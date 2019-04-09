@@ -150,6 +150,15 @@ void meshMRABWeightedPartitionQuad3D(mesh3D *mesh, dfloat *weights,
 #define TZID 8  
 #define  JID 9
 #define JWID 10
+#define RXMID 11  
+#define RYMID 12  
+#define RZMID 13
+#define SXMID 14 
+#define SYMID 15 
+#define SZMID 16 
+#define TXMID 17 
+#define TYMID 18 
+#define TZMID 19 
 
 /* offsets for second order geometric factors */
 #define G00ID 0  

@@ -8,6 +8,7 @@ int main(int argc, char **argv){
   //changes solver mode
   //main options are: DOPRI MRSAAB LSERK_BASIC LSERK_SYM LSERK_SPECTRUM
   //grid options are: flat sphere equispherical extended
+  //  char *mode = "LSERK_SYM sphere";
   char *mode = "LSERK_SPECTRUM sphere";
   
   // int specify polynomial degree 
@@ -15,9 +16,14 @@ int main(int argc, char **argv){
   dfloat alpha;
   
   if (argc > 3) 
-    alpha = atoi(argv[3])/10.;
+    alpha = atof(argv[3]);
   else
     alpha = 1./N;
+
+  // to run:
+  //
+  // ./advectionMainQuad3D 5 2
+  
   
   // set up mesh stuff
   dfloat sphereRadius = 1;
@@ -25,6 +31,7 @@ int main(int argc, char **argv){
 
   // set up boltzmann stuff
   solver_t *solver = advectionSetupPhysicsQuad3D(mesh);
+
   if (strstr(mode,"DOPRI")) {
     advectionSetupDOPRIQuad3D(solver);
   }

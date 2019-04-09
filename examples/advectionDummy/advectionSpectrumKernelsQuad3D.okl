@@ -1,0 +1,445 @@
+#define RXID 0  
+#define RYID 1
+#define RZID 2
+#define SXID 3  
+#define SYID 4
+#define SZID 5
+#define TXID 6  
+#define TYID 7
+#define TZID 8
+#define JID 9
+#define JWID 10
+
+#define p_LIFT (0.5f*(p_Nq-1)*p_Nq)
+
+#define Nfields  2
+
+
+kernel void advectionVolumeQuad3D(const int Nelements,
+				  const dfloat * restrict vgeo,
+				  const dfloat * restrict D,
+				  const dfloat * restrict x,
+				  const dfloat * restrict y,
+				  const dfloat * restrict z,
+				  const dfloat * restrict q,
+				  dfloat * restrict rhsq){
+  
+  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
+
+    shared dfloat s_q[Nfields][p_NblockV][p_Nq][p_Nq];
+    shared dfloat s_D[p_Nq][p_Nq];
+
+    for(int es=0;es<p_NblockV;++es;inner2){
+      for(int j=0;j<p_Nq;++j;inner1){
+	for(int i=0;i<p_Nq;++i;inner0){
+
+	  int e = eo+es; // element in block
+	  if(e<Nelements){
+	    const int base = i + j*p_Nq + Nfields*p_Np*e;
+	    for(int fld=0;fld<Nfields;++fld){
+	      s_q[fld][es][j][i] = q[base+fld*p_Np];
+	    }
+	  }
+
+	  if(es==0)
+	    s_D[j][i] = D[j*p_Nq+i];
+	}
+      }
+    }
+
+    // make sure all node data is loaded into shared
+    barrier(localMemFence);
+
+    for(int es=0;es<p_NblockV;++es;inner2){
+      for(int j=0;j<p_Nq;++j;inner1){
+	for(int i=0;i<p_Nq;++i;inner0){
+	  int e = eo+es; // element in block
+
+	  if(e<Nelements){
+
+	    const int n=j*p_Nq+i;
+
+	    // prefetch geometric factors (constant on triangle)
+	    const int gbase = e*p_Np*p_Nvgeo + n;
+	    const dfloat drdx = vgeo[gbase + p_Np*RXID];
+	    const dfloat drdy = vgeo[gbase + p_Np*RYID];
+	    const dfloat drdz = vgeo[gbase + p_Np*RZID];
+	    const dfloat dsdx = vgeo[gbase + p_Np*SXID];
+	    const dfloat dsdy = vgeo[gbase + p_Np*SYID];
+	    const dfloat dsdz = vgeo[gbase + p_Np*SZID];
+	    const dfloat dtdx = vgeo[gbase + p_Np*TXID];
+	    const dfloat dtdy = vgeo[gbase + p_Np*TYID];
+	    const dfloat dtdz = vgeo[gbase + p_Np*TZID];
+
+	    // compute 'r' and 's' derivatives of (q_m) at node n
+	    dfloat dqdr[Nfields], dqds[Nfields];
+
+	    occaUnroll(Nfields)
+	      for(int fld=0;fld<Nfields;++fld){
+		dqdr[fld] = 0;
+		dqds[fld] = 0;
+	      }
+
+	    occaUnroll(p_Nq)
+	      for(int m=0;m<p_Nq;++m){
+		const dfloat Dim = s_D[i][m]; // could L1
+		const dfloat Djm = s_D[j][m];
+
+		// differentiate q components with respect to 'r'
+		occaUnroll(Nfields)
+		  for(int fld=0;fld<Nfields;++fld)
+		    dqdr[fld] += Dim*s_q[fld][es][j][m]; // 4 bytes per flop (2TF max)
+
+		// differentiate q components with respect to 's'
+		occaUnroll(Nfields)
+		  for(int fld=0;fld<Nfields;++fld)
+		    dqds[fld] += Djm*s_q[fld][es][m][i];
+	      }
+
+	    const dfloat q1  = s_q[0][es][j][i];
+	    const dfloat q2  = s_q[1][es][j][i];
+
+	    const dfloat dq1dx = drdx*dqdr[0] + dsdx*dqds[0] + dtdx*q1;
+	    const dfloat dq1dy = drdy*dqdr[0] + dsdy*dqds[0] + dtdy*q1;
+	    const dfloat dq1dz = drdz*dqdr[0] + dsdz*dqds[0] + dtdz*q1;
+
+	    const dfloat dq2dx = drdx*dqdr[1] + dsdx*dqds[1] + dtdx*q2;
+	    const dfloat dq2dy = drdy*dqdr[1] + dsdy*dqds[1] + dtdy*q2;
+	    const dfloat dq2dz = drdz*dqdr[1] + dsdz*dqds[1] + dtdz*q2;	
+
+	    // hard code solid body velocity
+	    const dfloat xn = x[n+e*p_Np];
+	    const dfloat yn = y[n+e*p_Np];
+	    const dfloat zn = z[n+e*p_Np];
+
+	    const dfloat un =  yn;
+	    const dfloat vn = -xn;
+	    const dfloat wn = 0;
+
+	    const dfloat rhsq1 = un*dq2dx + vn*dq2dy + wn*dq2dz;
+	    const dfloat rhsq2 = un*dq1dx + vn*dq1dy + wn*dq1dz;
+
+	    const int base = e*p_Np*Nfields+n;
+	    
+	    rhsq[base+0*p_Np] = rhsq1;
+	    rhsq[base+1*p_Np] = rhsq2;
+	  }
+	}
+      }
+    }
+  }
+}
+
+
+void upwindFlux(const dfloat nx, const dfloat ny, const dfloat nz,
+		const dfloat u, const dfloat v, const dfloat w,
+		const dfloat * restrict dq,
+		dfloat * restrict fluxq,
+		dfloat * restrict stabq
+		){
+
+    const dfloat udotn = u*nx+v*ny+w*nz;
+
+    fluxq[0] = 0.5f*(udotn*dq[1]);
+    fluxq[1] = 0.5f*(udotn*dq[0]);
+
+    stabq[0] = 0.5f*(occaFabs(udotn)*dq[0]);
+    stabq[1] = 0.5f*(occaFabs(udotn)*dq[1]);
+
+}
+
+// pointwise SEM-DG lift
+kernel void advectionSurfaceQuad3D(const iint Nelements,
+				   const dfloat * restrict sgeo,
+				   const dfloat * restrict LIFTT,
+				   const iint   * restrict vmapM,
+				   const iint   * restrict vmapP,
+				   const dfloat time,
+				   const dfloat * restrict x,
+				   const dfloat * restrict y,
+				   const dfloat * restrict z,
+				   const dfloat * restrict q,
+				   dfloat * restrict rhsq,
+				   dfloat * restrict stabq
+				   ){
+
+    // for all elements
+    for(iint eo=0;eo<Nelements;eo+=p_NblockS;outer0){
+    
+	// for all faces (global barrier at end of body of this loop)
+	for(iint face=0;face<p_Nfaces;++face){      
+
+	    for(iint es=0;es<p_NblockS;++es;inner1){
+		for(iint i=0;i<p_Nq;++i;inner0){ 
+
+		    const iint eM = eo + es;
+	  
+		    if(eM<Nelements){	      
+			// load surface geofactors for this face
+			const iint sid = eM*p_Nsgeo*p_Nq*p_Nfaces + face*p_Nsgeo*p_Nq + i; 
+			const dfloat nx = sgeo[sid+0*p_Nq];
+			const dfloat ny = sgeo[sid+1*p_Nq];
+			const dfloat nz = sgeo[sid+2*p_Nq];
+			const dfloat sJ = sgeo[sid+3*p_Nq];
+			const dfloat invJ = sgeo[sid+4*p_Nq];
+
+			// indices of negative and positive traces of face node
+			const iint id  = eM*p_Nq*p_Nfaces + face*p_Nq + i;
+			const int idM = vmapM[id];
+			const int idP = vmapP[id];
+			const int eP = idP/p_Np;
+
+			const dfloat xn = x[idM];
+			const dfloat yn = y[idM];
+			const dfloat zn = z[idM];
+
+			const dfloat un = yn;
+			const dfloat vn = -xn;
+			const dfloat wn = 0;
+
+			const iint vidM = eM*p_Np*Nfields + (idM%p_Np);
+			const iint vidP = eP*p_Np*Nfields + (idP%p_Np);
+
+			dfloat dq[Nfields], fluxq[Nfields], Sq[Nfields];
+	    
+			occaUnroll(Nfields)
+			    for(int fld=0;fld<Nfields;++fld){
+				const dfloat qM = q[vidM+fld*p_Np];
+				dfloat qP = q[vidP+fld*p_Np]; // assumes chunks of p_Np*2 per element
+				dq[fld] = qP-qM;
+			    }
+
+			upwindFlux(nx, ny, nz, un, vn, wn, dq, fluxq, Sq);
+	    
+			const dfloat sc = invJ*sJ*p_LIFT;
+	    
+			occaUnroll(Nfields)
+			  for(int fld=0;fld<Nfields;++fld){
+			    rhsq[vidM+fld*p_Np] += sc*fluxq[fld]; // TW dq[fld];
+			    stabq[vidM+fld*p_Np] += sc*Sq[fld]; // TW dq[fld];
+			  }
+		    }
+		}
+	    }
+	    // wait for all global memory writes of the previous inner loop to complete
+	    barrier(globalMemFence);
+	}
+    }
+}
+
+kernel void advectionFilterHsymQuad3D(const iint Nelements,
+				     const dfloat * restrict F,
+				     const iint * restrict cubeFaceNumber,
+				     const iint * restrict EToE,
+				     const dfloat * restrict vgeo,
+				     const iint * restrict cubeDistance,
+				     const dfloat * restrict qIn,
+				     dfloat * restrict Fq) {
+  
+  for (iint eo = 0; eo < Nelements;++eo;outer0) {
+    
+    shared dfloat s_F[3][p_Nq][p_Nq];
+    shared dfloat s_q[Nfields][3][p_Nq][p_Nq];
+    exclusive iint mark_edge;
+    
+    for (iint j=0;j<p_Nq; ++j; inner1) {
+      for (iint i=0; i<p_Nq; ++i; inner0) {
+	s_F[0][j][i] = F[i+0*p_Nq+j*3*p_Nq];
+	s_F[1][j][i] = F[i+1*p_Nq+j*3*p_Nq];
+	s_F[2][j][i] = F[i+2*p_Nq+j*3*p_Nq];
+
+	const iint eL = EToE[eo*p_Nfaces + 3];
+	const iint eR = EToE[eo*p_Nfaces + 1];
+	const iint eD = EToE[eo*p_Nfaces + 0];
+	const iint eU = EToE[eo*p_Nfaces + 2];
+	
+	const iint faceC = cubeFaceNumber[eo];
+
+	//mark_edge = ((cubeDistance[eo] > 1)&&
+	//    (cubeDistance[eL] > 0)&&
+	//    (cubeDistance[eR] > 0));
+	
+	mark_edge = ((faceC==cubeFaceNumber[eL])&&
+		     (faceC==cubeFaceNumber[eR]));//&&
+	//		     (faceC==cubeFaceNumber[eD])&&
+	//	     (faceC==cubeFaceNumber[eU]));
+	
+	occaUnroll(Nfields)
+  	  for(iint fld=0;fld<Nfields;++fld){
+	    int id = eo*p_Np*Nfields + fld*p_Np + j*p_Nq + i;
+	    dfloat qin = qIn[id];//*vgeo[eo*p_Np*p_Nvgeo + 10*p_Np + j*p_Nq + i];
+	    s_q[fld][1][j][i] = qin;
+	    if(mark_edge) {
+		s_q[fld][0][j][i] = qIn[eL*p_Np*Nfields + fld*p_Np + j*p_Nq + i];//*vgeo[eL*p_Np*p_Nvgeo + 10*p_Np + j*p_Nq + i];
+		s_q[fld][2][j][i] = qIn[eR*p_Np*Nfields + fld*p_Np + j*p_Nq + i];//*vgeo[eR*p_Np*p_Nvgeo + 10*p_Np + j*p_Nq + i];
+	    }
+	  }
+      }
+    }
+    
+    barrier(localMemFence);
+
+    for (iint j=0;j<p_Nq; ++j; inner1) {
+      for (iint i=0; i<p_Nq; ++i; inner0) {
+	dfloat Fqij[Nfields];
+	
+	if (mark_edge) {
+	  
+	  occaUnroll(Nfields)
+	    for(iint fld=0;fld<Nfields;++fld){
+	      Fqij[fld] = 0;
+	    }
+	  
+	  occaUnroll(p_Nq)
+	    for(int n=0;n<p_Nq;++n){
+	      // fetch once, use Nfields times
+	      const dfloat FinL = s_F[0][i][n];
+	      const dfloat FinC = s_F[1][i][n];
+	      const dfloat FinR = s_F[2][i][n];
+	      
+	      // ratio of 1 shared per 2 flops: on P100 => 2TFLOPS max
+	      occaUnroll(Nfields)
+		for(iint fld=0;fld<Nfields;++fld){
+		  Fqij[fld] += FinL*s_q[fld][0][j][n];
+		  Fqij[fld] += FinC*s_q[fld][1][j][n];
+		  Fqij[fld] += FinR*s_q[fld][2][j][n];
+		}
+	    }
+
+	}
+	else{
+	  occaUnroll(Nfields)
+	    for(iint fld=0;fld<Nfields;++fld){
+	      Fqij[fld] = s_q[fld][1][j][i];
+	    }
+	}
+
+	const dfloat wj = vgeo[eo*p_Np*p_Nvgeo + 10*p_Np + j*p_Nq + i];
+	
+	occaUnroll(Nfields)
+	  for(iint fld=0;fld<Nfields;++fld){
+	    Fq[eo*Nfields*p_Np + fld*p_Np + j*p_Nq + i] = Fqij[fld];
+	  }
+      }
+    }
+  }
+}
+
+
+kernel void advectionFilterVsymQuad3D(const iint Nelements,
+				     const dfloat alpha,
+				     const dfloat * restrict F,
+				     const iint * restrict cubeFaceNumber,
+				     const iint * restrict EToE,
+				     const dfloat * restrict x,
+				     const dfloat * restrict y,
+				     const dfloat * restrict z,
+				     const dfloat * restrict vgeo,
+				     const dfloat * restrict cubeDistance,
+				     const dfloat * restrict qOrig,
+				     const dfloat * restrict qIn,
+				     dfloat * restrict Fq) {
+  
+  for (iint eo = 0; eo < Nelements;++eo;outer0) {
+    
+    shared dfloat s_F[3][p_Nq][p_Nq];
+    shared dfloat s_q[Nfields][3][p_Nq][p_Nq];
+    exclusive iint mark_edge;
+    
+    for (iint j=0;j<p_Nq; ++j; inner1) {
+      for (iint i=0; i<p_Nq; ++i; inner0) {
+	s_F[0][j][i] = F[i+0*p_Nq+j*3*p_Nq];
+	s_F[1][j][i] = F[i+1*p_Nq+j*3*p_Nq];
+	s_F[2][j][i] = F[i+2*p_Nq+j*3*p_Nq];
+	
+	const iint eL = EToE[eo*p_Nfaces+0];
+	const iint eR = EToE[eo*p_Nfaces+2];
+	const iint eD = EToE[eo*p_Nfaces+1];
+	const iint eU = EToE[eo*p_Nfaces+3];
+
+	const iint faceC = cubeFaceNumber[eo];
+
+	//mark_edge = ((cubeDistance[eo] > 1)&&
+	//				(cubeDistance[eL] > 0)&&
+	//			(cubeDistance[eR] > 0));
+	
+	mark_edge = ((faceC==cubeFaceNumber[eL]) &&
+		     (faceC==cubeFaceNumber[eR]));// &&
+	//		     (faceC==cubeFaceNumber[eU]) &&
+	//	     (faceC==cubeFaceNumber[eD]));
+	
+	occaUnroll(Nfields)
+	  for(iint fld=0;fld<Nfields;++fld){
+	      s_q[fld][1][j][i] = qIn[eo*p_Np*Nfields + fld*p_Np + j*p_Nq + i];//*vgeo[eo*p_Np*p_Nvgeo + 10*p_Np + j*p_Nq + i];
+	    if(mark_edge) {
+		s_q[fld][0][j][i] = qIn[eL*p_Np*Nfields + fld*p_Np + j*p_Nq + i];//*vgeo[eL*p_Np*p_Nvgeo + 10*p_Np + j*p_Nq + i];
+		s_q[fld][2][j][i] = qIn[eR*p_Np*Nfields + fld*p_Np + j*p_Nq + i];//*vgeo[eR*p_Np*p_Nvgeo + 10*p_Np + j*p_Nq + i];
+	    }
+	  }
+      }
+    }
+
+    barrier(localMemFence);
+
+    for (iint j=0;j<p_Nq; ++j; inner1) {
+      for (iint i=0; i<p_Nq; ++i; inner0) {
+	dfloat Fqij[Nfields];
+	
+	if(mark_edge){
+	  occaUnroll(Nfields)
+	    for(iint fld=0;fld<Nfields;++fld){
+	      Fqij[fld] = 0;
+	    }
+	  
+	  occaUnroll(p_Nq)
+	    for(int n=0;n<p_Nq;++n){
+	      // fetch once, use Nfields times
+	      const dfloat FinL = s_F[0][j][n];
+	      const dfloat FinC = s_F[1][j][n];
+	      const dfloat FinR = s_F[2][j][n];
+	      
+	      // ratio of 1 shared per 2 flops: on P100 => 2TFLOPS max
+	      occaUnroll(Nfields)
+		for(iint fld=0;fld<Nfields;++fld){
+		  Fqij[fld] += FinL*s_q[fld][0][n][i];
+		  Fqij[fld] += FinC*s_q[fld][1][n][i];
+		  Fqij[fld] += FinR*s_q[fld][2][n][i];
+		}
+	    }
+
+	  // use saved data for blend
+    	  for (iint fld=0; fld<Nfields;++fld) {
+	    int id = eo*Nfields*p_Np+fld*p_Np + j*p_Nq + i;
+	    const dfloat wj = vgeo[eo*p_Np*p_Nvgeo + 10*p_Np + j*p_Nq + i];
+	    Fqij[fld] = Fqij[fld]*(1. - alpha) + alpha*qOrig[id];
+	  }
+
+	  // constrain momentum changes to lie on sphere
+	  const dfloat xij = x[i+j*p_Nq+eo*p_Np];
+	  const dfloat yij = y[i+j*p_Nq+eo*p_Np];
+	  const dfloat zij = z[i+j*p_Nq+eo*p_Np];
+	  
+	  // remove radial component of momentum change
+	  const dfloat xdotrhsq = (Fqij[1]*xij + Fqij[2]*yij + Fqij[3]*zij)*p_invRadiusSq;
+	  
+	  Fqij[1] -= xij*xdotrhsq; 
+	  Fqij[2] -= yij*xdotrhsq;
+	  Fqij[3] -= zij*xdotrhsq;
+	}
+	else { //copy boundary elements directly
+	    const dfloat wj = vgeo[eo*p_Np*p_Nvgeo + 10*p_Np + j*p_Nq + i];
+	  occaUnroll(Nfields)
+	    for(iint fld=0;fld<Nfields;++fld){
+		Fqij[fld] = s_q[fld][1][j][i];
+	    }
+	}
+	
+	for(iint fld=0;fld<Nfields;++fld){
+	  int id = eo*Nfields*p_Np+fld*p_Np + j*p_Nq + i;	    
+	  Fq[id] = Fqij[fld];
+	}
+	
+      }
+    }
+  }
+}

@@ -133,7 +133,7 @@ void meshSphericalNodesQuad3D(mesh_t *mesh){
       ysph = R/cubRad * ylin;
       zsph = R/cubRad * zlin;
 
-      //mesh->JR[cnt] = cubRad/R;
+      mesh->JR[cnt] = cubRad/R;
       
       if (fabs(xsph*xsph + ysph*ysph + zsph*zsph - 1) > 1e-12) printf("error\n");
 	  

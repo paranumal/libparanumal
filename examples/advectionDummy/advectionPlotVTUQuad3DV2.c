@@ -37,9 +37,9 @@ void advectionPlotVTUQuad3DV2(solver_t *solver, char *fileNameBase, int tstep){
     for(iint n=0;n<mesh->plotNp;++n){
       dfloat plotxn = 0, plotyn = 0, plotzn = 0;
       for(iint m=0;m<mesh->Np;++m){
-	plotxn += mesh->plotInterp[n*mesh->Np+m]*mesh->x[m+e*mesh->Np];
-	plotyn += mesh->plotInterp[n*mesh->Np+m]*mesh->y[m+e*mesh->Np];
-	plotzn += mesh->plotInterp[n*mesh->Np+m]*mesh->z[m+e*mesh->Np];
+	plotxn += mesh->plotInterp[n*mesh->Np+m]*mesh->x[m+e*mesh->Np]/mesh->vgeo[e*mesh->Np*mesh->Nvgeo + 9*mesh->Np + m];
+	plotyn += mesh->plotInterp[n*mesh->Np+m]*mesh->y[m+e*mesh->Np]/mesh->vgeo[e*mesh->Np*mesh->Nvgeo + 9*mesh->Np + m];
+	plotzn += mesh->plotInterp[n*mesh->Np+m]*mesh->z[m+e*mesh->Np]/mesh->vgeo[e*mesh->Np*mesh->Nvgeo + 9*mesh->Np + m];
       }
 
       fprintf(fp, "       ");

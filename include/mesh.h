@@ -323,8 +323,10 @@ typedef struct {
   iint *gridToE;
   iint *perp_index;
   dfloat *par_loc;
-  dfloat *weakD;
+  dfloat *weakDsym;
+    dfloat *weakD;
     dfloat *MD;
+    dfloat *Dsym;
     dfloat *weakMD;
     dfloat *inv_mass;
     dfloat *MLIFT;

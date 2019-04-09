@@ -84,23 +84,15 @@ void advectionSetupLSERKsymQuad3D (solver_t *solver) {
     
     printf("dt = %g\n", solver->dt);
     
-    occa::kernelInfo kernelInfo;
-
     // resize some variables prior to loading
     solver->q = (dfloat *)realloc(solver->q,mesh->Np*mesh->NgridElements*solver->Nfields*sizeof(dfloat));
     for (iint i = 0; i <  mesh->NgridElements - mesh->Nelements; ++i) {
       solver->q[(mesh->Nelements + i)*mesh->Np*solver->Nfields] = 0;
     }
-    
-    advectionSetupOccaQuad3D(solver,&kernelInfo);
 
-    dfloat *test = (dfloat *) calloc(mesh->Np*mesh->NgridElements*solver->Nfields,sizeof(dfloat));
-    
+    advectionSetupOccaQuad3D(solver,&(solver->kernelInfo));
+       
     solver->o_q =
-	solver->device.malloc(mesh->Np*mesh->NgridElements*solver->Nfields*sizeof(dfloat));
-    solver->o_qs =
-	solver->device.malloc(mesh->Np*mesh->NgridElements*solver->Nfields*sizeof(dfloat));
-    solver->o_qw =
 	solver->device.malloc(mesh->Np*mesh->NgridElements*solver->Nfields*sizeof(dfloat));
 
     solver->o_qpre =
@@ -134,12 +126,6 @@ void advectionSetupLSERKsymQuad3D (solver_t *solver) {
     
     solver->o_qFilter =
 	solver->device.malloc(mesh->NgridElements*solver->Nfields*mesh->Np*sizeof(dfloat));
-
-    solver->o_qFilters =
-	solver->device.malloc(mesh->NgridElements*solver->Nfields*mesh->Np*sizeof(dfloat));
-
-    solver->o_qFilterw =
-	solver->device.malloc(mesh->NgridElements*solver->Nfields*mesh->Np*sizeof(dfloat));
     
     solver->o_qCorr =
 	solver->device.malloc(mesh->Nelements*solver->Nfields*mesh->Np*sizeof(dfloat));
@@ -150,42 +136,35 @@ void advectionSetupLSERKsymQuad3D (solver_t *solver) {
 	solver->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->inv_mass);
     solver->volumeKernel =
       solver->device.buildKernelFromSource(DHOLMES "/okl/advectionVolumeQuad3D.okl",
-					 "advectionVolumeLSERKmixedQuad3D",
-					 kernelInfo);
+					 "advectionVolumeLSERKexpMixedQuad3D",
+					 solver->kernelInfo);
     solver->volumeCorrectionKernel =
       solver->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolumeCorrectionQuad3D.okl",
 					 "boltzmannVolumeCorrectionDOPRIQuad3D",
-					 kernelInfo);
+					 solver->kernelInfo);
     solver->massMatrixKernel =
       solver->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolumeCorrectionQuad3D.okl",
 					 "boltzmannMassMatrixQuad3D",
-					 kernelInfo);
+					 solver->kernelInfo);
     solver->surfaceKernel =
       solver->device.buildKernelFromSource(DHOLMES "/okl/advectionSurfaceQuad3D.okl",
-					 "advectionSurfaceLSERKmixedQuad3D",
-					 kernelInfo);
+					 "advectionSurfaceLSERKexpMixedQuad3D",
+					 solver->kernelInfo);
     solver->loadFilterGridKernel =
       solver->device.buildKernelFromSource(DHOLMES "/okl/boltzmannLoadFilterGridQuad3D.okl",
 					   "boltzmannLoadFilterGridQuad3D",
-					   kernelInfo);
+					   solver->kernelInfo);
     solver->updateKernel =
       solver->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateQuad3D.okl",
 					   "boltzmannLSERKsymUpdateQuad3D",
-					   kernelInfo);
+					   solver->kernelInfo);
     solver->filterKernelH =
       solver->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterHQuad3D.okl",
-					 "boltzmannFilterHq0Quad3D",
-					 kernelInfo);
+					 "boltzmannFilterHsymQuad3D",
+					 solver->kernelInfo);
     solver->filterKernelV =
       solver->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterVQuad3D.okl",
-					 "boltzmannFilterVq0Quad3D",
-					 kernelInfo);
-    solver->filterWeakKernelH =
-      solver->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterHQuad3D.okl",
-					 "boltzmannFilterHtransQuad3D",
-					 kernelInfo);
-    solver->filterWeakKernelV =
-      solver->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterVQuad3D.okl",
-					 "boltzmannFilterVtransQuad3D",
-					 kernelInfo);
+					 "boltzmannFilterVsymQuad3D",
+					 solver->kernelInfo);
+
 }

@@ -347,6 +347,32 @@ void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
     fgets(buf,BUFSIZ,fp); // rest of line
   }
 
+    /* 1D weak differentiation matrix on GLL nodes */
+  fgets(buf, BUFSIZ, fp); // read comment
+  printf("got weak D symmetrized message: %s\n", buf);
+  mesh->weakDsym = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
+  for(int n=0;n<mesh->N+1;++n){
+    for(int m=0;m<mesh->N+1;++m){
+      fscanf(fp, dfloatFormat, mesh->weakDsym+m+n*(mesh->N+1));
+      printf("%lg ",mesh->weakDsym[m+n*(mesh->N+1)]);
+    }
+    printf("\n");
+    fgets(buf,BUFSIZ,fp); // rest of line
+  }
+
+  /* 1D symmetrized strong differentiation matrix on GLL nodes */
+  fgets(buf, BUFSIZ, fp); // read comment
+  printf("got strong Dsym message: %s\n", buf);
+  mesh->Dsym = (dfloat*) calloc(mesh->Np, sizeof(dfloat));
+  for(int n=0;n<mesh->N+1;++n){
+    for(int m=0;m<mesh->N+1;++m){
+      fscanf(fp, dfloatFormat, mesh->Dsym+m+n*(mesh->N+1));
+      printf("%lg ",mesh->Dsym[m+n*(mesh->N+1)]);
+    }
+    printf("\n");
+    fgets(buf,BUFSIZ,fp); // rest of line
+  }
+
   /* 1D massless strong differentiation matrix on GLL nodes */
   fgets(buf, BUFSIZ, fp); // read comment
   printf("got strong MD message: %s\n", buf);
