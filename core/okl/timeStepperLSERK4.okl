@@ -24,19 +24,24 @@ SOFTWARE.
 
 */
 
-#include "settings.hpp"
+@kernel void lserk4Update(const dlong N,
+                          const dfloat dt,
+                          const dfloat rka,
+                          const dfloat rkb,
+                          @restrict const  dfloat *  rhsq,
+                          @restrict dfloat *  resq,
+                          @restrict dfloat *  q){
 
-void occaAddSettings(settings_t& settings) {
+  // Low storage Runge Kutta time step update
+  for(dlong n=0;n<N;++n;@tile(256,@outer,@inner)){
+    dfloat r_resq = resq[n];
+    dfloat r_rhsq = rhsq[n];
+    dfloat r_q    = q[n];
 
-  settings.newSetting("THREAD MODEL",
-                      "CUDA",
-                      "OCCA's Parallel execution platform",
-                      {"Serial", "OpenMP", "CUDA", "HIP", "OpenCL"});
-  settings.newSetting("PLATFORM NUMBER",
-                      "0",
-                      "Parallel platform number (used in OpenCL mode)");
-  settings.newSetting("DEVICE NUMBER",
-                      "0"
-                      "Parallel device number");
+    r_resq = rka*r_resq + dt*r_rhsq;
+    r_q   += rkb*r_resq;
+
+    resq[n] = r_resq;
+    q[n]    = r_q;
+  }
 }
-

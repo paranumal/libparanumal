@@ -25,6 +25,7 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
+#include "mesh3D.hpp"
 
 static void interpolateHex3D(dfloat *I, dfloat *x, int N, dfloat *Ix, int M){
 
@@ -113,11 +114,11 @@ void meshHex3D::GeometricFactors(){
   for(dlong e=0;e<Nelements;++e){ /* for each element */
 
     /* find vertex indices and physical coordinates */
-    dlong id = e*Nverts;
+    // dlong id = e*Nverts;
 
-    dfloat *xe = EX + id;
-    dfloat *ye = EY + id;
-    dfloat *ze = EZ + id;
+    // dfloat *xe = EX + id;
+    // dfloat *ye = EY + id;
+    // dfloat *ze = EZ + id;
 
     for(int n=0;n<Np;++n){
       xre[n] = 0; xse[n] = 0; xte[n] = 0;
@@ -132,9 +133,9 @@ void meshHex3D::GeometricFactors(){
           int n = i + j*Nq + k*Nq*Nq;
 
           /* local node coordinates */
-          dfloat rn = r[n];
-          dfloat sn = s[n];
-          dfloat tn = t[n];
+          // dfloat rn = r[n];
+          // dfloat sn = s[n];
+          // dfloat tn = t[n];
 
 #if 0
           /* Jacobian matrix */
@@ -245,9 +246,9 @@ void meshHex3D::GeometricFactors(){
 
           int n = k*cubNq*cubNq + j*cubNq + i;
 
-          dfloat rn = cubr[i];
-          dfloat sn = cubr[j];
-          dfloat tn = cubr[k];
+          // dfloat rn = cubr[i];
+          // dfloat sn = cubr[j];
+          // dfloat tn = cubr[k];
 
           /* Jacobian matrix */
           dfloat xr = cubxre[n], xs = cubxse[n], xt = cubxte[n];

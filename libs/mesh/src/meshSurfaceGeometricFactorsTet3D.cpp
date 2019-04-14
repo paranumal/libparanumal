@@ -25,6 +25,7 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
+#include "mesh3D.hpp"
 
 static void computeFrameTet3D(dfloat nx, dfloat ny, dfloat nz,
 		  dfloat &tanx, dfloat &tany, dfloat &tanz,

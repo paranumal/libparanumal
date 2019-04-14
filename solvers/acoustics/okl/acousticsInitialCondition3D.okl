@@ -24,19 +24,29 @@ SOFTWARE.
 
 */
 
+@kernel void acousticsInitialCondition3D(const dlong Nelements,
+                                         const dfloat time,
+                                         @restrict const  dfloat *  x,
+                                         @restrict const  dfloat *  y,
+                                         @restrict const  dfloat *  z,
+                                         @restrict        dfloat *  q){
 
-// Boundary conditions
-/* wall 1, outflow 2 */
-#define acousticsDirichletConditions2D(bc, t, x, y, nx, ny, rM, uM, vM, rB, uB, vB) \
-{                                   \
-  if(bc==2){                        \
-    *(rB) = -rM;                     \
-    *(uB) = uM;                    \
-    *(vB) = vM;                    \
-  } else if(bc==1){          \
-    *(rB) = rM;                     \
-    *(uB) = uM - p_two*(nx*uM+ny*vM)*nx;  \
-    *(vB) = vM - p_two*(nx*uM+ny*vM)*ny;  \
-  }                                 \
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      const dlong id = e*p_Np + n;
+
+      dfloat r = 0.0;
+      dfloat u = 0.0;
+      dfloat v = 0.0;
+      dfloat w = 0.0;
+
+      acousticsInitialConditions3D(time, x[id], y[id], z[id], &r, &u, &v, &w);
+
+      const dlong qbase = e*p_Np*p_Nfields + n;
+      q[qbase+0*p_Np] = r;
+      q[qbase+1*p_Np] = u;
+      q[qbase+2*p_Np] = v;
+      q[qbase+3*p_Np] = w;
+    }
+  }
 }
-

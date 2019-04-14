@@ -25,6 +25,7 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
+#include "mesh3D.hpp"
 
 void meshHex3D::PhysicalNodes(){
 

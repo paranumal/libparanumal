@@ -32,6 +32,7 @@ Acoustics solver makefile targets:
    make lib
    make clean
    make clean-libs
+   make clean-kernels
    make realclean
    make info
    make help
@@ -46,8 +47,10 @@ make clean
    Clean the acousticsMain executable, library, and object files.
 make clean-libs
    In addition to "make clean", also clean the mesh and ogs libraries.
+make clean-kernels
+   In addition to "make clean-libs", also cleans the cached OCCA kernels.
 make realclean
-   In addition to "make clean-libs", also clean 3rd party libraries.
+   In addition to "make clean-kernels", also clean 3rd party libraries.
 make info
    List directories and compiler flags in use.
 make help
@@ -57,7 +60,7 @@ Can use "make verbose=true" for verbose output.
 
 endef
 
-ifeq (,$(filter acousticsMain lib clean clean-libs \
+ifeq (,$(filter acousticsMain lib clean clean-libs clean-kernels \
                 realclean info help,$(MAKECMDGOALS)))
 ifneq (,$(MAKECMDGOALS))
 $(error ${ACOUSTICS_HELP_MSG})
@@ -76,13 +79,14 @@ endif
 GS_DIR       =${LIBP_TPL_DIR}/gslib
 BLAS_DIR     =${LIBP_TPL_DIR}/BlasLapack
 OGS_DIR      =${LIBP_LIBS_DIR}/ogs
-MESH_DIR     =${LIBP_DIR}/src
+MESH_DIR     =${LIBP_LIBS_DIR}/mesh
+CORE_DIR     =${LIBP_DIR}/core
 
 #includes
 INCLUDES=${LIBP_INCLUDES} \
 		 -I${LIBP_LIBS_DIR}/include \
          -I.
-         
+
 
 #defines
 DEFINES =${LIBP_DEFINES} \
@@ -92,9 +96,9 @@ DEFINES =${LIBP_DEFINES} \
 ACOUSTICS_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
 
 #link libraries
-LIBS=-L$(MESH_DIR) -lmesh \
-     -L${LIBP_LIBS_DIR}/lib -logs \
+LIBS=-L${LIBP_LIBS_DIR} -logs -lmesh\
      -L$(GS_DIR)/lib -lgs \
+     -L${CORE_DIR} -lcore \
      -L${BLAS_DIR} -lBlasLapack \
      -lgfortran \
      ${LIBP_LIBS}
@@ -105,14 +109,14 @@ LFLAGS=${ACOUSTICS_CXXFLAGS} ${LIBS}
 #object dependancies
 DEPS=$(wildcard *.hpp) \
      $(wildcard $(LIBP_INCLUDE_DIR)/*.h) \
-     $(wildcard $(LIBP_INCLUDE_DIR)/*.hpp) \
-     $(wildcard ${LIBP_LIBS_DIR}/include/*.hpp) 
+     $(wildcard $(LIBP_INCLUDE_DIR)/*.hpp)
 
 SRC =$(wildcard src/*.cpp)
 
 OBJS=$(SRC:.cpp=.o)
 
-.PHONY: all lib libmesh libogs libblas clean clean-libs realclean help info acousticsMain
+.PHONY: all lib libcore libmesh libogs libblas clean clean-libs \
+		clean-kernels realclean help info acousticsMain
 
 all: acousticsMain
 
@@ -134,21 +138,28 @@ else
 	@ar -cr libacoustics.a $(OBJS)
 endif
 
-libmesh: libogs libgs libblas
+libmesh: libogs libgs libblas libcore
 ifneq (,${verbose})
 	${MAKE} -C ${MESH_DIR} lib verbose=${verbose}
 else
 	@${MAKE} -C ${MESH_DIR} lib --no-print-directory
 endif
 
-libogs: libgs
+libogs: libcore
 ifneq (,${verbose})
 	${MAKE} -C ${OGS_DIR} lib verbose=${verbose}
 else
 	@${MAKE} -C ${OGS_DIR} lib --no-print-directory
 endif
 
-libgs:
+libcore: libgs
+ifneq (,${verbose})
+	${MAKE} -C ${CORE_DIR} lib verbose=${verbose}
+else
+	@${MAKE} -C ${CORE_DIR} lib --no-print-directory
+endif
+
+libgs: libblas
 ifneq (,${verbose})
 	${MAKE} -C $(GS_DIR) install verbose=${verbose}
 else
@@ -178,6 +189,11 @@ clean:
 clean-libs: clean
 	${MAKE} -C ${OGS_DIR} clean
 	${MAKE} -C ${MESH_DIR} clean
+	${MAKE} -C ${CORE_DIR} clean
+
+clean-kernels: clean-libs
+# 	$(shell ${OCCA_DIR}/bin/occa clear all -y)
+	rm -rf ~/.occa/
 
 realclean: clean-libs
 	${MAKE} -C ${GS_DIR} clean

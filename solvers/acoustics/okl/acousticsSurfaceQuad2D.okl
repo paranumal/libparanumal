@@ -44,65 +44,65 @@ void upwind(const dfloat nx,
   *rflux = p_half*   (ndotUM+ndotUP-(rP-rM));
   *uflux = p_half*nx*(rP+rM - (ndotUP-ndotUM));
   *vflux = p_half*ny*(rP+rM - (ndotUP-ndotUM));
-  
+
 }
 
-void surfaceTerms(const int e, 
-                  const int es, 
-                  const int sk, 
-                  const int face, 
-                  const int i, 
+void surfaceTerms(const int e,
+                  const int es,
+                  const int sk,
+                  const int face,
+                  const int i,
                   const int j,
-                  @global const dfloat *sgeo, 
-                  @global const dfloat *x, 
-                  @global const dfloat *y, 
-                  @global const int *vmapM, 
-                  @global const int *vmapP, 
-                  @global const int *EToB, 
+                  @global const dfloat *sgeo,
+                  @global const dfloat *x,
+                  @global const dfloat *y,
+                  @global const int *vmapM,
+                  @global const int *vmapP,
+                  @global const int *EToB,
                   @global const dfloat *q,
-                  NC@shared dfloat s_rflux[p_NblockS][p_Nq][p_Nq],
-                  NC@shared dfloat s_uflux[p_NblockS][p_Nq][p_Nq],
-                  NC@shared dfloat s_vflux[p_NblockS][p_Nq][p_Nq]){
-  
-  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            
-  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            
-  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];                            
-  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];                        
-  
-  const dlong idM = vmapM[sk];                                  
-  const dlong idP = vmapP[sk];                                  
-  
-  const dlong eM = e;                                                   
-  const dlong eP = idP/p_Np;                                            
-  const int vidM = idM%p_Np;                                            
-  const int vidP = idP%p_Np;                                            
-                                                                        
-  const dlong qbaseM = eM*p_Np*p_Nfields + vidM;                        
-  const dlong qbaseP = eP*p_Np*p_Nfields + vidP;                        
-                                                                        
-  const dfloat rM = q[qbaseM + 0*p_Np];                         
-  const dfloat uM = q[qbaseM + 1*p_Np];                         
-  const dfloat vM = q[qbaseM + 2*p_Np];                         
-                                                                        
-  dfloat rP = q[qbaseP + 0*p_Np];                                       
-  dfloat uP = q[qbaseP + 1*p_Np];                                       
-  dfloat vP = q[qbaseP + 2*p_Np];                                       
-                                                                        
-  const int bc = EToB[face+p_Nfaces*e];                         
-  if(bc>0){                                                             
-    acousticsDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, rM, uM, vM, &rP, &uP, &vP); 
-  }                                                                     
-                                                                        
-  const dfloat sc = invWJ*sJ;                                           
-  
-  dfloat rflux, uflux, vflux;                                           
-  upwind(nx, ny, rM, uM, vM, rP, uP, vP, &rflux, &uflux, &vflux);       
-  
-  s_rflux[es][j][i] += sc*(-rflux);                                     
-  s_uflux[es][j][i] += sc*(-uflux);                                     
-  s_vflux[es][j][i] += sc*(-vflux);                                     
+                  @shared dfloat s_rflux[p_NblockS][p_Nq][p_Nq],
+                  @shared dfloat s_uflux[p_NblockS][p_Nq][p_Nq],
+                  @shared dfloat s_vflux[p_NblockS][p_Nq][p_Nq]){
+
+  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
+  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
+  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];
+  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];
+
+  const dlong idM = vmapM[sk];
+  const dlong idP = vmapP[sk];
+
+  const dlong eM = e;
+  const dlong eP = idP/p_Np;
+  const int vidM = idM%p_Np;
+  const int vidP = idP%p_Np;
+
+  const dlong qbaseM = eM*p_Np*p_Nfields + vidM;
+  const dlong qbaseP = eP*p_Np*p_Nfields + vidP;
+
+  const dfloat rM = q[qbaseM + 0*p_Np];
+  const dfloat uM = q[qbaseM + 1*p_Np];
+  const dfloat vM = q[qbaseM + 2*p_Np];
+
+  dfloat rP = q[qbaseP + 0*p_Np];
+  dfloat uP = q[qbaseP + 1*p_Np];
+  dfloat vP = q[qbaseP + 2*p_Np];
+
+  const int bc = EToB[face+p_Nfaces*e];
+  if(bc>0){
+    acousticsDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, rM, uM, vM, &rP, &uP, &vP);
+  }
+
+  const dfloat sc = invWJ*sJ;
+
+  dfloat rflux, uflux, vflux;
+  upwind(nx, ny, rM, uM, vM, rP, uP, vP, &rflux, &uflux, &vflux);
+
+  s_rflux[es][j][i] += sc*(-rflux);
+  s_uflux[es][j][i] += sc*(-uflux);
+  s_vflux[es][j][i] += sc*(-vflux);
 }
-  
+
 // batch process elements
 @kernel void acousticsSurfaceQuad2D(const dlong Nelements,
                                    @restrict const  dfloat *  sgeo,
@@ -113,13 +113,13 @@ void surfaceTerms(const int e,
                                    const dfloat time,
                                    @restrict const  dfloat *  x,
                                    @restrict const  dfloat *  y,
-                                   @restrict const  dfloat *  z,   
+                                   @restrict const  dfloat *  z,
                                    @restrict const  dfloat *  q,
                                    @restrict dfloat *  rhsq){
-  
+
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
-    
+
     // @shared storage for flux terms
     @shared dfloat s_rflux[p_NblockS][p_Nq][p_Nq];
     @shared dfloat s_uflux[p_NblockS][p_Nq][p_Nq];
@@ -150,7 +150,7 @@ void surfaceTerms(const int e,
           //          surfaceTerms(sk0,0,i,0     );
           surfaceTerms(e, es, sk0, 0, i, 0,
                        sgeo, x, y, vmapM, vmapP, EToB, q, s_rflux, s_uflux, s_vflux);
-          
+
           //      surfaceTerms(sk2,2,i,p_Nq-1);
           surfaceTerms(e, es, sk2, 2, i, p_Nq-1,
                        sgeo, x, y, vmapM, vmapP, EToB, q, s_rflux, s_uflux, s_vflux);
@@ -171,7 +171,7 @@ void surfaceTerms(const int e,
           //          surfaceTerms(sk1,1,p_Nq-1,j);
           surfaceTerms(e, es, sk1, 1, p_Nq-1, j,
                        sgeo, x, y, vmapM, vmapP, EToB, q, s_rflux, s_uflux, s_vflux);
-          
+
           //surfaceTerms(sk3,3,0     ,j);
           surfaceTerms(e, es, sk3, 3, 0, j,
                        sgeo, x, y, vmapM, vmapP, EToB, q, s_rflux, s_uflux, s_vflux);

@@ -26,17 +26,17 @@ SOFTWARE.
 
 #include "mesh.hpp"
 
-void mesh_t::ParallelGatherScatterSetup(dlong N,
-                                      hlong *globalIds,
-                                      MPI_Comm &comm,
+void mesh_t::ParallelGatherScatterSetup(dlong _N,
+                                      hlong *_globalIds,
+                                      MPI_Comm &_comm,
                                       int verbose) {
 
-  ogs = ogsSetup(N, globalIds, comm, verbose, device);
+  ogs = ogsSetup(_N, _globalIds, _comm, verbose, device);
 
   //use the gs to find what nodes are local to this rank
-  int *minRank = (int *) calloc(N,sizeof(int));
-  int *maxRank = (int *) calloc(N,sizeof(int));
-  for (dlong i=0;i<N;i++) {
+  int *minRank = (int *) calloc(_N,sizeof(int));
+  int *maxRank = (int *) calloc(_N,sizeof(int));
+  for (dlong i=0;i<_N;i++) {
     minRank[i] = rank;
     maxRank[i] = rank;
   }

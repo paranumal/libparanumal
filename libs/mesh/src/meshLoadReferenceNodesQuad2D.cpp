@@ -25,11 +25,19 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
+#include "mesh2D.hpp"
+#include "mesh3D.hpp"
+
+void meshQuad3D::LoadReferenceNodes(int N_){
+  mesh_t *mesh_p = (mesh_t*) this;
+  meshQuad2D* quadmesh = (meshQuad2D*) mesh_p;
+  quadmesh->meshQuad2D::LoadReferenceNodes(N);
+}
 
 void meshQuad2D::LoadReferenceNodes(int N_){
 
   char fname[BUFSIZ];
-  sprintf(fname, LIBP_DIR "/nodes/quadrilateralN%02d.dat", N);
+  sprintf(fname, LIBP_DIR "/nodes/quadrilateralN%02d.dat", N_);
 
   FILE *fp = fopen(fname, "r");
 
@@ -47,66 +55,66 @@ void meshQuad2D::LoadReferenceNodes(int N_){
   int Nrows, Ncols;
 
   /* Nodal Data */
-  readDfloatArray(fp, "Nodal r-coordinates", &(r),&Nrows,&Ncols);
-  readDfloatArray(fp, "Nodal s-coordinates", &(s),&Nrows,&Ncols);
-  readDfloatArray(fp, "Nodal Dr differentiation matrix", &(Dr), &Nrows, &Ncols);
-  readDfloatArray(fp, "Nodal Ds differentiation matrix", &(Ds), &Nrows, &Ncols);
-  readIntArray   (fp, "Nodal Face nodes", &(faceNodes), &Nrows, &Ncols);
-  readDfloatArray(fp, "Nodal Lift Matrix", &(LIFT), &Nrows, &Ncols);
+  readDfloatArray(comm, fp, "Nodal r-coordinates", &(r),&Nrows,&Ncols);
+  readDfloatArray(comm, fp, "Nodal s-coordinates", &(s),&Nrows,&Ncols);
+  readDfloatArray(comm, fp, "Nodal Dr differentiation matrix", &(Dr), &Nrows, &Ncols);
+  readDfloatArray(comm, fp, "Nodal Ds differentiation matrix", &(Ds), &Nrows, &Ncols);
+  readIntArray   (comm, fp, "Nodal Face nodes", &(faceNodes), &Nrows, &Ncols);
+  readDfloatArray(comm, fp, "Nodal Lift Matrix", &(LIFT), &Nrows, &Ncols);
 
-  readDfloatArray(fp, "Nodal 1D GLL Nodes", &(gllz), &Nrows, &Ncols);
-  readDfloatArray(fp, "Nodal 1D GLL Weights", &(gllw), &Nrows, &Ncols);
-  readDfloatArray(fp, "Nodal 1D differentiation matrix", &(D), &Nrows, &Ncols);
+  readDfloatArray(comm, fp, "Nodal 1D GLL Nodes", &(gllz), &Nrows, &Ncols);
+  readDfloatArray(comm, fp, "Nodal 1D GLL Weights", &(gllw), &Nrows, &Ncols);
+  readDfloatArray(comm, fp, "Nodal 1D differentiation matrix", &(D), &Nrows, &Ncols);
 
-  readDfloatArray(fp, "1D degree raise matrix", &(interpRaise), &Nrows, &Ncols);
-  readDfloatArray(fp, "1D degree lower matrix", &(interpLower), &Nrows, &Ncols);
+  readDfloatArray(comm, fp, "1D degree raise matrix", &(interpRaise), &Nrows, &Ncols);
+  readDfloatArray(comm, fp, "1D degree lower matrix", &(interpLower), &Nrows, &Ncols);
 
   /* Plotting data */
-  readDfloatArray(fp, "Plotting r-coordinates", &(plotR),&Nrows,&Ncols);
-  readDfloatArray(fp, "Plotting s-coordinates", &(plotS),&Nrows,&Ncols);
+  readDfloatArray(comm, fp, "Plotting r-coordinates", &(plotR),&Nrows,&Ncols);
+  readDfloatArray(comm, fp, "Plotting s-coordinates", &(plotS),&Nrows,&Ncols);
   plotNp = Nrows;
 
-  readDfloatArray(fp, "Plotting Interpolation Matrix", &(plotInterp),&Nrows,&Ncols);
-  readIntArray   (fp, "Plotting triangulation", &(plotEToV), &Nrows, &Ncols);
+  readDfloatArray(comm, fp, "Plotting Interpolation Matrix", &(plotInterp),&Nrows,&Ncols);
+  readIntArray   (comm, fp, "Plotting triangulation", &(plotEToV), &Nrows, &Ncols);
   plotNelements = Nrows;
   plotNverts = Ncols;
 
   /* Quadrature data */
-  readDfloatArray(fp, "Quadrature r-coordinates", &(cubr),&Nrows,&Ncols);
-  readDfloatArray(fp, "Quadrature weights", &(cubw),&Nrows,&Ncols);
+  readDfloatArray(comm, fp, "Quadrature r-coordinates", &(cubr),&Nrows,&Ncols);
+  readDfloatArray(comm, fp, "Quadrature weights", &(cubw),&Nrows,&Ncols);
   cubNq = Nrows;
   cubNp = cubNq*cubNq;
 
-  readDfloatArray(fp, "Quadrature Interpolation Matrix", &(cubInterp),&Nrows,&Ncols);
-  readDfloatArray(fp, "Quadrature Weak D Differentiation Matrix", &(cubDW),&Nrows,&Ncols);
-  readDfloatArray(fp, "Quadrature Projection Matrix", &(cubProject),&Nrows,&Ncols);
+  readDfloatArray(comm, fp, "Quadrature Interpolation Matrix", &(cubInterp),&Nrows,&Ncols);
+  readDfloatArray(comm, fp, "Quadrature Weak D Differentiation Matrix", &(cubDW),&Nrows,&Ncols);
+  readDfloatArray(comm, fp, "Quadrature Projection Matrix", &(cubProject),&Nrows,&Ncols);
 
   /* Cubature data */
-  // readDfloatArray(fp, "Cubature r-coordinates", &(cubr),&Nrows,&Ncols);
-  // readDfloatArray(fp, "Cubature s-coordinates", &(cubs),&Nrows,&Ncols);
-  // readDfloatArray(fp, "Cubature weights", &(cubw),&Nrows,&Ncols);
+  // readDfloatArray(comm, fp, "Cubature r-coordinates", &(cubr),&Nrows,&Ncols);
+  // readDfloatArray(comm, fp, "Cubature s-coordinates", &(cubs),&Nrows,&Ncols);
+  // readDfloatArray(comm, fp, "Cubature weights", &(cubw),&Nrows,&Ncols);
   // cubNp = Nrows;
 
-  // readDfloatArray(fp, "Cubature Interpolation Matrix", &(cubInterp),&Nrows,&Ncols);
-  // readDfloatArray(fp, "Cubature Weak Dr Differentiation Matrix", &(cubDrW),&Nrows,&Ncols);
-  // readDfloatArray(fp, "Cubature Weak Ds Differentiation Matrix", &(cubDsW),&Nrows,&Ncols);
-  // readDfloatArray(fp, "Cubature Projection Matrix", &(cubProject),&Nrows,&Ncols);
-  // readDfloatArray(fp, "Cubature Surface Interpolation Matrix", &(intInterp),&Nrows,&Ncols);
+  // readDfloatArray(comm, fp, "Cubature Interpolation Matrix", &(cubInterp),&Nrows,&Ncols);
+  // readDfloatArray(comm, fp, "Cubature Weak Dr Differentiation Matrix", &(cubDrW),&Nrows,&Ncols);
+  // readDfloatArray(comm, fp, "Cubature Weak Ds Differentiation Matrix", &(cubDsW),&Nrows,&Ncols);
+  // readDfloatArray(comm, fp, "Cubature Projection Matrix", &(cubProject),&Nrows,&Ncols);
+  // readDfloatArray(comm, fp, "Cubature Surface Interpolation Matrix", &(intInterp),&Nrows,&Ncols);
   // intNfp = Nrows/Nfaces; //number of interpolation points per face
 
-  // readDfloatArray(fp, "Cubature Surface Lift Matrix", &(intLIFT),&Nrows,&Ncols);
+  // readDfloatArray(comm, fp, "Cubature Surface Lift Matrix", &(intLIFT),&Nrows,&Ncols);
 
   /* C0 patch data */
-  readDfloatArray(fp, "C0 overlapping patch forward matrix", &(oasForward), &Nrows, &Ncols);
-  readDfloatArray(fp, "C0 overlapping patch diagonal scaling", &(oasDiagOp), &Nrows, &Ncols);
-  readDfloatArray(fp, "C0 overlapping patch backward matrix", &(oasBack), &Nrows, &Ncols);
+  readDfloatArray(comm, fp, "C0 overlapping patch forward matrix", &(oasForward), &Nrows, &Ncols);
+  readDfloatArray(comm, fp, "C0 overlapping patch diagonal scaling", &(oasDiagOp), &Nrows, &Ncols);
+  readDfloatArray(comm, fp, "C0 overlapping patch backward matrix", &(oasBack), &Nrows, &Ncols);
   /* IPDG patch data */
-  readDfloatArray(fp, "IPDG overlapping patch forward matrix", &(oasForwardDg), &Nrows, &Ncols);
-  readDfloatArray(fp, "IPDG overlapping patch diagonal scaling", &(oasDiagOpDg), &Nrows, &Ncols);
-  readDfloatArray(fp, "IPDG overlapping patch backward matrix", &(oasBackDg), &Nrows, &Ncols);
+  readDfloatArray(comm, fp, "IPDG overlapping patch forward matrix", &(oasForwardDg), &Nrows, &Ncols);
+  readDfloatArray(comm, fp, "IPDG overlapping patch diagonal scaling", &(oasDiagOpDg), &Nrows, &Ncols);
+  readDfloatArray(comm, fp, "IPDG overlapping patch backward matrix", &(oasBackDg), &Nrows, &Ncols);
   NpP = Nrows; //overlapping patch size
 
-  readIntArray   (fp, "SEMFEM reference mesh", &(FEMEToV), &Nrows, &Ncols);
+  readIntArray   (comm, fp, "SEMFEM reference mesh", &(FEMEToV), &Nrows, &Ncols);
   NelFEM = Nrows;
   NpFEM = Np;
 

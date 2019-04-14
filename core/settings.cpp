@@ -33,7 +33,7 @@ void setting_t::updateVal(const string newVal){
   if (!options.size()) {
     val = newVal;
   } else {
-    for (int i=0;i<options.size();i++) {
+    for (size_t i=0;i<options.size();i++) {
       if (newVal==options[i]) {//valid
         val = newVal;
         return;
@@ -43,14 +43,14 @@ void setting_t::updateVal(const string newVal){
     ss << "Value: \"" << newVal << "\" "
        << "not valid for setting " << name <<std::endl
        << "Possible values are: { ";
-    for (int i=0;i<options.size()-1;i++) ss << options[i] << ", ";
+    for (size_t i=0;i<options.size()-1;i++) ss << options[i] << ", ";
     ss << options[options.size()-1] << " }" << std::endl;
     LIBP_ABORT(ss.str());
   }
 }
 
 bool setting_t::compareVal(const string token) const {
-  return (val.find(token) == std::string::npos);
+  return !(val.find(token) == std::string::npos);
 }
 
 string setting_t::toString() const {
@@ -64,7 +64,7 @@ string setting_t::toString() const {
 
   if (options.size()) {
     ss << "Possible values: { ";
-    for (int i=0;i<options.size()-1;i++) ss << options[i] << ", ";
+    for (size_t i=0;i<options.size()-1;i++) ss << options[i] << ", ";
     ss << options[options.size()-1] << " }" << std::endl;
   }
 
@@ -75,6 +75,9 @@ std::ostream& operator<<(ostream& os, const setting_t& setting) {
   os << setting.toString();
   return os;
 }
+
+settings_t::settings_t(MPI_Comm& _comm):
+  comm(_comm) {}
 
 void settings_t::newSetting(const string name, const string val,
                             const string description,
@@ -106,47 +109,94 @@ void settings_t::changeSetting(const string name, const string newVal) {
 //input settings from .rc file
 void settings_t::readSettingsFromFile(string filename) {
   string line;
-  std::ifstream file(filename);
-  if (!file.is_open()) {
-    stringstream ss;
-    ss << "Failed to open: " << filename.c_str();
-    LIBP_ABORT(ss.str());
-  } else {
-    string name = "";
-    string val  = "";
+  std::ifstream file;
 
-    //read settings
-    while (getline(file,line)) {
-      int size = line.length();
+  int rank;
+  MPI_Comm_rank(comm, &rank);
 
-      for(int i=0; i<size; i++){
-        char c = line[i];
-
-        // ignore comments
-        if(c == '#') break;
-
-        if(c == '['){ // new setting
-          //add current pair if populated
-          if (name.length() && val.length())
-            changeSetting(name, val);
-
-          name=""; val=""; i++;
-          while(i < size && line[i] != ']')
-            name += line[i++];
-
-        // Else add the character
-        } else {
-          // remove whitespace
-          if(isspace(c)) continue;
-
-          val += c;
-        }
-      }
-
-      if (name.length() && val.length())
-        changeSetting(name, val);
+  //only the root rank performs the read
+  if (!rank) {
+    file.open(filename);
+    if (!file.is_open()) {
+      stringstream ss;
+      ss << "Failed to open: " << filename.c_str();
+      LIBP_ABORT(ss.str());
     }
+  }
+
+  string name = "";
+  string val  = "";
+
+  //read settings
+  int flag;
+
+  if (!rank)
+   flag = (getline(file,line)) ? 1 : 0;
+
+  MPI_Bcast(&flag, 1, MPI_INT, 0, comm);
+
+  while (flag) {
+    int size;
+    char *cline;
+
+    if (!rank) {
+      size = line.length();
+    }
+    MPI_Bcast(&size, 1, MPI_INT, 0, comm);
+
+    cline = (char*) calloc(size+1,sizeof(char));
+    if (!rank) strcpy(cline, line.c_str());
+
+    MPI_Bcast(cline, size, MPI_CHAR, 0, comm);
+
+    for(int i=0; i<size; i++){
+      char c = cline[i];
+
+      // ignore comments
+      if(c == '#') break;
+
+      if(c == '['){ // new setting
+        //add current pair if populated
+        if (name.length() && val.length())
+          changeSetting(name, val);
+
+        name=""; val=""; i++;
+        while(i < size && cline[i] != ']')
+          name += cline[i++];
+
+      // Else add the character
+      } else {
+        // remove whitespace
+        if(isspace(c)) continue;
+
+        val += c;
+      }
+    }
+    if (cline) free(cline);
+
+    if (name.length() && val.length())
+      changeSetting(name, val);
+
+    if (!rank)
+      flag = (getline(file,line)) ? 1 : 0;
+
+    MPI_Bcast(&flag, 1, MPI_INT, 0, comm);
+  }
+
+  if (!rank)
     file.close();
+}
+
+string settings_t::getSetting(const string name) const {
+  auto search = settings.find(name);
+  if (search != settings.end()) {
+    setting_t* val = search->second;
+    return val->getVal<string>();
+  } else {
+    stringstream ss;
+    ss << "Unable to find setting: [" << name << "]";
+    LIBP_ABORT(ss.str());
+    return string();
   }
 }
 
@@ -159,12 +209,13 @@ bool settings_t::compareSetting(const string name, const string token) const {
     stringstream ss;
     ss << "Unable to find setting: [" << name.c_str() << "]";
     LIBP_ABORT(ss.str());
+    return false;
   }
 }
 
 void settings_t::report() {
   std::cout << "Settings:\n\n";
-  for (int i = 0; i < insertOrder.size(); ++i) {
+  for (size_t i = 0; i < insertOrder.size(); ++i) {
     const string &s = insertOrder[i];
     setting_t* val = settings[s];
     std::cout << *val << std::endl;

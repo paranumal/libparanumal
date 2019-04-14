@@ -35,15 +35,15 @@ extern "C"
   void ogsHostGatherScatter    (void *v, const char *type, const char *op, void *gsh);
   void ogsHostGatherScatterVec (void *v, const int k, const char *type, const char *op, void *gsh);
   void ogsHostGatherScatterMany(void *v, const int k, const char *type, const char *op, void *gsh);
-  
+
   void ogsHostGather    (void *v, const char *type, const char *op, void *gsh);
   void ogsHostGatherVec (void *v, const int k, const char *type, const char *op, void *gsh);
   void ogsHostGatherMany(void *v, const int k, const char *type, const char *op, void *gsh);
-  
+
   void ogsHostScatter    (void *v, const char *type, const char *op, void *gsh);
   void ogsHostScatterVec (void *v, const int k, const char *type, const char *op, void *gsh);
   void ogsHostScatterMany(void *v, const int k, const char *type, const char *op, void *gsh);
-  
+
   void ogsHostFree(void *gsh);
 }
 

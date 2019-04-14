@@ -49,12 +49,12 @@ PARALMOND_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
 
 #object dependancies
 DEPS=$(wildcard *.hpp) \
-		 $(wildcard include/*.hpp) \
+     $(wildcard include/*.hpp) \
      $(wildcard $(LIBP_INCLUDE_DIR)/*.h) \
      $(OGS_DIR)/ogs.hpp
 
 SRC =$(wildcard src/*.cpp) \
-		 $(wildcard src/agmgSetup/*.cpp)
+     $(wildcard src/agmgSetup/*.cpp)
 OBJS=$(SRC:.cpp=.o)
 
 # types of files we are going to construct rules for

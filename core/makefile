@@ -33,8 +33,7 @@ endif
 endif
 
 #includes
-INCLUDES=-I. \
-         -I${LIBP_LIBS_DIR}/include \
+INCLUDES=-I${LIBP_LIBS_DIR}/include \
          ${LIBP_INCLUDES}
 
 #defines
@@ -42,55 +41,43 @@ DEFINES =${LIBP_DEFINES} \
          -DLIBP_DIR='"${LIBP_DIR}"' \
 
 #.cpp compilation flags
-MESH_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
+CORE_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
 
 #object dependancies
 DEPS=$(wildcard $(LIBP_INCLUDE_DIR)/*.h) \
-     $(wildcard $(LIBP_INCLUDE_DIR)/*.hpp) \
-     $(wildcard ${LIBP_LIBS_DIR}/include/*.hpp) \
-     $(wildcard *.hpp)
+     $(LIBP_INCLUDE_DIR)/settings.hpp \
+     $(LIBP_INCLUDE_DIR)/solver.hpp \
+     $(LIBP_INCLUDE_DIR)/timeStepper.hpp
 
-CSRC   =$(wildcard *.c) 
-CPPSRC =$(wildcard *.cpp)
-
-OBJS=$(CSRC:.c=.o) \
-     $(CPPSRC:.cpp=.o)
+SRC =$(wildcard *.cpp)
+OBJS=$(SRC:.cpp=.o)
 
 .PHONY: all lib clean realclean silentUpdate
 
 all: lib
 
-lib: libmesh.a silentUpdate
+lib: libcore.a silentUpdate
 
-libmesh.a: $(OBJS)
+libcore.a: $(OBJS)
 ifneq (,${verbose})
-	ar -cr libmesh.a $(OBJS)
+	ar -cr libcore.a $(OBJS)
 else
 	@printf "%b" "$(LIB_COLOR)Building library $(@F)$(NO_COLOR)\n";
-	@ar -cr libmesh.a $(OBJS)
+	@ar -cr libcore.a $(OBJS)
 endif
 
 silentUpdate:
 	@true
 
-# rule for .c files
-%.o: %.c $(DEPS)
-ifneq (,${verbose})
-	$(CXX) -o $*.o -c $*.c $(MESH_CXXFLAGS)
-else
-	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
-	@$(CXX) -o $*.o -c $*.c $(MESH_CXXFLAGS)
-endif
-
 # rule for .cpp files
 %.o: %.cpp $(DEPS)
 ifneq (,${verbose})
-	$(CXX) -o $*.o -c $*.cpp $(MESH_CXXFLAGS)
+	$(CXX) -o $*.o -c $*.cpp $(CORE_CXXFLAGS)
 else
 	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
-	@$(CXX) -o $*.o -c $*.cpp $(MESH_CXXFLAGS)
+	@$(CXX) -o $*.o -c $*.cpp $(CORE_CXXFLAGS)
 endif
 
 #cleanup
 clean:
-	rm -f *.o libmesh.a
+	rm -f *.o libcore.a

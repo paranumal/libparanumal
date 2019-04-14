@@ -25,6 +25,7 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
+#include "mesh2D.hpp"
 
 /* compute outwards facing normals, surface Jacobian, and volume Jacobian for all face nodes */
 void meshQuad2D::SurfaceGeometricFactors(){

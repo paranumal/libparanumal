@@ -43,17 +43,17 @@ void mesh_t::PrintPartitionStatistics(){
   }
 
   int Nmessages = 0;
-  for(int r=0;r<size;++r)
-    if(comms[r]>0)
+  for(int rr=0;rr<size;++rr)
+    if(comms[rr]>0)
       ++Nmessages;
 
-  for(int r=0;r<size;++r){
+  for(int rr=0;rr<size;++rr){
     MPI_Barrier(comm);
-    if(r==rank){
+    if(rr==rank){
       fflush(stdout);
       printf("r: %02d [", rank);
-      for(int s=0;s<size;++s){
-        printf(" %04d", comms[s]);
+      for(int ss=0;ss<size;++ss){
+        printf(" %04d", comms[ss]);
       }
       printf("] (Nelements=" dlongFormat ", Nmessages=%d, Ncomms=%d)\n", Nelements,Nmessages, Ncomms);
       fflush(stdout);

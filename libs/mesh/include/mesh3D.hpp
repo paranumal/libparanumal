@@ -31,7 +31,8 @@ SOFTWARE.
 
 class mesh3D: public mesh_t {
 public:
-  mesh3D(occa::device& device, MPI_Comm comm);
+  mesh3D(occa::device& _device, MPI_Comm& _comm,
+         settings_t& _settings, occa::properties& _props);
 
   // repartition elements in parallel
   void GeometricPartition();
@@ -43,15 +44,18 @@ public:
   void ConnectFaceModes(int *faceModes, dfloat *V) {}; //not implemented yet
 
   // setup occa buffers
-  void OccaSetup(occa::properties &kernelInfo);
+  virtual void OccaSetup(occa::properties &kernelInfo);
 
   // print out mesh partition in parallel
   void PrintVTU(const char *fileName);
+
+  dfloat MinCharacteristicLength();
 };
 
 class meshTri3D: public mesh3D {
 public:
-  meshTri3D(occa::device& device, MPI_Comm comm);
+  meshTri3D(occa::device& _device, MPI_Comm& _comm,
+            settings_t& _settings, occa::properties& _props);
   void ParallelReader(const char *fileName);
   void LoadReferenceNodes(int N);
   void PhysicalNodes();
@@ -62,7 +66,8 @@ public:
 
 class meshQuad3D: public mesh3D {
 public:
-  meshQuad3D(occa::device& device, MPI_Comm comm);
+  meshQuad3D(occa::device& _device, MPI_Comm& _comm,
+             settings_t& _settings, occa::properties& _props);
   void ParallelReader(const char *fileName);
   void LoadReferenceNodes(int N);
   void PhysicalNodes();
@@ -73,7 +78,8 @@ public:
 
 class meshTet3D: public mesh3D {
 public:
-  meshTet3D(occa::device& device, MPI_Comm comm);
+  meshTet3D(occa::device& _device, MPI_Comm& _comm,
+            settings_t& _settings, occa::properties& _props);
   void ParallelReader(const char *fileName);
   void LoadReferenceNodes(int N);
   void PhysicalNodes();
@@ -84,7 +90,8 @@ public:
 
 class meshHex3D: public mesh3D {
 public:
-  meshHex3D(occa::device& device, MPI_Comm comm);
+  meshHex3D(occa::device& _device, MPI_Comm& _comm,
+            settings_t& _settings, occa::properties& _props);
   void ParallelReader(const char *fileName);
   void LoadReferenceNodes(int N);
   void PhysicalNodes();
@@ -92,9 +99,6 @@ public:
   void SurfaceGeometricFactors();
   void OccaSetup(occa::properties &kernelInfo);
 };
-
-// mesh3D *meshSetupBoxHex3D(int N, setupAide &options);
-// void meshConnectPeriodicFaceNodes3D(mesh3D *mesh, dfloat xper, dfloat yper, dfloat zper);
 
 #endif
 

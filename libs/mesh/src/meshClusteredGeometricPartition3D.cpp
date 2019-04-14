@@ -307,7 +307,7 @@ dfloat meshClusteredGeometricPartition3D(mesh_t *mesh, int Nclusters, cluster_t 
   for(int r=1;r<size;++r)
     recvOffsets[r] = recvOffsets[r-1] + Nrecv[r-1];
 
-  parallelCluster_t *recvParallelClusters;
+  parallelCluster_t *recvParallelClusters=NULL;
   if (Nclusters)
     recvParallelClusters = (parallelCluster_t*) calloc(Nclusters, sizeof(parallelCluster_t));
 
@@ -518,11 +518,6 @@ void balance3D(int rank, int size, MPI_Comm comm,
 
 dfloat improveClusteredPartition3D(int rank, int size, MPI_Comm comm,
 				   int *Nclusters, parallelCluster_t **parallelClusters){
-
-  int tag = 999;
-
-  MPI_Request recv, send;
-  MPI_Status status;
 
   dfloat *totalWeights = (dfloat *) calloc(size,sizeof(dfloat));
   dfloat quality;

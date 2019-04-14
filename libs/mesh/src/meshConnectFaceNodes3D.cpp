@@ -25,11 +25,12 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
+#include "mesh3D.hpp"
 
 static int findBestMatch(dfloat x1, dfloat y1, dfloat z1,
                    int Np2, int *nodeList, dfloat *x2, dfloat *y2, dfloat *z2, int *nP){
 
-  int matchIndex;
+  int matchIndex=0;
   dfloat mindist2=1e9;
 
   for(int n=0;n<Np2;++n){

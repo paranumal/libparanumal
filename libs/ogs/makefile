@@ -32,27 +32,30 @@ else
 endif
 endif
 
+LIBOGS_DIR=${LIBP_LIBS_DIR}/ogs
+
 #libraries
 GS_DIR=${LIBP_TPL_DIR}/gslib
 
 #includes
 INCLUDES=${LIBP_INCLUDES} \
-		-I${LIBP_LIBS_DIR}/include \
-		-I${GS_DIR}/src \
-		-I./include/
+         -I${LIBP_LIBS_DIR}/include \
+         -I${GS_DIR}/src \
+         -I./include
 
 #defines
 DEFINES=${LIBP_DEFINES} \
-		-D DOGS='"${CURDIR}"'
+        -D DOGS='"${CURDIR}"'
 
 #.cpp compilation flags
 OGS_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
 
 #object dependancies
-DEPS=$(wildcard ${LIBP_LIBS_DIR}/include/*.hpp) \
-     $(wildcard ./include/*.h) \
-     $(wildcard ./include/*.hpp) \
-     $(wildcard ./include/*.tpp)
+DEPS:=$(wildcard $(LIBP_INCLUDE_DIR)/*.h) \
+     $(wildcard ${LIBOGS_DIR}/include/*.h) \
+     $(wildcard ${LIBOGS_DIR}/include/*.hpp) \
+     $(wildcard ${LIBOGS_DIR}/include/*.tpp) \
+     ${LIBP_INCLUDE_DIR}/ogs.hpp
 
 SRC=$(wildcard src/*.cpp)
 OBJS=$(SRC:.cpp=.o)
@@ -67,14 +70,14 @@ COBJS=$(CSRC:.c=.o)
 
 all: lib
 
-lib: ../lib/libogs.a silentUpdate
+lib: ../libogs.a silentUpdate
 
-../lib/libogs.a:$(OBJS) ${COBJS}
+../libogs.a:$(OBJS) ${COBJS}
 ifneq (,${verbose})
-	ar -cr ../lib/libogs.a $(OBJS) $(COBJS)
+	ar -cr ../libogs.a $(OBJS) $(COBJS)
 else
 	@printf "%b" "$(LIB_COLOR)Building library $(@F)$(NO_COLOR)\n";
-	@ar -cr ../lib/libogs.a $(OBJS) $(COBJS)
+	@ar -cr ../libogs.a $(OBJS) $(COBJS)
 endif
 
 silentUpdate:
@@ -100,7 +103,7 @@ endif
 
 #cleanup
 clean:
-	rm -f src/*.o ../lib/libogs.a
+	rm -f src/*.o ../libogs.a
 
 realclean: clean
 	${MAKE} -C $(GS_DIR) clean

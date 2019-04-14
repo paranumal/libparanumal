@@ -25,6 +25,7 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
+#include "mesh3D.hpp"
 
 void meshHex3D::OccaSetup(occa::properties &kernelInfo){
 
@@ -57,8 +58,6 @@ void meshHex3D::OccaSetup(occa::properties &kernelInfo){
       cubDWT[n+m*cubNq] = cubDW[n*cubNq+m];
     }
   }
-
-  dfloat *LIFTT = (dfloat*) calloc(Np*Nfaces*Nfp, sizeof(dfloat));
 
   o_LIFTT =
     device.malloc(1*sizeof(dfloat)); // dummy
@@ -100,7 +99,7 @@ void meshHex3D::OccaSetup(occa::properties &kernelInfo){
       //interpolate in j and store
       for(int ny=0;ny<cubNq;++ny){
         for(int nx=0;nx<cubNq;++nx){
-          dfloat x=0.0, y=0.0, z=0.0;
+          dfloat xn=0.0, yn=0.0, zn=0.0;
 
           for(int m=0;m<Nq;++m){
             dfloat xm = ix[nx + m*cubNq];
@@ -108,15 +107,15 @@ void meshHex3D::OccaSetup(occa::properties &kernelInfo){
             dfloat zm = iz[nx + m*cubNq];
 
             dfloat Inm = cubInterp[m+ny*Nq];
-            x += Inm*xm;
-            y += Inm*ym;
-            z += Inm*zm;
+            xn += Inm*xm;
+            yn += Inm*ym;
+            zn += Inm*zm;
           }
 
           dlong id = nx + ny*cubNq + f*cubNfp + e*Nfaces*cubNfp;
-          intx[id] = x;
-          inty[id] = y;
-          intz[id] = z;
+          intx[id] = xn;
+          inty[id] = yn;
+          intz[id] = zn;
         }
       }
     }
@@ -134,7 +133,7 @@ void meshHex3D::OccaSetup(occa::properties &kernelInfo){
   dfloat *DT = (dfloat*) calloc(Nq*Nq,sizeof(dfloat));
   for(int j=0;j<Nq;++j){
     for(int i=0;i<Nq;++i){
-DT[i*Nq+j] = D[j*Nq+i];
+      DT[i*Nq+j] = D[j*Nq+i];
     }
   }
 

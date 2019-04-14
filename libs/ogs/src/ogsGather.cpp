@@ -35,28 +35,28 @@ void ogsGather_mul(void *gv, void *v, const size_t Nbytes, const char *type, ogs
 void ogsGather_min(void *gv, void *v, const size_t Nbytes, const char *type, ogs_t *ogs);
 void ogsGather_max(void *gv, void *v, const size_t Nbytes, const char *type, ogs_t *ogs);
 
-void ogsGather(occa::memory o_gv, 
-               occa::memory o_v, 
-               const char *type, 
-               const char *op, 
+void ogsGather(occa::memory o_gv,
+               occa::memory o_v,
+               const char *type,
+               const char *op,
                ogs_t *ogs){
   ogsGatherStart (o_gv, o_v, type, op, ogs);
   ogsGatherFinish(o_gv, o_v, type, op, ogs);
 }
 
-void ogsGatherStart(occa::memory o_gv, 
-                    occa::memory o_v, 
-                    const char *type, 
-                    const char *op, 
+void ogsGatherStart(occa::memory o_gv,
+                    occa::memory o_v,
+                    const char *type,
+                    const char *op,
                     ogs_t *ogs){
-  size_t Nbytes;
-  if (!strcmp(type, "float")) 
+  size_t Nbytes=0;
+  if (!strcmp(type, "float"))
     Nbytes = sizeof(float);
-  else if (!strcmp(type, "double")) 
+  else if (!strcmp(type, "double"))
     Nbytes = sizeof(double);
-  else if (!strcmp(type, "int")) 
+  else if (!strcmp(type, "int"))
     Nbytes = sizeof(int);
-  else if (!strcmp(type, "long long int")) 
+  else if (!strcmp(type, "long long int"))
     Nbytes = sizeof(long long int);
 
   if (ogs->NhaloGather) {
@@ -71,7 +71,7 @@ void ogsGatherStart(occa::memory o_gv,
   // gather halo nodes on device
   if (ogs->NhaloGather) {
     occaGather(ogs->NhaloGather, ogs->o_haloGatherOffsets, ogs->o_haloGatherIds, type, op, o_v, ogs::o_haloBuf);
-    
+
     ogs->device.finish();
     ogs->device.setStream(ogs::dataStream);
     ogs::o_haloBuf.copyTo(ogs::haloBuf, ogs->NhaloGather*Nbytes, 0, "async: true");
@@ -80,19 +80,19 @@ void ogsGatherStart(occa::memory o_gv,
 }
 
 
-void ogsGatherFinish(occa::memory o_gv, 
-                     occa::memory o_v, 
-                     const char *type, 
-                     const char *op, 
+void ogsGatherFinish(occa::memory o_gv,
+                     occa::memory o_v,
+                     const char *type,
+                     const char *op,
                      ogs_t *ogs){
-  size_t Nbytes;
-  if (!strcmp(type, "float")) 
+  size_t Nbytes=0;
+  if (!strcmp(type, "float"))
     Nbytes = sizeof(float);
-  else if (!strcmp(type, "double")) 
+  else if (!strcmp(type, "double"))
     Nbytes = sizeof(double);
-  else if (!strcmp(type, "int")) 
+  else if (!strcmp(type, "int"))
     Nbytes = sizeof(int);
-  else if (!strcmp(type, "long long int")) 
+  else if (!strcmp(type, "long long int"))
     Nbytes = sizeof(long long int);
 
   if(ogs->NlocalGather) {
@@ -108,7 +108,7 @@ void ogsGatherFinish(occa::memory o_gv,
 
     // copy totally gather halo data back from HOST to DEVICE
     if (ogs->NownedHalo)
-      o_gv.copyFrom(ogs::haloBuf, ogs->NownedHalo*Nbytes, 
+      o_gv.copyFrom(ogs::haloBuf, ogs->NownedHalo*Nbytes,
                               ogs->NlocalGather*Nbytes, "async: true");
 
     ogs->device.finish();
@@ -116,19 +116,19 @@ void ogsGatherFinish(occa::memory o_gv,
   }
 }
 
-void ogsGather(void *gv, 
-               void *v, 
-               const char *type, 
-               const char *op, 
+void ogsGather(void *gv,
+               void *v,
+               const char *type,
+               const char *op,
                ogs_t *ogs){
-  size_t Nbytes;
-  if (!strcmp(type, "float")) 
+  size_t Nbytes=0;
+  if (!strcmp(type, "float"))
     Nbytes = sizeof(float);
-  else if (!strcmp(type, "double")) 
+  else if (!strcmp(type, "double"))
     Nbytes = sizeof(double);
-  else if (!strcmp(type, "int")) 
+  else if (!strcmp(type, "int"))
     Nbytes = sizeof(int);
-  else if (!strcmp(type, "long long int")) 
+  else if (!strcmp(type, "long long int"))
     Nbytes = sizeof(long long int);
 
   if (ogs->NhaloGather) {
@@ -138,160 +138,160 @@ void ogsGather(void *gv,
     }
   }
 
-  if (!strcmp(op, "add")) 
+  if (!strcmp(op, "add"))
     ogsGather_add(gv, v, Nbytes, type, ogs);
-  else if (!strcmp(op, "mul")) 
+  else if (!strcmp(op, "mul"))
     ogsGather_mul(gv, v, Nbytes, type, ogs);
-  else if (!strcmp(op, "min")) 
+  else if (!strcmp(op, "min"))
     ogsGather_min(gv, v, Nbytes, type, ogs);
-  else if (!strcmp(op, "max")) 
+  else if (!strcmp(op, "max"))
     ogsGather_max(gv, v, Nbytes, type, ogs);
 }
 
 void ogsGather_add(void *gv, void *v, const size_t Nbytes, const char *type, ogs_t *ogs){
 
-  if (!strcmp(type, "float")) 
+  if (!strcmp(type, "float"))
     gather_add<float>(ogs->NhaloGather, ogs->haloGatherOffsets,
                       ogs->haloGatherIds, (float*)v, (float*)ogs::hostBuf);
-  else if (!strcmp(type, "double")) 
+  else if (!strcmp(type, "double"))
     gather_add<double>(ogs->NhaloGather, ogs->haloGatherOffsets,
                       ogs->haloGatherIds, (double*)v, (double*)ogs::hostBuf);
-  else if (!strcmp(type, "int")) 
+  else if (!strcmp(type, "int"))
     gather_add<int>(ogs->NhaloGather, ogs->haloGatherOffsets,
                       ogs->haloGatherIds, (int*)v, (int*)ogs::hostBuf);
-  else if (!strcmp(type, "long long int")) 
+  else if (!strcmp(type, "long long int"))
     gather_add<long long int>(ogs->NhaloGather, ogs->haloGatherOffsets,
                       ogs->haloGatherIds, (long long int*)v, (long long int*)ogs::hostBuf);
 
   if (ogs->NhaloGather) {
     // MPI based scatter using gslib
     ogsHostGather(ogs::hostBuf, type, ogsAdd, ogs->haloGshNonSym);
-    
+
     if (ogs->NownedHalo)
       memcpy((char*)gv+ogs->NlocalGather*Nbytes, ogs::hostBuf, ogs->NownedHalo*Nbytes);
   }
 
-  if (!strcmp(type, "float")) 
+  if (!strcmp(type, "float"))
     gather_add<float>(ogs->NlocalGather, ogs->localGatherOffsets,
                       ogs->localGatherIds, (float*)v, (float*)gv);
-  else if (!strcmp(type, "double")) 
+  else if (!strcmp(type, "double"))
     gather_add<double>(ogs->NlocalGather, ogs->localGatherOffsets,
                       ogs->localGatherIds, (double*)v, (double*)gv);
-  else if (!strcmp(type, "int")) 
+  else if (!strcmp(type, "int"))
     gather_add<int>(ogs->NlocalGather, ogs->localGatherOffsets,
                       ogs->localGatherIds, (int*)v, (int*)gv);
-  else if (!strcmp(type, "long long int")) 
+  else if (!strcmp(type, "long long int"))
     gather_add<long long int>(ogs->NlocalGather, ogs->localGatherOffsets,
                       ogs->localGatherIds, (long long int*)v, (long long int*)gv);
 }
 
 void ogsGather_mul(void *gv, void *v, const size_t Nbytes, const char *type, ogs_t *ogs){
 
-  if (!strcmp(type, "float")) 
+  if (!strcmp(type, "float"))
     gather_mul<float>(ogs->NhaloGather, ogs->haloGatherOffsets,
                       ogs->haloGatherIds, (float*)v, (float*)ogs::hostBuf);
-  else if (!strcmp(type, "double")) 
+  else if (!strcmp(type, "double"))
     gather_mul<double>(ogs->NhaloGather, ogs->haloGatherOffsets,
                       ogs->haloGatherIds, (double*)v, (double*)ogs::hostBuf);
-  else if (!strcmp(type, "int")) 
+  else if (!strcmp(type, "int"))
     gather_mul<int>(ogs->NhaloGather, ogs->haloGatherOffsets,
                       ogs->haloGatherIds, (int*)v, (int*)ogs::hostBuf);
-  else if (!strcmp(type, "long long int")) 
+  else if (!strcmp(type, "long long int"))
     gather_mul<long long int>(ogs->NhaloGather, ogs->haloGatherOffsets,
                       ogs->haloGatherIds, (long long int*)v, (long long int*)ogs::hostBuf);
 
   if (ogs->NhaloGather) {
     // MPI based scatter using gslib
     ogsHostGather(ogs::hostBuf, type, ogsMul, ogs->haloGshNonSym);
-    
+
     if (ogs->NownedHalo)
       memcpy((char*)gv+ogs->NlocalGather*Nbytes, ogs::hostBuf, ogs->NownedHalo*Nbytes);
   }
 
-  if (!strcmp(type, "float")) 
+  if (!strcmp(type, "float"))
     gather_mul<float>(ogs->NlocalGather, ogs->localGatherOffsets,
                       ogs->localGatherIds, (float*)v, (float*)gv);
-  else if (!strcmp(type, "double")) 
+  else if (!strcmp(type, "double"))
     gather_mul<double>(ogs->NlocalGather, ogs->localGatherOffsets,
                       ogs->localGatherIds, (double*)v, (double*)gv);
-  else if (!strcmp(type, "int")) 
+  else if (!strcmp(type, "int"))
     gather_mul<int>(ogs->NlocalGather, ogs->localGatherOffsets,
                       ogs->localGatherIds, (int*)v, (int*)gv);
-  else if (!strcmp(type, "long long int")) 
+  else if (!strcmp(type, "long long int"))
     gather_mul<long long int>(ogs->NlocalGather, ogs->localGatherOffsets,
                       ogs->localGatherIds, (long long int*)v, (long long int*)gv);
 }
 
 void ogsGather_min(void *gv, void *v, const size_t Nbytes, const char *type, ogs_t *ogs){
 
-  if (!strcmp(type, "float")) 
+  if (!strcmp(type, "float"))
     gather_min<float>(ogs->NhaloGather, ogs->haloGatherOffsets,
                       ogs->haloGatherIds, (float*)v, (float*)ogs::hostBuf);
-  else if (!strcmp(type, "double")) 
+  else if (!strcmp(type, "double"))
     gather_min<double>(ogs->NhaloGather, ogs->haloGatherOffsets,
                       ogs->haloGatherIds, (double*)v, (double*)ogs::hostBuf);
-  else if (!strcmp(type, "int")) 
+  else if (!strcmp(type, "int"))
     gather_min<int>(ogs->NhaloGather, ogs->haloGatherOffsets,
                       ogs->haloGatherIds, (int*)v, (int*)ogs::hostBuf);
-  else if (!strcmp(type, "long long int")) 
+  else if (!strcmp(type, "long long int"))
     gather_min<long long int>(ogs->NhaloGather, ogs->haloGatherOffsets,
                       ogs->haloGatherIds, (long long int*)v, (long long int*)ogs::hostBuf);
 
   if (ogs->NhaloGather) {
     // MPI based scatter using gslib
     ogsHostGather(ogs::hostBuf, type, ogsMin, ogs->haloGshNonSym);
-    
+
     if (ogs->NownedHalo)
       memcpy((char*)gv+ogs->NlocalGather*Nbytes, ogs::hostBuf, ogs->NownedHalo*Nbytes);
   }
 
-  if (!strcmp(type, "float")) 
+  if (!strcmp(type, "float"))
     gather_min<float>(ogs->NlocalGather, ogs->localGatherOffsets,
                       ogs->localGatherIds, (float*)v, (float*)gv);
-  else if (!strcmp(type, "double")) 
+  else if (!strcmp(type, "double"))
     gather_min<double>(ogs->NlocalGather, ogs->localGatherOffsets,
                       ogs->localGatherIds, (double*)v, (double*)gv);
-  else if (!strcmp(type, "int")) 
+  else if (!strcmp(type, "int"))
     gather_min<int>(ogs->NlocalGather, ogs->localGatherOffsets,
                       ogs->localGatherIds, (int*)v, (int*)gv);
-  else if (!strcmp(type, "long long int")) 
+  else if (!strcmp(type, "long long int"))
     gather_min<long long int>(ogs->NlocalGather, ogs->localGatherOffsets,
                       ogs->localGatherIds, (long long int*)v, (long long int*)gv);
 }
 
 void ogsGather_max(void *gv, void *v, const size_t Nbytes, const char *type, ogs_t *ogs){
 
-  if (!strcmp(type, "float")) 
+  if (!strcmp(type, "float"))
     gather_max<float>(ogs->NhaloGather, ogs->haloGatherOffsets,
                       ogs->haloGatherIds, (float*)v, (float*)ogs::hostBuf);
-  else if (!strcmp(type, "double")) 
+  else if (!strcmp(type, "double"))
     gather_max<double>(ogs->NhaloGather, ogs->haloGatherOffsets,
                       ogs->haloGatherIds, (double*)v, (double*)ogs::hostBuf);
-  else if (!strcmp(type, "int")) 
+  else if (!strcmp(type, "int"))
     gather_max<int>(ogs->NhaloGather, ogs->haloGatherOffsets,
                       ogs->haloGatherIds, (int*)v, (int*)ogs::hostBuf);
-  else if (!strcmp(type, "long long int")) 
+  else if (!strcmp(type, "long long int"))
     gather_max<long long int>(ogs->NhaloGather, ogs->haloGatherOffsets,
                       ogs->haloGatherIds, (long long int*)v, (long long int*)ogs::hostBuf);
 
   if (ogs->NhaloGather) {
     // MPI based scatter using gslib
     ogsHostGather(ogs::hostBuf, type, ogsMax, ogs->haloGshNonSym);
-    
+
     if (ogs->NownedHalo)
       memcpy((char*)gv+ogs->NlocalGather*Nbytes, ogs::hostBuf, ogs->NownedHalo*Nbytes);
   }
 
-  if (!strcmp(type, "float")) 
+  if (!strcmp(type, "float"))
     gather_max<float>(ogs->NlocalGather, ogs->localGatherOffsets,
                       ogs->localGatherIds, (float*)v, (float*)gv);
-  else if (!strcmp(type, "double")) 
+  else if (!strcmp(type, "double"))
     gather_max<double>(ogs->NlocalGather, ogs->localGatherOffsets,
                       ogs->localGatherIds, (double*)v, (double*)gv);
-  else if (!strcmp(type, "int")) 
+  else if (!strcmp(type, "int"))
     gather_max<int>(ogs->NlocalGather, ogs->localGatherOffsets,
                       ogs->localGatherIds, (int*)v, (int*)gv);
-  else if (!strcmp(type, "long long int")) 
+  else if (!strcmp(type, "long long int"))
     gather_max<long long int>(ogs->NlocalGather, ogs->localGatherOffsets,
                       ogs->localGatherIds, (long long int*)v, (long long int*)gv);
 }
@@ -303,37 +303,37 @@ void occaGather(const  dlong Ngather,
                 const char* op,
                 occa::memory  o_v,
                 occa::memory  o_gv) {
-  
-  if      ((!strcmp(type, "float"))&&(!strcmp(op, "add"))) 
+
+  if      ((!strcmp(type, "float"))&&(!strcmp(op, "add")))
     ogs::gatherKernel_floatAdd(Ngather, o_gatherStarts, o_gatherIds, o_v, o_gv);
-  else if ((!strcmp(type, "float"))&&(!strcmp(op, "mul"))) 
+  else if ((!strcmp(type, "float"))&&(!strcmp(op, "mul")))
     ogs::gatherKernel_floatMul(Ngather, o_gatherStarts, o_gatherIds, o_v, o_gv);
-  else if ((!strcmp(type, "float"))&&(!strcmp(op, "min"))) 
+  else if ((!strcmp(type, "float"))&&(!strcmp(op, "min")))
     ogs::gatherKernel_floatMin(Ngather, o_gatherStarts, o_gatherIds, o_v, o_gv);
-  else if ((!strcmp(type, "float"))&&(!strcmp(op, "max"))) 
+  else if ((!strcmp(type, "float"))&&(!strcmp(op, "max")))
     ogs::gatherKernel_floatMax(Ngather, o_gatherStarts, o_gatherIds, o_v, o_gv);
-  else if ((!strcmp(type, "double"))&&(!strcmp(op, "add"))) 
+  else if ((!strcmp(type, "double"))&&(!strcmp(op, "add")))
     ogs::gatherKernel_doubleAdd(Ngather, o_gatherStarts, o_gatherIds, o_v, o_gv);
-  else if ((!strcmp(type, "double"))&&(!strcmp(op, "mul"))) 
+  else if ((!strcmp(type, "double"))&&(!strcmp(op, "mul")))
     ogs::gatherKernel_doubleMul(Ngather, o_gatherStarts, o_gatherIds, o_v, o_gv);
-  else if ((!strcmp(type, "double"))&&(!strcmp(op, "min"))) 
+  else if ((!strcmp(type, "double"))&&(!strcmp(op, "min")))
     ogs::gatherKernel_doubleMin(Ngather, o_gatherStarts, o_gatherIds, o_v, o_gv);
-  else if ((!strcmp(type, "double"))&&(!strcmp(op, "max"))) 
+  else if ((!strcmp(type, "double"))&&(!strcmp(op, "max")))
     ogs::gatherKernel_doubleMax(Ngather, o_gatherStarts, o_gatherIds, o_v, o_gv);
-  else if ((!strcmp(type, "int"))&&(!strcmp(op, "add"))) 
+  else if ((!strcmp(type, "int"))&&(!strcmp(op, "add")))
     ogs::gatherKernel_intAdd(Ngather, o_gatherStarts, o_gatherIds, o_v, o_gv);
-  else if ((!strcmp(type, "int"))&&(!strcmp(op, "mul"))) 
+  else if ((!strcmp(type, "int"))&&(!strcmp(op, "mul")))
     ogs::gatherKernel_intMul(Ngather, o_gatherStarts, o_gatherIds, o_v, o_gv);
-  else if ((!strcmp(type, "int"))&&(!strcmp(op, "min"))) 
+  else if ((!strcmp(type, "int"))&&(!strcmp(op, "min")))
     ogs::gatherKernel_intMin(Ngather, o_gatherStarts, o_gatherIds, o_v, o_gv);
-  else if ((!strcmp(type, "int"))&&(!strcmp(op, "max"))) 
+  else if ((!strcmp(type, "int"))&&(!strcmp(op, "max")))
     ogs::gatherKernel_intMax(Ngather, o_gatherStarts, o_gatherIds, o_v, o_gv);
-  else if ((!strcmp(type, "long long int"))&&(!strcmp(op, "add"))) 
+  else if ((!strcmp(type, "long long int"))&&(!strcmp(op, "add")))
     ogs::gatherKernel_longAdd(Ngather, o_gatherStarts, o_gatherIds, o_v, o_gv);
-  else if ((!strcmp(type, "long long int"))&&(!strcmp(op, "mul"))) 
+  else if ((!strcmp(type, "long long int"))&&(!strcmp(op, "mul")))
     ogs::gatherKernel_longMul(Ngather, o_gatherStarts, o_gatherIds, o_v, o_gv);
-  else if ((!strcmp(type, "long long int"))&&(!strcmp(op, "min"))) 
+  else if ((!strcmp(type, "long long int"))&&(!strcmp(op, "min")))
     ogs::gatherKernel_longMin(Ngather, o_gatherStarts, o_gatherIds, o_v, o_gv);
-  else if ((!strcmp(type, "long long int"))&&(!strcmp(op, "max"))) 
+  else if ((!strcmp(type, "long long int"))&&(!strcmp(op, "max")))
     ogs::gatherKernel_longMax(Ngather, o_gatherStarts, o_gatherIds, o_v, o_gv);
 }

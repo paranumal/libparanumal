@@ -25,37 +25,29 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include <stdlib.h>
+#include "mesh2D.hpp"
 
-int isHigher(const void *a, const void *b){
+dfloat mesh2D::MinCharacteristicLength(){
 
-  hlong *pta = (hlong*) a;
-  hlong *ptb = (hlong*) b;
+  dfloat hmin = 1e9;
+  for(dlong e=0;e<Nelements;++e){
+    for(int f=0;f<Nfaces;++f){
+      dlong sid = Nsgeo*(Nfaces*e + f);
+      dfloat sJ   = sgeo[sid + SJID];
+      dfloat invJ = sgeo[sid + IJID];
 
-  if(*pta < *ptb) return -1;
-  if(*pta > *ptb) return +1;
+      // sJ = L/2, J = A/2,   sJ/J = L/A = L/(0.5*h*L) = 2/h
+      // h = 0.5/(sJ/J)
 
-  return 0;
-}
+      dfloat hest = 0.5/(sJ*invJ);
 
-int isLower(const void *a, const void *b){
-
-  hlong *pta = (hlong*) a;
-  hlong *ptb = (hlong*) b;
-
-  if(*pta > *ptb) return -1;
-  if(*pta < *ptb) return +1;
-
-  return 0;
-}
-
-void mysort(hlong *data, int N, const char *order){
-
-  if(strstr(order, "ascend")){
-    qsort(data, N, sizeof(hlong), isHigher);
-  }
-  else{
-    qsort(data, N, sizeof(hlong), isLower);
+      hmin = mymin(hmin, hest);
+    }
   }
 
+  // MPI_Allreduce to get global minimum dt
+  dfloat ghmin = 0.0;
+  MPI_Allreduce(&hmin, &ghmin, 1, MPI_DFLOAT, MPI_MIN, comm);
+
+  return ghmin;
 }

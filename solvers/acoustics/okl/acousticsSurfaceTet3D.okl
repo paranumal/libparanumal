@@ -27,20 +27,20 @@ SOFTWARE.
 
 // Roe averaged Riemann solver
 void upwind(const dfloat nx,
-	    const dfloat ny,
-	    const dfloat nz,
-	    const dfloat rM,
-	    const dfloat uM,
-	    const dfloat vM,
-	    const dfloat wM,
-	    const dfloat rP,
-	    const dfloat uP,
-	    const dfloat vP,
-	    const dfloat wP,
-	    dfloat *rflux,
-	    dfloat *uflux,
-	    dfloat *vflux,
-	    dfloat *wflux){
+            const dfloat ny,
+            const dfloat nz,
+            const dfloat rM,
+            const dfloat uM,
+            const dfloat vM,
+            const dfloat wM,
+            const dfloat rP,
+            const dfloat uP,
+            const dfloat vP,
+            const dfloat wP,
+            dfloat *rflux,
+            dfloat *uflux,
+            dfloat *vflux,
+            dfloat *wflux){
 
   //subtract F(qM)
   dfloat ndotUM = nx*uM + ny*vM + nz*wM;
@@ -49,26 +49,26 @@ void upwind(const dfloat nx,
   *uflux  = p_half*nx*(rP-rM         - (ndotUP-ndotUM));
   *vflux  = p_half*ny*(rP-rM         - (ndotUP-ndotUM));
   *wflux  = p_half*nz*(rP-rM         - (ndotUP-ndotUM));
-  
+
 }
 
 // batch process elements
 @kernel void acousticsSurfaceTet3D(const dlong Nelements,
-				  @restrict const  dfloat *  sgeo,
-				  @restrict const  dfloat *  LIFTT,
-				  @restrict const  dlong  *  vmapM,
-				  @restrict const  dlong  *  vmapP,
-				  @restrict const  int    *  EToB,
-				  const dfloat time,
-				  @restrict const  dfloat *  x,
-				  @restrict const  dfloat *  y,
-				  @restrict const  dfloat *  z,	
-				  @restrict const  dfloat *  q,
-				  @restrict dfloat *  rhsq){
-  
+                                  @restrict const  dfloat *  sgeo,
+                                  @restrict const  dfloat *  LIFTT,
+                                  @restrict const  dlong  *  vmapM,
+                                  @restrict const  dlong  *  vmapP,
+                                  @restrict const  int    *  EToB,
+                                  const dfloat time,
+                                  @restrict const  dfloat *  x,
+                                  @restrict const  dfloat *  y,
+                                  @restrict const  dfloat *  z,
+                                  @restrict const  dfloat *  q,
+                                  @restrict dfloat *  rhsq){
+
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
-    
+
     // @shared storage for flux terms
     @shared dfloat s_rflux [p_NblockS][p_NfacesNfp];
     @shared dfloat s_uflux[p_NblockS][p_NfacesNfp];
@@ -83,12 +83,12 @@ void upwind(const dfloat nx,
           if(n<p_NfacesNfp){
             // find face that owns this node
             const int face = n/p_Nfp;
-          
+
             // load surface geofactors for this face
             const dlong sid    = p_Nsgeo*(e*p_Nfaces+face);
             const dfloat nx   = sgeo[sid+p_NXID];
             const dfloat ny   = sgeo[sid+p_NYID];
-	    const dfloat nz   = sgeo[sid+p_NZID];
+            const dfloat nz   = sgeo[sid+p_NZID];
             const dfloat sJ   = sgeo[sid+p_SJID];
             const dfloat invJ = sgeo[sid+p_IJID];
 
@@ -105,47 +105,39 @@ void upwind(const dfloat nx,
 
             const dlong qbaseM = eM*p_Np*p_Nfields + vidM;
             const dlong qbaseP = eP*p_Np*p_Nfields + vidP;
-            
+
             const dfloat rM  = q[qbaseM + 0*p_Np];
             const dfloat uM = q[qbaseM + 1*p_Np];
             const dfloat vM = q[qbaseM + 2*p_Np];
-	    const dfloat wM = q[qbaseM + 3*p_Np];
+            const dfloat wM = q[qbaseM + 3*p_Np];
 
             dfloat rP  = q[qbaseP + 0*p_Np];
             dfloat uP = q[qbaseP + 1*p_Np];
             dfloat vP = q[qbaseP + 2*p_Np];
-	    dfloat wP = q[qbaseP + 3*p_Np];
-            
+            dfloat wP = q[qbaseP + 3*p_Np];
+
             // apply boundary condition
-#if 0    
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
               acousticsDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, rM, uM, vM, wM, &rP, &uP, &vP, &wP);
             }
-#else
-	    if(idP==idM){ // breaks for parallel
-	      dfloat ndotU = nx*uM+ny*vM+nz*wM;
-	      uP -= 2*ndotU*nx;
-	      vP -= 2*ndotU*ny;
-	      wP -= 2*ndotU*nz;
-	    }
-#endif
+
             // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
             const dfloat sc = invJ*sJ;
 
             dfloat rflux, uflux, vflux, wflux;
-            
+
             upwind(nx, ny, nz, rM, uM, vM, wM, rP, uP, vP, wP, &rflux, &uflux, &vflux, &wflux);
 
             s_rflux[es][n]  = sc*(-rflux );
             s_uflux[es][n] = sc*(-uflux);
             s_vflux[es][n] = sc*(-vflux);
-	    s_wflux[es][n] = sc*(-wflux);
+            s_wflux[es][n] = sc*(-wflux);
           }
         }
       }
     }
-    
+
     // wait for all @shared memory writes of the previous inner loop to complete
     @barrier("local");
 
@@ -154,10 +146,10 @@ void upwind(const dfloat nx,
       for(int n=0;n<p_maxNodes;++n;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements){
-          if(n<p_Np){            
+          if(n<p_Np){
             // load rhs data from volume fluxes
             dfloat Lrflux = 0.f, Luflux = 0.f, Lvflux = 0.f, Lwflux = 0.f;
-            
+
             // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
             #pragma unroll p_NfacesNfp
               for(int m=0;m<p_NfacesNfp;++m){
@@ -165,14 +157,14 @@ void upwind(const dfloat nx,
                 Lrflux  += L*s_rflux[es][m];
                 Luflux += L*s_uflux[es][m];
                 Lvflux += L*s_vflux[es][m];
-		Lwflux += L*s_wflux[es][m];
+                Lwflux += L*s_wflux[es][m];
               }
-            
+
             const dlong base = e*p_Np*p_Nfields+n;
             rhsq[base+0*p_Np] += Lrflux;
             rhsq[base+1*p_Np] += Luflux;
             rhsq[base+2*p_Np] += Lvflux;
-	    rhsq[base+3*p_Np] += Lwflux;
+            rhsq[base+3*p_Np] += Lwflux;
           }
         }
       }

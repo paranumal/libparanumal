@@ -31,7 +31,8 @@ SOFTWARE.
 
 class mesh2D: public mesh_t {
 public:
-  mesh2D(occa::device& device, MPI_Comm comm);
+  mesh2D(occa::device& _device, MPI_Comm& _comm,
+         settings_t& _settings, occa::properties& _props);
 
   // repartition elements in parallel
   void GeometricPartition();
@@ -41,15 +42,18 @@ public:
   void ConnectFaceModes(int *faceModes, dfloat *V);
 
   // setup occa buffers
-  void OccaSetup(occa::properties &kernelInfo);
+  virtual void OccaSetup(occa::properties &kernelInfo);
 
   // print out mesh partition in parallel
   void PrintVTU(const char *fileName);
+
+  dfloat MinCharacteristicLength();
 };
 
 class meshTri2D: public mesh2D {
 public:
-  meshTri2D(occa::device& device, MPI_Comm comm);
+  meshTri2D(occa::device& _device, MPI_Comm& _comm,
+            settings_t& _settings, occa::properties& _props);
   void ParallelReader(const char *fileName);
   void LoadReferenceNodes(int N);
   void PhysicalNodes();
@@ -60,7 +64,8 @@ public:
 
 class meshQuad2D: public mesh2D {
 public:
-  meshQuad2D(occa::device& device, MPI_Comm comm);
+  meshQuad2D(occa::device& _device, MPI_Comm& _comm,
+             settings_t& _settings, occa::properties& _props);
   void ParallelReader(const char *fileName);
   void LoadReferenceNodes(int N);
   void PhysicalNodes();

@@ -32,9 +32,11 @@ include ../../make.top
 endif
 endif
 
+LIBMESH_DIR=${LIBP_LIBS_DIR}/mesh
+
 #includes
 INCLUDES=${LIBP_INCLUDES} \
-         -I${LIBP_LIBS_DIR}/include
+         -I${LIBMESH_DIR}/include
 
 #defines
 DEFINES =${LIBP_DEFINES} \
@@ -45,8 +47,8 @@ MESH_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
 
 #object dependancies
 DEPS=$(wildcard $(LIBP_INCLUDE_DIR)/*.h) \
-     $(wildcard $(LIBP_INCLUDE_DIR)/*.hpp) \
-     $(wildcard ${LIBP_LIBS_DIR}/include/*.hpp)
+     $(wildcard ${LIBMESH_DIR}/include/*.hpp) \
+     $(LIBP_INCLUDE_DIR)/mesh.hpp
 
 SRC =$(wildcard src/*.cpp)
 OBJS=$(SRC:.cpp=.o)
@@ -55,14 +57,14 @@ OBJS=$(SRC:.cpp=.o)
 
 all: lib
 
-lib: ../lib/libmesh.a silentUpdate
+lib: ../libmesh.a silentUpdate
 
-../lib/libmesh.a: $(OBJS)
+../libmesh.a: $(OBJS)
 ifneq (,${verbose})
-	ar -cr ../lib/libmesh.a $(OBJS)
+	ar -cr ../libmesh.a $(OBJS)
 else
 	@printf "%b" "$(LIB_COLOR)Building library $(@F)$(NO_COLOR)\n";
-	@ar -cr ../lib/libmesh.a $(OBJS)
+	@ar -cr ../libmesh.a $(OBJS)
 endif
 
 silentUpdate:
@@ -79,4 +81,4 @@ endif
 
 #cleanup
 clean:
-	rm -f *.o ../lib/libmesh.a
+	rm -f *.o ../libmesh.a

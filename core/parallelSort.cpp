@@ -24,10 +24,6 @@ SOFTWARE.
 
 */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 /* use this for int */
 #include "mesh.hpp"
 

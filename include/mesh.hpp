@@ -45,13 +45,17 @@ SOFTWARE.
 
 class mesh_t {
 public:
-  MPI_Comm comm;
   occa::device& device;
+  MPI_Comm& comm;
+  settings_t& settings;
+  occa::properties& props;
 
   int rank, size; // MPI rank and size (process count)
 
   int dim;
   int Nverts, Nfaces, NfaceVertices;
+
+  int elementType;
 
   hlong Nnodes;
   dfloat *EX; // coordinates of vertices for each element
@@ -80,8 +84,20 @@ public:
   dlong *haloGetNodeIds; // volume node ids of outgoing halo nodes
   dlong *haloPutNodeIds; // volume node ids of incoming halo nodes
 
-  void *haloSendRequests;
-  void *haloRecvRequests;
+  MPI_Request *haloSendRequests;
+  MPI_Request *haloRecvRequests;
+
+  MPI_Status *sendStatus;
+  MPI_Status *recvStatus;
+
+  dfloat *sendBuffer;
+  dfloat *recvBuffer;
+
+  occa::memory o_haloBuffer;
+  occa::memory o_sendBuffer;
+  occa::memory o_recvBuffer;
+  occa::memory h_sendBuffer;
+  occa::memory h_recvBuffer;
 
   dlong NinternalElements; // number of elements that can update without halo exchange
   dlong NnotInternalElements; // number of elements that cannot update without halo exchange
@@ -395,7 +411,6 @@ public:
 
   // DG halo exchange info
   occa::memory o_haloElementList;
-  occa::memory o_haloBuffer;
   occa::memory o_haloGetNodeIds;
   occa::memory o_haloPutNodeIds;
 
@@ -435,7 +450,7 @@ public:
   // occa::kernel surfaceKernel;
   // occa::kernel updateKernel;
   // occa::kernel traceUpdateKernel;
-  // occa::kernel haloExtractKernel;
+  occa::kernel haloExtractKernel;
   // occa::kernel partialSurfaceKernel;
   // occa::kernel haloGetKernel;
   // occa::kernel haloPutKernel;
@@ -475,9 +490,12 @@ public:
   // unsigned int hash(const unsigned int value) ;
 
   mesh_t() = delete;
-  mesh_t(occa::device& device, MPI_Comm comm);
+  mesh_t(occa::device& device, MPI_Comm& comm,
+         settings_t& settings, occa::properties& props);
 
-  mesh_t *meshSetup(occa::device& device, MPI_Comm comm, settings_t& settings);
+  // generic mesh setup
+  static mesh_t& Setup(occa::device& device, MPI_Comm& comm,
+                       settings_t& settings, occa::properties& props);
 
   // mesh reader
   virtual void ParallelReader(const char *fileName) = 0;
@@ -522,7 +540,7 @@ public:
                    int maxLevels,
                    dfloat finalTime);
 
-  void OccaSetup(occa::properties &kernelInfo);
+  virtual void OccaSetup(occa::properties &kernelInfo);
 
   /* extract whole elements for the halo exchange */
   void HaloExtract(size_t Nbytes, void *sourceBuffer, void *haloBuffer);
@@ -536,8 +554,19 @@ public:
                          void *sendBuffer,    // temporary buffer
                          void *recvBuffer);
 
-
   void HaloExchangeFinish();
+
+  void HaloExchangeStart(size_t Nentries,   // number of dfloat entries
+                         occa::memory& o_q,
+                         occa::stream& defaultStream);
+
+  void HaloExchangeInterm(size_t Nentries,   // number of dfloat entries
+                          occa::stream& defaultStream,
+                          occa::stream& dataStream);
+
+  void HaloExchangeFinish(size_t Nentries,
+                          occa::memory& o_q,
+                          size_t offset);
 
   // print out parallel partition i
   void PrintPartitionStatistics();
@@ -546,6 +575,8 @@ public:
                                   hlong *globalIds,
                                   MPI_Comm &comm,
                                   int verbose);
+
+  virtual dfloat MinCharacteristicLength() = 0;
 };
 
 // serial sort
@@ -560,9 +591,7 @@ void parallelSort(int size, int rank, MPI_Comm comm,
 
 void addMeshSettings(settings_t& settings);
 
-// generic mesh setup
-mesh_t *meshSetup(char *filename, int N, settings_t& settings);
-
+void meshAddSettings(settings_t& settings);
 void occaAddSettings(settings_t& settings);
 
 // void occaTimerTic(occa::device device,std::string name);
@@ -608,8 +637,8 @@ void occaAddSettings(settings_t& settings);
 //                 double *RCOND, double *WORK, int *IWORK, int *INFO );
 // }
 
-void readDfloatArray(FILE *fp, const char *label, dfloat **A, int *Nrows, int* Ncols);
-void readIntArray   (FILE *fp, const char *label, int **A   , int *Nrows, int* Ncols);
+void readDfloatArray(MPI_Comm comm, FILE *fp, const char *label, dfloat **A, int *Nrows, int* Ncols);
+void readIntArray   (MPI_Comm comm, FILE *fp, const char *label, int **A   , int *Nrows, int* Ncols);
 
 void meshApplyElementMatrix(mesh_t *mesh, dfloat *A, dfloat *q, dfloat *Aq);
 
@@ -618,12 +647,10 @@ void meshRecursiveSpectralBisectionPartition(mesh_t *mesh);
 void matrixInverse(int N, dfloat *A);
 dfloat matrixConditionNumber(int N, dfloat *A);
 
-void occaDeviceConfig(mesh_t *mesh, settings_t& settings);
+void occaDeviceConfig(occa::device &device, MPI_Comm comm,
+                      settings_t& settings, occa::properties& kernelInfo);
 
 void *occaHostMallocPinned(occa::device &device, size_t size, void *source, occa::memory &mem, occa::memory &h_mem);
-
-#include "../mesh/include/mesh2D.hpp"
-#include "../mesh/include/mesh3D.hpp"
 
 #endif
 

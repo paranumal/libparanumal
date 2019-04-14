@@ -25,8 +25,11 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
+#include "mesh2D.hpp"
+#include "mesh3D.hpp"
 
-mesh_t *meshSetup(occa::device& device, MPI_Comm comm, settings_t& settings){
+mesh_t& mesh_t::Setup(occa::device& device, MPI_Comm& comm,
+                     settings_t& settings, occa::properties& props){
 
   string fileName;
   int N, dim, elementType;
@@ -36,25 +39,29 @@ mesh_t *meshSetup(occa::device& device, MPI_Comm comm, settings_t& settings){
   settings.getSetting("ELEMENT TYPE", elementType);
   settings.getSetting("MESH DIMENSION", dim);
 
-  mesh_t *mesh;
+  mesh_t *mesh=NULL;
   switch(elementType){
   case TRIANGLES:
     if(dim==2)
-      mesh = new meshTri2D(device, comm);
+      mesh = new meshTri2D(device, comm, settings, props);
     else
-      mesh = new meshTri2D(device, comm);
+      mesh = new meshTri3D(device, comm, settings, props);
     break;
   case QUADRILATERALS:
     if(dim==2)
-      mesh = new meshQuad2D(device, comm);
+      mesh = new meshQuad2D(device, comm, settings, props);
     else
-      mesh = new meshQuad3D(device, comm);
+      mesh = new meshQuad3D(device, comm, settings, props);
     break;
   case TETRAHEDRA:
-    mesh = new meshTet3D(device, comm);
+    mesh = new meshTet3D(device, comm, settings, props);
+    break;
   case HEXAHEDRA:
-    mesh = new meshHex3D(device, comm);
+    mesh = new meshHex3D(device, comm, settings, props);
+    break;
   }
+
+  mesh->elementType = elementType;
 
   // read chunk of elements
   mesh->ParallelReader(fileName.c_str());
@@ -92,5 +99,7 @@ mesh_t *meshSetup(occa::device& device, MPI_Comm comm, settings_t& settings){
   // global nodes
   mesh->ParallelConnectNodes();
 
-  return mesh;
+  mesh->OccaSetup(props);
+
+  return *mesh;
 }

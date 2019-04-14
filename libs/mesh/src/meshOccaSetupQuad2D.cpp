@@ -25,8 +25,11 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
+#include "mesh2D.hpp"
 
 void meshQuad2D::OccaSetup(occa::properties &kernelInfo){
+
+  this->mesh2D::OccaSetup(kernelInfo);
 
   //lumped mass matrix
   MM = (dfloat *) calloc(Np*Np, sizeof(dfloat));
@@ -106,8 +109,6 @@ void meshQuad2D::OccaSetup(occa::properties &kernelInfo){
         cubDWT);
 
   o_cubDWmatrices = device.malloc(cubNq*Nq*sizeof(dfloat), cubDWT);
-
-  dfloat *LIFTT = (dfloat*) calloc(Np*Nfaces*Nfp, sizeof(dfloat));
 
   o_LIFTT =
     device.malloc(1*sizeof(dfloat)); // dummy

@@ -75,12 +75,15 @@ ostream& operator<<(ostream& os, const setting_t& setting);
 
 class settings_t {
 private:
+  MPI_Comm& comm;
+
   vector<string> insertOrder;
 
 public:
   std::map<string, setting_t*> settings;
-  
-  settings_t() = default;
+
+  settings_t() = delete;
+  settings_t(MPI_Comm& _comm);
 
   ~settings_t();
 
@@ -109,6 +112,8 @@ public:
       LIBP_ABORT(ss.str());
     }
   }
+
+  string getSetting(const string name) const;
 
   bool compareSetting(const string name, const string token) const;
 

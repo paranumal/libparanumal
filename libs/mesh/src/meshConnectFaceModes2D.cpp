@@ -25,6 +25,7 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
+#include "mesh2D.hpp"
 
 // serial face-mode to face-mode connection
 void mesh2D::ConnectFaceModes(int *faceModes, dfloat *V){
@@ -57,8 +58,8 @@ void mesh2D::ConnectFaceModes(int *faceModes, dfloat *V){
         }
 
         dfloat mindist = 1E9;
-        int s;
-        int mMatch;
+        int sflag=0;
+        int mMatch=0;
         for (int nP=0;nP<Nfp;nP++) {
           //test the modes on face fP
           int mP = faceModes[nP+fP*Nfp];
@@ -83,12 +84,12 @@ void mesh2D::ConnectFaceModes(int *faceModes, dfloat *V){
           if(dist1<mindist){
             mindist = dist1;
             mMatch = mP;
-            s = 1;
+            sflag = 1;
           }
           if(dist2<mindist){
             mindist = dist2;
             mMatch = mP;
-            s = -1;
+            sflag = -1;
           }
         }
         if(mindist>1e-3) {
@@ -105,7 +106,7 @@ void mesh2D::ConnectFaceModes(int *faceModes, dfloat *V){
 
         mmapM[id] = idM;
         mmapP[id] = idP;
-        mmapS[id] = s;
+        mmapS[id] = sflag;
       }
     }
   }

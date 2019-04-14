@@ -25,6 +25,7 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
+#include "mesh2D.hpp"
 
 /*
    purpose: read gmsh quadrilateral mesh
@@ -32,8 +33,6 @@ SOFTWARE.
 void meshQuad2D::ParallelReader(const char *fileName){
 
   FILE *fp = fopen(fileName, "r");
-
-  char *status;
 
   dim = 2;
   Nverts = 4; // number of vertices per element
@@ -55,11 +54,19 @@ void meshQuad2D::ParallelReader(const char *fileName){
 
   char buf[BUFSIZ];
   do{
-    status = fgets(buf, BUFSIZ, fp);
+    if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
+      stringstream ss;
+      ss << "Error reading mesh file: " << fileName;
+      LIBP_ABORT(ss.str())
+    }
   }while(!strstr(buf, "$Nodes"));
 
   /* read number of nodes in mesh */
-  status = fgets(buf, BUFSIZ, fp);
+  if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
+    stringstream ss;
+    ss << "Error reading mesh file: " << fileName;
+    LIBP_ABORT(ss.str())
+  }
   sscanf(buf, hlongFormat, &(Nnodes));
 
   /* allocate space for node coordinates */
@@ -68,32 +75,48 @@ void meshQuad2D::ParallelReader(const char *fileName){
 
   /* load nodes */
   for(hlong n=0;n<Nnodes;++n){
-    status = fgets(buf, BUFSIZ, fp);
+    if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
+      stringstream ss;
+      ss << "Error reading mesh file: " << fileName;
+      LIBP_ABORT(ss.str())
+    }
     sscanf(buf, "%*d" dfloatFormat dfloatFormat, VX+n, VY+n);
   }
 
   /* look for section with Element node data */
   do{
-    status = fgets(buf, BUFSIZ, fp);
+    if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
+      stringstream ss;
+      ss << "Error reading mesh file: " << fileName;
+      LIBP_ABORT(ss.str())
+    }
   }while(!strstr(buf, "$Elements"));
 
   /* read number of nodes in mesh */
-  hlong Nelements;
-  status = fgets(buf, BUFSIZ, fp);
-  sscanf(buf, hlongFormat, &Nelements);
+  hlong gNelements;
+  if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
+    stringstream ss;
+    ss << "Error reading mesh file: " << fileName;
+    LIBP_ABORT(ss.str())
+  }
+  sscanf(buf, hlongFormat, &gNelements);
 
   /* find # of quadrilaterals */
   fpos_t fpos;
   fgetpos(fp, &fpos);
   hlong Nquadrilaterals = 0;
-  hlong NboundaryFaces = 0;
+  hlong gNboundaryFaces = 0;
 
-  for(hlong n=0;n<Nelements;++n){
-    int elementType;
-    status = fgets(buf, BUFSIZ, fp);
-    sscanf(buf, "%*d%d", &elementType);
-    if(elementType==1) ++NboundaryFaces;
-    if(elementType==3) ++Nquadrilaterals;
+  for(hlong n=0;n<gNelements;++n){
+    int ElementType;
+    if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
+      stringstream ss;
+      ss << "Error reading mesh file: " << fileName;
+      LIBP_ABORT(ss.str())
+    }
+    sscanf(buf, "%*d%d", &ElementType);
+    if(ElementType==1) ++gNboundaryFaces;
+    if(ElementType==3) ++Nquadrilaterals;
   }
   // rewind to start of elements
   fsetpos(fp, &fpos);
@@ -120,14 +143,18 @@ void meshQuad2D::ParallelReader(const char *fileName){
   hlong cnt=0, bcnt=0;
   Nquadrilaterals = 0;
 
-  boundaryInfo = (hlong*) calloc(NboundaryFaces*3, sizeof(hlong));
-  for(hlong n=0;n<Nelements;++n){
-    int elementType;
+  boundaryInfo = (hlong*) calloc(gNboundaryFaces*3, sizeof(hlong));
+  for(hlong n=0;n<gNelements;++n){
+    int ElementType;
     hlong v1, v2, v3, v4;
-    status = fgets(buf, BUFSIZ, fp);
-    sscanf(buf, "%*d%d", &elementType);
+    if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
+      stringstream ss;
+      ss << "Error reading mesh file: " << fileName;
+      LIBP_ABORT(ss.str())
+    }
+    sscanf(buf, "%*d%d", &ElementType);
 
-    if(elementType==1){ // boundary face
+    if(ElementType==1){ // boundary face
       sscanf(buf, "%*d%*d %*d" hlongFormat "%*d" hlongFormat hlongFormat,
              boundaryInfo+bcnt*3, &v1, &v2);
       boundaryInfo[bcnt*3+1] = v1-1;
@@ -135,7 +162,7 @@ void meshQuad2D::ParallelReader(const char *fileName){
       ++bcnt;
     }
 
-    if(elementType==3){  // quadrilateral
+    if(ElementType==3){  // quadrilateral
       if(start<=Nquadrilaterals && Nquadrilaterals<=end){
         sscanf(buf, "%*d%*d%*d " hlongFormat " %*d" hlongFormat hlongFormat hlongFormat hlongFormat,
                elementInfo+cnt, &v1, &v2, &v3, &v4);

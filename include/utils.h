@@ -28,7 +28,11 @@ SOFTWARE.
 #define UTILS_H
 
 #include <occa.hpp>
-#include "mpi.h"
+#include <mpi.h>
+
+//error codes
+#define LIBP_SUCCESS 0
+#define LIBP_ERROR -1
 
 #ifndef __PRETTY_FUNCTION__
 #  define __PRETTY_FUNCTION__ __FUNCTION__
@@ -37,7 +41,7 @@ SOFTWARE.
 #define LIBP_ABORT2(filename, function, line, message)              \
   {                                                                 \
     std::string banner = "---[ Error ]";                            \
-    std::cout << '\n'                                               \
+    std::cerr << '\n'                                               \
        << std::string(74, '=') << '\n'                              \
        << banner << std::string(74 - banner.size(), '-') << '\n'    \
        << "    File     : " << filename << '\n'                     \
@@ -45,14 +49,27 @@ SOFTWARE.
        << "    Function : " << function << '\n'                     \
        << "    Message  : " << message  << '\n'                     \
        << std::string(74, '=') << '\n';                             \
-    MPI_Abort(MPI_COMM_WORLD,-1);                                   \
+    MPI_Abort(MPI_COMM_WORLD,LIBP_ERROR);                           \
   }
 #define LIBP_ABORT(message) LIBP_ABORT2(__FILE__, __PRETTY_FUNCTION__, __LINE__, message)
+
+#define LIBP_WARNING(message)                                       \
+  {                                                                 \
+    std::string banner = "---[ Warning ]";                          \
+    std::cerr << '\n'                                               \
+       << std::string(74, '=') << '\n'                              \
+       << banner << std::string(74 - banner.size(), '-') << '\n'    \
+       << "    Warning  : " << message  << '\n'                     \
+       << std::string(74, '=') << '\n';                             \
+  }
 
 #define mymax(a,b) (((a)>(b))?(a):(b))
 #define mymin(a,b) (((a)<(b))?(a):(b))
 
 #define norm2(a,b) ( sqrt((a)*(a)+(b)*(b)) )
 #define norm3(a,b,c) ( sqrt((a)*(a)+(b)*(b)+(c)*(c)) )
+
+// block size for reduction (hard coded)
+#define BLOCKSIZE 256
 
 #endif

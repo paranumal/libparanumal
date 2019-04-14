@@ -25,6 +25,7 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
+#include "mesh3D.hpp"
 
 /*
    purpose: read gmsh hexrahedra mesh
@@ -32,8 +33,6 @@ SOFTWARE.
 void meshHex3D::ParallelReader(const char *fileName){
 
   FILE *fp = fopen(fileName, "r");
-
-  char *status;
 
   dim = 3;
   Nverts = 8; // number of vertices per element
@@ -56,11 +55,19 @@ void meshHex3D::ParallelReader(const char *fileName){
 
   char buf[BUFSIZ];
   do{
-    status = fgets(buf, BUFSIZ, fp);
+    if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
+      stringstream ss;
+      ss << "Error reading mesh file: " << fileName;
+      LIBP_ABORT(ss.str())
+    }
   }while(!strstr(buf, "$Nodes"));
 
   /* read number of nodes in mesh */
-  status = fgets(buf, BUFSIZ, fp);
+  if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
+    stringstream ss;
+    ss << "Error reading mesh file: " << fileName;
+    LIBP_ABORT(ss.str())
+  }
   sscanf(buf, hlongFormat, &(Nnodes));
 
   /* allocate space for node coordinates */
@@ -70,7 +77,11 @@ void meshHex3D::ParallelReader(const char *fileName){
 
   /* load nodes */
   for(hlong n=0;n<Nnodes;++n){
-    status = fgets(buf, BUFSIZ, fp);
+    if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
+      stringstream ss;
+      ss << "Error reading mesh file: " << fileName;
+      LIBP_ABORT(ss.str())
+    }
     sscanf(buf, "%*d" dfloatFormat dfloatFormat dfloatFormat,
            VX+n, VY+n, VZ+n);
 
@@ -78,25 +89,37 @@ void meshHex3D::ParallelReader(const char *fileName){
 
   /* look for section with Element node data */
   do{
-    status = fgets(buf, BUFSIZ, fp);
+    if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
+      stringstream ss;
+      ss << "Error reading mesh file: " << fileName;
+      LIBP_ABORT(ss.str())
+    }
   }while(!strstr(buf, "$Elements"));
 
   /* read number of nodes in mesh */
-  hlong Nelements;
-  status = fgets(buf, BUFSIZ, fp);
-  sscanf(buf, hlongFormat, &Nelements);
+  hlong gNelements;
+  if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
+    stringstream ss;
+    ss << "Error reading mesh file: " << fileName;
+    LIBP_ABORT(ss.str())
+  }
+  sscanf(buf, hlongFormat, &gNelements);
 
   /* find # of hexes */
   fpos_t fpos;
   fgetpos(fp, &fpos);
-  hlong Nhexes = 0, NboundaryFaces = 0;
+  hlong Nhexes = 0, gNboundaryFaces = 0;
 
-  for(hlong n=0;n<Nelements;++n){
-    int elementType;
-    status = fgets(buf, BUFSIZ, fp);
-    sscanf(buf, "%*d%d", &elementType);
-    if(elementType==5) ++Nhexes; // hex code is 5
-    if(elementType==3) ++NboundaryFaces; // quad codes is 3
+  for(hlong n=0;n<gNelements;++n){
+    int ElementType;
+    if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
+      stringstream ss;
+      ss << "Error reading mesh file: " << fileName;
+      LIBP_ABORT(ss.str())
+    }
+    sscanf(buf, "%*d%d", &ElementType);
+    if(ElementType==5) ++Nhexes; // hex code is 5
+    if(ElementType==3) ++gNboundaryFaces; // quad codes is 3
   }
   // rewind to start of elements
   fsetpos(fp, &fpos);
@@ -122,14 +145,18 @@ void meshHex3D::ParallelReader(const char *fileName){
   hlong cnt=0, bcnt=0;
   Nhexes = 0;
 
-  boundaryInfo = (hlong*) calloc(NboundaryFaces*(NfaceVertices+1), sizeof(hlong));
-  for(hlong n=0;n<Nelements;++n){
-    int elementType;
+  boundaryInfo = (hlong*) calloc(gNboundaryFaces*(NfaceVertices+1), sizeof(hlong));
+  for(hlong n=0;n<gNelements;++n){
+    int ElementType;
     hlong v1, v2, v3, v4, v5, v6, v7, v8;
-    status = fgets(buf, BUFSIZ, fp);
-    sscanf(buf, "%*d%d", &elementType);
+    if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
+      stringstream ss;
+      ss << "Error reading mesh file: " << fileName;
+      LIBP_ABORT(ss.str())
+    }
+    sscanf(buf, "%*d%d", &ElementType);
 
-    if(elementType==3){ // quad boundary face
+    if(ElementType==3){ // quad boundary face
       sscanf(buf, "%*d%*d %*d" hlongFormat "%*d " hlongFormat hlongFormat hlongFormat hlongFormat,
              boundaryInfo+bcnt*5, &v1, &v2, &v3, &v4);
 
@@ -140,7 +167,7 @@ void meshHex3D::ParallelReader(const char *fileName){
       ++bcnt;
     }
 
-    if(elementType==5){  // hex code is 5
+    if(ElementType==5){  // hex code is 5
       if(start<=Nhexes && Nhexes<=end){
         sscanf(buf,
                "%*d%*d%*d " hlongFormat " %*d"

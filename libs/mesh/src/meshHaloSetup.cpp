@@ -59,26 +59,34 @@ static int compareHaloFaces(const void *a,
 void mesh_t::HaloSetup(){
 
   // non-blocking MPI isend/irecv requests (used in meshHaloExchange)
-  haloSendRequests = calloc(size, sizeof(MPI_Request));
-  haloRecvRequests = calloc(size, sizeof(MPI_Request));
+  haloSendRequests = (MPI_Request*) calloc(size, sizeof(MPI_Request));
+  haloRecvRequests = (MPI_Request*) calloc(size, sizeof(MPI_Request));
+
+  sendStatus = (MPI_Status*) calloc(size, sizeof(MPI_Status));
+  recvStatus = (MPI_Status*) calloc(size, sizeof(MPI_Status));
+
+  for (int rr=0;rr<size;rr++) {
+    haloSendRequests[rr] = MPI_REQUEST_NULL;
+    haloRecvRequests[rr] = MPI_REQUEST_NULL;
+  }
 
   // count number of halo element nodes to swap
   totalHaloPairs = 0;
   NhaloPairs = (int*) calloc(size, sizeof(int));
   for(dlong e=0;e<Nelements;++e){
     for(int f=0;f<Nfaces;++f){
-      int r = EToP[e*Nfaces+f]; // rank of neighbor
-      if(r!=-1){
+      int rr = EToP[e*Nfaces+f]; // rank of neighbor
+      if(rr!=-1){
         totalHaloPairs += 1;
-        NhaloPairs[r] += 1;
+        NhaloPairs[rr] += 1;
       }
     }
   }
 
   // count number of MPI messages in halo exchange
   NhaloMessages = 0;
-  for(int r=0;r<size;++r)
-    if(NhaloPairs[r])
+  for(int rr=0;rr<size;++rr)
+    if(NhaloPairs[rr])
       ++NhaloMessages;
 
   // create a list of element/faces with halo neighbor
@@ -118,7 +126,6 @@ void mesh_t::HaloSetup(){
   for(dlong i=0;i<totalHaloPairs;++i){
     dlong eM = haloElements[i].element;
     int fM = haloElements[i].face;
-    int fP = haloElements[i].faceN;
     for(int n=0;n<Nfp;++n){
       haloGetNodeIds[cnt] = eM*Np + faceNodes[fM*Nfp+n];
       ++cnt;
@@ -128,11 +135,11 @@ void mesh_t::HaloSetup(){
   // now arrange for incoming nodes
   cnt = Nelements;
   dlong ncnt = 0;
-  for(int r=0;r<size;++r){
+  for(int rr=0;rr<size;++rr){
     for(dlong e=0;e<Nelements;++e){
       for(int f=0;f<Nfaces;++f){
 	dlong ef = e*Nfaces+f;
-	if(EToP[ef]==r){
+	if(EToP[ef]==rr){
 	  EToE[ef] = cnt;
 	  int fP = EToF[ef];
 	  for(int n=0;n<Nfp;++n){
@@ -150,7 +157,7 @@ void mesh_t::HaloSetup(){
   dlong localNodes     = Nelements*Np;
 
   // temporary send buffer
-  dfloat *sendBuffer = (dfloat*) calloc(totalHaloNodes, sizeof(dfloat));
+  dfloat *SendBuffer = (dfloat*) calloc(totalHaloNodes, sizeof(dfloat));
 
   // extend x,y arrays to hold coordinates of node coordinates of elements in halo
   x = (dfloat*) realloc(x, (localNodes+totalHaloNodes)*sizeof(dfloat));
@@ -159,10 +166,10 @@ void mesh_t::HaloSetup(){
     z = (dfloat*) realloc(z, (localNodes+totalHaloNodes)*sizeof(dfloat));
 
   // send halo data and recv into extended part of arrays
-  this->HaloExchange(Np*sizeof(dfloat), x, sendBuffer, x + localNodes);
-  this->HaloExchange(Np*sizeof(dfloat), y, sendBuffer, y + localNodes);
+  this->HaloExchange(Np*sizeof(dfloat), x, SendBuffer, x + localNodes);
+  this->HaloExchange(Np*sizeof(dfloat), y, SendBuffer, y + localNodes);
   if(dim==3)
-    this->HaloExchange(Np*sizeof(dfloat), z, sendBuffer, z + localNodes);
+    this->HaloExchange(Np*sizeof(dfloat), z, SendBuffer, z + localNodes);
 
   // grab EX,EY,EZ from halo
   EX = (dfloat*) realloc(EX, (Nelements+totalHaloPairs)*Nverts*sizeof(dfloat));
@@ -171,11 +178,17 @@ void mesh_t::HaloSetup(){
     EZ = (dfloat*) realloc(EZ, (Nelements+totalHaloPairs)*Nverts*sizeof(dfloat));
 
   // send halo data and recv into extended part of arrays
-  this->HaloExchange(Nverts*sizeof(dfloat), EX, sendBuffer, EX + Nverts*Nelements);
-  this->HaloExchange(Nverts*sizeof(dfloat), EY, sendBuffer, EY + Nverts*Nelements);
+  this->HaloExchange(Nverts*sizeof(dfloat), EX, SendBuffer, EX + Nverts*Nelements);
+  this->HaloExchange(Nverts*sizeof(dfloat), EY, SendBuffer, EY + Nverts*Nelements);
   if(dim==3)
-    this->HaloExchange(Nverts*sizeof(dfloat), EZ, sendBuffer, EZ + Nverts*Nelements);
+    this->HaloExchange(Nverts*sizeof(dfloat), EZ, SendBuffer, EZ + Nverts*Nelements);
 
   free(haloElements);
-  free(sendBuffer);
+  free(SendBuffer);
+
+  // fix this later
+  haloExtractKernel = device.buildKernel(LIBP_DIR "/okl/meshHaloExtract3D.okl",
+                                         "meshHaloExtract3D",
+                                         props);
+
 }

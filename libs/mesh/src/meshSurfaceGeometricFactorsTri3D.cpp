@@ -25,6 +25,7 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
+#include "mesh3D.hpp"
 
 /* compute outwards facing normals, surface Jacobian, and volume Jacobian for all face nodes */
 void meshTri3D::SurfaceGeometricFactors(){
@@ -49,9 +50,9 @@ void meshTri3D::SurfaceGeometricFactors(){
 
     for(int n=0;n<Np;++n){
 
-      dfloat x1 = x[n+e*Np];
-      dfloat y1 = y[n+e*Np];
-      dfloat z1 = z[n+e*Np];
+      // dfloat x1 = x[n+e*Np];
+      // dfloat y1 = y[n+e*Np];
+      // dfloat z1 = z[n+e*Np];
 
       dfloat xrn = 0, yrn = 0, zrn = 0;
       dfloat xsn = 0, ysn = 0, zsn = 0;
@@ -77,7 +78,7 @@ void meshTri3D::SurfaceGeometricFactors(){
 
       dfloat Gx = txn, Gy = tyn, Gz = tzn;
 
-      dfloat Jn = x1*txn + y1*tyn + z1*tzn;
+      // dfloat Jn = x1*txn + y1*tyn + z1*tzn;
 
       xr[n] = xrn;
       yr[n] = yrn;
@@ -99,7 +100,7 @@ void meshTri3D::SurfaceGeometricFactors(){
 	dfloat zid = z[id+e*Np];
 	dfloat Jid = J[id];
 
-	dfloat nx, ny, nz;
+	dfloat nx=0.0, ny=0.0, nz=0.0;
 
 	if(f==0){
 	  nx = yr[id]*zid - zr[id]*yid;

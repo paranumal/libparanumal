@@ -106,12 +106,12 @@ void mesh_t::ParallelConnect(){
   }
 
   // find send offsets
-  for(int r=1;r<size;++r)
-    sendOffsets[r] = sendOffsets[r-1] + Nsend[r-1];
+  for(int rr=1;rr<size;++rr)
+    sendOffsets[rr] = sendOffsets[rr-1] + Nsend[rr-1];
 
   // reset counters
-  for(int r=0;r<size;++r)
-    Nsend[r] = 0;
+  for(int rr=0;rr<size;++rr)
+    Nsend[rr] = 0;
 
   // buffer for outgoing data
   parallelFace_t *sendFaces = (parallelFace_t*) calloc(allNsend, sizeof(parallelFace_t));
@@ -187,12 +187,12 @@ void mesh_t::ParallelConnect(){
 
   // count incoming faces
   int allNrecv = 0;
-  for(int r=0;r<size;++r)
-    allNrecv += Nrecv[r];
+  for(int rr=0;rr<size;++rr)
+    allNrecv += Nrecv[rr];
 
   // find offsets for recv data
-  for(int r=1;r<size;++r)
-    recvOffsets[r] = recvOffsets[r-1] + Nrecv[r-1]; // byte offsets
+  for(int rr=1;rr<size;++rr)
+    recvOffsets[rr] = recvOffsets[rr-1] + Nrecv[rr-1]; // byte offsets
 
   // buffer for incoming face data
   parallelFace_t *recvFaces = (parallelFace_t*) calloc(allNrecv, sizeof(parallelFace_t));

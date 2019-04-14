@@ -27,48 +27,39 @@ SOFTWARE.
 #include "acoustics.hpp"
 
 //settings for acoustics solver
-acousticsSettings_t::acousticsSettings_t(): settings_t() {
+acousticsSettings_t::acousticsSettings_t(MPI_Comm& _comm):
+  settings_t(_comm) {
 
   occaAddSettings(*this);
   meshAddSettings(*this);
 
-  this->newSetting("TIME INTEGRATOR",
-                      "DOPRI5",
-                      "Time integration method",
-                      {"DOPRI5", "LSERK4"});
-  this->newSetting("COMPUTE ERROR FLAG",
-                      "1");
+  newSetting("DATA FILE",
+             "data/acousticsGaussian2D.h",
+             "Boundary and Initial conditions header");
 
-  this->newSetting("TSTEPS FOR ERROR COMPUTE",
-                      "1000",
-                      "Number of time steps between error check");
+  newSetting("TIME INTEGRATOR",
+             "DOPRI5",
+             "Time integration method",
+             {"DOPRI5", "LSERK4"});
 
-  this->newSetting("TSTEPS FOR SOLUTION OUTPUT",
-                      "1000",
-                      "Number of time steps between output frames");
+  newSetting("START TIME",
+             "0",
+             "Start time for time integration");
 
-  this->newSetting("REPORT FREQUENCY",
-                      "100",
-                      "Number of time steps between reporting");
+  newSetting("FINAL TIME",
+             "10",
+             "End time for time integration");
 
-  this->newSetting("START TIME",
-                      "0");
+  newSetting("OUTPUT INTERVAL",
+             ".1",
+             "Time between printing output data");
 
-  this->newSetting("FINAL TIME",
-                      "10");
+  newSetting("OUTPUT TO FILE",
+             "FALSE",
+             "Flag for writing fields to VTU files",
+             {"TRUE", "FALSE"});
 
-  this->newSetting("OUTPUT INTERVAL",
-                      ".1");
-
-  this->newSetting("MAX MRAB LEVELS",
-                      "1");
-
-  this->newSetting("FORMAT",
-                      "2.0",
-                      "Setting file version number",
-                      {"2.0"});
+  newSetting("OUTPUT FILE NAME",
+             "acoustics");
 }
 
-// void acousticsSettings_t::readSettingsFromFile(const string filename) {
-//   this->settings_t::readSettingsFromFile(filename);
-// }

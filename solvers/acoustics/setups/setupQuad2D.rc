@@ -1,8 +1,11 @@
 [FORMAT]
-1.0
+2.0
+
+[DATA FILE]
+data/acousticsGaussian2D.h
 
 [MESH FILE]
-../../meshes/cavityQuadH005.msh
+../../meshes/cavityQuadH01.msh
 
 [MESH DIMENSION]
 2
@@ -24,41 +27,6 @@ CUDA
 
 [TIME INTEGRATOR]
 DOPRI5
-#LSERK4
-
-[ADVECTION TYPE]
-#NODAL
-CUBATURE
-
-[VISCOSITY]
-5.e-3
-
-[MACH NUMBER]
-.2
-
-[RBAR]
-1.0
-
-[UBAR]
-1.0
-
-[VBAR]
-0.0
-
-[WBAR]
-0.0
-
-[COMPUTE ERROR FLAG]
-1
-
-[TSTEPS FOR ERROR COMPUTE]
-1000
-
-[TSTEPS FOR SOLUTION OUTPUT]
-1000
-
-[REPORT FREQUENCY]
-100
 
 [START TIME]
 0
@@ -67,16 +35,10 @@ CUBATURE
 10
 
 [OUTPUT INTERVAL]
-.31
+.1
 
-[MAX MRAB LEVELS]
-1
-
-[CFL]
-0.1
-
-[RESTART FROM FILE]
-0
+[OUTPUT TO FILE]
+TRUE
 
 [OUTPUT FILE NAME]
-vtkOut/tshape
+acoustics

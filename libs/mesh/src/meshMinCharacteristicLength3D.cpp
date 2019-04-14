@@ -24,35 +24,30 @@ SOFTWARE.
 
 */
 
-#include "acoustics.hpp"
+#include "mesh.hpp"
+#include "mesh3D.hpp"
 
-dfloat acousticsDopriEstimate(acoustics_t *acoustics){
-  
-  mesh_t *mesh = acoustics->mesh;
-  
-  // should insert err = acousticsDopriEstimate2D() here
-  //Error estimation 
-  //E. HAIRER, S.P. NORSETT AND G. WANNER, SOLVING ORDINARY
-  //      DIFFERENTIAL EQUATIONS I. NONSTIFF PROBLEMS. 2ND EDITION.
-  dlong Ntotal = mesh->Nelements*mesh->Np*mesh->Nfields;
-  acoustics->rkErrorEstimateKernel(Ntotal, 
-				   acoustics->ATOL,
-				   acoustics->RTOL,
-				   acoustics->o_q,
-				   acoustics->o_rkq,
-				   acoustics->o_rkerr,
-				   acoustics->o_errtmp);
-  
-  acoustics->o_errtmp.copyTo(acoustics->errtmp);
-  dfloat localerr = 0;
-  dfloat err = 0;
-  for(dlong n=0;n<acoustics->Nblock;++n){
-    localerr += acoustics->errtmp[n];
+dfloat mesh3D::MinCharacteristicLength(){
+
+  dfloat hmin = 1e9;
+  for(dlong e=0;e<Nelements;++e){
+    for(int f=0;f<Nfaces;++f){
+      dlong sid = Nsgeo*(Nfaces*e + f);
+      dfloat sJ   = sgeo[sid + SJID];
+      dfloat invJ = sgeo[sid + IJID];
+
+      // sJ = L/2, J = A/2,   sJ/J = L/A = L/(0.5*h*L) = 2/h
+      // h = 0.5/(sJ/J)
+
+      dfloat hest = 0.5/(sJ*invJ);
+
+      hmin = mymin(hmin, hest);
+    }
   }
-  MPI_Allreduce(&localerr, &err, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
 
-  err = sqrt(err/(mesh->Np*acoustics->totalElements*acoustics->Nfields));
-  
-  return err;
+  // MPI_Allreduce to get global minimum dt
+  dfloat ghmin = 0.0;
+  MPI_Allreduce(&hmin, &ghmin, 1, MPI_DFLOAT, MPI_MIN, comm);
+
+  return ghmin;
 }
-  

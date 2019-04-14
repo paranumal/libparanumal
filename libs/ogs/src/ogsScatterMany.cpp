@@ -30,42 +30,42 @@ SOFTWARE.
 
 #include "scatterMany.tpp"
 
-void ogsScatterMany_op(void *gv, void *v, 
-                        const int k, 
-                        const dlong sstride,  
-                        const dlong stride,  
-                        const size_t Nbytes, 
-                        const char *type, 
+void ogsScatterMany_op(void *gv, void *v,
+                        const int k,
+                        const dlong sstride,
+                        const dlong stride,
+                        const size_t Nbytes,
+                        const char *type,
                         ogs_t *ogs);
 
-void ogsScatterMany(occa::memory o_sv, 
-               occa::memory o_v, 
+void ogsScatterMany(occa::memory o_sv,
+               occa::memory o_v,
                const int k,
                const dlong sstride,
                const dlong stride,
-               const char *type, 
-               const char *op, 
+               const char *type,
+               const char *op,
                ogs_t *ogs){
   ogsScatterManyStart (o_sv, o_v, k, sstride, stride, type, op, ogs);
   ogsScatterManyFinish(o_sv, o_v, k, sstride, stride, type, op, ogs);
 }
 
-void ogsScatterManyStart(occa::memory o_sv, 
-                    occa::memory o_v, 
+void ogsScatterManyStart(occa::memory o_sv,
+                    occa::memory o_v,
                     const int k,
                     const dlong sstride,
                     const dlong stride,
-                    const char *type, 
-                    const char *op, 
+                    const char *type,
+                    const char *op,
                     ogs_t *ogs){
-  size_t Nbytes;
-  if (!strcmp(type, "float")) 
+  size_t Nbytes=0;
+  if (!strcmp(type, "float"))
     Nbytes = sizeof(float);
-  else if (!strcmp(type, "double")) 
+  else if (!strcmp(type, "double"))
     Nbytes = sizeof(double);
-  else if (!strcmp(type, "int")) 
+  else if (!strcmp(type, "int"))
     Nbytes = sizeof(int);
-  else if (!strcmp(type, "long long int")) 
+  else if (!strcmp(type, "long long int"))
     Nbytes = sizeof(long long int);
 
   if (ogs->NhaloGather) {
@@ -85,8 +85,8 @@ void ogsScatterManyStart(occa::memory o_sv,
     ogs->device.setStream(ogs::dataStream);
 
     if (ogs->NownedHalo) {
-      for (int i=0;i<k;i++) 
-        o_v.copyTo((char*)ogs::haloBuf+ogs->NhaloGather*Nbytes*i, 
+      for (int i=0;i<k;i++)
+        o_v.copyTo((char*)ogs::haloBuf+ogs->NhaloGather*Nbytes*i,
                     ogs->NownedHalo*Nbytes, ogs->NlocalGather*Nbytes*i, "async: true");
     }
 
@@ -95,22 +95,22 @@ void ogsScatterManyStart(occa::memory o_sv,
 }
 
 
-void ogsScatterManyFinish(occa::memory o_sv, 
-                     occa::memory o_v, 
+void ogsScatterManyFinish(occa::memory o_sv,
+                     occa::memory o_v,
                      const int k,
                      const dlong sstride,
                      const dlong stride,
-                     const char *type, 
-                     const char *op, 
+                     const char *type,
+                     const char *op,
                      ogs_t *ogs){
-  size_t Nbytes;
-  if (!strcmp(type, "float")) 
+  size_t Nbytes=0;
+  if (!strcmp(type, "float"))
     Nbytes = sizeof(float);
-  else if (!strcmp(type, "double")) 
+  else if (!strcmp(type, "double"))
     Nbytes = sizeof(double);
-  else if (!strcmp(type, "int")) 
+  else if (!strcmp(type, "int"))
     Nbytes = sizeof(int);
-  else if (!strcmp(type, "long long int")) 
+  else if (!strcmp(type, "long long int"))
     Nbytes = sizeof(long long int);
 
   if (ogs->NhaloGather) {
@@ -133,23 +133,23 @@ void ogsScatterManyFinish(occa::memory o_sv,
   }
 }
 
-void ogsScatterMany(void *sv, 
-               void *v, 
+void ogsScatterMany(void *sv,
+               void *v,
                const int k,
                const dlong sstride,
                const dlong stride,
-               const char *type, 
-               const char *op, 
+               const char *type,
+               const char *op,
                ogs_t *ogs){
-  
-  size_t Nbytes;
-  if (!strcmp(type, "float")) 
+
+  size_t Nbytes=0;
+  if (!strcmp(type, "float"))
     Nbytes = sizeof(float);
-  else if (!strcmp(type, "double")) 
+  else if (!strcmp(type, "double"))
     Nbytes = sizeof(double);
-  else if (!strcmp(type, "int")) 
+  else if (!strcmp(type, "int"))
     Nbytes = sizeof(int);
-  else if (!strcmp(type, "long long int")) 
+  else if (!strcmp(type, "long long int"))
     Nbytes = sizeof(long long int);
 
   if (ogs->NhaloGather) {
@@ -162,27 +162,27 @@ void ogsScatterMany(void *sv,
   ogsScatterMany_op(sv, v, k, sstride, stride, Nbytes, type, ogs);
 }
 
-void ogsScatterMany_op(void *sv, void *v, 
+void ogsScatterMany_op(void *sv, void *v,
                        const int k,
                        const dlong sstride,
                        const dlong stride,
-                       const size_t Nbytes, 
-                       const char *type, 
+                       const size_t Nbytes,
+                       const char *type,
                        ogs_t *ogs){
 
-  if (!strcmp(type, "float")) 
+  if (!strcmp(type, "float"))
     scatterMany<float>(ogs->NlocalGather,  k, stride, sstride,
                       ogs->localGatherOffsets,
                       ogs->localGatherIds, (float*)v, (float*)sv);
-  else if (!strcmp(type, "double")) 
+  else if (!strcmp(type, "double"))
     scatterMany<double>(ogs->NlocalGather, k, stride, sstride,
                       ogs->localGatherOffsets,
                       ogs->localGatherIds, (double*)v, (double*)sv);
-  else if (!strcmp(type, "int")) 
-    scatterMany<int>(ogs->NlocalGather, k, stride, sstride, 
-                      ogs->localGatherOffsets, 
+  else if (!strcmp(type, "int"))
+    scatterMany<int>(ogs->NlocalGather, k, stride, sstride,
+                      ogs->localGatherOffsets,
                       ogs->localGatherIds, (int*)v, (int*)sv);
-  else if (!strcmp(type, "long long int")) 
+  else if (!strcmp(type, "long long int"))
     scatterMany<long long int>(ogs->NlocalGather, k, stride, sstride,
                       ogs->localGatherOffsets,
                       ogs->localGatherIds, (long long int*)v, (long long int*)sv);
@@ -190,11 +190,11 @@ void ogsScatterMany_op(void *sv, void *v,
   if (ogs->NhaloGather) {
     if (ogs->NownedHalo)
       for (int i=0;i<k;i++)
-        memcpy((char*)ogs::hostBuf + ogs->NhaloGather*Nbytes*i, 
-               (char*) v+ogs->NlocalGather*Nbytes*i, 
+        memcpy((char*)ogs::hostBuf + ogs->NhaloGather*Nbytes*i,
+               (char*) v+ogs->NlocalGather*Nbytes*i,
                ogs->NownedHalo*Nbytes);
 
-    
+
     void* H[k];
     for (int i=0;i<k;i++) H[i] = (char*)ogs::hostBuf + i*ogs->NhaloGather*Nbytes;
 
@@ -202,20 +202,20 @@ void ogsScatterMany_op(void *sv, void *v,
     ogsHostScatterMany(H, k, type, ogsAdd, ogs->haloGshNonSym);
   }
 
-  if (!strcmp(type, "float")) 
+  if (!strcmp(type, "float"))
     scatterMany<float>(ogs->NhaloGather, k, ogs->NhaloGather, sstride,
                       ogs->haloGatherOffsets,
                       ogs->haloGatherIds, (float*)ogs::hostBuf, (float*)sv);
-  else if (!strcmp(type, "double")) 
-    scatterMany<double>(ogs->NhaloGather, k, ogs->NhaloGather, sstride, 
+  else if (!strcmp(type, "double"))
+    scatterMany<double>(ogs->NhaloGather, k, ogs->NhaloGather, sstride,
                       ogs->haloGatherOffsets,
                       ogs->haloGatherIds, (double*)ogs::hostBuf, (double*)sv);
-  else if (!strcmp(type, "int")) 
-    scatterMany<int>(ogs->NhaloGather, k, ogs->NhaloGather, sstride, 
+  else if (!strcmp(type, "int"))
+    scatterMany<int>(ogs->NhaloGather, k, ogs->NhaloGather, sstride,
                       ogs->haloGatherOffsets,
                       ogs->haloGatherIds, (int*)ogs::hostBuf, (int*)sv);
-  else if (!strcmp(type, "long long int")) 
-    scatterMany<long long int>(ogs->NhaloGather, k, ogs->NhaloGather, sstride, 
+  else if (!strcmp(type, "long long int"))
+    scatterMany<long long int>(ogs->NhaloGather, k, ogs->NhaloGather, sstride,
                       ogs->haloGatherOffsets,
                       ogs->haloGatherIds, (long long int*)ogs::hostBuf, (long long int*)sv);
 }
@@ -230,13 +230,13 @@ void occaScatterMany(const  dlong Nscatter,
                 const char* op,
                 occa::memory  o_v,
                 occa::memory  o_sv) {
-  
-  if      (!strcmp(type, "float")) 
+
+  if      (!strcmp(type, "float"))
     ogs::scatterManyKernel_float(Nscatter, Nentries, stride, sstride, o_scatterStarts, o_scatterIds, o_v, o_sv);
-  else if (!strcmp(type, "double")) 
+  else if (!strcmp(type, "double"))
     ogs::scatterManyKernel_double(Nscatter, Nentries, stride, sstride, o_scatterStarts, o_scatterIds, o_v, o_sv);
-  else if (!strcmp(type, "int")) 
+  else if (!strcmp(type, "int"))
     ogs::scatterManyKernel_int(Nscatter, Nentries, stride, sstride, o_scatterStarts, o_scatterIds, o_v, o_sv);
-  else if (!strcmp(type, "long long int")) 
+  else if (!strcmp(type, "long long int"))
     ogs::scatterManyKernel_long(Nscatter, Nentries, stride, sstride, o_scatterStarts, o_scatterIds, o_v, o_sv);
 }

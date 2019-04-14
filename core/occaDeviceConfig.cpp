@@ -24,27 +24,33 @@ SOFTWARE.
 
 */
 
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "omp.h"
 #include <unistd.h>
-#include  "mpi.h"
-#include "mesh.hpp"
+#include <mpi.h>
+#include "occa.hpp"
+#include "types.h"
+#include "utils.h"
+#include "settings.hpp"
+#include "omp.h"
 
-void occaDeviceConfig(mesh_t *mesh, setupAide &options, occa::properties &kernelInfo){
+void occaDeviceConfig(occa::device &device, MPI_Comm comm,
+                      settings_t& settings, occa::properties& kernelInfo){
+
+  kernelInfo["defines"].asObject();
+  kernelInfo["includes"].asArray();
+  kernelInfo["header"].asArray();
+  kernelInfo["flags"].asObject();
 
   // OCCA build stuff
-  char deviceConfig[BUFSIZ];
   int rank, size;
-  rank = mesh->rank;
-  size = mesh->size;
+  MPI_Comm_rank(comm, &rank);
+  MPI_Comm_size(comm, &size);
+
+  char deviceConfig[BUFSIZ];
 
   long int hostId = gethostid();
 
   long int* hostIds = (long int*) calloc(size,sizeof(long int));
-  MPI_Allgather(&hostId,1,MPI_LONG,hostIds,1,MPI_LONG,mesh->comm);
+  MPI_Allgather(&hostId,1,MPI_LONG,hostIds,1,MPI_LONG,comm);
 
   int device_id = 0;
   int totalDevices = 0;
@@ -55,29 +61,23 @@ void occaDeviceConfig(mesh_t *mesh, setupAide &options, occa::properties &kernel
     if (hostIds[r]==hostId) totalDevices++;
   }
 
-  if (size==1) options.getArgs("DEVICE NUMBER" ,device_id);
+  device_id = device_id % 1;
 
-  printf("device_id = %d\n", device_id);
+  if (size==1) settings.getSetting("DEVICE NUMBER",device_id);
 
-  //  device_id = device_id%2;
-
-  occa::properties deviceProps;
-
-  // read thread model/device/platform from options
-  if(options.compareArgs("THREAD MODEL", "CUDA")){
-    //    deviceProps["mode"] = "CUDA";
-    //    deviceProps["device_id"] = 0; string(device_id);
+  // read thread model/device/platform from settings
+  if(settings.compareSetting("THREAD MODEL", "CUDA")){
     sprintf(deviceConfig, "mode: 'CUDA', device_id: %d", device_id);
   }
-  else if(options.compareArgs("THREAD MODEL", "HIP")){
-    sprintf(deviceConfig, "mode: 'HIP', device_id: %d",device_id);
+  else if(settings.compareSetting("THREAD MODEL", "HIP")){
+    sprintf(deviceConfig, "mode: 'HIP', device_id: %d", device_id);
   }
-  else if(options.compareArgs("THREAD MODEL", "OpenCL")){
+  else if(settings.compareSetting("THREAD MODEL", "OpenCL")){
     int plat;
-    options.getArgs("PLATFORM NUMBER", plat);
+    settings.getSetting("PLATFORM NUMBER", plat);
     sprintf(deviceConfig, "mode: 'OpenCL', device_id: %d, platform_id: %d", device_id, plat);
   }
-  else if(options.compareArgs("THREAD MODEL", "OpenMP")){
+  else if(settings.compareSetting("THREAD MODEL", "OpenMP")){
     sprintf(deviceConfig, "mode: 'OpenMP' ");
   }
   else{
@@ -92,35 +92,15 @@ void occaDeviceConfig(mesh_t *mesh, setupAide &options, occa::properties &kernel
   Nthreads = mymax(1,Nthreads/2);
   omp_set_num_threads(Nthreads);
 
-  if (options.compareArgs("VERBOSE","TRUE"))
-    printf("Rank %d: Ncores = %d, Nthreads = %d, device_id = %d \n", rank, Ncores, Nthreads, device_id);
-
-  std::cout << deviceConfig << std::endl;
+  // if (settings.compareSetting("VERBOSE","TRUE"))
+  //   printf("Rank %d: Ncores = %d, Nthreads = %d, device_id = %d \n", rank, Ncores, Nthreads, device_id);
 
   //  mesh->device.setup( (std::string) deviceConfig); // deviceProps);
-  mesh->device.setup( (std::string)deviceConfig);
+  device.setup( (std::string)deviceConfig);
 
 #ifdef USE_OCCA_MEM_BYTE_ALIGN
   // change OCCA MEM BYTE ALIGNMENT
   occa::env::OCCA_MEM_BYTE_ALIGN = USE_OCCA_MEM_BYTE_ALIGN;
-#endif
-
-#if USE_MASTER_NOEL==1
-
-  int foo;
-  // check to see if the options specify to use precompiled binaries
-  if(options.compareArgs("USE PRECOMPILED BINARIES", "TRUE")){
-    mesh->device.UsePreCompiledKernels(1);
-    occa::host().UsePreCompiledKernels(1);
-  }
-  else if(options.compareArgs("USE PRECOMPILED BINARIES", "NONROOT")){
-    mesh->device.UsePreCompiledKernels(mesh->rank!=0);
-    occa::host().UsePreCompiledKernels(mesh->rank!=0);
-  }else{
-    mesh->device.UsePreCompiledKernels(0);
-    occa::host().UsePreCompiledKernels(0);
-  }
-
 #endif
 
   if(sizeof(dfloat)==4){
@@ -143,7 +123,7 @@ void occaDeviceConfig(mesh_t *mesh, setupAide &options, occa::properties &kernel
     kernelInfo["defines/" "dlong"]="long long int";
   }
 
-  if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
+  if(device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
     kernelInfo["compiler_flags"] += "--ftz=true";
     kernelInfo["compiler_flags"] += "--prec-div=false";
     kernelInfo["compiler_flags"] += "--prec-sqrt=false";
@@ -151,6 +131,6 @@ void occaDeviceConfig(mesh_t *mesh, setupAide &options, occa::properties &kernel
     kernelInfo["compiler_flags"] += "--fmad=true"; // compiler option for cuda
   }
 
-  occa::initTimer(mesh->device);
+  // occa::initTimer(mesh->device);
 
 }

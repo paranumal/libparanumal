@@ -25,6 +25,7 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
+#include "mesh3D.hpp"
 
 // 20 bits per coordinate
 #define bitRange 20
@@ -224,8 +225,8 @@ void mesh3D::GeometricPartition(){
 
   MPI_Allgather(&localNelements, 1, MPI_DLONG, globalNelements, 1,  MPI_DLONG, comm);
 
-  for(int r=0;r<size;++r)
-    starts[r+1] = starts[r]+globalNelements[r];
+  for(int rr=0;rr<size;++rr)
+    starts[rr+1] = starts[rr]+globalNelements[rr];
 
   hlong allNelements = starts[size];
 
@@ -270,29 +271,29 @@ void mesh3D::GeometricPartition(){
     elements[e].element = starts[rank]+e;
 
     // 0, chunk+1, 2*(chunk+1) ..., remainder*(chunk+1), remainder*(chunk+1) + chunk
-    int r;
+    int rr;
     if(elements[e].element<remainder*(chunk+1))
-      r = elements[e].element/(chunk+1);
+      rr = elements[e].element/(chunk+1);
     else
-      r = remainder + ((elements[e].element-remainder*(chunk+1))/chunk);
+      rr = remainder + ((elements[e].element-remainder*(chunk+1))/chunk);
 
-    ++Nsend[r];
+    ++Nsend[rr];
   }
 
   // find send offsets
-  for(int r=1;r<size;++r)
-    sendOffsets[r] = sendOffsets[r-1] + Nsend[r-1];
+  for(int rr=1;rr<size;++rr)
+    sendOffsets[rr] = sendOffsets[rr-1] + Nsend[rr-1];
 
   // exchange byte counts
   MPI_Alltoall(Nsend, 1, MPI_INT, Nrecv, 1, MPI_INT, comm);
 
   // count incoming clusters
   dlong newNelements = 0;
-  for(int r=0;r<size;++r)
-    newNelements += Nrecv[r];
+  for(int rr=0;rr<size;++rr)
+    newNelements += Nrecv[rr];
 
-  for(int r=1;r<size;++r)
-    recvOffsets[r] = recvOffsets[r-1] + Nrecv[r-1];
+  for(int rr=1;rr<size;++rr)
+    recvOffsets[rr] = recvOffsets[rr-1] + Nrecv[rr-1];
 
   element_t *tmpElements = (element_t *) calloc(newNelements, sizeof(element_t));
 

@@ -45,8 +45,8 @@ void mesh_t::ParallelConnectNodes(){
                 comm);
 
   hlong gatherNodeStart = 0;
-  for(int r=0;r<rank;++r)
-    gatherNodeStart += allLocalNodeCounts[r];
+  for(int rr=0;rr<rank;++rr)
+    gatherNodeStart += allLocalNodeCounts[rr];
 
   free(allLocalNodeCounts);
 
@@ -75,7 +75,7 @@ void mesh_t::ParallelConnectNodes(){
 
   dlong localChange = 0, gatherChange = 1;
 
-  parallelNode_t *sendBuffer =
+  parallelNode_t *SendBuffer =
     (parallelNode_t*) calloc(totalHaloPairs*Np, sizeof(parallelNode_t));
 
   // keep comparing numbers on positive and negative traces until convergence
@@ -86,7 +86,7 @@ void mesh_t::ParallelConnectNodes(){
 
     // send halo data and recv into extension of buffer
     this->HaloExchange(Np*sizeof(parallelNode_t),
-                     localNodes, sendBuffer, localNodes+localNodeCount);
+                     localNodes, SendBuffer, localNodes+localNodeCount);
 
     // compare trace nodes
     for(dlong e=0;e<Nelements;++e){
@@ -125,5 +125,5 @@ void mesh_t::ParallelConnectNodes(){
   }
 
   free(localNodes);
-  free(sendBuffer);
+  free(SendBuffer);
 }

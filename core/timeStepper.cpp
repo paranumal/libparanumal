@@ -24,32 +24,32 @@ SOFTWARE.
 
 */
 
-#include "mesh.hpp"
+#include "timeStepper.hpp"
 
-void matrixInverse(int N, dfloat *A){
-  int lwork = N*N;
-  int info;
+//virtual base time stepper class
+timeStepper_t::timeStepper_t(dlong _N, dlong _Nhalo, solver_t& _solver):
+  N(_N), Nhalo(_Nhalo),
+  solver(_solver),
+  comm(_solver.comm),
+  device(_solver.device),
+  settings(_solver.settings),
+  props(_solver.props) {}
 
-  // compute inverse mass matrix
-  double *tmpInvA = (double*) calloc(N*N, sizeof(double));
 
-  int *ipiv = (int*) calloc(N, sizeof(int));
-  double *work = (double*) calloc(lwork, sizeof(double));
+void timeStepper_t::SetTimeStep(dfloat dt_) {dt = dt_;};
 
-  for(int n=0;n<N*N;++n){
-    tmpInvA[n] = A[n];
+
+timeStepper_t* timeStepper_t::Setup(dlong N, dlong Nhalo, solver_t& solver) {
+
+  timeStepper_t *timeStepper=NULL;
+
+  if (solver.settings.compareSetting("TIME INTEGRATOR","LSERK4")){
+    timeStepper = new lserk4(N, Nhalo, solver);
+  } else if (solver.settings.compareSetting("TIME INTEGRATOR","DOPRI5")){
+    timeStepper = new dopri5(N, Nhalo, solver);
+  } else {
+    LIBP_ABORT(string("Requested TIME INTEGRATOR not found."));
   }
 
-  dgetrf_ (&N, &N, tmpInvA, &N, ipiv, &info);
-  dgetri_ (&N, tmpInvA, &N, ipiv, work, &lwork, &info);
-
-  if(info)
-    printf("inv: dgetrf/dgetri reports info = %d when inverting matrix\n", info);
-
-  for(int n=0;n<N*N;++n)
-    A[n] = tmpInvA[n];
-
-  free(work);
-  free(ipiv);
-  free(tmpInvA);
+  return timeStepper;
 }

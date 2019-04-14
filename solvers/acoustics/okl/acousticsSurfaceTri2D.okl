@@ -44,7 +44,6 @@ void upwind(const dfloat nx,
   *rflux  = p_half*   ((ndotUP-ndotUM)- (rP-rM));
   *uflux  = p_half*nx*((rP-rM)        - (ndotUP-ndotUM));
   *vflux  = p_half*ny*((rP-rM)        - (ndotUP-ndotUM));
-  
 }
 
 // batch process elements
@@ -60,10 +59,10 @@ void upwind(const dfloat nx,
 				  @restrict const  dfloat *  z,
 				  @restrict const  dfloat *  q,
 				  @restrict dfloat *  rhsq){
-  
+
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
-    
+
     // @shared storage for flux terms
     @shared dfloat s_rflux [p_NblockS][p_NfacesNfp];
     @shared dfloat s_uflux[p_NblockS][p_NfacesNfp];
@@ -77,7 +76,7 @@ void upwind(const dfloat nx,
           if(n<p_NfacesNfp){
             // find face that owns this node
             const int face = n/p_Nfp;
-          
+
             // load surface geofactors for this face
             const dlong sid   = p_Nsgeo*(e*p_Nfaces+face);
             const dfloat nx   = sgeo[sid+p_NXID];
@@ -113,12 +112,12 @@ void upwind(const dfloat nx,
               acousticsDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, rM, uM, vM, &rP, &uP, &vP);
               //should also add the Neumann BC here, but need uxM, uyM, vxM, abd vyM somehow
             }
-            
+
             // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
             const dfloat sc = invJ*sJ;
 
             dfloat rflux, uflux, vflux;
-            
+
 	    upwind(nx, ny, rM, uM, vM, rP, uP, vP, &rflux, &uflux, &vflux);
 
             // const dfloat hinv = sgeo[sid + p_IHID];
@@ -131,7 +130,7 @@ void upwind(const dfloat nx,
         }
       }
     }
-    
+
     // wait for all @shared memory writes of the previous inner loop to complete
     @barrier("local");
 
@@ -140,10 +139,10 @@ void upwind(const dfloat nx,
       for(int n=0;n<p_maxNodes;++n;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements){
-          if(n<p_Np){            
+          if(n<p_Np){
             // load rhs data from volume fluxes
             dfloat Lrflux = 0.f, Luflux = 0.f, Lvflux = 0.f;
-            
+
             // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
             #pragma unroll p_NfacesNfp
               for(int m=0;m<p_NfacesNfp;++m){
@@ -152,7 +151,7 @@ void upwind(const dfloat nx,
                 Luflux += L*s_uflux[es][m];
                 Lvflux += L*s_vflux[es][m];
               }
-            
+
             const dlong base = e*p_Np*p_Nfields+n;
             rhsq[base+0*p_Np] += Lrflux;
             rhsq[base+1*p_Np] += Luflux;

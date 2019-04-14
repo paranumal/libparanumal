@@ -70,10 +70,8 @@ void meshBuildMRABClusters2D(mesh_t *mesh, int lev, dfloat *weights, int *levels
   // minimum {vertex id % size}
   int *Nsend = (int*) calloc(size, sizeof(int));
   int *Nrecv = (int*) calloc(size, sizeof(int));
-  int *Ncount = (int*) calloc(size, sizeof(int));
   int *sendOffsets = (int*) calloc(size, sizeof(int));
   int *recvOffsets = (int*) calloc(size, sizeof(int));
-  int *sendCounts = (int*) calloc(size, sizeof(int));
 
 
   //build element struct
@@ -191,7 +189,6 @@ void meshBuildMRABClusters2D(mesh_t *mesh, int lev, dfloat *weights, int *levels
     *clusters = (cluster_t *) calloc(*Nclusters,sizeof(cluster_t));
 
     int cnt  = 0;
-    int ecnt = 1;
     (*clusters)[0].Nelements = 1;
     (*clusters)[0].offSet = 0;
     for (int e=1;e<*newNelements;e++) {

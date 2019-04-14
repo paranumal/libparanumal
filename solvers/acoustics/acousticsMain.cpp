@@ -31,56 +31,32 @@ int main(int argc, char **argv){
   // start up MPI
   MPI_Init(&argc, &argv);
 
-  if(argc!=2){
-    printf("usage2: ./acousticsMain setupfile\n");
-    exit(-1);
-  }
+  MPI_Comm comm = MPI_COMM_WORLD;
+  int rank;
+  MPI_Comm_rank(comm, &rank);
 
-  // if argv > 2 then should load input data from argv
-  setupAide newOptions(argv[1]);
+  if(argc!=2)
+    LIBP_ABORT(string("Usage: ./acousticsMain setupfile"));
 
-  acousticsSettings_t settings;
+  acousticsSettings_t settings(comm); //sets default settings
   settings.readSettingsFromFile(argv[1]);
+  if (!rank) settings.report();
 
-  settings.report();
-
-  // set up mesh stuff
-  string fileName;
-  int N, dim, elementType;
-
-  settings.getSetting("MESH FILE", fileName);
-  settings.getSetting("POLYNOMIAL DEGREE", N);
-  settings.getSetting("ELEMENT TYPE", elementType);
-  settings.getSetting("MESH DIMENSION", dim);
+  // set up occa device
+  occa::device device;
+  occa::properties props;
+  occaDeviceConfig(device, comm, settings, props);
 
   // set up mesh
-  mesh_t *mesh;
-  switch(elementType){
-  case TRIANGLES:
-    mesh = meshSetupTri2D((char*)fileName.c_str(), N); break;
-  case QUADRILATERALS:
-    mesh = meshSetupQuad2D((char*)fileName.c_str(), N); break;
-  case TETRAHEDRA:
-    mesh = meshSetupTet3D((char*)fileName.c_str(), N); break;
-  case HEXAHEDRA:
-    mesh = meshSetupHex3D((char*)fileName.c_str(), N); break;
-  }
+  mesh_t& mesh = mesh_t::Setup(device, comm, settings, props);
 
-  char *boundaryHeaderFileName; // could sprintf
-  if(dim==2)
-    boundaryHeaderFileName = strdup(DACOUSTICS "/acousticsUniform2D.h"); // default
-  if(dim==3)
-    boundaryHeaderFileName = strdup(DACOUSTICS "/acousticsUniform3D.h"); // default
-
-  // set up acoustics stuff
-  acoustics_t *acoustics = acousticsSetup(mesh, newOptions, boundaryHeaderFileName);
+  // set up acoustics solver
+  acoustics_t& acoustics = acoustics_t::Setup(mesh);
 
   // run
-  acousticsRun(acoustics, newOptions);
+  acoustics.Run();
 
   // close down MPI
   MPI_Finalize();
-
-  exit(0);
-  return 0;
+  return LIBP_SUCCESS;
 }

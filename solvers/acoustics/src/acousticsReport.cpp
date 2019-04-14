@@ -26,21 +26,24 @@ SOFTWARE.
 
 #include "acoustics.hpp"
 
-void acousticsReport(acoustics_t *acoustics, dfloat time, setupAide &newOptions){
+void acoustics_t::Report(dfloat time, int tstep){
 
-  mesh3D *mesh = acoustics->mesh;
+  static int frame=0;
 
-  // copy data back to host
-  acoustics->o_q.copyTo(acoustics->q);
+  if(mesh.rank==0)
+    printf("%5.2f (%d) (time, timestep)\n", time, tstep);
 
-  // do error stuff on host
-  acousticsError(acoustics, time);
+  if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
 
-  // output field files
-  char fname[BUFSIZ];
+    // copy data back to host
+    o_q.copyTo(q);
 
-  sprintf(fname, "foo_%04d_%04d.vtu", mesh->rank, acoustics->frame++);
+    // output field files
+    string name;
+    settings.getSetting("OUTPUT FILE NAME", name);
+    char fname[BUFSIZ];
+    sprintf(fname, "%s_%04d_%04d.vtu", name.c_str(), mesh.rank, frame++);
 
-  acousticsPlotVTU(acoustics, fname);
-  
+    PlotFields(q, fname);
+  }
 }

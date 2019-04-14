@@ -24,117 +24,45 @@ SOFTWARE.
 
 */
 
-#include <math.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include "mpi.h"
-
 #include "mesh.hpp"
-#include "mesh2D.h"
-#include "mesh3D.h"
-
-// block size for reduction (hard coded)
-#define blockSize 256
+#include "solver.hpp"
+#include "timeStepper.hpp"
 
 #define DACOUSTICS LIBP_DIR"/solvers/acoustics/"
 
-typedef struct{
+class acousticsSettings_t: public settings_t {
+public:
+  acousticsSettings_t(MPI_Comm& _comm);
+};
 
-  int dim;
-  int elementType; // number of edges (3=tri, 4=quad, 6=tet, 12=hex)
-
+class acoustics_t: public solver_t {
+public:
   int Nfields;
 
-  hlong totalElements;
-  dlong Nblock;
+  timeStepper_t* timeStepper;
 
-  dfloat *q, *rhsq, *resq;
-
-  dfloat *Vort;
-
-  dfloat *rkq, *rkrhsq, *rkerr;
-  dfloat *errtmp;
-  int frame;
-
-  mesh_t *mesh;
+  dfloat *q;
+  occa::memory o_q;
 
   occa::kernel volumeKernel;
   occa::kernel surfaceKernel;
-  occa::kernel updateKernel;
-  occa::kernel rkStageKernel;
-  occa::kernel rkUpdateKernel;
-  occa::kernel rkErrorEstimateKernel;
 
-  occa::memory o_q;
-  occa::memory o_rhsq;
-  occa::memory o_resq;
-  occa::memory o_saveq;
+  occa::kernel initialConditionKernel;
 
-  occa::memory o_rkq, o_rkrhsq, o_rkerr;
-  occa::memory o_errtmp;
+  occa::stream defaultStream;
+  occa::stream dataStream;
 
-  //halo data
-  dlong haloBytes;
-  dfloat *sendBuffer;
-  dfloat *recvBuffer;
-  occa::memory o_sendBuffer;
-  occa::memory o_recvBuffer;
-  occa::memory h_sendBuffer;
-  occa::memory h_recvBuffer;
-  occa::memory o_haloBuffer;
+  acoustics_t() = delete;
+  acoustics_t(mesh_t& _mesh);
 
-  // DOPRI5 RK data
-  int advSwitch;
-  int Nrk;
-  dfloat ATOL, RTOL;
-  dfloat factor1, invfactor1;
-  dfloat factor2, invfactor2;
-  dfloat exp1, facold,  dtMIN, safe, beta;
-  dfloat *rkA, *rkC, *rkE;
-  occa::memory o_rkA, o_rkC, o_rkE;
+  //setup
+  static acoustics_t& Setup(mesh_t& mesh);
 
-}acoustics_t;
+  void Run();
 
-class acousticsSettings_t: public settings_t {
-public:
-  acousticsSettings_t();
+  void Report(dfloat time, int tstep);
 
-  // void newSetting(const string name, const string val,
-  //                         const string description="",
-  //                         const vector<string> options={});
+  void PlotFields(dfloat* Q, char *fileName);
 
-  // void changeSetting(const string name, const string newVal);
-
-  // //read settings file and update settings
-  // void readSettingsFromFile(const string filename);
-
+  void rhsf(occa::memory& o_q, occa::memory& o_rhs, const dfloat time);
 };
-
-void acousticsRun(acoustics_t *acoustics, setupAide &newOptions);
-
-acoustics_t *acousticsSetup(mesh_t *mesh, setupAide &newOptions, char* boundaryHeaderFileName);
-
-void acousticsError(acoustics_t *acoustics, dfloat time);
-
-void acousticsCavitySolution(dfloat x, dfloat y, dfloat z, dfloat t,
-		       dfloat *u, dfloat *v, dfloat *w, dfloat *p);
-
-
-void acousticsGaussianPulse(dfloat x, dfloat y, dfloat z, dfloat t,
-		      dfloat *u, dfloat *v, dfloat *w, dfloat *p);
-
-void acousticsReport(acoustics_t *acoustics, dfloat time, setupAide &newOptions);
-
-void acousticsPlotVTU(acoustics_t *acoustics, char *fileName);
-
-void acousticsDopriStep(acoustics_t *acoustics, setupAide &newOptions, const dfloat time);
-
-void acousticsLserkStep(acoustics_t *acoustics, setupAide &newOoptions, const dfloat time);
-
-dfloat acousticsDopriEstimate(acoustics_t *acoustics);
-
-#define TRIANGLES 3
-#define QUADRILATERALS 4
-#define TETRAHEDRA 6
-#define HEXAHEDRA 12

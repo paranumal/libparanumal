@@ -25,6 +25,7 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
+#include "mesh3D.hpp"
 
 /*
    purpose: read gmsh tetrahedra mesh
@@ -32,8 +33,6 @@ SOFTWARE.
 void meshTet3D::ParallelReader(const char *fileName){
 
   FILE *fp = fopen(fileName, "r");
-
-  char *status;
 
   dim = 3;
   Nverts = 4; // number of vertices per element
@@ -55,11 +54,19 @@ void meshTet3D::ParallelReader(const char *fileName){
 
   char buf[BUFSIZ];
   do{
-    status = fgets(buf, BUFSIZ, fp);
+    if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
+      stringstream ss;
+      ss << "Error reading mesh file: " << fileName;
+      LIBP_ABORT(ss.str())
+    }
   }while(!strstr(buf, "$Nodes"));
 
   /* read number of nodes in mesh */
-  status = fgets(buf, BUFSIZ, fp);
+  if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
+    stringstream ss;
+    ss << "Error reading mesh file: " << fileName;
+    LIBP_ABORT(ss.str())
+  }
   sscanf(buf, hlongFormat, &(Nnodes));
 
   /* allocate space for node coordinates */
@@ -69,31 +76,47 @@ void meshTet3D::ParallelReader(const char *fileName){
 
   /* load nodes */
   for(hlong n=0;n<Nnodes;++n){
-    status = fgets(buf, BUFSIZ, fp);
+    if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
+      stringstream ss;
+      ss << "Error reading mesh file: " << fileName;
+      LIBP_ABORT(ss.str())
+    }
     sscanf(buf, "%*d" dfloatFormat dfloatFormat dfloatFormat,
            VX+n, VY+n, VZ+n);
   }
 
   /* look for section with Element node data */
   do{
-    status = fgets(buf, BUFSIZ, fp);
+    if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
+      stringstream ss;
+      ss << "Error reading mesh file: " << fileName;
+      LIBP_ABORT(ss.str())
+    }
   }while(!strstr(buf, "$Elements"));
 
   /* read number of nodes in mesh */
-  hlong Nelements;
-  status = fgets(buf, BUFSIZ, fp);
-  sscanf(buf, hlongFormat, &Nelements);
+  hlong gNelements;
+  if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
+    stringstream ss;
+    ss << "Error reading mesh file: " << fileName;
+    LIBP_ABORT(ss.str())
+  }
+  sscanf(buf, hlongFormat, &gNelements);
 
   /* find # of tets */
   fpos_t fpos;
   fgetpos(fp, &fpos);
-  hlong Ntets = 0, NboundaryFaces = 0;
-  for(hlong n=0;n<Nelements;++n){
-    int elementType;
-    status = fgets(buf, BUFSIZ, fp);
-    sscanf(buf, "%*d%d", &elementType);
-    if(elementType==4) ++Ntets; // tet code is 4
-    if(elementType==2) ++NboundaryFaces;
+  hlong Ntets = 0, gNboundaryFaces = 0;
+  for(hlong n=0;n<gNelements;++n){
+    int ElementType;
+    if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
+      stringstream ss;
+      ss << "Error reading mesh file: " << fileName;
+      LIBP_ABORT(ss.str())
+    }
+    sscanf(buf, "%*d%d", &ElementType);
+    if(ElementType==4) ++Ntets; // tet code is 4
+    if(ElementType==2) ++gNboundaryFaces;
   }
   // rewind to start of elements
   fsetpos(fp, &fpos);
@@ -118,13 +141,17 @@ void meshTet3D::ParallelReader(const char *fileName){
   hlong cnt=0, bcnt = 0;
   Ntets = 0;
 
-  boundaryInfo = (hlong*) calloc(NboundaryFaces*4, sizeof(hlong));
-  for(hlong n=0;n<Nelements;++n){
-    int elementType;
+  boundaryInfo = (hlong*) calloc(gNboundaryFaces*4, sizeof(hlong));
+  for(hlong n=0;n<gNelements;++n){
+    int ElementType;
     hlong v1, v2, v3, v4;
-    status = fgets(buf, BUFSIZ, fp);
-    sscanf(buf, "%*d%d", &elementType);
-    if(elementType==2){ // boundary face
+    if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
+      stringstream ss;
+      ss << "Error reading mesh file: " << fileName;
+      LIBP_ABORT(ss.str())
+    }
+    sscanf(buf, "%*d%d", &ElementType);
+    if(ElementType==2){ // boundary face
       sscanf(buf, "%*d%*d %*d" hlongFormat "%*d" hlongFormat hlongFormat hlongFormat,
              boundaryInfo+bcnt*4, &v1, &v2, &v3);
       boundaryInfo[bcnt*4+1] = v1-1;
@@ -133,7 +160,7 @@ void meshTet3D::ParallelReader(const char *fileName){
       ++bcnt;
     }
 
-    if(elementType==4){  // tet code is 4
+    if(ElementType==4){  // tet code is 4
       if(start<=Ntets && Ntets<=end){
         sscanf(buf,
                "%*d%*d%*d " hlongFormat " %*d"

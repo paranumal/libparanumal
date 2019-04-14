@@ -24,40 +24,30 @@ SOFTWARE.
 
 */
 
-#include <stdio.h>
-#include <math.h>
-#include <mpi.h>
-
-#include "acoustics.hpp"
 
 
-void acousticsError(acoustics_t *acoustics, dfloat time){
+// Boundary conditions
+/* wall 1, inflow 2 */
+#define acousticsDirichletConditions3D(bc, t, x, y, z, nx, ny, nz, rM, uM, vM, wM, rB, uB, vB, wB) \
+{                                                \
+  if(bc==2){                                     \
+    *(rB) = -rM;                                 \
+    *(uB) = uM;                                  \
+    *(vB) = vM;                                  \
+    *(wB) = wM;                                  \
+  } else if(bc==1){                              \
+    *(rB) = rM;                                  \
+    *(uB) = uM - 2.0*(nx*uM+ny*vM+nz*wM)*nx;     \
+    *(vB) = vM - 2.0*(nx*uM+ny*vM+nz*wM)*ny;     \
+    *(wB) = wM - 2.0*(nx*uM+ny*vM+nz*wM)*nz;     \
+  }                                              \
+}
 
-  mesh_t *mesh = acoustics->mesh;
-
-  dfloat maxR = 0;
-  dfloat minR = 1E9;
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Np;++n){
-      dfloat u,v,w, p;
-      int id = n+e*mesh->Np;
-      dfloat x = mesh->x[id];
-      dfloat y = mesh->y[id];
-      dfloat z = mesh->z[id];
-
-      int qbase = n+e*mesh->Np*mesh->Nfields;
-      maxR = mymax(maxR, acoustics->q[qbase]);
-      minR = mymin(minR, acoustics->q[qbase]);
-    }
-  }
-
-  // compute maximum over all processes
-  dfloat globalMaxR;
-  dfloat globalMinR;
-  MPI_Allreduce(&maxR, &globalMaxR, 1, MPI_DFLOAT, MPI_MAX, mesh->comm);
-  MPI_Allreduce(&minR, &globalMinR, 1, MPI_DFLOAT, MPI_MIN, mesh->comm);
-
-  if(mesh->rank==0)
-    printf("%g, %g, %g ( time, min density, max density)\n", time, globalMinR, globalMaxR);
-  
+// Initial conditions
+#define acousticsInitialConditions3D(t, x, y, z, r, u, v, w) \
+{                                       \
+  *(r) = 1.0 + exp(-3*(x*x+y*y+z*z));   \
+  *(u) = 0.0;                           \
+  *(v) = 0.0;                           \
+  *(w) = 0.0;                           \
 }

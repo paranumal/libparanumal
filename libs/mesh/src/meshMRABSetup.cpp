@@ -58,7 +58,7 @@ dfloat mesh_t::MRABSetup(dfloat *EToDT, int maxLevels, dfloat finalTime) {
 
   //compute the level of each element
   MRABlevel = (dlong *) calloc(Nelements+totalHaloPairs,sizeof(int));
-  int *MRABsendBuffer;
+  int *MRABsendBuffer=NULL;
   for(int lev=0; lev<MRABNlevels; lev++){
     dfloat dtlev = dtGmin*pow(2,lev);
     for(dlong e=0;e<Nelements;++e){
@@ -164,8 +164,8 @@ dfloat mesh_t::MRABSetup(dfloat *EToDT, int maxLevels, dfloat finalTime) {
     printf("------------------------------------------------------------\n");
   }
   MPI_Barrier(comm);
-  for (int r =0;r<size;r++) {
-    if (r==rank) {
+  for (int rr =0;rr<size;rr++) {
+    if (rr==rank) {
       for (int lev =0; lev<MRABNlevels; lev++)
         printf("|  %d,    %d,      %d,        %d     \n", rank, lev, MRABNelements[lev], MRABNhaloElements[lev]);
       printf("------------------------------------------------------------\n");
@@ -325,8 +325,8 @@ void meshMRABSetup2D(mesh2D *mesh, dfloat *EToDT, int maxLevels) {
     printf("------------------------------------------------------------\n");
   }
   MPI_Barrier(comm);
-  for (int r =0;r<size;r++) {
-    if (r==rank) {
+  for (int rr =0;rr<size;rr++) {
+    if (rr==rank) {
       for (int lev =0; lev<MRABNlevels; lev++)
         printf("|  %d,    %d,      %d,        %d     \n", rank, lev, MRABNelements[lev], MRABNhaloElements[lev]);
       printf("------------------------------------------------------------\n");

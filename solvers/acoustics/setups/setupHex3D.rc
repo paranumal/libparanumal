@@ -1,8 +1,11 @@
 [FORMAT]
-1.0
+2.0
+
+[DATA FILE]
+data/acousticsGaussian3D.h
 
 [MESH FILE]
-../../meshes/cubeHexH00625.msh
+../../meshes/cavityHexH02.msh
 
 [MESH DIMENSION]
 3
@@ -11,7 +14,7 @@
 12
 
 [POLYNOMIAL DEGREE]
-5
+4
 
 [THREAD MODEL]
 CUDA
@@ -24,17 +27,18 @@ CUDA
 
 [TIME INTEGRATOR]
 DOPRI5
-#LSERK4
-
-[ADVECTION TYPE]
-NODAL
 
 [START TIME]
 0
 
 [FINAL TIME]
-10
+1
 
 [OUTPUT INTERVAL]
-.15
+.1
 
+[OUTPUT TO FILE]
+TRUE
+
+[OUTPUT FILE NAME]
+acoustics

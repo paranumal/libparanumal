@@ -25,6 +25,7 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
+#include "mesh2D.hpp"
 
 /*
    purpose: read gmsh triangle mesh
@@ -32,8 +33,6 @@ SOFTWARE.
 void meshTri2D::ParallelReader(const char *fileName){
 
   FILE *fp = fopen(fileName, "r");
-
-  char *status;
 
   dim = 2;
   Nverts = 3; // number of vertices per element
@@ -59,11 +58,19 @@ void meshTri2D::ParallelReader(const char *fileName){
 
   // look for Nodes section
   do{
-    status = fgets(buf, BUFSIZ, fp);
+    if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
+      stringstream ss;
+      ss << "Error reading mesh file: " << fileName;
+      LIBP_ABORT(ss.str())
+    }
   }while(!strstr(buf, "$Nodes"));
 
   /* read number of nodes in mesh */
-  status = fgets(buf, BUFSIZ, fp);
+  if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
+    stringstream ss;
+    ss << "Error reading mesh file: " << fileName;
+    LIBP_ABORT(ss.str())
+  }
   sscanf(buf, hlongFormat, &(Nnodes));
 
   /* allocate space for node coordinates */
@@ -72,31 +79,47 @@ void meshTri2D::ParallelReader(const char *fileName){
 
   /* load nodes */
   for(hlong n=0;n<Nnodes;++n){
-    status = fgets(buf, BUFSIZ, fp);
+    if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
+      stringstream ss;
+      ss << "Error reading mesh file: " << fileName;
+      LIBP_ABORT(ss.str())
+    }
     sscanf(buf, "%*d" dfloatFormat dfloatFormat, VX+n, VY+n);
   }
 
   /* look for section with Element node data */
   do{
-    status = fgets(buf, BUFSIZ, fp);
+    if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
+      stringstream ss;
+      ss << "Error reading mesh file: " << fileName;
+      LIBP_ABORT(ss.str())
+    }
   }while(!strstr(buf, "$Elements"));
 
   /* read number of elements in mesh */
-  hlong Nelements;
-  status = fgets(buf, BUFSIZ, fp);
-  sscanf(buf, hlongFormat, &Nelements);
+  hlong gNelements;
+  if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
+    stringstream ss;
+    ss << "Error reading mesh file: " << fileName;
+    LIBP_ABORT(ss.str())
+  }
+  sscanf(buf, hlongFormat, &gNelements);
 
   /* find # of triangles */
   fpos_t fpos;
   fgetpos(fp, &fpos);
   hlong Ntriangles = 0;
-  hlong NboundaryFaces = 0;
-  for(hlong n=0;n<Nelements;++n){
-    int elementType;
-    status = fgets(buf, BUFSIZ, fp);
-    sscanf(buf, "%*d%d", &elementType);
-    if(elementType==1) ++NboundaryFaces;
-    if(elementType==2) ++Ntriangles;
+  hlong gNboundaryFaces = 0;
+  for(hlong n=0;n<gNelements;++n){
+    int ElementType;
+    if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
+      stringstream ss;
+      ss << "Error reading mesh file: " << fileName;
+      LIBP_ABORT(ss.str())
+    }
+    sscanf(buf, "%*d%d", &ElementType);
+    if(ElementType==1) ++gNboundaryFaces;
+    if(ElementType==2) ++Ntriangles;
   }
   // rewind to start of elements
   fsetpos(fp, &fpos);
@@ -122,20 +145,24 @@ void meshTri2D::ParallelReader(const char *fileName){
   hlong cnt=0, bcnt=0;
   Ntriangles = 0;
 
-  boundaryInfo = (hlong*) calloc(NboundaryFaces*3, sizeof(hlong));
-  for(hlong n=0;n<Nelements;++n){
-    int elementType;
+  boundaryInfo = (hlong*) calloc(gNboundaryFaces*3, sizeof(hlong));
+  for(hlong n=0;n<gNelements;++n){
+    int ElementType;
     hlong v1, v2, v3;
-    status = fgets(buf, BUFSIZ, fp);
-    sscanf(buf, "%*d%d", &elementType);
-    if(elementType==1){ // boundary face
+    if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
+      stringstream ss;
+      ss << "Error reading mesh file: " << fileName;
+      LIBP_ABORT(ss.str())
+    }
+    sscanf(buf, "%*d%d", &ElementType);
+    if(ElementType==1){ // boundary face
       sscanf(buf, "%*d%*d %*d" hlongFormat "%*d" hlongFormat hlongFormat,
              boundaryInfo+bcnt*3, &v1, &v2);
       boundaryInfo[bcnt*3+1] = v1-1;
       boundaryInfo[bcnt*3+2] = v2-1;
       ++bcnt;
     }
-    if(elementType==2){  // triangle
+    if(ElementType==2){  // triangle
       if(start<=Ntriangles && Ntriangles<=end){
         sscanf(buf, "%*d%*d%*d " hlongFormat " %*d" hlongFormat hlongFormat hlongFormat,
                elementInfo+cnt, &v1, &v2, &v3);

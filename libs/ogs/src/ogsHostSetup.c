@@ -44,15 +44,15 @@ void *ogsHostSetup(MPI_Comm meshComm,
   /* gslib stuff */
   comm_ext world;
   struct comm com;
-  
+
   /*  MPI_Comm_dup(MPI_COMM_WORLD, (MPI_Comm*) &world); */
   world = (comm_ext)meshComm; // MPI_COMM_WORLD;
-  
+
   comm_init(&com, world);
 
   /* for the moment borrow gslib array */
   slong *id = tmalloc(slong, NuniqueBases);
-  
+
   dlong n;
   for(n=0;n<NuniqueBases;++n){ /* at some point need to choose int */
     id[n] = (slong) gatherGlobalNodes[n];
@@ -73,22 +73,22 @@ void ogsHostFree(void *gsh){
 }
 
 
-void *ogsGsUnique(hlong *gatherGlobalNodes,
+void ogsGsUnique(hlong *gatherGlobalNodes,
                    dlong NuniqueBases,
                    MPI_Comm meshComm){
 
   /* gslib stuff */
   comm_ext world;
   struct comm com;
-  
+
   /*  MPI_Comm_dup(MPI_COMM_WORLD, (MPI_Comm*) &world); */
   world = (comm_ext)meshComm; // MPI_COMM_WORLD;
-  
+
   comm_init(&com, world);
 
   /* for the moment borrow gslib array */
   slong *id = tmalloc(slong, NuniqueBases);
-  
+
   dlong n;
   for(n=0;n<NuniqueBases;++n){ /* at some point need to choose int */
     id[n] = (slong) gatherGlobalNodes[n];

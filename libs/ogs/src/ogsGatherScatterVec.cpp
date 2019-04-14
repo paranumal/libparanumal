@@ -28,36 +28,36 @@ SOFTWARE.
 #include "ogsKernels.hpp"
 #include "ogsInterface.h"
 
-void ogsGatherScatterVec(void *v, 
+void ogsGatherScatterVec(void *v,
                       const int k,
-                      const char *type, 
-                      const char *op, 
+                      const char *type,
+                      const char *op,
                       ogs_t *ogs){
   ogsHostGatherScatterVec(v, k, type, op, ogs->hostGsh);
 }
 
-void ogsGatherScatterVec(occa::memory o_v, 
+void ogsGatherScatterVec(occa::memory o_v,
                       const int k,
-                      const char *type, 
-                      const char *op, 
+                      const char *type,
+                      const char *op,
                       ogs_t *ogs){
   ogsGatherScatterVecStart (o_v, k, type, op, ogs);
   ogsGatherScatterVecFinish(o_v, k, type, op, ogs);
 }
 
-void ogsGatherScatterVecStart(occa::memory o_v, 
+void ogsGatherScatterVecStart(occa::memory o_v,
                           const int k,
-                          const char *type, 
-                          const char *op, 
+                          const char *type,
+                          const char *op,
                           ogs_t *ogs){
-  size_t Nbytes;
-  if (!strcmp(type, "float")) 
+  size_t Nbytes=0;
+  if (!strcmp(type, "float"))
     Nbytes = sizeof(float);
-  else if (!strcmp(type, "double")) 
+  else if (!strcmp(type, "double"))
     Nbytes = sizeof(double);
-  else if (!strcmp(type, "int")) 
+  else if (!strcmp(type, "int"))
     Nbytes = sizeof(int);
-  else if (!strcmp(type, "long long int")) 
+  else if (!strcmp(type, "long long int"))
     Nbytes = sizeof(long long int);
 
   if (ogs->NhaloGather) {
@@ -72,7 +72,7 @@ void ogsGatherScatterVecStart(occa::memory o_v,
   // gather halo nodes on device
   if (ogs->NhaloGather) {
     occaGatherVec(ogs->NhaloGather, k, ogs->o_haloGatherOffsets, ogs->o_haloGatherIds, type, op, o_v, ogs::o_haloBuf);
-    
+
     ogs->device.finish();
     ogs->device.setStream(ogs::dataStream);
     ogs::o_haloBuf.copyTo(ogs::haloBuf, ogs->NhaloGather*Nbytes*k, 0, "async: true");
@@ -81,20 +81,20 @@ void ogsGatherScatterVecStart(occa::memory o_v,
 }
 
 
-void ogsGatherScatterVecFinish(occa::memory o_v, 
+void ogsGatherScatterVecFinish(occa::memory o_v,
                           const int k,
-                          const char *type, 
-                          const char *op, 
+                          const char *type,
+                          const char *op,
                           ogs_t *ogs){
 
-  size_t Nbytes;
-  if (!strcmp(type, "float")) 
+  size_t Nbytes=0;
+  if (!strcmp(type, "float"))
     Nbytes = sizeof(float);
-  else if (!strcmp(type, "double")) 
+  else if (!strcmp(type, "double"))
     Nbytes = sizeof(double);
-  else if (!strcmp(type, "int")) 
+  else if (!strcmp(type, "int"))
     Nbytes = sizeof(int);
-  else if (!strcmp(type, "long long int")) 
+  else if (!strcmp(type, "long long int"))
     Nbytes = sizeof(long long int);
 
   if(ogs->NlocalGather) {
@@ -125,37 +125,37 @@ void occaGatherScatterVec(const  dlong Ngather,
                 const char* type,
                 const char* op,
                 occa::memory  o_v) {
-  
-  if      ((!strcmp(type, "float"))&&(!strcmp(op, "add"))) 
+
+  if      ((!strcmp(type, "float"))&&(!strcmp(op, "add")))
     ogs::gatherScatterVecKernel_floatAdd(Ngather, Nentries, o_gatherStarts, o_gatherIds, o_v);
-  else if ((!strcmp(type, "float"))&&(!strcmp(op, "mul"))) 
+  else if ((!strcmp(type, "float"))&&(!strcmp(op, "mul")))
     ogs::gatherScatterVecKernel_floatMul(Ngather, Nentries, o_gatherStarts, o_gatherIds, o_v);
-  else if ((!strcmp(type, "float"))&&(!strcmp(op, "min"))) 
+  else if ((!strcmp(type, "float"))&&(!strcmp(op, "min")))
     ogs::gatherScatterVecKernel_floatMin(Ngather, Nentries, o_gatherStarts, o_gatherIds, o_v);
-  else if ((!strcmp(type, "float"))&&(!strcmp(op, "max"))) 
+  else if ((!strcmp(type, "float"))&&(!strcmp(op, "max")))
     ogs::gatherScatterVecKernel_floatMax(Ngather, Nentries, o_gatherStarts, o_gatherIds, o_v);
-  else if ((!strcmp(type, "double"))&&(!strcmp(op, "add"))) 
+  else if ((!strcmp(type, "double"))&&(!strcmp(op, "add")))
     ogs::gatherScatterVecKernel_doubleAdd(Ngather, Nentries, o_gatherStarts, o_gatherIds, o_v);
-  else if ((!strcmp(type, "double"))&&(!strcmp(op, "mul"))) 
+  else if ((!strcmp(type, "double"))&&(!strcmp(op, "mul")))
     ogs::gatherScatterVecKernel_doubleMul(Ngather, Nentries, o_gatherStarts, o_gatherIds, o_v);
-  else if ((!strcmp(type, "double"))&&(!strcmp(op, "min"))) 
+  else if ((!strcmp(type, "double"))&&(!strcmp(op, "min")))
     ogs::gatherScatterVecKernel_doubleMin(Ngather, Nentries, o_gatherStarts, o_gatherIds, o_v);
-  else if ((!strcmp(type, "double"))&&(!strcmp(op, "max"))) 
+  else if ((!strcmp(type, "double"))&&(!strcmp(op, "max")))
     ogs::gatherScatterVecKernel_doubleMax(Ngather, Nentries, o_gatherStarts, o_gatherIds, o_v);
-  else if ((!strcmp(type, "int"))&&(!strcmp(op, "add"))) 
+  else if ((!strcmp(type, "int"))&&(!strcmp(op, "add")))
     ogs::gatherScatterVecKernel_intAdd(Ngather, Nentries, o_gatherStarts, o_gatherIds, o_v);
-  else if ((!strcmp(type, "int"))&&(!strcmp(op, "mul"))) 
+  else if ((!strcmp(type, "int"))&&(!strcmp(op, "mul")))
     ogs::gatherScatterVecKernel_intMul(Ngather, Nentries, o_gatherStarts, o_gatherIds, o_v);
-  else if ((!strcmp(type, "int"))&&(!strcmp(op, "min"))) 
+  else if ((!strcmp(type, "int"))&&(!strcmp(op, "min")))
     ogs::gatherScatterVecKernel_intMin(Ngather, Nentries, o_gatherStarts, o_gatherIds, o_v);
-  else if ((!strcmp(type, "int"))&&(!strcmp(op, "max"))) 
+  else if ((!strcmp(type, "int"))&&(!strcmp(op, "max")))
     ogs::gatherScatterVecKernel_intMax(Ngather, Nentries, o_gatherStarts, o_gatherIds, o_v);
-  else if ((!strcmp(type, "long long int"))&&(!strcmp(op, "add"))) 
+  else if ((!strcmp(type, "long long int"))&&(!strcmp(op, "add")))
     ogs::gatherScatterVecKernel_longAdd(Ngather, Nentries, o_gatherStarts, o_gatherIds, o_v);
-  else if ((!strcmp(type, "long long int"))&&(!strcmp(op, "mul"))) 
+  else if ((!strcmp(type, "long long int"))&&(!strcmp(op, "mul")))
     ogs::gatherScatterVecKernel_longMul(Ngather, Nentries, o_gatherStarts, o_gatherIds, o_v);
-  else if ((!strcmp(type, "long long int"))&&(!strcmp(op, "min"))) 
+  else if ((!strcmp(type, "long long int"))&&(!strcmp(op, "min")))
     ogs::gatherScatterVecKernel_longMin(Ngather, Nentries, o_gatherStarts, o_gatherIds, o_v);
-  else if ((!strcmp(type, "long long int"))&&(!strcmp(op, "max"))) 
+  else if ((!strcmp(type, "long long int"))&&(!strcmp(op, "max")))
     ogs::gatherScatterVecKernel_longMax(Ngather, Nentries, o_gatherStarts, o_gatherIds, o_v);
 }

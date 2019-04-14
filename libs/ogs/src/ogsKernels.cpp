@@ -198,10 +198,10 @@ void ogs::initKernels(MPI_Comm comm, occa::device device) {
    kernelInfo["compiler_flags"] += "--fmad=true"; // compiler option for cuda
   }
 
-  if (rank==0) printf("Compiling GatherScatter Kernels...");fflush(stdout);
+  if (rank==0) {printf("Compiling GatherScatter Kernels...");fflush(stdout);}
 
   for (int r=0;r<2;r++){
-    if ((r==0 && rank==0) || (r==1 && rank>0)) {      
+    if ((r==0 && rank==0) || (r==1 && rank>0)) {
 
       ogs::gatherScatterKernel_floatAdd = device.buildKernel(DOGS "/okl/gatherScatter.okl", "gatherScatter_floatAdd", kernelInfo);
       ogs::gatherScatterKernel_floatMul = device.buildKernel(DOGS "/okl/gatherScatter.okl", "gatherScatter_floatMul", kernelInfo);
