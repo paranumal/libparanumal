@@ -129,6 +129,7 @@ SOFTWARE.
                                       @restrict const  dfloat *  U,
                                       @restrict const  dfloat *  NU,
                                       @restrict const  dfloat *  GP,
+                                      @restrict const  dfloat *  FU,
                                             @restrict dfloat *  rhsU,
                                             @restrict dfloat *  rhsV,
                                             @restrict dfloat *  rhsW){
@@ -162,9 +163,14 @@ SOFTWARE.
               const dfloat GPy  = GP[id+1*fieldOffset+s*p_NVfields*fieldOffset];
               const dfloat GPz  = GP[id+2*fieldOffset+s*p_NVfields*fieldOffset];
 
-              s_rhsU[es][n] -= J*inu*extbdfC[s]*GPx;
-              s_rhsV[es][n] -= J*inu*extbdfC[s]*GPy;
-              s_rhsW[es][n] -= J*inu*extbdfC[s]*GPz;
+              //
+              const dfloat FUx  = FU[id+0*fieldOffset+s*p_NVfields*fieldOffset];
+              const dfloat FUy  = FU[id+1*fieldOffset+s*p_NVfields*fieldOffset];
+              const dfloat FUz  = FU[id+2*fieldOffset+s*p_NVfields*fieldOffset];
+
+              s_rhsU[es][n] -= J*inu*(extbdfC[s]*GPx+extbdfA[s]*FUx);
+              s_rhsV[es][n] -= J*inu*(extbdfC[s]*GPy+extbdfA[s]*FUy);
+              s_rhsW[es][n] -= J*inu*(extbdfC[s]*GPz+extbdfA[s]*FUz);
             }
 
           } else {
@@ -188,9 +194,14 @@ SOFTWARE.
               const dfloat GPy  = GP[id+1*fieldOffset+s*p_NVfields*fieldOffset];
               const dfloat GPz  = GP[id+2*fieldOffset+s*p_NVfields*fieldOffset];
 
-              s_rhsU[es][n] += J*inu*(idt*extbdfB[s]*Um - extbdfA[s]*NUm - extbdfC[s]*GPx);
-              s_rhsV[es][n] += J*inu*(idt*extbdfB[s]*Vm - extbdfA[s]*NVm - extbdfC[s]*GPy);
-              s_rhsW[es][n] += J*inu*(idt*extbdfB[s]*Wm - extbdfA[s]*NWm - extbdfC[s]*GPz);
+              // FU
+              const dfloat FUx  = FU[id+0*fieldOffset+s*p_NVfields*fieldOffset];
+              const dfloat FUy  = FU[id+1*fieldOffset+s*p_NVfields*fieldOffset];
+              const dfloat FUz  = FU[id+2*fieldOffset+s*p_NVfields*fieldOffset];
+
+              s_rhsU[es][n] += J*inu*(idt*extbdfB[s]*Um - extbdfA[s]*(NUm+FUx) - extbdfC[s]*GPx);
+              s_rhsV[es][n] += J*inu*(idt*extbdfB[s]*Vm - extbdfA[s]*(NVm+FUy) - extbdfC[s]*GPy);
+              s_rhsW[es][n] += J*inu*(idt*extbdfB[s]*Wm - extbdfA[s]*(NWm+FUz) - extbdfC[s]*GPz);
             }
           }
         }

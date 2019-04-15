@@ -36,3 +36,15 @@ SOFTWARE.
     }
   }
 }
+
+
+@kernel void setScalar(const dlong N,
+                      const dfloat alpha,
+                      @restrict dfloat *  y){
+  
+  for(dlong n=0;n<N;++n;@tile(256,@outer,@inner)){
+    if(n<N){
+      y[n]  = alpha;
+    }
+  }
+}

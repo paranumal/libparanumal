@@ -94,15 +94,15 @@ void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU){
 
 
 
-  if(ins->options.compareArgs("FILTER STABILIZATION", "RELAXATION")){
-    ins->filterKernel(mesh->Nelements,
-                      ins->o_filterMT,
-                      ins->filterS, 
-                      ins->fieldOffset,
-                      o_U,
-                      o_NU);
-
-  }
+  // if(ins->options.compareArgs("FILTER STABILIZATION", "RELAXATION")){
+  //   ins->filterKernel(mesh->Nelements,
+  //                     ins->o_filterMT,
+  //                     ins->filterS, 
+  //                     ins->fieldOffset,
+  //                     o_U,
+  //                     o_NU);
+  // 
+  //}
                     
 
   if (ipdg){
