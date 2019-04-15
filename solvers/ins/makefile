@@ -82,7 +82,8 @@ AOBJS    = \
 ./src/insWeldTriVerts.o \
 ./src/insIsoPlotVTU.o \
 ./src/insBrownMinionQuad3D.o\
-./src/insFilterSetup.o
+./src/insFilterSetup.o \
+./src/insAddVelocityRhs.o
 
 # library objects
 LOBJS = \
