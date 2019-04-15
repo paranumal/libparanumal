@@ -58,7 +58,10 @@ int insWeldTriVerts(ins_t *ins, int Ntris, dfloat *isoq){
   vertexLookup* VL = new vertexLookup;
 
   dfloat p[3][3]={{0.0}};
-  dfloat q[ins->isoNfields][3]={{0.0}}; 
+  // dfloat q[ins->isoNfields][3]={{0.0}}; 
+  std::vector<dfloat> q;
+  q.resize(ins->isoNfields*3); 
+
   int id=0, v[3]={0}; 
   int nodesk=0;
   vertexPos vpos;
@@ -87,9 +90,9 @@ int insWeldTriVerts(ins_t *ins, int Ntris, dfloat *isoq){
 
     // get {q, q, q}, for 3 nodes in kth tri:
     for(int fld = 0; fld<ins->isoNfields; fld++){
-      q[fld][0] = isoq[n0+(ins->dim + fld)];
-      q[fld][1] = isoq[n1+(ins->dim + fld)];
-      q[fld][2] = isoq[n2+(ins->dim + fld)];
+      q[fld*3 + 0] = isoq[n0+(ins->dim + fld)];
+      q[fld*3 + 1] = isoq[n1+(ins->dim + fld)];
+      q[fld*3 + 2] = isoq[n2+(ins->dim + fld)];
     }
 
     for (int i=0; i<3; ++i) {     // for each node in the tri
@@ -97,7 +100,7 @@ int insWeldTriVerts(ins_t *ins, int Ntris, dfloat *isoq){
       id = VL->getVertex(vpos);   // insert node, get id
 
       for(int fld = 0; fld<ins->isoNfields; fld++)
-        Q[fld][id] = q[fld][i];               // scalar for this node
+        Q[fld][id] = q[fld*3 + i];               // scalar for this node
 
       refT[skT++] = id;           // id of ith node in triangle k
       v[i] = id;                  // for checking validity of tri
