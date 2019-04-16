@@ -111,4 +111,6 @@ SOFTWARE.
   }                                        \
 }
 
+ //   *(pxB) = 2.f*M_PI*cos(2.f*M_PI*y)*sin(2.f*M_PI*x)*exp(-p_nu*8.f*M_PI*M_PI*t);\
+ //   *(pyB) = 2.f*M_PI*sin(2.f*M_PI*y)*cos(2.f*M_PI*x)*exp(-p_nu*8.f*M_PI*M_PI*t);\
 

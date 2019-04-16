@@ -162,8 +162,10 @@ void insError(ins_t *ins, dfloat time){
       occa::memory o_pExact = mesh->device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), pExact);
 
       ellipticZeroMean(ins->pSolver, o_pExact); 
+      ellipticZeroMean(ins->pSolver, ins->o_P); 
 
       o_pExact.copyTo(pExact); 
+      ins->o_P.copyTo(ins->P);
 
       dfloat *pEx  = (dfloat *)calloc(mesh->Np, sizeof(dfloat));
       dfloat *pPr  = (dfloat *)calloc(mesh->Np, sizeof(dfloat));
@@ -264,8 +266,6 @@ void insError(ins_t *ins, dfloat time){
           vErr[id] = fabs(ins->U[id+1*offset]-vExact);
           wErr[id] = fabs(ins->U[id+2*offset]-wExact);
           pErr[id] = fabs(ins->P[id+0*offset]-((pExact[id] -gpem) + gpam));
-
-
 #endif
         
           #if 0

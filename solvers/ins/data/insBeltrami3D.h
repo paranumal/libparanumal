@@ -36,7 +36,7 @@ SOFTWARE.
     *(p) = -0.5f*a*a*exp(-2.f*p_nu*d*d*t)*(2.f*exp(a*(z+y))*cos(a*z+d*x)*sin(a*x+d*y)+2.f*exp(a*(z+x))*cos(a*x+d*y)*sin(a*y+d*z)+2.f*exp(a*(y+x))*cos(a*y+d*z)*sin(a*z+d*x)+exp(2.f*a*z)+exp(2.f*a*y)+exp(2.f*a*x));\
   }   
   
-  //*(p) = -a*a*exp(-2.f*d*d*t)*(exp(2.f*a*x)+exp(2.f*a*y)+exp(2.f*a*z))*(sin(a*x+d*y)*cos(a*z+d*x)*exp(a*(y+z))+sin(a*y+d*z)*cos(a*x+d*y)*exp(a*(x+z))+sin(a*z+d*x)*cos(a*y+d*z)*exp(a*(x+y))); \
+//*(p) = -a*a*exp(-2.f*d*d*t)*(exp(2.f*a*x)+exp(2.f*a*y)+exp(2.f*a*z))*(sin(a*x+d*y)*cos(a*z+d*x)*exp(a*(y+z))+sin(a*y+d*z)*cos(a*x+d*y)*exp(a*(x+z))+sin(a*z+d*x)*cos(a*y+d*z)*exp(a*(x+y))); \
 
 // Boundary conditions
 /* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5, z-slip 6 */

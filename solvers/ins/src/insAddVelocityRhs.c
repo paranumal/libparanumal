@@ -33,7 +33,7 @@ void insAddVelocityRhs(ins_t *ins, dfloat time){
   
   // Explicitly make FU zero to prevent multiple additions
   dfloat zero = 0.0; 
-  ins->setScalarKernel(ins->Ntotal, zero, ins->o_FU); 
+  ins->setScalarKernel(ins->Ntotal*ins->NVfields, zero, ins->o_FU); 
    
   if(ins->options.compareArgs("FILTER STABILIZATION", "RELAXATION"))
   ins->filterKernel(mesh->Nelements,

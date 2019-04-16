@@ -5,7 +5,7 @@
 data/insBeltrami3D.h
 
 [MESH FILE]
-../../meshes/insBeltramiHexStructured3D_2.msh
+../../meshes/insBeltramiHexStructured3D_3.msh
 
 [MESH DIMENSION]
 3
