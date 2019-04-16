@@ -29,6 +29,7 @@ SOFTWARE.
                                    @restrict const  dfloat *  vgeo,
                                    @restrict const  dfloat *  MM,
                                    const dfloat idt,
+                                   const dfloat g0,
                                     @restrict dfloat *  rhs){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
@@ -43,7 +44,7 @@ SOFTWARE.
           const dlong gid = n + e*p_Np*p_Nvgeo;
           const dfloat JW = vgeo[gid + p_JWID*p_Np];
 
-          rhs[id] = -JW*rhsid*idt;
+          rhs[id] = -JW*rhsid*idt*g0;
         }
       }
     }

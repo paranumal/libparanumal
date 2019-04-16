@@ -1041,8 +1041,8 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
       ins->divergenceSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       
-      // AK. Note that currently only HEX is implemented in weak form !!!!!!!
-      if(ins->elementType==HEXAHEDRA){
+      // AK. Note that currently only HEX and QUAD is implemented in weak form !!!!!!!
+      if(ins->elementType==HEXAHEDRA || (ins->elementType==QUADRILATERALS && ins->dim==2)){
         sprintf(kernelName, "insStrongDivergenceVolume%s", suffix);
         ins->divergenceStrongVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       }else{ // implement other divergence operators in weak form also!!!!

@@ -93,6 +93,7 @@ SOFTWARE.
   }                                 \
 }
 
+
 #define insPressureNeumannConditions2D(bc, t, x, y, nx, ny, pxM, pyM, pxB, pyB) \
 {                                          \
   if(bc==1 || bc==2){                      \
@@ -109,3 +110,5 @@ SOFTWARE.
     *(pyB) = 0.f;                          \
   }                                        \
 }
+
+

@@ -39,7 +39,8 @@ void insPressureRhs(ins_t *ins, dfloat time, int stage){
   ins->pressureRhsKernel(mesh->Nelements,
                               mesh->o_vgeo,
                               mesh->o_MM,
-                              ins->idt,  
+                              ins->idt, 
+                              ins->g0, 
                               ins->o_rhsP);
   occaTimerToc(mesh->device,"PoissonRhsForcing");
 

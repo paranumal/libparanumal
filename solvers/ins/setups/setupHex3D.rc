@@ -5,7 +5,7 @@
 data/insBeltrami3D.h
 
 [MESH FILE]
-../../meshes/insBeltramiHex3D_dir.msh
+../../meshes/insBeltramiHexStructured3D_2.msh
 
 [MESH DIMENSION]
 3
@@ -14,7 +14,7 @@ data/insBeltrami3D.h
 12
 
 [POLYNOMIAL DEGREE]
-7
+4
 
 [ELEMENT MAP]
 ISOPARAMETRIC
@@ -71,16 +71,20 @@ NONE
 0.0
 
 [TSTEPS FOR SOLUTION OUTPUT]
-100
+1000000
 
 [START TIME]
 0
 
 [FINAL TIME]
-0.1
+0.01
 
 [CFL]
 0.1
+
+# overwrites time step size
+[DT]
+8.0E-5
 
 [OUTPUT TYPE]
 VTU
@@ -97,15 +101,15 @@ fence
 
 # can add FLEXIBLE and/or NONBLOCKING to PCG
 [VELOCITY KRYLOV SOLVER]
-PCG+NONBLOCKING
+#PCG+NONBLOCKING
 #+NONBLOCKING
-# PCG
+PCG
 # PCG+FLEXIBLE
 # PCG+NONBLOCKING
 # PCG+NONBLOCKING+FLEXIBLE
 
 [VELOCITY SOLVER TOLERANCE]
-1.e-6
+1.e-10
 
 # can be IPDG, [ currently CONTINUOUS seems to be broken ]
 [VELOCITY DISCRETIZATION]
@@ -176,14 +180,15 @@ MAX
 
 # can add FLEXIBLE to PCG
 [PRESSURE KRYLOV SOLVER]
-PCG+FLEXIBLE+NONBLOCKING
+PCG
+#PCG+FLEXIBLE+NONBLOCKING
 #PCG (if fixed preconditioner)
 #PCG+NONBLOCKING (if fixed preconditioner)
 #PCG+FLEXIBLE
 #PCG+FLEXIBLE+NONBLOCKING
 
 [PRESSURE SOLVER TOLERANCE]
-1.e-7
+1.e-10
 
 # can be IPDG, or CONTINUOUS
 [PRESSURE DISCRETIZATION]
@@ -245,6 +250,13 @@ MAX
 [PRESSURE PARALMOND CHEBYSHEV DEGREE]
 2
 
+# only smooth at bottom of cycle
+[PARALMOND SMOOTH COARSEST]
+TRUE
+
+[PARALMOND SMOOTH COARSEST DEGREE]
+20
+
 ###########################################
 
 # compare to a reference solution. Use NONE to skip comparison
@@ -271,4 +283,7 @@ NODAL
 
 # force PCG to go to MAXIMUM ITERATIONS
 [FIXED ITERATION COUNT]
+FALSE
+
+[USE PRECOMPILED BINARIES]
 FALSE
