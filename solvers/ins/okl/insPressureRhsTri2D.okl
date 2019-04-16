@@ -30,6 +30,7 @@ SOFTWARE.
                                 @restrict const  dfloat *  vgeo,
                                 @restrict const  dfloat *  MM,
                                 const dfloat idt,
+                                const dfloat g0,
                                       @restrict dfloat *  rhsP){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
@@ -64,7 +65,7 @@ SOFTWARE.
             }
 
           const dlong id = e*p_Np+n;
-          rhsP[id] = -J*rhsn*idt;
+          rhsP[id] = -J*rhsn*idt*g0;
         }
       }
     }

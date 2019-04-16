@@ -5,7 +5,8 @@
 data/insVortex2D.h
 
 [MESH FILE]
-../../meshes/insVortexQuad2D.msh
+../../meshes/insVortexQuadStructured2D_3.msh
+#../../meshes/insVortexQuad2D.msh
 
 [MESH DIMENSION]
 2
@@ -14,7 +15,7 @@ data/insVortex2D.h
 4
 
 [POLYNOMIAL DEGREE]
-4
+5
 
 [THREAD MODEL]
 CUDA
@@ -38,8 +39,20 @@ EXTBDF2
 [ADVECTION TYPE]
 CUBATURE
 
+#currently RELAXATION, 
+[FILTER STABILIZATION]
+NONE
+#RELAXATION
+
+[FILTER STRENGTH]
+50.0
+
+#1D for hex and quads
+[FILTER CUTOFF RATIO]
+0.9
+
 [VISCOSITY]
-0.025
+0.01
 
 [MACH NUMBER]
 .2
@@ -54,16 +67,20 @@ CUBATURE
 0.0
 
 [TSTEPS FOR SOLUTION OUTPUT]
-100
+1000
 
 [START TIME]
 0
 
 [FINAL TIME]
-10
+1.0
 
 [CFL]
 0.2
+
+# overwrites time step size
+[DT]
+300.0E-5
 
 [OUTPUT TYPE]
 VTU
@@ -84,7 +101,11 @@ PCG
 
 # can be IPDG, or CONTINUOUS
 [VELOCITY DISCRETIZATION]
-IPDG
+#IPDG
+CONTINUOUS
+
+[VELOCITY SOLVER TOLERANCE]
+1.e-10
 
 # can be NODAL or BERN
 [VELOCITY BASIS]
@@ -106,6 +127,9 @@ HALFDOFS
 [VELOCITY MULTIGRID SMOOTHER]
 DAMPEDJACOBI,CHEBYSHEV
 
+[VELOCITY CHEBYSHEV DEGREE]
+2
+
 ###########################################
 
 ########## ParAlmond Options ##############
@@ -113,7 +137,7 @@ DAMPEDJACOBI,CHEBYSHEV
 # can be KCYCLE, or VCYCLE
 # can add the EXACT and NONSYM option
 [VELOCITY PARALMOND CYCLE]
-KCYCLE
+VCYCLE
 
 # can be DAMPEDJACOBI or CHEBYSHEV
 [VELOCITY PARALMOND SMOOTHER]
@@ -133,6 +157,9 @@ DEFAULT
 MAX
 #MIN
 
+[VELOCITY PARALMOND CHEBYSHEV DEGREE]
+2
+
 ###########################################
 
 #################################################
@@ -141,11 +168,15 @@ MAX
 
 # can add FLEXIBLE to PCG
 [PRESSURE KRYLOV SOLVER]
-PCG,FLEXIBLE
+PCG
 
 # can be IPDG, or CONTINUOUS
 [PRESSURE DISCRETIZATION]
+#IPDG
 CONTINUOUS
+
+[PRESSURE SOLVER TOLERANCE]
+1.e-10
 
 # can be NODAL or BERN
 [PRESSURE BASIS]
@@ -154,6 +185,7 @@ NODAL
 # can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
 [PRESSURE PRECONDITIONER]
 MULTIGRID
+#FULLALMOND
 
 ########## MULTIGRID Options ##############
 
@@ -167,6 +199,9 @@ HALFDOFS
 [PRESSURE MULTIGRID SMOOTHER]
 DAMPEDJACOBI,CHEBYSHEV
 
+[PRESSURE CHEBYSHEV DEGREE]
+2
+
 ###########################################
 
 ########## ParAlmond Options ##############
@@ -174,7 +209,7 @@ DAMPEDJACOBI,CHEBYSHEV
 # can be KCYCLE, or VCYCLE
 # can add the EXACT and NONSYM option
 [PRESSURE PARALMOND CYCLE]
-KCYCLE
+VCYCLE
 
 # can be DAMPEDJACOBI or CHEBYSHEV
 [PRESSURE PARALMOND SMOOTHER]
@@ -194,6 +229,17 @@ DEFAULT
 MAX
 #MIN
 
+[PRESSURE PARALMOND CHEBYSHEV DEGREE]
+2
+
+# only smooth at bottom of cycle
+[PARALMOND SMOOTH COARSEST]
+TRUE
+
+[PARALMOND SMOOTH COARSEST DEGREE]
+20
+
+
 ###########################################
 
 # compare to a reference solution. Use NONE to skip comparison
@@ -203,3 +249,24 @@ VORTEX
 
 [VERBOSE]
 FALSE
+
+[DEBUG ENABLE OGS]
+1
+
+[DEBUG ENABLE REDUCTIONS]
+1
+
+[ELLIPTIC INTEGRATION]
+NODAL
+
+# bail out iteration count for PCG
+[MAXIMUM ITERATIONS]
+1000
+
+# force PCG to go to MAXIMUM ITERATIONS
+[FIXED ITERATION COUNT]
+FALSE
+
+[USE PRECOMPILED BINARIES]
+FALSE
+

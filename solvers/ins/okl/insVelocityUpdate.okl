@@ -29,6 +29,7 @@ SOFTWARE.
                               const int stage,
                               const int ARKswitch,
                               const dfloat dt,
+                              const dfloat ig0,
                               const dlong fieldOffset,
                               @restrict const  dfloat *  prkA,
                               @restrict const  dfloat *  prkB,
@@ -51,11 +52,11 @@ SOFTWARE.
             Un += dt*prkAB*GP[id+i*fieldOffset+s*p_NVfields*fieldOffset];
           }
         } else {
-          Un = rkU[id+i*fieldOffset] - dt*rkGP[id+i*fieldOffset];
+          Un = rkU[id+i*fieldOffset] - dt*ig0*rkGP[id+i*fieldOffset];
 
           for (int s=0;s<stage;s++) {
             dfloat prkAn = prkA[s];
-            Un += dt*prkAn*GP[id+i*fieldOffset+s*p_NVfields*fieldOffset];
+            Un += dt*ig0*prkAn*GP[id+i*fieldOffset+s*p_NVfields*fieldOffset];
           }
         }
 
