@@ -24,27 +24,22 @@ SOFTWARE.
 
 */
 
-//add constant scalar value to every entry of a vector
+#include "ins.h"
 
-@kernel void addScalar(const dlong N,
-                      const dfloat alpha,
-                      @restrict dfloat *  y){
+// compute filter term and add to explicit storage data FU
+void insAddVelocityRhs(ins_t *ins, dfloat time){
+
+  mesh_t *mesh = ins->mesh;
   
-  for(dlong n=0;n<N;++n;@tile(256,@outer,@inner)){
-    if(n<N){
-      y[n] += alpha;
-    }
-  }
-}
-
-
-@kernel void setScalar(const dlong N,
-                      const dfloat alpha,
-                      @restrict dfloat *  y){
-  
-  for(dlong n=0;n<N;++n;@tile(256,@outer,@inner)){
-    if(n<N){
-      y[n]  = alpha;
-    }
-  }
+  // Explicitly make FU zero to prevent multiple additions
+  dfloat zero = 0.0; 
+  ins->setScalarKernel(ins->Ntotal, zero, ins->o_FU); 
+   
+  if(ins->options.compareArgs("FILTER STABILIZATION", "RELAXATION"))
+  ins->filterKernel(mesh->Nelements,
+                    ins->o_filterMT,
+                    ins->filterS, 
+                    ins->fieldOffset,
+                    ins->o_U,
+                    ins->o_FU);
 }

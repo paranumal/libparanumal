@@ -31,8 +31,8 @@ TRUE
 
 #currently RELAXATION, 
 [FILTER STABILIZATION]
-NONE
-#RELAXATION
+#NONE
+RELAXATION
 
 #in explicit Strength will be set to Strength*dt
 [FILTER STRENGTH]

@@ -88,6 +88,8 @@ typedef struct {
   dfloat *rhsU, *rhsV, *rhsW, *rhsP;   
   dfloat *rkU, *rkP, *PI;
   dfloat *rkNU, *rkLU, *rkGP;
+
+  dfloat *FU; // Additional source terms for explicit contribution
   
   dfloat *Vort, *Div;
 
@@ -173,6 +175,8 @@ typedef struct {
   occa::memory o_NU, o_LU, o_GP;
   occa::memory o_GU;
 
+  occa::memory o_FU; 
+
   occa::memory o_UH, o_VH, o_WH;
   occa::memory o_rkU, o_rkP, o_PI;
   occa::memory o_rkNU, o_rkLU, o_rkGP;
@@ -237,6 +241,8 @@ typedef struct {
   occa::kernel vorticityKernel;
   occa::kernel isoSurfaceKernel;
 
+  occa::kernel setScalarKernel; 
+
 
 }ins_t;
 
@@ -253,6 +259,7 @@ void insComputeDt(ins_t *ins, dfloat time);
 
 // Currently implemented Relexation-Type filtering
 void insFilterSetup(ins_t *ins);
+void insAddVelocityRhs(ins_t *ins, dfloat time);
 
 void insAdvection(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NU);
 void insDiffusion(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_LU);

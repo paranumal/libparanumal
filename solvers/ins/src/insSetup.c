@@ -255,6 +255,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->Vort = (dfloat*) calloc(ins->NVfields*Ntotal,sizeof(dfloat));
   ins->Div  = (dfloat*) calloc(              Nlocal,sizeof(dfloat));
 
+  ins->FU   = (dfloat*) calloc(ins->NVfields*(ins->Nstages+1)*Ntotal,sizeof(dfloat));
   //extra storage for interpolated fields
   if(ins->elementType==HEXAHEDRA)
     ins->cU = (dfloat *) calloc(ins->NVfields*mesh->Nelements*mesh->cubNp,sizeof(dfloat));
@@ -902,6 +903,8 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->o_Vort = mesh->device.malloc(ins->NVfields*Ntotal*sizeof(dfloat), ins->Vort);
   ins->o_Div  = mesh->device.malloc(              Nlocal*sizeof(dfloat), ins->Div);
 
+  ins->o_FU    = mesh->device.malloc(ins->NVfields*(ins->Nstages+1)*Ntotal*sizeof(dfloat), ins->FU);
+
   if(ins->elementType==HEXAHEDRA) // !!!! check that
     ins->o_cU = mesh->device.malloc(ins->NVfields*mesh->Nelements*mesh->cubNp*sizeof(dfloat), ins->cU);
   else 
@@ -1162,13 +1165,14 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
       }
 
       ins->haloGetKernel =
-	mesh->device.buildKernel(DINS "/okl/insHalo.okl",
-				 "insHaloGet",
-				 kernelInfo);
+	mesh->device.buildKernel(DINS "/okl/insHalo.okl", "insHaloGet", kernelInfo);
       ins->haloPutKernel =
-	mesh->device.buildKernel(DINS "/okl/insHalo.okl",
-				 "insHaloPut",
-				 kernelInfo);
+	mesh->device.buildKernel(DINS "/okl/insHalo.okl", "insHaloPut", kernelInfo);
+
+
+    sprintf(fileName, DHOLMES "/okl/addScalar.okl");
+    sprintf(kernelName, "setScalar");
+    ins->setScalarKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       
     }
