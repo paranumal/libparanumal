@@ -129,6 +129,9 @@ void insRunEXTBDF(ins_t *ins){
     }
     
     insGradient (ins, time, ins->o_P, ins->o_GP);
+    
+    // Add explicit contrubitions like gravity, relaxation etc...
+    insAddVelocityRhs(ins, time); 
 
     
     insVelocityRhs  (ins, time+ins->dt, ins->Nstages, ins->o_rhsU, ins->o_rhsV, ins->o_rhsW);
@@ -176,9 +179,14 @@ void insRunEXTBDF(ins_t *ins){
       ins->o_NU.copyFrom(ins->o_NU, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
 			 (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
 			 (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
+      
       ins->o_GP.copyFrom(ins->o_GP, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
 			 (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
 			 (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
+      
+      ins->o_FU.copyFrom(ins->o_FU, ins->Ntotal*ins->NVfields*sizeof(dfloat), 
+       (s-1)*ins->Ntotal*ins->NVfields*sizeof(dfloat), 
+       (s-2)*ins->Ntotal*ins->NVfields*sizeof(dfloat));
     }
 
 
