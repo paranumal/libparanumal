@@ -43,8 +43,8 @@ void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale){
 	  solver->q[curr_pos] = 1.;
 	  solver->o_qpre.copyFrom(solver->q);
 
-	  //solver->o_qpre.copyTo(solver->o_qw);
-	  	  solver->filterWeakKernelH(mesh->Nelements,
+	  solver->o_qpre.copyTo(solver->o_qw);
+	  /*solver->filterWeakKernelH(mesh->Nelements,
 			      solver->o_dualTransMatrix,
 			      solver->o_cubeFaceNumber,
 			      solver->o_gridToE,
@@ -66,7 +66,7 @@ void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale){
 			      solver->o_qpre,
 			      solver->o_qFilterw,
 			      solver->o_qw);
-	  
+	  */
 		  
 	// compute volume contribution to DG advection RHS
 	solver->volumeKernel(mesh->Nelements,
@@ -128,7 +128,7 @@ void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale){
 				     solver->o_overlapDirection,
 				     solver->o_rhsq);
 	*/
-	
+	/*
 	solver->filterKernelH(mesh->Nelements,
 			      solver->o_dualProjMatrix,
 			      solver->o_cubeFaceNumber,
@@ -152,7 +152,7 @@ void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale){
 			      solver->o_qFilters,
 			      solver->o_qs);
 	
-	
+	*/
 	/*	solver->massMatrixKernel(mesh->Nelements,
 				 solver->o_invmass,
 				 solver->o_vgeo,
@@ -163,7 +163,7 @@ void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale){
 	/*	solver->o_rhsqs.copyTo(test_qs);
 		solver->o_rhsqw.copyTo(test_qw);*/
 
-	solver->o_qs.copyTo(test_qs);
+	solver->o_rhsqs.copyTo(test_qs);
 	solver->o_rhsqw.copyTo(test_qw);
 
 	

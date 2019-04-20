@@ -201,8 +201,8 @@ kernel void advectionSurfaceLSERKmixedQuad3D(const iint Nelements,
 
 			occaUnroll(p_Nfields)
 			    for(int fld=0;fld<p_Nfields;++fld){
-				rhsqs[vidM+fld*p_Np] += w*j*sc*fluxqs[fld]; // TW dq[fld];
-				rhsqw[vidM+fld*p_Np] += w*j*sc*fluxqw[fld]; // TW dq[fld];
+				rhsqs[vidM+fld*p_Np] += sc*fluxqs[fld]; // TW dq[fld];
+				rhsqw[vidM+fld*p_Np] += sc*fluxqw[fld]; // TW dq[fld];
 			    }
 		    }
 		}

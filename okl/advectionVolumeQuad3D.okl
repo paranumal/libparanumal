@@ -271,9 +271,9 @@ kernel void advectionVolumeLSERKmixedQuad3D(const int Nelements,
 			dqdr[fld] += Dims*s_q[fld][es][j][m];
 			dldr[fld] += Dimw/jir*s_qw[fld][es][j][m];
 			
-			dldx[fld] += Dimw*jir*uni*drdxi*s_qw[fld][es][j][m];
-			dldy[fld] += Dimw*jir*vni*drdyi*s_qw[fld][es][j][m];
-			dldz[fld] += Dimw*jir*wni*drdzi*s_qw[fld][es][j][m];
+			dldx[fld] += Dimw*uni*drdxi*s_qw[fld][es][j][m];
+			dldy[fld] += Dimw*vni*drdyi*s_qw[fld][es][j][m];
+			dldz[fld] += Dimw*wni*drdzi*s_qw[fld][es][j][m];
 		    }
 		// differentiate q components with respect to 's'
 		occaUnroll(p_Nfields)
@@ -281,17 +281,17 @@ kernel void advectionVolumeLSERKmixedQuad3D(const int Nelements,
 			dqds[fld] += Djms*s_q[fld][es][m][i];
 			dlds[fld] += Djmw/jir*s_qw[fld][es][m][i];
 			
-			dldx[fld] += Djmw*jjr*unj*dsdxj*s_qw[fld][es][m][i];
-			dldy[fld] += Djmw*jjr*vnj*dsdyj*s_qw[fld][es][m][i];
-			dldz[fld] += Djmw*jjr*wnj*dsdzj*s_qw[fld][es][m][i];
+			dldx[fld] += Djmw*unj*dsdxj*s_qw[fld][es][m][i];
+			dldy[fld] += Djmw*vnj*dsdyj*s_qw[fld][es][m][i];
+			dldz[fld] += Djmw*wnj*dsdzj*s_qw[fld][es][m][i];
 			}
 			}
 	    
 	    occaUnroll(p_Nfields)
 		for(int fld=0;fld<p_Nfields;++fld) {
-		    dldx[fld] -= dtdx*un*jl*s_qw[fld][es][j][i];
-		    dldy[fld] -= dtdy*vn*jl*s_qw[fld][es][j][i];
-		    dldz[fld] -= dtdz*wn*jl*s_qw[fld][es][j][i];
+		    dldx[fld] -= dtdx*un*s_qw[fld][es][j][i];
+		    dldy[fld] -= dtdy*vn*s_qw[fld][es][j][i];
+		    dldz[fld] -= dtdz*wn*s_qw[fld][es][j][i];
 		}
 		
 
@@ -321,10 +321,10 @@ kernel void advectionVolumeLSERKmixedQuad3D(const int Nelements,
 
 	    const int base = e*p_Np*p_Nfields+n;
 	    
-	    rhsqs[base+0*p_Np] = w*jl*rhsqs1;
-	    rhsqs[base+1*p_Np] = w*jl*rhsqs2;
-	    rhsqw[base+0*p_Np] = w*rhsqw1;
-	    rhsqw[base+1*p_Np] = w*rhsqw2;
+	    rhsqs[base+0*p_Np] = rhsqs1;
+	    rhsqs[base+1*p_Np] = rhsqs2;
+	    rhsqw[base+0*p_Np] = rhsqw1;
+	    rhsqw[base+1*p_Np] = rhsqw2;
 	  }
 	}
       }

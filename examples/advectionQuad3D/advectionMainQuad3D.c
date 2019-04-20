@@ -8,7 +8,7 @@ int main(int argc, char **argv){
   //changes solver mode
   //main options are: DOPRI MRSAAB LSERK_BASIC LSERK_SYM LSERK_SPECTRUM
   //grid options are: flat sphere equispherical extended
-  char *mode = "LSERK_SPECTRUM sphere";
+  char *mode = "LSERK_SYM sphere";
   
   // int specify polynomial degree 
   int N = atoi(argv[2]);

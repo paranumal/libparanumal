@@ -54,8 +54,8 @@ void advectionRunLSERKsymQuad3D(solver_t *solver,dfloat alpha_scale){
 			     solver->o_z,
 			       solver->o_mass,
 			     solver->o_qpre,
-			     solver->o_qpre,
-			     //solver->o_qw,
+			     //solver->o_qpre,
+			     solver->o_qw,
 			     solver->o_rhsqs,
 			     solver->o_rhsqw
 			     );
@@ -71,8 +71,8 @@ void advectionRunLSERKsymQuad3D(solver_t *solver,dfloat alpha_scale){
 			      solver->o_y,
 			      solver->o_z,
 			      solver->o_qpre,
-			      solver->o_qpre,
-			      //solver->o_qw,
+			      //solver->o_qpre,
+			      solver->o_qw,
 			      solver->o_rhsqs,
 			      solver->o_rhsqw
 			      );
