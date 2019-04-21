@@ -93,14 +93,8 @@ void advectionSetupLSERKsymQuad3D (solver_t *solver) {
     }
     
     advectionSetupOccaQuad3D(solver,&kernelInfo);
-
-    dfloat *test = (dfloat *) calloc(mesh->Np*mesh->NgridElements*solver->Nfields,sizeof(dfloat));
-    
+       
     solver->o_q =
-	solver->device.malloc(mesh->Np*mesh->NgridElements*solver->Nfields*sizeof(dfloat));
-    solver->o_qs =
-	solver->device.malloc(mesh->Np*mesh->NgridElements*solver->Nfields*sizeof(dfloat));
-    solver->o_qw =
 	solver->device.malloc(mesh->Np*mesh->NgridElements*solver->Nfields*sizeof(dfloat));
 
     solver->o_qpre =
@@ -133,12 +127,6 @@ void advectionSetupLSERKsymQuad3D (solver_t *solver) {
     solver->o_perp_index = solver->device.malloc((mesh->NgridElements - mesh->Nelements + 1)*mesh->Np*sizeof(iint),mesh->perp_index);
     
     solver->o_qFilter =
-	solver->device.malloc(mesh->NgridElements*solver->Nfields*mesh->Np*sizeof(dfloat));
-
-    solver->o_qFilters =
-	solver->device.malloc(mesh->NgridElements*solver->Nfields*mesh->Np*sizeof(dfloat));
-
-    solver->o_qFilterw =
 	solver->device.malloc(mesh->NgridElements*solver->Nfields*mesh->Np*sizeof(dfloat));
     
     solver->o_qCorr =
@@ -174,18 +162,10 @@ void advectionSetupLSERKsymQuad3D (solver_t *solver) {
 					   kernelInfo);
     solver->filterKernelH =
       solver->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterHQuad3D.okl",
-					 "boltzmannFilterHq0Quad3D",
+					 "boltzmannFilterHsymQuad3D",
 					 kernelInfo);
     solver->filterKernelV =
       solver->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterVQuad3D.okl",
-					 "boltzmannFilterVq0Quad3D",
-					 kernelInfo);
-    solver->filterWeakKernelH =
-      solver->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterHQuad3D.okl",
-					 "boltzmannFilterHtransQuad3D",
-					 kernelInfo);
-    solver->filterWeakKernelV =
-      solver->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterVQuad3D.okl",
-					 "boltzmannFilterVtransQuad3D",
+					 "boltzmannFilterVsymQuad3D",
 					 kernelInfo);
 }

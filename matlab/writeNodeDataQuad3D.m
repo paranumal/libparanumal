@@ -458,15 +458,6 @@ for n=1:Nq
 end
 
 fprintf(fid,"%% Weak D matrix 1D\n");
-	  D1d_weak = -1*inv(M1d)*D1d'*M1d;
-for n=1:N+1
-  for m=1:N+1
-    fprintf(fid, '%17.15E ', D1d_weak(n,m));
-  end
-  fprintf(fid,'\n');
-end
-
-fprintf(fid,"%% Weak D symmetrized matrix 1D\n");
 	  D1d_weak = -1*inv(diag(w1d))*D1d'*M1d;
 for n=1:N+1
   for m=1:N+1
@@ -475,19 +466,11 @@ for n=1:N+1
   fprintf(fid,'\n');
 end
 
-fprintf(fid, '%% Strong D (1D) symmetrized matrix\n');
-for n=1:N+1
-  for m=1:N+1
-    fprintf(fid, '%17.15E ', D1d_sym(n,m));
-  end
-  fprintf(fid, '\n');
-end
-
 D1d_strong = M1d*D1d;
 fprintf(fid, '%% Strong D (1D) massless matrix\n');
 for n=1:N+1
   for m=1:N+1
-    fprintf(fid, '%17.15E ', D1d_strong(n,m));
+    fprintf(fid, '%17.15E ', D1d_sym(n,m));
   end
   fprintf(fid, '\n');
 end

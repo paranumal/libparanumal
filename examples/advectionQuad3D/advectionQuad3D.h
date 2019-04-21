@@ -17,13 +17,9 @@ typedef struct {
     occa::device device;
     char deviceConfig[BUFSIZ];
     occa::memory o_q;
-    occa::memory o_qs;
-    occa::memory o_qw;
     occa::memory o_rhsq;
     occa::memory o_rhsqs;
     occa::memory o_rhsqw;
-    occa::memory o_qFilters;
-    occa::memory o_qFilterw;
     occa::memory o_LIFT;
     occa::memory o_LIFTT;
     occa::memory o_vgeo;
@@ -39,7 +35,6 @@ typedef struct {
     occa::memory o_D;
     occa::memory o_weakD;
     occa::memory o_dualProjMatrix;
-    occa::memory o_dualTransMatrix;
     occa::memory o_cubeFaceNumber;
     occa::memory o_EToE;
     occa::memory o_qCorr;
@@ -62,8 +57,6 @@ typedef struct {
     occa::kernel surfaceKernel;
     occa::kernel loadFilterGridKernel;
     occa::kernel updateKernel;
-    occa::kernel filterWeakKernelH;
-    occa::kernel filterWeakKernelV;
     occa::kernel filterKernelH;
     occa::kernel filterKernelV;
     occa::kernel massMatrixKernel;

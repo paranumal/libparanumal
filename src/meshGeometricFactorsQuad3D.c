@@ -7,7 +7,7 @@
 void meshGeometricFactorsQuad3D(mesh_t *mesh){
 
   /* unified storage array for geometric factors */
-  mesh->Nvgeo = 20;
+  mesh->Nvgeo = 11;
   
   /* note that we have volume geometric factors for each node */
   mesh->vgeo = (dfloat*) calloc(mesh->Nelements*mesh->Nvgeo*mesh->Np, sizeof(dfloat));
@@ -43,8 +43,8 @@ void meshGeometricFactorsQuad3D(mesh_t *mesh){
 
 	for(int n=0;n<mesh->Nq;++n){
 
-	  dfloat Din = mesh->weakD[i*mesh->Nq+n];
-	  dfloat Djn = mesh->weakD[j*mesh->Nq+n];
+	  dfloat Din = mesh->MD[i*mesh->Nq+n];
+	  dfloat Djn = mesh->MD[j*mesh->Nq+n];
 
 	  xrm += Din*mesh->x[n+j*mesh->Nq+e*mesh->Np];
 	  yrm += Din*mesh->y[n+j*mesh->Nq+e*mesh->Np];
@@ -67,18 +67,6 @@ void meshGeometricFactorsQuad3D(mesh_t *mesh){
 	dfloat tx = yr*zs - zr*ys; // dXdr x dXds ~ X*|dXdr x dXds|/|X|
 	dfloat ty = zr*xs - xr*zs;
 	dfloat tz = xr*ys - yr*xs;
-
-	dfloat rxm = ysm*zij - zsm*yij; // dXds x X
-	dfloat rym = zsm*xij - xsm*zij;
-	dfloat rzm = xsm*yij - ysm*xij;
-
-	dfloat sxm = zrm*yij - yrm*zij; // -dXdr x X
-	dfloat sym = xrm*zij - zrm*xij;
-	dfloat szm = yrm*xij - xrm*yij;
-
-	dfloat txm = yrm*zsm - zrm*ysm; // dXdr x dXds ~ X*|dXdr x dXds|/|X|
-	dfloat tym = zrm*xsm - xrm*zsm;
-	dfloat tzm = xrm*ysm - yrm*xsm;
 
 	dfloat Gx = tx, Gy = ty, Gz = tz;
 
@@ -104,20 +92,9 @@ void meshGeometricFactorsQuad3D(mesh_t *mesh){
 	ty /= J;
 	tz /= J;
 
-	rxm /= J;
-	rym /= J;
-	rzm /= J;
-
-	sxm /= J;
-	sym /= J;
-	szm /= J;
-
-	txm /= J;
-	tym /= J;
-	tzm /= J;
-	
 	// use this for "volume" Jacobian
 	J = sqrt(Gx*Gx+Gy*Gy+Gz*Gz);
+
 	if(J<1e-8) { printf("Negative or small Jacobian: %g\n", J); exit(-1);}
 
 	dfloat JW = mesh->gllw[i]*mesh->gllw[j]*J;
@@ -136,15 +113,8 @@ void meshGeometricFactorsQuad3D(mesh_t *mesh){
 	mesh->vgeo[base + mesh->Np*TZID] = tz;
 	mesh->vgeo[base + mesh->Np*JID]  = J;
 	mesh->vgeo[base + mesh->Np*JWID] = JW;
-	mesh->vgeo[base + mesh->Np*RXMID] = rxm;
-	mesh->vgeo[base + mesh->Np*RYMID] = rym;
-	mesh->vgeo[base + mesh->Np*RZMID] = rzm;
-	mesh->vgeo[base + mesh->Np*SXMID] = sxm;
-	mesh->vgeo[base + mesh->Np*SYMID] = sym;
-	mesh->vgeo[base + mesh->Np*SZMID] = szm;
-	mesh->vgeo[base + mesh->Np*TXMID] = txm;
-	mesh->vgeo[base + mesh->Np*TYMID] = tym;
-	mesh->vgeo[base + mesh->Np*TZMID] = tzm;
+	//mesh->vgeo[base + mesh->Np*11] = mesh->JR[e*mesh->Np + j*mesh->Nq + i]*mesh->gllw[i]*mesh->gllw[j];
+      
       }
     }
   }
