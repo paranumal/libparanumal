@@ -293,8 +293,8 @@ kernel void advectionVolumeLSERKexpMixedQuad3D(const int Nelements,
 	    
 	    rhsqs[base+0*p_Np] = 0.5*w*(rhsqs1 + rhsqw1);
 	    rhsqs[base+1*p_Np] = 0.5*w*(rhsqs2 + rhsqw2);
-	    rhsqw[base+0*p_Np] = w*rhsqw1;
-	    rhsqw[base+1*p_Np] = w*rhsqw2;
+	    rhsqw[base+0*p_Np] = rhsqw1;
+	    rhsqw[base+1*p_Np] = rhsqw2;
 	  }
 	}
       }

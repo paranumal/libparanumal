@@ -58,8 +58,8 @@ void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale){
 			     );
 	
 	solver->surfaceKernel(mesh->Nelements,
-			      solver->o_vgeo,
 			      solver->o_sgeo,
+			      solver->o_vgeo,
 			      solver->o_LIFTT,
 			      solver->o_vmapM,
 			      solver->o_vmapP,
@@ -81,7 +81,7 @@ void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale){
 				     solver->o_overlapDirection,
 				     solver->o_rhsq);
 	*/	
-	solver->filterKernelH(mesh->Nelements,
+	/*solver->filterKernelH(mesh->Nelements,
 			      solver->o_dualProjMatrix,
 			      solver->o_cubeFaceNumber,
 			      solver->o_gridToE,
@@ -105,7 +105,7 @@ void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale){
 			      //solver->o_rhsqw,
 			      solver->o_qFilter,
 			      solver->o_q);
-	
+	*/
 	
 	/*	solver->massMatrixKernel(mesh->Nelements,
 				 solver->o_invmass,
@@ -117,7 +117,7 @@ void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale){
 	/*	solver->o_rhsqs.copyTo(test_qs);
 		solver->o_rhsqw.copyTo(test_qw);*/
 
-	solver->o_q.copyTo(test_qs);
+	solver->o_rhsqs.copyTo(test_qs);
 	//solver->o_rhsqw.copyTo(test_qw);
 	
 	for (iint es = 0; es < mesh->Nelements; ++es) {
