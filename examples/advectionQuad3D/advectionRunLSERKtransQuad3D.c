@@ -1,6 +1,6 @@
 #include "advectionQuad3D.h"
 
-void advectionRunLSERKsymQuad3D(solver_t *solver,dfloat alpha_scale){
+void advectionRunLSERKtransQuad3D(solver_t *solver,dfloat alpha_scale){
 
   mesh_t *mesh = solver->mesh;
     

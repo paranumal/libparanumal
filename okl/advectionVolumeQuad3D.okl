@@ -335,11 +335,10 @@ kernel void advectionVolumeLSERKmixedQuad3D(const int Nelements,
    kernel void advectionVolumeLSERKexpMixedQuad3D(const int Nelements,
 					       const dfloat * restrict vgeo,
 					       const dfloat * restrict D,
-					       const dfloat * restrict weakD,
 					       const dfloat * restrict x,
 					       const dfloat * restrict y,
 					       const dfloat * restrict z,
-					       const dfloat * restrict mass,
+					       const dfloat * restrict weakD,
 					       const dfloat * restrict q,
 					       const dfloat * restrict qw,
 					       dfloat * restrict rhsqs,
@@ -350,7 +349,6 @@ kernel void advectionVolumeLSERKmixedQuad3D(const int Nelements,
     shared dfloat s_q[p_Nfields][p_NblockV][p_Nq][p_Nq];
     shared dfloat s_D[p_Nq][p_Nq];
     shared dfloat s_weakD[p_Nq][p_Nq];
-    shared dfloat s_mass[p_Nq][p_Nq];
     
     for(int es=0;es<p_NblockV;++es;inner2){
       for(int j=0;j<p_Nq;++j;inner1){
@@ -367,7 +365,6 @@ kernel void advectionVolumeLSERKmixedQuad3D(const int Nelements,
 	  if(es==0) {
 	    s_D[j][i] = D[j*p_Nq+i];
 	    s_weakD[j][i] = weakD[j*p_Nq+i];
-	    s_mass[j][i] = mass[j*p_Nq+i];
 	  }
 	}
       }
@@ -420,10 +417,10 @@ kernel void advectionVolumeLSERKmixedQuad3D(const int Nelements,
 		  //const dfloat Dim2 = 0.5f*(s_D[i][m] + jir*s_weakD[i][m]/jl); // could L1
 		  //const dfloat Djm2 = 0.5f*(s_D[j][m] + jjr*s_weakD[j][m]/jl);
 
-		  const dfloat Dims = s_weakD[i][m];
-		  const dfloat Djms = s_weakD[j][m];
-		  const dfloat Dimw = s_mass[i][m];
-		  const dfloat Djmw = s_mass[j][m];
+		  const dfloat Dims = s_D[i][m];
+		  const dfloat Djms = s_D[j][m];
+		  const dfloat Dimw = s_weakD[i][m];
+		  const dfloat Djmw = s_weakD[j][m];
 
 		  const dfloat dsdxj = vgeo[e*p_Np*p_Nvgeo + p_Np*SXID + m*p_Nq + i];
 		  const dfloat dsdyj = vgeo[e*p_Np*p_Nvgeo + p_Np*SYID + m*p_Nq + i];
