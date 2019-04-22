@@ -41,6 +41,7 @@ typedef struct {
     occa::memory o_qFilters;
     occa::memory o_qFilterw;
     occa::memory o_dualProjMatrix;
+    occa::memory o_dualTransMatrix;
     occa::memory o_cubeFaceNumber;
     occa::memory o_EToE;
     occa::memory o_qCorr;
