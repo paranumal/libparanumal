@@ -46,12 +46,12 @@ void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale){
 	// compute volume contribution to DG advection RHS
 	solver->volumeKernel(mesh->Nelements,
 			     solver->o_vgeo,
-			     solver->o_D,
 			     solver->o_weakD,
 			     solver->o_x,
 			     solver->o_y,
 			     solver->o_z,
 			     solver->o_mass,
+			     solver->o_qpre,
 			     solver->o_qpre,
 			     solver->o_rhsqs,
 			     solver->o_rhsqw
@@ -67,6 +67,7 @@ void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale){
 			      solver->o_x,
 			      solver->o_y,
 			      solver->o_z,
+			      solver->o_qpre,
 			      solver->o_qpre,
 			      solver->o_rhsqs,
 			      solver->o_rhsqw
@@ -114,28 +115,17 @@ void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale){
 	*/
 	solver->q[curr_pos] = 0.;
 	
-	/*	solver->o_rhsqs.copyTo(test_qs);
-		solver->o_rhsqw.copyTo(test_qw);*/
-
 	solver->o_rhsqs.copyTo(test_qs);
-	//solver->o_rhsqw.copyTo(test_qw);
+	solver->o_rhsqw.copyTo(test_qw);
 	
 	for (iint es = 0; es < mesh->Nelements; ++es) {
 	  for (iint fs = 0; fs < 2; ++fs) {
 	    for (iint ns = 0; ns < mesh->Np; ++ns) {
-		//fprintf(matrix,"%17.15g ",test_qs[es*mesh->Np*solver->Nfields + fs*mesh->Np + ns] + test_qw[es*mesh->Np*solver->Nfields + fs*mesh->Np + ns]);
-		fprintf(matrix,"%17.15g ",(test_qs[es*mesh->Np*solver->Nfields + fs*mesh->Np + ns]/*+test_qw[es*mesh->Np*solver->Nfields + fs*mesh->Np + ns]*/)/*/mesh->vgeo[es*mesh->Np*mesh->Nvgeo + 10*mesh->Np + ns]*//*mesh->vgeo[es*mesh->Np*mesh->Nvgeo + 9*mesh->Np + ns]*/);
+		fprintf(matrix,"%17.15g ",0.5*(test_qs[es*mesh->Np*solver->Nfields + fs*mesh->Np + ns]+test_qw[es*mesh->Np*solver->Nfields + fs*mesh->Np + ns]));
 	    }
 	  }
 	}
 	fprintf(matrix,"\n");
-	/*solver->o_rhsq.copyTo(solver->q);
-	for (iint es = 0; es < mesh->Nelements; ++es) {
-	    for (iint ns = 0; ns < mesh->Np; ++ns) {
-		solver->q[es*mesh->Np*solver->Nfields + ns] -= 2*mesh->y[es*mesh->Np + ns];
-	    }
-	    }*/
-	//advectionPlotVTUQuad3DV2(solver, "der", 0);
 	  }
       }
   }

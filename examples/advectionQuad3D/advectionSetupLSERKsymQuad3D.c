@@ -93,7 +93,11 @@ void advectionSetupLSERKsymQuad3D (solver_t *solver) {
     }
     
     advectionSetupOccaQuad3D(solver,&kernelInfo);
-       
+
+    solver->o_weakD = solver->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
+
+    solver->o_mass = solver->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->weakD);
+    
     solver->o_q =
 	solver->device.malloc(mesh->Np*mesh->NgridElements*solver->Nfields*sizeof(dfloat));
 

@@ -28,8 +28,11 @@ int main(int argc, char **argv){
   if (strstr(mode,"DOPRI")) {
     advectionSetupDOPRIQuad3D(solver);
   }
-  else if (strstr(mode,"LSERK_SYM") || strstr(mode,"LSERK_SPECTRUM")) {
+  else if (strstr(mode,"LSERK_SYM")) {
     advectionSetupLSERKsymQuad3D(solver);
+  }
+  else if (strstr(mode,"LSERK_SPECTRUM")) {
+      advectionSetupLSERKspecQuad3D(solver);
   }
   else if (strstr(mode,"LSERK_BASIC")) {
       advectionSetupLSERKQuad3D(solver);

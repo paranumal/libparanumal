@@ -34,6 +34,12 @@ typedef struct {
     occa::memory o_haloBuffer;
     occa::memory o_D;
     occa::memory o_weakD;
+    occa::memory o_Dsym;
+    occa::memory o_weakDsym;
+    occa::memory o_qs;
+    occa::memory o_qw;
+    occa::memory o_qFilters;
+    occa::memory o_qFilterw;
     occa::memory o_dualProjMatrix;
     occa::memory o_cubeFaceNumber;
     occa::memory o_EToE;
@@ -60,6 +66,8 @@ typedef struct {
     occa::kernel filterKernelH;
     occa::kernel filterKernelV;
     occa::kernel massMatrixKernel;
+    occa::kernel filterWeakKernelH;
+    occa::kernel filterWeakKernelV;
     
     //occa mrsaab
     occa::memory o_qpre;
@@ -85,7 +93,7 @@ typedef struct {
     occa::kernel filterKernelHLSERK;
     occa::kernel filterKernelVLSERK;
     occa::kernel filterKernelLevelsH;
-    occa::kernel filterKernelLevelsV;
+    occa::kernel filterKernelLevelsV;    
 
     //occa dopri
     occa::memory o_rkA;
@@ -167,6 +175,7 @@ void advectionSetupMRSAABQuad3D(solver_t *solver);
 void advectionSetupDOPRIQuad3D(solver_t *solver);
 void advectionSetupLSERKQuad3D(solver_t *solver);
 void advectionSetupLSERKsymQuad3D(solver_t *solver);
+void advectionSetupLSERKspecQuad3D(solver_t *solver);
 
 void meshMRABSetupQuad3D(mesh3D *mesh, dfloat *EToDT, int maxLevels);
 

@@ -33,9 +33,6 @@ void advectionSetupOccaQuad3D(solver_t *solver,occa::kernelInfo *kernelInfo) {
   }
 
   solver->o_D = solver->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
-  solver->o_weakD = solver->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
-
-  solver->o_mass = solver->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->weakD);
 
   solver->o_LIFT =
     solver->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),

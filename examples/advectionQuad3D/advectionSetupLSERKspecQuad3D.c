@@ -1,6 +1,6 @@
 #include "advectionQuad3D.h"
 
-void rk4_lserktrans_coeffs(solver_t *solver) {
+void rk4_lserkspec_coeffs(solver_t *solver) {
   int Nrk = 5;
   
   solver->rka = (dfloat *) calloc(Nrk,sizeof(dfloat));
@@ -29,14 +29,14 @@ void rk4_lserktrans_coeffs(solver_t *solver) {
   memcpy(solver->rkc, rkc, (Nrk+1)*sizeof(dfloat));
 }
 
-void advectionSetupLSERKtransQuad3D (solver_t *solver) {
+void advectionSetupLSERKspecQuad3D (solver_t *solver) {
   
   mesh_t *mesh = solver->mesh;
   
   solver->rhsq = (dfloat*) calloc(mesh->NgridElements*mesh->Np*solver->Nfields,
 				  sizeof(dfloat));
   
-  rk4_lserksym_coeffs(solver);
+  rk4_lserkspec_coeffs(solver);
   
   solver->resq = (dfloat*) calloc(mesh->Nelements*mesh->Np*solver->Nfields,
 				  sizeof(dfloat));
@@ -95,6 +95,10 @@ void advectionSetupLSERKtransQuad3D (solver_t *solver) {
     advectionSetupOccaQuad3D(solver,&kernelInfo);
 
     dfloat *test = (dfloat *) calloc(mesh->Np*mesh->NgridElements*solver->Nfields,sizeof(dfloat));
+
+    solver->o_weakD = solver->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->D);
+
+    solver->o_mass = solver->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->weakD);
     
     solver->o_q =
 	solver->device.malloc(mesh->Np*mesh->NgridElements*solver->Nfields*sizeof(dfloat));

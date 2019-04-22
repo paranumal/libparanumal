@@ -124,7 +124,7 @@ void advectionRunLSERKsymQuad3D(solver_t *solver,dfloat alpha_scale){
 				       solver->o_rhsq);
 	}
 	*/				     
-	solver->filterKernelH(mesh->Nelements,
+	/*	solver->filterKernelH(mesh->Nelements,
 			      solver->o_dualProjMatrix,
 			      solver->o_cubeFaceNumber,
 			      solver->o_gridToE,
@@ -148,7 +148,7 @@ void advectionRunLSERKsymQuad3D(solver_t *solver,dfloat alpha_scale){
 			      //solver->o_rhsqw,
 			      solver->o_qFilter,
 			      solver->o_q);	
-	
+	*/
 	solver->volumeCorrectionKernel(mesh->Nelements,
 				       solver->o_q,
 				       solver->o_qCorr);
@@ -162,9 +162,8 @@ void advectionRunLSERKsymQuad3D(solver_t *solver,dfloat alpha_scale){
 			     solver->dt,
 			     solver->rka[rk],
 			     solver->rkb[rk],
-			     solver->o_vgeo,
-			     //solver->o_rhsqs,
-			     solver->o_q,
+			     solver->o_rhsqs,
+			     solver->o_rhsqw,
 			     solver->o_qCorr,
 			     solver->o_resq,
 			     solver->o_qpre);

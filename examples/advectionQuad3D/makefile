@@ -41,6 +41,7 @@ advectionPlotVTUQuad3DV2.o \
 advectionSetupOccaQuad3D.o \
 advectionSetupLSERKQuad3D.o \
 advectionSetupLSERKsymQuad3D.o \
+advectionSetupLSERKspecQuad3D.o \
 advectionSetupDOPRIQuad3D.o \
 advectionSetupMRSAABQuad3D.o \
 advectionRunLSERKQuad3D.o \
