@@ -1,6 +1,6 @@
 #include "advectionQuad3D.h"
 
-void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale){
+void advectionSpectrumLSERKsymQuad3D(solver_t *solver,dfloat alpha_scale){
 
   mesh_t *mesh = solver->mesh;
     
@@ -46,12 +46,12 @@ void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale){
 	// compute volume contribution to DG advection RHS
 	solver->volumeKernel(mesh->Nelements,
 			     solver->o_vgeo,
+			     solver->o_D,
 			     solver->o_weakD,
 			     solver->o_x,
 			     solver->o_y,
 			     solver->o_z,
 			     solver->o_mass,
-			     solver->o_qpre,
 			     solver->o_qpre,
 			     solver->o_rhsqs,
 			     solver->o_rhsqw
@@ -68,10 +68,10 @@ void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale){
 			      solver->o_y,
 			      solver->o_z,
 			      solver->o_qpre,
-			      solver->o_qpre,
 			      solver->o_rhsqs,
 			      solver->o_rhsqw
 			      );
+
 	/*solver->loadFilterGridKernel(Nboundary,
 				     mesh->Nelements,
 				     solver->o_rlocal,

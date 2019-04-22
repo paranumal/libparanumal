@@ -291,10 +291,10 @@ kernel void advectionVolumeLSERKexpMixedQuad3D(const int Nelements,
 
 	    const dfloat w = vgeo[gbase + p_Np*10];
 	    
-	    rhsqs[base+0*p_Np] = rhsqs1;
-	    rhsqs[base+1*p_Np] = rhsqs2;
-	    rhsqw[base+0*p_Np] = rhsqw1;
-	    rhsqw[base+1*p_Np] = rhsqw2;
+	    rhsqs[base+0*p_Np] = w*rhsqs1;
+	    rhsqs[base+1*p_Np] = w*rhsqs2;
+	    rhsqw[base+0*p_Np] = w*rhsqw1;
+	    rhsqw[base+1*p_Np] = w*rhsqw2;
 	  }
 	}
       }

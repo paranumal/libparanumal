@@ -164,7 +164,8 @@ void advectionRunDOPRIQuad3D(solver_t *solver);
 void advectionRunLSERKbasicQuad3D(solver_t *solver,dfloat alpha_scale);
 void advectionRunLSERKsymQuad3D(solver_t *solver,dfloat alpha_scale);
 
-void advectionSpectrumLSERKQuad3D(solver_t *solver,dfloat alpha_scale);
+void advectionSpectrumLSERKsymQuad3D(solver_t *solver,dfloat alpha_scale);
+void advectionSpectrumLSERKtransQuad3D(solver_t *solver,dfloat alpha_scale);
 
 void advectionPlotVTUQuad3D(mesh_t *mesh, char *fileNameBase, iint fld);
 void advectionPlotVTUQuad3DV2(solver_t *solver, char *fileNameBase, iint tstep);

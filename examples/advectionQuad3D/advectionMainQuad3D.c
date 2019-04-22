@@ -6,9 +6,9 @@ int main(int argc, char **argv){
   MPI_Init(&argc, &argv);
 
   //changes solver mode
-  //main options are: DOPRI MRSAAB LSERK_BASIC LSERK_SYM LSERK_SPECTRUM
+  //main options are: DOPRI MRSAAB LSERK_BASIC LSERK_SYM LSERK_SPEC_SYM LSERK_SPEC_TRANS
   //grid options are: flat sphere equispherical extended
-  char *mode = "LSERK_SPECTRUM sphere";
+  char *mode = "LSERK_SPEC_SYM sphere";
   
   // int specify polynomial degree 
   int N = atoi(argv[2]);
@@ -28,10 +28,10 @@ int main(int argc, char **argv){
   if (strstr(mode,"DOPRI")) {
     advectionSetupDOPRIQuad3D(solver);
   }
-  else if (strstr(mode,"LSERK_SYM")) {
+  else if (strstr(mode,"LSERK_SYM") || strstr(mode,"LSERK_SPEC_SYM")) {
     advectionSetupLSERKsymQuad3D(solver);
   }
-  else if (strstr(mode,"LSERK_SPECTRUM")) {
+  else if (strstr(mode,"LSERK_SPEC_TRANS")) {
       advectionSetupLSERKspecQuad3D(solver);
   }
   else if (strstr(mode,"LSERK_BASIC")) {
@@ -57,9 +57,12 @@ int main(int argc, char **argv){
       advectionRunLSERKsymQuad3D(solver,alpha);
       solver->o_qpre.copyTo(solver->q);
   }
-  else if (strstr(mode,"LSERK_SPECTRUM")) {
-    advectionSpectrumLSERKQuad3D(solver,alpha);
+  else if (strstr(mode,"LSERK_SPEC_TRANS")) {
+    advectionSpectrumLSERKtransQuad3D(solver,alpha);
   }
+  else if (strstr(mode,"LSERK_SPEC_SYM")) {
+      advectionSpectrumLSERKsymQuad3D(solver,alpha);
+  }   
   else if (strstr(mode,"MRSAAB")) {
     advectionRunLSERKQuad3D(solver);
     advectionRunMRSAABQuad3D(solver);
