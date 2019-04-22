@@ -602,7 +602,7 @@ SOFTWARE.
 
       if(bc==3) {
         dfloat pP = 0.f;
-        insPressureDirichletConditions3D(bc,time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &pP);
+        insPressureDirichletConditions3D(bc,time, x[idM], y[idM], z[idM], 0.f, 0.f, 0.f, 0.f, &pP);
         
         for (int s=0;s<stage;s++) {
           dfloat prkBn, ctime;
@@ -615,7 +615,7 @@ SOFTWARE.
           }
           
           dfloat pPm;
-          insPressureDirichletConditions3D(bc,ctime, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &pPm);
+          insPressureDirichletConditions3D(bc,ctime, x[idM], y[idM], z[idM], 0.f, 0.f, 0.f, 0.f, &pPm);
          
           pP    -= prkBn*pPm;
         }

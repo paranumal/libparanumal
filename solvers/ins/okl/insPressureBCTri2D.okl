@@ -337,7 +337,7 @@ SOFTWARE.
 
       if(bc==3) {
         dfloat pP;
-        insPressureDirichletConditions2D(bc,time, x[idM], y[idM], nx, ny, 0.f, &pP);
+        insPressureDirichletConditions2D(bc,time, x[idM], y[idM], 0.f, 0.f, 0.f, &pP);
 
         for (int s=0;s<stage;s++) {
           dfloat prkBn, ctime;
@@ -350,7 +350,7 @@ SOFTWARE.
           }
           
           dfloat pPm;
-          insPressureDirichletConditions2D(bc,ctime, x[idM], y[idM], nx, ny, 0.f, &pPm);
+          insPressureDirichletConditions2D(bc,ctime, x[idM], y[idM], 0.f, 0.f, 0.f, &pPm);
          
           pP    -= prkBn*pPm;
         }
