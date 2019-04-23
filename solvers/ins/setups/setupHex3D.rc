@@ -2,10 +2,12 @@
 1.0
 
 [DATA FILE]
-data/insBeltrami3D.h
+data/insVortex3D.h
+#data/insBeltrami3D.h
 
 [MESH FILE]
-../../meshes/insBeltramiHexStructured3D_3.msh
+../../meshes/insVortex3D.msh
+#../../meshes/insBeltramiHexStructured3D_3.msh
 
 [MESH DIMENSION]
 3
@@ -14,7 +16,7 @@ data/insBeltrami3D.h
 12
 
 [POLYNOMIAL DEGREE]
-4
+7
 
 [ELEMENT MAP]
 ISOPARAMETRIC
@@ -22,6 +24,7 @@ ISOPARAMETRIC
 [THREAD MODEL]
 #Serial
 CUDA
+#OpenCL
 
 [PLATFORM NUMBER]
 0
@@ -56,7 +59,8 @@ NONE
 0.9
 
 [VISCOSITY]
-1
+0.01
+#1
 
 [UBAR]
 1.0
@@ -77,14 +81,14 @@ NONE
 0
 
 [FINAL TIME]
-0.01
+0.1
 
 [CFL]
 0.1
 
 # overwrites time step size
 [DT]
-8.0E-5
+1.0E-4
 
 [OUTPUT TYPE]
 VTU
@@ -103,7 +107,7 @@ fence
 [VELOCITY KRYLOV SOLVER]
 #PCG+NONBLOCKING
 #+NONBLOCKING
-PCG
+PCG+FLEXIBLE
 # PCG+FLEXIBLE
 # PCG+NONBLOCKING
 # PCG+NONBLOCKING+FLEXIBLE
@@ -115,7 +119,6 @@ PCG
 [VELOCITY DISCRETIZATION]
 #IPDG
 CONTINUOUS
-#[ not currently working ]
 
 
 # can be NODAL or BERN
@@ -180,7 +183,7 @@ MAX
 
 # can add FLEXIBLE to PCG
 [PRESSURE KRYLOV SOLVER]
-PCG
+PCG+FLEXIBLE
 #PCG+FLEXIBLE+NONBLOCKING
 #PCG (if fixed preconditioner)
 #PCG+NONBLOCKING (if fixed preconditioner)
@@ -204,7 +207,7 @@ NODAL
 [PRESSURE PRECONDITIONER]
 #JACOBI
 MULTIGRID
-
+#FULLALMOND
 ########## MULTIGRID Options ##############
 
 # can be ALLDEGREES, HALFDEGREES, HALFDOFS
@@ -262,7 +265,8 @@ TRUE
 # compare to a reference solution. Use NONE to skip comparison
 # can be BELTRAMI
 [EXACT]
-BELTRAMI
+VORTEX
+#BELTRAMI
 
 [VERBOSE]
 FALSE
