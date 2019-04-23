@@ -142,7 +142,7 @@ void advectionSetupLSERKsymQuad3D (solver_t *solver) {
 	solver->device.malloc(mesh->Nq*mesh->Nq*sizeof(dfloat), mesh->inv_mass);
     solver->volumeKernel =
       solver->device.buildKernelFromSource(DHOLMES "/okl/advectionVolumeQuad3D.okl",
-					 "advectionVolumeLSERKexpMixedQuad3D",
+					 "advectionVolumeLSERKmixedQuad3D",
 					 kernelInfo);
     solver->volumeCorrectionKernel =
       solver->device.buildKernelFromSource(DHOLMES "/okl/boltzmannVolumeCorrectionQuad3D.okl",
@@ -154,7 +154,7 @@ void advectionSetupLSERKsymQuad3D (solver_t *solver) {
 					 kernelInfo);
     solver->surfaceKernel =
       solver->device.buildKernelFromSource(DHOLMES "/okl/advectionSurfaceQuad3D.okl",
-					 "advectionSurfaceLSERKexpMixedQuad3D",
+					 "advectionSurfaceLSERKmixedQuad3D",
 					 kernelInfo);
     solver->loadFilterGridKernel =
       solver->device.buildKernelFromSource(DHOLMES "/okl/boltzmannLoadFilterGridQuad3D.okl",

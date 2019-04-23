@@ -182,7 +182,7 @@ kernel void boltzmannLSERKsymUpdateQuad3D(const iint Nelements,
 	
 	dfloat r_resq = resq[id];
 	dfloat r_rhsq = 0.5f*(rhsqs[id] + rhsqw[id]) + qCorr[id];
-	//dfloat r_rhsq = rhsqw[id] + qCorr[id];
+	//dfloat r_rhsq = rhsqs[id] + qCorr[id];
 	dfloat r_q = q[id];
 	
 	r_resq = rka*r_resq + dt*(r_rhsq);

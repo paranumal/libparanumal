@@ -312,8 +312,8 @@ kernel void advectionSurfaceLSERKmixedQuad3D(const iint Nelements,
 				qmw[fld] = qMw;
 			    }
 
-			centralFluxS(nx, ny, nz, un, vn, wn, qps,qms, fluxqs);
-			centralFluxW(nx, ny, nz, un, vn, wn, qpw,qmw, fluxqw);
+			upwindFluxS(nx, ny, nz, un, vn, wn, qps,qms, fluxqs);
+			upwindFluxW(nx, ny, nz, un, vn, wn, qpw,qmw, fluxqw);
 
 			const int gbase = eM*p_Np*p_Nvgeo + (idM%p_Np);
 			const dfloat w = vgeo[gbase + p_Np*10]/vgeo[gbase+p_Np*9];
@@ -323,8 +323,8 @@ kernel void advectionSurfaceLSERKmixedQuad3D(const iint Nelements,
 
 			occaUnroll(p_Nfields)
 			    for(int fld=0;fld<p_Nfields;++fld){
-				rhsqs[vidM+fld*p_Np] += sc*w*j*fluxqs[fld]; // TW dq[fld];
-				rhsqw[vidM+fld*p_Np] += sc*w*j*fluxqw[fld]; // TW dq[fld];
+				rhsqs[vidM+fld*p_Np] += sc*fluxqs[fld]; // TW dq[fld];
+				rhsqw[vidM+fld*p_Np] += sc*fluxqw[fld]; // TW dq[fld];
 			    }
 		    }
 		}
