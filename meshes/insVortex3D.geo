@@ -1,6 +1,6 @@
 cl__1 = 1.0;
-xmax = DefineNumber[ 1.0];
-xmin = DefineNumber[-1.0];
+xmax = DefineNumber[ 0.5];
+xmin = DefineNumber[-0.5];
 
 xn = DefineNumber[10];
 yn = DefineNumber[10];

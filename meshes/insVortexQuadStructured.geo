@@ -2,7 +2,7 @@
  
  xn = DefineNumber[20];
  yn = DefineNumber[20];
- 
+  
  Point(1) = {-0.5, -0.5, 0, res};
  Point(2) = {-0.5, 0.5, 0, res};
  Point(3) = {0.5, 0.5, 0, res};
@@ -34,37 +34,5 @@
  Physical Surface("Domain",9) = {9};
  Physical Line("Inflow",2) = {2, 4, 6, 8};
  Physical Line("Outflow",3) = {1, 3, 5, 7};
- // Physical Line("Inflow",2) = {2, 4, 6, 8, 1, 3, 5, 7};
  Recombine Surface {9};
 
-// res = DefineNumber[0.025];
-// 
-// xn = DefineNumber[20];
-// yn = DefineNumber[20];
-// 
-// xmin = DefineNumber[-0.5]; 
-// ymin = DefineNumber[-0.5]; 
-// 
-// xmax = DefineNumber[0.5]; 
-// ymax = DefineNumber[0.5]; 
-// 
-// Point(1) = {xmin, ymin, 0, res};
-// Point(2) = {xmax, ymin, 0, res};
-// Point(3) = {xmax, ymax, 0, res};
-// Point(4) = {xmin, ymax, 0, res};
-// 
-// Line(1) = {1, 2};
-// Line(2) = {2, 3};
-// Line(3) = {3, 4};
-// Line(4) = {4, 1};
-// 
-// Transfinite Line {1, 3} = (xn+1) Using Progression 1;
-// Transfinite Line {2, 4} = (yn+1) Using Progression 1;
-// 
-// Line Loop(9) = {1, 2, 3, 4};
-// Plane Surface(9) = {9};
-// Transfinite Surface {9} = {1,2,3,4};
-// Physical Surface("Domain",9) = {9};
-// Physical Line("Inflow",2) = {1, 3, 4};
-// Physical Line("Outflow",3) = {2};
-// Recombine Surface {9};
