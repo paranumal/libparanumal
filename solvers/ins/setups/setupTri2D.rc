@@ -2,13 +2,11 @@
 1.0
 
 [DATA FILE]
-#data/insUniform2D.h
 data/insVortex2D.h
 
 [MESH FILE]
-#../../meshes/insSquareCylinder2D.msh
-#../../meshes/boltzmannSquareCylinderPML2D.msh
-../../meshes/insVortex2D.msh
+../../meshes/insVortexTri2D_0.msh
+#../../meshes/insVortexQuad2D.msh
 
 [MESH DIMENSION]
 2
@@ -28,8 +26,8 @@ CUDA
 [DEVICE NUMBER]
 0
 
-# can be EXTBDF1,2, or 3, or ARK1
-# can add SUBCYCLING STEPS with EXTBDF
+# can be EXTBDF1,2, or 3
+# can add SUBCYCLING to EXTBDF
 [TIME INTEGRATOR]
 #ARK2
 EXTBDF2
@@ -39,23 +37,22 @@ EXTBDF2
 
 # can be CUBATURE or COLLOCATION
 [ADVECTION TYPE]
-COLLOCATION
-#CUBATURE
+CUBATURE
 
 #currently RELAXATION, 
 [FILTER STABILIZATION]
 NONE
 #RELAXATION
 
-#in explicit Strength will be set to Strength*dt
 [FILTER STRENGTH]
 50.0
 
+#1D for hex and quads
 [FILTER CUTOFF RATIO]
 0.9
 
 [VISCOSITY]
-0.001
+0.01
 
 [MACH NUMBER]
 .2
@@ -69,42 +66,30 @@ NONE
 [PBAR]
 0.0
 
-#zero to ignore
 [TSTEPS FOR SOLUTION OUTPUT]
-100
-
-# zero to ignore
-[TSTEPS FOR FORCE OUTPUT]
-0
-
-# zero to ignore, only ARK stepper
-[TSTEPS FOR TIME STEP ADAPT]
-1000
+10000
 
 [START TIME]
 0
 
 [FINAL TIME]
-75.0
+0.1
 
 [CFL]
-0.5
+0.2
+
+# overwrites time step size
+[DT]
+1.0E-3
 
 [OUTPUT TYPE]
 VTU
 
-#Tested only EXTBDF currently
 [RESTART FROM FILE]
 0
 
-[WRITE RESTART FILE]
-0
-
-[RESTART FILE NAME]
-insRestartTri2D
-
 [OUTPUT FILE NAME]
-Tins
+fence
 
 #################################################
 ########## Velocity Solver Options ##############
@@ -114,12 +99,13 @@ Tins
 [VELOCITY KRYLOV SOLVER]
 PCG
 
-[VELOCITY SOLVER TOLERANCE]
-1.e-8
-
 # can be IPDG, or CONTINUOUS
 [VELOCITY DISCRETIZATION]
+#IPDG
 CONTINUOUS
+
+[VELOCITY SOLVER TOLERANCE]
+1.e-10
 
 # can be NODAL or BERN
 [VELOCITY BASIS]
@@ -127,6 +113,7 @@ NODAL
 
 # can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
 [VELOCITY PRECONDITIONER]
+#JACOBI
 MASSMATRIX
 
 ########## MULTIGRID Options ##############
@@ -141,8 +128,7 @@ HALFDOFS
 [VELOCITY MULTIGRID SMOOTHER]
 DAMPEDJACOBI,CHEBYSHEV
 
-# can be any integer >0
-[MULTIGRID CHEBYSHEV DEGREE]
+[VELOCITY CHEBYSHEV DEGREE]
 2
 
 ###########################################
@@ -152,7 +138,7 @@ DAMPEDJACOBI,CHEBYSHEV
 # can be KCYCLE, or VCYCLE
 # can add the EXACT and NONSYM option
 [VELOCITY PARALMOND CYCLE]
-KCYCLE
+VCYCLE
 
 # can be DAMPEDJACOBI or CHEBYSHEV
 [VELOCITY PARALMOND SMOOTHER]
@@ -172,8 +158,7 @@ DEFAULT
 MAX
 #MIN
 
-# can be any integer >0
-[PARALMOND CHEBYSHEV DEGREE]
+[VELOCITY PARALMOND CHEBYSHEV DEGREE]
 2
 
 ###########################################
@@ -184,14 +169,15 @@ MAX
 
 # can add FLEXIBLE to PCG
 [PRESSURE KRYLOV SOLVER]
-PCG,FLEXIBLE
-
-[PRESSURE SOLVER TOLERANCE]
-1.e-8
+PCG
 
 # can be IPDG, or CONTINUOUS
 [PRESSURE DISCRETIZATION]
+#IPDG
 CONTINUOUS
+
+[PRESSURE SOLVER TOLERANCE]
+1.e-10
 
 # can be NODAL or BERN
 [PRESSURE BASIS]
@@ -200,6 +186,7 @@ NODAL
 # can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
 [PRESSURE PRECONDITIONER]
 MULTIGRID
+#FULLALMOND
 
 ########## MULTIGRID Options ##############
 
@@ -213,6 +200,9 @@ HALFDOFS
 [PRESSURE MULTIGRID SMOOTHER]
 DAMPEDJACOBI,CHEBYSHEV
 
+[PRESSURE CHEBYSHEV DEGREE]
+2
+
 ###########################################
 
 ########## ParAlmond Options ##############
@@ -220,7 +210,7 @@ DAMPEDJACOBI,CHEBYSHEV
 # can be KCYCLE, or VCYCLE
 # can add the EXACT and NONSYM option
 [PRESSURE PARALMOND CYCLE]
-KCYCLE
+VCYCLE
 
 # can be DAMPEDJACOBI or CHEBYSHEV
 [PRESSURE PARALMOND SMOOTHER]
@@ -240,6 +230,9 @@ DEFAULT
 MAX
 #MIN
 
+[PRESSURE PARALMOND CHEBYSHEV DEGREE]
+2
+
 # only smooth at bottom of cycle
 [PARALMOND SMOOTH COARSEST]
 TRUE
@@ -247,17 +240,27 @@ TRUE
 [PARALMOND SMOOTH COARSEST DEGREE]
 20
 
+
 ###########################################
 
 # compare to a reference solution. Use NONE to skip comparison
 # can be VORTEX or KOVASZNAY
 [EXACT]
-#NONE
 VORTEX
 
 [VERBOSE]
 FALSE
 
+[DEBUG ENABLE OGS]
+1
+
+[DEBUG ENABLE REDUCTIONS]
+1
+
+[ELLIPTIC INTEGRATION]
+NODAL
+
+# bail out iteration count for PCG
 [MAXIMUM ITERATIONS]
 1000
 
@@ -265,8 +268,6 @@ FALSE
 [FIXED ITERATION COUNT]
 FALSE
 
-# TRUE: all ranks assume precompiled binaries
-# NONROOT: root rank compiles, other ranks load
-# FALSE: all ranks compile
 [USE PRECOMPILED BINARIES]
 FALSE
+

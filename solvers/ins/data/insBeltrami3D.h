@@ -24,7 +24,73 @@ SOFTWARE.
 
 */
 
+#if 1
+// Initial conditions 
+#define insFlowField3D(t,x,y,z, u,v,w,p) \
+  {                                   \
+    dfloat a = M_PI/4.f; \
+    dfloat d = M_PI/2.f; \
+    *(u) = -a*exp(-p_nu*d*d*t)*(exp(a*x)*sin(a*y+d*z)+exp(a*z)*cos(a*x+d*y));\
+    *(v) = -a*exp(-p_nu*d*d*t)*(exp(a*y)*sin(a*z+d*x)+exp(a*x)*cos(a*y+d*z));\
+    *(w) = -a*exp(-p_nu*d*d*t)*(exp(a*z)*sin(a*x+d*y)+exp(a*y)*cos(a*z+d*x));\
+    *(p) = -0.5f*a*a*exp(-2.f*p_nu*d*d*t)*(2.f*exp(a*(z+y))*cos(a*z+d*x)*sin(a*x+d*y)+2.f*exp(a*(z+x))*cos(a*x+d*y)*sin(a*y+d*z)+2.f*exp(a*(y+x))*cos(a*y+d*z)*sin(a*z+d*x)+exp(2.f*a*z)+exp(2.f*a*y)+exp(2.f*a*x));\
+  }   
+  
+// Boundary conditions
+/* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5, z-slip 6 */
+#define insVelocityDirichletConditions3D(bc, t, x, y, z, nx, ny, nz, uM, vM, wM, uB, vB, wB) \
+{                                   \
+  dfloat a = M_PI/4.f; \
+  dfloat d = M_PI/2.f; \
+  if(bc==1){                        \
+    *(uB) = 0.f;                    \
+    *(vB) = 0.f;                    \
+    *(wB) = 0.f;                    \
+  } else if(bc==2){                 \
+    *(uB) = -a*exp(-p_nu*d*d*t)*(exp(a*x)*sin(a*y+d*z)+exp(a*z)*cos(a*x+d*y));\
+    *(vB) = -a*exp(-p_nu*d*d*t)*(exp(a*y)*sin(a*z+d*x)+exp(a*x)*cos(a*y+d*z));\
+    *(wB) = -a*exp(-p_nu*d*d*t)*(exp(a*z)*sin(a*x+d*y)+exp(a*y)*cos(a*z+d*x));\
+  }else if(bc==4){     \
+    *(uB) = 0.f;       \
+  }else if(bc==5){     \
+    *(vB) = 0.f;       \
+  }else if(bc==6){     \
+    *(wB) = 0.f;       \
+  }                    \
+}
 
+#define insVelocityNeumannConditions3D(bc, t, x, y, z, nx, ny, nz, uxM, uyM, uzM, vxM, vyM, vzM, wxM, wyM, wzM, uxB, uyB, uzB, vxB, vyB, vzB, wxB, wyB, wzB) \
+{                                          \
+  dfloat a = M_PI/4.f; \
+  dfloat d = M_PI/2.f; \
+  if(bc==3){                        \
+    *(uxB) = -a*(a*exp(a*x)*sin(a*y+d*z)-a*exp(a*z)*sin(a*x+d*y))*exp(-p_nu*d*d*t); \
+    *(uyB) = -a*(a*exp(a*x)*cos(a*y+d*z)-d*exp(a*z)*sin(a*x+d*y))*exp(-p_nu*d*d*t); \
+    *(uzB) = -a*(d*exp(a*x)*cos(a*y+d*z)+a*exp(a*z)*cos(a*x+d*y))*exp(-p_nu*d*d*t); \
+    *(vxB) = -a*(d*exp(a*y)*cos(a*z+d*x)+a*exp(a*x)*cos(a*y+d*z))*exp(-p_nu*d*d*t); \
+    *(vyB) = -a*(a*exp(a*y)*sin(a*z+d*x)-a*exp(a*x)*sin(a*y+d*z))*exp(-p_nu*d*d*t); \
+    *(vzB) = -a*(a*exp(a*y)*cos(a*z+d*x)-d*exp(a*x)*sin(a*y+d*z))*exp(-p_nu*d*d*t); \
+    *(wxB) =  a*(a*exp(a*z)*cos(a*x+d*y)-d*exp(a*y)*sin(a*z+d*x))*exp(-p_nu*d*d*t); \
+    *(wyB) =  a*(d*exp(a*z)*cos(a*x+d*y)+a*exp(a*y)*cos(a*z+d*x))*exp(-p_nu*d*d*t); \
+    *(wzB) =  a*(a*exp(a*z)*sin(a*x+d*y)-a*exp(a*y)*sin(a*z+d*x))*exp(-p_nu*d*d*t); \
+  }                                                                                 \
+}
+
+
+#define insPressureDirichletConditions3D(bc, t, x, y, z, nx, ny, nz, pM, pB) \
+{                                   \
+  dfloat a = M_PI/4.f; \
+  dfloat d = M_PI/2.f; \
+  if(bc==3){                 \
+    *(pB) = -0.5f*a*a*exp(-2.f*p_nu*d*d*t)*(2.f*exp(a*(z+y))*cos(a*z+d*x)*sin(a*x+d*y)+2.f*exp(a*(z+x))*cos(a*x+d*y)*sin(a*y+d*z)+2.f*exp(a*(y+x))*cos(a*y+d*z)*sin(a*z+d*x)+exp(2.f*a*z)+exp(2.f*a*y)+exp(2.f*a*x));\
+  } \
+}
+
+// I dont think we need this, AK. 
+#define insPressureNeumannConditions3D(bc, t, x, y, z, nx, ny, nz, pxM, pyM, pzM, pxB, pyB, pzB) \
+{                                          \
+}
+#else
 // Initial conditions 
 #define insFlowField3D(t,x,y,z, u,v,w,p) \
   {                                   \
@@ -130,3 +196,4 @@ SOFTWARE.
     *(pzB) = 0.f;                          \
   }                                        \
 }
+#endif

@@ -2,11 +2,12 @@
 1.0
 
 [DATA FILE]
-data/insVortex3D.h
-#data/insBeltrami3D.h
+#data/insVortex3D.h
+data/insBeltrami3D.h
 
 [MESH FILE]
-../../meshes/insVortex3D.msh
+#../../meshes/insVortex3D.msh
+../../meshes/insBeltramiHex3D.msh
 #../../meshes/insBeltramiHexStructured3D_3.msh
 
 [MESH DIMENSION]
@@ -88,7 +89,7 @@ NONE
 
 # overwrites time step size
 [DT]
-1.0E-4
+1.0E-3
 
 [OUTPUT TYPE]
 VTU
@@ -265,8 +266,8 @@ TRUE
 # compare to a reference solution. Use NONE to skip comparison
 # can be BELTRAMI
 [EXACT]
-VORTEX
-#BELTRAMI
+#VORTEX
+BELTRAMI
 
 [VERBOSE]
 FALSE

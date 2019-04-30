@@ -165,6 +165,7 @@ SOFTWARE.
           // apply boundary condition
           const int bc = EToB[face+p_Nfaces*e];
           if(bc>0) {
+            pxP = pxM; pyP = pyM; 
             insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, pxM, pyM, &pxP, &pyP);
             pxP *= bScale; 
             pyP *= bScale; 
@@ -726,6 +727,9 @@ SOFTWARE.
             // apply boundary conditions
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
+              // explicitly set u+ = u-
+              r_iUdP[em] = r_iUdM[em]; 
+              r_iVdP[em] = r_iVdM[em]; 
               insVelocityDirichletConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, r_iUdM[em],r_iVdM[em], &(r_iUdP[em]), &(r_iVdP[em]));
               r_iUdP[em] *= bScale;
               r_iVdP[em] *= bScale;

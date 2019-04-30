@@ -5,7 +5,8 @@
 data/insVortex2D.h
 
 [MESH FILE]
-../../meshes/insVortexQuadStructured2D_3.msh
+../../meshes/insVortexQuad2D.msh
+#../../meshes/insVortexQuadStructured_0.msh
 #../../meshes/insVortexQuad2D.msh
 
 [MESH DIMENSION]
@@ -38,6 +39,7 @@ EXTBDF2
 # can be CUBATURE or COLLOCATION
 [ADVECTION TYPE]
 CUBATURE
+#COLLOCATION
 
 #currently RELAXATION, 
 [FILTER STABILIZATION]
@@ -67,20 +69,20 @@ NONE
 0.0
 
 [TSTEPS FOR SOLUTION OUTPUT]
-1000
+10000
 
 [START TIME]
 0
 
 [FINAL TIME]
-1.0
+0.1
 
 [CFL]
 0.2
 
 # overwrites time step size
 [DT]
-300.0E-5
+1.0E-4
 
 [OUTPUT TYPE]
 VTU
@@ -234,7 +236,7 @@ MAX
 
 # only smooth at bottom of cycle
 [PARALMOND SMOOTH COARSEST]
-TRUE
+FALSE
 
 [PARALMOND SMOOTH COARSEST DEGREE]
 20

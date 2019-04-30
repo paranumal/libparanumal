@@ -26,8 +26,8 @@ SOFTWARE.
 
 #include "ins.h"
 
-dfloat insL1Norm(ins_t* ins, dfloat*U); 
-dfloat insL2Norm(ins_t* ins, dfloat*U); 
+// dfloat insL1Norm(ins_t* ins, dfloat*U); 
+// dfloat insL2Norm(ins_t* ins, dfloat*U); 
 dfloat insLInfNorm(ins_t* ins, dfloat*U); 
 
 void insError(ins_t *ins, dfloat time){
@@ -288,11 +288,11 @@ void insError(ins_t *ins, dfloat time){
       if(ins->dim==3) wLiNorm = insLInfNorm(ins, wErr); 
       pLiNorm = insLInfNorm(ins, pErr); 
 
-      uL2norm  = insL2Norm(ins, uErr); 
-      vL2norm  = insL2Norm(ins, vErr); 
-      if(ins->dim==3) wL2norm  = insL2Norm(ins, wErr); 
+      // uL2norm  = insL2Norm(ins, uErr); 
+      // vL2norm  = insL2Norm(ins, vErr); 
+      // if(ins->dim==3) wL2norm  = insL2Norm(ins, wErr); 
 
-      pL2norm  = insL2Norm(ins, pErr); 
+      // pL2norm  = insL2Norm(ins, pErr); 
 
 
       if(ins->dim==2){
@@ -303,8 +303,8 @@ void insError(ins_t *ins, dfloat time){
        printf("Linf error-->\tStep: %d Time: %g ErrorU: %.4e ErrorV: %.4e ErrorP: %.4e\n", 
            (int)(time/ins->dt), time, uLiNorm, vLiNorm, pLiNorm);
 
-        printf("L2 error-->\tStep: %d Time: %g ErrorU: %.4e ErrorV: %.4e ErrorP: %.4e\n", 
-           (int)(time/ins->dt), time, uL2norm, vL2norm, pL2norm);
+        // printf("L2 error-->\tStep: %d Time: %g ErrorU: %.4e ErrorV: %.4e ErrorP: %.4e\n", 
+           // (int)(time/ins->dt), time, uL2norm, vL2norm, pL2norm);
       }
 
       }else if(ins->dim=3){
@@ -315,8 +315,8 @@ void insError(ins_t *ins, dfloat time){
         printf("Linf error\t-->\tStep: %d Time: %g ErrorU: %.4e ErrorV: %.4e ErrorW: %.4e ErrorP: %.4e\n", 
            (int)(time/ins->dt), time, uLiNorm, vLiNorm, wLiNorm, pLiNorm);
 
-        printf("L2 error\t-->\tStep: %d Time: %g ErrorU: %.4e ErrorV: %.4e ErrorW: %.4e ErrorP: %.4e\n", 
-           (int)(time/ins->dt), time, uL2norm, vL2norm, wL2norm, pL2norm);
+        // printf("L2 error\t-->\tStep: %d Time: %g ErrorU: %.4e ErrorV: %.4e ErrorW: %.4e ErrorP: %.4e\n", 
+           // (int)(time/ins->dt), time, uL2norm, vL2norm, wL2norm, pL2norm);
       }
 
 
@@ -330,58 +330,58 @@ void insError(ins_t *ins, dfloat time){
 }
 
 
-// l2 norm
-dfloat insL2Norm(ins_t *ins, dfloat *U){
+// // l2 norm
+// dfloat insL2Norm(ins_t *ins, dfloat *U){
 
-mesh_t *mesh = ins->mesh; 
-dfloat l2norm = 0.0; 
+// mesh_t *mesh = ins->mesh; 
+// dfloat l2norm = 0.0; 
 
- for(dlong e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Np;++n){  
-        dfloat sum = 0.0;  
-          for(int i=0;i<mesh->Np;++i){  
-            dfloat J  = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + mesh->Np*JID + i]; 
-            dfloat ui = U[e*mesh->Np+i]; 
-            sum += mesh->MM[n*mesh->Np +i]*J*ui*ui; 
-          }
+//  for(dlong e=0;e<mesh->Nelements;++e){
+//     for(int n=0;n<mesh->Np;++n){  
+//         dfloat sum = 0.0;  
+//           for(int i=0;i<mesh->Np;++i){  
+//             dfloat J  = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + mesh->Np*JID + i]; 
+//             dfloat ui = U[e*mesh->Np+i]; 
+//             sum += mesh->MM[n*mesh->Np +i]*J*ui*ui; 
+//           }
         
-        l2norm += sum; 
-      }
-    }
+//         l2norm += sum; 
+//       }
+//     }
 
-dfloat gl2norm; 
-MPI_Allreduce(&l2norm, &gl2norm, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
+// dfloat gl2norm; 
+// MPI_Allreduce(&l2norm, &gl2norm, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
 
-return sqrt(gl2norm);
+// return sqrt(gl2norm);
 
-}
+// }
 
 
-// l2 norm
-dfloat insL1Norm(ins_t *ins, dfloat *U){
+// // l2 norm
+// dfloat insL1Norm(ins_t *ins, dfloat *U){
 
-mesh_t *mesh = ins->mesh; 
-dfloat l1norm = 0.0; 
+// mesh_t *mesh = ins->mesh; 
+// dfloat l1norm = 0.0; 
 
- for(dlong e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Np;++n){  
-        dfloat sum = 0.0;  
-          for(int i=0;i<mesh->Np;++i){  
-            dfloat J  = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + mesh->Np*JID + i]; 
-            dfloat ui = U[e*mesh->Np+i]; 
-            sum += mesh->MM[n*mesh->Np +i]*J*ui; 
-          }
+//  for(dlong e=0;e<mesh->Nelements;++e){
+//     for(int n=0;n<mesh->Np;++n){  
+//         dfloat sum = 0.0;  
+//           for(int i=0;i<mesh->Np;++i){  
+//             dfloat J  = mesh->vgeo[e*mesh->Np*mesh->Nvgeo + mesh->Np*JID + i]; 
+//             dfloat ui = U[e*mesh->Np+i]; 
+//             sum += mesh->MM[n*mesh->Np +i]*J*ui; 
+//           }
         
-        l1norm += sum; 
-      }
-    }
+//         l1norm += sum; 
+//       }
+//     }
 
-dfloat gl1norm; 
-MPI_Allreduce(&l1norm, &gl1norm, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
+// dfloat gl1norm; 
+// MPI_Allreduce(&l1norm, &gl1norm, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
 
-return gl1norm;
+// return gl1norm;
 
-}
+// }
 
 
 // l2 norm

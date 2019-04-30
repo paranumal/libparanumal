@@ -115,6 +115,7 @@ SOFTWARE.
                                                                         \
   const int bc = EToB[face+p_Nfaces*e];                                 \
   if(bc>0) {                                                            \
+    PP = PM;                                                            \
     insPressureDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, PM, &PP);\
     PP = 2.f*PP - PM;                                                   \
   }                                                                     \

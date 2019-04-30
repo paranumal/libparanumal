@@ -128,10 +128,12 @@ void surfaceTerms(dlong e, int es, dlong offset, int sk, int face, int i, int j,
   const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];                        
   
   const dfloat  uM = U[idM+0*offset], vM = U[idM+1*offset];             
-  dfloat uP = U[idP+0*offset], vP = U[idP+1*offset];             
+        dfloat  uP = U[idP+0*offset], vP = U[idP+1*offset];             
   
   int bc = EToB[face+p_Nfaces*e];                                       
-  if(bc>0) {                                                            
+  if(bc>0) { 
+    // idM = idP but better to make it id independent, AK
+    uP = uM;  vP = vM; 
     insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP); 
   }                                                                     
   
@@ -589,10 +591,12 @@ void quadSurfaceTerms(int es, int face, int m, int i, int j,
 	    const dfloat sJ = cubsgeo[sk*p_Nsgeo+p_SJID];
 
 	    const dfloat uM = r_UMn[face], vM = r_VMn[face];
-	    dfloat uP = r_UPn[face], vP = r_VPn[face];
+	          dfloat uP = r_UPn[face], vP = r_VPn[face];
 
 	    int bc = EToB[face+p_Nfaces*e];
 	    if(bc>0) {
+         // defaulting to u+ = u-
+        uP = uM;  vP = vM;   
 	      const dlong idm = e*p_Nfaces*p_cubNq + face*p_cubNq + i;
 	      insVelocityDirichletConditions2D(bc, time, intx[e*p_Nfaces*p_cubNq + face*p_cubNq + i], \
 					       inty[e*p_Nfaces*p_cubNq + face*p_cubNq + i], \

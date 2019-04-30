@@ -848,9 +848,9 @@ SOFTWARE.
         const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
         const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];
 
-        dfloat uP = 0.f;
-        dfloat vP = 0.f;
-        dfloat wP = 0.f;
+        dfloat uP = uM;
+        dfloat vP = vM;
+        dfloat wP = wM;
         insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP);
         U[idM] = uP;
         V[idM] = vP;

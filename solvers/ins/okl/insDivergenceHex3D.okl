@@ -134,6 +134,7 @@ SOFTWARE.
     dfloat uP = U[idP+0*offset], vP = U[idP+1*offset], wP = U[idP+2*offset]; \
     const int bc = EToB[face+p_Nfaces*e];				\
     if(bc>0) {								\
+      uP = uM;  vP = vM; wP = wM; \
       insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP); \
       uP = 2.f*uP-uM;							\
       vP = 2.f*vP-vM;							\

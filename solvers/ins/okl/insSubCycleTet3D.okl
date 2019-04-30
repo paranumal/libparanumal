@@ -196,6 +196,7 @@ SOFTWARE.
             // apply boundary condition
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0) {
+              UdP = UdM; VdP = VdM; WdP = WdM;  
               insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, UdM, VdM, WdM, &UdP, &VdP, &WdP);
               UdP *= bScale;
               VdP *= bScale;
@@ -533,6 +534,9 @@ SOFTWARE.
             // apply boundary conditions
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
+              iUdP = iUdM;  
+              iVdP = iVdM; 
+              iWdP = iWdM;
               insVelocityDirichletConditions3D(bc,time, intx[n+e*p_Nfaces*p_intNfp], \
                                                         inty[n+e*p_Nfaces*p_intNfp], \
                                                         intz[n+e*p_Nfaces*p_intNfp], \

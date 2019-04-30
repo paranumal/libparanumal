@@ -601,7 +601,8 @@ SOFTWARE.
       const int bc = mapB[idM];
 
       if(bc==3) {
-        dfloat pP = 0.f;
+        // dfloat pP = 0.f;
+        dfloat pP = P[idM]; // just to be safe
         insPressureDirichletConditions3D(bc,time, x[idM], y[idM], z[idM], 0.f, 0.f, 0.f, 0.f, &pP);
         
         for (int s=0;s<stage;s++) {

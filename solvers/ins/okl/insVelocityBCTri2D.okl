@@ -361,8 +361,9 @@ SOFTWARE.
         const dfloat nx = sgeo[sid+p_NXID];
         const dfloat ny = sgeo[sid+p_NYID];
 
-        dfloat uP = 0.f;
-        dfloat vP = 0.f;
+        dfloat uP = uM;
+        dfloat vP = vM;
+        
         insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);
         U[idM] = uP;
         V[idM] = vP;

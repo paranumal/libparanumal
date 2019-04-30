@@ -336,7 +336,8 @@ SOFTWARE.
       const int bc = mapB[idM];
 
       if(bc==3) {
-        dfloat pP;
+        // dfloat pP;
+        dfloat pP = P[idM];
         insPressureDirichletConditions2D(bc,time, x[idM], y[idM], 0.f, 0.f, 0.f, &pP);
 
         for (int s=0;s<stage;s++) {
