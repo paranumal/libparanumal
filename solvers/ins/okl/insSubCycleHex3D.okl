@@ -172,7 +172,8 @@ SOFTWARE.
                                                                         \
   const int bc = EToB[face+p_Nfaces*e];                                 \
   if(bc>0) {                                                            \
-    insVelocityDirichletConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, uM, vM, wM, &udP, &vdP, &wdP); \
+    udP = udM; vdP = vdM; wdP = wdM;                                    \
+    insVelocityDirichletConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, udM, vdM, wdM, &udP, &vdP, &wdP); \
     udP *= bScale;                                                      \
     vdP *= bScale;                                                      \
     wdP *= bScale;                                                      \
@@ -1323,6 +1324,7 @@ SOFTWARE.
 									\
 	const int bc = EToB[face+p_Nfaces*e];				\
 	if(bc>0) {							\
+    udP = udM; vdP = vdM; wdP = wdM;                                    \
 	  insVelocityDirichletConditions3D(bc, time, intx[e*p_Nfaces*p_cubNfp + face*p_cubNfp + j*p_cubNq + i],	\
 					   inty[e*p_Nfaces*p_cubNfp + face*p_cubNfp + j*p_cubNq + i], \
 					   intz[e*p_Nfaces*p_cubNfp + face*p_cubNfp + j*p_cubNq + i], nx, ny, nz, udM, vdM, wdM, &udP, &vdP, &wdP); \

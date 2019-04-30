@@ -113,6 +113,8 @@ SOFTWARE.
                                                                         \
   const int bc = EToB[face+p_Nfaces*e];                                 \
   if(bc>0) {                                                            \
+    uP = uM;                                                            \
+    vP = vM;                                                            \
     insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);\
     uP = 2.f*uP-uM;                                                     \
     vP = 2.f*vP-vM;                                                     \
@@ -300,7 +302,9 @@ void surfaceTerms(dlong e, int es, dlong offset, int sk, int face, int i, int j,
         dfloat uP = U[idP+0*offset], vP = U[idP+1*offset];             
   
   int bc = EToB[face+p_Nfaces*e];                                       
-  if(bc>0) {                                                            
+  if(bc>0) {
+    // explicitly set u+ = u-   
+    uP = uM;  vP = vM;                                                           
     insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP); 
     uP = 2.f*uP - uM; 
     vP = 2.f*vP - vM; 

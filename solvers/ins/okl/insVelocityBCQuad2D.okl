@@ -192,6 +192,7 @@ SOFTWARE.
   s_ndv[j][i] -= WsJ*(nx*dvdxP + ny*dvdyP);                             \
 }
 
+
 //RHS contributions for continuous solver
 @kernel void insVelocityBCQuad2D(const dlong Nelements,
 				 @restrict const  dfloat *  ggeo,
@@ -377,9 +378,11 @@ SOFTWARE.
         const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
         const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
 
-        dfloat uP = 0.f;
-        dfloat vP = 0.f;
+        dfloat uP = uM;
+        dfloat vP = vM;
+        
         insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);
+
         U[idM] = uP;
         V[idM] = vP;
       }    

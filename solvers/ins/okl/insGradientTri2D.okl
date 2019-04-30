@@ -176,6 +176,7 @@ SOFTWARE.
             // apply boundary condition
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
+              PP = PM; // idM = idP but it is better to set explicitly. AK
               insPressureDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, PM, &PP);
               PP = 2.f*PP - PM; //Strong form BCs
             }

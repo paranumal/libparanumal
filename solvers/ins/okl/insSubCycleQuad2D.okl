@@ -129,6 +129,8 @@ SOFTWARE.
                                                                         \
   const int bc = EToB[face+p_Nfaces*e];                                 \
   if(bc>0) {                                                            \
+    udP = udM;                                                          \
+    vdP = vdM;                                                          \
     insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, udM, vdM, &udP, &vdP);\
     udP *= bScale;                                                      \
     vdP *= bScale;                                                      \
@@ -614,6 +616,7 @@ SOFTWARE.
 
             int bc = EToB[face+p_Nfaces*e];
             if(bc>0) {
+               udP = udM; vdP = vdM;
               const dlong idm = e*p_Nfaces*p_cubNq + face*p_cubNq + i;
               insVelocityDirichletConditions2D(bc, time, intx[e*p_Nfaces*p_cubNq + face*p_cubNq + i], \
                                                          inty[e*p_Nfaces*p_cubNq + face*p_cubNq + i], \

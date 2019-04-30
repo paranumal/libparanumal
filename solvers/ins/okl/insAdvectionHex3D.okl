@@ -167,6 +167,7 @@ SOFTWARE.
                                                                         \
   const int bc = EToB[face+p_Nfaces*e];                                 \
   if(bc>0) {                                                            \
+    uP = uM;  vP = vM; wP = wM;                                         \
     insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP); \
   }                                                                     \
                                                                         \
@@ -1101,10 +1102,11 @@ SOFTWARE.
 	const dfloat nz = cubsgeo[sk*p_Nsgeo+p_NZID];			\
 	const dfloat WsJ = cubsgeo[sk*p_Nsgeo+p_WSJID];			\
 	const dfloat uM = r_UMn, vM = r_VMn, wM = r_WMn;		\
-	dfloat uP = r_UPn, vP = r_VPn, wP = r_WPn;			\
+	      dfloat uP = r_UPn, vP = r_VPn, wP = r_WPn;			\
 									\
 	const int bc = EToB[face+p_Nfaces*e];				\
 	if(bc>0) {							\
+    uP = uM; vP = vM; wP = wM; \
 	  insVelocityDirichletConditions3D(bc, time, intx[e*p_Nfaces*p_cubNfp + face*p_cubNfp + j*p_cubNq + i],	\
 					   inty[e*p_Nfaces*p_cubNfp + face*p_cubNfp + j*p_cubNq + i], \
 					   intz[e*p_Nfaces*p_cubNfp + face*p_cubNfp + j*p_cubNq + i], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP); \

@@ -1,6 +1,6 @@
 cl__1 = 1.0;
-xmax = DefineNumber[ 0.5];
-xmin = DefineNumber[-0.5];
+xmax = DefineNumber[ 1.0];
+xmin = DefineNumber[-1.0];
 
 xn = DefineNumber[10];
 yn = DefineNumber[10];
@@ -62,7 +62,13 @@ Transfinite Volume {34} = {5,6,2,1,8,7,3,4};
 // Physical Surface("Inflow",2) = {22, 24, 26, 28, 30, 32};
 // Physical Surface("Outflow",3) = {22, 24, 26, 28, 30, 32};
 
-Physical Surface("Inflow",2)  = {24, 28, 32};
-Physical Surface("Outflow",3) = {22, 26, 30};
+// Physical Surface("Inflow",2)  = {24, 28, 32};
+// Physical Surface("Outflow",3) = {22, 26, 30};
+
+// Physical Surface("Outflow",3)  = {24, 28, 30, 32};
+// Physical Surface("Inflow",2) = {22, 26};
+
+Physical Surface("Inflow",2)  = {24, 28, 30, 32};
+Physical Surface("Outflow",3) = {22, 26};
 
 Physical Volume("Domain") = {34};
