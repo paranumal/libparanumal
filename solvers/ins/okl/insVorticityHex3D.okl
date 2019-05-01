@@ -24,6 +24,7 @@ SOFTWARE.
 
 */
 
+#if 0
 // Compute second largest eigenvalue of S^2 + Q^2 manually, ordered
 void eigenValue(const dfloat a11, const dfloat a12, const dfloat a13, 
                 const dfloat a22, const dfloat a23, const dfloat a33, 
@@ -64,7 +65,7 @@ if (p1 < TOL){
    eig2 = 3.f*q -eig1-eig3;
 } 
 }
-
+#endif
 // A very bad implementation for fast testing: AK 
 @kernel void insVorticityHex3D(const dlong Nelements,
                                      @restrict const  dfloat *  vgeo,
@@ -433,7 +434,11 @@ if (p1 < TOL){
                                                                         \
   const int bc = EToB[face+p_Nfaces*e];                                 \
   if(bc>0) {                                                            \
+    if(bc==1){                                                          \
+      uP = 0.f; vP = 0.f; wP = 0.f;                                     \
+    }else{                                                              \
     insVelocityDirichletConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP); \
+    }                                                                   \
     uP = 2.f*uP-uM;                                                     \
     vP = 2.f*vP-vM;                                                     \
     wP = 2.f*wP-wM;                                                     \
