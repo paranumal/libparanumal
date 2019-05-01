@@ -1,46 +1,46 @@
 /*
 
-The MIT License (MIT)
+  The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 
 */
 
 
 @kernel void insVelocityIpdgBCTet3D(const dlong Nelements,
-                                   @restrict const  dlong *  vmapM,
-                                   const dfloat tau,
-                                   const dfloat time,
-                                   @restrict const  dfloat *  x,
-                                   @restrict const  dfloat *  y,
-                                   @restrict const  dfloat *  z,
-                                   @restrict const  dfloat *  vgeo,
-                                   @restrict const  dfloat *  sgeo,
-                                   @restrict const  int    *  EToB,
-                                   @restrict const  dfloat *  Dmatrices,
-                                   @restrict const  dfloat *  LIFTT,
-                                   @restrict const  dfloat *  MM,
-                                         @restrict dfloat *  rhsU,
-                                         @restrict dfloat *  rhsV,
-                                         @restrict dfloat *  rhsW){
+				    @restrict const  dlong *  vmapM,
+				    const dfloat tau,
+				    const dfloat time,
+				    @restrict const  dfloat *  x,
+				    @restrict const  dfloat *  y,
+				    @restrict const  dfloat *  z,
+				    @restrict const  dfloat *  vgeo,
+				    @restrict const  dfloat *  sgeo,
+				    @restrict const  int    *  EToB,
+				    @restrict const  dfloat *  Dmatrices,
+				    @restrict const  dfloat *  LIFTT,
+				    @restrict const  dfloat *  MM,
+				    @restrict dfloat *  rhsU,
+				    @restrict dfloat *  rhsV,
+				    @restrict dfloat *  rhsW){
 
   for(dlong e=0;e<Nelements;++e;@outer(0)){
     @shared  dfloat s_dudx[p_Np];
@@ -106,7 +106,13 @@ SOFTWARE.
 
         const int bc = EToB[face+p_Nfaces*e];
         if(bc>0) {
-          insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, &uP, &vP, &wP);
+          if(bc==1){
+	    // no need but added for clarity 
+	    uP = 0.f; vP = 0.f; wP = 0.f; 
+          }else{            
+	    insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, &uP, &vP, &wP);
+          }
+
           insVelocityNeumannConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, &dudxP,&dudyP,&dudzP, &dvdxP,&dvdyP,&dvdzP, &dwdxP,&dwdyP,&dwdzP);
         }
 
@@ -162,21 +168,21 @@ SOFTWARE.
         dfloat Lnydw = 0.f;
         dfloat Lnzdw = 0.f;
 
-        #pragma unroll p_NfacesNfp
-          for(int i=0;i<p_NfacesNfp;++i){
-            dfloat liftt = LIFTT[n+i*p_Np];
-            Lnxdu += liftt*s_nxdu[i];
-            Lnydu += liftt*s_nydu[i];
-            Lnzdu += liftt*s_nzdu[i];
+#pragma unroll p_NfacesNfp
+	for(int i=0;i<p_NfacesNfp;++i){
+	  dfloat liftt = LIFTT[n+i*p_Np];
+	  Lnxdu += liftt*s_nxdu[i];
+	  Lnydu += liftt*s_nydu[i];
+	  Lnzdu += liftt*s_nzdu[i];
            
-            Lnxdv += liftt*s_nxdv[i];
-            Lnydv += liftt*s_nydv[i];
-            Lnzdv += liftt*s_nzdv[i];
+	  Lnxdv += liftt*s_nxdv[i];
+	  Lnydv += liftt*s_nydv[i];
+	  Lnzdv += liftt*s_nzdv[i];
 
-            Lnxdw += liftt*s_nxdw[i];
-            Lnydw += liftt*s_nydw[i];
-            Lnzdw += liftt*s_nzdw[i];
-          }
+	  Lnxdw += liftt*s_nxdw[i];
+	  Lnydw += liftt*s_nydw[i];
+	  Lnzdw += liftt*s_nzdw[i];
+	}
 
         const dfloat dudx = Lnxdu;
         const dfloat dudy = Lnydu;
@@ -230,23 +236,23 @@ SOFTWARE.
         dfloat laur = 0.f, laus = 0.f, laut=0.f;
         dfloat lavr = 0.f, lavs = 0.f, lavt=0.f;
         dfloat lawr = 0.f, laws = 0.f, lawt=0.f;
-        #pragma unroll p_Np
-          for(int i=0;i<p_Np;++i) {
-            const dfloat Drn = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
-            const dfloat Dsn = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
-            const dfloat Dtn = Dmatrices[n+i*p_Np+2*p_Np*p_Np];
-            laur += Drn*s_dudx[i];
-            laus += Dsn*s_dudy[i];
-            laut += Dtn*s_dudz[i];
+#pragma unroll p_Np
+	for(int i=0;i<p_Np;++i) {
+	  const dfloat Drn = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
+	  const dfloat Dsn = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
+	  const dfloat Dtn = Dmatrices[n+i*p_Np+2*p_Np*p_Np];
+	  laur += Drn*s_dudx[i];
+	  laus += Dsn*s_dudy[i];
+	  laut += Dtn*s_dudz[i];
 
-            lavr += Drn*s_dvdx[i];
-            lavs += Dsn*s_dvdy[i];
-            lavt += Dtn*s_dvdz[i];
+	  lavr += Drn*s_dvdx[i];
+	  lavs += Dsn*s_dvdy[i];
+	  lavt += Dtn*s_dvdz[i];
 
-            lawr += Drn*s_dwdx[i];
-            laws += Dsn*s_dwdy[i];
-            lawt += Dtn*s_dwdz[i];
-          }
+	  lawr += Drn*s_dwdx[i];
+	  laws += Dsn*s_dwdy[i];
+	  lawt += Dtn*s_dwdz[i];
+	}
 
         s_lapu[n] = -(laur+laus+laut);
         s_lapv[n] = -(lavr+lavs+lavt);
@@ -264,12 +270,12 @@ SOFTWARE.
         dfloat law = 0.f;
 
         // lift remaining surface terms
-        #pragma unroll p_NfacesNfp
-          for(int i=0;i<p_NfacesNfp;++i){
-            lau += LIFTT[n+i*p_Np]*s_lapuflux[i];
-            lav += LIFTT[n+i*p_Np]*s_lapvflux[i];
-            law += LIFTT[n+i*p_Np]*s_lapwflux[i];
-          }
+#pragma unroll p_NfacesNfp
+	for(int i=0;i<p_NfacesNfp;++i){
+	  lau += LIFTT[n+i*p_Np]*s_lapuflux[i];
+	  lav += LIFTT[n+i*p_Np]*s_lapvflux[i];
+	  law += LIFTT[n+i*p_Np]*s_lapwflux[i];
+	}
 
         s_lapu[n] += lau;
         s_lapv[n] += lav;
@@ -289,12 +295,12 @@ SOFTWARE.
         dfloat Mlapw = 0.f;
 
         // multiply by mass matrix
-        #pragma unroll p_Np
-          for(int i=0;i<p_Np;++i){
-            Mlapu += MM[n+i*p_Np]*s_lapu[i];
-            Mlapv += MM[n+i*p_Np]*s_lapv[i];
-            Mlapw += MM[n+i*p_Np]*s_lapw[i];
-          }
+#pragma unroll p_Np
+	for(int i=0;i<p_Np;++i){
+	  Mlapu += MM[n+i*p_Np]*s_lapu[i];
+	  Mlapv += MM[n+i*p_Np]*s_lapv[i];
+	  Mlapw += MM[n+i*p_Np]*s_lapw[i];
+	}
 
         rhsU[id] -=  J*Mlapu;
         rhsV[id] -=  J*Mlapv;
@@ -368,7 +374,12 @@ SOFTWARE.
 
         const int bc = mapB[idM];
         if(bc>0) {
-          insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, &uP, &vP, &wP);
+          if(bc==1){
+	    // no need but added for clarity 
+	    uP = 0.f; vP = 0.f; wP = 0.f; 
+          }else{            
+	    insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, &uP, &vP, &wP);
+          }
           insVelocityNeumannConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, &dudxP,&dudyP,&dudzP, &dvdxP,&dvdyP,&dvdzP, &dwdxP,&dwdyP,&dwdzP);
         }
 
@@ -404,59 +415,59 @@ SOFTWARE.
         dfloat ust = 0., vst = 0., wst = 0.;
         dfloat utt = 0., vtt = 0., wtt = 0.;
 
-        #pragma unroll p_Np
-          for (int k=0;k<p_Np;k++) {
-            const dfloat MMn = MM[n+k*p_Np];
-            const dfloat Srr = Smatrices[n+k*p_Np+0*p_Np*p_Np];
-            const dfloat Srs = Smatrices[n+k*p_Np+1*p_Np*p_Np];
-            const dfloat Srt = Smatrices[n+k*p_Np+2*p_Np*p_Np];
-            const dfloat Sss = Smatrices[n+k*p_Np+3*p_Np*p_Np];
-            const dfloat Sst = Smatrices[n+k*p_Np+4*p_Np*p_Np];
-            const dfloat Stt = Smatrices[n+k*p_Np+5*p_Np*p_Np];
+#pragma unroll p_Np
+	for (int k=0;k<p_Np;k++) {
+	  const dfloat MMn = MM[n+k*p_Np];
+	  const dfloat Srr = Smatrices[n+k*p_Np+0*p_Np*p_Np];
+	  const dfloat Srs = Smatrices[n+k*p_Np+1*p_Np*p_Np];
+	  const dfloat Srt = Smatrices[n+k*p_Np+2*p_Np*p_Np];
+	  const dfloat Sss = Smatrices[n+k*p_Np+3*p_Np*p_Np];
+	  const dfloat Sst = Smatrices[n+k*p_Np+4*p_Np*p_Np];
+	  const dfloat Stt = Smatrices[n+k*p_Np+5*p_Np*p_Np];
 
-            MMu += MMn*s_u[k];
-            urr += Srr*s_u[k];
-            urs += Srs*s_u[k];
-            urt += Srt*s_u[k];
-            uss += Sss*s_u[k];
-            ust += Sst*s_u[k];
-            utt += Stt*s_u[k];
+	  MMu += MMn*s_u[k];
+	  urr += Srr*s_u[k];
+	  urs += Srs*s_u[k];
+	  urt += Srt*s_u[k];
+	  uss += Sss*s_u[k];
+	  ust += Sst*s_u[k];
+	  utt += Stt*s_u[k];
 
-            MMv += MMn*s_v[k];
-            vrr += Srr*s_v[k];
-            vrs += Srs*s_v[k];
-            vrt += Srt*s_v[k];
-            vss += Sss*s_v[k];
-            vst += Sst*s_v[k];
-            vtt += Stt*s_v[k];
+	  MMv += MMn*s_v[k];
+	  vrr += Srr*s_v[k];
+	  vrs += Srs*s_v[k];
+	  vrt += Srt*s_v[k];
+	  vss += Sss*s_v[k];
+	  vst += Sst*s_v[k];
+	  vtt += Stt*s_v[k];
 
-            MMw += MMn*s_w[k];
-            wrr += Srr*s_w[k];
-            wrs += Srs*s_w[k];
-            wrt += Srt*s_w[k];
-            wss += Sss*s_w[k];
-            wst += Sst*s_w[k];
-            wtt += Stt*s_w[k];
-          }
+	  MMw += MMn*s_w[k];
+	  wrr += Srr*s_w[k];
+	  wrs += Srs*s_w[k];
+	  wrt += Srt*s_w[k];
+	  wss += Sss*s_w[k];
+	  wst += Sst*s_w[k];
+	  wtt += Stt*s_w[k];
+	}
 
         dfloat Lndu = 0;            
         dfloat Lndv = 0;            
         dfloat Lndw = 0;            
         // surface mass * surface terms
-        #pragma unroll p_NfacesNfp
-          for(int i=0;i<p_NfacesNfp;++i){
-            const dfloat sMTn = sMT[n+i*p_Np];
-            Lndu += sMTn*s_ndu[i];
-            Lndv += sMTn*s_ndv[i];
-            Lndw += sMTn*s_ndw[i];
-          }
+#pragma unroll p_NfacesNfp
+	for(int i=0;i<p_NfacesNfp;++i){
+	  const dfloat sMTn = sMT[n+i*p_Np];
+	  Lndu += sMTn*s_ndu[i];
+	  Lndv += sMTn*s_ndv[i];
+	  Lndw += sMTn*s_ndw[i];
+	}
 
         rhsU[id] -= Grr*urr+Grs*urs+Grt*urt
-                   +Gss*uss+Gst*ust+Gtt*utt + J*lambda*MMu - Lndu;
+	  +Gss*uss+Gst*ust+Gtt*utt + J*lambda*MMu - Lndu;
         rhsV[id] -= Grr*vrr+Grs*vrs+Grt*vrt
-                   +Gss*vss+Gst*vst+Gtt*vtt + J*lambda*MMv - Lndv;
+	  +Gss*vss+Gst*vst+Gtt*vtt + J*lambda*MMv - Lndv;
         rhsW[id] -= Grr*wrr+Grs*wrs+Grt*wrt
-                   +Gss*wss+Gst*wst+Gtt*wtt + J*lambda*MMw - Lndw;
+	  +Gss*wss+Gst*wst+Gtt*wtt + J*lambda*MMw - Lndw;
 
       }
     }
@@ -471,9 +482,9 @@ SOFTWARE.
                                    @restrict const  dfloat *  z,
                                    @restrict const  dlong  *  vmapM,
                                    @restrict const  int    *  mapB,
-                                         @restrict dfloat *  U,
-                                         @restrict dfloat *  V,
-                                         @restrict dfloat *  W){
+				   @restrict dfloat *  U,
+				   @restrict dfloat *  V,
+				   @restrict dfloat *  W){
   
   for(dlong e=0;e<Nelements;e++;@outer(0)){
     for(int n=0;n<p_Nfp*p_Nfaces;++n;@inner(0)){
@@ -494,7 +505,13 @@ SOFTWARE.
         dfloat uP = uM;  
         dfloat vP = vM;  
         dfloat wP = wM;  
-        insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP);
+
+        if(bc==1){
+	  uP = 0.f; vP = 0.f; wP = 0.f;
+        }else{            
+	  insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP);
+        }
+        
         U[idM] = uP;
         V[idM] = vP;
         W[idM] = wP;

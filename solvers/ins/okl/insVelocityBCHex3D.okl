@@ -1,83 +1,87 @@
 /*
 
-The MIT License (MIT)
+  The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 
 */
 
 
 #define surfaceTerms(sk,face,i, j)                                      \
-{                                                                       \
-  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
-  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
-  const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];                            \
-  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];                          \
-  const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];                           \
+  {									\
+    const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				\
+    const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				\
+    const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];				\
+    const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];			\
+    const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];				\
                                                                         \
-  dfloat dudxP=0, dudyP=0, dudzP=0, uP=0;                               \
-  dfloat dvdxP=0, dvdyP=0, dvdzP=0, vP=0;                               \
-  dfloat dwdxP=0, dwdyP=0, dwdzP=0, wP=0;                               \
+    dfloat dudxP=0, dudyP=0, dudzP=0, uP=0;				\
+    dfloat dvdxP=0, dvdyP=0, dvdzP=0, vP=0;				\
+    dfloat dwdxP=0, dwdyP=0, dwdzP=0, wP=0;				\
                                                                         \
-  const int bc = EToB[face+p_Nfaces*e];                                 \
-  if(bc>0) {                                                            \
-    insVelocityDirichletConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, 0.f, 0.f, 0.f, &uP, &vP, &wP);\
-    insVelocityNeumannConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dudzP, &dvdxP, &dvdyP, &dvdzP, &dwdxP, &dwdyP, &dwdzP);\
-  }                                                                     \
+    const int bc = EToB[face+p_Nfaces*e];				\
+    if(bc>0) {								\
+      if(bc==1){							\
+	uP = 0.f; vP = 0.f; wP = 0.f;					\
+      }else{								\
+	insVelocityDirichletConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, 0.f, 0.f, 0.f, &uP, &vP, &wP);	\
+      }									\
+      insVelocityNeumannConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dudzP, &dvdxP, &dvdyP, &dvdzP, &dwdxP, &dwdyP, &dwdzP); \
+    }									\
                                                                         \
-  const dfloat du = uP;                                                 \
-  const dfloat dv = vP;                                                 \
-  const dfloat dw = wP;                                                 \
+    const dfloat du = uP;						\
+    const dfloat dv = vP;						\
+    const dfloat dw = wP;						\
                                                                         \
-  s_dudx[j][i] = WsJ*nx*du;                                             \
-  s_dudy[j][i] = WsJ*ny*du;                                             \
-  s_dudz[j][i] = WsJ*nz*du;                                             \
-  s_dvdx[j][i] = WsJ*nx*dv;                                             \
-  s_dvdy[j][i] = WsJ*ny*dv;                                             \
-  s_dvdz[j][i] = WsJ*nz*dv;                                             \
-  s_dwdx[j][i] = WsJ*nx*dw;                                             \
-  s_dwdy[j][i] = WsJ*ny*dw;                                             \
-  s_dwdz[j][i] = WsJ*nz*dw;                                             \
+    s_dudx[j][i] = WsJ*nx*du;						\
+    s_dudy[j][i] = WsJ*ny*du;						\
+    s_dudz[j][i] = WsJ*nz*du;						\
+    s_dvdx[j][i] = WsJ*nx*dv;						\
+    s_dvdy[j][i] = WsJ*ny*dv;						\
+    s_dvdz[j][i] = WsJ*nz*dv;						\
+    s_dwdx[j][i] = WsJ*nx*dw;						\
+    s_dwdy[j][i] = WsJ*ny*dw;						\
+    s_dwdz[j][i] = WsJ*nz*dw;						\
                                                                         \
-  s_rhsU[j][i] = -WsJ*(nx*dudxP + ny*dudyP+ nz*dudzP+ tau*du*hinv);     \
-  s_rhsV[j][i] = -WsJ*(nx*dvdxP + ny*dvdyP+ nz*dvdzP+ tau*dv*hinv);     \
-  s_rhsW[j][i] = -WsJ*(nx*dwdxP + ny*dwdyP+ nz*dwdzP+ tau*dw*hinv);     \
-}
+    s_rhsU[j][i] = -WsJ*(nx*dudxP + ny*dudyP+ nz*dudzP+ tau*du*hinv);	\
+    s_rhsV[j][i] = -WsJ*(nx*dvdxP + ny*dvdyP+ nz*dvdzP+ tau*dv*hinv);	\
+    s_rhsW[j][i] = -WsJ*(nx*dwdxP + ny*dwdyP+ nz*dwdzP+ tau*dw*hinv);	\
+  }
 
 @kernel void insVelocityIpdgBCHex3D(const dlong Nelements,
-                                  @restrict const  dlong  *  vmapM,
-                                  const dfloat tau,
-                                  const dfloat time,
-                                  @restrict const  dfloat *  x,
-                                  @restrict const  dfloat *  y,
-                                  @restrict const  dfloat *  z,
-                                  @restrict const  dfloat *  vgeo,
-                                  @restrict const  dfloat *  sgeo,
-                                  @restrict const  int    *  EToB,
-                                  @restrict const  dfloat *  D,
-                                  @restrict const  dfloat *  LIFTT,
-                                  @restrict const  dfloat *  MM,
-                                        @restrict dfloat *  rhsU,
-                                        @restrict dfloat *  rhsV,
-                                        @restrict dfloat *  rhsW){
+				    @restrict const  dlong  *  vmapM,
+				    const dfloat tau,
+				    const dfloat time,
+				    @restrict const  dfloat *  x,
+				    @restrict const  dfloat *  y,
+				    @restrict const  dfloat *  z,
+				    @restrict const  dfloat *  vgeo,
+				    @restrict const  dfloat *  sgeo,
+				    @restrict const  int    *  EToB,
+				    @restrict const  dfloat *  D,
+				    @restrict const  dfloat *  LIFTT,
+				    @restrict const  dfloat *  MM,
+				    @restrict dfloat *  rhsU,
+				    @restrict dfloat *  rhsV,
+				    @restrict dfloat *  rhsW){
 
   for(dlong e=0;e<Nelements;++e;@outer(0)){
     
@@ -104,7 +108,7 @@ SOFTWARE.
     // loop over slabs
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
-        #pragma unroll p_Nq
+#pragma unroll p_Nq
         for(int k=0;k<p_Nq;++k){
           r_dudx[k] = 0.f;
           r_dudy[k] = 0.f;
@@ -202,7 +206,7 @@ SOFTWARE.
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
         if (j==0) {//face 1
-          #pragma unroll p_Nq
+#pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
             r_dudx[k] += s_dudx[k][i];
             r_dudy[k] += s_dudy[k][i];
@@ -237,7 +241,7 @@ SOFTWARE.
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
         if (j==p_Nq-1) {//face 3
-          #pragma unroll p_Nq
+#pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
             r_dudx[k] += s_dudx[k][i];
             r_dudy[k] += s_dudy[k][i];
@@ -272,7 +276,7 @@ SOFTWARE.
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
         if (i==p_Nq-1) {//face 2
-          #pragma unroll p_Nq
+#pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
             r_dudx[k] += s_dudx[k][j];
             r_dudy[k] += s_dudy[k][j];
@@ -307,7 +311,7 @@ SOFTWARE.
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
         if (i==0) {//face 4
-          #pragma unroll p_Nq
+#pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
             r_dudx[k] += s_dudx[k][j];
             r_dudy[k] += s_dudy[k][j];
@@ -329,7 +333,7 @@ SOFTWARE.
     @barrier("local");
 
     //layer by layer
-    #pragma unroll p_Nq
+#pragma unroll p_Nq
     for(int k=0;k<p_Nq;++k){
       for(int j=0;j<p_Nq;++j;@inner(1)){
         for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -378,7 +382,7 @@ SOFTWARE.
           dfloat vr = 0, vs = 0;
           dfloat wr = 0, ws = 0;
 
-          #pragma unroll p_Nq
+#pragma unroll p_Nq
           for(int n=0;n<p_Nq;++n){
             const dfloat Dr = s_D[n][i];
             const dfloat Ds = s_D[n][j];
@@ -406,7 +410,7 @@ SOFTWARE.
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
         
-        #pragma unroll p_Nq
+#pragma unroll p_Nq
         for(int k=0;k<p_Nq;++k){
           const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
           rhsU[id] -= r_rhsU[k];
@@ -421,30 +425,34 @@ SOFTWARE.
 
 
 #define surfaceTerms(sk,face,i, j)                                      \
-{                                                                       \
-  const dlong idM = vmapM[sk];                                          \
-  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
-  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
-  const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];                            \
-  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];                          \
+  {									\
+    const dlong idM = vmapM[sk];					\
+    const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				\
+    const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				\
+    const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];				\
+    const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];			\
                                                                         \
-  dfloat dudxP=0.f, dudyP=0.f, dudzP=0.f, uP=0.f;                       \
-  dfloat dvdxP=0.f, dvdyP=0.f, dvdzP=0.f, vP=0.f;                       \
-  dfloat dwdxP=0.f, dwdyP=0.f, dwdzP=0.f, wP=0.f;                       \
+    dfloat dudxP=0.f, dudyP=0.f, dudzP=0.f, uP=0.f;			\
+    dfloat dvdxP=0.f, dvdyP=0.f, dvdzP=0.f, vP=0.f;			\
+    dfloat dwdxP=0.f, dwdyP=0.f, dwdzP=0.f, wP=0.f;			\
                                                                         \
-  const int bc = mapB[idM];                                             \
-  if(bc>0) {                                                            \
-    insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, &uP, &vP, &wP); \
-    insVelocityNeumannConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dudzP, &dvdxP, &dvdyP, &dvdzP, &dwdxP, &dwdyP, &dwdzP); \
-  }									\
+    const int bc = mapB[idM];						\
+    if(bc>0) {								\
+      if(bc==1){							\
+	uP = 0.f; vP = 0.f; wP = 0.f;					\
+      }else{								\
+	insVelocityDirichletConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, 0.f, 0.f, 0.f, &uP, &vP, &wP);	\
+      }									\
+      insVelocityNeumannConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dudzP, &dvdxP, &dvdyP, &dvdzP, &dwdxP, &dwdyP, &dwdzP); \
+    }									\
   									\
-  s_U  [j][i] =  uP;                                                    \
-  s_V  [j][i] =  vP;                                                    \
-  s_W  [j][i] =  wP;                                                    \
-  s_ndU[j][i] = -WsJ*(nx*dudxP + ny*dudyP + nz*dudzP);                  \
-  s_ndV[j][i] = -WsJ*(nx*dvdxP + ny*dvdyP + nz*dvdzP);                  \
-  s_ndW[j][i] = -WsJ*(nx*dwdxP + ny*dwdyP + nz*dwdzP);                  \
-}
+    s_U  [j][i] =  uP;							\
+    s_V  [j][i] =  vP;							\
+    s_W  [j][i] =  wP;							\
+    s_ndU[j][i] = -WsJ*(nx*dudxP + ny*dudyP + nz*dudzP);		\
+    s_ndV[j][i] = -WsJ*(nx*dvdxP + ny*dvdyP + nz*dvdzP);		\
+    s_ndW[j][i] = -WsJ*(nx*dwdxP + ny*dwdyP + nz*dwdzP);		\
+  }
 
 //RHS contributions for continuous solver
 @kernel void insVelocityBCHex3D(const dlong Nelements,
@@ -477,9 +485,9 @@ SOFTWARE.
     @shared dfloat s_ndV[p_Nq][p_Nq];
     @shared dfloat s_ndW[p_Nq][p_Nq];
 
-    #define s_Gur s_ndU
-    #define s_Gvr s_ndV
-    #define s_Gwr s_ndW
+#define s_Gur s_ndU
+#define s_Gvr s_ndV
+#define s_Gwr s_ndW
 
     @shared dfloat s_Gus[p_Nq][p_Nq];
     @shared dfloat s_Gvs[p_Nq][p_Nq];
@@ -501,7 +509,7 @@ SOFTWARE.
         // s_D[i][j] = d \phi_i at node j
         s_D[j][i] = D[p_Nq*j+i]; // D is column major
 
-        #pragma unroll p_Nq
+#pragma unroll p_Nq
         for(int k=0;k<p_Nq;++k){
           r_U[k] = 0.;
           r_V[k] = 0.;
@@ -615,18 +623,18 @@ SOFTWARE.
       for(int i=0;i<p_Nq;++i;@inner(0)){
         if (j==p_Nq-1) {//face 3
 #pragma unroll p_Nq
-	    for (int k=0;k<p_Nq;k++) {
+	  for (int k=0;k<p_Nq;k++) {
 	      
-	      r_U[k]  = s_U[k][i];
-	      r_V[k]  = s_V[k][i];
-	      r_W[k]  = s_W[k][i];
+	    r_U[k]  = s_U[k][i];
+	    r_V[k]  = s_V[k][i];
+	    r_W[k]  = s_W[k][i];
 	      
-	      if(EToB[e*p_Nfaces+3]>0){
-		r_rhsU[k] += s_ndU[k][i];
-		r_rhsV[k] += s_ndV[k][i];
-		r_rhsW[k] += s_ndW[k][i];
-	      }
+	    if(EToB[e*p_Nfaces+3]>0){
+	      r_rhsU[k] += s_ndU[k][i];
+	      r_rhsV[k] += s_ndV[k][i];
+	      r_rhsW[k] += s_ndW[k][i];
 	    }
+	  }
 	}
       }
     }
@@ -679,7 +687,7 @@ SOFTWARE.
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
         if (i==0) {//face 4
-          #pragma unroll p_Nq
+#pragma unroll p_Nq
           for (int k=0;k<p_Nq;k++) {
 	    
 	    r_U[k]  = s_U[k][j];
@@ -697,141 +705,141 @@ SOFTWARE.
     }
     
     // Layer by layer
-    #pragma unroll p_Nq
-      for(int k = 0;k < p_Nq; k++){
+#pragma unroll p_Nq
+    for(int k = 0;k < p_Nq; k++){
 
-        @barrier("local");
+      @barrier("local");
 	
-        for(int j=0;j<p_Nq;++j;@inner(1)){
-          for(int i=0;i<p_Nq;++i;@inner(0)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+	for(int i=0;i<p_Nq;++i;@inner(0)){
 	    
-            // prefetch geometric factors
-            const dlong gbase = e*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+	  // prefetch geometric factors
+	  const dlong gbase = e*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 	    
-            r_G00 = ggeo[gbase+p_G00ID*p_Np];
-            r_G01 = ggeo[gbase+p_G01ID*p_Np];
-            r_G02 = ggeo[gbase+p_G02ID*p_Np];
+	  r_G00 = ggeo[gbase+p_G00ID*p_Np];
+	  r_G01 = ggeo[gbase+p_G01ID*p_Np];
+	  r_G02 = ggeo[gbase+p_G02ID*p_Np];
 	    
-            r_G11 = ggeo[gbase+p_G11ID*p_Np];
-            r_G12 = ggeo[gbase+p_G12ID*p_Np];
-            r_G22 = ggeo[gbase+p_G22ID*p_Np];
+	  r_G11 = ggeo[gbase+p_G11ID*p_Np];
+	  r_G12 = ggeo[gbase+p_G12ID*p_Np];
+	  r_G22 = ggeo[gbase+p_G22ID*p_Np];
 	    
-            r_GwJ = ggeo[gbase+p_GWJID*p_Np];
-          }
-        }
+	  r_GwJ = ggeo[gbase+p_GWJID*p_Np];
+	}
+      }
 
-        @barrier("local");
+      @barrier("local");
 
-        for(int j=0;j<p_Nq;++j;@inner(1)){
-          for(int i=0;i<p_Nq;++i;@inner(0)){
-            // share u(:,:,k)
-            s_U[j][i] = r_U[k];
-            s_V[j][i] = r_V[k];
-            s_W[j][i] = r_W[k];
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+	for(int i=0;i<p_Nq;++i;@inner(0)){
+	  // share u(:,:,k)
+	  s_U[j][i] = r_U[k];
+	  s_V[j][i] = r_V[k];
+	  s_W[j][i] = r_W[k];
 
-            r_ut = 0; r_vt = 0; r_wt = 0;
-
-            #pragma unroll p_Nq
-              for(int m = 0; m < p_Nq; m++) {
-                const dfloat Dt = s_D[k][m];
-                r_ut += Dt*r_U[m];
-                r_vt += Dt*r_V[m];
-                r_wt += Dt*r_W[m];
-              }
-          }
-        }
-
-        @barrier("local");
-
-        for(int j=0;j<p_Nq;++j;@inner(1)){
-          for(int i=0;i<p_Nq;++i;@inner(0)){
-            dfloat ur = 0.f, vr = 0.f, wr = 0.f;
-            dfloat us = 0.f, vs = 0.f, ws = 0.f;
+	  r_ut = 0; r_vt = 0; r_wt = 0;
 
 #pragma unroll p_Nq
-              for(int m = 0; m < p_Nq; m++) {
-                const dfloat Dr = s_D[i][m];
-                const dfloat Ds = s_D[j][m];
-                ur += Dr*s_U[j][m];
-                us += Ds*s_U[m][i];
-                vr += Dr*s_V[j][m];
-                vs += Ds*s_V[m][i];
-                wr += Dr*s_W[j][m];
-                ws += Ds*s_W[m][i];
-              }
-
-            s_Gus[j][i] = (r_G01*ur + r_G11*us + r_G12*r_ut);
-            s_Gur[j][i] = (r_G00*ur + r_G01*us + r_G02*r_ut);
-            s_Gvs[j][i] = (r_G01*vr + r_G11*vs + r_G12*r_vt);
-            s_Gvr[j][i] = (r_G00*vr + r_G01*vs + r_G02*r_vt);
-            s_Gws[j][i] = (r_G01*wr + r_G11*ws + r_G12*r_wt);
-            s_Gwr[j][i] = (r_G00*wr + r_G01*ws + r_G02*r_wt);
-
-            // put this here for a performance bump
-            r_Gut = (r_G02*ur + r_G12*us + r_G22*r_ut);
-            r_Gvt = (r_G02*vr + r_G12*vs + r_G22*r_vt);
-            r_Gwt = (r_G02*wr + r_G12*ws + r_G22*r_wt);
-            r_Auk = r_GwJ*lambda*r_U[k];
-            r_Avk = r_GwJ*lambda*r_V[k];
-            r_Awk = r_GwJ*lambda*r_W[k];
-          }
-        }
-
-        @barrier("local");
-
-        for(int j=0;j<p_Nq;++j;@inner(1)){
-          for(int i=0;i<p_Nq;++i;@inner(0)){
-
-            #pragma unroll p_Nq
-              for(int m = 0; m < p_Nq; m++){
-                const dfloat Dr = s_D[m][i];
-                const dfloat Ds = s_D[m][j];
-                const dfloat Dt = s_D[k][m];
-                r_Auk     += Dr*s_Gur[j][m];
-                r_Auk     += Ds*s_Gus[m][i];
-                r_rhsU[m] += Dt*r_Gut; // DT(m,k)*ut(i,j,k,e)
-                r_Avk     += Dr*s_Gvr[j][m];
-                r_Avk     += Ds*s_Gvs[m][i];
-                r_rhsV[m] += Dt*r_Gvt; // DT(m,k)*ut(i,j,k,e)
-                r_Awk     += Dr*s_Gwr[j][m];
-                r_Awk     += Ds*s_Gws[m][i];
-                r_rhsW[m] += Dt*r_Gwt; // DT(m,k)*ut(i,j,k,e)
-              }
-
-            r_rhsU[k] += r_Auk;
-            r_rhsV[k] += r_Avk;
-            r_rhsW[k] += r_Awk;
-          }
-        }
+	  for(int m = 0; m < p_Nq; m++) {
+	    const dfloat Dt = s_D[k][m];
+	    r_ut += Dt*r_U[m];
+	    r_vt += Dt*r_V[m];
+	    r_wt += Dt*r_W[m];
+	  }
+	}
       }
+
+      @barrier("local");
+
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+	for(int i=0;i<p_Nq;++i;@inner(0)){
+	  dfloat ur = 0.f, vr = 0.f, wr = 0.f;
+	  dfloat us = 0.f, vs = 0.f, ws = 0.f;
+
+#pragma unroll p_Nq
+	  for(int m = 0; m < p_Nq; m++) {
+	    const dfloat Dr = s_D[i][m];
+	    const dfloat Ds = s_D[j][m];
+	    ur += Dr*s_U[j][m];
+	    us += Ds*s_U[m][i];
+	    vr += Dr*s_V[j][m];
+	    vs += Ds*s_V[m][i];
+	    wr += Dr*s_W[j][m];
+	    ws += Ds*s_W[m][i];
+	  }
+
+	  s_Gus[j][i] = (r_G01*ur + r_G11*us + r_G12*r_ut);
+	  s_Gur[j][i] = (r_G00*ur + r_G01*us + r_G02*r_ut);
+	  s_Gvs[j][i] = (r_G01*vr + r_G11*vs + r_G12*r_vt);
+	  s_Gvr[j][i] = (r_G00*vr + r_G01*vs + r_G02*r_vt);
+	  s_Gws[j][i] = (r_G01*wr + r_G11*ws + r_G12*r_wt);
+	  s_Gwr[j][i] = (r_G00*wr + r_G01*ws + r_G02*r_wt);
+
+	  // put this here for a performance bump
+	  r_Gut = (r_G02*ur + r_G12*us + r_G22*r_ut);
+	  r_Gvt = (r_G02*vr + r_G12*vs + r_G22*r_vt);
+	  r_Gwt = (r_G02*wr + r_G12*ws + r_G22*r_wt);
+	  r_Auk = r_GwJ*lambda*r_U[k];
+	  r_Avk = r_GwJ*lambda*r_V[k];
+	  r_Awk = r_GwJ*lambda*r_W[k];
+	}
+      }
+
+      @barrier("local");
+
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+	for(int i=0;i<p_Nq;++i;@inner(0)){
+
+#pragma unroll p_Nq
+	  for(int m = 0; m < p_Nq; m++){
+	    const dfloat Dr = s_D[m][i];
+	    const dfloat Ds = s_D[m][j];
+	    const dfloat Dt = s_D[k][m];
+	    r_Auk     += Dr*s_Gur[j][m];
+	    r_Auk     += Ds*s_Gus[m][i];
+	    r_rhsU[m] += Dt*r_Gut; // DT(m,k)*ut(i,j,k,e)
+	    r_Avk     += Dr*s_Gvr[j][m];
+	    r_Avk     += Ds*s_Gvs[m][i];
+	    r_rhsV[m] += Dt*r_Gvt; // DT(m,k)*ut(i,j,k,e)
+	    r_Awk     += Dr*s_Gwr[j][m];
+	    r_Awk     += Ds*s_Gws[m][i];
+	    r_rhsW[m] += Dt*r_Gwt; // DT(m,k)*ut(i,j,k,e)
+	  }
+
+	  r_rhsU[k] += r_Auk;
+	  r_rhsV[k] += r_Avk;
+	  r_rhsW[k] += r_Awk;
+	}
+      }
+    }
 
     // write out
 
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
-        #pragma unroll p_Nq
-          for(int k = 0; k < p_Nq; k++){
-            const dlong id = e*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
-            rhsU[id] -= r_rhsU[k];
-            rhsV[id] -= r_rhsV[k];
-            rhsW[id] -= r_rhsW[k];
-          }
+#pragma unroll p_Nq
+	for(int k = 0; k < p_Nq; k++){
+	  const dlong id = e*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
+	  rhsU[id] -= r_rhsU[k];
+	  rhsV[id] -= r_rhsV[k];
+	  rhsW[id] -= r_rhsW[k];
+	}
       }
     }
   }
 }
 
 @kernel void insVelocityAddBCHex3D(const dlong Nelements,
-                                    const dfloat time,
-                                    @restrict const  dfloat *  sgeo,
-                                    @restrict const  dfloat *  x,
-                                    @restrict const  dfloat *  y,
-                                    @restrict const  dfloat *  z,
-                                    @restrict const  dlong  *  vmapM,
-                                    @restrict const  int    *  mapB,
-                                          @restrict dfloat *  U,
-                                          @restrict dfloat *  V,
-                                          @restrict dfloat *  W){
+				   const dfloat time,
+				   @restrict const  dfloat *  sgeo,
+				   @restrict const  dfloat *  x,
+				   @restrict const  dfloat *  y,
+				   @restrict const  dfloat *  z,
+				   @restrict const  dlong  *  vmapM,
+				   @restrict const  int    *  mapB,
+				   @restrict dfloat *  U,
+				   @restrict dfloat *  V,
+				   @restrict dfloat *  W){
 
   for(dlong e=0;e<Nelements;e++;@outer(0)){
     for(int n=0;n<p_Nfp*p_Nfaces;++n;@inner(0)){
@@ -851,7 +859,13 @@ SOFTWARE.
         dfloat uP = uM;
         dfloat vP = vM;
         dfloat wP = wM;
-        insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP);
+
+
+        if(bc==1){
+	  uP = 0.f; vP = 0.f; wP = 0.f;
+        }else{            
+	  insVelocityDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP);
+        }
         U[idM] = uP;
         V[idM] = vP;
         W[idM] = wP;

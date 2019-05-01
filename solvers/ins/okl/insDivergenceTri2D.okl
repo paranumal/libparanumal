@@ -1,37 +1,37 @@
 /*
 
-The MIT License (MIT)
+  The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 
 */
 
 
 // Computes volume contribution of div(UI)
 @kernel void insDivergenceVolumeTri2D(const dlong Nelements,
-                                     @restrict const  dfloat *  vgeo,
-                                     @restrict const  dfloat *  Dmatrices,
-                                     const dlong offset,
-                                     @restrict const  dfloat *  U,
-                                           @restrict dfloat *  divU){
+				      @restrict const  dfloat *  vgeo,
+				      @restrict const  dfloat *  Dmatrices,
+				      const dlong offset,
+				      @restrict const  dfloat *  U,
+				      @restrict dfloat *  divU){
   
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
@@ -65,15 +65,15 @@ SOFTWARE.
           // compute 'r' and 's' derivatives of (q_m) at node n
           dfloat dudr = 0.f, duds = 0.f; 
           dfloat dvdr = 0.f, dvds = 0.f; 
-          #pragma unroll p_Np
-            for(int i=0;i<p_Np;++i){
-              const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
-              const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
-              dudr += Drni*s_U[es][i];
-              duds += Dsni*s_U[es][i];
-              dvdr += Drni*s_V[es][i];
-              dvds += Dsni*s_V[es][i];
-            }
+#pragma unroll p_Np
+	  for(int i=0;i<p_Np;++i){
+	    const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
+	    const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
+	    dudr += Drni*s_U[es][i];
+	    duds += Dsni*s_U[es][i];
+	    dvdr += Drni*s_V[es][i];
+	    dvds += Dsni*s_V[es][i];
+	  }
 
           // chain rule
           const dfloat dudx   = drdx*dudr + dsdx*duds;
@@ -89,18 +89,18 @@ SOFTWARE.
 
 
 @kernel void insDivergenceSurfaceTri2D(const dlong Nelements,
-                                      @restrict const  dfloat *  sgeo,
-                                      @restrict const  dfloat *  LIFTT,
-                                      @restrict const  dlong  *  vmapM,
-                                      @restrict const  dlong  *  vmapP,
-                                      @restrict const  int    *  EToB,
-                                      const dfloat time,
-                                      @restrict const  dfloat *  x,
-                                      @restrict const  dfloat *  y,
-                                      @restrict const  dfloat *  z,
-                                      const dlong offset,
-                                      @restrict const  dfloat *  U,
-                                            @restrict dfloat *  divU){ 
+				       @restrict const  dfloat *  sgeo,
+				       @restrict const  dfloat *  LIFTT,
+				       @restrict const  dlong  *  vmapM,
+				       @restrict const  dlong  *  vmapP,
+				       @restrict const  int    *  EToB,
+				       const dfloat time,
+				       @restrict const  dfloat *  x,
+				       @restrict const  dfloat *  y,
+				       @restrict const  dfloat *  z,
+				       const dlong offset,
+				       @restrict const  dfloat *  U,
+				       @restrict dfloat *  divU){ 
 
   for(int eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
     @shared dfloat s_fluxU[p_NblockS][p_Nfp*p_Nfaces];
@@ -125,14 +125,18 @@ SOFTWARE.
 
             // load negative and positive trace node values of q
             const dfloat  uM = U[idM+0*offset], vM = U[idM+1*offset];
-                  dfloat  uP = U[idP+0*offset], vP = U[idP+1*offset];
+	    dfloat  uP = U[idP+0*offset], vP = U[idP+1*offset];
                    
             // apply boundary condition
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0) {
-              // explicitly set u+ = u-   
-              uP = uM;  vP = vM;  
-              insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);
+              if(bc==1){
+		// explicitly set u+ = u-   
+		uP = 0.f;  vP = 0.f;                  
+              }else{
+		uP = uM;  vP = vM;                                  
+		insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);
+              }
               uP = 2.f*uP-uM;        
               vP = 2.f*vP-vM;         
             }
@@ -157,11 +161,11 @@ SOFTWARE.
             
             dfloat divu = divU[id];
             
-            #pragma unroll p_NfacesNfp
-              for(int m=0;m<p_Nfaces*p_Nfp;++m){
-                const dfloat L = LIFTT[n+m*p_Np];
-                divu += L*s_fluxU[es][m];
-              }
+#pragma unroll p_NfacesNfp
+	    for(int m=0;m<p_Nfaces*p_Nfp;++m){
+	      const dfloat L = LIFTT[n+m*p_Np];
+	      divu += L*s_fluxU[es][m];
+	    }
               
             // Update
             divU[id] = divu; 

@@ -5,8 +5,8 @@
 data/insVortex2D.h
 
 [MESH FILE]
-../../meshes/insVortexQuad2D.msh
-#../../meshes/insVortexQuadStructured_0.msh
+#../../meshes/insVortexQuad2D.msh
+../../meshes/insVortexQuadStructured_0.msh
 #../../meshes/insVortexQuad2D.msh
 
 [MESH DIMENSION]
