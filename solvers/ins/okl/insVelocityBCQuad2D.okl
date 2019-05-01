@@ -1,26 +1,26 @@
 /*
 
-The MIT License (MIT)
+  The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 
 */
 
@@ -28,49 +28,53 @@ SOFTWARE.
 
 #define surfaceTerms(sk,face,i, j)                                      \
   {                                                                     \
-  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
-  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
-  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];                          \
-  const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];                           \
+    const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				\
+    const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				\
+    const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];			\
+    const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];				\
                                                                         \
-  dfloat dudxP=0, dudyP=0, uP=0;                                        \
-  dfloat dvdxP=0, dvdyP=0, vP=0;                                        \
+    dfloat dudxP=0, dudyP=0, uP=0;					\
+    dfloat dvdxP=0, dvdyP=0, vP=0;					\
                                                                         \
-  const int bc = EToB[face+p_Nfaces*e];                                 \
-  if(bc>0) {                                                            \
-    const dlong idM = vmapM[sk];                                        \
-    insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, 0.f, &uP, &vP);\
-    insVelocityNeumannConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dvdxP, &dvdyP);\
-  }                                                                     \
+    const int bc = EToB[face+p_Nfaces*e];				\
+    if(bc>0) {								\
+      const dlong idM = vmapM[sk];					\
+      if(bc==1){							\
+	uP = 0.f; vP = 0.f;						\
+      }else{								\
+	insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, 0.f, &uP, &vP);	\
+      }									\
+      insVelocityNeumannConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dvdxP, &dvdyP); \
+    }									\
                                                                         \
-  const dfloat du = uP;                                                 \
-  const dfloat dv = vP;                                                 \
+    const dfloat du = uP;						\
+    const dfloat dv = vP;						\
                                                                         \
-  s_dudx[j][i] += WsJ*nx*du;                                            \
-  s_dudy[j][i] += WsJ*ny*du;                                            \
-  s_dvdx[j][i] += WsJ*nx*dv;                                            \
-  s_dvdy[j][i] += WsJ*ny*dv;                                            \
+    s_dudx[j][i] += WsJ*nx*du;						\
+    s_dudy[j][i] += WsJ*ny*du;						\
+    s_dvdx[j][i] += WsJ*nx*dv;						\
+    s_dvdy[j][i] += WsJ*ny*dv;						\
                                                                         \
-  s_rhsu[j][i] -= WsJ*(nx*dudxP + ny*dudyP+ tau*du*hinv);               \
-  s_rhsv[j][i] -= WsJ*(nx*dvdxP + ny*dvdyP+ tau*dv*hinv);               \
+    s_rhsu[j][i] -= WsJ*(nx*dudxP + ny*dudyP+ tau*du*hinv);		\
+    s_rhsv[j][i] -= WsJ*(nx*dvdxP + ny*dvdyP+ tau*dv*hinv);		\
   }
 
 @kernel void insVelocityIpdgBCQuad2D(const dlong Nelements,
-                                    @restrict const  dlong  *  vmapM,
-                                    const dfloat tau,
-                                    const dfloat time,
-                                    @restrict const  dfloat *  x,
-                                    @restrict const  dfloat *  y,
-                                    @restrict const  dfloat *  z,
-                                    @restrict const  dfloat *  vgeo,
-                                    @restrict const  dfloat *  sgeo,
-                                    @restrict const  int    *  EToB,
-                                    @restrict const  dfloat *  D,
-                                    @restrict const  dfloat *  LIFTT,
-                                    @restrict const  dfloat *  MM,
-                                          @restrict dfloat *  rhsU,
-                                          @restrict dfloat *  rhsV,
-                                          @restrict dfloat *  rhsW){
+				     @restrict const  dlong  *  vmapM,
+				     const dfloat tau,
+				     const dfloat time,
+				     @restrict const  dfloat *  x,
+				     @restrict const  dfloat *  y,
+				     @restrict const  dfloat *  z,
+				     @restrict const  dfloat *  vgeo,
+				     @restrict const  dfloat *  sgeo,
+				     @restrict const  int    *  EToB,
+				     @restrict const  dfloat *  D,
+				     @restrict const  dfloat *  LIFTT,
+				     @restrict const  dfloat *  MM,
+				     @restrict dfloat *  rhsU,
+				     @restrict dfloat *  rhsV,
+				     @restrict dfloat *  rhsW){
 
   for(dlong e=0;e<Nelements;++e;@outer(0)){
 
@@ -171,26 +175,30 @@ SOFTWARE.
 
 
 #define surfaceTerms(sk,face,i, j)                                      \
-{                                                                       \
-  const dlong idM = vmapM[sk];                                          \
-  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
-  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
-  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];                          \
+  {									\
+    const dlong idM = vmapM[sk];					\
+    const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				\
+    const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				\
+    const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];			\
                                                                         \
-  dfloat dudxP=0.f, dudyP=0.f, uP=0.f;                                  \
-  dfloat dvdxP=0.f, dvdyP=0.f, vP=0.f;                                  \
+    dfloat dudxP=0.f, dudyP=0.f, uP=0.f;				\
+    dfloat dvdxP=0.f, dvdyP=0.f, vP=0.f;				\
                                                                         \
-  const int bc = mapB[idM];                                             \
-  if(bc>0) {                                                            \
-    insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, 0.f, &uP, &vP);\
-    insVelocityNeumannConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dvdxP, &dvdyP);\
-  }                                                                     \
+    const int bc = mapB[idM];						\
+    if(bc>0) {								\
+      if(bc==1){							\
+	uP = 0.f; vP= 0.f;						\
+      }else{								\
+	insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, 0.f, &uP, &vP);	\
+      }									\
+      insVelocityNeumannConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dvdxP, &dvdyP); \
+    }									\
                                                                         \
-  s_u  [j][i]  = uP;                                                    \
-  s_v  [j][i]  = vP;                                                    \
-  s_ndu[j][i] -= WsJ*(nx*dudxP + ny*dudyP);                             \
-  s_ndv[j][i] -= WsJ*(nx*dvdxP + ny*dvdyP);                             \
-}
+    s_u  [j][i]  = uP;							\
+    s_v  [j][i]  = vP;							\
+    s_ndu[j][i] -= WsJ*(nx*dudxP + ny*dudyP);				\
+    s_ndv[j][i] -= WsJ*(nx*dvdxP + ny*dvdyP);				\
+  }
 
 
 //RHS contributions for continuous solver
@@ -228,7 +236,7 @@ SOFTWARE.
 
     // loop over slabs
     for(int i=0;i<p_Nq;++i;@inner(0)){
-      #pragma unroll p_Nq
+#pragma unroll p_Nq
       for(int j=0;j<p_Nq;++j){
         s_u  [j][i] = 0.;
         s_v  [j][i] = 0.;
@@ -277,13 +285,13 @@ SOFTWARE.
         dfloat ur = 0.f, us = 0.f;
         dfloat vr = 0.f, vs = 0.f;
         
-        #pragma unroll p_Nq
-          for(int n=0; n<p_Nq; ++n){
-            ur += s_D[i][n]*s_u[j][n];
-            us += s_D[j][n]*s_u[n][i];
-            vr += s_D[i][n]*s_v[j][n];
-            vs += s_D[j][n]*s_v[n][i];
-          }
+#pragma unroll p_Nq
+	for(int n=0; n<p_Nq; ++n){
+	  ur += s_D[i][n]*s_u[j][n];
+	  us += s_D[j][n]*s_u[n][i];
+	  vr += s_D[i][n]*s_v[j][n];
+	  vs += s_D[j][n]*s_v[n][i];
+	}
         
         r_ur[j] = ur; r_us[j] = us; 
         r_vr[j] = vr; r_vs[j] = vs; 
@@ -308,11 +316,11 @@ SOFTWARE.
       for(int i=0;i<p_Nq;++i;@inner(0)){
         dfloat utmp = 0.f;
         dfloat vtmp = 0.f;
-        #pragma unroll p_Nq
-          for(int n=0;n<p_Nq;++n) {
-            utmp += s_D[n][i]*s_u[j][n];
-            vtmp += s_D[n][i]*s_v[j][n];
-          }
+#pragma unroll p_Nq
+	for(int n=0;n<p_Nq;++n) {
+	  utmp += s_D[n][i]*s_u[j][n];
+	  vtmp += s_D[n][i]*s_v[j][n];
+	}
 
         r_rhsu[j] += utmp;
         r_rhsv[j] += vtmp;
@@ -336,11 +344,11 @@ SOFTWARE.
         dfloat utmp = 0.f;
         dfloat vtmp = 0.f;
 
-        #pragma unroll p_Nq 
-          for(int n=0;n<p_Nq;++n) {
-            utmp += s_D[n][j]*s_u[n][i];
-            vtmp += s_D[n][j]*s_v[n][i];
-          }
+#pragma unroll p_Nq 
+	for(int n=0;n<p_Nq;++n) {
+	  utmp += s_D[n][j]*s_u[n][i];
+	  vtmp += s_D[n][j]*s_v[n][i];
+	}
         
         r_rhsu[j] += utmp;
         r_rhsv[j] += vtmp;
@@ -361,9 +369,9 @@ SOFTWARE.
                                     @restrict const  dfloat *  z,
                                     @restrict const  dlong  *  vmapM,
                                     @restrict const  int    *  mapB,
-                                          @restrict dfloat *  U,
-                                          @restrict dfloat *  V,
-                                          @restrict dfloat *  W){
+				    @restrict dfloat *  U,
+				    @restrict dfloat *  V,
+				    @restrict dfloat *  W){
 
   for(dlong e=0;e<Nelements;e++;@outer(0)){
     for(int n=0;n<p_Nfp*p_Nfaces;++n;@inner(0)){
@@ -380,9 +388,13 @@ SOFTWARE.
 
         dfloat uP = uM;
         dfloat vP = vM;
-        
-        insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);
 
+        if(bc==1){
+	  uP = 0.f; vP = 0.f; 
+        }else{
+          insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);
+        }
+        //
         U[idM] = uP;
         V[idM] = vP;
       }    

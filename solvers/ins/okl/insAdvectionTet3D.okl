@@ -1,36 +1,36 @@
 /*
 
-The MIT License (MIT)
+  The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 
 */
 
 // compute div(NU)  = div(uxu) in collocation way
 @kernel void insAdvectionVolumeTet3D(const dlong Nelements,
-                                    @restrict const  dfloat *  vgeo,
-                                    @restrict const  dfloat *  Dmatrices,
-                                    const dlong offset,
-                                    @restrict const  dfloat *  U,
-                                          @restrict dfloat *  NU){
+				     @restrict const  dfloat *  vgeo,
+				     @restrict const  dfloat *  Dmatrices,
+				     const dlong offset,
+				     @restrict const  dfloat *  U,
+				     @restrict dfloat *  NU){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
     // Hold Flux Vector on Shared, use symmetry f
@@ -93,24 +93,24 @@ SOFTWARE.
         const dlong e = eo+es; 
         if(e<Nelements){    
           dfloat nu = 0., nv = 0., nw = 0.;
-          #pragma unroll p_Np
-            for(int i=0;i<p_Np;++i){
-              const dfloat Drni  = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
-              const dfloat Dsni  = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
-              const dfloat Dtni  = Dmatrices[n+i*p_Np+2*p_Np*p_Np];
+#pragma unroll p_Np
+	  for(int i=0;i<p_Np;++i){
+	    const dfloat Drni  = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
+	    const dfloat Dsni  = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
+	    const dfloat Dtni  = Dmatrices[n+i*p_Np+2*p_Np*p_Np];
               
-              nu += Drni*s_F11[es][i]
-                   +Dsni*s_F12[es][i]
-                   +Dtni*s_F13[es][i];
+	    nu += Drni*s_F11[es][i]
+	      +Dsni*s_F12[es][i]
+	      +Dtni*s_F13[es][i];
               
-              nv += Drni*s_F21[es][i]
-                   +Dsni*s_F22[es][i]
-                   +Dtni*s_F23[es][i];
+	    nv += Drni*s_F21[es][i]
+	      +Dsni*s_F22[es][i]
+	      +Dtni*s_F23[es][i];
 
-              nw += Drni*s_F31[es][i]
-                   +Dsni*s_F32[es][i]
-                   +Dtni*s_F33[es][i];  
-            }
+	    nw += Drni*s_F31[es][i]
+	      +Dsni*s_F32[es][i]
+	      +Dtni*s_F33[es][i];  
+	  }
 
           // Update
           const dlong id = e*p_Np+n;
@@ -124,18 +124,18 @@ SOFTWARE.
 }
 
 @kernel void insAdvectionSurfaceTet3D(const dlong Nelements,
-                                     @restrict const  dfloat *  sgeo,
-                                     @restrict const  dfloat *  LIFTT,
-                                     @restrict const  dlong  *  vmapM,
-                                     @restrict const  dlong  *  vmapP,
-                                     @restrict const  int    *  EToB,
-                                     const dfloat time,
-                                     @restrict const  dfloat *  x,
-                                     @restrict const  dfloat *  y,
-                                     @restrict const  dfloat *  z,
-                                     const dlong offset,
-                                     @restrict const  dfloat *  U,
-                                           @restrict dfloat *  NU){
+				      @restrict const  dfloat *  sgeo,
+				      @restrict const  dfloat *  LIFTT,
+				      @restrict const  dlong  *  vmapM,
+				      @restrict const  dlong  *  vmapP,
+				      @restrict const  int    *  EToB,
+				      const dfloat time,
+				      @restrict const  dfloat *  x,
+				      @restrict const  dfloat *  y,
+				      @restrict const  dfloat *  z,
+				      const dlong offset,
+				      @restrict const  dfloat *  U,
+				      @restrict dfloat *  NU){
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
     // @shared storage for flux terms
@@ -165,35 +165,39 @@ SOFTWARE.
 
             // load negative and positive trace node values of U, V, Pr
             const dfloat  uM = U[idM+0*offset], vM = U[idM+1*offset], wM = U[idM+2*offset];
-                  dfloat  uP = U[idP+0*offset], vP = U[idP+1*offset], wP = U[idP+2*offset];
+	    dfloat  uP = U[idP+0*offset], vP = U[idP+1*offset], wP = U[idP+2*offset];
 
             // apply boundary condition
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
-              uP = uM; vP = vM; wP = wM; 
-              insVelocityDirichletConditions3D(bc,time, x[idM],y[idM],z[idM], nx,ny,nz, uM,vM,wM, &uP,&vP,&wP);
+              if(bc==1){
+                uP = 0.f; vP = 0.f; wP = 0.f;                 
+              }else{
+                uP = uM; vP = vM; wP = wM; 
+                insVelocityDirichletConditions3D(bc,time, x[idM],y[idM],z[idM], nx,ny,nz, uM,vM,wM, &uP,&vP,&wP);
+	      }
             }
 
             // Find max normal velocity on the face
             const dfloat unM   = fabs(nx*uM + ny*vM + nz*wM);
             const dfloat unP   = fabs(nx*uP + ny*vP + nz*wP);    
             const dfloat unMax = (unM > unP) ? unM : unP;
-             // evaluate "flux" terms: LLF
+	    // evaluate "flux" terms: LLF
             const dfloat sc = invJ * sJ ; 
             s_fluxNx[es][n] = sc*(.5f*( nx*(uP*uP - uM*uM) 
-                                      + ny*(uP*vP - uM*vM) 
-                                      + nz*(uP*wP - uM*wM)  
-                                      + unMax*(uM-uP) ));
+					+ ny*(uP*vP - uM*vM) 
+					+ nz*(uP*wP - uM*wM)  
+					+ unMax*(uM-uP) ));
 
             s_fluxNy[es][n] = sc*(.5f*( nx*(vP*uP - vM*uM) 
-                                      + ny*(vP*vP - vM*vM)
-                                      + nz*(vP*wP - vM*wM)  
-                                      + unMax*(vM-vP) ));
+					+ ny*(vP*vP - vM*vM)
+					+ nz*(vP*wP - vM*wM)  
+					+ unMax*(vM-vP) ));
 
             s_fluxNz[es][n] = sc*(.5f*( nx*(wP*uP - wM*uM) 
-                                      + ny*(wP*vP - wM*vM)
-                                      + nz*(wP*wP - wM*wM)  
-                                      + unMax*(wM-wP) ));
+					+ ny*(wP*vP - wM*vM)
+					+ nz*(wP*wP - wM*wM)  
+					+ unMax*(wM-wP) ));
           }
         }
       }
@@ -214,13 +218,13 @@ SOFTWARE.
             dfloat rhsnv = NU[id+1*offset];
             dfloat rhsnw = NU[id+2*offset];
             // Lift
-            #pragma unroll p_NfacesNfp
-              for(int m=0;m<p_Nfaces*p_Nfp;++m){
-                const dfloat L = LIFTT[n+m*p_Np];
-                rhsnu  += L*s_fluxNx[es][m];
-                rhsnv  += L*s_fluxNy[es][m];
-                rhsnw  += L*s_fluxNz[es][m];
-              }
+#pragma unroll p_NfacesNfp
+	    for(int m=0;m<p_Nfaces*p_Nfp;++m){
+	      const dfloat L = LIFTT[n+m*p_Np];
+	      rhsnu  += L*s_fluxNx[es][m];
+	      rhsnv  += L*s_fluxNy[es][m];
+	      rhsnw  += L*s_fluxNz[es][m];
+	    }
 
             NU[id+0*offset] = rhsnu;
             NU[id+1*offset] = rhsnv;
@@ -235,15 +239,15 @@ SOFTWARE.
 
 // compute div(NU)  = div(uxu) in collocation way
 @kernel void insAdvectionCubatureVolumeTet3D(const dlong Nelements,
-                                            @restrict const  dfloat *  vgeo,
-                                            @restrict const  dfloat *  cubvgeo,
-                                            @restrict const  dfloat *  cubDWmatrices,
-                                            @restrict const  dfloat *  cubInterpT,
-                                            @restrict const  dfloat *  cubProjectT,
-                                            const dlong offset,
-                                            @restrict const  dfloat *  U,
-                                                  @restrict dfloat *  cU,
-                                                  @restrict dfloat *  NU){
+					     @restrict const  dfloat *  vgeo,
+					     @restrict const  dfloat *  cubvgeo,
+					     @restrict const  dfloat *  cubDWmatrices,
+					     @restrict const  dfloat *  cubInterpT,
+					     @restrict const  dfloat *  cubProjectT,
+					     const dlong offset,
+					     @restrict const  dfloat *  U,
+					     @restrict dfloat *  cU,
+					     @restrict dfloat *  NU){
 
   for(dlong eo=0;eo<Nelements;eo+=p_cubNblockV;@outer(0)){  // for all elements
 
@@ -271,7 +275,7 @@ SOFTWARE.
             s_U[es][n] = U[id+0*offset];
             s_V[es][n] = U[id+1*offset];
             s_W[es][n] = U[id+2*offset];
-         }
+	  }
         } 
       }
     }
@@ -296,7 +300,7 @@ SOFTWARE.
           const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
 
           dfloat cUn = 0, cVn = 0, cWn = 0;
-          #pragma unroll p_Np
+#pragma unroll p_Np
           for(int i=0;i<p_Np;++i){
             const dfloat cIni = cubInterpT[n+i*p_cubNp];
             cUn += cIni*s_U[es][i];
@@ -331,24 +335,24 @@ SOFTWARE.
         const dlong e = eo+es; 
         if(e<Nelements && n<p_Np){    
           dfloat nu = 0., nv = 0., nw = 0.;
-          #pragma unroll p_cubNp
-            for(int i=0;i<p_cubNp;++i){
-              const dfloat cDrWni = cubDWmatrices[n+i*p_Np+0*p_cubNp*p_Np];
-              const dfloat cDsWni = cubDWmatrices[n+i*p_Np+1*p_cubNp*p_Np];
-              const dfloat cDtWni = cubDWmatrices[n+i*p_Np+2*p_cubNp*p_Np];
+#pragma unroll p_cubNp
+	  for(int i=0;i<p_cubNp;++i){
+	    const dfloat cDrWni = cubDWmatrices[n+i*p_Np+0*p_cubNp*p_Np];
+	    const dfloat cDsWni = cubDWmatrices[n+i*p_Np+1*p_cubNp*p_Np];
+	    const dfloat cDtWni = cubDWmatrices[n+i*p_Np+2*p_cubNp*p_Np];
 
-              nu += cDrWni*s_cF11[es][i]
-                   +cDsWni*s_cF12[es][i]
-                   +cDtWni*s_cF13[es][i];
+	    nu += cDrWni*s_cF11[es][i]
+	      +cDsWni*s_cF12[es][i]
+	      +cDtWni*s_cF13[es][i];
               
-              nv += cDrWni*s_cF21[es][i]
-                   +cDsWni*s_cF22[es][i]
-                   +cDtWni*s_cF23[es][i];
+	    nv += cDrWni*s_cF21[es][i]
+	      +cDsWni*s_cF22[es][i]
+	      +cDtWni*s_cF23[es][i];
 
-              nw += cDrWni*s_cF31[es][i]
-                   +cDsWni*s_cF32[es][i]
-                   +cDtWni*s_cF33[es][i];  
-            }
+	    nw += cDrWni*s_cF31[es][i]
+	      +cDsWni*s_cF32[es][i]
+	      +cDtWni*s_cF33[es][i];  
+	  }
 
           // Update
           const dlong id = e*p_Np+n;
@@ -363,23 +367,23 @@ SOFTWARE.
 
 
 @kernel void insAdvectionCubatureSurfaceTet3D(const dlong Nelements,
-                                             @restrict const  dfloat *  vgeo,
-                                             @restrict const  dfloat *  sgeo,
-                                             @restrict const  dfloat *  cubsgeo,
-                                             @restrict const  dfloat *  intInterpT, // interpolate to integration nodes
-                                             @restrict const  dfloat *  intLIFTT, // lift from integration to interpolation nodes
-                                             @restrict const  dfloat *  cubInterpT,
-                                             @restrict const  dfloat *  cubProjectT,
-                                             @restrict const  dlong  *  vmapM,
-                                             @restrict const  dlong  *  vmapP,
-                                             @restrict const  int    *  EToB,
-                                             const dfloat time,
-                                             @restrict const  dfloat *  intx, // integration nodes
-                                             @restrict const  dfloat *  inty,
-                                             @restrict const  dfloat *  intz,
-                                             const dlong offset,
-                                             @restrict const  dfloat *  U,
-                                                   @restrict dfloat *  NU){
+					      @restrict const  dfloat *  vgeo,
+					      @restrict const  dfloat *  sgeo,
+					      @restrict const  dfloat *  cubsgeo,
+					      @restrict const  dfloat *  intInterpT, // interpolate to integration nodes
+					      @restrict const  dfloat *  intLIFTT, // lift from integration to interpolation nodes
+					      @restrict const  dfloat *  cubInterpT,
+					      @restrict const  dfloat *  cubProjectT,
+					      @restrict const  dlong  *  vmapM,
+					      @restrict const  dlong  *  vmapP,
+					      @restrict const  int    *  EToB,
+					      const dfloat time,
+					      @restrict const  dfloat *  intx, // integration nodes
+					      @restrict const  dfloat *  inty,
+					      @restrict const  dfloat *  intz,
+					      const dlong offset,
+					      @restrict const  dfloat *  U,
+					      @restrict dfloat *  NU){
 
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_cubNblockS;@outer(0)){
@@ -425,62 +429,66 @@ SOFTWARE.
       for(int n=0;n<p_maxNodesSurfaceCub;++n;@inner(0)){ 
         const dlong e = eo + es;
         if(e<Nelements && n<(p_Nfaces*p_intNfp)){
-           // find face that owns this integration node
-            const int face = n/p_intNfp; 
-            // load surface geofactors for this face
-            const dlong sid = p_Nsgeo*(e*p_Nfaces+face);
-            const dfloat nx   = sgeo[sid+p_NXID];
-            const dfloat ny   = sgeo[sid+p_NYID];
-            const dfloat nz   = sgeo[sid+p_NZID];
-            const dfloat sJ   = sgeo[sid+p_SJID];
-            const dfloat invJ = sgeo[sid+p_IJID];
+	  // find face that owns this integration node
+	  const int face = n/p_intNfp; 
+	  // load surface geofactors for this face
+	  const dlong sid = p_Nsgeo*(e*p_Nfaces+face);
+	  const dfloat nx   = sgeo[sid+p_NXID];
+	  const dfloat ny   = sgeo[sid+p_NYID];
+	  const dfloat nz   = sgeo[sid+p_NZID];
+	  const dfloat sJ   = sgeo[sid+p_SJID];
+	  const dfloat invJ = sgeo[sid+p_IJID];
 
-            dfloat iUM = 0.f, iVM = 0.f, iWM = 0.f;
-            dfloat iUP = 0.f, iVP = 0.f, iWP = 0.f;
+	  dfloat iUM = 0.f, iVM = 0.f, iWM = 0.f;
+	  dfloat iUP = 0.f, iVP = 0.f, iWP = 0.f;
 
-            // local block interpolation (face nodes to integration nodes)
-            #pragma unroll p_Nfp
-            for(int m=0;m<p_Nfp;++m){
-              const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
-              const int fm = face*p_Nfp+m;
-              iUM += iInm*s_UM[es][fm];
-              iVM += iInm*s_VM[es][fm];
-              iWM += iInm*s_WM[es][fm];
+	  // local block interpolation (face nodes to integration nodes)
+#pragma unroll p_Nfp
+	  for(int m=0;m<p_Nfp;++m){
+	    const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
+	    const int fm = face*p_Nfp+m;
+	    iUM += iInm*s_UM[es][fm];
+	    iVM += iInm*s_VM[es][fm];
+	    iWM += iInm*s_WM[es][fm];
 
-              iUP += iInm*s_UP[es][fm];
-              iVP += iInm*s_VP[es][fm];
-              iWP += iInm*s_WP[es][fm];
-            }
+	    iUP += iInm*s_UP[es][fm];
+	    iVP += iInm*s_VP[es][fm];
+	    iWP += iInm*s_WP[es][fm];
+	  }
 
-            // apply boundary condition
-            const int bc = EToB[face+p_Nfaces*e];
-            if(bc>0){
+	  // apply boundary condition
+	  const int bc = EToB[face+p_Nfaces*e];
+	  if(bc>0){
+	    if(bc==1){                  
+              iUP = 0.f; iVP = 0.f; iWP = 0.f; 
+	    }else{
               iUP = iUM; iVP = iVM; iWP = iWM; 
               insVelocityDirichletConditions3D(bc,time, intx[n+e*p_Nfaces*p_intNfp],inty[n+e*p_Nfaces*p_intNfp],intz[n+e*p_Nfaces*p_intNfp], nx, ny,nz, iUM,iVM,iWM, &iUP, &iVP,&iWP);
             }
+	  }
 
-            // Find max normal velocity on the face // LLF
-            const dfloat unM   = fabs(nx*iUM + ny*iVM + nz*iWM);
-            const dfloat unP   = fabs(nx*iUP + ny*iVP + nz*iWP);    
-            const dfloat unMax = (unM > unP) ? unM : unP;
+	  // Find max normal velocity on the face // LLF
+	  const dfloat unM   = fabs(nx*iUM + ny*iVM + nz*iWM);
+	  const dfloat unP   = fabs(nx*iUP + ny*iVP + nz*iWP);    
+	  const dfloat unMax = (unM > unP) ? unM : unP;
 
-            // evaluate "flux" terms: LLF
-            const dfloat sc = invJ * sJ ;  // notice sign changes in flux because of weak form
-            s_iFluxNx[es][n] = sc*(.5f*(   nx*(iUP*iUP + iUM*iUM) 
+	  // evaluate "flux" terms: LLF
+	  const dfloat sc = invJ * sJ ;  // notice sign changes in flux because of weak form
+	  s_iFluxNx[es][n] = sc*(.5f*(   nx*(iUP*iUP + iUM*iUM) 
                                          + ny*(iUP*iVP + iUM*iVM) 
                                          + nz*(iUP*iWP + iUM*iWM) 
                                          + unMax*(iUM-iUP) ));
 
-            s_iFluxNy[es][n] = sc*(.5f*(   nx*(iVP*iUP + iVM*iUM) 
+	  s_iFluxNy[es][n] = sc*(.5f*(   nx*(iVP*iUP + iVM*iUM) 
                                          + ny*(iVP*iVP + iVM*iVM) 
                                          + nz*(iVP*iWP + iVM*iWM) 
                                          + unMax*(iVM-iVP) ));
 
-            s_iFluxNz[es][n] = sc*(.5f*(   nx*(iWP*iUP + iWM*iUM) 
+	  s_iFluxNz[es][n] = sc*(.5f*(   nx*(iWP*iUP + iWM*iUM) 
                                          + ny*(iWP*iVP + iWM*iVM) 
                                          + nz*(iWP*iWP + iWM*iWM) 
                                          + unMax*(iWM-iWP) ));
-          }
+	}
       }
     }
 
@@ -498,7 +506,7 @@ SOFTWARE.
           dfloat NVn = NU[id+1*offset];
           dfloat NWn = NU[id+2*offset];
 
-          #pragma unroll p_intNfp*p_Nfaces
+#pragma unroll p_intNfp*p_Nfaces
           for(int m=0;m<(p_intNfp*p_Nfaces);++m){
             // RefMassMatrix^{-1}*cInterp^t*cWeight
             const dfloat L = intLIFTT[n+m*p_Np];
@@ -520,11 +528,11 @@ SOFTWARE.
 
 //
 @kernel void insStrongAdvectionVolumeTet3D(const dlong Nelements,
-                                    @restrict const  dfloat *  vgeo,
-                                    @restrict const  dfloat *  Dmatrices,
-                                    const dlong offset,
-                                    @restrict const  dfloat *  U,
-                                          @restrict dfloat *  NU){
+					   @restrict const  dfloat *  vgeo,
+					   @restrict const  dfloat *  Dmatrices,
+					   const dlong offset,
+					   @restrict const  dfloat *  U,
+					   @restrict dfloat *  NU){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
     // Hold Flux Vector on Shared, use symmetry f21 = f12
@@ -573,48 +581,48 @@ SOFTWARE.
           dfloat dvdr = 0.f, dvds = 0.f, dvdt = 0.f; 
           dfloat dwdr = 0.f, dwds = 0.f, dwdt = 0.f; 
 
-          #pragma unroll p_Np
-            for(int i=0;i<p_Np;++i){
-              const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
-              const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
-              const dfloat Dtni = Dmatrices[n+i*p_Np+2*p_Np*p_Np];
+#pragma unroll p_Np
+	  for(int i=0;i<p_Np;++i){
+	    const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
+	    const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
+	    const dfloat Dtni = Dmatrices[n+i*p_Np+2*p_Np*p_Np];
               
-              dudr += Drni*s_U[es][i];
-              duds += Dsni*s_U[es][i];
-              dudt += Dtni*s_U[es][i];
+	    dudr += Drni*s_U[es][i];
+	    duds += Dsni*s_U[es][i];
+	    dudt += Dtni*s_U[es][i];
 
-              dvdr += Drni*s_V[es][i];
-              dvds += Dsni*s_V[es][i];
-              dvdt += Dtni*s_V[es][i];
+	    dvdr += Drni*s_V[es][i];
+	    dvds += Dsni*s_V[es][i];
+	    dvdt += Dtni*s_V[es][i];
 
-              dwdr += Drni*s_W[es][i];
-              dwds += Dsni*s_W[es][i];
-              dwdt += Dtni*s_W[es][i];
-            }
+	    dwdr += Drni*s_W[es][i];
+	    dwds += Dsni*s_W[es][i];
+	    dwdt += Dtni*s_W[es][i];
+	  }
 
-            dfloat dudx = drdx*dudr + dsdx*duds + dtdx*dudt;
-            dfloat dudy = drdy*dudr + dsdy*duds + dtdy*dudt;
-            dfloat dudz = drdz*dudr + dsdz*duds + dtdz*dudt;
+	  dfloat dudx = drdx*dudr + dsdx*duds + dtdx*dudt;
+	  dfloat dudy = drdy*dudr + dsdy*duds + dtdy*dudt;
+	  dfloat dudz = drdz*dudr + dsdz*duds + dtdz*dudt;
 
-            dfloat dvdx = drdx*dvdr + dsdx*dvds + dtdx*dvdt;
-            dfloat dvdy = drdy*dvdr + dsdy*dvds + dtdy*dvdt;
-            dfloat dvdz = drdz*dvdr + dsdz*dvds + dtdz*dvdt;
+	  dfloat dvdx = drdx*dvdr + dsdx*dvds + dtdx*dvdt;
+	  dfloat dvdy = drdy*dvdr + dsdy*dvds + dtdy*dvdt;
+	  dfloat dvdz = drdz*dvdr + dsdz*dvds + dtdz*dvdt;
 
-            dfloat dwdx = drdx*dwdr + dsdx*dwds + dtdx*dwdt;
-            dfloat dwdy = drdy*dwdr + dsdy*dwds + dtdy*dwdt;
-            dfloat dwdz = drdz*dwdr + dsdz*dwds + dtdz*dwdt;
+	  dfloat dwdx = drdx*dwdr + dsdx*dwds + dtdx*dwdt;
+	  dfloat dwdy = drdy*dwdr + dsdy*dwds + dtdy*dwdt;
+	  dfloat dwdz = drdz*dwdr + dsdz*dwds + dtdz*dwdt;
 
 
-            dfloat u = s_U[es][n];
-            dfloat v = s_V[es][n];
-            dfloat w = s_W[es][n];
+	  dfloat u = s_U[es][n];
+	  dfloat v = s_V[es][n];
+	  dfloat w = s_W[es][n];
 
-            const dlong id =e*p_Np + n; 
+	  const dlong id =e*p_Np + n; 
 
-            NU[id+0*offset] =  -(u*dudx + v*dudy + w*dudz);
-            NU[id+1*offset] =  -(u*dvdx + v*dvdy + w*dvdz);
-            NU[id+2*offset] =  -(u*dwdx + v*dwdy + w*dwdz);
-         }
+	  NU[id+0*offset] =  -(u*dudx + v*dudy + w*dudz);
+	  NU[id+1*offset] =  -(u*dvdx + v*dvdy + w*dvdz);
+	  NU[id+2*offset] =  -(u*dwdx + v*dwdy + w*dwdz);
+	}
       }
     }
   }

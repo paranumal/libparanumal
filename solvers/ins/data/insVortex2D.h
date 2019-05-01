@@ -34,13 +34,11 @@ SOFTWARE.
   }   
 
 // Boundary conditions
+// BC == 1 is already handled in the solver...  
 // Default u+ = u-, modify if it is different  
 #define insVelocityDirichletConditions2D(bc, t, x, y, nx, ny, uM, vM, uB, vB) \
-{                                   \
-  if(bc==1){                        \
-    *(uB) = 0.f;                    \
-    *(vB) = 0.f;                    \
-  } else if(bc==2){                 \
+{                                                       \
+  if(bc==2){                                            \
     *(uB) = -sin(2.f*M_PI*y)*exp(-p_nu*4.f*M_PI*M_PI*t);\
     *(vB) =  sin(2.f*M_PI*x)*exp(-p_nu*4.f*M_PI*M_PI*t);\
   }else if(bc==4){                  \

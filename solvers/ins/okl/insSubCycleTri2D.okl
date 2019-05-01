@@ -1,26 +1,26 @@
 /*
 
-The MIT License (MIT)
+  The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 
 */
 
@@ -28,12 +28,12 @@ SOFTWARE.
 
 // compute div(NU)  = div(uxu) in collocation way
 @kernel void insSubCycleVolumeTri2D(const dlong Nelements,
-                                @restrict const  dfloat *  vgeo,
-                                @restrict const  dfloat *  Dmatrices,
-                                const dlong offset,
-                                @restrict const  dfloat *  U,
-                                @restrict const  dfloat *  Ud,
-                                      @restrict dfloat *  rhsU){
+				    @restrict const  dfloat *  vgeo,
+				    @restrict const  dfloat *  Dmatrices,
+				    const dlong offset,
+				    @restrict const  dfloat *  U,
+				    @restrict const  dfloat *  Ud,
+				    @restrict dfloat *  rhsU){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
@@ -79,7 +79,7 @@ SOFTWARE.
           dfloat df21dr = 0.f, df21ds = 0.f; 
           dfloat df22dr = 0.f, df22ds = 0.f; 
 
-          #pragma unroll p_Np
+#pragma unroll p_Np
           for(int i=0;i<p_Np;++i){
             const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
             const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
@@ -98,10 +98,10 @@ SOFTWARE.
           }
 
           const dfloat rhsux   = drdx*df11dr + dsdx*df11ds 
-                               + drdy*df12dr + dsdy*df12ds;
+	    + drdy*df12dr + dsdy*df12ds;
 
           const dfloat rhsuy   = drdx*df21dr + dsdx*df21ds 
-                               + drdy*df22dr + dsdy*df22ds;
+	    + drdy*df22dr + dsdy*df22ds;
 
           const dlong id = e*p_Np+n;
           // Compute div(uxu)
@@ -115,20 +115,20 @@ SOFTWARE.
 
 
 @kernel void insSubCycleSurfaceTri2D(const dlong Nelements,
-                                    @restrict const  dfloat *  sgeo,
-                                    @restrict const  dfloat *  LIFTT,
-                                    @restrict const  dlong  *  vmapM,
-                                    @restrict const  dlong  *  vmapP,
-                                    @restrict const  int    *  EToB,
-                                    const dfloat bScale,
-                                    const dfloat time,
-                                    @restrict const  dfloat *  x,
-                                    @restrict const  dfloat *  y,
-                                    @restrict const  dfloat *  z,
-                                    const dlong offset,
-                                    @restrict const  dfloat *  U,
-                                    @restrict const  dfloat *  Ud,
-                                          @restrict dfloat *  rhsU){
+				     @restrict const  dfloat *  sgeo,
+				     @restrict const  dfloat *  LIFTT,
+				     @restrict const  dlong  *  vmapM,
+				     @restrict const  dlong  *  vmapP,
+				     @restrict const  int    *  EToB,
+				     const dfloat bScale,
+				     const dfloat time,
+				     @restrict const  dfloat *  x,
+				     @restrict const  dfloat *  y,
+				     @restrict const  dfloat *  z,
+				     const dlong offset,
+				     @restrict const  dfloat *  U,
+				     @restrict const  dfloat *  Ud,
+				     @restrict dfloat *  rhsU){
 
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
@@ -160,15 +160,19 @@ SOFTWARE.
           const dfloat  uyM = U[idM+1*offset], uyP = U[idP+1*offset];
 
           const dfloat  pxM = Ud[idM+0*offset], pyM = Ud[idM+1*offset];
-                dfloat  pxP = Ud[idP+0*offset], pyP = Ud[idP+1*offset];
+	  dfloat  pxP = Ud[idP+0*offset], pyP = Ud[idP+1*offset];
 
           // apply boundary condition
           const int bc = EToB[face+p_Nfaces*e];
           if(bc>0) {
-            pxP = pxM; pyP = pyM; 
-            insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, pxM, pyM, &pxP, &pyP);
-            pxP *= bScale; 
-            pyP *= bScale; 
+            if(bc==1){
+              pxP = 0.f; pyP = 0.f; 
+            }else{
+	      pxP = pxM; pyP = pyM; 
+	      insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, pxM, pyM, &pxP, &pyP);
+	      pxP *= bScale; 
+	      pyP *= bScale; 
+	    }
           }
 
           // Find max normal velocity on the face
@@ -179,9 +183,9 @@ SOFTWARE.
           // evaluate "flux" terms: LLF
           const dfloat sc = invJ * sJ ; 
           s_fluxUx[es][n] = sc*(.5f*( nx*(uxP*pxP + uxM*pxM) 
-                                    + ny*(uyP*pxP + uyM*pxM) + unMax*(pxM-pxP) ));
+				      + ny*(uyP*pxP + uyM*pxM) + unMax*(pxM-pxP) ));
           s_fluxUy[es][n] = sc*(.5f*( nx*(uxP*pyP + uxM*pyP) 
-                                    + ny*(uyP*pyP + uyM*pyM) + unMax*(pyM-pyP) ));
+				      + ny*(uyP*pyP + uyM*pyM) + unMax*(pyM-pyP) ));
         }
       }
     }
@@ -198,12 +202,12 @@ SOFTWARE.
           dfloat rhsux = rhsU[id+0*offset];
           dfloat rhsuy = rhsU[id+1*offset];
           // Lift
-          #pragma unroll p_NfacesNfp
-            for(int m=0;m<p_Nfaces*p_Nfp;++m){
-              const dfloat L = LIFTT[n+m*p_Np];
-              rhsux  += L*s_fluxUx[es][m];
-              rhsuy  += L*s_fluxUy[es][m];
-            }
+#pragma unroll p_NfacesNfp
+	  for(int m=0;m<p_Nfaces*p_Nfp;++m){
+	    const dfloat L = LIFTT[n+m*p_Np];
+	    rhsux  += L*s_fluxUx[es][m];
+	    rhsuy  += L*s_fluxUy[es][m];
+	  }
 
           // M^-1* (div(u*u)) + Lift*(F*-F))
           rhsU[id+0*offset] = -rhsux;
@@ -269,17 +273,17 @@ SOFTWARE.
 
 
 @kernel void insSubCycleCubatureVolumeTri2D(const dlong Nelements,
-                                           @restrict const  dfloat *  vgeo,
-                                           @restrict const  dfloat *  cubvgeo,
-                                           @restrict const  dfloat *  cubDmatrices,
-                                           @restrict const  dfloat *  cubInterpT,
-                                           @restrict const  dfloat *  cubProjectT,
-                                           const dlong offset,
-                                           @restrict const  dfloat *  U,
-                                           @restrict const  dfloat *  Ud,
-                                                 @restrict dfloat *  cU, //storage for interpolated fields
-                                                 @restrict dfloat *  cUd, //storage for interpolated fields
-                                                 @restrict dfloat *  rhsU){
+					    @restrict const  dfloat *  vgeo,
+					    @restrict const  dfloat *  cubvgeo,
+					    @restrict const  dfloat *  cubDmatrices,
+					    @restrict const  dfloat *  cubInterpT,
+					    @restrict const  dfloat *  cubProjectT,
+					    const dlong offset,
+					    @restrict const  dfloat *  U,
+					    @restrict const  dfloat *  Ud,
+					    @restrict dfloat *  cU, //storage for interpolated fields
+					    @restrict dfloat *  cUd, //storage for interpolated fields
+					    @restrict dfloat *  rhsU){
 
   for(dlong eo=0;eo<Nelements;eo+=(p_NbV*p_Nmt);@outer(0)){  // for all elements
     
@@ -298,40 +302,40 @@ SOFTWARE.
     
     for(int es=0;es<p_NbV;++es;@inner(1)){// for all elements in block      
       for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
-        #pragma unroll p_Nmt
-          for(int em=0;em<p_Nmt;++em){
-            const dlong e = eo + es*p_Nmt + em;
-            const dlong id = e*p_Np + n;
+#pragma unroll p_Nmt
+	for(int em=0;em<p_Nmt;++em){
+	  const dlong e = eo + es*p_Nmt + em;
+	  const dlong id = e*p_Np + n;
             
-            if(e<Nelements){
-              // prefetch geometric factors (constant on triangle)
-              const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
-              const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
-              const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
-              const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+	  if(e<Nelements){
+	    // prefetch geometric factors (constant on triangle)
+	    const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+	    const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+	    const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+	    const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
               
-              const dfloat Un = U[id+0*offset];
-              const dfloat Vn = U[id+1*offset];
+	    const dfloat Un = U[id+0*offset];
+	    const dfloat Vn = U[id+1*offset];
               
-              s_Ud[em][es][n] = Ud[id+0*offset];
-              s_Vd[em][es][n] = Ud[id+1*offset];
+	    s_Ud[em][es][n] = Ud[id+0*offset];
+	    s_Vd[em][es][n] = Ud[id+1*offset];
               
-              s_U[em][es][n] = drdx*Un + drdy*Vn; // rotate velocity 
-              s_V[em][es][n] = dsdx*Un + dsdy*Vn; // 
-            } else {
-              s_Ud[em][es][n] = 0.;
-              s_Vd[em][es][n] = 0.;
+	    s_U[em][es][n] = drdx*Un + drdy*Vn; // rotate velocity 
+	    s_V[em][es][n] = dsdx*Un + dsdy*Vn; // 
+	  } else {
+	    s_Ud[em][es][n] = 0.;
+	    s_Vd[em][es][n] = 0.;
               
-              s_U[em][es][n] = 0.;
-              s_V[em][es][n] = 0.;
-            }
-          }
+	    s_U[em][es][n] = 0.;
+	    s_V[em][es][n] = 0.;
+	  }
+	}
 
-        #pragma unroll p_Nmt
-          for(int em=0;em<p_Nmt;++em){
-            fluxU[em] = 0;
-            fluxV[em] = 0;
-          } 
+#pragma unroll p_Nmt
+	for(int em=0;em<p_Nmt;++em){
+	  fluxU[em] = 0;
+	  fluxV[em] = 0;
+	} 
       }
     }
 
@@ -347,34 +351,34 @@ SOFTWARE.
             // compute Np of the cubNp cubature values
             dfloat cU[p_Nmt], cV[p_Nmt], cUd[p_Nmt], cVd[p_Nmt];
             
-            #pragma unroll p_Nmt
-              for(int em=0;em<p_Nmt;++em){
-                cU[em] = 0.f;
-                cV[em] = 0.f;
-                cUd[em] = 0.f; 
-                cVd[em] = 0.f;
-              }
+#pragma unroll p_Nmt
+	    for(int em=0;em<p_Nmt;++em){
+	      cU[em] = 0.f;
+	      cV[em] = 0.f;
+	      cUd[em] = 0.f; 
+	      cVd[em] = 0.f;
+	    }
             
-            #pragma unroll p_Np
-              for(int i=0;i<p_Np;++i){
-                const dfloat cIni = cubInterpT[n+i*p_cubNp];
-                #pragma unroll p_Nmt
-                  for(int em=0;em<p_Nmt;++em){
-                    cU[em]  += cIni*s_U[em][es][i];
-                    cV[em]  += cIni*s_V[em][es][i];
-                    cUd[em] += cIni*s_Ud[em][es][i];
-                    cVd[em] += cIni*s_Vd[em][es][i];        
-                  }
-              }
+#pragma unroll p_Np
+	    for(int i=0;i<p_Np;++i){
+	      const dfloat cIni = cubInterpT[n+i*p_cubNp];
+#pragma unroll p_Nmt
+	      for(int em=0;em<p_Nmt;++em){
+		cU[em]  += cIni*s_U[em][es][i];
+		cV[em]  += cIni*s_V[em][es][i];
+		cUd[em] += cIni*s_Ud[em][es][i];
+		cVd[em] += cIni*s_Vd[em][es][i];        
+	      }
+	    }
             
             // share up to the Np cubature vals computed in this block
-            #pragma unroll p_Nmt
-              for(int em=0;em<p_Nmt;++em){
-                s_cF11[em][es][ns] = cU[em]*cUd[em];
-                s_cF12[em][es][ns] = cV[em]*cUd[em];
-                s_cF21[em][es][ns] = cU[em]*cVd[em];
-                s_cF22[em][es][ns] = cV[em]*cVd[em];
-              }
+#pragma unroll p_Nmt
+	    for(int em=0;em<p_Nmt;++em){
+	      s_cF11[em][es][ns] = cU[em]*cUd[em];
+	      s_cF12[em][es][ns] = cV[em]*cUd[em];
+	      s_cF21[em][es][ns] = cU[em]*cVd[em];
+	      s_cF22[em][es][ns] = cV[em]*cVd[em];
+	    }
           }
         }
       }
@@ -385,41 +389,41 @@ SOFTWARE.
       for(int es=0;es<p_NbV;++es;@inner(1)){
         for(int n=0;n<p_Np;++n;@inner(0)){      
           
-          #pragma unroll p_Np
-            for(int i=0;i<p_Np;++i){
-              if(i+io<p_cubNp){ // differentiate this sub block
-                const dfloat cDrWni = cubDmatrices[n+(i+io)*p_Np+0*p_cubNp*p_Np];
-                const dfloat cDsWni = cubDmatrices[n+(i+io)*p_Np+1*p_cubNp*p_Np];
+#pragma unroll p_Np
+	  for(int i=0;i<p_Np;++i){
+	    if(i+io<p_cubNp){ // differentiate this sub block
+	      const dfloat cDrWni = cubDmatrices[n+(i+io)*p_Np+0*p_cubNp*p_Np];
+	      const dfloat cDsWni = cubDmatrices[n+(i+io)*p_Np+1*p_cubNp*p_Np];
                 
-                #pragma unroll p_Nmt
-                  for(int em=0;em<p_Nmt;++em){  
-                    const dfloat cF11 = s_cF11[em][es][i];
-                    const dfloat cF12 = s_cF12[em][es][i];
-                    const dfloat cF21 = s_cF21[em][es][i];
-                    const dfloat cF22 = s_cF22[em][es][i];
+#pragma unroll p_Nmt
+	      for(int em=0;em<p_Nmt;++em){  
+		const dfloat cF11 = s_cF11[em][es][i];
+		const dfloat cF12 = s_cF12[em][es][i];
+		const dfloat cF21 = s_cF21[em][es][i];
+		const dfloat cF22 = s_cF22[em][es][i];
                     
-                    fluxU[em] += cDrWni*cF11;
-                    fluxU[em] += cDsWni*cF12;
-                    fluxV[em] += cDrWni*cF21;
-                    fluxV[em] += cDsWni*cF22;
-                  }
-              }
-            }
+		fluxU[em] += cDrWni*cF11;
+		fluxU[em] += cDsWni*cF12;
+		fluxV[em] += cDrWni*cF21;
+		fluxV[em] += cDsWni*cF22;
+	      }
+	    }
+	  }
         }
       }
     }
     
     for(int es=0;es<p_NbV;++es;@inner(1)){
       for(int n=0;n<p_Np;++n;@inner(0)){          
-        #pragma unroll p_Nmt
-          for(int em=0;em<p_Nmt;++em){
-            const dlong e = eo+es*p_Nmt+em;
-            if(e<Nelements){
-              const dlong id = e*p_Np+n;
-              rhsU[id+0*offset]   = -fluxU[em]; // note  change in sign
-              rhsU[id+1*offset]   = -fluxV[em];      
-            }
-          }
+#pragma unroll p_Nmt
+	for(int em=0;em<p_Nmt;++em){
+	  const dlong e = eo+es*p_Nmt+em;
+	  if(e<Nelements){
+	    const dlong id = e*p_Np+n;
+	    rhsU[id+0*offset]   = -fluxU[em]; // note  change in sign
+	    rhsU[id+1*offset]   = -fluxV[em];      
+	  }
+	}
       }
     }
   }
@@ -480,25 +484,25 @@ SOFTWARE.
 
 // Multiple nodes per thread// use less @shared memory by factor 4 
 @kernel void insSubCycleCubatureSurfaceTri2D(const dlong Nelements,
-                                            @restrict const  dfloat *  vgeo,
-                                            @restrict const  dfloat *  sgeo,
-                                            @restrict const  dfloat *  cubsgeo,
-                                            @restrict const  dfloat *  intInterpT, // interpolate to integration nodes
-                                            @restrict const  dfloat *  intLIFTT, // lift from integration to interpolation nodes
-                                            @restrict const  dfloat *  cubInterpT,
-                                            @restrict const  dfloat *  cubProjectT,
-                                            @restrict const  dlong  *  vmapM,
-                                            @restrict const  dlong  *  vmapP,
-                                            @restrict const  int    *  EToB,
-                                            const dfloat bScale,
-                                            const dfloat time,
-                                            @restrict const  dfloat *  intx, // integration nodes
-                                            @restrict const  dfloat *  inty,
-                                            @restrict const  dfloat *  intz,
-                                            const dlong offset,
-                                            @restrict const  dfloat *  U,
-                                            @restrict const  dfloat *  Ud,
-                                                  @restrict dfloat *  rhsU){
+					     @restrict const  dfloat *  vgeo,
+					     @restrict const  dfloat *  sgeo,
+					     @restrict const  dfloat *  cubsgeo,
+					     @restrict const  dfloat *  intInterpT, // interpolate to integration nodes
+					     @restrict const  dfloat *  intLIFTT, // lift from integration to interpolation nodes
+					     @restrict const  dfloat *  cubInterpT,
+					     @restrict const  dfloat *  cubProjectT,
+					     @restrict const  dlong  *  vmapM,
+					     @restrict const  dlong  *  vmapP,
+					     @restrict const  int    *  EToB,
+					     const dfloat bScale,
+					     const dfloat time,
+					     @restrict const  dfloat *  intx, // integration nodes
+					     @restrict const  dfloat *  inty,
+					     @restrict const  dfloat *  intz,
+					     const dlong offset,
+					     @restrict const  dfloat *  U,
+					     @restrict const  dfloat *  Ud,
+					     @restrict dfloat *  rhsU){
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=(p_NblockS4*p_NnodesS4);@outer(0)){
 
@@ -506,8 +510,8 @@ SOFTWARE.
     @shared dfloat s_U[p_NnodesS4][p_NblockS4][p_intNfpNfaces];
     @shared dfloat s_V[p_NnodesS4][p_NblockS4][p_intNfpNfaces];
    
-    #define s_iFluxU s_U // Reuse @shared memory arrays
-    #define s_iFluxV s_V
+#define s_iFluxU s_U // Reuse @shared memory arrays
+#define s_iFluxV s_V
 
     @exclusive dfloat r_iUM[p_NnodesS4],  r_iUP[p_NnodesS4];
     @exclusive dfloat r_iVM[p_NnodesS4],  r_iVP[p_NnodesS4];
@@ -522,7 +526,7 @@ SOFTWARE.
     for(int es=0;es<p_NblockS4;++es;@inner(1)){
       for(int n=0;n<p_maxNodesSurfaceCub;++n;@inner(0)){
         if(n<(p_Nfaces*p_Nfp)){
-          #pragma unroll p_NnodesS4
+#pragma unroll p_NnodesS4
           for (int em=0;em<p_NnodesS4;++em){
             const dlong e = em*p_NblockS4 + es + eo;
             if (e<Nelements) {
@@ -548,19 +552,19 @@ SOFTWARE.
         if(n<(p_Nfaces*p_intNfp)){
           face = n/p_intNfp; // find face that owns this integration node
 
-          #pragma unroll p_NnodesS4
+#pragma unroll p_NnodesS4
           for (int em=0;em<p_NnodesS4;++em){
             r_iUM[em]  = 0.f;
             r_iUP[em]  = 0.f;
           }
 
           // local block interpolation (face nodes to integration nodes)
-          #pragma unroll p_Nfp
+#pragma unroll p_Nfp
           for(int m=0;m<p_Nfp;++m){
             const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
             const int fm = face*p_Nfp+m;
 
-            #pragma unroll p_NnodesS4
+#pragma unroll p_NnodesS4
             for (int em=0;em<p_NnodesS4;++em){
               r_iUM[em]  += iInm*s_U[em][es][fm];
               r_iUP[em]  += iInm*s_V[em][es][fm];
@@ -575,7 +579,7 @@ SOFTWARE.
     for(int es=0;es<p_NblockS4;++es;@inner(1)){
       for(int n=0;n<p_maxNodesSurfaceCub;++n;@inner(0)){
         if(n<(p_Nfaces*p_Nfp)){
-          #pragma unroll p_NnodesS4
+#pragma unroll p_NnodesS4
           for (int em=0;em<p_NnodesS4;++em){
             const dlong e = em*p_NblockS4 + es + eo;
             if (e<Nelements) {
@@ -594,19 +598,19 @@ SOFTWARE.
     for(int es=0;es<p_NblockS4;++es;@inner(1)){
       for(int n=0;n<p_maxNodesSurfaceCub;++n;@inner(0)){ 
         if(n<(p_Nfaces*p_intNfp)){
-          #pragma unroll p_NnodesS4
+#pragma unroll p_NnodesS4
           for (int em=0;em<p_NnodesS4;++em){
             r_iUdM[em]  = 0.f;
             r_iUdP[em]  = 0.f;
           }
 
           // local block interpolation (face nodes to integration nodes)
-          #pragma unroll p_Nfp
+#pragma unroll p_Nfp
           for(int m=0;m<p_Nfp;++m){
             const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
             const int fm = face*p_Nfp+m;
 
-            #pragma unroll p_NnodesS4
+#pragma unroll p_NnodesS4
             for (int em=0;em<p_NnodesS4;++em){
               r_iUdM[em]  += iInm*s_U[em][es][fm];
               r_iUdP[em]  += iInm*s_V[em][es][fm];
@@ -617,12 +621,12 @@ SOFTWARE.
     }
     @barrier("local");
 
-      // Loop for positive traces
+    // Loop for positive traces
     // for all face nodes of all elements
     for(int es=0;es<p_NblockS4;++es;@inner(1)){
       for(int n=0;n<p_maxNodesSurfaceCub;++n;@inner(0)){
         if(n<(p_Nfaces*p_Nfp)){
-          #pragma unroll p_NnodesS4
+#pragma unroll p_NnodesS4
           for (int em=0;em<p_NnodesS4;++em){
             const dlong e = em*p_NblockS4 + es + eo;
             if (e<Nelements) {
@@ -641,19 +645,19 @@ SOFTWARE.
     for(int es=0;es<p_NblockS4;++es;@inner(1)){
       for(int n=0;n<p_maxNodesSurfaceCub;++n;@inner(0)){ 
         if(n<(p_Nfaces*p_intNfp)){
-          #pragma unroll p_NnodesS4
+#pragma unroll p_NnodesS4
           for (int em=0;em<p_NnodesS4;++em){
             r_iVM[em]  = 0.f;
             r_iVP[em]  = 0.f;
           }
 
           // local block interpolation (face nodes to integration nodes)
-          #pragma unroll p_Nfp
+#pragma unroll p_Nfp
           for(int m=0;m<p_Nfp;++m){
             const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
             const int fm = face*p_Nfp+m;
 
-            #pragma unroll p_NnodesS4
+#pragma unroll p_NnodesS4
             for (int em=0;em<p_NnodesS4;++em){
               r_iVM[em]  += iInm*s_U[em][es][fm];
               r_iVP[em]  += iInm*s_V[em][es][fm];
@@ -668,7 +672,7 @@ SOFTWARE.
     for(int es=0;es<p_NblockS4;++es;@inner(1)){
       for(int n=0;n<p_maxNodesSurfaceCub;++n;@inner(0)){
         if(n<(p_Nfaces*p_Nfp)){
-          #pragma unroll p_NnodesS4
+#pragma unroll p_NnodesS4
           for (int em=0;em<p_NnodesS4;++em){
             const dlong e = em*p_NblockS4 + es + eo;
             if (e<Nelements) {
@@ -687,19 +691,19 @@ SOFTWARE.
     for(int es=0;es<p_NblockS4;++es;@inner(1)){
       for(int n=0;n<p_maxNodesSurfaceCub;++n;@inner(0)){ 
         if(n<(p_Nfaces*p_intNfp)){
-          #pragma unroll p_NnodesS4
+#pragma unroll p_NnodesS4
           for (int em=0;em<p_NnodesS4;++em){
             r_iVdM[em]  = 0.f;
             r_iVdP[em]  = 0.f;
           }
 
           // local block interpolation (face nodes to integration nodes)
-          #pragma unroll p_Nfp
+#pragma unroll p_Nfp
           for(int m=0;m<p_Nfp;++m){
             const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
             const int fm = face*p_Nfp+m;
 
-            #pragma unroll p_NnodesS4
+#pragma unroll p_NnodesS4
             for (int em=0;em<p_NnodesS4;++em){
               r_iVdM[em]  += iInm*s_U[em][es][fm];
               r_iVdP[em]  += iInm*s_V[em][es][fm];
@@ -713,7 +717,7 @@ SOFTWARE.
     // Use traces to compuite and store flux
     for(int es=0;es<p_NblockS4;++es;@inner(1)){
       for(int n=0;n<p_maxNodesSurfaceCub;++n;@inner(0)){ 
-        #pragma unroll p_NnodesS4
+#pragma unroll p_NnodesS4
         for (int em=0;em<p_NnodesS4;++em){
           const dlong e = em*p_NblockS4 + es + eo;
           if((e<Nelements)&&(n<(p_Nfaces*p_intNfp))){
@@ -727,12 +731,17 @@ SOFTWARE.
             // apply boundary conditions
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
-              // explicitly set u+ = u-
-              r_iUdP[em] = r_iUdM[em]; 
-              r_iVdP[em] = r_iVdM[em]; 
-              insVelocityDirichletConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, r_iUdM[em],r_iVdM[em], &(r_iUdP[em]), &(r_iVdP[em]));
-              r_iUdP[em] *= bScale;
-              r_iVdP[em] *= bScale;
+              if(bc==1){
+                r_iUdP[em] = 0.f; 
+                r_iVdP[em] = 0.f; 
+              }else{
+		// explicitly set u+ = u-
+		r_iUdP[em] = r_iUdM[em]; 
+		r_iVdP[em] = r_iVdM[em]; 
+		insVelocityDirichletConditions2D(bc,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, r_iUdM[em],r_iVdM[em], &(r_iUdP[em]), &(r_iVdP[em]));
+		r_iUdP[em] *= bScale;
+		r_iVdP[em] *= bScale;
+              }
             }
 
             // Find max normal velocity on the face
@@ -745,10 +754,10 @@ SOFTWARE.
 
             // bad notation here //
             s_iFluxU[em][es][n] = sc*(nx*(r_iUP[em]*r_iUdP[em] + r_iUM[em]*r_iUdM[em]) 
-                                     +ny*(r_iVP[em]*r_iUdP[em] + r_iVM[em]*r_iUdM[em]) +unmax*(r_iUdM[em]-r_iUdP[em]));
+				      +ny*(r_iVP[em]*r_iUdP[em] + r_iVM[em]*r_iUdM[em]) +unmax*(r_iUdM[em]-r_iUdP[em]));
 
             s_iFluxV[em][es][n] = sc*(nx*(r_iUP[em]*r_iVdP[em] + r_iUM[em]*r_iVdM[em]) 
-                                    + ny*(r_iVP[em]*r_iVdP[em] + r_iVM[em]*r_iVdM[em]) +unmax*(r_iVdM[em]-r_iVdP[em]));
+				      + ny*(r_iVP[em]*r_iVdP[em] + r_iVM[em]*r_iVdM[em]) +unmax*(r_iVdM[em]-r_iVdP[em]));
           }
         }
       }
@@ -760,7 +769,7 @@ SOFTWARE.
     for(int es=0;es<p_NblockS4;++es;@inner(1)){
       for(int n=0;n<p_maxNodesSurfaceCub;++n;@inner(0)){
         if(n<p_Np){
-          #pragma unroll p_NnodesS4
+#pragma unroll p_NnodesS4
           for (int em=0;em<p_NnodesS4;++em){
             const dlong e = em*p_NblockS4 + es + eo;
             if(e<Nelements) {
@@ -771,18 +780,18 @@ SOFTWARE.
             }
           }
 
-          #pragma unroll p_intNfpNfaces
+#pragma unroll p_intNfpNfaces
           for(int m=0;m<p_intNfpNfaces;++m){
             const dfloat L = intLIFTT[n+m*p_Np];
 
-            #pragma unroll p_NnodesS4
+#pragma unroll p_NnodesS4
             for (int em=0;em<p_NnodesS4;++em){
               r_iUM[em] += L*s_U[em][es][m];
               r_iVM[em] += L*s_V[em][es][m];
             }
           }
 
-          #pragma unroll p_NnodesS4
+#pragma unroll p_NnodesS4
           for (int em=0;em<p_NnodesS4;++em){
             const dlong e = em*p_NblockS4 + es + eo;
             if(e<Nelements) {

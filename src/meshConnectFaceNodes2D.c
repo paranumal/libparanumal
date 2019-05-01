@@ -51,7 +51,8 @@ int findBestMatch(dfloat x1, dfloat y1,
       *nP = n;
     }
   }
-  if(mindist2>1e-3) printf("arggh - bad match: x,y=%g,%g\n", x1,y1);
+  // AK. Commneting out for NekRS testing !!!!!
+  // if(mindist2>1e-3) printf("arggh - bad match: x,y=%g,%g\n", x1,y1);
   return matchIndex;
 }
 
