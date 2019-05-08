@@ -60,7 +60,7 @@ E. Dependencies:
 
 ---
 ### 3. Clone: libParanumal
-`git clone https://github.com/tcew/paranumal/libparanumal`
+`git clone https://github.com/paranumal/libparanumal`
 
 ---
 ### 4. OCCA dependency (currently OCCA 1.0 forked by Noel Chalmers) 
