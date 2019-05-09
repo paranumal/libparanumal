@@ -5,6 +5,9 @@ cudaFlags = -Dcomp_Nq=$(comp_Nq) -Dcomp_cubNq=$(comp_cubNq) -Dcomp_MAX_ITERATION
 advectionInvertMassMatrix: advectionInvertMassMatrixV2.cu
 	nvcc -o advectionInvertMassMatrix $(cudaFlags) advectionInvertMassMatrixV2.cu
 
+advectionMassMatrixMultiply: advectionMassMatrixMultiply.cu
+	nvcc -o advectionMassMatrixMultiply $(cudaFlags) advectionMassMatrixMultiply.cu
+
 roofline: roofline.cu
 	nvcc -o roofline $(cudaFlags) roofline.cu
 
