@@ -458,36 +458,19 @@ void advectionMassMatrixMultiplyHost(const dlong Nelements,
 }
 
 
-void buildInterpMatrices(dfloat **h_I, dfloat **c_I){
-
-  dfloatRandAlloc(p_Nq*p_cubNq, h_I, c_I);
+void buildInterpMatrices(dfloat *h_I){
 
   // now overwrite h_I and copy to c_I
-#if 1
-  for(int i=0;i<p_halfCubNq;++i){
-    for(int a=0;a<p_Nq;++a){
-      h_I[0][(p_cubNq-1-i)*p_Nq + p_Nq-1-a] = h_I[0][i*p_Nq+a];
-    }
-  }
-#else
-  for(int i=0;i<p_cubNq;++i){
-    for(int a=0;a<p_Nq;++a){
-      h_I[0][i*p_Nq + a] = (i==a) ? 1: 0;
-    }
-  }
-
-#endif
-
   printf("I = [\n");
   for(int i=0;i<p_cubNq;++i){
     for(int a=0;a<p_Nq;++a){
-      printf("% .4e ", h_I[0][i*p_Nq+a]);
+      printf("% .4e ", h_I[i*p_Nq+a]);
     }
     printf("\n");
   }
   printf("];\n");
   
-  cudaMemcpy(*c_I, *h_I, p_Nq*p_cubNq*sizeof(dfloat), cudaMemcpyHostToDevice);
+  //  cudaMemcpy(*c_I, *h_I, p_Nq*p_cubNq*sizeof(dfloat), cudaMemcpyHostToDevice);
 
   dfloat *X = (dfloat*) calloc(p_Nq*p_Nq, sizeof(dfloat));
   dfloat *invX = (dfloat*) calloc(p_Nq*p_Nq, sizeof(dfloat));
@@ -536,7 +519,7 @@ void buildInterpMatrices(dfloat **h_I, dfloat **c_I){
     for(int a=0;a<p_Nq;++a){
       dfloat res = 0;
       for(int n=0;n<p_Nq;++n){
-	res += h_I[0][i*p_Nq+n]*invX[n*p_Nq+a];
+	res += h_I[i*p_Nq+n]*invX[n*p_Nq+a];
       }
       IinvX[i*p_Nq+a] = res;
     }
@@ -621,7 +604,17 @@ int main(int argc, char **argv){
   dfloatRandAlloc(Ntotal,       &h_q, &c_q);
   dfloatRandAlloc(Ntotal,       &h_qnew, &c_qnew);
 
-  buildInterpMatrices(&h_I, &c_I);
+  dfloatRandAlloc(p_Nq*p_cubNq, &h_I, &c_I);
+  
+  // give I the correct symmetry
+  for(int i=0;i<p_halfCubNq;++i){
+    for(int a=0;a<p_Nq;++a){
+      h_I[(p_cubNq-1-i)*p_Nq + p_Nq-1-a] = h_I[i*p_Nq+a];
+    }
+  }
+
+  // create Odd-even packed storage for I and transpose(I) and push to constant memory
+  buildInterpMatrices(h_I);
 
   // flush L2 ??
   dfloat *h_garbage, *c_garbage;
