@@ -274,6 +274,8 @@ void advectionMassMatrixMultiplyOddEven(const dlong element,
 
 }
 
+__global__ void nothingKernel(){  }
+
 __global__ void advectionMassMatrixMultiplyKernel(const dlong Nelements,
 						  const dlong  * __restrict__ elementIds,
 						  const dfloat * __restrict__ cubvgeo,
@@ -832,6 +834,8 @@ void buildInterpMatrices(dfloat *h_I){
 
 }
 
+#define USE_BLOCKED 1
+#define USE_GRAPH 1
 
 int main(int argc, char **argv){
 
@@ -896,44 +900,105 @@ int main(int argc, char **argv){
   dfloatRandAlloc(sz, &h_garbage, &c_garbage);
   
   cudaEvent_t start, end;
-
   cudaEventCreate(&start);
   cudaEventCreate(&end);	
 
-  // call matrix inverse
-  
+  int Ntests = 100;
+  // KERNEL GRID
   dim3 G((Nelements+p_Nblock-1)/p_Nblock, 1, 1);
   dim3 B(p_Nq*p_Nq, p_Nblock, 1);
 
-  advectionMassMatrixMultiplyBlockedKernel <<< G, B, 0, stream >>>
-    (Nelements, c_elementIds, c_cubvgeo, c_I, c_q, c_qnew);
+  float nothingElapsed = 0;
+  {
+
+    // time kernel that does nothing
+
+#if USE_GRAPH==1
+    // cuda stream capture sequence for nothingKernel
+    cudaGraph_t nothingGraph;
   
+    cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal);
+    
+    for(int test=0;test<Ntests;++test){
+      nothingKernel <<< 1, 1, 0, stream >>> ();
+    }
+    
+    cudaStreamEndCapture(stream, &nothingGraph);
+
+    // time graph sequence for nothing
+    cudaGraphExec_t nothingInstance;
+    cudaGraphInstantiate(&nothingInstance, nothingGraph, NULL, NULL, 0);
+    
+    cudaEventRecord(start, stream);
+    
+    cudaGraphLaunch(nothingInstance, stream);
+    
+    cudaEventRecord(end, stream);
+#else
+    
+    cudaEventRecord(start, stream);
+    
+    for(int test=0;test<Ntests;++test)
+    nothingKernel <<< 1, 1, 0, stream >>> ();
+    
+    cudaEventRecord(end, stream);
+    
+#endif
+    
+    cudaDeviceSynchronize();
+    
+    cudaEventElapsedTime(&nothingElapsed, start, end);
+    nothingElapsed /= 1000.;
+    nothingElapsed /= (double) Ntests;
+  
+  }
+  
+  
+  // warm up call
+#if USE_BLOCKED==1
+  advectionMassMatrixMultiplyBlockedKernel
+#else
+    advectionMassMatrixMultiplyKernel
+#endif
+    <<< G, B, 0, stream >>>(Nelements, c_elementIds, c_cubvgeo, c_I, c_q, c_qnew);
+
+#if USE_GRAPH==1
   // cuda stream capture
   cudaGraph_t graph;
-
-  int Ntests = 10;
   
   cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal);
 
-  for(int test=0;test<Ntests;++test)
-    advectionMassMatrixMultiplyBlockedKernel <<< G, B, 0, stream >>>
-      (Nelements, c_elementIds, c_cubvgeo, c_I, c_q, c_qnew);
-  
-  cudaStreamEndCapture(stream, &graph);
+  for(int test=0;test<Ntests;++test){
 
+#if USE_BLOCKED==1
+    advectionMassMatrixMultiplyBlockedKernel
+#else
+      advectionMassMatrixMultiplyKernel
+#endif
+      <<< G, B, 0, stream >>> (Nelements, c_elementIds, c_cubvgeo, c_I, c_q, c_qnew);
+  }
+
+  cudaStreamEndCapture(stream, &graph);
+  
   cudaGraphExec_t instance;
   cudaGraphInstantiate(&instance, graph, NULL, NULL, 0);
-
+#endif
   
   cudaDeviceSynchronize();
 
   {
     cudaEventRecord(start, stream);
     
-#if 0
-    for(int test=0;test<Ntests;++test)
-      advectionMassMatrixMultiplyBlockedKernel <<< G, B, 0, stream >>>
-	(Nelements, c_elementIds, c_cubvgeo, c_I, c_q, c_qnew);
+#if USE_GRAPH==0
+    for(int test=0;test<Ntests;++test){
+#if USE_BLOCKED==1
+      advectionMassMatrixMultiplyBlockedKernel
+#else
+	advectionMassMatrixMultiplyKernel
+#endif
+	<<< G, B, 0, stream >>> (Nelements, c_elementIds, c_cubvgeo, c_I, c_q, c_qnew);
+    }
+    
 #else
     cudaGraphLaunch(instance, stream);
 #endif
@@ -946,9 +1011,10 @@ int main(int argc, char **argv){
     elapsed /= 1000.;
     elapsed /= (double) Ntests;
     
-    printf("%d %d %d %lg %lg %%%% [MassMatrixMultiplyBlocked: N, Nelements, Ndofs, elapsed, dofsPerSecond]\n", p_Nq-1, Nelements, p_Np*Nelements, elapsed, Nelements*(p_Np/elapsed));
+    printf("%d %d %d %lg %lg %lg %%%% [MassMatrixMultiply: N, Nelements, Ndofs, elapsed, dofsPerSecond, nothingElapsed]\n", p_Nq-1, Nelements, p_Np*Nelements, elapsed, Nelements*(p_Np/elapsed), nothingElapsed);
   }
 
+  // check output is correct
   advectionMassMatrixMultiplyHost(Nelements, h_elementIds, h_cubvgeo, h_I, h_q, h_qnew);
 
   // copy device version to host old q
