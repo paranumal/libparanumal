@@ -592,6 +592,267 @@ __global__ void advectionMassMatrixMultiplyBlockedKernel(const dlong Nelements,
   }
 }
 
+
+
+__forceinline__ __device__
+void advectionMassMatrixMultiplyOddEvenBlockedGlobalVgeo(const dlong Nelements,
+							const dlong element,
+							const dlong elementId,
+							const dfloat * __restrict__ cubvgeo,
+							dfloat s_Ap[p_Nblock][p_cubNq][p_cubNq][p_cubNq+p_padCubNq],
+							dfloat * __restrict__ r_Ap){
+  
+  dfloat r_tmpOdd[p_halfCubNq];
+  dfloat r_tmpEven[p_halfCubNq];
+  
+  const int t = threadIdx.x;
+  const int blk = threadIdx.y;
+
+  
+  // assumes barrier before s_Ap was used last
+  
+  // transform in 'c'
+  {
+    const int a = t%p_Nq;
+    const int b = t/p_Nq;
+    
+    const dfloat * __restrict__ cI = const_I;
+    
+#pragma unroll p_halfNq
+    for(int c=0;c<p_halfNq;++c){
+      r_tmpOdd[c]  = r_Ap[c] + r_Ap[p_Nq-1-c];
+      r_tmpEven[c] = r_Ap[c] - r_Ap[p_Nq-1-c];
+    }
+    
+#pragma unroll p_halfCubNq
+    for(int k=0;k<p_halfCubNq;++k){
+      dfloat resOdd = 0, resEven = 0;
+      
+#pragma unroll p_halfNq
+      for(int c=0;c<p_halfNq;++c){
+	
+	resOdd += *(cI++)*r_tmpOdd[c];
+	resEven += *(cI++)*r_tmpEven[c];
+	
+      }
+      s_Ap[blk][k][b][a]           = resOdd + resEven;
+      s_Ap[blk][p_cubNq-1-k][b][a] = resOdd - resEven;
+    }
+    
+  }
+  
+  __syncthreads();
+
+  // transform in 'b'
+  {
+    for(int n=t;n<p_Nq*p_cubNq;n+=p_Nq2){
+      const int a = n%p_Nq;
+      const int k = n/p_Nq;
+
+#pragma unroll p_halfNq
+      for(int b=0;b<p_halfNq;++b){
+	dfloat ApOdd  = s_Ap[blk][k][b][a];
+	dfloat ApEven = s_Ap[blk][k][p_Nq-1-b][a];
+	r_tmpOdd[b]  = ApOdd + ApEven;
+	r_tmpEven[b] = ApOdd - ApEven;
+      }      
+      
+      const dfloat * __restrict__ cI = const_I;
+      
+#pragma unroll p_halfCubNq
+      for(int j=0;j<p_halfCubNq;++j){
+	dfloat resOdd = 0, resEven = 0;
+	
+#pragma unroll p_halfNq
+	for(int b=0;b<p_halfNq;++b){
+	  resOdd += *(cI++)*r_tmpOdd[b];
+	  resEven += *(cI++)*r_tmpEven[b];
+	}
+	
+	s_Ap[blk][k][j][a]           = resOdd+resEven;
+	s_Ap[blk][k][p_cubNq-1-j][a] = resOdd-resEven;
+	
+      }
+    }
+
+  }
+  
+  __syncthreads();
+
+  // ok to here
+  
+  // transform in 'a'
+  {
+    for(int n=t;n<p_cubNq2;n+=p_Nq2){
+      const int j = n%p_cubNq;
+      const int k = n/p_cubNq;
+      
+#pragma unroll p_halfNq
+      for(int a=0;a<p_halfNq;++a){
+	dfloat ApOdd  = s_Ap[blk][k][j][a];
+	dfloat ApEven = s_Ap[blk][k][j][p_Nq-1-a];
+	r_tmpOdd[a]  = ApOdd + ApEven;
+	r_tmpEven[a] = ApOdd - ApEven;
+      }
+      
+      const dfloat * __restrict__ cI = const_I;
+      
+#pragma unroll p_halfCubNq
+      for(int i=0;i<p_halfCubNq;++i){
+	dfloat resOdd = 0, resEven = 0;
+	
+#pragma unroll p_halfNq
+	for(int a=0;a<p_halfNq;++a){
+	  resOdd  += *(cI++)*r_tmpOdd[a];
+	  resEven += *(cI++)*r_tmpEven[a];
+	}
+
+	dlong gid1 = elementId*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i;
+	dlong gid2 = elementId*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + p_cubNq-1-i;
+	
+	dfloat WJ1 = (element<Nelements) ? cubvgeo[gid1]: 0;
+	dfloat WJ2 = (element<Nelements) ? cubvgeo[gid2]: 0;
+	
+	dfloat ApOdd = WJ1*(resOdd + resEven);
+	dfloat ApEven = WJ2*(resOdd - resEven);
+
+	r_Ap[i] = ApOdd + ApEven;
+	r_Ap[p_cubNq-1-i] = ApOdd - ApEven;
+      }
+
+      const dfloat * __restrict__ cIT = const_IT;
+      
+#pragma unroll p_halfNq
+      for(int a=0;a<p_halfNq;++a){
+	dfloat resOdd = 0, resEven = 0;
+	
+#pragma unroll p_halfCubNq
+	for(int i=0;i<p_halfCubNq;++i){
+	  resOdd  += *(cIT++)*r_Ap[i];
+	  resEven += *(cIT++)*r_Ap[p_cubNq-1-i];
+	}
+	
+	s_Ap[blk][k][j][a]        = resOdd + resEven;
+	s_Ap[blk][k][j][p_Nq-1-a] = resOdd - resEven;
+      }
+    }
+  }
+  
+  __syncthreads();
+
+  
+  // test in 'b'
+  {
+
+    for(int n=t;n<p_Nq*p_cubNq;n+=p_Nq2){
+      const int a = n%p_Nq;
+      const int k = n/p_Nq;
+
+      const dfloat * __restrict__ cIT = const_IT;
+	
+      for(int j=0;j<p_halfCubNq;++j){
+	dfloat ApOdd  = s_Ap[blk][k][j][a];
+	dfloat ApEven = s_Ap[blk][k][p_cubNq-1-j][a];
+	r_tmpOdd[j]  = ApOdd + ApEven;
+	r_tmpEven[j] = ApOdd - ApEven;
+      }
+
+#pragma unroll p_halfNq
+      for(int b=0;b<p_halfNq;++b){
+	dfloat resOdd = 0, resEven = 0;
+	
+#pragma unroll p_halfCubNq
+	for(int j=0;j<p_halfCubNq;++j){
+	  resOdd  += *(cIT++)*r_tmpOdd[j];
+	  resEven += *(cIT++)*r_tmpEven[j];
+	}
+	
+	s_Ap[blk][k][b][a]        = resOdd + resEven;
+	s_Ap[blk][k][p_Nq-1-b][a] = resOdd - resEven;
+      }
+    }
+  }
+  
+  __syncthreads();
+
+  // test in 'c'
+  {
+    const int a = t%p_Nq;
+    const int b = t/p_Nq;
+
+    for(int k=0;k<p_halfCubNq;++k){
+      dfloat ApOdd  = s_Ap[blk][k][b][a];
+      dfloat ApEven = s_Ap[blk][p_cubNq-1-k][b][a];
+      r_tmpOdd[k]  = ApOdd + ApEven;
+      r_tmpEven[k] = ApOdd - ApEven;
+    }
+    
+    const dfloat * __restrict__ cIT = const_IT;
+    
+#pragma unroll p_halfNq
+    for(int c=0;c<p_halfNq;++c){
+      dfloat resOdd = 0, resEven = 0;
+      
+#pragma unroll p_halfCubNq
+      for(int k=0;k<p_halfCubNq;++k){
+	resOdd  += *(cIT++)*r_tmpOdd[k];
+	resEven += *(cIT++)*r_tmpEven[k];
+      }
+      
+      r_Ap[c]        = resOdd + resEven;
+      r_Ap[p_Nq-1-c] = resOdd - resEven;
+      
+    }
+  }
+
+
+}
+
+__global__ void advectionMassMatrixMultiplyBlockedGlobalVgeoKernel(const dlong Nelements,
+								   const dlong  * __restrict__ elementIds,
+								   const dfloat * __restrict__ cubvgeo,
+								   const dfloat * __restrict__ cubI,
+								   const dfloat * __restrict__ q,
+								   dfloat * __restrict__ qnew){
+  
+  __shared__ dfloat s_tmp1[p_Nblock][p_cubNq][p_cubNq][p_cubNq+p_padCubNq];
+  
+  dfloat r_Aq[p_cubNq];
+
+  const unsigned int t = threadIdx.x;
+  const int blk = threadIdx.y;
+  
+  const dlong e = blockIdx.x*p_Nblock + blk;
+
+  const dlong element = (e<Nelements) ? elementIds[e]: 0;
+  
+  const unsigned int a = t%p_Nq;
+  const unsigned int b = t/p_Nq;
+
+  for(int c=0;c<p_Nq;++c){
+    
+    dlong id = a + b*p_Nq + c*p_Nq2 + element*p_Np;
+    
+    r_Aq[c] = q[id];
+  }
+
+  __syncthreads();
+  
+  advectionMassMatrixMultiplyOddEvenBlockedGlobalVgeo(Nelements, e, element, cubvgeo, s_tmp1, r_Aq);
+  
+  if(e<Nelements){
+#pragma unroll p_Nq
+    for(int c=0;c<p_Nq;++c){
+      dlong id = a + b*p_Nq + c*p_Nq2 + element*p_Np;
+      qnew[id] = r_Aq[c];
+    }
+  }
+}
+
+
+
+
+
 void advectionMassMatrixMultiplyHost(const dlong Nelements,
 				     const dlong  * __restrict__ elementIds,
 				     const dfloat * __restrict__ cubvgeo,
@@ -836,6 +1097,15 @@ void buildInterpMatrices(dfloat *h_I){
 
 #define USE_BLOCKED 1
 #define USE_GRAPH 1
+#define USE_GLOBAL_VGEO 1
+
+#if USE_GLOBAL_VGEO==1
+#define massMatrixKernel advectionMassMatrixMultiplyBlockedGlobalVgeoKernel
+#elif USE_BLOCKED==1
+#define massMatrixKernel advectionMassMatrixMultiplyBlockedKernel
+#else
+#define massMatrixKernel advectionMassMatrixMultiplyKernel
+#endif
 
 int main(int argc, char **argv){
 
@@ -873,7 +1143,7 @@ int main(int argc, char **argv){
 
   for(int e=0;e<Nelements;++e){
     for(int n=0;n<p_cubNp;++n){
-      h_cubvgeo[e*p_cubNp+n] = 1;
+      h_cubvgeo[e*p_cubNp+n] = drand48();
     }
   }
 
@@ -955,12 +1225,7 @@ int main(int argc, char **argv){
   
   
   // warm up call
-#if USE_BLOCKED==1
-  advectionMassMatrixMultiplyBlockedKernel
-#else
-    advectionMassMatrixMultiplyKernel
-#endif
-    <<< G, B, 0, stream >>>(Nelements, c_elementIds, c_cubvgeo, c_I, c_q, c_qnew);
+  massMatrixKernel <<< G, B, 0, stream >>>(Nelements, c_elementIds, c_cubvgeo, c_I, c_q, c_qnew);
 
 #if USE_GRAPH==1
   // cuda stream capture
@@ -969,13 +1234,7 @@ int main(int argc, char **argv){
   cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal);
 
   for(int test=0;test<Ntests;++test){
-
-#if USE_BLOCKED==1
-    advectionMassMatrixMultiplyBlockedKernel
-#else
-      advectionMassMatrixMultiplyKernel
-#endif
-      <<< G, B, 0, stream >>> (Nelements, c_elementIds, c_cubvgeo, c_I, c_q, c_qnew);
+    massMatrixKernel <<< G, B, 0, stream >>>(Nelements, c_elementIds, c_cubvgeo, c_I, c_q, c_qnew);
   }
 
   cudaStreamEndCapture(stream, &graph);
@@ -991,17 +1250,12 @@ int main(int argc, char **argv){
     
 #if USE_GRAPH==0
     for(int test=0;test<Ntests;++test){
-#if USE_BLOCKED==1
-      advectionMassMatrixMultiplyBlockedKernel
-#else
-	advectionMassMatrixMultiplyKernel
-#endif
-	<<< G, B, 0, stream >>> (Nelements, c_elementIds, c_cubvgeo, c_I, c_q, c_qnew);
+     massMatrixKernel <<< G, B, 0, stream >>>(Nelements, c_elementIds, c_cubvgeo, c_I, c_q, c_qnew);
     }
-    
 #else
     cudaGraphLaunch(instance, stream);
 #endif
+
     cudaEventRecord(end, stream);
     
     cudaEventSynchronize(end);
