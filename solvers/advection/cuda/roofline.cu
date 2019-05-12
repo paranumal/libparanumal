@@ -251,7 +251,7 @@ int main(int argc, char **argv){
     sprintf(resultsName, "%s.dat", kernelNames[knl]);
     
     FILE *fpResults = fopen(resultsName, "a");
-    fprintf(fpResults, "%%%%  arithmeticIntensity, perf, kernelMaxEmpiricalBandwidth, maxEstimateGflops, maxEstimatedBandwidth\n");
+    fprintf(fpResults, "%%%%  arithmeticIntensity, perf, kernelMaxEmpiricalBandwidth, maxEstimateGflops, maxEstimatedBandwidth, bytes\n");
     
     //    long long int bytes = (kernelReadThroughput[knl]+kernelWriteThroughput[knl])*kernelTime[knl]*1.e9;
     long long int bytes = (kernelBytesRead[knl]+kernelBytesWritten[knl])*32;
@@ -305,8 +305,8 @@ int main(int argc, char **argv){
     
     kernelMaxEmpiricalBandwidth[knl] = (2.*bytes/elapsed)/1.e9; // convert max empirical bw for this vector size to GB/s
     
-    fprintf(fpResults, "%lg, %lg, %lg, %lg, %lg\n", arithmeticIntensity, perf, kernelMaxEmpiricalBandwidth[knl],
-	    maxGFLOPSest, maxBWest);
+    fprintf(fpResults, "%lg, %lg, %lg, %lg, %lg, %lg\n", arithmeticIntensity, perf, kernelMaxEmpiricalBandwidth[knl],
+	    maxGFLOPSest, maxBWest, bytes);
 
     fflush(fpResults);
     fclose(fpResults);
