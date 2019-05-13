@@ -87,6 +87,10 @@ void meshHex3D::LoadReferenceNodes(int N_){
   cubNfp = cubNq*cubNq;
   cubNp = cubNq*cubNq*cubNq;
 
+  //zero out some unused values
+  intNfp = 0;
+  max_EL_nnz = 0;
+
   readDfloatArray(comm, fp, "Quadrature Interpolation Matrix", &(cubInterp),&Nrows,&Ncols);
   readDfloatArray(comm, fp, "Quadrature Weak D Differentiation Matrix", &(cubDW),&Nrows,&Ncols);
   readDfloatArray(comm, fp, "Quadrature Differentiation Matrix", &(cubD),&Nrows,&Ncols);

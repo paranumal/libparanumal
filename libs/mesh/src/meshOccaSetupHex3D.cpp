@@ -141,6 +141,8 @@ void meshHex3D::OccaSetup(occa::properties &kernelInfo){
 
   //    reportMemoryUsage(device, "meshOccaSetup3D: before geofactors ");
 
+  o_MM = device.malloc(Np*Np*sizeof(dfloat), MM);
+
   o_vgeo =
     device.malloc(Nelements*Np*Nvgeo*sizeof(dfloat),
                         vgeo);

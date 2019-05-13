@@ -54,9 +54,6 @@ void mesh_t::OccaSetup(occa::properties &kernelInfo){
   if(NnotInterior)
     o_notInternalElementIds = device.malloc(NnotInterior*sizeof(dlong), notInternalElementIds);
 
-
-  o_MM = device.malloc(Np*Np*sizeof(dfloat), MM);
-
   o_vmapM = device.malloc(Nelements*Nfp*Nfaces*sizeof(dlong), vmapM);
   o_vmapP = device.malloc(Nelements*Nfp*Nfaces*sizeof(dlong), vmapP);
 

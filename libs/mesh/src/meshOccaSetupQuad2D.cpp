@@ -78,6 +78,8 @@ void meshQuad2D::OccaSetup(occa::properties &kernelInfo){
   o_Dmatrices = device.malloc(Nq*Nq*sizeof(dfloat), D);
   o_Smatrices = device.malloc(Nq*Nq*sizeof(dfloat), D); //dummy
 
+  o_MM = device.malloc(Np*Np*sizeof(dfloat), MM);
+
   o_vgeo =
     device.malloc(Nelements*Nvgeo*Np*sizeof(dfloat),
         vgeo);
@@ -123,7 +125,7 @@ void meshQuad2D::OccaSetup(occa::properties &kernelInfo){
 
   o_intz =
     device.malloc(Nelements*Nfaces*cubNq*sizeof(dfloat),
-        intz);
+        inty);
 
   //dummy quadrature lifter operators
   o_intInterpT = device.malloc(cubNq*Nq*sizeof(dfloat));

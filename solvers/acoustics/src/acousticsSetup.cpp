@@ -79,7 +79,7 @@ acoustics_t& acoustics_t::Setup(mesh_t& mesh){
   int NblockV = 1024/mesh.Np; // works for CUDA
   kernelInfo["defines/" "p_NblockV"]= NblockV;
 
-  int NblockS = 1024/maxNodes; // works for CUDA
+  int NblockS = 512/maxNodes; // works for CUDA
   kernelInfo["defines/" "p_NblockS"]= NblockS;
 
   int cubMaxNodes = mymax(mesh.Np, (mesh.intNfp*mesh.Nfaces));

@@ -53,16 +53,16 @@ void surfaceTerms(const int e,
                   const int face,
                   const int i,
                   const int j,
-                  @global const dfloat *sgeo,
-                  @global const dfloat *x,
-                  @global const dfloat *y,
-                  @global const int *vmapM,
-                  @global const int *vmapP,
-                  @global const int *EToB,
-                  @global const dfloat *q,
-                  @shared dfloat s_rflux[p_NblockS][p_Nq][p_Nq],
-                  @shared dfloat s_uflux[p_NblockS][p_Nq][p_Nq],
-                  @shared dfloat s_vflux[p_NblockS][p_Nq][p_Nq]){
+                  const dfloat *sgeo,
+                  const dfloat *x,
+                  const dfloat *y,
+                  const int *vmapM,
+                  const int *vmapP,
+                  const int *EToB,
+                  const dfloat *q,
+                  dfloat s_rflux[p_NblockS][p_Nq][p_Nq],
+                  dfloat s_uflux[p_NblockS][p_Nq][p_Nq],
+                  dfloat s_vflux[p_NblockS][p_Nq][p_Nq]){
 
   const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
   const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];

@@ -95,6 +95,8 @@ void meshQuad3D::OccaSetup(occa::properties &kernelInfo){
 
   o_Smatrices = device.malloc(Nq*Nq*sizeof(dfloat), D); //dummy
 
+  o_MM = device.malloc(Np*Np*sizeof(dfloat), MM);
+
   o_vgeo =
     device.malloc(Nelements*Nvgeo*Np*sizeof(dfloat),
                         vgeo);

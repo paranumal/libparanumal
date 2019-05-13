@@ -81,6 +81,10 @@ void meshTri2D::LoadReferenceNodes(int N_){
   readDfloatArray(comm, fp, "Cubature weights", &(cubw),&Nrows,&Ncols);
   cubNp = Nrows;
 
+  //zero out some unused values
+  cubNq = 0;
+  cubNfp = 0;
+
   readDfloatArray(comm, fp, "Cubature Interpolation Matrix", &(cubInterp),&Nrows,&Ncols);
   readDfloatArray(comm, fp, "Cubature Weak Dr Differentiation Matrix", &(cubDrW),&Nrows,&Ncols);
   readDfloatArray(comm, fp, "Cubature Weak Ds Differentiation Matrix", &(cubDsW),&Nrows,&Ncols);

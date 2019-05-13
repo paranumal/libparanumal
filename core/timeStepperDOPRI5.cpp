@@ -144,7 +144,7 @@ void dopri5::Run(occa::memory &o_q, dfloat start, dfloat end) {
       ss << "Time step became too small at time step = " << tstep;
       LIBP_ABORT(ss.str());
     }
-    if (isnan(dt)) {
+    if (std::isnan(dt)) {
       stringstream ss;
       ss << "Solution became unstable at time step = " << tstep;
       LIBP_ABORT(ss.str());

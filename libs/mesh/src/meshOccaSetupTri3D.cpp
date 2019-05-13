@@ -230,6 +230,8 @@ void meshTri3D::OccaSetup(occa::properties &kernelInfo){
 
   o_Dmatrices = device.malloc(2*Np*Np*sizeof(dfloat), DrsT);
 
+  o_MM = device.malloc(Np*Np*sizeof(dfloat), MM);
+
   o_LIFT =
     device.malloc(Np*Nfaces*Nfp*sizeof(dfloat),
                         LIFT);

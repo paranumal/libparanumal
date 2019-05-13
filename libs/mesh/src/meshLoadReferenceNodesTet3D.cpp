@@ -97,8 +97,14 @@ void meshTet3D::LoadReferenceNodes(int N_){
     intNfp = Nrows/Nfaces; //number of interpolation points per face
 
     readDfloatArray(comm, fp, "Cubature Surface Lift Matrix", &(intLIFT),&Nrows,&Ncols);
+  } else {
+    cubNp = 0;
+    intNfp = 0;
   }
 
+  //zero out some unused values
+  cubNq = 0;
+  cubNfp = 0;
 
   /* Bernstein-Bezier data */
   readDfloatArray(comm, fp, "Bernstein-Bezier Vandermonde Matrix", &(VB),&Nrows,&Ncols);

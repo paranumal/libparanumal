@@ -48,6 +48,7 @@ DEFINES=${LIBP_DEFINES} \
         -D DOGS='"${CURDIR}"'
 
 #.cpp compilation flags
+OGS_CFLAGS=${CFLAGS} ${DEFINES} ${INCLUDES}
 OGS_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
 
 #object dependancies
@@ -86,10 +87,10 @@ silentUpdate:
 # rule for .c files
 %.o: %.c $(DEPS)
 ifneq (,${verbose})
-	$(CC) -o $*.o -c $*.c $(OGS_CXXFLAGS)
+	$(CC) -o $*.o -c $*.c $(OGS_CFLAGS)
 else
 	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
-	@$(CC) -o $*.o -c $*.c $(OGS_CXXFLAGS)
+	@$(CC) -o $*.o -c $*.c $(OGS_CFLAGS)
 endif
 
 # rule for .cpp files

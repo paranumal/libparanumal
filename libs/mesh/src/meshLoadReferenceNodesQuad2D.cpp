@@ -85,6 +85,11 @@ void meshQuad2D::LoadReferenceNodes(int N_){
   cubNq = Nrows;
   cubNp = cubNq*cubNq;
 
+  //zero out some unused values
+  cubNfp = 0;
+  intNfp = 0;
+  max_EL_nnz = 0;
+
   readDfloatArray(comm, fp, "Quadrature Interpolation Matrix", &(cubInterp),&Nrows,&Ncols);
   readDfloatArray(comm, fp, "Quadrature Weak D Differentiation Matrix", &(cubDW),&Nrows,&Ncols);
   readDfloatArray(comm, fp, "Quadrature Projection Matrix", &(cubProject),&Nrows,&Ncols);

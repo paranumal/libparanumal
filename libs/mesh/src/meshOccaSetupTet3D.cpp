@@ -338,6 +338,8 @@ void meshTet3D::OccaSetup(occa::properties &kernelInfo){
 
   o_Dmatrices = device.malloc(3*Np*Np*sizeof(dfloat), DrstT);
 
+  o_MM = device.malloc(Np*Np*sizeof(dfloat), MM);
+
   o_LIFT =
     device.malloc(Np*Nfaces*Nfp*sizeof(dfloat),
                         LIFT);
