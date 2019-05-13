@@ -273,10 +273,10 @@ void advectionMassMatrixMultiplyOddEven(const dlong element,
 
 }
 
-__global__ void nothingKernel(hipLaunchParm lp){  }
+__global__ void nothingKernel(){
+}
 
-__global__ void advectionMassMatrixMultiplyKernel(hipLaunchParm lp,
-						  const dlong Nelements,
+__global__ void advectionMassMatrixMultiplyKernel(const dlong Nelements,
 						  const dlong  * __restrict__ elementIds,
 						  const dfloat * __restrict__ cubvgeo,
 						  const dfloat * __restrict__ cubI,
@@ -541,8 +541,7 @@ void advectionMassMatrixMultiplyOddEvenBlocked(const dfloat s_WJ[p_Nblock][p_cub
 
 }
 
-__global__ void advectionMassMatrixMultiplyBlockedKernel(hipLaunchParm lp,
-							 const dlong Nelements,
+__global__ void advectionMassMatrixMultiplyBlockedKernel(const dlong Nelements,
 							 const dlong  * __restrict__ elementIds,
 							 const dfloat * __restrict__ cubvgeo,
 							 const dfloat * __restrict__ cubI,
@@ -809,8 +808,7 @@ void advectionMassMatrixMultiplyOddEvenBlockedGlobalVgeo(const dlong Nelements,
 
 }
 
-__global__ void advectionMassMatrixMultiplyBlockedGlobalVgeoKernel(hipLaunchParm lp,
-								   const dlong Nelements,
+__global__ void advectionMassMatrixMultiplyBlockedGlobalVgeoKernel(const dlong Nelements,
 								   const dlong  * __restrict__ elementIds,
 								   const dfloat * __restrict__ cubvgeo,
 								   const dfloat * __restrict__ cubI,
@@ -1212,7 +1210,7 @@ int main(int argc, char **argv){
     hipEventRecord(start, stream);
     
     for(int test=0;test<Ntests;++test)
-      hipLaunchKernelGGL(nothingKernel, dim3(1,1,1), dim3(1,1,1), 0, stream);
+      hipLaunchKernelGGL(nothingKernel, dim3(1), dim3(1), 0, stream);
     
     hipEventRecord(end, stream);
     
