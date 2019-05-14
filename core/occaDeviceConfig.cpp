@@ -33,12 +33,12 @@ SOFTWARE.
 #include "omp.h"
 
 void occaDeviceConfig(occa::device &device, MPI_Comm comm,
-                      settings_t& settings, occa::properties& kernelInfo){
+                      settings_t& settings, occa::properties& props){
 
-  kernelInfo["defines"].asObject();
-  kernelInfo["includes"].asArray();
-  kernelInfo["header"].asArray();
-  kernelInfo["flags"].asObject();
+  props["defines"].asObject();
+  props["includes"].asArray();
+  props["header"].asArray();
+  props["flags"].asObject();
 
   // OCCA build stuff
   int rank, size;
@@ -104,31 +104,31 @@ void occaDeviceConfig(occa::device &device, MPI_Comm comm,
 #endif
 
   if(sizeof(dfloat)==4){
-    kernelInfo["defines/" "dfloat"]="float";
-    kernelInfo["defines/" "dfloat2"]="float2";
-    kernelInfo["defines/" "dfloat4"]="float4";
-    kernelInfo["defines/" "dfloat8"]="float8";
+    props["defines/" "dfloat"]="float";
+    props["defines/" "dfloat2"]="float2";
+    props["defines/" "dfloat4"]="float4";
+    props["defines/" "dfloat8"]="float8";
   }
   if(sizeof(dfloat)==8){
-    kernelInfo["defines/" "dfloat"]="double";
-    kernelInfo["defines/" "dfloat2"]="double2";
-    kernelInfo["defines/" "dfloat4"]="double4";
-    kernelInfo["defines/" "dfloat8"]="double8";
+    props["defines/" "dfloat"]="double";
+    props["defines/" "dfloat2"]="double2";
+    props["defines/" "dfloat4"]="double4";
+    props["defines/" "dfloat8"]="double8";
   }
 
   if(sizeof(dlong)==4){
-    kernelInfo["defines/" "dlong"]="int";
+    props["defines/" "dlong"]="int";
   }
   if(sizeof(dlong)==8){
-    kernelInfo["defines/" "dlong"]="long long int";
+    props["defines/" "dlong"]="long long int";
   }
 
   if(device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
-    kernelInfo["compiler_flags"] += "--ftz=true";
-    kernelInfo["compiler_flags"] += "--prec-div=false";
-    kernelInfo["compiler_flags"] += "--prec-sqrt=false";
-    kernelInfo["compiler_flags"] += "--use_fast_math";
-    kernelInfo["compiler_flags"] += "--fmad=true"; // compiler option for cuda
+    props["compiler_flags"] += "--ftz=true ";
+    props["compiler_flags"] += "--prec-div=false ";
+    props["compiler_flags"] += "--prec-sqrt=false ";
+    props["compiler_flags"] += "--use_fast_math ";
+    props["compiler_flags"] += "--fmad=true "; // compiler option for cuda
   }
 
   // occa::initTimer(mesh->device);
