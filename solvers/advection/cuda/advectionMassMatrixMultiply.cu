@@ -280,6 +280,7 @@ __global__ void advectionMassMatrixMultiplyKernel(const dlong Nelements,
 						  const dlong  * __restrict__ elementIds,
 						  const dfloat * __restrict__ cubvgeo,
 						  const dfloat * __restrict__ cubI,
+						  const dfloat * __restrict__ cubIT,
 						  const dfloat * __restrict__ q,
 						  dfloat * __restrict__ qnew){
   
@@ -542,11 +543,12 @@ void advectionMassMatrixMultiplyOddEvenBlocked(const dfloat s_WJ[p_Nblock][p_cub
 }
 
 __global__ void advectionMassMatrixMultiplyBlockedKernel(const dlong Nelements,
-						       const dlong  * __restrict__ elementIds,
-						       const dfloat * __restrict__ cubvgeo,
-						       const dfloat * __restrict__ cubI,
-						       const dfloat * __restrict__ q,
-						       dfloat * __restrict__ qnew){
+							 const dlong  * __restrict__ elementIds,
+							 const dfloat * __restrict__ cubvgeo,
+							 const dfloat * __restrict__ cubI,
+							 const dfloat * __restrict__ cubIT,
+							 const dfloat * __restrict__ q,
+							 dfloat * __restrict__ qnew){
   
   __shared__ dfloat s_tmp1[p_Nblock][p_cubNq][p_cubNq][p_cubNq+p_padCubNq];
   __shared__ dfloat s_WJ[p_Nblock][p_cubNq][p_cubNq][p_cubNq];
@@ -812,6 +814,7 @@ __global__ void advectionMassMatrixMultiplyBlockedGlobalVgeoKernel(const dlong N
 								   const dlong  * __restrict__ elementIds,
 								   const dfloat * __restrict__ cubvgeo,
 								   const dfloat * __restrict__ cubI,
+								   const dfloat * __restrict__ cubIT,
 								   const dfloat * __restrict__ q,
 								   dfloat * __restrict__ qnew){
   
@@ -848,6 +851,539 @@ __global__ void advectionMassMatrixMultiplyBlockedGlobalVgeoKernel(const dlong N
     }
   }
 }
+
+
+
+__forceinline__ __device__
+void advectionMassMatrixMultiplyOddEvenBlockedGlobalVgeoSharedInterp(const dlong Nelements,
+								     const dlong element,
+								     const dlong elementId,
+								     const dfloat * __restrict__ cubvgeo,
+								     const dfloat * __restrict__ s_cubI,
+								     const dfloat * __restrict__ s_cubIT,
+								     dfloat s_Ap[p_Nblock][p_cubNq][p_cubNq][p_cubNq+p_padCubNq],
+								     dfloat * __restrict__ r_Ap){
+  
+  dfloat r_tmpOdd[p_halfCubNq];
+  dfloat r_tmpEven[p_halfCubNq];
+  
+  const int t = threadIdx.x;
+  const int blk = threadIdx.y;
+
+  
+  // assumes barrier before s_Ap was used last
+  
+  // transform in 'c'
+  {
+    const int a = t%p_Nq;
+    const int b = t/p_Nq;
+    
+    const dfloat * __restrict__ cI = s_cubI;
+    
+#pragma unroll p_halfNq
+    for(int c=0;c<p_halfNq;++c){
+      r_tmpOdd[c]  = r_Ap[c] + r_Ap[p_Nq-1-c];
+      r_tmpEven[c] = r_Ap[c] - r_Ap[p_Nq-1-c];
+    }
+    
+#pragma unroll p_halfCubNq
+    for(int k=0;k<p_halfCubNq;++k){
+      dfloat resOdd = 0, resEven = 0;
+      
+#pragma unroll p_halfNq
+      for(int c=0;c<p_halfNq;++c){
+	
+	resOdd += *(cI++)*r_tmpOdd[c];
+	resEven += *(cI++)*r_tmpEven[c];
+	
+      }
+      s_Ap[blk][k][b][a]           = resOdd + resEven;
+      s_Ap[blk][p_cubNq-1-k][b][a] = resOdd - resEven;
+    }
+    
+  }
+  
+  __syncthreads();
+
+  // transform in 'b'
+  {
+    for(int n=t;n<p_Nq*p_cubNq;n+=p_Nq2){
+      const int a = n%p_Nq;
+      const int k = n/p_Nq;
+
+#pragma unroll p_halfNq
+      for(int b=0;b<p_halfNq;++b){
+	dfloat ApOdd  = s_Ap[blk][k][b][a];
+	dfloat ApEven = s_Ap[blk][k][p_Nq-1-b][a];
+	r_tmpOdd[b]  = ApOdd + ApEven;
+	r_tmpEven[b] = ApOdd - ApEven;
+      }      
+      
+      const dfloat * __restrict__ cI = s_cubI;
+      
+#pragma unroll p_halfCubNq
+      for(int j=0;j<p_halfCubNq;++j){
+	dfloat resOdd = 0, resEven = 0;
+	
+#pragma unroll p_halfNq
+	for(int b=0;b<p_halfNq;++b){
+	  resOdd += *(cI++)*r_tmpOdd[b];
+	  resEven += *(cI++)*r_tmpEven[b];
+	}
+	
+	s_Ap[blk][k][j][a]           = resOdd+resEven;
+	s_Ap[blk][k][p_cubNq-1-j][a] = resOdd-resEven;
+	
+      }
+    }
+
+  }
+  
+  __syncthreads();
+
+  // ok to here
+  
+  // transform in 'a'
+  {
+    for(int n=t;n<p_cubNq2;n+=p_Nq2){
+      const int j = n%p_cubNq;
+      const int k = n/p_cubNq;
+      
+#pragma unroll p_halfNq
+      for(int a=0;a<p_halfNq;++a){
+	dfloat ApOdd  = s_Ap[blk][k][j][a];
+	dfloat ApEven = s_Ap[blk][k][j][p_Nq-1-a];
+	r_tmpOdd[a]  = ApOdd + ApEven;
+	r_tmpEven[a] = ApOdd - ApEven;
+      }
+      
+      const dfloat * __restrict__ cI = s_cubI;
+      
+#pragma unroll p_halfCubNq
+      for(int i=0;i<p_halfCubNq;++i){
+	dfloat resOdd = 0, resEven = 0;
+	
+#pragma unroll p_halfNq
+	for(int a=0;a<p_halfNq;++a){
+	  resOdd  += *(cI++)*r_tmpOdd[a];
+	  resEven += *(cI++)*r_tmpEven[a];
+	}
+
+	dlong gid1 = elementId*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i;
+	dlong gid2 = elementId*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + p_cubNq-1-i;
+	
+	dfloat WJ1 = (element<Nelements) ? cubvgeo[gid1]: 0;
+	dfloat WJ2 = (element<Nelements) ? cubvgeo[gid2]: 0;
+	
+	dfloat ApOdd = WJ1*(resOdd + resEven);
+	dfloat ApEven = WJ2*(resOdd - resEven);
+
+	r_Ap[i] = ApOdd + ApEven;
+	r_Ap[p_cubNq-1-i] = ApOdd - ApEven;
+      }
+
+      const dfloat * __restrict__ cIT = s_cubIT;
+      
+#pragma unroll p_halfNq
+      for(int a=0;a<p_halfNq;++a){
+	dfloat resOdd = 0, resEven = 0;
+	
+#pragma unroll p_halfCubNq
+	for(int i=0;i<p_halfCubNq;++i){
+	  resOdd  += *(cIT++)*r_Ap[i];
+	  resEven += *(cIT++)*r_Ap[p_cubNq-1-i];
+	}
+	
+	s_Ap[blk][k][j][a]        = resOdd + resEven;
+	s_Ap[blk][k][j][p_Nq-1-a] = resOdd - resEven;
+      }
+    }
+  }
+  
+  __syncthreads();
+
+  
+  // test in 'b'
+  {
+
+    for(int n=t;n<p_Nq*p_cubNq;n+=p_Nq2){
+      const int a = n%p_Nq;
+      const int k = n/p_Nq;
+
+      const dfloat * __restrict__ cIT = s_cubIT;
+	
+      for(int j=0;j<p_halfCubNq;++j){
+	dfloat ApOdd  = s_Ap[blk][k][j][a];
+	dfloat ApEven = s_Ap[blk][k][p_cubNq-1-j][a];
+	r_tmpOdd[j]  = ApOdd + ApEven;
+	r_tmpEven[j] = ApOdd - ApEven;
+      }
+
+#pragma unroll p_halfNq
+      for(int b=0;b<p_halfNq;++b){
+	dfloat resOdd = 0, resEven = 0;
+	
+#pragma unroll p_halfCubNq
+	for(int j=0;j<p_halfCubNq;++j){
+	  resOdd  += *(cIT++)*r_tmpOdd[j];
+	  resEven += *(cIT++)*r_tmpEven[j];
+	}
+	
+	s_Ap[blk][k][b][a]        = resOdd + resEven;
+	s_Ap[blk][k][p_Nq-1-b][a] = resOdd - resEven;
+      }
+    }
+  }
+  
+  __syncthreads();
+
+  // test in 'c'
+  {
+    const int a = t%p_Nq;
+    const int b = t/p_Nq;
+
+    for(int k=0;k<p_halfCubNq;++k){
+      dfloat ApOdd  = s_Ap[blk][k][b][a];
+      dfloat ApEven = s_Ap[blk][p_cubNq-1-k][b][a];
+      r_tmpOdd[k]  = ApOdd + ApEven;
+      r_tmpEven[k] = ApOdd - ApEven;
+    }
+    
+    const dfloat * __restrict__ cIT = s_cubIT;
+    
+#pragma unroll p_halfNq
+    for(int c=0;c<p_halfNq;++c){
+      dfloat resOdd = 0, resEven = 0;
+      
+#pragma unroll p_halfCubNq
+      for(int k=0;k<p_halfCubNq;++k){
+	resOdd  += *(cIT++)*r_tmpOdd[k];
+	resEven += *(cIT++)*r_tmpEven[k];
+      }
+      
+      r_Ap[c]        = resOdd + resEven;
+      r_Ap[p_Nq-1-c] = resOdd - resEven;
+      
+    }
+  }
+
+}
+
+__global__ void advectionMassMatrixMultiplyBlockedGlobalVgeoSharedInterpKernel(const dlong Nelements,
+									       const dlong  * __restrict__ elementIds,
+									       const dfloat * __restrict__ cubvgeo,
+									       const dfloat * __restrict__ cubI,
+									       const dfloat * __restrict__ cubIT,
+									       const dfloat * __restrict__ q,
+									       dfloat * __restrict__ qnew){
+  
+  __shared__ dfloat s_tmp1[p_Nblock][p_cubNq][p_cubNq][p_cubNq+p_padCubNq];
+  __shared__ dfloat s_cubI[p_halfNq*p_cubNq];
+  __shared__ dfloat s_cubIT[p_halfCubNq*p_Nq];  
+
+  dfloat r_Aq[p_cubNq];
+
+  const unsigned int t = threadIdx.x;
+  const int blk = threadIdx.y;
+  
+  const dlong e = blockIdx.x*p_Nblock + blk;
+
+  const dlong element = (e<Nelements) ? elementIds[e]: 0;
+  
+  const unsigned int a = t%p_Nq;
+  const unsigned int b = t/p_Nq;
+
+  for(int c=0;c<p_Nq;++c){
+    
+    dlong id = a + b*p_Nq + c*p_Nq2 + element*p_Np;
+    
+    r_Aq[c] = q[id];
+  }
+
+  for(int n=t;n<p_halfNq*p_cubNq;n+=p_Nq*p_Nq){
+    s_cubI[n] = cubI[n];
+    s_cubIT[n] = cubIT[n];
+    n+=p_Nq*p_Nq;
+  }
+  
+  __syncthreads();
+  
+  advectionMassMatrixMultiplyOddEvenBlockedGlobalVgeoSharedInterp(Nelements, e, element, cubvgeo, s_cubI, s_cubIT, s_tmp1, r_Aq);
+  
+  if(e<Nelements){
+#pragma unroll p_Nq
+    for(int c=0;c<p_Nq;++c){
+      dlong id = a + b*p_Nq + c*p_Nq2 + element*p_Np;
+      qnew[id] = r_Aq[c];
+    }
+  }
+}
+
+
+__forceinline__ __device__
+void advectionMassMatrixMultiplyOddEvenBlockedGlobalVgeoRegisterInterp(const dlong Nelements,
+								     const dlong element,
+								       const dlong elementId,
+								       const dfloat * __restrict__ cubvgeo,
+								       const dfloat r_oddI[p_halfCubNq][p_halfNq],
+								       const dfloat r_evenI[p_halfCubNq][p_halfNq],
+								       dfloat s_Ap[p_Nblock][p_cubNq][p_cubNq][p_cubNq+p_padCubNq],
+								       dfloat * __restrict__ r_Ap){
+  
+  dfloat r_tmpOdd[p_halfCubNq];
+  dfloat r_tmpEven[p_halfCubNq];
+  
+  const int t = threadIdx.x;
+  const int blk = threadIdx.y;
+
+  
+  // assumes barrier before s_Ap was used last
+  
+  // transform in 'c'
+  {
+    const int a = t%p_Nq;
+    const int b = t/p_Nq;
+    
+#pragma unroll p_halfNq
+    for(int c=0;c<p_halfNq;++c){
+      r_tmpOdd[c]  = r_Ap[c] + r_Ap[p_Nq-1-c];
+      r_tmpEven[c] = r_Ap[c] - r_Ap[p_Nq-1-c];
+    }
+    
+#pragma unroll p_halfCubNq
+    for(int k=0;k<p_halfCubNq;++k){
+      dfloat resOdd = 0, resEven = 0;
+      
+#pragma unroll p_halfNq
+      for(int c=0;c<p_halfNq;++c){
+	
+	resOdd += r_oddI[k][c]*r_tmpOdd[c];
+	resEven += r_evenI[k][c]*r_tmpEven[c];
+	
+      }
+      s_Ap[blk][k][b][a]           = resOdd + resEven;
+      s_Ap[blk][p_cubNq-1-k][b][a] = resOdd - resEven;
+    }
+    
+  }
+  
+  __syncthreads();
+
+  // transform in 'b'
+  {
+    for(int n=t;n<p_Nq*p_cubNq;n+=p_Nq2){
+      const int a = n%p_Nq;
+      const int k = n/p_Nq;
+
+#pragma unroll p_halfNq
+      for(int b=0;b<p_halfNq;++b){
+	dfloat ApOdd  = s_Ap[blk][k][b][a];
+	dfloat ApEven = s_Ap[blk][k][p_Nq-1-b][a];
+	r_tmpOdd[b]  = ApOdd + ApEven;
+	r_tmpEven[b] = ApOdd - ApEven;
+      }      
+      
+#pragma unroll p_halfCubNq
+      for(int j=0;j<p_halfCubNq;++j){
+	dfloat resOdd = 0, resEven = 0;
+	
+#pragma unroll p_halfNq
+	for(int b=0;b<p_halfNq;++b){
+	  resOdd += r_oddI[j][b]*r_tmpOdd[b];
+	  resEven += r_evenI[j][b]*r_tmpEven[b];
+	}
+	
+	s_Ap[blk][k][j][a]           = resOdd+resEven;
+	s_Ap[blk][k][p_cubNq-1-j][a] = resOdd-resEven;
+	
+      }
+    }
+
+  }
+  
+  __syncthreads();
+
+  // ok to here
+  
+  // transform in 'a'
+  {
+    for(int n=t;n<p_cubNq2;n+=p_Nq2){
+      const int j = n%p_cubNq;
+      const int k = n/p_cubNq;
+      
+#pragma unroll p_halfNq
+      for(int a=0;a<p_halfNq;++a){
+	dfloat ApOdd  = s_Ap[blk][k][j][a];
+	dfloat ApEven = s_Ap[blk][k][j][p_Nq-1-a];
+	r_tmpOdd[a]  = ApOdd + ApEven;
+	r_tmpEven[a] = ApOdd - ApEven;
+      }
+      
+#pragma unroll p_halfCubNq
+      for(int i=0;i<p_halfCubNq;++i){
+	dfloat resOdd = 0, resEven = 0;
+	
+#pragma unroll p_halfNq
+	for(int a=0;a<p_halfNq;++a){
+	  resOdd  += r_oddI[i][a]*r_tmpOdd[a];
+	  resEven += r_evenI[i][a]*r_tmpEven[a];
+	}
+
+	dlong gid1 = elementId*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i;
+	dlong gid2 = elementId*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + p_cubNq-1-i;
+	
+	dfloat WJ1 = (element<Nelements) ? cubvgeo[gid1]: 0;
+	dfloat WJ2 = (element<Nelements) ? cubvgeo[gid2]: 0;
+	
+	dfloat ApOdd = WJ1*(resOdd + resEven);
+	dfloat ApEven = WJ2*(resOdd - resEven);
+
+	r_Ap[i] = ApOdd + ApEven;
+	r_Ap[p_cubNq-1-i] = ApOdd - ApEven;
+      }
+
+#pragma unroll p_halfNq
+      for(int a=0;a<p_halfNq;++a){
+	dfloat resOdd = 0, resEven = 0;
+	
+#pragma unroll p_halfCubNq
+	for(int i=0;i<p_halfCubNq;++i){
+	  resOdd  += r_oddI[i][a]*r_Ap[i];
+	  resEven += r_evenI[i][a]*r_Ap[p_cubNq-1-i];
+	}
+	
+	s_Ap[blk][k][j][a]        = resOdd + resEven;
+	s_Ap[blk][k][j][p_Nq-1-a] = resOdd - resEven;
+      }
+    }
+  }
+  
+  __syncthreads();
+
+  
+  // test in 'b'
+  {
+
+    for(int n=t;n<p_Nq*p_cubNq;n+=p_Nq2){
+      const int a = n%p_Nq;
+      const int k = n/p_Nq;
+
+      for(int j=0;j<p_halfCubNq;++j){
+	dfloat ApOdd  = s_Ap[blk][k][j][a];
+	dfloat ApEven = s_Ap[blk][k][p_cubNq-1-j][a];
+	r_tmpOdd[j]  = ApOdd + ApEven;
+	r_tmpEven[j] = ApOdd - ApEven;
+      }
+
+#pragma unroll p_halfNq
+      for(int b=0;b<p_halfNq;++b){
+	dfloat resOdd = 0, resEven = 0;
+	
+#pragma unroll p_halfCubNq
+	for(int j=0;j<p_halfCubNq;++j){
+	  resOdd  += r_oddI[j][b]*r_tmpOdd[j];
+	  resEven += r_evenI[j][b]*r_tmpEven[j];
+	}
+	
+	s_Ap[blk][k][b][a]        = resOdd + resEven;
+	s_Ap[blk][k][p_Nq-1-b][a] = resOdd - resEven;
+      }
+    }
+  }
+  
+  __syncthreads();
+
+  // test in 'c'
+  {
+    const int a = t%p_Nq;
+    const int b = t/p_Nq;
+
+    for(int k=0;k<p_halfCubNq;++k){
+      dfloat ApOdd  = s_Ap[blk][k][b][a];
+      dfloat ApEven = s_Ap[blk][p_cubNq-1-k][b][a];
+      r_tmpOdd[k]  = ApOdd + ApEven;
+      r_tmpEven[k] = ApOdd - ApEven;
+    }
+    
+#pragma unroll p_halfNq
+    for(int c=0;c<p_halfNq;++c){
+      dfloat resOdd = 0, resEven = 0;
+      
+#pragma unroll p_halfCubNq
+      for(int k=0;k<p_halfCubNq;++k){
+	resOdd  += r_oddI[k][c]*r_tmpOdd[k];
+	resEven += r_evenI[k][c]*r_tmpEven[k];
+      }
+      
+      r_Ap[c]        = resOdd + resEven;
+      r_Ap[p_Nq-1-c] = resOdd - resEven;
+      
+    }
+  }
+
+}
+
+
+
+__global__ void advectionMassMatrixMultiplyBlockedGlobalVgeoRegisterInterpKernel(const dlong Nelements,
+										 const dlong  * __restrict__ elementIds,
+										 const dfloat * __restrict__ cubvgeo,
+										 const dfloat * __restrict__ oddI,
+										 const dfloat * __restrict__ evenI,
+										 const dfloat * __restrict__ q,
+										 dfloat * __restrict__ qnew){
+  
+  __shared__ dfloat s_tmp1[p_Nblock][p_cubNq][p_cubNq][p_cubNq+p_padCubNq];
+  __shared__ dfloat s_oddI[p_halfNq*p_halfCubNq];
+  __shared__ dfloat s_evenI[p_halfCubNq*p_halfNq];
+
+  dfloat r_oddI[p_halfCubNq][p_halfNq];
+  dfloat r_evenI[p_halfCubNq][p_halfNq];
+
+  dfloat r_Aq[p_cubNq];
+
+  const unsigned int t = threadIdx.x;
+  const int blk = threadIdx.y;
+  
+  const dlong e = blockIdx.x*p_Nblock + blk;
+
+  const dlong element = (e<Nelements) ? elementIds[e]: 0;
+  
+  const unsigned int a = t%p_Nq;
+  const unsigned int b = t/p_Nq;
+
+  for(int c=0;c<p_Nq;++c){
+    
+    dlong id = a + b*p_Nq + c*p_Nq2 + element*p_Np;
+    
+    r_Aq[c] = q[id];
+  }
+
+  for(int n=t;n<p_halfNq*p_halfCubNq;n+=p_Nq*p_Nq){
+    s_oddI[n] = oddI[n];
+    s_evenI[n] = evenI[n];
+    n+=p_Nq*p_Nq;
+  }
+
+  __syncthreads();
+  
+  for(int n=0;n<p_halfNq*p_halfCubNq;++n){
+    r_oddI[0][n] = s_oddI[n];
+    r_evenI[0][n] = s_evenI[n];
+  }
+  
+  advectionMassMatrixMultiplyOddEvenBlockedGlobalVgeoRegisterInterp(Nelements, e, element, cubvgeo, r_oddI, r_evenI, s_tmp1, r_Aq);
+  
+  if(e<Nelements){
+#pragma unroll p_Nq
+    for(int c=0;c<p_Nq;++c){
+      dlong id = a + b*p_Nq + c*p_Nq2 + element*p_Np;
+      qnew[id] = r_Aq[c];
+    }
+  }
+}
+
+
 
 
 
@@ -992,8 +1528,9 @@ void advectionMassMatrixMultiplyHost(const dlong Nelements,
 }
 
 
-void buildInterpMatrices(dfloat *h_I){
+void buildInterpMatrices(dfloat *h_I, dfloat **c_packedI, dfloat **c_packedIT, dfloat **c_oddI, dfloat **c_evenI){
 
+#if 0
   // now overwrite h_I and copy to c_I
   printf("I = [\n");
   for(int i=0;i<p_cubNq;++i){
@@ -1003,6 +1540,7 @@ void buildInterpMatrices(dfloat *h_I){
     printf("\n");
   }
   printf("];\n");
+#endif
   
   //  cudaMemcpy(*c_I, *h_I, p_Nq*p_cubNq*sizeof(dfloat), cudaMemcpyHostToDevice);
 
@@ -1076,6 +1614,9 @@ void buildInterpMatrices(dfloat *h_I){
 
   dfloat *halfI  = (dfloat*) calloc(p_cubNq*p_halfNq, sizeof(dfloat));
   dfloat *halfIT = (dfloat*) calloc(p_cubNq*p_halfNq, sizeof(dfloat));
+
+  dfloat *oddI  = (dfloat*) calloc(p_cubNq*p_halfCubNq, sizeof(dfloat));
+  dfloat *evenI = (dfloat*) calloc(p_cubNq*p_halfCubNq, sizeof(dfloat));
   
   for(int i=0;i<p_halfCubNq;++i){
     for(int a=0;a<p_halfNq;++a){
@@ -1083,6 +1624,10 @@ void buildInterpMatrices(dfloat *h_I){
       halfI[2*(i*p_halfNq+a)+1] = cubInvXIinvX[(p_cubNq-1-i)*p_Nq + p_Nq-1-a];
       halfIT[2*(i+p_halfCubNq*a)+0] = cubInvXIinvX[i*p_Nq + a];
       halfIT[2*(i+p_halfCubNq*a)+1] = cubInvXIinvX[(p_cubNq-1-i)*p_Nq + p_Nq-1-a];
+
+      oddI[i*p_halfNq+a] = cubInvXIinvX[i*p_Nq+a];
+      evenI[i*p_halfNq+a] = cubInvXIinvX[(p_cubNq-1-i)*p_Nq + p_Nq-1-a];
+      
     }
   }
       
@@ -1091,17 +1636,42 @@ void buildInterpMatrices(dfloat *h_I){
 
   cudaMemcpyToSymbol(const_I,  halfI,  NconstantI*sizeof(dfloat), 0, cudaMemcpyHostToDevice);
   cudaMemcpyToSymbol(const_IT, halfIT, NconstantIT*sizeof(dfloat));
+
+  cudaMalloc(c_packedI, NconstantI*sizeof(dfloat));
+  cudaMalloc(c_packedIT, NconstantIT*sizeof(dfloat));
+
+  cudaMemcpy(*c_packedI,  halfI,  NconstantI*sizeof(dfloat),  cudaMemcpyHostToDevice);
+  cudaMemcpy(*c_packedIT, halfIT, NconstantIT*sizeof(dfloat), cudaMemcpyHostToDevice);
+
+  int NoddI = p_halfCubNq*p_halfNq;
+  int NevenI = p_halfCubNq*p_halfNq;
+  
+  cudaMalloc(c_oddI, NoddI*sizeof(dfloat));
+  cudaMalloc(c_evenI, NevenI*sizeof(dfloat));
+  
+  cudaMemcpy(*c_oddI,  oddI,  NoddI*sizeof(dfloat),  cudaMemcpyHostToDevice);
+  cudaMemcpy(*c_evenI, evenI, NoddI*sizeof(dfloat), cudaMemcpyHostToDevice);
   
 
 }
 
+#define USE_REGISTER_INTERP 1
+#define USE_SHARED_INTERP 0
 #define USE_BLOCKED 1
 #define USE_GRAPH 1
 #define USE_GLOBAL_VGEO 1
 
-#if USE_GLOBAL_VGEO==1
+#if USE_REGISTER_INTERP==1
+// store compressed interp matrix in register
+#define massMatrixKernel advectionMassMatrixMultiplyBlockedGlobalVgeoRegisterInterpKernel
+#elif USE_SHARED_INTERP==1
+// store compressed interp matrix in shared
+#define massMatrixKernel advectionMassMatrixMultiplyBlockedGlobalVgeoSharedInterpKernel
+#elif USE_GLOBAL_VGEO==1
+// read geofacs directly from global memory in middle of operation
 #define massMatrixKernel advectionMassMatrixMultiplyBlockedGlobalVgeoKernel
 #elif USE_BLOCKED==1
+// use element blocking to max out thread blocks
 #define massMatrixKernel advectionMassMatrixMultiplyBlockedKernel
 #else
 #define massMatrixKernel advectionMassMatrixMultiplyKernel
@@ -1127,9 +1697,10 @@ int main(int argc, char **argv){
   dfloat *h_qnew,    *c_qnew;
   dfloat *h_q,       *c_q;
   dfloat *h_I,       *c_I;
-
+  dfloat *c_packedI, *c_packedIT;
+  dfloat *c_oddI,    *c_evenI;
+  dfloat *h_garbage, *c_garbage;
   int    *h_elementIds, *c_elementIds;
-
 
   // list of elements
   h_elementIds = (int*) calloc(Nelements, sizeof(int));
@@ -1162,10 +1733,14 @@ int main(int argc, char **argv){
   }
 
   // create Odd-even packed storage for I and transpose(I) and push to constant memory
-  buildInterpMatrices(h_I);
+  buildInterpMatrices(h_I, &c_packedI, &c_packedIT, &c_oddI, &c_evenI);
 
+#if USE_REGISTER_INTERP==1
+  c_packedI = c_oddI;
+  c_packedIT = c_evenI;
+#endif
+  
   // flush L2 ??
-  dfloat *h_garbage, *c_garbage;
   int sz = 32*1024*1024; // 32MB
   dfloatRandAlloc(sz, &h_garbage, &c_garbage);
   
@@ -1225,7 +1800,7 @@ int main(int argc, char **argv){
   
   
   // warm up call
-  massMatrixKernel <<< G, B, 0, stream >>>(Nelements, c_elementIds, c_cubvgeo, c_I, c_q, c_qnew);
+  massMatrixKernel <<< G, B, 0, stream >>>(Nelements, c_elementIds, c_cubvgeo, c_packedI, c_packedIT, c_q, c_qnew);
 
 #if USE_GRAPH==1
   // cuda stream capture
@@ -1234,7 +1809,7 @@ int main(int argc, char **argv){
   cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal);
 
   for(int test=0;test<Ntests;++test){
-    massMatrixKernel <<< G, B, 0, stream >>>(Nelements, c_elementIds, c_cubvgeo, c_I, c_q, c_qnew);
+    massMatrixKernel <<< G, B, 0, stream >>>(Nelements, c_elementIds, c_cubvgeo, c_packedI, c_packedIT, c_q, c_qnew);
   }
 
   cudaStreamEndCapture(stream, &graph);
@@ -1250,7 +1825,7 @@ int main(int argc, char **argv){
     
 #if USE_GRAPH==0
     for(int test=0;test<Ntests;++test){
-     massMatrixKernel <<< G, B, 0, stream >>>(Nelements, c_elementIds, c_cubvgeo, c_I, c_q, c_qnew);
+      massMatrixKernel <<< G, B, 0, stream >>>(Nelements, c_elementIds, c_cubvgeo, c_packedI, c_packedIT, c_q, c_qnew);
     }
 #else
     cudaGraphLaunch(instance, stream);

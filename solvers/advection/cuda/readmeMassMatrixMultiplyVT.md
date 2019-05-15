@@ -4,10 +4,10 @@
 for Nq in `seq 10 2 12`
 do
 
-  rm advectionMassMatrixMultiply
+  rm massMatrixMultiplyVT
 
   let cubNq=$(($Nq + 2))
-  make advectionMassMatrixMultiply comp_Nq=$Nq comp_cubNq=$cubNq
+  make massMatrixMultiplyVT comp_Nq=$Nq comp_cubNq=$cubNq
   echo $cubNq
 
   let Np=$Nq*$Nq*$Nq
@@ -21,11 +21,11 @@ do
   echo $maxE
   echo $skipE
 
-  ./advectionMassMatrixMultiply 1
+  ./massMatrixMultiplyVT 1
   
   for E in `seq 80 $skipE $maxE`
   do
-    ./advectionMassMatrixMultiply $E
+    ./massMatrixMultiplyVT $E
   done
 done
       
