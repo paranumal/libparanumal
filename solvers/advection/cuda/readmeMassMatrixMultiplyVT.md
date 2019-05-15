@@ -1,13 +1,13 @@
 #!/bin/bash
 
+rm massMatrixMultiplyVT
+make massMatrixMultiplyVT
+
 # to run a sweep
-for Nq in `seq 10 2 12`
+for Nq in `seq 2 2 12`
 do
 
-  rm massMatrixMultiplyVT
-
   let cubNq=$(($Nq + 2))
-  make massMatrixMultiplyVT comp_Nq=$Nq comp_cubNq=$cubNq
   echo $cubNq
 
   let Np=$Nq*$Nq*$Nq
@@ -21,11 +21,11 @@ do
   echo $maxE
   echo $skipE
 
-  ./massMatrixMultiplyVT 1
+  ./massMatrixMultiplyVT $Nq $cubNq 1 
   
   for E in `seq 80 $skipE $maxE`
   do
-    ./massMatrixMultiplyVT $E
+    ./massMatrixMultiplyVT $Nq $cubNq $E
   done
 done
       

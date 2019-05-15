@@ -31,14 +31,13 @@ SOFTWARE.
 
 #define USE_GRAPH 1
 
+#define p_maxHalfNq 14
+#define p_maxHalfCubNq 16
 
-static const int p_Nq = comp_Nq;
-static const int p_cubNq = comp_cubNq;
+#define p_halfNq ((p_Nq+1)/2)
+#define p_halfCubNq ((p_cubNq+1)/2)
 
-static const int p_halfNq = ((comp_Nq+1)/2);
-static const int p_halfCubNq = ((comp_cubNq+1)/2);
-
-static const int p_padCubNq = (p_cubNq%4) ? 0:1;
+#define p_padCubNq ((p_cubNq%4) ? 0:1)
 
 #define p_Nq2 (p_Nq*p_Nq)
 #define p_Np  (p_Nq*p_Nq*p_Nq)
@@ -51,27 +50,14 @@ static const int p_padCubNq = (p_cubNq%4) ? 0:1;
 
 #define p_Nwarps ((p_Nq2+32-1)/32)
 
-#if comp_Nq<=2
-#define p_Nblock 8
-#warning "using 8 elements per block"
-#elif comp_Nq<=4
-#define p_Nblock 2
-#warning "using 2 elements per block"
-#elif comp_Nq<10
-#define p_Nblock 1
-#warning "using 1 elements per block"
-#else
-#define p_Nblock 1
-#warning "using 1 elements per block"
-#endif
+// #define p_Nblock ((p_Nq<=2)*7 + (2<p_Nq && p_Nq<=4)*1 + 1)
 
 #define dlong int
 #define hlong dlong
 #define dfloat double
 
-__constant__ dfloat const_oddI[p_halfCubNq][p_halfNq];
-__constant__ dfloat const_evenI[p_halfCubNq][p_halfNq];
-
+__constant__ dfloat const_oddI[p_maxHalfCubNq*p_maxHalfNq];
+__constant__ dfloat const_evenI[p_maxHalfCubNq*p_maxHalfNq];
 
 void dfloatRandAlloc(int N, dfloat **h_a, dfloat **c_a){
 
@@ -88,15 +74,16 @@ void dfloatRandAlloc(int N, dfloat **h_a, dfloat **c_a){
 
 __global__ void nothingKernel(){  }
 
-__forceinline__ __device__
-void massMatrixMultiplyDevice(const dlong Nelements,
-			      const dlong element,
-			      const dlong elementId,
-			      const dfloat * __restrict__ cubvgeo,
-			      const dfloat r_oddI[p_halfCubNq][p_halfNq],
-			      const dfloat r_evenI[p_halfCubNq][p_halfNq],
-			      dfloat s_Ap[p_Nblock][p_cubNq][p_cubNq][p_cubNq+p_padCubNq],
-			      dfloat * __restrict__ r_Ap){
+template <int p_Nq, int p_cubNq, int p_Nblock >
+  __forceinline__ __device__ 
+  void massMatrixMultiplyDevice(const dlong Nelements,
+				const dlong element,
+				const dlong elementId,
+				const dfloat * __restrict__ cubvgeo,
+				const dfloat * __restrict__ oddI,
+				const dfloat * __restrict__ evenI,
+				dfloat s_Ap[p_Nblock][p_cubNq][p_cubNq][p_cubNq+p_padCubNq],
+				dfloat * __restrict__ r_Ap){
   
   dfloat r_tmpOdd[p_halfCubNq];
   dfloat r_tmpEven[p_halfCubNq];
@@ -111,21 +98,21 @@ void massMatrixMultiplyDevice(const dlong Nelements,
     const int a = t%p_Nq;
     const int b = t/p_Nq;
     
-#pragma unroll p_halfNq
+#pragma unroll
     for(int c=0;c<p_halfNq;++c){
       r_tmpOdd[c]  = r_Ap[c] + r_Ap[p_Nq-1-c];
       r_tmpEven[c] = r_Ap[c] - r_Ap[p_Nq-1-c];
     }
     
-#pragma unroll p_halfCubNq
+#pragma unroll
     for(int k=0;k<p_halfCubNq;++k){
       dfloat resOdd = 0, resEven = 0;
       
-#pragma unroll p_halfNq
+#pragma unroll
       for(int c=0;c<p_halfNq;++c){
 	
-	resOdd += r_oddI[k][c]*r_tmpOdd[c];
-	resEven += r_evenI[k][c]*r_tmpEven[c];
+	resOdd  += oddI[k*p_halfNq+c]*r_tmpOdd[c];
+	resEven += evenI[k*p_halfNq+c]*r_tmpEven[c];
 	
       }
       s_Ap[blk][k][b][a]           = resOdd + resEven;
@@ -142,7 +129,7 @@ void massMatrixMultiplyDevice(const dlong Nelements,
       const int a = n%p_Nq;
       const int k = n/p_Nq;
 
-#pragma unroll p_halfNq
+#pragma unroll
       for(int b=0;b<p_halfNq;++b){
 	dfloat ApOdd  = s_Ap[blk][k][b][a];
 	dfloat ApEven = s_Ap[blk][k][p_Nq-1-b][a];
@@ -150,14 +137,14 @@ void massMatrixMultiplyDevice(const dlong Nelements,
 	r_tmpEven[b] = ApOdd - ApEven;
       }      
       
-#pragma unroll p_halfCubNq
+#pragma unroll
       for(int j=0;j<p_halfCubNq;++j){
 	dfloat resOdd = 0, resEven = 0;
 	
-#pragma unroll p_halfNq
+#pragma unroll
 	for(int b=0;b<p_halfNq;++b){
-	  resOdd += r_oddI[j][b]*r_tmpOdd[b];
-	  resEven += r_evenI[j][b]*r_tmpEven[b];
+	  resOdd  += oddI[j*p_halfNq+b]*r_tmpOdd[b];
+	  resEven += evenI[j*p_halfNq+b]*r_tmpEven[b];
 	}
 	
 	s_Ap[blk][k][j][a]           = resOdd+resEven;
@@ -176,7 +163,7 @@ void massMatrixMultiplyDevice(const dlong Nelements,
       const int j = n%p_cubNq;
       const int k = n/p_cubNq;
       
-#pragma unroll p_halfNq
+#pragma unroll
       for(int a=0;a<p_halfNq;++a){
 	dfloat ApOdd  = s_Ap[blk][k][j][a];
 	dfloat ApEven = s_Ap[blk][k][j][p_Nq-1-a];
@@ -184,14 +171,14 @@ void massMatrixMultiplyDevice(const dlong Nelements,
 	r_tmpEven[a] = ApOdd - ApEven;
       }
       
-#pragma unroll p_halfCubNq
+#pragma unroll
       for(int i=0;i<p_halfCubNq;++i){
 	dfloat resOdd = 0, resEven = 0;
 	
-#pragma unroll p_halfNq
+#pragma unroll
 	for(int a=0;a<p_halfNq;++a){
-	  resOdd  += r_oddI[i][a]*r_tmpOdd[a];
-	  resEven += r_evenI[i][a]*r_tmpEven[a];
+	  resOdd  += oddI[i*p_halfNq+a]*r_tmpOdd[a];
+	  resEven += evenI[i*p_halfNq+a]*r_tmpEven[a];
 	}
 
 	dlong gid1 = elementId*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i;
@@ -207,14 +194,14 @@ void massMatrixMultiplyDevice(const dlong Nelements,
 	r_Ap[p_cubNq-1-i] = ApOdd - ApEven;
       }
 
-#pragma unroll p_halfNq
+#pragma unroll
       for(int a=0;a<p_halfNq;++a){
 	dfloat resOdd = 0, resEven = 0;
 	
-#pragma unroll p_halfCubNq
+#pragma unroll
 	for(int i=0;i<p_halfCubNq;++i){
-	  resOdd  += r_oddI[i][a]*r_Ap[i];
-	  resEven += r_evenI[i][a]*r_Ap[p_cubNq-1-i];
+	  resOdd  += oddI[i*p_halfNq+a]*r_Ap[i];
+	  resEven += evenI[i*p_halfNq+a]*r_Ap[p_cubNq-1-i];
 	}
 	
 	s_Ap[blk][k][j][a]        = resOdd + resEven;
@@ -240,14 +227,14 @@ void massMatrixMultiplyDevice(const dlong Nelements,
 	r_tmpEven[j] = ApOdd - ApEven;
       }
 
-#pragma unroll p_halfNq
+#pragma unroll
       for(int b=0;b<p_halfNq;++b){
 	dfloat resOdd = 0, resEven = 0;
 	
-#pragma unroll p_halfCubNq
+#pragma unroll
 	for(int j=0;j<p_halfCubNq;++j){
-	  resOdd  += r_oddI[j][b]*r_tmpOdd[j];
-	  resEven += r_evenI[j][b]*r_tmpEven[j];
+	  resOdd  += oddI[j*p_halfNq+b]*r_tmpOdd[j];
+	  resEven += evenI[j*p_halfNq+b]*r_tmpEven[j];
 	}
 	
 	s_Ap[blk][k][b][a]        = resOdd + resEven;
@@ -270,14 +257,14 @@ void massMatrixMultiplyDevice(const dlong Nelements,
       r_tmpEven[k] = ApOdd - ApEven;
     }
     
-#pragma unroll p_halfNq
+#pragma unroll
     for(int c=0;c<p_halfNq;++c){
       dfloat resOdd = 0, resEven = 0;
       
-#pragma unroll p_halfCubNq
+#pragma unroll
       for(int k=0;k<p_halfCubNq;++k){
-	resOdd  += r_oddI[k][c]*r_tmpOdd[k];
-	resEven += r_evenI[k][c]*r_tmpEven[k];
+	resOdd  += oddI[k*p_halfNq+c]*r_tmpOdd[k];
+	resEven += evenI[k*p_halfNq+c]*r_tmpEven[k];
       }
       
       r_Ap[c]        = resOdd + resEven;
@@ -288,8 +275,69 @@ void massMatrixMultiplyDevice(const dlong Nelements,
 
 }
 
+template <int p_Nq, int p_cubNq, int p_Nblock >
+  __global__ void massMatrixMultiplyRegisterKernel(const dlong Nelements,
+						   const dlong  * __restrict__ elementIds,
+						   const dfloat * __restrict__ cubvgeo,
+						   const dfloat * __restrict__ oddI,
+						   const dfloat * __restrict__ evenI,
+						   const dfloat * __restrict__ q,
+						   dfloat * __restrict__ qnew){
+  
+  __shared__ dfloat s_tmp1[p_Nblock][p_cubNq][p_cubNq][p_cubNq+p_padCubNq];
+  __shared__ dfloat s_oddI[p_halfNq*p_halfCubNq];
+  __shared__ dfloat s_evenI[p_halfCubNq*p_halfNq];
 
-__global__ void massMatrixMultiplyRegisterKernel(const dlong Nelements,
+  dfloat r_oddI[p_halfCubNq*p_halfNq];
+  dfloat r_evenI[p_halfCubNq*p_halfNq];
+
+  dfloat r_Aq[p_cubNq];
+
+  const unsigned int t = threadIdx.x;
+  const int blk = threadIdx.y;
+  
+  const dlong e = blockIdx.x*p_Nblock + blk;
+
+  const dlong element = (e<Nelements) ? elementIds[e]: 0;
+  
+  const unsigned int a = t%p_Nq;
+  const unsigned int b = t/p_Nq;
+
+  for(int c=0;c<p_Nq;++c){
+    
+    dlong id = a + b*p_Nq + c*p_Nq2 + element*p_Np;
+    
+    r_Aq[c] = q[id];
+  }
+
+  for(int n=t;n<p_halfNq*p_halfCubNq;n+=p_Nq*p_Nq){
+    s_oddI[n] = oddI[n];
+    s_evenI[n] = evenI[n];
+    n+=p_Nq*p_Nq;
+  }
+
+  __syncthreads();
+
+  // now copy shared data to thread local register arrays
+  for(int n=0;n<p_halfNq*p_halfCubNq;++n){
+    r_oddI[n] = s_oddI[n];
+    r_evenI[n] = s_evenI[n];
+  }
+  
+  massMatrixMultiplyDevice <p_Nq, p_cubNq, p_Nblock> (Nelements, e, element, cubvgeo, r_oddI, r_evenI, s_tmp1, r_Aq);
+  
+  if(e<Nelements){
+#pragma unroll
+    for(int c=0;c<p_Nq;++c){
+      dlong id = a + b*p_Nq + c*p_Nq2 + element*p_Np;
+      qnew[id] = r_Aq[c];
+    }
+  }
+}
+
+
+template <int p_Nq, int p_cubNq, int p_Nblock >
+  __global__ void massMatrixMultiplySharedKernel(const dlong Nelements,
 						 const dlong  * __restrict__ elementIds,
 						 const dfloat * __restrict__ cubvgeo,
 						 const dfloat * __restrict__ oddI,
@@ -298,11 +346,8 @@ __global__ void massMatrixMultiplyRegisterKernel(const dlong Nelements,
 						 dfloat * __restrict__ qnew){
   
   __shared__ dfloat s_tmp1[p_Nblock][p_cubNq][p_cubNq][p_cubNq+p_padCubNq];
-  __shared__ dfloat s_oddI[p_halfNq*p_halfCubNq];
+  __shared__ dfloat s_oddI[p_halfCubNq*p_halfNq];
   __shared__ dfloat s_evenI[p_halfCubNq*p_halfNq];
-
-  dfloat r_oddI[p_halfCubNq][p_halfNq];
-  dfloat r_evenI[p_halfCubNq][p_halfNq];
 
   dfloat r_Aq[p_cubNq];
 
@@ -331,15 +376,10 @@ __global__ void massMatrixMultiplyRegisterKernel(const dlong Nelements,
 
   __syncthreads();
   
-  for(int n=0;n<p_halfNq*p_halfCubNq;++n){
-    r_oddI[0][n] = s_oddI[n];
-    r_evenI[0][n] = s_evenI[n];
-  }
-  
-  massMatrixMultiplyDevice(Nelements, e, element, cubvgeo, r_oddI, r_evenI, s_tmp1, r_Aq);
+  massMatrixMultiplyDevice  <p_Nq, p_cubNq, p_Nblock> (Nelements, e, element, cubvgeo, s_oddI, s_evenI, s_tmp1, r_Aq);
   
   if(e<Nelements){
-#pragma unroll p_Nq
+#pragma unroll
     for(int c=0;c<p_Nq;++c){
       dlong id = a + b*p_Nq + c*p_Nq2 + element*p_Np;
       qnew[id] = r_Aq[c];
@@ -347,59 +387,7 @@ __global__ void massMatrixMultiplyRegisterKernel(const dlong Nelements,
   }
 }
 
-
-
-__global__ void massMatrixMultiplySharedKernel(const dlong Nelements,
-						 const dlong  * __restrict__ elementIds,
-						 const dfloat * __restrict__ cubvgeo,
-						 const dfloat * __restrict__ oddI,
-						 const dfloat * __restrict__ evenI,
-						 const dfloat * __restrict__ q,
-						 dfloat * __restrict__ qnew){
-  
-  __shared__ dfloat s_tmp1[p_Nblock][p_cubNq][p_cubNq][p_cubNq+p_padCubNq];
-  __shared__ dfloat s_oddI[p_halfCubNq][p_halfNq];
-  __shared__ dfloat s_evenI[p_halfCubNq][p_halfNq];
-
-  dfloat r_Aq[p_cubNq];
-
-  const unsigned int t = threadIdx.x;
-  const int blk = threadIdx.y;
-  
-  const dlong e = blockIdx.x*p_Nblock + blk;
-
-  const dlong element = (e<Nelements) ? elementIds[e]: 0;
-  
-  const unsigned int a = t%p_Nq;
-  const unsigned int b = t/p_Nq;
-
-  for(int c=0;c<p_Nq;++c){
-    
-    dlong id = a + b*p_Nq + c*p_Nq2 + element*p_Np;
-    
-    r_Aq[c] = q[id];
-  }
-
-  for(int n=t;n<p_halfNq*p_halfCubNq;n+=p_Nq*p_Nq){
-    s_oddI[0][n] = oddI[n];
-    s_evenI[0][n] = evenI[n];
-    n+=p_Nq*p_Nq;
-  }
-
-  __syncthreads();
-  
-  massMatrixMultiplyDevice(Nelements, e, element, cubvgeo, s_oddI, s_evenI, s_tmp1, r_Aq);
-  
-  if(e<Nelements){
-#pragma unroll p_Nq
-    for(int c=0;c<p_Nq;++c){
-      dlong id = a + b*p_Nq + c*p_Nq2 + element*p_Np;
-      qnew[id] = r_Aq[c];
-    }
-  }
-}
-
-
+template <int p_Nq, int p_cubNq, int p_Nblock >
 __global__ void massMatrixMultiplyConstantKernel(const dlong Nelements,
 						 const dlong  * __restrict__ elementIds,
 						 const dfloat * __restrict__ cubvgeo,
@@ -431,10 +419,10 @@ __global__ void massMatrixMultiplyConstantKernel(const dlong Nelements,
 
   __syncthreads();
   
-  massMatrixMultiplyDevice(Nelements, e, element, cubvgeo, const_oddI, const_evenI, s_tmp1, r_Aq);
+  massMatrixMultiplyDevice  <p_Nq, p_cubNq, p_Nblock> (Nelements, e, element, cubvgeo, const_oddI, const_evenI, s_tmp1, r_Aq);
   
   if(e<Nelements){
-#pragma unroll p_Nq
+#pragma unroll
     for(int c=0;c<p_Nq;++c){
       dlong id = a + b*p_Nq + c*p_Nq2 + element*p_Np;
       qnew[id] = r_Aq[c];
@@ -444,12 +432,7 @@ __global__ void massMatrixMultiplyConstantKernel(const dlong Nelements,
 
 
 
-
-
-
-
-
-void massMatrixMultiplyHost(const dlong Nelements,
+void massMatrixMultiplyHost(int p_Nq, int p_cubNq, const dlong Nelements,
 			    const dlong  * __restrict__ elementIds,
 			    const dfloat * __restrict__ cubvgeo,
 			    const dfloat * __restrict__ cubI,
@@ -587,8 +570,7 @@ void massMatrixMultiplyHost(const dlong Nelements,
   
 }
 
-
-void buildInterpMatrices(dfloat *h_I,  dfloat **c_oddI, dfloat **c_evenI){
+void buildInterpMatrices(int p_Nq, int p_cubNq, dfloat *h_I,  dfloat **c_oddI, dfloat **c_evenI){
 
 #if 0
   // now overwrite h_I and copy to c_I
@@ -698,21 +680,132 @@ void buildInterpMatrices(dfloat *h_I,  dfloat **c_oddI, dfloat **c_evenI){
 }
 
 
+void runMassMatrixMultiplyKernel(cudaStream_t stream, int Nq, int cubNq, hlong Nelements,
+				 dlong *c_elementIds, dfloat *c_cubvgeo, dfloat *c_oddI, dfloat *c_evenI, dfloat *c_q, dfloat *c_qnew){
+  
+#define massMatrixMultiplyKernel(Nq,cubNq,Nblock)			\
+  {									\
+    if(Nq<=8) massMatrixMultiplyRegisterKernel<Nq,cubNq,Nblock> <<< G, B, 0, stream >>>(Nelements, c_elementIds, c_cubvgeo, c_oddI, c_evenI, c_q, c_qnew); \
+    else      massMatrixMultiplyConstantKernel<Nq,cubNq,Nblock> <<< G, B, 0, stream >>>(Nelements, c_elementIds, c_cubvgeo, c_oddI, c_evenI, c_q, c_qnew); \
+  }
+  
+#define ERR printf("massMatrixMultiplyRegister with Nq=%d, cubNq=%d not available", Nq, cubNq); exit(-1)
+
+  int Nblock = 1;
+  if(Nq==2){
+    Nblock = 8;
+    dim3 G((Nelements+Nblock-1)/Nblock, 1, 1);
+    dim3 B(Nq*Nq, Nblock, 1);
+    
+    switch(cubNq){
+    case 2: massMatrixMultiplyKernel(2,2,8); break;
+    case 4: massMatrixMultiplyKernel(2,4,8); break;
+    case 6: massMatrixMultiplyKernel(2,6,8); break;
+    default: ERR;
+    }
+    return;
+  }
+
+  if(Nq==4){
+    Nblock = 2;
+    dim3 G((Nelements+Nblock-1)/Nblock, 1, 1);
+    dim3 B(Nq*Nq, Nblock, 1);
+    
+    switch(cubNq){
+    case 4: massMatrixMultiplyKernel(4,4,2); break;
+    case 6: massMatrixMultiplyKernel(4,6,2); break;
+    case 8: massMatrixMultiplyKernel(4,8,2); break;
+    default: ERR;
+    }
+    return;
+  }
+
+  Nblock = 1;
+  dim3 G((Nelements+Nblock-1)/Nblock, 1, 1);
+  dim3 B(Nq*Nq, Nblock, 1);
+  
+  if(Nq==6){
+    switch(cubNq){
+    case 6:  massMatrixMultiplyKernel(6, 6,1); break;
+    case 8:  massMatrixMultiplyKernel(6, 8,1); break;
+    case 10: massMatrixMultiplyKernel(6,10,1); break;
+    default: ERR;
+    }
+    return;
+  }
+
+  if(Nq==8){
+    switch(cubNq){
+    case 8:  massMatrixMultiplyKernel(8, 8,1); break;
+    case 10: massMatrixMultiplyKernel(8,10,1); break;
+    case 12: massMatrixMultiplyKernel(8,12,1); break;
+    default: ERR;
+    }
+    return;
+  }
+
+  if(Nq==10){
+    switch(cubNq){
+    case 10: massMatrixMultiplyKernel(10,10,1); break;
+    case 12: massMatrixMultiplyKernel(10,12,1); break;
+    case 14: massMatrixMultiplyKernel(10,14,1); break;
+    default: ERR;
+    }
+    return;
+  }
+
+  if(Nq==12){
+    switch(cubNq){
+    case 12: massMatrixMultiplyKernel(12,12,1); break;
+    case 14: massMatrixMultiplyKernel(12,14,1); break;
+    case 16: massMatrixMultiplyKernel(12,16,1); break;
+    default: ERR;
+    }
+    return;
+  }
+  
+  ERR;
+}
+
+
+
+
+
 int main(int argc, char **argv){
 
   cudaStream_t stream;
   cudaStreamCreate(&stream);
   
-  if(argc!=2){
-    printf("Usage: ./massMatrixMultiplyVT Nelements\n");
+  if(argc!=4){
+    printf("Usage: ./massMatrixMultiplyVT Nq cubNq Nelements\n");
     exit(-1);
   }
 
   // read number of elements
-  hlong Nelements = atoi(argv[argc-1]);
+  int   Nq = atoi(argv[1]);
+  int   cubNq = atoi(argv[2]);
+  hlong Nelements = atoi(argv[3]);
+
+  printf("Running: Nq=%d, cubNq=%d, Nelements=%d\n", Nq, cubNq, Nelements);
   
-  int    Ntotal = Nelements*p_Np;
-  int cubNtotal = Nelements*p_cubNp;
+  if(Nq%2){
+    printf("Nq must be even\n");
+    exit(-1);
+  }
+
+  if(cubNq%2){
+    printf("cubNq must be even\n");
+    exit(-1);
+  }
+  
+  int   Np = Nq*Nq*Nq;
+  int   cubNp = cubNq*cubNq*cubNq;
+
+  int halfNq = ((Nq+1)/2);
+  int halfCubNq = ((cubNq+1)/2);
+
+  int    Ntotal = Nelements*Np;
+  int cubNtotal = Nelements*cubNp;
 
   dfloat *h_cubvgeo, *c_cubvgeo;
   dfloat *h_qnew,    *c_qnew;
@@ -728,32 +821,32 @@ int main(int argc, char **argv){
     h_elementIds[e] = e;
   cudaMalloc(&c_elementIds, Nelements*sizeof(int));
   cudaMemcpy(c_elementIds, h_elementIds, Nelements*sizeof(int), cudaMemcpyHostToDevice);
-  
+
   // float fields
   dfloatRandAlloc(cubNtotal*p_Nvgeo, &h_cubvgeo, &c_cubvgeo);
 
   for(int e=0;e<Nelements;++e){
-    for(int n=0;n<p_cubNp;++n){
-      h_cubvgeo[e*p_cubNp+n] = drand48();
+    for(int n=0;n<cubNp;++n){
+      h_cubvgeo[e*cubNp+n] = drand48();
     }
   }
-
-  cudaMemcpy(c_cubvgeo, h_cubvgeo, p_Nvgeo*Nelements*p_cubNp*sizeof(dfloat), cudaMemcpyHostToDevice);
+  
+  cudaMemcpy(c_cubvgeo, h_cubvgeo, p_Nvgeo*Nelements*cubNp*sizeof(dfloat), cudaMemcpyHostToDevice);
   
   dfloatRandAlloc(Ntotal,       &h_q, &c_q);
   dfloatRandAlloc(Ntotal,       &h_qnew, &c_qnew);
-
-  dfloatRandAlloc(p_Nq*p_cubNq, &h_I, &c_I);
+  
+  dfloatRandAlloc(Nq*cubNq, &h_I, &c_I);
   
   // give I the correct symmetry
-  for(int i=0;i<p_halfCubNq;++i){
-    for(int a=0;a<p_Nq;++a){
-      h_I[(p_cubNq-1-i)*p_Nq + p_Nq-1-a] = h_I[i*p_Nq+a];
+  for(int i=0;i<halfCubNq;++i){
+    for(int a=0;a<Nq;++a){
+      h_I[(cubNq-1-i)*Nq + Nq-1-a] = h_I[i*Nq+a];
     }
   }
 
   // create Odd-even packed storage for I and transpose(I) and push to constant memory
-  buildInterpMatrices(h_I, &c_oddI, &c_evenI);
+  buildInterpMatrices (Nq,cubNq, h_I, &c_oddI, &c_evenI);
 
   // flush L2 ??
   int sz = 32*1024*1024; // 32MB
@@ -765,8 +858,6 @@ int main(int argc, char **argv){
 
   int Ntests = 100;
   // KERNEL GRID
-  dim3 G((Nelements+p_Nblock-1)/p_Nblock, 1, 1);
-  dim3 B(p_Nq*p_Nq, p_Nblock, 1);
 
   float nothingElapsed = 0;
   {
@@ -813,12 +904,8 @@ int main(int argc, char **argv){
   
   }
   
-  int cacheSwitchNq = 8;
   // warm up call
-  if(p_Nq<=cacheSwitchNq) 
-    massMatrixMultiplyRegisterKernel <<< G, B, 0, stream >>>(Nelements, c_elementIds, c_cubvgeo, c_oddI, c_evenI, c_q, c_qnew);
-  else
-    massMatrixMultiplyConstantKernel <<< G, B, 0, stream >>>(Nelements, c_elementIds, c_cubvgeo, c_oddI, c_evenI, c_q, c_qnew);
+  runMassMatrixMultiplyKernel (stream, Nq, cubNq, Nelements, c_elementIds, c_cubvgeo, c_oddI, c_evenI, c_q, c_qnew);
 
 #if USE_GRAPH==1
   // cuda stream capture
@@ -828,10 +915,7 @@ int main(int argc, char **argv){
 
   for(int test=0;test<Ntests;++test){
 
-    if(p_Nq<=cacheSwitchNq) 
-      massMatrixMultiplyRegisterKernel <<< G, B, 0, stream >>>(Nelements, c_elementIds, c_cubvgeo, c_oddI, c_evenI, c_q, c_qnew);
-    else
-      massMatrixMultiplyConstantKernel <<< G, B, 0, stream >>>(Nelements, c_elementIds, c_cubvgeo, c_oddI, c_evenI, c_q, c_qnew);
+    runMassMatrixMultiplyKernel (stream, Nq, cubNq, Nelements, c_elementIds, c_cubvgeo, c_oddI, c_evenI, c_q, c_qnew);
     
   }
 
@@ -849,10 +933,7 @@ int main(int argc, char **argv){
 #if USE_GRAPH==0
     for(int test=0;test<Ntests;++test){
 
-      if(p_Nq<=cacheSwitchNq) 
-	massMatrixMultiplyRegisterKernel <<< G, B, 0, stream >>>(Nelements, c_elementIds, c_cubvgeo, c_oddI, c_evenI, c_q, c_qnew);
-      else
-	massMatrixMultiplyConstantKernel <<< G, B, 0, stream >>>(Nelements, c_elementIds, c_cubvgeo, c_oddI, c_evenI, c_q, c_qnew);
+      runMassMatrixMultiplyKernel (stream, Nq, cubNq, Nelements, c_elementIds, c_cubvgeo, c_oddI, c_evenI, c_q, c_qnew);
       
     }
 #else
@@ -868,21 +949,22 @@ int main(int argc, char **argv){
     elapsed /= 1000.;
     elapsed /= (double) Ntests;
     
-    printf("%d %d %d %lg %lg %lg %%%% [MassMatrixMultiply: N, Nelements, Ndofs, elapsed, dofsPerSecond, nothingElapsed]\n", p_Nq-1, Nelements, p_Np*Nelements, elapsed, Nelements*(p_Np/elapsed), nothingElapsed);
+    printf("%2d %8d %8d %e %e %e %%%% [MassMatrixMultiply: N, Nelements, Ndofs, elapsed, dofsPerSecond, nothingElapsed]\n",
+	   Nq-1, Nelements, Np*Nelements, elapsed, Nelements*(Np/elapsed), nothingElapsed);
   }
 
   // check output is correct
-  massMatrixMultiplyHost(Nelements, h_elementIds, h_cubvgeo, h_I, h_q, h_qnew);
+  massMatrixMultiplyHost (Nq,cubNq,Nelements, h_elementIds, h_cubvgeo, h_I, h_q, h_qnew);
 
   // copy device version to host old q
-  dfloat *fromDevice = (dfloat*) calloc(Nelements*p_Np, sizeof(dfloat));
-  cudaMemcpy(fromDevice, c_qnew, Nelements*p_Np*sizeof(dfloat), cudaMemcpyDeviceToHost);
+  dfloat *fromDevice = (dfloat*) calloc(Nelements*Np, sizeof(dfloat));
+  cudaMemcpy(fromDevice, c_qnew, Nelements*Np*sizeof(dfloat), cudaMemcpyDeviceToHost);
 
   dfloat maxDiff = 0;
   
   for(int e=0;e<Nelements;++e){
-    for(int n=0;n<p_Np;++n){
-      int id = e*p_Np + n;
+    for(int n=0;n<Np;++n){
+      int id = e*Np + n;
       dfloat diff = fabs(h_qnew[id]-fromDevice[id]);
       maxDiff = (diff>maxDiff) ? diff:maxDiff;
     }
