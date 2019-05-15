@@ -8,6 +8,10 @@ advectionInvertMassMatrix: advectionInvertMassMatrixV2.cu
 advectionMassMatrixMultiply: advectionMassMatrixMultiply.cu
 	nvcc -o advectionMassMatrixMultiply $(cudaFlags) advectionMassMatrixMultiply.cu
 
+massMatrixMultiplyVT: massMatrixMultiplyVT.cu
+	nvcc -o massMatrixMultiplyVT $(cudaFlags) massMatrixMultiplyVT.cu
+
+
 roofline: roofline.cu
 	nvcc -o roofline $(cudaFlags) roofline.cu
 
