@@ -4,7 +4,7 @@ rm massMatrixMultiplyVT
 make massMatrixMultiplyVT
 
 # to run a sweep
-for Nq in `seq 2 2 12`
+for Nq in `seq 8 2 12`
 do
 
   let cubNq=$(($Nq + 2))
