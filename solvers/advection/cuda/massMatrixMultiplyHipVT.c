@@ -91,29 +91,6 @@ void randAlloc(int N, dfloat_t **h_a, dfloat_t **c_a){
 
 __global__ void nothingKernel(){  }
 
-__global__ void nothingVerboseKernel(int n, dfloat_t *creOut, dfloat_t *cimOut){
-
-
-  if(n==-1 || n==-7098 || n==1023 || n==3521){ // this will never be true
-
-    dfloat_t cre = hipThreadIdx_x + hipBlockIdx_x*hipBlockDim_x;
-    dfloat_t cim = hipThreadIdx_y + hipBlockIdx_x*hipBlockDim_y;
-
-#pragma unroll 1
-    for(int i=0;i<1;++i){
-      dfloat_t tmpre = cre*cre-cim*cim;
-      dfloat_t tmpim = 2.*cre*cim;
-
-      cre = tmpre;
-      cim = tmpim;
-
-    }
-
-    creOut[0] = cre;
-    
-  }
-}
-
 template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
   __forceinline__ __device__ 
   void massMatrixMultiplyDevice(const int numElements,
@@ -852,87 +829,6 @@ dfloat_t nothingTest(hipStream_t stream, int Ntests){
   return nothingElapsed;
 }
 
-dfloat_t nothingVerboseTest(hipStream_t stream, int Ntests){
-
-  int n = 1;
-  dfloat_t *c_cre, *c_cim;
-
-  hipMalloc(&c_cre, sizeof(dfloat_t));
-  hipMalloc(&c_cim, sizeof(dfloat_t));
-
-
-#if 0
-  dim3 G(800); // continuous degradation with increasing G 
-  dim3 B(769); // 769 slows it down
-#else
-  //  dim3 G(25600); // continuous degradation with increasing G 
-  //  dim3 B(50); // 769 slows it down
-#endif
-
-  int B=50;
-
-  float nothingVerboseElapsed = 0;
-  
-  for(int G=1;G<25600;G+=10){
-    
-    hipEvent_t start, end;
-    hipEventCreate(&start);
-    hipEventCreate(&end);	
-    
-    hipDeviceSynchronize();
-    
-    
-    {
-      
-      // time kernel that does nothing
-      
-#if USE_GRAPH==1
-      // hip stream capture sequence for nothingKernel
-      hipGraph_t nothingGraph;
-      
-      hipStreamBeginCapture(stream, hipStreamCaptureModeGlobal);
-      
-      for(int test=0;test<Ntests;++test){
-	hipLaunchKernelGGL(nothingVerboseKernel, G, B, 0, stream, n, c_cre, c_cim);
-      }
-      
-      hipStreamEndCapture(stream, &nothingGraph);
-      
-      // time graph sequence for nothing
-      hipGraphExec_t nothingInstance;
-      hipGraphInstantiate(&nothingInstance, nothingGraph, NULL, NULL, 0);
-      
-      hipEventRecord(start, stream);
-      
-      hipGraphLaunch(nothingInstance, stream);
-      
-      hipEventRecord(end, stream);
-#else
-      
-      hipEventRecord(start, stream);
-      
-      for(int test=0;test<Ntests;++test)
-	hipLaunchKernelGGL(nothingVerboseKernel, G, B, 0, stream, n, c_cre, c_cim);
-      
-      hipEventRecord(end, stream);
-      
-#endif
-      
-      hipDeviceSynchronize();
-      
-      hipEventElapsedTime(&nothingVerboseElapsed, start, end);
-      nothingVerboseElapsed /= 1000.;
-      nothingVerboseElapsed /= (double) Ntests;
-
-      printf("%d, %d, %e %%%% G B nothingVerboseElapsed\n", G, B, nothingVerboseElapsed);
-    }
-  }
-  
-    return nothingVerboseElapsed;
-}
-
-
-
 
 int main(int argc, char **argv){
 
@@ -1009,7 +905,6 @@ int main(int argc, char **argv){
   // KERNEL GRID
   // do nothing kernel test
   dfloat_t nothingElapsed = nothingTest(stream, Ntests);
-  dfloat_t nothingVerboseElapsed = nothingVerboseTest(stream, Ntests);
   
   // warm up call
   runMassMatrixMultiplyKernel (stream, Nq, cubNq, numElements, c_op, c_oddDofToQuad, c_evenDofToQuad, c_solIn, c_solOut);
@@ -1056,9 +951,9 @@ int main(int argc, char **argv){
     elapsed /= 1000.;
     elapsed /= (double) Ntests;
     
-    printf("%2d %8d %8d %e %e %e %e %%%% [MassMatrixMultiply: N, numElements, Ndofs,"
-	   " elapsed, dofsPerSecond, nothingElapsed, nothingVerboseElapsed]\n",
-	   Nq-1, numElements, Np*numElements, elapsed, numElements*(Np/elapsed), nothingElapsed, nothingVerboseElapsed);
+    printf("%2d %8d %8d %e %e %e %%%% [MassMatrixMultiply: N, numElements, Ndofs,"
+	   " elapsed, dofsPerSecond, nothingElapsed]\n",
+	   Nq-1, numElements, Np*numElements, elapsed, numElements*(Np/elapsed), nothingElapsed);
   }
 
   // check output is correct
