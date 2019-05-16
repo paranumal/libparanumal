@@ -96,8 +96,8 @@ __global__ void nothingVerboseKernel(int n, dfloat_t *creOut, dfloat_t *cimOut){
 
   if(n==-1 || n==-7098 || n==1023 || n==3521){ // this will never be true
 
-    dfloat_t cre = threadIdx.x + blockIdx.x*blockDim.x;
-    dfloat_t cim = threadIdx.y + blockIdx.x*blockDim.y;
+    dfloat_t cre = hipThreadIdx_x + hipBlockIdx_x*hipBlockDim_x;
+    dfloat_t cim = hipThreadIdx_y + hipBlockIdx_x*hipBlockDim_y;
 
 #pragma unroll 1
     for(int i=0;i<1;++i){
@@ -127,8 +127,8 @@ template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
   dfloat_t r_tmpOdd[HALF_QUAD_1D];
   dfloat_t r_tmpEven[HALF_QUAD_1D];
 
-  const int t   = threadIdx.x;
-  const int blk = threadIdx.y;
+  const int t   = hipThreadIdx_x;
+  const int blk = hipThreadIdx_y;
   
   // assumes barrier before s_Ap was used last
   
@@ -335,10 +335,10 @@ template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
 
   dfloat_t r_Aq[NUM_QUAD_1D];
 
-  const unsigned int t = threadIdx.x;
-  const int blk = threadIdx.y;
+  const unsigned int t = hipThreadIdx_x;
+  const int blk = hipThreadIdx_y;
   
-  const int element = blockIdx.x*p_Nblock + blk;
+  const int element = hipBlockIdx_x*p_Nblock + blk;
   
   const unsigned int a = t%NUM_DOFS_1D;
   const unsigned int b = t/NUM_DOFS_1D;
@@ -391,10 +391,10 @@ template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
 
   dfloat_t r_Aq[NUM_QUAD_1D];
 
-  const unsigned int t = threadIdx.x;
-  const int blk = threadIdx.y;
+  const unsigned int t = hipThreadIdx_x;
+  const int blk = hipThreadIdx_y;
   
-  const int element = blockIdx.x*p_Nblock + blk;
+  const int element = hipBlockIdx_x*p_Nblock + blk;
   
   const unsigned int a = t%NUM_DOFS_1D;
   const unsigned int b = t/NUM_DOFS_1D;
@@ -438,10 +438,10 @@ __global__ void massMatrixMultiplyConstantKernel(const int numElements,
 
   dfloat_t r_Aq[NUM_QUAD_1D];
 
-  const unsigned int t = threadIdx.x;
-  const int blk = threadIdx.y;
+  const unsigned int t = hipThreadIdx_x;
+  const int blk = hipThreadIdx_y;
   
-  const int element = blockIdx.x*p_Nblock + blk;
+  const int element = hipBlockIdx_x*p_Nblock + blk;
   
   const unsigned int a = t%NUM_DOFS_1D;
   const unsigned int b = t/NUM_DOFS_1D;
