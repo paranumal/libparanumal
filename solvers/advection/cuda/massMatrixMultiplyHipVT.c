@@ -688,10 +688,7 @@ void runMassMatrixMultiplyKernel(hipStream_t stream, int Nq, int cubNq, int numE
   
 #define massMatrixMultiplyKernel(Nq,cubNq,Nblock)			\
   {									\
-    if(Nq<=8)								\
-      hipLaunchKernelGGL(massMatrixMultiplyRegisterKernel<Nq,cubNq,Nblock>, G, B, 0, stream, numElements, c_op, c_oddDofToQuad, c_evenDofToQuad, c_solIn, c_solOut); \
-    else								\
-      hipLaunchKernelGGL(massMatrixMultiplyConstantKernel<Nq,cubNq,Nblock>, G, B, 0, stream, numElements, c_op, c_oddDofToQuad, c_evenDofToQuad, c_solIn, c_solOut); \
+       hipLaunchKernelGGL(massMatrixMultiplyConstantKernel<Nq,cubNq,Nblock>, G, B, 0, stream, numElements, c_op, c_oddDofToQuad, c_evenDofToQuad, c_solIn, c_solOut); \
   }
   
 #define ERR printf("massMatrixMultiplyRegister with Nq=%d, cubNq=%d not available", Nq, cubNq); exit(-1)
@@ -826,6 +823,9 @@ dfloat_t nothingTest(hipStream_t stream, int Ntests){
     
   }
 
+  hipEventDestroy(start);
+  hipEventDestroy(end);
+  
   return nothingElapsed;
 }
 
@@ -905,6 +905,7 @@ int main(int argc, char **argv){
   // KERNEL GRID
   // do nothing kernel test
   dfloat_t nothingElapsed = nothingTest(stream, Ntests);
+  nothingElapsed = nothingTest(stream, Ntests);
   
   // warm up call
   runMassMatrixMultiplyKernel (stream, Nq, cubNq, numElements, c_op, c_oddDofToQuad, c_evenDofToQuad, c_solIn, c_solOut);
