@@ -76,7 +76,7 @@ __forceinline__ __device__ __host__ int ijklN(const int i, const int j, const in
 __constant__ dfloat_t const_oddDofToQuad[MAX_HALF_QUAD_1D*MAX_HALF_DOFS_1D];
 __constant__ dfloat_t const_evenDofToQuad[MAX_HALF_QUAD_1D*MAX_HALF_DOFS_1D];
 
-void dfloat_tRandAlloc(int N, dfloat_t **h_a, dfloat_t **c_a){
+void randAlloc(int N, dfloat_t **h_a, dfloat_t **c_a){
 
   *h_a = (dfloat_t*) calloc(N, sizeof(dfloat_t));
 
@@ -818,7 +818,7 @@ int main(int argc, char **argv){
   dfloat_t *c_oddDofToQuad, *c_evenDofToQuad;
 
   // float fields
-  dfloat_tRandAlloc(cubNtotal*p_Nvgeo, &h_op, &c_op);
+  randAlloc(cubNtotal*p_Nvgeo, &h_op, &c_op);
 
   for(int e=0;e<numElements;++e){
     for(int n=0;n<cubNp;++n){
@@ -828,10 +828,10 @@ int main(int argc, char **argv){
   
   cudaMemcpy(c_op, h_op, p_Nvgeo*numElements*cubNp*sizeof(dfloat_t), cudaMemcpyHostToDevice);
   
-  dfloat_tRandAlloc(Ntotal, &h_solIn, &c_solIn);
-  dfloat_tRandAlloc(Ntotal, &h_solOut, &c_solOut);
+  randAlloc(Ntotal, &h_solIn, &c_solIn);
+  randAlloc(Ntotal, &h_solOut, &c_solOut);
   
-  dfloat_tRandAlloc(Nq*cubNq, &h_DofToQuad, &c_DofToQuad);
+  randAlloc(Nq*cubNq, &h_DofToQuad, &c_DofToQuad);
   
   // give I the correct symmetry
   for(int i=0;i<halfCubNq;++i){
