@@ -14,6 +14,9 @@ massMatrixMultiplyVT: massMatrixMultiplyVT.cu
 	nvcc -o massMatrixMultiplyVT $(cudaFlags) massMatrixMultiplyVT.cu
 #	nvcc -o massMatrixMultiplyVT $(nonoptFlags) massMatrixMultiplyVT.cu
 
+stiffnessMatrixMultiplyVT: stiffnessMatrixMultiplyVT.cu
+	nvcc -o stiffnessMatrixMultiplyVT $(cudaFlags) stiffnessMatrixMultiplyVT.cu
+
 advectionMassMatrixMultiplyHip: advectionMassMatrixMultiplyHip.c
 	hipcc -o advectionMassMatrixMultiplyHip $(hipFlags) advectionMassMatrixMultiplyHip.c
 
