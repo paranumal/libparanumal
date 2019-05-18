@@ -140,8 +140,6 @@ template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
 #pragma unroll
   for(int k = 0; k < NUM_QUAD_1D; k++) {
 
-    __syncthreads();
-    
     dfloat_t G00 = 0, G01 =0, G02 =0, G11 =0, G12 =0, G22 =0, GWJ =0;
     
     // prefetch geometric factors
@@ -439,7 +437,8 @@ __global__ void massMatrixMultiplyConstantKernel(const int numElements,
 						 dfloat_t * __restrict__ solOut){
   
   __shared__ dfloat_t s_tmp1[p_Nblock][NUM_QUAD_1D][NUM_QUAD_1D][NUM_QUAD_1D+p_padCubNq];
-
+  __shared__ dfloat_t s_QuadToQuadD[NUM_QUAD_2D];
+  
   dfloat_t r_Aq[NUM_QUAD_1D];
 
   const unsigned int t = threadIdx.x;
@@ -450,6 +449,8 @@ __global__ void massMatrixMultiplyConstantKernel(const int numElements,
   const unsigned int a = t%NUM_DOFS_1D;
   const unsigned int b = t/NUM_DOFS_1D;
 
+  s_QuadToQuadD[t] = QuadToQuadD[t];
+  
   if(element < numElements){
     if(t<NUM_DOFS_2D){
       for(int c=0;c<NUM_DOFS_1D;++c){
@@ -464,7 +465,7 @@ __global__ void massMatrixMultiplyConstantKernel(const int numElements,
   __syncthreads();
   
   massMatrixMultiplyDevice  <NUM_DOFS_1D, NUM_QUAD_1D, p_Nblock>
-    (numElements, element, lambda, op, const_oddDofToQuad, const_evenDofToQuad, const_QuadToQuadD, const_oddQuadToQuadD, const_evenQuadToQuadD, s_tmp1, r_Aq);
+    (numElements, element, lambda, op, const_oddDofToQuad, const_evenDofToQuad, s_QuadToQuadD, const_oddQuadToQuadD, const_evenQuadToQuadD, s_tmp1, r_Aq);
   
   if(element<numElements){
     if(t<NUM_DOFS_2D){
@@ -1016,7 +1017,7 @@ int main(int argc, char **argv){
   cudaEventCreate(&start);
   cudaEventCreate(&end);	
 
-  int Ntests = 1;
+  int Ntests = 100;
   // KERNEL GRID
   // do nothing kernel test
   dfloat_t nothingElapsed = nothingTest(stream, Ntests);
