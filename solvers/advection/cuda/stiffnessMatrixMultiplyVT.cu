@@ -63,7 +63,8 @@ __forceinline__ __device__ __host__ int ijklN(const int i, const int j, const in
 #define HALF_DOFS_1D ((NUM_DOFS_1D+1)/2)
 #define HALF_QUAD_1D ((NUM_QUAD_1D+1)/2)
 
-#define p_padCubNq  ((NUM_QUAD_1D%4) ? 0:1)
+#define p_padCubNq  0
+//((NUM_QUAD_1D%4) ? 0:1)
 
 #define NUM_DOFS_2D (NUM_DOFS_1D*NUM_DOFS_1D)
 #define NUM_DOFS_3D (NUM_DOFS_1D*NUM_DOFS_1D*NUM_DOFS_1D)
@@ -72,7 +73,6 @@ __forceinline__ __device__ __host__ int ijklN(const int i, const int j, const in
 #define NUM_QUAD_3D (NUM_QUAD_1D*NUM_QUAD_1D*NUM_QUAD_1D)
 
 #define p_Nggeo 7
-#define p_JWID 0
 
 #define p_G00ID 0
 #define p_G01ID 1
@@ -106,6 +106,7 @@ void randAlloc(int N, dfloat_t **h_a, dfloat_t **c_a){
 
 __global__ void nothingKernel(){  }
 
+
 template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
   __forceinline__ __device__ 
   void stiffnessMatrixMultiplyDevice(const int numElements,
@@ -118,7 +119,6 @@ template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
 				     dfloat_t s_Ap[p_Nblock][NUM_QUAD_1D][NUM_QUAD_1D][NUM_QUAD_1D+p_padCubNq],
 				     dfloat_t * __restrict__ r_Ap){
 
-  __shared__ dfloat_t s_p[p_Nblock][NUM_QUAD_1D][NUM_QUAD_1D];
   __shared__ dfloat_t s_Gpr[p_Nblock][NUM_QUAD_1D][NUM_QUAD_1D];
   __shared__ dfloat_t s_Gps[p_Nblock][NUM_QUAD_1D][NUM_QUAD_1D];
   
@@ -138,79 +138,73 @@ template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
   
   // Layer by layer
 #pragma unroll
-
   for(int k = 0; k < NUM_QUAD_1D; k++) {
+
+    __syncthreads();
+    
+    dfloat_t G00 = 0, G01 =0, G02 =0, G11 =0, G12 =0, G22 =0, GWJ =0;
     
     // prefetch geometric factors
-    const int gbase = element*p_Nggeo*NUM_QUAD_3D + k*NUM_QUAD_2D + j*NUM_QUAD_1D + i;
-    
-    dfloat_t G00 = op[gbase+p_G00ID*NUM_QUAD_3D];
-    dfloat_t G01 = op[gbase+p_G01ID*NUM_QUAD_3D];
-    dfloat_t G02 = op[gbase+p_G02ID*NUM_QUAD_3D];
-    
-    dfloat_t G11 = op[gbase+p_G11ID*NUM_QUAD_3D];
-    dfloat_t G12 = op[gbase+p_G12ID*NUM_QUAD_3D];
-    dfloat_t G22 = op[gbase+p_G22ID*NUM_QUAD_3D];
-    
-    dfloat_t GwJ = op[gbase+p_GWJID*NUM_QUAD_3D];
-    
-    __syncthreads();
+    const int gbase = element*p_Nggeo*NUM_QUAD_3D + ijkN(i,j,k,NUM_QUAD_1D);
 
+    if(element<numElements){
+      G00 = op[gbase+p_G00ID*NUM_QUAD_3D];
+      G01 = op[gbase+p_G01ID*NUM_QUAD_3D];
+      G02 = op[gbase+p_G02ID*NUM_QUAD_3D];
+      G11 = op[gbase+p_G11ID*NUM_QUAD_3D];
+      G12 = op[gbase+p_G12ID*NUM_QUAD_3D];
+      G22 = op[gbase+p_G22ID*NUM_QUAD_3D];
+      GWJ = op[gbase+p_GWJID*NUM_QUAD_3D];
+    }
+    
     dfloat_t pr = 0.f;
     dfloat_t ps = 0.f;
     dfloat_t pt = 0.f;
 
-    s_p[blk][j][i] = r_p[k];
-    
-#pragma unroll
-    for(int m = 0; m < NUM_QUAD_1D; m++) {
-      int km = ijN(m,k,NUM_QUAD_1D);
-      pt += QuadToQuadD[km]*r_p[m];
-    }
-    
-    __syncthreads();
-    
 #pragma unroll
     for(int m = 0; m < NUM_QUAD_1D; m++) {
       int im = ijN(m,i,NUM_QUAD_1D);
       int jm = ijN(m,j,NUM_QUAD_1D);
-      pr += QuadToQuadD[jm]*s_p[blk][m][i];
-      ps += QuadToQuadD[im]*s_p[blk][j][m];
+      int km = ijN(m,k,NUM_QUAD_1D);
+      pr += QuadToQuadD[im]*s_Ap[blk][k][j][m];
+      ps += QuadToQuadD[jm]*s_Ap[blk][k][m][i];
+      pt += QuadToQuadD[km]*r_p[m];
     }
+
+    __syncthreads();
     
-    s_Gps[blk][j][i] = (G01*pr + G11*ps + G12*pt);
     s_Gpr[blk][j][i] = (G00*pr + G01*ps + G02*pt);
+    s_Gps[blk][j][i] = (G01*pr + G11*ps + G12*pt);
     
-    // put this here for a performance bump
     dfloat_t Gpt = (G02*pr + G12*ps + G22*pt);
     
-    dfloat_t Apk = GwJ*lambda*r_p[k];
+    dfloat_t Apk = GWJ*lambda*r_p[k];
     
     __syncthreads();
     
 #pragma unroll
     for(int m = 0; m < NUM_QUAD_1D; m++){
       int mi = ijN(i,m,NUM_QUAD_1D);
-      int mj = ijN(m,k,NUM_QUAD_1D);
-      int km = ijN(j,m,NUM_QUAD_1D);
+      int mj = ijN(j,m,NUM_QUAD_1D);
+      int km = ijN(m,k,NUM_QUAD_1D);
+      Apk     += QuadToQuadD[mi]*s_Gpr[blk][j][m];
       Apk     += QuadToQuadD[mj]*s_Gps[blk][m][i];
       r_Ap[m] += QuadToQuadD[km]*Gpt; // DT(m,k)*ut(i,j,k,e)
-      Apk     += QuadToQuadD[mi]*s_Gpr[blk][j][m];
     }
-
+    
     r_Ap[k] += Apk;
   }
-
-
-#if 0
+  
   __syncthreads();
-
-  for(int k = 0; k < NUM_QUAD_1D; k++) {
+  
+  for(int k=0;k<NUM_QUAD_1D;++k){
     s_Ap[blk][k][j][i] = r_Ap[k];
-  }
-#endif
-}
 
+  }
+  
+  __syncthreads();
+  
+}
 
 template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
   __forceinline__ __device__ 
@@ -328,7 +322,8 @@ template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
   }
   
   __syncthreads();
-  
+
+  // enters in s_Ap, leaves in r_Ap
   stiffnessMatrixMultiplyDevice <NUM_DOFS_1D, NUM_QUAD_1D, p_Nblock> (numElements, element, lambda, op,
 								      QuadToQuadD, oddQuadToQuadD, evenQuadToQuadD, s_Ap, r_Ap);
   
@@ -342,14 +337,23 @@ template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
     // need to load from s_Ap into r_Ap
     
 #pragma unroll
+    for(int i=0;i<HALF_QUAD_1D;++i){
+      dfloat_t ApOdd  = s_Ap[blk][k][j][i];
+      dfloat_t ApEven = s_Ap[blk][k][j][NUM_QUAD_1D-1-i];
+      r_tmpOdd[i]  = ApOdd + ApEven;
+      r_tmpEven[i] = ApOdd - ApEven;
+    }      
+    
+    
+#pragma unroll
     for(int a=0;a<HALF_DOFS_1D;++a){
       dfloat_t resOdd = 0, resEven = 0;
       
 #pragma unroll
       for(int i=0;i<HALF_QUAD_1D;++i){
 	int ia = ijN(a,i,HALF_DOFS_1D);
-	resOdd  += oddDofToQuad[ia]*r_Ap[i];
-	resEven += evenDofToQuad[ia]*r_Ap[NUM_QUAD_1D-1-i];
+	resOdd  += oddDofToQuad[ia]*r_tmpOdd[i];
+	resEven += evenDofToQuad[ia]*r_tmpEven[i];
       }
       
       s_Ap[blk][k][j][a]               = resOdd + resEven;
@@ -456,7 +460,7 @@ __global__ void massMatrixMultiplyConstantKernel(const int numElements,
       }
     }
   }
-  
+
   __syncthreads();
   
   massMatrixMultiplyDevice  <NUM_DOFS_1D, NUM_QUAD_1D, p_Nblock>
@@ -473,9 +477,86 @@ __global__ void massMatrixMultiplyConstantKernel(const int numElements,
   }
 }
 
-void massMatrixMultiplyHost(int NUM_DOFS_1D, int NUM_QUAD_1D, const int numElements,
+void stiffnessElementalMatrixMultiplyHost(int NUM_QUAD_1D, int element, dfloat_t lambda,
+					  const dfloat_t * __restrict__ op,
+					  const dfloat_t * __restrict__ QuadToQuadD,
+					  const dfloat_t * qIII,
+					  dfloat_t *lapqIII){
+  
+  dfloat_t Gqr[NUM_QUAD_1D][NUM_QUAD_1D][NUM_QUAD_1D];
+  dfloat_t Gqs[NUM_QUAD_1D][NUM_QUAD_1D][NUM_QUAD_1D];
+  dfloat_t Gqt[NUM_QUAD_1D][NUM_QUAD_1D][NUM_QUAD_1D];
+
+  for(int k=0;k<NUM_QUAD_1D;++k){
+    for(int j=0;j<NUM_QUAD_1D;++j){
+      for(int i=0;i<NUM_QUAD_1D;++i){
+	
+	dfloat_t qr = 0;
+	dfloat_t qs = 0;
+	dfloat_t qt = 0;
+	
+	for(int n=0;n<NUM_QUAD_1D;++n){
+	  int in = ijN(n,i,NUM_QUAD_1D);
+	  int jn = ijN(n,j,NUM_QUAD_1D);
+	  int kn = ijN(n,k,NUM_QUAD_1D);
+	  
+	  int kjn = ijkN(n,j,k,NUM_QUAD_1D);
+	  int kni = ijkN(i,n,k,NUM_QUAD_1D);
+	  int nji = ijkN(i,j,n,NUM_QUAD_1D);
+	  
+	  qr += QuadToQuadD[in]*qIII[kjn];
+	  qs += QuadToQuadD[jn]*qIII[kni];
+	  qt += QuadToQuadD[kn]*qIII[nji];	  
+	}
+
+	const int gbase = element*p_Nggeo*NUM_QUAD_3D + ijkN(i,j,k,NUM_QUAD_1D);
+	
+	dfloat_t G00 = op[gbase+p_G00ID*NUM_QUAD_3D];
+	dfloat_t G01 = op[gbase+p_G01ID*NUM_QUAD_3D];
+	dfloat_t G02 = op[gbase+p_G02ID*NUM_QUAD_3D];
+	dfloat_t G11 = op[gbase+p_G11ID*NUM_QUAD_3D];
+	dfloat_t G12 = op[gbase+p_G12ID*NUM_QUAD_3D];
+	dfloat_t G22 = op[gbase+p_G22ID*NUM_QUAD_3D];
+	
+	Gqr[k][j][i] = (G00*qr + G01*qs + G02*qt);
+	Gqs[k][j][i] = (G01*qr + G11*qs + G12*qt);
+	Gqt[k][j][i] = (G02*qr + G12*qs + G22*qt);
+      }
+    }
+  }
+
+
+  for(int k=0;k<NUM_QUAD_1D;++k){
+    for(int j=0;j<NUM_QUAD_1D;++j){
+      for(int i=0;i<NUM_QUAD_1D;++i){
+  
+	int kji = ijkN(i,j,k,NUM_QUAD_1D);
+	
+	const int gbase = element*p_Nggeo*NUM_QUAD_3D + ijkN(i,j,k,NUM_QUAD_1D);
+
+	dfloat_t GWJ = op[gbase+p_GWJID*NUM_QUAD_3D];
+	dfloat_t lapq = lambda*GWJ*qIII[kji];
+	
+	for(int n=0;n<NUM_QUAD_1D;++n){
+	  int ni = ijN(i,n,NUM_QUAD_1D);
+	  int nj = ijN(j,n,NUM_QUAD_1D);
+	  int nk = ijN(k,n,NUM_QUAD_1D);
+
+	  lapq += QuadToQuadD[ni]*Gqr[k][j][n];
+	  lapq += QuadToQuadD[nj]*Gqs[k][n][i];
+	  lapq += QuadToQuadD[nk]*Gqt[n][j][i];	  
+	}
+	
+	lapqIII[kji] = lapq;
+      }
+    }
+  }
+}
+
+void massMatrixMultiplyHost(int NUM_DOFS_1D, int NUM_QUAD_1D, const int numElements, dfloat_t lambda,
 			    const dfloat_t * __restrict__ op,
-			    const dfloat_t * __restrict__ cubDofToQuad,
+			    const dfloat_t * __restrict__ DofToQuad,
+			    const dfloat_t * __restrict__ QuadToQuadD,
 			    const dfloat_t * __restrict__ solIn,
 			    dfloat_t * __restrict__ solOut){
 
@@ -484,7 +565,8 @@ void massMatrixMultiplyHost(int NUM_DOFS_1D, int NUM_QUAD_1D, const int numEleme
   dfloat_t qIXX[NUM_QUAD_1D][NUM_DOFS_1D][NUM_DOFS_1D];
   dfloat_t qIIX[NUM_QUAD_1D][NUM_QUAD_1D][NUM_DOFS_1D];
   dfloat_t qIII[NUM_QUAD_1D][NUM_QUAD_1D][NUM_QUAD_1D];
-    
+  dfloat_t lapqIII[NUM_QUAD_1D][NUM_QUAD_1D][NUM_QUAD_1D];
+
   for(int e=0;e<numElements;++e){
 
     for(int c=0;c<NUM_DOFS_1D;++c){
@@ -504,7 +586,7 @@ void massMatrixMultiplyHost(int NUM_DOFS_1D, int NUM_QUAD_1D, const int numEleme
 	  
 	  for(int c=0;c<NUM_DOFS_1D;++c){
 	    int kc = ijN(c,k,NUM_DOFS_1D);
-	    dfloat_t Ikc = cubDofToQuad[kc];
+	    dfloat_t Ikc = DofToQuad[kc];
 	    res += Ikc*qXXX[c][b][a];
 	  }
 	  
@@ -522,7 +604,7 @@ void massMatrixMultiplyHost(int NUM_DOFS_1D, int NUM_QUAD_1D, const int numEleme
 	  
 	  for(int b=0;b<NUM_DOFS_1D;++b){
 	    int jb = ijN(b,j,NUM_DOFS_1D);
-	    dfloat_t Ijb = cubDofToQuad[jb];
+	    dfloat_t Ijb = DofToQuad[jb];
 	    res += Ijb*qIXX[k][b][a];
 	  }
 	  
@@ -540,19 +622,16 @@ void massMatrixMultiplyHost(int NUM_DOFS_1D, int NUM_QUAD_1D, const int numEleme
 	  
 	  for(int a=0;a<NUM_DOFS_1D;++a){
 	    int ia = ijN(a,i,NUM_DOFS_1D);
-	    dfloat_t Iia = cubDofToQuad[ia];
+	    dfloat_t Iia = DofToQuad[ia];
 	    res += Iia*qIIX[k][j][a];
 	  }
 	  
-	  int gid = ijklN(i,j,k,e,NUM_QUAD_1D);
-	  
-	  dfloat_t JW = op[gid];
-
-	  qIII[k][j][i] = res*JW;
+	  qIII[k][j][i] = res;
 	}
       }
     }
-
+  
+    stiffnessElementalMatrixMultiplyHost(NUM_QUAD_1D, e, lambda, op, QuadToQuadD, qIII[0][0], lapqIII[0][0]);
 
     // project in a
     for(int k=0;k<NUM_QUAD_1D;++k){
@@ -563,8 +642,8 @@ void massMatrixMultiplyHost(int NUM_DOFS_1D, int NUM_QUAD_1D, const int numEleme
 	  
 	  for(int i=0;i<NUM_QUAD_1D;++i){
 	    int ia = ijN(a,i,NUM_DOFS_1D);
-	    dfloat_t Iia = cubDofToQuad[ia];
-	    res += Iia*qIII[k][j][i];
+	    dfloat_t Iia = DofToQuad[ia];
+	    res += Iia*lapqIII[k][j][i];
 	  }
 
 	  qIIX[k][j][a] = res;
@@ -582,7 +661,7 @@ void massMatrixMultiplyHost(int NUM_DOFS_1D, int NUM_QUAD_1D, const int numEleme
 
 	  for(int j=0;j<NUM_QUAD_1D;++j){
 	    int jb = ijN(b,j,NUM_DOFS_1D);
-	    dfloat_t Ijb = cubDofToQuad[j*NUM_DOFS_1D+b];
+	    dfloat_t Ijb = DofToQuad[jb];
 	    res += Ijb*qIIX[k][j][a];
 	  }
 	  
@@ -602,7 +681,7 @@ void massMatrixMultiplyHost(int NUM_DOFS_1D, int NUM_QUAD_1D, const int numEleme
 
 	  for(int k=0;k<NUM_QUAD_1D;++k){
 	    int kc = ijN(c,k,NUM_DOFS_1D);
-	    dfloat_t Ikc = cubDofToQuad[kc];
+	    dfloat_t Ikc = DofToQuad[kc];
 	    res += Ikc*qIXX[k][b][a];
 	  }
 
@@ -615,70 +694,73 @@ void massMatrixMultiplyHost(int NUM_DOFS_1D, int NUM_QUAD_1D, const int numEleme
   
 }
 
-void buildOddEvenMatrices(int NUM_DOFS_1D, int NUM_QUAD_1D,
-			  dfloat_t *h_DofToQuad,   dfloat_t **c_DofToQuad, dfloat_t **c_oddDofToQuad,  dfloat_t **c_evenDofToQuad){
+void buildOddEvenMatrices(int NUM_COLS_OP, int NUM_ROWS_OP,
+			  dfloat_t *h_OP,   dfloat_t **c_OP, dfloat_t **c_oddOP,  dfloat_t **c_evenOP){
+
+  int HALF_COLS_OP = ((NUM_COLS_OP+1)/2);
+  int HALF_ROWS_OP = ((NUM_ROWS_OP+1)/2);
   
-  dfloat_t *X = (dfloat_t*) calloc(NUM_DOFS_1D*NUM_DOFS_1D, sizeof(dfloat_t));
-  dfloat_t *invX = (dfloat_t*) calloc(NUM_DOFS_1D*NUM_DOFS_1D, sizeof(dfloat_t));
+  dfloat_t *X = (dfloat_t*) calloc(NUM_COLS_OP*NUM_COLS_OP, sizeof(dfloat_t));
+  dfloat_t *invX = (dfloat_t*) calloc(NUM_COLS_OP*NUM_COLS_OP, sizeof(dfloat_t));
 
-  dfloat_t *cubX = (dfloat_t*) calloc(NUM_QUAD_1D*NUM_QUAD_1D, sizeof(dfloat_t));
-  dfloat_t *cubInvX = (dfloat_t*) calloc(NUM_QUAD_1D*NUM_QUAD_1D, sizeof(dfloat_t));
+  dfloat_t *cubX = (dfloat_t*) calloc(NUM_ROWS_OP*NUM_ROWS_OP, sizeof(dfloat_t));
+  dfloat_t *cubInvX = (dfloat_t*) calloc(NUM_ROWS_OP*NUM_ROWS_OP, sizeof(dfloat_t));
 
-  for(int n=0;n<NUM_QUAD_1D;++n){
-    cubX[n*NUM_QUAD_1D + n] = 1;
-    cubInvX[n*NUM_QUAD_1D + n] = 0.5;
+  for(int n=0;n<NUM_ROWS_OP;++n){
+    cubX[n*NUM_ROWS_OP + n] = 1;
+    cubInvX[n*NUM_ROWS_OP + n] = 0.5;
 
-    if(n<NUM_QUAD_1D/2){
-      cubX[n*NUM_QUAD_1D + NUM_QUAD_1D-1-n] = -1;
-      cubInvX[n*NUM_QUAD_1D + NUM_QUAD_1D-1-n] = +0.5;
+    if(n<NUM_ROWS_OP/2){
+      cubX[n*NUM_ROWS_OP + NUM_ROWS_OP-1-n] = -1;
+      cubInvX[n*NUM_ROWS_OP + NUM_ROWS_OP-1-n] = +0.5;
     }
     
-    if(n>=(NUM_QUAD_1D/2)){
-      cubX[n*NUM_QUAD_1D + NUM_QUAD_1D-1-n] = +1;
-      cubInvX[n*NUM_QUAD_1D + NUM_QUAD_1D-1-n] = -0.5;
+    if(n>=(NUM_ROWS_OP/2)){
+      cubX[n*NUM_ROWS_OP + NUM_ROWS_OP-1-n] = +1;
+      cubInvX[n*NUM_ROWS_OP + NUM_ROWS_OP-1-n] = -0.5;
     }
   }
 
-  for(int n=0;n<NUM_DOFS_1D;++n){
-    X[n*NUM_DOFS_1D + n] = 1;
-    invX[n*NUM_DOFS_1D + n] = 0.5;
+  for(int n=0;n<NUM_COLS_OP;++n){
+    X[n*NUM_COLS_OP + n] = 1;
+    invX[n*NUM_COLS_OP + n] = 0.5;
 
-    if(n<NUM_DOFS_1D/2){
-      X[n*NUM_DOFS_1D + NUM_DOFS_1D-1-n] = 1;
-      invX[n*NUM_DOFS_1D + NUM_DOFS_1D-1-n] = -0.5;
+    if(n<NUM_COLS_OP/2){
+      X[n*NUM_COLS_OP + NUM_COLS_OP-1-n] = 1;
+      invX[n*NUM_COLS_OP + NUM_COLS_OP-1-n] = -0.5;
     }
     
-    if(n>=NUM_DOFS_1D/2){
-      X[n*NUM_DOFS_1D + NUM_DOFS_1D-1-n] = -1;
-      invX[n*NUM_DOFS_1D + NUM_DOFS_1D-1-n] = 0.5;
+    if(n>=NUM_COLS_OP/2){
+      X[n*NUM_COLS_OP + NUM_COLS_OP-1-n] = -1;
+      invX[n*NUM_COLS_OP + NUM_COLS_OP-1-n] = 0.5;
     }
   }
 
-  if(NUM_DOFS_1D%2) invX[(NUM_DOFS_1D)*(NUM_DOFS_1D)/2] = 1;
-  if(NUM_QUAD_1D%2) cubInvX[(NUM_QUAD_1D+1)*(NUM_QUAD_1D+1)/2] = 1;
+  if(NUM_COLS_OP%2) invX[(NUM_COLS_OP)*(NUM_COLS_OP)/2] = 1;
+  if(NUM_ROWS_OP%2) cubInvX[(NUM_ROWS_OP+1)*(NUM_ROWS_OP+1)/2] = 1;
   
-  dfloat_t *IinvX = (dfloat_t*) calloc(NUM_DOFS_1D*NUM_QUAD_1D, sizeof(dfloat_t));
-  dfloat_t *cubInvXIinvX = (dfloat_t*) calloc(NUM_DOFS_1D*NUM_QUAD_1D, sizeof(dfloat_t));
+  dfloat_t *IinvX = (dfloat_t*) calloc(NUM_COLS_OP*NUM_ROWS_OP, sizeof(dfloat_t));
+  dfloat_t *cubInvXIinvX = (dfloat_t*) calloc(NUM_COLS_OP*NUM_ROWS_OP, sizeof(dfloat_t));
 
   // post multiply by invX
-  for(int i=0;i<NUM_QUAD_1D;++i){
-    for(int a=0;a<NUM_DOFS_1D;++a){
+  for(int i=0;i<NUM_ROWS_OP;++i){
+    for(int a=0;a<NUM_COLS_OP;++a){
       dfloat_t resI = 0;
-      for(int n=0;n<NUM_DOFS_1D;++n){
-	resI += h_DofToQuad [i*NUM_DOFS_1D+n]*invX[n*NUM_DOFS_1D+a];
+      for(int n=0;n<NUM_COLS_OP;++n){
+	resI += h_OP [i*NUM_COLS_OP+n]*invX[n*NUM_COLS_OP+a];
       }
-      IinvX[i*NUM_DOFS_1D+a] = resI;
+      IinvX[i*NUM_COLS_OP+a] = resI;
     }
   }
   
   // pre multiply by invX
-  for(int i=0;i<NUM_QUAD_1D;++i){
-    for(int a=0;a<NUM_DOFS_1D;++a){
+  for(int i=0;i<NUM_ROWS_OP;++i){
+    for(int a=0;a<NUM_COLS_OP;++a){
       dfloat_t resI = 0;
-      for(int n=0;n<NUM_QUAD_1D;++n){
-	resI += cubInvX[i*NUM_QUAD_1D+n]*IinvX[n*NUM_DOFS_1D + a];
+      for(int n=0;n<NUM_ROWS_OP;++n){
+	resI += cubInvX[i*NUM_ROWS_OP+n]*IinvX[n*NUM_COLS_OP + a];
       }
-      cubInvXIinvX[i*NUM_DOFS_1D+a] = resI;
+      cubInvXIinvX[i*NUM_COLS_OP+a] = resI;
     }
   }
   
@@ -686,25 +768,27 @@ void buildOddEvenMatrices(int NUM_DOFS_1D, int NUM_QUAD_1D,
   // [ A 0 ]  => [ A[0][0] B[0][0] A[0][1] B[0][1] .. A[0][HALF_DOFS_1D-1] B[0][HALF_DOFS_1D-1] .. 
   // [ 0 B ] 
 
-  dfloat_t *oddDofToQuad  = (dfloat_t*) calloc(NUM_QUAD_1D*HALF_QUAD_1D, sizeof(dfloat_t));
-  dfloat_t *evenDofToQuad = (dfloat_t*) calloc(NUM_QUAD_1D*HALF_QUAD_1D, sizeof(dfloat_t));
+  dfloat_t *oddOP  = (dfloat_t*) calloc(NUM_ROWS_OP*HALF_ROWS_OP, sizeof(dfloat_t));
+  dfloat_t *evenOP = (dfloat_t*) calloc(NUM_ROWS_OP*HALF_ROWS_OP, sizeof(dfloat_t));
   
-  for(int i=0;i<HALF_QUAD_1D;++i){
-    for(int a=0;a<HALF_DOFS_1D;++a){
+  for(int i=0;i<HALF_ROWS_OP;++i){
+    for(int a=0;a<HALF_COLS_OP;++a){
 
-      oddDofToQuad[i*HALF_DOFS_1D+a]  = cubInvXIinvX[i*NUM_DOFS_1D+a];
-      evenDofToQuad[i*HALF_DOFS_1D+a]  = cubInvXIinvX[(NUM_QUAD_1D-1-i)*NUM_DOFS_1D + NUM_DOFS_1D-1-a];
+      oddOP[i*HALF_COLS_OP+a]  = cubInvXIinvX[i*NUM_COLS_OP+a];
+      evenOP[i*HALF_COLS_OP+a]  = cubInvXIinvX[(NUM_ROWS_OP-1-i)*NUM_COLS_OP + NUM_COLS_OP-1-a];
     }
   }
       
-  int NoddDofToQuad  = HALF_QUAD_1D*HALF_DOFS_1D;
-  int NevenDofToQuad = HALF_QUAD_1D*HALF_DOFS_1D;
+  int NoddOP  = HALF_ROWS_OP*HALF_COLS_OP;
+  int NevenOP = HALF_ROWS_OP*HALF_COLS_OP;
   
-  cudaMalloc(c_oddDofToQuad, NoddDofToQuad*sizeof(dfloat_t));
-  cudaMalloc(c_evenDofToQuad, NevenDofToQuad*sizeof(dfloat_t));
+  cudaMalloc(c_oddOP, NoddOP*sizeof(dfloat_t));
+  cudaMalloc(c_evenOP, NevenOP*sizeof(dfloat_t));
   
-  cudaMemcpy(*c_oddDofToQuad,  oddDofToQuad,  NoddDofToQuad*sizeof(dfloat_t),  cudaMemcpyHostToDevice);
-  cudaMemcpy(*c_evenDofToQuad, evenDofToQuad, NoddDofToQuad*sizeof(dfloat_t), cudaMemcpyHostToDevice);
+  cudaMemcpy(*c_oddOP,  oddOP,  NoddOP*sizeof(dfloat_t),  cudaMemcpyHostToDevice);
+  cudaMemcpy(*c_evenOP, evenOP, NoddOP*sizeof(dfloat_t), cudaMemcpyHostToDevice);
+
+  cudaMemcpy(*c_OP, h_OP,  NUM_COLS_OP*NUM_ROWS_OP*sizeof(dfloat_t),  cudaMemcpyHostToDevice);
 
 }
 
@@ -861,7 +945,7 @@ int main(int argc, char **argv){
   int     cubNq = atoi(argv[2]);
   int numElements = atoi(argv[3]);
 
-  dfloat_t lambda = 2.1;
+  dfloat_t lambda = 0;
   
   printf("Running: Nq=%d, cubNq=%d, numElements=%d\n", Nq, cubNq, numElements);
   
@@ -895,14 +979,6 @@ int main(int argc, char **argv){
 
   // float fields
   randAlloc(cubNtotal*p_Nggeo, &h_op, &c_op);
-
-  for(int e=0;e<numElements;++e){
-    for(int n=0;n<cubNp;++n){
-      h_op[e*cubNp+n] = drand48();
-    }
-  }
-  
-  cudaMemcpy(c_op, h_op, p_Nggeo*numElements*cubNp*sizeof(dfloat_t), cudaMemcpyHostToDevice);
   
   randAlloc(Ntotal, &h_solIn, &c_solIn);
   randAlloc(Ntotal, &h_solOut, &c_solOut);
@@ -935,15 +1011,12 @@ int main(int argc, char **argv){
   cudaMemcpyToSymbol(const_QuadToQuadD,     c_QuadToQuadD,     cubNq*cubNq*sizeof(dfloat_t), 0, cudaMemcpyDeviceToDevice);
   cudaMemcpyToSymbol(const_oddQuadToQuadD,  c_oddQuadToQuadD,  halfCubNq*halfCubNq*sizeof(dfloat_t), 0, cudaMemcpyDeviceToDevice);
   cudaMemcpyToSymbol(const_evenQuadToQuadD, c_evenQuadToQuadD, halfCubNq*halfCubNq*sizeof(dfloat_t), 0, cudaMemcpyDeviceToDevice);
-
-
-
   
   cudaEvent_t start, end;
   cudaEventCreate(&start);
   cudaEventCreate(&end);	
 
-  int Ntests = 10;
+  int Ntests = 1;
   // KERNEL GRID
   // do nothing kernel test
   dfloat_t nothingElapsed = nothingTest(stream, Ntests);
@@ -1010,7 +1083,7 @@ int main(int argc, char **argv){
   }
 
   // check output is correct
-  massMatrixMultiplyHost (Nq,cubNq,numElements, h_op, h_DofToQuad, h_solIn, h_solOut);
+  massMatrixMultiplyHost (Nq, cubNq, numElements, lambda, h_op, h_DofToQuad, h_QuadToQuadD, h_solIn, h_solOut);
 
   // copy device version to host old q
   dfloat_t *fromDevice = (dfloat_t*) calloc(numElements*Np, sizeof(dfloat_t));
