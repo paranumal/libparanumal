@@ -23,6 +23,9 @@ advectionMassMatrixMultiplyHip: advectionMassMatrixMultiplyHip.c
 massMatrixMultiplyHipVT: massMatrixMultiplyHipVT.c
 	hipcc -o massMatrixMultiplyHipVT $(hipFlags) massMatrixMultiplyHipVT.c
 
+stiffnessMatrixMultiplyHipVT: stiffnessMatrixMultiplyHipVT.c
+	hipcc -o stiffnessMatrixMultiplyHipVT $(hipFlags) stiffnessMatrixMultiplyHipVT.c
+
 
 
 roofline: roofline.cu
