@@ -72,6 +72,7 @@ __forceinline__ __device__ __host__ int ijklN(const int i, const int j, const in
 #define p_JWID 0
 
 void matrixPrint(int Nrows, int Ncols, dfloat_t *A, const char *mess){
+#if 0
   printf("%s = [\n", mess);
   for(int i=0;i<Nrows;++i){
     for(int a=0;a<Ncols;++a){
@@ -80,6 +81,7 @@ void matrixPrint(int Nrows, int Ncols, dfloat_t *A, const char *mess){
     printf("\n");
   }
   printf("]\n");
+#endif
 }
 
 __constant__ dfloat_t const_oddDofToQuad[MAX_HALF_QUAD_1D*MAX_HALF_DOFS_1D];
@@ -355,8 +357,6 @@ template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
 						   dfloat_t * __restrict__ solOut){
   
   __shared__ dfloat_t s_tmp1[p_Nblock][NUM_QUAD_1D][NUM_QUAD_1D][NUM_QUAD_1D+p_padCubNq];
-  __shared__ dfloat_t s_oddDofToQuad[HALF_DOFS_1D*HALF_QUAD_1D];
-  __shared__ dfloat_t s_evenDofToQuad[HALF_QUAD_1D*HALF_DOFS_1D];
 
   dfloat_t r_oddDofToQuad[HALF_QUAD_1D*HALF_DOFS_1D];
   dfloat_t r_evenDofToQuad[HALF_QUAD_1D*HALF_DOFS_1D];
@@ -380,20 +380,26 @@ template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
     }
   }
 
-  for(int n=t;n<HALF_DOFS_1D*HALF_QUAD_1D;n+=NUM_DOFS_2D){
-    s_oddDofToQuad[n] = oddDofToQuad[n];
-    s_evenDofToQuad[n] = evenDofToQuad[n];
-    n+=NUM_DOFS_2D;
+  {
+    __shared__ dfloat_t s_oddDofToQuad[HALF_DOFS_1D*HALF_QUAD_1D];
+    __shared__ dfloat_t s_evenDofToQuad[HALF_QUAD_1D*HALF_DOFS_1D];
+    
+    
+    for(int n=t;n<HALF_DOFS_1D*HALF_QUAD_1D;n+=NUM_DOFS_2D){
+      s_oddDofToQuad[n] = oddDofToQuad[n];
+      s_evenDofToQuad[n] = evenDofToQuad[n];
+      n+=NUM_DOFS_2D;
+    }
+    
+    __syncthreads();
+    
+    // now copy shared data to thread local register arrays
+    for(int n=0;n<HALF_DOFS_1D*HALF_QUAD_1D;++n){
+      r_oddDofToQuad[n] = s_oddDofToQuad[n];
+      r_evenDofToQuad[n] = s_evenDofToQuad[n];
+    }
   }
-
-  __syncthreads();
-
-  // now copy shared data to thread local register arrays
-  for(int n=0;n<HALF_DOFS_1D*HALF_QUAD_1D;++n){
-    r_oddDofToQuad[n] = s_oddDofToQuad[n];
-    r_evenDofToQuad[n] = s_evenDofToQuad[n];
-  }
-  
+    
   massMatrixMultiplyDevice <NUM_DOFS_1D, NUM_QUAD_1D, p_Nblock>
     (numElements, element, op, r_oddDofToQuad, r_evenDofToQuad, s_tmp1, r_Aq);
   
@@ -763,7 +769,7 @@ void runMassMatrixMultiplyKernel(cudaStream_t stream, int Nq, int cubNq, int num
   
 #define massMatrixMultiplyKernel(Nq,cubNq,Nblock)			\
   {									\
-    if(Nq<=8)								\
+    if(Nq<=12)								\
       massMatrixMultiplyRegisterKernel<Nq,cubNq,Nblock> <<< G, B, 0, stream >>>(numElements, c_op, c_oddDofToQuad, c_evenDofToQuad, c_solIn, c_solOut); \
     else								\
       massMatrixMultiplyConstantKernel<Nq,cubNq,Nblock> <<< G, B, 0, stream >>>(numElements, c_op, c_oddDofToQuad, c_evenDofToQuad, c_solIn, c_solOut); \
@@ -871,11 +877,12 @@ void runMassMatrixMultiplyKernel(cudaStream_t stream, int Nq, int cubNq, int num
     return;
   }
 
-  Nblock = 1;
-  dim3 G((numElements+Nblock-1)/Nblock, 1, 1);
-  dim3 B(Nq*Nq, Nblock, 1);
-  
   if(Nq==8){
+
+    Nblock = 1;
+    dim3 G((numElements+Nblock-1)/Nblock, 1, 1);
+    dim3 B(Nq*Nq, Nblock, 1);    
+    
     switch(cubNq){
     case 8:  massMatrixMultiplyKernel(8, 8,1); break;
     case 9:  massMatrixMultiplyKernel(8, 9,1); break;
@@ -888,6 +895,11 @@ void runMassMatrixMultiplyKernel(cudaStream_t stream, int Nq, int cubNq, int num
   }
 
   if(Nq==9){
+
+    Nblock = 1;
+    dim3 G((numElements+Nblock-1)/Nblock, 1, 1);
+    dim3 B(Nq*Nq, Nblock, 1);
+   
     switch(cubNq){
     case 9:  massMatrixMultiplyKernel(9, 9,1); break;
     case 10: massMatrixMultiplyKernel(9,10,1); break;
@@ -899,6 +911,10 @@ void runMassMatrixMultiplyKernel(cudaStream_t stream, int Nq, int cubNq, int num
     }
     return;
   }
+
+  Nblock = 1;
+  dim3 G((numElements+Nblock-1)/Nblock, 1, 1);
+  dim3 B(Nq*Nq, Nblock, 1);
   
   if(Nq==10){
     switch(cubNq){
@@ -1161,10 +1177,12 @@ int main(int argc, char **argv){
   cudaEventCreate(&start);
   cudaEventCreate(&end);	
 
-  int Ntests = 10;
+  int Ntests = 100;
   // KERNEL GRID
   // do nothing kernel test
-  dfloat_t nothingElapsed = nothingTest(stream, Ntests);
+  //dfloat_t nothingElapsed = nothingTest(stream, Ntests);
+  dfloat_t nothingElapsed = 0;
+  
 //  dfloat_t nothingVerboseElapsed = nothingVerboseTest(stream, Ntests);
   
   // warm up call
@@ -1211,10 +1229,19 @@ int main(int argc, char **argv){
     cudaEventElapsedTime(&elapsed, start, end);
     elapsed /= 1000.;
     elapsed /= (double) Ntests;
+
+    // estimate bandwidth (assuming all data moved to/from device memory)
+    int bytesMoved = (2*Np+cubNp)*sizeof(dfloat_t); // x, Mx, opa   
+    double bw = (bytesMoved*numElements/elapsed)/1.e9;
+
+    double effectiveFlops =
+      numElements*(4*(cubNq*Nq*Nq*Nq +
+		      cubNq*cubNq*Nq*Nq +
+		      cubNq*cubNq*cubNq*Nq)/elapsed)/1.e9;
     
-    printf("%2d %8d %8d %e %e %e %%%% [MassMatrixMultiply: N, numElements, Ndofs,"
-	   " elapsed, dofsPerSecond, nothingElapsed]\n",
-	   Nq-1, numElements, Np*numElements, elapsed, numElements*(Np/elapsed), nothingElapsed);
+    printf("%2d %2d %8d %8d %e %e %e %e %e %%%% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs,"
+	   " elapsed, dofsPerSecond, nothingElapsed, bandwidth in GB/s, est. effective GFLOPS/s]\n",
+	   Nq, cubNq, numElements, Np*numElements, elapsed, numElements*(Np/elapsed), nothingElapsed, bw, effectiveFlops);
   }
 
   // check output is correct
@@ -1233,8 +1260,9 @@ int main(int argc, char **argv){
       maxDiff = (diff>maxDiff) ? diff:maxDiff;
     }
   }
+
   printf("Nq=%02d, cubNq=%02d || Mq_{host} - Mq_{device} ||_linf = %lg\n", Nq, cubNq, maxDiff);
-  
+
   cudaEventDestroy(start);
   cudaEventDestroy(end);	
   
