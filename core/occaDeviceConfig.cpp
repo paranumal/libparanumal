@@ -32,6 +32,16 @@ SOFTWARE.
 #include "settings.hpp"
 #include "omp.h"
 
+#if OCCA_CUDA_ENABLED
+#include "occa/mode/cuda.hpp"
+#endif
+#if OCCA_HIP_ENABLED
+#include "occa/mode/hip.hpp"
+#endif
+#if OCCA_OPENCL_ENABLED
+#include "occa/mode/opencl.hpp"
+#endif
+
 void occaDeviceConfig(occa::device &device, MPI_Comm comm,
                       settings_t& settings, occa::properties& props){
 
@@ -40,6 +50,10 @@ void occaDeviceConfig(occa::device &device, MPI_Comm comm,
   props["header"].asArray();
   props["flags"].asObject();
 
+  props["device"].asObject();
+  props["kernel"].asObject();
+  props["memory"].asObject();
+
   // OCCA build stuff
   int rank, size;
   MPI_Comm_rank(comm, &rank);
@@ -47,6 +61,9 @@ void occaDeviceConfig(occa::device &device, MPI_Comm comm,
 
   char deviceConfig[BUFSIZ];
 
+  char hostname[1024];
+  hostname[1023] = '\0';
+  gethostname(hostname, 1023);
   long int hostId = gethostid();
 
   long int* hostIds = (long int*) calloc(size,sizeof(long int));
@@ -61,9 +78,44 @@ void occaDeviceConfig(occa::device &device, MPI_Comm comm,
     if (hostIds[r]==hostId) totalDevices++;
   }
 
-  device_id = device_id % 1;
-
+  //for testing a single device, run with 1 rank and specify DEVICE NUMBER
   if (size==1) settings.getSetting("DEVICE NUMBER",device_id);
+
+  //check for over-subscribing devices
+  if(settings.compareSetting("THREAD MODEL", "CUDA")){
+#if OCCA_CUDA_ENABLED
+    int deviceCount = occa::cuda::getDeviceCount();
+    if (device_id>=deviceCount) {
+      stringstream ss;
+      ss << "Rank " << rank << " oversubscribing CUDA device " << device_id%deviceCount << " on node \"" << hostname<< "\"";
+      LIBP_WARNING(ss.str());
+      device_id = device_id%deviceCount;
+    }
+#endif
+  }
+  else if(settings.compareSetting("THREAD MODEL", "HIP")){
+#if OCCA_HIP_ENABLED
+    int deviceCount = occa::hip::getDeviceCount();
+    if (device_id>=deviceCount) {
+      stringstream ss;
+      ss << "Rank " << rank << " oversubscribing HIP device " << device_id%deviceCount << " on node \"" << hostname<< "\"";
+      LIBP_WARNING(ss.str());
+      device_id = device_id%deviceCount;
+    }
+#endif
+
+  }
+  else if(settings.compareSetting("THREAD MODEL", "OpenCL")){
+#if OCCA_OPENCL_ENABLED
+    int deviceCount = occa::opencl::getDeviceCount();
+    if (device_id>=deviceCount) {
+      stringstream ss;
+      ss << "Rank " << rank << " oversubscribing OpenCL device " << device_id%deviceCount << " on node \"" << hostname<< "\"";
+      LIBP_WARNING(ss.str());
+      device_id = device_id%deviceCount;
+    }
+#endif
+  }
 
   // read thread model/device/platform from settings
   if(settings.compareSetting("THREAD MODEL", "CUDA")){

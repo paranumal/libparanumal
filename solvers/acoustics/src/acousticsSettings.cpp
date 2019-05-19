@@ -63,3 +63,17 @@ acousticsSettings_t::acousticsSettings_t(MPI_Comm& _comm):
              "acoustics");
 }
 
+void acousticsSettings_t::report() {
+
+  std::cout << "Settings:\n\n";
+  occaReportSettings(*this);
+  meshReportSettings(*this);
+
+  reportSetting("DATA FILE");
+  reportSetting("TIME INTEGRATOR");
+  reportSetting("START TIME");
+  reportSetting("FINAL TIME");
+  reportSetting("OUTPUT INTERVAL");
+  reportSetting("OUTPUT TO FILE");
+  reportSetting("OUTPUT FILE NAME");
+}

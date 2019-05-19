@@ -29,8 +29,8 @@ SOFTWARE.
 void meshAddSettings(settings_t& settings) {
 
   settings.newSetting("MESH FILE",
-                      "Box"
-                      "Input mesh");
+                      "BOX"
+                      "Input mesh. Can set to BOX to instead construct a uniform mesh");
   settings.newSetting("MESH DIMENSION",
                       "2",
                       "Dimension of input mesh",
@@ -39,9 +39,55 @@ void meshAddSettings(settings_t& settings) {
                       "3",
                       "Type of mesh elements (number of edges)",
                       {"3","4","6","12"});
+
+  settings.newSetting("BOX DIMX",
+                      "10",
+                      "Length of BOX domain in X-dimension");
+  settings.newSetting("BOX DIMY",
+                      "10",
+                      "Length of BOX domain in Y-dimension");
+  settings.newSetting("BOX DIMZ",
+                      "10",
+                      "Length of BOX domain in Z-dimension");
+
+  settings.newSetting("BOX NX",
+                      "10",
+                      "Number of elements in X-dimension per rank");
+  settings.newSetting("BOX NY",
+                      "10",
+                      "Number of elements in Y-dimension per rank");
+  settings.newSetting("BOX NZ",
+                      "10",
+                      "Number of elements in Z-dimension per rank");
+
+  settings.newSetting("BOX BOUNDARY FLAG",
+                      "1",
+                      "Type of boundary conditions for BOX domain (-1 for periodic)");
+
   settings.newSetting("POLYNOMIAL DEGREE",
                       "4",
                       "Degree of polynomial finite element space",
                       {"1","2","3","4","5","6","7","8","9","10","11","12","13","14","15"});
 }
 
+void meshReportSettings(settings_t& settings) {
+
+  if (!settings.compareSetting("MESH FILE","BOX"))
+    settings.reportSetting("MESH FILE");
+
+  settings.reportSetting("MESH DIMENSION");
+  settings.reportSetting("ELEMENT TYPE");
+
+  //report the box settings
+  if (settings.compareSetting("MESH FILE","BOX")) {
+    settings.reportSetting("BOX DIMX");
+    settings.reportSetting("BOX DIMY");
+    settings.reportSetting("BOX DIMZ");
+    settings.reportSetting("BOX NX");
+    settings.reportSetting("BOX NY");
+    settings.reportSetting("BOX NZ");
+    settings.reportSetting("BOX BOUNDARY FLAG");
+  }
+
+  settings.reportSetting("POLYNOMIAL DEGREE");
+}

@@ -63,11 +63,16 @@ mesh_t& mesh_t::Setup(occa::device& device, MPI_Comm& comm,
 
   mesh->elementType = elementType;
 
-  // read chunk of elements
-  mesh->ParallelReader(fileName.c_str());
+  if (settings.compareSetting("MESH FILE","BOX")) {
+    //build a box mesh
+    mesh->SetupBox();
+  } else {
+    // read chunk of elements from file
+    mesh->ParallelReader(fileName.c_str());
 
-  // partition elements using Morton ordering & parallel sort
-  mesh->GeometricPartition();
+    // partition elements using Morton ordering & parallel sort
+    mesh->GeometricPartition();
+  }
 
   // connect elements using parallel sort
   mesh->ParallelConnect();

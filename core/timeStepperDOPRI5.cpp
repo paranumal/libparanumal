@@ -207,6 +207,7 @@ void dopri5::Run(occa::memory &o_q, dfloat start, dfloat end) {
       }
 
       time += dt;
+      while (time>outputTime) outputTime+= outputInterval; //catch up next output in case dt>outputInterval
 
       facold = mymax(err,1E-4); // hard coded factor ?
 

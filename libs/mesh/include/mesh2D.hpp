@@ -55,6 +55,7 @@ public:
   meshTri2D(occa::device& _device, MPI_Comm& _comm,
             settings_t& _settings, occa::properties& _props);
   void ParallelReader(const char *fileName);
+  void SetupBox();
   void LoadReferenceNodes(int N);
   void PhysicalNodes();
   void GeometricFactors();
@@ -67,6 +68,7 @@ public:
   meshQuad2D(occa::device& _device, MPI_Comm& _comm,
              settings_t& _settings, occa::properties& _props);
   void ParallelReader(const char *fileName);
+  void SetupBox();
   void LoadReferenceNodes(int N);
   void PhysicalNodes();
   void GeometricFactors();

@@ -222,6 +222,18 @@ void settings_t::report() {
   }
 }
 
+void settings_t::reportSetting(const string name) const {
+  auto search = settings.find(name);
+  if (search != settings.end()) {
+    setting_t* val = search->second;
+    std::cout << *val << std::endl;
+  } else {
+    stringstream ss;
+    ss << "Unable to find setting: [" << name.c_str() << "]";
+    LIBP_ABORT(ss.str());
+  }
+}
+
 settings_t::~settings_t() {
   for(auto it = settings.begin(); it != settings.end(); ++it)
     delete it->second;

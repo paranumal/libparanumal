@@ -497,6 +497,9 @@ public:
   static mesh_t& Setup(occa::device& device, MPI_Comm& comm,
                        settings_t& settings, occa::properties& props);
 
+  // box mesh
+  virtual void SetupBox() = 0;
+
   // mesh reader
   virtual void ParallelReader(const char *fileName) = 0;
 
@@ -589,10 +592,11 @@ void parallelSort(int size, int rank, MPI_Comm comm,
 		  void (*match)(void *, void *)
 		  );
 
-void addMeshSettings(settings_t& settings);
-
 void meshAddSettings(settings_t& settings);
 void occaAddSettings(settings_t& settings);
+
+void meshReportSettings(settings_t& settings);
+void occaReportSettings(settings_t& settings);
 
 // void occaTimerTic(occa::device device,std::string name);
 // void occaTimerToc(occa::device device,std::string name);

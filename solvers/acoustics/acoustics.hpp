@@ -33,6 +33,7 @@ SOFTWARE.
 class acousticsSettings_t: public settings_t {
 public:
   acousticsSettings_t(MPI_Comm& _comm);
+  void report();
 };
 
 class acoustics_t: public solver_t {

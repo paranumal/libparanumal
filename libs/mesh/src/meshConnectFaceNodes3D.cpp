@@ -66,6 +66,23 @@ void mesh3D::ConnectFaceNodes(){
   vmapP = (dlong*) calloc(Nfp*Nfaces*Nelements, sizeof(dlong));
   mapP  = (dlong*) calloc(Nfp*Nfaces*Nelements, sizeof(dlong));
 
+  //check if we're connecting a periodic box mesh
+  int periodicFlag = 0;
+  if (settings.compareSetting("MESH FILE","BOX") &&
+      settings.compareSetting("BOX BOUNDARY FLAG","-1"))
+    periodicFlag = 1;
+
+  //box dimensions
+  dfloat DIMX, DIMY, DIMZ;
+  settings.getSetting("BOX DIMX", DIMX);
+  settings.getSetting("BOX DIMY", DIMY);
+  settings.getSetting("BOX DIMZ", DIMZ);
+
+  //box is centered at the origin
+  DIMX /= 2.0;
+  DIMY /= 2.0;
+  DIMZ /= 2.0;
+
   /* assume elements already connected */
   for(dlong e=0;e<Nelements;++e){
     for(int f=0;f<Nfaces;++f){
@@ -75,12 +92,39 @@ void mesh3D::ConnectFaceNodes(){
         eP = e;
         fP = f;
       }
+
+      dfloat offsetX = 0.0;
+      dfloat offsetY = 0.0;
+      dfloat offsetZ = 0.0;
+
+      if (periodicFlag) {
+        //if the mesh is periodic, this is more complicated.
+        // check if this face is on a boundary face
+        bool top=true, bottom=true, front=true, back=true, left=true, right=true;
+        for(int n=0;n<NfaceVertices;++n){
+          dlong vid = e*Nverts + faceVertices[f*NfaceVertices+n];
+          if (fabs(EX[vid]-DIMX)>1e-4) right = false;
+          if (fabs(EX[vid]+DIMX)>1e-4) left = false;
+          if (fabs(EY[vid]-DIMY)>1e-4) back = false;
+          if (fabs(EY[vid]+DIMY)>1e-4) front = false;
+          if (fabs(EZ[vid]-DIMZ)>1e-4) top = false;
+          if (fabs(EZ[vid]+DIMZ)>1e-4) bottom = false;
+        }
+
+        if (right)  offsetX = -2.0*DIMX;
+        if (left)   offsetX =  2.0*DIMX;
+        if (back)   offsetY = -2.0*DIMY;
+        if (front)  offsetY =  2.0*DIMY;
+        if (top)    offsetZ = -2.0*DIMZ;
+        if (bottom) offsetZ =  2.0*DIMZ;
+      }
+
       /* for each node on this face find the neighbor node */
       for(int n=0;n<Nfp;++n){
         dlong  idM = faceNodes[f*Nfp+n] + e*Np;
-        dfloat xM = x[idM];
-        dfloat yM = y[idM];
-        dfloat zM = z[idM];
+        dfloat xM = x[idM]+offsetX;
+        dfloat yM = y[idM]+offsetY;
+        dfloat zM = z[idM]+offsetZ;
         int nP;
 
         int  idP = findBestMatch(xM, yM, zM,

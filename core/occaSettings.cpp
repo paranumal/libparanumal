@@ -48,3 +48,18 @@ void occaAddSettings(settings_t& settings) {
                       "Parallel device number");
 }
 
+void occaReportSettings(settings_t& settings) {
+
+  settings.reportSetting("THREAD MODEL");
+
+  if (settings.compareSetting("THREAD MODEL","OpenCL"))
+    settings.reportSetting("PLATFORM NUMBER");
+
+  int size;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  if ((size==1)
+    &&(settings.compareSetting("THREAD MODEL","CUDA")
+        ||settings.compareSetting("THREAD MODEL","HIP")
+        ||settings.compareSetting("THREAD MODEL","OpenCL") ))
+    settings.reportSetting("DEVICE NUMBER");
+}

@@ -5,13 +5,25 @@
 data/acousticsGaussian3D.h
 
 [MESH FILE]
-../../meshes/cavityTetH02.msh
+BOX
 
 [MESH DIMENSION]
 3
 
 [ELEMENT TYPE] # number of edges
 6
+
+[BOX NX]
+10
+
+[BOX NY]
+10
+
+[BOX NZ]
+10
+
+[BOX BOUNDARY FLAG]
+1
 
 [POLYNOMIAL DEGREE]
 4
@@ -32,10 +44,10 @@ DOPRI5
 0
 
 [FINAL TIME]
-1
+10
 
 [OUTPUT INTERVAL]
-.1
+1
 
 [OUTPUT TO FILE]
 TRUE

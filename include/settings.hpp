@@ -118,6 +118,8 @@ public:
   bool compareSetting(const string name, const string token) const;
 
   void report();
+
+  void reportSetting(const string name) const;
 };
 
 
