@@ -320,13 +320,15 @@ template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
   const unsigned int a = t%NUM_DOFS_1D;
   const unsigned int b = t/NUM_DOFS_1D;
 
-  for(int c=0;c<NUM_DOFS_1D;++c){
-    
-    int id = ijklN(a,b,c,element, NUM_DOFS_1D); 
-    
-    r_Aq[c] = solIn[id];
+  if(element<numElements){
+    for(int c=0;c<NUM_DOFS_1D;++c){
+      
+      int id = ijklN(a,b,c,element, NUM_DOFS_1D); 
+      
+      r_Aq[c] = solIn[id];
+    }
   }
-
+  
   for(int n=t;n<HALF_DOFS_1D*HALF_QUAD_1D;n+=NUM_DOFS_2D){
     s_oddDofToQuad[n] = oddDofToQuad[n];
     s_evenDofToQuad[n] = evenDofToQuad[n];
@@ -376,11 +378,12 @@ template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
   const unsigned int a = t%NUM_DOFS_1D;
   const unsigned int b = t/NUM_DOFS_1D;
 
-  for(int c=0;c<NUM_DOFS_1D;++c){
-    
-    int id = ijklN(a,b,c,element,NUM_DOFS_1D);
-    
-    r_Aq[c] = solIn[id];
+  if(element<numElements){
+    for(int c=0;c<NUM_DOFS_1D;++c){
+      int id = ijklN(a,b,c,element,NUM_DOFS_1D);
+      
+      r_Aq[c] = solIn[id];
+    }
   }
 
   for(int n=t;n<HALF_DOFS_1D*HALF_QUAD_1D;n+=NUM_DOFS_1D*NUM_DOFS_1D){
@@ -423,11 +426,13 @@ __global__ void massMatrixMultiplyConstantKernel(const int numElements,
   const unsigned int a = t%NUM_DOFS_1D;
   const unsigned int b = t/NUM_DOFS_1D;
 
-  for(int c=0;c<NUM_DOFS_1D;++c){
-    
-    int id = ijklN(a,b,c,element,NUM_DOFS_1D);
-    
-    r_Aq[c] = solIn[id];
+  if(element<numElements){
+    for(int c=0;c<NUM_DOFS_1D;++c){
+      
+      int id = ijklN(a,b,c,element,NUM_DOFS_1D);
+      
+      r_Aq[c] = solIn[id];
+    }
   }
 
   __syncthreads();
@@ -688,65 +693,82 @@ void runMassMatrixMultiplyKernel(hipStream_t stream, int Nq, int cubNq, int numE
   
 #define massMatrixMultiplyKernel(Nq,cubNq,Nblock)			\
   {									\
-       hipLaunchKernelGGL(massMatrixMultiplyConstantKernel<Nq,cubNq,Nblock>, G, B, 0, stream, numElements, c_op, c_oddDofToQuad, c_evenDofToQuad, c_solIn, c_solOut); \
+    if(Nq<=10) hipLaunchKernelGGL(massMatrixMultiplyRegisterKernel<Nq,cubNq,Nblock>, G, B, 0, stream, numElements, c_op, c_oddDofToQuad, c_evenDofToQuad, c_solIn, c_solOut); \
+    else       hipLaunchKernelGGL(massMatrixMultiplySharedKernel<Nq,cubNq,Nblock>, G, B, 0, stream, numElements, c_op, c_oddDofToQuad, c_evenDofToQuad, c_solIn, c_solOut); \
   }
+
+  // Nq=6 hipLaunchKernelGGL(massMatrixMultiplyRegisterKernel<Nq,cubNq,Nblock>, G, B, 0, stream, numElements, c_op, c_oddDofToQuad, c_evenDofToQuad, c_solIn, c_solOut); \
+  //   Nq==4; hipLaunchKernelGGL(massMatrixMultiplySharedKernel<Nq,cubNq,Nblock>, G, B, 0, stream, numElements, c_op, c_oddDofToQuad, c_evenDofToQuad, c_solIn, c_solOut); \
   
 #define ERR printf("massMatrixMultiplyRegister with Nq=%d, cubNq=%d not available", Nq, cubNq); exit(-1)
 
   int Nblock = 1;
   if(Nq==2){
-    Nblock = 8;
+    Nblock = 16;
     dim3 G((numElements+Nblock-1)/Nblock, 1, 1);
     dim3 B(Nq*Nq, Nblock, 1);
+
+    // TUNED FOR SIMD WIDTH OF 64
     
     switch(cubNq){
-    case 2: massMatrixMultiplyKernel(2,2,8); break;
-    case 4: massMatrixMultiplyKernel(2,4,8); break;
-    case 6: massMatrixMultiplyKernel(2,6,8); break;
+    case 2: massMatrixMultiplyKernel(2,2,16); break;
+    case 4: massMatrixMultiplyKernel(2,4,16); break;
+    case 6: massMatrixMultiplyKernel(2,6,16); break;
     default: ERR;
     }
     return;
   }
 
   if(Nq==4){
-    Nblock = 2;
+    Nblock = 4;
     dim3 G((numElements+Nblock-1)/Nblock, 1, 1);
     dim3 B(Nq*Nq, Nblock, 1);
     
     switch(cubNq){
-    case 4: massMatrixMultiplyKernel(4,4,2); break;
-    case 6: massMatrixMultiplyKernel(4,6,2); break;
-    case 8: massMatrixMultiplyKernel(4,8,2); break;
+    case 4: massMatrixMultiplyKernel(4,4,4); break;
+    case 6: massMatrixMultiplyKernel(4,6,4); break;
+    case 8: massMatrixMultiplyKernel(4,8,4); break;
     default: ERR;
     }
     return;
   }
 
-  Nblock = 1;
-  dim3 G((numElements+Nblock-1)/Nblock, 1, 1);
-  dim3 B(Nq*Nq, Nblock, 1);
-  
   if(Nq==6){
+
+    Nblock = 3;
+    dim3 G((numElements+Nblock-1)/Nblock, 1, 1);
+    dim3 B(Nq*Nq, Nblock, 1);
+    
     switch(cubNq){
-    case 6:  massMatrixMultiplyKernel(6, 6,1); break;
-    case 8:  massMatrixMultiplyKernel(6, 8,1); break;
-    case 10: massMatrixMultiplyKernel(6,10,1); break;
+    case 6:  massMatrixMultiplyKernel(6, 6,3); break;
+    case 8:  massMatrixMultiplyKernel(6, 8,3); break;
+    case 10: massMatrixMultiplyKernel(6,10,3); break;
     default: ERR;
     }
     return;
   }
 
   if(Nq==8){
+
+    Nblock = 2;
+    dim3 G((numElements+Nblock-1)/Nblock, 1, 1);
+    dim3 B(Nq*Nq, Nblock, 1)  ;
+    
     switch(cubNq){
-    case 8:  massMatrixMultiplyKernel(8, 8,1); break;
-    case 10: massMatrixMultiplyKernel(8,10,1); break;
-    case 12: massMatrixMultiplyKernel(8,12,1); break;
+    case 8:  massMatrixMultiplyKernel(8, 8,2); break;
+    case 10: massMatrixMultiplyKernel(8,10,2); break;
+    case 12: massMatrixMultiplyKernel(8,12,2); break;
     default: ERR;
     }
     return;
   }
 
   if(Nq==10){
+
+    Nblock = 1;
+    dim3 G((numElements+Nblock-1)/Nblock, 1, 1);
+    dim3 B(Nq*Nq, Nblock, 1);    
+    
     switch(cubNq){
     case 10: massMatrixMultiplyKernel(10,10,1); break;
     case 12: massMatrixMultiplyKernel(10,12,1); break;
@@ -756,6 +778,11 @@ void runMassMatrixMultiplyKernel(hipStream_t stream, int Nq, int cubNq, int numE
     return;
   }
 
+  
+  Nblock = 1;
+  dim3 G((numElements+Nblock-1)/Nblock, 1, 1);
+  dim3 B(Nq*Nq, Nblock, 1);    
+    
   if(Nq==12){
     switch(cubNq){
     case 12: massMatrixMultiplyKernel(12,12,1); break;
