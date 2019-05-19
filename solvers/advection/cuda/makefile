@@ -27,6 +27,10 @@ stiffnessMatrixMultiplyHipVT: stiffnessMatrixMultiplyHipVT.c
 	hipcc -o stiffnessMatrixMultiplyHipVT $(hipFlags) stiffnessMatrixMultiplyHipVT.c
 
 
+stiffnessMatrixMultiplyHipVTV2: stiffnessMatrixMultiplyHipVTV2.c
+	hipcc -o stiffnessMatrixMultiplyHipVTV2 $(hipFlags) stiffnessMatrixMultiplyHipVTV2.c
+
+
 
 roofline: roofline.cu
 	nvcc -o roofline $(cudaFlags) roofline.cu
