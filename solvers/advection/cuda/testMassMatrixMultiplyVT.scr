@@ -1,0 +1,15 @@
+#!/bin/bash
+
+rm massMatrixMultiplyVT
+make massMatrixMultiplyVT
+
+# to run a sweep
+for Nq in `seq 2 1 12`
+    do
+    let upperCubNq=$Nq+4
+    for cubNq in `seq $Nq 1 $upperCubNq`
+    do
+      ./massMatrixMultiplyVT $Nq $cubNq 10
+    done
+done
+      
