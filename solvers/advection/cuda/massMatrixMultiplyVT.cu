@@ -1343,6 +1343,10 @@ int main(int argc, char **argv){
     exit(-1);
   }
 #endif
+
+  cudaEvent_t start, end;
+  cudaEventCreate(&start);
+  cudaEventCreate(&end);	
   
   int   Np = Nq*Nq*Nq;
   int   cubNp = cubNq*cubNq*cubNq;
@@ -1353,6 +1357,43 @@ int main(int argc, char **argv){
   int    Ntotal = numElements*Np;
   int cubNtotal = numElements*cubNp;
 
+  int Ntests = 400;
+  
+  // bandwidth test
+  // total number of bytes
+  float elapsed;
+  double estimatedActualDeviceBandwidth = 0;
+  
+  {
+    int bwNtotal = (Ntotal*2 + cubNtotal);
+    
+    dfloat_t *h_bwTest1, *c_bwTest1;
+    dfloat_t *h_bwTest2, *c_bwTest2;
+
+    randAlloc(bwNtotal/2, &h_bwTest1, &c_bwTest1);
+    randAlloc(bwNtotal/2, &h_bwTest2, &c_bwTest2);
+  
+    cudaDeviceSynchronize();
+    cudaEventRecord(start, stream);
+    
+    for(int test=0;test<Ntests/2;++test){
+      cudaMemcpy(c_bwTest2, c_bwTest1, (bwNtotal/2)*sizeof(dfloat_t), cudaMemcpyDeviceToDevice);
+      cudaMemcpy(c_bwTest1, c_bwTest2, (bwNtotal/2)*sizeof(dfloat_t), cudaMemcpyDeviceToDevice);
+    }
+    
+    cudaEventRecord(end, stream);
+    cudaEventSynchronize(end);
+    
+    cudaEventElapsedTime(&elapsed, start, end);
+    elapsed /= 1000.; // convert to s
+    elapsed /= (double) Ntests;
+    
+    estimatedActualDeviceBandwidth = (bwNtotal*sizeof(dfloat_t)/elapsed)/1.e9;
+    
+    cudaFree(c_bwTest1);
+    cudaFree(c_bwTest2);
+  }
+  
   dfloat_t *h_op,      *c_op;
   dfloat_t *h_solOut,       *c_solOut;
   dfloat_t *h_solIn,        *c_solIn;
@@ -1393,11 +1434,6 @@ int main(int argc, char **argv){
 
 
   
-  cudaEvent_t start, end;
-  cudaEventCreate(&start);
-  cudaEventCreate(&end);	
-
-  int Ntests = 10;
   // KERNEL GRID
   // do nothing kernel test
   dfloat_t nothingElapsed = nothingTest(stream, Ntests);
@@ -1445,7 +1481,6 @@ int main(int argc, char **argv){
     
     cudaEventSynchronize(end);
     
-    float elapsed;
     cudaEventElapsedTime(&elapsed, start, end);
     elapsed /= 1000.;
     elapsed /= (double) Ntests;
@@ -1464,9 +1499,9 @@ int main(int argc, char **argv){
     double effectiveFlops =
       numElements*(2*( Nq*Nq*Nq*cubNq*2 + Nq*Nq*cubNq*cubNq*2 + Nq*cubNq*cubNq*cubNq*2)/elapsed)/1.e9;
     
-    printf("%2d %2d %8d %8d %e %e %e %e %e %e %d %%%% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs,"
-	   " elapsed, dofsPerSecond, nothingElapsed, bandwidth in GB/s, est. GFLOPS/s, effective GFLOPS/s, mode]\n",
-	   Nq, cubNq, numElements, Np*numElements, elapsed, numElements*(Np/elapsed), nothingElapsed, bw, estFlops, effectiveFlops, mode);
+    printf("%2d %2d %8d %8d %e %e %e %e %e %e %e %d %%%% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs,"
+	   " elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]\n",
+	   Nq, cubNq, numElements, Np*numElements, elapsed, numElements*(Np/elapsed), nothingElapsed, bw, estimatedActualDeviceBandwidth, estFlops, effectiveFlops, mode);
   }
 
   // check output is correct
