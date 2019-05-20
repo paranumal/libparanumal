@@ -31,7 +31,7 @@ SOFTWARE.
 
 #define dfloat_t double
 
-#define ODD_EVEN_THRESHOLD 0
+#define ODD_EVEN_THRESHOLD 1
 
 __forceinline__ __device__ __host__  int ijN(const int i, const int j, const int N){
 
@@ -571,12 +571,8 @@ template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
       r_evenDofToQuad[n] = s_evenDofToQuad[n];
     }
   }
-  if(NUM_DOFS_1D>=ODD_EVEN_THRESHOLD)
-    massMatrixMultiplyOddEvenDevice <NUM_DOFS_1D, NUM_QUAD_1D, p_Nblock>
-      (numElements, element, op, r_oddDofToQuad, r_evenDofToQuad, s_tmp1, r_Aq);
-  else
-    massMatrixMultiplyMonolithicDevice <NUM_DOFS_1D, NUM_QUAD_1D, p_Nblock>
-      (numElements, element, op, const_DofToQuad, s_tmp1, r_Aq);
+  massMatrixMultiplyOddEvenDevice <NUM_DOFS_1D, NUM_QUAD_1D, p_Nblock>
+    (numElements, element, op, r_oddDofToQuad, r_evenDofToQuad, s_tmp1, r_Aq);
   
   if(element<numElements){
 #pragma unroll
@@ -627,12 +623,8 @@ template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
 
   __syncthreads();
 
-  if(NUM_DOFS_1D>=ODD_EVEN_THRESHOLD)
-    massMatrixMultiplyOddEvenDevice  <NUM_DOFS_1D, NUM_QUAD_1D, p_Nblock>
-      (numElements, element, op, s_oddDofToQuad, s_evenDofToQuad, s_tmp1, r_Aq);
-  else
-    massMatrixMultiplyMonolithicDevice  <NUM_DOFS_1D, NUM_QUAD_1D, p_Nblock>
-      (numElements, element, op, const_DofToQuad, s_tmp1, r_Aq);
+  massMatrixMultiplyOddEvenDevice  <NUM_DOFS_1D, NUM_QUAD_1D, p_Nblock>
+    (numElements, element, op, s_oddDofToQuad, s_evenDofToQuad, s_tmp1, r_Aq);
     
   if(element<numElements){
 #pragma unroll
@@ -674,12 +666,8 @@ __global__ void massMatrixMultiplyConstantKernel(const int numElements,
   
   __syncthreads();
 
-  if(NUM_DOFS_1D>=ODD_EVEN_THRESHOLD)
-    massMatrixMultiplyOddEvenDevice  <NUM_DOFS_1D, NUM_QUAD_1D, p_Nblock>
-      (numElements, element, op, const_oddDofToQuad, const_evenDofToQuad, s_tmp1, r_Aq);
-  else
-    massMatrixMultiplyMonolithicDevice  <NUM_DOFS_1D, NUM_QUAD_1D, p_Nblock>
-      (numElements, element, op, const_DofToQuad, s_tmp1, r_Aq);
+  massMatrixMultiplyOddEvenDevice  <NUM_DOFS_1D, NUM_QUAD_1D, p_Nblock>
+    (numElements, element, op, const_oddDofToQuad, const_evenDofToQuad, s_tmp1, r_Aq);
   
   if(element<numElements){
 #pragma unroll
@@ -689,6 +677,51 @@ __global__ void massMatrixMultiplyConstantKernel(const int numElements,
     }
   }
 }
+
+template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
+__global__ void massMatrixMultiplyMonolithicKernel(const int numElements,
+						   const dfloat_t * __restrict__ op,
+						   const dfloat_t * __restrict__ oddDofToQuad,
+						   const dfloat_t * __restrict__ evenDofToQuad,
+						   const dfloat_t * __restrict__ solIn,
+						   dfloat_t * __restrict__ solOut){
+  
+  __shared__ dfloat_t s_tmp1[p_Nblock][NUM_QUAD_1D][NUM_QUAD_1D][NUM_QUAD_1D+p_padCubNq];
+
+  dfloat_t r_Aq[NUM_QUAD_1D];
+
+  const unsigned int t = threadIdx.x;
+  const int blk = threadIdx.y;
+  
+  const int element = blockIdx.x*p_Nblock + blk;
+  
+  const unsigned int a = t%NUM_DOFS_1D;
+  const unsigned int b = t/NUM_DOFS_1D;
+
+  if(element < numElements){
+    for(int c=0;c<NUM_DOFS_1D;++c){
+      
+      int id = ijklN(a,b,c,element,NUM_DOFS_1D);
+      
+      r_Aq[c] = solIn[id];
+    }
+  }
+  
+  __syncthreads();
+
+  massMatrixMultiplyMonolithicDevice  <NUM_DOFS_1D, NUM_QUAD_1D, p_Nblock>
+    (numElements, element, op, const_DofToQuad, s_tmp1, r_Aq);
+  
+  if(element<numElements){
+#pragma unroll
+    for(int c=0;c<NUM_DOFS_1D;++c){
+      int id = ijklN(a,b,c,element,NUM_DOFS_1D);
+      solOut[id] = r_Aq[c];
+    }
+  }
+}
+
+
 
 void massMatrixMultiplyHost(int NUM_DOFS_1D, int NUM_QUAD_1D, const int numElements,
 			    const dfloat_t * __restrict__ op,
@@ -949,14 +982,16 @@ void buildInterpMatrices(int NUM_DOFS_1D, int NUM_QUAD_1D,
 
 void runMassMatrixMultiplyKernel(cudaStream_t stream, int Nq, int cubNq, int numElements,
 				 dfloat_t *c_op, dfloat_t *c_oddDofToQuad, dfloat_t *c_evenDofToQuad,
-				 dfloat_t *c_solIn, dfloat_t *c_solOut){
+				 dfloat_t *c_solIn, dfloat_t *c_solOut, int mode){
   
 #define massMatrixMultiplyKernel(Nq,cubNq,Nblock)			\
   {									\
-    if(Nq<=2)								\
+    if(mode==1)								\
       massMatrixMultiplyRegisterKernel<Nq,cubNq,Nblock> <<< G, B, 0, stream >>>(numElements, c_op, c_oddDofToQuad, c_evenDofToQuad, c_solIn, c_solOut); \
-    else								\
+    else if(mode==2)							\
       massMatrixMultiplyConstantKernel<Nq,cubNq,Nblock> <<< G, B, 0, stream >>>(numElements, c_op, c_oddDofToQuad, c_evenDofToQuad, c_solIn, c_solOut); \
+    else 								\
+      massMatrixMultiplyMonolithicKernel<Nq,cubNq,Nblock> <<< G, B, 0, stream >>>(numElements, c_op, c_oddDofToQuad, c_evenDofToQuad, c_solIn, c_solOut); \
   }
   
 #define ERR printf("massMatrixMultiplyRegister with Nq=%d, cubNq=%d not available", Nq, cubNq); exit(-1)
@@ -1284,8 +1319,8 @@ int main(int argc, char **argv){
   cudaStream_t stream;
   cudaStreamCreate(&stream);
   
-  if(argc!=4){
-    printf("Usage: ./massMatrixMultiplyVT Nq cubNq numElements\n");
+  if(argc!=5){
+    printf("Usage: ./massMatrixMultiplyVT Nq cubNq numElements mode \n");
     exit(-1);
   }
 
@@ -1293,8 +1328,9 @@ int main(int argc, char **argv){
   int        Nq = atoi(argv[1]);
   int     cubNq = atoi(argv[2]);
   int numElements = atoi(argv[3]);
+  int        mode = atoi(argv[4]);
 
-  printf("Running: Nq=%d, cubNq=%d, numElements=%d\n", Nq, cubNq, numElements);
+  printf("Running: Nq=%d, cubNq=%d, numElements=%d, mode=%d\n", Nq, cubNq, numElements, mode);
 
 #if 0
   if(Nq%2){
@@ -1361,7 +1397,7 @@ int main(int argc, char **argv){
   cudaEventCreate(&start);
   cudaEventCreate(&end);	
 
-  int Ntests = 100;
+  int Ntests = 10;
   // KERNEL GRID
   // do nothing kernel test
   dfloat_t nothingElapsed = nothingTest(stream, Ntests);
@@ -1370,7 +1406,7 @@ int main(int argc, char **argv){
 //  dfloat_t nothingVerboseElapsed = nothingVerboseTest(stream, Ntests);
   
   // warm up call
-  runMassMatrixMultiplyKernel (stream, Nq, cubNq, numElements, c_op, c_oddDofToQuad, c_evenDofToQuad, c_solIn, c_solOut);
+  runMassMatrixMultiplyKernel (stream, Nq, cubNq, numElements, c_op, c_oddDofToQuad, c_evenDofToQuad, c_solIn, c_solOut, mode);
 
 #if USE_GRAPH==1
   // cuda stream capture
@@ -1380,7 +1416,7 @@ int main(int argc, char **argv){
 
   for(int test=0;test<Ntests;++test){
 
-    runMassMatrixMultiplyKernel (stream, Nq, cubNq, numElements, c_op, c_oddDofToQuad, c_evenDofToQuad, c_solIn, c_solOut);
+    runMassMatrixMultiplyKernel (stream, Nq, cubNq, numElements, c_op, c_oddDofToQuad, c_evenDofToQuad, c_solIn, c_solOut, mode);
     
   }
 
@@ -1398,7 +1434,7 @@ int main(int argc, char **argv){
 #if USE_GRAPH==0
     for(int test=0;test<Ntests;++test){
 
-      runMassMatrixMultiplyKernel (stream, Nq, cubNq, numElements, c_op, c_oddDofToQuad, c_evenDofToQuad, c_solIn, c_solOut);
+      runMassMatrixMultiplyKernel (stream, Nq, cubNq, numElements, c_op, c_oddDofToQuad, c_evenDofToQuad, c_solIn, c_solOut, mode);
       
     }
 #else
@@ -1428,9 +1464,9 @@ int main(int argc, char **argv){
     double effectiveFlops =
       numElements*(2*( Nq*Nq*Nq*cubNq*2 + Nq*Nq*cubNq*cubNq*2 + Nq*cubNq*cubNq*cubNq*2)/elapsed)/1.e9;
     
-    printf("%2d %2d %8d %8d %e %e %e %e %e %e %%%% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs,"
-	   " elapsed, dofsPerSecond, nothingElapsed, bandwidth in GB/s, est. GFLOPS/s, effective GFLOPS/s]\n",
-	   Nq, cubNq, numElements, Np*numElements, elapsed, numElements*(Np/elapsed), nothingElapsed, bw, estFlops, effectiveFlops);
+    printf("%2d %2d %8d %8d %e %e %e %e %e %e %d %%%% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs,"
+	   " elapsed, dofsPerSecond, nothingElapsed, bandwidth in GB/s, est. GFLOPS/s, effective GFLOPS/s, mode]\n",
+	   Nq, cubNq, numElements, Np*numElements, elapsed, numElements*(Np/elapsed), nothingElapsed, bw, estFlops, effectiveFlops, mode);
   }
 
   // check output is correct
