@@ -14,7 +14,10 @@ do
     let upperCubNq=$Nq+4
     for cubNq in `seq $Nq 1 $upperCubNq`
     do
-	./massMatrixMultiplyVT $Nq $cubNq $E
+	for mode in `seq 1 3`
+	do 
+	    ./massMatrixMultiplyVT $Nq $cubNq $E $mode
+	done
     done
 done
 
