@@ -31,8 +31,7 @@ SOFTWARE.
 #define dfloat_t double
 
 #define ODD_EVEN_THRESHOLD 1
-#define READ_TO_REGISTER 1
-#define USE_CONTINGUOUS_OUPUT 0
+#define READ_TO_REGISTER 0
 
 
 __forceinline__ __device__ __host__  int ijN(const int i, const int j, const int N){
@@ -67,8 +66,7 @@ __forceinline__ __device__ __host__ int ijklN(const int i, const int j, const in
 #define HALF_DOFS_1D ((NUM_DOFS_1D+1)/2)
 #define HALF_QUAD_1D ((NUM_QUAD_1D+1)/2)
 
-#define p_padCubNq 0
-// ((NUM_QUAD_1D%4) ? 0:1)
+#define p_padCubNq ((NUM_QUAD_1D%4) ? 0:1)
 
 #define NUM_DOFS_2D (NUM_DOFS_1D*NUM_DOFS_1D)
 #define NUM_DOFS_3D (NUM_DOFS_1D*NUM_DOFS_1D*NUM_DOFS_1D)
@@ -155,6 +153,11 @@ template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
   if(t<NUM_DOFS_2D){
     const int a = t%NUM_DOFS_1D;
     const int b = t/NUM_DOFS_1D;
+
+#pragma unroll
+    for(int c=0;c<NUM_DOFS_1D;++c){
+      r_tmp[b]  = s_Ap[blk][c][b][a];
+    }
     
 #pragma unroll
     for(int k=0;k<NUM_QUAD_1D;++k){
@@ -163,7 +166,7 @@ template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
 #pragma unroll
       for(int c=0;c<NUM_DOFS_1D;++c){
 	int kc = ijN(c,k,NUM_DOFS_1D);		
-	res  += DofToQuad[kc]*r_Ap[c];
+	res  += DofToQuad[kc]*r_tmp[c];
       }
       
       s_Ap[blk][k][b][a]  = res;
@@ -289,27 +292,178 @@ template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
     }
   }
 
-#if USE_CONTIGUOUS_OUTPUT==1
-  
-  __syncthreads();
-
-  // write to shared
-  if(t<NUM_DOFS_2D){
-
-#pragma unroll
-    for(int c=0;c<NUM_DOFS_1D;++c){
-      const int a = t%NUM_DOFS_1D;
-      const int b = t/NUM_DOFS_1D;
-      int id = ijklN(a,b,c,blk, NUM_DOFS_1D);
-      s_Ap[0][0][0][id] = r_Ap[c];
-    }
-  }
-
-#endif
   __syncthreads();
 
   
 }
+
+template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
+  __forceinline__ __device__ 
+  void massMatrixMultiplyMonolithicShuffledDevice(const int numElements,
+						  const int element,
+						  const dfloat_t * __restrict__ op,
+						  const dfloat_t * __restrict__ DofToQuad,
+						  dfloat_t s_Ap[p_Nblock][NUM_QUAD_1D][NUM_QUAD_1D][NUM_QUAD_1D+p_padCubNq],
+						  dfloat_t * __restrict__ r_Ap){
+  
+  const int t   = threadIdx.x;
+  const int blk = threadIdx.y;
+  
+  // assumes barrier before s_Ap was used last
+  
+  // transform in 'a'
+  if(t<NUM_DOFS_2D){
+    const int b = t%NUM_DOFS_1D;
+    const int c = t/NUM_DOFS_1D;
+    
+#pragma unroll
+    for(int a=0;a<NUM_DOFS_1D;++a){
+      r_Ap[a]  = s_Ap[blk][c][b][a];
+    }
+    
+#pragma unroll
+    for(int i=0;i<NUM_QUAD_1D;++i){
+      dfloat_t res = 0;
+      
+#pragma unroll
+      for(int a=0;a<NUM_DOFS_1D;++a){
+	int ia = ijN(a,i,NUM_DOFS_1D);		
+	res  += DofToQuad[ia]*r_Ap[a];
+      }
+      
+      s_Ap[blk][c][b][i]  = res;
+    }
+  }
+   
+ __syncthreads();
+  
+  // transform in 'b'
+  if(t<NUM_DOFS_1D*NUM_QUAD_1D){
+    const int i = t%NUM_QUAD_1D;
+    const int c = t/NUM_QUAD_1D;
+    
+#pragma unroll
+    for(int b=0;b<NUM_DOFS_1D;++b){
+      r_Ap[b]  = s_Ap[blk][c][b][i];
+    }
+    
+#pragma unroll
+    for(int j=0;j<NUM_QUAD_1D;++j){
+      dfloat_t res = 0;
+      
+#pragma unroll
+      for(int b=0;b<NUM_DOFS_1D;++b){
+	int jb = ijN(b,j,NUM_DOFS_1D);
+	res  += DofToQuad[jb]*r_Ap[b];
+      }
+      s_Ap[blk][c][j][i] = res;
+    }
+  }
+  
+  __syncthreads();
+
+  // transform in 'c'
+  {
+    const int i = t%NUM_QUAD_1D;
+    const int j = t/NUM_QUAD_1D;
+    
+#pragma unroll
+    for(int c=0;c<NUM_DOFS_1D;++c){
+      r_Ap[c]  = s_Ap[blk][c][j][i];
+    }
+    
+#pragma unroll
+    for(int k=0;k<NUM_QUAD_1D;++k){
+
+      int gid = ijklN(i,j,k,element, NUM_QUAD_1D);
+      
+      dfloat_t WJ = (element<numElements) ? op[gid]: 0;
+
+      
+      dfloat_t res = 0;
+      
+#pragma unroll
+      for(int c=0;c<NUM_DOFS_1D;++c){
+	int kc = ijN(c,k,NUM_DOFS_1D);
+	res  += DofToQuad[kc]*r_Ap[c];
+      }
+	
+      s_Ap[blk][k][j][i] = WJ*res;
+    }
+    
+#pragma unroll
+    for(int k=0;k<NUM_QUAD_1D;++k){
+      r_Ap[k]  = s_Ap[blk][k][j][i];
+    }
+    
+#pragma unroll
+    for(int c=0;c<NUM_DOFS_1D;++c){
+      dfloat_t res = 0;
+      
+#pragma unroll
+      for(int k=0;k<NUM_QUAD_1D;++k){
+	int kc = ijN(c,k,NUM_DOFS_1D);
+	res  += DofToQuad[kc]*r_Ap[k];
+      }
+      
+      s_Ap[blk][c][j][i] = res;
+    }
+  }
+  
+  __syncthreads();
+
+  
+  // test in 'b'
+  if(t<NUM_DOFS_1D*NUM_QUAD_1D){
+    const int i = t%NUM_QUAD_1D;
+    const int c = t/NUM_QUAD_1D;
+    
+    for(int j=0;j<NUM_QUAD_1D;++j){
+      r_Ap[j]  = s_Ap[blk][c][j][i];
+    }
+    
+#pragma unroll
+    for(int b=0;b<NUM_DOFS_1D;++b){
+      dfloat_t res = 0;
+      
+#pragma unroll
+      for(int j=0;j<NUM_QUAD_1D;++j){
+	int jb = ijN(b,j,NUM_DOFS_1D);
+	res += DofToQuad[jb]*r_Ap[j];
+      }
+      
+      s_Ap[blk][c][b][i] = res;
+    }
+  }
+  
+  __syncthreads();
+
+  // test in 'a'
+  if(t<NUM_DOFS_2D){
+    const int b = t%NUM_DOFS_1D;
+    const int c = t/NUM_DOFS_1D;
+    
+    for(int i=0;i<NUM_QUAD_1D;++i){
+      r_Ap[i]  = s_Ap[blk][c][b][i];
+    }
+
+#pragma unroll
+    for(int a=0;a<NUM_DOFS_1D;++a){
+      dfloat_t res = 0; 
+      
+#pragma unroll
+      for(int i=0;i<NUM_QUAD_1D;++i){
+	int ia = ijN(a,i,NUM_DOFS_1D);
+	res += DofToQuad[ia]*r_Ap[i];
+      }
+      
+      s_Ap[blk][c][b][a] = res;
+    }
+  }
+  
+}
+
+
 
 
 template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
@@ -545,26 +699,239 @@ template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
     }
   }
 
-#if USE_CONTIGUOUS_OUTPUT==1
-  __syncthreads();
+}
 
-  // write to shared
+
+template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
+  __forceinline__ __device__ 
+  void massMatrixMultiplyOddEvenShuffledDevice(const int numElements,
+					       const int element,
+					       const dfloat_t * __restrict__ op,
+					       const dfloat_t * __restrict__ oddDofToQuad,
+					       const dfloat_t * __restrict__ evenDofToQuad,
+					       dfloat_t s_Ap[p_Nblock][NUM_QUAD_1D][NUM_QUAD_1D][NUM_QUAD_1D+p_padCubNq],
+					       dfloat_t * __restrict__ r_tmpOdd,
+					       dfloat_t * __restrict__ r_tmpEven){
+  
+  
+  const int t   = threadIdx.x;
+  const int blk = threadIdx.y;
+
+  // input in s_Ap
+  
+  // assumes barrier before s_Ap was used last
+  
+  // transform in 'a'
   if(t<NUM_DOFS_2D){
-
-    const int a = t%NUM_DOFS_1D;
-    const int b = t/NUM_DOFS_1D;
+    const int b = t%NUM_DOFS_1D;
+    const int c = t/NUM_DOFS_1D;
     
 #pragma unroll
-    for(int c=0;c<NUM_DOFS_1D;++c){
-      int id = ijklN(a,b,c,blk, NUM_DOFS_1D);
-      s_Ap[0][0][0][id] = r_Ap[c];
+    for(int a=0;a<HALF_DOFS_1D;++a){
+      dfloat_t tmp1 = s_Ap[blk][c][b][a];
+      dfloat_t tmp2 = s_Ap[blk][c][b][NUM_DOFS_1D-1-a];
+      r_tmpOdd[a]  = tmp1 + tmp2;
+      r_tmpEven[a] = tmp1 - tmp2;
+    }
+    
+    if(NUM_DOFS_1D%2)
+      r_tmpOdd[HALF_DOFS_1D-1] *= 0.5f;
+    
+#pragma unroll
+    for(int i=0;i<HALF_QUAD_1D;++i){
+      dfloat_t resOdd = 0, resEven = 0;
+      
+#pragma unroll
+      for(int a=0;a<HALF_DOFS_1D;++a){
+	int ia = ijN(a,i,HALF_DOFS_1D);		
+	resOdd  += oddDofToQuad[ia]*r_tmpOdd[a];
+	resEven += evenDofToQuad[ia]*r_tmpEven[a];
+      }
+      
+      s_Ap[blk][c][b][NUM_QUAD_1D-1-i] = resOdd - resEven;
+      s_Ap[blk][c][b][i]               = resOdd + resEven;
     }
   }
-#endif
   
   __syncthreads();
 
+  // transform in 'b'
+  if(t<NUM_DOFS_1D*NUM_QUAD_1D){
+    const int i = t%NUM_QUAD_1D;
+    const int c = t/NUM_QUAD_1D;
+    
+#pragma unroll
+    for(int b=0;b<HALF_DOFS_1D;++b){
+      dfloat_t tmp1 = s_Ap[blk][c][b][i];
+      dfloat_t tmp2 = s_Ap[blk][c][NUM_DOFS_1D-1-b][i];
+      r_tmpOdd[b]  = tmp1 + tmp2;
+      r_tmpEven[b] = tmp1 - tmp2;
+    }
+    
+    if(NUM_DOFS_1D%2)
+      r_tmpOdd[HALF_DOFS_1D-1] *= 0.5f;
+    
+#pragma unroll
+    for(int j=0;j<HALF_QUAD_1D;++j){
+      dfloat_t resOdd = 0, resEven = 0;
+      
+#pragma unroll
+      for(int b=0;b<HALF_DOFS_1D;++b){
+	int jb = ijN(b,j,HALF_DOFS_1D);		
+	resOdd  += oddDofToQuad[jb]*r_tmpOdd[b];
+	resEven += evenDofToQuad[jb]*r_tmpEven[b];
+      }
+      
+      s_Ap[blk][c][NUM_QUAD_1D-1-j][i] = resOdd - resEven;
+      s_Ap[blk][c][j][i]               = resOdd + resEven;
+    }
+  }
+
+
+  __syncthreads();
+
+  // transform in 'c' then in 'k'
+  {
+    const int i = t%NUM_QUAD_1D;
+    const int j = t/NUM_QUAD_1D;
+    
+#pragma unroll
+    for(int c=0;c<HALF_DOFS_1D;++c){
+      dfloat_t tmp1 = s_Ap[blk][c][j][i];
+      dfloat_t tmp2 = s_Ap[blk][NUM_DOFS_1D-1-c][j][i];
+      r_tmpOdd[c]  = tmp1 + tmp2;
+      r_tmpEven[c] = tmp1 - tmp2;
+    }
+    
+    if(NUM_DOFS_1D%2)
+      r_tmpOdd[HALF_DOFS_1D-1] *= 0.5f;
+    
+#pragma unroll
+    for(int k=0;k<HALF_QUAD_1D;++k){
+      dfloat_t resOdd = 0, resEven = 0;
+      
+#pragma unroll
+      for(int c=0;c<HALF_DOFS_1D;++c){
+	int kc = ijN(c,k,HALF_DOFS_1D);		
+	resOdd  += oddDofToQuad[kc]*r_tmpOdd[c];
+	resEven += evenDofToQuad[kc]*r_tmpEven[c];
+      }
+      
+      int gid1 = ijklN(i,j,NUM_QUAD_1D-1-k,element, NUM_QUAD_1D);
+      int gid2 = ijklN(i,j,k,element, NUM_QUAD_1D);
+
+      dfloat_t WJ1 = op[gid1]; // 2 from doing there/back
+      dfloat_t WJ2 = op[gid2];
+      
+      s_Ap[blk][NUM_QUAD_1D-1-k][j][i] = WJ1*(resOdd-resEven);
+      s_Ap[blk][k][j][i]               = WJ2*(resOdd+resEven);
+    }
+    
+    // no barrier since all threads are working on their own pencils
+    
+    // transform in 'k'
+#pragma unroll
+    for(int k=0;k<HALF_QUAD_1D;++k){
+      
+      dfloat_t tmp1 = s_Ap[blk][k][j][i];
+      dfloat_t tmp2 = s_Ap[blk][NUM_QUAD_1D-1-k][j][i];
+      r_tmpOdd[k]  = tmp1 + tmp2;
+      r_tmpEven[k] = tmp1 - tmp2;
+    }
+    
+    if(NUM_QUAD_1D%2)
+      r_tmpOdd[HALF_QUAD_1D-1] *= 0.5f;
+    
+#pragma unroll
+    for(int c=0;c<HALF_DOFS_1D;++c){
+      dfloat_t resOdd = 0, resEven = 0;
+      
+#pragma unroll
+      for(int k=0;k<HALF_QUAD_1D;++k){
+	int kc = ijN(c,k,HALF_DOFS_1D);		
+	resOdd  += oddDofToQuad[kc]*r_tmpOdd[k];
+	resEven += evenDofToQuad[kc]*r_tmpEven[k];
+      }
+      
+      s_Ap[blk][NUM_DOFS_1D-1-c][j][i] = resOdd - resEven;
+      s_Ap[blk][c][j][i]              = resOdd + resEven;
+    }
+  }
+  
+  __syncthreads();
+
+  // transform in 'j'
+  if(t<NUM_DOFS_1D*NUM_QUAD_1D){
+
+    const int i = t%NUM_QUAD_1D;
+    const int c = t/NUM_QUAD_1D;
+    
+#pragma unroll
+    for(int j=0;j<HALF_QUAD_1D;++j){
+      dfloat_t tmp1 = s_Ap[blk][c][j][i];
+      dfloat_t tmp2 = s_Ap[blk][c][NUM_QUAD_1D-1-j][i];
+      r_tmpOdd[j]  = tmp1 + tmp2;
+      r_tmpEven[j] = tmp1 - tmp2;
+    }
+    
+    if(NUM_QUAD_1D%2)
+      r_tmpOdd[HALF_QUAD_1D-1] *= 0.5f;
+    
+#pragma unroll
+    for(int b=0;b<HALF_DOFS_1D;++b){
+      dfloat_t resOdd = 0, resEven = 0;
+      
+#pragma unroll
+      for(int j=0;j<HALF_QUAD_1D;++j){
+	int jb = ijN(b,j,HALF_DOFS_1D);		
+	resOdd  += oddDofToQuad[jb]*r_tmpOdd[j];
+	resEven += evenDofToQuad[jb]*r_tmpEven[j];
+      }
+      
+      s_Ap[blk][c][NUM_DOFS_1D-1-b][i] = resOdd - resEven;
+      s_Ap[blk][c][b][i]               = resOdd + resEven;
+    }
+  }
+
+
+  __syncthreads();
+
+  // transform in 'i'
+  if(t<NUM_DOFS_2D){
+
+    const int b = t%NUM_DOFS_1D;
+    const int c = t/NUM_DOFS_1D;
+    
+#pragma unroll
+    for(int i=0;i<HALF_QUAD_1D;++i){
+      dfloat_t tmp1 = s_Ap[blk][c][b][i];
+      dfloat_t tmp2 = s_Ap[blk][c][b][NUM_QUAD_1D-1-i];
+      r_tmpOdd[i]  = tmp1 + tmp2;
+      r_tmpEven[i] = tmp1 - tmp2;
+    }
+    
+    if(NUM_QUAD_1D%2)
+      r_tmpOdd[HALF_QUAD_1D-1] *= 0.5f;
+    
+#pragma unroll
+    for(int a=0;a<HALF_DOFS_1D;++a){
+      dfloat_t resOdd = 0, resEven = 0;
+      
+#pragma unroll
+      for(int i=0;i<HALF_QUAD_1D;++i){
+	int ia = ijN(a,i,HALF_DOFS_1D);		
+	resOdd  += oddDofToQuad[ia]*r_tmpOdd[i];
+	resEven += evenDofToQuad[ia]*r_tmpEven[i];
+      }
+      
+      s_Ap[blk][c][b][NUM_DOFS_1D-1-a] = resOdd - resEven;
+      s_Ap[blk][c][b][a]               = resOdd + resEven;
+    }
+  }
+
 }
+
+
 
 
 template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
@@ -580,38 +947,46 @@ template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
   dfloat_t r_oddDofToQuad[HALF_QUAD_1D*HALF_DOFS_1D];
   dfloat_t r_evenDofToQuad[HALF_QUAD_1D*HALF_DOFS_1D];
 
-  dfloat_t r_Aq[NUM_QUAD_1D];
+  dfloat_t r_tmpOdd[HALF_QUAD_1D];
+  dfloat_t r_tmpEven[HALF_QUAD_1D];
 
-  const unsigned int t = threadIdx.x;
+  const  int t = threadIdx.x;
   const int blk = threadIdx.y;
   
   const int element = blockIdx.x*p_Nblock + blk;
-  
-  const unsigned int a = t%NUM_DOFS_1D;
-  const unsigned int b = t/NUM_DOFS_1D;
 
-  
-#if READ_TO_REGISTER==1
+#if 1
+  const  int a = t%NUM_DOFS_1D;
+  const  int b = t/NUM_DOFS_1D;
+ 
   if(element < numElements && t<NUM_DOFS_2D){
     for(int c=0;c<NUM_DOFS_1D;++c){
-      int id = ijklN(a,b,c,element, NUM_DOFS_1D); 
+      int id = ijklN(a,b,c,element,NUM_DOFS_1D); 
       
-      r_Aq[c] = solIn[id];
+      //      r_Aq[c] = solIn[id];
+      s_tmp1[blk][c][b][a] = solIn[id];
     }
   }
 #else
-  int n = t + blk*NUM_QUAD_2D;
-  
-  while(n<p_Nblock*NUM_DOFS_3D){
+  {
+    int n = t + blk*NUM_QUAD_2D;
     
-    int id = n + blockIdx.x*p_Nblock*NUM_DOFS_3D;
-    if(id<numElements*NUM_DOFS_3D){
-      s_tmp1[0][0][0][n] = solIn[id];
+    while(n<p_Nblock*NUM_DOFS_3D){
+      
+      int id = n + blockIdx.x*p_Nblock*NUM_DOFS_3D;
+      if(id<numElements*NUM_DOFS_3D){
+	int a1 = n%NUM_DOFS_1D;
+	int b1 = (n/NUM_DOFS_1D)%NUM_DOFS_1D;
+	int c1 = (n/NUM_DOFS_2D)%NUM_DOFS_1D;
+	int blk1 = (n/NUM_DOFS_3D);
+	s_tmp1[blk1][c1][b1][a1] = solIn[id];
+      }
+      n+=NUM_QUAD_2D*p_Nblock;
     }
-    n+=NUM_QUAD_2D*p_Nblock;
   }
   
 #endif
+
   {
     __shared__ dfloat_t s_oddDofToQuad[HALF_DOFS_1D*HALF_QUAD_1D];
     __shared__ dfloat_t s_evenDofToQuad[HALF_QUAD_1D*HALF_DOFS_1D];
@@ -631,38 +1006,41 @@ template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
     }
   }
 
-#if READ_TO_REGISTER==0
-  if(t<NUM_DOFS_2D)
-    for(int c=0;c<NUM_DOFS_1D;++c)
-      r_Aq[c] = s_tmp1[blk][c][b][a];
+  massMatrixMultiplyOddEvenShuffledDevice <NUM_DOFS_1D, NUM_QUAD_1D, p_Nblock>
+    (numElements, element, op, r_oddDofToQuad, r_evenDofToQuad, s_tmp1, r_tmpOdd, r_tmpEven);
 
   __syncthreads();
-#endif
   
-  massMatrixMultiplyOddEvenDevice <NUM_DOFS_1D, NUM_QUAD_1D, p_Nblock>
-    (numElements, element, op, r_oddDofToQuad, r_evenDofToQuad, s_tmp1, r_Aq);
-
-#if USE_CONTIGUOUS_OUTPUT==0
+#if 1
   if(element<numElements && t<NUM_DOFS_2D){
 #pragma unroll
     for(int c=0;c<NUM_DOFS_1D;++c){
       int id = ijklN(a,b,c,element,NUM_DOFS_1D);
-      solOut[id] = r_Aq[c];
+      //      solOut[id] = r_Aq[c];
+      solOut[id] = s_tmp1[blk][c][b][a];
     }
   }
 #else
-  
-  int n = t + blk*NUM_QUAD_2D;
-  
-  while(n<p_Nblock*NUM_DOFS_3D){
+  {
+    int n = t + blk*NUM_QUAD_2D;
     
-    int id = n + blockIdx.x*p_Nblock*NUM_DOFS_3D;
-    if(id<numElements*NUM_DOFS_3D){
-      solOut[id] = s_tmp1[0][0][0][n];
+    while(n<p_Nblock*NUM_DOFS_3D){
+      
+      int id = n + blockIdx.x*p_Nblock*NUM_DOFS_3D;
+      if(id<numElements*NUM_DOFS_3D){
+
+	int a1 = n%NUM_DOFS_1D;
+	int b1 = (n/NUM_DOFS_1D)%NUM_DOFS_1D;
+	int c1 = (n/NUM_DOFS_2D)%NUM_DOFS_1D;
+	int blk1 = (n/NUM_DOFS_3D);
+	
+	solOut[id] = s_tmp1[blk1][c1][b1][a1];
+      }
+      n+=NUM_QUAD_2D*p_Nblock;
     }
-    n+=NUM_QUAD_2D*p_Nblock;
   }
-#endif  
+#endif
+  
 }
 
 
@@ -678,23 +1056,25 @@ template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
   __shared__ dfloat_t s_oddDofToQuad[HALF_QUAD_1D*HALF_DOFS_1D];
   __shared__ dfloat_t s_evenDofToQuad[HALF_QUAD_1D*HALF_DOFS_1D];
 
-  dfloat_t r_Aq[NUM_QUAD_1D];
+  dfloat_t r_tmpOdd[HALF_QUAD_1D];
+  dfloat_t r_tmpEven[HALF_QUAD_1D];
 
-  const unsigned int t = threadIdx.x;
+
+  const  int t = threadIdx.x;
   const int blk = threadIdx.y;
   
   const int element = blockIdx.x*p_Nblock + blk;
-  
-  const unsigned int a = t%NUM_DOFS_1D;
-  const unsigned int b = t/NUM_DOFS_1D;
 
-#if READ_TO_REGISTER==1
+#if 1
+  const  int a = t%NUM_DOFS_1D;
+  const  int b = t/NUM_DOFS_1D;
+
   if(element < numElements && t<NUM_DOFS_2D){
     for(int c=0;c<NUM_DOFS_1D;++c){
-      
       int id = ijklN(a,b,c,element,NUM_DOFS_1D);
       
-      r_Aq[c] = solIn[id];
+      //      r_Aq[c] = solIn[id];
+      s_tmp1[blk][c][b][a] = solIn[id];
     }
   }
 #else
@@ -704,7 +1084,12 @@ template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
     
     int id = n + blockIdx.x*p_Nblock*NUM_DOFS_3D;
     if(id<numElements*NUM_DOFS_3D){
-      s_tmp1[0][0][0][n] = solIn[id];
+      int a1 = n%NUM_DOFS_1D;
+      int b1 = (n/NUM_DOFS_1D)%NUM_DOFS_1D;
+      int c1 = (n/NUM_DOFS_2D)%NUM_DOFS_1D;
+      int blk1 = (n/NUM_DOFS_3D);
+      
+      s_tmp1[blk1][c1][b1][a1] = solIn[id];
     }
     n+=NUM_QUAD_2D*p_Nblock;
   }
@@ -718,38 +1103,41 @@ template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
 
   __syncthreads();
 
-#if READ_TO_REGISTER==0
-  if(t<NUM_DOFS_2D)
-    for(int c=0;c<NUM_DOFS_1D;++c)
-      r_Aq[c] = s_tmp1[blk][c][b][a];
+  
+  massMatrixMultiplyOddEvenShuffledDevice <NUM_DOFS_1D, NUM_QUAD_1D, p_Nblock>
+    (numElements, element, op, s_oddDofToQuad, s_evenDofToQuad, s_tmp1, r_tmpOdd, r_tmpEven);
 
   __syncthreads();
-#endif
   
-  massMatrixMultiplyOddEvenDevice  <NUM_DOFS_1D, NUM_QUAD_1D, p_Nblock>
-    (numElements, element, op, s_oddDofToQuad, s_evenDofToQuad, s_tmp1, r_Aq);
-
-#if USE_CONTIGUOUS_OUTPUT==0
+#if 0
   if(element<numElements && t<NUM_DOFS_2D){
 #pragma unroll
     for(int c=0;c<NUM_DOFS_1D;++c){
       int id = ijklN(a,b,c,element,NUM_DOFS_1D);
-      solOut[id] = r_Aq[c];
+      //      solOut[id] = r_Aq[c];
+      solOut[id] = s_tmp1[blk][c][b][a];
     }
   }
 #else
-  
-  int n = t + blk*NUM_QUAD_2D;
-  
-  while(n<p_Nblock*NUM_DOFS_3D){
+  {
+    int n = t + blk*NUM_QUAD_2D;
     
-    int id = n + blockIdx.x*p_Nblock*NUM_DOFS_3D;
-    if(id<numElements*NUM_DOFS_3D){
-      solOut[id] = s_tmp1[0][0][0][n];
+    while(n<p_Nblock*NUM_DOFS_3D){
+      
+      int id = n + blockIdx.x*p_Nblock*NUM_DOFS_3D;
+      if(id<numElements*NUM_DOFS_3D){
+	int a1 = n%NUM_DOFS_1D;
+	int b1 = (n/NUM_DOFS_1D)%NUM_DOFS_1D;
+	int c1 = (n/NUM_DOFS_2D)%NUM_DOFS_1D;
+	int blk1 = (n/NUM_DOFS_3D);
+	
+	solOut[id] = s_tmp1[blk1][c1][b1][a1];
+      }
+      n+=NUM_QUAD_2D*p_Nblock;
     }
-    n+=NUM_QUAD_2D*p_Nblock;
   }
-#endif  
+#endif
+
 }
 
 template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
@@ -762,22 +1150,24 @@ __global__ void massMatrixMultiplyConstantKernel(const int numElements,
   
   __shared__ dfloat_t s_tmp1[p_Nblock][NUM_QUAD_1D][NUM_QUAD_1D][NUM_QUAD_1D+p_padCubNq];
 
-  dfloat_t r_Aq[NUM_QUAD_1D];
+  dfloat_t r_tmpOdd[HALF_QUAD_1D];
+  dfloat_t r_tmpEven[HALF_QUAD_1D];
 
-  const unsigned int t = threadIdx.x;
+  const  int t = threadIdx.x;
   const int blk = threadIdx.y;
   
   const int element = blockIdx.x*p_Nblock + blk;
-  
-  const unsigned int a = t%NUM_DOFS_1D;
-  const unsigned int b = t/NUM_DOFS_1D;
 
-#if READ_TO_REGISTER==1
+#if 0
+  const  int a = t%NUM_DOFS_1D;
+  const  int b = t/NUM_DOFS_1D;
+
   if(element < numElements && t<NUM_DOFS_2D){
     for(int c=0;c<NUM_DOFS_1D;++c){
       int id = ijklN(a,b,c,element,NUM_DOFS_1D);
       
-      r_Aq[c] = solIn[id];
+      //      r_Aq[c] = solIn[id];
+      s_tmp1[blk][c][b][a] = solIn[id];
     }
   }
 #else
@@ -787,7 +1177,12 @@ __global__ void massMatrixMultiplyConstantKernel(const int numElements,
     
     int id = n + blockIdx.x*p_Nblock*NUM_DOFS_3D;
     if(id<numElements*NUM_DOFS_3D){
-      s_tmp1[0][0][0][n] = solIn[id];
+      int a1 = n%NUM_DOFS_1D;
+      int b1 = (n/NUM_DOFS_1D)%NUM_DOFS_1D;
+      int c1 = (n/NUM_DOFS_2D)%NUM_DOFS_1D;
+      int blk1 = (n/NUM_DOFS_3D);
+      
+      s_tmp1[blk1][c1][b1][a1] = solIn[id];
     }
     n+=NUM_QUAD_2D*p_Nblock;
   }
@@ -795,42 +1190,39 @@ __global__ void massMatrixMultiplyConstantKernel(const int numElements,
 
   __syncthreads();
 
-#if READ_TO_REGISTER==0
-  if(t<NUM_DOFS_2D)
-    for(int c=0;c<NUM_DOFS_1D;++c)
-      r_Aq[c] = s_tmp1[blk][c][b][a];
+  massMatrixMultiplyOddEvenShuffledDevice  <NUM_DOFS_1D, NUM_QUAD_1D, p_Nblock>
+    (numElements, element, op, const_oddDofToQuad, const_evenDofToQuad, s_tmp1, r_tmpOdd, r_tmpEven);
 
   __syncthreads();
-#endif
   
-  massMatrixMultiplyOddEvenDevice  <NUM_DOFS_1D, NUM_QUAD_1D, p_Nblock>
-    (numElements, element, op, const_oddDofToQuad, const_evenDofToQuad, s_tmp1, r_Aq);
-
-#if USE_CONTIGUOUS_OUTPUT==0
-  
+#if 0
   if(element<numElements && t<NUM_DOFS_2D){
 #pragma unroll
     for(int c=0;c<NUM_DOFS_1D;++c){
       int id = ijklN(a,b,c,element,NUM_DOFS_1D);
-      solOut[id] = r_Aq[c];
+      //      solOut[id] = r_Aq[c];
+      solOut[id] = s_tmp1[blk][c][b][a];
     }
   }
-
 #else
-  
-  int n = t + blk*NUM_QUAD_2D;
-  
-  while(n<p_Nblock*NUM_DOFS_3D){
+  {
+    int n = t + blk*NUM_QUAD_2D;
     
-    int id = n + blockIdx.x*p_Nblock*NUM_DOFS_3D;
-    if(id<numElements*NUM_DOFS_3D){
-      solOut[id] = s_tmp1[0][0][0][n];
+    while(n<p_Nblock*NUM_DOFS_3D){
+      
+      int id = n + blockIdx.x*p_Nblock*NUM_DOFS_3D;
+      if(id<numElements*NUM_DOFS_3D){
+	int a1 = n%NUM_DOFS_1D;
+	int b1 = (n/NUM_DOFS_1D)%NUM_DOFS_1D;
+	int c1 = (n/NUM_DOFS_2D)%NUM_DOFS_1D;
+	int blk1 = (n/NUM_DOFS_3D);
+	
+	solOut[id] = s_tmp1[blk1][c1][b1][a1];
+      }
+      n+=NUM_QUAD_2D*p_Nblock;
     }
-    n+=NUM_QUAD_2D*p_Nblock;
   }
-#endif  
-
-  
+#endif
 }
 
 template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
@@ -845,74 +1237,81 @@ __global__ void massMatrixMultiplyMonolithicKernel(const int numElements,
 
   dfloat_t r_Aq[NUM_QUAD_1D];
 
-  const unsigned int t = threadIdx.x;
+  const  int t = threadIdx.x;
   const int blk = threadIdx.y;
   
   const int element = blockIdx.x*p_Nblock + blk;
-  
-  const unsigned int a = t%NUM_DOFS_1D;
-  const unsigned int b = t/NUM_DOFS_1D;
 
-#if READ_TO_REGISTER==1
-  if(element < numElements){
+#if 1
+  const  int a = t%NUM_DOFS_1D;
+  const  int b = t/NUM_DOFS_1D;
+
+  if(element < numElements && t<NUM_DOFS_2D){
     for(int c=0;c<NUM_DOFS_1D;++c){
-      
       int id = ijklN(a,b,c,element,NUM_DOFS_1D);
       
-      r_Aq[c] = solIn[id];
+      //      r_Aq[c] = solIn[id];
+      s_tmp1[blk][c][b][a] = solIn[id];
     }
   }
 #else
-  int n = t + blk*NUM_QUAD_2D;
-  
-  while(n<p_Nblock*NUM_DOFS_3D){
+
+  {
+    int n = t + blk*NUM_QUAD_2D;
     
-    int id = n + blockIdx.x*p_Nblock*NUM_DOFS_3D;
-    if(id<numElements*NUM_DOFS_3D){
-      s_tmp1[0][0][0][n] = solIn[id];
+    while(n<(p_Nblock*NUM_DOFS_3D)){
+      
+      int id = n + blockIdx.x*p_Nblock*NUM_DOFS_3D;
+      if(id<numElements*NUM_DOFS_3D){
+	int a1 = n%NUM_DOFS_1D;
+	int b1 = (n/NUM_DOFS_1D)%NUM_DOFS_1D;
+	int c1 = (n/NUM_DOFS_2D)%NUM_DOFS_1D;
+	int blk1 = (n/NUM_DOFS_3D);
+	
+	s_tmp1[blk1][c1][b1][a1] = solIn[id];
+      }
+
+      n += NUM_QUAD_2D*p_Nblock;
     }
-    n+=NUM_QUAD_2D*p_Nblock;
   }
 #endif
   
   __syncthreads();
-
-#if READ_TO_REGISTER==0
-  if(t<NUM_DOFS_2D)
-    for(int c=0;c<NUM_DOFS_1D;++c)
-      r_Aq[c] = s_tmp1[blk][c][b][a];
-
-  __syncthreads();
-#endif
   
-  massMatrixMultiplyMonolithicDevice  <NUM_DOFS_1D, NUM_QUAD_1D, p_Nblock>
+  massMatrixMultiplyMonolithicShuffledDevice  <NUM_DOFS_1D, NUM_QUAD_1D, p_Nblock>
     (numElements, element, op, const_DofToQuad, s_tmp1, r_Aq);
 
-#if USE_CONTIGUOUS_OUTPUT==0
+  __syncthreads();
 
+#if 1
   if(element<numElements && t<NUM_DOFS_2D){
 #pragma unroll
     for(int c=0;c<NUM_DOFS_1D;++c){
       int id = ijklN(a,b,c,element,NUM_DOFS_1D);
-      solOut[id] = r_Aq[c];
+      //      solOut[id] = r_Aq[c];
+      solOut[id] = s_tmp1[blk][c][b][a];
     }
   }
-
 #else
   
-  int n = t + blk*NUM_QUAD_2D;
-  
-  while(n<p_Nblock*NUM_DOFS_3D){
+  {
+    int n = t + blk*NUM_QUAD_2D;
     
-    int id = n + blockIdx.x*p_Nblock*NUM_DOFS_3D;
-    if(id<numElements*NUM_DOFS_3D){
-      solOut[id] = s_tmp1[0][0][0][n];
+    while(n<p_Nblock*NUM_DOFS_3D){
+      
+      int id = n + blockIdx.x*p_Nblock*NUM_DOFS_3D;
+      if(id<numElements*NUM_DOFS_3D){
+	int a1 = n%NUM_DOFS_1D;
+	int b1 = (n/NUM_DOFS_1D)%NUM_DOFS_1D;
+	int c1 = (n/NUM_DOFS_2D)%NUM_DOFS_1D;
+	int blk1 = (n/NUM_DOFS_3D);
+	
+	solOut[id] = s_tmp1[blk1][c1][b1][a1];
+      }
+      n+=NUM_QUAD_2D*p_Nblock;
     }
-    n+=NUM_QUAD_2D*p_Nblock;
   }
-#endif  
-
-  
+#endif
 }
 
 
@@ -1237,7 +1636,7 @@ void runMassMatrixMultiplyKernel(hipStream_t stream, int Nq, int cubNq, int numE
     switch(cubNq){
     case 5: massMatrixMultiplyKernel(5,5,5); break;
     case 6: massMatrixMultiplyKernel(5,6,3); break;
-    case 7: massMatrixMultiplyKernel(5,7,2); break;
+    case 7: massMatrixMultiplyKernel(5,7,5); break;
     case 8: massMatrixMultiplyKernel(5,8,1); break;
     case 9: massMatrixMultiplyKernel(5,9,2); break;
     default: ERR;
@@ -1248,7 +1647,7 @@ void runMassMatrixMultiplyKernel(hipStream_t stream, int Nq, int cubNq, int numE
   if(Nq==6){
     switch(cubNq){
     case 6:  massMatrixMultiplyKernel(6, 6, 3); break; // Nb=3 best so far
-    case 7:  massMatrixMultiplyKernel(6, 7, 2); break;
+    case 7:  massMatrixMultiplyKernel(6, 7, 5); break;
     case 8:  massMatrixMultiplyKernel(6, 8, 1); break;
     case 9:  massMatrixMultiplyKernel(6, 9, 2); break;
     case 10: massMatrixMultiplyKernel(6,10, 1); break;
@@ -1259,9 +1658,9 @@ void runMassMatrixMultiplyKernel(hipStream_t stream, int Nq, int cubNq, int numE
 
   if(Nq==7){
     switch(cubNq){
-    case 7:  massMatrixMultiplyKernel(7, 7,2); break;
+    case 7:  massMatrixMultiplyKernel(7, 7,5); break;
     case 8:  massMatrixMultiplyKernel(7, 8,1); break;
-    case 9:  massMatrixMultiplyKernel(7, 9,2); break;
+    case 9:  massMatrixMultiplyKernel(7, 9,1); break;
     case 10: massMatrixMultiplyKernel(7,10,1); break;
     case 11: massMatrixMultiplyKernel(7,11,1); break;
 
@@ -1273,7 +1672,7 @@ void runMassMatrixMultiplyKernel(hipStream_t stream, int Nq, int cubNq, int numE
   if(Nq==8){
     switch(cubNq){
     case 8:  massMatrixMultiplyKernel(8, 8,1); break;
-    case 9:  massMatrixMultiplyKernel(8, 9,2); break;
+    case 9:  massMatrixMultiplyKernel(8, 9,1); break;
     case 10: massMatrixMultiplyKernel(8,10,1); break;
     case 11: massMatrixMultiplyKernel(8,11,1); break;
     case 12: massMatrixMultiplyKernel(8,12,1); break;
@@ -1413,18 +1812,6 @@ int main(int argc, char **argv){
   int        mode = atoi(argv[4]);
 
   printf("Running: Nq=%d, cubNq=%d, numElements=%d, mode=%d\n", Nq, cubNq, numElements, mode);
-
-#if 0
-  if(Nq%2){
-    printf("Nq must be even\n");
-    exit(-1);
-  }
-
-  if(cubNq%2){
-    printf("cubNq must be even\n");
-    exit(-1);
-  }
-#endif
 
   hipEvent_t start, end;
   hipEventCreate(&start);

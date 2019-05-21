@@ -1,4 +1,4 @@
-/*
+1/*
 
 The MIT License (MIT)
 
@@ -33,7 +33,7 @@ SOFTWARE.
 #define ODD_EVEN_THRESHOLD 1
 
 __forceinline__ __device__ __host__  int ijN(const int i, const int j, const int N){
-
+v
   return i + j*N;
 
 }
