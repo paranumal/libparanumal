@@ -1,0 +1,24 @@
+#!/bin/bash
+
+#rm massMatrixMultiplyHipVT
+#make massMatrixMultiplyHipVT
+
+# to run a sweep
+for Nq in `seq 2 1 12`
+do
+    
+    let Np=$Nq*$Nq*$Nq
+  
+    let E=8000000/$Np
+    
+    let upperCubNq=$Nq+1
+    for cubNq in `seq $upperCubNq 1 $upperCubNq`
+    do
+	for mode in `seq 1 4`
+	do 
+	    #rocm-profiler -o profile_Nq_${Nq}_cubNq_${cubNq}_mode_${mode}.csv -C ./massMatrixMultiplyHipVT $Nq $cubNq $E $mode
+	    ./massMatrixMultiplyHipVT $Nq $cubNq $E $mode
+	done
+    done
+done
+
