@@ -9,12 +9,12 @@ do
     
     let Np=$Nq*$Nq*$Nq
   
-    let E=4000000/$Np
+    let E=8000000/$Np
     
-    let upperCubNq=$Nq+4
-    for cubNq in `seq $Nq 1 $upperCubNq`
+    let upperCubNq=$Nq+1
+    for cubNq in `seq $upperCubNq 1 $upperCubNq`
     do
-	for mode in `seq 1 3`
+	for mode in `seq 1 6`
 	do 
 	    ./massMatrixMultiplyVT $Nq $cubNq $E $mode
 	done
