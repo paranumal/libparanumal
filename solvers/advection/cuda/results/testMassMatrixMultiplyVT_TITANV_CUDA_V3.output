@@ -1,0 +1,1508 @@
+nvcc -o massMatrixMultiplyVT -Dcomp_Nq= -Dcomp_cubNq= -Dcomp_MAX_ITERATIONS= -arch=sm_70   --use_fast_math -Xptxas -v,-dlcm=ca,-O3 -Xcompiler -O3 massMatrixMultiplyVTV3.cu
+massMatrixMultiplyVTV3.cu(1372): warning: variable "Nblock" was declared but never referenced
+
+ptxas info    : 0 bytes gmem, 3072 bytes cmem[3]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi12ELi15ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi12ELi15ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 64 registers, 27000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi12ELi15ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi12ELi15ELi1EEviPKdS1_S1_S1_Pd
+    1064 bytes stack frame, 1264 bytes spill stores, 2792 bytes spill loads
+ptxas info    : Used 255 registers, 27000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi12ELi15ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi12ELi15ELi1EEviPKdS1_S1_S1_Pd
+    8 bytes stack frame, 8 bytes spill stores, 8 bytes spill loads
+ptxas info    : Used 255 registers, 27000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi12ELi15ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi12ELi15ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 124 registers, 27768 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi12ELi15ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi12ELi15ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 72 registers, 27000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi12ELi15ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi12ELi15ELi1EEviPKdS1_S1_S1_Pd
+    8 bytes stack frame, 8 bytes spill stores, 8 bytes spill loads
+ptxas info    : Used 255 registers, 27768 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi12ELi14ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi12ELi14ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 64 registers, 21952 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi12ELi14ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi12ELi14ELi1EEviPKdS1_S1_S1_Pd
+    864 bytes stack frame, 1064 bytes spill stores, 2208 bytes spill loads
+ptxas info    : Used 255 registers, 21952 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi12ELi14ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi12ELi14ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 252 registers, 21952 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi12ELi14ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi12ELi14ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 102 registers, 22624 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi12ELi14ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi12ELi14ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 72 registers, 21952 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi12ELi14ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi12ELi14ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 254 registers, 22624 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi12ELi13ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi12ELi13ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 64 registers, 17576 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi12ELi13ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi12ELi13ELi1EEviPKdS1_S1_S1_Pd
+    664 bytes stack frame, 840 bytes spill stores, 1576 bytes spill loads
+ptxas info    : Used 255 registers, 17576 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi12ELi13ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi12ELi13ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 254 registers, 17576 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi12ELi13ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi12ELi13ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 122 registers, 18248 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi12ELi13ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi12ELi13ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 72 registers, 17576 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi12ELi13ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi12ELi13ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 254 registers, 18248 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi12ELi12ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi12ELi12ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 64 registers, 13824 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi12ELi12ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi12ELi12ELi1EEviPKdS1_S1_S1_Pd
+    456 bytes stack frame, 540 bytes spill stores, 1208 bytes spill loads
+ptxas info    : Used 255 registers, 13824 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi12ELi12ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi12ELi12ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 236 registers, 13824 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi12ELi12ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi12ELi12ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 118 registers, 14400 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi12ELi12ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi12ELi12ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 72 registers, 13824 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi12ELi12ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi12ELi12ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 242 registers, 14400 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi11ELi15ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi11ELi15ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 64 registers, 27000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi11ELi15ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi11ELi15ELi1EEviPKdS1_S1_S1_Pd
+    760 bytes stack frame, 1068 bytes spill stores, 2052 bytes spill loads
+ptxas info    : Used 255 registers, 27000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi11ELi15ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi11ELi15ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 255 registers, 27000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi11ELi15ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi11ELi15ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 124 registers, 27768 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi11ELi15ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi11ELi15ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 72 registers, 27000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi11ELi15ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi11ELi15ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 255 registers, 27768 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi11ELi14ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi11ELi14ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 64 registers, 21952 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi11ELi14ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi11ELi14ELi1EEviPKdS1_S1_S1_Pd
+    648 bytes stack frame, 1016 bytes spill stores, 1816 bytes spill loads
+ptxas info    : Used 255 registers, 21952 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi11ELi14ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi11ELi14ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 254 registers, 21952 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi11ELi14ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi11ELi14ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 104 registers, 22624 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi11ELi14ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi11ELi14ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 72 registers, 21952 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi11ELi14ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi11ELi14ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 254 registers, 22624 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi11ELi13ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi11ELi13ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 64 registers, 17576 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi11ELi13ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi11ELi13ELi1EEviPKdS1_S1_S1_Pd
+    496 bytes stack frame, 664 bytes spill stores, 1208 bytes spill loads
+ptxas info    : Used 255 registers, 17576 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi11ELi13ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi11ELi13ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 254 registers, 17576 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi11ELi13ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi11ELi13ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 112 registers, 18248 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi11ELi13ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi11ELi13ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 72 registers, 17576 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi11ELi13ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi11ELi13ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 254 registers, 18248 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi11ELi12ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi11ELi12ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 64 registers, 13824 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi11ELi12ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi11ELi12ELi1EEviPKdS1_S1_S1_Pd
+    464 bytes stack frame, 680 bytes spill stores, 1128 bytes spill loads
+ptxas info    : Used 255 registers, 13824 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi11ELi12ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi11ELi12ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 226 registers, 13824 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi11ELi12ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi11ELi12ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 94 registers, 14400 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi11ELi12ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi11ELi12ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 72 registers, 13824 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi11ELi12ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi11ELi12ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 222 registers, 14400 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi11ELi11ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi11ELi11ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 64 registers, 10648 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi11ELi11ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi11ELi11ELi1EEviPKdS1_S1_S1_Pd
+    216 bytes stack frame, 280 bytes spill stores, 512 bytes spill loads
+ptxas info    : Used 255 registers, 10648 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi11ELi11ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi11ELi11ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 224 registers, 10648 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi11ELi11ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi11ELi11ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 118 registers, 11224 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi11ELi11ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi11ELi11ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 71 registers, 10648 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi11ELi11ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi11ELi11ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 228 registers, 11224 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi10ELi14ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi10ELi14ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 56 registers, 21952 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi10ELi14ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi10ELi14ELi1EEviPKdS1_S1_S1_Pd
+    472 bytes stack frame, 752 bytes spill stores, 1256 bytes spill loads
+ptxas info    : Used 255 registers, 21952 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi10ELi14ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi10ELi14ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 234 registers, 21952 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi10ELi14ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi10ELi14ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 90 registers, 22512 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi10ELi14ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi10ELi14ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 64 registers, 21952 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi10ELi14ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi10ELi14ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 230 registers, 22512 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi10ELi13ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi10ELi13ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 56 registers, 17576 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi10ELi13ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi10ELi13ELi1EEviPKdS1_S1_S1_Pd
+    344 bytes stack frame, 564 bytes spill stores, 908 bytes spill loads
+ptxas info    : Used 255 registers, 17576 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi10ELi13ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi10ELi13ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 224 registers, 17576 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi10ELi13ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi10ELi13ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 116 registers, 18136 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi10ELi13ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi10ELi13ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 64 registers, 17576 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi10ELi13ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi10ELi13ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 228 registers, 18136 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi10ELi12ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi10ELi12ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 56 registers, 13824 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi10ELi12ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi10ELi12ELi1EEviPKdS1_S1_S1_Pd
+    296 bytes stack frame, 368 bytes spill stores, 640 bytes spill loads
+ptxas info    : Used 255 registers, 13824 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi10ELi12ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi10ELi12ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 198 registers, 13824 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi10ELi12ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi10ELi12ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 92 registers, 14304 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi10ELi12ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi10ELi12ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 64 registers, 13824 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi10ELi12ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi10ELi12ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 198 registers, 14304 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi10ELi11ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi10ELi11ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 56 registers, 10648 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi10ELi11ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi10ELi11ELi1EEviPKdS1_S1_S1_Pd
+    64 bytes stack frame, 64 bytes spill stores, 64 bytes spill loads
+ptxas info    : Used 255 registers, 10648 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi10ELi11ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi10ELi11ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 196 registers, 10648 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi10ELi11ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi10ELi11ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 110 registers, 11128 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi10ELi11ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi10ELi11ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 64 registers, 10648 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi10ELi11ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi10ELi11ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 200 registers, 11128 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi10ELi10ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi10ELi10ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 56 registers, 8000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi10ELi10ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi10ELi10ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 255 registers, 8000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi10ELi10ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi10ELi10ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 168 registers, 8000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi10ELi10ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi10ELi10ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 86 registers, 8400 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi10ELi10ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi10ELi10ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 64 registers, 8000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi10ELi10ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi10ELi10ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 168 registers, 8400 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi9ELi13ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi9ELi13ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 56 registers, 17576 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi9ELi13ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi9ELi13ELi1EEviPKdS1_S1_S1_Pd
+    128 bytes stack frame, 200 bytes spill stores, 272 bytes spill loads
+ptxas info    : Used 255 registers, 17576 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi9ELi13ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi9ELi13ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 234 registers, 17576 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi9ELi13ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi9ELi13ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 114 registers, 18136 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi9ELi13ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi9ELi13ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 56 registers, 17576 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi9ELi13ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi9ELi13ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 224 registers, 18136 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi9ELi12ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi9ELi12ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 56 registers, 13824 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi9ELi12ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi9ELi12ELi1EEviPKdS1_S1_S1_Pd
+    56 bytes stack frame, 80 bytes spill stores, 80 bytes spill loads
+ptxas info    : Used 255 registers, 13824 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi9ELi12ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi9ELi12ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 198 registers, 13824 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi9ELi12ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi9ELi12ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 80 registers, 14304 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi9ELi12ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi9ELi12ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 56 registers, 13824 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi9ELi12ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi9ELi12ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 200 registers, 14304 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi9ELi11ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi9ELi11ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 56 registers, 10648 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi9ELi11ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi9ELi11ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 254 registers, 10648 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi9ELi11ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi9ELi11ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 190 registers, 10648 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi9ELi11ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi9ELi11ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 102 registers, 11128 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi9ELi11ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi9ELi11ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 56 registers, 10648 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi9ELi11ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi9ELi11ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 206 registers, 11128 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi9ELi10ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi9ELi10ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 56 registers, 8000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi9ELi10ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi9ELi10ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 244 registers, 8000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi9ELi10ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi9ELi10ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 168 registers, 8000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi9ELi10ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi9ELi10ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 80 registers, 8400 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi9ELi10ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi9ELi10ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 56 registers, 8000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi9ELi10ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi9ELi10ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 168 registers, 8400 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi9ELi9ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi9ELi9ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 56 registers, 5832 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi9ELi9ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi9ELi9ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 228 registers, 5832 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi9ELi9ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi9ELi9ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 166 registers, 5832 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi9ELi9ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi9ELi9ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 96 registers, 6232 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi9ELi9ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi9ELi9ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 64 registers, 5832 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi9ELi9ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi9ELi9ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 166 registers, 6232 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi8ELi12ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi8ELi12ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, 13824 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi8ELi12ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi8ELi12ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 254 registers, 13824 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi8ELi12ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi8ELi12ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 168 registers, 13824 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi8ELi12ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi8ELi12ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 98 registers, 14208 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi8ELi12ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi8ELi12ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, 13824 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi8ELi12ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi8ELi12ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 166 registers, 14208 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi8ELi11ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi8ELi11ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, 10648 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi8ELi11ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi8ELi11ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 240 registers, 10648 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi8ELi11ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi8ELi11ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 166 registers, 10648 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi8ELi11ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi8ELi11ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 94 registers, 11032 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi8ELi11ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi8ELi11ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, 10648 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi8ELi11ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi8ELi11ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 166 registers, 11032 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi8ELi10ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi8ELi10ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, 8000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi8ELi10ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi8ELi10ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 218 registers, 8000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi8ELi10ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi8ELi10ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 128 registers, 8000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi8ELi10ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi8ELi10ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 72 registers, 8320 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi8ELi10ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi8ELi10ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, 8000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi8ELi10ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi8ELi10ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 128 registers, 8320 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi8ELi9ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi8ELi9ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, 11664 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi8ELi9ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi8ELi9ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 206 registers, 11664 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi8ELi9ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi8ELi9ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 128 registers, 11664 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi8ELi9ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi8ELi9ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 72 registers, 11984 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi8ELi9ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi8ELi9ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, 11664 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi8ELi9ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi8ELi9ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 128 registers, 11984 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi8ELi8ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi8ELi8ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, 4096 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi8ELi8ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi8ELi8ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 190 registers, 4096 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi8ELi8ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi8ELi8ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 126 registers, 4096 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi8ELi8ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi8ELi8ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 70 registers, 4352 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi8ELi8ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi8ELi8ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 56 registers, 4096 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi8ELi8ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi8ELi8ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 126 registers, 4352 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi7ELi11ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi7ELi11ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, 10648 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi7ELi11ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi7ELi11ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 212 registers, 10648 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi7ELi11ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi7ELi11ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 166 registers, 10648 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi7ELi11ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi7ELi11ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 94 registers, 11032 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi7ELi11ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi7ELi11ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, 10648 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi7ELi11ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi7ELi11ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 166 registers, 11032 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi7ELi10ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi7ELi10ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, 8000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi7ELi10ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi7ELi10ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 204 registers, 8000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi7ELi10ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi7ELi10ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 128 registers, 8000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi7ELi10ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi7ELi10ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 72 registers, 8320 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi7ELi10ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi7ELi10ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, 8000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi7ELi10ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi7ELi10ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 128 registers, 8320 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi7ELi9ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi7ELi9ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, 11664 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi7ELi9ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi7ELi9ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 168 registers, 11664 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi7ELi9ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi7ELi9ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 128 registers, 11664 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi7ELi9ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi7ELi9ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 70 registers, 11984 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi7ELi9ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi7ELi9ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, 11664 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi7ELi9ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi7ELi9ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 128 registers, 11984 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi7ELi8ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi7ELi8ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, 4096 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi7ELi8ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi7ELi8ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 160 registers, 4096 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi7ELi8ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi7ELi8ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 120 registers, 4096 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi7ELi8ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi7ELi8ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 64 registers, 4352 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi7ELi8ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi7ELi8ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, 4096 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi7ELi8ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi7ELi8ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 118 registers, 4352 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi7ELi7ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi7ELi7ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, 5488 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi7ELi7ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi7ELi7ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 154 registers, 5488 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi7ELi7ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi7ELi7ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 122 registers, 5488 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi7ELi7ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi7ELi7ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 68 registers, 5744 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi7ELi7ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi7ELi7ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 47 registers, 5488 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi7ELi7ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi7ELi7ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 128 registers, 5744 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi6ELi10ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi6ELi10ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, 8000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi6ELi10ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi6ELi10ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 172 registers, 8000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi6ELi10ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi6ELi10ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 120 registers, 8000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi6ELi10ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi6ELi10ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 64 registers, 8240 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi6ELi10ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi6ELi10ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, 8000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi6ELi10ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi6ELi10ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 122 registers, 8240 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi6ELi9ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi6ELi9ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, 11664 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi6ELi9ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi6ELi9ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 160 registers, 11664 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi6ELi9ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi6ELi9ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 124 registers, 11664 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi6ELi9ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi6ELi9ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 62 registers, 11904 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi6ELi9ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi6ELi9ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, 11664 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi6ELi9ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi6ELi9ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 120 registers, 11904 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi6ELi8ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi6ELi8ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, 4096 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi6ELi8ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi6ELi8ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 142 registers, 4096 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi6ELi8ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi6ELi8ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 96 registers, 4096 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi6ELi8ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi6ELi8ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 60 registers, 4288 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi6ELi8ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi6ELi8ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, 4096 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi6ELi8ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi6ELi8ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 96 registers, 4288 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi6ELi7ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi6ELi7ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, 5488 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi6ELi7ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi6ELi7ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 128 registers, 5488 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi6ELi7ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi6ELi7ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 96 registers, 5488 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi6ELi7ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi6ELi7ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 60 registers, 5680 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi6ELi7ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi6ELi7ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, 5488 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi6ELi7ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi6ELi7ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 96 registers, 5680 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi6ELi6ELi3EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi6ELi6ELi3EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, 5184 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi6ELi6ELi3EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi6ELi6ELi3EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 118 registers, 5184 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi6ELi6ELi3EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi6ELi6ELi3EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 80 registers, 5184 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi6ELi6ELi3EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi6ELi6ELi3EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 58 registers, 5328 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi6ELi6ELi3EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi6ELi6ELi3EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, 5184 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi6ELi6ELi3EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi6ELi6ELi3EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 80 registers, 5328 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi5ELi9ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi5ELi9ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 34 registers, 11664 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi5ELi9ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi5ELi9ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 128 registers, 11664 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi5ELi9ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi5ELi9ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 116 registers, 11664 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi5ELi9ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi5ELi9ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 64 registers, 11904 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi5ELi9ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi5ELi9ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, 11664 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi5ELi9ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi5ELi9ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 128 registers, 11904 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi5ELi8ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi5ELi8ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, 4096 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi5ELi8ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi5ELi8ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 124 registers, 4096 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi5ELi8ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi5ELi8ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 96 registers, 4096 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi5ELi8ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi5ELi8ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 62 registers, 4288 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi5ELi8ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi5ELi8ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, 4096 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi5ELi8ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi5ELi8ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 96 registers, 4288 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi5ELi7ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi5ELi7ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, 5488 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi5ELi7ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi5ELi7ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 116 registers, 5488 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi5ELi7ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi5ELi7ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 96 registers, 5488 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi5ELi7ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi5ELi7ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 60 registers, 5680 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi5ELi7ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi5ELi7ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, 5488 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi5ELi7ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi5ELi7ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 94 registers, 5680 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi5ELi6ELi3EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi5ELi6ELi3EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, 5184 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi5ELi6ELi3EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi5ELi6ELi3EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 94 registers, 5184 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi5ELi6ELi3EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi5ELi6ELi3EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 80 registers, 5184 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi5ELi6ELi3EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi5ELi6ELi3EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 56 registers, 5328 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi5ELi6ELi3EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi5ELi6ELi3EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, 5184 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi5ELi6ELi3EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi5ELi6ELi3EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 80 registers, 5328 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi5ELi5ELi5EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi5ELi5ELi5EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, 5000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi5ELi5ELi5EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi5ELi5ELi5EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 94 registers, 5000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi5ELi5ELi5EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi5ELi5ELi5EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 80 registers, 5000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi5ELi5ELi5EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi5ELi5ELi5EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 62 registers, 5144 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi5ELi5ELi5EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi5ELi5ELi5EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, 5000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi5ELi5ELi5EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi5ELi5ELi5EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 77 registers, 5144 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi4ELi8ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi4ELi8ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, 4096 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi4ELi8ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi4ELi8ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 122 registers, 4096 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi4ELi8ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi4ELi8ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 71 registers, 4096 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi4ELi8ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi4ELi8ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, 4224 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi4ELi8ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi4ELi8ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, 4096 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi4ELi8ELi1EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi4ELi8ELi1EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 72 registers, 4224 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi4ELi7ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi4ELi7ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, 5488 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi4ELi7ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi4ELi7ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 94 registers, 5488 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi4ELi7ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi4ELi7ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 64 registers, 5488 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi4ELi7ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi4ELi7ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, 5616 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi4ELi7ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi4ELi7ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, 5488 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi4ELi7ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi4ELi7ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 64 registers, 5616 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi4ELi6ELi3EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi4ELi6ELi3EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, 5184 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi4ELi6ELi3EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi4ELi6ELi3EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 88 registers, 5184 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi4ELi6ELi3EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi4ELi6ELi3EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 56 registers, 5184 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi4ELi6ELi3EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi4ELi6ELi3EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, 5280 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi4ELi6ELi3EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi4ELi6ELi3EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, 5184 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi4ELi6ELi3EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi4ELi6ELi3EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 56 registers, 5280 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi4ELi5ELi5EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi4ELi5ELi5EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, 5000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi4ELi5ELi5EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi4ELi5ELi5EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 72 registers, 5000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi4ELi5ELi5EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi4ELi5ELi5EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 56 registers, 5000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi4ELi5ELi5EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi4ELi5ELi5EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 44 registers, 5096 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi4ELi5ELi5EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi4ELi5ELi5EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, 5000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi4ELi5ELi5EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi4ELi5ELi5EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 56 registers, 5096 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi4ELi4ELi4EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi4ELi4ELi4EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, 2048 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi4ELi4ELi4EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi4ELi4ELi4EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 72 registers, 2048 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi4ELi4ELi4EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi4ELi4ELi4EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, 2048 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi4ELi4ELi4EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi4ELi4ELi4EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, 2112 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi4ELi4ELi4EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi4ELi4ELi4EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, 2048 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi4ELi4ELi4EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi4ELi4ELi4EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, 2112 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi3ELi7ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi3ELi7ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, 5488 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi3ELi7ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi3ELi7ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 72 registers, 5488 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi3ELi7ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi3ELi7ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 64 registers, 5488 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi3ELi7ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi3ELi7ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, 5616 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi3ELi7ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi3ELi7ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 38 registers, 5488 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi3ELi7ELi2EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi3ELi7ELi2EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 64 registers, 5616 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi3ELi6ELi3EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi3ELi6ELi3EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, 5184 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi3ELi6ELi3EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi3ELi6ELi3EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 72 registers, 5184 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi3ELi6ELi3EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi3ELi6ELi3EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 56 registers, 5184 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi3ELi6ELi3EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi3ELi6ELi3EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, 5280 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi3ELi6ELi3EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi3ELi6ELi3EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, 5184 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi3ELi6ELi3EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi3ELi6ELi3EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 56 registers, 5280 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi3ELi5ELi5EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi3ELi5ELi5EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, 5000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi3ELi5ELi5EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi3ELi5ELi5EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 56 registers, 5000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi3ELi5ELi5EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi3ELi5ELi5EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 56 registers, 5000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi3ELi5ELi5EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi3ELi5ELi5EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, 5096 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi3ELi5ELi5EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi3ELi5ELi5EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, 5000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi3ELi5ELi5EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi3ELi5ELi5EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 56 registers, 5096 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi3ELi4ELi16EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi3ELi4ELi16EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, 8192 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi3ELi4ELi16EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi3ELi4ELi16EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 56 registers, 8192 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi3ELi4ELi16EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi3ELi4ELi16EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 46 registers, 8192 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi3ELi4ELi16EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi3ELi4ELi16EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, 8256 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi3ELi4ELi16EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi3ELi4ELi16EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 30 registers, 8192 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi3ELi4ELi16EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi3ELi4ELi16EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, 8256 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi3ELi3ELi7EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi3ELi3ELi7EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 31 registers, 1512 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi3ELi3ELi7EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi3ELi3ELi7EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 47 registers, 1512 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi3ELi3ELi7EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi3ELi3ELi7EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, 1512 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi3ELi3ELi7EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi3ELi3ELi7EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, 1576 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi3ELi3ELi7EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi3ELi3ELi7EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, 1512 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi3ELi3ELi7EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi3ELi3ELi7EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, 1576 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi2ELi6ELi3EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi2ELi6ELi3EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, 5184 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi2ELi6ELi3EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi2ELi6ELi3EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 56 registers, 5184 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi2ELi6ELi3EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi2ELi6ELi3EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 46 registers, 5184 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi2ELi6ELi3EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi2ELi6ELi3EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, 5232 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi2ELi6ELi3EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi2ELi6ELi3EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, 5184 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi2ELi6ELi3EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi2ELi6ELi3EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, 5232 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi2ELi5ELi5EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi2ELi5ELi5EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, 5000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi2ELi5ELi5EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi2ELi5ELi5EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 48 registers, 5000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi2ELi5ELi5EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi2ELi5ELi5EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, 5000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi2ELi5ELi5EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi2ELi5ELi5EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 34 registers, 5048 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi2ELi5ELi5EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi2ELi5ELi5EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, 5000 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi2ELi5ELi5EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi2ELi5ELi5EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, 5048 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi2ELi4ELi4EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi2ELi4ELi4EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, 2048 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi2ELi4ELi4EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi2ELi4ELi4EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, 2048 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi2ELi4ELi4EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi2ELi4ELi4EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 36 registers, 2048 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi2ELi4ELi4EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi2ELi4ELi4EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, 2080 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi2ELi4ELi4EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi2ELi4ELi4EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 30 registers, 2048 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi2ELi4ELi4EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi2ELi4ELi4EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, 2080 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi2ELi3ELi7EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi2ELi3ELi7EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 26 registers, 1512 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi2ELi3ELi7EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi2ELi3ELi7EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, 1512 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi2ELi3ELi7EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi2ELi3ELi7EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, 1512 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi2ELi3ELi7EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi2ELi3ELi7EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, 1544 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi2ELi3ELi7EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi2ELi3ELi7EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 26 registers, 1512 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi2ELi3ELi7EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi2ELi3ELi7EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, 1544 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z42massMatrixMultiplyMonolithicConstantKernelILi2ELi2ELi16EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z42massMatrixMultiplyMonolithicConstantKernelILi2ELi2ELi16EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 28 registers, 1024 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z40massMatrixMultiplyMonolithicGlobalKernelILi2ELi2ELi16EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z40massMatrixMultiplyMonolithicGlobalKernelILi2ELi2ELi16EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, 1024 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplyGlobalKernelILi2ELi2ELi16EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplyGlobalKernelILi2ELi2ELi16EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 34 registers, 1024 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z30massMatrixMultiplySharedKernelILi2ELi2ELi16EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z30massMatrixMultiplySharedKernelILi2ELi2ELi16EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, 1040 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyConstantKernelILi2ELi2ELi16EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyConstantKernelILi2ELi2ELi16EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 30 registers, 1024 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z32massMatrixMultiplyRegisterKernelILi2ELi2ELi16EEviPKdS1_S1_S1_Pd' for 'sm_70'
+ptxas info    : Function properties for _Z32massMatrixMultiplyRegisterKernelILi2ELi2ELi16EEviPKdS1_S1_S1_Pd
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, 1040 bytes smem, 400 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z20nothingVerboseKerneliPdS_' for 'sm_70'
+ptxas info    : Function properties for _Z20nothingVerboseKerneliPdS_
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 9 registers, 376 bytes cmem[0]
+ptxas info    : Compiling entry function '_Z13nothingKernelv' for 'sm_70'
+ptxas info    : Function properties for _Z13nothingKernelv
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 4 registers, 352 bytes cmem[0]
+massMatrixMultiplyVTV3.cu(1372): warning: variable "Nblock" was declared but never referenced
+
+Running: Nq=2, cubNq=3, numElements=1000000, mode=1
+ 2  3  1000000  8000000 5.995031e-04 1.334439e+10 3.458160e-06 5.738086e+02 5.767261e+02 9.274348e+02 7.606300e+02 1 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=02, cubNq=03 || Mq_{host} - Mq_{device} ||_linf = 6.66134e-16
+Running: Nq=2, cubNq=3, numElements=1000000, mode=2
+ 2  3  1000000  8000000 5.830383e-04 1.372123e+10 3.185280e-06 5.900127e+02 5.796739e+02 9.536253e+02 7.821100e+02 2 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=02, cubNq=03 || Mq_{host} - Mq_{device} ||_linf = 6.66134e-16
+Running: Nq=2, cubNq=3, numElements=1000000, mode=3
+ 2  3  1000000  8000000 5.788954e-04 1.381942e+10 3.173760e-06 5.942352e+02 5.771846e+02 9.604499e+02 7.877071e+02 3 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=02, cubNq=03 || Mq_{host} - Mq_{device} ||_linf = 6.66134e-16
+Running: Nq=2, cubNq=3, numElements=1000000, mode=4
+ 2  3  1000000  8000000 5.853281e-04 1.366755e+10 3.276880e-06 5.877046e+02 5.752034e+02 9.498946e+02 7.790502e+02 4 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=02, cubNq=03 || Mq_{host} - Mq_{device} ||_linf = 6.66134e-16
+Running: Nq=2, cubNq=3, numElements=1000000, mode=5
+ 2  3  1000000  8000000 5.801757e-04 1.378893e+10 3.178000e-06 5.929238e+02 5.781195e+02 9.583304e+02 7.859687e+02 5 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=02, cubNq=03 || Mq_{host} - Mq_{device} ||_linf = 6.66134e-16
+Running: Nq=2, cubNq=3, numElements=1000000, mode=6
+ 2  3  1000000  8000000 5.785364e-04 1.382800e+10 3.498080e-06 5.946039e+02 5.816239e+02 9.610459e+02 7.881960e+02 6 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=02, cubNq=03 || Mq_{host} - Mq_{device} ||_linf = 6.66134e-16
+Running: Nq=3, cubNq=4, numElements=296296, mode=1
+ 3  4   296296  7999992 4.746462e-04 1.685464e+10 3.464560e-06 5.892883e+02 5.811685e+02 1.148613e+03 1.108661e+03 1 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=03, cubNq=04 || Mq_{host} - Mq_{device} ||_linf = 5.32907e-15
+Running: Nq=3, cubNq=4, numElements=296296, mode=2
+ 3  4   296296  7999992 4.677919e-04 1.710160e+10 3.212160e-06 5.979227e+02 5.812060e+02 1.165443e+03 1.124906e+03 2 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=03, cubNq=04 || Mq_{host} - Mq_{device} ||_linf = 5.32907e-15
+Running: Nq=3, cubNq=4, numElements=296296, mode=3
+ 3  4   296296  7999992 4.713068e-04 1.697406e+10 3.480480e-06 5.934635e+02 5.794384e+02 1.156751e+03 1.116516e+03 3 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=03, cubNq=04 || Mq_{host} - Mq_{device} ||_linf = 5.32907e-15
+Running: Nq=3, cubNq=4, numElements=296296, mode=4
+ 3  4   296296  7999992 4.879148e-04 1.639629e+10 3.271040e-06 5.732629e+02 5.657965e+02 1.117377e+03 1.078511e+03 4 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=03, cubNq=04 || Mq_{host} - Mq_{device} ||_linf = 5.32907e-15
+Running: Nq=3, cubNq=4, numElements=296296, mode=5
+ 3  4   296296  7999992 4.785992e-04 1.671543e+10 3.267600e-06 5.844210e+02 5.755465e+02 1.139126e+03 1.099504e+03 5 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=03, cubNq=04 || Mq_{host} - Mq_{device} ||_linf = 3.55271e-15
+Running: Nq=3, cubNq=4, numElements=296296, mode=6
+ 3  4   296296  7999992 4.676498e-04 1.710680e+10 3.530160e-06 5.981044e+02 5.784212e+02 1.165797e+03 1.125247e+03 6 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=03, cubNq=04 || Mq_{host} - Mq_{device} ||_linf = 3.55271e-15
+Running: Nq=4, cubNq=5, numElements=125000, mode=1
+ 4  5   125000  8000000 4.300339e-04 1.860318e+10 3.503200e-06 5.883257e+02 5.811876e+02 1.237693e+03 1.418493e+03 1 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=04, cubNq=05 || Mq_{host} - Mq_{device} ||_linf = 2.84217e-14
+Running: Nq=4, cubNq=5, numElements=125000, mode=2
+ 4  5   125000  8000000 5.040239e-04 1.587226e+10 3.254160e-06 5.019603e+02 5.378720e+02 1.056001e+03 1.210260e+03 2 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=04, cubNq=05 || Mq_{host} - Mq_{device} ||_linf = 2.84217e-14
+Running: Nq=4, cubNq=5, numElements=125000, mode=3
+ 4  5   125000  8000000 4.195761e-04 1.906687e+10 3.496960e-06 6.029896e+02 4.989078e+02 1.268542e+03 1.453848e+03 3 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=04, cubNq=05 || Mq_{host} - Mq_{device} ||_linf = 2.84217e-14
+Running: Nq=4, cubNq=5, numElements=125000, mode=4
+ 4  5   125000  8000000 4.204957e-04 1.902517e+10 3.026640e-06 6.016709e+02 4.795411e+02 1.265768e+03 1.450669e+03 4 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=04, cubNq=05 || Mq_{host} - Mq_{device} ||_linf = 2.84217e-14
+Running: Nq=4, cubNq=5, numElements=125000, mode=5
+ 4  5   125000  8000000 4.230799e-04 1.890896e+10 3.554000e-06 5.979959e+02 5.811828e+02 1.258037e+03 1.441808e+03 5 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=04, cubNq=05 || Mq_{host} - Mq_{device} ||_linf = 2.84217e-14
+Running: Nq=4, cubNq=5, numElements=125000, mode=6
+ 4  5   125000  8000000 4.279840e-04 1.869229e+10 3.244320e-06 5.911436e+02 5.430229e+02 1.243621e+03 1.425287e+03 6 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=04, cubNq=05 || Mq_{host} - Mq_{device} ||_linf = 2.84217e-14
+Running: Nq=5, cubNq=6, numElements=64000, mode=1
+ 5  6    64000  8000000 4.804898e-04 1.664968e+10 3.549760e-06 4.965599e+02 5.803561e+02 1.192383e+03 1.454516e+03 1 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=05, cubNq=06 || Mq_{host} - Mq_{device} ||_linf = 3.41061e-13
+Running: Nq=5, cubNq=6, numElements=64000, mode=2
+ 5  6    64000  8000000 4.614525e-04 1.733656e+10 3.239040e-06 5.170456e+02 4.717249e+02 1.241575e+03 1.514522e+03 2 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=05, cubNq=06 || Mq_{host} - Mq_{device} ||_linf = 3.41061e-13
+Running: Nq=5, cubNq=6, numElements=64000, mode=3
+ 5  6    64000  8000000 3.950572e-04 2.025023e+10 3.072560e-06 6.039429e+02 4.720585e+02 1.450241e+03 1.769060e+03 3 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=05, cubNq=06 || Mq_{host} - Mq_{device} ||_linf = 3.41061e-13
+Running: Nq=5, cubNq=6, numElements=64000, mode=4
+ 5  6    64000  8000000 3.983636e-04 2.008215e+10 3.211200e-06 5.989302e+02 5.818192e+02 1.438204e+03 1.754377e+03 4 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=05, cubNq=06 || Mq_{host} - Mq_{device} ||_linf = 3.41061e-13
+Running: Nq=5, cubNq=6, numElements=64000, mode=5
+ 5  6    64000  8000000 4.027637e-04 1.986277e+10 3.179840e-06 5.923871e+02 5.033868e+02 1.422492e+03 1.735211e+03 5 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=05, cubNq=06 || Mq_{host} - Mq_{device} ||_linf = 2.27374e-13
+Running: Nq=5, cubNq=6, numElements=64000, mode=6
+ 5  6    64000  8000000 5.177362e-04 1.545188e+10 3.482880e-06 4.608370e+02 4.709930e+02 1.106602e+03 1.349876e+03 6 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=05, cubNq=06 || Mq_{host} - Mq_{device} ||_linf = 2.27374e-13
+Running: Nq=6, cubNq=7, numElements=37037, mode=1
+ 6  7    37037  7999992 4.412561e-04 1.813004e+10 3.558720e-06 5.203994e+02 4.703386e+02 1.347667e+03 1.790846e+03 1 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=06, cubNq=07 || Mq_{host} - Mq_{device} ||_linf = 1.42109e-13
+Running: Nq=6, cubNq=7, numElements=37037, mode=2
+ 6  7    37037  7999992 4.097712e-04 1.952307e+10 3.511280e-06 5.603844e+02 5.810698e+02 1.451215e+03 1.928445e+03 2 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=06, cubNq=07 || Mq_{host} - Mq_{device} ||_linf = 1.42109e-13
+Running: Nq=6, cubNq=7, numElements=37037, mode=3
+ 6  7    37037  7999992 3.795542e-04 2.107734e+10 3.070320e-06 6.049977e+02 4.940874e+02 1.566749e+03 2.081973e+03 3 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=06, cubNq=07 || Mq_{host} - Mq_{device} ||_linf = 1.42109e-13
+Running: Nq=6, cubNq=7, numElements=37037, mode=4
+ 6  7    37037  7999992 3.831235e-04 2.088097e+10 3.495120e-06 5.993613e+02 5.797394e+02 1.552153e+03 2.062576e+03 4 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=06, cubNq=07 || Mq_{host} - Mq_{device} ||_linf = 1.42109e-13
+Running: Nq=6, cubNq=7, numElements=37037, mode=5
+ 6  7    37037  7999992 3.940286e-04 2.030308e+10 3.197280e-06 5.827734e+02 4.920848e+02 1.509195e+03 2.005493e+03 5 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=06, cubNq=07 || Mq_{host} - Mq_{device} ||_linf = 1.13687e-13
+Running: Nq=6, cubNq=7, numElements=37037, mode=6
+ 6  7    37037  7999992 4.436058e-04 1.803401e+10 3.252480e-06 5.176429e+02 5.287739e+02 1.340528e+03 1.781360e+03 6 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=06, cubNq=07 || Mq_{host} - Mq_{device} ||_linf = 1.13687e-13
+Running: Nq=7, cubNq=8, numElements=23323, mode=1
+ 7  8    23323  7999789 3.724924e-04 2.147638e+10 3.491840e-06 6.000864e+02 5.633354e+02 1.725123e+03 2.370291e+03 1 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=07, cubNq=08 || Mq_{host} - Mq_{device} ||_linf = 6.82121e-13
+Running: Nq=7, cubNq=8, numElements=23323, mode=2
+ 7  8    23323  7999789 3.738331e-04 2.139936e+10 3.488240e-06 5.979343e+02 5.654310e+02 1.718936e+03 2.361791e+03 2 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=07, cubNq=08 || Mq_{host} - Mq_{device} ||_linf = 6.82121e-13
+Running: Nq=7, cubNq=8, numElements=23323, mode=3
+ 7  8    23323  7999789 3.892182e-04 2.055348e+10 3.635440e-06 5.742990e+02 4.871931e+02 1.650990e+03 2.268433e+03 3 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=07, cubNq=08 || Mq_{host} - Mq_{device} ||_linf = 6.82121e-13
+Running: Nq=7, cubNq=8, numElements=23323, mode=4
+ 7  8    23323  7999789 3.746767e-04 2.135118e+10 3.456880e-06 5.965880e+02 5.337120e+02 1.715066e+03 2.356473e+03 4 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=07, cubNq=08 || Mq_{host} - Mq_{device} ||_linf = 6.82121e-13
+Running: Nq=7, cubNq=8, numElements=23323, mode=5
+ 7  8    23323  7999789 4.074370e-04 1.963442e+10 3.289200e-06 5.486188e+02 5.784639e+02 1.577165e+03 2.166999e+03 5 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=07, cubNq=08 || Mq_{host} - Mq_{device} ||_linf = 6.82121e-13
+Running: Nq=7, cubNq=8, numElements=23323, mode=6
+ 7  8    23323  7999789 3.788586e-04 2.111550e+10 3.510160e-06 5.900028e+02 5.406190e+02 1.696135e+03 2.330462e+03 6 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=07, cubNq=08 || Mq_{host} - Mq_{device} ||_linf = 6.82121e-13
+Running: Nq=8, cubNq=9, numElements=15625, mode=1
+ 8  9    15625  8000000 3.918303e-04 2.041700e+10 3.178240e-06 5.592345e+02 5.576937e+02 1.722605e+03 2.492151e+03 1 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=08, cubNq=09 || Mq_{host} - Mq_{device} ||_linf = 2.27374e-12
+Running: Nq=8, cubNq=9, numElements=15625, mode=2
+ 8  9    15625  8000000 3.858522e-04 2.073333e+10 3.522480e-06 5.678987e+02 5.631644e+02 1.749293e+03 2.530762e+03 2 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=08, cubNq=09 || Mq_{host} - Mq_{device} ||_linf = 2.27374e-12
+Running: Nq=8, cubNq=9, numElements=15625, mode=3
+ 8  9    15625  8000000 3.675365e-04 2.176655e+10 3.243040e-06 5.961993e+02 5.735610e+02 1.836467e+03 2.656879e+03 3 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=08, cubNq=09 || Mq_{host} - Mq_{device} ||_linf = 2.27374e-12
+Running: Nq=8, cubNq=9, numElements=15625, mode=4
+ 8  9    15625  8000000 4.059949e-04 1.970468e+10 3.568080e-06 5.397235e+02 5.464521e+02 1.662505e+03 2.405202e+03 4 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=08, cubNq=09 || Mq_{host} - Mq_{device} ||_linf = 2.27374e-12
+Running: Nq=8, cubNq=9, numElements=15625, mode=5
+ 8  9    15625  8000000 6.855292e-04 1.166982e+10 3.555040e-06 3.196435e+02 5.659384e+02 9.845952e+02 1.424447e+03 5 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=08, cubNq=09 || Mq_{host} - Mq_{device} ||_linf = 1.81899e-12
+Running: Nq=8, cubNq=9, numElements=15625, mode=6
+ 8  9    15625  8000000 4.653195e-04 1.719249e+10 3.234320e-06 4.709130e+02 5.258571e+02 1.450549e+03 2.098558e+03 6 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=08, cubNq=09 || Mq_{host} - Mq_{device} ||_linf = 1.81899e-12
+Running: Nq=9, cubNq=10, numElements=10973, mode=1
+ 9 10    10973  7999317 4.009160e-04 1.995260e+10 3.659520e-06 5.382002e+02 5.766066e+02 1.807503e+03 2.670200e+03 1 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=09, cubNq=10 || Mq_{host} - Mq_{device} ||_linf = 5.45697e-12
+Running: Nq=9, cubNq=10, numElements=10973, mode=2
+ 9 10    10973  7999317 4.419532e-04 1.809992e+10 3.584400e-06 4.882261e+02 5.150385e+02 1.639669e+03 2.422261e+03 2 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=09, cubNq=10 || Mq_{host} - Mq_{device} ||_linf = 5.45697e-12
+Running: Nq=9, cubNq=10, numElements=10973, mode=3
+ 9 10    10973  7999317 4.104880e-04 1.948734e+10 3.276000e-06 5.256502e+02 5.409653e+02 1.765355e+03 2.607935e+03 3 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=09, cubNq=10 || Mq_{host} - Mq_{device} ||_linf = 5.45697e-12
+Running: Nq=9, cubNq=10, numElements=10973, mode=4
+ 9 10    10973  7999317 3.655560e-04 2.188261e+10 3.447280e-06 5.902600e+02 5.056849e+02 1.982342e+03 2.928487e+03 4 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=09, cubNq=10 || Mq_{host} - Mq_{device} ||_linf = 5.45697e-12
+Running: Nq=9, cubNq=10, numElements=10973, mode=5
+ 9 10    10973  7999317 5.271209e-04 1.517549e+10 3.502400e-06 4.093427e+02 5.386057e+02 1.374745e+03 2.030892e+03 5 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=09, cubNq=10 || Mq_{host} - Mq_{device} ||_linf = 5.45697e-12
+Running: Nq=9, cubNq=10, numElements=10973, mode=6
+ 9 10    10973  7999317 4.041271e-04 1.979407e+10 3.199200e-06 5.339239e+02 5.020334e+02 1.793141e+03 2.648983e+03 6 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=09, cubNq=10 || Mq_{host} - Mq_{device} ||_linf = 5.45697e-12
+Running: Nq=10, cubNq=11, numElements=8000, mode=1
+10 11     8000  8000000 3.652491e-04 2.190286e+10 3.532160e-06 5.836674e+02 4.915631e+02 2.085941e+03 3.189932e+03 1 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=10, cubNq=11 || Mq_{host} - Mq_{device} ||_linf = 5.45697e-12
+Running: Nq=10, cubNq=11, numElements=8000, mode=2
+10 11     8000  8000000 3.555218e-04 2.250214e+10 3.486400e-06 5.996370e+02 4.916164e+02 2.143014e+03 3.277211e+03 2 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=10, cubNq=11 || Mq_{host} - Mq_{device} ||_linf = 5.45697e-12
+Running: Nq=10, cubNq=11, numElements=8000, mode=3
+10 11     8000  8000000 3.615630e-04 2.212616e+10 3.504320e-06 5.896179e+02 5.237003e+02 2.107207e+03 3.222454e+03 3 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=10, cubNq=11 || Mq_{host} - Mq_{device} ||_linf = 5.45697e-12
+Running: Nq=10, cubNq=11, numElements=8000, mode=4
+10 11     8000  8000000 4.084843e-04 1.958460e+10 3.289520e-06 5.218903e+02 4.917843e+02 1.865158e+03 2.852301e+03 4 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=10, cubNq=11 || Mq_{host} - Mq_{device} ||_linf = 5.45697e-12
+Running: Nq=10, cubNq=11, numElements=8000, mode=5
+10 11     8000  8000000 5.587961e-04 1.431649e+10 3.263840e-06 3.815059e+02 4.840116e+02 1.363445e+03 2.085054e+03 5 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=10, cubNq=11 || Mq_{host} - Mq_{device} ||_linf = 5.45697e-12
+Running: Nq=10, cubNq=11, numElements=8000, mode=6
+10 11     8000  8000000 4.982737e-04 1.605543e+10 3.737600e-06 4.278452e+02 5.758372e+02 1.529055e+03 2.338313e+03 6 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=10, cubNq=11 || Mq_{host} - Mq_{device} ||_linf = 5.45697e-12
+Running: Nq=11, cubNq=12, numElements=6010, mode=1
+11 12     6010  7999310 4.950226e-04 1.615948e+10 3.211760e-06 4.263870e+02 5.475003e+02 1.640473e+03 2.544918e+03 1 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=11, cubNq=12 || Mq_{host} - Mq_{device} ||_linf = 5.45697e-12
+Running: Nq=11, cubNq=12, numElements=6010, mode=2
+11 12     6010  7999310 3.523717e-04 2.270134e+10 3.220240e-06 5.990017e+02 5.089164e+02 2.304587e+03 3.575180e+03 2 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=11, cubNq=12 || Mq_{host} - Mq_{device} ||_linf = 5.45697e-12
+Running: Nq=11, cubNq=12, numElements=6010, mode=3
+11 12     6010  7999310 3.755934e-04 2.129779e+10 3.297360e-06 5.619673e+02 4.807937e+02 2.162102e+03 3.354139e+03 3 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=11, cubNq=12 || Mq_{host} - Mq_{device} ||_linf = 5.45697e-12
+Running: Nq=11, cubNq=12, numElements=6010, mode=4
+11 12     6010  7999310 5.581643e-04 1.433146e+10 3.184480e-06 3.781525e+02 5.484418e+02 1.454896e+03 2.257027e+03 4 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=11, cubNq=12 || Mq_{host} - Mq_{device} ||_linf = 5.45697e-12
+Running: Nq=11, cubNq=12, numElements=6010, mode=5
+11 12     6010  7999310 1.664934e-03 4.804581e+09 3.478800e-06 1.267745e+02 5.328423e+02 4.877498e+02 7.566619e+02 5 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=11, cubNq=12 || Mq_{host} - Mq_{device} ||_linf = 5.45697e-12
+Running: Nq=11, cubNq=12, numElements=6010, mode=6
+11 12     6010  7999310 3.594213e-04 2.225608e+10 3.503600e-06 5.872528e+02 5.725694e+02 2.259385e+03 3.505057e+03 6 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=11, cubNq=12 || Mq_{host} - Mq_{device} ||_linf = 5.45697e-12
+Running: Nq=12, cubNq=13, numElements=4629, mode=1
+12 13     4629  7998912 4.476089e-04 1.787031e+10 3.243360e-06 4.676892e+02 4.789002e+02 1.903126e+03 3.026536e+03 1 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=12, cubNq=13 || Mq_{host} - Mq_{device} ||_linf = 1.81899e-11
+Running: Nq=12, cubNq=13, numElements=4629, mode=2
+12 13     4629  7998912 3.591009e-04 2.227483e+10 3.549760e-06 5.829613e+02 4.984226e+02 2.372192e+03 3.772490e+03 2 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=12, cubNq=13 || Mq_{host} - Mq_{device} ||_linf = 1.81899e-11
+Running: Nq=12, cubNq=13, numElements=4629, mode=3
+12 13     4629  7998912 4.343443e-04 1.841606e+10 3.240560e-06 4.819723e+02 5.014611e+02 1.961247e+03 3.118965e+03 3 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=12, cubNq=13 || Mq_{host} - Mq_{device} ||_linf = 1.81899e-11
+Running: Nq=12, cubNq=13, numElements=4629, mode=4
+12 13     4629  7998912 5.732413e-04 1.395383e+10 3.501840e-06 3.651898e+02 5.445333e+02 1.486034e+03 2.363236e+03 4 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=12, cubNq=13 || Mq_{host} - Mq_{device} ||_linf = 1.81899e-11
+Running: Nq=12, cubNq=13, numElements=4629, mode=5
+12 13     4629  7998912 2.505063e-03 3.193098e+09 3.274480e-06 8.356752e+01 5.235634e+02 3.400539e+02 5.407867e+02 5 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=12, cubNq=13 || Mq_{host} - Mq_{device} ||_linf = 1.81899e-11
+Running: Nq=12, cubNq=13, numElements=4629, mode=6
+12 13     4629  7998912 4.261570e-04 1.876987e+10 3.515440e-06 4.912318e+02 5.769591e+02 1.998926e+03 3.178886e+03 6 %% [MassMatrixMultiply: NUM_DOFS_1D, NUM_QUAD_1D, numElements, Ndofs, elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimated peak Device BW, est. GFLOPS/s, oddeven GFLOPS/s, mode]
+Nq=12, cubNq=13 || Mq_{host} - Mq_{device} ||_linf = 1.81899e-11
