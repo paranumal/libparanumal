@@ -22,11 +22,13 @@ do
   echo $maxE
   echo $skipE
 
-  ./massMatrixMultiplyVT $Nq $cubNq 1 
-  
-  for E in `seq 80 $skipE $maxE`
+  ./massMatrixMultiplyVT $Nq $cubNq 1  1
+  for mode in `seq 1 4`
   do
-    ./massMatrixMultiplyVT $Nq $cubNq $E
+      for E in `seq 80 $skipE $maxE`
+      do
+	  ./massMatrixMultiplyVT $Nq $cubNq $E $mode
+      done
   done
 done
       
