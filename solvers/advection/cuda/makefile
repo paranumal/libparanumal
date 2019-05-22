@@ -13,8 +13,8 @@ advectionInvertMassMatrix: advectionInvertMassMatrixV2.cu
 advectionMassMatrixMultiply: advectionMassMatrixMultiply.cu
 	nvcc -o advectionMassMatrixMultiply $(cudaFlags) advectionMassMatrixMultiply.cu
 
-massMatrixMultiplyVT: massMatrixMultiplyVT.cu
-	nvcc -o massMatrixMultiplyVT $(cudaFlags) massMatrixMultiplyVT.cu
+massMatrixMultiplyVT: massMatrixMultiplyVTV3.cu
+	nvcc -o massMatrixMultiplyVT $(cudaFlags) massMatrixMultiplyVTV3.cu
 #	nvcc -o massMatrixMultiplyVT $(nonoptFlags) massMatrixMultiplyVT.cu
 
 stiffnessMatrixMultiplyVT: stiffnessMatrixMultiplyVT.cu
