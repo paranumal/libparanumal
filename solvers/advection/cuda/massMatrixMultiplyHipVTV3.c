@@ -834,15 +834,181 @@ __global__ void massMatrixMultiplyConstantKernel(const int numElements,
 }
 
 template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
-__global__ void massMatrixMultiplyMonolithicKernel(const int numElements,
+__global__ void massMatrixMultiplyGlobalKernel(const int numElements,
+						 const dfloat_t * __restrict__ op,
+						 const dfloat_t * __restrict__ oddDofToQuad,
+						 const dfloat_t * __restrict__ evenDofToQuad,
+						 const dfloat_t * __restrict__ solIn,
+						 dfloat_t * __restrict__ solOut){
+  
+  __shared__ dfloat_t s_tmp1[p_Nblock][NUM_QUAD_1D][NUM_QUAD_1D][NUM_QUAD_1D+p_padCubNq];
+
+  dfloat_t r_Aq[NUM_QUAD_1D];
+
+  const unsigned int t = threadIdx.x;
+  const int blk = threadIdx.y;
+  
+  const int element = blockIdx.x*p_Nblock + blk;
+  
+  const unsigned int a = t%NUM_DOFS_1D;
+  const unsigned int b = t/NUM_DOFS_1D;
+
+#if READ_TO_REGISTER==1
+  if(element < numElements && t<NUM_DOFS_2D){
+    for(int c=0;c<NUM_DOFS_1D;++c){
+      int id = ijklN(a,b,c,element,NUM_DOFS_1D);
+      
+      r_Aq[c] = solIn[id];
+    }
+  }
+#else
+  int n = t + blk*NUM_QUAD_2D;
+  
+  while(n<p_Nblock*NUM_DOFS_3D){
+    
+    int id = n + blockIdx.x*p_Nblock*NUM_DOFS_3D;
+    if(id<numElements*NUM_DOFS_3D){
+      s_tmp1[0][0][0][n] = solIn[id];
+    }
+    n+=NUM_QUAD_2D*p_Nblock;
+  }
+#endif
+
+  __syncthreads();
+
+#if READ_TO_REGISTER==0
+  if(t<NUM_DOFS_2D)
+    for(int c=0;c<NUM_DOFS_1D;++c)
+      r_Aq[c] = s_tmp1[blk][c][b][a];
+
+  __syncthreads();
+#endif
+  
+  massMatrixMultiplyOddEvenDevice  <NUM_DOFS_1D, NUM_QUAD_1D, p_Nblock>
+    (numElements, element, op, oddDofToQuad, evenDofToQuad, s_tmp1, r_Aq);
+
+#if USE_CONTIGUOUS_OUTPUT==0
+  
+  if(element<numElements && t<NUM_DOFS_2D){
+#pragma unroll
+    for(int c=0;c<NUM_DOFS_1D;++c){
+      int id = ijklN(a,b,c,element,NUM_DOFS_1D);
+      solOut[id] = r_Aq[c];
+    }
+  }
+
+#else
+  
+  int n = t + blk*NUM_QUAD_2D;
+  
+  while(n<p_Nblock*NUM_DOFS_3D){
+    
+    int id = n + blockIdx.x*p_Nblock*NUM_DOFS_3D;
+    if(id<numElements*NUM_DOFS_3D){
+      solOut[id] = s_tmp1[0][0][0][n];
+    }
+    n+=NUM_QUAD_2D*p_Nblock;
+  }
+#endif  
+
+  
+}
+
+
+
+template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
+__global__ void massMatrixMultiplyMonolithicGlobalKernel(const int numElements,
 						   const dfloat_t * __restrict__ op,
-						   const dfloat_t * __restrict__ oddDofToQuad,
+						   const dfloat_t * __restrict__ DofToQuad,
 						   const dfloat_t * __restrict__ evenDofToQuad,
 						   const dfloat_t * __restrict__ solIn,
 						   dfloat_t * __restrict__ solOut){
   
   __shared__ dfloat_t s_tmp1[p_Nblock][NUM_QUAD_1D][NUM_QUAD_1D][NUM_QUAD_1D+p_padCubNq];
 
+  dfloat_t r_Aq[NUM_QUAD_1D];
+
+  const unsigned int t = threadIdx.x;
+  const int blk = threadIdx.y;
+  
+  const int element = blockIdx.x*p_Nblock + blk;
+  
+  const unsigned int a = t%NUM_DOFS_1D;
+  const unsigned int b = t/NUM_DOFS_1D;
+
+#if READ_TO_REGISTER==1
+  if(element < numElements){
+    for(int c=0;c<NUM_DOFS_1D;++c){
+      
+      int id = ijklN(a,b,c,element,NUM_DOFS_1D);
+      
+      r_Aq[c] = solIn[id];
+    }
+  }
+#else
+  int n = t + blk*NUM_QUAD_2D;
+  
+  while(n<p_Nblock*NUM_DOFS_3D){
+    
+    int id = n + blockIdx.x*p_Nblock*NUM_DOFS_3D;
+    if(id<numElements*NUM_DOFS_3D){
+      s_tmp1[0][0][0][n] = solIn[id];
+    }
+    n+=NUM_QUAD_2D*p_Nblock;
+  }
+#endif
+  
+  __syncthreads();
+
+#if READ_TO_REGISTER==0
+  if(t<NUM_DOFS_2D)
+    for(int c=0;c<NUM_DOFS_1D;++c)
+      r_Aq[c] = s_tmp1[blk][c][b][a];
+
+  __syncthreads();
+#endif
+  
+  massMatrixMultiplyMonolithicDevice  <NUM_DOFS_1D, NUM_QUAD_1D, p_Nblock>
+    (numElements, element, op, DofToQuad, s_tmp1, r_Aq);
+
+#if USE_CONTIGUOUS_OUTPUT==0
+
+  if(element<numElements && t<NUM_DOFS_2D){
+#pragma unroll
+    for(int c=0;c<NUM_DOFS_1D;++c){
+      int id = ijklN(a,b,c,element,NUM_DOFS_1D);
+      solOut[id] = r_Aq[c];
+    }
+  }
+
+#else
+  
+  int n = t + blk*NUM_QUAD_2D;
+  
+  while(n<p_Nblock*NUM_DOFS_3D){
+    
+    int id = n + blockIdx.x*p_Nblock*NUM_DOFS_3D;
+    if(id<numElements*NUM_DOFS_3D){
+      solOut[id] = s_tmp1[0][0][0][n];
+    }
+    n+=NUM_QUAD_2D*p_Nblock;
+  }
+#endif  
+
+  
+}
+
+
+template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
+__global__ void massMatrixMultiplyMonolithicConstantKernel(const int numElements,
+							   const dfloat_t * __restrict__ op,
+							   const dfloat_t * __restrict__ DofToQuad,
+							   const dfloat_t * __restrict__ evenDofToQuad,
+							   const dfloat_t * __restrict__ solIn,
+							   dfloat_t * __restrict__ solOut){
+  
+  __shared__ dfloat_t s_tmp1[p_Nblock][NUM_QUAD_1D][NUM_QUAD_1D][NUM_QUAD_1D+p_padCubNq];
+  
   dfloat_t r_Aq[NUM_QUAD_1D];
 
   const unsigned int t = threadIdx.x;
@@ -1190,8 +1356,12 @@ void runMassMatrixMultiplyKernel(hipStream_t stream, int Nq, int cubNq, int numE
       hipLaunchKernelGGL(massMatrixMultiplyConstantKernel<Nq,cubNq,Nblock>, G, B, 0, stream, numElements, c_op, c_oddDofToQuad, c_evenDofToQuad, c_solIn, c_solOut); \
     else if(mode==3)							\
       hipLaunchKernelGGL(massMatrixMultiplySharedKernel<Nq,cubNq,Nblock>, G, B, 0, stream, numElements, c_op, c_oddDofToQuad, c_evenDofToQuad, c_solIn, c_solOut); \
-    else 								\
-      hipLaunchKernelGGL(massMatrixMultiplyMonolithicKernel<Nq,cubNq,Nblock>, G, B, 0, stream, numElements, c_op, c_DofToQuad, c_evenDofToQuad, c_solIn, c_solOut); \
+    else if(mode==4)							\
+      hipLaunchKernelGGL(massMatrixMultiplyGlobalKernel<Nq,cubNq,Nblock>, G, B, 0, stream, numElements, c_op, c_oddDofToQuad, c_evenDofToQuad, c_solIn, c_solOut); \
+    else if(mode==5)							\
+      hipLaunchKernelGGL(massMatrixMultiplyMonolithicGlobalKernel<Nq,cubNq,Nblock>, G, B, 0, stream, numElements, c_op, c_DofToQuad, c_evenDofToQuad, c_solIn, c_solOut); \
+    else if(mode==6)							\
+      hipLaunchKernelGGL(massMatrixMultiplyMonolithicConstantKernel<Nq,cubNq,Nblock>, G, B, 0, stream, numElements, c_op, c_DofToQuad, c_evenDofToQuad, c_solIn, c_solOut); \
   }
   
 #define ERR printf("massMatrixMultiplyRegister with Nq=%d, cubNq=%d not available", Nq, cubNq); exit(-1)
@@ -1394,6 +1564,50 @@ dfloat_t nothingTest(hipStream_t stream, int Ntests){
 }
 
 
+double bandwidthTest(hipStream_t stream, int Ntests, size_t bwNtotal){
+
+  hipEvent_t start, end;
+  hipEventCreate(&start);
+  hipEventCreate(&end);	
+  
+  dfloat_t *h_bwTest1, *c_bwTest1;
+  dfloat_t *h_bwTest2, *c_bwTest2;
+  
+  randAlloc(bwNtotal/2, &h_bwTest1, &c_bwTest1);
+  randAlloc(bwNtotal/2, &h_bwTest2, &c_bwTest2);
+  
+  hipDeviceSynchronize();
+  hipEventRecord(start, stream);
+  
+  for(int test=0;test<Ntests/2;++test){
+    hipMemcpy(c_bwTest2, c_bwTest1, (bwNtotal/2)*sizeof(dfloat_t), hipMemcpyDeviceToDevice);
+    hipMemcpy(c_bwTest1, c_bwTest2, (bwNtotal/2)*sizeof(dfloat_t), hipMemcpyDeviceToDevice);
+  }
+  
+  hipEventRecord(end, stream);
+  hipEventSynchronize(end);
+  hipDeviceSynchronize();
+
+  float elapsed;
+  hipEventElapsedTime(&elapsed, start, end);
+  elapsed /= 1000.; // convert to s
+  elapsed /= (double) Ntests;
+  
+  double estimatedActualDeviceBandwidth = (bwNtotal*sizeof(dfloat_t)/elapsed)/1.e9;
+  
+  hipFree(c_bwTest1);
+  hipFree(c_bwTest2);
+  
+  free(h_bwTest1);
+  free(h_bwTest2);
+  
+  hipEventDestroy(start);
+  hipEventDestroy(end);	
+  
+  return estimatedActualDeviceBandwidth;
+}
+
+
 int main(int argc, char **argv){
 
   hipSetDevice(0);
@@ -1429,6 +1643,14 @@ int main(int argc, char **argv){
   hipEvent_t start, end;
   hipEventCreate(&start);
   hipEventCreate(&end);	
+
+  int Ntests = 400;
+  
+  // do nothing kernel test
+  dfloat_t nothingElapsed = nothingTest(stream, Ntests);
+  nothingElapsed = nothingTest(stream, Ntests);
+
+  
   
   int   Np = Nq*Nq*Nq;
   int   cubNp = cubNq*cubNq*cubNq;
@@ -1439,42 +1661,10 @@ int main(int argc, char **argv){
   int    Ntotal = numElements*Np;
   int cubNtotal = numElements*cubNp;
 
-  int Ntests = 400;
-  
   // bandwidth test
   // total number of bytes
-  float elapsed;
-  double estimatedActualDeviceBandwidth = 0;
-  
-  {
-    int bwNtotal = (Ntotal*2 + cubNtotal);
-    
-    dfloat_t *h_bwTest1, *c_bwTest1;
-    dfloat_t *h_bwTest2, *c_bwTest2;
 
-    randAlloc(bwNtotal/2, &h_bwTest1, &c_bwTest1);
-    randAlloc(bwNtotal/2, &h_bwTest2, &c_bwTest2);
-  
-    hipDeviceSynchronize();
-    hipEventRecord(start, stream);
-    
-    for(int test=0;test<Ntests/2;++test){
-      hipMemcpy(c_bwTest2, c_bwTest1, (bwNtotal/2)*sizeof(dfloat_t), hipMemcpyDeviceToDevice);
-      hipMemcpy(c_bwTest1, c_bwTest2, (bwNtotal/2)*sizeof(dfloat_t), hipMemcpyDeviceToDevice);
-    }
-    
-    hipEventRecord(end, stream);
-    hipEventSynchronize(end);
-    
-    hipEventElapsedTime(&elapsed, start, end);
-    elapsed /= 1000.; // convert to s
-    elapsed /= (double) Ntests;
-    
-    estimatedActualDeviceBandwidth = (bwNtotal*sizeof(dfloat_t)/elapsed)/1.e9;
-    
-    hipFree(c_bwTest1);
-    hipFree(c_bwTest2);
-  }
+  double estimatedActualDeviceBandwidth = bandwidthTest(stream, Ntests, (Ntotal*2+cubNtotal)*sizeof(dfloat_t));
   
   dfloat_t *h_op,      *c_op;
   dfloat_t *h_solOut,       *c_solOut;
@@ -1508,6 +1698,8 @@ int main(int argc, char **argv){
     }
   }
 
+  hipMemcpy(c_DofToQuad, h_DofToQuad, cubNq*Nq*sizeof(dfloat_t), hipMemcpyHostToDevice);
+  
   matrixPrint(cubNq, Nq, h_DofToQuad, "DofToQuad");
 
   // create Odd-even packed storage for I and transpose(I) and push to constant memory
@@ -1517,10 +1709,8 @@ int main(int argc, char **argv){
 
   
   // KERNEL GRID
-  // do nothing kernel test
-  dfloat_t nothingElapsed = nothingTest(stream, Ntests);
-  nothingElapsed = nothingTest(stream, Ntests);
-
+  float elapsed;
+  
   // warm up call
   runMassMatrixMultiplyKernel (stream, Nq, cubNq, numElements, c_op, c_DofToQuad, c_oddDofToQuad, c_evenDofToQuad, c_solIn, c_solOut, mode);
 
