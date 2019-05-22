@@ -1,5 +1,5 @@
 
-data = load('results/testMassMatrixMultiplyVT_TITANV_CUDA_V3.dat')
+data = load('results/testMassMatrixMultiplyVT_RADEONVII_HIP_V3.dat')
 
 dNq = 1;
 
@@ -26,15 +26,14 @@ axis([1, 11, 0 800])
 grid on
 xlabel('Element Degree', 'FontSize', 14)
 ylabel('Estimated Bandwidth (GB/s)', 'FontSize', 14)
-title('BK1:CUDA:Titan V:~8M DOFS')
+title('BK1:HIP:RADEON VII:~8M DOFS')
 ha = legend('Odd-even + OP in registers', ...
 	    'Odd-even + OP in constant cache', ...
 	    'Odd-even + OP in shared cache', ...
 	    'Odd-even + OP in global', ...
 	    'Monolithic + OP in Global', ...
 	    'Monolithic + OP in constant cache', ...
-	    'cudaMemcpy BW', 'location', 'southwest');
+	    'hipMemcpy BW', 'location', 'southwest');
 set(ha, 'FontSize', 12)
-box on
 
-print('-dpdf', 'testMassMatrixMultiplyVT_TITANV_CUDA_V3.pdf', '-bestfit')
+print('-dpdf', 'testMassMatrixMultiplyVT_RADEONVII_HIP_V3.pdf', '-bestfit')
