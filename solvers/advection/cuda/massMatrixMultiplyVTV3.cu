@@ -430,8 +430,8 @@ template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
       int gid1 = ijklN(NUM_QUAD_1D-1-i,j,k,element, NUM_QUAD_1D);
       int gid2 = ijklN(i,j,k,element, NUM_QUAD_1D);
 
-      dfloat_t WJ1 = op[gid1];
-      dfloat_t WJ2 = op[gid2];
+      dfloat_t WJ1 = (element<numElements) ? op[gid1]:0;
+      dfloat_t WJ2 = (element<numElements) ? op[gid2]:0;
 
 #if 0
       s_Ap[blk][k][j][NUM_QUAD_1D-1-i] = WJ1*(resOdd-resEven);
