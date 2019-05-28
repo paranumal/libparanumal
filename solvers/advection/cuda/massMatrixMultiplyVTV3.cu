@@ -1647,7 +1647,7 @@ int main(int argc, char **argv){
   cudaEventCreate(&start);
   cudaEventCreate(&end);	
 
-  int Ntests = 400;
+  int Ntests = 50;
   
   // do nothing kernel test
   dfloat_t nothingElapsed = nothingTest(stream, Ntests);

@@ -13,7 +13,7 @@ do
 
   let Np=$Nq*$Nq*$Nq
   
-  let maxE=2000000/$Np
+  let maxE=1000000/$Np
 
   let tmpE=$maxE/400
   let tmpE2=(19+$tmpE)/20
