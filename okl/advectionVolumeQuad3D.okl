@@ -124,191 +124,14 @@ kernel void advectionVolumeLSERKQuad3D(const int Nelements,
   }
 }
 
-kernel void advectionVolumeLSERKexpMixedQuad3D(const int Nelements,
-				  const dfloat * restrict vgeo,
-				  const dfloat * restrict D,
-				       const dfloat * restrict weakD,
-				  const dfloat * restrict x,
-				  const dfloat * restrict y,
-				  const dfloat * restrict z,
-				  const dfloat * restrict mass,
-				  const dfloat * restrict q,
-				  dfloat * restrict rhsqs,
-				  dfloat * restrict rhsqw){
-
-  for(int eo=0;eo<Nelements;eo+=p_NblockV;outer0){  // for all elements
-
-    shared dfloat s_q[p_Nfields][p_NblockV][p_Nq][p_Nq];
-    shared dfloat s_D[p_Nq][p_Nq];
-    shared dfloat s_weakD[p_Nq][p_Nq];
-    shared dfloat s_mass[p_Nq][p_Nq];
-    
-    for(int es=0;es<p_NblockV;++es;inner2){
-      for(int j=0;j<p_Nq;++j;inner1){
-	for(int i=0;i<p_Nq;++i;inner0){
-
-	  int e = eo+es; // element in block
-	  if(e<Nelements){
-	    const int base = i + j*p_Nq + p_Nfields*p_Np*e;
-	    for(int fld=0;fld<p_Nfields;++fld){
-	      s_q[fld][es][j][i] = q[base+fld*p_Np];
-	    }
-	  }
-
-	  if(es==0) {
-	    s_D[j][i] = D[j*p_Nq+i];
-	    s_weakD[j][i] = weakD[j*p_Nq+i];
-	    s_mass[j][i] = mass[j*p_Nq+i];
-	  }
-	}
-      }
-    }
-
-    // make sure all node data is loaded into shared
-    barrier(localMemFence);
-
-    for(int es=0;es<p_NblockV;++es;inner2){
-      for(int j=0;j<p_Nq;++j;inner1){
-	for(int i=0;i<p_Nq;++i;inner0){
-	  int e = eo+es; // element in block
-
-	  if(e<Nelements){
-
-	    const int n=j*p_Nq+i;
-
-	    // prefetch geometric factors (constant on triangle)
-	    const int gbase = e*p_Np*p_Nvgeo + n;
-	    const dfloat drdx = vgeo[gbase + p_Np*RXID];
-	    const dfloat drdy = vgeo[gbase + p_Np*RYID];
-	    const dfloat drdz = vgeo[gbase + p_Np*RZID];
-	    const dfloat dsdx = vgeo[gbase + p_Np*SXID];
-	    const dfloat dsdy = vgeo[gbase + p_Np*SYID];
-	    const dfloat dsdz = vgeo[gbase + p_Np*SZID];
-	    const dfloat dtdx = vgeo[gbase + p_Np*TXID];
-	    const dfloat dtdy = vgeo[gbase + p_Np*TYID];
-	    const dfloat dtdz = vgeo[gbase + p_Np*TZID];
-	    const dfloat jl = vgeo[gbase + p_Np*JID];
-
-	    // compute 'r' and 's' derivatives of (q_m) at node n
-	    dfloat dqdr[p_Nfields], dqds[p_Nfields], dldx[p_Nfields], dldy[p_Nfields], dldz[p_Nfields], dldr[p_Nfields], dlds[p_Nfields];
-
-	    occaUnroll(p_Nfields)
-	      for(int fld=0;fld<p_Nfields;++fld){
-		dqdr[fld] = 0;
-		dqds[fld] = 0;
-		dldr[fld] = 0;
-		dlds[fld] = 0;
-		
-		dldx[fld] = 0;
-		dldy[fld] = 0;
-		dldz[fld] = 0;
-	      }
-
-	    occaUnroll(p_Nq)
-	      for(int m=0;m<p_Nq;++m){
-		  const dfloat jir = vgeo[e*p_Np*p_Nvgeo + p_Np*JID + j*p_Nq + m];
-		  const dfloat jjr = vgeo[e*p_Np*p_Nvgeo + p_Np*JID + m*p_Nq + i];
-		  //const dfloat Dim2 = 0.5f*(s_D[i][m] + jir*s_weakD[i][m]/jl); // could L1
-		  //const dfloat Djm2 = 0.5f*(s_D[j][m] + jjr*s_weakD[j][m]/jl);
-
-		  const dfloat Dims = s_weakD[i][m];
-		  const dfloat Djms = s_weakD[j][m];
-		  const dfloat Dimw = s_mass[i][m];
-		  const dfloat Djmw = s_mass[j][m];
-
-		  const dfloat dsdxj = vgeo[e*p_Np*p_Nvgeo + p_Np*SXID + m*p_Nq + i];
-		  const dfloat dsdyj = vgeo[e*p_Np*p_Nvgeo + p_Np*SYID + m*p_Nq + i];
-		  const dfloat dsdzj = vgeo[e*p_Np*p_Nvgeo + p_Np*SZID + m*p_Nq + i];
-		  
-		  const dfloat drdxi = vgeo[e*p_Np*p_Nvgeo + p_Np*RXID + j*p_Nq + m];
-		  const dfloat drdyi = vgeo[e*p_Np*p_Nvgeo + p_Np*RYID + j*p_Nq + m];
-		  const dfloat drdzi = vgeo[e*p_Np*p_Nvgeo + p_Np*RZID + j*p_Nq + m];
-		  
-		// differentiate q components with respect to 'r'
-		occaUnroll(p_Nfields)
-		    for(int fld=0;fld<p_Nfields;++fld) {
-			dqdr[fld] += Dims*s_q[fld][es][j][m];
-			dldr[fld] += Dimw*s_q[fld][es][j][m];
-			
-			dldx[fld] += Dimw*drdxi*s_q[fld][es][j][m];
-			dldy[fld] += Dimw*drdyi*s_q[fld][es][j][m];
-			dldz[fld] += Dimw*drdzi*s_q[fld][es][j][m];
-		    }
-		// differentiate q components with respect to 's'
-		occaUnroll(p_Nfields)
-		    for(int fld=0;fld<p_Nfields;++fld) {
-			dqds[fld] += Djms*s_q[fld][es][m][i];
-			dlds[fld] += Djmw*s_q[fld][es][m][i];
-			
-			dldx[fld] += Djmw*dsdxj*s_q[fld][es][m][i];
-			dldy[fld] += Djmw*dsdyj*s_q[fld][es][m][i];
-			dldz[fld] += Djmw*dsdzj*s_q[fld][es][m][i];
-		    }
-	      }
-
-	    occaUnroll(p_Nfields)
-		for(int fld=0;fld<p_Nfields;++fld) {
-		    dldx[fld] -= dtdx*s_q[fld][es][j][i];
-		    dldy[fld] -= dtdy*s_q[fld][es][j][i];
-		    dldz[fld] -= dtdz*s_q[fld][es][j][i];
-		}
-
-
-	    const dfloat q1  = s_q[0][es][j][i];
-	    const dfloat q2  = s_q[1][es][j][i];
-
-	    const dfloat dl1dx = drdx*dldr[0] + dsdx*dlds[0] - dtdx*q1;
-	    const dfloat dl1dy = drdy*dldr[0] + dsdy*dlds[0] - dtdy*q1;
-	    const dfloat dl1dz = drdz*dldr[0] + dsdz*dlds[0] - dtdz*q1;
-
-	    const dfloat dl2dx = drdx*dldr[1] + dsdx*dlds[1] - dtdx*q2;
-	    const dfloat dl2dy = drdy*dldr[1] + dsdy*dlds[1] - dtdy*q2;
-	    const dfloat dl2dz = drdz*dldr[1] + dsdz*dlds[1] - dtdz*q2;
-
-	    const dfloat dq1dx = drdx*dqdr[0] + dsdx*dqds[0] + dtdx*q1;
-	    const dfloat dq1dy = drdy*dqdr[0] + dsdy*dqds[0] + dtdy*q1;
-	    const dfloat dq1dz = drdz*dqdr[0] + dsdz*dqds[0] + dtdz*q1;
-
-	    const dfloat dq2dx = drdx*dqdr[1] + dsdx*dqds[1] + dtdx*q2;
-	    const dfloat dq2dy = drdy*dqdr[1] + dsdy*dqds[1] + dtdy*q2;
-	    const dfloat dq2dz = drdz*dqdr[1] + dsdz*dqds[1] + dtdz*q2;
-
-	    // hard code solid body velocity
-	    const dfloat xn = x[n+e*p_Np];
-	    const dfloat yn = y[n+e*p_Np];
-	    const dfloat zn = z[n+e*p_Np];
-
-	    const dfloat un =  yn;
-	    const dfloat vn = -xn;
-	    const dfloat wn = 0;
-
-	    const dfloat rhsqs1 = un*dq2dx + vn*dq2dy + wn*dq2dz;
-	    const dfloat rhsqs2 = un*dq1dx + vn*dq1dy + wn*dq1dz;
-	    const dfloat rhsqw1 = un*dl2dx + vn*dl2dy + wn*dl2dz;
-	    const dfloat rhsqw2 = un*dl1dx + vn*dl1dy + wn*dl1dz;
-
-	    const int base = e*p_Np*p_Nfields+n;
-
-	    const dfloat w = vgeo[gbase + p_Np*10];
-	    
-	    rhsqs[base+0*p_Np] = w*rhsqs1;
-	    rhsqs[base+1*p_Np] = w*rhsqs2;
-	    rhsqw[base+0*p_Np] = w*rhsqw1;
-	    rhsqw[base+1*p_Np] = w*rhsqw2;
-	  }
-	}
-      }
-    }
-  }
-}
 
 kernel void advectionVolumeLSERKmixedQuad3D(const int Nelements,
 					       const dfloat * restrict vgeo,
 					       const dfloat * restrict D,
+					    const dfloat * restrict weakD,
 					       const dfloat * restrict x,
 					       const dfloat * restrict y,
 					       const dfloat * restrict z,
-					       const dfloat * restrict weakD,
 					       const dfloat * restrict q,
 					       const dfloat * restrict qw,
 					       dfloat * restrict rhsqs,
@@ -366,7 +189,7 @@ kernel void advectionVolumeLSERKmixedQuad3D(const int Nelements,
 	    const dfloat dtdy = vgeo[gbase + p_Np*TYID];
 	    const dfloat dtdz = vgeo[gbase + p_Np*TZID];
 	    const dfloat jl = vgeo[gbase + p_Np*JID];
-	    const dfloat w = vgeo[gbase + p_Np*10]/vgeo[gbase + p_Np*9];
+	    const dfloat w = vgeo[gbase + p_Np*10];
 
 	    // hard code solid body velocity
 	    const dfloat xn = x[n+e*p_Np];
@@ -396,8 +219,6 @@ kernel void advectionVolumeLSERKmixedQuad3D(const int Nelements,
 	      for(int m=0;m<p_Nq;++m){
 		  const dfloat jir = vgeo[e*p_Np*p_Nvgeo + p_Np*JID + j*p_Nq + m];
 		  const dfloat jjr = vgeo[e*p_Np*p_Nvgeo + p_Np*JID + m*p_Nq + i];
-		  //const dfloat Dim2 = 0.5f*(s_D[i][m] + jir*s_weakD[i][m]/jl); // could L1
-		  //const dfloat Djm2 = 0.5f*(s_D[j][m] + jjr*s_weakD[j][m]/jl);
 
 		  const dfloat Dims = s_D[i][m];
 		  const dfloat Djms = s_D[j][m];
@@ -412,8 +233,8 @@ kernel void advectionVolumeLSERKmixedQuad3D(const int Nelements,
 		  const dfloat drdyi = vgeo[e*p_Np*p_Nvgeo + p_Np*RYID + j*p_Nq + m];
 		  const dfloat drdzi = vgeo[e*p_Np*p_Nvgeo + p_Np*RZID + j*p_Nq + m];
 
-		  const dfloat wi = vgeo[e*p_Np*p_Nvgeo + p_Np*10 + j*p_Nq + m]/vgeo[e*p_Np*p_Nvgeo + p_Np*9 + j*p_Nq + m];
-		  const dfloat wj = vgeo[e*p_Np*p_Nvgeo + p_Np*10 + j*p_Nq + m]/vgeo[e*p_Np*p_Nvgeo + p_Np*9 + m*p_Nq + i];
+		  const dfloat wi = vgeo[e*p_Np*p_Nvgeo + p_Np*10 + j*p_Nq + m];
+		  const dfloat wj = vgeo[e*p_Np*p_Nvgeo + p_Np*10 + j*p_Nq + m];
 
 
 		  // hard code solid body velocity
@@ -437,7 +258,6 @@ kernel void advectionVolumeLSERKmixedQuad3D(const int Nelements,
 		occaUnroll(p_Nfields)
 		    for(int fld=0;fld<p_Nfields;++fld) {
 			dqdr[fld] += Dims*s_q[fld][es][j][m];
-			dldr[fld] += Dimw/jir*s_qw[fld][es][j][m];
 			
 			dldx[fld] += Dimw*uni*drdxi*jir*s_qw[fld][es][j][m];
 			dldy[fld] += Dimw*vni*drdyi*jir*s_qw[fld][es][j][m];
@@ -447,7 +267,6 @@ kernel void advectionVolumeLSERKmixedQuad3D(const int Nelements,
 		occaUnroll(p_Nfields)
 		    for(int fld=0;fld<p_Nfields;++fld) {
 			dqds[fld] += Djms*s_q[fld][es][m][i];
-			dlds[fld] += Djmw/jir*s_qw[fld][es][m][i];
 			
 			dldx[fld] += Djmw*unj*dsdxj*jjr*s_qw[fld][es][m][i];
 			dldy[fld] += Djmw*vnj*dsdyj*jjr*s_qw[fld][es][m][i];
@@ -457,22 +276,14 @@ kernel void advectionVolumeLSERKmixedQuad3D(const int Nelements,
 	    
 	    occaUnroll(p_Nfields)
 		for(int fld=0;fld<p_Nfields;++fld) {
-		    dldx[fld] -= dtdx*un*s_qw[fld][es][j][i];
-		    dldy[fld] -= dtdy*vn*s_qw[fld][es][j][i];
-		    dldz[fld] -= dtdz*wn*s_qw[fld][es][j][i];
+		    dldx[fld] -= dtdx*jl*un*s_qw[fld][es][j][i];
+		    dldy[fld] -= dtdy*jl*vn*s_qw[fld][es][j][i];
+		    dldz[fld] -= dtdz*jl*wn*s_qw[fld][es][j][i];
 		}
 		
 
 	    const dfloat q1  = s_q[0][es][j][i];
 	    const dfloat q2  = s_q[1][es][j][i];
-
-	    const dfloat dl1dx = drdx*dldr[0] + dsdx*dlds[0] - dtdx*q1;
-	    const dfloat dl1dy = drdy*dldr[0] + dsdy*dlds[0] - dtdy*q1;
-	    const dfloat dl1dz = drdz*dldr[0] + dsdz*dlds[0] - dtdz*q1;
-
-	    const dfloat dl2dx = drdx*dldr[1] + dsdx*dlds[1] - dtdx*q2;
-	    const dfloat dl2dy = drdy*dldr[1] + dsdy*dlds[1] - dtdy*q2;
-	    const dfloat dl2dz = drdz*dldr[1] + dsdz*dlds[1] - dtdz*q2;
 	    
 	    const dfloat dq1dx = drdx*dqdr[0] + dsdx*dqds[0] + dtdx*q1;
 	    const dfloat dq1dy = drdy*dqdr[0] + dsdy*dqds[0] + dtdy*q1;

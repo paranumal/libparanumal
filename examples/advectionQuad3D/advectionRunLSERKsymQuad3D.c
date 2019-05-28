@@ -86,11 +86,11 @@ void advectionRunLSERKsymQuad3D(solver_t *solver,dfloat alpha_scale){
 	// compute volume contribution to DG advection RHS
 	solver->volumeKernel(mesh->Nelements,
 			     solver->o_vgeo,
+			     solver->o_D,
 			     solver->o_weakD,
 			     solver->o_x,
 			     solver->o_y,
 			     solver->o_z,
-			     solver->o_mass,
 			     solver->o_qpre,
 			     solver->o_qpre,
 			     solver->o_rhsqs,

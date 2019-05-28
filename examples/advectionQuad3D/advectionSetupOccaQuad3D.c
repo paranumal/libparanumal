@@ -25,13 +25,6 @@ void advectionSetupOccaQuad3D(solver_t *solver,occa::kernelInfo *kernelInfo) {
     }
   }
 
-  dfloat *MLIFTT = (dfloat*) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp, sizeof(dfloat));
-  for(iint n=0;n<mesh->Np;++n){
-    for(iint m=0;m<mesh->Nfaces*mesh->Nfp;++m){
-      MLIFTT[n+m*mesh->Np] = mesh->MLIFT[n*mesh->Nfp*mesh->Nfaces+m];
-    }
-  }
-
   dfloat *Ft = (dfloat *) calloc(mesh->Nq*mesh->Nq*3,sizeof(dfloat));
   for (iint m = 0; m < mesh->Nq; ++m) {
       for(iint f = 0; f<3; ++f) {
@@ -48,11 +41,11 @@ void advectionSetupOccaQuad3D(solver_t *solver,occa::kernelInfo *kernelInfo) {
 
   solver->o_LIFT =
     solver->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
-			  mesh->MLIFT);
+			  mesh->LIFT);
   
   solver->o_LIFTT =
     solver->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat),
-			  MLIFTT);
+			  LIFTT);
 
   solver->o_vgeo =
     solver->device.malloc(mesh->Nelements*mesh->Nvgeo*mesh->Np*sizeof(dfloat),

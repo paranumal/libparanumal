@@ -323,14 +323,8 @@ typedef struct {
   iint *gridToE;
   iint *perp_index;
   dfloat *par_loc;
-  dfloat *weakD;
-    dfloat *MD;
-    dfloat *weakMD;
-    dfloat *inv_mass;
-    dfloat *MLIFT;
-    dfloat *mass;
-    dfloat *JR;
-  
+    dfloat *weakD;
+    
   // occa stuff
   occa::device device;
   occa::memory o_q, o_rhsq, o_resq, o_fQM, o_fQP;

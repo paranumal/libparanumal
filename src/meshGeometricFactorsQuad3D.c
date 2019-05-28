@@ -23,8 +23,6 @@ void meshGeometricFactorsQuad3D(mesh_t *mesh){
 
 	dfloat xr = 0, yr = 0, zr = 0;
 	dfloat xs = 0, ys = 0, zs = 0;
-	dfloat xrm = 0, yrm = 0, zrm = 0;
-	dfloat xsm = 0, ysm = 0, zsm = 0;
 	
 	for(int n=0;n<mesh->Nq;++n){
 
@@ -41,20 +39,6 @@ void meshGeometricFactorsQuad3D(mesh_t *mesh){
 
 	}
 
-	for(int n=0;n<mesh->Nq;++n){
-
-	  dfloat Din = mesh->MD[i*mesh->Nq+n];
-	  dfloat Djn = mesh->MD[j*mesh->Nq+n];
-
-	  xrm += Din*mesh->x[n+j*mesh->Nq+e*mesh->Np];
-	  yrm += Din*mesh->y[n+j*mesh->Nq+e*mesh->Np];
-	  zrm += Din*mesh->z[n+j*mesh->Nq+e*mesh->Np];
-
-	  xsm += Djn*mesh->x[i+n*mesh->Nq+e*mesh->Np];
-	  ysm += Djn*mesh->y[i+n*mesh->Nq+e*mesh->Np];
-	  zsm += Djn*mesh->z[i+n*mesh->Nq+e*mesh->Np];
-
-	}
 
 	dfloat rx = ys*zij - zs*yij; // dXds x X
 	dfloat ry = zs*xij - xs*zij;
@@ -113,7 +97,6 @@ void meshGeometricFactorsQuad3D(mesh_t *mesh){
 	mesh->vgeo[base + mesh->Np*TZID] = tz;
 	mesh->vgeo[base + mesh->Np*JID]  = J;
 	mesh->vgeo[base + mesh->Np*JWID] = JW;
-	//mesh->vgeo[base + mesh->Np*11] = mesh->JR[e*mesh->Np + j*mesh->Nq + i]*mesh->gllw[i]*mesh->gllw[j];
       
       }
     }

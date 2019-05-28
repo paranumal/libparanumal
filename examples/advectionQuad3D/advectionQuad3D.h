@@ -34,8 +34,6 @@ typedef struct {
     occa::memory o_haloBuffer;
     occa::memory o_D;
     occa::memory o_weakD;
-    occa::memory o_Dsym;
-    occa::memory o_weakDsym;
     occa::memory o_qs;
     occa::memory o_qw;
     occa::memory o_qFilters;

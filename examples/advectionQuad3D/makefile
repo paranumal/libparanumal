@@ -41,14 +41,12 @@ advectionPlotVTUQuad3DV2.o \
 advectionSetupOccaQuad3D.o \
 advectionSetupLSERKQuad3D.o \
 advectionSetupLSERKsymQuad3D.o \
-advectionSetupLSERKspecQuad3D.o \
 advectionSetupDOPRIQuad3D.o \
 advectionSetupMRSAABQuad3D.o \
 advectionRunLSERKQuad3D.o \
 advectionRunLSERKsymQuad3D.o \
 advectionErrorNormQuad3D.o \
 advectionSpectrumLSERKsymQuad3D.o \
-advectionSpectrumLSERKtransQuad3D.o \
 ../../src/meshExtendGridQuad3D.o \
 ../../src/meshParallelReaderQuad3D.o \
 ../../src/meshSetupQuad3D.o \
