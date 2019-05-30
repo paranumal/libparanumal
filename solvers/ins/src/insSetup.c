@@ -30,7 +30,7 @@ SOFTWARE.
 
 ins_t *insSetup(mesh_t *mesh, setupAide options){
 
-  ins_t *ins = (ins_t*) calloc(1, sizeof(ins_t));
+  ins_t *ins = new ins_t(); // (ins_t*) calloc(1, sizeof(ins_t));
   ins->mesh = mesh;
   ins->options = options;
 
@@ -677,7 +677,7 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
   // Use third Order Velocity Solve: full rank should converge for low orders
   if (mesh->rank==0) printf("==================VELOCITY SOLVE SETUP=========================\n");
 
-  ins->uSolver = (elliptic_t*) calloc(1, sizeof(elliptic_t));
+  ins->uSolver = new elliptic_t(); // (elliptic_t*) calloc(1, sizeof(elliptic_t));
   ins->uSolver->mesh = mesh;
   ins->uSolver->options = ins->vOptions;
   ins->uSolver->dim = ins->dim;
@@ -686,7 +686,7 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
   memcpy(ins->uSolver->BCType,uBCType,7*sizeof(int));
   ellipticSolveSetup(ins->uSolver, ins->lambda, kernelInfoV); 
 
-  ins->vSolver = (elliptic_t*) calloc(1, sizeof(elliptic_t));
+  ins->vSolver = new elliptic_t(); // (elliptic_t*) calloc(1, sizeof(elliptic_t));
   ins->vSolver->mesh = mesh;
   ins->vSolver->options = ins->vOptions;
   ins->vSolver->dim = ins->dim;
@@ -696,7 +696,7 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
   ellipticSolveSetup(ins->vSolver, ins->lambda, kernelInfoV); //!!!!!
 
   if (ins->dim==3) {
-    ins->wSolver = (elliptic_t*) calloc(1, sizeof(elliptic_t));
+    ins->wSolver = new elliptic_t(); // (elliptic_t*) calloc(1, sizeof(elliptic_t));
     ins->wSolver->mesh = mesh;
     ins->wSolver->options = ins->vOptions;
     ins->wSolver->dim = ins->dim;
@@ -707,7 +707,7 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
   }
   
   if (mesh->rank==0) printf("==================PRESSURE SOLVE SETUP=========================\n");
-  ins->pSolver = (elliptic_t*) calloc(1, sizeof(elliptic_t));
+  ins->pSolver = new elliptic_t(); // (elliptic_t*) calloc(1, sizeof(elliptic_t));
   ins->pSolver->mesh = mesh;
   ins->pSolver->options = ins->pOptions;
   ins->pSolver->dim = ins->dim;
