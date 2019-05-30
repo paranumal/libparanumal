@@ -60,6 +60,7 @@ solver_t::solver_t(occa::device device_, MPI_Comm comm_,
 
   if (options.compareArgs("PARALMOND SMOOTHER", "CHEBYSHEV")) {
     stype = CHEBYSHEV;
+    ChebyshevIterations = 0;
     options.getArgs("PARALMOND CHEBYSHEV DEGREE", ChebyshevIterations);
     if (!ChebyshevIterations) ChebyshevIterations=2; //default to 2
   } else { //default to DAMPED_JACOBI
