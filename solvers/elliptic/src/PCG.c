@@ -34,7 +34,7 @@ int pcg(elliptic_t* elliptic, dfloat lambda,
   setupAide options = elliptic->options;
 
   int DEBUG_ENABLE_REDUCTIONS = 1;
-  options.getArgs("DEBUG ENABLE REDUCTIONS", DEBUG_ENABLE_REDUCTIONS);
+  //  options.getArgs("DEBUG ENABLE REDUCTIONS", DEBUG_ENABLE_REDUCTIONS);
   
   // register scalars
   dfloat rdotz0 = 0;
@@ -193,7 +193,7 @@ dfloat ellipticUpdatePCG(elliptic_t *elliptic,
   setupAide options = elliptic->options;
 
   int DEBUG_ENABLE_REDUCTIONS = 1;
-  options.getArgs("DEBUG ENABLE REDUCTIONS", DEBUG_ENABLE_REDUCTIONS);
+  //  options.getArgs("DEBUG ENABLE REDUCTIONS", DEBUG_ENABLE_REDUCTIONS);
   
   dfloat rdotr1 = 0;
   
