@@ -42,7 +42,7 @@ void ellipticOperator(elliptic_t *elliptic, dfloat lambda, occa::memory &o_q, oc
   occa::memory &o_tmp = elliptic->o_tmp;
 
   int DEBUG_ENABLE_OGS = 1;
-  options.getArgs("DEBUG ENABLE OGS", DEBUG_ENABLE_OGS);
+  //  options.getArgs("DEBUG ENABLE OGS", DEBUG_ENABLE_OGS);
 
 
   if(options.compareArgs("DISCRETIZATION", "CONTINUOUS")){

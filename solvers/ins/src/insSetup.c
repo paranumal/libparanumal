@@ -734,8 +734,8 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
     }
   }
 
-  // ogsGatherScatter(ins->VmapB, ogsInt, ogsMin, mesh->ogs); !!!!!!!!!!!!!!!!!
-  // ogsGatherScatter(ins->PmapB, ogsInt, ogsMax, mesh->ogs); !!!!!!!!!!!!!!!!!
+  ogsGatherScatter(ins->VmapB, ogsInt, ogsMin, mesh->ogs);// !!!!!!!!!!!!!!!!!
+  ogsGatherScatter(ins->PmapB, ogsInt, ogsMax, mesh->ogs); //!!!!!!!!!!!!!!!!!
 
   for (int n=0;n<mesh->Nelements*mesh->Np;n++) {
     if (ins->VmapB[n] == 1E9) {
