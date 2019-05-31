@@ -32,7 +32,7 @@ SOFTWARE.
 #define dfloat_t double
 
 void matrixPrint(int Nrows, int Ncols, dfloat_t *A, const char *mess){
-#if 1
+#if 0
   printf("%s = [\n", mess);
   for(int i=0;i<Nrows;++i){
     for(int a=0;a<Ncols;++a){
@@ -729,6 +729,50 @@ void massMatrixMultiplyHost(int NUM_DOFS_1D, int NUM_QUAD_1D, const int numEleme
   
 }
 
+double bandwidthTest(cudaStream_t stream, int Ntests, size_t bwNtotal){
+
+  cudaEvent_t start, end;
+  cudaEventCreate(&start);
+  cudaEventCreate(&end);	
+  
+  dfloat_t *h_bwTest1, *c_bwTest1;
+  dfloat_t *h_bwTest2, *c_bwTest2;
+  
+  randAlloc(bwNtotal/2, &h_bwTest1, &c_bwTest1);
+  randAlloc(bwNtotal/2, &h_bwTest2, &c_bwTest2);
+  
+  cudaDeviceSynchronize();
+  cudaEventRecord(start, stream);
+  
+  for(int test=0;test<Ntests/2;++test){
+    cudaMemcpy(c_bwTest2, c_bwTest1, (bwNtotal/2)*sizeof(dfloat_t), cudaMemcpyDeviceToDevice);
+    cudaMemcpy(c_bwTest1, c_bwTest2, (bwNtotal/2)*sizeof(dfloat_t), cudaMemcpyDeviceToDevice);
+  }
+  
+  cudaEventRecord(end, stream);
+  cudaEventSynchronize(end);
+  cudaDeviceSynchronize();
+
+  float elapsed;
+  cudaEventElapsedTime(&elapsed, start, end);
+  elapsed /= 1000.; // convert to s
+  elapsed /= (double) Ntests;
+  
+  double estimatedActualDeviceBandwidth = (bwNtotal*sizeof(dfloat_t)/elapsed)/1.e9;
+  
+  cudaFree(c_bwTest1);
+  cudaFree(c_bwTest2);
+  
+  free(h_bwTest1);
+  free(h_bwTest2);
+  
+  cudaEventDestroy(start);
+  cudaEventDestroy(end);	
+  
+  return estimatedActualDeviceBandwidth;
+}
+
+
 void buildOddEvenMatrices(int NUM_COLS_OP, int NUM_ROWS_OP,
 			  dfloat_t *h_OP,   dfloat_t **c_OP, dfloat_t **c_oddOP,  dfloat_t **c_evenOP){
 
@@ -998,6 +1042,18 @@ void runMassMatrixMultiplyKernel(cudaStream_t stream, int Nq, int cubNq, int num
     return;
   }
 
+  if(Nq==13){
+    switch(cubNq){
+    case 13: massMatrixMultiplyKernel(13,13,1); break;
+    case 14: massMatrixMultiplyKernel(13,14,1); break;
+    case 15: massMatrixMultiplyKernel(14,15,1); break;
+    case 16: massMatrixMultiplyKernel(15,16,1); break;
+      //    case 16: massMatrixMultiplyKernel(12,16,1); break;
+    default: ERR;
+    }
+    return;
+  }
+
   ERR;
 }
 
@@ -1078,8 +1134,13 @@ int main(int argc, char **argv){
   
   printf("Running: Nq=%d, cubNq=%d, numElements=%d\n", Nq, cubNq, numElements);
 
+  if(cubNq<Nq){
+    printf("cubNq must be > Nq\n");
+    exit(-1);
+  }
+  
   if(0)
-  if(Nq%2){
+    if(Nq%2){
     printf("Nq must be even\n");
     exit(-1);
   }
@@ -1099,6 +1160,11 @@ int main(int argc, char **argv){
   int    Ntotal = numElements*Np;
   int cubNtotal = numElements*cubNp;
 
+  int Ntests = 10;
+
+  
+  double estimatedActualDeviceBandwidth = bandwidthTest(stream, Ntests, (Ntotal*2+7*cubNtotal)*sizeof(dfloat_t));
+  
   dfloat_t *h_op,      *c_op;
   dfloat_t *h_solOut,       *c_solOut;
   dfloat_t *h_solIn,        *c_solIn;
@@ -1147,7 +1213,6 @@ int main(int argc, char **argv){
   cudaEventCreate(&start);
   cudaEventCreate(&end);	
 
-  int Ntests = 100;
   // KERNEL GRID
   // do nothing kernel test
   dfloat_t nothingElapsed = nothingTest(stream, Ntests);
@@ -1207,10 +1272,14 @@ int main(int argc, char **argv){
     cudaEventElapsedTime(&elapsed, start, end);
     elapsed /= 1000.;
     elapsed /= (double) Ntests;
+
+    int bytesMoved = (2*Np+7*cubNp)*sizeof(dfloat_t); // x, Mx, opa   
+    double bw = (bytesMoved*numElements/elapsed)/1.e9;
     
-    printf("%2d %8d %8d %e %e %e %%%% [MassMatrixMultiply: N, numElements, Ndofs,"
-	   " elapsed, dofsPerSecond, nothingElapsed]\n",
-	   Nq-1, numElements, Np*numElements, elapsed, numElements*(Np/elapsed), nothingElapsed);
+    printf("%2d %8d %8d %e %e %e %e %e %%%% [MassMatrixMultiply: N, numElements, Ndofs,"
+	   " elapsed, dofsPerSecond, nothingElapsed, BW in GB/s, estimatedActualDeviceBandwidth]\n",
+	   Nq-1, numElements, Np*numElements, elapsed, numElements*(Np/elapsed),
+	   nothingElapsed, bw, estimatedActualDeviceBandwidth);
   }
 
   // check output is correct
