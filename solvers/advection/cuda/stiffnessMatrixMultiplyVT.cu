@@ -31,6 +31,21 @@ SOFTWARE.
 
 #define dfloat_t double
 
+void matrixPrint(int Nrows, int Ncols, dfloat_t *A, const char *mess){
+#if 1
+  printf("%s = [\n", mess);
+  for(int i=0;i<Nrows;++i){
+    for(int a=0;a<Ncols;++a){
+      printf(" % e", A[i*Ncols+a]);
+    }
+    printf("\n");
+  }
+  printf("]\n");
+#endif
+}
+
+
+
 __forceinline__ __device__ __host__  int ijN(const int i, const int j, const int N){
 
   return i + j*N;
@@ -237,6 +252,9 @@ template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
       r_tmpOdd[c]  = r_Ap[c] + r_Ap[NUM_DOFS_1D-1-c];
       r_tmpEven[c] = r_Ap[c] - r_Ap[NUM_DOFS_1D-1-c];
     }
+
+    if(NUM_DOFS_1D%2)
+      r_tmpOdd[HALF_DOFS_1D-1] *= 0.5f;
     
 #pragma unroll
     for(int k=0;k<HALF_QUAD_1D;++k){
@@ -270,6 +288,9 @@ template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
       r_tmpEven[b] = ApOdd - ApEven;
     }      
     
+    if(NUM_DOFS_1D%2)
+      r_tmpOdd[HALF_DOFS_1D-1] *= 0.5f;
+    
 #pragma unroll
     for(int j=0;j<HALF_QUAD_1D;++j){
       dfloat_t resOdd = 0, resEven = 0;
@@ -301,7 +322,11 @@ template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
       r_tmpOdd[a]  = ApOdd + ApEven;
       r_tmpEven[a] = ApOdd - ApEven;
     }
-      
+
+    if(NUM_DOFS_1D%2)
+      r_tmpOdd[HALF_DOFS_1D-1] *= 0.5f;
+
+    
 #pragma unroll
     for(int i=0;i<HALF_QUAD_1D;++i){
       dfloat_t resOdd = 0, resEven = 0;
@@ -341,7 +366,10 @@ template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
       r_tmpOdd[i]  = ApOdd + ApEven;
       r_tmpEven[i] = ApOdd - ApEven;
     }      
-    
+
+    if(NUM_QUAD_1D%2)
+      r_tmpOdd[HALF_QUAD_1D-1] *= 0.5f;
+
     
 #pragma unroll
     for(int a=0;a<HALF_DOFS_1D;++a){
@@ -373,6 +401,9 @@ template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
       r_tmpOdd[j]  = ApOdd + ApEven;
       r_tmpEven[j] = ApOdd - ApEven;
     }
+
+    if(NUM_QUAD_1D%2)
+      r_tmpOdd[HALF_QUAD_1D-1] *= 0.5f;    
     
 #pragma unroll
     for(int b=0;b<HALF_DOFS_1D;++b){
@@ -404,6 +435,9 @@ template <int NUM_DOFS_1D, int NUM_QUAD_1D, int p_Nblock >
       r_tmpOdd[k]  = ApOdd + ApEven;
       r_tmpEven[k] = ApOdd - ApEven;
     }
+
+    if(NUM_QUAD_1D%2)
+      r_tmpOdd[HALF_QUAD_1D-1] *= 0.5f;    
     
 #pragma unroll
     for(int c=0;c<HALF_DOFS_1D;++c){
@@ -736,9 +770,15 @@ void buildOddEvenMatrices(int NUM_COLS_OP, int NUM_ROWS_OP,
       invX[n*NUM_COLS_OP + NUM_COLS_OP-1-n] = 0.5;
     }
   }
-
+  
+  if(NUM_COLS_OP%2) X[(NUM_COLS_OP)*(NUM_COLS_OP)/2] = 1;
   if(NUM_COLS_OP%2) invX[(NUM_COLS_OP)*(NUM_COLS_OP)/2] = 1;
-  if(NUM_ROWS_OP%2) cubInvX[(NUM_ROWS_OP+1)*(NUM_ROWS_OP+1)/2] = 1;
+  
+  if(NUM_ROWS_OP%2) cubX[(NUM_ROWS_OP)*(NUM_ROWS_OP)/2] = 1;
+  if(NUM_ROWS_OP%2) cubInvX[(NUM_ROWS_OP)*(NUM_ROWS_OP)/2] = 1;
+
+  //  if(NUM_COLS_OP%2) invX[(NUM_COLS_OP)*(NUM_COLS_OP)/2] = 1;
+  //  if(NUM_ROWS_OP%2) cubInvX[(NUM_ROWS_OP+1)*(NUM_ROWS_OP+1)/2] = 1;
   
   dfloat_t *IinvX = (dfloat_t*) calloc(NUM_COLS_OP*NUM_ROWS_OP, sizeof(dfloat_t));
   dfloat_t *cubInvXIinvX = (dfloat_t*) calloc(NUM_COLS_OP*NUM_ROWS_OP, sizeof(dfloat_t));
@@ -779,7 +819,10 @@ void buildOddEvenMatrices(int NUM_COLS_OP, int NUM_ROWS_OP,
       evenOP[i*HALF_COLS_OP+a]  = cubInvXIinvX[(NUM_ROWS_OP-1-i)*NUM_COLS_OP + NUM_COLS_OP-1-a];
     }
   }
-      
+
+  if((NUM_ROWS_OP%2)) // zero duplicate
+    evenOP[HALF_ROWS_OP*HALF_COLS_OP-1] = 0;
+  
   int NoddOP  = HALF_ROWS_OP*HALF_COLS_OP;
   int NevenOP = HALF_ROWS_OP*HALF_COLS_OP;
   
@@ -791,6 +834,15 @@ void buildOddEvenMatrices(int NUM_COLS_OP, int NUM_ROWS_OP,
 
   cudaMemcpy(*c_OP, h_OP,  NUM_COLS_OP*NUM_ROWS_OP*sizeof(dfloat_t),  cudaMemcpyHostToDevice);
 
+  matrixPrint(NUM_COLS_OP, NUM_COLS_OP, X, "X");
+  matrixPrint(NUM_ROWS_OP, NUM_ROWS_OP, cubX, "cubX");
+
+  
+  matrixPrint(NUM_COLS_OP, NUM_COLS_OP, invX, "invX");
+  matrixPrint(NUM_ROWS_OP, NUM_ROWS_OP, cubInvX, "cubInvX");
+
+
+  
 }
 
 
@@ -810,11 +862,26 @@ void runMassMatrixMultiplyKernel(cudaStream_t stream, int Nq, int cubNq, int num
   
 #define ERR printf("massMatrixMultiplyRegister with Nq=%d, cubNq=%d not available", Nq, cubNq); exit(-1)
 
+  int Nblock = 1;
   if(Nq==2){
     switch(cubNq){
-    case 2: massMatrixMultiplyKernel(2,2,8); break;
-    case 4: massMatrixMultiplyKernel(2,4,2); break;
-    case 6: massMatrixMultiplyKernel(2,6,3); break;
+    case 2: massMatrixMultiplyKernel(2,2,16); break;
+    case 3: massMatrixMultiplyKernel(2,3, 7); break;
+    case 4: massMatrixMultiplyKernel(2,4, 4); break;
+    case 5: massMatrixMultiplyKernel(2,5, 5); break;
+    case 6: massMatrixMultiplyKernel(2,6, 3); break;
+    default: ERR;
+    }
+    return;
+  }
+
+  if(Nq==3){
+    switch(cubNq){
+    case 3: massMatrixMultiplyKernel(3,3,7); break;
+    case 4: massMatrixMultiplyKernel(3,4,16); break;
+    case 5: massMatrixMultiplyKernel(3,5,5); break;
+    case 6: massMatrixMultiplyKernel(3,6,3); break;
+    case 7: massMatrixMultiplyKernel(3,7,2); break;
     default: ERR;
     }
     return;
@@ -822,9 +889,23 @@ void runMassMatrixMultiplyKernel(cudaStream_t stream, int Nq, int cubNq, int num
 
   if(Nq==4){
     switch(cubNq){
-    case 4: massMatrixMultiplyKernel(4,4,2); break;
+    case 4: massMatrixMultiplyKernel(4,4,4); break;
+    case 5: massMatrixMultiplyKernel(4,5,5); break;
     case 6: massMatrixMultiplyKernel(4,6,3); break;
+    case 7: massMatrixMultiplyKernel(4,7,2); break;
     case 8: massMatrixMultiplyKernel(4,8,1); break;
+    default: ERR;
+    }
+    return;
+  }
+
+  if(Nq==5){
+    switch(cubNq){
+    case 5: massMatrixMultiplyKernel(5,5,5); break;
+    case 6: massMatrixMultiplyKernel(5,6,3); break;
+    case 7: massMatrixMultiplyKernel(5,7,2); break;
+    case 8: massMatrixMultiplyKernel(5,8,1); break;
+    case 9: massMatrixMultiplyKernel(5,9,2); break;
     default: ERR;
     }
     return;
@@ -832,19 +913,49 @@ void runMassMatrixMultiplyKernel(cudaStream_t stream, int Nq, int cubNq, int num
 
   if(Nq==6){
     switch(cubNq){
-    case 6:  massMatrixMultiplyKernel(6, 6,3); break;
-    case 8:  massMatrixMultiplyKernel(6, 8,1); break;
-    case 10: massMatrixMultiplyKernel(6,10,1); break;
+    case 6:  massMatrixMultiplyKernel(6, 6, 3); break; // Nb=3 best so far
+    case 7:  massMatrixMultiplyKernel(6, 7, 2); break;
+    case 8:  massMatrixMultiplyKernel(6, 8, 1); break;
+    case 9:  massMatrixMultiplyKernel(6, 9, 2); break;
+    case 10: massMatrixMultiplyKernel(6,10, 1); break;
     default: ERR;
     }
     return;
   }
-  
+
+  if(Nq==7){
+    switch(cubNq){
+    case 7:  massMatrixMultiplyKernel(7, 7,2); break;
+    case 8:  massMatrixMultiplyKernel(7, 8,1); break;
+    case 9:  massMatrixMultiplyKernel(7, 9,2); break;
+    case 10: massMatrixMultiplyKernel(7,10,1); break;
+    case 11: massMatrixMultiplyKernel(7,11,1); break;
+
+    default: ERR;
+    }
+    return;
+  }
+
   if(Nq==8){
     switch(cubNq){
     case 8:  massMatrixMultiplyKernel(8, 8,1); break;
+    case 9:  massMatrixMultiplyKernel(8, 9,2); break;
     case 10: massMatrixMultiplyKernel(8,10,1); break;
+    case 11: massMatrixMultiplyKernel(8,11,1); break;
     case 12: massMatrixMultiplyKernel(8,12,1); break;
+    default: ERR;
+    }
+    return;
+  }
+
+  if(Nq==9){
+    switch(cubNq){
+    case 9:  massMatrixMultiplyKernel(9, 9,1); break;
+    case 10: massMatrixMultiplyKernel(9,10,1); break;
+    case 11: massMatrixMultiplyKernel(9,11,1); break;
+    case 12: massMatrixMultiplyKernel(9,12,1); break;
+    case 13: massMatrixMultiplyKernel(9,13,1); break;
+
     default: ERR;
     }
     return;
@@ -853,23 +964,40 @@ void runMassMatrixMultiplyKernel(cudaStream_t stream, int Nq, int cubNq, int num
   if(Nq==10){
     switch(cubNq){
     case 10: massMatrixMultiplyKernel(10,10,1); break;
+    case 11: massMatrixMultiplyKernel(10,11,1); break;
     case 12: massMatrixMultiplyKernel(10,12,1); break;
+    case 13: massMatrixMultiplyKernel(10,13,1); break;
     case 14: massMatrixMultiplyKernel(10,14,1); break;
     default: ERR;
     }
     return;
   }
 
-  if(Nq==12){
+  if(Nq==11){
     switch(cubNq){
-    case 12: massMatrixMultiplyKernel(12,12,1); break;
-    case 14: massMatrixMultiplyKernel(12,14,1); break;
-    case 16: massMatrixMultiplyKernel(12,16,1); break;
+    case 11: massMatrixMultiplyKernel(11,11,1); break;
+    case 12: massMatrixMultiplyKernel(11,12,1); break;
+    case 13: massMatrixMultiplyKernel(11,13,1); break;
+    case 14: massMatrixMultiplyKernel(11,14,1); break;
+    case 15: massMatrixMultiplyKernel(11,15,1); break;
+
     default: ERR;
     }
     return;
   }
   
+  if(Nq==12){
+    switch(cubNq){
+    case 12: massMatrixMultiplyKernel(12,12,1); break;
+    case 13: massMatrixMultiplyKernel(12,13,1); break;
+    case 14: massMatrixMultiplyKernel(12,14,1); break;
+    case 15: massMatrixMultiplyKernel(12,15,1); break;
+      //    case 16: massMatrixMultiplyKernel(12,16,1); break;
+    default: ERR;
+    }
+    return;
+  }
+
   ERR;
 }
 
@@ -949,12 +1077,14 @@ int main(int argc, char **argv){
   dfloat_t lambda = 0;
   
   printf("Running: Nq=%d, cubNq=%d, numElements=%d\n", Nq, cubNq, numElements);
-  
+
+  if(0)
   if(Nq%2){
     printf("Nq must be even\n");
     exit(-1);
   }
 
+  if(0)
   if(cubNq%2){
     printf("cubNq must be even\n");
     exit(-1);
