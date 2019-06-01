@@ -60,7 +60,7 @@ void meshTri2D::SurfaceGeometricFactors(){
     dlong base = Nsgeo*Nfaces*e;
     dfloat nx1 = ye2-ye1;
     dfloat ny1 = -(xe2-xe1);
-    dfloat  d1 = norm2(nx1,ny1);
+    dfloat  d1 = sqrt((nx1)*(nx1)+(ny1)*(ny1));
 
     sgeo[base+NXID] = nx1/d1;
     sgeo[base+NYID] = ny1/d1;
@@ -71,7 +71,7 @@ void meshTri2D::SurfaceGeometricFactors(){
     base += Nsgeo;
     dfloat nx2 = ye3-ye2;
     dfloat ny2 = -(xe3-xe2);
-    dfloat  d2 = norm2(nx2,ny2);
+    dfloat  d2 = sqrt((nx2)*(nx2)+(ny2)*(ny2));
 
     sgeo[base+NXID] = nx2/d2;
     sgeo[base+NYID] = ny2/d2;
@@ -82,7 +82,7 @@ void meshTri2D::SurfaceGeometricFactors(){
     base += Nsgeo;
     dfloat nx3 = ye1-ye3;
     dfloat ny3 = -(xe1-xe3);
-    dfloat  d3 = norm2(nx3,ny3);
+    dfloat  d3 = sqrt((nx3)*(nx3)+(ny3)*(ny3));
 
     sgeo[base+NXID] = nx3/d3;
     sgeo[base+NYID] = ny3/d3;

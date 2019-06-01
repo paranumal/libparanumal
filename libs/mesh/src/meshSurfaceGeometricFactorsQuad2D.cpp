@@ -71,7 +71,7 @@ void meshQuad2D::SurfaceGeometricFactors(){
         /* face f normal and length */
         dfloat nx =   ye[(f+1)%Nverts]-ye[f];
         dfloat ny = -(xe[(f+1)%Nverts]-xe[f]);
-        dfloat  d = norm2(nx,ny);
+        dfloat  d = sqrt((nx)*(nx)+(ny)*(ny));
 
         /* output index */
         dlong base = Nsgeo*(Nfaces*Nfp*e + Nfp*f + i);
@@ -112,7 +112,7 @@ void meshQuad2D::SurfaceGeometricFactors(){
         /* face f normal and length */
         dfloat nx =   ye[(f+1)%Nverts]-ye[f];
         dfloat ny = -(xe[(f+1)%Nverts]-xe[f]);
-        dfloat  d = norm2(nx,ny);
+        dfloat  d = sqrt((nx)*(nx)+(ny)*(ny));
 
         /* output index */
         dlong base = Nsgeo*(Nfaces*cubNq*e + cubNq*f + i);

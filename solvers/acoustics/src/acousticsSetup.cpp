@@ -49,6 +49,10 @@ acoustics_t& acoustics_t::Setup(mesh_t& mesh){
   dfloat dt = cfl*hmin/((mesh.N+1.)*(mesh.N+1.));
   acoustics->timeStepper->SetTimeStep(dt);
 
+  //setup linear algebra module
+  acoustics->linAlg = linAlg_t::Setup(acoustics->device, settings, acoustics->props);
+  acoustics->linAlg->Init({"norm2"});
+
   // set penalty parameter
   dfloat Lambda2 = 0.5;
 

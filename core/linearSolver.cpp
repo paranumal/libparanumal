@@ -24,16 +24,26 @@ SOFTWARE.
 
 */
 
+#include "linearSolver.hpp"
 
-@kernel void dotMultiply(const dlong N,
-			@restrict const  dfloat *  w,
-			@restrict const  dfloat *  v,
-			@restrict dfloat *  wv){
+//virtual base time stepper class
+linearSolver_t::linearSolver_t(dlong _N, solver_t& _solver):
+  N(_N),
+  solver(_solver),
+  comm(_solver.comm),
+  device(_solver.device),
+  settings(_solver.settings),
+  props(_solver.props) {}
 
-  for(dlong n=0;n<N;++n;@tile(256,@outer,@inner)){
-    if(n<N){
-      wv [n] = w[n]*v[n];
-    }
+linearSolver_t* linearSolver_t::Setup(dlong N, solver_t& solver) {
+
+  linearSolver_t *linearSolver=NULL;
+
+  if (solver.settings.compareSetting("LINEAR SOLVER","PCG")){
+    linearSolver = new pcg(N, solver);
+  } else {
+    LIBP_ABORT(string("Requested LINEAR SOLVER not found."));
   }
 
+  return linearSolver;
 }

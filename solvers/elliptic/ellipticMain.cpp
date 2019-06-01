@@ -24,83 +24,41 @@ SOFTWARE.
 
 */
 
-#include "elliptic.h"
+#include "elliptic.hpp"
 
 int main(int argc, char **argv){
 
   // start up MPI
   MPI_Init(&argc, &argv);
 
-  if(argc!=2){
-    printf("usage: ./ellipticMain setupfile\n");
+  MPI_Comm comm = MPI_COMM_WORLD;
+  int rank;
+  MPI_Comm_rank(comm, &rank);
 
-    MPI_Finalize();
-    exit(-1);
-  }
+  if(argc!=2)
+    LIBP_ABORT(string("Usage: ./ellipticMain setupfile"));
 
-  // if argv > 2 then should load input data from argv
-  setupAide options(argv[1]);
+  ellipticSettings_t settings(comm); //sets default settings
+  settings.readSettingsFromFile(argv[1]);
+  if (!rank) settings.report();
 
-  // set up mesh stuff
-  string fileName;
-  int N, dim, elementType;
-
-  options.getArgs("POLYNOMIAL DEGREE", N);
-  options.getArgs("ELEMENT TYPE", elementType);
-  options.getArgs("MESH DIMENSION", dim);
-
-  mesh_t *mesh;
+  // set up occa device
+  occa::device device;
+  occa::properties props;
+  occaDeviceConfig(device, comm, settings, props);
 
   // set up mesh
-  if(options.getArgs("MESH FILE", fileName)){
-    mesh = meshSetup((char*) fileName.c_str(), N, options);
-  }
-  else if(options.compareArgs("BOX DOMAIN", "TRUE")){
-    mesh = meshSetupBoxHex3D(N, options);
-  }
+  mesh_t& mesh = mesh_t::Setup(device, comm, settings, props);
 
-  //  if(mesh->Nelements<10)
-  //    meshPrint3D(mesh);
-#if 0
-  char fname[BUFSIZ];
-  sprintf(fname,"meshQuad3D.vtu");
-  meshVTU3D(mesh, fname);
-#endif
-// parameter for elliptic problem (-laplacian + lambda)*q = f
-  dfloat lambda;
-  options.getArgs("LAMBDA", lambda);
+  // set up elliptic solver
+  elliptic_t& elliptic = elliptic_t::Setup(mesh);
 
-  // set up
-  occa::properties kernelInfo;
-  kernelInfo["defines"].asObject();
-  kernelInfo["includes"].asArray();
-  kernelInfo["header"].asArray();
-  kernelInfo["flags"].asObject();
+  // run
+  elliptic.Run();
 
-  if(dim==3){
-    if(elementType == TRIANGLES)
-      meshOccaSetupTri3D(mesh, options, kernelInfo);
-    else if(elementType == QUADRILATERALS)
-      meshOccaSetupQuad3D(mesh, options, kernelInfo);
-    else
-      meshOccaSetup3D(mesh, options, kernelInfo);
-  }
-  else
-    meshOccaSetup2D(mesh, options, kernelInfo);
-
-
-  elliptic_t *elliptic = ellipticSetup(mesh, lambda, kernelInfo, options);
-
-#if 0
-  {
-    char fname[BUFSIZ];
-    string outName;
-    options.getArgs("OUTPUT FILE NAME", outName);
-    sprintf(fname, "%s_%04d",(char*)outName.c_str(), mesh->rank);
-
-    ellipticPlotVTUHex3D(mesh, fname, 0);
-  }
-#endif
+  // close down MPI
+  MPI_Finalize();
+  return LIBP_SUCCESS;
 
   {
     occa::memory o_r = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), elliptic->o_r);

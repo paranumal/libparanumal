@@ -24,48 +24,17 @@ SOFTWARE.
 
 */
 
-#include "mesh.hpp"
-#include "solver.hpp"
-#include "timeStepper.hpp"
-#include "linAlg.hpp"
+#include "linearSolver.hpp"
 
-#define DACOUSTICS LIBP_DIR"/solvers/acoustics/"
+pcg::pcg(dlong _N, solver_t& _solver):
+  linearSolver_t(_N, _solver) {};
 
-class acousticsSettings_t: public settings_t {
-public:
-  acousticsSettings_t(MPI_Comm& _comm);
-  void report();
-};
+pcg::~pcg() {}
 
-class acoustics_t: public solver_t {
-public:
-  int Nfields;
+void pcg::Init() {}
 
-  linAlg_t* linAlg;
-  timeStepper_t* timeStepper;
+int pcg::Solve(occa::memory &o_x, occa::memory &o_rhs) {
 
-  dfloat *q;
-  occa::memory o_q;
 
-  occa::kernel volumeKernel;
-  occa::kernel surfaceKernel;
+}
 
-  occa::kernel initialConditionKernel;
-
-  occa::stream defaultStream;
-  occa::stream dataStream;
-
-  acoustics_t() = delete;
-  acoustics_t(mesh_t& _mesh);
-
-  //setup
-  static acoustics_t& Setup(mesh_t& mesh);
-
-  void Run();
-
-  void Report(dfloat time, int tstep);
-
-  void PlotFields(dfloat* Q, char *fileName);
-
-  void rhsf(occa::memory& o_q, occa::memory& o_rhs, const dfloat time);
-};

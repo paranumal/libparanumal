@@ -30,8 +30,11 @@ void acoustics_t::Report(dfloat time, int tstep){
 
   static int frame=0;
 
+  dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
+  dfloat norm2 = linAlg->norm2(Nentries, o_q, comm);
+
   if(mesh.rank==0)
-    printf("%5.2f (%d) (time, timestep)\n", time, tstep);
+    printf("%5.2f (%d), %5.2f (time, timestep, norm)\n", time, tstep, norm2);
 
   if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
 

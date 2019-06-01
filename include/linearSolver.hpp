@@ -24,15 +24,44 @@ SOFTWARE.
 
 */
 
-//add constant scalar value to every entry of a vector
+#ifndef LINEARSOLVER_HPP
+#define LINEARSOLVER_HPP
 
-@kernel void addScalar(const dlong N,
-                      const dfloat alpha,
-                      @restrict dfloat *  y){
-  
-  for(dlong n=0;n<N;++n;@tile(256,@outer,@inner)){
-    if(n<N){
-      y[n] += alpha;
-    }
-  }
-}
+#include <occa.hpp>
+#include "utils.h"
+#include "types.h"
+#include "solver.hpp"
+#include "settings.hpp"
+
+//virtual base linear solver class
+class linearSolver_t {
+public:
+  dlong N;
+
+  solver_t& solver;
+
+  MPI_Comm& comm;
+  occa::device& device;
+  settings_t& settings;
+  occa::properties& props;
+
+  linearSolver_t(dlong _N, solver_t& _solver);
+
+  static linearSolver_t* Setup(dlong N, solver_t& solver);
+
+  virtual void Init()=0;
+  virtual int Solve(occa::memory& o_x, occa::memory& o_rhs)=0;
+};
+
+class pcg: public linearSolver_t {
+private:
+
+public:
+  pcg(dlong N, solver_t& solver);
+  ~pcg();
+
+  void Init();
+  int Solve(occa::memory& o_x, occa::memory& o_rhs);
+};
+
+#endif

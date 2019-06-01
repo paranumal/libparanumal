@@ -24,16 +24,46 @@ SOFTWARE.
 
 */
 
+@kernel void axpy(const dlong N,
+                  const dfloat alpha,
+                  @restrict const dfloat *x,
+                  const dfloat beta,
+                  @restrict dfloat *y){
 
-@kernel void dotDivide(const dlong N,
-		      @restrict const  dfloat *  v,
-		      @restrict const  dfloat *  w,
-		      @restrict dfloat *  viw){
-  
-  for(dlong n=0;n<N;++n;@tile(256,@outer,@inner)){
+  for(dlong n=0;n<N;++n;@tile(p_blockSize,@outer,@inner)){
     if(n<N){
-      viw [n] = v[n]/w[n];
+      y[n] = alpha*x[n] + beta*y[n];
     }
   }
-
 }
+
+@kernel void zaxpy(const dlong N,
+                   const dfloat alpha,
+                   @restrict const dfloat *x,
+                   const dfloat beta,
+                   @restrict const dfloat *y,
+                   @restrict dfloat *z){
+
+  for(dlong n=0;n<N;++n;@tile(p_blockSize,@outer,@inner)){
+    if(n<N){
+      z[n] = alpha*x[n] + beta*y[n];
+    }
+  }
+}
+
+#if 0
+@kernel void scaledAddwOffset(const dlong N,
+                      const dfloat alpha,
+                      const dlong sourceOffset,
+                      @restrict const  dfloat *  x,
+                      const dfloat beta,
+                      const dlong destOffset,
+                      @restrict dfloat *  y){
+
+  for(dlong n=0;n<N;++n;@tile(256,@outer,@inner)){
+    if(n<N){
+      y[n+destOffset] = alpha*x[n+sourceOffset] + beta*y[n+destOffset];
+    }
+  }
+}
+#endif

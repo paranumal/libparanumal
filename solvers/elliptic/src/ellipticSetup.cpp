@@ -24,71 +24,23 @@ SOFTWARE.
 
 */
 
-#include "elliptic.h"
-#include "omp.h"
-#include <unistd.h>
+#include "elliptic.hpp"
 
-void reportMemoryUsage(occa::device &device, const char *mess);
+elliptic_t::elliptic_t(mesh_t& _mesh): solver_t(_mesh) {}
 
-elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelInfo, setupAide options){
+elliptic_t& elliptic_t::Setup(mesh_t& mesh){
 
-  // elliptic_t *elliptic = (elliptic_t*) calloc(1, sizeof(elliptic_t));
-  elliptic_t *elliptic = new elliptic_t[1];
+  elliptic_t* elliptic = new elliptic_t(mesh);
 
-  mesh->Nfields = 1;
+  settings_t& settings = elliptic->settings;
 
-  options.getArgs("MESH DIMENSION", elliptic->dim);
-  options.getArgs("ELEMENT TYPE", elliptic->elementType);
-  elliptic->mesh = mesh;
-  elliptic->options = options;
+  elliptic->Nfields = 1; //unused for noe
 
-#if 0
-  if(elliptic->dim==3){
-    if(elliptic->elementType == TRIANGLES)
-      meshOccaSetupTri3D(mesh, options, kernelInfo);
-    else if(elliptic->elementType == QUADRILATERALS)
-      meshOccaSetupQuad3D(mesh, options, kernelInfo);
-    else
-      meshOccaSetup3D(mesh, options, kernelInfo);
-  }
-  else
-    meshOccaSetup2D(mesh, options, kernelInfo);
-#endif
+  //setup linear solver
+  elliptic->linearSolver = linearSolver_t::Setup(*elliptic);
+  elliptic->linearSolver->Init();
 
-
-  // defaults for conjugate gradient
-  int enableGatherScatters = 1;
-  int enableReductions = 1;
-  int flexible = 1;
-  int verbose = 0;
-
-  int serial = options.compareArgs("THREAD MODEL", "Serial");
-
-  int continuous = options.compareArgs("DISCRETIZATION", "CONTINUOUS");
-  int ipdg = options.compareArgs("DISCRETIZATION", "IPDG");
-
-  options.getArgs("DEBUG ENABLE REDUCTIONS", enableReductions);
-  options.getArgs("DEBUG ENABLE OGS", enableGatherScatters);
-
-  flexible = options.compareArgs("KRYLOV SOLVER", "FLEXIBLE");
-  verbose  = options.compareArgs("VERBOSE", "TRUE");
-
-  if(mesh->rank==0 && verbose==1){
-    printf("CG OPTIONS: enableReductions=%d, enableGatherScatters=%d, flexible=%d, verbose=%d, ipdg=%d, continuous=%d, serial=%d\n",
-	   enableGatherScatters,
-	   enableReductions,
-	   flexible,
-	   verbose,
-	   ipdg,
-	   continuous,
-	   serial);
-  }
-
-  // compute samples of q at interpolation nodes
-  mesh->q = (dfloat*) calloc((mesh->totalHaloPairs+mesh->Nelements)*mesh->Np*mesh->Nfields, sizeof(dfloat));
-
-  if (mesh->rank==0)
-    reportMemoryUsage(mesh->device, "after occa setup");
+  elliptic->verbose = settings.compareSetting("VERBOSE","TRUE") ? 1:0;
 
   // Boundary Type translation. Just default from the mesh file.
   int BCType[3] = {0,1,2};
@@ -99,35 +51,35 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
   if(elliptic->elementType==HEXAHEDRA){
     if(options.compareArgs("DISCRETIZATION","CONTINUOUS")){
       if(options.compareArgs("ELEMENT MAP", "TRILINEAR")){
-	printf("mesh->dim = %d, mesh->Nverts = %d\n", mesh->dim, mesh->Nverts);
+        printf("mesh->dim = %d, mesh->Nverts = %d\n", mesh->dim, mesh->Nverts);
 
-	// pack gllz, gllw, and elementwise EXYZ
-	hlong Nxyz = mesh->Nelements*mesh->dim*mesh->Nverts;
-	dfloat *EXYZ = (dfloat*) calloc(Nxyz, sizeof(dfloat));
-	dfloat *gllzw = (dfloat*) calloc(2*mesh->Nq, sizeof(dfloat));
+        // pack gllz, gllw, and elementwise EXYZ
+        hlong Nxyz = mesh->Nelements*mesh->dim*mesh->Nverts;
+        dfloat *EXYZ = (dfloat*) calloc(Nxyz, sizeof(dfloat));
+        dfloat *gllzw = (dfloat*) calloc(2*mesh->Nq, sizeof(dfloat));
 
-	int sk = 0;
-	for(int n=0;n<mesh->Nq;++n)
-	  gllzw[sk++] = mesh->gllz[n];
-	for(int n=0;n<mesh->Nq;++n)
-	  gllzw[sk++] = mesh->gllw[n];
+        int sk = 0;
+        for(int n=0;n<mesh->Nq;++n)
+          gllzw[sk++] = mesh->gllz[n];
+        for(int n=0;n<mesh->Nq;++n)
+          gllzw[sk++] = mesh->gllw[n];
 
-	sk = 0;
-	for(hlong e=0;e<mesh->Nelements;++e){
-	  for(int v=0;v<mesh->Nverts;++v)
-	    EXYZ[sk++] = mesh->EX[e*mesh->Nverts+v];
-	  for(int v=0;v<mesh->Nverts;++v)
-	    EXYZ[sk++] = mesh->EY[e*mesh->Nverts+v];
-	  for(int v=0;v<mesh->Nverts;++v)
-	    EXYZ[sk++] = mesh->EZ[e*mesh->Nverts+v];
-	}
+        sk = 0;
+        for(hlong e=0;e<mesh->Nelements;++e){
+          for(int v=0;v<mesh->Nverts;++v)
+            EXYZ[sk++] = mesh->EX[e*mesh->Nverts+v];
+          for(int v=0;v<mesh->Nverts;++v)
+            EXYZ[sk++] = mesh->EY[e*mesh->Nverts+v];
+          for(int v=0;v<mesh->Nverts;++v)
+            EXYZ[sk++] = mesh->EZ[e*mesh->Nverts+v];
+        }
 
-	// nodewise ggeo with element coordinates and gauss node info
-	elliptic->o_EXYZ = mesh->device.malloc(Nxyz*sizeof(dfloat), EXYZ);
-	elliptic->o_gllzw = mesh->device.malloc(2*mesh->Nq*sizeof(dfloat), gllzw);
+        // nodewise ggeo with element coordinates and gauss node info
+        elliptic->o_EXYZ = mesh->device.malloc(Nxyz*sizeof(dfloat), EXYZ);
+        elliptic->o_gllzw = mesh->device.malloc(2*mesh->Nq*sizeof(dfloat), gllzw);
 
-	free(EXYZ);
-	free(gllzw);
+        free(EXYZ);
+        free(gllzw);
       }
     }
   }
@@ -185,52 +137,52 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
 //         if(elliptic->elementType==QUADRILATERALS){
 
 // #if 0
-// 	  dfloat exact = pow(xn,2);
-// 	  dfloat forcing = -2*(- 2*pow(xn,2) + pow(yn,2) + pow(zn,2));
+//        dfloat exact = pow(xn,2);
+//        dfloat forcing = -2*(- 2*pow(xn,2) + pow(yn,2) + pow(zn,2));
 // #endif
-// 	  dfloat a = 1, b = 2, c = 3;
-// 	  dfloat pi = M_PI;
+//        dfloat a = 1, b = 2, c = 3;
+//        dfloat pi = M_PI;
 
 // #if 0
-// 	  dfloat exact = sin(pi*xn)*sin(pi*yn)*sin(pi*zn);
-// 	  dfloat forcing =
-// 	    - 2*pi*pi*sin(pi*xn)*sin(pi*yn)*sin(pi*zn)
-// 	    - 2*xn*pi*cos(pi*xn)*sin(pi*yn)*sin(pi*zn)
-// 	    - 2*yn*pi*cos(pi*yn)*sin(pi*xn)*sin(pi*zn)
-// 	    - 2*zn*pi*cos(pi*zn)*sin(pi*xn)*sin(pi*yn)
-// 	    - 2*xn*yn*pi*pi*cos(pi*xn)*cos(pi*yn)*sin(pi*zn)
-// 	    - 2*xn*zn*pi*pi*cos(pi*xn)*cos(pi*zn)*sin(pi*yn)
-// 	    - 2*yn*zn*pi*pi*cos(pi*yn)*cos(pi*zn)*sin(pi*xn);
+//        dfloat exact = sin(pi*xn)*sin(pi*yn)*sin(pi*zn);
+//        dfloat forcing =
+//          - 2*pi*pi*sin(pi*xn)*sin(pi*yn)*sin(pi*zn)
+//          - 2*xn*pi*cos(pi*xn)*sin(pi*yn)*sin(pi*zn)
+//          - 2*yn*pi*cos(pi*yn)*sin(pi*xn)*sin(pi*zn)
+//          - 2*zn*pi*cos(pi*zn)*sin(pi*xn)*sin(pi*yn)
+//          - 2*xn*yn*pi*pi*cos(pi*xn)*cos(pi*yn)*sin(pi*zn)
+//          - 2*xn*zn*pi*pi*cos(pi*xn)*cos(pi*zn)*sin(pi*yn)
+//          - 2*yn*zn*pi*pi*cos(pi*yn)*cos(pi*zn)*sin(pi*xn);
 // #endif
 
-// 	  dfloat exact = sin(a*xn)*sin(b*yn)*sin(c*zn);
+//        dfloat exact = sin(a*xn)*sin(b*yn)*sin(c*zn);
 
-// 	  dfloat forcing =
-// 	      b*b*yn*yn*sin(a*xn)*sin(b*yn)*sin(c*zn)
-// 	    - c*c*sin(a*xn)*sin(b*yn)*sin(c*zn)
-// 	    - a*a*yn*yn*sin(a*xn)*sin(b*yn)*sin(c*zn)
-// 	    - a*a*zn*zn*sin(a*xn)*sin(b*yn)*sin(c*zn)
-// 	    - b*b*sin(a*xn)*sin(b*yn)*sin(c*zn)
-// 	    + c*c*zn*zn*sin(a*xn)*sin(b*yn)*sin(c*zn)
-// 	    - 2*a*xn*cos(a*xn)*sin(b*yn)*sin(c*zn)
-// 	    - 2*b*yn*cos(b*yn)*sin(a*xn)*sin(c*zn)
-// 	    - 2*c*zn*cos(c*zn)*sin(a*xn)*sin(b*yn)
-// 	    - 2*a*c*xn*zn*cos(a*xn)*cos(c*zn)*sin(b*yn)
-// 	    - 2*b*c*yn*zn*cos(b*yn)*cos(c*zn)*sin(a*xn)
-// 	    - 2*a*b*xn*yn*cos(a*xn)*cos(b*yn)*sin(c*zn);
+//        dfloat forcing =
+//            b*b*yn*yn*sin(a*xn)*sin(b*yn)*sin(c*zn)
+//          - c*c*sin(a*xn)*sin(b*yn)*sin(c*zn)
+//          - a*a*yn*yn*sin(a*xn)*sin(b*yn)*sin(c*zn)
+//          - a*a*zn*zn*sin(a*xn)*sin(b*yn)*sin(c*zn)
+//          - b*b*sin(a*xn)*sin(b*yn)*sin(c*zn)
+//          + c*c*zn*zn*sin(a*xn)*sin(b*yn)*sin(c*zn)
+//          - 2*a*xn*cos(a*xn)*sin(b*yn)*sin(c*zn)
+//          - 2*b*yn*cos(b*yn)*sin(a*xn)*sin(c*zn)
+//          - 2*c*zn*cos(c*zn)*sin(a*xn)*sin(b*yn)
+//          - 2*a*c*xn*zn*cos(a*xn)*cos(c*zn)*sin(b*yn)
+//          - 2*b*c*yn*zn*cos(b*yn)*cos(c*zn)*sin(a*xn)
+//          - 2*a*b*xn*yn*cos(a*xn)*cos(b*yn)*sin(c*zn);
 
 
-// 	  forcing = -forcing + lambda*exact;
+//        forcing = -forcing + lambda*exact;
 
 //           elliptic->r[id] = J*forcing;
 
 //         }
 //         else{
-	  // dfloat mode = 1;
-	  // elliptic->r[id] =
-	  //   J*(3*mode*mode*M_PI*M_PI+lambda)*cos(mode*M_PI*xn)*cos(mode*M_PI*yn)*cos(mode*M_PI*zn);
-	  //	  elliptic->r[id] += 0.1*2*(drand48()-0.5);
-	// }
+          // dfloat mode = 1;
+          // elliptic->r[id] =
+          //   J*(3*mode*mode*M_PI*M_PI+lambda)*cos(mode*M_PI*xn)*cos(mode*M_PI*yn)*cos(mode*M_PI*zn);
+          //      elliptic->r[id] += 0.1*2*(drand48()-0.5);
+        // }
 
       }
       elliptic->x[id] = 0;
@@ -265,32 +217,32 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
 
  //      dfloat *cubInterpT = (dfloat*) calloc(mesh->cubNq*mesh->Nq, sizeof(dfloat));
  //      for(int n=0;n<mesh->Nq;++n){
-	// for(int m=0;m<mesh->cubNq;++m){
-	//   cubInterpT[m+n*mesh->cubNq] = mesh->cubInterp[m*mesh->Nq+n];
-	//   printf("%g ", cubInterpT[m+n*mesh->cubNq]);
-	// }
-	// printf("\n");
+        // for(int m=0;m<mesh->cubNq;++m){
+        //   cubInterpT[m+n*mesh->cubNq] = mesh->cubInterp[m*mesh->Nq+n];
+        //   printf("%g ", cubInterpT[m+n*mesh->cubNq]);
+        // }
+        // printf("\n");
  //      }
 
  //      for(hlong e=0;e<mesh->Nelements;++e){
 
-	// interpolateHex3D(mesh->cubInterp, mesh->x+mesh->Np*e, mesh->Nq, cubx, mesh->cubNq);
-	// interpolateHex3D(mesh->cubInterp, mesh->y+mesh->Np*e, mesh->Nq, cuby, mesh->cubNq);
-	// interpolateHex3D(mesh->cubInterp, mesh->z+mesh->Np*e, mesh->Nq, cubz, mesh->cubNq);
+        // interpolateHex3D(mesh->cubInterp, mesh->x+mesh->Np*e, mesh->Nq, cubx, mesh->cubNq);
+        // interpolateHex3D(mesh->cubInterp, mesh->y+mesh->Np*e, mesh->Nq, cuby, mesh->cubNq);
+        // interpolateHex3D(mesh->cubInterp, mesh->z+mesh->Np*e, mesh->Nq, cubz, mesh->cubNq);
 
-	// for(int n=0;n<mesh->cubNp;++n){
-	//   dfloat JW = mesh->cubggeo[e*mesh->cubNp*mesh->Nggeo + n + GWJID*mesh->cubNp];
-	//   //	  cubrhs[n] = JW*(3*M_PI*M_PI+lambda)*cos(M_PI*cubx[n])*cos(M_PI*cuby[n])*cos(M_PI*cubz[n]);
-	//   dfloat  mode = 1;
-	//   cubrhs[n] = JW*(3*mode*mode*M_PI*M_PI+lambda)*cos(mode*M_PI*cubx[n])*cos(mode*M_PI*cuby[n])*cos(mode*M_PI*cubz[n]);
-	//   //	  cubrhs[n] += 0.1*2*(drand48()-0.5);
-	// }
+        // for(int n=0;n<mesh->cubNp;++n){
+        //   dfloat JW = mesh->cubggeo[e*mesh->cubNp*mesh->Nggeo + n + GWJID*mesh->cubNp];
+        //   //   cubrhs[n] = JW*(3*M_PI*M_PI+lambda)*cos(M_PI*cubx[n])*cos(M_PI*cuby[n])*cos(M_PI*cubz[n]);
+        //   dfloat  mode = 1;
+        //   cubrhs[n] = JW*(3*mode*mode*M_PI*M_PI+lambda)*cos(mode*M_PI*cubx[n])*cos(mode*M_PI*cuby[n])*cos(mode*M_PI*cubz[n]);
+        //   //   cubrhs[n] += 0.1*2*(drand48()-0.5);
+        // }
 
-	// interpolateHex3D(cubInterpT, cubrhs, mesh->cubNq, elliptic->r+e*mesh->Np, mesh->Nq);
+        // interpolateHex3D(cubInterpT, cubrhs, mesh->cubNq, elliptic->r+e*mesh->Np, mesh->Nq);
 
-	// //	for(int n=0;n<mesh->Np;++n){
-	// //	  printf("elliptic->r[%d]=%g\n", e*mesh->Np+n, elliptic->r[e*mesh->Np+n]);
-	// //	}
+        // //   for(int n=0;n<mesh->Np;++n){
+        // //     printf("elliptic->r[%d]=%g\n", e*mesh->Np+n, elliptic->r[e*mesh->Np+n]);
+        // //   }
 
 
  //      }
@@ -331,29 +283,29 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
     for (int r=0;r<2;r++){
       if ((r==0 && mesh->rank==0) || (r==1 && mesh->rank>0)) {
 
-	sprintf(fileName, DELLIPTIC "/okl/ellipticRhsBCIpdg%s.okl", suffix);
-	sprintf(kernelName, "ellipticRhsBCIpdg%s", suffix);
+        sprintf(fileName, DELLIPTIC "/okl/ellipticRhsBCIpdg%s.okl", suffix);
+        sprintf(kernelName, "ellipticRhsBCIpdg%s", suffix);
 
-	elliptic->rhsBCIpdgKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
+        elliptic->rhsBCIpdgKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
       }
       MPI_Barrier(mesh->comm);
     }
 
     dfloat zero = 0.f;
     elliptic->rhsBCIpdgKernel(mesh->Nelements,
-			      mesh->o_vmapM,
-			      elliptic->tau,
-			      zero,
-			      mesh->o_x,
-			      mesh->o_y,
-			      mesh->o_z,
-			      mesh->o_vgeo,
-			      mesh->o_sgeo,
-			      elliptic->o_EToB,
-			      mesh->o_Dmatrices,
-			      mesh->o_LIFTT,
-			      mesh->o_MM,
-			      elliptic->o_r);
+                              mesh->o_vmapM,
+                              elliptic->tau,
+                              zero,
+                              mesh->o_x,
+                              mesh->o_y,
+                              mesh->o_z,
+                              mesh->o_vgeo,
+                              mesh->o_sgeo,
+                              elliptic->o_EToB,
+                              mesh->o_Dmatrices,
+                              mesh->o_LIFTT,
+                              mesh->o_MM,
+                              elliptic->o_r);
   }
 
   if (options.compareArgs("DISCRETIZATION","CONTINUOUS") &&
@@ -362,7 +314,7 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
     for (int r=0;r<2;r++){
       if ((r==0 && mesh->rank==0) || (r==1 && mesh->rank>0)) {
 
-	sprintf(fileName, DELLIPTIC "/okl/ellipticRhsBC%s.okl", suffix);
+        sprintf(fileName, DELLIPTIC "/okl/ellipticRhsBC%s.okl", suffix);
         sprintf(kernelName, "ellipticRhsBC%s", suffix);
 
         elliptic->rhsBCKernel = mesh->device.buildKernel(fileName,kernelName, kernelInfo);
@@ -378,20 +330,20 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
     dfloat zero = 0.f, mone = -1.0f, one = 1.0f;
     if(options.compareArgs("ELLIPTIC INTEGRATION", "NODAL")){
       elliptic->rhsBCKernel(mesh->Nelements,
-			    mesh->o_ggeo,
-			    mesh->o_sgeo,
-			    mesh->o_Dmatrices,
-			    mesh->o_Smatrices,
-			    mesh->o_MM,
-			    mesh->o_vmapM,
-			    mesh->o_sMT,
-			    lambda,
-			    zero,
-			    mesh->o_x,
-			    mesh->o_y,
-			    mesh->o_z,
-			    elliptic->o_mapB,
-			    elliptic->o_r);
+                            mesh->o_ggeo,
+                            mesh->o_sgeo,
+                            mesh->o_Dmatrices,
+                            mesh->o_Smatrices,
+                            mesh->o_MM,
+                            mesh->o_vmapM,
+                            mesh->o_sMT,
+                            lambda,
+                            zero,
+                            mesh->o_x,
+                            mesh->o_y,
+                            mesh->o_z,
+                            elliptic->o_mapB,
+                            elliptic->o_r);
     }else{
 
       // first set Dirichlet bc in tmp field
@@ -402,22 +354,22 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
       occa::memory o_rbc = mesh->device.malloc(Etotal*mesh->Np*sizeof(dfloat), qbc);
 
       elliptic->addBCKernel(mesh->Nelements,
-			    zero, // time
-			    mesh->o_x,
-			    mesh->o_y,
-			    mesh->o_z,
-			    elliptic->o_mapB,
-			    o_qbc);
+                            zero, // time
+                            mesh->o_x,
+                            mesh->o_y,
+                            mesh->o_z,
+                            elliptic->o_mapB,
+                            o_qbc);
 
      //  // A*qbc
      //  elliptic->partialCubatureAxKernel(mesh->NlocalGatherElements,
-					// mesh->o_localGatherElementList,
-					// mesh->o_cubggeo,
-					// mesh->o_cubD,
-					// mesh->o_cubInterpT,
-					// lambda,
-					// o_qbc,
-					// o_rbc);
+                                        // mesh->o_localGatherElementList,
+                                        // mesh->o_cubggeo,
+                                        // mesh->o_cubD,
+                                        // mesh->o_cubInterpT,
+                                        // lambda,
+                                        // o_qbc,
+                                        // o_rbc);
      //  // r -= A*q_bc
      //  elliptic->scaledAddKernel(Etotal*mesh->Np, mone, o_rbc, one, elliptic->o_r);
 

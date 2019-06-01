@@ -24,20 +24,25 @@ SOFTWARE.
 
 */
 
-@kernel void weightedInnerProduct2(const dlong N,
-				  @restrict const  dfloat *  w,
-				  @restrict const  dfloat *  x,
-				  @restrict const  dfloat *  y,
-				  @restrict dfloat *  wxy){
-  
+@kernel void weightedInnerProd(const dlong Nblocks,
+                               const dlong N,
+                               @restrict const  dfloat *w,
+                               @restrict const  dfloat *x,
+                               @restrict const  dfloat *y,
+                               @restrict        dfloat *wxy){
 
-  for(dlong b=0;b<(N+p_blockSize-1)/p_blockSize;++b;@outer(0)){
-    
+
+  for(dlong b=0;b<Nblocks;++b;@outer(0)){
+
     @shared volatile dfloat s_wxy[p_blockSize];
 
     for(int t=0;t<p_blockSize;++t;@inner(0)){
-      const dlong id = t + p_blockSize*b;
-      s_wxy[t] = (id<N) ? w[id]*x[id]*y[id] : 0.f;
+      dlong id = t + b*p_blockSize;
+      s_wxy[t] = 0.0;
+      while (id<N) {
+        s_wxy[t] += w[id]*x[id]*y[id];
+        id += p_blockSize*Nblocks;
+      }
     }
 
     @barrier("local");
@@ -69,37 +74,37 @@ SOFTWARE.
 #if 0
 // barrier avoiding (partial) reduction
 @kernel void weightedInnerProduct2(const int N,
-				  @restrict const  dfloat *  w,
-				  @restrict const  dfloat *  x,
-				  @restrict const  dfloat *  y,
-				  @restrict dfloat *  wxy){
-  
+                                  @restrict const  dfloat *  w,
+                                  @restrict const  dfloat *  x,
+                                  @restrict const  dfloat *  y,
+                                  @restrict dfloat *  wxy){
+
 #define G 8
 #define S 32
-  
+
   // loop over blocks
   for(int b=0;b<(N+G*S-1)/(G*S);++b;@outer(0)){
-    
+
     @shared volatile dfloat s_a[G][S];
     @shared volatile dfloat s_b[G];
 
     for(int g=0;g<G;++g;@inner(1)){
       for(int s=0;s<S;++s;@inner(0)){
-	const int n = b*G*S + g*S + s;
+        const int n = b*G*S + g*S + s;
 
-	const dfloat wgs = (n<N) ? w[n]:0.f;
-	const dfloat xgs = (n<N) ? x[n]:0.f;
-	const dfloat ygs = (n<N) ? y[n]:0.f;
+        const dfloat wgs = (n<N) ? w[n]:0.f;
+        const dfloat xgs = (n<N) ? x[n]:0.f;
+        const dfloat ygs = (n<N) ? y[n]:0.f;
 
-	s_a[g][s] = wgs*xgs*ygs;
+        s_a[g][s] = wgs*xgs*ygs;
       }
     }
-    
+
     @barrier("local");
 
     for(int g=0;g<G;++g;@inner(1)){
       for(int s=0;s<S;++s;@inner(0)){
-	const int n = b*G*S + g*S + s;
+        const int n = b*G*S + g*S + s;
 
         if(s<16) s_a[g][s] += s_a[g][s + 16];
         if(s< 8) s_a[g][s] += s_a[g][s +  8];
@@ -108,7 +113,7 @@ SOFTWARE.
         if(s==0) s_b[g] = s_a[g][0] + s_a[g][1];
       }
     }
-    
+
     @barrier("local");
 
     for(int g=0;g<G;++g;@inner(1)){
@@ -122,11 +127,11 @@ SOFTWARE.
     }
 
     @barrier("local");
-    
+
     for(int g=0;g<G;++g;@inner(1)){
       for(int s=0;s<S;++s;@inner(0)){
         if(g==0 && s==0)
-	  wxy[b] = s_b[0];
+          wxy[b] = s_b[0];
       }
     }
   }

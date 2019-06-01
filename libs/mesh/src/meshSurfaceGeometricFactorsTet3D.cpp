@@ -102,7 +102,7 @@ void meshTet3D::SurfaceGeometricFactors(){
     dfloat nx1 = -tx;
     dfloat ny1 = -ty;
     dfloat nz1 = -tz;
-    dfloat sJ1 = norm3(nx1,ny1,nz1);
+    dfloat sJ1 = sqrt((nx1)*(nx1)+(ny1)*(ny1)+(nz1)*(nz1));
 
     sgeo[base+NXID] = nx1/sJ1;
     sgeo[base+NYID] = ny1/sJ1;
@@ -120,7 +120,7 @@ void meshTet3D::SurfaceGeometricFactors(){
     dfloat nx2 = -sx;
     dfloat ny2 = -sy;
     dfloat nz2 = -sz;
-    dfloat sJ2 = norm3(nx2,ny2,nz2);
+    dfloat sJ2 = sqrt((nx2)*(nx2)+(ny2)*(ny2)+(nz2)*(nz2));
 
     sgeo[base+NXID] = nx2/sJ2;
     sgeo[base+NYID] = ny2/sJ2;
@@ -138,7 +138,7 @@ void meshTet3D::SurfaceGeometricFactors(){
     dfloat nx3 = rx+sx+tx;
     dfloat ny3 = ry+sy+ty;
     dfloat nz3 = rz+sz+tz;
-    dfloat sJ3 = norm3(nx3,ny3,nz3);
+    dfloat sJ3 = sqrt((nx3)*(nx3)+(ny3)*(ny3)+(nz3)*(nz3));
 
     sgeo[base+NXID] = nx3/sJ3;
     sgeo[base+NYID] = ny3/sJ3;
@@ -156,7 +156,7 @@ void meshTet3D::SurfaceGeometricFactors(){
     dfloat nx4 = -rx;
     dfloat ny4 = -ry;
     dfloat nz4 = -rz;
-    dfloat sJ4 = norm3(nx4,ny4,nz4);
+    dfloat sJ4 = sqrt((nx4)*(nx4)+(ny4)*(ny4)+(nz4)*(nz4));
 
     sgeo[base+NXID] = nx4/sJ4;
     sgeo[base+NYID] = ny4/sJ4;
