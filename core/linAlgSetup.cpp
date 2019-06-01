@@ -50,7 +50,7 @@ linAlg_t* linAlg_t::Setup(occa::device& device_,
 }
 
 //initialize list of kernels
-void linAlg_t::Init(vector<string> kernels) {
+void linAlg_t::InitKernels(vector<string> kernels) {
 
   occa::properties kernelInfo = props; //copy base properties
 

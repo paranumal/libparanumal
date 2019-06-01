@@ -54,7 +54,7 @@ public:
            settings_t& settings_, occa::properties& props_);
 
   //initialize list of kernels
-  void Init(vector<string> kernels);
+  void InitKernels(vector<string> kernels);
 
   /*********************/
   /* vector operations */

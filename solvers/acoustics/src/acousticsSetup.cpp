@@ -51,7 +51,7 @@ acoustics_t& acoustics_t::Setup(mesh_t& mesh){
 
   //setup linear algebra module
   acoustics->linAlg = linAlg_t::Setup(acoustics->device, settings, acoustics->props);
-  acoustics->linAlg->Init({"norm2"});
+  acoustics->linAlg->InitKernels({"innerProd"});
 
   // set penalty parameter
   dfloat Lambda2 = 0.5;
@@ -59,6 +59,9 @@ acoustics_t& acoustics_t::Setup(mesh_t& mesh){
   // compute samples of q at interpolation nodes
   acoustics->q = (dfloat*) calloc(Nlocal+Nhalo, sizeof(dfloat));
   acoustics->o_q = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat), acoustics->q);
+
+  //storage for M*q during reporting
+  acoustics->o_Mq = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat), acoustics->q);
 
   // OCCA build stuff
   acoustics->defaultStream = mesh.device.getStream();
@@ -119,6 +122,12 @@ acoustics_t& acoustics_t::Setup(mesh_t& mesh){
   sprintf(kernelName, "acousticsSurface%s", suffix);
 
   acoustics->surfaceKernel = mesh.device.buildKernel(fileName, kernelName, kernelInfo);
+
+  // mass matrix operator
+  sprintf(fileName, LIBP_DIR "/core/okl/MassMatrixOperator%s.okl", suffix);
+  sprintf(kernelName, "MassMatrixOperator%s", suffix);
+
+  acoustics->MassMatrixKernel = mesh.device.buildKernel(fileName, kernelName, kernelInfo);
 
 
   if (mesh.dim==2) {

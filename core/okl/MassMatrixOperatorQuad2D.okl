@@ -24,52 +24,27 @@ SOFTWARE.
 
 */
 
-#include "mesh.hpp"
-#include "solver.hpp"
-#include "timeStepper.hpp"
-#include "linAlg.hpp"
+//spectral mass matrix
+@kernel void MassMatrixOperatorQuad2D(const dlong Nelements,
+                                      @restrict const dfloat* ggeo,
+                                      @restrict const dfloat* MM,
+                                      @restrict const dfloat* q,
+                                      @restrict       dfloat* Mq){
 
-#define DACOUSTICS LIBP_DIR"/solvers/acoustics/"
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
 
-class acousticsSettings_t: public settings_t {
-public:
-  acousticsSettings_t(MPI_Comm& _comm);
-  void report();
-};
+    for(int n=0;n<p_Np;++n;@inner(0)){
 
-class acoustics_t: public solver_t {
-public:
-  int Nfields;
+      const dlong qbase = e*p_Np*p_Nfields + n;
+      const dlong gbase = e*p_Nggeo*p_Np + n;
 
-  linAlg_t* linAlg;
-  timeStepper_t* timeStepper;
+      // assumes w*J built into G entries
+      const dfloat r_GwJ = ggeo[gbase+p_GWJID*p_Np];
 
-  dfloat *q;
-  occa::memory o_q;
-
-  occa::memory o_Mq;
-
-  occa::kernel volumeKernel;
-  occa::kernel surfaceKernel;
-
-  occa::kernel MassMatrixKernel;
-
-  occa::kernel initialConditionKernel;
-
-  occa::stream defaultStream;
-  occa::stream dataStream;
-
-  acoustics_t() = delete;
-  acoustics_t(mesh_t& _mesh);
-
-  //setup
-  static acoustics_t& Setup(mesh_t& mesh);
-
-  void Run();
-
-  void Report(dfloat time, int tstep);
-
-  void PlotFields(dfloat* Q, char *fileName);
-
-  void rhsf(occa::memory& o_q, occa::memory& o_rhs, const dfloat time);
-};
+      #pragma unroll p_Nfields
+      for (int f=0;f<p_Nfields;f++) {
+        Mq[qbase+f*p_Np] = r_GwJ*q[qbase+f*p_Np];
+      }
+    }
+  }
+}
