@@ -34,7 +34,7 @@ elliptic_t& elliptic_t::Setup(mesh_t& mesh){
 
   settings_t& settings = elliptic->settings;
 
-  elliptic->Nfields = 1; //unused for noe
+  elliptic->Nfields = 1;
 
   //setup linear solver
   elliptic->linearSolver = linearSolver_t::Setup(*elliptic);
@@ -201,53 +201,7 @@ elliptic_t& elliptic_t::Setup(mesh_t& mesh){
 #endif
 
   //Apply some element matrix ops to r depending on our solver
-  if (options.compareArgs("BASIS","BERN"))   meshApplyElementMatrix(mesh,mesh->invVB,elliptic->r,elliptic->r);
-  if (options.compareArgs("BASIS","BERN"))   meshApplyElementMatrix(mesh,mesh->BBMM,elliptic->r,elliptic->r);
-  if (options.compareArgs("BASIS","NODAL")){
-    // if(options.compareArgs("ELLIPTIC INTEGRATION", "NODAL")){
-      //      printf("MASS APPLY NODAL\n");
-      meshApplyElementMatrix(mesh,mesh->MM,elliptic->r,elliptic->r);
-    // }
- //    else{
- //      //      printf("MASS APPLY CUBATURE\n");
- //      dfloat *cubx = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
- //      dfloat *cuby = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
- //      dfloat *cubz = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
- //      dfloat *cubrhs = (dfloat*) calloc(mesh->cubNp, sizeof(dfloat));
-
- //      dfloat *cubInterpT = (dfloat*) calloc(mesh->cubNq*mesh->Nq, sizeof(dfloat));
- //      for(int n=0;n<mesh->Nq;++n){
-        // for(int m=0;m<mesh->cubNq;++m){
-        //   cubInterpT[m+n*mesh->cubNq] = mesh->cubInterp[m*mesh->Nq+n];
-        //   printf("%g ", cubInterpT[m+n*mesh->cubNq]);
-        // }
-        // printf("\n");
- //      }
-
- //      for(hlong e=0;e<mesh->Nelements;++e){
-
-        // interpolateHex3D(mesh->cubInterp, mesh->x+mesh->Np*e, mesh->Nq, cubx, mesh->cubNq);
-        // interpolateHex3D(mesh->cubInterp, mesh->y+mesh->Np*e, mesh->Nq, cuby, mesh->cubNq);
-        // interpolateHex3D(mesh->cubInterp, mesh->z+mesh->Np*e, mesh->Nq, cubz, mesh->cubNq);
-
-        // for(int n=0;n<mesh->cubNp;++n){
-        //   dfloat JW = mesh->cubggeo[e*mesh->cubNp*mesh->Nggeo + n + GWJID*mesh->cubNp];
-        //   //   cubrhs[n] = JW*(3*M_PI*M_PI+lambda)*cos(M_PI*cubx[n])*cos(M_PI*cuby[n])*cos(M_PI*cubz[n]);
-        //   dfloat  mode = 1;
-        //   cubrhs[n] = JW*(3*mode*mode*M_PI*M_PI+lambda)*cos(mode*M_PI*cubx[n])*cos(mode*M_PI*cuby[n])*cos(mode*M_PI*cubz[n]);
-        //   //   cubrhs[n] += 0.1*2*(drand48()-0.5);
-        // }
-
-        // interpolateHex3D(cubInterpT, cubrhs, mesh->cubNq, elliptic->r+e*mesh->Np, mesh->Nq);
-
-        // //   for(int n=0;n<mesh->Np;++n){
-        // //     printf("elliptic->r[%d]=%g\n", e*mesh->Np+n, elliptic->r[e*mesh->Np+n]);
-        // //   }
-
-
- //      }
- //    }
-  }
+  meshApplyElementMatrix(mesh,mesh->MM,elliptic->r,elliptic->r);
 
   //copy to occa buffers
   elliptic->o_r   = mesh->device.malloc(Nall*sizeof(dfloat), elliptic->r);

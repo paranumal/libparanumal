@@ -58,7 +58,6 @@ dfloat mesh_t::MRABSetup(dfloat *EToDT, int maxLevels, dfloat finalTime) {
 
   //compute the level of each element
   MRABlevel = (dlong *) calloc(Nelements+totalHaloPairs,sizeof(int));
-  int *MRABsendBuffer=NULL;
   for(int lev=0; lev<MRABNlevels; lev++){
     dfloat dtlev = dtGmin*pow(2,lev);
     for(dlong e=0;e<Nelements;++e){
@@ -68,12 +67,10 @@ dfloat mesh_t::MRABSetup(dfloat *EToDT, int maxLevels, dfloat finalTime) {
   }
 
   //enforce one level difference between neighbours
-  if (totalHaloPairs)
-    MRABsendBuffer = (int *) calloc(totalHaloPairs,sizeof(int));
-
   for (int lev=0; lev < MRABNlevels; lev++){
-    if (totalHaloPairs)
-      this->HaloExchange(sizeof(int), MRABlevel, MRABsendBuffer, MRABlevel+Nelements);
+
+    HaloExchange(MRABlevel, 1, ogsInt);
+
     for (dlong e =0; e<Nelements;e++) {
       if (MRABlevel[e] > lev+1) { //find elements at least 2 levels higher than lev
         for (int f=0;f<Nfaces;f++) { //check for a level lev neighbour
@@ -85,10 +82,6 @@ dfloat mesh_t::MRABSetup(dfloat *EToDT, int maxLevels, dfloat finalTime) {
       }
     }
   }
-
-
-
-  if (totalHaloPairs) free(MRABsendBuffer);
 
   //this could change the number of MRAB levels there are, so find the new max level
   MRABNlevels = 0;

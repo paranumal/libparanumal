@@ -86,14 +86,14 @@ mesh_t& mesh_t::Setup(occa::device& device, MPI_Comm& comm,
   // load reference (r,s) element nodes
   mesh->LoadReferenceNodes(N);
 
+  // set up halo exchange info for MPI (do before connect face nodes)
+  mesh->HaloSetup();
+
   // compute physical (x,y) locations of the element nodes
   mesh->PhysicalNodes();
 
   // compute geometric factors
   mesh->GeometricFactors();
-
-  // set up halo exchange info for MPI (do before connect face nodes)
-  mesh->HaloSetup();
 
   // connect face nodes (find trace indices)
   mesh->ConnectFaceNodes();

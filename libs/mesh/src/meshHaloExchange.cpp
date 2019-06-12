@@ -28,156 +28,126 @@ SOFTWARE.
 
 // send data from partition boundary elements
 // and receive data to ghost elements
-void mesh_t::HaloExchange(size_t Nbytes,         // message size per element
-                          void *sourceBuffer,
-                          void *_sendBuffer,    // temporary buffer
-                          void *_recvBuffer){
+void mesh_t::HaloExchange(void  *v, const int Nentries, const char *type){
+  HaloExchangeStart(v, Nentries, type);
+  HaloExchangeFinish(v, Nentries, type);
+}
 
-  // count outgoing and incoming meshes
-  int tag = 999;
+void mesh_t::HaloExchangeStart(void  *v, const int Nentries, const char *type){
 
-  // copy data from outgoing elements into temporary send buffer
-  for(int i=0;i<totalHaloPairs;++i){
+  size_t Nbytes=0;
+
+  if (!strcmp(type, "double"))
+    Nbytes = sizeof(double);
+  else if (!strcmp(type, "float"))
+    Nbytes = sizeof(float);
+  else if (!strcmp(type, "int"))
+    Nbytes = sizeof(int);
+  else if (!strcmp(type, "long long int"))
+    Nbytes = sizeof(long long int);
+
+  if (haloBufferSize < Nbytes*Nentries*(NhaloElements+totalHaloPairs)) {
+    if (haloBuffer) free(haloBuffer);
+    haloBuffer = malloc(Nbytes*Nentries*(NhaloElements+totalHaloPairs));
+    haloBufferSize = Nbytes*Nentries*(NhaloElements+totalHaloPairs);
+  }
+
+  // copy data from outgoing elements into halo buffer
+  for(dlong i=0;i<NhaloElements;++i){
     // outgoing element
-    int e = haloElementList[i];
-    // copy element e data to _sendBuffer
-    memcpy(((char*)_sendBuffer)+i*Nbytes, ((char*)sourceBuffer)+e*Nbytes, Nbytes);
-  }
-
-  // initiate immediate send  and receives to each other process as needed
-  int offset = 0, message = 0;
-  for(int rr=0;rr<size;++rr){
-    if(rr!=rank){
-      size_t count = NhaloPairs[rr]*Nbytes;
-      if(count){
-        //      printf("rank %d sending %d bytes to rank %d\n", rank, count, rr);
-        MPI_Irecv(((char*)_recvBuffer)+offset, count, MPI_CHAR, rr, tag,
-                  comm, haloRecvRequests+message);
-
-        MPI_Isend(((char*)_sendBuffer)+offset, count, MPI_CHAR, rr, tag,
-                  comm, haloSendRequests+message);
-        offset += count;
-        ++message;
-      }
-    }
-  }
-  //  printf("NhaloMessages = %d\n", NhaloMessages);
-
-  // Wait for all sent messages to have left and received messages to have arrived
-  MPI_Waitall(NhaloMessages, haloRecvRequests, recvStatus);
-  MPI_Waitall(NhaloMessages, haloSendRequests, sendStatus);
-}
-
-
-// start halo exchange (for q)
-void mesh_t::HaloExchangeStart(size_t Nbytes,       // message size per element
-                             void *_sendBuffer,    // temporary buffer
-                             void *_recvBuffer){
-
-  if(totalHaloPairs>0){
-    // count outgoing and incoming meshes
-    int tag = 999;
-
-    // initiate immediate send  and receives to each other process as needed
-    int offset = 0, message = 0;
-    for(int rr=0;rr<size;++rr){
-      if(rr!=rank){
-        size_t count = NhaloPairs[rr]*Nbytes;
-        if(count){
-          MPI_Irecv(((char*)_recvBuffer)+offset, count, MPI_CHAR, rr, tag,
-                    comm, (haloRecvRequests)+message);
-
-          MPI_Isend(((char*)_sendBuffer)+offset, count, MPI_CHAR, rr, tag,
-                    comm, (haloSendRequests)+message);
-          offset += count;
-          ++message;
-        }
-      }
-    }
+    dlong e = haloElementIds[i];
+    memcpy(((char*)haloBuffer)+i*Nbytes*Nentries,
+           ((char*)v)         +e*Nbytes*Nentries, Nbytes*Nentries);
   }
 }
 
-void mesh_t::HaloExchangeFinish(){
+void mesh_t::HaloExchangeFinish(void  *v, const int Nentries, const char *type){
 
-  if(totalHaloPairs>0){
-    // Wait for all sent messages to have left and received messages to have arrived
-    MPI_Waitall(NhaloMessages, haloRecvRequests, recvStatus);
-    MPI_Waitall(NhaloMessages, haloSendRequests, sendStatus);
-  }
+  size_t Nbytes=0;
+
+  if (!strcmp(type, "double"))
+    Nbytes = sizeof(double);
+  else if (!strcmp(type, "float"))
+    Nbytes = sizeof(float);
+  else if (!strcmp(type, "int"))
+    Nbytes = sizeof(int);
+  else if (!strcmp(type, "long long int"))
+    Nbytes = sizeof(long long int);
+
+  ogsGatherScatterVec(haloBuffer, Nentries, type, ogsAdd, ogsHalo);
+
+  // copy data from incoming elements into end of source array
+  memcpy(((char*)v)          + Nelements*Nbytes*Nentries,
+         ((char*)haloBuffer) + NhaloElements*Nbytes*Nentries,
+         totalHaloPairs*Nbytes*Nentries);
 }
 
-// start halo exchange (for o_q)
-void mesh_t::HaloExchangeStart(size_t Nentries,   // number of dfloat entries
-                               occa::memory& o_q,
-                               occa::stream& defaultStream){
+void mesh_t::HaloExchange(occa::memory &o_v, const int Nentries, const char *type){
+  HaloExchangeStart(o_v, Nentries, type);
+  HaloExchangeFinish(o_v, Nentries, type);
+}
 
-  if(totalHaloPairs>0){
-    //required buffer size
-    size_t Nbytes = Nentries*sizeof(dfloat)*totalHaloPairs;
+void mesh_t::HaloExchangeStart(occa::memory &o_v, const int Nentries, const char *type){
+  size_t Nbytes=0;
 
-    if (o_haloBuffer.size() < Nbytes) {
-      if (o_haloBuffer.size()) {
-        o_haloBuffer.free();
-        o_sendBuffer.free();
-        o_recvBuffer.free();
-      }
-      o_haloBuffer = device.malloc(Nbytes);
-      sendBuffer = (dfloat*) occaHostMallocPinned(device, Nbytes, NULL, o_sendBuffer, h_sendBuffer);
-      recvBuffer = (dfloat*) occaHostMallocPinned(device, Nbytes, NULL, o_recvBuffer, h_recvBuffer);
+  if (!strcmp(type, "double"))
+    Nbytes = sizeof(double);
+  else if (!strcmp(type, "float"))
+    Nbytes = sizeof(float);
+  else if (!strcmp(type, "int"))
+    Nbytes = sizeof(int);
+  else if (!strcmp(type, "long long int"))
+    Nbytes = sizeof(long long int);
+
+  if (o_haloBuffer.size() < Nbytes*Nentries*(NhaloElements+totalHaloPairs)) {
+    if (o_haloBuffer.size()) {
+      o_haloBuffer.free();
+      h_haloBuffer.free();
     }
 
-    device.setStream(defaultStream);
-    haloExtractKernel(totalHaloPairs, Nentries, o_haloElementList, o_q, o_haloBuffer);
+    pinnedHaloBuffer = occaHostMallocPinned(device,
+                            Nbytes*Nentries*(NhaloElements+totalHaloPairs),
+                            NULL, o_haloBuffer, h_haloBuffer);
+  }
+
+  if (NhaloElements) {
+    // copy data from outgoing elements into halo buffer
+    //WARNING: this kernel is currently only supporting dfloat types
+    haloExtractKernel(NhaloElements, Nentries, o_haloElementIds, o_v, o_haloBuffer);
+
     device.finish();
-  }
-}
-
-
-void mesh_t::HaloExchangeInterm(size_t Nentries,   // number of dfloat entries
-                               occa::stream& defaultStream,
-                               occa::stream& dataStream){
-
-  if(totalHaloPairs>0){
-    // count outgoing and incoming meshes
-    int tag = 999;
-
-    //required buffer size
-    size_t Nbytes = Nentries*sizeof(dfloat)*totalHaloPairs;
-
     device.setStream(dataStream);
-    o_haloBuffer.copyTo(sendBuffer, Nbytes, 0, "async: true");
-    device.finish();
-
-    // initiate immediate send  and receives to each other process as needed
-    int offset = 0, message = 0;
-    for(int rr=0;rr<size;++rr){
-      if(rr!=rank){
-        size_t count = NhaloPairs[rr]*Nentries;
-        if(count){
-          MPI_Irecv(recvBuffer+offset, count, MPI_DFLOAT, rr, tag,
-                    comm, haloRecvRequests+message);
-
-          MPI_Isend(sendBuffer+offset, count, MPI_DFLOAT, rr, tag,
-                    comm, haloSendRequests+message);
-          offset += count;
-          ++message;
-        }
-      }
-    }
+    o_haloBuffer.copyTo(pinnedHaloBuffer,
+                        Nbytes*Nentries*NhaloElements, 0, "async: true");
     device.setStream(defaultStream);
   }
 }
 
-void mesh_t::HaloExchangeFinish(size_t Nentries,
-                                occa::memory& o_q,
-                                size_t offset){
+void mesh_t::HaloExchangeFinish(occa::memory &o_v, const int Nentries, const char *type){
+  size_t Nbytes=0;
 
-  if(totalHaloPairs>0){
-    MPI_Waitall(NhaloMessages, haloRecvRequests, recvStatus);
-    MPI_Waitall(NhaloMessages, haloSendRequests, sendStatus);
+  if (!strcmp(type, "double"))
+    Nbytes = sizeof(double);
+  else if (!strcmp(type, "float"))
+    Nbytes = sizeof(float);
+  else if (!strcmp(type, "int"))
+    Nbytes = sizeof(int);
+  else if (!strcmp(type, "long long int"))
+    Nbytes = sizeof(long long int);
 
-    size_t Nbytes = Nentries*sizeof(dfloat)*totalHaloPairs;
+  if (NhaloElements) {
+    device.setStream(dataStream);
+    device.finish();
+  }
 
-    o_q.copyFrom(recvBuffer, Nbytes, offset*sizeof(dfloat));
+  ogsGatherScatterVec(pinnedHaloBuffer, Nentries, type, ogsAdd, ogsHalo);
+
+  if (NhaloElements) {
+    // copy data from incoming elements into end of source array
+    o_v.copyFrom(((char*)pinnedHaloBuffer) + Nbytes*Nentries*NhaloElements,
+                 Nbytes*Nentries*totalHaloPairs,
+                 Nbytes*Nentries*Nelements, "async: true");
+    device.finish();
+    device.setStream(defaultStream);
   }
 }

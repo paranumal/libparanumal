@@ -102,7 +102,8 @@ void meshBuildMRABClusters3D(mesh_t *mesh, int lev, dfloat *weights, int *levels
   int allDone = 0;
   int rankDone, done;
   while(!allDone) {
-    mesh->HaloExchange(sizeof(cElement_t), *elements, sendBuffer, *elements + mesh->Nelements);
+    LIBP_ABORT(string("meshBuildMRABClusters3D has not yet been updated to use new halo exchange."))
+    // mesh->HaloExchange(sizeof(cElement_t), *elements, sendBuffer, *elements + mesh->Nelements);
 
     rankDone = 1;
     //local clustering

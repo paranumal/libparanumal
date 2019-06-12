@@ -86,11 +86,5 @@ void mesh_t::ParallelGatherScatterSetup(dlong _N,
   NglobalGatherElements = globalCount;
   NlocalGatherElements = localCount;
 
-  if(globalCount)
-    o_globalGatherElementList =
-      device.malloc(globalCount*sizeof(dlong), globalGatherElementList);
 
-  if(localCount)
-    o_localGatherElementList =
-      device.malloc(localCount*sizeof(dlong), localGatherElementList);
 }

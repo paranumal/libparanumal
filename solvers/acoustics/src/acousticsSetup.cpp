@@ -64,9 +64,6 @@ acoustics_t& acoustics_t::Setup(mesh_t& mesh){
   acoustics->o_Mq = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat), acoustics->q);
 
   // OCCA build stuff
-  acoustics->defaultStream = mesh.device.getStream();
-  acoustics->dataStream    = mesh.device.createStream();
-
   occa::properties kernelInfo = acoustics->props; //copy base occa properties
 
   //add boundary data to kernel info

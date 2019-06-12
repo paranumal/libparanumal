@@ -26,169 +26,93 @@ SOFTWARE.
 
 #include "mesh.hpp"
 
-typedef struct {
-
-  dlong element, elementN;
-  int face, faceN, rankN;
-
-}facePair_t;
-
-/* comparison function that orders halo element/face
-   based on their indexes */
-static int compareHaloFaces(const void *a,
-                     const void *b){
-
-  facePair_t *fa = (facePair_t*) a;
-  facePair_t *fb = (facePair_t*) b;
-
-  if(fa->rankN < fb->rankN) return -1;
-  if(fa->rankN > fb->rankN) return +1;
-
-  if(fa->elementN < fb->elementN) return -1;
-  if(fa->elementN > fb->elementN) return +1;
-
-  if(fa->faceN < fb->faceN) return -1;
-  if(fa->faceN > fb->faceN) return +1;
-
-  return 0;
-}
-
-
 // set up halo infomation for inter-processor MPI
 // exchange of trace nodes
 void mesh_t::HaloSetup(){
 
-  // non-blocking MPI isend/irecv requests (used in meshHaloExchange)
-  haloSendRequests = (MPI_Request*) calloc(size, sizeof(MPI_Request));
-  haloRecvRequests = (MPI_Request*) calloc(size, sizeof(MPI_Request));
+  hlong *globalOffset = (hlong *) calloc(size+1,sizeof(hlong));
+  hlong localNelements = (hlong) Nelements;
 
-  sendStatus = (MPI_Status*) calloc(size, sizeof(MPI_Status));
-  recvStatus = (MPI_Status*) calloc(size, sizeof(MPI_Status));
+  //gather number of elements on each rank
+  MPI_Allgather(&localNelements, 1, MPI_HLONG, globalOffset+1, 1, MPI_HLONG, comm);
 
-  for (int rr=0;rr<size;rr++) {
-    haloSendRequests[rr] = MPI_REQUEST_NULL;
-    haloRecvRequests[rr] = MPI_REQUEST_NULL;
-  }
+  for(int rr=0;rr<size;++rr)
+    globalOffset[rr+1] = globalOffset[rr]+globalOffset[rr+1];
 
   // count number of halo element nodes to swap
   totalHaloPairs = 0;
-  NhaloPairs = (int*) calloc(size, sizeof(int));
   for(dlong e=0;e<Nelements;++e){
     for(int f=0;f<Nfaces;++f){
       int rr = EToP[e*Nfaces+f]; // rank of neighbor
       if(rr!=-1){
-        totalHaloPairs += 1;
-        NhaloPairs[rr] += 1;
+        totalHaloPairs++;
       }
     }
   }
 
-  // count number of MPI messages in halo exchange
-  NhaloMessages = 0;
-  for(int rr=0;rr<size;++rr)
-    if(NhaloPairs[rr])
-      ++NhaloMessages;
-
-  // create a list of element/faces with halo neighbor
-  facePair_t *haloElements =
-    (facePair_t*) calloc(totalHaloPairs, sizeof(facePair_t));
-
-  dlong cnt = 0;
+  // count elements that contribute to a global halo exchange
+  NhaloElements = 0;
   for(dlong e=0;e<Nelements;++e){
     for(int f=0;f<Nfaces;++f){
-      dlong ef = e*Nfaces+f;
-      if(EToP[ef]!=-1){
-        haloElements[cnt].element  = e;
-        haloElements[cnt].face     = f;
-        haloElements[cnt].elementN = EToE[ef];
-        haloElements[cnt].faceN    = EToF[ef];
-        haloElements[cnt].rankN    = EToP[ef];
-        ++cnt;
+      int rr = EToP[e*Nfaces+f]; // rank of neighbor
+      if(rr!=-1){
+        NhaloElements++;
+        break;
+      }
+    }
+  }
+  NinternalElements = Nelements - NhaloElements;
+
+  //record the halo and non-halo element ids
+  internalElementIds = (dlong*) malloc(NinternalElements*sizeof(dlong));
+  haloElementIds     = (dlong*) malloc(NhaloElements*sizeof(dlong));
+
+  NhaloElements = 0, NinternalElements = 0;
+  for(dlong e=0;e<Nelements;++e){
+    int haloFlag = 0;
+    for(int f=0;f<Nfaces;++f){
+      int rr = EToP[e*Nfaces+f]; // rank of neighbor
+      if(rr!=-1){
+        haloFlag = 1;
+        haloElementIds[NhaloElements++] = e;
+        break;
+      }
+    }
+    if (!haloFlag)
+      internalElementIds[NinternalElements++] = e;
+  }
+
+  //make a list of global element ids taking part in the halo exchange
+  hlong *globalElementId = (hlong *) malloc((NhaloElements+totalHaloPairs)*sizeof(hlong));
+
+  //outgoing elements
+  for(int e=0;e<NhaloElements;++e)
+    globalElementId[e] = haloElementIds[e] + globalOffset[rank] + 1;
+
+  //incoming elements
+  totalHaloPairs = 0;
+  for(dlong e=0;e<Nelements;++e){
+    for(int f=0;f<Nfaces;++f){
+      int rr = EToP[e*Nfaces+f]; // rank of neighbor
+      if(rr!=-1){
+        //EToE contains the local element number of the neighbor on rank rr
+        globalElementId[NhaloElements+totalHaloPairs]
+                       = -(EToE[e*Nfaces+f] + globalOffset[rr] + 1); //negative so doesnt contribute to sum in ogs
+
+        // overwrite EToE to point to halo region now
+        EToE[e*Nfaces+f] = Nelements+totalHaloPairs++;
       }
     }
   }
 
-  // sort the face pairs in order the destination requires
-  qsort(haloElements, totalHaloPairs, sizeof(facePair_t), compareHaloFaces);
+  //make a halo exchange ogs op
+  int verbose = 0;
+  ogsHalo = ogsSetup(NhaloElements+totalHaloPairs, globalElementId, comm,
+                     verbose, device);
 
-  // record the outgoing order for elements
-  haloElementList = (dlong*) calloc(totalHaloPairs, sizeof(dlong));
-  for(dlong i=0;i<totalHaloPairs;++i){
-    dlong e = haloElements[i].element;
-    haloElementList[i] = e;
-  }
+  haloBufferSize = 0;
+  haloBuffer = NULL;
 
-  // record the outgoing node ids for trace nodes
-  haloGetNodeIds = (dlong*) calloc(totalHaloPairs*Nfp, sizeof(dlong));
-  haloPutNodeIds = (dlong*) calloc(totalHaloPairs*Nfp, sizeof(dlong));
-
-  cnt = 0;
-  for(dlong i=0;i<totalHaloPairs;++i){
-    dlong eM = haloElements[i].element;
-    int fM = haloElements[i].face;
-    for(int n=0;n<Nfp;++n){
-      haloGetNodeIds[cnt] = eM*Np + faceNodes[fM*Nfp+n];
-      ++cnt;
-    }
-  }
-
-  // now arrange for incoming nodes
-  cnt = Nelements;
-  dlong ncnt = 0;
-  for(int rr=0;rr<size;++rr){
-    for(dlong e=0;e<Nelements;++e){
-      for(int f=0;f<Nfaces;++f){
-	dlong ef = e*Nfaces+f;
-	if(EToP[ef]==rr){
-	  EToE[ef] = cnt;
-	  int fP = EToF[ef];
-	  for(int n=0;n<Nfp;++n){
-	    haloPutNodeIds[ncnt] = cnt*Np + faceNodes[fP*Nfp+n];
-	    ++ncnt;
-	  }
-	  ++cnt; // next halo element
-	}
-      }
-    }
-  }
-
-  // create halo extension for x,y arrays
-  dlong totalHaloNodes = totalHaloPairs*Np;
-  dlong localNodes     = Nelements*Np;
-
-  // temporary send buffer
-  dfloat *SendBuffer = (dfloat*) calloc(totalHaloNodes, sizeof(dfloat));
-
-  // extend x,y arrays to hold coordinates of node coordinates of elements in halo
-  x = (dfloat*) realloc(x, (localNodes+totalHaloNodes)*sizeof(dfloat));
-  y = (dfloat*) realloc(y, (localNodes+totalHaloNodes)*sizeof(dfloat));
-  if(dim==3)
-    z = (dfloat*) realloc(z, (localNodes+totalHaloNodes)*sizeof(dfloat));
-
-  // send halo data and recv into extended part of arrays
-  this->HaloExchange(Np*sizeof(dfloat), x, SendBuffer, x + localNodes);
-  this->HaloExchange(Np*sizeof(dfloat), y, SendBuffer, y + localNodes);
-  if(dim==3)
-    this->HaloExchange(Np*sizeof(dfloat), z, SendBuffer, z + localNodes);
-
-  // grab EX,EY,EZ from halo
-  EX = (dfloat*) realloc(EX, (Nelements+totalHaloPairs)*Nverts*sizeof(dfloat));
-  EY = (dfloat*) realloc(EY, (Nelements+totalHaloPairs)*Nverts*sizeof(dfloat));
-  if(dim==3)
-    EZ = (dfloat*) realloc(EZ, (Nelements+totalHaloPairs)*Nverts*sizeof(dfloat));
-
-  // send halo data and recv into extended part of arrays
-  this->HaloExchange(Nverts*sizeof(dfloat), EX, SendBuffer, EX + Nverts*Nelements);
-  this->HaloExchange(Nverts*sizeof(dfloat), EY, SendBuffer, EY + Nverts*Nelements);
-  if(dim==3)
-    this->HaloExchange(Nverts*sizeof(dfloat), EZ, SendBuffer, EZ + Nverts*Nelements);
-
-  free(haloElements);
-  free(SendBuffer);
-
-  // fix this later
-  haloExtractKernel = device.buildKernel(LIBP_DIR "/okl/meshHaloExtract3D.okl",
-                                         "meshHaloExtract3D",
-                                         props);
-
+  free(globalElementId);
+  free(globalOffset);
 }

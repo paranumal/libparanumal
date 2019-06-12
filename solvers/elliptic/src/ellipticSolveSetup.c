@@ -33,11 +33,6 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   setupAide options = elliptic->options;
 
   //sanity checking
-  if (options.compareArgs("BASIS","BERN") && elliptic->elementType!=TRIANGLES) {
-    printf("ERROR: BERN basis is only available for triangular elements\n");
-    MPI_Finalize();
-    exit(-1);
-  }
   if (options.compareArgs("PRECONDITIONER","MASSMATRIX") && elliptic->elementType!=TRIANGLES
                                                          && elliptic->elementType!=TETRAHEDRA ) {
     printf("ERROR: MASSMATRIX preconditioner is only available for triangle and tetrhedra elements. Use JACOBI instead.\n");
@@ -216,16 +211,10 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
     }
   }
 
-
-  // !!!!!! Removed MPI::BOOL since some mpi versions complains about it !!!!!
   int lallNeumann, gallNeumann;
   lallNeumann = allNeumann ? 0:1;
   MPI_Allreduce(&lallNeumann, &gallNeumann, 1, MPI_INT, MPI_SUM, mesh->comm);
   elliptic->allNeumann = (gallNeumann>0) ? false: true;
-
-  // MPI_Allreduce(&allNeumann, &(elliptic->allNeumann), 1, MPI::BOOL, MPI_LAND, mesh->comm);
-  //  if (mesh->rank==0&& options.compareArgs("VERBOSE","TRUE"))
-    printf("allNeumann = %d \n", elliptic->allNeumann);
 
   //set surface mass matrix for continuous boundary conditions
   mesh->sMT = (dfloat *) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp,sizeof(dfloat));
@@ -243,12 +232,6 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   //copy boundary flags
   elliptic->o_EToB = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(int), elliptic->EToB);
 
-#if 0
-  if (mesh->rank==0 && options.compareArgs("VERBOSE","TRUE"))
-    occa::setVerboseCompilation(true);
-  else
-    occa::setVerboseCompilation(false);
-#endif
 
   //setup an unmasked gs handle
   int verbose = options.compareArgs("VERBOSE","TRUE") ? 1:0;

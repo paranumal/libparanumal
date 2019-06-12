@@ -29,9 +29,9 @@ SOFTWARE.
 
 void meshQuad3D::PhysicalNodes(){
 
-  x = (dfloat*) calloc(Nelements*Np,sizeof(dfloat));
-  y = (dfloat*) calloc(Nelements*Np,sizeof(dfloat));
-  z = (dfloat*) calloc(Nelements*Np,sizeof(dfloat));
+  x = (dfloat*) calloc((Nelements+totalHaloPairs)*Np,sizeof(dfloat));
+  y = (dfloat*) calloc((Nelements+totalHaloPairs)*Np,sizeof(dfloat));
+  z = (dfloat*) calloc((Nelements+totalHaloPairs)*Np,sizeof(dfloat));
 
   int cnt = 0;
   for(int e=0;e<Nelements;++e){ /* for each element */
@@ -62,22 +62,22 @@ void meshQuad3D::PhysicalNodes(){
 
       /* physical coordinate of interpolation node */
       dfloat xlin =
-	+0.25*(1-rn)*(1-sn)*xe1
-	+0.25*(1+rn)*(1-sn)*xe2
-	+0.25*(1+rn)*(1+sn)*xe3
-	+0.25*(1-rn)*(1+sn)*xe4;
+        +0.25*(1-rn)*(1-sn)*xe1
+        +0.25*(1+rn)*(1-sn)*xe2
+        +0.25*(1+rn)*(1+sn)*xe3
+        +0.25*(1-rn)*(1+sn)*xe4;
 
       dfloat ylin =
-	+0.25*(1-rn)*(1-sn)*ye1
-	+0.25*(1+rn)*(1-sn)*ye2
-	+0.25*(1+rn)*(1+sn)*ye3
-	+0.25*(1-rn)*(1+sn)*ye4;
+        +0.25*(1-rn)*(1-sn)*ye1
+        +0.25*(1+rn)*(1-sn)*ye2
+        +0.25*(1+rn)*(1+sn)*ye3
+        +0.25*(1-rn)*(1+sn)*ye4;
 
       dfloat zlin =
-	+0.25*(1-rn)*(1-sn)*ze1
-	+0.25*(1+rn)*(1-sn)*ze2
-	+0.25*(1+rn)*(1+sn)*ze3
-	+0.25*(1-rn)*(1+sn)*ze4;
+        +0.25*(1-rn)*(1-sn)*ze1
+        +0.25*(1+rn)*(1-sn)*ze2
+        +0.25*(1+rn)*(1+sn)*ze3
+        +0.25*(1-rn)*(1+sn)*ze4;
 
       //      printf("xlin=%g, ylin=%g, zlin=%g\n", xlin, ylin, zlin);
 
@@ -90,4 +90,18 @@ void meshQuad3D::PhysicalNodes(){
       ++cnt;
     }
   }
+
+  HaloExchange(x, Np, ogsDfloat);
+  HaloExchange(y, Np, ogsDfloat);
+  HaloExchange(z, Np, ogsDfloat);
+
+  // grab EX,EY,EZ from halo
+  EX = (dfloat*) realloc(EX, (Nelements+totalHaloPairs)*Nverts*sizeof(dfloat));
+  EY = (dfloat*) realloc(EY, (Nelements+totalHaloPairs)*Nverts*sizeof(dfloat));
+  EZ = (dfloat*) realloc(EZ, (Nelements+totalHaloPairs)*Nverts*sizeof(dfloat));
+
+  // send halo data and recv into extended part of arrays
+  HaloExchange(EX, Nverts, ogsDfloat);
+  HaloExchange(EY, Nverts, ogsDfloat);
+  HaloExchange(EZ, Nverts, ogsDfloat);
 }

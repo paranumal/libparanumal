@@ -183,9 +183,7 @@ void mesh_t::MRABWeightedPartition(dfloat *weights,
 
   if (totalHaloPairs) {
     MRABlevel = (int *) realloc(MRABlevel,(Nelements+totalHaloPairs)*sizeof(int));
-    int *MRABsendBuffer = (int *) calloc(totalHaloPairs,sizeof(int));
-    this->HaloExchange(sizeof(int), MRABlevel, MRABsendBuffer, MRABlevel+Nelements);
-    free(MRABsendBuffer);
+    HaloExchange(MRABlevel, 1, ogsInt);
   }
 
   free(acceptedPartition);

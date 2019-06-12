@@ -57,12 +57,12 @@ public:
 
   int elementType;
 
-  hlong Nnodes;
+  hlong Nnodes; //global number of element vertices
   dfloat *EX; // coordinates of vertices for each element
   dfloat *EY;
   dfloat *EZ;
 
-  dlong Nelements;
+  dlong Nelements; //local element count
   hlong *EToV; // element-to-vertex connectivity
   dlong *EToE; // element-to-element connectivity
   int   *EToF; // element-to-(local)face connectivity
@@ -76,40 +76,28 @@ public:
   hlong *boundaryInfo; // list of boundary faces (type, vertex-1, vertex-2, vertex-3)
 
   // MPI halo exchange info
-  dlong  totalHaloPairs;  // number of elements to be sent in halo exchange
-  dlong *haloElementList; // sorted list of elements to be sent in halo exchange
-  int *NhaloPairs;      // number of elements worth of data to send/recv
-  int  NhaloMessages;     // number of messages to send
-
-  dlong *haloGetNodeIds; // volume node ids of outgoing halo nodes
-  dlong *haloPutNodeIds; // volume node ids of incoming halo nodes
-
-  MPI_Request *haloSendRequests;
-  MPI_Request *haloRecvRequests;
-
-  MPI_Status *sendStatus;
-  MPI_Status *recvStatus;
-
-  dfloat *sendBuffer;
-  dfloat *recvBuffer;
-
-  occa::memory o_haloBuffer;
-  occa::memory o_sendBuffer;
-  occa::memory o_recvBuffer;
-  occa::memory h_sendBuffer;
-  occa::memory h_recvBuffer;
-
   dlong NinternalElements; // number of elements that can update without halo exchange
-  dlong NnotInternalElements; // number of elements that cannot update without halo exchange
+  dlong NhaloElements;     // number of elements that cannot update without halo exchange
+  ogs_t *ogsHalo;          // halo exchange ogs pointer
+  dlong  totalHaloPairs;   // number of elements to be received in halo exchange
+  dlong *internalElementIds;  // list of elements that can update without halo exchange
+  dlong *haloElementIds;      // list of elements to be sent in halo exchange
+  occa::memory o_internalElementIds;  // list of elements that can update without halo exchange
+  occa::memory o_haloElementIds;      // list of elements to be sent in halo exchange
 
-  dlong *internalElementIds;
-  dlong *notInternalElementIds;
+  //halo exchange scratch space
+  size_t haloBufferSize;
+  void *haloBuffer;
+  void *pinnedHaloBuffer;
+  occa::memory o_haloBuffer;
+  occa::memory h_haloBuffer;
 
   // CG gather-scatter info
+  ogs_t *ogs; //occa gs pointer
   hlong *globalIds;
   hlong *maskedGlobalIds;
   void *gsh, *hostGsh; // gslib struct pointer
-  ogs_t *ogs; //occa gs pointer
+
 
   // list of elements that are needed for global gather-scatter
   dlong NglobalGatherElements;
@@ -120,15 +108,6 @@ public:
   dlong NlocalGatherElements;
   dlong *localGatherElementList;
   occa::memory o_localGatherElementList;
-
-  //list of fair pairs
-  dlong NfacePairs;
-  dlong *EToFPairs;
-  dlong *FPairsToE;
-  int *FPairsToF;
-
-  // NBN: streams / command queues
-  // occa::stream stream0, stream1;
 
   // volumeGeometricFactors;
   dlong Nvgeo;
@@ -357,11 +336,8 @@ public:
   // dfloat *probeI;
 
   // occa stuff
-  // occa::stream defaultStream;
-  // occa::stream dataStream;
-  // occa::stream computeStream;
-
-  // occa::memory o_q, o_rhsq, o_resq, o_fQM, o_fQP;
+  occa::stream defaultStream;
+  occa::stream dataStream;
 
   occa::memory o_Dr, o_Ds, o_Dt, o_LIFT, o_MM;
   occa::memory o_DrT, o_DsT, o_DtT, o_LIFTT;
@@ -408,15 +384,6 @@ public:
   occa::memory *o_MRABpmlHaloElementIds;
   occa::memory *o_MRABpmlHaloIds;
 
-
-  // DG halo exchange info
-  occa::memory o_haloElementList;
-  occa::memory o_haloGetNodeIds;
-  occa::memory o_haloPutNodeIds;
-
-  occa::memory o_internalElementIds;
-  occa::memory o_notInternalElementIds;
-
   // Bernstein-Bezier occa arrays
   occa::memory o_BBMM;
   occa::memory o_D0ids, o_D1ids, o_D2ids, o_D3ids, o_Dvals; // Bernstein deriv matrix indices
@@ -446,48 +413,7 @@ public:
   occa::memory o_ggeo; // second order geometric factors
   occa::memory o_projectL2; // local weights for projection.
 
-  // occa::kernel volumeKernel;
-  // occa::kernel surfaceKernel;
-  // occa::kernel updateKernel;
-  // occa::kernel traceUpdateKernel;
   occa::kernel haloExtractKernel;
-  // occa::kernel partialSurfaceKernel;
-  // occa::kernel haloGetKernel;
-  // occa::kernel haloPutKernel;
-
-  // Just for test will be deleted after temporal testsAK
-  // occa::kernel RKupdateKernel;
-  // occa::kernel RKpmlUpdateKernel;
-
-
-  // occa::kernel gatherKernel;
-  // occa::kernel scatterKernel;
-  // occa::kernel gatherScatterKernel;
-
-  // occa::kernel getKernel;
-  // occa::kernel putKernel;
-
-  // occa::kernel sumKernel;
-  // occa::kernel addScalarKernel;
-
-  // occa::kernel AxKernel;
-  // occa::kernel innerProductKernel;
-  // occa::kernel weightedInnerProduct1Kernel;
-  // occa::kernel weightedInnerProduct2Kernel;
-  // occa::kernel scaledAddKernel;
-  // occa::kernel dotMultiplyKernel;
-  // occa::kernel dotDivideKernel;
-
-  // occa::kernel gradientKernel;
-  // occa::kernel ipdgKernel;
-
-  // occa::kernel maskKernel;
-
-  // // Boltzmann Specific Kernels
-  // occa::kernel relaxationKernel;
-  // occa::kernel pmlRelaxationKernel;
-
-  // unsigned int hash(const unsigned int value) ;
 
   mesh_t() = delete;
   mesh_t(occa::device& device, MPI_Comm& comm,
@@ -545,31 +471,13 @@ public:
 
   virtual void OccaSetup(occa::properties &kernelInfo);
 
-  /* extract whole elements for the halo exchange */
-  void HaloExtract(size_t Nbytes, void *sourceBuffer, void *haloBuffer);
+  void HaloExchange      (void  *v, const int Nentries, const char *type);
+  void HaloExchangeStart (void  *v, const int Nentries, const char *type);
+  void HaloExchangeFinish(void  *v, const int Nentries, const char *type);
 
-  void HaloExchange(size_t Nbytes,         // message size per element
-                    void *sourceBuffer,
-                    void *sendBuffer,    // temporary buffer
-                    void *recvBuffer);
-
-  void HaloExchangeStart(size_t Nbytes,       // message size per element
-                         void *sendBuffer,    // temporary buffer
-                         void *recvBuffer);
-
-  void HaloExchangeFinish();
-
-  void HaloExchangeStart(size_t Nentries,   // number of dfloat entries
-                         occa::memory& o_q,
-                         occa::stream& defaultStream);
-
-  void HaloExchangeInterm(size_t Nentries,   // number of dfloat entries
-                          occa::stream& defaultStream,
-                          occa::stream& dataStream);
-
-  void HaloExchangeFinish(size_t Nentries,
-                          occa::memory& o_q,
-                          size_t offset);
+  void HaloExchange      (occa::memory &o_v, const int Nentries, const char *type);
+  void HaloExchangeStart (occa::memory &o_v, const int Nentries, const char *type);
+  void HaloExchangeFinish(occa::memory &o_v, const int Nentries, const char *type);
 
   // print out parallel partition i
   void PrintPartitionStatistics();

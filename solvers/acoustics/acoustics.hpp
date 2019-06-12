@@ -56,9 +56,6 @@ public:
 
   occa::kernel initialConditionKernel;
 
-  occa::stream defaultStream;
-  occa::stream dataStream;
-
   acoustics_t() = delete;
   acoustics_t(mesh_t& _mesh);
 

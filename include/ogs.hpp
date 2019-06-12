@@ -81,7 +81,7 @@ SOFTWARE.
 
   A version for vectors (contiguously packed) is, e.g.,
 
-    occa::memory o_v[k];
+    occa::memory o_v;
     ogsGatherScatterVec(o_v,k, ogsDouble,ogsAdd, transpose, ogs);
 
   which is like "gs" operating on the datatype double[k],

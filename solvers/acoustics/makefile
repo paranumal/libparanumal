@@ -96,7 +96,7 @@ DEFINES =${LIBP_DEFINES} \
 ACOUSTICS_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
 
 #link libraries
-LIBS=-L${LIBP_LIBS_DIR} -logs -lmesh\
+LIBS=-L${LIBP_LIBS_DIR} -lmesh -logs\
      -L$(GS_DIR)/lib -lgs \
      -L${CORE_DIR} -lcore \
      -L${BLAS_DIR} -lBlasLapack \

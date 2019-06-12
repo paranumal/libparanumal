@@ -28,44 +28,32 @@ SOFTWARE.
 
 void mesh_t::OccaSetup(occa::properties &kernelInfo){
 
-  // find elements that have all neighbors on this process
-  internalElementIds = (dlong*) calloc(Nelements, sizeof(dlong));
-  notInternalElementIds = (dlong*) calloc(Nelements, sizeof(dlong));
+  if(NinternalElements)
+    o_internalElementIds    =
+      device.malloc(NinternalElements*sizeof(dlong), internalElementIds);
 
-  dlong Ninterior = 0, NnotInterior = 0;
-  for(dlong e=0;e<Nelements;++e){
-    int flag = 0;
-    for(int f=0;f<Nfaces;++f)
-      if(EToP[e*Nfaces+f]!=-1)
-        flag = 1;
-    if(!flag)
-      internalElementIds[Ninterior++] = e;
-    else
-      notInternalElementIds[NnotInterior++] = e;
-  }
+  if(NhaloElements)
+    o_haloElementIds = device.malloc(NhaloElements*sizeof(dlong), haloElementIds);
 
-  //printf("NinteriorElements = %d, NnotInternalElements = %d\n", Ninterior, NnotInterior);
+  if(NglobalGatherElements)
+    o_globalGatherElementList =
+      device.malloc(NglobalGatherElements*sizeof(dlong), globalGatherElementList);
 
-  NinternalElements = Ninterior;
-  NnotInternalElements = NnotInterior;
-  if(Ninterior)
-    o_internalElementIds    = device.malloc(Ninterior*sizeof(dlong), internalElementIds);
-
-  if(NnotInterior)
-    o_notInternalElementIds = device.malloc(NnotInterior*sizeof(dlong), notInternalElementIds);
+  if(NlocalGatherElements)
+    o_localGatherElementList =
+      device.malloc(NlocalGatherElements*sizeof(dlong), localGatherElementList);
 
   o_vmapM = device.malloc(Nelements*Nfp*Nfaces*sizeof(dlong), vmapM);
   o_vmapP = device.malloc(Nelements*Nfp*Nfaces*sizeof(dlong), vmapP);
 
   o_EToB = device.malloc(Nelements*Nfaces*sizeof(int), EToB);
 
-  if(totalHaloPairs){
-    // copy halo element list to DEVICE
-    o_haloElementList = device.malloc(totalHaloPairs*sizeof(dlong), haloElementList);
+  defaultStream = device.getStream();
+  dataStream    = device.createStream();
 
-    o_haloGetNodeIds = device.malloc(Nfp*totalHaloPairs*sizeof(dlong), haloGetNodeIds);
-    o_haloPutNodeIds = device.malloc(Nfp*totalHaloPairs*sizeof(dlong), haloPutNodeIds);
-  }
+  haloExtractKernel = device.buildKernel(LIBP_DIR "/libs/mesh/okl/meshHaloExtract.okl",
+                                         "meshHaloExtract",
+                                         kernelInfo);
 
   kernelInfo["defines/" "p_dim"]= dim;
   kernelInfo["defines/" "p_N"]= N;

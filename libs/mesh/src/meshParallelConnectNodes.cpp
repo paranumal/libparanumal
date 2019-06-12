@@ -26,13 +26,6 @@ SOFTWARE.
 
 #include "mesh.hpp"
 
-typedef struct{
-
-  int baseRank;
-  hlong baseId;
-
-}parallelNode_t;
-
 
 // uniquely label each node with a global index, used for gatherScatter
 void mesh_t::ParallelConnectNodes(){
@@ -51,32 +44,27 @@ void mesh_t::ParallelConnectNodes(){
   free(allLocalNodeCounts);
 
   // form continuous node numbering (local=>virtual gather)
-  parallelNode_t *localNodes =
-    (parallelNode_t*) calloc((totalHaloPairs+Nelements)*Np,
-                             sizeof(parallelNode_t));
+  int *baseRank = (int *) malloc((totalHaloPairs+Nelements)*Np*sizeof(int));
+  hlong *baseId = (hlong *) malloc((totalHaloPairs+Nelements)*Np*sizeof(hlong));
 
   // use local numbering
   for(dlong e=0;e<Nelements;++e){
     for(int n=0;n<Np;++n){
       dlong id = e*Np+n;
 
-      localNodes[id].baseRank = rank;
-      localNodes[id].baseId = 1 + id + Nnodes + gatherNodeStart;
-
+      baseRank[id] = rank;
+      baseId[id] = 1 + id + Nnodes + gatherNodeStart;
     }
 
     // use vertex ids for vertex nodes to reduce iterations
     for(int v=0;v<Nverts;++v){
       dlong id = e*Np + vertexNodes[v];
       hlong gid = EToV[e*Nverts+v] + 1;
-      localNodes[id].baseId = gid;
+      baseId[id] = gid;
     }
   }
 
   dlong localChange = 0, gatherChange = 1;
-
-  parallelNode_t *SendBuffer =
-    (parallelNode_t*) calloc(totalHaloPairs*Np, sizeof(parallelNode_t));
 
   // keep comparing numbers on positive and negative traces until convergence
   while(gatherChange>0){
@@ -85,8 +73,8 @@ void mesh_t::ParallelConnectNodes(){
     localChange = 0;
 
     // send halo data and recv into extension of buffer
-    this->HaloExchange(Np*sizeof(parallelNode_t),
-                     localNodes, SendBuffer, localNodes+localNodeCount);
+    HaloExchange(baseRank, Np, ogsInt);
+    HaloExchange(baseId, Np, ogsHlong);
 
     // compare trace nodes
     for(dlong e=0;e<Nelements;++e){
@@ -94,22 +82,22 @@ void mesh_t::ParallelConnectNodes(){
         dlong id  = e*Nfp*Nfaces + n;
         dlong idM = vmapM[id];
         dlong idP = vmapP[id];
-        hlong gidM = localNodes[idM].baseId;
-        hlong gidP = localNodes[idP].baseId;
+        hlong gidM = baseId[idM];
+        hlong gidP = baseId[idP];
 
-        int baseRankM = localNodes[idM].baseRank;
-        int baseRankP = localNodes[idP].baseRank;
+        int baseRankM = baseRank[idM];
+        int baseRankP = baseRank[idP];
 
         if(gidM<gidP || (gidP==gidM && baseRankM<baseRankP)){
           ++localChange;
-          localNodes[idP].baseRank    = localNodes[idM].baseRank;
-          localNodes[idP].baseId      = localNodes[idM].baseId;
+          baseRank[idP] = baseRank[idM];
+          baseId[idP]   = baseId[idM];
         }
 
         if(gidP<gidM || (gidP==gidM && baseRankP<baseRankM)){
           ++localChange;
-          localNodes[idM].baseRank    = localNodes[idP].baseRank;
-          localNodes[idM].baseId      = localNodes[idP].baseId;
+          baseRank[idM] = baseRank[idP];
+          baseId[idM]   = baseId[idP];
         }
       }
     }
@@ -121,9 +109,9 @@ void mesh_t::ParallelConnectNodes(){
   //make a locally-ordered version
   globalIds = (hlong*) calloc(localNodeCount, sizeof(hlong));
   for(dlong id=0;id<localNodeCount;++id){
-    globalIds[id] = localNodes[id].baseId;
+    globalIds[id] = baseId[id];
   }
 
-  free(localNodes);
-  free(SendBuffer);
+  free(baseRank);
+  free(baseId);
 }

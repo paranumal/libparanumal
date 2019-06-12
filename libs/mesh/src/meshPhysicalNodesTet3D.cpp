@@ -29,9 +29,9 @@ SOFTWARE.
 
 void meshTet3D::PhysicalNodes(){
 
-  x = (dfloat*) calloc(Nelements*Np,sizeof(dfloat));
-  y = (dfloat*) calloc(Nelements*Np,sizeof(dfloat));
-  z = (dfloat*) calloc(Nelements*Np,sizeof(dfloat));
+  x = (dfloat*) calloc((Nelements+totalHaloPairs)*Np,sizeof(dfloat));
+  y = (dfloat*) calloc((Nelements+totalHaloPairs)*Np,sizeof(dfloat));
+  z = (dfloat*) calloc((Nelements+totalHaloPairs)*Np,sizeof(dfloat));
 
   dlong cnt = 0;
   for(dlong e=0;e<Nelements;++e){ /* for each element */
@@ -67,4 +67,18 @@ void meshTet3D::PhysicalNodes(){
       ++cnt;
     }
   }
+
+  HaloExchange(x, Np, ogsDfloat);
+  HaloExchange(y, Np, ogsDfloat);
+  HaloExchange(z, Np, ogsDfloat);
+
+  // grab EX,EY,EZ from halo
+  EX = (dfloat*) realloc(EX, (Nelements+totalHaloPairs)*Nverts*sizeof(dfloat));
+  EY = (dfloat*) realloc(EY, (Nelements+totalHaloPairs)*Nverts*sizeof(dfloat));
+  EZ = (dfloat*) realloc(EZ, (Nelements+totalHaloPairs)*Nverts*sizeof(dfloat));
+
+  // send halo data and recv into extended part of arrays
+  HaloExchange(EX, Nverts, ogsDfloat);
+  HaloExchange(EY, Nverts, ogsDfloat);
+  HaloExchange(EZ, Nverts, ogsDfloat);
 }

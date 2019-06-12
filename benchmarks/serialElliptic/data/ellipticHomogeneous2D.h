@@ -25,16 +25,18 @@ SOFTWARE.
 */
 
 
-@kernel void meshHaloExtract3D(const dlong NhaloElements,
-			      const int Nentries,
-			      @restrict const  dlong   *  haloElements,
-			      @restrict const  dfloat *  q,
-			            @restrict dfloat *  haloq){
-
-  for(dlong e=0;e<NhaloElements;++e;@outer(0)){  // for all elements
-    for(int n=0;n<Nentries;++n;@inner(0)){     // for all entries in this element
-      const dlong id = haloElements[e];
-      haloq[n + Nentries*e] = q[n + Nentries*id];
-    }
+/* Homogeneous Dirichlet boundary condition   */
+#define ellipticDirichletCondition2D(t,x,y,nx,ny,uM,uxM,uyM,uB,uxB,uyB)  \
+  {              \
+    uB  = 0.f;   \
+    uxB = uxM;   \
+    uyB = uyM;   \
   }
-}
+
+/* Homogeneous Neumann boundary condition   */
+#define ellipticNeumannCondition2D(t,x,y,nx,ny,uM,uxM,uyM,uB,uxB,uyB)  \
+  {              \
+    uB  = uM;    \
+    uxB = 0.f;   \
+    uyB = 0.f;   \
+  }
