@@ -779,8 +779,8 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   }
 
   // this is potentially not good for Neumann (since it will )
-  ogsGatherScatter(ins->VmapB, ogsInt, ogsMin, mesh->ogs); // !!!!!!!!!!!!!!!!!
-  ogsGatherScatter(ins->PmapB, ogsInt, ogsMax, mesh->ogs); // !!!!!!!!!!!!!!!!!
+  ogsGatherScatter(ins->VmapB, ogsInt, ogsMin, mesh->ogs); 
+  ogsGatherScatter(ins->PmapB, ogsInt, ogsMax, mesh->ogs); 
 #if 1
   for (int n=0;n<mesh->Nelements*mesh->Np;n++) {
 
@@ -1207,6 +1207,17 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
  
   if(ins->options.compareArgs("FILTER STABILIZATION", "RELAXATION"))
   insFilterSetup(ins); 
+
+  // printf("%d %d\n", mesh->Nverts, mesh->Nelements);
+
+  // int cnt = 0;
+  // for(dlong e=0;e<mesh->Nelements;++e){
+  //   for(int f=0;f<mesh->Nfaces;++f){
+  //     printf("EToE(%d,%d) = %d \n", e,f, mesh->EToE[cnt]);
+      
+  //     ++cnt;
+  //   }
+  // }
   
   return ins;
 }

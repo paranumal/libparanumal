@@ -24,117 +24,59 @@ SOFTWARE.
 
 */
 
-/* wall 1, inflow 2, outflow 3 */
+// Initial conditions 
+#define insFlowField2D(t,x,y,u,v,p)   \
+  {                                   \
+    dfloat lambda = 0.5*1.0/p_nu - sqrt(1.0/(4.0*p_nu*p_nu) + 4.f*M_PI*M_PI); \
+    *(u) = 1.0 - exp(lambda*x)*cos(2.0*M_PI*y);\
+    *(v) = 0.5*lambda/M_PI*exp(lambda*x)*sin(2.0*M_PI*y);\
+    *(p) = 0.5*(1.0 - exp(2.0*lambda*x)); \
+  }   
 
-// Weakly Impose Nonlinear term BCs
-#define insAdvectionBoundaryConditions2D(bc, t, x, y, nx, ny, uM, vM, uB, vB) \
-  {	\
-    dfloat lambda = 1.f/(2.f * p_nu) - occaSqrt(1.f/(4.f*p_nu*p_nu) + 4.f*M_PI*M_PI);\
-    if(bc==1){								\
-      *(uB) = 0.f;							\
-      *(vB) = 0.f;							\
-    } else if(bc==2){							\
-      *(uB) = 1.f - exp(lambda*x)*cos(2.f*M_PI*y);   \
-      *(vB) =  lambda/(2.f*M_PI)*exp(lambda*x)*sin(2.f*M_PI*y);  	\
-    } else if(bc==3){							\
-      *(uB) = uM;							\
-      *(vB) = vM;							\
-    }									\
-  }
+// Boundary conditions
+// BC == 1 is already handled in the solver...  
+// Default u+ = u-, modify if it is different  
+#define insVelocityDirichletConditions2D(bc, t, x, y, nx, ny, uM, vM, uB, vB) \
+{                                                       \
+    dfloat lambda = 0.5*1.0/p_nu - sqrt(1.0/(4.0*p_nu*p_nu) + 4.0*M_PI*M_PI); \
+  if(bc==2){                                            \
+    *(uB) = 1.0 - exp(lambda*x)*cos(2.0*M_PI*y);\
+    *(vB) = 0.5*lambda/M_PI*exp(lambda*x)*sin(2.0*M_PI*y);\
+  }else if(bc==4){                  \
+    *(uB) = 0.0;                    \
+  } else if(bc==5){                 \
+    *(vB) = 0.0;                    \
+  }                                 \
+}
 
-#define insDivergenceBoundaryConditions2D(bc, t, x, y, nx, ny, uM, vM, uB, vB) \
-  {	\
-    dfloat lambda = 1.f/(2.f * p_nu) - occaSqrt(1.f/(4.f*p_nu*p_nu) + 4.f*M_PI*M_PI);\
-    if(bc==1){								\
-      *(uB)= 0.f;							\
-      *(vB)= 0.f;							\
-    } else if(bc==2){							\
-      *(uB) = 1.f - exp(lambda*x)*cos(2.f*M_PI*y);   		\
-      *(vB) = lambda/(2.f*M_PI)*exp(lambda*x)*sin(2.f*M_PI*y);\
-    } else if(bc==3){							\
-      *(uB) = uM;							\
-      *(vB) = vM;							\
-    }									\
-  }
+// default dudx = 0.0; modify only if you have a specific outflow bc 
+#define insVelocityNeumannConditions2D(bc, t, x, y, nx, ny, uxM, uyM, vxM, vyM, uxB, uyB, vxB, vyB) \
+{                                          \
+    dfloat lambda = 0.5*1.0/p_nu - sqrt(1.0/(4.0*p_nu*p_nu) + 4.0*M_PI*M_PI); \
+  if(bc==3){                               \
+    *(uxB) =-lambda*exp(lambda*x)*cos(2.0*M_PI*y);\
+    *(uyB) = 2.0*M_PI*exp(lambda*x)*sin(2.0*M_PI*y);\
+    *(vxB) = 0.5*lambda*lambda/M_PI*exp(lambda*x)*sin(2.0*M_PI*y);\
+    *(vyB) = lambda*exp(lambda*x)*cos(2.0*M_PI*y); \
+  }                                        \
+}
 
-// Gradient only applies to Pressure and Pressure Incremament
-// Boundary Conditions are implemented in strong form
-#define insGradientBoundaryConditions2D(bc,t,x,y,nx,ny,pM,pB)	\
-  {	\
-    dfloat lambda = 1.f/(2.f * p_nu) - occaSqrt(1.f/(4.f*p_nu*p_nu) + 4.f*M_PI*M_PI);\
-    if(bc==1){							\
-      *(pB) = pM;						\
-    } else if(bc==2){						\
-      *(pB) = pM;						\
-    } else if(bc==3){						\
-      *(pB) = 0.5f*(1.f- exp(2.f*lambda*x));\
-    }								\
-  }
-
-#define insHelmholtzBoundaryConditionsIpdg2D(bc, t, x, y, nx, ny, uB, uxB, uyB, vB, vxB, vyB) \
-  {	\
-    dfloat lambda = 1.f/(2.f*p_nu)-occaSqrt(1.f/(4.f*p_nu*p_nu) + 4.f*M_PI*M_PI);\
-    if((bc==1)||(bc==4)){						\
-      *(uB) = 0.f;							\
-      *(vB) = 0.f;							\
-									\
-      *(uxB) = 0.f;							\
-      *(uyB) = 0.f;							\
-      *(vxB) = 0.f;							\
-      *(vyB) = 0.f;							\
-    } else if(bc==2){							\
-									\
-      *(uB) = 1.f - exp(lambda*x)*cos(2.f*M_PI*y);   	\
-      *(vB) = lambda/(2.f*M_PI)*exp(lambda*x)*sin(2.f*M_PI*y);	\
-									\
-      *(uxB) = 0.f;							\
-      *(uyB) = 0.f;							\
-      *(vxB) = 0.f;							\
-      *(vyB) = 0.f;							\
-    } else if(bc==3){							\
-      *(uB) = 0.f;							\
-      *(vB) = 0.f;							\
-      *(uxB) = -lambda*exp(lambda*x)*cos(2.f*M_PI*y);\
-      *(uyB) = 2.f*M_PI*exp(lambda*x)*sin(2.f*M_PI*y); \
-      *(vxB) = lambda*lambda/(2.f*M_PI)*exp(lambda*x)*sin(2.f*M_PI*y);   \
-      *(vyB) = lambda*exp(lambda*x)*cos(2.f*M_PI*y);              \
-    }									\
-  }
+// default is pB = pM; modify only if you have a specific outflow bc
+#define insPressureDirichletConditions2D(bc, t, x, y, nx, ny, pM, pB) \
+{                                   \
+  dfloat lambda = 0.5*1.0/p_nu - sqrt(1.0/(4.0*p_nu*p_nu) + 4.0*M_PI*M_PI); \
+  if(bc==3){                        \
+    *(pB) = 0.5f*(1.f - exp(2.f*lambda*x)); \
+   } \
+}
 
 
-// Compute bcs for P increment: if c0 = 0 give Pr BCs, zero if time independent
-#define insPoissonBoundaryConditions2D(bc,t,dt,x,y,nx,ny,pB,pxB,pyB)	\
-  {	\
-    dfloat lambda = 1.f/(2.f * p_nu) - occaSqrt(1.f/(4.f*p_nu*p_nu) + 4.f*M_PI*M_PI);\
-    if((bc==1)||(bc==4)){						\
-      *(pB) = 0.f;							\
-									\
-      *(pxB) = 0.f;							\
-      *(pyB) = 0.f;							\
-    }									\
-    if(bc==2){								\
-      *(pB)  = 0.f;							\
-									\
-      *(pxB) =  0.f; \
-      *(pyB) =  0.f; \
-    }									\
-    if(bc==3){								\
-      *(pB) =  0.5f*(1.f- exp(2.f*lambda*x));\
-									\
-      *(pxB) = 0.f;							\
-      *(pyB) = 0.f;							\
-    }									\
-  }
+// default is dPdx = 0.0; I think we dont need that....  
+#define insPressureNeumannConditions2D(bc, t, x, y, nx, ny, pxM, pyM, pxB, pyB) \
+{                                          \
+  if(bc==3){                               \
+  }                                        \
+}
 
 
 
-// Compute bcs for P increment
-#define insPoissonNeumannTimeDerivative2D(bc,t,x,y,dpdt)  \
-  { \
-    if((bc==1)||(bc==4)||(bc==2) ){           \
-      *(dpdt) =0.f; \
-    }                 \
-    if(bc==3){                \
-      *(dpdt) = 0.0; \
-    }                 \
-  }

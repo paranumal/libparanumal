@@ -1,7 +1,7 @@
  res = DefineNumber[0.025];
  
- xn = DefineNumber[50];
- yn = DefineNumber[50];
+ xn = DefineNumber[5];
+ yn = DefineNumber[5];
   
  Point(1) = {-1.0, -1.0, 0, res};
  Point(2) = {-1.0, 1.0, 0, res};

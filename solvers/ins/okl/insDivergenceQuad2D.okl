@@ -23,7 +23,7 @@
   SOFTWARE.
 
 */
-#define STRONG  0
+#define STRONG 0
 
 #if STRONG==1
 // Compute Gradient in Strong Form
@@ -272,7 +272,8 @@
             for(int n=0;n<p_Nq;++n){
               const dfloat Dr = s_D[n][i];
               const dfloat Ds = s_D[n][j];
-              div += Dr*s_U[es][j][n]+Ds*s_V[es][n][i];
+              div += Dr*s_U[es][j][n]
+                    +Ds*s_V[es][n][i];
             }
 
             const dlong id = e*p_Np + j*p_Nq + i;

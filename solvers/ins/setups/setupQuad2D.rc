@@ -2,12 +2,29 @@
 1.0
 
 [DATA FILE]
-data/insVortex2D.h
+data/insKovasznay2D.h
+#data/insVortex2D.h
 
 [MESH FILE]
-#../../meshes/insVortexQuad2D.msh
-../../meshes/insVortexQuadStructured_0.msh
-#../../meshes/insVortexQuad2D.msh
+#../../meshes/insKovasznayCircleQuad2D.msh
+#../../meshes/insKovasznayCircleQuad2D_1.msh
+#../../meshes/insKovasznayCircleQuad2D_05.msh
+#../../meshes/insKovasznayCircleQuad2D_025.msh
+
+../../meshes/insKovasznayQuad2D.msh
+#../../meshes/insKovasznayQuad2D_A.msh
+
+#../../meshes/insVortexQuadStructured.msh
+#../../meshes/insVortexCircleQuad2D.msh
+#../../meshes/insVortexCircleQuad2D_1.msh
+#../../meshes/insVortexCircleQuad2D_05.msh
+#../../meshes/insVortexCircleQuad2D_025.msh
+
+## works, DNDN setup
+#../../meshes/insVortexQuadStructured_0.msh
+## works, DDNN setup
+#../../meshes/insVortexQuadStructured_1.msh
+
 
 [MESH DIMENSION]
 2
@@ -19,6 +36,7 @@ data/insVortex2D.h
 5
 
 [THREAD MODEL]
+#Serial
 CUDA
 
 [PLATFORM NUMBER]
@@ -33,13 +51,14 @@ CUDA
 #ARK2
 EXTBDF2
 
+
 [SUBCYCLING STEPS]
 0
 
 # can be CUBATURE or COLLOCATION
 [ADVECTION TYPE]
-CUBATURE
-#COLLOCATION
+#CUBATURE
+COLLOCATION
 
 #currently RELAXATION, 
 [FILTER STABILIZATION]
@@ -54,7 +73,8 @@ NONE
 0.9
 
 [VISCOSITY]
-0.01
+#0.01
+0.025
 
 [MACH NUMBER]
 .2
@@ -69,20 +89,21 @@ NONE
 0.0
 
 [TSTEPS FOR SOLUTION OUTPUT]
-10000
+100
 
 [START TIME]
 0
 
 [FINAL TIME]
-0.1
+#1.0E-2
+1.0E0
 
 [CFL]
 0.2
 
 # overwrites time step size
 [DT]
-1.0E-4
+1.0E-3
 
 [OUTPUT TYPE]
 VTU
@@ -91,7 +112,8 @@ VTU
 0
 
 [OUTPUT FILE NAME]
-fence
+#kovasznayC0
+kovasznayDG
 
 #################################################
 ########## Velocity Solver Options ##############
@@ -237,6 +259,7 @@ MAX
 # only smooth at bottom of cycle
 [PARALMOND SMOOTH COARSEST]
 FALSE
+#TRUE
 
 [PARALMOND SMOOTH COARSEST DEGREE]
 20
@@ -247,7 +270,8 @@ FALSE
 # compare to a reference solution. Use NONE to skip comparison
 # can be VORTEX or KOVASZNAY
 [EXACT]
-VORTEX
+#VORTEX
+KOVASZNAY
 
 [VERBOSE]
 FALSE

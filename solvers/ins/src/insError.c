@@ -131,6 +131,31 @@ void insError(ins_t *ins, dfloat time){
           #endif
         }
       }
+    } else if (ins->options.compareArgs("EXACT","KOVASZNAY")) { //2D Kovasznay flow
+
+      for(dlong e=0;e<mesh->Nelements;++e){
+        for(int n=0;n<mesh->Np;++n){
+          int id = n+e*mesh->Np;
+          dfloat x = mesh->x[id];
+          dfloat y = mesh->y[id];
+
+          dfloat lambda = 0.5f*1.0/ins->nu - sqrt(1.f/(4.0f*ins->nu*ins->nu) + 4.f*M_PI*M_PI);
+
+          dfloat uExact = 1.0 - exp(lambda*x)*cos(2.f*M_PI*y);
+          dfloat vExact = 0.5f*lambda/M_PI*exp(lambda*x)*sin(2.f*M_PI*y);
+          dfloat pExact = 0.5f*(1.f - exp(2.f*lambda*x));
+
+           // Store for L2 Norm of Error
+          uErr[id] = fabs(ins->U[id+0*offset]-uExact);
+          vErr[id] = fabs(ins->U[id+1*offset]-vExact);
+          pErr[id] = fabs(ins->P[id+0*offset]-pExact);
+          #if 1
+            ins->U[id+0*offset] = uErr[id];
+            ins->U[id+1*offset] = vErr[id];
+            ins->P[id]          = pErr[id];
+          #endif
+        }
+      }
     } else if (ins->options.compareArgs("EXACT","BELTRAMI")) { //3D Beltrami flow
       
       
