@@ -29,6 +29,8 @@ SOFTWARE.
 #include "mpi.h"
 #include <math.h>
 
+void matrixInverse(int N, dfloat *A);
+
 void readDfloatArray(FILE *fp, const char *label, dfloat **A, int *Nrows, int* Ncols);
 
 dfloat mygamma(dfloat x){
@@ -537,8 +539,63 @@ void meshInterpolationMatrixTri2D(int N,
 }
 
 
+// masMatrix = inv(V')*inv(V) = inv(V*V')
+void meshMassMatrix1D(int N, int Npoints, dfloat *r, dfloat **MM){
+
+  dfloat *V, *Vr;
+  int Np = meshVandermonde1D(N, Npoints, r, &V, &Vr);
+
+  *MM = (dfloat *) calloc(Np*Np, sizeof(dfloat));
+  
+  for(int n=0;n<Npoints;++n){
+    for(int m=0;m<Npoints;++m){
+      dfloat res = 0;
+      for(int i=0;i<Np;++i){
+	res += V[n*Np+i]*V[m*Np+i];
+      }
+      MM[0][n*Npoints + m] = res;
+    }
+  }
+  
+  matrixInverse(Np, MM[0]);
+
+  free(V);
+  free(Vr);
+}
+
+
+// masMatrix = inv(V')*inv(V) = inv(V*V')
+void meshMassMatrixTri2D(int N, int Npoints, dfloat *r, dfloat *s, dfloat **MM){
+
+  dfloat *V, *Vr, *Vs;
+  
+  int Np = meshVandermondeTri2D(N, Npoints, r, s, &V, &Vr, &Vs);
+
+  *MM = (dfloat *) calloc(Np*Np, sizeof(dfloat));
+  
+  for(int n=0;n<Npoints;++n){
+    for(int m=0;m<Npoints;++m){
+      dfloat res = 0;
+      for(int i=0;i<Np;++i){
+	res += V[n*Np+i]*V[m*Np+i];
+      }
+      MM[0][n*Npoints + m] = res;
+    }
+  }
+  
+  matrixInverse(Np, MM[0]);
+
+  free(V);
+  free(Vr);
+  free(Vs);
+}
+
+
+
+
 #if TEST_MESH_BASIS==1
-// mpic++ -o meshBasis meshBasis.c readArray.c -Ddfloat=double -llapack -lblas -lm -DDHOLMES='"../"' -DdfloatFormat='"%lf"' -DTEST_MESH_BASIS=1
+// mpic++ -I../libs/gatherScatter/ -I../../occa/include  -I../include -o meshBasis meshBasis.c matrixInverse.c readArray.c -Ddfloat=double -llapack -lblas -lm -DDHOLMES='"../"' -DdfloatFormat='"%lf"' -DTEST_MESH_BASIS=1 
+
 // to run with degree 2:
 // ./meshBasis 2
 int main(int argc, char **argv){
@@ -546,11 +603,12 @@ int main(int argc, char **argv){
   dfloat *r, *s, *t;
   dfloat *Dr, *Ds, *Dt;
   dfloat *Vr, *Vs, *Vt, *V;
+  dfloat *MM;
 
   dfloat *cubr, *cubs, *cubt;
   dfloat *cubInterp;
   
-  dfloat *fileDr, *fileDs, *fileDt, *fileCubInterp;
+  dfloat *fileDr, *fileDs, *fileDt, *fileCubInterp, *fileMM;
   
   int Nrows, Ncols;
 
@@ -576,17 +634,21 @@ int main(int argc, char **argv){
     printf("cubNp = %d\n", cubNp);
     
     readDfloatArray(fp, "Cubature Interpolation Matrix", &fileCubInterp,&cubNp,&Ncols);
+
+    readDfloatArray(fp, "Nodal Mass Matrix", &fileMM,&Np,&Ncols);
     
     fclose(fp);
     
     meshDmatricesTri2D(N, Np, r, s, &Dr, &Ds);
     meshVandermondeTri2D(N, Np, r, s, &V, &Vr, &Vs);
-
     meshInterpolationMatrixTri2D(N, Np, r, s, cubNp, cubr, cubs, &cubInterp);
+    meshMassMatrixTri2D(N, Np, r, s, &MM);
     
     matrixCompare(stdout, "TRI2D: |Dr-fileDr|", Np, Np, Dr, fileDr);
     matrixCompare(stdout, "TRI2D: |Ds-fileDs|", Np, Np, Ds, fileDs);
+    matrixCompare(stdout, "TRI2D: |MM-fileMM|", Np, Np, MM, fileMM);
     matrixCompare(stdout, "TRI2D: |cubInterp-fileCubInterp|", cubNp, Np, cubInterp, fileCubInterp);
+
 
     matrixPrint(stdout, "TRI2D: cubInterp", cubNp, Np, cubInterp);
     matrixPrint(stdout, "TRI2D: fileCubInterp", cubNp, Np, fileCubInterp);
