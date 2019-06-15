@@ -539,55 +539,23 @@ void meshInterpolationMatrixTri2D(int N,
 }
 
 
-// masMatrix = inv(V')*inv(V) = inv(V*V')
-void meshMassMatrix1D(int N, int Npoints, dfloat *r, dfloat **MM){
 
-  dfloat *V, *Vr;
-  int Np = meshVandermonde1D(N, Npoints, r, &V, &Vr);
+// masMatrix = inv(V')*inv(V) = inv(V*V')
+void meshMassMatrix(int Np, dfloat *V, dfloat **MM){
 
   *MM = (dfloat *) calloc(Np*Np, sizeof(dfloat));
   
-  for(int n=0;n<Npoints;++n){
-    for(int m=0;m<Npoints;++m){
+  for(int n=0;n<Np;++n){
+    for(int m=0;m<Np;++m){
       dfloat res = 0;
       for(int i=0;i<Np;++i){
 	res += V[n*Np+i]*V[m*Np+i];
       }
-      MM[0][n*Npoints + m] = res;
+      MM[0][n*Np + m] = res;
     }
   }
   
   matrixInverse(Np, MM[0]);
-
-  free(V);
-  free(Vr);
-}
-
-
-// masMatrix = inv(V')*inv(V) = inv(V*V')
-void meshMassMatrixTri2D(int N, int Npoints, dfloat *r, dfloat *s, dfloat **MM){
-
-  dfloat *V, *Vr, *Vs;
-  
-  int Np = meshVandermondeTri2D(N, Npoints, r, s, &V, &Vr, &Vs);
-
-  *MM = (dfloat *) calloc(Np*Np, sizeof(dfloat));
-  
-  for(int n=0;n<Npoints;++n){
-    for(int m=0;m<Npoints;++m){
-      dfloat res = 0;
-      for(int i=0;i<Np;++i){
-	res += V[n*Np+i]*V[m*Np+i];
-      }
-      MM[0][n*Npoints + m] = res;
-    }
-  }
-  
-  matrixInverse(Np, MM[0]);
-
-  free(V);
-  free(Vr);
-  free(Vs);
 }
 
 
@@ -627,22 +595,18 @@ int main(int argc, char **argv){
 
     readDfloatArray(fp, "Nodal Dr differentiation matrix", &(fileDr), &Np, &Ncols);
     readDfloatArray(fp, "Nodal Ds differentiation matrix", &(fileDs), &Np, &Ncols);
-
+    readDfloatArray(fp, "Nodal Mass Matrix", &fileMM,&Np,&Ncols);
+    
     readDfloatArray(fp, "Cubature r-coordinates", &cubr,&cubNp,&Ncols);
     readDfloatArray(fp, "Cubature s-coordinates", &cubs,&cubNp,&Ncols);
-
-    printf("cubNp = %d\n", cubNp);
-    
     readDfloatArray(fp, "Cubature Interpolation Matrix", &fileCubInterp,&cubNp,&Ncols);
-
-    readDfloatArray(fp, "Nodal Mass Matrix", &fileMM,&Np,&Ncols);
     
     fclose(fp);
     
     meshDmatricesTri2D(N, Np, r, s, &Dr, &Ds);
     meshVandermondeTri2D(N, Np, r, s, &V, &Vr, &Vs);
     meshInterpolationMatrixTri2D(N, Np, r, s, cubNp, cubr, cubs, &cubInterp);
-    meshMassMatrixTri2D(N, Np, r, s, &MM);
+    meshMassMatrix(Np, V, &MM);
     
     matrixCompare(stdout, "TRI2D: |Dr-fileDr|", Np, Np, Dr, fileDr);
     matrixCompare(stdout, "TRI2D: |Ds-fileDs|", Np, Np, Ds, fileDs);
@@ -673,7 +637,6 @@ int main(int argc, char **argv){
 
     matrixCompare(stdout, "QUAD2D: |Dr-fileDr|", Np, Np, Dr, fileDr);
     matrixCompare(stdout, "QUAD2D: |Ds-fileDs|", Np, Np, Ds, fileDs);
-    
   }
 
   
@@ -689,12 +652,15 @@ int main(int argc, char **argv){
     readDfloatArray(fp, "Nodal Dr differentiation matrix", &(fileDr), &Np, &Ncols);
     readDfloatArray(fp, "Nodal Ds differentiation matrix", &(fileDs), &Np, &Ncols);
     readDfloatArray(fp, "Nodal Dt differentiation matrix", &(fileDt), &Np, &Ncols);
+    readDfloatArray(fp, "Nodal Mass Matrix", &fileMM,&Np,&Ncols);
     
     fclose(fp);
     
     meshDmatricesTet3D(N, Np, r, s, t, &Dr, &Ds, &Dt);
     meshVandermondeTet3D(N, Np, r, s, t, &V, &Vr, &Vs, &Vt);
-    
+    meshMassMatrix(Np, V, &MM);
+
+    matrixCompare(stdout, "TET3D: |MM-fileMM|", Np, Np, MM, fileMM);
     matrixCompare(stdout, "TET3D: |Dr-fileDr|", Np, Np, Dr, fileDr);
     matrixCompare(stdout, "TET3D: |Ds-fileDs|", Np, Np, Ds, fileDs);
     matrixCompare(stdout, "TET3D: |Dt-fileDt|", Np, Np, Dt, fileDt);
