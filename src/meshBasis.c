@@ -625,8 +625,85 @@ void meshLiftMatrixTri2D(int N, int Np, int *faceNodes, dfloat *r, dfloat *s, df
   
   free(Emat);
   free(faceR);
+  free(V);
+  free(Vr);
+  free(Vs);
 }
 
+void meshLiftMatrixTet3D(int N, int Np, int *faceNodes, dfloat *r, dfloat *s, dfloat *t, dfloat **LIFT){
+
+
+  dfloat *V, *Vr, *Vs, *Vt, *MMf, *Vf, *Vrf, *Vsf;
+  int Nfp = (N+1)*(N+2)/2;
+  int Nfaces = 4;
+
+  dfloat *Emat = (dfloat*) calloc(Np*Nfaces*Nfp, sizeof(dfloat));
+  dfloat *faceR = (dfloat*) calloc(Nfp, sizeof(dfloat));
+  dfloat *faceS = (dfloat*) calloc(Nfp, sizeof(dfloat));
+
+  meshVandermondeTet3D(N, Np, r, s, t, &V, &Vr, &Vs, &Vt);
+  
+  for(int f=0;f<Nfaces;++f){
+
+    for(int n=0;n<Nfp;++n){
+      if(f==0){ faceR[n] = r[faceNodes[n + 0*Nfp]]; faceS[n] = s[faceNodes[n + 0*Nfp]];}
+      if(f==1){ faceR[n] = r[faceNodes[n + 1*Nfp]]; faceS[n] = t[faceNodes[n + 1*Nfp]];}
+      if(f==2){ faceR[n] = s[faceNodes[n + 2*Nfp]]; faceS[n] = t[faceNodes[n + 2*Nfp]];}
+      if(f==3){ faceR[n] = s[faceNodes[n + 3*Nfp]]; faceS[n] = t[faceNodes[n + 3*Nfp]];}
+    }
+
+    // compute mass matrix for nodes on face
+    meshVandermondeTri2D(N, Nfp, faceR, faceS, &Vf, &Vrf, &Vsf);
+    meshMassMatrix(Nfp, Vf, &MMf);
+
+    for(int n=0;n<Nfp;++n){
+      for(int m=0;m<Nfp;++m){
+	int id = faceNodes[n+f*Nfp];
+	Emat[id*Nfaces*Nfp + m + f*Nfp] = MMf[n*Nfp+m];
+      }
+    }
+    
+    free(Vf);
+    free(Vrf);
+    free(Vsf);
+    free(MMf);
+  }
+  
+  
+  // inv(mass matrix)*\I_n (L_i,L_j)_{edge_n}
+  *LIFT = (dfloat*) calloc(Np*Nfaces*Nfp, sizeof(dfloat));
+  dfloat *tmp = (dfloat*) calloc(Np*Nfaces*Nfp, sizeof(dfloat));
+
+  //  LIFT = V*(V'*Emat);
+
+  for(int n=0;n<Np;++n){
+    for(int m=0;m<Nfp*Nfaces;++m){
+      dfloat res = 0;
+      for(int i=0;i<Np;++i){
+	res += V[i*Np+n]*Emat[i*Nfaces*Nfp+m];
+      }
+      tmp[n*Nfaces*Nfp+m] = res;
+    }
+  }
+
+  for(int n=0;n<Np;++n){
+    for(int m=0;m<Nfp*Nfaces;++m){
+      dfloat res = 0;
+      for(int i=0;i<Np;++i){
+	res += V[n*Np+i]*tmp[i*Nfaces*Nfp+m];
+      }
+      LIFT[0][n*Nfaces*Nfp+m] = res;
+    }
+  }
+  
+  free(Emat);
+  free(faceR);
+  free(faceS);
+  free(V);
+  free(Vr);
+  free(Vs);
+  free(Vt);
+}
 
 
 
@@ -667,6 +744,7 @@ int main(int argc, char **argv){
     
     readDfloatArray(fp, "Nodal r-coordinates", &r,&Np,&Ncols);
     readDfloatArray(fp, "Nodal s-coordinates", &s,&Np,&Ncols);
+
     readIntArray(fp, "Nodal Face nodes", &faceNodes,&Nrows,&Ncols);
     
     readDfloatArray(fp, "Nodal Dr differentiation matrix", &(fileDr), &Np, &Ncols);
@@ -722,26 +800,37 @@ int main(int argc, char **argv){
     sprintf(fname, DHOLMES "/nodes/tetN%02d.dat", N);
     
     FILE *fp = fopen(fname, "r");
+
+    Nfaces = 3;
+    Nfp = (N+1)*(N+2)/2;
     
     readDfloatArray(fp, "Nodal r-coordinates", &r,&Np,&Ncols);
     readDfloatArray(fp, "Nodal s-coordinates", &s,&Np,&Ncols);
     readDfloatArray(fp, "Nodal t-coordinates", &t,&Np,&Ncols);
 
+    readIntArray(fp, "Nodal Face nodes", &faceNodes,&Nrows,&Ncols);
+    
     readDfloatArray(fp, "Nodal Dr differentiation matrix", &(fileDr), &Np, &Ncols);
     readDfloatArray(fp, "Nodal Ds differentiation matrix", &(fileDs), &Np, &Ncols);
     readDfloatArray(fp, "Nodal Dt differentiation matrix", &(fileDt), &Np, &Ncols);
     readDfloatArray(fp, "Nodal Mass Matrix", &fileMM,&Np,&Ncols);
+
+    readDfloatArray(fp, "Nodal Lift Matrix", &fileLIFT,&Np,&Ncols);
     
     fclose(fp);
     
     meshDmatricesTet3D(N, Np, r, s, t, &Dr, &Ds, &Dt);
     meshVandermondeTet3D(N, Np, r, s, t, &V, &Vr, &Vs, &Vt);
     meshMassMatrix(Np, V, &MM);
-
+    meshLiftMatrixTet3D(N, Np, faceNodes, r, s, t, &LIFT);
+    
     matrixCompare(stdout, "TET3D: |MM-fileMM|", Np, Np, MM, fileMM);
     matrixCompare(stdout, "TET3D: |Dr-fileDr|", Np, Np, Dr, fileDr);
     matrixCompare(stdout, "TET3D: |Ds-fileDs|", Np, Np, Ds, fileDs);
     matrixCompare(stdout, "TET3D: |Dt-fileDt|", Np, Np, Dt, fileDt);
+
+    matrixCompare(stdout, "TET3D: |LIFT-fileLIFT|", Np, Nfaces*Nfp, LIFT, fileLIFT);
+    
   }
 
   if(0){ // HEX TEST [ does not have Dr,Ds,Dt in node files ]
