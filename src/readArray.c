@@ -26,7 +26,8 @@ SOFTWARE.
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "mesh.h"
+#include <string.h>
+//#include "mesh.h"
 
 void readDfloatArray(FILE *fp, const char *label, dfloat **A, int *Nrows, int* Ncols){
 
