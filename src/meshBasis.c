@@ -32,6 +32,7 @@ SOFTWARE.
 void matrixInverse(int N, dfloat *A);
 
 void readDfloatArray(FILE *fp, const char *label, dfloat **A, int *Nrows, int* Ncols);
+void readIntArray(FILE *fp, const char *label, int **A, int *Nrows, int* Ncols);
 
 dfloat mygamma(dfloat x){
 
@@ -398,7 +399,7 @@ void matrixRightSolve(int NrowsA, int NcolsA, dfloat *A, int NrowsB, int NcolsB,
 }
 
 void matrixPrint(FILE *fp, const char *mess, int Nrows, int Ncols, dfloat *A){
-#if 0
+#if 1
   fprintf(fp, "%s=[\n", mess);
   for(int n=0;n<Nrows;++n){
     for(int m=0;m<Ncols;++m){
@@ -559,6 +560,74 @@ void meshMassMatrix(int Np, dfloat *V, dfloat **MM){
 }
 
 
+void meshLiftMatrixTri2D(int N, int Np, int *faceNodes, dfloat *r, dfloat *s, dfloat **LIFT){
+
+
+  dfloat *V, *Vr, *Vs, *MMf, *Vf, *Vrf;
+  int Nfp = N+1;
+  int Nfaces = 3;
+
+  dfloat *Emat = (dfloat*) calloc(Np*Nfaces*Nfp, sizeof(dfloat));
+  dfloat *faceR = (dfloat*) calloc(Nfp, sizeof(dfloat));
+
+  meshVandermondeTri2D(N, Np, r, s, &V, &Vr, &Vs);
+  
+  for(int f=0;f<Nfaces;++f){
+
+    for(int n=0;n<Nfp;++n){
+      if(f==0) faceR[n] = r[faceNodes[n + 0*Nfp]];
+      if(f==1) faceR[n] = r[faceNodes[n + 1*Nfp]];
+      if(f==2) faceR[n] = s[faceNodes[n + 2*Nfp]];
+    }
+
+    // compute mass matrix for nodes on face
+    meshVandermonde1D(N, Nfp, faceR, &Vf, &Vrf);
+    meshMassMatrix(Nfp, Vf, &MMf);
+
+    for(int n=0;n<Nfp;++n){
+      for(int m=0;m<Nfp;++m){
+	int id = faceNodes[n+f*Nfp];
+	Emat[id*Nfaces*Nfp + m + f*Nfp] = MMf[n*Nfp+m];
+      }
+    }
+    
+    free(Vf);
+    free(Vrf);
+    free(MMf);
+  }
+  
+  
+  // inv(mass matrix)*\I_n (L_i,L_j)_{edge_n}
+  *LIFT = (dfloat*) calloc(Np*Nfaces*Nfp, sizeof(dfloat));
+  dfloat *tmp = (dfloat*) calloc(Np*Nfaces*Nfp, sizeof(dfloat));
+
+  //  LIFT = V*(V'*Emat);
+
+  for(int n=0;n<Np;++n){
+    for(int m=0;m<Nfp*Nfaces;++m){
+      dfloat res = 0;
+      for(int i=0;i<Np;++i){
+	res += V[i*Np+n]*Emat[i*Nfaces*Nfp+m];
+      }
+      tmp[n*Nfaces*Nfp+m] = res;
+    }
+  }
+
+  for(int n=0;n<Np;++n){
+    for(int m=0;m<Nfp*Nfaces;++m){
+      dfloat res = 0;
+      for(int i=0;i<Np;++i){
+	res += V[n*Np+i]*tmp[i*Nfaces*Nfp+m];
+      }
+      LIFT[0][n*Nfaces*Nfp+m] = res;
+    }
+  }
+  
+  free(Emat);
+  free(faceR);
+}
+
+
 
 
 #if TEST_MESH_BASIS==1
@@ -568,34 +637,43 @@ void meshMassMatrix(int Np, dfloat *V, dfloat **MM){
 // ./meshBasis 2
 int main(int argc, char **argv){
 
+  int *faceNodes;
+  
   dfloat *r, *s, *t;
   dfloat *Dr, *Ds, *Dt;
   dfloat *Vr, *Vs, *Vt, *V;
-  dfloat *MM;
+  dfloat *MM, *LIFT;
 
   dfloat *cubr, *cubs, *cubt;
   dfloat *cubInterp;
   
-  dfloat *fileDr, *fileDs, *fileDt, *fileCubInterp, *fileMM;
+  dfloat *fileDr, *fileDs, *fileDt, *fileCubInterp, *fileMM, *fileLIFT;
   
   int Nrows, Ncols;
 
   int N = atoi(argv[1]);
   int cubNp, Np;
-
+  int Nfaces, Nfp;
+  
   char fname[BUFSIZ];
 
   { // TRIANGLE TEST
     sprintf(fname, DHOLMES "/nodes/triangleN%02d.dat", N);
     
     FILE *fp = fopen(fname, "r");
+
+    Nfaces = 3;
+    Nfp = N+1;
     
     readDfloatArray(fp, "Nodal r-coordinates", &r,&Np,&Ncols);
     readDfloatArray(fp, "Nodal s-coordinates", &s,&Np,&Ncols);
-
+    readIntArray(fp, "Nodal Face nodes", &faceNodes,&Nrows,&Ncols);
+    
     readDfloatArray(fp, "Nodal Dr differentiation matrix", &(fileDr), &Np, &Ncols);
     readDfloatArray(fp, "Nodal Ds differentiation matrix", &(fileDs), &Np, &Ncols);
     readDfloatArray(fp, "Nodal Mass Matrix", &fileMM,&Np,&Ncols);
+
+    readDfloatArray(fp, "Nodal Lift Matrix", &fileLIFT,&Np,&Ncols);
     
     readDfloatArray(fp, "Cubature r-coordinates", &cubr,&cubNp,&Ncols);
     readDfloatArray(fp, "Cubature s-coordinates", &cubs,&cubNp,&Ncols);
@@ -607,16 +685,16 @@ int main(int argc, char **argv){
     meshVandermondeTri2D(N, Np, r, s, &V, &Vr, &Vs);
     meshInterpolationMatrixTri2D(N, Np, r, s, cubNp, cubr, cubs, &cubInterp);
     meshMassMatrix(Np, V, &MM);
+
+    meshLiftMatrixTri2D(N, Np, faceNodes, r, s, &LIFT);
     
     matrixCompare(stdout, "TRI2D: |Dr-fileDr|", Np, Np, Dr, fileDr);
     matrixCompare(stdout, "TRI2D: |Ds-fileDs|", Np, Np, Ds, fileDs);
     matrixCompare(stdout, "TRI2D: |MM-fileMM|", Np, Np, MM, fileMM);
+
+    matrixCompare(stdout, "TRI2D: |LIFT-fileLIFT|", Np, Nfaces*Nfp, LIFT, fileLIFT);
     matrixCompare(stdout, "TRI2D: |cubInterp-fileCubInterp|", cubNp, Np, cubInterp, fileCubInterp);
 
-
-    matrixPrint(stdout, "TRI2D: cubInterp", cubNp, Np, cubInterp);
-    matrixPrint(stdout, "TRI2D: fileCubInterp", cubNp, Np, fileCubInterp);
-    
   }
 
   { // QUAD TEST
