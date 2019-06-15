@@ -29,7 +29,15 @@ SOFTWARE.
 #include "mpi.h"
 #include <math.h>
 
+extern "C"
+{
+  void dgesv_ (int *NrowsA, int *NcolsA, double *A, int *LDA, int *ipiv,  double *B, int *LDB, int *info);
+  void dgeev_ (char *JOBVL, char *JOBVR, int *N, double *A, int *LDA, double *WR, double *WI, double *VL, int *LDVL, double *VR, int *LDVR, double *WORK, int *LWORK, int *INFO );
+}
+
+
 void matrixInverse(int N, dfloat *A);
+void matrixEig(int N, dfloat *A, dfloat *VR, dfloat *WR, dfloat *WI);
 
 void readDfloatArray(FILE *fp, const char *label, dfloat **A, int *Nrows, int* Ncols);
 void readIntArray(FILE *fp, const char *label, int **A, int *Nrows, int* Ncols);
@@ -40,6 +48,98 @@ dfloat mygamma(dfloat x){
   dfloat gam  = signgam*exp(lgam);
   return gam;
 }
+
+int meshJacobiGQ(dfloat alpha, dfloat beta, int N, dfloat **x, dfloat **w){
+
+  // function NGQ = JacobiGQ(alpha,beta,N, x, w)
+  // Purpose: Compute the N'th order Gauss quadrature points, x, 
+  //          and weights, w, associated with the Jacobi 
+  //          polynomial, of type (alpha,beta) > -1 ( <> -0.5).
+
+  *x = (dfloat*) calloc(N+1, sizeof(dfloat));
+  *w = (dfloat*) calloc(N+1, sizeof(dfloat));
+  
+  if (N==0){
+    x[0][0] = (alpha-beta)/(alpha+beta+2);
+    w[0][0] = 2;
+    return N+1;
+  }
+
+  // Form symmetric matrix from recurrence.
+  dfloat *J = (dfloat*) calloc((N+1)*(N+1), sizeof(dfloat));
+  dfloat *h1 = (dfloat*) calloc(N+1, sizeof(dfloat));
+  
+  for(int n=0;n<=N;++n){
+    h1[n] = 2*n+alpha+beta;
+  }
+
+  // J = J + J';
+  for(int n=0;n<=N;++n){
+    // J = diag(-1/2*(alpha^2-beta^2)./(h1+2)./h1) + ...
+    J[n*(N+1)+n]+= -0.5*(alpha*alpha-beta*beta)/((h1[n]+2)*h1[n])*2; // *2 for symm
+    
+    //    diag(2./(h1(1:N)+2).*sqrt((1:N).*((1:N)+alpha+beta).*((1:N)+alpha).*((1:N)+beta)./(h1(1:N)+1)./(h1(1:N)+3)),1);
+    if(n<N){
+      J[n*(N+1)+n+1]   += (2./(h1[n]+2.))*sqrt((n+1)*(n+1+alpha+beta)*(n+1+alpha)*(n+1+beta)/((h1[n]+1)*(h1[n]+3)));
+      J[(n+1)*(N+1)+n] += (2./(h1[n]+2.))*sqrt((n+1)*(n+1+alpha+beta)*(n+1+alpha)*(n+1+beta)/((h1[n]+1)*(h1[n]+3)));
+    }
+  }
+
+  dfloat eps = 1;
+  while(1+eps>1){
+    eps = eps/2.;
+  }
+  printf("MACHINE PRECISION %e\n", eps);
+  
+  if (alpha+beta<10*eps) J[0] = 0;
+
+  // Compute quadrature by eigenvalue solve
+
+  //  [V,D] = eig(J); 
+  dfloat *WR = (dfloat*) calloc(N+1, sizeof(dfloat));
+  dfloat *WI = (dfloat*) calloc(N+1, sizeof(dfloat));
+  dfloat *VR = (dfloat*) calloc((N+1)*(N+1), sizeof(dfloat));
+
+  // x = diag(D);
+  matrixEig(N+1, J, VR, *x, WI);
+
+  
+  //w = (V(1,:)').^2*2^(alpha+beta+1)/(alpha+beta+1)*gamma(alpha+1)*.gamma(beta+1)/gamma(alpha+beta+1);
+
+  for(int n=0;n<=N;++n){
+    w[0][n] = pow(VR[n*(N+1)+0],2)*(pow(2,alpha+beta+1)/(alpha+beta+1))*mygamma(alpha+1)*mygamma(beta+1)/mygamma(alpha+beta+1);
+  }
+
+  free(WR);
+  free(WI);
+  free(VR);
+  
+  return N+1;
+}
+
+int meshJacobiGL(dfloat alpha, dfloat beta, int N, dfloat **x){
+
+  *x = (dfloat*) calloc(N+1, sizeof(dfloat));
+
+  x[0][0] = -1.;
+  x[0][N] =  1.;
+  
+  if(N>1){
+    dfloat *wtmp, *xtmp;
+    meshJacobiGQ(alpha+1,beta+1, N-2, &xtmp, &wtmp);
+    
+    for(int n=1;n<N;++n){
+      x[0][n] = xtmp[n-1];
+    }
+    
+    free(xtmp);
+    free(wtmp);
+  }
+  
+  return N+1;
+}
+
+
 
 dfloat meshJacobiP(dfloat a, dfloat alpha, dfloat beta, int N){
   
@@ -349,10 +449,6 @@ int meshVandermondeHex3D(int N, int Npoints, dfloat *r, dfloat *s, dfloat *t, df
   return Np;
 }
 
-extern "C"
-{
-  void dgesv_ (int *NrowsA, int *NcolsA, double *A, int *LDA, int *ipiv,  double *B, int *LDB, int *info);
-}
 
 // C = A/B  = trans(trans(B)\trans(A))
 // assume row major
@@ -396,6 +492,45 @@ void matrixRightSolve(int NrowsA, int NcolsA, dfloat *A, int NrowsB, int NcolsB,
   free(ipiv);
   free(tmpX);
   free(tmpY);
+}
+
+
+
+// compute right eigenvectors
+void matrixEig(int N, dfloat *A, dfloat *VR, dfloat *WR, dfloat *WI){
+
+  char JOBVL = 'N';
+  char JOBVR = 'V';
+  int LDA = N;
+  int LDVL = N;
+  int LDVR = N;
+  int LWORK = 8*N;
+
+  double *tmpA  = (double*) calloc(N*N,sizeof(double));
+  double *tmpWR = (double*) calloc(N,sizeof(double));
+  double *tmpWI = (double*) calloc(N,sizeof(double));
+  double *tmpVR = (double*) calloc(N*N,sizeof(double));
+  double *tmpVL = NULL;
+  double *WORK  = (double*) calloc(LWORK,sizeof(double));
+
+  int info;
+
+  for(int n=0;n<N;++n){
+    for(int m=0;m<N;++m){
+      tmpA[n+m*N] = A[n*N+m];
+    }
+  }
+  
+  dgeev_ (&JOBVL, &JOBVR, &N, tmpA, &LDA, tmpWR, tmpWI, tmpVL, &LDVL, tmpVR, &LDVR, WORK, &LWORK, &info);
+
+  for(int n=0;n<N;++n){
+    WR[n] = tmpWR[n];
+    WI[n] = tmpWI[n];
+    for(int m=0;m<N;++m){
+      VR[n+m*N] = tmpVR[n*N+m];
+    }
+  }
+  
 }
 
 void matrixPrint(FILE *fp, const char *mess, int Nrows, int Ncols, dfloat *A){
@@ -734,6 +869,14 @@ int main(int argc, char **argv){
   
   char fname[BUFSIZ];
 
+  { // 1D interval test
+    dfloat *x;
+    meshJacobiGL(0,0,N, &x);
+    for(int n=0;n<=N;++n){
+      printf("xgll[%d] = % e\n", n, x[n]);
+    }
+  }
+  
   { // TRIANGLE TEST
     sprintf(fname, DHOLMES "/nodes/triangleN%02d.dat", N);
     
