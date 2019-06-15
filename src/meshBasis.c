@@ -110,7 +110,7 @@ int meshJacobiGQ(dfloat alpha, dfloat beta, int N, dfloat **x, dfloat **w){
   //w = (V(1,:)').^2*2^(alpha+beta+1)/(alpha+beta+1)*gamma(alpha+1)*.gamma(beta+1)/gamma(alpha+beta+1);
 
   for(int n=0;n<=N;++n){
-    w[0][n] = pow(VR[n*(N+1)+0],2)*(pow(2,alpha+beta+1)/(alpha+beta+1))*mygamma(alpha+1)*mygamma(beta+1)/mygamma(alpha+beta+1);
+    w[0][n] = pow(VR[0*(N+1)+n],2)*(pow(2,alpha+beta+1)/(alpha+beta+1))*mygamma(alpha+1)*mygamma(beta+1)/mygamma(alpha+beta+1);
   }
 
   // sloppy sort
