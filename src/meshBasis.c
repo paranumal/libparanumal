@@ -110,6 +110,21 @@ int meshJacobiGQ(dfloat alpha, dfloat beta, int N, dfloat **x, dfloat **w){
     w[0][n] = pow(VR[n*(N+1)+0],2)*(pow(2,alpha+beta+1)/(alpha+beta+1))*mygamma(alpha+1)*mygamma(beta+1)/mygamma(alpha+beta+1);
   }
 
+  // sloppy sort
+
+  for(int n=0;n<=N;++n){
+    for(int m=n+1;m<=N;++m){
+      if(x[0][n]>x[0][m]){
+	dfloat tmpx = x[0][m];
+	dfloat tmpw = w[0][m];
+	x[0][m] = x[0][n];
+	w[0][m] = w[0][n];
+	x[0][n] = tmpx;
+	w[0][n] = tmpw;
+      }
+    }
+  }
+  
   free(WR);
   free(WI);
   free(VR);
@@ -870,11 +885,12 @@ int main(int argc, char **argv){
   char fname[BUFSIZ];
 
   { // 1D interval test
-    dfloat *x;
-    meshJacobiGL(0,0,N, &x);
-    for(int n=0;n<=N;++n){
-      printf("xgll[%d] = % e\n", n, x[n]);
-    }
+    dfloat *xgll, *xgl, *wgl;
+    meshJacobiGQ(0,0,N, &xgl, &wgl);
+    meshJacobiGL(0,0,N, &xgll);
+    for(int n=0;n<=N;++n)  printf("xgll[%d] = % e\n", n, xgll[n]);
+    for(int n=0;n<=N;++n)  printf("xgl[%d] = % e, wgl[%d] = % e \n", n, xgl[n], n, wgl[n]);
+    
   }
   
   { // TRIANGLE TEST
