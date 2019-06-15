@@ -42,6 +42,9 @@ void matrixEig(int N, dfloat *A, dfloat *VR, dfloat *WR, dfloat *WI);
 void readDfloatArray(FILE *fp, const char *label, dfloat **A, int *Nrows, int* Ncols);
 void readIntArray(FILE *fp, const char *label, int **A, int *Nrows, int* Ncols);
 
+void meshMassMatrix(int Np, dfloat *V, dfloat **MM);
+int meshVandermonde1D(int N, int Npoints, dfloat *r, dfloat **V, dfloat **Vr);
+
 dfloat mygamma(dfloat x){
 
   dfloat lgam = lgamma(x);
@@ -132,9 +135,10 @@ int meshJacobiGQ(dfloat alpha, dfloat beta, int N, dfloat **x, dfloat **w){
   return N+1;
 }
 
-int meshJacobiGL(dfloat alpha, dfloat beta, int N, dfloat **x){
+int meshJacobiGL(dfloat alpha, dfloat beta, int N, dfloat **x, dfloat **w){
 
   *x = (dfloat*) calloc(N+1, sizeof(dfloat));
+  *w = (dfloat*) calloc(N+1, sizeof(dfloat));
 
   x[0][0] = -1.;
   x[0][N] =  1.;
@@ -149,6 +153,20 @@ int meshJacobiGL(dfloat alpha, dfloat beta, int N, dfloat **x){
     
     free(xtmp);
     free(wtmp);
+  }
+
+  dfloat *MM, *V, *Vr, *Vs;
+
+  meshVandermonde1D(N, N+1, x[0], &V, &Vr);
+  meshMassMatrix(N+1, V, &MM);
+
+  // use weights from mass lumping
+  for(int n=0;n<=N;++n){
+    dfloat res = 0;
+    for(int m=0;m<=N;++m){
+      res += MM[n*(N+1)+m];
+    }
+    w[0][n] = res;
   }
   
   return N+1;
@@ -885,11 +903,11 @@ int main(int argc, char **argv){
   char fname[BUFSIZ];
 
   { // 1D interval test
-    dfloat *xgll, *xgl, *wgl;
+    dfloat *xgll, *xgl, *wgl, *wgll;
     meshJacobiGQ(0,0,N, &xgl, &wgl);
-    meshJacobiGL(0,0,N, &xgll);
-    for(int n=0;n<=N;++n)  printf("xgll[%d] = % e\n", n, xgll[n]);
-    for(int n=0;n<=N;++n)  printf("xgl[%d] = % e, wgl[%d] = % e \n", n, xgl[n], n, wgl[n]);
+    meshJacobiGL(0,0,N, &xgll, &wgll); 
+    for(int n=0;n<=N;++n)  printf("xgll[%d] = % e, wgll[%d] = % e \n", n, xgll[n], n, wgll[n]);
+    for(int n=0;n<=N;++n)  printf("xgl[%d]  = % e, wgl[%d]  = % e \n", n, xgl[n], n, wgl[n]);
     
   }
   
