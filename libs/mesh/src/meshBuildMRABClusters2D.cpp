@@ -96,7 +96,7 @@ void meshBuildMRABClusters2D(mesh_t *mesh, int lev, dfloat *weights, int *levels
     (*elements)[e].cRank = rank;
   }
 
-  cElement_t *sendBuffer = (cElement_t *) calloc(mesh->totalHaloPairs,sizeof(cElement_t));
+  // cElement_t *sendBuffer = (cElement_t *) calloc(mesh->totalHaloPairs,sizeof(cElement_t));
 
   //propagate clusters
   int allDone = 0;

@@ -39,7 +39,6 @@ public:
 
   // serial face-node to face-node connection
   void ConnectFaceNodes();
-  void ConnectFaceModes(int *faceModes, dfloat *V);
 
   // setup occa buffers
   virtual void OccaSetup(occa::properties &kernelInfo);

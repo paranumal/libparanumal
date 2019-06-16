@@ -39,8 +39,8 @@ void meshAddSettings(settings_t& settings) {
                       "3",
                       "Type of mesh elements (number of edges)",
                       {"3","4","6","12"});
-  settings.newSetting("ELEMENT MAPPING",
-                      "3",
+  settings.newSetting("ELEMENT MAP",
+                      "POLYNOMIAL",
                       "Type mapping used to transform each element",
                       {"POLYNOMIAL","AFFINE"});
 
@@ -84,7 +84,7 @@ void meshReportSettings(settings_t& settings) {
 
   if (settings.compareSetting("ELEMENT TYPE","4") ||
       settings.compareSetting("ELEMENT TYPE","12"))
-    settings.reportSetting("ELEMENT MAPPING");
+    settings.reportSetting("ELEMENT MAP");
 
   //report the box settings
   if (settings.compareSetting("MESH FILE","BOX")) {

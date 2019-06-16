@@ -124,7 +124,6 @@ public:
   dfloat *Ssr,*Sss, *Sst;
   dfloat *Str,*Sts, *Stt;
   dfloat *Smatrices;
-  int maxNnzPerRow;
   dfloat *x, *y, *z;    // coordinates of physical nodes
 
   dfloat sphereRadius;  // for Quad3D
@@ -144,22 +143,6 @@ public:
   dfloat *gjr,*gjw; // 1D nodes and weights for Gauss Jacobi quadature
   dfloat *gjI,*gjD; // 1D GLL to Gauss node interpolation and differentiation matrices
   dfloat *gjD2;     // 1D GJ to GJ node differentiation
-
-  // transform to/from eigenmodes of 1D laplacian (with built in weighting)
-  dfloat *oasForward;
-  dfloat *oasBack;
-  dfloat *oasDiagOp;
-
-  // transform to/from eigenmode of IPDG 1D laplacian
-  dfloat *oasForwardDg;
-  dfloat *oasBackDg;
-  dfloat *oasDiagOpDg;
-
-  //rotated node ids
-  int *rmapP;
-
-  //reference patch inverse (for OAS precon)
-  dfloat *invAP;
 
   /* GeoData for affine mapped elements */
   dfloat *EXYZ;  // element vertices for reconstructing geofacs
@@ -208,24 +191,6 @@ public:
   dfloat *intLIFT;   // lift from surface integration nodes to W&B volume nodes
   dfloat *intx, *inty, *intz; // coordinates of suface integration nodes
 
-  // Bernstein-Bezier info
-  dfloat *VB, *invVB; // Bernstein Vandermonde matrices
-  dfloat *BBMM;
-  dfloat *invVB1D, *invVB2D;
-  int *D0ids, *D1ids, *D2ids, *D3ids; // Bernstein deriv matrix indices
-  dfloat *Dvals; // Bernstein deriv matrix values
-  int *D0Tids, *D1Tids, *D2Tids, *D3Tids; // Bernstein transpose deriv matrix indices
-  dfloat *DTvals; // Bernstein transpose deriv matrix values
-  dfloat *VBq, *PBq; // cubature interpolation/projection matrices
-  int *L0ids; // L0 matrix ids
-  dfloat *L0vals; // L0 values (L0 tridiagonal in 2D)
-  int *ELids; // lift reduction matrix indices
-  dfloat *ELvals; // lift reduction matrix values
-  int max_EL_nnz; // max number of non-zeros per row of EL
-  int *BBRaiseids; //Bernstein elevate matrix indices
-  dfloat *BBRaiseVals; //Bernstein elevate matrix values
-  dfloat *BBLower; //Berstein projection matrix.
-
   //degree raising and lowering interpolation matrices
   dfloat *interpRaise;
   dfloat *interpLower;
@@ -273,12 +238,9 @@ public:
   occa::memory o_D; // tensor product differentiation matrix (for Hexes)
   occa::memory o_SrrT, o_SrsT, o_SrtT; //element stiffness matrices
   occa::memory o_SsrT, o_SssT, o_SstT;
+  occa::memory o_StrT, o_StsT, o_SttT;
   occa::memory o_Srr, o_Srs, o_Srt, o_Sss, o_Sst, o_Stt; // for char4-based kernels
   occa::memory o_Smatrices;
-  occa::memory o_IndT, o_IndTchar;
-  occa::memory o_India, o_Indja;
-  occa::memory o_StrT, o_StsT, o_SttT;
-  occa::memory o_Ind; // for sparse index storage
 
   occa::memory o_vgeo, o_sgeo;
   occa::memory o_vmapM, o_vmapP, o_mapP;
@@ -306,16 +268,6 @@ public:
   occa::memory *o_MRABpmlIds;
   occa::memory *o_MRABpmlHaloElementIds;
   occa::memory *o_MRABpmlHaloIds;
-
-  // Bernstein-Bezier occa arrays
-  occa::memory o_BBMM;
-  occa::memory o_D0ids, o_D1ids, o_D2ids, o_D3ids, o_Dvals; // Bernstein deriv matrix indices
-  occa::memory o_packedDids; // char4 packed increments (D1ids-D0ids)
-
-  occa::memory o_invVB1DT, o_invVB2DT;
-  occa::memory o_VBq, o_PBq; // cubature interpolation/projection matrices
-  occa::memory o_L0ids, o_L0vals, o_ELids, o_ELvals;
-
 
   occa::memory o_pmlElementIds;
   occa::memory o_nonPmlElementIds;
@@ -364,7 +316,6 @@ public:
 
   // serial face-node to face-node connection
   virtual void ConnectFaceNodes() = 0;
-  virtual void ConnectFaceModes(int *faceModes, dfloat *V) = 0;
 
   // setup halo region
   void HaloSetup();
@@ -372,6 +323,8 @@ public:
   /* build global connectivity in parallel */
   void ParallelConnectNodes();
 
+  /* build global gather scatter ops */
+  void ParallelGatherScatterSetup();
 
   //MRAB weighted mesh partitioning
   void MRABWeightedPartition(dfloat *weights,
@@ -395,10 +348,6 @@ public:
   // print out parallel partition i
   void PrintPartitionStatistics();
 
-  void ParallelGatherScatterSetup(dlong N,
-                                  hlong *globalIds,
-                                  MPI_Comm &comm,
-                                  int verbose);
 
   virtual dfloat MinCharacteristicLength() = 0;
 

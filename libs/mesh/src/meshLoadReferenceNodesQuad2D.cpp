@@ -88,8 +88,6 @@ void meshQuad2D::LoadReferenceNodes(int N_){
   //zero out some unused values
   cubNfp = 0;
   intNfp = 0;
-  max_EL_nnz = 0;
-
   readDfloatArray(comm, fp, "Quadrature Interpolation Matrix", &(cubInterp),&Nrows,&Ncols);
   readDfloatArray(comm, fp, "Quadrature Weak D Differentiation Matrix", &(cubDW),&Nrows,&Ncols);
   readDfloatArray(comm, fp, "Quadrature Projection Matrix", &(cubProject),&Nrows,&Ncols);
@@ -108,16 +106,6 @@ void meshQuad2D::LoadReferenceNodes(int N_){
   // intNfp = Nrows/Nfaces; //number of interpolation points per face
 
   // readDfloatArray(comm, fp, "Cubature Surface Lift Matrix", &(intLIFT),&Nrows,&Ncols);
-
-  /* C0 patch data */
-  readDfloatArray(comm, fp, "C0 overlapping patch forward matrix", &(oasForward), &Nrows, &Ncols);
-  readDfloatArray(comm, fp, "C0 overlapping patch diagonal scaling", &(oasDiagOp), &Nrows, &Ncols);
-  readDfloatArray(comm, fp, "C0 overlapping patch backward matrix", &(oasBack), &Nrows, &Ncols);
-  /* IPDG patch data */
-  readDfloatArray(comm, fp, "IPDG overlapping patch forward matrix", &(oasForwardDg), &Nrows, &Ncols);
-  readDfloatArray(comm, fp, "IPDG overlapping patch diagonal scaling", &(oasDiagOpDg), &Nrows, &Ncols);
-  readDfloatArray(comm, fp, "IPDG overlapping patch backward matrix", &(oasBackDg), &Nrows, &Ncols);
-  NpP = Nrows; //overlapping patch size
 
   readIntArray   (comm, fp, "SEMFEM reference mesh", &(FEMEToV), &Nrows, &Ncols);
   NelFEM = Nrows;

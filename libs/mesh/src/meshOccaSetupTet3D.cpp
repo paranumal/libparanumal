@@ -78,45 +78,6 @@ void meshTet3D::OccaSetup(occa::properties &kernelInfo){
     }
   }
 
-  // =============== BB operators [added by NC] ===============
-
-  // deriv operators: transpose from row major to column major
-  int *D0idsT = (int*) calloc(Np*4,sizeof(int));
-  int *D1idsT = (int*) calloc(Np*4,sizeof(int));
-  int *D2idsT = (int*) calloc(Np*4,sizeof(int));
-  int *D3idsT = (int*) calloc(Np*4,sizeof(int));
-  dfloat *DvalsT = (dfloat*) calloc(Np*4,sizeof(dfloat));
-
-  int *L0idsT = (int*) calloc(Nfp*7,sizeof(int));
-  dfloat *L0valsT = (dfloat*) calloc(Nfp*7,sizeof(dfloat)); // tridiag
-  int *ELidsT = (int*) calloc(Np*max_EL_nnz,sizeof(int));
-  dfloat *ELvalsT = (dfloat*) calloc(Np*max_EL_nnz,sizeof(dfloat));
-
-  for (int i = 0; i < Np; ++i){
-    for (int j = 0; j < 4; ++j){
-      D0idsT[i+j*Np] = D0ids[j+i*4];
-      D1idsT[i+j*Np] = D1ids[j+i*4];
-      D2idsT[i+j*Np] = D2ids[j+i*4];
-      D3idsT[i+j*Np] = D3ids[j+i*4];
-      DvalsT[i+j*Np] = Dvals[j+i*4];
-    }
-  }
-
-  for (int i = 0; i < Nfp; ++i){
-    for (int j = 0; j < 7; ++j){
-      L0idsT [i+j*Nfp] = L0ids [j+i*7];
-      L0valsT[i+j*Nfp] = L0vals[j+i*7];
-    }
-  }
-
-  for (int i = 0; i < Np; ++i){
-    for (int j = 0; j < max_EL_nnz; ++j){
-      ELidsT [i + j*Np] = ELids [j+i*max_EL_nnz];
-      ELvalsT[i + j*Np] = ELvals[j+i*max_EL_nnz];
-    }
-  }
-    // =============== end BB stuff =============================
-
   if(cubNp){
     dfloat *cubDrWT = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
     dfloat *cubDsWT = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
@@ -199,7 +160,7 @@ void meshTet3D::OccaSetup(occa::properties &kernelInfo){
             dfloat xm = x[vid];
             dfloat ym = y[vid];
             dfloat zm = z[vid];
-            dfloat Inm = intInterp[m+n*Nfp+f*intNfp*Nfp]; // Fixed
+            dfloat Inm = intInterp[m+n*Nfp+f*intNfp*Nfp];
             ix += Inm*xm;
             iy += Inm*ym;
             iz += Inm*zm;
@@ -225,50 +186,6 @@ void meshTet3D::OccaSetup(occa::properties &kernelInfo){
                           intz);
 
   }
-
-  // =============== Bernstein-Bezier allocations [added by NC] ============
-
-  // create packed BB indexes
-  o_D0ids = device.malloc(Np*4*sizeof(int),D0idsT);
-  o_D1ids = device.malloc(Np*4*sizeof(int),D1idsT);
-  o_D2ids = device.malloc(Np*4*sizeof(int),D2idsT);
-  o_D3ids = device.malloc(Np*4*sizeof(int),D3idsT);
-  o_Dvals = device.malloc(Np*4*sizeof(dfloat),DvalsT);
-
-  unsigned char *packedDids = (unsigned char*) malloc(Np*3*4*sizeof(unsigned char));
-
-  // for(int n=0;n<4*Np;++n){
-  //   if(D1ids[n]<D0ids[n]) printf("bugger: D0id > D1id\n");
-  //   if(D2ids[n]<D0ids[n]) printf("bugger: D0id > D2id\n");
-  //   if(D3ids[n]<D0ids[n]) printf("bugger: D0id > D3id\n");
-  // }
-
-  for(int n=0;n<Np;++n){
-
-    packedDids[n*4+0] = D1idsT[n+0*Np]-D0idsT[n+0*Np];
-    packedDids[n*4+1] = D1idsT[n+1*Np]-D0idsT[n+1*Np];
-    packedDids[n*4+2] = D1idsT[n+2*Np]-D0idsT[n+2*Np];
-    packedDids[n*4+3] = D1idsT[n+3*Np]-D0idsT[n+3*Np];
-
-    packedDids[4*Np+n*4+0] = D2idsT[n+0*Np]-D0idsT[n+0*Np];
-    packedDids[4*Np+n*4+1] = D2idsT[n+1*Np]-D0idsT[n+1*Np];
-    packedDids[4*Np+n*4+2] = D2idsT[n+2*Np]-D0idsT[n+2*Np];
-    packedDids[4*Np+n*4+3] = D2idsT[n+3*Np]-D0idsT[n+3*Np];
-
-    packedDids[8*Np+n*4+0] = D3idsT[n+0*Np]-D0idsT[n+0*Np];
-    packedDids[8*Np+n*4+1] = D3idsT[n+1*Np]-D0idsT[n+1*Np];
-    packedDids[8*Np+n*4+2] = D3idsT[n+2*Np]-D0idsT[n+2*Np];
-    packedDids[8*Np+n*4+3] = D3idsT[n+3*Np]-D0idsT[n+3*Np];
-  }
-
-
-  o_packedDids = device.malloc(Np*3*4*sizeof(unsigned char),packedDids);
-
-  o_L0ids  = device.malloc(Nfp*7*sizeof(int),L0idsT);
-  o_L0vals = device.malloc(Nfp*7*sizeof(dfloat),L0valsT);
-  o_ELids  = device.malloc(Np*max_EL_nnz*sizeof(int),ELidsT);
-  o_ELvals = device.malloc(Np*max_EL_nnz*sizeof(dfloat),ELvalsT);
-  // =============== end Bernstein-Bezier section [added by NC] ============
 
   //build element stiffness matrices
   dfloat *SrrT, *SrsT, *SrtT;
@@ -401,15 +318,4 @@ void meshTet3D::OccaSetup(occa::properties &kernelInfo){
   o_Smatrices = device.malloc(6*Np*Np*sizeof(dfloat), ST);
 
   free(DrstT); free(ST);
-
-  free(D0idsT);
-  free(D1idsT);
-  free(D2idsT);
-  free(D3idsT);
-  free(DvalsT);
-
-  free(L0idsT);
-  free(L0valsT);
-  free(ELidsT);
-  free(ELvalsT);
 }

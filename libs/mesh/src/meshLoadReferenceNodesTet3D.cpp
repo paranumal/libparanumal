@@ -106,38 +106,6 @@ void meshTet3D::LoadReferenceNodes(int N_){
   cubNq = 0;
   cubNfp = 0;
 
-  /* Bernstein-Bezier data */
-  readDfloatArray(comm, fp, "Bernstein-Bezier Vandermonde Matrix", &(VB),&Nrows,&Ncols);
-  readDfloatArray(comm, fp, "Bernstein-Bezier Inverse Vandermonde Matrix", &(invVB),&Nrows,&Ncols);
-  readIntArray   (comm, fp, "Bernstein-Bezier sparse D0 differentiation ids", &(D0ids), &Nrows, &Ncols);  //Ncols should be 4
-  readIntArray   (comm, fp, "Bernstein-Bezier sparse D1 differentiation ids", &(D1ids), &Nrows, &Ncols);  //Ncols should be 4
-  readIntArray   (comm, fp, "Bernstein-Bezier sparse D2 differentiation ids", &(D2ids), &Nrows, &Ncols);  //Ncols should be 4
-  readIntArray   (comm, fp, "Bernstein-Bezier sparse D3 differentiation ids", &(D3ids), &Nrows, &Ncols);  //Ncols should be 4
-  readDfloatArray(comm, fp, "Bernstein-Bezier sparse D differentiation values", &(Dvals), &Nrows, &Ncols);//Ncols should be 4
-
-  readIntArray   (comm, fp, "Bernstein-Bezier sparse D0T transpose differentiation ids", &(D0Tids), &Nrows, &Ncols);  //Ncols should be 4
-  readIntArray   (comm, fp, "Bernstein-Bezier sparse D1T transpose differentiation ids", &(D1Tids), &Nrows, &Ncols);  //Ncols should be 4
-  readIntArray   (comm, fp, "Bernstein-Bezier sparse D2T transpose differentiation ids", &(D2Tids), &Nrows, &Ncols);  //Ncols should be 4
-  readIntArray   (comm, fp, "Bernstein-Bezier sparse D3T transpose differentiation ids", &(D3Tids), &Nrows, &Ncols);  //Ncols should be 4
-  readDfloatArray(comm, fp, "Bernstein-Bezier sparse DT transpose differentiation values", &(DTvals), &Nrows, &Ncols);//Ncols should be 4
-
-  readIntArray   (comm, fp, "Bernstein-Bezier L0 Matrix ids", &(L0ids), &Nrows, &Ncols);
-  readDfloatArray(comm, fp, "Bernstein-Bezier L0 Matrix values", &(L0vals), &Nrows, &Ncols); //Ncols should be 7
-  readIntArray   (comm, fp, "Bernstein-Bezier EL lift ids", &(ELids), &Nrows, &Ncols);
-  readDfloatArray(comm, fp, "Bernstein-Bezier EL lift values", &(ELvals), &Nrows, &Ncols);
-  max_EL_nnz = Ncols;
-
-  readIntArray   (comm, fp, "Bernstein-Bezier sparse 2D degree raise ids", &(BBRaiseids), &Nrows, &Ncols);     //Ncols should be 3
-  readDfloatArray(comm, fp, "Bernstein-Bezier sparse 2D degree raise values", &(BBRaiseVals), &Nrows, &Ncols); //Ncols should be 3
-  readDfloatArray(comm, fp, "Bernstein-Bezier sparse 2D degree lower matrix", &(BBLower), &Nrows, &Ncols);
-
-  /* IPDG patch data */
-  readDfloatArray(comm, fp, "IPDG overlapping patch forward matrix", &(oasForwardDg), &Nrows, &Ncols);
-  readDfloatArray(comm, fp, "IPDG overlapping patch diagonal scaling", &(oasDiagOpDg), &Nrows, &Ncols);
-  readDfloatArray(comm, fp, "IPDG overlapping patch backward matrix", &(oasBackDg), &Nrows, &Ncols);
-  NpP = Nrows; //overlapping patch size
-
-
   /* SEMFEM data */
   readDfloatArray(comm, fp, "SEMFEM r-coordinates", &(rFEM),&Nrows,&Ncols);
   readDfloatArray(comm, fp, "SEMFEM s-coordinates", &(sFEM),&Nrows,&Ncols);

@@ -89,8 +89,6 @@ void meshHex3D::LoadReferenceNodes(int N_){
 
   //zero out some unused values
   intNfp = 0;
-  max_EL_nnz = 0;
-
   readDfloatArray(comm, fp, "Quadrature Interpolation Matrix", &(cubInterp),&Nrows,&Ncols);
   readDfloatArray(comm, fp, "Quadrature Weak D Differentiation Matrix", &(cubDW),&Nrows,&Ncols);
   readDfloatArray(comm, fp, "Quadrature Differentiation Matrix", &(cubD),&Nrows,&Ncols);
@@ -118,16 +116,6 @@ void meshHex3D::LoadReferenceNodes(int N_){
   }
   intNfp = 0;
   intLIFT = NULL;
-
-  /* C0 patch data */
-  readDfloatArray(comm, fp, "C0 overlapping patch forward matrix", &(oasForward), &Nrows, &Ncols);
-  readDfloatArray(comm, fp, "C0 overlapping patch diagonal scaling", &(oasDiagOp), &Nrows, &Ncols);
-  readDfloatArray(comm, fp, "C0 overlapping patch backward matrix", &(oasBack), &Nrows, &Ncols);
-  /* IPDG patch data */
-  readDfloatArray(comm, fp, "IPDG overlapping patch forward matrix", &(oasForwardDg), &Nrows, &Ncols);
-  readDfloatArray(comm, fp, "IPDG overlapping patch diagonal scaling", &(oasDiagOpDg), &Nrows, &Ncols);
-  readDfloatArray(comm, fp, "IPDG overlapping patch backward matrix", &(oasBackDg), &Nrows, &Ncols);
-  NpP = Nrows; //overlapping patch size
 
   readIntArray   (comm, fp, "SEMFEM reference mesh", &(FEMEToV), &Nrows, &Ncols);
   NelFEM = Nrows;
@@ -162,7 +150,5 @@ void meshHex3D::LoadReferenceNodes(int N_){
     if( (r[n]+1)*(r[n]+1)+(s[n]-1)*(s[n]-1)+(t[n]-1)*(t[n]-1)<NODETOL)
       vertexNodes[7] = n;
   }
-
-  max_EL_nnz = 0;
 }
 

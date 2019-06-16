@@ -25,6 +25,7 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
+#include "core.hpp"
 
 // send data from partition boundary elements
 // and receive data to ghost elements

@@ -95,8 +95,10 @@ void matrixInverse(int N, float *A){
     tmpInvA[n] = A[n];
   }
 
-  sgetrf_ (&N, &N, tmpInvA, &N, ipiv, &info);
-  sgetri_ (&N, tmpInvA, &N, ipiv, work, &lwork, &info);
+  //NC: are we missing these?
+  // sgetrf_ (&N, &N, tmpInvA, &N, ipiv, &info);
+  // sgetri_ (&N, tmpInvA, &N, ipiv, work, &lwork, &info);
+  info =1; //NC: throw an error for now
 
   if(info)
     printf("inv: sgetrf/sgetri reports info = %d when inverting matrix\n", info);

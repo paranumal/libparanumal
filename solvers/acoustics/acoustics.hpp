@@ -24,6 +24,7 @@ SOFTWARE.
 
 */
 
+#include "core.hpp"
 #include "mesh.hpp"
 #include "solver.hpp"
 #include "timeStepper.hpp"

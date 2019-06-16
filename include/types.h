@@ -24,8 +24,8 @@ SOFTWARE.
 
 */
 
-#ifndef TYPES_H
-#define TYPES_H
+#ifndef TYPES_HPP
+#define TYPES_HPP
 
 //float data type
 #if 0

@@ -45,7 +45,7 @@ void mesh_t::ParallelConnectNodes(){
 
   // form continuous node numbering (local=>virtual gather)
   int *baseRank = (int *) malloc((totalHaloPairs+Nelements)*Np*sizeof(int));
-  hlong *baseId = (hlong *) malloc((totalHaloPairs+Nelements)*Np*sizeof(hlong));
+  globalIds = (hlong *) malloc((totalHaloPairs+Nelements)*Np*sizeof(hlong));
 
   // use local numbering
   for(dlong e=0;e<Nelements;++e){
@@ -53,14 +53,14 @@ void mesh_t::ParallelConnectNodes(){
       dlong id = e*Np+n;
 
       baseRank[id] = rank;
-      baseId[id] = 1 + id + Nnodes + gatherNodeStart;
+      globalIds[id] = 1 + id + Nnodes + gatherNodeStart;
     }
 
     // use vertex ids for vertex nodes to reduce iterations
     for(int v=0;v<Nverts;++v){
       dlong id = e*Np + vertexNodes[v];
       hlong gid = EToV[e*Nverts+v] + 1;
-      baseId[id] = gid;
+      globalIds[id] = gid;
     }
   }
 
@@ -74,7 +74,7 @@ void mesh_t::ParallelConnectNodes(){
 
     // send halo data and recv into extension of buffer
     HaloExchange(baseRank, Np, ogsInt);
-    HaloExchange(baseId, Np, ogsHlong);
+    HaloExchange(globalIds, Np, ogsHlong);
 
     // compare trace nodes
     for(dlong e=0;e<Nelements;++e){
@@ -82,22 +82,22 @@ void mesh_t::ParallelConnectNodes(){
         dlong id  = e*Nfp*Nfaces + n;
         dlong idM = vmapM[id];
         dlong idP = vmapP[id];
-        hlong gidM = baseId[idM];
-        hlong gidP = baseId[idP];
+        hlong gidM = globalIds[idM];
+        hlong gidP = globalIds[idP];
 
         int baseRankM = baseRank[idM];
         int baseRankP = baseRank[idP];
 
         if(gidM<gidP || (gidP==gidM && baseRankM<baseRankP)){
           ++localChange;
-          baseRank[idP] = baseRank[idM];
-          baseId[idP]   = baseId[idM];
+          baseRank[idP]  = baseRank[idM];
+          globalIds[idP] = globalIds[idM];
         }
 
         if(gidP<gidM || (gidP==gidM && baseRankP<baseRankM)){
           ++localChange;
-          baseRank[idM] = baseRank[idP];
-          baseId[idM]   = baseId[idP];
+          baseRank[idM]  = baseRank[idP];
+          globalIds[idM] = globalIds[idP];
         }
       }
     }
@@ -106,12 +106,5 @@ void mesh_t::ParallelConnectNodes(){
     MPI_Allreduce(&localChange, &gatherChange, 1, MPI_DLONG, MPI_SUM, comm);
   }
 
-  //make a locally-ordered version
-  globalIds = (hlong*) calloc(localNodeCount, sizeof(hlong));
-  for(dlong id=0;id<localNodeCount;++id){
-    globalIds[id] = baseId[id];
-  }
-
   free(baseRank);
-  free(baseId);
 }

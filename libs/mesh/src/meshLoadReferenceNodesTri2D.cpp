@@ -61,7 +61,7 @@ void meshTri2D::LoadReferenceNodes(int N_){
   readDfloatArray(comm, fp, "Nodal Mass Matrix", &(MM), &Nrows, &Ncols);
   readIntArray   (comm, fp, "Nodal Face nodes", &(faceNodes), &Nrows, &Ncols);
   readDfloatArray(comm, fp, "Nodal Lift Matrix", &(LIFT), &Nrows, &Ncols);
-  readIntArray   (comm, fp, "Nodal rotation permutations", &(rmapP), &Nrows, &Ncols);
+
   readDfloatArray(comm, fp, "Nodal degree raise matrix", &(interpRaise), &Nrows, &Ncols);
   readDfloatArray(comm, fp, "Nodal degree lower matrix", &(interpLower), &Nrows, &Ncols);
 
@@ -94,33 +94,6 @@ void meshTri2D::LoadReferenceNodes(int N_){
 
   readDfloatArray(comm, fp, "Cubature Surface Lift Matrix", &(intLIFT),&Nrows,&Ncols);
 
-
-  /* Bernstein-Bezier data */
-  readDfloatArray(comm, fp, "Bernstein-Bezier Vandermonde Matrix", &(VB),&Nrows,&Ncols);
-  readDfloatArray(comm, fp, "Bernstein-Bezier Inverse Vandermonde Matrix", &(invVB),&Nrows,&Ncols);
-  readIntArray   (comm, fp, "Bernstein-Bezier sparse D1 differentiation ids", &(D1ids), &Nrows, &Ncols);  //Ncols should be 3
-  readIntArray   (comm, fp, "Bernstein-Bezier sparse D2 differentiation ids", &(D2ids), &Nrows, &Ncols);  //Ncols should be 3
-  readIntArray   (comm, fp, "Bernstein-Bezier sparse D3 differentiation ids", &(D3ids), &Nrows, &Ncols);  //Ncols should be 3
-  readDfloatArray(comm, fp, "Bernstein-Bezier sparse D differentiation values", &(Dvals), &Nrows, &Ncols);//Ncols should be 3
-  readDfloatArray(comm, fp, "Cubature Bernstein-Bezier Interpolation Matrix", &(VBq), &Nrows, &Ncols);
-  readDfloatArray(comm, fp, "Cubature Bernstein-Bezier Projection Matrix", &(PBq), &Nrows, &Ncols);
-  readDfloatArray(comm, fp, "Bernstein-Bezier L0 Matrix values", &(L0vals), &Nrows, &Ncols); //Ncols should be 3 (tridiagonal)
-  readIntArray   (comm, fp, "Bernstein-Bezier EL lift ids", &(ELids), &Nrows, &Ncols);
-  readDfloatArray(comm, fp, "Bernstein-Bezier EL lift values", &(ELvals), &Nrows, &Ncols);
-  max_EL_nnz = Ncols;
-
-  readIntArray   (comm, fp, "Bernstein-Bezier sparse 1D degree raise ids", &(BBRaiseids), &Nrows, &Ncols);     //Ncols should be 2
-  readDfloatArray(comm, fp, "Bernstein-Bezier sparse 1D degree raise values", &(BBRaiseVals), &Nrows, &Ncols); //Ncols should be 2
-  readDfloatArray(comm, fp, "Bernstein-Bezier sparse 1D degree lower matrix", &(BBLower), &Nrows, &Ncols);
-
-  /* IPDG patch data */
-  readDfloatArray(comm, fp, "IPDG overlapping patch forward matrix", &(oasForwardDg), &Nrows, &Ncols);
-  readDfloatArray(comm, fp, "IPDG overlapping patch diagonal scaling", &(oasDiagOpDg), &Nrows, &Ncols);
-  readDfloatArray(comm, fp, "IPDG overlapping patch backward matrix", &(oasBackDg), &Nrows, &Ncols);
-  NpP = Nrows; //overlapping patch size
-
-  readDfloatArray(comm, fp, "IPDG full reference patch inverse matrix", &(invAP), &Nrows, &Ncols);
-
   if (N<13) { //data only generated for N<13
     /* SEMFEM data */
     readDfloatArray(comm, fp, "SEMFEM r-coordinates", &(rFEM),&Nrows,&Ncols);
@@ -132,16 +105,6 @@ void meshTri2D::LoadReferenceNodes(int N_){
 
     readDfloatArray(comm, fp, "SEMFEM interpolation matrix", &(SEMFEMInterp),&Nrows,&Ncols);
   }
-
-  /* Sparse basis data */
-  readDfloatArray(comm, fp, "Sparse basis Vandermonde", &(sparseV), &Nrows, &Ncols);
-  readDfloatArray(comm, fp, "Sparse basis mass matrix", &(sparseMM), &Nrows, &Ncols);
-  readIntArray   (comm, fp, "Sparse basis face modes", &(FaceModes), &Nrows, &Ncols);
-  readIntArray   (comm, fp, "Sparse differentiation matrix ids", &(sparseStackedNZ), &Nrows, &Ncols);
-  readDfloatArray(comm, fp, "Sparse differentiation Srr values", &(sparseSrrT), &Nrows, &Ncols);
-  readDfloatArray(comm, fp, "Sparse differentiation Srs values", &(sparseSrsT), &Nrows, &Ncols);
-  readDfloatArray(comm, fp, "Sparse differentiation Sss values", &(sparseSssT), &Nrows, &Ncols);
-  SparseNnzPerRow = Nrows;
 
   fclose(fp);
 

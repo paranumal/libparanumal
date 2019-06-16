@@ -101,8 +101,11 @@ mesh_t& mesh_t::Setup(occa::device& device, MPI_Comm& comm,
   // compute surface geofacs
   mesh->SurfaceGeometricFactors();
 
-  // global nodes
+  // make a global indexing
   mesh->ParallelConnectNodes();
+
+  // make an ogs operator and label local/global gather elements
+  mesh->ParallelGatherScatterSetup();
 
   mesh->OccaSetup(props);
 

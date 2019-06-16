@@ -66,8 +66,6 @@ void mesh_t::OccaSetup(occa::properties &kernelInfo){
   kernelInfo["defines/" "p_Nsgeo"]= Nsgeo;
   kernelInfo["defines/" "p_Nggeo"]= Nggeo;
 
-  kernelInfo["defines/" "p_max_EL_nnz"]= max_EL_nnz; // for Bernstein Bezier lift
-
   kernelInfo["defines/" "p_cubNq"]= cubNq;
   kernelInfo["defines/" "p_cubNp"]= cubNp;
   kernelInfo["defines/" "p_intNfp"]= intNfp;
