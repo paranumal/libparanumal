@@ -889,6 +889,47 @@ void meshLiftMatrixTet3D(int N, int Np, int *faceNodes, dfloat *r, dfloat *s, df
   free(Vt);
 }
 
+void meshCubatureWeakDmatrices1D(int N, int Np, dfloat *V,
+				 int cubNp, dfloat *cubr, dfloat *cubw,
+				 dfloat **cubDrT, dfloat **cubProject){
+
+  dfloat *cubV, *cubVr;
+
+  meshVandermonde1D(N, cubNp, cubr, &cubV, &cubVr);
+
+  // cubDrT = V*transpose(cVr)*diag(cubw);
+  // cubProject = V*cV'*diag(cubw); %% relies on (transpose(cV)*diag(cubw)*cV being the identity)
+
+  for(int n=0;n<cubNp;++n){
+    for(int m=0;m<Np;++m){
+      // scale by cubw
+      cubVr[n*Np+m] *= cubw[n];
+      cubV[n*Np+m]  *= cubw[n];
+    }
+  }
+
+  *cubDrT = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
+  *cubProject = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
+
+  for(int n=0;n<Np;++n){
+    for(int m=0;m<cubNp;++m){
+      dfloat resP = 0, resDrT = 0;
+
+      for(int i=0;i<Np;++i){
+	dfloat Vni = V[n*Np+i];
+	resDrT += Vni*cubVr[m*Np+i];
+	resP   += Vni*cubV[m*Np+i];
+      }
+
+      cubDrT[0][n*cubNp+m] = resDrT;
+      cubProject[0][n*cubNp+m] = resP;
+    }
+  }
+  
+  free(cubV);
+  free(cubVr);
+}
+
 
 void meshCubatureWeakDmatricesTri2D(int N, int Np, dfloat *V,
 				    int cubNp, dfloat *cubr, dfloat *cubs, dfloat *cubw,
@@ -1081,7 +1122,7 @@ int main(int argc, char **argv){
 
   int *faceNodes;
   
-  dfloat *r, *s, *t;
+  dfloat *r, *s, *t, *w;
   dfloat *Dr, *Ds, *Dt;
   dfloat *Vr, *Vs, *Vt, *V;
   dfloat *MM, *LIFT;
@@ -1105,12 +1146,18 @@ int main(int argc, char **argv){
   char fname[BUFSIZ];
 
   { // 1D interval test
-    dfloat *xgll, *xgl, *wgl, *wgll;
-    meshJacobiGQ(0,0,N, &xgl, &wgl);
-    meshJacobiGL(0,0,N, &xgll, &wgll); 
-    for(int n=0;n<=N;++n)  printf("xgll[%d] = % e, wgll[%d] = % e \n", n, xgll[n], n, wgll[n]);
-    for(int n=0;n<=N;++n)  printf("xgl[%d]  = % e, wgl[%d]  = % e \n", n, xgl[n], n, wgl[n]);
+    meshJacobiGQ(0,0,N, &cubr, &cubw);
+    meshJacobiGL(0,0,N, &r, &w); 
+    for(int n=0;n<=N;++n)  printf("xgll[%d] = % e, wgll[%d] = % e \n", n, r[n], n, w[n]);
+    for(int n=0;n<=N;++n)  printf("xgl[%d]  = % e, wgl[%d]  = % e \n", n, cubr[n], n, cubw[n]);
+
+    Np = N+1;
+    cubNp = N+1;
     
+    meshVandermonde1D(N, Np, r, &V, &Vr);
+    
+    meshCubatureWeakDmatrices1D(N, Np, V, cubNp, cubr, cubw, &cubDrT, &cubProject); 
+
   }
   
   { // TRIANGLE TEST
