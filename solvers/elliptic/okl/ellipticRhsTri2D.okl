@@ -24,42 +24,45 @@ SOFTWARE.
 
 */
 
-#include "elliptic.h"
 
-int ellipticSolve(elliptic_t *elliptic, dfloat lambda, dfloat tol,
-                  occa::memory &o_r, occa::memory &o_x){
-  
-  mesh_t *mesh = elliptic->mesh;
-  setupAide options = elliptic->options;
+@kernel void ellipticRhsTri2D(const dlong Nelements,
+                              @restrict const dfloat* ggeo,
+                              @restrict const dfloat* MM,
+                              @restrict const dfloat* x,
+                              @restrict const dfloat* y,
+                              @restrict const dfloat* z,
+                                        const dfloat  lambda,
+                              @restrict       dfloat* rhs){
 
-  int Niter = 0;
-  int maxIter = 1000; 
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
 
-#if USE_NULL_PROJECTION==1
-  if(elliptic->allNeumann) // zero mean of RHS
-    ellipticZeroMean(elliptic, o_r);
-#endif
-  
-  options.getArgs("MAXIMUM ITERATIONS", maxIter);
+    @shared dfloat s_q[p_Np];
 
-  options.getArgs("SOLVER TOLERANCE", tol);
-  
-  if(!options.compareArgs("KRYLOV SOLVER", "NONBLOCKING"))
-    Niter = pcg (elliptic, lambda, o_r, o_x, tol, maxIter);
-  else{
-    if(!options.compareArgs("KRYLOV SOLVER", "FLEXIBLE")){
-      Niter = nbpcg (elliptic, lambda, o_r, o_x, tol, maxIter);
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      const dlong id = e*p_Np + n;
+
+      dfloat f = 0;
+      ellipticForcing2D(x[id], y[id], lambda, f);
+
+      s_q[n] = f;
     }
-    else{      
-      Niter = nbfpcg (elliptic, lambda, o_r, o_x, tol, maxIter);
+
+    @barrier("local");
+
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      const dlong gid = e*p_Nggeo;
+      const dfloat J = ggeo[gid + p_GWJID];
+
+      dfloat r_qM = 0.0;
+
+      #pragma unroll p_Np
+      for (int k=0;k<p_Np;k++) {
+        const dfloat MMnk = MM[n+k*p_Np];
+        r_qM += MMnk*s_q[k];
+      }
+
+      const dlong id = e*p_Np + n;
+      rhs[id] = J*r_qM;
     }
   }
-
-#if USE_NULL_PROJECTION==1
-  if(elliptic->allNeumann) // zero mean of RHS
-    ellipticZeroMean(elliptic, o_x);
-#endif
-  
-  return Niter;
-
 }

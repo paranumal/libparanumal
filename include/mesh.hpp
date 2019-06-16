@@ -34,7 +34,7 @@ SOFTWARE.
 #include <occa.hpp>
 
 #include "types.h"
-#include "utils.h"
+#include "utils.hpp"
 #include "ogs.hpp"
 #include "settings.hpp"
 
@@ -95,9 +95,6 @@ public:
   // CG gather-scatter info
   ogs_t *ogs; //occa gs pointer
   hlong *globalIds;
-  hlong *maskedGlobalIds;
-  void *gsh, *hostGsh; // gslib struct pointer
-
 
   // list of elements that are needed for global gather-scatter
   dlong NglobalGatherElements;
@@ -164,6 +161,14 @@ public:
   //reference patch inverse (for OAS precon)
   dfloat *invAP;
 
+  /* GeoData for affine mapped elements */
+  dfloat *EXYZ;  // element vertices for reconstructing geofacs
+  dfloat *gllzw; // GLL nodes and weights
+  dfloat *ggeoNoJW;
+  occa::memory o_EXYZ;
+  occa::memory o_gllzw;
+  occa::memory o_ggeoNoJW;
+
   // face node info
   int Nfp;        // number of nodes per face
   int *faceNodes; // list of element reference interpolation nodes on element faces
@@ -178,15 +183,6 @@ public:
 
   dlong   Nsgeo;
   dfloat *sgeo;
-
-  // field info for PDE solver
-  // int Nfields;
-  // dfloat *q;    // solution data array
-  // dfloat *fQM, *fQP; //solution trace arrays
-  // dfloat *rhsq, *rhsq2, *rhsq3; // right hand side data array
-  // dfloat *resq; // residual data array (for LSERK time-stepping)
-
-  // dfloat Lambda2; // square of penalty paramater used in constructing q^*
 
   // cubature
   int cubNp, cubNfp, cubNq;
@@ -205,15 +201,6 @@ public:
   dfloat *cubsgeo;  //surface geometric data at cubature points
   dfloat *cubggeo;  //second type volume geometric data at cubature points
 
-  // c2 at cubature points (for wadg)
-  // dfloat *c2;
-
-  //source injection
-  // dfloat *sourceq;
-  // dfloat sourceX0, sourceY0, sourceZ0, sourceT0, sourceC2, sourceFreq;
-  // int sourceNelements;
-  // dlong *MRABsourceNelements;
-  // dlong *sourceElements;
 
   // surface integration node info
   int    intNfp;    // number of integration nodes on each face
@@ -243,56 +230,13 @@ public:
   dfloat *interpRaise;
   dfloat *interpLower;
 
-  //sparse basis info
-  dfloat *sparseV, *invSparseV;
-  dfloat *sparseMM;
-  int* FaceModes;
-  int SparseNnzPerRow;
-  int SparseNnzPerRowNonPadded;
-  int *sparseStackedNZ;
-  dfloat *sparseSrrT;
-  dfloat *sparseSrsT;
-  dfloat *sparseSssT;
-  int *Ind;
-
-  dlong *mmapM, *mmapP;
-  int   *mmapS;
-  dfloat *mapSgn;
-
-  // time stepping info
-  // dfloat dt; // time step
-  // dfloat startTime ; // Start Time
-  // dfloat finalTime; // final time to run acoustics to
-  // int   NtimeSteps;// number of time steps
-  // int   errorStep; // number of steps between error calculations
-  // int   Nrk;
-  // dfloat rka[5], rkb[5], rkc[6]; // AK: deprecated
-
   // MRAB,SAAB coefficients
-  // dfloat mrab[3], mrabb[3], saab[3], saabexp; // AK: deprecated
   int MRABNlevels;
   int *MRABlevel;
   dlong *MRABNelements, *MRABNhaloElements;
   dlong **MRABelementIds, **MRABhaloIds;
   int *MRABshiftIndex;
 
-  // dlong *MRABpmlNelements, *MRABpmlNhaloElements;
-  // dlong **MRABpmlElementIds, **MRABpmlIds;
-  // dlong **MRABpmlHaloElementIds, **MRABpmlHaloIds;
-
-  // dlong pmlNelements, nonPmlNelements;
-  // dlong *nonPmlElementIds, *pmlElementIds, *pmlIds;
-  // int shiftIndex;
-
-  // dfloat dtfactor; //Delete later for script run
-  // dfloat maxErrorBoltzmann;
-
-  // dfloat *errtmp;
-  // dfloat rkC[7], rkA[7*7], rkE[7];
-
-  // occa::memory o_rkq, o_rkrhsq, o_rkerr; // deprecated, AK.
-  // occa::memory o_errtmp;
-  // occa::memory o_rkA, o_rkE;
 
   // ploting info for generating field vtu
   int    plotNverts;    // number of vertices for each plot element
@@ -315,25 +259,6 @@ public:
   occa::memory o_SEMFEMInterp;
   occa::memory o_SEMFEMAnterp;
 
-  // Boltzmann specific stuff
-  // dfloat RT, sqrtRT, tauInv, Ma, Re; // Deprecated: AK
-
-  // pml stuff
-  // int    pmlNfields;
-  //  dlong    pmlNelements; // deprecated
-  // dlong   *pmlElementList; // deprecated
-
-  // int Ntscale; // Will be removed, for time accuracy test
-
-  // dfloat *invTau; // deprecated in Boltzmann
-
-
-  // Probe Data
-  // int probeN, probeNTotal;
-  // dfloat *probeR, *probeS, *probeT;
-  // // dfloat *probeX, *probeY, *probeZ;
-  // dlong *probeElementIds, *probeIds;
-  // dfloat *probeI;
 
   // occa stuff
   occa::stream defaultStream;
@@ -364,7 +289,7 @@ public:
 
   occa::memory o_EToFPairs, o_FPairsToE, o_FPairsToF;
 
-  // cubature (for wadg)
+  // cubature
   occa::memory o_intLIFTT, o_intInterpT, o_intx, o_inty, o_intz;
   occa::memory o_cubDWT, o_cubD;
   occa::memory o_cubDrWT, o_cubDsWT, o_cubDtWT;
@@ -373,8 +298,6 @@ public:
   occa::memory o_invMc; // for comparison: inverses of weighted mass matrices
 
   occa::memory o_cubvgeo, o_cubsgeo, o_cubggeo;
-
-  // occa::memory o_c2;
 
   //MRAB element lists
   occa::memory *o_MRABelementIds;
@@ -392,16 +315,6 @@ public:
   occa::memory o_invVB1DT, o_invVB2DT;
   occa::memory o_VBq, o_PBq; // cubature interpolation/projection matrices
   occa::memory o_L0ids, o_L0vals, o_ELids, o_ELvals;
-
-  /* sparse basis occa arrays */
-  occa::memory o_sparseStackedNZ;
-  occa::memory o_sparseSrrT;
-  occa::memory o_sparseSrsT;
-  occa::memory o_sparseSssT;
-  occa::memory o_mapSgn;
-
-  // pml vars
-  // occa::memory o_sigmax, o_sigmay, o_sigmaz; // AK: deprecated
 
 
   occa::memory o_pmlElementIds;
@@ -488,81 +401,9 @@ public:
                                   int verbose);
 
   virtual dfloat MinCharacteristicLength() = 0;
+
+  void RecursiveSpectralBisectionPartition();
 };
-
-// serial sort
-void mysort(hlong *data, int N, const char *order);
-
-// sort entries in an array in parallel
-void parallelSort(int size, int rank, MPI_Comm comm,
-		  int N, void *vv, size_t sz,
-		  int (*compare)(const void *, const void *),
-		  void (*match)(void *, void *)
-		  );
-
-void meshAddSettings(settings_t& settings);
-void occaAddSettings(settings_t& settings);
-
-void meshReportSettings(settings_t& settings);
-void occaReportSettings(settings_t& settings);
-
-// void occaTimerTic(occa::device device,std::string name);
-// void occaTimerToc(occa::device device,std::string name);
-
-// extern "C"
-// {
-//   void * xxtSetup(uint num_local_rows,
-//       void* row_ids,
-//       uint nnz,
-//       void*   A_i,
-//       void*   A_j,
-//       void* A_vals,
-//       int null_space,
-//       const char* inttype,
-//       const char* floattype);
-
-//   void xxtSolve(void* x,
-//       void* A,
-//       void* rhs);
-
-//   void xxtFree(void* A) ;
-// }
-
-// extern "C"
-// {
-//   void dgesv_ ( int     *N, int     *NRHS, double  *A,
-//                 int     *LDA,
-//                 int     *IPIV,
-//                 double  *B,
-//                 int     *LDB,
-//                 int     *INFO );
-
-//   void sgesv_(int *N, int *NRHS,float  *A, int *LDA, int *IPIV, float  *B, int *LDB,int *INFO);
-
-//   void dgetrf_(int* M, int *N, double* A, int* lda, int* IPIV, int* INFO);
-//   void dgetri_(int* N, double* A, int* lda, int* IPIV, double* WORK, int* lwork, int* INFO);
-//   void dgeev_(char *JOBVL, char *JOBVR, int *N, double *A, int *LDA, double *WR, double *WI,
-//               double *VL, int *LDVL, double *VR, int *LDVR, double *WORK, int *LWORK, int *INFO );
-
-//   double dlange_(char *NORM, int *M, int *N, double *A, int *LDA, double *WORK);
-//   void dgecon_(char *NORM, int *N, double *A, int *LDA, double *ANORM,
-//                 double *RCOND, double *WORK, int *IWORK, int *INFO );
-// }
-
-void readDfloatArray(MPI_Comm comm, FILE *fp, const char *label, dfloat **A, int *Nrows, int* Ncols);
-void readIntArray   (MPI_Comm comm, FILE *fp, const char *label, int **A   , int *Nrows, int* Ncols);
-
-void meshApplyElementMatrix(mesh_t *mesh, dfloat *A, dfloat *q, dfloat *Aq);
-
-void meshRecursiveSpectralBisectionPartition(mesh_t *mesh);
-
-void matrixInverse(int N, dfloat *A);
-dfloat matrixConditionNumber(int N, dfloat *A);
-
-void occaDeviceConfig(occa::device &device, MPI_Comm comm,
-                      settings_t& settings, occa::properties& kernelInfo);
-
-void *occaHostMallocPinned(occa::device &device, size_t size, void *source, occa::memory &mem, occa::memory &h_mem);
 
 #endif
 

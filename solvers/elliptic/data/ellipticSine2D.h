@@ -24,6 +24,11 @@ SOFTWARE.
 
 */
 
+/* forcing function   */
+#define ellipticForcing2D(x, y, lambda, f)  \
+  {                                         \
+    f  = (2*OCCA_PI*OCCA_PI+lambda)*occaSin(OCCA_PI*x)*occaSin(OCCA_PI*y);   \
+  }
 
 /* Dirichlet boundary condition   */
 #define ellipticDirichletCondition2D(t,x,y,nx,ny,uM,uxM,uyM,uB,uxB,uyB)  \

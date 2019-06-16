@@ -95,19 +95,18 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
 
   } else if(ipdg) {
 
-    dlong offset = 0;
+    int Nentries = mesh.Np;
+    mesh.HaloExchangeStart(o_q, Nentries, ogsDfloat);
 
-    ellipticStartHaloExchange(elliptic, o_q, mesh.Np, sendBuffer, recvBuffer);
-
-    if(mesh.NElements)
+    if(mesh.Nelements) {
+      dlong offset = 0;
       partialGradientKernel(mesh.Nelements,
                             offset,
                             mesh.o_vgeo,
                             mesh.o_Dmatrices,
                             o_q,
                             o_grad);
-
-    ellipticInterimHaloExchange(elliptic, o_q, mesh.Np, sendBuffer, recvBuffer);
+    }
 
     if(mesh.NinternalElements)
       partialIpdgKernel(mesh.NinternalElements,
@@ -125,10 +124,10 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
                         o_grad,
                         o_Aq);
 
-    ellipticEndHaloExchange(elliptic, o_q, mesh.Np, recvBuffer);
+    mesh.HaloExchangeFinish(o_q, Nentries, ogsDfloat);
 
     if(mesh.totalHaloPairs){
-      offset = mesh.Nelements;
+      dlong offset = mesh.Nelements;
       partialGradientKernel(mesh.totalHaloPairs,
                             offset,
                             mesh.o_vgeo,

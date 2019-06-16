@@ -24,46 +24,28 @@ SOFTWARE.
 
 */
 
-#ifndef TYPES_H
-#define TYPES_H
+#ifndef CORE_HPP
+#define CORE_HPP
 
-//float data type
-#if 0
-#define dfloat float
-#define MPI_DFLOAT MPI_FLOAT
-#define dfloatFormat "%f"
-#define dfloatString "float"
-#else
-#define dfloat double
-#define MPI_DFLOAT MPI_DOUBLE
-#define dfloatFormat "%lf"
-#define dfloatString "double"
-#endif
+#include <mpi.h>
+#include <occa.h>
+#include <string>
+#include "types.h"
+#include "utils.hpp"
+#include "settings.hpp"
 
-//host index data type
-#if 0
-#define hlong int
-#define MPI_HLONG MPI_INT
-#define hlongFormat "%d"
-#define hlongString "int"
-#else
-#define hlong long long int
-#define MPI_HLONG MPI_LONG_LONG_INT
-#define hlongFormat "%lld"
-#define hlongString "long long int"
-#endif
+void meshAddSettings(settings_t& settings);
+void occaAddSettings(settings_t& settings);
 
-//device index data type
-#if 1
-#define dlong int
-#define MPI_DLONG MPI_INT
-#define dlongFormat "%d"
-#define dlongString "int"
-#else
-#define dlong long long int
-#define MPI_DLONG MPI_LONG_LONG_INT
-#define dlongFormat "%lld"
-#define dlongString "long long int"
-#endif
+void meshReportSettings(settings_t& settings);
+void occaReportSettings(settings_t& settings);
+
+void occaDeviceConfig(occa::device &device, MPI_Comm comm,
+                      settings_t& settings, occa::properties& kernelInfo);
+
+void *occaHostMallocPinned(occa::device &device, size_t size, void *source, occa::memory &mem, occa::memory &h_mem);
+
+occa::kernel buildKernel(occa::device& device, std::string fileName, std::string kernelName,
+                         occa::properties& kernelInfo, MPI_Comm& comm);
 
 #endif

@@ -28,40 +28,69 @@ SOFTWARE.
 #define LINEARSOLVER_HPP
 
 #include <occa.hpp>
-#include "utils.h"
 #include "types.h"
-#include "solver.hpp"
+#include "utils.hpp"
+#include "core.hpp"
 #include "settings.hpp"
+#include "solver.hpp"
+#include "linAlg.hpp"
+
+// #include "../solvers/elliptic/elliptic.hpp"
+class elliptic_t: public solver_t {
+public:
+
+  linAlg_t* linAlg;
+
+  occa::memory o_invDegree;
+
+  void Preconditioner(occa::memory &o_r, occa::memory &o_z);
+  void Operator(occa::memory &o_x, occa::memory &o_Ax);
+
+};
 
 //virtual base linear solver class
 class linearSolver_t {
 public:
-  dlong N;
-
-  solver_t& solver;
+  elliptic_t& elliptic; //must be made with an elliptic_t solver for now
 
   MPI_Comm& comm;
   occa::device& device;
   settings_t& settings;
   occa::properties& props;
 
-  linearSolver_t(dlong _N, solver_t& _solver);
+  dlong N;
 
-  static linearSolver_t* Setup(dlong N, solver_t& solver);
+  linearSolver_t(elliptic_t& _elliptic);
+
+  static linearSolver_t* Setup(elliptic_t& elliptic);
 
   virtual void Init()=0;
-  virtual int Solve(occa::memory& o_x, occa::memory& o_rhs)=0;
+  virtual int Solve(occa::memory& o_x, occa::memory& o_rhs,
+                    const dfloat tol, const int MAXIT, const int verbose)=0;
 };
 
 class pcg: public linearSolver_t {
 private:
+  occa::memory o_p, o_Ap, o_z, o_Ax, o_w;
+
+  dfloat* tmprdotr;
+  occa::memory h_tmprdotr;
+  occa::memory o_tmprdotr;
+
+  int flexible, weighted;
+
+  occa::kernel updatePCGKernel;
+  occa::kernel weightedUpdatePCGKernel;
 
 public:
-  pcg(dlong N, solver_t& solver);
+  pcg(elliptic_t& elliptic);
   ~pcg();
 
   void Init();
-  int Solve(occa::memory& o_x, occa::memory& o_rhs);
+  int Solve(occa::memory& o_x, occa::memory& o_rhs,
+            const dfloat tol, const int MAXIT, const int verbose);
+
+  dfloat UpdatePCG(const dfloat alpha, occa::memory &o_x, occa::memory &o_r);
 };
 
 #endif

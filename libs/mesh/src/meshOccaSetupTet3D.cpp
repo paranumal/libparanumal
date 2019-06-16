@@ -31,6 +31,24 @@ void meshTet3D::OccaSetup(occa::properties &kernelInfo){
 
   this->mesh3D::OccaSetup(kernelInfo);
 
+  //build inverse of mass matrix
+  invMM = (dfloat *) calloc(Np*Np,sizeof(dfloat));
+  for (int n=0;n<Np*Np;n++)
+    invMM[n] = MM[n];
+  matrixInverse(Np,invMM);
+
+  //set surface mass matrix
+  sMT = (dfloat *) calloc(Np*Nfaces*Nfp,sizeof(dfloat));
+  for (int n=0;n<Np;n++) {
+    for (int m=0;m<Nfp*Nfaces;m++) {
+      dfloat MSnm = 0;
+      for (int i=0;i<Np;i++){
+        MSnm += MM[n+i*Np]*LIFT[m+i*Nfp*Nfaces];
+      }
+      sMT[n+m*Np]  = MSnm;
+    }
+  }
+
   // build Dr, Ds, LIFT transposes
   dfloat *DrT = (dfloat*) calloc(Np*Np, sizeof(dfloat));
   dfloat *DsT = (dfloat*) calloc(Np*Np, sizeof(dfloat));
@@ -339,6 +357,8 @@ void meshTet3D::OccaSetup(occa::properties &kernelInfo){
   o_Dmatrices = device.malloc(3*Np*Np*sizeof(dfloat), DrstT);
 
   o_MM = device.malloc(Np*Np*sizeof(dfloat), MM);
+
+  o_sMT = device.malloc(Np*Nfaces*Nfp*sizeof(dfloat), sMT);
 
   o_LIFT =
     device.malloc(Np*Nfaces*Nfp*sizeof(dfloat),

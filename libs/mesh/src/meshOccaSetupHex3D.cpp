@@ -42,6 +42,12 @@ void meshHex3D::OccaSetup(occa::properties &kernelInfo){
     }
   }
 
+  //build inverse of mass matrix
+  invMM = (dfloat *) calloc(Np*Np,sizeof(dfloat));
+  for (int n=0;n<Np*Np;n++)
+    invMM[n] = MM[n];
+  matrixInverse(Np,invMM);
+
   LIFT = (dfloat*) calloc(Np*Nfaces*Nfp, sizeof(dfloat));
 
   dfloat *cubDWT = (dfloat*) calloc(cubNq*cubNq, sizeof(dfloat));
@@ -121,6 +127,48 @@ void meshHex3D::OccaSetup(occa::properties &kernelInfo){
     }
   }
   free(ix); free(iy); free(iz);
+
+  // build trilinear geometric factors for hexes
+  if(settings.compareSetting("ELEMENT MAP", "AFFINE")){
+    // pack gllz, gllw, and elementwise EXYZ
+    hlong Nxyz = Nelements*dim*Nverts;
+    EXYZ  = (dfloat*) calloc(Nxyz, sizeof(dfloat));
+    gllzw = (dfloat*) calloc(2*Nq, sizeof(dfloat));
+
+    int sk = 0;
+    for(int n=0;n<Nq;++n)
+      gllzw[sk++] = gllz[n];
+    for(int n=0;n<Nq;++n)
+      gllzw[sk++] = gllw[n];
+
+    sk = 0;
+    for(hlong e=0;e<Nelements;++e){
+      for(int v=0;v<Nverts;++v)
+        EXYZ[sk++] = EX[e*Nverts+v];
+      for(int v=0;v<Nverts;++v)
+        EXYZ[sk++] = EY[e*Nverts+v];
+      for(int v=0;v<Nverts;++v)
+        EXYZ[sk++] = EZ[e*Nverts+v];
+    }
+
+    // nodewise ggeo with element coordinates and gauss node info
+    o_EXYZ  = device.malloc(Nxyz*sizeof(dfloat), EXYZ);
+    o_gllzw = device.malloc(2*Nq*sizeof(dfloat), gllzw);
+  }
+
+  ggeoNoJW = (dfloat*) calloc(Np*Nelements*6,sizeof(dfloat));
+  for(int e=0;e<Nelements;++e){
+    for(int n=0;n<Np;++n){
+      ggeoNoJW[e*Np*6 + n + 0*Np] = ggeo[e*Np*Nggeo + n + G00ID*Np];
+      ggeoNoJW[e*Np*6 + n + 1*Np] = ggeo[e*Np*Nggeo + n + G01ID*Np];
+      ggeoNoJW[e*Np*6 + n + 2*Np] = ggeo[e*Np*Nggeo + n + G02ID*Np];
+      ggeoNoJW[e*Np*6 + n + 3*Np] = ggeo[e*Np*Nggeo + n + G11ID*Np];
+      ggeoNoJW[e*Np*6 + n + 4*Np] = ggeo[e*Np*Nggeo + n + G12ID*Np];
+      ggeoNoJW[e*Np*6 + n + 5*Np] = ggeo[e*Np*Nggeo + n + G22ID*Np];
+    }
+  }
+  o_ggeoNoJW = device.malloc(Np*Nelements*6*sizeof(dfloat), ggeoNoJW);
+
 
   o_MM =
     device.malloc(Np*Np*sizeof(dfloat),

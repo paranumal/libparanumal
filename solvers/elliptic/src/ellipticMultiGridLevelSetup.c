@@ -157,8 +157,12 @@ void MGLevel::setupSmoother() {
 
   } else if (options.compareArgs("MULTIGRID SMOOTHER","DAMPEDJACOBI")) { //default to damped jacobi
     smtype = JACOBI;
-    dfloat *invDiagA;
-    ellipticBuildJacobi(elliptic,lambda, &invDiagA);
+
+    dfloat *diagA    = (dfloat*) calloc(mesh->Np*mesh->Nelements, sizeof(dfloat));
+    dfloat *invDiagA = (dfloat*) calloc(mesh->Np*mesh->Nelements, sizeof(dfloat));
+    BuildDiag(diagA);
+    for (dlong n=0;n<mesh->Nelements*mesh->Np;n++)
+      invDiagA[n] = 1.0/diagA[n];
 
     o_invDiagA = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), invDiagA);
 
@@ -188,6 +192,7 @@ void MGLevel::setupSmoother() {
       //update diagonal with weight
       o_invDiagA.copyFrom(invDiagA);
     }
+    free(diagA);
     free(invDiagA);
   }
 }

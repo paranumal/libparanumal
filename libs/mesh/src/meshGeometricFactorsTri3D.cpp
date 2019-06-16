@@ -35,7 +35,7 @@ void meshTri3D::GeometricFactors(){
   Nvgeo = 12; //
 
   /* note that we have volume geometric factors for each node */
-  vgeo = (dfloat*) calloc(Nelements*Nvgeo*Np, sizeof(dfloat));
+  vgeo = (dfloat*) calloc((Nelements+totalHaloPairs)*Nvgeo*Np, sizeof(dfloat));
 
   /* number of second order geometric factors */
   Nggeo = 7;
@@ -54,16 +54,16 @@ void meshTri3D::GeometricFactors(){
 
       for(int m=0;m<Np;++m){
 
-	dfloat Drnm = Dr[n*Np+m];
-	dfloat Dsnm = Ds[n*Np+m];
+        dfloat Drnm = Dr[n*Np+m];
+        dfloat Dsnm = Ds[n*Np+m];
 
-	xr += Drnm*x[m+e*Np];
-	yr += Drnm*y[m+e*Np];
-	zr += Drnm*z[m+e*Np];
+        xr += Drnm*x[m+e*Np];
+        yr += Drnm*y[m+e*Np];
+        zr += Drnm*z[m+e*Np];
 
-	xs += Dsnm*x[m+e*Np];
-	ys += Dsnm*y[m+e*Np];
-	zs += Dsnm*z[m+e*Np];
+        xs += Dsnm*x[m+e*Np];
+        ys += Dsnm*y[m+e*Np];
+        zs += Dsnm*z[m+e*Np];
 
       }
 
@@ -131,4 +131,6 @@ void meshTri3D::GeometricFactors(){
 
     }
   }
+
+  HaloExchange(vgeo, Nvgeo*Np, ogsDfloat);
 }

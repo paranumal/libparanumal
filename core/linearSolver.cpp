@@ -26,21 +26,20 @@ SOFTWARE.
 
 #include "linearSolver.hpp"
 
-//virtual base time stepper class
-linearSolver_t::linearSolver_t(dlong _N, solver_t& _solver):
-  N(_N),
-  solver(_solver),
-  comm(_solver.comm),
-  device(_solver.device),
-  settings(_solver.settings),
-  props(_solver.props) {}
+//virtual base linear solver class
+linearSolver_t::linearSolver_t(elliptic_t& _elliptic):
+  elliptic(_elliptic),
+  comm(_elliptic.comm),
+  device(_elliptic.device),
+  settings(_elliptic.settings),
+  props(_elliptic.props) {}
 
-linearSolver_t* linearSolver_t::Setup(dlong N, solver_t& solver) {
+linearSolver_t* linearSolver_t::Setup(elliptic_t& elliptic) {
 
   linearSolver_t *linearSolver=NULL;
 
-  if (solver.settings.compareSetting("LINEAR SOLVER","PCG")){
-    linearSolver = new pcg(N, solver);
+  if (elliptic.settings.compareSetting("LINEAR SOLVER","PCG")){
+    linearSolver = new pcg(elliptic);
   } else {
     LIBP_ABORT(string("Requested LINEAR SOLVER not found."));
   }

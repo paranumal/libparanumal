@@ -45,10 +45,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
     exit(-1);
   }
 
-  dlong Ntotal = mesh->Np*mesh->Nelements;
 
-  dlong Nhalo = mesh->Np*mesh->totalHaloPairs;
-  dlong Nall   = Ntotal + Nhalo;
 
   dlong Nblock  = mymax(1,(Ntotal+blockSize-1)/blockSize);
   dlong Nblock2 = mymax(1,(Nblock+blockSize-1)/blockSize);
@@ -149,40 +146,6 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   elliptic->Nblock = Nblock;
   elliptic->Nblock2 = Nblock2;
 
-  //fill geometric factors in halo
-  if(mesh->totalHaloPairs){
-    dlong Nlocal = mesh->Nelements;
-    dlong Nhalo = mesh->totalHaloPairs;
-    size_t Nbytes = mesh->Nvgeo*sizeof(dfloat);
-
-    if (elliptic->elementType==QUADRILATERALS || elliptic->elementType==HEXAHEDRA) {
-      Nlocal *= mesh->Np;
-      Nhalo *= mesh->Np;
-      Nbytes *= mesh->Np;
-    }
-
-    dfloat *vgeoSendBuffer = (dfloat*) calloc(Nhalo*mesh->Nvgeo, sizeof(dfloat));
-
-    // import geometric factors from halo elements
-    mesh->vgeo = (dfloat*) realloc(mesh->vgeo, (Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat));
-
-    meshHaloExchange(mesh,
-         Nbytes,
-         mesh->vgeo,
-         vgeoSendBuffer,
-         mesh->vgeo + Nlocal*mesh->Nvgeo);
-
-    mesh->o_vgeo =
-      mesh->device.malloc((Nlocal+Nhalo)*mesh->Nvgeo*sizeof(dfloat), mesh->vgeo);
-    free(vgeoSendBuffer);
-  }
-
-  //build inverse of mass matrix
-  mesh->invMM = (dfloat *) calloc(mesh->Np*mesh->Np,sizeof(dfloat));
-  for (int n=0;n<mesh->Np*mesh->Np;n++)
-    mesh->invMM[n] = mesh->MM[n];
-  matrixInverse(mesh->Np,mesh->invMM);
-
   // count total number of elements
   hlong NelementsLocal = mesh->Nelements;
   hlong NelementsGlobal = 0;
@@ -215,19 +178,6 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   lallNeumann = allNeumann ? 0:1;
   MPI_Allreduce(&lallNeumann, &gallNeumann, 1, MPI_INT, MPI_SUM, mesh->comm);
   elliptic->allNeumann = (gallNeumann>0) ? false: true;
-
-  //set surface mass matrix for continuous boundary conditions
-  mesh->sMT = (dfloat *) calloc(mesh->Np*mesh->Nfaces*mesh->Nfp,sizeof(dfloat));
-  for (int n=0;n<mesh->Np;n++) {
-    for (int m=0;m<mesh->Nfp*mesh->Nfaces;m++) {
-      dfloat MSnm = 0;
-      for (int i=0;i<mesh->Np;i++){
-        MSnm += mesh->MM[n+i*mesh->Np]*mesh->LIFT[m+i*mesh->Nfp*mesh->Nfaces];
-      }
-      mesh->sMT[n+m*mesh->Np]  = MSnm;
-    }
-  }
-  mesh->o_sMT = mesh->device.malloc(mesh->Np*mesh->Nfaces*mesh->Nfp*sizeof(dfloat), mesh->sMT);
 
   //copy boundary flags
   elliptic->o_EToB = mesh->device.malloc(mesh->Nelements*mesh->Nfaces*sizeof(int), elliptic->EToB);
@@ -326,17 +276,6 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   for (int r=0;r<2;r++){
     if ((r==0 && mesh->rank==0) || (r==1 && mesh->rank>0)) {
 
-      //mesh kernels
-      mesh->haloExtractKernel =
-        mesh->device.buildKernel(LIBP_DIR "/okl/meshHaloExtract2D.okl",
-                                       "meshHaloExtract2D",
-                                       kernelInfo);
-
-      mesh->addScalarKernel =
-        mesh->device.buildKernel(LIBP_DIR "/okl/addScalar.okl",
-                   "addScalar",
-                   kernelInfo);
-
       mesh->maskKernel =
         mesh->device.buildKernel(LIBP_DIR "/okl/mask.okl",
                    "mask",
@@ -344,57 +283,6 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 
 
       kernelInfo["defines/" "p_blockSize"]= blockSize;
-
-
-      mesh->sumKernel =
-        mesh->device.buildKernel(LIBP_DIR "/okl/sum.okl",
-                   "sum",
-                   kernelInfo);
-
-      elliptic->weightedInnerProduct1Kernel =
-        mesh->device.buildKernel(LIBP_DIR "/okl/weightedInnerProduct1.okl",
-                                       "weightedInnerProduct1",
-                                       kernelInfo);
-
-      elliptic->weightedInnerProduct2Kernel =
-        mesh->device.buildKernel(LIBP_DIR "/okl/weightedInnerProduct2.okl",
-                                       "weightedInnerProduct2",
-                                       kernelInfo);
-
-      elliptic->innerProductKernel =
-        mesh->device.buildKernel(LIBP_DIR "/okl/innerProduct.okl",
-                                       "innerProduct",
-                                       kernelInfo);
-
-      elliptic->weightedNorm2Kernel =
-        mesh->device.buildKernel(LIBP_DIR "/okl/weightedNorm2.okl",
-                                           "weightedNorm2",
-                                           kernelInfo);
-
-      elliptic->norm2Kernel =
-        mesh->device.buildKernel(LIBP_DIR "/okl/norm2.okl",
-                                           "norm2",
-                                           kernelInfo);
-
-      elliptic->scaledAddKernel =
-          mesh->device.buildKernel(LIBP_DIR "/okl/scaledAdd.okl",
-                                         "scaledAdd",
-                                         kernelInfo);
-
-      elliptic->dotMultiplyKernel =
-          mesh->device.buildKernel(LIBP_DIR "/okl/dotMultiply.okl",
-                                         "dotMultiply",
-                                         kernelInfo);
-
-      elliptic->dotMultiplyAddKernel =
-          mesh->device.buildKernel(LIBP_DIR "/okl/dotMultiplyAdd.okl",
-                                         "dotMultiplyAdd",
-                                         kernelInfo);
-
-      elliptic->dotDivideKernel =
-          mesh->device.buildKernel(LIBP_DIR "/okl/dotDivide.okl",
-                                         "dotDivide",
-                                         kernelInfo);
 
       // add custom defines
       kernelInfo["defines/" "p_NpP"]= (mesh->Np+mesh->Nfp*mesh->Nfaces);
@@ -487,11 +375,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 	elliptic->partialCubatureAxKernel = mesh->device.buildKernel(fileName,kernelName,dfloatKernelInfo);
       }
 
-      // combined PCG update and r.r kernel
 
-      elliptic->updatePCGKernel =
-	mesh->device.buildKernel(DELLIPTIC "/okl/ellipticUpdatePCG.okl",
-				 "ellipticUpdatePCG", dfloatKernelInfo);
 
 
       // combined update for Non-blocking PCG
@@ -514,26 +398,6 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 				 "ellipticUpdate1NBFPCG", dfloatKernelInfo);
 
 
-      // Not implemented for Quad3D !!!!!
-      if (options.compareArgs("BASIS","BERN")) {
-
-        sprintf(fileName, DELLIPTIC "/okl/ellipticGradientBB%s.okl", suffix);
-        sprintf(kernelName, "ellipticGradientBB%s", suffix);
-
-        elliptic->gradientKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
-
-        sprintf(kernelName, "ellipticPartialGradientBB%s", suffix);
-        elliptic->partialGradientKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
-
-        sprintf(fileName, DELLIPTIC "/okl/ellipticAxIpdgBB%s.okl", suffix);
-        sprintf(kernelName, "ellipticAxIpdgBB%s", suffix);
-        elliptic->ipdgKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
-
-        sprintf(kernelName, "ellipticPartialAxIpdgBB%s", suffix);
-        elliptic->partialIpdgKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
-
-      } else if (options.compareArgs("BASIS","NODAL")) {
-
         sprintf(fileName, DELLIPTIC "/okl/ellipticGradient%s.okl", suffix);
         sprintf(kernelName, "ellipticGradient%s", suffix);
 
@@ -548,7 +412,7 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
 
         sprintf(kernelName, "ellipticPartialAxIpdg%s", suffix);
         elliptic->partialIpdgKernel = mesh->device.buildKernel(fileName,kernelName,kernelInfo);
-      }
+
 
       // Use the same kernel with quads for the following kenels
       if(elliptic->dim==3){

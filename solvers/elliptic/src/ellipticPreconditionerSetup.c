@@ -91,16 +91,22 @@ void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat lambda
   } else if(options.compareArgs("PRECONDITIONER", "MULTIGRID")){
 
     ellipticMultiGridSetup(elliptic,precon,lambda);
-    
+
   } else if(options.compareArgs("PRECONDITIONER", "SEMFEM")) {
 
     ellipticSEMFEMSetup(elliptic,precon,lambda);
 
   } else if(options.compareArgs("PRECONDITIONER", "JACOBI")) {
 
-    dfloat *invDiagA;
-    ellipticBuildJacobi(elliptic,lambda,&invDiagA);
+    dfloat *diagA    = (dfloat*) calloc(mesh->Np*mesh->Nelements, sizeof(dfloat));
+    dfloat *invDiagA = (dfloat*) calloc(mesh->Np*mesh->Nelements, sizeof(dfloat));
+    BuildDiag(diagA);
+    for (dlong n=0;n<mesh->Nelements*mesh->Np;n++)
+      invDiagA[n] = 1.0/diagA[n];
+
     precon->o_invDiagA = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), invDiagA);
+
+    free(diagA);
     free(invDiagA);
   } else if(options.compareArgs("PRECONDITIONER", "OAS")){
 

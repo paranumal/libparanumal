@@ -24,16 +24,14 @@ SOFTWARE.
 
 */
 
-#ifndef ELLIPTIC_H
-#define ELLIPTIC_H 1
+#ifndef ELLIPTIC_HPP
+#define ELLIPTIC_HPP 1
 
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include "mpi.h"
-#include "mesh2D.h"
-#include "mesh3D.h"
 #include "parAlmond.hpp"
 #include "ellipticPrecon.h"
 
@@ -111,17 +109,12 @@ typedef struct {
   occa::memory o_R;
   occa::memory o_Ry;
 
-  occa::memory o_EXYZ; // element vertices for reconstructing geofacs (trilinear hexes only)
-  occa::memory o_gllzw; // GLL nodes and weights
-
-  occa::memory o_ggeoNoJW; // 
-
   occa::kernel AxKernel;
   occa::kernel partialAxKernel;
   occa::kernel partialAxKernel2;
   occa::kernel partialFloatAxKernel;
   occa::kernel partialCubatureAxKernel;
-  
+
   occa::kernel rhsBCKernel;
   occa::kernel addBCKernel;
   occa::kernel innerProductKernel;
@@ -177,7 +170,7 @@ typedef struct {
 
   hlong NelementsGlobal;
   dfloat nullProjectWeightGlobal;
-  
+
 }elliptic_t;
 
 #include "ellipticMultiGrid.h"
@@ -191,11 +184,6 @@ void ellipticPreconditionerSetup(elliptic_t *elliptic, ogs_t *ogs, dfloat lambda
 int  ellipticSolve(elliptic_t *elliptic, dfloat lambda, dfloat tol, occa::memory &o_r, occa::memory &o_x);
 
 void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &kernelInfo);
-
-
-void ellipticStartHaloExchange(elliptic_t *elliptic, occa::memory &o_q, int Nentries, dfloat *sendBuffer, dfloat *recvBuffer);
-void ellipticInterimHaloExchange(elliptic_t *elliptic, occa::memory &o_q, int Nentries, dfloat *sendBuffer, dfloat *recvBuffer);
-void ellipticEndHaloExchange(elliptic_t *elliptic, occa::memory &o_q, int Nentries, dfloat *recvBuffer);
 
 //Linear solvers
 int pcg      (elliptic_t* elliptic, dfloat lambda, occa::memory &o_r, occa::memory &o_x, const dfloat tol, const int MAXIT);
@@ -293,8 +281,8 @@ void ellipticNonBlockingUpdate2NBPCG(elliptic_t *elliptic,
 				     occa::memory &o_r, occa::memory &o_z,
 				     dfloat *localdots, dfloat *globaldots, MPI_Request *request);
 
-int nbpcg(elliptic_t* elliptic, dfloat lambda, 
-	  occa::memory &o_r, occa::memory &o_x, 
+int nbpcg(elliptic_t* elliptic, dfloat lambda,
+	  occa::memory &o_r, occa::memory &o_x,
 	  const dfloat tol, const int MAXIT);
 
 void ellipticNonBlockingUpdate0NBFPCG(elliptic_t *elliptic,
@@ -307,8 +295,8 @@ void ellipticNonBlockingUpdate1NBFPCG(elliptic_t *elliptic,
 				      occa::memory &o_x, occa::memory &o_r, occa::memory &o_u, occa::memory &o_w,
 				      dfloat *localpdots, dfloat *globalpdots, MPI_Request *request);
 
-int nbfpcg(elliptic_t* elliptic, dfloat lambda, 
-	   occa::memory &o_r, occa::memory &o_x, 
+int nbfpcg(elliptic_t* elliptic, dfloat lambda,
+	   occa::memory &o_r, occa::memory &o_x,
 	   const dfloat tol, const int MAXIT);
 
 void ellipticZeroMean(elliptic_t *elliptic, occa::memory &o_q);

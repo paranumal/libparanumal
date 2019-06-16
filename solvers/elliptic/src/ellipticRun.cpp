@@ -1,0 +1,187 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+#include "elliptic.hpp"
+
+void elliptic_t::Run(){
+
+  occa::properties kernelInfo = props; //copy base occa properties
+
+  string dataFileName;
+  settings.getSetting("DATA FILE", dataFileName);
+  kernelInfo["includes"] += dataFileName;
+
+  // set kernel name suffix
+  char *suffix;
+  if(mesh.elementType==TRIANGLES)
+    suffix = strdup("Tri2D");
+  if(mesh.elementType==QUADRILATERALS)
+    suffix = strdup("Quad2D");
+  if(mesh.elementType==TETRAHEDRA)
+    suffix = strdup("Tet3D");
+  if(mesh.elementType==HEXAHEDRA)
+    suffix = strdup("Hex3D");
+
+  char fileName[BUFSIZ], kernelName[BUFSIZ];
+  sprintf(fileName, DELLIPTIC "/okl/ellipticRhs%s.okl", suffix);
+  sprintf(kernelName, "ellipticRhs%s", suffix);
+
+  occa::kernel forcingKernel = buildKernel(device, fileName, kernelName,
+                                                    kernelInfo, comm);
+
+  occa::kernel rhsBCKernel, addBCKernel;
+  if (settings.compareSetting("DISCRETIZATION","IPDG")) {
+    sprintf(fileName, DELLIPTIC "/okl/ellipticRhsBCIpdg%s.okl", suffix);
+    sprintf(kernelName, "ellipticRhsBCIpdg%s", suffix);
+
+    rhsBCKernel = buildKernel(device, fileName,kernelName, kernelInfo, comm);
+  } else if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
+    sprintf(fileName, DELLIPTIC "/okl/ellipticRhsBC%s.okl", suffix);
+    sprintf(kernelName, "ellipticRhsBC%s", suffix);
+
+    rhsBCKernel = buildKernel(device, fileName, kernelName, kernelInfo, comm);
+
+    sprintf(fileName, DELLIPTIC "/okl/ellipticAddBC%s.okl", suffix);
+    sprintf(kernelName, "ellipticAddBC%s", suffix);
+
+    addBCKernel = buildKernel(device, fileName, kernelName, kernelInfo, comm);
+  }
+
+  //create occa buffers
+  dlong Nall = mesh.Np*(mesh.Nelements+mesh.totalHaloPairs);
+  dfloat *r = (dfloat*) calloc(Nall, sizeof(dfloat));
+  dfloat *x = (dfloat*) calloc(Nall, sizeof(dfloat));
+  occa:memory o_r = device.malloc(Nall*sizeof(dfloat));
+  occa:memory o_x = device.malloc(Nall*sizeof(dfloat), x);
+
+  //populate rhs forcing
+  forcingKernel(mesh.Nelements,
+                mesh.o_ggeo,
+                mesh.o_MM,
+                lambda,
+                mesh.o_x,
+                mesh.o_y,
+                mesh.o_z,
+                o_r);
+
+  //add boundary condition contribution to rhs
+  if (settings.compareSetting("DISCRETIZATION","IPDG")) {
+    dfloat zero = 0.f;
+    rhsBCKernel(mesh.Nelements,
+                mesh.o_vmapM,
+                tau,
+                zero,
+                mesh.o_x,
+                mesh.o_y,
+                mesh.o_z,
+                mesh.o_vgeo,
+                mesh.o_sgeo,
+                o_EToB,
+                mesh.o_Dmatrices,
+                mesh.o_LIFTT,
+                mesh.o_MM,
+                o_r);
+  } else if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
+    dfloat zero = 0.f, mone = -1.0f, one = 1.0f;
+    rhsBCKernel(mesh.Nelements,
+                mesh.o_ggeo,
+                mesh.o_sgeo,
+                mesh.o_Dmatrices,
+                mesh.o_Smatrices,
+                mesh.o_MM,
+                mesh.o_vmapM,
+                mesh.o_sMT,
+                lambda,
+                zero,
+                mesh.o_x,
+                mesh.o_y,
+                mesh.o_z,
+                o_mapB,
+                o_r);
+  }
+
+  // gather-scatter and mask rhs if c0
+  if(settings.compareSetting("DISCRETIZATION","CONTINUOUS")){
+    ogsGatherScatter(o_r, ogsDfloat, ogsAdd, mesh.ogs);
+    if (Nmasked) maskKernel(Nmasked, o_maskIds, o_r);
+  }
+
+  int maxIter = 1000;
+  settings.getSetting("MAXIMUM ITERATIONS", maxIter);
+
+  int verbose = settings.compareSetting("VERBOSE", "TRUE") ? 1 : 0;
+
+  MPI_Barrier(comm);
+  double startTime = MPI_Wtime();
+
+  //call the solver
+  dfloat tol = 1e-8;
+  int iter = Solve(o_x, o_r, tol, maxIter, verbose);
+
+  //add the boundary data to the masked nodes
+  if(settings.compareSetting("DISCRETIZATION","CONTINUOUS")){
+    dfloat zero = 0.;
+    addBCKernel(mesh.Nelements,
+                zero,
+                mesh.o_x,
+                mesh.o_y,
+                mesh.o_z,
+                o_mapB,
+                o_x);
+  }
+
+  MPI_Barrier(comm);
+  double endTime = MPI_Wtime();
+  double elapsedTime = endTime - startTime;
+
+  if ((mesh.rank==0) && verbose){
+    printf("%d, " hlongFormat ", %g, %d, %g, %g; global: N, dofs, elapsed, iterations, time per node, nodes*iterations/time %s\n",
+           mesh.N,
+           mesh.globalNelements*mesh->Np,
+           elapsedTime,
+           iter,
+           elapsedTime/(mesh.Np*mesh.globalNelements),
+           globalNelements*((dfloat)iter*mesh.Np/elapsedTime),
+           (char*) settings.getsetting("PRECONDITIONER").c_str());
+  }
+
+  if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
+
+    // copy data back to host
+    o_x.copyTo(x);
+
+    // output field files
+    string name;
+    settings.getSetting("OUTPUT FILE NAME", name);
+    char fname[BUFSIZ];
+    sprintf(fname, "%s_%04d.vtu", name.c_str(), mesh.rank);
+
+    PlotFields(x, fname);
+  }
+
+  free(r); free(x);
+  o_r.free(); o_x.free();
+}

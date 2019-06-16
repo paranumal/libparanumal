@@ -24,23 +24,34 @@ SOFTWARE.
 
 */
 
-#define mode 1.0
+#include "elliptic.hpp"
 
-/* Homogeneous Dirichlet boundary condition   */
-#define ellipticDirichletCondition3D(t,x,y,z,nx,ny,nz,uM,uxM,uyM,uzM,uB,uxB,uyB,uzB)  \
-  {              \
-    uB  = cos(mode*M_PI*x)*cos(mode*M_PI*y)*cos(mode*M_PI*z);	\
-    uxB = uxM;	\
-    uyB = uyM;   \
-    uzB = uzM;   \
-  }
+int elliptic_t::Solve(occa::memory &o_x, occa::memory &o_r,
+                      const dfloat tol, const int MAXIT, const int verbose){
 
-/* Homogeneous Neumann boundary condition   */
-#define ellipticNeumannCondition3D(t,x,y,z,nx,ny,nz,uM,uxM,uyM,uzM,uB,uxB,uyB,uzB)  \
-  {              \
-    uB  = uM;    \
-    uxB = -mode*M_PI*sin(mode*M_PI*x)*cos(mode*M_PI*y)*cos(mode*M_PI*z);	\
-    uyB = -mode*M_PI*cos(mode*M_PI*x)*sin(mode*M_PI*y)*cos(mode*M_PI*z);		\
-    uzB = -mode*M_PI*cos(mode*M_PI*x)*cos(mode*M_PI*y)*sin(mode*M_PI*z);		\
-  }
 
+#if USE_NULL_PROJECTION==1
+  if(allNeumann) // zero mean of RHS
+    ZeroMean(o_r);
+#endif
+
+  int Niter = linearSolver->Solve(o_x, o_r, tol, MAXIT, verbose);
+
+  // if(!options.compareArgs("KRYLOV SOLVER", "NONBLOCKING"))
+  //   Niter = pcg (elliptic, lambda, o_r, o_x, tol, maxIter, verbose);
+  // else{
+  //   if(!options.compareArgs("KRYLOV SOLVER", "FLEXIBLE")){
+  //     Niter = nbpcg (elliptic, lambda, o_r, o_x, tol, maxIter);
+  //   }
+  //   else{
+  //     Niter = nbfpcg (elliptic, lambda, o_r, o_x, tol, maxIter);
+  //   }
+  // }
+
+#if USE_NULL_PROJECTION==1
+  if(allNeumann) // zero mean of RHS
+    ZeroMean(o_x);
+#endif
+
+  return Niter;
+}

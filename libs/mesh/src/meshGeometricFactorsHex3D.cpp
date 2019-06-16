@@ -79,7 +79,7 @@ void meshHex3D::GeometricFactors(){
   Nvgeo = 12;
 
   /* note that we have volume geometric factors for each node */
-  vgeo = (dfloat*) calloc(Nelements*Nvgeo*Np, sizeof(dfloat));
+  vgeo = (dfloat*) calloc((Nelements+totalHaloPairs)*Nvgeo*Np, sizeof(dfloat));
 
   cubvgeo = (dfloat*) calloc(Nelements*Nvgeo*cubNp, sizeof(dfloat));
 
@@ -314,6 +314,8 @@ void meshHex3D::GeometricFactors(){
     if(rank==0)
       printf("J in range [%g,%g] and max Skew = %g\n", globalMinJ, globalMaxJ, globalMaxSkew);
   #endif
+
+  HaloExchange(vgeo, Nvgeo*Np, ogsDfloat);
 
   free(xre); free(xse); free(xte);
   free(yre); free(yse); free(yte);

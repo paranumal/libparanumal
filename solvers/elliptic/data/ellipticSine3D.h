@@ -24,46 +24,26 @@ SOFTWARE.
 
 */
 
-#ifndef TYPES_H
-#define TYPES_H
+/* forcing function   */
+#define ellipticForcing3D(x, y, z, lambda, f)  \
+  {                                         \
+    f  = (3*OCCA_PI*OCCA_PI+lambda)*occaSin(OCCA_PI*x)*occaSin(OCCA_PI*y)*occaSin(OCCA_PI*z);   \
+  }
 
-//float data type
-#if 0
-#define dfloat float
-#define MPI_DFLOAT MPI_FLOAT
-#define dfloatFormat "%f"
-#define dfloatString "float"
-#else
-#define dfloat double
-#define MPI_DFLOAT MPI_DOUBLE
-#define dfloatFormat "%lf"
-#define dfloatString "double"
-#endif
+/* Dirichlet boundary condition   */
+#define ellipticDirichletCondition3D(t,x,y,z,nx,ny,nz,uM,uxM,uyM,uzM,uB,uxB,uyB,uzB)  \
+  {              \
+    uB  = occaCos(OCCA_PI*x)*occaCos(OCCA_PI*y)*occaCos(OCCA_PI*z);   \
+    uxB = uxM;   \
+    uyB = uyM;   \
+    uzB = uzM;   \
+  }
 
-//host index data type
-#if 0
-#define hlong int
-#define MPI_HLONG MPI_INT
-#define hlongFormat "%d"
-#define hlongString "int"
-#else
-#define hlong long long int
-#define MPI_HLONG MPI_LONG_LONG_INT
-#define hlongFormat "%lld"
-#define hlongString "long long int"
-#endif
-
-//device index data type
-#if 1
-#define dlong int
-#define MPI_DLONG MPI_INT
-#define dlongFormat "%d"
-#define dlongString "int"
-#else
-#define dlong long long int
-#define MPI_DLONG MPI_LONG_LONG_INT
-#define dlongFormat "%lld"
-#define dlongString "long long int"
-#endif
-
-#endif
+/* Neumann boundary condition   */
+#define ellipticNeumannCondition3D(t,x,y,z,nx,ny,nz,uM,uxM,uyM,uzM,uB,uxB,uyB,uzB)  \
+  {              \
+    uB  = uM;    \
+    uxB = -OCCA_PI*occaSin(OCCA_PI*x)*occaCos(OCCA_PI*y)*occaCos(OCCA_PI*z);   \
+    uyB = -OCCA_PI*occaCos(OCCA_PI*x)*occaSin(OCCA_PI*y)*occaCos(OCCA_PI*z);   \
+    uzB = -OCCA_PI*occaCos(OCCA_PI*x)*occaCos(OCCA_PI*y)*occaSin(OCCA_PI*z);   \
+  }

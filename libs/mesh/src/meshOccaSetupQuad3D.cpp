@@ -40,6 +40,13 @@ void meshQuad3D::OccaSetup(occa::properties &kernelInfo){
     }
   }
 
+  //build inverse of mass matrix
+  invMM = (dfloat *) calloc(Np*Np,sizeof(dfloat));
+  for (int n=0;n<Np*Np;n++)
+    invMM[n] = MM[n];
+  matrixInverse(Np,invMM);
+
+
   dfloat *cubDWT = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
   dfloat *cubProjectT = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
   dfloat *cubInterpT = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));

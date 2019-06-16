@@ -28,7 +28,7 @@ SOFTWARE.
 #include <mpi.h>
 #include "occa.hpp"
 #include "types.h"
-#include "utils.h"
+#include "utils.hpp"
 #include "settings.hpp"
 #include "omp.h"
 

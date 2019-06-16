@@ -28,8 +28,8 @@ SOFTWARE.
 #define TIMESTEPPER_HPP
 
 #include <occa.hpp>
-#include "utils.h"
 #include "types.h"
+#include "utils.hpp"
 #include "solver.hpp"
 #include "settings.hpp"
 

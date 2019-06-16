@@ -32,7 +32,7 @@ SOFTWARE.
 #include <ostream>
 #include <sstream>
 #include <fstream>
-#include "utils.h"
+#include "utils.hpp"
 
 using std::string;
 using std::vector;

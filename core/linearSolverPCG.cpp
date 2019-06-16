@@ -26,15 +26,162 @@ SOFTWARE.
 
 #include "linearSolver.hpp"
 
-pcg::pcg(dlong _N, solver_t& _solver):
-  linearSolver_t(_N, _solver) {};
+#define PCG_BLOCKSIZE 512
+
+pcg::pcg(elliptic_t& _elliptic):
+  linearSolver_t(_elliptic) {};
 
 pcg::~pcg() {}
 
-void pcg::Init() {}
+void pcg::Init() {
 
-int pcg::Solve(occa::memory &o_x, occa::memory &o_rhs) {
+  mesh_t& mesh = elliptic.mesh;
 
+  N = mesh.Np*mesh.Nelements;
+  dlong Nhalo  = mesh.Np*mesh.totalHaloPairs;
+  dlong Ntotal = N + Nhalo;
 
+  weighted = settings.compareSetting("DISCRETIZATION", "CONTINUOUS");
+  flexible = settings.compareSetting("KRYLOV SOLVER", "FLEXIBLE");
+
+  /*aux variables */
+  o_p  = device.malloc(Ntotal*sizeof(dfloat));
+  o_z  = device.malloc(Ntotal*sizeof(dfloat));
+  o_Ax = device.malloc(Ntotal*sizeof(dfloat));
+  o_Ap = device.malloc(Ntotal*sizeof(dfloat));
+
+  if (weighted)
+    o_w = elliptic.o_invDegree;
+
+  //pinned tmp buffer for reductions
+  occa::properties mprops;
+  mprops["mapped"] = true;
+  h_tmprdotr = device.malloc(PCG_BLOCKSIZE*sizeof(dfloat), mprops);
+  tmprdotr = (dfloat*) h_tmprdotr.ptr();
+  o_tmprdotr = device.malloc(PCG_BLOCKSIZE*sizeof(dfloat));
+
+  /* build kernels */
+  occa::properties kernelInfo = props; //copy base properties
+
+  //add defines
+  kernelInfo["defines/" "p_blockSize"] = (int)PCG_BLOCKSIZE;
+
+  // combined PCG update and r.r kernel
+  updatePCGKernel = buildKernel(device,
+                                LIBP_DIR "/core/okl/linearSolverUpdatePCG.okl",
+                                "updatePCG", kernelInfo, comm);
+  weightedUpdatePCGKernel = buildKernel(device,
+                                LIBP_DIR "/core/okl/linearSolverWeightedUpdatePCG.okl",
+                                "weightedUpdatePCG", kernelInfo, comm);
 }
 
+int pcg::Solve(occa::memory &o_x, occa::memory &o_r,
+               const dfloat tol, const int MAXIT, const int verbose) {
+
+  int rank = elliptic.mesh.rank;
+  linAlg_t* linAlg = elliptic.linAlg;
+
+  // register scalars
+  dfloat rdotz1 = 0;
+  dfloat rdotz2 = 0;
+  dfloat alpha = 0, beta = 0, pAp = 0;
+  dfloat rdotr;
+
+  // compute A*x
+  elliptic.Operator(o_x, o_Ax);
+
+  // subtract r = r - A*x
+  linAlg->axpy(N, -1.f, o_Ax, 1.f, o_r);
+
+  if (weighted)
+    rdotr = linAlg->weightedNorm2(N, o_w, o_r, comm);
+  else
+    rdotr = linAlg->norm2(N, o_r, comm);
+
+  dfloat TOL = mymax(tol*tol*rdotr,tol*tol);
+
+  if (verbose&&(rank==0))
+    printf("CG: initial res norm %12.12f \n", sqrt(rdotr));
+
+  int iter;
+  for(iter=0;iter<MAXIT;++iter){
+
+    //exit if tolerance is reached
+    if(rdotr<=TOL) break;
+
+    // z = Precon^{-1} r
+    elliptic.Preconditioner(o_r, o_z);
+
+    // r.z
+    rdotz2 = rdotz1;
+    if (weighted)
+      rdotz1 = linAlg->weightedInnerProd(N, o_w, o_r, o_z, comm);
+    else
+      rdotz1 = linAlg->innerProd(N, o_r, o_z, comm);
+
+
+    if(flexible){
+      dfloat zdotAp;
+      if (weighted)
+        zdotAp = linAlg->weightedInnerProd(N, o_w, o_z, o_Ap, comm);
+      else
+        zdotAp = linAlg->innerProd(N, o_z, o_Ap, comm);
+
+      beta = (iter==0) ? 0 : -alpha*zdotAp/rdotz2;
+    } else{
+      beta = (iter==0) ? 0 : rdotz1/rdotz2;
+    }
+
+    // p = z + beta*p
+    linAlg->axpy(N, 1.f, o_z, beta, o_p);
+
+    // A*p
+    elliptic.Operator(o_p, o_Ap);
+
+    // p.Ap
+    if (weighted)
+      pAp =  linAlg->weightedInnerProd(N, o_w, o_p, o_Ap, comm);
+    else
+      pAp =  linAlg->innerProd(N, o_p, o_Ap, comm);
+
+    alpha = rdotz1/pAp;
+
+    //  x <= x + alpha*p
+    //  r <= r - alpha*A*p
+    //  dot(r,r)
+    rdotr = UpdatePCG(alpha, o_x, o_r);
+
+    if (verbose&&(rank==0)) {
+      if(rdotr<0)
+        printf("WARNING CG: rdotr = %17.15lf\n", rdotr);
+
+      printf("CG: it %d, r norm %12.12le, alpha = %le \n", iter+1, sqrt(rdotr), alpha);
+    }
+  }
+
+  return iter;
+}
+
+dfloat pcg::UpdatePCG(const dfloat alpha, occa::memory &o_x, occa::memory &o_r){
+
+  // x <= x + alpha*p
+  // r <= r - alpha*A*p
+  // dot(r,r)
+  int Nblocks = (N+PCG_BLOCKSIZE-1)/PCG_BLOCKSIZE;
+  Nblocks = (Nblocks>PCG_BLOCKSIZE) ? PCG_BLOCKSIZE : Nblocks; //limit to PCG_BLOCKSIZE entries
+
+  if (weighted)
+    weightedUpdatePCGKernel(N, Nblocks, o_w, o_p, o_Ap, alpha, o_x, o_r, o_tmprdotr);
+  else
+    updatePCGKernel(N, Nblocks, o_p, o_Ap, alpha, o_x, o_r, o_tmprdotr);
+
+  o_tmprdotr.copyTo(tmprdotr, Nblocks*sizeof(dfloat));
+
+  dfloat rdotr1 = 0;
+  for(int n=0;n<Nblocks;++n)
+    rdotr1 += tmprdotr[n];
+
+  dfloat globalrdotr1 = 0;
+  MPI_Allreduce(&rdotr1, &globalrdotr1, 1, MPI_DFLOAT, MPI_SUM, comm);
+  return globalrdotr1;
+}

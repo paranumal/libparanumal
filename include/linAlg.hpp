@@ -28,8 +28,8 @@ SOFTWARE.
 #define LINALG_HPP
 
 #include <occa.hpp>
-#include "utils.h"
 #include "types.h"
+#include "utils.hpp"
 #include "settings.hpp"
 
 //launcher for basic linear algebra OCCA kernels
@@ -102,6 +102,10 @@ public:
   // o_x.o_y
   dfloat innerProd(const dlong N, occa::memory& o_x, occa::memory& o_y,
                     MPI_Comm comm);
+
+  // ||o_a||_w2
+  dfloat weightedNorm2(const dlong N, occa::memory& o_w, occa::memory& o_a,
+                       MPI_Comm comm);
 
   // o_w.o_x.o_y
   dfloat weightedInnerProd(const dlong N, occa::memory& o_w, occa::memory& o_x,

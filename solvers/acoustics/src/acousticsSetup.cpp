@@ -67,9 +67,9 @@ acoustics_t& acoustics_t::Setup(mesh_t& mesh){
   occa::properties kernelInfo = acoustics->props; //copy base occa properties
 
   //add boundary data to kernel info
-  string boundaryHeaderFileName;
-  settings.getSetting("DATA FILE", boundaryHeaderFileName);
-  kernelInfo["includes"] += boundaryHeaderFileName;
+  string dataFileName;
+  settings.getSetting("DATA FILE", dataFileName);
+  kernelInfo["includes"] += dataFileName;
 
 
   kernelInfo["defines/" "p_Nfields"]= acoustics->Nfields;
@@ -112,19 +112,21 @@ acoustics_t& acoustics_t::Setup(mesh_t& mesh){
   sprintf(fileName, DACOUSTICS "/okl/acousticsVolume%s.okl", suffix);
   sprintf(kernelName, "acousticsVolume%s", suffix);
 
-  acoustics->volumeKernel =  mesh.device.buildKernel(fileName, kernelName, kernelInfo);
-
+  acoustics->volumeKernel =  buildKernel(mesh.device, fileName, kernelName,
+                                         kernelInfo, mesh.comm);
   // kernels from surface file
   sprintf(fileName, DACOUSTICS "/okl/acousticsSurface%s.okl", suffix);
   sprintf(kernelName, "acousticsSurface%s", suffix);
 
-  acoustics->surfaceKernel = mesh.device.buildKernel(fileName, kernelName, kernelInfo);
+  acoustics->surfaceKernel = buildKernel(mesh.device, fileName, kernelName,
+                                         kernelInfo, mesh.comm);
 
   // mass matrix operator
   sprintf(fileName, LIBP_DIR "/core/okl/MassMatrixOperator%s.okl", suffix);
   sprintf(kernelName, "MassMatrixOperator%s", suffix);
 
-  acoustics->MassMatrixKernel = mesh.device.buildKernel(fileName, kernelName, kernelInfo);
+  acoustics->MassMatrixKernel = buildKernel(mesh.device, fileName, kernelName,
+                                            kernelInfo, mesh.comm);
 
 
   if (mesh.dim==2) {
@@ -135,7 +137,8 @@ acoustics_t& acoustics_t::Setup(mesh_t& mesh){
     sprintf(kernelName, "acousticsInitialCondition3D");
   }
 
-  acoustics->initialConditionKernel = mesh.device.buildKernel(fileName, kernelName, kernelInfo);
+  acoustics->initialConditionKernel = buildKernel(mesh.device, fileName, kernelName,
+                                                  kernelInfo, mesh.comm);
 
   return *acoustics;
 }

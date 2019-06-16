@@ -24,46 +24,29 @@ SOFTWARE.
 
 */
 
-#ifndef TYPES_H
-#define TYPES_H
+//spectral mass matrix
+@kernel void ellipticRhsQuad2D(const dlong Nelements,
+                               @restrict const dfloat* ggeo,
+                               @restrict const dfloat* MM,
+                               @restrict const dfloat* x,
+                               @restrict const dfloat* y,
+                               @restrict const dfloat* z,
+                                         const dfloat  lambda,
+                               @restrict       dfloat* rhs){
 
-//float data type
-#if 0
-#define dfloat float
-#define MPI_DFLOAT MPI_FLOAT
-#define dfloatFormat "%f"
-#define dfloatString "float"
-#else
-#define dfloat double
-#define MPI_DFLOAT MPI_DOUBLE
-#define dfloatFormat "%lf"
-#define dfloatString "double"
-#endif
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
 
-//host index data type
-#if 0
-#define hlong int
-#define MPI_HLONG MPI_INT
-#define hlongFormat "%d"
-#define hlongString "int"
-#else
-#define hlong long long int
-#define MPI_HLONG MPI_LONG_LONG_INT
-#define hlongFormat "%lld"
-#define hlongString "long long int"
-#endif
+    for(int n=0;n<p_Np;++n;@inner(0)){
 
-//device index data type
-#if 1
-#define dlong int
-#define MPI_DLONG MPI_INT
-#define dlongFormat "%d"
-#define dlongString "int"
-#else
-#define dlong long long int
-#define MPI_DLONG MPI_LONG_LONG_INT
-#define dlongFormat "%lld"
-#define dlongString "long long int"
-#endif
+      // assumes w*J built into G entries
+      const dlong gbase = e*p_Nggeo*p_Np + n;
+      const dfloat r_GwJ = ggeo[gbase+p_GWJID*p_Np];
 
-#endif
+      dfloat f = 0;
+      ellipticForcing3D(x[id], y[id], z[id], lambda, f);
+
+      const dlong id = e*p_Np + n;
+      rhs[id] = r_GwJ*f;
+    }
+  }
+}

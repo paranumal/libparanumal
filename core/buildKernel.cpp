@@ -24,46 +24,27 @@ SOFTWARE.
 
 */
 
-#ifndef TYPES_H
-#define TYPES_H
+#include "utils.hpp"
 
-//float data type
-#if 0
-#define dfloat float
-#define MPI_DFLOAT MPI_FLOAT
-#define dfloatFormat "%f"
-#define dfloatString "float"
-#else
-#define dfloat double
-#define MPI_DFLOAT MPI_DOUBLE
-#define dfloatFormat "%lf"
-#define dfloatString "double"
-#endif
+occa::kernel buildKernel(occa::device& device, std::string fileName, std::string kernelName,
+                         occa::properties& kernelInfo, MPI_Comm& comm){
 
-//host index data type
-#if 0
-#define hlong int
-#define MPI_HLONG MPI_INT
-#define hlongFormat "%d"
-#define hlongString "int"
-#else
-#define hlong long long int
-#define MPI_HLONG MPI_LONG_LONG_INT
-#define hlongFormat "%lld"
-#define hlongString "long long int"
-#endif
+  int rank;
+  MPI_Comm_rank(comm, &rank);
 
-//device index data type
-#if 1
-#define dlong int
-#define MPI_DLONG MPI_INT
-#define dlongFormat "%d"
-#define dlongString "int"
-#else
-#define dlong long long int
-#define MPI_DLONG MPI_LONG_LONG_INT
-#define dlongFormat "%lld"
-#define dlongString "long long int"
-#endif
+  occa::kernel kernel;
 
-#endif
+  //build on root first
+  if (!rank)
+    kernel = device.buildKernel(fileName, kernelName, kernelInfo);
+
+  MPI_Barrier(comm);
+
+  //remaining rank find the cached version (ideally)
+  if (rank)
+    kernel = device.buildKernel(fileName, kernelName, kernelInfo);
+
+  MPI_Barrier(comm);
+
+  return kernel;
+}

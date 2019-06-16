@@ -33,7 +33,7 @@ void meshQuad2D::GeometricFactors(){
   Nvgeo = 7;
 
   /* note that we have volume geometric factors for each node */
-  vgeo = (dfloat*) calloc(Nelements*Nvgeo*Np, sizeof(dfloat));
+  vgeo = (dfloat*) calloc((Nelements+totalHaloPairs)*Nvgeo*Np, sizeof(dfloat));
 
   cubvgeo = (dfloat*) calloc(Nelements*Nvgeo*cubNp, sizeof(dfloat));
 
@@ -134,4 +134,6 @@ void meshQuad2D::GeometricFactors(){
       }
     }
   }
+
+  HaloExchange(vgeo, Nvgeo*Np, ogsDfloat);
 }

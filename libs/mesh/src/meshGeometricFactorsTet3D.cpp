@@ -31,8 +31,7 @@ void meshTet3D::GeometricFactors(){
 
   /* unified storage array for geometric factors */
   Nvgeo = 12;
-  vgeo = (dfloat*) calloc(Nelements*Nvgeo,
-        sizeof(dfloat));
+  vgeo = (dfloat*) calloc((Nelements+totalHaloPairs)*Nvgeo, sizeof(dfloat));
 
   /* number of second order geometric factors */
   Nggeo = 7;
@@ -96,4 +95,5 @@ void meshTet3D::GeometricFactors(){
   }
 
   //printf("minJ = %g, maxJ = %g\n", minJ, maxJ);
+  HaloExchange(vgeo, Nvgeo, ogsDfloat);
 }
