@@ -698,13 +698,29 @@ void meshInterpolationMatrixTri2D(int N,
   
   matrixRightSolve(NpointsOut, NpOut, VOut, NpointsIn, NpIn, VIn, *I);
 
-  free(VIn);
-  free(VrIn);
-  free(VsIn);
+  free(VIn);  free(VrIn);  free(VsIn);
+  free(VOut); free(VrOut); free(VsOut);
+}
 
-  free(VOut);
-  free(VrOut);
-  free(VsOut);
+
+// assumes NpointsIn = (N+1)*(N+2)*(N+3)/6
+void meshInterpolationMatrixTet3D(int N,
+				  int NpointsIn,  dfloat *rIn,  dfloat *sIn,  dfloat *tIn,
+				  int NpointsOut, dfloat *rOut, dfloat *sOut, dfloat *tOut,
+				  dfloat **I){
+
+  dfloat *VIn,  *VrIn,  *VsIn,  *VtIn;
+  dfloat *VOut, *VrOut, *VsOut, *VtOut;
+  
+  int NpIn  = meshVandermondeTet3D(N, NpointsIn,  rIn,  sIn,  tIn,  &VIn,  &VrIn,  &VsIn,  &VtIn);
+  int NpOut = meshVandermondeTet3D(N, NpointsOut, rOut, sOut, tOut, &VOut, &VrOut, &VsOut, &VtOut);
+  
+  *I = (dfloat *) calloc(NpointsIn*NpointsOut, sizeof(dfloat));
+  
+  matrixRightSolve(NpointsOut, NpOut, VOut, NpointsIn, NpIn, VIn, *I);
+
+  free(VIn);  free(VrIn);  free(VsIn);  free(VtIn);
+  free(VOut); free(VrOut); free(VsOut); free(VtOut);
 }
 
 
@@ -922,6 +938,62 @@ void meshCubatureWeakDmatricesTri2D(int N, int Np, dfloat *V,
   
 }
 
+void meshCubatureWeakDmatricesTet3D(int N, int Np, dfloat *V,
+				    int cubNp, dfloat *cubr, dfloat *cubs, dfloat *cubt, dfloat *cubw,
+				    dfloat **cubDrT, dfloat **cubDsT, dfloat **cubDtT, dfloat **cubProject){
+
+  dfloat *cubV, *cubVr, *cubVs, *cubVt;
+
+  meshVandermondeTet3D(N, cubNp, cubr, cubs, cubt, &cubV, &cubVr, &cubVs, &cubVt);
+
+  // cubDrT = V*transpose(cVr)*diag(cubw);
+  // cubDsT = V*transpose(cVs)*diag(cubw);
+  // cubDtT = V*transpose(cVt)*diag(cubw);
+  // cubProject = V*cV'*diag(cubw); %% relies on (transpose(cV)*diag(cubw)*cV being the identity)
+
+  for(int n=0;n<cubNp;++n){
+    for(int m=0;m<Np;++m){
+      // scale by cubw
+      cubVr[n*Np+m] *= cubw[n];
+      cubVs[n*Np+m] *= cubw[n];
+      cubVt[n*Np+m] *= cubw[n];
+      cubV[n*Np+m]  *= cubw[n];
+    }
+  }
+
+  *cubDrT = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
+  *cubDsT = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
+  *cubDtT = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
+  *cubProject = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
+
+  for(int n=0;n<Np;++n){
+    for(int m=0;m<cubNp;++m){
+      dfloat resP = 0, resDrT = 0, resDsT = 0, resDtT = 0;
+
+      for(int i=0;i<Np;++i){
+	dfloat Vni = V[n*Np+i];
+	resDrT += Vni*cubVr[m*Np+i];
+	resDsT += Vni*cubVs[m*Np+i];
+	resDtT += Vni*cubVt[m*Np+i];
+	resP   += Vni*cubV[m*Np+i];
+      }
+
+      cubDrT[0][n*cubNp+m] = resDrT;
+      cubDsT[0][n*cubNp+m] = resDsT;
+      cubDtT[0][n*cubNp+m] = resDtT;
+      cubProject[0][n*cubNp+m] = resP;
+    }
+  }
+  
+  free(cubV);
+  free(cubVr);
+  free(cubVs);
+  free(cubVt);
+  
+}
+
+
+
 
 #if TEST_MESH_BASIS==1
 // mpic++ -I../libs/gatherScatter/ -I../../occa/include  -I../include -o meshBasis meshBasis.c matrixInverse.c readArray.c -Ddfloat=double -llapack -lblas -lm -DDHOLMES='"../"' -DdfloatFormat='"%lf"' -DTEST_MESH_BASIS=1 
@@ -942,7 +1014,7 @@ int main(int argc, char **argv){
   dfloat *cubDrT, *cubDsT, *cubDtT, *cubProject;
   
   dfloat *fileDr, *fileDs, *fileDt,  *fileMM, *fileLIFT;
-  dfloat *fileCubInterp, *fileCubDrT, *fileCubDsT, *fileCubProject;
+  dfloat *fileCubInterp, *fileCubDrT, *fileCubDsT, *fileCubDtT, *fileCubProject;
   
   int Nrows, Ncols;
 
@@ -1049,8 +1121,18 @@ int main(int argc, char **argv){
     readDfloatArray(fp, "Nodal Ds differentiation matrix", &(fileDs), &Np, &Ncols);
     readDfloatArray(fp, "Nodal Dt differentiation matrix", &(fileDt), &Np, &Ncols);
     readDfloatArray(fp, "Nodal Mass Matrix", &fileMM,&Np,&Ncols);
-
     readDfloatArray(fp, "Nodal Lift Matrix", &fileLIFT,&Np,&Ncols);
+
+    readDfloatArray(fp, "Cubature r-coordinates", &cubr,&cubNp,&Ncols);
+    readDfloatArray(fp, "Cubature s-coordinates", &cubs,&cubNp,&Ncols);
+    readDfloatArray(fp, "Cubature t-coordinates", &cubt,&cubNp,&Ncols);
+    readDfloatArray(fp, "Cubature weights", &cubw,&cubNp,&Ncols);
+
+    readDfloatArray(fp, "Cubature Interpolation Matrix", &fileCubInterp,&cubNp,&Ncols);
+    readDfloatArray(fp, "Cubature Weak Dr Differentiation Matrix", &fileCubDrT,&Nrows,&Ncols);
+    readDfloatArray(fp, "Cubature Weak Ds Differentiation Matrix", &fileCubDsT,&Nrows,&Ncols);
+    readDfloatArray(fp, "Cubature Weak Dt Differentiation Matrix", &fileCubDtT,&Nrows,&Ncols);
+    readDfloatArray(fp, "Cubature Projection Matrix", &fileCubProject,&Nrows,&Ncols);
     
     fclose(fp);
     
@@ -1058,6 +1140,10 @@ int main(int argc, char **argv){
     meshVandermondeTet3D(N, Np, r, s, t, &V, &Vr, &Vs, &Vt);
     meshMassMatrix(Np, V, &MM);
     meshLiftMatrixTet3D(N, Np, faceNodes, r, s, t, &LIFT);
+
+    meshInterpolationMatrixTet3D(N, Np, r, s, t, cubNp, cubr, cubs, cubt, &cubInterp);
+
+    meshCubatureWeakDmatricesTet3D(N, Np, V, cubNp, cubr, cubs, cubt, cubw, &cubDrT, &cubDsT, &cubDtT, &cubProject); 
     
     matrixCompare(stdout, "TET3D: |MM-fileMM|", Np, Np, MM, fileMM);
     matrixCompare(stdout, "TET3D: |Dr-fileDr|", Np, Np, Dr, fileDr);
@@ -1065,6 +1151,11 @@ int main(int argc, char **argv){
     matrixCompare(stdout, "TET3D: |Dt-fileDt|", Np, Np, Dt, fileDt);
 
     matrixCompare(stdout, "TET3D: |LIFT-fileLIFT|", Np, Nfaces*Nfp, LIFT, fileLIFT);
+
+    matrixCompare(stdout, "TET3D: |cubInterp-fileCubInterp|", cubNp, Np, cubInterp, fileCubInterp);
+    matrixCompare(stdout, "TET3D: |cubDrT-fileCubDrT|",       Np, cubNp, cubDrT,    fileCubDrT);
+    matrixCompare(stdout, "TET3D: |cubDsT-fileCubDsT|",       Np, cubNp, cubDsT,    fileCubDsT);
+    matrixCompare(stdout, "TET3D: |cubDtT-fileCubDtT|",       Np, cubNp, cubDtT,    fileCubDtT);
     
   }
 
