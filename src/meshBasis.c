@@ -992,7 +992,84 @@ void meshCubatureWeakDmatricesTet3D(int N, int Np, dfloat *V,
   
 }
 
+int meshCubatureSurfaceMatricesTri2D(int N, int Np, dfloat *r, dfloat *s, dfloat *V, int *faceNodes,
+				     int intNfp,  dfloat **intInterp, dfloat **intLIFT){
 
+  int Nfaces = 3;
+  int Nfp = N+1;
+
+  dfloat *z, *w;
+
+  //Surface cubature per face
+  meshJacobiGQ(0,0,intNfp-1, &z, &w);
+
+  dfloat *ir = (dfloat*) calloc(intNfp*Nfaces, sizeof(dfloat));
+  dfloat *is = (dfloat*) calloc(intNfp*Nfaces, sizeof(dfloat));
+  dfloat *iw = (dfloat*) calloc(intNfp*Nfaces, sizeof(dfloat));
+
+  for(int n=0;n<intNfp;++n){
+    ir[0*intNfp + n] =  z[n];
+    ir[1*intNfp + n] = -z[n];
+    ir[2*intNfp + n] = -1.0;
+
+    is[0*intNfp + n] = -1.0;
+    is[1*intNfp + n] =  z[n];
+    is[2*intNfp + n] = -z[n];
+
+    iw[0*intNfp + n] =  w[n];
+    iw[1*intNfp + n] =  w[n];
+    iw[2*intNfp + n] =  w[n];
+  }
+
+  dfloat *sInterp;
+  meshInterpolationMatrixTri2D(N, Np, r, s, Nfaces*intNfp, ir, is, &sInterp);
+
+  *intInterp = (dfloat*) calloc(intNfp*Nfaces*Nfp, sizeof(dfloat));
+  for(int n=0;n<intNfp;++n){
+    for(int m=0;m<Nfp;++m){
+      intInterp[0][0*intNfp*Nfp + n*Nfp + m] = sInterp[(n+0*intNfp)*Np+faceNodes[0*Nfp+m]];
+      intInterp[0][1*intNfp*Nfp + n*Nfp + m] = sInterp[(n+1*intNfp)*Np+faceNodes[1*Nfp+m]];
+      intInterp[0][2*intNfp*Nfp + n*Nfp + m] = sInterp[(n+2*intNfp)*Np+faceNodes[2*Nfp+m]];
+    }
+  }
+
+  // integration node lift matrix
+  //iLIFT = V*V'*sInterp'*diag(iw(:));
+  for(int n=0;n<Nfaces*intNfp;++n){
+    for(int m=0;m<Np;++m){
+	// scale by cubw
+	sInterp[n*Np+m] *= iw[n];
+    }
+  }
+
+  dfloat *tmp = (dfloat*) calloc(Np*Nfaces*intNfp, sizeof(dfloat));
+
+  for(int n=0;n<Nfaces*intNfp;++n){
+    for(int m=0;m<Np;++m){
+      dfloat res = 0;
+      for(int i=0;i<Np;++i){
+	res += V[i*Np+m]*sInterp[n*Np+i];
+      }
+      tmp[m*Nfaces*intNfp+n] = res;
+    }
+  }
+
+  *intLIFT = (dfloat*) calloc(Nfaces*intNfp*Np, sizeof(dfloat));
+
+  for(int n=0;n<Nfaces*intNfp;++n){
+    for(int m=0;m<Np;++m){
+      dfloat res = 0;
+      for(int i=0;i<Np;++i){
+	res += V[m*Np+i]*tmp[i*Nfaces*intNfp+n];
+      }
+      intLIFT[0][m*Nfaces*intNfp+n] = res;
+    }
+  }
+
+  free(ir);  free(is);  free(iw);  free(sInterp); free(tmp);
+  
+  return Nfaces*intNfp;
+}
 
 
 #if TEST_MESH_BASIS==1
@@ -1012,15 +1089,18 @@ int main(int argc, char **argv){
   dfloat *cubr, *cubs, *cubt, *cubw;
   dfloat *cubInterp;
   dfloat *cubDrT, *cubDsT, *cubDtT, *cubProject;
+
+  dfloat *intInterp, *intLIFT;
   
   dfloat *fileDr, *fileDs, *fileDt,  *fileMM, *fileLIFT;
   dfloat *fileCubInterp, *fileCubDrT, *fileCubDsT, *fileCubDtT, *fileCubProject;
+  dfloat *fileIntLIFT, *fileIntInterp;
   
   int Nrows, Ncols;
 
   int N = atoi(argv[1]);
   int cubNp, Np;
-  int Nfaces, Nfp;
+  int Nfaces, Nfp, intNfp;
   
   char fname[BUFSIZ];
 
@@ -1060,6 +1140,9 @@ int main(int argc, char **argv){
     readDfloatArray(fp, "Cubature Weak Ds Differentiation Matrix", &fileCubDsT,&Nrows,&Ncols);
     readDfloatArray(fp, "Cubature Projection Matrix", &fileCubProject,&Nrows,&Ncols);
 
+    readDfloatArray(fp, "Cubature Surface Interpolation Matrix", &fileIntInterp,&Nrows,&Ncols);
+    readDfloatArray(fp, "Cubature Surface Lift Matrix", &fileIntLIFT,&Nrows,&Ncols);
+    
     fclose(fp);
     
     meshDmatricesTri2D(N, Np, r, s, &Dr, &Ds);
@@ -1070,16 +1153,27 @@ int main(int argc, char **argv){
     meshLiftMatrixTri2D(N, Np, faceNodes, r, s, &LIFT);
 
     meshCubatureWeakDmatricesTri2D(N, Np, V, cubNp, cubr, cubs, cubw, &cubDrT, &cubDsT, &cubProject); 
+
+    intNfp = ceil(3.*Nfp/2.);
+
+    printf("intNfp = %d\n", intNfp);
+    meshCubatureSurfaceMatricesTri2D(N, Np, r, s, V, faceNodes, intNfp, &intInterp, &intLIFT);
+
+    matrixPrint(stdout, "TRI2D: intInterp", Nfaces*intNfp, Nfp, intInterp);
     
     matrixCompare(stdout, "TRI2D: |Dr-fileDr|", Np, Np, Dr, fileDr);
     matrixCompare(stdout, "TRI2D: |Ds-fileDs|", Np, Np, Ds, fileDs);
     matrixCompare(stdout, "TRI2D: |MM-fileMM|", Np, Np, MM, fileMM);
 
     matrixCompare(stdout, "TRI2D: |LIFT-fileLIFT|", Np, Nfaces*Nfp, LIFT, fileLIFT);
+
     matrixCompare(stdout, "TRI2D: |cubInterp-fileCubInterp|", cubNp, Np, cubInterp, fileCubInterp);
     matrixCompare(stdout, "TRI2D: |cubDrT-fileCubDrT|",       Np, cubNp, cubDrT,    fileCubDrT);
     matrixCompare(stdout, "TRI2D: |cubDsT-fileCubDsT|",       Np, cubNp, cubDsT,    fileCubDsT);
 
+    matrixCompare(stdout, "TRI2D: |intInterp-fileIntInterp|", intNfp*Nfaces, Nfp, intInterp, fileIntInterp);
+    matrixCompare(stdout, "TRI2D: |intLIFT-fileIntLIFT|", Np, intNfp*Nfaces, intLIFT, fileIntLIFT);
+    
   }
 
   { // QUAD TEST
