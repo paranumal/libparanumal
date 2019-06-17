@@ -65,3 +65,23 @@ SOFTWARE.
     }
   }
 }
+
+
+// U^s = Uhat - dt * GP^s + dt*\sum^s-1 pa_si GP^i
+@kernel void insVelocityUpdateTOMBO(const dlong Nelements,
+                              const dlong fieldOffset,
+                              @restrict const  dfloat *  U,
+                                    @restrict dfloat *  rkU){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      const dlong id  = n + e*p_Np;
+     
+      for (int i=0;i<p_NVfields;i++) {
+
+      dfloat Un = rkU[id+i*fieldOffset] + U[id+i*fieldOffset];
+      rkU[id+i*fieldOffset] = Un;
+      }
+    }
+  }
+}

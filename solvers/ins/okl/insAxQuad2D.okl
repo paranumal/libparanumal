@@ -1,0 +1,271 @@
+/*
+
+  The MIT License (MIT)
+
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+*/
+
+// Computes local [lap(u) + lambda*u] = [-(grad(u), grad(phi)) + lambda*u] operation
+
+// square thread version
+@kernel void insPressureAxQuad2D(const dlong   Nelements,
+                                 @restrict const  dfloat *  ggeo,
+                                 @restrict const  dfloat *  D,
+                                 @restrict const  dfloat *  S,
+                                 @restrict const  dfloat *  MM,
+                                 const dfloat   lambda,
+                                 @restrict const  dfloat *  q,
+                                 @restrict dfloat *  Aq){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    
+    @shared dfloat s_q[p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
+
+    @exclusive dfloat r_qr, r_qs, r_Aq;
+    @exclusive dfloat r_G00, r_G01, r_G11, r_GwJ;
+    
+    // prefetch q(:,:,:,e) to @shared
+    for(int j=0; j<p_Nq; ++j; @inner(1)){
+      for(int i=0; i<p_Nq; ++i; @inner(0)){
+      const dlong base = i + j*p_Nq + e*p_Np; 
+      s_q[j][i] = q[base];
+      // fetch D to @shared
+      s_D[j][i] = D[j*p_Nq+i];
+    }
+  }
+      
+    @barrier("local");
+
+    for(int j=0; j<p_Nq; ++j; @inner(1)){
+      for(int i=0; i<p_Nq; ++i; @inner(0)){
+      const dlong base = e*p_Nggeo*p_Np + j*p_Nq + i;
+
+      // assumes w*J built into G entries
+      r_GwJ = ggeo[base+p_GWJID*p_Np];
+
+      r_G00 = ggeo[base+p_G00ID*p_Np];
+      r_G01 = ggeo[base+p_G01ID*p_Np];
+      
+      r_G11 = ggeo[base+p_G11ID*p_Np];
+
+      dfloat qr = 0.f, qs = 0.f;
+      
+      #pragma unroll p_Nq
+        for(int n=0; n<p_Nq; ++n){
+          qr += s_D[i][n]*s_q[j][n];
+          qs += s_D[j][n]*s_q[n][i];
+        }
+      
+      r_qr = qr; r_qs = qs; 
+      // note the change in sign !!!!
+      r_Aq = -r_GwJ*lambda*s_q[j][i];
+    }
+  }
+
+    // r term ----->
+    @barrier("local");
+
+   for(int j=0; j<p_Nq; ++j; @inner(1)){
+      for(int i=0; i<p_Nq; ++i; @inner(0)){
+      s_q[j][i] = r_G00*r_qr + r_G01*r_qs;
+    }
+  }
+    
+    @barrier("local");
+
+   for(int j=0; j<p_Nq; ++j; @inner(1)){
+      for(int i=0; i<p_Nq; ++i; @inner(0)){
+      dfloat tmp = 0.f;
+      #pragma unroll p_Nq
+        for(int n=0;n<p_Nq;++n) {
+          tmp += s_D[n][i]*s_q[j][n];
+        }
+
+      r_Aq += tmp;
+    }
+  }
+
+    // s term ---->
+    @barrier("local");
+
+   for(int j=0; j<p_Nq; ++j; @inner(1)){
+      for(int i=0; i<p_Nq; ++i; @inner(0)){
+      s_q[j][i] = r_G01*r_qr + r_G11*r_qs;
+    }
+  }
+    
+    @barrier("local");
+
+   for(int j=0; j<p_Nq; ++j; @inner(1)){
+      for(int i=0; i<p_Nq; ++i; @inner(0)){
+      dfloat tmp = 0.f;
+
+      #pragma unroll p_Nq 
+        for(int n=0;n<p_Nq;++n) {
+          tmp += s_D[n][j]*s_q[n][i];
+        }
+      
+      r_Aq += tmp;
+
+      const dlong base = e*p_Np + j*p_Nq + i;
+
+      // revert sign here add to Rhs!!!!
+      Aq[base] += (-r_Aq);
+    }
+  }
+  }
+}
+
+
+
+
+// square thread version
+@kernel void insVelocityAxQuad2D(const dlong   Nelements,
+                                 @restrict const  dfloat *  ggeo,
+                                 @restrict const  dfloat *  D,
+                                 @restrict const  dfloat *  S,
+                                 @restrict const  dfloat *  MM,
+                                 const dfloat   lambda,
+                                 const dlong   offset,
+                                 @restrict const  dfloat *  U,
+                                 @restrict dfloat *  Au,
+                                 @restrict dfloat *  Av,
+                                 @restrict dfloat *  Aw){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    
+    @shared dfloat s_u[p_Nq][p_Nq];
+    @shared dfloat s_v[p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
+
+    @exclusive dfloat r_ur, r_us, r_Au;
+    @exclusive dfloat r_vr, r_vs, r_Av;
+    @exclusive dfloat r_G00, r_G01, r_G11, r_GwJ;
+    
+    // prefetch q(:,:,:,e) to @shared
+    for(int j=0; j<p_Nq; ++j; @inner(1)){
+      for(int i=0; i<p_Nq; ++i; @inner(0)){
+      const dlong base = i + j*p_Nq + e*p_Np; 
+      s_u[j][i] = U[base + 0*offset];
+      s_v[j][i] = U[base + 1*offset];
+      // fetch D to @shared
+      s_D[j][i] = D[j*p_Nq+i];
+    }
+  }
+      
+    @barrier("local");
+
+    for(int j=0; j<p_Nq; ++j; @inner(1)){
+      for(int i=0; i<p_Nq; ++i; @inner(0)){
+      const dlong base = e*p_Nggeo*p_Np + j*p_Nq + i;
+
+      // assumes w*J built into G entries
+      r_GwJ = ggeo[base+p_GWJID*p_Np];
+
+      r_G00 = ggeo[base+p_G00ID*p_Np];
+      r_G01 = ggeo[base+p_G01ID*p_Np];
+      
+      r_G11 = ggeo[base+p_G11ID*p_Np];
+
+      dfloat ur = 0.f, us = 0.f;
+      dfloat vr = 0.f, vs = 0.f;
+      
+      #pragma unroll p_Nq
+        for(int n=0; n<p_Nq; ++n){
+          ur += s_D[i][n]*s_u[j][n];
+          us += s_D[j][n]*s_u[n][i];
+
+          vr += s_D[i][n]*s_v[j][n];
+          vs += s_D[j][n]*s_v[n][i];
+
+        }
+      
+      r_ur = ur; r_us = us; 
+      r_vr = vr; r_vs = vs; 
+      // note the change in sign !!!!
+      r_Au = -r_GwJ*lambda*s_u[j][i];
+      r_Av = -r_GwJ*lambda*s_v[j][i];
+    }
+  }
+
+    // r term ----->
+    @barrier("local");
+
+   for(int j=0; j<p_Nq; ++j; @inner(1)){
+      for(int i=0; i<p_Nq; ++i; @inner(0)){
+      s_u[j][i] = r_G00*r_ur + r_G01*r_us;
+      s_v[j][i] = r_G00*r_vr + r_G01*r_vs;
+    }
+  }
+    
+    @barrier("local");
+
+   for(int j=0; j<p_Nq; ++j; @inner(1)){
+      for(int i=0; i<p_Nq; ++i; @inner(0)){
+      dfloat tmpu = 0.f;
+      dfloat tmpv = 0.f;
+      #pragma unroll p_Nq
+        for(int n=0;n<p_Nq;++n) {
+          tmpu += s_D[n][i]*s_u[j][n];
+          tmpv += s_D[n][i]*s_v[j][n];
+        }
+      r_Au += tmpu;
+      r_Av += tmpv;
+    }
+  }
+
+    // s term ---->
+    @barrier("local");
+
+   for(int j=0; j<p_Nq; ++j; @inner(1)){
+      for(int i=0; i<p_Nq; ++i; @inner(0)){
+      s_u[j][i] = r_G01*r_ur + r_G11*r_us;
+      s_v[j][i] = r_G01*r_vr + r_G11*r_vs;
+    }
+  }
+    
+    @barrier("local");
+
+   for(int j=0; j<p_Nq; ++j; @inner(1)){
+      for(int i=0; i<p_Nq; ++i; @inner(0)){
+      dfloat tmpu = 0.f;
+      dfloat tmpv = 0.f;
+
+      #pragma unroll p_Nq 
+        for(int n=0;n<p_Nq;++n) {
+          tmpu += s_D[n][j]*s_u[n][i];
+          tmpv += s_D[n][j]*s_v[n][i];
+        }
+      
+      r_Au += tmpu;
+      r_Av += tmpv;
+
+      const dlong base = e*p_Np + j*p_Nq + i;
+
+      // revert sign here add to Rhs!!!!
+      Au[base] += (-r_Au);
+      Av[base] += (-r_Av);
+    }
+  }
+  }
+}

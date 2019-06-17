@@ -38,12 +38,16 @@ SOFTWARE.
       const dlong id  = n + e*p_Np;
 
       dfloat rkPn = PI[id];
-      for (int s=0;s<stage;s++) {
-        dfloat prkBn = p_EXTBDF ? prkB[s] : prkB[stage*(p_Nstages+1)+s]; 
-        // dfloat prkBn = prkB[s];   
-        rkPn += prkBn*P[id+s*fieldOffset];
+      
+      if(p_TOMBO){
+        rkPn +=  P[id + 0*fieldOffset];
+      }else{
+        for (int s=0;s<stage;s++) {
+          dfloat prkBn = p_EXTBDF ? prkB[s] : prkB[stage*(p_Nstages+1)+s]; 
+          // dfloat prkBn = prkB[s];   
+          rkPn += prkBn*P[id+s*fieldOffset];
+        }   
       }
-
       rkP[id] = rkPn;      
     }
   }

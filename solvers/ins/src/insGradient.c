@@ -144,8 +144,8 @@ void insGradient(ins_t *ins, dfloat time, occa::memory o_P, occa::memory o_GP){
     mesh->device.finish();
   }
   
+ if (ins->pOptions.compareArgs("DISCRETIZATION","IPDG")){ 
   occaTimerTic(mesh->device,"GradientSurface");
-
   // Compute Surface Conribution
   ins->gradientSurfaceKernel(mesh->Nelements,
 			     mesh->o_sgeo,
@@ -161,4 +161,5 @@ void insGradient(ins_t *ins, dfloat time, occa::memory o_P, occa::memory o_GP){
 			     o_P,
 			     o_GP);
   occaTimerToc(mesh->device,"GradientSurface");
+}
 }

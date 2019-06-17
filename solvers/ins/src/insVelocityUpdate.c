@@ -34,6 +34,12 @@ void insVelocityUpdate(ins_t *ins, dfloat time, int stage,
 
   // U^s = Uhat - dt * GP^s + dt*\sum^s-1 pa_si GP^i
   occaTimerTic(mesh->device,"VelocityUpdate");
+  if(ins->TOMBO)
+     ins->velocityUpdateKernel(mesh->Nelements,
+                              ins->fieldOffset,
+                              ins->o_U,
+                              o_rkU);
+  else  
   ins->velocityUpdateKernel(mesh->Nelements,
                               stage,
                               ins->ARKswitch,

@@ -69,5 +69,58 @@ void insVelocityRhs(ins_t *ins, dfloat time, int stage, occa::memory o_rhsU, occ
                            o_rhsU,
                            o_rhsV,
                            o_rhsW);
+  }else if (ins->options.compareArgs("TIME INTEGRATOR", "TOMBO")) {
+
+    // Get ready to velocity solve!!!!
+    insGradient (ins, time, ins->o_P, ins->o_rkGP); 
+
+#if 0
+    ins->o_rhsP.copyFrom(ins->o_rkGP,ins->Ntotal*sizeof(dfloat),0,1*ins->fieldOffset*sizeof(dfloat));
+    // ogsGatherScatter(ins->o_rhsP, ogsDfloat, ogsAdd, mesh->ogs);
+    ins->o_rhsP.copyTo(ins->P);
+    
+    char fname[BUFSIZ];
+    string outName;
+    sprintf(fname, "insGradient_%04d.vtu",ins->frame++);
+    insPlotVTU(ins, fname);
+#endif  
+
+    // rhsU^s = MM*1/nu*[ -(grad P) + sum_i ( (a_i) U^(n-q)/dt - b_i NU ^(n-q)) 
+    ins->velocityRhsKernel(mesh->Nelements,
+                           mesh->o_vgeo,
+                           mesh->o_MM,
+                           ins->idt,
+                           ins->inu,
+                           ins->o_extbdfA,
+                           ins->o_extbdfB,
+                           ins->fieldOffset,
+                           ins->o_U,
+                           ins->o_NU,
+                           ins->o_rkGP,
+                           o_rhsU,
+                           o_rhsV,
+                           o_rhsW);
+
+
+    // Add helmholtz of old velocity
+    const dfloat lambda = -ins->g0*ins->idt*ins->inu; 
+
+
+  //   // simple AX kernel, will be modified later AK.....
+  // ins->velocityAxKernel(mesh->Nelements,
+  //                       mesh->o_ggeo, 
+  //                       mesh->o_Dmatrices, 
+  //                       mesh->o_Smatrices, 
+  //                       mesh->o_MM, 
+  //                       lambda, 
+  //                       ins->fieldOffset, 
+  //                       ins->o_U, 
+  //                       ins->o_rhsU,
+  //                       ins->o_rhsV,
+  //                       ins->o_rhsW); 
+
+
+
+
   }
 }

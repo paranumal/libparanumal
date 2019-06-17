@@ -390,9 +390,71 @@
         dfloat vP = vM;
 
         if(bc==1){
-	  uP = 0.f; vP = 0.f; 
+	         uP = 0.f; vP = 0.f; 
         }else{
           insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);
+        }
+        //
+        U[idM] = uP;
+        V[idM] = vP;
+      }    
+    }
+  }
+}
+
+
+@kernel void insVelocityAddBCTOMBOQuad2D(const dlong Nelements,
+                                        const dfloat time,
+                                        const dfloat dt,
+                                        const int stage,
+                                        @restrict const  dfloat *  c,
+                                        @restrict const  dfloat *  prkB,
+                                        @restrict const  dfloat *  x,
+                                        @restrict const  dfloat *  y,
+                                        @restrict const  dfloat *  z,
+                                        @restrict const  dfloat *  sgeo,
+                                          @restrict const  dlong  *  vmapM,
+                                          @restrict const  int    *  mapB,
+                                          @restrict dfloat *  U,
+                                          @restrict dfloat *  V,
+                                          @restrict dfloat *  W){
+
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+    for(int n=0;n<p_Nfp*p_Nfaces;++n;@inner(0)){
+      const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
+      const int bc = mapB[idM];
+
+      if(bc>0 && bc!=3) {
+        const dfloat uM = U[idM];
+        const dfloat vM = V[idM];
+
+        const dlong sk = e*p_Nfp*p_Nfaces + n;
+        const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
+        const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
+
+        dfloat uP = uM;
+        dfloat vP = vM;
+
+        if(bc==1){
+           uP = 0.f; vP = 0.f; 
+        }else{
+          insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);
+           
+          // dfloat ctime = 0.f;
+          //  // extrapolate for BC difference
+          // for (int s=0;s<stage;s++) {
+          //   ctime = time-(s+1)*dt;
+          //   dfloat uPm, vPm; 
+          //   insVelocityDirichletConditions2D(bc, ctime, x[idM], y[idM], nx, ny, uM, vM, &uPm, &vPm);
+          //   uP -= prkB[s]*uPm;  
+          //   vP -= prkB[s]*vPm;  
+          // }
+         if(bc==2){
+          uP = 0.f; 
+          vP = 0.f; 
+         }
+         
+          // printf("%d %g \n", bc, uP);
         }
         //
         U[idM] = uP;

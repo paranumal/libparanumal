@@ -67,10 +67,12 @@ AOBJS    = \
 ./src/insReport.o \
 ./src/insRunARK.o \
 ./src/insRunEXTBDF.o \
+./src/insRunTOMBO.o \
 ./src/insAdvection.o \
 ./src/insDiffusion.o \
 ./src/insGradient.o \
 ./src/insDivergence.o \
+./src/insCurlCurl.o \
 ./src/insSubCycle.o \
 ./src/insVelocityRhs.o \
 ./src/insVelocitySolve.o \
@@ -82,6 +84,7 @@ AOBJS    = \
 ./src/insWeldTriVerts.o \
 ./src/insIsoPlotVTU.o \
 ./src/insBrownMinionQuad3D.o\
+./src/insExtBdfCoefficents.o \
 ./src/insFilterSetup.o \
 ./src/insAddVelocityRhs.o
 

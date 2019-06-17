@@ -100,8 +100,9 @@ ins_t *ins = insSetup(mesh,options);
     printf("done\n");   
    }  
   
-  // if (ins->options.compareArgs("TIME INTEGRATOR", "ARK"))  insRunARK(ins);
+  if (ins->options.compareArgs("TIME INTEGRATOR", "ARK"))  insRunARK(ins);
   if (ins->options.compareArgs("TIME INTEGRATOR", "EXTBDF"))  insRunEXTBDF(ins);
+  if (ins->options.compareArgs("TIME INTEGRATOR", "TOMBO"))  insRunTOMBO(ins);
 
   // close down MPI
   MPI_Finalize();

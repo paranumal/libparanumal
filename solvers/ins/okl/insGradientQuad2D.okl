@@ -24,7 +24,7 @@ SOFTWARE.
 
 */
 
-#define STRONG 0
+#define STRONG 1
 
 #if STRONG==1
 // Compute Gradient in Strong Form

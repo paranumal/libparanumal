@@ -43,7 +43,7 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
   
   if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS")){
 
-    if(!quad3D) 
+    if(!quad3D || !ins->TOMBO) // will be modified later AK..... 
       ins->velocityRhsBCKernel(mesh->Nelements,
                                 mesh->o_ggeo,
                                 mesh->o_sgeo,
@@ -58,7 +58,7 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
                                 mesh->o_x,
                                 mesh->o_y,
                                 mesh->o_z,
-			       ins->o_VmapB,//   usolver->o_mapB, 
+			                          ins->o_VmapB,//   usolver->o_mapB, 
                                 o_rhsU,
                                 o_rhsV,
                                 o_rhsW);
@@ -136,14 +136,32 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
   }
 
   if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS") && !quad3D) {
+    // if(ins->TOMBO)
+    //    ins->velocityAddBCKernel(mesh->Nelements,
+    //                             time,
+    //                             ins->dt,
+    //                             stage,
+    //                             ins->o_rkC,
+    //                             ins->o_prkB,
+    //                             mesh->o_x,
+    //                             mesh->o_y,
+    //                             mesh->o_z,
+    //                             mesh->o_sgeo,
+    //                             mesh->o_vmapM,
+    //                             ins->o_VmapB,   //           usolver->o_mapB,
+    //                             ins->o_UH,
+    //                             ins->o_VH,
+    //                             ins->o_WH);
+
+    // else
     ins->velocityAddBCKernel(mesh->Nelements,
                             time,
                             mesh->o_sgeo,
                             mesh->o_x,
                             mesh->o_y,
                             mesh->o_z,
-			     mesh->o_vmapM,
-			     ins->o_VmapB,   //			     usolver->o_mapB,
+			                      mesh->o_vmapM,
+			                      ins->o_VmapB,   //			     usolver->o_mapB,
                             ins->o_UH,
                             ins->o_VH,
                             ins->o_WH);
@@ -153,5 +171,17 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
   ins->o_UH.copyTo(o_Uhat,Ntotal*sizeof(dfloat),0*ins->fieldOffset*sizeof(dfloat),0);
   ins->o_VH.copyTo(o_Uhat,Ntotal*sizeof(dfloat),1*ins->fieldOffset*sizeof(dfloat),0);    
   if (ins->dim==3)
-    ins->o_WH.copyTo(o_Uhat,Ntotal*sizeof(dfloat),2*ins->fieldOffset*sizeof(dfloat),0);    
+    ins->o_WH.copyTo(o_Uhat,Ntotal*sizeof(dfloat),2*ins->fieldOffset*sizeof(dfloat),0);  
+
+
+#if 1
+    // ins->o_.copyFrom(ins->o_rkGP,ins->Ntotal*sizeof(dfloat),0,1*ins->fieldOffset*sizeof(dfloat));
+    // ogsGatherScatter(ins->o_rhsP, ogsDfloat, ogsAdd, mesh->ogs);
+    o_Uhat.copyTo(ins->U);
+    
+    char fname[BUFSIZ];
+    string outName;
+    sprintf(fname, "insVelDiff_%04d.vtu",ins->frame++);
+    insPlotVTU(ins, fname);
+#endif  
 }

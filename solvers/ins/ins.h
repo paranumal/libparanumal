@@ -172,7 +172,7 @@ typedef struct {
   occa::memory o_U, o_P;
   occa::memory o_rhsU, o_rhsV, o_rhsW, o_rhsP; 
 
-  occa::memory o_NU, o_LU, o_GP;
+  occa::memory o_NU, o_LU, o_GP, o_NC;
   occa::memory o_GU;
 
   occa::memory o_FU; 
@@ -243,6 +243,18 @@ typedef struct {
 
   occa::kernel setScalarKernel; 
 
+  // New TOMBO stuff
+  int TOMBO;  
+  occa::kernel pressureAxKernel; 
+  occa::kernel velocityAxKernel; 
+  occa::kernel curlKernel; 
+  occa::kernel curlBKernel; 
+  occa::kernel invMassMatrixKernel; 
+  occa::kernel massMatrixKernel; 
+
+  occa::memory o_InvM;
+
+
 
 }ins_t;
 
@@ -250,6 +262,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options);
 
 void insRunARK(ins_t *ins);
 void insRunEXTBDF(ins_t *ins);
+void insRunTOMBO(ins_t *ins);
 
 void insPlotVTU(ins_t *ins, char *fileNameBase);
 void insReport(ins_t *ins, dfloat time,  int tstep);
@@ -257,7 +270,7 @@ void insError(ins_t *ins, dfloat time);
 void insForces(ins_t *ins, dfloat time);
 void insComputeDt(ins_t *ins, dfloat time); 
 
-// Currently implemented Relexation-Type filtering
+// Relexation-Type low-pass filtering
 void insFilterSetup(ins_t *ins);
 void insAddVelocityRhs(ins_t *ins, dfloat time);
 
@@ -284,6 +297,11 @@ void insRestartWrite(ins_t *ins, setupAide &options, dfloat time);
 void insRestartRead(ins_t *ins, setupAide &options); 
 
 void insBrownMinionQuad3D(ins_t *ins);
+void insExtBdfCoefficents(ins_t *ins, int order);
+
+
+void insCurlCurl(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NC); 
+
 // customized hex writer
 extern "C"
 {
