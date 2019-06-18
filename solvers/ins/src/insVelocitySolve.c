@@ -43,7 +43,8 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
   
   if (ins->vOptions.compareArgs("DISCRETIZATION","CONTINUOUS")){
 
-    if(!quad3D || !ins->TOMBO) // will be modified later AK..... 
+    // if(!quad3D && !ins->TOMBO) // will be modified later AK..... 
+    if(!quad3D ) // will be modified later AK..... 
       ins->velocityRhsBCKernel(mesh->Nelements,
                                 mesh->o_ggeo,
                                 mesh->o_sgeo,
@@ -174,7 +175,7 @@ void insVelocitySolve(ins_t *ins, dfloat time, int stage,  occa::memory o_rhsU,
     ins->o_WH.copyTo(o_Uhat,Ntotal*sizeof(dfloat),2*ins->fieldOffset*sizeof(dfloat),0);  
 
 
-#if 1
+#if 0
     // ins->o_.copyFrom(ins->o_rkGP,ins->Ntotal*sizeof(dfloat),0,1*ins->fieldOffset*sizeof(dfloat));
     // ogsGatherScatter(ins->o_rhsP, ogsDfloat, ogsAdd, mesh->ogs);
     o_Uhat.copyTo(ins->U);

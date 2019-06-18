@@ -37,8 +37,8 @@ void insRunTOMBO(ins_t *ins){
   // Write Initial Data
   if(ins->outputStep) insReport(ins, ins->startTime, 0);
 
-// for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
-   for(int tstep=0;tstep<1000;++tstep){
+for(int tstep=0;tstep<ins->NtimeSteps;++tstep){
+  // for(int tstep=0;tstep<1000;++tstep){
 
     if(tstep<1) 
       insExtBdfCoefficents(ins,tstep+1);
@@ -74,9 +74,8 @@ void insRunTOMBO(ins_t *ins){
     insPressureRhs  (ins, time+ins->dt, ins->Nstages);
     insPressureSolve(ins, time+ins->dt, ins->Nstages); 
     insPressureUpdate(ins, time+ins->dt, ins->Nstages, ins->o_rkP);
+   
     // //  ins->scaledAddKernel(ins->Ntotal, 1.0, 0, ins->o_PI, 1.0, 0, ins->o_P);
-
-
     // // no need to cycle pressure in TOMBO 
     // for (int s=ins->Nstages;s>1;s--) {
     //   ins->o_P.copyFrom(ins->o_P, ins->Ntotal*sizeof(dfloat), 

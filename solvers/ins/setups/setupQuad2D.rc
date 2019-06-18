@@ -6,12 +6,16 @@ data/insKovasznay2D.h
 #data/insVortex2D.h
 
 [MESH FILE]
+../../meshes/insKovasznaySpectralConvergenceQuad.msh
+
+
+
 #../../meshes/insKovasznayCircleQuad2D.msh
 #../../meshes/insKovasznayCircleQuad2D_1.msh
 #../../meshes/insKovasznayCircleQuad2D_05.msh
 #../../meshes/insKovasznayCircleQuad2D_025.msh
 
-../../meshes/insKovasznayQuad2D.msh
+#../../meshes/insKovasznayQuad2D.msh
 #../../meshes/insKovasznayQuad2D_A.msh
 
 #../../meshes/insVortexQuadStructured.msh
@@ -33,7 +37,7 @@ data/insKovasznay2D.h
 4
 
 [POLYNOMIAL DEGREE]
-8
+10
 
 [THREAD MODEL]
 #Serial
@@ -50,7 +54,7 @@ CUDA
 [TIME INTEGRATOR]
 #ARK2
 #EXTBDF2
-TOMBO1
+TOMBO2
 
 
 [SUBCYCLING STEPS]
@@ -58,8 +62,8 @@ TOMBO1
 
 # can be CUBATURE or COLLOCATION
 [ADVECTION TYPE]
-#CUBATURE
-COLLOCATION
+CUBATURE
+#COLLOCATION
 
 #currently RELAXATION, 
 [FILTER STABILIZATION]
@@ -90,14 +94,14 @@ NONE
 0.0
 
 [TSTEPS FOR SOLUTION OUTPUT]
-100
+1000
 
 [START TIME]
 0
 
 [FINAL TIME]
 #1.0E-2
-1.0E0
+1.5E0
 
 [CFL]
 0.2

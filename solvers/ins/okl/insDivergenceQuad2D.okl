@@ -585,36 +585,14 @@ void surfaceTermsTOMBO(dlong e, int es, dlong offset, int sk, int face, int i, i
   
   const dfloat nx    = sgeo[sk*p_Nsgeo+p_NXID];                            
   const dfloat ny    = sgeo[sk*p_Nsgeo+p_NYID];                            
-  const dfloat sJ    = sgeo[sk*p_Nsgeo+p_SJID];                            
-  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];                        
+  const dfloat WSJ   = sgeo[sk*p_Nsgeo+p_WSJID];   
   
-  const dfloat uM = U[idM+0*offset], vM = U[idM+1*offset];             
-        dfloat uP = U[idP+0*offset], vP = U[idP+1*offset];    
-  int bc = EToB[face+p_Nfaces*e];                                       
-  if(bc>0) {
-    if(bc==1){
-      uP = 0.f;  vP = 0.f;                          
-    }else{
-      // explicitly set u+ = u-   
-      uP = uM;  vP = vM;                                                           
-      insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);
-    } 
- uP = 2.f*uP - uM; 
- vP = 2.f*vP - vM; 
-    // uP = 2.f*uP + uM; 
-    // vP = 2.f*vP + vM;   
-  }                                                                      
-const dfloat sc = invWJ*sJ;                                         
- // const dfloat sc = sJ;                                         
- s_fluxU[es][j][i] = sc*(.5f*(nx*(uP + uM) + ny*(vP + vM)));         
- // s_fluxU[es][j][i] += sc*(.5f*(nx*(uP - uM) + ny*(vP - vM)));      
- // s_fluxU[es][j][i] += sc*(1.0f*(nx*uP + ny*vP));   
+  const dfloat uM = U[idM+0*offset]; 
+  const dfloat vM = U[idM+1*offset];             
 
-#if 0  
-  dfloat uP = 0.f, vP = 0.f;
-   // dfloat uP = uM;  
-   // dfloat vP = vM;                          
-  int bc = EToB[face+p_Nfaces*e];                                       
+  dfloat uP = 0.f;  
+  dfloat vP = 0.f;  
+  int bc           = EToB[face+p_Nfaces*e];
   if(bc>0) {
     if(bc==1){
       // nada; Up = 0, vP= 0; 
@@ -622,10 +600,7 @@ const dfloat sc = invWJ*sJ;
       insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);
     } 
   }                                                                      
-  const dfloat sc = invWJ*sJ;                                         
-  // const dfloat sc    = sJ;                                         
-  s_fluxU[es][j][i] += sc*(1.0f*(nx*uP + ny*vP));
-#endif
+  s_fluxU[es][j][i] += WSJ*(1.0f*(nx*uP + ny*vP));
 }
 
 
@@ -714,9 +689,8 @@ const dfloat sc = invWJ*sJ;
             const dlong id = e*p_Np + j*p_Nq + i;
             const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
             const dfloat JW = vgeo[gid + p_JWID*p_Np];
-   
-          divU[id+0*offset] += JW*coef*s_fluxU[es][j][i]; // -g_0/dt*n*up
-            // divU[id+0*offset] += coef*s_fluxU[es][j][i]; // -g_0/dt*n*up
+            //   
+            divU[id+0*offset] += coef*s_fluxU[es][j][i]; // -g_0/dt*n*up
           }
         }
       }
