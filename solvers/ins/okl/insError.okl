@@ -1,0 +1,245 @@
+/*
+
+  The MIT License (MIT)
+
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+*/
+
+// compute div(NU)  = div(uxu) using quadrature (weak form)
+@kernel void insErrorQuad2D(const dlong Nelements,
+                @restrict const  dfloat *  cubInterpT,
+                const dlong offsetNp,
+                const dlong offsetNc,
+                @restrict const  dfloat *  U,
+                @restrict const  dfloat *  P,
+                @restrict dfloat * Uex,
+                @restrict dfloat * Pex){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
+
+    @shared dfloat s_U[p_NblockV][p_cubNq][p_cubNq];
+    @shared dfloat s_V[p_NblockV][p_cubNq][p_cubNq];
+    @shared dfloat s_P[p_NblockV][p_cubNq][p_cubNq];
+
+    @shared dfloat s_cubInterpT[p_Nq][p_cubNq];
+
+    @exclusive dfloat r_Un, r_Vn, r_Pn;
+
+    //fetch the U and V values and store in flux arrays in @shared
+    for(int es=0;es<p_NblockV;++es;@inner(2)){   
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){    
+          const dlong e = eo+es; // element in block
+          if((e<Nelements) && (i<p_Nq) && (j<p_Nq)){ 
+            const dlong id = e*p_Np + j*p_Nq+i;
+
+            const dfloat Un = U[id+0*offsetNp];
+            const dfloat Vn = U[id+1*offsetNp];
+            const dfloat Pn = P[id+0*offsetNp];
+
+            s_U[es][j][i] = Un;
+            s_V[es][j][i] = Vn;
+            s_P[es][j][i] = Pn;
+          }
+
+          const int id = i+j*p_cubNq;
+          if ((es==0) && (id<p_Nq*p_cubNq)) {
+            s_cubInterpT[0][id] = cubInterpT[id];
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    //interpolate in i, store in register
+    for(int es=0;es<p_NblockV;++es;@inner(2)){   
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          if (j<p_Nq) {
+            r_Un = 0.; r_Vn = 0.;r_Pn = 0.;
+
+#pragma unroll p_Nq
+            for (int n=0;n<p_Nq;n++) {
+              const dfloat Ini = s_cubInterpT[n][i];
+              r_Un  += Ini*s_U[es][j][n];
+              r_Vn  += Ini*s_V[es][j][n];
+              r_Pn  += Ini*s_P[es][j][n];
+            }
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    //write register back to @shared
+    for(int es=0;es<p_NblockV;++es;@inner(2)){   
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          if (j<p_Nq) {
+            s_U[es][j][i] = r_Un;
+            s_V[es][j][i] = r_Vn;
+            s_P[es][j][i] = r_Pn;
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    //interpolate in j and store flux in register
+    for(int es=0;es<p_NblockV;++es;@inner(2)){   
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          r_Un  = 0.; r_Vn  = 0.; r_Pn = 0.; 
+
+#pragma unroll p_Nq
+          for (int n=0;n<p_Nq;n++) {
+            const dfloat Inj = s_cubInterpT[n][j];
+            r_Un  += Inj*s_U[es][n][i];
+            r_Vn  += Inj*s_V[es][n][i];
+            r_Pn  += Inj*s_P[es][n][i];
+          }
+
+          const dlong e = eo + es;
+           const dlong id = e*p_cubNp + j*p_cubNq + i;
+
+           const dfloat uerr = fabs( Uex[id +0*offsetNc] - r_Un); 
+           const dfloat verr = fabs( Uex[id +1*offsetNc] - r_Vn); 
+           const dfloat perr = fabs( Pex[id +0*offsetNc] - r_Pn); 
+
+           Uex[id +0*offsetNc]  = uerr; 
+           Uex[id +1*offsetNc]  = verr; 
+           Pex[id +0*offsetNc]  = perr; 
+        }
+      }
+    }
+  }  
+} 
+
+
+@kernel void insSetFlowFieldCubQuad2D(const dlong Nelements,
+             const dfloat t,
+             @restrict const  dfloat *  cubInterpT,
+             @restrict const  dfloat *  x,
+             @restrict const  dfloat *  y,
+             @restrict const  dfloat *  z,
+             const dlong offset,
+             @restrict dfloat *  U,
+             @restrict dfloat *  P){
+  
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
+
+    @shared dfloat s_X[p_NblockV][p_cubNq][p_cubNq];
+    @shared dfloat s_Y[p_NblockV][p_cubNq][p_cubNq];
+
+    @shared dfloat s_cubInterpT[p_Nq][p_cubNq];
+
+    @exclusive dfloat r_xn, r_yn;
+
+    //fetch the U and V values and store in flux arrays in @shared
+    for(int es=0;es<p_NblockV;++es;@inner(2)){   
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){    
+          const dlong e = eo+es; // element in block
+          if((e<Nelements) && (i<p_Nq) && (j<p_Nq)){ 
+            const dlong id = e*p_Np + j*p_Nq+i;
+
+            s_X[es][j][i] = x[id];
+            s_Y[es][j][i] = y[id];
+          }
+
+          const int id = i+j*p_cubNq;
+          if ((es==0) && (id<p_Nq*p_cubNq)) {
+            s_cubInterpT[0][id] = cubInterpT[id];
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    //interpolate in i, store in register
+    for(int es=0;es<p_NblockV;++es;@inner(2)){   
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          if (j<p_Nq) {
+            r_xn = 0.f; r_yn = 0.f;
+
+#pragma unroll p_Nq
+            for (int n=0;n<p_Nq;n++) {
+              const dfloat Ini = s_cubInterpT[n][i];
+              r_xn  += Ini*s_X[es][j][n];
+              r_yn  += Ini*s_Y[es][j][n];
+            }
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    //write register back to @shared
+    for(int es=0;es<p_NblockV;++es;@inner(2)){   
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          if (j<p_Nq) {
+            s_X[es][j][i] = r_xn;
+            s_Y[es][j][i] = r_yn;
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    //interpolate in j and store flux in register
+    for(int es=0;es<p_NblockV;++es;@inner(2)){   
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          const dlong e = eo + es;
+          r_xn = 0.; r_yn = 0.;
+
+#pragma unroll p_Nq
+          for (int n=0;n<p_Nq;n++) {
+            const dfloat Inj = s_cubInterpT[n][j];
+            r_xn  += Inj*s_X[es][n][i];
+            r_yn  += Inj*s_Y[es][n][i];
+          }
+      
+          dfloat u = 0.f;
+          dfloat v = 0.f;
+          dfloat p = 0.f;
+
+          insFlowField2D(t, r_xn, r_yn, &u, &v, &p);
+
+          const dlong id = e*p_cubNp + j*p_cubNq + i;
+          
+          U[id +0*offset]  = u; 
+          U[id +1*offset]  = v; 
+          P[id +0*offset]  = p; 
+        }
+      }
+    }
+  }  
+} 

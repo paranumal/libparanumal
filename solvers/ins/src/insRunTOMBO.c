@@ -175,7 +175,6 @@ ins->setFlowFieldKernel(mesh->Nelements,
     if (ins->dim==3 && mesh->rank==0) printf("\rtstep = %d, solver iterations: U - %3d, V - %3d, W - %3d, P - %3d", tstep+1, ins->NiterU, ins->NiterV, ins->NiterW, ins->NiterP); fflush(stdout);
     
     occaTimerToc(mesh->device,"Report");
-
 #if 0
 
     

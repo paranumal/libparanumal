@@ -1211,7 +1211,16 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
       sprintf(kernelName, "insVelocityUpdateTOMBO");
       else
       sprintf(kernelName, "insVelocityUpdate");
-      ins->velocityUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);      
+      ins->velocityUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);   
+
+
+
+    sprintf(fileName, DINS "/okl/insError.okl");
+    sprintf(kernelName, "insError%s", suffix);
+    ins->errorKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
+     sprintf(kernelName, "insSetFlowFieldCub%s", suffix);
+    ins->setFlowFieldCubKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
 #if 0
       // ===========================================================================
@@ -1284,17 +1293,16 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   if(ins->options.compareArgs("FILTER STABILIZATION", "RELAXATION"))
   insFilterSetup(ins); 
 
-  // printf("%d %d\n", mesh->Nverts, mesh->Nelements);
+if(!ins->options.compareArgs("EXACT","NONE")){ // check if there is an exact solution
+    ins->Uer  = (dfloat*) calloc(ins->NVfields*mesh->Nelements*mesh->cubNp, sizeof(dfloat));
+    ins->Per  = (dfloat*) calloc(              mesh->Nelements*mesh->cubNp, sizeof(dfloat));
 
-  // int cnt = 0;
-  // for(dlong e=0;e<mesh->Nelements;++e){
-  //   for(int f=0;f<mesh->Nfaces;++f){
-  //     printf("EToE(%d,%d) = %d \n", e,f, mesh->EToE[cnt]);
-      
-  //     ++cnt;
-  //   }
-  // }
-  
+    ins->o_Uex = mesh->device.malloc(ins->NVfields*mesh->Nelements*mesh->cubNp*sizeof(dfloat), ins->Uer); 
+    ins->o_Pex = mesh->device.malloc(              mesh->Nelements*mesh->cubNp*sizeof(dfloat), ins->Per); 
+  }
+
+
+
   return ins;
 }
 

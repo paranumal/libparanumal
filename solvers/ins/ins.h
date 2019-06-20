@@ -248,12 +248,20 @@ typedef struct {
   occa::kernel pressureAxKernel; 
   occa::kernel velocityAxKernel; 
   occa::kernel curlKernel; 
-  occa::kernel curlBKernel; 
+  occa::kernel curlBKernel; // needed for 2D
   occa::kernel invMassMatrixKernel; 
   occa::kernel massMatrixKernel; 
 
-  occa::memory o_InvM;
 
+  // error Realted
+  occa::kernel setFlowFieldCubKernel; 
+  occa::kernel errorKernel;
+
+  occa::memory o_InvM;
+  
+  dfloat *Uer, *Per; 
+
+  occa::memory o_Uex, o_Pex; 
 
 
 }ins_t;

@@ -2,13 +2,12 @@
 1.0
 
 [DATA FILE]
-data/insKovasznay2D.h
-#data/insVortex2D.h
+#data/insKovasznay2D.h
+data/insVortex2D.h
 
 [MESH FILE]
-../../meshes/insKovasznaySpectralConvergenceQuad.msh
-
-
+#../../meshes/insKovasznaySpectralConvergenceQuad.msh
+../../meshes/insVortexQuadStructured.msh
 
 #../../meshes/insKovasznayCircleQuad2D.msh
 #../../meshes/insKovasznayCircleQuad2D_1.msh
@@ -18,7 +17,6 @@ data/insKovasznay2D.h
 #../../meshes/insKovasznayQuad2D.msh
 #../../meshes/insKovasznayQuad2D_A.msh
 
-#../../meshes/insVortexQuadStructured.msh
 #../../meshes/insVortexCircleQuad2D.msh
 #../../meshes/insVortexCircleQuad2D_1.msh
 #../../meshes/insVortexCircleQuad2D_05.msh
@@ -37,7 +35,7 @@ data/insKovasznay2D.h
 4
 
 [POLYNOMIAL DEGREE]
-10
+7
 
 [THREAD MODEL]
 #Serial
@@ -78,8 +76,8 @@ NONE
 0.9
 
 [VISCOSITY]
-#0.01
-0.025
+0.01
+#0.025
 
 [MACH NUMBER]
 .2
@@ -94,14 +92,16 @@ NONE
 0.0
 
 [TSTEPS FOR SOLUTION OUTPUT]
-1000
+10000
 
 [START TIME]
 0
 
 [FINAL TIME]
 #1.0E-2
-1.5E0
+#for spectral convergence set dt=1e-3 finaltime = 1.5 i.e. 15K iterations
+#1.5E0
+1.0E0
 
 [CFL]
 0.2
@@ -275,8 +275,8 @@ FALSE
 # compare to a reference solution. Use NONE to skip comparison
 # can be VORTEX or KOVASZNAY
 [EXACT]
-#VORTEX
-KOVASZNAY
+VORTEX
+#KOVASZNAY
 
 [VERBOSE]
 FALSE
