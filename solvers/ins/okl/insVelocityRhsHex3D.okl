@@ -153,9 +153,9 @@ SOFTWARE.
                   rhsWn -= JW*inu*(extbdfC[s]*GPz+extbdfA[s]*FUz);
                 }
               } else {
-                rhsUn = 0.;
-                rhsVn = 0.;
-                rhsWn = 0.;
+                rhsUn = 0.f;
+                rhsVn = 0.f;
+                rhsWn = 0.f;
 
                 for (int s=0;s<p_Nstages;s++) {
                   //U 

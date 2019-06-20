@@ -23,7 +23,7 @@
   SOFTWARE.
 
 */
-#define STRONG 1
+#define STRONG 0
 #if STRONG==1
 // compute div(NU)  = div(uxu) in collocation way (weak form)
 @kernel void insAdvectionVolumeQuad2D(const dlong Nelements,

@@ -124,7 +124,6 @@ void insCurlCurl(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NC){
                             mesh->o_vgeo,
                             ins->o_InvM, // mesh->o_MM, // should be invMM for tri/tet
                             ins->o_rkU);
-
-
+   
   ins->o_rkU.copyTo(o_NC,ins->NVfields*ins->Ntotal*sizeof(dfloat),0*ins->fieldOffset*sizeof(dfloat),0);
 }

@@ -53,8 +53,8 @@ if(ins->TOMBO){
 
 
   
-  // weak divergence term (not that no boundary contribution) -> (F, grad(phi))_sigma - g_0/dt*(n*U^n+1)_del_sigma
-  insDivergence(ins, time, ins->o_rkU, ins->o_rhsP);
+  // // weak divergence term (not that no boundary contribution) -> (F, grad(phi))_sigma - g_0/dt*(n*U^n+1)_del_sigma
+  // insDivergence(ins, time, ins->o_rkU, ins->o_rhsP);
 
 #if 0
     // ins->o_rkU.copyTo(ins->U);
@@ -68,17 +68,17 @@ if(ins->TOMBO){
 #endif
 
   
-  // Add  -(grad P, grad phi) to rhsP
-  const dfloat lambda = 0.0; 
-  // simple AX kernel, will be modified later AK.....
-  ins->pressureAxKernel(mesh->Nelements,
-                        mesh->o_ggeo, 
-                        mesh->o_Dmatrices, 
-                        mesh->o_Smatrices, 
-                        mesh->o_MM, 
-                        lambda, 
-                        ins->o_P, 
-                        ins->o_rhsP); 
+  // // Add  -(grad P, grad phi) to rhsP
+  // const dfloat lambda = 0.0; 
+  // // simple AX kernel, will be modified later AK.....
+  // ins->pressureAxKernel(mesh->Nelements,
+  //                       mesh->o_ggeo, 
+  //                       mesh->o_Dmatrices, 
+  //                       mesh->o_Smatrices, 
+  //                       mesh->o_MM, 
+  //                       lambda, 
+  //                       ins->o_P, 
+  //                       ins->o_rhsP); 
   
   // dfloat *test = (dfloat *)calloc(ins->Ntotal, sizeof(dfloat));
   // occa::memory o_test = mesh->device.malloc(ins->Ntotal*sizeof(dfloat), test);

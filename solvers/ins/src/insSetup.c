@@ -1054,13 +1054,13 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
       if(options.compareArgs("TIME INTEGRATOR","TOMBO")){
         
-        // Create lap(U) kernel for Ins for (lap(u) - lambda*u) operation
-        sprintf(fileName,DINS "/okl/insAx%s.okl", suffix); 
-        sprintf(kernelName,"insPressureAx%s", suffix);
-        ins->pressureAxKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);  
+        // // Create lap(U) kernel for Ins for (lap(u) - lambda*u) operation
+        // sprintf(fileName,DINS "/okl/insAx%s.okl", suffix); 
+        // sprintf(kernelName,"insPressureAx%s", suffix);
+        // ins->pressureAxKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);  
         
-        sprintf(kernelName,"insVelocityAx%s", suffix);
-        ins->velocityAxKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);  
+        // sprintf(kernelName,"insVelocityAx%s", suffix);
+        // ins->velocityAxKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);  
 
         // Curl operations...
         sprintf(fileName,DINS "/okl/insCurl%s.okl", suffix); 
@@ -1113,11 +1113,11 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
       if(options.compareArgs("TIME INTEGRATOR","TOMBO")){
 
-        sprintf(kernelName, "insDivergenceVolumeTOMBO%s", suffix);
-        ins->divergenceVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+        // sprintf(kernelName, "insDivergenceVolumeTOMBO%s", suffix);
+        // ins->divergenceVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-        sprintf(kernelName, "insDivergenceSurfaceTOMBO%s", suffix);
-        ins->divergenceSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+        // sprintf(kernelName, "insDivergenceSurfaceTOMBO%s", suffix);
+        // ins->divergenceSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       }else{
         sprintf(kernelName, "insDivergenceVolume%s", suffix);
@@ -1179,15 +1179,15 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
       ins->scaledAddKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
     
       // ===========================================================================
-      sprintf(fileName, DINS "/okl/insVelocityRhs%s.okl", suffix);
-      if (options.compareArgs("TIME INTEGRATOR", "ARK")) 
-        sprintf(kernelName, "insVelocityRhsARK%s", suffix); 
-      else if (options.compareArgs("TIME INTEGRATOR", "EXTBDF")) 
-        sprintf(kernelName, "insVelocityRhsEXTBDF%s", suffix);
-      else if (options.compareArgs("TIME INTEGRATOR", "TOMBO")) 
-        sprintf(kernelName, "insVelocityRhsTOMBO%s", suffix);
+      // sprintf(fileName, DINS "/okl/insVelocityRhs%s.okl", suffix);
+      // if (options.compareArgs("TIME INTEGRATOR", "ARK")) 
+      //   sprintf(kernelName, "insVelocityRhsARK%s", suffix); 
+      // else if (options.compareArgs("TIME INTEGRATOR", "EXTBDF")) 
+      //   sprintf(kernelName, "insVelocityRhsEXTBDF%s", suffix);
+      // else if (options.compareArgs("TIME INTEGRATOR", "TOMBO")) 
+      //   sprintf(kernelName, "insVelocityRhsTOMBO%s", suffix);
 
-      ins->velocityRhsKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      // ins->velocityRhsKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       
       // ===========================================================================
       if(!(ins->dim==3 && ins->elementType==QUADRILATERALS) ){
@@ -1206,32 +1206,31 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->velocityAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       }
 
-      sprintf(fileName, DINS "/okl/insVelocityUpdate.okl");
-      if(ins->TOMBO)
-      sprintf(kernelName, "insVelocityUpdateTOMBO");
-      else
-      sprintf(kernelName, "insVelocityUpdate");
-      ins->velocityUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);   
+    //   sprintf(fileName, DINS "/okl/insVelocityUpdate.okl");
+    //   if(ins->TOMBO)
+    //   sprintf(kernelName, "insVelocityUpdateTOMBO");
+    //   else
+    //   sprintf(kernelName, "insVelocityUpdate");
+    //   ins->velocityUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);   
 
 
 
-    sprintf(fileName, DINS "/okl/insError.okl");
+    sprintf(fileName, DINS "/okl/insError%s.okl", suffix);
     sprintf(kernelName, "insError%s", suffix);
     ins->errorKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
      sprintf(kernelName, "insSetFlowFieldCub%s", suffix);
     ins->setFlowFieldCubKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-#if 0
       // ===========================================================================
       if(ins->dim==3 && ins->options.compareArgs("OUTPUT TYPE","ISO")){
-	sprintf(fileName, DINS "/okl/insIsoSurface3D.okl");
-	sprintf(kernelName, "insIsoSurface3D");
+  sprintf(fileName, DINS "/okl/insIsoSurface3D.okl");
+  sprintf(kernelName, "insIsoSurface3D");
 
-	ins->isoSurfaceKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);  
+  ins->isoSurfaceKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);  
       }
       
-	
+  
 
       // Not implemented for Quad 3D yet !!!!!!!!!!
       if(ins->Nsubsteps){
@@ -1246,42 +1245,43 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   else 
     ins->o_cUd = ins->o_Ud;
       
-	sprintf(fileName, DINS "/okl/insSubCycle%s.okl", suffix);
-	sprintf(kernelName, "insSubCycleVolume%s", suffix);
-	ins->subCycleVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+  sprintf(fileName, DINS "/okl/insSubCycle%s.okl", suffix);
+  sprintf(kernelName, "insSubCycleVolume%s", suffix);
+  ins->subCycleVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-	sprintf(kernelName, "insSubCycleSurface%s", suffix);
-	ins->subCycleSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+  sprintf(kernelName, "insSubCycleSurface%s", suffix);
+  ins->subCycleSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-	sprintf(kernelName, "insSubCycleCubatureVolume%s", suffix);
-	ins->subCycleCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+  sprintf(kernelName, "insSubCycleCubatureVolume%s", suffix);
+  ins->subCycleCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
   
   if(ins->elementType==HEXAHEDRA){
-	sprintf(kernelName, "insSubCycleNekCubatureVolume%s", suffix);
-	ins->subCycleNekCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+  sprintf(kernelName, "insSubCycleNekCubatureVolume%s", suffix);
+  ins->subCycleNekCubatureVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-	sprintf(kernelName, "insSubCycleCubatureSurface%s", suffix);
-	ins->subCycleCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+  sprintf(kernelName, "insSubCycleCubatureSurface%s", suffix);
+  ins->subCycleCubatureSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
   }
 
-	sprintf(fileName, DINS "/okl/insSubCycle.okl");
-	sprintf(kernelName, "insSubCycleRKUpdate");
-	ins->subCycleRKUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+  sprintf(fileName, DINS "/okl/insSubCycle.okl");
+  sprintf(kernelName, "insSubCycleRKUpdate");
+  ins->subCycleRKUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-	sprintf(kernelName, "insSubCycleExt");
-	ins->subCycleExtKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+  sprintf(kernelName, "insSubCycleExt");
+  ins->subCycleExtKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       }
 
       ins->haloGetKernel =
-	mesh->device.buildKernel(DINS "/okl/insHalo.okl", "insHaloGet", kernelInfo);
+  mesh->device.buildKernel(DINS "/okl/insHalo.okl", "insHaloGet", kernelInfo);
       ins->haloPutKernel =
-	mesh->device.buildKernel(DINS "/okl/insHalo.okl", "insHaloPut", kernelInfo);
+  mesh->device.buildKernel(DINS "/okl/insHalo.okl", "insHaloPut", kernelInfo);
 
 
     sprintf(fileName, DHOLMES "/okl/addScalar.okl");
     sprintf(kernelName, "setScalar");
     ins->setScalarKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-#endif
+// #if 0
+// #endif
       
     }
     MPI_Barrier(mesh->comm);
@@ -1300,8 +1300,6 @@ if(!ins->options.compareArgs("EXACT","NONE")){ // check if there is an exact sol
     ins->o_Uex = mesh->device.malloc(ins->NVfields*mesh->Nelements*mesh->cubNp*sizeof(dfloat), ins->Uer); 
     ins->o_Pex = mesh->device.malloc(              mesh->Nelements*mesh->cubNp*sizeof(dfloat), ins->Per); 
   }
-
-
 
   return ins;
 }

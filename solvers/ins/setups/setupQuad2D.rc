@@ -92,7 +92,7 @@ NONE
 0.0
 
 [TSTEPS FOR SOLUTION OUTPUT]
-10000
+1000
 
 [START TIME]
 0
@@ -117,8 +117,8 @@ VTU
 0
 
 [OUTPUT FILE NAME]
-#kovasznayC0
-kovasznayDG
+#kovasznay
+vortex
 
 #################################################
 ########## Velocity Solver Options ##############

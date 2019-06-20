@@ -1,0 +1,347 @@
+/*
+
+  The MIT License (MIT)
+
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+*/
+// compute div(NU)  = div(uxu) using quadrature (weak form)
+@kernel void insErrorHex3D(const dlong Nelements,
+                @restrict const  dfloat *  cubInterpT,
+                const dlong offsetNp,
+                const dlong offsetNc,
+                @restrict const  dfloat *  U,
+                @restrict const  dfloat *  P,
+                @restrict dfloat * Uex,
+                @restrict dfloat * Pex){
+
+  //interpolate velocity and pressure fields to quadrature points
+  for(dlong e=0; e<Nelements; ++e; @outer(0)) {
+
+    @shared dfloat s_cubInterpT[p_Nq][p_cubNq];
+
+    @shared dfloat s_U[p_cubNq][p_cubNq];
+    @shared dfloat s_V[p_cubNq][p_cubNq];
+    @shared dfloat s_W[p_cubNq][p_cubNq];
+    @shared dfloat s_P[p_cubNq][p_cubNq];
+
+    @exclusive dfloat r_cU[p_cubNq], r_cV[p_cubNq]; 
+    @exclusive dfloat r_cW[p_cubNq], r_cP[p_cubNq];
+
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        const int id = i+j*p_cubNq;
+        if (id<p_Nq*p_cubNq) {
+          s_cubInterpT[0][id] = cubInterpT[id];
+        }
+
+#pragma unroll p_cubNq
+  for(int k=0;k<p_cubNq;++k){         
+    r_cU[k] = 0.f;
+    r_cV[k] = 0.f;
+    r_cW[k] = 0.f;
+    r_cP[k] = 0.f;
+  }
+      }
+    }
+
+    @barrier("local");
+
+    //read in and interpolate in k
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        if (i<p_Nq && j<p_Nq) {
+#pragma unroll p_Nq
+          for(int k=0;k<p_Nq;++k){
+            const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+            const dfloat uc = U[id+0*offsetNp];
+            const dfloat vc = U[id+1*offsetNp];
+            const dfloat wc = U[id+2*offsetNp];
+            const dfloat pc = P[id+0*offsetNp];
+
+#pragma unroll p_cubNq
+            for(int n=0;n<p_cubNq;++n){
+              const dfloat Ik = s_cubInterpT[k][n];
+              r_cU[n] += Ik*uc;
+              r_cV[n] += Ik*vc;
+              r_cW[n] += Ik*wc;
+              r_cP[n] += Ik*pc;
+            }
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+#pragma unroll p_cubNq
+    for(int k=0;k<p_cubNq;++k){ 
+      //load slice to @shared
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          if (i<p_Nq && j<p_Nq) {
+            s_U[j][i] = r_cU[k];
+            s_V[j][i] = r_cV[k];
+            s_W[j][i] = r_cW[k];
+            s_P[j][i] = r_cP[k];
+          }
+        }
+      }
+
+      @barrier("local");
+
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          if(j<p_Nq){
+            r_cU[k] = 0.f; r_cV[k] = 0.f; 
+            r_cW[k] = 0.f; r_cP[k] = 0.f;
+
+#pragma unroll p_Nq
+            for (int n=0;n<p_Nq;n++) {
+              const dfloat Ii = s_cubInterpT[n][i];
+              r_cU[k] += Ii*s_U[j][n];
+              r_cV[k] += Ii*s_V[j][n];
+              r_cW[k] += Ii*s_W[j][n];
+              r_cP[k] += Ii*s_P[j][n];
+            }
+          }
+        }
+      }
+
+      @barrier("local");
+
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          if(j<p_Nq){
+            s_U[j][i] = r_cU[k];
+            s_V[j][i] = r_cV[k];
+            s_W[j][i] = r_cW[k];
+            s_P[j][i] = r_cP[k];
+          }
+        }
+      }
+
+      @barrier("local");
+
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+           r_cU[k] = 0.f; r_cV[k] = 0.f; 
+           r_cW[k] = 0.f; r_cP[k] = 0.f;
+
+#pragma unroll p_Nq
+          for (int n=0;n<p_Nq;n++) {
+            const dfloat Ij = s_cubInterpT[n][j];
+            r_cU[k] += Ij*s_U[n][i];
+            r_cV[k] += Ij*s_V[n][i];
+            r_cW[k] += Ij*s_W[n][i];
+            r_cP[k] += Ij*s_P[n][i];
+          }
+        }
+      }
+
+      @barrier("local");      
+    }
+
+
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          //#pragma unroll p_cubNq
+          for(int k=0;k<p_cubNq;++k){ 
+            const dfloat Un = r_cU[k];
+            const dfloat Vn = r_cV[k];
+            const dfloat Wn = r_cW[k];
+            const dfloat Pn = r_cP[k];
+
+            const dlong id = e*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i;
+
+           const dfloat uerr = fabs( Uex[id +0*offsetNc] - Un); 
+           const dfloat verr = fabs( Uex[id +1*offsetNc] - Vn); 
+           const dfloat werr = fabs( Uex[id +2*offsetNc] - Wn); 
+           const dfloat perr = fabs( Pex[id +0*offsetNc] - Pn); 
+
+           Uex[id +0*offsetNc]  = uerr; 
+           Uex[id +1*offsetNc]  = verr; 
+           Uex[id +2*offsetNc]  = werr; 
+           Pex[id +0*offsetNc]  = perr; 
+        }
+      }
+    }
+  }
+}
+
+@kernel void insSetFlowFieldCubHex3D(const dlong Nelements,
+             const dfloat t,
+             @restrict const  dfloat *  cubInterpT,
+             @restrict const  dfloat *  x,
+             @restrict const  dfloat *  y,
+             @restrict const  dfloat *  z,
+             const dlong offset,
+             @restrict dfloat *  U,
+             @restrict dfloat *  P){
+  
+  //interpolate velocity and pressure fields to quadrature points
+  for(dlong e=0; e<Nelements; ++e; @outer(0)) {
+
+    @shared dfloat s_cubInterpT[p_Nq][p_cubNq];
+
+    @shared dfloat s_X[p_cubNq][p_cubNq];
+    @shared dfloat s_Y[p_cubNq][p_cubNq];
+    @shared dfloat s_Z[p_cubNq][p_cubNq];
+
+    @exclusive dfloat r_X[p_cubNq], r_Y[p_cubNq], r_Z[p_cubNq]; 
+
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        const int id = i+j*p_cubNq;
+        if (id<p_Nq*p_cubNq) {
+          s_cubInterpT[0][id] = cubInterpT[id];
+        }
+
+#pragma unroll p_cubNq
+  for(int k=0;k<p_cubNq;++k){         
+    r_X[k] = 0.f;
+    r_Y[k] = 0.f;
+    r_Z[k] = 0.f;
+  }
+      }
+    }
+
+    @barrier("local");
+
+    //read in and interpolate in k
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        if (i<p_Nq && j<p_Nq) {
+#pragma unroll p_Nq
+          for(int k=0;k<p_Nq;++k){
+            const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+            const dfloat xc = x[id];
+            const dfloat yc = y[id];
+            const dfloat zc = z[id];
+
+#pragma unroll p_cubNq
+            for(int n=0;n<p_cubNq;++n){
+              const dfloat Ik = s_cubInterpT[k][n];
+              r_X[n] += Ik*xc;
+              r_Y[n] += Ik*yc;
+              r_Z[n] += Ik*zc;
+            }
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+#pragma unroll p_cubNq
+    for(int k=0;k<p_cubNq;++k){ 
+      //load slice to @shared
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          if (i<p_Nq && j<p_Nq) {
+            s_X[j][i] = r_X[k];
+            s_Y[j][i] = r_Y[k];
+            s_Z[j][i] = r_Z[k];
+          }
+        }
+      }
+
+      @barrier("local");
+
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          if(j<p_Nq){
+            r_X[k] = 0.f; 
+            r_Y[k] = 0.f; 
+            r_Z[k] = 0.f; 
+
+#pragma unroll p_Nq
+            for (int n=0;n<p_Nq;n++) {
+              const dfloat Ii = s_cubInterpT[n][i];
+              r_X[k] += Ii*s_X[j][n];
+              r_Y[k] += Ii*s_Y[j][n];
+              r_Z[k] += Ii*s_Z[j][n];
+            }
+          }
+        }
+      }
+
+      @barrier("local");
+
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          if(j<p_Nq){
+            s_X[j][i] = r_X[k];
+            s_Y[j][i] = r_Y[k];
+            s_Z[j][i] = r_Z[k];
+          }
+        }
+      }
+
+      @barrier("local");
+
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+           r_X[k] = 0.f;
+           r_Y[k] = 0.f; 
+           r_Z[k] = 0.f; 
+
+#pragma unroll p_Nq
+          for (int n=0;n<p_Nq;n++) {
+            const dfloat Ij = s_cubInterpT[n][j];
+            r_X[k] += Ij*s_X[n][i];
+            r_Y[k] += Ij*s_Y[n][i];
+            r_Z[k] += Ij*s_Z[n][i];
+          }
+        }
+      }
+
+      @barrier("local");      
+    }
+
+     @barrier("local"); 
+     
+      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          //#pragma unroll p_cubNq
+          for(int k=0;k<p_cubNq;++k){ 
+            const dfloat xc = r_X[k];
+            const dfloat yc = r_Y[k];
+            const dfloat zc = r_Z[k];
+
+            const dlong id = e*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i;
+
+           dfloat u = 0.f;
+           dfloat v = 0.f;
+           dfloat w = 0.f;
+           dfloat p = 0.f;
+
+          insFlowField3D(t, xc, yc, zc, &u, &v, &w, &p);
+
+           U[id +0*offset]  = u; 
+           U[id +1*offset]  = v; 
+           U[id +2*offset]  = w; 
+           P[id +0*offset]  = p; 
+        }
+      }
+    }
+  }
+}

@@ -185,7 +185,7 @@ dfloat insL2Norm(ins_t *ins, dlong offset, dfloat *U){
 mesh_t *mesh = ins->mesh; 
 dfloat l2norm = 0.0; 
 
-if(ins->elementType==QUADRILATERALS){
+if(ins->elementType==QUADRILATERALS || ins->elementType==HEXAHEDRA){
 
  for(dlong e=0;e<mesh->Nelements;++e){
       dfloat sum = 0.0;  
@@ -201,13 +201,28 @@ if(ins->elementType==QUADRILATERALS){
 
       l2norm += sum; 
   }
+}else if(ins->elementType==QUADRILATERALS || ins->elementType==HEXAHEDRA){
+for(dlong e=0;e<mesh->Nelements;++e){
+      dfloat sum = 0.0;  
+  for(int k=0;k<mesh->cubNq;++k){
+    for(int j=0;j<mesh->cubNq;++j){
+      for(int i=0;i<mesh->cubNq;++i){
+          dlong vbase = mesh->Nvgeo*mesh->cubNp*e + i + j*mesh->cubNq + k*mesh->cubNq*mesh->cubNq;
+          dlong nbase = mesh->cubNp*e + i + j*mesh->cubNq + k*mesh->cubNq*mesh->cubNq;
+         dfloat JW  = mesh->cubvgeo[vbase + mesh->cubNp*JWID]; 
+         dfloat ui = U[nbase + offset]; 
+         sum +=ui*JW*ui;
+       }
+     }
+   }
+  l2norm += sum; 
+  }
 }
 
 dfloat gl2norm; 
 MPI_Allreduce(&l2norm, &gl2norm, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
 
 return sqrt(gl2norm);
-
 }
 
 // linf norm
