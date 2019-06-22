@@ -1054,11 +1054,12 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
       if(options.compareArgs("TIME INTEGRATOR","TOMBO")){
         
-        // // Create lap(U) kernel for Ins for (lap(u) - lambda*u) operation
-        // sprintf(fileName,DINS "/okl/insAx%s.okl", suffix); 
-        // sprintf(kernelName,"insPressureAx%s", suffix);
-        // ins->pressureAxKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);  
+        // Create lap(U) kernel for Ins for (lap(u) - lambda*u) operation
+        sprintf(fileName,DINS "/okl/insAx%s.okl", suffix); 
+        sprintf(kernelName,"insPressureAx%s", suffix);
+        ins->pressureAxKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);  
         
+        // needed for velocity increament
         // sprintf(kernelName,"insVelocityAx%s", suffix);
         // ins->velocityAxKernel = mesh->device.buildKernel(fileName, kernelName, kernelInfo);  
 
@@ -1113,11 +1114,11 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
       if(options.compareArgs("TIME INTEGRATOR","TOMBO")){
 
-        // sprintf(kernelName, "insDivergenceVolumeTOMBO%s", suffix);
-        // ins->divergenceVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+        sprintf(kernelName, "insDivergenceVolumeTOMBO%s", suffix);
+        ins->divergenceVolumeKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
-        // sprintf(kernelName, "insDivergenceSurfaceTOMBO%s", suffix);
-        // ins->divergenceSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+        sprintf(kernelName, "insDivergenceSurfaceTOMBO%s", suffix);
+        ins->divergenceSurfaceKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
 
       }else{
         sprintf(kernelName, "insDivergenceVolume%s", suffix);
@@ -1150,6 +1151,10 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
           ins->pressureAddBCKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
         }
 
+      sprintf(fileName, DINS "/okl/insPressureUpdate.okl");
+      sprintf(kernelName, "insPressureUpdate");
+      ins->pressureUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+
 
         // AK. Note that currently only HEX and QUAD is implemented in weak form !!!!!!!
         sprintf(fileName, DINS "/okl/insDivergence%s.okl", suffix);
@@ -1167,11 +1172,6 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
       sprintf(fileName, DINS "/okl/insVorticity%s.okl", suffix);
       sprintf(kernelName, "insVorticity%s", suffix);
       ins->vorticityKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-
-      sprintf(fileName, DINS "/okl/insPressureUpdate.okl");
-      sprintf(kernelName, "insPressureUpdate");
-      ins->pressureUpdateKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
-
       // ===========================================================================
 
       sprintf(fileName, DHOLMES "/okl/scaledAdd.okl");
@@ -1179,15 +1179,15 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
       ins->scaledAddKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
     
       // ===========================================================================
-      // sprintf(fileName, DINS "/okl/insVelocityRhs%s.okl", suffix);
-      // if (options.compareArgs("TIME INTEGRATOR", "ARK")) 
-      //   sprintf(kernelName, "insVelocityRhsARK%s", suffix); 
-      // else if (options.compareArgs("TIME INTEGRATOR", "EXTBDF")) 
-      //   sprintf(kernelName, "insVelocityRhsEXTBDF%s", suffix);
-      // else if (options.compareArgs("TIME INTEGRATOR", "TOMBO")) 
-      //   sprintf(kernelName, "insVelocityRhsTOMBO%s", suffix);
+      sprintf(fileName, DINS "/okl/insVelocityRhs%s.okl", suffix);
+      if (options.compareArgs("TIME INTEGRATOR", "ARK")) 
+        sprintf(kernelName, "insVelocityRhsARK%s", suffix); 
+      else if (options.compareArgs("TIME INTEGRATOR", "EXTBDF")) 
+        sprintf(kernelName, "insVelocityRhsEXTBDF%s", suffix);
+      else if (options.compareArgs("TIME INTEGRATOR", "TOMBO")) 
+        sprintf(kernelName, "insVelocityRhsTOMBO%s", suffix);
 
-      // ins->velocityRhsKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
+      ins->velocityRhsKernel =  mesh->device.buildKernel(fileName, kernelName, kernelInfo);
       
       // ===========================================================================
       if(!(ins->dim==3 && ins->elementType==QUADRILATERALS) ){

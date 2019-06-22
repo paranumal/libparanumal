@@ -73,6 +73,7 @@ AOBJS    = \
 ./src/insGradient.o \
 ./src/insDivergence.o \
 ./src/insCurlCurl.o \
+./src/insMean.o \
 ./src/insSubCycle.o \
 ./src/insVelocityRhs.o \
 ./src/insVelocitySolve.o \

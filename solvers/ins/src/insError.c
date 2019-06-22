@@ -101,10 +101,31 @@ void insError(ins_t *ins, dfloat time){
       dfloat uL2, vL2, wL2, pL2; 
       dfloat uexL2, vexL2, wexL2, pexL2; 
 
+      dfloat mexct = 0.f; 
+      dfloat msoln = 0.f; 
+
+      if(ins->pSolver->allNeumann){
+
+       occa::memory o_P = mesh->device.malloc(ins->Ntotal*sizeof(dfloat), ins->rkP);
+
+       ins->setFlowFieldKernel(mesh->Nelements, 
+                            time, 
+                            mesh->o_x,
+                            mesh->o_y,
+                            mesh->o_z,
+                            ins->fieldOffset, 
+                            ins->o_rkU, // dummy 
+                            o_P);
+      mexct = insMean(ins, o_P);
+      msoln = insMean(ins, ins->o_P);
+      printf("exact_mean : %.8e solution_mean: %.8e\n", mexct, msoln);
+      }
+
+      dfloat shift = msoln - mexct; 
+
     // Compute exact solution in cubature nodes
     const dlong offset = mesh->Nelements*mesh->cubNp; 
-
-    ins->setFlowFieldCubKernel(mesh->Nelements, 
+      ins->setFlowFieldCubKernel(mesh->Nelements, 
                               time, 
                               mesh->o_cubInterpT,
                               mesh->o_x,
@@ -114,9 +135,11 @@ void insError(ins_t *ins, dfloat time){
                               ins->o_Uex, 
                               ins->o_Pex);
 
+   
     ins->o_Uex.copyTo(ins->Uer); 
     ins->o_Pex.copyTo(ins->Per);
-    
+  
+
     // Compute the L2 norm of exact soln
     uexL2  = insL2Norm(ins, 0*offset, ins->Uer); 
     vexL2  = insL2Norm(ins, 1*offset, ins->Uer); 
@@ -128,6 +151,7 @@ void insError(ins_t *ins, dfloat time){
                      mesh->o_cubInterpT,
                      ins->fieldOffset,
                      offset,
+                     shift, 
                      ins->o_U,
                      ins->o_P,
                      ins->o_Uex,

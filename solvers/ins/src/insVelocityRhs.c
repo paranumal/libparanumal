@@ -106,7 +106,7 @@ void insVelocityRhs(ins_t *ins, dfloat time, int stage, occa::memory o_rhsU, occ
     const dfloat lambda = -ins->g0*ins->idt*ins->inu; 
 
 
-  //   // simple AX kernel, will be modified later AK.....
+  //   // simple AX kernel, will be modified later AK..... for increament
   // ins->velocityAxKernel(mesh->Nelements,
   //                       mesh->o_ggeo, 
   //                       mesh->o_Dmatrices, 

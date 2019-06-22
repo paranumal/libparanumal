@@ -10,6 +10,11 @@ data/insBeltrami3D.h
 ../../meshes/insBeltramiHex3D.msh
 #../../meshes/insBeltramiHexStructured3D_3.msh
 
+#../../meshes/insBeltramiHex3D_00.msh
+#../../meshes/insBeltramiHex3D_0.msh
+#../../meshes/insBeltramiHex3D_1.msh
+#../../meshes/insBeltramiHex3D_2.msh
+
 [MESH DIMENSION]
 3
 
@@ -17,7 +22,7 @@ data/insBeltrami3D.h
 12
 
 [POLYNOMIAL DEGREE]
-8
+7
 
 
 [ELEMENT MAP]
@@ -62,8 +67,7 @@ NONE
 0.9
 
 [VISCOSITY]
-0.01
-#1
+0.1
 
 [UBAR]
 1.0
@@ -78,20 +82,20 @@ NONE
 0.0
 
 [TSTEPS FOR SOLUTION OUTPUT]
-1
+10000
 
 [START TIME]
 0
 
 [FINAL TIME]
-0.1
+1.0
 
 [CFL]
 0.1
 
 # overwrites time step size
 [DT]
-1.0E-3
+1.0E-5
 
 [OUTPUT TYPE]
 VTU
@@ -273,6 +277,7 @@ FALSE
 [EXACT]
 #VORTEX
 BELTRAMI
+#NONE
 
 [VERBOSE]
 FALSE

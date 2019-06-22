@@ -688,7 +688,7 @@ void surfaceTermsTOMBO(dlong e, int es, dlong offset, int sk, int face, int i, i
           for(int j=0;j<p_Nq;++j){
             const dlong id = e*p_Np + j*p_Nq + i;
             const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
-            const dfloat JW = vgeo[gid + p_JWID*p_Np];
+            //const dfloat JW = vgeo[gid + p_JWID*p_Np];
             //   
             divU[id+0*offset] += coef*s_fluxU[es][j][i]; // -g_0/dt*n*up
           }

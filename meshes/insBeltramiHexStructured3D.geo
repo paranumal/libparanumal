@@ -2,9 +2,9 @@ cl__1 = 1.0;
 xmax = DefineNumber[ 1.0];
 xmin = DefineNumber[-1.0];
 
-xn = DefineNumber[5];
-yn = DefineNumber[5];
-zn = DefineNumber[5];
+xn = DefineNumber[2];
+yn = DefineNumber[2];
+zn = DefineNumber[2];
 
 Point(1) = {xmin, xmin, xmin, cl__1};
 Point(2) = {xmax, xmin, xmin, cl__1};

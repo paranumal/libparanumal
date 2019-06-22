@@ -306,6 +306,7 @@ void insRestartRead(ins_t *ins, setupAide &options);
 
 void insBrownMinionQuad3D(ins_t *ins);
 void insExtBdfCoefficents(ins_t *ins, int order);
+dfloat insMean(ins_t *ins, occa::memory o_q);
 
 
 void insCurlCurl(ins_t *ins, dfloat time, occa::memory o_U, occa::memory o_NC); 

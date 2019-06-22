@@ -230,7 +230,6 @@ SOFTWARE.
                 //U 
                 const dfloat Um  = U[id+0*fieldOffset+s*p_NVfields*fieldOffset];
                 const dfloat Vm  = U[id+1*fieldOffset+s*p_NVfields*fieldOffset];
-
                 // NU
                 const dfloat NUm  = NU[id+0*fieldOffset+s*p_NVfields*fieldOffset];
                 const dfloat NVm  = NU[id+1*fieldOffset+s*p_NVfields*fieldOffset];

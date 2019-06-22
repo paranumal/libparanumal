@@ -29,6 +29,7 @@
                 @restrict const  dfloat *  cubInterpT,
                 const dlong offsetNp,
                 const dlong offsetNc,
+                const dfloat shift, 
                 @restrict const  dfloat *  U,
                 @restrict const  dfloat *  P,
                 @restrict dfloat * Uex,
@@ -126,7 +127,7 @@
 
            const dfloat uerr = fabs( Uex[id +0*offsetNc] - r_Un); 
            const dfloat verr = fabs( Uex[id +1*offsetNc] - r_Vn); 
-           const dfloat perr = fabs( Pex[id +0*offsetNc] - r_Pn); 
+           const dfloat perr = fabs( Pex[id +0*offsetNc] - r_Pn + shift); 
 
            Uex[id +0*offsetNc]  = uerr; 
            Uex[id +1*offsetNc]  = verr; 
