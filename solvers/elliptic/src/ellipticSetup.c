@@ -32,8 +32,7 @@ void reportMemoryUsage(occa::device &device, const char *mess);
 
 elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelInfo, setupAide options){
 
-  elliptic_t *elliptic = (elliptic_t*) calloc(1, sizeof(elliptic_t));
-  //  elliptic_t *elliptic = new elliptic_t[1];
+  elliptic_t *elliptic = new elliptic_t();
 
   mesh->Nfields = 1;
   

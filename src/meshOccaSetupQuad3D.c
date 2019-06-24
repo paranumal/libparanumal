@@ -310,11 +310,11 @@ void meshOccaSetupQuad3D(mesh_t *mesh, setupAide &newOptions, occa::properties &
   }
 
   if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
-    kernelInfo["compiler_flags"] += "--ftz=true";
-    kernelInfo["compiler_flags"] += "--prec-div=false";
-    kernelInfo["compiler_flags"] += "--prec-sqrt=false";
-    kernelInfo["compiler_flags"] += "--use_fast_math";
-    kernelInfo["compiler_flags"] += "--fmad=true"; // compiler option for cuda
+    kernelInfo["compiler_flags"] += " --ftz=true ";
+    kernelInfo["compiler_flags"] += " --prec-div=false ";
+    kernelInfo["compiler_flags"] += " --prec-sqrt=false ";
+    kernelInfo["compiler_flags"] += " --use_fast_math ";
+    kernelInfo["compiler_flags"] += " --fmad=true "; // compiler option for cuda
   }
 
   kernelInfo["defines/" "p_G00ID"]= G00ID;

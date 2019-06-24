@@ -105,6 +105,7 @@ void occaDeviceConfig(mesh_t *mesh, setupAide &options){
   occa::env::OCCA_MEM_BYTE_ALIGN = USE_OCCA_MEM_BYTE_ALIGN;
 #endif
 
+#if 0
 #if USE_MASTER_NOEL==1
 
   int foo;
@@ -121,6 +122,7 @@ void occaDeviceConfig(mesh_t *mesh, setupAide &options){
     occa::host().UsePreCompiledKernels(0);
   }
     
+#endif
 #endif
   
   occa::initTimer(mesh->device);

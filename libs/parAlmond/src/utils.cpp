@@ -45,9 +45,9 @@ void *reductionScratch=NULL;
 occa::memory h_reductionScratch;
 occa::memory o_reductionScratch;
 
-  void *parAlmondHostMallocPinned(occa::device &device, size_t size, void *source, occa::memory &mem, occa::memory &h_mem){
-
-#if USE_MASTER_NOEL==1
+ void *parAlmondHostMallocPinned(occa::device &device, size_t size, void *source, occa::memory &mem, occa::memory &h_mem){
+   
+#if 0
     
   mem = device.malloc(size, source);
   
@@ -55,7 +55,8 @@ occa::memory o_reductionScratch;
   
   void *ptr = h_mem.getMappedPointer();
 
-#else
+#endif
+  
   
   occa::properties props;
   props["mapped"] = true;
@@ -68,7 +69,6 @@ occa::memory o_reductionScratch;
   h_mem =  device.malloc(size, props);
   
   void *ptr = h_mem.ptr();
-#endif
 
   return ptr;
 

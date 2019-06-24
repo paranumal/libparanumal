@@ -30,8 +30,7 @@
 
 ins_t *insSetup(mesh_t *mesh, setupAide options){
 
-  ins_t *ins = (ins_t*) calloc(1, sizeof(ins_t));
-  //  ins_t *ins = new ins_t[1];
+  ins_t *ins = new ins_t();
   
   ins->mesh = mesh;
   ins->options = options;
@@ -661,6 +660,8 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->vOptions.setArgs("PARALMOND PARTITION",  options.getArgs("VELOCITY PARALMOND PARTITION"));
   ins->vOptions.setArgs("PARALMOND CHEBYSHEV DEGREE",  options.getArgs("VELOCITY PARALMOND CHEBYSHEV DEGREE"));
 
+  ins->vOptions.setArgs("PARALMOND AGGREGATION STRATEGY", options.getArgs("VELOCITY PARALMOND AGGREGATION STRATEGY"));
+  
   ins->vOptions.setArgs("DEBUG ENABLE OGS", "1");
   ins->vOptions.setArgs("DEBUG ENABLE REDUCTIONS", "1");
 
@@ -681,6 +682,8 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   ins->pOptions.setArgs("PARALMOND PARTITION",  options.getArgs("PRESSURE PARALMOND PARTITION"));
   ins->pOptions.setArgs("PARALMOND CHEBYSHEV DEGREE",  options.getArgs("PRESSURE PARALMOND CHEBYSHEV DEGREE"));
 
+  ins->pOptions.setArgs("PARALMOND AGGREGATION STRATEGY", options.getArgs("PRESSURE PARALMOND AGGREGATION STRATEGY"));
+  
   ins->pOptions.setArgs("DEBUG ENABLE OGS", "1");
   ins->pOptions.setArgs("DEBUG ENABLE REDUCTIONS", "1");
 
@@ -708,8 +711,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   // Use third Order Velocity Solve: full rank should converge for low orders
   if (mesh->rank==0) printf("==================VELOCITY SOLVE SETUP=========================\n");
 
-  ins->uSolver = (elliptic_t*) calloc(1, sizeof(elliptic_t));
-  //  ins->uSolver = new elliptic_t[1];
+  ins->uSolver = new elliptic_t();
   ins->uSolver->mesh = mesh;
   ins->uSolver->options = ins->vOptions;
   ins->uSolver->dim = ins->dim;
@@ -719,8 +721,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
   ellipticSolveSetup(ins->uSolver, ins->lambda, kernelInfoV); 
 
-  ins->vSolver = (elliptic_t*) calloc(1, sizeof(elliptic_t));
-  //  ins->vSolver = new elliptic_t[1];
+  ins->vSolver = new elliptic_t();
   ins->vSolver->mesh = mesh;
   ins->vSolver->options = ins->vOptions;
   ins->vSolver->dim = ins->dim;
@@ -732,8 +733,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
 
   
   if (ins->dim==3) {
-    //ins->wSolver = new elliptic_t[1];
-    ins->wSolver = (elliptic_t*) calloc(1, sizeof(elliptic_t));
+    ins->wSolver = new elliptic_t();
     ins->wSolver->mesh = mesh;
     ins->wSolver->options = ins->vOptions;
     ins->wSolver->dim = ins->dim;
@@ -745,8 +745,7 @@ ins_t *insSetup(mesh_t *mesh, setupAide options){
   }
   
   if (mesh->rank==0) printf("==================PRESSURE SOLVE SETUP=========================\n");
-  ins->pSolver = (elliptic_t*) calloc(1, sizeof(elliptic_t));
-  //ins->pSolver = new elliptic_t[1];
+  ins->pSolver = new elliptic_t();
   ins->pSolver->mesh = mesh;
   ins->pSolver->options = ins->pOptions;
   ins->pSolver->dim = ins->dim;

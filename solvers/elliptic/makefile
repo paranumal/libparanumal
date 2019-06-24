@@ -22,16 +22,20 @@ CC	= mpic++
 LD	= mpic++
 
 # compiler flags to be used (set to compile with debugging on)
-CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -I$(ALMONDDIR) -D DHOLMES='"${CURDIR}/../.."' -D DELLIPTIC='"${CURDIR}"' -I../../3rdParty/parmetis-4.0.3/metis/GKlib -I../../3rdParty/parmetis-4.0.3/include -I../../3rdParty/parmetis-4.0.3/metis/include -I../../3rdParty/parmetis-4.0.3/libparmetis $(LIBP_OPT_FLAGS) -I$(OGSDIR)/include 
+CFLAGS = -I. -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) -I$(HDRDIR) -I$(OGSDIR) -I$(ALMONDDIR) -D DHOLMES='"${CURDIR}/../.."' -D DELLIPTIC='"${CURDIR}"'  $(LIBP_OPT_FLAGS) -I$(OGSDIR)/include
+
+# -I../../3rdParty/parmetis-4.0.3/metis/GKlib -I../../3rdParty/parmetis-4.0.3/include -I../../3rdParty/parmetis-4.0.3/metis/include -I../../3rdParty/parmetis-4.0.3/libparmetis
 
 # link flags to be used
 LDFLAGS	= -DOCCA_VERSION_1_0 $(compilerFlags) $(flags) $(LIBP_OPT_FLAGS)
 
-PARMETISDIR = ../../3rdParty/parmetis-4.0.3/build/Linux-x86_64/libparmetis/
-METISDIR = ../../3rdParty/parmetis-4.0.3/build/Linux-x86_64/libmetis
+#PARMETISDIR = ../../3rdParty/parmetis-4.0.3/build/Linux-x86_64/libparmetis/
+#METISDIR = ../../3rdParty/parmetis-4.0.3/build/Linux-x86_64/libmetis
 
 # libraries to be linked in
-LIBS	=  -L$(PARMETISDIR) -lparmetis -L$(METISDIR) -lmetis  -L$(ALMONDDIR) -lparAlmond  -L$(OGSDIR) -logs -L$(GSDIR)/lib -lgs -L$(OCCA_DIR)/lib -locca $(links) -L../../3rdParty/BlasLapack  $(LIBP_EXT_LIBS) -lgfortran
+LIBS	=    -L$(ALMONDDIR) -lparAlmond  -L$(OGSDIR) -logs -L$(GSDIR)/lib -lgs -L$(OCCA_DIR)/lib -locca $(links) -L../../3rdParty/BlasLapack  $(LIBP_EXT_LIBS) -lgfortran
+
+#-L$(PARMETISDIR) -lparmetis -L$(METISDIR) -lmetis
 
 INCLUDES = elliptic.h ellipticPrecon.h
 DEPS = $(INCLUDES) \
@@ -92,6 +96,7 @@ AOBJS    = \
 
 # library objects
 LOBJS = \
+../../src/meshConnectPeriodicFaceNodes2D.o \
 ../../src/meshConnectPeriodicFaceNodes3D.o \
 ../../src/meshSetupBoxHex3D.o \
 ../../src/meshApplyElementMatrix.o \

@@ -306,17 +306,16 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   // TW: HERE
 
   /*preconditioner setup */
-  //  elliptic->precon = new precon_t[1];
-  elliptic->precon = (precon_t*) calloc(1, sizeof(precon_t));
+  elliptic->precon = new precon_t();
 
   //  kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
 
   if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
-    kernelInfo["compiler_flags"] += "-Xptxas -dlcm=ca";
+    kernelInfo["compiler_flags"] += " -Xptxas -dlcm=ca ";
   }
 
-  if(mesh->device.mode()=="Serial")
-    kernelInfo["compiler_flags"] += "-g";
+  //  if(mesh->device.mode()=="Serial")
+  //    kernelInfo["compiler_flags"] += "-g";
 
   // set kernel name suffix
   char *suffix;

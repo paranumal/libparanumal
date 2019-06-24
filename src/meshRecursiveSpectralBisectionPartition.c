@@ -3,11 +3,18 @@
 #include "mpi.h"
 #include "mesh.h"
 
+#if 0
 #include "parmetis.h"
 #include "defs.h"
+#endif
 //#include "parmetisdefs.h"
 
 void meshRecursiveSpectralBisectionPartition(mesh_t *mesh){
+
+  printf("meshRecursiveSpectralBisectionPartition is disabled, exiting\n");
+  exit(-1);
+
+  #if 0
   
   int rank = mesh->rank;
   int size = mesh->size;
@@ -231,5 +238,6 @@ void meshRecursiveSpectralBisectionPartition(mesh_t *mesh){
  free(eind);
  free(elmwgt);
  free(part);
-
+#endif
+ 
 }

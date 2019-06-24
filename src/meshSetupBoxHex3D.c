@@ -28,8 +28,7 @@ SOFTWARE.
 
 mesh3D *meshSetupBoxHex3D(int N, setupAide &options){
 
-  //  mesh_t *mesh = new mesh_t[1];
-  mesh_t *mesh = (mesh_t*) calloc(1, sizeof(mesh_t));
+  mesh_t *mesh = new mesh_t();
   
   int rank, size;
   

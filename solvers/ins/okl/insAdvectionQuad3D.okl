@@ -161,13 +161,13 @@
 
 
 void surfaceTerms(dlong e, int es, dlong offset, int sk, int face, int i, int j, dfloat time,
-                  @global const dfloat *x,
-                  @global const dfloat *y, 
-                  @global const dfloat *z, 
-                  @global const dfloat *sgeo,
-                  @global const dlong *vmapM,
-                  @global const dlong *vmapP,
-                  @global const dfloat *U,
+                  const dfloat *x,
+                  const dfloat *y, 
+                  const dfloat *z, 
+                  const dfloat *sgeo,
+                  const dlong *vmapM,
+                  const dlong *vmapP,
+                  const dfloat *U,
                   @shared dfloat s_fluxNU[p_NblockS][p_Nq][p_Nq],
                   @shared dfloat s_fluxNV[p_NblockS][p_Nq][p_Nq],
                   @shared dfloat s_fluxNW[p_NblockS][p_Nq][p_Nq]){

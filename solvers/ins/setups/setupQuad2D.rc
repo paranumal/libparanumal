@@ -4,9 +4,13 @@
 [DATA FILE]
 data/insVortex2D.h
 
+
+[BOX DOMAIN]
+FALSE
+
 [MESH FILE]
-#../../meshes/insVortexQuad2D.msh
-../../meshes/insVortexQuadStructured_0.msh
+../../meshes/insVortexQuad2D.msh
+#../../meshes/insVortexQuadStructured_0.msh
 #../../meshes/insVortexQuad2D.msh
 
 [MESH DIMENSION]
@@ -32,6 +36,9 @@ CUDA
 [TIME INTEGRATOR]
 #ARK2
 EXTBDF2
+
+[SUBCYCLING TYPE]
+LIBP
 
 [SUBCYCLING STEPS]
 0
@@ -132,6 +139,9 @@ DAMPEDJACOBI,CHEBYSHEV
 [VELOCITY CHEBYSHEV DEGREE]
 2
 
+[VELOCITY MULTIGRID CHEBYSHEV DEGREE]
+2
+
 ###########################################
 
 ########## ParAlmond Options ##############
@@ -188,6 +198,9 @@ NODAL
 [PRESSURE PRECONDITIONER]
 MULTIGRID
 #FULLALMOND
+
+[PRESSURE MULTIGRID CHEBYSHEV DEGREE]
+2
 
 ########## MULTIGRID Options ##############
 
@@ -271,4 +284,5 @@ FALSE
 
 [USE PRECOMPILED BINARIES]
 FALSE
+
 

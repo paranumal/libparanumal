@@ -515,6 +515,13 @@ void meshOccaSetup2D(mesh2D *mesh, setupAide &newOptions, occa::properties &kern
     // temporary DEVICE buffer for halo (maximum size Nfields*Np for dfloat)
     mesh->o_haloBuffer =
       mesh->device.malloc(mesh->totalHaloPairs*mesh->Np*mesh->Nfields*sizeof(dfloat));
+
+    mesh->o_haloGetNodeIds = 
+      mesh->device.malloc(mesh->Nfp*mesh->totalHaloPairs*sizeof(dlong), mesh->haloGetNodeIds);
+    
+    mesh->o_haloPutNodeIds = 
+      mesh->device.malloc(mesh->Nfp*mesh->totalHaloPairs*sizeof(dlong), mesh->haloPutNodeIds);
+
   }
 
 
@@ -579,11 +586,11 @@ void meshOccaSetup2D(mesh2D *mesh, setupAide &newOptions, occa::properties &kern
   }
 
   if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
-    kernelInfo["compiler_flags"] += "--ftz=true";
-    kernelInfo["compiler_flags"] += "--prec-div=false";
-    kernelInfo["compiler_flags"] += "--prec-sqrt=false";
-    kernelInfo["compiler_flags"] += "--use_fast_math";
-    kernelInfo["compiler_flags"] += "--fmad=true"; // compiler option for cuda
+    kernelInfo["compiler_flags"] += " --ftz=true ";
+    kernelInfo["compiler_flags"] += " --prec-div=false ";
+    kernelInfo["compiler_flags"] += " --prec-sqrt=false ";
+    kernelInfo["compiler_flags"] += " --use_fast_math ";
+    kernelInfo["compiler_flags"] += " --fmad=true "; // compiler option for cuda
   }
 
   kernelInfo["defines/" "p_G00ID"]= G00ID;

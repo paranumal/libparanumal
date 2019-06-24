@@ -84,16 +84,16 @@ occa::properties ellipticKernelInfo(mesh_t *mesh){
   }
 
   if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
-    kernelInfo["compiler_flags"] += "--ftz=true";
-    kernelInfo["compiler_flags"] += "--prec-div=false";
-    kernelInfo["compiler_flags"] += "--prec-sqrt=false";
-    kernelInfo["compiler_flags"] += "--use_fast_math";
-    kernelInfo["compiler_flags"] += "--fmad=true"; // compiler option for cuda
-    kernelInfo["compiler_flags"] += "-Xptxas -dlcm=ca";
+    kernelInfo["compiler_flags"] += " --ftz=true ";
+    kernelInfo["compiler_flags"] += " --prec-div=false ";
+    kernelInfo["compiler_flags"] += " --prec-sqrt=false ";
+    kernelInfo["compiler_flags"] += " --use_fast_math ";
+    kernelInfo["compiler_flags"] += " --fmad=true "; // compiler option for cuda
+    kernelInfo["compiler_flags"] += " -Xptxas -dlcm=ca ";
   }
 
-  if(mesh->device.mode()=="Serial")
-    kernelInfo["compiler_flags"] += "-g";
+  //  if(mesh->device.mode()=="Serial")
+  //    kernelInfo["compiler_flags"] += " -g ";
 
   kernelInfo["defines/" "p_G00ID"]= G00ID;
   kernelInfo["defines/" "p_G01ID"]= G01ID;
