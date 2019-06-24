@@ -63,8 +63,8 @@ E. Dependencies:
 `git clone https://github.com/tcew/paranumal/libparanumal`
 
 ---
-### 4. OCCA dependency (currently OCCA 1.0 forked by Noel Chalmers) 
-`git clone https://github.com/noelchalmers/occa`
+### 4. OCCA dependency (currently OCCA 1.0)
+`git clone https://github.com/libocca/occa`
 
 #### 4-1. Build OCCA 
 `cd occa`    
