@@ -38,7 +38,7 @@ parCSR* strongGraph(parCSR *A){
   C->diag->rowStarts = (dlong *) calloc(N+1,sizeof(dlong));
   C->offd->rowStarts = (dlong *) calloc(N+1,sizeof(dlong));
 
-  dfloat *maxOD;
+  dfloat *maxOD = NULL;
   if (N) maxOD = (dfloat *) calloc(N,sizeof(dfloat));
 
   dfloat *diagA = A->diagA;

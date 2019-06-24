@@ -25,13 +25,12 @@ SOFTWARE.
 */
 
 @kernel void ellipticAddBCHex3D(const dlong Nelements,
-                              const dfloat t,
                               @restrict const  dfloat *  x,
                               @restrict const  dfloat *  y,
                               @restrict const  dfloat *  z,
                               @restrict const  int    *  mapB,
                               @restrict dfloat  *  q){
-  
+
   for(dlong e=0;e<Nelements;e++;@outer(0)){
     for(int n=0;n<p_Np;++n;@inner(0)){
       const dlong id = n+e*p_Np;
@@ -40,9 +39,9 @@ SOFTWARE.
       dfloat dudxP=0, dudyP=0, dudzP=0, uP=0;
 
       if(bc==1) {
-        ellipticBoundaryConditions3D(bc, t, x[id], y[id], z[id], nx, ny, nz,  0.f, 0.f, 0.f, 0.f, uP, dudxP, dudyP, dudzP);
+        ellipticBoundaryConditions3D(bc, x[id], y[id], z[id], nx, ny, nz,  0.f, 0.f, 0.f, 0.f, uP, dudxP, dudyP, dudzP);
         q[id] = uP;
-      }    
+      }
     }
   }
 }

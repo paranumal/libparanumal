@@ -99,10 +99,10 @@ void buildParAlmondKernels(MPI_Comm comm, occa::device device){
     kernelInfo["compiler_flags"] += "--fmad=true"; // compiler option for cuda
   }
 
-  if (rank==0) printf("Compiling parALMOND Kernels...");fflush(stdout);
+  if (rank==0) {printf("Compiling parALMOND Kernels...");fflush(stdout);}
 
   for (int r=0;r<2;r++){
-    if ((r==0 && rank==0) || (r==1 && rank>0)) {      
+    if ((r==0 && rank==0) || (r==1 && rank>0)) {
 
       SpMVcsrKernel1  = device.buildKernel(DPARALMOND"/okl/SpMVcsr.okl",  "SpMVcsr1",  kernelInfo);
       SpMVcsrKernel2  = device.buildKernel(DPARALMOND"/okl/SpMVcsr.okl",  "SpMVcsr2",  kernelInfo);

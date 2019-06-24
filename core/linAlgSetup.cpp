@@ -33,7 +33,7 @@ linAlg_t::linAlg_t(occa::device& device_,
   device(device_), settings(settings_), props(props_), blocksize(LINALG_BLOCKSIZE) {};
 
 //named cosntructor
-linAlg_t* linAlg_t::Setup(occa::device& device_,
+linAlg_t& linAlg_t::Setup(occa::device& device_,
          settings_t& settings_, occa::properties& props_) {
 
   linAlg_t *linAlg = new linAlg_t(device_, settings_, props_);
@@ -46,7 +46,7 @@ linAlg_t* linAlg_t::Setup(occa::device& device_,
 
   linAlg->o_scratch = linAlg->device.malloc(LINALG_BLOCKSIZE*sizeof(dfloat));
 
-  return linAlg;
+  return *linAlg;
 }
 
 //initialize list of kernels
@@ -113,11 +113,23 @@ void linAlg_t::InitKernels(vector<string> kernels) {
                                         "linAlgAXDY.okl",
                                         "zaxdy",
                                         kernelInfo);
+    } else if (name=="sum") {
+      if (sumKernel.isInitialized()==false)
+        sumKernel = device.buildKernel(LIBP_DIR "/core/okl/"
+                                        "linAlgSum.okl",
+                                        "sum",
+                                        kernelInfo);
     } else if (name=="norm2") {
       if (norm2Kernel.isInitialized()==false)
         norm2Kernel = device.buildKernel(LIBP_DIR "/core/okl/"
                                         "linAlgNorm2.okl",
                                         "norm2",
+                                        kernelInfo);
+    } else if (name=="weightedNorm2") {
+      if (weightedNorm2Kernel.isInitialized()==false)
+        weightedNorm2Kernel = device.buildKernel(LIBP_DIR "/core/okl/"
+                                        "linAlgWeightedNorm2.okl",
+                                        "weightedNorm2",
                                         kernelInfo);
     } else if (name=="innerProd") {
       if (innerProdKernel.isInitialized()==false)

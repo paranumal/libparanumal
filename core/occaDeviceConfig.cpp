@@ -175,13 +175,19 @@ void occaDeviceConfig(occa::device &device, MPI_Comm comm,
     props["defines/" "dlong"]="long long int";
   }
 
+  if(device.mode()=="Serial")
+    props["compiler_flags"] += "-g"; //debugging
+
   if(device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
     props["compiler_flags"] += "--ftz=true ";
     props["compiler_flags"] += "--prec-div=false ";
     props["compiler_flags"] += "--prec-sqrt=false ";
     props["compiler_flags"] += "--use_fast_math ";
     props["compiler_flags"] += "--fmad=true "; // compiler option for cuda
+    props["compiler_flags"] += "-Xptxas -dlcm=ca";
   }
+
+
 
   // occa::initTimer(mesh->device);
 

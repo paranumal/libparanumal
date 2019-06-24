@@ -62,7 +62,8 @@ public:
   dfloat *EY;
   dfloat *EZ;
 
-  dlong Nelements; //local element count
+  dlong Nelements;       //local element count
+  hlong NelementsGlobal; //global element count
   hlong *EToV; // element-to-vertex connectivity
   dlong *EToE; // element-to-element connectivity
   int   *EToF; // element-to-(local)face connectivity

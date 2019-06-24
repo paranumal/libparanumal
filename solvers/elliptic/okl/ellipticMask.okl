@@ -24,11 +24,14 @@ SOFTWARE.
 
 */
 
-#include "solver.hpp"
 
-solver_t::solver_t(mesh_t& _mesh):
-  mesh(_mesh),
-  comm(_mesh.comm),
-  device(_mesh.device),
-  settings(_mesh.settings),
-  props(_mesh.props) {}
+@kernel void mask(const dlong Nmasked,
+                  @restrict const dlong  *maskIds,
+                  @restrict       dfloat *q){
+
+  for(dlong n=0;n<Nmasked;++n;@tile(256,@outer,@inner)){
+    if(n<Nmasked){
+      q[maskIds[n]] = 0.;
+    }
+  }
+}

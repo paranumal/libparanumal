@@ -50,8 +50,14 @@ int main(int argc, char **argv){
   // set up mesh
   mesh_t& mesh = mesh_t::Setup(device, comm, settings, props);
 
+  // set up linear algebra module
+  linAlg_t& linAlg = linAlg_t::Setup(device, settings, props);
+
+  dfloat lambda = 0.0;
+  settings.getSetting("LAMBDA", lambda);
+
   // set up elliptic solver
-  elliptic_t& elliptic = elliptic_t::Setup(mesh);
+  elliptic_t& elliptic = elliptic_t::Setup(mesh, linAlg, lambda);
 
   // run
   elliptic.Run();

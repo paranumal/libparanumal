@@ -30,13 +30,22 @@ SOFTWARE.
 
 namespace parAlmond {
 
+struct nonZero_t {
+  hlong row;
+  hlong col;
+  dfloat val;
+
+  int ownerRank;
+};
+
 class matrix_t {
 
 public:
   dlong Nrows;
   dlong Ncols;
 
-  matrix_t(dlong N=0, dlong M=0);
+  matrix_t(dlong N=0, dlong M=0): Nrows(N), Ncols(M) {};
+  virtual ~matrix_t() {};
 
   virtual void SpMV(const dfloat alpha,        dfloat *x, const dfloat beta, dfloat *y)=0;
   virtual void SpMV(const dfloat alpha,        dfloat *x, const dfloat beta, const dfloat *y, dfloat *z)=0;
@@ -114,6 +123,20 @@ public:
   void SpMV(const dfloat alpha, occa::memory o_x, const dfloat beta, occa::memory o_y, occa::memory o_z);
 };
 
+class parCOO {
+
+public:
+  dlong nnz=0;
+  nonZero_t *entries=NULL;
+  hlong *globalStarts=NULL;
+
+  parCOO(): nnz(0) {}
+  ~parCOO() {
+    if(entries) free(entries);
+    if(globalStarts) free(globalStarts);
+  }
+};
+
 class parCSR: public matrix_t {
 
 public:
@@ -157,11 +180,7 @@ public:
 
   //build a parCSR matrix from a distributed COO matrix
   parCSR(dlong N,         // number of rows on this rank
-         hlong* starts,   // global partitioning
-         dlong nnz,       // number of nonzeros on this rank
-         hlong *Ai,       // global row ids
-         hlong *Aj,       // global column ids
-         dfloat *Avals,    // values
+         parCOO& A,
          bool NullSpace,          //switch for nullspace
          dfloat *Null,            //null vector (or low energy mode)
          dfloat NullSpacePenalty, //penalty parameter for rank boost

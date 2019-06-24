@@ -33,42 +33,38 @@ SOFTWARE.
 #include "core.hpp"
 #include "settings.hpp"
 #include "solver.hpp"
+#include "precon.hpp"
 #include "linAlg.hpp"
-
-// #include "../solvers/elliptic/elliptic.hpp"
-class elliptic_t: public solver_t {
-public:
-
-  linAlg_t* linAlg;
-
-  occa::memory o_invDegree;
-
-  void Preconditioner(occa::memory &o_r, occa::memory &o_z);
-  void Operator(occa::memory &o_x, occa::memory &o_Ax);
-
-};
 
 //virtual base linear solver class
 class linearSolver_t {
 public:
-  elliptic_t& elliptic; //must be made with an elliptic_t solver for now
-
   MPI_Comm& comm;
   occa::device& device;
   settings_t& settings;
   occa::properties& props;
+  mesh_t& mesh;
+  linAlg_t& linAlg;
 
   dlong N;
 
-  linearSolver_t(elliptic_t& _elliptic);
+  linearSolver_t(solver_t& solver):
+    comm(solver.comm),
+    device(solver.device),
+    settings(solver.settings),
+    props(solver.props),
+    mesh(solver.mesh),
+    linAlg(solver.linAlg) {}
 
-  static linearSolver_t* Setup(elliptic_t& elliptic);
+  static linearSolver_t* Setup(solver_t& solver);
 
-  virtual void Init()=0;
-  virtual int Solve(occa::memory& o_x, occa::memory& o_rhs,
+  virtual void Init(int _weighted, occa::memory& o_weight)=0;
+  virtual int Solve(solver_t& solver, precon_t& precon,
+                    occa::memory& o_x, occa::memory& o_rhs,
                     const dfloat tol, const int MAXIT, const int verbose)=0;
 };
 
+//Preconditioned Conjugate Gradient
 class pcg: public linearSolver_t {
 private:
   occa::memory o_p, o_Ap, o_z, o_Ax, o_w;
@@ -82,15 +78,84 @@ private:
   occa::kernel updatePCGKernel;
   occa::kernel weightedUpdatePCGKernel;
 
+  dfloat UpdatePCG(const dfloat alpha, occa::memory &o_x, occa::memory &o_r);
+
 public:
-  pcg(elliptic_t& elliptic);
+  pcg(solver_t& solver);
   ~pcg();
 
-  void Init();
-  int Solve(occa::memory& o_x, occa::memory& o_rhs,
+  void Init(int _weighted, occa::memory& o_weight);
+  int Solve(solver_t& solver, precon_t& precon,
+            occa::memory& o_x, occa::memory& o_rhs,
             const dfloat tol, const int MAXIT, const int verbose);
+};
 
-  dfloat UpdatePCG(const dfloat alpha, occa::memory &o_x, occa::memory &o_r);
+//Non-Blocking Preconditioned Conjugate Gradient
+class nbpcg: public linearSolver_t {
+private:
+  occa::memory o_p, o_s, o_S, o_z, o_Z, o_Ax, o_weight;
+
+  dfloat* tmpdots;
+  occa::memory h_tmpdots;
+  occa::memory o_tmpdots;
+
+  int weighted;
+
+  occa::kernel update1NBPCGKernel;
+  occa::kernel update2NBPCGKernel;
+  occa::kernel weightedUpdate1NBPCGKernel;
+  occa::kernel weightedUpdate2NBPCGKernel;
+
+  dfloat *localdots, *globaldots;
+
+  MPI_Request request;
+  MPI_Status  status;
+
+  void Update1NBPCG(const dfloat beta);
+  void Update2NBPCG(const dfloat alpha, occa::memory &o_r);
+
+public:
+  nbpcg(solver_t& solver);
+  ~nbpcg();
+
+  void Init(int _weighted, occa::memory& o_weight_);
+  int Solve(solver_t& solver, precon_t& precon,
+            occa::memory& o_x, occa::memory& o_rhs,
+            const dfloat tol, const int MAXIT, const int verbose);
+};
+
+//Non-Blocking Flexible Preconditioned Conjugate Gradient
+class nbfpcg: public linearSolver_t {
+private:
+  occa::memory o_u, o_p, o_w, o_n, o_m, o_s, o_z, o_q, o_Ax, o_weight;
+
+  dfloat* tmpdots;
+  occa::memory h_tmpdots;
+  occa::memory o_tmpdots;
+
+  int weighted;
+
+  occa::kernel update0NBFPCGKernel;
+  occa::kernel update1NBFPCGKernel;
+  occa::kernel weightedUpdate0NBFPCGKernel;
+  occa::kernel weightedUpdate1NBFPCGKernel;
+
+  dfloat *localdots, *globaldots;
+
+  MPI_Request request;
+  MPI_Status  status;
+
+  void Update0NBFPCG(occa::memory &o_r);
+  void Update1NBFPCG(const dfloat alpha, occa::memory &o_x, occa::memory &o_r);
+
+public:
+  nbfpcg(solver_t& solver);
+  ~nbfpcg();
+
+  void Init(int _weighted, occa::memory& o_weight_);
+  int Solve(solver_t& solver, precon_t& precon,
+            occa::memory& o_x, occa::memory& o_rhs,
+            const dfloat tol, const int MAXIT, const int verbose);
 };
 
 #endif

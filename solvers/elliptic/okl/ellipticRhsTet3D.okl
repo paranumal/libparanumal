@@ -42,7 +42,7 @@ SOFTWARE.
       const dlong id = e*p_Np + n;
 
       dfloat f = 0;
-      ellipticForcing3D(x[id], y[id], z[id], f);
+      ellipticForcing3D(x[id], y[id], z[id], lambda, f);
 
       s_q[n] = f;
     }

@@ -37,42 +37,42 @@ void surfaceTerms(const int element,
                   const int i,
                   const int j,
                   const dfloat tau,
-                  @global const dfloat *sgeo,
-                  @global const int *vmapM,
-                  @global const int *vmapP,
-                  @global const int *EToB,
-                  @global const dfloat4 *gradq,
+                  const dfloat *sgeo,
+                  const int *vmapM,
+                  const int *vmapP,
+                  const int *EToB,
+                  const dfloat4 *gradq,
                   dfloat s_dqdx[p_Nq][p_Nq],
                   dfloat s_dqdy[p_Nq][p_Nq],
                   dfloat s_rhsq[p_Nq][p_Nq]){
-                                                  
-  const dlong  idM = vmapM[sk];                                          
-  const dlong  idP = vmapP[sk];                                          
-                                                                        
-  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            
-  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            
-  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];                          
-  const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];                           
-                                                                        
-  const dfloat4 gradqM = gradq[idM];                                    
-  dfloat4 gradqP = gradq[idP];                                          
-                                                                        
-  int bc = EToB[face+p_Nfaces*element];                                         
-  if(bc>0) {                                                            
+
+  const dlong  idM = vmapM[sk];
+  const dlong  idP = vmapP[sk];
+
+  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
+  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
+  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];
+  const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];
+
+  const dfloat4 gradqM = gradq[idM];
+  dfloat4 gradqP = gradq[idP];
+
+  int bc = EToB[face+p_Nfaces*element];
+  if(bc>0) {
     ellipticHomogeneousBC2D(bc, gradqM.w, gradqM.x, gradqM.y,gradqP.w, gradqP.x, gradqP.y);
-    gradqP.x = 2.f*gradqP.x - gradqM.x;                                 
-    gradqP.y = 2.f*gradqP.y - gradqM.y;                                 
-    gradqP.w = 2.f*gradqP.w - gradqM.w;                                 
-  }                                                                     
-  
-  dfloat dq = gradqP.w - gradqM.w;                                      
-  
-  s_dqdx[j][i] += 0.5f*WsJ*nx*dq;                                       
-  s_dqdy[j][i] += 0.5f*WsJ*ny*dq;                                       
-  
-  s_rhsq[j][i] -= 0.5f*WsJ*(nx*(gradqP.x+gradqM.x) +                    
-                            ny*(gradqP.y+gradqM.y) +                    
-                            tau*dq*hinv);                               
+    gradqP.x = 2.f*gradqP.x - gradqM.x;
+    gradqP.y = 2.f*gradqP.y - gradqM.y;
+    gradqP.w = 2.f*gradqP.w - gradqM.w;
+  }
+
+  dfloat dq = gradqP.w - gradqM.w;
+
+  s_dqdx[j][i] += 0.5f*WsJ*nx*dq;
+  s_dqdy[j][i] += 0.5f*WsJ*ny*dq;
+
+  s_rhsq[j][i] -= 0.5f*WsJ*(nx*(gradqP.x+gradqM.x) +
+                            ny*(gradqP.y+gradqM.y) +
+                            tau*dq*hinv);
 }
 
 @kernel void ellipticAxIpdgQuad2D(const dlong Nelements,
@@ -164,7 +164,7 @@ void surfaceTerms(const int element,
 
       //      surfaceTerms(sk0,0,i,0);
       surfaceTerms(e, sk0, 0, i, 0, tau, sgeo, vmapM, vmapP, EToB, gradq, s_dqdx, s_dqdy, s_rhsq);
-      
+
       //      surfaceTerms(sk2,2,i,p_Nq-1);
       surfaceTerms(e, sk2, 2, i, p_Nq-1, tau, sgeo, vmapM, vmapP, EToB, gradq, s_dqdx, s_dqdy, s_rhsq);
 
@@ -295,7 +295,7 @@ void surfaceTerms(const int element,
 
       //      surfaceTerms(sk1,1,p_Nq-1,j);
       surfaceTerms(element, sk1, 1, p_Nq-1, j, tau, sgeo, vmapM, vmapP, EToB, gradq, s_dqdx, s_dqdy, s_rhsq);
-      
+
       //      surfaceTerms(sk3,3,0,j);
       surfaceTerms(element, sk3, 3, 0, j, tau, sgeo, vmapM, vmapP, EToB, gradq, s_dqdx, s_dqdy, s_rhsq);
     }

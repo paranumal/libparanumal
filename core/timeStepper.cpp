@@ -26,19 +26,6 @@ SOFTWARE.
 
 #include "timeStepper.hpp"
 
-//virtual base time stepper class
-timeStepper_t::timeStepper_t(dlong _N, dlong _Nhalo, solver_t& _solver):
-  N(_N), Nhalo(_Nhalo),
-  solver(_solver),
-  comm(_solver.comm),
-  device(_solver.device),
-  settings(_solver.settings),
-  props(_solver.props) {}
-
-
-void timeStepper_t::SetTimeStep(dfloat dt_) {dt = dt_;};
-
-
 timeStepper_t* timeStepper_t::Setup(dlong N, dlong Nhalo, solver_t& solver) {
 
   timeStepper_t *timeStepper=NULL;

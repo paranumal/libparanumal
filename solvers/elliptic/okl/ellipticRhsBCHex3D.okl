@@ -25,37 +25,36 @@ SOFTWARE.
 */
 
 
-void surfaceTerms(int sk, 
-                  int m, 
-                  int i, 
+void surfaceTerms(int sk,
+                  int m,
+                  int i,
                   int j,
-		  const dfloat t, 
-                  @global const dfloat *sgeo, 
-                  @global const dfloat *x, 
-                  @global const dfloat *y, 
-                  @global const dfloat *z,
-                  @global const int *vmapM, 
-                  @global const int *mapB,
+                  const dfloat *sgeo,
+                  const dfloat *x,
+                  const dfloat *y,
+                  const dfloat *z,
+                  const int *vmapM,
+                  const int *mapB,
                   dfloat s_q[2][p_Nq][p_Nq],
                   dfloat s_ndq[2][p_Nq][p_Nq]){
-  
-  const dlong  idM = vmapM[sk];                                         
-  
-  const dfloat nx  = sgeo[sk*p_Nsgeo+p_NXID];                           
-  const dfloat ny  = sgeo[sk*p_Nsgeo+p_NYID];                           
-  const dfloat nz  = sgeo[sk*p_Nsgeo+p_NZID];                           
-  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];                          
-  
-  dfloat dudxP=0, dudyP=0, dudzP=0, uP=0;                               
-  
-  const int bc = mapB[idM];                                             
-  
+
+  const dlong  idM = vmapM[sk];
+
+  const dfloat nx  = sgeo[sk*p_Nsgeo+p_NXID];
+  const dfloat ny  = sgeo[sk*p_Nsgeo+p_NYID];
+  const dfloat nz  = sgeo[sk*p_Nsgeo+p_NZID];
+  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];
+
+  dfloat dudxP=0, dudyP=0, dudzP=0, uP=0;
+
+  const int bc = mapB[idM];
+
   if(bc>0) {
-    ellipticBoundaryConditions3D(bc, t, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, uP, dudxP, dudyP, dudzP);
-  }                                                                     
-  
-  s_q  [m][j][i]  = uP;                                                 
-  s_ndq[m][j][i]  = -WsJ*(nx*dudxP + ny*dudyP + nz*dudzP);              
+    ellipticBoundaryConditions3D(bc, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, uP, dudxP, dudyP, dudzP);
+  }
+
+  s_q  [m][j][i]  = uP;
+  s_ndq[m][j][i]  = -WsJ*(nx*dudxP + ny*dudyP + nz*dudzP);
 }
 
 @kernel void ellipticRhsBCHex3D(const dlong Nelements,
@@ -64,10 +63,9 @@ void surfaceTerms(int sk,
                               @restrict const  dfloat *  D,
                               @restrict const  dfloat *  S,
                               @restrict const  dfloat *  MM,
-                              @restrict const  dlong   *  vmapM,
+                              @restrict const  dlong  *  vmapM,
                               @restrict const  dfloat *  sMT,
                               const dfloat lambda,
-                              const dfloat t,
                               @restrict const  dfloat *  x,
                               @restrict const  dfloat *  y,
                               @restrict const  dfloat *  z,
@@ -102,12 +100,12 @@ void surfaceTerms(int sk,
 
         const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i + j*p_Nq;
         const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + i + j*p_Nq;
-        
+
         //      surfaceTerms(sk0,0,i,j);
-        surfaceTerms(sk0, 0, i, j, t, sgeo, x, y, z, vmapM, mapB, s_q, s_ndq);
-        
+        surfaceTerms(sk0, 0, i, j, sgeo, x, y, z, vmapM, mapB, s_q, s_ndq);
+
         //        surfaceTerms(sk5,1,i,j);
-        surfaceTerms(sk5, 1, i, j, t, sgeo, x, y, z, vmapM, mapB, s_q, s_ndq);
+        surfaceTerms(sk5, 1, i, j, sgeo, x, y, z, vmapM, mapB, s_q, s_ndq);
       }
     }
 
@@ -126,7 +124,7 @@ void surfaceTerms(int sk,
       }
     }
 
-    @barrier("local");    
+    @barrier("local");
 
     // face 1 & 3
     for(int k=0;k<p_Nq;++k;@inner(1)){
@@ -135,10 +133,10 @@ void surfaceTerms(int sk,
         const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + i + k*p_Nq;
 
         //        surfaceTerms(sk1,0,i,k);
-        surfaceTerms(sk1, 0, i, k, t, sgeo, x, y, z, vmapM, mapB, s_q, s_ndq);
+        surfaceTerms(sk1, 0, i, k, sgeo, x, y, z, vmapM, mapB, s_q, s_ndq);
 
         //surfaceTerms(sk3,1,i,k);
-        surfaceTerms(sk3, 1, i, k, t, sgeo, x, y, z, vmapM, mapB, s_q, s_ndq);
+        surfaceTerms(sk3, 1, i, k, sgeo, x, y, z, vmapM, mapB, s_q, s_ndq);
       }
     }
 
@@ -164,7 +162,7 @@ void surfaceTerms(int sk,
       }
     }
 
-    @barrier("local");    
+    @barrier("local");
 
     // face 2 & 4
     for(int k=0;k<p_Nq;++k;@inner(1)){
@@ -173,10 +171,10 @@ void surfaceTerms(int sk,
         const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + j + k*p_Nq;
 
         //        surfaceTerms(sk2,0,j,k);
-        surfaceTerms(sk2, 0, j, k, t, sgeo, x, y, z, vmapM, mapB, s_q, s_ndq);
+        surfaceTerms(sk2, 0, j, k, sgeo, x, y, z, vmapM, mapB, s_q, s_ndq);
 
         //        surfaceTerms(sk4,1,j,k);
-        surfaceTerms(sk4, 1, j, k, t, sgeo, x, y, z, vmapM, mapB, s_q, s_ndq);
+        surfaceTerms(sk4, 1, j, k, sgeo, x, y, z, vmapM, mapB, s_q, s_ndq);
       }
     }
 
@@ -202,7 +200,7 @@ void surfaceTerms(int sk,
       }
     }
 
-    @barrier("local"); 
+    @barrier("local");
 
 
     // Layer by layer

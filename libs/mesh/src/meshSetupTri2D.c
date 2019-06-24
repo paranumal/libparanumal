@@ -34,8 +34,6 @@ mesh2D *meshSetupTri2D(char *filename, int N){
   // partition elements using Morton ordering & parallel sort
   meshGeometricPartition2D(mesh);
 
-  //printf("Space-filling is off\n");
-
   // connect elements using parallel sort
   meshParallelConnect(mesh);
 

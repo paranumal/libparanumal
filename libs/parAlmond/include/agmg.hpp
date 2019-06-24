@@ -76,14 +76,14 @@ public:
 };
 
 
-agmgLevel *coarsenAgmgLevel(agmgLevel *level, KrylovType ktype, setupAide options);
+agmgLevel *coarsenAgmgLevel(agmgLevel *level, KrylovType ktype, settings_t& settings);
 
 parCSR* strongGraph(parCSR *A);
 
 void formAggregates(parCSR *A, parCSR *C,
                      hlong* FineToCoarse,
                      hlong* globalAggStarts,
-                     setupAide options);
+                     settings_t& settings);
 
 parCSR *constructProlongation(parCSR *A, hlong *FineToCoarse,
                             hlong *globalAggStarts, dfloat **nullCoarseA);

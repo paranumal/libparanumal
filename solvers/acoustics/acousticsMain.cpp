@@ -50,8 +50,11 @@ int main(int argc, char **argv){
   // set up mesh
   mesh_t& mesh = mesh_t::Setup(device, comm, settings, props);
 
+  // set up linear algebra module
+  linAlg_t& linAlg = linAlg_t::Setup(device, settings, props);
+
   // set up acoustics solver
-  acoustics_t& acoustics = acoustics_t::Setup(mesh);
+  acoustics_t& acoustics = acoustics_t::Setup(mesh, linAlg);
 
   // run
   acoustics.Run();

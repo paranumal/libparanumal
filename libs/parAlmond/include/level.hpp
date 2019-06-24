@@ -56,7 +56,7 @@ public:
   MPI_Comm comm;
 
   multigridLevel(dlong N, dlong M, KrylovType Ktype, MPI_Comm comm);
-  ~multigridLevel();
+  virtual ~multigridLevel();
 
   virtual void Ax(dfloat        *x, dfloat        *Ax)=0;
   virtual void Ax(occa::memory o_x, occa::memory o_Ax)=0;

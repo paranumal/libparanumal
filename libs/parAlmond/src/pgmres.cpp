@@ -195,8 +195,8 @@ void solver_t::pgmres(const int maxIt,
     if(fabs(s[i+1]) < tol) break;
 
     if(i < maxIt-1){
-      dfloat wdotw = vectorInnerProd(m, w, w, levels[0]->comm);
-      dfloat nw = sqrt(wdotw);
+      dfloat wdotw2 = vectorInnerProd(m, w, w, levels[0]->comm);
+      dfloat nw = sqrt(wdotw2);
 
       // V(:,i+1) = w/nw
       vectorAdd(m,1./nw, w, 0.0, V[i+1]);
@@ -341,8 +341,8 @@ void solver_t::device_pgmres(const int maxIt,
   if(Niter == maxIt)
     printf("gmres did not converge in given number of iterations \n");
 
-  for(int i=0; i<maxIt; ++i)
-    o_V[i].free();
+  for(int ii=0; ii<maxIt; ++ii)
+    o_V[ii].free();
   free((void*)o_V);
 
   free(s);

@@ -40,7 +40,7 @@ occa::kernel buildKernel(occa::device& device, std::string fileName, std::string
 
   MPI_Barrier(comm);
 
-  //remaining rank find the cached version (ideally)
+  //remaining ranks find the cached version (ideally)
   if (rank)
     kernel = device.buildKernel(fileName, kernelName, kernelInfo);
 

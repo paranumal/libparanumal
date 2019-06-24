@@ -29,7 +29,8 @@ SOFTWARE.
 namespace parAlmond {
 
 solver_t::solver_t(occa::device device_, MPI_Comm comm_,
-                   setupAide options_) {
+                   settings_t& settings_):
+  settings(settings_) {
 
   device = device_;
 
@@ -40,27 +41,25 @@ solver_t::solver_t(occa::device device_, MPI_Comm comm_,
   levels = (multigridLevel **) calloc(MAX_LEVELS,sizeof(multigridLevel *));
   numLevels = 0;
 
-  options = options_;
-
-  if (options.compareArgs("PARALMOND CYCLE", "NONSYM")) {
+  if (settings.compareSetting("PARALMOND CYCLE", "NONSYM")) {
     ktype = GMRES;
   } else {
     ktype = PCG;
   }
 
-  if(options.compareArgs("PARALMOND CYCLE", "EXACT"))
+  if(settings.compareSetting("PARALMOND CYCLE", "EXACT"))
     exact = true;
   else
     exact = false;
 
-  if(options.compareArgs("PARALMOND CYCLE", "VCYCLE"))
+  if(settings.compareSetting("PARALMOND CYCLE", "VCYCLE"))
     ctype = VCYCLE;
   else
     ctype = KCYCLE;
 
-  if (options.compareArgs("PARALMOND SMOOTHER", "CHEBYSHEV")) {
+  if (settings.compareSetting("PARALMOND SMOOTHER", "CHEBYSHEV")) {
     stype = CHEBYSHEV;
-    options.getArgs("PARALMOND CHEBYSHEV DEGREE", ChebyshevIterations);
+    settings.getSetting("PARALMOND CHEBYSHEV DEGREE", ChebyshevIterations);
     if (!ChebyshevIterations) ChebyshevIterations=2; //default to 2
   } else { //default to DAMPED_JACOBI
     stype = DAMPED_JACOBI;

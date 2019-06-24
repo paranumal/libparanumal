@@ -41,11 +41,11 @@ SOFTWARE.
       // assumes w*J built into G entries
       const dlong gbase = e*p_Nggeo*p_Np + n;
       const dfloat r_GwJ = ggeo[gbase+p_GWJID*p_Np];
+      const dlong id = e*p_Np + n;
 
       dfloat f = 0;
       ellipticForcing2D(x[id], y[id], lambda, f);
 
-      const dlong id = e*p_Np + n;
       rhs[id] = r_GwJ*f;
     }
   }

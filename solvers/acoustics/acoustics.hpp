@@ -24,6 +24,9 @@ SOFTWARE.
 
 */
 
+#ifndef ACOUSTICS_HPP
+#define ACOUSTICS_HPP 1
+
 #include "core.hpp"
 #include "mesh.hpp"
 #include "solver.hpp"
@@ -42,7 +45,6 @@ class acoustics_t: public solver_t {
 public:
   int Nfields;
 
-  linAlg_t* linAlg;
   timeStepper_t* timeStepper;
 
   dfloat *q;
@@ -58,10 +60,11 @@ public:
   occa::kernel initialConditionKernel;
 
   acoustics_t() = delete;
-  acoustics_t(mesh_t& _mesh);
+  acoustics_t(mesh_t& _mesh, linAlg_t& _linAlg):
+    solver_t(_mesh, _linAlg) {}
 
   //setup
-  static acoustics_t& Setup(mesh_t& mesh);
+  static acoustics_t& Setup(mesh_t& mesh, linAlg_t& linAlg);
 
   void Run();
 
@@ -71,3 +74,5 @@ public:
 
   void rhsf(occa::memory& o_q, occa::memory& o_rhs, const dfloat time);
 };
+
+#endif

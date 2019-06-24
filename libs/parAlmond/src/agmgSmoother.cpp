@@ -28,38 +28,38 @@ SOFTWARE.
 
 namespace parAlmond {
 
-void agmgLevel::smoothJacobi(dfloat *r, dfloat *x,
+void agmgLevel::smoothJacobi(dfloat *r, dfloat *X,
                              const bool x_is_zero) {
 
-  // x = x + inv(D)*(b-A*x)
+  // X = X + inv(D)*(b-A*X)
   if(x_is_zero){
-    vectorDotStar(Nrows,1.0,A->diagInv,r,0.0,x);
+    vectorDotStar(Nrows,1.0,A->diagInv,r,0.0,X);
     return;
   }
 
-  dfloat *res = (dfloat *) scratch;
+  dfloat *RES = (dfloat *) scratch;
 
-  A->SpMV(-1.0, x, 1.0, r, res);
-  vectorDotStar(Nrows, 1.0, A->diagInv, res, 1.0, x);
+  A->SpMV(-1.0, X, 1.0, r, RES);
+  vectorDotStar(Nrows, 1.0, A->diagInv, RES, 1.0, X);
 }
 
 
-void agmgLevel::smoothDampedJacobi(dfloat *r, dfloat *x,
+void agmgLevel::smoothDampedJacobi(dfloat *r, dfloat *X,
                                    const bool x_is_zero) {
 
-  // x = x + alpha*inv(D)*(b-A*x)
+  // X = X + alpha*inv(D)*(b-A*X)
   if(x_is_zero){
-    vectorDotStar(Nrows,lambda,A->diagInv,r,0.0,x);
+    vectorDotStar(Nrows,lambda,A->diagInv,r,0.0,X);
     return;
   }
 
-  dfloat *res = (dfloat *) scratch;
+  dfloat *RES = (dfloat *) scratch;
 
-  A->SpMV(-1.0, x, 1.0, r, res);
-  vectorDotStar(Nrows, lambda, A->diagInv, res, 1.0, x);
+  A->SpMV(-1.0, X, 1.0, r, RES);
+  vectorDotStar(Nrows, lambda, A->diagInv, RES, 1.0, X);
 }
 
-void agmgLevel::smoothChebyshev(dfloat *r, dfloat *x,
+void agmgLevel::smoothChebyshev(dfloat *r, dfloat *X,
                                 const bool x_is_zero) {
 
   const dfloat theta = 0.5*(lambda1+lambda0);
@@ -69,84 +69,84 @@ void agmgLevel::smoothChebyshev(dfloat *r, dfloat *x,
   dfloat rho_n = 1./sigma;
   dfloat rho_np1;
 
-  dfloat *res = ((dfloat*) scratch) + 0*Ncols;
+  dfloat *RES = ((dfloat*) scratch) + 0*Ncols;
   dfloat *Ad  = ((dfloat*) scratch) + 1*Ncols;
   dfloat *d   = ((dfloat*) scratch) + 2*Ncols;
 
-  if(x_is_zero){ //skip the Ax if x is zero
-    //res = D^{-1}r
-    vectorDotStar(Nrows, 1.0, A->diagInv, r, 0.0, res);
-    vectorSet(Nrows, 0.0, x);
-    //d = invTheta*res
-    vectorAdd(Nrows, invTheta, res, 0.0, d);
+  if(x_is_zero){ //skip the Ax if X is zero
+    //RES = D^{-1}r
+    vectorDotStar(Nrows, 1.0, A->diagInv, r, 0.0, RES);
+    vectorSet(Nrows, 0.0, X);
+    //d = invTheta*RES
+    vectorAdd(Nrows, invTheta, RES, 0.0, d);
   } else {
-    //res = D^{-1}(r-Ax)
-    A->SpMV(-1.0, x, 1.0, r, res);
-    vectorDotStar(Nrows, A->diagInv, res);
+    //RES = D^{-1}(r-Ax)
+    A->SpMV(-1.0, X, 1.0, r, RES);
+    vectorDotStar(Nrows, A->diagInv, RES);
 
-    //d = invTheta*res
-    vectorAdd(Nrows, invTheta, res, 0.0, d);
+    //d = invTheta*RES
+    vectorAdd(Nrows, invTheta, RES, 0.0, d);
   }
 
   for (int k=0;k<ChebyshevIterations;k++) {
     //x_k+1 = x_k + d_k
-    vectorAdd(Nrows, 1.0, d, 1.0, x);
+    vectorAdd(Nrows, 1.0, d, 1.0, X);
 
     //r_k+1 = r_k - D^{-1}Ad_k
     A->SpMV(1.0, d, 0.0, Ad);
-    vectorDotStar(Nrows, -1.0, A->diagInv, Ad, 1.0, res);
+    vectorDotStar(Nrows, -1.0, A->diagInv, Ad, 1.0, RES);
 
     rho_np1 = 1.0/(2.*sigma-rho_n);
 
     //d_k+1 = rho_k+1*rho_k*d_k  + 2*rho_k+1*r_k+1/delta
-    vectorAdd(Nrows, 2.0*rho_np1/delta, res, rho_np1*rho_n, d);
+    vectorAdd(Nrows, 2.0*rho_np1/delta, RES, rho_np1*rho_n, d);
     rho_n = rho_np1;
   }
   //x_k+1 = x_k + d_k
-  vectorAdd(Nrows, 1.0, d, 1.0, x);
+  vectorAdd(Nrows, 1.0, d, 1.0, X);
 }
 
-void agmgLevel::smoothJacobi(occa::memory o_r, occa::memory o_x,
+void agmgLevel::smoothJacobi(occa::memory o_r, occa::memory o_X,
                              bool x_is_zero) {
 
   // occaTimerTic(parAlmond->device,"device smoothJacobi");
   if(x_is_zero){
-    vectorDotStar(Nrows, 1.0, o_A->o_diagInv, o_r, 0.0, o_x);
+    vectorDotStar(Nrows, 1.0, o_A->o_diagInv, o_r, 0.0, o_X);
     // occaTimerToc(parAlmond->device,"device smoothJacobi");
     return;
   }
 
-  occa::memory o_res = o_scratch;
+  occa::memory o_RES = o_scratch;
 
-  // res = r-A*x
-  o_A->SpMV(-1.0, o_x, 1.0, o_r, o_res);
+  // RES = r-A*x
+  o_A->SpMV(-1.0, o_X, 1.0, o_r, o_RES);
 
-  // x = x + alpha*inv(D)*res
-  vectorDotStar(Nrows, 1.0, o_A->o_diagInv, o_res, 1.0, o_x);
+  // x = x + alpha*inv(D)*RES
+  vectorDotStar(Nrows, 1.0, o_A->o_diagInv, o_RES, 1.0, o_X);
   // occaTimerToc(parAlmond->device,"hyb smoothJacobi");
 }
 
-void agmgLevel::smoothDampedJacobi(occa::memory o_r, occa::memory o_x,
+void agmgLevel::smoothDampedJacobi(occa::memory o_r, occa::memory o_X,
                                    bool x_is_zero){
 
   // occaTimerTic(parAlmond->device,"device smoothDampedJacobi");
   if(x_is_zero){
-    vectorDotStar(Nrows, lambda, o_A->o_diagInv, o_r, 0.0, o_x);
+    vectorDotStar(Nrows, lambda, o_A->o_diagInv, o_r, 0.0, o_X);
     // occaTimerToc(parAlmond->device,"device smoothDampedJacobi");
     return;
   }
 
-  occa::memory o_res = o_scratch;
+  occa::memory o_RES = o_scratch;
 
-  // res = r-A*x
-  o_A->SpMV(-1.0, o_x, 1.0, o_r, o_res);
+  // RES = r-A*x
+  o_A->SpMV(-1.0, o_X, 1.0, o_r, o_RES);
 
-  // x = x + alpha*inv(D)*res
-  vectorDotStar(Nrows, lambda, o_A->o_diagInv, o_res, 1.0, o_x);
+  // x = x + alpha*inv(D)*RES
+  vectorDotStar(Nrows, lambda, o_A->o_diagInv, o_RES, 1.0, o_X);
   // occaTimerToc(parAlmond->device,"device smoothDampedJacobi");
 }
 
-void agmgLevel::smoothChebyshev(occa::memory o_r, occa::memory o_x,
+void agmgLevel::smoothChebyshev(occa::memory o_r, occa::memory o_X,
                                 bool x_is_zero) {
 
   const dfloat theta = 0.5*(lambda1+lambda0);
@@ -156,43 +156,43 @@ void agmgLevel::smoothChebyshev(occa::memory o_r, occa::memory o_x,
   dfloat rho_n = 1./sigma;
   dfloat rho_np1;
 
-  occa::memory o_res = o_scratch + 0*Ncols*sizeof(dfloat);
+  occa::memory o_RES = o_scratch + 0*Ncols*sizeof(dfloat);
   occa::memory o_Ad  = o_scratch + 1*Ncols*sizeof(dfloat);
   occa::memory o_d   = o_scratch + 2*Ncols*sizeof(dfloat);
 
   // occaTimerTic(parAlmond->device,"device smoothChebyshev");
 
   if(x_is_zero){ //skip the Ax if x is zero
-    //res = D^{-1}r
-    vectorDotStar(Nrows, 1.0, o_A->o_diagInv, o_r, 0.0, o_res);
-    vectorSet(Nrows, 0.0, o_x);
-    //d = invTheta*res
-    vectorAdd(Nrows, invTheta, o_res, 0.0, o_d);
+    //RES = D^{-1}r
+    vectorDotStar(Nrows, 1.0, o_A->o_diagInv, o_r, 0.0, o_RES);
+    vectorSet(Nrows, 0.0, o_X);
+    //d = invTheta*RES
+    vectorAdd(Nrows, invTheta, o_RES, 0.0, o_d);
   } else {
-    //res = D^{-1}(r-Ax)
-    o_A->SpMV(-1.0, o_x, 1.0, o_r, o_res);
-    vectorDotStar(Nrows, o_A->o_diagInv, o_res);
+    //RES = D^{-1}(r-Ax)
+    o_A->SpMV(-1.0, o_X, 1.0, o_r, o_RES);
+    vectorDotStar(Nrows, o_A->o_diagInv, o_RES);
 
-    //d = invTheta*res
-    vectorAdd(Nrows, invTheta, o_res, 0.0, o_d);
+    //d = invTheta*RES
+    vectorAdd(Nrows, invTheta, o_RES, 0.0, o_d);
   }
 
   for (int k=0;k<ChebyshevIterations;k++) {
     //x_k+1 = x_k + d_k
-    vectorAdd(Nrows, 1.0, o_d, 1.0, o_x);
+    vectorAdd(Nrows, 1.0, o_d, 1.0, o_X);
 
     //r_k+1 = r_k - D^{-1}Ad_k
     o_A->SpMV(1.0, o_d, 0.0, o_Ad);
-    vectorDotStar(Nrows, -1.0, o_A->o_diagInv, o_Ad, 1.0, o_res);
+    vectorDotStar(Nrows, -1.0, o_A->o_diagInv, o_Ad, 1.0, o_RES);
 
     rho_np1 = 1.0/(2.*sigma-rho_n);
 
     //d_k+1 = rho_k+1*rho_k*d_k  + 2*rho_k+1*r_k+1/delta
-    vectorAdd(Nrows, 2.0*rho_np1/delta, o_res, rho_np1*rho_n, o_d);
+    vectorAdd(Nrows, 2.0*rho_np1/delta, o_RES, rho_np1*rho_n, o_d);
     rho_n = rho_np1;
   }
   //x_k+1 = x_k + d_k
-  vectorAdd(Nrows, 1.0, o_d, 1.0, o_x);
+  vectorAdd(Nrows, 1.0, o_d, 1.0, o_X);
 
   // occaTimerToc(parAlmond->device,"device smoothChebyshev");
 }

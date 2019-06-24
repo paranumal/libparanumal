@@ -301,7 +301,6 @@ void kcycleCombinedOp1(const dlong N, dfloat *aDotbc, occa::memory o_a,
   }
   o_reductionScratch.copyTo(reductionScratch,3*numBlocks*sizeof(dfloat),0);
 
-  // #pragma omp parallel for reduction(+:aDotb) reduction(+:aDotc) reduction(+:bDotb)
   for(dlong i=0; i<numBlocks; i++) {
     result[0] += ((dfloat*)reductionScratch)[3*i+0];
     result[1] += ((dfloat*)reductionScratch)[3*i+1];
@@ -326,8 +325,6 @@ void kcycleCombinedOp2(const dlong N, dfloat *aDotbcd,
   }
   o_reductionScratch.copyTo(reductionScratch,3*numBlocks*sizeof(dfloat),0);
 
-  dfloat aDotb = 0., aDotc = 0., aDotd = 0.;
-  // #pragma omp parallel for reduction(+:aDotb) reduction(+:aDotc) reduction(+:aDotd)
   for(dlong i=0; i<numBlocks; i++) {
     result[0] += ((dfloat*)reductionScratch)[3*i+0];
     result[1] += ((dfloat*)reductionScratch)[3*i+1];

@@ -141,9 +141,9 @@ parCSR *galerkinProd(parCSR *A, parCSR *P){
                recvCounts, 1, MPI_INT, A->comm);
 
   // find send and recv offsets for gather
-  for(int r=0;r<size;++r){
-    sendOffsets[r+1] = sendOffsets[r] + sendCounts[r];
-    recvOffsets[r+1] = recvOffsets[r] + recvCounts[r];
+  for(int rr=0;rr<size;++rr){
+    sendOffsets[rr+1] = sendOffsets[rr] + sendCounts[rr];
+    recvOffsets[rr+1] = recvOffsets[rr] + recvCounts[rr];
   }
   dlong recvNtotal = recvOffsets[size];
 

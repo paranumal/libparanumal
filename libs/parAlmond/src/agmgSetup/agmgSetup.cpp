@@ -30,8 +30,8 @@ namespace parAlmond {
 
 void solver_t::AMGSetup(parCSR *A){
 
-  // approximate Nrows at coarsest level  
-  coarseLevel = new coarseSolver(options);
+  // approximate Nrows at coarsest level
+  coarseLevel = new coarseSolver(settings);
   const int gCoarseSize = coarseLevel->getTargetSize();
 
   AMGstartLev = numLevels;
@@ -53,7 +53,7 @@ void solver_t::AMGSetup(parCSR *A){
   numLevels++;
 
   while(!done){
-    L = coarsenAgmgLevel((agmgLevel*)(levels[numLevels-1]), ktype, options);
+    L = coarsenAgmgLevel((agmgLevel*)(levels[numLevels-1]), ktype, settings);
     levels[numLevels] = L;
     hlong globalCoarseSize = L->A->globalRowStarts[size];
     numLevels++;
@@ -76,8 +76,8 @@ void solver_t::AMGSetup(parCSR *A){
     if(n==numLevels-1){
       chebyIts =ChebyshevIterations;
       printf("setting: chebyshev iterations\n");
-      if(options.compareArgs("PARALMOND SMOOTH COARSEST", "TRUE"))
-	options.getArgs("PARALMOND SMOOTH COARSEST DEGREE", chebyIts);
+      if(settings.compareSetting("PARALMOND SMOOTH COARSEST", "TRUE"))
+	      settings.getSetting("PARALMOND SMOOTH COARSEST DEGREE", chebyIts);
     }
     setupAgmgSmoother((agmgLevel*)(levels[n]), stype, chebyIts);
     allocateAgmgVectors((agmgLevel*)(levels[n]), n, AMGstartLev, ctype);
@@ -87,7 +87,7 @@ void solver_t::AMGSetup(parCSR *A){
 }
 
 //create coarsened problem
-agmgLevel *coarsenAgmgLevel(agmgLevel *level, KrylovType ktype, setupAide options){
+agmgLevel *coarsenAgmgLevel(agmgLevel *level, KrylovType ktype, settings_t& settings){
 
   int rank, size;
   MPI_Comm_rank(level->comm, &rank);
@@ -98,9 +98,9 @@ agmgLevel *coarsenAgmgLevel(agmgLevel *level, KrylovType ktype, setupAide option
   hlong *FineToCoarse = (hlong *) malloc(level->A->Ncols*sizeof(hlong));
   hlong *globalAggStarts = (hlong *) calloc(size+1,sizeof(hlong));
 
-  formAggregates(level->A, C, FineToCoarse, globalAggStarts, options);
+  formAggregates(level->A, C, FineToCoarse, globalAggStarts, settings);
 
-  // adjustPartition(FineToCoarse, options);
+  // adjustPartition(FineToCoarse, settings);
 
   dfloat *nullCoarseA;
   parCSR *P = constructProlongation(level->A, FineToCoarse, globalAggStarts, &nullCoarseA);
@@ -118,7 +118,7 @@ agmgLevel *coarsenAgmgLevel(agmgLevel *level, KrylovType ktype, setupAide option
 }
 
 void setupAgmgSmoother(agmgLevel *level, SmoothType s, int ChebIterations){
-  
+
   level->stype = s;
   level->ChebyshevIterations = ChebIterations;
 

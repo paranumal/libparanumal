@@ -33,13 +33,12 @@ SOFTWARE.
                               @restrict const  int   *  vmapM,
                               @restrict const  dfloat *  sMT,
                               const dfloat lambda,
-                              const dfloat t,
                               @restrict const  dfloat *  x,
                               @restrict const  dfloat *  y,
                               @restrict const  dfloat *  z,
                               @restrict const  int    *  mapB,
                               @restrict dfloat  *  rhs){
-  
+
   for(int e=0;e<Nelements;e++;@outer(0)){
     @shared dfloat s_q[p_Np];
     @shared dfloat s_ndq[p_Nfp*p_Nfaces];
@@ -58,13 +57,13 @@ SOFTWARE.
     for(int n=0;n<p_Nmax;++n;@inner(0)){
       if(n<p_NfacesNfp){
         const int id  = n + e*p_Nfaces*p_Nfp;
-        const int idM = vmapM[id];          
-        const int nid = idM%p_Np; 
+        const int idM = vmapM[id];
+        const int nid = idM%p_Np;
 
         const int face = n/p_Nfp;
 
         dfloat dudxP=0, dudyP=0, dudzP=0, uP=0;
-        
+
         // load surface geofactors for this face
         const int sid = p_Nsgeo*(e*p_Nfaces+face);
         const dfloat nx = sgeo[sid+p_NXID];
@@ -74,10 +73,10 @@ SOFTWARE.
 
         const int bc = mapB[idM];
         if(bc>0) {
-          ellipticBoundaryConditions3D(bc, t, x[idM], y[idM], z[idM], nx, ny, nz, \
+          ellipticBoundaryConditions3D(bc, x[idM], y[idM], z[idM], nx, ny, nz, \
                                         0.f, 0.f, 0.f, 0.f,               \
                                         uP, dudxP, dudyP, dudzP);
-        }  
+        }
 
         s_q[nid] = uP;
         s_ndq[n] = sJ*(nx*dudxP + ny*dudyP + nz*dudzP);
@@ -85,8 +84,8 @@ SOFTWARE.
     }
 
     @barrier("local");
-    
-    for(int n=0;n<p_Nmax;++n;@inner(0)){ 
+
+    for(int n=0;n<p_Nmax;++n;@inner(0)){
       if(n<p_Np){
         //volume Dirichlet data
         const int id = n + e*p_Np;
@@ -118,14 +117,14 @@ SOFTWARE.
             qM  += MM[n+k*p_Np]*s_q[k];
           }
 
-        dfloat Lndq = 0;            
+        dfloat Lndq = 0;
         // surface mass * surface terms
         #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
             Lndq += sMT[n+i*p_Np]*s_ndq[i];
           }
-          
-        rhs[id] -= Grr*qrr+Grs*qrs+Grt*qrt 
+
+        rhs[id] -= Grr*qrr+Grs*qrs+Grt*qrt
                   +Gss*qss+Gst*qst+Gtt*qtt
                   + J*lambda*qM - Lndq;
       }

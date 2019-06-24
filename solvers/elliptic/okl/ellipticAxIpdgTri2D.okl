@@ -87,8 +87,8 @@ SOFTWARE.
         if(bc>0) {
           ellipticHomogeneousBC2D(bc, gradqM.w, gradqM.x, gradqM.y, gradqP.w, gradqP.x, gradqP.y);
           gradqP.x = 2.f*gradqP.x - gradqM.x;
-	  gradqP.y = 2.f*gradqP.y - gradqM.y;	
-	  gradqP.w = 2.f*gradqP.w - gradqM.w;
+          gradqP.y = 2.f*gradqP.y - gradqM.y;
+          gradqP.w = 2.f*gradqP.w - gradqM.w;
         }
 
         const dfloat dq = gradqP.w - gradqM.w;
@@ -273,7 +273,7 @@ SOFTWARE.
     // @shared dlong idM[p_Nmt];
     // @shared dfloat nx[p_Nmt], ny[p_Nmt], sJ[p_Nmt];
     // @shared dfloat invJ[p_Nmt], hinv[p_Nmt];
-    
+
     @exclusive dlong idM[p_Nmt];
     @exclusive dfloat nx[p_Nmt], ny[p_Nmt], sJ[p_Nmt];
     @exclusive dfloat invJ[p_Nmt], hinv[p_Nmt];
@@ -283,7 +283,7 @@ SOFTWARE.
    for(int es=0;es<p_NbV;++es;@inner(1)){//
     for(int n=0;n<p_Nmax;++n;@inner(0)){
 
-    
+
       #pragma unroll p_Nmt
         for(int em=0;em<p_Nmt;++em){
           const dlong e = eo+es*p_Nmt + em;
@@ -300,7 +300,7 @@ SOFTWARE.
            if(e<Nelements){
              if(n<p_Np){
               // assume that this stores (qx, qy, qz, q) as dfloat4
-              
+
               const dfloat4 gradqn = gradq[element[em]*p_Np+n];
 
               s_dqdx[em][es][n] = gradqn.x;
@@ -329,9 +329,9 @@ SOFTWARE.
             int bc = EToB[face+p_Nfaces*element[em]];
             if(bc>0) {
               ellipticHomogeneousBC2D(bc, gradqM.w, gradqM.x, gradqM.y, gradqP.w, gradqP.x, gradqP.y);
-	      gradqP.x = 2.f*gradqP.x - gradqM.x;
-	      gradqP.y = 2.f*gradqP.y - gradqM.y;	
-	      gradqP.w = 2.f*gradqP.w - gradqM.w;
+              gradqP.x = 2.f*gradqP.x - gradqM.x;
+              gradqP.y = 2.f*gradqP.y - gradqM.y;
+              gradqP.w = 2.f*gradqP.w - gradqM.w;
             }
 
             const dfloat dq = gradqP.w - gradqM.w;
@@ -355,7 +355,7 @@ SOFTWARE.
     for(int n=0;n<p_Nmax;++n;@inner(0)){
 
       dfloat Lnxdq[p_Nmt], Lnydq[p_Nmt];
-      
+
       // // Try holding drdx in register array
       // const dfloat drdx[p_Nmt], drdy[p_Nmt];
       // const dfloat dsdx[p_Nmt], dsdy[p_Nmt];
@@ -373,7 +373,7 @@ SOFTWARE.
           // dsdy[em] = vgeo[gid + p_SYID];
         }
 
-          
+
        if(n<p_Np){
 
         #pragma unroll p_NfacesNfp
@@ -412,7 +412,7 @@ SOFTWARE.
         }
       }
     }
-  
+
 
     @barrier("local");
 
@@ -429,7 +429,7 @@ SOFTWARE.
                                                      +ny[em]*s_Lnydq[em][es][id]);
           }
 
-          lapr[em] = 0.f; 
+          lapr[em] = 0.f;
           laps[em] = 0.f;
         }
 
@@ -482,11 +482,11 @@ SOFTWARE.
           #pragma unroll p_Nmt
             for(int em=0;em<p_Nmt;++em){
                s_lapq[em][es][n] += lap[em];
-            } 
-        } 
+            }
+        }
       }
     }
- 
+
 
     @barrier("local");
 

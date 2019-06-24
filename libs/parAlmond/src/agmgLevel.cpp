@@ -58,7 +58,7 @@ agmgLevel::~agmgLevel() {
 
 }
 
-void agmgLevel::Ax        (dfloat *x, dfloat *Ax){ A->SpMV(1.0, x, 0.0, Ax); }
+void agmgLevel::Ax        (dfloat *X, dfloat *Ax){ A->SpMV(1.0, X, 0.0, Ax); }
 
 void agmgLevel::coarsen   (dfloat *r, dfloat *Rr){
   if (gatherLevel) {
@@ -70,19 +70,19 @@ void agmgLevel::coarsen   (dfloat *r, dfloat *Rr){
   }
 }
 
-void agmgLevel::prolongate(dfloat *x, dfloat *Px){
+void agmgLevel::prolongate(dfloat *X, dfloat *Px){
   if (gatherLevel) {
-    P->SpMV(1.0, x, 0.0, Gx);
+    P->SpMV(1.0, X, 0.0, Gx);
     ogsScatter(Sx, Gx, ogsDfloat, ogsAdd, ogs);
     vectorAdd(P->Nrows, 1.0, Sx, 1.0, Px);
   } else {
-    P->SpMV(1.0, x, 1.0, Px);
+    P->SpMV(1.0, X, 1.0, Px);
   }
 }
 
-void agmgLevel::residual  (dfloat *rhs, dfloat *x, dfloat *res) { A->SpMV(-1.0, x, 1.0, rhs, res); }
+void agmgLevel::residual  (dfloat *RHS, dfloat *X, dfloat *RES) { A->SpMV(-1.0, X, 1.0, RHS, RES); }
 
-void agmgLevel::Ax        (occa::memory o_x, occa::memory o_Ax){ o_A->SpMV(1.0, o_x, 0.0, o_Ax); }
+void agmgLevel::Ax        (occa::memory o_X, occa::memory o_Ax){ o_A->SpMV(1.0, o_X, 0.0, o_Ax); }
 
 void agmgLevel::coarsen   (occa::memory o_r, occa::memory o_Rr){
   if (gatherLevel) {
@@ -94,35 +94,35 @@ void agmgLevel::coarsen   (occa::memory o_r, occa::memory o_Rr){
   }
 }
 
-void agmgLevel::prolongate(occa::memory o_x, occa::memory o_Px){
+void agmgLevel::prolongate(occa::memory o_X, occa::memory o_Px){
   if (gatherLevel) {
-    o_P->SpMV(1.0, o_x, 0.0, o_Gx);
+    o_P->SpMV(1.0, o_X, 0.0, o_Gx);
     ogsScatter(o_Sx, o_Gx, ogsDfloat, ogsAdd, ogs);
     vectorAdd(ogs->N, 1.0, o_Sx, 1.0, o_Px);
   } else {
-    o_P->SpMV(1.0, o_x, 1.0, o_Px);
+    o_P->SpMV(1.0, o_X, 1.0, o_Px);
   }
 }
 
-void agmgLevel::residual  (occa::memory o_rhs, occa::memory o_x, occa::memory o_res) { o_A->SpMV(-1.0, o_x, 1.0, o_rhs, o_res); }
+void agmgLevel::residual  (occa::memory o_RHS, occa::memory o_X, occa::memory o_RES) { o_A->SpMV(-1.0, o_X, 1.0, o_RHS, o_RES); }
 
-void agmgLevel::smooth(dfloat *rhs, dfloat *x, bool x_is_zero){
+void agmgLevel::smooth(dfloat *RHS, dfloat *X, bool x_is_zero){
   if(stype == JACOBI){
-    this->smoothJacobi(rhs, x, x_is_zero);
+    this->smoothJacobi(RHS, X, x_is_zero);
   } else if(stype == DAMPED_JACOBI){
-    this->smoothDampedJacobi(rhs, x, x_is_zero);
+    this->smoothDampedJacobi(RHS, X, x_is_zero);
   } else if(stype == CHEBYSHEV){
-    this->smoothChebyshev(rhs, x, x_is_zero);
+    this->smoothChebyshev(RHS, X, x_is_zero);
   }
 }
 
-void agmgLevel::smooth(occa::memory o_rhs, occa::memory o_x, bool x_is_zero){
+void agmgLevel::smooth(occa::memory o_RHS, occa::memory o_X, bool x_is_zero){
   if(stype == JACOBI){
-    this->smoothJacobi(o_rhs, o_x, x_is_zero);
+    this->smoothJacobi(o_RHS, o_X, x_is_zero);
   } else if(stype == DAMPED_JACOBI){
-    this->smoothDampedJacobi(o_rhs, o_x, x_is_zero);
+    this->smoothDampedJacobi(o_RHS, o_X, x_is_zero);
   } else if(stype == CHEBYSHEV){
-    this->smoothChebyshev(o_rhs, o_x, x_is_zero);
+    this->smoothChebyshev(o_RHS, o_X, x_is_zero);
   }
 }
 
@@ -153,10 +153,8 @@ void agmgLevel::Report() {
   nnz = A->diag->nnz+A->offd->nnz;
 
   long long int minNnz=0, maxNnz=0, totalNnz=0;
-  dfloat avgNnz;
   MPI_Allreduce(&nnz, &maxNnz,   1, MPI_LONG_LONG_INT, MPI_MAX, comm);
   MPI_Allreduce(&nnz, &totalNnz, 1, MPI_LONG_LONG_INT, MPI_SUM, comm);
-  avgNnz = (dfloat) totalNnz/totalActive;
 
   if (nnz==0) nnz = maxNnz; //set this so it's ignored for the global min
   MPI_Allreduce(&nnz, &minNnz, 1, MPI_LONG_LONG_INT, MPI_MIN, comm);

@@ -27,7 +27,6 @@ SOFTWARE.
 @kernel void ellipticRhsBCIpdgTri2D(const dlong Nelements,
                                   @restrict const  dlong *  vmapM,
                                   const dfloat tau,
-                                  const dfloat t,
                                   @restrict const  dfloat *  x,
                                   @restrict const  dfloat *  y,
                                   @restrict const  dfloat *  z,
@@ -38,7 +37,7 @@ SOFTWARE.
                                   @restrict const  dfloat *  LIFTT,
                                   @restrict const  dfloat *  MM,
                                   @restrict dfloat *  rhs){
-  
+
   for(int e=0;e<Nelements;++e;@outer(0)){
     @shared  dfloat s_dudx[p_Np];
     @shared  dfloat s_dudy[p_Np];
@@ -51,16 +50,16 @@ SOFTWARE.
 
     @exclusive int idM;
     @exclusive dfloat nx, ny, sJ, invJ, hinv;
-    
+
     for(int n=0;n<p_Nmax;++n;@inner(0)){
       if(n<p_NfacesNfp){
         const int id  = n + e*p_Nfaces*p_Nfp;
-        idM = vmapM[id];          
-     
+        idM = vmapM[id];
+
         const int face = n/p_Nfp;
 
         dfloat dudxP=0, dudyP=0, uP=0;
-        
+
         // load surface geofactors for this face
         int sid = p_Nsgeo*(e*p_Nfaces+face);
         nx = sgeo[sid+p_NXID];
@@ -71,14 +70,14 @@ SOFTWARE.
 
         const int bc = EToB[face+p_Nfaces*e];
         if(bc>0) {
-          ellipticBoundaryConditions2D(bc, t, x[idM], y[idM], nx, ny, \
+          ellipticBoundaryConditions2D(bc, x[idM], y[idM], nx, ny, \
                                         0.f, 0.f, 0.f,                \
                                         uP, dudxP, dudyP);
-        }  
+        }
 
         const dfloat du = uP;
         const dfloat half = 1.f;
-        
+
         s_nxdu[n] = half*sJ*invJ*nx*du;
         s_nydu[n] = half*sJ*invJ*ny*du;
 
@@ -99,13 +98,13 @@ SOFTWARE.
 
         dfloat Lnxdu = 0;
         dfloat Lnydu = 0;
-              
+
         #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
             Lnxdu += LIFTT[n+i*p_Np]*s_nxdu[i];
             Lnydu += LIFTT[n+i*p_Np]*s_nydu[i];
           }
-    
+
         dfloat dudx = Lnxdu;
         dfloat dudy = Lnydu;
 
@@ -131,26 +130,26 @@ SOFTWARE.
         #pragma unroll p_Np
         for(int i=0;i<p_Np;++i) {
           laur += Dmatrices[n+i*p_Np+0*p_Np*p_Np]*s_dudx[i];
-          laus += Dmatrices[n+i*p_Np+0*p_Np*p_Np]*s_dudy[i];
+          laus += Dmatrices[n+i*p_Np+1*p_Np*p_Np]*s_dudy[i];
         }
 
         s_lapu[n] = -(laur+laus);
       }
-      
+
     }
-    
+
     @barrier("local");
 
     for(int n=0;n<p_Nmax;++n;@inner(0)){
       if(n<p_Np){
         dfloat lau = 0;
-              
+
         // lift remaining surface terms
         #pragma unroll p_NfacesNfp
         for(int i=0;i<p_NfacesNfp;++i){
           lau += LIFTT[n+i*p_Np]*s_lapuflux[i];
         }
-              
+
         s_lapu[n] += lau;
       }
     }
@@ -160,7 +159,7 @@ SOFTWARE.
     for(int n=0;n<p_Nmax;++n;@inner(0)){
       if(n<p_Np){
         const dfloat J = vgeo[e*p_Nvgeo + p_JID];
-              
+
         dfloat Mlapu = 0;
 
         // multiply by mass matrix
@@ -168,7 +167,7 @@ SOFTWARE.
         for(int i=0;i<p_Np;++i){
           Mlapu += MM[n+i*p_Np]*s_lapu[i];
         }
-            
+
         const int id = e*p_Np+n;
         rhs[id] -=  J*Mlapu;
       }

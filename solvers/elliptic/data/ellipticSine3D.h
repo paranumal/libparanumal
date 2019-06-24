@@ -24,26 +24,28 @@ SOFTWARE.
 
 */
 
+#define PI 3.14159265358979323846
+
 /* forcing function   */
 #define ellipticForcing3D(x, y, z, lambda, f)  \
   {                                         \
-    f  = (3*OCCA_PI*OCCA_PI+lambda)*occaSin(OCCA_PI*x)*occaSin(OCCA_PI*y)*occaSin(OCCA_PI*z);   \
+    f  = (3*PI*PI+lambda)*sin(PI*x)*sin(PI*y)*sin(PI*z);   \
   }
 
 /* Dirichlet boundary condition   */
-#define ellipticDirichletCondition3D(t,x,y,z,nx,ny,nz,uM,uxM,uyM,uzM,uB,uxB,uyB,uzB)  \
+#define ellipticDirichletCondition3D(x,y,z,nx,ny,nz,uM,uxM,uyM,uzM,uB,uxB,uyB,uzB)  \
   {              \
-    uB  = occaCos(OCCA_PI*x)*occaCos(OCCA_PI*y)*occaCos(OCCA_PI*z);   \
+    uB  = sin(PI*x)*sin(PI*y)*sin(PI*z);   \
     uxB = uxM;   \
     uyB = uyM;   \
     uzB = uzM;   \
   }
 
 /* Neumann boundary condition   */
-#define ellipticNeumannCondition3D(t,x,y,z,nx,ny,nz,uM,uxM,uyM,uzM,uB,uxB,uyB,uzB)  \
+#define ellipticNeumannCondition3D(x,y,z,nx,ny,nz,uM,uxM,uyM,uzM,uB,uxB,uyB,uzB)  \
   {              \
     uB  = uM;    \
-    uxB = -OCCA_PI*occaSin(OCCA_PI*x)*occaCos(OCCA_PI*y)*occaCos(OCCA_PI*z);   \
-    uyB = -OCCA_PI*occaCos(OCCA_PI*x)*occaSin(OCCA_PI*y)*occaCos(OCCA_PI*z);   \
-    uzB = -OCCA_PI*occaCos(OCCA_PI*x)*occaCos(OCCA_PI*y)*occaSin(OCCA_PI*z);   \
+    uxB = -PI*cos(PI*x)*sin(PI*y)*sin(PI*z);   \
+    uyB = -PI*sin(PI*x)*cos(PI*y)*sin(PI*z);   \
+    uzB = -PI*sin(PI*x)*sin(PI*y)*cos(PI*z);   \
   }

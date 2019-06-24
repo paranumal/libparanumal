@@ -38,37 +38,37 @@ void surfaceTerms(const int element,
                   const int i,
                   const int j,
                   const dfloat tau,
-                  @global const dfloat *sgeo,
-                  @global const int *vmapM,
-                  @global const int *vmapP,
-                  @global const dfloat4 *gradq,
+                  const dfloat *sgeo,
+                  const int *vmapM,
+                  const int *vmapP,
+                  const dfloat4 *gradq,
                   dfloat s_dqdx[p_Nq][p_Nq],
                   dfloat s_dqdy[p_Nq][p_Nq],
                   dfloat s_dqdz[p_Nq][p_Nq],
                   dfloat s_rhsq[p_Nq][p_Nq]){
-                                                  
-  const dlong  idM = vmapM[sk];                                          
-  const dlong  idP = vmapP[sk];                                          
-                                                                        
-  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            
-  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            
-  const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];                            
-  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];                          
-  const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];                           
-                                                                        
-  const dfloat4 gradqM = gradq[idM];                                    
-        dfloat4 gradqP = gradq[idP];                                          
-                                                                        
-  dfloat dq = gradqP.w - gradqM.w;                                      
-  
-  s_dqdx[j][i] += 0.5f*WsJ*nx*dq;                                       
-  s_dqdy[j][i] += 0.5f*WsJ*ny*dq;                                       
-  s_dqdz[j][i] += 0.5f*WsJ*nz*dq;                                       
-  
-  s_rhsq[j][i] -= 0.5f*WsJ*(nx*(gradqP.x+gradqM.x) +                    
-                            ny*(gradqP.y+gradqM.y) +                    
-                            nz*(gradqP.z+gradqM.z) +                    
-                            tau*dq*hinv);                               
+
+  const dlong  idM = vmapM[sk];
+  const dlong  idP = vmapP[sk];
+
+  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
+  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
+  const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];
+  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];
+  const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];
+
+  const dfloat4 gradqM = gradq[idM];
+        dfloat4 gradqP = gradq[idP];
+
+  dfloat dq = gradqP.w - gradqM.w;
+
+  s_dqdx[j][i] += 0.5f*WsJ*nx*dq;
+  s_dqdy[j][i] += 0.5f*WsJ*ny*dq;
+  s_dqdz[j][i] += 0.5f*WsJ*nz*dq;
+
+  s_rhsq[j][i] -= 0.5f*WsJ*(nx*(gradqP.x+gradqM.x) +
+                            ny*(gradqP.y+gradqM.y) +
+                            nz*(gradqP.z+gradqM.z) +
+                            tau*dq*hinv);
 }
 
 @kernel void ellipticAxIpdgQuad3D(const dlong Nelements,
@@ -161,7 +161,7 @@ void surfaceTerms(const int element,
 
       //      surfaceTerms(sk0,0,i,0);
       surfaceTerms(e, sk0, 0, i, 0, tau, sgeo, vmapM, vmapP, gradq, s_dqdx, s_dqdy, s_dqdz, s_rhsq);
-      
+
       //      surfaceTerms(sk2,2,i,p_Nq-1);
       surfaceTerms(e, sk2, 2, i, p_Nq-1, tau, sgeo, vmapM, vmapP, gradq, s_dqdx, s_dqdy, s_dqdz, s_rhsq);
 
@@ -251,9 +251,9 @@ void surfaceTerms(const int element,
 					 @restrict const  dfloat *  MM,
 					 @restrict const  dfloat4 *  gradq,
                                  @restrict dfloat  *  Aq){
-  
+
   for(dlong e=0;e<Nelements;++e;@outer(0)){
-    
+
     @shared dfloat s_dqdx[p_Nq][p_Nq];
     @shared dfloat s_dqdy[p_Nq][p_Nq];
     @shared dfloat s_dqdz[p_Nq][p_Nq];
@@ -307,7 +307,7 @@ void surfaceTerms(const int element,
 
       //      surfaceTerms(sk1,1,p_Nq-1,j);
       surfaceTerms(element, sk1, 1, p_Nq-1, j, tau, sgeo, vmapM, vmapP, gradq, s_dqdx, s_dqdy, s_dqdz, s_rhsq);
-      
+
       //      surfaceTerms(sk3,3,0,j);
       surfaceTerms(element, sk3, 3, 0, j, tau, sgeo, vmapM, vmapP, gradq, s_dqdx, s_dqdy, s_dqdz, s_rhsq);
     }

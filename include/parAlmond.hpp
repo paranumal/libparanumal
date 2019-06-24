@@ -33,8 +33,10 @@ SOFTWARE.
 
 #include "mpi.h"
 #include "types.h"
+#include "utils.hpp"
+#include "core.hpp"
 #include "ogs.hpp"
-#include "setupAide.hpp"
+#include "settings.hpp"
 
 #include "include/defines.hpp"
 #include "include/utils.hpp"
@@ -49,14 +51,10 @@ SOFTWARE.
 
 namespace parAlmond {
 
-solver_t *Init(occa::device device, MPI_Comm comm, setupAide options);
+solver_t *Init(occa::device device, MPI_Comm comm, settings_t& settings);
 
 void AMGSetup(solver_t* M,
-             hlong* rowStarts,
-             dlong nnz,
-             hlong* Ai,
-             hlong* Aj,
-             dfloat* Avals,
+             parCOO& A,
              bool nullSpace,
              dfloat nullSpacePenalty);
 
@@ -67,5 +65,8 @@ void Report(solver_t *M);
 void Free(solver_t* M);
 
 } //namespace parAlmond
+
+void parAlmondAddSettings(settings_t& settings);
+void parAlmondReportSettings(settings_t& settings);
 
 #endif

@@ -157,7 +157,6 @@ parCSR *transpose(parCSR *A){
   hlong globalRowOffset = At->globalRowStarts[rank];
 
   hlong *colIds = (hlong *) malloc(At->offd->nnz*sizeof(hlong));
-  dlong cnt=0;
   for (dlong n=0;n<At->offd->nnz;n++) {
     colIds[n] = recvNonZeros[n].col;
   }

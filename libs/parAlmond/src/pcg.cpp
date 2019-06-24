@@ -72,7 +72,7 @@ void solver_t::pcg(const int maxIt, const dfloat tol){
     //   Ap = A*p;
     levels[0]->Ax(p, Ap);
 
-    dfloat pAp = vectorInnerProd(m, p, Ap, levels[0]->comm);
+    pAp = vectorInnerProd(m, p, Ap, levels[0]->comm);
 
     alpha = rdotz0/pAp;
 
@@ -84,7 +84,7 @@ void solver_t::pcg(const int maxIt, const dfloat tol){
     // r = r - alpha * Ap;
     vectorAdd(m, -alpha, Ap, 1.0, r);
 
-    dfloat rdotr1 = vectorInnerProd(m, r, r, levels[0]->comm);
+    rdotr1 = vectorInnerProd(m, r, r, levels[0]->comm);
 
     if(rdotr1 < tol*tol) {
       rdotr0 = rdotr1;
@@ -98,7 +98,7 @@ void solver_t::pcg(const int maxIt, const dfloat tol){
       this->vcycle(0);
     }
 
-    dfloat rdotz1 = vectorInnerProd(m, r, z, levels[0]->comm);
+    rdotz1 = vectorInnerProd(m, r, z, levels[0]->comm);
 
     if(ctype==KCYCLE) {
       // flexible pcg beta = (z.(-alpha*Ap))/zdotz0
@@ -144,7 +144,7 @@ void solver_t::device_pcg(const int maxIt, const dfloat tol){
   dfloat rdotr0 = vectorInnerProd(m, o_r, o_r, levels[0]->comm);
 
   //  dfloat TOL =  mymax(tol*tol*normB,tol*tol);
-  
+
   occa::memory o_x  = device.malloc(n*sizeof(dfloat),levels[0]->x);
   occa::memory o_Ap = device.malloc(n*sizeof(dfloat),levels[0]->x);
   occa::memory o_p  = device.malloc(n*sizeof(dfloat),levels[0]->x);
@@ -179,7 +179,7 @@ void solver_t::device_pcg(const int maxIt, const dfloat tol){
     //   Ap = A*p;
     levels[0]->Ax(o_p, o_Ap);
 
-    dfloat pAp = vectorInnerProd(m, o_p, o_Ap, levels[0]->comm);
+    pAp = vectorInnerProd(m, o_p, o_Ap, levels[0]->comm);
 
     alpha = rdotz0/pAp;
 
@@ -191,7 +191,7 @@ void solver_t::device_pcg(const int maxIt, const dfloat tol){
     // r = r - alpha * Ap;
     vectorAdd(m, -alpha, o_Ap, 1.0, o_r);
 
-    dfloat rdotr1 = vectorInnerProd(m, o_r, o_r, levels[0]->comm);
+    rdotr1 = vectorInnerProd(m, o_r, o_r, levels[0]->comm);
 
     if(rdotr1 < tol*tol) {
       rdotr0 = rdotr1;
@@ -205,8 +205,9 @@ void solver_t::device_pcg(const int maxIt, const dfloat tol){
       this->device_vcycle(0);
     }
 
-    dfloat rdotz1 = vectorInnerProd(m, o_r, o_z, levels[0]->comm);
+    rdotz1 = vectorInnerProd(m, o_r, o_z, levels[0]->comm);
 
+    beta = 0.;
     if(ctype==KCYCLE) {
       // flexible pcg beta = (z.(-alpha*Ap))/zdotz0
       dfloat zdotAp = vectorInnerProd(m, o_z, o_Ap, levels[0]->comm);

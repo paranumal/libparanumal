@@ -24,37 +24,39 @@ SOFTWARE.
 
 */
 
-#include "elliptic.h"
+#include "elliptic.hpp"
+#include "../mesh/include/meshDefines2D.h"
+#include "../mesh/include/meshDefines3D.h"
 
 int parallelCompareRowColumn(const void *a, const void *b);
 
-void elliptic_t::BuildIpdg(nonZero_t **A, dlong *nnzA, hlong *globalStarts){
+void elliptic_t::BuildOperatorMatrixIpdg(parAlmond::parCOO& A){
 
   switch(mesh.elementType){
   case TRIANGLES:
   {
     if(mesh.dim==2)
-      BuildIpdgTri2D(A, nnzA, globalStarts);
+      BuildOperatorMatrixIpdgTri2D(A);
     else
-      BuildIpdgTri3D(A, nnzA, globalStarts);
+      BuildOperatorMatrixIpdgTri3D(A);
     break;
   }
   case QUADRILATERALS:{
     if(mesh.dim==2)
-      BuildIpdgQuad2D(A, nnzA, globalStarts);
+      BuildOperatorMatrixIpdgQuad2D(A);
     else
-      BuildIpdgQuad3D(A, nnzA, globalStarts);
+      BuildOperatorMatrixIpdgQuad3D(A);
     break;
   }
   case TETRAHEDRA:
-    BuildIpdgTet3D(A, nnzA, globalStarts); break;
+    BuildOperatorMatrixIpdgTet3D(A); break;
   case HEXAHEDRA:
-    BuildIpdgHex3D(A, nnzA, globalStarts); break;
+    BuildOperatorMatrixIpdgHex3D(A); break;
   }
 
 }
 
-void elliptic_t::BuildIpdgTri2D(nonZero_t **A, dlong *nnzA, hlong *globalStarts){
+void elliptic_t::BuildOperatorMatrixIpdgTri2D(parAlmond::parCOO& A){
 
   int rankM = mesh.rank;
 
@@ -70,9 +72,10 @@ void elliptic_t::BuildIpdgTri2D(nonZero_t **A, dlong *nnzA, hlong *globalStarts)
   hlong *globalIds = (hlong *) calloc((Nelements+mesh.totalHaloPairs)*Np,sizeof(hlong));
 
   // every degree of freedom has its own global id
-  MPI_Allgather(&Nnum, 1, MPI_HLONG, globalStarts+1, 1, MPI_HLONG, mesh.comm);
+  A.globalStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  MPI_Allgather(&Nnum, 1, MPI_HLONG, A.globalStarts+1, 1, MPI_HLONG, mesh.comm);
   for(int r=0;r<mesh.size;++r)
-    globalStarts[r+1] = globalStarts[r]+globalStarts[r+1];
+    A.globalStarts[r+1] = A.globalStarts[r]+A.globalStarts[r+1];
 
   /* so find number of elements on each rank */
   dlong *rankNelements = (dlong*) calloc(mesh.size, sizeof(dlong));
@@ -119,12 +122,12 @@ void elliptic_t::BuildIpdgTri2D(nonZero_t **A, dlong *nnzA, hlong *globalStarts)
   // reset non-zero counter
   dlong nnz = 0;
 
-  *A = (nonZero_t*) calloc(nnzLocalBound, sizeof(nonZero_t));
+  A.entries = (parAlmond::nonZero_t*) calloc(nnzLocalBound, sizeof(parAlmond::nonZero_t));
 
   dfloat *SM = (dfloat*) calloc(Np*Np,sizeof(dfloat));
   dfloat *SP = (dfloat*) calloc(Np*Np,sizeof(dfloat));
 
-  if(rankM==0) printf("Building full IPDG matrix...");fflush(stdout);
+  if(rankM==0) {printf("Building full IPDG matrix...");fflush(stdout);}
 
   // loop over all elements
   for(dlong eM=0;eM<Nelements;++eM){
@@ -263,10 +266,10 @@ void elliptic_t::BuildIpdgTri2D(nonZero_t **A, dlong *nnzA, hlong *globalStarts)
         for(int m=0;m<Np;++m){
           dfloat val = SP[n*Np+m];
           if(fabs(val)>tol){
-            (*A)[nnz].row = globalIds[eM*Np + n];
-            (*A)[nnz].col = globalIds[eP*Np + m];
-            (*A)[nnz].val = val;
-            (*A)[nnz].ownerRank = rankM;
+            A.entries[nnz].row = globalIds[eM*Np + n];
+            A.entries[nnz].col = globalIds[eP*Np + m];
+            A.entries[nnz].val = val;
+            A.entries[nnz].ownerRank = rankM;
             ++nnz;
           }
         }
@@ -277,10 +280,10 @@ void elliptic_t::BuildIpdgTri2D(nonZero_t **A, dlong *nnzA, hlong *globalStarts)
       for(int m=0;m<Np;++m){
         dfloat val = SM[n*Np+m];
         if(fabs(val)>tol){
-          (*A)[nnz].row = globalIds[eM*Np + n];
-          (*A)[nnz].col = globalIds[eM*Np + m];
-          (*A)[nnz].val = val;
-          (*A)[nnz].ownerRank = rankM;
+          A.entries[nnz].row = globalIds[eM*Np + n];
+          A.entries[nnz].col = globalIds[eM*Np + m];
+          A.entries[nnz].val = val;
+          A.entries[nnz].ownerRank = rankM;
           ++nnz;
         }
       }
@@ -289,19 +292,19 @@ void elliptic_t::BuildIpdgTri2D(nonZero_t **A, dlong *nnzA, hlong *globalStarts)
 
   //printf("nnz = %d\n", nnz);
 
-  qsort((*A), nnz, sizeof(nonZero_t), parallelCompareRowColumn);
-  //*A = (nonZero_t*) realloc(*A, nnz*sizeof(nonZero_t));
-  *nnzA = nnz;
+  qsort(A.entries, nnz, sizeof(parAlmond::nonZero_t), parallelCompareRowColumn);
+  //*A = (parAlmond::nonZero_t*) realloc(*A, nnz*sizeof(parAlmond::nonZero_t));
+  A.nnz = nnz;
 
   if(rankM==0) printf("done.\n");
 
 #if 0
   dfloat* Ap = (dfloat *) calloc(Np*Np*Nelements*Nelements,sizeof(dfloat));
   for (int n=0;n<nnz;n++) {
-    int row = (*A)[n].row;
-    int col = (*A)[n].col;
+    int row = A.entries[n].row;
+    int col = A.entries[n].col;
 
-    Ap[col+row*Np*Nelements] = (*A)[n].val;
+    Ap[col+row*Np*Nelements] = A.entries[n].val;
   }
 
   for (int i=0;i<Np*Nelements;i++) {
@@ -318,7 +321,7 @@ void elliptic_t::BuildIpdgTri2D(nonZero_t **A, dlong *nnzA, hlong *globalStarts)
   free(MS);
 }
 
-void elliptic_t::BuildIpdgTri3D(nonZero_t **A, dlong *nnzA, hlong *globalStarts){
+void elliptic_t::BuildOperatorMatrixIpdgTri3D(parAlmond::parCOO& A){
 
   int rankM = mesh.rank;
 
@@ -334,9 +337,10 @@ void elliptic_t::BuildIpdgTri3D(nonZero_t **A, dlong *nnzA, hlong *globalStarts)
   hlong *globalIds = (hlong *) calloc((Nelements+mesh.totalHaloPairs)*Np,sizeof(hlong));
 
   // every degree of freedom has its own global id
-  MPI_Allgather(&Nnum, 1, MPI_HLONG, globalStarts+1, 1, MPI_HLONG, mesh.comm);
+  A.globalStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  MPI_Allgather(&Nnum, 1, MPI_HLONG, A.globalStarts+1, 1, MPI_HLONG, mesh.comm);
   for(int r=0;r<mesh.size;++r)
-    globalStarts[r+1] = globalStarts[r]+globalStarts[r+1];
+    A.globalStarts[r+1] = A.globalStarts[r]+A.globalStarts[r+1];
 
   /* so find number of elements on each rank */
   dlong *rankNelements = (dlong*) calloc(mesh.size, sizeof(dlong));
@@ -383,12 +387,12 @@ void elliptic_t::BuildIpdgTri3D(nonZero_t **A, dlong *nnzA, hlong *globalStarts)
   // reset non-zero counter
   dlong nnz = 0;
 
-  *A = (nonZero_t*) calloc(nnzLocalBound, sizeof(nonZero_t));
+  A.entries = (parAlmond::nonZero_t*) calloc(nnzLocalBound, sizeof(parAlmond::nonZero_t));
 
   dfloat *SM = (dfloat*) calloc(Np*Np,sizeof(dfloat));
   dfloat *SP = (dfloat*) calloc(Np*Np,sizeof(dfloat));
 
-  if(rankM==0) printf("Building full IPDG matrix...");fflush(stdout);
+  if(rankM==0) {printf("Building full IPDG matrix...");fflush(stdout);}
 
   // loop over all elements
   for(dlong eM=0;eM<Nelements;++eM){
@@ -545,10 +549,10 @@ void elliptic_t::BuildIpdgTri3D(nonZero_t **A, dlong *nnzA, hlong *globalStarts)
         for(int m=0;m<Np;++m){
           dfloat val = SP[n*Np+m];
           if(fabs(val)>tol){
-            (*A)[nnz].row = globalIds[eM*Np + n];
-            (*A)[nnz].col = globalIds[eP*Np + m];
-            (*A)[nnz].val = val;
-            (*A)[nnz].ownerRank = rankM;
+            A.entries[nnz].row = globalIds[eM*Np + n];
+            A.entries[nnz].col = globalIds[eP*Np + m];
+            A.entries[nnz].val = val;
+            A.entries[nnz].ownerRank = rankM;
             ++nnz;
           }
         }
@@ -559,10 +563,10 @@ void elliptic_t::BuildIpdgTri3D(nonZero_t **A, dlong *nnzA, hlong *globalStarts)
       for(int m=0;m<Np;++m){
         dfloat val = SM[n*Np+m];
         if(fabs(val)>tol){
-          (*A)[nnz].row = globalIds[eM*Np + n];
-          (*A)[nnz].col = globalIds[eM*Np + m];
-          (*A)[nnz].val = val;
-          (*A)[nnz].ownerRank = rankM;
+          A.entries[nnz].row = globalIds[eM*Np + n];
+          A.entries[nnz].col = globalIds[eM*Np + m];
+          A.entries[nnz].val = val;
+          A.entries[nnz].ownerRank = rankM;
           ++nnz;
         }
       }
@@ -571,9 +575,9 @@ void elliptic_t::BuildIpdgTri3D(nonZero_t **A, dlong *nnzA, hlong *globalStarts)
 
   //printf("nnz = %d\n", nnz);
 
-  qsort((*A), nnz, sizeof(nonZero_t), parallelCompareRowColumn);
-  //*A = (nonZero_t*) realloc(*A, nnz*sizeof(nonZero_t));
-  *nnzA = nnz;
+  qsort(A.entries, nnz, sizeof(parAlmond::nonZero_t), parallelCompareRowColumn);
+  //*A = (parAlmond::nonZero_t*) realloc(*A, nnz*sizeof(parAlmond::nonZero_t));
+  A.nnz = nnz;
 
   if(rankM==0) printf("done.\n");
 
@@ -585,12 +589,11 @@ void elliptic_t::BuildIpdgTri3D(nonZero_t **A, dlong *nnzA, hlong *globalStarts)
 
 
 
-void elliptic_t::BuildIpdgQuad2D(nonZero_t **A, dlong *nnzA, hlong *globalStarts){
+void elliptic_t::BuildOperatorMatrixIpdgQuad2D(parAlmond::parCOO& A){
 
   int rankM = mesh.rank;
 
   int Np = mesh.Np;
-  int Nfp = mesh.Nfp;
   int Nfaces = mesh.Nfaces;
   dlong Nelements = mesh.Nelements;
 
@@ -600,9 +603,10 @@ void elliptic_t::BuildIpdgQuad2D(nonZero_t **A, dlong *nnzA, hlong *globalStarts
   hlong *globalIds = (hlong *) calloc((Nelements+mesh.totalHaloPairs)*Np,sizeof(hlong));
 
   // every degree of freedom has its own global id
-  MPI_Allgather(&Nnum, 1, MPI_HLONG, globalStarts+1, 1, MPI_HLONG, mesh.comm);
+  A.globalStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  MPI_Allgather(&Nnum, 1, MPI_HLONG, A.globalStarts+1, 1, MPI_HLONG, mesh.comm);
   for(int r=0;r<mesh.size;++r)
-    globalStarts[r+1] = globalStarts[r]+globalStarts[r+1];
+    A.globalStarts[r+1] = A.globalStarts[r]+A.globalStarts[r+1];
 
   /* so find number of elements on each rank */
   dlong *rankNelements = (dlong*) calloc(mesh.size, sizeof(dlong));
@@ -657,9 +661,9 @@ void elliptic_t::BuildIpdgQuad2D(nonZero_t **A, dlong *nnzA, hlong *globalStarts
     }
   }
 
-  *A = (nonZero_t*) calloc(nnzLocalBound,sizeof(nonZero_t));
+  A.entries = (parAlmond::nonZero_t*) calloc(nnzLocalBound,sizeof(parAlmond::nonZero_t));
 
-  if(rankM==0) printf("Building full IPDG matrix...");fflush(stdout);
+  if(rankM==0) {printf("Building full IPDG matrix...");fflush(stdout);}
 
   // reset non-zero counter
   dlong nnz = 0;
@@ -776,19 +780,19 @@ void elliptic_t::BuildIpdgQuad2D(nonZero_t **A, dlong *nnzA, hlong *globalStarts
           if(fabs(AnmP)>tol){
             // remote info
             dlong eP    = mesh.EToE[eM*mesh.Nfaces+fM];
-            (*A)[nnz].row = globalIds[eM*mesh.Np + n];
-            (*A)[nnz].col = globalIds[eP*mesh.Np + m];
-            (*A)[nnz].val = AnmP;
-            (*A)[nnz].ownerRank = rankM;
+            A.entries[nnz].row = globalIds[eM*mesh.Np + n];
+            A.entries[nnz].col = globalIds[eP*mesh.Np + m];
+            A.entries[nnz].val = AnmP;
+            A.entries[nnz].ownerRank = rankM;
             ++nnz;
           }
         }
         if(fabs(Anm)>tol){
           // local block
-          (*A)[nnz].row = globalIds[eM*mesh.Np+n];
-          (*A)[nnz].col = globalIds[eM*mesh.Np+m];
-          (*A)[nnz].val = Anm;
-          (*A)[nnz].ownerRank = rankM;
+          A.entries[nnz].row = globalIds[eM*mesh.Np+n];
+          A.entries[nnz].col = globalIds[eM*mesh.Np+m];
+          A.entries[nnz].val = Anm;
+          A.entries[nnz].ownerRank = rankM;
           ++nnz;
         }
       }
@@ -796,9 +800,9 @@ void elliptic_t::BuildIpdgQuad2D(nonZero_t **A, dlong *nnzA, hlong *globalStarts
   }
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
-  qsort((*A), nnz, sizeof(nonZero_t), parallelCompareRowColumn);
-  //*A = (nonZero_t*) realloc(*A, nnz*sizeof(nonZero_t));
-  *nnzA = nnz;
+  qsort(A.entries, nnz, sizeof(parAlmond::nonZero_t), parallelCompareRowColumn);
+  //*A = (parAlmond::nonZero_t*) realloc(*A, nnz*sizeof(parAlmond::nonZero_t));
+  A.nnz = nnz;
 
   if(rankM==0) printf("done.\n");
 
@@ -807,12 +811,11 @@ void elliptic_t::BuildIpdgQuad2D(nonZero_t **A, dlong *nnzA, hlong *globalStarts
 }
 
 
-void elliptic_t::BuildIpdgQuad3D(nonZero_t **A, dlong *nnzA, hlong *globalStarts){
+void elliptic_t::BuildOperatorMatrixIpdgQuad3D(parAlmond::parCOO& A){
 
   int rankM = mesh.rank;
 
   int Np = mesh.Np;
-  int Nfp = mesh.Nfp;
   int Nfaces = mesh.Nfaces;
   dlong Nelements = mesh.Nelements;
 
@@ -822,9 +825,10 @@ void elliptic_t::BuildIpdgQuad3D(nonZero_t **A, dlong *nnzA, hlong *globalStarts
   hlong *globalIds = (hlong *) calloc((Nelements+mesh.totalHaloPairs)*Np,sizeof(hlong));
 
   // every degree of freedom has its own global id
-  MPI_Allgather(&Nnum, 1, MPI_HLONG, globalStarts+1, 1, MPI_HLONG, mesh.comm);
+  A.globalStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  MPI_Allgather(&Nnum, 1, MPI_HLONG, A.globalStarts+1, 1, MPI_HLONG, mesh.comm);
   for(int r=0;r<mesh.size;++r)
-    globalStarts[r+1] = globalStarts[r]+globalStarts[r+1];
+    A.globalStarts[r+1] = A.globalStarts[r]+A.globalStarts[r+1];
 
   /* so find number of elements on each rank */
   dlong *rankNelements = (dlong*) calloc(mesh.size, sizeof(dlong));
@@ -878,9 +882,9 @@ void elliptic_t::BuildIpdgQuad3D(nonZero_t **A, dlong *nnzA, hlong *globalStarts
     }
   }
 
-  *A = (nonZero_t*) calloc(nnzLocalBound,sizeof(nonZero_t));
+  A.entries = (parAlmond::nonZero_t*) calloc(nnzLocalBound,sizeof(parAlmond::nonZero_t));
 
-  if(rankM==0) printf("Building full IPDG matrix...");fflush(stdout);
+  if(rankM==0) {printf("Building full IPDG matrix...");fflush(stdout);}
 
   // reset non-zero counter
   dlong nnz = 0;
@@ -902,20 +906,20 @@ void elliptic_t::BuildIpdgQuad3D(nonZero_t **A, dlong *nnzA, hlong *globalStarts
           dfloat dsdx = mesh.vgeo[base+mesh.Np*SXID];
           dfloat dsdy = mesh.vgeo[base+mesh.Np*SYID];
           dfloat dsdz = mesh.vgeo[base+mesh.Np*SZID];
-          dfloat dtdx = mesh.vgeo[base+mesh.Np*TXID];
-          dfloat dtdy = mesh.vgeo[base+mesh.Np*TYID];
-          dfloat dtdz = mesh.vgeo[base+mesh.Np*TZID];
+          // dfloat dtdx = mesh.vgeo[base+mesh.Np*TXID];
+          // dfloat dtdy = mesh.vgeo[base+mesh.Np*TYID];
+          // dfloat dtdz = mesh.vgeo[base+mesh.Np*TZID];
           dfloat JW   = mesh.vgeo[base+mesh.Np*JWID];
 
           int idn = n*mesh.Np+i;
           int idm = m*mesh.Np+i;
-          dfloat dlndx = drdx*Br[idn] + dsdx*Bs[idn]; + dtdx;
-          dfloat dlndy = drdy*Br[idn] + dsdy*Bs[idn]; + dtdy;
-          dfloat dlndz = drdz*Br[idn] + dsdz*Bs[idn]; + dtdz;
+          dfloat dlndx = drdx*Br[idn] + dsdx*Bs[idn];// + dtdx;
+          dfloat dlndy = drdy*Br[idn] + dsdy*Bs[idn];// + dtdy;
+          dfloat dlndz = drdz*Br[idn] + dsdz*Bs[idn];// + dtdz;
 
-          dfloat dlmdx = drdx*Br[idm] + dsdx*Bs[idm]; + dtdx;
-          dfloat dlmdy = drdy*Br[idm] + dsdy*Bs[idm]; + dtdy;
-          dfloat dlmdz = drdz*Br[idm] + dsdz*Bs[idm]; + dtdz;
+          dfloat dlmdx = drdx*Br[idm] + dsdx*Bs[idm];// + dtdx;
+          dfloat dlmdy = drdy*Br[idm] + dsdy*Bs[idm];// + dtdy;
+          dfloat dlmdz = drdz*Br[idm] + dsdz*Bs[idm];// + dtdz;
 
           Anm += JW*(dlndx*dlmdx+dlndy*dlmdy + dlndz*dlmdz);
           Anm += lambda*JW*B[idn]*B[idm];
@@ -938,9 +942,9 @@ void elliptic_t::BuildIpdgQuad3D(nonZero_t **A, dlong *nnzA, hlong *globalStarts
             dfloat dsdyM = mesh.vgeo[baseM+mesh.Np*SYID];
             dfloat dsdzM = mesh.vgeo[baseM+mesh.Np*SZID];
 
-            dfloat dtdxM = mesh.vgeo[baseM+mesh.Np*TXID];
-            dfloat dtdyM = mesh.vgeo[baseM+mesh.Np*TYID];
-            dfloat dtdzM = mesh.vgeo[baseM+mesh.Np*TZID];
+            // dfloat dtdxM = mesh.vgeo[baseM+mesh.Np*TXID];
+            // dfloat dtdyM = mesh.vgeo[baseM+mesh.Np*TYID];
+            // dfloat dtdzM = mesh.vgeo[baseM+mesh.Np*TZID];
 
 
             // double check vol geometric factors are in halo storage of vgeo
@@ -956,9 +960,9 @@ void elliptic_t::BuildIpdgQuad3D(nonZero_t **A, dlong *nnzA, hlong *globalStarts
             dfloat dsdyP = mesh.vgeo[baseP+mesh.Np*SYID];
             dfloat dsdzP = mesh.vgeo[baseP+mesh.Np*SZID];
 
-            dfloat dtdxP = mesh.vgeo[baseP+mesh.Np*TXID];
-            dfloat dtdyP = mesh.vgeo[baseP+mesh.Np*TYID];
-            dfloat dtdzP = mesh.vgeo[baseP+mesh.Np*TZID];
+            // dfloat dtdxP = mesh.vgeo[baseP+mesh.Np*TXID];
+            // dfloat dtdyP = mesh.vgeo[baseP+mesh.Np*TYID];
+            // dfloat dtdzP = mesh.vgeo[baseP+mesh.Np*TZID];
 
             // grab surface geometric factors
             dlong base = mesh.Nsgeo*(eM*mesh.Nfp*mesh.Nfaces + fM*mesh.Nfp + i);
@@ -973,22 +977,22 @@ void elliptic_t::BuildIpdgQuad3D(nonZero_t **A, dlong *nnzA, hlong *globalStarts
             int idmM = m*mesh.Np+vidM;
             int idmP = m*mesh.Np+vidP;
 
-            dfloat dlndxM = drdxM*Br[idnM] + dsdxM*Bs[idnM]; + dtdxM;
-            dfloat dlndyM = drdyM*Br[idnM] + dsdyM*Bs[idnM]; + dtdyM;
-            dfloat dlndzM = drdzM*Br[idnM] + dsdzM*Bs[idnM]; + dtdzM;
+            dfloat dlndxM = drdxM*Br[idnM] + dsdxM*Bs[idnM];// + dtdxM;
+            dfloat dlndyM = drdyM*Br[idnM] + dsdyM*Bs[idnM];// + dtdyM;
+            dfloat dlndzM = drdzM*Br[idnM] + dsdzM*Bs[idnM];// + dtdzM;
 
             dfloat ndotgradlnM = nx*dlndxM+ny*dlndyM + nz*dlndzM;
             dfloat lnM = B[idnM];
 
-            dfloat dlmdxM = drdxM*Br[idmM] + dsdxM*Bs[idmM]; + dtdxM;
-            dfloat dlmdyM = drdyM*Br[idmM] + dsdyM*Bs[idmM]; + dtdyM;
-            dfloat dlmdzM = drdzM*Br[idmM] + dsdzM*Bs[idmM]; + dtdzM;
+            dfloat dlmdxM = drdxM*Br[idmM] + dsdxM*Bs[idmM];// + dtdxM;
+            dfloat dlmdyM = drdyM*Br[idmM] + dsdyM*Bs[idmM];// + dtdyM;
+            dfloat dlmdzM = drdzM*Br[idmM] + dsdzM*Bs[idmM];// + dtdzM;
             dfloat ndotgradlmM = nx*dlmdxM+ny*dlmdyM + nz*dlmdzM;
             dfloat lmM = B[idmM];
 
-            dfloat dlmdxP = drdxP*Br[idmP] + dsdxP*Bs[idmP]; + dtdxP;
-            dfloat dlmdyP = drdyP*Br[idmP] + dsdyP*Bs[idmP]; + dtdyP;
-            dfloat dlmdzP = drdzP*Br[idmP] + dsdzP*Bs[idmP]; + dtdzP;
+            dfloat dlmdxP = drdxP*Br[idmP] + dsdxP*Bs[idmP];// + dtdxP;
+            dfloat dlmdyP = drdyP*Br[idmP] + dsdyP*Bs[idmP];// + dtdyP;
+            dfloat dlmdzP = drdzP*Br[idmP] + dsdzP*Bs[idmP];// + dtdzP;
             dfloat ndotgradlmP = nx*dlmdxP+ny*dlmdyP+nz*dlmdzP;
             dfloat lmP = B[idmP];
 
@@ -1005,20 +1009,20 @@ void elliptic_t::BuildIpdgQuad3D(nonZero_t **A, dlong *nnzA, hlong *globalStarts
           if(fabs(AnmP)>tol){
             // remote info
             dlong eP    = mesh.EToE[eM*mesh.Nfaces+fM];
-            (*A)[nnz].row = globalIds[eM*mesh.Np + n];
-            (*A)[nnz].col = globalIds[eP*mesh.Np + m];
-            (*A)[nnz].val = AnmP;
-            (*A)[nnz].ownerRank = rankM;
+            A.entries[nnz].row = globalIds[eM*mesh.Np + n];
+            A.entries[nnz].col = globalIds[eP*mesh.Np + m];
+            A.entries[nnz].val = AnmP;
+            A.entries[nnz].ownerRank = rankM;
             ++nnz;
           }
         }
 
         if(fabs(Anm)>tol){
           // local block
-          (*A)[nnz].row = globalIds[eM*mesh.Np+n];
-          (*A)[nnz].col = globalIds[eM*mesh.Np+m];
-          (*A)[nnz].val = Anm;
-          (*A)[nnz].ownerRank = rankM;
+          A.entries[nnz].row = globalIds[eM*mesh.Np+n];
+          A.entries[nnz].col = globalIds[eM*mesh.Np+m];
+          A.entries[nnz].val = Anm;
+          A.entries[nnz].ownerRank = rankM;
           ++nnz;
         }
       }
@@ -1026,9 +1030,9 @@ void elliptic_t::BuildIpdgQuad3D(nonZero_t **A, dlong *nnzA, hlong *globalStarts
   }
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
-  qsort((*A), nnz, sizeof(nonZero_t), parallelCompareRowColumn);
-  //*A = (nonZero_t*) realloc(*A, nnz*sizeof(nonZero_t));
-  *nnzA = nnz;
+  qsort(A.entries, nnz, sizeof(parAlmond::nonZero_t), parallelCompareRowColumn);
+  //*A = (parAlmond::nonZero_t*) realloc(*A, nnz*sizeof(parAlmond::nonZero_t));
+  A.nnz = nnz;
 
   if(rankM==0) printf("done.\n");
 
@@ -1037,9 +1041,9 @@ void elliptic_t::BuildIpdgQuad3D(nonZero_t **A, dlong *nnzA, hlong *globalStarts
     FILE *fp = fopen("DGS.dat", "w");
     for(int n=0;n<nnz;++n){
       fprintf(fp, "%d %d %17.15lf\n",
-              (*A)[n].row+1,
-              (*A)[n].col+1,
-              (*A)[n].val);
+              A.entries[n].row+1,
+              A.entries[n].col+1,
+              A.entries[n].val);
     }
     fclose(fp);
   }
@@ -1054,7 +1058,7 @@ void elliptic_t::BuildIpdgQuad3D(nonZero_t **A, dlong *nnzA, hlong *globalStarts
 
 
 
-void elliptic_t::BuildIpdgTet3D(nonZero_t **A, dlong *nnzA, hlong *globalStarts){
+void elliptic_t::BuildOperatorMatrixIpdgTet3D(parAlmond::parCOO& A){
 
   int rankM = mesh.rank;
 
@@ -1065,16 +1069,16 @@ void elliptic_t::BuildIpdgTet3D(nonZero_t **A, dlong *nnzA, hlong *globalStarts)
   hlong *globalIds = (hlong *) calloc((mesh.Nelements+mesh.totalHaloPairs)*mesh.Np,sizeof(hlong));
 
   // every degree of freedom has its own global id
-  MPI_Allgather(&Nnum, 1, MPI_HLONG, globalStarts+1, 1, MPI_HLONG, mesh.comm);
+  A.globalStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  MPI_Allgather(&Nnum, 1, MPI_HLONG, A.globalStarts+1, 1, MPI_HLONG, mesh.comm);
     for(int r=0;r<mesh.size;++r)
-      globalStarts[r+1] = globalStarts[r]+globalStarts[r+1];
+      A.globalStarts[r+1] = A.globalStarts[r]+A.globalStarts[r+1];
 
   /* so find number of elements on each rank */
   dlong *rankNelements = (dlong*) calloc(mesh.size, sizeof(dlong));
   hlong *rankStarts = (hlong*) calloc(mesh.size+1, sizeof(hlong));
-  dlong Nelements = mesh.Nelements;
   MPI_Allgather(&(mesh.Nelements), 1, MPI_DLONG,
-                      rankNelements, 1, MPI_DLONG, mesh.comm);
+                    rankNelements, 1, MPI_DLONG, mesh.comm);
   //find offsets
   for(int r=0;r<mesh.size;++r){
     rankStarts[r+1] = rankStarts[r]+rankNelements[r];
@@ -1087,7 +1091,7 @@ void elliptic_t::BuildIpdgTet3D(nonZero_t **A, dlong *nnzA, hlong *globalStarts)
   }
 
   /* do a halo exchange of global node numbers */
-  mesh.HaloExchange(globalIds, Np, ogsHlong);
+  mesh.HaloExchange(globalIds, mesh.Np, ogsHlong);
 
   dlong nnzLocalBound = mesh.Np*mesh.Np*(1+mesh.Nfaces)*mesh.Nelements;
 
@@ -1130,12 +1134,12 @@ void elliptic_t::BuildIpdgTet3D(nonZero_t **A, dlong *nnzA, hlong *globalStarts)
     }
   }
 
-  *A = (nonZero_t*) calloc(nnzLocalBound,sizeof(nonZero_t));
+  A.entries = (parAlmond::nonZero_t*) calloc(nnzLocalBound,sizeof(parAlmond::nonZero_t));
 
   // reset non-zero counter
   dlong nnz = 0;
 
-  if(rankM==0) printf("Building full IPDG matrix...");fflush(stdout);
+  if(rankM==0) {printf("Building full IPDG matrix...");fflush(stdout);}
 
   // loop over all elements
   //#pragma omp parallel
@@ -1278,10 +1282,10 @@ void elliptic_t::BuildIpdgTet3D(nonZero_t **A, dlong *nnzA, hlong *globalStarts)
             //#pragma omp critical
             {
               // remote info
-              (*A)[nnz].row = globalIds[eM*mesh.Np+n];
-              (*A)[nnz].col = globalIds[eP*mesh.Np+m];
-              (*A)[nnz].val = AnmP;
-              (*A)[nnz].ownerRank = rankM;
+              A.entries[nnz].row = globalIds[eM*mesh.Np+n];
+              A.entries[nnz].col = globalIds[eP*mesh.Np+m];
+              A.entries[nnz].val = AnmP;
+              A.entries[nnz].ownerRank = rankM;
               ++nnz;
             }
           }
@@ -1296,10 +1300,10 @@ void elliptic_t::BuildIpdgTet3D(nonZero_t **A, dlong *nnzA, hlong *globalStarts)
         if(fabs(Anm)>tol){
           //#pragma omp critical
           {
-            (*A)[nnz].row = globalIds[eM*mesh.Np+n];
-            (*A)[nnz].col = globalIds[eM*mesh.Np+m];
-            (*A)[nnz].val = Anm;
-            (*A)[nnz].ownerRank = rankM;
+            A.entries[nnz].row = globalIds[eM*mesh.Np+n];
+            A.entries[nnz].col = globalIds[eM*mesh.Np+m];
+            A.entries[nnz].val = Anm;
+            A.entries[nnz].ownerRank = rankM;
             ++nnz;
           }
         }
@@ -1311,10 +1315,10 @@ void elliptic_t::BuildIpdgTet3D(nonZero_t **A, dlong *nnzA, hlong *globalStarts)
   free(qmM); free(qmP);
   free(ndotgradqmM); free(ndotgradqmP);
 }
-  qsort((*A), nnz, sizeof(nonZero_t), parallelCompareRowColumn);
+  qsort(A.entries, nnz, sizeof(parAlmond::nonZero_t), parallelCompareRowColumn);
   // free up unused storage
-  //*A = (nonZero_t*) realloc(*A, nnz*sizeof(nonZero_t));
-  *nnzA = nnz;
+  //*A = (parAlmond::nonZero_t*) realloc(*A, nnz*sizeof(parAlmond::nonZero_t));
+  A.nnz = nnz;
 
   if(rankM==0) printf("done.\n");
 
@@ -1324,12 +1328,11 @@ void elliptic_t::BuildIpdgTet3D(nonZero_t **A, dlong *nnzA, hlong *globalStarts)
   free(DrTMS); free(DsTMS); free(DtTMS);
 }
 
-void elliptic_t::BuildIpdgHex3D(nonZero_t **A, dlong *nnzA, hlong *globalStarts){
+void elliptic_t::BuildOperatorMatrixIpdgHex3D(parAlmond::parCOO& A){
 
   int rankM = mesh.rank;
 
   int Np = mesh.Np;
-  int Nfp = mesh.Nfp;
   int Nfaces = mesh.Nfaces;
   dlong Nelements = mesh.Nelements;
 
@@ -1339,9 +1342,10 @@ void elliptic_t::BuildIpdgHex3D(nonZero_t **A, dlong *nnzA, hlong *globalStarts)
   hlong *globalIds = (hlong *) calloc((Nelements+mesh.totalHaloPairs)*Np,sizeof(hlong));
 
   // every degree of freedom has its own global id
-  MPI_Allgather(&Nnum, 1, MPI_HLONG, globalStarts+1, 1, MPI_HLONG, mesh.comm);
+  A.globalStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  MPI_Allgather(&Nnum, 1, MPI_HLONG, A.globalStarts+1, 1, MPI_HLONG, mesh.comm);
   for(int r=0;r<mesh.size;++r)
-    globalStarts[r+1] = globalStarts[r]+globalStarts[r+1];
+    A.globalStarts[r+1] = A.globalStarts[r]+A.globalStarts[r+1];
 
   /* so find number of elements on each rank */
   dlong *rankNelements = (dlong*) calloc(mesh.size, sizeof(dlong));
@@ -1403,9 +1407,9 @@ void elliptic_t::BuildIpdgHex3D(nonZero_t **A, dlong *nnzA, hlong *globalStarts)
     }
   }
 
-  *A = (nonZero_t*) calloc(nnzLocalBound,sizeof(nonZero_t));
+  A.entries = (parAlmond::nonZero_t*) calloc(nnzLocalBound,sizeof(parAlmond::nonZero_t));
 
-  if(rankM==0) printf("Building full IPDG matrix...");fflush(stdout);
+  if(rankM==0) {printf("Building full IPDG matrix...");fflush(stdout);}
 
   // reset non-zero counter
   dlong nnz = 0;
@@ -1546,10 +1550,10 @@ void elliptic_t::BuildIpdgHex3D(nonZero_t **A, dlong *nnzA, hlong *globalStarts)
             {
               // remote info
               dlong eP    = mesh.EToE[eM*mesh.Nfaces+fM];
-              (*A)[nnz].row = globalIds[eM*mesh.Np + n];
-              (*A)[nnz].col = globalIds[eP*mesh.Np + m];
-              (*A)[nnz].val = AnmP;
-              (*A)[nnz].ownerRank = rankM;
+              A.entries[nnz].row = globalIds[eM*mesh.Np + n];
+              A.entries[nnz].col = globalIds[eP*mesh.Np + m];
+              A.entries[nnz].val = AnmP;
+              A.entries[nnz].ownerRank = rankM;
               ++nnz;
             }
           }
@@ -1558,10 +1562,10 @@ void elliptic_t::BuildIpdgHex3D(nonZero_t **A, dlong *nnzA, hlong *globalStarts)
           //#pragma omp critical
           {
             // local block
-            (*A)[nnz].row = globalIds[eM*mesh.Np+n];
-            (*A)[nnz].col = globalIds[eM*mesh.Np+m];
-            (*A)[nnz].val = Anm;
-            (*A)[nnz].ownerRank = rankM;
+            A.entries[nnz].row = globalIds[eM*mesh.Np+n];
+            A.entries[nnz].col = globalIds[eM*mesh.Np+m];
+            A.entries[nnz].val = Anm;
+            A.entries[nnz].ownerRank = rankM;
             ++nnz;
           }
         }
@@ -1570,9 +1574,9 @@ void elliptic_t::BuildIpdgHex3D(nonZero_t **A, dlong *nnzA, hlong *globalStarts)
   }
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
-  qsort((*A), nnz, sizeof(nonZero_t), parallelCompareRowColumn);
-  //*A = (nonZero_t*) realloc(*A, nnz*sizeof(nonZero_t));
-  *nnzA = nnz;
+  qsort(A.entries, nnz, sizeof(parAlmond::nonZero_t), parallelCompareRowColumn);
+  //*A = (parAlmond::nonZero_t*) realloc(*A, nnz*sizeof(parAlmond::nonZero_t));
+  A.nnz = nnz;
 
   if(rankM==0) printf("done.\n");
 

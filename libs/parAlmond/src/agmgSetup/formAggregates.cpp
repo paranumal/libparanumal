@@ -35,17 +35,17 @@ static void formAggregatesDefault(parCSR *A, parCSR *C,
 static void formAggregatesLPSCN(parCSR *A, parCSR *C,
                                 hlong* FineToCoarse,
                                 hlong* globalAggStarts,
-                                setupAide options);
+                                settings_t& settings);
 
 void formAggregates(parCSR *A, parCSR *C,
                     hlong* FineToCoarse,
                     hlong* globalAggStarts,
-                    setupAide options) {
+                    settings_t& settings) {
 
-  if (options.compareArgs("PARALMOND AGGREGATION STRATEGY", "DEFAULT")) {
+  if (settings.compareSetting("PARALMOND AGGREGATION STRATEGY", "DEFAULT")) {
     formAggregatesDefault(A, C, FineToCoarse, globalAggStarts);
-  } else if (options.compareArgs("PARALMOND AGGREGATION STRATEGY", "LPSCN")) {
-    formAggregatesLPSCN(A, C, FineToCoarse, globalAggStarts, options);
+  } else if (settings.compareSetting("PARALMOND AGGREGATION STRATEGY", "LPSCN")) {
+    formAggregatesLPSCN(A, C, FineToCoarse, globalAggStarts, settings);
   } else {
     printf("WARNING:  Missing or bad value for option PARALMOND AGGREGATION STRATEGY.  Using default.\n");
     formAggregatesDefault(A, C, FineToCoarse, globalAggStarts);
@@ -191,7 +191,9 @@ static void formAggregatesDefault(parCSR *A, parCSR *C,
     ogsGatherScatter(states, ogsInt, ogsAdd, A->ogs);
 
     // if number of undecided nodes = 0, algorithm terminates
-    hlong cnt = std::count(states, states+N, 0);
+    hlong cnt = 0;
+    for (dlong n=0;n<N;n++) if (states[n]==0) cnt++;
+
     MPI_Allreduce(&cnt,&done,1,MPI_HLONG, MPI_SUM,A->comm);
     done = (done == 0) ? 1 : 0;
   }
@@ -344,8 +346,8 @@ int compareNBSmaxLPSCN(const void *a, const void *b)
   if (pa->Nnbs + pa->LNN < pb->Nnbs + pb->LNN)  return +1;
   if (pa->Nnbs + pa->LNN > pb->Nnbs + pb->LNN)  return -1;
 
-  if (pa->index < pa->index ) return +1;
-  if (pa->index > pa->index ) return -1;
+  if (pa->index < pb->index ) return +1;
+  if (pa->index > pb->index ) return -1;
 
   return 0;
 }
@@ -359,8 +361,8 @@ int compareNBSminLPSCN(const void *a, const void *b)
   if (pa->Nnbs + pa->LNN < pb->Nnbs + pb->LNN)  return -1;
   if (pa->Nnbs + pa->LNN > pb->Nnbs + pb->LNN)  return +1;
 
-  if (pa->index < pa->index ) return +1;
-  if (pa->index > pa->index ) return -1;
+  if (pa->index < pb->index ) return +1;
+  if (pa->index > pb->index ) return -1;
 
   return 0;
 }
@@ -368,23 +370,20 @@ int compareNBSminLPSCN(const void *a, const void *b)
 static void formAggregatesLPSCN(parCSR *A, parCSR *C,
                                 hlong* FineToCoarse,
                                 hlong* globalAggStarts,
-                                setupAide options) {
+                                settings_t& settings) {
   int rank, size;
   MPI_Comm_rank(A->comm, &rank);
   MPI_Comm_size(A->comm, &size);
 
   const dlong N   = C->Nrows;
   const dlong M   = C->Ncols;
-  const dlong diagNNZ = C->diag->nnz;
 
   dlong   *states = (dlong *)    calloc(M, sizeof(dlong));    //  M > N
   for(dlong i=0; i<N; i++)   // initialize states to -1
     states[i] = -1;
 
-  hlong *globalRowStarts = A->globalRowStarts;
-
   // construct the local neigbors
-  nbs_t *V = (nbs_t *) calloc(N,sizeof(nbs_t));
+  nbs_t *V = (nbs_t *) malloc(N*sizeof(nbs_t));
 
   for(dlong i=0; i<N; i++){
     V[i].index = i;
@@ -398,9 +397,9 @@ static void formAggregatesLPSCN(parCSR *A, parCSR *C,
   }
 
   // sort the fake nbs
-  if (options.compareArgs("PARALMOND LPSCN ORDERING", "MAX")) {
+  if (settings.compareSetting("PARALMOND LPSCN ORDERING", "MAX")) {
     qsort(V,N,sizeof(nbs_t),compareNBSmaxLPSCN);
-  } else if (options.compareArgs("PARALMOND LPSCN ORDERING", "MIN")) {
+  } else if (settings.compareSetting("PARALMOND LPSCN ORDERING", "MIN")) {
     qsort(V,N,sizeof(nbs_t),compareNBSminLPSCN);
   } else { //default NONE
    //do nothing, use the native ordering
@@ -465,7 +464,7 @@ static void formAggregatesLPSCN(parCSR *A, parCSR *C,
       int Nneighbors = end - start;
 
       if (Nneighbors > 1){    // at least one neighbor
-        dlong Agg;
+        dlong Agg = 0;
         int maxConnections=0;
 
         int Nactive = Nneighbors;

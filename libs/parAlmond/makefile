@@ -32,26 +32,30 @@ else
 endif
 endif
 
+LIBPARALMOND_DIR=${LIBP_LIBS_DIR}/parAlmond
+
 #libraries
 OGS_DIR      =${LIBP_LIBS_DIR}/gatherScatter
 
 #includes
-INCLUDES=-I. \
-				 -I$(OGS_DIR) \
-				 ${LIBP_INCLUDES}
+INCLUDES=${LIBP_INCLUDES} \
+         -I${LIBP_LIBS_DIR}/include \
+         -I${LIBPARALMOND_DIR} \
+         -I./include
 
 #defines
 DEFINES =${LIBP_DEFINES} \
-				 -DDPARALMOND='"${CURDIR}"'
+         -DDPARALMOND='"${CURDIR}"'
 
 #.cpp compilation flags
 PARALMOND_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
 
 #object dependancies
-DEPS=$(wildcard *.hpp) \
-     $(wildcard include/*.hpp) \
-     $(wildcard $(LIBP_INCLUDE_DIR)/*.h) \
-     $(OGS_DIR)/ogs.hpp
+DEPS=$(wildcard $(LIBP_INCLUDE_DIR)/*.h) \
+     $(wildcard ${LIBPARALMOND_DIR}/include/*.h) \
+     $(wildcard ${LIBPARALMOND_DIR}/include/*.hpp) \
+     ${LIBP_INCLUDE_DIR}/ogs.hpp \
+     ${LIBP_INCLUDE_DIR}/parAlmond.hpp
 
 SRC =$(wildcard src/*.cpp) \
      $(wildcard src/agmgSetup/*.cpp)
@@ -64,14 +68,14 @@ OBJS=$(SRC:.cpp=.o)
 
 all: lib
 
-lib: libparAlmond.a silentUpdate
+lib: ../libparAlmond.a silentUpdate
 
-libparAlmond.a: $(OBJS)
+../libparAlmond.a: $(OBJS)
 ifneq (,${verbose})
-	ar -cr libparAlmond.a $(OBJS)
+	ar -cr ../libparAlmond.a $(OBJS)
 else
 	@printf "%b" "$(LIB_COLOR)Building library $(@F)$(NO_COLOR)\n";
-	@ar -cr libparAlmond.a $(OBJS)
+	@ar -cr ../libparAlmond.a $(OBJS)
 endif
 
 silentUpdate:
@@ -88,4 +92,6 @@ endif
 
 #cleanup
 clean:
-	rm -f src/*.o src/agmgSetup/*.o libparAlmond.a
+	rm -f src/*.o src/agmgSetup/*.o ../libparAlmond.a
+
+realclean: clean

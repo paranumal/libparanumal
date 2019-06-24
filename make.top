@@ -56,10 +56,10 @@ export LIBP_LIBS=-L$(OCCA_DIR)/lib -locca $(links)
 
 export LIBP_DEFINES=-DUSE_OCCA_MEM_BYTE_ALIGN=32 \
 						  		  -DOCCA_VERSION_1_0=1 \
-						  		  -DUSE_NULL_PROJECTION=1 \
+						  		  -DUSE_NULL_PROJECT=1
 						  		  # -DUSE_MASTER_NOEL=1
-						  		  # -DUSE_NULL_PROJECT=1
 						  		  # -DUSE_NULL_BOOST=1
+# 						  		  -DUSE_NULL_PROJECTION=1 \
 
 export LIBP_INCLUDES=-I${LIBP_INCLUDE_DIR} -I${OCCA_DIR}/include
 

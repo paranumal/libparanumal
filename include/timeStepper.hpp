@@ -48,14 +48,20 @@ public:
 
   dfloat dt;
 
-  timeStepper_t(dlong _N, dlong _Nhalo, solver_t& _solver);
+  timeStepper_t(dlong _N, dlong _Nhalo, solver_t& _solver):
+    N(_N), Nhalo(_Nhalo),
+    solver(_solver),
+    comm(_solver.comm),
+    device(_solver.device),
+    settings(_solver.settings),
+    props(_solver.props) {}
 
   static timeStepper_t* Setup(dlong N, dlong Nhalo, solver_t& solver);
 
   virtual void Init()=0;
   virtual void Run(occa::memory& o_q, dfloat start, dfloat end)=0;
 
-  void SetTimeStep(dfloat dt_);
+  void SetTimeStep(dfloat dt_) {dt = dt_;};
 };
 
 class lserk4: public timeStepper_t {

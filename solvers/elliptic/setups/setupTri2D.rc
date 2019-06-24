@@ -1,16 +1,11 @@
 [FORMAT]
-1.0
-
-[BENCHMARK]
-SOLVE
-#NONE
-#BP5
+2.0
 
 [DATA FILE]
-data/ellipticHomogeneous2D.h
+data/ellipticSine2D.h
 
 [MESH FILE]
-../../meshes/cavityH0025.msh
+BOX
 
 [MESH DIMENSION]
 2
@@ -18,8 +13,29 @@ data/ellipticHomogeneous2D.h
 [ELEMENT TYPE] # number of edges
 3
 
+[BOX NX]
+10
+
+[BOX NY]
+10
+
+[BOX NZ]
+10
+
+[BOX DIMX]
+1
+
+[BOX DIMY]
+1
+
+[BOX DIMZ]
+1
+
+[BOX BOUNDARY FLAG]
+1
+
 [POLYNOMIAL DEGREE]
-6
+4
 
 [THREAD MODEL]
 CUDA
@@ -31,24 +47,19 @@ CUDA
 0
 
 [LAMBDA]
-0
-
-# can add FLEXIBLE to PCG
-[KRYLOV SOLVER]
-PCG
+1
 
 # can be IPDG, or CONTINUOUS
 [DISCRETIZATION]
 CONTINUOUS
 
-# can be NODAL or BERN
-[BASIS]
-NODAL
+# can add FLEXIBLE to PCG
+[LINEAR SOLVER]
+PCG
 
 # can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
 [PRECONDITIONER]
-MULTIGRID
-
+NONE
 
 ########## MULTIGRID Options ##############
 
@@ -60,7 +71,7 @@ HALFDOFS
 # LOCALPATCH smoother can include EXACT
 # can include CHEBYSHEV for smoother acceleration
 [MULTIGRID SMOOTHER]
-DAMPEDJACOBI,CHEBYSHEV
+CHEBYSHEV
 
 # can be any integer >0
 [MULTIGRID CHEBYSHEV DEGREE]
@@ -90,34 +101,18 @@ STRONGNODES
 # can be DEFAULT or LPSCN
 [PARALMOND AGGREGATION STRATEGY]
 DEFAULT
-#LPSCN
 
 # can be MAX, MIN, or NONE
 [PARALMOND LPSCN ORDERING]
 MAX
-#MIN
 
 ###########################################
 
-[RESTART FROM FILE]
-0
+[OUTPUT TO FILE]
+TRUE
 
 [OUTPUT FILE NAME]
-cavity
+elliptic
 
 [VERBOSE]
 TRUE
-
-# set to 0 (zero) to disable reductions
-[DEBUG ENABLE REDUCTIONS]
-1
-
-# set to 0 (zero) to disable gather-scatter
-[DEBUG ENABLE OGS]
-1
-
-[MAXIMUM ITERATIONS]
-1000
-
-[FIXED ITERATION COUNT]
-FALSE

@@ -24,123 +24,102 @@ SOFTWARE.
 
 */
 
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-
-#include "mesh3D.h"
+#include "elliptic.hpp"
 
 // interpolate data to plot nodes and save to file (one per process
-extern "C"
-{
-void ellipticPlotVTUHex3D(mesh3D *mesh, char *fileNameBase, int fld);
-}
-
-void ellipticPlotVTUHex3D(mesh3D *mesh, char *fileNameBase, int fld){
-
-  int rank;
-  rank = mesh->rank;
+void elliptic_t::PlotFields(dfloat* Q, char *fileName){
 
   FILE *fp;
-  char fileName[BUFSIZ];
-  sprintf(fileName, "%s_%04d.vtu", fileNameBase, rank);
-  // strcpy(fileName,fileNameBase);
 
   fp = fopen(fileName, "w");
 
   fprintf(fp, "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"BigEndian\">\n");
   fprintf(fp, "  <UnstructuredGrid>\n");
-
-  int Eloc = (mesh->Nq-1)*(mesh->Nq-1)*(mesh->Nq-1);
-  //  printf("N = %d, Eloc = %d, Nel = %d\n",
-  //	 mesh->Nq-1, Eloc, mesh->Nelements);
-
-  fprintf(fp, "    <Piece NumberOfPoints=\"" dlongFormat "\" NumberOfCells=\"" dlongFormat "\">\n",
-          mesh->Nelements*mesh->Np,
-          mesh->Nelements*Eloc);
+  fprintf(fp, "    <Piece NumberOfPoints=\"%d\" NumberOfCells=\"%d\">\n",
+          mesh.Nelements*mesh.plotNp,
+          mesh.Nelements*mesh.plotNelements);
 
   // write out nodes
   fprintf(fp, "      <Points>\n");
   fprintf(fp, "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
 
   // compute plot node coordinates on the fly
-  for(dlong e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Np;++n){
-      dlong id = n + e*mesh->Np;
+  for(dlong e=0;e<mesh.Nelements;++e){
+    for(int n=0;n<mesh.plotNp;++n){
+      dfloat plotxn = 0, plotyn = 0, plotzn = 0;
+
+      for(int m=0;m<mesh.Np;++m){
+        plotxn += mesh.plotInterp[n*mesh.Np+m]*mesh.x[m+e*mesh.Np];
+        plotyn += mesh.plotInterp[n*mesh.Np+m]*mesh.y[m+e*mesh.Np];
+        plotzn += mesh.plotInterp[n*mesh.Np+m]*mesh.z[m+e*mesh.Np];
+      }
+
       fprintf(fp, "       ");
-      fprintf(fp, "%g %g %g\n",
-	      mesh->x[id],
-	      mesh->y[id],
-	      mesh->z[id]);
+      fprintf(fp, "%g %g %g\n", plotxn,plotyn,plotzn);
     }
   }
   fprintf(fp, "        </DataArray>\n");
   fprintf(fp, "      </Points>\n");
 
-  //  printf("Nelements = %d, Np = %d\n", mesh->Nelements, mesh->Np);
 
-  // write out pressure
+  // write out fields
   fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
-  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"pressure\" Format=\"ascii\">\n");
+  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Fields\" NumberOfComponents=\"%d\" Format=\"ascii\">\n", Nfields);
+  for(dlong e=0;e<mesh.Nelements;++e){
+    for(int n=0;n<mesh.plotNp;++n){
+      dfloat plotqn[Nfields];
 
-  for(dlong e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Np;++n){
-      dfloat qn = mesh->q[n+fld*mesh->Np + e*mesh->Nfields*mesh->Np];
+      for (int f=0;f<Nfields;f++) plotqn[f] = 0;
+
+      for(int m=0;m<mesh.Np;++m){
+        for (int f=0;f<Nfields;f++) {
+          dfloat qm = Q[e*mesh.Np*Nfields+f*mesh.Np+m];
+          plotqn[f] += mesh.plotInterp[n*mesh.Np+m]*qm;
+        }
+      }
+
       fprintf(fp, "       ");
-      fprintf(fp, "%17.15lf\n", qn);
+      for (int f=0;f<Nfields;f++)
+        fprintf(fp, "%g ", plotqn[f]);
+      fprintf(fp, "\n");
     }
   }
-
   fprintf(fp, "       </DataArray>\n");
+
   fprintf(fp, "     </PointData>\n");
 
   fprintf(fp, "    <Cells>\n");
   fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");
 
-  for(dlong e=0;e<mesh->Nelements;++e){
-    for(int k=0;k<mesh->Nq-1;++k){
-      for(int j=0;j<mesh->Nq-1;++j){
-	for(int i=0;i<mesh->Nq-1;++i){
-	  int b = e*mesh->Np + i + j*mesh->Nq + k*mesh->Nq*mesh->Nq;
-	  fprintf(fp,
-		  dlongFormat" "
-		  dlongFormat" "
-		  dlongFormat" "
-		  dlongFormat" "
-		  dlongFormat" "
-		  dlongFormat" "
-		  dlongFormat" "
-		  dlongFormat"\n ",
-		  b,
-		  b+1,
-		  b+mesh->Nq+1,
-		  b+mesh->Nq,
-		  b + mesh->Nq*mesh->Nq,
-		  b+1 + mesh->Nq*mesh->Nq,
-		  b+mesh->Nq+1 + mesh->Nq*mesh->Nq,
-		  b+mesh->Nq+ mesh->Nq*mesh->Nq);
-	}
+  for(dlong e=0;e<mesh.Nelements;++e){
+    for(int n=0;n<mesh.plotNelements;++n){
+      fprintf(fp, "       ");
+      for(int m=0;m<mesh.plotNverts;++m){
+        fprintf(fp, "%d ", e*mesh.plotNp + mesh.plotEToV[n*mesh.plotNverts+m]);
       }
+      fprintf(fp, "\n");
     }
   }
-
   fprintf(fp, "        </DataArray>\n");
 
   fprintf(fp, "        <DataArray type=\"Int32\" Name=\"offsets\" Format=\"ascii\">\n");
   dlong cnt = 0;
-  for(dlong e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<Eloc;++n){
-      cnt += 8;
+  for(dlong e=0;e<mesh.Nelements;++e){
+    for(int n=0;n<mesh.plotNelements;++n){
+      cnt += mesh.plotNverts;
       fprintf(fp, "       ");
-      fprintf(fp, dlongFormat"\n", cnt);
+      fprintf(fp, "%d\n", cnt);
     }
   }
   fprintf(fp, "       </DataArray>\n");
 
   fprintf(fp, "       <DataArray type=\"Int32\" Name=\"types\" Format=\"ascii\">\n");
-  for(dlong e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<Eloc;++n){
-      fprintf(fp, "12\n"); // HEX code ?
+  for(dlong e=0;e<mesh.Nelements;++e){
+    for(int n=0;n<mesh.plotNelements;++n){
+      if(mesh.dim==2)
+        fprintf(fp, "5\n");
+      else
+        fprintf(fp, "10\n");
     }
   }
   fprintf(fp, "        </DataArray>\n");
@@ -149,4 +128,5 @@ void ellipticPlotVTUHex3D(mesh3D *mesh, char *fileNameBase, int fld){
   fprintf(fp, "  </UnstructuredGrid>\n");
   fprintf(fp, "</VTKFile>\n");
   fclose(fp);
+
 }

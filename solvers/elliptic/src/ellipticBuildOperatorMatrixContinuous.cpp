@@ -24,13 +24,15 @@ SOFTWARE.
 
 */
 
-#include "elliptic.h"
+#include "elliptic.hpp"
+#include "../mesh/include/meshDefines2D.h"
+#include "../mesh/include/meshDefines3D.h"
 
 // compare on global indices
 int parallelCompareRowColumn(const void *a, const void *b){
 
-  nonZero_t *fa = (nonZero_t*) a;
-  nonZero_t *fb = (nonZero_t*) b;
+  parAlmond::nonZero_t *fa = (parAlmond::nonZero_t*) a;
+  parAlmond::nonZero_t *fb = (parAlmond::nonZero_t*) b;
 
   if(fa->row < fb->row) return -1;
   if(fa->row > fb->row) return +1;
@@ -41,35 +43,35 @@ int parallelCompareRowColumn(const void *a, const void *b){
   return 0;
 }
 
-void elliptic_t::BuildContinuous(nonZero_t **A, dlong *nnz, ogs_t **ogs, hlong *globalStarts) {
+void elliptic_t::BuildOperatorMatrixContinuous(parAlmond::parCOO& A) {
 
   switch(mesh.elementType){
   case TRIANGLES:
-    BuildContinuousTri2D(A, nnz, ogs, globalStarts); break;
+    BuildOperatorMatrixContinuousTri2D(A); break;
   case QUADRILATERALS:
   {
     if(mesh.dim==2)
-      BuildContinuousQuad2D(A, nnz, ogs, globalStarts);
+      BuildOperatorMatrixContinuousQuad2D(A);
     else
-      BuildContinuousQuad3D(A, nnz, ogs, globalStarts);
+      BuildOperatorMatrixContinuousQuad3D(A);
 
     break;
   }
   case TETRAHEDRA:
-    BuildContinuousTet3D(A, nnz, ogs, globalStarts); break;
+    BuildOperatorMatrixContinuousTet3D(A); break;
   case HEXAHEDRA:
-    BuildContinuousHex3D(A, nnz, ogs, globalStarts); break;
+    BuildOperatorMatrixContinuousHex3D(A); break;
   }
 }
 
-void elliptic_t::BuildContinuousTri2D(nonZero_t **A, dlong *nnz, ogs_t **ogs, hlong *globalStarts) {
+void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO& A) {
 
   int rank = mesh.rank;
 
   /* use the masked gs handle to define a global ordering */
 
   // number of degrees of freedom on this rank (after gathering)
-  hlong Ngather = ogs->Ngather;
+  hlong Ngather = ogsMasked->Ngather;
   dlong Ntotal  = mesh.Np*mesh.Nelements;
 
   // create a global numbering system
@@ -77,13 +79,14 @@ void elliptic_t::BuildContinuousTri2D(nonZero_t **A, dlong *nnz, ogs_t **ogs, hl
   int   *owner     = (int *) calloc(Ngather,sizeof(int));
 
   // every gathered degree of freedom has its own global id
-  MPI_Allgather(&Ngather, 1, MPI_HLONG, globalStarts+1, 1, MPI_HLONG, mesh.comm);
+  A.globalStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  MPI_Allgather(&Ngather, 1, MPI_HLONG, A.globalStarts+1, 1, MPI_HLONG, mesh.comm);
   for(int r=0;r<mesh.size;++r)
-    globalStarts[r+1] = globalStarts[r]+globalStarts[r+1];
+    A.globalStarts[r+1] = A.globalStarts[r]+A.globalStarts[r+1];
 
   //use the offsets to set a consecutive global numbering
-  for (dlong n =0;n<ogs->Ngather;n++) {
-    globalIds[n] = n + globalStarts[rank];
+  for (dlong n =0;n<ogsMasked->Ngather;n++) {
+    globalIds[n] = n + A.globalStarts[rank];
     owner[n] = rank;
   }
 
@@ -91,15 +94,15 @@ void elliptic_t::BuildContinuousTri2D(nonZero_t **A, dlong *nnz, ogs_t **ogs, hl
   hlong *globalNumbering = (hlong *) calloc(Ntotal,sizeof(hlong));
   int *globalOwners = (int *) calloc(Ntotal,sizeof(int));
   for (dlong n=0;n<Ntotal;n++) globalNumbering[n] = -1;
-  ogsScatter(globalNumbering, globalIds, ogsHlong, ogsAdd, ogs);
-  ogsScatter(globalOwners, owner, ogsInt, ogsAdd, ogs);
+  ogsScatter(globalNumbering, globalIds, ogsHlong, ogsAdd, ogsMasked);
+  ogsScatter(globalOwners, owner, ogsInt, ogsAdd, ogsMasked);
 
   free(globalIds); free(owner);
 
   // Build non-zeros of stiffness matrix (unassembled)
   dlong nnzLocal = mesh.Np*mesh.Np*mesh.Nelements;
 
-  nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnzLocal, sizeof(nonZero_t));
+  parAlmond::nonZero_t *sendNonZeros = (parAlmond::nonZero_t*) calloc(nnzLocal, sizeof(parAlmond::nonZero_t));
   int *AsendCounts  = (int*) calloc(mesh.size, sizeof(int));
   int *ArecvCounts  = (int*) calloc(mesh.size, sizeof(int));
   int *AsendOffsets = (int*) calloc(mesh.size+1, sizeof(int));
@@ -119,7 +122,7 @@ void elliptic_t::BuildContinuousTri2D(nonZero_t **A, dlong *nnz, ogs_t **ogs, hl
     }
   }
 
-  if(mesh.rank==0) printf("Building full FEM matrix...");fflush(stdout);
+  if(mesh.rank==0) {printf("Building full FEM matrix...");fflush(stdout);}
 
   //Build unassembed non-zeros
   dlong cnt =0;
@@ -175,43 +178,43 @@ void elliptic_t::BuildContinuousTri2D(nonZero_t **A, dlong *nnz, ogs_t **ogs, hl
     AsendCounts[sendNonZeros[n].ownerRank]++;
 
   // sort by row ordering
-  qsort(sendNonZeros, cnt, sizeof(nonZero_t), parallelCompareRowColumn);
+  qsort(sendNonZeros, cnt, sizeof(parAlmond::nonZero_t), parallelCompareRowColumn);
 
   // find how many nodes to expect (should use sparse version)
   MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, mesh.comm);
 
   // find send and recv offsets for gather
-  *nnz = 0;
+  A.nnz = 0;
   for(int r=0;r<mesh.size;++r){
     AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
     ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
-    *nnz += ArecvCounts[r];
+    A.nnz += ArecvCounts[r];
   }
 
-  *A = (nonZero_t*) calloc(*nnz, sizeof(nonZero_t));
+  A.entries = (parAlmond::nonZero_t*) calloc(A.nnz, sizeof(parAlmond::nonZero_t));
 
   // determine number to receive
   MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_NONZERO_T,
-                        (*A), ArecvCounts, ArecvOffsets, MPI_NONZERO_T,
-                        mesh.comm);
+                   A.entries, ArecvCounts, ArecvOffsets, MPI_NONZERO_T,
+                   mesh.comm);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
-  qsort((*A), *nnz, sizeof(nonZero_t), parallelCompareRowColumn);
+  qsort((A.entries), A.nnz, sizeof(parAlmond::nonZero_t), parallelCompareRowColumn);
 
   // compress duplicates
   cnt = 0;
-  for(dlong n=1;n<*nnz;++n){
-    if((*A)[n].row == (*A)[cnt].row &&
-       (*A)[n].col == (*A)[cnt].col){
-      (*A)[cnt].val += (*A)[n].val;
+  for(dlong n=1;n<A.nnz;++n){
+    if(A.entries[n].row == A.entries[cnt].row &&
+       A.entries[n].col == A.entries[cnt].col){
+       A.entries[cnt].val += A.entries[n].val;
     }
     else{
       ++cnt;
-      (*A)[cnt] = (*A)[n];
+      A.entries[cnt] = A.entries[n];
     }
   }
-  if (*nnz) cnt++;
-  *nnz = cnt;
+  if (A.nnz) cnt++;
+  A.nnz = cnt;
 
   if(mesh.rank==0) printf("done.\n");
 
@@ -233,14 +236,14 @@ void elliptic_t::BuildContinuousTri2D(nonZero_t **A, dlong *nnz, ogs_t **ogs, hl
 }
 
 
-void elliptic_t::BuildContinuousQuad3D(nonZero_t **A, dlong *nnz, ogs_t **ogs, hlong *globalStarts) {
+void elliptic_t::BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO& A) {
 
   int rank = mesh.rank;
 
   //use the masked gs handle to define a global ordering
 
   // number of degrees of freedom on this rank (after gathering)
-  hlong Ngather = ogs->Ngather;
+  hlong Ngather = ogsMasked->Ngather;
   dlong Ntotal  = mesh.Np*mesh.Nelements;
 
   // create a global numbering system
@@ -248,13 +251,14 @@ void elliptic_t::BuildContinuousQuad3D(nonZero_t **A, dlong *nnz, ogs_t **ogs, h
   int   *owner     = (int *) calloc(Ngather,sizeof(int));
 
   // every gathered degree of freedom has its own global id
-  MPI_Allgather(&Ngather, 1, MPI_HLONG, globalStarts+1, 1, MPI_HLONG, mesh.comm);
+  A.globalStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  MPI_Allgather(&Ngather, 1, MPI_HLONG, A.globalStarts+1, 1, MPI_HLONG, mesh.comm);
   for(int r=0;r<mesh.size;++r)
-    globalStarts[r+1] = globalStarts[r]+globalStarts[r+1];
+    A.globalStarts[r+1] = A.globalStarts[r]+A.globalStarts[r+1];
 
   //use the offsets to set a consecutive global numbering
-  for (dlong n =0;n<ogs->Ngather;n++) {
-    globalIds[n] = n + globalStarts[rank];
+  for (dlong n =0;n<ogsMasked->Ngather;n++) {
+    globalIds[n] = n + A.globalStarts[rank];
     owner[n] = rank;
   }
 
@@ -262,14 +266,14 @@ void elliptic_t::BuildContinuousQuad3D(nonZero_t **A, dlong *nnz, ogs_t **ogs, h
   hlong *globalNumbering = (hlong *) calloc(Ntotal,sizeof(hlong));
   int *globalOwners = (int *) calloc(Ntotal,sizeof(int));
   for (dlong n=0;n<Ntotal;n++) globalNumbering[n] = -1;
-  ogsScatter(globalNumbering, globalIds, ogsHlong, ogsAdd, ogs);
-  ogsScatter(globalOwners, owner, ogsInt, ogsAdd, ogs);
+  ogsScatter(globalNumbering, globalIds, ogsHlong, ogsAdd, ogsMasked);
+  ogsScatter(globalOwners, owner, ogsInt, ogsAdd, ogsMasked);
 
   free(globalIds); free(owner);
 
   // 2. Build non-zeros of stiffness matrix (unassembled)
   dlong nnzLocal = mesh.Np*mesh.Np*mesh.Nelements;
-  nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnzLocal, sizeof(nonZero_t));
+  parAlmond::nonZero_t *sendNonZeros = (parAlmond::nonZero_t*) calloc(nnzLocal, sizeof(parAlmond::nonZero_t));
   int *AsendCounts  = (int*) calloc(mesh.size, sizeof(int));
   int *ArecvCounts  = (int*) calloc(mesh.size, sizeof(int));
   int *AsendOffsets = (int*) calloc(mesh.size+1, sizeof(int));
@@ -278,7 +282,7 @@ void elliptic_t::BuildContinuousQuad3D(nonZero_t **A, dlong *nnz, ogs_t **ogs, h
   int *mask = (int *) calloc(mesh.Np*mesh.Nelements,sizeof(int));
   for (dlong n=0;n<Nmasked;n++) mask[maskIds[n]] = 1;
 
-  if(mesh.rank==0) printf("Building full FEM matrix...");fflush(stdout);
+  if(mesh.rank==0) {printf("Building full FEM matrix...");fflush(stdout);}
 
 #if 0
   hlong NTf = mesh.Nelements*mesh.Np * mesh.Nelements*mesh.Np ;
@@ -415,43 +419,43 @@ void elliptic_t::BuildContinuousQuad3D(nonZero_t **A, dlong *nnz, ogs_t **ogs, h
     AsendCounts[sendNonZeros[n].ownerRank]++;
 
   // sort by row ordering
-  qsort(sendNonZeros, cnt, sizeof(nonZero_t), parallelCompareRowColumn);
+  qsort(sendNonZeros, cnt, sizeof(parAlmond::nonZero_t), parallelCompareRowColumn);
 
   // find how many nodes to expect (should use sparse version)
   MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, mesh.comm);
 
   // find send and recv offsets for gather
-  *nnz = 0;
+  A.nnz = 0;
   for(int r=0;r<mesh.size;++r){
     AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
     ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
-    *nnz += ArecvCounts[r];
+    A.nnz += ArecvCounts[r];
   }
 
-  *A = (nonZero_t*) calloc(*nnz, sizeof(nonZero_t));
+  A.entries = (parAlmond::nonZero_t*) calloc(A.nnz, sizeof(parAlmond::nonZero_t));
 
   // determine number to receive
   MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_NONZERO_T,
-                        (*A), ArecvCounts, ArecvOffsets, MPI_NONZERO_T,
-                        mesh.comm);
+                   A.entries, ArecvCounts, ArecvOffsets, MPI_NONZERO_T,
+                   mesh.comm);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
-  qsort((*A), *nnz, sizeof(nonZero_t), parallelCompareRowColumn);
+  qsort((A.entries), A.nnz, sizeof(parAlmond::nonZero_t), parallelCompareRowColumn);
 
   // compress duplicates
   cnt = 0;
-  for(dlong n=1;n<*nnz;++n){
-    if((*A)[n].row == (*A)[cnt].row &&
-       (*A)[n].col == (*A)[cnt].col){
-      (*A)[cnt].val += (*A)[n].val;
+  for(dlong n=1;n<A.nnz;++n){
+    if(A.entries[n].row == A.entries[cnt].row &&
+       A.entries[n].col == A.entries[cnt].col){
+       A.entries[cnt].val += A.entries[n].val;
     }
     else{
       ++cnt;
-      (*A)[cnt] = (*A)[n];
+      A.entries[cnt] = A.entries[n];
     }
   }
-  if (*nnz) cnt++;
-  *nnz = cnt;
+  if (A.nnz) cnt++;
+  A.nnz = cnt;
 
 #if 0
   // Write matlab dat for postprocess
@@ -460,7 +464,7 @@ void elliptic_t::BuildContinuousQuad3D(nonZero_t **A, dlong *nnz, ogs_t **ogs, h
   FILE *fp;
   fp = fopen(fname, "w");
 
-  for(dlong n=1;n<*nnz;++n){
+  for(dlong n=1;n<A.nnz;++n){
       fprintf(fp,"%d %d %.8e\n", (*A)[n].row+1, (*A)[n].col+1, (*A)[n].val);
   }
 
@@ -482,14 +486,14 @@ void elliptic_t::BuildContinuousQuad3D(nonZero_t **A, dlong *nnz, ogs_t **ogs, h
 }
 
 
-void elliptic_t::BuildContinuousQuad2D(nonZero_t **A, dlong *nnz, ogs_t **ogs, hlong *globalStarts) {
+void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO& A) {
 
   int rank = mesh.rank;
 
   //use the masked gs handle to define a global ordering
 
   // number of degrees of freedom on this rank (after gathering)
-  hlong Ngather = ogs->Ngather;
+  hlong Ngather = ogsMasked->Ngather;
   dlong Ntotal  = mesh.Np*mesh.Nelements;
 
   // create a global numbering system
@@ -497,13 +501,14 @@ void elliptic_t::BuildContinuousQuad2D(nonZero_t **A, dlong *nnz, ogs_t **ogs, h
   int   *owner     = (int *) calloc(Ngather,sizeof(int));
 
   // every gathered degree of freedom has its own global id
-  MPI_Allgather(&Ngather, 1, MPI_HLONG, globalStarts+1, 1, MPI_HLONG, mesh.comm);
+  A.globalStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  MPI_Allgather(&Ngather, 1, MPI_HLONG, A.globalStarts+1, 1, MPI_HLONG, mesh.comm);
   for(int r=0;r<mesh.size;++r)
-    globalStarts[r+1] = globalStarts[r]+globalStarts[r+1];
+    A.globalStarts[r+1] = A.globalStarts[r]+A.globalStarts[r+1];
 
   //use the offsets to set a consecutive global numbering
-  for (dlong n =0;n<ogs->Ngather;n++) {
-    globalIds[n] = n + globalStarts[rank];
+  for (dlong n =0;n<ogsMasked->Ngather;n++) {
+    globalIds[n] = n + A.globalStarts[rank];
     owner[n] = rank;
   }
 
@@ -511,14 +516,14 @@ void elliptic_t::BuildContinuousQuad2D(nonZero_t **A, dlong *nnz, ogs_t **ogs, h
   hlong *globalNumbering = (hlong *) calloc(Ntotal,sizeof(hlong));
   int *globalOwners = (int *) calloc(Ntotal,sizeof(int));
   for (dlong n=0;n<Ntotal;n++) globalNumbering[n] = -1;
-  ogsScatter(globalNumbering, globalIds, ogsHlong, ogsAdd, ogs);
-  ogsScatter(globalOwners, owner, ogsInt, ogsAdd, ogs);
+  ogsScatter(globalNumbering, globalIds, ogsHlong, ogsAdd, ogsMasked);
+  ogsScatter(globalOwners, owner, ogsInt, ogsAdd, ogsMasked);
 
   free(globalIds); free(owner);
 
   // 2. Build non-zeros of stiffness matrix (unassembled)
   dlong nnzLocal = mesh.Np*mesh.Np*mesh.Nelements;
-  nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnzLocal, sizeof(nonZero_t));
+  parAlmond::nonZero_t *sendNonZeros = (parAlmond::nonZero_t*) calloc(nnzLocal, sizeof(parAlmond::nonZero_t));
   int *AsendCounts  = (int*) calloc(mesh.size, sizeof(int));
   int *ArecvCounts  = (int*) calloc(mesh.size, sizeof(int));
   int *AsendOffsets = (int*) calloc(mesh.size+1, sizeof(int));
@@ -527,7 +532,7 @@ void elliptic_t::BuildContinuousQuad2D(nonZero_t **A, dlong *nnz, ogs_t **ogs, h
   int *mask = (int *) calloc(mesh.Np*mesh.Nelements,sizeof(int));
   for (dlong n=0;n<Nmasked;n++) mask[maskIds[n]] = 1;
 
-  if(mesh.rank==0) printf("Building full FEM matrix...");fflush(stdout);
+  if(mesh.rank==0) {printf("Building full FEM matrix...");fflush(stdout);}
 
   //Build unassembed non-zeros
   dlong cnt =0;
@@ -611,43 +616,43 @@ void elliptic_t::BuildContinuousQuad2D(nonZero_t **A, dlong *nnz, ogs_t **ogs, h
     AsendCounts[sendNonZeros[n].ownerRank]++;
 
   // sort by row ordering
-  qsort(sendNonZeros, cnt, sizeof(nonZero_t), parallelCompareRowColumn);
+  qsort(sendNonZeros, cnt, sizeof(parAlmond::nonZero_t), parallelCompareRowColumn);
 
   // find how many nodes to expect (should use sparse version)
   MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, mesh.comm);
 
   // find send and recv offsets for gather
-  *nnz = 0;
+  A.nnz = 0;
   for(int r=0;r<mesh.size;++r){
     AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
     ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
-    *nnz += ArecvCounts[r];
+    A.nnz += ArecvCounts[r];
   }
 
-  *A = (nonZero_t*) calloc(*nnz, sizeof(nonZero_t));
+  A.entries = (parAlmond::nonZero_t*) calloc(A.nnz, sizeof(parAlmond::nonZero_t));
 
   // determine number to receive
   MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_NONZERO_T,
-                        (*A), ArecvCounts, ArecvOffsets, MPI_NONZERO_T,
-                        mesh.comm);
+                   A.entries, ArecvCounts, ArecvOffsets, MPI_NONZERO_T,
+                   mesh.comm);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
-  qsort((*A), *nnz, sizeof(nonZero_t), parallelCompareRowColumn);
+  qsort((A.entries), A.nnz, sizeof(parAlmond::nonZero_t), parallelCompareRowColumn);
 
   // compress duplicates
   cnt = 0;
-  for(dlong n=1;n<*nnz;++n){
-    if((*A)[n].row == (*A)[cnt].row &&
-       (*A)[n].col == (*A)[cnt].col){
-      (*A)[cnt].val += (*A)[n].val;
+  for(dlong n=1;n<A.nnz;++n){
+    if(A.entries[n].row == A.entries[cnt].row &&
+       A.entries[n].col == A.entries[cnt].col){
+       A.entries[cnt].val += A.entries[n].val;
     }
     else{
       ++cnt;
-      (*A)[cnt] = (*A)[n];
+      A.entries[cnt] = A.entries[n];
     }
   }
-  if (*nnz) cnt++;
-  *nnz = cnt;
+  if (A.nnz) cnt++;
+  A.nnz = cnt;
 
 #if 0
   // Write matlab dat for postprocess
@@ -656,7 +661,7 @@ void elliptic_t::BuildContinuousQuad2D(nonZero_t **A, dlong *nnz, ogs_t **ogs, h
   FILE *fp;
   fp = fopen(fname, "w");
 
-  for(dlong n=1;n<*nnz;++n){
+  for(dlong n=1;n<A.nnz;++n){
       fprintf(fp, hlongFormat " " hlongFormat " %.8e\n", (*A)[n].row+1, (*A)[n].col+1, (*A)[n].val);
   }
 
@@ -677,14 +682,14 @@ void elliptic_t::BuildContinuousQuad2D(nonZero_t **A, dlong *nnz, ogs_t **ogs, h
   free(ArecvOffsets);
 }
 
-void elliptic_t::BuildContinuousTet3D(nonZero_t **A, dlong *nnz, ogs_t **ogs, hlong *globalStarts) {
+void elliptic_t::BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO& A) {
 
   int rank = mesh.rank;
 
   //use the masked gs handle to define a global ordering
 
   // number of degrees of freedom on this rank (after gathering)
-  hlong Ngather = ogs->Ngather;
+  hlong Ngather = ogsMasked->Ngather;
   dlong Ntotal  = mesh.Np*mesh.Nelements;
 
   // create a global numbering system
@@ -692,13 +697,14 @@ void elliptic_t::BuildContinuousTet3D(nonZero_t **A, dlong *nnz, ogs_t **ogs, hl
   int   *owner     = (int *) calloc(Ngather,sizeof(int));
 
   // every gathered degree of freedom has its own global id
-  MPI_Allgather(&Ngather, 1, MPI_HLONG, globalStarts+1, 1, MPI_HLONG, mesh.comm);
+  A.globalStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  MPI_Allgather(&Ngather, 1, MPI_HLONG, A.globalStarts+1, 1, MPI_HLONG, mesh.comm);
   for(int r=0;r<mesh.size;++r)
-    globalStarts[r+1] = globalStarts[r]+globalStarts[r+1];
+    A.globalStarts[r+1] = A.globalStarts[r]+A.globalStarts[r+1];
 
   //use the offsets to set a consecutive global numbering
-  for (dlong n =0;n<ogs->Ngather;n++) {
-    globalIds[n] = n + globalStarts[rank];
+  for (dlong n =0;n<ogsMasked->Ngather;n++) {
+    globalIds[n] = n + A.globalStarts[rank];
     owner[n] = rank;
   }
 
@@ -706,8 +712,8 @@ void elliptic_t::BuildContinuousTet3D(nonZero_t **A, dlong *nnz, ogs_t **ogs, hl
   hlong *globalNumbering = (hlong *) calloc(Ntotal,sizeof(hlong));
   int *globalOwners = (int *) calloc(Ntotal,sizeof(int));
   for (dlong n=0;n<Ntotal;n++) globalNumbering[n] = -1;
-  ogsScatter(globalNumbering, globalIds, ogsHlong, ogsAdd, ogs);
-  ogsScatter(globalOwners, owner, ogsInt, ogsAdd, ogs);
+  ogsScatter(globalNumbering, globalIds, ogsHlong, ogsAdd, ogsMasked);
+  ogsScatter(globalOwners, owner, ogsInt, ogsAdd, ogsMasked);
 
   free(globalIds); free(owner);
 
@@ -715,7 +721,7 @@ void elliptic_t::BuildContinuousTet3D(nonZero_t **A, dlong *nnz, ogs_t **ogs, hl
   // Build non-zeros of stiffness matrix (unassembled)
   dlong nnzLocal = mesh.Np*mesh.Np*mesh.Nelements;
 
-  nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnzLocal, sizeof(nonZero_t));
+  parAlmond::nonZero_t *sendNonZeros = (parAlmond::nonZero_t*) calloc(nnzLocal, sizeof(parAlmond::nonZero_t));
   int *AsendCounts  = (int*) calloc(mesh.size, sizeof(int));
   int *ArecvCounts  = (int*) calloc(mesh.size, sizeof(int));
   int *AsendOffsets = (int*) calloc(mesh.size+1, sizeof(int));
@@ -725,7 +731,7 @@ void elliptic_t::BuildContinuousTet3D(nonZero_t **A, dlong *nnz, ogs_t **ogs, hl
   for (dlong n=0;n<Nmasked;n++) mask[maskIds[n]] = 1;
 
   //Build unassembed non-zeros
-  if(mesh.rank==0) printf("Building full FEM matrix...");fflush(stdout);
+  if(mesh.rank==0) {printf("Building full FEM matrix...");fflush(stdout);}
 
   dlong cnt =0;
   //#pragma omp parallel for
@@ -793,43 +799,43 @@ void elliptic_t::BuildContinuousTet3D(nonZero_t **A, dlong *nnz, ogs_t **ogs, hl
     AsendCounts[sendNonZeros[n].ownerRank] += 1;
 
   // sort by row ordering
-  qsort(sendNonZeros, cnt, sizeof(nonZero_t), parallelCompareRowColumn);
+  qsort(sendNonZeros, cnt, sizeof(parAlmond::nonZero_t), parallelCompareRowColumn);
 
   // find how many nodes to expect (should use sparse version)
   MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, mesh.comm);
 
   // find send and recv offsets for gather
-  *nnz = 0;
+  A.nnz = 0;
   for(int r=0;r<mesh.size;++r){
     AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
     ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
-    *nnz += ArecvCounts[r];
+    A.nnz += ArecvCounts[r];
   }
 
-  *A = (nonZero_t*) calloc(*nnz, sizeof(nonZero_t));
+  A.entries = (parAlmond::nonZero_t*) calloc(A.nnz, sizeof(parAlmond::nonZero_t));
 
   // determine number to receive
   MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_NONZERO_T,
-                        (*A), ArecvCounts, ArecvOffsets, MPI_NONZERO_T,
-                        mesh.comm);
+                   A.entries, ArecvCounts, ArecvOffsets, MPI_NONZERO_T,
+                   mesh.comm);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
-  qsort((*A), *nnz, sizeof(nonZero_t), parallelCompareRowColumn);
+  qsort((A.entries), A.nnz, sizeof(parAlmond::nonZero_t), parallelCompareRowColumn);
 
   // compress duplicates
   cnt = 0;
-  for(dlong n=1;n<*nnz;++n){
-    if((*A)[n].row == (*A)[cnt].row &&
-       (*A)[n].col == (*A)[cnt].col){
-      (*A)[cnt].val += (*A)[n].val;
+  for(dlong n=1;n<A.nnz;++n){
+    if(A.entries[n].row == A.entries[cnt].row &&
+       A.entries[n].col == A.entries[cnt].col){
+       A.entries[cnt].val += A.entries[n].val;
     }
     else{
       ++cnt;
-      (*A)[cnt] = (*A)[n];
+      A.entries[cnt] = A.entries[n];
     }
   }
-  if (*nnz) cnt++;
-  *nnz = cnt;
+  if (A.nnz) cnt++;
+  A.nnz = cnt;
 
   if(mesh.rank==0) printf("done.\n");
 
@@ -847,14 +853,14 @@ void elliptic_t::BuildContinuousTet3D(nonZero_t **A, dlong *nnz, ogs_t **ogs, hl
   free(mask);
 }
 
-void elliptic_t::BuildContinuousHex3D(nonZero_t **A, dlong *nnz, ogs_t **ogs, hlong *globalStarts) {
+void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO& A) {
 
   int rank = mesh.rank;
 
   //use the masked gs handle to define a global ordering
 
   // number of degrees of freedom on this rank (after gathering)
-  hlong Ngather = ogs->Ngather;
+  hlong Ngather = ogsMasked->Ngather;
   dlong Ntotal  = mesh.Np*mesh.Nelements;
 
   // create a global numbering system
@@ -862,13 +868,14 @@ void elliptic_t::BuildContinuousHex3D(nonZero_t **A, dlong *nnz, ogs_t **ogs, hl
   int   *owner     = (int *) calloc(Ngather,sizeof(int));
 
   // every gathered degree of freedom has its own global id
-  MPI_Allgather(&Ngather, 1, MPI_HLONG, globalStarts+1, 1, MPI_HLONG, mesh.comm);
+  A.globalStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  MPI_Allgather(&Ngather, 1, MPI_HLONG, A.globalStarts+1, 1, MPI_HLONG, mesh.comm);
   for(int r=0;r<mesh.size;++r)
-    globalStarts[r+1] = globalStarts[r]+globalStarts[r+1];
+    A.globalStarts[r+1] = A.globalStarts[r]+A.globalStarts[r+1];
 
   //use the offsets to set a consecutive global numbering
-  for (dlong n =0;n<ogs->Ngather;n++) {
-    globalIds[n] = n + globalStarts[rank];
+  for (dlong n =0;n<ogsMasked->Ngather;n++) {
+    globalIds[n] = n + A.globalStarts[rank];
     owner[n] = rank;
   }
 
@@ -876,15 +883,15 @@ void elliptic_t::BuildContinuousHex3D(nonZero_t **A, dlong *nnz, ogs_t **ogs, hl
   hlong *globalNumbering = (hlong *) calloc(Ntotal,sizeof(hlong));
   int *globalOwners = (int *) calloc(Ntotal,sizeof(int));
   for (dlong n=0;n<Ntotal;n++) globalNumbering[n] = -1;
-  ogsScatter(globalNumbering, globalIds, ogsHlong, ogsAdd, ogs);
-  ogsScatter(globalOwners, owner, ogsInt, ogsAdd, ogs);
+  ogsScatter(globalNumbering, globalIds, ogsHlong, ogsAdd, ogsMasked);
+  ogsScatter(globalOwners, owner, ogsInt, ogsAdd, ogsMasked);
 
   free(globalIds); free(owner);
 
 
     // 2. Build non-zeros of stiffness matrix (unassembled)
   dlong nnzLocal = mesh.Np*mesh.Np*mesh.Nelements;
-  nonZero_t *sendNonZeros = (nonZero_t*) calloc(nnzLocal, sizeof(nonZero_t));
+  parAlmond::nonZero_t *sendNonZeros = (parAlmond::nonZero_t*) calloc(nnzLocal, sizeof(parAlmond::nonZero_t));
   int *AsendCounts  = (int*) calloc(mesh.size, sizeof(int));
   int *ArecvCounts  = (int*) calloc(mesh.size, sizeof(int));
   int *AsendOffsets = (int*) calloc(mesh.size+1, sizeof(int));
@@ -893,7 +900,7 @@ void elliptic_t::BuildContinuousHex3D(nonZero_t **A, dlong *nnz, ogs_t **ogs, hl
   int *mask = (int *) calloc(mesh.Np*mesh.Nelements,sizeof(int));
   for (dlong n=0;n<Nmasked;n++) mask[maskIds[n]] = 1;
 
-  if(mesh.rank==0) printf("Building full FEM matrix...");fflush(stdout);
+  if(mesh.rank==0) {printf("Building full FEM matrix...");fflush(stdout);}
 
   dlong cnt =0;
   for (dlong e=0;e<mesh.Nelements;e++) {
@@ -1013,43 +1020,43 @@ void elliptic_t::BuildContinuousHex3D(nonZero_t **A, dlong *nnz, ogs_t **ogs, hl
     AsendCounts[sendNonZeros[n].ownerRank]++;
 
   // sort by row ordering
-  qsort(sendNonZeros, cnt, sizeof(nonZero_t), parallelCompareRowColumn);
+  qsort(sendNonZeros, cnt, sizeof(parAlmond::nonZero_t), parallelCompareRowColumn);
 
   // find how many nodes to expect (should use sparse version)
   MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, mesh.comm);
 
   // find send and recv offsets for gather
-  *nnz = 0;
+  A.nnz = 0;
   for(int r=0;r<mesh.size;++r){
     AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
     ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
-    *nnz += ArecvCounts[r];
+    A.nnz += ArecvCounts[r];
   }
 
-  *A = (nonZero_t*) calloc(*nnz, sizeof(nonZero_t));
+  A.entries = (parAlmond::nonZero_t*) calloc(A.nnz, sizeof(parAlmond::nonZero_t));
 
   // determine number to receive
   MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_NONZERO_T,
-                        (*A), ArecvCounts, ArecvOffsets, MPI_NONZERO_T,
-                        mesh.comm);
+                   A.entries, ArecvCounts, ArecvOffsets, MPI_NONZERO_T,
+                   mesh.comm);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
-  qsort((*A), *nnz, sizeof(nonZero_t), parallelCompareRowColumn);
+  qsort((A.entries), A.nnz, sizeof(parAlmond::nonZero_t), parallelCompareRowColumn);
 
   // compress duplicates
   cnt = 0;
-  for(dlong n=1;n<*nnz;++n){
-    if((*A)[n].row == (*A)[cnt].row &&
-       (*A)[n].col == (*A)[cnt].col){
-      (*A)[cnt].val += (*A)[n].val;
+  for(dlong n=1;n<A.nnz;++n){
+    if(A.entries[n].row == A.entries[cnt].row &&
+       A.entries[n].col == A.entries[cnt].col){
+       A.entries[cnt].val += A.entries[n].val;
     }
     else{
       ++cnt;
-      (*A)[cnt] = (*A)[n];
+      A.entries[cnt] = A.entries[n];
     }
   }
-  if (*nnz) cnt++;
-  *nnz = cnt;
+  if (A.nnz) cnt++;
+  A.nnz = cnt;
 
   if(mesh.rank==0) printf("done.\n");
 

@@ -29,8 +29,8 @@ SOFTWARE.
 namespace parAlmond {
 
 
-solver_t *Init(occa::device device, MPI_Comm comm, setupAide options) {
-  solver_t *M = new solver_t(device, comm, options);
+solver_t *Init(occa::device device, MPI_Comm comm, settings_t& settings) {
+  solver_t *M = new solver_t(device, comm, settings);
 
   if (Nrefs==0) buildParAlmondKernels(comm, device);
   Nrefs++;
@@ -39,11 +39,7 @@ solver_t *Init(occa::device device, MPI_Comm comm, setupAide options) {
 }
 
 void AMGSetup(solver_t *MM,
-               hlong* globalRowStarts,       //global partition
-               dlong nnz,                    //--
-               hlong* Ai,                    //-- Local A matrix data (globally indexed, COO storage, row sorted)
-               hlong* Aj,                    //--
-               dfloat* Avals,                //--
+               parCOO& A,                    //-- Local A matrix data (globally indexed, COO storage, row sorted)
                bool nullSpace,
                dfloat nullSpacePenalty){
 
@@ -53,22 +49,21 @@ void AMGSetup(solver_t *MM,
   MPI_Comm_rank(M->comm, &rank);
   MPI_Comm_size(M->comm, &size);
 
-  hlong TotalRows = globalRowStarts[M->size];
-  dlong numLocalRows = (dlong) (globalRowStarts[M->rank+1]-globalRowStarts[M->rank]);
+  hlong TotalRows = A.globalStarts[M->size];
+  dlong numLocalRows = (dlong) (A.globalStarts[M->rank+1]-A.globalStarts[M->rank]);
 
-  if(rank==0) printf("Setting up AMG...");fflush(stdout);
+  if(rank==0) {printf("Setting up AMG...");fflush(stdout);}
 
   //populate null space vector
   dfloat *null = (dfloat *) calloc(numLocalRows, sizeof(dfloat));
-  for (dlong i=0;i<numLocalRows;i++) null[i] = 1/sqrt(TotalRows);
+  for (dlong i=0;i<numLocalRows;i++) null[i] = 1.0/sqrt(TotalRows);
 
-  parCSR *A = new parCSR(numLocalRows,globalRowStarts,
-                          nnz, Ai, Aj, Avals,
-                          nullSpace, null, nullSpacePenalty,
-                          M->comm, M->device);
+  parCSR *csrA = new parCSR(numLocalRows, A,
+                            nullSpace, null, nullSpacePenalty,
+                            M->comm, M->device);
   free(null);
 
-  M->AMGSetup(A);
+  M->AMGSetup(csrA);
 
   if(rank==0) printf("done.\n");
 }

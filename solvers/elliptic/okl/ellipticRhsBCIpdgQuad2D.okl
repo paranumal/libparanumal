@@ -32,41 +32,40 @@ SOFTWARE.
 // nx,ny,nz,sJ,invJ - need WsJ
 
 void surfaceTerms(int e, int sk, int face, int i, int j,
-                  @global const dfloat *sgeo, 
-                  @global const dfloat *x, 
-                  @global const dfloat *y, 
-                  @global const int *vmapM, 
-                  @global const int *EToB, 
+                  const dfloat *sgeo,
+                  const dfloat *x,
+                  const dfloat *y,
+                  const int *vmapM,
+                  const int *EToB,
                   const dfloat tau,
                   dfloat s_dqdx[p_Nq][p_Nq],
                   dfloat s_dqdy[p_Nq][p_Nq],
                   dfloat s_rhsq[p_Nq][p_Nq]){
 
-  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            
-  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            
-  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];                          
-  const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];                           
-                                                                        
-  dfloat dqdxP, dqdyP, qP;                                              
-  dqdxP=0.f; dqdyP=0.f; qP=0.f;                                         
-                                                                        
-  const int bc = EToB[face+p_Nfaces*e];                                 
-  if(bc>0) {                                                            
-    ellipticBoundaryConditions2D(bc, t, x[vmapM[sk]], y[vmapM[sk]], nx, ny, 0.f, 0.f, 0.f, qP, dqdxP, dqdyP);
-  }                                                                     
+  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
+  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
+  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];
+  const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];
 
-  dfloat dq = qP;                                                       
-                                                                        
-  s_dqdx[j][i] += WsJ*nx*dq;                                            
-  s_dqdy[j][i] += WsJ*ny*dq;                                            
-                                                                        
-  s_rhsq[j][i] -= WsJ*(nx*dqdxP + ny*dqdyP+ tau*dq*hinv);               
+  dfloat dqdxP, dqdyP, qP;
+  dqdxP=0.f; dqdyP=0.f; qP=0.f;
+
+  const int bc = EToB[face+p_Nfaces*e];
+  if(bc>0) {
+    ellipticBoundaryConditions2D(bc, x[vmapM[sk]], y[vmapM[sk]], nx, ny, 0.f, 0.f, 0.f, qP, dqdxP, dqdyP);
+  }
+
+  dfloat dq = qP;
+
+  s_dqdx[j][i] += WsJ*nx*dq;
+  s_dqdy[j][i] += WsJ*ny*dq;
+
+  s_rhsq[j][i] -= WsJ*(nx*dqdxP + ny*dqdyP+ tau*dq*hinv);
 }
 
 @kernel void ellipticRhsBCIpdgQuad2D(const dlong Nelements,
                                  @restrict const  dlong *  vmapM,
                                  const dfloat tau,
-                                 const dfloat t,
                                  @restrict const  dfloat *  x,
                                  @restrict const  dfloat *  y,
                                  @restrict const  dfloat *  z,
@@ -128,7 +127,7 @@ void surfaceTerms(int e, int sk, int face, int i, int j,
       //      surfaceTerms(sk3,3,0,j);
       surfaceTerms(e, sk3, 3, 0, j, sgeo, x, y, vmapM, EToB, tau,
                    s_dqdx, s_dqdy, s_rhsq);
-      
+
     }
 
     @barrier("local");

@@ -81,9 +81,30 @@ void linAlg_t::zaxdy(const dlong N, const dfloat alpha, occa::memory& o_x,
   zaxdyKernel(N, alpha, o_x, beta, o_y, o_z);
 }
 
+// \sum o_a
+dfloat linAlg_t::sum(const dlong N, occa::memory& o_a, MPI_Comm comm) {
+  //TODO, maybe complete reduction on device with second kernel?
+  int Nblock = (N+blocksize-1)/blocksize;
+  Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
+
+  sumKernel(Nblock, N, o_a, o_scratch);
+
+  o_scratch.copyTo(scratch, Nblock*sizeof(dfloat));
+
+  dfloat sum = 0;
+  for(dlong n=0;n<Nblock;++n){
+    sum += scratch[n];
+  }
+
+  dfloat globalsum = 0;
+  MPI_Allreduce(&sum, &globalsum, 1, MPI_DFLOAT, MPI_SUM, comm);
+
+  return globalsum;
+}
+
 // ||o_a||_2
 dfloat linAlg_t::norm2(const dlong N, occa::memory& o_a, MPI_Comm comm) {
-  //TODO, maybe complete reducuction on device with second kernel?
+  //TODO, maybe complete reduction on device with second kernel?
   int Nblock = (N+blocksize-1)/blocksize;
   Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
 
@@ -105,7 +126,7 @@ dfloat linAlg_t::norm2(const dlong N, occa::memory& o_a, MPI_Comm comm) {
 // o_x.o_y
 dfloat linAlg_t::innerProd(const dlong N, occa::memory& o_x, occa::memory& o_y,
                            MPI_Comm comm) {
-  //TODO, maybe complete reducuction on device with second kernel?
+  //TODO, maybe complete reduction on device with second kernel?
   int Nblock = (N+blocksize-1)/blocksize;
   Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
 
@@ -128,7 +149,7 @@ dfloat linAlg_t::innerProd(const dlong N, occa::memory& o_x, occa::memory& o_y,
 dfloat linAlg_t::weightedInnerProd(const dlong N, occa::memory& o_w,
                                    occa::memory& o_x, occa::memory& o_y,
                                    MPI_Comm comm) {
-  //TODO, maybe complete reducuction on device with second kernel?
+  //TODO, maybe complete reduction on device with second kernel?
   int Nblock = (N+blocksize-1)/blocksize;
   Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
 
@@ -147,3 +168,24 @@ dfloat linAlg_t::weightedInnerProd(const dlong N, occa::memory& o_w,
   return globaldot;
 }
 
+// ||o_a||_w2
+dfloat linAlg_t::weightedNorm2(const dlong N, occa::memory& o_w,
+                               occa::memory& o_a, MPI_Comm comm) {
+  //TODO, maybe complete reduction on device with second kernel?
+  int Nblock = (N+blocksize-1)/blocksize;
+  Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
+
+  weightedNorm2Kernel(Nblock, N, o_w, o_a, o_scratch);
+
+  o_scratch.copyTo(scratch, Nblock*sizeof(dfloat));
+
+  dfloat norm = 0;
+  for(dlong n=0;n<Nblock;++n){
+    norm += scratch[n];
+  }
+
+  dfloat globalnorm = 0;
+  MPI_Allreduce(&norm, &globalnorm, 1, MPI_DFLOAT, MPI_SUM, comm);
+
+  return sqrt(globalnorm);
+}

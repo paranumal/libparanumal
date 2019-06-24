@@ -1,11 +1,11 @@
 [FORMAT]
-1.0
+2.0
 
 [DATA FILE]
-data/ellipticHomogeneous3D.h
+data/ellipticSine3D.h
 
 [MESH FILE]
-../../meshes/cavityTetH05.msh
+BOX
 
 [MESH DIMENSION]
 3
@@ -13,8 +13,29 @@ data/ellipticHomogeneous3D.h
 [ELEMENT TYPE] # number of edges
 6
 
+[BOX NX]
+10
+
+[BOX NY]
+10
+
+[BOX NZ]
+10
+
+[BOX DIMX]
+1
+
+[BOX DIMY]
+1
+
+[BOX DIMZ]
+1
+
+[BOX BOUNDARY FLAG]
+1
+
 [POLYNOMIAL DEGREE]
-6
+4
 
 [THREAD MODEL]
 CUDA
@@ -26,28 +47,19 @@ CUDA
 0
 
 [LAMBDA]
-0
-
-# can add FLEXIBLE to PCG
-[KRYLOV SOLVER]
-PCG+FLEXIBLE
+1
 
 # can be IPDG, or CONTINUOUS
 [DISCRETIZATION]
-#IPDG
 CONTINUOUS
 
-# can be NODAL or BERN
-[BASIS]
-NODAL
+# can add FLEXIBLE to PCG
+[LINEAR SOLVER]
+PCG
 
 # can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
 [PRECONDITIONER]
-#FULLALMOND
-#JACOBI
-MULTIGRID
-#SEMFEM
-
+NONE
 
 ########## MULTIGRID Options ##############
 
@@ -59,7 +71,7 @@ HALFDEGREES
 # LOCALPATCH smoother can include EXACT
 # can include CHEBYSHEV for smoother acceleration
 [MULTIGRID SMOOTHER]
-DAMPEDJACOBI+CHEBYSHEV
+CHEBYSHEV
 
 # can be any integer >0
 [MULTIGRID CHEBYSHEV DEGREE]
@@ -72,12 +84,10 @@ DAMPEDJACOBI+CHEBYSHEV
 # can be KCYCLE, or VCYCLE
 # can add the EXACT and NONSYM option
 [PARALMOND CYCLE]
-#KCYCLE
-VCYCLE
+KCYCLE
 
 # can be DAMPEDJACOBI or CHEBYSHEV
 [PARALMOND SMOOTHER]
-#DAMPEDJACOBI
 CHEBYSHEV
 
 # can be any integer >0
@@ -91,20 +101,18 @@ STRONGNODES
 # can be DEFAULT or LPSCN
 [PARALMOND AGGREGATION STRATEGY]
 DEFAULT
-#LPSCN
 
 # can be MAX, MIN, or NONE
 [PARALMOND LPSCN ORDERING]
 MAX
-#MIN
 
 ###########################################
 
-[RESTART FROM FILE]
-0
+[OUTPUT TO FILE]
+TRUE
 
 [OUTPUT FILE NAME]
-cavity
+elliptic
 
 [VERBOSE]
 TRUE

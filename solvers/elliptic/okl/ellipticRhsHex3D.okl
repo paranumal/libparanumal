@@ -25,7 +25,7 @@ SOFTWARE.
 */
 
 //spectral mass matrix
-@kernel void ellipticRhsQuad2D(const dlong Nelements,
+@kernel void ellipticRhsHex3D(const dlong Nelements,
                                @restrict const dfloat* ggeo,
                                @restrict const dfloat* MM,
                                @restrict const dfloat* x,
@@ -41,11 +41,11 @@ SOFTWARE.
       // assumes w*J built into G entries
       const dlong gbase = e*p_Nggeo*p_Np + n;
       const dfloat r_GwJ = ggeo[gbase+p_GWJID*p_Np];
+      const dlong id = e*p_Np + n;
 
       dfloat f = 0;
       ellipticForcing3D(x[id], y[id], z[id], lambda, f);
 
-      const dlong id = e*p_Np + n;
       rhs[id] = r_GwJ*f;
     }
   }

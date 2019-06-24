@@ -28,11 +28,28 @@ SOFTWARE.
 
 void elliptic_t::Run(){
 
+  //setup linear solver
+  linearSolver_t *linearSolver = linearSolver_t::Setup(*this);
+
+  int weighted = settings.compareSetting("DISCRETIZATION", "CONTINUOUS") ? 1 : 0;
+  linearSolver->Init(weighted, o_weight);
+
   occa::properties kernelInfo = props; //copy base occa properties
 
   string dataFileName;
   settings.getSetting("DATA FILE", dataFileName);
   kernelInfo["includes"] += dataFileName;
+
+  //add standard boundary functions
+  char *boundaryHeaderFileName;
+  if (mesh.dim==2)
+    boundaryHeaderFileName = strdup(DELLIPTIC "/data/ellipticBoundary2D.h");
+  else if (mesh.dim==3)
+    boundaryHeaderFileName = strdup(DELLIPTIC "/data/ellipticBoundary3D.h");
+  kernelInfo["includes"] += boundaryHeaderFileName;
+
+  int Nmax = mymax(mesh.Np, mesh.Nfaces*mesh.Nfp);
+  kernelInfo["defines/" "p_Nmax"]= Nmax;
 
   // set kernel name suffix
   char *suffix;
@@ -74,26 +91,24 @@ void elliptic_t::Run(){
   dlong Nall = mesh.Np*(mesh.Nelements+mesh.totalHaloPairs);
   dfloat *r = (dfloat*) calloc(Nall, sizeof(dfloat));
   dfloat *x = (dfloat*) calloc(Nall, sizeof(dfloat));
-  occa:memory o_r = device.malloc(Nall*sizeof(dfloat));
-  occa:memory o_x = device.malloc(Nall*sizeof(dfloat), x);
+  occa::memory o_r = device.malloc(Nall*sizeof(dfloat));
+  occa::memory o_x = device.malloc(Nall*sizeof(dfloat), x);
 
   //populate rhs forcing
   forcingKernel(mesh.Nelements,
                 mesh.o_ggeo,
                 mesh.o_MM,
-                lambda,
                 mesh.o_x,
                 mesh.o_y,
                 mesh.o_z,
+                lambda,
                 o_r);
 
   //add boundary condition contribution to rhs
   if (settings.compareSetting("DISCRETIZATION","IPDG")) {
-    dfloat zero = 0.f;
     rhsBCKernel(mesh.Nelements,
                 mesh.o_vmapM,
                 tau,
-                zero,
                 mesh.o_x,
                 mesh.o_y,
                 mesh.o_z,
@@ -105,7 +120,7 @@ void elliptic_t::Run(){
                 mesh.o_MM,
                 o_r);
   } else if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
-    dfloat zero = 0.f, mone = -1.0f, one = 1.0f;
+    printf("mesh.o_sMT.size() = %lu  \n",  mesh.o_sMT.size());
     rhsBCKernel(mesh.Nelements,
                 mesh.o_ggeo,
                 mesh.o_sgeo,
@@ -115,7 +130,6 @@ void elliptic_t::Run(){
                 mesh.o_vmapM,
                 mesh.o_sMT,
                 lambda,
-                zero,
                 mesh.o_x,
                 mesh.o_y,
                 mesh.o_z,
@@ -129,9 +143,7 @@ void elliptic_t::Run(){
     if (Nmasked) maskKernel(Nmasked, o_maskIds, o_r);
   }
 
-  int maxIter = 1000;
-  settings.getSetting("MAXIMUM ITERATIONS", maxIter);
-
+  int maxIter = 5000;
   int verbose = settings.compareSetting("VERBOSE", "TRUE") ? 1 : 0;
 
   MPI_Barrier(comm);
@@ -139,13 +151,11 @@ void elliptic_t::Run(){
 
   //call the solver
   dfloat tol = 1e-8;
-  int iter = Solve(o_x, o_r, tol, maxIter, verbose);
+  int iter = Solve(*linearSolver, o_x, o_r, tol, maxIter, verbose);
 
   //add the boundary data to the masked nodes
   if(settings.compareSetting("DISCRETIZATION","CONTINUOUS")){
-    dfloat zero = 0.;
     addBCKernel(mesh.Nelements,
-                zero,
                 mesh.o_x,
                 mesh.o_y,
                 mesh.o_z,
@@ -160,12 +170,12 @@ void elliptic_t::Run(){
   if ((mesh.rank==0) && verbose){
     printf("%d, " hlongFormat ", %g, %d, %g, %g; global: N, dofs, elapsed, iterations, time per node, nodes*iterations/time %s\n",
            mesh.N,
-           mesh.globalNelements*mesh->Np,
+           mesh.NelementsGlobal*mesh.Np,
            elapsedTime,
            iter,
-           elapsedTime/(mesh.Np*mesh.globalNelements),
-           globalNelements*((dfloat)iter*mesh.Np/elapsedTime),
-           (char*) settings.getsetting("PRECONDITIONER").c_str());
+           elapsedTime/(mesh.Np*mesh.NelementsGlobal),
+           mesh.NelementsGlobal*((dfloat)iter*mesh.Np/elapsedTime),
+           (char*) settings.getSetting("PRECONDITIONER").c_str());
   }
 
   if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {

@@ -28,12 +28,12 @@
 
 void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
 
-  if(continuous){
+  if(disc_c0){
     int mapType = (mesh.elementType==HEXAHEDRA &&
-                   options.compareArgs("ELEMENT MAP", "TRILINEAR")) ? 1:0;
+                   settings.compareSetting("ELEMENT MAP", "TRILINEAR")) ? 1:0;
 
     // int integrationType = (mesh.elementType==HEXAHEDRA &&
-    //                        options.compareArgs("ELLIPTIC INTEGRATION", "CUBATURE")) ? 1:0;
+    //                        settings.compareSetting("ELLIPTIC INTEGRATION", "CUBATURE")) ? 1:0;
 
     if(mesh.NglobalGatherElements) {
 
@@ -43,7 +43,7 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
                           mesh.o_ggeo, mesh.o_Dmatrices, mesh.o_Smatrices, mesh.o_MM, lambda, o_q, o_Aq);
         else
           partialAxKernel(mesh.NglobalGatherElements, mesh.o_globalGatherElementList,
-                          elliptic->o_EXYZ, elliptic->o_gllzw, mesh.o_Dmatrices, mesh.o_Smatrices, mesh.o_MM, lambda, o_q, o_Aq);
+                          mesh.o_EXYZ, mesh.o_gllzw, mesh.o_Dmatrices, mesh.o_Smatrices, mesh.o_MM, lambda, o_q, o_Aq);
       // } else {
       //   partialCubatureAxKernel(mesh.NglobalGatherElements,
       //                           mesh.o_globalGatherElementList,
@@ -54,7 +54,7 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
       // }
     }
 
-    ogsGatherScatterStart(o_Aq, ogsDfloat, ogsAdd, ogs);
+    ogsGatherScatterStart(o_Aq, ogsDfloat, ogsAdd, ogsMasked);
 
     if(mesh.NlocalGatherElements){
       // if(integrationType==0) { // GLL or non-hex
@@ -63,7 +63,7 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
                           mesh.o_ggeo, mesh.o_Dmatrices, mesh.o_Smatrices, mesh.o_MM, lambda, o_q, o_Aq);
         else
           partialAxKernel(mesh.NlocalGatherElements, mesh.o_localGatherElementList,
-                          elliptic->o_EXYZ, elliptic->o_gllzw, mesh.o_Dmatrices, mesh.o_Smatrices, mesh.o_MM, lambda, o_q, o_Aq);
+                          mesh.o_EXYZ, mesh.o_gllzw, mesh.o_Dmatrices, mesh.o_Smatrices, mesh.o_MM, lambda, o_q, o_Aq);
       // } else {
       //   partialCubatureAxKernel(mesh.NlocalGatherElements,
       //                           mesh.o_localGatherElementList,
@@ -77,7 +77,7 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
     }
 
     // finalize gather using local and global contributions
-    ogsGatherScatterFinish(o_Aq, ogsDfloat, ogsAdd, ogs);
+    ogsGatherScatterFinish(o_Aq, ogsDfloat, ogsAdd, ogsMasked);
 
 #if USE_NULL_BOOST==1
     if(mesh.allNeumann) {
@@ -93,7 +93,7 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
     if (Nmasked)
       maskKernel(Nmasked, o_maskIds, o_Aq);
 
-  } else if(ipdg) {
+  } else if(disc_ipdg) {
 
     int Nentries = mesh.Np;
     mesh.HaloExchangeStart(o_q, Nentries, ogsDfloat);
@@ -136,9 +136,9 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
                             o_grad);
     }
 
-    if(mesh.NnotInternalElements) {
-      partialIpdgKernel(mesh.NnotInternalElements,
-                        mesh.o_notInternalElementIds,
+    if(mesh.NhaloElements) {
+      partialIpdgKernel(mesh.NhaloElements,
+                        mesh.o_haloElementIds,
                         mesh.o_vmapM,
                         mesh.o_vmapP,
                         lambda,

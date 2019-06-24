@@ -1,27 +1,11 @@
 [FORMAT]
-1.0
-
-[BENCHMARK]
-SOLVE
+2.0
 
 [DATA FILE]
-#data/ellipticSineTest3D.h
-data/ellipticHomogeneous3D.h
+data/ellipticSine3D.h
 
 [MESH FILE]
-#../../meshes/cubeHexE8Thilina.msh
-#../../meshes/cavityHexH025.msh
-#../../meshes/cavityHexH0125.msh
-#../../meshes/cavityHexH0075.msh
-#../../meshes/cubeHexE00008.msh
-#../../meshes/cubeHexE00064.msh
-#../../meshes/cubeHexE00216.msh
-#../../meshes/cubeHexE00512.msh
-../../meshes/cubeHexE01000.msh
-#../../meshes/cubeHexE01728.msh
-#../../meshes/cubeHexE04096.msh
-#../../meshes/cubeHexE05832.msh
-#../../meshes/cubeHexE08000.msh
+BOX
 
 [MESH DIMENSION]
 3
@@ -29,20 +13,34 @@ data/ellipticHomogeneous3D.h
 [ELEMENT TYPE] # number of edges
 12
 
-[POLYNOMIAL DEGREE]
-7
-
 [ELEMENT MAP]
 ISOPARAMETRIC
-#TRILINEAR
 
-[ELLIPTIC INTEGRATION]
-NODAL
-#CUBATURE
-# CUBATURE - WORKING FOR INHOMOGENEOUS DIRICHLET BCS - NOT WORKING FOR NEUMANN YET
+[BOX NX]
+10
+
+[BOX NY]
+10
+
+[BOX NZ]
+10
+
+[BOX DIMX]
+1
+
+[BOX DIMY]
+1
+
+[BOX DIMZ]
+1
+
+[BOX BOUNDARY FLAG]
+1
+
+[POLYNOMIAL DEGREE]
+4
 
 [THREAD MODEL]
-#Serial
 CUDA
 
 [PLATFORM NUMBER]
@@ -52,56 +50,35 @@ CUDA
 0
 
 [LAMBDA]
-10
-
-# can add FLEXIBLE to PCG
-# can add NONBLOCKING (disable FLEXIBLE for the moment)
-[KRYLOV SOLVER]
-PCG+FLEXIBLE+NONBLOCKING
-#+NONBLOCKING+FLEXIBLE
-#+FLEXIBLE
-#+FLEXIBLE+NONBLOCKING
-
-[SOLVER TOLERANCE]
-1.e-7
+1
 
 # can be IPDG, or CONTINUOUS
 [DISCRETIZATION]
-#IPDG
 CONTINUOUS
 
-# can be NODAL or BERN
-[BASIS]
-NODAL
+# can add FLEXIBLE to PCG
+[LINEAR SOLVER]
+PCG
 
 # can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, MULTIGRID, or OAS
-# OAS does not currently work with NONBLOCKING PCG
 [PRECONDITIONER]
-#OAS
-#JACOBI
-MULTIGRID
-#SEMFEM
-#FULLALMOND
-
-
+NONE
 
 ########## MULTIGRID Options ##############
 
 # can be ALLDEGREES, HALFDEGREES, HALFDOFS
 [MULTIGRID COARSENING]
-#ALLDEGREES
 HALFDEGREES
-#HALFDOFS
 
 # can be LOCALPATCH, or DAMPEDJACOBI
 # LOCALPATCH smoother can include EXACT
 # can include CHEBYSHEV for smoother acceleration
 [MULTIGRID SMOOTHER]
-DAMPEDJACOBI+CHEBYSHEV
+CHEBYSHEV
 
 # can be any integer >0
 [MULTIGRID CHEBYSHEV DEGREE]
-1
+2
 
 ###########################################
 
@@ -111,15 +88,14 @@ DAMPEDJACOBI+CHEBYSHEV
 # can add the EXACT and NONSYM option
 [PARALMOND CYCLE]
 KCYCLE
-#EXACT
 
 # can be DAMPEDJACOBI or CHEBYSHEV
 [PARALMOND SMOOTHER]
-CHEBYSHEV+DAMPEDJACOBI
+CHEBYSHEV
 
 # can be any integer >0
 [PARALMOND CHEBYSHEV DEGREE]
-1
+2
 
 # can be STRONGNODES, DISTRIBUTED, SATURATE
 [PARALMOND PARTITION]
@@ -128,36 +104,18 @@ STRONGNODES
 # can be DEFAULT or LPSCN
 [PARALMOND AGGREGATION STRATEGY]
 DEFAULT
-#LPSCN
 
 # can be MAX, MIN, or NONE
 [PARALMOND LPSCN ORDERING]
 MAX
-#MIN
 
 ###########################################
 
-[RESTART FROM FILE]
-0
+[OUTPUT TO FILE]
+TRUE
 
 [OUTPUT FILE NAME]
-cavity
+elliptic
 
 [VERBOSE]
 TRUE
-#FALSE
-
-# set to 0 (zero) to disable reductions
-[DEBUG ENABLE REDUCTIONS]
-1
-
-# set to 0 (zero) to disable gather-scatter
-[DEBUG ENABLE OGS]
-1
-
-[MAXIMUM ITERATIONS]
-1000
-
-[FIXED ITERATION COUNT]
-FALSE
-

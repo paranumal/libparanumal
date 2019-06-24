@@ -32,6 +32,7 @@ Elliptic solver makefile targets:
    make lib
    make clean
    make clean-libs
+   make clean-kernels
    make realclean
    make info
    make help
@@ -46,8 +47,10 @@ make clean
    Clean the ellipticMain executable, library, and object files.
 make clean-libs
    In addition to "make clean", also clean the mesh, ogs, and parAlmond libraries.
+make clean-kernels
+   In addition to "make clean-libs", also cleans the cached OCCA kernels.
 make realclean
-   In addition to "make clean-libs", also clean 3rd party libraries.
+   In addition to "make clean-kernels", also clean 3rd party libraries.
 make info
    List directories and compiler flags in use.
 make help
@@ -57,7 +60,7 @@ Can use "make verbose=true" for verbose output.
 
 endef
 
-ifeq (,$(filter ellipticMain lib clean clean-libs \
+ifeq (,$(filter ellipticMain lib clean clean-libs clean-kernels \
                 realclean info help,$(MAKECMDGOALS)))
 ifneq (,$(MAKECMDGOALS))
 $(error ${ELLIPTIC_HELP_MSG})
@@ -75,29 +78,29 @@ endif
 #libraries
 GS_DIR       =${LIBP_TPL_DIR}/gslib
 BLAS_DIR     =${LIBP_TPL_DIR}/BlasLapack
-OGS_DIR      =${LIBP_LIBS_DIR}/gatherScatter
+OGS_DIR      =${LIBP_LIBS_DIR}/ogs
 PARALMOND_DIR=${LIBP_LIBS_DIR}/parAlmond
-MESH_DIR     =${LIBP_DIR}/src
+MESH_DIR     =${LIBP_LIBS_DIR}/mesh
+CORE_DIR     =${LIBP_DIR}/core
 
 #includes
-ELLIPTIC_INCLUDES=-I. \
-         -I$(OGS_DIR) \
-         -I$(PARALMOND_DIR) \
-         ${LIBP_INCLUDES}
+INCLUDES=${LIBP_INCLUDES} \
+		 -I${LIBP_LIBS_DIR}/include \
+		 -I${PARALMOND_DIR} \
+         -I.
+
 
 #defines
-ELLIPTIC_DEFINES =${LIBP_DEFINES} \
-         -DLIBP_DIR='"${LIBP_DIR}"' \
-         -DDELLIPTIC='"${CURDIR}"'
+DEFINES =${LIBP_DEFINES} \
+         -DLIBP_DIR='"${LIBP_DIR}"'
 
 #.cpp compilation flags
-ELLIPTIC_CXXFLAGS=${CXXFLAGS} ${ELLIPTIC_DEFINES} ${ELLIPTIC_INCLUDES}
+ELLIPTIC_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
 
 #link libraries
-LIBS=-L$(MESH_DIR) -lmesh \
-     -L$(PARALMOND_DIR) -lparAlmond  \
-     -L$(OGS_DIR) -logs \
+LIBS=-L${LIBP_LIBS_DIR} -lmesh -lparAlmond -logs\
      -L$(GS_DIR)/lib -lgs \
+     -L${CORE_DIR} -lcore \
      -L${BLAS_DIR} -lBlasLapack \
      -lgfortran \
      ${LIBP_LIBS}
@@ -106,21 +109,22 @@ LIBS=-L$(MESH_DIR) -lmesh \
 LFLAGS=${ELLIPTIC_CXXFLAGS} ${LIBS}
 
 #object dependancies
-DEPS=$(wildcard *.h) \
+DEPS=$(wildcard *.hpp) \
      $(wildcard $(LIBP_INCLUDE_DIR)/*.h) \
-     $(OGS_DIR)/ogs.hpp \
-     $(PARALMOND_DIR)/parAlmond.hpp
+     $(wildcard $(LIBP_INCLUDE_DIR)/*.hpp)
 
-SRC =$(wildcard src/*.c)
-OBJS=$(SRC:.c=.o)
+SRC =$(wildcard src/*.cpp)
 
-.PHONY: all lib libmesh libogs libblas libparAlmond clean clean-libs realclean help info
+OBJS=$(SRC:.cpp=.o)
+
+.PHONY: all lib libcore libmesh libparAlmond libogs libblas clean clean-libs \
+		clean-kernels realclean help info ellipticMain
 
 all: ellipticMain
 
-lib: libelliptic.a silentUpdate
+lib: libelliptic.a
 
-ellipticMain:$(OBJS) $(MESH_OBJS) ellipticMain.o | libparAlmond
+ellipticMain:$(OBJS) ellipticMain.o | libmesh
 ifneq (,${verbose})
 	$(LD) -o ellipticMain ellipticMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
 else
@@ -136,21 +140,35 @@ else
 	@ar -cr libelliptic.a $(OBJS)
 endif
 
-libmesh: libogs libgs libblas
+libmesh: libogs libparAlmond libgs libblas libcore
 ifneq (,${verbose})
 	${MAKE} -C ${MESH_DIR} lib verbose=${verbose}
 else
 	@${MAKE} -C ${MESH_DIR} lib --no-print-directory
 endif
 
-libogs: libgs
+libparAlmond: libogs libgs libblas libcore
+ifneq (,${verbose})
+	${MAKE} -C ${PARALMOND_DIR} lib verbose=${verbose}
+else
+	@${MAKE} -C ${PARALMOND_DIR} lib --no-print-directory
+endif
+
+libogs: libcore
 ifneq (,${verbose})
 	${MAKE} -C ${OGS_DIR} lib verbose=${verbose}
 else
 	@${MAKE} -C ${OGS_DIR} lib --no-print-directory
 endif
 
-libgs:
+libcore: libgs
+ifneq (,${verbose})
+	${MAKE} -C ${CORE_DIR} lib verbose=${verbose}
+else
+	@${MAKE} -C ${CORE_DIR} lib --no-print-directory
+endif
+
+libgs: libblas
 ifneq (,${verbose})
 	${MAKE} -C $(GS_DIR) install verbose=${verbose}
 else
@@ -164,20 +182,13 @@ else
 	@${MAKE} -C ${BLAS_DIR} lib --no-print-directory
 endif
 
-libparAlmond: | libmesh
+# rule for .cpp files
+%.o: %.cpp $(DEPS) | libmesh
 ifneq (,${verbose})
-	${MAKE} -C ${PARALMOND_DIR} lib verbose=${verbose}
-else
-	@${MAKE} -C ${PARALMOND_DIR} lib --no-print-directory
-endif
-
-# rule for .c files
-%.o: %.c $(DEPS) | libparAlmond
-ifneq (,${verbose})
-	$(CXX) -o $*.o -c $*.c $(ELLIPTIC_CXXFLAGS)
+	$(CXX) -o $*.o -c $*.cpp $(ELLIPTIC_CXXFLAGS)
 else
 	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
-	@$(CXX) -o $*.o -c $*.c $(ELLIPTIC_CXXFLAGS)
+	@$(CXX) -o $*.o -c $*.cpp $(ELLIPTIC_CXXFLAGS)
 endif
 
 #cleanup
@@ -188,6 +199,11 @@ clean-libs: clean
 	${MAKE} -C ${OGS_DIR} clean
 	${MAKE} -C ${PARALMOND_DIR} clean
 	${MAKE} -C ${MESH_DIR} clean
+	${MAKE} -C ${CORE_DIR} clean
+
+clean-kernels: clean-libs
+# 	$(shell ${OCCA_DIR}/bin/occa clear all -y)
+	rm -rf ~/.occa/
 
 realclean: clean-libs
 	${MAKE} -C ${GS_DIR} clean
@@ -203,7 +219,4 @@ info:
 	$(info LIBP_ARCH = $(LIBP_ARCH))
 	$(info CXXFLAGS  = $(ELLIPTIC_CXXFLAGS))
 	$(info LIBS      = $(LIBS))
-	@true
-
-silentUpdate:
 	@true

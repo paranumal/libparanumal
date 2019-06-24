@@ -24,14 +24,20 @@ SOFTWARE.
 
 */
 
+#include "ellipticPrecon.hpp"
 
-@kernel void mask(const dlong Nmasked,
-                 @restrict const  dlong    *  maskIds,
-                       @restrict dfloat *  q){
+// Matrix-free p-Multigrid levels followed by AMG
+MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
+  elliptic(_elliptic), mesh(_elliptic.mesh), settings(_elliptic.settings) {
 
-  for(dlong n=0;n<Nmasked;++n;@tile(256,@outer,@inner)){
-    if(n<Nmasked){
-      q[maskIds[n]] = 0.;
-    }
-  }
+}
+
+void MultiGridPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
+
+  parAlmond::Precon(parAlmondHandle, o_Mr, o_r);
+
+#if USE_NULL_PROJECTION==1
+  if(elliptic.allNeumann) // zero mean of RHS
+    elliptic.ZeroMean(o_Mr);
+#endif
 }

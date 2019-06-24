@@ -27,7 +27,6 @@ SOFTWARE.
 @kernel void ellipticRhsBCIpdgTet3D(const dlong Nelements,
                                   @restrict const  dlong  *  vmapM,
                                   const dfloat tau,
-                                  const dfloat t,
                                   @restrict const  dfloat *  x,
                                   @restrict const  dfloat *  y,
                                   @restrict const  dfloat *  z,
@@ -76,7 +75,7 @@ SOFTWARE.
 
         const int bc = EToB[face+p_Nfaces*e];
         if(bc>0) {
-          ellipticBoundaryConditions3D(bc, t, x[idM], y[idM], z[idM], nx, ny, nz, \
+          ellipticBoundaryConditions3D(bc, x[idM], y[idM], z[idM], nx, ny, nz, \
                                         0.f, 0.f, 0.f, 0.f,               \
                                         uP, dudxP, dudyP, dudzP);
         }

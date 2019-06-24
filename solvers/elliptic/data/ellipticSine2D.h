@@ -24,24 +24,26 @@ SOFTWARE.
 
 */
 
+#define PI 3.14159265358979323846
+
 /* forcing function   */
 #define ellipticForcing2D(x, y, lambda, f)  \
   {                                         \
-    f  = (2*OCCA_PI*OCCA_PI+lambda)*occaSin(OCCA_PI*x)*occaSin(OCCA_PI*y);   \
+    f  = (2*PI*PI+lambda)*sin(PI*x)*sin(PI*y);   \
   }
 
 /* Dirichlet boundary condition   */
-#define ellipticDirichletCondition2D(t,x,y,nx,ny,uM,uxM,uyM,uB,uxB,uyB)  \
+#define ellipticDirichletCondition2D(x,y,nx,ny,uM,uxM,uyM,uB,uxB,uyB)  \
   {              \
-    uB  = occaCos(OCCA_PI*x)*occaCos(OCCA_PI*y);   \
+    uB  = sin(PI*x)*sin(PI*y);   \
     uxB = uxM;   \
     uyB = uyM;   \
   }
 
 /* Neumann boundary condition   */
-#define ellipticNeumannCondition2D(t,x,y,nx,ny,uM,uxM,uyM,uB,uxB,uyB)  \
+#define ellipticNeumannCondition2D(x,y,nx,ny,uM,uxM,uyM,uB,uxB,uyB)  \
   {              \
     uB  = uM;    \
-    uxB = -OCCA_PI*occaSin(OCCA_PI*x)*occaCos(OCCA_PI*y);   \
-    uyB = -OCCA_PI*occaCos(OCCA_PI*x)*occaSin(OCCA_PI*y);   \
+    uxB = -PI*cos(PI*x)*sin(PI*y);   \
+    uyB = -PI*sin(PI*x)*cos(PI*y);   \
   }

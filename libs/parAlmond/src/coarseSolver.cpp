@@ -28,9 +28,9 @@ SOFTWARE.
 
 namespace parAlmond {
 
-coarseSolver::coarseSolver(setupAide options_) {
+coarseSolver::coarseSolver(settings_t& settings_):
+  settings(settings_) {
   gatherLevel = false;
-  options = options_;
 }
 
 int coarseSolver::getTargetSize() {
@@ -39,7 +39,7 @@ int coarseSolver::getTargetSize() {
 
 //set up exact solver using xxt
 void coarseSolver::setup(parCSR *A) {
-  
+
   comm = A->comm;
 
   int rank, size;
@@ -58,19 +58,16 @@ void coarseSolver::setup(parCSR *A) {
   coarseCounts = (int*) calloc(size,sizeof(int));
 
   // had to move this later
-  if(options.compareArgs("PARALMOND SMOOTH COARSEST", "TRUE")){
+  if(settings.compareSetting("PARALMOND SMOOTH COARSEST", "TRUE")){
     if(rank==0) printf("WARNING !!!!!: not building coarsest level matrix\n");
     return; // bail early as this will not get used
   }
 
 
-  
-  int sendNNZ = (int) (A->diag->nnz+A->offd->nnz);
-  int *rows;
-  int *cols;
-  dfloat *vals;
 
-  // if((rank==0)&&(options.compareArgs("VERBOSE","TRUE")))
+  int sendNNZ = (int) (A->diag->nnz+A->offd->nnz);
+
+  // if((rank==0)&&(settings.compareSetting("VERBOSE","TRUE")))
   //   printf("Setting up coarse solver...");fflush(stdout);
 
   // Make the MPI_NONZERO_T data type
@@ -182,7 +179,7 @@ void coarseSolver::setup(parCSR *A) {
 
   free(coarseA);
 
-   // if((rank==0)&&(options.compareArgs("VERBOSE","TRUE"))) printf("done.\n");
+   // if((rank==0)&&(settings.compareSetting("VERBOSE","TRUE"))) printf("done.\n");
 }
 
 void coarseSolver::syncToDevice() {}
@@ -204,7 +201,7 @@ void coarseSolver::solve(dfloat *rhs, dfloat *x) {
       for (int m=0;m<coarseTotal;m++) {
         xLocal[n] += invCoarseA[n*coarseTotal+m]*rhsCoarse[m];
       }
-      
+
 #else
       xLocal[n] = rhsCoarse[n];
 #endif
@@ -218,7 +215,7 @@ void coarseSolver::solve(dfloat *rhs, dfloat *x) {
                    rhsCoarse, coarseCounts, coarseOffsets, MPI_DFLOAT, comm);
 
     printf("HACKING COARSE GRID\n");
-    
+
     //multiply by local part of the exact matrix inverse
    // #pragma omp parallel for
 

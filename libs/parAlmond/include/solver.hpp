@@ -36,7 +36,7 @@ public:
   int rank, size;
 
   occa::device device;
-  setupAide options;
+  settings_t& settings;
 
   bool exact;
   CycleType    ctype;
@@ -52,7 +52,7 @@ public:
   int ChebyshevIterations;
 
   solver_t(occa::device otherdevice, MPI_Comm othercomm,
-                         setupAide otheroptions);
+                         settings_t& otherSettings);
 
   ~solver_t();
 

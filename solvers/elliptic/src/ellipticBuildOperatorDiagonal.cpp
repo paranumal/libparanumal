@@ -25,59 +25,61 @@ SOFTWARE.
 */
 
 #include "elliptic.hpp"
+#include "../mesh/include/meshDefines2D.h"
+#include "../mesh/include/meshDefines3D.h"
 
-void elliptic_t::BuildDiag(dfloat *diagA){
+void elliptic_t::BuildOperatorDiagonal(dfloat *diagA){
 
-  if(mesh.rank==0) printf("Building diagonal...");fflush(stdout);
+  if(mesh.rank==0) {printf("Building diagonal...");fflush(stdout);}
 
   if (settings.compareSetting("DISCRETIZATION","IPDG")) {
     switch(mesh.elementType){
       case TRIANGLES:
       {
         if(mesh.dim==2)
-          BuildIpdgDiagTri2D(diagA);
+          BuildOperatorDiagonalIpdgTri2D(diagA);
         else
-          BuildIpdgDiagTri3D(diagA);
+          BuildOperatorDiagonalIpdgTri3D(diagA);
         break;
       }
       case QUADRILATERALS:
-        BuildIpdgDiagQuad2D(diagA);
+        BuildOperatorDiagonalIpdgQuad2D(diagA);
         break;
       case TETRAHEDRA:
-        BuildIpdgDiagTet3D(diagA);
+        BuildOperatorDiagonalIpdgTet3D(diagA);
         break;
       case HEXAHEDRA:
-        BuildIpdgDiagHex3D(diagA);
+        BuildOperatorDiagonalIpdgHex3D(diagA);
         break;
     }
   } else if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
     switch(mesh.elementType){
       case TRIANGLES:
-        BuildContinuousDiagTri2D(diagA);
+        BuildOperatorDiagonalContinuousTri2D(diagA);
         break;
       case QUADRILATERALS:
       {
         if(mesh.dim==2)
-          BuildContinuousDiagQuad2D(diagA);
+          BuildOperatorDiagonalContinuousQuad2D(diagA);
         else
-          BuildContinuousDiagQuad3D(diagA);
+          BuildOperatorDiagonalContinuousQuad3D(diagA);
         break;
       }
       case TETRAHEDRA:
-        BuildContinuousDiagTet3D(diagA);
+        BuildOperatorDiagonalContinuousTet3D(diagA);
         break;
       case HEXAHEDRA:
-        BuildContinuousDiagHex3D(diagA);
+        BuildOperatorDiagonalContinuousHex3D(diagA);
         break;
     }
 
     //gatherscatter the diagonal to assemble it
-    ogsGatherScatter(diagA, ogsDfloat, ogsAdd, ogs);
+    ogsGatherScatter(diagA, ogsDfloat, ogsAdd, ogsMasked);
   }
   if(mesh.rank==0) printf("done.\n");
 }
 
-void elliptic_t::BuildIpdgDiagTri2D(dfloat *A) {
+void elliptic_t::BuildOperatorDiagonalIpdgTri2D(dfloat *A) {
 
   // surface mass matrices MS = MM*LIFT
   dfloat *MS = (dfloat *) calloc(mesh.Nfaces*mesh.Nfp*mesh.Nfp,sizeof(dfloat));
@@ -212,7 +214,7 @@ void elliptic_t::BuildIpdgDiagTri2D(dfloat *A) {
   free(MS);
 }
 
-void elliptic_t::BuildIpdgDiagTri3D(dfloat *A) {
+void elliptic_t::BuildOperatorDiagonalIpdgTri3D(dfloat *A) {
 
   // surface mass matrices MS = MM*LIFT
   dfloat *MS = (dfloat *) calloc(mesh.Nfaces*mesh.Nfp*mesh.Nfp,sizeof(dfloat));
@@ -358,15 +360,15 @@ void elliptic_t::BuildIpdgDiagTri3D(dfloat *A) {
   free(MS);
 }
 
-void elliptic_t::BuildContinuousDiagTri2D(dfloat *A) {
-
-  dlong gbase = eM*mesh.Nggeo;
-  dfloat Grr = mesh.ggeo[gbase + G00ID];
-  dfloat Grs = mesh.ggeo[gbase + G01ID];
-  dfloat Gss = mesh.ggeo[gbase + G11ID];
-  dfloat J   = mesh.ggeo[gbase + GWJID];
+void elliptic_t::BuildOperatorDiagonalContinuousTri2D(dfloat *A) {
 
   for(dlong eM=0;eM<mesh.Nelements;++eM){
+    dlong gbase = eM*mesh.Nggeo;
+    dfloat Grr = mesh.ggeo[gbase + G00ID];
+    dfloat Grs = mesh.ggeo[gbase + G01ID];
+    dfloat Gss = mesh.ggeo[gbase + G11ID];
+    dfloat J   = mesh.ggeo[gbase + GWJID];
+
     /* start with stiffness matrix  */
     for(int n=0;n<mesh.Np;++n){
       if (mapB[n+eM*mesh.Np]!=1) { //dont fill rows for masked nodes
@@ -391,7 +393,7 @@ void elliptic_t::BuildContinuousDiagTri2D(dfloat *A) {
   }
 }
 
-void elliptic_t::BuildIpdgDiagQuad2D(dfloat *A) {
+void elliptic_t::BuildOperatorDiagonalIpdgQuad2D(dfloat *A) {
 
   // build some monolithic basis arrays (for quads and hexes)
   dfloat *B  = (dfloat*) calloc(mesh.Np*mesh.Np, sizeof(dfloat));
@@ -497,7 +499,7 @@ void elliptic_t::BuildIpdgDiagQuad2D(dfloat *A) {
   free(B); free(Br); free(Bs);
 }
 
-void elliptic_t::BuildContinuousDiagQuad2D(dfloat *A) {
+void elliptic_t::BuildOperatorDiagonalContinuousQuad2D(dfloat *A) {
 
   for(dlong eM=0;eM<mesh.Nelements;++eM){
     for (int ny=0;ny<mesh.Nq;ny++) {
@@ -543,7 +545,7 @@ void elliptic_t::BuildContinuousDiagQuad2D(dfloat *A) {
 }
 
 
-void elliptic_t::BuildIpdgDiagQuad3D(dfloat *A) {
+void elliptic_t::BuildOperatorDiagonalIpdgQuad3D(dfloat *A) {
 
   // build some monolithic basis arrays (for quads and hexes)
   dfloat *B  = (dfloat*) calloc(mesh.Np*mesh.Np, sizeof(dfloat));
@@ -649,7 +651,7 @@ void elliptic_t::BuildIpdgDiagQuad3D(dfloat *A) {
   free(B); free(Br); free(Bs);
 }
 
-void elliptic_t::BuildContinuousDiagQuad3D(dfloat *A) {
+void elliptic_t::BuildOperatorDiagonalContinuousQuad3D(dfloat *A) {
 
   for(dlong eM=0;eM<mesh.Nelements;++eM){
     for (int ny=0;ny<mesh.Nq;ny++) {
@@ -695,7 +697,7 @@ void elliptic_t::BuildContinuousDiagQuad3D(dfloat *A) {
 
 
 
-void elliptic_t::BuildIpdgDiagTet3D(dfloat *A) {
+void elliptic_t::BuildOperatorDiagonalIpdgTet3D(dfloat *A) {
 
   // surface mass matrices MS = MM*LIFT
   dfloat *MS = (dfloat *) calloc(mesh.Nfaces*mesh.Nfp*mesh.Nfp,sizeof(dfloat));
@@ -854,7 +856,7 @@ void elliptic_t::BuildIpdgDiagTet3D(dfloat *A) {
   free(MS);
 }
 
-void elliptic_t::BuildContinuousDiagTet3D(dfloat *A) {
+void elliptic_t::BuildOperatorDiagonalContinuousTet3D(dfloat *A) {
 
   for(dlong eM=0;eM<mesh.Nelements;++eM){
     dlong gbase = eM*mesh.Nggeo;
@@ -895,7 +897,7 @@ void elliptic_t::BuildContinuousDiagTet3D(dfloat *A) {
   }
 }
 
-void elliptic_t::BuildIpdgDiagHex3D(dfloat *A) {
+void elliptic_t::BuildOperatorDiagonalIpdgHex3D(dfloat *A) {
 
   // build some monolithic basis arrays (for quads and hexes)
   dfloat *B  = (dfloat*) calloc(mesh.Np*mesh.Np, sizeof(dfloat));
@@ -1021,7 +1023,7 @@ void elliptic_t::BuildIpdgDiagHex3D(dfloat *A) {
   free(B); free(Br); free(Bs); free(Bt);
 }
 
-void elliptic_t::BuildContinuousDiagHex3D(dfloat *A) {
+void elliptic_t::BuildOperatorDiagonalContinuousHex3D(dfloat *A) {
 
   for(dlong eM=0;eM<mesh.Nelements;++eM){
     for (int nz=0;nz<mesh.Nq;nz++) {

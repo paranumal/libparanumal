@@ -32,8 +32,6 @@ void solver_t::kcycle(int k){
 
   multigridLevel *level = levels[k];
 
-  dlong m = level->Nrows;
-
   dfloat* rhs = level->rhs;
   dfloat*   x = level->x;
   dfloat* res = level->res;
@@ -177,8 +175,6 @@ void solver_t::vcycle(int k) {
 
   multigridLevel *level = levels[k];
 
-  dlong m = level->Nrows;
-
   dfloat* rhs = level->rhs;
   dfloat*   x = level->x;
   dfloat* res = level->res;
@@ -196,7 +192,6 @@ void solver_t::vcycle(int k) {
   }
 
   multigridLevel *levelC = levels[k+1];
-  dlong mCoarse = levelC->Nrows;
   dfloat* rhsC   = levelC->rhs;
   dfloat*   xC   = levelC->x;
 
@@ -248,7 +243,6 @@ void solver_t::device_vcycle(int k){
   }
 
   multigridLevel *levelC = levels[k+1];
-  dlong mCoarse = levelC->Nrows;
   occa::memory o_rhsC = levelC->o_rhs;
   occa::memory o_xC   = levelC->o_x;
 

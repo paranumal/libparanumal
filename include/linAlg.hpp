@@ -50,7 +50,7 @@ public:
            settings_t& settings_, occa::properties& props_);
 
   //named constructor
-  static linAlg_t* Setup(occa::device& device_,
+  static linAlg_t& Setup(occa::device& device_,
            settings_t& settings_, occa::properties& props_);
 
   //initialize list of kernels
@@ -96,6 +96,9 @@ public:
                             const dfloat beta,  occa::memory& o_y,
                             occa::memory& o_z);
 
+  // \sum o_a
+  dfloat sum(const dlong N, occa::memory& o_a, MPI_Comm comm);
+
   // ||o_a||_2
   dfloat norm2(const dlong N, occa::memory& o_a, MPI_Comm comm);
 
@@ -120,7 +123,9 @@ public:
   occa::kernel zaxmyKernel;
   occa::kernel axdyKernel;
   occa::kernel zaxdyKernel;
+  occa::kernel sumKernel;
   occa::kernel norm2Kernel;
+  occa::kernel weightedNorm2Kernel;
   occa::kernel innerProdKernel;
   occa::kernel weightedInnerProdKernel;
 };

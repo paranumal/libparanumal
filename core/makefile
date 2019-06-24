@@ -45,9 +45,7 @@ CORE_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
 
 #object dependancies
 DEPS=$(wildcard $(LIBP_INCLUDE_DIR)/*.h) \
-     $(LIBP_INCLUDE_DIR)/settings.hpp \
-     $(LIBP_INCLUDE_DIR)/solver.hpp \
-     $(LIBP_INCLUDE_DIR)/timeStepper.hpp
+     $(wildcard $(LIBP_INCLUDE_DIR)/*.hpp)
 
 SRC =$(wildcard *.cpp)
 OBJS=$(SRC:.cpp=.o)

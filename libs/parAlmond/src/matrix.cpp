@@ -28,8 +28,6 @@ SOFTWARE.
 
 namespace parAlmond {
 
-matrix_t::matrix_t(dlong N, dlong M): Nrows(N), Ncols(M) {}
-
 //------------------------------------------------------------------------
 //
 //  CSR matrix
@@ -140,21 +138,12 @@ parCSR::parCSR(dlong N, dlong M,
 
 //build a parCSR matrix from a distributed COO matrix (assumes square)
 parCSR::parCSR(dlong N,         // number of rows on this rank
-               hlong* starts,   // global partitioning
-               dlong nnz,       // number of nonzeros on this rank
-               hlong *Ai,       // global row ids
-               hlong *Aj,       // global column ids
-               dfloat *Avals,    // values
+               parCOO& A,       // number of nonzeros on this rank
                bool NullSpace,          //switch for nullspace
                dfloat *Null,            //null vector (or low energy mode)
                dfloat NullSpacePenalty, //penalty parameter for rank boost
                MPI_Comm comm_,
                occa::device device_) {
-
-  Nrows = N;
-  Ncols = N;
-  globalRowStarts = starts;
-  globalColStarts = starts;
 
   device = device_;
   MPI_Comm_dup(comm_, &comm);
@@ -162,6 +151,15 @@ parCSR::parCSR(dlong N,         // number of rows on this rank
   int rank, size;
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
+
+  Nrows = N;
+  Ncols = N;
+
+  //copy global partition
+  globalRowStarts = (hlong *) calloc(size+1,sizeof(hlong));
+  globalColStarts = (hlong *) calloc(size+1,sizeof(hlong));
+  memcpy(globalRowStarts, A.globalStarts, (size+1)*sizeof(hlong));
+  memcpy(globalColStarts, A.globalStarts, (size+1)*sizeof(hlong));
 
   hlong globalOffset = globalRowStarts[rank];
 
@@ -178,9 +176,10 @@ parCSR::parCSR(dlong N,         // number of rows on this rank
   offd->rowStarts = (dlong *) calloc(Nrows+1, sizeof(dlong));
 
   //count the entries in each row
-  for (dlong n=0;n<nnz;n++) {
-    dlong row = (dlong) (Ai[n] - globalOffset);
-    if ((Aj[n] < globalOffset) || (Aj[n]>globalOffset+Nrows-1))
+  for (dlong n=0;n<A.nnz;n++) {
+    dlong row = (dlong) (A.entries[n].row - globalOffset);
+    if (   (A.entries[n].col < globalOffset)
+        || (A.entries[n].col > globalOffset+Nrows-1))
       offd->rowStarts[row+1]++;
     else
       diag->rowStarts[row+1]++;
@@ -197,9 +196,10 @@ parCSR::parCSR(dlong N,         // number of rows on this rank
   // Halo setup
   hlong *colIds = (hlong *) malloc(offd->nnz*sizeof(hlong));
   dlong cnt=0;
-  for (dlong n=0;n<nnz;n++) {
-    if ((Aj[n] < globalOffset) || (Aj[n]>globalOffset+N-1))
-      colIds[cnt++] = Aj[n];
+  for (dlong n=0;n<A.nnz;n++) {
+    if ( (A.entries[n].col < globalOffset)
+      || (A.entries[n].col > globalOffset+N-1))
+      colIds[cnt++] = A.entries[n].col;
   }
   this->haloSetup(colIds);
 
@@ -212,17 +212,18 @@ parCSR::parCSR(dlong N,         // number of rows on this rank
   offd->vals = (dfloat *) calloc(offd->nnz, sizeof(dfloat));
   dlong diagCnt = 0;
   dlong offdCnt = 0;
-  for (dlong n=0;n<nnz;n++) {
-    if ((Aj[n] < globalOffset) || (Aj[n]>globalOffset+Nrows-1)) {
+  for (dlong n=0;n<A.nnz;n++) {
+    if ( (A.entries[n].col < globalOffset)
+      || (A.entries[n].col > globalOffset+Nrows-1)) {
       offd->cols[offdCnt] = colIds[offdCnt];
-      offd->vals[offdCnt] = Avals[n];
+      offd->vals[offdCnt] = A.entries[n].val;
       offdCnt++;
     } else {
-      diag->cols[diagCnt] = (dlong) (Aj[n] - globalOffset);
-      diag->vals[diagCnt] = Avals[n];
+      diag->cols[diagCnt] = (dlong) (A.entries[n].col - globalOffset);
+      diag->vals[diagCnt] = A.entries[n].val;
 
       //record the diagonal
-      dlong row = (dlong) (Ai[n] - globalOffset);
+      dlong row = (dlong) (A.entries[n].row - globalOffset);
       if (row==diag->cols[diagCnt])
         diagA[row] = diag->vals[diagCnt];
 

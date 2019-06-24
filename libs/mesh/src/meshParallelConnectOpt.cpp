@@ -250,4 +250,9 @@ void mesh_t::ParallelConnect(){
   MPI_Type_free(&MPI_PARALLELFACE_T);
   free(sendFaces);
   free(recvFaces);
+
+  //record the number of elements in the whole mesh
+  hlong NelementsLocal = (hlong) Nelements;
+  NelementsGlobal = 0;
+  MPI_Allreduce(&NelementsLocal, &NelementsGlobal, 1, MPI_HLONG, MPI_SUM, comm);
 }

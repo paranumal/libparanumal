@@ -26,27 +26,16 @@ SOFTWARE.
 
 #include "elliptic.hpp"
 
-int elliptic_t::Solve(occa::memory &o_x, occa::memory &o_r,
+int elliptic_t::Solve(linearSolver_t& linearSolver,
+                      occa::memory &o_x, occa::memory &o_r,
                       const dfloat tol, const int MAXIT, const int verbose){
-
 
 #if USE_NULL_PROJECTION==1
   if(allNeumann) // zero mean of RHS
     ZeroMean(o_r);
 #endif
 
-  int Niter = linearSolver->Solve(o_x, o_r, tol, MAXIT, verbose);
-
-  // if(!options.compareArgs("KRYLOV SOLVER", "NONBLOCKING"))
-  //   Niter = pcg (elliptic, lambda, o_r, o_x, tol, maxIter, verbose);
-  // else{
-  //   if(!options.compareArgs("KRYLOV SOLVER", "FLEXIBLE")){
-  //     Niter = nbpcg (elliptic, lambda, o_r, o_x, tol, maxIter);
-  //   }
-  //   else{
-  //     Niter = nbfpcg (elliptic, lambda, o_r, o_x, tol, maxIter);
-  //   }
-  // }
+  int Niter = linearSolver.Solve(*this, *precon, o_x, o_r, tol, MAXIT, verbose);
 
 #if USE_NULL_PROJECTION==1
   if(allNeumann) // zero mean of RHS

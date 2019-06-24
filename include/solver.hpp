@@ -28,6 +28,7 @@ SOFTWARE.
 #define SOLVER_HPP
 
 #include "mesh.hpp"
+#include "linAlg.hpp"
 
 class solver_t {
 public:
@@ -37,15 +38,23 @@ public:
   occa::device& device;
   settings_t& settings;
   occa::properties& props;
-
+  linAlg_t& linAlg;
 
   solver_t() = delete;
-  solver_t(mesh_t& _mesh);
+
+  solver_t(mesh_t& _mesh, linAlg_t& _linAlg):
+    mesh(_mesh),
+    comm(_mesh.comm),
+    device(_mesh.device),
+    settings(_mesh.settings),
+    props(_mesh.props),
+    linAlg(_linAlg) {};
 
   virtual void Run()=0;
-  virtual void Report(dfloat time=0.0, int tstep=0)=0;
+  virtual void Report(dfloat time=0.0, int tstep=0) {};
 
   virtual void rhsf(occa::memory& o_q, occa::memory& o_rhs, const dfloat time) {};
+  virtual void Operator(occa::memory& o_q, occa::memory& o_Aq) {};
 };
 
 #endif

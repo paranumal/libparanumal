@@ -40,9 +40,9 @@ void meshAddSettings(settings_t& settings) {
                       "Type of mesh elements (number of edges)",
                       {"3","4","6","12"});
   settings.newSetting("ELEMENT MAP",
-                      "POLYNOMIAL",
+                      "ISOPARAMETRIC",
                       "Type mapping used to transform each element",
-                      {"POLYNOMIAL","AFFINE"});
+                      {"ISOPARAMETRIC","AFFINE"});
 
   settings.newSetting("BOX DIMX",
                       "10",

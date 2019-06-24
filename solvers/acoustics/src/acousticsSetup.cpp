@@ -26,11 +26,9 @@ SOFTWARE.
 
 #include "acoustics.hpp"
 
-acoustics_t::acoustics_t(mesh_t& _mesh): solver_t(_mesh) {}
+acoustics_t& acoustics_t::Setup(mesh_t& mesh, linAlg_t& linAlg){
 
-acoustics_t& acoustics_t::Setup(mesh_t& mesh){
-
-  acoustics_t* acoustics = new acoustics_t(mesh);
+  acoustics_t* acoustics = new acoustics_t(mesh, linAlg);
 
   settings_t& settings = acoustics->settings;
 
@@ -50,8 +48,7 @@ acoustics_t& acoustics_t::Setup(mesh_t& mesh){
   acoustics->timeStepper->SetTimeStep(dt);
 
   //setup linear algebra module
-  acoustics->linAlg = linAlg_t::Setup(acoustics->device, settings, acoustics->props);
-  acoustics->linAlg->InitKernels({"innerProd"});
+  acoustics->linAlg.InitKernels({"innerProd"});
 
   // set penalty parameter
   dfloat Lambda2 = 0.5;

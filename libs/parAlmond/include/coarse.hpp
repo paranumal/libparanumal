@@ -54,9 +54,9 @@ public:
   MPI_Comm comm;
   occa::device device;
 
-  setupAide options;
+  settings_t& settings;
 
-  coarseSolver(setupAide options);
+  coarseSolver(settings_t& settings);
   ~coarseSolver();
 
   int getTargetSize();
