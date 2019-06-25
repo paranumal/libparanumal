@@ -75,9 +75,9 @@ void solver_t::AMGSetup(parCSR *A){
 
     if(n==numLevels-1){
       chebyIts =ChebyshevIterations;
-      printf("setting: chebyshev iterations\n");
-      if(settings.compareSetting("PARALMOND SMOOTH COARSEST", "TRUE"))
-	      settings.getSetting("PARALMOND SMOOTH COARSEST DEGREE", chebyIts);
+      // printf("setting: chebyshev iterations\n");
+      // if(settings.compareSetting("PARALMOND SMOOTH COARSEST", "TRUE"))
+	     //  settings.getSetting("PARALMOND SMOOTH COARSEST DEGREE", chebyIts);
     }
     setupAgmgSmoother((agmgLevel*)(levels[n]), stype, chebyIts);
     allocateAgmgVectors((agmgLevel*)(levels[n]), n, AMGstartLev, ctype);

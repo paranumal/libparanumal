@@ -44,6 +44,9 @@ MassMatrixPrecon::MassMatrixPrecon(elliptic_t& _elliptic):
   // OCCA build stuff
   occa::properties kernelInfo = elliptic.props; //copy base occa properties
 
+  int NblockV = mymax(1,512/mesh.Np);
+  kernelInfo["defines/" "p_NblockV"]= NblockV;
+
   if (settings.compareSetting("DISCRETIZATION", "IPDG")) {
     blockJacobiKernel = buildKernel(mesh.device, DELLIPTIC "/okl/ellipticPreconBlockJacobi.okl",
                                      "blockJacobi", kernelInfo, mesh.comm);

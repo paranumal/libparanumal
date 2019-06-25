@@ -58,17 +58,17 @@ void coarseSolver::setup(parCSR *A) {
   coarseCounts = (int*) calloc(size,sizeof(int));
 
   // had to move this later
-  if(settings.compareSetting("PARALMOND SMOOTH COARSEST", "TRUE")){
-    if(rank==0) printf("WARNING !!!!!: not building coarsest level matrix\n");
-    return; // bail early as this will not get used
-  }
+  // if(settings.compareSetting("PARALMOND SMOOTH COARSEST", "TRUE")){
+  //   if(rank==0) printf("WARNING !!!!!: not building coarsest level matrix\n");
+  //   return; // bail early as this will not get used
+  // }
 
 
 
   int sendNNZ = (int) (A->diag->nnz+A->offd->nnz);
 
-  // if((rank==0)&&(settings.compareSetting("VERBOSE","TRUE")))
-  //   printf("Setting up coarse solver...");fflush(stdout);
+  if((rank==0)&&(settings.compareSetting("VERBOSE","TRUE")))
+    {printf("Setting up coarse solver...");fflush(stdout);}
 
   // Make the MPI_NONZERO_T data type
   nonzero_t NZ;
@@ -179,7 +179,7 @@ void coarseSolver::setup(parCSR *A) {
 
   free(coarseA);
 
-   // if((rank==0)&&(settings.compareSetting("VERBOSE","TRUE"))) printf("done.\n");
+   if((rank==0)&&(settings.compareSetting("VERBOSE","TRUE"))) printf("done.\n");
 }
 
 void coarseSolver::syncToDevice() {}
