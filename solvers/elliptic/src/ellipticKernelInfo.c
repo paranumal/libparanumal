@@ -89,7 +89,7 @@ occa::properties ellipticKernelInfo(mesh_t *mesh){
     kernelInfo["compiler_flags"] += " --prec-sqrt=false ";
     kernelInfo["compiler_flags"] += " --use_fast_math ";
     kernelInfo["compiler_flags"] += " --fmad=true "; // compiler option for cuda
-    kernelInfo["compiler_flags"] += " -Xptxas -dlcm=ca ";
+    //    kernelInfo["compiler_flags"] += " -Xptxas -dlcm=ca ";
   }
 
   //  if(mesh->device.mode()=="Serial")

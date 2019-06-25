@@ -115,7 +115,9 @@ void meshLoadReferenceNodesHex3D(mesh3D *mesh, int N){
   }
   mesh->intNfp = 0;
   mesh->intLIFT = NULL;
-
+  mesh->max_EL_nnz = 0;
+  mesh->intNfp = 0;
+  
   /* C0 patch data */ 
   readDfloatArray(fp, "C0 overlapping patch forward matrix", &(mesh->oasForward), &Nrows, &Ncols);   
   readDfloatArray(fp, "C0 overlapping patch diagonal scaling", &(mesh->oasDiagOp), &Nrows, &Ncols);   

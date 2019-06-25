@@ -97,6 +97,10 @@ void meshLoadReferenceNodesQuad2D(mesh2D *mesh, int N){
 
   // readDfloatArray(fp, "Cubature Surface Lift Matrix", &(mesh->intLIFT),&Nrows,&Ncols);
 
+  mesh->max_EL_nnz = 0;
+  mesh->intNfp = 0;
+
+  
   /* C0 patch data */ 
   readDfloatArray(fp, "C0 overlapping patch forward matrix", &(mesh->oasForward), &Nrows, &Ncols);   
   readDfloatArray(fp, "C0 overlapping patch diagonal scaling", &(mesh->oasDiagOp), &Nrows, &Ncols);   

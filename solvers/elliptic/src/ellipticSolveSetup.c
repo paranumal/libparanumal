@@ -309,11 +309,12 @@ void ellipticSolveSetup(elliptic_t *elliptic, dfloat lambda, occa::properties &k
   elliptic->precon = new precon_t();
 
   //  kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
-
+#if 0
   if(mesh->device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
     kernelInfo["compiler_flags"] += " -Xptxas -dlcm=ca ";
   }
-
+#endif
+ 
   //  if(mesh->device.mode()=="Serial")
   //    kernelInfo["compiler_flags"] += "-g";
 

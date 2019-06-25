@@ -81,7 +81,6 @@ void meshLoadReferenceNodesTri2D(mesh2D *mesh, int N){
   readDfloatArray(fp, "Cubature Projection Matrix", &(mesh->cubProject),&Nrows,&Ncols);
   readDfloatArray(fp, "Cubature Surface Interpolation Matrix", &(mesh->intInterp),&Nrows,&Ncols);
   mesh->intNfp = Nrows/mesh->Nfaces; //number of interpolation points per face
-
   readDfloatArray(fp, "Cubature Surface Lift Matrix", &(mesh->intLIFT),&Nrows,&Ncols);
 
 
