@@ -45,8 +45,7 @@ mesh3D* meshParallelReaderTet3D(char *fileName){
 
   char *status;
 
-  //  mesh3D *mesh = (mesh3D*) calloc(1, sizeof(mesh3D));
-  mesh_t *mesh = new mesh_t[1];
+  mesh_t *mesh = new mesh_t();
 
   mesh->rank = rank;
   mesh->size = size;

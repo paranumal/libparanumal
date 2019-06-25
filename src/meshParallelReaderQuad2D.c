@@ -46,8 +46,7 @@ mesh2D* meshParallelReaderQuad2D(char *fileName){
 
   char *status;
 
-  //  mesh2D *mesh = (mesh2D*) calloc(1, sizeof(mesh2D));
-  mesh_t *mesh = new mesh_t[1];
+  mesh_t *mesh = new mesh_t();
 
   mesh->rank = rank;
   mesh->size = size;
