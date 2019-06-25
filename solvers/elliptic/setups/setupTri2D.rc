@@ -6,6 +6,9 @@ SOLVE
 #NONE
 #BP5
 
+[BOX DOMAIN]
+FALSE
+
 [DATA FILE]
 data/ellipticHomogeneous2D.h
 
@@ -110,7 +113,6 @@ MAX
 
 [PARALMOND SMOOTH COARSEST]
 FALSE
-
 
 
 ###########################################
