@@ -17,13 +17,13 @@ BOX
 ISOPARAMETRIC
 
 [BOX NX]
-10
+5
 
 [BOX NY]
-10
+5
 
 [BOX NZ]
-10
+5
 
 [BOX DIMX]
 1

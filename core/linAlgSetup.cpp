@@ -24,6 +24,7 @@ SOFTWARE.
 
 */
 
+#include "core.hpp"
 #include "linAlg.hpp"
 
 #define LINALG_BLOCKSIZE 512
@@ -50,7 +51,7 @@ linAlg_t& linAlg_t::Setup(occa::device& device_,
 }
 
 //initialize list of kernels
-void linAlg_t::InitKernels(vector<string> kernels) {
+void linAlg_t::InitKernels(vector<string> kernels, MPI_Comm& comm) {
 
   occa::properties kernelInfo = props; //copy base properties
 
@@ -61,88 +62,88 @@ void linAlg_t::InitKernels(vector<string> kernels) {
     string name = kernels[i];
     if (name=="set") {
       if (setKernel.isInitialized()==false)
-        setKernel = device.buildKernel(LIBP_DIR "/core/okl/"
+        setKernel = buildKernel(device, LIBP_DIR "/core/okl/"
                                         "linAlgSet.okl",
                                         "set",
-                                        kernelInfo);
+                                        kernelInfo, comm);
     } else if (name=="scale") {
       if (scaleKernel.isInitialized()==false)
-        scaleKernel = device.buildKernel(LIBP_DIR "/core/okl/"
+        scaleKernel = buildKernel(device, LIBP_DIR "/core/okl/"
                                         "linAlgScale.okl",
                                         "scale",
-                                        kernelInfo);
+                                        kernelInfo, comm);
     } else if (name=="add") {
       if (addKernel.isInitialized()==false)
-        addKernel = device.buildKernel(LIBP_DIR "/core/okl/"
+        addKernel = buildKernel(device, LIBP_DIR "/core/okl/"
                                         "linAlgAdd.okl",
                                         "add",
-                                        kernelInfo);
+                                        kernelInfo, comm);
     } else if (name=="axpy") {
       if (axpyKernel.isInitialized()==false)
-        axpyKernel = device.buildKernel(LIBP_DIR "/core/okl/"
+        axpyKernel = buildKernel(device, LIBP_DIR "/core/okl/"
                                         "linAlgAXPY.okl",
                                         "axpy",
-                                        kernelInfo);
+                                        kernelInfo, comm);
     } else if (name=="zaxpy") {
       if (zaxpyKernel.isInitialized()==false)
-        zaxpyKernel = device.buildKernel(LIBP_DIR "/core/okl/"
+        zaxpyKernel = buildKernel(device, LIBP_DIR "/core/okl/"
                                         "linAlgAXPY.okl",
                                         "zaxpy",
-                                        kernelInfo);
+                                        kernelInfo, comm);
     } else if (name=="axmy") {
       if (axmyKernel.isInitialized()==false)
-        axmyKernel = device.buildKernel(LIBP_DIR "/core/okl/"
+        axmyKernel = buildKernel(device, LIBP_DIR "/core/okl/"
                                         "linAlgAXMY.okl",
                                         "axmy",
-                                        kernelInfo);
+                                        kernelInfo, comm);
     } else if (name=="zaxmy") {
       if (zaxmyKernel.isInitialized()==false)
-        zaxmyKernel = device.buildKernel(LIBP_DIR "/core/okl/"
+        zaxmyKernel = buildKernel(device, LIBP_DIR "/core/okl/"
                                         "linAlgAXMY.okl",
                                         "zaxmy",
-                                        kernelInfo);
+                                        kernelInfo, comm);
     } else if (name=="axdy") {
       if (axdyKernel.isInitialized()==false)
-        axdyKernel = device.buildKernel(LIBP_DIR "/core/okl/"
+        axdyKernel = buildKernel(device, LIBP_DIR "/core/okl/"
                                         "linAlgAXDY.okl",
                                         "axdy",
-                                        kernelInfo);
+                                        kernelInfo, comm);
     } else if (name=="zaxdy") {
       if (zaxdyKernel.isInitialized()==false)
-        zaxdyKernel = device.buildKernel(LIBP_DIR "/core/okl/"
+        zaxdyKernel = buildKernel(device, LIBP_DIR "/core/okl/"
                                         "linAlgAXDY.okl",
                                         "zaxdy",
-                                        kernelInfo);
+                                        kernelInfo, comm);
     } else if (name=="sum") {
       if (sumKernel.isInitialized()==false)
-        sumKernel = device.buildKernel(LIBP_DIR "/core/okl/"
+        sumKernel = buildKernel(device, LIBP_DIR "/core/okl/"
                                         "linAlgSum.okl",
                                         "sum",
-                                        kernelInfo);
+                                        kernelInfo, comm);
     } else if (name=="norm2") {
       if (norm2Kernel.isInitialized()==false)
-        norm2Kernel = device.buildKernel(LIBP_DIR "/core/okl/"
+        norm2Kernel = buildKernel(device, LIBP_DIR "/core/okl/"
                                         "linAlgNorm2.okl",
                                         "norm2",
-                                        kernelInfo);
+                                        kernelInfo, comm);
     } else if (name=="weightedNorm2") {
       if (weightedNorm2Kernel.isInitialized()==false)
-        weightedNorm2Kernel = device.buildKernel(LIBP_DIR "/core/okl/"
+        weightedNorm2Kernel = buildKernel(device, LIBP_DIR "/core/okl/"
                                         "linAlgWeightedNorm2.okl",
                                         "weightedNorm2",
-                                        kernelInfo);
+                                        kernelInfo, comm);
     } else if (name=="innerProd") {
       if (innerProdKernel.isInitialized()==false)
-        innerProdKernel = device.buildKernel(LIBP_DIR "/core/okl/"
+        innerProdKernel = buildKernel(device, LIBP_DIR "/core/okl/"
                                         "linAlgInnerProd.okl",
                                         "innerProd",
-                                        kernelInfo);
+                                        kernelInfo, comm);
     } else if (name=="weightedInnerProd") {
       if (weightedInnerProdKernel.isInitialized()==false)
-        weightedInnerProdKernel = device.buildKernel(LIBP_DIR "/core/okl/"
+        weightedInnerProdKernel = buildKernel(device, LIBP_DIR "/core/okl/"
                                         "linAlgWeightedInnerProd.okl",
                                         "weightedInnerProd",
-                                        kernelInfo);
+                                        kernelInfo, comm);
     } else {
       stringstream ss;
       ss << "Requested linAlg routine \"" << name << "\" not found";

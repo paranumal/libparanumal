@@ -24,6 +24,7 @@ SOFTWARE.
 
 */
 
+#include "core.hpp"
 #include "ogs.hpp"
 #include "ogsKernels.hpp"
 
@@ -200,150 +201,146 @@ void ogs::initKernels(MPI_Comm comm, occa::device device) {
 
   if (rank==0) {printf("Compiling GatherScatter Kernels...");fflush(stdout);}
 
-  for (int r=0;r<2;r++){
-    if ((r==0 && rank==0) || (r==1 && rank>0)) {
+  ogs::gatherScatterKernel_floatAdd = buildKernel(device, DOGS "/okl/gatherScatter.okl", "gatherScatter_floatAdd", kernelInfo, comm);
+  ogs::gatherScatterKernel_floatMul = buildKernel(device, DOGS "/okl/gatherScatter.okl", "gatherScatter_floatMul", kernelInfo, comm);
+  ogs::gatherScatterKernel_floatMin = buildKernel(device, DOGS "/okl/gatherScatter.okl", "gatherScatter_floatMin", kernelInfo, comm);
+  ogs::gatherScatterKernel_floatMax = buildKernel(device, DOGS "/okl/gatherScatter.okl", "gatherScatter_floatMax", kernelInfo, comm);
 
-      ogs::gatherScatterKernel_floatAdd = device.buildKernel(DOGS "/okl/gatherScatter.okl", "gatherScatter_floatAdd", kernelInfo);
-      ogs::gatherScatterKernel_floatMul = device.buildKernel(DOGS "/okl/gatherScatter.okl", "gatherScatter_floatMul", kernelInfo);
-      ogs::gatherScatterKernel_floatMin = device.buildKernel(DOGS "/okl/gatherScatter.okl", "gatherScatter_floatMin", kernelInfo);
-      ogs::gatherScatterKernel_floatMax = device.buildKernel(DOGS "/okl/gatherScatter.okl", "gatherScatter_floatMax", kernelInfo);
+  ogs::gatherScatterKernel_doubleAdd = buildKernel(device, DOGS "/okl/gatherScatter.okl", "gatherScatter_doubleAdd", kernelInfo, comm);
+  ogs::gatherScatterKernel_doubleMul = buildKernel(device, DOGS "/okl/gatherScatter.okl", "gatherScatter_doubleMul", kernelInfo, comm);
+  ogs::gatherScatterKernel_doubleMin = buildKernel(device, DOGS "/okl/gatherScatter.okl", "gatherScatter_doubleMin", kernelInfo, comm);
+  ogs::gatherScatterKernel_doubleMax = buildKernel(device, DOGS "/okl/gatherScatter.okl", "gatherScatter_doubleMax", kernelInfo, comm);
 
-      ogs::gatherScatterKernel_doubleAdd = device.buildKernel(DOGS "/okl/gatherScatter.okl", "gatherScatter_doubleAdd", kernelInfo);
-      ogs::gatherScatterKernel_doubleMul = device.buildKernel(DOGS "/okl/gatherScatter.okl", "gatherScatter_doubleMul", kernelInfo);
-      ogs::gatherScatterKernel_doubleMin = device.buildKernel(DOGS "/okl/gatherScatter.okl", "gatherScatter_doubleMin", kernelInfo);
-      ogs::gatherScatterKernel_doubleMax = device.buildKernel(DOGS "/okl/gatherScatter.okl", "gatherScatter_doubleMax", kernelInfo);
+  ogs::gatherScatterKernel_intAdd = buildKernel(device, DOGS "/okl/gatherScatter.okl", "gatherScatter_intAdd", kernelInfo, comm);
+  ogs::gatherScatterKernel_intMul = buildKernel(device, DOGS "/okl/gatherScatter.okl", "gatherScatter_intMul", kernelInfo, comm);
+  ogs::gatherScatterKernel_intMin = buildKernel(device, DOGS "/okl/gatherScatter.okl", "gatherScatter_intMin", kernelInfo, comm);
+  ogs::gatherScatterKernel_intMax = buildKernel(device, DOGS "/okl/gatherScatter.okl", "gatherScatter_intMax", kernelInfo, comm);
 
-      ogs::gatherScatterKernel_intAdd = device.buildKernel(DOGS "/okl/gatherScatter.okl", "gatherScatter_intAdd", kernelInfo);
-      ogs::gatherScatterKernel_intMul = device.buildKernel(DOGS "/okl/gatherScatter.okl", "gatherScatter_intMul", kernelInfo);
-      ogs::gatherScatterKernel_intMin = device.buildKernel(DOGS "/okl/gatherScatter.okl", "gatherScatter_intMin", kernelInfo);
-      ogs::gatherScatterKernel_intMax = device.buildKernel(DOGS "/okl/gatherScatter.okl", "gatherScatter_intMax", kernelInfo);
+  ogs::gatherScatterKernel_longAdd = buildKernel(device, DOGS "/okl/gatherScatter.okl", "gatherScatter_longAdd", kernelInfo, comm);
+  ogs::gatherScatterKernel_longMul = buildKernel(device, DOGS "/okl/gatherScatter.okl", "gatherScatter_longMul", kernelInfo, comm);
+  ogs::gatherScatterKernel_longMin = buildKernel(device, DOGS "/okl/gatherScatter.okl", "gatherScatter_longMin", kernelInfo, comm);
+  ogs::gatherScatterKernel_longMax = buildKernel(device, DOGS "/okl/gatherScatter.okl", "gatherScatter_longMax", kernelInfo, comm);
 
-      ogs::gatherScatterKernel_longAdd = device.buildKernel(DOGS "/okl/gatherScatter.okl", "gatherScatter_longAdd", kernelInfo);
-      ogs::gatherScatterKernel_longMul = device.buildKernel(DOGS "/okl/gatherScatter.okl", "gatherScatter_longMul", kernelInfo);
-      ogs::gatherScatterKernel_longMin = device.buildKernel(DOGS "/okl/gatherScatter.okl", "gatherScatter_longMin", kernelInfo);
-      ogs::gatherScatterKernel_longMax = device.buildKernel(DOGS "/okl/gatherScatter.okl", "gatherScatter_longMax", kernelInfo);
+  ogs::gatherScatterVecKernel_floatAdd = buildKernel(device, DOGS "/okl/gatherScatterVec.okl", "gatherScatterVec_floatAdd", kernelInfo, comm);
+  ogs::gatherScatterVecKernel_floatMul = buildKernel(device, DOGS "/okl/gatherScatterVec.okl", "gatherScatterVec_floatMul", kernelInfo, comm);
+  ogs::gatherScatterVecKernel_floatMin = buildKernel(device, DOGS "/okl/gatherScatterVec.okl", "gatherScatterVec_floatMin", kernelInfo, comm);
+  ogs::gatherScatterVecKernel_floatMax = buildKernel(device, DOGS "/okl/gatherScatterVec.okl", "gatherScatterVec_floatMax", kernelInfo, comm);
 
-      ogs::gatherScatterVecKernel_floatAdd = device.buildKernel(DOGS "/okl/gatherScatterVec.okl", "gatherScatterVec_floatAdd", kernelInfo);
-      ogs::gatherScatterVecKernel_floatMul = device.buildKernel(DOGS "/okl/gatherScatterVec.okl", "gatherScatterVec_floatMul", kernelInfo);
-      ogs::gatherScatterVecKernel_floatMin = device.buildKernel(DOGS "/okl/gatherScatterVec.okl", "gatherScatterVec_floatMin", kernelInfo);
-      ogs::gatherScatterVecKernel_floatMax = device.buildKernel(DOGS "/okl/gatherScatterVec.okl", "gatherScatterVec_floatMax", kernelInfo);
+  ogs::gatherScatterVecKernel_doubleAdd = buildKernel(device, DOGS "/okl/gatherScatterVec.okl", "gatherScatterVec_doubleAdd", kernelInfo, comm);
+  ogs::gatherScatterVecKernel_doubleMul = buildKernel(device, DOGS "/okl/gatherScatterVec.okl", "gatherScatterVec_doubleMul", kernelInfo, comm);
+  ogs::gatherScatterVecKernel_doubleMin = buildKernel(device, DOGS "/okl/gatherScatterVec.okl", "gatherScatterVec_doubleMin", kernelInfo, comm);
+  ogs::gatherScatterVecKernel_doubleMax = buildKernel(device, DOGS "/okl/gatherScatterVec.okl", "gatherScatterVec_doubleMax", kernelInfo, comm);
 
-      ogs::gatherScatterVecKernel_doubleAdd = device.buildKernel(DOGS "/okl/gatherScatterVec.okl", "gatherScatterVec_doubleAdd", kernelInfo);
-      ogs::gatherScatterVecKernel_doubleMul = device.buildKernel(DOGS "/okl/gatherScatterVec.okl", "gatherScatterVec_doubleMul", kernelInfo);
-      ogs::gatherScatterVecKernel_doubleMin = device.buildKernel(DOGS "/okl/gatherScatterVec.okl", "gatherScatterVec_doubleMin", kernelInfo);
-      ogs::gatherScatterVecKernel_doubleMax = device.buildKernel(DOGS "/okl/gatherScatterVec.okl", "gatherScatterVec_doubleMax", kernelInfo);
+  ogs::gatherScatterVecKernel_intAdd = buildKernel(device, DOGS "/okl/gatherScatterVec.okl", "gatherScatterVec_intAdd", kernelInfo, comm);
+  ogs::gatherScatterVecKernel_intMul = buildKernel(device, DOGS "/okl/gatherScatterVec.okl", "gatherScatterVec_intMul", kernelInfo, comm);
+  ogs::gatherScatterVecKernel_intMin = buildKernel(device, DOGS "/okl/gatherScatterVec.okl", "gatherScatterVec_intMin", kernelInfo, comm);
+  ogs::gatherScatterVecKernel_intMax = buildKernel(device, DOGS "/okl/gatherScatterVec.okl", "gatherScatterVec_intMax", kernelInfo, comm);
 
-      ogs::gatherScatterVecKernel_intAdd = device.buildKernel(DOGS "/okl/gatherScatterVec.okl", "gatherScatterVec_intAdd", kernelInfo);
-      ogs::gatherScatterVecKernel_intMul = device.buildKernel(DOGS "/okl/gatherScatterVec.okl", "gatherScatterVec_intMul", kernelInfo);
-      ogs::gatherScatterVecKernel_intMin = device.buildKernel(DOGS "/okl/gatherScatterVec.okl", "gatherScatterVec_intMin", kernelInfo);
-      ogs::gatherScatterVecKernel_intMax = device.buildKernel(DOGS "/okl/gatherScatterVec.okl", "gatherScatterVec_intMax", kernelInfo);
+  ogs::gatherScatterVecKernel_longAdd = buildKernel(device, DOGS "/okl/gatherScatterVec.okl", "gatherScatterVec_longAdd", kernelInfo, comm);
+  ogs::gatherScatterVecKernel_longMul = buildKernel(device, DOGS "/okl/gatherScatterVec.okl", "gatherScatterVec_longMul", kernelInfo, comm);
+  ogs::gatherScatterVecKernel_longMin = buildKernel(device, DOGS "/okl/gatherScatterVec.okl", "gatherScatterVec_longMin", kernelInfo, comm);
+  ogs::gatherScatterVecKernel_longMax = buildKernel(device, DOGS "/okl/gatherScatterVec.okl", "gatherScatterVec_longMax", kernelInfo, comm);
 
-      ogs::gatherScatterVecKernel_longAdd = device.buildKernel(DOGS "/okl/gatherScatterVec.okl", "gatherScatterVec_longAdd", kernelInfo);
-      ogs::gatherScatterVecKernel_longMul = device.buildKernel(DOGS "/okl/gatherScatterVec.okl", "gatherScatterVec_longMul", kernelInfo);
-      ogs::gatherScatterVecKernel_longMin = device.buildKernel(DOGS "/okl/gatherScatterVec.okl", "gatherScatterVec_longMin", kernelInfo);
-      ogs::gatherScatterVecKernel_longMax = device.buildKernel(DOGS "/okl/gatherScatterVec.okl", "gatherScatterVec_longMax", kernelInfo);
+  ogs::gatherScatterManyKernel_floatAdd = buildKernel(device, DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_floatAdd", kernelInfo, comm);
+  ogs::gatherScatterManyKernel_floatMul = buildKernel(device, DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_floatMul", kernelInfo, comm);
+  ogs::gatherScatterManyKernel_floatMin = buildKernel(device, DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_floatMin", kernelInfo, comm);
+  ogs::gatherScatterManyKernel_floatMax = buildKernel(device, DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_floatMax", kernelInfo, comm);
 
-      ogs::gatherScatterManyKernel_floatAdd = device.buildKernel(DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_floatAdd", kernelInfo);
-      ogs::gatherScatterManyKernel_floatMul = device.buildKernel(DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_floatMul", kernelInfo);
-      ogs::gatherScatterManyKernel_floatMin = device.buildKernel(DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_floatMin", kernelInfo);
-      ogs::gatherScatterManyKernel_floatMax = device.buildKernel(DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_floatMax", kernelInfo);
+  ogs::gatherScatterManyKernel_doubleAdd = buildKernel(device, DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_doubleAdd", kernelInfo, comm);
+  ogs::gatherScatterManyKernel_doubleMul = buildKernel(device, DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_doubleMul", kernelInfo, comm);
+  ogs::gatherScatterManyKernel_doubleMin = buildKernel(device, DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_doubleMin", kernelInfo, comm);
+  ogs::gatherScatterManyKernel_doubleMax = buildKernel(device, DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_doubleMax", kernelInfo, comm);
 
-      ogs::gatherScatterManyKernel_doubleAdd = device.buildKernel(DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_doubleAdd", kernelInfo);
-      ogs::gatherScatterManyKernel_doubleMul = device.buildKernel(DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_doubleMul", kernelInfo);
-      ogs::gatherScatterManyKernel_doubleMin = device.buildKernel(DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_doubleMin", kernelInfo);
-      ogs::gatherScatterManyKernel_doubleMax = device.buildKernel(DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_doubleMax", kernelInfo);
+  ogs::gatherScatterManyKernel_intAdd = buildKernel(device, DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_intAdd", kernelInfo, comm);
+  ogs::gatherScatterManyKernel_intMul = buildKernel(device, DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_intMul", kernelInfo, comm);
+  ogs::gatherScatterManyKernel_intMin = buildKernel(device, DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_intMin", kernelInfo, comm);
+  ogs::gatherScatterManyKernel_intMax = buildKernel(device, DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_intMax", kernelInfo, comm);
 
-      ogs::gatherScatterManyKernel_intAdd = device.buildKernel(DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_intAdd", kernelInfo);
-      ogs::gatherScatterManyKernel_intMul = device.buildKernel(DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_intMul", kernelInfo);
-      ogs::gatherScatterManyKernel_intMin = device.buildKernel(DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_intMin", kernelInfo);
-      ogs::gatherScatterManyKernel_intMax = device.buildKernel(DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_intMax", kernelInfo);
-
-      ogs::gatherScatterManyKernel_longAdd = device.buildKernel(DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_longAdd", kernelInfo);
-      ogs::gatherScatterManyKernel_longMul = device.buildKernel(DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_longMul", kernelInfo);
-      ogs::gatherScatterManyKernel_longMin = device.buildKernel(DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_longMin", kernelInfo);
-      ogs::gatherScatterManyKernel_longMax = device.buildKernel(DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_longMax", kernelInfo);
+  ogs::gatherScatterManyKernel_longAdd = buildKernel(device, DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_longAdd", kernelInfo, comm);
+  ogs::gatherScatterManyKernel_longMul = buildKernel(device, DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_longMul", kernelInfo, comm);
+  ogs::gatherScatterManyKernel_longMin = buildKernel(device, DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_longMin", kernelInfo, comm);
+  ogs::gatherScatterManyKernel_longMax = buildKernel(device, DOGS "/okl/gatherScatterMany.okl", "gatherScatterMany_longMax", kernelInfo, comm);
 
 
 
-      ogs::gatherKernel_floatAdd = device.buildKernel(DOGS "/okl/gather.okl", "gather_floatAdd", kernelInfo);
-      ogs::gatherKernel_floatMul = device.buildKernel(DOGS "/okl/gather.okl", "gather_floatMul", kernelInfo);
-      ogs::gatherKernel_floatMin = device.buildKernel(DOGS "/okl/gather.okl", "gather_floatMin", kernelInfo);
-      ogs::gatherKernel_floatMax = device.buildKernel(DOGS "/okl/gather.okl", "gather_floatMax", kernelInfo);
+  ogs::gatherKernel_floatAdd = buildKernel(device, DOGS "/okl/gather.okl", "gather_floatAdd", kernelInfo, comm);
+  ogs::gatherKernel_floatMul = buildKernel(device, DOGS "/okl/gather.okl", "gather_floatMul", kernelInfo, comm);
+  ogs::gatherKernel_floatMin = buildKernel(device, DOGS "/okl/gather.okl", "gather_floatMin", kernelInfo, comm);
+  ogs::gatherKernel_floatMax = buildKernel(device, DOGS "/okl/gather.okl", "gather_floatMax", kernelInfo, comm);
 
-      ogs::gatherKernel_doubleAdd = device.buildKernel(DOGS "/okl/gather.okl", "gather_doubleAdd", kernelInfo);
-      ogs::gatherKernel_doubleMul = device.buildKernel(DOGS "/okl/gather.okl", "gather_doubleMul", kernelInfo);
-      ogs::gatherKernel_doubleMin = device.buildKernel(DOGS "/okl/gather.okl", "gather_doubleMin", kernelInfo);
-      ogs::gatherKernel_doubleMax = device.buildKernel(DOGS "/okl/gather.okl", "gather_doubleMax", kernelInfo);
+  ogs::gatherKernel_doubleAdd = buildKernel(device, DOGS "/okl/gather.okl", "gather_doubleAdd", kernelInfo, comm);
+  ogs::gatherKernel_doubleMul = buildKernel(device, DOGS "/okl/gather.okl", "gather_doubleMul", kernelInfo, comm);
+  ogs::gatherKernel_doubleMin = buildKernel(device, DOGS "/okl/gather.okl", "gather_doubleMin", kernelInfo, comm);
+  ogs::gatherKernel_doubleMax = buildKernel(device, DOGS "/okl/gather.okl", "gather_doubleMax", kernelInfo, comm);
 
-      ogs::gatherKernel_intAdd = device.buildKernel(DOGS "/okl/gather.okl", "gather_intAdd", kernelInfo);
-      ogs::gatherKernel_intMul = device.buildKernel(DOGS "/okl/gather.okl", "gather_intMul", kernelInfo);
-      ogs::gatherKernel_intMin = device.buildKernel(DOGS "/okl/gather.okl", "gather_intMin", kernelInfo);
-      ogs::gatherKernel_intMax = device.buildKernel(DOGS "/okl/gather.okl", "gather_intMax", kernelInfo);
+  ogs::gatherKernel_intAdd = buildKernel(device, DOGS "/okl/gather.okl", "gather_intAdd", kernelInfo, comm);
+  ogs::gatherKernel_intMul = buildKernel(device, DOGS "/okl/gather.okl", "gather_intMul", kernelInfo, comm);
+  ogs::gatherKernel_intMin = buildKernel(device, DOGS "/okl/gather.okl", "gather_intMin", kernelInfo, comm);
+  ogs::gatherKernel_intMax = buildKernel(device, DOGS "/okl/gather.okl", "gather_intMax", kernelInfo, comm);
 
-      ogs::gatherKernel_longAdd = device.buildKernel(DOGS "/okl/gather.okl", "gather_longAdd", kernelInfo);
-      ogs::gatherKernel_longMul = device.buildKernel(DOGS "/okl/gather.okl", "gather_longMul", kernelInfo);
-      ogs::gatherKernel_longMin = device.buildKernel(DOGS "/okl/gather.okl", "gather_longMin", kernelInfo);
-      ogs::gatherKernel_longMax = device.buildKernel(DOGS "/okl/gather.okl", "gather_longMax", kernelInfo);
+  ogs::gatherKernel_longAdd = buildKernel(device, DOGS "/okl/gather.okl", "gather_longAdd", kernelInfo, comm);
+  ogs::gatherKernel_longMul = buildKernel(device, DOGS "/okl/gather.okl", "gather_longMul", kernelInfo, comm);
+  ogs::gatherKernel_longMin = buildKernel(device, DOGS "/okl/gather.okl", "gather_longMin", kernelInfo, comm);
+  ogs::gatherKernel_longMax = buildKernel(device, DOGS "/okl/gather.okl", "gather_longMax", kernelInfo, comm);
 
-      ogs::gatherVecKernel_floatAdd = device.buildKernel(DOGS "/okl/gatherVec.okl", "gatherVec_floatAdd", kernelInfo);
-      ogs::gatherVecKernel_floatMul = device.buildKernel(DOGS "/okl/gatherVec.okl", "gatherVec_floatMul", kernelInfo);
-      ogs::gatherVecKernel_floatMin = device.buildKernel(DOGS "/okl/gatherVec.okl", "gatherVec_floatMin", kernelInfo);
-      ogs::gatherVecKernel_floatMax = device.buildKernel(DOGS "/okl/gatherVec.okl", "gatherVec_floatMax", kernelInfo);
+  ogs::gatherVecKernel_floatAdd = buildKernel(device, DOGS "/okl/gatherVec.okl", "gatherVec_floatAdd", kernelInfo, comm);
+  ogs::gatherVecKernel_floatMul = buildKernel(device, DOGS "/okl/gatherVec.okl", "gatherVec_floatMul", kernelInfo, comm);
+  ogs::gatherVecKernel_floatMin = buildKernel(device, DOGS "/okl/gatherVec.okl", "gatherVec_floatMin", kernelInfo, comm);
+  ogs::gatherVecKernel_floatMax = buildKernel(device, DOGS "/okl/gatherVec.okl", "gatherVec_floatMax", kernelInfo, comm);
 
-      ogs::gatherVecKernel_doubleAdd = device.buildKernel(DOGS "/okl/gatherVec.okl", "gatherVec_doubleAdd", kernelInfo);
-      ogs::gatherVecKernel_doubleMul = device.buildKernel(DOGS "/okl/gatherVec.okl", "gatherVec_doubleMul", kernelInfo);
-      ogs::gatherVecKernel_doubleMin = device.buildKernel(DOGS "/okl/gatherVec.okl", "gatherVec_doubleMin", kernelInfo);
-      ogs::gatherVecKernel_doubleMax = device.buildKernel(DOGS "/okl/gatherVec.okl", "gatherVec_doubleMax", kernelInfo);
+  ogs::gatherVecKernel_doubleAdd = buildKernel(device, DOGS "/okl/gatherVec.okl", "gatherVec_doubleAdd", kernelInfo, comm);
+  ogs::gatherVecKernel_doubleMul = buildKernel(device, DOGS "/okl/gatherVec.okl", "gatherVec_doubleMul", kernelInfo, comm);
+  ogs::gatherVecKernel_doubleMin = buildKernel(device, DOGS "/okl/gatherVec.okl", "gatherVec_doubleMin", kernelInfo, comm);
+  ogs::gatherVecKernel_doubleMax = buildKernel(device, DOGS "/okl/gatherVec.okl", "gatherVec_doubleMax", kernelInfo, comm);
 
-      ogs::gatherVecKernel_intAdd = device.buildKernel(DOGS "/okl/gatherVec.okl", "gatherVec_intAdd", kernelInfo);
-      ogs::gatherVecKernel_intMul = device.buildKernel(DOGS "/okl/gatherVec.okl", "gatherVec_intMul", kernelInfo);
-      ogs::gatherVecKernel_intMin = device.buildKernel(DOGS "/okl/gatherVec.okl", "gatherVec_intMin", kernelInfo);
-      ogs::gatherVecKernel_intMax = device.buildKernel(DOGS "/okl/gatherVec.okl", "gatherVec_intMax", kernelInfo);
+  ogs::gatherVecKernel_intAdd = buildKernel(device, DOGS "/okl/gatherVec.okl", "gatherVec_intAdd", kernelInfo, comm);
+  ogs::gatherVecKernel_intMul = buildKernel(device, DOGS "/okl/gatherVec.okl", "gatherVec_intMul", kernelInfo, comm);
+  ogs::gatherVecKernel_intMin = buildKernel(device, DOGS "/okl/gatherVec.okl", "gatherVec_intMin", kernelInfo, comm);
+  ogs::gatherVecKernel_intMax = buildKernel(device, DOGS "/okl/gatherVec.okl", "gatherVec_intMax", kernelInfo, comm);
 
-      ogs::gatherVecKernel_longAdd = device.buildKernel(DOGS "/okl/gatherVec.okl", "gatherVec_longAdd", kernelInfo);
-      ogs::gatherVecKernel_longMul = device.buildKernel(DOGS "/okl/gatherVec.okl", "gatherVec_longMul", kernelInfo);
-      ogs::gatherVecKernel_longMin = device.buildKernel(DOGS "/okl/gatherVec.okl", "gatherVec_longMin", kernelInfo);
-      ogs::gatherVecKernel_longMax = device.buildKernel(DOGS "/okl/gatherVec.okl", "gatherVec_longMax", kernelInfo);
+  ogs::gatherVecKernel_longAdd = buildKernel(device, DOGS "/okl/gatherVec.okl", "gatherVec_longAdd", kernelInfo, comm);
+  ogs::gatherVecKernel_longMul = buildKernel(device, DOGS "/okl/gatherVec.okl", "gatherVec_longMul", kernelInfo, comm);
+  ogs::gatherVecKernel_longMin = buildKernel(device, DOGS "/okl/gatherVec.okl", "gatherVec_longMin", kernelInfo, comm);
+  ogs::gatherVecKernel_longMax = buildKernel(device, DOGS "/okl/gatherVec.okl", "gatherVec_longMax", kernelInfo, comm);
 
-      ogs::gatherManyKernel_floatAdd = device.buildKernel(DOGS "/okl/gatherMany.okl", "gatherMany_floatAdd", kernelInfo);
-      ogs::gatherManyKernel_floatMul = device.buildKernel(DOGS "/okl/gatherMany.okl", "gatherMany_floatMul", kernelInfo);
-      ogs::gatherManyKernel_floatMin = device.buildKernel(DOGS "/okl/gatherMany.okl", "gatherMany_floatMin", kernelInfo);
-      ogs::gatherManyKernel_floatMax = device.buildKernel(DOGS "/okl/gatherMany.okl", "gatherMany_floatMax", kernelInfo);
+  ogs::gatherManyKernel_floatAdd = buildKernel(device, DOGS "/okl/gatherMany.okl", "gatherMany_floatAdd", kernelInfo, comm);
+  ogs::gatherManyKernel_floatMul = buildKernel(device, DOGS "/okl/gatherMany.okl", "gatherMany_floatMul", kernelInfo, comm);
+  ogs::gatherManyKernel_floatMin = buildKernel(device, DOGS "/okl/gatherMany.okl", "gatherMany_floatMin", kernelInfo, comm);
+  ogs::gatherManyKernel_floatMax = buildKernel(device, DOGS "/okl/gatherMany.okl", "gatherMany_floatMax", kernelInfo, comm);
 
-      ogs::gatherManyKernel_doubleAdd = device.buildKernel(DOGS "/okl/gatherMany.okl", "gatherMany_doubleAdd", kernelInfo);
-      ogs::gatherManyKernel_doubleMul = device.buildKernel(DOGS "/okl/gatherMany.okl", "gatherMany_doubleMul", kernelInfo);
-      ogs::gatherManyKernel_doubleMin = device.buildKernel(DOGS "/okl/gatherMany.okl", "gatherMany_doubleMin", kernelInfo);
-      ogs::gatherManyKernel_doubleMax = device.buildKernel(DOGS "/okl/gatherMany.okl", "gatherMany_doubleMax", kernelInfo);
+  ogs::gatherManyKernel_doubleAdd = buildKernel(device, DOGS "/okl/gatherMany.okl", "gatherMany_doubleAdd", kernelInfo, comm);
+  ogs::gatherManyKernel_doubleMul = buildKernel(device, DOGS "/okl/gatherMany.okl", "gatherMany_doubleMul", kernelInfo, comm);
+  ogs::gatherManyKernel_doubleMin = buildKernel(device, DOGS "/okl/gatherMany.okl", "gatherMany_doubleMin", kernelInfo, comm);
+  ogs::gatherManyKernel_doubleMax = buildKernel(device, DOGS "/okl/gatherMany.okl", "gatherMany_doubleMax", kernelInfo, comm);
 
-      ogs::gatherManyKernel_intAdd = device.buildKernel(DOGS "/okl/gatherMany.okl", "gatherMany_intAdd", kernelInfo);
-      ogs::gatherManyKernel_intMul = device.buildKernel(DOGS "/okl/gatherMany.okl", "gatherMany_intMul", kernelInfo);
-      ogs::gatherManyKernel_intMin = device.buildKernel(DOGS "/okl/gatherMany.okl", "gatherMany_intMin", kernelInfo);
-      ogs::gatherManyKernel_intMax = device.buildKernel(DOGS "/okl/gatherMany.okl", "gatherMany_intMax", kernelInfo);
+  ogs::gatherManyKernel_intAdd = buildKernel(device, DOGS "/okl/gatherMany.okl", "gatherMany_intAdd", kernelInfo, comm);
+  ogs::gatherManyKernel_intMul = buildKernel(device, DOGS "/okl/gatherMany.okl", "gatherMany_intMul", kernelInfo, comm);
+  ogs::gatherManyKernel_intMin = buildKernel(device, DOGS "/okl/gatherMany.okl", "gatherMany_intMin", kernelInfo, comm);
+  ogs::gatherManyKernel_intMax = buildKernel(device, DOGS "/okl/gatherMany.okl", "gatherMany_intMax", kernelInfo, comm);
 
-      ogs::gatherManyKernel_longAdd = device.buildKernel(DOGS "/okl/gatherMany.okl", "gatherMany_longAdd", kernelInfo);
-      ogs::gatherManyKernel_longMul = device.buildKernel(DOGS "/okl/gatherMany.okl", "gatherMany_longMul", kernelInfo);
-      ogs::gatherManyKernel_longMin = device.buildKernel(DOGS "/okl/gatherMany.okl", "gatherMany_longMin", kernelInfo);
-      ogs::gatherManyKernel_longMax = device.buildKernel(DOGS "/okl/gatherMany.okl", "gatherMany_longMax", kernelInfo);
+  ogs::gatherManyKernel_longAdd = buildKernel(device, DOGS "/okl/gatherMany.okl", "gatherMany_longAdd", kernelInfo, comm);
+  ogs::gatherManyKernel_longMul = buildKernel(device, DOGS "/okl/gatherMany.okl", "gatherMany_longMul", kernelInfo, comm);
+  ogs::gatherManyKernel_longMin = buildKernel(device, DOGS "/okl/gatherMany.okl", "gatherMany_longMin", kernelInfo, comm);
+  ogs::gatherManyKernel_longMax = buildKernel(device, DOGS "/okl/gatherMany.okl", "gatherMany_longMax", kernelInfo, comm);
 
 
 
-      ogs::scatterKernel_float = device.buildKernel(DOGS "/okl/scatter.okl", "scatter_float", kernelInfo);
-      ogs::scatterKernel_double = device.buildKernel(DOGS "/okl/scatter.okl", "scatter_double", kernelInfo);
-      ogs::scatterKernel_int = device.buildKernel(DOGS "/okl/scatter.okl", "scatter_int", kernelInfo);
-      ogs::scatterKernel_long = device.buildKernel(DOGS "/okl/scatter.okl", "scatter_long", kernelInfo);
+  ogs::scatterKernel_float = buildKernel(device, DOGS "/okl/scatter.okl", "scatter_float", kernelInfo, comm);
+  ogs::scatterKernel_double = buildKernel(device, DOGS "/okl/scatter.okl", "scatter_double", kernelInfo, comm);
+  ogs::scatterKernel_int = buildKernel(device, DOGS "/okl/scatter.okl", "scatter_int", kernelInfo, comm);
+  ogs::scatterKernel_long = buildKernel(device, DOGS "/okl/scatter.okl", "scatter_long", kernelInfo, comm);
 
-      ogs::scatterVecKernel_float = device.buildKernel(DOGS "/okl/scatterVec.okl", "scatterVec_float", kernelInfo);
-      ogs::scatterVecKernel_double = device.buildKernel(DOGS "/okl/scatterVec.okl", "scatterVec_double", kernelInfo);
-      ogs::scatterVecKernel_int = device.buildKernel(DOGS "/okl/scatterVec.okl", "scatterVec_int", kernelInfo);
-      ogs::scatterVecKernel_long = device.buildKernel(DOGS "/okl/scatterVec.okl", "scatterVec_long", kernelInfo);
+  ogs::scatterVecKernel_float = buildKernel(device, DOGS "/okl/scatterVec.okl", "scatterVec_float", kernelInfo, comm);
+  ogs::scatterVecKernel_double = buildKernel(device, DOGS "/okl/scatterVec.okl", "scatterVec_double", kernelInfo, comm);
+  ogs::scatterVecKernel_int = buildKernel(device, DOGS "/okl/scatterVec.okl", "scatterVec_int", kernelInfo, comm);
+  ogs::scatterVecKernel_long = buildKernel(device, DOGS "/okl/scatterVec.okl", "scatterVec_long", kernelInfo, comm);
 
-      ogs::scatterManyKernel_float = device.buildKernel(DOGS "/okl/scatterMany.okl", "scatterMany_float", kernelInfo);
-      ogs::scatterManyKernel_double = device.buildKernel(DOGS "/okl/scatterMany.okl", "scatterMany_double", kernelInfo);
-      ogs::scatterManyKernel_int = device.buildKernel(DOGS "/okl/scatterMany.okl", "scatterMany_int", kernelInfo);
-      ogs::scatterManyKernel_long = device.buildKernel(DOGS "/okl/scatterMany.okl", "scatterMany_long", kernelInfo);
-    }
-    MPI_Barrier(comm);
-  }
+  ogs::scatterManyKernel_float = buildKernel(device, DOGS "/okl/scatterMany.okl", "scatterMany_float", kernelInfo, comm);
+  ogs::scatterManyKernel_double = buildKernel(device, DOGS "/okl/scatterMany.okl", "scatterMany_double", kernelInfo, comm);
+  ogs::scatterManyKernel_int = buildKernel(device, DOGS "/okl/scatterMany.okl", "scatterMany_int", kernelInfo, comm);
+  ogs::scatterManyKernel_long = buildKernel(device, DOGS "/okl/scatterMany.okl", "scatterMany_long", kernelInfo, comm);
+
+
   if(rank==0) printf("done.\n");
 }
 

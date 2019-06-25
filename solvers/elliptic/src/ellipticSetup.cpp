@@ -44,7 +44,8 @@ elliptic_t& elliptic_t::Setup(mesh_t& mesh, linAlg_t& linAlg, dfloat lambda){
                                 "axmy", "zaxmy",
                                 "axdy", "zaxdy",
                                 "innerProd", "weightedInnerProd",
-                                "norm2", "weightedNorm2"});
+                                "norm2", "weightedNorm2"},
+                                mesh.comm);
 
   // Boundary Type translation. Just defaults.
   int BCType[3] = {0,1,2};

@@ -194,7 +194,7 @@ void meshHex3D::OccaSetup(occa::properties &kernelInfo){
   o_sMT = device.malloc(1*sizeof(dfloat)); //dummy
 
   o_vgeo =
-    device.malloc(Nelements*Np*Nvgeo*sizeof(dfloat),
+    device.malloc((Nelements+totalHaloPairs)*Np*Nvgeo*sizeof(dfloat),
                         vgeo);
 
   o_sgeo =

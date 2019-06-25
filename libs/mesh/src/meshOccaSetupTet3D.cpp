@@ -290,7 +290,7 @@ void meshTet3D::OccaSetup(occa::properties &kernelInfo){
       MM);
 
   o_vgeo =
-    device.malloc(Nelements*Nvgeo*sizeof(dfloat),
+    device.malloc((Nelements+totalHaloPairs)*Nvgeo*sizeof(dfloat),
                         vgeo);
 
   o_sgeo =

@@ -120,7 +120,6 @@ void elliptic_t::Run(){
                 mesh.o_MM,
                 o_r);
   } else if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
-    printf("mesh.o_sMT.size() = %lu  \n",  mesh.o_sMT.size());
     rhsBCKernel(mesh.Nelements,
                 mesh.o_ggeo,
                 mesh.o_sgeo,

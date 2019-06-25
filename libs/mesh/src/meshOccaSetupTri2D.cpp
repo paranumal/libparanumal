@@ -201,7 +201,7 @@ void meshTri2D::OccaSetup(occa::properties &kernelInfo){
         LIFTT);
 
   o_vgeo =
-    device.malloc(Nelements*Nvgeo*sizeof(dfloat),
+    device.malloc((Nelements+totalHaloPairs)*Nvgeo*sizeof(dfloat),
         vgeo);
 
   o_cubvgeo =   device.malloc(sizeof(dfloat));// dummy
