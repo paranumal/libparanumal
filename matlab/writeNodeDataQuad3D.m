@@ -457,6 +457,17 @@ for n=1:Nq
     fprintf(fid, '\n');
 end
 
+Finv = inv(F2(:,Nq:2*Nq-1)');
+
+fprintf(fid,"%% inverse transposed center matrix\n");
+
+for n=1:Nq
+  for m=1:Nq
+    fprintf(fid, '%17.15E ', Finv(n,m))
+  end
+  fprintf(fid, '\n');
+end    
+    
 fprintf(fid,"%% Weak D matrix 1D\n");
 	  D1d_weak = -1*inv(diag(w1d))*D1d'*M1d;
 for n=1:N+1

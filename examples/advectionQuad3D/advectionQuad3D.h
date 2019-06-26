@@ -55,6 +55,7 @@ typedef struct {
     occa::memory o_gridToE;
     occa::memory o_mass;
     occa::memory o_invmass;
+    occa::memory o_invTransMatrix;
     occa::kernel haloExtractKernel;
     occa::kernel haloScatterKernel;
     occa::kernel volumeKernel;

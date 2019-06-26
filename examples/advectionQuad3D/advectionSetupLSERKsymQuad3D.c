@@ -130,6 +130,9 @@ void advectionSetupLSERKsymQuad3D (solver_t *solver) {
     
     solver->o_qFilter =
 	solver->device.malloc(mesh->NgridElements*solver->Nfields*mesh->Np*sizeof(dfloat));
+
+    solver->o_qFiltered =
+	solver->device.malloc(mesh->NgridElements*solver->Nfields*mesh->Np*sizeof(dfloat));
     
     solver->o_qCorr =
 	solver->device.malloc(mesh->Nelements*solver->Nfields*mesh->Np*sizeof(dfloat));
@@ -160,12 +163,25 @@ void advectionSetupLSERKsymQuad3D (solver_t *solver) {
       solver->device.buildKernelFromSource(DHOLMES "/okl/boltzmannUpdateQuad3D.okl",
 					   "boltzmannLSERKsymUpdateQuad3D",
 					   kernelInfo);
+    printf("starting first kernel\n");
     solver->filterKernelH =
-      solver->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterHQuad3D.okl",
-					 "boltzmannFilterHsymQuad3D",
-					 kernelInfo);
+	solver->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterHQuad3D.okl",
+					     "boltzmannFilterHsymQuad3D",
+					     kernelInfo);
+    printf("finished first kernel\n");
     solver->filterKernelV =
-      solver->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterVQuad3D.okl",
-					 "boltzmannFilterVsymQuad3D",
-					 kernelInfo);
+	solver->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterVQuad3D.okl",
+					     "boltzmannFilterVsymQuad3D",
+					     kernelInfo);
+    printf("finished second kernel\n");
+    solver->filterWeakKernelH =
+	solver->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterHQuad3D.okl",
+					     "boltzmannFilterHtransQuad3D",
+					     kernelInfo);
+    printf("finished third kernel\n");
+    solver->filterWeakKernelV =
+	solver->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterVQuad3D.okl",
+					     "boltzmannFilterVtransQuad3D",
+					     kernelInfo);
+    printf("finished loading kernels\n");
 }

@@ -335,6 +335,19 @@ void meshLoadReferenceNodesQuad3D(mesh2D *mesh, int N){
     fgets(buf,BUFSIZ,fp); // rest of line
   }
 
+  // read inverse center lift matrix from surface integration to volume nodes
+  mesh->invTransMatrix = (dfloat*) calloc(mesh->Nq*mesh->Nq, sizeof(dfloat));
+  fgets(buf, BUFSIZ, fp); // read comment
+  printf("got invDual message: %s\n", buf);
+  for(int n=0;n<mesh->Nq;++n){
+    for(int m=0;m<mesh->Nq;++m){
+      fscanf(fp, dfloatFormat, mesh->invTransMatrix+n*mesh->Nq+m);
+      printf("%lg ", mesh->invTransMatrix[n*mesh->Nq+m]);
+    }
+    printf("\n");
+    fgets(buf,BUFSIZ,fp); // rest of line
+  }  
+  
     /* 1D weak differentiation matrix on GLL nodes */
   fgets(buf, BUFSIZ, fp); // read comment
   printf("got weak D message: %s\n", buf);

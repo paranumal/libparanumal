@@ -324,6 +324,7 @@ typedef struct {
   iint *perp_index;
   dfloat *par_loc;
     dfloat *weakD;
+    dfloat *invTransMatrix;
     
   // occa stuff
   occa::device device;
