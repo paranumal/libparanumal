@@ -107,7 +107,7 @@ mesh3D *meshSetupBoxHex3D(int N, setupAide &options){
   for(hlong n=start;n<end;++n){
 
     int i = n%NX;      // [0, NX)
-    int j = (n/NY)%NZ; // [0, NY)
+    int j = (n/NX)%NY; // [0, NY)
     int k = n/(NX*NY); // [0, NZ)
 
     hlong e = n-start;
