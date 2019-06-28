@@ -35,14 +35,14 @@ void linAlg_t::set(const dlong N, const dfloat alpha, occa::memory& o_a) {
   setKernel(N, alpha, o_a);
 }
 
-// o_a[n] *= alpha
-void linAlg_t::scale(const dlong N, const dfloat alpha, occa::memory& o_a)  {
-  scaleKernel(N, alpha, o_a);
-}
-
 // o_a[n] += alpha
 void linAlg_t::add(const dlong N, const dfloat alpha, occa::memory& o_a) {
   addKernel(N, alpha, o_a);
+}
+
+// o_a[n] *= alpha
+void linAlg_t::scale(const dlong N, const dfloat alpha, occa::memory& o_a)  {
+  scaleKernel(N, alpha, o_a);
 }
 
 // o_y[n] = beta*o_y[n] + alpha*o_x[n]
@@ -57,28 +57,44 @@ void linAlg_t::zaxpy(const dlong N, const dfloat alpha, occa::memory& o_x,
   zaxpyKernel(N, alpha, o_x, beta, o_y, o_z);
 }
 
-// o_y[n] = beta*o_y[n] + alpha*o_x[n]*o_y[n]
-void linAlg_t::axmy(const dlong N, const dfloat alpha, occa::memory& o_x,
-                    const dfloat beta, occa::memory& o_y) {
-  axmyKernel(N, alpha, o_x, beta, o_y);
+// o_x[n] = alpha*o_a[n]*o_x[n]
+void linAlg_t::amx(const dlong N, const dfloat alpha,
+                   occa::memory& o_a, occa::memory& o_x) {
+  amxKernel(N, alpha, o_a, o_x);
 }
 
-// o_z[n] = beta*o_y[n] + alpha*o_x[n]*o_y[n]
-void linAlg_t::zaxmy(const dlong N, const dfloat alpha, occa::memory& o_x,
-                     const dfloat beta, occa::memory& o_y, occa::memory& o_z) {
-  zaxmyKernel(N, alpha, o_x, beta, o_y, o_z);
+// o_y[n] = alpha*o_a[n]*o_x[n] + beta*o_y[n]
+void linAlg_t::amxpy(const dlong N, const dfloat alpha,
+                     occa::memory& o_a, occa::memory& o_x,
+                     const dfloat beta, occa::memory& o_y) {
+  amxpyKernel(N, alpha, o_a, o_x, beta, o_y);
 }
 
-// o_y[n] = beta*o_y[n] + alpha*o_y[n]/o_x[n]
-void linAlg_t::axdy(const dlong N, const dfloat alpha, occa::memory& o_x,
-                    const dfloat beta, occa::memory& o_y) {
-  axdyKernel(N, alpha, o_x, beta, o_y);
+// o_z[n] = alpha*o_a[n]*o_x[n] + beta*o_y[n]
+void linAlg_t::zamxpy(const dlong N, const dfloat alpha,
+                      occa::memory& o_a, occa::memory& o_x,
+                      const dfloat beta, occa::memory& o_y, occa::memory& o_z) {
+  zamxpyKernel(N, alpha, o_a, o_x, beta, o_y, o_z);
 }
 
-// o_z[n] = beta*o_y[n] + alpha*o_y[n]/o_x[n]
-void linAlg_t::zaxdy(const dlong N, const dfloat alpha, occa::memory& o_x,
-                     const dfloat beta, occa::memory& o_y, occa::memory& o_z) {
-  zaxdyKernel(N, alpha, o_x, beta, o_y, o_z);
+// o_x[n] = alpha*o_x[n]/o_a[n]
+void linAlg_t::adx(const dlong N, const dfloat alpha,
+                   occa::memory& o_a, occa::memory& o_x) {
+  adxKernel(N, alpha, o_a, o_x);
+}
+
+// o_y[n] = alpha*o_x[n]/o_a[n] + beta*o_y[n]
+void linAlg_t::adxpy(const dlong N, const dfloat alpha,
+                     occa::memory& o_a, occa::memory& o_x,
+                     const dfloat beta, occa::memory& o_y) {
+  adxpyKernel(N, alpha, o_a, o_x, beta, o_y);
+}
+
+// o_z[n] = alpha*o_x[n]/o_a[n] + beta*o_y[n]
+void linAlg_t::zadxpy(const dlong N, const dfloat alpha,
+                      occa::memory& o_a, occa::memory& o_x,
+                      const dfloat beta, occa::memory& o_y, occa::memory& o_z) {
+  zadxpyKernel(N, alpha, o_a, o_x, beta, o_y, o_z);
 }
 
 // \sum o_a

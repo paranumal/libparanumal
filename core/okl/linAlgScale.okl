@@ -25,9 +25,9 @@ SOFTWARE.
 */
 
 //scale every entry of a vector by a constant scalar
-@kernel void set(const dlong N,
-                 const dfloat alpha,
-                 @restrict dfloat *a){
+@kernel void scale(const dlong N,
+                   const dfloat alpha,
+                   @restrict dfloat *a){
 
   for(dlong n=0;n<N;++n;@tile(p_blockSize,@outer,@inner)){
     if(n<N){

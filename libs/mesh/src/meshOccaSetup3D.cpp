@@ -27,51 +27,51 @@ SOFTWARE.
 #include "mesh.hpp"
 #include "mesh3D.hpp"
 
-void mesh3D::OccaSetup(occa::properties &kernelInfo){
+void mesh3D::OccaSetup(){
 
-  this->mesh_t::OccaSetup(kernelInfo);
+  this->mesh_t::OccaSetup();
 
   o_x = device.malloc(Nelements*Np*sizeof(dfloat), x);
   o_y = device.malloc(Nelements*Np*sizeof(dfloat), y);
   o_z = device.malloc(Nelements*Np*sizeof(dfloat), z);
 
-  kernelInfo["defines/" "p_NXID"]= NXID;
-  kernelInfo["defines/" "p_NYID"]= NYID;
-  kernelInfo["defines/" "p_NZID"]= NZID;
-  kernelInfo["defines/" "p_SJID"]= SJID;
-  kernelInfo["defines/" "p_IJID"]= IJID;
-  kernelInfo["defines/" "p_IHID"]= IHID;
-  kernelInfo["defines/" "p_WSJID"]= WSJID;
-  kernelInfo["defines/" "p_WIJID"]= WIJID;
-  kernelInfo["defines/" "p_STXID"]= STXID;
-  kernelInfo["defines/" "p_STYID"]= STYID;
-  kernelInfo["defines/" "p_STZID"]= STZID;
-  kernelInfo["defines/" "p_SBXID"]= SBXID;
-  kernelInfo["defines/" "p_SBYID"]= SBYID;
-  kernelInfo["defines/" "p_SBZID"]= SBZID;
+  props["defines/" "p_NXID"]= NXID;
+  props["defines/" "p_NYID"]= NYID;
+  props["defines/" "p_NZID"]= NZID;
+  props["defines/" "p_SJID"]= SJID;
+  props["defines/" "p_IJID"]= IJID;
+  props["defines/" "p_IHID"]= IHID;
+  props["defines/" "p_WSJID"]= WSJID;
+  props["defines/" "p_WIJID"]= WIJID;
+  props["defines/" "p_STXID"]= STXID;
+  props["defines/" "p_STYID"]= STYID;
+  props["defines/" "p_STZID"]= STZID;
+  props["defines/" "p_SBXID"]= SBXID;
+  props["defines/" "p_SBYID"]= SBYID;
+  props["defines/" "p_SBZID"]= SBZID;
 
-  kernelInfo["defines/" "p_G00ID"]= G00ID;
-  kernelInfo["defines/" "p_G01ID"]= G01ID;
-  kernelInfo["defines/" "p_G02ID"]= G02ID;
-  kernelInfo["defines/" "p_G11ID"]= G11ID;
-  kernelInfo["defines/" "p_G12ID"]= G12ID;
-  kernelInfo["defines/" "p_G22ID"]= G22ID;
-  kernelInfo["defines/" "p_GWJID"]= GWJID;
+  props["defines/" "p_G00ID"]= G00ID;
+  props["defines/" "p_G01ID"]= G01ID;
+  props["defines/" "p_G02ID"]= G02ID;
+  props["defines/" "p_G11ID"]= G11ID;
+  props["defines/" "p_G12ID"]= G12ID;
+  props["defines/" "p_G22ID"]= G22ID;
+  props["defines/" "p_GWJID"]= GWJID;
 
 
-  kernelInfo["defines/" "p_RXID"]= RXID;
-  kernelInfo["defines/" "p_SXID"]= SXID;
-  kernelInfo["defines/" "p_TXID"]= TXID;
+  props["defines/" "p_RXID"]= RXID;
+  props["defines/" "p_SXID"]= SXID;
+  props["defines/" "p_TXID"]= TXID;
 
-  kernelInfo["defines/" "p_RYID"]= RYID;
-  kernelInfo["defines/" "p_SYID"]= SYID;
-  kernelInfo["defines/" "p_TYID"]= TYID;
+  props["defines/" "p_RYID"]= RYID;
+  props["defines/" "p_SYID"]= SYID;
+  props["defines/" "p_TYID"]= TYID;
 
-  kernelInfo["defines/" "p_RZID"]= RZID;
-  kernelInfo["defines/" "p_SZID"]= SZID;
-  kernelInfo["defines/" "p_TZID"]= TZID;
+  props["defines/" "p_RZID"]= RZID;
+  props["defines/" "p_SZID"]= SZID;
+  props["defines/" "p_TZID"]= TZID;
 
-  kernelInfo["defines/" "p_JID"]= JID;
-  kernelInfo["defines/" "p_JWID"]= JWID;
-  kernelInfo["defines/" "p_IJWID"]= IJWID;
+  props["defines/" "p_JID"]= JID;
+  props["defines/" "p_JWID"]= JWID;
+  props["defines/" "p_IJWID"]= IJWID;
 }

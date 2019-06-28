@@ -67,7 +67,7 @@ void ParAlmondPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
     ogsGather(o_rhsG, o_r, ogsDfloat, ogsAdd, elliptic.ogsMasked);
 
     dlong N = elliptic.ogsMasked->Ngather;
-    elliptic.linAlg.axmy(N, 1.0, elliptic.ogsMasked->o_gatherInvDegree, 0.0, o_rhsG);
+    elliptic.linAlg.amx(N, 1.0, elliptic.ogsMasked->o_gatherInvDegree, o_rhsG);
 
     parAlmond::Precon(parAlmondHandle, o_xG, o_rhsG);
 

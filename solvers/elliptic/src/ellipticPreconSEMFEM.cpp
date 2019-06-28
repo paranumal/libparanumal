@@ -39,7 +39,7 @@ void SEMFEMPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
     dlong Ntotal = mesh.Np*mesh.Nelements;
 
     // Mr = invDegree.*r
-    elliptic.linAlg.zaxmy(Ntotal, 1.0, elliptic.o_weight, 0.0, o_r, o_Mr);
+    elliptic.linAlg.amxpy(Ntotal, 1.0, elliptic.o_weight, o_r, 0.0, o_Mr);
 
     SEMFEMInterpKernel(mesh.Nelements,mesh.o_SEMFEMAnterp,o_Mr,o_rFEM);
     ogsGather(o_GrFEM, o_rFEM, ogsDfloat, ogsAdd, FEMogs);
@@ -50,7 +50,7 @@ void SEMFEMPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
     SEMFEMAnterpKernel(mesh.Nelements,mesh.o_SEMFEMAnterp,o_zFEM,o_Mr);
 
     // Mr = invDegree.*Mr
-    elliptic.linAlg.axmy(Ntotal, 1.0, elliptic.o_weight, 0.0, o_Mr);
+    elliptic.linAlg.amx(Ntotal, 1.0, elliptic.o_weight, o_Mr);
 
     ogsGatherScatter(o_Mr, ogsDfloat, ogsAdd, elliptic.ogsMasked);
 
@@ -59,7 +59,7 @@ void SEMFEMPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
     ogsGather(o_rhsG, o_r, ogsDfloat, ogsAdd, FEMogs);
 
     dlong N = FEMogs->Ngather;
-    elliptic.linAlg.axmy(N, 1.0, FEMogs->o_gatherInvDegree, 0.0, o_rhsG);
+    elliptic.linAlg.amx(N, 1.0, FEMogs->o_gatherInvDegree, o_rhsG);
 
     parAlmond::Precon(parAlmondHandle, o_xG, o_rhsG);
 

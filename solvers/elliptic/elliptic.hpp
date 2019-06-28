@@ -134,6 +134,8 @@ public:
   void BuildOperatorDiagonalIpdgTet3D(dfloat *diagA);
   void BuildOperatorDiagonalIpdgHex3D(dfloat *diagA);
 
+  elliptic_t& SetupNewDegree(mesh_t& meshF);
+
   // void ZeroMean(occa::memory &o_q);
 };
 

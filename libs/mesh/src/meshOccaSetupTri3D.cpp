@@ -27,9 +27,9 @@
 #include "mesh.hpp"
 #include "mesh3D.hpp"
 
-void meshTri3D::OccaSetup(occa::properties &kernelInfo){
+void meshTri3D::OccaSetup(){
 
-  this->mesh3D::OccaSetup(kernelInfo);
+  this->mesh3D::OccaSetup();
 
   //build inverse of mass matrix
   invMM = (dfloat *) calloc(Np*Np,sizeof(dfloat));

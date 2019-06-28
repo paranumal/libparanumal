@@ -98,6 +98,7 @@ int pcg::Solve(solver_t& solver, precon_t& precon,
     rdotr = linAlg.weightedNorm2(N, o_w, o_r, comm);
   else
     rdotr = linAlg.norm2(N, o_r, comm);
+  rdotr = rdotr*rdotr;
 
   dfloat TOL = mymax(tol*tol*rdotr,tol*tol);
 

@@ -24,23 +24,6 @@ SOFTWARE.
 
 */
 
-@kernel void ellipticPreconCoarsen_v0(const dlong Nelements,
-                                     @restrict const  dfloat *  invDegree,
-                                     @restrict const  dfloat *  V1,
-                                     @restrict const  dfloat *  qN,
-                                     @restrict dfloat *  q1){
-
-  for(dlong e=0;e<Nelements;++e;@outer(0)){
-    for(int n=0;n<p_Nverts;++n;@inner(0)){
-      dfloat tmp = 0;
-      for(int i=0;i<p_Np;++i){
-        tmp += V1[n*p_Np + i]*qN[e*p_Np+i];
-      }
-      q1[e*p_Nverts+n] = tmp; // *invDegree[e*p_Nverts+n];
-    }
-  }
-}
-
 @kernel void ellipticPreconCoarsenTri2D(const dlong Nelements,
                                   @restrict const  dfloat *  R,
                                   @restrict const  dfloat *  qN,
@@ -131,69 +114,3 @@ SOFTWARE.
 }
 #endif
 
-
-#if 0
-@kernel void ellipticPreconCoarsenQuad2D(const int Nelements,
-                                        @restrict const  dfloat *  R,
-                                        @restrict const  dfloat *  qN,
-                                        @restrict dfloat *  q1){
-
-
-  for(int e=0;e<Nelements;++e;@outer(0)){
-    @shared dfloat s_qNN[p_Nq][p_Nq];
-    @shared dfloat s_q1N[p_Nq1][p_Nq];
-    @shared dfloat s_q11[p_Nq1][p_Nq1];
-
-    // prefetch to @shared
-
-    for(int j=0;j<p_Nq;++j;@inner(1)){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
-        s_qNN[j][i] = qN[i+j*p_Nq+e*p_Nq*p_Nq];
-      }
-    }
-
-    @barrier("local");
-
-    // coarsen in j index
-
-    for(int j=0;j<p_Nq;++j;@inner(1)){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
-        if(j<2){
-          dfloat res = 0;
-          for(int m=0;m<p_Nq;++m)
-            res += R[j*p_Nq + m]*s_qN[m][i];
-          s_q1N[j][i] = res;
-        }
-      }
-    }
-
-    @barrier("local");
-
-    // coarsen in i index
-
-    for(int j=0;j<p_Nq;++j;@inner(1)){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
-        if(j<2 && i<2){
-          dfloat rtmp = 0;
-          for(int m=0;m<p_Nq;++m)
-            rtmp += R[i*p_Nq + m]*s_qN[j][m];
-          s_q11[j][i] = rtmp;
-        }
-      }
-    }
-
-    @barrier("local");
-
-    // collect writes
-    for(int j=0;j<p_Nq;++j;@inner(1)){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
-        const int id = i + j*p_Nq;
-        if(id<p_Nq1*p_Nq1){
-          q1[id + p_Nq1*p_Nq1*e] = s_q11[0][id];
-        }
-      }
-    }
-
-  }
-}
-#endif

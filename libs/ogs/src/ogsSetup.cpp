@@ -357,6 +357,8 @@ ogs_t *ogsSetup(dlong N, hlong *ids, MPI_Comm &comm,
 
 void ogsFree(ogs_t *ogs) {
 
+  if (ogs==NULL) return; //already freed
+
   if (ogs->Nlocal) {
     free(ogs->localGatherOffsets);
     free(ogs->localGatherIds);
@@ -384,7 +386,7 @@ void ogsFree(ogs_t *ogs) {
     ogs->o_gatherInvDegree.free();
   }
 
-  free(ogs);
+  delete[] ogs;
 
   ogs::Nrefs--;
   if (!ogs::Nrefs) ogs::freeKernels();

@@ -39,10 +39,10 @@ elliptic_t& elliptic_t::Setup(mesh_t& mesh, linAlg_t& linAlg, dfloat lambda){
   elliptic->disc_c0   = settings.compareSetting("DISCRETIZATION","CONTINUOUS");
 
   //setup linear algebra module
-  elliptic->linAlg.InitKernels({"add", "sum",
+  elliptic->linAlg.InitKernels({"add", "sum", "scale",
                                 "axpy", "zaxpy",
-                                "axmy", "zaxmy",
-                                "axdy", "zaxdy",
+                                "amx", "amxpy", "zamxpy",
+                                "adx", "adxpy", "zadxpy",
                                 "innerProd", "weightedInnerProd",
                                 "norm2", "weightedNorm2"},
                                 mesh.comm);
@@ -145,9 +145,8 @@ elliptic_t& elliptic_t::Setup(mesh_t& mesh, linAlg_t& linAlg, dfloat lambda){
     elliptic->precon = new MassMatrixPrecon(*elliptic);
   else if(settings.compareSetting("PRECONDITIONER", "FULLALMOND"))
     elliptic->precon = new ParAlmondPrecon(*elliptic);
-  else if(settings.compareSetting("PRECONDITIONER", "MULTIGRID")) {
-    // elliptic->precon = new MultiGridPrecon(*elliptic);
-  }
+  else if(settings.compareSetting("PRECONDITIONER", "MULTIGRID"))
+    elliptic->precon = new MultiGridPrecon(*elliptic);
   else if(settings.compareSetting("PRECONDITIONER", "SEMFEM")){
     // elliptic->precon = new SEMFEMPrecon(*elliptic);
   }

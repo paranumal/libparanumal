@@ -25,11 +25,11 @@ SOFTWARE.
 */
 
 @kernel void ellipticPreconCoarsenHex3D(const dlong Nelements,
-					@restrict const  dfloat *  R,
-					@restrict const  dfloat *  qf,
-					@restrict dfloat *  qc){
-  
-  
+                                        @restrict const  dfloat *  R,
+                                        @restrict const  dfloat *  qf,
+                                        @restrict dfloat *  qc){
+
+
   for(dlong e=0;e<Nelements;++e;@outer(0)){
     @shared dfloat s_qfff[p_NqFine][p_NqFine][p_NqFine];
     @shared dfloat s_qcff[p_NqCoarse][p_NqFine][p_NqFine];
@@ -39,7 +39,7 @@ SOFTWARE.
     @shared dfloat s_R[p_NqCoarse][p_NqFine];
 
     // prefetch to @shared
-    
+
     for(int k=0;k<p_NqFine;++k;@inner(2)){
       for(int j=0;j<p_NqFine;++j;@inner(1)){
         for(int i=0;i<p_NqFine;++i;@inner(0)){
@@ -124,15 +124,15 @@ SOFTWARE.
 
 
 @kernel void ellipticPreconCoarsenHex3D_new(const dlong Nelements,
-					    @restrict const  dfloat *  R,
-					    @restrict const  dfloat *  qf,
-					    @restrict dfloat *  qc){
-  
-  
+                                            @restrict const  dfloat *  R,
+                                            @restrict const  dfloat *  qf,
+                                            @restrict dfloat *  qc){
+
+
   for(dlong e=0;e<Nelements;++e;@outer(0)){
 
     @exclusive dfloat r_q[p_NqCoarse];
-    
+
     @shared dfloat s_q[p_NqFine][p_NqFine];
     @shared dfloat s_Pq[p_NqCoarse][p_NqFine];
 
@@ -142,86 +142,86 @@ SOFTWARE.
     for(int j=0;j<p_NqFine;++j;@inner(1)){
       for(int i=0;i<p_NqFine;++i;@inner(0)){
 
-	int t=i+j*p_NqFine;
-	if(t<p_NqCoarse*p_NqFine){
-	  s_R[0][t] = R[t];
-	}
+        int t=i+j*p_NqFine;
+        if(t<p_NqCoarse*p_NqFine){
+          s_R[0][t] = R[t];
+        }
       }
     }
-    
+
     @barrier("local");
-    
+
     for(int j=0;j<p_NqFine;++j;@inner(1)){
       for(int i=0;i<p_NqFine;++i;@inner(0)){
-	
-	for(int k=0;k<p_NqCoarse;++k){
-	  r_q[k] = 0;
-	}
-	
-	for(int k=0;k<p_NqFine;++k){
-	  const int id = i + j*p_NqFine +k*p_NqFine*p_NqFine + e*p_NpFine;
-	  const dfloat tmp = qf[id];
-	  
-	  for(int m=0;m<p_NqCoarse;++m){
-	    r_q[m] += s_R[m][k]*tmp;
-	  }
-	}
-	
+
+        for(int k=0;k<p_NqCoarse;++k){
+          r_q[k] = 0;
+        }
+
+        for(int k=0;k<p_NqFine;++k){
+          const int id = i + j*p_NqFine +k*p_NqFine*p_NqFine + e*p_NpFine;
+          const dfloat tmp = qf[id];
+
+          for(int m=0;m<p_NqCoarse;++m){
+            r_q[m] += s_R[m][k]*tmp;
+          }
+        }
+
       }
     }
-    
+
     for(int k=0;k<p_NqCoarse;++k){
-      
-      @barrier("local");
-      
-      for(int j=0;j<p_NqFine;++j;@inner(1)){
-	for(int i=0;i<p_NqFine;++i;@inner(0)){
-	  
-	  s_q[j][i] = r_q[k];
-	}
-      }
-	  
+
       @barrier("local");
 
       for(int j=0;j<p_NqFine;++j;@inner(1)){
-	for(int i=0;i<p_NqFine;++i;@inner(0)){
-	  
-	  if(j<p_NqCoarse){
-	    
-	    dfloat res = 0;
-	    
-	    for(int m=0;m<p_NqFine;++m){
-	      res += s_R[j][m]*s_q[m][i];
-	    }
-	    
-	    s_Pq[j][i] = res;
-	    
-	  }
-	}
+        for(int i=0;i<p_NqFine;++i;@inner(0)){
+
+          s_q[j][i] = r_q[k];
+        }
       }
-      
+
       @barrier("local");
-      
+
       for(int j=0;j<p_NqFine;++j;@inner(1)){
-	for(int i=0;i<p_NqFine;++i;@inner(0)){
-	  
-	  int t=i+j*p_NqFine;
-	  
-	  if(t<p_NqCoarse*p_NqCoarse){
-	    
-	    int ti = t%p_NqCoarse;
-	    int tj = t/p_NqCoarse;
-	    
-	    dfloat res = 0;
-	    
-	    for(int m=0;m<p_NqFine;++m){
-	      res += s_R[ti][m]*s_Pq[tj][m];
-	    }
-	    
-	    const int id = ti + tj*p_NqCoarse + k*p_NqCoarse*p_NqCoarse + e*p_NpCoarse;
-	    qc[id] = res;
-	  }
-	}
+        for(int i=0;i<p_NqFine;++i;@inner(0)){
+
+          if(j<p_NqCoarse){
+
+            dfloat res = 0;
+
+            for(int m=0;m<p_NqFine;++m){
+              res += s_R[j][m]*s_q[m][i];
+            }
+
+            s_Pq[j][i] = res;
+
+          }
+        }
+      }
+
+      @barrier("local");
+
+      for(int j=0;j<p_NqFine;++j;@inner(1)){
+        for(int i=0;i<p_NqFine;++i;@inner(0)){
+
+          int t=i+j*p_NqFine;
+
+          if(t<p_NqCoarse*p_NqCoarse){
+
+            int ti = t%p_NqCoarse;
+            int tj = t/p_NqCoarse;
+
+            dfloat res = 0;
+
+            for(int m=0;m<p_NqFine;++m){
+              res += s_R[ti][m]*s_Pq[tj][m];
+            }
+
+            const int id = ti + tj*p_NqCoarse + k*p_NqCoarse*p_NqCoarse + e*p_NpCoarse;
+            qc[id] = res;
+          }
+        }
       }
     }
   }

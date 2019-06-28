@@ -26,7 +26,7 @@ SOFTWARE.
 
 #include "mesh.hpp"
 
-void mesh_t::OccaSetup(occa::properties &kernelInfo){
+void mesh_t::OccaSetup(){
 
   if(NinternalElements)
     o_internalElementIds    =
@@ -53,22 +53,22 @@ void mesh_t::OccaSetup(occa::properties &kernelInfo){
 
   haloExtractKernel = device.buildKernel(LIBP_DIR "/libs/mesh/okl/meshHaloExtract.okl",
                                          "meshHaloExtract",
-                                         kernelInfo);
+                                         props);
 
-  kernelInfo["defines/" "p_dim"]= dim;
-  kernelInfo["defines/" "p_N"]= N;
-  kernelInfo["defines/" "p_Nq"]= N+1;
-  kernelInfo["defines/" "p_Np"]= Np;
-  kernelInfo["defines/" "p_Nfp"]= Nfp;
-  kernelInfo["defines/" "p_Nfaces"]= Nfaces;
-  kernelInfo["defines/" "p_NfacesNfp"]= Nfp*Nfaces;
-  kernelInfo["defines/" "p_Nvgeo"]= Nvgeo;
-  kernelInfo["defines/" "p_Nsgeo"]= Nsgeo;
-  kernelInfo["defines/" "p_Nggeo"]= Nggeo;
+  props["defines/" "p_dim"]= dim;
+  props["defines/" "p_N"]= N;
+  props["defines/" "p_Nq"]= N+1;
+  props["defines/" "p_Np"]= Np;
+  props["defines/" "p_Nfp"]= Nfp;
+  props["defines/" "p_Nfaces"]= Nfaces;
+  props["defines/" "p_NfacesNfp"]= Nfp*Nfaces;
+  props["defines/" "p_Nvgeo"]= Nvgeo;
+  props["defines/" "p_Nsgeo"]= Nsgeo;
+  props["defines/" "p_Nggeo"]= Nggeo;
 
-  kernelInfo["defines/" "p_cubNq"]= cubNq;
-  kernelInfo["defines/" "p_cubNp"]= cubNp;
-  kernelInfo["defines/" "p_intNfp"]= intNfp;
-  kernelInfo["defines/" "p_intNfpNfaces"]= intNfp*Nfaces;
-  kernelInfo["defines/" "p_cubNfp"]= cubNfp;
+  props["defines/" "p_cubNq"]= cubNq;
+  props["defines/" "p_cubNp"]= cubNp;
+  props["defines/" "p_intNfp"]= intNfp;
+  props["defines/" "p_intNfpNfaces"]= intNfp*Nfaces;
+  props["defines/" "p_cubNfp"]= cubNfp;
 }

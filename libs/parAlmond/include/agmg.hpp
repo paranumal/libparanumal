@@ -49,28 +49,28 @@ public:
   agmgLevel(parCSR *AA, parCSR *PP, parCSR *RR, KrylovType Ktype);
   ~agmgLevel();
 
-  void Ax(dfloat        *x, dfloat        *Ax);
-  void Ax(occa::memory o_x, occa::memory o_Ax);
+  void Ax(dfloat         *x, dfloat         *Ax);
+  void Ax(occa::memory& o_x, occa::memory& o_Ax);
 
-  void smooth(dfloat        *rhs, dfloat        *x, bool x_is_zero);
-  void smooth(occa::memory o_rhs, occa::memory o_x, bool x_is_zero);
+  void smooth(dfloat         *rhs, dfloat         *x, bool x_is_zero);
+  void smooth(occa::memory& o_rhs, occa::memory& o_x, bool x_is_zero);
 
-  void residual(dfloat        *rhs, dfloat        *x, dfloat        *res);
-  void residual(occa::memory o_rhs, occa::memory o_x, occa::memory o_res);
+  void residual(dfloat         *rhs, dfloat         *x, dfloat         *res);
+  void residual(occa::memory& o_rhs, occa::memory& o_x, occa::memory& o_res);
 
-  void coarsen(dfloat        *x, dfloat        *Cx);
-  void coarsen(occa::memory o_x, occa::memory o_Cx);
+  void coarsen(dfloat         *x, dfloat         *Cx);
+  void coarsen(occa::memory& o_x, occa::memory& o_Cx);
 
-  void prolongate(dfloat        *x, dfloat        *Px);
-  void prolongate(occa::memory o_x, occa::memory o_Px);
+  void prolongate(dfloat         *x, dfloat         *Px);
+  void prolongate(occa::memory& o_x, occa::memory& o_Px);
 
   void smoothJacobi(dfloat *r, dfloat *x, const bool x_is_zero);
   void smoothDampedJacobi(dfloat *r, dfloat *x, const bool x_is_zero);
   void smoothChebyshev(dfloat *r, dfloat *x, const bool x_is_zero);
 
-  void smoothJacobi(occa::memory o_r, occa::memory o_x, bool x_is_zero);
-  void smoothDampedJacobi(occa::memory o_r, occa::memory o_x, bool x_is_zero);
-  void smoothChebyshev(occa::memory o_r, occa::memory o_x, bool x_is_zero);
+  void smoothJacobi(occa::memory& o_r, occa::memory& o_x, bool x_is_zero);
+  void smoothDampedJacobi(occa::memory& o_r, occa::memory& o_x, bool x_is_zero);
+  void smoothChebyshev(occa::memory& o_r, occa::memory& o_x, bool x_is_zero);
 
   void Report();
 };

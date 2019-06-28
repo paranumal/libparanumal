@@ -336,7 +336,7 @@ public:
                    int maxLevels,
                    dfloat finalTime);
 
-  virtual void OccaSetup(occa::properties &kernelInfo);
+  virtual void OccaSetup();
 
   void HaloExchange      (void  *v, const int Nentries, const char *type);
   void HaloExchangeStart (void  *v, const int Nentries, const char *type);
@@ -353,7 +353,15 @@ public:
   virtual dfloat MinCharacteristicLength() = 0;
 
   void RecursiveSpectralBisectionPartition();
+
+  //create a new mesh object with the same geometry, but different degree
+  mesh_t& SetupNewDegree(int Nf);
+
+  virtual void BuildBasisCoarsen(dfloat**R, occa::memory& o_R, int Nf, int Nc)=0;
 };
+
+void meshAddSettings(settings_t& settings);
+void meshReportSettings(settings_t& settings);
 
 #endif
 

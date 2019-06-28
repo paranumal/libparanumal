@@ -24,30 +24,43 @@ SOFTWARE.
 
 */
 
-
-@kernel void axmy(const dlong N,
-                  const dfloat alpha,
-                  @restrict const dfloat *x,
-                  const dfloat beta,
-                  @restrict dfloat *y){
+@kernel void adx(const dlong N,
+                 const dfloat alpha,
+                 @restrict const dfloat *a,
+                 @restrict       dfloat *x){
 
   for(dlong n=0;n<N;++n;@tile(p_blockSize,@outer,@inner)){
     if(n<N){
-      y[n] = beta*y[n] + alpha*x[n]*y[n];
+      x[n] = alpha*x[n]/a[n];
     }
   }
 }
 
-@kernel void zaxmy(const dlong N,
+@kernel void adxpy(const dlong N,
                    const dfloat alpha,
+                   @restrict const dfloat *a,
                    @restrict const dfloat *x,
                    const dfloat beta,
-                   @restrict const dfloat *y,
-                   @restrict dfloat *z){
+                   @restrict dfloat *y){
 
   for(dlong n=0;n<N;++n;@tile(p_blockSize,@outer,@inner)){
     if(n<N){
-      z[n] = beta*y[n] + alpha*x[n]*y[n];
+      y[n] = alpha*x[n]/a[n] + beta*y[n];
+    }
+  }
+}
+
+@kernel void zadxpy(const dlong N,
+                    const dfloat alpha,
+                    @restrict const dfloat *a,
+                    @restrict const dfloat *x,
+                    const dfloat beta,
+                    @restrict const dfloat *y,
+                    @restrict dfloat *z){
+
+  for(dlong n=0;n<N;++n;@tile(p_blockSize,@outer,@inner)){
+    if(n<N){
+      z[n] = alpha*x[n]/a[n] + beta*y[n];
     }
   }
 }

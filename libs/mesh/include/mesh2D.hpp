@@ -41,7 +41,7 @@ public:
   void ConnectFaceNodes();
 
   // setup occa buffers
-  virtual void OccaSetup(occa::properties &kernelInfo);
+  virtual void OccaSetup();
 
   // print out mesh partition in parallel
   void PrintVTU(const char *fileName);
@@ -59,7 +59,9 @@ public:
   void PhysicalNodes();
   void GeometricFactors();
   void SurfaceGeometricFactors();
-  void OccaSetup(occa::properties &kernelInfo);
+  void OccaSetup();
+
+  void BuildBasisCoarsen(dfloat**R, occa::memory& o_R, int Nf, int Nc);
 };
 
 class meshQuad2D: public mesh2D {
@@ -72,7 +74,9 @@ public:
   void PhysicalNodes();
   void GeometricFactors();
   void SurfaceGeometricFactors();
-  void OccaSetup(occa::properties &kernelInfo);
+  void OccaSetup();
+
+  void BuildBasisCoarsen(dfloat**R, occa::memory& o_R, int Nf, int Nc);
 };
 
 #endif

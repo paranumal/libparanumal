@@ -48,7 +48,7 @@ void JacobiPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
   dlong Ntotal = elliptic.mesh.Np*elliptic.mesh.Nelements;
 
   // Mr = invDiag.*r
-  elliptic.linAlg.zaxmy(Ntotal, 1.0, o_invDiagA, 0.0, o_r, o_Mr);
+  elliptic.linAlg.amxpy(Ntotal, 1.0, o_invDiagA, o_r, 0.0, o_Mr);
 
 #if USE_NULL_PROJECTION==1
   if(elliptic.allNeumann) // zero mean of RHS

@@ -53,8 +53,8 @@ agmgLevel::agmgLevel(parCSR *A_, parCSR *P_, parCSR *R_, KrylovType ktype_):
 
 agmgLevel::~agmgLevel() {
 
-  delete   A; delete   P; delete   R;
-  delete o_A; delete o_P; delete o_R;
+  // delete[]   A; delete[]   P; delete[]   R;
+  // delete[] o_A; delete[] o_P; delete[] o_R;
 
 }
 
@@ -82,9 +82,9 @@ void agmgLevel::prolongate(dfloat *X, dfloat *Px){
 
 void agmgLevel::residual  (dfloat *RHS, dfloat *X, dfloat *RES) { A->SpMV(-1.0, X, 1.0, RHS, RES); }
 
-void agmgLevel::Ax        (occa::memory o_X, occa::memory o_Ax){ o_A->SpMV(1.0, o_X, 0.0, o_Ax); }
+void agmgLevel::Ax        (occa::memory& o_X, occa::memory& o_Ax){ o_A->SpMV(1.0, o_X, 0.0, o_Ax); }
 
-void agmgLevel::coarsen   (occa::memory o_r, occa::memory o_Rr){
+void agmgLevel::coarsen   (occa::memory& o_r, occa::memory& o_Rr){
   if (gatherLevel) {
     ogsGather(o_Gx, o_r, ogsDfloat, ogsAdd, ogs);
     vectorDotStar(ogs->Ngather, ogs->o_gatherInvDegree, o_Gx);
@@ -94,7 +94,7 @@ void agmgLevel::coarsen   (occa::memory o_r, occa::memory o_Rr){
   }
 }
 
-void agmgLevel::prolongate(occa::memory o_X, occa::memory o_Px){
+void agmgLevel::prolongate(occa::memory& o_X, occa::memory& o_Px){
   if (gatherLevel) {
     o_P->SpMV(1.0, o_X, 0.0, o_Gx);
     ogsScatter(o_Sx, o_Gx, ogsDfloat, ogsAdd, ogs);
@@ -104,7 +104,7 @@ void agmgLevel::prolongate(occa::memory o_X, occa::memory o_Px){
   }
 }
 
-void agmgLevel::residual  (occa::memory o_RHS, occa::memory o_X, occa::memory o_RES) { o_A->SpMV(-1.0, o_X, 1.0, o_RHS, o_RES); }
+void agmgLevel::residual  (occa::memory& o_RHS, occa::memory& o_X, occa::memory& o_RES) { o_A->SpMV(-1.0, o_X, 1.0, o_RHS, o_RES); }
 
 void agmgLevel::smooth(dfloat *RHS, dfloat *X, bool x_is_zero){
   if(stype == JACOBI){
@@ -116,7 +116,7 @@ void agmgLevel::smooth(dfloat *RHS, dfloat *X, bool x_is_zero){
   }
 }
 
-void agmgLevel::smooth(occa::memory o_RHS, occa::memory o_X, bool x_is_zero){
+void agmgLevel::smooth(occa::memory& o_RHS, occa::memory& o_X, bool x_is_zero){
   if(stype == JACOBI){
     this->smoothJacobi(o_RHS, o_X, x_is_zero);
   } else if(stype == DAMPED_JACOBI){

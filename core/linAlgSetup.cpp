@@ -66,17 +66,17 @@ void linAlg_t::InitKernels(vector<string> kernels, MPI_Comm& comm) {
                                         "linAlgSet.okl",
                                         "set",
                                         kernelInfo, comm);
-    } else if (name=="scale") {
-      if (scaleKernel.isInitialized()==false)
-        scaleKernel = buildKernel(device, LIBP_DIR "/core/okl/"
-                                        "linAlgScale.okl",
-                                        "scale",
-                                        kernelInfo, comm);
     } else if (name=="add") {
       if (addKernel.isInitialized()==false)
         addKernel = buildKernel(device, LIBP_DIR "/core/okl/"
                                         "linAlgAdd.okl",
                                         "add",
+                                        kernelInfo, comm);
+    } else if (name=="scale") {
+      if (scaleKernel.isInitialized()==false)
+        scaleKernel = buildKernel(device, LIBP_DIR "/core/okl/"
+                                        "linAlgScale.okl",
+                                        "scale",
                                         kernelInfo, comm);
     } else if (name=="axpy") {
       if (axpyKernel.isInitialized()==false)
@@ -90,29 +90,41 @@ void linAlg_t::InitKernels(vector<string> kernels, MPI_Comm& comm) {
                                         "linAlgAXPY.okl",
                                         "zaxpy",
                                         kernelInfo, comm);
-    } else if (name=="axmy") {
-      if (axmyKernel.isInitialized()==false)
-        axmyKernel = buildKernel(device, LIBP_DIR "/core/okl/"
-                                        "linAlgAXMY.okl",
-                                        "axmy",
+    } else if (name=="amx") {
+      if (amxKernel.isInitialized()==false)
+        amxKernel = buildKernel(device, LIBP_DIR "/core/okl/"
+                                        "linAlgAMXPY.okl",
+                                        "amx",
                                         kernelInfo, comm);
-    } else if (name=="zaxmy") {
-      if (zaxmyKernel.isInitialized()==false)
-        zaxmyKernel = buildKernel(device, LIBP_DIR "/core/okl/"
-                                        "linAlgAXMY.okl",
-                                        "zaxmy",
+    } else if (name=="amxpy") {
+      if (amxpyKernel.isInitialized()==false)
+        amxpyKernel = buildKernel(device, LIBP_DIR "/core/okl/"
+                                        "linAlgAMXPY.okl",
+                                        "amxpy",
                                         kernelInfo, comm);
-    } else if (name=="axdy") {
-      if (axdyKernel.isInitialized()==false)
-        axdyKernel = buildKernel(device, LIBP_DIR "/core/okl/"
-                                        "linAlgAXDY.okl",
-                                        "axdy",
+    } else if (name=="zamxpy") {
+      if (zamxpyKernel.isInitialized()==false)
+        zamxpyKernel = buildKernel(device, LIBP_DIR "/core/okl/"
+                                        "linAlgAMXPY.okl",
+                                        "zamxpy",
                                         kernelInfo, comm);
-    } else if (name=="zaxdy") {
-      if (zaxdyKernel.isInitialized()==false)
-        zaxdyKernel = buildKernel(device, LIBP_DIR "/core/okl/"
-                                        "linAlgAXDY.okl",
-                                        "zaxdy",
+    } else if (name=="adx") {
+      if (adxKernel.isInitialized()==false)
+        adxKernel = buildKernel(device, LIBP_DIR "/core/okl/"
+                                        "linAlgADXPY.okl",
+                                        "adx",
+                                        kernelInfo, comm);
+    } else if (name=="adxpy") {
+      if (adxpyKernel.isInitialized()==false)
+        adxpyKernel = buildKernel(device, LIBP_DIR "/core/okl/"
+                                        "linAlgADXPY.okl",
+                                        "adxpy",
+                                        kernelInfo, comm);
+    } else if (name=="zadxpy") {
+      if (zadxpyKernel.isInitialized()==false)
+        zadxpyKernel = buildKernel(device, LIBP_DIR "/core/okl/"
+                                        "linAlgADXPY.okl",
+                                        "zadxpy",
                                         kernelInfo, comm);
     } else if (name=="sum") {
       if (sumKernel.isInitialized()==false)

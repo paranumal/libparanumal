@@ -27,9 +27,9 @@ SOFTWARE.
 #include "mesh.hpp"
 #include "mesh3D.hpp"
 
-void meshQuad3D::OccaSetup(occa::properties &kernelInfo){
+void meshQuad3D::OccaSetup(){
 
-  this->mesh3D::OccaSetup(kernelInfo);
+  this->mesh3D::OccaSetup();
 
   //lumped mass matrix
   MM = (dfloat *) calloc(Np*Np, sizeof(dfloat));

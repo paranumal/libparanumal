@@ -27,34 +27,34 @@ SOFTWARE.
 #include "mesh.hpp"
 #include "mesh2D.hpp"
 
-void mesh2D::OccaSetup(occa::properties &kernelInfo){
+void mesh2D::OccaSetup(){
 
-  this->mesh_t::OccaSetup(kernelInfo);
+  this->mesh_t::OccaSetup();
 
   o_x = device.malloc(Nelements*Np*sizeof(dfloat), x);
   o_y = device.malloc(Nelements*Np*sizeof(dfloat), y);
   o_z = device.malloc(Nelements*Np*sizeof(dfloat), y); // dummy z variables (note used y)
 
-  kernelInfo["defines/" "p_NXID"]= NXID;
-  kernelInfo["defines/" "p_NYID"]= NYID;
-  kernelInfo["defines/" "p_SJID"]= SJID;
-  kernelInfo["defines/" "p_IJID"]= IJID;
-  kernelInfo["defines/" "p_IHID"]= IHID;
-  kernelInfo["defines/" "p_WIJID"]= WIJID;
-  kernelInfo["defines/" "p_WSJID"]= WSJID;
+  props["defines/" "p_NXID"]= NXID;
+  props["defines/" "p_NYID"]= NYID;
+  props["defines/" "p_SJID"]= SJID;
+  props["defines/" "p_IJID"]= IJID;
+  props["defines/" "p_IHID"]= IHID;
+  props["defines/" "p_WIJID"]= WIJID;
+  props["defines/" "p_WSJID"]= WSJID;
 
-  kernelInfo["defines/" "p_G00ID"]= G00ID;
-  kernelInfo["defines/" "p_G01ID"]= G01ID;
-  kernelInfo["defines/" "p_G11ID"]= G11ID;
-  kernelInfo["defines/" "p_GWJID"]= GWJID;
+  props["defines/" "p_G00ID"]= G00ID;
+  props["defines/" "p_G01ID"]= G01ID;
+  props["defines/" "p_G11ID"]= G11ID;
+  props["defines/" "p_GWJID"]= GWJID;
 
-  kernelInfo["defines/" "p_RXID"]= RXID;
-  kernelInfo["defines/" "p_SXID"]= SXID;
-  kernelInfo["defines/" "p_RYID"]= RYID;
-  kernelInfo["defines/" "p_SYID"]= SYID;
+  props["defines/" "p_RXID"]= RXID;
+  props["defines/" "p_SXID"]= SXID;
+  props["defines/" "p_RYID"]= RYID;
+  props["defines/" "p_SYID"]= SYID;
 
-  kernelInfo["defines/" "p_JID"]= JID;
-  kernelInfo["defines/" "p_JWID"]= JWID;
-  kernelInfo["defines/" "p_IJWID"]= IJWID;
+  props["defines/" "p_JID"]= JID;
+  props["defines/" "p_JWID"]= JWID;
+  props["defines/" "p_IJWID"]= IJWID;
 
 }

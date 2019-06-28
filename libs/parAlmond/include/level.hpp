@@ -58,20 +58,20 @@ public:
   multigridLevel(dlong N, dlong M, KrylovType Ktype, MPI_Comm comm);
   virtual ~multigridLevel();
 
-  virtual void Ax(dfloat        *x, dfloat        *Ax)=0;
-  virtual void Ax(occa::memory o_x, occa::memory o_Ax)=0;
+  virtual void Ax(dfloat         *x, dfloat         *Ax)=0;
+  virtual void Ax(occa::memory& o_x, occa::memory& o_Ax)=0;
 
-  virtual void smooth(dfloat        *rhs, dfloat        *x, bool x_is_zero)=0;
-  virtual void smooth(occa::memory o_rhs, occa::memory o_x, bool x_is_zero)=0;
+  virtual void smooth(dfloat         *rhs, dfloat         *x, bool x_is_zero)=0;
+  virtual void smooth(occa::memory& o_rhs, occa::memory& o_x, bool x_is_zero)=0;
 
-  virtual void residual(dfloat        *rhs, dfloat        *x, dfloat        *res)=0;
-  virtual void residual(occa::memory o_rhs, occa::memory o_x, occa::memory o_res)=0;
+  virtual void residual(dfloat         *rhs, dfloat         *x, dfloat         *res)=0;
+  virtual void residual(occa::memory& o_rhs, occa::memory& o_x, occa::memory& o_res)=0;
 
-  virtual void coarsen(dfloat        *x, dfloat        *Cx)=0;
-  virtual void coarsen(occa::memory o_x, occa::memory o_Cx)=0;
+  virtual void coarsen(dfloat         *x, dfloat         *Cx)=0;
+  virtual void coarsen(occa::memory& o_x, occa::memory& o_Cx)=0;
 
-  virtual void prolongate(dfloat        *x, dfloat        *Px)=0;
-  virtual void prolongate(occa::memory o_x, occa::memory o_Px)=0;
+  virtual void prolongate(dfloat         *x, dfloat         *Px)=0;
+  virtual void prolongate(occa::memory& o_x, occa::memory& o_Px)=0;
 
   virtual void Report()=0;
 

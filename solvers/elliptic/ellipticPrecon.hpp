@@ -114,4 +114,70 @@ public:
   void Operator(occa::memory& o_r, occa::memory& o_Mr);
 };
 
+class MGLevel: public parAlmond::multigridLevel {
+
+public:
+
+  elliptic_t& elliptic;
+  mesh_t& mesh;
+  linAlg_t& linAlg;
+
+  //coarsener
+  dfloat *R;
+  occa::memory o_R;
+  int NpF;
+  occa::memory o_weightF;
+
+  occa::kernel coarsenKernel;
+  occa::kernel prolongateKernel;
+
+  //smoothing params
+  typedef enum {JACOBI=1,
+                CHEBYSHEV=2} SmootherType;
+  SmootherType stype;
+
+  dfloat lambda1, lambda0;
+  int ChebyshevIterations;
+
+  static size_t smootherResidualBytes;
+  static dfloat *smootherResidual;
+  static occa::memory o_smootherResidual;
+  static occa::memory o_smootherResidual2;
+  static occa::memory o_smootherUpdate;
+
+  //jacobi data
+  occa::memory o_invDiagA;
+
+  //build a p-multigrid level and connect it to the previous one
+  MGLevel(elliptic_t& _elliptic, int k, int Nf, int Npf, occa::memory o_weightF_,
+          parAlmond::KrylovType ktype_, parAlmond::CycleType ctype);
+
+  void Ax(dfloat        *X, dfloat        *Ax) {};
+  void Ax(occa::memory &o_X, occa::memory &o_Ax);
+
+  void residual(dfloat        *RHS, dfloat        *X, dfloat        *RES) {};
+  void residual(occa::memory &o_RHS, occa::memory &o_X, occa::memory &o_RES);
+
+  void coarsen(dfloat        *X, dfloat        *Cx) {};
+  void coarsen(occa::memory &o_X, occa::memory &o_Cx);
+
+  void prolongate(dfloat        *X, dfloat        *Px) {};
+  void prolongate(occa::memory &o_X, occa::memory &o_Px);
+
+  //smoother ops
+  void smooth(dfloat        *RHS, dfloat        *X, bool x_is_zero) {};
+  void smooth(occa::memory &o_RHS, occa::memory &o_X, bool x_is_zero);
+
+  void smoothJacobi    (occa::memory &o_r, occa::memory &o_X, bool xIsZero);
+  void smoothChebyshev (occa::memory &o_r, occa::memory &o_X, bool xIsZero);
+
+  void Report();
+
+  void SetupSmoother();
+  dfloat maxEigSmoothAx();
+
+  void AllocateStorage(int k, parAlmond::CycleType ctype);
+};
+
+
 #endif

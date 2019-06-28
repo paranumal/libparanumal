@@ -187,7 +187,10 @@ void coarseSolver::syncToDevice() {}
 void coarseSolver::solve(dfloat *rhs, dfloat *x) {
 
   if (gatherLevel) {
-    ogsGather(Gx, rhs, ogsDfloat, ogsAdd, ogs);
+    //weight
+    vectorDotStar(ogs->N, 1.0, ogs->invDegree, rhs, 0.0, Sx);
+    ogsGather(Gx, Sx, ogsDfloat, ogsAdd, ogs);
+
     //gather the full vector
     MPI_Allgatherv(Gx,                  N,                MPI_DFLOAT,
                    rhsCoarse, coarseCounts, coarseOffsets, MPI_DFLOAT, comm);
@@ -238,7 +241,10 @@ void coarseSolver::solve(dfloat *rhs, dfloat *x) {
 void coarseSolver::solve(occa::memory o_rhs, occa::memory o_x) {
 
   if (gatherLevel) {
-    ogsGather(o_Gx, o_rhs, ogsDfloat, ogsAdd, ogs);
+    //weight
+    vectorDotStar(ogs->N, 1.0, ogs->o_invDegree, o_rhs, 0.0, o_Sx);
+    ogsGather(o_Gx, o_Sx, ogsDfloat, ogsAdd, ogs);
+
     if(N)
       o_Gx.copyTo(rhsLocal, N*sizeof(dfloat), 0);
   } else {

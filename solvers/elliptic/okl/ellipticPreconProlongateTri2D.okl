@@ -24,23 +24,6 @@ SOFTWARE.
 
 */
 
-@kernel void ellipticPreconProlongate_v0(const dlong Nelements,
-                                        @restrict const  dfloat *  V1,
-                                        @restrict const  dfloat *  q1,
-                                        @restrict dfloat *  qN){
-
-  for(dlong e=0;e<Nelements;++e;@outer(0)){
-    for(int n=0;n<p_Np;++n;@inner(0)){
-      dfloat tmp = 0; // qN[e*p_Np+n] ;
-
-      for(int i=0;i<p_Nverts;++i){
-        tmp += V1[i*p_Np + n]*q1[e*p_Nverts + i];
-      }
-      qN[e*p_Np+n] = tmp;
-    }
-  }
-}
-
 @kernel void ellipticPreconProlongateTri2D(const dlong Nelements,
                                      @restrict const  dfloat *  R,
                                      @restrict const  dfloat *  qCoarse,

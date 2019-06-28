@@ -402,6 +402,8 @@ parCSR::~parCSR() {
 
   if (ogs)       ogsFree(ogs);
   if (ogsHalo)   ogsFree(ogsHalo);
+  ogs     = NULL;
+  ogsHalo = NULL;
 }
 
 dfloat parCSR::rhoDinvA(){
@@ -688,6 +690,8 @@ parHYB::~parHYB() {
 
   if (ogs)       ogsFree(ogs);
   if (ogsHalo)   ogsFree(ogsHalo);
+  ogs     = NULL;
+  ogsHalo = NULL;
 };
 
 void parHYB::syncToDevice() {

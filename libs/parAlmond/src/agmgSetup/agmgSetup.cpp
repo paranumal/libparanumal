@@ -39,7 +39,7 @@ void solver_t::AMGSetup(parCSR *A){
   agmgLevel *L = new agmgLevel(A, ktype);
   levels[numLevels] = L;
 
-  setupAgmgSmoother((agmgLevel*)(levels[numLevels]), stype, ChebyshevIterations);
+  // setupAgmgSmoother((agmgLevel*)(levels[numLevels]), stype, ChebyshevIterations);
 
   hlong globalSize = L->A->globalRowStarts[size];
 
