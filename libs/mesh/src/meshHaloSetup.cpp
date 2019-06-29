@@ -115,4 +115,16 @@ void mesh_t::HaloSetup(){
 
   free(globalElementId);
   free(globalOffset);
+
+  // grab EX,EY,EZ from halo
+  EX = (dfloat*) realloc(EX, (Nelements+totalHaloPairs)*Nverts*sizeof(dfloat));
+  EY = (dfloat*) realloc(EY, (Nelements+totalHaloPairs)*Nverts*sizeof(dfloat));
+  if (dim==3)
+    EZ = (dfloat*) realloc(EZ, (Nelements+totalHaloPairs)*Nverts*sizeof(dfloat));
+
+  // send halo data and recv into extended part of arrays
+  HaloExchange(EX, Nverts, ogsDfloat);
+  HaloExchange(EY, Nverts, ogsDfloat);
+  if(dim==3)
+    HaloExchange(EZ, Nverts, ogsDfloat);
 }

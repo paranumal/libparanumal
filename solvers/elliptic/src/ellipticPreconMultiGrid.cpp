@@ -84,9 +84,9 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
 
           nextLevel->gatherLevel = true;
           nextLevel->ogs = ellipticC.ogsMasked;
-          nextLevel->Gx = (dfloat*) calloc(levels[numMGLevels]->Ncols,sizeof(dfloat));
+          nextLevel->Gx = (dfloat*) calloc(nextLevel->R->Ncols,sizeof(dfloat));
           nextLevel->Sx = (dfloat*) calloc(meshC.Np*meshC.Nelements,sizeof(dfloat));
-          nextLevel->o_Gx = meshC.device.malloc(levels[numMGLevels]->Ncols*sizeof(dfloat),nextLevel->Gx);
+          nextLevel->o_Gx = meshC.device.malloc(nextLevel->R->Ncols*sizeof(dfloat),nextLevel->Gx);
           nextLevel->o_Sx = meshC.device.malloc(meshC.Np*meshC.Nelements*sizeof(dfloat),nextLevel->Sx);
         } else {
           //this level is the base

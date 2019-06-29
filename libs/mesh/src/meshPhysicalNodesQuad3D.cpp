@@ -94,14 +94,4 @@ void meshQuad3D::PhysicalNodes(){
   HaloExchange(x, Np, ogsDfloat);
   HaloExchange(y, Np, ogsDfloat);
   HaloExchange(z, Np, ogsDfloat);
-
-  // grab EX,EY,EZ from halo
-  EX = (dfloat*) realloc(EX, (Nelements+totalHaloPairs)*Nverts*sizeof(dfloat));
-  EY = (dfloat*) realloc(EY, (Nelements+totalHaloPairs)*Nverts*sizeof(dfloat));
-  EZ = (dfloat*) realloc(EZ, (Nelements+totalHaloPairs)*Nverts*sizeof(dfloat));
-
-  // send halo data and recv into extended part of arrays
-  HaloExchange(EX, Nverts, ogsDfloat);
-  HaloExchange(EY, Nverts, ogsDfloat);
-  HaloExchange(EZ, Nverts, ogsDfloat);
 }
