@@ -66,38 +66,14 @@ void elliptic_t::BuildOperatorMatrixContinuous(parAlmond::parCOO& A) {
 
 void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO& A) {
 
-  int rank = mesh.rank;
-
-  /* use the masked gs handle to define a global ordering */
-
   // number of degrees of freedom on this rank (after gathering)
   hlong Ngather = ogsMasked->Ngather;
-  dlong Ntotal  = mesh.Np*mesh.Nelements;
-
-  // create a global numbering system
-  hlong *globalIds = (hlong *) calloc(Ngather,sizeof(hlong));
-  int   *owner     = (int *) calloc(Ngather,sizeof(int));
 
   // every gathered degree of freedom has its own global id
   A.globalStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
   MPI_Allgather(&Ngather, 1, MPI_HLONG, A.globalStarts+1, 1, MPI_HLONG, mesh.comm);
   for(int r=0;r<mesh.size;++r)
     A.globalStarts[r+1] = A.globalStarts[r]+A.globalStarts[r+1];
-
-  //use the offsets to set a consecutive global numbering
-  for (dlong n =0;n<ogsMasked->Ngather;n++) {
-    globalIds[n] = n + A.globalStarts[rank];
-    owner[n] = rank;
-  }
-
-  //scatter this numbering to the original nodes
-  hlong *globalNumbering = (hlong *) calloc(Ntotal,sizeof(hlong));
-  int *globalOwners = (int *) calloc(Ntotal,sizeof(int));
-  for (dlong n=0;n<Ntotal;n++) globalNumbering[n] = -1;
-  ogsScatter(globalNumbering, globalIds, ogsHlong, ogsAdd, ogsMasked);
-  ogsScatter(globalOwners, owner, ogsInt, ogsAdd, ogsMasked);
-
-  free(globalIds); free(owner);
 
   // Build non-zeros of stiffness matrix (unassembled)
   dlong nnzLocal = mesh.Np*mesh.Np*mesh.Nelements;
@@ -133,9 +109,9 @@ void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO& A) {
     dfloat J   = mesh.ggeo[e*mesh.Nggeo + GWJID];
 
     for (int n=0;n<mesh.Np;n++) {
-      if (globalNumbering[e*mesh.Np + n]<0) continue; //skip masked nodes
+      if (maskedGlobalNumbering[e*mesh.Np + n]<0) continue; //skip masked nodes
       for (int m=0;m<mesh.Np;m++) {
-        if (globalNumbering[e*mesh.Np + m]<0) continue; //skip masked nodes
+        if (maskedGlobalNumbering[e*mesh.Np + m]<0) continue; //skip masked nodes
 
         dfloat val = 0.;
 
@@ -148,9 +124,9 @@ void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO& A) {
         if (fabs(val)>nonZeroThreshold) {
           // pack non-zero
           sendNonZeros[cnt].val = val;
-          sendNonZeros[cnt].row = globalNumbering[e*mesh.Np + n];
-          sendNonZeros[cnt].col = globalNumbering[e*mesh.Np + m];
-          sendNonZeros[cnt].ownerRank = globalOwners[e*mesh.Np + n];
+          sendNonZeros[cnt].row = maskedGlobalNumbering[e*mesh.Np + n];
+          sendNonZeros[cnt].col = maskedGlobalNumbering[e*mesh.Np + m];
+          sendNonZeros[cnt].ownerRank = maskedGlobalOwners[e*mesh.Np + n];
           cnt++;
         }
       }
@@ -222,7 +198,6 @@ void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO& A) {
   MPI_Type_free(&MPI_NONZERO_T);
 
   free(sendNonZeros);
-  free(globalNumbering); free(globalOwners);
 
   free(AsendCounts);
   free(ArecvCounts);
@@ -238,38 +213,14 @@ void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO& A) {
 
 void elliptic_t::BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO& A) {
 
-  int rank = mesh.rank;
-
-  //use the masked gs handle to define a global ordering
-
   // number of degrees of freedom on this rank (after gathering)
   hlong Ngather = ogsMasked->Ngather;
-  dlong Ntotal  = mesh.Np*mesh.Nelements;
-
-  // create a global numbering system
-  hlong *globalIds = (hlong *) calloc(Ngather,sizeof(hlong));
-  int   *owner     = (int *) calloc(Ngather,sizeof(int));
 
   // every gathered degree of freedom has its own global id
   A.globalStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
   MPI_Allgather(&Ngather, 1, MPI_HLONG, A.globalStarts+1, 1, MPI_HLONG, mesh.comm);
   for(int r=0;r<mesh.size;++r)
     A.globalStarts[r+1] = A.globalStarts[r]+A.globalStarts[r+1];
-
-  //use the offsets to set a consecutive global numbering
-  for (dlong n =0;n<ogsMasked->Ngather;n++) {
-    globalIds[n] = n + A.globalStarts[rank];
-    owner[n] = rank;
-  }
-
-  //scatter this numbering to the original nodes
-  hlong *globalNumbering = (hlong *) calloc(Ntotal,sizeof(hlong));
-  int *globalOwners = (int *) calloc(Ntotal,sizeof(int));
-  for (dlong n=0;n<Ntotal;n++) globalNumbering[n] = -1;
-  ogsScatter(globalNumbering, globalIds, ogsHlong, ogsAdd, ogsMasked);
-  ogsScatter(globalOwners, owner, ogsInt, ogsAdd, ogsMasked);
-
-  free(globalIds); free(owner);
 
   // 2. Build non-zeros of stiffness matrix (unassembled)
   dlong nnzLocal = mesh.Np*mesh.Np*mesh.Nelements;
@@ -278,9 +229,6 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO& A) {
   int *ArecvCounts  = (int*) calloc(mesh.size, sizeof(int));
   int *AsendOffsets = (int*) calloc(mesh.size+1, sizeof(int));
   int *ArecvOffsets = (int*) calloc(mesh.size+1, sizeof(int));
-
-  int *mask = (int *) calloc(mesh.Np*mesh.Nelements,sizeof(int));
-  for (dlong n=0;n<Nmasked;n++) mask[maskIds[n]] = 1;
 
   if(mesh.rank==0) {printf("Building full FEM matrix...");fflush(stdout);}
 
@@ -294,10 +242,10 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO& A) {
   for (dlong e=0;e<mesh.Nelements;e++) {
     for (int ny=0;ny<mesh.Nq;ny++) {
       for (int nx=0;nx<mesh.Nq;nx++) {
-        if (mask[e*mesh.Np + nx+ny*mesh.Nq]) continue; //skip masked nodes
+        if (maskedGlobalNumbering[e*mesh.Np + nx+ny*mesh.Nq]<0) continue; //skip masked nodes
         for (int my=0;my<mesh.Nq;my++) {
           for (int mx=0;mx<mesh.Nq;mx++) {
-            if (mask[e*mesh.Np + mx+my*mesh.Nq]) continue; //skip masked nodes
+            if (maskedGlobalNumbering[e*mesh.Np + mx+my*mesh.Nq]<0) continue; //skip masked nodes
 
             int id;
             dfloat val = 0.;
@@ -369,9 +317,9 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO& A) {
             if (fabs(val)>nonZeroThreshold) {
               // pack non-zero
               sendNonZeros[cnt].val = val;
-              sendNonZeros[cnt].row = globalNumbering[e*mesh.Np + nx+ny*mesh.Nq];
-              sendNonZeros[cnt].col = globalNumbering[e*mesh.Np + mx+my*mesh.Nq];
-              sendNonZeros[cnt].ownerRank = globalOwners[e*mesh.Np + nx+ny*mesh.Nq];
+              sendNonZeros[cnt].row = maskedGlobalNumbering[e*mesh.Np + nx+ny*mesh.Nq];
+              sendNonZeros[cnt].col = maskedGlobalNumbering[e*mesh.Np + mx+my*mesh.Nq];
+              sendNonZeros[cnt].ownerRank = maskedGlobalOwners[e*mesh.Np + nx+ny*mesh.Nq];
               cnt++;
             }
           }
@@ -477,7 +425,6 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO& A) {
   MPI_Type_free(&MPI_NONZERO_T);
 
   free(sendNonZeros);
-  free(globalNumbering); free(globalOwners);
 
   free(AsendCounts);
   free(ArecvCounts);
@@ -488,38 +435,14 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO& A) {
 
 void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO& A) {
 
-  int rank = mesh.rank;
-
-  //use the masked gs handle to define a global ordering
-
   // number of degrees of freedom on this rank (after gathering)
   hlong Ngather = ogsMasked->Ngather;
-  dlong Ntotal  = mesh.Np*mesh.Nelements;
-
-  // create a global numbering system
-  hlong *globalIds = (hlong *) calloc(Ngather,sizeof(hlong));
-  int   *owner     = (int *) calloc(Ngather,sizeof(int));
 
   // every gathered degree of freedom has its own global id
   A.globalStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
   MPI_Allgather(&Ngather, 1, MPI_HLONG, A.globalStarts+1, 1, MPI_HLONG, mesh.comm);
   for(int r=0;r<mesh.size;++r)
     A.globalStarts[r+1] = A.globalStarts[r]+A.globalStarts[r+1];
-
-  //use the offsets to set a consecutive global numbering
-  for (dlong n =0;n<ogsMasked->Ngather;n++) {
-    globalIds[n] = n + A.globalStarts[rank];
-    owner[n] = rank;
-  }
-
-  //scatter this numbering to the original nodes
-  hlong *globalNumbering = (hlong *) calloc(Ntotal,sizeof(hlong));
-  int *globalOwners = (int *) calloc(Ntotal,sizeof(int));
-  for (dlong n=0;n<Ntotal;n++) globalNumbering[n] = -1;
-  ogsScatter(globalNumbering, globalIds, ogsHlong, ogsAdd, ogsMasked);
-  ogsScatter(globalOwners, owner, ogsInt, ogsAdd, ogsMasked);
-
-  free(globalIds); free(owner);
 
   // 2. Build non-zeros of stiffness matrix (unassembled)
   dlong nnzLocal = mesh.Np*mesh.Np*mesh.Nelements;
@@ -529,9 +452,6 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO& A) {
   int *AsendOffsets = (int*) calloc(mesh.size+1, sizeof(int));
   int *ArecvOffsets = (int*) calloc(mesh.size+1, sizeof(int));
 
-  int *mask = (int *) calloc(mesh.Np*mesh.Nelements,sizeof(int));
-  for (dlong n=0;n<Nmasked;n++) mask[maskIds[n]] = 1;
-
   if(mesh.rank==0) {printf("Building full FEM matrix...");fflush(stdout);}
 
   //Build unassembed non-zeros
@@ -539,10 +459,10 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO& A) {
   for (dlong e=0;e<mesh.Nelements;e++) {
     for (int ny=0;ny<mesh.Nq;ny++) {
       for (int nx=0;nx<mesh.Nq;nx++) {
-        if (mask[e*mesh.Np + nx+ny*mesh.Nq]) continue; //skip masked nodes
+        if (maskedGlobalNumbering[e*mesh.Np + nx+ny*mesh.Nq]<0) continue; //skip masked nodes
         for (int my=0;my<mesh.Nq;my++) {
           for (int mx=0;mx<mesh.Nq;mx++) {
-            if (mask[e*mesh.Np + mx+my*mesh.Nq]) continue; //skip masked nodes
+            if (maskedGlobalNumbering[e*mesh.Np + mx+my*mesh.Nq]<0) continue; //skip masked nodes
 
             int id;
             dfloat val = 0.;
@@ -584,9 +504,9 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO& A) {
             if (fabs(val)>nonZeroThreshold) {
               // pack non-zero
               sendNonZeros[cnt].val = val;
-              sendNonZeros[cnt].row = globalNumbering[e*mesh.Np + nx+ny*mesh.Nq];
-              sendNonZeros[cnt].col = globalNumbering[e*mesh.Np + mx+my*mesh.Nq];
-              sendNonZeros[cnt].ownerRank = globalOwners[e*mesh.Np + nx+ny*mesh.Nq];
+              sendNonZeros[cnt].row = maskedGlobalNumbering[e*mesh.Np + nx+ny*mesh.Nq];
+              sendNonZeros[cnt].col = maskedGlobalNumbering[e*mesh.Np + mx+my*mesh.Nq];
+              sendNonZeros[cnt].ownerRank = maskedGlobalOwners[e*mesh.Np + nx+ny*mesh.Nq];
               cnt++;
             }
           }
@@ -674,7 +594,6 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO& A) {
   MPI_Type_free(&MPI_NONZERO_T);
 
   free(sendNonZeros);
-  free(globalNumbering); free(globalOwners);
 
   free(AsendCounts);
   free(ArecvCounts);
@@ -684,39 +603,14 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO& A) {
 
 void elliptic_t::BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO& A) {
 
-  int rank = mesh.rank;
-
-  //use the masked gs handle to define a global ordering
-
   // number of degrees of freedom on this rank (after gathering)
   hlong Ngather = ogsMasked->Ngather;
-  dlong Ntotal  = mesh.Np*mesh.Nelements;
-
-  // create a global numbering system
-  hlong *globalIds = (hlong *) calloc(Ngather,sizeof(hlong));
-  int   *owner     = (int *) calloc(Ngather,sizeof(int));
 
   // every gathered degree of freedom has its own global id
   A.globalStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
   MPI_Allgather(&Ngather, 1, MPI_HLONG, A.globalStarts+1, 1, MPI_HLONG, mesh.comm);
   for(int r=0;r<mesh.size;++r)
     A.globalStarts[r+1] = A.globalStarts[r]+A.globalStarts[r+1];
-
-  //use the offsets to set a consecutive global numbering
-  for (dlong n =0;n<ogsMasked->Ngather;n++) {
-    globalIds[n] = n + A.globalStarts[rank];
-    owner[n] = rank;
-  }
-
-  //scatter this numbering to the original nodes
-  hlong *globalNumbering = (hlong *) calloc(Ntotal,sizeof(hlong));
-  int *globalOwners = (int *) calloc(Ntotal,sizeof(int));
-  for (dlong n=0;n<Ntotal;n++) globalNumbering[n] = -1;
-  ogsScatter(globalNumbering, globalIds, ogsHlong, ogsAdd, ogsMasked);
-  ogsScatter(globalOwners, owner, ogsInt, ogsAdd, ogsMasked);
-
-  free(globalIds); free(owner);
-
 
   // Build non-zeros of stiffness matrix (unassembled)
   dlong nnzLocal = mesh.Np*mesh.Np*mesh.Nelements;
@@ -726,9 +620,6 @@ void elliptic_t::BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO& A) {
   int *ArecvCounts  = (int*) calloc(mesh.size, sizeof(int));
   int *AsendOffsets = (int*) calloc(mesh.size+1, sizeof(int));
   int *ArecvOffsets = (int*) calloc(mesh.size+1, sizeof(int));
-
-  int *mask = (int *) calloc(mesh.Np*mesh.Nelements,sizeof(int));
-  for (dlong n=0;n<Nmasked;n++) mask[maskIds[n]] = 1;
 
   //Build unassembed non-zeros
   if(mesh.rank==0) {printf("Building full FEM matrix...");fflush(stdout);}
@@ -746,9 +637,9 @@ void elliptic_t::BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO& A) {
     dfloat J   = mesh.ggeo[e*mesh.Nggeo + GWJID];
 
     for (int n=0;n<mesh.Np;n++) {
-      if (mask[e*mesh.Np + n]) continue; //skip masked nodes
+      if (maskedGlobalNumbering[e*mesh.Np + n]<0) continue; //skip masked nodes
       for (int m=0;m<mesh.Np;m++) {
-        if (mask[e*mesh.Np + m]) continue; //skip masked nodes
+        if (maskedGlobalNumbering[e*mesh.Np + m]<0) continue; //skip masked nodes
         dfloat val = 0.;
 
         val += Grr*mesh.Srr[m+n*mesh.Np];
@@ -768,9 +659,9 @@ void elliptic_t::BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO& A) {
           {
             // pack non-zero
             sendNonZeros[cnt].val = val;
-            sendNonZeros[cnt].row = globalNumbering[e*mesh.Np + n];
-            sendNonZeros[cnt].col = globalNumbering[e*mesh.Np + m];
-            sendNonZeros[cnt].ownerRank = globalOwners[e*mesh.Np + n];
+            sendNonZeros[cnt].row = maskedGlobalNumbering[e*mesh.Np + n];
+            sendNonZeros[cnt].col = maskedGlobalNumbering[e*mesh.Np + m];
+            sendNonZeros[cnt].ownerRank = maskedGlobalOwners[e*mesh.Np + n];
             cnt++;
           }
         }
@@ -843,29 +734,17 @@ void elliptic_t::BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO& A) {
   MPI_Type_free(&MPI_NONZERO_T);
 
   free(sendNonZeros);
-  free(globalNumbering); free(globalOwners);
 
   free(AsendCounts);
   free(ArecvCounts);
   free(AsendOffsets);
   free(ArecvOffsets);
-
-  free(mask);
 }
 
 void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO& A) {
 
-  int rank = mesh.rank;
-
-  //use the masked gs handle to define a global ordering
-
   // number of degrees of freedom on this rank (after gathering)
   hlong Ngather = ogsMasked->Ngather;
-  dlong Ntotal  = mesh.Np*mesh.Nelements;
-
-  // create a global numbering system
-  hlong *globalIds = (hlong *) calloc(Ngather,sizeof(hlong));
-  int   *owner     = (int *) calloc(Ngather,sizeof(int));
 
   // every gathered degree of freedom has its own global id
   A.globalStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
@@ -873,32 +752,13 @@ void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO& A) {
   for(int r=0;r<mesh.size;++r)
     A.globalStarts[r+1] = A.globalStarts[r]+A.globalStarts[r+1];
 
-  //use the offsets to set a consecutive global numbering
-  for (dlong n =0;n<ogsMasked->Ngather;n++) {
-    globalIds[n] = n + A.globalStarts[rank];
-    owner[n] = rank;
-  }
-
-  //scatter this numbering to the original nodes
-  hlong *globalNumbering = (hlong *) calloc(Ntotal,sizeof(hlong));
-  int *globalOwners = (int *) calloc(Ntotal,sizeof(int));
-  for (dlong n=0;n<Ntotal;n++) globalNumbering[n] = -1;
-  ogsScatter(globalNumbering, globalIds, ogsHlong, ogsAdd, ogsMasked);
-  ogsScatter(globalOwners, owner, ogsInt, ogsAdd, ogsMasked);
-
-  free(globalIds); free(owner);
-
-
-    // 2. Build non-zeros of stiffness matrix (unassembled)
+  // 2. Build non-zeros of stiffness matrix (unassembled)
   dlong nnzLocal = mesh.Np*mesh.Np*mesh.Nelements;
   parAlmond::nonZero_t *sendNonZeros = (parAlmond::nonZero_t*) calloc(nnzLocal, sizeof(parAlmond::nonZero_t));
   int *AsendCounts  = (int*) calloc(mesh.size, sizeof(int));
   int *ArecvCounts  = (int*) calloc(mesh.size, sizeof(int));
   int *AsendOffsets = (int*) calloc(mesh.size+1, sizeof(int));
   int *ArecvOffsets = (int*) calloc(mesh.size+1, sizeof(int));
-
-  int *mask = (int *) calloc(mesh.Np*mesh.Nelements,sizeof(int));
-  for (dlong n=0;n<Nmasked;n++) mask[maskIds[n]] = 1;
 
   if(mesh.rank==0) {printf("Building full FEM matrix...");fflush(stdout);}
 
@@ -908,13 +768,13 @@ void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO& A) {
     for (int ny=0;ny<mesh.Nq;ny++) {
     for (int nx=0;nx<mesh.Nq;nx++) {
       int idn = nx+ny*mesh.Nq+nz*mesh.Nq*mesh.Nq;
-      if (mask[e*mesh.Np + idn]) continue; //skip masked nodes
+      if (maskedGlobalNumbering[e*mesh.Np + idn]<0) continue; //skip masked nodes
 
         for (int mz=0;mz<mesh.Nq;mz++) {
         for (int my=0;my<mesh.Nq;my++) {
         for (int mx=0;mx<mesh.Nq;mx++) {
           int idm = mx+my*mesh.Nq+mz*mesh.Nq*mesh.Nq;
-          if (mask[e*mesh.Np + idm]) continue; //skip masked nodes
+          if (maskedGlobalNumbering[e*mesh.Np + idm]<0) continue; //skip masked nodes
 
             int id;
             dfloat val = 0.;
@@ -986,9 +846,9 @@ void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO& A) {
             dfloat nonZeroThreshold = 1e-7;
             if (fabs(val) >= nonZeroThreshold) {
               sendNonZeros[cnt].val = val;
-              sendNonZeros[cnt].row = globalNumbering[e*mesh.Np + idn];
-              sendNonZeros[cnt].col = globalNumbering[e*mesh.Np + idm];
-              sendNonZeros[cnt].ownerRank = globalOwners[e*mesh.Np + idn];
+              sendNonZeros[cnt].row = maskedGlobalNumbering[e*mesh.Np + idn];
+              sendNonZeros[cnt].col = maskedGlobalNumbering[e*mesh.Np + idm];
+              sendNonZeros[cnt].ownerRank = maskedGlobalOwners[e*mesh.Np + idn];
               cnt++;
             }
         }
@@ -1064,7 +924,6 @@ void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO& A) {
   MPI_Type_free(&MPI_NONZERO_T);
 
   free(sendNonZeros);
-  free(globalNumbering); free(globalOwners);
 
   free(AsendCounts);
   free(ArecvCounts);

@@ -66,6 +66,8 @@ public:
   dlong Nmasked;
   dlong *maskIds;
   hlong *maskedGlobalIds;
+  hlong *maskedGlobalNumbering;
+  int   *maskedGlobalOwners;
 
   occa::memory o_maskIds;
   occa::memory o_mapB;

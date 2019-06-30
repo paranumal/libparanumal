@@ -97,6 +97,8 @@ private:
   mesh_t& mesh;
   settings_t& settings;
 
+  mesh_t *femMesh;
+  elliptic_t* femElliptic;
   parAlmond::solver_t *parAlmondHandle;
 
   occa::memory o_xG, o_rhsG;

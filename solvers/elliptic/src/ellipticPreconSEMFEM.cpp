@@ -27,11 +27,6 @@ SOFTWARE.
 #include "ellipticPrecon.hpp"
 
 // Cast problem into spectrally-equivalent N=1 FEM space and precondition with AMG
-SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
-  elliptic(_elliptic), mesh(_elliptic.mesh), settings(_elliptic.settings) {
-
-}
-
 void SEMFEMPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
 
   if (mesh.elementType==TRIANGLES||mesh.elementType==TETRAHEDRA) {
@@ -73,4 +68,205 @@ void SEMFEMPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
   if(elliptic.allNeumann) // zero mean of RHS
     elliptic.ZeroMean(o_Mr);
 #endif
+}
+
+SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
+  elliptic(_elliptic), mesh(_elliptic.mesh), settings(_elliptic.settings) {
+
+  //sanity checking
+  if (!settings.compareSetting("DISCRETIZATION", "CONTINUOUS") )
+    LIBP_ABORT(string("SEMFEM is supported for CONTINUOUS only"));
+
+  //make a low-order fem mesh from the sem mesh (also return globalIds of the enriched sem nodes, and faceNode mapping)
+  int Nfp = 0;
+  int *faceNodes = NULL;
+  hlong *globalIds = NULL;
+  femMesh = mesh.SetupSEMFEM(&globalIds, &Nfp, &faceNodes);
+
+  //use the BCs to make a maskedGlobalIds array
+  dlong Ntotal = mesh.NpFEM*mesh.Nelements;
+  hlong* maskedGlobalIds = (hlong *) calloc(Ntotal,sizeof(hlong));
+  memcpy(maskedGlobalIds, globalIds, Ntotal*sizeof(hlong));
+  if (mesh.elementType==TRIANGLES||mesh.elementType==TETRAHEDRA) { //build a new mask for NpFEM>Np node sets
+    // gather-scatter
+    int verbose = 0;
+    ogs_t *ogs = ogsSetup(Ntotal, globalIds, mesh.comm, verbose, mesh.device);
+
+    //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
+    const int largeNumber = 1<<20;
+    int *mapB = (int *) calloc(Ntotal,sizeof(int));
+    for (dlong e=0;e<mesh.Nelements;e++) {
+      for (int n=0;n<mesh.NpFEM;n++) mapB[n+e*mesh.NpFEM] = largeNumber;
+
+      for (int f=0;f<mesh.Nfaces;f++) {
+        int bc = elliptic.EToB[f+e*mesh.Nfaces];
+        if (bc>0) {
+          for (int n=0;n<Nfp;n++) {
+            int fid = faceNodes[n+f*Nfp];
+            mapB[fid+e*mesh.NpFEM] = mymin(bc,mapB[fid+e*mesh.Np]);
+          }
+        }
+      }
+    }
+    ogsGatherScatter(mapB, ogsInt, ogsMin, ogs);
+
+    //use the bc flags to find masked ids
+    for (dlong n=0;n<mesh.Nelements*mesh.NpFEM;n++)
+      if (mapB[n] == 1) //Dirichlet boundary
+        maskedGlobalIds[n] = 0;
+
+    free(mapB);
+  } else {
+    //mask using the original mask
+    for (dlong n=0;n<elliptic.Nmasked;n++)
+      maskedGlobalIds[elliptic.maskIds[n]] = 0;
+  }
+
+  //build masked gs handle to gather from enriched sem nodes to assembled fem problem
+  int verbose = 0;
+  FEMogs = ogsSetup(Ntotal, maskedGlobalIds, mesh.comm, verbose, mesh.device);
+
+  //make a map from the fem mesh's nodes to the (enriched) sem nodes
+  dlong *localIds = (dlong *) calloc(femMesh->Nelements*femMesh->Nverts,sizeof(dlong));
+  for(dlong e=0;e<mesh.Nelements;++e){
+    for (int n=0;n<mesh.NelFEM;n++) {
+      dlong id[femMesh->Nverts];
+
+      //local ids in the subelement fem grid
+      for (int i=0;i<mesh.Nverts;i++)
+        id[i] = e*mesh.NpFEM + mesh.FEMEToV[n*femMesh->Nverts+i];
+
+      dlong femId = e*mesh.NelFEM*femMesh->Nverts+n*mesh.Nverts;
+      switch(mesh.elementType){
+      case TRIANGLES:
+        localIds[femId+0] = id[0];
+        localIds[femId+1] = id[1];
+        localIds[femId+2] = id[2];
+        break;
+      case QUADRILATERALS:
+        localIds[femId+0] = id[0];
+        localIds[femId+1] = id[1];
+        localIds[femId+2] = id[3];  //need to swap this as the Np nodes are ordered [0,1,3,2] in a degree 1 element
+        localIds[femId+3] = id[2];
+        break;
+      case TETRAHEDRA:
+        localIds[femId+0] = id[0];
+        localIds[femId+1] = id[1];
+        localIds[femId+2] = id[2];
+        localIds[femId+3] = id[3];
+        break;
+      case HEXAHEDRA:
+        localIds[femId+0] = id[0];
+        localIds[femId+1] = id[1];
+        localIds[femId+2] = id[3];  //need to swap this as the Np nodes are ordered [0,1,3,2,4,5,7,6] in a degree 1 element
+        localIds[femId+3] = id[2];
+        localIds[femId+4] = id[4];
+        localIds[femId+5] = id[5];
+        localIds[femId+6] = id[7];
+        localIds[femId+7] = id[6];
+        break;
+      }
+    }
+  }
+
+  //make a fem elliptic solver
+  femElliptic = new elliptic_t(*femMesh, elliptic.linAlg, elliptic.lambda);
+  femElliptic->ogsMasked = FEMogs; //only for getting Ngather when building matrix
+
+  // number of degrees of freedom on this rank (after gathering)
+  hlong Ngather = FEMogs->Ngather;
+
+  // create a global numbering system
+  hlong *globalIds2 = (hlong *) calloc(Ngather,sizeof(hlong));
+  int   *owner     = (int *) calloc(Ngather,sizeof(int));
+
+  // every gathered degree of freedom has its own global id
+  hlong *globalStarts = (hlong *) calloc(mesh.size+1,sizeof(hlong));
+  MPI_Allgather(&Ngather, 1, MPI_HLONG, globalStarts+1, 1, MPI_HLONG, mesh.comm);
+  for(int r=0;r<mesh.size;++r)
+    globalStarts[r+1] = globalStarts[r]+globalStarts[r+1];
+
+  //use the offsets to set a consecutive global numbering
+  for (dlong n =0;n<FEMogs->Ngather;n++) {
+    globalIds2[n] = n + globalStarts[mesh.rank];
+    owner[n] = mesh.rank;
+  }
+  free(globalStarts);
+
+  //scatter this numbering to the original nodes
+  Ntotal = mesh.NpFEM*mesh.Nelements;
+  hlong* maskedGlobalNumbering = (hlong *) calloc(Ntotal,sizeof(hlong));
+  int  * maskedGlobalOwners    = (int *) calloc(Ntotal,sizeof(int));
+  for (dlong n=0;n<Ntotal;n++) maskedGlobalNumbering[n] = -1;
+  ogsScatter(maskedGlobalNumbering, globalIds2, ogsHlong, ogsAdd, FEMogs);
+  ogsScatter(maskedGlobalOwners, owner, ogsInt, ogsAdd, FEMogs);
+  free(globalIds2); free(owner);
+
+  //transfer the consecutive global numbering to the fem mesh
+  Ntotal = femMesh->Np*femMesh->Nelements;
+  femElliptic->maskedGlobalNumbering = (hlong *) calloc(Ntotal,sizeof(hlong));
+  femElliptic->maskedGlobalOwners    = (int *) calloc(Ntotal,sizeof(int));
+
+  for (dlong e=0;e<femMesh->Nelements;e++) {
+    for (int n=0;n<femMesh->Np;n++) {
+      dlong id = e*femMesh->Np + n;
+      dlong localId = localIds[id];
+      femElliptic->maskedGlobalNumbering[id] = maskedGlobalNumbering[localId];
+      femElliptic->maskedGlobalOwners[id] = maskedGlobalOwners[localId];
+    }
+  }
+  free(localIds); free(maskedGlobalNumbering); free(maskedGlobalOwners);
+
+  //finally, build the fem matrix and pass to parAlmond
+  parAlmond::parCOO A;
+  femElliptic->BuildOperatorMatrixContinuous(A);
+
+  parAlmondHandle = parAlmond::Init(mesh.device, mesh.comm, elliptic.settings);
+  parAlmond::AMGSetup(parAlmondHandle, A,
+                      elliptic.allNeumann, elliptic.allNeumannPenalty);
+
+  parAlmond::Report(parAlmondHandle);
+
+  if (mesh.elementType==TRIANGLES||mesh.elementType==TETRAHEDRA) {
+    // build interp and anterp
+    dfloat *SEMFEMAnterp = (dfloat*) calloc(mesh.NpFEM*mesh.Np, sizeof(dfloat));
+    for(int n=0;n<mesh.NpFEM;++n){
+      for(int m=0;m<mesh.Np;++m){
+        SEMFEMAnterp[n+m*mesh.NpFEM] = mesh.SEMFEMInterp[n*mesh.Np+m];
+      }
+    }
+
+    mesh.o_SEMFEMInterp = mesh.device.malloc(mesh.NpFEM*mesh.Np*sizeof(dfloat),mesh.SEMFEMInterp);
+    mesh.o_SEMFEMAnterp = mesh.device.malloc(mesh.NpFEM*mesh.Np*sizeof(dfloat),SEMFEMAnterp);
+
+    free(SEMFEMAnterp);
+
+    o_rFEM = mesh.device.malloc(mesh.Nelements*mesh.NpFEM*sizeof(dfloat));
+    o_zFEM = mesh.device.malloc(mesh.Nelements*mesh.NpFEM*sizeof(dfloat));
+
+    parAlmond::multigridLevel *baseLevel = parAlmondHandle->levels[0];
+    o_GrFEM = mesh.device.malloc(baseLevel->Ncols*sizeof(dfloat));
+    o_GzFEM = mesh.device.malloc(baseLevel->Ncols*sizeof(dfloat));
+
+    //build kernels
+    occa::properties kernelInfo = elliptic.props;
+
+    kernelInfo["defines/" "p_Np"]= mesh.Np;
+    kernelInfo["defines/" "p_NpFEM"]= mesh.NpFEM;
+
+    int NblockV = 512/mesh.NpFEM;
+    kernelInfo["defines/" "p_NblockV"]= NblockV;
+
+    SEMFEMInterpKernel = buildKernel(mesh.device, DELLIPTIC "/okl/ellipticSEMFEMInterp.okl",
+                                     "ellipticSEMFEMInterp", kernelInfo, mesh.comm);
+
+    SEMFEMAnterpKernel = buildKernel(mesh.device, DELLIPTIC "/okl/ellipticSEMFEMAnterp.okl",
+                                     "ellipticSEMFEMAnterp", kernelInfo, mesh.comm);
+  } else {
+    parAlmond::multigridLevel *baseLevel = parAlmondHandle->levels[0];
+    // rhsG = (dfloat*) calloc(baseLevel->Ncols,sizeof(dfloat));
+    // xG   = (dfloat*) calloc(baseLevel->Ncols,sizeof(dfloat));
+    o_rhsG = mesh.device.malloc(baseLevel->Ncols*sizeof(dfloat));
+    o_xG   = mesh.device.malloc(baseLevel->Ncols*sizeof(dfloat));
+  }
 }

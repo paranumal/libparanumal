@@ -148,7 +148,7 @@ elliptic_t& elliptic_t::Setup(mesh_t& mesh, linAlg_t& linAlg, dfloat lambda){
   else if(settings.compareSetting("PRECONDITIONER", "MULTIGRID"))
     elliptic->precon = new MultiGridPrecon(*elliptic);
   else if(settings.compareSetting("PRECONDITIONER", "SEMFEM")){
-    // elliptic->precon = new SEMFEMPrecon(*elliptic);
+    elliptic->precon = new SEMFEMPrecon(*elliptic);
   }
   else if(settings.compareSetting("PRECONDITIONER", "OAS")){
 

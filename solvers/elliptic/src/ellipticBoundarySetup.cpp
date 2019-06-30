@@ -100,4 +100,33 @@ void elliptic_t::BoundarySetup(){
 
   //use the invDegree for the weight in linear solvers (used in C0)
   o_weight = ogsMasked->o_invDegree;
+
+  /* use the masked gs handle to define a global ordering */
+  dlong Ntotal  = mesh.Np*mesh.Nelements; // number of degrees of freedom on this rank (before gathering)
+  hlong Ngather = ogsMasked->Ngather;     // number of degrees of freedom on this rank (after gathering)
+
+  // create a global numbering system
+  hlong *globalIds = (hlong *) calloc(Ngather,sizeof(hlong));
+  int   *owner     = (int *) calloc(Ngather,sizeof(int));
+
+  // every gathered degree of freedom has its own global id
+  hlong *globalStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  MPI_Allgather(&Ngather, 1, MPI_HLONG, globalStarts+1, 1, MPI_HLONG, mesh.comm);
+  for(int r=0;r<mesh.size;++r)
+    globalStarts[r+1] = globalStarts[r] + globalStarts[r+1];
+
+  //use the offsets to set a consecutive global numbering
+  for (dlong n =0;n<ogsMasked->Ngather;n++) {
+    globalIds[n] = n + globalStarts[mesh.rank];
+    owner[n] = mesh.rank;
+  }
+
+  //scatter this numbering to the original nodes
+  maskedGlobalNumbering = (hlong *) calloc(Ntotal,sizeof(hlong));
+  maskedGlobalOwners    = (int *)   calloc(Ntotal,sizeof(int));
+  for (dlong n=0;n<Ntotal;n++) maskedGlobalNumbering[n] = -1;
+  ogsScatter(maskedGlobalNumbering, globalIds, ogsHlong, ogsAdd, ogsMasked);
+  ogsScatter(maskedGlobalOwners, owner, ogsInt, ogsAdd, ogsMasked);
+
+  free(globalIds); free(owner);
 }

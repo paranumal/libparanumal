@@ -100,12 +100,12 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
 
   mesh_t* mesh = elliptic->mesh; //original mesh
 
-  //  mesh_t* pmesh = (mesh_t*) calloc (1,sizeof(mesh_t)); //partially assembled fem mesh (result of projecting sem element to larger space)
+  //  mesh_t* pmesh = (mesh_t*) calloc (1,sizeof(mesh_t));
   mesh_t* pmesh = new mesh_t[1];
-  
+
   //  precon->femMesh = (mesh_t*) calloc (1,sizeof(mesh_t)); //full fem mesh
   precon->femMesh = new mesh_t[1];
-  
+
   mesh_t *femMesh = precon->femMesh;
 
   memcpy(pmesh  ,mesh,sizeof(mesh_t));
@@ -216,7 +216,7 @@ void ellipticSEMFEMSetup(elliptic_t *elliptic, precon_t* precon, dfloat lambda) 
   }
 
 
-  //now build the full degree 1 fem mesh
+
   int femN = 1; //degree of fem approximation
 
   /* allocate space for node coordinates */
