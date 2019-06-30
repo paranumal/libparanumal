@@ -24,428 +24,78 @@ SOFTWARE.
 
 */
 
-
-@kernel void gatherScatter_floatAdd(const dlong Ngather,
-                                    @restrict const  dlong *  gatherStarts,
-                                    @restrict const  dlong *  gatherIds,
-                                    @restrict float *  q){
-  
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
-    
-    const dlong start = gatherStarts[g];
-    const dlong end = gatherStarts[g+1];
-    if((start+1)!=end){
-    
-      float gq = 0;
-      
-      for(dlong n=start;n<end;++n){
-        const dlong id = gatherIds[n];
-        gq += q[id];
-      }
-      
-      for(dlong n=start;n<end;++n){
-        const dlong id = gatherIds[n];
-        q[id] = gq;
-      }
-    }
-  }
+/*------------------------------------------------------------------------------
+  The basic gather-scatter kernel
+------------------------------------------------------------------------------*/
+#define DEFINE_GATHERSCATTER(T,OP)                                      \
+@kernel void gatherScatter_##T##_##OP(const dlong Ngather,              \
+                               @restrict const  dlong *  gatherStarts,  \
+                               @restrict const  dlong *  gatherIds,     \
+                               @restrict            T *  q)             \
+{                                                                       \
+  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){                \
+    const dlong start = gatherStarts[g];                                \
+    const dlong end = gatherStarts[g+1];                                \
+    if((start+1)!=end){                                                 \
+      T gq = init_##T##_##OP;                                           \
+      for(dlong n=start;n<end;++n){                                     \
+        const dlong id = gatherIds[n];                                  \
+        OGS_DO_##OP(gq,q[id]);                                          \
+      }                                                                 \
+      for(dlong n=start;n<end;++n){                                     \
+        const dlong id = gatherIds[n];                                  \
+        q[id] = gq;                                                     \
+      }                                                                 \
+    }                                                                   \
+  }                                                                     \
 }
 
-@kernel void gatherScatter_doubleAdd(const dlong Ngather,
-                                    @restrict const  dlong *  gatherStarts,
-                                    @restrict const  dlong *  gatherIds,
-                                    @restrict double *  q){
-  
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
-    
-    const dlong start = gatherStarts[g];
-    const dlong end = gatherStarts[g+1];
-    if((start+1)!=end){
-    
-      double gq = 0;
-      
-      for(dlong n=start;n<end;++n){
-        const dlong id = gatherIds[n];
-        gq += q[id];
-      }
-      
-      for(dlong n=start;n<end;++n){
-        const dlong id = gatherIds[n];
-        q[id] = gq;
-      }
-    }
-  }
+/*------------------------------------------------------------------------------
+  The basic gather kernel
+------------------------------------------------------------------------------*/
+#define DEFINE_GATHER(T,OP)                                             \
+@kernel void gather_##T##_##OP(const dlong Ngather,                     \
+                               @restrict const  dlong *  gatherStarts,  \
+                               @restrict const  dlong *  gatherIds,     \
+                               @restrict const      T *  q,             \
+                               @restrict            T *  gatherq)       \
+{                                                                       \
+  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){                \
+    const dlong start = gatherStarts[g];                                \
+    const dlong end = gatherStarts[g+1];                                \
+    T gq = init_##T##_##OP;                                             \
+    for(dlong n=start;n<end;++n){                                       \
+      const dlong id = gatherIds[n];                                    \
+      OGS_DO_##OP(gq,q[id]);                                            \
+    }                                                                   \
+    gatherq[g] = gq;                                                    \
+  }                                                                     \
 }
 
-@kernel void gatherScatter_intAdd(const dlong Ngather,
-                                    @restrict const  dlong *  gatherStarts,
-                                    @restrict const  dlong *  gatherIds,
-                                    @restrict int *  q){
-  
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
-    
-    const dlong start = gatherStarts[g];
-    const dlong end = gatherStarts[g+1];
-    if((start+1)!=end){
-    
-      int gq = 0;
-      
-      for(dlong n=start;n<end;++n){
-        const dlong id = gatherIds[n];
-        gq += q[id];
-      }
-      
-      for(dlong n=start;n<end;++n){
-        const dlong id = gatherIds[n];
-        q[id] = gq;
-      }
-    }
-  }
+/*------------------------------------------------------------------------------
+  The basic scatter kernel
+------------------------------------------------------------------------------*/
+#define DEFINE_SCATTER(T)                                               \
+@kernel void scatter_##T(const dlong Nscatter,                          \
+                         @restrict const  dlong *  scatterStarts,       \
+                         @restrict const  dlong *  scatterIds,          \
+                         @restrict const      T *  q,                   \
+                         @restrict            T *  scatterq)            \
+{                                                                       \
+  for(dlong s=0;s<Nscatter;++s;@tile(256,@outer,@inner)){               \
+    const T qs = q[s];                                                  \
+    const dlong start = scatterStarts[s];                               \
+    const dlong end = scatterStarts[s+1];                               \
+    for(dlong n=start;n<end;++n){                                       \
+      const dlong id = scatterIds[n];                                   \
+      scatterq[id] = qs;                                                \
+    }                                                                   \
+  }                                                                     \
 }
 
-@kernel void gatherScatter_longAdd(const dlong Ngather,
-                                    @restrict const  dlong *  gatherStarts,
-                                    @restrict const  dlong *  gatherIds,
-                                    @restrict long long int *  q){
-  
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
-    
-    const dlong start = gatherStarts[g];
-    const dlong end = gatherStarts[g+1];
-    if((start+1)!=end){
-    
-      long long int gq = 0;
-      
-      for(dlong n=start;n<end;++n){
-        const dlong id = gatherIds[n];
-        gq += q[id];
-      }
-      
-      for(dlong n=start;n<end;++n){
-        const dlong id = gatherIds[n];
-        q[id] = gq;
-      }
-    }
-  }
-}
+#define DEFINE_PROCS(T) \
+  OGS_FOR_EACH_OP(T,DEFINE_GATHERSCATTER) \
+  OGS_FOR_EACH_OP(T,DEFINE_GATHER) \
+  DEFINE_SCATTER(T)
 
-@kernel void gatherScatter_floatMul(const dlong Ngather,
-                                    @restrict const  dlong *  gatherStarts,
-                                    @restrict const  dlong *  gatherIds,
-                                    @restrict float *  q){
-  
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
-    
-    const dlong start = gatherStarts[g];
-    const dlong end = gatherStarts[g+1];
-    if((start+1)!=end){
-    
-      float gq = 1;
-      
-      for(dlong n=start;n<end;++n){
-        const dlong id = gatherIds[n];
-        gq *= q[id];
-      }
-      
-      for(dlong n=start;n<end;++n){
-        const dlong id = gatherIds[n];
-        q[id] = gq;
-      }
-    }
-  }
-}
-
-@kernel void gatherScatter_doubleMul(const dlong Ngather,
-                                    @restrict const  dlong *  gatherStarts,
-                                    @restrict const  dlong *  gatherIds,
-                                    @restrict double *  q){
-  
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
-    
-    const dlong start = gatherStarts[g];
-    const dlong end = gatherStarts[g+1];
-    if((start+1)!=end){
-    
-      double gq = 1;
-      
-      for(dlong n=start;n<end;++n){
-        const dlong id = gatherIds[n];
-        gq *= q[id];
-      }
-      
-      for(dlong n=start;n<end;++n){
-        const dlong id = gatherIds[n];
-        q[id] = gq;
-      }
-    }
-  }
-}
-
-@kernel void gatherScatter_intMul(const dlong Ngather,
-                                    @restrict const  dlong *  gatherStarts,
-                                    @restrict const  dlong *  gatherIds,
-                                    @restrict int *  q){
-  
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
-    
-    const dlong start = gatherStarts[g];
-    const dlong end = gatherStarts[g+1];
-    if((start+1)!=end){
-    
-      int gq = 1;
-      
-      for(dlong n=start;n<end;++n){
-        const dlong id = gatherIds[n];
-        gq *= q[id];
-      }
-      
-      for(dlong n=start;n<end;++n){
-        const dlong id = gatherIds[n];
-        q[id] = gq;
-      }
-    }
-  }
-}
-
-@kernel void gatherScatter_longMul(const dlong Ngather,
-                                    @restrict const  dlong *  gatherStarts,
-                                    @restrict const  dlong *  gatherIds,
-                                    @restrict long long int *  q){
-  
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
-    
-    const dlong start = gatherStarts[g];
-    const dlong end = gatherStarts[g+1];
-    if((start+1)!=end){
-    
-      long long int gq = 1;
-      
-      for(dlong n=start;n<end;++n){
-        const dlong id = gatherIds[n];
-        gq *= q[id];
-      }
-      
-      for(dlong n=start;n<end;++n){
-        const dlong id = gatherIds[n];
-        q[id] = gq;
-      }
-    }
-  }
-}
-
-
-@kernel void gatherScatter_floatMin(const dlong Ngather,
-                                    @restrict const  dlong *  gatherStarts,
-                                    @restrict const  dlong *  gatherIds,
-                                    @restrict float *  q){
-  
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
-    
-    const dlong start = gatherStarts[g];
-    const dlong end = gatherStarts[g+1];
-    if((start+1)!=end){
-    
-      const dlong startId = gatherIds[start];
-      float gq = q[startId];
-
-      for(dlong n=start+1;n<end;++n){
-        const dlong id = gatherIds[n];
-        gq = (q[id] < gq) ? q[id] : gq;
-      }
-      
-      for(dlong n=start;n<end;++n){
-        const dlong id = gatherIds[n];
-        q[id] = gq;
-      }
-    }
-  }
-}
-
-@kernel void gatherScatter_doubleMin(const dlong Ngather,
-                                    @restrict const  dlong *  gatherStarts,
-                                    @restrict const  dlong *  gatherIds,
-                                    @restrict double *  q){
-  
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
-    
-    const dlong start = gatherStarts[g];
-    const dlong end = gatherStarts[g+1];
-    if((start+1)!=end){
-    
-      const dlong startId = gatherIds[start];
-      double gq = q[startId];
-
-      for(dlong n=start+1;n<end;++n){
-        const dlong id = gatherIds[n];
-        gq = (q[id] < gq) ? q[id] : gq;
-      }
-      
-      for(dlong n=start;n<end;++n){
-        const dlong id = gatherIds[n];
-        q[id] = gq;
-      }
-    }
-  }
-}
-
-@kernel void gatherScatter_intMin(const dlong Ngather,
-                                    @restrict const  dlong *  gatherStarts,
-                                    @restrict const  dlong *  gatherIds,
-                                    @restrict int *  q){
-  
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
-    
-    const dlong start = gatherStarts[g];
-    const dlong end = gatherStarts[g+1];
-    if((start+1)!=end){
-    
-      const dlong startId = gatherIds[start];
-      int gq = q[startId];
-
-      for(dlong n=start+1;n<end;++n){
-        const dlong id = gatherIds[n];
-        gq = (q[id] < gq) ? q[id] : gq;
-      }
-      
-      for(dlong n=start;n<end;++n){
-        const dlong id = gatherIds[n];
-        q[id] = gq;
-      }
-    }
-  }
-}
-
-@kernel void gatherScatter_longMin(const dlong Ngather,
-                                    @restrict const  dlong *  gatherStarts,
-                                    @restrict const  dlong *  gatherIds,
-                                    @restrict long long int *  q){
-  
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
-    
-    const dlong start = gatherStarts[g];
-    const dlong end = gatherStarts[g+1];
-    if((start+1)!=end){
-    
-      const dlong startId = gatherIds[start];
-      long long int gq = q[startId];
-
-      for(dlong n=start+1;n<end;++n){
-        const dlong id = gatherIds[n];
-        gq = (q[id] < gq) ? q[id] : gq;
-      }
-      
-      for(dlong n=start;n<end;++n){
-        const dlong id = gatherIds[n];
-        q[id] = gq;
-      }
-    }
-  }
-}
-
-@kernel void gatherScatter_floatMax(const dlong Ngather,
-                                    @restrict const  dlong *  gatherStarts,
-                                    @restrict const  dlong *  gatherIds,
-                                    @restrict float *  q){
-  
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
-    
-    const dlong start = gatherStarts[g];
-    const dlong end = gatherStarts[g+1];
-    if((start+1)!=end){
-    
-      const dlong startId = gatherIds[start];
-      float gq = q[startId];
-
-      for(dlong n=start+1;n<end;++n){
-        const dlong id = gatherIds[n];
-        gq = (q[id] > gq) ? q[id] : gq;
-      }
-      
-      for(dlong n=start;n<end;++n){
-        const dlong id = gatherIds[n];
-        q[id] = gq;
-      }
-    }
-  }
-}
-
-@kernel void gatherScatter_doubleMax(const dlong Ngather,
-                                    @restrict const  dlong *  gatherStarts,
-                                    @restrict const  dlong *  gatherIds,
-                                    @restrict double *  q){
-  
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
-    
-    const dlong start = gatherStarts[g];
-    const dlong end = gatherStarts[g+1];
-    if((start+1)!=end){
-    
-      const dlong startId = gatherIds[start];
-      double gq = q[startId];
-
-      for(dlong n=start+1;n<end;++n){
-        const dlong id = gatherIds[n];
-        gq = (q[id] > gq) ? q[id] : gq;
-      }
-      
-      for(dlong n=start;n<end;++n){
-        const dlong id = gatherIds[n];
-        q[id] = gq;
-      }
-    }
-  }
-}
-
-@kernel void gatherScatter_intMax(const dlong Ngather,
-                                    @restrict const  dlong *  gatherStarts,
-                                    @restrict const  dlong *  gatherIds,
-                                    @restrict int *  q){
-  
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
-    
-    const dlong start = gatherStarts[g];
-    const dlong end = gatherStarts[g+1];
-    if((start+1)!=end){
-    
-      const dlong startId = gatherIds[start];
-      int gq = q[startId];
-
-      for(dlong n=start+1;n<end;++n){
-        const dlong id = gatherIds[n];
-        gq = (q[id] > gq) ? q[id] : gq;
-      }
-      
-      for(dlong n=start;n<end;++n){
-        const dlong id = gatherIds[n];
-        q[id] = gq;
-      }
-    }
-  }
-}
-
-@kernel void gatherScatter_longMax(const dlong Ngather,
-                                    @restrict const  dlong *  gatherStarts,
-                                    @restrict const  dlong *  gatherIds,
-                                    @restrict long long int *  q){
-  
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){
-    
-    const dlong start = gatherStarts[g];
-    const dlong end = gatherStarts[g+1];
-    if((start+1)!=end){
-    
-      const dlong startId = gatherIds[start];
-      long long int gq = q[startId];
-
-      for(dlong n=start+1;n<end;++n){
-        const dlong id = gatherIds[n];
-        gq = (q[id] > gq) ? q[id] : gq;
-      }
-      
-      for(dlong n=start;n<end;++n){
-        const dlong id = gatherIds[n];
-        q[id] = gq;
-      }
-    }
-  }
-}
+OGS_FOR_EACH_DOMAIN(DEFINE_PROCS)

@@ -24,9 +24,22 @@ SOFTWARE.
 
 */
 
-#ifndef ELLIPTIC_MGLEVEL_HPP
-#define ELLIPTIC_MGLEVEL_HPP
+/* the supported domains */
+#define OGS_FOR_EACH_DOMAIN(macro) \
+  macro(double   ) \
+  macro(float    ) \
+  macro(int      ) \
+  macro(long     ) \
+  macro(long long int)
 
+/* the supported ops */
+#define OGS_FOR_EACH_OP(T,macro) \
+  macro(T,add) \
+  macro(T,mul) \
+  macro(T,min) \
+  macro(T,max)
 
-
-#endif
+#define OGS_DO_add(a,b) a+=b
+#define OGS_DO_mul(a,b) a*=b
+#define OGS_DO_min(a,b) if(b<a) a=b
+#define OGS_DO_max(a,b) if(b>a) a=b
