@@ -54,6 +54,16 @@ void advectionSpectrumLSERKsymQuad3D(solver_t *solver,dfloat alpha_scale){
 			      solver->o_cubeDistance,
 			      solver->o_qpre,
 			      solver->o_qFilter);
+
+	solver->filterWeakTraceKernelH(mesh->Nelements,
+				  solver->o_dualTransMatrix,
+				  solver->o_invTransMatrix,
+				  solver->o_cubeFaceNumber,
+				  solver->o_gridToE,
+				  solver->o_vgeo,
+				  solver->o_cubeDistance,
+				  solver->o_qpre,
+				  solver->o_qFilter);
 		
 	solver->filterWeakKernelV(mesh->Nelements,
 			      alpha,

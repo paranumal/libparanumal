@@ -183,5 +183,11 @@ void advectionSetupLSERKsymQuad3D (solver_t *solver) {
 	solver->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterVQuad3D.okl",
 					     "boltzmannFilterVtransQuad3D",
 					     kernelInfo);
+
+    printf("starting weak kernels\n");
+        solver->filterWeakTraceKernelH =
+	solver->device.buildKernelFromSource(DHOLMES "/okl/boltzmannFilterHQuad3D.okl",
+					     "boltzmannFilterHtransTraceQuad3D",
+					     kernelInfo);
     printf("finished loading kernels\n");
 }

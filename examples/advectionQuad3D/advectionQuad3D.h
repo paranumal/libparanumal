@@ -68,6 +68,7 @@ typedef struct {
     occa::kernel massMatrixKernel;
     occa::kernel filterWeakKernelH;
     occa::kernel filterWeakKernelV;
+    occa::kernel filterWeakTraceKernelH;
     
     //occa mrsaab
     occa::memory o_qpre;

@@ -223,13 +223,13 @@ kernel void advectionSurfaceLSERKmixedQuad3D(const iint Nelements,
 				qmw[fld] = qMw;
 			    }
 
-			centralFluxS(nx, ny, nz, un, vn, wn, qps,qms, fluxqs);
-			centralFluxW(nx, ny, nz, un, vn, wn, qpw,qmw, fluxqw);
+			upwindFluxS(nx, ny, nz, un, vn, wn, qps,qms, fluxqs);
+			upwindFluxW(nx, ny, nz, un, vn, wn, qpw,qmw, fluxqw);
 
 			const int gbase = eM*p_Np*p_Nvgeo + (idM%p_Np);
 			const dfloat w = vgeo[gbase + p_Np*10];
 	    
-			const dfloat sc = w*invJ*sJ*p_LIFT;
+			const dfloat sc = invJ*sJ*p_LIFT;
 
 			occaUnroll(p_Nfields)
 			    for(int fld=0;fld<p_Nfields;++fld){
