@@ -138,7 +138,7 @@ void elliptic_t::Run(){
 
   // gather-scatter and mask rhs if c0
   if(settings.compareSetting("DISCRETIZATION","CONTINUOUS")){
-    ogsGatherScatter(o_r, ogsDfloat, ogsAdd, mesh.ogs);
+    mesh.ogs->GatherScatter(o_r, ogs_dfloat, ogs_add);
     if (Nmasked) maskKernel(Nmasked, o_maskIds, o_r);
   }
 

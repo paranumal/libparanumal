@@ -94,7 +94,7 @@ void elliptic_t::BuildOperatorMatrixIpdgTri2D(parAlmond::parCOO& A){
   }
 
   /* do a halo exchange of global node numbers */
-  mesh.HaloExchange(globalIds, Np, ogsHlong);
+  mesh.halo->Exchange(globalIds, Np, ogs_hlong);
 
   dlong nnzLocalBound = Np*Np*(1+Nfaces)*Nelements;
 
@@ -359,7 +359,7 @@ void elliptic_t::BuildOperatorMatrixIpdgTri3D(parAlmond::parCOO& A){
   }
 
   /* do a halo exchange of global node numbers */
-  mesh.HaloExchange(globalIds, Np, ogsHlong);
+  mesh.halo->Exchange(globalIds, Np, ogs_hlong);
 
   dlong nnzLocalBound = Np*Np*(1+Nfaces)*Nelements;
 
@@ -625,7 +625,7 @@ void elliptic_t::BuildOperatorMatrixIpdgQuad2D(parAlmond::parCOO& A){
   }
 
   /* do a halo exchange of global node numbers */
-  mesh.HaloExchange(globalIds, Np, ogsHlong);
+  mesh.halo->Exchange(globalIds, Np, ogs_hlong);
 
   dlong nnzLocalBound = Np*Np*(1+Nfaces)*Nelements;
 
@@ -846,7 +846,7 @@ void elliptic_t::BuildOperatorMatrixIpdgQuad3D(parAlmond::parCOO& A){
   }
 
   /* do a halo exchange of global node numbers */
-  mesh.HaloExchange(globalIds, Np, ogsHlong);
+  mesh.halo->Exchange(globalIds, Np, ogs_hlong);
 
   dlong nnzLocalBound = Np*Np*(1+Nfaces)*Nelements;
 
@@ -1091,7 +1091,7 @@ void elliptic_t::BuildOperatorMatrixIpdgTet3D(parAlmond::parCOO& A){
   }
 
   /* do a halo exchange of global node numbers */
-  mesh.HaloExchange(globalIds, mesh.Np, ogsHlong);
+  mesh.halo->Exchange(globalIds, mesh.Np, ogs_hlong);
 
   dlong nnzLocalBound = mesh.Np*mesh.Np*(1+mesh.Nfaces)*mesh.Nelements;
 
@@ -1364,7 +1364,7 @@ void elliptic_t::BuildOperatorMatrixIpdgHex3D(parAlmond::parCOO& A){
   }
 
   /* do a halo exchange of global node numbers */
-  mesh.HaloExchange(globalIds, Np, ogsHlong);
+  mesh.halo->Exchange(globalIds, Np, ogs_hlong);
 
   dlong nnzLocalBound = Np*Np*(1+Nfaces)*Nelements;
 

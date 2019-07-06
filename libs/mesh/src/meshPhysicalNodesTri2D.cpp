@@ -59,6 +59,6 @@ void meshTri2D::PhysicalNodes(){
     }
   }
 
-  HaloExchange(x, Np, ogsDfloat);
-  HaloExchange(y, Np, ogsDfloat);
+  halo->Exchange(x, Np, ogs_dfloat);
+  halo->Exchange(y, Np, ogs_dfloat);
 }

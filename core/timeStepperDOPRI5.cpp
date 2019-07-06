@@ -25,6 +25,7 @@ SOFTWARE.
 */
 
 #include <math.h>
+#include "core.hpp"
 #include "timeStepper.hpp"
 
 dopri5::dopri5(dlong _N, dlong _Nhalo, solver_t& _solver):
@@ -67,20 +68,20 @@ void dopri5::Init() {
   //add defines
   kernelInfo["defines/" "p_blockSize"] = (int)BLOCKSIZE;
 
-  rkUpdateKernel = device.buildKernel(LIBP_DIR "/core/okl/"
+  rkUpdateKernel = buildKernel(device, LIBP_DIR "/core/okl/"
                                     "timeStepperDOPRI5.okl",
                                     "dopri5RkUpdate",
-                                    kernelInfo);
+                                    kernelInfo, comm);
 
-  rkStageKernel = device.buildKernel(LIBP_DIR "/core/okl/"
+  rkStageKernel = buildKernel(device, LIBP_DIR "/core/okl/"
                                     "timeStepperDOPRI5.okl",
                                     "dopri5RkStage",
-                                    kernelInfo);
+                                    kernelInfo, comm);
 
-  rkErrorEstimateKernel = device.buildKernel(LIBP_DIR "/core/okl/"
+  rkErrorEstimateKernel = buildKernel(device, LIBP_DIR "/core/okl/"
                                     "timeStepperDOPRI5.okl",
                                     "dopri5ErrorEstimate",
-                                    kernelInfo);
+                                    kernelInfo, comm);
 
   // Dormand Prince -order (4) 5 with PID timestep control
   dfloat _rkC[7] = {0.0, 0.2, 0.3, 0.8, 8.0/9.0, 1.0, 1.0};

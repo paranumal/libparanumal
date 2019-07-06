@@ -30,11 +30,13 @@ SOFTWARE.
 //float data type
 #if 0
 #define dfloat float
+#define ogs_dfloat ogs_float
 #define MPI_DFLOAT MPI_FLOAT
 #define dfloatFormat "%f"
 #define dfloatString "float"
 #else
 #define dfloat double
+#define ogs_dfloat ogs_double
 #define MPI_DFLOAT MPI_DOUBLE
 #define dfloatFormat "%lf"
 #define dfloatString "double"
@@ -43,11 +45,13 @@ SOFTWARE.
 //host index data type
 #if 0
 #define hlong int
+#define ogs_hlong ogs_int
 #define MPI_HLONG MPI_INT
 #define hlongFormat "%d"
 #define hlongString "int"
 #else
 #define hlong long long int
+#define ogs_hlong ogs_long_long
 #define MPI_HLONG MPI_LONG_LONG_INT
 #define hlongFormat "%lld"
 #define hlongString "long long int"
@@ -56,11 +60,13 @@ SOFTWARE.
 //device index data type
 #if 1
 #define dlong int
+#define ogs_dlong ogs_int
 #define MPI_DLONG MPI_INT
 #define dlongFormat "%d"
 #define dlongString "int"
 #else
 #define dlong long long int
+#define ogs_dlong ogs_longlongint
 #define MPI_DLONG MPI_LONG_LONG_INT
 #define dlongFormat "%lld"
 #define dlongString "long long int"

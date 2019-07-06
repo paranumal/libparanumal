@@ -75,14 +75,14 @@ void MassMatrixPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
                                mesh.o_globalGatherElementList,
                                invLambda, mesh.o_vgeo, o_invMM, o_rtmp, o_Mr);
 
-    ogsGatherScatterStart(o_Mr, ogsDfloat, ogsAdd, elliptic.ogsMasked);
+    elliptic.ogsMasked->GatherScatterStart(o_Mr, ogs_dfloat, ogs_add);
 
     if(mesh.NlocalGatherElements)
       partialBlockJacobiKernel(mesh.NlocalGatherElements,
                                mesh.o_localGatherElementList,
                                invLambda, mesh.o_vgeo, o_invMM, o_rtmp, o_Mr);
 
-    ogsGatherScatterFinish(o_Mr, ogsDfloat, ogsAdd, elliptic.ogsMasked);
+    elliptic.ogsMasked->GatherScatterFinish(o_Mr, ogs_dfloat, ogs_add);
 
     // Mr = invDegree.*Mr
     elliptic.linAlg.amx(Ntotal, 1.0, elliptic.o_weight, o_Mr);

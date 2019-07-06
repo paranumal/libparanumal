@@ -49,11 +49,6 @@ void mesh_t::OccaSetup(){
   o_EToB = device.malloc(Nelements*Nfaces*sizeof(int), EToB);
 
   defaultStream = device.getStream();
-  dataStream    = device.createStream();
-
-  haloExtractKernel = device.buildKernel(LIBP_DIR "/libs/mesh/okl/meshHaloExtract.okl",
-                                         "meshHaloExtract",
-                                         props);
 
   props["defines/" "p_dim"]= dim;
   props["defines/" "p_N"]= N;

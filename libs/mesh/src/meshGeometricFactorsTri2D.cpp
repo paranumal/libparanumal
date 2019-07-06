@@ -78,5 +78,5 @@ void meshTri2D::GeometricFactors(){
     ggeo[Nggeo*e + GWJID]  = J;
   }
 
-  HaloExchange(vgeo, Nvgeo, ogsDfloat);
+  halo->Exchange(vgeo, Nvgeo, ogs_dfloat);
 }

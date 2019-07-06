@@ -67,7 +67,7 @@ void elliptic_t::BoundarySetup(){
       }
     }
   }
-  ogsGatherScatter(mapB, ogsInt, ogsMin, mesh.ogs);
+  mesh.ogs->GatherScatter(mapB, ogs_int, ogs_min);
 
   //use the bc flags to find masked ids
   Nmasked = 0;
@@ -96,14 +96,27 @@ void elliptic_t::BoundarySetup(){
 
   //use the masked ids to make another gs handle
   int verbose = 0;
-  ogsMasked = ogsSetup(mesh.Nelements*mesh.Np, maskedGlobalIds, comm, verbose, device);
-
-  //use the invDegree for the weight in linear solvers (used in C0)
-  o_weight = ogsMasked->o_invDegree;
+  ogsMasked = ogs_t::Setup(mesh.Nelements*mesh.Np, maskedGlobalIds,
+                           comm, verbose, device);
 
   /* use the masked gs handle to define a global ordering */
   dlong Ntotal  = mesh.Np*mesh.Nelements; // number of degrees of freedom on this rank (before gathering)
   hlong Ngather = ogsMasked->Ngather;     // number of degrees of freedom on this rank (after gathering)
+
+  // build inverse degree vectors
+  // used for the weight in linear solvers (used in C0)
+  weight  = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+  weightG = (dfloat*) calloc(ogsMasked->Ngather, sizeof(dfloat));
+  for(dlong n=0;n<Ntotal;++n) weight[n] = 1.0;
+
+  ogsMasked->Gather(weightG, weight, ogs_dfloat, ogs_add);
+  for(dlong n=0;n<ogsMasked->Ngather;++n)
+    if (weightG[n]) weightG[n] = 1./weightG[n];
+
+  ogsMasked->Scatter(weight, weightG, ogs_dfloat, ogs_add);
+
+  o_weight  = device.malloc(Ntotal*sizeof(dfloat), weight);
+  o_weightG = device.malloc(ogsMasked->Ngather*sizeof(dfloat), weightG);
 
   // create a global numbering system
   hlong *globalIds = (hlong *) calloc(Ngather,sizeof(hlong));
@@ -125,8 +138,8 @@ void elliptic_t::BoundarySetup(){
   maskedGlobalNumbering = (hlong *) calloc(Ntotal,sizeof(hlong));
   maskedGlobalOwners    = (int *)   calloc(Ntotal,sizeof(int));
   for (dlong n=0;n<Ntotal;n++) maskedGlobalNumbering[n] = -1;
-  ogsScatter(maskedGlobalNumbering, globalIds, ogsHlong, ogsAdd, ogsMasked);
-  ogsScatter(maskedGlobalOwners, owner, ogsInt, ogsAdd, ogsMasked);
+  ogsMasked->Scatter(maskedGlobalNumbering, globalIds, ogs_hlong, ogs_add);
+  ogsMasked->Scatter(maskedGlobalOwners, owner, ogs_int, ogs_add);
 
   free(globalIds); free(owner);
 }

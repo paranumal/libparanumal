@@ -5,12 +5,12 @@
      <limits.h>, <float.h>   for GS_DEFINE_IDENTITIES()
      "types.h"               for gs_sint, gs_slong
 */
-   
+
 /*------------------------------------------------------------------------------
   Monoid Definitions
-  
+
   Here are defined the domains and operations, each combination being a
-  commutative semigroup, as well as the identity element making each a 
+  commutative semigroup, as well as the identity element making each a
   commutative monoid.
 ------------------------------------------------------------------------------*/
 
@@ -21,7 +21,7 @@
   macro(int   ) \
   macro(long  ) \
   WHEN_LONG_LONG(macro(long_long))
-  
+
 /* the supported ops */
 #define GS_FOR_EACH_OP(T,macro) \
   macro(T,add) \
@@ -54,6 +54,12 @@
 /*------------------------------------------------------------------------------
   Enums and constants
 ------------------------------------------------------------------------------*/
+
+#define DEFINE_ADD_INIT(T)                                          \
+  static const T init_##T_add = (T)  0;                             \
+  static const T init_##T_mul = (T)  1;                             \
+  static const T init_##T_min = (T)  std::numeric_limits<T>::max(); \
+  static const T init_##T_max = (T) -std::numeric_limits<T>::max();
 
 /* domain enum */
 #define LIST GS_FOR_EACH_DOMAIN(ITEM) gs_dom_n

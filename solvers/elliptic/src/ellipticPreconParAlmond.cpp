@@ -64,14 +64,14 @@ void ParAlmondPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
     parAlmond::Precon(parAlmondHandle, o_Mr, o_r);
 
   } else if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
-    ogsGather(o_rhsG, o_r, ogsDfloat, ogsAdd, elliptic.ogsMasked);
+    elliptic.ogsMasked->Gather(o_rhsG, o_r, ogs_dfloat, ogs_add);
 
     dlong N = elliptic.ogsMasked->Ngather;
-    elliptic.linAlg.amx(N, 1.0, elliptic.ogsMasked->o_gatherInvDegree, o_rhsG);
+    elliptic.linAlg.amx(N, 1.0, elliptic.o_weightG, o_rhsG);
 
     parAlmond::Precon(parAlmondHandle, o_xG, o_rhsG);
 
-    ogsScatter(o_Mr, o_xG, ogsDfloat, ogsAdd, elliptic.ogsMasked);
+    elliptic.ogsMasked->Scatter(o_Mr, o_xG, ogs_dfloat, ogs_add);
   }
 
 #if USE_NULL_PROJECTION==1

@@ -25,253 +25,194 @@ SOFTWARE.
 */
 
 #ifndef OGS_KERNELS_HPP
-#define OGS_KERNELS_HPP 1
+#define OGS_KERNELS_HPP
 
+#include <limits>
 #include "ogs.hpp"
+#include "ogsDefs.h"
+
+#define DEFINE_ADD_OGS_INIT(T)                                  \
+  static T init_##T##_add = (T)  0;                             \
+  static T init_##T##_mul = (T)  1;                             \
+  static T init_##T##_min = (T)  std::numeric_limits<T>::max(); \
+  static T init_##T##_max = (T) -std::numeric_limits<T>::max();
 
 namespace ogs {
 
-  extern int Nrefs;
+extern int Nrefs;
 
-  extern void* hostBuf;
-  extern size_t hostBufSize;
+extern occa::stream dataStream;
 
-  extern void* haloBuf;
-  extern occa::memory o_haloBuf;
-  extern occa::memory h_haloBuf;
+void initKernels(MPI_Comm& comm, occa::device& device);
 
-  extern occa::kernel gatherScatterKernel_floatAdd;
-  extern occa::kernel gatherScatterKernel_floatMul;
-  extern occa::kernel gatherScatterKernel_floatMin;
-  extern occa::kernel gatherScatterKernel_floatMax;
+void freeKernels();
 
-  extern occa::kernel gatherScatterKernel_doubleAdd;
-  extern occa::kernel gatherScatterKernel_doubleMul;
-  extern occa::kernel gatherScatterKernel_doubleMin;
-  extern occa::kernel gatherScatterKernel_doubleMax;
+//Setup a gslib struct
+void *gsSetup(MPI_Comm meshComm,
+              dlong NuniqueBases,
+              hlong *gatherGlobalNodes,
+              int nonsymm, int verbose);
 
-  extern occa::kernel gatherScatterKernel_intAdd;
-  extern occa::kernel gatherScatterKernel_intMul;
-  extern occa::kernel gatherScatterKernel_intMin;
-  extern occa::kernel gatherScatterKernel_intMax;
+void gsUnique(hlong *gatherGlobalNodes,
+              dlong NuniqueBases,
+              MPI_Comm meshComm);
 
-  extern occa::kernel gatherScatterKernel_longAdd;
-  extern occa::kernel gatherScatterKernel_longMul;
-  extern occa::kernel gatherScatterKernel_longMin;
-  extern occa::kernel gatherScatterKernel_longMax;
+void gsFree(void* gs);
 
+#define DEFINE_GATHERSCATTER_KERNEL(T,OP) \
+  extern occa::kernel gatherScatterKernel_##T##_##OP;
 
+#define DEFINE_GATHER_KERNEL(T,OP) \
+  extern occa::kernel gatherKernel_##T##_##OP;
 
-  extern occa::kernel gatherScatterVecKernel_floatAdd;
-  extern occa::kernel gatherScatterVecKernel_floatMul;
-  extern occa::kernel gatherScatterVecKernel_floatMin;
-  extern occa::kernel gatherScatterVecKernel_floatMax;
+#define DEFINE_SCATTER_KERNEL(T) \
+  extern occa::kernel scatterKernel_##T;
 
-  extern occa::kernel gatherScatterVecKernel_doubleAdd;
-  extern occa::kernel gatherScatterVecKernel_doubleMul;
-  extern occa::kernel gatherScatterVecKernel_doubleMin;
-  extern occa::kernel gatherScatterVecKernel_doubleMax;
+#define DEFINE_HALO_KERNEL(T) \
+  extern occa::kernel haloExtractKernel_##T;
 
-  extern occa::kernel gatherScatterVecKernel_intAdd;
-  extern occa::kernel gatherScatterVecKernel_intMul;
-  extern occa::kernel gatherScatterVecKernel_intMin;
-  extern occa::kernel gatherScatterVecKernel_intMax;
+#define DEFINE_KERNELS(T)                        \
+  OGS_FOR_EACH_OP(T,DEFINE_GATHERSCATTER_KERNEL) \
+  OGS_FOR_EACH_OP(T,DEFINE_GATHER_KERNEL)        \
+  DEFINE_SCATTER_KERNEL(T)                       \
+  DEFINE_HALO_KERNEL(T)
 
-  extern occa::kernel gatherScatterVecKernel_longAdd;
-  extern occa::kernel gatherScatterVecKernel_longMul;
-  extern occa::kernel gatherScatterVecKernel_longMin;
-  extern occa::kernel gatherScatterVecKernel_longMax;
+OGS_FOR_EACH_TYPE(DEFINE_KERNELS)
 
+#undef DEFINE_GATHERSCATTER_KERNEL
+#undef DEFINE_GATHER_KERNEL
+#undef DEFINE_SCATTER_KERNEL
+#undef DEFINE_HALO_KERNEL
+#undef DEFINE_KERNELS
 
+void occaGatherScatterStart(occa::memory& o_v,
+                            const int Nentries, const int Nvectors, const dlong stride,
+                            const ogs_type type, const ogs_op op, ogs_t &ogs);
+void occaGatherScatterFinish(occa::memory& o_v,
+                            const int Nentries, const int Nvectors, const dlong stride,
+                            const ogs_type type, const ogs_op op, ogs_t &ogs);
 
-  extern occa::kernel gatherScatterManyKernel_floatAdd;
-  extern occa::kernel gatherScatterManyKernel_floatMul;
-  extern occa::kernel gatherScatterManyKernel_floatMin;
-  extern occa::kernel gatherScatterManyKernel_floatMax;
+void occaGatherStart(occa::memory& o_gv, occa::memory& o_v,
+                     const int Nentries, const int Nvectors,
+                     const dlong gstride, const dlong stride,
+                     const ogs_type type, const ogs_op op, ogs_t &ogs);
+void occaGatherFinish(occa::memory& o_gv, occa::memory& o_v,
+                     const int Nentries, const int Nvectors,
+                     const dlong gstride, const dlong stride,
+                     const ogs_type type, const ogs_op op, ogs_t &ogs);
 
-  extern occa::kernel gatherScatterManyKernel_doubleAdd;
-  extern occa::kernel gatherScatterManyKernel_doubleMul;
-  extern occa::kernel gatherScatterManyKernel_doubleMin;
-  extern occa::kernel gatherScatterManyKernel_doubleMax;
+void occaScatterStart(occa::memory& o_v, occa::memory& o_gv,
+                      const int Nentries, const int Nvectors,
+                      const dlong stride, const dlong gstride,
+                      const ogs_type type, const ogs_op op, ogs_t &ogs);
+void occaScatterFinish(occa::memory& o_v, occa::memory& o_gv,
+                      const int Nentries, const int Nvectors,
+                      const dlong stride, const dlong gstride,
+                      const ogs_type type, const ogs_op op, ogs_t &ogs);
 
-  extern occa::kernel gatherScatterManyKernel_intAdd;
-  extern occa::kernel gatherScatterManyKernel_intMul;
-  extern occa::kernel gatherScatterManyKernel_intMin;
-  extern occa::kernel gatherScatterManyKernel_intMax;
+void hostGatherScatter(void* v, const int Nentries, const int Nvectors,
+                       const dlong stride, const ogs_type type,
+                       const ogs_op op, ogs_t &ogs);
 
-  extern occa::kernel gatherScatterManyKernel_longAdd;
-  extern occa::kernel gatherScatterManyKernel_longMul;
-  extern occa::kernel gatherScatterManyKernel_longMin;
-  extern occa::kernel gatherScatterManyKernel_longMax;
+void hostGather(void* gv, void* v, const int Nentries, const int Nvectors,
+                const dlong gstride, const dlong stride,
+                const ogs_type type, const ogs_op op, ogs_t &ogs);
 
+void hostScatter(void* v, void* gv, const int Nentries, const int Nvectors,
+                 const dlong stride, const dlong gstride,
+                 const ogs_type type, const ogs_op op, ogs_t &ogs);
 
+void occaGatherScatterKernel(const dlong Ngather,
+                             const int Nentries,
+                             const int Nvectors,
+                             const dlong stride,
+                             occa::memory& o_gatherStarts,
+                             occa::memory& o_gatherIds,
+                             const ogs_type type,
+                             const ogs_op op,
+                             occa::memory&  o_v);
 
-  extern occa::kernel gatherKernel_floatAdd;
-  extern occa::kernel gatherKernel_floatMul;
-  extern occa::kernel gatherKernel_floatMin;
-  extern occa::kernel gatherKernel_floatMax;
+void occaGatherKernel(const dlong Ngather,
+                      const int Nentries,
+                      const int Nvectors,
+                      const dlong stride,
+                      const dlong gtride,
+                      occa::memory& o_gatherStarts,
+                      occa::memory& o_gatherIds,
+                      const ogs_type type,
+                      const ogs_op op,
+                      occa::memory& o_v,
+                      occa::memory& o_gv);
 
-  extern occa::kernel gatherKernel_doubleAdd;
-  extern occa::kernel gatherKernel_doubleMul;
-  extern occa::kernel gatherKernel_doubleMin;
-  extern occa::kernel gatherKernel_doubleMax;
+void occaScatterKernel(const dlong Ngather,
+                       const int Nentries,
+                       const int Nvectors,
+                       const dlong gtride,
+                       const dlong stride,
+                       occa::memory& o_gatherStarts,
+                       occa::memory& o_gatherIds,
+                       const ogs_type type,
+                       const ogs_op op,
+                       occa::memory& o_gv,
+                       occa::memory& o_v);
 
-  extern occa::kernel gatherKernel_intAdd;
-  extern occa::kernel gatherKernel_intMul;
-  extern occa::kernel gatherKernel_intMin;
-  extern occa::kernel gatherKernel_intMax;
+void hostGatherScatterKernel(const dlong Ngather,
+                             const int Nentries,
+                             const int Nvectors,
+                             const dlong stride,
+                             dlong* gatherStarts,
+                             dlong* gatherIds,
+                             const ogs_type type,
+                             const ogs_op op,
+                             void* v);
 
-  extern occa::kernel gatherKernel_longAdd;
-  extern occa::kernel gatherKernel_longMul;
-  extern occa::kernel gatherKernel_longMin;
-  extern occa::kernel gatherKernel_longMax;
+void hostGatherKernel(const dlong Ngather,
+                      const int Nentries,
+                      const int Nvectors,
+                      const dlong stride,
+                      const dlong gstride,
+                      const dlong *gatherStarts,
+                      const dlong *gatherIds,
+                      const ogs_type type,
+                      const ogs_op op,
+                      const void *v,
+                      void *gv);
 
+void hostScatterKernel(const dlong Ngather,
+                       const int Nentries,
+                       const int Nvectors,
+                       const dlong gstride,
+                       const dlong stride,
+                       const dlong *gatherStarts,
+                       const dlong *gatherIds,
+                       const ogs_type type,
+                       const ogs_op op,
+                       const void *gv,
+                       void *v);
 
+void gsGatherScatter(void* v, const int Nentries, const int Nvectors,
+                     const dlong stride, const ogs_type type, const ogs_op op,
+                     void *gsh);
+void gsGather(void* v, const int Nentries, const int Nvectors,
+              const dlong stride, const ogs_type type, const ogs_op op,
+              void *gsh);
+void gsScatter(void* v, const int Nentries, const int Nvectors,
+              const dlong stride, const ogs_type type, const ogs_op op,
+              void *gsh);
 
-  extern occa::kernel gatherVecKernel_floatAdd;
-  extern occa::kernel gatherVecKernel_floatMul;
-  extern occa::kernel gatherVecKernel_floatMin;
-  extern occa::kernel gatherVecKernel_floatMax;
+void occaExtractKernel(const dlong Nsend,
+                       const int Nentries,
+                       occa::memory& o_haloSendIds,
+                       const ogs_type type,
+                       occa::memory& o_v,
+                       occa::memory& o_haloBuf);
 
-  extern occa::kernel gatherVecKernel_doubleAdd;
-  extern occa::kernel gatherVecKernel_doubleMul;
-  extern occa::kernel gatherVecKernel_doubleMin;
-  extern occa::kernel gatherVecKernel_doubleMax;
-
-  extern occa::kernel gatherVecKernel_intAdd;
-  extern occa::kernel gatherVecKernel_intMul;
-  extern occa::kernel gatherVecKernel_intMin;
-  extern occa::kernel gatherVecKernel_intMax;
-
-  extern occa::kernel gatherVecKernel_longAdd;
-  extern occa::kernel gatherVecKernel_longMul;
-  extern occa::kernel gatherVecKernel_longMin;
-  extern occa::kernel gatherVecKernel_longMax;
-
-
-
-  extern occa::kernel gatherManyKernel_floatAdd;
-  extern occa::kernel gatherManyKernel_floatMul;
-  extern occa::kernel gatherManyKernel_floatMin;
-  extern occa::kernel gatherManyKernel_floatMax;
-
-  extern occa::kernel gatherManyKernel_doubleAdd;
-  extern occa::kernel gatherManyKernel_doubleMul;
-  extern occa::kernel gatherManyKernel_doubleMin;
-  extern occa::kernel gatherManyKernel_doubleMax;
-
-  extern occa::kernel gatherManyKernel_intAdd;
-  extern occa::kernel gatherManyKernel_intMul;
-  extern occa::kernel gatherManyKernel_intMin;
-  extern occa::kernel gatherManyKernel_intMax;
-
-  extern occa::kernel gatherManyKernel_longAdd;
-  extern occa::kernel gatherManyKernel_longMul;
-  extern occa::kernel gatherManyKernel_longMin;
-  extern occa::kernel gatherManyKernel_longMax;
-
-
-  extern occa::kernel scatterKernel_float;
-  extern occa::kernel scatterKernel_double;
-  extern occa::kernel scatterKernel_int;
-  extern occa::kernel scatterKernel_long;
-
-  extern occa::kernel scatterVecKernel_float;
-  extern occa::kernel scatterVecKernel_double;
-  extern occa::kernel scatterVecKernel_int;
-  extern occa::kernel scatterVecKernel_long;
-
-  extern occa::kernel scatterManyKernel_float;
-  extern occa::kernel scatterManyKernel_double;
-  extern occa::kernel scatterManyKernel_int;
-  extern occa::kernel scatterManyKernel_long;
-
-  extern occa::stream defaultStream;
-  extern occa::stream dataStream;
-
-  void initKernels(MPI_Comm comm, occa::device device);
-
-  void freeKernels();
+void hostExtractKernel(const dlong Nsend,
+                       const int Nentries,
+                       dlong *haloSendIds,
+                       const ogs_type type,
+                       void *v,
+                       void *hostBuf);
 }
-
-void occaGatherScatter(const  dlong Ngather,
-                occa::memory o_gatherStarts,
-                occa::memory o_gatherIds,
-                const char* type,
-                const char* op,
-                occa::memory  o_v);
-
-void occaGatherScatterVec(const  dlong Ngather,
-                const int Nentries,
-                occa::memory o_gatherStarts,
-                occa::memory o_gatherIds,
-                const char* type,
-                const char* op,
-                occa::memory  o_v);
-
-void occaGatherScatterMany(const  dlong Ngather,
-                const int Nentries,
-                const dlong stride,
-                occa::memory o_gatherStarts,
-                occa::memory o_gatherIds,
-                const char* type,
-                const char* op,
-                occa::memory  o_v);
-
-void occaGather(const  dlong Ngather,
-                occa::memory o_gatherStarts,
-                occa::memory o_gatherIds,
-                const char* type,
-                const char* op,
-                occa::memory  o_v,
-                occa::memory  o_gv);
-
-void occaGatherVec(const  dlong Ngather,
-                const int Nentries,
-                occa::memory o_gatherStarts,
-                occa::memory o_gatherIds,
-                const char* type,
-                const char* op,
-                occa::memory  o_v,
-                occa::memory  o_gv);
-
-void occaGatherMany(const  dlong Ngather,
-                const int Nentries,
-                const dlong stride,
-                const dlong gstride,
-                occa::memory o_gatherStarts,
-                occa::memory o_gatherIds,
-                const char* type,
-                const char* op,
-                occa::memory  o_v,
-                occa::memory  o_gv);
-
-void occaScatter(const  dlong Nscatter,
-                occa::memory o_scatterStarts,
-                occa::memory o_scatterIds,
-                const char* type,
-                const char* op,
-                occa::memory  o_v,
-                occa::memory  o_sv);
-
-void occaScatterVec(const  dlong Nscatter,
-                const int Nentries,
-                occa::memory o_scatterStarts,
-                occa::memory o_scatterIds,
-                const char* type,
-                const char* op,
-                occa::memory  o_v,
-                occa::memory  o_sv);
-
-void occaScatterMany(const  dlong Nscatter,
-                const int Nentries,
-                const dlong stride,
-                const dlong sstride,
-                occa::memory o_scatterStarts,
-                occa::memory o_scatterIds,
-                const char* type,
-                const char* op,
-                occa::memory  o_v,
-                occa::memory  o_sv);
 
 #endif

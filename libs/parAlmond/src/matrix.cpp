@@ -232,7 +232,7 @@ parCSR::parCSR(dlong N,         // number of rows on this rank
   }
 
   //fill the halo region
-  ogsGatherScatter(diagA, ogsDfloat, ogsAdd, ogs);
+  halo->Exchange(diagA, 1, ogs_dfloat);
 
   //compute the inverse diagonal
   for (dlong n=0;n<Nrows;n++) diagInv[n] = 1.0/diagA[n];
@@ -286,99 +286,21 @@ void parCSR::haloSetup(hlong *colIds) {
   //make an array of all the column ids required on this rank (local first)
   colMap = (hlong*) malloc(Ncols*sizeof(hlong));
   for (dlong n=0; n<NlocalCols; n++)      colMap[n] = n+globalOffset+1; //local rows
-  for (dlong n=NlocalCols; n<Ncols; n++)  colMap[n] = offdcols[n-NlocalCols]+1;    //nonlocal rows
+  for (dlong n=NlocalCols; n<Ncols; n++)  colMap[n] = -(offdcols[n-NlocalCols]+1);    //nonlocal rows
 
-  //make a gatherScatter to determine local ids which are shared
+  //make a halo exchange to share column entries and an ogs for gsops accross columns
   int verbose = 0;
-  ogs = ogsSetup(Ncols, colMap, comm, verbose, device);
+  halo = halo_t::Setup(Ncols, colMap, comm, verbose, device);
+  ogs  =  ogs_t::Setup(Ncols, colMap, comm, verbose, device);
 
   //shift back to 0-indexed
-  for (dlong n=0; n<Ncols; n++) colMap[n]--;
-
-  int *minRank = (int *) calloc((unsigned dlong) Ncols,sizeof(int));
-  int *maxRank = (int *) calloc((unsigned dlong) Ncols,sizeof(int));
-  for (dlong i=0;i<Ncols;i++) {
-    minRank[i] = rank;
-    maxRank[i] = rank;
-  }
-
-  ogsGatherScatter(minRank, ogsInt, ogsMin, ogs); //minRank[n] contains the smallest rank taking part in the gather of node n
-  ogsGatherScatter(maxRank, ogsInt, ogsMax, ogs); //maxRank[n] contains the largest rank taking part in the gather of node n
-
-  //count the local nodes that must be shared
-  Nshared = 0;
-  for (dlong i=0;i<NlocalCols;i++)
-    if ((minRank[i]!=rank)||(maxRank[i]!=rank))
-      Nshared++;
-
-  //total nodes involved in communication is the local nodes which must be shared
-  // + the number of nodes which need to be recieved.
-  Nhalo = Nshared + Noffdcols;
-
-  //build of list of ids to share for the comm
-  haloIds = (dlong *) malloc(Nshared*sizeof(dlong));
-  hlong *ghaloIds = (hlong*) malloc(Nhalo*sizeof(hlong));
-  Nshared = 0;
-  Nhalo=0;
-  for (dlong i=0;i<NlocalCols;i++) {
-    if ((minRank[i]!=rank)||(maxRank[i]!=rank)) {
-      haloIds[Nshared++] = i;
-      ghaloIds[Nhalo++] = i+globalOffset+1;
-    }
-  }
-  for (dlong n=0; n<Noffdcols; n++) {
-    ghaloIds[Nhalo++] = -(offdcols[n]+1); //negative -> does not participate in sum
-  }
-
-  //construct the parCSR ogs object for comms
-  ogsHalo = ogsSetup(Nhalo, ghaloIds, comm, verbose, device);
-
-  MPI_Barrier(comm);
-
-  free(ghaloIds);
-  free(offdcols);
-  free(minRank);
-  free(maxRank);
+  for (dlong n=0; n<Ncols; n++) colMap[n]=abs(colMap[n])-1;
 
   //update column numbering
   for (dlong n=0;n<offd->nnz;n++)
     colIds[n] = NlocalCols + parIds[n].newId;
 
-  size_t requiredBytes = Nhalo*sizeof(dfloat);
-  allocatePinnedScratchSpace(requiredBytes, device);
-
   free(parIds);
-}
-
-void parCSR::haloExchangeStart(dfloat *x) {
-  // copy data from outgoing elements into temporary send buffer
-  for(int i=0;i<Nshared;++i){
-    // outgoing element
-    dlong id = haloIds[i];
-    ((dfloat*)pinnedScratch)[i] = x[id];
-  }
-}
-
-void parCSR::haloExchangeFinish(dfloat *x) {
-  ogsGatherScatter(pinnedScratch, ogsDfloat, ogsAdd, ogsHalo);
-  memcpy(x+NlocalCols, ((dfloat*)pinnedScratch)+Nshared,
-          (Nhalo-Nshared)*sizeof(dfloat));
-}
-
-void parCSR::haloExchangeStart(occa::memory o_x) {
-  // copy data from outgoing elements into temporary send buffer
-  if (Nshared) {
-    haloExtractKernel(Nshared, o_haloIds, o_x, o_pinnedScratch);
-    o_pinnedScratch.copyTo(pinnedScratch, Nshared*sizeof(dfloat), 0);
-  }
-}
-
-void parCSR::haloExchangeFinish(occa::memory o_x) {
-  ogsGatherScatter(pinnedScratch, ogsDfloat, ogsAdd, ogsHalo);
-  if (Nhalo-Nshared)
-    o_x.copyFrom(((dfloat*)pinnedScratch)+Nshared,
-                 (Nhalo-Nshared)*sizeof(dfloat),
-                  NlocalCols*sizeof(dfloat));
 }
 
 parCSR::~parCSR() {
@@ -398,12 +320,9 @@ parCSR::~parCSR() {
   free(globalColStarts);
 
   free(colMap);
-  free(haloIds);
 
-  if (ogs)       ogsFree(ogs);
-  if (ogsHalo)   ogsFree(ogsHalo);
-  ogs     = NULL;
-  ogsHalo = NULL;
+  if (halo)   halo->Free();
+  delete[] halo;
 }
 
 dfloat parCSR::rhoDinvA(){
@@ -656,15 +575,9 @@ parHYB::parHYB(parCSR *A): matrix_t(A->Nrows, A->Ncols) {
   globalColStarts = A->globalColStarts;
   colMap = A->colMap;
 
+  halo = A->halo;
   ogs = A->ogs;
-  ogsHalo = A->ogsHalo;
-
-  Nhalo = A->Nhalo;
-  Nshared = A->Nshared;
   NlocalCols = A->NlocalCols;
-
-  haloIds = A->haloIds;
-  o_haloIds = A->o_haloIds;
 
   device = A->device;
 }
@@ -686,12 +599,11 @@ parHYB::~parHYB() {
   free(globalColStarts);
 
   free(colMap);
-  free(haloIds);
 
-  if (ogs)       ogsFree(ogs);
-  if (ogsHalo)   ogsFree(ogsHalo);
-  ogs     = NULL;
-  ogsHalo = NULL;
+  if (halo) halo->Free();
+  if (ogs) ogs->Free();
+  delete[] halo;
+  delete[] ogs;
 };
 
 void parHYB::syncToDevice() {
@@ -706,40 +618,6 @@ void parHYB::syncToDevice() {
     if(nullSpace)
       o_null = device.malloc(Nrows*sizeof(dfloat), null);
   }
-
-  if (Nshared)
-    o_haloIds = device.malloc(Nshared*sizeof(dlong), haloIds);
-}
-
-void parHYB::haloExchangeStart(dfloat *x) {
-  // copy data from outgoing elements into temporary send buffer
-  for(int i=0;i<Nshared;++i){
-    // outgoing element
-    dlong id = haloIds[i];
-    ((dfloat*)pinnedScratch)[i] = x[id];
-  }
-}
-
-void parHYB::haloExchangeFinish(dfloat *x) {
-  ogsGatherScatter(pinnedScratch, ogsDfloat, ogsAdd, ogsHalo);
-  memcpy(x+NlocalCols, ((dfloat*)pinnedScratch)+Nshared,
-          (Nhalo-Nshared)*sizeof(dfloat));
-}
-
-void parHYB::haloExchangeStart(occa::memory o_x) {
-  // copy data from outgoing elements into temporary send buffer
-  if (Nshared) {
-    haloExtractKernel(Nshared, o_haloIds, o_x, o_pinnedScratch);
-    o_pinnedScratch.copyTo(pinnedScratch, Nshared*sizeof(dfloat), 0);
-  }
-}
-
-void parHYB::haloExchangeFinish(occa::memory o_x) {
-  ogsGatherScatter(pinnedScratch, ogsDfloat, ogsAdd, ogsHalo);
-  if (Nhalo-Nshared)
-    o_x.copyFrom(((dfloat*)pinnedScratch)+Nshared,
-                 (Nhalo-Nshared)*sizeof(dfloat),
-                  NlocalCols*sizeof(dfloat));
 }
 
 } //namespace parAlmond

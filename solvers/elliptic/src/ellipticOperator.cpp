@@ -54,7 +54,7 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
       // }
     }
 
-    ogsGatherScatterStart(o_Aq, ogsDfloat, ogsAdd, ogsMasked);
+    ogsMasked->GatherScatterStart(o_Aq, ogs_dfloat, ogs_add);
 
     if(mesh.NlocalGatherElements){
       // if(integrationType==0) { // GLL or non-hex
@@ -77,7 +77,7 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
     }
 
     // finalize gather using local and global contributions
-    ogsGatherScatterFinish(o_Aq, ogsDfloat, ogsAdd, ogsMasked);
+    ogsMasked->GatherScatterFinish(o_Aq, ogs_dfloat, ogs_add);
 
 #if USE_NULL_BOOST==1
     if(mesh.allNeumann) {
@@ -96,7 +96,7 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
   } else if(disc_ipdg) {
 
     int Nentries = mesh.Np;
-    mesh.HaloExchangeStart(o_q, Nentries, ogsDfloat);
+    mesh.halo->ExchangeStart(o_q, Nentries, ogs_dfloat);
 
     if(mesh.Nelements) {
       dlong offset = 0;
@@ -124,7 +124,7 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
                         o_grad,
                         o_Aq);
 
-    mesh.HaloExchangeFinish(o_q, Nentries, ogsDfloat);
+    mesh.halo->ExchangeFinish(o_q, Nentries, ogs_dfloat);
 
     if(mesh.totalHaloPairs){
       dlong offset = mesh.Nelements;

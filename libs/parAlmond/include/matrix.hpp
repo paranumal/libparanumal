@@ -163,17 +163,11 @@ public:
   hlong *globalColStarts=NULL;
   hlong *colMap=NULL;
 
-  ogs_t *ogs=NULL;
-  ogs_t *ogsHalo=NULL;
-  dlong Nhalo;
-  dlong Nshared;
-  dlong NlocalCols;
-
-  dlong *haloIds=NULL;
-  occa::memory o_haloIds;
+  halo_t *halo = NULL;
+  ogs_t *ogs = NULL;
+  dlong NlocalCols = 0;
 
   occa::device device;
-
 
   parCSR(dlong N=0, dlong M=0);
   parCSR(dlong N, dlong M, MPI_Comm Comm, occa::device Device);
@@ -190,10 +184,6 @@ public:
   ~parCSR();
 
   void haloSetup(hlong *colIds);
-  void haloExchangeStart (dfloat *x);
-  void haloExchangeFinish(dfloat *x);
-  void haloExchangeStart (occa::memory o_x);
-  void haloExchangeFinish(occa::memory o_x);
 
   dfloat rhoDinvA();
 
@@ -228,14 +218,9 @@ public:
   hlong *globalColStarts=NULL;
   hlong *colMap=NULL;
 
-  ogs_t *ogs=NULL;
-  ogs_t *ogsHalo=NULL;
-  dlong Nhalo;
-  dlong Nshared;
-  dlong NlocalCols;
-
-  dlong *haloIds=NULL;
-  occa::memory o_haloIds;
+  halo_t *halo = NULL;
+  ogs_t *ogs = NULL;
+  dlong NlocalCols = 0;
 
   occa::device device;
 
@@ -243,11 +228,6 @@ public:
   parHYB(parCSR *A); //build from parCSR
 
   ~parHYB();
-
-  void haloExchangeStart (dfloat *x);
-  void haloExchangeFinish(dfloat *x);
-  void haloExchangeStart (occa::memory o_x);
-  void haloExchangeFinish(occa::memory o_x);
 
   void syncToDevice();
 

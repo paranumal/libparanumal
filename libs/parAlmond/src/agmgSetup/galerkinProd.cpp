@@ -67,10 +67,8 @@ parCSR *galerkinProd(parCSR *A, parCSR *P){
   }
 
   //fill the halo region
-  ogsGatherScatter(Pcols, ogsHlong,  ogsAdd, A->ogs);
-  ogsGatherScatter(Pvals, ogsDfloat, ogsAdd, A->ogs);
-
-
+  A->halo->Exchange(Pcols, 1, ogs_hlong);
+  A->halo->Exchange(Pvals, 1, ogs_dfloat);
 
   dlong sendNtotal = A->diag->nnz+A->offd->nnz;
   nonzero_t *sendPTAP = (nonzero_t *) calloc(sendNtotal,sizeof(nonzero_t));

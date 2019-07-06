@@ -95,5 +95,5 @@ void meshTet3D::GeometricFactors(){
   }
 
   //printf("minJ = %g, maxJ = %g\n", minJ, maxJ);
-  HaloExchange(vgeo, Nvgeo, ogsDfloat);
+  halo->Exchange(vgeo, Nvgeo, ogs_dfloat);
 }

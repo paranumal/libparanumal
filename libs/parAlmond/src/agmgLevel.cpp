@@ -62,8 +62,8 @@ void agmgLevel::Ax        (dfloat *X, dfloat *Ax){ A->SpMV(1.0, X, 0.0, Ax); }
 
 void agmgLevel::coarsen   (dfloat *r, dfloat *Rr){
   if (gatherLevel) {
-    ogsGather(Gx, r, ogsDfloat, ogsAdd, ogs);
-    vectorDotStar(ogs->Ngather, ogs->gatherInvDegree, Gx);
+    ogs->Gather(Gx, r, ogs_dfloat, ogs_add);
+    vectorDotStar(ogs->Ngather, o_gatherWeight, Gx);
     R->SpMV(1.0, Gx, 0.0, Rr);
   } else {
     R->SpMV(1.0, r, 0.0, Rr);
@@ -73,7 +73,7 @@ void agmgLevel::coarsen   (dfloat *r, dfloat *Rr){
 void agmgLevel::prolongate(dfloat *X, dfloat *Px){
   if (gatherLevel) {
     P->SpMV(1.0, X, 0.0, Gx);
-    ogsScatter(Sx, Gx, ogsDfloat, ogsAdd, ogs);
+    ogs->Scatter(Sx, Gx, ogs_dfloat, ogs_add);
     vectorAdd(P->Nrows, 1.0, Sx, 1.0, Px);
   } else {
     P->SpMV(1.0, X, 1.0, Px);
@@ -86,8 +86,8 @@ void agmgLevel::Ax        (occa::memory& o_X, occa::memory& o_Ax){ o_A->SpMV(1.0
 
 void agmgLevel::coarsen   (occa::memory& o_r, occa::memory& o_Rr){
   if (gatherLevel) {
-    ogsGather(o_Gx, o_r, ogsDfloat, ogsAdd, ogs);
-    vectorDotStar(ogs->Ngather, ogs->o_gatherInvDegree, o_Gx);
+    ogs->Gather(o_Gx, o_r, ogs_dfloat, ogs_add);
+    vectorDotStar(ogs->Ngather, o_gatherWeight, o_Gx);
     o_R->SpMV(1.0, o_Gx, 0.0, o_Rr);
   } else {
     o_R->SpMV(1.0, o_r, 0.0, o_Rr);
@@ -97,7 +97,7 @@ void agmgLevel::coarsen   (occa::memory& o_r, occa::memory& o_Rr){
 void agmgLevel::prolongate(occa::memory& o_X, occa::memory& o_Px){
   if (gatherLevel) {
     o_P->SpMV(1.0, o_X, 0.0, o_Gx);
-    ogsScatter(o_Sx, o_Gx, ogsDfloat, ogsAdd, ogs);
+    ogs->Scatter(o_Sx, o_Gx, ogs_dfloat, ogs_add);
     vectorAdd(ogs->N, 1.0, o_Sx, 1.0, o_Px);
   } else {
     o_P->SpMV(1.0, o_X, 1.0, o_Px);

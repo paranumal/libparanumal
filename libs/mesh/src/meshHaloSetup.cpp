@@ -27,7 +27,7 @@ SOFTWARE.
 #include "mesh.hpp"
 
 // set up halo infomation for inter-processor MPI
-// exchange of trace nodes
+// exchange of elements or trace nodes
 void mesh_t::HaloSetup(){
 
   hlong *globalOffset = (hlong *) calloc(size+1,sizeof(hlong));
@@ -83,11 +83,11 @@ void mesh_t::HaloSetup(){
   }
 
   //make a list of global element ids taking part in the halo exchange
-  hlong *globalElementId = (hlong *) malloc((NhaloElements+totalHaloPairs)*sizeof(hlong));
+  hlong *globalElementId = (hlong *) malloc((Nelements+totalHaloPairs)*sizeof(hlong));
 
   //outgoing elements
-  for(int e=0;e<NhaloElements;++e)
-    globalElementId[e] = haloElementIds[e] + globalOffset[rank] + 1;
+  for(int e=0;e<Nelements;++e)
+    globalElementId[e] = e + globalOffset[rank] + 1;
 
   //incoming elements
   totalHaloPairs = 0;
@@ -96,7 +96,7 @@ void mesh_t::HaloSetup(){
       int rr = EToP[e*Nfaces+f]; // rank of neighbor
       if(rr!=-1){
         //EToE contains the local element number of the neighbor on rank rr
-        globalElementId[NhaloElements+totalHaloPairs]
+        globalElementId[Nelements+totalHaloPairs]
                        = -(EToE[e*Nfaces+f] + globalOffset[rr] + 1); //negative so doesnt contribute to sum in ogs
 
         // overwrite EToE to point to halo region now
@@ -105,13 +105,10 @@ void mesh_t::HaloSetup(){
     }
   }
 
-  //make a halo exchange ogs op
+  //make a halo exchange op
   int verbose = 0;
-  ogsHalo = ogsSetup(NhaloElements+totalHaloPairs, globalElementId, comm,
-                     verbose, device);
-
-  haloBufferSize = 0;
-  haloBuffer = NULL;
+  halo = halo_t::Setup(Nelements+totalHaloPairs, globalElementId, comm,
+                       verbose, device);
 
   free(globalElementId);
   free(globalOffset);
@@ -123,8 +120,8 @@ void mesh_t::HaloSetup(){
     EZ = (dfloat*) realloc(EZ, (Nelements+totalHaloPairs)*Nverts*sizeof(dfloat));
 
   // send halo data and recv into extended part of arrays
-  HaloExchange(EX, Nverts, ogsDfloat);
-  HaloExchange(EY, Nverts, ogsDfloat);
+  halo->Exchange(EX, Nverts, ogs_dfloat);
+  halo->Exchange(EY, Nverts, ogs_dfloat);
   if(dim==3)
-    HaloExchange(EZ, Nverts, ogsDfloat);
+    halo->Exchange(EZ, Nverts, ogs_dfloat);
 }

@@ -24,6 +24,7 @@ SOFTWARE.
 
 */
 
+#include "core.hpp"
 #include "timeStepper.hpp"
 
 lserk4::lserk4(dlong _N, dlong _Nhalo, solver_t& _solver):
@@ -46,10 +47,10 @@ void lserk4::Init() {
 
   kernelInfo["defines/" "p_blockSize"] = BLOCKSIZE;
 
-  updateKernel = device.buildKernel(LIBP_DIR "/core/okl/"
+  updateKernel = buildKernel(device, LIBP_DIR "/core/okl/"
                                     "timeStepperLSERK4.okl",
                                     "lserk4Update",
-                                    kernelInfo);
+                                    kernelInfo, comm);
 
   // initialize LSERK4 time stepping coefficients
   dfloat _rka[5] = {0.0,

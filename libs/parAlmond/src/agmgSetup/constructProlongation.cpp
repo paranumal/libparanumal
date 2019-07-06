@@ -103,7 +103,7 @@ parCSR *constructProlongation(parCSR *A, hlong *FineToCoarse,
   for(dlong i=0; i<P->offd->nnz; i++)
     (*nullCoarseA)[P->offd->cols[i]] += P->offd->vals[i] * P->offd->vals[i];
 
-  ogsGatherScatter((*nullCoarseA), ogsDfloat,  ogsAdd, P->ogs);
+  P->ogs->GatherScatter((*nullCoarseA), ogs_dfloat,  ogs_add);
 
   for(dlong i=0; i<NCoarse; i++)
     (*nullCoarseA)[i] = sqrt((*nullCoarseA)[i]);
@@ -111,7 +111,7 @@ parCSR *constructProlongation(parCSR *A, hlong *FineToCoarse,
   for(dlong i=NCoarse; i<P->Ncols; i++)
     (*nullCoarseA)[i] = 0.;
 
-  ogsGatherScatter((*nullCoarseA), ogsDfloat,  ogsAdd, P->ogs);
+  P->ogs->GatherScatter((*nullCoarseA), ogs_dfloat,  ogs_add);
 
   for(dlong i=0; i<P->diag->nnz; i++)
     P->diag->vals[i] /= (*nullCoarseA)[P->diag->cols[i]];

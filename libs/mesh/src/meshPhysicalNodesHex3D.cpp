@@ -107,7 +107,7 @@ void meshHex3D::PhysicalNodes(){
     }
   }
 
-  HaloExchange(x, Np, ogsDfloat);
-  HaloExchange(y, Np, ogsDfloat);
-  HaloExchange(z, Np, ogsDfloat);
+  halo->Exchange(x, Np, ogs_dfloat);
+  halo->Exchange(y, Np, ogs_dfloat);
+  halo->Exchange(z, Np, ogs_dfloat);
 }

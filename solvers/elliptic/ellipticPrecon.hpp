@@ -107,6 +107,8 @@ private:
   occa::memory o_GzFEM, o_GrFEM;
 
   ogs_t *FEMogs;
+  dfloat *weightG;
+  occa::memory o_weightG;
 
   occa::kernel SEMFEMInterpKernel;
   occa::kernel SEMFEMAnterpKernel;

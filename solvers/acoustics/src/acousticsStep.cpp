@@ -31,7 +31,7 @@ void acoustics_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
 
   // extract q halo on DEVICE
   int Nentries = mesh.Np*Nfields;
-  mesh.HaloExchangeStart(o_Q, Nentries, ogsDfloat);
+  mesh.halo->ExchangeStart(o_Q, Nentries, ogs_dfloat);
 
   volumeKernel(mesh.Nelements,
                mesh.o_vgeo,
@@ -39,7 +39,7 @@ void acoustics_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
                o_Q,
                o_RHS);
 
-  mesh.HaloExchangeFinish(o_Q, Nentries, ogsDfloat);
+  mesh.halo->ExchangeFinish(o_Q, Nentries, ogs_dfloat);
 
   surfaceKernel(mesh.Nelements,
                 mesh.o_sgeo,

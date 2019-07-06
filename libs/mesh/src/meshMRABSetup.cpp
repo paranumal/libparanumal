@@ -69,7 +69,7 @@ dfloat mesh_t::MRABSetup(dfloat *EToDT, int maxLevels, dfloat finalTime) {
   //enforce one level difference between neighbours
   for (int lev=0; lev < MRABNlevels; lev++){
 
-    HaloExchange(MRABlevel, 1, ogsInt);
+    halo->Exchange(MRABlevel, 1, ogs_int);
 
     for (dlong e =0; e<Nelements;e++) {
       if (MRABlevel[e] > lev+1) { //find elements at least 2 levels higher than lev

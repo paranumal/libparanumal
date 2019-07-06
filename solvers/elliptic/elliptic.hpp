@@ -57,7 +57,8 @@ public:
   dfloat *grad;
   occa::memory o_grad;
 
-  occa::memory o_weight;
+  dfloat *weight, *weightG;
+  occa::memory o_weight, o_weightG;
 
   //C0-FEM mask data
   ogs_t *ogsMasked;

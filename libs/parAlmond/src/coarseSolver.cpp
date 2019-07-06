@@ -188,8 +188,8 @@ void coarseSolver::solve(dfloat *rhs, dfloat *x) {
 
   if (gatherLevel) {
     //weight
-    vectorDotStar(ogs->N, 1.0, ogs->invDegree, rhs, 0.0, Sx);
-    ogsGather(Gx, Sx, ogsDfloat, ogsAdd, ogs);
+    vectorDotStar(ogs->N, 1.0, o_gatherWeight, rhs, 0.0, Sx);
+    ogs->Gather(Gx, Sx, ogs_dfloat, ogs_add);
 
     //gather the full vector
     MPI_Allgatherv(Gx,                  N,                MPI_DFLOAT,
@@ -210,7 +210,7 @@ void coarseSolver::solve(dfloat *rhs, dfloat *x) {
 #endif
 
     }
-    ogsScatter(x, xLocal, ogsDfloat, ogsAdd, ogs);
+    ogs->Scatter(x, xLocal, ogs_dfloat, ogs_add);
 
   } else {
     //gather the full vector
@@ -242,8 +242,8 @@ void coarseSolver::solve(occa::memory o_rhs, occa::memory o_x) {
 
   if (gatherLevel) {
     //weight
-    vectorDotStar(ogs->N, 1.0, ogs->o_invDegree, o_rhs, 0.0, o_Sx);
-    ogsGather(o_Gx, o_Sx, ogsDfloat, ogsAdd, ogs);
+    vectorDotStar(ogs->N, 1.0, o_gatherWeight, o_rhs, 0.0, o_Sx);
+    ogs->Gather(o_Gx, o_Sx, ogs_dfloat, ogs_add);
 
     if(N)
       o_Gx.copyTo(rhsLocal, N*sizeof(dfloat), 0);
@@ -268,7 +268,7 @@ void coarseSolver::solve(occa::memory o_rhs, occa::memory o_x) {
   if (gatherLevel) {
     if(N)
       o_Gx.copyFrom(xLocal, N*sizeof(dfloat), 0);
-    ogsScatter(o_x, o_Gx, ogsDfloat, ogsAdd, ogs);
+    ogs->Scatter(o_x, o_Gx, ogs_dfloat, ogs_add);
   } else {
     if(N)
       o_x.copyFrom(xLocal, N*sizeof(dfloat), 0);

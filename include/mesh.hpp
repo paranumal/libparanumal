@@ -77,24 +77,17 @@ public:
   hlong *boundaryInfo; // list of boundary faces (type, vertex-1, vertex-2, vertex-3)
 
   // MPI halo exchange info
+  halo_t *halo;            // halo exchange pointer
   dlong NinternalElements; // number of elements that can update without halo exchange
   dlong NhaloElements;     // number of elements that cannot update without halo exchange
-  ogs_t *ogsHalo;          // halo exchange ogs pointer
   dlong  totalHaloPairs;   // number of elements to be received in halo exchange
   dlong *internalElementIds;  // list of elements that can update without halo exchange
   dlong *haloElementIds;      // list of elements to be sent in halo exchange
   occa::memory o_internalElementIds;  // list of elements that can update without halo exchange
   occa::memory o_haloElementIds;      // list of elements to be sent in halo exchange
 
-  //halo exchange scratch space
-  size_t haloBufferSize;
-  void *haloBuffer;
-  void *pinnedHaloBuffer;
-  occa::memory o_haloBuffer;
-  occa::memory h_haloBuffer;
-
   // CG gather-scatter info
-  ogs_t *ogs; //occa gs pointer
+  ogs_t *ogs;              //occa gs pointer
   hlong *globalIds;
 
   // list of elements that are needed for global gather-scatter
@@ -228,7 +221,6 @@ public:
 
   // occa stuff
   occa::stream defaultStream;
-  occa::stream dataStream;
 
   occa::memory o_Dr, o_Ds, o_Dt, o_LIFT, o_MM;
   occa::memory o_DrT, o_DsT, o_DtT, o_LIFTT;
@@ -249,8 +241,6 @@ public:
   occa::memory o_rmapP;
 
   occa::memory o_EToE, o_EToF, o_EToB, o_x, o_y, o_z;
-
-  occa::memory o_EToFPairs, o_FPairsToE, o_FPairsToF;
 
   // cubature
   occa::memory o_intLIFTT, o_intInterpT, o_intx, o_inty, o_intz;
@@ -278,8 +268,6 @@ public:
 
   occa::memory o_ggeo; // second order geometric factors
   occa::memory o_projectL2; // local weights for projection.
-
-  occa::kernel haloExtractKernel;
 
   mesh_t() = delete;
   mesh_t(occa::device& device, MPI_Comm& comm,

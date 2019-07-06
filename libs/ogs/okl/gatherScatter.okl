@@ -24,73 +24,98 @@ SOFTWARE.
 
 */
 
+// OCCA will #include "ogsDefs.h" before compilation
+
 /*------------------------------------------------------------------------------
   The basic gather-scatter kernel
 ------------------------------------------------------------------------------*/
-#define DEFINE_GATHERSCATTER(T,OP)                                      \
-@kernel void gatherScatter_##T##_##OP(const dlong Ngather,              \
-                               @restrict const  dlong *  gatherStarts,  \
-                               @restrict const  dlong *  gatherIds,     \
-                               @restrict            T *  q)             \
-{                                                                       \
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){                \
-    const dlong start = gatherStarts[g];                                \
-    const dlong end = gatherStarts[g+1];                                \
-    if((start+1)!=end){                                                 \
-      T gq = init_##T##_##OP;                                           \
-      for(dlong n=start;n<end;++n){                                     \
-        const dlong id = gatherIds[n];                                  \
-        OGS_DO_##OP(gq,q[id]);                                          \
-      }                                                                 \
-      for(dlong n=start;n<end;++n){                                     \
-        const dlong id = gatherIds[n];                                  \
-        q[id] = gq;                                                     \
-      }                                                                 \
-    }                                                                   \
-  }                                                                     \
+#define DEFINE_GATHERSCATTER(T,OP)                                              \
+@kernel void gatherScatter_##T##_##OP(const dlong Ngather,                      \
+                                      const int   Nentries,                     \
+                                      const int   Nvectors,                     \
+                                      const dlong stride,                       \
+                                      @restrict const dlong *gatherStarts,      \
+                                      @restrict const dlong *gatherIds,         \
+                                      @restrict           T *q)                 \
+{                                                                               \
+  for(dlong g=0;g<Ngather*Nentries*Nvectors;++g;@tile(256,@outer,@inner)){      \
+    const int m     = g/(Ngather*Nentries);                                     \
+    const dlong vid = g%(Ngather*Nentries);                                     \
+    const dlong gid = vid/Nentries;                                             \
+    const int k     = vid%Nentries;                                             \
+    const dlong start = gatherStarts[gid];                                      \
+    const dlong end = gatherStarts[gid+1];                                      \
+    if((start+1)!=end){                                                         \
+      T gq = init_##T##_##OP;                                                   \
+      for(dlong n=start;n<end;++n){                                             \
+        const dlong id = gatherIds[n];                                          \
+        OGS_DO_##OP(gq,q[k+id*Nentries+m*stride]);                              \
+      }                                                                         \
+      for(dlong n=start;n<end;++n){                                             \
+        const dlong id = gatherIds[n];                                          \
+        q[k+id*Nentries+m*stride] = gq;                                         \
+      }                                                                         \
+    }                                                                           \
+  }                                                                             \
 }
 
 /*------------------------------------------------------------------------------
   The basic gather kernel
 ------------------------------------------------------------------------------*/
-#define DEFINE_GATHER(T,OP)                                             \
-@kernel void gather_##T##_##OP(const dlong Ngather,                     \
-                               @restrict const  dlong *  gatherStarts,  \
-                               @restrict const  dlong *  gatherIds,     \
-                               @restrict const      T *  q,             \
-                               @restrict            T *  gatherq)       \
-{                                                                       \
-  for(dlong g=0;g<Ngather;++g;@tile(256,@outer,@inner)){                \
-    const dlong start = gatherStarts[g];                                \
-    const dlong end = gatherStarts[g+1];                                \
-    T gq = init_##T##_##OP;                                             \
-    for(dlong n=start;n<end;++n){                                       \
-      const dlong id = gatherIds[n];                                    \
-      OGS_DO_##OP(gq,q[id]);                                            \
-    }                                                                   \
-    gatherq[g] = gq;                                                    \
-  }                                                                     \
+#define DEFINE_GATHER(T,OP)                                                     \
+@kernel void gather_##T##_##OP(const dlong Ngather,                             \
+                               const int   Nentries,                            \
+                               const int   Nvectors,                            \
+                               const dlong stride,                              \
+                               const dlong gstride,                             \
+                               @restrict const dlong *gatherStarts,             \
+                               @restrict const dlong *gatherIds,                \
+                               @restrict const     T *q,                        \
+                               @restrict           T *gatherq)                  \
+{                                                                               \
+  for(dlong g=0;g<Ngather*Nentries*Nvectors;++g;@tile(256,@outer,@inner)){      \
+    const int m     = g/(Ngather*Nentries);                                     \
+    const dlong vid = g%(Ngather*Nentries);                                     \
+    const dlong gid = vid/Nentries;                                             \
+    const int k     = vid%Nentries;                                             \
+    const dlong start = gatherStarts[gid];                                      \
+    const dlong end = gatherStarts[gid+1];                                      \
+    T gq = init_##T##_##OP;                                                     \
+    for(dlong n=start;n<end;++n){                                               \
+      const dlong id = gatherIds[n];                                            \
+      OGS_DO_##OP(gq,q[k+id*Nentries+m*stride]);                                \
+    }                                                                           \
+    gatherq[k+gid*Nentries+m*gstride] = gq;                                     \
+  }                                                                             \
 }
 
 /*------------------------------------------------------------------------------
   The basic scatter kernel
 ------------------------------------------------------------------------------*/
-#define DEFINE_SCATTER(T)                                               \
-@kernel void scatter_##T(const dlong Nscatter,                          \
-                         @restrict const  dlong *  scatterStarts,       \
-                         @restrict const  dlong *  scatterIds,          \
-                         @restrict const      T *  q,                   \
-                         @restrict            T *  scatterq)            \
-{                                                                       \
-  for(dlong s=0;s<Nscatter;++s;@tile(256,@outer,@inner)){               \
-    const T qs = q[s];                                                  \
-    const dlong start = scatterStarts[s];                               \
-    const dlong end = scatterStarts[s+1];                               \
-    for(dlong n=start;n<end;++n){                                       \
-      const dlong id = scatterIds[n];                                   \
-      scatterq[id] = qs;                                                \
-    }                                                                   \
-  }                                                                     \
+#define DEFINE_SCATTER(T)                                                       \
+@kernel void scatter_##T(const dlong Ngather,                                   \
+                         const int   Nentries,                                  \
+                         const int   Nvectors,                                  \
+                         const dlong gstride,                                   \
+                         const dlong stride,                                    \
+                         @restrict const dlong *gatherStarts,                   \
+                         @restrict const dlong *gatherIds,                      \
+                         @restrict const     T *gatherq,                        \
+                         @restrict           T *q)                              \
+{                                                                               \
+  for(dlong g=0;g<Ngather*Nentries*Nvectors;++g;@tile(256,@outer,@inner)){      \
+    const int m     = g/(Ngather*Nentries);                                     \
+    const dlong vid = g%(Ngather*Nentries);                                     \
+    const dlong gid = vid/Nentries;                                             \
+    const int k     = vid%Nentries;                                             \
+    const T gq = gatherq[k+gid*Nentries+m*gstride];                             \
+    const dlong start = gatherStarts[gid];                                      \
+    const dlong end = gatherStarts[gid+1];                                      \
+    for(dlong n=start;n<end;++n){                                               \
+      const dlong id = gatherIds[n];                                            \
+      q[k+id*Nentries+m*stride] = gq;                                           \
+    }                                                                           \
+  }                                                                             \
 }
 
 #define DEFINE_PROCS(T) \
@@ -98,4 +123,4 @@ SOFTWARE.
   OGS_FOR_EACH_OP(T,DEFINE_GATHER) \
   DEFINE_SCATTER(T)
 
-OGS_FOR_EACH_DOMAIN(DEFINE_PROCS)
+OGS_FOR_EACH_TYPE(DEFINE_PROCS)

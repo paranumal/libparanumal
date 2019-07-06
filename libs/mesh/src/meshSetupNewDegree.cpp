@@ -87,17 +87,14 @@ mesh_t& mesh_t::SetupNewDegree(int Nf){
   mesh->NboundaryFaces = NboundaryFaces;
   mesh->boundaryInfo = boundaryInfo;
 
+  mesh->halo = halo;
   mesh->NinternalElements = NinternalElements;
   mesh->NhaloElements = NhaloElements;
-  mesh->ogsHalo = ogsHalo;
   mesh->totalHaloPairs = totalHaloPairs;
   mesh->internalElementIds = internalElementIds;
   mesh->haloElementIds = haloElementIds;
   mesh->o_internalElementIds = o_internalElementIds;
   mesh->o_haloElementIds     = o_haloElementIds;
-
-  mesh->haloBufferSize = 0;
-  mesh->haloBuffer = NULL;
 
   mesh->ogs = ogs;
   mesh->globalIds = globalIds;
@@ -111,9 +108,6 @@ mesh_t& mesh_t::SetupNewDegree(int Nf){
   mesh->o_localGatherElementList = o_localGatherElementList;
 
   mesh->defaultStream = defaultStream;
-  mesh->dataStream = dataStream;
-
-  mesh->haloExtractKernel = haloExtractKernel;
 
   // load reference (r,s) element nodes
   mesh->LoadReferenceNodes(Nf);

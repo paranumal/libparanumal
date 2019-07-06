@@ -45,7 +45,7 @@ void MGLevel::coarsen(occa::memory &o_X, occa::memory &o_Rx) {
   coarsenKernel(mesh.Nelements, o_R, o_X, o_Rx);
 
   if (elliptic.disc_c0) {
-    ogsGatherScatter(o_Rx, ogsDfloat, ogsAdd, elliptic.ogsMasked);
+    elliptic.ogsMasked->GatherScatter(o_Rx, ogs_dfloat, ogs_add);
     if (elliptic.Nmasked)
       elliptic.maskKernel(elliptic.Nmasked, elliptic.o_maskIds, o_Rx);
   }
@@ -392,7 +392,7 @@ dfloat MGLevel::maxEigSmoothAx(){
 
   //gather-scatter
   if (weighted) {
-    ogsGatherScatter(Vx, ogsDfloat, ogsAdd, elliptic.ogsMasked);
+    elliptic.ogsMasked->GatherScatter(Vx, ogs_dfloat, ogs_add);
     for (dlong i=0;i<elliptic.Nmasked;i++) Vx[elliptic.maskIds[i]] = 0.;
   }
 

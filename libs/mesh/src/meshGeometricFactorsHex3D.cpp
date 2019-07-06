@@ -315,7 +315,7 @@ void meshHex3D::GeometricFactors(){
       printf("J in range [%g,%g] and max Skew = %g\n", globalMinJ, globalMaxJ, globalMaxSkew);
   #endif
 
-  HaloExchange(vgeo, Nvgeo*Np, ogsDfloat);
+  halo->Exchange(vgeo, Nvgeo*Np, ogs_dfloat);
 
   free(xre); free(xse); free(xte);
   free(yre); free(yse); free(yte);

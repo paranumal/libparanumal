@@ -147,15 +147,12 @@ mesh_t* mesh_t::SetupSEMFEM(hlong **globalIds_, int *Nfp_, int **faceNodes_){
     pmesh->boundaryInfo   = boundaryInfo;
 
     //use existing halo
+    pmesh->halo = halo;
     pmesh->NinternalElements = NinternalElements;
     pmesh->NhaloElements = NhaloElements;
-    pmesh->ogsHalo = ogsHalo;
     pmesh->totalHaloPairs = totalHaloPairs;
     pmesh->internalElementIds = internalElementIds;
     pmesh->haloElementIds = haloElementIds;
-
-    pmesh->haloBufferSize = 0;
-    pmesh->haloBuffer = NULL;
 
     // compute physical (x,y) locations FEM vertices
     pmesh->PhysicalNodes();

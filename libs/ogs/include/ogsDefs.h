@@ -24,13 +24,14 @@ SOFTWARE.
 
 */
 
-/* the supported domains */
-#define OGS_FOR_EACH_DOMAIN(macro) \
+/* the supported types */
+typedef long long long_long;
+#define OGS_FOR_EACH_TYPE(macro) \
   macro(double   ) \
   macro(float    ) \
   macro(int      ) \
   macro(long     ) \
-  macro(long long int)
+  macro(long_long)
 
 /* the supported ops */
 #define OGS_FOR_EACH_OP(T,macro) \
@@ -43,3 +44,22 @@ SOFTWARE.
 #define OGS_DO_mul(a,b) a*=b
 #define OGS_DO_min(a,b) if(b<a) a=b
 #define OGS_DO_max(a,b) if(b>a) a=b
+
+/* type size array */
+#define OGS_TYPE_SIZE_ITEM(T) sizeof(T),
+#define OGS_DEFINE_TYPE_SIZES() \
+  static const unsigned ogs_type_size[] = \
+    { OGS_FOR_EACH_TYPE(OGS_TYPE_SIZE_ITEM) 0 };
+
+/* mapping from ogs types to gs types */
+#define gs_int64_t gs_long_long
+#define OGS_GS_MAP_TYPE_ITEM(T) gs_##T,
+#define OGS_GS_DEFINE_TYPE_MAP() \
+  static const gs_dom ogs_gs_type_map[] = \
+    { OGS_FOR_EACH_TYPE(OGS_GS_MAP_TYPE_ITEM) gs_dom_n };
+
+/* mapping from ogs ops to gs ops */
+#define OGS_GS_MAP_OP_ITEM(T,OP) gs_##OP,
+#define OGS_GS_DEFINE_OP_MAP() \
+  static const gs_op ogs_gs_op_map[] = \
+    { OGS_FOR_EACH_OP(T,OGS_GS_MAP_OP_ITEM) gs_op_n };

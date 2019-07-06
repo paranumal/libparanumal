@@ -37,28 +37,28 @@ void SEMFEMPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
     elliptic.linAlg.amxpy(Ntotal, 1.0, elliptic.o_weight, o_r, 0.0, o_Mr);
 
     SEMFEMInterpKernel(mesh.Nelements,mesh.o_SEMFEMAnterp,o_Mr,o_rFEM);
-    ogsGather(o_GrFEM, o_rFEM, ogsDfloat, ogsAdd, FEMogs);
+    FEMogs->Gather(o_GrFEM, o_rFEM, ogs_dfloat, ogs_add);
 
     parAlmond::Precon(parAlmondHandle, o_GzFEM, o_GrFEM);
 
-    ogsScatter(o_zFEM, o_GzFEM, ogsDfloat, ogsAdd, FEMogs);
+    FEMogs->Scatter(o_zFEM, o_GzFEM, ogs_dfloat, ogs_add);
     SEMFEMAnterpKernel(mesh.Nelements,mesh.o_SEMFEMAnterp,o_zFEM,o_Mr);
 
     // Mr = invDegree.*Mr
     elliptic.linAlg.amx(Ntotal, 1.0, elliptic.o_weight, o_Mr);
 
-    ogsGatherScatter(o_Mr, ogsDfloat, ogsAdd, elliptic.ogsMasked);
+    elliptic.ogsMasked->GatherScatter(o_Mr, ogs_dfloat, ogs_add);
 
   } else {
 
-    ogsGather(o_rhsG, o_r, ogsDfloat, ogsAdd, FEMogs);
+    FEMogs->Gather(o_rhsG, o_r, ogs_dfloat, ogs_add);
 
     dlong N = FEMogs->Ngather;
-    elliptic.linAlg.amx(N, 1.0, FEMogs->o_gatherInvDegree, o_rhsG);
+    elliptic.linAlg.amx(N, 1.0, o_weightG, o_rhsG);
 
     parAlmond::Precon(parAlmondHandle, o_xG, o_rhsG);
 
-    ogsScatter(o_Mr, o_xG, ogsDfloat, ogsAdd, FEMogs);
+    FEMogs->Scatter(o_Mr, o_xG, ogs_dfloat, ogs_add);
   }
 
   if (elliptic.Nmasked)
@@ -90,7 +90,7 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
   if (mesh.elementType==TRIANGLES||mesh.elementType==TETRAHEDRA) { //build a new mask for NpFEM>Np node sets
     // gather-scatter
     int verbose = 0;
-    ogs_t *ogs = ogsSetup(Ntotal, globalIds, mesh.comm, verbose, mesh.device);
+    ogs_t *ogs = ogs_t::Setup(Ntotal, globalIds, mesh.comm, verbose, mesh.device);
 
     //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
     const int largeNumber = 1<<20;
@@ -108,7 +108,7 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
         }
       }
     }
-    ogsGatherScatter(mapB, ogsInt, ogsMin, ogs);
+    ogs->GatherScatter(mapB, ogs_int, ogs_min);
 
     //use the bc flags to find masked ids
     for (dlong n=0;n<mesh.Nelements*mesh.NpFEM;n++)
@@ -116,6 +116,7 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
         maskedGlobalIds[n] = 0;
 
     free(mapB);
+    ogs->Free();
   } else {
     //mask using the original mask
     for (dlong n=0;n<elliptic.Nmasked;n++)
@@ -124,7 +125,7 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
 
   //build masked gs handle to gather from enriched sem nodes to assembled fem problem
   int verbose = 0;
-  FEMogs = ogsSetup(Ntotal, maskedGlobalIds, mesh.comm, verbose, mesh.device);
+  FEMogs = ogs_t::Setup(Ntotal, maskedGlobalIds, mesh.comm, verbose, mesh.device);
 
   //make a map from the fem mesh's nodes to the (enriched) sem nodes
   dlong *localIds = (dlong *) calloc(femMesh->Nelements*femMesh->Nverts,sizeof(dlong));
@@ -169,6 +170,18 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
     }
   }
 
+  //make a gathered weight vector
+  dfloat *weight  = (dfloat*) calloc(Ntotal, sizeof(dfloat));
+  weightG = (dfloat*) calloc(FEMogs->Ngather, sizeof(dfloat));
+  for(dlong n=0;n<Ntotal;++n) weight[n] = 1.0;
+
+  FEMogs->Gather(weightG, weight, ogs_dfloat, ogs_add);
+  for(dlong n=0;n<FEMogs->Ngather;++n)
+    if (weightG[n]) weightG[n] = 1./weightG[n];
+
+  o_weightG = mesh.device.malloc(FEMogs->Ngather*sizeof(dfloat), weightG);
+  free(weight);
+
   //make a fem elliptic solver
   femElliptic = new elliptic_t(*femMesh, elliptic.linAlg, elliptic.lambda);
   femElliptic->ogsMasked = FEMogs; //only for getting Ngather when building matrix
@@ -198,8 +211,8 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
   hlong* maskedGlobalNumbering = (hlong *) calloc(Ntotal,sizeof(hlong));
   int  * maskedGlobalOwners    = (int *) calloc(Ntotal,sizeof(int));
   for (dlong n=0;n<Ntotal;n++) maskedGlobalNumbering[n] = -1;
-  ogsScatter(maskedGlobalNumbering, globalIds2, ogsHlong, ogsAdd, FEMogs);
-  ogsScatter(maskedGlobalOwners, owner, ogsInt, ogsAdd, FEMogs);
+  FEMogs->Scatter(maskedGlobalNumbering, globalIds2, ogs_hlong, ogs_add);
+  FEMogs->Scatter(maskedGlobalOwners, owner, ogs_int, ogs_add);
   free(globalIds2); free(owner);
 
   //transfer the consecutive global numbering to the fem mesh

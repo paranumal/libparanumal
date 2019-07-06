@@ -132,5 +132,5 @@ void meshTri3D::GeometricFactors(){
     }
   }
 
-  HaloExchange(vgeo, Nvgeo*Np, ogsDfloat);
+  halo->Exchange(vgeo, Nvgeo*Np, ogs_dfloat);
 }

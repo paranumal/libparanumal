@@ -31,7 +31,7 @@ void mesh_t::ParallelGatherScatterSetup() {
   dlong Ntotal = Np*Nelements;
 
   int verbose = 0;
-  ogs = ogsSetup(Ntotal, globalIds, comm, verbose, device);
+  ogs = ogs_t::Setup(Ntotal, globalIds, comm, verbose, device);
 
   //use the gs to find what nodes are local to this rank
   int *minRank = (int *) calloc(Ntotal,sizeof(int));
@@ -41,8 +41,8 @@ void mesh_t::ParallelGatherScatterSetup() {
     maxRank[i] = rank;
   }
 
-  ogsGatherScatter(minRank, ogsInt, ogsMin, ogs); //minRank[n] contains the smallest rank taking part in the gather of node n
-  ogsGatherScatter(maxRank, ogsInt, ogsMax, ogs); //maxRank[n] contains the largest rank taking part in the gather of node n
+  ogs->GatherScatter(minRank, ogs_int, ogs_min); //minRank[n] contains the smallest rank taking part in the gather of node n
+  ogs->GatherScatter(maxRank, ogs_int, ogs_max); //maxRank[n] contains the largest rank taking part in the gather of node n
 
   // count elements that contribute to global C0 gather-scatter
   dlong globalCount = 0;

@@ -240,12 +240,12 @@ void MCSR::SpMV(const dfloat alpha, occa::memory o_x, const dfloat beta,
 void parCSR::SpMV(const dfloat alpha, dfloat *x,
                   const dfloat beta, dfloat *y) {
 
-  this->haloExchangeStart(x);
+  halo->ExchangeStart(x, 1, ogs_dfloat);
 
   // z[i] = beta*y[i] + alpha* (sum_{ij} Aij*x[j])
   diag->SpMV(alpha, x, beta, y);
 
-  this->haloExchangeFinish(x);
+  halo->ExchangeFinish(x, 1, ogs_dfloat);
 
   offd->SpMV(alpha, x, 1.0, y);
 
@@ -259,12 +259,12 @@ void parCSR::SpMV(const dfloat alpha, dfloat *x,
 void parCSR::SpMV(const dfloat alpha, dfloat *x,
                   const dfloat beta, const dfloat *y, dfloat *z) {
 
-  this->haloExchangeStart(x);
+  halo->ExchangeStart(x, 1, ogs_dfloat);
 
   // z[i] = beta*y[i] + alpha* (sum_{ij} Aij*x[j])
   diag->SpMV(alpha, x, beta, y, z);
 
-  this->haloExchangeFinish(x);
+  halo->ExchangeFinish(x, 1, ogs_dfloat);
 
   offd->SpMV(alpha, x, 1.0, z);
 
@@ -278,12 +278,12 @@ void parCSR::SpMV(const dfloat alpha, dfloat *x,
 void parCSR::SpMV(const dfloat alpha, occa::memory o_x, const dfloat beta,
                   occa::memory o_y) {
 
-  this->haloExchangeStart(o_x);
+  halo->ExchangeStart(o_x, 1, ogs_dfloat);
 
   // z[i] = beta*y[i] + alpha* (sum_{ij} Aij*x[j])
   diag->SpMV(alpha, o_x, beta, o_y);
 
-  this->haloExchangeFinish(o_x);
+  halo->ExchangeFinish(o_x, 1, ogs_dfloat);
 
   offd->SpMV(alpha, o_x, 1.0, o_y);
 
@@ -297,12 +297,12 @@ void parCSR::SpMV(const dfloat alpha, occa::memory o_x, const dfloat beta,
 void parCSR::SpMV(const dfloat alpha, occa::memory o_x, const dfloat beta,
                   occa::memory o_y, occa::memory o_z) {
 
-  this->haloExchangeStart(o_x);
+  halo->ExchangeStart(o_x, 1, ogs_dfloat);
 
   // z[i] = beta*y[i] + alpha* (sum_{ij} Aij*x[j])
   diag->SpMV(alpha, o_x, beta, o_y, o_z);
 
-  this->haloExchangeFinish(o_x);
+  halo->ExchangeFinish(o_x, 1, ogs_dfloat);
 
   offd->SpMV(alpha, o_x, 1.0, o_z);
 
@@ -321,12 +321,12 @@ void parCSR::SpMV(const dfloat alpha, occa::memory o_x, const dfloat beta,
 void parHYB::SpMV(const dfloat alpha, dfloat *x,
                   const dfloat beta, dfloat *y) {
 
-  this->haloExchangeStart(x);
+  halo->ExchangeStart(x, 1, ogs_dfloat);
 
   // z[i] = beta*y[i] + alpha* (sum_{ij} Aij*x[j])
   E->SpMV(alpha, x, beta, y);
 
-  this->haloExchangeFinish(x);
+  halo->ExchangeFinish(x, 1, ogs_dfloat);
 
   C->SpMV(alpha, x, 1.0, y);
 
@@ -340,12 +340,12 @@ void parHYB::SpMV(const dfloat alpha, dfloat *x,
 void parHYB::SpMV(const dfloat alpha, dfloat *x,
                   const dfloat beta, const dfloat *y, dfloat *z) {
 
-  this->haloExchangeStart(x);
+  halo->ExchangeStart(x, 1, ogs_dfloat);
 
   // z[i] = beta*y[i] + alpha* (sum_{ij} Aij*x[j])
   E->SpMV(alpha, x, beta, y, z);
 
-  this->haloExchangeFinish(x);
+  halo->ExchangeFinish(x, 1, ogs_dfloat);
 
   C->SpMV(alpha, x, 1.0, z);
 
@@ -359,12 +359,12 @@ void parHYB::SpMV(const dfloat alpha, dfloat *x,
 void parHYB::SpMV(const dfloat alpha, occa::memory o_x, const dfloat beta,
                   occa::memory o_y) {
 
-  this->haloExchangeStart(o_x);
+  halo->ExchangeStart(o_x, 1, ogs_dfloat);
 
   // z[i] = beta*y[i] + alpha* (sum_{ij} Aij*x[j])
   E->SpMV(alpha, o_x, beta, o_y);
 
-  this->haloExchangeFinish(o_x);
+  halo->ExchangeFinish(o_x, 1, ogs_dfloat);
 
   C->SpMV(alpha, o_x, 1.0, o_y);
 
@@ -378,12 +378,12 @@ void parHYB::SpMV(const dfloat alpha, occa::memory o_x, const dfloat beta,
 void parHYB::SpMV(const dfloat alpha, occa::memory o_x, const dfloat beta,
                   occa::memory o_y, occa::memory o_z) {
 
-  this->haloExchangeStart(o_x);
+  halo->ExchangeStart(o_x, 1, ogs_dfloat);
 
   // z[i] = beta*y[i] + alpha* (sum_{ij} Aij*x[j])
   E->SpMV(alpha, o_x, beta, o_y, o_z);
 
-  this->haloExchangeFinish(o_x);
+  halo->ExchangeFinish(o_x, 1, ogs_dfloat);
 
   C->SpMV(alpha, o_x, 1.0, o_z);
 
