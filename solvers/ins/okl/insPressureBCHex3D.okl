@@ -626,3 +626,43 @@ SOFTWARE.
     }
   }
 }
+
+
+@kernel void insPressureAddBCTOMBOHex3D(const dlong Nelements,
+                                  const dfloat time,
+                                  const dfloat dt,
+                                  const int stage,
+                                  const int ARKswitch,
+                                  @restrict const  dfloat *  c,
+                                  @restrict const  dfloat *  prkB,
+                                  @restrict const  dfloat *  x,
+                                  @restrict const  dfloat *  y,
+                                  @restrict const  dfloat *  z,
+                                  @restrict const  dlong  *  vmapM,
+                                  @restrict const  int    *  mapB,
+                                        @restrict dfloat *  P){
+  
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+    for(int f=0; f<p_Nfaces; f++){
+      @barrier("global");
+      for(int m=0;m<p_Nfp;++m;@inner(0)){
+        const int n = m + f*p_Nfp;       
+        const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
+        const int bc = mapB[idM];
+
+      if(bc==3) {
+        // dfloat pP = 0.f;
+        dfloat pP = P[idM]; // just to be safe
+        insPressureDirichletConditions3D(bc,time, x[idM], y[idM], z[idM], 0.f, 0.f, 0.f, 0.f, &pP);
+
+        dfloat ctime = time-dt;
+
+        dfloat pPm = 0.f;
+        insPressureDirichletConditions3D(bc,ctime, x[idM], y[idM], z[idM], 0.f, 0.f, 0.f, 0.f, &pPm);
+        pP    -= pPm;
+        P[idM] = pP;
+      }    
+    }
+   }
+  }
+}
