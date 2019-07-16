@@ -29,6 +29,10 @@ SOFTWARE.
 void insVelocityRhs(ins_t *ins, dfloat time, int stage, occa::memory o_rhsU, occa::memory o_rhsV, occa::memory o_rhsW){
   
   mesh_t *mesh = ins->mesh; 
+  timer *profiler = ins->profiler; 
+
+
+  profiler->tic("Velocity Rhs");  
 
   if (ins->options.compareArgs("TIME INTEGRATOR", "ARK")) { 
     // rhsU^s = MM*(U^n - \sum^s-1 ea_si N(U^i) + \sum^s-1 ia_si LU^i - \sum^s-1 pa_si GP^i)/ia_ss nu dt
@@ -68,4 +72,5 @@ void insVelocityRhs(ins_t *ins, dfloat time, int stage, occa::memory o_rhsU, occ
                            o_rhsV,
                            o_rhsW);
   }
+   profiler->toc("Velocity Rhs",  ins->velocityRhsKernel);  
 }

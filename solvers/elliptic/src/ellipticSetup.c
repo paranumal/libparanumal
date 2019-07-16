@@ -104,6 +104,10 @@ elliptic_t *ellipticSetup(mesh_t *mesh, dfloat lambda, occa::properties &kernelI
   //
   ellipticSolveSetup(elliptic, lambda, kernelInfo);
 
+    // Set Timer
+  elliptic->profiler = new timer; 
+  elliptic->profiler->setTimer(elliptic->options);
+  elliptic->profiler->initTimer(mesh->device);
 
   dlong Nall = mesh->Np*(mesh->Nelements+mesh->totalHaloPairs);
   elliptic->r   = (dfloat*) calloc(Nall,   sizeof(dfloat));

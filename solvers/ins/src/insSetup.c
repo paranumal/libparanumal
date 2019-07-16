@@ -630,9 +630,11 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
 
   }
 
+  // Set Timer
+  ins->profiler = new timer; 
+  ins->profiler->setTimer(ins->options);
+  ins->profiler->initTimer(mesh->device);
   
-  
-
   //make option objects for elliptc solvers
   ins->vOptions = options;
   ins->vOptions.setArgs("KRYLOV SOLVER",        options.getArgs("VELOCITY KRYLOV SOLVER"));
@@ -679,6 +681,7 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
 
   ins->uSolver = new elliptic_t(); // (elliptic_t*) calloc(1, sizeof(elliptic_t));
   ins->uSolver->mesh = mesh;
+  ins->uSolver->profiler = ins->profiler; 
   ins->uSolver->options = ins->vOptions;
   ins->uSolver->dim = ins->dim;
   ins->uSolver->elementType = ins->elementType;
@@ -688,6 +691,7 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
 
   ins->vSolver = new elliptic_t(); // (elliptic_t*) calloc(1, sizeof(elliptic_t));
   ins->vSolver->mesh = mesh;
+  ins->vSolver->profiler = ins->profiler; 
   ins->vSolver->options = ins->vOptions;
   ins->vSolver->dim = ins->dim;
   ins->vSolver->elementType = ins->elementType;
@@ -698,6 +702,7 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
   if (ins->dim==3) {
     ins->wSolver = new elliptic_t(); // (elliptic_t*) calloc(1, sizeof(elliptic_t));
     ins->wSolver->mesh = mesh;
+    ins->wSolver->profiler = ins->profiler; 
     ins->wSolver->options = ins->vOptions;
     ins->wSolver->dim = ins->dim;
     ins->wSolver->elementType = ins->elementType;
@@ -709,6 +714,7 @@ if(options.compareArgs("INITIAL CONDITION", "BROWN-MINION") &&
   if (mesh->rank==0) printf("==================PRESSURE SOLVE SETUP=========================\n");
   ins->pSolver = new elliptic_t(); // (elliptic_t*) calloc(1, sizeof(elliptic_t));
   ins->pSolver->mesh = mesh;
+  ins->pSolver->profiler = ins->profiler; 
   ins->pSolver->options = ins->pOptions;
   ins->pSolver->dim = ins->dim;
   ins->pSolver->elementType = ins->elementType;
