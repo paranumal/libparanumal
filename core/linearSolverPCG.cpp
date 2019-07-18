@@ -56,7 +56,7 @@ void pcg::Init(int _weighted, occa::memory& o_weight) {
   occa::properties mprops;
   mprops["mapped"] = true;
   h_tmprdotr = device.malloc(PCG_BLOCKSIZE*sizeof(dfloat), mprops);
-  tmprdotr = (dfloat*) h_tmprdotr.ptr();
+  tmprdotr = (dfloat*) h_tmprdotr.ptr(mprops);
   o_tmprdotr = device.malloc(PCG_BLOCKSIZE*sizeof(dfloat));
 
   /* build kernels */

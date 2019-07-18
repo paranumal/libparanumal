@@ -33,15 +33,43 @@ SOFTWARE.
 #include "settings.hpp"
 #include "omp.h"
 
+//hack the hook to ask OCCA to return a device count
+namespace occa {
 #if OCCA_CUDA_ENABLED
-#include "occa/mode/cuda.hpp"
+  namespace cuda { 
+    int getDeviceCount(); 
+  }
 #endif
 #if OCCA_HIP_ENABLED
-#include "occa/mode/hip.hpp"
+  namespace hip { 
+    int getDeviceCount(); 
+  }
 #endif
 #if OCCA_OPENCL_ENABLED
-#include "occa/mode/opencl.hpp"
+  namespace opencl { 
+    namespace info {
+      static const int CPU     = (1 << 0);
+      static const int GPU     = (1 << 1);
+      static const int FPGA    = (1 << 3);
+      static const int XeonPhi = (1 << 2);
+      static const int anyType = (CPU | GPU | FPGA | XeonPhi);
+
+      static const int Intel     = (1 << 4);
+      static const int AMD       = (1 << 5);
+      static const int Altera    = (1 << 6);
+      static const int NVIDIA    = (1 << 7);
+      static const int anyVendor = (Intel | AMD | Altera | NVIDIA);
+
+      static const int any = (anyType | anyVendor);
+
+      std::string deviceType(int type);
+      std::string vendor(int type);
+    }
+
+    int getDeviceCountInPlatform(int pID, int type = info::any);
+  }
 #endif
+}
 
 void occaDeviceConfig(occa::device &device, MPI_Comm comm,
                       settings_t& settings, occa::properties& props){
@@ -99,7 +127,9 @@ void occaDeviceConfig(occa::device &device, MPI_Comm comm,
   }
   else if(settings.compareSetting("THREAD MODEL", "OpenCL")){
 #if OCCA_OPENCL_ENABLED
-    int deviceCount = occa::opencl::getDeviceCount();
+    int plat;
+    settings.getSetting("PLATFORM NUMBER", plat);
+    int deviceCount = occa::opencl::getDeviceCountInPlatform(plat);
     if (device_id>=deviceCount) {
       stringstream ss;
       ss << "Rank " << rank << " oversubscribing OpenCL device " << device_id%deviceCount << " on node \"" << hostname<< "\"";

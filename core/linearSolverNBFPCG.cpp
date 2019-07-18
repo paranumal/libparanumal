@@ -62,7 +62,7 @@ void nbfpcg::Init(int _weighted, occa::memory& o_weight_) {
   occa::properties mprops;
   mprops["mapped"] = true;
   h_tmpdots = device.malloc(4*NBFPCG_BLOCKSIZE*sizeof(dfloat), mprops);
-  tmpdots = (dfloat*) h_tmpdots.ptr();
+  tmpdots = (dfloat*) h_tmpdots.ptr(mprops);
   o_tmpdots = device.malloc(4*NBFPCG_BLOCKSIZE*sizeof(dfloat));
 
   /* build kernels */

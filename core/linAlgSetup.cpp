@@ -43,7 +43,7 @@ linAlg_t& linAlg_t::Setup(occa::device& device_,
   occa::properties mprops;
   mprops["mapped"] = true;
   linAlg->h_scratch = linAlg->device.malloc(LINALG_BLOCKSIZE*sizeof(dfloat), mprops);
-  linAlg->scratch = (dfloat*) linAlg->h_scratch.ptr();
+  linAlg->scratch = (dfloat*) linAlg->h_scratch.ptr(mprops);
 
   linAlg->o_scratch = linAlg->device.malloc(LINALG_BLOCKSIZE*sizeof(dfloat));
 
