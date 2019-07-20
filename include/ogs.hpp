@@ -143,6 +143,14 @@ SOFTWARE.
 
   except that all communication is done together.
 
+  A utility function, ogs_t::Unique is provided
+
+    ogs_t::Unique(ids, N, comm);
+
+  This call modifies ids, "flagging" (by negating id[i]) all (p,i) pairs in
+  each group except one. The sole "unflagged" member of the group is chosen
+  in an arbitrary but consistent way.
+
   Asynchronous versions of the various GatherScatter functions are provided by
 
     ogs->GatherScatterStart(o_v, ogs_double, ogs_add, ogs_sym);
@@ -151,10 +159,12 @@ SOFTWARE.
 
   MPI communication is not initiated in GatherScatterStart, rather some initial
   message packing and host<->device transfers are queued. The user can then queue
-  their own local work to the device which overlapps with this work before
-  calling GatherScatterFinish to maximize the amount of communication hiding.
+  their own local kernels to the device which overlapps with this work before
+  calling GatherScatterFinish. The MPI communication will then take place while the
+  user's local kernels execute to maximize the amount of communication hiding.
 
-
+  Finally, a thin wrapper of the ogs_t object, named halo_t is provided. This object
+  is intended to provided support for thin halo exchages between MPI procceses.
 
 */
 
