@@ -54,7 +54,7 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
       // }
     }
 
-    ogsMasked->GatherScatterStart(o_Aq, ogs_dfloat, ogs_add);
+    ogsMasked->GatherScatterStart(o_Aq, ogs_dfloat, ogs_add, ogs_sym);
 
     if(mesh.NlocalGatherElements){
       // if(integrationType==0) { // GLL or non-hex
@@ -77,7 +77,7 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
     }
 
     // finalize gather using local and global contributions
-    ogsMasked->GatherScatterFinish(o_Aq, ogs_dfloat, ogs_add);
+    ogsMasked->GatherScatterFinish(o_Aq, ogs_dfloat, ogs_add, ogs_sym);
 
 #if USE_NULL_BOOST==1
     if(mesh.allNeumann) {

@@ -39,58 +39,77 @@ void hostScatter(void* v,
                  const dlong gstride,
                  const ogs_type type,
                  const ogs_op op,
+                 const ogs_transpose trans,
                  ogs_t &ogs){
 
   const size_t Nbytes = ogs_type_size[type];
 
   ogs.reallocHostBuffer(Nbytes*Nentries*Nvectors);
 
-  // scatter interior nodes
-  if (ogs.NlocalGather)
-    hostScatterKernel(ogs.NlocalGather, Nentries, Nvectors, gstride, stride,
-                      ogs.localGatherOffsets, ogs.localGatherIds,
-                      type, op, gv, v);
-
-  if (ogs.NownedHalo)
-    for (int i=0;i<Nvectors;i++)
-      memcpy((char*)ogs.hostBuf+ogs.NhaloGather*Nbytes*Nentries*i,
-             (char*)gv+ogs.NlocalGather*Nbytes + gstride*Nbytes*i,
-             ogs.NownedHalo*Nbytes*Nentries);
-
-  // MPI based scatter using gslib
-  gsScatter(ogs.hostBuf, Nentries, Nvectors, ogs.NhaloGather,
-            type, op, ogs.gshNonSym);
+  if (trans == ogs_sym)
+    LIBP_ABORT(string("Calling ogs::Scatter in ogs_sym mode not supported."))
 
   if (ogs.NhaloGather)
-    hostScatterKernel(ogs.NhaloGather, Nentries, Nvectors, ogs.NhaloGather, stride,
-                      ogs.haloGatherOffsets, ogs.haloGatherIds,
-                      type, op, ogs.hostBuf, v);
+    for (int i=0;i<Nvectors;i++)
+      memcpy((char*)ogs.hostBuf+ogs.Nhalo*Nbytes*Nentries*i,
+             (char*)gv+ogs.NlocalGather*Nbytes + gstride*Nbytes*i,
+             ogs.NhaloGather*Nbytes*Nentries);
+
+  // MPI based scatter using gslib
+  // (must use ogs_notrans so the negative ids don't contribute to op)
+  gsGatherScatter(ogs.hostBuf, Nentries, Nvectors, ogs.Nhalo,
+                  type, op, ogs_notrans, ogs.gsh);
+
+  dlong NhaloScatter = (trans == ogs_trans) ? ogs.NhaloGather : ogs.NhaloScatter;
+
+  if (NhaloScatter) {
+    if (trans == ogs_trans)
+      hostScatterKernel(ogs.NhaloGather, Nentries, Nvectors, ogs.Nhalo, stride,
+                        ogs.haloGatherOffsets, ogs.haloGatherIds,
+                        type, op, ogs.hostBuf, v);
+    else
+      hostScatterKernel(ogs.NhaloScatter, Nentries, Nvectors, ogs.Nhalo, stride,
+                        ogs.haloScatterOffsets, ogs.haloScatterIds,
+                        type, op, ogs.hostBuf, v);
+  }
+
+  // scatter interior nodes
+  if (ogs.Nlocal) {
+    if (trans == ogs_trans)
+      hostScatterKernel(ogs.Nlocal, Nentries, Nvectors, gstride, stride,
+                        ogs.localGatherOffsets, ogs.localGatherIds,
+                        type, op, gv, v);
+    else
+      hostScatterKernel(ogs.Nlocal, Nentries, Nvectors, gstride, stride,
+                        ogs.localScatterOffsets, ogs.localScatterIds,
+                        type, op, gv, v);
+  }
 }
 
 /*------------------------------------------------------------------------------
   The basic gather kernel
 ------------------------------------------------------------------------------*/
 #define DEFINE_SCATTER(T)                                                       \
-static void hostScatterKernel_##T(const dlong Ngather,                          \
+static void hostScatterKernel_##T(const dlong N,                                \
                                   const int   Nentries,                         \
                                   const int   Nvectors,                         \
                                   const dlong gstride,                          \
                                   const dlong stride,                           \
-                                  const dlong *gatherStarts,                    \
-                                  const dlong *gatherIds,                       \
+                                  const dlong *scatterStarts,                   \
+                                  const dlong *scatterIds,                      \
                                   const     T *gatherq,                         \
                                             T *q)                               \
 {                                                                               \
-  for(dlong g=0;g<Ngather*Nentries*Nvectors;++g){                               \
-    const int m     = g/(Ngather*Nentries);                                     \
-    const dlong vid = g%(Ngather*Nentries);                                     \
+  for(dlong n=0;n<N*Nentries*Nvectors;++n){                                     \
+    const int m     = n/(N*Nentries);                                           \
+    const dlong vid = n%(N*Nentries);                                           \
     const dlong gid = vid/Nentries;                                             \
     const int k     = vid%Nentries;                                             \
     const T gq = gatherq[k+gid*Nentries+m*gstride];                             \
-    const dlong start = gatherStarts[gid];                                      \
-    const dlong end = gatherStarts[gid+1];                                      \
-    for(dlong n=start;n<end;++n){                                               \
-      const dlong id = gatherIds[n];                                            \
+    const dlong start = scatterStarts[gid];                                     \
+    const dlong end = scatterStarts[gid+1];                                     \
+    for(dlong g=start;g<end;++g){                                               \
+      const dlong id = scatterIds[g];                                           \
       q[k+id*Nentries+m*stride] = gq;                                           \
     }                                                                           \
   }                                                                             \
@@ -105,26 +124,26 @@ OGS_FOR_EACH_TYPE(DEFINE_PROCS)
 #define SWITCH_TYPE(type) switch(type) { \
     OGS_FOR_EACH_TYPE(SWITCH_TYPE_CASE) case ogs_type_n: break; }
 
-void hostScatterKernel(const dlong Ngather,
+void hostScatterKernel(const dlong N,
                        const int Nentries,
                        const int Nvectors,
                        const dlong gstride,
                        const dlong stride,
-                       const dlong *gatherStarts,
-                       const dlong *gatherIds,
+                       const dlong *scatterStarts,
+                       const dlong *scatterIds,
                        const ogs_type type,
                        const ogs_op op,
                        const void *gv,
                        void *v) {
 
 #define WITH_TYPE(T)                          \
-  hostScatterKernel_##T(Ngather,              \
+  hostScatterKernel_##T(N,                    \
                         Nentries,             \
                         Nvectors,             \
                         gstride,              \
                         stride,               \
-                        gatherStarts,         \
-                        gatherIds,            \
+                        scatterStarts,        \
+                        scatterIds,           \
                         (T*) gv,              \
                         (T*) v);
 

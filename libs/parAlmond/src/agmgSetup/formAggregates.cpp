@@ -94,14 +94,14 @@ static void formAggregatesDefault(parCSR *A, parCSR *C,
     colCnt[C->offd->cols[i]]++;
 
   //gs for total column counts
-  A->ogs->GatherScatter(colCnt, ogs_int, ogs_add);
+  A->halo->Combine(colCnt, 1, ogs_int);
 
   //add random pertubation
   for(int i=0;i<N;++i)
     rands[i] += colCnt[i];
 
   //gs to fill halo region
-  A->ogs->GatherScatter(rands, ogs_dfloat, ogs_add);
+  A->halo->Exchange(rands, 1, ogs_dfloat);
 
   hlong done = 0;
   while(!done){
@@ -140,14 +140,9 @@ static void formAggregatesDefault(parCSR *A, parCSR *C,
     }
 
     //share results
-    for (dlong n=N;n<M;n++) {
-      Tr[n] = 0.;
-      Ts[n] = 0;
-      Ti[n] = 0;
-    }
-    A->ogs->GatherScatter(Tr, ogs_dfloat, ogs_add);
-    A->ogs->GatherScatter(Ts, ogs_int,    ogs_add);
-    A->ogs->GatherScatter(Ti, ogs_hlong,  ogs_add);
+    A->halo->Exchange(Tr, 1, ogs_dfloat);
+    A->halo->Exchange(Ts, 1, ogs_int);
+    A->halo->Exchange(Ti, 1, ogs_hlong);
 
     // second neighbours
     // #pragma omp parallel for
@@ -187,8 +182,7 @@ static void formAggregatesDefault(parCSR *A, parCSR *C,
     }
 
     //share results
-    for (dlong n=N;n<M;n++) states[n] = 0;
-    A->ogs->GatherScatter(states, ogs_int, ogs_add);
+    A->halo->Exchange(states, 1, ogs_int);
 
     // if number of undecided nodes = 0, algorithm terminates
     hlong cnt = 0;
@@ -220,10 +214,9 @@ static void formAggregatesDefault(parCSR *A, parCSR *C,
       FineToCoarse[i] = -1;
     }
   }
-  for(dlong i=N; i<M; i++) FineToCoarse[i] = 0;
 
   //share the initial aggregate flags
-  A->ogs->GatherScatter(FineToCoarse, ogs_hlong, ogs_add);
+  A->halo->Exchange(FineToCoarse, 1, ogs_hlong);
 
   // form the aggregates
   // #pragma omp parallel for
@@ -266,18 +259,11 @@ static void formAggregatesDefault(parCSR *A, parCSR *C,
   }
 
   //share results
-  for (dlong n=N;n<M;n++) {
-    FineToCoarse[n] = 0;
-    Tr[n] = 0.;
-    Ts[n] = 0;
-    Ti[n] = 0;
-    Tc[n] = 0;
-  }
-  A->ogs->GatherScatter(FineToCoarse, ogs_hlong,  ogs_add);
-  A->ogs->GatherScatter(Tr,     ogs_dfloat, ogs_add);
-  A->ogs->GatherScatter(Ts,     ogs_int,    ogs_add);
-  A->ogs->GatherScatter(Ti,     ogs_hlong,  ogs_add);
-  A->ogs->GatherScatter(Tc,     ogs_hlong,  ogs_add);
+  A->halo->Exchange(FineToCoarse, 1, ogs_hlong);
+  A->halo->Exchange(Tr,     1, ogs_dfloat);
+  A->halo->Exchange(Ts,     1, ogs_int);
+  A->halo->Exchange(Ti,     1, ogs_hlong);
+  A->halo->Exchange(Tc,     1, ogs_hlong);
 
   // second neighbours
   // #pragma omp parallel for
@@ -314,8 +300,7 @@ static void formAggregatesDefault(parCSR *A, parCSR *C,
   }
 
   //share results
-  for (dlong n=N;n<M;n++) FineToCoarse[n] = 0;
-  A->ogs->GatherScatter(FineToCoarse, ogs_hlong,  ogs_add);
+  A->halo->Exchange(FineToCoarse, 1, ogs_hlong);
 
   free(rands);
   free(states);
@@ -535,8 +520,7 @@ static void formAggregatesLPSCN(parCSR *A, parCSR *C,
     FineToCoarse[i] = globalAggStarts[rank] + states[i];
 
   // share results
-  for (dlong n=N;n<M;n++) FineToCoarse[n] = 0;
-  A->ogs->GatherScatter(FineToCoarse, ogs_hlong,  ogs_add);
+  A->halo->Exchange(FineToCoarse, 1, ogs_hlong);
 
   free(states);
   free(V);

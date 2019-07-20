@@ -95,12 +95,8 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
 
           coarseLevel->gatherLevel = true;
           coarseLevel->ogs = ellipticC.ogsMasked;
-          coarseLevel->gatherWeight = ellipticC.weight;
-          coarseLevel->o_gatherWeight = ellipticC.o_weight;
           coarseLevel->Gx = (dfloat*) calloc(coarseLevel->ogs->Ngather,sizeof(dfloat));
-          coarseLevel->Sx = (dfloat*) calloc(meshC.Np*meshC.Nelements,sizeof(dfloat));
           coarseLevel->o_Gx = meshC.device.malloc(coarseLevel->ogs->Ngather*sizeof(dfloat),coarseLevel->Gx);
-          coarseLevel->o_Sx = meshC.device.malloc(meshC.Np*meshC.Nelements*sizeof(dfloat),coarseLevel->Sx);
         }
       }
       break;

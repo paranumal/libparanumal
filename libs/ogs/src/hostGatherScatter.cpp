@@ -38,59 +38,96 @@ void hostGatherScatter(void* v,
                        const dlong stride,
                        const ogs_type type,
                        const ogs_op op,
+                       const ogs_transpose trans,
                        ogs_t &ogs){
 
   const size_t Nbytes = ogs_type_size[type];
 
   ogs.reallocHostBuffer(Nbytes*Nentries*Nvectors);
 
+  dlong NhaloGather  = (trans == ogs_notrans) ? ogs.NhaloGather : ogs.NhaloScatter;
+  dlong NhaloScatter = (trans == ogs_trans)   ? ogs.NhaloGather : ogs.NhaloScatter;
+
+  void* gsh = (trans == ogs_sym) ? ogs.gshSym : ogs.gsh;
+
   // gather-scatter halo nodes
-  if (ogs.NhaloGather)
-    hostGatherKernel(ogs.NhaloGather, Nentries, Nvectors, stride, ogs.NhaloGather,
-                     ogs.haloGatherOffsets, ogs.haloGatherIds,
-                     type, op, v, ogs.hostBuf);
+  if (NhaloGather) {
+    if (trans == ogs_notrans)
+      hostGatherKernel(ogs.NhaloGather, Nentries, Nvectors, stride, ogs.Nhalo,
+                       ogs.haloGatherOffsets, ogs.haloGatherIds,
+                       type, op, v, ogs.hostBuf);
+    else
+      hostGatherKernel(ogs.NhaloScatter, Nentries, Nvectors, stride, ogs.Nhalo,
+                       ogs.haloScatterOffsets, ogs.haloScatterIds,
+                       type, op, v, ogs.hostBuf);
+  }
 
   // MPI based gather scatter using libgs
-  gsGatherScatter(ogs.hostBuf, Nentries, Nvectors, ogs.NhaloGather,
-                  type, op, ogs.gshSym);
+  gsGatherScatter(ogs.hostBuf, Nentries, Nvectors, ogs.Nhalo,
+                  type, op, trans, gsh);
 
-  if (ogs.NhaloGather)
-    hostScatterKernel(ogs.NhaloGather, Nentries, Nvectors, stride, ogs.NhaloGather,
-                      ogs.haloGatherOffsets, ogs.haloGatherIds,
-                      type, op, ogs.hostBuf, v);
+  if (NhaloScatter) {
+    if (trans == ogs_trans)
+      hostScatterKernel(ogs.NhaloGather, Nentries, Nvectors, stride, ogs.Nhalo,
+                        ogs.haloGatherOffsets, ogs.haloGatherIds,
+                        type, op, ogs.hostBuf, v);
+    else
+      hostScatterKernel(ogs.NhaloScatter, Nentries, Nvectors, stride, ogs.Nhalo,
+                        ogs.haloScatterOffsets, ogs.haloScatterIds,
+                        type, op, ogs.hostBuf, v);
+  }
 
-  if (ogs.NlocalGather)
-    hostGatherScatterKernel(ogs.NlocalGather, Nentries, Nvectors, stride,
-                            ogs.localGatherOffsets, ogs.localGatherIds,
-                            type, op, v);
+  if (trans == ogs_notrans) {
+    if (ogs.NlocalFused)
+      hostGatherScatterKernel(ogs.NlocalFused, Nentries, Nvectors, stride,
+                              ogs.localFusedGatherOffsets,  ogs.localFusedGatherIds,
+                              ogs.localFusedScatterOffsets, ogs.localFusedScatterIds,
+                              type, op, v);
+  } else if (trans == ogs_trans) {
+    if (ogs.NlocalFused)
+      hostGatherScatterKernel(ogs.NlocalFused, Nentries, Nvectors, stride,
+                              ogs.localFusedScatterOffsets, ogs.localFusedScatterIds,
+                              ogs.localFusedGatherOffsets,  ogs.localFusedGatherIds,
+                              type, op, v);
+  } else { //ogs_sym
+    if (ogs.NlocalFusedSym)
+      hostGatherScatterKernel(ogs.NlocalFusedSym, Nentries, Nvectors, stride,
+                              ogs.localFusedOffsets, ogs.localFusedIds,
+                              ogs.localFusedOffsets, ogs.localFusedIds,
+                              type, op, v);
+  }
 }
 
 /*------------------------------------------------------------------------------
   The basic gatherScatter kernel
 ------------------------------------------------------------------------------*/
 #define DEFINE_GATHERSCATTER(T,OP)                                              \
-static void hostGatherScatterKernel_##T##_##OP(const dlong Ngather,             \
+static void hostGatherScatterKernel_##T##_##OP(const dlong N,                   \
                                                const int   Nentries,            \
                                                const int   Nvectors,            \
                                                const dlong stride,              \
                                                const dlong *gatherStarts,       \
                                                const dlong *gatherIds,          \
+                                               const dlong *scatterStarts,      \
+                                               const dlong *scatterIds,         \
                                                          T *q)                  \
 {                                                                               \
-  for(dlong g=0;g<Ngather*Nentries*Nvectors;++g){                               \
-    const int m     = g/(Ngather*Nentries);                                     \
-    const dlong vid = g%(Ngather*Nentries);                                     \
+  for(dlong n=0;n<N*Nentries*Nvectors;++n){                                     \
+    const int m     = n/(N*Nentries);                                           \
+    const dlong vid = n%(N*Nentries);                                           \
     const dlong gid = vid/Nentries;                                             \
     const int k     = vid%Nentries;                                             \
-    const dlong start = gatherStarts[gid];                                      \
-    const dlong end = gatherStarts[gid+1];                                      \
+    const dlong gstart = gatherStarts[gid];                                     \
+    const dlong gend = gatherStarts[gid+1];                                     \
     T gq = init_##T##_##OP;                                                     \
-    for(dlong n=start;n<end;++n){                                               \
-      const dlong id = gatherIds[n];                                            \
+    for(dlong g=gstart;g<gend;++g){                                             \
+      const dlong id = gatherIds[g];                                            \
       OGS_DO_##OP(gq,q[k+id*Nentries+m*stride]);                                \
     }                                                                           \
-    for(dlong n=start;n<end;++n){                                               \
-      const dlong id = gatherIds[n];                                            \
+    const dlong sstart = scatterStarts[gid];                                    \
+    const dlong send = scatterStarts[gid+1];                                    \
+    for(dlong g=sstart;g<send;++g){                                             \
+      const dlong id = gatherIds[g];                                            \
       q[k+id*Nentries+m*stride] = gq;                                           \
     }                                                                           \
   }                                                                             \
@@ -110,23 +147,27 @@ OGS_FOR_EACH_TYPE(DEFINE_PROCS)
     OGS_FOR_EACH_OP(T,SWITCH_OP_CASE) case ogs_op_n: break; }
 
 
-void hostGatherScatterKernel(const dlong Ngather,
+void hostGatherScatterKernel(const dlong N,
                              const int Nentries,
                              const int Nvectors,
                              const dlong stride,
                              dlong* gatherStarts,
                              dlong* gatherIds,
+                             dlong* scatterStarts,
+                             dlong* scatterIds,
                              const ogs_type type,
                              const ogs_op op,
                              void* v) {
 
 #define WITH_OP(T,OP)                                \
-  hostGatherScatterKernel_##T##_##OP(Ngather,        \
+  hostGatherScatterKernel_##T##_##OP(N,              \
                                      Nentries,       \
                                      Nvectors,       \
                                      stride,         \
                                      gatherStarts,   \
                                      gatherIds,      \
+                                     scatterStarts,  \
+                                     scatterIds,     \
                                      (T*)v);
 #define WITH_TYPE(T) SWITCH_OP(T,op)
 

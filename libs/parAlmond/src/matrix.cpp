@@ -291,7 +291,6 @@ void parCSR::haloSetup(hlong *colIds) {
   //make a halo exchange to share column entries and an ogs for gsops accross columns
   int verbose = 0;
   halo = halo_t::Setup(Ncols, colMap, comm, verbose, device);
-  ogs  =  ogs_t::Setup(Ncols, colMap, comm, verbose, device);
 
   //shift back to 0-indexed
   for (dlong n=0; n<Ncols; n++) colMap[n]=abs(colMap[n])-1;
@@ -576,7 +575,6 @@ parHYB::parHYB(parCSR *A): matrix_t(A->Nrows, A->Ncols) {
   colMap = A->colMap;
 
   halo = A->halo;
-  ogs = A->ogs;
   NlocalCols = A->NlocalCols;
 
   device = A->device;
@@ -601,9 +599,7 @@ parHYB::~parHYB() {
   free(colMap);
 
   if (halo) halo->Free();
-  if (ogs) ogs->Free();
   delete[] halo;
-  delete[] ogs;
 };
 
 void parHYB::syncToDevice() {

@@ -47,16 +47,12 @@ namespace ogs {
 #define DEFINE_SCATTER_KERNEL(T) \
   occa::kernel scatterKernel_##T;
 
-#define DEFINE_HALO_KERNEL(T) \
-  occa::kernel haloExtractKernel_##T;
-
 #define DEFINE_KERNELS(T)                        \
   OGS_FOR_EACH_OP(T,DEFINE_GATHERSCATTER_KERNEL) \
   OGS_FOR_EACH_OP(T,DEFINE_GATHER_KERNEL)        \
-  DEFINE_SCATTER_KERNEL(T)                       \
-  DEFINE_HALO_KERNEL(T)
+  DEFINE_SCATTER_KERNEL(T)
 
-  OGS_FOR_EACH_TYPE(DEFINE_KERNELS)
+OGS_FOR_EACH_TYPE(DEFINE_KERNELS)
 
 
 void initKernels(MPI_Comm& comm, occa::device& device) {
@@ -102,17 +98,10 @@ typedef int64_t long_long;
                                              "scatter_" STR(T),                    \
                                              kernelInfo, comm);                    \
 
-#define DEFINE_HALO_BUILD(T)                                                       \
-  haloExtractKernel_##T  = buildKernel(device,                                     \
-                                             DOGS "/okl/haloExtract.okl",          \
-                                             "haloExtract_" STR(T),                \
-                                             kernelInfo, comm);                    \
-
 #define DEFINE_BUILD(T)                         \
   OGS_FOR_EACH_OP(T,DEFINE_GATHERSCATTER_BUILD) \
   OGS_FOR_EACH_OP(T,DEFINE_GATHER_BUILD)        \
-  DEFINE_SCATTER_BUILD(T)                       \
-  DEFINE_HALO_BUILD(T)
+  DEFINE_SCATTER_BUILD(T)
 
   OGS_FOR_EACH_TYPE(DEFINE_BUILD)
 
@@ -130,14 +119,10 @@ void freeKernels() {
 #define DEFINE_SCATTER_FREE(T)       \
   scatterKernel_##T.free();
 
-#define DEFINE_HALO_FREE(T)          \
-  haloExtractKernel_##T.free();
-
 #define DEFINE_FREE(T)                         \
   OGS_FOR_EACH_OP(T,DEFINE_GATHERSCATTER_FREE) \
   OGS_FOR_EACH_OP(T,DEFINE_GATHER_FREE)        \
-  DEFINE_SCATTER_FREE(T)                       \
-  DEFINE_HALO_FREE(T)
+  DEFINE_SCATTER_FREE(T)
 
   OGS_FOR_EACH_TYPE(DEFINE_FREE)
 }

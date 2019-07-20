@@ -40,40 +40,58 @@ void hostGather(void* gv,
                 const dlong stride,
                 const ogs_type type,
                 const ogs_op op,
+                const ogs_transpose trans,
                 ogs_t &ogs){
 
   const size_t Nbytes = ogs_type_size[type];
 
+  if (trans == ogs_sym)
+    LIBP_ABORT(string("Calling ogs::Gather in ogs_sym mode not supported."))
+
   ogs.reallocHostBuffer(Nbytes*Nentries*Nvectors);
 
+  dlong NhaloGather = (trans == ogs_notrans) ? ogs.NhaloGather : ogs.NhaloScatter;
+
   // gather halo nodes
-  if (ogs.NhaloGather)
-    hostGatherKernel(ogs.NhaloGather, Nentries, Nvectors, stride, ogs.NhaloGather,
-                     ogs.haloGatherOffsets, ogs.haloGatherIds,
-                     type, op, v, ogs.hostBuf);
+  if (NhaloGather) {
+    if (trans == ogs_notrans)
+      hostGatherKernel(ogs.NhaloGather, Nentries, Nvectors, stride, ogs.Nhalo,
+                       ogs.haloGatherOffsets, ogs.haloGatherIds,
+                       type, op, v, ogs.hostBuf);
+    else
+      hostGatherKernel(ogs.NhaloScatter, Nentries, Nvectors, stride, ogs.Nhalo,
+                       ogs.haloScatterOffsets, ogs.haloScatterIds,
+                       type, op, v, ogs.hostBuf);
+  }
 
   // MPI based gather using libgs
-  gsGather(ogs.hostBuf, Nentries, Nvectors, ogs.NhaloGather,
-           type, op, ogs.gshNonSym);
+  gsGatherScatter(ogs.hostBuf, Nentries, Nvectors, ogs.Nhalo,
+                  type, op, trans, ogs.gsh);
 
-  if (ogs.NownedHalo)
+  if (ogs.NhaloGather)
     for (int i=0;i<Nvectors;i++)
       memcpy((char*)gv+ogs.NlocalGather*Nbytes*Nentries + gstride*Nbytes*i,
-             (char*)ogs.hostBuf+ogs.NhaloGather*Nbytes*Nentries*i,
-             ogs.NownedHalo*Nentries*Nbytes);
+             (char*)ogs.hostBuf+ogs.Nhalo*Nbytes*Nentries*i,
+             ogs.NhaloGather*Nentries*Nbytes);
 
   // gather interior nodes
-  if (ogs.NlocalGather)
-    hostGatherKernel(ogs.NlocalGather, Nentries, Nvectors, stride, gstride,
-                     ogs.localGatherOffsets, ogs.localGatherIds,
-                     type, op, v, gv);
+  if (ogs.Nlocal) {
+    if (trans == ogs_notrans)
+      hostGatherKernel(ogs.NlocalGather, Nentries, Nvectors, stride, gstride,
+                       ogs.localGatherOffsets, ogs.localGatherIds,
+                       type, op, v, gv);
+    else
+      hostGatherKernel(ogs.NlocalScatter, Nentries, Nvectors, stride, gstride,
+                       ogs.localScatterOffsets, ogs.localScatterIds,
+                       type, op, v, gv);
+  }
 }
 
 /*------------------------------------------------------------------------------
   The basic gather kernel
 ------------------------------------------------------------------------------*/
 #define DEFINE_GATHER(T,OP)                                                     \
-static void hostGatherKernel_##T##_##OP(const dlong Ngather,                    \
+static void hostGatherKernel_##T##_##OP(const dlong N,                          \
                                         const int   Nentries,                   \
                                         const int   Nvectors,                   \
                                         const dlong stride,                     \
@@ -83,16 +101,16 @@ static void hostGatherKernel_##T##_##OP(const dlong Ngather,                    
                                         const     T *q,                         \
                                                   T *gatherq)                   \
 {                                                                               \
-  for(dlong g=0;g<Ngather*Nentries*Nvectors;++g){                               \
-    const int m     = g/(Ngather*Nentries);                                     \
-    const dlong vid = g%(Ngather*Nentries);                                     \
+  for(dlong n=0;n<N*Nentries*Nvectors;++n){                                     \
+    const int m     = n/(N*Nentries);                                           \
+    const dlong vid = n%(N*Nentries);                                           \
     const dlong gid = vid/Nentries;                                             \
     const int k     = vid%Nentries;                                             \
     const dlong start = gatherStarts[gid];                                      \
     const dlong end = gatherStarts[gid+1];                                      \
     T gq = init_##T##_##OP;                                                     \
-    for(dlong n=start;n<end;++n){                                               \
-      const dlong id = gatherIds[n];                                            \
+    for(dlong g=start;g<end;++g){                                               \
+      const dlong id = gatherIds[g];                                            \
       OGS_DO_##OP(gq,q[k+id*Nentries+m*stride]);                                \
     }                                                                           \
     gatherq[k+gid*Nentries+m*gstride] = gq;                                     \
@@ -113,7 +131,7 @@ OGS_FOR_EACH_TYPE(DEFINE_PROCS)
     OGS_FOR_EACH_OP(T,SWITCH_OP_CASE) case ogs_op_n: break; }
 
 
-void hostGatherKernel(const dlong Ngather,
+void hostGatherKernel(const dlong N,
                       const int Nentries,
                       const int Nvectors,
                       const dlong stride,
@@ -126,7 +144,7 @@ void hostGatherKernel(const dlong Ngather,
                       void *gv) {
 
 #define WITH_OP(T,OP)                         \
-  hostGatherKernel_##T##_##OP(Ngather,        \
+  hostGatherKernel_##T##_##OP(N,              \
                               Nentries,       \
                               Nvectors,       \
                               stride,         \

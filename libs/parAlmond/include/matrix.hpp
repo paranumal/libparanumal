@@ -164,7 +164,6 @@ public:
   hlong *colMap=NULL;
 
   halo_t *halo = NULL;
-  ogs_t *ogs = NULL;
   dlong NlocalCols = 0;
 
   occa::device device;
@@ -219,7 +218,6 @@ public:
   hlong *colMap=NULL;
 
   halo_t *halo = NULL;
-  ogs_t *ogs = NULL;
   dlong NlocalCols = 0;
 
   occa::device device;

@@ -48,10 +48,8 @@ public:
 
   bool gatherLevel;
   ogs_t *ogs;
-  dfloat* gatherWeight;
-  occa::memory o_gatherWeight;
-  dfloat *Gx, *Sx;
-  occa::memory o_Sx, o_Gx;
+  dfloat *Gx;
+  occa::memory o_Gx;
 
   MPI_Comm comm;
   occa::device device;

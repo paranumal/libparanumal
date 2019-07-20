@@ -37,24 +37,36 @@ void occaGatherScatterStart(occa::memory& o_v,
                             const dlong stride,
                             const ogs_type type,
                             const ogs_op op,
+                            const ogs_transpose trans,
                             ogs_t &ogs){
 
   const size_t Nbytes = ogs_type_size[type];
 
   ogs.reallocOccaBuffer(Nbytes*Nentries*Nvectors);
 
+  dlong NhaloGather = (trans == ogs_notrans) ? ogs.NhaloGather : ogs.NhaloScatter;
+
   // gather halo nodes on device
-  if (ogs.NhaloGather) {
-    occaGatherKernel(ogs.NhaloGather, Nentries, Nvectors, stride, ogs.NhaloGather,
-                     ogs.o_haloGatherOffsets, ogs.o_haloGatherIds,
-                     type, op, o_v, ogs.o_haloBuf);
+  if (NhaloGather) {
+    if (trans == ogs_notrans)
+      occaGatherKernel(ogs.NhaloGather, Nentries, Nvectors, stride, ogs.Nhalo,
+                       ogs.o_haloGatherOffsets, ogs.o_haloGatherIds,
+                       type, op, o_v, ogs.o_haloBuf);
+    else
+      occaGatherKernel(ogs.NhaloScatter, Nentries, Nvectors, stride, ogs.Nhalo,
+                       ogs.o_haloScatterOffsets, ogs.o_haloScatterIds,
+                       type, op, o_v, ogs.o_haloBuf);
 
     ogs.device.finish();
     occa::stream currentStream = ogs.device.getStream();
     ogs.device.setStream(dataStream);
-    ogs.o_haloBuf.copyTo(ogs.haloBuf,
-                         ogs.NhaloGather*Nbytes*Nentries*Nvectors,
-                         0, "async: true");
+
+    for (int i=0;i<Nvectors;i++)
+      ogs.o_haloBuf.copyTo((char*)ogs.haloBuf + ogs.Nhalo*Nbytes*Nentries*i,
+                           NhaloGather*Nbytes*Nentries,
+                           ogs.Nhalo*Nbytes*Nentries*i,
+                           "async: true");
+
     ogs.device.setStream(currentStream);
   }
 }
@@ -66,40 +78,68 @@ void occaGatherScatterFinish(occa::memory& o_v,
                              const dlong stride,
                              const ogs_type type,
                              const ogs_op op,
+                             const ogs_transpose trans,
                              ogs_t &ogs){
 
   const size_t Nbytes = ogs_type_size[type];
 
-  if(ogs.NlocalGather)
-    occaGatherScatterKernel(ogs.NlocalGather, Nentries, Nvectors, stride,
-                            ogs.o_localGatherOffsets, ogs.o_localGatherIds,
-                            type, op, o_v);
+  void* gsh = (trans == ogs_sym) ? ogs.gshSym : ogs.gsh;
+
+  if (trans == ogs_notrans) {
+    if(ogs.NlocalFused)
+      occaGatherScatterKernel(ogs.NlocalFused, Nentries, Nvectors, stride,
+                              ogs.o_localFusedGatherOffsets,  ogs.o_localFusedGatherIds,
+                              ogs.o_localFusedScatterOffsets, ogs.o_localFusedScatterIds,
+                              type, op, o_v);
+  } else if (trans == ogs_trans) {
+    if(ogs.NlocalFused)
+      occaGatherScatterKernel(ogs.NlocalFused, Nentries, Nvectors, stride,
+                              ogs.o_localFusedScatterOffsets, ogs.o_localFusedScatterIds,
+                              ogs.o_localFusedGatherOffsets,  ogs.o_localFusedGatherIds,
+                              type, op, o_v);
+  } else {//ogs_sym
+    if(ogs.NlocalFusedSym)
+      occaGatherScatterKernel(ogs.NlocalFusedSym, Nentries, Nvectors, stride,
+                              ogs.o_localFusedOffsets, ogs.o_localFusedIds,
+                              ogs.o_localFusedOffsets, ogs.o_localFusedIds,
+                              type, op, o_v);
+  }
 
   occa::stream currentStream = ogs.device.getStream();
-  if (ogs.NhaloGather) {
+  if (ogs.Nhalo) {
     ogs.device.setStream(dataStream);
     ogs.device.finish();
     ogs.device.setStream(currentStream);
   }
 
   // MPI based gather scatter using libgs
-  gsGatherScatter(ogs.haloBuf, Nentries, Nvectors, ogs.NhaloGather,
-                  type, op, ogs.gshSym);
+  gsGatherScatter(ogs.haloBuf, Nentries, Nvectors, ogs.Nhalo,
+                  type, op, trans, gsh);
 
-  if (ogs.NhaloGather) {
+  dlong NhaloScatter = (trans == ogs_trans) ? ogs.NhaloGather : ogs.NhaloScatter;
+
+  if (NhaloScatter) {
     ogs.device.setStream(dataStream);
 
-    // copy totally gather halo data back from HOST to DEVICE
-    ogs.o_haloBuf.copyFrom(ogs.haloBuf,
-                           ogs.NhaloGather*Nbytes*Nentries*Nvectors,
-                           0, "async: true");
+    // copy gatherScattered halo data back from HOST to DEVICE
+    for (int i=0;i<Nvectors;i++)
+      ogs.o_haloBuf.copyFrom((char*)ogs.haloBuf + ogs.Nhalo*Nbytes*Nentries*i,
+                             NhaloScatter*Nbytes*Nentries,
+                             ogs.Nhalo*Nbytes*Nentries*i,
+                             "async: true");
+
     ogs.device.finish();
     ogs.device.setStream(currentStream);
 
     // scatter back to local nodes
-    occaScatterKernel(ogs.NhaloGather, Nentries, Nvectors, stride, ogs.NhaloGather,
-                      ogs.o_haloGatherOffsets, ogs.o_haloGatherIds,
-                      type, op, ogs.o_haloBuf, o_v);
+    if (trans == ogs_trans)
+      occaScatterKernel(ogs.NhaloGather, Nentries, Nvectors, stride, ogs.Nhalo,
+                        ogs.o_haloGatherOffsets, ogs.o_haloGatherIds,
+                        type, op, ogs.o_haloBuf, o_v);
+    else
+      occaScatterKernel(ogs.NhaloScatter, Nentries, Nvectors, stride, ogs.Nhalo,
+                        ogs.o_haloScatterOffsets, ogs.o_haloScatterIds,
+                        type, op, ogs.o_haloBuf, o_v);
   }
 }
 
@@ -113,23 +153,27 @@ void occaGatherScatterFinish(occa::memory& o_v,
     OGS_FOR_EACH_OP(T,SWITCH_OP_CASE) case ogs_op_n: break; }
 
 
-void occaGatherScatterKernel(const dlong Ngather,
+void occaGatherScatterKernel(const dlong N,
                              const int Nentries,
                              const int Nvectors,
                              const dlong stride,
                              occa::memory& o_gatherStarts,
                              occa::memory& o_gatherIds,
+                             occa::memory& o_scatterStarts,
+                             occa::memory& o_scatterIds,
                              const ogs_type type,
                              const ogs_op op,
                              occa::memory&  o_v) {
 
-#define WITH_OP(T,OP)                            \
-  gatherScatterKernel_##T##_##OP(Ngather,        \
-                                 Nentries,       \
-                                 Nvectors,       \
-                                 stride,         \
-                                 o_gatherStarts, \
-                                 o_gatherIds,    \
+#define WITH_OP(T,OP)                             \
+  gatherScatterKernel_##T##_##OP(N,               \
+                                 Nentries,        \
+                                 Nvectors,        \
+                                 stride,          \
+                                 o_gatherStarts,  \
+                                 o_gatherIds,     \
+                                 o_scatterStarts, \
+                                 o_scatterIds,    \
                                  o_v);
 #define WITH_TYPE(T) SWITCH_OP(T,op)
 

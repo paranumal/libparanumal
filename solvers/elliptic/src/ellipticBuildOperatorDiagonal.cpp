@@ -74,7 +74,7 @@ void elliptic_t::BuildOperatorDiagonal(dfloat *diagA){
     }
 
     //gatherscatter the diagonal to assemble it
-    ogsMasked->GatherScatter(diagA, ogs_dfloat, ogs_add);
+    ogsMasked->GatherScatter(diagA, ogs_dfloat, ogs_add, ogs_sym);
   }
   if(mesh.rank==0) printf("done.\n");
 }

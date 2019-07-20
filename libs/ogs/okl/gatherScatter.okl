@@ -30,31 +30,33 @@ SOFTWARE.
   The basic gather-scatter kernel
 ------------------------------------------------------------------------------*/
 #define DEFINE_GATHERSCATTER(T,OP)                                              \
-@kernel void gatherScatter_##T##_##OP(const dlong Ngather,                      \
+@kernel void gatherScatter_##T##_##OP(const dlong N,                            \
                                       const int   Nentries,                     \
                                       const int   Nvectors,                     \
                                       const dlong stride,                       \
                                       @restrict const dlong *gatherStarts,      \
                                       @restrict const dlong *gatherIds,         \
+                                      @restrict const dlong *scatterStarts,     \
+                                      @restrict const dlong *scatterIds,        \
                                       @restrict           T *q)                 \
 {                                                                               \
-  for(dlong g=0;g<Ngather*Nentries*Nvectors;++g;@tile(256,@outer,@inner)){      \
-    const int m     = g/(Ngather*Nentries);                                     \
-    const dlong vid = g%(Ngather*Nentries);                                     \
+  for(dlong n=0;n<N*Nentries*Nvectors;++n;@tile(256,@outer,@inner)){            \
+    const int m     = n/(N*Nentries);                                           \
+    const dlong vid = n%(N*Nentries);                                           \
     const dlong gid = vid/Nentries;                                             \
     const int k     = vid%Nentries;                                             \
-    const dlong start = gatherStarts[gid];                                      \
-    const dlong end = gatherStarts[gid+1];                                      \
-    if((start+1)!=end){                                                         \
-      T gq = init_##T##_##OP;                                                   \
-      for(dlong n=start;n<end;++n){                                             \
-        const dlong id = gatherIds[n];                                          \
-        OGS_DO_##OP(gq,q[k+id*Nentries+m*stride]);                              \
-      }                                                                         \
-      for(dlong n=start;n<end;++n){                                             \
-        const dlong id = gatherIds[n];                                          \
-        q[k+id*Nentries+m*stride] = gq;                                         \
-      }                                                                         \
+    dlong gstart = gatherStarts[gid];                                           \
+    dlong gend = gatherStarts[gid+1];                                           \
+    T gq = init_##T##_##OP;                                                     \
+    for(dlong n=gstart;n<gend;++n){                                             \
+      const dlong id = gatherIds[n];                                            \
+      OGS_DO_##OP(gq,q[k+id*Nentries+m*stride]);                                \
+    }                                                                           \
+    dlong sstart = scatterStarts[gid];                                          \
+    dlong send = scatterStarts[gid+1];                                          \
+    for(dlong n=sstart;n<send;++n){                                             \
+      const dlong id = scatterIds[n];                                           \
+      q[k+id*Nentries+m*stride] = gq;                                           \
     }                                                                           \
   }                                                                             \
 }
@@ -63,7 +65,7 @@ SOFTWARE.
   The basic gather kernel
 ------------------------------------------------------------------------------*/
 #define DEFINE_GATHER(T,OP)                                                     \
-@kernel void gather_##T##_##OP(const dlong Ngather,                             \
+@kernel void gather_##T##_##OP(const dlong N,                                   \
                                const int   Nentries,                            \
                                const int   Nvectors,                            \
                                const dlong stride,                              \
@@ -73,9 +75,9 @@ SOFTWARE.
                                @restrict const     T *q,                        \
                                @restrict           T *gatherq)                  \
 {                                                                               \
-  for(dlong g=0;g<Ngather*Nentries*Nvectors;++g;@tile(256,@outer,@inner)){      \
-    const int m     = g/(Ngather*Nentries);                                     \
-    const dlong vid = g%(Ngather*Nentries);                                     \
+  for(dlong n=0;n<N*Nentries*Nvectors;++n;@tile(256,@outer,@inner)){            \
+    const int m     = n/(N*Nentries);                                           \
+    const dlong vid = n%(N*Nentries);                                           \
     const dlong gid = vid/Nentries;                                             \
     const int k     = vid%Nentries;                                             \
     const dlong start = gatherStarts[gid];                                      \
@@ -93,26 +95,26 @@ SOFTWARE.
   The basic scatter kernel
 ------------------------------------------------------------------------------*/
 #define DEFINE_SCATTER(T)                                                       \
-@kernel void scatter_##T(const dlong Ngather,                                   \
+@kernel void scatter_##T(const dlong N,                                         \
                          const int   Nentries,                                  \
                          const int   Nvectors,                                  \
                          const dlong gstride,                                   \
                          const dlong stride,                                    \
-                         @restrict const dlong *gatherStarts,                   \
-                         @restrict const dlong *gatherIds,                      \
+                         @restrict const dlong *scatterStarts,                  \
+                         @restrict const dlong *scatterIds,                     \
                          @restrict const     T *gatherq,                        \
                          @restrict           T *q)                              \
 {                                                                               \
-  for(dlong g=0;g<Ngather*Nentries*Nvectors;++g;@tile(256,@outer,@inner)){      \
-    const int m     = g/(Ngather*Nentries);                                     \
-    const dlong vid = g%(Ngather*Nentries);                                     \
+  for(dlong n=0;n<N*Nentries*Nvectors;++n;@tile(256,@outer,@inner)){            \
+    const int m     = n/(N*Nentries);                                           \
+    const dlong vid = n%(N*Nentries);                                           \
     const dlong gid = vid/Nentries;                                             \
     const int k     = vid%Nentries;                                             \
     const T gq = gatherq[k+gid*Nentries+m*gstride];                             \
-    const dlong start = gatherStarts[gid];                                      \
-    const dlong end = gatherStarts[gid+1];                                      \
+    const dlong start = scatterStarts[gid];                                     \
+    const dlong end = scatterStarts[gid+1];                                     \
     for(dlong n=start;n<end;++n){                                               \
-      const dlong id = gatherIds[n];                                            \
+      const dlong id = scatterIds[n];                                           \
       q[k+id*Nentries+m*stride] = gq;                                           \
     }                                                                           \
   }                                                                             \

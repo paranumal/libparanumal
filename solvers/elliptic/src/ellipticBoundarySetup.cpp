@@ -67,7 +67,7 @@ void elliptic_t::BoundarySetup(){
       }
     }
   }
-  mesh.ogs->GatherScatter(mapB, ogs_int, ogs_min);
+  mesh.ogs->GatherScatter(mapB, ogs_int, ogs_min, ogs_sym);
 
   //use the bc flags to find masked ids
   Nmasked = 0;
@@ -94,8 +94,9 @@ void elliptic_t::BoundarySetup(){
   for (dlong n=0;n<Nmasked;n++)
     maskedGlobalIds[maskIds[n]] = 0;
 
-  //use the masked ids to make another gs handle
+  //use the masked ids to make another gs handle (signed so the gather is defined)
   int verbose = 0;
+  ogs_t::Unique(maskedGlobalIds, mesh.Nelements*mesh.Np, comm);     //flag a unique node in every gather node
   ogsMasked = ogs_t::Setup(mesh.Nelements*mesh.Np, maskedGlobalIds,
                            comm, verbose, device);
 
@@ -109,11 +110,11 @@ void elliptic_t::BoundarySetup(){
   weightG = (dfloat*) calloc(ogsMasked->Ngather, sizeof(dfloat));
   for(dlong n=0;n<Ntotal;++n) weight[n] = 1.0;
 
-  ogsMasked->Gather(weightG, weight, ogs_dfloat, ogs_add);
+  ogsMasked->Gather(weightG, weight, ogs_dfloat, ogs_add, ogs_trans);
   for(dlong n=0;n<ogsMasked->Ngather;++n)
     if (weightG[n]) weightG[n] = 1./weightG[n];
 
-  ogsMasked->Scatter(weight, weightG, ogs_dfloat, ogs_add);
+  ogsMasked->Scatter(weight, weightG, ogs_dfloat, ogs_add, ogs_notrans);
 
   o_weight  = device.malloc(Ntotal*sizeof(dfloat), weight);
   o_weightG = device.malloc(ogsMasked->Ngather*sizeof(dfloat), weightG);
@@ -138,8 +139,8 @@ void elliptic_t::BoundarySetup(){
   maskedGlobalNumbering = (hlong *) calloc(Ntotal,sizeof(hlong));
   maskedGlobalOwners    = (int *)   calloc(Ntotal,sizeof(int));
   for (dlong n=0;n<Ntotal;n++) maskedGlobalNumbering[n] = -1;
-  ogsMasked->Scatter(maskedGlobalNumbering, globalIds, ogs_hlong, ogs_add);
-  ogsMasked->Scatter(maskedGlobalOwners, owner, ogs_int, ogs_add);
+  ogsMasked->Scatter(maskedGlobalNumbering, globalIds, ogs_hlong, ogs_add, ogs_notrans);
+  ogsMasked->Scatter(maskedGlobalOwners, owner, ogs_int, ogs_add, ogs_notrans);
 
   free(globalIds); free(owner);
 }

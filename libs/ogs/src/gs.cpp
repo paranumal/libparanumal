@@ -44,77 +44,24 @@ void gsGatherScatter(void* v,
                      const dlong stride,
                      const ogs_type type,
                      const ogs_op op,
-                     void *gshSym){
+                     const ogs_transpose trans,
+                     void *gsh){
 
   const gs_op  gsop  = ogs_gs_op_map[op];
   const gs_dom gsdom = ogs_gs_type_map[type];
-
+  const int gstrans  = (trans == ogs_notrans) ? 0 : 1;
   //call libgs (symmetric behaviour)
   if (Nentries==1 && Nvectors==1)
-    gs(v, gsdom, gsop, 0, (gs_data*)gshSym, 0);
+    gs(v, gsdom, gsop, gstrans, (gs_data*)gsh, 0);
   else if (Nvectors==1)
-    gs_vec(v, Nentries, gsdom, gsop, 0, (gs_data*)gshSym, 0);
+    gs_vec(v, Nentries, gsdom, gsop, gstrans, (gs_data*)gsh, 0);
   else if (Nentries==1) {
     const size_t Nbytes = ogs_type_size[type];
     void* V[Nvectors];
     for (int i=0;i<Nvectors;i++)
       V[i] = (char*)v + i*stride*Nbytes;
 
-    gs_many(V, Nvectors, gsdom, gsop, 0, (gs_data*)gshSym, 0);
-  }
-}
-
-// MPI based gather using libgs
-void gsGather(void* v,
-              const dlong Nentries,
-              const dlong Nvectors,
-              const dlong stride,
-              const ogs_type type,
-              const ogs_op op,
-              void *gshNonSym){
-
-  const gs_op  gsop  = ogs_gs_op_map[op];
-  const gs_dom gsdom = ogs_gs_type_map[type];
-
-  //call libgs (non-symmetric behaviour)
-  if (Nentries==1 && Nvectors==1)
-    gs(v, gsdom, gsop, 1, (gs_data*)gshNonSym, 0);
-  else if (Nvectors==1)
-    gs_vec(v, Nentries, gsdom, gsop, 1, (gs_data*)gshNonSym, 0);
-  else if (Nentries==1) {
-    const size_t Nbytes = ogs_type_size[type];
-    void* V[Nvectors];
-    for (int i=0;i<Nvectors;i++)
-      V[i] = (char*)v + i*stride*Nbytes;
-
-    gs_many(V, Nvectors, gsdom, gsop, 1, (gs_data*)gshNonSym, 0);
-  }
-}
-
-// MPI based scatter using libgs
-void gsScatter(void* v,
-               const dlong Nentries,
-               const dlong Nvectors,
-               const dlong stride,
-               const ogs_type type,
-               const ogs_op op,
-               void *gshNonSym){
-
-  const gs_op  gsop  = ogs_gs_op_map[op];
-  const gs_dom gsdom = ogs_gs_type_map[type];
-
-  //call libgs (non-symmetric behaviour)
-  if (Nentries==1 && Nvectors==1)
-    gs(v, gsdom, gsop, 0, (gs_data*)gshNonSym, 0);
-  else if (Nvectors==1)
-    gs_vec(v, Nentries, gsdom, gsop, 0, (gs_data*)gshNonSym, 0);
-  else if (Nentries==1) {
-    const size_t Nbytes = ogs_type_size[type];
-    void* V[Nvectors];
-    for (int i=0;i<Nvectors;i++)
-      V[i] = (char*)v + i*stride*Nbytes;
-
-    gs_many(V, Nvectors, gsdom, gsop, 0, (gs_data*)gshNonSym, 0);
+    gs_many(V, Nvectors, gsdom, gsop, gstrans, (gs_data*)gsh, 0);
   }
 }
 

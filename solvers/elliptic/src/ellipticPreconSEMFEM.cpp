@@ -37,28 +37,23 @@ void SEMFEMPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
     elliptic.linAlg.amxpy(Ntotal, 1.0, elliptic.o_weight, o_r, 0.0, o_Mr);
 
     SEMFEMInterpKernel(mesh.Nelements,mesh.o_SEMFEMAnterp,o_Mr,o_rFEM);
-    FEMogs->Gather(o_GrFEM, o_rFEM, ogs_dfloat, ogs_add);
+    FEMogs->Gather(o_GrFEM, o_rFEM, ogs_dfloat, ogs_add, ogs_trans);
 
     parAlmond::Precon(parAlmondHandle, o_GzFEM, o_GrFEM);
 
-    FEMogs->Scatter(o_zFEM, o_GzFEM, ogs_dfloat, ogs_add);
+    FEMogs->Scatter(o_zFEM, o_GzFEM, ogs_dfloat, ogs_add, ogs_notrans);
     SEMFEMAnterpKernel(mesh.Nelements,mesh.o_SEMFEMAnterp,o_zFEM,o_Mr);
 
     // Mr = invDegree.*Mr
     elliptic.linAlg.amx(Ntotal, 1.0, elliptic.o_weight, o_Mr);
 
-    elliptic.ogsMasked->GatherScatter(o_Mr, ogs_dfloat, ogs_add);
+    elliptic.ogsMasked->GatherScatter(o_Mr, ogs_dfloat, ogs_add, ogs_sym);
 
   } else {
 
-    FEMogs->Gather(o_rhsG, o_r, ogs_dfloat, ogs_add);
-
-    dlong N = FEMogs->Ngather;
-    elliptic.linAlg.amx(N, 1.0, o_weightG, o_rhsG);
-
+    FEMogs->Gather(o_rhsG, o_r, ogs_dfloat, ogs_add, ogs_notrans);
     parAlmond::Precon(parAlmondHandle, o_xG, o_rhsG);
-
-    FEMogs->Scatter(o_Mr, o_xG, ogs_dfloat, ogs_add);
+    FEMogs->Scatter(o_Mr, o_xG, ogs_dfloat, ogs_add, ogs_notrans);
   }
 
   if (elliptic.Nmasked)
@@ -108,7 +103,7 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
         }
       }
     }
-    ogs->GatherScatter(mapB, ogs_int, ogs_min);
+    ogs->GatherScatter(mapB, ogs_int, ogs_min, ogs_sym);
 
     //use the bc flags to find masked ids
     for (dlong n=0;n<mesh.Nelements*mesh.NpFEM;n++)
@@ -125,6 +120,7 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
 
   //build masked gs handle to gather from enriched sem nodes to assembled fem problem
   int verbose = 0;
+  ogs_t::Unique(maskedGlobalIds, Ntotal, mesh.comm);     //flag a unique node in every gather node
   FEMogs = ogs_t::Setup(Ntotal, maskedGlobalIds, mesh.comm, verbose, mesh.device);
 
   //make a map from the fem mesh's nodes to the (enriched) sem nodes
@@ -170,18 +166,6 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
     }
   }
 
-  //make a gathered weight vector
-  dfloat *weight  = (dfloat*) calloc(Ntotal, sizeof(dfloat));
-  weightG = (dfloat*) calloc(FEMogs->Ngather, sizeof(dfloat));
-  for(dlong n=0;n<Ntotal;++n) weight[n] = 1.0;
-
-  FEMogs->Gather(weightG, weight, ogs_dfloat, ogs_add);
-  for(dlong n=0;n<FEMogs->Ngather;++n)
-    if (weightG[n]) weightG[n] = 1./weightG[n];
-
-  o_weightG = mesh.device.malloc(FEMogs->Ngather*sizeof(dfloat), weightG);
-  free(weight);
-
   //make a fem elliptic solver
   femElliptic = new elliptic_t(*femMesh, elliptic.linAlg, elliptic.lambda);
   femElliptic->ogsMasked = FEMogs; //only for getting Ngather when building matrix
@@ -211,8 +195,8 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
   hlong* maskedGlobalNumbering = (hlong *) calloc(Ntotal,sizeof(hlong));
   int  * maskedGlobalOwners    = (int *) calloc(Ntotal,sizeof(int));
   for (dlong n=0;n<Ntotal;n++) maskedGlobalNumbering[n] = -1;
-  FEMogs->Scatter(maskedGlobalNumbering, globalIds2, ogs_hlong, ogs_add);
-  FEMogs->Scatter(maskedGlobalOwners, owner, ogs_int, ogs_add);
+  FEMogs->Scatter(maskedGlobalNumbering, globalIds2, ogs_hlong, ogs_add, ogs_notrans);
+  FEMogs->Scatter(maskedGlobalOwners, owner, ogs_int, ogs_add, ogs_notrans);
   free(globalIds2); free(owner);
 
   //transfer the consecutive global numbering to the fem mesh

@@ -187,9 +187,7 @@ void coarseSolver::syncToDevice() {}
 void coarseSolver::solve(dfloat *rhs, dfloat *x) {
 
   if (gatherLevel) {
-    //weight
-    vectorDotStar(ogs->N, 1.0, o_gatherWeight, rhs, 0.0, Sx);
-    ogs->Gather(Gx, Sx, ogs_dfloat, ogs_add);
+    ogs->Gather(Gx, rhs, ogs_dfloat, ogs_add, ogs_notrans);
 
     //gather the full vector
     MPI_Allgatherv(Gx,                  N,                MPI_DFLOAT,
@@ -197,7 +195,6 @@ void coarseSolver::solve(dfloat *rhs, dfloat *x) {
 
     //multiply by local part of the exact matrix inverse
     // #pragma omp parallel for
-
     for (int n=0;n<N;n++) {
 #if 1
       xLocal[n] = 0.;
@@ -210,7 +207,7 @@ void coarseSolver::solve(dfloat *rhs, dfloat *x) {
 #endif
 
     }
-    ogs->Scatter(x, xLocal, ogs_dfloat, ogs_add);
+    ogs->Scatter(x, xLocal, ogs_dfloat, ogs_add, ogs_notrans);
 
   } else {
     //gather the full vector
@@ -220,8 +217,7 @@ void coarseSolver::solve(dfloat *rhs, dfloat *x) {
     printf("HACKING COARSE GRID\n");
 
     //multiply by local part of the exact matrix inverse
-   // #pragma omp parallel for
-
+    // #pragma omp parallel for
     for (int n=0;n<N;n++) {
 #if 1
       x[n] = 0.;
@@ -241,15 +237,11 @@ void coarseSolver::solve(dfloat *rhs, dfloat *x) {
 void coarseSolver::solve(occa::memory o_rhs, occa::memory o_x) {
 
   if (gatherLevel) {
-    //weight
-    vectorDotStar(ogs->N, 1.0, o_gatherWeight, o_rhs, 0.0, o_Sx);
-    ogs->Gather(o_Gx, o_Sx, ogs_dfloat, ogs_add);
+    ogs->Gather(o_Gx, o_rhs, ogs_dfloat, ogs_add, ogs_notrans);
 
-    if(N)
-      o_Gx.copyTo(rhsLocal, N*sizeof(dfloat), 0);
+    if(N) o_Gx.copyTo(rhsLocal, N*sizeof(dfloat), 0);
   } else {
-    if(N)
-      o_rhs.copyTo(rhsLocal, N*sizeof(dfloat), 0);
+    if(N) o_rhs.copyTo(rhsLocal, N*sizeof(dfloat), 0);
   }
 
   //gather the full vector
@@ -266,12 +258,10 @@ void coarseSolver::solve(occa::memory o_rhs, occa::memory o_x) {
   }
 
   if (gatherLevel) {
-    if(N)
-      o_Gx.copyFrom(xLocal, N*sizeof(dfloat), 0);
-    ogs->Scatter(o_x, o_Gx, ogs_dfloat, ogs_add);
+    if(N) o_Gx.copyFrom(xLocal, N*sizeof(dfloat), 0);
+    ogs->Scatter(o_x, o_Gx, ogs_dfloat, ogs_add, ogs_notrans);
   } else {
-    if(N)
-      o_x.copyFrom(xLocal, N*sizeof(dfloat), 0);
+    if(N) o_x.copyFrom(xLocal, N*sizeof(dfloat), 0);
   }
 }
 

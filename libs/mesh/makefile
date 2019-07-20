@@ -81,4 +81,4 @@ endif
 
 #cleanup
 clean:
-	rm -f *.o ../libmesh.a
+	rm -f src/*.o ../libmesh.a
