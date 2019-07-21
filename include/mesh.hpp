@@ -78,6 +78,7 @@ public:
 
   // MPI halo exchange info
   halo_t *halo;            // halo exchange pointer
+  halo_t *traceHalo;       // trace halo exchange pointer
   dlong NinternalElements; // number of elements that can update without halo exchange
   dlong NhaloElements;     // number of elements that cannot update without halo exchange
   dlong  totalHaloPairs;   // number of elements to be received in halo exchange
@@ -309,6 +310,9 @@ public:
   // setup halo region
   void HaloSetup();
 
+  // setup trace halo
+  void HaloTraceSetup();
+
   /* build global connectivity in parallel */
   void ParallelConnectNodes();
 
@@ -325,14 +329,6 @@ public:
                    dfloat finalTime);
 
   virtual void OccaSetup();
-
-  void HaloExchange      (void  *v, const int Nentries, const char *type);
-  void HaloExchangeStart (void  *v, const int Nentries, const char *type);
-  void HaloExchangeFinish(void  *v, const int Nentries, const char *type);
-
-  void HaloExchange      (occa::memory &o_v, const int Nentries, const char *type);
-  void HaloExchangeStart (occa::memory &o_v, const int Nentries, const char *type);
-  void HaloExchangeFinish(occa::memory &o_v, const int Nentries, const char *type);
 
   // print out parallel partition i
   void PrintPartitionStatistics();

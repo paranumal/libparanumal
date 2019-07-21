@@ -47,6 +47,8 @@ public:
 
   timeStepper_t* timeStepper;
 
+  halo_t* traceHalo;
+
   dfloat *q;
   occa::memory o_q;
 
