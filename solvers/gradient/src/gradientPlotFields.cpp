@@ -24,13 +24,15 @@ SOFTWARE.
 
 */
 
-#include "acoustics.hpp"
+#include "gradient.hpp"
 
 // interpolate data to plot nodes and save to file (one per process
-void acoustics_t::PlotFields(dfloat* Q, char *fileName){
+void gradient_t::PlotFields(){
 
   FILE *fp;
 
+  string fname = "gradient.vtu";
+  const char* fileName = fname.c_str();
   fp = fopen(fileName, "w");
 
   fprintf(fp, "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"BigEndian\">\n");
@@ -62,44 +64,41 @@ void acoustics_t::PlotFields(dfloat* Q, char *fileName){
   fprintf(fp, "      </Points>\n");
 
 
-  // write out pressure
+  // write out q
   fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
-  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Density\" Format=\"ascii\">\n");
+  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"q\" Format=\"ascii\">\n");
   for(dlong e=0;e<mesh.Nelements;++e){
     for(int n=0;n<mesh.plotNp;++n){
-      dfloat plotpn = 0;
+      dfloat plotqn = 0;
       for(int m=0;m<mesh.Np;++m){
-        dfloat pm = Q[e*mesh.Np*Nfields+m];
-        plotpn += mesh.plotInterp[n*mesh.Np+m]*pm;
+        dfloat qm = q[e*mesh.Np+m];
+        plotqn += mesh.plotInterp[n*mesh.Np+m]*qm;
       }
 
       fprintf(fp, "       ");
-      fprintf(fp, "%g\n", plotpn);
+      fprintf(fp, "%g\n", plotqn);
     }
   }
   fprintf(fp, "       </DataArray>\n");
 
-  // write out velocity
-  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"%d\" Format=\"ascii\">\n", mesh.dim);
+  // write out gradq
+  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Gradient\" NumberOfComponents=\"%d\" Format=\"ascii\">\n", Nfields);
   for(dlong e=0;e<mesh.Nelements;++e){
     for(int n=0;n<mesh.plotNp;++n){
       dfloat plotun = 0, plotvn = 0, plotwn = 0;
       for(int m=0;m<mesh.Np;++m){
-        // dfloat rm = Q[e*mesh.Np*Nfields+m           ];
-        dfloat um = Q[e*mesh.Np*Nfields+m+mesh.Np  ];
-        dfloat vm = Q[e*mesh.Np*Nfields+m+mesh.Np*2];
-        //
+        dfloat um = gradq[e*mesh.Np*Nfields+m+mesh.Np*0];
+        dfloat vm = gradq[e*mesh.Np*Nfields+m+mesh.Np*1];
+
         plotun += mesh.plotInterp[n*mesh.Np+m]*um;
         plotvn += mesh.plotInterp[n*mesh.Np+m]*vm;
 
         if(mesh.dim==3){
-          dfloat wm = Q[e*mesh.Np*Nfields+m+mesh.Np*3];
-
+          dfloat wm = gradq[e*mesh.Np*Nfields+m+mesh.Np*2];
           plotwn += mesh.plotInterp[n*mesh.Np+m]*wm;
         }
       }
 
-      fprintf(fp, "       ");
       fprintf(fp, "       ");
       if (mesh.dim==2)
         fprintf(fp, "%g %g\n", plotun, plotvn);

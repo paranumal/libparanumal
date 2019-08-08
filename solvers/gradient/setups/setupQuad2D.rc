@@ -2,16 +2,16 @@
 2.0
 
 [DATA FILE]
-data/gradientCos3D.h
+data/gradientCos2D.h
 
 [MESH FILE]
 BOX
 
 [MESH DIMENSION]
-3
+2
 
 [ELEMENT TYPE] # number of edges
-12
+4
 
 [BOX NX]
 10

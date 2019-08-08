@@ -24,40 +24,51 @@ SOFTWARE.
 
 */
 
-#include <stdio.h>
-#include <math.h>
-#include <mpi.h>
+#ifndef GRADIENT_HPP
+#define GRADIENT_HPP 1
 
-#include "gradient.h"
+#include "core.hpp"
+#include "mesh.hpp"
+#include "solver.hpp"
 
+#define DGRADIENT LIBP_DIR"/solvers/gradient/"
 
-void gradientError(gradient_t *gradient, dfloat time){
+class gradientSettings_t: public settings_t {
+public:
+  gradientSettings_t(MPI_Comm& _comm);
+  void report();
+};
 
-  mesh_t *mesh = gradient->mesh;
+class gradient_t: public solver_t {
+public:
+  int Nfields;
 
-  dfloat maxR = 0;
-  dfloat minR = 1E9;
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int n=0;n<mesh->Np;++n){
-      dfloat u,v,w, p;
-      int id = n+e*mesh->Np;
-      dfloat x = mesh->x[id];
-      dfloat y = mesh->y[id];
-      dfloat z = mesh->z[id];
+  dfloat *q;
+  occa::memory o_q;
 
-      int qbase = n+e*mesh->Np*mesh->Nfields;
-      maxR = mymax(maxR, gradient->q[qbase]);
-      minR = mymin(minR, gradient->q[qbase]);
-    }
-  }
+  dfloat *gradq;
+  occa::memory o_gradq;
 
-  // compute maximum over all processes
-  dfloat globalMaxR;
-  dfloat globalMinR;
-  MPI_Allreduce(&maxR, &globalMaxR, 1, MPI_DFLOAT, MPI_MAX, mesh->comm);
-  MPI_Allreduce(&minR, &globalMinR, 1, MPI_DFLOAT, MPI_MIN, mesh->comm);
+  occa::memory o_Mgradq;
 
-  if(mesh->rank==0)
-    printf("\n%g, %g, %g ( time, min density, max density)\n", time, globalMinR, globalMaxR);
-  
-}
+  occa::kernel volumeKernel;
+
+  occa::kernel MassMatrixKernel;
+
+  occa::kernel initialConditionKernel;
+
+  gradient_t() = delete;
+  gradient_t(mesh_t& _mesh, linAlg_t& _linAlg):
+    solver_t(_mesh, _linAlg) {}
+
+  //setup
+  static gradient_t& Setup(mesh_t& mesh, linAlg_t& linAlg);
+
+  void Run();
+
+  void Report();
+
+  void PlotFields();
+};
+
+#endif

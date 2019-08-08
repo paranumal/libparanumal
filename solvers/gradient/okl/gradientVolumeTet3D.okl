@@ -40,43 +40,43 @@ void gradientVolumeTet3D(int Nelements,
 
     // loop over all nodes in element e
     for(int n=0;n<p_Np;++n){
-      
+
       dfloat qr = 0, qs = 0, qt = 0;
-      
+
       for(int m=0;m<p_Np;++m){
 	dfloat dr = Drst[n + m*p_Np + 0*p_Np*p_Np];
 	dfloat ds = Drst[n + m*p_Np + 1*p_Np*p_Np];
 	dfloat dt = Drst[n + m*p_Np + 2*p_Np*p_Np];
 
 	int id = e*p_Np + m;
-	
+
 	qr += dr*q[id];
 	qs += ds*q[id];
 	qt += dt*q[id];
       }
-      
+
       dfloat rx = vgeo[e*p_Nvgeo + p_RXID];
       dfloat sx = vgeo[e*p_Nvgeo + p_SXID];
       dfloat tx = vgeo[e*p_Nvgeo + p_TXID];
-      
+
       dfloat ry = vgeo[e*p_Nvgeo + p_RYID];
       dfloat sy = vgeo[e*p_Nvgeo + p_SYID];
       dfloat ty = vgeo[e*p_Nvgeo + p_TYID];
-      
+
       dfloat rz = vgeo[e*p_Nvgeo + p_RZID];
       dfloat sz = vgeo[e*p_Nvgeo + p_SZID];
       dfloat tz = vgeo[e*p_Nvgeo + p_TZID];
-      
+
       dfloat qx = rx*qr + sx*qs + tx*qt;
       dfloat qy = ry*qr + sy*qs + ty*qt;
       dfloat qz = rz*qr + sz*qs + tz*qt;
-      
+
       int id = e*p_Np*3 + m;
 
       gradq[id + 0*p_Np + n] = qx;
       gradq[id + 1*p_Np + n] = qy;
       gradq[id + 2*p_Np + n] = qz;
-      
+
     }
   }
 }
@@ -95,43 +95,43 @@ void gradientVolumeTet3D(int Nelements,
 
     // loop over all nodes in element e
     for(int n=0;n<p_Np;++n;@inner(0)){ // distributed to thread
-      
+
       dfloat qr = 0, qs = 0, qt = 0;
-      
+
       for(int m=0;m<p_Np;++m){
 	dfloat dr = Drst[n + m*p_Np + 0*p_Np*p_Np];
 	dfloat ds = Drst[n + m*p_Np + 1*p_Np*p_Np];
 	dfloat dt = Drst[n + m*p_Np + 2*p_Np*p_Np];
 
 	int id = e*p_Np + m;
-	
+
 	qr += dr*q[id];
 	qs += ds*q[id];
 	qt += dt*q[id];
       }
-      
+
       dfloat rx = vgeo[e*p_Nvgeo + p_RXID];
       dfloat sx = vgeo[e*p_Nvgeo + p_SXID];
       dfloat tx = vgeo[e*p_Nvgeo + p_TXID];
-      
+
       dfloat ry = vgeo[e*p_Nvgeo + p_RYID];
       dfloat sy = vgeo[e*p_Nvgeo + p_SYID];
       dfloat ty = vgeo[e*p_Nvgeo + p_TYID];
-      
+
       dfloat rz = vgeo[e*p_Nvgeo + p_RZID];
       dfloat sz = vgeo[e*p_Nvgeo + p_SZID];
       dfloat tz = vgeo[e*p_Nvgeo + p_TZID];
-      
+
       dfloat qx = rx*qr + sx*qs + tx*qt;
       dfloat qy = ry*qr + sy*qs + ty*qt;
       dfloat qz = rz*qr + sz*qs + tz*qt;
-      
+
       int id = e*p_Np*3 + n;
 
       gradq[id + 0*p_Np] = qx;
       gradq[id + 1*p_Np] = qy;
       gradq[id + 2*p_Np] = qz;
-      
+
     }
   }
 }
@@ -149,43 +149,43 @@ void gradientVolumeTet3D(int Nelements,
 
     // loop over all nodes in element e
     for(int n=0;n<p_Np;++n;@inner(0)){ // distributed to thread
-      
+
       dfloat qr = 0, qs = 0, qt = 0;
-      
+
       for(int m=0;m<p_Np;++m){
 	const dfloat dr = Drst[n + m*p_Np + 0*p_Np*p_Np];
 	const dfloat ds = Drst[n + m*p_Np + 1*p_Np*p_Np];
 	const dfloat dt = Drst[n + m*p_Np + 2*p_Np*p_Np];
-	
+
 	const int id = e*p_Np + m;
-	
+
 	qr += dr*q[id];
 	qs += ds*q[id];
 	qt += dt*q[id];
       }
-      
+
       const dfloat rx = vgeo[e*p_Nvgeo + p_RXID];
       const dfloat sx = vgeo[e*p_Nvgeo + p_SXID];
       const dfloat tx = vgeo[e*p_Nvgeo + p_TXID];
-      
+
       const dfloat ry = vgeo[e*p_Nvgeo + p_RYID];
       const dfloat sy = vgeo[e*p_Nvgeo + p_SYID];
       const dfloat ty = vgeo[e*p_Nvgeo + p_TYID];
-      
+
       const dfloat rz = vgeo[e*p_Nvgeo + p_RZID];
       const dfloat sz = vgeo[e*p_Nvgeo + p_SZID];
       const dfloat tz = vgeo[e*p_Nvgeo + p_TZID];
-      
+
       const dfloat qx = rx*qr + sx*qs + tx*qt;
       const dfloat qy = ry*qr + sy*qs + ty*qt;
       const dfloat qz = rz*qr + sz*qs + tz*qt;
-      
+
       const int id = e*p_Np*3 + n;
-      
+
       gradq[id + 0*p_Np] = qx;
       gradq[id + 1*p_Np] = qy;
       gradq[id + 2*p_Np] = qz;
-      
+
     }
   }
 }
@@ -203,7 +203,7 @@ void gradientVolumeTet3D(int Nelements,
 
     // loop over all nodes in element e
     for(int n=0;n<p_Np;++n;@inner(0)){ // distributed to thread
-      
+
       dfloat qr = 0, qs = 0, qt = 0;
 
       #pragma unroll p_Np
@@ -211,36 +211,36 @@ void gradientVolumeTet3D(int Nelements,
 	  const dfloat dr = Drst[n + m*p_Np + 0*p_Np*p_Np];
 	  const dfloat ds = Drst[n + m*p_Np + 1*p_Np*p_Np];
 	  const dfloat dt = Drst[n + m*p_Np + 2*p_Np*p_Np];
-	  
+
 	  const int id = e*p_Np + m;
-	  
+
 	  qr += dr*q[id];
 	  qs += ds*q[id];
 	  qt += dt*q[id];
 	}
-      
+
       const dfloat rx = vgeo[e*p_Nvgeo + p_RXID];
       const dfloat sx = vgeo[e*p_Nvgeo + p_SXID];
       const dfloat tx = vgeo[e*p_Nvgeo + p_TXID];
-      
+
       const dfloat ry = vgeo[e*p_Nvgeo + p_RYID];
       const dfloat sy = vgeo[e*p_Nvgeo + p_SYID];
       const dfloat ty = vgeo[e*p_Nvgeo + p_TYID];
-      
+
       const dfloat rz = vgeo[e*p_Nvgeo + p_RZID];
       const dfloat sz = vgeo[e*p_Nvgeo + p_SZID];
       const dfloat tz = vgeo[e*p_Nvgeo + p_TZID];
-      
+
       const dfloat qx = rx*qr + sx*qs + tx*qt;
       const dfloat qy = ry*qr + sy*qs + ty*qt;
       const dfloat qz = rz*qr + sz*qs + tz*qt;
-      
+
       const int id = e*p_Np*3 + n;
-      
+
       gradq[id + 0*p_Np] = qx;
       gradq[id + 1*p_Np] = qy;
       gradq[id + 2*p_Np] = qz;
-      
+
     }
   }
 }
@@ -267,10 +267,10 @@ void gradientVolumeTet3D(int Nelements,
 
     // make sure all values are prefetched
     @barrier("local");
-    
+
     // loop over all nodes in element e
     for(int n=0;n<p_Np;++n;@inner(0)){ // distributed to thread
-      
+
       dfloat qr = 0, qs = 0, qt = 0;
 
       #pragma unroll p_Np
@@ -283,29 +283,29 @@ void gradientVolumeTet3D(int Nelements,
 	  qs += ds*qm;
 	  qt += dt*qm;
 	}
-      
+
       const dfloat rx = vgeo[e*p_Nvgeo + p_RXID];
       const dfloat sx = vgeo[e*p_Nvgeo + p_SXID];
       const dfloat tx = vgeo[e*p_Nvgeo + p_TXID];
-      
+
       const dfloat ry = vgeo[e*p_Nvgeo + p_RYID];
       const dfloat sy = vgeo[e*p_Nvgeo + p_SYID];
       const dfloat ty = vgeo[e*p_Nvgeo + p_TYID];
-      
+
       const dfloat rz = vgeo[e*p_Nvgeo + p_RZID];
       const dfloat sz = vgeo[e*p_Nvgeo + p_SZID];
       const dfloat tz = vgeo[e*p_Nvgeo + p_TZID];
-      
+
       const dfloat qx = rx*qr + sx*qs + tx*qt;
       const dfloat qy = ry*qr + sy*qs + ty*qt;
       const dfloat qz = rz*qr + sz*qs + tz*qt;
-      
+
       const int id = e*p_Np*3 + n;
-      
+
       gradq[id + 0*p_Np] = qx;
       gradq[id + 1*p_Np] = qy;
       gradq[id + 2*p_Np] = qz;
-      
+
     }
   }
 }
@@ -319,12 +319,12 @@ void gradientVolumeTet3D(int Nelements,
 				){
 
 #define p_Nblock 4
-  
+
   // loop over all elements
   for(int eo=0;eo<Nelements;eo+=p_Nblock;@outer(0)){ // distributed amongst cores
-    
+
     @shared dfloat s_q[p_Nblock][p_Np]; // @shared memory array for each element
-    
+
     for(int n=0;n<p_Np;++n;@inner(0)){ // distributed to thread
 
       // prefetch to @shared
@@ -340,29 +340,29 @@ void gradientVolumeTet3D(int Nelements,
 
     // make sure all values are prefetched
     @barrier("local");
-    
+
     // loop over all nodes in element e
     for(int n=0;n<p_Np;++n;@inner(0)){ // distributed to thread
-      
+
       dfloat qr[p_Nblock], qs[p_Nblock], qt[p_Nblock];
-      
+
       #pragma unroll p_Nblock
 	for(int es=0;es<p_Nblock;++es){
 	  qr[es] = 0;
 	  qs[es] = 0;
 	  qt[es] = 0;
 	}
-      
+
       #pragma unroll p_Np
 	for(int m=0;m<p_Np;++m){
 	  // Vasily Volkov "multiple outputs" paper
 	  const dfloat dr = Drst[n + m*p_Np + 0*p_Np*p_Np];
 	  const dfloat ds = Drst[n + m*p_Np + 1*p_Np*p_Np];
 	  const dfloat dt = Drst[n + m*p_Np + 2*p_Np*p_Np];
-	  
+
 	  #pragma unroll p_Nblock
 	    for(int es=0;es<p_Nblock;++es){
-	      
+
 	      const dfloat qm = s_q[es][m];
 	      qr[es] += dr*qm;
 	      qs[es] += ds*qm;
@@ -374,25 +374,25 @@ void gradientVolumeTet3D(int Nelements,
 	for(int es=0;es<p_Nblock;++es){
 	  const int e = eo + es;
 	  if(e<Nelements){
-	    
+
 	    const dfloat rx = vgeo[e*p_Nvgeo + p_RXID];
 	    const dfloat sx = vgeo[e*p_Nvgeo + p_SXID];
 	    const dfloat tx = vgeo[e*p_Nvgeo + p_TXID];
-	    
+
 	    const dfloat ry = vgeo[e*p_Nvgeo + p_RYID];
 	    const dfloat sy = vgeo[e*p_Nvgeo + p_SYID];
 	    const dfloat ty = vgeo[e*p_Nvgeo + p_TYID];
-	    
+
 	    const dfloat rz = vgeo[e*p_Nvgeo + p_RZID];
 	    const dfloat sz = vgeo[e*p_Nvgeo + p_SZID];
 	    const dfloat tz = vgeo[e*p_Nvgeo + p_TZID];
-	    
+
 	    const dfloat qx = rx*qr[es] + sx*qs[es] + tx*qt[es];
 	    const dfloat qy = ry*qr[es] + sy*qs[es] + ty*qt[es];
 	    const dfloat qz = rz*qr[es] + sz*qs[es] + tz*qt[es];
-	    
+
 	    const int id = e*p_Np*3 + n;
-	    
+
 	    gradq[id + 0*p_Np] = qx;
 	    gradq[id + 1*p_Np] = qy;
 	    gradq[id + 2*p_Np] = qz;
@@ -409,18 +409,18 @@ void gradientVolumeTet3D(int Nelements,
 				@restrict const  dfloat *  q,    // data at nodes
 				@restrict dfloat *  gradq // physical gradient
 				){
-  
+
 #define p_Nvec 1
 #define p_Nblock 2
-  
+
   // loop over all elements
   for(int eo=0;eo<Nelements;eo+=p_Nblock*p_Nvec;@outer(0)){ // distributed amongst cores
-    
+
     @shared dfloat s_q[p_Nblock][p_Nvec][p_Np]; // @shared memory array for each element
-    
+
     for(int et=0;et<p_Nvec;++et;@inner(1)){
       for(int n=0;n<p_Np;++n;@inner(0)){ // distributed to thread
-	
+
 	// prefetch to @shared
 	#pragma unroll p_Nblock
 	  for(int es=0;es<p_Nblock;++es){
@@ -435,30 +435,30 @@ void gradientVolumeTet3D(int Nelements,
 
     // make sure all values are prefetched
     @barrier("local");
-    
+
     // loop over all nodes in element e
     for(int et=0;et<p_Nvec;++et;@inner(1)){
       for(int n=0;n<p_Np;++n;@inner(0)){ // distributed to thread
-	
+
 	dfloat qr[p_Nblock], qs[p_Nblock], qt[p_Nblock];
-	
+
 	#pragma unroll p_Nblock
 	  for(int es=0;es<p_Nblock;++es){
 	    qr[es] = 0;
 	    qs[es] = 0;
 	    qt[es] = 0;
 	  }
-	
+
 	#pragma unroll p_Np
 	  for(int m=0;m<p_Np;++m){
 	    // Vasily Volkov "multiple outputs" paper
 	    const dfloat dr = Drst[n + m*p_Np + 0*p_Np*p_Np];
 	    const dfloat ds = Drst[n + m*p_Np + 1*p_Np*p_Np];
 	    const dfloat dt = Drst[n + m*p_Np + 2*p_Np*p_Np];
-	    
+
 	    #pragma unroll p_Nblock
 	      for(int es=0;es<p_Nblock;++es){
-		
+
 		const dfloat qm = s_q[es][et][m];
 		qr[es] += dr*qm;
 		qs[es] += ds*qm;
@@ -470,25 +470,25 @@ void gradientVolumeTet3D(int Nelements,
 	  for(int es=0;es<p_Nblock;++es){
 	    const int e = eo + et + p_Nvec*es;
 	    if(e<Nelements){
-	      
+
 	      const dfloat rx = vgeo[e*p_Nvgeo + p_RXID];
 	      const dfloat sx = vgeo[e*p_Nvgeo + p_SXID];
 	      const dfloat tx = vgeo[e*p_Nvgeo + p_TXID];
-	      
+
 	      const dfloat ry = vgeo[e*p_Nvgeo + p_RYID];
 	      const dfloat sy = vgeo[e*p_Nvgeo + p_SYID];
 	      const dfloat ty = vgeo[e*p_Nvgeo + p_TYID];
-	      
+
 	      const dfloat rz = vgeo[e*p_Nvgeo + p_RZID];
 	      const dfloat sz = vgeo[e*p_Nvgeo + p_SZID];
 	      const dfloat tz = vgeo[e*p_Nvgeo + p_TZID];
-	      
+
 	      const dfloat qx = rx*qr[es] + sx*qs[es] + tx*qt[es];
 	      const dfloat qy = ry*qr[es] + sy*qs[es] + ty*qt[es];
 	      const dfloat qz = rz*qr[es] + sz*qs[es] + tz*qt[es];
-	      
+
 	      const int id = e*p_Np*3 + n;
-	      
+
 	      gradq[id + 0*p_Np] = qx;
 	      gradq[id + 1*p_Np] = qy;
 	      gradq[id + 2*p_Np] = qz;

@@ -1,8 +1,11 @@
 [FORMAT]
-1.0
+2.0
+
+[DATA FILE]
+data/gradientCos2D.h
 
 [MESH FILE]
-../../meshes/cavityH00125.msh
+BOX
 
 [MESH DIMENSION]
 2
@@ -10,8 +13,20 @@
 [ELEMENT TYPE] # number of edges
 3
 
+[BOX NX]
+10
+
+[BOX NY]
+10
+
+[BOX NZ]
+10
+
+[BOX BOUNDARY FLAG]
+1
+
 [POLYNOMIAL DEGREE]
-6
+4
 
 [THREAD MODEL]
 CUDA
@@ -19,9 +34,8 @@ CUDA
 [PLATFORM NUMBER]
 0
 
-#this is ignored when running with MPI
 [DEVICE NUMBER]
 0
 
-[OUTPUT FILE NAME]
-cube
+[OUTPUT TO FILE]
+TRUE
