@@ -48,7 +48,7 @@ SOFTWARE.
     }
 
     //contiguously packed
-    gatherq[g+k*gstride] = gq;
+    gatherq[gid+k*gstride] = gq;
   }
 }
 
@@ -75,7 +75,7 @@ SOFTWARE.
     }
 
     //contiguously packed
-    gatherq[g+k*gstride] = gq;
+    gatherq[gid+k*gstride] = gq;
   }
 }
 
@@ -102,7 +102,7 @@ SOFTWARE.
     }
 
     //contiguously packed
-    gatherq[g+k*gstride] = gq;
+    gatherq[gid+k*gstride] = gq;
   }
 }
 
@@ -129,7 +129,7 @@ SOFTWARE.
     }
 
     //contiguously packed
-    gatherq[g+k*gstride] = gq;
+    gatherq[gid+k*gstride] = gq;
   }
 }
 
@@ -156,7 +156,7 @@ SOFTWARE.
     }
 
     //contiguously packed
-    gatherq[g+k*gstride] = gq;
+    gatherq[gid+k*gstride] = gq;
   }
 }
 
@@ -183,7 +183,7 @@ SOFTWARE.
     }
 
     //contiguously packed
-    gatherq[g+k*gstride] = gq;
+    gatherq[gid+k*gstride] = gq;
   }
 }
 
@@ -210,7 +210,7 @@ SOFTWARE.
     }
 
     //contiguously packed
-    gatherq[g+k*gstride] = gq;
+    gatherq[gid+k*gstride] = gq;
   }
 }
 
@@ -237,7 +237,7 @@ SOFTWARE.
     }
 
     //contiguously packed
-    gatherq[g+k*gstride] = gq;
+    gatherq[gid+k*gstride] = gq;
   }
 }
 
@@ -265,7 +265,7 @@ SOFTWARE.
     }
 
     //contiguously packed
-    gatherq[g+k*gstride] = gq;
+    gatherq[gid+k*gstride] = gq;
   }
 }
 
@@ -294,7 +294,7 @@ SOFTWARE.
     }
 
     //contiguously packed
-    gatherq[g+k*gstride] = gq;
+    gatherq[gid+k*gstride] = gq;
   }
 }
 
@@ -323,7 +323,7 @@ SOFTWARE.
     }
 
     //contiguously packed
-    gatherq[g+k*gstride] = gq;
+    gatherq[gid+k*gstride] = gq;
   }
 }
 
@@ -352,7 +352,7 @@ SOFTWARE.
     }
 
     //contiguously packed
-    gatherq[g+k*gstride] = gq;
+    gatherq[gid+k*gstride] = gq;
   }
 }
 
@@ -381,7 +381,7 @@ SOFTWARE.
     }
 
     //contiguously packed
-    gatherq[g+k*gstride] = gq;
+    gatherq[gid+k*gstride] = gq;
   }
 }
 
@@ -409,7 +409,7 @@ SOFTWARE.
     }
 
     //contiguously packed
-    gatherq[g+k*gstride] = gq;
+    gatherq[gid+k*gstride] = gq;
   }
 }
 
@@ -437,7 +437,7 @@ SOFTWARE.
     }
 
     //contiguously packed
-    gatherq[g+k*gstride] = gq;
+    gatherq[gid+k*gstride] = gq;
   }
 }
 
@@ -465,6 +465,6 @@ SOFTWARE.
     }
 
     //contiguously packed
-    gatherq[g+k*gstride] = gq;
+    gatherq[gid+k*gstride] = gq;
   }
 }
