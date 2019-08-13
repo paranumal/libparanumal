@@ -24,35 +24,20 @@ SOFTWARE.
 
 */
 
-#include "advection.h"
+#include "advection.hpp"
 
-dfloat advectionDopriEstimate(advection_t *advection){
-  
-  mesh_t *mesh = advection->mesh;
-  
-  // should insert err = advectionDopriEstimate2D() here
-  //Error estimation 
-  //E. HAIRER, S.P. NORSETT AND G. WANNER, SOLVING ORDINARY
-  //      DIFFERENTIAL EQUATIONS I. NONSTIFF PROBLEMS. 2ND EDITION.
-  dlong Ntotal = mesh->Nelements*mesh->Np*mesh->Nfields;
-  advection->rkErrorEstimateKernel(Ntotal, 
-				   advection->ATOL,
-				   advection->RTOL,
-				   advection->o_q,
-				   advection->o_rkq,
-				   advection->o_rkerr,
-				   advection->o_errtmp);
-  
-  advection->o_errtmp.copyTo(advection->errtmp);
-  dfloat localerr = 0;
-  dfloat err = 0;
-  for(dlong n=0;n<advection->Nblock;++n){
-    localerr += advection->errtmp[n];
-  }
-  MPI_Allreduce(&localerr, &err, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
+void advection_t::Run(){
 
-  err = sqrt(err/(mesh->Np*advection->totalElements*advection->Nfields));
-  
-  return err;
+  dfloat startTime, finalTime;
+  settings.getSetting("START TIME", startTime);
+  settings.getSetting("FINAL TIME", finalTime);
+
+  initialConditionKernel(mesh.Nelements,
+                         startTime,
+                         mesh.o_x,
+                         mesh.o_y,
+                         mesh.o_z,
+                         o_q);
+
+  timeStepper->Run(o_q, startTime, finalTime);
 }
-  

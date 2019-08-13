@@ -24,18 +24,32 @@ SOFTWARE.
 
 */
 
+#include "advection.hpp"
 
+void advection_t::Report(dfloat time, int tstep){
 
-// Boundary conditions
-/* wall 1, inflow 2 */
-#define advectionDirichletConditions3D(bc, t, x, y, z, nx, ny, nz, qM, qB) \
-  {									\
-    if(bc==2){								\
-      *(qB) = -qM;							\
-    } else if(bc==1){							\
-      *(qB) = qM;							\
-    }									\
-    else{								\
-      printf("DOH");							\
-    }									\
+  static int frame=0;
+
+  //compute q.M*q
+  MassMatrixKernel(mesh.Nelements, mesh.o_ggeo, mesh.o_MM, o_q, o_Mq);
+
+  dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
+  dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_q, o_Mq, comm));
+
+  if(mesh.rank==0)
+    printf("%5.2f (%d), %5.2f (time, timestep, norm)\n", time, tstep, norm2);
+
+  if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
+
+    // copy data back to host
+    o_q.copyTo(q);
+
+    // output field files
+    string name;
+    settings.getSetting("OUTPUT FILE NAME", name);
+    char fname[BUFSIZ];
+    sprintf(fname, "%s_%04d_%04d.vtu", name.c_str(), mesh.rank, frame++);
+
+    PlotFields(q, fname);
   }
+}

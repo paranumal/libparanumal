@@ -24,12 +24,23 @@ SOFTWARE.
 
 */
 
-#include <math.h>
-#include "mesh.hpp"
-
-void advectionGaussianPulse(dfloat x, dfloat y, dfloat z, dfloat t, dfloat *q){
-
-  // fix this
-  *q = exp(-40*((x-.75)*(x-.75)+(y-.5)*(y-.5)+(z-.5)*(z-.5)));
-
+// Initial conditions
+#define advectionInitialConditions3D(t, x, y, z, q) \
+{                                       \
+  *(q) = exp(-40*((x-.75)*(x-.75)+(y-.5)*(y-.5)+(z-.5)*(z-.5)));       \
 }
+
+
+// Boundary conditions
+/* wall 1, inflow 2 */
+#define advectionDirichletConditions3D(bc, t, x, y, z, nx, ny, nz, qM, qB) \
+  {									\
+    if(bc==2){								\
+      *(qB) = -qM;							\
+    } else if(bc==1){							\
+      *(qB) = qM;							\
+    }									\
+    else{								\
+      printf("DOH");							\
+    }									\
+  }
