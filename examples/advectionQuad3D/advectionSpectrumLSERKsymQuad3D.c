@@ -78,7 +78,7 @@ void advectionSpectrumLSERKsymQuad3D(solver_t *solver,dfloat alpha_scale){
 			      solver->o_qpre,
 			      solver->o_qFilter,
 			      solver->o_qFiltered);
-	  
+	
 	  solver->volumeKernel(mesh->Nelements,
 			     solver->o_vgeo,
 			     solver->o_D,
