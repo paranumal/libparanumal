@@ -82,8 +82,8 @@ void advectionRunLSERKsymQuad3D(solver_t *solver,dfloat alpha_scale){
 	
 	//synthesize actual stage time
 	dfloat t = tstep*solver->dt;
-	
-	solver->filterWeakKernelH(mesh->Nelements,
+
+	/*	solver->filterWeakKernelH(mesh->Nelements,
 			      solver->o_dualTransMatrix,
 				  solver->o_invTransMatrix,
 			      solver->o_cubeFaceNumber,
@@ -102,7 +102,7 @@ void advectionRunLSERKsymQuad3D(solver_t *solver,dfloat alpha_scale){
 				  solver->o_cubeDistance,
 				  solver->o_qpre,
 				  solver->o_qFilter);
-		
+	
 	solver->filterWeakKernelV(mesh->Nelements,
 			      alpha,
 			      solver->o_dualTransMatrix,
@@ -116,7 +116,7 @@ void advectionRunLSERKsymQuad3D(solver_t *solver,dfloat alpha_scale){
 			      solver->o_qpre,
 			      solver->o_qFilter,
 			      solver->o_qFiltered);
-
+	*/
 	// compute volume contribution to DG advection RHS
 	solver->volumeKernel(mesh->Nelements,
 			     solver->o_vgeo,
@@ -126,7 +126,7 @@ void advectionRunLSERKsymQuad3D(solver_t *solver,dfloat alpha_scale){
 			     solver->o_y,
 			     solver->o_z,
 			     solver->o_qpre,
-			     solver->o_qFiltered,
+			     solver->o_qpre,
 			     solver->o_rhsqs,
 			     solver->o_rhsqw
 			     );
@@ -142,33 +142,11 @@ void advectionRunLSERKsymQuad3D(solver_t *solver,dfloat alpha_scale){
 			      solver->o_y,
 			      solver->o_z,
 			      solver->o_qpre,
-			      solver->o_qFiltered,
+			      solver->o_qpre,
 			      solver->o_rhsqs,
 			      solver->o_rhsqw
 			      );
 
-	solver->filterKernelH(mesh->Nelements,
-			      solver->o_dualProjMatrix,
-			      solver->o_cubeFaceNumber,
-			      solver->o_gridToE,
-			      solver->o_vgeo,
-			      solver->o_cubeDistance,
-			      solver->o_rhsqs,
-			      solver->o_qFilter);
-		
-	solver->filterKernelV(mesh->Nelements,
-			      alpha,
-			      solver->o_dualProjMatrix,
-			      solver->o_cubeFaceNumber,
-			      solver->o_gridToE,
-			      solver->o_x,
-			      solver->o_y,
-			      solver->o_z,
-			      solver->o_vgeo,
-			      solver->o_cubeDistance,
-			      solver->o_rhsqs,
-			      solver->o_qFilter,
-			      solver->o_q);
 	
 	/*if (Nboundary > 0) {
 	  solver->loadFilterGridKernel(Nboundary,
@@ -196,12 +174,37 @@ void advectionRunLSERKsymQuad3D(solver_t *solver,dfloat alpha_scale){
 			     solver->dt,
 			     solver->rka[rk],
 			     solver->rkb[rk],
-			     solver->o_q,
+			     solver->o_rhsqs,
 			     solver->o_rhsqw,
 			     solver->o_qCorr,
 			     solver->o_resq,
 			     solver->o_qpre);
 
+	solver->filterKernelH(mesh->Nelements,
+			      solver->o_dualProjMatrix,
+			      solver->o_cubeFaceNumber,
+			      solver->o_gridToE,
+			      solver->o_vgeo,
+			      solver->o_cubeDistance,
+			      solver->o_qpre,
+			      solver->o_qFilter);
+		
+	solver->filterKernelV(mesh->Nelements,
+			      alpha,
+			      solver->o_dualProjMatrix,
+			      solver->o_cubeFaceNumber,
+			      solver->o_gridToE,
+			      solver->o_x,
+			      solver->o_y,
+			      solver->o_z,
+			      solver->o_vgeo,
+			      solver->o_cubeDistance,
+			      solver->o_qpre,
+			      solver->o_qFilter,
+			      solver->o_q);
+
+	solver->o_q.copyTo(solver->o_qpre);
+	
 	/*	solver->filterKernelH(mesh->Nelements,
 			      solver->o_dualProjMatrix,
 			      solver->o_cubeFaceNumber,
