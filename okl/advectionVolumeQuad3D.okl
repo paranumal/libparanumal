@@ -190,6 +190,7 @@ kernel void advectionVolumeLSERKmixedQuad3D(const int Nelements,
 	    const dfloat dtdz = vgeo[gbase + p_Np*TZID];
 	    const dfloat jl = vgeo[gbase + p_Np*JID];
 	    const dfloat w = vgeo[gbase + p_Np*10];
+	    const dfloat m = w/jl;
 
 	    // hard code solid body velocity
 	    const dfloat xn = x[n+e*p_Np];
@@ -300,10 +301,10 @@ kernel void advectionVolumeLSERKmixedQuad3D(const int Nelements,
 
 	    const int base = e*p_Np*p_Nfields+n;
 	    
-	    rhsqs[base+0*p_Np] = rhsqs1*w;
-	    rhsqs[base+1*p_Np] = rhsqs2*w;
-	    rhsqw[base+0*p_Np] = rhsqw1/jl*w;
-	    rhsqw[base+1*p_Np] = rhsqw2/jl*w;
+	    rhsqs[base+0*p_Np] = rhsqs1;
+	    rhsqs[base+1*p_Np] = rhsqs2;
+	    rhsqw[base+0*p_Np] = rhsqw1/jl;
+	    rhsqw[base+1*p_Np] = rhsqw2/jl;
 	  }
 	}
       }

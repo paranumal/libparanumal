@@ -374,7 +374,7 @@ kernel void boltzmannFilterHtransTraceQuad3D(const iint Nelements,
 
 			int id = eo*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i;
 			dfloat qin = qIn[id];
-			s_q[fld][1][j][i] = qin/wj;				
+			s_q[fld][1][j][i] = qin;				
 			
 			if (!mark_edge) {
 			    if (cubeDistance[eL] > 0) {
@@ -382,16 +382,16 @@ kernel void boltzmannFilterHtransTraceQuad3D(const iint Nelements,
 				const dfloat wjl = vgeo[eL*p_Np*p_Nvgeo + 9*p_Np + j*p_Nq + i];
 				const dfloat wjul = vgeo[eUL*p_Np*p_Nvgeo + 9*p_Np + j*p_Nq + i];
 
-				s_q[fld][3][j][i] = (cubeDistance[eDL] > 0) ? qIn[eDL*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i]/wjdl : 0.f;
-				s_q[fld][4][j][i] = qIn[eL*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i]/wjl;
-				s_q[fld][5][j][i] = (cubeDistance[eUL] > 0) ? qIn[eUL*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i]/wjul : 0.f;
+				s_q[fld][3][j][i] = (cubeDistance[eDL] > 0) ? qIn[eDL*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i] : 0.f;
+				s_q[fld][4][j][i] = qIn[eL*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
+				s_q[fld][5][j][i] = (cubeDistance[eUL] > 0) ? qIn[eUL*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i] : 0.f;
 				s_F[3][j][i] = s_F[0][j][i];
 				dir = 0;
 			    }
 			    else if (cubeDistance[eD] > 0) {
 				const dfloat wjd = vgeo[eD*p_Np*p_Nvgeo + 9*p_Np + j*p_Nq + i];
 
-				s_q[fld][0][j][i] = qIn[eD*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i]/wjd;
+				s_q[fld][0][j][i] = qIn[eD*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
 				s_F[3][j][i] = s_F[0][j][i];
 				dir = 1;
 			    }
@@ -401,15 +401,15 @@ kernel void boltzmannFilterHtransTraceQuad3D(const iint Nelements,
 				const dfloat wjr = vgeo[eR*p_Np*p_Nvgeo + 9*p_Np + j*p_Nq + i];
 				const dfloat wjur = vgeo[eUR*p_Np*p_Nvgeo + 9*p_Np + j*p_Nq + i];
 
-				s_q[fld][3][j][i] = (cubeDistance[eDR] > 0) ? qIn[eDR*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i]/wjdr : 0.f;
-				s_q[fld][4][j][i] = qIn[eR*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i]/wjr;
-				s_q[fld][5][j][i] = (cubeDistance[eUR] > 0) ? qIn[eUR*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i]/wjur : 0.f;
+				s_q[fld][3][j][i] = (cubeDistance[eDR] > 0) ? qIn[eDR*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i] : 0.f;
+				s_q[fld][4][j][i] = qIn[eR*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
+				s_q[fld][5][j][i] = (cubeDistance[eUR] > 0) ? qIn[eUR*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i] : 0.f;
 				s_F[3][j][i] = s_F[2][j][i];
 				dir = 0;
 			    }
 			    else if (cubeDistance[eU] > 0) {
 				const dfloat wju = vgeo[eU*p_Np*p_Nvgeo + 9*p_Np + j*p_Nq + i];
-				s_q[fld][0][j][i] = qIn[eU*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i]/wju;
+				s_q[fld][0][j][i] = qIn[eU*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
 				s_F[3][j][i] = s_F[2][j][i];
 				dir = 1;
 			    }
@@ -537,12 +537,12 @@ kernel void boltzmannFilterHtransQuad3D(const iint Nelements,
 		occaUnroll(p_Nfields)
 		    for(iint fld=0;fld<p_Nfields;++fld){
 			int id = eo*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i;
-			dfloat qin = qIn[id]/wj;
+			dfloat qin = qIn[id];
 			s_q[fld][1][j][i] = qin;
 			    
 			if (cubeDistance[eL] > 0) {
 			    const dfloat wjl = vgeo[eL*p_Np*p_Nvgeo + 9*p_Np + j*p_Nq + i];
-			    s_q[fld][0][j][i] = qIn[eL*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i]/wjl;
+			    s_q[fld][0][j][i] = qIn[eL*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
 			}
 			else {
 			    s_q[fld][0][j][i] = 0.f;
@@ -550,7 +550,7 @@ kernel void boltzmannFilterHtransQuad3D(const iint Nelements,
 			    
 			if (cubeDistance[eR] > 0) {
 			    const dfloat wjr = vgeo[eR*p_Np*p_Nvgeo + 9*p_Np + j*p_Nq + i];
-			    s_q[fld][2][j][i] = qIn[eR*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i]/wjr;
+			    s_q[fld][2][j][i] = qIn[eR*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
 			}
 			else {
 			    s_q[fld][2][j][i] = 0.f;
@@ -640,13 +640,13 @@ kernel void boltzmannFilterHsymQuad3D(const iint Nelements,
 		    for(iint fld=0;fld<p_Nfields;++fld){
 			int id = eo*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i;
 			const dfloat wj = vgeo[eo*p_Np*p_Nvgeo + 10*p_Np + j*p_Nq + i];
-			dfloat qin = qIn[id]*wj;
+			dfloat qin = qIn[id];
 			s_q[fld][1][j][i] = qin;
 			if(mark_edge) {
 			    const dfloat wjl = vgeo[eL*p_Np*p_Nvgeo + 10*p_Np + j*p_Nq + i];
 			    const dfloat wjr = vgeo[eR*p_Np*p_Nvgeo + 10*p_Np + j*p_Nq + i];
-			    s_q[fld][0][j][i] = qIn[eL*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i]*wjl;
-			    s_q[fld][2][j][i] = qIn[eR*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i]*wjr;
+			    s_q[fld][0][j][i] = qIn[eL*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
+			    s_q[fld][2][j][i] = qIn[eR*p_Np*p_Nfields + fld*p_Np + j*p_Nq + i];
 			}
 		    }
 	    }
