@@ -95,7 +95,7 @@ DEFINES =${LIBP_DEFINES} \
          -DLIBP_DIR='"${LIBP_DIR}"'
 
 #.cpp compilation flags
-ELLIPTIC_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
+ELLIPTIC_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES} -g
 
 #link libraries
 LIBS=-L${LIBP_LIBS_DIR} -lmesh -lparAlmond -logs\

@@ -25,211 +25,208 @@ SOFTWARE.
 */
 
 
-// hex kernel for screened coulomb potential mat-vec
+// hex @kernel for screened coulomb potential mat-vec
 #define squareThreads                           \
-  for(int j=0; j<p_Nq; ++j; inner1)		\
-    for(int i=0; i<p_Nq; ++i; inner0)
+    for(int j=0; j<p_Nq; ++j; @inner(1))           \
+      for(int i=0; i<p_Nq; ++i; @inner(0))
 
 
-kernel void ellipticPartialAxQuad2D_Ref0(const dlong Nelements,
-					 const dlong elementOffset,
-					 const dfloat * restrict ggeo,
-					 const dfloat * restrict D,
-					 const dfloat   lambda,
-					 const dfloat * restrict q,
-					 dfloat * restrict Aq){
-  
-  for(dlong e=0;e<Nelements;++e;outer0){
+// square thread version
+@kernel void ellipticPartialAxHex3D_0(const dlong   Nelements,
+                               @restrict const  dfloat *  ggeo,
+                               @restrict const  dfloat *  D,
+                               @restrict const  dfloat *  S,
+                               @restrict const  dfloat *  MM,
+                               const dfloat   lambda,
+                               @restrict const  dfloat *  q,
+                               @restrict dfloat *  Aq){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
     
-    shared dfloat s_q[p_Nq][p_Nq];
-    shared dfloat s_D[p_Nq][p_Nq];
-    shared dfloat s_qr[p_Nq][p_Nq];
-    shared dfloat s_qs[p_Nq][p_Nq];
+    @shared dfloat s_q[p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
+
+    @exclusive dfloat r_qr, r_qs, r_Aq;
+    @exclusive dfloat r_G00, r_G01, r_G11, r_GwJ;
     
-    exclusive dlong element;
-    exclusive dfloat r_Aq;
-    
-    // prefetch q(:,:,:,e) to shared
+    // prefetch q(:,:,:,e) to @shared
     squareThreads{
-
-      element = e+elementOffset;
-      
-      const dlong base = i + j*p_Nq + element*p_Np; 
+      const dlong base = i + j*p_Nq + e*p_Np; 
       
       s_q[j][i] = q[base];
-    
-      // fetch D to shared
+      
+      // fetch D to @shared
       s_D[j][i] = D[j*p_Nq+i];
     }
       
-    barrier(localMemFence);
+    @barrier("local");
 
     squareThreads{
-      
-      const dlong base = element*p_Nggeo*p_Np + j*p_Nq + i;
-      
+      const dlong base = e*p_Nggeo*p_Np + j*p_Nq + i;
+
       // assumes w*J built into G entries
-      const dfloat r_GwJ = ggeo[base+p_GWJID*p_Np];
+      r_GwJ = ggeo[base+p_GWJID*p_Np];
+
+      r_G00 = ggeo[base+p_G00ID*p_Np];
+      r_G01 = ggeo[base+p_G01ID*p_Np];
       
-      const dfloat r_G00 = ggeo[base+p_G00ID*p_Np];
-      const dfloat r_G01 = ggeo[base+p_G01ID*p_Np];
-      
-      const dfloat r_G11 = ggeo[base+p_G11ID*p_Np];
-      
+      r_G11 = ggeo[base+p_G11ID*p_Np];
+
       dfloat qr = 0.f, qs = 0.f;
       
-      occaUnroll(p_Nq)
-	for(int n=0; n<p_Nq; ++n){
-	  qr += s_D[i][n]*s_q[j][n];
-	  qs += s_D[j][n]*s_q[n][i];
-	}
-      
-      r_Aq = r_GwJ*lambda*s_q[j][i];
-      
-      s_qr[j][i] = r_G00*qr + r_G01*qs;
-      s_qs[j][i] = r_G01*qr + r_G11*qs;
-    }
-
-    barrier(localMemFence);
-
-    squareThreads{
-      dfloat tmpr = 0.f, tmps = 0.f;
-
-      occaUnroll(p_Nq)
-        for(int n=0;n<p_Nq;++n) {
-          tmpr += s_D[n][i]*s_qr[j][n];
-	  tmps += s_D[n][j]*s_qs[n][i];
+      #pragma unroll p_Nq
+        for(int n=0; n<p_Nq; ++n){
+          qr += s_D[i][n]*s_q[j][n];
+          qs += s_D[j][n]*s_q[n][i];
         }
       
-      r_Aq += tmpr;
-      r_Aq += tmps;
+      r_qr = qr; r_qs = qs; 
       
-      const dlong base = element*p_Np + j*p_Nq + i;
+      r_Aq = r_GwJ*lambda*s_q[j][i];
+    }
+
+    // r term ----->
+    @barrier("local");
+
+    squareThreads{
+      s_q[j][i] = r_G00*r_qr + r_G01*r_qs;
+    }
+    
+    @barrier("local");
+
+    squareThreads{
+      dfloat tmp = 0.f;
+      #pragma unroll p_Nq
+        for(int n=0;n<p_Nq;++n) {
+          tmp += s_D[n][i]*s_q[j][n];
+        }
+
+      r_Aq += tmp;
+    }
+
+    // s term ---->
+    @barrier("local");
+
+    squareThreads{
+      s_q[j][i] = r_G01*r_qr + r_G11*r_qs;
+    }
+    
+    @barrier("local");
+
+    squareThreads{
+      dfloat tmp = 0.f;
+
+      #pragma unroll p_Nq 
+        for(int n=0;n<p_Nq;++n) {
+          tmp += s_D[n][j]*s_q[n][i];
+        }
+      
+      r_Aq += tmp;
+
+      const dlong base = e*p_Np + j*p_Nq + i;
       Aq[base] = r_Aq;
     }
   }
 }
 
+// square thread version
+@kernel void ellipticPartialAxHex3D_1(const dlong Nelements,
+                                   @restrict const  dlong   *  elementList,
+                                   @restrict const  dfloat *  ggeo,
+                                   @restrict const  dfloat *  D,
+                                   @restrict const  dfloat *  S,
+                                   @restrict const  dfloat *  MM,
+                                   const dfloat   lambda,
+                                   @restrict const  dfloat *  q,
+                                   @restrict dfloat *  Aq){
 
-// adding multiple outputs and simd cramming
-kernel void ellipticPartialAxQuad2D_Ref1(const dlong Nelements,
-					 const dlong elementOffset,
-					 const dfloat * restrict ggeo,
-					 const dfloat * restrict D,
-					 const dfloat   lambda,
-					 const dfloat * restrict q,
-					 dfloat * restrict Aq){
-  
-  for(dlong eo=0;eo<Nelements;eo+=p_Ne*p_Nb;outer0){
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
     
-    shared dfloat s_q[p_Ne][p_Nb][p_Nq][p_Nq];
-    shared dfloat s_qr[p_Ne][p_Nb][p_Nq][p_Nq];
-    shared dfloat s_qs[p_Ne][p_Nb][p_Nq][p_Nq];
-    shared dfloat s_D[p_Nq][p_Nq];
-    
-    exclusive dlong element[p_Ne];
-    exclusive dfloat r_Aq[p_Ne];
-    
-    // prefetch q(:,:,:,e) to shared
-    for(int b=0; b<p_Nb; ++b; inner2){
-      for(int j=0; j<p_Nq; ++j; inner1){
-	for(int i=0; i<p_Nq; ++i; inner0){
+    @shared dfloat s_q[p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
 
-	  for(int et=0;et<p_Ne;++et){
-	    element[et] = eo + b + p_Nb*et;
-	    if(element[et]<Nelements){
-	      const dlong base = i + j*p_Nq + (element[et]+elementOffset)*p_Np; 
-	      
-	      s_q[et][b][j][i] = q[base];
-	    }
-	  }
-	  
-	  // fetch D to shared
-	  if(b==0)
-	    s_D[j][i] = D[j*p_Nq+i];
-	}
-      }
+    @exclusive dlong element;
+    @exclusive dfloat r_qr, r_qs, r_Aq;
+    @exclusive dfloat r_G00, r_G01, r_G11, r_GwJ;
+    
+    // prefetch q(:,:,:,e) to @shared
+    squareThreads{
+      element = elementList[e];
+      const dlong base = i + j*p_Nq + element*p_Np; 
+      
+      s_q[j][i] = q[base];
+      
+      // fetch D to @shared
+      s_D[j][i] = D[j*p_Nq+i];
     }
-    
-    barrier(localMemFence);
+      
+    @barrier("local");
 
-    for(int b=0; b<p_Nb; ++b; inner2){
-      for(int j=0; j<p_Nq; ++j; inner1){
-	for(int i=0; i<p_Nq; ++i; inner0){
+    squareThreads{
+      
+      const dlong base = element*p_Nggeo*p_Np + j*p_Nq + i;
 
-	  dfloat qr[p_Ne], qs[p_Ne];
+      // assumes w*J built into G entries
+      r_GwJ = ggeo[base+p_GWJID*p_Np];
 
-	  occaUnroll(p_Ne)
-	    for(int et=0;et<p_Ne;++et){
-	      qr[et] = 0;
-	      qs[et] = 0;
-	    }
-	  
-	  occaUnroll(p_Nq)
-	    for(int n=0; n<p_Nq; ++n){
-	      const dfloat Din = s_D[i][n];
-	      const dfloat Djn = s_D[j][n];
+      r_G00 = ggeo[base+p_G00ID*p_Np];
+      r_G01 = ggeo[base+p_G01ID*p_Np];
+      
+      r_G11 = ggeo[base+p_G11ID*p_Np];
 
-	      occaUnroll(p_Ne)
-		for(int et=0;et<p_Ne;++et){
-		  
-		  qr[et] += Din*s_q[et][b][j][n];
-		  qs[et] += Djn*s_q[et][b][n][i];
-		}
-	    }
-
-	  occaUnroll(p_Ne)
-	    for(int et=0;et<p_Ne;++et){
-	      
-	      if(element[et]<Nelements){
-		const dlong base = (element[et]+elementOffset)*p_Nggeo*p_Np + j*p_Nq + i;
-		
-		// assumes w*J built into G entries
-		const dfloat r_GwJ = ggeo[base+p_GWJID*p_Np];
-		
-		const dfloat r_G00 = ggeo[base+p_G00ID*p_Np];
-		const dfloat r_G01 = ggeo[base+p_G01ID*p_Np];
-		
-		const dfloat r_G11 = ggeo[base+p_G11ID*p_Np];
-
-		r_Aq[et] = r_GwJ*lambda*s_q[et][b][j][i];
-		
-		s_qr[et][b][j][i] = r_G00*qr[et] + r_G01*qs[et];
-		s_qs[et][b][j][i] = r_G01*qr[et] + r_G11*qs[et];
-	      }
-	    }
-	}
-      }
+      dfloat qr = 0.f, qs = 0.f;
+      
+      #pragma unroll p_Nq
+        for(int n=0; n<p_Nq; ++n){
+          qr += s_D[i][n]*s_q[j][n];
+          qs += s_D[j][n]*s_q[n][i];
+        }
+      
+      r_qr = qr; r_qs = qs; 
+      
+      r_Aq = r_GwJ*lambda*s_q[j][i];
     }
 
-    barrier(localMemFence);
+    // r term ----->
+    @barrier("local");
 
-    for(int b=0; b<p_Nb; ++b; inner2){
-      for(int j=0; j<p_Nq; ++j; inner1){
-	for(int i=0; i<p_Nq; ++i; inner0){
-	    
-	  occaUnroll(p_Nq)
-	    for(int n=0;n<p_Nq;++n) {
-	      
-	      const dfloat Dni = s_D[n][i];
-	      const dfloat Dnj = s_D[n][j];
-	      
-	      occaUnroll(p_Ne)
-		for(int et=0;et<p_Ne;++et){
-		  r_Aq[et] += Dni*s_qr[et][b][j][n];
-		  r_Aq[et] += Dnj*s_qs[et][b][n][i];
-		}
-	    }
-	  
-	  occaUnroll(p_Ne)
-	    for(int et=0;et<p_Ne;++et){
-	      if(element[et]<Nelements){
-		const dlong base = (element[et]+elementOffset)*p_Np + j*p_Nq + i;
-		Aq[base] = r_Aq[et];
-	      }
-	    }
-	}
+    squareThreads{
+      s_q[j][i] = r_G00*r_qr + r_G01*r_qs;
+    }
+    
+    @barrier("local");
+
+    squareThreads{
+      dfloat tmp = 0.f;
+      #pragma unroll p_Nq
+        for(int n=0;n<p_Nq;++n) {
+          tmp += s_D[n][i]*s_q[j][n];
+        }
+
+      r_Aq += tmp;
+    }
+
+    // s term ---->
+    @barrier("local");
+
+    squareThreads{
+      s_q[j][i] = r_G01*r_qr + r_G11*r_qs;
+    }
+    
+    @barrier("local");
+
+    squareThreads{
+      dfloat tmp = 0.f;
+
+      #pragma unroll p_Nq
+        for(int n=0;n<p_Nq;++n){
+          tmp += s_D[n][j]*s_q[n][i];
       }
+
+      r_Aq += tmp;
+
+      const dlong base = element*p_Np + j*p_Nq + i;
+      Aq[base] = r_Aq;
     }
   }
 }

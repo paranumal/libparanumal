@@ -37,6 +37,7 @@ elliptic_t& elliptic_t::Setup(mesh_t& mesh, linAlg_t& linAlg, dfloat lambda){
 
   elliptic->disc_ipdg = settings.compareSetting("DISCRETIZATION","IPDG");
   elliptic->disc_c0   = settings.compareSetting("DISCRETIZATION","CONTINUOUS");
+  elliptic->coef_var  = settings.compareSetting("COEFFICIENT","VARIABLE");
 
   //setup linear algebra module
   elliptic->linAlg.InitKernels({"add", "sum", "scale",
@@ -48,7 +49,7 @@ elliptic_t& elliptic_t::Setup(mesh_t& mesh, linAlg_t& linAlg, dfloat lambda){
                                 mesh.comm);
 
   // Boundary Type translation. Just defaults.
-  int BCType[3] = {0,1,2};
+  int BCType[3]    = {0,1,2};
   elliptic->BCType = (int*) calloc(3,sizeof(int));
   memcpy(elliptic->BCType,BCType,3*sizeof(int));
 

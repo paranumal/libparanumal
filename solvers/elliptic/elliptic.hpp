@@ -51,6 +51,7 @@ public:
   dfloat tau;
 
   int disc_ipdg, disc_c0;
+  int coef_var; 
 
   precon_t* precon;
 
@@ -85,6 +86,12 @@ public:
   occa::kernel partialAxKernel;
   occa::kernel partialGradientKernel;
   occa::kernel partialIpdgKernel;
+  
+  // needed in setup phase 
+  // since we are not planing to change AMG in time-dependent solves
+  occa::kernel setCoefficientKernel; 
+  occa::memory o_coef; 
+  dfloat *coef; 
 
   elliptic_t() = delete;
   elliptic_t(mesh_t& _mesh, linAlg_t& _linAlg, dfloat _lambda):

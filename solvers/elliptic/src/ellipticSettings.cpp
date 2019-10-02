@@ -42,6 +42,11 @@ ellipticSettings_t::ellipticSettings_t(MPI_Comm& _comm):
              "1.0",
              "Coefficient in Screened Poisson Equation");
 
+  newSetting("COEFFICIENT",
+             "CONSTANT",
+             "Coefficient in Screened Poisson Operator",
+             {"CONSTANT=1", "VARIABLE"});
+
   newSetting("DISCRETIZATION",
              "CONTINUOUS",
              "Type of Finite Element Discretization",
@@ -97,6 +102,7 @@ void ellipticSettings_t::report() {
   reportSetting("DATA FILE");
 
   reportSetting("LAMBDA");
+  reportSetting("COEFFICIENT");
   reportSetting("DISCRETIZATION");
   reportSetting("LINEAR SOLVER");
   reportSetting("PRECONDITIONER");

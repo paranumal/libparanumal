@@ -2,10 +2,12 @@
 2.0
 
 [DATA FILE]
-data/ellipticSine2D.h
+#data/ellipticSine2D.h
+data/ellipticVarSine2D.h
 
 [MESH FILE]
-BOX
+../../meshes/boxVarCoeffQuad2D.msh
+#BOX
 
 [MESH DIMENSION]
 2
@@ -48,6 +50,9 @@ CUDA
 
 [LAMBDA]
 1
+
+[COEFFICIENT]
+VARIABLE
 
 # can be IPDG, or CONTINUOUS
 [DISCRETIZATION]

@@ -41,11 +41,12 @@ int main(int argc, char **argv){
   ellipticSettings_t settings(comm); //sets default settings
   settings.readSettingsFromFile(argv[1]);
   if (!rank) settings.report();
-
+ 
   // set up occa device
   occa::device device;
   occa::properties props;
   occaDeviceConfig(device, comm, settings, props);
+  
 
   // set up mesh
   mesh_t& mesh = mesh_t::Setup(device, comm, settings, props);

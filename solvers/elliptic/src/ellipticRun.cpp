@@ -149,7 +149,7 @@ void elliptic_t::Run(){
   double startTime = MPI_Wtime();
 
   //call the solver
-  dfloat tol = 1e-8;
+  dfloat tol = 1e-10;
   int iter = Solve(*linearSolver, o_x, o_r, tol, maxIter, verbose);
 
   //add the boundary data to the masked nodes
@@ -165,6 +165,20 @@ void elliptic_t::Run(){
   MPI_Barrier(comm);
   double endTime = MPI_Wtime();
   double elapsedTime = endTime - startTime;
+
+#if 1
+  o_x.copyTo(x);
+  double err = 0.f; 
+  for(int e=0; e<mesh.Nelements; e++){
+    for(int n=0; n<mesh.Np; n++){
+      const int id       = n + e*mesh.Np; 
+      // const double exact = sin(mesh.x[id]) + sin(mesh.y[id]); 
+      const double exact = sin(M_PI*mesh.x[id])*sin(M_PI*mesh.y[id]);
+      err = mymax(fabs(x[id]-exact), err);
+    }
+  }
+  printf("Error = %.8e \n", err); 
+#endif
 
   if ((mesh.rank==0) && verbose){
     printf("%d, " hlongFormat ", %g, %d, %g, %g; global: N, dofs, elapsed, iterations, time per node, nodes*iterations/time %s\n",

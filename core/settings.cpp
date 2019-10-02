@@ -102,7 +102,7 @@ void settings_t::changeSetting(const string name, const string newVal) {
   } else {
     stringstream ss;
     ss << "Setting with name: [" << name << "] does not exist.";
-    LIBP_ABORT(ss.str());
+    // LIBP_ABORT(ss.str());
   }
 }
 
