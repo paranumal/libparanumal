@@ -1,0 +1,10 @@
+#!/bin/bash
+echo "Bash version ${BASH_VERSION}..."
+
+for E in {2000..10000..2000}
+do
+	for N in {1..10}
+	do
+	   	./testMain $E $N |& grep timeData;
+	done
+done
