@@ -48,10 +48,10 @@ public:
   int Nfields;
 
   dfloat lambda;
+  dfloat *coeff; 
   dfloat tau;
 
-  int disc_ipdg, disc_c0;
-  int coef_var; 
+  int disc_ipdg, disc_c0, var_coef; 
 
   precon_t* precon;
 
@@ -64,7 +64,7 @@ public:
   //C0-FEM mask data
   ogs_t *ogsMasked;
   int *mapB;      // boundary flag of face nodes
-
+  
   dlong Nmasked;
   dlong *maskIds;
   hlong *maskedGlobalIds;
@@ -89,16 +89,19 @@ public:
   
   // needed in setup phase 
   // since we are not planing to change AMG in time-dependent solves
-  occa::kernel setCoefficientKernel; 
-  occa::memory o_coef; 
-  dfloat *coef; 
+  occa::kernel coefficientKernel; 
+  occa::memory o_coeff; 
 
   elliptic_t() = delete;
-  elliptic_t(mesh_t& _mesh, linAlg_t& _linAlg, dfloat _lambda):
-    solver_t(_mesh, _linAlg), lambda(_lambda) {}
+  // elliptic_t(mesh_t& _mesh, linAlg_t& _linAlg, dfloat _lambda):
+  //   solver_t(_mesh, _linAlg), lambda(_lambda) {}
+
+  elliptic_t(mesh_t& _mesh, linAlg_t& _linAlg):
+    solver_t(_mesh, _linAlg) {}
 
   //setup
-  static elliptic_t& Setup(mesh_t& mesh, linAlg_t& linAlg, dfloat lambda);
+  // static elliptic_t& Setup(mesh_t& mesh, linAlg_t& linAlg, dfloat lambda);
+  static elliptic_t& Setup(mesh_t& mesh, linAlg_t& linAlg);
 
   void BoundarySetup();
 

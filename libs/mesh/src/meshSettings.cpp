@@ -54,6 +54,16 @@ void meshAddSettings(settings_t& settings) {
                       "10",
                       "Length of BOX domain in Z-dimension");
 
+  settings.newSetting("BOX DOMX",
+                      "0",
+                      "Start of BOX domain in X-dimension");
+  settings.newSetting("BOX DOMY",
+                      "0",
+                      "Start of BOX domain in Y-dimension");
+  settings.newSetting("BOX DOMZ",
+                      "0",
+                      "Start of BOX domain in Z-dimension");
+
   settings.newSetting("BOX NX",
                       "10",
                       "Number of elements in X-dimension per rank");
@@ -91,6 +101,9 @@ void meshReportSettings(settings_t& settings) {
     settings.reportSetting("BOX DIMX");
     settings.reportSetting("BOX DIMY");
     settings.reportSetting("BOX DIMZ");
+    settings.reportSetting("BOX DOMX");
+    settings.reportSetting("BOX DOMY");
+    settings.reportSetting("BOX DOMZ");
     settings.reportSetting("BOX NX");
     settings.reportSetting("BOX NY");
     settings.reportSetting("BOX NZ");

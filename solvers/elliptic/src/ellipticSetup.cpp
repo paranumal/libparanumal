@@ -27,9 +27,11 @@ SOFTWARE.
 #include "elliptic.hpp"
 #include "ellipticPrecon.hpp"
 
-elliptic_t& elliptic_t::Setup(mesh_t& mesh, linAlg_t& linAlg, dfloat lambda){
+// elliptic_t& elliptic_t::Setup(mesh_t& mesh, linAlg_t& linAlg, dfloat lambda){
+elliptic_t& elliptic_t::Setup(mesh_t& mesh, linAlg_t& linAlg){
 
-  elliptic_t* elliptic = new elliptic_t(mesh, linAlg, lambda);
+  // elliptic_t* elliptic = new elliptic_t(mesh, linAlg, lambda);
+  elliptic_t* elliptic = new elliptic_t(mesh, linAlg);
 
   settings_t& settings = elliptic->settings;
 
@@ -37,7 +39,7 @@ elliptic_t& elliptic_t::Setup(mesh_t& mesh, linAlg_t& linAlg, dfloat lambda){
 
   elliptic->disc_ipdg = settings.compareSetting("DISCRETIZATION","IPDG");
   elliptic->disc_c0   = settings.compareSetting("DISCRETIZATION","CONTINUOUS");
-  elliptic->coef_var  = settings.compareSetting("COEFFICIENT","VARIABLE");
+  elliptic->var_coef  = settings.compareSetting("COEFFICIENT","VARIABLE");
 
   //setup linear algebra module
   elliptic->linAlg.InitKernels({"add", "sum", "scale",
@@ -98,6 +100,7 @@ elliptic_t& elliptic_t::Setup(mesh_t& mesh, linAlg_t& linAlg, dfloat lambda){
   elliptic->maskKernel = buildKernel(mesh.device, DELLIPTIC "/okl/ellipticMask.okl",
                                      "mask", kernelInfo, mesh.comm);
 
+
   //add standard boundary functions
   char *boundaryHeaderFileName;
   if (mesh.dim==2)
@@ -109,22 +112,79 @@ elliptic_t& elliptic_t::Setup(mesh_t& mesh, linAlg_t& linAlg, dfloat lambda){
   int NblockV = mymax(1,512/mesh.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;
 
+  // Add coefficients here ......
+  if(elliptic->var_coef){
+    // AK: this could be moved but we need problem dependent data for setup also!!!
+    string dataFileName;
+    settings.getSetting("DATA FILE", dataFileName);
+    kernelInfo["includes"] += dataFileName;
+
+    const dlong Nall = mesh.Np *(mesh.Nelements+mesh.totalHaloPairs); 
+    
+    // currently scalar coefficients are supported
+    elliptic->coeff     = (dfloat *) calloc(2*Nall, sizeof(dfloat)); 
+    elliptic->o_coeff   = mesh.device.malloc(2*Nall*sizeof(dfloat), elliptic->coeff);
+
+    sprintf(fileName, DELLIPTIC "/okl/ellipticCoefficient%s.okl", suffix);
+    sprintf(kernelName,"ellipticCoefficient%s", suffix);
+
+    elliptic->coefficientKernel  = buildKernel(mesh.device,fileName, kernelName,
+                                              kernelInfo, mesh.comm); 
+
+    elliptic->coefficientKernel(mesh.Nelements,
+                                mesh.o_x,
+                                mesh.o_y,
+                                mesh.o_z,
+                                Nall,  
+                                elliptic->o_coeff); 
+    
+    // copy to host for setup
+    elliptic->o_coeff.copyTo(elliptic->coeff);
+
+  dfloat lambda = 0.0;
+  settings.getSetting("LAMBDA", lambda); elliptic->lambda = lambda;  
+
+#if 1
+    const dfloat ncoeff = elliptic->linAlg.norm2(2*Nall, elliptic->o_coeff, mesh.comm);
+    printf(" \n !!!! norm of the coeff = %.8f !!!!\n", ncoeff*ncoeff); 
+#endif
+
+  }else{ // setting contant coefficient 
+  dfloat lambda = 0.0;
+  settings.getSetting("LAMBDA", lambda); elliptic->lambda = lambda; 
+  
+  elliptic->coeff     = (dfloat *) calloc(1,sizeof(dfloat));
+  elliptic->coeff[0] = lambda; 
+
+  elliptic->o_coeff = mesh.device.malloc(1*sizeof(dfloat), elliptic->coeff);
+  }
+  
   // Ax kernel
   if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
     sprintf(fileName,  DELLIPTIC "/okl/ellipticAx%s.okl", suffix);
     if(mesh.elementType==HEXAHEDRA){
-      if(settings.compareSetting("ELEMENT MAP", "TRILINEAR"))
+      if(settings.compareSetting("ELEMENT MAP", "TRILINEAR")){
+        if(elliptic->var_coef)
+        sprintf(kernelName, "ellipticPartialAxTrilinearVar%s", suffix);
+        else
         sprintf(kernelName, "ellipticPartialAxTrilinear%s", suffix);
-      else
+      }else{
+        if(elliptic->var_coef)
+        sprintf(kernelName, "ellipticPartialAxVar%s", suffix);
+        else
         sprintf(kernelName, "ellipticPartialAx%s", suffix);
+      }
     } else{
-      sprintf(kernelName, "ellipticPartialAx%s", suffix);
+        if(elliptic->var_coef)      
+          sprintf(kernelName, "ellipticPartialAxVar%s", suffix);
+        else
+          sprintf(kernelName, "ellipticPartialAx%s", suffix);          
     }
 
     elliptic->partialAxKernel = buildKernel(mesh.device, fileName, kernelName,
                                      kernelInfo, mesh.comm);
 
-  } else if (settings.compareSetting("DISCRETIZATION","IPDG")) {
+  } else if (settings.compareSetting("DISCRETIZATION","IPDG")) {  // did not updated DG yet!!!!!!!!!!!
     int Nmax = mymax(mesh.Np, mesh.Nfaces*mesh.Nfp);
     kernelInfo["defines/" "p_Nmax"]= Nmax;
 
@@ -142,15 +202,15 @@ elliptic_t& elliptic_t::Setup(mesh_t& mesh, linAlg_t& linAlg, dfloat lambda){
   /* Preconditioner Setup */
   if       (settings.compareSetting("PRECONDITIONER", "JACOBI"))
     elliptic->precon = new JacobiPrecon(*elliptic);
-  else if(settings.compareSetting("PRECONDITIONER", "MASSMATRIX"))
-    elliptic->precon = new MassMatrixPrecon(*elliptic);
-  else if(settings.compareSetting("PRECONDITIONER", "FULLALMOND"))
-    elliptic->precon = new ParAlmondPrecon(*elliptic);
-  else if(settings.compareSetting("PRECONDITIONER", "MULTIGRID"))
-    elliptic->precon = new MultiGridPrecon(*elliptic);
-  else if(settings.compareSetting("PRECONDITIONER", "SEMFEM")){
-    elliptic->precon = new SEMFEMPrecon(*elliptic);
-  }
+  // else if(settings.compareSetting("PRECONDITIONER", "MASSMATRIX"))
+  //   elliptic->precon = new MassMatrixPrecon(*elliptic);
+  // else if(settings.compareSetting("PRECONDITIONER", "FULLALMOND"))
+  //   elliptic->precon = new ParAlmondPrecon(*elliptic);
+  // else if(settings.compareSetting("PRECONDITIONER", "MULTIGRID"))
+  //   elliptic->precon = new MultiGridPrecon(*elliptic);
+  // else if(settings.compareSetting("PRECONDITIONER", "SEMFEM")){
+  //   elliptic->precon = new SEMFEMPrecon(*elliptic);
+  // }
   else if(settings.compareSetting("PRECONDITIONER", "OAS")){
 
     LIBP_ABORT(string("OAS does not work right now."));

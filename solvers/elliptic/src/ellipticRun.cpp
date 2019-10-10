@@ -172,8 +172,8 @@ void elliptic_t::Run(){
   for(int e=0; e<mesh.Nelements; e++){
     for(int n=0; n<mesh.Np; n++){
       const int id       = n + e*mesh.Np; 
-      // const double exact = sin(mesh.x[id]) + sin(mesh.y[id]); 
-      const double exact = sin(M_PI*mesh.x[id])*sin(M_PI*mesh.y[id]);
+       // const double exact = sin(M_PI*mesh.x[id])*sin(M_PI*mesh.y[id]);
+     const double exact = sin(M_PI*mesh.x[id])*sin(M_PI*mesh.y[id])*sin(M_PI*mesh.z[id]); ;
       err = mymax(fabs(x[id]-exact), err);
     }
   }
@@ -195,6 +195,18 @@ void elliptic_t::Run(){
 
     // copy data back to host
     o_x.copyTo(x);
+
+
+#if 1
+  for(int e=0; e<mesh.Nelements; e++){
+    for(int n=0; n<mesh.Np; n++){
+      const int id       = n + e*mesh.Np; 
+       // const double exact = sin(M_PI*mesh.x[id])*sin(M_PI*mesh.y[id]);
+     const double exact = sin(M_PI*mesh.x[id])*sin(M_PI*mesh.y[id])*sin(M_PI*mesh.z[id]); ;
+       x[id] = x[id]-exact;
+    }
+  }
+#endif
 
     // output field files
     string name;

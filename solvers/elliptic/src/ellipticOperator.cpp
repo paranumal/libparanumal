@@ -28,6 +28,8 @@
 
 void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
 
+  const dlong offset  = mesh.Np*(mesh.Nelements + mesh.NhaloElements); 
+
   if(disc_c0){
     int mapType = (mesh.elementType==HEXAHEDRA &&
                    settings.compareSetting("ELEMENT MAP", "TRILINEAR")) ? 1:0;
@@ -38,12 +40,21 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
     if(mesh.NglobalGatherElements) {
 
       // if(integrationType==0) { // GLL or non-hex
-        if(mapType==0)
-          partialAxKernel(mesh.NglobalGatherElements, mesh.o_globalGatherElementList,
+      if(mapType==0){
+	if(var_coef)
+          partialAxKernel(mesh.NglobalGatherElements, offset, mesh.o_globalGatherElementList,
+                          mesh.o_ggeo, mesh.o_Dmatrices, mesh.o_Smatrices, mesh.o_MM, o_coeff, o_q, o_Aq);
+	else
+	  partialAxKernel(mesh.NglobalGatherElements, mesh.o_globalGatherElementList,
                           mesh.o_ggeo, mesh.o_Dmatrices, mesh.o_Smatrices, mesh.o_MM, lambda, o_q, o_Aq);
-        else
-          partialAxKernel(mesh.NglobalGatherElements, mesh.o_globalGatherElementList,
+      }else{
+	if(var_coef)
+          partialAxKernel(mesh.NglobalGatherElements, offset, mesh.o_globalGatherElementList,
+                          mesh.o_EXYZ, mesh.o_gllzw, mesh.o_Dmatrices, mesh.o_Smatrices, mesh.o_MM, o_coeff, o_q, o_Aq);
+	else
+	  partialAxKernel(mesh.NglobalGatherElements, mesh.o_globalGatherElementList,
                           mesh.o_EXYZ, mesh.o_gllzw, mesh.o_Dmatrices, mesh.o_Smatrices, mesh.o_MM, lambda, o_q, o_Aq);
+      }
       // } else {
       //   partialCubatureAxKernel(mesh.NglobalGatherElements,
       //                           mesh.o_globalGatherElementList,
@@ -53,17 +64,27 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
       //                           lambda, o_q, o_Aq);
       // }
     }
-
+    
     ogsMasked->GatherScatterStart(o_Aq, ogs_dfloat, ogs_add, ogs_sym);
 
     if(mesh.NlocalGatherElements){
       // if(integrationType==0) { // GLL or non-hex
-        if(mapType==0)
-          partialAxKernel(mesh.NlocalGatherElements, mesh.o_localGatherElementList,
+      if(mapType==0){
+	if(var_coef)
+          partialAxKernel(mesh.NlocalGatherElements, offset, mesh.o_localGatherElementList,
+                          mesh.o_ggeo, mesh.o_Dmatrices, mesh.o_Smatrices, mesh.o_MM, o_coeff, o_q, o_Aq);
+	else
+	  partialAxKernel(mesh.NlocalGatherElements, mesh.o_localGatherElementList,
                           mesh.o_ggeo, mesh.o_Dmatrices, mesh.o_Smatrices, mesh.o_MM, lambda, o_q, o_Aq);
-        else
-          partialAxKernel(mesh.NlocalGatherElements, mesh.o_localGatherElementList,
+      }
+      else{
+	if(var_coef)
+          partialAxKernel(mesh.NlocalGatherElements, offset, mesh.o_localGatherElementList,
+                          mesh.o_EXYZ, mesh.o_gllzw, mesh.o_Dmatrices, mesh.o_Smatrices, mesh.o_MM, o_coeff, o_q, o_Aq);
+	else
+	  partialAxKernel(mesh.NlocalGatherElements, mesh.o_localGatherElementList,
                           mesh.o_EXYZ, mesh.o_gllzw, mesh.o_Dmatrices, mesh.o_Smatrices, mesh.o_MM, lambda, o_q, o_Aq);
+      }
       // } else {
       //   partialCubatureAxKernel(mesh.NlocalGatherElements,
       //                           mesh.o_localGatherElementList,
@@ -96,9 +117,9 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
   } else if(disc_ipdg) {
 
     if(mesh.Nelements) {
-      dlong offset = 0;
+      dlong offset_zero = 0;
       partialGradientKernel(mesh.Nelements,
-                            offset,
+                            offset_zero,
                             mesh.o_vgeo,
                             mesh.o_Dmatrices,
                             o_q,

@@ -231,3 +231,483 @@ SOFTWARE.
   }
 }
 
+
+
+// square thread version
+@kernel void ellipticAxVarQuad2D(const dlong   Nelements,
+                                const dlong   offset,
+                               @restrict const  dfloat *  ggeo,
+                               @restrict const  dfloat *  D,
+                               @restrict const  dfloat *  S,
+                               @restrict const  dfloat *  MM,
+                               @restrict const  dfloat *  lambda,
+                               @restrict const  dfloat *  q,
+                               @restrict dfloat *  Aq){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    
+    @shared dfloat s_q[p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
+
+    @exclusive dfloat r_qr, r_qs, r_Aq;
+    @exclusive dfloat r_G00, r_G01, r_G11, r_GwJ;
+    
+    @exclusive dfloat r_lam0, r_lam1; 
+    // prefetch q(:,:,:,e) to @shared
+    squareThreads{
+      const dlong base = i + j*p_Nq + e*p_Np; 
+      
+      s_q[j][i] = q[base];
+      
+      // fetch D to @shared
+      s_D[j][i] = D[j*p_Nq+i];
+    }
+      
+    @barrier("local");
+
+    squareThreads{
+      const dlong base = e*p_Nggeo*p_Np + j*p_Nq + i;
+
+      const dlong id = e*p_Np + j*p_Nq + i;
+      r_lam0  = lambda[id+0*offset]; 
+      r_lam1  = lambda[id+1*offset];  
+
+      // assumes w*J built into G entries
+      r_GwJ = ggeo[base+p_GWJID*p_Np];
+
+      r_G00 = ggeo[base+p_G00ID*p_Np];
+      r_G01 = ggeo[base+p_G01ID*p_Np];
+      
+      r_G11 = ggeo[base+p_G11ID*p_Np];
+
+      dfloat qr = 0.f, qs = 0.f;
+      
+      #pragma unroll p_Nq
+        for(int n=0; n<p_Nq; ++n){
+          qr += s_D[i][n]*s_q[j][n];
+          qs += s_D[j][n]*s_q[n][i];
+        }
+      
+      r_qr = qr; r_qs = qs; 
+
+      r_Aq    = r_GwJ*r_lam1*s_q[j][i];
+    }
+
+    // r term ----->
+    @barrier("local");
+
+    squareThreads{
+       s_q[j][i] = r_lam0*(r_G00*r_qr + r_G01*r_qs);
+    }
+    
+    @barrier("local");
+
+    squareThreads{
+      dfloat tmp = 0.f;
+      #pragma unroll p_Nq
+        for(int n=0;n<p_Nq;++n) {
+          tmp += s_D[n][i]*s_q[j][n];
+        }
+
+      r_Aq += tmp;
+    }
+
+    // s term ---->
+    @barrier("local");
+
+    squareThreads{
+      s_q[j][i] = r_lam0*(r_G01*r_qr + r_G11*r_qs);
+    }
+    
+    @barrier("local");
+
+    squareThreads{
+      dfloat tmp = 0.f;
+
+      #pragma unroll p_Nq 
+        for(int n=0;n<p_Nq;++n) {
+          tmp += s_D[n][j]*s_q[n][i];
+        }
+      
+      r_Aq += tmp;
+
+      const dlong base = e*p_Np + j*p_Nq + i;
+      Aq[base] = r_Aq;
+    }
+  }
+}
+
+// square thread version
+@kernel void ellipticPartialAxVarQuad2D(const dlong Nelements,
+                                   const dlong   offset,
+                                   @restrict const  dlong   *  elementList,
+                                   @restrict const  dfloat *  ggeo,
+                                   @restrict const  dfloat *  D,
+                                   @restrict const  dfloat *  S,
+                                   @restrict const  dfloat *  MM,
+                                   @restrict const  dfloat *  lambda,
+                                   @restrict const  dfloat *  q,
+                                   @restrict dfloat *  Aq){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    
+    @shared dfloat s_q[p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
+
+    @exclusive dlong element;
+    @exclusive dfloat r_qr, r_qs, r_Aq;
+    @exclusive dfloat r_G00, r_G01, r_G11, r_GwJ;
+    
+    @exclusive dfloat r_lam0, r_lam1; 
+    // prefetch q(:,:,:,e) to @shared
+    squareThreads{
+      element = elementList[e];
+      const dlong base = i + j*p_Nq + element*p_Np; 
+      
+      s_q[j][i] = q[base];
+      
+      // fetch D to @shared
+      s_D[j][i] = D[j*p_Nq+i];
+    }
+      
+    @barrier("local");
+
+    squareThreads{
+      
+      const dlong base = element*p_Nggeo*p_Np + j*p_Nq + i;
+      const dlong id   = element*p_Np + j*p_Nq + i;
+      
+      r_lam0  = lambda[id+0*offset]; 
+      r_lam1  = lambda[id+1*offset];   
+
+      // assumes w*J built into G entries
+      r_GwJ = ggeo[base+p_GWJID*p_Np];
+
+      r_G00 = ggeo[base+p_G00ID*p_Np];
+      r_G01 = ggeo[base+p_G01ID*p_Np];
+      
+      r_G11 = ggeo[base+p_G11ID*p_Np];
+
+      dfloat qr = 0.f, qs = 0.f;
+      
+      #pragma unroll p_Nq
+        for(int n=0; n<p_Nq; ++n){
+          qr += s_D[i][n]*s_q[j][n];
+          qs += s_D[j][n]*s_q[n][i];
+        }
+      
+      r_qr = qr; r_qs = qs; 
+      //    
+      r_Aq = r_GwJ*r_lam1*s_q[j][i];
+    }
+
+    // r term ----->
+    @barrier("local");
+
+    squareThreads{
+      s_q[j][i] = r_lam0*(r_G00*r_qr + r_G01*r_qs);
+    }
+    
+    @barrier("local");
+
+    squareThreads{
+      dfloat tmp = 0.f;
+      #pragma unroll p_Nq
+        for(int n=0;n<p_Nq;++n) {
+          tmp += s_D[n][i]*s_q[j][n];
+        }
+
+      r_Aq += tmp;
+    }
+
+    // s term ---->
+    @barrier("local");
+
+    squareThreads{
+      s_q[j][i] = r_lam0*(r_G01*r_qr + r_G11*r_qs);
+    }
+    
+    @barrier("local");
+
+    squareThreads{
+      dfloat tmp = 0.f;
+
+      #pragma unroll p_Nq
+        for(int n=0;n<p_Nq;++n){
+          tmp += s_D[n][j]*s_q[n][i];
+      }
+
+      r_Aq += tmp;
+
+      const dlong base = element*p_Np + j*p_Nq + i;
+      Aq[base] = r_Aq;
+    }
+  }
+}
+
+
+
+
+#if 0
+#define VARIABLE_COEFFICIENT 1
+
+#if VARIABLE_COEFFICIENT
+// square thread version
+@kernel void ellipticAxQuad2D(const dlong   Nelements,
+                               @restrict const  dfloat *  ggeo,
+                               @restrict const  dfloat *  D,
+                               @restrict const  dfloat *  S,
+                               @restrict const  dfloat *  MM,
+                               @restrict const  dfloat *  coeff,
+                               @restrict const  dfloat *  q,
+                               @restrict dfloat *  Aq){
+#else
+// square thread version
+@kernel void ellipticAxQuad2D(const dlong   Nelements,
+                               @restrict const  dfloat *  ggeo,
+                               @restrict const  dfloat *  D,
+                               @restrict const  dfloat *  S,
+                               @restrict const  dfloat *  MM,
+                               const  dfloat lambda,
+                               @restrict const  dfloat *  q,
+                               @restrict dfloat *  Aq){
+#endif
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    
+    @shared dfloat s_q[p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
+
+    @exclusive dfloat r_qr, r_qs, r_Aq;
+    @exclusive dfloat r_G00, r_G01, r_G11, r_GwJ;
+
+#if VARIABLE_COEFFICIENT
+    @exclusive dfloat r_lam0, r_lam1; 
+#endif
+    
+    // prefetch q(:,:,:,e) to @shared
+    squareThreads{
+      const dlong base = i + j*p_Nq + e*p_Np; 
+      
+      s_q[j][i] = q[base];
+      
+      // fetch D to @shared
+      s_D[j][i] = D[j*p_Nq+i];
+    }
+      
+    @barrier("local");
+
+    squareThreads{
+      const dlong base = e*p_Nggeo*p_Np + j*p_Nq + i;
+
+      // assumes w*J built into G entries
+      r_GwJ = ggeo[base+p_GWJID*p_Np];
+
+      r_G00 = ggeo[base+p_G00ID*p_Np];
+      r_G01 = ggeo[base+p_G01ID*p_Np];
+      
+      r_G11 = ggeo[base+p_G11ID*p_Np];
+
+      dfloat qr = 0.f, qs = 0.f;
+      
+      #pragma unroll p_Nq
+        for(int n=0; n<p_Nq; ++n){
+          qr += s_D[i][n]*s_q[j][n];
+          qs += s_D[j][n]*s_q[n][i];
+        }
+      r_qr = qr; r_qs = qs; 
+
+#if VARIABLE_COEFFICIENT
+      //
+      const dlong id = e*p_Np + j*p_Nq + i;
+      r_lam0  = coeff[id+0*Nelements*p_Np]; 
+      r_lam1  = coeff[id+1*Nelements*p_Np];       
+      r_Aq    = r_GwJ*r_lam1*s_q[j][i];
+#else      
+      r_Aq    = r_GwJ*lambda*s_q[j][i];
+#endif
+    }
+
+    // r term ----->
+    @barrier("local");
+
+    squareThreads{
+      #if VARIABLE_COEFFICIENT
+      s_q[j][i] = r_lam0*(r_G00*r_qr + r_G01*r_qs);
+      #else
+      s_q[j][i] = r_G00*r_qr + r_G01*r_qs;
+      #endif
+    }
+    
+    @barrier("local");
+
+    squareThreads{
+      dfloat tmp = 0.f;
+      #pragma unroll p_Nq
+        for(int n=0;n<p_Nq;++n) {
+          tmp += s_D[n][i]*s_q[j][n];
+        }
+
+      r_Aq += tmp;
+    }
+
+    // s term ---->
+    @barrier("local");
+
+    squareThreads{
+      s_q[j][i] = r_G01*r_qr + r_G11*r_qs;
+    }
+    
+    @barrier("local");
+
+    squareThreads{
+      dfloat tmp = 0.f;
+
+      #pragma unroll p_Nq 
+        for(int n=0;n<p_Nq;++n) {
+          tmp += s_D[n][j]*s_q[n][i];
+        }
+      
+      r_Aq += tmp;
+
+      const dlong base = e*p_Np + j*p_Nq + i;
+      Aq[base] = r_Aq;
+    }
+  }
+}
+
+
+#if VARIABLE_COEFFICIENT
+// square thread version
+@kernel void ellipticPartialAxQuad2D(const dlong Nelements,
+                                   @restrict const  dlong   *  elementList,
+                                   @restrict const  dfloat *  ggeo,
+                                   @restrict const  dfloat *  D,
+                                   @restrict const  dfloat *  S,
+                                   @restrict const  dfloat *  MM,
+                                   @restrict const  dfloat *  coeff,
+                                   @restrict const  dfloat *  q,
+                                   @restrict dfloat *  Aq){
+#else
+// square thread version
+@kernel void ellipticPartialAxQuad2D(const dlong Nelements,
+                                   @restrict const  dlong   *  elementList,
+                                   @restrict const  dfloat *  ggeo,
+                                   @restrict const  dfloat *  D,
+                                   @restrict const  dfloat *  S,
+                                   @restrict const  dfloat *  MM,
+                                   const  dfloat   lambda,
+                                   @restrict const  dfloat *  q,
+                                   @restrict dfloat *  Aq){
+
+#endif
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    
+    @shared dfloat s_q[p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
+
+    @exclusive dlong element;
+    @exclusive dfloat r_qr, r_qs, r_Aq;
+    @exclusive dfloat r_G00, r_G01, r_G11, r_GwJ;
+
+#if VARIABLE_COEFFICIENT 
+    @exclusive dfloat r_lam0, r_lam1; 
+#endif
+    
+    // prefetch q(:,:,:,e) to @shared
+    squareThreads{
+      element = elementList[e];
+      const dlong base = i + j*p_Nq + element*p_Np; 
+      
+      s_q[j][i] = q[base];
+      
+      // fetch D to @shared
+      s_D[j][i] = D[j*p_Nq+i];
+    }
+      
+    @barrier("local");
+
+    squareThreads{
+      
+      const dlong base = element*p_Nggeo*p_Np + j*p_Nq + i;
+
+      // assumes w*J built into G entries
+      r_GwJ = ggeo[base+p_GWJID*p_Np];
+
+      r_G00 = ggeo[base+p_G00ID*p_Np];
+      r_G01 = ggeo[base+p_G01ID*p_Np];
+      
+      r_G11 = ggeo[base+p_G11ID*p_Np];
+
+      dfloat qr = 0.f, qs = 0.f;
+      
+      #pragma unroll p_Nq
+        for(int n=0; n<p_Nq; ++n){
+          qr += s_D[i][n]*s_q[j][n];
+          qs += s_D[j][n]*s_q[n][i];
+        }
+      
+      r_qr = qr; r_qs = qs; 
+
+#if VARIABLE_COEFFICIENT
+      //
+      const dlong id = element*p_Np + j*p_Nq + i;
+      r_lam0  = coeff[id+0*Nelements*p_Np]; 
+      r_lam1  = coeff[id+1*Nelements*p_Np];       
+      r_Aq    = r_GwJ*r_lam1*s_q[j][i];
+#else      
+      r_Aq    = r_GwJ*lambda*s_q[j][i];
+#endif
+  }
+
+    // r term ----->
+    @barrier("local");
+
+    squareThreads{
+#if VARIABLE_COEFFICIENT
+      s_q[j][i] = r_lam0*(r_G00*r_qr + r_G01*r_qs);
+#else
+      s_q[j][i] = r_G00*r_qr + r_G01*r_qs;
+#endif
+    }
+    
+    @barrier("local");
+
+    squareThreads{
+      dfloat tmp = 0.f;
+      #pragma unroll p_Nq
+        for(int n=0;n<p_Nq;++n) {
+          tmp += s_D[n][i]*s_q[j][n];
+        }
+
+      r_Aq += tmp;
+    }
+
+    // s term ---->
+    @barrier("local");
+
+    squareThreads{
+      s_q[j][i] = r_G01*r_qr + r_G11*r_qs;
+    }
+    
+    @barrier("local");
+
+    squareThreads{
+      dfloat tmp = 0.f;
+
+      #pragma unroll p_Nq
+        for(int n=0;n<p_Nq;++n){
+          tmp += s_D[n][j]*s_q[n][i];
+      }
+
+      r_Aq += tmp;
+
+      const dlong base = element*p_Np + j*p_Nq + i;
+      Aq[base] = r_Aq;
+    }
+  }
+}
+
+#endif
+

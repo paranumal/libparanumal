@@ -71,10 +71,17 @@ void meshQuad2D::SetupBox(){
   //rank coordinates
   int rank_y = rank / size_x;
   int rank_x = rank % size_x;
+  
+  // defaulting center of domain to zero 
+  dfloat domx = 0.0; //-DIMX/2.0; 
+  dfloat domy = 0.0; //-DIMY/2.0;
+
+  settings.getSetting("BOX DOMX", domx);
+  settings.getSetting("BOX DOMY", domy);
 
   //bottom corner of physical domain
-  dfloat X0 = -DIMX/2.0 + rank_x*dimx;
-  dfloat Y0 = -DIMY/2.0 + rank_y*dimy;
+  dfloat X0 = domx + rank_x*dimx;
+  dfloat Y0 = domy + rank_y*dimy;
 
   //global number of elements in each dimension
   hlong NX = size_x*nx;

@@ -23,49 +23,6 @@
 #SOFTWARE.
 #
 #####################################################################################
-define TEST_HELP_MSG
-
-Elliptic solver makefile targets:
-
-   make ellipticMain (default)
-   make lib
-   make clean
-   make clean-libs
-   make clean-kernels
-   make realclean
-   make info
-   make help
-
-Usage:
-
-make ellipticMain
-   Build ellipticMain executable.
-make lib
-   Build libelliptic.a solver library.
-make clean
-   Clean the ellipticMain executable, library, and object files.
-make clean-libs
-   In addition to "make clean", also clean the mesh, ogs, and parAlmond libraries.
-make clean-kernels
-   In addition to "make clean-libs", also cleans the cached OCCA kernels.
-make realclean
-   In addition to "make clean-kernels", also clean 3rd party libraries.
-make info
-   List directories and compiler flags in use.
-make help
-   Display this help message.
-
-Can use "make verbose=true" for verbose output.
-
-endef
-
-ifeq (,$(filter testMain lib clean clean-libs clean-kernels \
-                realclean info help,$(MAKECMDGOALS)))
-ifneq (,$(MAKECMDGOALS))
-$(error ${TEST_HELP_MSG})
-endif
-endif
-
 ifndef LIBP_MAKETOP_LOADED
 ifeq (,$(wildcard ../../make.top))
 $(error cannot locate ${PWD}/../../make.top)

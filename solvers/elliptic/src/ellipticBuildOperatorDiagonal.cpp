@@ -501,6 +501,8 @@ void elliptic_t::BuildOperatorDiagonalIpdgQuad2D(dfloat *A) {
 
 void elliptic_t::BuildOperatorDiagonalContinuousQuad2D(dfloat *A) {
 
+  const dlong offset =  mesh.Np *(mesh.Nelements+mesh.totalHaloPairs); 
+
   for(dlong eM=0;eM<mesh.Nelements;++eM){
     for (int ny=0;ny<mesh.Nq;ny++) {
       for (int nx=0;nx<mesh.Nq;nx++) {
@@ -508,24 +510,29 @@ void elliptic_t::BuildOperatorDiagonalContinuousQuad2D(dfloat *A) {
         if (mapB[nx+ny*mesh.Nq+eM*mesh.Np]!=1) {
           A[eM*mesh.Np+iid] = 0;
 
+        dfloat lambda_0 =1.0, lambda_1 = 1.0;   
           for (int k=0;k<mesh.Nq;k++) {
             int id = k+ny*mesh.Nq;
             dfloat Grr = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + G00ID*mesh.Np];
-            A[eM*mesh.Np+iid] += Grr*mesh.D[nx+k*mesh.Nq]*mesh.D[nx+k*mesh.Nq];
+            lambda_0   = var_coef ? coeff[eM*mesh.Np + id + 0*offset] : 1.0; 
+            A[eM*mesh.Np+iid] += Grr*lambda_0*mesh.D[nx+k*mesh.Nq]*mesh.D[nx+k*mesh.Nq];
           }
 
           for (int k=0;k<mesh.Nq;k++) {
             int id = nx+k*mesh.Nq;
             dfloat Gss = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + G11ID*mesh.Np];
-            A[eM*mesh.Np+iid] += Gss*mesh.D[ny+k*mesh.Nq]*mesh.D[ny+k*mesh.Nq];
+            lambda_0   = var_coef ? coeff[eM*mesh.Np + id + 0*offset] : 1.0; 
+            A[eM*mesh.Np+iid] += Gss*lambda_0*mesh.D[ny+k*mesh.Nq]*mesh.D[ny+k*mesh.Nq];
           }
 
           int id = nx+ny*mesh.Nq;
           dfloat Grs = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + G01ID*mesh.Np];
-          A[eM*mesh.Np+iid] += 2*Grs*mesh.D[nx+nx*mesh.Nq]*mesh.D[ny+ny*mesh.Nq];
+          lambda_0 = var_coef ? coeff[eM*mesh.Np + id + 0*offset] : 1.0; 
+          A[eM*mesh.Np+iid] += 2*lambda_0*Grs*mesh.D[nx+nx*mesh.Nq]*mesh.D[ny+ny*mesh.Nq];
 
           dfloat JW = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + GWJID*mesh.Np];
-          A[eM*mesh.Np+iid] += JW*lambda;
+          lambda_1 = var_coef ? coeff[eM*mesh.Np + id + 1*offset] : lambda;
+          A[eM*mesh.Np+iid] += JW*lambda_1;
 
         } else {
           A[eM*mesh.Np+iid] = 1; //just put a 1 so A is invertable
@@ -1025,7 +1032,9 @@ void elliptic_t::BuildOperatorDiagonalIpdgHex3D(dfloat *A) {
 
 void elliptic_t::BuildOperatorDiagonalContinuousHex3D(dfloat *A) {
 
-  for(dlong eM=0;eM<mesh.Nelements;++eM){
+    const dlong offset =  mesh.Np *(mesh.Nelements+mesh.totalHaloPairs); 
+
+    for(dlong eM=0;eM<mesh.Nelements;++eM){
     for (int nz=0;nz<mesh.Nq;nz++) {
     for (int ny=0;ny<mesh.Nq;ny++) {
     for (int nx=0;nx<mesh.Nq;nx++) {
@@ -1035,37 +1044,42 @@ void elliptic_t::BuildOperatorDiagonalContinuousHex3D(dfloat *A) {
 
         int id = nx+ny*mesh.Nq+nz*mesh.Nq*mesh.Nq;
         dlong base = eM*mesh.Np*mesh.Nggeo;
-
+       
+        dfloat lambda_0 = var_coef ? coeff[eM*mesh.Np + id + 0*offset] : 1.0; 
+        dfloat lambda_1 = var_coef ? coeff[eM*mesh.Np + id + 1*offset] : coeff[0]; 
 
         dfloat Grs = mesh.ggeo[base + id + G01ID*mesh.Np];
-        A[eM*mesh.Np+idn] += 2*Grs*mesh.D[nx+nx*mesh.Nq]*mesh.D[ny+ny*mesh.Nq];
+        A[eM*mesh.Np+idn] += 2*lambda_0*Grs*mesh.D[nx+nx*mesh.Nq]*mesh.D[ny+ny*mesh.Nq];
 
         dfloat Grt = mesh.ggeo[base + id + G02ID*mesh.Np];
-        A[eM*mesh.Np+idn] += 2*Grt*mesh.D[nx+nx*mesh.Nq]*mesh.D[nz+nz*mesh.Nq];
+        A[eM*mesh.Np+idn] += 2*lambda_0*Grt*mesh.D[nx+nx*mesh.Nq]*mesh.D[nz+nz*mesh.Nq];
 
         dfloat Gst = mesh.ggeo[base + id + G12ID*mesh.Np];
-        A[eM*mesh.Np+idn] += 2*Gst*mesh.D[ny+ny*mesh.Nq]*mesh.D[nz+nz*mesh.Nq];
+        A[eM*mesh.Np+idn] += 2*lambda_0*Gst*mesh.D[ny+ny*mesh.Nq]*mesh.D[nz+nz*mesh.Nq];
 
         for (int k=0;k<mesh.Nq;k++) {
           int iid = k+ny*mesh.Nq+nz*mesh.Nq*mesh.Nq;
           dfloat Grr = mesh.ggeo[base + iid + G00ID*mesh.Np];
-          A[eM*mesh.Np+idn] += Grr*mesh.D[nx+k*mesh.Nq]*mesh.D[nx+k*mesh.Nq];
+          lambda_0   = var_coef ? coeff[eM*mesh.Np + iid + 0*offset] : 1.0; 
+          A[eM*mesh.Np+idn] += Grr*lambda_0*mesh.D[nx+k*mesh.Nq]*mesh.D[nx+k*mesh.Nq];
         }
 
         for (int k=0;k<mesh.Nq;k++) {
           int iid = nx+k*mesh.Nq+nz*mesh.Nq*mesh.Nq;
           dfloat Gss = mesh.ggeo[base + iid + G11ID*mesh.Np];
-          A[eM*mesh.Np+idn] += Gss*mesh.D[ny+k*mesh.Nq]*mesh.D[ny+k*mesh.Nq];
+           lambda_0  = var_coef ? coeff[eM*mesh.Np + iid + 0*offset] : 1.0; 
+          A[eM*mesh.Np+idn] += Gss*lambda_0*mesh.D[ny+k*mesh.Nq]*mesh.D[ny+k*mesh.Nq];
         }
 
         for (int k=0;k<mesh.Nq;k++) {
           int iid = nx+ny*mesh.Nq+k*mesh.Nq*mesh.Nq;
           dfloat Gtt = mesh.ggeo[base + iid + G22ID*mesh.Np];
-          A[eM*mesh.Np+idn] += Gtt*mesh.D[nz+k*mesh.Nq]*mesh.D[nz+k*mesh.Nq];
+          lambda_0   = var_coef ? coeff[eM*mesh.Np + iid + 0*offset] : 1.0; 
+          A[eM*mesh.Np+idn] += Gtt*lambda_0*mesh.D[nz+k*mesh.Nq]*mesh.D[nz+k*mesh.Nq];
         }
 
         dfloat JW = mesh.ggeo[base + id + GWJID*mesh.Np];
-        A[eM*mesh.Np+idn] += JW*lambda;
+        A[eM*mesh.Np+idn] += JW*lambda_1;
       } else {
         A[eM*mesh.Np+idn] = 1; //just put a 1 so A is invertable
       }

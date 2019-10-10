@@ -54,11 +54,14 @@ int main(int argc, char **argv){
   // set up linear algebra module
   linAlg_t& linAlg = linAlg_t::Setup(device, settings, props);
 
+#if 0
   dfloat lambda = 0.0;
   settings.getSetting("LAMBDA", lambda);
 
   // set up elliptic solver
   elliptic_t& elliptic = elliptic_t::Setup(mesh, linAlg, lambda);
+#endif
+  elliptic_t& elliptic = elliptic_t::Setup(mesh, linAlg);
 
   // run
   elliptic.Run();

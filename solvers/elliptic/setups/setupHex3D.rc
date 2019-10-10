@@ -2,7 +2,8 @@
 2.0
 
 [DATA FILE]
-data/ellipticSine3D.h
+#data/ellipticSine3D.h
+data/ellipticVarSine3D.h
 
 [MESH FILE]
 BOX
@@ -34,6 +35,15 @@ ISOPARAMETRIC
 [BOX DIMZ]
 1
 
+[BOX DOMX]
+0
+
+[BOX DOMY]
+0
+
+[BOX DOMZ]
+0
+
 [BOX BOUNDARY FLAG]
 1
 
@@ -52,6 +62,10 @@ CUDA
 [LAMBDA]
 1
 
+[COEFFICIENT]
+VARIABLE
+#CONSTANT
+
 # can be IPDG, or CONTINUOUS
 [DISCRETIZATION]
 CONTINUOUS
@@ -62,7 +76,9 @@ PCG
 
 # can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, MULTIGRID, or OAS
 [PRECONDITIONER]
-MULTIGRID
+#NONE
+JACOBI
+#MULTIGRID
 
 ########## MULTIGRID Options ##############
 

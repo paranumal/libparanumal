@@ -43,20 +43,6 @@ SOFTWARE.
 #define hlongString "long long int"
 
 
-/* offsets for geometric factors */
-#define RXID 0
-#define RYID 1
-#define SXID 2
-#define SYID 3
-#define  JID 4
-#define JWID 5
-#define IJWID 6
-#define RZID 7
-#define SZID 8
-#define TXID 9
-#define TYID 10
-#define TZID 11
-
 /* offsets for second order geometric factors */
 #define G00ID 0
 #define G01ID 1
@@ -65,28 +51,6 @@ SOFTWARE.
 #define G12ID 4
 #define G02ID 5
 #define G22ID 6
-
-
-/* offsets for nx, ny, sJ, 1/J */
-#define NXID 0
-#define NYID 1
-#define SJID 2
-#define IJID 3
-#define IHID 4
-#define WSJID 5
-#define WIJID 6
-#define NZID 7
-#define STXID 8
-#define STYID 9
-#define STZID 10
-#define SBXID 11
-#define SBYID 12
-#define SBZID 13
-#define SURXID 14
-#define SURYID 15
-#define SURZID 16
-
-
 
 
 void randDeviceCalloc(occa::device &device, int sz, dfloat **pt, occa::memory &o_pt){
@@ -113,21 +77,7 @@ void setDeviceProperties(occa::device &device, occa::properties &props){
 
   props["defines/" "dlong"]="int";
 
-  props["defines/" "p_NXID"]= NXID;
-  props["defines/" "p_NYID"]= NYID;
-  props["defines/" "p_NZID"]= NZID;
-  props["defines/" "p_SJID"]= SJID;
-  props["defines/" "p_IJID"]= IJID;
-  props["defines/" "p_IHID"]= IHID;
-  props["defines/" "p_WSJID"]= WSJID;
-  props["defines/" "p_WIJID"]= WIJID;
-  props["defines/" "p_STXID"]= STXID;
-  props["defines/" "p_STYID"]= STYID;
-  props["defines/" "p_STZID"]= STZID;
-  props["defines/" "p_SBXID"]= SBXID;
-  props["defines/" "p_SBYID"]= SBYID;
-  props["defines/" "p_SBZID"]= SBZID;
-
+  
   props["defines/" "p_G00ID"]= G00ID;
   props["defines/" "p_G01ID"]= G01ID;
   props["defines/" "p_G02ID"]= G02ID;
@@ -135,23 +85,6 @@ void setDeviceProperties(occa::device &device, occa::properties &props){
   props["defines/" "p_G12ID"]= G12ID;
   props["defines/" "p_G22ID"]= G22ID;
   props["defines/" "p_GWJID"]= GWJID;
-
-
-  props["defines/" "p_RXID"]= RXID;
-  props["defines/" "p_SXID"]= SXID;
-  props["defines/" "p_TXID"]= TXID;
-
-  props["defines/" "p_RYID"]= RYID;
-  props["defines/" "p_SYID"]= SYID;
-  props["defines/" "p_TYID"]= TYID;
-
-  props["defines/" "p_RZID"]= RZID;
-  props["defines/" "p_SZID"]= SZID;
-  props["defines/" "p_TZID"]= TZID;
-
-  props["defines/" "p_JID"]= JID;
-  props["defines/" "p_JWID"]= JWID;
-  props["defines/" "p_IJWID"]= IJWID;
 
   props["compiler_flags"] += "--ftz=true ";
   props["compiler_flags"] += "--prec-div=false ";
@@ -180,11 +113,11 @@ int main(int argc, char **argv){
   int Nb      = (argc>=6) ? atoi(argv[5]):1;
 
   int kMin = (argc>=7) ? atoi(argv[6]):0;
-  int kMax = (argc>=8) ? atoi(argv[7]):2;
+  int kMax = (argc>=8) ? atoi(argv[7]):3;
 
-  int Np = (N+1)*(N+1);
-  int Nfp = (N+1);
-  int Nfaces = 4;
+  int Np = (N+1)*(N+1)*(N+1);
+  int Nfp = (N+1)*(N+1);
+  int Nfaces = 6;
   int NfacesNfp = Nfaces*Nfp;
   int Nq = N+1;
   int Nggeo = 7;
@@ -257,9 +190,9 @@ int main(int argc, char **argv){
   srand(12345);
   
   randDeviceCalloc(device, E*Nggeo*BSIZE*BSIZE, &ggeo, o_ggeo);
-  randDeviceCalloc(device, BSIZE*BSIZE, &DT, o_DT);
-  randDeviceCalloc(device, BSIZE*BSIZE, &S, o_S);
-  randDeviceCalloc(device, BSIZE*BSIZE, &MM, o_MM);
+  randDeviceCalloc(device, Nq*Nq, &DT, o_DT);
+  randDeviceCalloc(device, Nq*Nq, &S, o_S);
+  randDeviceCalloc(device, Nq*Nq, &MM, o_MM);
   randDeviceCalloc(device, BSIZE*E, &q, o_q);
   randDeviceCalloc(device, BSIZE*E, &Aq, o_Aq);
   randDeviceCalloc(device, BSIZE*E*2, &coeff, o_coeff);

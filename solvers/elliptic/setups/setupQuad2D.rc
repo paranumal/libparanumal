@@ -6,8 +6,8 @@
 data/ellipticVarSine2D.h
 
 [MESH FILE]
-../../meshes/boxVarCoeffQuad2D.msh
-#BOX
+#../../meshes/boxVarCoeffQuad2D.msh
+BOX
 
 [MESH DIMENSION]
 2
@@ -33,6 +33,16 @@ data/ellipticVarSine2D.h
 [BOX DIMZ]
 1
 
+#lower left corner of the domain, defaulted to zero
+[BOX DOMX]
+0
+
+[BOX DOMY]
+0
+
+[BOX DOMZ]
+0
+
 [BOX BOUNDARY FLAG]
 1
 
@@ -52,6 +62,7 @@ CUDA
 1
 
 [COEFFICIENT]
+#CONSTANT
 VARIABLE
 
 # can be IPDG, or CONTINUOUS
@@ -64,7 +75,8 @@ PCG
 
 # can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
 [PRECONDITIONER]
-MULTIGRID
+NONE
+#JACOBI
 
 ########## MULTIGRID Options ##############
 

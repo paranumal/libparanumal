@@ -45,7 +45,7 @@ ellipticSettings_t::ellipticSettings_t(MPI_Comm& _comm):
   newSetting("COEFFICIENT",
              "CONSTANT",
              "Coefficient in Screened Poisson Operator",
-             {"CONSTANT=1", "VARIABLE"});
+             {"CONSTANT", "VARIABLE"});
 
   newSetting("DISCRETIZATION",
              "CONTINUOUS",
