@@ -24,36 +24,14 @@ SOFTWARE.
 
 */
 
-
-// Roe averaged Riemann solver
-void upwind(const dfloat nx,
-            const dfloat ny,
-            const dfloat rM,
-            const dfloat uM,
-            const dfloat vM,
-            const dfloat rP,
-            const dfloat uP,
-            const dfloat vP,
-            dfloat *rflux,
-            dfloat *uflux,
-            dfloat *vflux){
-
-  //subtract F(qM)
-  dfloat ndotUM = nx*uM + ny*vM;
-  dfloat ndotUP = nx*uP + ny*vP;
-  *rflux  = p_half*   ((ndotUP-ndotUM)- (rP-rM));
-  *uflux  = p_half*nx*((rP-rM)        - (ndotUP-ndotUM));
-  *vflux  = p_half*ny*((rP-rM)        - (ndotUP-ndotUM));
-}
-
 // batch process elements
-@kernel void acousticsSurfaceTri2D(const dlong Nelements,
+@kernel void advectionSurfaceTri2D(const dlong Nelements,
                                   @restrict const  dfloat *  sgeo,
                                   @restrict const  dfloat *  LIFTT,
                                   @restrict const  dlong  *  vmapM,
                                   @restrict const  dlong  *  vmapP,
                                   @restrict const  int    *  EToB,
-                                  const dfloat time,
+                                            const  dfloat time,
                                   @restrict const  dfloat *  x,
                                   @restrict const  dfloat *  y,
                                   @restrict const  dfloat *  z,
@@ -64,9 +42,7 @@ void upwind(const dfloat nx,
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
 
     // @shared storage for flux terms
-    @shared dfloat s_rflux [p_NblockS][p_NfacesNfp];
-    @shared dfloat s_uflux[p_NblockS][p_NfacesNfp];
-    @shared dfloat s_vflux[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_qflux[p_NblockS][p_NfacesNfp];
 
     // for all face nodes of all elements
     for(int es=0;es<p_NblockS;++es;@inner(1)){
@@ -90,42 +66,25 @@ void upwind(const dfloat nx,
             const dlong idP = vmapP[id];
 
             // load traces
-            const dlong eM = e;
-            const dlong eP = idP/p_Np;
-            const int vidM = idM%p_Np;
-            const int vidP = idP%p_Np;
-
-            const dlong qbaseM = eM*p_Np*p_Nfields + vidM;
-            const dlong qbaseP = eP*p_Np*p_Nfields + vidP;
-
-            const dfloat rM = q[qbaseM + 0*p_Np];
-            const dfloat uM = q[qbaseM + 1*p_Np];
-            const dfloat vM = q[qbaseM + 2*p_Np];
-
-            dfloat rP = q[qbaseP + 0*p_Np];
-            dfloat uP = q[qbaseP + 1*p_Np];
-            dfloat vP = q[qbaseP + 2*p_Np];
+            const dfloat qM = q[idM];
+            dfloat qP = q[idP];
 
             // apply boundary condition
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
-              acousticsDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, rM, uM, vM, &rP, &uP, &vP);
-              //should also add the Neumann BC here, but need uxM, uyM, vxM, abd vyM somehow
+              advectionDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, qM, &qP);
             }
 
             // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
-            const dfloat sc = invJ*sJ;
+            dfloat cxM=0.0, cyM=0.0;
+            dfloat cxP=0.0, cyP=0.0;
+            advectionFlux2D(t, x[idM], y[idM], qM, &cxM, &cyM);
+            advectionFlux2D(t, x[idM], y[idM], qP, &cxP, &cyP);
 
-            dfloat rflux, uflux, vflux;
+            const dfloat ndotcM = nx*cxM + ny*cyM;
+            const dfloat ndotcP = nx*cxP + ny*cyP;
 
-            upwind(nx, ny, rM, uM, vM, rP, uP, vP, &rflux, &uflux, &vflux);
-
-            // const dfloat hinv = sgeo[sid + p_IHID];
-            // dfloat penalty = p_Nq*p_Nq*hinv*mu;
-
-            s_rflux[es][n] = sc*(-rflux );
-            s_uflux[es][n] = sc*(-uflux);
-            s_vflux[es][n] = sc*(-vflux);
+            s_qflux[es][n] = -0.5*invJ*sJ*(ndotcP-ndotcM-(qP-qM));
           }
         }
       }
@@ -140,22 +99,17 @@ void upwind(const dfloat nx,
         const dlong e = eo + es;
         if(e<Nelements){
           if(n<p_Np){
-            // load rhs data from volume fluxes
-            dfloat Lrflux = 0.f, Luflux = 0.f, Lvflux = 0.f;
+            dfloat Lqflux = 0.f;
 
             // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
             #pragma unroll p_NfacesNfp
               for(int m=0;m<p_NfacesNfp;++m){
                 const dfloat L = LIFTT[n+m*p_Np];
-                Lrflux += L*s_rflux[es][m];
-                Luflux += L*s_uflux[es][m];
-                Lvflux += L*s_vflux[es][m];
+                Lqflux += L*s_qflux[es][m];
               }
 
-            const dlong base = e*p_Np*p_Nfields+n;
-            rhsq[base+0*p_Np] += Lrflux;
-            rhsq[base+1*p_Np] += Luflux;
-            rhsq[base+2*p_Np] += Lvflux;
+            const dlong id = e*p_Np+n;
+            rhsq[id] += Lqflux;
           }
         }
       }

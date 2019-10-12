@@ -24,78 +24,64 @@ SOFTWARE.
 
 */
 
+// thread loop over elements
+@kernel void advectionVolumeTet3D(const dlong Nelements,
+                                 @restrict const  dfloat *  vgeo,
+                                 @restrict const  dfloat *  DT,
+                                           const  dfloat time,
+                                 @restrict const  dfloat *  x,
+                                 @restrict const  dfloat *  y,
+                                 @restrict const  dfloat *  z,
+                                 @restrict const  dfloat *  q,
+                                 @restrict dfloat *  rhsq){
 
-// isotropic acoustics
-@kernel void acousticsVolumeTri2D(const dlong Nelements,
-                            @restrict const  dfloat *  vgeo,
-                            @restrict const  dfloat *  DT,
-                            @restrict const  dfloat *  q,
-                                  @restrict dfloat *  rhsq){
+for(dlong e=0;e<Nelements;++e;@outer(0)){
 
-  for(dlong e=0;e<Nelements;++e;@outer(0)){
-
-    @shared dfloat s_F[p_Nfields][p_Np];
-    @shared dfloat s_G[p_Nfields][p_Np];
+    @shared dfloat s_F[p_Np];
+    @shared dfloat s_G[p_Np];
+    @shared dfloat s_H[p_Np];
 
     for(int n=0;n<p_Np;++n;@inner(0)){
 
       // prefetch geometric factors (constant on triangle)
       const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
       const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+      const dfloat drdz = vgeo[e*p_Nvgeo + p_RZID];
       const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
       const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+      const dfloat dsdz = vgeo[e*p_Nvgeo + p_SZID];
+      const dfloat dtdx = vgeo[e*p_Nvgeo + p_TXID];
+      const dfloat dtdy = vgeo[e*p_Nvgeo + p_TYID];
+      const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
 
-      const dlong  qbase = e*p_Np*p_Nfields + n;
-      const dfloat r = q[qbase+0*p_Np];
-      const dfloat u = q[qbase+1*p_Np];
-      const dfloat v = q[qbase+2*p_Np];
+      // conseved variables
+      const dlong  id = e*p_Np + n;
+      const dfloat qn  = q[id];
 
-      {
-        const dfloat f = -u;
-        const dfloat g = -v;
-        s_F[0][n] = drdx*f + drdy*g;
-        s_G[0][n] = dsdx*f + dsdy*g;
-      }
-
-      {
-        const dfloat f = -r;
-        const dfloat g = 0;
-        s_F[1][n] = drdx*f + drdy*g;
-        s_G[1][n] = dsdx*f + dsdy*g;
-      }
-
-      {
-        const dfloat f = 0;
-        const dfloat g = -r;
-        s_F[2][n] = drdx*f + drdy*g;
-        s_G[2][n] = dsdx*f + dsdy*g;
-      }
+      //  \hat{div} (G*[F;G])
+      dfloat cx=0.0, cy=0.0, cz=0.0;
+      advectionFlux3D(t, x[id], y[id], z[id], qn, &cx, &cy, &cz);
+      s_F[n] = drdx*cx + drdy*cy + drdz*cz;
+      s_G[n] = dsdx*cx + dsdy*cy + dsdz*cz;
+      s_H[n] = dtdx*cx + dtdy*cy + dtdz*cz;
     }
 
     @barrier("local");
 
     for(int n=0;n<p_Np;++n;@inner(0)){
 
-      dfloat rhsq0 = 0, rhsq1 = 0, rhsq2 = 0;
-
+      dfloat rhsqn = 0;
       for(int i=0;i<p_Np;++i){
         const dfloat Drni = DT[n+i*p_Np+0*p_Np*p_Np];
         const dfloat Dsni = DT[n+i*p_Np+1*p_Np*p_Np];
+        const dfloat Dtni = DT[n+i*p_Np+2*p_Np*p_Np];
 
-        rhsq0 += Drni*s_F[0][i]
-                +Dsni*s_G[0][i];
-        rhsq1 += Drni*s_F[1][i]
-                +Dsni*s_G[1][i];
-        rhsq2 += Drni*s_F[2][i]
-                +Dsni*s_G[2][i];
+        rhsqn += Drni*s_F[i]+Dsni*s_G[i]+Dtni*s_H[i];
       }
 
-      const dlong base = e*p_Np*p_Nfields + n;
-
       // move to rhs
-      rhsq[base+0*p_Np] = rhsq0;
-      rhsq[base+1*p_Np] = rhsq1;
-      rhsq[base+2*p_Np] = rhsq2;
+      const dlong id = e*p_Np + n;
+      rhsq[id] = -rhsqn;
     }
   }
 }

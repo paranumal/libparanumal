@@ -25,65 +25,58 @@ SOFTWARE.
 */
 
 
+// isothermal Compressible Navier-Stokes
 @kernel void advectionVolumeQuad2D(const dlong Nelements,
-                                  @restrict const  dfloat *  vgeo,
-                                  @restrict const  dfloat *  D,
-                                            const  dfloat    t,
-                                  @restrict const  dfloat *  x,
-                                  @restrict const  dfloat *  y,
-                                  @restrict const  dfloat *  z,
-                                  @restrict const  dfloat *  q,
-                                  @restrict dfloat *  rhsq){
-
+				   @restrict const  dfloat *  vgeo,
+				   @restrict const  dfloat *  D,
+				   @restrict const  dfloat *  fluxVector,
+				   @restrict const  dfloat *  q,
+				   @restrict dfloat *  rhsq){
+  
   for(dlong e=0;e<Nelements;++e;@outer(0)){
 
     @shared dfloat s_D[p_Nq][p_Nq];
     @shared dfloat s_F[p_Nq][p_Nq];
     @shared dfloat s_G[p_Nq][p_Nq];
-
+    
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
         s_D[j][i] = D[j*p_Nq+i];
 
-        const dlong  id = e*p_Np + j*p_Nq + i;
-        dfloat qn = q[id];
-
         // geometric factors
-        const dlong gbase = e*p_Np*p_Nvgeo + j*p_Nq + i;
-        const dfloat rx = vgeo[gbase+p_Np*p_RXID];
-        const dfloat ry = vgeo[gbase+p_Np*p_RYID];
-        const dfloat sx = vgeo[gbase+p_Np*p_SXID];
-        const dfloat sy = vgeo[gbase+p_Np*p_SYID];
-        const dfloat JW = vgeo[gbase+p_Np*p_JWID];
+        const dlong gbase = e*p_Np*p_dim + j*p_Nq + i;
+        const dfloat Fr = fluxVector[gbase+p_Np*0];
+        const dfloat Fs = fluxVector[gbase+p_Np*1];
 
-        // (1/J) \hat{div} (G*[cx*q;cy*q])
-        dfloat cx=0.0, cy=0.0;
-        advectionFlux2D(t, x[id], y[id], qn, &cx, &cy);
-        s_F[j][i] = JW*(rx*cx + ry*cy);
-        s_G[j][i] = JW*(sx*cx + sy*cy);
+        // conseved variables
+        const dlong  qbase = e*p_Np*p_Nfields + j*p_Nq + i;
+        const dfloat qn  = q[qbase+0*p_Np];
+
+	s_F[j][i] = Fr*qn;
+	s_G[j][i] = Fs*qn;
       }
     }
 
     @barrier("local");
-
+    
     for(int j=0;j<p_Nq;++j;@inner(1)){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){    
         const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
         const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
 
-        dfloat rhsqn = 0;
-
+        dfloat rhsq0 = 0, rhsq1 = 0, rhsq2 = 0;
+	
         for(int n=0;n<p_Nq;++n){
           const dfloat Din = s_D[n][i];
           const dfloat Djn = s_D[n][j];
-          rhsqn += Din*s_F[j][n];
-          rhsqn += Djn*s_G[n][i];
+          rhsq0 += Din*s_F[j][n];
+          rhsq0 += Djn*s_G[n][i];
         }
-
-        const dlong id = e*p_Np*p_Nfields + j*p_Nq + i;
-
-        // move to rhs
-        rhsq[id] = invJW*rhsqn;
+        
+        const dlong base = e*p_Np*p_Nfields + j*p_Nq + i;
+        
+        // move to rhs (check sign)
+        rhsq[base+0*p_Np] = -invJW*rhsq0;
       }
     }
   }

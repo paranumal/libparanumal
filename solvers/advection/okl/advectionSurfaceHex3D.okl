@@ -24,71 +24,69 @@ SOFTWARE.
 
 */
 
-void surfaceTerms(const int e, 
-                  const int sk, 
-                  const int face, 
-                  const int i, 
-                  const int j, 
+void surfaceTerms(const int e,
+                  const int sk,
+                  const int face,
+                  const int i,
+                  const int j,
                   const int k,
-                  @global const dfloat *sgeo, 
-                  @global const dfloat *x, 
-                  @global const dfloat *y, 
-                  @global const dfloat *z,
-                  @global const int *vmapM, 
-                  @global const int *vmapP, 
-                  @global const int *EToB, 
-                  @global const dfloat *advectionVelocityM,
-                  @global const dfloat *advectionVelocityP,		  
-		  @global const dfloat *q,
+                  const dfloat *sgeo,
+                  const dfloat t,
+                  const dfloat *x,
+                  const dfloat *y,
+                  const dfloat *z,
+                  const int *vmapM,
+                  const int *vmapP,
+                  const int *EToB,
+                  const dfloat *q,
                   dfloat *rhsq){
 
-  const dfloat FM = advectionVelocityM[sk];
-  const dfloat FP = advectionVelocityP[sk];
-  
+  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
+  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
+  const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];
+  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];
+  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];
+
   const dlong idM = vmapM[sk];
   const dlong idP = vmapP[sk];
 
-  const dlong eM = e;
-  const dlong eP = idP/p_Np;
+  const dfloat qM = q[idM];
+  dfloat qP = q[idP];
 
-  const int vidM = idM%p_Np;
-  const int vidP = idP%p_Np;
-  
-  const dlong qbaseM = eM*p_Np*p_Nfields + vidM;
-  const dlong qbaseP = eP*p_Np*p_Nfields + vidP;                        
-  
-  const dfloat qM = q[qbaseM + 0*p_Np];                         
-  dfloat qP = q[qbaseP + 0*p_Np];                                       
-                                                                        
-  const int bc = EToB[face+p_Nfaces*e];                         
-  if(idM==idP){                                                 
-    qP = -qM;                                                            
-  }                                                                     
+  const int bc = EToB[face+p_Nfaces*e];
+  if(bc>0){
+    advectionDirichletConditions3D(bc, t, x[idM], y[idM], z[idM], nx, ny, nz, qM, &qP);
+  }
 
-  const dlong base = e*p_Np*p_Nfields+k*p_Nq*p_Nq + j*p_Nq+i;           
+  dfloat cxM=0.0, cyM=0.0, czM=0.0;
+  dfloat cxP=0.0, cyP=0.0, czP=0.0;
+  advectionFlux3D(t, x[idM], y[idM], z[idM], qM, &cxM, &cyM, &czM);
+  advectionFlux3D(t, x[idM], y[idM], z[idM], qP, &cxP, &cyP, &czP);
 
-  rhsq[base+0*p_Np] += FP*qP+FM*qM;
+  const dfloat ndotcM = nx*cxM + ny*cyM + nz*czM;
+  const dfloat ndotcP = nx*cxP + ny*cyP + nz*czP;
+
+  const dlong id = e*p_Np+k*p_Nq*p_Nq+j*p_Nq+i;
+  rhsq[id] -= 0.5*invWJ*sJ*(ndotcM+ndotcP-(qP-qM));
 }
 
 // batch process elements
 @kernel void advectionSurfaceHex3D(const dlong Nelements,
-				   @restrict const dfloat * sgeo,
-				   @restrict const dfloat * LIFTT,        
-				   @restrict const dlong  * vmapM,
-				   @restrict const dlong  * vmapP,
-				   @restrict const int    * EToB,
-				   const dfloat time,
-				   @restrict const dfloat * x,
-				   @restrict const dfloat * y,
-				   @restrict const dfloat * z,
-				   @restrict const dfloat * advectionVelocityM,
-				   @restrict const dfloat * advectionVelocityP,
-				   @restrict const dfloat * q,
-				   @restrict dfloat *  rhsq){
-  
+                                   @restrict const dfloat * sgeo,
+                                   @restrict const dfloat * LIFTT,
+                                   @restrict const dlong  * vmapM,
+                                   @restrict const dlong  * vmapP,
+                                   @restrict const int    * EToB,
+                                   const dfloat time,
+                                   @restrict const dfloat * x,
+                                   @restrict const dfloat * y,
+                                   @restrict const dfloat * z,
+                                   @restrict const dfloat * q,
+                                   @restrict dfloat *  rhsq){
+
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
-    
+
     // for all face nodes of all elements
     // face 0 & 5
     for(int es=0;es<p_NblockS;++es;@inner(2)){
@@ -98,19 +96,19 @@ void surfaceTerms(const int e,
           if(e<Nelements){
             const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + j*p_Nq + i;
             const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i;
-            
+
             //      surfaceTerms(sk0,0,i,j,0     );
-            surfaceTerms(e,sk0,0,i,j,0, sgeo, x, y, z, vmapM, vmapP, EToB, advectionVelocityM, advectionVelocityP, q, rhsq);
+            surfaceTerms(e,sk0,0,i,j,0, sgeo, time, x, y, z, vmapM, vmapP, EToB, q, rhsq);
 
             //surfaceTerms(sk5,5,i,j,(p_Nq-1));
-            surfaceTerms(e,sk5,5,i,j,(p_Nq-1), sgeo, x, y, z, vmapM, vmapP, EToB, advectionVelocityM, advectionVelocityP, q, rhsq);
+            surfaceTerms(e,sk5,5,i,j,(p_Nq-1), sgeo, time, x, y, z, vmapM, vmapP, EToB, q, rhsq);
           }
         }
       }
     }
-    
+
     @barrier("global");
-    
+
     // face 1 & 3
     for(int es=0;es<p_NblockS;++es;@inner(2)){
       for(int k=0;k<p_Nq;++k;@inner(1)){
@@ -119,19 +117,19 @@ void surfaceTerms(const int e,
           if(e<Nelements){
             const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + k*p_Nq + i;
             const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + k*p_Nq + i;
-            
+
             //      surfaceTerms(sk1,1,i,0     ,k);
-            surfaceTerms(e,sk1,1,i,0,k, sgeo, x, y, z, vmapM, vmapP, EToB, advectionVelocityM, advectionVelocityP, q, rhsq);
+            surfaceTerms(e,sk1,1,i,0,k, sgeo, time, x, y, z, vmapM, vmapP, EToB, q, rhsq);
 
             //      surfaceTerms(sk3,3,i,(p_Nq-1),k);
-            surfaceTerms(e,sk3,3,i,(p_Nq-1),k, sgeo, x, y, z, vmapM, vmapP, EToB, advectionVelocityM, advectionVelocityP, q, rhsq);
+            surfaceTerms(e,sk3,3,i,(p_Nq-1),k, sgeo, time, x, y, z, vmapM, vmapP, EToB, q, rhsq);
           }
         }
       }
     }
-    
+
     @barrier("global");
-    
+
     // face 2 & 4
     for(int es=0;es<p_NblockS;++es;@inner(2)){
       for(int k=0;k<p_Nq;++k;@inner(1)){
@@ -140,12 +138,12 @@ void surfaceTerms(const int e,
           if(e<Nelements){
             const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + k*p_Nq + j;
             const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + k*p_Nq + j;
-            
+
             //      surfaceTerms(sk2,2,(p_Nq-1),j,k);
-            surfaceTerms(e,sk2,2,(p_Nq-1),j,k, sgeo, x, y, z, vmapM, vmapP, EToB, advectionVelocityM, advectionVelocityP, q, rhsq);
+            surfaceTerms(e,sk2,2,(p_Nq-1),j,k, sgeo, time, x, y, z, vmapM, vmapP, EToB, q, rhsq);
 
             //surfaceTerms(sk4,4,0     ,j,k);
-            surfaceTerms(e,sk4,4,0,j,k, sgeo, x, y, z, vmapM, vmapP, EToB, advectionVelocityM, advectionVelocityP, q, rhsq);
+            surfaceTerms(e,sk4,4,0,j,k, sgeo, time, x, y, z, vmapM, vmapP, EToB, q, rhsq);
           }
         }
       }

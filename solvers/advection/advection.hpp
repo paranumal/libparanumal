@@ -43,8 +43,6 @@ public:
 
 class advection_t: public solver_t {
 public:
-  int Nfields;
-
   timeStepper_t* timeStepper;
 
   halo_t* traceHalo;

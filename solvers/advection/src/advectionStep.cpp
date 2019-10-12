@@ -26,30 +26,34 @@ SOFTWARE.
 
 #include "advection.hpp"
 
-void advection_t::Report(dfloat time, int tstep){
+//evaluate ODE rhs = f(q,t)
+void advection_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
 
-  static int frame=0;
+  // extract q halo on DEVICE
+  mesh.traceHalo->ExchangeStart(o_Q, 1, ogs_dfloat);
 
-  //compute q.M*q
-  MassMatrixKernel(mesh.Nelements, mesh.o_ggeo, mesh.o_MM, o_q, o_Mq);
+  volumeKernel(mesh.Nelements,
+               mesh.o_vgeo,
+               mesh.o_Dmatrices,
+               T,
+               mesh.o_x,
+               mesh.o_y,
+               mesh.o_z,
+               o_Q,
+               o_RHS);
 
-  dlong Nentries = mesh.Nelements*mesh.Np;
-  dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_q, o_Mq, comm));
+  mesh.traceHalo->ExchangeFinish(o_Q, 1, ogs_dfloat);
 
-  if(mesh.rank==0)
-    printf("%5.2f (%d), %5.2f (time, timestep, norm)\n", time, tstep, norm2);
-
-  if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
-
-    // copy data back to host
-    o_q.copyTo(q);
-
-    // output field files
-    string name;
-    settings.getSetting("OUTPUT FILE NAME", name);
-    char fname[BUFSIZ];
-    sprintf(fname, "%s_%04d_%04d.vtu", name.c_str(), mesh.rank, frame++);
-
-    PlotFields(q, fname);
-  }
+  surfaceKernel(mesh.Nelements,
+                mesh.o_sgeo,
+                mesh.o_LIFTT,
+                mesh.o_vmapM,
+                mesh.o_vmapP,
+                mesh.o_EToB,
+                T,
+                mesh.o_x,
+                mesh.o_y,
+                mesh.o_z,
+                o_Q,
+                o_RHS);
 }

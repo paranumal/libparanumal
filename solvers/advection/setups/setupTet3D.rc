@@ -2,25 +2,25 @@
 2.0
 
 [DATA FILE]
-data/advectionLinear2D.h
+data/advectionLinear3D.h
 
 [MESH FILE]
 BOX
 
 [MESH DIMENSION]
-2
+3
 
 [ELEMENT TYPE] # number of edges
-4
+6
 
 [BOX NX]
-20
+4
 
 [BOX NY]
-20
+4
 
 [BOX NZ]
-20
+4
 
 [BOX BOUNDARY FLAG]
 -1

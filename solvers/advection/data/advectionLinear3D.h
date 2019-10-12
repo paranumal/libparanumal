@@ -24,32 +24,27 @@ SOFTWARE.
 
 */
 
-#include "advection.hpp"
+// Flux function
+#define advectionFlux3D(t, x, y, z, q, cx, cy, cz) \
+{                                       \
+  *(cx) = 1.0*q;                        \
+  *(cy) = 0.5*q;                        \
+  *(cz) = 0.75*q;                       \
+}
 
-void advection_t::Report(dfloat time, int tstep){
+// Boundary conditions
+/* wall 1, outflow 2 */
+#define advectionDirichletConditions3D(bc, t, x, y, z, nx, ny, nz, qM, qB) \
+{                                       \
+  if(bc==1){                            \
+    *(qB) = 0.0;                        \
+  } else if(bc==2){                     \
+    *(qB) = qM;                         \
+  }                                     \
+}
 
-  static int frame=0;
-
-  //compute q.M*q
-  MassMatrixKernel(mesh.Nelements, mesh.o_ggeo, mesh.o_MM, o_q, o_Mq);
-
-  dlong Nentries = mesh.Nelements*mesh.Np;
-  dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_q, o_Mq, comm));
-
-  if(mesh.rank==0)
-    printf("%5.2f (%d), %5.2f (time, timestep, norm)\n", time, tstep, norm2);
-
-  if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
-
-    // copy data back to host
-    o_q.copyTo(q);
-
-    // output field files
-    string name;
-    settings.getSetting("OUTPUT FILE NAME", name);
-    char fname[BUFSIZ];
-    sprintf(fname, "%s_%04d_%04d.vtu", name.c_str(), mesh.rank, frame++);
-
-    PlotFields(q, fname);
-  }
+// Initial conditions
+#define advectionInitialConditions3D(t, x, y, z, q) \
+{                                       \
+  *(q) = exp(-2*(x*x+y*y+z*z));         \
 }

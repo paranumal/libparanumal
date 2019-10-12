@@ -24,32 +24,23 @@ SOFTWARE.
 
 */
 
-#include "advection.hpp"
+@kernel void advectionInitialCondition3D(const dlong Nelements,
+                                         const dfloat time,
+                                         @restrict const  dfloat *  x,
+                                         @restrict const  dfloat *  y,
+                                         @restrict const  dfloat *  z,
+                                         @restrict        dfloat *  q){
 
-void advection_t::Report(dfloat time, int tstep){
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      const dlong id = e*p_Np + n;
 
-  static int frame=0;
+      dfloat r_q = 0.0;
 
-  //compute q.M*q
-  MassMatrixKernel(mesh.Nelements, mesh.o_ggeo, mesh.o_MM, o_q, o_Mq);
+      advectionInitialConditions3D(time, x[id], y[id], z[id], &r_q);
 
-  dlong Nentries = mesh.Nelements*mesh.Np;
-  dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_q, o_Mq, comm));
-
-  if(mesh.rank==0)
-    printf("%5.2f (%d), %5.2f (time, timestep, norm)\n", time, tstep, norm2);
-
-  if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
-
-    // copy data back to host
-    o_q.copyTo(q);
-
-    // output field files
-    string name;
-    settings.getSetting("OUTPUT FILE NAME", name);
-    char fname[BUFSIZ];
-    sprintf(fname, "%s_%04d_%04d.vtu", name.c_str(), mesh.rank, frame++);
-
-    PlotFields(q, fname);
+      const dlong qbase = e*p_Np + n;
+      q[qbase] = r_q;
+    }
   }
 }
