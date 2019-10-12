@@ -80,7 +80,7 @@ public:
 
 agmgLevel *coarsenAgmgLevel(agmgLevel *level, KrylovType ktype, settings_t& settings);
 
-parCSR* strongGraph(parCSR *A);
+parCSR* strongGraph(parCSR *A, StrengthType type);
 
 void formAggregates(parCSR *A, parCSR *C,
                      hlong* FineToCoarse,

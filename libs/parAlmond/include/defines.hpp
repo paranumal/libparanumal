@@ -43,6 +43,7 @@ extern int ChebyshevIterations;
 typedef enum {VCYCLE=0,KCYCLE=1,EXACT=3} CycleType;
 typedef enum {PCG=0,GMRES=1} KrylovType;
 typedef enum {JACOBI=0,DAMPED_JACOBI=1,CHEBYSHEV=2} SmoothType;
+typedef enum {RUGESTUBEN=0,SYMMETRIC=1} StrengthType;
 
 } //namespace parAlmond
 

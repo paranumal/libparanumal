@@ -93,7 +93,12 @@ agmgLevel *coarsenAgmgLevel(agmgLevel *level, KrylovType ktype, settings_t& sett
   MPI_Comm_rank(level->comm, &rank);
   MPI_Comm_size(level->comm, &size);
 
-  parCSR *C = strongGraph(level->A);
+  //TODO: Make this a runtime option
+  //hard code for now
+  // StrengthType strType = RUGESTUBEN;
+  StrengthType strType = SYMMETRIC;
+
+  parCSR *C = strongGraph(level->A, strType);
 
   hlong *FineToCoarse = (hlong *) malloc(level->A->Ncols*sizeof(hlong));
   hlong *globalAggStarts = (hlong *) calloc(size+1,sizeof(hlong));
