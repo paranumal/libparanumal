@@ -254,7 +254,7 @@ static void formAggregatesDefault(parCSR *A, parCSR *C,
     Ti[i] = imax;
     Tc[i] = cmax;
 
-    if((states[i] == -1) && (smax == 1) && (cmax > -1))
+    if((FineToCoarse[i] == -1) && (smax == 1) && (cmax > -1))
       FineToCoarse[i] = cmax;
   }
 
@@ -295,7 +295,7 @@ static void formAggregatesDefault(parCSR *A, parCSR *C,
       }
     }
 
-    if((states[i] == -1) && (smax == 1) && (cmax > -1))
+    if((FineToCoarse[i] == -1) && (smax == 1) && (cmax > -1))
       FineToCoarse[i] = cmax;
   }
 
