@@ -73,12 +73,6 @@ void nbpcg::Init(int _weighted, occa::memory& o_weight_) {
   update2NBPCGKernel = buildKernel(device,
                                 LIBP_DIR "/core/okl/linearSolverUpdateNBPCG.okl",
                                 "update2NBPCG", kernelInfo, comm);
-  weightedUpdate1NBPCGKernel = buildKernel(device,
-                                LIBP_DIR "/core/okl/linearSolverWeightedUpdateNBPCG.okl",
-                                "weightedUpdate1NBPCG", kernelInfo, comm);
-  weightedUpdate2NBPCGKernel = buildKernel(device,
-                                LIBP_DIR "/core/okl/linearSolverWeightedUpdateNBPCG.okl",
-                                "weightedUpdate2NBPCG", kernelInfo, comm);
 }
 
 int nbpcg::Solve(solver_t& solver, precon_t& precon,
@@ -188,10 +182,7 @@ void nbpcg::Update1NBPCG(const dfloat beta){
   int Nblocks = (N+NBPCG_BLOCKSIZE-1)/NBPCG_BLOCKSIZE;
   Nblocks = (Nblocks>NBPCG_BLOCKSIZE) ? NBPCG_BLOCKSIZE : Nblocks; //limit to NBPCG_BLOCKSIZE entries
 
-  if (weighted)
-    weightedUpdate1NBPCGKernel(N, Nblocks, o_z, o_Z, beta, o_p, o_s, o_tmpdots);
-  else
-    update1NBPCGKernel(N, Nblocks, o_weight, o_z, o_Z, beta, o_p, o_s, o_tmpdots);
+  update1NBPCGKernel(N, Nblocks, weighted, o_weight, o_z, o_Z, beta, o_p, o_s, o_tmpdots);
 
   o_tmpdots.copyTo(tmpdots, Nblocks*sizeof(dfloat));
 
@@ -213,10 +204,7 @@ void nbpcg::Update2NBPCG(const dfloat alpha, occa::memory &o_r){
   int Nblocks = (N+NBPCG_BLOCKSIZE-1)/NBPCG_BLOCKSIZE;
   Nblocks = (Nblocks>NBPCG_BLOCKSIZE) ? NBPCG_BLOCKSIZE : Nblocks; //limit to NBPCG_BLOCKSIZE entries
 
-  if (weighted)
-    weightedUpdate2NBPCGKernel(N, Nblocks, o_s, o_S, alpha, o_r, o_z, o_tmpdots);
-  else
-    update2NBPCGKernel(N, Nblocks, o_weight, o_s, o_S, alpha, o_r, o_z, o_tmpdots);
+  update2NBPCGKernel(N, Nblocks, weighted, o_weight, o_s, o_S, alpha, o_r, o_z, o_tmpdots);
 
   o_tmpdots.copyTo(tmpdots, 3*Nblocks*sizeof(dfloat));
 
@@ -224,9 +212,9 @@ void nbpcg::Update2NBPCG(const dfloat alpha, occa::memory &o_r){
   localdots[1] = 0;
   localdots[2] = 0;
   for(int n=0;n<Nblocks;++n) {
-    localdots[0] += tmpdots[0*Nblocks+n];
-    localdots[1] += tmpdots[1*Nblocks+n];
-    localdots[2] += tmpdots[2*Nblocks+n];
+    localdots[0] += tmpdots[0+3*n];
+    localdots[1] += tmpdots[1+3*n];
+    localdots[2] += tmpdots[2+3*n];
   }
 
   globaldots[0] = 0;

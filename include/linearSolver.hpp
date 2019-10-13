@@ -76,7 +76,6 @@ private:
   int flexible, weighted;
 
   occa::kernel updatePCGKernel;
-  occa::kernel weightedUpdatePCGKernel;
 
   dfloat UpdatePCG(const dfloat alpha, occa::memory &o_x, occa::memory &o_r);
 
@@ -103,8 +102,6 @@ private:
 
   occa::kernel update1NBPCGKernel;
   occa::kernel update2NBPCGKernel;
-  occa::kernel weightedUpdate1NBPCGKernel;
-  occa::kernel weightedUpdate2NBPCGKernel;
 
   dfloat *localdots, *globaldots;
 
@@ -137,8 +134,6 @@ private:
 
   occa::kernel update0NBFPCGKernel;
   occa::kernel update1NBFPCGKernel;
-  occa::kernel weightedUpdate0NBFPCGKernel;
-  occa::kernel weightedUpdate1NBFPCGKernel;
 
   dfloat *localdots, *globaldots;
 

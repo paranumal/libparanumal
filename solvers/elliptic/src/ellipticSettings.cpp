@@ -50,7 +50,7 @@ ellipticSettings_t::ellipticSettings_t(MPI_Comm& _comm):
   newSetting("LINEAR SOLVER",
              "PCG",
              "Iterative Linear Solver to use for solve",
-             {"PCG", "PCG,FLEXIBLE"});
+             {"PCG", "FPCG", "NBPCG", "NBFPCG"});
 
   newSetting("PRECONDITIONER",
              "NONE",

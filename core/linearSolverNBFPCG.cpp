@@ -74,16 +74,10 @@ void nbfpcg::Init(int _weighted, occa::memory& o_weight_) {
   // combined NBFPCG update kernels
   update0NBFPCGKernel = buildKernel(device,
                                 LIBP_DIR "/core/okl/linearSolverUpdateNBFPCG.okl",
-                                "update1NBFPCG", kernelInfo, comm);
+                                "update0NBFPCG", kernelInfo, comm);
   update1NBFPCGKernel = buildKernel(device,
                                 LIBP_DIR "/core/okl/linearSolverUpdateNBFPCG.okl",
-                                "update2NBFPCG", kernelInfo, comm);
-  weightedUpdate0NBFPCGKernel = buildKernel(device,
-                                LIBP_DIR "/core/okl/linearSolverWeightedUpdateNBFPCG.okl",
-                                "weightedUpdate1NBFPCG", kernelInfo, comm);
-  weightedUpdate1NBFPCGKernel = buildKernel(device,
-                                LIBP_DIR "/core/okl/linearSolverWeightedUpdateNBFPCG.okl",
-                                "weightedUpdate2NBFPCG", kernelInfo, comm);
+                                "update1NBFPCG", kernelInfo, comm);
 }
 
 int nbfpcg::Solve(solver_t& solver, precon_t& precon,
@@ -212,10 +206,7 @@ void nbfpcg::Update0NBFPCG(occa::memory &o_r){
   int Nblocks = (N+NBFPCG_BLOCKSIZE-1)/NBFPCG_BLOCKSIZE;
   Nblocks = (Nblocks>NBFPCG_BLOCKSIZE) ? NBFPCG_BLOCKSIZE : Nblocks; //limit to NBFPCG_BLOCKSIZE entries
 
-  if (weighted)
-    weightedUpdate0NBFPCGKernel(N, Nblocks, o_u, o_r, o_w, o_tmpdots);
-  else
-    update0NBFPCGKernel(N, Nblocks, o_weight, o_u, o_r, o_w, o_tmpdots);
+  update0NBFPCGKernel(N, Nblocks, weighted, o_weight, o_u, o_r, o_w, o_tmpdots);
 
   o_tmpdots.copyTo(tmpdots, 3*Nblocks*sizeof(dfloat));
 
@@ -223,9 +214,9 @@ void nbfpcg::Update0NBFPCG(occa::memory &o_r){
   localdots[1] = 0;
   localdots[2] = 0;
   for(int n=0;n<Nblocks;++n) {
-    localdots[0] += tmpdots[0*Nblocks+n];
-    localdots[1] += tmpdots[1*Nblocks+n];
-    localdots[2] += tmpdots[2*Nblocks+n];
+    localdots[0] += tmpdots[0+3*n];
+    localdots[1] += tmpdots[1+3*n];
+    localdots[2] += tmpdots[2+3*n];
   }
 
   globaldots[0] = 0;
@@ -242,10 +233,7 @@ void nbfpcg::Update1NBFPCG(const dfloat alpha, occa::memory &o_x, occa::memory &
   int Nblocks = (N+NBFPCG_BLOCKSIZE-1)/NBFPCG_BLOCKSIZE;
   Nblocks = (Nblocks>NBFPCG_BLOCKSIZE) ? NBFPCG_BLOCKSIZE : Nblocks; //limit to NBFPCG_BLOCKSIZE entries
 
-  if (weighted)
-    weightedUpdate1NBFPCGKernel(N, Nblocks, o_p, o_s, o_q, o_z, alpha, o_x, o_r, o_u, o_w, o_tmpdots);
-  else
-    update1NBFPCGKernel(N, Nblocks, o_weight, o_p, o_s, o_q, o_z, alpha, o_x, o_r, o_u, o_w, o_tmpdots);
+  update1NBFPCGKernel(N, Nblocks, weighted, o_weight, o_p, o_s, o_q, o_z, alpha, o_x, o_r, o_u, o_w, o_tmpdots);
 
   o_tmpdots.copyTo(tmpdots, 4*Nblocks*sizeof(dfloat));
 
@@ -254,10 +242,10 @@ void nbfpcg::Update1NBFPCG(const dfloat alpha, occa::memory &o_x, occa::memory &
   localdots[2] = 0;
   localdots[3] = 0;
   for(int n=0;n<Nblocks;++n) {
-    localdots[0] += tmpdots[0*Nblocks+n];
-    localdots[1] += tmpdots[1*Nblocks+n];
-    localdots[2] += tmpdots[2*Nblocks+n];
-    localdots[3] += tmpdots[3*Nblocks+n];
+    localdots[0] += tmpdots[0+4*n];
+    localdots[1] += tmpdots[1+4*n];
+    localdots[2] += tmpdots[2+4*n];
+    localdots[3] += tmpdots[3+4*n];
   }
 
   globaldots[0] = 0;

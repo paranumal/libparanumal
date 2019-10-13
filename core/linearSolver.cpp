@@ -31,7 +31,11 @@ linearSolver_t* linearSolver_t::Setup(solver_t& solver) {
 
   linearSolver_t *linearSolver=NULL;
 
-  if (solver.settings.compareSetting("LINEAR SOLVER","PCG")){
+  if (solver.settings.compareSetting("LINEAR SOLVER","NBPCG")){
+    linearSolver = new nbpcg(solver);
+  } else if (solver.settings.compareSetting("LINEAR SOLVER","NBFPCG")){
+    linearSolver = new nbfpcg(solver);
+  } else if (solver.settings.compareSetting("LINEAR SOLVER","PCG")){
     linearSolver = new pcg(solver);
   } else {
     LIBP_ABORT(string("Requested LINEAR SOLVER not found."));

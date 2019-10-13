@@ -39,7 +39,7 @@ void pcg::Init(int _weighted, occa::memory& o_weight) {
   dlong Nhalo  = mesh.Np*mesh.totalHaloPairs;
   dlong Ntotal = N + Nhalo;
 
-  flexible = settings.compareSetting("LINEAR SOLVER", "FLEXIBLE");
+  flexible = settings.compareSetting("LINEAR SOLVER", "FPCG");
 
   /*aux variables */
   dfloat *dummy = (dfloat *) calloc(Ntotal,sizeof(dfloat)); //need this to avoid uninitialized memory warnings
@@ -66,14 +66,9 @@ void pcg::Init(int _weighted, occa::memory& o_weight) {
   kernelInfo["defines/" "p_blockSize"] = (int)PCG_BLOCKSIZE;
 
   // combined PCG update and r.r kernel
-  if (!weighted)
-    updatePCGKernel = buildKernel(device,
-                                  LIBP_DIR "/core/okl/linearSolverUpdatePCG.okl",
-                                  "updatePCG", kernelInfo, comm);
-  else
-    weightedUpdatePCGKernel = buildKernel(device,
-                                  LIBP_DIR "/core/okl/linearSolverUpdatePCG.okl",
-                                  "weightedUpdatePCG", kernelInfo, comm);
+  updatePCGKernel = buildKernel(device,
+                                LIBP_DIR "/core/okl/linearSolverUpdatePCG.okl",
+                                "updatePCG", kernelInfo, comm);
 }
 
 int pcg::Solve(solver_t& solver, precon_t& precon,
@@ -171,10 +166,7 @@ dfloat pcg::UpdatePCG(const dfloat alpha, occa::memory &o_x, occa::memory &o_r){
   int Nblocks = (N+PCG_BLOCKSIZE-1)/PCG_BLOCKSIZE;
   Nblocks = (Nblocks>PCG_BLOCKSIZE) ? PCG_BLOCKSIZE : Nblocks; //limit to PCG_BLOCKSIZE entries
 
-  if (weighted)
-    weightedUpdatePCGKernel(N, Nblocks, o_w, o_p, o_Ap, alpha, o_x, o_r, o_tmprdotr);
-  else
-    updatePCGKernel(N, Nblocks, o_p, o_Ap, alpha, o_x, o_r, o_tmprdotr);
+  updatePCGKernel(N, Nblocks, weighted, o_w, o_p, o_Ap, alpha, o_x, o_r, o_tmprdotr);
 
   o_tmprdotr.copyTo(tmprdotr, Nblocks*sizeof(dfloat));
 
