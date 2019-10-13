@@ -30,17 +30,10 @@ int elliptic_t::Solve(linearSolver_t& linearSolver,
                       occa::memory &o_x, occa::memory &o_r,
                       const dfloat tol, const int MAXIT, const int verbose){
 
-#if USE_NULL_PROJECTION==1
-  if(allNeumann) // zero mean of RHS
-    ZeroMean(o_r);
-#endif
+  // if there is a nullspace, remove the constant vector from r
+  if(allNeumann) ZeroMean(o_r);
 
   int Niter = linearSolver.Solve(*this, *precon, o_x, o_r, tol, MAXIT, verbose);
-
-#if USE_NULL_PROJECTION==1
-  if(allNeumann) // zero mean of RHS
-    ZeroMean(o_x);
-#endif
 
   return Niter;
 }

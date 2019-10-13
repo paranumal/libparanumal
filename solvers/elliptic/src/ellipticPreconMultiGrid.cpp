@@ -33,10 +33,8 @@ void MultiGridPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
   //just pass to parAlmond
   parAlmond::Precon(parAlmondHandle, o_Mr, o_r);
 
-#if USE_NULL_PROJECTION==1
-  if(elliptic.allNeumann) // zero mean of RHS
-    elliptic.ZeroMean(o_Mr);
-#endif
+  // zero mean of RHS
+  if(elliptic.allNeumann) elliptic.ZeroMean(o_Mr);
 }
 
 MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):

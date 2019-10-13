@@ -32,7 +32,13 @@ void elliptic_t::BoundarySetup(){
   int localAllNeumann = (lambda==0) ? 1 : 0; //if lambda>0 we don't care about all Neumann problem
   allNeumannPenalty = 1.;
 
-  allNeumannScale = 1./sqrt((dfloat)mesh.Np*mesh.NelementsGlobal);
+  //setup normalization constant
+  if (settings.compareSetting("DISCRETIZATION","IPDG")) {
+    allNeumannScale = 1./sqrt((dfloat)mesh.Np*mesh.NelementsGlobal);
+  } else {
+    //note that we can use the mesh ogs, since there are no masked nodes
+    allNeumannScale = 1./sqrt((dfloat)mesh.ogs->NgatherGlobal);
+  }
 
   //setup a custom element-to-boundaryflag mapping
   EToB = (int *) calloc(mesh.Nelements*mesh.Nfaces,sizeof(int));

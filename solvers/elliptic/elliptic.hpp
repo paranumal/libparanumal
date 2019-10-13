@@ -139,7 +139,7 @@ public:
 
   elliptic_t& SetupNewDegree(mesh_t& meshF);
 
-  // void ZeroMean(occa::memory &o_q);
+  void ZeroMean(occa::memory &o_q);
 };
 
 

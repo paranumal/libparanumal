@@ -50,8 +50,6 @@ void JacobiPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
   // Mr = invDiag.*r
   elliptic.linAlg.amxpy(Ntotal, 1.0, o_invDiagA, o_r, 0.0, o_Mr);
 
-#if USE_NULL_PROJECTION==1
-  if(elliptic.allNeumann) // zero mean of RHS
-    elliptic.ZeroMean(o_Mr);
-#endif
+  // zero mean of RHS
+  if(elliptic.allNeumann) elliptic.ZeroMean(o_Mr);
 }

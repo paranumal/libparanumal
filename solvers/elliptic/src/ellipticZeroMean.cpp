@@ -24,45 +24,23 @@
 
 */
 
-#include "elliptic.h"
+#include "elliptic.hpp"
 
-void ellipticZeroMean(elliptic_t *elliptic, occa::memory &o_q){
+void elliptic_t::ZeroMean(occa::memory &o_q){
 
-  dfloat qmeanLocal;
-  dfloat qmeanGlobal;
+  dlong N = mesh.Nelements*mesh.Np;
 
-  dlong Nblock = elliptic->Nblock;
-  dfloat *tmp = elliptic->tmp;
-  mesh_t *mesh = elliptic->mesh;
+  dfloat qmean=0.0;
 
-  occa::memory &o_tmp = elliptic->o_tmp;
-
-  // this is a C0 thing [ assume GS previously applied to o_q ]
-#define USE_WEIGHTED 1
-
-#if USE_WEIGHTED==1
-  elliptic->innerProductKernel(mesh->Nelements*mesh->Np, elliptic->o_invDegree, o_q, o_tmp);
-#else
-  mesh->sumKernel(mesh->Nelements*mesh->Np, o_q, o_tmp);
-#endif
-
-  o_tmp.copyTo(tmp);
-
-  // finish reduction
-  qmeanLocal = 0;
-  for(dlong n=0;n<Nblock;++n)
-    qmeanLocal += tmp[n];
-
-  // globalize reduction
-  MPI_Allreduce(&qmeanLocal, &qmeanGlobal, 1, MPI_DFLOAT, MPI_SUM, mesh->comm);
+  if (disc_c0) {
+    qmean = linAlg.innerProd(N, o_weight, o_q, comm);
+  } else {
+    qmean = linAlg.sum(N, o_q, comm);
+  }
 
   // normalize
-#if USE_WEIGHTED==1
-  qmeanGlobal *= elliptic->nullProjectWeightGlobal;
-#else
-  qmeanGlobal /= ((dfloat) elliptic->NelementsGlobal*(dfloat)mesh->Np);
-#endif
+  qmean *= allNeumannScale*allNeumannScale;
 
-  // q[n] = q[n] - qmeanGlobal
-  mesh->addScalarKernel(mesh->Nelements*mesh->Np, -qmeanGlobal, o_q);
+  // q[n] = q[n] - qmean
+  linAlg.add(N, -qmean, o_q);
 }

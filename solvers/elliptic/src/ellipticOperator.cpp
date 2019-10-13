@@ -79,16 +79,6 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
     // finalize gather using local and global contributions
     ogsMasked->GatherScatterFinish(o_Aq, ogs_dfloat, ogs_add, ogs_sym);
 
-#if USE_NULL_BOOST==1
-    if(mesh.allNeumann) {
-      dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
-      dfloat alpha = linAlg->innerProd(Nentries, o_invDegree, o_q, comm);
-      alpha *= allNeumannPenalty*allNeumannScale*allNeumannScale;
-
-      linAlg->add(Nentries, alpha, o_Aq);
-    }
-#endif
-
     //post-mask
     if (Nmasked)
       maskKernel(Nmasked, o_maskIds, o_Aq);
@@ -142,18 +132,6 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
                         o_grad,
                         o_Aq);
     }
-
-#if USE_NULL_BOOST==1
-    //rank 1 augmentation if all BCs are Neumann
-    //TODO this could probably be moved inside the Ax kernel for better performance
-    if(allNeumann) {
-      dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
-      alpha = linAlg->sum(Nentries, o_q, comm);
-      alpha *= allNeumannPenalty*allNeumannScale*allNeumannScale;
-
-      linAlg->add(Nentries, alpha, o_Aq);
-    }
-#endif
   }
 }
 

@@ -208,6 +208,7 @@ public:
 
   dlong         N;
   dlong         Ngather;        //  total number of gather nodes
+  hlong         NgatherGlobal;  //  global number of gather nodes
 
   dlong         Nlocal;         //  number of local nodes
   dlong         NlocalGather;   //  number of local gathered nodes

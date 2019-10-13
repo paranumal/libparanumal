@@ -59,10 +59,8 @@ void SEMFEMPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
   if (elliptic.Nmasked)
       elliptic.maskKernel(elliptic.Nmasked, elliptic.o_maskIds, o_Mr);
 
-#if USE_NULL_PROJECTION==1
-  if(elliptic.allNeumann) // zero mean of RHS
-    elliptic.ZeroMean(o_Mr);
-#endif
+  // zero mean of RHS
+  if(elliptic.allNeumann) elliptic.ZeroMean(o_Mr);
 }
 
 SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):

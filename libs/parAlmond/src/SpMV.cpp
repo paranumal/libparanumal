@@ -246,12 +246,6 @@ void parCSR::SpMV(const dfloat alpha, dfloat *x,
   halo->Exchange(x, 1, ogs_dfloat);
 
   offd->SpMV(alpha, x, 1.0, y);
-
-  //rank 1 correction if there is a nullspace
-  if (nullSpace) {
-    dfloat gamma = vectorInnerProd(Nrows, null, x, comm)*nullSpacePenalty;
-    vectorAdd(Nrows, alpha*gamma, null, 1.0, y);
-  }
 }
 
 void parCSR::SpMV(const dfloat alpha, dfloat *x,
@@ -263,12 +257,6 @@ void parCSR::SpMV(const dfloat alpha, dfloat *x,
   halo->Exchange(x, 1, ogs_dfloat);
 
   offd->SpMV(alpha, x, 1.0, z);
-
-  //rank 1 correction if there is a nullspace
-  if (nullSpace) {
-    dfloat gamma = vectorInnerProd(Nrows, null, x, comm)*nullSpacePenalty;
-    vectorAdd(Nrows, alpha*gamma, null, 1.0, z);
-  }
 }
 
 void parCSR::SpMV(const dfloat alpha, occa::memory o_x, const dfloat beta,
@@ -282,12 +270,6 @@ void parCSR::SpMV(const dfloat alpha, occa::memory o_x, const dfloat beta,
   halo->ExchangeFinish(o_x, 1, ogs_dfloat);
 
   offd->SpMV(alpha, o_x, 1.0, o_y);
-
-  //rank 1 correction if there is a nullspace
-  if (nullSpace) {
-    dfloat gamma = vectorInnerProd(Nrows, o_null, o_x, comm)*nullSpacePenalty;
-    vectorAdd(Nrows, alpha*gamma, o_null, 1.0, o_y);
-  }
 }
 
 void parCSR::SpMV(const dfloat alpha, occa::memory o_x, const dfloat beta,
@@ -301,12 +283,6 @@ void parCSR::SpMV(const dfloat alpha, occa::memory o_x, const dfloat beta,
   halo->ExchangeFinish(o_x, 1, ogs_dfloat);
 
   offd->SpMV(alpha, o_x, 1.0, o_z);
-
-  //rank 1 correction if there is a nullspace
-  if (nullSpace) {
-    dfloat gamma = vectorInnerProd(Nrows, o_null, o_x, comm)*nullSpacePenalty;
-    vectorAdd(Nrows, alpha*gamma, o_null, 1.0, o_z);
-  }
 }
 
 //------------------------------------------------------------------------
@@ -323,12 +299,6 @@ void parHYB::SpMV(const dfloat alpha, dfloat *x,
   halo->Exchange(x, 1, ogs_dfloat);
 
   C->SpMV(alpha, x, 1.0, y);
-
-  //rank 1 correction if there is a nullspace
-  if (nullSpace) {
-    dfloat gamma = vectorInnerProd(Nrows, null, x, comm)*nullSpacePenalty;
-    vectorAdd(Nrows, alpha*gamma, null, 1.0, y);
-  }
 }
 
 void parHYB::SpMV(const dfloat alpha, dfloat *x,
@@ -340,12 +310,6 @@ void parHYB::SpMV(const dfloat alpha, dfloat *x,
   halo->Exchange(x, 1, ogs_dfloat);
 
   C->SpMV(alpha, x, 1.0, z);
-
-  //rank 1 correction if there is a nullspace
-  if (nullSpace) {
-    dfloat gamma = vectorInnerProd(Nrows, null, x, comm)*nullSpacePenalty;
-    vectorAdd(Nrows, alpha*gamma, null, 1.0, z);
-  }
 }
 
 void parHYB::SpMV(const dfloat alpha, occa::memory o_x, const dfloat beta,
@@ -359,12 +323,6 @@ void parHYB::SpMV(const dfloat alpha, occa::memory o_x, const dfloat beta,
   halo->ExchangeFinish(o_x, 1, ogs_dfloat);
 
   C->SpMV(alpha, o_x, 1.0, o_y);
-
-  //rank 1 correction if there is a nullspace
-  if (nullSpace) {
-    dfloat gamma = vectorInnerProd(Nrows, o_null, o_x, comm)*nullSpacePenalty;
-    vectorAdd(Nrows, alpha*gamma, o_null, 1.0, o_y);
-  }
 }
 
 void parHYB::SpMV(const dfloat alpha, occa::memory o_x, const dfloat beta,
@@ -378,12 +336,6 @@ void parHYB::SpMV(const dfloat alpha, occa::memory o_x, const dfloat beta,
   halo->ExchangeFinish(o_x, 1, ogs_dfloat);
 
   C->SpMV(alpha, o_x, 1.0, o_z);
-
-  //rank 1 correction if there is a nullspace
-  if (nullSpace) {
-    dfloat gamma = vectorInnerProd(Nrows, o_null, o_x, comm)*nullSpacePenalty;
-    vectorAdd(Nrows, alpha*gamma, o_null, 1.0, o_z);
-  }
 }
 
 

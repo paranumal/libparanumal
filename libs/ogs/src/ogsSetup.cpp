@@ -73,6 +73,7 @@ ogs_t *ogs_t::Setup(dlong N, hlong *ids, MPI_Comm &comm,
   ogs_t *ogs = new ogs_t(comm, device);
 
   ogs->Ngather = 0;
+  ogs->NgatherGlobal = 0;
 
   ogs->Nlocal = 0;
   ogs->NlocalGather = 0;
@@ -455,6 +456,9 @@ ogs_t *ogs_t::Setup(dlong N, hlong *ids, MPI_Comm &comm,
 
   //total number of owned gathered nodes
   ogs->Ngather = ogs->NlocalGather+ogs->NhaloGather;
+
+  hlong NgatherLocal = (hlong) ogs->Ngather;
+  MPI_Allreduce(&NgatherLocal, &(ogs->NgatherGlobal), 1, MPI_HLONG, MPI_SUM, comm);
 
   ogs->hostBuf = NULL;
   ogs->haloBuf = NULL;
