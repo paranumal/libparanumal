@@ -116,6 +116,36 @@ public:
   void Operator(occa::memory& o_r, occa::memory& o_Mr);
 };
 
+// Overlapping additive Schwarz with patch problems consisting of the
+//  entire local mesh + 1 ring overlap, solved with a local multigrid
+//  precon and coarse problem consisting of the global degree 1
+//  problem, solved with parAlmond
+class OASPrecon: public precon_t {
+private:
+  elliptic_t& elliptic;
+  mesh_t& mesh;
+  settings_t& settings;
+
+  //Patch precon
+  MultiGridPrecon *preconPatch;
+
+  //Coarse Precon
+  parAlmond::solver_t *parAlmondHandle;
+
+  dfloat *rPatch, *zPatch;
+  occa::memory o_rPatch, o_zPatch;
+
+  dfloat *rC, *zC;
+  occa::memory o_rC, o_zC;
+
+  dfloat *patchWeight;
+  occa::memory o_patchWeight;
+
+public:
+  OASPrecon(elliptic_t& elliptic);
+  void Operator(occa::memory& o_r, occa::memory& o_Mr);
+};
+
 class MGLevel: public parAlmond::multigridLevel {
 
 public:

@@ -79,9 +79,11 @@ public:
   // MPI halo exchange info
   halo_t *halo;            // halo exchange pointer
   halo_t *traceHalo;       // trace halo exchange pointer
+  halo_t *ringHalo;        // ring halo exchange pointer
   dlong NinternalElements; // number of elements that can update without halo exchange
   dlong NhaloElements;     // number of elements that cannot update without halo exchange
   dlong  totalHaloPairs;   // number of elements to be received in halo exchange
+  dlong  totalRingElements;// number of elements to be received in ring halo exchange
   dlong *internalElementIds;  // list of elements that can update without halo exchange
   dlong *haloElementIds;      // list of elements to be sent in halo exchange
   occa::memory o_internalElementIds;  // list of elements that can update without halo exchange
@@ -313,6 +315,9 @@ public:
   // setup trace halo
   void HaloTraceSetup();
 
+  // setup trace halo
+  void HaloRingSetup();
+
   /* build global connectivity in parallel */
   void ParallelConnectNodes();
 
@@ -341,9 +346,12 @@ public:
   //create a new mesh object with the same geometry, but different degree
   mesh_t& SetupNewDegree(int Nf);
 
+  mesh_t& SetupRingPatch();
+
   virtual void BuildBasisCoarsen(dfloat**R, occa::memory& o_R, int Nf, int Nc)=0;
 
   mesh_t* SetupSEMFEM(hlong **globalIds, int *Nfp, int **faceNodes);
+
 };
 
 void meshAddSettings(settings_t& settings);

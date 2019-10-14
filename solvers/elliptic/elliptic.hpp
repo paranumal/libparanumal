@@ -139,6 +139,8 @@ public:
 
   elliptic_t& SetupNewDegree(mesh_t& meshF);
 
+  elliptic_t& SetupRingPatch(mesh_t& meshPatch);
+
   void ZeroMean(occa::memory &o_q);
 };
 

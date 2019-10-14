@@ -55,7 +55,7 @@ ellipticSettings_t::ellipticSettings_t(MPI_Comm& _comm):
   newSetting("PRECONDITIONER",
              "NONE",
              "Preconditioning Strategy",
-             {"NONE", "JACOBI", "MASSMATRIX", "FULLALMOND", "MULTIGRID", "SEMFEM"});
+             {"NONE", "JACOBI", "MASSMATRIX", "FULLALMOND", "MULTIGRID", "SEMFEM", "OAS"});
 
   /* MULTIGRID options */
   newSetting("MULTIGRID COARSENING",

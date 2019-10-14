@@ -147,22 +147,11 @@ elliptic_t& elliptic_t::Setup(mesh_t& mesh, linAlg_t& linAlg, dfloat lambda){
     elliptic->precon = new ParAlmondPrecon(*elliptic);
   else if(settings.compareSetting("PRECONDITIONER", "MULTIGRID"))
     elliptic->precon = new MultiGridPrecon(*elliptic);
-  else if(settings.compareSetting("PRECONDITIONER", "SEMFEM")){
+  else if(settings.compareSetting("PRECONDITIONER", "SEMFEM"))
     elliptic->precon = new SEMFEMPrecon(*elliptic);
-  }
-  else if(settings.compareSetting("PRECONDITIONER", "OAS")){
-
-    LIBP_ABORT(string("OAS does not work right now."));
-
-    //if(mesh->N>1)
-    //  ellipticOasSetup(elliptic, lambda, kernelInfo);
-    //else{
-    //  dfloat *invDiagA;
-    //  ellipticBuildJacobi(elliptic,lambda,&invDiagA);
-    //  elliptic->precon->o_invDiagA = mesh->device.malloc(mesh->Np*mesh->Nelements*sizeof(dfloat), invDiagA);
-    //  free(invDiagA);
-    //}
-  } else if(settings.compareSetting("PRECONDITIONER", "NONE"))
+  else if(settings.compareSetting("PRECONDITIONER", "OAS"))
+    elliptic->precon = new OASPrecon(*elliptic);
+  else if(settings.compareSetting("PRECONDITIONER", "NONE"))
     elliptic->precon = new IdentityPrecon(mesh.Np*mesh.Nelements);
 
   return *elliptic;

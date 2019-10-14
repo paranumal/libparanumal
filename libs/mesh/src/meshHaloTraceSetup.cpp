@@ -52,7 +52,7 @@ void mesh_t::HaloTraceSetup(){
     }
   }
 
-  //excahge full element global ids
+  //exchange full element global ids
   halo->Exchange(globalids, Np, ogs_hlong);
 
   //flag the trace ids we need

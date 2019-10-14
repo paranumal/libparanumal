@@ -135,7 +135,12 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
 
   //report
   if (settings.compareSetting("VERBOSE","TRUE")) {
-    if (mesh.rank==0) { //report the upper multigrid levels
+    //This setup can be called by many subcommunicators, so only
+    // print on the global root.
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    if (rank==0) { //report the upper multigrid levels
       printf("------------------Multigrid Report----------------------------------------\n");
       printf("--------------------------------------------------------------------------\n");
       printf("level|    Type    |    dimension   |   nnz per row   |   Smoother        |\n");
@@ -144,11 +149,11 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
     }
 
     for(int lev=0; lev<parAlmondHandle->numLevels; lev++) {
-      if(mesh.rank==0) {printf(" %3d ", lev);fflush(stdout);}
+      if(rank==0) {printf(" %3d ", lev);fflush(stdout);}
       levels[lev]->Report();
     }
 
-    if (mesh.rank==0)
+    if (rank==0)
       printf("--------------------------------------------------------------------------\n");
   }
 }

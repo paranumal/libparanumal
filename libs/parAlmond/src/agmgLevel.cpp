@@ -127,9 +127,10 @@ void agmgLevel::smooth(occa::memory& o_RHS, occa::memory& o_X, bool x_is_zero){
 
 void agmgLevel::Report() {
 
-  int rank, size;
-  MPI_Comm_rank(comm, &rank);
-  MPI_Comm_size(comm, &size);
+  //This setup can be called by many subcommunicators, so only
+  // print on the global root.
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   hlong hNrows = (hlong) Nrows;
 

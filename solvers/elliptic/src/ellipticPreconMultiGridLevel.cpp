@@ -274,7 +274,12 @@ void MGLevel::Report() {
   else if (stype==CHEBYSHEV)
     strcpy(smootherString, "Chebyshev       ");
 
-  if (mesh.rank==0){
+  //This setup can be called by many subcommunicators, so only
+  // print on the global root.
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  if (rank==0){
     printf(     "|    pMG     |    %10d  |   Matrix-free   |   %s|\n",minNrows, smootherString);
     printf("     |            |    %10d  |     Degree %2d   |                   |\n", maxNrows, mesh.N);
     printf("     |            |    %10d  |                 |                   |\n", (int) avgNrows);
