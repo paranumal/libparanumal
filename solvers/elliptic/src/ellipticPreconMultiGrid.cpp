@@ -51,6 +51,7 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   int NpFine   = mesh.Np;
   int NpCoarse = mesh.Np;
   occa::memory o_weightF = elliptic.o_weight;
+
   while(true) {
     //build mesh and elliptic objects for this degree
     mesh_t &meshC = mesh.SetupNewDegree(Nc);
@@ -75,6 +76,9 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
 
       levels[numMGLevels] = new MGLevel(ellipticC, numMGLevels, Nf, NpFine, o_weightF,
                                         parAlmondHandle->ktype, parAlmondHandle->ctype);
+
+      printf(" Number of levels : %d Mesh F = %d and mesh C = %d \n", numMGLevels, Nf, Nc); 
+
 
       if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
         if (parAlmondHandle->numLevels > numMGLevels+1) {
@@ -107,6 +111,7 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
       levels[numMGLevels] = new MGLevel(ellipticC, numMGLevels, Nf, NpFine, o_weightF,
                                         parAlmondHandle->ktype, parAlmondHandle->ctype);
       parAlmondHandle->numLevels++;
+      printf(" Number of levels : %d Mesh F = %d and mesh C = %d \n", numMGLevels, Nf, Nc); 
     }
 
     //find the degree of the next level

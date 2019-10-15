@@ -161,6 +161,8 @@ MGLevel::MGLevel(elliptic_t& _elliptic, int k,
 
   weighted = false;
 
+  printf("Creating level order : Coarse %d and Fine:%d \n", elliptic.mesh.N, Nf);
+
   //save size and weight of previous level
   NpF = Npf;
   o_weightF = o_weightF_;
@@ -232,10 +234,11 @@ void MGLevel::AllocateStorage(int k, parAlmond::CycleType ctype) {
     smootherResidualBytes = Nbytes;
   }
 
-  if (k) x    = (dfloat *) calloc(Ncols,sizeof(dfloat));
-  if (k) rhs  = (dfloat *) calloc(Nrows,sizeof(dfloat));
+  if (k) x     = (dfloat *) calloc(Ncols,sizeof(dfloat));
+  if (k) rhs   = (dfloat *) calloc(Nrows,sizeof(dfloat));
   if (k) o_x   = mesh.device.malloc(Ncols*sizeof(dfloat),x);
   if (k) o_rhs = mesh.device.malloc(Nrows*sizeof(dfloat),rhs);
+ 
 
   res  = (dfloat *) calloc(Ncols,sizeof(dfloat));
   o_res = mesh.device.malloc(Ncols*sizeof(dfloat),res);

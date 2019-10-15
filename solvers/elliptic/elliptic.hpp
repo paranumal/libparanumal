@@ -89,7 +89,8 @@ public:
   
   // needed in setup phase 
   // since we are not planing to change AMG in time-dependent solves
-  occa::kernel coefficientKernel; 
+  occa::kernel coefficientKernel;
+  occa::kernel coarsenCoefficientKernel;  
   occa::memory o_coeff; 
 
   elliptic_t() = delete;
@@ -148,6 +149,8 @@ public:
   void BuildOperatorDiagonalIpdgHex3D(dfloat *diagA);
 
   elliptic_t& SetupNewDegree(mesh_t& meshF);
+
+  void SetupNewCoefficient(elliptic_t & elliptic);
 
   // void ZeroMean(occa::memory &o_q);
 };

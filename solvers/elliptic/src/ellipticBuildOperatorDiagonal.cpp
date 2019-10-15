@@ -362,6 +362,8 @@ void elliptic_t::BuildOperatorDiagonalIpdgTri3D(dfloat *A) {
 
 void elliptic_t::BuildOperatorDiagonalContinuousTri2D(dfloat *A) {
 
+  const dlong offset =  mesh.Np *(mesh.Nelements+mesh.totalHaloPairs); 
+
   for(dlong eM=0;eM<mesh.Nelements;++eM){
     dlong gbase = eM*mesh.Nggeo;
     dfloat Grr = mesh.ggeo[gbase + G00ID];
@@ -372,11 +374,14 @@ void elliptic_t::BuildOperatorDiagonalContinuousTri2D(dfloat *A) {
     /* start with stiffness matrix  */
     for(int n=0;n<mesh.Np;++n){
       if (mapB[n+eM*mesh.Np]!=1) { //dont fill rows for masked nodes
-        A[eM*mesh.Np+n] = J*lambda*mesh.MM[n+n*mesh.Np];
-        A[eM*mesh.Np+n] += Grr*mesh.Srr[n+n*mesh.Np];
-        A[eM*mesh.Np+n] += Grs*mesh.Srs[n+n*mesh.Np];
-        A[eM*mesh.Np+n] += Grs*mesh.Ssr[n+n*mesh.Np];
-        A[eM*mesh.Np+n] += Gss*mesh.Sss[n+n*mesh.Np];
+        dfloat lambda_0 = var_coef ? coeff[eM*mesh.Np + n + 0*offset] : 1.0; 
+        dfloat lambda_1 = var_coef ? coeff[eM*mesh.Np + n + 1*offset] : coeff[0]; 
+
+        A[eM*mesh.Np+n] = J*lambda_0*mesh.MM[n+n*mesh.Np];
+        A[eM*mesh.Np+n] += Grr*lambda_1*mesh.Srr[n+n*mesh.Np];
+        A[eM*mesh.Np+n] += Grs*lambda_1*mesh.Srs[n+n*mesh.Np];
+        A[eM*mesh.Np+n] += Grs*lambda_1*mesh.Ssr[n+n*mesh.Np];
+        A[eM*mesh.Np+n] += Gss*lambda_1*mesh.Sss[n+n*mesh.Np];
       } else {
         A[eM*mesh.Np+n] = 1; //just put a 1 so A is invertable
       }
@@ -510,28 +515,27 @@ void elliptic_t::BuildOperatorDiagonalContinuousQuad2D(dfloat *A) {
         if (mapB[nx+ny*mesh.Nq+eM*mesh.Np]!=1) {
           A[eM*mesh.Np+iid] = 0;
 
-        dfloat lambda_0 =1.0, lambda_1 = 1.0;   
           for (int k=0;k<mesh.Nq;k++) {
             int id = k+ny*mesh.Nq;
             dfloat Grr = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + G00ID*mesh.Np];
-            lambda_0   = var_coef ? coeff[eM*mesh.Np + id + 0*offset] : 1.0; 
+            dfloat lambda_0   = var_coef ? coeff[eM*mesh.Np + id + 0*offset] : 1.0; 
             A[eM*mesh.Np+iid] += Grr*lambda_0*mesh.D[nx+k*mesh.Nq]*mesh.D[nx+k*mesh.Nq];
           }
 
           for (int k=0;k<mesh.Nq;k++) {
             int id = nx+k*mesh.Nq;
             dfloat Gss = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + G11ID*mesh.Np];
-            lambda_0   = var_coef ? coeff[eM*mesh.Np + id + 0*offset] : 1.0; 
+            dfloat lambda_0   = var_coef ? coeff[eM*mesh.Np + id + 0*offset] : 1.0; 
             A[eM*mesh.Np+iid] += Gss*lambda_0*mesh.D[ny+k*mesh.Nq]*mesh.D[ny+k*mesh.Nq];
           }
 
           int id = nx+ny*mesh.Nq;
           dfloat Grs = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + G01ID*mesh.Np];
-          lambda_0 = var_coef ? coeff[eM*mesh.Np + id + 0*offset] : 1.0; 
+          dfloat lambda_0 = var_coef ? coeff[eM*mesh.Np + id + 0*offset] : 1.0; 
           A[eM*mesh.Np+iid] += 2*lambda_0*Grs*mesh.D[nx+nx*mesh.Nq]*mesh.D[ny+ny*mesh.Nq];
 
           dfloat JW = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + GWJID*mesh.Np];
-          lambda_1 = var_coef ? coeff[eM*mesh.Np + id + 1*offset] : lambda;
+          dfloat lambda_1 = var_coef ? coeff[eM*mesh.Np + id + 1*offset] : lambda;
           A[eM*mesh.Np+iid] += JW*lambda_1;
 
         } else {
@@ -660,6 +664,8 @@ void elliptic_t::BuildOperatorDiagonalIpdgQuad3D(dfloat *A) {
 
 void elliptic_t::BuildOperatorDiagonalContinuousQuad3D(dfloat *A) {
 
+ const dlong offset =  mesh.Np *(mesh.Nelements+mesh.totalHaloPairs); 
+ 
   for(dlong eM=0;eM<mesh.Nelements;++eM){
     for (int ny=0;ny<mesh.Nq;ny++) {
       for (int nx=0;nx<mesh.Nq;nx++) {
@@ -668,19 +674,22 @@ void elliptic_t::BuildOperatorDiagonalContinuousQuad3D(dfloat *A) {
 
         for (int k=0;k<mesh.Nq;k++) {
           int id = k+ny*mesh.Nq;
+          dfloat lambda_0 = var_coef ? coeff[eM*mesh.Np + id + 0*offset] : 1.0; 
           dfloat Grr = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + G00ID*mesh.Np];
-          A[eM*mesh.Np+iid] += Grr*mesh.D[nx+k*mesh.Nq]*mesh.D[nx+k*mesh.Nq];
+          A[eM*mesh.Np+iid] += lambda_0*Grr*mesh.D[nx+k*mesh.Nq]*mesh.D[nx+k*mesh.Nq];
         }
 
         for (int k=0;k<mesh.Nq;k++) {
           int id = nx+k*mesh.Nq;
+          dfloat lambda_0 = var_coef ? coeff[eM*mesh.Np + id + 0*offset] : 1.0; 
           dfloat Gss = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + G11ID*mesh.Np];
-          A[eM*mesh.Np+iid] += Gss*mesh.D[ny+k*mesh.Nq]*mesh.D[ny+k*mesh.Nq];
+          A[eM*mesh.Np+iid] += lambda_0*Gss*mesh.D[ny+k*mesh.Nq]*mesh.D[ny+k*mesh.Nq];
         }
 
         int id = nx+ny*mesh.Nq;
+        dfloat lambda_0   = var_coef ? coeff[eM*mesh.Np + id + 0*offset] : 1.0; 
         dfloat Grs = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + G01ID*mesh.Np];
-        A[eM*mesh.Np+iid] += 2*Grs*mesh.D[nx+nx*mesh.Nq]*mesh.D[ny+ny*mesh.Nq];
+        A[eM*mesh.Np+iid] += 2*lambda_0*Grs*mesh.D[nx+nx*mesh.Nq]*mesh.D[ny+ny*mesh.Nq];
 
         // id = nx+ny*mesh.Nq;
         // dfloat Grt = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + G02ID*mesh.Np];
@@ -694,9 +703,9 @@ void elliptic_t::BuildOperatorDiagonalContinuousQuad3D(dfloat *A) {
         // A[eM*mesh.Np+iid] += Gtt;
 
 
-
+        dfloat lambda_1   = var_coef ? coeff[eM*mesh.Np + id + 1*offset] : coeff[0];
         dfloat JW  = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + GWJID*mesh.Np];
-        A[eM*mesh.Np+iid] += JW*lambda;
+        A[eM*mesh.Np+iid] += JW*lambda_1;
       }
     }
   }
@@ -865,6 +874,8 @@ void elliptic_t::BuildOperatorDiagonalIpdgTet3D(dfloat *A) {
 
 void elliptic_t::BuildOperatorDiagonalContinuousTet3D(dfloat *A) {
 
+   const dlong offset =  mesh.Np *(mesh.Nelements+mesh.totalHaloPairs); 
+
   for(dlong eM=0;eM<mesh.Nelements;++eM){
     dlong gbase = eM*mesh.Nggeo;
     dfloat Grr = mesh.ggeo[gbase + G00ID];
@@ -878,16 +889,19 @@ void elliptic_t::BuildOperatorDiagonalContinuousTet3D(dfloat *A) {
     /* start with stiffness matrix  */
     for(int n=0;n<mesh.Np;++n){
       if (mapB[n+eM*mesh.Np]!=1) { //dont fill rows for masked nodes
-        A[eM*mesh.Np+n] = J*lambda*mesh.MM[n+n*mesh.Np];
-        A[eM*mesh.Np+n] += Grr*mesh.Srr[n+n*mesh.Np];
-        A[eM*mesh.Np+n] += Grs*mesh.Srs[n+n*mesh.Np];
-        A[eM*mesh.Np+n] += Grt*mesh.Srt[n+n*mesh.Np];
-        A[eM*mesh.Np+n] += Grs*mesh.Ssr[n+n*mesh.Np];
-        A[eM*mesh.Np+n] += Gss*mesh.Sss[n+n*mesh.Np];
-        A[eM*mesh.Np+n] += Gst*mesh.Sst[n+n*mesh.Np];
-        A[eM*mesh.Np+n] += Grt*mesh.Str[n+n*mesh.Np];
-        A[eM*mesh.Np+n] += Gst*mesh.Sts[n+n*mesh.Np];
-        A[eM*mesh.Np+n] += Gtt*mesh.Stt[n+n*mesh.Np];
+        dfloat lambda_0 = var_coef ? coeff[eM*mesh.Np + n + 0*offset] : 1.0; 
+        dfloat lambda_1 = var_coef ? coeff[eM*mesh.Np + n + 1*offset] : coeff[0]; 
+
+        A[eM*mesh.Np+n] = J*lambda_1*mesh.MM[n+n*mesh.Np];
+        A[eM*mesh.Np+n] += Grr*lambda_0*mesh.Srr[n+n*mesh.Np];
+        A[eM*mesh.Np+n] += Grs*lambda_0*mesh.Srs[n+n*mesh.Np];
+        A[eM*mesh.Np+n] += Grt*lambda_0*mesh.Srt[n+n*mesh.Np];
+        A[eM*mesh.Np+n] += Grs*lambda_0*mesh.Ssr[n+n*mesh.Np];
+        A[eM*mesh.Np+n] += Gss*lambda_0*mesh.Sss[n+n*mesh.Np];
+        A[eM*mesh.Np+n] += Gst*lambda_0*mesh.Sst[n+n*mesh.Np];
+        A[eM*mesh.Np+n] += Grt*lambda_0*mesh.Str[n+n*mesh.Np];
+        A[eM*mesh.Np+n] += Gst*lambda_0*mesh.Sts[n+n*mesh.Np];
+        A[eM*mesh.Np+n] += Gtt*lambda_0*mesh.Stt[n+n*mesh.Np];
       } else {
         A[eM*mesh.Np+n] = 1; //just put a 1 so A is invertable
       }

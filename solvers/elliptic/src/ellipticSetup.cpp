@@ -200,14 +200,27 @@ elliptic_t& elliptic_t::Setup(mesh_t& mesh, linAlg_t& linAlg){
   }
 
   /* Preconditioner Setup */
-  if       (settings.compareSetting("PRECONDITIONER", "JACOBI"))
+  if       (settings.compareSetting("PRECONDITIONER", "JACOBI")){
+    if((mesh.elementType==TRIANGLES || mesh.elementType==TETRAHEDRA) && elliptic->var_coef)
+      LIBP_ABORT(string("Variable coefficient elliptic solve is implemented only for Quad and Hex with CO only."));
     elliptic->precon = new JacobiPrecon(*elliptic);
-  // else if(settings.compareSetting("PRECONDITIONER", "MASSMATRIX"))
-  //   elliptic->precon = new MassMatrixPrecon(*elliptic);
-  // else if(settings.compareSetting("PRECONDITIONER", "FULLALMOND"))
-  //   elliptic->precon = new ParAlmondPrecon(*elliptic);
-  // else if(settings.compareSetting("PRECONDITIONER", "MULTIGRID"))
-  //   elliptic->precon = new MultiGridPrecon(*elliptic);
+  }else if(settings.compareSetting("PRECONDITIONER", "MASSMATRIX")){
+    if(elliptic->var_coef)
+       LIBP_ABORT(string("Variable coefficient elliptic solve is not implemented for MASSMATRIX Preconditioner"));
+    elliptic->precon = new MassMatrixPrecon(*elliptic);
+  }
+  else if(settings.compareSetting("PRECONDITIONER", "FULLALMOND")){
+    if(mesh.elementType==TRIANGLES || mesh.elementType==TETRAHEDRA) 
+      LIBP_ABORT(string("Variable coefficient elliptic solve is implemented only for Quad and Hex with CO only."));
+
+    elliptic->precon = new ParAlmondPrecon(*elliptic);
+  }
+  else if(settings.compareSetting("PRECONDITIONER", "MULTIGRID")){
+    if(mesh.elementType==TRIANGLES || mesh.elementType==TETRAHEDRA)
+    LIBP_ABORT(string("Variable coefficient elliptic solve is implemented only for Quad and Hex with CO only."));
+    
+    elliptic->precon = new MultiGridPrecon(*elliptic);
+  }
   // else if(settings.compareSetting("PRECONDITIONER", "SEMFEM")){
   //   elliptic->precon = new SEMFEMPrecon(*elliptic);
   // }

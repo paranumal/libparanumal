@@ -437,6 +437,7 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO& A) {
 
   // number of degrees of freedom on this rank (after gathering)
   hlong Ngather = ogsMasked->Ngather;
+  const dlong offset =  mesh.Np *(mesh.Nelements+mesh.totalHaloPairs); 
 
   // every gathered degree of freedom has its own global id
   A.globalStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
@@ -466,38 +467,42 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO& A) {
 
             int id;
             dfloat val = 0.;
+            dfloat lambda_0 = 1.0, lambda_1 = 1.0; 
 
             if (ny==my) {
               for (int k=0;k<mesh.Nq;k++) {
                 id = k+ny*mesh.Nq;
                 dfloat Grr = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G00ID*mesh.Np];
-
-                val += Grr*mesh.D[nx+k*mesh.Nq]*mesh.D[mx+k*mesh.Nq];
+                lambda_0 = var_coef ? coeff[e*mesh.Np + id + 0*offset] : 1.0; 
+                val += lambda_0*Grr*mesh.D[nx+k*mesh.Nq]*mesh.D[mx+k*mesh.Nq];
               }
             }
 
             id = mx+ny*mesh.Nq;
             dfloat Grs = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G01ID*mesh.Np];
-            val += Grs*mesh.D[nx+mx*mesh.Nq]*mesh.D[my+ny*mesh.Nq];
+            lambda_0 = var_coef ? coeff[e*mesh.Np + id + 0*offset] : 1.0; 
+            val += lambda_0*Grs*mesh.D[nx+mx*mesh.Nq]*mesh.D[my+ny*mesh.Nq];
 
 
             id = nx+my*mesh.Nq;
             dfloat Gsr = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G01ID*mesh.Np];
-            val += Gsr*mesh.D[mx+nx*mesh.Nq]*mesh.D[ny+my*mesh.Nq];
+            lambda_0 = var_coef ? coeff[e*mesh.Np + id + 0*offset] : 1.0; 
+            val += lambda_0*Gsr*mesh.D[mx+nx*mesh.Nq]*mesh.D[ny+my*mesh.Nq];
 
             if (nx==mx) {
               for (int k=0;k<mesh.Nq;k++) {
                 id = nx+k*mesh.Nq;
                 dfloat Gss = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G11ID*mesh.Np];
-
-                val += Gss*mesh.D[ny+k*mesh.Nq]*mesh.D[my+k*mesh.Nq];
+                lambda_0 = var_coef ? coeff[e*mesh.Np + id + 0*offset] : 1.0; 
+                val += lambda_0*Gss*mesh.D[ny+k*mesh.Nq]*mesh.D[my+k*mesh.Nq];
               }
             }
 
             if ((nx==mx)&&(ny==my)) {
               id = nx + ny*mesh.Nq;
+              lambda_1 = var_coef ? coeff[e*mesh.Np + id + 1*offset] : 1.0; 
               dfloat JW = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + GWJID*mesh.Np];
-              val += JW*lambda;
+              val += JW*lambda_1;
             }
 
             dfloat nonZeroThreshold = 1e-7;
@@ -745,6 +750,7 @@ void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO& A) {
 
   // number of degrees of freedom on this rank (after gathering)
   hlong Ngather = ogsMasked->Ngather;
+  const dlong offset =  mesh.Np *(mesh.Nelements+mesh.totalHaloPairs); 
 
   // every gathered degree of freedom has its own global id
   A.globalStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
@@ -779,67 +785,85 @@ void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO& A) {
             int id;
             dfloat val = 0.;
 
+            dfloat lambda_0 = 1.0, lambda_1 = 1.0; 
+
             if ((ny==my)&&(nz==mz)) {
               for (int k=0;k<mesh.Nq;k++) {
                 id = k+ny*mesh.Nq+nz*mesh.Nq*mesh.Nq;
                 dfloat Grr = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G00ID*mesh.Np];
-
-                val += Grr*mesh.D[nx+k*mesh.Nq]*mesh.D[mx+k*mesh.Nq];
+                lambda_0 = var_coef ? coeff[e*mesh.Np + id + 0*offset] : 1.0; 
+                val += lambda_0*Grr*mesh.D[nx+k*mesh.Nq]*mesh.D[mx+k*mesh.Nq];
               }
             }
 
             if (nz==mz) {
               id = mx+ny*mesh.Nq+nz*mesh.Nq*mesh.Nq;
               dfloat Grs = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G01ID*mesh.Np];
-              val += Grs*mesh.D[nx+mx*mesh.Nq]*mesh.D[my+ny*mesh.Nq];
+              lambda_0 = var_coef ? coeff[e*mesh.Np + id + 0*offset] : 1.0; 
+
+              val += lambda_0*Grs*mesh.D[nx+mx*mesh.Nq]*mesh.D[my+ny*mesh.Nq];
 
               id = nx+my*mesh.Nq+nz*mesh.Nq*mesh.Nq;
               dfloat Gsr = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G01ID*mesh.Np];
-              val += Gsr*mesh.D[mx+nx*mesh.Nq]*mesh.D[ny+my*mesh.Nq];
+              lambda_0 = var_coef ? coeff[e*mesh.Np + id + 0*offset] : 1.0; 
+
+              val += lambda_0*Gsr*mesh.D[mx+nx*mesh.Nq]*mesh.D[ny+my*mesh.Nq];
             }
 
             if (ny==my) {
               id = mx+ny*mesh.Nq+nz*mesh.Nq*mesh.Nq;
               dfloat Grt = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G02ID*mesh.Np];
-              val += Grt*mesh.D[nx+mx*mesh.Nq]*mesh.D[mz+nz*mesh.Nq];
+              lambda_0 = var_coef ? coeff[e*mesh.Np + id + 0*offset] : 1.0; 
+
+              val += lambda_0*Grt*mesh.D[nx+mx*mesh.Nq]*mesh.D[mz+nz*mesh.Nq];
 
               id = nx+ny*mesh.Nq+mz*mesh.Nq*mesh.Nq;
               dfloat Gst = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G02ID*mesh.Np];
-              val += Gst*mesh.D[mx+nx*mesh.Nq]*mesh.D[nz+mz*mesh.Nq];
+              lambda_0 = var_coef ? coeff[e*mesh.Np + id + 0*offset] : 1.0; 
+
+              val += lambda_0*Gst*mesh.D[mx+nx*mesh.Nq]*mesh.D[nz+mz*mesh.Nq];
             }
 
             if ((nx==mx)&&(nz==mz)) {
               for (int k=0;k<mesh.Nq;k++) {
                 id = nx+k*mesh.Nq+nz*mesh.Nq*mesh.Nq;
                 dfloat Gss = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G11ID*mesh.Np];
+                lambda_0 = var_coef ? coeff[e*mesh.Np + id + 0*offset] : 1.0; 
 
-                val += Gss*mesh.D[ny+k*mesh.Nq]*mesh.D[my+k*mesh.Nq];
+                val += lambda_0*Gss*mesh.D[ny+k*mesh.Nq]*mesh.D[my+k*mesh.Nq];
               }
             }
 
             if (nx==mx) {
               id = nx+my*mesh.Nq+nz*mesh.Nq*mesh.Nq;
               dfloat Gst = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G12ID*mesh.Np];
-              val += Gst*mesh.D[ny+my*mesh.Nq]*mesh.D[mz+nz*mesh.Nq];
+              lambda_0 = var_coef ? coeff[e*mesh.Np + id + 0*offset] : 1.0; 
+              
+              val += lambda_0*Gst*mesh.D[ny+my*mesh.Nq]*mesh.D[mz+nz*mesh.Nq];
 
               id = nx+ny*mesh.Nq+mz*mesh.Nq*mesh.Nq;
               dfloat Gts = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G12ID*mesh.Np];
-              val += Gts*mesh.D[my+ny*mesh.Nq]*mesh.D[nz+mz*mesh.Nq];
+              lambda_0 = var_coef ? coeff[e*mesh.Np + id + 0*offset] : 1.0; 
+   
+              val += lambda_0*Gts*mesh.D[my+ny*mesh.Nq]*mesh.D[nz+mz*mesh.Nq];
             }
 
             if ((nx==mx)&&(ny==my)) {
               for (int k=0;k<mesh.Nq;k++) {
                 id = nx+ny*mesh.Nq+k*mesh.Nq*mesh.Nq;
                 dfloat Gtt = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G22ID*mesh.Np];
+                lambda_0 = var_coef ? coeff[e*mesh.Np + id + 0*offset] : 1.0; 
 
-                val += Gtt*mesh.D[nz+k*mesh.Nq]*mesh.D[mz+k*mesh.Nq];
+                val += lambda_0*Gtt*mesh.D[nz+k*mesh.Nq]*mesh.D[mz+k*mesh.Nq];
               }
             }
 
             if ((nx==mx)&&(ny==my)&&(nz==mz)) {
               id = nx + ny*mesh.Nq+nz*mesh.Nq*mesh.Nq;
               dfloat JW = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + GWJID*mesh.Np];
-              val += JW*lambda;
+              lambda_1 = var_coef ? coeff[e*mesh.Np + id + 1*offset] : 1.0; 
+
+              val += JW*lambda_1;
             }
 
             // pack non-zero

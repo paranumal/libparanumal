@@ -71,10 +71,23 @@ void meshTet3D::SetupBox(){
   int rank_y = (rank - rank_z*size_x*size_x) / size_x;
   int rank_x = rank % size_x;
 
+  // //bottom corner of physical domain
+  // dfloat X0 = -DIMX/2.0 + rank_x*dimx;
+  // dfloat Y0 = -DIMY/2.0 + rank_y*dimy;
+  // dfloat Z0 = -DIMZ/2.0 + rank_z*dimz;
+
+  dfloat domx = 0.0; // -DIMX/2.0 ; 
+  dfloat domy = 0.0; // -DIMY/2.0 ; 
+  dfloat domz = 0.0; // -DIMZ/2.0 ; 
+
+  settings.getSetting("BOX DOMX", domx);
+  settings.getSetting("BOX DOMY", domy);
+  settings.getSetting("BOX DOMZ", domz);
+
   //bottom corner of physical domain
-  dfloat X0 = -DIMX/2.0 + rank_x*dimx;
-  dfloat Y0 = -DIMY/2.0 + rank_y*dimy;
-  dfloat Z0 = -DIMZ/2.0 + rank_z*dimz;
+  dfloat X0 = domx + rank_x*dimx;
+  dfloat Y0 = domy + rank_y*dimy;
+  dfloat Z0 = domz + rank_z*dimz;
 
   //global number of elements in each dimension
   hlong NX = size_x*nx;

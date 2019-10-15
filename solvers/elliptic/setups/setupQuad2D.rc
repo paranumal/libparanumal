@@ -6,7 +6,6 @@
 data/ellipticVarSine2D.h
 
 [MESH FILE]
-#../../meshes/boxVarCoeffQuad2D.msh
 BOX
 
 [MESH DIMENSION]
@@ -47,7 +46,7 @@ BOX
 1
 
 [POLYNOMIAL DEGREE]
-4
+7
 
 [THREAD MODEL]
 CUDA
@@ -75,8 +74,10 @@ PCG
 
 # can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
 [PRECONDITIONER]
-NONE
+#NONE
 #JACOBI
+#FULLALMOND
+MULTIGRID
 
 ########## MULTIGRID Options ##############
 

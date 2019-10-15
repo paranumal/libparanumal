@@ -40,6 +40,7 @@ elliptic_t& elliptic_t::SetupNewDegree(mesh_t& meshC){
 
   elliptic->disc_ipdg = disc_ipdg;
   elliptic->disc_c0 = disc_c0;
+  elliptic->var_coef = var_coef; 
 
   elliptic->grad = grad;
   elliptic->o_grad = o_grad;
@@ -47,6 +48,7 @@ elliptic_t& elliptic_t::SetupNewDegree(mesh_t& meshC){
   elliptic->BCType = BCType;
 
   elliptic->maskKernel = maskKernel;
+
 
   //setup boundary flags and make mask and masked ogs
   elliptic->BoundarySetup();
@@ -60,14 +62,9 @@ elliptic_t& elliptic_t::SetupNewDegree(mesh_t& meshC){
         elliptic->tau *= 1.5;
     } else
       elliptic->tau = 2.0*(meshC.N+1)*(meshC.N+3);
-
-    //buffer for gradient (Reuse the original buffer)
-    // dlong Ntotal = meshC.Np*(meshC.Nelements+meshC.totalHaloPairs);
-    // elliptic->grad = (dfloat*) calloc(Ntotal*4, sizeof(dfloat));
-    // elliptic->o_grad  = meshC.device.malloc(Ntotal*4*sizeof(dfloat), elliptic->grad);
   }
 
-  // OCCA build stuff
+   // OCCA build stuff
   occa::properties kernelInfo = elliptic->props; //copy base occa properties
 
   // set kernel name suffix
@@ -100,16 +97,65 @@ elliptic_t& elliptic_t::SetupNewDegree(mesh_t& meshC){
   int NblockV = mymax(1,512/meshC.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;
 
+  // Add coefficients here ......
+  if(elliptic->var_coef){
+  
+ #if 1
+ this->SetupNewCoefficient(*elliptic); 
+ #else
+  // this needs to be changed later
+  const dlong Nall   = meshC.Np *(meshC.Nelements+meshC.totalHaloPairs);    
+
+  // currently scalar coefficients are supported
+  elliptic->coeff     = (dfloat *) calloc(2*Nall, sizeof(dfloat)); 
+  elliptic->o_coeff   = meshC.device.malloc(2*Nall*sizeof(dfloat), elliptic->coeff);
+
+  string dataFileName;
+  settings.getSetting("DATA FILE", dataFileName);
+  kernelInfo["includes"] += dataFileName;
+
+  sprintf(fileName, DELLIPTIC "/okl/ellipticCoefficient%s.okl", suffix);
+  sprintf(kernelName,"ellipticCoefficient%s", suffix);
+
+    elliptic->coefficientKernel  = buildKernel(meshC.device,fileName, kernelName,
+                                              kernelInfo, meshC.comm); 
+
+    elliptic->coefficientKernel(mesh.Nelements,
+                                meshC.o_x,
+                                meshC.o_y,
+                                meshC.o_z,
+                                Nall,  
+                                elliptic->o_coeff); 
+    
+    // copy to host for setup
+    elliptic->o_coeff.copyTo(elliptic->coeff);
+#endif
+  }else{ // setting contant coefficient 
+  // copy base elliptic coefficient
+  elliptic->coeff     = coeff; 
+  elliptic->o_coeff   = o_coeff;
+  }
+
   // Ax kernel
   if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
     sprintf(fileName,  DELLIPTIC "/okl/ellipticAx%s.okl", suffix);
     if(meshC.elementType==HEXAHEDRA){
-      if(settings.compareSetting("ELEMENT MAP", "TRILINEAR"))
+       if(settings.compareSetting("ELEMENT MAP", "TRILINEAR")){
+        if(elliptic->var_coef)
+        sprintf(kernelName, "ellipticPartialAxTrilinearVar%s", suffix);
+        else
         sprintf(kernelName, "ellipticPartialAxTrilinear%s", suffix);
-      else
+      }else{
+        if(elliptic->var_coef)
+        sprintf(kernelName, "ellipticPartialAxVar%s", suffix);
+        else
         sprintf(kernelName, "ellipticPartialAx%s", suffix);
+      }
     } else{
-      sprintf(kernelName, "ellipticPartialAx%s", suffix);
+      if(elliptic->var_coef)      
+          sprintf(kernelName, "ellipticPartialAxVar%s", suffix);
+        else
+          sprintf(kernelName, "ellipticPartialAx%s", suffix);   
     }
 
     elliptic->partialAxKernel = buildKernel(meshC.device, fileName, kernelName,
@@ -129,6 +175,6 @@ elliptic_t& elliptic_t::SetupNewDegree(mesh_t& meshC){
     elliptic->partialIpdgKernel = buildKernel(meshC.device, fileName, kernelName,
                                               kernelInfo, meshC.comm);
   }
-
+  
   return *elliptic;
 }
