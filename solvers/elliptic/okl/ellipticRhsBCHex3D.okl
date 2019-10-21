@@ -25,37 +25,21 @@ SOFTWARE.
 */
 
 
-void surfaceTerms(int sk, 
-                  int m, 
-                  int i, 
-                  int j,
-		  const dfloat t, 
-                  @global const dfloat *sgeo, 
-                  @global const dfloat *x, 
-                  @global const dfloat *y, 
-                  @global const dfloat *z,
-                  @global const int *vmapM, 
-                  @global const int *mapB,
-                  dfloat s_q[2][p_Nq][p_Nq],
-                  dfloat s_ndq[2][p_Nq][p_Nq]){
-  
-  const dlong  idM = vmapM[sk];                                         
-  
-  const dfloat nx  = sgeo[sk*p_Nsgeo+p_NXID];                           
-  const dfloat ny  = sgeo[sk*p_Nsgeo+p_NYID];                           
-  const dfloat nz  = sgeo[sk*p_Nsgeo+p_NZID];                           
-  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];                          
-  
-  dfloat dudxP=0, dudyP=0, dudzP=0, uP=0;                               
-  
-  const int bc = mapB[idM];                                             
-  
-  if(bc>0) {
-    ellipticBoundaryConditions3D(bc, t, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, uP, dudxP, dudyP, dudzP);
-  }                                                                     
-  
-  s_q  [m][j][i]  = uP;                                                 
-  s_ndq[m][j][i]  = -WsJ*(nx*dudxP + ny*dudyP + nz*dudzP);              
+#define surfaceTerms(sk,m,i,j,t,sgeo,x,y,z,vmapM,mapB,s_q,s_ndq){\
+  const dlong  idM = vmapM[sk];                                        \
+  const dfloat nx  = sgeo[sk*p_Nsgeo+p_NXID];                          \
+  const dfloat ny  = sgeo[sk*p_Nsgeo+p_NYID];                          \
+  const dfloat nz  = sgeo[sk*p_Nsgeo+p_NZID];                          \
+  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];                         \
+  dfloat dudxP=0, dudyP=0, dudzP=0, uP=0;                              \
+  const int bc = mapB[idM];\
+  \
+  if(bc>0) {\
+    ellipticBoundaryConditions3D(bc,t,x[idM],y[idM],z[idM],nx,ny,nz,0.f,0.f,0.f,0.f,uP,dudxP,dudyP,dudzP);\
+  }\
+  \
+  s_q  [m][j][i]  = uP;\
+  s_ndq[m][j][i]  = -WsJ*(nx*dudxP + ny*dudyP + nz*dudzP);\
 }
 
 @kernel void ellipticRhsBCHex3D(const dlong Nelements,

@@ -30,55 +30,32 @@ SOFTWARE.
 // sgeo stores dfloat4s with nx,ny,nz,(sJ/J)*(w1*w2*w3/(ws1*ws2))
 
 // nx,ny,nz,sJ,invJ - need WsJ
-
-void surfaceTerms(const int emap,
-                  const int sk,
-                  const int face,
-                  const int m,
-                  const int i,
-                  const int j,
-                  const dfloat tau,
-                  @global const dfloat *sgeo,
-                  @global const int *vmapM,
-                  @global const int *vmapP,
-                  @global const int *EToB,
-                  @global const dfloat4 *gradq,
-                  dfloat s_dqdx[2][p_Nq][p_Nq],
-                  dfloat s_dqdy[2][p_Nq][p_Nq],
-                  dfloat s_dqdz[2][p_Nq][p_Nq],
-                  dfloat s_Aq[2][p_Nq][p_Nq]){
-  
-  const dlong  idM = vmapM[sk];                                       
-  const dlong  idP = vmapP[sk];                                       
-  
-  const dfloat nx  = sgeo[sk*p_Nsgeo+p_NXID];                         
-  const dfloat ny  = sgeo[sk*p_Nsgeo+p_NYID];                         
-  const dfloat nz  = sgeo[sk*p_Nsgeo+p_NZID];                         
-  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];                        
-  const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];                         
-  
-  const dfloat4 gradqM = gradq[idM];                                  
-  dfloat4 gradqP = gradq[idP];                                  
-  
-  const int bc = EToB[face+p_Nfaces*emap];                            
-  if(bc>0) {                                                          
-    ellipticHomogeneousBC3D(bc, gradqM.w, gradqM.x, gradqM.y,gradqM.z,gradqP.w, gradqP.x, gradqP.y, gradqP.z); 
-    gradqP.x = 2.f*gradqP.x - gradqM.x;                         
-    gradqP.y = 2.f*gradqP.y - gradqM.y;                         
-    gradqP.z = 2.f*gradqP.z - gradqM.z;                         
-    gradqP.w = 2.f*gradqP.w - gradqM.w;                         
-  }                                                                   
-  
-  const dfloat dq = gradqP.w - gradqM.w;                              
-  
-  s_dqdx[m][j][i] = 0.5f*WsJ*nx*dq;                                   
-  s_dqdy[m][j][i] = 0.5f*WsJ*ny*dq;                                   
-  s_dqdz[m][j][i] = 0.5f*WsJ*nz*dq;                                   
-  
-  s_Aq[m][j][i] = -0.5f*WsJ*(nx*(gradqP.x+gradqM.x) +                 
-                             ny*(gradqP.y+gradqM.y) +                 
-                             nz*(gradqP.z+gradqM.z) +                 
-                             tau*hinv*dq);                            
+#define surfaceTerms(emap,sk,face,m,i,j,tau,sgeo,vmapM,vmapP,EToB,gradq,s_dqdx,s_dqdy,s_dqdz,s_Aq){\
+  const dlong  idM = vmapM[sk];\
+  const dlong  idP = vmapP[sk];\
+  const dfloat nx  = sgeo[sk*p_Nsgeo+p_NXID];\
+  const dfloat ny  = sgeo[sk*p_Nsgeo+p_NYID];\
+  const dfloat nz  = sgeo[sk*p_Nsgeo+p_NZID];\
+  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];\
+  const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];\
+  const dfloat4 gradqM = gradq[idM];\
+  dfloat4 gradqP = gradq[idP];\
+  const int bc = EToB[face+p_Nfaces*emap];\
+  if(bc>0) {\
+    ellipticHomogeneousBC3D(bc, gradqM.w, gradqM.x, gradqM.y,gradqM.z,gradqP.w, gradqP.x, gradqP.y, gradqP.z);\
+    gradqP.x = 2.f*gradqP.x - gradqM.x;\
+    gradqP.y = 2.f*gradqP.y - gradqM.y;\
+    gradqP.z = 2.f*gradqP.z - gradqM.z;\
+    gradqP.w = 2.f*gradqP.w - gradqM.w;\
+  }\
+  const dfloat dq = gradqP.w - gradqM.w;\
+  s_dqdx[m][j][i] = 0.5f*WsJ*nx*dq;\
+  s_dqdy[m][j][i] = 0.5f*WsJ*ny*dq;\
+  s_dqdz[m][j][i] = 0.5f*WsJ*nz*dq;\
+  s_Aq[m][j][i] = -0.5f*WsJ*(nx*(gradqP.x+gradqM.x) +\
+                             ny*(gradqP.y+gradqM.y) +\
+                             nz*(gradqP.z+gradqM.z) +\
+                             tau*hinv*dq);\
 }
 
 // (grad phi, grad q) + ([phi], n.{grad q}) + ({grad phi}, n[u]) + (tau[phi],[u])
