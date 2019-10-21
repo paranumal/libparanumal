@@ -77,7 +77,7 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
       levels[numMGLevels] = new MGLevel(ellipticC, numMGLevels, Nf, NpFine, o_weightF,
                                         parAlmondHandle->ktype, parAlmondHandle->ctype);
 
-      printf(" Number of levels : %d Mesh F = %d and mesh C = %d \n", numMGLevels, Nf, Nc); 
+      // printf(" Number of levels : %d Mesh F = %d and mesh C = %d \n", numMGLevels, Nf, Nc); 
 
 
       if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
@@ -111,7 +111,7 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
       levels[numMGLevels] = new MGLevel(ellipticC, numMGLevels, Nf, NpFine, o_weightF,
                                         parAlmondHandle->ktype, parAlmondHandle->ctype);
       parAlmondHandle->numLevels++;
-      printf(" Number of levels : %d Mesh F = %d and mesh C = %d \n", numMGLevels, Nf, Nc); 
+      // printf(" Number of levels : %d Mesh F = %d and mesh C = %d \n", numMGLevels, Nf, Nc); 
     }
 
     //find the degree of the next level

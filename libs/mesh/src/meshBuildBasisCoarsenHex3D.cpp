@@ -86,3 +86,7 @@ void meshHex3D::BuildBasisCoarsen(dfloat**R, occa::memory& o_R, int Nf, int Nc) 
 
   free(P); free(Ptmp);
 }
+
+
+void meshHex3D::BuildInterpolation(dfloat**R, occa::memory& o_R, int Nf, int Nc) {
+}

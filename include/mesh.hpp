@@ -342,6 +342,8 @@ public:
   mesh_t& SetupNewDegree(int Nf);
 
   virtual void BuildBasisCoarsen(dfloat**R, occa::memory& o_R, int Nf, int Nc)=0;
+  
+  virtual void BuildInterpolation(dfloat**R, occa::memory& o_R, int Nf, int Nc)=0;
 
   mesh_t* SetupSEMFEM(hlong **globalIds, int *Nfp, int **faceNodes);
 };

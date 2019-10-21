@@ -62,6 +62,7 @@ public:
   void OccaSetup();
 
   void BuildBasisCoarsen(dfloat**R, occa::memory& o_R, int Nf, int Nc);
+  void BuildInterpolation(dfloat**R, occa::memory& o_R, int Nf, int Nc);
 };
 
 class meshQuad2D: public mesh2D {
@@ -77,6 +78,7 @@ public:
   void OccaSetup();
 
   void BuildBasisCoarsen(dfloat**R, occa::memory& o_R, int Nf, int Nc);
+  void BuildInterpolation(dfloat**R, occa::memory& o_R, int Nf, int Nc);
 };
 
 #endif

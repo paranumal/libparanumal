@@ -34,6 +34,10 @@ void meshTri3D::BuildBasisCoarsen(dfloat**R, occa::memory& o_R, int Nf, int Nc){
   trimesh->meshTri2D::BuildBasisCoarsen(R, o_R, Nf, Nc);
 }
 
+
+void meshTri3D::BuildInterpolation(dfloat**R, occa::memory& o_R, int Nf, int Nc){
+}
+
 void meshTri2D::BuildBasisCoarsen(dfloat**R, occa::memory& o_R, int Nf, int Nc) {
 
   int NpFine   = ((Nf+1)*(Nf+2))/2;
@@ -94,3 +98,9 @@ void meshTri2D::BuildBasisCoarsen(dfloat**R, occa::memory& o_R, int Nf, int Nc) 
 
   free(P); free(Ptmp);
 }
+
+void meshTri2D::BuildInterpolation(dfloat**R, occa::memory& o_R, int Nf, int Nc) {
+
+ 
+}
+

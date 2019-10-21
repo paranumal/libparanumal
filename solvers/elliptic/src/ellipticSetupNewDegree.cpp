@@ -120,7 +120,7 @@ elliptic_t& elliptic_t::SetupNewDegree(mesh_t& meshC){
     elliptic->coefficientKernel  = buildKernel(meshC.device,fileName, kernelName,
                                               kernelInfo, meshC.comm); 
 
-    elliptic->coefficientKernel(mesh.Nelements,
+    elliptic->coefficientKernel(meshC.Nelements,
                                 meshC.o_x,
                                 meshC.o_y,
                                 meshC.o_z,
@@ -128,7 +128,8 @@ elliptic_t& elliptic_t::SetupNewDegree(mesh_t& meshC){
                                 elliptic->o_coeff); 
     
     // copy to host for setup
-    elliptic->o_coeff.copyTo(elliptic->coeff);
+
+   elliptic->o_coeff.copyTo(elliptic->coeff);
 #endif
   }else{ // setting contant coefficient 
   // copy base elliptic coefficient

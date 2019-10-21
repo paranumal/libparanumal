@@ -86,3 +86,9 @@ void meshTet3D::BuildBasisCoarsen(dfloat**R, occa::memory& o_R, int Nf, int Nc) 
 
   free(P); free(Ptmp);
 }
+
+
+void meshTet3D::BuildInterpolation(dfloat**R, occa::memory& o_R, int Nf, int Nc) {
+
+}
+
