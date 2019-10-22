@@ -89,4 +89,62 @@ void meshHex3D::BuildBasisCoarsen(dfloat**R, occa::memory& o_R, int Nf, int Nc) 
 
 
 void meshHex3D::BuildInterpolation(dfloat**R, occa::memory& o_R, int Nf, int Nc) {
+
+  int NqFine   = Nf+1;
+  int NqCoarse = Nc+1;
+
+  dfloat *P    = (dfloat *) calloc(NqFine*NqFine,sizeof(dfloat));
+  dfloat *Ptmp = (dfloat *) calloc(NqFine*NqFine,sizeof(dfloat));
+
+  //initialize P as Nf-1 identity
+  for (int i=0;i<NqFine;i++) P[i*NqFine+i] = 1.0;
+
+  for (int n=Nf;n>Nc;n--) {
+
+    int Nqp1 = n;
+    int Nqp  = n+1;
+
+    //copy P
+    for (int i=0;i<Nqp*NqFine;i++) Ptmp[i] = P[i];
+
+    //get the raise op from the node file
+    char fname[BUFSIZ];
+    sprintf(fname, LIBP_DIR "/nodes/quadrilateralN%02d.dat", n);
+
+    FILE *fp = fopen(fname, "r");
+
+    if (!fp) {
+      stringstream ss;
+      ss << "Cannot open file: " << fname;
+      LIBP_ABORT(ss.str())
+    }
+
+    int Nrows, Ncols;
+    dfloat *InterpLower;
+    readDfloatArray(comm, fp, "1D degree lower matrix", &(InterpLower), &Nrows, &Ncols);
+
+    //Multiply by the raise op
+    for (int i=0;i<Nqp1;i++) {
+      for (int j=0;j<NqFine;j++) {
+        P[i*NqFine + j] = 0.;
+        for (int k=0;k<Nqp;k++) {
+          P[i*NqFine + j] += InterpLower[i*Nqp+k]*Ptmp[k*NqFine + j];
+        }
+      }
+    }
+
+    fclose(fp);
+    free(InterpLower);
+  }
+
+  //copy non-zero part of the interpolation matrix
+  *R = (dfloat *) calloc(NqFine*NqCoarse,sizeof(dfloat));
+  for (int i=0;i<NqCoarse;i++) {
+    for (int j=0;j<NqFine;j++) {
+      (*R)[i*NqFine+j] = P[i*NqFine+j];
+    }
+  }
+  o_R = device.malloc(NqFine*NqCoarse*sizeof(dfloat), *R);
+
+  free(P); free(Ptmp);
 }

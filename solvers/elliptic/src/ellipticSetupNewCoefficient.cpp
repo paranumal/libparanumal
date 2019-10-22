@@ -71,9 +71,10 @@ void elliptic_t::SetupNewCoefficient(elliptic_t &elliptic){
 
     sprintf(fileName, DELLIPTIC "/okl/ellipticCoarsen%s.okl", suffix);
     sprintf(kernelName, "ellipticCoarsenCoefficient%s", suffix);
-    coarsenCoefficientKernel = buildKernel(mesh.device, fileName, kernelName, kernelInfo, meshC.comm);
+    
+    elliptic.coarsenCoefficientKernel = buildKernel(meshC.device, fileName, kernelName, kernelInfo, meshC.comm);
 
-    coarsenCoefficientKernel(mesh.Nelements, o_cR, o_coeff, elliptic.o_coeff); 
+    elliptic.coarsenCoefficientKernel(meshC.Nelements, o_cR, o_coeff, elliptic.o_coeff); 
 
     elliptic.o_coeff.copyTo(elliptic.coeff);
 

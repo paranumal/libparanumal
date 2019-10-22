@@ -179,18 +179,6 @@ MGLevel::MGLevel(elliptic_t& _elliptic, int k,
   if (mesh.N<Nf) {
     mesh.BuildBasisCoarsen(&R, o_R, Nf, mesh.N);
 
-//     if(mesh.N ==4){
-//     dfloat maxA = 0.f; 
-//     int NqFine   = Nf+1;
-//     int NqCoarse = mesh.N+1;    
-//     for (int i=0;i<NqCoarse;i++) {
-//     for (int j=0;j<NqFine;j++) {
-//       printf("%.4e ",R[i*NqFine+j]); 
-//     }
-//     printf("\n");
-//   }
-// }
-
     //build kernels
     occa::properties kernelInfo = elliptic.props;
 
