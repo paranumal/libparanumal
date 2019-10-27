@@ -108,7 +108,7 @@ SOFTWARE.
           const dfloat dwdy = ry*dwdr + sy*dwds + ty*dwdt;
           const dfloat dwdz = rz*dwdr + sz*dwds + tz*dwdt;
 
-          const dlong sbase = e*p_Ngrads*p_Np + j*p_Nq + i;
+          const dlong sbase = e*p_Ngrads*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
           gradq[sbase + 0*p_Np] = dudx;
           gradq[sbase + 1*p_Np] = dudy;
           gradq[sbase + 2*p_Np] = dudz;

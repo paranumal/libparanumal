@@ -269,7 +269,7 @@ void upwindRoeAveraged(const dfloat nx,
 
             dfloat rflux, ruflux, rvflux, rwflux;
             upwindRoeAveraged(nx, ny, nz, gamma,
-                              rM, ruM, rvM, rwM, rP, ruP, rvP, rwP,
+                              rM, uM, vM, wM, rP, uP, vP, wP,
                               &rflux, &ruflux, &rvflux, &rwflux);
 
             const dfloat T11M = mu*(2.0*dudxM - 2.0*(dudxM+dvdyM+dwdzM)/3.0);
@@ -316,6 +316,8 @@ void upwindRoeAveraged(const dfloat nx,
               }
           }
         }
+
+        @barrier("local");
       }
 
     @barrier("local");
@@ -511,7 +513,7 @@ void upwindRoeAveraged(const dfloat nx,
         }
 
         dfloat rflux, ruflux, rvflux, rwflux;
-        upwindRoeAveraged(nx, ny, nz, bx, by, bz, tx, ty, tz, gamma,
+        upwindRoeAveraged(nx, ny, nz, gamma,
                           rM, ruM, rvM, rwM, rP, ruP, rvP, rwP,
                           &rflux, &ruflux, &rvflux, &rwflux);
 
