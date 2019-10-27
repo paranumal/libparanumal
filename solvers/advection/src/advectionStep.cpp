@@ -30,7 +30,7 @@ SOFTWARE.
 void advection_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
 
   // extract q halo on DEVICE
-  mesh.traceHalo->ExchangeStart(o_Q, 1, ogs_dfloat);
+  traceHalo->ExchangeStart(o_Q, 1, ogs_dfloat);
 
   volumeKernel(mesh.Nelements,
                mesh.o_vgeo,
@@ -42,7 +42,7 @@ void advection_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
                o_Q,
                o_RHS);
 
-  mesh.traceHalo->ExchangeFinish(o_Q, 1, ogs_dfloat);
+  traceHalo->ExchangeFinish(o_Q, 1, ogs_dfloat);
 
   surfaceKernel(mesh.Nelements,
                 mesh.o_sgeo,

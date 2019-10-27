@@ -24,54 +24,69 @@ SOFTWARE.
 
 */
 
-
-// isothermal Compressible Navier-Stokes
+// Compressible Navier-Stokes
 @kernel void cnsCubatureVolumeQuad2D(const dlong Nelements,
-                                    const int advSwitch,
-				    const dfloat fx,
-				    const dfloat fy,
-				    const dfloat fz, 
                                     @restrict const  dfloat *  vgeo,
-				     @restrict const  dfloat *  x,
-				     @restrict const  dfloat *  y,
-				     @restrict const  dfloat *  z,
                                     @restrict const  dfloat *  cubvgeo,
                                     @restrict const  dfloat *  cubDWT,
                                     @restrict const  dfloat *  cubInterpT,
                                     @restrict const  dfloat *  cubProjectT,
-                                    @restrict const  dfloat *  viscousStresses,
+                                    @restrict const  dfloat *  x,
+                                    @restrict const  dfloat *  y,
+                                    @restrict const  dfloat *  z,
+                                    const dfloat t,
+                                    const dfloat mu,
+                                    const dfloat gamma,
                                     @restrict const  dfloat *  q,
+                                    @restrict const  dfloat *  gradq,
                                     @restrict dfloat *  rhsq){
-  
+
   for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_q[p_Nfields][p_cubNq][p_cubNq];
+    @shared dfloat s_gradq[p_Ngrads][p_cubNq][p_cubNq];
 
     @shared dfloat s_F[p_Nfields][p_cubNq][p_cubNq];
     @shared dfloat s_G[p_Nfields][p_cubNq][p_cubNq];
-
-    #define s_q s_F
-    #define s_vS s_G
 
     @shared dfloat s_cubInterpT[p_Nq][p_cubNq];
     @shared dfloat s_cubProjectT[p_cubNq][p_Nq];
     @shared dfloat s_cubDWT[p_cubNq][p_Nq];
 
-    @exclusive dfloat r_q[p_Nfields], r_vS[p_Nstresses];
+    @exclusive dfloat r_q[p_Nfields], r_gradq[p_Ngrads];
     @exclusive dfloat r_F[p_Nfields], r_G[p_Nfields];
 
-    for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-      for(int i=0;i<p_cubNq;++i;@inner(0)){    
-        if((i<p_Nq) && (j<p_Nq)){ 
+    @exclusive dfloat fx, fy;
+
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        if((i<p_Nq) && (j<p_Nq)){
           // conserved variables
           const dlong  qbase = e*p_Np*p_Nfields + j*p_Nq + i;
-          s_q[0][j][i] = q[qbase+0*p_Np];
-          s_q[1][j][i] = q[qbase+1*p_Np];
-          s_q[2][j][i] = q[qbase+2*p_Np];
-          
-          // viscous stresses (precomputed by cnsStressesVolumeQuad2D)
-          const dlong id = e*p_Np*p_Nstresses + j*p_Nq + i;
-          s_vS[0][j][i] = viscousStresses[id+0*p_Np];
-          s_vS[1][j][i] = viscousStresses[id+1*p_Np];
-          s_vS[2][j][i] = viscousStresses[id+2*p_Np];
+          const dfloat r  = q[qbase+0*p_Np];
+          const dfloat ru = q[qbase+1*p_Np];
+          const dfloat rv = q[qbase+2*p_Np];
+          const dfloat E  = q[qbase+3*p_Np];
+
+          const dlong id = e*p_Np*p_Ngrads + j*p_Nq + i;
+          s_gradq[0][j][i] = gradq[id+0*p_Np];
+          s_gradq[1][j][i] = gradq[id+1*p_Np];
+          s_gradq[2][j][i] = gradq[id+2*p_Np];
+          s_gradq[3][j][i] = gradq[id+3*p_Np];
+
+          s_q[0][j][i] = r;
+          s_q[1][j][i] = ru;
+          s_q[2][j][i] = rv;
+          s_q[3][j][i] = E;
+
+          // primitive variables (velocity)
+          const dfloat u = ru/r, v = rv/r;
+          const dfloat p = (gamma-1)*(E-0.5*r*(u*u+v*v));
+
+          //Body force contribution
+          fx = 0.0; fy = 0.0;
+          cnsBodyForce2D(gamma, mu, t, x[e*p_Np+n], y[e*p_Np+n], r, u, v, p, &fx, &fy);
+          fx *= r; fy *= r;
         }
 
         const int id = i+j*p_cubNq;
@@ -86,11 +101,12 @@ SOFTWARE.
     @barrier("local");
 
     //interpolate in i, store in register
-    for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
       for(int i=0;i<p_cubNq;++i;@inner(0)){
         if (j<p_Nq) {
-          r_q[0] = 0.; r_q[1] = 0.; r_q[2] = 0.;
-          r_vS[0] = 0.; r_vS[1] = 0.; r_vS[2] = 0.;
+          r_q[0] = 0.; r_q[1] = 0.; r_q[2] = 0.; r_q[3] = 0.;
+          r_gradq[0] = 0.; r_gradq[1] = 0.;
+          r_gradq[2] = 0.; r_gradq[3] = 0.;
 
           #pragma unroll p_Nq
           for (int n=0;n<p_Nq;n++) {
@@ -98,9 +114,11 @@ SOFTWARE.
             r_q[0] += Ini*s_q[0][j][n];
             r_q[1] += Ini*s_q[1][j][n];
             r_q[2] += Ini*s_q[2][j][n];
-            r_vS[0] += Ini*s_vS[0][j][n];
-            r_vS[1] += Ini*s_vS[1][j][n];
-            r_vS[2] += Ini*s_vS[2][j][n];
+            r_q[3] += Ini*s_q[3][j][n];
+            r_gradq[0] += Ini*s_gradq[0][j][n];
+            r_gradq[1] += Ini*s_gradq[1][j][n];
+            r_gradq[2] += Ini*s_gradq[2][j][n];
+            r_gradq[3] += Ini*s_gradq[3][j][n];
           }
         }
       }
@@ -109,15 +127,17 @@ SOFTWARE.
     @barrier("local");
 
     //write register back to @shared
-    for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
       for(int i=0;i<p_cubNq;++i;@inner(0)){
         if (j<p_Nq) {
           s_q[0][j][i] = r_q[0];
           s_q[1][j][i] = r_q[1];
           s_q[2][j][i] = r_q[2];
-          s_vS[0][j][i] = r_vS[0];
-          s_vS[1][j][i] = r_vS[1];
-          s_vS[2][j][i] = r_vS[2];
+          s_q[3][j][i] = r_q[3];
+          s_gradq[0][j][i] = r_gradq[0];
+          s_gradq[1][j][i] = r_gradq[1];
+          s_gradq[2][j][i] = r_gradq[2];
+          s_gradq[3][j][i] = r_gradq[3];
         }
       }
     }
@@ -125,10 +145,11 @@ SOFTWARE.
     @barrier("local");
 
     //interpolate in j and store flux in register
-    for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
       for(int i=0;i<p_cubNq;++i;@inner(0)){
-        r_q[0] = 0.; r_q[1] = 0.; r_q[2] = 0.;
-        r_vS[0] = 0.; r_vS[1] = 0.; r_vS[2] = 0.;
+        r_q[0] = 0.; r_q[1] = 0.; r_q[2] = 0.; r_q[3] = 0.;
+        r_gradq[0] = 0.; r_gradq[1] = 0.;
+        r_gradq[2] = 0.; r_gradq[3] = 0.;
 
         #pragma unroll p_Nq
         for (int n=0;n<p_Nq;n++) {
@@ -136,9 +157,11 @@ SOFTWARE.
           r_q[0] += Inj*s_q[0][n][i];
           r_q[1] += Inj*s_q[1][n][i];
           r_q[2] += Inj*s_q[2][n][i];
-          r_vS[0] += Inj*s_vS[0][n][i];
-          r_vS[1] += Inj*s_vS[1][n][i];
-          r_vS[2] += Inj*s_vS[2][n][i];
+          r_q[3] += Inj*s_q[3][n][i];
+          r_gradq[0] += Inj*s_gradq[0][n][i];
+          r_gradq[1] += Inj*s_gradq[1][n][i];
+          r_gradq[2] += Inj*s_gradq[2][n][i];
+          r_gradq[3] += Inj*s_gradq[3][n][i];
         }
       }
     }
@@ -158,50 +181,63 @@ SOFTWARE.
         const dfloat r  = r_q[0];
         const dfloat ru = r_q[1];
         const dfloat rv = r_q[2];
-        const dfloat p  = r*p_RT;
+        const dfloat E  = r_q[3];
 
         // primitive variables (velocity)
         const dfloat u = ru/r, v = rv/r;
+        const dfloat p = (gamma-1)*(E-0.5*r*(u*u+v*v));
 
-        const dfloat T11 = r_vS[0];
-        const dfloat T12 = r_vS[1];
-        const dfloat T22 = r_vS[2];
+        const dfloat dudx = r_gradq[0];
+        const dfloat dudy = r_gradq[1];
+        const dfloat dvdx = r_gradq[2];
+        const dfloat dvdy = r_gradq[3];
+
+        const dfloat T11 = 2.0*dudx - 2.0*(dudx+dvdy)/3.0;
+        const dfloat T12 = dudy+dvdx;
+        const dfloat T22 = 2.0*dvdy - 2.0*(dudx+dvdy)/3.0;
 
         // (1/J) \hat{div} (G*[F;G])
-
         {
           // F0 = ru, G0 = rv
-          const dfloat f = -advSwitch*ru;
-          const dfloat g = -advSwitch*rv;
+          const dfloat f = -ru;
+          const dfloat g = -rv;
           s_F[0][j][i] = J*(rx*f + ry*g);
           s_G[0][j][i] = J*(sx*f + sy*g);
         }
 
         {
-          // F1 = 2*mu*S11 - (ru^2+p), G1 = 2*mu*S12 - (rvu)
-          const dfloat f = T11-advSwitch*(ru*u+p);
-          const dfloat g = T12-advSwitch*(rv*u);
+          // F1 = mu*T11 - (ru^2+p), G1 = mu*T12 - (rvu)
+          const dfloat f = mu*T11-(ru*u+p);
+          const dfloat g = mu*T12-(rv*u);
           s_F[1][j][i] = J*(rx*f + ry*g);
           s_G[1][j][i] = J*(sx*f + sy*g);
         }
 
         {
-          // F2 = 2*mu*S21 - (ruv), G2 = 2*mu*S22 - (rv^2+p)
-          const dfloat f = T12-advSwitch*(rv*u);
-          const dfloat g = T22-advSwitch*(rv*v+p);
+          // F2 = mu*T21 - (ruv), G2 = mu*T22 - (rv^2+p)
+          const dfloat f = mu*T12-(rv*u);
+          const dfloat g = mu*T22-(rv*v+p);
           s_F[2][j][i] = J*(rx*f + ry*g);
           s_G[2][j][i] = J*(sx*f + sy*g);
+        }
+
+        {
+          // F3 = mu*(u*T11+v*T12) - (uE+up), G2 = mu*(u*T12+v*T22) - (vE+vp)
+          const dfloat f = mu*(u*T11 + v*T12)-(u*E+u*p);
+          const dfloat g = mu*(u*T12 + v*T22)-(v*E+v*p);
+          s_F[3][j][i] = J*(rx*f + ry*g);
+          s_G[3][j][i] = J*(sx*f + sy*g);
         }
       }
     }
 
     @barrier("local");
 
-    //project/differentiate in j 
-    for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+    //project/differentiate in j
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
       for(int i=0;i<p_cubNq;++i;@inner(0)){
-        r_F[0] = 0.; r_F[1] = 0.; r_F[2] = 0.;
-        r_G[0] = 0.; r_G[1] = 0.; r_G[2] = 0.;
+        r_F[0] = 0.; r_F[1] = 0.; r_F[2] = 0.; r_F[3] = 0.;
+        r_G[0] = 0.; r_G[1] = 0.; r_G[2] = 0.; r_G[3] = 0.;
 
         if (j<p_Nq) {
           #pragma unroll p_cubNq
@@ -211,9 +247,11 @@ SOFTWARE.
             r_F[0]  += Pnj*s_F[0][n][i];
             r_F[1]  += Pnj*s_F[1][n][i];
             r_F[2]  += Pnj*s_F[2][n][i];
+            r_F[3]  += Pnj*s_F[3][n][i];
             r_G[0]  += Dnj*s_G[0][n][i];
             r_G[1]  += Dnj*s_G[1][n][i];
             r_G[2]  += Dnj*s_G[2][n][i];
+            r_G[3]  += Dnj*s_G[3][n][i];
           }
         }
       }
@@ -221,31 +259,33 @@ SOFTWARE.
 
     @barrier("local");
 
-    //write register back to @shared 
-    for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+    //write register back to @shared
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
       for(int i=0;i<p_cubNq;++i;@inner(0)){
         if (j<p_Nq) {
           s_F[0][j][i] = r_F[0];
           s_F[1][j][i] = r_F[1];
           s_F[2][j][i] = r_F[2];
+          s_F[3][j][i] = r_F[3];
           s_G[0][j][i] = r_G[0];
           s_G[1][j][i] = r_G[1];
           s_G[2][j][i] = r_G[2];
+          s_G[3][j][i] = r_G[3];
         }
       }
     }
 
     @barrier("local");
 
-    //project/differentiate in i and write back 
-    for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-      for(int i=0;i<p_cubNq;++i;@inner(0)){  
-        if((i<p_Nq) && (j<p_Nq)){ 
+    //project/differentiate in i and write back
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        if((i<p_Nq) && (j<p_Nq)){
           const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
           const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
-          
-          dfloat rhsq0 = 0, rhsq1 = 0, rhsq2 = 0;
-          
+
+          dfloat rhsq0 = 0, rhsq1 = 0, rhsq2 = 0, rhsq3 = 0;
+
           #pragma unroll p_cubNq
           for(int n=0;n<p_cubNq;++n){
             const dfloat Pni = s_cubProjectT[n][i];
@@ -259,88 +299,19 @@ SOFTWARE.
 
             rhsq2 += Dni*s_F[2][j][n]
                     +Pni*s_G[2][j][n];
+
+            rhsq3 += Dni*s_F[3][j][n]
+                    +Pni*s_G[3][j][n];
           }
 
           const dlong base = e*p_Np*p_Nfields + j*p_Nq + i;
-          
+
           // move to rhs
-          rhsq[base+0*p_Np] = -invJW*rhsq0; 
-          rhsq[base+1*p_Np] = -invJW*rhsq1+fx*s_q[0][j][i];
-          rhsq[base+2*p_Np] = -invJW*rhsq2+fy*s_q[0][j][i];
+          rhsq[base+0*p_Np] = -invJW*rhsq0;
+          rhsq[base+1*p_Np] = -invJW*rhsq1+fx;
+          rhsq[base+2*p_Np] = -invJW*rhsq2+fy;
+          rhsq[base+3*p_Np] = -invJW*rhsq3;
         }
-      }
-    }
-  }
-}
-
-
-@kernel void cnsStressesVolumeQuad2D(const dlong Nelements,
-                                    @restrict const  dfloat *  vgeo,
-                                    @restrict const  dfloat *  D,
-                                    const dfloat mu,
-                                    @restrict const  dfloat *  q,
-                                    @restrict dfloat *  viscousStresses){
-  
-  for(dlong e=0;e<Nelements;++e;@outer(0)){
-
-    @shared dfloat s_D[p_Nq][p_Nq];
-    @shared dfloat s_u[p_Nq][p_Nq];
-    @shared dfloat s_v[p_Nq][p_Nq];
-    
-    for(int j=0;j<p_Nq;++j;@inner(1)){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
-        
-        s_D[j][i] = D[j*p_Nq+i];
-
-        const dlong qbase = e*p_Nfields*p_Np + j*p_Nq + i;
-        const dfloat r  = q[qbase + 0*p_Np];
-        const dfloat ru = q[qbase + 1*p_Np];
-        const dfloat rv = q[qbase + 2*p_Np];
-        
-        s_u[j][i] = ru/r;
-        s_v[j][i] = rv/r;
-        
-      }
-    }
-    
-    @barrier("local");
-    
-    for(int j=0;j<p_Nq;++j;@inner(1)){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
-        
-        dfloat dudr = 0, duds = 0, dvdr = 0, dvds = 0;
-
-        for(int n=0;n<p_Nq;++n){
-          const dfloat Din = s_D[i][n];
-          const dfloat Djn = s_D[j][n];
-
-          dudr += Din*s_u[j][n];
-          duds += Djn*s_u[n][i];
-
-          dvdr += Din*s_v[j][n];
-          dvds += Djn*s_v[n][i];
-        }
-
-        const dlong gbase = e*p_Np*p_Nvgeo + j*p_Nq + i;
-        const dfloat rx = vgeo[gbase+p_Np*p_RXID];
-        const dfloat ry = vgeo[gbase+p_Np*p_RYID];
-        const dfloat sx = vgeo[gbase+p_Np*p_SXID];
-        const dfloat sy = vgeo[gbase+p_Np*p_SYID];
-
-        const dfloat dudx = rx*dudr + sx*duds;
-        const dfloat dudy = ry*dudr + sy*duds;
-        const dfloat dvdx = rx*dvdr + sx*dvds;
-        const dfloat dvdy = ry*dvdr + sy*dvds;
-        
-        const dlong sbase = e*p_Nstresses*p_Np + j*p_Nq + i;
-
-        const dfloat S11 = p_half*(dudx+dudx) - p_third*(dudx+dvdy);
-        const dfloat S12 = p_half*(dudy+dvdx);
-        const dfloat S22 = p_half*(dvdy+dvdy) - p_third*(dudx+dvdy);
-        
-        viscousStresses[sbase + 0*p_Np] = p_two*mu*S11;
-        viscousStresses[sbase + 1*p_Np] = p_two*mu*S12;
-        viscousStresses[sbase + 2*p_Np] = p_two*mu*S22;
       }
     }
   }

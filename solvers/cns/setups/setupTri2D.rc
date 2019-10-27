@@ -1,19 +1,29 @@
 [FORMAT]
-1.0
+2.0
 
 [DATA FILE]
-data/cnsUniform2D.h
+data/cnsGaussian2D.h
 
 [MESH FILE]
-../../meshes/boltzmannSquareCylinderPML2D.msh
-#../../meshes/insSquareCylinder2D.msh
-#../../meshes/T2D_Mar27_ins.msh
+BOX
 
 [MESH DIMENSION]
 2
 
 [ELEMENT TYPE] # number of edges
 3
+
+[BOX NX]
+20
+
+[BOX NY]
+20
+
+[BOX NZ]
+20
+
+[BOX BOUNDARY FLAG]
+-1
 
 [POLYNOMIAL DEGREE]
 4
@@ -24,74 +34,36 @@ CUDA
 [PLATFORM NUMBER]
 0
 
-#this is ignored when running with MPI
 [DEVICE NUMBER]
 0
 
-#Can be DOPRI5 or LSERK4
-[TIME INTEGRATOR]
-DOPRI5
-#LSERK4
+[GAMMA]
+1.4
 
-[ABSOLUTE TOLERANCE]
-1E-7
+[VISCOSITY]
+0.01
 
-[RELATIVE TOLERANCE]
-1E-6
-
-[MINUMUM TIME STEP SIZE]
-1E-10
-
-[MAXIMUM TIME STEP SIZE]
-1e-4
+[ISOTHERMAL]
+FALSE
 
 #Can be COLLOCATION or CUBATURE
 [ADVECTION TYPE]
 CUBATURE
 
-[VISCOSITY]
-0.005
-
-[SPEED OF SOUND]
-5.0
-
-[RBAR]
-1.0
-
-[UBAR]
-1.0
-
-[VBAR]
-0.0
-
-[WBAR]
-0.0
+[TIME INTEGRATOR]
+DOPRI5
 
 [START TIME]
 0
 
 [FINAL TIME]
-100
+10
 
-#set to 0.0 to ignore
-[TIME OUTPUT INTERVAL]
-5
+[OUTPUT INTERVAL]
+1
 
-[TSTEPS FOR FORCE OUTPUT]
-50
-
-#set to 0 to ignore
-[TSTEP OUTPUT INTERVAL]
-0
-
-[CFL]
-0.1
-
-[RESTART FROM FILE]
-0
+[OUTPUT TO FILE]
+TRUE
 
 [OUTPUT FILE NAME]
-square_cyl
-
-[VERBOSE]
-TRUE
+cns

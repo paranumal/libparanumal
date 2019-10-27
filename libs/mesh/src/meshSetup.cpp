@@ -98,9 +98,6 @@ mesh_t& mesh_t::Setup(occa::device& device, MPI_Comm& comm,
   // connect face nodes (find trace indices)
   mesh->ConnectFaceNodes();
 
-  // set up tracehalo exchange info for MPI
-  mesh->HaloTraceSetup();
-
   // compute surface geofacs
   mesh->SurfaceGeometricFactors();
 

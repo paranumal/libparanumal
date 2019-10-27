@@ -96,7 +96,7 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
     }
 
     // dfloat4 storage -> 4 entries
-    mesh.traceHalo->ExchangeStart(o_grad, 4, ogs_dfloat);
+    traceHalo->ExchangeStart(o_grad, 4, ogs_dfloat);
 
     if(mesh.NinternalElements)
       partialIpdgKernel(mesh.NinternalElements,
@@ -114,7 +114,7 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
                         o_grad,
                         o_Aq);
 
-    mesh.traceHalo->ExchangeFinish(o_grad, 4, ogs_dfloat);
+    traceHalo->ExchangeFinish(o_grad, 4, ogs_dfloat);
 
     if(mesh.NhaloElements) {
       partialIpdgKernel(mesh.NhaloElements,

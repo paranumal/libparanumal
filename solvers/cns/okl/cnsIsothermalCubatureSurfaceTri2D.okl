@@ -1,0 +1,262 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+
+
+// Roe averaged Riemann solver
+void upwindRoeAveraged(const dfloat nx,
+                       const dfloat ny,
+                       const dfloat c,
+                       const dfloat rM,
+                       const dfloat uM,
+                       const dfloat vM,
+                       const dfloat rP,
+                       const dfloat uP,
+                       const dfloat vP,
+                       dfloat *rflux,
+                       dfloat *ruflux,
+                       dfloat *rvflux){
+
+  //pressure
+  const dfloat pM = c*c*rM; // c^2 = RT
+  const dfloat pP = c*c*rP; // c^2 = RT
+
+  // Compute Roe average variables
+  const dfloat sqrtrM = sqrt(rM);
+  const dfloat sqrtrP = sqrt(rP);
+
+  const dfloat r = sqrtrM*sqrtrP;
+  const dfloat u = (sqrtrM*uM + sqrtrP*uP)/(sqrtrM + sqrtrP);
+  const dfloat v = (sqrtrM*vM + sqrtrP*vP)/(sqrtrM + sqrtrP);
+
+  // normal velocity
+  const dfloat qP = nx*uP+ny*vP;
+  const dfloat qM = nx*uM+ny*vM;
+  const dfloat q  = nx*u +ny*v;
+
+  // jump terms
+  const dfloat dp = pP-pM;
+  const dfloat dr = rP-rM;
+  const dfloat du = uP-uM;
+  const dfloat dv = vP-vM;
+  const dfloat dq = qP-qM;
+
+  const dfloat W1 = fabs(q-c) * 0.5*(dp-r*c*dq)/(c*c);
+  const dfloat W2 = fabs(q  ) * r;
+  const dfloat W3 = fabs(q+c) * 0.5*(dp+r*c*dq)/(c*c);
+
+  // Fluxes from traces n.F(uP) and n.F(uM)
+  *rflux  = 0.5*((rP*qP         ) + (rM*qM         ));
+  *ruflux = 0.5*((rP*uP*qP+nx*pP) + (rM*uM*qM+nx*pM));
+  *rvflux = 0.5*((rP*vP*qP+ny*pP) + (rM*vM*qM+ny*pM));
+
+  // Roe flux
+  *rflux  -= 0.5*(W1*1.0      + W2*0.0        + W3*1.0     );
+  *ruflux -= 0.5*(W1*(u-nx*c) + W2*(du-nx*dq) + W3*(u+nx*c));
+  *rvflux -= 0.5*(W1*(v-ny*c) + W2*(dv-ny*dq) + W3*(v+ny*c));
+}
+
+
+// batch process elements
+@kernel void cnsIsothermalCubatureSurfaceTri2D(const dlong Nelements,
+                                    @restrict const  dfloat *  vgeo,
+                                    @restrict const  dfloat *  sgeo,
+                                    @restrict const  dlong  *  vmapM,
+                                    @restrict const  dlong  *  vmapP,
+                                    @restrict const  int    *  EToB,
+                                    @restrict const  dfloat *  intInterpT, // interpolate to integration nodes
+                                    @restrict const  dfloat *  intLIFTT, // lift from integration to interpolation nodes
+                                    @restrict const  dfloat *  intx,
+                                    @restrict const  dfloat *  inty,
+                                    @restrict const  dfloat *  intz,
+                                    const dfloat time,
+                                    const dfloat mu,
+                                    const dfloat gamma,
+                                    @restrict const  dfloat *  q,
+                                    @restrict const  dfloat *  gradq,
+                                    @restrict dfloat *  rhsq){
+
+  // for all elements
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+
+    // @shared storage for flux terms
+    @shared dfloat s_qM[p_Nfields][p_NfacesNfp];
+    @shared dfloat s_qP[p_Nfields][p_NfacesNfp];
+    @shared dfloat s_gradqM[p_Ngrads][p_NfacesNfp];
+    @shared dfloat s_gradqP[p_Ngrads][p_NfacesNfp];
+
+    @shared dfloat s_rflux [p_intNfpNfaces];
+    @shared dfloat s_ruflux[p_intNfpNfaces];
+    @shared dfloat s_rvflux[p_intNfpNfaces];
+
+    for(int n=0;n<p_cubMaxNodes;++n;@inner(0)){
+      if(n<p_NfacesNfp){
+        // indices of negative and positive traces of face node
+        const dlong id  = e*p_Nfp*p_Nfaces + n;
+        const dlong idM = vmapM[id];
+        const dlong idP = vmapP[id];
+
+        // load traces
+        const dlong eM = e;
+        const dlong eP = idP/p_Np;
+        const int vidM = idM%p_Np;
+        const int vidP = idP%p_Np;
+
+        const dlong qbaseM = eM*p_Np*p_Nfields + vidM;
+        const dlong qbaseP = eP*p_Np*p_Nfields + vidP;
+
+        const dlong sbaseM = eM*p_Np*p_Ngrads + vidM;
+        const dlong sbaseP = eP*p_Np*p_Ngrads + vidP;
+
+        s_qM[0][n] = q[qbaseM + 0*p_Np];
+        s_qM[1][n] = q[qbaseM + 1*p_Np];
+        s_qM[2][n] = q[qbaseM + 2*p_Np];
+
+        s_qP[0][n] = q[qbaseP + 0*p_Np];
+        s_qP[1][n] = q[qbaseP + 1*p_Np];
+        s_qP[2][n] = q[qbaseP + 2*p_Np];
+
+        s_gradqM[0][n] = gradq[sbaseM+0*p_Np];
+        s_gradqM[1][n] = gradq[sbaseM+1*p_Np];
+        s_gradqM[2][n] = gradq[sbaseM+2*p_Np];
+        s_gradqM[3][n] = gradq[sbaseM+3*p_Np];
+
+        s_gradqP[0][n] = gradq[sbaseP+0*p_Np];
+        s_gradqP[1][n] = gradq[sbaseP+1*p_Np];
+        s_gradqP[2][n] = gradq[sbaseP+2*p_Np];
+        s_gradqP[3][n] = gradq[sbaseP+3*p_Np];
+      }
+    }
+
+    @barrier("local");
+
+    // interpolate to surface integration nodes
+    for(int n=0;n<p_cubMaxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
+      if(n<p_intNfpNfaces){
+        // find face that owns this node
+        const int face = n/p_intNfp;
+
+        // load surface geofactors for this face
+        const dlong sid    = p_Nsgeo*(e*p_Nfaces+face);
+        const dfloat nx   = sgeo[sid+p_NXID];
+        const dfloat ny   = sgeo[sid+p_NYID];
+        const dfloat sJ   = sgeo[sid+p_SJID];
+        const dfloat invJ = sgeo[sid+p_IJID];
+
+        dfloat rM  = 0., ruM = 0., rvM = 0.;
+        dfloat rP  = 0., ruP = 0., rvP = 0.;
+        dfloat dudxM = 0., dudyM = 0.;
+        dfloat dvdxM = 0., dvdyM = 0.;
+        dfloat dudxP = 0., dudyP = 0.;
+        dfloat dvdxP = 0., dvdyP = 0.;
+
+        // local block interpolation (face nodes to integration nodes)
+        #pragma unroll p_Nfp
+          for(int m=0;m<p_Nfp;++m){
+            const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
+            const int fm = face*p_Nfp+m;
+            rM  += iInm*s_qM[0][fm];
+            ruM += iInm*s_qM[1][fm];
+            rvM += iInm*s_qM[2][fm];
+            rP  += iInm*s_qP[0][fm];
+            ruP += iInm*s_qP[1][fm];
+            rvP += iInm*s_qP[2][fm];
+
+            dudxM += iInm*s_gradqM[0][fm];
+            dudyM += iInm*s_gradqM[1][fm];
+            dvdxM += iInm*s_gradqM[2][fm];
+            dvdyM += iInm*s_gradqM[3][fm];
+            dudxP += iInm*s_gradqP[0][fm];
+            dudyP += iInm*s_gradqP[1][fm];
+            dvdxP += iInm*s_gradqP[2][fm];
+            dvdyP += iInm*s_gradqP[3][fm];
+          }
+
+        const dfloat uM = ruM/rM;
+        const dfloat vM = rvM/rM;
+
+        dfloat uP = ruP/rP;
+        dfloat vP = rvP/rP;
+
+        // apply boundary condition
+        const int bc = EToB[face+p_Nfaces*e];
+        if(bc>0){
+          const dfloat pM = gamma*gamma*rM; // gamma^2 = RT
+          dfloat pP = gamma*gamma*rP; // gamma^2 = RT
+          cnsBoundaryConditions2D(bc, gamma, mu,
+                                  time, intx[idM], inty[idM], nx, ny,
+                                  rM, uM, vM, pM, dudxM, dudyM, dvdxM, dvdyM,
+                                  &rP, &uP, &vP, &pP, &dudxP, &dudyP, &dvdxP, &dvdyP);
+        }
+
+        dfloat rflux, ruflux, rvflux;
+        upwindRoeAveraged(nx, ny, gamma, rM, uM, vM, rP, uP, vP, &rflux, &ruflux, &rvflux);
+
+        const dfloat T11M = mu*(2.0*dudxM - 2.0*(dudxM+dvdyM)/3.0);
+        const dfloat T12M = mu*(dudyM+dvdxM);
+        const dfloat T22M = mu*(2.0*dvdyM - 2.0*(dudxM+dvdyM)/3.0);
+
+        const dfloat T11P = mu*(2.0*dudxP - 2.0*(dudxP+dvdyP)/3.0);
+        const dfloat T12P = mu*(dudyP+dvdxP);
+        const dfloat T22P = mu*(2.0*dvdyP - 2.0*(dudxP+dvdyP)/3.0);
+
+        ruflux -= 0.5*(nx*(T11P+T11M) + ny*(T12P+T12M));
+        rvflux -= 0.5*(nx*(T12P+T12M) + ny*(T22P+T22M));
+
+        // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
+        const dfloat sc = invJ*sJ;
+        s_rflux [n] = sc*(-rflux );
+        s_ruflux[n] = sc*(-ruflux);
+        s_rvflux[n] = sc*(-rvflux);
+      }
+    }
+
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
+
+    // for each node in the element
+    for(int n=0;n<p_cubMaxNodes;++n;@inner(0)){
+      if(n<p_Np){
+        // load rhs data from volume fluxes
+        dfloat Lrflux = 0.f, Lruflux = 0.f, Lrvflux = 0.f;
+
+        // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
+        #pragma unroll p_intNfpNfaces
+          for(int m=0;m<p_intNfpNfaces;++m){
+            const dfloat L = intLIFTT[n+m*p_Np];
+            Lrflux  += L*s_rflux[m];
+            Lruflux += L*s_ruflux[m];
+            Lrvflux += L*s_rvflux[m];
+          }
+
+        const dlong base = e*p_Np*p_Nfields+n;
+        rhsq[base+0*p_Np] += Lrflux;
+        rhsq[base+1*p_Np] += Lruflux;
+        rhsq[base+2*p_Np] += Lrvflux;
+      }
+    }
+  }
+}

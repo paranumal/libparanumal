@@ -54,60 +54,7 @@ acoustics_t& acoustics_t::Setup(mesh_t& mesh, linAlg_t& linAlg){
   dfloat Lambda2 = 0.5;
 
   /*setup trace halo exchange */
-
-  //get number of elements in each rank for global offset
-  hlong *globalNelements = (hlong*) calloc(mesh.size+1,sizeof(hlong));
-  MPI_Allgather(&(mesh.Nelements), 1, MPI_HLONG, globalNelements+1, 1, MPI_HLONG, mesh.comm);
-  for(int r=0;r<mesh.size;++r) globalNelements[r+1] = globalNelements[r]+globalNelements[r+1];
-
-  hlong globalOffset = globalNelements[mesh.rank];
-  free(globalNelements);
-
-  // populate a global numbering system
-  hlong *globalIds = (hlong *) calloc((mesh.Nelements+mesh.totalHaloPairs)*mesh.Np,sizeof(hlong));
-
-  for (dlong e=0;e<mesh.Nelements;e++) {
-    for (int n=0;n<mesh.Np;n++) {
-      dlong id = e*mesh.Np + n;
-      globalIds[id] = (e+globalOffset)*mesh.Np + n + 1;
-    }
-  }
-  //populate the trace ids using the trace halo from mesh
-  mesh.traceHalo->Exchange(globalIds, 1, ogs_hlong);
-
-  //populate another global numbering system which has the Nfields stride
-  hlong *traceGlobalIds = (hlong *) calloc((mesh.Nelements+mesh.totalHaloPairs)
-                                           *mesh.Np*acoustics->Nfields,sizeof(hlong));
-  for (dlong e=0;e<mesh.Nelements;e++) {
-    for (int k=0;k<acoustics->Nfields;k++) {
-      for (int n=0;n<mesh.Np;n++) {
-        dlong id = e*mesh.Np*acoustics->Nfields + k*mesh.Np + n;
-        traceGlobalIds[id] = (e+globalOffset)*mesh.Np*acoustics->Nfields + k*mesh.Np + n + 1;
-      }
-    }
-  }
-
-  //translate the halo ids from globalIds to traceGlobalIds
-  for (dlong e=mesh.Nelements;e<mesh.Nelements+mesh.totalHaloPairs;e++) {
-    for (int n=0;n<mesh.Np;n++) {
-      if (globalIds[e*mesh.Np + n]!=0) {
-        hlong gid = globalIds[e*mesh.Np + n] - 1;
-        hlong eP = gid/mesh.Np;
-        int vidP = gid%mesh.Np;
-
-        dlong id = e*mesh.Np*acoustics->Nfields + n;
-        for (int k=0;k<acoustics->Nfields;k++) {
-          traceGlobalIds[id + k*mesh.Np] = -(eP*mesh.Np*acoustics->Nfields + k*mesh.Np + vidP + 1);
-        }
-      }
-    }
-  }
-  free(globalIds);
-
-  int verbose = 0;
-  acoustics->traceHalo = halo_t::Setup((mesh.Nelements+mesh.totalHaloPairs)*mesh.Np*acoustics->Nfields,
-                                        traceGlobalIds, mesh.comm, verbose, mesh.device);
-  free(traceGlobalIds);
+  acoustics->traceHalo = mesh.HaloTraceSetup(acoustics->Nfields);
 
   // compute samples of q at interpolation nodes
   acoustics->q = (dfloat*) calloc(Nlocal+Nhalo, sizeof(dfloat));

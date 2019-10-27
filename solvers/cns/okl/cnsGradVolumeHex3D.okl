@@ -1,0 +1,125 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+@kernel void cnsGradVolumeHex3D(const dlong Nelements,
+                                @restrict const  dfloat *  vgeo,
+                                @restrict const  dfloat *  D,
+                                @restrict const  dfloat *  q,
+                                @restrict dfloat *  gradq){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_u[p_Nq][p_Nq][p_Nq];
+    @shared dfloat s_v[p_Nq][p_Nq][p_Nq];
+    @shared dfloat s_w[p_Nq][p_Nq][p_Nq];
+
+    for(int k=0;k<p_Nq;++k;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
+
+          if(k==0)
+            s_D[j][i] = D[j*p_Nq+i];
+
+          const dlong qbase = e*p_Nfields*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+          const dfloat r  = q[qbase + 0*p_Np];
+          const dfloat ru = q[qbase + 1*p_Np];
+          const dfloat rv = q[qbase + 2*p_Np];
+          const dfloat rw = q[qbase + 3*p_Np];
+
+          s_u[k][j][i] = ru/r;
+          s_v[k][j][i] = rv/r;
+          s_w[k][j][i] = rw/r;
+        }
+      }
+    }
+
+    @barrier("local");
+
+    for(int k=0;k<p_Nq;++k;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
+
+          dfloat dudr = 0, duds = 0, dudt = 0;
+          dfloat dvdr = 0, dvds = 0, dvdt = 0;
+          dfloat dwdr = 0, dwds = 0, dwdt = 0;
+
+          for(int n=0;n<p_Nq;++n){
+            const dfloat Din = s_D[i][n];
+            const dfloat Djn = s_D[j][n];
+            const dfloat Dkn = s_D[k][n];
+
+            dudr += Din*s_u[k][j][n];
+            duds += Djn*s_u[k][n][i];
+            dudt += Dkn*s_u[n][j][i];
+
+            dvdr += Din*s_v[k][j][n];
+            dvds += Djn*s_v[k][n][i];
+            dvdt += Dkn*s_v[n][j][i];
+
+            dwdr += Din*s_w[k][j][n];
+            dwds += Djn*s_w[k][n][i];
+            dwdt += Dkn*s_w[n][j][i];
+          }
+
+          const dlong gbase = e*p_Np*p_Nvgeo + k*p_Nq*p_Nq + j*p_Nq + i;
+          const dfloat rx = vgeo[gbase+p_Np*p_RXID];
+          const dfloat ry = vgeo[gbase+p_Np*p_RYID];
+          const dfloat rz = vgeo[gbase+p_Np*p_RZID];
+          const dfloat sx = vgeo[gbase+p_Np*p_SXID];
+          const dfloat sy = vgeo[gbase+p_Np*p_SYID];
+          const dfloat sz = vgeo[gbase+p_Np*p_SZID];
+          const dfloat tx = vgeo[gbase+p_Np*p_TXID];
+          const dfloat ty = vgeo[gbase+p_Np*p_TYID];
+          const dfloat tz = vgeo[gbase+p_Np*p_TZID];
+
+          const dfloat dudx = rx*dudr + sx*duds + tx*dudt;
+          const dfloat dudy = ry*dudr + sy*duds + ty*dudt;
+          const dfloat dudz = rz*dudr + sz*duds + tz*dudt;
+
+          const dfloat dvdx = rx*dvdr + sx*dvds + tx*dvdt;
+          const dfloat dvdy = ry*dvdr + sy*dvds + ty*dvdt;
+          const dfloat dvdz = rz*dvdr + sz*dvds + tz*dvdt;
+
+          const dfloat dwdx = rx*dwdr + sx*dwds + tx*dwdt;
+          const dfloat dwdy = ry*dwdr + sy*dwds + ty*dwdt;
+          const dfloat dwdz = rz*dwdr + sz*dwds + tz*dwdt;
+
+          const dlong sbase = e*p_Ngrads*p_Np + j*p_Nq + i;
+          gradq[sbase + 0*p_Np] = dudx;
+          gradq[sbase + 1*p_Np] = dudy;
+          gradq[sbase + 2*p_Np] = dudz;
+          gradq[sbase + 3*p_Np] = dvdx;
+          gradq[sbase + 4*p_Np] = dvdy;
+          gradq[sbase + 5*p_Np] = dvdz;
+          gradq[sbase + 6*p_Np] = dwdx;
+          gradq[sbase + 7*p_Np] = dwdy;
+          gradq[sbase + 8*p_Np] = dwdz;
+        }
+      }
+    }
+  }
+}

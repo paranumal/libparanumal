@@ -1,9 +1,0 @@
-To do:
-
-1. add extra arguments for z variables to 2D kernels where appropriate
-2. delete extra update okl kernels
-3. delete separate cns examples
-4. add Dt related variables where appropriate and tweak for versions that use D
-5. create a setup file for each element type and dimension
-6. tweak cnsPlotVTU to be dimension aware
-7. look for hard coded surface geofac offsets

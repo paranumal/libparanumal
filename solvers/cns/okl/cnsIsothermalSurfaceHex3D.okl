@@ -1,0 +1,303 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+
+// Roe averaged Riemann solver
+void upwindRoeAveraged(const dfloat nx,
+                       const dfloat ny,
+                       const dfloat nz,
+                       const dfloat c,
+                       const dfloat rM,
+                       const dfloat uM,
+                       const dfloat vM,
+                       const dfloat wM,
+                       const dfloat rP,
+                       const dfloat uP,
+                       const dfloat vP,
+                       const dfloat wP,
+                       dfloat *rflux,
+                       dfloat *ruflux,
+                       dfloat *rvflux,
+                       dfloat *rwflux){
+
+  //pressure
+  const dfloat pM = c*c*rM; // c^2 = RT
+  const dfloat pP = c*c*rP; // c^2 = RT
+
+  // Compute Roe average variables
+  const dfloat sqrtrM = sqrt(rM);
+  const dfloat sqrtrP = sqrt(rP);
+
+  const dfloat r = sqrtrM*sqrtrP;
+  const dfloat u = (sqrtrM*uM + sqrtrP*uP)/(sqrtrM + sqrtrP);
+  const dfloat v = (sqrtrM*vM + sqrtrP*vP)/(sqrtrM + sqrtrP);
+  const dfloat w = (sqrtrM*wM + sqrtrP*wP)/(sqrtrM + sqrtrP);
+
+  // normal velocity
+  const dfloat qP = nx*uP+ny*vP+nz*wP;
+  const dfloat qM = nx*uM+ny*vM+nz*wM;
+  const dfloat q  = nx*u +ny*v +nz*w;
+
+  // jump terms
+  const dfloat dp = pP-pM;
+  const dfloat dr = rP-rM;
+  const dfloat du = uP-uM;
+  const dfloat dv = vP-vM;
+  const dfloat dw = wP-wM;
+  const dfloat dq = qP-qM;
+
+  const dfloat W1 = fabs(q-c) * 0.5*(dp-r*c*dq)/(c*c);
+  const dfloat W2 = fabs(q  ) * r;
+  const dfloat W3 = fabs(q+c) * 0.5*(dp+r*c*dq)/(c*c);
+
+  // Fluxes from traces n.F(uP) and n.F(uM)
+  *rflux  = 0.5*((rP*qP         ) + (rM*qM         ));
+  *ruflux = 0.5*((rP*uP*qP+nx*pP) + (rM*uM*qM+nx*pM));
+  *rvflux = 0.5*((rP*vP*qP+ny*pP) + (rM*vM*qM+ny*pM));
+  *rwflux = 0.5*((rP*wP*qP+nz*pP) + (rM*wM*qM+nz*pM));
+
+  // Roe flux
+  *rflux  -= 0.5*(W1*1.0      + W2*0.0        + W3*1.0     );
+  *ruflux -= 0.5*(W1*(u-nx*c) + W2*(du-nx*dq) + W3*(u+nx*c));
+  *rvflux -= 0.5*(W1*(v-ny*c) + W2*(dv-ny*dq) + W3*(v+ny*c));
+  *rwflux -= 0.5*(W1*(w-nz*c) + W2*(dw-nz*dq) + W3*(w+nz*c));
+}
+
+
+void surfaceTerms(const int e,
+                  const int sk,
+                  const int face,
+                  const int i,
+                  const int j,
+                  const int k,
+                  const dfloat *x,
+                  const dfloat *y,
+                  const dfloat *z,
+                  const dfloat time,
+                  const dfloat mu,
+                  const dfloat gamma,
+                  const dfloat *sgeo,
+                  const dlong *vmapM,
+                  const dlong *vmapP,
+                  const dlong *EToB,
+                  const dfloat *q,
+                  const dfloat *gradq,
+                  dfloat *rhsq){
+
+  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
+  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
+  const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];
+  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];
+  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];
+
+  const dlong idM = vmapM[sk];
+  const dlong idP = vmapP[sk];
+
+  const dlong eM = e;
+  const dlong eP = idP/p_Np;
+  const int vidM = idM%p_Np;
+  const int vidP = idP%p_Np;
+
+  const dlong qbaseM = eM*p_Np*p_Nfields + vidM;
+  const dlong qbaseP = eP*p_Np*p_Nfields + vidP;
+
+  const dlong sbaseM = eM*p_Np*p_Ngrads + vidM;
+  const dlong sbaseP = eP*p_Np*p_Ngrads + vidP;
+
+  const dfloat rM  = q[qbaseM + 0*p_Np];
+  const dfloat ruM = q[qbaseM + 1*p_Np];
+  const dfloat rvM = q[qbaseM + 2*p_Np];
+  const dfloat rwM = q[qbaseM + 3*p_Np];
+
+  const dfloat dudxM = gradq[sbaseM+0*p_Np];
+  const dfloat dudyM = gradq[sbaseM+1*p_Np];
+  const dfloat dudzM = gradq[sbaseM+2*p_Np];
+  const dfloat dvdxM = gradq[sbaseM+3*p_Np];
+  const dfloat dvdyM = gradq[sbaseM+4*p_Np];
+  const dfloat dvdzM = gradq[sbaseM+5*p_Np];
+  const dfloat dwdxM = gradq[sbaseM+6*p_Np];
+  const dfloat dwdyM = gradq[sbaseM+7*p_Np];
+  const dfloat dwdzM = gradq[sbaseM+8*p_Np];
+
+  dfloat rP  = q[qbaseP + 0*p_Np];
+  dfloat ruP = q[qbaseP + 1*p_Np];
+  dfloat rvP = q[qbaseP + 2*p_Np];
+  dfloat rwP = q[qbaseP + 3*p_Np];
+
+  dfloat dudxP = gradq[sbaseP+0*p_Np];
+  dfloat dudyP = gradq[sbaseP+1*p_Np];
+  dfloat dudzP = gradq[sbaseP+2*p_Np];
+  dfloat dvdxP = gradq[sbaseP+3*p_Np];
+  dfloat dvdyP = gradq[sbaseP+4*p_Np];
+  dfloat dvdzP = gradq[sbaseP+5*p_Np];
+  dfloat dwdxP = gradq[sbaseP+6*p_Np];
+  dfloat dwdyP = gradq[sbaseP+7*p_Np];
+  dfloat dwdzP = gradq[sbaseP+8*p_Np];
+
+  const dfloat uM = ruM/rM;
+  const dfloat vM = rvM/rM;
+  const dfloat wM = rwM/rM;
+
+  dfloat uP = ruP/rP;
+  dfloat vP = rvP/rP;
+  dfloat wP = rwP/rP;
+
+  const int bc = EToB[face+p_Nfaces*e];
+  if(bc>0){
+    const dfloat pM = gamma*gamma*rM; // gamma^2 = RT
+    dfloat pP = gamma*gamma*rP; // gamma^2 = RT
+    cnsBoundaryConditions3D(bc, gamma, mu,
+                            time, x[idM], y[idM], z[idM], nx, ny, nz,
+                            rM, uM, vM, wM, pM,
+                            dudxM, dudyM, dudzM,
+                            dvdxM, dvdyM, dvdzM,
+                            dwdxM, dwdyM, dwdzM,
+                            &rP, &uP, &vP, &wP, &pP,
+                            &dudxP, &dudyP, &dudzP,
+                            &dvdxP, &dvdyP, &dvdzP,
+                            &dwdxP, &dwdyP, &dwdzP);
+  }
+
+  dfloat rflux, ruflux, rvflux, rwflux;
+  upwindRoeAveraged(nx, ny, nz, gamma,
+                    rM, uM, vM, wM, rP, uP, vP, wP,
+                    &rflux, &ruflux, &rvflux, &rwflux);
+
+  const dfloat T11M = mu*(2.0*dudxM - 2.0*(dudxM+dvdyM+dwdzM)/3.0);
+  const dfloat T12M = mu*(dudyM+dvdxM);
+  const dfloat T13M = mu*(dudzM+dwdxM);
+  const dfloat T22M = mu*(2.0*dvdyM - 2.0*(dudxM+dvdyM+dwdzM)/3.0);
+  const dfloat T23M = mu*(dvdzM+dwdyM);
+  const dfloat T33M = mu*(2.0*dwdzM - 2.0*(dudxM+dvdyM+dwdzM)/3.0);
+
+  const dfloat T11P = mu*(2.0*dudxP - 2.0*(dudxP+dvdyP+dwdzP)/3.0);
+  const dfloat T12P = mu*(dudyP+dvdxP);
+  const dfloat T13P = mu*(dudzP+dwdxP);
+  const dfloat T22P = mu*(2.0*dvdyP - 2.0*(dudxP+dvdyP+dwdzP)/3.0);
+  const dfloat T23P = mu*(dvdzP+dwdyP);
+  const dfloat T33P = mu*(2.0*dwdzP - 2.0*(dudxP+dvdyP+dwdzP)/3.0);
+
+  ruflux -= 0.5*(nx*(T11P+T11M) + ny*(T12P+T12M) + nz*(T13P+T13M));
+  rvflux -= 0.5*(nx*(T12P+T12M) + ny*(T22P+T22M) + nz*(T23P+T23M));
+  rwflux -= 0.5*(nx*(T13P+T13M) + ny*(T23P+T23M) + nz*(T33P+T33M));
+
+  const dlong base = e*p_Np*p_Nfields+k*p_Nq*p_Nq + j*p_Nq+i;
+  const dfloat sc = invWJ*sJ;
+  rhsq[base+0*p_Np] += sc*(-rflux);
+  rhsq[base+1*p_Np] += sc*(-ruflux);
+  rhsq[base+2*p_Np] += sc*(-rvflux);
+  rhsq[base+3*p_Np] += sc*(-rwflux);
+}
+
+// batch process elements
+@kernel void cnsIsothermalSurfaceHex3D(const dlong Nelements,
+                            @restrict const  dfloat *  sgeo,
+                            @restrict const  dfloat *  LIFTT,
+                            @restrict const  dlong  *  vmapM,
+                            @restrict const  dlong  *  vmapP,
+                            @restrict const  int    *  EToB,
+                            @restrict const  dfloat *  x,
+                            @restrict const  dfloat *  y,
+                            @restrict const  dfloat *  z,
+                            const dfloat time,
+                            const dfloat mu,
+                            const dfloat gamma,
+                            @restrict const  dfloat *  q,
+                            @restrict const  dfloat *  gradq,
+                            @restrict dfloat *  rhsq){
+
+  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
+
+    // for all face nodes of all elements
+    // face 0 & 5
+    for(int es=0;es<p_NblockS;++es;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
+          const dlong e = eo + es;
+          if(e<Nelements){
+            const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + j*p_Nq + i;
+            const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i;
+
+            //            surfaceTerms(sk0,0,i,j,0     );
+            surfaceTerms(e, sk0, 0, i, j, 0,
+                         x, y, z, time, mu, gamma, sgeo, vmapM, vmapP, EToB, q, gradq, rhsq);
+
+            //            surfaceTerms(sk5,5,i,j,(p_Nq-1));
+            surfaceTerms(e, sk5, 5, i, j, (p_Nq-1),
+                         x, y, z, time, mu, gamma, sgeo, vmapM, vmapP, EToB, q, gradq, rhsq);
+          }
+        }
+      }
+    }
+
+    @barrier("global");
+
+    // face 1 & 3
+    for(int es=0;es<p_NblockS;++es;@inner(2)){
+      for(int k=0;k<p_Nq;++k;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
+          const dlong e = eo + es;
+          if(e<Nelements){
+            const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + k*p_Nq + i;
+            const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + k*p_Nq + i;
+
+            //            surfaceTerms(sk1,1,i,0     ,k);
+            surfaceTerms(e, sk1, 1, i, 0, k,
+                         x, y, z, time, mu, gamma, sgeo, vmapM, vmapP, EToB, q, gradq, rhsq);
+
+            //surfaceTerms(sk3,3,i,(p_Nq-1),k);
+            surfaceTerms(e, sk3, 3, i, (p_Nq-1), k,
+                         x, y, z, time, mu, gamma, sgeo, vmapM, vmapP, EToB, q, gradq, rhsq);
+          }
+        }
+      }
+    }
+
+    @barrier("global");
+
+    // face 2 & 4
+    for(int es=0;es<p_NblockS;++es;@inner(2)){
+      for(int k=0;k<p_Nq;++k;@inner(1)){
+        for(int j=0;j<p_Nq;++j;@inner(0)){
+          const dlong e = eo + es;
+          if(e<Nelements){
+            const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + k*p_Nq + j;
+            const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + k*p_Nq + j;
+
+            //            surfaceTerms(sk2,2,(p_Nq-1),j,k);
+            surfaceTerms(e, sk2, 2, (p_Nq-1), j, k,
+                         x, y, z, time, mu, gamma, sgeo, vmapM, vmapP, EToB, q, gradq, rhsq);
+
+            //surfaceTerms(sk4,4,0     ,j,k);
+            surfaceTerms(e, sk4, 4, 0, j, k,
+                         x, y, z, time, mu, gamma, sgeo, vmapM, vmapP, EToB, q, gradq, rhsq);
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,226 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+
+// isothermal Compressible Navier-Stokes
+@kernel void cnsIsothermalCubatureVolumeTet3D(const dlong Nelements,
+                                   @restrict const  dfloat *  vgeo,
+                                   @restrict const  dfloat *  cubvgeo,
+                                   @restrict const  dfloat *  cubDWmatrices,
+                                   @restrict const  dfloat *  cubInterpT,
+                                   @restrict const  dfloat *  cubProjectT,
+                                   @restrict const  dfloat *  x,
+                                   @restrict const  dfloat *  y,
+                                   @restrict const  dfloat *  z,
+                                   const dfloat t,
+                                   const dfloat mu,
+                                   const dfloat gamma,
+                                   @restrict const  dfloat *  q,
+                                   @restrict const  dfloat *  gradq,
+                                   @restrict dfloat *  rhsq){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_q[p_Nfields][p_Np];
+    @shared dfloat s_gradq[p_Ngrads][p_Np];
+
+    @shared dfloat s_F[p_Nfields][p_cubNp];
+    @shared dfloat s_G[p_Nfields][p_cubNp];
+    @shared dfloat s_H[p_Nfields][p_cubNp];
+
+    @exclusive dfloat fx, fy, fz;
+
+    for(int n=0;n<p_cubNp;++n;@inner(0)){      // for all nodes in this element
+      if(n<p_Np){
+        const dlong  qbase = e*p_Np*p_Nfields + n;
+        const dlong id = e*p_Np*p_Ngrads + n;
+
+        const dfloat r  = q[qbase+0*p_Np];
+        const dfloat ru = q[qbase+1*p_Np];
+        const dfloat rv = q[qbase+2*p_Np];
+        const dfloat rw = q[qbase+3*p_Np];
+
+        // primitive variables (velocity)
+        const dfloat u = ru/r, v = rv/r, w = rw/r;
+        const dfloat p  = r*gamma*gamma; //gamma^2 = RT
+
+        s_q[0][n] = r ;
+        s_q[1][n] = ru;
+        s_q[2][n] = rv;
+        s_q[3][n] = rw;
+
+        s_gradq[0][n] = gradq[id+0*p_Np];
+        s_gradq[1][n] = gradq[id+1*p_Np];
+        s_gradq[2][n] = gradq[id+2*p_Np];
+        s_gradq[3][n] = gradq[id+3*p_Np];
+        s_gradq[4][n] = gradq[id+4*p_Np];
+        s_gradq[5][n] = gradq[id+5*p_Np];
+        s_gradq[6][n] = gradq[id+6*p_Np];
+        s_gradq[7][n] = gradq[id+7*p_Np];
+        s_gradq[8][n] = gradq[id+8*p_Np];
+
+        //Body force contribution
+        fx = 0.0; fy = 0.0; fz = 0.0;
+        cnsBodyForce3D(gamma, mu, t, x[e*p_Np+n], y[e*p_Np+n], z[e*p_Np+n],
+                        r, u, v, w, p, &fx, &fy, &fz);
+        fx *= r; fy *= r; fz *= r;
+      }
+    }
+
+    @barrier("local");
+
+    for(int n=0;n<p_cubNp;++n;@inner(0)){
+      //interpolate to cubature
+      dfloat r = 0., ru = 0., rv = 0., rw = 0;
+      dfloat dudx = 0., dudy = 0., dudz = 0.;
+      dfloat dvdx = 0., dvdy = 0., dvdz = 0.;
+      dfloat dwdx = 0., dwdy = 0., dwdz = 0.;
+
+      #pragma unroll p_Np
+        for(int i=0;i<p_Np;++i){
+          const dfloat cIni = cubInterpT[n+i*p_cubNp];
+          r  += cIni*s_q[0][i];
+          ru += cIni*s_q[1][i];
+          rv += cIni*s_q[2][i];
+          rw += cIni*s_q[3][i];
+          dudx += cIni*s_gradq[0][i];
+          dudy += cIni*s_gradq[1][i];
+          dudz += cIni*s_gradq[2][i];
+          dvdx += cIni*s_gradq[3][i];
+          dvdy += cIni*s_gradq[4][i];
+          dvdz += cIni*s_gradq[5][i];
+          dwdx += cIni*s_gradq[6][i];
+          dwdy += cIni*s_gradq[7][i];
+          dwdz += cIni*s_gradq[8][i];
+        }
+
+      // primitive variables
+      const dfloat u = ru/r, v = rv/r, w = rw/r;
+      const dfloat p = r*gamma*gamma; //gamma^2 = RT
+
+      // prefetch geometric factors (constant on triangle)
+      const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+      const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+      const dfloat drdz = vgeo[e*p_Nvgeo + p_RZID];
+      const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+      const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+      const dfloat dsdz = vgeo[e*p_Nvgeo + p_SZID];
+      const dfloat dtdx = vgeo[e*p_Nvgeo + p_TXID];
+      const dfloat dtdy = vgeo[e*p_Nvgeo + p_TYID];
+      const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
+
+      const dfloat T11 = 2.0*dudx - 2.0*(dudx+dvdy+dwdz)/3.0;
+      const dfloat T12 = dudy+dvdx;
+      const dfloat T13 = dudz+dwdx;
+      const dfloat T22 = 2.0*dvdy - 2.0*(dudx+dvdy+dwdz)/3.0;
+      const dfloat T23 = dvdz+dwdy;
+      const dfloat T33 = 2.0*dwdz - 2.0*(dudx+dvdy+dwdz)/3.0;
+
+      {
+        // F0 = ru, G0 = rv
+        const dfloat F = -ru;
+        const dfloat G = -rv;
+        const dfloat H = -rw;
+        s_F[0][n] = drdx*F + drdy*G + drdz*H;
+        s_G[0][n] = dsdx*F + dsdy*G + dsdz*H;
+        s_H[0][n] = dtdx*F + dtdy*G + dtdz*H;
+      }
+
+      {
+        // F1 = mu*T11 - (ru^2+p), G1 = mu*T12 - (rvu), H1 = mu*T13 - (ruw)
+        const dfloat F = mu*T11-(ru*u+p);
+        const dfloat G = mu*T12-(rv*u);
+        const dfloat H = mu*T13-(rw*u);
+        s_F[1][n] = drdx*F + drdy*G + drdz*H;
+        s_G[1][n] = dsdx*F + dsdy*G + dsdz*H;
+        s_H[1][n] = dtdx*F + dtdy*G + dtdz*H;
+      }
+
+      {
+        // F2 = mu*T21 - (ruv), G2 = mu*T22 - (rv^2+p), H2 = mu*T23 - (rvw)
+        const dfloat F = mu*T12-(ru*v);
+        const dfloat G = mu*T22-(rv*v+p);
+        const dfloat H = mu*T23-(rw*v);
+        s_F[2][n] = drdx*F + drdy*G + drdz*H;
+        s_G[2][n] = dsdx*F + dsdy*G + dsdz*H;
+        s_H[2][n] = dtdx*F + dtdy*G + dtdz*H;
+      }
+
+      {
+        // F3 = mu*T31 - (ruw), G3 = mu*T32 - (rvw), H3 = mu*T33 - (rw^2+p)
+        const dfloat F = mu*T13-(ru*w);
+        const dfloat G = mu*T23-(rv*w);
+        const dfloat H = mu*T33-(rw*w+p);
+        s_F[3][n] = drdx*F + drdy*G + drdz*H;
+        s_G[3][n] = dsdx*F + dsdy*G + dsdz*H;
+        s_H[3][n] = dtdx*F + dtdy*G + dtdz*H;
+      }
+    }
+
+    @barrier("local");
+
+    for(int n=0;n<p_cubNp;++n;@inner(0)){
+      if (n<p_Np) {
+
+        dfloat df0dr = 0.f, dg0ds = 0.f, dh0dt = 0.f;
+        dfloat df1dr = 0.f, dg1ds = 0.f, dh1dt = 0.f;
+        dfloat df2dr = 0.f, dg2ds = 0.f, dh2dt = 0.f;
+        dfloat df3dr = 0.f, dg3ds = 0.f, dh3dt = 0.f;
+
+        #pragma unroll p_cubNp
+          for(int i=0;i<p_cubNp;++i){
+            const dfloat cDrni = cubDWmatrices[n+i*p_Np+0*p_Np*p_cubNp];
+            const dfloat cDsni = cubDWmatrices[n+i*p_Np+1*p_Np*p_cubNp];
+            const dfloat cDtni = cubDWmatrices[n+i*p_Np+2*p_Np*p_cubNp];
+
+            df0dr += cDrni*s_F[0][i];
+            df1dr += cDrni*s_F[1][i];
+            df2dr += cDrni*s_F[2][i];
+            df3dr += cDrni*s_F[3][i];
+
+            dg0ds += cDsni*s_G[0][i];
+            dg1ds += cDsni*s_G[1][i];
+            dg2ds += cDsni*s_G[2][i];
+            dg3ds += cDsni*s_G[3][i];
+
+            dh0dt += cDtni*s_H[0][i];
+            dh1dt += cDtni*s_H[1][i];
+            dh2dt += cDtni*s_H[2][i];
+            dh3dt += cDtni*s_H[3][i];
+          }
+
+
+        const dlong base = e*p_Np*p_Nfields + n;
+
+        // move to rhs
+        rhsq[base+0*p_Np] = -(df0dr+dg0ds+dh0dt);
+        rhsq[base+1*p_Np] = -(df1dr+dg1ds+dh1dt)+fx;
+        rhsq[base+2*p_Np] = -(df2dr+dg2ds+dh2dt)+fy;
+        rhsq[base+3*p_Np] = -(df3dr+dg3ds+dh3dt)+fz;
+      }
+    }
+  }
+}

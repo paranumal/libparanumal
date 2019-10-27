@@ -59,25 +59,6 @@ public:
 
   occa::kernel initialConditionKernel;
 
-  occa::kernel combinedKernel;
-
-  occa::kernel invertMassMatrixKernel;
-  occa::kernel invertMassMatrixCombinedKernel;
-
-  // [J*W*c_x, J*W*c_y, J*W*c_z]
-  occa::memory o_advectionVelocityJW;
-
-  occa::memory o_cubAdvectionVelocityJW;
-
-  // [Jsurf*Wsurf/(Jvol*Wvol)*(c.n + |c.n|)/2
-  occa::memory o_advectionVelocityM;
-
-  // [Jsurf*Wsurf/(Jvol*Wvol)*(c.n - |c.n|)/2
-  occa::memory o_advectionVelocityP;
-
-  occa::memory o_diagInvMassMatrix;
-
-
   advection_t() = delete;
   advection_t(mesh_t& _mesh, linAlg_t& _linAlg):
     solver_t(_mesh, _linAlg) {}

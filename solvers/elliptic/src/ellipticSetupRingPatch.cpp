@@ -35,6 +35,7 @@ elliptic_t& elliptic_t::SetupRingPatch(mesh_t& meshPatch){
   elliptic_t* elliptic = new elliptic_t(meshPatch, linAlg, lambda);
 
   //shallow copy
+  elliptic->Nfields = Nfields;
   elliptic->lambda = lambda;
 
   elliptic->disc_ipdg = disc_ipdg;
@@ -44,6 +45,9 @@ elliptic_t& elliptic_t::SetupRingPatch(mesh_t& meshPatch){
   dlong Ntotal = meshPatch.Np*meshPatch.Nelements;
   elliptic->grad = (dfloat*) calloc(Ntotal*4, sizeof(dfloat));
   elliptic->o_grad  = mesh.device.malloc(Ntotal*4*sizeof(dfloat), elliptic->grad);
+
+  /*setup trace halo exchange */
+  elliptic->traceHalo = mesh.HaloTraceSetup(elliptic->Nfields);
 
   elliptic->BCType = BCType;
 

@@ -35,6 +35,7 @@ elliptic_t& elliptic_t::SetupNewDegree(mesh_t& meshC){
   elliptic_t* elliptic = new elliptic_t(meshC, linAlg, lambda);
 
   //shallow copy
+  elliptic->Nfields = Nfields;
   elliptic->lambda = lambda;
 
   elliptic->disc_ipdg = disc_ipdg;
@@ -46,6 +47,9 @@ elliptic_t& elliptic_t::SetupNewDegree(mesh_t& meshC){
   elliptic->BCType = BCType;
 
   elliptic->maskKernel = maskKernel;
+
+  /*setup trace halo exchange */
+  elliptic->traceHalo = meshC.HaloTraceSetup(elliptic->Nfields);
 
   //setup boundary flags and make mask and masked ogs
   elliptic->BoundarySetup();

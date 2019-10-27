@@ -1,0 +1,173 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+@kernel void cnsGradSurfaceTet3D(const dlong Nelements,
+                                 @restrict const  dfloat *  sgeo,
+                                 @restrict const  dfloat *  LIFTT,
+                                 @restrict const  dlong  *  vmapM,
+                                 @restrict const  dlong  *  vmapP,
+                                 @restrict const  int    *  EToB,
+                                 @restrict const  dfloat *  x,
+                                 @restrict const  dfloat *  y,
+                                 @restrict const  dfloat *  z,
+                                           const  dfloat time,
+                                           const  dfloat mu,
+                                           const  dfloat gamma,
+                                 @restrict const  dfloat *  q,
+                                 @restrict        dfloat *  gradq){
+
+  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
+
+    // @shared storage for flux terms
+    @shared dfloat s_gradflux[p_NblockS][p_Ngrads][p_NfacesNfp];
+
+    // for all face nodes of all elements
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
+        const dlong e = eo + es;
+        if(e<Nelements){
+          if(n<p_NfacesNfp){
+            // find face that owns this node
+            const int face = n/p_Nfp;
+
+            // load surface geofactors for this face
+            const dlong sid    = p_Nsgeo*(e*p_Nfaces+face);
+            const dfloat nx   = sgeo[sid+p_NXID];
+            const dfloat ny   = sgeo[sid+p_NYID];
+            const dfloat nz   = sgeo[sid+p_NZID];
+            const dfloat sJ   = sgeo[sid+p_SJID];
+            const dfloat invJ = sgeo[sid+p_IJID];
+
+            // indices of negative and positive traces of face node
+            const dlong id  = e*p_Nfp*p_Nfaces + n;
+            const dlong idM = vmapM[id];
+            const dlong idP = vmapP[id];
+
+            // load traces
+            const dlong eM = e;
+            const dlong eP = idP/p_Np;
+            const int vidM = idM%p_Np;
+            const int vidP = idP%p_Np;
+
+            const dlong baseM = eM*p_Np*p_Nfields + vidM;
+            const dlong baseP = eP*p_Np*p_Nfields + vidP;
+
+            const dfloat rM  = q[baseM + 0*p_Np];
+            const dfloat ruM = q[baseM + 1*p_Np];
+            const dfloat rvM = q[baseM + 2*p_Np];
+            const dfloat rwM = q[baseM + 3*p_Np];
+
+            const dfloat uM = ruM/rM;
+            const dfloat vM = rvM/rM;
+            const dfloat wM = rwM/rM;
+
+            dfloat rP  = q[baseP + 0*p_Np];
+            dfloat ruP = q[baseP + 1*p_Np];
+            dfloat rvP = q[baseP + 2*p_Np];
+            dfloat rwP = q[baseP + 3*p_Np];
+
+            dfloat uP = ruP/rP;
+            dfloat vP = rvP/rP;
+            dfloat wP = rwP/rP;
+
+            // apply boundary condition
+            const int bc = EToB[face+p_Nfaces*e];
+            if(bc>0) {
+              const dfloat pM = gamma*gamma*rM;
+              dfloat pP = gamma*gamma*rP;
+              dfloat dudx = 0.f, dudy = 0.f, dudz = 0.f; //fake these values
+              dfloat dvdx = 0.f, dvdy = 0.f, dvdz = 0.f; //fake these values
+              dfloat dwdx = 0.f, dwdy = 0.f, dwdz = 0.f; //fake these values
+              cnsBoundaryConditions3D(bc, gamma, mu, \
+                                      time, x[idM], y[idM], z[idM], nx, ny, nz, \
+                                      rM, uM, vM, wM, pM,
+                                      0., 0., 0., 0., 0., 0., 0., 0., 0.,
+                                      &rP, &uP, &vP, &wP, &pP,
+                                      &dudx, &dudy, &dudz, &dvdx, &dvdy, &dvdz, &dwdx, &dwdy, &dwdz);
+            }
+
+            const dfloat sc = invJ*sJ;
+            s_gradflux[es][0][n] = sc*nx*(uP-uM);
+            s_gradflux[es][1][n] = sc*ny*(uP-uM);
+            s_gradflux[es][2][n] = sc*nz*(uP-uM);
+            s_gradflux[es][3][n] = sc*nx*(vP-vM);
+            s_gradflux[es][4][n] = sc*ny*(vP-vM);
+            s_gradflux[es][5][n] = sc*nz*(vP-vM);
+            s_gradflux[es][6][n] = sc*nx*(wP-wM);
+            s_gradflux[es][7][n] = sc*ny*(wP-wM);
+            s_gradflux[es][8][n] = sc*nz*(wP-wM);
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    // for each node in the element
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
+        const dlong e = eo + es;
+        if(e<Nelements){
+          if(n<p_Np){
+            // load rhs data from volume fluxes
+            dfloat LTuxflux = 0.f, LTuyflux = 0.f, LTuzflux = 0.f;
+            dfloat LTvxflux = 0.f, LTvyflux = 0.f, LTvzflux = 0.f;
+            dfloat LTwxflux = 0.f, LTwyflux = 0.f, LTwzflux = 0.f;
+
+            // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
+            #pragma unroll p_NfacesNfp
+              for(int m=0;m<p_NfacesNfp;++m){
+                const dfloat L = LIFTT[n+m*p_Np];
+                LTuxflux += L*s_gradflux[es][0][m];
+                LTuyflux += L*s_gradflux[es][1][m];
+                LTuzflux += L*s_gradflux[es][2][m];
+                LTvxflux += L*s_gradflux[es][3][m];
+                LTvyflux += L*s_gradflux[es][4][m];
+                LTvzflux += L*s_gradflux[es][5][m];
+                LTwxflux += L*s_gradflux[es][6][m];
+                LTwyflux += L*s_gradflux[es][7][m];
+                LTwzflux += L*s_gradflux[es][8][m];
+              }
+
+            const dlong base = e*p_Np*p_Ngrads+n;
+            gradq[base+0*p_Np] += LTuxflux;
+            gradq[base+1*p_Np] += LTuyflux;
+            gradq[base+2*p_Np] += LTuzflux;
+            gradq[base+3*p_Np] += LTvxflux;
+            gradq[base+4*p_Np] += LTvyflux;
+            gradq[base+5*p_Np] += LTvzflux;
+            gradq[base+6*p_Np] += LTwxflux;
+            gradq[base+7*p_Np] += LTwyflux;
+            gradq[base+8*p_Np] += LTwzflux;
+          }
+        }
+      }
+    }
+  }
+}
+
+

@@ -26,9 +26,13 @@ SOFTWARE.
 
 #include "mesh.hpp"
 
-// set up trace halo infomation for inter-processor MPI
-// exchange of trace nodes
-void mesh_t::HaloTraceSetup(){
+/* Set up trace halo infomation for inter-processor MPI
+   exchange of trace nodes */
+
+// Setup assumes field to be exchanged is Nelements*Nfields*Np in size
+// with Np being the fastest running index (hence each field entry is strided
+// Np apart)
+halo_t* mesh_t::HaloTraceSetup(int Nfields){
 
   hlong *globalOffsets = (hlong *) calloc(size+1,sizeof(hlong));
   hlong localNelements = (hlong) Nelements;
@@ -42,18 +46,20 @@ void mesh_t::HaloTraceSetup(){
   hlong globalOffset = globalOffsets[rank];
   free(globalOffsets);
 
-  //make a list of global ids taking part in the halo exchange
-  hlong *globalids = (hlong *) malloc((Nelements+totalHaloPairs)*Np*sizeof(hlong));
-
-  //populate ids
+  //populate a global numbering system which has the Nfields stride
+  hlong *globalids = (hlong *) calloc((Nelements+totalHaloPairs)
+                                       *Np*Nfields,sizeof(hlong));
   for (dlong e=0;e<Nelements;e++) {
-    for (int n=0;n<Np;n++) {
-      globalids[e*Np + n] = (e+globalOffset)*Np + n + 1;
+    for (int k=0;k<Nfields;k++) {
+      for (int n=0;n<Np;n++) {
+        dlong id = e*Np*Nfields + k*Np + n;
+        globalids[id] = (e+globalOffset)*Np*Nfields + k*Np + n + 1;
+      }
     }
   }
 
-  //exchange full element global ids
-  halo->Exchange(globalids, Np, ogs_hlong);
+  //exchange full Np*Nfields per element global ids
+  halo->Exchange(globalids, Np*Nfields, ogs_hlong);
 
   //flag the trace ids we need
   for (dlong e=0;e<Nelements;e++) {
@@ -63,20 +69,28 @@ void mesh_t::HaloTraceSetup(){
         dlong idP = vmapP[id];
 
         dlong eP = idP/Np;
-        if (eP >= Nelements) globalids[idP] *= -1;
+        int nP   = idP%Np;
+        if (eP >= Nelements) { //neighbor is in halo
+          dlong iid = eP*Np*Nfields + nP;
+          for (int k=0;k<Nfields;k++) {
+            globalids[iid+k*Np] *= -1; //flag trace ids
+          }
+        }
       }
     }
   }
   //set the remaining globalids to zero so they are ignored
   for (dlong e=Nelements;e<Nelements+totalHaloPairs;e++) {
-    for (int n=0;n<Np;n++) {
-      if (globalids[e*Np + n]>0) globalids[e*Np + n] = 0;
+    for (int n=0;n<Np*Nfields;n++) {
+      if (globalids[e*Np*Nfields + n]>0) globalids[e*Np*Nfields + n] = 0;
     }
   }
 
   int verbose = 0;
-  traceHalo = halo_t::Setup((Nelements+totalHaloPairs)*Np,
-                             globalids, comm, verbose, device);
+  halo_t* traceHalo = halo_t::Setup((Nelements+totalHaloPairs)*Np*Nfields,
+                                    globalids, comm, verbose, device);
 
   free(globalids);
+
+  return traceHalo;
 }

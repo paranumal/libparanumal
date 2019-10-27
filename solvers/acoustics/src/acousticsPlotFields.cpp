@@ -62,7 +62,7 @@ void acoustics_t::PlotFields(dfloat* Q, char *fileName){
   fprintf(fp, "      </Points>\n");
 
 
-  // write out pressure
+  // write out density
   fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Density\" Format=\"ascii\">\n");
   for(dlong e=0;e<mesh.Nelements;++e){
@@ -85,10 +85,9 @@ void acoustics_t::PlotFields(dfloat* Q, char *fileName){
     for(int n=0;n<mesh.plotNp;++n){
       dfloat plotun = 0, plotvn = 0, plotwn = 0;
       for(int m=0;m<mesh.Np;++m){
-        // dfloat rm = Q[e*mesh.Np*Nfields+m           ];
         dfloat um = Q[e*mesh.Np*Nfields+m+mesh.Np  ];
         dfloat vm = Q[e*mesh.Np*Nfields+m+mesh.Np*2];
-        //
+
         plotun += mesh.plotInterp[n*mesh.Np+m]*um;
         plotvn += mesh.plotInterp[n*mesh.Np+m]*vm;
 

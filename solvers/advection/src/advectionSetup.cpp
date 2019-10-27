@@ -48,6 +48,9 @@ advection_t& advection_t::Setup(mesh_t& mesh, linAlg_t& linAlg){
   //setup linear algebra module
   advection->linAlg.InitKernels({"innerProd"}, mesh.comm);
 
+  /*setup trace halo exchange */
+  advection->traceHalo = mesh.HaloTraceSetup(1); //one field
+
   // compute samples of q at interpolation nodes
   advection->q = (dfloat*) calloc(Nlocal+Nhalo, sizeof(dfloat));
   advection->o_q = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat), advection->q);

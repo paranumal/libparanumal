@@ -78,7 +78,6 @@ public:
 
   // MPI halo exchange info
   halo_t *halo;            // halo exchange pointer
-  halo_t *traceHalo;       // trace halo exchange pointer
   halo_t *ringHalo;        // ring halo exchange pointer
   dlong NinternalElements; // number of elements that can update without halo exchange
   dlong NhaloElements;     // number of elements that cannot update without halo exchange
@@ -313,10 +312,10 @@ public:
   void HaloSetup();
 
   // setup trace halo
-  void HaloTraceSetup();
+  void HaloRingSetup();
 
   // setup trace halo
-  void HaloRingSetup();
+  halo_t* HaloTraceSetup(int Nfields);
 
   /* build global connectivity in parallel */
   void ParallelConnectNodes();

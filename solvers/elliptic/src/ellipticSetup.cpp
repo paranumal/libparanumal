@@ -47,6 +47,9 @@ elliptic_t& elliptic_t::Setup(mesh_t& mesh, linAlg_t& linAlg, dfloat lambda){
                                 "norm2", "weightedNorm2"},
                                 mesh.comm);
 
+  /*setup trace halo exchange */
+  elliptic->traceHalo = mesh.HaloTraceSetup(elliptic->Nfields);
+
   // Boundary Type translation. Just defaults.
   int BCType[3] = {0,1,2};
   elliptic->BCType = (int*) calloc(3,sizeof(int));

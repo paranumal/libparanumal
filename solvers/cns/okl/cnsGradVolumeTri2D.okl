@@ -1,0 +1,85 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+@kernel void cnsGradVolumeTri2D(const dlong Nelements,
+                                @restrict const  dfloat *  vgeo,
+                                @restrict const  dfloat *  DT,
+                                @restrict const  dfloat *  q,
+                                @restrict        dfloat *  gradq){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_u[p_Np];
+    @shared dfloat s_v[p_Np];
+
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      const dlong qbase = e*p_Nfields*p_Np + n;
+      const dfloat r  = q[qbase + 0*p_Np];
+      const dfloat ru = q[qbase + 1*p_Np];
+      const dfloat rv = q[qbase + 2*p_Np];
+
+      s_u[n] = ru/r;
+      s_v[n] = rv/r;
+    }
+
+    @barrier("local");
+
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      // prefetch geometric factors (constant on triangle)
+      const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+      const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+      const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+      const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+      dfloat dudr = 0, duds = 0, dvdr = 0, dvds = 0;
+
+      for(int i=0;i<p_Np;++i){
+        const dfloat Drni = DT[n+i*p_Np+0*p_Np*p_Np];
+        const dfloat Dsni = DT[n+i*p_Np+1*p_Np*p_Np];
+
+        const dfloat u = s_u[i];
+        const dfloat v = s_v[i];
+
+        dudr += Drni*u;
+        duds += Dsni*u;
+
+        dvdr += Drni*v;
+        dvds += Dsni*v;
+      }
+
+      const dfloat dudx = drdx*dudr + dsdx*duds;
+      const dfloat dudy = drdy*dudr + dsdy*duds;
+      const dfloat dvdx = drdx*dvdr + dsdx*dvds;
+      const dfloat dvdy = drdy*dvdr + dsdy*dvds;
+
+      const dlong sbase = e*p_Ngrads*p_Np + n;
+      gradq[sbase + 0*p_Np] = dudx;
+      gradq[sbase + 1*p_Np] = dudy;
+      gradq[sbase + 2*p_Np] = dvdx;
+      gradq[sbase + 3*p_Np] = dvdy;
+    }
+  }
+}

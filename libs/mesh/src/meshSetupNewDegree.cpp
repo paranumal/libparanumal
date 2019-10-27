@@ -121,9 +121,6 @@ mesh_t& mesh_t::SetupNewDegree(int Nf){
   // connect face nodes (find trace indices)
   mesh->ConnectFaceNodes();
 
-  // set up tracehalo exchange info for MPI
-  mesh->HaloTraceSetup();
-
   // compute surface geofacs
   mesh->SurfaceGeometricFactors();
 

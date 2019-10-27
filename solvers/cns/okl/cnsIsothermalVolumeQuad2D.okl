@@ -1,0 +1,144 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+
+// isothermal Compressible Navier-Stokes
+@kernel void cnsIsothermalVolumeQuad2D(const dlong Nelements,
+                             @restrict const  dfloat *  vgeo,
+                             @restrict const  dfloat *  D,
+                             @restrict const  dfloat *  x,
+                             @restrict const  dfloat *  y,
+                             @restrict const  dfloat *  z,
+                             const dfloat t,
+                             const dfloat mu,
+                             const dfloat gamma,
+                             @restrict const  dfloat *  q,
+                             @restrict const  dfloat *  gradq,
+                             @restrict dfloat *  rhsq){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_F[p_Nfields][p_Nq][p_Nq];
+    @shared dfloat s_G[p_Nfields][p_Nq][p_Nq];
+
+    @exclusive dfloat fx, fy;
+
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        s_D[j][i] = D[j*p_Nq+i];
+
+        // geometric factors
+        const dlong gbase = e*p_Np*p_Nvgeo + j*p_Nq + i;
+        const dfloat rx = vgeo[gbase+p_Np*p_RXID];
+        const dfloat ry = vgeo[gbase+p_Np*p_RYID];
+        const dfloat sx = vgeo[gbase+p_Np*p_SXID];
+        const dfloat sy = vgeo[gbase+p_Np*p_SYID];
+        const dfloat JW = vgeo[gbase+p_Np*p_JWID];
+
+        // conserved variables
+        const dlong  qbase = e*p_Np*p_Nfields + j*p_Nq + i;
+        const dfloat r  = q[qbase+0*p_Np];
+        const dfloat ru = q[qbase+1*p_Np];
+        const dfloat rv = q[qbase+2*p_Np];
+
+        // primitive variables (velocity)
+        const dfloat u = ru/r, v = rv/r;
+        const dfloat p  = r*gamma*gamma;
+
+        // gradients
+        const dlong id = e*p_Np*p_Ngrads + j*p_Nq + i;
+        const dfloat dudx = gradq[id+0*p_Np];
+        const dfloat dudy = gradq[id+1*p_Np];
+        const dfloat dvdx = gradq[id+2*p_Np];
+        const dfloat dvdy = gradq[id+3*p_Np];
+
+        //Body force contribution
+        fx = 0.0; fy = 0.0;
+        cnsBodyForce2D(gamma, mu, t, x[e*p_Np+n], y[e*p_Np+n], r, u, v, p, &fx, &fy);
+        fx *= r; fy *= r;
+
+        const dfloat T11 = 2.0*dudx - 2.0*(dudx+dvdy)/3.0;
+        const dfloat T12 = dudy+dvdx;
+        const dfloat T22 = 2.0*dvdy - 2.0*(dudx+dvdy)/3.0;
+
+        // (1/J) \hat{div} (G*[F;G])
+        {
+          // F0 = ru, G0 = rv
+          const dfloat f = -ru;
+          const dfloat g = -rv;
+          s_F[0][j][i] = JW*(rx*f + ry*g);
+          s_G[0][j][i] = JW*(sx*f + sy*g);
+        }
+
+        {
+          // F1 = mu*T11 - (ru^2+p), G1 = mu*T12 - (rvu)
+          const dfloat f = mu*T11-(ru*u+p);
+          const dfloat g = mu*T12-(rv*u);
+          s_F[1][j][i] = JW*(rx*f + ry*g);
+          s_G[1][j][i] = JW*(sx*f + sy*g);
+        }
+
+        {
+          // F2 = mu*T21 - (ruv), G2 = mu*T22 - (rv^2+p)
+          const dfloat f = mu*T12-(rv*u);
+          const dfloat g = mu*T22-(rv*v+p);
+          s_F[2][j][i] = JW*(rx*f + ry*g);
+          s_G[2][j][i] = JW*(sx*f + sy*g);
+        }
+      }
+    }
+
+    @barrier("local");
+
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
+        const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
+
+        dfloat rhsq0 = 0, rhsq1 = 0, rhsq2 = 0;
+
+        for(int n=0;n<p_Nq;++n){
+          const dfloat Din = s_D[n][i];
+          const dfloat Djn = s_D[n][j];
+          rhsq0 += Din*s_F[0][j][n];
+          rhsq0 += Djn*s_G[0][n][i];
+          rhsq1 += Din*s_F[1][j][n];
+          rhsq1 += Djn*s_G[1][n][i];
+          rhsq2 += Din*s_F[2][j][n];
+          rhsq2 += Djn*s_G[2][n][i];
+        }
+
+        const dlong base = e*p_Np*p_Nfields + j*p_Nq + i;
+
+        // move to rhs
+        rhsq[base+0*p_Np] = -invJW*rhsq0;
+        rhsq[base+1*p_Np] = -invJW*rhsq1+fx;
+        rhsq[base+2*p_Np] = -invJW*rhsq2+fy;
+      }
+    }
+  }
+}

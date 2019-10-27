@@ -1,0 +1,82 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+@kernel void cnsInitialCondition2D(const dlong Nelements,
+                                   const dfloat mu,
+                                   const dfloat gamma,
+                                   const dfloat time,
+                                   @restrict const  dfloat *  x,
+                                   @restrict const  dfloat *  y,
+                                   @restrict const  dfloat *  z,
+                                   @restrict        dfloat *  q){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      const dlong id = e*p_Np + n;
+
+      dfloat r = 0.0;
+      dfloat u = 0.0;
+      dfloat v = 0.0;
+      dfloat p = 0.0;
+
+      cnsInitialConditions2D(gamma, mu, time, x[id], y[id], &r, &u, &v, &p);
+
+      const dlong qbase = e*p_Np*p_Nfields + n;
+      q[qbase+0*p_Np] = r;
+      q[qbase+1*p_Np] = r*u;
+      q[qbase+2*p_Np] = r*v;
+      q[qbase+3*p_Np] = p/(gamma-1) + 0.5*r*(u*u+v*v);
+    }
+  }
+}
+
+@kernel void cnsIsothermalInitialCondition2D(const dlong Nelements,
+                                   const dfloat mu,
+                                   const dfloat gamma,
+                                   const dfloat time,
+                                   @restrict const  dfloat *  x,
+                                   @restrict const  dfloat *  y,
+                                   @restrict const  dfloat *  z,
+                                   @restrict        dfloat *  q){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      const dlong id = e*p_Np + n;
+
+      dfloat r = 0.0;
+      dfloat u = 0.0;
+      dfloat v = 0.0;
+      dfloat p = 0.0;
+
+      cnsInitialConditions2D(gamma, mu, time, x[id], y[id], &r, &u, &v, &p);
+
+      const dlong qbase = e*p_Np*p_Nfields + n;
+      q[qbase+0*p_Np] = r;
+      q[qbase+1*p_Np] = r*u;
+      q[qbase+2*p_Np] = r*v;
+    }
+  }
+}

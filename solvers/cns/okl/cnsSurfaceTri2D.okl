@@ -29,116 +29,93 @@ SOFTWARE.
 // Roe averaged Riemann solver
 void upwindRoeAveraged(const dfloat nx,
                        const dfloat ny,
+                       const dfloat gamma,
                        const dfloat rM,
-                       const dfloat ruM,
-                       const dfloat rvM,
+                       const dfloat uM,
+                       const dfloat vM,
+                       const dfloat pM,
                        const dfloat rP,
-                       const dfloat ruP,
-                       const dfloat rvP,
+                       const dfloat uP,
+                       const dfloat vP,
+                       const dfloat pP,
                        dfloat *rflux,
                        dfloat *ruflux,
-                       dfloat *rvflux){
+                       dfloat *rvflux,
+                       dfloat *Eflux){
 
-  // Rotate "-" trace momentum to face normal-tangent coordinates
-  dfloat ruMrot = nx*ruM + ny*rvM;
-  dfloat rvMrot =-ny*ruM + nx*rvM;
-
-  dfloat ruProt = nx*ruP + ny*rvP;
-  dfloat rvProt =-ny*ruP + nx*rvP;
-  
-  dfloat uMrot = ruMrot/rM;
-  dfloat vMrot = rvMrot/rM;
-
-  dfloat uProt = ruProt/rP;
-  dfloat vProt = rvProt/rP;
-
-  dfloat pM = p_RT*rM;
-  dfloat pP = p_RT*rP;
-  
-  // Compute fluxes and primitive variables in rotated coordinates
-  dfloat frMrot = ruMrot;
-  dfloat grMrot = rvMrot;
-
-  dfloat fruMrot = uMrot*ruMrot + pM;
-  dfloat gruMrot = uMrot*rvMrot;
-
-  dfloat frvMrot = vMrot*ruMrot;
-  dfloat grvMrot = vMrot*rvMrot + pM;
-
-
-  dfloat frProt = ruProt;
-  dfloat grProt = rvProt;
-
-  dfloat fruProt = uProt*ruProt + pP;
-  dfloat gruProt = uProt*rvProt;
-
-  dfloat frvProt = vProt*ruProt;
-  dfloat grvProt = vProt*rvProt + pP;
+  const dfloat EM = pM/(gamma-1) + 0.5*rM*(uM*uM+vM*vM);
+  const dfloat EP = pP/(gamma-1) + 0.5*rP*(uP*uP+vP*vP);
+  const dfloat HM = (EM+pM)/rM;
+  const dfloat HP = (EP+pP)/rP;
 
   // Compute Roe average variables
-  dfloat rMsqr = sqrt(rM);
-  dfloat rPsqr = sqrt(rP); 
+  const dfloat sqrtrM = sqrt(rM);
+  const dfloat sqrtrP = sqrt(rP);
 
-  dfloat r = rMsqr*rPsqr;
-  dfloat urot = (rMsqr*uMrot + rPsqr*uProt)/(rMsqr + rPsqr);
-  dfloat vrot = (rMsqr*vMrot + rPsqr*vProt)/(rMsqr + rPsqr);
-  
-  dfloat c2  = p_RT;
-  dfloat c   = p_sqrtRT;
+  const dfloat r = sqrtrM*sqrtrP;
+  const dfloat u = (sqrtrM*uM + sqrtrP*uP)/(sqrtrM + sqrtrP);
+  const dfloat v = (sqrtrM*vM + sqrtrP*vP)/(sqrtrM + sqrtrP);
+  const dfloat H = (sqrtrM*HM + sqrtrP*HP)/(sqrtrM + sqrtrP);
 
-  // Riemann fluxes
-  dfloat dW1 = -p_half*r*(uProt-uMrot)/c + p_half*(pP-pM)/c2;  
-  dfloat dW2 = r*(vProt-vMrot);
-  dfloat dW3 =  p_half*r*(uProt-uMrot)/c + p_half*(pP-pM)/c2;  
+  const dfloat c2 = (gamma-1)*(H-0.5*(u*u+v*v));
+  const dfloat c = sqrt(c2);
 
+  // normal velocity
+  const dfloat qP = nx*uP+ny*vP;
+  const dfloat qM = nx*uM+ny*vM;
+  const dfloat q  = nx*u +ny*v;
 
-  dW1 *= fabs(urot-c);
-  dW2 *= fabs(urot);
-  dW3 *= fabs(urot+c); 
+  // jump terms
+  const dfloat dp = pP-pM;
+  const dfloat dr = rP-rM;
+  const dfloat du = uP-uM;
+  const dfloat dv = vP-vM;
+  const dfloat dq = qP-qM;
 
-  // Form Roe fluxes
-  *rflux = p_half*(frProt-frMrot);
-  dfloat rufluxRot = p_half*(fruProt-fruMrot);
-  dfloat rvfluxRot = p_half*(frvProt-frvMrot);
+  const dfloat W1 = fabs(q-c) * 0.5*(dp-r*c*dq)/(c2);
+  const dfloat W2 = fabs(q  ) * r;
+  const dfloat W3 = fabs(q+c) * 0.5*(dp+r*c*dq)/(c2);
+  const dfloat W4 = fabs(q  ) * (dr-(dp/c2));
 
-  
-  *rflux    -= p_half*(dW1*p_one    + dW2*p_zero  + dW3*p_one);
-  rufluxRot -= p_half*(dW1*(urot-c) + dW2*p_zero  + dW3*(urot+c));
-  rvfluxRot -= p_half*(dW1*vrot     + dW2*p_one   + dW3*vrot);
+  // Fluxes from traces n.F(uP) and n.F(uM)
+  *rflux  = 0.5*((rP*qP         ) - (rM*qM         ));
+  *ruflux = 0.5*((rP*uP*qP+nx*pP) - (rM*uM*qM+nx*pM));
+  *rvflux = 0.5*((rP*vP*qP+ny*pP) - (rM*vM*qM+ny*pM));
+  *Eflux  = 0.5*((qP*(EP+pP)    ) - (qM*(EM+pM)    ));
 
-  // rotate back to Cartesian
-  *ruflux = nx*rufluxRot - ny*rvfluxRot;
-  *rvflux = ny*rufluxRot + nx*rvfluxRot;
+  // Roe flux
+  *rflux  -= 0.5*(W1*1.0      + W2*0.0              + W3*1.0      + W4*1.0          );
+  *ruflux -= 0.5*(W1*(u-nx*c) + W2*(du-nx*dq)       + W3*(u+nx*c) + W4*u            );
+  *rvflux -= 0.5*(W1*(v-ny*c) + W2*(dv-ny*dq)       + W3*(v+ny*c) + W4*v            );
+  *Eflux  -= 0.5*(W1*(H- q*c) + W2*(u*du+v*dv-q*dq) + W3*(H+ q*c) + W4*0.5*(u*u+v*v));
 }
 
 
 // batch process elements
 @kernel void cnsSurfaceTri2D(const dlong Nelements,
-			    const int advSwitch,
-			    @restrict const  dfloat *  sgeo,
-			    @restrict const  dfloat *  LIFTT,
-			    @restrict const  dlong  *  vmapM,
-			    @restrict const  dlong  *  vmapP,
-			    @restrict const  int    *  EToB,
-			    const dfloat time,
-			    @restrict const  dfloat *  x,
-			    @restrict const  dfloat *  y,
-			    @restrict const  dfloat *  z,
-			    const dfloat mu,
-			    const dfloat intfx,
-			    const dfloat intfy,
-			    const dfloat intfz,
-			    @restrict const  dfloat *  q,
-			    @restrict const  dfloat *  viscousStresses,
-			    @restrict dfloat *  rhsq){
-  
+                            @restrict const  dfloat *  sgeo,
+                            @restrict const  dfloat *  LIFTT,
+                            @restrict const  dlong  *  vmapM,
+                            @restrict const  dlong  *  vmapP,
+                            @restrict const  int    *  EToB,
+                            @restrict const  dfloat *  x,
+                            @restrict const  dfloat *  y,
+                            @restrict const  dfloat *  z,
+                            const dfloat time,
+                            const dfloat mu,
+                            const dfloat gamma,
+                            @restrict const  dfloat *  q,
+                            @restrict const  dfloat *  gradq,
+                            @restrict dfloat *  rhsq){
+
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
-    
+
     // @shared storage for flux terms
     @shared dfloat s_rflux [p_NblockS][p_NfacesNfp];
     @shared dfloat s_ruflux[p_NblockS][p_NfacesNfp];
     @shared dfloat s_rvflux[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_Eflux [p_NblockS][p_NfacesNfp];
 
     // for all face nodes of all elements
     for(int es=0;es<p_NblockS;++es;@inner(1)){
@@ -148,9 +125,9 @@ void upwindRoeAveraged(const dfloat nx,
           if(n<p_NfacesNfp){
             // find face that owns this node
             const int face = n/p_Nfp;
-          
+
             // load surface geofactors for this face
-            const dlong sid    = p_Nsgeo*(e*p_Nfaces+face);
+            const dlong sid   = p_Nsgeo*(e*p_Nfaces+face);
             const dfloat nx   = sgeo[sid+p_NXID];
             const dfloat ny   = sgeo[sid+p_NYID];
             const dfloat sJ   = sgeo[sid+p_SJID];
@@ -170,106 +147,77 @@ void upwindRoeAveraged(const dfloat nx,
             const dlong qbaseM = eM*p_Np*p_Nfields + vidM;
             const dlong qbaseP = eP*p_Np*p_Nfields + vidP;
 
-            const dlong sbaseM = eM*p_Np*p_Nstresses + vidM;
-            const dlong sbaseP = eP*p_Np*p_Nstresses + vidP;
-            
+            const dlong sbaseM = eM*p_Np*p_Ngrads + vidM;
+            const dlong sbaseP = eP*p_Np*p_Ngrads + vidP;
+
             const dfloat rM  = q[qbaseM + 0*p_Np];
             const dfloat ruM = q[qbaseM + 1*p_Np];
             const dfloat rvM = q[qbaseM + 2*p_Np];
+            const dfloat EM  = q[qbaseM + 3*p_Np];
 
-            const dfloat T11M = viscousStresses[sbaseM+0*p_Np];
-            const dfloat T12M = viscousStresses[sbaseM+1*p_Np];
-            const dfloat T22M = viscousStresses[sbaseM+2*p_Np];
-            
+            const dfloat dudxM = gradq[sbaseM+0*p_Np];
+            const dfloat dudyM = gradq[sbaseM+1*p_Np];
+            const dfloat dvdxM = gradq[sbaseM+2*p_Np];
+            const dfloat dvdyM = gradq[sbaseM+3*p_Np];
+
             dfloat rP  = q[qbaseP + 0*p_Np];
             dfloat ruP = q[qbaseP + 1*p_Np];
             dfloat rvP = q[qbaseP + 2*p_Np];
+            dfloat EP  = q[qbaseP + 3*p_Np];
 
-            const dfloat T11P = viscousStresses[sbaseP+0*p_Np];
-            const dfloat T12P = viscousStresses[sbaseP+1*p_Np];
-            const dfloat T22P = viscousStresses[sbaseP+2*p_Np];
+            dfloat dudxP = gradq[sbaseP+0*p_Np];
+            dfloat dudyP = gradq[sbaseP+1*p_Np];
+            dfloat dvdxP = gradq[sbaseP+2*p_Np];
+            dfloat dvdyP = gradq[sbaseP+3*p_Np];
 
             const dfloat uM = ruM/rM;
             const dfloat vM = rvM/rM;
-            const dfloat pM = p_RT*rM;
+            const dfloat pM = (gamma-1)*(EM-0.5*rM*(uM*uM+vM*vM));
 
             dfloat uP = ruP/rP;
             dfloat vP = rvP/rP;
-            dfloat pP = p_RT*rP;
-            
+            dfloat pP = (gamma-1)*(EP-0.5*rP*(uP*uP+vP*vP));
+
             // apply boundary condition
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
-              cnsDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, intfx, intfy, rM, uM, vM, &rP, &uP, &vP);
-              ruP = rP*uP;
-              rvP = rP*vP;
-              pP = p_RT*rP;
-              //should also add the Neumann BC here, but need uxM, uyM, vxM, abd vyM somehow
+              cnsBoundaryConditions2D(bc, gamma, mu,
+                                      time, x[idM], y[idM], nx, ny,
+                                      rM, uM, vM, pM, dudxM, dudyM, dvdxM, dvdyM,
+                                      &rP, &uP, &vP, &pP, &dudxP, &dudyP, &dvdxP, &dvdyP);
             }
-            
+
+            dfloat rflux, ruflux, rvflux, Eflux;
+            upwindRoeAveraged(nx, ny, gamma, rM, uM, vM, pM, rP, uP, vP, pP, &rflux, &ruflux, &rvflux, &Eflux);
+
+            const dfloat T11M = mu*(2.0*dudxM - 2.0*(dudxM+dvdyM)/3.0);
+            const dfloat T12M = mu*(dudyM+dvdxM);
+            const dfloat T22M = mu*(2.0*dvdyM - 2.0*(dudxM+dvdyM)/3.0);
+            const dfloat T31M = uM*T11M + vM*T12M;
+            const dfloat T32M = uM*T12M + vM*T22M;
+
+            const dfloat T11P = mu*(2.0*dudxP - 2.0*(dudxP+dvdyP)/3.0);
+            const dfloat T12P = mu*(dudyP+dvdxP);
+            const dfloat T22P = mu*(2.0*dvdyP - 2.0*(dudxP+dvdyP)/3.0);
+            const dfloat T31P = uP*T11P + vP*T12P;
+            const dfloat T32P = uP*T12P + vP*T22P;
+
+            ruflux -= 0.5*(nx*(T11P-T11M) + ny*(T12P-T12M));
+            rvflux -= 0.5*(nx*(T12P-T12M) + ny*(T22P-T22M));
+            Eflux  -= 0.5*(nx*(T31P-T31M) + ny*(T32P-T32M));
+
             // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
             const dfloat sc = invJ*sJ;
 
-#if 1
-            dfloat rflux, ruflux, rvflux;
-            
-            upwindRoeAveraged(nx, ny, rM, ruM, rvM, rP, ruP, rvP, &rflux, &ruflux, &rvflux);
-
-            rflux  *= advSwitch;
-            ruflux *= advSwitch;
-            rvflux *= advSwitch;
-            
-            
-            // const dfloat hinv = sgeo[sid + p_IHID];
-            // dfloat penalty = p_Nq*p_Nq*hinv*mu;
-
-            ruflux -= p_half*(nx*(T11P-T11M) + ny*(T12P-T12M));// + penalty*(uP-uM)); // should add viscous penalty
-            rvflux -= p_half*(nx*(T12P-T12M) + ny*(T22P-T22M));// + penalty*(vP-vM)); // should add viscous penalty
-            
             s_rflux[es][n]  = sc*(-rflux );
             s_ruflux[es][n] = sc*(-ruflux);
             s_rvflux[es][n] = sc*(-rvflux);
-            
-#else
-            const dfloat lambdaM = sqrt(uM*uM+vM*vM) + p_sqrtRT;
-            const dfloat lambdaP = sqrt(uP*uP+vP*vP) + p_sqrtRT;
-
-            dfloat lambda = (lambdaM>lambdaP) ? lambdaM:lambdaP;
-            
-            // simple Lax Friedrichs flux to get started (change later)
-            {
-              const dfloat fM = -ruM, gM = -rvM;
-              const dfloat fP = -ruP, gP = -rvP;
-              const dfloat rflux = nx*(fP-fM) + ny*(gP-gM) + lambda*(rP-rM);
-
-              s_rflux[es][n] = p_half*sc*(rflux);
-            }
-
-            const dfloat hinv = sgeo[sid + p_IHID];
-            dfloat penalty = p_Nq*p_Nq*hinv*mu;       
-
-            {
-              
-              const dfloat fM = T11M - ruM*uM - pM, gM = T12M - ruM*vM;
-              const dfloat fP = T11P - ruP*uP - pP, gP = T12P - ruP*vP;
-
-              const dfloat ruflux = nx*(fP-fM) + ny*(gP-gM) + lambda*(ruP-ruM) + penalty*(uP-uM); // should add viscous penalty
-              s_ruflux[es][n] = p_half*sc*(ruflux);
-            }
-
-            {
-              const dfloat fM = T12M - rvM*uM, gM = T22M - rvM*vM - pM;
-              const dfloat fP = T12P - rvP*uP, gP = T22P - rvP*vP - pP;
-
-              const dfloat rvflux = nx*(fP-fM) + ny*(gP-gM) + lambda*(rvP-rvM) + penalty*(vP-vM); // should add viscous penalty
-              s_rvflux[es][n] = p_half*sc*(rvflux);
-            }
-#endif
+            s_Eflux[es][n]  = sc*(-Eflux);
           }
         }
       }
     }
-    
+
     // wait for all @shared memory writes of the previous inner loop to complete
     @barrier("local");
 
@@ -278,10 +226,10 @@ void upwindRoeAveraged(const dfloat nx,
       for(int n=0;n<p_maxNodes;++n;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements){
-          if(n<p_Np){            
+          if(n<p_Np){
             // load rhs data from volume fluxes
-            dfloat Lrflux = 0.f, Lruflux = 0.f, Lrvflux = 0.f;
-            
+            dfloat Lrflux = 0.f, Lruflux = 0.f, Lrvflux = 0.f,  LEflux = 0.f;
+
             // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
             #pragma unroll p_NfacesNfp
               for(int m=0;m<p_NfacesNfp;++m){
@@ -289,136 +237,17 @@ void upwindRoeAveraged(const dfloat nx,
                 Lrflux  += L*s_rflux[es][m];
                 Lruflux += L*s_ruflux[es][m];
                 Lrvflux += L*s_rvflux[es][m];
+                LEflux  += L*s_Eflux[es][m];
               }
-            
+
             const dlong base = e*p_Np*p_Nfields+n;
             rhsq[base+0*p_Np] += Lrflux;
             rhsq[base+1*p_Np] += Lruflux;
             rhsq[base+2*p_Np] += Lrvflux;
+            rhsq[base+3*p_Np] += LEflux;
           }
         }
       }
     }
   }
 }
-
-@kernel void cnsStressesSurfaceTri2D(const dlong Nelements,
-				    @restrict const  dfloat *  sgeo,
-				    @restrict const  dfloat *  LIFTT,
-				    @restrict const  dlong  *  vmapM,
-				    @restrict const  dlong  *  vmapP,
-				    @restrict const  int    *  EToB,
-				    const dfloat time,
-				    @restrict const  dfloat *  x,
-				    @restrict const  dfloat *  y,
-				    @restrict const  dfloat *  z,
-				    const dfloat mu,
-				    const dfloat intfx,
-				    const dfloat intfy,
-				    const dfloat intfz,
-				    @restrict const  dfloat *  q,
-				    @restrict dfloat *  viscousStresses){
-  
-  // for all elements
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
-    
-    // @shared storage for flux terms
-    @shared dfloat s_T11flux[p_NblockS][p_NfacesNfp];
-    @shared dfloat s_T12flux[p_NblockS][p_NfacesNfp];
-    @shared dfloat s_T22flux[p_NblockS][p_NfacesNfp];
-
-    // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;@inner(1)){
-      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
-        const dlong e = eo + es;
-        if(e<Nelements){
-          if(n<p_NfacesNfp){
-            // find face that owns this node
-            const int face = n/p_Nfp;
-          
-            // load surface geofactors for this face
-            const dlong sid    = p_Nsgeo*(e*p_Nfaces+face);
-            const dfloat nx   = sgeo[sid+p_NXID];
-            const dfloat ny   = sgeo[sid+p_NYID];
-            const dfloat sJ   = sgeo[sid+p_SJID];
-            const dfloat invJ = sgeo[sid+p_IJID];
-
-            // indices of negative and positive traces of face node
-            const dlong id  = e*p_Nfp*p_Nfaces + n;
-            const dlong idM = vmapM[id];
-            const dlong idP = vmapP[id];
-
-            // load traces
-            const dlong eM = e;
-            const dlong eP = idP/p_Np;
-            const int vidM = idM%p_Np;
-            const int vidP = idP%p_Np;
-
-            const dlong baseM = eM*p_Np*p_Nfields + vidM;
-            const dlong baseP = eP*p_Np*p_Nfields + vidP;
-
-            const dfloat rM  = q[baseM + 0*p_Np];
-            const dfloat ruM = q[baseM + 1*p_Np];
-            const dfloat rvM = q[baseM + 2*p_Np];
-
-            dfloat uM = ruM/rM;
-            dfloat vM = rvM/rM;
-            
-            dfloat rP  = q[baseP + 0*p_Np];
-            dfloat ruP = q[baseP + 1*p_Np];
-            dfloat rvP = q[baseP + 2*p_Np];
-            
-            dfloat uP = ruP/rP;
-            dfloat vP = rvP/rP;
-
-            // apply boundary condition
-            const int bc = EToB[face+p_Nfaces*e];
-            if(bc>0) {
-              cnsDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, intfx, intfy, rM, uM, vM, &rP, &uP, &vP);
-            }
-            
-            const dfloat dS11 = p_half*(nx*(p_two*(uP-uM))) - p_third*(nx*(uP-uM)+ny*(vP-vM));
-            const dfloat dS12 = p_half*(ny*(uP-uM) + nx*(vP-vM));
-            const dfloat dS22 = p_half*(ny*(p_two*(vP-vM))) - p_third*(nx*(uP-uM)+ny*(vP-vM));
-            
-            const dfloat sc = invJ*sJ;
-            s_T11flux[es][n] = sc*p_two*mu*dS11;
-            s_T12flux[es][n] = sc*p_two*mu*dS12;
-            s_T22flux[es][n] = sc*p_two*mu*dS22;
-          }
-        }
-      }
-    }
-
-    @barrier("local");
-
-    // for each node in the element
-    for(int es=0;es<p_NblockS;++es;@inner(1)){
-      for(int n=0;n<p_maxNodes;++n;@inner(0)){
-        const dlong e = eo + es;
-        if(e<Nelements){
-          if(n<p_Np){      
-            // load rhs data from volume fluxes
-            dfloat LT11flux = 0.f, LT12flux = 0.f, LT22flux = 0.f;
-            
-            // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-            #pragma unroll p_NfacesNfp
-              for(int m=0;m<p_NfacesNfp;++m){
-                const dfloat L = LIFTT[n+m*p_Np];
-                LT11flux += L*s_T11flux[es][m];
-                LT12flux += L*s_T12flux[es][m];
-                LT22flux += L*s_T22flux[es][m];
-              }
-            
-            const dlong base = e*p_Np*p_Nstresses+n;
-            viscousStresses[base+0*p_Np] += LT11flux;
-            viscousStresses[base+1*p_Np] += LT12flux;
-            viscousStresses[base+2*p_Np] += LT22flux;
-          }
-        }
-      }
-    }
-  }
-}
-
-  

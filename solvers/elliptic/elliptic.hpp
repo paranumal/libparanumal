@@ -52,6 +52,8 @@ public:
 
   int disc_ipdg, disc_c0;
 
+  halo_t* traceHalo;
+
   precon_t* precon;
 
   dfloat *grad;

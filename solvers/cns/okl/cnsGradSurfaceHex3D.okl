@@ -1,0 +1,202 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+void surfaceTerms(const int e,
+                  const int sk,
+                  const int face,
+                  const int i,
+                  const int j,
+                  const int k,
+                  const dfloat *x,
+                  const dfloat *y,
+                  const dfloat *z,
+                  const dfloat time,
+                  const dfloat mu,
+                  const dfloat gamma,
+                  const dfloat *sgeo,
+                  const dlong *vmapM,
+                  const dlong *vmapP,
+                  const dlong *EToB,
+                  const dfloat *q,
+                  dfloat *gradq){
+
+  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
+  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
+  const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];
+  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];
+  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];
+
+  const dlong idM = vmapM[sk];
+  const dlong idP = vmapP[sk];
+
+  const dlong eM = e;
+  const dlong eP = idP/p_Np;
+  const int vidM = idM%p_Np;
+  const int vidP = idP%p_Np;
+
+  const dlong baseM = eM*p_Np*p_Nfields + vidM;
+  const dlong baseP = eP*p_Np*p_Nfields + vidP;
+
+  const dfloat rM  = q[baseM + 0*p_Np];
+  const dfloat ruM = q[baseM + 1*p_Np];
+  const dfloat rvM = q[baseM + 2*p_Np];
+  const dfloat rwM = q[baseM + 3*p_Np];
+
+  dfloat uM = ruM/rM;
+  dfloat vM = rvM/rM;
+  dfloat wM = rwM/rM;
+
+  dfloat rP  = q[baseP + 0*p_Np];
+  dfloat ruP = q[baseP + 1*p_Np];
+  dfloat rvP = q[baseP + 2*p_Np];
+  dfloat rwP = q[baseP + 3*p_Np];
+
+  dfloat uP = ruP/rP;
+  dfloat vP = rvP/rP;
+  dfloat wP = rwP/rP;
+
+  const int bc = EToB[face+p_Nfaces*e];
+  if(bc>0) {
+    const dfloat pM = gamma*gamma*rM;
+    dfloat pP = gamma*gamma*rP;
+    dfloat dudx = 0.f, dudy = 0.f, dudz = 0.f; //fake these values
+    dfloat dvdx = 0.f, dvdy = 0.f, dvdz = 0.f; //fake these values
+    dfloat dwdx = 0.f, dwdy = 0.f, dwdz = 0.f; //fake these values
+    cnsBoundaryConditions3D(bc, gamma, mu, \
+                            time, x[idM], y[idM], z[idM], nx, ny, nz, \
+                            rM, uM, vM, wM, pM,
+                            0., 0., 0., 0., 0., 0., 0., 0., 0.,
+                            &rP, &uP, &vP, &wP, &pP,
+                            &dudx, &dudy, &dudz, &dvdx, &dvdy, &dvdz, &dwdx, &dwdy, &dwdz);
+  }
+
+  const dfloat sc = invWJ * sJ;
+  const dlong base = e*p_Np*p_Ngrads+k*p_Nq*p_Nq+j*p_Nq+i;
+  gradq[base+0*p_Np] += sc*nx*(uP-uM);
+  gradq[base+1*p_Np] += sc*ny*(uP-uM);
+  gradq[base+2*p_Np] += sc*nz*(uP-uM);
+  gradq[base+3*p_Np] += sc*nx*(vP-vM);
+  gradq[base+4*p_Np] += sc*ny*(vP-vM);
+  gradq[base+5*p_Np] += sc*nz*(vP-vM);
+  gradq[base+6*p_Np] += sc*nx*(wP-wM);
+  gradq[base+7*p_Np] += sc*ny*(wP-wM);
+  gradq[base+8*p_Np] += sc*nz*(wP-wM);
+}
+
+@kernel void cnsGradSurfaceHex3D(const int Nelements,
+                                 @restrict const  dfloat *  sgeo,
+                                 @restrict const  dfloat *  LIFTT,
+                                 @restrict const  int   *  vmapM,
+                                 @restrict const  int   *  vmapP,
+                                 @restrict const  int   *  EToB,
+                                 @restrict const  dfloat *  x,
+                                 @restrict const  dfloat *  y,
+                                 @restrict const  dfloat *  z,
+                                 const dfloat time,
+                                 const dfloat mu,
+                                 const dfloat gamma,
+                                 @restrict const  dfloat *  q,
+                                 @restrict dfloat *  gradq){
+
+  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
+
+    // for all face nodes of all elements
+    // face 0 & 5
+    for(int es=0;es<p_NblockS;++es;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
+          const dlong e = eo + es;
+          if(e<Nelements){
+            const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + j*p_Nq + i;
+            const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i;
+
+            //            surfaceTerms(sk0,0,i,j,0     );
+            surfaceTerms(e, sk0, 0, i, j, 0,
+                         x, y, z, time, mu, gamma, sgeo, vmapM, vmapP, EToB, q, gradq);
+
+            //            surfaceTerms(sk5,5,i,j,(p_Nq-1));
+            surfaceTerms(e, sk5, 5, i, j, (p_Nq-1),
+                         x, y, z, time, mu, gamma, sgeo, vmapM, vmapP, EToB, q, gradq);
+          }
+        }
+      }
+    }
+
+    @barrier("global");
+
+    // face 1 & 3
+    for(int es=0;es<p_NblockS;++es;@inner(2)){
+      for(int k=0;k<p_Nq;++k;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
+          const dlong e = eo + es;
+          if(e<Nelements){
+            const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + k*p_Nq + i;
+            const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + k*p_Nq + i;
+
+            //            surfaceTerms(sk1,1,i,0     ,k);
+            surfaceTerms(e, sk1, 1, i, 0, k,
+                         x, y, z, time, mu, gamma, sgeo, vmapM, vmapP, EToB, q, gradq);
+
+            //surfaceTerms(sk3,3,i,(p_Nq-1),k);
+            surfaceTerms(e, sk3, 3, i, (p_Nq-1), k,
+                         x, y, z, time, mu, gamma, sgeo, vmapM, vmapP, EToB, q, gradq);
+
+          }
+        }
+      }
+    }
+
+    @barrier("global");
+
+    // face 2 & 4
+    for(int es=0;es<p_NblockS;++es;@inner(2)){
+      for(int k=0;k<p_Nq;++k;@inner(1)){
+        for(int j=0;j<p_Nq;++j;@inner(0)){
+          const dlong e = eo + es;
+          if(e<Nelements){
+            const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + k*p_Nq + j;
+            const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + k*p_Nq + j;
+
+            //            surfaceTerms(sk2,2,(p_Nq-1),j ,k);
+            surfaceTerms(e, sk2, 2, (p_Nq-1), j, k,
+                         x, y, z, time, mu, gamma, sgeo, vmapM, vmapP, EToB, q, gradq);
+
+            //surfaceTerms(sk4,4,0,     j, k);
+            surfaceTerms(e, sk4, 4, 0, j, k,
+                         x, y, z, time, mu, gamma, sgeo, vmapM, vmapP, EToB, q, gradq);
+          }
+        }
+      }
+    }
+  }
+}
+
+
+
+
+
+

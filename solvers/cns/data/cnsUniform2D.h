@@ -24,59 +24,70 @@ SOFTWARE.
 
 */
 
+//Mean flow
+#define p_RBAR 1.0
+#define p_UBAR 1.0
+#define p_VBAR 0.0
+#define p_PBAR 1.0
 
-// Initial conditions 
-#define cnsFlowField2D(t,x,y,u,v,p)   \
-  {                                   \
-    *(r) = p_rbar;                    \
-    *(u) = p_ubar;                    \
-    *(v) = p_vbar;                    \
-  }   
+// Initial conditions (p is ignored for isothermal)
+#define cnsInitialConditions2D(gamma, mu, t, x, y, r, u, v, p) \
+{                                         \
+  *(r) = p_RBAR           \
+  *(u) = p_UBAR           \
+  *(v) = p_VBAR           \
+  *(p) = p_PBAR           \
+}
+
+// Body force
+#define cnsBodyForce2D(gamma, mu, t, x, y, r, u, v, p, fx, fy) \
+{                                                   \
+  *(fx) = 0.0;                                      \
+  *(fy) = 0.0;                                      \
+}
 
 // Boundary conditions
 /* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5 */
-#define cnsDirichletConditions2D(bc, t, x, y, nx, ny, intfx, intfy, rM, uM, vM, rB, uB, vB) \
-{                                   \
-  if(bc==1){                        \
-    *(rB) = rM;                     \
-    *(uB) = 0.f;                    \
-    *(vB) = 0.f;                    \
-  } else if(bc==2){                 \
-    *(rB) = p_rbar;                 \
-    *(uB) = intfx;                 \
-    *(vB) = intfy;                 \
-  } else if(bc==3){                 \
-    *(rB) = rM;                     \
-    *(uB) = intfx;                 \
-    *(vB) = intfy;                 \
-  } else if(bc==4||bc==5){          \
-    *(rB) = rM;                     \
-    *(uB) = uM - (nx*uM+ny*vM)*nx;  \
-    *(vB) = vM - (nx*uM+ny*vM)*ny;  \
-  }                                 \
-}
-
-#define cnsNeumannConditions2D(bc, t, x, y, nx, ny, uxM, uyM, vxM, vyM, uxB, uyB, vxB, vyB) \
-{                                          \
-  if(bc==1 || bc==2){                      \
-    *(uxB) = uxM;                          \
-    *(uyB) = uyM;                          \
-    *(vxB) = vxM;                          \
-    *(vyB) = vyM;                          \
-  } else if(bc==3){                        \
-    *(uxB) = 0.f;                          \
-    *(uyB) = 0.f;                          \
-    *(vxB) = 0.f;                          \
-    *(vyB) = 0.f;                          \
-  } else if(bc==4){                        \
-    *(uxB) = uxM;                          \
-    *(uyB) = uyM;                          \
-    *(vxB) = 0.f;                          \
-    *(vyB) = 0.f;                          \
-  } else if(bc==5){                        \
-    *(uxB) = 0.f;                          \
-    *(uyB) = 0.f;                          \
-    *(vxB) = vxM;                          \
-    *(vyB) = vyM;                          \
-  }                                        \
+#define cnsBoundaryConditions2D(bc, gamma, mu, \
+                                  t, x, y, nx, ny, \
+                                  rM, uM, vM, pM, uxM, uyM, vxM, vyM, \
+                                  rB, uB, vB, pB, uxB, uyB, vxB, vyB) \
+{                                      \
+  if(bc==1){                           \
+    *(rB) = p_RBAR;                    \
+    *(uB) = 0.f;                       \
+    *(vB) = 0.f;                       \
+    *(pB) = p_PBAR;                    \
+    *(uxB) = uxM;                      \
+    *(uyB) = uyM;                      \
+    *(vxB) = vxM;                      \
+    *(vyB) = vyM;                      \
+  } else if(bc==2){                    \
+    *(rB) = p_RBAR;                       \
+    *(uB) = p_UBAR;                       \
+    *(vB) = p_VBAR;                       \
+    *(pB) = p_PBAR;                       \
+    *(uxB) = uxM;                      \
+    *(uyB) = uyM;                      \
+    *(vxB) = vxM;                      \
+    *(vyB) = vyM;                      \
+  } else if(bc==3){                    \
+    *(rB) = rM;                        \
+    *(uB) = uM;                        \
+    *(vB) = vM;                        \
+    *(pB) = pM;                        \
+    *(uxB) = 0.0;                      \
+    *(uyB) = 0.0;                      \
+    *(vxB) = 0.0;                      \
+    *(vyB) = 0.0;                      \
+  } else if(bc==4||bc==5){             \
+    *(rB) = rM;                        \
+    *(uB) = uM - (nx*uM+ny*vM)*nx;     \
+    *(vB) = vM - (nx*uM+ny*vM)*ny;     \
+    *(pB) = pM;                        \
+    *(uxB) = uxM;                      \
+    *(uyB) = uyM;                      \
+    *(vxB) = vxM;                      \
+    *(vyB) = vyM;                      \
+  }                                    \
 }

@@ -205,9 +205,6 @@ mesh_t& mesh_t::SetupRingPatch(){
   // connect face nodes (find trace indices)
   mesh->ConnectFaceNodes();
 
-  // set up tracehalo exchange info for MPI
-  mesh->HaloTraceSetup();
-
   // compute surface geofacs
   mesh->SurfaceGeometricFactors();
 
