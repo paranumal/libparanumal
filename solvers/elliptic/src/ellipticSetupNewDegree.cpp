@@ -133,5 +133,7 @@ elliptic_t& elliptic_t::SetupNewDegree(mesh_t& meshC){
                                               kernelInfo, meshC.comm);
   }
 
+  elliptic->precon = NULL;
+
   return *elliptic;
 }

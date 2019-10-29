@@ -37,6 +37,8 @@ lserk4::~lserk4() {
   if (rka) free(rka);
   if (rkb) free(rkb);
   if (rkc) free(rkc);
+
+  updateKernel.free();
 }
 
 void lserk4::Init() {

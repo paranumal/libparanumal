@@ -95,3 +95,8 @@ void MassMatrixPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
   // zero mean of RHS
   if(elliptic.allNeumann) elliptic.ZeroMean(o_Mr);
 }
+
+MassMatrixPrecon::~MassMatrixPrecon(){
+  blockJacobiKernel.free();
+  partialBlockJacobiKernel.free();
+}

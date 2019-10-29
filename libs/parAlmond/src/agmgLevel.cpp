@@ -33,8 +33,14 @@ agmgLevel::agmgLevel(parCSR *A_, KrylovType ktype_):
 
   weighted = false;
   gatherLevel = false;
+  ogs=NULL;
 
   A = A_;
+  P = NULL;
+  R = NULL;
+  o_A = NULL;
+  o_P = NULL;
+  o_R = NULL;
 }
 
 agmgLevel::agmgLevel(parCSR *A_, parCSR *P_, parCSR *R_, KrylovType ktype_):
@@ -45,17 +51,24 @@ agmgLevel::agmgLevel(parCSR *A_, parCSR *P_, parCSR *R_, KrylovType ktype_):
 
   weighted = false;
   gatherLevel = false;
+  ogs=NULL;
 
   A = A_;
   P = P_;
   R = R_;
+  o_A = NULL;
+  o_P = NULL;
+  o_R = NULL;
 }
 
 agmgLevel::~agmgLevel() {
 
-  // delete[]   A; delete[]   P; delete[]   R;
-  // delete[] o_A; delete[] o_P; delete[] o_R;
-
+  if (  A) delete   A;
+  if (  P) delete   P;
+  if (  R) delete   R;
+  if (o_A) delete o_A;
+  if (o_P) delete o_P;
+  if (o_R) delete o_R;
 }
 
 void agmgLevel::Ax        (dfloat *X, dfloat *Ax){ A->SpMV(1.0, X, 0.0, Ax); }

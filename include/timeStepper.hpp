@@ -58,6 +58,8 @@ public:
 
   static timeStepper_t* Setup(dlong N, dlong Nhalo, solver_t& solver);
 
+  virtual ~timeStepper_t() {};
+
   virtual void Init()=0;
   virtual void Run(occa::memory& o_q, dfloat start, dfloat end)=0;
 

@@ -71,3 +71,9 @@ meshTet3D::meshTet3D(occa::device& device_, MPI_Comm& comm_,
 meshHex3D::meshHex3D(occa::device& device_, MPI_Comm& comm_,
                      settings_t& settings_, occa::properties& props_):
   mesh3D(device_, comm_, settings_, props_) {}
+
+mesh_t::~mesh_t() {
+  if (halo) halo->Free();
+  if (ringHalo) ringHalo->Free();
+  if (ogs) ogs->Free();
+}

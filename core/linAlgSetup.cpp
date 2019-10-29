@@ -163,3 +163,22 @@ void linAlg_t::InitKernels(vector<string> kernels, MPI_Comm& comm) {
     }
   }
 }
+
+linAlg_t::~linAlg_t() {
+  setKernel.free();
+  addKernel.free();
+  scaleKernel.free();
+  axpyKernel.free();
+  zaxpyKernel.free();
+  amxKernel.free();
+  amxpyKernel.free();
+  zamxpyKernel.free();
+  adxKernel.free();
+  adxpyKernel.free();
+  zadxpyKernel.free();
+  sumKernel.free();
+  norm2Kernel.free();
+  weightedNorm2Kernel.free();
+  innerProdKernel.free();
+  weightedInnerProdKernel.free();
+}

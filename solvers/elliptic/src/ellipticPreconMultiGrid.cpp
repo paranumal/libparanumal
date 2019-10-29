@@ -49,10 +49,14 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   int NpFine   = mesh.Np;
   int NpCoarse = mesh.Np;
   occa::memory o_weightF = elliptic.o_weight;
+
+  NpMGlevels=0;
+
   while(true) {
     //build mesh and elliptic objects for this degree
     mesh_t &meshC = mesh.SetupNewDegree(Nc);
     elliptic_t &ellipticC = elliptic.SetupNewDegree(meshC);
+    NpMGlevels++;
 
     if (Nc==1) { //base p-MG level
       //build full A matrix and pass to parAlmond
@@ -158,3 +162,13 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   }
 }
 
+MultiGridPrecon::~MultiGridPrecon() {
+
+  for (int i=1;i<NpMGlevels;i++) {
+    MGLevel *level = (MGLevel *) parAlmondHandle->levels[i];
+    delete &(level->elliptic);
+    if (level->mesh.ogs) level->mesh.ogs->Free();
+  }
+
+  if (parAlmondHandle) parAlmond::Free(parAlmondHandle);
+}

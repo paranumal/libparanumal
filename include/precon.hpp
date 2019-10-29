@@ -38,6 +38,8 @@ public:
   precon_t() {};
 
   virtual void Operator(occa::memory &o_r, occa::memory &o_Mr)=0;
+
+  virtual ~precon_t() {}
 };
 
 //Identity operator

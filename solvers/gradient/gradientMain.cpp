@@ -59,6 +59,12 @@ int main(int argc, char **argv){
   // run
   gradient.Run();
 
+  // clean up
+  delete &gradient;
+  delete &linAlg;
+  delete &mesh;
+  device.free();
+
   // close down MPI
   MPI_Finalize();
   return LIBP_SUCCESS;

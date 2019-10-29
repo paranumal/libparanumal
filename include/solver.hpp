@@ -50,6 +50,8 @@ public:
     props(_mesh.props),
     linAlg(_linAlg) {};
 
+  virtual ~solver_t(){}
+
   virtual void Run()=0;
   virtual void Report(dfloat time=0.0, int tstep=0) {};
 

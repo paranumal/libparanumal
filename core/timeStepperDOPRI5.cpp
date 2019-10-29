@@ -43,6 +43,10 @@ dopri5::~dopri5() {
   if (rkC) free(rkC);
   if (rkA) free(rkA);
   if (rkE) free(rkE);
+
+  rkUpdateKernel.free();
+  rkStageKernel.free();
+  rkErrorEstimateKernel.free();
 }
 
 void dopri5::Init() {

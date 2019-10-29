@@ -142,3 +142,13 @@ acoustics_t& acoustics_t::Setup(mesh_t& mesh, linAlg_t& linAlg){
 
   return *acoustics;
 }
+
+acoustics_t::~acoustics_t() {
+  volumeKernel.free();
+  surfaceKernel.free();
+  MassMatrixKernel.free();
+  initialConditionKernel.free();
+
+  if (timeStepper) delete timeStepper;
+  if (traceHalo) traceHalo->Free();
+}

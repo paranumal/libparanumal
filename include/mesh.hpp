@@ -275,6 +275,8 @@ public:
   mesh_t(occa::device& device, MPI_Comm& comm,
          settings_t& settings, occa::properties& props);
 
+  virtual ~mesh_t();
+
   // generic mesh setup
   static mesh_t& Setup(occa::device& device, MPI_Comm& comm,
                        settings_t& settings, occa::properties& props);
@@ -345,7 +347,7 @@ public:
   //create a new mesh object with the same geometry, but different degree
   mesh_t& SetupNewDegree(int Nf);
 
-  mesh_t& SetupRingPatch();
+  mesh_t* SetupRingPatch();
 
   virtual void BuildBasisCoarsen(dfloat**R, occa::memory& o_R, int Nf, int Nc)=0;
 

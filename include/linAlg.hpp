@@ -56,6 +56,8 @@ public:
   //initialize list of kernels
   void InitKernels(vector<string> kernels, MPI_Comm& comm);
 
+  ~linAlg_t();
+
   /*********************/
   /* vector operations */
   /*********************/

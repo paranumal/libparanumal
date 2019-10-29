@@ -28,7 +28,6 @@ SOFTWARE.
 
 int main(int argc, char **argv){
 
-
   // start up MPI
   MPI_Init(&argc, &argv);
 
@@ -59,6 +58,12 @@ int main(int argc, char **argv){
 
   // run
   advection.Run();
+
+  // clean up
+  delete &advection;
+  delete &linAlg;
+  delete &mesh;
+  device.free();
 
   // close down MPI
   MPI_Finalize();

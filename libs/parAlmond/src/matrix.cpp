@@ -306,22 +306,21 @@ parCSR::~parCSR() {
   delete diag;
   delete offd;
 
-  free(diagA);
-  free(diagInv);
+  // free(diagA);
+  // free(diagInv);
 
   if (o_diagA.size()) o_diagA.free();
   if (o_diagInv.size()) o_diagInv.free();
 
-  free(null);
+  // free(null);
   if (o_null.size()) o_null.free();
 
-  free(globalRowStarts);
-  free(globalColStarts);
+  // free(globalRowStarts);
+  // free(globalColStarts);
 
-  free(colMap);
+  // free(colMap);
 
   if (halo)   halo->Free();
-  delete[] halo;
 }
 
 dfloat parCSR::rhoDinvA(){
@@ -584,22 +583,21 @@ parHYB::~parHYB() {
   delete E;
   delete C;
 
-  free(diagA);
-  free(diagInv);
+  // if (diagA)  free(diagA);
+  // if (diagInv)  free(diagInv);
 
   if (o_diagA.size()) o_diagA.free();
   if (o_diagInv.size()) o_diagInv.free();
 
-  free(null);
+  // if (null) free(null);
   if (o_null.size()) o_null.free();
 
-  free(globalRowStarts);
-  free(globalColStarts);
+  // if (globalRowStarts) free(globalRowStarts);
+  // if (globalColStarts) free(globalColStarts);
 
-  free(colMap);
+  // if (colMap) free(colMap);
 
   if (halo) halo->Free();
-  delete[] halo;
 };
 
 void parHYB::syncToDevice() {

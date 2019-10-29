@@ -75,9 +75,9 @@ OASPrecon::OASPrecon(elliptic_t& _elliptic):
 
   //build the one ring mesh
   if (mesh.N>1) {
-    mesh_t &meshPatch = mesh.SetupRingPatch();
-    elliptic_t &ellipticPatch = elliptic.SetupRingPatch(meshPatch);
-    preconPatch = new MultiGridPrecon(ellipticPatch);
+    meshPatch = mesh.SetupRingPatch();
+    ellipticPatch = elliptic.SetupRingPatch(*meshPatch);
+    preconPatch = new MultiGridPrecon(*ellipticPatch);
   }
 
   //build the coarse precon
@@ -180,3 +180,15 @@ OASPrecon::OASPrecon(elliptic_t& _elliptic):
   }
 }
 
+OASPrecon::~OASPrecon() {
+  if (mesh.N>1) {
+    delete preconPatch;
+    if (mesh.size>1) delete ellipticPatch;
+    if (mesh.size>1) delete meshPatch;
+
+    MGLevel *level = (MGLevel *) parAlmondHandle->levels[0];
+    delete &(level->elliptic);
+    if (level->mesh.ogs) level->mesh.ogs->Free();
+  }
+  if (parAlmondHandle) parAlmond::Free(parAlmondHandle);
+}

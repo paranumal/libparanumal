@@ -193,4 +193,5 @@ void elliptic_t::Run(){
 
   free(r); free(x);
   o_r.free(); o_x.free();
+  delete linearSolver;
 }

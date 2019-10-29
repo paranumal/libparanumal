@@ -159,3 +159,14 @@ elliptic_t& elliptic_t::Setup(mesh_t& mesh, linAlg_t& linAlg, dfloat lambda){
 
   return *elliptic;
 }
+
+elliptic_t::~elliptic_t() {
+  maskKernel.free();
+  partialAxKernel.free();
+  partialGradientKernel.free();
+  partialIpdgKernel.free();
+
+  if (traceHalo) traceHalo->Free();
+  if (ogsMasked) ogsMasked->Free();
+  if (precon) delete precon;
+}

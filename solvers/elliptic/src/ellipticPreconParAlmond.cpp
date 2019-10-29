@@ -72,3 +72,7 @@ void ParAlmondPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
   // zero mean of RHS
   if(elliptic.allNeumann) elliptic.ZeroMean(o_Mr);
 }
+
+ParAlmondPrecon::~ParAlmondPrecon() {
+  if (parAlmondHandle) parAlmond::Free(parAlmondHandle);
+}

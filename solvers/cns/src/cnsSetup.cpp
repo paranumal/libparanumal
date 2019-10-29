@@ -229,3 +229,20 @@ cns_t& cns_t::Setup(mesh_t& mesh, linAlg_t& linAlg){
 
   return *cns;
 }
+
+cns_t::~cns_t() {
+  volumeKernel.free();
+  surfaceKernel.free();
+  cubatureVolumeKernel.free();
+  cubatureSurfaceKernel.free();
+  gradVolumeKernel.free();
+  gradSurfaceKernel.free();
+  vorticityKernel.free();
+  constrainKernel.free();
+  MassMatrixKernel.free();
+  initialConditionKernel.free();
+
+  if (timeStepper) delete timeStepper;
+  if (fieldTraceHalo) fieldTraceHalo->Free();
+  if (gradTraceHalo) gradTraceHalo->Free();
+}

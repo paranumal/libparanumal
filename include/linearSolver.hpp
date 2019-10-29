@@ -62,6 +62,8 @@ public:
   virtual int Solve(solver_t& solver, precon_t& precon,
                     occa::memory& o_x, occa::memory& o_rhs,
                     const dfloat tol, const int MAXIT, const int verbose)=0;
+
+  virtual ~linearSolver_t(){}
 };
 
 //Preconditioned Conjugate Gradient

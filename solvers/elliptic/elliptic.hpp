@@ -92,6 +92,8 @@ public:
   elliptic_t(mesh_t& _mesh, linAlg_t& _linAlg, dfloat _lambda):
     solver_t(_mesh, _linAlg), lambda(_lambda) {}
 
+  ~elliptic_t();
+
   //setup
   static elliptic_t& Setup(mesh_t& mesh, linAlg_t& linAlg, dfloat lambda);
 
@@ -141,7 +143,7 @@ public:
 
   elliptic_t& SetupNewDegree(mesh_t& meshF);
 
-  elliptic_t& SetupRingPatch(mesh_t& meshPatch);
+  elliptic_t* SetupRingPatch(mesh_t& meshPatch);
 
   void ZeroMean(occa::memory &o_q);
 };

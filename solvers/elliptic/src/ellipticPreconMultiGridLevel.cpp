@@ -286,6 +286,10 @@ void MGLevel::Report() {
   }
 }
 
+MGLevel::~MGLevel() {
+  coarsenKernel.free();
+  prolongateKernel.free();
+}
 
 void MGLevel::SetupSmoother() {
 

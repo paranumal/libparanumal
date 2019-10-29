@@ -31,13 +31,13 @@ SOFTWARE.
 
 //build a new mesh object consisting of the orignal mesh with an
 // 1-element overlap with neighboring meshes
-mesh_t& mesh_t::SetupRingPatch(){
+mesh_t* mesh_t::SetupRingPatch(){
 
   //setup the 1-ring halo exchange
   HaloRingSetup();
 
   //just reuse the current mesh if there are no neighbors
-  if (size==1) return *this;
+  if (size==1) return this;
 
   // single process communicator for new mesh
   MPI_Comm* splitComm = new MPI_Comm;
@@ -193,6 +193,8 @@ mesh_t& mesh_t::SetupRingPatch(){
 
   mesh->vertexNodes = vertexNodes;
 
+  mesh->ringHalo = NULL;
+
   //Halo
   mesh->HaloSetup();
 
@@ -216,5 +218,5 @@ mesh_t& mesh_t::SetupRingPatch(){
 
   mesh->OccaSetup();
 
-  return *mesh;
+  return mesh;
 }

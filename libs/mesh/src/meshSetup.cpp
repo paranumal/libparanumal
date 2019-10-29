@@ -63,6 +63,8 @@ mesh_t& mesh_t::Setup(occa::device& device, MPI_Comm& comm,
 
   mesh->elementType = elementType;
 
+  mesh->ringHalo = NULL;
+
   if (settings.compareSetting("MESH FILE","BOX")) {
     //build a box mesh
     mesh->SetupBox();

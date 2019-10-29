@@ -131,3 +131,13 @@ advection_t& advection_t::Setup(mesh_t& mesh, linAlg_t& linAlg){
 
   return *advection;
 }
+
+advection_t::~advection_t() {
+  volumeKernel.free();
+  surfaceKernel.free();
+  MassMatrixKernel.free();
+  initialConditionKernel.free();
+
+  if (timeStepper) delete timeStepper;
+  if (traceHalo) traceHalo->Free();
+}

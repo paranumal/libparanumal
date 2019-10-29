@@ -101,3 +101,9 @@ gradient_t& gradient_t::Setup(mesh_t& mesh, linAlg_t& linAlg){
 
   return *gradient;
 }
+
+gradient_t::~gradient_t() {
+  volumeKernel.free();
+  MassMatrixKernel.free();
+  initialConditionKernel.free();
+}

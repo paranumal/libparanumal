@@ -31,7 +31,9 @@ SOFTWARE.
 pcg::pcg(solver_t& _solver):
   linearSolver_t(_solver) {};
 
-pcg::~pcg() {}
+pcg::~pcg() {
+  updatePCGKernel.free();
+}
 
 void pcg::Init(int _weighted, occa::memory& o_weight) {
 

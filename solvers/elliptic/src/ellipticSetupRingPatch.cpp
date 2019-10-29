@@ -27,10 +27,10 @@ SOFTWARE.
 #include "elliptic.hpp"
 #include "ellipticPrecon.hpp"
 
-elliptic_t& elliptic_t::SetupRingPatch(mesh_t& meshPatch){
+elliptic_t* elliptic_t::SetupRingPatch(mesh_t& meshPatch){
 
   //just reuse the current solver if there are no neighbors
-  if (mesh.size == 1) return *this;
+  if (mesh.size == 1) return this;
 
   elliptic_t* elliptic = new elliptic_t(meshPatch, linAlg, lambda);
 
@@ -67,5 +67,7 @@ elliptic_t& elliptic_t::SetupRingPatch(mesh_t& meshPatch){
     elliptic->partialIpdgKernel = partialIpdgKernel;
   }
 
-  return *elliptic;
+  elliptic->precon = NULL;
+
+  return elliptic;
 }

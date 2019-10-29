@@ -265,3 +265,14 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
     o_xG   = mesh.device.malloc(baseLevel->Ncols*sizeof(dfloat));
   }
 }
+
+SEMFEMPrecon::~SEMFEMPrecon() {
+  // if (FEMogs) FEMogs->Free();
+  if (parAlmondHandle) parAlmond::Free(parAlmondHandle);
+  femElliptic->ogsMasked->Free();
+
+  femMesh->halo->Free();
+
+  SEMFEMInterpKernel.free();
+  SEMFEMAnterpKernel.free();
+}

@@ -31,7 +31,10 @@ SOFTWARE.
 nbfpcg::nbfpcg(solver_t& _solver):
   linearSolver_t(_solver) {};
 
-nbfpcg::~nbfpcg() {}
+nbfpcg::~nbfpcg() {
+  update0NBFPCGKernel.free();
+  update1NBFPCGKernel.free();
+}
 
 void nbfpcg::Init(int _weighted, occa::memory& o_weight_) {
 

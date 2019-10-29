@@ -63,6 +63,8 @@ public:
   advection_t(mesh_t& _mesh, linAlg_t& _linAlg):
     solver_t(_mesh, _linAlg) {}
 
+  ~advection_t();
+
   //setup
   static advection_t& Setup(mesh_t& mesh, linAlg_t& linAlg);
 

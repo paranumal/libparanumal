@@ -56,6 +56,7 @@ private:
   occa::kernel partialBlockJacobiKernel;
 
 public:
+  ~MassMatrixPrecon();
   MassMatrixPrecon(elliptic_t& elliptic);
   void Operator(occa::memory& o_r, occa::memory& o_Mr);
 };
@@ -72,6 +73,7 @@ private:
   occa::memory o_xG, o_rhsG;
 
 public:
+  ~ParAlmondPrecon();
   ParAlmondPrecon(elliptic_t& elliptic);
   void Operator(occa::memory& o_r, occa::memory& o_Mr);
 };
@@ -85,7 +87,9 @@ private:
 
   parAlmond::solver_t *parAlmondHandle;
 
+  int NpMGlevels;
 public:
+  ~MultiGridPrecon();
   MultiGridPrecon(elliptic_t& elliptic);
   void Operator(occa::memory& o_r, occa::memory& o_Mr);
 };
@@ -112,6 +116,7 @@ private:
   occa::kernel SEMFEMAnterpKernel;
 
 public:
+  ~SEMFEMPrecon();
   SEMFEMPrecon(elliptic_t& elliptic);
   void Operator(occa::memory& o_r, occa::memory& o_Mr);
 };
@@ -127,6 +132,8 @@ private:
   settings_t& settings;
 
   //Patch precon
+  mesh_t* meshPatch;
+  elliptic_t* ellipticPatch;
   MultiGridPrecon *preconPatch;
 
   //Coarse Precon
@@ -142,6 +149,7 @@ private:
   occa::memory o_patchWeight;
 
 public:
+  ~OASPrecon();
   OASPrecon(elliptic_t& elliptic);
   void Operator(occa::memory& o_r, occa::memory& o_Mr);
 };
@@ -183,6 +191,8 @@ public:
   //build a p-multigrid level and connect it to the previous one
   MGLevel(elliptic_t& _elliptic, int k, int Nf, int Npf, occa::memory o_weightF_,
           parAlmond::KrylovType ktype_, parAlmond::CycleType ctype);
+
+  ~MGLevel();
 
   void Ax(dfloat        *X, dfloat        *Ax) {};
   void Ax(occa::memory &o_X, occa::memory &o_Ax);
