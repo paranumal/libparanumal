@@ -27,22 +27,31 @@ SOFTWARE.
 #include "mesh.hpp"
 #include "mesh2D.hpp"
 
+dfloat mesh2D::ElementCharacteristicLength(dlong e) {
+
+  dfloat h = 1.e9;
+  for(int f=0;f<Nfaces;++f){
+    dlong sid = Nsgeo*(Nfaces*e + f);
+    dfloat sJ   = sgeo[sid + SJID];
+    dfloat invJ = sgeo[sid + IJID];
+
+    // sJ = L/2, J = A/2,   sJ/J = L/A = L/(0.5*h*L) = 2/h
+    // h = 0.5/(sJ/J)
+    dfloat hest = 0.5/(sJ*invJ);
+
+    h = mymin(h, hest);
+  }
+  return h;
+}
+
+
 dfloat mesh2D::MinCharacteristicLength(){
 
   dfloat hmin = 1e9;
   for(dlong e=0;e<Nelements;++e){
-    for(int f=0;f<Nfaces;++f){
-      dlong sid = Nsgeo*(Nfaces*e + f);
-      dfloat sJ   = sgeo[sid + SJID];
-      dfloat invJ = sgeo[sid + IJID];
+    dfloat h = ElementCharacteristicLength(e);
 
-      // sJ = L/2, J = A/2,   sJ/J = L/A = L/(0.5*h*L) = 2/h
-      // h = 0.5/(sJ/J)
-
-      dfloat hest = 0.5/(sJ*invJ);
-
-      hmin = mymin(hmin, hest);
-    }
+    hmin = mymin(hmin, h);
   }
 
   // MPI_Allreduce to get global minimum dt

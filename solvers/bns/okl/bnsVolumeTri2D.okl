@@ -24,39 +24,46 @@ SOFTWARE.
 
 */
 
-// Only difference with boltzmannVolume2D is size of rhsq and shifting
 @kernel void bnsVolumeTri2D(const dlong Nelements,
-			    @restrict const  dlong *  elementIds,
-			    const dlong offset,
-			    const int shift,
-			    const dfloat fx,
-			    const dfloat fy,
-			    const dfloat fz,
-			    @restrict const  dfloat *  vgeo,
-			    @restrict const  dfloat * x, 
-			    @restrict const  dfloat * y,
-			    @restrict const  dfloat * z,
-			    @restrict const  dfloat *  Dmatrices,
-			    @restrict const  dfloat *  q,
-			    @restrict dfloat *  rhsq){
-  
+                            @restrict const  dlong  *  elementIds,
+                            @restrict const  dfloat *  vgeo,
+                            @restrict const  dfloat *  Dmatrices,
+                            @restrict const  dfloat * x,
+                            @restrict const  dfloat * y,
+                            @restrict const  dfloat * z,
+                            const dfloat t,
+                            const dfloat c,
+                            const dfloat nu,
+                            @restrict const  dfloat *  q,
+                            @restrict dfloat *  rhsq){
+
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
     @shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
     @exclusive dlong e;
 
+    @exclusive dfloat fx[p_NblockV], fy[p_NblockV];
+
     for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
       for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
-        dlong et = eo+es; // element in block
+        const dlong et = eo+es; // element in block
         if(et<Nelements){
           e = elementIds[et];
-          const dlong id = e*p_Nfields*p_Np + n;   
-         
+          const dlong id = e*p_Nfields*p_Np + n;
+
           #pragma unroll p_Nfields
           for(int fld=0; fld<p_Nfields;++fld){
             s_q[es][fld][n] = q[id+fld*p_Np];
           }
 
+          const dfloat r =   s_q[es][0][n];
+          const dfloat u = c*s_q[es][1][n]/r;
+          const dfloat v = c*s_q[es][2][n]/r;
+
+          //Body force contribution
+          fx[es] = 0.0; fy[es] = 0.0;
+          bnsBodyForce2D(c, nu, t, x[e*p_Np+n], y[e*p_Np+n], r, u, v,
+                         &(fx[es]), &(fy[es]));
         }
       }
     }
@@ -65,286 +72,252 @@ SOFTWARE.
     @barrier("local");
 
     for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
-      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element 
-      dlong et = eo+es; // element in block
-      if(et<Nelements){   
-        // prefetch geometric factors (constant on triangle)
-        const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
-        const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
-        const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
-        const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+        const dlong et = eo+es; // element in block
+        if(et<Nelements){
+          // prefetch geometric factors (constant on triangle)
+          const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+          const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+          const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+          const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
 
-        // compute 'r' and 's' derivatives of (q_m) at node n
-        dfloat r_dqdr[p_Nfields], r_dqds[p_Nfields]; 
-        dfloat r_dqdx[p_Nfields], r_dqdy[p_Nfields];
-        dfloat r_rhsq[p_Nfields];
-        
-        #pragma unroll p_Nfields
+          // compute 'r' and 's' derivatives of (q_m) at node n
+          dfloat r_dqdr[p_Nfields], r_dqds[p_Nfields];
+          dfloat r_dqdx[p_Nfields], r_dqdy[p_Nfields];
+          dfloat r_rhsq[p_Nfields];
+
+          #pragma unroll p_Nfields
+            for(int fld=0; fld<p_Nfields;++fld){
+              r_dqdr[fld] = 0.f, r_dqds[fld] = 0.f;
+              r_dqdx[fld] = 0.f, r_dqdy[fld] = 0.f;
+              r_rhsq[fld] = 0.f;
+            }
+
+          #pragma unroll p_Np
+            for(int i=0;i<p_Np;++i){
+              const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
+              const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
+              #pragma unroll p_Nfields
+              for(int fld=0; fld<p_Nfields;++fld){
+                r_dqdr[fld] += Drni*s_q[es][fld][i];
+                r_dqds[fld] += Dsni*s_q[es][fld][i];
+              }
+            }
+
+          // Compute derivatives in physical coordinates
+          #pragma unroll p_Nfields
+            for(int fld=0; fld<p_Nfields;++fld){
+              r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
+              r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
+            }
+
+          // transport operator
+          r_rhsq[0] = -c*(r_dqdx[1] + r_dqdy[2]);
+          r_rhsq[1] = -c*(r_dqdx[0] + sqrt(2.0)*r_dqdx[4] + r_dqdy[3]);
+          r_rhsq[2] = -c*(r_dqdx[3] + r_dqdy[0] + sqrt(2.0)*r_dqdy[5]);
+          r_rhsq[3] = -c*(r_dqdx[2] + r_dqdy[1]);
+          r_rhsq[4] = -c*sqrt(2.0)*r_dqdx[1];
+          r_rhsq[5] = -c*sqrt(2.0)*r_dqdy[2];
+
+          // add body forcing
+          r_rhsq[1] += fx[es]*s_q[es][0][n]/c;
+          r_rhsq[2] += fy[es]*s_q[es][0][n]/c;
+          r_rhsq[3] += fx[es]*s_q[es][2][n]/c + fy[es]*s_q[es][1][n]/c;
+          r_rhsq[4] += fx[es]*sqrt(2.0)*s_q[es][1][n]/c;
+          r_rhsq[5] += fy[es]*sqrt(2.0)*s_q[es][2][n]/c;
+
+          // Update
+          const dlong id = e*p_Nfields*p_Np + n;
+
           for(int fld=0; fld<p_Nfields;++fld){
-            r_dqdr[fld] = 0.f, r_dqds[fld] = 0.f;
-            r_dqdx[fld] = 0.f, r_dqdy[fld] = 0.f;
-            r_rhsq[fld] = 0.f;
+            rhsq[id + fld*p_Np] = r_rhsq[fld];
+          }
+        }
+      }
+    }
+  }
+}
+
+@kernel void bnsPmlVolumeCubTri2D(const dlong pmlNelements,
+                                  @restrict const  dlong *  pmlElementIds,
+                                  @restrict const  dlong *  pmlIds,
+                                  @restrict const  dfloat *  vgeo,
+                                  @restrict const  dfloat *  Dmatrices,
+                                  @restrict const  dfloat *  x,
+                                  @restrict const  dfloat *  y,
+                                  @restrict const  dfloat *  z,
+                                  const dfloat t,
+                                  const dfloat c,
+                                  const dfloat nu,
+                                  @restrict const  dfloat *  q,
+                                  @restrict dfloat *  rhsq,
+                                  @restrict dfloat *  rhspmlq){
+
+  for(dlong eo=0;eo<pmlNelements;eo+=p_NblockV;@outer(0)){  // for all elements
+
+    @shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
+    @exclusive dlong e;
+
+    @exclusive dfloat fx[p_NblockV], fy[p_NblockV];
+
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+
+        const dlong et = eo+es; // element in block
+        if(et<pmlNelements){
+          e     = pmlElementIds[et];
+
+          const dlong id = e*p_Nfields*p_Np + n;
+          #pragma unroll p_Nfields
+          for(int fld=0; fld<p_Nfields;++fld){
+            s_q[es][fld][n] = q[id+fld*p_Np];
           }
 
-        #pragma unroll p_Np
+          const dfloat r =   s_q[es][0][n];
+          const dfloat u = c*s_q[es][1][n]/r;
+          const dfloat v = c*s_q[es][2][n]/r;
+
+          //Body force contribution
+          fx[es] = 0.0; fy[es] = 0.0;
+          bnsBodyForce2D(c, nu, t, x[e*p_Np+n], y[e*p_Np+n], r, u, v,
+                         &(fx[es]), &(fy[es]));
+        }
+      }
+    }
+
+    // make sure all node data is loaded into @shared
+    @barrier("local");
+
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+        const dlong et = eo+es; // element in block
+        if(et<pmlNelements){
+
+          // prefetch geometric factors
+          const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+          const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+          const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+          const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+          // Pack register variables into arrays
+          dfloat r_dqdr[p_Nfields],  r_dqds[p_Nfields];
+          dfloat r_dqdx[p_Nfields],  r_dqdy[p_Nfields];
+          dfloat r_Aqx[p_Nfields],   r_Bqy[p_Nfields];
+          dfloat r_f[p_Nfields];
+
+          // Initialize
+          #pragma unroll p_Nfields
+          for(int fld=0; fld<p_Nfields; ++fld){
+            r_dqdr[fld]  = 0.f, r_dqds[fld]  = 0.f;
+            r_dqdx[fld]  = 0.f, r_dqdy[fld]  = 0.f;
+            r_f[fld]     = 0.f;
+          }
+
+          // Compute Derivatives
+          #pragma unroll p_Np
           for(int i=0;i<p_Np;++i){
             const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
             const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
             #pragma unroll p_Nfields
-            for(int fld=0; fld<p_Nfields;++fld){
+            for(int fld=0; fld<p_Nfields; ++fld){
               r_dqdr[fld] += Drni*s_q[es][fld][i];
               r_dqds[fld] += Dsni*s_q[es][fld][i];
             }
           }
-      
-        // Compute derivatives in physical coordinates 
-        #pragma unroll p_Nfields
-          for(int fld=0; fld<p_Nfields;++fld){
+
+          #pragma unroll p_Nfields
+          for(int fld=0; fld<p_Nfields; ++fld){
             r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
             r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
           }
 
-        // transport operator
-        r_rhsq[0] = -p_sqrtRT*(r_dqdx[1] + r_dqdy[2]);
-        r_rhsq[1] = -p_sqrtRT*(r_dqdx[0] + p_sqrt2*r_dqdx[4] + r_dqdy[3]); 
-        r_rhsq[2] = -p_sqrtRT*(r_dqdx[3] + r_dqdy[0] + p_sqrt2*r_dqdy[5]); 
-        r_rhsq[3] = -p_sqrtRT*(r_dqdx[2] + r_dqdy[1]);   
-        r_rhsq[4] = -p_sqrtRT*p_sqrt2*r_dqdx[1];     
-        r_rhsq[5] = -p_sqrtRT*p_sqrt2*r_dqdy[2];        
+          // Compute volume flux for q, qx and qy
+          // A*dQ/dx
+          r_Aqx[0] = -c*(r_dqdx[1]);
+          r_Aqx[1] = -c*(r_dqdx[0] + sqrt(2.0)*r_dqdx[4]);
+          r_Aqx[2] = -c*(r_dqdx[3]);
+          r_Aqx[3] = -c*(r_dqdx[2]);
+          r_Aqx[4] = -c*sqrt(2.0)*r_dqdx[1];
+          r_Aqx[5] = -0.f;
 
-        if(fx){
-          // add x-body forcing (e.g. gravity)
-          r_rhsq[1] += fx*p_isqrtRT*s_q[es][0][n]; 
-          r_rhsq[3] += fx*p_isqrtRT*s_q[es][2][n];
-          r_rhsq[4] += p_sqrt2*fx*p_isqrtRT*s_q[es][1][n];
-        }
+          // B*dQ/dy
+          r_Bqy[0] = -c*(r_dqdy[2]);
+          r_Bqy[1] = -c*(r_dqdy[3]);
+          r_Bqy[2] = -c*(r_dqdy[0] + sqrt(2.0)*r_dqdy[5]);
+          r_Bqy[3] = -c*(r_dqdy[1]);
+          r_Bqy[4] = -0.f;
+          r_Bqy[5] = -c*sqrt(2.0)*r_dqdy[2];
 
-        if(fy){
-          // add y-body forcing (e.g. gravity)
-          r_rhsq[2] += fy*p_isqrtRT*s_q[es][0][n];
-          r_rhsq[3] += fy*p_isqrtRT*s_q[es][1][n];
-          r_rhsq[5] += p_sqrt2*fy*p_isqrtRT*s_q[es][2][n];
-        }
+          // body forcing
+          r_f[1] = fx[es]*s_q[es][0][n]/c;
+          r_f[2] = fy[es]*s_q[es][0][n]/c;
+          r_f[3] = fx[es]*s_q[es][2][n]/c + fy[es]*s_q[es][1][n]/c;
+          r_f[4] = fx[es]*sqrt(2.0)*s_q[es][1][n]/c;
+          r_f[5] = fy[es]*sqrt(2.0)*s_q[es][2][n]/c;
 
-#ifdef p_AX
-        // add x-body forcing (e.g. gravity)
-        r_rhsq[1] += p_AX*s_q[es][0][n]; // assumes AX = gx/(sqrt(RT))
-        r_rhsq[3] += p_AX*s_q[es][2][n];
-        r_rhsq[4] += p_sqrt2*p_AX*s_q[es][1][n];
-#endif
+          const dlong pmlId = pmlIds[et];
+          const dlong id = e*p_Nfields*p_Np + n;
+          const dlong pmlrhsId = pmlId*p_Npmlfields*p_Np + n;
 
-#ifdef p_AY
-        // add y-body forcing (e.g. gravity)
-        r_rhsq[2] += p_AY*s_q[es][0][n]; // assumes AY = gy/(sqrt(RT))
-        r_rhsq[3] += p_AY*s_q[es][1][n];
-        r_rhsq[5] += p_sqrt2*p_AY*s_q[es][2][n];
-#endif  
-  
-        // Update 
-        const dlong id    = e*p_Nfields*p_Np + n;
-        dlong rhsId = id;
-
-        if(p_MRSAAB){
-          rhsId   += shift*offset;  
-        }
-
-              
-        for(int fld=0; fld<p_Nfields;++fld){
-          rhsq[rhsId + fld*p_Np] = r_rhsq[fld];
-        }
-      }
-    }
-  }
-}
-}
-
-
-
-
-@kernel void bnsPmlVolumeCubTri2D(const dlong pmlNelements,
-            @restrict const  dlong *  pmlElementIds,
-            @restrict const  dlong *  pmlIds,
-            const dlong offset,
-            const dlong pmloffset,
-            const int   shift,
-            const dfloat fx,
-            const dfloat fy,
-            const dfloat fz,
-            @restrict const  dfloat *  vgeo,
-            @restrict const  dfloat *  Dmatrices,
-            @restrict const  dfloat *  q,
-            @restrict const  dfloat *  pmlqx,
-            @restrict const  dfloat *  pmlqy,
-            @restrict const  dfloat *  pmlqz,
-            @restrict dfloat *  rhsq,
-            @restrict dfloat *  pmlrhsqx,
-            @restrict dfloat *  pmlrhsqy,
-            @restrict dfloat *  pmlrhsqz){
-  
-  for(dlong eo=0;eo<pmlNelements;eo+=p_NblockV;@outer(0)){  // for all elements
-
-    @shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
-    @exclusive dlong e, pmlId;
-
-    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
-      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
-
-      dlong et = eo+es; // element in block
-      if(et<pmlNelements){
-        e     = pmlElementIds[et];
-        pmlId = pmlIds[et];
-
-        const dlong id = e*p_Nfields*p_Np + n;
-        #pragma unroll p_Nfields
-        for(int fld=0; fld<p_Nfields;++fld){
-          s_q[es][fld][n] = q[id+fld*p_Np];
-        }
-      }
-      }
-    }
-
-    // make sure all node data is loaded into @shared
-    @barrier("local");
-
-    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
-      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element 
-      dlong et = eo+es; // element in block
-      if(et<pmlNelements){  
-
-        // prefetch geometric factors 
-        const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
-        const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
-        const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
-        const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
-        
-        // Pack register variables into arrays 
-        // dfloat r_pmlqx[p_Nfields], r_pmlqy[p_Nfields];
-        dfloat r_dqdr[p_Nfields],  r_dqds[p_Nfields];
-        dfloat r_dqdx[p_Nfields],  r_dqdy[p_Nfields];
-        dfloat r_Aqx[p_Nfields],   r_Bqy[p_Nfields];
-        dfloat r_N[p_Nfields];
-        
-        // Initialize
-        #pragma unroll p_Nfields
-        for(int fld=0; fld<p_Nfields; ++fld){
-          //r_pmlqx[fld] = 0.f, r_pmlqy[fld] = 0.f; 
-          r_dqdr[fld]  = 0.f, r_dqds[fld]  = 0.f; 
-          r_dqdx[fld]  = 0.f, r_dqdy[fld]  = 0.f; 
-          r_N[fld]     = 0.f; 
-        }
-    
-        // Compute Derivatives
-        #pragma unroll p_Np
-        for(int i=0;i<p_Np;++i){
-          const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
-          const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
           #pragma unroll p_Nfields
           for(int fld=0; fld<p_Nfields; ++fld){
-            r_dqdr[fld] += Drni*s_q[es][fld][i];
-            r_dqds[fld] += Dsni*s_q[es][fld][i];
+            rhspmlq[pmlrhsId + 0*p_Nfields*p_Np + fld*p_Np] =  r_Aqx[fld];
+            rhspmlq[pmlrhsId + 1*p_Nfields*p_Np + fld*p_Np] =  r_Bqy[fld];
+            rhsq[id +fld*p_Np] =  r_Aqx[fld] + r_Bqy[fld] + r_f[fld];
           }
         }
-        
-        #pragma unroll p_Nfields
-        for(int fld=0; fld<p_Nfields; ++fld){
-          r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
-          r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
-        }
-  
-        // Compute volume flux for q, qx and qy
-        // A*dQ/dx
-        r_Aqx[0] = -p_sqrtRT*(r_dqdx[1]);
-        r_Aqx[1] = -p_sqrtRT*(r_dqdx[0] + p_sqrt2*r_dqdx[4]);  
-        r_Aqx[2] = -p_sqrtRT*(r_dqdx[3]);
-        r_Aqx[3] = -p_sqrtRT*(r_dqdx[2]);
-        r_Aqx[4] = -p_sqrtRT*p_sqrt2*r_dqdx[1];      
-        r_Aqx[5] =  0.f;
-
-        // B*dQ/dy
-        r_Bqy[0] = -p_sqrtRT*(r_dqdy[2]);
-        r_Bqy[1] = -p_sqrtRT*(r_dqdy[3]);  
-        r_Bqy[2] = -p_sqrtRT*(r_dqdy[0] + p_sqrt2*r_dqdy[5]);  
-        r_Bqy[3] = -p_sqrtRT*(r_dqdy[1]);    
-        r_Bqy[4] =  0.f;
-        r_Bqy[5] = -p_sqrtRT*p_sqrt2*r_dqdy[2];  
-
-        // body forcing 
-        r_N[0] = 0.f;
-        r_N[1] = fx*p_isqrtRT*s_q[es][0][n]; 
-        r_N[2] = fy*p_isqrtRT*s_q[es][0][n]; 
-        r_N[3] = fx*p_isqrtRT*s_q[es][2][n];
-        r_N[3] += fy*p_isqrtRT*s_q[es][1][n];
-        r_N[4] = p_sqrt2*fx*p_isqrtRT*s_q[es][1][n];
-        r_N[5] = p_sqrt2*fy*p_isqrtRT*s_q[es][2][n];
-
-        const dlong id = e*p_Nfields*p_Np + n;
-        dlong rhsId    = id;
-        dlong pmlrhsId = p_Nfields*pmlId*p_Np + n;
-
-        if(p_MRSAAB){
-          rhsId     += shift*offset;
-          pmlrhsId  += shift*pmloffset;
-        }
-          
-        #pragma unroll p_Nfields
-        for(int fld=0; fld<p_Nfields; ++fld){
-          pmlrhsqx[pmlrhsId + fld*p_Np] =  r_Aqx[fld];
-          pmlrhsqy[pmlrhsId + fld*p_Np] =  r_Bqy[fld];
-          rhsq[rhsId +fld*p_Np]         =  r_Aqx[fld] + r_Bqy[fld] + r_N[fld];
-           
-        }
-
       }
     }
   }
-  
 }
-}
-
-
 
 @kernel void bnsPmlVolumeTri2D(const dlong pmlNelements,
-            @restrict const  dlong *  pmlElementIds,
-            @restrict const  dlong *  pmlIds,
-            const dlong offset,
-            const dlong pmloffset,
-            const int   shift,
-            const dfloat fx,
-            const dfloat fy,
-            const dfloat fz,
-            @restrict const  dfloat *  vgeo,
-            @restrict const  dfloat *  pmlSigmaX,
-            @restrict const  dfloat *  pmlSigmaY, 
-            @restrict const  dfloat *  pmlSigmaZ, 
-            @restrict const  dfloat *  Dmatrices,
-            @restrict const  dfloat *  q,
-            @restrict const  dfloat *  pmlqx,
-            @restrict const  dfloat *  pmlqy,
-            @restrict const  dfloat *  pmlqz,
-            @restrict dfloat *  rhsq,
-            @restrict dfloat *  pmlrhsqx,
-            @restrict dfloat *  pmlrhsqy,
-            @restrict dfloat *  pmlrhsqz){
-  
+                              @restrict const  dlong *  pmlElementIds,
+                              @restrict const  dlong *  pmlIds,
+                              @restrict const  dfloat *  vgeo,
+                              @restrict const  dfloat *  Dmatrices,
+                              @restrict const  dfloat *  x,
+                              @restrict const  dfloat *  y,
+                              @restrict const  dfloat *  z,
+                              @restrict const  dfloat *  pmlSigma,
+                              const dfloat pmlAlpha,
+                              const dfloat t,
+                              const dfloat c,
+                              const dfloat nu,
+                              @restrict const  dfloat *  q,
+                              @restrict const  dfloat *  pmlq,
+                              @restrict dfloat *  rhsq,
+                              @restrict dfloat *  rhspmlq){
+
   for(dlong eo=0;eo<pmlNelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
     @shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
-    @exclusive dlong e, pmlId;
+    @exclusive dlong e;
+
+    @exclusive dfloat fx[p_NblockV], fy[p_NblockV];
 
     for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
       for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
 
-      dlong et = eo+es; // element in block
-      if(et<pmlNelements){
-        e     = pmlElementIds[et];
-        pmlId = pmlIds[et];
+        const dlong et = eo+es; // element in block
+        if(et<pmlNelements){
+          e = pmlElementIds[et];
+          const dlong id = e*p_Nfields*p_Np + n;
 
-        const dlong id = e*p_Nfields*p_Np + n;
-        #pragma unroll p_Nfields
-        for(int fld=0; fld<p_Nfields;++fld){
-          s_q[es][fld][n] = q[id+fld*p_Np];
+          #pragma unroll p_Nfields
+          for(int fld=0; fld<p_Nfields;++fld){
+            s_q[es][fld][n] = q[id+fld*p_Np];
+          }
+
+          const dfloat r =   s_q[es][0][n];
+          const dfloat u = c*s_q[es][1][n]/r;
+          const dfloat v = c*s_q[es][2][n]/r;
+
+          //Body force contribution
+          fx[es] = 0.0; fy[es] = 0.0;
+          bnsBodyForce2D(c, nu, t, x[e*p_Np+n], y[e*p_Np+n], r, u, v,
+                         &(fx[es]), &(fy[es]));
         }
-      }
       }
     }
 
@@ -352,111 +325,95 @@ SOFTWARE.
     @barrier("local");
 
     for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
-      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element 
-      dlong et = eo+es; // element in block
-      if(et<pmlNelements){
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+        const dlong et = eo+es; // element in block
+        if(et<pmlNelements){
 
-        // Pack register variables into arrays 
-        // dfloat r_pmlqx[p_Nfields], r_pmlqy[p_Nfields];
-        dfloat r_dqdr[p_Nfields],  r_dqds[p_Nfields];
-        dfloat r_dqdx[p_Nfields],  r_dqdy[p_Nfields];
-        dfloat r_Aqx[p_Nfields],   r_Bqy[p_Nfields];
-        dfloat r_N[p_Nfields];  
+          // Pack register variables into arrays
+          dfloat r_dqdr[p_Nfields],  r_dqds[p_Nfields];
+          dfloat r_dqdx[p_Nfields],  r_dqdy[p_Nfields];
+          dfloat r_Aqx[p_Nfields],   r_Bqy[p_Nfields];
+          dfloat r_f[p_Nfields];
 
-        // prefetch geometric factors 
-        const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
-        const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
-        const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
-        const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
-        // PML terms
-        const dfloat sigmaxe = pmlSigmaX[pmlId*p_Np+n];
-        const dfloat sigmaye = pmlSigmaY[pmlId*p_Np+n];
-        // M-PML sigma midification
-        const dfloat msigmaxe = sigmaxe + sigmaye*p_pmlAlpha;
-        const dfloat msigmaye = sigmaye + sigmaxe*p_pmlAlpha;
-        
-        //
-        dlong base    = e*p_Nfields*p_Np     + n;
-        dlong pmlbase = pmlId*p_Nfields*p_Np + n;
+          // prefetch geometric factors
+          const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+          const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+          const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+          const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+          // PML terms
+          const dlong pmlId = pmlIds[et];
+          const dfloat sigmaxe = pmlSigma[2*pmlId*p_Np+0*p_Np+n];
+          const dfloat sigmaye = pmlSigma[2*pmlId*p_Np+1*p_Np+n];
+          // M-PML sigma modification
+          const dfloat msigmaxe = sigmaxe + sigmaye*pmlAlpha;
+          const dfloat msigmaye = sigmaye + sigmaxe*pmlAlpha;
 
-         for(int fld = 0; fld<p_Nfields; fld++){
-          r_Aqx[fld] = -msigmaxe*pmlqx[pmlbase + fld*p_Np]; 
-          r_Bqy[fld] = -msigmaye*pmlqy[pmlbase + fld*p_Np]; 
-        }
+          const dlong base    = e *p_Nfields*p_Np + n;
+          const dlong pmlbase = pmlId*p_Npmlfields*p_Np + n;
 
-        // Update RHS index for MRSAAB
-        if(p_MRSAAB){
-          base     += shift*offset;
-          pmlbase  += shift*pmloffset;
-        }
+           for(int fld = 0; fld<p_Nfields; fld++){
+            r_Aqx[fld] = -msigmaxe*pmlq[pmlbase + 0*p_Nfields*p_Np + fld*p_Np];
+            r_Bqy[fld] = -msigmaye*pmlq[pmlbase + 1*p_Nfields*p_Np + fld*p_Np];
+          }
 
-        // Initialize
-        #pragma unroll p_Nfields
-        for(int fld=0; fld<p_Nfields; ++fld){
-          //r_pmlqx[fld] = 0.f, r_pmlqy[fld] = 0.f; 
-          r_dqdr[fld]  = 0.f, r_dqds[fld]  = 0.f; 
-          r_dqdx[fld]  = 0.f, r_dqdy[fld]  = 0.f; 
-          r_N[fld]     = 0.f; 
-        }
-    
-        // Compute Derivatives
-        #pragma unroll p_Np
-        for(int i=0;i<p_Np;++i){
-          const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
-          const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
+          // Initialize
           #pragma unroll p_Nfields
           for(int fld=0; fld<p_Nfields; ++fld){
-            r_dqdr[fld] += Drni*s_q[es][fld][i];
-            r_dqds[fld] += Dsni*s_q[es][fld][i];
+            r_dqdr[fld]  = 0.f, r_dqds[fld]  = 0.f;
+            r_dqdx[fld]  = 0.f, r_dqdy[fld]  = 0.f;
+            r_f[fld]     = 0.f;
+          }
+
+          // Compute Derivatives
+          #pragma unroll p_Np
+          for(int i=0;i<p_Np;++i){
+            const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
+            const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
+            #pragma unroll p_Nfields
+            for(int fld=0; fld<p_Nfields; ++fld){
+              r_dqdr[fld] += Drni*s_q[es][fld][i];
+              r_dqds[fld] += Dsni*s_q[es][fld][i];
+            }
+          }
+
+          #pragma unroll p_Nfields
+          for(int fld=0; fld<p_Nfields; ++fld){
+            r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
+            r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
+          }
+
+          // Compute volume flux for q, qx and qy
+          // A*dQ/dx
+          r_Aqx[0] -= c*(r_dqdx[1]);
+          r_Aqx[1] -= c*(r_dqdx[0] + sqrt(2.0)*r_dqdx[4]);
+          r_Aqx[2] -= c*(r_dqdx[3]);
+          r_Aqx[3] -= c*(r_dqdx[2]);
+          r_Aqx[4] -= c*sqrt(2.0)*r_dqdx[1];
+          r_Aqx[5] -= 0.f;
+
+          // B*dQ/dy
+          r_Bqy[0] -= c*(r_dqdy[2]);
+          r_Bqy[1] -= c*(r_dqdy[3]);
+          r_Bqy[2] -= c*(r_dqdy[0] + sqrt(2.0)*r_dqdy[5]);
+          r_Bqy[3] -= c*(r_dqdy[1]);
+          r_Bqy[4] -= 0.f;
+          r_Bqy[5] -= c*sqrt(2.0)*r_dqdy[2];
+
+          // body forcing
+          r_f[1] += fx[es]*s_q[es][0][n]/c;
+          r_f[2] += fy[es]*s_q[es][0][n]/c;
+          r_f[3] += fx[es]*s_q[es][2][n]/c + fy[es]*s_q[es][1][n]/c;
+          r_f[4] += fx[es]*sqrt(2.0)*s_q[es][1][n]/c;
+          r_f[5] += fy[es]*sqrt(2.0)*s_q[es][2][n]/c;
+
+          #pragma unroll p_Nfields
+          for(int fld=0; fld<p_Nfields; ++fld){
+            rhspmlq[pmlbase + 0*p_Nfields*p_Np + fld*p_Np] =  r_Aqx[fld];
+            rhspmlq[pmlbase + 1*p_Nfields*p_Np + fld*p_Np] =  r_Bqy[fld];
+            rhsq[base +fld*p_Np] = r_Aqx[fld] + r_Bqy[fld] + r_f[fld];
           }
         }
-        
-        #pragma unroll p_Nfields
-        for(int fld=0; fld<p_Nfields; ++fld){
-          r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
-          r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
-        }
-  
-        // Compute volume flux for q, qx and qy
-        // A*dQ/dx
-        r_Aqx[0] -= p_sqrtRT*(r_dqdx[1]);
-        r_Aqx[1] -= p_sqrtRT*(r_dqdx[0] + p_sqrt2*r_dqdx[4]);  
-        r_Aqx[2] -= p_sqrtRT*(r_dqdx[3]);
-        r_Aqx[3] -= p_sqrtRT*(r_dqdx[2]);
-        r_Aqx[4] -= p_sqrtRT*p_sqrt2*r_dqdx[1];      
-        r_Aqx[5] -= 0.f;
-
-        // B*dQ/dy
-        r_Bqy[0] -= p_sqrtRT*(r_dqdy[2]);
-        r_Bqy[1] -= p_sqrtRT*(r_dqdy[3]);  
-        r_Bqy[2] -= p_sqrtRT*(r_dqdy[0] + p_sqrt2*r_dqdy[5]);  
-        r_Bqy[3] -= p_sqrtRT*(r_dqdy[1]);    
-        r_Bqy[4] -= 0.f;
-        r_Bqy[5] -= p_sqrtRT*p_sqrt2*r_dqdy[2];  
-
-        // body forcing 
-        r_N[0] = 0.f;
-
-        r_N[1] = fx*p_isqrtRT*s_q[es][0][n]; 
-        r_N[3] = fx*p_isqrtRT*s_q[es][2][n];
-        r_N[4]  = p_sqrt2*fx*p_isqrtRT*s_q[es][1][n];
-
-        r_N[2] = fy*p_isqrtRT*s_q[es][0][n]; 
-        r_N[3] += fy*p_isqrtRT*s_q[es][1][n];
-        r_N[5]  = p_sqrt2*fy*p_isqrtRT*s_q[es][2][n];
-
-        #pragma unroll p_Nfields
-        for(int fld=0; fld<p_Nfields; ++fld){
-          pmlrhsqx[pmlbase + fld*p_Np] =  r_Aqx[fld];
-          pmlrhsqy[pmlbase + fld*p_Np] =  r_Bqy[fld];
-          rhsq[base +fld*p_Np]         =  r_Aqx[fld] + r_Bqy[fld] + r_N[fld];
-           
-        }
-
       }
     }
   }
-  
 }
-}
-

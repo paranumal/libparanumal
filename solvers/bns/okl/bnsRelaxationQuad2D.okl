@@ -26,23 +26,18 @@ SOFTWARE.
 
 #define p_Nvars 3
 #define p_Nrelax 3
-// Start index of non-zero nonlinear terms
-#define p_qNs 3
-
-
-
 
 @kernel void bnsRelaxationQuad2D(const dlong Nelements,
                                @restrict const  dlong *  elementIds,
                                @restrict const  dfloat *  vgeo,
                                @restrict const  dfloat *  cubvgeo,
-                               const dlong offset,
-                               const int   shift,
                                @restrict const  dfloat *  cubInterpT,
                                @restrict const  dfloat *  cubProjectT,
+                               const int semiAnalytic,
+                               const dfloat tauInv,
                                @restrict const  dfloat *  q,
                                      @restrict dfloat *  rhsq){
-  
+
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
     // @shared memory for q at nodes
@@ -52,19 +47,19 @@ SOFTWARE.
 
     @shared dfloat s_cubInterpT[p_Nq][p_cubNq];
     @shared dfloat s_cubProjectT[p_cubNq][p_Nq];
-    
-    @exclusive dlong e; 
-    
+
+    @exclusive dlong e;
+
     //fetch the U and V values and store in flux arrays in @shared
-    for(int es=0;es<p_NblockV;++es;@inner(2)){   
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){    
+    for(int es=0;es<p_NblockV;++es;@inner(2)){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
           dlong et = eo+es; // element in block
           if (et<Nelements) {
             e = elementIds[et];
-            if ((i<p_Nq) && (j<p_Nq)){ 
+            if ((i<p_Nq) && (j<p_Nq)){
               const dlong id = e*p_Nfields*p_Np + j*p_Nq + i;
-              
+
               #pragma unroll p_Nfields
               for(int fld=0; fld<p_Nfields;++fld){
                 s_q[es][fld][j][i] = q[id+fld*p_Np];
@@ -80,28 +75,26 @@ SOFTWARE.
         }
       }
     }
-      
+
     @barrier("local");
 
     //interpolate in i, store in register
-    for(int es=0;es<p_NblockV;++es;@inner(2)){   
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+    for(int es=0;es<p_NblockV;++es;@inner(2)){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
         for(int i=0;i<p_cubNq;++i;@inner(0)){
           if (j<p_Nq) {
 
             for(int fld=0; fld<p_Nfields; fld++)
-              r_q[fld] = 0.f; 
-            
+              r_q[fld] = 0.f;
 
             #pragma unroll p_Nq
             for (int n=0;n<p_Nq;n++) {
               const dfloat Ini = s_cubInterpT[n][i];
               #pragma unroll p_Nfields
               for(int fld=0; fld<p_Nfields; fld++){
-                r_q[fld]  += Ini*s_q[es][fld][j][n];                
+                r_q[fld]  += Ini*s_q[es][fld][j][n];
               }
             }
-
           }
         }
       }
@@ -110,12 +103,12 @@ SOFTWARE.
     @barrier("local");
 
     //write register back to @shared
-    for(int es=0;es<p_NblockV;++es;@inner(2)){   
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+    for(int es=0;es<p_NblockV;++es;@inner(2)){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
         for(int i=0;i<p_cubNq;++i;@inner(0)){
           if (j<p_Nq) {
             for(int fld=0; fld<p_Nfields; fld++){
-              s_q[es][fld][j][i] = r_q[fld];              
+              s_q[es][fld][j][i] = r_q[fld];
             }
           }
         }
@@ -126,21 +119,21 @@ SOFTWARE.
 
 
     //interpolate in j, store in register
-    for(int es=0;es<p_NblockV;++es;@inner(2)){   
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+    for(int es=0;es<p_NblockV;++es;@inner(2)){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
         for(int i=0;i<p_cubNq;++i;@inner(0)){
-         
+
           for(int fld=0; fld<p_Nfields; fld++)
-            r_q[fld] = 0.f; 
-  
+            r_q[fld] = 0.f;
+
           #pragma unroll p_Nq
           for (int n=0;n<p_Nq;n++) {
             const dfloat Ini = s_cubInterpT[n][j];
             // #pragma unroll p_Nfields
             for(int fld=0; fld<p_Nfields; fld++){
-              r_q[fld]  += Ini*s_q[es][fld][n][i];                
+              r_q[fld]  += Ini*s_q[es][fld][n][i];
             }
-          }   
+          }
         }
       }
     }
@@ -148,27 +141,26 @@ SOFTWARE.
     @barrier("local");
 
     //construct nonlinear term from registers
-    for(int es=0;es<p_NblockV;++es;@inner(2)){   
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+    for(int es=0;es<p_NblockV;++es;@inner(2)){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
         for(int i=0;i<p_cubNq;++i;@inner(0)){
           dlong et = eo+es; // element in block
           if(et<Nelements) {
             const dlong gid = e*p_cubNp*p_Nvgeo+ j*p_cubNq +i;
             const dfloat J = cubvgeo[gid + p_JID*p_cubNp];
 
-            dfloat icubq1 = 1.f/r_q[0];
-            if(p_SEMI_ANALYTIC){
+            if(semiAnalytic){
               // BGK relaxation approximation to the Boltzmann collision operator
-              s_q[es][3][j][i] =  J*p_tauInv*(           r_q[1]*r_q[2]*icubq1);
-              s_q[es][4][j][i] =  J*p_tauInv*(p_invsqrt2*r_q[1]*r_q[1]*icubq1);
-              s_q[es][5][j][i] =  J*p_tauInv*(p_invsqrt2*r_q[2]*r_q[2]*icubq1); 
+              s_q[es][3][j][i] =  J*tauInv*(r_q[1]*r_q[2]/(r_q[0]          ));
+              s_q[es][4][j][i] =  J*tauInv*(r_q[1]*r_q[1]/(r_q[0]*sqrt(2.0)));
+              s_q[es][5][j][i] =  J*tauInv*(r_q[2]*r_q[2]/(r_q[0]*sqrt(2.0)));
             }else{
               // BGK relaxation approximation to the Boltzmann collision operator
               // can be simplified by seperating linear part
-              s_q[es][3][j][i] = -J*p_tauInv*(r_q[3] -            r_q[1]*r_q[2]*icubq1);
-              s_q[es][4][j][i] = -J*p_tauInv*(r_q[4] - p_invsqrt2*r_q[1]*r_q[1]*icubq1);
-              s_q[es][5][j][i] = -J*p_tauInv*(r_q[5] - p_invsqrt2*r_q[2]*r_q[2]*icubq1);
-            }         
+              s_q[es][3][j][i] = -J*tauInv*(r_q[3] - r_q[1]*r_q[2]/(r_q[0]          ));
+              s_q[es][4][j][i] = -J*tauInv*(r_q[4] - r_q[1]*r_q[1]/(r_q[0]*sqrt(2.0)));
+              s_q[es][5][j][i] = -J*tauInv*(r_q[5] - r_q[2]*r_q[2]/(r_q[0]*sqrt(2.0)));
+            }
           }
         }
       }
@@ -177,19 +169,19 @@ SOFTWARE.
     @barrier("local");
 
     //project in j
-    for(int es=0;es<p_NblockV;++es;@inner(2)){   
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+    for(int es=0;es<p_NblockV;++es;@inner(2)){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
         for(int i=0;i<p_cubNq;++i;@inner(0)){
 
-          for(int fld=0; fld<p_Nfields; fld++)
-            r_q[fld] = 0.f; 
+          for(int fld=0; fld<p_Nrelax; fld++)
+            r_q[fld] = 0.f;
 
           if (j<p_Nq) {
             #pragma unroll p_cubNq
             for (int n=0;n<p_cubNq;n++) {
               const dfloat Pnj = s_cubProjectT[n][j];
-              for(int fld=p_qNs; fld<p_Nfields; fld++){
-                r_q[fld] += Pnj*s_q[es][fld][n][i];
+              for(int fld=0; fld<p_Nrelax; fld++){
+                r_q[fld] += Pnj*s_q[es][fld+p_Nvars][n][i];
               }
             }
           }
@@ -197,15 +189,15 @@ SOFTWARE.
       }
     }
 
-    @barrier("local"); 
+    @barrier("local");
 
     //write register back to @shared
-    for(int es=0;es<p_NblockV;++es;@inner(2)){   
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
+    for(int es=0;es<p_NblockV;++es;@inner(2)){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
         for(int i=0;i<p_cubNq;++i;@inner(0)){
           if (j<p_Nq) {
-            for(int fld=p_qNs; fld<p_Nfields; fld++){
-              s_q[es][fld][j][i] = r_q[fld];              
+            for(int fld=0; fld<p_Nrelax; fld++){
+              s_q[es][fld][j][i] = r_q[fld];
             }
           }
         }
@@ -215,41 +207,37 @@ SOFTWARE.
     @barrier("local");
 
     // project in i and update
-    for(int es=0;es<p_NblockV;++es;@inner(2)){ 
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){  
+    for(int es=0;es<p_NblockV;++es;@inner(2)){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
           const dlong et = eo+es; // element in block
-          if((et<Nelements) && (i<p_Nq) && (j<p_Nq)){ 
+          if((et<Nelements) && (i<p_Nq) && (j<p_Nq)){
             const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
             const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
 
-            for(int fld=0; fld<p_Nfields; fld++)
-              r_q[fld] = 0.f; 
+            for(int fld=0; fld<p_Nrelax; fld++)
+              r_q[fld] = 0.f;
 
 
             #pragma unroll p_cubNq
             for(int n=0;n<p_cubNq;++n){
               const dfloat Pni = s_cubProjectT[n][i];
-              for(int fld=p_qNs; fld<p_Nfields; fld++){
+              for(int fld=0; fld<p_Nrelax; fld++){
                 r_q[fld] += Pni*s_q[es][fld][j][n];
               }
             }
 
-            dlong rhsId = e*p_Np*p_Nfields + j*p_Nq + i;
-             // 
-              if(p_MRSAAB)
-                rhsId     += shift*offset;
-              
-            for(int fld=p_qNs; fld<p_Nfields; fld++){
-              rhsq[rhsId + fld*p_Np]  += invJW*r_q[fld];
+            const dlong rhsId = e*p_Np*p_Nfields + j*p_Nq + i;
+
+            for(int fld=0; fld<p_Nrelax; fld++){
+              rhsq[rhsId + (fld+p_Nvars)*p_Np]  += invJW*r_q[fld];
             }
           }
         }
       }
     }
-
-  }  
-} 
+  }
+}
 
 
 
@@ -260,29 +248,23 @@ SOFTWARE.
                                   @restrict const  dlong *  pmlIds,
                                   @restrict const  dfloat *  vgeo,
                                   @restrict const  dfloat *  cubvgeo,
-                                  const dlong offset,
-                                  const dlong pmloffset,
-                                  const int   shift,
                                   @restrict const  dfloat *  cubInterpT,
                                   @restrict const  dfloat *  cubProjectT,
-                                  @restrict const  dfloat *  pmlSigmaX,
-                                  @restrict const  dfloat *  pmlSigmaY, 
-                                  @restrict const  dfloat *  pmlSigmaZ, 
+                                  @restrict const  dfloat *  pmlSigma,
+                                            const dfloat pmlAlpha,
+                                            const int semiAnalytic,
+                                            const dfloat tauInv,
                                   @restrict const  dfloat *  q,
-                                  @restrict const  dfloat *  pmlqx,
-                                  @restrict const  dfloat *  pmlqy,
-                                  @restrict const  dfloat *  pmlqz,
+                                  @restrict const  dfloat *  pmlq,
                                         @restrict dfloat *  rhsq,
-                                        @restrict dfloat *  pmlrhsqx,
-                                        @restrict dfloat *  pmlrhsqy,
-                                        @restrict dfloat *  pmlrhsqz){
+                                        @restrict dfloat *  rhspmlq){
 
-  for(dlong eo=0;eo<pmlNelements;eo+=p_NblockV;@outer(0)){  // for all elements
+  for(dlong et=0;et<pmlNelements;et++;@outer(0)){  // for all elements
 
     // @shared memory for q at nodes
-    @shared dfloat s_q[p_NblockV][p_Nfields][p_cubNq][p_cubNq];
-    @shared dfloat s_qx[p_NblockV][p_Nfields][p_cubNq][p_cubNq];
-    @shared dfloat s_qy[p_NblockV][p_Nfields][p_cubNq][p_cubNq];
+    @shared dfloat s_q[p_Nfields][p_cubNq][p_cubNq];
+    @shared dfloat s_qx[p_Nfields][p_cubNq][p_cubNq];
+    @shared dfloat s_qy[p_Nfields][p_cubNq][p_cubNq];
 
     @exclusive dfloat r_q[p_Nfields];
     @exclusive dfloat r_qx[p_Nfields];
@@ -290,66 +272,57 @@ SOFTWARE.
 
     @shared dfloat s_cubInterpT[p_Nq][p_cubNq];
     @shared dfloat s_cubProjectT[p_cubNq][p_Nq];
-    
-     @exclusive dlong e, pmlId; 
 
+    @exclusive dlong e, pmlId;
 
-     //fetch the U and V values and store in flux arrays in @shared
-    for(int es=0;es<p_NblockV;++es;@inner(2)){   
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){    
-          dlong et = eo+es; // element in block
-          if(et<pmlNelements){ 
-              e     = pmlElementIds[et];
-              pmlId = pmlIds[et];
+    //fetch the U and V values and store in flux arrays in @shared
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        e     = pmlElementIds[et];
+        pmlId = pmlIds[et];
 
-              if( (i<p_Nq) && (j<p_Nq)){
-                const dlong id =  e*p_Nfields*p_Np + j*p_Nq + i;
-                const dlong pid = pmlId*p_Nfields*p_Np + j*p_Nq + i;
-                
-                #pragma unroll p_Nfields
-                for(int fld=0; fld<p_Nfields;++fld){
-                  s_q[es][fld][j][i]  = q[id+fld*p_Np];
-                  s_qx[es][fld][j][i] = pmlqx[pid+fld*p_Np];
-                  s_qy[es][fld][j][i] = pmlqy[pid+fld*p_Np];
-                }
-              }
+        if( (i<p_Nq) && (j<p_Nq)){
+          const dlong id =  e*p_Nfields*p_Np + j*p_Nq + i;
+          const dlong pid = pmlId*p_Npmlfields*p_Np + j*p_Nq + i;
+
+          #pragma unroll p_Nfields
+          for(int fld=0; fld<p_Nfields;++fld){
+            s_q[fld][j][i]  = q[id+fld*p_Np];
+            s_qx[fld][j][i] = pmlq[pid + 0*p_Np*p_Nfields + fld*p_Np];
+            s_qy[fld][j][i] = pmlq[pid + 1*p_Np*p_Nfields + fld*p_Np];
           }
+        }
 
-            const int ids = i+j*p_cubNq;
-            if ((es==0) && (ids<p_Nq*p_cubNq)) {
-              s_cubInterpT[0][ids] = cubInterpT[ids];
-              s_cubProjectT[0][ids] = cubProjectT[ids];
-            }
+        const int ids = i+j*p_cubNq;
+        if (ids<p_Nq*p_cubNq) {
+          s_cubInterpT[0][ids] = cubInterpT[ids];
+          s_cubProjectT[0][ids] = cubProjectT[ids];
         }
       }
     }
-      
+
     @barrier("local");
 
     //interpolate in i, store in register
-    for(int es=0;es<p_NblockV;++es;@inner(2)){   
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){
-          if (j<p_Nq) {
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        if (j<p_Nq) {
 
+          for(int fld=0; fld<p_Nfields; fld++){
+            r_q[fld] = 0.f;
+            r_qx[fld] = 0.f;
+            r_qy[fld] = 0.f;
+          }
+
+          #pragma unroll p_Nq
+          for (int n=0;n<p_Nq;n++) {
+            const dfloat Ini = s_cubInterpT[n][i];
+            #pragma unroll p_Nfields
             for(int fld=0; fld<p_Nfields; fld++){
-              r_q[fld] = 0.f; 
-              r_qx[fld] = 0.f; 
-              r_qy[fld] = 0.f; 
+              r_q[fld]   += Ini*s_q[fld][j][n];
+              r_qx[fld]  += Ini*s_qx[fld][j][n];
+              r_qy[fld]  += Ini*s_qy[fld][j][n];
             }
-
-            #pragma unroll p_Nq
-            for (int n=0;n<p_Nq;n++) {
-              const dfloat Ini = s_cubInterpT[n][i];
-              #pragma unroll p_Nfields
-              for(int fld=0; fld<p_Nfields; fld++){
-                r_q[fld]   += Ini*s_q[es][fld][j][n];                
-                r_qx[fld]  += Ini*s_qx[es][fld][j][n];                
-                r_qy[fld]  += Ini*s_qy[es][fld][j][n];                
-              }
-            }
-
           }
         }
       }
@@ -358,15 +331,13 @@ SOFTWARE.
     @barrier("local");
 
     //write register back to @shared
-    for(int es=0;es<p_NblockV;++es;@inner(2)){   
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){
-          if (j<p_Nq) {
-            for(int fld=0; fld<p_Nfields; fld++){
-              s_q[es][fld][j][i]  = r_q[fld];              
-              s_qx[es][fld][j][i] = r_qx[fld];              
-              s_qy[es][fld][j][i] = r_qy[fld];              
-            }
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        if (j<p_Nq) {
+          for(int fld=0; fld<p_Nfields; fld++){
+            s_q[fld][j][i]  = r_q[fld];
+            s_qx[fld][j][i] = r_qx[fld];
+            s_qy[fld][j][i] = r_qy[fld];
           }
         }
       }
@@ -375,25 +346,23 @@ SOFTWARE.
     @barrier("local");
 
      //interpolate in j, store in register
-    for(int es=0;es<p_NblockV;++es;@inner(2)){   
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){
-         
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+
+        for(int fld=0; fld<p_Nfields; fld++){
+          r_q[fld]  = 0.f;
+          r_qx[fld] = 0.f;
+          r_qy[fld] = 0.f;
+        }
+        #pragma unroll p_Nq
+        for (int n=0;n<p_Nq;n++) {
+          const dfloat Ini = s_cubInterpT[n][j];
+          #pragma unroll p_Nfields
           for(int fld=0; fld<p_Nfields; fld++){
-            r_q[fld]  = 0.f; 
-            r_qx[fld] = 0.f; 
-            r_qy[fld] = 0.f; 
+            r_q[fld]   += Ini*s_q[fld][n][i];
+            r_qx[fld]  += Ini*s_qx[fld][n][i];
+            r_qy[fld]  += Ini*s_qy[fld][n][i];
           }
-          #pragma unroll p_Nq
-          for (int n=0;n<p_Nq;n++) {
-            const dfloat Ini = s_cubInterpT[n][j];
-            #pragma unroll p_Nfields
-            for(int fld=0; fld<p_Nfields; fld++){
-              r_q[fld]   += Ini*s_q[es][fld][n][i];                
-              r_qx[fld]  += Ini*s_qx[es][fld][n][i];                
-              r_qy[fld]  += Ini*s_qy[es][fld][n][i];                
-            }
-          }   
         }
       }
     }
@@ -401,67 +370,59 @@ SOFTWARE.
     @barrier("local");
 
     //construct nonlinear term from registers
-    for(int es=0;es<p_NblockV;++es;@inner(2)){   
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){
-          dlong et = eo+es; // element in block
-          if(et<pmlNelements) {
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
 
-            const dlong gid = e*p_cubNp*p_Nvgeo+ j*p_cubNq +i;
-            const dfloat J = cubvgeo[gid + p_JID*p_cubNp];
+        const dlong gid = e*p_cubNp*p_Nvgeo+ j*p_cubNq +i;
+        const dfloat J = cubvgeo[gid + p_JID*p_cubNp];
 
-            // Prefetch sigma
-            const dfloat sigmaxe = pmlSigmaX[pmlId*p_cubNp + j*p_cubNq + i];
-            const dfloat sigmaye = pmlSigmaY[pmlId*p_cubNp + j*p_cubNq + i];
-            // M-PML sigma midification
-            const dfloat msigmaxe = sigmaxe + sigmaye*p_pmlAlpha;
-            const dfloat msigmaye = sigmaye + sigmaxe*p_pmlAlpha;
+        // Prefetch sigma
+        const dfloat sigmaxe = pmlSigma[2*pmlId*p_cubNp + 0*p_cubNp + j*p_cubNq + i];
+        const dfloat sigmaye = pmlSigma[2*pmlId*p_cubNp + 1*p_cubNp + j*p_cubNq + i];
+        // M-PML sigma midification
+        const dfloat msigmaxe = sigmaxe + sigmaye*pmlAlpha;
+        const dfloat msigmaye = sigmaye + sigmaxe*pmlAlpha;
 
-            #pragma unroll p_Nfields
-            for(int fld=0; fld<p_Nfields ; fld++){
-              s_qx[es][fld][j][i] = -J*msigmaxe*r_qx[fld];
-              s_qy[es][fld][j][i] = -J*msigmaye*r_qy[fld];
-              s_q [es][fld][j][i] = -J*(msigmaxe*r_qx[fld] + msigmaye*r_qy[fld]);
-            }
+        #pragma unroll p_Nfields
+        for(int fld=0; fld<p_Nfields ; fld++){
+          s_qx[fld][j][i] = -J*msigmaxe*r_qx[fld];
+          s_qy[fld][j][i] = -J*msigmaye*r_qy[fld];
+          s_q [fld][j][i] = -J*(msigmaxe*r_qx[fld] + msigmaye*r_qy[fld]);
+        }
 
-            dfloat icubq1 = 1.f/r_q[0];
-            if(p_SEMI_ANALYTIC){
-            // BGK relaxation approximation to the Boltzmann collision operator
-              s_q[es][3][j][i] +=  J*p_tauInv*(           r_q[1]*r_q[2]*icubq1);
-              s_q[es][4][j][i] +=  J*p_tauInv*(p_invsqrt2*r_q[1]*r_q[1]*icubq1);
-              s_q[es][5][j][i] +=  J*p_tauInv*(p_invsqrt2*r_q[2]*r_q[2]*icubq1); 
-            }else{
-              // can be simplified by seperating linear part
-              s_q[es][3][j][i] -= J*p_tauInv*(r_q[3] -            r_q[1]*r_q[2]*icubq1);
-              s_q[es][4][j][i] -= J*p_tauInv*(r_q[4] - p_invsqrt2*r_q[1]*r_q[1]*icubq1);
-              s_q[es][5][j][i] -= J*p_tauInv*(r_q[5] - p_invsqrt2*r_q[2]*r_q[2]*icubq1);
-            } 
-          }        
+        if(semiAnalytic){
+        // BGK relaxation approximation to the Boltzmann collision operator
+          s_q[3][j][i] +=  J*tauInv*(r_q[1]*r_q[2]/(r_q[0]          ));
+          s_q[4][j][i] +=  J*tauInv*(r_q[1]*r_q[1]/(r_q[0]*sqrt(2.0)));
+          s_q[5][j][i] +=  J*tauInv*(r_q[2]*r_q[2]/(r_q[0]*sqrt(2.0)));
+        }else{
+          // can be simplified by seperating linear part
+          s_q[3][j][i] -= J*tauInv*(r_q[3] - r_q[1]*r_q[2]/(r_q[0]          ));
+          s_q[4][j][i] -= J*tauInv*(r_q[4] - r_q[1]*r_q[1]/(r_q[0]*sqrt(2.0)));
+          s_q[5][j][i] -= J*tauInv*(r_q[5] - r_q[2]*r_q[2]/(r_q[0]*sqrt(2.0)));
         }
       }
     }
 
-    
+
     @barrier("local");
 
     //project in j
-    for(int es=0;es<p_NblockV;++es;@inner(2)){   
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){
-          for(int fld=0; fld<p_Nfields; fld++){
-            r_q[fld]  = 0.f; 
-            r_qx[fld] = 0.f; 
-            r_qy[fld] = 0.f; 
-          }
-          if (j<p_Nq) {
-            #pragma unroll p_cubNq
-            for (int n=0;n<p_cubNq;n++) {
-              const dfloat Pnj = s_cubProjectT[n][j];
-              for(int fld=0; fld<p_Nfields; fld++){
-                r_q[fld]  += Pnj*s_q[es][fld][n][i];
-                r_qx[fld] += Pnj*s_qx[es][fld][n][i];
-                r_qy[fld] += Pnj*s_qy[es][fld][n][i];
-              }
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        for(int fld=0; fld<p_Nfields; fld++){
+          r_q[fld]  = 0.f;
+          r_qx[fld] = 0.f;
+          r_qy[fld] = 0.f;
+        }
+        if (j<p_Nq) {
+          #pragma unroll p_cubNq
+          for (int n=0;n<p_cubNq;n++) {
+            const dfloat Pnj = s_cubProjectT[n][j];
+            for(int fld=0; fld<p_Nfields; fld++){
+              r_q[fld]  += Pnj*s_q[fld][n][i];
+              r_qx[fld] += Pnj*s_qx[fld][n][i];
+              r_qy[fld] += Pnj*s_qy[fld][n][i];
             }
           }
         }
@@ -471,15 +432,13 @@ SOFTWARE.
     @barrier("local");
 
     //write register back to @shared
-    for(int es=0;es<p_NblockV;++es;@inner(2)){   
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){
-          if (j<p_Nq) {
-            for(int fld=0; fld<p_Nfields; fld++){
-              s_q[es][fld][j][i]  = r_q[fld];              
-              s_qx[es][fld][j][i] = r_qx[fld];              
-              s_qy[es][fld][j][i] = r_qy[fld];              
-            }
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        if (j<p_Nq) {
+          for(int fld=0; fld<p_Nfields; fld++){
+            s_q[fld][j][i]  = r_q[fld];
+            s_qx[fld][j][i] = r_qx[fld];
+            s_qy[fld][j][i] = r_qy[fld];
           }
         }
       }
@@ -488,932 +447,38 @@ SOFTWARE.
     @barrier("local");
 
     // project in i and update
-    for(int es=0;es<p_NblockV;++es;@inner(2)){ 
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){  
-          const dlong et = eo+es; // element in block
-          if((et<pmlNelements) && (i<p_Nq) && (j<p_Nq)){ 
-            const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
-            const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        if((i<p_Nq) && (j<p_Nq)){
+          const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
+          const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
 
+          for(int fld=0; fld<p_Nfields; fld++){
+            r_q[fld] = 0.f;
+            r_qx[fld] = 0.f;
+            r_qy[fld] = 0.f;
+          }
+
+          #pragma unroll p_cubNq
+          for(int n=0;n<p_cubNq;++n){
+            const dfloat Pni = s_cubProjectT[n][i];
             for(int fld=0; fld<p_Nfields; fld++){
-              r_q[fld] = 0.f; 
-              r_qx[fld] = 0.f; 
-              r_qy[fld] = 0.f; 
-            }
-
-            #pragma unroll p_cubNq
-            for(int n=0;n<p_cubNq;++n){
-              const dfloat Pni = s_cubProjectT[n][i];
-              for(int fld=0; fld<p_Nfields; fld++){
-                r_q[fld]  += Pni*s_q[es][fld][j][n];
-                r_qx[fld] += Pni*s_qx[es][fld][j][n];
-                r_qy[fld] += Pni*s_qy[es][fld][j][n];
-              }
-            }
-
-            dlong rhsId    = e*p_Np*p_Nfields + j*p_Nq + i;
-            dlong pmlRhsId = pmlId*p_Np*p_Nfields + j*p_Nq + i;
-            // 
-            if(p_MRSAAB){
-              rhsId     += shift*offset;
-              pmlRhsId  += shift*pmloffset;
-            }
-
-            for(int fld=0; fld<p_Nfields; fld++){
-              pmlrhsqx[pmlRhsId + fld*p_Np] += invJW*r_qx[fld];
-              pmlrhsqy[pmlRhsId + fld*p_Np] += invJW*r_qy[fld];
-              rhsq[rhsId + fld*p_Np]        += invJW*r_q[fld];
+              r_q[fld]  += Pni*s_q[fld][j][n];
+              r_qx[fld] += Pni*s_qx[fld][j][n];
+              r_qy[fld] += Pni*s_qy[fld][j][n];
             }
           }
+
+          const dlong rhsId    = e*p_Np*p_Nfields + j*p_Nq + i;
+          const dlong pmlRhsId = pmlId*p_Np*p_Npmlfields + j*p_Nq + i;
+
+          for(int fld=0; fld<p_Nfields; fld++){
+            rhspmlq[pmlRhsId + 0*p_Np*p_Nfields + fld*p_Np] += invJW*r_qx[fld];
+            rhspmlq[pmlRhsId + 1*p_Np*p_Nfields + fld*p_Np] += invJW*r_qy[fld];
+            rhsq[rhsId + fld*p_Np] += invJW*r_q[fld];
+          }
         }
-     }
+      }
     }
   }
 }
-
-
-
-
-
-// Very similar to the non-pml @kernel
-@kernel void bnsPmlRelaxationQuad2D(const dlong pmlNelements,
-                                  @restrict const  dlong *  pmlElementIds,
-                                  @restrict const  dlong *  pmlIds,
-                                  @restrict const  dfloat *  vgeo,
-                                  @restrict const  dfloat *  cubvgeo,
-                                  const dlong offset,
-                                  const dlong pmloffset,
-                                  const int   shift,
-                                  @restrict const  dfloat *  cubInterpT,
-                                  @restrict const  dfloat *  cubProjectT,
-                                  @restrict const  dfloat *  q,
-                                        @restrict dfloat *  rhsq){
-  for(dlong eo=0;eo<pmlNelements;eo+=p_NblockV;@outer(0)){  // for all elements
-
-    // @shared memory for q at nodes
-    @shared dfloat s_q[p_NblockV][p_Nfields][p_cubNq][p_cubNq];
-
-    @exclusive dfloat r_q[p_Nfields];
-
-    @shared dfloat s_cubInterpT[p_Nq][p_cubNq];
-    @shared dfloat s_cubProjectT[p_cubNq][p_Nq];
-    
-    @exclusive dlong e; 
-    
-    //fetch the U and V values and store in flux arrays in @shared
-    for(int es=0;es<p_NblockV;++es;@inner(2)){   
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){    
-          dlong et = eo+es; // element in block
-          if (et<pmlNelements) {
-            e = pmlElementIds[et];
-            if ((i<p_Nq) && (j<p_Nq)){ 
-              const dlong id = e*p_Nfields*p_Np + j*p_Nq + i;
-              
-              #pragma unroll p_Nfields
-              for(int fld=0; fld<p_Nfields;++fld){
-                s_q[es][fld][j][i] = q[id+fld*p_Np];
-              }
-            }
-          }
-
-          const int ids = i+j*p_cubNq;
-          if ((es==0) && (ids<p_Nq*p_cubNq)) {
-            s_cubInterpT[0][ids] = cubInterpT[ids];
-            s_cubProjectT[0][ids] = cubProjectT[ids];
-          }
-        }
-      }
-    }
-      
-    @barrier("local");
-
-    //interpolate in i, store in register
-    for(int es=0;es<p_NblockV;++es;@inner(2)){   
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){
-          if (j<p_Nq) {
-
-            for(int fld=0; fld<p_Nfields; fld++)
-              r_q[fld] = 0.f; 
-            
-
-            #pragma unroll p_Nq
-            for (int n=0;n<p_Nq;n++) {
-              const dfloat Ini = s_cubInterpT[n][i];
-              #pragma unroll p_Nfields
-              for(int fld=0; fld<p_Nfields; fld++){
-                r_q[fld]  += Ini*s_q[es][fld][j][n];                
-              }
-            }
-
-          }
-        }
-      }
-    }
-
-    @barrier("local");
-
-    //write register back to @shared
-    for(int es=0;es<p_NblockV;++es;@inner(2)){   
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){
-          if (j<p_Nq) {
-            for(int fld=0; fld<p_Nfields; fld++){
-              s_q[es][fld][j][i] = r_q[fld];              
-            }
-          }
-        }
-      }
-    }
-
-    @barrier("local");
-
-
-    //interpolate in j, store in register
-    for(int es=0;es<p_NblockV;++es;@inner(2)){   
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){
-         
-          for(int fld=0; fld<p_Nfields; fld++)
-            r_q[fld] = 0.f; 
-  
-          #pragma unroll p_Nq
-          for (int n=0;n<p_Nq;n++) {
-            const dfloat Ini = s_cubInterpT[n][j];
-            // #pragma unroll p_Nfields
-            for(int fld=0; fld<p_Nfields; fld++){
-              r_q[fld]  += Ini*s_q[es][fld][n][i];                
-            }
-          }   
-        }
-      }
-    }
-
-    @barrier("local");
-
-    //construct nonlinear term from registers
-    for(int es=0;es<p_NblockV;++es;@inner(2)){   
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){
-          dlong et = eo+es; // element in block
-          if(et<pmlNelements) {
-            const dlong gid = e*p_cubNp*p_Nvgeo+ j*p_cubNq +i;
-            const dfloat J  = cubvgeo[gid + p_JID*p_cubNp];
-
-            dfloat icubq1 = 1.f/r_q[0];
-            if(p_SEMI_ANALYTIC){
-              // BGK relaxation approximation to the Boltzmann collision operator
-              s_q[es][3][j][i] =  J*p_tauInv*(           r_q[1]*r_q[2]*icubq1);
-              s_q[es][4][j][i] =  J*p_tauInv*(p_invsqrt2*r_q[1]*r_q[1]*icubq1);
-              s_q[es][5][j][i] =  J*p_tauInv*(p_invsqrt2*r_q[2]*r_q[2]*icubq1); 
-            }else{
-              // BGK relaxation approximation to the Boltzmann collision operator
-              // can be simplified by seperating linear part
-              s_q[es][3][j][i] = -J*p_tauInv*(r_q[3] -            r_q[1]*r_q[2]*icubq1);
-              s_q[es][4][j][i] = -J*p_tauInv*(r_q[4] - p_invsqrt2*r_q[1]*r_q[1]*icubq1);
-              s_q[es][5][j][i] = -J*p_tauInv*(r_q[5] - p_invsqrt2*r_q[2]*r_q[2]*icubq1);
-            }         
-          }
-        }
-      }
-    }
-
-    @barrier("local");
-
-    //project in j
-    for(int es=0;es<p_NblockV;++es;@inner(2)){   
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){
-
-          for(int fld=0; fld<p_Nfields; fld++)
-            r_q[fld] = 0.f; 
-
-          if (j<p_Nq) {
-            #pragma unroll p_cubNq
-            for (int n=0;n<p_cubNq;n++) {
-              const dfloat Pnj = s_cubProjectT[n][j];
-              for(int fld=p_qNs; fld<p_Nfields; fld++){
-                r_q[fld] += Pnj*s_q[es][fld][n][i];
-              }
-            }
-          }
-        }
-      }
-    }
-
-    @barrier("local"); 
-
-    //write register back to @shared
-    for(int es=0;es<p_NblockV;++es;@inner(2)){   
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){
-          if (j<p_Nq) {
-            for(int fld=p_qNs; fld<p_Nfields; fld++){
-              s_q[es][fld][j][i] = r_q[fld];              
-            }
-          }
-        }
-      }
-    }
-
-    @barrier("local");
-
-    // project in i and update
-    for(int es=0;es<p_NblockV;++es;@inner(2)){ 
-      for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-        for(int i=0;i<p_cubNq;++i;@inner(0)){  
-          const dlong et = eo+es; // element in block
-          if((et<pmlNelements) && (i<p_Nq) && (j<p_Nq)){ 
-            const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
-            const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
-
-            for(int fld=0; fld<p_Nfields; fld++)
-              r_q[fld] = 0.f; 
-
-
-            #pragma unroll p_cubNq
-            for(int n=0;n<p_cubNq;++n){
-              const dfloat Pni = s_cubProjectT[n][i];
-              for(int fld=p_qNs; fld<p_Nfields; fld++){
-                r_q[fld] += Pni*s_q[es][fld][j][n];
-              }
-            }
-
-            dlong rhsId = e*p_Np*p_Nfields + j*p_Nq + i;
-             // 
-              if(p_MRSAAB)
-                rhsId     += shift*offset;
-              
-            for(int fld=p_qNs; fld<p_Nfields; fld++){
-              rhsq[rhsId + fld*p_Np]  += invJW*r_q[fld];
-            }
-          }
-        }
-      }
-    }
-
-  }  
-} 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// // MRAB relaxation cub
-// @kernel void bnsRelaxationQuad2D(const dlong Nelements,
-//                                @restrict const  dlong *  elementIds,
-//                                const dlong offset,
-//                                const int   shift,
-//                                @restrict const  dfloat *  cubInterpT,
-//                                @restrict const  dfloat *  cubProjectT,
-//                                @restrict const  dfloat *  q,
-//                                      @restrict dfloat *  rhsq){
-  
-//   for(dlong eo=0;eo<Nelements;eo+=p_NblockCub;@outer(0)){  // for all elements
-
-//     // @shared memory for q at nodes
-//     @shared dfloat s_q[p_NblockCub][p_Nvars][p_Nq][p_Nq];
-//     @shared dfloat s_Iq[p_NblockCub][p_Nvars][p_Nq][p_cubNq];
-
-//     // sub-group of p_Np cubature node interpolants of N4,N5,N6
-//     @shared dfloat s_cubN4[p_NblockCub][p_Nvars][p_cubNq][p_cubNq];
-//     @shared dfloat s_cubN5[p_NblockCub][p_Nvars][p_cubNq][p_cubNq];
-//     @shared dfloat s_cubN6[p_NblockCub][p_Nvars][p_cubNq][p_cubNq];
-
-//     // storage for interpolation and projection matrices
-//     @shared dfloat s_cubInterpT[p_Nq][p_cubNq];
-//     @shared dfloat s_cubProjectT[p_cubNq][p_Nq];
-    
-//     @exclusive dlong e;
-    
-//     // prefetch q to @shared
-//     for(int es=0;es<p_NblockCub;++es;@inner(2)){
-//       for(int j=0;j<p_cubNq;++j;@inner(1)){
-//         for(int i=0;i<p_cubNq;++i;@inner(0)){
-
-//           dlong et = eo+es; // element in block
-//           if(et<Nelements){
-//             e = elementIds[et];
-
-//             int n=i+p_cubNq*j;
-//             while(n<p_Np*p_Nvars){ // chunk loading of q1,q2,q3
-//               const dlong id = e*p_Nfields*p_Np + n;
-//               s_q[es][0][0][n] = q[id];
-//                n+=p_cubNq*p_cubNq;
-//             }
-//           }
-
-//           int n = i + j*p_cubNq;
-//           if(n<p_cubNq*p_Nq && es==0){
-//             s_cubInterpT[0][n] = cubInterpT[n]; // rely on column major
-//             s_cubProjectT[0][n] = cubProjectT[n]; 
-//           }
-//         }
-//       }
-//     }
-
-//     // make sure all node data is loaded into @shared
-//     @barrier("local");
-    
-//     // interpolate q to cubature in 'r'
-//     for(int es=0;es<p_NblockCub;++es;@inner(2)){
-//       for(int j=0;j<p_cubNq;++j;@inner(1)){
-//         for(int i=0;i<p_cubNq;++i;@inner(0)){
-
-//           if(j<p_Nq){
-//             dfloat cubq1 = 0.0f, cubq2 = 0.0f, cubq3 = 0.0f;
-
-//             #pragma unroll p_Nq
-//             for(int m=0;m<p_Nq;++m){
-//               const dfloat Iim  = s_cubInterpT[m][i];
-//               cubq1 += Iim*s_q[es][0][j][m];
-//               cubq2 += Iim*s_q[es][1][j][m];
-//               cubq3 += Iim*s_q[es][2][j][m];
-//             }
-
-//             s_Iq[es][0][j][i] = cubq1;
-//             s_Iq[es][1][j][i] = cubq2;
-//             s_Iq[es][2][j][i] = cubq3;
-//           }
-//         }
-//       }
-//     }
-
-//     @barrier("local");
-
-//     // interpolate q to cubature in 's' and form nonlinear relaxation terms
-//     for(int es=0;es<p_NblockCub;++es;@inner(2)){
-//       for(int j=0;j<p_cubNq;++j;@inner(1)){
-//         for(int i=0;i<p_cubNq;++i;@inner(0)){
-//           dfloat cubq1 = 0.0f, cubq2 = 0.0f, cubq3 = 0.0f;
-
-//           #pragma unroll p_Nq
-//           for(int m=0;m<p_Nq;++m){
-//             const dfloat Ijm  = s_cubInterpT[m][j]; 
-//             cubq1 += Ijm*s_Iq[es][0][m][i];
-//             cubq2 += Ijm*s_Iq[es][1][m][i];
-//             cubq3 += Ijm*s_Iq[es][2][m][i];
-//           }
-
-//           dfloat icubq1   = 1.f/cubq1;
-//           // BGK relaxation approximation to the Boltzmann collision operator
-//           s_cubN4[es][0][j][i] =  p_tauInv*(           cubq2*cubq3*icubq1);
-//           s_cubN5[es][1][j][i] =  p_tauInv*(p_invsqrt2*cubq2*cubq2*icubq1);
-//           s_cubN6[es][2][j][i] =  p_tauInv*(p_invsqrt2*cubq3*cubq3*icubq1);
-//         }
-//       }
-//     }
-    
-//     //make sure all cubature node data is loaded into @shared
-//     @barrier("local");
-
-//     // project back in 's'
-//     for(int es=0;es<p_NblockCub;++es;@inner(2)){
-//       for(int j=0;j<p_cubNq;++j;@inner(1)){
-//         for(int i=0;i<p_cubNq;++i;@inner(0)){
-//             if(j<p_Nq){
-//               dfloat cubN4 = 0.0f, cubN5 = 0.0f, cubN6 = 0.0f;
-//               #pragma unroll p_Nq
-//                 for(int m=0;m<p_cubNq;++m){
-//                   const dfloat Pim  = s_cubProjectT[m][j]; 
-//                   cubN4 += Pim*s_cubN4[es][0][m][i];
-//                   cubN5 += Pim*s_cubN5[es][1][m][i];
-//                   cubN6 += Pim*s_cubN6[es][2][m][i];
-//                 }
-             
-//               s_Iq[es][0][j][i] = cubN4;
-//               s_Iq[es][1][j][i] = cubN5;
-//               s_Iq[es][2][j][i] = cubN6;
-//             }
-//           }
-//         }
-//       }
-    
-//     @barrier("local");
-
-//       // project back in 's'
-//       for(int es=0;es<p_NblockCub;++es;@inner(2)){
-//         for(int j=0;j<p_cubNq;++j;@inner(1)){
-//           for(int i=0;i<p_cubNq;++i;@inner(0)){
-
-//             dlong et = eo+es; // element in block
-//             if(et<Nelements){
-//               if(i<p_Nq && j<p_Nq){
-//                 int n = i + j*p_Nq;
-
-//                 const dlong id    = e*p_Nfields*p_Np + n;
-//                 dlong rhsId = id ; 
-
-//                 // multi-rate index shift
-//                 if(p_MRSAAB){
-//                 rhsId   += shift*offset;  
-//                 }
-
-//                 dfloat N4 = rhsq[rhsId + 3*p_Np];
-//                 dfloat N5 = rhsq[rhsId + 4*p_Np];
-//                 dfloat N6 = rhsq[rhsId + 5*p_Np];
-
-//                 #pragma unroll p_Nq
-//                 for(int m=0;m<p_cubNq;++m){
-//                   const dfloat Pim  = s_cubProjectT[m][i]; // check this;
-//                   N4 += Pim*s_Iq[es][0][j][m];
-//                   N5 += Pim*s_Iq[es][1][j][m];
-//                   N6 += Pim*s_Iq[es][2][j][m];
-//                 }
-
-//               if(!p_SEMI_ANALYTIC){
-//               N4 -= p_tauInv*q[id + 3*p_Np];
-//               N5 -= p_tauInv*q[id + 4*p_Np];
-//               N6 -= p_tauInv*q[id + 5*p_Np];
-//               }
-
-//               // Update  
-//               rhsq[rhsId + 3*p_Np] = N4;
-//               rhsq[rhsId + 4*p_Np] = N5;
-//               rhsq[rhsId + 5*p_Np] = N6;
-
-//             }
-//           }
-//         }
-//       }
-//     }
-//   }
-// }
-
-
-
-
-
-
-
-
-
-// // Fully Explicit Scheme Uses Clasical half Half Splitting
-// @kernel void bnsPmlRelaxationQuad2D(const dlong pmlNelements,
-//                                   @restrict const  dlong *  pmlElementIds,
-//                                   @restrict const  dlong *  pmlIds,
-//                                   const dlong offset,
-//                                   const dlong pmloffset,
-//                                   const int   shift,
-//                                   @restrict const  dfloat *  cubInterpT,
-//                                   @restrict const  dfloat *  cubProjectT,
-//                                   @restrict const  dfloat *  pmlSigmaX,
-//                                   @restrict const  dfloat *  pmlSigmaY, 
-//                                   @restrict const  dfloat *  pmlSigmaZ, 
-//                                   @restrict const  dfloat *  q,
-//                                   @restrict const  dfloat *  pmlqx,
-//                                   @restrict const  dfloat *  pmlqy,
-//                                   @restrict const  dfloat *  pmlqz,
-//                                         @restrict dfloat *  rhsq,
-//                                         @restrict dfloat *  pmlrhsqx,
-//                                         @restrict dfloat *  pmlrhsqy,
-//                                         @restrict dfloat *  pmlrhsqz){
-
-//   for(dlong eo=0;eo<pmlNelements;eo+=p_NblockV;@outer(0)){  // for all elements
-
-//     // @shared memory for q at nodes
-//     @shared dfloat s_q[p_NblockV][p_Nfields][p_cubNq][p_cubNq];
-//     @shared dfloat s_qx[p_NblockV][p_Nfields][p_cubNq][p_cubNq];
-//     @shared dfloat s_qy[p_NblockV][p_Nfields][p_cubNq][p_cubNq];
-
-//     @exclusive dfloat r_q[p_Nfields];
-//     @exclusive dfloat r_qx[p_Nfields];
-//     @exclusive dfloat r_qy[p_Nfields];
-
-//     @shared dfloat s_cubInterpT[p_Nq][p_cubNq];
-//     @shared dfloat s_cubProjectT[p_cubNq][p_Nq];
-    
-//     @exclusive dlong e, pmlId; 
-
-
-//      //fetch the U and V values and store in flux arrays in @shared
-//     for(int es=0;es<p_NblockV;++es;@inner(2)){   
-//       for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-//         for(int i=0;i<p_cubNq;++i;@inner(0)){    
-//           dlong et = eo+es; // element in block
-//           if((et<pmlNelements) && (i<p_Nq) && (j<p_Nq)){ 
-            
-//             e     = pmlElementIds[et];
-//             pmlId = pmlIds[et];
-
-//             const dlong id =  e*p_Nfields*p_Np + j*p_Nq + i;
-//             const dlong pid = pmlId*p_Nfields*p_Np + j*p_Nq + i;
-            
-//             #pragma unroll p_Nfields
-//             for(int fld=0; fld<p_Nfields;++fld){
-//               s_q[es][fld][j][i]  = q[id+fld*p_Np];
-//               s_qx[es][fld][j][i] = pmlqx[pid+fld*p_Np];
-//               s_qy[es][fld][j][i] = pmlqy[pid+fld*p_Np];
-//             }
-
-//             const int ids = i+j*p_cubNq;
-//             if ((es==0) && (ids<p_Nq*p_cubNq)) {
-//               s_cubInterpT[0][ids] = cubInterpT[ids];
-//               s_cubProjectT[0][ids] = cubProjectT[ids];
-//             }
-
-//           }
-//         }
-//       }
-//     }
-      
-//     @barrier("local");
-
-//     //interpolate in i, store in register
-//     for(int es=0;es<p_NblockV;++es;@inner(2)){   
-//       for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-//         for(int i=0;i<p_cubNq;++i;@inner(0)){
-//           if (j<p_Nq) {
-
-//             for(int fld=0; fld>p_Nfields; fld++){
-//               r_q[fld] = 0.f; 
-//               r_qx[fld] = 0.f; 
-//               r_qy[fld] = 0.f; 
-//             }
-
-//             #pragma unroll p_Nq
-//             for (int n=0;n<p_Nq;n++) {
-//               const dfloat Ini = s_cubInterpT[n][i];
-//               #pragma unroll p_Nfields
-//               for(int fld=0; fld<p_Nfields; fld++){
-//                 r_q[fld]   += Ini*s_q[es][fld][j][n];                
-//                 r_qx[fld]  += Ini*s_qx[es][fld][j][n];                
-//                 r_qy[fld]  += Ini*s_qy[es][fld][j][n];                
-//               }
-//             }
-
-//           }
-//         }
-//       }
-//     }
-
-//     @barrier("local");
-
-//     //write register back to @shared
-//     for(int es=0;es<p_NblockV;++es;@inner(2)){   
-//       for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-//         for(int i=0;i<p_cubNq;++i;@inner(0)){
-//           if (j<p_Nq) {
-//             for(int fld=0; fld<p_Nfields; fld++){
-//               s_q[es][fld][j][i]  = r_q[fld];              
-//               s_qx[es][fld][j][i] = r_qx[fld];              
-//               s_qy[es][fld][j][i] = r_qy[fld];              
-//             }
-//           }
-//         }
-//       }
-//     }
-
-//     @barrier("local");
-
-//      //interpolate in j, store in register
-//     for(int es=0;es<p_NblockV;++es;@inner(2)){   
-//       for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-//         for(int i=0;i<p_cubNq;++i;@inner(0)){
-         
-//           for(int fld=0; fld>p_Nfields; fld++){
-//             r_q[fld]  = 0.f; 
-//             r_qx[fld] = 0.f; 
-//             r_qy[fld] = 0.f; 
-//           }
-//           #pragma unroll p_Nq
-//           for (int n=0;n<p_Nq;n++) {
-//             const dfloat Ini = s_cubInterpT[n][j];
-//             #pragma unroll p_Nfields
-//             for(int fld=0; fld<p_Nfields; fld++){
-//               r_q[fld]   += Ini*s_q[es][fld][n][i];                
-//               r_qx[fld]  += Ini*s_qx[es][fld][n][i];                
-//               r_qy[fld]  += Ini*s_qy[es][fld][n][i];                
-//             }
-//           }   
-//         }
-//       }
-//     }
-
-//     @barrier("local");
-
-//     //construct nonlinear term from registers
-//     for(int es=0;es<p_NblockV;++es;@inner(2)){   
-//       for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-//         for(int i=0;i<p_cubNq;++i;@inner(0)){
-
-//           // Prefetch sigma
-//           const dfloat sigmaxe = pmlSigmaX[pmlId*p_cubNp + j*p_cubNq + i];
-//           const dfloat sigmaye = pmlSigmaY[pmlId*p_cubNp + j*p_cubNq + i];
-//           // M-PML sigma midification
-//           const dfloat msigmaxe = sigmaxe + sigmaye*p_pmlAlpha;
-//           const dfloat msigmaye = sigmaye + sigmaxe*p_pmlAlpha;
-
-//           #pragma unroll p_Nfields
-//           for(int fld=0; fld<p_Nfields ; fld++){
-//             s_qx[es][fld][j][i]= -msigmaxe*r_qx[fld];
-//             s_qy[es][fld][j][i]= -msigmaye*r_qy[fld];
-//             s_q [es][fld][j][i] = -msigmaxe*r_qx[fld]-msigmaye*r_qy[fld];
-//           }
-
-//           dfloat icubq1 = 1.f/r_q[0];
-//           if(p_SEMI_ANALYTIC){
-//             // BGK relaxation approximation to the Boltzmann collision operator
-//             s_q[es][3][j][i] +=  p_tauInv*(           r_q[1]*r_q[2]*icubq1);
-//             s_q[es][4][j][i] +=  p_tauInv*(p_invsqrt2*r_q[1]*r_q[1]*icubq1);
-//             s_q[es][5][j][i] +=  p_tauInv*(p_invsqrt2*r_q[2]*r_q[2]*icubq1); 
-//           }else{
-//             // BGK relaxation approximation to the Boltzmann collision operator
-//             // can be simplified by seperating linear part
-//             s_q[es][3][j][i] -= p_tauInv*(r_q[3] -            r_q[1]*r_q[2]*icubq1);
-//             s_q[es][4][j][i] -= p_tauInv*(r_q[4] - p_invsqrt2*r_q[1]*r_q[1]*icubq1);
-//             s_q[es][5][j][i] -= p_tauInv*(r_q[5] - p_invsqrt2*r_q[2]*r_q[2]*icubq1);
-//           }         
-//         }
-//       }
-//     }
-
-    
-//     @barrier("local");
-
-//     //project in j
-//     for(int es=0;es<p_NblockV;++es;@inner(2)){   
-//       for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-//         for(int i=0;i<p_cubNq;++i;@inner(0)){
-//           for(int fld=0; fld>p_Nfields; fld++){
-//             r_q[fld]  = 0.f; 
-//             r_qx[fld] = 0.f; 
-//             r_qy[fld] = 0.f; 
-//           }
-//           if (j<p_Nq) {
-//             #pragma unroll p_cubNq
-//             for (int n=0;n<p_cubNq;n++) {
-//               const dfloat Pnj = s_cubProjectT[n][j];
-//               for(int fld=0; fld<p_Nfields; fld++){
-//                 r_q[fld]  += Pnj*s_q[es][fld][n][i];
-//                 r_qx[fld] += Pnj*s_qx[es][fld][n][i];
-//                 r_qy[fld] += Pnj*s_qy[es][fld][n][i];
-//               }
-//             }
-//           }
-//         }
-//       }
-//     }
-
-//     @barrier("local");
-
-//     //write register back to @shared
-//     for(int es=0;es<p_NblockV;++es;@inner(2)){   
-//       for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-//         for(int i=0;i<p_cubNq;++i;@inner(0)){
-//           if (j<p_Nq) {
-//             for(int fld=0; fld<p_Nfields; fld++){
-//               s_q[es][fld][j][i]  = r_q[fld];              
-//               s_qx[es][fld][j][i] = r_qx[fld];              
-//               s_qy[es][fld][j][i] = r_qy[fld];              
-//             }
-//           }
-//         }
-//       }
-//     }
-
-
-//     @barrier("local");
-
-//     // project in i and update
-//     for(int es=0;es<p_NblockV;++es;@inner(2)){ 
-//       for(int j=0;j<p_cubNq;++j;@inner(1)){ 
-//         for(int i=0;i<p_cubNq;++i;@inner(0)){  
-//           const dlong et = eo+es; // element in block
-//           if((et<pmlNelements) && (i<p_Nq) && (j<p_Nq)){ 
-
-//             for(int fld=0; fld>p_Nfields; fld++){
-//               r_q[fld] = 0.f; 
-//             }
-
-//             #pragma unroll p_cubNq
-//             for(int n=0;n<p_cubNq;++n){
-//               const dfloat Pni = s_cubProjectT[n][i];
-//               for(int fld=0; fld<p_Nfields; fld++){
-//                 r_q[fld]  += Pni*s_q[es][fld][j][n];
-//                 r_qx[fld] += Pni*s_qx[es][fld][j][n];
-//                 r_qy[fld] += Pni*s_qy[es][fld][j][n];
-//               }
-//             }
-
-//             const dlong rhsId    = e*p_Np + j*p_Nq + i;
-//             const dlong pmlRhsId = pmlId*p_Np + j*p_Nq + i;
-//             for(int fld=0; fld>p_Nfields; fld++){
-//               pmlrhsqx[pmlRhsId + fld*p_Np] += r_qx[fld];
-//               pmlrhsqy[pmlRhsId + fld*p_Np] += r_qy[fld];
-//               rhsq[rhsId + fld*p_Np]        += r_q[fld];
-//             }
-//           }
-//         }
-//      }
-//     }
-//   }
-// }
-
-
-
-// // Fully Explicit Scheme Uses Clasical half Half Splitting
-// @kernel void bnsPmlRelaxationQuad2D(const dlong pmlNelements,
-//                                   @restrict const  dlong *  pmlElementIds,
-//                                   @restrict const  dlong *  pmlIds,
-//                                   const dlong offset,
-//                                   const dlong pmloffset,
-//                                   const int   shift,
-//                                   @restrict const  dfloat *  cubInterpT,
-//                                   @restrict const  dfloat *  cubProjectT,
-//                                   @restrict const  dfloat *  pmlSigmaX,
-//                                   @restrict const  dfloat *  pmlSigmaY, 
-//                                   @restrict const  dfloat *  pmlSigmaZ, 
-//                                   @restrict const  dfloat *  q,
-//                                   @restrict const  dfloat *  pmlqx,
-//                                   @restrict const  dfloat *  pmlqy,
-//                                   @restrict const  dfloat *  pmlqz,
-//                                         @restrict dfloat *  rhsq,
-//                                         @restrict dfloat *  pmlrhsqx,
-//                                         @restrict dfloat *  pmlrhsqy,
-//                                         @restrict dfloat *  pmlrhsqz){
-
-//     for(dlong eo=0;eo<pmlNelements;eo+=p_NblockV;@outer(0)){  // for all elements
-
-//     // @shared memory for q at nodes
-//     @shared dfloat  s_q[p_NblockV][p_Nfields][p_Np];
-//     @shared dfloat s_qx[p_NblockV][p_Nfields][p_Np];
-//     @shared dfloat s_qy[p_NblockV][p_Nfields][p_Np];
-
-//     // sub-group of p_Np cubature node interpolants of N4,N5,N6
-//     @shared dfloat s_cubq[p_NblockV][p_Nfields][p_cubNp];
-//     @shared dfloat s_cubqx[p_NblockV][p_Nfields][p_cubNp];
-//     @shared dfloat s_cubqy[p_NblockV][p_Nfields][p_cubNp];
-   
-//     @exclusive dlong e, pmlId;
-
-//     // prefetch q to @shared
-//     for(int es=0;es<p_NblockV;++es;@inner(1)){
-//       for(int n=0;n<p_maxCubNodes;++n;@inner(0)){      
-//         const dlong et = eo+es; // element in block
-//         if(et<pmlNelements){
-//             e     = pmlElementIds[et];
-//             pmlId = pmlIds[et];
-            
-//             if(n<p_Np){
-
-//               const dlong id  = e*p_Nfields*p_Np + n;
-//               const dlong pid = pmlId*p_Nfields*p_Np + n;
-              
-//               #pragma unroll p_Nfields
-//               for(int fld=0; fld<p_Nfields;++fld){
-//                 s_q[es][fld][n]   = q[id +fld*p_Np];
-//                 s_qx[es][fld][n]  = pmlqx[pid+fld*p_Np];
-//                 s_qy[es][fld][n]  = pmlqy[pid+fld*p_Np];
-//               }
-//             }
-//          }
-//        }
-//     }
-    
-//     // make sure all node data is loaded into @shared
-//     @barrier("local");
-
-//     // interpolate q to cubature
-//     for(int es=0;es<p_NblockV;++es;@inner(1)){
-//       for(int n=0;n<p_maxCubNodes;++n;@inner(0)){     
-//         const dlong et = eo+es; // element in block
-//         if(et<pmlNelements){
-//           if(n<p_cubNp){
-//             dfloat r_q[p_Nfields];
-//             dfloat r_qx[p_Nfields];
-//             dfloat r_qy[p_Nfields];
-            
-//             #pragma unroll p_Nfields
-//             for(int fld=0; fld<p_Nfields ; fld++){
-//               r_q[fld]  = 0.f;
-//               r_qx[fld] = 0.f;
-//               r_qy[fld] = 0.f;
-//             }
-            
-//             #pragma unroll p_Np
-//             for(int m=0;m<p_Np;++m){
-//               const dfloat Icn  = cubInterpT[m*p_cubNp+n];   
-//               #pragma unroll p_Nfields
-//               for(int fld=0; fld<p_Nfields;++fld){
-//                 r_q[fld]  += Icn*s_q[es][fld][m];
-//                 r_qx[fld] += Icn*s_qx[es][fld][m];
-//                 r_qy[fld] += Icn*s_qy[es][fld][m];
-//               }
-//             }
-            
-//             // Prefetch sigma
-//             const dfloat sigmaxe = pmlSigmaX[pmlId*p_cubNp+n];
-//             const dfloat sigmaye = pmlSigmaY[pmlId*p_cubNp+n];
-//             // M-PML sigma midification
-//             const dfloat msigmaxe = sigmaxe + sigmaye*p_pmlAlpha;
-//             const dfloat msigmaye = sigmaye + sigmaxe*p_pmlAlpha;
-            
-//             #pragma unroll p_Nfields
-//             for(int fld=0; fld<p_Nfields ; fld++){
-//               s_cubqx[es][fld][n]= -msigmaxe*r_qx[fld];
-//               s_cubqy[es][fld][n]= -msigmaye*r_qy[fld];
-//               s_cubq[es][fld][n] = -msigmaxe*r_qx[fld]-msigmaye*r_qy[fld];
-//             }
-
-//             dfloat icubq1 = 1.f/r_q[0];
-//             if(p_SEMI_ANALYTIC){
-//               // BGK relaxation approximation to the Boltzmann collision operator
-//               s_cubq[es][3][n] += p_tauInv*(           r_q[1]*r_q[2]*icubq1);
-//               s_cubq[es][4][n] += p_tauInv*(p_invsqrt2*r_q[1]*r_q[1]*icubq1);
-//               s_cubq[es][5][n] += p_tauInv*(p_invsqrt2*r_q[2]*r_q[2]*icubq1);  
-//             }else{
-//               // BGK relaxation approximation to the Boltzmann collision operator
-//               s_cubq[es][3][n] -= p_tauInv*(r_q[3]-(           r_q[1]*r_q[2]*icubq1));
-//               s_cubq[es][4][n] -= p_tauInv*(r_q[4]-(p_invsqrt2*r_q[1]*r_q[1]*icubq1));
-//               s_cubq[es][5][n] -= p_tauInv*(r_q[5]-(p_invsqrt2*r_q[2]*r_q[2]*icubq1));
-//             }
-//           }
-//         }
-//       }
-//     }
-
-//     // make sure all cubature node data is loaded into @shared
-//     @barrier("local");
-    
-//     // partial projection to nodes from cubature-sub-group
-//     for(int es=0;es<p_NblockV;++es;@inner(1)){
-//       for(int n=0;n<p_maxCubNodes;++n;@inner(0)){     
-    
-//         const dlong et = eo+es; // element in block
-//           if(et<pmlNelements){
-//             if(n<p_Np){
-          
-//               dfloat r_rhsq[p_Nfields];
-//               dfloat r_rhsqx[p_Nfields];
-//               dfloat r_rhsqy[p_Nfields]; 
-                          
-//               #pragma unroll p_Nfields
-//               for(int fld=0; fld<p_Nfields;++fld){
-//                 r_rhsq[fld]  = 0.f;
-//                 r_rhsqx[fld] = 0.f;
-//                 r_rhsqy[fld] = 0.f;
-//               }
-
-//               // use temporaries for part sums for N4,N5,N6 because of @exclusives
-//               #pragma unroll p_cubNp
-//               for(int m=0;m<p_cubNp;++m){
-//                 const dfloat Pnc  = cubProjectT[m*p_Np+n];                  
-//                  #pragma unroll p_Nfields
-//                  for(int fld=0; fld<p_Nfields; fld++){
-//                   r_rhsq [fld] += Pnc*s_cubq[es][fld][m];
-//                   r_rhsqx[fld] += Pnc*s_cubqx[es][fld][m];
-//                   r_rhsqy[fld] += Pnc*s_cubqy[es][fld][m];
-//                  }
-//               }
-
-//               // Update
-//               dlong rhsId    = e*p_Nfields*p_Np + n;
-//               dlong pmlrhsId = pmlId*p_Nfields*p_Np + n;
-//               // 
-//               if(p_MRSAAB){
-//                 rhsId     += shift*offset;
-//                 pmlrhsId  += shift*pmloffset;
-//               }
-                
-//              #pragma unroll p_Nfields 
-//              for(int fld=0; fld<p_Nfields;++fld){
-//                 pmlrhsqx[pmlrhsId + fld*p_Np] += r_rhsqx[fld];
-//                 pmlrhsqy[pmlrhsId + fld*p_Np] += r_rhsqy[fld];
-//                 rhsq[rhsId + fld*p_Np]        += r_rhsq[fld];
-//               }   
-//           }
-//         }
-//       }
-//     }
-
-//   }
-// }

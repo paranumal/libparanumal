@@ -24,83 +24,89 @@ SOFTWARE.
 
 */
 
+//mean flow
+#define RBAR 1.0
+#define UBAR 1.0
+#define VBAR 0.0
+#define WBAR 0.0
 
-// Boundary conditions
-/* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5 */
-#define boundaryConditionsPML3D(bc, t, x, y, z, nx, ny, nz, intfx, intfy, intfz, q1M, q2M, q3M, q4M, q5M, q6M, q7M, q8M, q9M, q10M, q1B, q2B, q3B, q4B, q5B, q6B, q7B, q8B, q9B, q10B) \
-{                                           \
-  if(bc==1){                                \
-    *(q1B)  =  q1M;                         \
-    *(q2B)  = -q2M;                         \
-    *(q3B)  = -q3M;                         \
-    *(q4B)  = -q4M;                         \
-    *(q5B)  =  q5M;                         \
-    *(q6B)  =  q6M;                         \
-    *(q7B)  =  q7M;                         \
-    *(q8B)  =  q8M;                         \
-    *(q9B)  =  q9M;                         \
-    *(q10B) =  q10M;                        \
-  } else if(bc==4||bc==5){                  \
-    *(q1B)  = q1M;                           \
-    *(q2B)  = q2M-2.f*(nx*q2M+ny*q3M*nz*q4M)*nx;\
-    *(q3B)  = q3M-2.f*(nx*q2M+ny*q3M*nz*q4M)*ny;\
-    *(q4B)  = q4M-2.f*(nx*q2M+ny*q3M*nz*q4M)*nz;\
-    *(q5B)  = q5M;                           \
-    *(q6B)  = q6M;                           \
-    *(q7B)  = q7M;                           \
-    *(q8B)  = q8M;                           \
-    *(q9B)  = q9M;                           \
-    *(q10B) = q10M;                          \
-  }else{								\
-    *(q1B) = 2.f*p_q1bar - q1M;						\
-    *(q2B) = 2.f*p_q1bar*intfx*p_isqrtRT - q2M;				\
-    *(q3B) = 2.f*p_q1bar*intfy*p_isqrtRT - q3M;				\
-    *(q4B) = 2.f*p_q1bar*intfz*p_isqrtRT - q4M;				\
-    *(q5B) = 2.f*p_q1bar*intfx*intfy*p_isqrtRT*p_isqrtRT-q5M;		\
-    *(q6B) = 2.f*p_q1bar*intfx*intfz*p_isqrtRT*p_isqrtRT-q6M;		\
-    *(q7B) = 2.f*p_q1bar*intfy*intfz*p_isqrtRT*p_isqrtRT-q7M;		\
-    *(q8B) = 2.f*p_q1bar*intfx*intfx*p_isqrtRT*p_isqrtRT*p_invsqrt2-q8M; \
-    *(q9B) = 2.f*p_q1bar*intfy*intfy*p_isqrtRT*p_isqrtRT*p_invsqrt2-q9M; \
-    *(q10B) = 2.f*p_q1bar*intfz*intfz*p_isqrtRT*p_isqrtRT*p_invsqrt2-q10M; \
-  }									\
+
+// Initial conditions
+#define bnsInitialConditions3D(c, nu, t, x, y, z, \
+                               r, u, v, w,        \
+                               s11, s12, s13,     \
+                               s22, s23, s33)     \
+{                                         \
+  *(r) = RBAR;                            \
+  *(u) = UBAR;                            \
+  *(v) = VBAR;                            \
+  *(w) = WBAR;                            \
+  *(s11) = 0.0;                           \
+  *(s12) = 0.0;                           \
+  *(s13) = 0.0;                           \
+  *(s22) = 0.0;                           \
+  *(s23) = 0.0;                           \
+  *(s33) = 0.0;                           \
+}
+
+// Body force
+#define bnsBodyForce3D(c, nu, t, x, y, z, r, u, v, w, fx, fy, fz) \
+{                                                   \
+  *(fx) = 0.0;                                      \
+  *(fy) = 0.0;                                      \
+  *(fz) = 0.0;                                      \
 }
 
 // Boundary conditions
 /* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5 */
-#define boundaryConditions3D(bc, t, x, y, z, nx, ny, nz, intfx, intfy, intfz, q1M, q2M, q3M, q4M, q5M, q6M, q7M, q8M, q9M, q10M, q1B, q2B, q3B, q4B, q5B, q6B, q7B, q8B, q9B, q10B) \
-{                                           \
-  if(bc==1){                                \
-    *(q1B)  =  q1M;                         \
-    *(q2B)  = -q2M;                         \
-    *(q3B)  = -q3M;                         \
-    *(q4B)  = -q4M;                         \
-    *(q5B)  =  q5M;                         \
-    *(q6B)  =  q6M;                         \
-    *(q7B)  =  q7M;                         \
-    *(q8B)  =  q8M;                         \
-    *(q9B)  =  q9M;                         \
-    *(q10B) =  q10M;                        \
-  } else if(bc==2 || bc==3){		    \
-    *(q1B) = 2.f*p_q1bar - q1M;						\
-    *(q2B) = 2.f*p_q1bar*intfx*p_isqrtRT - q2M;				\
-    *(q3B) = 2.f*p_q1bar*intfy*p_isqrtRT - q3M;				\
-    *(q4B) = 2.f*p_q1bar*intfz*p_isqrtRT - q4M;				\
-    *(q5B) = 2.f*p_q1bar*intfx*intfy*p_isqrtRT*p_isqrtRT-q5M;		\
-    *(q6B) = 2.f*p_q1bar*intfx*intfz*p_isqrtRT*p_isqrtRT-q6M;		\
-    *(q7B) = 2.f*p_q1bar*intfy*intfz*p_isqrtRT*p_isqrtRT-q7M;		\
-    *(q8B) = 2.f*p_q1bar*intfx*intfx*p_isqrtRT*p_isqrtRT*p_invsqrt2-q8M; \
-    *(q9B) = 2.f*p_q1bar*intfy*intfy*p_isqrtRT*p_isqrtRT*p_invsqrt2-q9M; \
-    *(q10B) = 2.f*p_q1bar*intfz*intfz*p_isqrtRT*p_isqrtRT*p_invsqrt2-q10M; \
-  } else if(bc==4||bc==5){                  \
-    *(q1B)  = q1M;                           \
-    *(q2B)  = q2M-2.f*(nx*q2M+ny*q3M*nz*q4M)*nx;\
-    *(q3B)  = q3M-2.f*(nx*q2M+ny*q3M*nz*q4M)*ny;\
-    *(q4B)  = q4M-2.f*(nx*q2M+ny*q3M*nz*q4M)*nz;\
-    *(q5B)  = q5M;                           \
-    *(q6B)  = q6M;                           \
-    *(q7B)  = q7M;                           \
-    *(q8B)  = q8M;                           \
-    *(q9B)  = q9M;                           \
-    *(q10B) = q10M;                          \
-  }                                         \
+#define bnsBoundaryConditions3D(bc, c, nu, \
+                                t, x, y, z, nx, ny, nz, \
+                                rM, uM, vM, wM, s11M, s12M, s13M, s22M, s23M, s33M, \
+                                rB, uB, vB, wB, s11B, s12B, s13B, s22B, s23B, s33B) \
+{                                      \
+  if(bc==1){                           \
+    *(rB) = rM;                        \
+    *(uB) = 0.0;                       \
+    *(vB) = 0.0;                       \
+    *(wB) = 0.0;                       \
+    *(s11B) = 0.0;                     \
+    *(s12B) = 0.0;                     \
+    *(s13B) = 0.0;                     \
+    *(s22B) = 0.0;                     \
+    *(s23B) = 0.0;                     \
+    *(s33B) = 0.0;                     \
+  } else if(bc==2){                    \
+    *(rB) = RBAR;                      \
+    *(uB) = UBAR;                      \
+    *(vB) = VBAR;                      \
+    *(wB) = WBAR;                      \
+    *(s11B) = 0.0;                     \
+    *(s12B) = 0.0;                     \
+    *(s13B) = 0.0;                     \
+    *(s22B) = 0.0;                     \
+    *(s23B) = 0.0;                     \
+    *(s33B) = 0.0;                     \
+  } else if(bc==3){                    \
+    *(rB) = RBAR;                      \
+    *(uB) = uM;                        \
+    *(vB) = vM;                        \
+    *(wB) = wM;                        \
+    *(s11B) = s11M;                    \
+    *(s12B) = s12M;                    \
+    *(s13B) = s13M;                    \
+    *(s22B) = s22M;                    \
+    *(s23B) = s23M;                    \
+    *(s33B) = s33M;                    \
+  } else if(bc==4||bc==5||bc==6){      \
+    *(rB) = rM;                        \
+    *(uB) = uM - (nx*uM+ny*vM+nz*wM)*nx; \
+    *(vB) = vM - (nx*uM+ny*vM+nz*wM)*ny; \
+    *(wB) = wM - (nx*uM+ny*vM+nz*wM)*nz; \
+    *(s11B) = s11M;                    \
+    *(s12B) = s12M;                    \
+    *(s13B) = s13M;                    \
+    *(s22B) = s22M;                    \
+    *(s23B) = s23M;                    \
+    *(s33B) = s33M;                    \
+  }                                    \
 }

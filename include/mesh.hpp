@@ -191,13 +191,24 @@ public:
   dfloat *interpRaise;
   dfloat *interpLower;
 
-  // MRAB,SAAB coefficients
-  int MRABNlevels;
-  int *MRABlevel;
-  dlong *MRABNelements, *MRABNhaloElements;
-  dlong **MRABelementIds, **MRABhaloIds;
-  int *MRABshiftIndex;
+  //pml lists
+  dlong NnonPmlElements;
+  dlong NpmlElements;
 
+  dlong *pmlElements;
+  dlong *nonPmlElements;
+  dlong *pmlIds;
+
+  //multirate lists
+  int mrNlevels;
+  int *mrLevel;
+  dlong *mrNelements, *mrInterfaceNelements;
+  dlong **mrElements, **mrInterfaceElements;
+
+  //multirate pml lists
+  dlong *mrNnonPmlElements, *mrNpmlElements;
+  dlong **mrPmlElements, **mrNonPmlElements;
+  dlong **mrPmlIds;
 
   // ploting info for generating field vtu
   int    plotNverts;    // number of vertices for each plot element
@@ -254,19 +265,19 @@ public:
 
   occa::memory o_cubvgeo, o_cubsgeo, o_cubggeo;
 
-  //MRAB element lists
-  occa::memory *o_MRABelementIds;
-  occa::memory *o_MRABhaloIds;
-  occa::memory *o_MRABpmlElementIds;
-  occa::memory *o_MRABpmlIds;
-  occa::memory *o_MRABpmlHaloElementIds;
-  occa::memory *o_MRABpmlHaloIds;
-
-  occa::memory o_pmlElementIds;
-  occa::memory o_nonPmlElementIds;
+  //pml lists
+  occa::memory o_pmlElements;
+  occa::memory o_nonPmlElements;
   occa::memory o_pmlIds;
 
-  occa::memory o_pmlElementList;
+  //multirate lists
+  occa::memory o_mrLevel;
+  occa::memory o_mrNelements, o_mrInterfaceNelements;
+  occa::memory *o_mrElements, *o_mrInterfaceElements;
+
+  //multirate pml lists
+  occa::memory *o_mrPmlElements, *o_mrNonPmlElements;
+  occa::memory *o_mrPmlIds;
 
   occa::memory o_ggeo; // second order geometric factors
   occa::memory o_projectL2; // local weights for projection.
@@ -283,6 +294,9 @@ public:
 
   // box mesh
   virtual void SetupBox() = 0;
+
+  // pml box mesh
+  virtual void SetupPmlBox() = 0;
 
   // mesh reader
   virtual void ParallelReader(const char *fileName) = 0;
@@ -325,20 +339,22 @@ public:
   /* build global gather scatter ops */
   void ParallelGatherScatterSetup();
 
-  //MRAB weighted mesh partitioning
-  void MRABWeightedPartition(dfloat *weights,
-                             int numLevels,
-                             int *levels);
+  //Setup PML elements
+  void PmlSetup();
+  void MultiRatePmlSetup();
 
-  dfloat MRABSetup(dfloat *EToDT,
-                   int maxLevels,
-                   dfloat finalTime);
+  //Multirate partitioning
+  void MultiRateSetup(dfloat *EToDT);
+
+  // Multirate trace halo
+  halo_t** MultiRateHaloTraceSetup(int Nfields);
 
   virtual void OccaSetup();
 
   // print out parallel partition i
   void PrintPartitionStatistics();
 
+  virtual dfloat ElementCharacteristicLength(dlong e) = 0;
 
   virtual dfloat MinCharacteristicLength() = 0;
 

@@ -24,31 +24,29 @@ SOFTWARE.
 
 */
 
-// #define p_Nvort 4
-
 @kernel void bnsVorticityTri2D(const dlong Nelements,
                               @restrict const  dfloat *  vgeo,
                               @restrict const  dfloat *  DT,
                               @restrict const  dfloat *  q,
-                                    @restrict dfloat *  Vort,
-                                    @restrict dfloat *  VortMag){  
-  
+                                        const  dfloat    c,
+                                    @restrict dfloat *  Vort){
+
   // block partition of elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
-    
+
     @shared dfloat s_u[p_NblockV][p_Np];
     @shared dfloat s_v[p_NblockV][p_Np];
     for(int es=0;es<p_NblockV;++es;@inner(1)){
       for(int n=0;n<p_Np;++n;@inner(0)){
-      const dlong e = eo+es; 
+      const dlong e = eo+es;
         if (e<Nelements) {
           const dlong id = e*p_Nfields*p_Np + n;
           const dfloat q0  = q[id + 0*p_Np]; // rho
           const dfloat q1  = q[id + 1*p_Np]; // q1
           const dfloat q2  = q[id + 2*p_Np]; // q2
           // get physical velocities
-          s_u[es][n] = p_sqrtRT*q1/q0;
-          s_v[es][n] = p_sqrtRT*q2/q0;        
+          s_u[es][n] = c*q1/q0;
+          s_v[es][n] = c*q2/q0;
         }
       }
     }
@@ -57,7 +55,7 @@ SOFTWARE.
 
     for(int es=0;es<p_NblockV;++es;@inner(1)){
       for(int n=0;n<p_Np;++n;@inner(0)){
-        const dlong e = eo+es; 
+        const dlong e = eo+es;
         if(e<Nelements){
 
           const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
@@ -81,7 +79,7 @@ SOFTWARE.
           const dfloat uy = drdy*ur + dsdy*us;
           const dfloat vx = drdx*vr + dsdx*vs;
 
-          const dlong id = p_Nvort*e*p_Np + n; 
+          const dlong id = e*p_Np + n;
           Vort[id] = vx-uy;
         }
       }

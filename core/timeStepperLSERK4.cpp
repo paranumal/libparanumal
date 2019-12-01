@@ -27,21 +27,14 @@ SOFTWARE.
 #include "core.hpp"
 #include "timeStepper.hpp"
 
-lserk4::lserk4(dlong _N, dlong _Nhalo, solver_t& _solver):
-  timeStepper_t(_N, _Nhalo, _solver) {};
+namespace TimeStepper {
 
-lserk4::~lserk4() {
-  if (o_rhsq.size()) o_rhsq.free();
-  if (o_resq.size()) o_resq.free();
+lserk4::lserk4(dlong Nelements, dlong NhaloElements,
+               int Np, int Nfields, solver_t& _solver):
+  timeStepper_t(Nelements, NhaloElements, Np, Nfields, _solver) {
 
-  if (rka) free(rka);
-  if (rkb) free(rkb);
-  if (rkc) free(rkc);
+  Nrk = 5;
 
-  updateKernel.free();
-}
-
-void lserk4::Init() {
   o_resq = device.malloc(N*sizeof(dfloat));
   o_rhsq = device.malloc(N*sizeof(dfloat));
 
@@ -73,7 +66,6 @@ void lserk4::Init() {
        2802321613138.0/2924317926251.0 ,
        1.0};
 
-  Nrk = 5;
   rka = (dfloat*) calloc(Nrk, sizeof(dfloat));
   rkb = (dfloat*) calloc(Nrk, sizeof(dfloat));
   rkc = (dfloat*) calloc(Nrk+1, sizeof(dfloat));
@@ -147,3 +139,61 @@ void lserk4::Step(occa::memory &o_q, dfloat time, dfloat _dt) {
                  o_rhsq, o_resq, o_q);
   }
 }
+
+lserk4::~lserk4() {
+  if (o_rhsq.size()) o_rhsq.free();
+  if (o_resq.size()) o_resq.free();
+
+  if (rka) free(rka);
+  if (rkb) free(rkb);
+  if (rkc) free(rkc);
+
+  updateKernel.free();
+}
+
+/**************************************************/
+/* PML version                                    */
+/**************************************************/
+
+lserk4_pml::lserk4_pml(dlong _Nelements, dlong _NpmlElements, dlong _NhaloElements,
+                      int _Np, int _Nfields, int _Npmlfields,
+                      solver_t& _solver):
+  lserk4(_Nelements, _NhaloElements, _Np, _Nfields, _solver),
+  Npml(_Npmlfields*_Np*_NpmlElements) {
+
+  if (Npml) {
+    dfloat *pmlq = (dfloat *) calloc(Npml,sizeof(dfloat));
+    o_pmlq   = device.malloc(Npml*sizeof(dfloat), pmlq);
+    free(pmlq);
+
+    o_respmlq = device.malloc(Npml*sizeof(dfloat));
+    o_rhspmlq = device.malloc(Npml*sizeof(dfloat));
+  }
+}
+
+void lserk4_pml::Step(occa::memory &o_q, dfloat time, dfloat _dt) {
+
+  // Low storage explicit Runge Kutta (5 stages, 4th order)
+  for(int rk=0;rk<Nrk;++rk){
+
+    dfloat currentTime = time + rkc[rk]*_dt;
+
+    //evaluate ODE rhs = f(q,t)
+    solver.rhsf_pml(o_q, o_pmlq, o_rhsq, o_rhspmlq, currentTime);
+
+    // update solution using Runge-Kutta
+    updateKernel(N, _dt, rka[rk], rkb[rk],
+                 o_rhsq, o_resq, o_q);
+    if (Npml)
+      updateKernel(Npml, _dt, rka[rk], rkb[rk],
+                   o_rhspmlq, o_respmlq, o_pmlq);
+  }
+}
+
+lserk4_pml::~lserk4_pml() {
+  if (o_pmlq.size()) o_pmlq.free();
+  if (o_rhspmlq.size()) o_rhspmlq.free();
+  if (o_respmlq.size()) o_respmlq.free();
+}
+
+} //namespace TimeStepper

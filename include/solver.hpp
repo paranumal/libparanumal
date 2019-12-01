@@ -53,10 +53,32 @@ public:
   virtual ~solver_t(){}
 
   virtual void Run()=0;
-  virtual void Report(dfloat time=0.0, int tstep=0) {};
+  virtual void Report(dfloat time=0.0, int tstep=0) {
+    LIBP_ABORT(string("Report not implemented in this solver"))
+  }
 
-  virtual void rhsf(occa::memory& o_q, occa::memory& o_rhs, const dfloat time) {};
-  virtual void Operator(occa::memory& o_q, occa::memory& o_Aq) {};
+  virtual void rhsf(occa::memory& o_q, occa::memory& o_rhs, const dfloat time) {
+    LIBP_ABORT(string("rhsf not implemented in this solver"))
+  }
+
+  virtual void rhsf_MR(occa::memory& o_q, occa::memory& o_rhs, occa::memory& o_fQM, const dfloat time, const int level) {
+    LIBP_ABORT(string("rhsf_MR not implemented in this solver"))
+  }
+
+  virtual void rhsf_pml(occa::memory& o_q, occa::memory& o_pmlq,
+                        occa::memory& o_rhs, occa::memory& o_pmlrhs, const dfloat time) {
+    LIBP_ABORT(string("rhsf_pml not implemented in this solver"))
+  }
+
+  virtual void rhsf_MR_pml(occa::memory& o_q, occa::memory& o_pmlq,
+                           occa::memory& o_rhs, occa::memory& o_pmlrhs,
+                           occa::memory& o_fQM, const dfloat time, const int level) {
+    LIBP_ABORT(string("rhsf_MR_pml not implemented in this solver"))
+  }
+
+  virtual void Operator(occa::memory& o_q, occa::memory& o_Aq) {
+    LIBP_ABORT(string("Operator not implemented in this solver"))
+  }
 };
 
 #endif

@@ -29,28 +29,28 @@ SOFTWARE.
                               @restrict const  dfloat *  vgeo,
                               @restrict const  dfloat *  D,
                               @restrict const  dfloat *  q,
-                                    @restrict dfloat *  Vort,
-                                    @restrict dfloat *  VortMag){  
-  
+                                        const  dfloat    c,
+                                     @restrict dfloat *  Vort){
+
   // block partition of elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
-    
+
     @shared dfloat s_u[p_NblockV][p_Nq][p_Nq];
     @shared dfloat s_v[p_NblockV][p_Nq][p_Nq];
     @shared dfloat s_D[p_Nq][p_Nq];
 
-    for(int es=0;es<p_NblockV;++es;@inner(2)){   
-      for(int j=0;j<p_Nq;++j;@inner(1)){ 
-        for(int i=0;i<p_Nq;++i;@inner(0)){    
+    for(int es=0;es<p_NblockV;++es;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           const dlong e = eo+es; // element in block
-          if(e<Nelements){ 
+          if(e<Nelements){
             const dlong qbase = e*p_Nfields*p_Np + j*p_Nq +i;
             const dfloat q0 = q[qbase + 0*p_Np];
             const dfloat q1 = q[qbase + 1*p_Np];
             const dfloat q2 = q[qbase + 2*p_Np];
-            
-            s_u[es][j][i] = p_sqrtRT*q1/q0;
-            s_v[es][j][i] = p_sqrtRT*q2/q0;
+
+            s_u[es][j][i] = c*q1/q0;
+            s_v[es][j][i] = c*q2/q0;
           }
 
             if (es==0)
@@ -61,11 +61,11 @@ SOFTWARE.
 
     @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;@inner(2)){   
-      for(int j=0;j<p_Nq;++j;@inner(1)){ 
-        for(int i=0;i<p_Nq;++i;@inner(0)){    
+    for(int es=0;es<p_NblockV;++es;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           const dlong e = eo+es; // element in block
-          if(e<Nelements){ 
+          if(e<Nelements){
             const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
             const dfloat drdx = vgeo[gid + p_RXID*p_Np];
             const dfloat drdy = vgeo[gid + p_RYID*p_Np];
@@ -89,8 +89,8 @@ SOFTWARE.
             const dfloat uy = drdy*ur + dsdy*us;
             const dfloat vx = drdx*vr + dsdx*vs;
 
-            const dlong id = p_Nvort*e*p_Np+j*p_Nq+i; 
-            Vort[id + 0*p_Np] = vx-uy;
+            const dlong id = e*p_Np+j*p_Nq+i;
+            Vort[id] = vx-uy;
           }
         }
       }

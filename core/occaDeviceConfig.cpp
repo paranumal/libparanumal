@@ -36,17 +36,17 @@ SOFTWARE.
 //hack the hook to ask OCCA to return a device count
 namespace occa {
 #if OCCA_CUDA_ENABLED
-  namespace cuda { 
-    int getDeviceCount(); 
+  namespace cuda {
+    int getDeviceCount();
   }
 #endif
 #if OCCA_HIP_ENABLED
-  namespace hip { 
-    int getDeviceCount(); 
+  namespace hip {
+    int getDeviceCount();
   }
 #endif
 #if OCCA_OPENCL_ENABLED
-  namespace opencl { 
+  namespace opencl {
     namespace info {
       static const int CPU     = (1 << 0);
       static const int GPU     = (1 << 1);

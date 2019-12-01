@@ -1,0 +1,195 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+@kernel void sarkRkStage(const dlong Nelements,
+                         const int rk,
+                         const dfloat dt,
+                         @restrict const  dfloat *  rkX,
+                         @restrict const  dfloat *  rkA,
+                         @restrict const  dfloat *  q,
+                         @restrict const  dfloat *  rkrhsq,
+                         @restrict dfloat *  rkq){
+
+  // Runge Kutta intermediate stage
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
+
+      const dlong id = e*p_Nfields*p_Np + n;
+
+      #pragma unroll p_Nfields
+      for (int f=0;f<p_Nfields;f++) {
+        dfloat r_q = rkX[rk+f*p_Nrk]*q[id+f*p_Np];
+
+        for (int i=0;i<rk;i++)
+          r_q += dt*rkA[p_Nrk*rk + i + f*p_Nrk*p_Nrk]*rkrhsq[id+f*p_Np+i*Nelements*p_Np*p_Nfields];
+
+        rkq[id+f*p_Np] = r_q;
+      }
+    }
+  }
+}
+
+@kernel void sarkRkUpdate(const dlong Nelements,
+                          const int rk,
+                          const dfloat dt,
+                          @restrict const  dfloat *  rkX,
+                          @restrict const  dfloat *  rkA,
+                          @restrict const  dfloat *  rkE,
+                          @restrict const  dfloat *  q,
+                          @restrict const  dfloat *  rhsq,
+                          @restrict dfloat *  rkrhsq,
+                          @restrict dfloat *  rkq,
+                          @restrict dfloat *  rkerr){
+
+  // Runge Kutta intermediate stage
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
+
+      const dlong id = e*p_Nfields*p_Np + n;
+
+      #pragma unroll p_Nfields
+      for (int f=0;f<p_Nfields;f++) {
+        dfloat r_rhsq = rhsq[id+f*p_Np];
+
+        if (rk==p_Nrk-1) { //last stage
+          dfloat r_q = rkX[rk+f*p_Nrk]*q[id+f*p_Np];
+          dfloat r_rkerr = 0.;
+          for (int i=0;i<p_Nrk-1;i++) {
+            r_q     += dt*rkA[p_Nrk*rk + i + f*p_Nrk*p_Nrk]*rkrhsq[id+f*p_Np+i*Nelements*p_Np*p_Nfields];
+            r_rkerr += dt*rkE[           i + f*p_Nrk      ]*rkrhsq[id+f*p_Np+i*Nelements*p_Np*p_Nfields];
+          }
+          r_q     += dt*rkA[p_Nrk*rk + p_Nrk-1 + f*p_Nrk*p_Nrk]*r_rhsq;
+          r_rkerr += dt*rkE[           p_Nrk-1 + f*p_Nrk      ]*r_rhsq;
+
+          rkq[id+f*p_Np] = r_q;
+          rkerr[id+f*p_Np] = r_rkerr;
+        }
+
+        rkrhsq[id+f*p_Np+rk*Nelements*p_Np*p_Nfields] = r_rhsq;
+      }
+    }
+  }
+}
+
+@kernel void sarkErrorEstimate(const dlong N,
+                               const dfloat ATOL,
+                               const dfloat RTOL,
+                               @restrict const  dfloat *  q,
+                               @restrict const  dfloat *  rkq,
+                               @restrict const  dfloat *  rkerr,
+                               @restrict dfloat *  errtmp){
+
+  for(dlong b=0;b<(N+p_blockSize-1)/p_blockSize;++b;@outer(0)){
+
+    @shared volatile dfloat s_err[p_blockSize];
+
+    for(int t=0;t<p_blockSize;++t;@inner(0)){
+      const dlong id = t + p_blockSize*b;
+      if (id<N) {
+        const dfloat   qn = fabs(  q[id]);
+        const dfloat rkqn = fabs(rkq[id]);
+        const dfloat qmax = (qn>rkqn) ? qn : rkqn;
+        dfloat sk = ATOL + RTOL*qmax;
+
+        s_err[t] = (rkerr[id]/sk)*(rkerr[id]/sk);
+      } else {
+        s_err[t] = 0.f;
+      }
+    }
+
+    @barrier("local");
+#if p_blockSize>512
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<512) s_err[t] += s_err[t+512];
+    @barrier("local");
+#endif
+#if p_blockSize>256
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<256) s_err[t] += s_err[t+256];
+    @barrier("local");
+#endif
+
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<128) s_err[t] += s_err[t+128];
+    @barrier("local");
+
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 64) s_err[t] += s_err[t+64];
+    @barrier("local");
+
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 32) s_err[t] += s_err[t+32];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 16) s_err[t] += s_err[t+16];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  8) s_err[t] += s_err[t+8];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  4) s_err[t] += s_err[t+4];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  2) s_err[t] += s_err[t+2];
+
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  1) errtmp[b] = s_err[0] + s_err[1];
+  }
+}
+
+@kernel void sarkRkPmlStage(const dlong N,
+                           const int rk,
+                           const dfloat dt,
+                           @restrict const  dfloat *  rkA,
+                           @restrict const  dfloat *  q,
+                           @restrict const  dfloat *  rkrhsq,
+                           @restrict dfloat *  rkq){
+
+  // Runge Kutta intermediate stage
+  for(dlong n=0;n<N;++n;@tile(p_blockSize,@outer,@inner)){
+
+    dfloat r_q = q[n];
+
+    for (int i=0;i<rk;i++)
+      r_q += dt*rkA[p_Nrk*rk + i]*rkrhsq[n+i*N];
+
+    rkq[n] = r_q;
+  }
+}
+
+@kernel void sarkRkPmlUpdate(const dlong N,
+                            const int rk,
+                            const dfloat dt,
+                            @restrict const  dfloat *  rkA,
+                            @restrict const  dfloat *  q,
+                            @restrict const  dfloat *  rhsq,
+                            @restrict dfloat *  rkrhsq,
+                            @restrict dfloat *  rkq){
+
+  // Runge Kutta intermediate stage
+  for(dlong n=0;n<N;++n;@tile(p_blockSize,@outer,@inner)){
+
+    dfloat r_rhsq = rhsq[n];
+
+    if (rk==p_Nrk-1) { //last stage
+      dfloat r_q = q[n];
+      for (int i=0;i<p_Nrk-1;i++) {
+        r_q     += dt*rkA[p_Nrk*rk + i]*rkrhsq[n+i*N];
+      }
+      r_q     += dt*rkA[p_Nrk*rk + p_Nrk-1]*r_rhsq;
+
+      rkq[n] = r_q;
+    }
+
+    rkrhsq[n+rk*N] = r_rhsq;
+  }
+}

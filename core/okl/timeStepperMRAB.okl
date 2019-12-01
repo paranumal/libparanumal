@@ -1,0 +1,216 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+@kernel void mrabUpdate(const dlong Nelements,
+                        @restrict const  dlong *  elementIds,
+                        @restrict const  int   *  level,
+                        @restrict const  dlong *  vmapM,
+                        const dlong offset,
+                        @restrict const int    * shiftIndex,
+                        @restrict const dfloat * dt,
+                        @restrict const dfloat * a,
+                        @restrict dfloat * rhsq0,
+                        @restrict dfloat * rhsq,
+                        @restrict dfloat * fQM,
+                        @restrict dfloat *  q){
+
+  // Adams Bashforth time step update
+  for(dlong es=0;es<Nelements;++es;@outer(0)){
+
+    @shared dfloat s_q[p_Np*p_Nfields];
+    @exclusive dlong e;
+
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      e  = elementIds[es];
+      if(n<p_Np){
+        const int lev = level[e];
+
+        //shifting array of pointers to previous rhs
+        dfloat* rhsqi[p_Nstages];
+
+        rhsqi[0] = rhsq0; //current step rhs
+        for (int i=0;i<p_Nstages-1;i++)
+          rhsqi[i+1] = rhsq + ((shiftIndex[lev]+i)%(p_Nstages-1))*offset; //history
+
+        const dlong id = e*p_Np*p_Nfields + n;
+
+        #pragma unroll p_Nfields
+        for(int f=0; f<p_Nfields; ++f) {
+          dfloat qn = q[id+f*p_Np];
+
+          for (int i=0;i<p_Nstages;i++)
+            qn += dt[lev]*a[i]*rhsqi[i][id+f*p_Np];
+
+          s_q[n+f*p_Np] = qn;
+
+          if (p_Nstages>1)
+            rhsqi[p_Nstages-1][id+f*p_Np] = rhsqi[0][id+f*p_Np]; //overwrite oldest rhs
+        }
+      }
+    }
+
+    // make sure all node data is loaded into @shared
+    @barrier("local");
+
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+
+      // Update q
+      if(n<p_Np){
+        const dlong id = e*p_Np*p_Nfields + n ;
+        #pragma unroll p_Nfields
+        for (int f = 0; f<p_Nfields; ++f){
+          q[id+f*p_Np] = s_q[n+f*p_Np];
+        }
+      }
+
+      if(n<p_Nfaces*p_Nfp){
+
+        const dlong vid  = e*p_Nfp*p_Nfaces + n;
+        const int qidM   = vmapM[vid]-e*p_Np;
+
+        const dlong qid  = e*p_Nfp*p_Nfaces*p_Nfields + n;
+
+        #pragma unroll p_Nfields
+        for (int f=0; f<p_Nfields; ++f){
+          fQM[qid+f*p_Nfp*p_Nfaces] = s_q[qidM+f*p_Np];
+        }
+      }
+    }
+  }
+}
+
+
+@kernel void mrabTraceUpdate(const dlong Nelements,
+                            @restrict const  dlong *  elementIds,
+                            @restrict const  int   *  level,
+                            @restrict const  dlong *  vmapM,
+                            const dlong offset,
+                            @restrict const int    * shiftIndex,
+                            @restrict const dfloat * dt,
+                            @restrict const dfloat * b,
+                            @restrict const dfloat * rhsq0,
+                            @restrict const dfloat * rhsq,
+                            @restrict const dfloat * q,
+                            @restrict dfloat *  fQM){
+
+  // Adams Bashforth time step update
+  for(dlong es=0;es<Nelements;++es;@outer(0)){
+
+    @shared dfloat s_q[p_Np*p_Nfields];
+    @exclusive dlong e;
+
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      e  = elementIds[es];
+      if(n<p_Np){
+        const int lev = level[e];
+
+        //shifting array of pointers to previous rhs
+        const dfloat* rhsqi[p_Nstages];
+
+        rhsqi[0] = rhsq0; //current step rhs
+        for (int i=0;i<p_Nstages-1;i++)
+          rhsqi[i+1] = rhsq + ((shiftIndex[lev]+i)%(p_Nstages-1))*offset; //history
+
+
+        const dlong id = e*p_Np*p_Nfields + n;
+
+        #pragma unroll p_Nfields
+        for(int f=0; f<p_Nfields; ++f) {
+          dfloat qn = q[id+f*p_Np];
+
+          for (int i=0;i<p_Nstages;i++)
+            qn += dt[lev]*b[i]*rhsqi[i][id+f*p_Np];
+
+          s_q[n+f*p_Np] = qn;
+        }
+      }
+    }
+
+    // make sure all node data is loaded into @shared
+    @barrier("local");
+
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+
+      if(n<p_Nfaces*p_Nfp){
+
+        const dlong vid  = e*p_Nfp*p_Nfaces + n;
+        const int qidM   = vmapM[vid]-e*p_Np;
+
+        const dlong qid  = e*p_Nfp*p_Nfaces*p_Nfields + n;
+
+        #pragma unroll p_Nfields
+        for (int f=0; f<p_Nfields; ++f){
+          fQM[qid+f*p_Nfp*p_Nfaces] = s_q[qidM+f*p_Np];
+        }
+      }
+    }
+  }
+}
+
+@kernel void mrabPmlUpdate(const dlong Nelements,
+                        @restrict const  dlong *  elementIds,
+                        @restrict const  dlong *  pmlIds,
+                        @restrict const  int   *  level,
+                        const dlong offset,
+                        const int Npmlfields,
+                        @restrict const int    * shiftIndex,
+                        @restrict const dfloat * dt,
+                        @restrict const dfloat * a,
+                        @restrict dfloat * rhsq0,
+                        @restrict dfloat * rhsq,
+                        @restrict dfloat *  q){
+
+  // Adams Bashforth time step update
+  for(dlong es=0;es<Nelements;++es;@outer(0)){
+
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      dlong e     = elementIds[es];
+      dlong pmle  = pmlIds[es];
+      const int lev = level[e];
+
+      //shifting array of pointers to previous rhs
+      dfloat* rhsqi[p_Nstages];
+
+      rhsqi[0] = rhsq0; //current step rhs
+      for (int i=0;i<p_Nstages-1;i++)
+        rhsqi[i+1] = rhsq + ((shiftIndex[lev]+i)%(p_Nstages-1))*offset; //history
+
+      const dlong id = pmle*p_Np*Npmlfields + n;
+
+      for(int f=0; f<Npmlfields; ++f) {
+        dfloat qn = q[id+f*p_Np];
+
+        for (int i=0;i<p_Nstages;i++)
+          qn += dt[lev]*a[i]*rhsqi[i][id+f*p_Np];
+
+        q[id+f*p_Np] = qn;
+
+        if (p_Nstages>1)
+          rhsqi[p_Nstages-1][id+f*p_Np] = rhsqi[0][id+f*p_Np]; //overwrite oldest rhs
+      }
+    }
+  }
+}

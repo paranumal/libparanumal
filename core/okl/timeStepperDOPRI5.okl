@@ -78,6 +78,34 @@ SOFTWARE.
   }
 }
 
+@kernel void dopri5RkPmlUpdate(const dlong N,
+                            const int rk,
+                            const dfloat dt,
+                            @restrict const  dfloat *  rkA,
+                            @restrict const  dfloat *  q,
+                            @restrict const  dfloat *  rhsq,
+                            @restrict dfloat *  rkrhsq,
+                            @restrict dfloat *  rkq){
+
+  // Runge Kutta intermediate stage
+  for(dlong n=0;n<N;++n;@tile(256,@outer,@inner)){
+
+    dfloat r_rhsq = rhsq[n];
+
+    if (rk==6) { //last stage
+      dfloat r_q = q[n];
+      for (int i=0;i<6;i++) {
+        r_q     += dt*rkA[7*rk + i]*rkrhsq[n+i*N];
+      }
+      r_q     += dt*rkA[7*rk + 6]*r_rhsq;
+
+      rkq[n] = r_q;
+    }
+
+    rkrhsq[n+rk*N] = r_rhsq;
+  }
+}
+
 @kernel void dopri5ErrorEstimate(const dlong N,
                                  const dfloat ATOL,
                                  const dfloat RTOL,
@@ -93,8 +121,8 @@ SOFTWARE.
     for(int t=0;t<p_blockSize;++t;@inner(0)){
       const dlong id = t + p_blockSize*b;
       if (id<N) {
-        const dfloat   qn =   q[id];
-        const dfloat rkqn = rkq[id];
+        const dfloat   qn = fabs(  q[id]);
+        const dfloat rkqn = fabs(rkq[id]);
         const dfloat qmax = (qn>rkqn) ? qn : rkqn;
         dfloat sk = ATOL + RTOL*qmax;
 

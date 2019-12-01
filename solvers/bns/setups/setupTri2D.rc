@@ -1,12 +1,11 @@
 [FORMAT]
-1.0
+2.0
 
 [DATA FILE]
-data/bnsUniform2D.h
+data/bnsGaussian2D.h
 
 [MESH FILE]
-#../../meshes/Tshape2D.msh
-../../meshes/boltzmannSquareCylinderPML2D.msh
+PMLBOX
 
 [MESH DIMENSION]
 2
@@ -14,40 +13,20 @@ data/bnsUniform2D.h
 [ELEMENT TYPE] # number of edges
 3
 
+[BOX NX]
+20
+
+[BOX NY]
+20
+
+[BOX NZ]
+20
+
+[BOX BOUNDARY FLAG]
+1
+
 [POLYNOMIAL DEGREE]
 4
-
-[RBAR] # mean density
-1.0
-
-[UBAR] # mean x-velocity
-1.0
-
-[VBAR] # mean y-velocity
-0.0
-
-[BODYFORCE-X] # constant global force on particles in x-direction
-0.0
-
-[BODYFORCE-Y] # constant global force on particles in y-direction
-0.0
-
-[ABSORBING LAYER]
-PML
-
-[PML PROFILE ORDER]
-4
-
-[PML SIGMAX MAX]
-100
-
-[PML SIGMAY MAX]
-100
-
-# compute sigma terms default: CUBATURE use COLLOCATION otherwise
-[PML INTEGRATION]
-COLLOCATION 
-
 
 [THREAD MODEL]
 CUDA
@@ -58,71 +37,38 @@ CUDA
 [DEVICE NUMBER]
 0
 
-[TIME INTEGRATOR]
-#LSERK4
-#MRSAAB
-SARK 
-
 [VISCOSITY]
 0.001
 
 [SPEED OF SOUND]
-5.0
+1.0
 
-[PROBE FLAG]
-0
+[PML PROFILE ORDER]
+4
 
-[REPORT FLAG]
-1
+[PML SIGMAX MAX]
+50
 
-[ERROR FLAG]
-1
+[PML SIGMAY MAX]
+50
 
-[TSTEPS FOR ERROR COMPUTE]
-100
+[PML INTEGRATION]
+COLLOCATION
 
-[TSTEPS FOR SOLUTION OUTPUT]
-100
+[TIME INTEGRATOR]
+SARK4
 
 [START TIME]
 0
 
 [FINAL TIME]
-75.0
+10
 
 [OUTPUT INTERVAL]
-0.1
-
-[TSTEPS FOR FORCE OUTPUT]
-0
-
-[ABSOLUTE TOLERANCE]
-1E-6
-
-[RELATIVE TOLERANCE]
-1E-5
-
-[MINUMUM TIME STEP SIZE]
-1E-10
-
-[MAX MRAB LEVELS]
-100
-
-[CFL]
-0.2
-
-# Currently SARK and LSERK only
-[RESTART FROM FILE]
-0
-
-[WRITE RESTART FILE]
 1
 
-[RESTART FILE NAME]
-bnsRestartTri2D
-
-[OUTPUT FILE FORMAT]
-VTU
+[OUTPUT TO FILE]
+TRUE
 
 [OUTPUT FILE NAME]
-Tbns
+bns

@@ -49,6 +49,8 @@ public:
   // print out mesh partition in parallel
   void PrintVTU(const char *fileName);
 
+  dfloat ElementCharacteristicLength(dlong e);
+
   dfloat MinCharacteristicLength();
 };
 
@@ -58,6 +60,7 @@ public:
             settings_t& _settings, occa::properties& _props);
   void ParallelReader(const char *fileName);
   void SetupBox();
+  void SetupPmlBox();
   void LoadReferenceNodes(int N);
   void PhysicalNodes();
   void GeometricFactors();
@@ -73,6 +76,7 @@ public:
              settings_t& _settings, occa::properties& _props);
   void ParallelReader(const char *fileName);
   void SetupBox();
+  void SetupPmlBox();
   void LoadReferenceNodes(int N);
   void PhysicalNodes();
   void GeometricFactors();
@@ -88,6 +92,7 @@ public:
             settings_t& _settings, occa::properties& _props);
   void ParallelReader(const char *fileName);
   void SetupBox();
+  void SetupPmlBox();
   void LoadReferenceNodes(int N);
   void PhysicalNodes();
   void GeometricFactors();
@@ -103,6 +108,7 @@ public:
             settings_t& _settings, occa::properties& _props);
   void ParallelReader(const char *fileName);
   void SetupBox();
+  void SetupPmlBox();
   void LoadReferenceNodes(int N);
   void PhysicalNodes();
   void GeometricFactors();

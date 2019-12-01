@@ -1,0 +1,1014 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+#define p_isq12 (1.f/sqrt(12.f))
+#define p_isq6 (1.f/sqrt(6.f))
+
+void upwind(const dfloat nx,  const dfloat ny,  const dfloat nz, const dfloat c,
+            const dfloat q1M, const dfloat q2M, const dfloat q3M, const dfloat q4M, const dfloat q5M,
+            const dfloat q6M, const dfloat q7M, const dfloat q8M, const dfloat q9M, const dfloat q10M,
+            const dfloat q1B, const dfloat q2B, const dfloat q3B, const dfloat q4B, const dfloat q5B,
+            const dfloat q6B, const dfloat q7B, const dfloat q8B, const dfloat q9B, const dfloat q10B,
+            dfloat * qflux){
+
+  const dfloat dq1  = 0.5f*(q1B  - q1M)  - p_isq12*(nx*(q2B-q2M) + ny*(q3B-q3M) + nz*(q4B-q4M));
+  const dfloat dq2  = 0.5f*(q2B  - q2M)  - p_isq12*nx*(q1B-q1M) - p_isq6*nx*(q8B-q8M) - 0.5f*ny*(q5B-q5M) - 0.5f*nz*(q6B-q6M);
+  const dfloat dq3  = 0.5f*(q3B  - q3M)  - 0.5f*nx*(q5B-q5M) - p_isq12*ny*(q1B-q1M) - p_isq6*ny*(q9B-q9M) - 0.5f*nz*(q7B-q7M);
+  const dfloat dq4  = 0.5f*(q4B  - q4M)  - 0.5f*nx*(q6B-q6M) - 0.5f*ny*(q7B-q7M) - p_isq6*nz*(q10B-q10M) - p_isq12*nz*(q1B-q1M);
+  const dfloat dq5  = 0.5f*(q5B  - q5M)  - 0.5f*nx*(q3B-q3M) - 0.5f*ny*(q2B-q2M);
+  const dfloat dq6  = 0.5f*(q6B  - q6M)  - 0.5f*nx*(q4B-q4M) - 0.5f*nz*(q2B-q2M);
+  const dfloat dq7  = 0.5f*(q7B  - q7M)  - 0.5f*ny*(q4B-q4M) - 0.5f*nz*(q3B-q3M);
+  const dfloat dq8  = 0.5f*(q8B  - q8M)  - p_isq6*nx*(q2B-q2M);
+  const dfloat dq9  = 0.5f*(q9B  - q9M)  - p_isq6*ny*(q3B-q3M);
+  const dfloat dq10 = 0.5f*(q10B - q10M) - p_isq6*nz*(q4B-q4M);
+
+  qflux[0] = c*(nx*dq2 + ny*dq3 + nz*dq4);
+  qflux[1] = c*(nx*(dq1+sqrt(2.0)*dq8) + ny*dq5 + nz*dq6);
+  qflux[2] = c*(nx*dq5 + ny*(dq1+sqrt(2.0)*dq9) + nz*dq7);
+  qflux[3] = c*(nx*dq6 + ny*dq7 + nz*(dq1+sqrt(2.0)*dq10));
+  qflux[4] = c*(nx*dq3 + ny*dq2);
+  qflux[5] = c*(nx*dq4 + nz*dq2);
+  qflux[6] = c*(ny*dq4 + nz*dq3);
+  qflux[7] = c*sqrt(2.0)*(nx*dq2);
+  qflux[8] = c*sqrt(2.0)*(ny*dq3);
+  qflux[9] = c*sqrt(2.0)*(nz*dq4);
+}
+
+void upwind_split(const dfloat nx,  const dfloat ny,  const dfloat nz, const dfloat c,
+            const dfloat q1M, const dfloat q2M, const dfloat q3M, const dfloat q4M, const dfloat q5M,
+            const dfloat q6M, const dfloat q7M, const dfloat q8M, const dfloat q9M, const dfloat q10M,
+            const dfloat q1B, const dfloat q2B, const dfloat q3B, const dfloat q4B, const dfloat q5B,
+            const dfloat q6B, const dfloat q7B, const dfloat q8B, const dfloat q9B, const dfloat q10B,
+            dfloat * qxflux, dfloat * qyflux, dfloat * qzflux){
+
+  const dfloat dq1  = 0.5f*(q1B  - q1M)  - p_isq12*(nx*(q2B-q2M) + ny*(q3B-q3M) + nz*(q4B-q4M));
+  const dfloat dq2  = 0.5f*(q2B  - q2M)  - p_isq12*nx*(q1B-q1M) - p_isq6*nx*(q8B-q8M) - 0.5f*ny*(q5B-q5M) - 0.5f*nz*(q6B-q6M);
+  const dfloat dq3  = 0.5f*(q3B  - q3M)  - 0.5f*nx*(q5B-q5M) - p_isq12*ny*(q1B-q1M) - p_isq6*ny*(q9B-q9M) - 0.5f*nz*(q7B-q7M);
+  const dfloat dq4  = 0.5f*(q4B  - q4M)  - 0.5f*nx*(q6B-q6M) - 0.5f*ny*(q7B-q7M) - p_isq6*nz*(q10B-q10M) - p_isq12*nz*(q1B-q1M);
+  const dfloat dq5  = 0.5f*(q5B  - q5M)  - 0.5f*nx*(q3B-q3M) - 0.5f*ny*(q2B-q2M);
+  const dfloat dq6  = 0.5f*(q6B  - q6M)  - 0.5f*nx*(q4B-q4M) - 0.5f*nz*(q2B-q2M);
+  const dfloat dq7  = 0.5f*(q7B  - q7M)  - 0.5f*ny*(q4B-q4M) - 0.5f*nz*(q3B-q3M);
+  const dfloat dq8  = 0.5f*(q8B  - q8M)  - p_isq6*nx*(q2B-q2M);
+  const dfloat dq9  = 0.5f*(q9B  - q9M)  - p_isq6*ny*(q3B-q3M);
+  const dfloat dq10 = 0.5f*(q10B - q10M) - p_isq6*nz*(q4B-q4M);
+
+  qxflux[0] = c*(nx*dq2);
+  qxflux[1] = c*(nx*(dq1+sqrt(2.0)*dq8));
+  qxflux[2] = c*(nx*dq5);
+  qxflux[3] = c*(nx*dq6);
+  qxflux[4] = c*(nx*dq3);
+  qxflux[5] = c*(nx*dq4);
+  qxflux[6] = 0.0;
+  qxflux[7] = c*sqrt(2.0)*(nx*dq2);
+  qxflux[8] = 0.0;
+  qxflux[9] = 0.0;
+
+  qyflux[0] = c*(ny*dq3);
+  qyflux[1] = c*(ny*dq5);
+  qyflux[2] = c*(ny*(dq1+sqrt(2.0)*dq9));
+  qyflux[3] = c*(ny*dq7);
+  qyflux[4] = c*(ny*dq2);
+  qyflux[5] = 0.0;
+  qyflux[6] = c*(ny*dq4);
+  qyflux[7] = 0.0;
+  qyflux[8] = c*sqrt(2.0)*(ny*dq3);
+  qyflux[9] = 0.0;
+
+  qzflux[0] = c*(nz*dq4);
+  qzflux[1] = c*(nz*dq6);
+  qzflux[2] = c*(nz*dq7);
+  qzflux[3] = c*(nz*(dq1+sqrt(2.0)*dq10));
+  qzflux[4] = 0.0;
+  qzflux[5] = c*(nz*dq2);
+  qzflux[6] = c*(nz*dq3);
+  qzflux[7] = 0.0;
+  qzflux[8] = 0.0;
+  qzflux[9] = c*sqrt(2.0)*(nz*dq4);
+}
+
+void surfaceTerms(const int e,
+                  const int sk,
+                  const int face,
+                  const int i,
+                  const int j,
+                  const int k,
+                  const dfloat *sgeo,
+                  const dfloat c,
+                  const dfloat nu,
+                  const dfloat time,
+                  const dfloat *x,
+                  const dfloat *y,
+                  const dfloat *z,
+                  const int *vmapM,
+                  const int *vmapP,
+                  const int *EToB,
+                  const dfloat *q,
+                  dfloat s_fluxq[p_Nfields][p_Nq][p_Nq][p_Nq]){
+
+  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
+  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
+  const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];
+  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];
+  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];
+
+  const dlong  idM = vmapM[sk];
+  const dlong  idP = vmapP[sk];
+
+  const dlong eM = e;
+  const dlong eP = idP/p_Np;
+  const int vidM = idM%p_Np;
+  const int vidP = idP%p_Np;
+
+  const dlong qidM = eM*p_Np*p_Nfields + vidM;
+  const dlong qidP = eP*p_Np*p_Nfields + vidP;
+
+  // Read trace values
+  const dfloat q1M  = q[qidM + 0*p_Np];
+  const dfloat q2M  = q[qidM + 1*p_Np];
+  const dfloat q3M  = q[qidM + 2*p_Np];
+  const dfloat q4M  = q[qidM + 3*p_Np];
+  const dfloat q5M  = q[qidM + 4*p_Np];
+  const dfloat q6M  = q[qidM + 5*p_Np];
+  const dfloat q7M  = q[qidM + 6*p_Np];
+  const dfloat q8M  = q[qidM + 7*p_Np];
+  const dfloat q9M  = q[qidM + 8*p_Np];
+  const dfloat q10M = q[qidM + 9*p_Np];
+
+  dfloat q1P = q[qidP  + 0*p_Np];
+  dfloat q2P = q[qidP  + 1*p_Np];
+  dfloat q3P = q[qidP  + 2*p_Np];
+  dfloat q4P = q[qidP  + 3*p_Np];
+  dfloat q5P = q[qidP  + 4*p_Np];
+  dfloat q6P = q[qidP  + 5*p_Np];
+  dfloat q7P = q[qidP  + 6*p_Np];
+  dfloat q8P = q[qidP  + 7*p_Np];
+  dfloat q9P = q[qidP  + 8*p_Np];
+  dfloat q10P = q[qidP + 9*p_Np];
+
+
+  // apply boundary condition
+  const int bc = EToB[face+p_Nfaces*e];
+  if(bc>0){
+    //convert to primitives
+    const dfloat rM   = q1M;
+    const dfloat uM   = c*q2M/rM;
+    const dfloat vM   = c*q3M/rM;
+    const dfloat wM   = c*q4M/rM;
+
+    const dfloat s12M = -c*c*(          q5M  - q2M*q3M/q1M);
+    const dfloat s13M = -c*c*(          q6M  - q2M*q4M/q1M);
+    const dfloat s23M = -c*c*(          q7M  - q3M*q4M/q1M);
+
+    const dfloat s11M = -c*c*(sqrt(2.0)*q8M  - q2M*q2M/q1M);
+    const dfloat s22M = -c*c*(sqrt(2.0)*q9M  - q3M*q3M/q1M);
+    const dfloat s33M = -c*c*(sqrt(2.0)*q10M - q4M*q4M/q1M);
+
+    dfloat rP, uP, vP, wP, s11P, s12P, s13P, s22P, s23P, s33P;
+    bnsBoundaryConditions3D(bc, c, nu, time,
+                            x[idM], y[idM], z[idM], nx, ny, nz,
+                             rM,  uM,  vM,  wM,  s11M,  s12M,  s13M,  s22M,  s23M,  s33M,
+                            &rP, &uP, &vP, &wP, &s11P, &s12P, &s13P, &s22P, &s23P, &s33P);
+
+    //convert back
+    q2P = rP*uP/c;
+    q3P = rP*vP/c;
+    q4P = rP*wP/c;
+
+    q5P = (-s12P/(c*c) + q2P*q3P/q1P);
+    q6P = (-s13P/(c*c) + q2P*q4P/q1P);
+    q7P = (-s23P/(c*c) + q3P*q4P/q1P);
+
+    q8P  = (-s11P/(c*c) + q2P*q2P/q1P)/sqrt(2.0);
+    q9P  = (-s22P/(c*c) + q3P*q3P/q1P)/sqrt(2.0);
+    q10P = (-s33P/(c*c) + q4P*q4P/q1P)/sqrt(2.0);
+  }
+
+  // compute (q^*)
+  dfloat qflux[p_Nfields];
+  upwind(nx, ny, nz, c,
+         q1M, q2M, q3M, q4M, q5M, q6M, q7M, q8M, q9M, q10M,
+         q1P, q2P, q3P, q4P, q5P, q6P, q7P, q8P, q9P, q10P,
+         qflux);
+
+  const dfloat sc = invWJ*sJ;
+  s_fluxq[0][k][j][i] += sc*(-qflux[0]);
+  s_fluxq[1][k][j][i] += sc*(-qflux[1]);
+  s_fluxq[2][k][j][i] += sc*(-qflux[2]);
+  s_fluxq[3][k][j][i] += sc*(-qflux[3]);
+  s_fluxq[4][k][j][i] += sc*(-qflux[4]);
+  s_fluxq[5][k][j][i] += sc*(-qflux[5]);
+  s_fluxq[6][k][j][i] += sc*(-qflux[6]);
+  s_fluxq[7][k][j][i] += sc*(-qflux[7]);
+  s_fluxq[8][k][j][i] += sc*(-qflux[8]);
+  s_fluxq[9][k][j][i] += sc*(-qflux[9]);
+}
+
+
+void surfaceTerms_split(const int e,
+                     const int sk,
+                     const int face,
+                     const int i,
+                     const int j,
+                     const int k,
+                     const dfloat *sgeo,
+                     const dfloat c,
+                     const dfloat nu,
+                     const dfloat time,
+                     const dfloat *x,
+                     const dfloat *y,
+                     const dfloat *z,
+                     const int *vmapM,
+                     const int *vmapP,
+                     const int *EToB,
+                     const dfloat *q,
+                     dfloat s_fluxqx[p_Nfields][p_Nq][p_Nq][p_Nq],
+                     dfloat s_fluxqy[p_Nfields][p_Nq][p_Nq][p_Nq],
+                     dfloat s_fluxqz[p_Nfields][p_Nq][p_Nq][p_Nq]){
+
+  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
+  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
+  const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];
+  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];
+  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];
+
+  const dlong  idM = vmapM[sk];
+  const dlong  idP = vmapP[sk];
+
+  const dlong eM = e;
+  const dlong eP = idP/p_Np;
+  const int vidM = idM%p_Np;
+  const int vidP = idP%p_Np;
+
+  const dlong qidM = eM*p_Np*p_Nfields + vidM;
+  const dlong qidP = eP*p_Np*p_Nfields + vidP;
+
+  // Read trace values
+  const dfloat q1M  = q[qidM + 0*p_Np];
+  const dfloat q2M  = q[qidM + 1*p_Np];
+  const dfloat q3M  = q[qidM + 2*p_Np];
+  const dfloat q4M  = q[qidM + 3*p_Np];
+  const dfloat q5M  = q[qidM + 4*p_Np];
+  const dfloat q6M  = q[qidM + 5*p_Np];
+  const dfloat q7M  = q[qidM + 6*p_Np];
+  const dfloat q8M  = q[qidM + 7*p_Np];
+  const dfloat q9M  = q[qidM + 8*p_Np];
+  const dfloat q10M = q[qidM + 9*p_Np];
+
+  dfloat q1P  = q[qidP + 0*p_Np];
+  dfloat q2P  = q[qidP + 1*p_Np];
+  dfloat q3P  = q[qidP + 2*p_Np];
+  dfloat q4P  = q[qidP + 3*p_Np];
+  dfloat q5P  = q[qidP + 4*p_Np];
+  dfloat q6P  = q[qidP + 5*p_Np];
+  dfloat q7P  = q[qidP + 6*p_Np];
+  dfloat q8P  = q[qidP + 7*p_Np];
+  dfloat q9P  = q[qidP + 8*p_Np];
+  dfloat q10P = q[qidP + 9*p_Np];
+
+
+  // apply boundary condition
+  const int bc = EToB[face+p_Nfaces*e];
+  if(bc>0){
+    //convert to primitives
+    const dfloat rM   = q1M;
+    const dfloat uM   = c*q2M/rM;
+    const dfloat vM   = c*q3M/rM;
+    const dfloat wM   = c*q4M/rM;
+
+    const dfloat s12M = -c*c*(          q5M  - q2M*q3M/q1M);
+    const dfloat s13M = -c*c*(          q6M  - q2M*q4M/q1M);
+    const dfloat s23M = -c*c*(          q7M  - q3M*q4M/q1M);
+
+    const dfloat s11M = -c*c*(sqrt(2.0)*q8M  - q2M*q2M/q1M);
+    const dfloat s22M = -c*c*(sqrt(2.0)*q9M  - q3M*q3M/q1M);
+    const dfloat s33M = -c*c*(sqrt(2.0)*q10M - q4M*q4M/q1M);
+
+    dfloat rP, uP, vP, wP, s11P, s12P, s13P, s22P, s23P, s33P;
+    bnsBoundaryConditions3D(bc, c, nu, time,
+                            x[idM], y[idM], z[idM], nx, ny, nz,
+                             rM,  uM,  vM,  wM,  s11M,  s12M,  s13M,  s22M,  s23M,  s33M,
+                            &rP, &uP, &vP, &wP, &s11P, &s12P, &s13P, &s22P, &s23P, &s33P);
+
+    //convert back
+    q2P = rP*uP/c;
+    q3P = rP*vP/c;
+    q4P = rP*wP/c;
+
+    q5P = (-s12P/(c*c) + q2P*q3P/q1P);
+    q6P = (-s13P/(c*c) + q2P*q4P/q1P);
+    q7P = (-s23P/(c*c) + q3P*q4P/q1P);
+
+    q8P  = (-s11P/(c*c) + q2P*q2P/q1P)/sqrt(2.0);
+    q9P  = (-s22P/(c*c) + q3P*q3P/q1P)/sqrt(2.0);
+    q10P = (-s33P/(c*c) + q4P*q4P/q1P)/sqrt(2.0);
+  }
+
+  // compute (q^*)
+  dfloat qxflux[p_Nfields], qyflux[p_Nfields], qzflux[p_Nfields];
+  upwind_split(nx, ny, nz, c,
+         q1M, q2M, q3M, q4M, q5M, q6M, q7M, q8M, q9M, q10M,
+         q1P, q2P, q3P, q4P, q5P, q6P, q7P, q8P, q9P, q10P,
+         qxflux, qyflux, qzflux);
+
+  const dfloat sc = invWJ*sJ;
+  for(int fld=0; fld<p_Nfields; fld++){
+    s_fluxqx[fld][k][j][i] += sc*(-qxflux[fld]);
+    s_fluxqy[fld][k][j][i] += sc*(-qyflux[fld]);
+    s_fluxqz[fld][k][j][i] += sc*(-qzflux[fld]);
+  }
+}
+
+
+void surfaceMRTerms(const int e,
+                    const int sk,
+                    const int face,
+                    const int i,
+                    const int j,
+                    const int k,
+                    const dfloat *sgeo,
+                    const dfloat c,
+                    const dfloat nu,
+                    const dfloat time,
+                    const dfloat *x,
+                    const dfloat *y,
+                    const dfloat *z,
+                    const int *vmapM,
+                    const int *mapP,
+                    const int *EToB,
+                    const dfloat *fQM,
+                    dfloat s_fluxq[p_Nfields][p_Nq][p_Nq][p_Nq]){
+
+  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
+  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
+  const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];
+  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];
+  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];
+
+  const dlong eM   = e;
+  const dlong idP  = mapP[sk];
+  const dlong eP = idP/(p_Nfp*p_Nfaces);
+  const int fidM = sk%(p_Nfp*p_Nfaces);
+  const int fidP = idP%(p_Nfp*p_Nfaces);
+
+  const dlong qidM = eM*p_Nfp*p_Nfaces*p_Nfields + fidM;
+  const dlong qidP = eP*p_Nfp*p_Nfaces*p_Nfields + fidP;
+
+  // Read trace values
+  const dfloat q1M  = fQM[qidM + 0*p_Nfp*p_Nfaces];
+  const dfloat q2M  = fQM[qidM + 1*p_Nfp*p_Nfaces];
+  const dfloat q3M  = fQM[qidM + 2*p_Nfp*p_Nfaces];
+  const dfloat q4M  = fQM[qidM + 3*p_Nfp*p_Nfaces];
+  const dfloat q5M  = fQM[qidM + 4*p_Nfp*p_Nfaces];
+  const dfloat q6M  = fQM[qidM + 5*p_Nfp*p_Nfaces];
+  const dfloat q7M  = fQM[qidM + 6*p_Nfp*p_Nfaces];
+  const dfloat q8M  = fQM[qidM + 7*p_Nfp*p_Nfaces];
+  const dfloat q9M  = fQM[qidM + 8*p_Nfp*p_Nfaces];
+  const dfloat q10M = fQM[qidM + 9*p_Nfp*p_Nfaces];
+
+  dfloat q1P  = fQM[qidP + 0*p_Nfp*p_Nfaces];
+  dfloat q2P  = fQM[qidP + 1*p_Nfp*p_Nfaces];
+  dfloat q3P  = fQM[qidP + 2*p_Nfp*p_Nfaces];
+  dfloat q4P  = fQM[qidP + 3*p_Nfp*p_Nfaces];
+  dfloat q5P  = fQM[qidP + 4*p_Nfp*p_Nfaces];
+  dfloat q6P  = fQM[qidP + 5*p_Nfp*p_Nfaces];
+  dfloat q7P  = fQM[qidP + 6*p_Nfp*p_Nfaces];
+  dfloat q8P  = fQM[qidP + 7*p_Nfp*p_Nfaces];
+  dfloat q9P  = fQM[qidP + 8*p_Nfp*p_Nfaces];
+  dfloat q10P = fQM[qidP + 9*p_Nfp*p_Nfaces];
+
+  // apply boundary condition
+  const int bc = EToB[face+p_Nfaces*e];
+  if(bc>0){
+    //convert to primitives
+    const dfloat rM   = q1M;
+    const dfloat uM   = c*q2M/rM;
+    const dfloat vM   = c*q3M/rM;
+    const dfloat wM   = c*q4M/rM;
+
+    const dfloat s12M = -c*c*(          q5M  - q2M*q3M/q1M);
+    const dfloat s13M = -c*c*(          q6M  - q2M*q4M/q1M);
+    const dfloat s23M = -c*c*(          q7M  - q3M*q4M/q1M);
+
+    const dfloat s11M = -c*c*(sqrt(2.0)*q8M  - q2M*q2M/q1M);
+    const dfloat s22M = -c*c*(sqrt(2.0)*q9M  - q3M*q3M/q1M);
+    const dfloat s33M = -c*c*(sqrt(2.0)*q10M - q4M*q4M/q1M);
+
+    dfloat rP, uP, vP, wP, s11P, s12P, s13P, s22P, s23P, s33P;
+    bnsBoundaryConditions3D(bc, c, nu, time,
+                            x[idM], y[idM], z[idM], nx, ny, nz,
+                             rM,  uM,  vM,  wM,  s11M,  s12M,  s13M,  s22M,  s23M,  s33M,
+                            &rP, &uP, &vP, &wP, &s11P, &s12P, &s13P, &s22P, &s23P, &s33P);
+
+    //convert back
+    q2P = rP*uP/c;
+    q3P = rP*vP/c;
+    q4P = rP*wP/c;
+
+    q5P = (-s12P/(c*c) + q2P*q3P/q1P);
+    q6P = (-s13P/(c*c) + q2P*q4P/q1P);
+    q7P = (-s23P/(c*c) + q3P*q4P/q1P);
+
+    q8P  = (-s11P/(c*c) + q2P*q2P/q1P)/sqrt(2.0);
+    q9P  = (-s22P/(c*c) + q3P*q3P/q1P)/sqrt(2.0);
+    q10P = (-s33P/(c*c) + q4P*q4P/q1P)/sqrt(2.0);
+  }
+
+  // compute (q^*)
+  dfloat qflux[p_Nfields];
+  upwind(nx, ny, nz, c,
+         q1M, q2M, q3M, q4M, q5M, q6M, q7M, q8M, q9M, q10M,
+         q1P, q2P, q3P, q4P, q5P, q6P, q7P, q8P, q9P, q10P,
+         qflux);
+
+  const dfloat sc = invWJ*sJ;
+  s_fluxq[0][k][j][i] += sc*(-qflux[0]);
+  s_fluxq[1][k][j][i] += sc*(-qflux[1]);
+  s_fluxq[2][k][j][i] += sc*(-qflux[2]);
+  s_fluxq[3][k][j][i] += sc*(-qflux[3]);
+  s_fluxq[4][k][j][i] += sc*(-qflux[4]);
+  s_fluxq[5][k][j][i] += sc*(-qflux[5]);
+  s_fluxq[6][k][j][i] += sc*(-qflux[6]);
+  s_fluxq[7][k][j][i] += sc*(-qflux[7]);
+  s_fluxq[8][k][j][i] += sc*(-qflux[8]);
+  s_fluxq[9][k][j][i] += sc*(-qflux[9]);
+}
+
+
+void surfaceMRTerms_split(const int e,
+                       const int sk,
+                       const int face,
+                       const int i,
+                       const int j,
+                       const int k,
+                       const dfloat *sgeo,
+                       const dfloat c,
+                       const dfloat nu,
+                       const dfloat time,
+                       const dfloat *x,
+                       const dfloat *y,
+                       const dfloat *z,
+                       const int *vmapM,
+                       const int *mapP,
+                       const int *EToB,
+                       const dfloat *fQM,
+                       dfloat s_fluxqx[p_Nfields][p_Nq][p_Nq][p_Nq],
+                       dfloat s_fluxqy[p_Nfields][p_Nq][p_Nq][p_Nq],
+                       dfloat s_fluxqz[p_Nfields][p_Nq][p_Nq][p_Nq]){
+
+  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
+  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
+  const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];
+  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];
+  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];
+
+  const dlong eM   = e;
+  const dlong idP  = mapP[sk];
+  const dlong eP   = idP/(p_Nfp*p_Nfaces);
+  const int fidM   = sk%(p_Nfp*p_Nfaces);
+  const int fidP   = idP%(p_Nfp*p_Nfaces);
+
+  const dlong qidM = eM*p_Nfp*p_Nfaces*p_Nfields + fidM;
+  const dlong qidP = eP*p_Nfp*p_Nfaces*p_Nfields + fidP;
+
+
+  // Read trace values
+  const dfloat q1M  = fQM[qidM + 0*p_Nfp*p_Nfaces];
+  const dfloat q2M  = fQM[qidM + 1*p_Nfp*p_Nfaces];
+  const dfloat q3M  = fQM[qidM + 2*p_Nfp*p_Nfaces];
+  const dfloat q4M  = fQM[qidM + 3*p_Nfp*p_Nfaces];
+  const dfloat q5M  = fQM[qidM + 4*p_Nfp*p_Nfaces];
+  const dfloat q6M  = fQM[qidM + 5*p_Nfp*p_Nfaces];
+  const dfloat q7M  = fQM[qidM + 6*p_Nfp*p_Nfaces];
+  const dfloat q8M  = fQM[qidM + 7*p_Nfp*p_Nfaces];
+  const dfloat q9M  = fQM[qidM + 8*p_Nfp*p_Nfaces];
+  const dfloat q10M = fQM[qidM + 9*p_Nfp*p_Nfaces];
+
+  dfloat q1P  = fQM[qidP + 0*p_Nfp*p_Nfaces];
+  dfloat q2P  = fQM[qidP + 1*p_Nfp*p_Nfaces];
+  dfloat q3P  = fQM[qidP + 2*p_Nfp*p_Nfaces];
+  dfloat q4P  = fQM[qidP + 3*p_Nfp*p_Nfaces];
+  dfloat q5P  = fQM[qidP + 4*p_Nfp*p_Nfaces];
+  dfloat q6P  = fQM[qidP + 5*p_Nfp*p_Nfaces];
+  dfloat q7P  = fQM[qidP + 6*p_Nfp*p_Nfaces];
+  dfloat q8P  = fQM[qidP + 7*p_Nfp*p_Nfaces];
+  dfloat q9P  = fQM[qidP + 8*p_Nfp*p_Nfaces];
+  dfloat q10P = fQM[qidP + 9*p_Nfp*p_Nfaces];
+
+  // apply boundary condition
+  const int bc = EToB[face+p_Nfaces*e];
+  if(bc>0){
+    //convert to primitives
+    const dfloat rM   = q1M;
+    const dfloat uM   = c*q2M/rM;
+    const dfloat vM   = c*q3M/rM;
+    const dfloat wM   = c*q4M/rM;
+
+    const dfloat s12M = -c*c*(          q5M  - q2M*q3M/q1M);
+    const dfloat s13M = -c*c*(          q6M  - q2M*q4M/q1M);
+    const dfloat s23M = -c*c*(          q7M  - q3M*q4M/q1M);
+
+    const dfloat s11M = -c*c*(sqrt(2.0)*q8M  - q2M*q2M/q1M);
+    const dfloat s22M = -c*c*(sqrt(2.0)*q9M  - q3M*q3M/q1M);
+    const dfloat s33M = -c*c*(sqrt(2.0)*q10M - q4M*q4M/q1M);
+
+    dfloat rP, uP, vP, wP, s11P, s12P, s13P, s22P, s23P, s33P;
+    bnsBoundaryConditions3D(bc, c, nu, time,
+                            x[idM], y[idM], z[idM], nx, ny, nz,
+                             rM,  uM,  vM,  wM,  s11M,  s12M,  s13M,  s22M,  s23M,  s33M,
+                            &rP, &uP, &vP, &wP, &s11P, &s12P, &s13P, &s22P, &s23P, &s33P);
+
+    //convert back
+    q2P = rP*uP/c;
+    q3P = rP*vP/c;
+    q4P = rP*wP/c;
+
+    q5P = (-s12P/(c*c) + q2P*q3P/q1P);
+    q6P = (-s13P/(c*c) + q2P*q4P/q1P);
+    q7P = (-s23P/(c*c) + q3P*q4P/q1P);
+
+    q8P  = (-s11P/(c*c) + q2P*q2P/q1P)/sqrt(2.0);
+    q9P  = (-s22P/(c*c) + q3P*q3P/q1P)/sqrt(2.0);
+    q10P = (-s33P/(c*c) + q4P*q4P/q1P)/sqrt(2.0);
+  }
+
+  // compute (q^*)
+  dfloat qxflux[p_Nfields], qyflux[p_Nfields], qzflux[p_Nfields];
+  upwind_split(nx, ny, nz, c,
+         q1M, q2M, q3M, q4M, q5M, q6M, q7M, q8M, q9M, q10M,
+         q1P, q2P, q3P, q4P, q5P, q6P, q7P, q8P, q9P, q10P,
+         qxflux, qyflux, qzflux);
+
+  const dfloat sc = invWJ*sJ;
+  for(int fld=0; fld<p_Nfields; fld++){
+    s_fluxqx[fld][k][j][i] += sc*(-qxflux[fld]);
+    s_fluxqy[fld][k][j][i] += sc*(-qyflux[fld]);
+    s_fluxqz[fld][k][j][i] += sc*(-qzflux[fld]);
+  }
+}
+
+
+
+// This @kernel uses Upwind flux
+@kernel void bnsSurfaceHex3D(const dlong Nelements,
+                             @restrict const  dlong  *  elementIds,
+                             @restrict const  dfloat *  sgeo,
+                             @restrict const  dfloat *  LIFTT,
+                             @restrict const  dlong  *  vmapM,
+                             @restrict const  dlong  *  vmapP,
+                             @restrict const  int    *  EToB,
+                             @restrict const  dfloat *  x,
+                             @restrict const  dfloat *  y,
+                             @restrict const  dfloat *  z,
+                             const dfloat time,
+                             const dfloat c,
+                             const dfloat nu,
+                             @restrict const  dfloat *  q,
+                             @restrict dfloat *  rhsq){
+  // for all elements
+  for(dlong et=0;et<Nelements;et++;@outer(0)){
+
+    // @shared storage for flux terms
+    @shared dfloat s_fluxq[p_Nfields][p_Nq][p_Nq][p_Nq];
+
+    @exclusive dlong e;
+
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        #pragma unroll p_Nq
+          for(int k=0;k<p_Nq;++k){
+            #pragma unroll p_Nfields
+              for(int fld=0; fld<p_Nfields; fld++)
+                s_fluxq[fld][k][j][i] = 0.f;
+          }
+      }
+    }
+
+    @barrier("local");
+
+    // face 0 & 5
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        e = elementIds[et];
+        const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + j*p_Nq + i;
+        const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i;
+
+        surfaceTerms(e, sk0, 0, i, j, 0,
+                     sgeo, c, nu, time, x, y, z, vmapM, vmapP, EToB, q, s_fluxq);
+
+        surfaceTerms(e, sk5, 5, i, j, p_Nq-1,
+                     sgeo, c, nu, time, x, y, z, vmapM, vmapP, EToB, q, s_fluxq);
+      }
+    }
+
+    @barrier("local");
+
+    // face 1 & 3
+    for(int k=0;k<p_Nq;++k;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + k*p_Nq + i;
+        const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + k*p_Nq + i;
+
+        surfaceTerms(e, sk1, 1, i, 0, k,
+                     sgeo, c, nu, time, x, y, z, vmapM, vmapP, EToB, q, s_fluxq);
+
+        surfaceTerms(e, sk3, 3, i, p_Nq-1, k,
+                     sgeo, c, nu, time, x, y, z, vmapM, vmapP, EToB, q, s_fluxq);
+      }
+    }
+
+    @barrier("local");
+
+    // face 2 & 4
+    for(int k=0;k<p_Nq;++k;@inner(1)){
+      for(int j=0;j<p_Nq;++j;@inner(0)){
+        const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + k*p_Nq + j;
+        const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + k*p_Nq + j;
+
+        surfaceTerms(e, sk2, 2, p_Nq-1, j, k,
+                     sgeo, c, nu, time, x, y, z, vmapM, vmapP, EToB, q, s_fluxq);
+
+        surfaceTerms(e, sk4, 4, 0, j, k,
+                     sgeo, c, nu, time, x, y, z, vmapM, vmapP, EToB, q, s_fluxq);
+      }
+    }
+
+    @barrier("local");
+
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        #pragma unroll p_Nq
+          for(int k=0;k<p_Nq;++k){
+            const dlong rhsId = e*p_Np*p_Nfields+k*p_Nq*p_Nq+j*p_Nq+i;
+            for(int fld=0; fld<p_Nfields; fld++){
+              rhsq[rhsId+fld*p_Np] += s_fluxq[fld][k][j][i];
+            }
+          }
+      }
+    }
+  }
+}
+
+
+
+// This @kernel uses upwind flux
+@kernel void bnsPmlSurfaceHex3D(const dlong pmlNelements,
+                                @restrict const  dlong  *  pmlElementIds,
+                                @restrict const  dlong  *  pmlIds,
+                                @restrict const  dfloat *  sgeo,
+                                @restrict const  dfloat *  LIFTT,
+                                @restrict const  dlong  *  vmapM,
+                                @restrict const  dlong  *  vmapP,
+                                @restrict const  int    *  EToB,
+                                @restrict const  dfloat *  x,
+                                @restrict const  dfloat *  y,
+                                @restrict const  dfloat *  z,
+                                const dfloat time,
+                                const dfloat c,
+                                const dfloat nu,
+                                @restrict const  dfloat *  q,
+                                @restrict dfloat *  rhsq,
+                                @restrict dfloat *  rhspmlq){
+
+  // for all elements
+  for(dlong et=0;et<pmlNelements;et++;@outer(0)){
+    // @shared storage for flux terms
+    @shared dfloat s_fluxqx[p_Nfields][p_Nq][p_Nq][p_Nq];
+    @shared dfloat s_fluxqy[p_Nfields][p_Nq][p_Nq][p_Nq];
+    @shared dfloat s_fluxqz[p_Nfields][p_Nq][p_Nq][p_Nq];
+
+    @exclusive dlong e;
+
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        #pragma unroll p_Nq
+          for(int k=0;k<p_Nq;++k){
+            #pragma unroll p_Nfields
+              for(int fld=0; fld<p_Nfields; fld++) {
+                s_fluxqx[fld][k][j][i] = 0.f;
+                s_fluxqy[fld][k][j][i] = 0.f;
+                s_fluxqz[fld][k][j][i] = 0.f;
+              }
+          }
+      }
+    }
+
+    @barrier("local");
+
+    // face 0 & 5
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        e = pmlElementIds[et];
+        const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + j*p_Nq + i;
+        const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i;
+
+        surfaceTerms_split(e, sk0, 0, i, j, 0,
+                     sgeo, c, nu, time, x, y, z, vmapM, vmapP, EToB, q, s_fluxqx, s_fluxqy, s_fluxqz);
+
+        surfaceTerms_split(e, sk5, 5, i, j, p_Nq-1,
+                     sgeo, c, nu, time, x, y, z, vmapM, vmapP, EToB, q, s_fluxqx, s_fluxqy, s_fluxqz);
+      }
+    }
+
+    @barrier("local");
+
+    // face 1 & 3
+    for(int k=0;k<p_Nq;++k;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + k*p_Nq + i;
+        const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + k*p_Nq + i;
+
+        surfaceTerms_split(e, sk1, 1, i, 0, k,
+                     sgeo, c, nu, time, x, y, z, vmapM, vmapP, EToB, q, s_fluxqx, s_fluxqy, s_fluxqz);
+
+        surfaceTerms_split(e, sk3, 3, i, p_Nq-1, k,
+                     sgeo, c, nu, time, x, y, z, vmapM, vmapP, EToB, q, s_fluxqx, s_fluxqy, s_fluxqz);
+      }
+    }
+
+    @barrier("local");
+
+    // face 2 & 4
+    for(int k=0;k<p_Nq;++k;@inner(1)){
+      for(int j=0;j<p_Nq;++j;@inner(0)){
+        const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + k*p_Nq + j;
+        const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + k*p_Nq + j;
+
+        surfaceTerms_split(e, sk2, 2, p_Nq-1, j, k,
+                     sgeo, c, nu, time, x, y, z, vmapM, vmapP, EToB, q, s_fluxqx, s_fluxqy, s_fluxqz);
+
+        surfaceTerms_split(e, sk4, 4, 0, j, k,
+                     sgeo, c, nu, time, x, y, z, vmapM, vmapP, EToB, q, s_fluxqx, s_fluxqy, s_fluxqz);
+      }
+    }
+
+    @barrier("local");
+
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        const dlong pmlId = pmlIds[et];
+
+        #pragma unroll p_Nq
+        for(int k=0;k<p_Nq;++k){
+
+          const dlong rhsId    = e*p_Np*p_Nfields+k*p_Nq*p_Nq+j*p_Nq+i;
+          const dlong pmlRhsId = pmlId*p_Np*p_Npmlfields+k*p_Nq*p_Nq+j*p_Nq+i;
+
+          for(int fld=0; fld<p_Nfields; fld++){
+            const dfloat aqx = s_fluxqx[fld][k][j][i];
+            const dfloat bqy = s_fluxqy[fld][k][j][i];
+            const dfloat cqz = s_fluxqz[fld][k][j][i];
+
+            rhsq[rhsId+fld*p_Np] += (aqx + bqy + cqz);
+            rhspmlq[pmlRhsId+0*p_Nfields*p_Np+fld*p_Np] += aqx;
+            rhspmlq[pmlRhsId+1*p_Nfields*p_Np+fld*p_Np] += bqy;
+            rhspmlq[pmlRhsId+2*p_Nfields*p_Np+fld*p_Np] += cqz;
+          }
+        }
+      }
+    }
+  }
+}
+
+
+@kernel void bnsMRSurfaceHex3D(const dlong Nelements,
+                               @restrict const  dlong  *  elementIds,
+                               @restrict const  dfloat *  sgeo,
+                               @restrict const  dfloat *  LIFTT,
+                               @restrict const  dlong  *  vmapM,
+                               @restrict const  dlong  *  mapP,
+                               @restrict const  int    *  EToB,
+                               @restrict const  dfloat *  x,
+                               @restrict const  dfloat *  y,
+                               @restrict const  dfloat *  z,
+                               const dfloat time,
+                               const dfloat c,
+                               const dfloat nu,
+                               @restrict const  dfloat *  q,
+                               @restrict const  dfloat *  fQM,
+                               @restrict dfloat *  rhsq){
+  // for all elements
+  for(dlong et=0;et<Nelements;et++;@outer(0)){
+
+    // @shared storage for flux terms
+    @shared dfloat s_fluxq[p_Nfields][p_Nq][p_Nq][p_Nq];
+
+    @exclusive dlong e;
+
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        #pragma unroll p_Nq
+          for(int k=0;k<p_Nq;++k){
+            #pragma unroll p_Nfields
+              for(int fld=0; fld<p_Nfields; fld++)
+                s_fluxq[fld][k][j][i] = 0.f;
+          }
+      }
+    }
+
+    @barrier("local");
+
+    // face 0 & 5
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        e = elementIds[et];
+        const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + j*p_Nq + i;
+        const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i;
+
+        surfaceMRTerms(e, sk0, 0, i, j, 0,
+                     sgeo, c, nu, time, x, y, z, vmapM, mapP, EToB, fQM, s_fluxq);
+
+        surfaceMRTerms(e, sk5, 5, i, j, p_Nq-1,
+                     sgeo, c, nu, time, x, y, z, vmapM, mapP, EToB, fQM, s_fluxq);
+      }
+    }
+
+    @barrier("local");
+
+    // face 1 & 3
+    for(int k=0;k<p_Nq;++k;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + k*p_Nq + i;
+        const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + k*p_Nq + i;
+
+        surfaceMRTerms(e, sk1, 1, i, 0, k,
+                     sgeo, c, nu, time, x, y, z, vmapM, mapP, EToB, fQM, s_fluxq);
+
+        surfaceMRTerms(e, sk3, 3, i, p_Nq-1, k,
+                     sgeo, c, nu, time, x, y, z, vmapM, mapP, EToB, fQM, s_fluxq);
+      }
+    }
+
+    @barrier("local");
+
+    // face 2 & 4
+    for(int k=0;k<p_Nq;++k;@inner(1)){
+      for(int j=0;j<p_Nq;++j;@inner(0)){
+        const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + k*p_Nq + j;
+        const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + k*p_Nq + j;
+
+        surfaceMRTerms(e, sk2, 2, p_Nq-1, j, k,
+                     sgeo, c, nu, time, x, y, z, vmapM, mapP, EToB, fQM, s_fluxq);
+
+        surfaceMRTerms(e, sk4, 4, 0, j, k,
+                     sgeo, c, nu, time, x, y, z, vmapM, mapP, EToB, fQM, s_fluxq);
+      }
+    }
+
+    @barrier("local");
+
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        #pragma unroll p_Nq
+          for(int k=0;k<p_Nq;++k){
+            const dlong rhsId = e*p_Np*p_Nfields+k*p_Nq*p_Nq+j*p_Nq+i;
+            for(int fld=0; fld<p_Nfields; fld++){
+              rhsq[rhsId+fld*p_Np] += s_fluxq[fld][k][j][i];
+            }
+          }
+      }
+    }
+  }
+}
+
+
+
+@kernel void bnsMRPmlSurfaceHex3D(const dlong pmlNelements,
+                                  @restrict const  dlong  *  pmlElementIds,
+                                  @restrict const  dlong  *  pmlIds,
+                                  @restrict const  dfloat *  sgeo,
+                                  @restrict const  dfloat *  LIFTT,
+                                  @restrict const  dlong  *  vmapM,
+                                  @restrict const  dlong  *  mapP,
+                                  @restrict const  int    *  EToB,
+                                  @restrict const  dfloat *  x,
+                                  @restrict const  dfloat *  y,
+                                  @restrict const  dfloat *  z,
+                                  const dfloat time,
+                                  const dfloat c,
+                                  const dfloat nu,
+                                  @restrict const  dfloat *  q,
+                                  @restrict const  dfloat *  fQM,
+                                  @restrict dfloat *  rhsq,
+                                  @restrict dfloat *  rhspmlq){
+
+  // for all elements
+  for(dlong et=0;et<pmlNelements;et++;@outer(0)){
+    // @shared storage for flux terms
+    @shared dfloat s_fluxqx[p_Nfields][p_Nq][p_Nq][p_Nq];
+    @shared dfloat s_fluxqy[p_Nfields][p_Nq][p_Nq][p_Nq];
+    @shared dfloat s_fluxqz[p_Nfields][p_Nq][p_Nq][p_Nq];
+
+    @exclusive dlong e;
+
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        #pragma unroll p_Nq
+          for(int k=0;k<p_Nq;++k){
+            #pragma unroll p_Nfields
+              for(int fld=0; fld<p_Nfields; fld++) {
+                s_fluxqx[fld][k][j][i] = 0.f;
+                s_fluxqy[fld][k][j][i] = 0.f;
+                s_fluxqz[fld][k][j][i] = 0.f;
+              }
+          }
+      }
+    }
+
+    @barrier("local");
+
+    // face 0 & 5
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        e = pmlElementIds[et];
+        const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + j*p_Nq + i;
+        const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i;
+
+        surfaceMRTerms_split(e, sk0, 0, i, j, 0,
+                     sgeo, c, nu, time, x, y, z, vmapM, mapP, EToB, fQM, s_fluxqx, s_fluxqy, s_fluxqz);
+
+        surfaceMRTerms_split(e, sk5, 5, i, j, p_Nq-1,
+                     sgeo, c, nu, time, x, y, z, vmapM, mapP, EToB, fQM, s_fluxqx, s_fluxqy, s_fluxqz);
+      }
+    }
+
+    @barrier("local");
+
+    // face 1 & 3
+    for(int k=0;k<p_Nq;++k;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + k*p_Nq + i;
+        const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + k*p_Nq + i;
+
+        surfaceMRTerms_split(e, sk1, 1, i, 0, k,
+                     sgeo, c, nu, time, x, y, z, vmapM, mapP, EToB, fQM, s_fluxqx, s_fluxqy, s_fluxqz);
+
+        surfaceMRTerms_split(e, sk3, 3, i, p_Nq-1, k,
+                     sgeo, c, nu, time, x, y, z, vmapM, mapP, EToB, fQM, s_fluxqx, s_fluxqy, s_fluxqz);
+      }
+    }
+
+    @barrier("local");
+
+    // face 2 & 4
+    for(int k=0;k<p_Nq;++k;@inner(1)){
+      for(int j=0;j<p_Nq;++j;@inner(0)){
+        const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + k*p_Nq + j;
+        const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + k*p_Nq + j;
+
+        surfaceMRTerms_split(e, sk2, 2, p_Nq-1, j, k,
+                     sgeo, c, nu, time, x, y, z, vmapM, mapP, EToB, fQM, s_fluxqx, s_fluxqy, s_fluxqz);
+
+        surfaceMRTerms_split(e, sk4, 4, 0, j, k,
+                     sgeo, c, nu, time, x, y, z, vmapM, mapP, EToB, fQM, s_fluxqx, s_fluxqy, s_fluxqz);
+      }
+    }
+
+    @barrier("local");
+
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        #pragma unroll p_Nq
+        for(int k=0;k<p_Nq;++k){
+          const dlong pmlId = pmlIds[et];
+
+          const dlong rhsId    = e*p_Np*p_Nfields+k*p_Nq*p_Nq+j*p_Nq+i;
+          const dlong pmlRhsId = pmlId*p_Np*p_Npmlfields+k*p_Nq*p_Nq+j*p_Nq+i;
+
+          for(int fld=0; fld<p_Nfields; fld++){
+            const dfloat aqx = s_fluxqx[fld][k][j][i];
+            const dfloat bqy = s_fluxqy[fld][k][j][i];
+            const dfloat cqz = s_fluxqz[fld][k][j][i];
+
+            rhsq[rhsId+fld*p_Np] += (aqx + bqy + cqz);
+            rhspmlq[pmlRhsId+0*p_Nfields*p_Np+fld*p_Np] += aqx;
+            rhspmlq[pmlRhsId+1*p_Nfields*p_Np+fld*p_Np] += bqy;
+            rhspmlq[pmlRhsId+2*p_Nfields*p_Np+fld*p_Np] += cqz;
+          }
+        }
+      }
+    }
+  }
+}

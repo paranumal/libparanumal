@@ -45,6 +45,7 @@ void mesh_t::OccaSetup(){
 
   o_vmapM = device.malloc(Nelements*Nfp*Nfaces*sizeof(dlong), vmapM);
   o_vmapP = device.malloc(Nelements*Nfp*Nfaces*sizeof(dlong), vmapP);
+  o_mapP  = device.malloc(Nelements*Nfp*Nfaces*sizeof(dlong), mapP);
 
   o_EToB = device.malloc(Nelements*Nfaces*sizeof(int), EToB);
 

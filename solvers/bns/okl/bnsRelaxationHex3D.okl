@@ -1,0 +1,761 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+#define p_Nvars 4
+#define p_Nrelax 6
+
+#if 0
+@kernel void bnsRelaxationHex3D(const dlong Nelements,
+                               @restrict const  dlong *  elementIds,
+                               @restrict const  dfloat *  vgeo,
+                               @restrict const  dfloat *  cubvgeo,
+                               @restrict const  dfloat *  cubInterpT,
+                               @restrict const  dfloat *  cubProjectT,
+                               const int semiAnalytic,
+                               const dfloat tauInv,
+                               @restrict const  dfloat *  q,
+                                     @restrict dfloat *  rhsq){
+
+  for(dlong et=0;et<Nelements;et++;@outer(0)){  // for all elements
+
+    for(int k=0;k<p_Nq;++k;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
+          const dlong e = elementIds[et];
+          const dlong id = e*p_Nfields*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+
+          dfloat r_q[p_Nfields];
+
+          #pragma unroll p_Nfields
+          for(int fld=0; fld<p_Nfields;++fld){
+            r_q[fld] = q[id+fld*p_Np];
+          }
+
+          dfloat r_N[p_Nfields];
+
+          if(semiAnalytic){
+            // BGK relaxation approximation to the Boltzmann collision operator
+            r_N[4] = tauInv*(r_q[1]*r_q[2]/(r_q[0]          ));
+            r_N[5] = tauInv*(r_q[1]*r_q[3]/(r_q[0]          ));
+            r_N[6] = tauInv*(r_q[2]*r_q[3]/(r_q[0]          ));
+            r_N[7] = tauInv*(r_q[1]*r_q[1]/(r_q[0]*sqrt(2.0)));
+            r_N[8] = tauInv*(r_q[2]*r_q[2]/(r_q[0]*sqrt(2.0)));
+            r_N[9] = tauInv*(r_q[3]*r_q[3]/(r_q[0]*sqrt(2.0)));
+          }else{
+            // BGK relaxation approximation to the Boltzmann collision operator
+            // can be simplified by seperating linear part
+            r_N[4] = -tauInv*(r_q[4] - r_q[1]*r_q[2]/(r_q[0]          ));
+            r_N[5] = -tauInv*(r_q[5] - r_q[1]*r_q[3]/(r_q[0]          ));
+            r_N[6] = -tauInv*(r_q[6] - r_q[2]*r_q[3]/(r_q[0]          ));
+            r_N[7] = -tauInv*(r_q[7] - r_q[1]*r_q[1]/(r_q[0]*sqrt(2.0)));
+            r_N[8] = -tauInv*(r_q[8] - r_q[2]*r_q[2]/(r_q[0]*sqrt(2.0)));
+            r_N[9] = -tauInv*(r_q[9] - r_q[3]*r_q[3]/(r_q[0]*sqrt(2.0)));
+          }
+
+          const dlong rhsId = e*p_Np*p_Nfields + k*p_Nq*p_Nq + j*p_Nq + i;
+
+          for(int fld=0; fld<p_Nrelax; fld++){
+            rhsq[rhsId + (fld+p_Nvars)*p_Np]  += r_N[fld+p_Nvars];
+          }
+        }
+      }
+    }
+  }
+}
+#else
+@kernel void bnsRelaxationHex3D(const dlong Nelements,
+                               @restrict const  dlong *  elementIds,
+                               @restrict const  dfloat *  vgeo,
+                               @restrict const  dfloat *  cubvgeo,
+                               @restrict const  dfloat *  cubInterpT,
+                               @restrict const  dfloat *  cubProjectT,
+                               const int semiAnalytic,
+                               const dfloat tauInv,
+                               @restrict const  dfloat *  q,
+                                     @restrict dfloat *  rhsq){
+
+  for(dlong et=0;et<Nelements;et++;@outer(0)){  // for all elements
+
+    // @shared memory for q at nodes
+    @shared dfloat s_q[p_Nfields][p_cubNq][p_cubNq][p_cubNq];
+
+    @exclusive dfloat r_q[p_Nfields];
+
+    @shared dfloat s_cubInterpT[p_Nq][p_cubNq];
+    @shared dfloat s_cubProjectT[p_cubNq][p_Nq];
+
+    @exclusive dlong e;
+
+    //fetch the U and V values and store in flux arrays in @shared
+    for(int k=0;k<p_cubNq;++k;@inner(2)){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          e = elementIds[et];
+          if ((i<p_Nq) && (j<p_Nq) && (k<p_Nq)){
+            const dlong id = e*p_Nfields*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+
+            #pragma unroll p_Nfields
+            for(int fld=0; fld<p_Nfields;++fld){
+              s_q[fld][k][j][i] = q[id+fld*p_Np];
+            }
+          }
+
+          const int ids = i+j*p_cubNq;
+          if ((k==0) && (ids<p_Nq*p_cubNq)) {
+            s_cubInterpT[0][ids] = cubInterpT[ids];
+            s_cubProjectT[0][ids] = cubProjectT[ids];
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    //interpolate in i, store in register
+    for(int k=0;k<p_cubNq;++k;@inner(2)){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          if (j<p_Nq && k<p_Nq) {
+
+            for(int fld=0; fld<p_Nfields; fld++)
+              r_q[fld] = 0.f;
+
+            #pragma unroll p_Nq
+            for (int n=0;n<p_Nq;n++) {
+              const dfloat Ini = s_cubInterpT[n][i];
+              // #pragma unroll p_Nfields
+              for(int fld=0; fld<p_Nfields; fld++){
+                r_q[fld]  += Ini*s_q[fld][k][j][n];
+              }
+            }
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    //write register back to @shared
+    for(int k=0;k<p_cubNq;++k;@inner(2)){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          if (j<p_Nq && k<p_Nq) {
+            for(int fld=0; fld<p_Nfields; fld++){
+              s_q[fld][k][j][i] = r_q[fld];
+            }
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+
+    //interpolate in j, store in register
+    for(int k=0;k<p_cubNq;++k;@inner(2)){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          if (k<p_Nq) {
+
+            for(int fld=0; fld<p_Nfields; fld++)
+              r_q[fld] = 0.f;
+
+            #pragma unroll p_Nq
+            for (int n=0;n<p_Nq;n++) {
+              const dfloat Ini = s_cubInterpT[n][j];
+              // #pragma unroll p_Nfields
+              for(int fld=0; fld<p_Nfields; fld++){
+                r_q[fld]  += Ini*s_q[fld][k][n][i];
+              }
+            }
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    //write register back to @shared
+    for(int k=0;k<p_cubNq;++k;@inner(2)){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          if (k<p_Nq) {
+            for(int fld=0; fld<p_Nfields; fld++){
+              s_q[fld][k][j][i] = r_q[fld];
+            }
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    //interpolate in k, store in register
+    for(int k=0;k<p_cubNq;++k;@inner(2)){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+
+          for(int fld=0; fld<p_Nfields; fld++)
+            r_q[fld] = 0.f;
+
+          #pragma unroll p_Nq
+          for (int n=0;n<p_Nq;n++) {
+            const dfloat Ini = s_cubInterpT[n][k];
+            // #pragma unroll p_Nfields
+            for(int fld=0; fld<p_Nfields; fld++){
+              r_q[fld]  += Ini*s_q[fld][n][j][i];
+            }
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    //construct nonlinear term from registers
+    for(int k=0;k<p_cubNq;++k;@inner(2)){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          const dlong gid = e*p_cubNp*p_Nvgeo+ k*p_cubNq*p_cubNq + j*p_cubNq +i;
+          const dfloat JW = cubvgeo[gid + p_JWID*p_cubNp];
+
+          if(semiAnalytic){
+            // BGK relaxation approximation to the Boltzmann collision operator
+            s_q[4][k][j][i] = JW*tauInv*(r_q[1]*r_q[2]/(r_q[0]          ));
+            s_q[5][k][j][i] = JW*tauInv*(r_q[1]*r_q[3]/(r_q[0]          ));
+            s_q[6][k][j][i] = JW*tauInv*(r_q[2]*r_q[3]/(r_q[0]          ));
+            s_q[7][k][j][i] = JW*tauInv*(r_q[1]*r_q[1]/(r_q[0]*sqrt(2.0)));
+            s_q[8][k][j][i] = JW*tauInv*(r_q[2]*r_q[2]/(r_q[0]*sqrt(2.0)));
+            s_q[9][k][j][i] = JW*tauInv*(r_q[3]*r_q[3]/(r_q[0]*sqrt(2.0)));
+          }else{
+            // BGK relaxation approximation to the Boltzmann collision operator
+            // can be simplified by seperating linear part
+            s_q[4][k][j][i] = -JW*tauInv*(r_q[4] - r_q[1]*r_q[2]/(r_q[0]          ));
+            s_q[5][k][j][i] = -JW*tauInv*(r_q[5] - r_q[1]*r_q[3]/(r_q[0]          ));
+            s_q[6][k][j][i] = -JW*tauInv*(r_q[6] - r_q[2]*r_q[3]/(r_q[0]          ));
+            s_q[7][k][j][i] = -JW*tauInv*(r_q[7] - r_q[1]*r_q[1]/(r_q[0]*sqrt(2.0)));
+            s_q[8][k][j][i] = -JW*tauInv*(r_q[8] - r_q[2]*r_q[2]/(r_q[0]*sqrt(2.0)));
+            s_q[9][k][j][i] = -JW*tauInv*(r_q[9] - r_q[3]*r_q[3]/(r_q[0]*sqrt(2.0)));
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    //project in k
+    for(int k=0;k<p_cubNq;++k;@inner(2)){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+
+          for(int fld=0; fld<p_Nrelax; fld++)
+            r_q[fld] = 0.f;
+
+          if (k<p_Nq) {
+            #pragma unroll p_cubNq
+            for (int n=0;n<p_cubNq;n++) {
+              const dfloat Pnk = s_cubProjectT[n][k];
+              for(int fld=0; fld<p_Nrelax; fld++){
+                r_q[fld] += Pnk*s_q[fld+p_Nvars][n][j][i];
+              }
+            }
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    //write register back to @shared
+    for(int k=0;k<p_cubNq;++k;@inner(2)){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          if (k<p_Nq) {
+            for(int fld=0; fld<p_Nrelax; fld++){
+              s_q[fld][k][j][i] = r_q[fld];
+            }
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    //project in j
+    for(int k=0;k<p_cubNq;++k;@inner(2)){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+
+          for(int fld=0; fld<p_Nrelax; fld++)
+            r_q[fld] = 0.f;
+
+          if (j<p_Nq && k<p_Nq) {
+            #pragma unroll p_cubNq
+            for (int n=0;n<p_cubNq;n++) {
+              const dfloat Pnj = s_cubProjectT[n][j];
+              for(int fld=0; fld<p_Nrelax; fld++){
+                r_q[fld] += Pnj*s_q[fld][k][n][i];
+              }
+            }
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    //write register back to @shared
+    for(int k=0;k<p_cubNq;++k;@inner(2)){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          if (j<p_Nq && k<p_Nq) {
+            for(int fld=0; fld<p_Nrelax; fld++){
+              s_q[fld][k][j][i] = r_q[fld];
+            }
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    // project in i and update
+    for(int k=0;k<p_cubNq;++k;@inner(2)){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          if((i<p_Nq) && (j<p_Nq) && (k<p_Nq)){
+            const dlong gid = e*p_Np*p_Nvgeo+ k*p_Nq*p_Nq +j*p_Nq +i;
+            const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
+
+            for(int fld=0; fld<p_Nrelax; fld++)
+              r_q[fld] = 0.f;
+
+
+            #pragma unroll p_cubNq
+            for(int n=0;n<p_cubNq;++n){
+              const dfloat Pni = s_cubProjectT[n][i];
+              for(int fld=0; fld<p_Nrelax; fld++){
+                r_q[fld] += Pni*s_q[fld][k][j][n];
+              }
+            }
+
+            const dlong rhsId = e*p_Np*p_Nfields + k*p_Nq*p_Nq + j*p_Nq + i;
+
+            for(int fld=0; fld<p_Nrelax; fld++){
+              rhsq[rhsId + (fld+p_Nvars)*p_Np]  += invJW*r_q[fld];
+            }
+          }
+        }
+      }
+    }
+  }
+}
+#endif
+
+
+// Too much shmem usage
+#if 0
+
+// Fully Explicit Scheme Uses Clasical half Half Splitting
+@kernel void bnsPmlRelaxationCubHex3D(const dlong pmlNelements,
+                                  @restrict const  dlong *  pmlElementIds,
+                                  @restrict const  dlong *  pmlIds,
+                                  @restrict const  dfloat *  vgeo,
+                                  @restrict const  dfloat *  cubvgeo,
+                                  @restrict const  dfloat *  cubInterpT,
+                                  @restrict const  dfloat *  cubProjectT,
+                                  @restrict const  dfloat *  pmlSigma,
+                                            const dfloat pmlAlpha,
+                                            const int semiAnalytic,
+                                            const dfloat tauInv,
+                                  @restrict const  dfloat *  q,
+                                  @restrict const  dfloat *  pmlq,
+                                        @restrict dfloat *  rhsq,
+                                        @restrict dfloat *  rhspmlq){
+
+  for(dlong et=0;et<pmlNelements;et++;@outer(0)){  // for all elements
+
+    // @shared memory for q at nodes
+    @shared dfloat s_q[p_Nfields][p_cubNq][p_cubNq][p_cubNq];
+    @shared dfloat s_qx[p_Nfields][p_cubNq][p_cubNq][p_cubNq];
+    @shared dfloat s_qy[p_Nfields][p_cubNq][p_cubNq][p_cubNq];
+    @shared dfloat s_qz[p_Nfields][p_cubNq][p_cubNq][p_cubNq];
+
+    @exclusive dfloat r_q[p_Nfields];
+    @exclusive dfloat r_qx[p_Nfields];
+    @exclusive dfloat r_qy[p_Nfields];
+    @exclusive dfloat r_qz[p_Nfields];
+
+    @shared dfloat s_cubInterpT[p_Nq][p_cubNq];
+    @shared dfloat s_cubProjectT[p_cubNq][p_Nq];
+
+    @exclusive dlong e, pmlId;
+
+    //fetch the U and V values and store in flux arrays in @shared
+    for(int k=0;k<p_cubNq;++k;@inner(2)){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          e     = pmlElementIds[et];
+          pmlId = pmlIds[et];
+
+          if( (i<p_Nq) && (j<p_Nq)){
+            const dlong id =  e*p_Nfields*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+            const dlong pid = pmlId*p_Npmlfields*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+
+            #pragma unroll p_Nfields
+            for(int fld=0; fld<p_Nfields;++fld){
+              s_q[fld][k][j][i]  = q[id+fld*p_Np];
+              s_qx[fld][k][j][i] = pmlq[pid + 0*p_Np*p_Nfields + fld*p_Np];
+              s_qy[fld][k][j][i] = pmlq[pid + 1*p_Np*p_Nfields + fld*p_Np];
+              s_qz[fld][k][j][i] = pmlq[pid + 2*p_Np*p_Nfields + fld*p_Np];
+            }
+          }
+
+          const int ids = i+j*p_cubNq;
+          if (k==0 && ids<p_Nq*p_cubNq) {
+            s_cubInterpT[0][ids] = cubInterpT[ids];
+            s_cubProjectT[0][ids] = cubProjectT[ids];
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    //interpolate in i, store in register
+    for(int k=0;k<p_cubNq;++k;@inner(2)){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          if (j<p_Nq && k<p_Nq) {
+
+            for(int fld=0; fld<p_Nfields; fld++) {
+              r_q[fld] = 0.f;
+              r_qx[fld] = 0.f;
+              r_qy[fld] = 0.f;
+              r_qz[fld] = 0.f;
+            }
+
+            #pragma unroll p_Nq
+            for (int n=0;n<p_Nq;n++) {
+              const dfloat Ini = s_cubInterpT[n][i];
+              // #pragma unroll p_Nfields
+              for(int fld=0; fld<p_Nfields; fld++){
+                r_q[fld]   += Ini*s_q[fld][k][j][n];
+                r_qx[fld]  += Ini*s_qx[fld][k][j][n];
+                r_qy[fld]  += Ini*s_qy[fld][k][j][n];
+                r_qz[fld]  += Ini*s_qz[fld][k][j][n];
+              }
+            }
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    //write register back to @shared
+    for(int k=0;k<p_cubNq;++k;@inner(2)){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          if (j<p_Nq && k<p_Nq) {
+            for(int fld=0; fld<p_Nfields; fld++){
+              s_q[fld][k][j][i] = r_q[fld];
+              s_qx[fld][k][j][i] = r_qx[fld];
+              s_qy[fld][k][j][i] = r_qy[fld];
+              s_qz[fld][k][j][i] = r_qz[fld];
+            }
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+
+    //interpolate in j, store in register
+    for(int k=0;k<p_cubNq;++k;@inner(2)){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          if (k<p_Nq) {
+
+            for(int fld=0; fld<p_Nfields; fld++) {
+              r_q[fld] = 0.f;
+              r_qx[fld] = 0.f;
+              r_qy[fld] = 0.f;
+              r_qz[fld] = 0.f;
+            }
+
+            #pragma unroll p_Nq
+            for (int n=0;n<p_Nq;n++) {
+              const dfloat Ini = s_cubInterpT[n][j];
+              // #pragma unroll p_Nfields
+              for(int fld=0; fld<p_Nfields; fld++){
+                r_q[fld]   += Ini*s_q[fld][k][n][i];
+                r_qx[fld]  += Ini*s_qx[fld][k][n][i];
+                r_qy[fld]  += Ini*s_qy[fld][k][n][i];
+                r_qz[fld]  += Ini*s_qz[fld][k][n][i];
+              }
+            }
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    //write register back to @shared
+    for(int k=0;k<p_cubNq;++k;@inner(2)){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          if (k<p_Nq) {
+            for(int fld=0; fld<p_Nfields; fld++){
+              s_q[fld][k][j][i] = r_q[fld];
+              s_qx[fld][k][j][i] = r_qx[fld];
+              s_qy[fld][k][j][i] = r_qy[fld];
+              s_qz[fld][k][j][i] = r_qz[fld];
+            }
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    //interpolate in k, store in register
+    for(int k=0;k<p_cubNq;++k;@inner(2)){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+
+          for(int fld=0; fld<p_Nfields; fld++) {
+            r_q[fld] = 0.f;
+            r_qx[fld] = 0.f;
+            r_qy[fld] = 0.f;
+            r_qz[fld] = 0.f;
+          }
+
+          #pragma unroll p_Nq
+          for (int n=0;n<p_Nq;n++) {
+            const dfloat Ini = s_cubInterpT[n][k];
+            // #pragma unroll p_Nfields
+            for(int fld=0; fld<p_Nfields; fld++){
+              r_q[fld]   += Ini*s_q[fld][n][j][i];
+              r_qx[fld]  += Ini*s_qx[fld][n][j][i];
+              r_qy[fld]  += Ini*s_qy[fld][n][j][i];
+              r_qz[fld]  += Ini*s_qz[fld][n][j][i];
+            }
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    //construct nonlinear term from registers
+    for(int k=0;k<p_cubNq;++k;@inner(2)){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+
+          const dlong gid = e*p_cubNp*p_Nvgeo+ k*p_cubNq*p_cubNq + j*p_cubNq +i;
+          const dfloat J = cubvgeo[gid + p_JID*p_cubNp];
+
+          // Prefetch sigma
+          const dfloat sigmaxe = pmlSigma[3*pmlId*p_cubNp + 0*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i];
+          const dfloat sigmaye = pmlSigma[3*pmlId*p_cubNp + 1*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i];
+          const dfloat sigmaze = pmlSigma[3*pmlId*p_cubNp + 2*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i];
+          // M-PML sigma midification
+          const dfloat msigmaxe = sigmaxe + sigmaye*pmlAlpha + sigmaze*pmlAlpha;
+          const dfloat msigmaye = sigmaye + sigmaxe*pmlAlpha + sigmaze*pmlAlpha;
+          const dfloat msigmaze = sigmaze + sigmaxe*pmlAlpha + sigmaye*pmlAlpha;
+
+          #pragma unroll p_Nfields
+          for(int fld=0; fld<p_Nfields ; fld++){
+            s_qx[fld][k][j][i] = -J*msigmaxe*r_qx[fld];
+            s_qy[fld][k][j][i] = -J*msigmaye*r_qy[fld];
+            s_qz[fld][k][j][i] = -J*msigmaze*r_qz[fld];
+            s_q [fld][k][j][i] = -J*(msigmaxe*r_qx[fld] + msigmaye*r_qy[fld] + msigmaze*r_qz[fld]);
+          }
+
+          if(semiAnalytic){
+          // BGK relaxation approximation to the Boltzmann collision operator
+            s_q[4][k][j][i] += J*tauInv*(r_q[1]*r_q[2]/(r_q[0]          ));
+            s_q[5][k][j][i] += J*tauInv*(r_q[1]*r_q[3]/(r_q[0]          ));
+            s_q[6][k][j][i] += J*tauInv*(r_q[2]*r_q[3]/(r_q[0]          ));
+            s_q[7][k][j][i] += J*tauInv*(r_q[1]*r_q[1]/(r_q[0]*sqrt(2.0)));
+            s_q[8][k][j][i] += J*tauInv*(r_q[2]*r_q[2]/(r_q[0]*sqrt(2.0)));
+            s_q[9][k][j][i] += J*tauInv*(r_q[3]*r_q[3]/(r_q[0]*sqrt(2.0)));
+          }else{
+            // can be simplified by seperating linear part
+            s_q[4][k][j][i] -= J*tauInv*(r_q[4] - r_q[1]*r_q[2]/(r_q[0]          ));
+            s_q[5][k][j][i] -= J*tauInv*(r_q[5] - r_q[1]*r_q[3]/(r_q[0]          ));
+            s_q[6][k][j][i] -= J*tauInv*(r_q[6] - r_q[2]*r_q[3]/(r_q[0]          ));
+            s_q[7][k][j][i] -= J*tauInv*(r_q[7] - r_q[1]*r_q[1]/(r_q[0]*sqrt(2.0)));
+            s_q[8][k][j][i] -= J*tauInv*(r_q[8] - r_q[2]*r_q[2]/(r_q[0]*sqrt(2.0)));
+            s_q[9][k][j][i] -= J*tauInv*(r_q[9] - r_q[3]*r_q[3]/(r_q[0]*sqrt(2.0)));
+          }
+        }
+      }
+    }
+
+
+    @barrier("local");
+
+    //project in k
+    for(int k=0;k<p_cubNq;++k;@inner(2)){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+
+          for(int fld=0; fld<p_Nrelax; fld++) {
+            r_q[fld] = 0.f;
+            r_qx[fld] = 0.f;
+            r_qy[fld] = 0.f;
+            r_qz[fld] = 0.f;
+          }
+
+          if (k<p_Nq) {
+            #pragma unroll p_cubNq
+            for (int n=0;n<p_cubNq;n++) {
+              const dfloat Pnj = s_cubProjectT[n][k];
+              for(int fld=0; fld<p_Nrelax; fld++){
+                r_q[fld]  += Pnj*s_q[fld+p_Nvars][n][j][i];
+                r_qx[fld] += Pnj*s_qx[fld+p_Nvars][n][j][i];
+                r_qy[fld] += Pnj*s_qy[fld+p_Nvars][n][j][i];
+                r_qz[fld] += Pnj*s_qz[fld+p_Nvars][n][j][i];
+              }
+            }
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    //write register back to @shared
+    for(int k=0;k<p_cubNq;++k;@inner(2)){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          if (k<p_Nq) {
+            for(int fld=0; fld<p_Nrelax; fld++){
+              s_q[fld][k][j][i]  = r_q[fld];
+              s_qx[fld][k][j][i] = r_qx[fld];
+              s_qy[fld][k][j][i] = r_qy[fld];
+              s_qz[fld][k][j][i] = r_qz[fld];
+            }
+          }
+        }
+      }
+    }
+
+    //project in j
+    for(int k=0;k<p_cubNq;++k;@inner(2)){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+
+          for(int fld=0; fld<p_Nrelax; fld++) {
+            r_q[fld] = 0.f;
+            r_qx[fld] = 0.f;
+            r_qy[fld] = 0.f;
+            r_qz[fld] = 0.f;
+          }
+
+          if (j<p_Nq && k<p_Nq) {
+            #pragma unroll p_cubNq
+            for (int n=0;n<p_cubNq;n++) {
+              const dfloat Pnj = s_cubProjectT[n][j];
+              for(int fld=0; fld<p_Nrelax; fld++){
+                r_q[fld]  += Pnj*s_q[fld+p_Nvars][k][n][i];
+                r_qx[fld] += Pnj*s_qx[fld+p_Nvars][k][n][i];
+                r_qy[fld] += Pnj*s_qy[fld+p_Nvars][k][n][i];
+                r_qz[fld] += Pnj*s_qz[fld+p_Nvars][k][n][i];
+              }
+            }
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    //write register back to @shared
+    for(int k=0;k<p_cubNq;++k;@inner(2)){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          if (j<p_Nq && k<p_Nq) {
+            for(int fld=0; fld<p_Nrelax; fld++){
+              s_q[fld][k][j][i]  = r_q[fld];
+              s_qx[fld][k][j][i] = r_qx[fld];
+              s_qy[fld][k][j][i] = r_qy[fld];
+              s_qz[fld][k][j][i] = r_qz[fld];
+            }
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    // project in i and update
+    for(int k=0;k<p_cubNq;++k;@inner(2)){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
+        for(int i=0;i<p_cubNq;++i;@inner(0)){
+          if((i<p_Nq) && (j<p_Nq) && (k<p_Nq)){
+            const dlong gid = e*p_Np*p_Nvgeo+ k*p_Nq*p_Nq +j*p_Nq +i;
+            const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
+
+            for(int fld=0; fld<p_Nrelax; fld++) {
+              r_q[fld] = 0.f;
+              r_qx[fld] = 0.f;
+              r_qy[fld] = 0.f;
+              r_qz[fld] = 0.f;
+            }
+
+
+            #pragma unroll p_cubNq
+            for(int n=0;n<p_cubNq;++n){
+              const dfloat Pni = s_cubProjectT[n][i];
+              for(int fld=0; fld<p_Nrelax; fld++){
+                r_q[fld]  += Pni*s_q[fld][k][j][n];
+                r_qx[fld] += Pni*s_qx[fld][k][j][n];
+                r_qy[fld] += Pni*s_qy[fld][k][j][n];
+                r_qz[fld] += Pni*s_qz[fld][k][j][n];
+              }
+            }
+
+            const dlong rhsId = e*p_Np*p_Nfields + k*p_Nq*p_Nq + j*p_Nq + i;
+            const dlong pmlRhsId = pmlId*p_Np*p_Npmlfields + k*p_Nq*p_Nq + j*p_Nq + i;
+
+            for(int fld=0; fld<p_Nrelax; fld++){
+              rhspmlq[pmlRhsId + 0*p_Np*p_Nfields + fld*p_Np] += invJW*r_qx[fld];
+              rhspmlq[pmlRhsId + 1*p_Np*p_Nfields + fld*p_Np] += invJW*r_qy[fld];
+              rhspmlq[pmlRhsId + 2*p_Np*p_Nfields + fld*p_Np] += invJW*r_qz[fld];
+              rhsq[rhsId + (fld+p_Nvars)*p_Np]  += invJW*r_q[fld];
+            }
+          }
+        }
+      }
+    }
+  }
+}
+#endif

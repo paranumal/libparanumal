@@ -1,13 +1,11 @@
 [FORMAT]
-1.0
+2.0
 
 [DATA FILE]
-data/bnsUniform3D.h
+data/bnsGaussian3D.h
 
 [MESH FILE]
-#../../meshes/boltzmannFencePML3D.msh
-../../meshes/boltzmannSquareCylinderPML3D.msh
-#../../meshes/boltzmannAcousticPulsePML3D.msh
+PMLBOX
 
 [MESH DIMENSION]
 3
@@ -15,48 +13,20 @@ data/bnsUniform3D.h
 [ELEMENT TYPE] # number of edges
 6
 
+[BOX NX]
+5
+
+[BOX NY]
+5
+
+[BOX NZ]
+5
+
+[BOX BOUNDARY FLAG]
+1
+
 [POLYNOMIAL DEGREE]
-3
-
-[RBAR] # mean density
-1.0
-
-[UBAR] # mean x-velocity
-1.0
-
-[VBAR] # mean y-velocity
-0.0
-
-[WBAR] # mean z-velocity
-0.0
-
-[BODYFORCE-X] # constant global force on particles in x-direction
-0.0
-
-[BODYFORCE-Y] # constant global force on particles in y-direction
-0.0
-
-[BODYFORCE-Z] # constant global force on particles in z-direction
-0.0
-
-[ABSORBING LAYER]
-PML
-
-[PML PROFILE ORDER]
 4
-
-[PML SIGMAX MAX]
-100
-
-[PML SIGMAY MAX]
-100
-
-[PML SIGMAZ MAX]
-100
-
-# compute sigma terms default: CUBATURE use COLLOCATION otherwise
-[PML INTEGRATION]
-COLLOCATION 
 
 [THREAD MODEL]
 CUDA
@@ -67,95 +37,41 @@ CUDA
 [DEVICE NUMBER]
 0
 
-[TIME INTEGRATOR]
-#LSERK4
-#MRSAAB
-SARK 
-
-[FIXED TIME STEP]
-0 
-
 [VISCOSITY]
-1.e-3
+0.001
 
 [SPEED OF SOUND]
-5.0
+1.0
 
-[PROBE FLAG]
-0
+[PML PROFILE ORDER]
+4
 
-[REPORT FLAG]
-1
+[PML SIGMAX MAX]
+50
 
-[ERROR FLAG]
-1
+[PML SIGMAY MAX]
+50
 
-[TSTEPS FOR ERROR COMPUTE]
-100
+[PML SIGMAZ MAX]
+50
 
-[TSTEPS FOR SOLUTION OUTPUT]
-100
+[PML INTEGRATION]
+COLLOCATION
 
-[TSTEPS FOR FORCE OUTPUT]
-0
-
-
+[TIME INTEGRATOR]
+SARK4
 
 [START TIME]
 0
 
 [FINAL TIME]
-50
+10
 
 [OUTPUT INTERVAL]
-.1
+1
 
-[ABSOLUTE TOLERANCE]
-1E-6
-
-[RELATIVE TOLERANCE]
-1E-5
-
-[MINUMUM TIME STEP SIZE]
-1E-10
-
-[MAX MRAB LEVELS]
-100
-
-[CFL]
-0.2
-
-# Currently SARK and LSERK only
-[RESTART FROM FILE]
-0
-
-[WRITE RESTART FILE]
-0
-
-[RESTART FILE NAME]
-bnsRestartTet3D
-
-[OUTPUT FILE FORMAT] #ISO_WELD - ISO_FULL - VTU 
-VTU
-
-#0 = pr, 1,2,3 = u,v,w 4,5,6 = vortx,vorty,vortz, 7= vort_mag 8= Vel mag
-[ISOSURFACE FIELD ID]
-7
-
-[ISOSURFACE COLOR ID]
-8
-
-[ISOSURFACE CONTOUR MAX]
-2.0
-
-[ISOSURFACE CONTOUR MIN]
-0.4
-
-[ISOSURFACE LEVEL NUMBER]
-5
-
-[ISOSURFACE GROUP NUMBER]
-5
+[OUTPUT TO FILE]
+TRUE
 
 [OUTPUT FILE NAME]
-fence3D
+bns

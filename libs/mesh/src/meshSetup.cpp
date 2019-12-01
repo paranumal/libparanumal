@@ -65,7 +65,10 @@ mesh_t& mesh_t::Setup(occa::device& device, MPI_Comm& comm,
 
   mesh->ringHalo = NULL;
 
-  if (settings.compareSetting("MESH FILE","BOX")) {
+  if (settings.compareSetting("MESH FILE","PMLBOX")) {
+    //build a box mesh with a pml layer
+    mesh->SetupPmlBox();
+  } else if (settings.compareSetting("MESH FILE","BOX")) {
     //build a box mesh
     mesh->SetupBox();
   } else {
