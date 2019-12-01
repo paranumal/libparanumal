@@ -40,7 +40,7 @@ advectionSettings_t::advectionSettings_t(MPI_Comm& _comm):
   newSetting("TIME INTEGRATOR",
              "DOPRI5",
              "Time integration method",
-             {"DOPRI5", "LSERK4"});
+             {"AB3", "DOPRI5", "LSERK4"});
 
   newSetting("START TIME",
              "0",

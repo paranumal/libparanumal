@@ -34,11 +34,20 @@ acoustics_t& acoustics_t::Setup(mesh_t& mesh, linAlg_t& linAlg){
 
   acoustics->Nfields = (mesh.dim==3) ? 4:3;
 
-  //setup timeStepper
   dlong Nlocal = mesh.Nelements*mesh.Np*acoustics->Nfields;
   dlong Nhalo  = mesh.totalHaloPairs*mesh.Np*acoustics->Nfields;
-  acoustics->timeStepper = timeStepper_t::Setup(Nlocal, Nhalo, *acoustics);
-  acoustics->timeStepper->Init();
+
+  //setup timeStepper
+  if (settings.compareSetting("TIME INTEGRATOR","AB3")){
+    acoustics->timeStepper = new TimeStepper::ab3(mesh.Nelements, mesh.totalHaloPairs,
+                                              mesh.Np, acoustics->Nfields, *acoustics);
+  } else if (settings.compareSetting("TIME INTEGRATOR","LSERK4")){
+    acoustics->timeStepper = new TimeStepper::lserk4(mesh.Nelements, mesh.totalHaloPairs,
+                                              mesh.Np, acoustics->Nfields, *acoustics);
+  } else if (settings.compareSetting("TIME INTEGRATOR","DOPRI5")){
+    acoustics->timeStepper = new TimeStepper::dopri5(mesh.Nelements, mesh.totalHaloPairs,
+                                              mesh.Np, acoustics->Nfields, *acoustics);
+  }
 
   // set time step
   dfloat hmin = mesh.MinCharacteristicLength();

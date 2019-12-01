@@ -27,65 +27,6 @@ SOFTWARE.
 #define p_Nvars 4
 #define p_Nrelax 6
 
-#if 0
-@kernel void bnsRelaxationHex3D(const dlong Nelements,
-                               @restrict const  dlong *  elementIds,
-                               @restrict const  dfloat *  vgeo,
-                               @restrict const  dfloat *  cubvgeo,
-                               @restrict const  dfloat *  cubInterpT,
-                               @restrict const  dfloat *  cubProjectT,
-                               const int semiAnalytic,
-                               const dfloat tauInv,
-                               @restrict const  dfloat *  q,
-                                     @restrict dfloat *  rhsq){
-
-  for(dlong et=0;et<Nelements;et++;@outer(0)){  // for all elements
-
-    for(int k=0;k<p_Nq;++k;@inner(2)){
-      for(int j=0;j<p_Nq;++j;@inner(1)){
-        for(int i=0;i<p_Nq;++i;@inner(0)){
-          const dlong e = elementIds[et];
-          const dlong id = e*p_Nfields*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-
-          dfloat r_q[p_Nfields];
-
-          #pragma unroll p_Nfields
-          for(int fld=0; fld<p_Nfields;++fld){
-            r_q[fld] = q[id+fld*p_Np];
-          }
-
-          dfloat r_N[p_Nfields];
-
-          if(semiAnalytic){
-            // BGK relaxation approximation to the Boltzmann collision operator
-            r_N[4] = tauInv*(r_q[1]*r_q[2]/(r_q[0]          ));
-            r_N[5] = tauInv*(r_q[1]*r_q[3]/(r_q[0]          ));
-            r_N[6] = tauInv*(r_q[2]*r_q[3]/(r_q[0]          ));
-            r_N[7] = tauInv*(r_q[1]*r_q[1]/(r_q[0]*sqrt(2.0)));
-            r_N[8] = tauInv*(r_q[2]*r_q[2]/(r_q[0]*sqrt(2.0)));
-            r_N[9] = tauInv*(r_q[3]*r_q[3]/(r_q[0]*sqrt(2.0)));
-          }else{
-            // BGK relaxation approximation to the Boltzmann collision operator
-            // can be simplified by seperating linear part
-            r_N[4] = -tauInv*(r_q[4] - r_q[1]*r_q[2]/(r_q[0]          ));
-            r_N[5] = -tauInv*(r_q[5] - r_q[1]*r_q[3]/(r_q[0]          ));
-            r_N[6] = -tauInv*(r_q[6] - r_q[2]*r_q[3]/(r_q[0]          ));
-            r_N[7] = -tauInv*(r_q[7] - r_q[1]*r_q[1]/(r_q[0]*sqrt(2.0)));
-            r_N[8] = -tauInv*(r_q[8] - r_q[2]*r_q[2]/(r_q[0]*sqrt(2.0)));
-            r_N[9] = -tauInv*(r_q[9] - r_q[3]*r_q[3]/(r_q[0]*sqrt(2.0)));
-          }
-
-          const dlong rhsId = e*p_Np*p_Nfields + k*p_Nq*p_Nq + j*p_Nq + i;
-
-          for(int fld=0; fld<p_Nrelax; fld++){
-            rhsq[rhsId + (fld+p_Nvars)*p_Np]  += r_N[fld+p_Nvars];
-          }
-        }
-      }
-    }
-  }
-}
-#else
 @kernel void bnsRelaxationHex3D(const dlong Nelements,
                                @restrict const  dlong *  elementIds,
                                @restrict const  dfloat *  vgeo,
@@ -373,7 +314,6 @@ SOFTWARE.
     }
   }
 }
-#endif
 
 
 // Too much shmem usage
@@ -579,7 +519,7 @@ SOFTWARE.
         for(int i=0;i<p_cubNq;++i;@inner(0)){
 
           const dlong gid = e*p_cubNp*p_Nvgeo+ k*p_cubNq*p_cubNq + j*p_cubNq +i;
-          const dfloat J = cubvgeo[gid + p_JID*p_cubNp];
+          const dfloat JW = cubvgeo[gid + p_JWID*p_cubNp];
 
           // Prefetch sigma
           const dfloat sigmaxe = pmlSigma[3*pmlId*p_cubNp + 0*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i];
@@ -592,28 +532,28 @@ SOFTWARE.
 
           #pragma unroll p_Nfields
           for(int fld=0; fld<p_Nfields ; fld++){
-            s_qx[fld][k][j][i] = -J*msigmaxe*r_qx[fld];
-            s_qy[fld][k][j][i] = -J*msigmaye*r_qy[fld];
-            s_qz[fld][k][j][i] = -J*msigmaze*r_qz[fld];
-            s_q [fld][k][j][i] = -J*(msigmaxe*r_qx[fld] + msigmaye*r_qy[fld] + msigmaze*r_qz[fld]);
+            s_qx[fld][k][j][i] = -JW*msigmaxe*r_qx[fld];
+            s_qy[fld][k][j][i] = -JW*msigmaye*r_qy[fld];
+            s_qz[fld][k][j][i] = -JW*msigmaze*r_qz[fld];
+            s_q [fld][k][j][i] = -JW*(msigmaxe*r_qx[fld] + msigmaye*r_qy[fld] + msigmaze*r_qz[fld]);
           }
 
           if(semiAnalytic){
           // BGK relaxation approximation to the Boltzmann collision operator
-            s_q[4][k][j][i] += J*tauInv*(r_q[1]*r_q[2]/(r_q[0]          ));
-            s_q[5][k][j][i] += J*tauInv*(r_q[1]*r_q[3]/(r_q[0]          ));
-            s_q[6][k][j][i] += J*tauInv*(r_q[2]*r_q[3]/(r_q[0]          ));
-            s_q[7][k][j][i] += J*tauInv*(r_q[1]*r_q[1]/(r_q[0]*sqrt(2.0)));
-            s_q[8][k][j][i] += J*tauInv*(r_q[2]*r_q[2]/(r_q[0]*sqrt(2.0)));
-            s_q[9][k][j][i] += J*tauInv*(r_q[3]*r_q[3]/(r_q[0]*sqrt(2.0)));
+            s_q[4][k][j][i] += JW*tauInv*(r_q[1]*r_q[2]/(r_q[0]          ));
+            s_q[5][k][j][i] += JW*tauInv*(r_q[1]*r_q[3]/(r_q[0]          ));
+            s_q[6][k][j][i] += JW*tauInv*(r_q[2]*r_q[3]/(r_q[0]          ));
+            s_q[7][k][j][i] += JW*tauInv*(r_q[1]*r_q[1]/(r_q[0]*sqrt(2.0)));
+            s_q[8][k][j][i] += JW*tauInv*(r_q[2]*r_q[2]/(r_q[0]*sqrt(2.0)));
+            s_q[9][k][j][i] += JW*tauInv*(r_q[3]*r_q[3]/(r_q[0]*sqrt(2.0)));
           }else{
             // can be simplified by seperating linear part
-            s_q[4][k][j][i] -= J*tauInv*(r_q[4] - r_q[1]*r_q[2]/(r_q[0]          ));
-            s_q[5][k][j][i] -= J*tauInv*(r_q[5] - r_q[1]*r_q[3]/(r_q[0]          ));
-            s_q[6][k][j][i] -= J*tauInv*(r_q[6] - r_q[2]*r_q[3]/(r_q[0]          ));
-            s_q[7][k][j][i] -= J*tauInv*(r_q[7] - r_q[1]*r_q[1]/(r_q[0]*sqrt(2.0)));
-            s_q[8][k][j][i] -= J*tauInv*(r_q[8] - r_q[2]*r_q[2]/(r_q[0]*sqrt(2.0)));
-            s_q[9][k][j][i] -= J*tauInv*(r_q[9] - r_q[3]*r_q[3]/(r_q[0]*sqrt(2.0)));
+            s_q[4][k][j][i] -= JW*tauInv*(r_q[4] - r_q[1]*r_q[2]/(r_q[0]          ));
+            s_q[5][k][j][i] -= JW*tauInv*(r_q[5] - r_q[1]*r_q[3]/(r_q[0]          ));
+            s_q[6][k][j][i] -= JW*tauInv*(r_q[6] - r_q[2]*r_q[3]/(r_q[0]          ));
+            s_q[7][k][j][i] -= JW*tauInv*(r_q[7] - r_q[1]*r_q[1]/(r_q[0]*sqrt(2.0)));
+            s_q[8][k][j][i] -= JW*tauInv*(r_q[8] - r_q[2]*r_q[2]/(r_q[0]*sqrt(2.0)));
+            s_q[9][k][j][i] -= JW*tauInv*(r_q[9] - r_q[3]*r_q[3]/(r_q[0]*sqrt(2.0)));
           }
         }
       }

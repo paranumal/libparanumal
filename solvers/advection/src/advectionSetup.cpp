@@ -32,11 +32,20 @@ advection_t& advection_t::Setup(mesh_t& mesh, linAlg_t& linAlg){
 
   settings_t& settings = advection->settings;
 
-  //setup timeStepper
   dlong Nlocal = mesh.Nelements*mesh.Np;
   dlong Nhalo  = mesh.totalHaloPairs*mesh.Np;
-  advection->timeStepper = timeStepper_t::Setup(Nlocal, Nhalo, *advection);
-  advection->timeStepper->Init();
+
+  //setup timeStepper
+  if (settings.compareSetting("TIME INTEGRATOR","AB3")){
+    advection->timeStepper = new TimeStepper::ab3(mesh.Nelements, mesh.totalHaloPairs,
+                                              mesh.Np, 1, *advection);
+  } else if (settings.compareSetting("TIME INTEGRATOR","LSERK4")){
+    advection->timeStepper = new TimeStepper::lserk4(mesh.Nelements, mesh.totalHaloPairs,
+                                              mesh.Np, 1, *advection);
+  } else if (settings.compareSetting("TIME INTEGRATOR","DOPRI5")){
+    advection->timeStepper = new TimeStepper::dopri5(mesh.Nelements, mesh.totalHaloPairs,
+                                              mesh.Np, 1, *advection);
+  }
 
   // set time step
   dfloat hmin = mesh.MinCharacteristicLength();

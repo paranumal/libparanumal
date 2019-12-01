@@ -52,7 +52,7 @@ public:
   int cubature;
   int isothermal;
 
-  timeStepper_t* timeStepper;
+  TimeStepper::timeStepper_t* timeStepper;
 
   halo_t* fieldTraceHalo;
   halo_t* gradTraceHalo;

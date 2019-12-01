@@ -44,13 +44,22 @@ cns_t& cns_t::Setup(mesh_t& mesh, linAlg_t& linAlg){
 
   if (!cns->isothermal) cns->Nfields++; //include energy equation
 
-  //setup timeStepper
   dlong NlocalFields = mesh.Nelements*mesh.Np*cns->Nfields;
   dlong NhaloFields  = mesh.totalHaloPairs*mesh.Np*cns->Nfields;
   dlong NlocalGrads = mesh.Nelements*mesh.Np*cns->Ngrads;
   dlong NhaloGrads  = mesh.totalHaloPairs*mesh.Np*cns->Ngrads;
-  cns->timeStepper = timeStepper_t::Setup(NlocalFields, NhaloFields, *cns);
-  cns->timeStepper->Init();
+
+  //setup timeStepper
+  if (settings.compareSetting("TIME INTEGRATOR","AB3")){
+    cns->timeStepper = new TimeStepper::ab3(mesh.Nelements, mesh.totalHaloPairs,
+                                              mesh.Np, cns->Nfields, *cns);
+  } else if (settings.compareSetting("TIME INTEGRATOR","LSERK4")){
+    cns->timeStepper = new TimeStepper::lserk4(mesh.Nelements, mesh.totalHaloPairs,
+                                              mesh.Np, cns->Nfields, *cns);
+  } else if (settings.compareSetting("TIME INTEGRATOR","DOPRI5")){
+    cns->timeStepper = new TimeStepper::dopri5(mesh.Nelements, mesh.totalHaloPairs,
+                                              mesh.Np, cns->Nfields, *cns);
+  }
 
   // set time step
   dfloat hmin = mesh.MinCharacteristicLength();

@@ -43,7 +43,7 @@ public:
 
 class advection_t: public solver_t {
 public:
-  timeStepper_t* timeStepper;
+  TimeStepper::timeStepper_t* timeStepper;
 
   halo_t* traceHalo;
 
