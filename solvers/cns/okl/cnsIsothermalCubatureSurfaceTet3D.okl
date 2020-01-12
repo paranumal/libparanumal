@@ -433,12 +433,6 @@ void upwindRoeAveraged(const dfloat nx,
         const dfloat nx   = sgeo[sid+p_NXID];
         const dfloat ny   = sgeo[sid+p_NYID];
         const dfloat nz   = sgeo[sid+p_NZID];
-        const dfloat tx   = sgeo[sid+p_STXID];
-        const dfloat ty   = sgeo[sid+p_STYID];
-        const dfloat tz   = sgeo[sid+p_STZID];
-        const dfloat bx   = sgeo[sid+p_SBXID];
-        const dfloat by   = sgeo[sid+p_SBYID];
-        const dfloat bz   = sgeo[sid+p_SBZID];
         const dfloat sJ   = sgeo[sid+p_SJID];
         const dfloat invJ = sgeo[sid+p_IJID];
 

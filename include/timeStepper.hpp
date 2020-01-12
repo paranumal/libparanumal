@@ -332,6 +332,61 @@ public:
   void Run(occa::memory& o_q, dfloat start, dfloat end);
 };
 
+/* Backward Difference Formula, order 3, with extrapolation */
+class extbdf3: public timeStepper_t {
+protected:
+  int Nstages;
+  int shiftIndex;
+
+  dfloat *extbdf_a;
+  dfloat *extbdf_b;
+  occa::memory o_extbdf_a;
+  occa::memory o_extbdf_b;
+
+  occa::memory o_rhs;
+  occa::memory o_qn;
+  occa::memory o_F;
+
+  occa::kernel rhsKernel;
+
+  virtual void Step(occa::memory& o_q, dfloat time, dfloat dt, int order);
+
+public:
+  extbdf3(dlong Nelements, dlong NhaloElements,
+      int Np, int Nfields, solver_t& solver);
+  ~extbdf3();
+
+  dfloat getGamma();
+
+  void Run(occa::memory& o_q, dfloat start, dfloat end);
+};
+
+/* Backward Difference Formula, order 3, with subcycling */
+class ssbdf3: public timeStepper_t {
+protected:
+  int Nstages;
+  int shiftIndex;
+
+  dfloat *ssbdf_b;
+  occa::memory o_ssbdf_b;
+
+  occa::memory o_rhs;
+  occa::memory o_qn;
+  occa::memory o_qhat;
+
+  occa::kernel rhsKernel;
+
+  virtual void Step(occa::memory& o_q, dfloat time, dfloat dt, int order);
+
+public:
+  ssbdf3(dlong Nelements, dlong NhaloElements,
+      int Np, int Nfields, solver_t& solver);
+  ~ssbdf3();
+
+  dfloat getGamma();
+
+  void Run(occa::memory& o_q, dfloat start, dfloat end);
+};
 
 /* Multi-rate Adams-Bashforth, order 3 */
 class mrab3: public timeStepper_t {

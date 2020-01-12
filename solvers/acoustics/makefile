@@ -184,7 +184,7 @@ endif
 
 #cleanup
 clean:
-	rm -f src/*.o acousticsMain libacoustics.a
+	rm -f src/*.o *.o acousticsMain libacoustics.a
 
 clean-libs: clean
 	${MAKE} -C ${OGS_DIR} clean

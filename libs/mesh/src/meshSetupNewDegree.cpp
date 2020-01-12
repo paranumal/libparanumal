@@ -66,6 +66,7 @@ mesh_t& mesh_t::SetupNewDegree(int Nf){
   mesh->Nverts        = Nverts;
   mesh->Nfaces        = Nfaces;
   mesh->NfaceVertices = NfaceVertices;
+  mesh->faceVertices  = faceVertices;
 
   mesh->elementType = elementType;
 

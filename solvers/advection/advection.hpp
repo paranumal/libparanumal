@@ -39,6 +39,9 @@ class advectionSettings_t: public settings_t {
 public:
   advectionSettings_t(MPI_Comm& _comm);
   void report();
+  void parseFromFile(occaSettings_t& occaSettings,
+                     meshSettings_t& meshSettings,
+                     const string filename);
 };
 
 class advection_t: public solver_t {
@@ -60,13 +63,14 @@ public:
   occa::kernel initialConditionKernel;
 
   advection_t() = delete;
-  advection_t(mesh_t& _mesh, linAlg_t& _linAlg):
-    solver_t(_mesh, _linAlg) {}
+  advection_t(mesh_t& _mesh, linAlg_t& _linAlg, settings_t& _settings):
+    solver_t(_mesh, _linAlg, _settings) {}
 
   ~advection_t();
 
   //setup
-  static advection_t& Setup(mesh_t& mesh, linAlg_t& linAlg);
+  static advection_t& Setup(mesh_t& mesh, linAlg_t& linAlg,
+                            advectionSettings_t& settings);
 
   void Run();
 

@@ -46,38 +46,6 @@ void meshQuad2D::OccaSetup(){
     invMM[n] = MM[n];
   matrixInverse(Np,invMM);
 
-  dfloat *cubDWT = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
-  dfloat *cubProjectT = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
-  dfloat *cubInterpT = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
-  for(int n=0;n<Nq;++n){
-    for(int m=0;m<cubNq;++m){
-      cubDWT[n+m*Nq] = cubDW[n*cubNq+m];
-      cubProjectT[n+m*Nq] = cubProject[n*cubNq+m];
-      cubInterpT[m+n*cubNq] = cubInterp[m*Nq+n];
-    }
-  }
-
-  intx = (dfloat*) calloc(Nelements*Nfaces*cubNq, sizeof(dfloat));
-  inty = (dfloat*) calloc(Nelements*Nfaces*cubNq, sizeof(dfloat));
-  for(dlong e=0;e<Nelements;++e){
-    for(int f=0;f<Nfaces;++f){
-      for(int n=0;n<cubNq;++n){
-        dfloat ix = 0, iy = 0;
-        for(int m=0;m<Nq;++m){
-          dlong vid = vmapM[m+f*Nfp+e*Nfp*Nfaces];
-          dfloat xm = x[vid];
-          dfloat ym = y[vid];
-
-          dfloat Inm = cubInterp[m+n*Nq];
-          ix += Inm*xm;
-          iy += Inm*ym;
-        }
-        dlong id = n + f*cubNq + e*Nfaces*cubNq;
-        intx[id] = ix;
-        inty[id] = iy;
-      }
-    }
-  }
 
   o_D = device.malloc(Nq*Nq*sizeof(dfloat), D);
 
@@ -88,6 +56,8 @@ void meshQuad2D::OccaSetup(){
 
   o_sMT = device.malloc(1*sizeof(dfloat)); //dummy
 
+  o_LIFTT = device.malloc(1*sizeof(dfloat)); // dummy
+
   o_vgeo =
     device.malloc((Nelements+totalHaloPairs)*Nvgeo*Np*sizeof(dfloat),
         vgeo);
@@ -97,49 +67,4 @@ void meshQuad2D::OccaSetup(){
   o_ggeo =
     device.malloc(Nelements*Np*Nggeo*sizeof(dfloat),
         ggeo);
-
-  o_cubvgeo =
-    device.malloc(Nelements*Nvgeo*cubNp*sizeof(dfloat),
-        cubvgeo);
-
-  o_cubsgeo =
-    device.malloc(Nelements*Nfaces*cubNq*Nsgeo*sizeof(dfloat),
-        cubsgeo);
-
-  o_cubInterpT =
-    device.malloc(Nq*cubNq*sizeof(dfloat),
-        cubInterpT);
-
-  o_cubProjectT =
-    device.malloc(Nq*cubNq*sizeof(dfloat),
-        cubProjectT);
-
-  o_cubDWT =
-    device.malloc(Nq*cubNq*sizeof(dfloat),
-        cubDWT);
-
-  o_cubDWmatrices = device.malloc(cubNq*Nq*sizeof(dfloat), cubDWT);
-
-  o_LIFTT =
-    device.malloc(1*sizeof(dfloat)); // dummy
-
-  o_intx =
-    device.malloc(Nelements*Nfaces*cubNq*sizeof(dfloat),
-        intx);
-
-  o_inty =
-    device.malloc(Nelements*Nfaces*cubNq*sizeof(dfloat),
-        inty);
-
-  o_intz =
-    device.malloc(Nelements*Nfaces*cubNq*sizeof(dfloat),
-        inty);
-
-  //dummy quadrature lifter operators
-  o_intInterpT = device.malloc(cubNq*Nq*sizeof(dfloat));
-  o_intInterpT.copyFrom(o_cubInterpT);
-
-  o_intLIFTT = device.malloc(cubNq*Nq*sizeof(dfloat));
-  o_intLIFTT.copyFrom(o_cubProjectT);
-
 }

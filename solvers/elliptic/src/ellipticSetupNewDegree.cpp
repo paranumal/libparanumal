@@ -32,7 +32,7 @@ elliptic_t& elliptic_t::SetupNewDegree(mesh_t& meshC){
   //if asking for the same degree, return the original solver
   if (meshC.N == mesh.N) return *this;
 
-  elliptic_t* elliptic = new elliptic_t(meshC, linAlg, lambda);
+  elliptic_t* elliptic = new elliptic_t(meshC, linAlg, settings, lambda);
 
   //shallow copy
   elliptic->Nfields = Nfields;
@@ -107,7 +107,7 @@ elliptic_t& elliptic_t::SetupNewDegree(mesh_t& meshC){
   if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
     sprintf(fileName,  DELLIPTIC "/okl/ellipticAx%s.okl", suffix);
     if(meshC.elementType==HEXAHEDRA){
-      if(settings.compareSetting("ELEMENT MAP", "TRILINEAR"))
+      if(mesh.settings.compareSetting("ELEMENT MAP", "TRILINEAR"))
         sprintf(kernelName, "ellipticPartialAxTrilinear%s", suffix);
       else
         sprintf(kernelName, "ellipticPartialAx%s", suffix);

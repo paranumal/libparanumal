@@ -32,7 +32,7 @@ SOFTWARE.
 class mesh3D: public mesh_t {
 public:
   mesh3D(occa::device& _device, MPI_Comm& _comm,
-         settings_t& _settings, occa::properties& _props);
+         meshSettings_t& _settings, occa::properties& _props);
 
   // repartition elements in parallel
   void GeometricPartition();
@@ -57,7 +57,7 @@ public:
 class meshTri3D: public mesh3D {
 public:
   meshTri3D(occa::device& _device, MPI_Comm& _comm,
-            settings_t& _settings, occa::properties& _props);
+            meshSettings_t& _settings, occa::properties& _props);
   void ParallelReader(const char *fileName);
   void SetupBox();
   void SetupPmlBox();
@@ -66,6 +66,9 @@ public:
   void GeometricFactors();
   void SurfaceGeometricFactors();
   void OccaSetup();
+
+  void CubatureSetup();
+  void CubatureNodes();
 
   void BuildBasisCoarsen(dfloat**R, occa::memory& o_R, int Nf, int Nc);
 };
@@ -73,7 +76,7 @@ public:
 class meshQuad3D: public mesh3D {
 public:
   meshQuad3D(occa::device& _device, MPI_Comm& _comm,
-             settings_t& _settings, occa::properties& _props);
+             meshSettings_t& _settings, occa::properties& _props);
   void ParallelReader(const char *fileName);
   void SetupBox();
   void SetupPmlBox();
@@ -82,6 +85,9 @@ public:
   void GeometricFactors();
   void SurfaceGeometricFactors();
   void OccaSetup();
+
+  void CubatureSetup();
+  void CubatureNodes();
 
   void BuildBasisCoarsen(dfloat**R, occa::memory& o_R, int Nf, int Nc);
 };
@@ -89,7 +95,7 @@ public:
 class meshTet3D: public mesh3D {
 public:
   meshTet3D(occa::device& _device, MPI_Comm& _comm,
-            settings_t& _settings, occa::properties& _props);
+            meshSettings_t& _settings, occa::properties& _props);
   void ParallelReader(const char *fileName);
   void SetupBox();
   void SetupPmlBox();
@@ -98,6 +104,9 @@ public:
   void GeometricFactors();
   void SurfaceGeometricFactors();
   void OccaSetup();
+
+  void CubatureSetup();
+  void CubatureNodes();
 
   void BuildBasisCoarsen(dfloat**R, occa::memory& o_R, int Nf, int Nc);
 };
@@ -105,7 +114,7 @@ public:
 class meshHex3D: public mesh3D {
 public:
   meshHex3D(occa::device& _device, MPI_Comm& _comm,
-            settings_t& _settings, occa::properties& _props);
+            meshSettings_t& _settings, occa::properties& _props);
   void ParallelReader(const char *fileName);
   void SetupBox();
   void SetupPmlBox();
@@ -114,6 +123,9 @@ public:
   void GeometricFactors();
   void SurfaceGeometricFactors();
   void OccaSetup();
+
+  void CubatureSetup();
+  void CubatureNodes();
 
   void BuildBasisCoarsen(dfloat**R, occa::memory& o_R, int Nf, int Nc);
 };

@@ -43,11 +43,17 @@ SOFTWARE.
 #define TETRAHEDRA 6
 #define HEXAHEDRA 12
 
+class meshSettings_t: public settings_t {
+public:
+  meshSettings_t(MPI_Comm& _comm);
+  void report();
+};
+
 class mesh_t {
 public:
   occa::device& device;
   MPI_Comm& comm;
-  settings_t& settings;
+  meshSettings_t& settings;
   occa::properties& props;
 
   int rank, size; // MPI rank and size (process count)
@@ -257,6 +263,7 @@ public:
 
   // cubature
   occa::memory o_intLIFTT, o_intInterpT, o_intx, o_inty, o_intz;
+  occa::memory o_cubx, o_cuby, o_cubz;
   occa::memory o_cubDWT, o_cubD;
   occa::memory o_cubDrWT, o_cubDsWT, o_cubDtWT;
   occa::memory o_cubDWmatrices;
@@ -284,13 +291,13 @@ public:
 
   mesh_t() = delete;
   mesh_t(occa::device& device, MPI_Comm& comm,
-         settings_t& settings, occa::properties& props);
+         meshSettings_t& settings, occa::properties& props);
 
   virtual ~mesh_t();
 
   // generic mesh setup
   static mesh_t& Setup(occa::device& device, MPI_Comm& comm,
-                       settings_t& settings, occa::properties& props);
+                       meshSettings_t& settings, occa::properties& props);
 
   // box mesh
   virtual void SetupBox() = 0;
@@ -351,6 +358,10 @@ public:
 
   virtual void OccaSetup();
 
+  virtual void CubatureSetup()=0;
+
+  virtual void CubatureNodes()=0;
+
   // print out parallel partition i
   void PrintPartitionStatistics();
 
@@ -370,9 +381,6 @@ public:
   mesh_t* SetupSEMFEM(hlong **globalIds, int *Nfp, int **faceNodes);
 
 };
-
-void meshAddSettings(settings_t& settings);
-void meshReportSettings(settings_t& settings);
 
 #endif
 

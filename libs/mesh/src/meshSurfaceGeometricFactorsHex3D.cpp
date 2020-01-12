@@ -27,6 +27,7 @@ SOFTWARE.
 #include "mesh.hpp"
 #include "mesh3D.hpp"
 
+/*
 static void computeFrame(dfloat nx, dfloat ny, dfloat nz,
                   dfloat &tanx, dfloat &tany, dfloat &tanz,
                   dfloat &binx, dfloat &biny, dfloat &binz){
@@ -68,56 +69,16 @@ static void computeFrame(dfloat nx, dfloat ny, dfloat nz,
 
   //  printf("nor = %g,%g,%g; tan = %g,%g,%g; bin = %g,%g,%g\n", nx, ny, nz, tanx, tany, tanz, binx, biny, binz);
 }
-
-static void interpolateFaceHex3D(int *faceNodes, dfloat *I, dfloat *x, int N, dfloat *Ix, int M){
-
-  dfloat *Ix0 = (dfloat*) calloc(N*N, sizeof(dfloat));
-  dfloat *Ix1 = (dfloat*) calloc(N*M, sizeof(dfloat));
-
-  for(int j=0;j<N;++j){
-    for(int i=0;i<N;++i){
-      Ix0[j*N+i] = x[faceNodes[j*N+i]];
-    }
-  }
-
-  for(int j=0;j<N;++j){
-    for(int i=0;i<M;++i){
-      dfloat tmp = 0;
-      for(int n=0;n<N;++n){
-        tmp += I[i*N + n]*Ix0[j*N+n];
-      }
-      Ix1[j*M+i] = tmp;
-    }
-  }
-
-  for(int j=0;j<M;++j){
-    for(int i=0;i<M;++i){
-      dfloat tmp = 0;
-      for(int n=0;n<N;++n){
-        tmp += I[j*N + n]*Ix1[n*M+i];
-      }
-      Ix[j*M+i] = tmp;
-    }
-  }
-
-  free(Ix0);
-  free(Ix1);
-
-}
-
+*/
 
 /* compute outwards facing normals, surface Jacobian, and volume Jacobian for all face nodes */
 void meshHex3D::SurfaceGeometricFactors(){
 
   /* unified storage array for geometric factors */
-  Nsgeo = 17;
+  Nsgeo = 8; //17; (old)
   sgeo = (dfloat*) calloc((Nelements+totalHaloPairs)*
                                 Nsgeo*Nfp*Nfaces,
                                 sizeof(dfloat));
-
-  cubsgeo = (dfloat*) calloc((Nelements+totalHaloPairs)*
-                                   Nsgeo*cubNfp*Nfaces,
-                                   sizeof(dfloat));
 
   dfloat *xre = (dfloat*) calloc(Np, sizeof(dfloat));
   dfloat *xse = (dfloat*) calloc(Np, sizeof(dfloat));
@@ -129,45 +90,16 @@ void meshHex3D::SurfaceGeometricFactors(){
   dfloat *zse = (dfloat*) calloc(Np, sizeof(dfloat));
   dfloat *zte = (dfloat*) calloc(Np, sizeof(dfloat));
 
-  dfloat *cubxre = (dfloat*) calloc(cubNq*cubNq, sizeof(dfloat));
-  dfloat *cubxse = (dfloat*) calloc(cubNq*cubNq, sizeof(dfloat));
-  dfloat *cubxte = (dfloat*) calloc(cubNq*cubNq, sizeof(dfloat));
-  dfloat *cubyre = (dfloat*) calloc(cubNq*cubNq, sizeof(dfloat));
-  dfloat *cubyse = (dfloat*) calloc(cubNq*cubNq, sizeof(dfloat));
-  dfloat *cubyte = (dfloat*) calloc(cubNq*cubNq, sizeof(dfloat));
-  dfloat *cubzre = (dfloat*) calloc(cubNq*cubNq, sizeof(dfloat));
-  dfloat *cubzse = (dfloat*) calloc(cubNq*cubNq, sizeof(dfloat));
-  dfloat *cubzte = (dfloat*) calloc(cubNq*cubNq, sizeof(dfloat));
-
-  dfloat *cubxe = (dfloat*) calloc(cubNq*cubNq, sizeof(dfloat));
-  dfloat *cubye = (dfloat*) calloc(cubNq*cubNq, sizeof(dfloat));
-  dfloat *cubze = (dfloat*) calloc(cubNq*cubNq, sizeof(dfloat));
-
   for(dlong e=0;e<Nelements+totalHaloPairs;++e){ /* for each element */
-
-    /* find vertex indices and physical coordinates */
-    // dlong id = e*Nverts;
-
-    // dfloat *xe = EX + id;
-    // dfloat *ye = EY + id;
-    // dfloat *ze = EZ + id;
-
-    for(int n=0;n<Np;++n){
-      xre[n] = 0; xse[n] = 0; xte[n] = 0;
-      yre[n] = 0; yse[n] = 0; yte[n] = 0;
-      zre[n] = 0; zse[n] = 0; zte[n] = 0;
-    }
 
     for(int k=0;k<Nq;++k){
       for(int j=0;j<Nq;++j){
         for(int i=0;i<Nq;++i){
 
           int n = i + j*Nq + k*Nq*Nq;
-
-          /* local node coordinates */
-          // dfloat rn = r[n];
-          // dfloat sn = s[n];
-          // dfloat tn = t[n];
+          xre[n] = 0; xse[n] = 0; xte[n] = 0;
+          yre[n] = 0; yse[n] = 0; yte[n] = 0;
+          zre[n] = 0; zse[n] = 0; zte[n] = 0;
 
           for(int m=0;m<Nq;++m){
             int idr = e*Np + k*Nq*Nq + j*Nq + m;
@@ -193,11 +125,6 @@ void meshHex3D::SurfaceGeometricFactors(){
 
         /* volume index of face node */
         int n = faceNodes[f*Nfp+i];
-
-        /* local node coordinates */
-        // dfloat rn = r[n];
-        // dfloat sn = s[n];
-        // dfloat tn = t[n];
 
         dfloat xr = xre[n], xs = xse[n], xt = xte[n];
         dfloat yr = yre[n], ys = yse[n], yt = yte[n];
@@ -238,78 +165,9 @@ void meshHex3D::SurfaceGeometricFactors(){
         sgeo[base+WIJID] = 1./(J*gllw[0]);
         sgeo[base+WSJID] = sJ*gllw[i%Nq]*gllw[i/Nq];
 
-        computeFrame(nx, ny, nz,
-                     sgeo[base+STXID], sgeo[base+STYID], sgeo[base+STZID],
-                     sgeo[base+SBXID], sgeo[base+SBYID], sgeo[base+SBZID]);
-      }
-
-      // now interpolate geofacs to cubature
-      interpolateFaceHex3D(faceNodes+f*Nfp, cubInterp, xre, Nq, cubxre, cubNq);
-      interpolateFaceHex3D(faceNodes+f*Nfp, cubInterp, xse, Nq, cubxse, cubNq);
-      interpolateFaceHex3D(faceNodes+f*Nfp, cubInterp, xte, Nq, cubxte, cubNq);
-      interpolateFaceHex3D(faceNodes+f*Nfp, cubInterp, yre, Nq, cubyre, cubNq);
-      interpolateFaceHex3D(faceNodes+f*Nfp, cubInterp, yse, Nq, cubyse, cubNq);
-      interpolateFaceHex3D(faceNodes+f*Nfp, cubInterp, yte, Nq, cubyte, cubNq);
-      interpolateFaceHex3D(faceNodes+f*Nfp, cubInterp, zre, Nq, cubzre, cubNq);
-      interpolateFaceHex3D(faceNodes+f*Nfp, cubInterp, zse, Nq, cubzse, cubNq);
-      interpolateFaceHex3D(faceNodes+f*Nfp, cubInterp, zte, Nq, cubzte, cubNq);
-
-      interpolateFaceHex3D(faceNodes+f*Nfp, cubInterp, x+e*Np, Nq, cubxe, cubNq);
-      interpolateFaceHex3D(faceNodes+f*Nfp, cubInterp, y+e*Np, Nq, cubye, cubNq);
-      interpolateFaceHex3D(faceNodes+f*Nfp, cubInterp, z+e*Np, Nq, cubze, cubNq);
-
-      //geometric data for quadrature
-      for(int i=0;i<cubNfp;++i){  // for each quadrature node on face
-
-        dfloat xr = cubxre[i], xs = cubxse[i], xt = cubxte[i];
-        dfloat yr = cubyre[i], ys = cubyse[i], yt = cubyte[i];
-        dfloat zr = cubzre[i], zs = cubzse[i], zt = cubzte[i];
-
-        /* determinant of Jacobian matrix */
-        dfloat J = xr*(ys*zt-zs*yt) - yr*(xs*zt-zs*xt) + zr*(xs*yt-ys*xt);
-
-        dfloat rx =  (ys*zt - zs*yt)/J, ry = -(xs*zt - zs*xt)/J, rz =  (xs*yt - ys*xt)/J;
-        dfloat sx = -(yr*zt - zr*yt)/J, sy =  (xr*zt - zr*xt)/J, sz = -(xr*yt - yr*xt)/J;
-        dfloat tx =  (yr*zs - zr*ys)/J, ty = -(xr*zs - zr*xs)/J, tz =  (xr*ys - yr*xs)/J;
-
-        /* face f normal and length */
-        dfloat nx=0.0, ny=0.0, nz=0.0;
-        switch(f){
-        case 0: nx = -tx; ny = -ty; nz = -tz; break;
-        case 1: nx = -sx; ny = -sy; nz = -sz; break;
-        case 2: nx = +rx; ny = +ry; nz = +rz; break;
-        case 3: nx = +sx; ny = +sy; nz = +sz; break;
-        case 4: nx = -rx; ny = -ry; nz = -rz; break;
-        case 5: nx = +tx; ny = +ty; nz = +tz; break;
-        }
-
-        dfloat sJ = sqrt(nx*nx+ny*ny+nz*nz);
-        nx /= sJ; ny /= sJ; nz /= sJ;
-        sJ *= J;
-
-
-        /* output index */
-        dlong base = Nsgeo*(Nfaces*cubNfp*e + cubNfp*f + i);
-
-        /* store normal, surface Jacobian, and reciprocal of volume Jacobian */
-        cubsgeo[base+NXID] = nx;
-        cubsgeo[base+NYID] = ny;
-        cubsgeo[base+NZID] = nz;
-        cubsgeo[base+SJID] = sJ;
-        cubsgeo[base+IJID] = 1./J;
-
-        cubsgeo[base+WIJID] = 1./(J*cubw[0]);
-        cubsgeo[base+WSJID] = sJ*cubw[i%cubNq]*cubw[i/cubNq];
-
-        cubsgeo[base+SURXID] = cubxe[i];
-        cubsgeo[base+SURYID] = cubye[i];
-        cubsgeo[base+SURZID] = cubze[i];
-
-        computeFrame(nx, ny, nz,
-                     cubsgeo[base+STXID], cubsgeo[base+STYID], cubsgeo[base+STZID],
-                     cubsgeo[base+SBXID], cubsgeo[base+SBYID], cubsgeo[base+SBZID]);
-
-
+        // computeFrame(nx, ny, nz,
+        //              sgeo[base+STXID], sgeo[base+STYID], sgeo[base+STZID],
+        //              sgeo[base+SBXID], sgeo[base+SBYID], sgeo[base+SBZID]);
       }
     }
   }
@@ -326,13 +184,7 @@ void meshHex3D::SurfaceGeometricFactors(){
     }
   }
 
-
   free(xre); free(xse); free(xte);
   free(yre); free(yse); free(yte);
   free(zre); free(zse); free(zte);
-
-  free(cubxre); free(cubxse); free(cubxte);
-  free(cubyre); free(cubyse); free(cubyte);
-  free(cubzre); free(cubzse); free(cubzte);
-
 }

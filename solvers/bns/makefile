@@ -184,7 +184,7 @@ endif
 
 #cleanup
 clean:
-	rm -f src/*.o bnsMain libbns.a
+	rm -f src/*.o *.o bnsMain libbns.a
 
 clean-libs: clean
 	${MAKE} -C ${OGS_DIR} clean

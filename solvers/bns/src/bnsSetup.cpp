@@ -26,11 +26,10 @@ SOFTWARE.
 
 #include "bns.hpp"
 
-bns_t& bns_t::Setup(mesh_t& mesh, linAlg_t& linAlg){
+bns_t& bns_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
+                    bnsSettings_t& settings){
 
-  bns_t* bns = new bns_t(mesh, linAlg);
-
-  settings_t& settings = bns->settings;
+  bns_t* bns = new bns_t(mesh, linAlg, settings);
 
   //get physical paramters
   settings.getSetting("SPEED OF SOUND", bns->c);
@@ -40,6 +39,9 @@ bns_t& bns_t::Setup(mesh_t& mesh, linAlg_t& linAlg){
 
   bns->Nfields    = (mesh.dim==3) ? 10:6;
   bns->Npmlfields = mesh.dim*bns->Nfields;
+
+  //setup cubature
+  mesh.CubatureSetup();
 
   //Setup PML
   bns->PmlSetup();

@@ -41,7 +41,13 @@ class ellipticSettings_t: public settings_t {
 public:
   ellipticSettings_t(MPI_Comm& _comm);
   void report();
+  void parseFromFile(occaSettings_t& occaSettings,
+                     meshSettings_t& meshSettings,
+                     const string filename);
 };
+void ellipticAddRunSettings(settings_t& settings);
+void ellipticAddSettings(settings_t& settings,
+                         const string prefix="");
 
 class elliptic_t: public solver_t {
 public:
@@ -89,13 +95,16 @@ public:
   occa::kernel partialIpdgKernel;
 
   elliptic_t() = delete;
-  elliptic_t(mesh_t& _mesh, linAlg_t& _linAlg, dfloat _lambda):
-    solver_t(_mesh, _linAlg), lambda(_lambda) {}
+  elliptic_t(mesh_t& _mesh, linAlg_t& _linAlg,
+             settings_t& _settings, dfloat _lambda):
+    solver_t(_mesh, _linAlg, _settings), lambda(_lambda) {}
 
   ~elliptic_t();
 
   //setup
-  static elliptic_t& Setup(mesh_t& mesh, linAlg_t& linAlg, dfloat lambda);
+  static elliptic_t& Setup(mesh_t& mesh, linAlg_t& linAlg,
+                           ellipticSettings_t& settings, dfloat lambda,
+                           const int NBCTypes, const int *BCType);
 
   void BoundarySetup();
 

@@ -26,76 +26,83 @@ SOFTWARE.
 
 #include "mesh.hpp"
 
-void meshAddSettings(settings_t& settings) {
+meshSettings_t::meshSettings_t(MPI_Comm& _comm):
+  settings_t(_comm) {
 
-  settings.newSetting("MESH FILE",
-                      "BOX"
-                      "Input mesh. Can set to BOX to instead construct a uniform mesh");
-  settings.newSetting("MESH DIMENSION",
-                      "2",
-                      "Dimension of input mesh",
-                      {"2","3"});
-  settings.newSetting("ELEMENT TYPE",
-                      "3",
-                      "Type of mesh elements (number of edges)",
-                      {"3","4","6","12"});
-  settings.newSetting("ELEMENT MAP",
-                      "ISOPARAMETRIC",
-                      "Type mapping used to transform each element",
-                      {"ISOPARAMETRIC","AFFINE"});
+  newSetting("MESH FILE",
+             "BOX"
+             "Input mesh. Can set to BOX to instead construct a uniform mesh");
+  newSetting("MESH DIMENSION",
+             "2",
+             "Dimension of input mesh",
+             {"2","3"});
+  newSetting("ELEMENT TYPE",
+             "3",
+             "Type of mesh elements (number of edges)",
+             {"3","4","6","12"});
+  newSetting("ELEMENT MAP",
+             "ISOPARAMETRIC",
+             "Type mapping used to transform each element",
+             {"ISOPARAMETRIC","AFFINE"});
 
-  settings.newSetting("BOX DIMX",
-                      "10",
-                      "Length of BOX domain in X-dimension");
-  settings.newSetting("BOX DIMY",
-                      "10",
-                      "Length of BOX domain in Y-dimension");
-  settings.newSetting("BOX DIMZ",
-                      "10",
-                      "Length of BOX domain in Z-dimension");
+  newSetting("BOX DIMX",
+             "10",
+             "Length of BOX domain in X-dimension");
+  newSetting("BOX DIMY",
+             "10",
+             "Length of BOX domain in Y-dimension");
+  newSetting("BOX DIMZ",
+             "10",
+             "Length of BOX domain in Z-dimension");
 
-  settings.newSetting("BOX NX",
-                      "10",
-                      "Number of elements in X-dimension per rank");
-  settings.newSetting("BOX NY",
-                      "10",
-                      "Number of elements in Y-dimension per rank");
-  settings.newSetting("BOX NZ",
-                      "10",
-                      "Number of elements in Z-dimension per rank");
+  newSetting("BOX NX",
+             "10",
+             "Number of elements in X-dimension per rank");
+  newSetting("BOX NY",
+             "10",
+             "Number of elements in Y-dimension per rank");
+  newSetting("BOX NZ",
+             "10",
+             "Number of elements in Z-dimension per rank");
 
-  settings.newSetting("BOX BOUNDARY FLAG",
-                      "1",
-                      "Type of boundary conditions for BOX domain (-1 for periodic)");
+  newSetting("BOX BOUNDARY FLAG",
+             "1",
+             "Type of boundary conditions for BOX domain (-1 for periodic)");
 
-  settings.newSetting("POLYNOMIAL DEGREE",
-                      "4",
-                      "Degree of polynomial finite element space",
-                      {"1","2","3","4","5","6","7","8","9","10","11","12","13","14","15"});
+  newSetting("POLYNOMIAL DEGREE",
+             "4",
+             "Degree of polynomial finite element space",
+             {"1","2","3","4","5","6","7","8","9","10","11","12","13","14","15"});
 }
 
-void meshReportSettings(settings_t& settings) {
+void meshSettings_t::report() {
 
-  if (!settings.compareSetting("MESH FILE","BOX"))
-    settings.reportSetting("MESH FILE");
+  int rank;
+  MPI_Comm_rank(comm, &rank);
 
-  settings.reportSetting("MESH DIMENSION");
-  settings.reportSetting("ELEMENT TYPE");
+  if (rank==0) {
+    std::cout << "Mesh Settings:\n\n";
+    if (!compareSetting("MESH FILE","BOX"))
+      reportSetting("MESH FILE");
 
-  if (settings.compareSetting("ELEMENT TYPE","4") ||
-      settings.compareSetting("ELEMENT TYPE","12"))
-    settings.reportSetting("ELEMENT MAP");
+    reportSetting("MESH DIMENSION");
+    reportSetting("ELEMENT TYPE");
 
-  //report the box settings
-  if (settings.compareSetting("MESH FILE","BOX")) {
-    settings.reportSetting("BOX DIMX");
-    settings.reportSetting("BOX DIMY");
-    settings.reportSetting("BOX DIMZ");
-    settings.reportSetting("BOX NX");
-    settings.reportSetting("BOX NY");
-    settings.reportSetting("BOX NZ");
-    settings.reportSetting("BOX BOUNDARY FLAG");
+    if (compareSetting("ELEMENT TYPE","4") ||
+        compareSetting("ELEMENT TYPE","12"))
+      reportSetting("ELEMENT MAP");
+
+    //report the box settings
+    if (compareSetting("MESH FILE","BOX")) {
+      reportSetting("BOX DIMX");
+      reportSetting("BOX DIMY");
+      reportSetting("BOX DIMZ");
+      reportSetting("BOX NX");
+      reportSetting("BOX NY");
+      reportSetting("BOX NZ");
+      reportSetting("BOX BOUNDARY FLAG");
+    }
+
+    reportSetting("POLYNOMIAL DEGREE");
   }
-
-  settings.reportSetting("POLYNOMIAL DEGREE");
 }

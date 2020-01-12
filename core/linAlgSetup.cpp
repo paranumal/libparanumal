@@ -30,14 +30,14 @@ SOFTWARE.
 #define LINALG_BLOCKSIZE 512
 
 linAlg_t::linAlg_t(occa::device& device_,
-         settings_t& settings_, occa::properties& props_):
-  device(device_), settings(settings_), props(props_), blocksize(LINALG_BLOCKSIZE) {};
+                   occa::properties& props_):
+  device(device_), props(props_), blocksize(LINALG_BLOCKSIZE) {};
 
 //named cosntructor
 linAlg_t& linAlg_t::Setup(occa::device& device_,
-         settings_t& settings_, occa::properties& props_) {
+                          occa::properties& props_) {
 
-  linAlg_t *linAlg = new linAlg_t(device_, settings_, props_);
+  linAlg_t *linAlg = new linAlg_t(device_, props_);
 
   //pinned scratch buffer
   occa::properties mprops;

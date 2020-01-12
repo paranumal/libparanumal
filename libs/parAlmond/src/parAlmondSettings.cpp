@@ -26,33 +26,34 @@ SOFTWARE.
 
 #include "settings.hpp"
 
-void parAlmondAddSettings(settings_t& settings) {
+void parAlmondAddSettings(settings_t& settings,
+                          const string prefix) {
 
-  settings.newSetting("PARALMOND CYCLE",
+  settings.newSetting(prefix+"PARALMOND CYCLE",
                       "KCYCLE",
                       "Type of Multigrid Cycle",
                       {"VCYCLE", "KCYCLE"});
 
-  settings.newSetting("PARALMOND SMOOTHER",
+  settings.newSetting(prefix+"PARALMOND SMOOTHER",
                       "CHEBYSHEV",
                       "Type of Smoother",
                       {"DAMPEDJACOBI", "CHEBYSHEV"});
 
-  settings.newSetting("PARALMOND CHEBYSHEV DEGREE",
+  settings.newSetting(prefix+"PARALMOND CHEBYSHEV DEGREE",
                       "2",
                       "Number of Chebyshev iteration to run in smoother");
 
-  settings.newSetting("PARALMOND PARTITION",
+  settings.newSetting(prefix+"PARALMOND PARTITION",
                       "STRONGNODES",
                       "Type of parallel node-distribution in coarse problems",
                       {"STRONGNODES", "DISTRIBUTED", "SATURATE"});
 
-  settings.newSetting("PARALMOND AGGREGATION STRATEGY",
+  settings.newSetting(prefix+"PARALMOND AGGREGATION STRATEGY",
                       "DEFAULT",
                       "Type of coarse node aggregation to use",
                       {"DEFAULT", "LPSCN"});
 
-  settings.newSetting("PARALMOND LPSCN ORDERING",
+  settings.newSetting(prefix+"PARALMOND LPSCN ORDERING",
                       "NONE",
                       "Type of node ordering to use in LPSCN aggregation",
                       {"MIN", "MAX", "NONE"});

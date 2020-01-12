@@ -26,11 +26,10 @@ SOFTWARE.
 
 #include "cns.hpp"
 
-cns_t& cns_t::Setup(mesh_t& mesh, linAlg_t& linAlg){
+cns_t& cns_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
+                    cnsSettings_t& settings){
 
-  cns_t* cns = new cns_t(mesh, linAlg);
-
-  settings_t& settings = cns->settings;
+  cns_t* cns = new cns_t(mesh, linAlg, settings);
 
   //get physical paramters
   settings.getSetting("VISCOSITY", cns->mu);
@@ -38,6 +37,12 @@ cns_t& cns_t::Setup(mesh_t& mesh, linAlg_t& linAlg){
 
   cns->cubature   = (settings.compareSetting("ADVECTION TYPE", "CUBATURE")) ? 1:0;
   cns->isothermal = (settings.compareSetting("ISOTHERMAL", "TRUE")) ? 1:0;
+
+  //setup cubature
+  if (cns->cubature) {
+    mesh.CubatureSetup();
+    mesh.CubatureNodes();
+  }
 
   cns->Nfields   = (mesh.dim==3) ? 4:3;
   cns->Ngrads = mesh.dim*mesh.dim;

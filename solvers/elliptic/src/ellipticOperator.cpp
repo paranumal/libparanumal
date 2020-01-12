@@ -30,7 +30,7 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
 
   if(disc_c0){
     int mapType = (mesh.elementType==HEXAHEDRA &&
-                   settings.compareSetting("ELEMENT MAP", "TRILINEAR")) ? 1:0;
+                   mesh.settings.compareSetting("ELEMENT MAP", "TRILINEAR")) ? 1:0;
 
     // int integrationType = (mesh.elementType==HEXAHEDRA &&
     //                        settings.compareSetting("ELLIPTIC INTEGRATION", "CUBATURE")) ? 1:0;

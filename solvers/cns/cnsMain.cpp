@@ -32,29 +32,36 @@ int main(int argc, char **argv){
   MPI_Init(&argc, &argv);
 
   MPI_Comm comm = MPI_COMM_WORLD;
-  int rank;
-  MPI_Comm_rank(comm, &rank);
 
   if(argc!=2)
     LIBP_ABORT(string("Usage: ./cnsMain setupfile"));
 
-  cnsSettings_t settings(comm); //sets default settings
-  settings.readSettingsFromFile(argv[1]);
-  if (!rank) settings.report();
+  //create default settings
+  occaSettings_t occaSettings(comm);
+  meshSettings_t meshSettings(comm);
+  cnsSettings_t cnsSettings(comm);
+
+  //load settings from file
+  cnsSettings.parseFromFile(occaSettings, meshSettings,
+                            argv[1]);
+
+  occaSettings.report();
+  meshSettings.report();
+  cnsSettings.report();
 
   // set up occa device
   occa::device device;
   occa::properties props;
-  occaDeviceConfig(device, comm, settings, props);
+  occaDeviceConfig(device, comm, occaSettings, props);
 
   // set up mesh
-  mesh_t& mesh = mesh_t::Setup(device, comm, settings, props);
+  mesh_t& mesh = mesh_t::Setup(device, comm, meshSettings, props);
 
   // set up linear algebra module
-  linAlg_t& linAlg = linAlg_t::Setup(device, settings, props);
+  linAlg_t& linAlg = linAlg_t::Setup(device, props);
 
   // set up cns solver
-  cns_t& cns = cns_t::Setup(mesh, linAlg);
+  cns_t& cns = cns_t::Setup(mesh, linAlg, cnsSettings);
 
   // run
   cns.Run();

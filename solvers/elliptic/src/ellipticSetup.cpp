@@ -27,11 +27,11 @@ SOFTWARE.
 #include "elliptic.hpp"
 #include "ellipticPrecon.hpp"
 
-elliptic_t& elliptic_t::Setup(mesh_t& mesh, linAlg_t& linAlg, dfloat lambda){
+elliptic_t& elliptic_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
+                              ellipticSettings_t& settings, dfloat lambda,
+                              const int NBCTypes, const int *BCType){
 
-  elliptic_t* elliptic = new elliptic_t(mesh, linAlg, lambda);
-
-  settings_t& settings = elliptic->settings;
+  elliptic_t* elliptic = new elliptic_t(mesh, linAlg, settings, lambda);
 
   elliptic->Nfields = 1;
 
@@ -51,9 +51,8 @@ elliptic_t& elliptic_t::Setup(mesh_t& mesh, linAlg_t& linAlg, dfloat lambda){
   elliptic->traceHalo = mesh.HaloTraceSetup(elliptic->Nfields);
 
   // Boundary Type translation. Just defaults.
-  int BCType[3] = {0,1,2};
-  elliptic->BCType = (int*) calloc(3,sizeof(int));
-  memcpy(elliptic->BCType,BCType,3*sizeof(int));
+  elliptic->BCType = (int*) calloc(NBCTypes,sizeof(int));
+  memcpy(elliptic->BCType,BCType,NBCTypes*sizeof(int));
 
   //setup boundary flags and make mask and masked ogs
   elliptic->BoundarySetup();
@@ -115,7 +114,7 @@ elliptic_t& elliptic_t::Setup(mesh_t& mesh, linAlg_t& linAlg, dfloat lambda){
   if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
     sprintf(fileName,  DELLIPTIC "/okl/ellipticAx%s.okl", suffix);
     if(mesh.elementType==HEXAHEDRA){
-      if(settings.compareSetting("ELEMENT MAP", "TRILINEAR"))
+      if(mesh.settings.compareSetting("ELEMENT MAP", "TRILINEAR"))
         sprintf(kernelName, "ellipticPartialAxTrilinear%s", suffix);
       else
         sprintf(kernelName, "ellipticPartialAx%s", suffix);

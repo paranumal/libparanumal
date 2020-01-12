@@ -30,88 +30,119 @@ SOFTWARE.
 ellipticSettings_t::ellipticSettings_t(MPI_Comm& _comm):
   settings_t(_comm) {
 
-  occaAddSettings(*this);
-  meshAddSettings(*this);
+  //common settings used when the elliptic solver
+  // is used inside another solver
+  ellipticAddSettings(*this);
+  parAlmondAddSettings(*this);
+}
 
+void ellipticAddRunSettings(settings_t& settings) {
+  settings.newSetting("DATA FILE",
+                      "data/ellipticSine2D.h",
+                      "Boundary and Initial conditions header");
 
-  newSetting("DATA FILE",
-             "data/ellipticSine2D.h",
-             "Boundary and Initial conditions header");
+  settings.newSetting("LAMBDA",
+                      "1.0",
+                      "Coefficient in Screened Poisson Equation");
 
-  newSetting("LAMBDA",
-             "1.0",
-             "Coefficient in Screened Poisson Equation");
+  settings.newSetting("OUTPUT TO FILE",
+                      "FALSE",
+                      "Flag for writing fields to VTU files",
+                      {"TRUE", "FALSE"});
 
-  newSetting("DISCRETIZATION",
-             "CONTINUOUS",
-             "Type of Finite Element Discretization",
-             {"CONTINUOUS", "IPDG"});
+  settings.newSetting("OUTPUT FILE NAME",
+                      "elliptic");
+}
 
-  newSetting("LINEAR SOLVER",
-             "PCG",
-             "Iterative Linear Solver to use for solve",
-             {"PCG", "FPCG", "NBPCG", "NBFPCG"});
+void ellipticAddSettings(settings_t& settings,
+                         const string prefix) {
+  settings.newSetting(prefix+"DISCRETIZATION",
+                      "CONTINUOUS",
+                      "Type of Finite Element Discretization",
+                      {"CONTINUOUS", "IPDG"});
 
-  newSetting("PRECONDITIONER",
-             "NONE",
-             "Preconditioning Strategy",
-             {"NONE", "JACOBI", "MASSMATRIX", "FULLALMOND", "MULTIGRID", "SEMFEM", "OAS"});
+  settings.newSetting(prefix+"LINEAR SOLVER",
+                      "PCG",
+                      "Iterative Linear Solver to use for solve",
+                      {"PCG", "FPCG", "NBPCG", "NBFPCG"});
+
+  settings.newSetting(prefix+"PRECONDITIONER",
+                      "NONE",
+                      "Preconditioning Strategy",
+                      {"NONE", "JACOBI", "MASSMATRIX", "FULLALMOND", "MULTIGRID", "SEMFEM", "OAS"});
 
   /* MULTIGRID options */
-  newSetting("MULTIGRID COARSENING",
-             "HALFDOFS",
-             "p-Multigrid coarsening strategy",
-             {"ALLDEGREES", "HALFDEGREES", "HALFDOFS"});
+  settings.newSetting(prefix+"MULTIGRID COARSENING",
+                      "HALFDOFS",
+                      "p-Multigrid coarsening strategy",
+                      {"ALLDEGREES", "HALFDEGREES", "HALFDOFS"});
 
-  newSetting("MULTIGRID SMOOTHER",
-             "CHEBYSHEV",
-             "p-Multigrid smoother",
-             {"DAMPEDJACOBI", "CHEBYSHEV"});
+  settings.newSetting(prefix+"MULTIGRID SMOOTHER",
+                      "CHEBYSHEV",
+                      "p-Multigrid smoother",
+                      {"DAMPEDJACOBI", "CHEBYSHEV"});
 
-  newSetting("MULTIGRID CHEBYSHEV DEGREE",
-             "2",
-             "Smoothing iterations in Chebyshev smoother");
+  settings.newSetting(prefix+"MULTIGRID CHEBYSHEV DEGREE",
+                      "2",
+                      "Smoothing iterations in Chebyshev smoother");
 
-  newSetting("OUTPUT TO FILE",
-             "FALSE",
-             "Flag for writing fields to VTU files",
-             {"TRUE", "FALSE"});
-
-  newSetting("OUTPUT FILE NAME",
-             "elliptic");
-
-  newSetting("VERBOSE",
-             "FALSE",
-             "Enable verbose output",
-             {"TRUE", "FALSE"});
-
-  parAlmondAddSettings(*this);
+  settings.newSetting(prefix+"VERBOSE",
+                      "FALSE",
+                      "Enable verbose output",
+                      {"TRUE", "FALSE"});
 }
 
 void ellipticSettings_t::report() {
 
-  std::cout << "Settings:\n\n";
-  occaReportSettings(*this);
-  meshReportSettings(*this);
+  int rank;
+  MPI_Comm_rank(comm, &rank);
 
-  reportSetting("DATA FILE");
+  if (rank==0) {
+    std::cout << "Elliptic Settings:\n\n";
+    reportSetting("DATA FILE");
 
-  reportSetting("LAMBDA");
-  reportSetting("DISCRETIZATION");
-  reportSetting("LINEAR SOLVER");
-  reportSetting("PRECONDITIONER");
+    reportSetting("LAMBDA");
+    reportSetting("DISCRETIZATION");
+    reportSetting("LINEAR SOLVER");
+    reportSetting("PRECONDITIONER");
 
-  if (compareSetting("PRECONDITIONER","MULTIGRID")) {
-    reportSetting("MULTIGRID COARSENING");
-    reportSetting("MULTIGRID SMOOTHER");
-    if (compareSetting("MULTIGRID SMOOTHER","CHEBYSHEV"))
-      reportSetting("MULTIGRID CHEBYSHEV DEGREE");
+    if (compareSetting("PRECONDITIONER","MULTIGRID")) {
+      reportSetting("MULTIGRID COARSENING");
+      reportSetting("MULTIGRID SMOOTHER");
+      if (compareSetting("MULTIGRID SMOOTHER","CHEBYSHEV"))
+        reportSetting("MULTIGRID CHEBYSHEV DEGREE");
+    }
+
+    if (compareSetting("PRECONDITIONER","MULTIGRID")
+      ||compareSetting("PRECONDITIONER","FULLALMOND"))
+      parAlmondReportSettings(*this);
+
+    reportSetting("OUTPUT TO FILE");
+    reportSetting("OUTPUT FILE NAME");
   }
+}
 
-  if (compareSetting("PRECONDITIONER","MULTIGRID")
-    ||compareSetting("PRECONDITIONER","FULLALMOND"))
-    parAlmondReportSettings(*this);
+void ellipticSettings_t::parseFromFile(occaSettings_t& occaSettings,
+                                       meshSettings_t& meshSettings,
+                                       const string filename) {
+  //read all settings from file
+  settings_t s(comm);
+  s.readSettingsFromFile(filename);
 
-  reportSetting("OUTPUT TO FILE");
-  reportSetting("OUTPUT FILE NAME");
+  for(auto it = s.settings.begin(); it != s.settings.end(); ++it) {
+    setting_t* set = it->second;
+    const string name = set->getName();
+    const string val = set->getVal<string>();
+    if (occaSettings.hasSetting(name))
+      occaSettings.changeSetting(name, val);
+    else if (meshSettings.hasSetting(name))
+      meshSettings.changeSetting(name, val);
+    else if (hasSetting(name)) //self
+      changeSetting(name, val);
+    else  {
+      stringstream ss;
+      ss << "Unknown setting: [" << name << "] requested";
+      LIBP_ABORT(ss.str());
+    }
+  }
 }

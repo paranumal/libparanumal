@@ -215,8 +215,8 @@ void dopri5::Run(occa::memory &o_q, dfloat start, dfloat end) {
     allStep++;
   }
 
-  if (!rank)
-    printf("%d accepted steps and %d total steps\n", tstep, allStep);
+  // if (!rank)
+  //   printf("%d accepted steps and %d total steps\n", tstep, allStep);
 }
 
 void dopri5::Backup(occa::memory &o_Q) {

@@ -30,13 +30,14 @@ SOFTWARE.
 #include <occa.hpp>
 #include "types.h"
 #include "utils.hpp"
-#include "settings.hpp"
+
+using std::vector;
+using std::string;
 
 //launcher for basic linear algebra OCCA kernels
 class linAlg_t {
 public:
   occa::device& device;
-  settings_t& settings;
   occa::properties& props;
 
   int blocksize;
@@ -46,12 +47,11 @@ public:
   occa::memory h_scratch;
   occa::memory o_scratch;
 
-  linAlg_t(occa::device& device_,
-           settings_t& settings_, occa::properties& props_);
+  linAlg_t(occa::device& device_, occa::properties& props_);
 
   //named constructor
   static linAlg_t& Setup(occa::device& device_,
-           settings_t& settings_, occa::properties& props_);
+                         occa::properties& props_);
 
   //initialize list of kernels
   void InitKernels(vector<string> kernels, MPI_Comm& comm);

@@ -184,7 +184,7 @@ endif
 
 #cleanup
 clean:
-	rm -f src/*.o advectionMain libadvection.a
+	rm -f src/*.o *.o advectionMain libadvection.a
 
 clean-libs: clean
 	${MAKE} -C ${OGS_DIR} clean

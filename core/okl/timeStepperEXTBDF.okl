@@ -24,30 +24,34 @@ SOFTWARE.
 
 */
 
-#ifndef CORE_HPP
-#define CORE_HPP
+@kernel void extbdfRHS(const dlong N,
+                      const dfloat dt,
+                      const int shiftIndex,
+                      @restrict const dfloat * a,
+                      @restrict const dfloat * b,
+                      @restrict const dfloat * q,
+                      @restrict const dfloat * F,
+                      @restrict dfloat *  qn,
+                      @restrict dfloat *  rhs){
 
-#include <mpi.h>
-#include <occa.h>
-#include <string>
-#include "types.h"
-#include "utils.hpp"
-#include "settings.hpp"
+  // Adams Bashforth time step update
+  for(dlong n=0;n<N;++n;@tile(p_blockSize,@outer,@inner)){
 
-class occaSettings_t: public settings_t {
-public:
-  occaSettings_t(MPI_Comm& _comm);
-  void report();
-};
+    //shifting array of pointers to previous qs and Fs
+    dfloat* qni[p_Nstages];
+    const dfloat* Fi[p_Nstages];
+    for (int i=0;i<p_Nstages;i++) {
+      qni[i] = qn + ((shiftIndex+i)%p_Nstages)*N;
+      Fi[i]  = F  + ((shiftIndex+i)%p_Nstages)*N;
+    }
 
-void occaDeviceConfig(occa::device &device, MPI_Comm comm,
-                      settings_t& settings, occa::properties& kernelInfo);
+    //compute rhs
+    dfloat qn = q[n];
+    dfloat rhsn = b[1]*qn + dt*a[0]*Fi[0][n]; //First q value comes from q, not history
+    for (int i=1;i<p_Nstages;i++)
+      rhsn += b[i+1]*qni[i][n] + dt*a[i]*Fi[i][n];
 
-void occaDeviceProperties(occa::device &device, occa::properties& props);
-
-void *occaHostMallocPinned(occa::device &device, size_t size, void *source, occa::memory &mem, occa::memory &h_mem);
-
-occa::kernel buildKernel(occa::device& device, std::string fileName, std::string kernelName,
-                         occa::properties& kernelInfo, MPI_Comm& comm);
-
-#endif
+    rhs[n] = rhsn/dt; //write RHS
+    qni[0][n] = qn; //write q into history
+  }
+}

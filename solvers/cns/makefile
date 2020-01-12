@@ -184,7 +184,7 @@ endif
 
 #cleanup
 clean:
-	rm -f src/*.o cnsMain libcns.a
+	rm -f src/*.o *.o cnsMain libcns.a
 
 clean-libs: clean
 	${MAKE} -C ${OGS_DIR} clean

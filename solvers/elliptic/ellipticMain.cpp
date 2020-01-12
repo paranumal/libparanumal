@@ -32,32 +32,45 @@ int main(int argc, char **argv){
   MPI_Init(&argc, &argv);
 
   MPI_Comm comm = MPI_COMM_WORLD;
-  int rank;
-  MPI_Comm_rank(comm, &rank);
 
   if(argc!=2)
     LIBP_ABORT(string("Usage: ./ellipticMain setupfile"));
 
-  ellipticSettings_t settings(comm); //sets default settings
-  settings.readSettingsFromFile(argv[1]);
-  if (!rank) settings.report();
+  //create default settings
+  occaSettings_t occaSettings(comm);
+  meshSettings_t meshSettings(comm);
+  ellipticSettings_t ellipticSettings(comm);
+  ellipticAddRunSettings(ellipticSettings);
+
+  //load settings from file
+  ellipticSettings.parseFromFile(occaSettings, meshSettings,
+                                 argv[1]);
+
+  occaSettings.report();
+  meshSettings.report();
+  ellipticSettings.report();
 
   // set up occa device
   occa::device device;
   occa::properties props;
-  occaDeviceConfig(device, comm, settings, props);
+  occaDeviceConfig(device, comm, occaSettings, props);
 
   // set up mesh
-  mesh_t& mesh = mesh_t::Setup(device, comm, settings, props);
+  mesh_t& mesh = mesh_t::Setup(device, comm, meshSettings, props);
 
   // set up linear algebra module
-  linAlg_t& linAlg = linAlg_t::Setup(device, settings, props);
+  linAlg_t& linAlg = linAlg_t::Setup(device, props);
 
   dfloat lambda = 0.0;
-  settings.getSetting("LAMBDA", lambda);
+  ellipticSettings.getSetting("LAMBDA", lambda);
+
+  // Boundary Type translation. Just defaults.
+  int NBCTypes = 3;
+  int BCType[NBCTypes] = {0,1,2};
 
   // set up elliptic solver
-  elliptic_t& elliptic = elliptic_t::Setup(mesh, linAlg, lambda);
+  elliptic_t& elliptic = elliptic_t::Setup(mesh, linAlg, ellipticSettings,
+                                           lambda, NBCTypes, BCType);
 
   // run
   elliptic.Run();

@@ -29,6 +29,18 @@ SOFTWARE.
 setting_t::setting_t(string name_, string val_, string description_, vector<string> options_)
   : name{name_}, val{val_}, description{description_}, options{options_} {}
 
+const string& setting_t::getName() const {
+  return name;
+}
+
+const string& setting_t::getDescription() const {
+  return description;
+}
+
+const vector<string>& setting_t::getOptions() const {
+  return options;
+}
+
 void setting_t::updateVal(const string newVal){
   if (!options.size()) {
     val = newVal;
@@ -94,6 +106,14 @@ void settings_t::newSetting(const string name, const string val,
   }
 }
 
+bool settings_t::hasSetting(const string name) {
+  auto search = settings.find(name);
+  if (search != settings.end())
+    return true;
+  else
+    return false;
+}
+
 void settings_t::changeSetting(const string name, const string newVal) {
   auto search = settings.find(name);
   if (search != settings.end()) {
@@ -157,8 +177,10 @@ void settings_t::readSettingsFromFile(string filename) {
 
       if(c == '['){ // new setting
         //add current pair if populated
-        if (name.length() && val.length())
-          changeSetting(name, val);
+        if (name.length() && val.length()) {
+          newSetting(name, val);
+          name.clear(); val.clear();
+        }
 
         name=""; val=""; i++;
         while(i < size && cline[i] != ']')
@@ -174,8 +196,10 @@ void settings_t::readSettingsFromFile(string filename) {
     }
     if (cline) free(cline);
 
-    if (name.length() && val.length())
-      changeSetting(name, val);
+    if (name.length() && val.length()) {
+      newSetting(name, val);
+      name.clear(); val.clear();
+    }
 
     if (!rank)
       flag = (getline(file,line)) ? 1 : 0;

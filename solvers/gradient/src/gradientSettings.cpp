@@ -30,9 +30,6 @@ SOFTWARE.
 gradientSettings_t::gradientSettings_t(MPI_Comm& _comm):
   settings_t(_comm) {
 
-  occaAddSettings(*this);
-  meshAddSettings(*this);
-
   newSetting("DATA FILE",
              "data/gradientCos2D.h",
              "Initial conditions header");
@@ -45,10 +42,37 @@ gradientSettings_t::gradientSettings_t(MPI_Comm& _comm):
 
 void gradientSettings_t::report() {
 
-  std::cout << "Settings:\n\n";
-  occaReportSettings(*this);
-  meshReportSettings(*this);
+  int rank;
+  MPI_Comm_rank(comm, &rank);
 
-  reportSetting("DATA FILE");
-  reportSetting("OUTPUT TO FILE");
+  if (rank==0) {
+    std::cout << "Gradient Settings:\n\n";
+    reportSetting("DATA FILE");
+    reportSetting("OUTPUT TO FILE");
+  }
+}
+
+void gradientSettings_t::parseFromFile(occaSettings_t& occaSettings,
+                                  meshSettings_t& meshSettings,
+                                  const string filename) {
+  //read all settings from file
+  settings_t s(comm);
+  s.readSettingsFromFile(filename);
+
+  for(auto it = s.settings.begin(); it != s.settings.end(); ++it) {
+    setting_t* set = it->second;
+    const string name = set->getName();
+    const string val = set->getVal<string>();
+    if (occaSettings.hasSetting(name))
+      occaSettings.changeSetting(name, val);
+    else if (meshSettings.hasSetting(name))
+      meshSettings.changeSetting(name, val);
+    else if (hasSetting(name)) //self
+      changeSetting(name, val);
+    else  {
+      stringstream ss;
+      ss << "Unknown setting: [" << name << "] requested";
+      LIBP_ABORT(ss.str());
+    }
+  }
 }

@@ -184,7 +184,7 @@ endif
 
 #cleanup
 clean:
-	rm -f src/*.o gradientMain libgradient.a
+	rm -f src/*.o *.o gradientMain libgradient.a
 
 clean-libs: clean
 	${MAKE} -C ${OGS_DIR} clean

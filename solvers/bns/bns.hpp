@@ -39,6 +39,9 @@ class bnsSettings_t: public settings_t {
 public:
   bnsSettings_t(MPI_Comm& _comm);
   void report();
+  void parseFromFile(occaSettings_t& occaSettings,
+                     meshSettings_t& meshSettings,
+                     const string filename);
 };
 
 class bns_t: public solver_t {
@@ -90,13 +93,14 @@ public:
   occa::kernel initialConditionKernel;
 
   bns_t() = delete;
-  bns_t(mesh_t& _mesh, linAlg_t& _linAlg):
-    solver_t(_mesh, _linAlg) {}
+  bns_t(mesh_t& _mesh, linAlg_t& _linAlg, settings_t& _settings):
+    solver_t(_mesh, _linAlg, _settings) {}
 
   ~bns_t();
 
   //setup
-  static bns_t& Setup(mesh_t& mesh, linAlg_t& linAlg);
+  static bns_t& Setup(mesh_t& mesh, linAlg_t& linAlg,
+                      bnsSettings_t& settings);
 
   void PmlSetup();
 

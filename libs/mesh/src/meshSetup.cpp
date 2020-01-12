@@ -29,7 +29,7 @@ SOFTWARE.
 #include "mesh3D.hpp"
 
 mesh_t& mesh_t::Setup(occa::device& device, MPI_Comm& comm,
-                     settings_t& settings, occa::properties& props){
+                      meshSettings_t& settings, occa::properties& props){
 
   string fileName;
   int N, dim, elementType;

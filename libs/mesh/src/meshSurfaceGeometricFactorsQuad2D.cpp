@@ -36,95 +36,70 @@ void meshQuad2D::SurfaceGeometricFactors(){
                                 Nsgeo*Nfp*Nfaces,
                                 sizeof(dfloat));
 
-  cubsgeo = (dfloat*) calloc((Nelements+totalHaloPairs)*
-                                Nsgeo*cubNq*Nfaces,
-                                sizeof(dfloat));
+  dfloat *xre = (dfloat*) calloc(Np, sizeof(dfloat));
+  dfloat *xse = (dfloat*) calloc(Np, sizeof(dfloat));
+  dfloat *yre = (dfloat*) calloc(Np, sizeof(dfloat));
+  dfloat *yse = (dfloat*) calloc(Np, sizeof(dfloat));
 
   for(dlong e=0;e<Nelements+totalHaloPairs;++e){ /* for each element */
 
-    /* find vertex indices and physical coordinates */
-    dlong id = e*Nverts;
+    for(int j=0;j<Nq;++j){
+      for(int i=0;i<Nq;++i){
+        int n = i + j*Nq;
+        xre[n] = 0; xse[n] = 0;
+        yre[n] = 0; yse[n] = 0;
 
-    dfloat *xe = EX + id;
-    dfloat *ye = EY + id;
+        for(int m=0;m<Nq;++m){
+          int idr = e*Np + j*Nq + m;
+          int ids = e*Np + m*Nq + i;
+          xre[n] += D[i*Nq+m]*x[idr];
+          xse[n] += D[j*Nq+m]*x[ids];
+          yre[n] += D[i*Nq+m]*y[idr];
+          yse[n] += D[j*Nq+m]*y[ids];
+        }
+      }
+    }
 
     for(int f=0;f<Nfaces;++f){ // for each face
-
-      for(int i=0;i<Nfp;++i){  // for each node on face
+      for(int i=0;i<Nq;++i){  // for each node on face
 
         /* volume index of face node */
         int n = faceNodes[f*Nfp+i];
 
-        /* local node coordinates */
-        dfloat rn = r[n];
-        dfloat sn = s[n];
-
-        /* Jacobian matrix */
-        dfloat xr = 0.25*( (1-sn)*(xe[1]-xe[0]) + (1+sn)*(xe[2]-xe[3]) );
-        dfloat xs = 0.25*( (1-rn)*(xe[3]-xe[0]) + (1+rn)*(xe[2]-xe[1]) );
-        dfloat yr = 0.25*( (1-sn)*(ye[1]-ye[0]) + (1+sn)*(ye[2]-ye[3]) );
-        dfloat ys = 0.25*( (1-rn)*(ye[3]-ye[0]) + (1+rn)*(ye[2]-ye[1]) );
+        dfloat xr = xre[n], xs = xse[n];
+        dfloat yr = yre[n], ys = yse[n];
 
         /* compute geometric factors for affine coordinate transform*/
         dfloat J = xr*ys - xs*yr;
 
+        dfloat rx =  ys/J;
+        dfloat ry = -xs/J;
+        dfloat sx = -yr/J;
+        dfloat sy =  xr/J;
+
         /* face f normal and length */
-        dfloat nx =   ye[(f+1)%Nverts]-ye[f];
-        dfloat ny = -(xe[(f+1)%Nverts]-xe[f]);
-        dfloat  d = sqrt((nx)*(nx)+(ny)*(ny));
+        dfloat nx=0.0, ny=0.0;
+        switch(f){
+        case 0: nx = -sx; ny = -sy; break;
+        case 1: nx = +rx; ny = +ry; break;
+        case 2: nx = +sx; ny = +sy; break;
+        case 3: nx = -rx; ny = -ry; break;
+        }
+        dfloat  sJ = sqrt((nx)*(nx)+(ny)*(ny));
+        nx /= sJ; ny /= sJ;
+        sJ *= J;
 
         /* output index */
         dlong base = Nsgeo*(Nfaces*Nfp*e + Nfp*f + i);
 
         /* store normal, surface Jacobian, and reciprocal of volume Jacobian */
-        sgeo[base+NXID] = nx/d;
-        sgeo[base+NYID] = ny/d;
-        sgeo[base+SJID] = d/2.;
+        sgeo[base+NXID] = nx;
+        sgeo[base+NYID] = ny;
+        sgeo[base+SJID] = sJ;
         sgeo[base+IJID] = 1./J;
 
         sgeo[base+WIJID] = 1./(J*gllw[0]);
-        sgeo[base+WSJID] = (d/2.)*gllw[i];
-      }
-
-      //geometric data for quadrature
-      for(int i=0;i<cubNq;++i){  // for each quadrature node on face
-
-        dfloat rn = 0., sn = 0.;
-
-        /* interpolate local node coordinates */
-        for (int j=0;j<Nfp;j++) {
-          /* volume index of face node */
-          int n = faceNodes[f*Nfp+j];
-
-          rn += cubInterp[i*Nfp+j]*r[n];
-          sn += cubInterp[i*Nfp+j]*s[n];
-        }
-
-        /* Jacobian matrix */
-        dfloat xr = 0.25*( (1-sn)*(xe[1]-xe[0]) + (1+sn)*(xe[2]-xe[3]) );
-        dfloat xs = 0.25*( (1-rn)*(xe[3]-xe[0]) + (1+rn)*(xe[2]-xe[1]) );
-        dfloat yr = 0.25*( (1-sn)*(ye[1]-ye[0]) + (1+sn)*(ye[2]-ye[3]) );
-        dfloat ys = 0.25*( (1-rn)*(ye[3]-ye[0]) + (1+rn)*(ye[2]-ye[1]) );
-
-        /* compute geometric factors for affine coordinate transform*/
-        dfloat J = xr*ys - xs*yr;
-
-        /* face f normal and length */
-        dfloat nx =   ye[(f+1)%Nverts]-ye[f];
-        dfloat ny = -(xe[(f+1)%Nverts]-xe[f]);
-        dfloat  d = sqrt((nx)*(nx)+(ny)*(ny));
-
-        /* output index */
-        dlong base = Nsgeo*(Nfaces*cubNq*e + cubNq*f + i);
-
-        /* store normal, surface Jacobian, and reciprocal of volume Jacobian */
-        cubsgeo[base+NXID] = nx/d;
-        cubsgeo[base+NYID] = ny/d;
-        cubsgeo[base+SJID] = d/2.;
-        cubsgeo[base+IJID] = 1./J;
-
-        cubsgeo[base+WIJID] = 1./(J*cubw[0]);
-        cubsgeo[base+WSJID] = (d/2.)*cubw[i];
+        sgeo[base+WSJID] = sJ*gllw[i];
       }
     }
   }

@@ -165,7 +165,8 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
   }
 
   //make a fem elliptic solver
-  femElliptic = new elliptic_t(*femMesh, elliptic.linAlg, elliptic.lambda);
+  femElliptic = new elliptic_t(*femMesh, elliptic.linAlg,
+                               elliptic.settings, elliptic.lambda);
   femElliptic->ogsMasked = FEMogs; //only for getting Ngather when building matrix
 
   // number of degrees of freedom on this rank (after gathering)

@@ -35,77 +35,30 @@ void meshQuad2D::GeometricFactors(){
   /* note that we have volume geometric factors for each node */
   vgeo = (dfloat*) calloc((Nelements+totalHaloPairs)*Nvgeo*Np, sizeof(dfloat));
 
-  cubvgeo = (dfloat*) calloc(Nelements*Nvgeo*cubNp, sizeof(dfloat));
-
   /* number of second order geometric factors */
   Nggeo = 4;
   ggeo = (dfloat*) calloc(Nelements*Nggeo*Np, sizeof(dfloat));
 
   for(dlong e=0;e<Nelements;++e){ /* for each element */
+    for(int j=0;j<Nq;++j){
+      for(int i=0;i<Nq;++i){
 
-    /* find vertex indices and physical coordinates */
-    dlong id = e*Nverts;
+        int n = i + j*Nq;
 
-    dfloat *xe = EX + id;
-    dfloat *ye = EY + id;
+        //differentiate physical coordinates
+        dfloat xr = 0.0;
+        dfloat xs = 0.0;
+        dfloat yr = 0.0;
+        dfloat ys = 0.0;
 
-    for(int n=0;n<Np;++n){
-
-      /* local node coordinates */
-      dfloat rn = r[n];
-      dfloat sn = s[n];
-
-      /* Jacobian matrix */
-      dfloat xr = 0.25*( (1-sn)*(xe[1]-xe[0]) + (1+sn)*(xe[2]-xe[3]) );
-      dfloat xs = 0.25*( (1-rn)*(xe[3]-xe[0]) + (1+rn)*(xe[2]-xe[1]) );
-      dfloat yr = 0.25*( (1-sn)*(ye[1]-ye[0]) + (1+sn)*(ye[2]-ye[3]) );
-      dfloat ys = 0.25*( (1-rn)*(ye[3]-ye[0]) + (1+rn)*(ye[2]-ye[1]) );
-
-      /* compute geometric factors for affine coordinate transform*/
-      dfloat J = xr*ys - xs*yr;
-
-      if(J<1e-8) {
-        stringstream ss;
-        ss << "Negative J found at element " << e << "\n";
-        LIBP_ABORT(ss.str())
-      }
-      dfloat rx =  ys/J;
-      dfloat ry = -xs/J;
-      dfloat sx = -yr/J;
-      dfloat sy =  xr/J;
-
-      int i = n%Nq;
-      int j = n/Nq;
-      dfloat JW = J*gllw[i]*gllw[j];
-
-      /* store geometric factors */
-      vgeo[Nvgeo*Np*e + n + Np*RXID] = rx;
-      vgeo[Nvgeo*Np*e + n + Np*RYID] = ry;
-      vgeo[Nvgeo*Np*e + n + Np*SXID] = sx;
-      vgeo[Nvgeo*Np*e + n + Np*SYID] = sy;
-      vgeo[Nvgeo*Np*e + n + Np*JID]  = J;
-      vgeo[Nvgeo*Np*e + n + Np*JWID] = JW;
-      vgeo[Nvgeo*Np*e + n + Np*IJWID] = 1./JW;
-
-      /* store second order geometric factors */
-      ggeo[Nggeo*Np*e + n + Np*G00ID] = JW*(rx*rx + ry*ry);
-      ggeo[Nggeo*Np*e + n + Np*G01ID] = JW*(rx*sx + ry*sy);
-      ggeo[Nggeo*Np*e + n + Np*G11ID] = JW*(sx*sx + sy*sy);
-      ggeo[Nggeo*Np*e + n + Np*GWJID] = JW;
-    }
-
-    //geometric data for quadrature
-    for(int j=0;j<cubNq;++j){
-      for(int i=0;i<cubNq;++i){
-
-        dfloat rn = cubr[i];
-        dfloat sn = cubr[j];
-
-        /* Jacobian matrix */
-        dfloat xr = 0.25*( (1-sn)*(xe[1]-xe[0]) + (1+sn)*(xe[2]-xe[3]) );
-        dfloat xs = 0.25*( (1-rn)*(xe[3]-xe[0]) + (1+rn)*(xe[2]-xe[1]) );
-        dfloat yr = 0.25*( (1-sn)*(ye[1]-ye[0]) + (1+sn)*(ye[2]-ye[3]) );
-        dfloat ys = 0.25*( (1-rn)*(ye[3]-ye[0]) + (1+rn)*(ye[2]-ye[1]) );
+        for(int m=0;m<Nq;++m){
+          int idr = e*Np + j*Nq + m;
+          int ids = e*Np + m*Nq + i;
+          xr += D[i*Nq+m]*x[idr];
+          xs += D[j*Nq+m]*x[ids];
+          yr += D[i*Nq+m]*y[idr];
+          ys += D[j*Nq+m]*y[ids];
+        }
 
         /* compute geometric factors for affine coordinate transform*/
         dfloat J = xr*ys - xs*yr;
@@ -119,18 +72,22 @@ void meshQuad2D::GeometricFactors(){
         dfloat ry = -xs/J;
         dfloat sx = -yr/J;
         dfloat sy =  xr/J;
-
-        dfloat JW = J*cubw[i]*cubw[j];
+        dfloat JW = J*gllw[i]*gllw[j];
 
         /* store geometric factors */
-        dlong base = Nvgeo*cubNp*e + i + j*cubNq;
-        cubvgeo[base + cubNp*RXID] = rx;
-        cubvgeo[base + cubNp*RYID] = ry;
-        cubvgeo[base + cubNp*SXID] = sx;
-        cubvgeo[base + cubNp*SYID] = sy;
-        cubvgeo[base + cubNp*JID]  = J;
-        cubvgeo[base + cubNp*JWID] = JW;
-        cubvgeo[base + cubNp*IJWID] = 1./JW;
+        vgeo[Nvgeo*Np*e + n + Np*RXID] = rx;
+        vgeo[Nvgeo*Np*e + n + Np*RYID] = ry;
+        vgeo[Nvgeo*Np*e + n + Np*SXID] = sx;
+        vgeo[Nvgeo*Np*e + n + Np*SYID] = sy;
+        vgeo[Nvgeo*Np*e + n + Np*JID]  = J;
+        vgeo[Nvgeo*Np*e + n + Np*JWID] = JW;
+        vgeo[Nvgeo*Np*e + n + Np*IJWID] = 1./JW;
+
+        /* store second order geometric factors */
+        ggeo[Nggeo*Np*e + n + Np*G00ID] = JW*(rx*rx + ry*ry);
+        ggeo[Nggeo*Np*e + n + Np*G01ID] = JW*(rx*sx + ry*sy);
+        ggeo[Nggeo*Np*e + n + Np*G11ID] = JW*(sx*sx + sy*sy);
+        ggeo[Nggeo*Np*e + n + Np*GWJID] = JW;
       }
     }
   }

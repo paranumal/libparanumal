@@ -193,7 +193,7 @@ endif
 
 #cleanup
 clean:
-	rm -f src/*.o ellipticMain libelliptic.a
+	rm -f src/*.o *.o ellipticMain libelliptic.a
 
 clean-libs: clean
 	${MAKE} -C ${OGS_DIR} clean

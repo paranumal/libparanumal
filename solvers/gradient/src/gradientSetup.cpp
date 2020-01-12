@@ -26,11 +26,10 @@ SOFTWARE.
 
 #include "gradient.hpp"
 
-gradient_t& gradient_t::Setup(mesh_t& mesh, linAlg_t& linAlg){
+gradient_t& gradient_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
+                              gradientSettings_t& settings){
 
-  gradient_t* gradient = new gradient_t(mesh, linAlg);
-
-  settings_t& settings = gradient->settings;
+  gradient_t* gradient = new gradient_t(mesh, linAlg, settings);
 
   gradient->Nfields = mesh.dim;
 

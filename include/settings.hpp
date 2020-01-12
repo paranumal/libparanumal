@@ -56,6 +56,10 @@ public:
   setting_t(const setting_t& other) = default;
   setting_t& operator=(const setting_t& other) = default;
 
+  const string& getName() const;
+  const string& getDescription() const;
+  const vector<string>& getOptions() const;
+
   template<typename T>
   T getVal() const {
     stringstream ss(val);
@@ -75,11 +79,10 @@ ostream& operator<<(ostream& os, const setting_t& setting);
 
 class settings_t {
 private:
-  MPI_Comm& comm;
-
   vector<string> insertOrder;
 
 public:
+  MPI_Comm& comm;
   std::map<string, setting_t*> settings;
 
   settings_t() = delete;
@@ -94,6 +97,8 @@ public:
   void newSetting(const string name, const string val,
                           const string description="",
                           const vector<string> options={});
+
+  bool hasSetting(const string name);
 
   void changeSetting(const string name, const string newVal);
 

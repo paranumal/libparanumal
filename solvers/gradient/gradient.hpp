@@ -37,6 +37,9 @@ class gradientSettings_t: public settings_t {
 public:
   gradientSettings_t(MPI_Comm& _comm);
   void report();
+  void parseFromFile(occaSettings_t& occaSettings,
+                     meshSettings_t& meshSettings,
+                     const string filename);
 };
 
 class gradient_t: public solver_t {
@@ -58,13 +61,14 @@ public:
   occa::kernel initialConditionKernel;
 
   gradient_t() = delete;
-  gradient_t(mesh_t& _mesh, linAlg_t& _linAlg):
-    solver_t(_mesh, _linAlg) {}
+  gradient_t(mesh_t& _mesh, linAlg_t& _linAlg, settings_t& _settings):
+    solver_t(_mesh, _linAlg, _settings) {}
 
   ~gradient_t();
 
   //setup
-  static gradient_t& Setup(mesh_t& mesh, linAlg_t& linAlg);
+  static gradient_t& Setup(mesh_t& mesh, linAlg_t& linAlg,
+                          gradientSettings_t& settings);
 
   void Run();
 

@@ -78,115 +78,6 @@ void meshTet3D::OccaSetup(){
     }
   }
 
-  if(cubNp){
-    dfloat *cubDrWT = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
-    dfloat *cubDsWT = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
-    dfloat *cubDtWT = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
-    dfloat *cubDrstWT = (dfloat*) calloc(3*cubNp*Np, sizeof(dfloat));
-    dfloat *cubProjectT = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
-    dfloat *cubInterpT = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
-    for(int n=0;n<Np;++n){
-      for(int m=0;m<cubNp;++m){
-        cubDrWT[n+m*Np] = cubDrW[n*cubNp+m];
-        cubDsWT[n+m*Np] = cubDsW[n*cubNp+m];
-        cubDtWT[n+m*Np] = cubDtW[n*cubNp+m];
-
-        cubDrstWT[n+m*Np] = cubDrW[n*cubNp+m];
-        cubDrstWT[n+m*Np+cubNp*Np] = cubDsW[n*cubNp+m];
-        cubDrstWT[n+m*Np+2*cubNp*Np] = cubDtW[n*cubNp+m];
-
-        cubProjectT[n+m*Np] = cubProject[n*cubNp+m];
-        cubInterpT[m+n*cubNp] = cubInterp[m*Np+n];
-      }
-    }
-
-    o_cubInterpT =
-      device.malloc(Np*cubNp*sizeof(dfloat),
-                          cubInterpT);
-
-    o_cubProjectT =
-      device.malloc(Np*cubNp*sizeof(dfloat),
-                          cubProjectT);
-
-    o_cubDrWT =
-      device.malloc(Np*cubNp*sizeof(dfloat),
-                          cubDrWT);
-
-    o_cubDsWT =
-      device.malloc(Np*cubNp*sizeof(dfloat),
-                          cubDsWT);
-
-    o_cubDtWT =
-      device.malloc(Np*cubNp*sizeof(dfloat),
-                          cubDtWT);
-
-    o_cubDWmatrices = device.malloc(3*cubNp*Np*sizeof(dfloat), cubDrstWT);
-  }
-
-  if(intNfp){
-    // build surface integration matrix transposes
-    dfloat *intLIFTT = (dfloat*) calloc(Np*Nfaces*intNfp, sizeof(dfloat));
-    dfloat *intInterpT = (dfloat*) calloc(Nfp*Nfaces*intNfp, sizeof(dfloat));
-    for(int n=0;n<Np;++n){
-      for(int m=0;m<Nfaces*intNfp;++m){
-        intLIFTT[n+m*Np] = intLIFT[n*intNfp*Nfaces+m];
-      }
-    }
-    for(int n=0;n<intNfp*Nfaces;++n){
-      for(int m=0;m<Nfp;++m){
-        intInterpT[n+m*Nfaces*intNfp] = intInterp[n*Nfp + m];
-      }
-    }
-
-    o_intInterpT =
-      device.malloc(Nfp*Nfaces*intNfp*sizeof(dfloat),
-                          intInterpT);
-
-    o_intLIFTT =
-      device.malloc(Np*Nfaces*intNfp*sizeof(dfloat),
-                          intLIFTT);
-
-    // printf("Integration number of points: %d \n",intNfp);
-    intx = (dfloat*) calloc(Nelements*Nfaces*intNfp, sizeof(dfloat));
-    inty = (dfloat*) calloc(Nelements*Nfaces*intNfp, sizeof(dfloat));
-    intz = (dfloat*) calloc(Nelements*Nfaces*intNfp, sizeof(dfloat));
-
-    for(dlong e=0;e<Nelements;++e){
-      for(int f=0;f<Nfaces;++f){
-        for(int n=0;n<intNfp;++n){
-          dfloat ix = 0, iy = 0, iz=0;
-          for(int m=0;m<Nfp;++m){
-            dlong vid = vmapM[m+f*Nfp+e*Nfp*Nfaces];
-            dfloat xm = x[vid];
-            dfloat ym = y[vid];
-            dfloat zm = z[vid];
-            dfloat Inm = intInterp[m+n*Nfp+f*intNfp*Nfp];
-            ix += Inm*xm;
-            iy += Inm*ym;
-            iz += Inm*zm;
-          }
-          dlong id = n + f*intNfp + e*Nfaces*intNfp;
-          intx[id] = ix;
-          inty[id] = iy;
-          intz[id] = iz;
-        }
-      }
-    }
-
-    o_intx =
-      device.malloc(Nelements*Nfaces*intNfp*sizeof(dfloat),
-                          intx);
-
-    o_inty =
-      device.malloc(Nelements*Nfaces*intNfp*sizeof(dfloat),
-                          inty);
-
-    o_intz =
-      device.malloc(Nelements*Nfaces*intNfp*sizeof(dfloat),
-                          intz);
-
-  }
-
   //build element stiffness matrices
   dfloat *SrrT, *SrsT, *SrtT;
   dfloat *SsrT, *SssT, *SstT;
@@ -297,13 +188,9 @@ void meshTet3D::OccaSetup(){
     device.malloc(Nelements*Nfaces*Nsgeo*sizeof(dfloat),
                         sgeo);
 
-  o_cubsgeo = o_sgeo; //dummy cubature geo factors
-
   o_ggeo =
     device.malloc(Nelements*Nggeo*sizeof(dfloat),
       ggeo);
-
-  o_cubvgeo =   device.malloc(sizeof(dfloat));// dummy
 
   o_SrrT = device.malloc(Np*Np*sizeof(dfloat), SrrT);
   o_SrsT = device.malloc(Np*Np*sizeof(dfloat), SrsT);

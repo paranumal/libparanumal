@@ -66,7 +66,7 @@ void Free(solver_t* M);
 
 } //namespace parAlmond
 
-void parAlmondAddSettings(settings_t& settings);
+void parAlmondAddSettings(settings_t& settings, const string prefix="");
 void parAlmondReportSettings(settings_t& settings);
 
 #endif

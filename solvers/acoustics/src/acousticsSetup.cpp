@@ -26,11 +26,10 @@ SOFTWARE.
 
 #include "acoustics.hpp"
 
-acoustics_t& acoustics_t::Setup(mesh_t& mesh, linAlg_t& linAlg){
+acoustics_t& acoustics_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
+                                acousticsSettings_t& settings){
 
-  acoustics_t* acoustics = new acoustics_t(mesh, linAlg);
-
-  settings_t& settings = acoustics->settings;
+  acoustics_t* acoustics = new acoustics_t(mesh, linAlg, settings);
 
   acoustics->Nfields = (mesh.dim==3) ? 4:3;
 

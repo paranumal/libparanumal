@@ -86,7 +86,7 @@ void lserk4::Run(occa::memory &o_q, dfloat start, dfloat end) {
   dfloat outputTime = time + outputInterval;
 
   int tstep=0;
-
+  dfloat stepdt;
   while (time < end) {
 
     if (time<outputTime && time+dt>=outputTime) {
@@ -95,18 +95,15 @@ void lserk4::Run(occa::memory &o_q, dfloat start, dfloat end) {
       occa::memory o_saveq = device.malloc(N*sizeof(dfloat));
       o_saveq.copyFrom(o_q, N*sizeof(dfloat));
 
-      dfloat savedt = dt;
-
-      dt = outputTime-time;
+      stepdt = outputTime-time;
 
       //take small time step
-      Step(o_q, time, dt);
+      Step(o_q, time, stepdt);
 
       //report state
       solver.Report(outputTime,tstep);
 
       //restore previous state
-      dt = savedt;
       o_q.copyFrom(o_saveq, N*sizeof(dfloat));
       o_saveq.free();
 
@@ -115,11 +112,13 @@ void lserk4::Run(occa::memory &o_q, dfloat start, dfloat end) {
 
     //check for final timestep
     if (time+dt > end){
-      dt = end-time;
+      stepdt = end-time;
+    } else {
+      stepdt = dt;
     }
 
-    Step(o_q, time, dt);
-    time += dt;
+    Step(o_q, time, stepdt);
+    time += stepdt;
     tstep++;
   }
 }

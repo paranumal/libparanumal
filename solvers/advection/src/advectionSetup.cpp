@@ -26,11 +26,10 @@ SOFTWARE.
 
 #include "advection.hpp"
 
-advection_t& advection_t::Setup(mesh_t& mesh, linAlg_t& linAlg){
+advection_t& advection_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
+                                 advectionSettings_t& settings){
 
-  advection_t* advection = new advection_t(mesh, linAlg);
-
-  settings_t& settings = advection->settings;
+  advection_t* advection = new advection_t(mesh, linAlg, settings);
 
   dlong Nlocal = mesh.Nelements*mesh.Np;
   dlong Nhalo  = mesh.totalHaloPairs*mesh.Np;

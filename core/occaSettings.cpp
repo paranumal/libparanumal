@@ -24,42 +24,50 @@ SOFTWARE.
 
 */
 
-#include "settings.hpp"
+#include "core.hpp"
 
-void occaAddSettings(settings_t& settings) {
+occaSettings_t::occaSettings_t(MPI_Comm& _comm):
+  settings_t(_comm) {
 
   //settings format
-  settings.newSetting("FORMAT",
-                      "2.0",
-                      "Setting file version number",
-                      {"2.0"});
+  newSetting("FORMAT",
+             "2.0",
+             "Setting file version number",
+             {"2.0"});
 
-  settings.newSetting("THREAD MODEL",
-                      "CUDA",
-                      "OCCA's Parallel execution platform",
-                      {"Serial", "OpenMP", "CUDA", "HIP", "OpenCL"});
+  newSetting("THREAD MODEL",
+             "CUDA",
+             "OCCA's Parallel execution platform",
+             {"Serial", "OpenMP", "CUDA", "HIP", "OpenCL"});
 
-  settings.newSetting("PLATFORM NUMBER",
-                      "0",
-                      "Parallel platform number (used in OpenCL mode)");
+  newSetting("PLATFORM NUMBER",
+             "0",
+             "Parallel platform number (used in OpenCL mode)");
 
-  settings.newSetting("DEVICE NUMBER",
-                      "0"
-                      "Parallel device number");
+  newSetting("DEVICE NUMBER",
+             "0"
+             "Parallel device number");
 }
 
-void occaReportSettings(settings_t& settings) {
+void occaSettings_t::report() {
 
-  settings.reportSetting("THREAD MODEL");
+  int rank;
+  MPI_Comm_rank(comm, &rank);
 
-  if (settings.compareSetting("THREAD MODEL","OpenCL"))
-    settings.reportSetting("PLATFORM NUMBER");
+  if (rank==0) {
+    std::cout << "OCCA Settings:\n\n";
 
-  int size;
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-  if ((size==1)
-    &&(settings.compareSetting("THREAD MODEL","CUDA")
-        ||settings.compareSetting("THREAD MODEL","HIP")
-        ||settings.compareSetting("THREAD MODEL","OpenCL") ))
-    settings.reportSetting("DEVICE NUMBER");
+    reportSetting("THREAD MODEL");
+
+    if (compareSetting("THREAD MODEL","OpenCL"))
+      reportSetting("PLATFORM NUMBER");
+
+    int size;
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    if ((size==1)
+        &&(compareSetting("THREAD MODEL","CUDA")
+        ||compareSetting("THREAD MODEL","HIP")
+        ||compareSetting("THREAD MODEL","OpenCL") ))
+      reportSetting("DEVICE NUMBER");
+  }
 }

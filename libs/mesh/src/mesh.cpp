@@ -30,7 +30,7 @@ SOFTWARE.
 
 //makeing a mesh object requires it to be bound to a device and communicator
 mesh_t::mesh_t(occa::device& device_, MPI_Comm& comm_,
-               settings_t& settings_, occa::properties& props_):
+               meshSettings_t& settings_, occa::properties& props_):
   device(device_),
   comm(comm_),
   settings(settings_),
@@ -41,35 +41,35 @@ mesh_t::mesh_t(occa::device& device_, MPI_Comm& comm_,
 }
 
 mesh2D::mesh2D(occa::device& device_, MPI_Comm& comm_,
-               settings_t& settings_, occa::properties& props_):
+               meshSettings_t& settings_, occa::properties& props_):
   mesh_t(device_, comm_, settings_, props_) {}
 
 mesh3D::mesh3D(occa::device& device_, MPI_Comm& comm_,
-               settings_t& settings_, occa::properties& props_):
+               meshSettings_t& settings_, occa::properties& props_):
   mesh_t(device_, comm_, settings_, props_) {}
 
 meshTri2D::meshTri2D(occa::device& device_, MPI_Comm& comm_,
-                     settings_t& settings_, occa::properties& props_):
+                     meshSettings_t& settings_, occa::properties& props_):
   mesh2D(device_, comm_, settings_, props_) {}
 
 meshQuad2D::meshQuad2D(occa::device& device_, MPI_Comm& comm_,
-                       settings_t& settings_, occa::properties& props_):
+                       meshSettings_t& settings_, occa::properties& props_):
   mesh2D(device_, comm_, settings_, props_) {}
 
 meshTri3D::meshTri3D(occa::device& device_, MPI_Comm& comm_,
-                     settings_t& settings_, occa::properties& props_):
+                     meshSettings_t& settings_, occa::properties& props_):
   mesh3D(device_, comm_, settings_, props_) {}
 
 meshQuad3D::meshQuad3D(occa::device& device_, MPI_Comm& comm_,
-                       settings_t& settings_, occa::properties& props_):
+                       meshSettings_t& settings_, occa::properties& props_):
   mesh3D(device_, comm_, settings_, props_) {}
 
 meshTet3D::meshTet3D(occa::device& device_, MPI_Comm& comm_,
-                     settings_t& settings_, occa::properties& props_):
+                     meshSettings_t& settings_, occa::properties& props_):
   mesh3D(device_, comm_, settings_, props_) {}
 
 meshHex3D::meshHex3D(occa::device& device_, MPI_Comm& comm_,
-                     settings_t& settings_, occa::properties& props_):
+                     meshSettings_t& settings_, occa::properties& props_):
   mesh3D(device_, comm_, settings_, props_) {}
 
 mesh_t::~mesh_t() {
