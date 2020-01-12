@@ -1,0 +1,201 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+// compute div(NU)  = div(uxu) in collocation way
+@kernel void fpeAdvectionVolumeTet3D(const dlong Nelements,
+                                     @restrict const  dfloat *  vgeo,
+                                     @restrict const  dfloat *  Dmatrices,
+                                               const  dfloat    t,
+                                     @restrict const  dfloat *  x,
+                                     @restrict const  dfloat *  y,
+                                     @restrict const  dfloat *  z,
+                                     @restrict const  dfloat *  q,
+                                           @restrict  dfloat *  rhs){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
+    // Hold Flux Vector on Shared, use symmetry f
+    @shared dfloat s_F[p_NblockV][p_Np];
+    @shared dfloat s_G[p_NblockV][p_Np];
+    @shared dfloat s_H[p_NblockV][p_Np];
+
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements){
+          const dlong id = e*p_Np+n;
+
+          const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+          const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+          const dfloat drdz = vgeo[e*p_Nvgeo + p_RZID];
+
+          const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+          const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+          const dfloat dsdz = vgeo[e*p_Nvgeo + p_SZID];
+
+          const dfloat dtdx = vgeo[e*p_Nvgeo + p_TXID];
+          const dfloat dtdy = vgeo[e*p_Nvgeo + p_TYID];
+          const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
+
+          const dfloat qn = q[id];
+
+          dfloat u=0.0, v=0.0, w=0.0;
+          fpeAdvectionField3D(t, x[id], y[id], z[id], qn, &u, &v, &w);
+
+          s_F[es][n] = drdx*u*qn + drdy*v*qn + drdz*w*qn;
+          s_G[es][n] = dsdx*u*qn + dsdy*v*qn + dsdz*w*qn;
+          s_H[es][n] = dtdx*u*qn + dtdy*v*qn + dtdz*w*qn;
+        }
+      }
+    }
+
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
+
+    for(int es=0;es<p_NblockV;++es;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
+        const dlong e = eo+es;
+        if(e<Nelements){
+
+          dfloat rhsqn = 0.f;
+          #pragma unroll p_Np
+            for(int i=0;i<p_Np;++i){
+              const dfloat Drni  = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
+              const dfloat Dsni  = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
+              const dfloat Dtni  = Dmatrices[n+i*p_Np+2*p_Np*p_Np];
+
+              rhsqn += Drni*s_F[es][i]
+                      +Dsni*s_G[es][i]
+                      +Dtni*s_H[es][i];
+            }
+
+          // Update
+          const dlong id = e*p_Np+n;
+          rhs[id] = -rhsqn;
+        }
+      }
+    }
+  }
+}
+
+
+
+@kernel void fpeAdvectionSurfaceTet3D(const dlong Nelements,
+                                      @restrict const  dfloat *  sgeo,
+                                      @restrict const  dfloat *  LIFTT,
+                                      @restrict const  dlong  *  vmapM,
+                                      @restrict const  dlong  *  vmapP,
+                                      @restrict const  int    *  EToB,
+                                                const  dfloat    t,
+                                      @restrict const  dfloat *  x,
+                                      @restrict const  dfloat *  y,
+                                      @restrict const  dfloat *  z,
+                                      @restrict const  dfloat *  q,
+                                            @restrict dfloat *  rhs){
+
+  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
+    // @shared storage for flux terms
+    @shared dfloat s_flux[p_NblockS][p_Nfp*p_Nfaces];
+    // for all face nodes of all elements
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
+        const dlong e = eo + es;
+        if(e<Nelements){
+          if(n<p_Nfp*p_Nfaces){
+            // find face that owns this node
+            const int face = n/p_Nfp;
+            // load surface geofactors for this face
+            const dlong sid    = p_Nsgeo*(e*p_Nfaces+face);
+            const dfloat nx   = sgeo[sid+p_NXID];
+            const dfloat ny   = sgeo[sid+p_NYID];
+            const dfloat nz   = sgeo[sid+p_NZID];
+            const dfloat sJ   = sgeo[sid+p_SJID];
+            const dfloat invJ = sgeo[sid+p_IJID];
+
+            // indices of negative and positive traces of face node
+            const dlong id  = e*p_Nfp*p_Nfaces + n;
+            const dlong idM = vmapM[id];
+            const dlong idP = vmapP[id];
+
+            // load traces
+            const dfloat qM = q[idM];
+            dfloat qP = q[idP];
+
+            // apply boundary condition
+            const int bc = EToB[face+p_Nfaces*e];
+            if(bc>0){
+              dfloat qxP=0.0, qyP=0.0, qzP=0.0;
+              fpeBoundaryConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz,
+                                       qM, 0.0, 0.0, 0.0,
+                                       &qP, &qxP, &qyP, &qzP);
+            }
+
+            dfloat uM=0.0, vM=0.0, wM=0.0;
+            dfloat uP=0.0, vP=0.0, wP=0.0;
+            fpeAdvectionField3D(t, x[idM], y[idM], z[idM], qM, &uM, &vM, &wM);
+            fpeAdvectionField3D(t, x[idM], y[idM], z[idM], qP, &uP, &vP, &wP);
+
+            // Find max normal velocity on the face
+            const dfloat unM   = fabs(nx*uM + ny*vM + nz*wM);
+            const dfloat unP   = fabs(nx*uP + ny*vP + nz*wP);
+            const dfloat unMax = (unM > unP) ? unM : unP;
+             // evaluate "flux" terms: LLF
+            const dfloat sc = invJ * sJ ;
+            s_flux[es][n] = -sc*(.5f*( nx*(qP*uP - qM*uM)
+                                     + ny*(qP*vP - qM*vM)
+                                     + nz*(qP*wP - qM*wM)
+                                     + unMax*(qM-qP) ));
+          }
+        }
+      }
+    }
+
+
+    // wait for all flux functions are written to @shared
+    @barrier("local");
+
+    // for each node in the element
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
+        const dlong e = eo + es;
+        if(e<Nelements){
+          if(n<p_Np){
+            dfloat rhsns = 0.0;
+            // Lift
+            #pragma unroll p_NfacesNfp
+              for(int m=0;m<p_Nfaces*p_Nfp;++m){
+                const dfloat L = LIFTT[n+m*p_Np];
+                rhsns  += L*s_flux[es][m];
+              }
+
+            const dlong id = e*p_Np + n;
+            rhs[id] += rhsns;
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,240 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+#define p_cubNblockV 4
+
+@kernel void fpeAdvectionCubatureVolumeTri2D(const dlong Nelements,
+                                             @restrict const  dfloat *  vgeo,
+                                             @restrict const  dfloat *  cubvgeo,
+                                             @restrict const  dfloat *  cubDWmatrices,
+                                             @restrict const  dfloat *  cubInterpT,
+                                             @restrict const  dfloat *  cubProjectT,
+                                                       const  dfloat    t,
+                                             @restrict const  dfloat *  cubx,
+                                             @restrict const  dfloat *  cuby,
+                                             @restrict const  dfloat *  cubz,
+                                             @restrict const  dfloat *  q,
+                                                   @restrict  dfloat *  rhs){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_cubNblockV;@outer(0)){  // for all elements
+
+    // Hold Flux Vector on Shared, use symmetry f21 = f12
+    @shared dfloat s_q[p_cubNblockV][p_Np];
+    @shared dfloat s_F[p_cubNblockV][p_cubNp];
+    @shared dfloat s_G[p_cubNblockV][p_cubNp];
+
+    for(int es=0;es<p_cubNblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_cubNp;++n;@inner(0)){      // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements){
+          if(n<p_Np){
+            const dlong id = e*p_Np+n;
+            s_q[es][n] = q[id];
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    for(int es=0;es<p_cubNblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_cubNp;++n;@inner(0)){     // for all nodes in this element
+
+        dfloat qn = 0.f;
+        #pragma unroll p_Np
+        for(int i=0;i<p_Np;++i){
+          const dfloat cIni = cubInterpT[n+i*p_cubNp];
+          qn += cIni*s_q[es][i];
+        }
+
+        dfloat u=0.0, v=0.0;
+        const dlong id = e*p_cubNp + n;
+        fpeAdvectionField2D(t, cubx[id], cuby[id], qn, &u, &v);
+
+        s_F[es][n] = u*qn;
+        s_G[es][n] = v*qn;
+      }
+    }
+
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
+
+    for(int es=0;es<p_cubNblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_cubNp;++n;@inner(0)){     // for all nodes in this element
+        const dlong e = eo+es;
+        if(e<Nelements && n<p_Np){
+          // prefetch geometric factors (constant on triangle)
+          const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+          const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+          const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+          const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+          // compute 'r' and 's' derivatives of (q_m) at node n
+          dfloat dfdr = 0.f, dfds = 0.f;
+          dfloat dgdr = 0.f, dgds = 0.f;
+          #pragma unroll p_cubNp
+            for(int i=0;i<p_cubNp;++i){
+              const dfloat cDrWni = cubDWmatrices[n+i*p_Np+0*p_cubNp*p_Np];
+              const dfloat cDsWni = cubDWmatrices[n+i*p_Np+1*p_cubNp*p_Np];
+
+              dfdr += cDrWni*s_F[es][i];
+              dfds += cDsWni*s_F[es][i];
+
+              dgdr += cDrWni*s_G[es][i];
+              dgds += cDsWni*s_G[es][i];
+            }
+
+          const dfloat rhsn = drdx*dfdr + dsdx*dfds
+                            + drdy*dgdr + dsdy*dgds;
+
+          // Update
+          const dlong id = e*p_Np+n;
+          rhs[id] = rhsn;
+        }
+      }
+    }
+  }
+}
+
+
+@kernel void fpeAdvectionCubatureSurfaceTri2D(const dlong Nelements,
+                                             @restrict const  dfloat *  vgeo,
+                                             @restrict const  dfloat *  sgeo,
+                                             @restrict const  dlong  *  vmapM,
+                                             @restrict const  dlong  *  vmapP,
+                                             @restrict const  int    *  EToB,
+                                             @restrict const  dfloat *  intInterpT, // interpolate to integration nodes
+                                             @restrict const  dfloat *  intLIFTT, // lift from integration to interpolation nodes
+                                                       const  dfloat t,
+                                             @restrict const  dfloat *  intx, // integration nodes
+                                             @restrict const  dfloat *  inty,
+                                             @restrict const  dfloat *  intz,
+                                             @restrict const  dfloat *  q,
+                                                   @restrict  dfloat *  rhs){
+
+  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
+
+    // @shared storage for flux terms
+    @shared dfloat s_qM[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_qP[p_NblockS][p_NfacesNfp];
+
+    @shared dfloat s_flux[p_NblockS][p_intNfpNfaces];
+
+    // for all face nodes of all elements
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_cubMaxNodes;++n;@inner(0)){
+        const dlong e = eo + es;
+        if(e<Nelements && n<(p_Nfaces*p_Nfp)){
+          const dlong id  = e*p_Nfp*p_Nfaces + n;
+          const dlong idM = vmapM[id];
+          const dlong idP = vmapP[id];
+          // load negative and positive trace node values of velocity
+          s_qM[es][n] = q[idM];
+          s_qP[es][n] = q[idP];
+        }
+      }
+    }
+
+    @barrier("local");
+
+    // interpolate to surface integration nodes
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_cubMaxNodes;++n;@inner(0)){
+        const dlong e = eo + es;
+        if(e<Nelements && n<(p_Nfaces*p_intNfp)){
+          const int face = n/p_intNfp; // find face that owns this integration node
+
+          // load surface geofactors for this face
+          const dlong sid = p_Nsgeo*(e*p_Nfaces+face);
+          const dfloat nx   = sgeo[sid+p_NXID];
+          const dfloat ny   = sgeo[sid+p_NYID];
+          const dfloat sJ   = sgeo[sid+p_SJID];
+          const dfloat invJ = sgeo[sid+p_IJID];
+
+          dfloat qM = 0.f, qP = 0.f;
+
+          // local block interpolation (face nodes to integration nodes)
+          #pragma unroll p_Nfp
+          for(int m=0;m<p_Nfp;++m){
+            const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
+            const int fm = face*p_Nfp+m;
+            qM += iInm*s_qM[es][fm];
+            qP += iInm*s_qP[es][fm];
+          }
+
+          // apply boundary condition
+          const int bc = EToB[face+p_Nfaces*e];
+          const dlong id = p_intNfp*p_Nfaces*e + n;
+          if(bc>0){
+            dfloat qxP=0.0, qyP=0.0;
+            fpeBoundaryConditions2D(bc, t, intx[id], inty[id], nx, ny,
+                                     qM, 0.0, 0.0,
+                                     &qP, &qxP, &qyP);
+          }
+
+          // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
+          dfloat uM=0.0, vM=0.0;
+          dfloat uP=0.0, vP=0.0;
+          fpeAdvectionField2D(t, intx[id], inty[id], qM, &uM, &vM);
+          fpeAdvectionField2D(t, intx[id], inty[id], qP, &uP, &vP);
+
+          // Find max normal velocity on the face
+          const dfloat unM   = fabs(nx*uM + ny*vM);
+          const dfloat unP   = fabs(nx*uP + ny*vP);
+          const dfloat unMax = (unM > unP) ? unM : unP;
+
+          // evaluate "flux" terms: LLF
+          const dfloat sc = invJ * sJ ;  // notice sign changes in flux because of weak form
+          s_flux[es][n] = -sc*(.5f*( nx*(qP*uP + qM*uM)
+                                   + ny*(qP*vP + qM*vM) + unMax*(qM-qP) ));
+        }
+      }
+    }
+
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
+
+    // lift from surface integration to volume nodes
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_cubMaxNodes;++n;@inner(0)){
+        const dlong e = eo + es;
+        if(e<Nelements && n<p_Np ){
+          dfloat rhsn = 0.0;
+
+          #pragma unroll p_intNfp*p_Nfaces
+          for(int m=0;m<(p_intNfp*p_Nfaces);++m){
+            const dfloat L = intLIFTT[n+m*p_Np];
+            rhsn += L*s_flux[es][m];
+          }
+
+          const dlong id = n + p_Np*e;
+          rhs[id] += rhsn;
+        }
+      }
+    }
+  }
+}

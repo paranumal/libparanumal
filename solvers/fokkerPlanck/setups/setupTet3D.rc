@@ -1,0 +1,121 @@
+[FORMAT]
+2.0
+
+[DATA FILE]
+data/fpeLinear3D.h
+
+[MESH FILE]
+BOX
+
+[MESH DIMENSION]
+3
+
+[ELEMENT TYPE] # number of edges
+6
+
+[BOX NX]
+4
+
+[BOX NY]
+4
+
+[BOX NZ]
+4
+
+[BOX BOUNDARY FLAG]
+-1
+
+[POLYNOMIAL DEGREE]
+4
+
+[THREAD MODEL]
+CUDA
+
+[PLATFORM NUMBER]
+0
+
+[DEVICE NUMBER]
+0
+
+[VISCOSITY]
+0.01
+
+#Can be COLLOCATION or CUBATURE
+[ADVECTION TYPE]
+CUBATURE
+
+[TIME INTEGRATOR]
+SSBDF3
+
+[NUMBER OF SUBCYCLES]
+16
+
+[SUBCYCLING TIME INTEGRATOR]
+DOPRI5
+
+[START TIME]
+0
+
+[FINAL TIME]
+10
+
+[OUTPUT INTERVAL]
+1
+
+[OUTPUT TO FILE]
+TRUE
+
+[OUTPUT FILE NAME]
+fpe
+
+#################################################
+########## Elliptic Solver Options ##############
+#################################################
+
+# can be PCG, FPCG, NBPCG, or NBFPCG
+[ELLIPTIC LINEAR SOLVER]
+PCG
+
+# can be IPDG, or CONTINUOUS
+[ELLIPTIC DISCRETIZATION]
+IPDG
+
+# can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, MULTIGRID, or OAS
+[ELLIPTIC PRECONDITIONER]
+MASSMATRIX
+
+[ELLIPTIC VERBOSE]
+TRUE
+
+########## MULTIGRID Options ##############
+
+# can be ALLDEGREES, HALFDEGREES, HALFDOFS
+[ELLIPTIC MULTIGRID COARSENING]
+HALFDOFS
+
+# can be DAMPEDJACOBI or CHEBYSHEV
+[ELLIPTIC MULTIGRID SMOOTHER]
+CHEBYSHEV
+
+# can be any integer >0
+[ELLIPTIC MULTIGRID CHEBYSHEV DEGREE]
+2
+
+########## ParAlmond Options ##############
+
+# can be KCYCLE, or VCYCLE
+# can add the EXACT and NONSYM option
+[ELLIPTIC PARALMOND CYCLE]
+KCYCLE
+
+# can be DAMPEDJACOBI or CHEBYSHEV
+[ELLIPTIC PARALMOND SMOOTHER]
+CHEBYSHEV
+
+# can be any integer >0
+[ELLIPTIC PARALMOND CHEBYSHEV DEGREE]
+2
+
+#################################################
+#################################################
+#################################################

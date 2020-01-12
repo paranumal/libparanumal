@@ -1,0 +1,341 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+
+#define surfaceTerms(sk,face,i, j)                                      \
+{                                                                       \
+  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
+  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
+  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];                          \
+  const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];                           \
+                                                                        \
+  dfloat dqdxP=0, dqdyP=0, qP=0;                                        \
+  const int bc = EToB[face+p_Nfaces*e];                                 \
+  if(bc>0) {                                                            \
+    const dlong idM = vmapM[sk];                                        \
+    fpeBoundaryConditions2D(bc, time, x[idM], y[idM], nx, ny,           \
+                                       0.0, 0.0, 0.0,                   \
+                                       &qP, &dqdxP, &dqdyP);            \
+  }                                                                     \
+                                                                        \
+  const dfloat dq = qP;                                                 \
+  s_dqdx[j][i] += WsJ*nx*dq;                                            \
+  s_dqdy[j][i] += WsJ*ny*dq;                                            \
+                                                                        \
+  s_rhsq[j][i] -= WsJ*(nx*dqdxP + ny*dqdyP+ tau*dq*hinv);               \
+}
+
+@kernel void fpeDiffusionRhsQuad2D(const dlong Nelements,
+                                    @restrict const  dlong  *  vmapM,
+                                    @restrict const  dfloat *  vgeo,
+                                    @restrict const  dfloat *  sgeo,
+                                    @restrict const  int    *  EToB,
+                                    @restrict const  dfloat *  D,
+                                    @restrict const  dfloat *  LIFTT,
+                                    @restrict const  dfloat *  MM,
+                                    const dfloat tau,
+                                    const dfloat mu,
+                                    @restrict const  dfloat *  x,
+                                    @restrict const  dfloat *  y,
+                                    @restrict const  dfloat *  z,
+                                    const dfloat time,
+                                          @restrict dfloat *  rhs){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_dqdx[p_Nq][p_Nq];
+    @shared dfloat s_dqdy[p_Nq][p_Nq];
+    @shared dfloat s_rhsq[p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
+
+    // loop over slabs
+    for(int j=0;j<p_Nq;++j){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        s_dqdx[j][i] = 0.f;
+        s_dqdy[j][i] = 0.f;
+        s_rhsq[j][i] = 0.f;
+
+        s_D[j][i] = D[j*p_Nq+i];
+      }
+    }
+
+    @barrier("local");
+
+    // loop over faces to add pseudo-gradient
+
+    // face 0 & 2
+    for(int i=0;i<p_Nq;++i;@inner(0)){
+      const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i ;
+      const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + i ;
+
+      surfaceTerms(sk0,0,i,0     );
+      surfaceTerms(sk2,2,i,p_Nq-1);
+    }
+
+    @barrier("local");
+
+    // face 1 & 3
+    for(int j=0;j<p_Nq;++j;@inner(0)){
+      const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + j;
+      const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + j;
+
+      surfaceTerms(sk1,1,p_Nq-1,j);
+      surfaceTerms(sk3,3,0     ,j);
+    }
+
+    @barrier("local");
+
+    // prescale by geofacs
+    for(int j=0;j<p_Nq;++j){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        // does need the nasty geofacs
+        const dlong gid = i + j*p_Nq + e*p_Np*p_Nvgeo;
+
+        const dfloat drdx = vgeo[gid + p_RXID*p_Np];
+        const dfloat drdy = vgeo[gid + p_RYID*p_Np];
+        const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
+        const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
+
+        const dfloat dqdx = s_dqdx[j][i];
+        const dfloat dqdy = s_dqdy[j][i];
+
+        s_dqdx[j][i] = (drdx*dqdx + drdy*dqdy);
+        s_dqdy[j][i] = (dsdx*dqdx + dsdy*dqdy);
+      }
+    }
+
+    @barrier("local");
+
+    // loop over slabs
+    for(int j=0;j<p_Nq;++j){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        // does need the nasty geofacs
+        const dlong gid = i + j*p_Nq + e*p_Np*p_Nvgeo;
+        const dfloat JW = vgeo[gid + p_JWID*p_Np];
+
+        dfloat dsr = 0, dss = 0;
+        for(int n=0;n<p_Nq;++n){
+          dsr += s_D[n][i]*s_dqdx[j][n];
+          dss += s_D[n][j]*s_dqdy[n][i];
+        }
+
+        //fetch rhs value and add boundary terms
+        const dlong id = e*p_Np + j*p_Nq + i;
+        rhs[id] = JW*rhs[id]/mu - (s_rhsq[j][i]  + dsr + dss);
+      }
+    }
+  }
+}
+#undef surfaceTerms
+
+
+#if 0
+#define surfaceTerms(sk,face,i, j)                                      \
+{                                                                       \
+  const dlong idM = vmapM[sk];                                          \
+  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
+  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
+  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];                          \
+                                                                        \
+  dfloat dqdxP=0.f, dqdyP=0.f, qP=0.f;                                  \
+                                                                        \
+  const int bc = mapB[idM];                                             \
+  if(bc>0) {                                                            \
+    cdsDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, &qP);\
+    cdsNeumannConditions2D(bc, time, x[idM], y[idM], nx, ny, 0.f, 0.f, &dqdxP, &dqdyP);\
+  }                                                                     \
+                                                                        \
+  s_s  [j][i]  = qP;                                                    \
+  s_nds[j][i] -= WsJ*(nx*dqdxP + ny*dqdyP);                             \
+}
+
+//RHS contributions for continuous solver
+@kernel void cdsHelmholtzBCQuad2D(const dlong Nelements,
+                                 @restrict const  dfloat *  ggeo,
+                                 @restrict const  dfloat *  sgeo,
+                                 @restrict const  dfloat *  D,
+                                 @restrict const  dfloat *  S,
+                                 @restrict const  dfloat *  MM,
+                                 @restrict const  dlong  *  vmapM,
+                                 @restrict const  int    *  EToB,
+                                 @restrict const  dfloat *  sMT,
+                                 const dfloat lambda,
+                                 const dfloat time,
+                                 @restrict const  dfloat *  x,
+                                 @restrict const  dfloat *  y,
+                                 @restrict const  dfloat *  z,
+                                 @restrict const  int    *  mapB,
+                                 @restrict dfloat *  rhsS){
+
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+    @shared dfloat s_s[p_Nq][p_Nq];
+    @shared dfloat s_nds[p_Nq][p_Nq];
+
+    @shared dfloat s_D[p_Nq][p_Nq];
+    @exclusive dfloat r_sr[p_Nq], r_ss[p_Nq], r_rhss[p_Nq];
+    @exclusive dfloat r_G00[p_Nq], r_G01[p_Nq], r_G11[p_Nq], r_GwJ[p_Nq];
+
+    // loop over slabs
+    for(int i=0;i<p_Nq;++i;@inner(0)){
+      #pragma unroll p_Nq
+      for(int j=0;j<p_Nq;++j){
+        s_s  [j][i] = 0.;
+        s_nds[j][i] = 0.;
+
+        s_D[j][i] = D[j*p_Nq+i];
+      }
+    }
+
+    @barrier("local");
+
+    // face 0 & 2
+    for(int i=0;i<p_Nq;++i;@inner(0)){
+      const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i;
+      const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + i;
+
+      surfaceTerms(sk0,0,i,0     );
+      surfaceTerms(sk2,2,i,p_Nq-1);
+    }
+
+    @barrier("local");
+
+    // face 1 & 3
+    for(int j=0;j<p_Nq;++j;@inner(0)){
+      const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + j;
+      const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + j;
+
+      surfaceTerms(sk1,1,p_Nq-1,j);
+      surfaceTerms(sk3,3,0     ,j);
+    }
+
+    @barrier("local");
+
+    // loop over slabs
+    for(int j=0;j<p_Nq;++j){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        const dlong base = e*p_Nggeo*p_Np + j*p_Nq + i;
+
+        // assumes w*J built into G entries
+        r_GwJ[j] = ggeo[base+p_GWJID*p_Np];
+        r_G00[j] = ggeo[base+p_G00ID*p_Np];
+        r_G01[j] = ggeo[base+p_G01ID*p_Np];
+        r_G11[j] = ggeo[base+p_G11ID*p_Np];
+
+        dfloat sr = 0.f, ss = 0.f;
+
+        #pragma unroll p_Nq
+          for(int n=0; n<p_Nq; ++n){
+            sr += s_D[i][n]*s_s[j][n];
+            ss += s_D[j][n]*s_s[n][i];
+          }
+
+        r_sr[j] = sr; r_ss[j] = ss;
+        r_rhss[j] = r_GwJ[j]*lambda*s_s[j][i];
+      }
+    }
+
+    // r term ----->
+    @barrier("local");
+
+    for(int j=0;j<p_Nq;++j){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        s_s[j][i] = r_G00[j]*r_sr[j] + r_G01[j]*r_ss[j];
+      }
+    }
+
+    @barrier("local");
+
+    for(int j=0;j<p_Nq;++j){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        dfloat stmp = 0.f;
+        #pragma unroll p_Nq
+          for(int n=0;n<p_Nq;++n) {
+            stmp += s_D[n][i]*s_s[j][n];
+          }
+
+        r_rhss[j] += stmp;
+      }
+    }
+
+    // s term ---->
+    @barrier("local");
+
+    for(int j=0;j<p_Nq;++j){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        s_s[j][i] = r_G01[j]*r_sr[j] + r_G11[j]*r_ss[j];
+      }
+    }
+
+    @barrier("local");
+
+    for(int j=0;j<p_Nq;++j){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        dfloat stmp = 0.f;
+        #pragma unroll p_Nq
+          for(int n=0;n<p_Nq;++n) {
+            stmp += s_D[n][j]*s_s[n][i];
+          }
+
+        r_rhss[j] += stmp;
+
+        const dlong id = e*p_Np + j*p_Nq + i;
+        rhsS[id] -= r_rhss[j] + s_nds[j][i];
+      }
+    }
+  }
+}
+
+
+@kernel void cdsHelmholtzAddBCQuad2D(const dlong Nelements,
+                                   const dfloat time,
+                                   @restrict const  dfloat *  sgeo,
+                                   @restrict const  dfloat *  x,
+                                   @restrict const  dfloat *  y,
+                                   @restrict const  dfloat *  z,
+                                   @restrict const  dlong  *  vmapM,
+                                   @restrict const  int    *  mapB,
+                                         @restrict dfloat *  S){
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+    for(int n=0;n<p_Nfp*p_Nfaces;++n;@inner(0)){
+      const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
+      const int bc = mapB[idM];
+
+      if(bc>0) {
+        const dfloat sM = S[idM];
+
+        const dlong sk = e*p_Nfp*p_Nfaces + n;
+        const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
+        const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
+
+        dfloat qP = 0.f;
+        cdsDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, sM,&qP);
+        S[idM] = qP;
+      }
+    }
+  }
+}
+
+#endif
