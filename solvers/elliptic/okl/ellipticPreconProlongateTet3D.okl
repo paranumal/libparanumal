@@ -26,7 +26,7 @@ SOFTWARE.
 
 
 @kernel void ellipticPreconProlongateTet3D(const dlong Nelements,
-                                     @restrict const  dfloat *  R,
+                                     @restrict const  dfloat *  P,
                                      @restrict const  dfloat *  qCoarse,
                                      @restrict dfloat *  qFine){
 
@@ -55,7 +55,7 @@ SOFTWARE.
 
           #pragma unroll p_NpCoarse
             for(int i=0;i<p_NpCoarse;++i){
-              tmp += R[i*p_NpFine + n]*s_qCoarse[es][i];
+              tmp += P[i + n*p_NpCoarse]*s_qCoarse[es][i];
             }
 
           qFine[e*p_NpFine+n] = tmp;

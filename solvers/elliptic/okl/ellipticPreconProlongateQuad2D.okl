@@ -25,16 +25,16 @@ SOFTWARE.
 */
 
 @kernel void ellipticPreconProlongateQuad2D(const dlong Nelements,
-                                           @restrict const  dfloat *  R,
+                                           @restrict const  dfloat *  P,
                                            @restrict const  dfloat *  qc,
                                                  @restrict dfloat *  qN){
-  
-  
+
+
   for(dlong e=0;e<Nelements;++e;@outer(0)){
     @shared dfloat s_qcf[p_NqCoarse][p_NqFine];
     @shared dfloat s_qcc[p_NqCoarse][p_NqCoarse];
-    @shared dfloat s_R[p_NqCoarse][p_NqFine];
-    
+    @shared dfloat s_P[p_NqFine][p_NqCoarse];
+
     // prefetch to @shared
     for(int j=0;j<p_NqFine;++j;@inner(1)){
       for(int i=0;i<p_NqFine;++i;@inner(0)){
@@ -43,11 +43,11 @@ SOFTWARE.
           s_qcc[0][id] = qc[id+e*p_NpCoarse];
         }
         if(id<p_NqCoarse*p_NqFine){
-          s_R[0][id] = R[id];
+          s_P[0][id] = P[id];
         }
       }
     }
-    
+
     @barrier("local");
 
     // prolongate in i index
@@ -57,7 +57,7 @@ SOFTWARE.
           dfloat res = 0;
           #pragma unroll p_NqCoarse
             for(int m=0;m<p_NqCoarse;++m) {
-              res += s_R[m][i]*s_qcc[j][m];
+              res += s_P[i][m]*s_qcc[j][m];
             }
           s_qcf[j][i] = res;
         }
@@ -72,7 +72,7 @@ SOFTWARE.
         dfloat res = 0;
         #pragma unroll p_NqCoarse
           for(int m=0;m<p_NqCoarse;++m) {
-            res += s_R[m][j]*s_qcf[m][i];
+            res += s_P[j][m]*s_qcf[m][i];
           }
 
         const dlong id = i+j*p_NqFine+e*p_NpFine;

@@ -58,7 +58,7 @@ public:
   void ParallelReader(const char *fileName);
   void SetupBox();
   void SetupPmlBox();
-  void LoadReferenceNodes(int N);
+  void ReferenceNodes(int N);
   void PhysicalNodes();
   void GeometricFactors();
   void SurfaceGeometricFactors();
@@ -77,7 +77,7 @@ public:
   void ParallelReader(const char *fileName);
   void SetupBox();
   void SetupPmlBox();
-  void LoadReferenceNodes(int N);
+  void ReferenceNodes(int N);
   void PhysicalNodes();
   void GeometricFactors();
   void SurfaceGeometricFactors();

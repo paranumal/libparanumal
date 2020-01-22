@@ -111,7 +111,7 @@ mesh_t& mesh_t::SetupNewDegree(int Nf){
   mesh->defaultStream = defaultStream;
 
   // load reference (r,s) element nodes
-  mesh->LoadReferenceNodes(Nf);
+  mesh->ReferenceNodes(Nf);
 
   // compute physical (x,y) locations of the element nodes
   mesh->PhysicalNodes();

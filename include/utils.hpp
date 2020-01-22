@@ -71,62 +71,6 @@ SOFTWARE.
 // block size for reduction (hard coded)
 #define BLOCKSIZE 256
 
-// serial sort
-void mysort(hlong *data, int N, const char *order);
-
-// sort entries in an array in parallel
-void parallelSort(int size, int rank, MPI_Comm comm,
-      int N, void *vv, size_t sz,
-      int (*compare)(const void *, const void *),
-      void (*match)(void *, void *)
-      );
-
-// extern "C"
-// {
-//   void * xxtSetup(uint num_local_rows,
-//       void* row_ids,
-//       uint nnz,
-//       void*   A_i,
-//       void*   A_j,
-//       void* A_vals,
-//       int null_space,
-//       const char* inttype,
-//       const char* floattype);
-
-//   void xxtSolve(void* x,
-//       void* A,
-//       void* rhs);
-
-//   void xxtFree(void* A) ;
-// }
-
-// extern "C"
-// {
-//   void dgesv_ ( int     *N, int     *NRHS, double  *A,
-//                 int     *LDA,
-//                 int     *IPIV,
-//                 double  *B,
-//                 int     *LDB,
-//                 int     *INFO );
-
-//   void sgesv_(int *N, int *NRHS,float  *A, int *LDA, int *IPIV, float  *B, int *LDB,int *INFO);
-
-//   void dgetrf_(int* M, int *N, double* A, int* lda, int* IPIV, int* INFO);
-//   void dgetri_(int* N, double* A, int* lda, int* IPIV, double* WORK, int* lwork, int* INFO);
-//   void dgeev_(char *JOBVL, char *JOBVR, int *N, double *A, int *LDA, double *WR, double *WI,
-//               double *VL, int *LDVL, double *VR, int *LDVR, double *WORK, int *LWORK, int *INFO );
-
-//   double dlange_(char *NORM, int *M, int *N, double *A, int *LDA, double *WORK);
-//   void dgecon_(char *NORM, int *N, double *A, int *LDA, double *ANORM,
-//                 double *RCOND, double *WORK, int *IWORK, int *INFO );
-// }
-
-void readDfloatArray(MPI_Comm comm, FILE *fp, const char *label, dfloat **A, int *Nrows, int* Ncols);
-void readIntArray   (MPI_Comm comm, FILE *fp, const char *label, int **A   , int *Nrows, int* Ncols);
-
-void matrixInverse(int N, dfloat *A);
-dfloat matrixConditionNumber(int N, dfloat *A);
-
 
 
 #endif

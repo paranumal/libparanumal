@@ -89,7 +89,7 @@ mesh_t& mesh_t::Setup(occa::device& device, MPI_Comm& comm,
   mesh->ConnectBoundary();
 
   // load reference (r,s) element nodes
-  mesh->LoadReferenceNodes(N);
+  mesh->ReferenceNodes(N);
 
   // set up halo exchange info for MPI (do before connect face nodes)
   mesh->HaloSetup();

@@ -29,7 +29,7 @@ SOFTWARE.
 // Cast problem into spectrally-equivalent N=1 FEM space and precondition with AMG
 void SEMFEMPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
 
-  if (mesh.elementType==TRIANGLES||mesh.elementType==TETRAHEDRA) {
+  if (mesh.elementType==TRIANGLES) {
 
     dlong Ntotal = mesh.Np*mesh.Nelements;
 
@@ -80,7 +80,7 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
   dlong Ntotal = mesh.NpFEM*mesh.Nelements;
   hlong* maskedGlobalIds = (hlong *) calloc(Ntotal,sizeof(hlong));
   memcpy(maskedGlobalIds, globalIds, Ntotal*sizeof(hlong));
-  if (mesh.elementType==TRIANGLES||mesh.elementType==TETRAHEDRA) { //build a new mask for NpFEM>Np node sets
+  if (mesh.elementType==TRIANGLES) { //build a new mask for NpFEM>Np node sets
     // gather-scatter
     int verbose = 0;
     ogs_t *ogs = ogs_t::Setup(Ntotal, globalIds, mesh.comm, verbose, mesh.device);
@@ -223,7 +223,7 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
 
   parAlmond::Report(parAlmondHandle);
 
-  if (mesh.elementType==TRIANGLES||mesh.elementType==TETRAHEDRA) {
+  if (mesh.elementType==TRIANGLES) {
     // build interp and anterp
     dfloat *SEMFEMAnterp = (dfloat*) calloc(mesh.NpFEM*mesh.Np, sizeof(dfloat));
     for(int n=0;n<mesh.NpFEM;++n){

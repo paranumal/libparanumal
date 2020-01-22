@@ -50,4 +50,22 @@ void *occaHostMallocPinned(occa::device &device, size_t size, void *source, occa
 occa::kernel buildKernel(occa::device& device, std::string fileName, std::string kernelName,
                          occa::properties& kernelInfo, MPI_Comm& comm);
 
+// serial sort
+void mysort(hlong *data, int N, const char *order);
+
+// sort entries in an array in parallel
+void parallelSort(int size, int rank, MPI_Comm comm,
+      int N, void *vv, size_t sz,
+      int (*compare)(const void *, const void *),
+      void (*match)(void *, void *)
+      );
+
+void readDfloatArray(MPI_Comm comm, FILE *fp, const char *label, dfloat **A, int *Nrows, int* Ncols);
+void readIntArray   (MPI_Comm comm, FILE *fp, const char *label, int **A   , int *Nrows, int* Ncols);
+
+void matrixRightSolve(int NrowsA, int NcolsA, dfloat *A, int NrowsB, int NcolsB, dfloat *B, dfloat *C);
+void matrixEig(int N, dfloat *A, dfloat *VR, dfloat *WR, dfloat *WI);
+void matrixInverse(int N, dfloat *A);
+dfloat matrixConditionNumber(int N, dfloat *A);
+
 #endif

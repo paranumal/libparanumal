@@ -42,7 +42,7 @@ void MGLevel::coarsen(occa::memory &o_X, occa::memory &o_Rx) {
   if (elliptic.disc_c0)
     linAlg.amx(mesh.Nelements*NpF, 1.0, o_weightF, o_X);
 
-  coarsenKernel(mesh.Nelements, o_R, o_X, o_Rx);
+  coarsenKernel(mesh.Nelements, o_P, o_X, o_Rx);
 
   if (elliptic.disc_c0) {
     elliptic.ogsMasked->GatherScatter(o_Rx, ogs_dfloat, ogs_add, ogs_sym);
@@ -52,7 +52,7 @@ void MGLevel::coarsen(occa::memory &o_X, occa::memory &o_Rx) {
 }
 
 void MGLevel::prolongate(occa::memory &o_X, occa::memory &o_Px) {
-  prolongateKernel(mesh.Nelements, o_R, o_X, o_Px);
+  prolongateKernel(mesh.Nelements, o_P, o_X, o_Px);
 }
 
 void MGLevel::smooth(occa::memory &o_RHS, occa::memory &o_X, bool x_is_zero) {
@@ -175,7 +175,19 @@ MGLevel::MGLevel(elliptic_t& _elliptic, int k,
   AllocateStorage(k, ctype);
 
   if (mesh.N<Nf) {
-    mesh.BuildBasisCoarsen(&R, o_R, Nf, mesh.N);
+    if (mesh.elementType==QUADRILATERALS || mesh.elementType==HEXAHEDRA) {
+      P = (dfloat *) calloc((Nf+1)*(mesh.N+1),sizeof(dfloat));
+      mesh.DegreeRaiseMatrix1D(mesh.N, Nf, P);
+      o_P = mesh.device.malloc((Nf+1)*(mesh.N+1)*sizeof(dfloat), P);
+    } else if (mesh.elementType==TRIANGLES) {
+      P = (dfloat *) calloc(Npf*mesh.Np,sizeof(dfloat));
+      mesh.DegreeRaiseMatrixTri2D(mesh.N, Nf, P);
+      o_P = mesh.device.malloc(Npf*mesh.Np*sizeof(dfloat), P);
+    } else {
+      P = (dfloat *) calloc(Npf*mesh.Np,sizeof(dfloat));
+      mesh.DegreeRaiseMatrixTet3D(mesh.N, Nf, P);
+      o_P = mesh.device.malloc(Npf*mesh.Np*sizeof(dfloat), P);
+    }
 
     //build kernels
     occa::properties kernelInfo = elliptic.props;

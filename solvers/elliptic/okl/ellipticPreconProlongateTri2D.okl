@@ -25,7 +25,7 @@ SOFTWARE.
 */
 
 @kernel void ellipticPreconProlongateTri2D(const dlong Nelements,
-                                     @restrict const  dfloat *  R,
+                                     @restrict const  dfloat *  P,
                                      @restrict const  dfloat *  qCoarse,
                                      @restrict dfloat *  qFine){
 
@@ -54,7 +54,7 @@ SOFTWARE.
 
           #pragma unroll p_NpCoarse
             for(int i=0;i<p_NpCoarse;++i){
-              tmp += R[i*p_NpFine + n]*s_qCoarse[es][i];
+              tmp += P[i + n*p_NpCoarse]*s_qCoarse[es][i];
             }
 
           qFine[e*p_NpFine+n] = tmp;
@@ -65,17 +65,17 @@ SOFTWARE.
 }
 
 
-//storing R in @shared is too much for 3D
+//storing P in @shared is too much for 3D
 #if 0
 @kernel void ellipticPreconProlongate_v1(const dlong Nelements,
-                                     @restrict const  dfloat *  R,
+                                     @restrict const  dfloat *  P,
                                      @restrict const  dfloat *  qCoarse,
                                      @restrict dfloat *  qFine){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockVFine;@outer(0)){
 
     @shared dfloat s_qCoarse[p_NblockVFine][p_NpCoarse];
-    @shared dfloat s_R[p_NpCoarse][p_NpFine];
+    @shared dfloat s_P[p_NpCoarse][p_NpFine];
 
     for(int es=0;es<p_NblockVFine;++es;@inner(1)){
       for(int n=0;n<p_NpFine;++n;@inner(0)){
@@ -86,7 +86,7 @@ SOFTWARE.
             s_qCoarse[0][t] = qCoarse[eo*p_NpCoarse+t];
 
         while(t<p_NpFine*p_NpCoarse){
-          s_R[0][t] = R[t];
+          s_P[0][t] = P[t];
           t += p_NpFine*p_NblockVFine;
         }
       }
@@ -103,70 +103,11 @@ SOFTWARE.
 
           #pragma unroll p_NpCoarse
             for(int i=0;i<p_NpCoarse;++i){
-              tmp += s_R[i][n]*s_qCoarse[es][i];
+              tmp += s_P[n][i]*s_qCoarse[es][i];
             }
 
           qFine[e*p_NpFine+n] = tmp;
         }
-      }
-    }
-  }
-}
-#endif
-
-#if 0
-@kernel void ellipticPreconProlongateQuad2D(const int Nelements,
-             @restrict const  dfloat *  V1,
-             @restrict const  dfloat *  q1,
-             @restrict dfloat *  qN){
-
-
-  for(int e=0;e<Nelements;++e;@outer(0)){
-    @shared dfloat s_q1N[p_Nq1][p_Nq];
-    @shared dfloat s_q11[p_Nq1][p_Nq1];
-    @shared dfloat s_V1[p_Nq1][p_Nq];
-
-    // prefetch to @shared
-
-    for(int j=0;j<p_Nq;++j;@inner(1)){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
-  int id = i+j*p_Nq;
-  if(id<p_Nq1*p_Nq1){
-    s_q11[0][id] = q1[id+e*p_Nq1*p_Nq1];
-  }
-  if(id<p_Nq1*p_Nq){
-    s_V1[0][id] = V1[id];
-  }
-      }
-    }
-
-    @barrier("local");
-
-    // prolongate in i index
-
-    for(int j=0;j<p_Nq;++j;@inner(1)){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
-  if(j<2){
-    dfloat res = 0;
-    for(int m=0;m<p_Nq1;++m)
-      res += s_V1[i][m]*s_q11[j][m];
-    s_q1N[j][i] = res;
-  }
-      }
-    }
-
-    @barrier("local");
-
-    // coarsen in i index
-
-    for(int j=0;j<p_Nq;++j;@inner(1)){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
-
-  dfloat res = 0;
-  for(int m=0;m<p_Nq1;++m)
-    res += s_V1[j][m]*s_q1N[m][i];
-
-  qN[i+j*p_Nq+e*p_Nq*p_Nq] = res;
       }
     }
   }

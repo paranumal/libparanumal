@@ -29,6 +29,42 @@ SOFTWARE.
 
 void meshHex3D::CubatureSetup(){
 
+  /* Quadrature data */
+  cubN = N+1;
+  cubNq = cubN+1;
+  cubNp = cubNq*cubNq*cubNq;
+  cubNfp = cubNq*cubNq;
+  intNfp = cubNq*cubNq;
+
+  // cubN+1 point Gauss-Legendre quadrature
+  cubr = (dfloat *) malloc(cubNq*sizeof(dfloat));
+  cubw = (dfloat *) malloc(cubNq*sizeof(dfloat));
+  JacobiGQ(0, 0, cubN, cubr, cubw);
+
+  // GLL to GL interpolation matrix
+  cubInterp = (dfloat *) malloc(Nq*cubNq*sizeof(dfloat));
+  InterpolationMatrix1D(N, Nq, gllz, cubNq, cubr, cubInterp);
+
+  cubDW = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
+  cubProject = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
+  CubatureWeakDmatrices1D(N, Nq, gllz, cubNq, cubr, cubw,
+                             cubDW, cubProject);
+
+  // GLL to GL differentiation matrix
+  cubD = (dfloat *) malloc(Nq*cubNq*sizeof(dfloat));
+  Dmatrix1D(N, Nq, gllz, cubNq, cubr, cubD);
+
+  // GL to GL differentiation matrix
+  gjD = (dfloat *) malloc(cubNq*cubNq*sizeof(dfloat));
+  Dmatrix1D(cubN, cubNq, cubr, cubNq, cubr, gjD);
+
+  // add compile time constants to kernels
+  props["defines/" "p_cubNq"]= cubNq;
+  props["defines/" "p_cubNp"]= cubNp;
+  props["defines/" "p_intNfp"]= intNfp;
+  props["defines/" "p_intNfpNfaces"]= intNfp*Nfaces;
+  props["defines/" "p_cubNfp"]= cubNfp;
+
   dfloat *cubDWT = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
   dfloat *cubProjectT = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
   dfloat *cubInterpT = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));

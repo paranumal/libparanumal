@@ -162,9 +162,9 @@ public:
   mesh_t& mesh;
   linAlg_t& linAlg;
 
-  //coarsener
-  dfloat *R;
-  occa::memory o_R;
+  //prologation
+  dfloat *P;
+  occa::memory o_P;
   int NpF;
   occa::memory o_weightF;
 

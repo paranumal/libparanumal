@@ -25,7 +25,7 @@ SOFTWARE.
 */
 
 @kernel void ellipticPreconCoarsenTri2D(const dlong Nelements,
-                                  @restrict const  dfloat *  R,
+                                  @restrict const  dfloat *  P,
                                   @restrict const  dfloat *  qN,
                                   @restrict dfloat *  q1){
 
@@ -54,7 +54,7 @@ SOFTWARE.
           dfloat tmp = 0;
           #pragma unroll p_NpFine
             for(int i=0;i<p_NpFine;++i){
-              tmp += R[n*p_NpFine + i]*s_qN[es][i]; // bank conflict ?
+              tmp += P[n + i*p_NpCoarse]*s_qN[es][i]; // bank conflict ?
             }
           q1[e*p_NpCoarse+n] = tmp; // *invDegree[e*p_NpCoarse+n];
         }
@@ -64,17 +64,17 @@ SOFTWARE.
 }
 
 
-//storing R in @shared is too much for 3D
+//storing P in @shared is too much for 3D
 #if 0
 @kernel void ellipticPreconCoarsen_v1(const dlong Nelements,
-                                  @restrict const  dfloat *  R,
+                                  @restrict const  dfloat *  P,
                                   @restrict const  dfloat *  qN,
                                   @restrict dfloat *  q1){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockVCoarse;@outer(0)){
 
     @shared dfloat s_qN[p_NblockVCoarse][p_NpFine];
-    @shared dfloat s_R[p_NpCoarse][p_NpFine];
+    @shared dfloat s_P[p_NpFine][p_NpCoarse];
 
     for(int es=0;es<p_NblockVCoarse;++es;@inner(1)){
       for(int n=0;n<p_NpCoarse;++n;@inner(0)){
@@ -89,7 +89,7 @@ SOFTWARE.
         t = n + es*p_NpCoarse;
 
         while(t<p_NpFine*p_NpCoarse){
-          s_R[0][t] = R[t];
+          s_P[0][t] = P[t];
           t += p_NpCoarse*p_NblockVCoarse;
         }
       }
@@ -104,7 +104,7 @@ SOFTWARE.
           dfloat tmp = 0;
           #pragma unroll p_NpFine
             for(int i=0;i<p_NpFine;++i){
-              tmp += s_R[n][i]*s_qN[es][i]; // bank conflict ?
+              tmp += s_P[i][n]*s_qN[es][i]; // bank conflict ?
             }
           q1[e*p_NpCoarse+n] = tmp; // *invDegree[e*p_NpCoarse+n];
         }

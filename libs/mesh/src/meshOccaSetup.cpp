@@ -61,10 +61,4 @@ void mesh_t::OccaSetup(){
   props["defines/" "p_Nvgeo"]= Nvgeo;
   props["defines/" "p_Nsgeo"]= Nsgeo;
   props["defines/" "p_Nggeo"]= Nggeo;
-
-  props["defines/" "p_cubNq"]= cubNq;
-  props["defines/" "p_cubNp"]= cubNp;
-  props["defines/" "p_intNfp"]= intNfp;
-  props["defines/" "p_intNfpNfaces"]= intNfp*Nfaces;
-  props["defines/" "p_cubNfp"]= cubNfp;
 }

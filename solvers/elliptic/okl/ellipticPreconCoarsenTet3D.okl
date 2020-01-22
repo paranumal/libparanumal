@@ -27,7 +27,7 @@ SOFTWARE.
 
 
 @kernel void ellipticPreconCoarsenTet3D(const dlong Nelements,
-                                  @restrict const  dfloat *  R,
+                                  @restrict const  dfloat *  P,
                                   @restrict const  dfloat *  qN,
                                   @restrict dfloat *  q1){
 
@@ -56,7 +56,7 @@ SOFTWARE.
           dfloat tmp = 0;
           #pragma unroll p_NpFine
             for(int i=0;i<p_NpFine;++i){
-              tmp += R[n*p_NpFine + i]*s_qN[es][i]; // bank conflict ?
+              tmp += P[n + i*p_NpCoarse]*s_qN[es][i]; // bank conflict ?
             }
           q1[e*p_NpCoarse+n] = tmp; // *invDegree[e*p_NpCoarse+n];
         }

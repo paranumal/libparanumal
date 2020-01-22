@@ -36,6 +36,8 @@ mesh_t* mesh_t::SetupSEMFEM(hlong **globalIds_, int *Nfp_, int **faceNodes_){
   //quads and hexes reuse the SEM ndoes for the FEM problem
   case QUADRILATERALS:
     pmesh = this; break;
+  case TETRAHEDRA:
+    pmesh = this; break;
   case HEXAHEDRA:
     pmesh = this; break;
   case TRIANGLES:
@@ -44,13 +46,10 @@ mesh_t* mesh_t::SetupSEMFEM(hlong **globalIds_, int *Nfp_, int **faceNodes_){
     else
       pmesh = new meshTri3D(device, comm, settings, props);
     break;
-  case TETRAHEDRA:
-    pmesh = new meshTet3D(device, comm, settings, props);
-    break;
   }
 
   //setup the intermediate mesh for tris and tets
-  if (elementType==TRIANGLES || elementType==TETRAHEDRA) {
+  if (elementType==TRIANGLES) {
     pmesh->dim           = dim;
     pmesh->elementType   = elementType;
     pmesh->Nverts        = Nverts;
@@ -58,73 +57,42 @@ mesh_t* mesh_t::SetupSEMFEM(hlong **globalIds_, int *Nfp_, int **faceNodes_){
     pmesh->NfaceVertices = NfaceVertices;
     pmesh->faceVertices  = faceVertices;
 
-    if (elementType==TRIANGLES) {
-      //set semfem nodes as the grid points
-      pmesh->Np = NpFEM;
-      pmesh->r  = rFEM;
-      pmesh->s  = sFEM;
+    /* SEMFEM data */
+    SEMFEMNodesTri2D(N, &NpFEM, &rFEM, &sFEM);
+    SEMFEMEToVTri2D(N, &NelFEM, &FEMEToV);
 
-      //count number of face nodes in the semfem element
-      dfloat NODETOL = 1e-6;
-      pmesh->Nfp=0;
-      for (int n=0;n<pmesh->Np;n++)
-        if (fabs(pmesh->s[n]+1)<NODETOL) pmesh->Nfp++;
+    SEMFEMInterp = (dfloat*) calloc(NpFEM*Np, sizeof(dfloat));
+    SEMFEMInterpMatrixTri2D(N, Np, r, s, NpFEM, rFEM, sFEM, SEMFEMInterp);
 
-      //remake the faceNodes array
-      pmesh->faceNodes = (int *) calloc(Nfaces*pmesh->Nfp,sizeof(int));
-      int f0=0, f1=0, f2=0;
-      for (int n=0;n<pmesh->Np;n++) {
-        if (fabs(pmesh->s[n]+1)<NODETOL)           pmesh->faceNodes[0*pmesh->Nfp+f0++] = n;
-        if (fabs(pmesh->r[n]+pmesh->s[n])<NODETOL) pmesh->faceNodes[1*pmesh->Nfp+f1++] = n;
-        if (fabs(pmesh->r[n]+1)<NODETOL)           pmesh->faceNodes[2*pmesh->Nfp+f2++] = n;
-      }
+    //set semfem nodes as the grid points
+    pmesh->Np = NpFEM;
+    pmesh->r  = rFEM;
+    pmesh->s  = sFEM;
 
-      //remake vertexNodes array
-      pmesh->vertexNodes = (int*) calloc(Nverts, sizeof(int));
-      for(int n=0;n<pmesh->Np;++n){
-        if( (pmesh->r[n]+1)*(pmesh->r[n]+1)+(pmesh->s[n]+1)*(pmesh->s[n]+1)<NODETOL)
-          pmesh->vertexNodes[0] = n;
-        if( (pmesh->r[n]-1)*(pmesh->r[n]-1)+(pmesh->s[n]+1)*(pmesh->s[n]+1)<NODETOL)
-          pmesh->vertexNodes[1] = n;
-        if( (pmesh->r[n]+1)*(pmesh->r[n]+1)+(pmesh->s[n]-1)*(pmesh->s[n]-1)<NODETOL)
-          pmesh->vertexNodes[2] = n;
-      }
-    } else if (elementType==TETRAHEDRA) {
-      //set semfem nodes as the grid points
-      pmesh->Np = NpFEM;
-      pmesh->r  = rFEM;
-      pmesh->s  = sFEM;
-      pmesh->t  = tFEM;
+    //count number of face nodes in the semfem element
+    dfloat NODETOL = 1e-6;
+    pmesh->Nfp=0;
+    for (int n=0;n<pmesh->Np;n++)
+      if (fabs(pmesh->s[n]+1)<NODETOL) pmesh->Nfp++;
 
-      //count number of face nodes in the semfem element
-      dfloat NODETOL = 1e-6;
-      pmesh->Nfp=0;
-      for (int n=0;n<pmesh->Np;n++)
-        if (fabs(pmesh->t[n]+1)<NODETOL) pmesh->Nfp++;
+    //remake the faceNodes array
+    pmesh->faceNodes = (int *) calloc(Nfaces*pmesh->Nfp,sizeof(int));
+    int f0=0, f1=0, f2=0;
+    for (int n=0;n<pmesh->Np;n++) {
+      if (fabs(pmesh->s[n]+1)<NODETOL)           pmesh->faceNodes[0*pmesh->Nfp+f0++] = n;
+      if (fabs(pmesh->r[n]+pmesh->s[n])<NODETOL) pmesh->faceNodes[1*pmesh->Nfp+f1++] = n;
+      if (fabs(pmesh->r[n]+1)<NODETOL)           pmesh->faceNodes[2*pmesh->Nfp+f2++] = n;
+    }
 
-      //remake the faceNodes array
-      pmesh->faceNodes = (int *) calloc(Nfaces*pmesh->Nfp,sizeof(int));
-      int f0=0, f1=0, f2=0, f3=0;
-      for (int n=0;n<pmesh->Np;n++) {
-        if (fabs(pmesh->t[n]+1)<NODETOL)           pmesh->faceNodes[0*pmesh->Nfp+f0++] = n;
-        if (fabs(pmesh->s[n]+1)<NODETOL)           pmesh->faceNodes[1*pmesh->Nfp+f1++] = n;
-        if (fabs(pmesh->r[n]+pmesh->s[n]+
-           pmesh->t[n]+1.0)<NODETOL) pmesh->faceNodes[2*pmesh->Nfp+f2++] = n;
-        if (fabs(pmesh->r[n]+1)<NODETOL)           pmesh->faceNodes[3*pmesh->Nfp+f3++] = n;
-      }
-
-      //remake vertexNodes array
-      pmesh->vertexNodes = (int*) calloc(Nverts, sizeof(int));
-      for(int n=0;n<pmesh->Np;++n){
-        if( (pmesh->r[n]+1)*(pmesh->r[n]+1)+(pmesh->s[n]+1)*(pmesh->s[n]+1)+(pmesh->t[n]+1)*(pmesh->t[n]+1)<NODETOL)
-          pmesh->vertexNodes[0] = n;
-        if( (pmesh->r[n]-1)*(pmesh->r[n]-1)+(pmesh->s[n]+1)*(pmesh->s[n]+1)+(pmesh->t[n]+1)*(pmesh->t[n]+1)<NODETOL)
-          pmesh->vertexNodes[1] = n;
-        if( (pmesh->r[n]+1)*(pmesh->r[n]+1)+(pmesh->s[n]-1)*(pmesh->s[n]-1)+(pmesh->t[n]+1)*(pmesh->t[n]+1)<NODETOL)
-          pmesh->vertexNodes[2] = n;
-        if( (pmesh->r[n]+1)*(pmesh->r[n]+1)+(pmesh->s[n]+1)*(pmesh->s[n]+1)+(pmesh->t[n]-1)*(pmesh->t[n]-1)<NODETOL)
-          pmesh->vertexNodes[3] = n;
-      }
+    //remake vertexNodes array
+    pmesh->vertexNodes = (int*) calloc(Nverts, sizeof(int));
+    for(int n=0;n<pmesh->Np;++n){
+      if( (pmesh->r[n]+1)*(pmesh->r[n]+1)+(pmesh->s[n]+1)*(pmesh->s[n]+1)<NODETOL)
+        pmesh->vertexNodes[0] = n;
+      if( (pmesh->r[n]-1)*(pmesh->r[n]-1)+(pmesh->s[n]+1)*(pmesh->s[n]+1)<NODETOL)
+        pmesh->vertexNodes[1] = n;
+      if( (pmesh->r[n]+1)*(pmesh->r[n]+1)+(pmesh->s[n]-1)*(pmesh->s[n]-1)<NODETOL)
+        pmesh->vertexNodes[2] = n;
     }
 
     // use existing mesh connectivity
@@ -184,12 +152,24 @@ mesh_t* mesh_t::SetupSEMFEM(hlong **globalIds_, int *Nfp_, int **faceNodes_){
       femMesh = new meshQuad2D(device, comm, settings, props);
     else
       femMesh = new meshQuad3D(device, comm, settings, props);
+    NpFEM = Np;
+    NelFEM = N*N;
+    FEMEToV = (int*) malloc(NelFEM*Nverts*sizeof(int));
+    SEMFEMEToVQuad2D(N, FEMEToV);
     break;
   case TETRAHEDRA:
     femMesh = new meshTet3D(device, comm, settings, props);
+    NpFEM = Np;
+    NelFEM = N*N*N;
+    FEMEToV = (int*) malloc(NelFEM*Nverts*sizeof(int));
+    SEMFEMEToVTet3D(N, FEMEToV);
     break;
   case HEXAHEDRA:
     femMesh = new meshHex3D(device, comm, settings, props);
+    NpFEM = Np;
+    NelFEM = N*N*N;
+    FEMEToV = (int*) malloc(NelFEM*Nverts*sizeof(int));
+    SEMFEMEToVHex3D(N, FEMEToV);
     break;
   }
 
@@ -233,7 +213,7 @@ mesh_t* mesh_t::SetupSEMFEM(hlong **globalIds_, int *Nfp_, int **faceNodes_){
   femMesh->ParallelConnect();
 
   // load reference (r,s) element nodes
-  femMesh->LoadReferenceNodes(femN);
+  femMesh->ReferenceNodes(femN);
 
   //identify the nodes on the SEMFEM element faces
   int *faceFlag = (int*) calloc(pmesh->Np*Nfaces,sizeof(int));

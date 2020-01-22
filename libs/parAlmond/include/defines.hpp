@@ -33,7 +33,7 @@ SOFTWARE.
 #define GPU_CPU_SWITCH_SIZE 0 //host-device switch threshold
 
 #define NUMKCYCLES 3
-#define COARSENTHREASHOLD 0.2
+#define COARSENTHREASHOLD 0.12
 #define KCYCLETOL 0.2
 
 namespace parAlmond {

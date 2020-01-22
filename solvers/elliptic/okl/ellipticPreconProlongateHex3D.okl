@@ -25,7 +25,7 @@ SOFTWARE.
 */
 
 @kernel void ellipticPreconProlongateHex3D(const dlong Nelements,
-                                           @restrict const  dfloat *  R,
+                                           @restrict const  dfloat *  P,
                                            @restrict const  dfloat *  qc,
                                            @restrict dfloat *  qN){
 
@@ -34,7 +34,7 @@ SOFTWARE.
     @shared dfloat s_qcff[p_NqCoarse][p_NqFine][p_NqFine];
     @shared dfloat s_qccf[p_NqCoarse][p_NqCoarse][p_NqFine];
     @shared dfloat s_qccc[p_NqCoarse][p_NqCoarse][p_NqCoarse];
-    @shared dfloat s_R[p_NqCoarse][p_NqFine];
+    @shared dfloat s_P[p_NqFine][p_NqCoarse];
 
     // prefetch to @shared
     for(int k=0;k<p_NqFine;++k;@inner(2)){
@@ -45,7 +45,7 @@ SOFTWARE.
             s_qccc[0][0][id] = qc[id+e*p_NpCoarse];
           }
           if(id<p_NqCoarse*p_NqFine){
-            s_R[0][id] = R[id];
+            s_P[0][id] = P[id];
           }
         }
       }
@@ -61,7 +61,7 @@ SOFTWARE.
             dfloat res = 0;
             #pragma unroll p_NqCoarse
               for(int m=0;m<p_NqCoarse;++m) {
-                res += s_R[m][i]*s_qccc[k][j][m];
+                res += s_P[i][m]*s_qccc[k][j][m];
               }
             s_qccf[k][j][i] = res;
           }
@@ -79,7 +79,7 @@ SOFTWARE.
             dfloat res = 0;
             #pragma unroll p_NqCoarse
               for(int m=0;m<p_NqCoarse;++m) {
-                res += s_R[m][j]*s_qccf[k][m][i];
+                res += s_P[j][m]*s_qccf[k][m][i];
               }
             s_qcff[k][j][i] = res;
           }
@@ -96,7 +96,7 @@ SOFTWARE.
           dfloat res = 0;
           #pragma unroll p_NqCoarse
             for(int m=0;m<p_NqCoarse;++m) {
-              res += s_R[m][k]*s_qcff[m][j][i];
+              res += s_P[k][m]*s_qcff[m][j][i];
             }
 
           const dlong id = i+j*p_NqFine+k*p_NqFine*p_NqFine+e*p_NpFine;
@@ -108,7 +108,7 @@ SOFTWARE.
 }
 
 @kernel void ellipticPreconProlongateHex3D_new(const dlong Nelements,
-                                               @restrict const  dfloat *  R,
+                                               @restrict const  dfloat *  P,
                                                @restrict const  dfloat *  qc,
                                                @restrict dfloat *  qN){
 
@@ -120,14 +120,14 @@ SOFTWARE.
     @shared dfloat s_q[p_NqCoarse][p_NqCoarse];
     @shared dfloat s_Pq[p_NqFine][p_NqCoarse];
 
-    @shared dfloat s_R[p_NqCoarse][p_NqFine];
+    @shared dfloat s_P[p_NqCoarse][p_NqFine];
 
     for(int j=0;j<p_NqFine;++j;@inner(1)){
       for(int i=0;i<p_NqFine;++i;@inner(0)){
 
         int t=i+j*p_NqFine;
         if(t<p_NqCoarse*p_NqFine){
-          s_R[0][t] = R[t];
+          s_P[0][t] = P[t];
         }
       }
     }
@@ -152,7 +152,7 @@ SOFTWARE.
             const dfloat tmp = qc[id];
 
             for(int m=0;m<p_NqFine;++m){
-              r_q[m] += s_R[k][m]*tmp;
+              r_q[m] += s_P[m][k]*tmp;
             }
           }
         }
@@ -192,7 +192,7 @@ SOFTWARE.
             dfloat res = 0;
 
             for(int m=0;m<p_NqCoarse;++m){
-              res += s_R[m][tj]*s_q[m][ti];
+              res += s_P[tj][m]*s_q[m][ti];
             }
 
             s_Pq[tj][ti] = res;
@@ -209,7 +209,7 @@ SOFTWARE.
           dfloat res = 0;
 
           for(int m=0;m<p_NqCoarse;++m){
-            res += s_R[m][i]*s_Pq[j][m];
+            res += s_P[i][m]*s_Pq[j][m];
           }
 
           const int id = i + j*p_NqFine + k*p_NqFine*p_NqFine + e*p_NpFine;

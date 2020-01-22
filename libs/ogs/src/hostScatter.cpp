@@ -76,11 +76,11 @@ void hostScatter(void* v,
   // scatter interior nodes
   if (ogs.Nlocal) {
     if (trans == ogs_trans)
-      hostScatterKernel(ogs.Nlocal, Nentries, Nvectors, gstride, stride,
+      hostScatterKernel(ogs.NlocalGather, Nentries, Nvectors, gstride, stride,
                         ogs.localGatherOffsets, ogs.localGatherIds,
                         type, op, gv, v);
     else
-      hostScatterKernel(ogs.Nlocal, Nentries, Nvectors, gstride, stride,
+      hostScatterKernel(ogs.NlocalScatter, Nentries, Nvectors, gstride, stride,
                         ogs.localScatterOffsets, ogs.localScatterIds,
                         type, op, gv, v);
   }

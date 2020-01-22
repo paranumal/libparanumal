@@ -36,6 +36,39 @@ void meshTri3D::CubatureSetup(){
 
 void meshTri2D::CubatureSetup(){
 
+  /* Cubature data */
+  cubN = 2*N; //cubature order
+  CubatureNodesTri2D(cubN, &cubNp, &cubr, &cubs, &cubw);
+
+  cubInterp = (dfloat *) malloc(Np*cubNp*sizeof(dfloat));
+  InterpolationMatrixTri2D(N, Np, r, s, cubNp, cubr, cubs, cubInterp);
+
+  cubDrW = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
+  cubDsW = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
+  cubProject = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
+  CubatureWeakDmatricesTri2D(N, Np, r, s, cubNp, cubr, cubs, cubw,
+                             cubDrW, cubDsW, cubProject);
+
+  // cubN+1 point Gauss-Legendre quadrature for surface integrals
+  cubNq = cubN+1;
+  cubNfp = cubN+1;
+  intNfp = cubN+1;
+  intr = (dfloat *) malloc(cubNfp*sizeof(dfloat));
+  intw = (dfloat *) malloc(cubNfp*sizeof(dfloat));
+  JacobiGQ(0, 0, cubN, intr, intw);
+
+  intInterp = (dfloat*) calloc(intNfp*Nfaces*Nfp, sizeof(dfloat));
+  intLIFT = (dfloat*) calloc(Nfaces*intNfp*Np, sizeof(dfloat));
+  CubatureSurfaceMatricesTri2D(N, Np, r, s, faceNodes, intNfp, intr, intw,
+                               intInterp, intLIFT);
+
+  // add compile time constants to kernels
+  props["defines/" "p_cubNq"]= cubNq;
+  props["defines/" "p_cubNp"]= cubNp;
+  props["defines/" "p_intNfp"]= intNfp;
+  props["defines/" "p_intNfpNfaces"]= intNfp*Nfaces;
+  props["defines/" "p_cubNfp"]= cubNfp;
+
   // build volume cubature matrix transposes
   int cubNpBlocked = Np*((cubNp+Np-1)/Np);
   dfloat *cubDrWT = (dfloat*) calloc(cubNpBlocked*Np, sizeof(dfloat));

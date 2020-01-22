@@ -25,27 +25,27 @@ SOFTWARE.
 */
 
 @kernel void ellipticPreconCoarsenQuad2D(const dlong Nelements,
-                                        @restrict const  dfloat *  R,
+                                        @restrict const  dfloat *  RT,
                                         @restrict const  dfloat *  qf,
                                               @restrict dfloat *  qc){
-  
-  
+
+
   for(dlong e=0;e<Nelements;++e;@outer(0)){
     @shared dfloat s_qff[p_NqFine][p_NqFine];
     @shared dfloat s_qcf[p_NqCoarse][p_NqFine];
     @shared dfloat s_qcc[p_NqCoarse][p_NqCoarse];
 
-    @shared dfloat s_R[p_NqCoarse][p_NqFine];
+    @shared dfloat s_RT[p_NqFine][p_NqCoarse];
 
     // prefetch to @shared
-    
+
     for(int j=0;j<p_NqFine;++j;@inner(1)){
       for(int i=0;i<p_NqFine;++i;@inner(0)){
         const dlong id = i+j*p_NqFine+e*p_NpFine;
         s_qff[j][i] = qf[id];
 
-        if (j<p_NqCoarse)
-          s_R[j][i] = R[j*p_NqFine + i];
+        if (i<p_NqCoarse)
+          s_RT[j][i] = RT[j*p_NqCoarse + i];
       }
     }
 
@@ -58,7 +58,7 @@ SOFTWARE.
           dfloat res = 0;
           #pragma unroll p_NqFine
             for(int m=0;m<p_NqFine;++m) {
-              res += s_R[j][m]*s_qff[m][i];
+              res += s_RT[m][j]*s_qff[m][i];
             }
           s_qcf[j][i] = res;
         }
@@ -74,7 +74,7 @@ SOFTWARE.
           dfloat rtmp = 0;
           #pragma unroll p_NqFine
             for(int m=0;m<p_NqFine;++m) {
-              rtmp += s_R[i][m]*s_qcf[j][m];
+              rtmp += s_RT[m][i]*s_qcf[j][m];
             }
           s_qcc[j][i] = rtmp;
         }
