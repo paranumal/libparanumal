@@ -50,17 +50,17 @@ void hostGather(void* gv,
 
   ogs.reallocHostBuffer(Nbytes*Nentries*Nvectors);
 
-  dlong NhaloGather = (trans == ogs_notrans) ? ogs.NhaloGather : ogs.NhaloScatter;
+  dlong NhaloGather = (trans == ogs_notrans) ? ogs.haloGather.Nrows : ogs.haloScatter.Nrows;
 
   // gather halo nodes
   if (NhaloGather) {
     if (trans == ogs_notrans)
-      hostGatherKernel(ogs.NhaloGather, Nentries, Nvectors, stride, ogs.Nhalo,
-                       ogs.haloGatherOffsets, ogs.haloGatherIds,
+      hostGatherKernel(ogs.haloGather.Nrows, Nentries, Nvectors, stride, ogs.Nhalo,
+                       ogs.haloGather.rowStarts, ogs.haloGather.colIds,
                        type, op, v, ogs.hostBuf);
     else
-      hostGatherKernel(ogs.NhaloScatter, Nentries, Nvectors, stride, ogs.Nhalo,
-                       ogs.haloScatterOffsets, ogs.haloScatterIds,
+      hostGatherKernel(ogs.haloScatter.Nrows, Nentries, Nvectors, stride, ogs.Nhalo,
+                       ogs.haloScatter.rowStarts, ogs.haloScatter.colIds,
                        type, op, v, ogs.hostBuf);
   }
 
@@ -68,21 +68,21 @@ void hostGather(void* gv,
   gsGatherScatter(ogs.hostBuf, Nentries, Nvectors, ogs.Nhalo,
                   type, op, trans, ogs.gsh);
 
-  if (ogs.NhaloGather)
+  if (ogs.haloGather.Nrows)
     for (int i=0;i<Nvectors;i++)
-      memcpy((char*)gv+ogs.NlocalGather*Nbytes*Nentries + gstride*Nbytes*i,
+      memcpy((char*)gv+ogs.localGather.Nrows*Nbytes*Nentries + gstride*Nbytes*i,
              (char*)ogs.hostBuf+ogs.Nhalo*Nbytes*Nentries*i,
-             ogs.NhaloGather*Nentries*Nbytes);
+             ogs.haloGather.Nrows*Nentries*Nbytes);
 
   // gather interior nodes
   if (ogs.Nlocal) {
     if (trans == ogs_notrans)
-      hostGatherKernel(ogs.NlocalGather, Nentries, Nvectors, stride, gstride,
-                       ogs.localGatherOffsets, ogs.localGatherIds,
+      hostGatherKernel(ogs.localGather.Nrows, Nentries, Nvectors, stride, gstride,
+                       ogs.localGather.rowStarts, ogs.localGather.colIds,
                        type, op, v, gv);
     else
-      hostGatherKernel(ogs.NlocalScatter, Nentries, Nvectors, stride, gstride,
-                       ogs.localScatterOffsets, ogs.localScatterIds,
+      hostGatherKernel(ogs.localScatter.Nrows, Nentries, Nvectors, stride, gstride,
+                       ogs.localScatter.rowStarts, ogs.localScatter.colIds,
                        type, op, v, gv);
   }
 }

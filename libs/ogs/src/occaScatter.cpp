@@ -49,14 +49,14 @@ void occaScatterStart(occa::memory& o_v,
 
   ogs.reallocOccaBuffer(Nbytes*Nentries*Nvectors);
 
-  if (ogs.NhaloGather) {
+  if (ogs.haloGather.Nrows) {
     occa::stream currentStream = ogs.device.getStream();
     ogs.device.setStream(dataStream);
 
     for (int i=0;i<Nvectors;i++)
       o_gv.copyTo((char*)ogs.haloBuf+ogs.Nhalo*Nbytes*Nentries*i,
-                  ogs.NhaloGather*Nbytes*Nentries,
-                  ogs.NlocalGather*Nbytes + gstride*Nbytes*i,
+                  ogs.haloGather.Nrows*Nbytes*Nentries,
+                  ogs.localGather.Nrows*Nbytes + gstride*Nbytes*i,
                   "async: true");
 
     ogs.device.setStream(currentStream);
@@ -80,14 +80,16 @@ void occaScatterFinish(occa::memory& o_v,
   if (trans == ogs_sym)
     LIBP_ABORT(string("Calling ogs::Scatter in ogs_sym mode not supported."))
 
-  if(ogs.Nlocal) {
+  dlong NlocalScatter = (trans == ogs_notrans) ? ogs.localScatter.Nrows : ogs.localGather.Nrows;
+
+  if(NlocalScatter) {
     if (trans == ogs_notrans)
-      occaScatterKernel(ogs.Nlocal, Nentries, Nvectors, gstride, stride,
-                        ogs.o_localScatterOffsets, ogs.o_localScatterIds,
+      occaScatterKernel(ogs.localScatter.Nrows, Nentries, Nvectors, gstride, stride,
+                        ogs.localScatter.o_rowStarts, ogs.localScatter.o_colIds,
                         type, op, o_gv, o_v);
     else
-      occaScatterKernel(ogs.Nlocal, Nentries, Nvectors, gstride, stride,
-                        ogs.o_localGatherOffsets, ogs.o_localGatherIds,
+      occaScatterKernel(ogs.localGather.Nrows, Nentries, Nvectors, gstride, stride,
+                        ogs.localGather.o_rowStarts, ogs.localGather.o_colIds,
                         type, op, o_gv, o_v);
   }
 
@@ -103,7 +105,7 @@ void occaScatterFinish(occa::memory& o_v,
   gsGatherScatter(ogs.haloBuf, Nentries, Nvectors, ogs.Nhalo,
                   type, op, ogs_notrans, ogs.gsh);
 
-  dlong NhaloScatter = (trans == ogs_notrans) ? ogs.NhaloScatter : ogs.NhaloGather;
+  dlong NhaloScatter = (trans == ogs_notrans) ? ogs.haloScatter.Nrows : ogs.haloGather.Nrows;
 
   if (NhaloScatter) {
     ogs.device.setStream(dataStream);
@@ -119,12 +121,12 @@ void occaScatterFinish(occa::memory& o_v,
     ogs.device.setStream(currentStream);
 
     if (trans == ogs_notrans)
-      occaScatterKernel(ogs.NhaloScatter, Nentries, Nvectors, ogs.Nhalo, stride,
-                        ogs.o_haloScatterOffsets, ogs.o_haloScatterIds,
+      occaScatterKernel(ogs.haloScatter.Nrows, Nentries, Nvectors, ogs.Nhalo, stride,
+                        ogs.haloScatter.o_rowStarts, ogs.haloScatter.o_colIds,
                         type, op, ogs.o_haloBuf, o_v);
     else
-      occaScatterKernel(ogs.NhaloGather, Nentries, Nvectors, ogs.Nhalo, stride,
-                        ogs.o_haloGatherOffsets, ogs.o_haloGatherIds,
+      occaScatterKernel(ogs.haloGather.Nrows, Nentries, Nvectors, ogs.Nhalo, stride,
+                        ogs.haloGather.o_rowStarts, ogs.haloGather.o_colIds,
                         type, op, ogs.o_haloBuf, o_v);
   }
 }

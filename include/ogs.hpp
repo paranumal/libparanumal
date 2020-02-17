@@ -200,66 +200,57 @@ typedef enum { LIST } ogs_op;
 /* transpose switch */
 typedef enum { ogs_sym, ogs_notrans, ogs_trans } ogs_transpose;
 
+class ogsData_t {
+public:
+  dlong Nrows=0;
+  dlong nnz=0;
+
+  dlong *blockRowStarts=nullptr;
+  dlong *rowStarts=nullptr;
+  dlong *colIds=nullptr;
+
+  occa::memory o_blockRowStarts;
+  occa::memory o_rowStarts;
+  occa::memory o_colIds;
+
+  ogsData_t() {};
+
+  ~ogsData_t() {
+    if(blockRowStarts) {free(blockRowStarts); blockRowStarts=nullptr;}
+    if(rowStarts) {free(rowStarts); rowStarts=nullptr;}
+    if(colIds) {free(colIds); colIds=nullptr;}
+    o_blockRowStarts.free();
+    o_rowStarts.free();
+    o_colIds.free();
+  }
+};
+
 // OCCA+gslib gather scatter
 class ogs_t {
 public:
   MPI_Comm& comm;
   occa::device& device;
 
-  dlong         N;
-  dlong         Ngather;        //  total number of gather nodes
-  hlong         NgatherGlobal;  //  global number of gather nodes
+  dlong         N=0;
+  dlong         Nlocal=0;         //  number of local nodes
+  dlong         Nhalo=0;          //  number of halo nodes
 
-  dlong         Nlocal;         //  number of local nodes
-  dlong         NlocalGather;   //  number of local gathered nodes
-  dlong         NlocalScatter;  //  number of local scattered nodes
+  dlong         Ngather=0;        //  total number of gather nodes
+  hlong         NgatherGlobal=0;  //  global number of gather nodes
 
-  dlong         Nhalo;          //  number of halo nodes
-  dlong         NhaloGather;    //  number of gathered nodes on halo
-  dlong         NhaloScatter;   //  number of scattered nodes on halo
+  ogsData_t localGather, localScatter;
+  ogsData_t haloGather, haloScatter;
 
-  dlong         NlocalFused;
-  dlong         NlocalFusedSym;
+  ogsData_t fusedGather, fusedScatter;
+  ogsData_t symGatherScatter;
 
-  dlong         *localGatherOffsets;
-  dlong         *localScatterOffsets;
-  dlong         *localGatherIds;
-  dlong         *localScatterIds;
-  occa::memory o_localGatherOffsets;
-  occa::memory o_localScatterOffsets;
-  occa::memory o_localGatherIds;
-  occa::memory o_localScatterIds;
+  void *gsh=nullptr;       // gslib handle
+  void *gshSym=nullptr;    // Symmetrized gslib handle (all ids made positive)
 
-  //shortend offset and ids lists for fused kernels
-  dlong         *localFusedGatherOffsets;
-  dlong         *localFusedScatterOffsets;
-  dlong         *localFusedOffsets;
-  dlong         *localFusedGatherIds;
-  dlong         *localFusedScatterIds;
-  dlong         *localFusedIds;
-  occa::memory o_localFusedGatherOffsets;
-  occa::memory o_localFusedScatterOffsets;
-  occa::memory o_localFusedOffsets;
-  occa::memory o_localFusedGatherIds;
-  occa::memory o_localFusedScatterIds;
-  occa::memory o_localFusedIds;
+  void* hostBuf=nullptr;
+  size_t hostBufSize=0;
 
-  dlong         *haloGatherOffsets;
-  dlong         *haloScatterOffsets;
-  dlong         *haloGatherIds;
-  dlong         *haloScatterIds;
-  occa::memory o_haloGatherOffsets;
-  occa::memory o_haloScatterOffsets;
-  occa::memory o_haloGatherIds;
-  occa::memory o_haloScatterIds;
-
-  void *gsh;       // gslib handle
-  void *gshSym;    // Symmetrized gslib handle (all ids made positive)
-
-  void* hostBuf;
-  size_t hostBufSize;
-
-  void* haloBuf;
+  void* haloBuf=nullptr;
   occa::memory o_haloBuf;
   occa::memory h_haloBuf;
 
@@ -375,7 +366,7 @@ class halo_t {
 public:
   ogs_t* ogs;
 
-  void Free() { if (ogs) { ogs->Free(); ogs=NULL; } }
+  void Free() { if (ogs) { ogs->Free(); ogs=nullptr; } }
 
   static halo_t *Setup(dlong N, hlong *ids, MPI_Comm &comm,
                        int verbose, occa::device& device) {

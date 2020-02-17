@@ -72,28 +72,6 @@ ogs_t *ogs_t::Setup(dlong N, hlong *ids, MPI_Comm &comm,
 
   ogs_t *ogs = new ogs_t(comm, device);
 
-  ogs->Ngather = 0;
-  ogs->NgatherGlobal = 0;
-
-  ogs->Nlocal = 0;
-  ogs->NlocalGather = 0;
-
-  ogs->Nhalo = 0;
-  ogs->NhaloGather = 0;
-  ogs->NhaloScatter = 0;
-
-  ogs->localGatherOffsets = NULL;
-  ogs->localGatherIds = NULL;
-  ogs->localScatterOffsets = NULL;
-  ogs->localScatterIds = NULL;
-
-  ogs->haloGatherOffsets = NULL;
-  ogs->haloGatherIds = NULL;
-  ogs->haloScatterOffsets = NULL;
-  ogs->haloScatterIds = NULL;
-
-  ogs->gsh = NULL;
-
   //Keep track of how many gs handles we've created, and
   // build kernels if this is the first
   if (!ogs::Nrefs) ogs::initKernels(comm, device);
@@ -156,25 +134,25 @@ ogs_t *ogs_t::Setup(dlong N, hlong *ids, MPI_Comm &comm,
 
   //flag each set of ids by whether there is at least one positive id
   // and count how many local gather/scatter nodes we have
-  ogs->NlocalGather = 0;
-  ogs->NlocalScatter = 0;
+  ogs->localGather.Nrows = 0;
+  ogs->localScatter.Nrows = 0;
   if (ogs->Nlocal) {
     localNodes[0].newId = 0;
     int sign = (localNodes[0].baseId > 0) ? 1 : -1;
     localNodes[0].sign = sign;
-    if (sign > 0) ogs->NlocalGather++;
+    if (sign > 0) ogs->localGather.Nrows++;
 
     for (dlong i=1;i<ogs->Nlocal;i++) {
       if (abs(localNodes[i].baseId)!=abs(localNodes[i-1].baseId)) {
         sign = (localNodes[i].baseId > 0) ? 1 : -1;
-        ogs->NlocalScatter++;
-        if (sign > 0) ogs->NlocalGather++;
+        ogs->localScatter.Nrows++;
+        if (sign > 0) ogs->localGather.Nrows++;
       }
 
-      localNodes[i].newId = ogs->NlocalScatter;
+      localNodes[i].newId = ogs->localScatter.Nrows;
       localNodes[i].sign = sign;
     }
-    ogs->NlocalScatter++;
+    ogs->localScatter.Nrows++;
   }
 
   // sort back to local ids
@@ -182,14 +160,15 @@ ogs_t *ogs_t::Setup(dlong N, hlong *ids, MPI_Comm &comm,
 
   //tally up how many nodes are being gathered to each gatherNode and
   //  map to a local ordering
-  dlong *localGatherCounts  = (dlong*) calloc(ogs->NlocalScatter,sizeof(dlong));
-  dlong *localScatterCounts = (dlong*) calloc(ogs->NlocalScatter,sizeof(dlong));
-  dlong *localMap = (dlong*) calloc(ogs->NlocalScatter,sizeof(dlong));
+  dlong *localGatherCounts  = (dlong*) calloc(ogs->localScatter.Nrows,sizeof(dlong));
+  dlong *localScatterCounts = (dlong*) calloc(ogs->localScatter.Nrows,sizeof(dlong));
 
-  for (dlong i=0;i<ogs->NlocalScatter;i++) localMap[i] = -1; //initialize map
+  dlong *localMap = (dlong*) calloc(ogs->localScatter.Nrows,sizeof(dlong));
+
+  for (dlong i=0;i<ogs->localScatter.Nrows;i++) localMap[i] = -1; //initialize map
 
   cnt = 0;
-  dlong cnt2 = ogs->NlocalGather;
+  dlong cnt2 = ogs->localGather.Nrows;
   for (dlong i=0;i<ogs->Nlocal;i++) {
     dlong newId = localNodes[i].newId; //get the ordered id
 
@@ -209,122 +188,129 @@ ogs_t *ogs_t::Setup(dlong N, hlong *ids, MPI_Comm &comm,
   }
   free(localMap);
 
-  ogs->localGatherOffsets  = (dlong*) calloc(ogs->NlocalScatter+1,sizeof(dlong));
-  ogs->localScatterOffsets = (dlong*) calloc(ogs->NlocalScatter+1,sizeof(dlong));
-  for (dlong i=0;i<ogs->NlocalScatter;i++) {
-    ogs->localGatherOffsets[i+1]  = ogs->localGatherOffsets[i]  + localGatherCounts[i];
-    ogs->localScatterOffsets[i+1] = ogs->localScatterOffsets[i] + localScatterCounts[i];
+  ogs->localGather.rowStarts  = (dlong*) calloc(ogs->localScatter.Nrows+1,sizeof(dlong));
+  ogs->localScatter.rowStarts = (dlong*) calloc(ogs->localScatter.Nrows+1,sizeof(dlong));
+  for (dlong i=0;i<ogs->localScatter.Nrows;i++) {
+    ogs->localGather.rowStarts[i+1]  = ogs->localGather.rowStarts[i]  + localGatherCounts[i];
+    ogs->localScatter.rowStarts[i+1] = ogs->localScatter.rowStarts[i] + localScatterCounts[i];
 
     //reset counters
-    localGatherCounts[i] = 0;
     localScatterCounts[i] = 0;
+    localGatherCounts[i] = 0;
   }
 
-  dlong totalLocalGather  = ogs->localGatherOffsets[ogs->NlocalScatter];
-  dlong totalLocalScatter = ogs->localScatterOffsets[ogs->NlocalScatter];
+  ogs->localGather.nnz  = ogs->localGather.rowStarts[ogs->localGather.Nrows];
+  ogs->localScatter.nnz = ogs->localScatter.rowStarts[ogs->localScatter.Nrows];
 
-  ogs->localGatherIds  = (dlong*) calloc(totalLocalGather+1,sizeof(dlong)); //extra entry so the occa buffer will actually exist
-  ogs->localScatterIds = (dlong*) calloc(totalLocalScatter+1,sizeof(dlong)); //extra entry so the occa buffer will actually exist
+  ogs->localGather.colIds  = (dlong*) calloc(ogs->localGather.nnz+1,sizeof(dlong)); //extra entry so the occa buffer will actually exist
+  ogs->localScatter.colIds = (dlong*) calloc(ogs->localScatter.nnz+1,sizeof(dlong)); //extra entry so the occa buffer will actually exist
   for (dlong i=0;i<ogs->Nlocal;i++) {
     dlong gid = localNodes[i].newId;
 
-    dlong soffset = ogs->localScatterOffsets[gid];
+    dlong soffset = ogs->localScatter.rowStarts[gid];
     int sindex  = localScatterCounts[gid];
-    ogs->localScatterIds[soffset+sindex] = localNodes[i].localId;
+    ogs->localScatter.colIds[soffset+sindex] = localNodes[i].localId;
     localScatterCounts[gid]++;
 
     if (localNodes[i].baseId > 0) {
-      dlong goffset = ogs->localGatherOffsets[gid];
+      dlong goffset = ogs->localGather.rowStarts[gid];
       int gindex  = localGatherCounts[gid];
-      ogs->localGatherIds[goffset+gindex] = localNodes[i].localId;
+      ogs->localGather.colIds[goffset+gindex] = localNodes[i].localId;
       localGatherCounts[gid]++;
     }
   }
   free(localGatherCounts);
   free(localScatterCounts);
 
-  ogs->o_localGatherOffsets  = device.malloc((ogs->NlocalScatter+1)*sizeof(dlong), ogs->localGatherOffsets);
-  ogs->o_localScatterOffsets = device.malloc((ogs->NlocalScatter+1)*sizeof(dlong), ogs->localScatterOffsets);
+  ogs->localGather.o_rowStarts  = device.malloc((ogs->localScatter.Nrows+1)*sizeof(dlong), ogs->localGather.rowStarts);
+  ogs->localScatter.o_rowStarts = device.malloc((ogs->localScatter.Nrows+1)*sizeof(dlong), ogs->localScatter.rowStarts);
 
-  ogs->o_localGatherIds  = device.malloc((totalLocalGather+1)*sizeof(dlong), ogs->localGatherIds);
-  ogs->o_localScatterIds = device.malloc((totalLocalScatter+1)*sizeof(dlong), ogs->localScatterIds);
+  ogs->localGather.o_colIds  = device.malloc((ogs->localGather.nnz+1)*sizeof(dlong), ogs->localGather.colIds);
+  ogs->localScatter.o_colIds = device.malloc((ogs->localScatter.nnz+1)*sizeof(dlong), ogs->localScatter.colIds);
 
   free(localNodes);
 
   //make some compressed versions of the gather/scatter ids for the fused gs kernel
-  ogs->NlocalFused=0;
-  ogs->NlocalFusedSym=0;
+  ogs->fusedGather.Nrows=0;
+  ogs->fusedScatter.Nrows=0;
+  ogs->symGatherScatter.Nrows=0;
 
-  dlong totalGatherIdsFused = 0;
-  dlong totalScatterIdsFused = 0;
-  dlong totalIdsFusedSym = 0;
+  ogs->fusedGather.nnz=0;
+  ogs->fusedScatter.nnz=0;
+  ogs->symGatherScatter.nnz=0;
 
-  for (dlong n=0;n<ogs->NlocalScatter;n++) {
-    int gatherCnt  = ogs->localGatherOffsets[n+1] -ogs->localGatherOffsets[n];
-    int scatterCnt = ogs->localScatterOffsets[n+1]-ogs->localScatterOffsets[n];
+  for (dlong n=0;n<ogs->localScatter.Nrows;n++) {
+    int gatherCnt  = ogs->localGather.rowStarts[n+1] -ogs->localGather.rowStarts[n];
+    int scatterCnt = ogs->localScatter.rowStarts[n+1]-ogs->localScatter.rowStarts[n];
 
-    //only include this node if both the gather and scatter interact with mulitple nodes
+    //only include this node if either the gather or scatter interact with mulitple nodes
     // otherwise the op is identity and ignored
     if ((gatherCnt>1)||(scatterCnt>1)) {
-      ogs->NlocalFused++;
-      totalGatherIdsFused  += gatherCnt;
-      totalScatterIdsFused += scatterCnt;
+      ogs->fusedGather.Nrows++;
+      ogs->fusedScatter.Nrows++;
+      ogs->fusedGather.nnz  += gatherCnt;
+      ogs->fusedScatter.nnz += scatterCnt;
     }
 
     //for the sym op only the scatter ids are used
     if (scatterCnt>1) {
-      ogs->NlocalFusedSym++;
-      totalIdsFusedSym += scatterCnt;
+      ogs->symGatherScatter.Nrows++;
+      ogs->symGatherScatter.nnz += scatterCnt;
     }
   }
 
-  ogs->localFusedGatherOffsets  = (dlong*) calloc(ogs->NlocalFused+1,sizeof(dlong));
-  ogs->localFusedScatterOffsets = (dlong*) calloc(ogs->NlocalFused+1,sizeof(dlong));
-  ogs->localFusedOffsets = (dlong*) calloc(ogs->NlocalFusedSym+1,sizeof(dlong));
-  ogs->localFusedGatherIds  = (dlong*) calloc(totalGatherIdsFused+1,sizeof(dlong));
-  ogs->localFusedScatterIds = (dlong*) calloc(totalScatterIdsFused+1,sizeof(dlong));
-  ogs->localFusedIds = (dlong*) calloc(totalIdsFusedSym+1,sizeof(dlong));
+  ogs->fusedGather.rowStarts  = (dlong*) calloc(ogs->fusedScatter.Nrows+1,sizeof(dlong));
+  ogs->fusedScatter.rowStarts = (dlong*) calloc(ogs->fusedScatter.Nrows+1,sizeof(dlong));
+  ogs->symGatherScatter.rowStarts  = (dlong*) calloc(ogs->symGatherScatter.Nrows+1,sizeof(dlong));
+
+  ogs->fusedGather.colIds  = (dlong*) calloc(ogs->fusedGather.nnz+1,sizeof(dlong));
+  ogs->fusedScatter.colIds  = (dlong*) calloc(ogs->fusedScatter.nnz+1,sizeof(dlong));
+  ogs->symGatherScatter.colIds  = (dlong*) calloc(ogs->symGatherScatter.nnz+1,sizeof(dlong));
 
   //reset counters
-  ogs->NlocalFused=0;
-  ogs->NlocalFusedSym=0;
-  totalGatherIdsFused = 0;
-  totalScatterIdsFused = 0;
-  totalIdsFusedSym = 0;
-  for (dlong n=0;n<ogs->NlocalScatter;n++) {
-    int gatherCnt  = ogs->localGatherOffsets[n+1] -ogs->localGatherOffsets[n];
-    int scatterCnt = ogs->localScatterOffsets[n+1]-ogs->localScatterOffsets[n];
+  ogs->fusedGather.Nrows=0;
+  ogs->fusedScatter.Nrows=0;
+  ogs->symGatherScatter.Nrows=0;
 
-    //only include this node if both the gather and scatter interact with mulitple nodes
+  ogs->fusedGather.nnz=0;
+  ogs->fusedScatter.nnz=0;
+  ogs->symGatherScatter.nnz=0;
+  for (dlong n=0;n<ogs->localScatter.Nrows;n++) {
+    int gatherCnt  = ogs->localGather.rowStarts[n+1] -ogs->localGather.rowStarts[n];
+    int scatterCnt = ogs->localScatter.rowStarts[n+1]-ogs->localScatter.rowStarts[n];
+
+    //only include this node if either the gather and scatter interact with mulitple nodes
     // otherwise the op is identity and ignored
     if ((gatherCnt>1)||(scatterCnt>1)) {
-      ogs->NlocalFused++;
-      ogs->localFusedGatherOffsets[ogs->NlocalFused] = gatherCnt + ogs->localFusedGatherOffsets[ogs->NlocalFused-1];
-      ogs->localFusedScatterOffsets[ogs->NlocalFused] = scatterCnt + ogs->localFusedScatterOffsets[ogs->NlocalFused-1];
+      ogs->fusedGather.Nrows++;
+      ogs->fusedScatter.Nrows++;
+      ogs->fusedGather.rowStarts[ogs->fusedGather.Nrows]   = gatherCnt  + ogs->fusedGather.rowStarts[ogs->fusedGather.Nrows-1];
+      ogs->fusedScatter.rowStarts[ogs->fusedScatter.Nrows] = scatterCnt + ogs->fusedScatter.rowStarts[ogs->fusedScatter.Nrows-1];
 
-      for (int i=ogs->localGatherOffsets[n];i<ogs->localGatherOffsets[n+1];i++)
-        ogs->localFusedGatherIds[totalGatherIdsFused++] = ogs->localGatherIds[i];
+      for (int i=ogs->localGather.rowStarts[n];i<ogs->localGather.rowStarts[n+1];i++)
+        ogs->fusedGather.colIds[ogs->fusedGather.nnz++] = ogs->localGather.colIds[i];
 
-      for (int i=ogs->localScatterOffsets[n];i<ogs->localScatterOffsets[n+1];i++)
-        ogs->localFusedScatterIds[totalScatterIdsFused++] = ogs->localScatterIds[i];
+      for (int i=ogs->localScatter.rowStarts[n];i<ogs->localScatter.rowStarts[n+1];i++)
+        ogs->fusedScatter.colIds[ogs->fusedScatter.nnz++] = ogs->localScatter.colIds[i];
     }
 
     //for the sym op only the scatter ids are used
     if (scatterCnt>1) {
-      ogs->NlocalFusedSym++;
-      ogs->localFusedOffsets[ogs->NlocalFusedSym] = scatterCnt + ogs->localFusedOffsets[ogs->NlocalFusedSym-1];
+      ogs->symGatherScatter.Nrows++;
+      ogs->symGatherScatter.rowStarts[ogs->symGatherScatter.Nrows] = scatterCnt + ogs->symGatherScatter.rowStarts[ogs->symGatherScatter.Nrows-1];
 
-      for (int i=ogs->localScatterOffsets[n];i<ogs->localScatterOffsets[n+1];i++)
-        ogs->localFusedIds[totalIdsFusedSym++] = ogs->localScatterIds[i];
+      for (int i=ogs->localScatter.rowStarts[n];i<ogs->localScatter.rowStarts[n+1];i++)
+        ogs->symGatherScatter.colIds[ogs->symGatherScatter.nnz++] = ogs->localScatter.colIds[i];
     }
   }
 
-  ogs->o_localFusedGatherOffsets  = device.malloc((ogs->NlocalFused+1)*sizeof(dlong), ogs->localFusedGatherOffsets);
-  ogs->o_localFusedScatterOffsets = device.malloc((ogs->NlocalFused+1)*sizeof(dlong), ogs->localFusedScatterOffsets);
-  ogs->o_localFusedOffsets = device.malloc((ogs->NlocalFusedSym+1)*sizeof(dlong), ogs->localFusedScatterOffsets);
-  ogs->o_localFusedGatherIds  = device.malloc((totalGatherIdsFused+1)*sizeof(dlong),  ogs->localFusedGatherIds);
-  ogs->o_localFusedScatterIds = device.malloc((totalScatterIdsFused+1)*sizeof(dlong), ogs->localFusedScatterIds);
-  ogs->o_localFusedIds = device.malloc((totalIdsFusedSym+1)*sizeof(dlong), ogs->localFusedScatterIds);
+  ogs->fusedGather.o_rowStarts  = device.malloc((ogs->fusedScatter.Nrows+1)*sizeof(dlong), ogs->fusedGather.rowStarts);
+  ogs->fusedScatter.o_rowStarts = device.malloc((ogs->fusedScatter.Nrows+1)*sizeof(dlong), ogs->fusedScatter.rowStarts);
+  ogs->symGatherScatter.o_rowStarts = device.malloc((ogs->symGatherScatter.Nrows+1)*sizeof(dlong), ogs->symGatherScatter.rowStarts);
+
+  ogs->fusedGather.o_colIds  = device.malloc((ogs->fusedGather.nnz+1)*sizeof(dlong), ogs->fusedGather.colIds);
+  ogs->fusedScatter.o_colIds = device.malloc((ogs->fusedScatter.nnz+1)*sizeof(dlong), ogs->fusedScatter.colIds);
+  ogs->symGatherScatter.o_colIds = device.malloc((ogs->symGatherScatter.nnz+1)*sizeof(dlong), ogs->symGatherScatter.colIds);
 
   //set up the halo gatherScatter
   parallelNode_t *haloNodes = (parallelNode_t*) calloc(ogs->Nhalo+1,sizeof(parallelNode_t));
@@ -343,25 +329,26 @@ ogs_t *ogs_t::Setup(dlong N, hlong *ids, MPI_Comm &comm,
   // sort based on base ids (putting positive ids first) then local id
   qsort(haloNodes, ogs->Nhalo, sizeof(parallelNode_t), compareBaseId);
 
-  ogs->NhaloGather=0;
-  ogs->NhaloScatter=0;
+  ogs->haloGather.Nrows = 0;
+  ogs->haloScatter.Nrows = 0;
+
   if (ogs->Nhalo) {
     haloNodes[0].newId = 0;
     int sign = (haloNodes[0].baseId > 0) ? 1 : -1;
     haloNodes[0].sign = sign;
-    if (sign > 0) ogs->NhaloGather++;
+    if (sign > 0) ogs->haloGather.Nrows++;
 
     for (dlong i=1;i<ogs->Nhalo;i++) {
       if (abs(haloNodes[i].baseId)!=abs(haloNodes[i-1].baseId)) {
         sign = (haloNodes[i].baseId > 0) ? 1 : -1;
-        ogs->NhaloScatter++;
-        if (sign > 0) ogs->NhaloGather++;
+        ogs->haloScatter.Nrows++;
+        if (sign > 0) ogs->haloGather.Nrows++;
       }
 
-      haloNodes[i].newId = ogs->NhaloScatter;
+      haloNodes[i].newId = ogs->haloScatter.Nrows;
       haloNodes[i].sign = sign;
     }
-    ogs->NhaloScatter++;
+    ogs->haloScatter.Nrows++;
   }
 
   // sort based on local ids
@@ -369,16 +356,16 @@ ogs_t *ogs_t::Setup(dlong N, hlong *ids, MPI_Comm &comm,
 
   //tally up how many nodes are being gathered to each gatherNode and
   //  map to a local ordering
-  dlong *haloGatherCounts  = (dlong*) calloc(ogs->NhaloGather+1,sizeof(dlong));
-  dlong *haloScatterCounts = (dlong*) calloc(ogs->NhaloScatter+1,sizeof(dlong));
-  dlong *haloMap = (dlong*)  calloc(ogs->NhaloScatter+1,sizeof(dlong));
-  hlong *haloIds = (hlong *) calloc(ogs->NhaloScatter+1,sizeof(hlong));
-  hlong *haloIdsSym = (hlong *) calloc(ogs->NhaloScatter+1,sizeof(hlong));
+  dlong *haloGatherCounts  = (dlong*) calloc(ogs->haloGather.Nrows+1,sizeof(dlong));
+  dlong *haloScatterCounts = (dlong*) calloc(ogs->haloScatter.Nrows+1,sizeof(dlong));
+  dlong *haloMap = (dlong*)  calloc(ogs->haloScatter.Nrows+1,sizeof(dlong));
+  hlong *haloIds = (hlong *) calloc(ogs->haloScatter.Nrows+1,sizeof(hlong));
+  hlong *haloIdsSym = (hlong *) calloc(ogs->haloScatter.Nrows+1,sizeof(hlong));
 
-  for (dlong i=0;i<ogs->NhaloScatter;i++) haloMap[i] = -1; //initialize map
+  for (dlong i=0;i<ogs->haloScatter.Nrows;i++) haloMap[i] = -1; //initialize map
 
   cnt = 0;
-  cnt2 = ogs->NhaloGather;
+  cnt2 = ogs->haloGather.Nrows;
   for (dlong i=0;i<ogs->Nhalo;i++) {
     dlong newId = haloNodes[i].newId; //get the ordered id
 
@@ -401,51 +388,51 @@ ogs_t *ogs_t::Setup(dlong N, hlong *ids, MPI_Comm &comm,
   }
   free(haloMap);
 
-  ogs->haloGatherOffsets  = (dlong*) calloc(ogs->NhaloGather+1,sizeof(dlong));
-  ogs->haloScatterOffsets = (dlong*) calloc(ogs->NhaloScatter+1,sizeof(dlong));
-  for (dlong i=0;i<ogs->NhaloGather;i++) {
-    ogs->haloGatherOffsets[i+1] = ogs->haloGatherOffsets[i] + haloGatherCounts[i];
+  ogs->haloGather.rowStarts  = (dlong*) calloc(ogs->haloGather.Nrows+1,sizeof(dlong));
+  ogs->haloScatter.rowStarts = (dlong*) calloc(ogs->haloScatter.Nrows+1,sizeof(dlong));
+  for (dlong i=0;i<ogs->haloGather.Nrows;i++) {
+    ogs->haloGather.rowStarts[i+1] = ogs->haloGather.rowStarts[i] + haloGatherCounts[i];
     haloGatherCounts[i] = 0;
   }
-  for (dlong i=0;i<ogs->NhaloScatter;i++) {
-    ogs->haloScatterOffsets[i+1] = ogs->haloScatterOffsets[i] + haloScatterCounts[i];
+  for (dlong i=0;i<ogs->haloScatter.Nrows;i++) {
+    ogs->haloScatter.rowStarts[i+1] = ogs->haloScatter.rowStarts[i] + haloScatterCounts[i];
     haloScatterCounts[i] = 0;
   }
 
-  dlong totalHaloGather  = ogs->haloGatherOffsets[ogs->NhaloGather];
-  dlong totalHaloScatter = ogs->haloScatterOffsets[ogs->NhaloScatter];
+  ogs->haloGather.nnz  = ogs->haloGather.rowStarts[ogs->haloGather.Nrows];
+  ogs->haloScatter.nnz = ogs->haloScatter.rowStarts[ogs->haloScatter.Nrows];
 
-  ogs->haloGatherIds  = (dlong*) calloc(totalHaloGather+1,sizeof(dlong));
-  ogs->haloScatterIds = (dlong*) calloc(totalHaloScatter+1,sizeof(dlong));
+  ogs->haloGather.colIds  = (dlong*) calloc(ogs->haloGather.nnz+1,sizeof(dlong));
+  ogs->haloScatter.colIds = (dlong*) calloc(ogs->haloScatter.nnz+1,sizeof(dlong));
   for (dlong i=0;i<ogs->Nhalo;i++) {
     dlong gid = haloNodes[i].newId;
 
-    dlong soffset = ogs->haloScatterOffsets[gid];
+    dlong soffset = ogs->haloScatter.rowStarts[gid];
     int sindex  = haloScatterCounts[gid];
-    ogs->haloScatterIds[soffset+sindex] = haloNodes[i].localId;
+    ogs->haloScatter.colIds[soffset+sindex] = haloNodes[i].localId;
     haloScatterCounts[gid]++;
 
     if (haloNodes[i].baseId > 0) {
-      dlong goffset = ogs->haloGatherOffsets[gid];
+      dlong goffset = ogs->haloGather.rowStarts[gid];
       int gindex  = haloGatherCounts[gid];
-      ogs->haloGatherIds[goffset+gindex] = haloNodes[i].localId;
+      ogs->haloGather.colIds[goffset+gindex] = haloNodes[i].localId;
       haloGatherCounts[gid]++;
     }
   }
   free(haloGatherCounts);
   free(haloScatterCounts);
 
-  ogs->o_haloGatherOffsets  = device.malloc((ogs->NhaloGather+1)*sizeof(dlong), ogs->haloGatherOffsets);
-  ogs->o_haloScatterOffsets = device.malloc((ogs->NhaloScatter+1)*sizeof(dlong), ogs->haloScatterOffsets);
+  ogs->haloGather.o_rowStarts  = device.malloc((ogs->haloGather.Nrows+1)*sizeof(dlong), ogs->haloGather.rowStarts);
+  ogs->haloScatter.o_rowStarts = device.malloc((ogs->haloScatter.Nrows+1)*sizeof(dlong), ogs->haloScatter.rowStarts);
 
-  ogs->o_haloGatherIds  = device.malloc((totalHaloGather+1)*sizeof(dlong), ogs->haloGatherIds);
-  ogs->o_haloScatterIds = device.malloc((totalHaloScatter+1)*sizeof(dlong), ogs->haloScatterIds);
+  ogs->haloGather.o_colIds  = device.malloc((ogs->haloGather.nnz+1)*sizeof(dlong), ogs->haloGather.colIds);
+  ogs->haloScatter.o_colIds = device.malloc((ogs->haloScatter.nnz+1)*sizeof(dlong), ogs->haloScatter.colIds);
 
   free(haloNodes);
 
   //make a host gs handle
-  ogs->Nlocal = ogs->NlocalScatter;
-  ogs->Nhalo = ogs->NhaloScatter;
+  ogs->Nlocal = ogs->localScatter.Nrows;
+  ogs->Nhalo = ogs->haloScatter.Nrows;
   ogs->gsh    = ogs::gsSetup(comm, ogs->Nhalo, haloIds, 0,0);
   ogs->gshSym = ogs::gsSetup(comm, ogs->Nhalo, haloIdsSym, 0,0);
 
@@ -455,13 +442,13 @@ ogs_t *ogs_t::Setup(dlong N, hlong *ids, MPI_Comm &comm,
   free(minRank); free(maxRank);
 
   //total number of owned gathered nodes
-  ogs->Ngather = ogs->NlocalGather+ogs->NhaloGather;
+  ogs->Ngather = ogs->localGather.Nrows+ogs->haloGather.Nrows;
 
   hlong NgatherLocal = (hlong) ogs->Ngather;
   MPI_Allreduce(&NgatherLocal, &(ogs->NgatherGlobal), 1, MPI_HLONG, MPI_SUM, comm);
 
-  ogs->hostBuf = NULL;
-  ogs->haloBuf = NULL;
+  ogs->hostBuf = nullptr;
+  ogs->haloBuf = nullptr;
   ogs->hostBufSize = 0;
 
   return ogs;
@@ -469,30 +456,6 @@ ogs_t *ogs_t::Setup(dlong N, hlong *ids, MPI_Comm &comm,
 
 
 void ogs_t::Free() {
-
-  if (Nlocal) {
-    free(localGatherOffsets);
-    free(localScatterOffsets);
-    free(localGatherIds);
-    free(localScatterIds);
-    o_localGatherOffsets.free();
-    o_localScatterOffsets.free();
-    o_localGatherIds.free();
-    o_localScatterIds.free();
-    Nlocal = 0;
-  }
-
-  if (Nhalo) {
-    free(haloGatherOffsets);
-    free(haloScatterOffsets);
-    free(haloGatherIds);
-    free(haloScatterIds);
-    o_haloGatherOffsets.free();
-    o_haloScatterOffsets.free();
-    o_haloGatherIds.free();
-    o_haloScatterIds.free();
-    Nhalo = 0;
-  }
 
   ogs::gsFree(gsh);
 
@@ -514,7 +477,7 @@ void ogs_t::reallocOccaBuffer(size_t Nbytes) {
   if (Nhalo) {
     if (o_haloBuf.size() < Nhalo*Nbytes) {
       if (o_haloBuf.size()) o_haloBuf.free();
-      haloBuf = occaHostMallocPinned(device, Nhalo*Nbytes, NULL,
+      haloBuf = occaHostMallocPinned(device, Nhalo*Nbytes, nullptr,
                                      o_haloBuf, h_haloBuf);
     }
   }

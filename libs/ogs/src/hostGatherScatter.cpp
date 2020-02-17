@@ -45,20 +45,20 @@ void hostGatherScatter(void* v,
 
   ogs.reallocHostBuffer(Nbytes*Nentries*Nvectors);
 
-  dlong NhaloGather  = (trans == ogs_notrans) ? ogs.NhaloGather : ogs.NhaloScatter;
-  dlong NhaloScatter = (trans == ogs_trans)   ? ogs.NhaloGather : ogs.NhaloScatter;
+  dlong NhaloGather  = (trans == ogs_notrans) ? ogs.haloGather.Nrows : ogs.haloScatter.Nrows;
+  dlong NhaloScatter = (trans == ogs_trans)   ? ogs.haloGather.Nrows : ogs.haloScatter.Nrows;
 
   void* gsh = (trans == ogs_sym) ? ogs.gshSym : ogs.gsh;
 
   // gather-scatter halo nodes
   if (NhaloGather) {
     if (trans == ogs_notrans)
-      hostGatherKernel(ogs.NhaloGather, Nentries, Nvectors, stride, ogs.Nhalo,
-                       ogs.haloGatherOffsets, ogs.haloGatherIds,
+      hostGatherKernel(ogs.haloGather.Nrows, Nentries, Nvectors, stride, ogs.Nhalo,
+                       ogs.haloGather.rowStarts, ogs.haloGather.colIds,
                        type, op, v, ogs.hostBuf);
     else
-      hostGatherKernel(ogs.NhaloScatter, Nentries, Nvectors, stride, ogs.Nhalo,
-                       ogs.haloScatterOffsets, ogs.haloScatterIds,
+      hostGatherKernel(ogs.haloScatter.Nrows, Nentries, Nvectors, stride, ogs.Nhalo,
+                       ogs.haloScatter.rowStarts, ogs.haloScatter.colIds,
                        type, op, v, ogs.hostBuf);
   }
 
@@ -68,32 +68,32 @@ void hostGatherScatter(void* v,
 
   if (NhaloScatter) {
     if (trans == ogs_trans)
-      hostScatterKernel(ogs.NhaloGather, Nentries, Nvectors, stride, ogs.Nhalo,
-                        ogs.haloGatherOffsets, ogs.haloGatherIds,
+      hostScatterKernel(ogs.haloGather.Nrows, Nentries, Nvectors, stride, ogs.Nhalo,
+                        ogs.haloGather.rowStarts, ogs.haloGather.colIds,
                         type, op, ogs.hostBuf, v);
     else
-      hostScatterKernel(ogs.NhaloScatter, Nentries, Nvectors, stride, ogs.Nhalo,
-                        ogs.haloScatterOffsets, ogs.haloScatterIds,
+      hostScatterKernel(ogs.haloScatter.Nrows, Nentries, Nvectors, stride, ogs.Nhalo,
+                        ogs.haloScatter.rowStarts, ogs.haloScatter.colIds,
                         type, op, ogs.hostBuf, v);
   }
 
   if (trans == ogs_notrans) {
-    if (ogs.NlocalFused)
-      hostGatherScatterKernel(ogs.NlocalFused, Nentries, Nvectors, stride,
-                              ogs.localFusedGatherOffsets,  ogs.localFusedGatherIds,
-                              ogs.localFusedScatterOffsets, ogs.localFusedScatterIds,
+    if (ogs.fusedScatter.Nrows)
+      hostGatherScatterKernel(ogs.fusedScatter.Nrows, Nentries, Nvectors, stride,
+                              ogs.fusedGather.rowStarts,  ogs.fusedGather.colIds,
+                              ogs.fusedScatter.rowStarts, ogs.fusedScatter.colIds,
                               type, op, v);
   } else if (trans == ogs_trans) {
-    if (ogs.NlocalFused)
-      hostGatherScatterKernel(ogs.NlocalFused, Nentries, Nvectors, stride,
-                              ogs.localFusedScatterOffsets, ogs.localFusedScatterIds,
-                              ogs.localFusedGatherOffsets,  ogs.localFusedGatherIds,
+    if (ogs.fusedScatter.Nrows)
+      hostGatherScatterKernel(ogs.fusedScatter.Nrows, Nentries, Nvectors, stride,
+                              ogs.fusedScatter.rowStarts, ogs.fusedScatter.colIds,
+                              ogs.fusedGather.rowStarts,  ogs.fusedGather.colIds,
                               type, op, v);
   } else { //ogs_sym
-    if (ogs.NlocalFusedSym)
-      hostGatherScatterKernel(ogs.NlocalFusedSym, Nentries, Nvectors, stride,
-                              ogs.localFusedOffsets, ogs.localFusedIds,
-                              ogs.localFusedOffsets, ogs.localFusedIds,
+    if (ogs.symGatherScatter.Nrows)
+      hostGatherScatterKernel(ogs.symGatherScatter.Nrows, Nentries, Nvectors, stride,
+                              ogs.symGatherScatter.rowStarts, ogs.symGatherScatter.colIds,
+                              ogs.symGatherScatter.rowStarts, ogs.symGatherScatter.colIds,
                               type, op, v);
   }
 }

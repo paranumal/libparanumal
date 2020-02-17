@@ -44,17 +44,17 @@ void occaGatherScatterStart(occa::memory& o_v,
 
   ogs.reallocOccaBuffer(Nbytes*Nentries*Nvectors);
 
-  dlong NhaloGather = (trans == ogs_notrans) ? ogs.NhaloGather : ogs.NhaloScatter;
+  dlong NhaloGather = (trans == ogs_notrans) ? ogs.haloGather.Nrows : ogs.haloScatter.Nrows;
 
   // gather halo nodes on device
   if (NhaloGather) {
     if (trans == ogs_notrans)
-      occaGatherKernel(ogs.NhaloGather, Nentries, Nvectors, stride, ogs.Nhalo,
-                       ogs.o_haloGatherOffsets, ogs.o_haloGatherIds,
+      occaGatherKernel(ogs.haloGather.Nrows, Nentries, Nvectors, stride, ogs.Nhalo,
+                       ogs.haloGather.o_rowStarts, ogs.haloGather.o_colIds,
                        type, op, o_v, ogs.o_haloBuf);
     else
-      occaGatherKernel(ogs.NhaloScatter, Nentries, Nvectors, stride, ogs.Nhalo,
-                       ogs.o_haloScatterOffsets, ogs.o_haloScatterIds,
+      occaGatherKernel(ogs.haloScatter.Nrows, Nentries, Nvectors, stride, ogs.Nhalo,
+                       ogs.haloScatter.o_rowStarts, ogs.haloScatter.o_colIds,
                        type, op, o_v, ogs.o_haloBuf);
 
     ogs.device.finish();
@@ -86,22 +86,22 @@ void occaGatherScatterFinish(occa::memory& o_v,
   void* gsh = (trans == ogs_sym) ? ogs.gshSym : ogs.gsh;
 
   if (trans == ogs_notrans) {
-    if(ogs.NlocalFused)
-      occaGatherScatterKernel(ogs.NlocalFused, Nentries, Nvectors, stride,
-                              ogs.o_localFusedGatherOffsets,  ogs.o_localFusedGatherIds,
-                              ogs.o_localFusedScatterOffsets, ogs.o_localFusedScatterIds,
+    if(ogs.fusedScatter.Nrows)
+      occaGatherScatterKernel(ogs.fusedScatter.Nrows, Nentries, Nvectors, stride,
+                              ogs.fusedGather.o_rowStarts,  ogs.fusedGather.o_colIds,
+                              ogs.fusedScatter.o_rowStarts, ogs.fusedScatter.o_colIds,
                               type, op, o_v);
   } else if (trans == ogs_trans) {
-    if(ogs.NlocalFused)
-      occaGatherScatterKernel(ogs.NlocalFused, Nentries, Nvectors, stride,
-                              ogs.o_localFusedScatterOffsets, ogs.o_localFusedScatterIds,
-                              ogs.o_localFusedGatherOffsets,  ogs.o_localFusedGatherIds,
+    if(ogs.fusedScatter.Nrows)
+      occaGatherScatterKernel(ogs.fusedScatter.Nrows, Nentries, Nvectors, stride,
+                              ogs.fusedScatter.o_rowStarts, ogs.fusedScatter.o_colIds,
+                              ogs.fusedGather.o_rowStarts,  ogs.fusedGather.o_colIds,
                               type, op, o_v);
   } else {//ogs_sym
-    if(ogs.NlocalFusedSym)
-      occaGatherScatterKernel(ogs.NlocalFusedSym, Nentries, Nvectors, stride,
-                              ogs.o_localFusedOffsets, ogs.o_localFusedIds,
-                              ogs.o_localFusedOffsets, ogs.o_localFusedIds,
+    if(ogs.symGatherScatter.Nrows)
+      occaGatherScatterKernel(ogs.symGatherScatter.Nrows, Nentries, Nvectors, stride,
+                              ogs.symGatherScatter.o_rowStarts, ogs.symGatherScatter.o_colIds,
+                              ogs.symGatherScatter.o_rowStarts, ogs.symGatherScatter.o_colIds,
                               type, op, o_v);
   }
 
@@ -116,7 +116,7 @@ void occaGatherScatterFinish(occa::memory& o_v,
   gsGatherScatter(ogs.haloBuf, Nentries, Nvectors, ogs.Nhalo,
                   type, op, trans, gsh);
 
-  dlong NhaloScatter = (trans == ogs_trans) ? ogs.NhaloGather : ogs.NhaloScatter;
+  dlong NhaloScatter = (trans == ogs_trans) ? ogs.haloGather.Nrows : ogs.haloScatter.Nrows;
 
   if (NhaloScatter) {
     ogs.device.setStream(dataStream);
@@ -133,12 +133,12 @@ void occaGatherScatterFinish(occa::memory& o_v,
 
     // scatter back to local nodes
     if (trans == ogs_trans)
-      occaScatterKernel(ogs.NhaloGather, Nentries, Nvectors, stride, ogs.Nhalo,
-                        ogs.o_haloGatherOffsets, ogs.o_haloGatherIds,
+      occaScatterKernel(ogs.haloGather.Nrows, Nentries, Nvectors, stride, ogs.Nhalo,
+                        ogs.haloGather.o_rowStarts, ogs.haloGather.o_colIds,
                         type, op, ogs.o_haloBuf, o_v);
     else
-      occaScatterKernel(ogs.NhaloScatter, Nentries, Nvectors, stride, ogs.Nhalo,
-                        ogs.o_haloScatterOffsets, ogs.o_haloScatterIds,
+      occaScatterKernel(ogs.haloScatter.Nrows, Nentries, Nvectors, stride, ogs.Nhalo,
+                        ogs.haloScatter.o_rowStarts, ogs.haloScatter.o_colIds,
                         type, op, ogs.o_haloBuf, o_v);
   }
 }

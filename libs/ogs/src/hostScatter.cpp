@@ -49,39 +49,39 @@ void hostScatter(void* v,
   if (trans == ogs_sym)
     LIBP_ABORT(string("Calling ogs::Scatter in ogs_sym mode not supported."))
 
-  if (ogs.NhaloGather)
+  if (ogs.haloGather.Nrows)
     for (int i=0;i<Nvectors;i++)
       memcpy((char*)ogs.hostBuf+ogs.Nhalo*Nbytes*Nentries*i,
-             (char*)gv+ogs.NlocalGather*Nbytes + gstride*Nbytes*i,
-             ogs.NhaloGather*Nbytes*Nentries);
+             (char*)gv+ogs.localGather.Nrows*Nbytes + gstride*Nbytes*i,
+             ogs.haloGather.Nrows*Nbytes*Nentries);
 
   // MPI based scatter using gslib
   // (must use ogs_notrans so the negative ids don't contribute to op)
   gsGatherScatter(ogs.hostBuf, Nentries, Nvectors, ogs.Nhalo,
                   type, op, ogs_notrans, ogs.gsh);
 
-  dlong NhaloScatter = (trans == ogs_trans) ? ogs.NhaloGather : ogs.NhaloScatter;
+  dlong NhaloScatter = (trans == ogs_trans) ? ogs.haloGather.Nrows : ogs.haloScatter.Nrows;
 
   if (NhaloScatter) {
     if (trans == ogs_trans)
-      hostScatterKernel(ogs.NhaloGather, Nentries, Nvectors, ogs.Nhalo, stride,
-                        ogs.haloGatherOffsets, ogs.haloGatherIds,
+      hostScatterKernel(ogs.haloGather.Nrows, Nentries, Nvectors, ogs.Nhalo, stride,
+                        ogs.haloGather.rowStarts, ogs.haloGather.colIds,
                         type, op, ogs.hostBuf, v);
     else
-      hostScatterKernel(ogs.NhaloScatter, Nentries, Nvectors, ogs.Nhalo, stride,
-                        ogs.haloScatterOffsets, ogs.haloScatterIds,
+      hostScatterKernel(ogs.haloScatter.Nrows, Nentries, Nvectors, ogs.Nhalo, stride,
+                        ogs.haloScatter.rowStarts, ogs.haloScatter.colIds,
                         type, op, ogs.hostBuf, v);
   }
 
   // scatter interior nodes
   if (ogs.Nlocal) {
     if (trans == ogs_trans)
-      hostScatterKernel(ogs.NlocalGather, Nentries, Nvectors, gstride, stride,
-                        ogs.localGatherOffsets, ogs.localGatherIds,
+      hostScatterKernel(ogs.localGather.Nrows, Nentries, Nvectors, gstride, stride,
+                        ogs.localGather.rowStarts, ogs.localGather.colIds,
                         type, op, gv, v);
     else
-      hostScatterKernel(ogs.NlocalScatter, Nentries, Nvectors, gstride, stride,
-                        ogs.localScatterOffsets, ogs.localScatterIds,
+      hostScatterKernel(ogs.localScatter.Nrows, Nentries, Nvectors, gstride, stride,
+                        ogs.localScatter.rowStarts, ogs.localScatter.colIds,
                         type, op, gv, v);
   }
 }

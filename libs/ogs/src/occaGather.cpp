@@ -49,17 +49,17 @@ void occaGatherStart(occa::memory& o_gv,
 
   ogs.reallocOccaBuffer(Nbytes*Nentries*Nvectors);
 
-  dlong NhaloGather = (trans == ogs_notrans) ? ogs.NhaloGather : ogs.NhaloScatter;
+  dlong NhaloGather = (trans == ogs_notrans) ? ogs.haloGather.Nrows : ogs.haloScatter.Nrows;
 
   // gather halo nodes on device
   if (NhaloGather) {
     if (trans == ogs_notrans)
-      occaGatherKernel(ogs.NhaloGather, Nentries, Nvectors, stride, ogs.Nhalo,
-                       ogs.o_haloGatherOffsets, ogs.o_haloGatherIds,
+      occaGatherKernel(ogs.haloGather.Nrows, Nentries, Nvectors, stride, ogs.Nhalo,
+                       ogs.haloGather.o_rowStarts, ogs.haloGather.o_colIds,
                        type, op, o_v, ogs.o_haloBuf);
     else
-      occaGatherKernel(ogs.NhaloScatter, Nentries, Nvectors, stride, ogs.Nhalo,
-                       ogs.o_haloScatterOffsets, ogs.o_haloScatterIds,
+      occaGatherKernel(ogs.haloScatter.Nrows, Nentries, Nvectors, stride, ogs.Nhalo,
+                       ogs.haloScatter.o_rowStarts, ogs.haloScatter.o_colIds,
                        type, op, o_v, ogs.o_haloBuf);
 
     ogs.device.finish();
@@ -95,12 +95,12 @@ void occaGatherFinish(occa::memory& o_gv,
 
   if(ogs.Nlocal) {
     if (trans == ogs_notrans)
-      occaGatherKernel(ogs.Nlocal, Nentries, Nvectors, stride, gstride,
-                       ogs.o_localGatherOffsets, ogs.o_localGatherIds,
+      occaGatherKernel(ogs.localGather.Nrows, Nentries, Nvectors, stride, gstride,
+                       ogs.localGather.o_rowStarts, ogs.localGather.o_colIds,
                        type, op, o_v, o_gv);
     else
-      occaGatherKernel(ogs.Nlocal, Nentries, Nvectors, stride, gstride,
-                       ogs.o_localScatterOffsets, ogs.o_localScatterIds,
+      occaGatherKernel(ogs.localScatter.Nrows, Nentries, Nvectors, stride, gstride,
+                       ogs.localScatter.o_rowStarts, ogs.localScatter.o_colIds,
                        type, op, o_v, o_gv);
   }
 
@@ -116,13 +116,13 @@ void occaGatherFinish(occa::memory& o_gv,
                   type, op, trans, ogs.gsh);
 
   // copy totally gathered halo data back from HOST to DEVICE
-  if (ogs.NhaloGather) {
+  if (ogs.haloGather.Nrows) {
     ogs.device.setStream(dataStream);
 
     for (int i=0;i<Nvectors;i++)
       o_gv.copyFrom((char*)ogs.haloBuf+ogs.Nhalo*Nbytes*Nentries*i,
-                    ogs.NhaloGather*Nbytes*Nentries,
-                    ogs.NlocalGather*Nbytes + gstride*Nbytes*i,
+                    ogs.haloGather.Nrows*Nbytes*Nentries,
+                    ogs.localGather.Nrows*Nbytes + gstride*Nbytes*i,
                     "async: true");
 
     ogs.device.finish();
