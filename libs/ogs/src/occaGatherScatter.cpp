@@ -49,12 +49,10 @@ void occaGatherScatterStart(occa::memory& o_v,
   // gather halo nodes on device
   if (NhaloGather) {
     if (trans == ogs_notrans)
-      occaGatherKernel(ogs.haloGather.Nrows, Nentries, Nvectors, stride, ogs.Nhalo,
-                       ogs.haloGather.o_rowStarts, ogs.haloGather.o_colIds,
+      occaGatherKernel(ogs.haloGather, Nentries, Nvectors, stride, ogs.Nhalo,
                        type, op, o_v, ogs.o_haloBuf);
     else
-      occaGatherKernel(ogs.haloScatter.Nrows, Nentries, Nvectors, stride, ogs.Nhalo,
-                       ogs.haloScatter.o_rowStarts, ogs.haloScatter.o_colIds,
+      occaGatherKernel(ogs.haloScatter, Nentries, Nvectors, stride, ogs.Nhalo,
                        type, op, o_v, ogs.o_haloBuf);
 
     ogs.device.finish();
@@ -87,22 +85,16 @@ void occaGatherScatterFinish(occa::memory& o_v,
 
   if (trans == ogs_notrans) {
     if(ogs.fusedScatter.Nrows)
-      occaGatherScatterKernel(ogs.fusedScatter.Nrows, Nentries, Nvectors, stride,
-                              ogs.fusedGather.o_rowStarts,  ogs.fusedGather.o_colIds,
-                              ogs.fusedScatter.o_rowStarts, ogs.fusedScatter.o_colIds,
-                              type, op, o_v);
+      occaGatherScatterKernel(ogs.fusedGather, ogs.fusedScatter,
+                              Nentries, Nvectors, stride, type, op, o_v);
   } else if (trans == ogs_trans) {
     if(ogs.fusedScatter.Nrows)
-      occaGatherScatterKernel(ogs.fusedScatter.Nrows, Nentries, Nvectors, stride,
-                              ogs.fusedScatter.o_rowStarts, ogs.fusedScatter.o_colIds,
-                              ogs.fusedGather.o_rowStarts,  ogs.fusedGather.o_colIds,
-                              type, op, o_v);
+      occaGatherScatterKernel(ogs.fusedScatter, ogs.fusedGather,
+                              Nentries, Nvectors, stride, type, op, o_v);
   } else {//ogs_sym
     if(ogs.symGatherScatter.Nrows)
-      occaGatherScatterKernel(ogs.symGatherScatter.Nrows, Nentries, Nvectors, stride,
-                              ogs.symGatherScatter.o_rowStarts, ogs.symGatherScatter.o_colIds,
-                              ogs.symGatherScatter.o_rowStarts, ogs.symGatherScatter.o_colIds,
-                              type, op, o_v);
+      occaGatherScatterKernel(ogs.symGatherScatter, ogs.symGatherScatter,
+                              Nentries, Nvectors, stride, type, op, o_v);
   }
 
   occa::stream currentStream = ogs.device.getStream();
@@ -133,12 +125,10 @@ void occaGatherScatterFinish(occa::memory& o_v,
 
     // scatter back to local nodes
     if (trans == ogs_trans)
-      occaScatterKernel(ogs.haloGather.Nrows, Nentries, Nvectors, stride, ogs.Nhalo,
-                        ogs.haloGather.o_rowStarts, ogs.haloGather.o_colIds,
+      occaScatterKernel(ogs.haloGather, Nentries, Nvectors, stride, ogs.Nhalo,
                         type, op, ogs.o_haloBuf, o_v);
     else
-      occaScatterKernel(ogs.haloScatter.Nrows, Nentries, Nvectors, stride, ogs.Nhalo,
-                        ogs.haloScatter.o_rowStarts, ogs.haloScatter.o_colIds,
+      occaScatterKernel(ogs.haloScatter, Nentries, Nvectors, stride, ogs.Nhalo,
                         type, op, ogs.o_haloBuf, o_v);
   }
 }
@@ -153,27 +143,25 @@ void occaGatherScatterFinish(occa::memory& o_v,
     OGS_FOR_EACH_OP(T,SWITCH_OP_CASE) case ogs_op_n: break; }
 
 
-void occaGatherScatterKernel(const dlong N,
+void occaGatherScatterKernel(const ogsData_t &gather,
+                             const ogsData_t &scatter,
                              const int Nentries,
                              const int Nvectors,
                              const dlong stride,
-                             occa::memory& o_gatherStarts,
-                             occa::memory& o_gatherIds,
-                             occa::memory& o_scatterStarts,
-                             occa::memory& o_scatterIds,
                              const ogs_type type,
                              const ogs_op op,
                              occa::memory&  o_v) {
 
-#define WITH_OP(T,OP)                             \
-  gatherScatterKernel_##T##_##OP(N,               \
-                                 Nentries,        \
-                                 Nvectors,        \
-                                 stride,          \
-                                 o_gatherStarts,  \
-                                 o_gatherIds,     \
-                                 o_scatterStarts, \
-                                 o_scatterIds,    \
+#define WITH_OP(T,OP)                                     \
+  gatherScatterKernel_##T##_##OP(gather.NrowBlocks,       \
+                                 Nentries,                \
+                                 Nvectors,                \
+                                 stride,                  \
+                                 gather.o_blockRowStarts, \
+                                 gather.o_rowStarts,      \
+                                 gather.o_colIds,         \
+                                 scatter.o_rowStarts,     \
+                                 scatter.o_colIds,        \
                                  o_v);
 #define WITH_TYPE(T) SWITCH_OP(T,op)
 

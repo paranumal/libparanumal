@@ -204,6 +204,7 @@ class ogsData_t {
 public:
   dlong Nrows=0;
   dlong nnz=0;
+  dlong NrowBlocks=0;
 
   dlong *blockRowStarts=nullptr;
   dlong *rowStarts=nullptr;

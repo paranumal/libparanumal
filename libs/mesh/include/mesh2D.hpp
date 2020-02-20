@@ -66,8 +66,6 @@ public:
 
   void CubatureSetup();
   void CubatureNodes();
-
-  void BuildBasisCoarsen(dfloat**R, occa::memory& o_R, int Nf, int Nc);
 };
 
 class meshQuad2D: public mesh2D {
@@ -85,8 +83,6 @@ public:
 
   void CubatureSetup();
   void CubatureNodes();
-
-  void BuildBasisCoarsen(dfloat**R, occa::memory& o_R, int Nf, int Nc);
 };
 
 #endif

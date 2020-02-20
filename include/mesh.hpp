@@ -378,8 +378,6 @@ public:
 
   mesh_t* SetupRingPatch();
 
-  virtual void BuildBasisCoarsen(dfloat**R, occa::memory& o_R, int Nf, int Nc)=0;
-
   mesh_t* SetupSEMFEM(hlong **globalIds, int *Nfp, int **faceNodes);
 
   void DegreeRaiseMatrix1D(int Nc, int Nf, dfloat *P);

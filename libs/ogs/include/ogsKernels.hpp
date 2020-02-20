@@ -37,7 +37,12 @@ SOFTWARE.
   static T init_##T##_min = (T)  std::numeric_limits<T>::max(); \
   static T init_##T##_max = (T) -std::numeric_limits<T>::max();
 
+class ogsData_t;
+
 namespace ogs {
+
+extern const int blockSize;
+extern const int gatherNodesPerBlock;
 
 extern int Nrefs;
 
@@ -125,37 +130,30 @@ void hostScatter(void* v, void* gv, const int Nentries, const int Nvectors,
                  const ogs_type type, const ogs_op op,
                  const ogs_transpose trans, ogs_t &ogs);
 
-void occaGatherScatterKernel(const dlong N,
+void occaGatherScatterKernel(const ogsData_t &gather,
+                             const ogsData_t &scatter,
                              const int Nentries,
                              const int Nvectors,
                              const dlong stride,
-                             occa::memory& o_gatherStarts,
-                             occa::memory& o_gatherIds,
-                             occa::memory& o_scatterStarts,
-                             occa::memory& o_scatterIds,
                              const ogs_type type,
                              const ogs_op op,
                              occa::memory&  o_v);
 
-void occaGatherKernel(const dlong N,
+void occaGatherKernel(const ogsData_t &gather,
                       const int Nentries,
                       const int Nvectors,
                       const dlong stride,
                       const dlong gtride,
-                      occa::memory& o_gatherStarts,
-                      occa::memory& o_gatherIds,
                       const ogs_type type,
                       const ogs_op op,
                       occa::memory& o_v,
                       occa::memory& o_gv);
 
-void occaScatterKernel(const dlong N,
+void occaScatterKernel(const ogsData_t &gather,
                        const int Nentries,
                        const int Nvectors,
                        const dlong gtride,
                        const dlong stride,
-                       occa::memory& o_scatterStarts,
-                       occa::memory& o_scatterIds,
                        const ogs_type type,
                        const ogs_op op,
                        occa::memory& o_gv,

@@ -67,6 +67,8 @@ static int compareLocalId(const void *a, const void *b){
   return 0;
 }
 
+void setupRowBlocks(ogsData_t &A, occa::device &device);
+
 ogs_t *ogs_t::Setup(dlong N, hlong *ids, MPI_Comm &comm,
                     int verbose, occa::device &device){
 
@@ -228,6 +230,11 @@ ogs_t *ogs_t::Setup(dlong N, hlong *ids, MPI_Comm &comm,
   ogs->localGather.o_colIds  = device.malloc((ogs->localGather.nnz+1)*sizeof(dlong), ogs->localGather.colIds);
   ogs->localScatter.o_colIds = device.malloc((ogs->localScatter.nnz+1)*sizeof(dlong), ogs->localScatter.colIds);
 
+  //divide the list of colIds into roughly equal sized blocks so that each
+  // threadblock loads approxiamtely an equal amount of data
+  setupRowBlocks(ogs->localGather, device);
+  setupRowBlocks(ogs->localScatter, device);
+
   free(localNodes);
 
   //make some compressed versions of the gather/scatter ids for the fused gs kernel
@@ -311,6 +318,17 @@ ogs_t *ogs_t::Setup(dlong N, hlong *ids, MPI_Comm &comm,
   ogs->fusedGather.o_colIds  = device.malloc((ogs->fusedGather.nnz+1)*sizeof(dlong), ogs->fusedGather.colIds);
   ogs->fusedScatter.o_colIds = device.malloc((ogs->fusedScatter.nnz+1)*sizeof(dlong), ogs->fusedScatter.colIds);
   ogs->symGatherScatter.o_colIds = device.malloc((ogs->symGatherScatter.nnz+1)*sizeof(dlong), ogs->symGatherScatter.colIds);
+
+  setupRowBlocks(ogs->fusedGather, device);
+  setupRowBlocks(ogs->fusedScatter, device);
+  setupRowBlocks(ogs->symGatherScatter, device);
+
+  //use the blocking from the fused scatter for the fusded gather as well
+  if (ogs->fusedGather.blockRowStarts) free(ogs->fusedGather.blockRowStarts);
+  ogs->fusedGather.o_blockRowStarts.free();
+  ogs->fusedGather.NrowBlocks = ogs->fusedScatter.NrowBlocks;
+  ogs->fusedGather.blockRowStarts = ogs->fusedScatter.blockRowStarts;
+  ogs->fusedGather.o_blockRowStarts = ogs->fusedScatter.o_blockRowStarts;
 
   //set up the halo gatherScatter
   parallelNode_t *haloNodes = (parallelNode_t*) calloc(ogs->Nhalo+1,sizeof(parallelNode_t));
@@ -428,6 +446,9 @@ ogs_t *ogs_t::Setup(dlong N, hlong *ids, MPI_Comm &comm,
   ogs->haloGather.o_colIds  = device.malloc((ogs->haloGather.nnz+1)*sizeof(dlong), ogs->haloGather.colIds);
   ogs->haloScatter.o_colIds = device.malloc((ogs->haloScatter.nnz+1)*sizeof(dlong), ogs->haloScatter.colIds);
 
+  setupRowBlocks(ogs->haloGather, device);
+  setupRowBlocks(ogs->haloScatter, device);
+
   free(haloNodes);
 
   //make a host gs handle
@@ -453,7 +474,6 @@ ogs_t *ogs_t::Setup(dlong N, hlong *ids, MPI_Comm &comm,
 
   return ogs;
 }
-
 
 void ogs_t::Free() {
 
@@ -481,4 +501,47 @@ void ogs_t::reallocOccaBuffer(size_t Nbytes) {
                                      o_haloBuf, h_haloBuf);
     }
   }
+}
+
+void setupRowBlocks(ogsData_t &A, occa::device &device) {
+
+  dlong blockSum=0;
+  A.NrowBlocks=0;
+  if (A.Nrows) A.NrowBlocks++;
+  for (dlong i=0;i<A.Nrows;i++) {
+    dlong rowSize = A.rowStarts[i+1]-A.rowStarts[i];
+
+    if (rowSize > ogs::gatherNodesPerBlock) {
+      //this row is pathalogically big. We can't currently run this
+      stringstream ss;
+      ss << "Multiplicity of global node id: " << i << "in ogsSetup is too large.";
+      LIBP_ABORT(ss.str())
+    }
+
+    if (blockSum+rowSize > ogs::gatherNodesPerBlock) { //adding this row will exceed the nnz per block
+      A.NrowBlocks++; //count the previous block
+      blockSum=rowSize; //start a new row block
+    } else {
+      blockSum+=rowSize; //add this row to the block
+    }
+  }
+
+  A.blockRowStarts  = (dlong*) calloc(A.NrowBlocks+1,sizeof(dlong));
+
+  blockSum=0;
+  A.NrowBlocks=0;
+  if (A.Nrows) A.NrowBlocks++;
+  for (dlong i=0;i<A.Nrows;i++) {
+    dlong rowSize = A.rowStarts[i+1]-A.rowStarts[i];
+
+    if (blockSum+rowSize > ogs::gatherNodesPerBlock) { //adding this row will exceed the nnz per block
+      A.blockRowStarts[A.NrowBlocks++] = i; //mark the previous block
+      blockSum=rowSize; //start a new row block
+    } else {
+      blockSum+=rowSize; //add this row to the block
+    }
+  }
+  A.blockRowStarts[A.NrowBlocks] = A.Nrows;
+
+  A.o_blockRowStarts = device.malloc((A.NrowBlocks+1)*sizeof(dlong), A.blockRowStarts);
 }

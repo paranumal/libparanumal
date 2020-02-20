@@ -84,12 +84,10 @@ void occaScatterFinish(occa::memory& o_v,
 
   if(NlocalScatter) {
     if (trans == ogs_notrans)
-      occaScatterKernel(ogs.localScatter.Nrows, Nentries, Nvectors, gstride, stride,
-                        ogs.localScatter.o_rowStarts, ogs.localScatter.o_colIds,
+      occaScatterKernel(ogs.localScatter, Nentries, Nvectors, gstride, stride,
                         type, op, o_gv, o_v);
     else
-      occaScatterKernel(ogs.localGather.Nrows, Nentries, Nvectors, gstride, stride,
-                        ogs.localGather.o_rowStarts, ogs.localGather.o_colIds,
+      occaScatterKernel(ogs.localGather, Nentries, Nvectors, gstride, stride,
                         type, op, o_gv, o_v);
   }
 
@@ -121,12 +119,10 @@ void occaScatterFinish(occa::memory& o_v,
     ogs.device.setStream(currentStream);
 
     if (trans == ogs_notrans)
-      occaScatterKernel(ogs.haloScatter.Nrows, Nentries, Nvectors, ogs.Nhalo, stride,
-                        ogs.haloScatter.o_rowStarts, ogs.haloScatter.o_colIds,
+      occaScatterKernel(ogs.haloScatter, Nentries, Nvectors, ogs.Nhalo, stride,
                         type, op, ogs.o_haloBuf, o_v);
     else
-      occaScatterKernel(ogs.haloGather.Nrows, Nentries, Nvectors, ogs.Nhalo, stride,
-                        ogs.haloGather.o_rowStarts, ogs.haloGather.o_colIds,
+      occaScatterKernel(ogs.haloGather, Nentries, Nvectors, ogs.Nhalo, stride,
                         type, op, ogs.o_haloBuf, o_v);
   }
 }
@@ -136,27 +132,26 @@ void occaScatterFinish(occa::memory& o_v,
 #define SWITCH_TYPE(type) switch(type) { \
     OGS_FOR_EACH_TYPE(SWITCH_TYPE_CASE) case ogs_type_n: break; }
 
-void occaScatterKernel(const dlong N,
+void occaScatterKernel(const ogsData_t &scatter,
                        const int Nentries,
                        const int Nvectors,
                        const dlong gstride,
                        const dlong stride,
-                       occa::memory& o_scatterStarts,
-                       occa::memory& o_scatterIds,
                        const ogs_type type,
                        const ogs_op op,
                        occa::memory& o_gv,
                        occa::memory& o_v) {
 
-#define WITH_TYPE(T)                 \
-  scatterKernel_##T(N,               \
-                    Nentries,        \
-                    Nvectors,        \
-                    gstride,         \
-                    stride,          \
-                    o_scatterStarts, \
-                    o_scatterIds,    \
-                    o_gv,            \
+#define WITH_TYPE(T)                          \
+  scatterKernel_##T(scatter.NrowBlocks,       \
+                    Nentries,                 \
+                    Nvectors,                 \
+                    gstride,                  \
+                    stride,                   \
+                    scatter.o_blockRowStarts, \
+                    scatter.o_rowStarts,      \
+                    scatter.o_colIds,         \
+                    o_gv,                     \
                     o_v);
 
   SWITCH_TYPE(type)

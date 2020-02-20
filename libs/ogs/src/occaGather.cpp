@@ -54,12 +54,10 @@ void occaGatherStart(occa::memory& o_gv,
   // gather halo nodes on device
   if (NhaloGather) {
     if (trans == ogs_notrans)
-      occaGatherKernel(ogs.haloGather.Nrows, Nentries, Nvectors, stride, ogs.Nhalo,
-                       ogs.haloGather.o_rowStarts, ogs.haloGather.o_colIds,
+      occaGatherKernel(ogs.haloGather, Nentries, Nvectors, stride, ogs.Nhalo,
                        type, op, o_v, ogs.o_haloBuf);
     else
-      occaGatherKernel(ogs.haloScatter.Nrows, Nentries, Nvectors, stride, ogs.Nhalo,
-                       ogs.haloScatter.o_rowStarts, ogs.haloScatter.o_colIds,
+      occaGatherKernel(ogs.haloScatter, Nentries, Nvectors, stride, ogs.Nhalo,
                        type, op, o_v, ogs.o_haloBuf);
 
     ogs.device.finish();
@@ -95,12 +93,10 @@ void occaGatherFinish(occa::memory& o_gv,
 
   if(ogs.Nlocal) {
     if (trans == ogs_notrans)
-      occaGatherKernel(ogs.localGather.Nrows, Nentries, Nvectors, stride, gstride,
-                       ogs.localGather.o_rowStarts, ogs.localGather.o_colIds,
+      occaGatherKernel(ogs.localGather, Nentries, Nvectors, stride, gstride,
                        type, op, o_v, o_gv);
     else
-      occaGatherKernel(ogs.localScatter.Nrows, Nentries, Nvectors, stride, gstride,
-                       ogs.localScatter.o_rowStarts, ogs.localScatter.o_colIds,
+      occaGatherKernel(ogs.localScatter, Nentries, Nvectors, stride, gstride,
                        type, op, o_v, o_gv);
   }
 
@@ -140,27 +136,26 @@ void occaGatherFinish(occa::memory& o_gv,
     OGS_FOR_EACH_OP(T,SWITCH_OP_CASE) case ogs_op_n: break; }
 
 
-void occaGatherKernel(const dlong N,
+void occaGatherKernel(const ogsData_t &gather,
                       const int Nentries,
                       const int Nvectors,
                       const dlong stride,
                       const dlong gstride,
-                      occa::memory& o_gatherStarts,
-                      occa::memory& o_gatherIds,
                       const ogs_type type,
                       const ogs_op op,
                       occa::memory& o_v,
                       occa::memory& o_gv) {
 
-#define WITH_OP(T,OP)                     \
-  gatherKernel_##T##_##OP(N,              \
-                          Nentries,       \
-                          Nvectors,       \
-                          stride,         \
-                          gstride,        \
-                          o_gatherStarts, \
-                          o_gatherIds,    \
-                          o_v,            \
+#define WITH_OP(T,OP)                              \
+  gatherKernel_##T##_##OP(gather.NrowBlocks,       \
+                          Nentries,                \
+                          Nvectors,                \
+                          stride,                  \
+                          gstride,                 \
+                          gather.o_blockRowStarts, \
+                          gather.o_rowStarts,      \
+                          gather.o_colIds,         \
+                          o_v,                     \
                           o_gv);
 #define WITH_TYPE(T) SWITCH_OP(T,op)
 

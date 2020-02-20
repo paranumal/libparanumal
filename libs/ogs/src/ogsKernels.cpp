@@ -34,6 +34,10 @@ SOFTWARE.
 
 namespace ogs {
 
+  //NC: Hard code these for now. Should be sufficient for GPU devices, but needs attention for CPU
+  const int blockSize = 256;
+  const int gatherNodesPerBlock = 1024; //should be a multiple of blockSize for good unrolling
+
   int Nrefs = 0;
 
   occa::stream dataStream;
@@ -65,6 +69,9 @@ void initKernels(MPI_Comm& comm, occa::device& device) {
 
   occa::properties kernelInfo;
   occaDeviceProperties(device, kernelInfo);
+
+  kernelInfo["defines/p_blockSize"] = blockSize;
+  kernelInfo["defines/p_gatherNodesPerBlock"] = gatherNodesPerBlock;
 
 #define DEFINE_OCCA_ADD_INIT(T) \
   kernelInfo["defines/init_" STR(T) "_add"] = (T)  0;                              \
