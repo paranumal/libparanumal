@@ -25,7 +25,7 @@ SOFTWARE.
 */
 
 
-// compute div(NU)  = div(uxu) with cubature
+// compute NU = -div(uxu) with cubature
 @kernel void insSubcycleAdvectionCubatureVolumeTet3D(const dlong Nelements,
                                            @restrict const  dfloat *  vgeo,
                                            @restrict const  dfloat *  cubvgeo,
@@ -161,9 +161,9 @@ SOFTWARE.
             }
 
           const dlong id = e*p_Np*p_NVfields+n;
-          RHS[id+0*p_Np] = -fluxU; // note  change in sign
-          RHS[id+1*p_Np] = -fluxV;
-          RHS[id+2*p_Np] = -fluxW;
+          RHS[id+0*p_Np] = fluxU; // note  change in sign
+          RHS[id+1*p_Np] = fluxV;
+          RHS[id+2*p_Np] = fluxW;
         }
       }
     }
@@ -353,9 +353,9 @@ SOFTWARE.
               }
 
             const dlong id = n + p_NVfields*p_Np*e;
-            RHS[id+0*p_Np] += rhsu;
-            RHS[id+1*p_Np] += rhsv;
-            RHS[id+2*p_Np] += rhsw;
+            RHS[id+0*p_Np] -= rhsu;
+            RHS[id+1*p_Np] -= rhsv;
+            RHS[id+2*p_Np] -= rhsw;
           }
         }
       }

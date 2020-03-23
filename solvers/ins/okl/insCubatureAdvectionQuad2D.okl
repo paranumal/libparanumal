@@ -24,7 +24,7 @@ SOFTWARE.
 
 */
 
-// compute div(NU)  = div(uxu) using quadrature (weak form)
+// compute NU = -div(uxu) using quadrature (weak form)
 @kernel void insAdvectionCubatureVolumeQuad2D(const dlong Nelements,
                                               @restrict const  dfloat *  vgeo,
                                               @restrict const  dfloat *  cubvgeo,
@@ -221,11 +221,11 @@ SOFTWARE.
 
             const dlong id = e*p_Np*p_NVfields + j*p_Nq + i;
             if (beta!=0.0) {
-              RHS[id+0*p_Np] = beta*RHS[id+0*p_Np] - alpha*invJW*nu;
-              RHS[id+1*p_Np] = beta*RHS[id+1*p_Np] - alpha*invJW*nv;
+              RHS[id+0*p_Np] = beta*RHS[id+0*p_Np] + alpha*invJW*nu;
+              RHS[id+1*p_Np] = beta*RHS[id+1*p_Np] + alpha*invJW*nv;
             } else {
-              RHS[id+0*p_Np] = - alpha*invJW*nu;
-              RHS[id+1*p_Np] = - alpha*invJW*nv;
+              RHS[id+0*p_Np] = alpha*invJW*nu;
+              RHS[id+1*p_Np] = alpha*invJW*nv;
             }
           }
         }
@@ -452,8 +452,8 @@ void quadSurfaceTerms(int es, int face, int m, int i, int j,
 
             const dlong id = e*p_Np*p_NVfields + j*p_Nq + i;
 
-            RHS[id+0*p_Np] += alpha*invJW*s_NU[es][j][i];
-            RHS[id+1*p_Np] += alpha*invJW*s_NV[es][j][i];
+            RHS[id+0*p_Np] -= alpha*invJW*s_NU[es][j][i];
+            RHS[id+1*p_Np] -= alpha*invJW*s_NV[es][j][i];
           }
         }
       }

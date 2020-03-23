@@ -24,7 +24,7 @@ SOFTWARE.
 
 */
 
-// compute div(NU)  = div(uxu) in collocation way
+// compute NU = -div(uxu) in collocation way
 @kernel void insAdvectionVolumeTet3D(const dlong Nelements,
                                     @restrict const  dfloat *  vgeo,
                                     @restrict const  dfloat *  Dmatrices,
@@ -115,13 +115,13 @@ SOFTWARE.
           // Update
           const dlong id = e*p_Np*p_NVfields+n;
           if (beta!=0) {
-            RHS[id+0*p_Np] = beta*RHS[id+0*p_Np] + alpha*nu;
-            RHS[id+1*p_Np] = beta*RHS[id+1*p_Np] + alpha*nv;
-            RHS[id+2*p_Np] = beta*RHS[id+2*p_Np] + alpha*nw;
+            RHS[id+0*p_Np] = beta*RHS[id+0*p_Np] - alpha*nu;
+            RHS[id+1*p_Np] = beta*RHS[id+1*p_Np] - alpha*nv;
+            RHS[id+2*p_Np] = beta*RHS[id+2*p_Np] - alpha*nw;
           } else {
-            RHS[id+0*p_Np] = alpha*nu;
-            RHS[id+1*p_Np] = alpha*nv;
-            RHS[id+2*p_Np] = alpha*nw;
+            RHS[id+0*p_Np] = -alpha*nu;
+            RHS[id+1*p_Np] = -alpha*nv;
+            RHS[id+2*p_Np] = -alpha*nw;
           }
         }
       }
@@ -237,9 +237,9 @@ SOFTWARE.
               }
 
             const dlong id = e*p_Np*p_NVfields + n;
-            RHS[id+0*p_Np] += alpha*rhsnu;
-            RHS[id+1*p_Np] += alpha*rhsnv;
-            RHS[id+2*p_Np] += alpha*rhsnw;
+            RHS[id+0*p_Np] -= alpha*rhsnu;
+            RHS[id+1*p_Np] -= alpha*rhsnv;
+            RHS[id+2*p_Np] -= alpha*rhsnw;
           }
         }
       }

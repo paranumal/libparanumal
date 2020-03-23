@@ -24,7 +24,7 @@ SOFTWARE.
 
 */
 
-// compute div(NU)  = div(uxu) with cubature
+// compute NU = -div(uxu) with cubature
 @kernel void insAdvectionCubatureVolumeTri2D(const dlong Nelements,
                                             @restrict const  dfloat *  vgeo,
                                             @restrict const  dfloat *  cubvgeo,
@@ -34,7 +34,7 @@ SOFTWARE.
                                             const dfloat alpha,
                                             const dfloat beta,
                                             @restrict const  dfloat *  U,
-                                                  @restrict dfloat *  RHS){
+                                                   @restrict dfloat *  RHS){
 
   for(dlong eo=0;eo<Nelements;eo+=p_cubNblockV;@outer(0)){  // for all elements
 
@@ -117,11 +117,11 @@ SOFTWARE.
           // Update
           const dlong id = e*p_Np*p_NVfields+n;
           if (beta!=0.0) {
-            RHS[id+0*p_Np] = beta*RHS[id+0*p_Np] - alpha*nu; // note  change in sign
-            RHS[id+1*p_Np] = beta*RHS[id+1*p_Np] - alpha*nv;
+            RHS[id+0*p_Np] = beta*RHS[id+0*p_Np] + alpha*nu; // note  change in sign
+            RHS[id+1*p_Np] = beta*RHS[id+1*p_Np] + alpha*nv;
           } else {
-            RHS[id+0*p_Np] = -alpha*nu; // note  change in sign
-            RHS[id+1*p_Np] = -alpha*nv;
+            RHS[id+0*p_Np] = alpha*nu; // note  change in sign
+            RHS[id+1*p_Np] = alpha*nv;
           }
         }
       }
@@ -256,8 +256,8 @@ SOFTWARE.
             NVn += L*s_iFluxNy[es][m];
           }
 
-          RHS[id+0*p_Np] += alpha*NUn;
-          RHS[id+1*p_Np] += alpha*NVn;
+          RHS[id+0*p_Np] -= alpha*NUn;
+          RHS[id+1*p_Np] -= alpha*NVn;
         }
       }
     }

@@ -25,7 +25,7 @@ SOFTWARE.
 */
 
 
-// compute div(NU)  = div(uxu) in collocation way
+// compute NU = -div(uxu) in collocation way
 @kernel void insSubcycleAdvectionVolumeTet3D(const dlong Nelements,
                                    @restrict const  dfloat *  vgeo,
                                    @restrict const  dfloat *  Dmatrices,
@@ -123,9 +123,9 @@ SOFTWARE.
                       +Dtni*s_F33[es][i];
             }
 
-          RHS[id+0*p_Np] = fluxU;
-          RHS[id+1*p_Np] = fluxV;
-          RHS[id+2*p_Np] = fluxW;
+          RHS[id+0*p_Np] = -fluxU;
+          RHS[id+1*p_Np] = -fluxV;
+          RHS[id+2*p_Np] = -fluxW;
         }
       }
     }
@@ -255,9 +255,9 @@ SOFTWARE.
              }
             // M^-1* (div(u*u)) + Lift*(F*-F))
             const dlong id = e*p_Np*p_NVfields + n;
-            RHS[id+0*p_Np] += rhsu;
-            RHS[id+1*p_Np] += rhsv;
-            RHS[id+2*p_Np] += rhsw;
+            RHS[id+0*p_Np] -= rhsu;
+            RHS[id+1*p_Np] -= rhsv;
+            RHS[id+2*p_Np] -= rhsw;
           }
         }
       }

@@ -24,7 +24,7 @@ SOFTWARE.
 
 */
 
-// compute div(NU)  = div(uxu) using quadrature (weak form)
+// compute NU = -div(uxu) using quadrature (weak form)
 @kernel void insSubcycleAdvectionCubatureVolumeQuad2D(const dlong Nelements,
                                             @restrict const  dfloat *  vgeo,
                                             @restrict const  dfloat *  cubvgeo,
@@ -231,8 +231,8 @@ SOFTWARE.
               }
 
             const dlong id = e*p_Np*p_NVfields + j*p_Nq + i;
-            RHS[id+0*p_Np] = -invJW*nu;
-            RHS[id+1*p_Np] = -invJW*nv;
+            RHS[id+0*p_Np] = invJW*nu;
+            RHS[id+1*p_Np] = invJW*nv;
           }
         }
       }
@@ -465,8 +465,8 @@ SOFTWARE.
 
             const dlong id = e*p_Np*p_NVfields + j*p_Nq + i;
 
-            RHS[id+0*p_Np] += invJW*s_NU[es][j][i];
-            RHS[id+1*p_Np] += invJW*s_NV[es][j][i];
+            RHS[id+0*p_Np] -= invJW*s_NU[es][j][i];
+            RHS[id+1*p_Np] -= invJW*s_NV[es][j][i];
           }
         }
       }

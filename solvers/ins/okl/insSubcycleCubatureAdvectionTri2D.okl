@@ -216,8 +216,8 @@ SOFTWARE.
           const dlong e = eo+es*p_Nmt+em;
           if(e<Nelements){
             const dlong id = e*p_Np*p_NVfields+n;
-            RHS[id+0*p_Np]   = -fluxU[em]; // note  change in sign
-            RHS[id+1*p_Np]   = -fluxV[em];
+            RHS[id+0*p_Np] = fluxU[em]; // note  change in sign
+            RHS[id+1*p_Np] = fluxV[em];
           }
         }
       }
@@ -583,8 +583,8 @@ SOFTWARE.
             if(e<Nelements) {
               const dlong id = n + p_NVfields*p_Np*e;
               // prefemch volume rhs
-              RHS[id+0*p_Np] += r_iUM[em];
-              RHS[id+1*p_Np] += r_iVM[em];
+              RHS[id+0*p_Np] -= r_iUM[em];
+              RHS[id+1*p_Np] -= r_iVM[em];
             }
           }
         }

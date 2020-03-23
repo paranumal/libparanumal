@@ -24,7 +24,7 @@ SOFTWARE.
 
 */
 
-// compute div(NU)  = div(uxu) with cubature
+// compute NU = -div(uxu) with cubature
 @kernel void insAdvectionCubatureVolumeTet3D(const dlong Nelements,
                                             @restrict const  dfloat *  vgeo,
                                             @restrict const  dfloat *  cubvgeo,
@@ -144,13 +144,13 @@ SOFTWARE.
           // Update
           const dlong id = e*p_Np*p_NVfields+n;
           if (beta!=0.0) {
-            RHS[id+0*p_Np] = beta*RHS[id+0*p_Np] - alpha*nu; // note  change in sign
-            RHS[id+1*p_Np] = beta*RHS[id+1*p_Np] - alpha*nv;
-            RHS[id+2*p_Np] = beta*RHS[id+2*p_Np] - alpha*nw;
+            RHS[id+0*p_Np] = beta*RHS[id+0*p_Np] + alpha*nu; // note  change in sign
+            RHS[id+1*p_Np] = beta*RHS[id+1*p_Np] + alpha*nv;
+            RHS[id+2*p_Np] = beta*RHS[id+2*p_Np] + alpha*nw;
           } else {
-            RHS[id+0*p_Np] = - alpha*nu; // note  change in sign
-            RHS[id+1*p_Np] = - alpha*nv;
-            RHS[id+2*p_Np] = - alpha*nw;
+            RHS[id+0*p_Np] = alpha*nu; // note  change in sign
+            RHS[id+1*p_Np] = alpha*nv;
+            RHS[id+2*p_Np] = alpha*nw;
           }
         }
       }
@@ -309,9 +309,9 @@ SOFTWARE.
           }
 
           const dlong id = n + p_NVfields*p_Np*e;
-          RHS[id+0*p_Np] += alpha*NUn;
-          RHS[id+1*p_Np] += alpha*NVn;
-          RHS[id+2*p_Np] += alpha*NWn;
+          RHS[id+0*p_Np] -= alpha*NUn;
+          RHS[id+1*p_Np] -= alpha*NVn;
+          RHS[id+2*p_Np] -= alpha*NWn;
         }
       }
     }
