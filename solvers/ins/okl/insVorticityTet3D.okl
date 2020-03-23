@@ -24,56 +24,15 @@ SOFTWARE.
 
 */
 
-// Compute second largest eigenvalue of S^2 + Q^2 manually, ordered
-void eigenValue(const dfloat a11, const dfloat a12, const dfloat a13, const dfloat a22, const dfloat a23, const dfloat a33, 
-                  dfloat &eig1, dfloat &eig2, dfloat &eig3){
-  //
-  const dfloat TOL = 1.0e-16; 
-  const dfloat p1 = a12*a12 + a13*a13 + a23*a23; 
-  const dfloat q = (a11 + a22 + a33)/3.f; 
-
-  if (p1 < TOL){
-     // A is diagonal.
-     eig1 = min(min(a11, a22), a33); 
-     eig3 = max(max(a11, a22), a33);
-     eig2 = 3.f*q - (eig1 + eig3);
-  }else{
-     const dfloat p = sqrt( ( (a11-q)*(a11-q) + (a22-q)*(a22-q) + (a33-q)*(a33 - q) + 2.f*p1)/6.f);
-     // det(1/p*(A-qI))/2.0; 
-     const dfloat ip = 1.f/p; 
-     const dfloat r = 0.5f*ip*ip*ip*( (a11-q)*( (a22-q)*(a33-q) - a23*a23) 
-                                      - a12  *(  a12   *(a33-q) - a23*a13)   
-                                      + a13  *(  a12*a23        - (a22-q)*a13));
-
-     dfloat phi = 0.f;
-     // // r<= -1.0  r = pi/3;  r>= 1.0  r = 0; else r = acos(r)/3; 
-     // phi = (r<= -1.f) ? M_PI/3.f    : phi; 
-     // phi = (r <  1.f) ? acos(r)/3.f : phi; 
-     // 
-     if(r<=-1.0)
-      phi = M_PI/3.f;
-     else if(r>=1.0)
-      phi = 0.f;
-     else 
-      phi = acos(r)/3.f; 
-
-
-     eig1 = q + 2.f*p*cos(phi); 
-     eig3 = q + 2.f*p*cos(phi + (2.f*M_PI/3.f)); 
-     eig2 = 3.f*q -eig1-eig3;
-  } 
-}
-
 @kernel void insVorticityTet3D(const dlong Nelements,
-                                  @restrict const  dfloat *  vgeo,
-                                  @restrict const  dfloat *  const Dmatrices,
-                                  const dlong offset,
-                                  @restrict const  dfloat *  U,
-                                  @restrict dfloat *  Vort){  
-  
+                              @restrict const  dfloat *  vgeo,
+                              @restrict const  dfloat *  const Dmatrices,
+                              @restrict const  dfloat *  U,
+                                    @restrict  dfloat *  Vort){
+
   // block partition of elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
-    
+
     @shared dfloat s_u[p_NblockV][p_Np];
     @shared dfloat s_v[p_NblockV][p_Np];
     @shared dfloat s_w[p_NblockV][p_Np];
@@ -81,14 +40,14 @@ void eigenValue(const dfloat a11, const dfloat a12, const dfloat a13, const dflo
     for(int e=eo;e<eo+p_NblockV;++e;@inner(1)){
       for(int n=0;n<p_Np;++n;@inner(0)){
         if(e<Nelements){
-          const dlong id = e*p_Np+n;
-          s_u[e-eo][n] = U[id+0*offset];
-          s_v[e-eo][n] = U[id+1*offset];
-          s_w[e-eo][n] = U[id+2*offset];
+          const dlong id = e*p_Np*p_NVfields+n;
+          s_u[e-eo][n] = U[id+0*p_Np];
+          s_v[e-eo][n] = U[id+1*p_Np];
+          s_w[e-eo][n] = U[id+2*p_Np];
         }
       }
     }
-          
+
     @barrier("local");
 
     for(int e=eo;e<eo+p_NblockV;++e;@inner(1)){
@@ -104,7 +63,133 @@ void eigenValue(const dfloat a11, const dfloat a12, const dfloat a13, const dflo
           const dfloat dsdz = vgeo[gid + p_SZID];
           const dfloat dtdx = vgeo[gid + p_TXID];
           const dfloat dtdy = vgeo[gid + p_TYID];
-          const dfloat dtdz = vgeo[gid + p_TZID];    
+          const dfloat dtdz = vgeo[gid + p_TZID];
+
+          // compute 1D derivatives
+          dfloat ur = 0, vr = 0, wr =0;
+          dfloat us = 0, vs = 0, ws =0;
+          dfloat ut = 0, vt = 0, wt =0;
+
+          #pragma unroll p_Np
+            for(int i=0;i<p_Np;++i) {
+              const dfloat Drn = Dmatrices[n + i*p_Np+0*p_Np*p_Np];
+              const dfloat Dsn = Dmatrices[n + i*p_Np+1*p_Np*p_Np];
+              const dfloat Dtn = Dmatrices[n + i*p_Np+2*p_Np*p_Np];
+
+              ur += Drn*s_u[es][i];
+              us += Dsn*s_u[es][i];
+              ut += Dtn*s_u[es][i];
+
+              vr += Drn*s_v[es][i];
+              vs += Dsn*s_v[es][i];
+              vt += Dtn*s_v[es][i];
+
+              wr += Drn*s_w[es][i];
+              ws += Dsn*s_w[es][i];
+              wt += Dtn*s_w[es][i];
+            }
+
+          const dfloat uy = drdy*ur + dsdy*us + dtdy*ut;
+          const dfloat uz = drdz*ur + dsdz*us + dtdz*ut;
+
+          const dfloat vx = drdx*vr + dsdx*vs + dtdx*vt;
+          const dfloat vz = drdz*vr + dsdz*vs + dtdz*vt;
+
+          const dfloat wx = drdx*wr + dsdx*ws + dtdx*wt;
+          const dfloat wy = drdy*wr + dsdy*ws + dtdy*wt;
+
+          const dlong id = e*p_Np*p_NVfields+n;
+          Vort[id+0*p_Np] = wy-vz;
+          Vort[id+1*p_Np] = uz-wx;
+          Vort[id+2*p_Np] = vx-uy;
+        }
+      }
+    }
+  }
+}
+
+#if 0
+// Compute second largest eigenvalue of S^2 + Q^2 manually, ordered
+void eigenValue(const dfloat a11, const dfloat a12, const dfloat a13, const dfloat a22, const dfloat a23, const dfloat a33,
+                  dfloat &eig1, dfloat &eig2, dfloat &eig3){
+  //
+  const dfloat TOL = 1.0e-16;
+  const dfloat p1 = a12*a12 + a13*a13 + a23*a23;
+  const dfloat q = (a11 + a22 + a33)/3.f;
+
+  if (p1 < TOL){
+     // A is diagonal.
+     eig1 = min(min(a11, a22), a33);
+     eig3 = max(max(a11, a22), a33);
+     eig2 = 3.f*q - (eig1 + eig3);
+  }else{
+     const dfloat p = sqrt( ( (a11-q)*(a11-q) + (a22-q)*(a22-q) + (a33-q)*(a33 - q) + 2.f*p1)/6.f);
+     // det(1/p*(A-qI))/2.0;
+     const dfloat ip = 1.f/p;
+     const dfloat r = 0.5f*ip*ip*ip*( (a11-q)*( (a22-q)*(a33-q) - a23*a23)
+                                      - a12  *(  a12   *(a33-q) - a23*a13)
+                                      + a13  *(  a12*a23        - (a22-q)*a13));
+
+     dfloat phi = 0.f;
+     // // r<= -1.0  r = pi/3;  r>= 1.0  r = 0; else r = acos(r)/3;
+     // phi = (r<= -1.f) ? M_PI/3.f    : phi;
+     // phi = (r <  1.f) ? acos(r)/3.f : phi;
+     //
+     if(r<=-1.0)
+      phi = M_PI/3.f;
+     else if(r>=1.0)
+      phi = 0.f;
+     else
+      phi = acos(r)/3.f;
+
+
+     eig1 = q + 2.f*p*cos(phi);
+     eig3 = q + 2.f*p*cos(phi + (2.f*M_PI/3.f));
+     eig2 = 3.f*q -eig1-eig3;
+  }
+}
+
+@kernel void insVorticityTet3D(const dlong Nelements,
+                                  @restrict const  dfloat *  vgeo,
+                                  @restrict const  dfloat *  const Dmatrices,
+                                  const dlong offset,
+                                  @restrict const  dfloat *  U,
+                                  @restrict dfloat *  Vort){
+
+  // block partition of elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
+
+    @shared dfloat s_u[p_NblockV][p_Np];
+    @shared dfloat s_v[p_NblockV][p_Np];
+    @shared dfloat s_w[p_NblockV][p_Np];
+
+    for(int e=eo;e<eo+p_NblockV;++e;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
+        if(e<Nelements){
+          const dlong id = e*p_Np+n;
+          s_u[e-eo][n] = U[id+0*offset];
+          s_v[e-eo][n] = U[id+1*offset];
+          s_w[e-eo][n] = U[id+2*offset];
+        }
+      }
+    }
+
+    @barrier("local");
+
+    for(int e=eo;e<eo+p_NblockV;++e;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
+        if(e<Nelements){
+          const int es = e-eo;
+          const dlong gid = e*p_Nvgeo;
+          const dfloat drdx = vgeo[gid + p_RXID];
+          const dfloat drdy = vgeo[gid + p_RYID];
+          const dfloat drdz = vgeo[gid + p_RZID];
+          const dfloat dsdx = vgeo[gid + p_SXID];
+          const dfloat dsdy = vgeo[gid + p_SYID];
+          const dfloat dsdz = vgeo[gid + p_SZID];
+          const dfloat dtdx = vgeo[gid + p_TXID];
+          const dfloat dtdy = vgeo[gid + p_TYID];
+          const dfloat dtdz = vgeo[gid + p_TZID];
 
           // compute 1D derivatives
           dfloat ur = 0, vr = 0, wr =0;
@@ -144,131 +229,45 @@ void eigenValue(const dfloat a11, const dfloat a12, const dfloat a13, const dflo
           const dfloat wz = drdz*wr + dsdz*ws + dtdz*wt;
 
           // Compute symmetric stress tensor i.e S = 1/2(Ux + UxT)
-          const dfloat s11 = 0.5f*(ux + ux); 
-          const dfloat s12 = 0.5f*(uy + vx); 
+          const dfloat s11 = 0.5f*(ux + ux);
+          const dfloat s12 = 0.5f*(uy + vx);
           const dfloat s13 = 0.5f*(uz + wx);
-          const dfloat s22 = 0.5f*(vy + vy); 
+          const dfloat s22 = 0.5f*(vy + vy);
           const dfloat s23 = 0.5f*(vz + wy);
-          const dfloat s33 = 0.5f*(wz + wz); 
+          const dfloat s33 = 0.5f*(wz + wz);
           // Compute skew symmetric stress tensor i.e Q = 1/2(Ux - UxT)
-          const dfloat q12 = 0.5*(uy - vx); 
-          const dfloat q13 = 0.5*(uz - wx); 
-          const dfloat q23 = 0.5*(vz - wy);         
+          const dfloat q12 = 0.5*(uy - vx);
+          const dfloat q13 = 0.5*(uz - wx);
+          const dfloat q23 = 0.5*(vz - wy);
           // A = S^2 + Q^2
-          const dfloat a11 = - q12*q12 - q13*q13 + s11*s11 + s12*s12 + s13*s13; 
+          const dfloat a11 = - q12*q12 - q13*q13 + s11*s11 + s12*s12 + s13*s13;
           const dfloat a12 =   s11*s12 - q13*q23 + s12*s22 + s13*s23;
           const dfloat a13 =   q12*q23 + s11*s13 + s12*s23 + s13*s33;
-          const dfloat a22 = - q12*q12 - q23*q23 + s12*s12 + s22*s22 + s23*s23; 
+          const dfloat a22 = - q12*q12 - q23*q23 + s12*s12 + s22*s22 + s23*s23;
           const dfloat a23 =   s12*s13 - q12*q13 + s22*s23 + s23*s33;
-          const dfloat a33 = - q13*q13 - q23*q23 + s13*s13 + s23*s23 + s33*s33; 
+          const dfloat a33 = - q13*q13 - q23*q23 + s13*s13 + s23*s23 + s33*s33;
 
-          dfloat eig1 = 0.f; 
-          dfloat eig2 = 0.f; 
+          dfloat eig1 = 0.f;
+          dfloat eig2 = 0.f;
           dfloat eig3 = 0.f;
           //
           eigenValue(a11, a12, a13, a22, a23, a33, eig1, eig2, eig3);
 
           // Use compex eigenvalue definition
-          const dfloat detu = ux*( vy*wz - vz*wy) - uy*( vx*wz - wx*vz) + uz*(vx*wy - wx*vy); 
-          const dfloat qq = (-0.5*(eig1+eig2+eig3))/3.f; 
-          const dfloat rr = 0.5*(detu); 
+          const dfloat detu = ux*( vy*wz - vz*wy) - uy*( vx*wz - wx*vz) + uz*(vx*wy - wx*vy);
+          const dfloat qq = (-0.5*(eig1+eig2+eig3))/3.f;
+          const dfloat rr = 0.5*(detu);
 
           const dlong id = e*p_Np+n;
-          // first field Vorticity according to lamda2; 
+          // first field Vorticity according to lamda2;
           Vort[id+0*offset] = -eig2;
           // second is  vorticity magnitude
           Vort[id+1*offset] = sqrt((wy-vz)*(wy-vz) + (uz-wx)*(uz-wx) + (vx-uy)*(vx-uy));
-          // third is 
+          // third is
           Vort[id+2*offset] = qq*qq*qq + rr*rr;
         }
       }
     }
   }
 }
-
-
-// Just computes vorrticitiy magnitude
-@kernel void insVorticityTet3D_V2(const dlong Nelements,
-                              @restrict const  dfloat *  vgeo,
-                              @restrict const  dfloat *  const Dmatrices,
-                              const dlong offset,
-                              @restrict const  dfloat *  U,
-                                    @restrict dfloat *  Vort){  
-  
-  // block partition of elements
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
-    
-    @shared dfloat s_u[p_NblockV][p_Np];
-    @shared dfloat s_v[p_NblockV][p_Np];
-    @shared dfloat s_w[p_NblockV][p_Np];
-
-    for(int e=eo;e<eo+p_NblockV;++e;@inner(1)){
-      for(int n=0;n<p_Np;++n;@inner(0)){
-        if(e<Nelements){
-          const dlong id = e*p_Np+n;
-          s_u[e-eo][n] = U[id+0*offset];
-          s_v[e-eo][n] = U[id+1*offset];
-          s_w[e-eo][n] = U[id+2*offset];
-        }
-      }
-    }
-          
-    @barrier("local");
-
-    for(int e=eo;e<eo+p_NblockV;++e;@inner(1)){
-      for(int n=0;n<p_Np;++n;@inner(0)){
-        if(e<Nelements){
-          const int es = e-eo;
-          const dlong gid = e*p_Nvgeo;
-          const dfloat drdx = vgeo[gid + p_RXID];
-          const dfloat drdy = vgeo[gid + p_RYID];
-          const dfloat drdz = vgeo[gid + p_RZID];
-          const dfloat dsdx = vgeo[gid + p_SXID];
-          const dfloat dsdy = vgeo[gid + p_SYID];
-          const dfloat dsdz = vgeo[gid + p_SZID];
-          const dfloat dtdx = vgeo[gid + p_TXID];
-          const dfloat dtdy = vgeo[gid + p_TYID];
-          const dfloat dtdz = vgeo[gid + p_TZID];    
-
-          // compute 1D derivatives
-          dfloat ur = 0, vr = 0, wr =0;
-          dfloat us = 0, vs = 0, ws =0;
-          dfloat ut = 0, vt = 0, wt =0;
-
-          #pragma unroll p_Np
-            for(int i=0;i<p_Np;++i) {
-              const dfloat Drn = Dmatrices[n + i*p_Np+0*p_Np*p_Np];
-              const dfloat Dsn = Dmatrices[n + i*p_Np+1*p_Np*p_Np];
-              const dfloat Dtn = Dmatrices[n + i*p_Np+2*p_Np*p_Np];
-
-              ur += Drn*s_u[es][i];
-              us += Dsn*s_u[es][i];
-              ut += Dtn*s_u[es][i];
-
-              vr += Drn*s_v[es][i];
-              vs += Dsn*s_v[es][i];
-              vt += Dtn*s_v[es][i];
-
-              wr += Drn*s_w[es][i];
-              ws += Dsn*s_w[es][i];
-              wt += Dtn*s_w[es][i];
-            }
-
-          const dfloat uy = drdy*ur + dsdy*us + dtdy*ut;
-          const dfloat uz = drdz*ur + dsdz*us + dtdz*ut;
-
-          const dfloat vx = drdx*vr + dsdx*vs + dtdx*vt;
-          const dfloat vz = drdz*vr + dsdz*vs + dtdz*vt;
-
-          const dfloat wx = drdx*wr + dsdx*ws + dtdx*wt;
-          const dfloat wy = drdy*wr + dsdy*ws + dtdy*wt;
-
-          const dlong id = e*p_Np+n; 
-          Vort[id+0*offset] = wy-vz;
-          Vort[id+1*offset] = uz-wx;
-          Vort[id+2*offset] = vx-uy;
-        }
-      }
-    }
-  }
-}
+#endif

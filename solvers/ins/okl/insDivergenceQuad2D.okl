@@ -24,13 +24,14 @@ SOFTWARE.
 
 */
 
-// Compute Gradient in Strong Form
+// Computes volume contribution of div(UI)
 @kernel void insDivergenceVolumeQuad2D(const dlong Nelements,
                                       @restrict const  dfloat *  vgeo,
                                       @restrict const  dfloat *  D,
-                                      const dlong offset,
+                                      const dfloat alpha,
+                                      const dfloat beta,
                                       @restrict const  dfloat *  U,
-                                            @restrict dfloat *  divU){
+                                            @restrict  dfloat *  RHS){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
@@ -38,16 +39,16 @@ SOFTWARE.
     @shared dfloat s_V[p_NblockV][p_Nq][p_Nq];
     @shared dfloat s_D[p_Nq][p_Nq];
 
-    for(int es=0;es<p_NblockV;++es;@inner(2)){   
-      for(int j=0;j<p_Nq;++j;@inner(1)){ 
-        for(int i=0;i<p_Nq;++i;@inner(0)){    
+    for(int es=0;es<p_NblockV;++es;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           const dlong e = eo+es; // element in block
-          if(e<Nelements){ 
-            const dlong id = e*p_Np + j*p_Nq+i;
-            
-            s_U[es][j][i] = U[id+0*offset];
-            s_V[es][j][i] = U[id+1*offset];
-      
+          if(e<Nelements){
+            const dlong id = e*p_Np*p_NVfields + j*p_Nq+i;
+
+            s_U[es][j][i] = U[id+0*p_Np];
+            s_V[es][j][i] = U[id+1*p_Np];
+
             if (es==0)
               s_D[j][i] = D[j*p_Nq+i];
           }
@@ -58,11 +59,11 @@ SOFTWARE.
     // Make sure all node data is loaded into @shared
     @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;@inner(2)){ 
-      for(int j=0;j<p_Nq;++j;@inner(1)){ 
-        for(int i=0;i<p_Nq;++i;@inner(0)){  
-          const dlong e = eo+es; 
-          if(e<Nelements){ 
+    for(int es=0;es<p_NblockV;++es;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
+          const dlong e = eo+es;
+          if(e<Nelements){
             const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
             const dfloat drdx = vgeo[gid + p_RXID*p_Np];
             const dfloat drdy = vgeo[gid + p_RYID*p_Np];
@@ -87,12 +88,16 @@ SOFTWARE.
             const dfloat dUdx = drdx*dUdr + dsdx*dUds;
             const dfloat dVdy = drdy*dVdr + dsdy*dVds;
 
-            divU[id] = dUdx + dVdy;
+            if (beta!=0.0) {
+              RHS[id] = beta*RHS[id] + alpha*(dUdx + dVdy);
+            } else {
+              RHS[id] = alpha*(dUdx + dVdy);
+            }
           }
         }
       }
     }
-  }  
+  }
 }
 
 
@@ -106,12 +111,20 @@ SOFTWARE.
   const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];                            \
   const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];                        \
                                                                         \
-  const dfloat uM = U[idM+0*offset], vM = U[idM+1*offset];              \
-        dfloat uP = U[idP+0*offset], vP = U[idP+1*offset];              \
+  const dlong eM = e;                                                   \
+  const dlong eP = idP/p_Np;                                            \
+  const int vidM = idM%p_Np;                                            \
+  const int vidP = idP%p_Np;                                            \
+                                                                        \
+  const dlong qbaseM = eM*p_Np*p_NVfields + vidM;                       \
+  const dlong qbaseP = eP*p_Np*p_NVfields + vidP;                       \
+                                                                        \
+  const dfloat uM = U[qbaseM+0*p_Np], vM = U[qbaseM+1*p_Np];            \
+        dfloat uP = U[qbaseP+0*p_Np], vP = U[qbaseP+1*p_Np];            \
                                                                         \
   const int bc = EToB[face+p_Nfaces*e];                                 \
   if(bc>0) {                                                            \
-    insVelocityDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);\
+    insVelocityDirichletConditions2D(bc, nu, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);\
     uP = 2.f*uP-uM;                                                     \
     vP = 2.f*vP-vM;                                                     \
   }                                                                     \
@@ -130,9 +143,10 @@ SOFTWARE.
                                        @restrict const  dfloat *  x,
                                        @restrict const  dfloat *  y,
                                        @restrict const  dfloat *  z,
-                                       const dlong offset,
+                                       const dfloat nu,
+                                       const dfloat alpha,
                                        @restrict const  dfloat *  U,
-                                             @restrict dfloat *  divU){
+                                             @restrict  dfloat *  RHS){
 
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
@@ -189,7 +203,7 @@ SOFTWARE.
           const dlong e = eo + es;
           if(e<Nelements){
             const dlong id = e*p_Np + j*p_Nq + i;
-            divU[id] += s_fluxU[es][j][i];
+            RHS[id] += alpha*s_fluxU[es][j][i];
           }
         }
       }

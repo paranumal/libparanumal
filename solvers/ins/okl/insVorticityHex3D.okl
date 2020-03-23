@@ -24,48 +24,131 @@ SOFTWARE.
 
 */
 
+@kernel void insVorticityHex3D(const dlong Nelements,
+                                     @restrict const  dfloat *  vgeo,
+                                     @restrict const  dfloat *  D,
+                                     @restrict const  dfloat *  U,
+                                           @restrict  dfloat *  Vort){
+
+
+  for(dlong e=0;e<Nelements;e++;@outer(0)){  // for all elements
+
+    @shared dfloat s_U[p_Nq][p_Nq][p_Nq];
+    @shared dfloat s_V[p_Nq][p_Nq][p_Nq];
+    @shared dfloat s_W[p_Nq][p_Nq][p_Nq];
+
+    @shared dfloat s_D[p_Nq][p_Nq];
+
+    for(int k=0;k<p_Nq;++k;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
+          const dlong id = e*p_Np*p_NVfields + k*p_Nq*p_Nq + j*p_Nq+i;
+
+          s_U[k][j][i]  = U[id + 0*p_Np];
+          s_V[k][j][i]  = U[id + 1*p_Np];
+          s_W[k][j][i]  = U[id + 2*p_Np];
+
+          if (k==0)
+            s_D[j][i] = D[j*p_Nq+i];
+        }
+      }
+    }
+
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
+
+    for(int k=0;k<p_Nq;++k;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
+          const dlong gid = e*p_Np*p_Nvgeo +k*p_Nq*p_Nq +j*p_Nq +i;
+          const dfloat drdx = vgeo[gid + p_RXID*p_Np];
+          const dfloat drdy = vgeo[gid + p_RYID*p_Np];
+          const dfloat drdz = vgeo[gid + p_RZID*p_Np];
+          const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
+          const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
+          const dfloat dsdz = vgeo[gid + p_SZID*p_Np];
+          const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
+          const dfloat dtdy = vgeo[gid + p_TYID*p_Np];
+          const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
+
+          // compute 'r' and 's' derivatives of (q_m) at node n
+          dfloat dudr  = 0.f, duds  = 0.f, dudt  = 0.f;
+          dfloat dvdr  = 0.f, dvds  = 0.f, dvdt  = 0.f;
+          dfloat dwdr  = 0.f, dwds  = 0.f, dwdt  = 0.f;
+
+          #pragma unroll p_Nq
+            for(int n=0;n<p_Nq;++n){
+              const dfloat Dr = s_D[i][n];
+              const dfloat Ds = s_D[j][n];
+              const dfloat Dt = s_D[k][n];
+
+              dudr += Dr*s_U[k][j][n];
+              duds += Ds*s_U[k][n][i];
+              dudt += Dt*s_U[n][j][i];
+
+              dvdr += Dr*s_V[k][j][n];
+              dvds += Ds*s_V[k][n][i];
+              dvdt += Dt*s_V[n][j][i];
+
+              dwdr += Dr*s_W[k][j][n];
+              dwds += Ds*s_W[k][n][i];
+              dwdt += Dt*s_W[n][j][i];
+
+            }
+
+          const dlong id = e*p_Np*p_NVfields + k*p_Nq*p_Nq + j*p_Nq + i;
+          Vort[id+0*p_Np] = (drdy*dwdr + dsdy*dwds + dtdy*dwdt) - (drdz*dvdr + dsdz*dvds + dtdz*dvdt);
+          Vort[id+1*p_Np] = (drdz*dudr + dsdz*duds + dtdz*dudt) - (drdx*dwdr + dsdx*dwds + dtdx*dwdt);
+          Vort[id+2*p_Np] = (drdx*dvdr + dsdx*dvds + dtdx*dvdt) - (drdy*dudr + dsdy*duds + dtdy*dudt);
+        }
+      }
+    }
+  }
+}
+
+#if 0
 // Compute second largest eigenvalue of S^2 + Q^2 manually, ordered
-void eigenValue(const dfloat a11, const dfloat a12, const dfloat a13, 
-                const dfloat a22, const dfloat a23, const dfloat a33, 
+void eigenValue(const dfloat a11, const dfloat a12, const dfloat a13,
+                const dfloat a22, const dfloat a23, const dfloat a33,
                 dfloat &eig1, dfloat &eig2, dfloat &eig3){
 //
-const dfloat TOL = 1.0e-16; 
-const dfloat p1 = a12*a12 + a13*a13 + a23*a23; 
-const dfloat q = (a11 + a22 + a33)/3.f; 
+const dfloat TOL = 1.0e-16;
+const dfloat p1 = a12*a12 + a13*a13 + a23*a23;
+const dfloat q = (a11 + a22 + a33)/3.f;
 
 if (p1 < TOL){
    // A is diagonal.
-   eig1 = min(min(a11, a22), a33); 
+   eig1 = min(min(a11, a22), a33);
    eig3 = max(max(a11, a22), a33);
    eig2 = 3.f*q - (eig1 + eig3);
 }else{
    const dfloat p = sqrt( ( (a11-q)*(a11-q) + (a22-q)*(a22-q) + (a33-q)*(a33 - q) + 2.f*p1)/6.f);
-   // det(1/p*(A-qI))/2.0; 
-   const dfloat ip = 1.f/p; 
-   const dfloat r = 0.5f*ip*ip*ip*( (a11-q)*( (a22-q)*(a33-q) - a23*a23) 
-                                    - a12  *(  a12   *(a33-q) - a23*a13)   
+   // det(1/p*(A-qI))/2.0;
+   const dfloat ip = 1.f/p;
+   const dfloat r = 0.5f*ip*ip*ip*( (a11-q)*( (a22-q)*(a33-q) - a23*a23)
+                                    - a12  *(  a12   *(a33-q) - a23*a13)
                                     + a13  *(  a12*a23        - (a22-q)*a13));
 
    dfloat phi = 0.f;
-   // r<= -1.0  r = pi/3;  r>= 1.0  r = 0; else r = acos(r)/3; 
+   // r<= -1.0  r = pi/3;  r>= 1.0  r = 0; else r = acos(r)/3;
    if(r<=-1.0)
     phi = M_PI/3.f;
    else if(r>=1.0)
     phi = 0.f;
-   else 
-    phi = acos(r)/3.f; 
+   else
+    phi = acos(r)/3.f;
 
 
-   phi = (r<= -1.f) ? M_PI/3.f    : phi; 
-   phi = (r <  1.f) ? acos(r)/3.f : phi; 
+   phi = (r<= -1.f) ? M_PI/3.f    : phi;
+   phi = (r <  1.f) ? acos(r)/3.f : phi;
    //
-   eig1 = q + 2.f*p*cos(phi); 
-   eig3 = q + 2.f*p*cos(phi + (2.f*M_PI/3.f)); 
+   eig1 = q + 2.f*p*cos(phi);
+   eig3 = q + 2.f*p*cos(phi + (2.f*M_PI/3.f));
    eig2 = 3.f*q -eig1-eig3;
-} 
+}
 }
 
-// A very bad implementation for fast testing: AK 
+// A very bad implementation for fast testing: AK
 @kernel void insVorticityHex3D(const dlong Nelements,
                                      @restrict const  dfloat *  vgeo,
                                      @restrict const  dfloat *  D,
@@ -82,9 +165,9 @@ if (p1 < TOL){
 
     @shared dfloat s_D[p_Nq][p_Nq];
 
-    for(int k=0;k<p_Nq;++k;@inner(2)){ 
-      for(int j=0;j<p_Nq;++j;@inner(1)){ 
-        for(int i=0;i<p_Nq;++i;@inner(0)){    
+    for(int k=0;k<p_Nq;++k;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq+i;
 
           s_U[k][j][i]  = U[id + 0*offset];
@@ -100,9 +183,9 @@ if (p1 < TOL){
     // Make sure all node data is loaded into @shared
     @barrier("local");
 
-    for(int k=0;k<p_Nq;++k;@inner(2)){ 
-      for(int j=0;j<p_Nq;++j;@inner(1)){ 
-        for(int i=0;i<p_Nq;++i;@inner(0)){  
+    for(int k=0;k<p_Nq;++k;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           const dlong gid = e*p_Np*p_Nvgeo +k*p_Nq*p_Nq +j*p_Nq +i;
           const dfloat drdx = vgeo[gid + p_RXID*p_Np];
           const dfloat drdy = vgeo[gid + p_RYID*p_Np];
@@ -154,45 +237,45 @@ if (p1 < TOL){
 #if 0
 
           // Compute symmetric stress tensor i.e S = 1/2(Ux + UxT)
-          const dfloat s11 = 0.5f*(ux + ux); 
-          const dfloat s12 = 0.5f*(uy + vx); 
+          const dfloat s11 = 0.5f*(ux + ux);
+          const dfloat s12 = 0.5f*(uy + vx);
           const dfloat s13 = 0.5f*(uz + wx);
-          const dfloat s22 = 0.5f*(vy + vy); 
+          const dfloat s22 = 0.5f*(vy + vy);
           const dfloat s23 = 0.5f*(vz + wy);
-          const dfloat s33 = 0.5f*(wz + wz); 
+          const dfloat s33 = 0.5f*(wz + wz);
           // Compute skew symmetric stress tensor i.e Q = 1/2(Ux - UxT)
-          const dfloat q12 = 0.5*(uy - vx); 
-          const dfloat q13 = 0.5*(uz - wx); 
-          const dfloat q23 = 0.5*(vz - wy);         
+          const dfloat q12 = 0.5*(uy - vx);
+          const dfloat q13 = 0.5*(uz - wx);
+          const dfloat q23 = 0.5*(vz - wy);
           // A = S^2 + Q^2
-          const dfloat a11 = - q12*q12 - q13*q13 + s11*s11 + s12*s12 + s13*s13; 
+          const dfloat a11 = - q12*q12 - q13*q13 + s11*s11 + s12*s12 + s13*s13;
           const dfloat a12 =   s11*s12 - q13*q23 + s12*s22 + s13*s23;
           const dfloat a13 =   q12*q23 + s11*s13 + s12*s23 + s13*s33;
-          const dfloat a22 = - q12*q12 - q23*q23 + s12*s12 + s22*s22 + s23*s23; 
+          const dfloat a22 = - q12*q12 - q23*q23 + s12*s12 + s22*s22 + s23*s23;
           const dfloat a23 =   s12*s13 - q12*q13 + s22*s23 + s23*s33;
-          const dfloat a33 = - q13*q13 - q23*q23 + s13*s13 + s23*s23 + s33*s33; 
+          const dfloat a33 = - q13*q13 - q23*q23 + s13*s13 + s23*s23 + s33*s33;
 
-          dfloat eig1 = 0.f; 
-          dfloat eig2 = 0.f; 
+          dfloat eig1 = 0.f;
+          dfloat eig2 = 0.f;
           dfloat eig3 = 0.f;
           //
           eigenValue(a11, a12, a13, a22, a23, a33, eig1, eig2, eig3);
 
           // Use compex eigenvalue definition
-          const dfloat detu = ux*( vy*wz - vz*wy) - uy*( vx*wz - wx*vz) + uz*(vx*wy - wx*vy); 
-          const dfloat qq = (-0.5*(eig1+eig2+eig3))/3.f; 
-          const dfloat rr = 0.5*(detu); 
+          const dfloat detu = ux*( vy*wz - vz*wy) - uy*( vx*wz - wx*vz) + uz*(vx*wy - wx*vy);
+          const dfloat qq = (-0.5*(eig1+eig2+eig3))/3.f;
+          const dfloat rr = 0.5*(detu);
 
 #endif
           const dfloat vortx = (drdy*dwdr + dsdy*dwds + dtdy*dwdt) - (drdz*dvdr + dsdz*dvds + dtdz*dvdt);
           const dfloat vorty = (drdz*dudr + dsdz*duds + dtdz*dudt) - (drdx*dwdr + dsdx*dwds + dtdx*dwdt);
           const dfloat vortz = (drdx*dvdr + dsdx*dvds + dtdx*dvdt) - (drdy*dudr + dsdy*duds + dtdy*dudt);
-          
+
           const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
 #if 0
-          Vort[id+0*offset] = -eig2; 
-          Vort[id+1*offset] = sqrt( vortx*vortx + vorty*vorty + vortz*vortz); 
+          Vort[id+0*offset] = -eig2;
+          Vort[id+1*offset] = sqrt( vortx*vortx + vorty*vorty + vortz*vortz);
           Vort[id+2*offset] = qq*qq*qq + rr*rr;
 #else
 	  Vort[id+0*offset] = vortx;
@@ -204,393 +287,6 @@ if (p1 < TOL){
         }
       }
     }
-  }  
-}
-
-
-
-
-
-// Just computes the vorticity Mag 
-@kernel void insVorticityHex3D_V2(const dlong Nelements,
-                                     @restrict const  dfloat *  vgeo,
-                                     @restrict const  dfloat *  D,
-                                     const dlong offset,
-                                     @restrict const  dfloat *  U,
-                                           @restrict dfloat *  Vort){
-
-
-  for(dlong e=0;e<Nelements;e++;@outer(0)){  // for all elements
-
-    @shared dfloat s_U[p_Nq][p_Nq][p_Nq];
-    @shared dfloat s_V[p_Nq][p_Nq][p_Nq];
-    @shared dfloat s_W[p_Nq][p_Nq][p_Nq];
-
-    @shared dfloat s_D[p_Nq][p_Nq];
-
-    for(int k=0;k<p_Nq;++k;@inner(2)){ 
-      for(int j=0;j<p_Nq;++j;@inner(1)){ 
-        for(int i=0;i<p_Nq;++i;@inner(0)){    
-          const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq+i;
-
-          s_U[k][j][i]  = U[id + 0*offset];
-          s_V[k][j][i]  = U[id + 1*offset];
-          s_W[k][j][i]  = U[id + 2*offset];
-
-          if (k==0)
-            s_D[j][i] = D[j*p_Nq+i];
-        }
-      }
-    }
-
-    // Make sure all node data is loaded into @shared
-    @barrier("local");
-
-    for(int k=0;k<p_Nq;++k;@inner(2)){ 
-      for(int j=0;j<p_Nq;++j;@inner(1)){ 
-        for(int i=0;i<p_Nq;++i;@inner(0)){  
-          const dlong gid = e*p_Np*p_Nvgeo +k*p_Nq*p_Nq +j*p_Nq +i;
-          const dfloat drdx = vgeo[gid + p_RXID*p_Np];
-          const dfloat drdy = vgeo[gid + p_RYID*p_Np];
-          const dfloat drdz = vgeo[gid + p_RZID*p_Np];
-          const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
-          const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
-          const dfloat dsdz = vgeo[gid + p_SZID*p_Np];
-          const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
-          const dfloat dtdy = vgeo[gid + p_TYID*p_Np];
-          const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
-
-          // compute 'r' and 's' derivatives of (q_m) at node n
-          dfloat dudr  = 0.f, duds  = 0.f, dudt  = 0.f;
-          dfloat dvdr  = 0.f, dvds  = 0.f, dvdt  = 0.f;
-          dfloat dwdr  = 0.f, dwds  = 0.f, dwdt  = 0.f;
-
-          #pragma unroll p_Nq
-            for(int n=0;n<p_Nq;++n){
-              const dfloat Dr = s_D[i][n];
-              const dfloat Ds = s_D[j][n];
-              const dfloat Dt = s_D[k][n];
-
-              dudr += Dr*s_U[k][j][n];
-              duds += Ds*s_U[k][n][i];
-              dudt += Dt*s_U[n][j][i];
-
-              dvdr += Dr*s_V[k][j][n];
-              dvds += Ds*s_V[k][n][i];
-              dvdt += Dt*s_V[n][j][i];
-
-              dwdr += Dr*s_W[k][j][n];
-              dwds += Ds*s_W[k][n][i];
-              dwdt += Dt*s_W[n][j][i];
-
-            }
-
-          const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-          Vort[id+0*offset] = (drdy*dwdr + dsdy*dwds + dtdy*dwdt) - (drdz*dvdr + dsdz*dvds + dtdz*dvdt);
-          Vort[id+1*offset] = (drdz*dudr + dsdz*duds + dtdz*dudt) - (drdx*dwdr + dsdx*dwds + dtdx*dwdt);
-          Vort[id+2*offset] = (drdx*dvdr + dsdx*dvds + dtdx*dvdt) - (drdy*dudr + dsdy*duds + dtdy*dudt);
-        }
-      }
-    }
-  }  
-}
-
-
-// compute div(NU)  = div(uxu) in collocation way (weak form)
-@kernel void insVorticityVolumeHex3D(const dlong Nelements,
-                                     @restrict const  dfloat *  vgeo,
-                                     @restrict const  dfloat *  D,
-                                     const dlong offset,
-                                     @restrict const  dfloat *  U,
-                                           @restrict dfloat *  Vort){
-
-  for(dlong e=0; e<Nelements; ++e; @outer(0)) {
-
-    @shared dfloat s_F11[p_Nq][p_Nq];
-    @shared dfloat s_F12[p_Nq][p_Nq];
-    @shared dfloat s_F13[p_Nq][p_Nq];
-    @shared dfloat s_F21[p_Nq][p_Nq];
-    @shared dfloat s_F22[p_Nq][p_Nq];
-    @shared dfloat s_F23[p_Nq][p_Nq];
-    @shared dfloat s_F31[p_Nq][p_Nq];
-    @shared dfloat s_F32[p_Nq][p_Nq];
-    @shared dfloat s_F33[p_Nq][p_Nq];
-
-    @shared dfloat s_D[p_Nq][p_Nq];
-
-    @exclusive dfloat r_Vx[p_Nq], r_Vy[p_Nq], r_Vz[p_Nq];
-
-    for(int j=0;j<p_Nq;++j;@inner(1)){ 
-      for(int i=0;i<p_Nq;++i;@inner(0)){
-        const int id = i+j*p_Nq;
-        s_D[0][id] = D[id];
-
-        #pragma unroll p_Nq
-          for(int k=0;k<p_Nq;++k){         
-            r_Vx[k] = 0.;
-            r_Vy[k] = 0.;
-            r_Vz[k] = 0.;
-          }
-      }
-    }
-
-    @barrier("local");
-
-    #pragma unroll p_Nq
-    for(int k=0;k<p_Nq;++k){ 
-
-      //fetch slice
-      for(int j=0;j<p_Nq;++j;@inner(1)){ 
-        for(int i=0;i<p_Nq;++i;@inner(0)){
-          const dlong gid = e*p_Np*p_Nvgeo+ k*p_Nq*p_Nq + j*p_Nq +i;
-          const dfloat drdx = vgeo[gid + p_RXID*p_Np];
-          const dfloat drdy = vgeo[gid + p_RYID*p_Np];
-          const dfloat drdz = vgeo[gid + p_RZID*p_Np];
-          const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
-          const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
-          const dfloat dsdz = vgeo[gid + p_SZID*p_Np];
-          const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
-          const dfloat dtdy = vgeo[gid + p_TYID*p_Np];
-          const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
-          const dfloat JW   = vgeo[gid + p_JWID*p_Np];
-
-          const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-          const dfloat Un = U[id+0*offset];
-          const dfloat Vn = U[id+1*offset];
-          const dfloat Wn = U[id+2*offset];
-
-          s_F11[j][i] = JW*( drdy*Wn-drdz*Vn);
-          s_F12[j][i] = JW*( dsdy*Wn-dsdz*Vn);
-          s_F13[j][i] = JW*( dtdy*Wn-dtdz*Vn);
-          s_F21[j][i] = JW*( drdz*Un-drdx*Wn);
-          s_F22[j][i] = JW*( dsdz*Un-dsdx*Wn);
-          s_F23[j][i] = JW*( dtdz*Un-dtdx*Wn);
-          s_F31[j][i] = JW*( drdx*Vn-drdy*Un);
-          s_F32[j][i] = JW*( dsdx*Vn-dsdy*Un);
-          s_F33[j][i] = JW*( dtdx*Vn-dtdy*Un);
-        }
-      }
-
-      @barrier("local");
-
-      for(int j=0;j<p_Nq;++j;@inner(1)){ 
-        for(int i=0;i<p_Nq;++i;@inner(0)){
-          #pragma unroll p_Nq
-            for (int n=0;n<p_Nq;n++) {
-              const dfloat Dr = s_D[n][i];
-              const dfloat Ds = s_D[n][j];
-              const dfloat Dt = s_D[k][n];
-              r_Vx[k] += Dr*s_F11[j][n];
-              r_Vy[k] += Dr*s_F21[j][n];
-              r_Vz[k] += Dr*s_F31[j][n];
-
-              r_Vx[k] += Ds*s_F12[n][i];
-              r_Vy[k] += Ds*s_F22[n][i];
-              r_Vz[k] += Ds*s_F32[n][i];
-
-              r_Vx[n] += Dt*s_F13[j][i];
-              r_Vy[n] += Dt*s_F23[j][i];
-              r_Vz[n] += Dt*s_F33[j][i];
-            }
-        }
-      }
-
-      @barrier("local");
-    } //k loop
-
-    //write out
-    for(int j=0;j<p_Nq;++j;@inner(1)){ 
-      for(int i=0;i<p_Nq;++i;@inner(0)){
-        #pragma unroll p_Nq
-          for(int k=0;k<p_Nq;++k){
-            const dlong gid = e*p_Np*p_Nvgeo+ k*p_Nq*p_Nq + j*p_Nq +i;
-            const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
-
-            const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-            Vort[id+0*offset] = -invJW*r_Vx[k];  //sign 
-            Vort[id+1*offset] = -invJW*r_Vy[k];  //sign 
-            Vort[id+2*offset] = -invJW*r_Vz[k];  //sign 
-          }
-      }
-    }
   }
 }
-
-
-#define surfaceTerms(sk,face,m, i, j)                                   \
-{                                                                       \
-  const dlong  idM = vmapM[sk];                                         \
-  const dlong  idP = vmapP[sk];                                         \
-                                                                        \
-  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
-  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
-  const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];                            \
-  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];                            \
-  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];                        \
-                                                                        \
-  const dfloat uM = U[idM+0*offset], vM = U[idM+1*offset], wM = U[idM+2*offset];\
-        dfloat uP = U[idP+0*offset], vP = U[idP+1*offset], wP = U[idP+2*offset];\
-                                                                        \
-  const int bc = EToB[face+p_Nfaces*e];                                 \
-  if(bc>0) {                                                            \
-    insVelocityDirichletConditions3D(bc, time, x[vmapM[sk]], y[vmapM[sk]], z[vmapM[sk]], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP); \
-    uP = 2.f*uP-uM;                                                     \
-    vP = 2.f*vP-vM;                                                     \
-    wP = 2.f*wP-wM;                                                     \
-  }                                                                     \
-                                                                        \
-  const dfloat sc = invWJ * sJ;                                         \
-  s_fluxVx[m][j][i] = sc*(.5f*( ny*(wP + wM) - nz*(vP + vM) ));         \
-  s_fluxVy[m][j][i] = sc*(.5f*( nz*(uP + uM) - nx*(wP + wM) ));         \
-  s_fluxVz[m][j][i] = sc*(.5f*( nx*(vP + vM) - ny*(uP + uM) ));         \
-}
-
-@kernel void insVorticitySurfaceHex3D(const dlong Nelements,
-                                      @restrict const  dfloat *  sgeo,
-                                      @restrict const  dlong  *  vmapM,
-                                      @restrict const  dlong  *  vmapP,
-                                      @restrict const  int    *  EToB,
-                                      const dfloat time,
-                                      @restrict const  dfloat *  x,
-                                      @restrict const  dfloat *  y,
-                                      @restrict const  dfloat *  z,
-                                      const dlong offset,
-                                      @restrict const  dfloat *  U,
-                                            @restrict dfloat *  Vort){
-
-  // for all elements
-  for(dlong e=0;e<Nelements;e++;@outer(0)){
-    // @shared storage for flux terms
-    @shared dfloat s_fluxVx[2][p_Nq][p_Nq];
-    @shared dfloat s_fluxVy[2][p_Nq][p_Nq];
-    @shared dfloat s_fluxVz[2][p_Nq][p_Nq];
-
-    @exclusive dfloat r_Vx[p_Nq], r_Vy[p_Nq], r_Vz[p_Nq];
-
-    // for all face nodes of all elements
-    // face 0 & 5
-    for(int j=0;j<p_Nq;++j;@inner(1)){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
-        #pragma unroll p_Nq
-        for(int k=0;k<p_Nq;++k){
-          r_Vx[k] = 0.;
-          r_Vy[k] = 0.;
-          r_Vz[k] = 0.;
-        }
-
-        const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i + j*p_Nq;
-        const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + i + j*p_Nq;
-
-        surfaceTerms(sk0,0,0,i,j);
-        surfaceTerms(sk5,5,1,i,j);
-      }
-    }
-
-    @barrier("local");
-
-    // face 0 & 5
-    for(int j=0;j<p_Nq;++j;@inner(1)){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
-        //face 0
-        r_Vx[0] += s_fluxVx[0][j][i];
-        r_Vy[0] += s_fluxVy[0][j][i];
-        r_Vz[0] += s_fluxVz[0][j][i];
-
-        //face 5
-        r_Vx[p_Nq-1] += s_fluxVx[1][j][i];
-        r_Vy[p_Nq-1] += s_fluxVy[1][j][i];
-        r_Vz[p_Nq-1] += s_fluxVz[1][j][i];
-      }
-    }
-
-    @barrier("local");    
-
-    // face 1 & 3
-    for(int k=0;k<p_Nq;++k;@inner(1)){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
-        const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + i + k*p_Nq;
-        const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + i + k*p_Nq;
-
-        surfaceTerms(sk1,1,0,i,k);
-        surfaceTerms(sk3,3,1,i,k);
-      }
-    }
-
-    @barrier("local");
-
-    // face 1 & 3
-    for(int j=0;j<p_Nq;++j;@inner(1)){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
-        if (j==0) {//face 1
-          #pragma unroll p_Nq
-          for (int n=0;n<p_Nq;n++) {
-            r_Vx[n] += s_fluxVx[0][n][i];
-            r_Vy[n] += s_fluxVy[0][n][i];
-            r_Vz[n] += s_fluxVz[0][n][i];
-          }
-        }
-        if (j==p_Nq-1) {//face 3
-          #pragma unroll p_Nq
-          for (int n=0;n<p_Nq;n++) {
-            r_Vx[n] += s_fluxVx[1][n][i];
-            r_Vy[n] += s_fluxVy[1][n][i];
-            r_Vz[n] += s_fluxVz[1][n][i];
-          }
-        }
-      }
-    }
-
-    @barrier("local");    
-
-    // face 2 & 4
-    for(int k=0;k<p_Nq;++k;@inner(1)){
-      for(int j=0;j<p_Nq;++j;@inner(0)){
-        const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + j + k*p_Nq;
-        const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + j + k*p_Nq;
-
-        surfaceTerms(sk2,2,0,j,k);
-        surfaceTerms(sk4,4,1,j,k);
-      }
-    }
-
-    @barrier("local");
-
-    // face 2 & 4
-    for(int j=0;j<p_Nq;++j;@inner(1)){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
-        if (i==p_Nq-1) {//face 2
-          #pragma unroll p_Nq
-          for (int n=0;n<p_Nq;n++) {
-            r_Vx[n] += s_fluxVx[0][n][j];
-            r_Vy[n] += s_fluxVy[0][n][j];
-            r_Vz[n] += s_fluxVz[0][n][j];
-          }
-        }
-        if (i==0) {//face 4
-          #pragma unroll p_Nq
-          for (int n=0;n<p_Nq;n++) {
-            r_Vx[n] += s_fluxVx[1][n][j];
-            r_Vy[n] += s_fluxVy[1][n][j];
-            r_Vz[n] += s_fluxVz[1][n][j];
-          }
-        }
-      }
-    }
-
-    @barrier("local");   
-
-    for(int j=0;j<p_Nq;++j;@inner(1)){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
-        #pragma unroll p_Nq
-        for(int k=0;k<p_Nq;++k){
-          const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-
-          Vort[id+0*offset] += r_Vx[k];
-          Vort[id+1*offset] += r_Vy[k];
-          Vort[id+2*offset] += r_Vz[k];
-        }
-      }
-    }
-  }
-}
-#undef surfaceTerms
+#endif

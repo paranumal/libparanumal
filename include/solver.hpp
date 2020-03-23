@@ -77,9 +77,8 @@ public:
 
   // Inversion of g function with solver in form dq/dt = f(q,t) + g(q,t)
   //  Solves gamma*q - g(q,t) = rhs for q
-  virtual int rhs_imex_invg(occa::memory& o_rhs, occa::memory& o_q, const dfloat gamma, const dfloat time) {
+  virtual void rhs_imex_invg(occa::memory& o_rhs, occa::memory& o_q, const dfloat gamma, const dfloat time) {
     LIBP_ABORT(string("rhs_imex_invg not implemented in this solver"))
-    return 0;
   }
 
   // Evolve rhs f function via a sub-timestepper

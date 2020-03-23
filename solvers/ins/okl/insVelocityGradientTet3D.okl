@@ -25,16 +25,14 @@ SOFTWARE.
 */
 
 @kernel void insVelocityGradientTet3D(const dlong Nelements,
-                                     const dlong offset,
-                                     @restrict const  dfloat *  vgeo,
-                                     @restrict const  dfloat *  Dmatrices, 
-                                     const dlong fieldOffset,
-                                     @restrict const  dfloat *  U,
-                                          @restrict dfloat4 *  GU){
-  
+                                     @restrict const  dfloat  *  vgeo,
+                                     @restrict const  dfloat  *  Dmatrices,
+                                     @restrict const  dfloat  *  U,
+                                          @restrict   dfloat4 *  GU){
+
   // block partition of elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
-    
+
     @shared dfloat s_q[p_NblockV][p_Np];
 
     #pragma unroll p_NVfields
@@ -44,19 +42,19 @@ SOFTWARE.
         for(int n=0;n<p_Np;++n;@inner(0)){
           if(e<Nelements){
             // prefetch q
-            const dlong id = (e+offset)*p_Np+n;
-            s_q[e-eo][n] = U[id+fld*fieldOffset];
+            const dlong id = e*p_Np*p_NVfields+n;
+            s_q[e-eo][n] = U[id+fld*p_Np];
           }
         }
       }
-            
+
       @barrier("local");
 
       for(dlong e=eo;e<eo+p_NblockV;++e;@inner(1)){
         for(int n=0;n<p_Np;++n;@inner(0)){
           if(e<Nelements){
             const int es = (int) (e-eo);
-            const dlong gid = (e+offset)*p_Nvgeo;
+            const dlong gid = e*p_Nvgeo;
 
             const dfloat drdx = vgeo[gid + p_RXID];
             const dfloat drdy = vgeo[gid + p_RYID];
@@ -66,7 +64,7 @@ SOFTWARE.
             const dfloat dsdz = vgeo[gid + p_SZID];
             const dfloat dtdx = vgeo[gid + p_TXID];
             const dfloat dtdy = vgeo[gid + p_TYID];
-            const dfloat dtdz = vgeo[gid + p_TZID];    
+            const dfloat dtdz = vgeo[gid + p_TZID];
 
             // compute 1D derivatives
             dfloat qr = 0, qs = 0, qt =0;
@@ -83,9 +81,9 @@ SOFTWARE.
             gradqn.y = drdy*qr + dsdy*qs + dtdy*qt;
             gradqn.z = drdz*qr + dsdz*qs + dtdz*qt;
             gradqn.w = s_q[es][n];
-            
-            const dlong id = (e+offset)*p_Np+n; 
-            GU[id+fld*fieldOffset] = gradqn;
+
+            const dlong id = e*p_Np*p_NVfields+n;
+            GU[id+fld*p_Np] = gradqn;
           }
         }
       }

@@ -26,12 +26,13 @@
 
 define INS_HELP_MSG
 
-Incompressible Navier-Stokes flow solver makefile targets:
+Incompressible Navier-Stokes solver makefile targets:
 
    make insMain (default)
    make lib
    make clean
    make clean-libs
+   make clean-kernels
    make realclean
    make info
    make help
@@ -45,10 +46,11 @@ make lib
 make clean
    Clean the insMain executable, library, and object files.
 make clean-libs
-   In addition to "make clean", also clean the mesh, ogs, parAlmond,
-   and elliptic libraries.
+   In addition to "make clean", also clean the mesh and ogs libraries.
+make clean-kernels
+   In addition to "make clean-libs", also cleans the cached OCCA kernels.
 make realclean
-   In addition to "make clean-libs", also clean 3rd party libraries.
+   In addition to "make clean-kernels", also clean 3rd party libraries.
 make info
    List directories and compiler flags in use.
 make help
@@ -58,7 +60,7 @@ Can use "make verbose=true" for verbose output.
 
 endef
 
-ifeq (,$(filter insMain lib clean clean-libs \
+ifeq (,$(filter insMain lib clean clean-libs clean-kernels \
                 realclean info help,$(MAKECMDGOALS)))
 ifneq (,$(MAKECMDGOALS))
 $(error ${INS_HELP_MSG})
@@ -76,32 +78,32 @@ endif
 #libraries
 GS_DIR       =${LIBP_TPL_DIR}/gslib
 BLAS_DIR     =${LIBP_TPL_DIR}/BlasLapack
-OGS_DIR      =${LIBP_LIBS_DIR}/gatherScatter
-PARALMOND_DIR=${LIBP_LIBS_DIR}/parAlmond
+OGS_DIR      =${LIBP_LIBS_DIR}/ogs
+MESH_DIR     =${LIBP_LIBS_DIR}/mesh
 ELLIPTIC_DIR =${LIBP_DIR}/solvers/elliptic
-MESH_DIR     =${LIBP_DIR}/src
+PARALMOND_DIR=${LIBP_LIBS_DIR}/parAlmond
+CORE_DIR     =${LIBP_DIR}/core
 
 #includes
-INS_INCLUDES=-I. \
-         -I$(OGS_DIR) \
-         -I$(PARALMOND_DIR) \
-         -I$(ELLIPTIC_DIR) \
-         ${LIBP_INCLUDES}
+INCLUDES=${LIBP_INCLUDES} \
+		 -I${LIBP_LIBS_DIR}/include \
+		 -I${ELLIPTIC_DIR} \
+		 -I${PARALMOND_DIR} \
+         -I.
+
 
 #defines
-INS_DEFINES =${LIBP_DEFINES} \
-         -DLIBP_DIR='"${LIBP_DIR}"' \
-         -DDINS='"${CURDIR}"'
+DEFINES =${LIBP_DEFINES} \
+         -DLIBP_DIR='"${LIBP_DIR}"'
 
 #.cpp compilation flags
-INS_CXXFLAGS+=${CXXFLAGS} ${INS_DEFINES} ${INS_INCLUDES}
+INS_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
 
 #link libraries
-LIBS=-L$(ELLIPTIC_DIR) -lelliptic  \
-     -L$(MESH_DIR) -lmesh \
-     -L$(PARALMOND_DIR) -lparAlmond  \
-     -L$(OGS_DIR) -logs \
+LIBS=-L${ELLIPTIC_DIR} -lelliptic \
+     -L${LIBP_LIBS_DIR} -lmesh -logs -lparAlmond \
      -L$(GS_DIR)/lib -lgs \
+     -L${CORE_DIR} -lcore \
      -L${BLAS_DIR} -lBlasLapack \
      -lgfortran \
      ${LIBP_LIBS}
@@ -110,22 +112,23 @@ LIBS=-L$(ELLIPTIC_DIR) -lelliptic  \
 LFLAGS=${INS_CXXFLAGS} ${LIBS}
 
 #object dependancies
-DEPS=$(wildcard *.h) \
+DEPS=$(wildcard *.hpp) \
      $(wildcard $(LIBP_INCLUDE_DIR)/*.h) \
-     $(OGS_DIR)/ogs.hpp \
-     $(PARALMOND_DIR)/parAlmond.hpp \
-     $(wildcard $(ELLIPTIC_DIR)/*.h)
+     $(wildcard $(LIBP_INCLUDE_DIR)/*.hpp) \
+     $(wildcard $(ELLIPTIC_DIR)/*.hpp)
 
-SRC =$(wildcard src/*.c)
-OBJS=$(SRC:.c=.o)
+SRC =$(wildcard src/*.cpp)
 
-.PHONY: all lib libmesh libogs libblas libparAlmond libelliptic clean clean-libs realclean help info
+OBJS=$(SRC:.cpp=.o)
+
+.PHONY: all lib libcore libelliptic libmesh libogs libblas clean clean-libs \
+		clean-kernels realclean help info insMain
 
 all: insMain
 
 lib: libins.a
 
-insMain:$(OBJS) $(MESH_OBJS) insMain.o | libelliptic
+insMain:$(OBJS) insMain.o | libelliptic
 ifneq (,${verbose})
 	$(LD) -o insMain insMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
 else
@@ -141,35 +144,35 @@ else
 	@ar -cr libins.a $(OBJS)
 endif
 
-libelliptic: | libparAlmond
+libelliptic: libmesh
 ifneq (,${verbose})
 	${MAKE} -C ${ELLIPTIC_DIR} lib verbose=${verbose}
 else
 	@${MAKE} -C ${ELLIPTIC_DIR} lib --no-print-directory
 endif
 
-libparAlmond: | libmesh
-ifneq (,${verbose})
-	${MAKE} -C ${PARALMOND_DIR} lib verbose=${verbose}
-else
-	@${MAKE} -C ${PARALMOND_DIR} lib --no-print-directory
-endif
-
-libmesh: libogs libgs libblas
+libmesh: libogs libgs libblas libcore
 ifneq (,${verbose})
 	${MAKE} -C ${MESH_DIR} lib verbose=${verbose}
 else
 	@${MAKE} -C ${MESH_DIR} lib --no-print-directory
 endif
 
-libogs: libgs
+libogs: libcore
 ifneq (,${verbose})
 	${MAKE} -C ${OGS_DIR} lib verbose=${verbose}
 else
 	@${MAKE} -C ${OGS_DIR} lib --no-print-directory
 endif
 
-libgs:
+libcore: libgs
+ifneq (,${verbose})
+	${MAKE} -C ${CORE_DIR} lib verbose=${verbose}
+else
+	@${MAKE} -C ${CORE_DIR} lib --no-print-directory
+endif
+
+libgs: libblas
 ifneq (,${verbose})
 	${MAKE} -C $(GS_DIR) install verbose=${verbose}
 else
@@ -183,23 +186,29 @@ else
 	@${MAKE} -C ${BLAS_DIR} lib --no-print-directory
 endif
 
-# rule for .c files
-%.o: %.c $(DEPS) | libelliptic
+# rule for .cpp files
+%.o: %.cpp $(DEPS) | libelliptic
 ifneq (,${verbose})
-	$(CXX) -o $*.o -c $*.c $(INS_CXXFLAGS)
+	$(CXX) -o $*.o -c $*.cpp $(INS_CXXFLAGS)
 else
 	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
-	@$(CXX) -o $*.o -c $*.c $(INS_CXXFLAGS)
+	@$(CXX) -o $*.o -c $*.cpp $(INS_CXXFLAGS)
 endif
 
 #cleanup
 clean:
-	rm -f src/*.o insMain libins.a
+	rm -f src/*.o *.o insMain libins.a
 
 clean-libs: clean
-	${MAKE} -C ${OGS_DIR} clean
+	${MAKE} -C ${ELLIPTIC_DIR} clean
 	${MAKE} -C ${PARALMOND_DIR} clean
+	${MAKE} -C ${OGS_DIR} clean
 	${MAKE} -C ${MESH_DIR} clean
+	${MAKE} -C ${CORE_DIR} clean
+
+clean-kernels: clean-libs
+# 	$(shell ${OCCA_DIR}/bin/occa clear all -y)
+	rm -rf ~/.occa/
 
 realclean: clean-libs
 	${MAKE} -C ${GS_DIR} clean

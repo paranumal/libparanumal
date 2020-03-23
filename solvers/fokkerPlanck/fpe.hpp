@@ -127,7 +127,7 @@ public:
   void rhs_imex_f(occa::memory& o_q, occa::memory& o_rhs, const dfloat time);
   void rhs_imex_g(occa::memory& o_q, occa::memory& o_rhs, const dfloat time);
 
-  int rhs_imex_invg(occa::memory& o_q, occa::memory& o_rhs, const dfloat gamma, const dfloat time);
+  void rhs_imex_invg(occa::memory& o_q, occa::memory& o_rhs, const dfloat gamma, const dfloat time);
 
   void rhs_subcycle_f(occa::memory& o_Q, occa::memory& o_QHAT,
                            const dfloat T, const dfloat dt, const dfloat* B,

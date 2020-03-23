@@ -28,20 +28,21 @@ SOFTWARE.
 @kernel void insGradientVolumeQuad2D(const dlong Nelements,
                                     @restrict const  dfloat *  vgeo,
                                     @restrict const  dfloat *  D,
-                                    const dlong fieldOffset,
+                                    const dfloat alpha,
+                                    const dfloat beta,
                                     @restrict const  dfloat *  P,
-                                          @restrict dfloat *  GP){
+                                          @restrict  dfloat *  RHS){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
     @shared dfloat s_P[p_NblockV][p_Nq][p_Nq];
     @shared dfloat s_D[p_Nq][p_Nq];
 
-    for(int es=0;es<p_NblockV;++es;@inner(2)){   
-      for(int j=0;j<p_Nq;++j;@inner(1)){ 
-        for(int i=0;i<p_Nq;++i;@inner(0)){    
+    for(int es=0;es<p_NblockV;++es;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           const dlong e = eo+es; // element in block
-          if(e<Nelements){ 
+          if(e<Nelements){
             const dlong id = e*p_Np + j*p_Nq+i;
 
             s_P[es][j][i]  = P[id];
@@ -56,11 +57,11 @@ SOFTWARE.
     // Make sure all node data is loaded into @shared
     @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;@inner(2)){ 
-      for(int j=0;j<p_Nq;++j;@inner(1)){ 
-        for(int i=0;i<p_Nq;++i;@inner(0)){  
-          const dlong e = eo+es; 
-          if(e<Nelements){ 
+    for(int es=0;es<p_NblockV;++es;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
+          const dlong e = eo+es;
+          if(e<Nelements){
             const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
             const dfloat drdx = vgeo[gid + p_RXID*p_Np];
             const dfloat drdy = vgeo[gid + p_RYID*p_Np];
@@ -71,22 +72,27 @@ SOFTWARE.
             dfloat dpdr  = 0.f, dpds  = 0.f;
 
             #pragma unroll p_Nq
-              for(int n=0;n<p_Nq;++n){
-                const dfloat Dr = s_D[i][n];
-                const dfloat Ds = s_D[j][n];
+            for(int n=0;n<p_Nq;++n){
+              const dfloat Dr = s_D[i][n];
+              const dfloat Ds = s_D[j][n];
 
-                dpdr += Dr*s_P[es][j][n];
-                dpds += Ds*s_P[es][n][i];
-              }
+              dpdr += Dr*s_P[es][j][n];
+              dpds += Ds*s_P[es][n][i];
+            }
 
-            const dlong id = e*p_Np + j*p_Nq + i;
-            GP[id+0*fieldOffset] = drdx*dpdr + dsdx*dpds;
-            GP[id+1*fieldOffset] = drdy*dpdr + dsdy*dpds;
+            const dlong id = e*p_Np*p_NVfields + j*p_Nq + i;
+            if (beta!=0) {
+              RHS[id+0*p_Np] = beta*RHS[id+0*p_Np] + alpha*(drdx*dpdr + dsdx*dpds);
+              RHS[id+1*p_Np] = beta*RHS[id+1*p_Np] + alpha*(drdy*dpdr + dsdy*dpds);
+            } else {
+              RHS[id+0*p_Np] = alpha*(drdx*dpdr + dsdx*dpds);
+              RHS[id+1*p_Np] = alpha*(drdy*dpdr + dsdy*dpds);
+            }
           }
         }
       }
     }
-  }  
+  }
 }
 
 #define surfaceTerms(sk,face,i, j)                                      \
@@ -104,7 +110,7 @@ SOFTWARE.
                                                                         \
   const int bc = EToB[face+p_Nfaces*e];                                 \
   if(bc>0) {                                                            \
-    insPressureDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, PM, &PP);\
+    insPressureDirichletConditions2D(bc, nu, time, x[idM], y[idM], nx, ny, PM, &PP);\
     PP = 2.f*PP - PM;                                                   \
   }                                                                     \
                                                                         \
@@ -119,13 +125,14 @@ SOFTWARE.
                                      @restrict const  dlong  *  vmapM,
                                      @restrict const  dlong  *  vmapP,
                                      @restrict const  int   *  EToB,
+                                     const dfloat time,
                                      @restrict const  dfloat *  x,
                                      @restrict const  dfloat *  y,
                                      @restrict const  dfloat *  z,
-                                     const dfloat time,
-                                     const dlong fieldOffset,
+                                     const dfloat nu,
+                                     const dfloat alpha,
                                      @restrict const  dfloat *  P,
-                                           @restrict dfloat *  GP){
+                                           @restrict  dfloat *  RHS){
 
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
@@ -183,10 +190,9 @@ SOFTWARE.
         for(int i=0;i<p_Nq;++i;@inner(0)){
           const dlong e = eo + es;
           if(e<Nelements){
-            const dlong id = e*p_Np + j*p_Nq + i;
-
-            GP[id+0*fieldOffset] += s_fluxPx[es][j][i];
-            GP[id+1*fieldOffset] += s_fluxPy[es][j][i];
+            const dlong id = e*p_Np*p_NVfields + j*p_Nq + i;
+            RHS[id+0*p_Np] += alpha*s_fluxPx[es][j][i];
+            RHS[id+1*p_Np] += alpha*s_fluxPy[es][j][i];
           }
         }
       }

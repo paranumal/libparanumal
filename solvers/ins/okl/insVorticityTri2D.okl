@@ -27,22 +27,21 @@ SOFTWARE.
 @kernel void insVorticityTri2D(const dlong Nelements,
                               @restrict const  dfloat *  vgeo,
                               @restrict const  dfloat *  const Dmatrices,
-                              const dlong offset,
                               @restrict const  dfloat *  U,
-                                    @restrict dfloat *  Vort){  
-  
+                                    @restrict  dfloat *  Vort){
+
   // block partition of elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
-    
+
     @shared dfloat s_u[p_NblockV][p_Np];
     @shared dfloat s_v[p_NblockV][p_Np];
 
     for(int e=eo;e<eo+p_NblockV;++e;@inner(1)){
       for(int n=0;n<p_Np;++n;@inner(0)){
         if(e<Nelements){
-          const dlong id = e*p_Np+n;
-          s_u[e-eo][n] = U[id+0*offset];
-          s_v[e-eo][n] = U[id+1*offset];
+          const dlong id = e*p_Np*p_NVfields+n;
+          s_u[e-eo][n] = U[id+0*p_Np];
+          s_v[e-eo][n] = U[id+1*p_Np];
         }
       }
     }
@@ -77,7 +76,7 @@ SOFTWARE.
           const dfloat uy = drdy*ur + dsdy*us;
           const dfloat vx = drdx*vr + dsdx*vs;
 
-          const dlong id = e*p_Np+n; 
+          const dlong id = e*p_Np+n;
           Vort[id] = vx-uy;
         }
       }

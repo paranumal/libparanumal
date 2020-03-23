@@ -1,20 +1,39 @@
 [FORMAT]
-1.0
+2.0
 
 [DATA FILE]
-data/insUniform2D.h
-#data/insVortex2D.h
+data/insVortex2D.h
 
 [MESH FILE]
-../../meshes/insSquareCylinder2D.msh
-#../../meshes/boltzmannSquareCylinderPML2D.msh
 #../../meshes/insVortex2D.msh
+BOX
 
 [MESH DIMENSION]
 2
 
 [ELEMENT TYPE] # number of edges
 3
+
+[BOX NX]
+10
+
+[BOX NY]
+10
+
+[BOX NZ]
+10
+
+[BOX DIMX]
+1
+
+[BOX DIMY]
+1
+
+[BOX DIMZ]
+1
+
+[BOX BOUNDARY FLAG]
+2
 
 [POLYNOMIAL DEGREE]
 4
@@ -28,90 +47,55 @@ CUDA
 [DEVICE NUMBER]
 0
 
-# can be EXTBDF1,2, or 3, or ARK1
-# can add SUBCYCLING STEPS with EXTBDF
-[TIME INTEGRATOR]
-#ARK2
-EXTBDF2
-
-[SUBCYCLING STEPS]
-4
+[VISCOSITY]
+0.05
 
 # can be CUBATURE or COLLOCATION
 [ADVECTION TYPE]
-CUBATURE
+COLLOCATION
 
-[VISCOSITY]
-0.001
+[TIME INTEGRATOR]
+SSBDF3
 
-[MACH NUMBER]
-.2
+[NUMBER OF SUBCYCLES]
+4
 
-[UBAR]
-1.0
-
-[VBAR]
-0.0
-
-[PBAR]
-0.0
-
-#zero to ignore
-[TSTEPS FOR SOLUTION OUTPUT]
-100
-
-# zero to ignore
-[TSTEPS FOR FORCE OUTPUT]
-0
-
-# zero to ignore, only ARK stepper
-[TSTEPS FOR TIME STEP ADAPT]
-100
+[SUBCYCLING TIME INTEGRATOR]
+DOPRI5
 
 [START TIME]
 0
 
 [FINAL TIME]
-75.0
+1.0
 
-[CFL]
-0.5
+[OUTPUT INTERVAL]
+0.1
 
-[OUTPUT TYPE]
-VTU
-
-#Tested only EXTBDF currently
-[RESTART FROM FILE]
-0
-
-[WRITE RESTART FILE]
-1
-
-[RESTART FILE NAME]
-insRestartTri2D
+[OUTPUT TO FILE]
+TRUE
 
 [OUTPUT FILE NAME]
-Tins
+ins
 
 #################################################
 ########## Velocity Solver Options ##############
 #################################################
 
-# can add FLEXIBLE to PCG
-[VELOCITY KRYLOV SOLVER]
+# can be PCG, FPCG, NBPCG, or NBFPCG
+[VELOCITY LINEAR SOLVER]
 PCG
 
 # can be IPDG, or CONTINUOUS
 [VELOCITY DISCRETIZATION]
 IPDG
 
-# can be NODAL or BERN
-[VELOCITY BASIS]
-NODAL
-
-# can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
+# can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, MULTIGRID, or OAS
 [VELOCITY PRECONDITIONER]
 MASSMATRIX
+
+[VELOCITY VERBOSE]
+TRUE
 
 ########## MULTIGRID Options ##############
 
@@ -119,14 +103,12 @@ MASSMATRIX
 [VELOCITY MULTIGRID COARSENING]
 HALFDOFS
 
-# can be LOCALPATCH, or DAMPEDJACOBI
-# LOCALPATCH smoother can include EXACT
-# can include CHEBYSHEV for smoother acceleration
+# can be DAMPEDJACOBI or CHEBYSHEV
 [VELOCITY MULTIGRID SMOOTHER]
-DAMPEDJACOBI,CHEBYSHEV
+CHEBYSHEV
 
 # can be any integer >0
-[MULTIGRID CHEBYSHEV DEGREE]
+[VELOCITY MULTIGRID CHEBYSHEV DEGREE]
 2
 
 ###########################################
@@ -142,22 +124,8 @@ KCYCLE
 [VELOCITY PARALMOND SMOOTHER]
 CHEBYSHEV
 
-# can be STRONGNODES, DISTRIBUTED, SATURATE
-[VELOCITY PARALMOND PARTITION]
-STRONGNODES
-
-# can be DEFAULT or LPSCN
-[VELOCITY PARALMOND AGGREGATION STRATEGY]
-DEFAULT
-#LPSCN
-
-# can be MAX, MIN, or NONE
-[VELOCITY PARALMOND LPSCN ORDERING]
-MAX
-#MIN
-
 # can be any integer >0
-[PARALMOND CHEBYSHEV DEGREE]
+[VELOCITY PARALMOND CHEBYSHEV DEGREE]
 2
 
 ###########################################
@@ -166,21 +134,20 @@ MAX
 ########## Pressure Solver Options ##############
 #################################################
 
-# can add FLEXIBLE to PCG
-[PRESSURE KRYLOV SOLVER]
-PCG,FLEXIBLE
+# can be PCG, FPCG, NBPCG, or NBFPCG
+[PRESSURE LINEAR SOLVER]
+FPCG
 
 # can be IPDG, or CONTINUOUS
 [PRESSURE DISCRETIZATION]
-CONTINUOUS
-
-# can be NODAL or BERN
-[PRESSURE BASIS]
-NODAL
+IPDG
 
 # can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
 [PRESSURE PRECONDITIONER]
 MULTIGRID
+
+[PRESSURE VERBOSE]
+TRUE
 
 ########## MULTIGRID Options ##############
 
@@ -188,11 +155,13 @@ MULTIGRID
 [PRESSURE MULTIGRID COARSENING]
 HALFDOFS
 
-# can be LOCALPATCH, or DAMPEDJACOBI
-# LOCALPATCH smoother can include EXACT
-# can include CHEBYSHEV for smoother acceleration
+# can be DAMPEDJACOBI or CHEBYSHEV
 [PRESSURE MULTIGRID SMOOTHER]
-DAMPEDJACOBI,CHEBYSHEV
+CHEBYSHEV
+
+# can be any integer >0
+[PRESSURE MULTIGRID CHEBYSHEV DEGREE]
+2
 
 ###########################################
 
@@ -207,27 +176,9 @@ KCYCLE
 [PRESSURE PARALMOND SMOOTHER]
 CHEBYSHEV
 
-# can be STRONGNODES, DISTRIBUTED, SATURATE
-[PRESSURE PARALMOND PARTITION]
-STRONGNODES
-
-# can be DEFAULT or LPSCN
-[PRESSURE PARALMOND AGGREGATION STRATEGY]
-DEFAULT
-#LPSCN
-
-# can be MAX, MIN, or NONE
-[PRESSURE PARALMOND LPSCN ORDERING]
-MAX
-#MIN
+# can be any integer >0
+[PRESSURE PARALMOND CHEBYSHEV DEGREE]
+2
 
 ###########################################
 
-# compare to a reference solution. Use NONE to skip comparison
-# can be VORTEX or KOVASZNAY
-[EXACT]
-NONE
-#VORTEX
-
-[VERBOSE]
-FALSE

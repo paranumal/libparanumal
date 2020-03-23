@@ -25,65 +25,13 @@ SOFTWARE.
 */
 
 // Compute Gradient in Strong Form
-@kernel void insGradientTri2D(const dlong Nelements,
-                             @restrict const  dfloat *  vgeo,
-                             @restrict const  dfloat *  Dmatrices,
-                             const dlong offset,
-                             @restrict const  dfloat *  P,
-                                   @restrict dfloat *  gradP){
-
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
-    // for all elements
-    @shared dfloat s_P[p_NblockV][p_Np];
-
-    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
-      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
-        const dlong e = eo+es; // element in block
-        if(e<Nelements){
-          s_P[es][n]  = P[n + e*p_Np];
-        }
-      }
-    }
-
-    // Make sure all node data is loaded into @shared
-    @barrier("local");
-
-    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
-      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
-        const dlong e = eo+es; // element in block
-        if(e<Nelements){
-          // prefetch geometric factors (constant on triangle)
-          const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
-          const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
-          const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
-          const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
-
-          dfloat dpdr  = 0.f, dpds  = 0.f;
-          #pragma unroll p_Np
-            for(int i=0;i<p_Np;++i){
-              const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
-              const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
-
-              dpdr  += Drni*s_P[es][i];
-              dpds  += Dsni*s_P[es][i];
-            }
-
-          const dlong id = e*p_Np+n;
-          gradP[id+0*offset] = drdx*dpdr + dsdx*dpds;
-          gradP[id+1*offset] = drdy*dpdr + dsdy*dpds;
-        }
-      }
-    }
-  }
-}
-
-// Compute Gradient in Strong Form
 @kernel void insGradientVolumeTri2D(const dlong Nelements,
                                    @restrict const  dfloat *  vgeo,
                                    @restrict const  dfloat *  Dmatrices,
-                                   const dlong offset,
+                                   const dfloat alpha,
+                                   const dfloat beta,
                                    @restrict const  dfloat *  P,
-                                         @restrict dfloat *  gradP){
+                                         @restrict  dfloat *  RHS){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
     // for all elements
@@ -113,17 +61,22 @@ SOFTWARE.
 
           dfloat dpdr  = 0.f, dpds  = 0.f;
           #pragma unroll p_Np
-            for(int i=0;i<p_Np;++i){
-              const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
-              const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
+          for(int i=0;i<p_Np;++i){
+            const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
+            const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
 
-              dpdr  += Drni*s_P[es][i];
-              dpds  += Dsni*s_P[es][i];
-            }
+            dpdr  += Drni*s_P[es][i];
+            dpds  += Dsni*s_P[es][i];
+          }
 
-          const dlong id = e*p_Np+n;
-          gradP[id+0*offset] = drdx*dpdr + dsdx*dpds;
-          gradP[id+1*offset] = drdy*dpdr + dsdy*dpds;
+          const dlong id = e*p_Np*p_NVfields+n;
+          if (beta!=0) {
+            RHS[id+0*p_Np] = beta*RHS[id+0*p_Np] + alpha*(drdx*dpdr + dsdx*dpds);
+            RHS[id+1*p_Np] = beta*RHS[id+1*p_Np] + alpha*(drdy*dpdr + dsdy*dpds);
+          } else {
+            RHS[id+0*p_Np] = alpha*(drdx*dpdr + dsdx*dpds);
+            RHS[id+1*p_Np] = alpha*(drdy*dpdr + dsdy*dpds);
+          }
         }
       }
     }
@@ -136,13 +89,14 @@ SOFTWARE.
                                     @restrict const  dlong  *  vmapM,
                                     @restrict const  dlong  *  vmapP,
                                     @restrict const  int    *  EToB,
+                                    const dfloat time,
                                     @restrict const  dfloat *  x,
                                     @restrict const  dfloat *  y,
                                     @restrict const  dfloat *  z,
-                                    const dfloat time,
-                                    const dlong offset,
+                                    const dfloat nu,
+                                    const dfloat alpha,
                                     @restrict const  dfloat *  P,
-                                          @restrict dfloat *  gradP){
+                                          @restrict  dfloat *  RHS){
 
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
@@ -169,14 +123,14 @@ SOFTWARE.
             const dlong id = e*p_Nfp*p_Nfaces + n;
             const dlong idM = vmapM[id];
             const dlong idP = vmapP[id];
-          
+
             const dfloat PM = P[idM];
                   dfloat PP = P[idP];
 
             // apply boundary condition
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
-              insPressureDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, PM, &PP);
+              insPressureDirichletConditions2D(bc, nu, time, x[idM], y[idM], nx, ny, PM, &PP);
               PP = 2.f*PP - PM; //Strong form BCs
             }
 
@@ -200,10 +154,9 @@ SOFTWARE.
         const dlong e = eo + es;
         if(e<Nelements){
           if(n<p_Np){
-            const dlong id = e*p_Np + n;;
 
-            dfloat px  = gradP[id+0*offset];
-            dfloat py  = gradP[id+1*offset];
+            dfloat px  = 0.0;
+            dfloat py  = 0.0;
             // Lift
             #pragma unroll p_NfacesNfp
               for(int m=0;m<p_Nfaces*p_Nfp;++m){
@@ -212,8 +165,9 @@ SOFTWARE.
                 py += L*s_fluxPy[es][m];
               }
             //  rhsu = grad(p) // Note that multiplied with M^-1
-            gradP[id+0*offset] = px;
-            gradP[id+1*offset] = py;
+            const dlong id = e*p_Np*p_NVfields + n;
+            RHS[id+0*p_Np] += alpha*px;
+            RHS[id+1*p_Np] += alpha*py;
           }
         }
       }
@@ -221,3 +175,63 @@ SOFTWARE.
   }
 }
 
+#if 0
+// Compute Gradient in Strong Form
+@kernel void insGradientTri2D(const dlong Nelements,
+                             @restrict const  dfloat *  vgeo,
+                             @restrict const  dfloat *  Dmatrices,
+                             const dfloat alpha,
+                             const dfloat beta,
+                             @restrict const  dfloat *  P,
+                                   @restrict  dfloat *  RHS){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
+    // for all elements
+    @shared dfloat s_P[p_NblockV][p_Np];
+
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements){
+          s_P[es][n]  = P[n + e*p_Np];
+        }
+      }
+    }
+
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
+
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements){
+          // prefetch geometric factors (constant on triangle)
+          const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+          const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+          const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+          const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+          dfloat dpdr  = 0.f, dpds  = 0.f;
+          #pragma unroll p_Np
+            for(int i=0;i<p_Np;++i){
+              const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
+              const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
+
+              dpdr  += Drni*s_P[es][i];
+              dpds  += Dsni*s_P[es][i];
+            }
+
+          const dlong id = e*p_Np*p_NVfields+n;
+          if (beta!=0) {
+            RHS[id+0*p_Np] = beta*RHS[id+0*p_Np] + alpha*(drdx*dpdr + dsdx*dpds);
+            RHS[id+1*p_Np] = beta*RHS[id+1*p_Np] + alpha*(drdy*dpdr + dsdy*dpds);
+          } else {
+            RHS[id+0*p_Np] = alpha*(drdx*dpdr + dsdx*dpds);
+            RHS[id+1*p_Np] = alpha*(drdy*dpdr + dsdy*dpds);
+          }
+        }
+      }
+    }
+  }
+}
+#endif

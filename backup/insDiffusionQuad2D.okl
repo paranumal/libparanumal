@@ -1,0 +1,216 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+#define surfaceTerms(sk,face,i, j)                                         \
+  {                                                                     \
+  const dlong  idM = vmapM[sk];                                          \
+                                                                        \
+  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
+  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
+  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];                          \
+                                                                        \
+  dfloat dudxP=0, dudyP=0; \
+  int bc = mapB[idM];                                         \
+  if(bc>0) {                                                            \
+    dfloat4 UM[p_NVfields]; \
+    dfloat4 UP[p_NVfields]; \
+\
+    for (int f=0;f<p_NVfields;f++) {\
+      UM[f].x = 0.;               \
+      UM[f].y = 0.;               \
+      UM[f].z = 0.;               \
+      UM[f].w = 0.;               \
+    }\
+    insVelocityNeumannConditions2D(bc, time, x[idM], y[idM], nx, ny, UM[0].x, UM[0].y, UM[1].x, UM[1].y, &(UP[0].x), &(UP[0].y), &(UP[1].x), &(UP[1].y));\
+    dudxP = UP[fld].x;\
+    dudyP = UP[fld].y;\
+  }                                                                     \
+                                                                        \
+  s_ndq[j][i] -= WsJ*(nx*dudxP + ny*dudyP); \
+}
+
+@kernel void insDiffusionQuad2D(const dlong Nelements,
+                              @restrict const  dlong  *  elementList,
+                              @restrict const  dfloat *  ggeo,
+                              @restrict const  dfloat *  vgeo,
+                              @restrict const  dfloat *  sgeo,
+                              @restrict const  dfloat *  D,
+                              @restrict const  dfloat *  S,
+                              @restrict const  dlong  *  vmapM,
+                              @restrict const  dfloat *  sMT,
+                              const dfloat nu,
+                              const dfloat time,
+                              @restrict const  dfloat *  x,
+                              @restrict const  dfloat *  y,
+                              @restrict const  dfloat *  z,
+                              @restrict const  int    *  mapB,
+                              const dlong fieldOffset,
+                              @restrict const  dfloat  *  U,
+                                    @restrict dfloat  *  LU){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    
+    @shared dfloat s_q[p_Nq][p_Nq];
+    @shared dfloat s_ndq[p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
+
+    @exclusive dlong element;
+    @exclusive dfloat r_qr, r_qs, r_Aq;
+    @exclusive dfloat r_G00, r_G01, r_G11;
+    
+    #pragma unroll p_NVfields
+    for (int fld=0; fld<p_NVfields; fld++) {
+
+      @barrier("local");
+
+      // prefetch q(:,:,:,e) to @shared
+      for(int j=0; j<p_Nq; ++j; @inner(1)) {
+        for(int i=0; i<p_Nq; ++i; @inner(0)) {
+          element = elementList[e];
+          const dlong id = i + j*p_Nq + element*p_Np; 
+          
+          s_q[j][i] = U[id+fld*fieldOffset];
+          s_ndq[j][i] = 0.;
+          
+          // fetch D to @shared
+          s_D[j][i] = D[j*p_Nq+i];
+        }
+      }
+        
+      @barrier("local");
+
+      //surface terms
+      for(int j=0; j<p_Nq; ++j; @inner(1)) {
+        for(int i=0; i<p_Nq; ++i; @inner(0)) {
+          if (j==0) {
+            const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i;
+            const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + i;
+
+            surfaceTerms(sk0,0,i,0     );
+            surfaceTerms(sk2,2,i,p_Nq-1);
+          }
+        }
+      }
+
+      @barrier("local");
+
+      //surface terms
+      for(int j=0; j<p_Nq; ++j; @inner(1)) {
+        for(int i=0; i<p_Nq; ++i; @inner(0)) {
+          if (j==0) {
+            const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + i;
+            const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + i;
+
+            surfaceTerms(sk1,1,p_Nq-1,i);
+            surfaceTerms(sk3,3,0     ,i);
+          }
+        }
+      }
+
+      @barrier("local");
+
+      for(int j=0; j<p_Nq; ++j; @inner(1)) {
+        for(int i=0; i<p_Nq; ++i; @inner(0)) {
+          
+          const dlong base = element*p_Nggeo*p_Np + j*p_Nq + i;
+
+          // assumes w*J built into G entries
+          r_G00 = ggeo[base+p_G00ID*p_Np];
+          r_G01 = ggeo[base+p_G01ID*p_Np];
+          
+          r_G11 = ggeo[base+p_G11ID*p_Np];
+
+          dfloat qr = 0.f, qs = 0.f;
+          
+          #pragma unroll p_Nq
+            for(int n=0; n<p_Nq; ++n){
+              qr += s_D[i][n]*s_q[j][n];
+              qs += s_D[j][n]*s_q[n][i];
+            }
+          
+          r_qr = qr; r_qs = qs; 
+          
+          r_Aq = 0.0;
+        }
+      }
+
+      // r term ----->
+      @barrier("local");
+
+      for(int j=0; j<p_Nq; ++j; @inner(1)) {
+        for(int i=0; i<p_Nq; ++i; @inner(0)) {
+          s_q[j][i] = r_G00*r_qr + r_G01*r_qs;
+        }
+      }
+      
+      @barrier("local");
+
+      for(int j=0; j<p_Nq; ++j; @inner(1)) {
+        for(int i=0; i<p_Nq; ++i; @inner(0)) {
+          dfloat tmp = 0.f;
+          #pragma unroll p_Nq
+            for(int n=0;n<p_Nq;++n) {
+              tmp += s_D[n][i]*s_q[j][n];
+            }
+
+          r_Aq += tmp;
+        }
+      }
+
+      // s term ---->
+      @barrier("local");
+
+      for(int j=0; j<p_Nq; ++j; @inner(1)) {
+        for(int i=0; i<p_Nq; ++i; @inner(0)) {
+          s_q[j][i] = r_G01*r_qr + r_G11*r_qs;
+        }
+      }
+      
+      @barrier("local");
+
+      for(int j=0; j<p_Nq; ++j; @inner(1)) {
+        for(int i=0; i<p_Nq; ++i; @inner(0)) {
+          const dlong gid = element*p_Np*p_Nvgeo+ j*p_Nq +i;
+          const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
+
+          dfloat tmp = 0.f;
+
+          #pragma unroll p_Nq
+            for(int n=0;n<p_Nq;++n){
+              tmp += s_D[n][j]*s_q[n][i];
+          }
+
+          r_Aq += tmp;
+
+          const dlong id = element*p_Np + j*p_Nq + i;
+          LU[id + fld*fieldOffset] = -nu*invJW*(r_Aq + s_ndq[j][i]);
+        }
+      }
+    }
+  }
+}
+
+

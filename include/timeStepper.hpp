@@ -64,6 +64,7 @@ public:
   virtual void Run(occa::memory& o_q, dfloat start, dfloat end)=0;
 
   void SetTimeStep(dfloat dt_) {dt = dt_;};
+  dfloat GetTimeStep() {return dt;};
 };
 
 /* Adams Bashforth, order 3 */

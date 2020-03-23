@@ -121,7 +121,7 @@ void ssbdf3::Step(occa::memory &o_q, dfloat time, dfloat _dt, int order) {
 
   //solve implicit part:
   // find q such that gamma*q - G(q) = rhs
-  int iter = solver.rhs_imex_invg(o_rhs, o_q, gamma, time+_dt);
+  solver.rhs_imex_invg(o_rhs, o_q, gamma, time+_dt);
 
   //rotate index
   shiftIndex = (shiftIndex+Nstages-1)%Nstages;

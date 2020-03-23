@@ -137,7 +137,7 @@ SOFTWARE.
 
         //fetch rhs value and add volume terms
         const dlong id = e*p_Np+n;
-        s_laps[n] = rhs[id]/mu - (lasr+lass);
+        s_laps[n] = rhs[id]/mu + (lasr+lass);
       }
     }
 
@@ -152,7 +152,7 @@ SOFTWARE.
           for(int i=0;i<p_NfacesNfp;++i){
             las += LIFTT[n+i*p_Np]*s_lapsflux[i];
           }
-        s_laps[n] += las;
+        s_laps[n] -= las;
       }
     }
 

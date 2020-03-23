@@ -188,11 +188,6 @@ fpe_t& fpe_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
                                            kernelInfo, mesh.comm);
   }
 
-  // gradient kernel
-  sprintf(fileName, DFPE "/okl/fpeGradient%s.okl", suffix);
-  sprintf(kernelName, "fpeGradient%s", suffix);
-  fpe->gradientKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                         kernelInfo, mesh.comm);
 
   // diffusion kernels
   if (settings.compareSetting("TIME INTEGRATOR","EXTBDF3")
@@ -202,6 +197,12 @@ fpe_t& fpe_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
     fpe->diffusionRhsKernel =  buildKernel(mesh.device, fileName, kernelName,
                                            kernelInfo, mesh.comm);
   } else {
+    // gradient kernel
+    sprintf(fileName, DFPE "/okl/fpeGradient%s.okl", suffix);
+    sprintf(kernelName, "fpeGradient%s", suffix);
+    fpe->gradientKernel =  buildKernel(mesh.device, fileName, kernelName,
+                                           kernelInfo, mesh.comm);
+
     sprintf(fileName, DFPE "/okl/fpeDiffusion%s.okl", suffix);
     sprintf(kernelName, "fpeDiffusion%s", suffix);
     fpe->diffusionKernel =  buildKernel(mesh.device, fileName, kernelName,

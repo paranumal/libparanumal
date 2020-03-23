@@ -208,8 +208,8 @@ void dopri5::Run(occa::memory &o_q, dfloat start, dfloat end) {
 
       // if (!rank)
       //   printf("\r time = %g (%d), dt = %g rejected, trying %g", time, allStep, dt, dtnew);
-      if (!rank)
-        printf("Repeating timestep %d. dt was %g, trying %g.\n", tstep, dt, dtnew);
+      // if (!rank)
+      //   printf("Repeating timestep %d. dt was %g, trying %g.\n", tstep, dt, dtnew);
     }
     dt = dtnew;
     allStep++;

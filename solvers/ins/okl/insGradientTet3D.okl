@@ -28,9 +28,10 @@ SOFTWARE.
 @kernel void insGradientVolumeTet3D(const dlong Nelements,
                                    @restrict const  dfloat *  vgeo,
                                    @restrict const  dfloat *  Dmatrices,
-                                   const dlong  offset,
+                                   const dfloat alpha,
+                                   const dfloat beta,
                                    @restrict const  dfloat *  P,
-                                         @restrict dfloat *  gradP){
+                                         @restrict  dfloat *  RHS){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
     // for all elements
@@ -67,20 +68,26 @@ SOFTWARE.
 
           dfloat dpdr  = 0.f,  dpds  = 0.f, dpdt = 0.f;
           #pragma unroll p_Np
-            for(int i=0;i<p_Np;++i){
-              const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
-              const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
-              const dfloat Dtni = Dmatrices[n+i*p_Np+2*p_Np*p_Np];
-              //
-              dpdr  += Drni*s_P[es][i];
-              dpds  += Dsni*s_P[es][i];
-              dpdt  += Dtni*s_P[es][i];
-            }
+          for(int i=0;i<p_Np;++i){
+            const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
+            const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
+            const dfloat Dtni = Dmatrices[n+i*p_Np+2*p_Np*p_Np];
 
-          const dlong id = e*p_Np+n;
-          gradP[id+0*offset] = drdx*dpdr + dsdx*dpds + dtdx*dpdt;
-          gradP[id+1*offset] = drdy*dpdr + dsdy*dpds + dtdy*dpdt;
-          gradP[id+2*offset] = drdz*dpdr + dsdz*dpds + dtdz*dpdt;
+            dpdr  += Drni*s_P[es][i];
+            dpds  += Dsni*s_P[es][i];
+            dpdt  += Dtni*s_P[es][i];
+          }
+
+          const dlong id = e*p_Np*p_NVfields+n;
+          if (beta!=0) {
+            RHS[id+0*p_Np] = beta*RHS[id+0*p_Np] + alpha*(drdx*dpdr + dsdx*dpds + dtdx*dpdt);
+            RHS[id+1*p_Np] = beta*RHS[id+1*p_Np] + alpha*(drdy*dpdr + dsdy*dpds + dtdy*dpdt);
+            RHS[id+2*p_Np] = beta*RHS[id+2*p_Np] + alpha*(drdz*dpdr + dsdz*dpds + dtdz*dpdt);
+          } else {
+            RHS[id+0*p_Np] = alpha*(drdx*dpdr + dsdx*dpds + dtdx*dpdt);
+            RHS[id+1*p_Np] = alpha*(drdy*dpdr + dsdy*dpds + dtdy*dpdt);
+            RHS[id+2*p_Np] = alpha*(drdz*dpdr + dsdz*dpds + dtdz*dpdt);
+          }
         }
       }
     }
@@ -93,13 +100,14 @@ SOFTWARE.
                                     @restrict const  dlong  *  vmapM,
                                     @restrict const  dlong  *  vmapP,
                                     @restrict const  int    *  EToB,
+                                    const dfloat time,
                                     @restrict const  dfloat *  x,
                                     @restrict const  dfloat *  y,
                                     @restrict const  dfloat *  z,
-                                    const dfloat time,
-                                    const dlong offset,
+                                    const dfloat nu,
+                                    const dfloat alpha,
                                     @restrict const  dfloat *  P,
-                                          @restrict dfloat *  gradP){
+                                          @restrict  dfloat *  RHS){
 
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
@@ -127,13 +135,13 @@ SOFTWARE.
             const dlong idM = vmapM[id];
             const dlong idP = vmapP[id];
 
-            const dfloat PM = P[idM]; 
+            const dfloat PM = P[idM];
                   dfloat PP = P[idP];
 
             // apply boundary condition
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
-              insPressureDirichletConditions3D(bc,time, x[idM],y[idM],z[idM], nx,ny,nz, PM,&PP);
+              insPressureDirichletConditions3D(bc,nu,time, x[idM],y[idM],z[idM], nx,ny,nz, PM,&PP);
               PP = 2.f*PP - PM; //Strong form BCs
             }
 
@@ -158,11 +166,10 @@ SOFTWARE.
         const dlong e = eo + es;
         if(e<Nelements){
           if(n<p_Np){
-            const dlong id = e*p_Np + n;
 
-            dfloat px  = gradP[id+0*offset];
-            dfloat py  = gradP[id+1*offset];
-            dfloat pz  = gradP[id+2*offset];
+            dfloat px  = 0.0;
+            dfloat py  = 0.0;
+            dfloat pz  = 0.0;
             // Lift
             #pragma unroll p_NfacesNfp
               for(int m=0;m<p_Nfaces*p_Nfp;++m){
@@ -172,9 +179,10 @@ SOFTWARE.
                 pz += L*s_fluxPz[es][m];
               }
             //  rhsu = grad(p) // Note that multiplied with M^-1
-            gradP[id+0*offset] = px;
-            gradP[id+1*offset] = py;
-            gradP[id+2*offset] = pz;
+            const dlong id = e*p_Np*p_NVfields + n;
+            RHS[id+0*p_Np] += alpha*px;
+            RHS[id+1*p_Np] += alpha*py;
+            RHS[id+2*p_Np] += alpha*pz;
           }
         }
       }

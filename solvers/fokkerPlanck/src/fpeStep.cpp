@@ -44,7 +44,7 @@ void fpe_t::rhs_imex_g(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
 
 // Inversion of diffusion operator
 //  Solves gamma*q - mu*Laplacian*q = rhs
-int fpe_t::rhs_imex_invg(occa::memory& o_RHS, occa::memory& o_Q, const dfloat gamma, const dfloat T){
+void fpe_t::rhs_imex_invg(occa::memory& o_RHS, occa::memory& o_Q, const dfloat gamma, const dfloat T){
 
   // rhs = MM*rhs/mu
   diffusionRhsKernel(mesh.Nelements,
@@ -72,7 +72,9 @@ int fpe_t::rhs_imex_invg(occa::memory& o_RHS, occa::memory& o_Q, const dfloat ga
   elliptic->lambda = gamma/mu;
   int iter = elliptic->Solve(*linearSolver, o_Q, o_RHS, tol, maxIter, verbose);
 
-  return iter;
+  if (mesh.rank==0){
+    printf("\rSolver iterations: %3d", iter); fflush(stdout);
+  }
 }
 
 // Evolve rhs f function via a sub-timestepper

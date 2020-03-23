@@ -28,18 +28,19 @@ SOFTWARE.
 @kernel void insGradientVolumeHex3D(const dlong Nelements,
                                     @restrict const  dfloat *  vgeo,
                                     @restrict const  dfloat *  D,
-                                    const dlong offset,
+                                    const dfloat alpha,
+                                    const dfloat beta,
                                     @restrict const  dfloat *  P,
-                                          @restrict dfloat *  gradP){
+                                          @restrict  dfloat *  RHS){
 
   for(dlong e=0;e<Nelements;e++;@outer(0)){  // for all elements
 
     @shared dfloat s_P[p_Nq][p_Nq][p_Nq];
     @shared dfloat s_D[p_Nq][p_Nq];
 
-    for(int k=0;k<p_Nq;++k;@inner(2)){ 
-      for(int j=0;j<p_Nq;++j;@inner(1)){ 
-        for(int i=0;i<p_Nq;++i;@inner(0)){    
+    for(int k=0;k<p_Nq;++k;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq+i;
 
           s_P[k][j][i]  = P[id];
@@ -53,9 +54,9 @@ SOFTWARE.
     // Make sure all node data is loaded into @shared
     @barrier("local");
 
-    for(int k=0;k<p_Nq;++k;@inner(2)){ 
-      for(int j=0;j<p_Nq;++j;@inner(1)){ 
-        for(int i=0;i<p_Nq;++i;@inner(0)){  
+    for(int k=0;k<p_Nq;++k;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           const dlong gid = e*p_Np*p_Nvgeo +k*p_Nq*p_Nq +j*p_Nq +i;
           const dfloat drdx = vgeo[gid + p_RXID*p_Np];
           const dfloat drdy = vgeo[gid + p_RYID*p_Np];
@@ -81,23 +82,21 @@ SOFTWARE.
               dpdt += Dt*s_P[n][j][i];
             }
 
-          const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-          gradP[id+0*offset] = drdx*dpdr + dsdx*dpds + dtdx*dpdt;
-          gradP[id+1*offset] = drdy*dpdr + dsdy*dpds + dtdy*dpdt;
-          gradP[id+2*offset] = drdz*dpdr + dsdz*dpds + dtdz*dpdt;
+          const dlong id = e*p_Np*p_NVfields + k*p_Nq*p_Nq + j*p_Nq + i;
+          if (beta!=0.0) {
+            RHS[id+0*p_Np] = beta*RHS[id+0*p_Np] + alpha*(drdx*dpdr + dsdx*dpds + dtdx*dpdt);
+            RHS[id+1*p_Np] = beta*RHS[id+1*p_Np] + alpha*(drdy*dpdr + dsdy*dpds + dtdy*dpdt);
+            RHS[id+2*p_Np] = beta*RHS[id+2*p_Np] + alpha*(drdz*dpdr + dsdz*dpds + dtdz*dpdt);
+          } else {
+            RHS[id+0*p_Np] = alpha*(drdx*dpdr + dsdx*dpds + dtdx*dpdt);
+            RHS[id+1*p_Np] = alpha*(drdy*dpdr + dsdy*dpds + dtdy*dpdt);
+            RHS[id+2*p_Np] = alpha*(drdz*dpdr + dsdz*dpds + dtdz*dpdt);
+          }
         }
       }
     }
-  }  
+  }
 }
-
-// taken from the lines if(solverID==1){ ..  }
-#if 0
-   /* dfloat PPo = 0.f; */                                              \
-   /* dfloat to  = time-dt; */                                          \
-   /* insGradientBoundaryConditions2D(bc,to, x[idM], y[idM], nx, ny, PM, &PPo); */  \
-   /* PP = PP-c0*PPo; */                                                \
-#endif
 
 #define surfaceTerms(sk,face,m, i, j)                                   \
 {                                                                       \
@@ -115,7 +114,7 @@ SOFTWARE.
                                                                         \
   const int bc = EToB[face+p_Nfaces*e];                                 \
   if(bc>0) {                                                            \
-    insPressureDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, PM, &PP);\
+    insPressureDirichletConditions3D(bc, nu, time, x[idM], y[idM], z[idM], nx, ny, nz, PM, &PP);\
     PP = 2.f*PP - PM;                                                   \
   }                                                                     \
                                                                         \
@@ -131,13 +130,14 @@ SOFTWARE.
                                      @restrict const  dlong  *  vmapM,
                                      @restrict const  dlong  *  vmapP,
                                      @restrict const  int    *  EToB,
+                                     const dfloat time,
                                      @restrict const  dfloat *  x,
                                      @restrict const  dfloat *  y,
                                      @restrict const  dfloat *  z,
-                                     const dfloat time,
-                                     const dlong offset,
+                                     const dfloat nu,
+                                     const dfloat alpha,
                                      @restrict const  dfloat *  P,
-                                           @restrict dfloat *  gradP){
+                                           @restrict  dfloat *  RHS){
 
   // for all elements
   for(dlong e=0;e<Nelements;e++;@outer(0)){
@@ -190,7 +190,7 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");    
+    @barrier("local");
 
     // face 1 & 3
     for(int k=0;k<p_Nq;++k;@inner(1)){
@@ -227,7 +227,7 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");    
+    @barrier("local");
 
     // face 2 & 4
     for(int k=0;k<p_Nq;++k;@inner(1)){
@@ -264,17 +264,17 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");   
+    @barrier("local");
 
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
         #pragma unroll p_Nq
         for(int k=0;k<p_Nq;++k){
-          const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+          const dlong id = e*p_Np*p_NVfields + k*p_Nq*p_Nq + j*p_Nq + i;
 
-          gradP[id+0*offset] += r_Px[k];
-          gradP[id+1*offset] += r_Py[k];
-          gradP[id+2*offset] += r_Pz[k];
+          RHS[id+0*p_Np] += alpha*r_Px[k];
+          RHS[id+1*p_Np] += alpha*r_Py[k];
+          RHS[id+2*p_Np] += alpha*r_Pz[k];
         }
       }
     }

@@ -24,119 +24,188 @@ SOFTWARE.
 
 */
 
-@kernel void insDiffusionTri2D(const dlong Nelements,
-                              @restrict const  dlong  *  elementList,
-                              @restrict const  dfloat *  ggeo,
-                              @restrict const  dfloat *  vgeo,
-                              @restrict const  dfloat *  sgeo,
-                              @restrict const  dfloat *  Dmatrices,
-                              @restrict const  dfloat *  Smatrices,
-                              @restrict const  dlong  *  vmapM,
-                              @restrict const  dfloat *  sMT,
-                              const dfloat nu,
-                              const dfloat time,
-                              @restrict const  dfloat *  x,
-                              @restrict const  dfloat *  y,
-                              @restrict const  dfloat *  z,
-                              @restrict const  int    *  mapB,
-                              const dlong fieldOffset,
-                              @restrict const  dfloat  *  U,
-                                    @restrict dfloat  *  LU){
-  
-  for(dlong e=0;e<Nelements;e++;@outer(0)){
 
-    @shared dfloat s_q[p_Np];
-    @shared dfloat s_ndq[p_Nfp*p_Nfaces];
+@kernel void insDiffusionTri2D(const dlong Nelements,
+                                @restrict const  dlong  *  elementList,
+                                @restrict const  dfloat *  vgeo,
+                                @restrict const  dfloat *  sgeo,
+                                @restrict const  dfloat *  Dmatrices,
+                                @restrict const  dfloat *  LIFTT,
+                                @restrict const  dlong  *  vmapM,
+                                @restrict const  dlong  *  vmapP,
+                                @restrict const  int    *  EToB,
+                                const dfloat tau,
+                                const dfloat time,
+                                @restrict const  dfloat *  x,
+                                @restrict const  dfloat *  y,
+                                @restrict const  dfloat *  z,
+                                const dfloat nu,
+                                const dfloat alpha,
+                                const dfloat beta,
+                                @restrict const  dfloat4 *  GU,
+                                      @restrict  dfloat  *  RHS){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @shared  dfloat s_dqdx[p_Np];
+    @shared  dfloat s_dqdy[p_Np];
+    @shared  dfloat s_nxdq[p_NfacesNfp];
+    @shared  dfloat s_nydq[p_NfacesNfp];
+    @shared  dfloat s_lapflux[p_NfacesNfp];
+    @shared  dfloat s_Lnxdq[p_Np];
+    @shared  dfloat s_Lnydq[p_Np];
+    @exclusive dlong element;
+    @exclusive dlong idM;
+    @exclusive dfloat nx, ny, sJ, invJ, hinv;
 
     #pragma unroll p_NVfields
     for (int i=0; i<p_NVfields; i++) {
 
       @barrier("local");
       for(int n=0;n<p_maxNodes;++n;@inner(0)){
-        if (n<p_Np) {
-          //prefetch q
-          const dlong element = elementList[e];
-          const dlong id = n + element*p_Np;
-          s_q[n] = U[id+i*fieldOffset];
-        }
-        if(n<p_NfacesNfp){
-          s_ndq[n] = 0.;
-        }
-      }
+        element = elementList[e];
 
-      @barrier("local");
+        if(n<p_Np){
+          // assume that this stores (qx, qy, qz, q) as dfloat4
+          const dfloat4 gradqn = GU[element*p_Np*p_NVfields + n + i*p_Np];
 
-      for(int n=0;n<p_maxNodes;++n;@inner(0)){
+          s_dqdx[n] = gradqn.x;
+          s_dqdy[n] = gradqn.y;
+        }
+
         if(n<p_NfacesNfp){
-          const dlong element = elementList[e];
           const dlong id  = n + element*p_Nfaces*p_Nfp;
-          const dlong idM = vmapM[id];          
 
+          idM = vmapM[id];
+          const dlong idP = vmapP[id];
+
+          const dlong eM = element;
+          const dlong eP = idP/p_Np;
+          const int vidM = idM%p_Np;
+          const int vidP = idP%p_Np;
+
+          const dlong qbaseM = eM*p_Np*p_NVfields + vidM;
+          const dlong qbaseP = eP*p_Np*p_NVfields + vidP;
+
+          // find face that owns this node
           const int face = n/p_Nfp;
 
-          dfloat dudxP=0, dudyP=0;
-          
-          // load surface geofactors for this face
-          const int sid = p_Nsgeo*(element*p_Nfaces+face);
-          const dfloat nx = sgeo[sid+p_NXID];
-          const dfloat ny = sgeo[sid+p_NYID];
-          const dfloat sJ = sgeo[sid+p_SJID];
+          const dfloat4 gradqM = GU[qbaseM+i*p_Np];// could fetch from @shared after barrier
+                dfloat4 gradqP = GU[qbaseP+i*p_Np];
 
-          const int bc = mapB[idM];
+          // load surface geofactors for this face
+          const dlong sid = p_Nsgeo*(element*p_Nfaces+face);
+          nx   = sgeo[sid+p_NXID];
+          ny   = sgeo[sid+p_NYID];
+          sJ   = sgeo[sid+p_SJID];
+          invJ = sgeo[sid+p_IJID];
+          hinv = sgeo[sid+p_IHID];
+
+          const int bc = EToB[face+p_Nfaces*element];
           if(bc>0) {
-            dfloat4 UM[p_NVfields]; 
-            dfloat4 UP[p_NVfields]; 
+            dfloat4 UM[p_NVfields];
+            dfloat4 UP[p_NVfields];
 
             //set all except field i zero. This assumes velocity boundaries are uncoupled
             for (int f=0;f<p_NVfields;f++) {
-              UM[f].x = 0.;               
-              UM[f].y = 0.;               
-              UM[f].z = 0.;               
-              UM[f].w = 0.;               
+              UM[f].x = 0.;
+              UM[f].y = 0.;
+              UM[f].z = 0.;
+              UM[f].w = 0.;
             }
-            //UP[i] = UM[i];
-            insVelocityNeumannConditions2D(bc, time, x[idM], y[idM], nx, ny, UM[0].x, UM[0].y, UM[1].x, UM[1].y, &(UP[0].x), &(UP[0].y), &(UP[1].x), &(UP[1].y));
+            UM[i] = gradqM;
+            //UP[i] = gradqM;
+            insVelocityDirichletConditions2D(bc, nu,time, x[idM], y[idM], nx, ny, UM[0].w, UM[1].w, \
+                                                                             &(UP[0].w), &(UP[1].w));
+            insVelocityNeumannConditions2D(bc, nu,time, x[idM], y[idM], nx, ny, UM[0].x, UM[0].y, \
+                                                                            UM[1].x, UM[1].y, \
+                                                                            &(UP[0].x), &(UP[0].y), \
+                                                                            &(UP[1].x), &(UP[1].y));
 
-            dudxP = UP[i].x;
-            dudyP = UP[i].y;
-          }  
-          s_ndq[n] = sJ*(nx*dudxP + ny*dudyP);
+            gradqP.x = 2.f*UP[i].x - gradqM.x;
+            gradqP.y = 2.f*UP[i].y - gradqM.y;
+            gradqP.w = 2.f*UP[i].w - gradqM.w;
+          }
+
+          const dfloat dq = gradqP.w - gradqM.w;
+          const dfloat hlf = 0.5f;
+
+          s_nxdq[n] = hlf*sJ*invJ*nx*dq;
+          s_nydq[n] = hlf*sJ*invJ*ny*dq;
+
+          s_lapflux[n] = hlf*sJ*invJ*(-nx*(gradqP.x-gradqM.x)
+                                      -ny*(gradqP.y-gradqM.y)
+                                      -tau*hinv*dq);
+        }
+      }
+
+      @barrier("local");
+
+      // dqdx += LIFT*(sJ/J)*nx*dq
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
+
+        if(n<p_Np){
+          const dlong gid = element*p_Nvgeo;
+          const dfloat drdx = vgeo[gid + p_RXID];
+          const dfloat drdy = vgeo[gid + p_RYID];
+          const dfloat dsdx = vgeo[gid + p_SXID];
+          const dfloat dsdy = vgeo[gid + p_SYID];
+
+          dfloat Lnxdq = 0;
+          dfloat Lnydq = 0;
+
+          #pragma unroll p_NfacesNfp
+          for(int k=0;k<p_NfacesNfp;++k){
+            Lnxdq += LIFTT[n+k*p_Np]*s_nxdq[k];
+            Lnydq += LIFTT[n+k*p_Np]*s_nydq[k];
+          }
+
+          dfloat dqdx = s_dqdx[n] + Lnxdq;
+          dfloat dqdy = s_dqdy[n] + Lnydq;
+          s_dqdx[n] = drdx*dqdx + drdy*dqdy; // abuse of notation
+          s_dqdy[n] = dsdx*dqdx + dsdy*dqdy;
+
+          s_Lnxdq[n] = Lnxdq;
+          s_Lnydq[n] = Lnydq;
         }
       }
 
       @barrier("local");
 
       for(int n=0;n<p_maxNodes;++n;@inner(0)){
-        if (n<p_Np) {
-          const dlong element = elementList[e];
-          const dlong gid = element*p_Nggeo;
+        if(n<p_NfacesNfp){
+          const int id = idM%p_Np;
+          s_lapflux[n] += sJ*invJ*(nx*s_Lnxdq[id]+ny*s_Lnydq[id]);
+        }
+      }
 
-          const dfloat Grr = ggeo[gid + p_G00ID];
-          const dfloat Grs = ggeo[gid + p_G01ID];
-          const dfloat Gss = ggeo[gid + p_G11ID];
+      @barrier("local");
 
-          dfloat qrr = 0.;
-          dfloat qrs = 0.;
-          dfloat qss = 0.;
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
+        if(n<p_Np){
+          dfloat LUn = 0.0;
+          dfloat lapr = 0, laps = 0;
 
           #pragma unroll p_Np
-            for (int k=0;k<p_Np;k++) {
-              dfloat qn = s_q[k];
-              qrr += Smatrices[n+k*p_Np+0*p_Np*p_Np]*qn;
-              qrs += Smatrices[n+k*p_Np+1*p_Np*p_Np]*qn;
-              qss += Smatrices[n+k*p_Np+2*p_Np*p_Np]*qn;
-            }
-            
-          dfloat Lndq = 0;            
-          // surface mass * surface terms
+          for(int k=0;k<p_Np;++k){
+            lapr += Dmatrices[n+k*p_Np+0*p_Np*p_Np]*s_dqdx[k];
+            laps += Dmatrices[n+k*p_Np+1*p_Np*p_Np]*s_dqdy[k];
+          }
+
+          LUn = -(lapr+laps);
+
+          // lift remaining surface terms
           #pragma unroll p_NfacesNfp
-            for(int k=0;k<p_NfacesNfp;++k){
-              Lndq += sMT[n+k*p_Np]*s_ndq[k];
-            }
+          for(int k=0;k<p_NfacesNfp;++k){
+            LUn += LIFTT[n+k*p_Np]*s_lapflux[k];
+          }
 
-          const dlong id = n + element*p_Np;
-
-          LU[id+i*fieldOffset] = -nu*(Grr*qrr+Grs*qrs+Gss*qss - Lndq);
+          const dlong id = n+element*p_Np*p_NVfields+i*p_Np;
+          if (beta!=0) {
+            RHS[id] = beta*RHS[id] - nu*alpha*LUn;
+          } else {
+            RHS[id] = -nu*alpha*LUn;
+          }
         }
       }
     }

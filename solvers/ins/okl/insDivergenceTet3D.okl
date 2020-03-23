@@ -29,24 +29,25 @@ SOFTWARE.
 @kernel void insDivergenceVolumeTet3D(const dlong Nelements,
                                      @restrict const  dfloat *  vgeo,
                                      @restrict const  dfloat *  Dmatrices,
-                                     const dlong offset,
+                                     const dfloat alpha,
+                                     const dfloat beta,
                                      @restrict const  dfloat *  U,
-                                           @restrict dfloat *  divU){
-  
+                                           @restrict  dfloat *  RHS){
+
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
     @shared dfloat s_U[p_NblockV][p_Np];
     @shared dfloat s_V[p_NblockV][p_Np];
     @shared dfloat s_W[p_NblockV][p_Np];
-  
+
     for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
       for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
         const dlong e = eo+es; // element in block
-        if(e<Nelements){ 
-          const dlong id = e*p_Np+n;
-          s_U[es][n] = U[id+0*offset];
-          s_V[es][n] = U[id+1*offset];         
-          s_W[es][n] = U[id+2*offset];         
+        if(e<Nelements){
+          const dlong id = e*p_Np*p_NVfields+n;
+          s_U[es][n] = U[id+0*p_Np];
+          s_V[es][n] = U[id+1*p_Np];
+          s_W[es][n] = U[id+2*p_Np];
         }
       }
     }
@@ -57,7 +58,7 @@ SOFTWARE.
     for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
       for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
         const dlong e = eo+es; // element in block
-        if(e<Nelements){    
+        if(e<Nelements){
           // prefetch geometric factors (constant on triangle)
           // prefetch geometric factors (constant on triangle)
           const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
@@ -73,15 +74,15 @@ SOFTWARE.
           const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
 
           // compute 'r' and 's' derivatives of (q_m) at node n
-          dfloat dudr = 0.f, duds = 0.f, dudt = 0.f; 
-          dfloat dvdr = 0.f, dvds = 0.f, dvdt = 0.f; 
-          dfloat dwdr = 0.f, dwds = 0.f, dwdt = 0.f; 
+          dfloat dudr = 0.f, duds = 0.f, dudt = 0.f;
+          dfloat dvdr = 0.f, dvds = 0.f, dvdt = 0.f;
+          dfloat dwdr = 0.f, dwds = 0.f, dwdt = 0.f;
           #pragma unroll p_Np
           for(int i=0;i<p_Np;++i){
             const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
             const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
             const dfloat Dtni = Dmatrices[n+i*p_Np+2*p_Np*p_Np];
-            // 
+            //
             dudr += Drni*s_U[es][i];
             duds += Dsni*s_U[es][i];
             dudt += Dtni*s_U[es][i];
@@ -101,7 +102,11 @@ SOFTWARE.
           dfloat dwdz   = drdz*dwdr + dsdz*dwds + dtdz*dwdt;
 
           const dlong id = e*p_Np+n;
-          divU[id] = dudx + dvdy + dwdz;
+          if (beta!=0.0) {
+            RHS[id] = beta*RHS[id] + alpha*(dudx + dvdy + dwdz);
+          } else {
+            RHS[id] = alpha*(dudx + dvdy + dwdz);
+          }
         }
       }
     }
@@ -118,9 +123,10 @@ SOFTWARE.
                                       @restrict const  dfloat *  x,
                                       @restrict const  dfloat *  y,
                                       @restrict const  dfloat *  z,
-                                      const dlong offset,
+                                      const dfloat nu,
+                                      const dfloat alpha,
                                       @restrict const  dfloat *  U,
-                                            @restrict dfloat *  divU){ 
+                                            @restrict  dfloat *  RHS){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
     @shared dfloat s_fluxU[p_NblockS][p_Nfp*p_Nfaces];
@@ -131,7 +137,7 @@ SOFTWARE.
         if(e<Nelements){
           if(n<p_Nfp*p_Nfaces){
             // find face that owns this node
-            const dlong face = n/p_Nfp;
+            const int face = n/p_Nfp;
             // load surface geofactors for this face
             const dlong sid    = p_Nsgeo*(e*p_Nfaces+face);
             const dfloat nx   = sgeo[sid+p_NXID];
@@ -145,27 +151,35 @@ SOFTWARE.
             const dlong idM = vmapM[id];
             const dlong idP = vmapP[id];
 
+            const dlong eM = e;
+            const dlong eP = idP/p_Np;
+            const int vidM = idM%p_Np;
+            const int vidP = idP%p_Np;
+
+            const dlong qbaseM = eM*p_Np*p_NVfields + vidM;
+            const dlong qbaseP = eP*p_Np*p_NVfields + vidP;
+
             // load negative and positive trace node values of q
-            const dfloat  uM = U[idM+0*offset], vM = U[idM+1*offset], wM = U[idM+2*offset];
-                  dfloat  uP = U[idP+0*offset], vP = U[idP+1*offset], wP = U[idP+2*offset];
-             
+            const dfloat  uM = U[qbaseM+0*p_Np], vM = U[qbaseM+1*p_Np], wM = U[qbaseM+2*p_Np];
+                  dfloat  uP = U[qbaseP+0*p_Np], vP = U[qbaseP+1*p_Np], wP = U[qbaseP+2*p_Np];
+
             // apply boundary condition
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0) {
-              insVelocityDirichletConditions3D(bc,time, x[idM],y[idM],z[idM], nx,ny,nz, uM,vM,wM, &uP,&vP,&wP);
+              insVelocityDirichletConditions3D(bc,nu,time, x[idM],y[idM],z[idM], nx,ny,nz, uM,vM,wM, &uP,&vP,&wP);
               // // Use strong form of the BCs
-              uP = 2.f*uP-uM;        
-              vP = 2.f*vP-vM;         
-              wP = 2.f*wP-wM;         
+              uP = 2.f*uP-uM;
+              vP = 2.f*vP-vM;
+              wP = 2.f*wP-wM;
             }
-      
-            const dfloat sc = invJ * sJ ; 
-            s_fluxU[es][n] = 0.5f*sc*(nx*(uP-uM) + ny*(vP-vM) + nz*(wP-wM)); 
+
+            const dfloat sc = invJ * sJ ;
+            s_fluxU[es][n] = 0.5f*sc*(nx*(uP-uM) + ny*(vP-vM) + nz*(wP-wM));
           }
         }
       }
     }
-    
+
     // wait for all @shared memory writes of the previous inner loop to complete
     @barrier("local");
 
@@ -175,16 +189,17 @@ SOFTWARE.
         const dlong e = eo + es;
         if(e<Nelements){
           if(n<p_Np){
-            const dlong id = e*p_Np + n;
-            dfloat divu = divU[id];    
-            
+            dfloat divu = 0.0;
+
             #pragma unroll p_NfacesNfp
             for(int m=0;m<p_Nfaces*p_Nfp;++m){
               const dfloat L = LIFTT[n+m*p_Np];
               divu += L*s_fluxU[es][m];
             }
+
             // Update
-            divU[id] = divu; 
+            const dlong id = e*p_Np + n;
+            RHS[id] += alpha*divu;
           }
         }
       }
