@@ -25,7 +25,7 @@ SOFTWARE.
 */
 
 // compute RHS = MM*RHS/gamma + BCdata
-@kernel void insPressureRhsTet3D(const dlong Nelements,
+@kernel void insPressureIncrementRhsTri2D(const dlong Nelements,
                                @restrict const  dfloat *  vgeo,
                                @restrict const  dfloat *  sgeo,
                                @restrict const  dfloat *  ggeo,
@@ -39,12 +39,13 @@ SOFTWARE.
                                @restrict const  int    *  mapB,
                                const dfloat tau,
                                const dfloat time,
+                               const dfloat dt,
                                @restrict const  dfloat *  x,
                                @restrict const  dfloat *  y,
                                @restrict const  dfloat *  z,
                                const dfloat nu,
                                const dfloat gamma,
-                               @restrict       dfloat *  RHS){
+                               @restrict        dfloat *  RHS){
 
   for(int e=0;e<Nelements;e++;@outer(0)){
     @shared dfloat s_p[p_Np];
@@ -71,23 +72,30 @@ SOFTWARE.
 
         const int face = n/p_Nfp;
 
-        dfloat dpdxP=0, dpdyP=0, dpdzP=0, pP=0;
-
         // load surface geofactors for this face
         const int sid = p_Nsgeo*(e*p_Nfaces+face);
         const dfloat nx = sgeo[sid+p_NXID];
         const dfloat ny = sgeo[sid+p_NYID];
-        const dfloat nz = sgeo[sid+p_NZID];
         const dfloat sJ = sgeo[sid+p_SJID];
+
+        dfloat dpdxP=0, dpdyP=0, pP=0;
 
         const int bc = mapB[idM];
         if(bc>0) {
-          insPressureDirichletConditions3D(bc,nu,time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &pP);
-          insPressureNeumannConditions3D(bc,nu,time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f,0.f, &dpdxP, &dpdyP, &dpdzP);
+          dfloat dpdxPn1=0, dpdyPn1=0, pPn1=0;
+          insPressureDirichletConditions2D(bc,nu,time, x[idM], y[idM], nx, ny, 0.f, &pP);
+          insPressureNeumannConditions2D(bc,nu,time, x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxP, &dpdyP);
+
+          insPressureDirichletConditions2D(bc,nu,(time-dt), x[idM], y[idM], nx, ny, 0.f, &pPn1);
+          insPressureNeumannConditions2D(bc,nu,(time-dt), x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxPn1, &dpdyPn1);
+
+          pP -= pPn1;
+          dpdxP -= dpdxPn1;
+          dpdyP -= dpdyPn1;
         }
 
         s_p[nid] = pP;
-        s_ndp[n] = sJ*(nx*dpdxP + ny*dpdyP + nz*dpdzP);
+        s_ndp[n] = sJ*(nx*dpdxP + ny*dpdyP);
       }
     }
 
@@ -99,25 +107,16 @@ SOFTWARE.
         const int gid = e*p_Nggeo;
         const dfloat Grr = ggeo[gid + p_G00ID];
         const dfloat Grs = ggeo[gid + p_G01ID];
-        const dfloat Grt = ggeo[gid + p_G02ID];
         const dfloat Gss = ggeo[gid + p_G11ID];
-        const dfloat Gst = ggeo[gid + p_G12ID];
-        const dfloat Gtt = ggeo[gid + p_G22ID];
 
         dfloat prr = 0.;
         dfloat prs = 0.;
-        dfloat prt = 0.;
         dfloat pss = 0.;
-        dfloat pst = 0.;
-        dfloat ptt = 0.;
         #pragma unroll p_Np
           for (int k=0;k<p_Np;k++) {
             prr += Smatrices[n+k*p_Np+0*p_Np*p_Np]*s_p[k];
             prs += Smatrices[n+k*p_Np+1*p_Np*p_Np]*s_p[k];
-            prt += Smatrices[n+k*p_Np+2*p_Np*p_Np]*s_p[k];
-            pss += Smatrices[n+k*p_Np+3*p_Np*p_Np]*s_p[k];
-            pst += Smatrices[n+k*p_Np+4*p_Np*p_Np]*s_p[k];
-            ptt += Smatrices[n+k*p_Np+5*p_Np*p_Np]*s_p[k];
+            pss += Smatrices[n+k*p_Np+2*p_Np*p_Np]*s_p[k];
           }
 
         dfloat Lndp = 0;
@@ -127,9 +126,7 @@ SOFTWARE.
             Lndp += sMT[n+i*p_Np]*s_ndp[i];
           }
 
-        r_rhsP = -(Grr*prr+Grs*prs+Grt*prt
-                  +Gss*pss+Gst*pst+Gtt*ptt
-                  - Lndp);
+        r_rhsP = -(Grr*prr+Grs*prs+Gss*pss - Lndp);
       }
     }
 
@@ -165,7 +162,7 @@ SOFTWARE.
 }
 
 // compute RHS = MM*RHS/gamma + BCdata
-@kernel void insPressureIpdgRhsTet3D(const dlong Nelements,
+@kernel void insPressureIncrementIpdgRhsTri2D(const dlong Nelements,
                                @restrict const  dfloat *  vgeo,
                                @restrict const  dfloat *  sgeo,
                                @restrict const  dfloat *  ggeo,
@@ -179,61 +176,63 @@ SOFTWARE.
                                @restrict const  int    *  mapB,
                                const dfloat tau,
                                const dfloat time,
+                               const dfloat dt,
                                @restrict const  dfloat *  x,
                                @restrict const  dfloat *  y,
                                @restrict const  dfloat *  z,
                                const dfloat nu,
                                const dfloat gamma,
-                               @restrict       dfloat *  RHS){
+                               @restrict        dfloat *  RHS){
 
   for(dlong e=0;e<Nelements;++e;@outer(0)){
     @shared  dfloat s_dpdx[p_Np];
     @shared  dfloat s_dpdy[p_Np];
-    @shared  dfloat s_dpdz[p_Np];
-
     @shared  dfloat s_lapp[p_Np];
 
     @shared  dfloat s_nxdp[p_NfacesNfp];
     @shared  dfloat s_nydp[p_NfacesNfp];
-    @shared  dfloat s_nzdp[p_NfacesNfp];
 
     @shared  dfloat s_lappflux[p_NfacesNfp];
-
     @shared  dfloat s_Lnxdp[p_Np];
     @shared  dfloat s_Lnydp[p_Np];
-    @shared  dfloat s_Lnzdp[p_Np];
 
     @exclusive dlong idM;
-    @exclusive dfloat nx, ny, nz, sJ, invJ, hinv;
+    @exclusive dfloat nx, ny, sJ, invJ, hinv;
 
     for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_NfacesNfp){
         const dlong id  = n + e*p_Nfaces*p_Nfp;
         idM = vmapM[id];
-
         const int face = n/p_Nfp;
+
         // load surface geofactors for this face
         const dlong sid = p_Nsgeo*(e*p_Nfaces+face);
-        nx    = sgeo[sid+p_NXID];
-        ny    = sgeo[sid+p_NYID];
-        nz    = sgeo[sid+p_NZID];
-        sJ    = sgeo[sid+p_SJID];
-        invJ  = sgeo[sid+p_IJID];
-        hinv  = sgeo[sid+p_IHID];
+        nx = sgeo[sid+p_NXID];
+        ny = sgeo[sid+p_NYID];
+        sJ = sgeo[sid+p_SJID];
+        invJ = sgeo[sid+p_IJID];
+        hinv = sgeo[sid+p_IHID];
 
-        dfloat dpdxP=0.f, dpdyP=0.f, dpdzP=0.f, pP=0;
+        dfloat dpdxP=0, dpdyP=0, pP=0;
 
         const int bc = EToB[face+p_Nfaces*e];
         if(bc>0) {
-          insPressureDirichletConditions3D(bc,nu,time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &pP);
-          insPressureNeumannConditions3D(bc,nu,time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f,0.f, &dpdxP, &dpdyP, &dpdzP);
+          dfloat dpdxPn1=0, dpdyPn1=0, pPn1=0;
+          insPressureDirichletConditions2D(bc,nu,time, x[idM], y[idM], nx, ny, 0.f, &pP);
+          insPressureNeumannConditions2D(bc,nu,time, x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxP, &dpdyP);
+
+          insPressureDirichletConditions2D(bc,nu,(time-dt), x[idM], y[idM], nx, ny, 0.f, &pPn1);
+          insPressureNeumannConditions2D(bc,nu,(time-dt), x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxPn1, &dpdyPn1);
+
+          pP -= pPn1;
+          dpdxP -= dpdxPn1;
+          dpdyP -= dpdyPn1;
         }
 
         const dfloat dp = pP;
         s_nxdp[n] = sJ*invJ*nx*dp;
         s_nydp[n] = sJ*invJ*ny*dp;
-        s_nzdp[n] = sJ*invJ*nz*dp;
-        s_lappflux[n] = sJ*invJ*(-nx*(dpdxP)-ny*(dpdyP)-nz*(dpdzP)-tau*hinv*dp);
+        s_lappflux[n] = sJ*invJ*(-nx*(dpdxP)-ny*(dpdyP) -tau*hinv*dp);
       }
     }
 
@@ -245,39 +244,26 @@ SOFTWARE.
         const dlong gid = e*p_Nvgeo;
         const dfloat drdx = vgeo[gid + p_RXID];
         const dfloat drdy = vgeo[gid + p_RYID];
-        const dfloat drdz = vgeo[gid + p_RZID];
-
         const dfloat dsdx = vgeo[gid + p_SXID];
         const dfloat dsdy = vgeo[gid + p_SYID];
-        const dfloat dsdz = vgeo[gid + p_SZID];
-
-        const dfloat dtdx = vgeo[gid + p_TXID];
-        const dfloat dtdy = vgeo[gid + p_TYID];
-        const dfloat dtdz = vgeo[gid + p_TZID];
 
         dfloat Lnxdp = 0.f;
         dfloat Lnydp = 0.f;
-        dfloat Lnzdp = 0.f;
 
         #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
-            dfloat liftt = LIFTT[n+i*p_Np];
-            Lnxdp += liftt*s_nxdp[i];
-            Lnydp += liftt*s_nydp[i];
-            Lnzdp += liftt*s_nzdp[i];
+            Lnxdp += LIFTT[n+i*p_Np]*s_nxdp[i];
+            Lnydp += LIFTT[n+i*p_Np]*s_nydp[i];
           }
 
         const dfloat dpdx = Lnxdp;
         const dfloat dpdy = Lnydp;
-        const dfloat dpdz = Lnzdp;
 
-        s_dpdx[n] = drdx*dpdx + drdy*dpdy + drdz*dpdz; // abuse of notation
-        s_dpdy[n] = dsdx*dpdx + dsdy*dpdy + dsdz*dpdz;
-        s_dpdz[n] = dtdx*dpdx + dtdy*dpdy + dtdz*dpdz;
+        s_dpdx[n] = drdx*dpdx + drdy*dpdy; // abuse of notation
+        s_dpdy[n] = dsdx*dpdx + dsdy*dpdy;
 
         s_Lnxdp[n] = Lnxdp;
         s_Lnydp[n] = Lnydp;
-        s_Lnzdp[n] = Lnzdp;
       }
     }
 
@@ -286,24 +272,23 @@ SOFTWARE.
     for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_NfacesNfp){
         const int id = idM%p_Np;
-        s_lappflux[n] += sJ*invJ*(nx*s_Lnxdp[id]+ny*s_Lnydp[id]+nz*s_Lnzdp[id]);
+        s_lappflux[n] += sJ*invJ*(nx*s_Lnxdp[id]+ny*s_Lnydp[id]);
       }
 
       if(n<p_Np){
-        dfloat lasr = 0.f, lass = 0.f, last=0.f;
+        dfloat lasr = 0.f, lass = 0.f;
+
         #pragma unroll p_Np
         for(int i=0;i<p_Np;++i) {
           const dfloat Drn = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
           const dfloat Dsn = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
-          const dfloat Dtn = Dmatrices[n+i*p_Np+2*p_Np*p_Np];
           lasr += Drn*s_dpdx[i];
           lass += Dsn*s_dpdy[i];
-          last += Dtn*s_dpdz[i];
         }
 
-        //fetch rhs value and add volume terms
+        //fetch RHS value and add volume terms
         const dlong id = e*p_Np+n;
-        s_lapp[n] = RHS[id]/gamma +(lasr+lass+last);
+        s_lapp[n] = RHS[id]/gamma + (lasr+lass);
       }
     }
 
@@ -311,14 +296,13 @@ SOFTWARE.
 
     for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_Np){
-        dfloat las = 0.f;
+        dfloat las = 0;
 
         // lift remaining surface terms
         #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
             las += LIFTT[n+i*p_Np]*s_lappflux[i];
           }
-
         s_lapp[n] -= las;
       }
     }
@@ -330,7 +314,6 @@ SOFTWARE.
         const dfloat J = vgeo[e*p_Nvgeo + p_JID];
 
         dfloat Mlaps = 0.f;
-
         // multiply by mass matrix
         #pragma unroll p_Np
         for(int i=0;i<p_Np;++i){
@@ -344,8 +327,8 @@ SOFTWARE.
   }
 }
 
-// enter BCs if C0
-@kernel void insPressureBCTet3D(const dlong Nelements,
+// P+=PI and enter BCs if C0
+@kernel void insPressureIncrementBCTri2D(const dlong Nelements,
                                @restrict const  dfloat *  sgeo,
                                @restrict const  dlong  *  vmapM,
                                @restrict const  int    *  mapB,
@@ -353,25 +336,40 @@ SOFTWARE.
                                @restrict const  dfloat *  x,
                                @restrict const  dfloat *  y,
                                @restrict const  dfloat *  z,
+                               const int pDisc_c0,
                                const dfloat nu,
+                               @restrict const  dfloat *  PI,
                                @restrict        dfloat *  P){
 
   for(dlong e=0;e<Nelements;e++;@outer(0)){
-    for(int n=0;n<p_NfacesNfp;++n;@inner(0)){
-      const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
-      const int bc = mapB[idM];
 
-      if(bc>0) {
-        const int face = n/p_Nfp;
-        const dlong sid = p_Nsgeo*(e*p_Nfaces+face);
-        const dfloat nx = sgeo[sid+p_NXID];
-        const dfloat ny = sgeo[sid+p_NYID];
-        const dfloat nz = sgeo[sid+p_NZID];
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      if(n<p_Np){
+        const dlong id = e*p_Np+n;
+        P[id] += PI[id];
+      }
+    }
 
-        const dfloat pM = P[idM];
-        dfloat pP = 0.f;
-        insPressureDirichletConditions3D(bc,nu,time, x[idM], y[idM], z[idM], nx, ny, nz, pM, &pP);
-        P[idM] = pP;
+    if (pDisc_c0) { //fill masked boundary points if C0
+      @barrier("local");
+
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
+        if(n<p_NfacesNfp){
+          const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
+          const int bc = mapB[idM];
+
+          if(bc>0) {
+            const int face = n/p_Nfp;
+            const dlong sid = p_Nsgeo*(e*p_Nfaces+face);
+            const dfloat nx = sgeo[sid+p_NXID];
+            const dfloat ny = sgeo[sid+p_NYID];
+
+            const dfloat pM = P[idM];
+            dfloat pP = 0.f;
+            insPressureDirichletConditions2D(bc,nu,time, x[idM], y[idM], nx, ny, pM, &pP);
+            P[idM] = pP;
+          }
+        }
       }
     }
   }

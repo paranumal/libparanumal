@@ -33,20 +33,48 @@ void ins_t::rhs_imex_invg(occa::memory& o_RHS, occa::memory& o_U, const dfloat g
 
   const dfloat dt = timeStepper->GetTimeStep();
 
-  //call velocty solver to solve
-  // gamma*U - mu*Laplacian*U = RHS
-  VelocitySolve(o_U, o_RHS, gamma, T);
+  if (pressureIncrement) {
+    //use current pressure in velocity RHS
+    // RHS = RHS - grad P
+    Gradient(-1.0, o_p, 1.0, o_RHS, T);
 
-  // rhsP = -Div U
-  Divergence(-1.0, o_U, 0.0, o_rhsP, T);
+    //call velocty solver to solve
+    // gamma*U - mu*Laplacian*U = RHS
+    VelocitySolve(o_U, o_RHS, gamma, T);
 
-  //call pressure solver to solve
-  // -dt*Laplacian*P = rhsP
-  PressureSolve(o_p, o_rhsP, dt, T);
+    // rhsP = -Div U
+    Divergence(-1.0, o_U, 0.0, o_rhsP, T);
 
-  //update velocity with pressure correction
-  // U = U - dt*grad P
-  Gradient(-dt, o_p, 1.0, o_U, T);
+    //remove old pressure gradient from U
+    // U = U + dt*grad P
+    Gradient(dt, o_p, 1.0, o_U, T);
+
+    //call pressure increment solver to solve
+    // -dt*Laplacian*PI = rhsP
+    // P += PI
+    PressureIncrementSolve(o_p, o_rhsP, dt, T, dt);
+
+    //update velocity with new pressure correction
+    // U = U - dt*grad P
+    Gradient(-dt, o_p, 1.0, o_U, T);
+
+  } else {
+    //call velocty solver to solve
+    // gamma*U - mu*Laplacian*U = RHS
+    VelocitySolve(o_U, o_RHS, gamma, T);
+
+    // rhsP = -Div U
+    Divergence(-1.0, o_U, 0.0, o_rhsP, T);
+
+    //call pressure solver to solve
+    // -dt*Laplacian*P = rhsP
+    PressureSolve(o_p, o_rhsP, dt, T);
+
+    //update velocity with pressure correction
+    // U = U - dt*grad P
+    Gradient(-dt, o_p, 1.0, o_U, T);
+  }
+
 
   if (mesh.rank==0 && mesh.dim==2) {
     printf("\rSolver iterations: U - %3d, V - %3d, P - %3d", NiterU, NiterV, NiterP); fflush(stdout);

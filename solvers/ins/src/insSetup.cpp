@@ -37,6 +37,7 @@ ins_t& ins_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   settings.getSetting("VISCOSITY", ins->nu);
 
   ins->cubature = (settings.compareSetting("ADVECTION TYPE", "CUBATURE")) ? 1:0;
+  ins->pressureIncrement = (settings.compareSetting("PRESSURE INCREMENT", "TRUE")) ? 1:0;
 
   //setup cubature
   if (ins->cubature) {
@@ -181,6 +182,9 @@ ins_t& ins_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
       ins->o_rhsW = mesh.device.malloc((1)*sizeof(dfloat));
   }
 
+  if (ins->pressureIncrement)
+    ins->o_PI = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat), ins->p);
+
   ins->o_rhsP = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat));
 
   //storage for M*u during reporting
@@ -312,7 +316,11 @@ ins_t& ins_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   if (settings.compareSetting("TIME INTEGRATOR","EXTBDF3")
     ||settings.compareSetting("TIME INTEGRATOR","SSBDF3")) {
     sprintf(fileName, DINS "/okl/insVelocityRhs%s.okl", suffix);
-    sprintf(kernelName, "insVelocityRhs%s", suffix);
+
+    if (ins->vDisc_c0)
+      sprintf(kernelName, "insVelocityRhs%s", suffix);
+    else
+      sprintf(kernelName, "insVelocityIpdgRhs%s", suffix);
     ins->velocityRhsKernel =  buildKernel(mesh.device, fileName, kernelName,
                                            kernelInfo, mesh.comm);
 
@@ -351,14 +359,32 @@ ins_t& ins_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
                                          kernelInfo, mesh.comm);
 
   //pressure solver kernels
-  sprintf(fileName, DINS "/okl/insPressureRhs%s.okl", suffix);
-  sprintf(kernelName, "insPressureRhs%s", suffix);
-  ins->pressureRhsKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                         kernelInfo, mesh.comm);
+  if (ins->pressureIncrement) {
+    sprintf(fileName, DINS "/okl/insPressureIncrementRhs%s.okl", suffix);
 
-  sprintf(kernelName, "insPressureBC%s", suffix);
-  ins->pressureBCKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                         kernelInfo, mesh.comm);
+    if (ins->pDisc_c0)
+      sprintf(kernelName, "insPressureIncrementRhs%s", suffix);
+    else
+      sprintf(kernelName, "insPressureIncrementIpdgRhs%s", suffix);
+    ins->pressureIncrementRhsKernel =  buildKernel(mesh.device, fileName, kernelName,
+                                           kernelInfo, mesh.comm);
+
+    sprintf(kernelName, "insPressureIncrementBC%s", suffix);
+    ins->pressureIncrementBCKernel =  buildKernel(mesh.device, fileName, kernelName,
+                                           kernelInfo, mesh.comm);
+  } else {
+    sprintf(fileName, DINS "/okl/insPressureRhs%s.okl", suffix);
+    if (ins->pDisc_c0)
+      sprintf(kernelName, "insPressureRhs%s", suffix);
+    else
+      sprintf(kernelName, "insPressureIpdgRhs%s", suffix);
+    ins->pressureRhsKernel =  buildKernel(mesh.device, fileName, kernelName,
+                                           kernelInfo, mesh.comm);
+
+    sprintf(kernelName, "insPressureBC%s", suffix);
+    ins->pressureBCKernel =  buildKernel(mesh.device, fileName, kernelName,
+                                           kernelInfo, mesh.comm);
+  }
 
   // mass matrix operator
   sprintf(fileName, LIBP_DIR "/core/okl/MassMatrixOperator%s.okl", suffix);

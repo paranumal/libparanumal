@@ -93,7 +93,7 @@ public:
 
   int NiterU, NiterV, NiterW, NiterP;
 
-  int cubature;
+  int cubature, pressureIncrement;
   int vDisc_c0, pDisc_c0;
   dfloat velTOL, presTOL;
 
@@ -113,7 +113,7 @@ public:
   //extra buffers for solvers
   occa::memory o_UH, o_VH, o_WH;
   occa::memory o_rhsU, o_rhsV, o_rhsW;
-  occa::memory o_rhsP;
+  occa::memory o_rhsP, o_PI;
 
   int *mapB; //node-wise boundary flag
   occa::memory o_mapB;
@@ -140,6 +140,9 @@ public:
 
   occa::kernel pressureRhsKernel;
   occa::kernel pressureBCKernel;
+
+  occa::kernel pressureIncrementRhsKernel;
+  occa::kernel pressureIncrementBCKernel;
 
   occa::kernel MassMatrixKernel;
   occa::kernel vorticityKernel;
@@ -192,6 +195,8 @@ public:
                      const dfloat gamma, const dfloat T);
   void PressureSolve(occa::memory& o_P, occa::memory& o_RHS,
                      const dfloat gamma, const dfloat T);
+  void PressureIncrementSolve(occa::memory& o_P, occa::memory& o_RHS,
+                     const dfloat gamma, const dfloat T, const dfloat dt);
 };
 
 #endif

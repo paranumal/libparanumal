@@ -43,6 +43,11 @@ insSettings_t::insSettings_t(MPI_Comm& _comm):
              "Integration type for flux terms",
              {"COLLOCATION", "CUBATURE"});
 
+  newSetting("PRESSURE INCREMENT",
+             "TRUE",
+             "Use Pressure increment update",
+             {"TRUE", "FALSE"});
+
   newSetting("TIME INTEGRATOR",
              "DOPRI5",
              "Time integration method",
@@ -93,6 +98,7 @@ void insSettings_t::report() {
     std::cout << "INS Settings:\n\n";
     reportSetting("DATA FILE");
     reportSetting("ADVECTION TYPE");
+    reportSetting("PRESSURE INCREMENT");
     reportSetting("TIME INTEGRATOR");
 
     if (compareSetting("TIME INTEGRATOR","SSBDF3")) {

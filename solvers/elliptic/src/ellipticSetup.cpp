@@ -71,6 +71,8 @@ elliptic_t& elliptic_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
     dlong Ntotal = mesh.Np*(mesh.Nelements+mesh.totalHaloPairs);
     elliptic->grad = (dfloat*) calloc(Ntotal*4, sizeof(dfloat));
     elliptic->o_grad  = mesh.device.malloc(Ntotal*4*sizeof(dfloat), elliptic->grad);
+  } else {
+    elliptic->tau = 0.0;
   }
 
   // OCCA build stuff

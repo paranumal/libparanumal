@@ -24,6 +24,350 @@ SOFTWARE.
 
 */
 
+#define surfaceTerms(sk,m,i, j)                                         \
+{                                                                       \
+  const dlong idM = vmapM[sk];                                          \
+  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
+  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
+  const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];                            \
+  const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];                          \
+                                                                        \
+  dfloat dudxP=0, dudyP=0, dudzP=0, uP=0;                               \
+  dfloat dvdxP=0, dvdyP=0, dvdzP=0, vP=0;                               \
+  dfloat dwdxP=0, dwdyP=0, dwdzP=0, wP=0;                               \
+  const int bc = mapB[idM];                                             \
+  if(bc>0) {                                                            \
+    insVelocityDirichletConditions3D(bc, nu, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, &uP, &vP, &wP);\
+    insVelocityNeumannConditions3D(bc, nu, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dudzP, &dvdxP, &dvdyP, &dvdzP, &dwdxP, &dwdyP, &dwdzP);\
+  }                                                                     \
+                                                                        \
+  s_u  [m][j][i]  = uP;                                                 \
+  s_v  [m][j][i]  = vP;                                                 \
+  s_w  [m][j][i]  = wP;                                                 \
+  s_ndu[m][j][i]  = -WsJ*(nx*dudxP + ny*dudyP + nz*dudzP);              \
+  s_ndv[m][j][i]  = -WsJ*(nx*dvdxP + ny*dvdyP + nz*dvdzP);              \
+  s_ndw[m][j][i]  = -WsJ*(nx*dwdxP + ny*dwdyP + nz*dwdzP);              \
+}
+
+// compute RHS = MM*RHS/nu + BCdata
+// and split fields to separate arrays
+@kernel void insVelocityRhsHex3D(const dlong Nelements,
+                               @restrict const  dfloat *  vgeo,
+                               @restrict const  dfloat *  sgeo,
+                               @restrict const  dfloat *  ggeo,
+                               @restrict const  dfloat *  S,
+                               @restrict const  dfloat *  D,
+                               @restrict const  dfloat *  LIFTT,
+                               @restrict const  dfloat *  MM,
+                               @restrict const  dfloat *  sMT,
+                               @restrict const  dlong  *  vmapM,
+                               @restrict const  int    *  EToB,
+                               @restrict const  int    *  mapB,
+                               const dfloat tau,
+                               const dfloat time,
+                               @restrict const  dfloat *  x,
+                               @restrict const  dfloat *  y,
+                               @restrict const  dfloat *  z,
+                               const dfloat lambda,
+                               const dfloat nu,
+                               @restrict const dfloat *  U,
+                               @restrict const dfloat *  RHS,
+                               @restrict       dfloat *  UH,
+                               @restrict       dfloat *  VH,
+                               @restrict       dfloat *  WH,
+                               @restrict       dfloat *  rhsU,
+                               @restrict       dfloat *  rhsV,
+                               @restrict       dfloat *  rhsW){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_u[2][p_Nq][p_Nq];
+    @shared dfloat s_v[2][p_Nq][p_Nq];
+    @shared dfloat s_w[2][p_Nq][p_Nq];
+    @shared dfloat s_ndu[2][p_Nq][p_Nq];
+    @shared dfloat s_ndv[2][p_Nq][p_Nq];
+    @shared dfloat s_ndw[2][p_Nq][p_Nq];
+
+    @exclusive dfloat r_ut, r_Gut, r_Auk;
+    @exclusive dfloat r_vt, r_Gvt, r_Avk;
+    @exclusive dfloat r_wt, r_Gwt, r_Awk;
+    @exclusive dfloat r_u[p_Nq]; // register array to hold u(i,j,0:N) private to thread
+    @exclusive dfloat r_v[p_Nq]; // register array to hold u(i,j,0:N) private to thread
+    @exclusive dfloat r_w[p_Nq]; // register array to hold u(i,j,0:N) private to thread
+    @exclusive dfloat r_rhsu[p_Nq];// array for results Au(i,j,0:N)
+    @exclusive dfloat r_rhsv[p_Nq];// array for results Au(i,j,0:N)
+    @exclusive dfloat r_rhsw[p_Nq];// array for results Au(i,j,0:N)
+
+    @exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
+
+    // for all face nodes of all elements
+    // face 0 & 5
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        //load D into local memory
+        // s_D[i][j] = d \phi_i at node j
+        s_D[j][i] = D[p_Nq*j+i]; // D is column major
+
+        #pragma unroll p_Nq
+        for(int k=0;k<p_Nq;++k){
+          r_u[k] = 0.;
+          r_v[k] = 0.;
+          r_w[k] = 0.;
+          r_rhsu[k] = 0.;
+          r_rhsv[k] = 0.;
+          r_rhsw[k] = 0.;
+        }
+
+        const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i + j*p_Nq;
+        const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + i + j*p_Nq;
+        surfaceTerms(sk0,0,i,j);
+        surfaceTerms(sk5,1,i,j);
+      }
+    }
+
+    @barrier("local");
+
+    // face 0 & 5
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        //face 0
+        r_u[0] = s_u[0][j][i];
+        r_v[0] = s_v[0][j][i];
+        r_w[0] = s_w[0][j][i];
+        r_rhsu[0] += s_ndu[0][j][i];
+        r_rhsv[0] += s_ndv[0][j][i];
+        r_rhsw[0] += s_ndw[0][j][i];
+
+        //face 5
+        r_u[p_Nq-1] = s_u[1][j][i];
+        r_v[p_Nq-1] = s_v[1][j][i];
+        r_w[p_Nq-1] = s_w[1][j][i];
+        r_rhsu[p_Nq-1] += s_ndu[1][j][i];
+        r_rhsv[p_Nq-1] += s_ndv[1][j][i];
+        r_rhsw[p_Nq-1] += s_ndw[1][j][i];
+      }
+    }
+
+    @barrier("local");
+
+    // face 1 & 3
+    for(int k=0;k<p_Nq;++k;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + i + k*p_Nq;
+        const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + i + k*p_Nq;
+        surfaceTerms(sk1,0,i,k);
+        surfaceTerms(sk3,1,i,k);
+      }
+    }
+
+    @barrier("local");
+
+    // face 1 & 3
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        if (j==0) {//face 1
+          #pragma unroll p_Nq
+          for (int k=0;k<p_Nq;k++) {
+            r_u[k] = s_u[0][k][i];
+            r_v[k] = s_v[0][k][i];
+            r_w[k] = s_w[0][k][i];
+            r_rhsu[k] += s_ndu[0][k][i];
+            r_rhsv[k] += s_ndv[0][k][i];
+            r_rhsw[k] += s_ndw[0][k][i];
+          }
+        }
+        if (j==p_Nq-1) {//face 3
+          #pragma unroll p_Nq
+          for (int k=0;k<p_Nq;k++) {
+            r_u[k] = s_u[1][k][i];
+            r_v[k] = s_v[1][k][i];
+            r_w[k] = s_w[1][k][i];
+            r_rhsu[k] += s_ndu[1][k][i];
+            r_rhsv[k] += s_ndv[1][k][i];
+            r_rhsw[k] += s_ndw[1][k][i];
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    // face 2 & 4
+    for(int k=0;k<p_Nq;++k;@inner(1)){
+      for(int j=0;j<p_Nq;++j;@inner(0)){
+        const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + j + k*p_Nq;
+        const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + j + k*p_Nq;
+        surfaceTerms(sk2,0,j,k);
+        surfaceTerms(sk4,1,j,k);
+      }
+    }
+
+    @barrier("local");
+
+    // face 2 & 4
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        if (i==p_Nq-1) {//face 2
+          #pragma unroll p_Nq
+          for (int k=0;k<p_Nq;k++) {
+            r_u[k] = s_u[0][k][j];
+            r_v[k] = s_v[0][k][j];
+            r_w[k] = s_w[0][k][j];
+            r_rhsu[k] += s_ndu[0][k][j];
+            r_rhsv[k] += s_ndv[0][k][j];
+            r_rhsw[k] += s_ndw[0][k][j];
+          }
+        }
+        if (i==0) {//face 4
+          #pragma unroll p_Nq
+          for (int k=0;k<p_Nq;k++) {
+            r_u[k] = s_u[1][k][j];
+            r_v[k] = s_v[1][k][j];
+            r_w[k] = s_w[1][k][j];
+            r_rhsu[k] += s_ndu[1][k][j];
+            r_rhsv[k] += s_ndv[1][k][j];
+            r_rhsw[k] += s_ndw[1][k][j];
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    // Layer by layer
+    #pragma unroll p_Nq
+      for(int k = 0;k < p_Nq; k++){
+        for(int j=0;j<p_Nq;++j;@inner(1)){
+          for(int i=0;i<p_Nq;++i;@inner(0)){
+
+            // prefetch geometric factors
+            const dlong gbase = e*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+            r_G00 = ggeo[gbase+p_G00ID*p_Np];
+            r_G01 = ggeo[gbase+p_G01ID*p_Np];
+            r_G02 = ggeo[gbase+p_G02ID*p_Np];
+
+            r_G11 = ggeo[gbase+p_G11ID*p_Np];
+            r_G12 = ggeo[gbase+p_G12ID*p_Np];
+            r_G22 = ggeo[gbase+p_G22ID*p_Np];
+
+            r_GwJ = ggeo[gbase+p_GWJID*p_Np];
+          }
+        }
+
+        @barrier("local");
+
+        for(int j=0;j<p_Nq;++j;@inner(1)){
+          for(int i=0;i<p_Nq;++i;@inner(0)){
+
+            // share u(:,:,k)
+            s_u[0][j][i] = r_u[k];
+            s_v[0][j][i] = r_v[k];
+            s_w[0][j][i] = r_w[k];
+
+            r_ut = 0;
+            r_vt = 0;
+            r_wt = 0;
+
+            #pragma unroll p_Nq
+              for(int m = 0; m < p_Nq; m++) {
+                r_ut += s_D[k][m]*r_u[m];
+                r_vt += s_D[k][m]*r_v[m];
+                r_wt += s_D[k][m]*r_w[m];
+              }
+          }
+        }
+
+        @barrier("local");
+
+        for(int j=0;j<p_Nq;++j;@inner(1)){
+          for(int i=0;i<p_Nq;++i;@inner(0)){
+
+            dfloat ur = 0.f;
+            dfloat vr = 0.f;
+            dfloat wr = 0.f;
+            dfloat us = 0.f;
+            dfloat vs = 0.f;
+            dfloat ws = 0.f;
+
+            #pragma unroll p_Nq
+              for(int m = 0; m < p_Nq; m++) {
+                ur += s_D[i][m]*s_u[0][j][m];
+                vr += s_D[i][m]*s_v[0][j][m];
+                wr += s_D[i][m]*s_w[0][j][m];
+                us += s_D[j][m]*s_u[0][m][i];
+                vs += s_D[j][m]*s_v[0][m][i];
+                ws += s_D[j][m]*s_w[0][m][i];
+              }
+
+            //reuse the s_ndq array
+            s_ndu[0][j][i] = (r_G01*ur + r_G11*us + r_G12*r_ut);
+            s_ndv[0][j][i] = (r_G01*vr + r_G11*vs + r_G12*r_vt);
+            s_ndw[0][j][i] = (r_G01*wr + r_G11*ws + r_G12*r_wt);
+            s_ndu[1][j][i] = (r_G00*ur + r_G01*us + r_G02*r_ut);
+            s_ndv[1][j][i] = (r_G00*vr + r_G01*vs + r_G02*r_vt);
+            s_ndw[1][j][i] = (r_G00*wr + r_G01*ws + r_G02*r_wt);
+
+            // put this here for a performance bump
+            r_Gut = (r_G02*ur + r_G12*us + r_G22*r_ut);
+            r_Gvt = (r_G02*vr + r_G12*vs + r_G22*r_vt);
+            r_Gwt = (r_G02*wr + r_G12*ws + r_G22*r_wt);
+            r_Auk = r_GwJ*lambda*r_u[k];
+            r_Avk = r_GwJ*lambda*r_v[k];
+            r_Awk = r_GwJ*lambda*r_w[k];
+          }
+        }
+
+        @barrier("local");
+
+        for(int j=0;j<p_Nq;++j;@inner(1)){
+          for(int i=0;i<p_Nq;++i;@inner(0)){
+
+            #pragma unroll p_Nq
+              for(int m = 0; m < p_Nq; m++){
+                r_Auk     += s_D[m][j]*s_ndu[0][m][i];
+                r_Avk     += s_D[m][j]*s_ndv[0][m][i];
+                r_Awk     += s_D[m][j]*s_ndw[0][m][i];
+                r_rhsu[m] += s_D[k][m]*r_Gut; // DT(m,k)*ut(i,j,k,e)
+                r_rhsv[m] += s_D[k][m]*r_Gvt; // DT(m,k)*ut(i,j,k,e)
+                r_rhsw[m] += s_D[k][m]*r_Gwt; // DT(m,k)*ut(i,j,k,e)
+                r_Auk     += s_D[m][i]*s_ndu[1][j][m];
+                r_Avk     += s_D[m][i]*s_ndv[1][j][m];
+                r_Awk     += s_D[m][i]*s_ndw[1][j][m];
+              }
+
+            r_rhsu[k] += r_Auk;
+            r_rhsv[k] += r_Avk;
+            r_rhsw[k] += r_Awk;
+          }
+        }
+      }
+
+    // write out
+
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        #pragma unroll p_Nq
+        for(int k = 0; k < p_Nq; k++){
+          const dlong gid = i + j*p_Nq + k*p_Nq*p_Nq + e*p_Np*p_Nvgeo;
+          const dfloat JW = vgeo[gid + p_JWID*p_Np];
+
+          const dlong id = e*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
+          const dlong iid = e*p_Np*p_NVfields + k*p_Nq*p_Nq + j*p_Nq + i;
+          rhsU[id] = JW*RHS[iid+0*p_Np]/nu - r_rhsu[k];
+          rhsV[id] = JW*RHS[iid+1*p_Np]/nu - r_rhsv[k];
+          rhsW[id] = JW*RHS[iid+2*p_Np]/nu - r_rhsw[k];
+
+          UH[id] = U[iid+0*p_Np];
+          VH[id] = U[iid+1*p_Np];
+          WH[id] = U[iid+2*p_Np];
+        }
+      }
+    }
+  }
+}
+#undef surfaceTerms
+
+
 #define surfaceTerms(sk,face,i, j)                                      \
   {                                                                     \
   const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
@@ -63,19 +407,24 @@ SOFTWARE.
 
 // compute RHS = MM*RHS/nu + BCdata
 // and split fields to separate arrays
-@kernel void insVelocityRhsHex3D(const dlong Nelements,
+@kernel void insVelocityIpdgRhsHex3D(const dlong Nelements,
                                @restrict const  dfloat *  vgeo,
                                @restrict const  dfloat *  sgeo,
+                               @restrict const  dfloat *  ggeo,
+                               @restrict const  dfloat *  S,
                                @restrict const  dfloat *  D,
                                @restrict const  dfloat *  LIFTT,
                                @restrict const  dfloat *  MM,
+                               @restrict const  dfloat *  sMT,
                                @restrict const  dlong  *  vmapM,
                                @restrict const  int    *  EToB,
+                               @restrict const  int    *  mapB,
                                const dfloat tau,
                                const dfloat time,
                                @restrict const  dfloat *  x,
                                @restrict const  dfloat *  y,
                                @restrict const  dfloat *  z,
+                               const dfloat lambda,
                                const dfloat nu,
                                @restrict const dfloat *  U,
                                @restrict const dfloat *  RHS,

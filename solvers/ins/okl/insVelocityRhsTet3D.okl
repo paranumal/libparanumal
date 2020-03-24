@@ -29,16 +29,213 @@ SOFTWARE.
 @kernel void insVelocityRhsTet3D(const dlong Nelements,
                                @restrict const  dfloat *  vgeo,
                                @restrict const  dfloat *  sgeo,
+                               @restrict const  dfloat *  ggeo,
+                               @restrict const  dfloat *  Smatrices,
                                @restrict const  dfloat *  Dmatrices,
                                @restrict const  dfloat *  LIFTT,
                                @restrict const  dfloat *  MM,
+                               @restrict const  dfloat *  sMT,
                                @restrict const  dlong  *  vmapM,
                                @restrict const  int    *  EToB,
+                               @restrict const  int    *  mapB,
                                const dfloat tau,
                                const dfloat time,
                                @restrict const  dfloat *  x,
                                @restrict const  dfloat *  y,
                                @restrict const  dfloat *  z,
+                               const dfloat lambda,
+                               const dfloat nu,
+                               @restrict const dfloat *  U,
+                               @restrict const dfloat *  RHS,
+                               @restrict       dfloat *  UH,
+                               @restrict       dfloat *  VH,
+                               @restrict       dfloat *  WH,
+                               @restrict       dfloat *  rhsU,
+                               @restrict       dfloat *  rhsV,
+                               @restrict       dfloat *  rhsW){
+
+  for(int e=0;e<Nelements;e++;@outer(0)){
+    @shared dfloat s_u[p_Np];
+    @shared dfloat s_v[p_Np];
+    @shared dfloat s_w[p_Np];
+    @shared dfloat s_ndu[p_Nfp*p_Nfaces];
+    @shared dfloat s_ndv[p_Nfp*p_Nfaces];
+    @shared dfloat s_ndw[p_Nfp*p_Nfaces];
+
+    @exclusive dfloat r_rhsU, r_rhsV, r_rhsW;
+
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      if(n<p_Np){
+        s_u[n] = 0.;
+        s_v[n] = 0.;
+        s_w[n] = 0.;
+      }
+      if(n<p_NfacesNfp){
+        s_ndu[n] = 0.;
+        s_ndv[n] = 0.;
+        s_ndw[n] = 0.;
+      }
+    }
+
+    @barrier("local");
+
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      if(n<p_NfacesNfp){
+        const int id  = n + e*p_Nfaces*p_Nfp;
+        const int idM = vmapM[id];
+        const int nid = idM%p_Np;
+
+        const int face = n/p_Nfp;
+
+        dfloat dudxP=0, dudyP=0, dudzP=0, uP=0;
+        dfloat dvdxP=0, dvdyP=0, dvdzP=0, vP=0;
+        dfloat dwdxP=0, dwdyP=0, dwdzP=0, wP=0;
+
+        // load surface geofactors for this face
+        const int sid = p_Nsgeo*(e*p_Nfaces+face);
+        const dfloat nx = sgeo[sid+p_NXID];
+        const dfloat ny = sgeo[sid+p_NYID];
+        const dfloat nz = sgeo[sid+p_NZID];
+        const dfloat sJ = sgeo[sid+p_SJID];
+
+        const int bc = mapB[idM];
+        if(bc>0) {
+          insVelocityDirichletConditions3D(bc, nu, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, &uP, &vP, &wP);
+          insVelocityNeumannConditions3D(bc, nu, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, &dudxP,&dudyP,&dudzP, &dvdxP,&dvdyP,&dvdzP, &dwdxP,&dwdyP,&dwdzP);
+        }
+
+        s_u[nid] = uP;
+        s_v[nid] = vP;
+        s_w[nid] = wP;
+        s_ndu[n] = sJ*(nx*dudxP + ny*dudyP + nz*dudzP);
+        s_ndv[n] = sJ*(nx*dvdxP + ny*dvdyP + nz*dvdzP);
+        s_ndw[n] = sJ*(nx*dwdxP + ny*dwdyP + nz*dwdzP);
+      }
+    }
+
+    @barrier("local");
+
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      if(n<p_Np){
+        //volume Dirichlet data
+        const int gid = e*p_Nggeo;
+        const dfloat Grr = ggeo[gid + p_G00ID];
+        const dfloat Grs = ggeo[gid + p_G01ID];
+        const dfloat Grt = ggeo[gid + p_G02ID];
+        const dfloat Gss = ggeo[gid + p_G11ID];
+        const dfloat Gst = ggeo[gid + p_G12ID];
+        const dfloat Gtt = ggeo[gid + p_G22ID];
+
+        dfloat urr = 0., vrr = 0., wrr = 0.;
+        dfloat urs = 0., vrs = 0., wrs = 0.;
+        dfloat urt = 0., vrt = 0., wrt = 0.;
+        dfloat uss = 0., vss = 0., wss = 0.;
+        dfloat ust = 0., vst = 0., wst = 0.;
+        dfloat utt = 0., vtt = 0., wtt = 0.;
+        #pragma unroll p_Np
+          for (int k=0;k<p_Np;k++) {
+            urr += Smatrices[n+k*p_Np+0*p_Np*p_Np]*s_u[k];
+            urs += Smatrices[n+k*p_Np+1*p_Np*p_Np]*s_u[k];
+            urt += Smatrices[n+k*p_Np+2*p_Np*p_Np]*s_u[k];
+            uss += Smatrices[n+k*p_Np+3*p_Np*p_Np]*s_u[k];
+            ust += Smatrices[n+k*p_Np+4*p_Np*p_Np]*s_u[k];
+            utt += Smatrices[n+k*p_Np+5*p_Np*p_Np]*s_u[k];
+
+            vrr += Smatrices[n+k*p_Np+0*p_Np*p_Np]*s_v[k];
+            vrs += Smatrices[n+k*p_Np+1*p_Np*p_Np]*s_v[k];
+            vrt += Smatrices[n+k*p_Np+2*p_Np*p_Np]*s_v[k];
+            vss += Smatrices[n+k*p_Np+3*p_Np*p_Np]*s_v[k];
+            vst += Smatrices[n+k*p_Np+4*p_Np*p_Np]*s_v[k];
+            vtt += Smatrices[n+k*p_Np+5*p_Np*p_Np]*s_v[k];
+
+            wrr += Smatrices[n+k*p_Np+0*p_Np*p_Np]*s_w[k];
+            wrs += Smatrices[n+k*p_Np+1*p_Np*p_Np]*s_w[k];
+            wrt += Smatrices[n+k*p_Np+2*p_Np*p_Np]*s_w[k];
+            wss += Smatrices[n+k*p_Np+3*p_Np*p_Np]*s_w[k];
+            wst += Smatrices[n+k*p_Np+4*p_Np*p_Np]*s_w[k];
+            wtt += Smatrices[n+k*p_Np+5*p_Np*p_Np]*s_w[k];
+          }
+
+        dfloat Lndu = 0;
+        dfloat Lndv = 0;
+        dfloat Lndw = 0;
+        // surface mass * surface terms
+        #pragma unroll p_NfacesNfp
+          for(int i=0;i<p_NfacesNfp;++i){
+            Lndu += sMT[n+i*p_Np]*s_ndu[i];
+            Lndv += sMT[n+i*p_Np]*s_ndv[i];
+            Lndw += sMT[n+i*p_Np]*s_ndw[i];
+          }
+
+        r_rhsU = -(Grr*urr+Grs*urs+Grt*urt+Gss*uss+Gst*ust+Gtt*utt - Lndu);
+        r_rhsV = -(Grr*vrr+Grs*vrs+Grt*vrt+Gss*vss+Gst*vst+Gtt*vtt - Lndv);
+        r_rhsW = -(Grr*wrr+Grs*wrs+Grt*wrt+Gss*wss+Gst*wst+Gtt*wtt - Lndw);
+      }
+    }
+
+    @barrier("local");
+
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      if(n<p_Np){
+        //load RHS
+        const int id = n + e*p_Np*p_NVfields;
+        s_u[n] = RHS[id+0*p_Np]/nu - lambda*s_u[n];
+        s_v[n] = RHS[id+1*p_Np]/nu - lambda*s_v[n];
+        s_w[n] = RHS[id+2*p_Np]/nu - lambda*s_w[n];
+      }
+    }
+
+    @barrier("local");
+
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      if(n<p_Np){
+        const int gid = e*p_Nggeo;
+        const dfloat J = ggeo[gid + p_GWJID];
+
+        dfloat Mu=0.0, Mv=0.0, Mw=0.0;
+
+        #pragma unroll p_Np
+        for (int k=0;k<p_Np;k++) {
+          Mu += MM[n+k*p_Np]*s_u[k];
+          Mv += MM[n+k*p_Np]*s_v[k];
+          Mw += MM[n+k*p_Np]*s_w[k];
+        }
+
+        const int id = n + e*p_Np;
+        rhsU[id] = J*Mu + r_rhsU;
+        rhsV[id] = J*Mv + r_rhsV;
+        rhsW[id] = J*Mw + r_rhsW;
+
+        const int iid = n + e*p_Np*p_NVfields;
+        UH[id] = U[iid+0*p_Np];
+        VH[id] = U[iid+1*p_Np];
+        WH[id] = U[iid+2*p_Np];
+      }
+    }
+  }
+}
+
+
+// compute RHS = MM*RHS/nu + BCdata
+// and split fields to separate arrays
+@kernel void insVelocityIpdgRhsTet3D(const dlong Nelements,
+                               @restrict const  dfloat *  vgeo,
+                               @restrict const  dfloat *  sgeo,
+                               @restrict const  dfloat *  ggeo,
+                               @restrict const  dfloat *  Smatrices,
+                               @restrict const  dfloat *  Dmatrices,
+                               @restrict const  dfloat *  LIFTT,
+                               @restrict const  dfloat *  MM,
+                               @restrict const  dfloat *  sMT,
+                               @restrict const  dlong  *  vmapM,
+                               @restrict const  int    *  EToB,
+                               @restrict const  int    *  mapB,
+                               const dfloat tau,
+                               const dfloat time,
+                               @restrict const  dfloat *  x,
+                               @restrict const  dfloat *  y,
+                               @restrict const  dfloat *  z,
+                               const dfloat lambda,
                                const dfloat nu,
                                @restrict const dfloat *  U,
                                @restrict const dfloat *  RHS,

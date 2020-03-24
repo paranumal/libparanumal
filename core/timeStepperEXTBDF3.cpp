@@ -37,12 +37,15 @@ extbdf3::extbdf3(dlong Nelements, dlong NhaloElements,
   Nstages = 3;
   shiftIndex = 0;
 
-  o_qn = device.malloc(Nstages*N*sizeof(dfloat)); //q history
-  o_rhs = device.malloc(N*sizeof(dfloat)); //rhs storage
+  dfloat *qn = (dfloat *) calloc(Nstages*N,sizeof(dfloat));
+  o_qn = device.malloc(Nstages*N*sizeof(dfloat),qn); //q history
 
-  dfloat *F = (dfloat *) calloc(Nstages*N,sizeof(dfloat));
-  o_F  = device.malloc(Nstages*N*sizeof(dfloat), F); //F(q) history (explicit part)
-  free(F);
+  dfloat *rhs = (dfloat *) calloc(N,sizeof(dfloat));
+  o_rhs = device.malloc(N*sizeof(dfloat), rhs); //rhs storage
+  free(rhs);
+
+  o_F  = device.malloc(Nstages*N*sizeof(dfloat), qn); //F(q) history (explicit part)
+  free(qn);
 
   occa::properties kernelInfo = props; //copy base occa properties from solver
 

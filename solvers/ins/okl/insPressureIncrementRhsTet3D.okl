@@ -25,7 +25,7 @@ SOFTWARE.
 */
 
 // compute RHS = MM*RHS/gamma + BCdata
-@kernel void insPressureRhsTet3D(const dlong Nelements,
+@kernel void insPressureIncrementRhsTet3D(const dlong Nelements,
                                @restrict const  dfloat *  vgeo,
                                @restrict const  dfloat *  sgeo,
                                @restrict const  dfloat *  ggeo,
@@ -39,6 +39,7 @@ SOFTWARE.
                                @restrict const  int    *  mapB,
                                const dfloat tau,
                                const dfloat time,
+                               const dfloat dt,
                                @restrict const  dfloat *  x,
                                @restrict const  dfloat *  y,
                                @restrict const  dfloat *  z,
@@ -82,8 +83,15 @@ SOFTWARE.
 
         const int bc = mapB[idM];
         if(bc>0) {
+          dfloat dpdxPn1=0, dpdyPn1=0, dpdzPn1=0, pPn1=0;
           insPressureDirichletConditions3D(bc,nu,time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &pP);
           insPressureNeumannConditions3D(bc,nu,time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f,0.f, &dpdxP, &dpdyP, &dpdzP);
+          insPressureDirichletConditions3D(bc,nu,(time-dt), x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &pPn1);
+          insPressureNeumannConditions3D(bc,nu,(time-dt), x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f,0.f, &dpdxPn1, &dpdyPn1, &dpdzPn1);
+          pP -= pPn1;
+          dpdxP -= dpdxPn1;
+          dpdyP -= dpdyPn1;
+          dpdzP -= dpdzPn1;
         }
 
         s_p[nid] = pP;
@@ -165,7 +173,7 @@ SOFTWARE.
 }
 
 // compute RHS = MM*RHS/gamma + BCdata
-@kernel void insPressureIpdgRhsTet3D(const dlong Nelements,
+@kernel void insPressureIncrementIpdgRhsTet3D(const dlong Nelements,
                                @restrict const  dfloat *  vgeo,
                                @restrict const  dfloat *  sgeo,
                                @restrict const  dfloat *  ggeo,
@@ -179,6 +187,7 @@ SOFTWARE.
                                @restrict const  int    *  mapB,
                                const dfloat tau,
                                const dfloat time,
+                               const dfloat dt,
                                @restrict const  dfloat *  x,
                                @restrict const  dfloat *  y,
                                @restrict const  dfloat *  z,
@@ -225,8 +234,15 @@ SOFTWARE.
 
         const int bc = EToB[face+p_Nfaces*e];
         if(bc>0) {
+          dfloat dpdxPn1=0, dpdyPn1=0, dpdzPn1=0, pPn1=0;
           insPressureDirichletConditions3D(bc,nu,time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &pP);
           insPressureNeumannConditions3D(bc,nu,time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f,0.f, &dpdxP, &dpdyP, &dpdzP);
+          insPressureDirichletConditions3D(bc,nu,(time-dt), x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &pPn1);
+          insPressureNeumannConditions3D(bc,nu,(time-dt), x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f,0.f, &dpdxPn1, &dpdyPn1, &dpdzPn1);
+          pP -= pPn1;
+          dpdxP -= dpdxPn1;
+          dpdyP -= dpdyPn1;
+          dpdzP -= dpdzPn1;
         }
 
         const dfloat dp = pP;
@@ -344,8 +360,8 @@ SOFTWARE.
   }
 }
 
-// enter BCs if C0
-@kernel void insPressureBCTet3D(const dlong Nelements,
+// P+=PI and enter BCs if C0
+@kernel void insPressureIncrementBCTet3D(const dlong Nelements,
                                @restrict const  dfloat *  sgeo,
                                @restrict const  dlong  *  vmapM,
                                @restrict const  int    *  mapB,
@@ -353,25 +369,41 @@ SOFTWARE.
                                @restrict const  dfloat *  x,
                                @restrict const  dfloat *  y,
                                @restrict const  dfloat *  z,
+                               const int pDisc_c0,
                                const dfloat nu,
+                               @restrict const  dfloat *  PI,
                                @restrict        dfloat *  P){
 
   for(dlong e=0;e<Nelements;e++;@outer(0)){
-    for(int n=0;n<p_NfacesNfp;++n;@inner(0)){
-      const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
-      const int bc = mapB[idM];
 
-      if(bc>0) {
-        const int face = n/p_Nfp;
-        const dlong sid = p_Nsgeo*(e*p_Nfaces+face);
-        const dfloat nx = sgeo[sid+p_NXID];
-        const dfloat ny = sgeo[sid+p_NYID];
-        const dfloat nz = sgeo[sid+p_NZID];
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      if(n<p_Np){
+        const dlong id = e*p_Np+n;
+        P[id] += PI[id];
+      }
+    }
 
-        const dfloat pM = P[idM];
-        dfloat pP = 0.f;
-        insPressureDirichletConditions3D(bc,nu,time, x[idM], y[idM], z[idM], nx, ny, nz, pM, &pP);
-        P[idM] = pP;
+    if (pDisc_c0) { //fill masked boundary points if C0
+      @barrier("local");
+
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
+        if(n<p_NfacesNfp){
+          const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
+          const int bc = mapB[idM];
+
+          if(bc>0) {
+            const int face = n/p_Nfp;
+            const dlong sid = p_Nsgeo*(e*p_Nfaces+face);
+            const dfloat nx = sgeo[sid+p_NXID];
+            const dfloat ny = sgeo[sid+p_NYID];
+            const dfloat nz = sgeo[sid+p_NZID];
+
+            const dfloat pM = P[idM];
+            dfloat pP = 0.f;
+            insPressureDirichletConditions3D(bc,nu,time, x[idM], y[idM], z[idM], nx, ny, nz, pM, &pP);
+            P[idM] = pP;
+          }
+        }
       }
     }
   }

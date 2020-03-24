@@ -26,12 +26,13 @@ SOFTWARE.
 
 #include "ins.hpp"
 
-//  Solves -gamma*Laplacian*P = rhs
-void ins_t::PressureSolve(occa::memory& o_P, occa::memory& o_RHS,
-                          const dfloat gamma, const dfloat T){
+//  Solves -gamma*Laplacian*PI = rhs
+//  P += PI
+void ins_t::PressureIncrementSolve(occa::memory& o_P, occa::memory& o_RHS,
+                                   const dfloat gamma, const dfloat T, const dfloat dt){
 
   // compute RHS = MM*RHS/gamma + BCdata
-  pressureRhsKernel(mesh.Nelements,
+  pressureIncrementRhsKernel(mesh.Nelements,
                     mesh.o_vgeo,
                     mesh.o_sgeo,
                     mesh.o_ggeo,
@@ -45,6 +46,7 @@ void ins_t::PressureSolve(occa::memory& o_P, occa::memory& o_RHS,
                     o_mapB,
                     pTau,
                     T,
+                    dt,
                     mesh.o_x,
                     mesh.o_y,
                     mesh.o_z,
@@ -56,7 +58,7 @@ void ins_t::PressureSolve(occa::memory& o_P, occa::memory& o_RHS,
   if(pDisc_c0) {
     mesh.ogs->GatherScatter(o_RHS, ogs_dfloat, ogs_add, ogs_sym);
 
-    //P should always be C0 so skip the gs+weighting
+    //PI should always be C0 so skip the gs+weighting
 
     if (pSolver->Nmasked) pSolver->maskKernel(pSolver->Nmasked, pSolver->o_maskIds, o_P);
     if (pSolver->Nmasked) pSolver->maskKernel(pSolver->Nmasked, pSolver->o_maskIds, o_RHS);
@@ -65,20 +67,20 @@ void ins_t::PressureSolve(occa::memory& o_P, occa::memory& o_RHS,
   int maxIter = 5000;
   int verbose = 0;
 
-  //  Solve - Laplacian*P = RHS
-  NiterP = pSolver->Solve(*pLinearSolver, o_P, o_RHS, presTOL, maxIter, verbose);
+  //  Solve - Laplacian*PI = RHS
+  NiterP = pSolver->Solve(*pLinearSolver, o_PI, o_RHS, presTOL, maxIter, verbose);
 
-  // enter BCs if C0
-  if(pDisc_c0) {
-    pressureBCKernel(mesh.Nelements,
-                     mesh.o_sgeo,
-                     mesh.o_vmapM,
-                     o_mapB,
-                     T,
-                     mesh.o_x,
-                     mesh.o_y,
-                     mesh.o_z,
-                     nu,
-                     o_P);
-  }
+  // P += PI and enter BCs if C0
+  pressureIncrementBCKernel(mesh.Nelements,
+                   mesh.o_sgeo,
+                   mesh.o_vmapM,
+                   o_mapB,
+                   T,
+                   mesh.o_x,
+                   mesh.o_y,
+                   mesh.o_z,
+                   pDisc_c0,
+                   nu,
+                   o_PI,
+                   o_P);
 }

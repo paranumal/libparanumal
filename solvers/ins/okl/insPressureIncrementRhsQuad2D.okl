@@ -34,15 +34,21 @@ SOFTWARE.
   dfloat dpdxP=0.f, dpdyP=0.f, pP=0.f;                                  \
   const int bc = mapB[idM];                                             \
   if(bc>0) {                                                            \
+    dfloat dpdxPn1=0, dpdyPn1=0, pPn1=0;                                \
     insPressureDirichletConditions2D(bc,nu,time, x[idM], y[idM], nx, ny, 0.f, &pP);\
     insPressureNeumannConditions2D(bc,nu,time, x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxP, &dpdyP);\
+    insPressureDirichletConditions2D(bc,nu,(time-dt), x[idM], y[idM], nx, ny, 0.f, &pPn1);\
+    insPressureNeumannConditions2D(bc,nu,(time-dt), x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxPn1, &dpdyPn1);\
+    pP -= pPn1;                                                         \
+    dpdxP -= dpdxPn1;                                                   \
+    dpdyP -= dpdyPn1;                                                   \
   }                                                                     \
                                                                         \
   s_p  [j][i]  = pP;                                                    \
   s_ndp[j][i] -= WsJ*(nx*dpdxP + ny*dpdyP);                             \
 }
 
-@kernel void insPressureRhsQuad2D(const dlong Nelements,
+@kernel void insPressureIncrementRhsQuad2D(const dlong Nelements,
                                @restrict const  dfloat *  vgeo,
                                @restrict const  dfloat *  sgeo,
                                @restrict const  dfloat *  ggeo,
@@ -56,6 +62,7 @@ SOFTWARE.
                                @restrict const  int    *  mapB,
                                const dfloat tau,
                                const dfloat time,
+                               const dfloat dt,
                                @restrict const  dfloat *  x,
                                @restrict const  dfloat *  y,
                                @restrict const  dfloat *  z,
@@ -192,8 +199,14 @@ SOFTWARE.
   const int bc = EToB[face+p_Nfaces*e];                                 \
   if(bc>0) {                                                            \
     const dlong idM = vmapM[sk];                                        \
+    dfloat dpdxPn1=0, dpdyPn1=0, pPn1=0;                                \
     insPressureDirichletConditions2D(bc,nu,time, x[idM], y[idM], nx, ny, 0.f, &pP);\
     insPressureNeumannConditions2D(bc,nu,time, x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxP, &dpdyP);\
+    insPressureDirichletConditions2D(bc,nu,(time-dt), x[idM], y[idM], nx, ny, 0.f, &pPn1);\
+    insPressureNeumannConditions2D(bc,nu,(time-dt), x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxPn1, &dpdyPn1);\
+    pP -= pPn1;                                                         \
+    dpdxP -= dpdxPn1;                                                   \
+    dpdyP -= dpdyPn1;                                                   \
   }                                                                     \
                                                                         \
   const dfloat dp = pP;                                                 \
@@ -203,7 +216,7 @@ SOFTWARE.
 }
 
 // compute RHS = MM*RHS/gamma + BCdata
-@kernel void insPressureIpdgRhsQuad2D(const dlong Nelements,
+@kernel void insPressureIncrementIpdgRhsQuad2D(const dlong Nelements,
                                @restrict const  dfloat *  vgeo,
                                @restrict const  dfloat *  sgeo,
                                @restrict const  dfloat *  ggeo,
@@ -217,6 +230,7 @@ SOFTWARE.
                                @restrict const  int    *  mapB,
                                const dfloat tau,
                                const dfloat time,
+                               const dfloat dt,
                                @restrict const  dfloat *  x,
                                @restrict const  dfloat *  y,
                                @restrict const  dfloat *  z,
@@ -327,8 +341,8 @@ SOFTWARE.
   }                                                                     \
 }
 
-// enter BCs if C0
-@kernel void insPressureBCQuad2D(const dlong Nelements,
+// P+=PI and enter BCs if C0
+@kernel void insPressureIncrementBCQuad2D(const dlong Nelements,
                                @restrict const  dfloat *  sgeo,
                                @restrict const  dlong  *  vmapM,
                                @restrict const  int    *  mapB,
@@ -336,28 +350,41 @@ SOFTWARE.
                                @restrict const  dfloat *  x,
                                @restrict const  dfloat *  y,
                                @restrict const  dfloat *  z,
+                               const int pDisc_c0,
                                const dfloat nu,
+                               @restrict const  dfloat *  PI,
                                @restrict        dfloat *  P){
 
   for(dlong e=0;e<Nelements;e++;@outer(0)){
-    // face 0 & 2
-    for(int i=0;i<p_Nq;++i;@inner(0)){
-      const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i;
-      const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + i;
 
-      surfaceTerms(sk0,0,i,0     );
-      surfaceTerms(sk2,2,i,p_Nq-1);
+    for(int i=0;i<p_Nq;++i;@inner(0)){
+      for(int j=0;j<p_Nq;++j){
+        const dlong id = e*p_Np+j*p_Nq+i;
+        P[id] += PI[id];
+      }
     }
 
-    @barrier("local");
+    if (pDisc_c0) { //fill masked boundary points if C0
+      @barrier("local");
+      // face 0 & 2
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i;
+        const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + i;
 
-    // face 1 & 3
-    for(int j=0;j<p_Nq;++j;@inner(0)){
-      const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + j;
-      const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + j;
+        surfaceTerms(sk0,0,i,0     );
+        surfaceTerms(sk2,2,i,p_Nq-1);
+      }
 
-      surfaceTerms(sk1,1,p_Nq-1,j);
-      surfaceTerms(sk3,3,0     ,j);
+      @barrier("local");
+
+      // face 1 & 3
+      for(int j=0;j<p_Nq;++j;@inner(0)){
+        const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + j;
+        const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + j;
+
+        surfaceTerms(sk1,1,p_Nq-1,j);
+        surfaceTerms(sk3,3,0     ,j);
+      }
     }
   }
 }
