@@ -80,9 +80,8 @@ G. Dependencies:
 ### 4. Clone: libParanumal
 `git clone https://github.com/paranumal/libparanumal`
 
-#### 4-1. Build libParanumal 
+#### 4-1. Build all libParanumal solvers
 `cd libparanumal`    
-`export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OCCA_DIR/lib`    
 ```make -j `nproc` ```
 
 ---
@@ -90,7 +89,7 @@ G. Dependencies:
 
 Each solver in the `solver/` sub-directory. Each solver sub-directory includes makefile, src directory, data directory (including header files for defining boundary conditions), okl kernel directory, and setups directory. The setups directory includes a number of example input files that specify input parameters for the solver.
 
-#### 5-1. Build libParanumal elliptic example
+#### 5-1. Build libParanumal elliptic solver
   
 `cd libparanumal/solvers/elliptic`    
 `make -j  `  
