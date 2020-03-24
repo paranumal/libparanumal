@@ -87,7 +87,7 @@ G. Dependencies:
 ---
 ### 5. Running the codes: 
 
-Each solver in the `solver/` sub-directory. Each solver sub-directory includes makefile, src directory, data directory (including header files for defining boundary conditions), okl kernel directory, and setups directory. The setups directory includes a number of example input files that specify input parameters for the solver.
+Each solver resides in its respective sub-directory in `solvers/`. Each solver sub-directory includes makefile, src directory, data directory (including header files for defining boundary conditions), okl kernel directory, and setups directory. The setups directory includes a number of example input files that specify input parameters for the solver.
 
 #### 5-1. Build libParanumal elliptic solver
   
