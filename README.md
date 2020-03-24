@@ -63,7 +63,7 @@ G. Dependencies:
 
 ---
 ### 2. Code block diagram 
-<img src="http://www.math.vt.edu/people/tcew/libPdiagramCrop.png" width="1024" >
+<img src="http://intranet.math.vt.edu/people/tcew/libPdiagramCrop.png" width="1024" >
 
 ---
 ### 3. OCCA dependency
