@@ -3,9 +3,9 @@ An experimental set of finite element flow solvers for heterogeneous (GPU/CPU) s
 
 libParanumal is funded in part by the US Department of Energy as part of the activities of the [Center for Efficient Exscale Discretizations](http://ceed.exascaleproject.org). 
 
-Why is it called libParanumal ?: the high-order finite-element implementations in libParanumal are __spectrally__ accurate and rely heavily on __ghost__ elements for MPI communications.
+Why is it called libParanumal?: the high-order finite-element implementations in libParanumal are __spectrally__ accurate and rely heavily on __ghost__ elements for MPI communications.
 
-If you use libParanumal as part of a research project see Section 8 below for papers to reference.
+If you use libParanumal as part of a research project see the [references](#7-references) section below for papers to reference.
 
 ---
 ### 1. Overview 
@@ -22,7 +22,7 @@ B. Mesh wrangling:
   
 C. Time integrators:
   - Adaptive rate Dormand-Prince order 5 Runge-Kutta.
-  - Low storage order 4 Runge-Kutta.
+  - Low storage explicit Runge-Kutta order 4.
   - Single and Multirate Adams-Bashforth order 3.
   - Extrapolated Backwards Differencing order 3.
   
@@ -32,7 +32,7 @@ D. Iterative linear solvers:
   
 E. Elliptic solver:
   - Linear Poisson and screened Poisson potential solvers.
-  - GPU optimized matrix-vector products.
+  - GPU-optimized matrix-vector products.
   - p-type multigrid, algebraic multigrid, low-order SEMFEM, and Jacobi preconditioning.
   - Matrix-free p-multigrid for fine levels of multigrid hierarchy.
 
@@ -98,9 +98,9 @@ Each solver resides in its respective sub-directory in `solvers/`. Each solver s
   
 `./ellipticMain setups/setupQuad2D.rc`  
 
-#### 5-3. Run the same example with two devices:
+#### 5-3. Run the same example with four devices:
 
-`mpiexec -n 2 ./ellipticMain setups/setupQuad2D.rc`  
+`mpiexec -n 4 ./ellipticMain setups/setupQuad2D.rc`  
  
 ---
 
@@ -134,6 +134,6 @@ Discontinuous Galerkin Boltzmann (bns) solver: [publisher](https://doi.org/10.10
 
 Incompressible Navier-Stokes (discontinuous) Galerkin (ins) solver: [publisher](https://doi.org/10.1016/j.jcp.2019.04.010), [arXiv version](https://arxiv.org/abs/1801.00246): `Karakus, A., Chalmers, N., Swirydowicz, K. and Warburton, T., 2017.A GPU accelerated discontinuous Galerkin incompressible flow solver, Journal of Computational Physics, Volume 390, Pages 380–404, 2019.`
 
-Optimization of elliptic mat-vec operations for (elliptic) solver on hexes: [publisher](https://doi.org/10.1177/1094342018816368), [arXiv version](https://arxiv.org/abs/1711.00903): `Kasia Swirydowicz, Noel Chalmers, Ali Karakus, and T. Warburton, Acceleration of tensor-product operations for high-order finite element methods, The International Journal of High Performance Computing Applications, Vol 33, Issue 4, 2019.`
+Optimization of elliptic mat-vec operations for (elliptic) solver on hexes: [publisher](https://doi.org/10.1177/1094342018816368), [arXiv version](https://arxiv.org/abs/1711.00903): `Swirydowicz, K., Chalmers, N., Karakus, A., and Warburton, T. 2019. Acceleration of tensor-product operations for high-order finite element methods, The International Journal of High Performance Computing Applications, Vol 33, Issue 4.`
 
-
+Low-order preconditioning of triangular elements (elliptic precon): [publisher](https://epubs.siam.org/doi/abs/10.1137/17M1149444): `Chalmers, N. and Warburton, T. 2018. Low-order preconditioning of high-order triangular finite elements, SIAM Journal on Scientific Computing, Vol 40, Issue 6, Pages A4040-A4059`
