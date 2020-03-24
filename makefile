@@ -31,7 +31,7 @@ LibParanumal makefile targets:
 	 make solvers (default)
 	 make {solver}
 	 make clean
-	 make clean-libs
+	 make clean-kernels
 	 make realclean
 	 make info
 	 make help
@@ -47,10 +47,10 @@ make clean
 	 Cleans all solver executables, libraries, and object files.
 make clean-{solver}
 	 Cleans a solve executable, library, and object files.
-make clean-libs
-	 In addition to "make clean", also clean the ogs and parAlmond libraries.
+make clean-kernels
+	 In addition to "make clean", also cleans the cached OCCA kernels.
 make realclean
-	 In addition to "make clean-libs", also clean 3rd party libraries.
+	 In addition to "make clean", also clean 3rd party libraries.
 make info
 	 List directories and compiler flags in use.
 make help
@@ -61,9 +61,9 @@ Can use "make verbose=true" for verbose output.
 endef
 
 ifeq (,$(filter solvers \
-								acoustics advection bns cns elliptic gradient ins \
-								lib clean clean-libs \
-								realclean info help,$(MAKECMDGOALS)))
+				acoustics advection bns cns elliptic fokkerPlanck gradient ins \
+				lib clean clean-kernels \
+				realclean info help,$(MAKECMDGOALS)))
 ifneq (,$(MAKECMDGOALS))
 $(error ${LIBP_HELP_MSG})
 endif
@@ -80,19 +80,20 @@ endif
 #libraries
 GS_DIR       =${LIBP_TPL_DIR}/gslib
 BLAS_DIR     =${LIBP_TPL_DIR}/BlasLapack
-OGS_DIR      =${LIBP_LIBS_DIR}/gatherScatter
+CORE_DIR     =${LIBP_DIR}/core
+OGS_DIR      =${LIBP_LIBS_DIR}/ogs
+MESH_DIR     =${LIBP_LIBS_DIR}/mesh
 PARALMOND_DIR=${LIBP_LIBS_DIR}/parAlmond
-MESH_DIR     =${LIBP_DIR}/src
 SOLVER_DIR   =${LIBP_DIR}/solvers
 
 .PHONY: all solvers \
-				acoustics advection bns cns elliptic gradient ins \
-				libparAlmond libmesh libogs ligs libblas \
-				clean clean-libs realclean help info
+			acoustics advection bns cns elliptic fokkerPlanck gradient ins \
+			libparAlmond libmesh libogs libgs libblas \
+			clean clean-libs realclean help info
 
 all: solvers
 
-solvers: acoustics advection bns cns elliptic gradient ins
+solvers: acoustics advection bns cns elliptic fokkerPlanck gradient ins
 
 acoustics: libmesh
 ifneq (,${verbose})
@@ -126,7 +127,15 @@ else
 	@${MAKE} -C ${SOLVER_DIR}/$(@F) --no-print-directory
 endif
 
-elliptic: libparAlmond
+elliptic: libmesh
+ifneq (,${verbose})
+	${MAKE} -C ${SOLVER_DIR}/$(@F) verbose=${verbose}
+else
+	@printf "%b" "$(SOL_COLOR)Building $(@F) solver$(NO_COLOR)\n";
+	@${MAKE} -C ${SOLVER_DIR}/$(@F) --no-print-directory
+endif
+
+fokkerPlanck: libmesh | elliptic
 ifneq (,${verbose})
 	${MAKE} -C ${SOLVER_DIR}/$(@F) verbose=${verbose}
 else
@@ -142,7 +151,7 @@ else
 	@${MAKE} -C ${SOLVER_DIR}/$(@F) --no-print-directory
 endif
 
-ins: elliptic
+ins: libmesh | elliptic
 ifneq (,${verbose})
 	${MAKE} -C ${SOLVER_DIR}/$(@F) verbose=${verbose}
 else
@@ -150,28 +159,35 @@ else
 	@${MAKE} -C ${SOLVER_DIR}/$(@F) --no-print-directory
 endif
 
-libmesh: libogs libgs libblas
+libmesh: libogs libparAlmond libgs libblas libcore
 ifneq (,${verbose})
 	${MAKE} -C ${MESH_DIR} lib verbose=${verbose}
 else
 	@${MAKE} -C ${MESH_DIR} lib --no-print-directory
 endif
 
-libparAlmond: libmesh
+libparAlmond: libogs libgs libblas libcore
 ifneq (,${verbose})
 	${MAKE} -C ${PARALMOND_DIR} lib verbose=${verbose}
 else
 	@${MAKE} -C ${PARALMOND_DIR} lib --no-print-directory
 endif
 
-libogs: libgs libblas
+libogs: libcore
 ifneq (,${verbose})
 	${MAKE} -C ${OGS_DIR} lib verbose=${verbose}
 else
 	@${MAKE} -C ${OGS_DIR} lib --no-print-directory
 endif
 
-libgs:
+libcore: libgs
+ifneq (,${verbose})
+	${MAKE} -C ${CORE_DIR} lib verbose=${verbose}
+else
+	@${MAKE} -C ${CORE_DIR} lib --no-print-directory
+endif
+
+libgs: libblas
 ifneq (,${verbose})
 	${MAKE} -C $(GS_DIR) install verbose=${verbose}
 else
@@ -187,7 +203,8 @@ endif
 
 #cleanup
 clean: clean-acoustics clean-advection clean-bns clean-cns \
-			 clean-elliptic clean-gradient clean-ins
+	   clean-elliptic clean-fokkerPlanck clean-gradient clean-ins \
+	   clean-libs
 
 clean-acoustics:
 	${MAKE} -C ${SOLVER_DIR}/acoustics clean
@@ -204,18 +221,25 @@ clean-cns:
 clean-elliptic:
 	${MAKE} -C ${SOLVER_DIR}/elliptic clean
 
+clean-fokkerPlanck:
+	${MAKE} -C ${SOLVER_DIR}/fokkerPlanck clean
+
 clean-gradient:
 	${MAKE} -C ${SOLVER_DIR}/gradient clean
 
 clean-ins:
 	${MAKE} -C ${SOLVER_DIR}/ins clean
 
-clean-libs: clean
+clean-libs:
 	${MAKE} -C ${MESH_DIR} clean
 	${MAKE} -C ${OGS_DIR} clean
 	${MAKE} -C ${PARALMOND_DIR} clean
 
-realclean: clean-libs
+clean-kernels: clean
+# 	$(shell ${OCCA_DIR}/bin/occa clear all -y)
+	rm -rf ~/.occa/
+
+realclean: clean
 	${MAKE} -C ${GS_DIR} clean
 	${MAKE} -C ${BLAS_DIR} clean
 
