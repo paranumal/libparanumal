@@ -127,7 +127,7 @@ static uint cap_rows(buffer *const data, const unsigned row_size,const uint max)
     else {
       buf[2]-=(maxn-n); data->n = (buf-(uint*)data->ptr)+3+buf[2];
       buf+=len+3;
-      while(buf!=buf_end) { uint len=buf[2]; n+=len, buf+=len+3; }
+      while(buf!=buf_end) { uint llen=buf[2]; n+=llen, buf+=llen+3; }
       break;
     }
   }
@@ -148,7 +148,7 @@ uint sarray_transfer_many(
   if(!ext) off1 -= sizeof(uint);
   row_size=off1; for(i=1;i<An;++i) row_size += size[i];
   row_size = (row_size+sizeof(uint)-1)/sizeof(uint);
-  
+
   perm = sortp(&cr->work,0, proc,A[0]->n,proc_stride);
 
   if(!ext) pack_int(&cr->data, row_size, cr->comm.id, A[0]->ptr,A[0]->n,size[0],
@@ -157,9 +157,9 @@ uint sarray_transfer_many(
                     proc,proc_stride, perm);
   for(off=off1,i=1;i<An;++i) if(size[i])
     pack_more(&cr->data,off,row_size, A[i]->ptr,size[i], perm),off+=size[i];
-    
+
   crystal_router(cr);
-  
+
   if(!fixed) {
     n = num_rows(&cr->data,row_size);
     for(i=0;i<An;++i)
@@ -171,15 +171,15 @@ uint sarray_transfer_many(
     an = n>max?max:n;
     for(i=0;i<An;++i) A[i]->n=an;
   }
-  
+
   if(!ext) unpack_int (A[0]->ptr,size[0],p_off, &cr->data,  row_size, set_src);
   else     unpack_more(A[0]->ptr,size[0],       &cr->data,0,row_size);
   for(off=off1,i=1;i<An;++i) if(size[i])
     unpack_more(A[i]->ptr,size[i], &cr->data,off,row_size),off+=size[i];
-    
+
   return n;
 }
-  
+
 
 void sarray_transfer_(struct array *const A, const unsigned size,
                       const unsigned p_off, const int set_src,

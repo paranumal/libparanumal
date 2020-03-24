@@ -30,9 +30,9 @@ struct dbl_range { double min,max; };
 
    The number of points in the constructed piecewise (tri-,bi-)linear bounds
    is a parameter; more points give tighter bounds, and we expect m>n.
-   
+
      unsigned mr = 4*nr, ms = 4*ns, mt = 4*nt;
-   
+
    The necessary setup is accomplished via:
      double *data_r = tmalloc(double, lob_bnd_size(nr,mr));
      double *data_s = tmalloc(double, lob_bnd_size(ns,ms));
@@ -40,7 +40,7 @@ struct dbl_range { double min,max; };
      lob_bnd_setup(data_r, nr,mr);
      lob_bnd_setup(data_s, ns,ms);
      lob_bnd_setup(data_t, nt,mt);
- 
+
    Bounds may then be computed via:
      double work1r[2*mr], work1s[2*ms];
      double work2[2*mr*(ns+ms+1)];
@@ -49,7 +49,7 @@ struct dbl_range { double min,max; };
      double u2[ns][nr];        // 2-d polynomial on zr[] (x) zs[]
      double u3[nt][ns][nr];    // 3-d polynomial on zr[] (x) zs[] (x) zt[]
      struct dbl_range bound;
-     
+
      bound = lob_bnd_1(data_r,nr,mr, ur, work1r); // compute bounds on ur
      bound = lob_bnd_1(data_s,ns,ms, us, work1s); // compute bounds on us
      bound = lob_bnd_2(data_r,nr,mr, data_s,ns,ms,
@@ -65,7 +65,7 @@ struct dbl_range { double min,max; };
      for(j=1;j<m-1;++j) h[j] = cos((m-1-j)*PI/(m-1));
    The functions lob_bnd_d simply call these and return the min and max
    over all nodes.
-    
+
   --------------------------------------------------------------------------*/
 
 #define PI 3.1415926535897932384626433832795028841971693993751058209749445923
@@ -80,15 +80,15 @@ void lob_bnd_setup(double *restrict data, unsigned n, unsigned m)
          *restrict dl = pl+n, *restrict pr=dl+n, *restrict dr=pr+n,
          *restrict p=dr+n, *restrict gll_data=p+n;
   lagrange_fun *lag = gll_lag_setup(gll_data,n);
-  
+
   /* set z and Q to Lobatto nodes, weights */
   lobatto_quad(z,Q,n);
-  
+
   /* Q0, Q1 : linear functionals on the GLL nodal basis
               for the zeroth and first Legendre coefficient */
   for(i=n;i;) --i, Q[2*i]=Q[i]/2, Q[2*i+1] = 3*Q[2*i]*z[i];
   /*for(i=0;i<n;++i) Q0[i]=Q0[i]/2, Q1[i] = 3*Q0[i]*z[i];*/
-  
+
   /* h : m Chebyshev nodes */
   h[0] = -1, h[m-1] = 1;
   for(j=1;j<m-1;++j) h[j] = cos((m-1-j)*PI/(m-1));
@@ -107,7 +107,8 @@ void lob_bnd_setup(double *restrict data, unsigned n, unsigned m)
     for(i=0;i<n;++i) {
       double lo,up, cl = pl[i] + (x-xl)*dl[i], cr = pr[i] + (x-xr)*dr[i];
       if(cl<cr) lo=cl,up=cr; else lo=cr,up=cl;
-      if(p[i]<lo) lo=p[i]; if(up<p[i]) up=p[i];
+      if(p[i]<lo) lo=p[i];
+      if(up<p[i]) up=p[i];
       lb[(i*m+j)*2+0] = lo, lb[(i*m+j)*2+1] = up;
     }
     memcpy(pl,pr,2*n*sizeof(double));

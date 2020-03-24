@@ -265,12 +265,12 @@ static void make_topology_unique(struct gs_topology *top, slong *id,
   /* flag local non-primaries */
   sarray_sort(struct nonzero_id,nz->ptr,nz->n, i,0, buf);
   if(id) {
-    struct nonzero_id *p,*e;
-    for(p=nz->ptr,e=p+nz->n;p!=e;++p)
+    struct nonzero_id *p,*ee;
+    for(p=nz->ptr,ee=p+nz->n;p!=ee;++p)
       if(p->i != p->primary) id[p->i]=-(slong)p->id,p->flag=1;
   } else {
-    struct nonzero_id *p,*e;
-    for(p=nz->ptr,e=p+nz->n;p!=e;++p)
+    struct nonzero_id *p,*ee;
+    for(p=nz->ptr,ee=p+nz->n;p!=ee;++p)
       if(p->i != p->primary) p->flag=1;
   }
   sarray_sort(struct nonzero_id,nz->ptr,nz->n, primary,0, buf);
@@ -470,14 +470,14 @@ static void pw_exec_irecv(
   unsigned transpose, const void *execdata, const struct comm *comm, char *buf)
 {
   const struct pw_data *pwd = execdata;
-  static gs_scatter_fun *const scatter_to_buf[] =
-    { &gs_scatter, &gs_scatter_vec, &gs_scatter_many_to_vec, &scatter_noop };
-  static gs_gather_fun *const gather_from_buf[] =
-    { &gs_gather, &gs_gather_vec, &gs_gather_vec_to_many, &gather_noop };
-  const unsigned recv = 0^transpose, send = 1^transpose;
+  // static gs_scatter_fun *const scatter_to_buf[] =
+  //   { &gs_scatter, &gs_scatter_vec, &gs_scatter_many_to_vec, &scatter_noop };
+  // static gs_gather_fun *const gather_from_buf[] =
+  //   { &gs_gather, &gs_gather_vec, &gs_gather_vec_to_many, &gather_noop };
+  const unsigned recv = 0^transpose; // send = 1^transpose;
   unsigned unit_size = vn*gs_dom_size[dom];
   /* post receives */
-  char *sendbuf = pw_exec_recvs(buf,unit_size,comm,&pwd->comm[recv],pwd->req);
+  (void) pw_exec_recvs(buf,unit_size,comm,&pwd->comm[recv],pwd->req);
 }
 
 static void pw_exec_isend(
@@ -487,8 +487,8 @@ static void pw_exec_isend(
   const struct pw_data *pwd = execdata;
   static gs_scatter_fun *const scatter_to_buf[] =
     { &gs_scatter, &gs_scatter_vec, &gs_scatter_many_to_vec, &scatter_noop };
-  static gs_gather_fun *const gather_from_buf[] =
-    { &gs_gather, &gs_gather_vec, &gs_gather_vec_to_many, &gather_noop };
+  // static gs_gather_fun *const gather_from_buf[] =
+  //   { &gs_gather, &gs_gather_vec, &gs_gather_vec_to_many, &gather_noop };
   const unsigned recv = 0^transpose, send = 1^transpose;
   unsigned unit_size = vn*gs_dom_size[dom];
 
@@ -505,12 +505,12 @@ static void pw_exec_wait(
   unsigned transpose, const void *execdata, const struct comm *comm, char *buf)
 {
   const struct pw_data *pwd = execdata;
-  static gs_scatter_fun *const scatter_to_buf[] =
-    { &gs_scatter, &gs_scatter_vec, &gs_scatter_many_to_vec, &scatter_noop };
+  // static gs_scatter_fun *const scatter_to_buf[] =
+  //   { &gs_scatter, &gs_scatter_vec, &gs_scatter_many_to_vec, &scatter_noop };
   static gs_gather_fun *const gather_from_buf[] =
     { &gs_gather, &gs_gather_vec, &gs_gather_vec_to_many, &gather_noop };
-  const unsigned recv = 0^transpose, send = 1^transpose;
-  unsigned unit_size = vn*gs_dom_size[dom];
+  const unsigned recv = 0^transpose; // send = 1^transpose;
+  // unsigned unit_size = vn*gs_dom_size[dom];
 
   comm_wait(pwd->req,pwd->comm[0].n+pwd->comm[1].n);
   /* gather using recv buffer */
@@ -979,8 +979,8 @@ static void allreduce_exec_i(
   const struct allreduce_data *ard = execdata;
   static gs_scatter_fun *const scatter_to_buf[] =
     { &gs_scatter, &gs_scatter_vec, &gs_scatter_many_to_vec, &scatter_noop };
-  static gs_scatter_fun *const scatter_from_buf[] =
-    { &gs_scatter, &gs_scatter_vec, &gs_scatter_vec_to_many, &scatter_noop };
+  // static gs_scatter_fun *const scatter_from_buf[] =
+  //   { &gs_scatter, &gs_scatter_vec, &gs_scatter_vec_to_many, &scatter_noop };
   uint gvn = vn*(ard->buffer_size/2);
   unsigned unit_size = gs_dom_size[dom];
   char *ardbuf = buf+unit_size*gvn;
@@ -997,8 +997,8 @@ static void allreduce_exec_wait(
   unsigned transpose, const void *execdata, const struct comm *comm, char *buf)
 {
   const struct allreduce_data *ard = execdata;
-  static gs_scatter_fun *const scatter_to_buf[] =
-    { &gs_scatter, &gs_scatter_vec, &gs_scatter_many_to_vec, &scatter_noop };
+  // static gs_scatter_fun *const scatter_to_buf[] =
+  //   { &gs_scatter, &gs_scatter_vec, &gs_scatter_many_to_vec, &scatter_noop };
   static gs_scatter_fun *const scatter_from_buf[] =
     { &gs_scatter, &gs_scatter_vec, &gs_scatter_vec_to_many, &scatter_noop };
   uint gvn = vn*(ard->buffer_size/2);
@@ -1110,16 +1110,18 @@ static void auto_setup(struct gs_remote *r, struct gs_topology *top,
   pw_setup(r, top,comm,buf);
 
   if(comm->np>1) {
-    const char *name = "pairwise";
+    // const char *name = "pairwise";
     struct gs_remote r_alt;
     double time[2][3];
 
-    // #define DRY_RUN(i,gsr,str) do { \
-    //   if(comm->id==0) printf("   " str ": "); \
-    //   dry_run_time(time[i],gsr,comm,buf); \
-    //   if(comm->id==0) \
-    //     printf("%g %g %g\n",time[i][0],time[i][1],time[i][2]); \
-    // } while(0)
+#if 0
+    #define DRY_RUN(i,gsr,str) do { \
+      if(comm->id==0) printf("   " str ": "); \
+      dry_run_time(time[i],gsr,comm,buf); \
+      if(comm->id==0) \
+        printf("%g %g %g\n",time[i][0],time[i][1],time[i][2]); \
+    } while(0)
+#endif
 
     #define DRY_RUN(i,gsr,str) do { \
       dry_run_time(time[i],gsr,comm,buf); \
@@ -1128,7 +1130,7 @@ static void auto_setup(struct gs_remote *r, struct gs_topology *top,
     #define DRY_RUN_CHECK(str,new_name) do { \
       DRY_RUN(1,&r_alt,str); \
       if(time[1][2]<time[0][2]) \
-        time[0][2]=time[1][2], name=new_name, \
+        time[0][2]=time[1][2], /*name=new_name,*/ \
         r->fin(r->data), *r = r_alt; \
       else \
         r_alt.fin(r_alt.data); \
@@ -1187,8 +1189,8 @@ static void gs_aux_irecv(
   void *u, gs_mode mode, unsigned vn, gs_dom dom, gs_op op, unsigned transpose,
   struct gs_data *gsh, buffer *buf)
 {
-  static gs_scatter_fun *const local_scatter[] =
-    { &gs_scatter, &gs_scatter_vec, &gs_scatter_many, &scatter_noop };
+  // static gs_scatter_fun *const local_scatter[] =
+  //   { &gs_scatter, &gs_scatter_vec, &gs_scatter_many, &scatter_noop };
   static gs_gather_fun  *const local_gather [] =
     { &gs_gather,  &gs_gather_vec,  &gs_gather_many, &gather_noop  };
   static gs_init_fun *const init[] =
@@ -1206,12 +1208,12 @@ static void gs_aux_isend(
   void *u, gs_mode mode, unsigned vn, gs_dom dom, gs_op op, unsigned transpose,
   struct gs_data *gsh, buffer *buf)
 {
-  static gs_scatter_fun *const local_scatter[] =
-    { &gs_scatter, &gs_scatter_vec, &gs_scatter_many, &scatter_noop };
-  static gs_gather_fun  *const local_gather [] =
-    { &gs_gather,  &gs_gather_vec,  &gs_gather_many, &gather_noop  };
-  static gs_init_fun *const init[] =
-    { &gs_init, &gs_init_vec, &gs_init_many, &init_noop };
+  // static gs_scatter_fun *const local_scatter[] =
+  //   { &gs_scatter, &gs_scatter_vec, &gs_scatter_many, &scatter_noop };
+  // static gs_gather_fun  *const local_gather [] =
+  //   { &gs_gather,  &gs_gather_vec,  &gs_gather_many, &gather_noop  };
+  // static gs_init_fun *const init[] =
+  //   { &gs_init, &gs_init_vec, &gs_init_many, &init_noop };
 
   if(!buf) buf = &static_buffer;
 
@@ -1225,10 +1227,10 @@ static void gs_aux_wait(
 {
   static gs_scatter_fun *const local_scatter[] =
     { &gs_scatter, &gs_scatter_vec, &gs_scatter_many, &scatter_noop };
-  static gs_gather_fun  *const local_gather [] =
-    { &gs_gather,  &gs_gather_vec,  &gs_gather_many, &gather_noop  };
-  static gs_init_fun *const init[] =
-    { &gs_init, &gs_init_vec, &gs_init_many, &init_noop };
+  // static gs_gather_fun  *const local_gather [] =
+  //   { &gs_gather,  &gs_gather_vec,  &gs_gather_many, &gather_noop  };
+  // static gs_init_fun *const init[] =
+  //   { &gs_init, &gs_init_vec, &gs_init_many, &init_noop };
 
   if(!buf) buf = &static_buffer;
 

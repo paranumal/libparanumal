@@ -28,34 +28,34 @@
 
 /*--------------------------------------------------------------------------
    Point to Possible Elements Hashing
-   
+
    Initializing the data:
      uint nel;        // number of elements
      uint max_size = nr*ns*nt*nel; // maximum size of hash table
-     struct obbox *obb = ...; // bounding boxes for elements     
+     struct obbox *obb = ...; // bounding boxes for elements
 
      hash_data data;
      hash_build(&data, obb, nel, max_size);
-     
+
    Using the data:
      double x[3];   // point to find
-     
+
      uint index = hash_index_3(&data, x);
      uint i, b = data.offset[index], e = data.offset[index+1];
-     
+
      // point may be in elements
      //   data.offset[b], data.offset[b+1], ... , data.offset[e-1]
      //
      // list has maximum size data.max (e.g., e-b <= data.max)
-   
+
      for(i=b; i!=e; ++i) {
        uint el = data.offset[i];
        ...
      }
-   
+
    When done:
      hash_free(&data);
-     
+
   --------------------------------------------------------------------------*/
 
 struct hash_data {
@@ -155,11 +155,11 @@ static void hash_build(struct hash_data *p,
   for(el=0;el<nel;++el) {
     unsigned d; struct uint_range ir[D];
     for(d=0;d<D;++d) ir[d]=hash_range(p,d,obb[el].x[d]);
-    #define FOR_LOOP() do { uint i,j; WHEN_3D(uint k;) \
+    #define FOR_LOOP() do { uint ii,j; WHEN_3D(uint k;) \
       WHEN_3D(for(k=ir[2].min;k<ir[2].max;++k)) \
               for(j=ir[1].min;j<ir[1].max;++j) \
-              for(i=ir[0].min;i<ir[0].max;++i) \
-                ++count[(WHEN_3D(k*hn)+j)*hn+i]; \
+              for(ii=ir[0].min;ii<ir[0].max;++ii) \
+                ++count[(WHEN_3D(k*hn)+j)*hn+ii]; \
     } while(0)
     FOR_LOOP();
     #undef FOR_LOOP
@@ -175,11 +175,11 @@ static void hash_build(struct hash_data *p,
   for(el=0;el<nel;++el) {
     unsigned d; struct uint_range ir[D];
     for(d=0;d<D;++d) ir[d]=hash_range(p,d,obb[el].x[d]);
-    #define FOR_LOOP() do { uint i,j; WHEN_3D(uint k;) \
+    #define FOR_LOOP() do { uint ii,j; WHEN_3D(uint k;) \
       WHEN_3D(for(k=ir[2].min;k<ir[2].max;++k)) \
               for(j=ir[1].min;j<ir[1].max;++j) \
-              for(i=ir[0].min;i<ir[0].max;++i) { \
-                uint index = (WHEN_3D(k*hn)+j)*hn+i; \
+              for(ii=ir[0].min;ii<ir[0].max;++ii) { \
+                uint index = (WHEN_3D(k*hn)+j)*hn+ii; \
                 p->offset[p->offset[index+1]-count[index]]=el; \
                 --count[index]; \
               } \

@@ -77,7 +77,7 @@ static void hash_bb(struct hash_data *p, const struct local_hash_data *lp,
 
   ghs = hash_size; comm_allreduce(comm,gs_double,gs_add,&ghs,1,buf);
   hash_setfac(p,lceil(pow(ghs,1./D)));
-  
+
   #ifdef DIAGNOSTICS
   if(comm->id==0) {
     printf("global bounding box (%g^%u):\n",(double)p->hash_n,D);
@@ -272,8 +272,8 @@ void findpts(      uint   *const  code_base   , const unsigned  code_stride   ,
       *proc = id;
       if(*code!=CODE_INTERNAL) {
         const uint hi = hash_index(&fd->hash,x);
-        unsigned d;
-        for(d=0;d<D;++d) pt->x[d]=x[d];
+        unsigned dd;
+        for(dd=0;dd<D;++dd) pt->x[dd]=x[dd];
         pt->index=index;
         pt->proc=hi%np;
         ++pt;
