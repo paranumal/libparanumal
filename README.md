@@ -14,26 +14,33 @@ Brief summary of major features:
 
 A. Supported elements:
   - Triangles, quadrilaterals, tetrahedra, hexahedra.
-  - Lagrange basis functions up to degree 15.
-  - Partial support for Bezier-Bernstein basis functions.
+  - Lagrange basis functions.
   
 B. Mesh wrangling:
   - Gmsh format file loaders.
   - Load balanced geometric partitioning using space filling curves (Hilbert or Morton ordering). 
-  - Clustered partitioning for multirate time stepping.
   
-C. Elliptic solver:
+C. Time integrators:
+  - Adaptive rate Dormand-Prince order 5 Runge-Kutta.
+  - Low storage order 4 Runge-Kutta.
+  - Single and Multirate Adams-Bashforth order 3.
+  - Extrapolated Backwards Differencing order 3.
+  
+D. Iterative linear solvers:
+  - Preconditioned (flexible) Conjugate Gradient method.
+  - Non-blocking Preconditioned (flexible) Conjugate Gradient method.
+  
+E. Elliptic solver:
   - Linear Poisson and screened Poisson potential solvers.
   - GPU optimized matrix-vector products.
-  - Hybrid p-type multigrid and algebraic multigrid  preconditioned conjugate gradient solver.
-  - Sparse matrix or nearly matrix-free algebraic multigrid for coarse levels of multigrid hierarchy.
+  - p-type multigrid, algebraic multigrid, low-order SEMFEM, and Jacobi preconditioning.
+  - Matrix-free p-multigrid for fine levels of multigrid hierarchy.
 
-D. Heterogeneous accelerated flow solvers:
-  - Linearized Euler equations.
-  - Isothermal compressible Navier-Stokes solver with:
+F. Heterogeneous accelerated flow solvers:
+  - Compressible Navier-Stokes solver with:
      * Upwind discontinuous Galerkin discretization in space.
-     * Dormand-Prince adaptive Runge-Kutta integration in time.
-  - Isothermal Galerkin-Boltzmann gas dynamics solver with:
+     * Optional isothermal equation of state.
+  - Galerkin-Boltzmann gas dynamics solver with:
      * Penalty flux DG discretization in space.
      * Adaptive semi-analytic (pointwise exponential) integration in time.
      * Multiaxial quasi-perfectly matched absorbing layer far field boundary condition.
@@ -42,13 +49,13 @@ D. Heterogeneous accelerated flow solvers:
      * Extrapolation-BDF integration in time.
      * Sub-cycling (Operator Integration Factor Splitting) for advection.
 
-E. Dependencies:
-   - Message Passing Interface (MPI).
-      * The libParanumal makefiles assume that mpic++ are installed and visible in your path.     
+G. Dependencies:
+   - Message Passing Interface (MPI v3.0 or higher).
+      * The libParanumal makefiles assume that mpic++ is installed and visible in your path.     
    - Open Concurrent Compute Abstraction (OCCA) 
       * OCCA must be installed.
-      * OCCA will try to detect if any of these execution models are installed OpenMP, CUDA, OpenCL, HIP.
-      * If OCCA does not detect any of these it will default to Serial execution.
+      * OCCA will try to detect if any of these execution models are installed: OpenMP, CUDA, OpenCL, and/or HIP.
+      * By default, if OCCA does not detect a chosen mode of execution it will default to Serial execution.
       * You will need to adjust the libParnumal setup input files to choose the execution model and compute device appropriate for your system.
       * The OCCA github repo is [here](https://github.com/libocca/occa)
       * The OCCA webpage is [here](http://libocca.org)
@@ -59,24 +66,29 @@ E. Dependencies:
 <img src="http://www.math.vt.edu/people/tcew/libParanumalNekDiagramFA18-crop.png" width="1024" >
 
 ---
-### 3. Clone: libParanumal
-`git clone https://github.com/tcew/paranumal/libparanumal`
+### 3. OCCA dependency
+`git clone https://github.com/libocca/occa`
+
+#### 3-1. Build OCCA 
+`cd occa`    
+`export OCCA_DIR=${PWD}`  
+`export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OCCA_DIR/lib`    
+```make -j `nproc` ```    
+`cd ../  `  
 
 ---
-### 4. OCCA dependency (currently OCCA 1.0 forked by Noel Chalmers) 
-`git clone https://github.com/noelchalmers/occa`
+### 4. Clone: libParanumal
+`git clone https://github.com/paranumal/libparanumal`
 
-#### 4-1. Build OCCA 
-`cd occa`    
-export OCCA_DIR=\`pwd\`  
+#### 4-1. Build libParanumal 
+`cd libparanumal`    
 `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OCCA_DIR/lib`    
-`make -j`    
-`cd ../  `  
+```make -j `nproc` ```
 
 ---
 ### 5. Running the codes: 
 
-The elliptic solver and flow solvers reside in sub-directories of the solver directory. Each sub-directory includes makefile, src directory, data directory (including header files for defining boundary conditions), okl kernel directory, and setups directory. The setups directory includes a number of example input files that specify input parameters for the solver.
+Each solver in the `solver/` sub-directory. Each solver sub-directory includes makefile, src directory, data directory (including header files for defining boundary conditions), okl kernel directory, and setups directory. The setups directory includes a number of example input files that specify input parameters for the solver.
 
 #### 5-1. Build libParanumal elliptic example
   
@@ -97,7 +109,7 @@ The elliptic solver and flow solvers reside in sub-directories of the solver dir
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2020 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
