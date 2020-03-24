@@ -61,7 +61,7 @@ void occaDeviceProperties(occa::device &device, occa::properties& props){
   }
 
   if(device.mode()=="Serial")
-    props["compiler_flags"] += "-g"; //debugging
+    props["compiler_flags"] += "-g "; //debugging
 
   if(device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
     props["compiler_flags"] += "--ftz=true ";
@@ -70,5 +70,21 @@ void occaDeviceProperties(occa::device &device, occa::properties& props){
     props["compiler_flags"] += "--use_fast_math ";
     props["compiler_flags"] += "--fmad=true "; // compiler option for cuda
     props["compiler_flags"] += "-Xptxas -dlcm=ca";
+  }
+
+  if(device.mode()=="OpenCL"){ // add backend compiler optimization for OPENCL
+    props["compiler_flags"] += " -cl-std=CL2.0 ";
+    props["compiler_flags"] += " -cl-strict-aliasing ";
+    props["compiler_flags"] += " -cl-mad-enable ";
+    props["compiler_flags"] += " -cl-no-signed-zeros ";
+    props["compiler_flags"] += " -cl-unsafe-math-optimizations ";
+    props["compiler_flags"] += " -cl-fast-relaxed-math ";
+  }
+
+  if(device.mode()=="HIP"){ // add backend compiler optimization for HIP
+    props["compiler_flags"] += " -O3 ";
+    props["compiler_flags"] += " -ffp-contract=fast ";
+    // props["compiler_flags"] += " -funsafe-math-optimizations ";
+    // props["compiler_flags"] += " -ffast-math ";
   }
 }
