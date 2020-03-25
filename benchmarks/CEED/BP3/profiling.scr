@@ -1,1 +1,0 @@
-make -j; rm *nvprof; mpirun.openmpi -np 3 nvprof -o ellipticMainHex3D.%q{OMPI_COMM_WORLD_RANK}.nvprof ./ellipticMainHex3D ../../../meshes/cubeHexH00625.msh 4
