@@ -231,6 +231,7 @@ clean-ins:
 	${MAKE} -C ${SOLVER_DIR}/ins clean
 
 clean-libs:
+	${MAKE} -C ${CORE_DIR} clean
 	${MAKE} -C ${MESH_DIR} clean
 	${MAKE} -C ${OGS_DIR} clean
 	${MAKE} -C ${PARALMOND_DIR} clean
