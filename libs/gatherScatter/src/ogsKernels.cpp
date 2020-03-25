@@ -27,6 +27,8 @@ SOFTWARE.
 #include "ogs.hpp"
 #include "ogsKernels.hpp"
 
+#include <cstdio>
+
 namespace ogs {
 
   int Nrefs = 0;
