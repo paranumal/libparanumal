@@ -120,7 +120,9 @@ public:
   int N=0, Np=0;
   dfloat *r, *s, *t;    // coordinates of local nodes
   dfloat *Dr, *Ds, *Dt; // collocation differentiation matrices
+  dfloat *DWr, *DWs, *DWt; // weak Collocation differentiation matrices
   dfloat *Dmatrices;
+  dfloat *DWmatrices;   // weak differentiation: AK: needed for FV coupling
   dfloat *MM, *invMM;           // reference mass matrix
   dfloat *Srr,*Srs, *Srt; //element stiffness matrices
   dfloat *Ssr,*Sss, *Sst;
@@ -245,6 +247,7 @@ public:
   occa::memory o_Dr, o_Ds, o_Dt, o_LIFT, o_MM;
   occa::memory o_DrT, o_DsT, o_DtT, o_LIFTT;
   occa::memory o_Dmatrices;
+  occa::memory o_DWmatrices;
   occa::memory o_FMMT;
   occa::memory o_sMT;
 
@@ -423,6 +426,8 @@ protected:
   void GradVandermondeTri2D(int N, int Npoints, dfloat *r, dfloat *s, dfloat *Vr, dfloat *Vs);
   void MassMatrixTri2D(int _Np, dfloat *V, dfloat *_MM);
   void DmatrixTri2D(int _N, int Npoints, dfloat *_r, dfloat *_s,
+                                          dfloat *_Dr, dfloat *_Ds);
+  void DWmatrixTri2D(int _N, int Npoints, dfloat *_r, dfloat *_s, dfloat *_MM, 
                                           dfloat *_Dr, dfloat *_Ds);
   void LIFTmatrixTri2D(int _N, int *_faceNodes,
                              dfloat *_r, dfloat *_s, dfloat *_LIFT);

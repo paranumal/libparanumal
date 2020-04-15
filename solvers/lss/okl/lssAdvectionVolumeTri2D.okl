@@ -1,0 +1,82 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+
+@kernel void lssAdvectionVolumeTri2D(const dlong Nelements,
+                                  const dlong offset, 
+                                  @restrict const  dfloat *  vgeo,
+                                  @restrict const  dfloat *  DT,
+                                            const  dfloat    t,
+                                  @restrict const  dfloat *  x,
+                                  @restrict const  dfloat *  y,
+                                  @restrict const  dfloat *  z,
+                                  @restrict const  dfloat *  U,
+                                  @restrict const  dfloat *  q,
+                                  @restrict        dfloat *  rhsq){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_F[p_Np];
+    @shared dfloat s_G[p_Np];
+
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      // prefetch geometric factors (constant on triangle)
+      const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+      const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+      const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+      const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+      const dlong  id = e*p_Np + n;
+      const dfloat qn = q[id];
+      const dfloat un = U[id + 0*offset]; // use flow solver side offset !!!!
+      const dfloat vn = U[id + 1*offset]; // use flow solver side offset !!!!
+      
+      const dfloat qxn = qn*un;  // flux function: assumes incompressible flow field!!!
+      const dfloat qyn = qn*vn;  // flux function: assumes incompressible flow field!!!
+
+      s_F[n] = drdx*qxn + drdy*qyn;
+      s_G[n] = dsdx*qxn + dsdy*qyn;
+    }
+
+    @barrier("local");
+
+    for(int n=0;n<p_Np;++n;@inner(0)){
+
+      dfloat rhsqn=0;
+
+      for(int i=0;i<p_Np;++i){
+        const dfloat Drni = DT[n+i*p_Np+0*p_Np*p_Np];
+        const dfloat Dsni = DT[n+i*p_Np+1*p_Np*p_Np];
+
+        rhsqn += Drni*s_F[i] + Dsni*s_G[i];
+      }
+
+      // move to rhs
+      const dlong id = e*p_Np + n;
+      rhsq[id] = -rhsqn;
+    }
+  }
+}

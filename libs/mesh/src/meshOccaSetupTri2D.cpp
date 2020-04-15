@@ -68,6 +68,15 @@ void meshTri2D::OccaSetup(){
     }
   }
 
+  // build Dr, Ds transposes
+  dfloat *DWrsT = (dfloat*) calloc(2*Np*Np, sizeof(dfloat));
+  for(int n=0;n<Np;++n){
+    for(int m=0;m<Np;++m){
+      DWrsT[n+m*Np] = DWr[n*Np+m];
+      DWrsT[n+m*Np+Np*Np] = DWs[n*Np+m];
+    }
+  }
+
   dfloat *LIFTT = (dfloat*) calloc(Np*Nfaces*Nfp, sizeof(dfloat));
   for(int n=0;n<Np;++n){
     for(int m=0;m<Nfaces*Nfp;++m){
@@ -131,6 +140,8 @@ void meshTri2D::OccaSetup(){
 			      DsT); // note: dummy allocated with DsT
 
   o_Dmatrices = device.malloc(2*Np*Np*sizeof(dfloat), DrsT);
+
+  o_DWmatrices = device.malloc(2*Np*Np*sizeof(dfloat), DWrsT);
 
   o_MM = device.malloc(Np*Np*sizeof(dfloat), MM);
 

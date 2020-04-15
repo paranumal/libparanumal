@@ -1,0 +1,150 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+
+@kernel void lssAdvectionCubatureSurfaceTri2D(const dlong Nelements,
+                                    const dlong offset,
+                                    @restrict const  dfloat *  vgeo,
+                                    @restrict const  dfloat *  sgeo,
+                                    @restrict const  dlong  *  vmapM,
+                                    @restrict const  dlong  *  vmapP,
+                                    @restrict const  int    *  EToB,
+                                    @restrict const  dfloat *  intInterpT, 
+                                    @restrict const  dfloat *  intLIFTT, 
+                                    @restrict const  dfloat *  intx,
+                                    @restrict const  dfloat *  inty,
+                                    @restrict const  dfloat *  intz,
+                                    const dfloat time,
+                                    @restrict const  dfloat *  U,
+                                    @restrict const  dfloat *  q,
+                                    @restrict dfloat *  rhsq){
+// for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_cubNblockS;@outer(0)){
+
+    // shared storage for flux terms
+    @shared dfloat s_uM[p_cubNblockS][p_NfacesNfp];
+    @shared dfloat s_vM[p_cubNblockS][p_NfacesNfp];
+    @shared dfloat s_uP[p_cubNblockS][p_NfacesNfp];
+    @shared dfloat s_vP[p_cubNblockS][p_NfacesNfp];
+    //
+    @shared dfloat s_qM[p_cubNblockS][p_NfacesNfp];
+    @shared dfloat s_qP[p_cubNblockS][p_NfacesNfp];
+    //
+    @shared dfloat s_fluxq[p_cubNblockS][p_intNfpNfaces];
+
+    @exclusive dlong e; 
+
+    for(int es=0;es<p_cubNblockS;++es;@inner(1)){
+      for(int n=0;n<p_cubMaxNodes;++n;@inner(0)){
+        e = eo + es;
+        if(e<Nelements && n<p_NfacesNfp){
+          const dlong id  = e*p_Nfp*p_Nfaces + n;
+          const dlong idM = vmapM[id];
+          const dlong idP = vmapP[id];
+          // load negative and positive trace node values of velocity
+          s_uM[es][n] = U[idM+0*offset];
+          s_vM[es][n] = U[idM+1*offset];
+
+          s_uP[es][n] = U[idP+0*offset];
+          s_vP[es][n] = U[idP+1*offset];
+        
+          s_qM[es][n] = q[idM];
+          s_qP[es][n] = q[idP];
+      }
+      }
+    }
+
+    @barrier("local");
+
+    // interpolate to surface integration nodes
+    for(int es=0;es<p_cubNblockS;++es;@inner(1)){
+      for(int n=0;n<p_cubMaxNodes;++n;@inner(0)){ 
+        if(e<Nelements && n<p_intNfpNfaces){
+            const int face = n/p_intNfp; 
+            // load surface geofactors for this face
+            const dlong sid   = p_Nsgeo*(e*p_Nfaces+face);
+            const dfloat nx   = sgeo[sid+p_NXID];
+            const dfloat ny   = sgeo[sid+p_NYID];
+            const dfloat sJ   = sgeo[sid+p_SJID];
+            const dfloat invJ = sgeo[sid+p_IJID];
+
+            dfloat um  = 0.f, vm  = 0.f;
+            dfloat up  = 0.f, vp  = 0.f;
+            dfloat qm  = 0.f, qp  = 0.f;
+
+            // local block interpolation (face nodes to integration nodes)
+            #pragma unroll p_Nfp
+            for(int m=0;m<p_Nfp;++m){
+              const dfloat Inm = intInterpT[n+m*p_Nfaces*p_intNfp];
+              const int fm = face*p_Nfp+m;
+              um += Inm*s_uM[es][fm];
+              vm += Inm*s_vM[es][fm];
+        
+              up += Inm*s_uP[es][fm];
+              vp += Inm*s_vP[es][fm];
+              
+              qm += Inm*s_qM[es][fm];
+              qp += Inm*s_qP[es][fm];
+            }
+
+            // apply boundary condition
+            int bc = EToB[face+p_Nfaces*e];
+            if(bc>0){
+              const dlong vid = n+e*p_Nfaces*p_intNfp; 
+              lssDirichletConditions2D(bc, time, intx[vid], inty[vid], nx, ny, qm, &qp);
+            }
+
+            // Find max normal velocity on the face
+            dfloat unM   = fabs(nx*um + ny*vm);
+            dfloat unP   = fabs(nx*up + ny*vp);    
+            dfloat unMax = (unM > unP) ? unM : unP;
+
+            // evaluate "flux" terms: LLF
+            const dfloat sc = 0.5f*invJ*sJ ; 
+            s_fluxq[es][n] = sc*(nx*(up*qp + um*qm) + ny*(vp*qp + vm*qm) + unMax*(qm-qp));
+          }
+      }
+    }
+
+    // wait for all @shared memory writes of the previous @inner( )loop to complete
+    @barrier("local");
+
+    // lift from surface integration to volume nodes
+    for(int es=0;es<p_cubNblockS;++es;@inner(1)){
+      for(int n=0;n<p_cubMaxNodes;++n;@inner(0)){
+        if(e<Nelements && n<p_Np ){
+            int id = n + p_Np*e;
+            dfloat rhs = 0.f; 
+            #pragma unroll p_intNfpNfaces
+            for(int m=0;m<p_intNfpNfaces;++m){
+              rhs += intLIFTT[n+m*p_Np]*s_fluxq[es][m];
+            }
+            rhsq[id] -= rhs;
+           }
+      }
+    }
+  }
+}
