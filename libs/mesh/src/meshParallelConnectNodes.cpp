@@ -30,11 +30,11 @@ SOFTWARE.
 // uniquely label each node with a global index, used for gatherScatter
 void mesh_t::ParallelConnectNodes(){
 
-  dlong localNodeCount = Np*Nelements;
-  dlong *allLocalNodeCounts = (dlong*) calloc(size, sizeof(dlong));
+  hlong localNodeCount = Np*Nelements;
+  hlong *allLocalNodeCounts = (hlong*) calloc(size, sizeof(hlong));
 
-  MPI_Allgather(&localNodeCount,    1, MPI_DLONG,
-                allLocalNodeCounts, 1, MPI_DLONG,
+  MPI_Allgather(&localNodeCount,    1, MPI_HLONG,
+                allLocalNodeCounts, 1, MPI_HLONG,
                 comm);
 
   hlong gatherNodeStart = 0;
@@ -58,13 +58,13 @@ void mesh_t::ParallelConnectNodes(){
 
     // use vertex ids for vertex nodes to reduce iterations
     for(int v=0;v<Nverts;++v){
-      dlong id = e*Np + vertexNodes[v];
+      hlong id = e*Np + vertexNodes[v];
       hlong gid = EToV[e*Nverts+v] + 1;
       globalIds[id] = gid;
     }
   }
 
-  dlong localChange = 0, gatherChange = 1;
+  hlong localChange = 0, gatherChange = 1;
 
   // keep comparing numbers on positive and negative traces until convergence
   while(gatherChange>0){
@@ -103,7 +103,7 @@ void mesh_t::ParallelConnectNodes(){
     }
 
     // sum up changes
-    MPI_Allreduce(&localChange, &gatherChange, 1, MPI_DLONG, MPI_SUM, comm);
+    MPI_Allreduce(&localChange, &gatherChange, 1, MPI_HLONG, MPI_MAX, comm);
   }
 
   free(baseRank);
