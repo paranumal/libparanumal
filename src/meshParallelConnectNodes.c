@@ -46,11 +46,11 @@ void meshParallelConnectNodes(mesh_t *mesh){
   rank = mesh->rank; 
   size = mesh->size; 
 
-  dlong localNodeCount = mesh->Np*mesh->Nelements;
-  dlong *allLocalNodeCounts = (dlong*) calloc(size, sizeof(dlong));
+  hlong localNodeCount = mesh->Np*mesh->Nelements;
+  hlong *allLocalNodeCounts = (hlong*) calloc(size, sizeof(hlong));
 
-  MPI_Allgather(&localNodeCount,    1, MPI_DLONG,
-                allLocalNodeCounts, 1, MPI_DLONG,
+  MPI_Allgather(&localNodeCount,    1, MPI_HLONG,
+                allLocalNodeCounts, 1, MPI_HLONG,
                 mesh->comm);
   
   hlong gatherNodeStart = 0;
@@ -67,7 +67,7 @@ void meshParallelConnectNodes(mesh_t *mesh){
   // use local numbering
   for(dlong e=0;e<mesh->Nelements;++e){
     for(int n=0;n<mesh->Np;++n){
-      dlong id = e*mesh->Np+n;
+      hlong id = e*mesh->Np+n;
 
       localNodes[id].baseRank = rank;
       localNodes[id].baseId = 1 + id + mesh->Nnodes + gatherNodeStart;
@@ -76,13 +76,13 @@ void meshParallelConnectNodes(mesh_t *mesh){
 
     // use vertex ids for vertex nodes to reduce iterations
     for(int v=0;v<mesh->Nverts;++v){
-      dlong id = e*mesh->Np + mesh->vertexNodes[v];
+      hlong id = e*mesh->Np + mesh->vertexNodes[v];
       hlong gid = mesh->EToV[e*mesh->Nverts+v] + 1;
       localNodes[id].baseId = gid; 
     }
   }
 
-  dlong localChange = 0, gatherChange = 1;
+  hlong localChange = 0, gatherChange = 1;
 
   parallelNode_t *sendBuffer =
     (parallelNode_t*) calloc(mesh->totalHaloPairs*mesh->Np, sizeof(parallelNode_t));
@@ -105,7 +105,7 @@ void meshParallelConnectNodes(mesh_t *mesh){
         dlong idP = mesh->vmapP[id];
         hlong gidM = localNodes[idM].baseId;
         hlong gidP = localNodes[idP].baseId;
-
+	
         int baseRankM = localNodes[idM].baseRank;
         int baseRankP = localNodes[idP].baseRank;
         
@@ -122,14 +122,14 @@ void meshParallelConnectNodes(mesh_t *mesh){
         }
       }
     }
-
+    
     // sum up changes
-    MPI_Allreduce(&localChange, &gatherChange, 1, MPI_DLONG, MPI_SUM, mesh->comm);
+    MPI_Allreduce(&localChange, &gatherChange, 1, MPI_HLONG, MPI_MAX, mesh->comm);
   }
 
   //make a locally-ordered version
   mesh->globalIds = (hlong*) calloc(localNodeCount, sizeof(hlong));
-  for(dlong id=0;id<localNodeCount;++id){
+  for(hlong id=0;id<localNodeCount;++id){
     mesh->globalIds[id] = localNodes[id].baseId;    
   }
   
