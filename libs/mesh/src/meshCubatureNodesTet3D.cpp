@@ -54,7 +54,7 @@ void meshTet3D::CubatureNodes(){
       dfloat ze3 = EZ[id+2];
       dfloat ze4 = EZ[id+3];
 
-      for(int n=0;n<Np;++n){ /* for each node */
+      for(int n=0;n<cubNp;++n){ /* for each node */
 
         /* (r,s,t) coordinates of interpolation nodes*/
         dfloat rn = cubr[n];
