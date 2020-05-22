@@ -1,0 +1,114 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+// @kernel void skylineTri2D(const dlong Nelements,
+//                @restrict const int * o_ModMap,
+//                @restrict const dfloat * o_InvV,
+//                @restrict const dfloat * o_LLF,
+//                @restrict const dfloat * o_Q, // 
+//                      @restrict dfloat *  o_ElementList){
+  @kernel void skylineTri2D(const dlong Nelements,
+               @restrict const int * o_ModMap,
+               @restrict const dfloat * o_InvVT,
+               @restrict const dfloat * o_LLF,
+               @restrict const dfloat * o_Q, // 
+                     @restrict dlong *  o_ElementList){
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_Q[p_Np], s_Mod[p_Np], S_LSF[p_N]; 
+    @shared int s_ModMap[p_Np]; 
+    @shared dfloat s_LogMod[p_Nq], s_SkyMod[p_Nq]; 
+
+    // prefetch global variables
+    for(int n=0; n<p_Np; n++; @inner(0)){
+        const dlong id = n+e*p_Np; 
+        s_Q[n]      = o_Q[id];     // solution field 
+        // s_ModMap[n] = o_ModMap[n]; // Mod Map
+        // if(n<p_N){
+        //   s_LSF[n] = o_LSF[n]; 
+        // } 
+    }
+
+@barrier("local");
+
+    // get modal coefficients
+    for(int n=0; n<p_Np; n++; @inner(0)){
+      dfloat mod = 0; 
+      for(int m=0; m<p_Np;m++){
+        mod +=o_InvVT[n+m*p_Np]*s_Q[m];  
+      }
+      s_Mod[n] = mod; 
+    }
+   
+@barrier("local");
+
+    //skyline pessimization: get 1D mods from 2D
+    // we need N threads to do this
+    for(int n=0; n<p_Np; n++; @inner(0)){
+      if(n<p_Nq){ // AK: this could be better!!! too many idle threads
+        dfloat modsum = 0; 
+        // we have i+1, i'th order mod
+         for(int i=0; i<n+1; i++){
+          const int nmods = 0.5*n*(n+1) + i; 
+          const int m     = o_ModMap[nmods]; 
+          modsum += s_Mod[m]*s_Mod[m];  
+         }
+        s_LogMod[n] = log10(sqrt(modsum)); 
+        // Initialize Skyline Modes
+        s_SkyMod[n] = (n==0) ? s_LogMod[n]:0.0; // don't touch to constant mod
+      }
+    }
+
+@barrier("local");
+
+// Skyline cut for modal potrait
+for(int n=0; n<p_Np; n++; @inner(0)){
+  if(n>0 && n<p_Nq){ // AK: this could be better!!! too many idle threads
+    dfloat maxq = s_LogMod[n]; 
+    for(int j=n; j<p_Nq; j++){
+      maxq = (n==p_N) ? max(maxq, s_LogMod[j-1]) : max(maxq, s_LogMod[j]); 
+    }
+    s_SkyMod[n] = maxq; 
+  }
+}
+
+@barrier("local");
+
+// damn!!! totally serial p_N floating point operations
+for(int n=0; n<p_Np; n++; @inner(0)){
+  if(n==0){
+    dfloat coeff = 0.f; 
+    for(int i=0; i<p_N; i++){
+      coeff += o_LLF[i]*s_SkyMod[i+1];
+    }
+    o_ElementList[e] = fabs(coeff)<3.0 ? 1: 0; 
+    // o_ElementList[e] = coeff; 
+  }
+}
+
+
+  }
+}
