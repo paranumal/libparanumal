@@ -96,6 +96,21 @@ void lss_t::PlotFields(dfloat* Q, char *fileName){
   }
   fprintf(fp, "       </DataArray>\n");
 
+// write out field
+  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"TroubledElements\" Format=\"ascii\">\n");
+  for(dlong e=0;e<mesh.Nelements;++e){
+    for(int n=0;n<mesh.plotNp;++n){
+      const dfloat plotpn = subcell->ElementList[e];
+      
+      fprintf(fp, "       ");
+      fprintf(fp, "%g\n", plotpn);
+    }
+  }
+  fprintf(fp, "       </DataArray>\n");
+
+
+
+
   }
    
 

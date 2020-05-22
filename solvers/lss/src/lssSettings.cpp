@@ -54,6 +54,20 @@ lssSettings_t::lssSettings_t(MPI_Comm& _comm):
              "Time integration method",
              {"AB3", "DOPRI5", "LSERK4"});
 
+  newSetting("STABILIZATION",
+             "SUBCELL",
+             "Stabilization method", 
+             {"SUBCELL", "NONE"});
+
+  newSetting("SUBCELL MINOR GRID",
+             "EQUISPACED",
+             "Minor Triangulation",
+             {"EQUISPACED"});
+
+  newSetting("SUBCELL NUMBER",
+             "0",
+             "Number of elements per direction");
+
   newSetting("START TIME",
              "0",
              "Start time for time integration");
@@ -87,6 +101,9 @@ void lssSettings_t::report() {
     reportSetting("ADVECTION TYPE");
     reportSetting("DATA FILE");
     reportSetting("TIME INTEGRATOR");
+    reportSetting("STABILIZATION");
+    reportSetting("SUBCELL NUMBER");
+    reportSetting("SUBCELL MINOR GRID");
     reportSetting("START TIME");
     reportSetting("FINAL TIME");
     reportSetting("OUTPUT INTERVAL");

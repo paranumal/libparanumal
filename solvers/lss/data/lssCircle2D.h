@@ -33,6 +33,8 @@ SOFTWARE.
   *(q) = ( (x-1.0)*(x-1.0) + (y-1.0)*(y-1.0) +0.1)*(sqrt((x-xc)*(x-xc) + (y-yc)*(y-yc)) - rc) ; \
 }
 
+  // *(q) = sqrt((x-xc)*(x-xc) + (y-yc)*(y-yc)) - rc ; \
+//  *(q) = ( (x-1.0)*(x-1.0) + (y-1.0)*(y-1.0) +0.1)*(sqrt((x-xc)*(x-xc) + (y-yc)*(y-yc)) - rc) ; \
 // LS Advective field
 #define lssAdvectionField2D(t, x, y, q, u, v) \
 {                                       \
@@ -42,7 +44,6 @@ SOFTWARE.
  *(u) = sin(M_PI*xs)*sin(M_PI*xs)*sin(2.f*M_PI*ys)*cos(M_PI*t/PERIOD); \
  *(v) =-sin(M_PI*ys)*sin(M_PI*ys)*sin(2.f*M_PI*xs)*cos(M_PI*t/PERIOD); \
 }
-
 
 
 // Boundary conditions

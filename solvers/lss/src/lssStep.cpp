@@ -128,6 +128,17 @@ void lss_t::Redistance(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
 // extract q halo on DEVICE
   traceHalo->ExchangeStart(o_Q, 1, ogs_dfloat);
 
+  // printf("I am here \n"); 
+  if(subcellStabilization)
+  subcell->skylineKernel(mesh.Nelements, 
+                            subcell->o_ModMap, 
+                            subcell->o_invVT,
+                            subcell->o_LSF,
+                            o_Q,
+                            subcell->o_ElementList); 
+
+  // printf("but not here\n");
+  
   redistanceVolumeKernel(mesh.Nelements,
                offset, 
                mesh.o_vgeo,

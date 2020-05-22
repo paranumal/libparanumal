@@ -7,7 +7,9 @@ data/lssCircle2D.h
 
 [MESH FILE]
 #BOX
-../../meshes/circle.msh
+#../../meshes/circle.msh
+#../../meshes/lssCircle.msh
+../../meshes/lssTest.msh
 
 [MESH DIMENSION]
 2
@@ -22,16 +24,16 @@ data/lssCircle2D.h
 40
 
 [BOX DIMX]
-1
+4
 
 [BOX DIMY]
-1
+4
 
 [BOX BOUNDARY FLAG]
 1
 
 [POLYNOMIAL DEGREE]
-5
+3
 
 [THREAD MODEL]
 CUDA
@@ -58,15 +60,25 @@ COLLOCATION
 #DOPRI5
 LSERK4
 
+[STABILIZATION]
+SUBCELL
+
+[SUBCELL NUMBER]
+4
+
+[SUBCELL MINOR GRID]
+EQUISPACED
+
 [START TIME]
 0
 
 [FINAL TIME]
 #8
-2
+#2
+0.5
 
 [OUTPUT INTERVAL]
-0.1
+0.01
 
 [OUTPUT TO FILE]
 TRUE

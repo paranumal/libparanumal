@@ -56,6 +56,13 @@ void lss_t::Run(){
                        mesh.o_z,
                        o_q,
                        o_sq); 
+ if(subcellStabilization)
+ subcell->skylineKernel(mesh.Nelements, 
+                        subcell->o_ModMap, 
+                        subcell->o_invVT,
+                        subcell->o_LSF,
+                        o_q,
+                        subcell->o_ElementList);  
 
 }
 

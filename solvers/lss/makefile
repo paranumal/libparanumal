@@ -80,6 +80,7 @@ GS_DIR       =${LIBP_TPL_DIR}/gslib
 BLAS_DIR     =${LIBP_TPL_DIR}/BlasLapack
 OGS_DIR      =${LIBP_LIBS_DIR}/ogs
 MESH_DIR     =${LIBP_LIBS_DIR}/mesh
+SUBCELL_DIR  =${LIBP_LIBS_DIR}/subcell
 CORE_DIR     =${LIBP_DIR}/core
 
 #includes
@@ -96,7 +97,7 @@ DEFINES =${LIBP_DEFINES} \
 LSS_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
 
 #link libraries
-LIBS=-L${LIBP_LIBS_DIR} -lmesh -logs\
+LIBS=-L${LIBP_LIBS_DIR} -lmesh -logs -lsubcell\
      -L$(GS_DIR)/lib -lgs \
      -L${CORE_DIR} -lcore \
      -L${BLAS_DIR} -lBlasLapack \
@@ -115,14 +116,14 @@ SRC =$(wildcard src/*.cpp)
 
 OBJS=$(SRC:.cpp=.o)
 
-.PHONY: all lib libcore libmesh libogs libblas clean clean-libs \
+.PHONY: all lib libcore libmesh libogs libsubcell libblas clean clean-libs \
 		clean-kernels realclean help info lssMain
 
 all: lssMain
 
 lib: liblss.a
 
-lssMain:$(OBJS) lssMain.o | libmesh
+lssMain:$(OBJS) lssMain.o | libsubcell
 ifneq (,${verbose})
 	$(LD) -o lssMain lssMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
 else
@@ -136,6 +137,13 @@ ifneq (,${verbose})
 else
 	@printf "%b" "$(LIB_COLOR)Building library $(@F)$(NO_COLOR)\n";
 	@ar -cr liblss.a $(OBJS)
+endif
+
+libsubcell: libmesh 
+ifneq (,${verbose})
+	${MAKE} -C ${SUBCELL_DIR} lib verbose=${verbose}
+else
+	@${MAKE} -C ${SUBCELL_DIR} lib --no-print-directory
 endif
 
 libmesh: libogs libgs libblas libcore
@@ -189,6 +197,7 @@ clean:
 clean-libs: clean
 	${MAKE} -C ${OGS_DIR} clean
 	${MAKE} -C ${MESH_DIR} clean
+	${MAKE} -C ${SUBCELL_DIR} clean
 	${MAKE} -C ${CORE_DIR} clean
 
 clean-kernels: clean-libs

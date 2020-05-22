@@ -32,7 +32,7 @@ SOFTWARE.
 #include "solver.hpp"
 #include "timeStepper.hpp"
 #include "linAlg.hpp"
-// #include "submesh.hpp"
+#include "subcell.hpp"
 
 #define DLSS LIBP_DIR"/solvers/lss/"
 
@@ -52,12 +52,13 @@ public:
   int cubature; 
   int advection;
   int redistance;
+  int subcellStabilization;
   dlong offset; 
 
   dfloat eps; // regularization thickness for level set function
 
   TimeStepper::timeStepper_t* timeStepper;
-  //SubMesh::submesh_t *submesh; 
+  subcell_t *subcell; 
 
   halo_t* traceHalo;
 

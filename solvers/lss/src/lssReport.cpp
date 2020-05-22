@@ -45,6 +45,7 @@ void lss_t::Report(dfloat time, int tstep){
     o_q.copyTo(q);
     if(redistance){
       o_sq.copyTo(sq);
+      subcell->o_ElementList.copyTo(subcell->ElementList);
     }   
     // output field files
     string name;

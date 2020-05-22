@@ -35,6 +35,8 @@ lss_t& lss_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   lss->advection  = (settings.compareSetting("ADVECTION SOLVER", "TRUE")) ? 1:0;
   lss->redistance = (settings.compareSetting("REDISTANCE SOLVER", "TRUE")) ? 1:0;
 
+
+
   //setup cubature
   if (lss->cubature) {
     mesh.CubatureSetup();
@@ -55,6 +57,7 @@ lss_t& lss_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
     lss->timeStepper = new TimeStepper::dopri5(mesh.Nelements, mesh.totalHaloPairs,
                                               mesh.Np, 1, *lss);
   }
+  
 
   // set time step
   dfloat hmin = mesh.MinCharacteristicLength();
@@ -126,6 +129,11 @@ lss_t& lss_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
 
   kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
 
+  lss->subcellStabilization = (settings.compareSetting("STABILIZATION", "SUBCELL")) ? 1:0;
+  if(lss->subcellStabilization){
+  lss->subcell = NULL; 
+  lss->subcell = &(subcell_t::Setup(mesh, settings)); 
+  }
   // set kernel name suffix
   char *suffix;
   if(mesh.elementType==TRIANGLES)
