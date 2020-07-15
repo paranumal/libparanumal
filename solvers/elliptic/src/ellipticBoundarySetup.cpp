@@ -55,7 +55,7 @@ void elliptic_t::BoundarySetup(){
   o_EToB = device.malloc(mesh.Nelements*mesh.Nfaces*sizeof(int), EToB);
 
   //collect the allNeumann flags from other ranks
-  MPI_Allreduce(&localAllNeumann, &allNeumann, 1, MPI_INT, MPI_MAX, comm);
+  MPI_Allreduce(&localAllNeumann, &allNeumann, 1, MPI_INT, MPI_MIN, comm);
 
 
   //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
