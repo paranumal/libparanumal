@@ -1,0 +1,79 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+@kernel void lssSubcellSign2D(const dlong Nelements,
+                                 const dfloat time,
+                                 const dfloat eps,
+                                 @restrict const  dfloat *  vgeo,
+                                 @restrict const  dfloat *  sq,
+                                 @restrict        dfloat *  sgnq){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<s_Ncells;++n;@inner(0)){
+      const dlong id   = e*s_Ncells + n;
+
+      // const dfloat qn = sqrt(xn*xn + yn*yn) -1.0; 
+#if 1
+    dfloat scale = 1.0; 
+    const dfloat xn = vgeo[id*s_Nvgeo + s_CXID]; 
+    const dfloat yn = vgeo[id*s_Nvgeo + s_CYID]; 
+//      const dfloat dphidx =  (2*xn - 2)*(sqrt(xn*xn + yn*yn) - 1) + (xn*((xn - 1)*(xn - 1) + (yn - 1)*(yn - 1) + 1/10))/sqrt(xn*xn + yn*yn);
+//      const dfloat dphidy =  (2*yn - 2)*(sqrt(xn*xn + yn*yn) - 1) + (yn*( (xn - 1)*(xn - 1) + (yn - 1)*(yn - 1) + 1/10))/sqrt(xn*xn + yn*yn);
+//      scale = 2.0*sqrt(dphidx*dphidx + dphidy*dphidy);
+
+     const dfloat qn = sqrt(xn*xn + yn*yn) -1.0; 
+    // const dfloat qn = xn; 
+ // const dfloat qn  = sq[id]; 
+    // const dfloat sgn = qn / sqrt(qn*qn + eps*eps);   
+    const dfloat sgn = tanh(M_PI*qn/(10.0*scale*eps));     
+   // const dfloat sgn = (qn > 0) ? 1 : ((qn < 0) ? -1 : 0); 
+    sgnq[id] = sgn;
+
+#else
+      const dfloat xn = vgeo[id*s_Nvgeo + s_CXID]; 
+      const dfloat yn = vgeo[id*s_Nvgeo + s_CYID]; 
+      const dfloat rc = 1.0;          
+      const dfloat ac = 0.7;          
+      const dfloat test1 = (ac-xn)/sqrt((ac-xn)*(ac-xn) + yn*yn); 
+      const dfloat test2 = (ac+xn)/sqrt((ac+xn)*(ac+xn) + yn*yn); 
+      const dfloat scale = 1.0;
+      dfloat qn = 0; 
+      if( ( test1 >= ac/rc ) && ( test2 >= ac/rc ) ){ 
+        qn = - scale* min(sqrt( xn*xn+( yn-sqrt( rc*rc-ac*ac))*(yn-sqrt( rc*rc-ac*ac))), 
+                            sqrt( xn*xn+( yn+sqrt( rc*rc-ac*ac))*(yn+sqrt( rc*rc-ac*ac)))); 
+      } 
+      else{ 
+        qn = scale*min( sqrt( (xn+ac)*(xn+ac)+ yn*yn)-rc, sqrt( (xn-ac)*(xn-ac)+ yn*yn)-rc );
+      } 
+
+      const dfloat sgn = tanh(M_PI*qn/(15.0*eps)); 
+      sgnq[id] = sgn; 
+#endif
+
+     
+    }
+  }
+}

@@ -1,4 +1,4 @@
-res = 0.1;
+res = 1.0;
 xmin = -1.0; 
 xmax =  1.0; 
 ymin = -1.0; 
@@ -14,6 +14,10 @@ Line(3) = {3, 4};
 Line(4) = {4, 1};
 Line Loop(6) = {4, 1, 2, 3};
 Plane Surface(6) = {6};
+Transfinite Line {4, 2} = 3 Using Progression 1;
+Transfinite Line {1, 3} = 3 Using Progression 1;
+Transfinite Surface {6};
+
 Physical Surface("Domain", 9) = {6};
 Physical Line("Inflow", 1) = {1, 2, 3, 4};
 
@@ -27,4 +31,6 @@ Physical Line("Inflow", 1) = {1, 2, 3, 4};
 // Line Loop(6) = {1, 2, 3};
 // Plane Surface(6) = {6};
 // Physical Surface("Domain", 9) = {6};
-// Physical Line("Inflow", 1) = {1, 2, 3};
+// Physical Line("Inflow", 1) = {1, 2, 3};//+
+
+//+

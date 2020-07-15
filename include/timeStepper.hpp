@@ -501,6 +501,23 @@ public:
   ~lserk4_pml();
 };
 
+
+/* Low-Storage Explicit Runge-Kutta, order 4 */
+class lserk4_subcell: public lserk4 {
+private:
+  dlong Ns; 
+  occa::memory o_sq;
+  occa::memory o_rhssq;
+  occa::memory o_ressq;
+
+  void Step(occa::memory& o_q, dfloat time, dfloat dt);
+
+public:
+  lserk4_subcell(dlong Nelements, dlong NhaloElements,
+            int Np, int Nfields, int Ns, int Nsfields, solver_t& solver);
+  ~lserk4_subcell();
+};
+
 /* Dormand-Prince method */
 /* Explict Runge-Kutta, order 5 with embedded order 4 and adaptive time-stepping */
 class dopri5_pml: public dopri5 {
@@ -658,6 +675,8 @@ public:
             dfloat *_lambda, solver_t& solver);
   ~mrsaab3_pml();
 };
+
+
 
 } //namespace TimeStepper
 

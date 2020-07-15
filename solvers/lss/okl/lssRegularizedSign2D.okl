@@ -38,13 +38,33 @@ SOFTWARE.
       const dlong id   = e*p_Np + n;
       const dfloat xn = x[id]; 
       const dfloat yn = y[id]; 
-
+#if 1
       const dfloat qn = sqrt(xn*xn + yn*yn) -1.0; 
-      // const dfloat qn  = q0[id]; 
+    // const dfloat qn  = q0[id]; 
       // const dfloat sgn = qn / sqrt(qn*qn + eps*eps);   
-      const dfloat sgn = tanh(M_PI*qn/(10*eps));     
+      const dfloat sgn = tanh(M_PI*qn/(10.0*eps));     
      // const dfloat sgn = (qn > 0) ? 1 : ((qn < 0) ? -1 : 0); 
       sq[id] = sgn;
+#else 
+  const dfloat rc = 1.0f;          
+  const dfloat ac = 0.70;          
+  const dfloat test1 = (ac-xn)/sqrt((ac-xn)*(ac-xn) + yn*yn); 
+  const dfloat test2 = (ac+xn)/sqrt((ac+xn)*(ac+xn) + yn*yn); 
+  const dfloat scale = 1.0;
+  dfloat sgn = 0;  
+if( ( test1 >= ac/rc ) && ( test2 >= ac/rc ) ){ 
+sgn= - scale* min(sqrt( xn*xn+( yn-sqrt( rc*rc-ac*ac))*(yn-sqrt( rc*rc-ac*ac))), 
+                  sqrt( xn*xn+( yn+sqrt( rc*rc-ac*ac))*(yn+sqrt( rc*rc-ac*ac)))); 
+} 
+else{ 
+sgn= scale*min( sqrt( (xn+ac)*(xn+ac)+ yn*yn)-rc, sqrt( (xn-ac)*(xn-ac)+ yn*yn)-rc );
+} 
+
+sgn = tanh(M_PI*sgn/(15.0*eps)); 
+
+ sq[id] = sgn;
+#endif
+
     }
   }
 }

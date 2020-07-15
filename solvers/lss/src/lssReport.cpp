@@ -29,22 +29,42 @@ SOFTWARE.
 void lss_t::Report(dfloat time, int tstep){
 
   static int frame=0;
-
-  //compute q.M*q
+#if 0
+  // //compute q.M*q
   MassMatrixKernel(mesh.Nelements, mesh.o_ggeo, mesh.o_MM, o_q, o_Mq);
 
   dlong Nentries = mesh.Nelements*mesh.Np;
   dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_q, o_Mq, comm));
+#else
+  // Simple mass loss test
+  dlong Nentries = mesh.Nelements*mesh.Np;
+  dfloat *test = (dfloat *)calloc(Nentries, sizeof(dfloat)); 
+  o_q.copyTo(q); 
+  
+  for(int n=0; n<Nentries; n++)
+    test[n] = q[n]<=1e-16 ? 1.0: 0.0; 
+  
+  occa::memory o_test = device.malloc(Nentries*sizeof(dfloat), test);
+  MassMatrixKernel(mesh.Nelements, mesh.o_ggeo, mesh.o_MM, o_test, o_Mq);
+  dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_test, o_Mq, comm));
+
+  norm2 *= norm2; // area 
+  
+  // error for r=1 circle
+  norm2 = M_PI - norm2;
+
+  free(test); 
+
+#endif
 
   if(mesh.rank==0)
     printf("%5.2f (%d), %.8e (time, timestep, norm)\n", time, tstep, norm2);
 
   if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
 
-    // copy data back to host
     o_q.copyTo(q);
     if(redistance){
-      o_sq.copyTo(sq);
+      o_sgnq.copyTo(sgnq);
       subcell->o_ElementList.copyTo(subcell->ElementList);
     }   
     // output field files

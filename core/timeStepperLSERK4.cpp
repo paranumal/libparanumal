@@ -87,6 +87,8 @@ void lserk4::Run(occa::memory &o_q, dfloat start, dfloat end) {
 
   int tstep=0;
   dfloat stepdt;
+
+  // dt = 0.001; 
   while (time < end) {
 
     if (time<outputTime && time+dt>=outputTime) {
@@ -193,6 +195,54 @@ lserk4_pml::~lserk4_pml() {
   if (o_pmlq.size()) o_pmlq.free();
   if (o_rhspmlq.size()) o_rhspmlq.free();
   if (o_respmlq.size()) o_respmlq.free();
+}
+
+
+
+/**************************************************/
+/* PML version                                    */
+/**************************************************/
+
+lserk4_subcell::lserk4_subcell(dlong _Nelements, dlong _NhaloElements,
+                      int _Np, int _Nfields, int _Nsubcell, int _Nsubcellfields,
+                      solver_t& _solver):
+  lserk4(_Nelements, _NhaloElements, _Np, _Nfields, _solver),
+  Ns(_Nsubcellfields*_Nsubcell*_Nelements) {
+  if (Ns) {
+    dfloat *sq = (dfloat *) calloc(Ns,sizeof(dfloat));
+    o_sq   = device.malloc(Ns*sizeof(dfloat), sq);
+    free(sq);
+    o_ressq = device.malloc(Ns*sizeof(dfloat));
+    o_rhssq = device.malloc(Ns*sizeof(dfloat));
+  }
+}
+
+void lserk4_subcell::Step(occa::memory &o_q, dfloat time, dfloat _dt) {
+
+  // Low storage explicit Runge Kutta (5 stages, 4th order)
+  for(int rk=0;rk<Nrk;++rk){
+
+    dfloat currentTime = time + rkc[rk]*_dt;
+
+    //evaluate ODE rhs = f(q,t)
+    solver.rhsf_subcell(o_q, o_sq, o_rhsq, o_rhssq, currentTime);
+
+    // update solution using Runge-Kutta
+    updateKernel(N, _dt, rka[rk], rkb[rk],
+                 o_rhsq, o_resq, o_q);
+    if (Ns){
+      updateKernel(Ns, _dt, rka[rk], rkb[rk],
+                   o_rhssq, o_ressq, o_sq);
+
+    solver.reconstruct_subcell(o_q, o_sq); 
+
+    }
+  }
+}
+
+lserk4_subcell::~lserk4_subcell() {
+  if (o_rhssq.size()) o_rhssq.free();
+  if (o_ressq.size()) o_ressq.free();
 }
 
 } //namespace TimeStepper

@@ -28,27 +28,32 @@ SOFTWARE.
 #include "subcell2D.hpp"
 // #include "subcell3D.hpp"
 
-subcell_t:: subcell_t(mesh_t &_mesh, settings_t& _settings):
-    mesh(_mesh),
-    comm(_mesh.comm),
-    device(_mesh.device),
-    settings(_settings),
-    props(_mesh.props){};
+// subcell_t:: subcell_t(mesh_t &_mesh, settings_t& _settings):
+//     mesh(_mesh),
+//     comm(_mesh.comm),
+//     device(_mesh.device),
+//     settings(_settings),
+//     props(_mesh.props){};
 
-  subcell_t& subcell_t::Setup(mesh_t& _mesh, settings_t& _settings){
+subcell_t:: subcell_t(solver_t &_solver):
+    mesh(_solver.mesh),
+    comm(_solver.comm),
+    device(_solver.device),
+    settings(_solver.settings),
+    props(_solver.props),
+    solver(_solver){};
+
+
+  // subcell_t& subcell_t::Setup(mesh_t& _mesh, settings_t& _settings){
+  subcell_t& subcell_t::Setup(solver_t& _solver){
 
   subcell_t *subcell=NULL; 
 
-  // int N, dim, elementType;
-
-  // settings.getSetting("POLYNOMIAL DEGREE", N);
-  // settings.getSetting("ELEMENT TYPE", elementType);
-  // settings.getSetting("MESH DIMENSION", dim);
-
-  switch(_mesh.elementType){
+  switch(_solver.mesh.elementType){
   case TRIANGLES:
-    if(_mesh.dim==2)
-      subcell = new subcellTri2D(_mesh, _settings);
+    if(_solver.mesh.dim==2)
+      subcell = new subcellTri2D(_solver);
+      // subcell = new subcellTri2D(_mesh, _settings);
     else
       // subcell = new subcellTri3D(device, comm, settings, props);
     break;
@@ -69,20 +74,27 @@ subcell_t:: subcell_t(mesh_t &_mesh, settings_t& _settings):
   // subcell->settings.getSetting("SUBCELL NUMBER", subcell->N);
   // printf("%d\n", subcell->N);
   
-  // Create Minor Grid i.e. rc, sc, mEToV
+  // Create Minor
   subcell->CreateMinorGrid(); 
 
+  // Create local connection in subcell
   subcell->LocalConnect(); 
 
-  subcell->GeometricFactors(); 
-
+  // Global connection of FV elements
   subcell->GlobalConnect(); 
 
+  // Compute Geometric factors for FV dicretization
+  subcell->GeometricFactors(); 
+
+  // Setup projection and recontruction operators
+  subcell->SetupOperators(); 
+
+  // Setup detector i.e. Skyline for now
   subcell->SetupDetector(); 
-  // mesh->elementType = elementType;
 
-
+  // Create device info
   subcell->OccaSetup();
+  
   #if 0
  
   // connect elements using parallel sort
@@ -127,35 +139,33 @@ subcell_t:: subcell_t(mesh_t &_mesh, settings_t& _settings):
 //
 void subcell_t::LeastSquaresFit(int _N, dfloat *_LSF){
 
-dfloat *logN = (dfloat *) malloc(_N*sizeof(dfloat)); 
-dfloat norm = 0; 
+dfloat *temp = (dfloat *)malloc(2*_N*sizeof(dfloat)); 
 for(int n=0; n<_N; n++){
   const dfloat logmode = log10(n+1); 
-  logN[n] = logmode;
-  norm   += logmode*logmode; 
-}
-// Simple QR precedure for vector i.e. R-1 * QT = xx/ (xxT*xx)
-// We need only first coefficient of linear fit i.e. a for  y = ax + b
-for(int n=0; n<_N; n++)
-  _LSF[n] = logN[n]/norm; 
-
-// Compute 
-
-free(logN);
+  temp[2*n + 0] = logmode; 
+  temp[2*n + 1] = 1.0; 
 }
 
+matrixPInverse(_N, 2, temp);
 
-//
+for(int n=0; n<_N; n++){
+  _LSF[n] = temp[n];
+}
+free(temp);
+
+}
+
+// 
 void subcell_t::BaseLineDecay(int _N, dfloat *_BLD){
 
 dfloat bsum = 0.0; 
 for(int j=1; j<_N+1; j++)
-    bsum +=1/pow(j, 2*_N); 
+    bsum +=1.0/pow(j, 2*_N); 
 
 bsum = 1.0/sqrt(bsum); 
   
 BLD[0] = 0.0; 
-// baseline decay: squared !!!!
+// baseline decay: AK: squared !!!!
 for(int n=1; n<_N+1; n++){
     const dfloat bdecay = bsum*1.0/(pow(n,_N));
     _BLD[n] = bdecay*bdecay;

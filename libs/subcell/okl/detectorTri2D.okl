@@ -105,10 +105,8 @@ for(int n=0; n<p_Np; n++; @inner(0)){
       coeff += o_LLF[i]*s_SkyMod[i+1];
     }
     o_ElementList[e] = fabs(coeff)<3.0 ? 1: 0; 
-    // o_ElementList[e] = coeff; 
+   // o_ElementList[e] = 1; 
   }
 }
-
-
   }
 }

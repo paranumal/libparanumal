@@ -139,12 +139,43 @@ void subcell_t::LocalConnect(){
   mEToE = (int*) calloc(Nsubcells*Nfaces, sizeof(int));
   mEToF = (int*) calloc(Nsubcells*Nfaces, sizeof(int));
 
-  cnt = 0;
+  cnt = 0; Nint=0; Next=0; 
   for(dlong e=0;e<Nsubcells;++e){
     for(int f=0;f<Nfaces;++f){
       mEToE[cnt] = faces[cnt].elementNeighbor;
       mEToF[cnt] = faces[cnt].faceNeighbor;
       ++cnt;
+    }
+
+    if( mEToE[e*Nfaces + 0]<0 || 
+        mEToE[e*Nfaces + 1]<0 || 
+        mEToE[e*Nfaces + 2]<0)      
+      Next++;
+    else
+      Nint++;
+  }
+
+  // printf("%d %d \n", Nint, Next);
+
+  // iemapP = (int*) calloc(Nint*Nfaces,sizeof(int));
+  // ifmapP = (int*) calloc(Nint*Nfaces,sizeof(int));
+  ielist = (int*) calloc(Nint,sizeof(int));
+  eelist = (int*) calloc(Next,sizeof(int));
+  int icnt = 0, ecnt = 0;  
+  for(dlong e=0;e<Nsubcells;++e){
+    if( mEToE[e*Nfaces + 0]<0 || 
+        mEToE[e*Nfaces + 1]<0 || 
+        mEToE[e*Nfaces + 2]<0){     
+      eelist[ecnt] = e; 
+      // printf("%d\n", eelist[ecnt]);
+      ++ecnt; 
+    }else{
+       ielist[icnt] = e; 
+      // for(int f=0;f<Nfaces;++f){
+      // iemapP[icnt*Nfaces + f] = mEToE[e*Nfaces + f];
+      // ifmapP[icnt*Nfaces + f] = mEToF[e*Nfaces + f];
+      // }
+    ++icnt;
     }
   }
 
@@ -193,6 +224,9 @@ void subcell_t::LocalConnect(){
   }
 }
 
+
+
+#if 1
 /* routine to find EToE (Element To Element)
    and EToF (Element To Local Face) connectivity arrays */
 void subcell_t::GlobalConnect(){
@@ -289,22 +323,22 @@ void subcell_t::GlobalConnect(){
 
       // for each subcell at this face find neighboor element
       for(int n=0; n<N; n++){
-	// local element and face info 
-	const int sem =  mFToE[f*N+ n];
-	const int sfm =  mFToF[f*N+ n];
-	//
-	const dlong idM = e*Nsubcells*Nfaces + sem*Nfaces + sfm; 
+        // local element and face info 
+        const int sem =  mFToE[f*N+ n];
+        const int sfm =  mFToF[f*N+ n];
+        //
+        const dlong idM = e*Nsubcells*Nfaces + sem*Nfaces + sfm; 
         dfloat xM = xf[idM] + offsetX;
         dfloat yM = yf[idM] + offsetY;
-        
+
         int idE, idF; // mEToE[sem*Nfaces + sfm]; 
         findBestMatch(xM, yM, Nfaces, N, mFToE+fP*N,
-		      xf+eP*Nsubcells*Nfaces,
-		      yf+eP*Nsubcells*Nfaces, &idE, &idF);
+                      xf+eP*Nsubcells*Nfaces,
+                      yf+eP*Nsubcells*Nfaces, &idE, &idF);
 
-	const dlong eshift = e*Nsubcells*Nfaces + sem*Nfaces + sfm;  
-	emapP[eshift]     = idE + eP*Nsubcells; 
-	fmapP[eshift]     = idF; //
+        const dlong eshift = e*Nsubcells*Nfaces + sem*Nfaces + sfm;  
+        emapP[eshift]     = idE + eP*Nsubcells; 
+        fmapP[eshift]     = idF; //
 
       }
     }
@@ -331,3 +365,210 @@ void subcell_t::GlobalConnect(){
 #endif
 
 }
+
+#else
+/* routine to find EToE (Element To Element)
+   and EToF (Element To Local Face) connectivity arrays */
+void subcell_t::GlobalConnect(){
+  const dlong Nelements = mesh.Nelements;
+  // Global connectivity
+  eemapP = (dlong*) calloc(Next*Nfaces*Nelements, sizeof(dlong));
+  efmapP = (dlong*) calloc(Next*Nfaces*Nelements, sizeof(dlong));
+
+  // Compute Face Centers and Connect
+  dfloat *xf = (dfloat *) malloc(Nelements*Nsubcells*Nfaces*sizeof(dfloat));
+  dfloat *yf = (dfloat *) malloc(Nelements*Nsubcells*Nfaces*sizeof(dfloat));
+
+  //check if we're using a periodic box mesh
+  int periodicFlag = 0;
+  if (mesh.settings.compareSetting("MESH FILE","BOX") &&
+      mesh.settings.compareSetting("BOX BOUNDARY FLAG","-1"))
+    periodicFlag = 1;
+
+  //box dimensions
+  dfloat DIMX, DIMY;
+  mesh.settings.getSetting("BOX DIMX", DIMX);
+  mesh.settings.getSetting("BOX DIMY", DIMY);
+
+  //box is centered at the origin
+  DIMX /= 2.0;
+  DIMY /= 2.0;
+
+
+  dlong cnt = 0; 
+  for(dlong e=0; e<Nelements; e++){
+    dlong id = e*Nverts;
+    dfloat xe1 = mesh.EX[id+0]; /* x-coordinates of vertices */
+    dfloat xe2 = mesh.EX[id+1];
+    dfloat xe3 = mesh.EX[id+2];
+
+    dfloat ye1 = mesh.EY[id+0]; /* y-coordinates of vertices */
+    dfloat ye2 = mesh.EY[id+1];
+    dfloat ye3 = mesh.EY[id+2];
+
+   for(int s= 0; s<Nsubcells; s++){
+      //
+      for(int f =0; f<Nfaces; f++){
+        dfloat rn = fr[s*Nfaces+f]; 
+        dfloat sn = fs[s*Nfaces+f]; 
+
+        xf[cnt] = -0.5*(rn+sn)*xe1 + 0.5*(1+rn)*xe2 + 0.5*(1+sn)*xe3;
+        yf[cnt] = -0.5*(rn+sn)*ye1 + 0.5*(1+rn)*ye2 + 0.5*(1+sn)*ye3;
+        ++cnt;
+      }
+    }
+  }
+
+  // find which subcell face is connected to element face 
+  int *ftemp = (int*) calloc(Next*Nfaces,sizeof(int));
+   for(int s=0;s<Next;++s){  
+    int sem = eelist[s];
+    for(int f=0; f<Nfaces; f++){
+      ftemp[s*Nfaces + f] = -1; 
+      if(mEToE[sem*Nfaces + f]<0){
+        for(int fi =0; fi<Nfaces; fi++){
+          for(int si=0; si<N; si++){
+            if(mFToE[fi*N + si]==sem){
+              int fm = mFToF[fi*N + si];
+              ftemp[s*Nfaces + fm] = fi; 
+            }
+          }
+        }
+      } 
+    }
+  }
+
+
+for(int e=0; e<Nelements; e++){
+  
+  for(dlong s=0;s<Next;++s){  
+    int sem = eelist[s];
+    for(int f=0; f<Nfaces; f++){
+      const dlong eshift = e*Next*Nfaces + s*Nfaces + f; 
+      if(mEToE[sem*Nfaces + f]<0){ 
+
+      int fm = ftemp[s*Nfaces + f];
+      // printf("%d %d %d\n",s,f,fm );
+      // this is a boundary face
+      dlong eP = mesh.EToE[e*Nfaces + fm]; 
+      int fP   = mesh.EToF[e*Nfaces + fm]; 
+
+      if(eP<0 || fP<0){ eP = e; fP = f;}
+
+      dfloat offsetX = 0.0, offsetY = 0.0;
+
+      if (periodicFlag) {
+        //if the mesh is periodic, this is more complicated.
+        // check if this face is on a boundary face
+        bool top=true, bottom=true, left=true, right=true;
+        for(int n=0;n<NfaceVertices;++n){
+          dlong vid = eP*mesh.Nverts + mesh.faceVertices[fP*NfaceVertices+n];
+          if (fabs(mesh.EX[vid]-DIMX)>1e-4) right = false;
+          if (fabs(mesh.EX[vid]+DIMX)>1e-4) left = false;
+          if (fabs(mesh.EY[vid]-DIMY)>1e-4) top = false;
+          if (fabs(mesh.EY[vid]+DIMY)>1e-4) bottom = false;
+        }
+        if (right)  offsetX = -2.0*DIMX;
+        if (left)   offsetX =  2.0*DIMX;
+        if (top)    offsetY = -2.0*DIMY;
+        if (bottom) offsetY =  2.0*DIMY;
+      }
+
+
+      const dlong idM = e*Nsubcells*Nfaces + sem*Nfaces + f; 
+        dfloat xM = xf[idM] - offsetX;
+        dfloat yM = yf[idM] - offsetY;
+
+        int idE, idF; // mEToE[sem*Nfaces + sfm]; 
+        findBestMatch(xM, yM, Nfaces, N, mFToE+fP*N,
+                      xf+eP*Nsubcells*Nfaces,
+                      yf+eP*Nsubcells*Nfaces, &idE, &idF);
+
+
+        eemapP[eshift]     = idE + eP*Nsubcells; 
+        efmapP[eshift]     = idF; 
+
+      }else{ // internal connection
+        const int ep = mEToE[sem*Nfaces + f]; 
+        eemapP[eshift] = ep + e*Nsubcells; 
+        efmapP[eshift] = mEToF[sem*Nfaces + f]; 
+      }
+    }
+
+
+  }
+}
+
+
+// for(int e=0; e<1; e++){
+//   for(dlong s=0;s<Next;++s){  
+//     int sem = eelist[s];
+//     printf("%d ", sem);
+//     for(int f=0; f<Nfaces; f++){
+//       const dlong eshift = e*Next*Nfaces + s*Nfaces + f; 
+//       printf(" %d",eemapP[eshift]); //, efmapP[eshift]);
+//     }
+//     printf("\n");
+//   }
+// }
+
+
+  // for(dlong e=0; e<Nelements; e++){
+  //   for(int f=0;f<Nfaces;++f){
+  //     dlong eP = mesh.EToE[e*Nfaces + f]; 
+  //     int fP   = mesh.EToF[e*Nfaces + f]; 
+
+  //     if(eP<0 || fP<0){ eP = e; fP = f;}
+
+  //     dfloat offsetX = 0.0, offsetY = 0.0;
+
+  //     if (periodicFlag) {
+  //       //if the mesh is periodic, this is more complicated.
+  //       // check if this face is on a boundary face
+  //       bool top=true, bottom=true, left=true, right=true;
+  //       for(int n=0;n<NfaceVertices;++n){
+  //         dlong vid = e*mesh.Nverts + mesh.faceVertices[f*NfaceVertices+n];
+  //         if (fabs(mesh.EX[vid]-DIMX)>1e-4) right = false;
+  //         if (fabs(mesh.EX[vid]+DIMX)>1e-4) left = false;
+  //         if (fabs(mesh.EY[vid]-DIMY)>1e-4) top = false;
+  //         if (fabs(mesh.EY[vid]+DIMY)>1e-4) bottom = false;
+  //       }
+  //       if (right)  offsetX = -2.0*DIMX;
+  //       if (left)   offsetX =  2.0*DIMX;
+  //       if (top)    offsetY = -2.0*DIMY;
+  //       if (bottom) offsetY =  2.0*DIMY;
+  //     }
+
+  //     // for each subcell at this face find neighboor element
+  //     for(int n=0; n<N; n++){
+  //       // local element and face info 
+  //       const int sem =  mFToE[f*N+ n];
+  //       const int sfm =  mFToF[f*N+ n];
+  //       //
+  //       const dlong idM = e*Nsubcells*Nfaces + sem*Nfaces + sfm; 
+  //       dfloat xM = xf[idM] + offsetX;
+  //       dfloat yM = yf[idM] + offsetY;
+
+  //       int idE, idF; // mEToE[sem*Nfaces + sfm]; 
+  //       findBestMatch(xM, yM, Nfaces, N, mFToE+fP*N,
+  //                     xf+eP*Nsubcells*Nfaces,
+  //                     yf+eP*Nsubcells*Nfaces, &idE, &idF);
+
+  //       const dlong eshift = e*Nsubcells*Nfaces + sem*Nfaces + sfm;  
+  //       emapP[eshift]     = idE + eP*Nsubcells; 
+  //       fmapP[eshift]     = idF; //
+
+  //     }
+  //   }
+  // }
+
+  free(xf); 
+  free(yf);
+  free(ftemp);
+}
+
+
+
+
+
+#endif

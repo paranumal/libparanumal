@@ -70,9 +70,6 @@ void subcell_t::EquispacedEToVTri2D(int _N, int *_EToV){
     }
     sk++;
   }
-
-
-
 #else
 
   int cnt=0;
@@ -110,6 +107,22 @@ void subcell_t::EquispacedEToVTri2D(int _N, int *_EToV){
 #endif  
 
 }
+
+
+
+// void subcell_t::FVProjectionMatrixTri2D(int _Ns, dfloat *_P){
+// int  Np   = mesh.Np; 
+// int  cubN = mesh.N+1; // Just to make sure it is dealiased
+// int  cubNp=0; 
+// dfloat *cubr, *cubs, *cubw; 
+
+// mesh.CubatureNodesTri2D(cubN, &cubNp, &cubr, &cubs, &cubw); 
+
+// printf("cubN= %d cubNp = %d\n", cubN, cubNp);
+
+
+
+// }
 
 #if 0
 void mesh_t::FaceNodesTri2D(int _N, dfloat *_r, dfloat *_s, int *_faceNodes){

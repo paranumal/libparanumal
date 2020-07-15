@@ -6,10 +6,12 @@
 data/lssCircle2D.h
 
 [MESH FILE]
-#BOX
+BOX
 #../../meshes/circle.msh
 #../../meshes/lssCircle.msh
-../../meshes/lssTest.msh
+#../../meshes/circle_h01.msh
+#../../meshes/circle.msh
+#../../meshes/lssTest.msh
 
 [MESH DIMENSION]
 2
@@ -18,10 +20,10 @@ data/lssCircle2D.h
 3
 
 [BOX NX]
-40
+60
 
 [BOX NY]
-40
+60
 
 [BOX DIMX]
 4
@@ -31,11 +33,13 @@ data/lssCircle2D.h
 
 [BOX BOUNDARY FLAG]
 1
+#-1
 
 [POLYNOMIAL DEGREE]
-3
+4
 
 [THREAD MODEL]
+#Serial
 CUDA
 
 [PLATFORM NUMBER]
@@ -64,7 +68,7 @@ LSERK4
 SUBCELL
 
 [SUBCELL NUMBER]
-4
+5
 
 [SUBCELL MINOR GRID]
 EQUISPACED
@@ -74,11 +78,11 @@ EQUISPACED
 
 [FINAL TIME]
 #8
-#2
-0.5
+3
+#0.3
 
 [OUTPUT INTERVAL]
-0.01
+0.1
 
 [OUTPUT TO FILE]
 TRUE

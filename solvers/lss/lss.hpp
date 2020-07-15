@@ -65,12 +65,20 @@ public:
   dfloat *q;
   dfloat *U; 
   dfloat *gradq;
-  dfloat *sq;
+  dfloat *sgnq;
+  dfloat *ssgnq; // sign for subcell
+  dfloat *sq; 
+
+
+  // dummy delete later
+  dfloat * sface; 
+  occa::memory o_sface; 
 
   occa::memory o_gradq;
   occa::memory o_q;
   occa::memory o_U;
-  occa::memory o_sq; 
+  occa::memory o_sgnq; 
+  occa::memory o_ssgnq, o_sq; 
 
   occa::memory o_Mq;
 
@@ -86,6 +94,28 @@ public:
   occa::kernel setFlowFieldKernel;
   occa::kernel regularizedSignKernel;
 
+  occa::kernel partialRedistanceVolumeKernel;  // This could be part of subcell 
+  occa::kernel partialRedistanceSurfaceKernel; // This could be part of subcell 
+  occa::kernel reconstructInternalFaceKernel; 
+  occa::kernel reconstructExternalFaceKernel; 
+
+  occa::kernel projectKernel; 
+  occa::kernel projectDGKernel; 
+  occa::kernel reconstructKernel; 
+  occa::kernel subcellComputeKernel; 
+
+  occa::kernel subcellSignKernel; // This could be part of subcell 
+  // occa::kernel subcellComputeKernel; 
+
+  // occa::kernel subcellReconstructFaceKernel; // This could be part of subcell 
+  // occa::kernel subcellSignKernel; // This could be part of subcell 
+  // occa::kernel subcellComputeKernel; 
+  // occa::kernel projectKernel; 
+  // occa::kernel reconstructKernel; 
+
+
+  occa::kernel skylineKernel; 
+
   lss_t() = delete;
   lss_t(mesh_t& _mesh, linAlg_t& _linAlg, settings_t& _settings):
     solver_t(_mesh, _linAlg, _settings) {}
@@ -100,12 +130,21 @@ public:
 
   void Advection(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T); 
   void Redistance(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T); 
+  void Redistance_Subcell(occa::memory& o_Q, occa::memory& o_sQ, 
+                          occa::memory& o_RHS, occa::memory& o_sRHS,const dfloat T); 
 
   void Report(dfloat time, int tstep);
 
   void PlotFields(dfloat* Q, char *fileName);
 
   void rhsf(occa::memory& o_q, occa::memory& o_rhs, const dfloat time);
+  void rhsf_subcell(occa::memory& o_Q, occa::memory &sQ, occa::memory& o_RHS,occa::memory& o_sRHS, const dfloat T);
+  void reconstruct_subcell(occa::memory& o_Q, occa::memory& sQ);
+
+  void SetupStabilizer(); 
+
+  void DetectTroubledCells(occa::memory& o_Q, occa::memory& o_list); 
+  
 };
 
 

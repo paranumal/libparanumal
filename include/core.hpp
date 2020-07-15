@@ -66,6 +66,7 @@ void readIntArray   (MPI_Comm comm, FILE *fp, const char *label, int **A   , int
 void matrixRightSolve(int NrowsA, int NcolsA, dfloat *A, int NrowsB, int NcolsB, dfloat *B, dfloat *C);
 void matrixEig(int N, dfloat *A, dfloat *VR, dfloat *WR, dfloat *WI);
 void matrixInverse(int N, dfloat *A);
+void matrixPInverse(int M, int N, dfloat *A);
 dfloat matrixConditionNumber(int N, dfloat *A);
 
 #endif

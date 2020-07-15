@@ -51,6 +51,14 @@ extern "C" {
   double dlange_(char *NORM, int *M, int *N, double *A, int *LDA, double *WORK);
   void dgecon_(char *NORM, int *N, double *A, int *LDA, double *ANORM,
                 double *RCOND, double *WORK, int *IWORK, int *INFO );
+
+  void dgesvd_( char *JOBU, char *JOBVT, int *M, int *N, double *A,
+                int *LDA, double *S, double *U, int *LDU, double *VT, int* LDVT,
+                double *WORK, int *LWORK, int *INFO );
+
+  void sgesvd_( char *JOBU, char *JOBVT, int *M, int *N, float *A,
+                int *LDA, float *S, float *U, int *LDU, float *VT, int *LDVT,
+                float *WORK, int *LWORK, int *INFO);
 }
 
 void matrixInverse(int N, double *A){
@@ -109,4 +117,159 @@ void matrixInverse(int N, float *A){
   free(work);
   free(ipiv);
   free(tmpInvA);
+}
+
+// Assumes row major ordering
+void matrixPInverse(int M, int N, double *A){
+
+
+#if 1
+  double *tmpA = (double *)calloc(M*N, sizeof(double));
+
+  for(int m=0; m<M*N; m++)
+    tmpA[m] = A[m]; 
+
+double *V = (double *) malloc(M*N*sizeof(double));
+// First compute  inv(trans(A)*A)
+for(int n=0; n<N; n++){
+  for(int m=0; m<N; m++){
+    double tmp = 0; 
+    for(int i = 0; i<M; i++){
+     tmp += tmpA[i*N +n]*tmpA[i*N +m];
+    }
+    V[n*N + m] = tmp; 
+  }
+}
+matrixInverse(N, V); 
+
+// (P^T*P)^-1 * P^T
+for(int n=0; n<N; n++){
+  for(int m=0; m<M; m++){
+    double tmp = 0; 
+    for(int i=0; i<N; i++){
+    tmp += V[n*N + i]*tmpA[m*N + i];
+    }
+    A[n*M + m] = tmp; 
+  }
+}
+
+free(V); free(tmpA); 
+
+#else  
+
+// transpose
+double *tmpA = (double *)calloc(M*N, sizeof(double));
+  for(int m=0; m<M; m++){
+    for(int n=0; n<N; n++){
+    tmpA[n*M + m] = A[m*N + n]; 
+  }
+}
+  int INFO;  
+  char opt = 'A'; 
+  int LWORK  = M*N;
+  int minN = M>N ? N : M; 
+
+  double *S    = (double *)calloc(minN, sizeof(double)); 
+  double *UT   = (double *)calloc(M*M, sizeof(double)); 
+  double *V    = (double *)calloc(N*N, sizeof(double)); 
+  double *WORK = (double *)calloc(LWORK, sizeof(double)); 
+
+  dgesvd_(&opt,&opt, &M, &N, tmpA, &M, S, UT, &M, V, &N, WORK, &LWORK, &INFO);
+  
+  if(INFO)
+    printf("Singular Value Decomp: dgesvd reports info = %d when decomposing matrix\n", INFO);
+
+  double *SM = (double *)calloc(M*N, sizeof(double));
+  double *VS = (double *)calloc(M*N, sizeof(double));
+  
+  // SM = transpose(1.0/S(S>0))
+  for(int n=0; n<minN; n++){
+    SM[n*M +n]= 1.0/S[n];
+  }
+
+  // Pinv = V*transpose(S^-1)*transpose(U)
+   for(int n=0; n<N; n++){
+    for(int m=0; m<M; m++){
+      double tmp = 0; 
+      for(int i=0; i<N; i++){
+          tmp += V[n*N + i]*SM[i*M + m]; 
+      }
+      VS[n*M + m] = tmp; 
+    }
+  }
+
+  for(int n=0; n<N; n++){
+    for(int m=0; m<M; m++){
+      double tmp = 0; 
+      for(int i=0; i<M; i++){
+          tmp += VS[n*M + i]*UT[i*M + m]; 
+      }
+      A[n*M + m] = tmp; 
+    }
+  }
+
+free(S); free(WORK); free(V); free(UT); 
+free(tmpA); free(SM); free(VS); 
+#endif
+  
+}
+
+
+
+// Assumes row major ordering
+void matrixPInverse(int M, int N, float *A){
+// transpose
+float *tmpA = (float *)calloc(M*N, sizeof(float));
+  for(int m=0; m<M; m++){
+    for(int n=0; n<N; n++){
+    tmpA[n*M + m] = A[m*N + n]; 
+  }
+}
+  int INFO;  
+  char opt = 'A'; 
+  int LWORK  = M*N;
+  int minN = M>N ? N : M; 
+
+  float *S    = (float *)calloc(minN, sizeof(float)); 
+  float *UT   = (float *)calloc(M*M, sizeof(float)); 
+  float *V    = (float *)calloc(N*N, sizeof(float)); 
+  float *WORK = (float *)calloc(LWORK, sizeof(float)); 
+
+  // sgesvd_(&opt,&opt, &M, &N, tmpA, &M, S, UT, &M, V, &N, WORK, &LWORK, &INFO); !!!!
+  
+  if(INFO)
+    printf("Singular Value Decomp: dgesvd reports info = %d when decomposing matrix\n", INFO);
+
+  float *SM = (float *)calloc(M*N, sizeof(float));
+  float *VS = (float *)calloc(M*N, sizeof(float));
+  
+  // SM = transpose(1.0/S(S>0))
+  for(int n=0; n<minN; n++){
+    SM[n*M +n]= 1.0/S[n];
+  }
+
+  // Pinv = V*transpose(S^-1)*transpose(U)
+   for(int n=0; n<N; n++){
+    for(int m=0; m<M; m++){
+      float tmp = 0; 
+      for(int i=0; i<N; i++){
+          tmp += V[n*N + i]*SM[i*M + m]; 
+      }
+      VS[n*M + m] = tmp; 
+    }
+  }
+
+  for(int n=0; n<N; n++){
+    for(int m=0; m<M; m++){
+      float tmp = 0; 
+      for(int i=0; i<M; i++){
+          tmp += VS[n*M + i]*UT[i*M + m]; 
+      }
+      A[n*M + m] = tmp; 
+    }
+  }
+
+free(S); free(WORK); free(V); free(UT); 
+free(tmpA); free(SM); free(VS); 
+  
 }

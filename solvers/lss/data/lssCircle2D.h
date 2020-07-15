@@ -24,17 +24,40 @@ SOFTWARE.
 
 */
 
+// // Level-Set function
+// #define lssInitialConditions2D(t, x, y, q) \
+// {                                       \
+//   if (x > 0) (*q) = 1; \
+//   else if (x < 0) (*q) = -1; \
+//   else (*q) = 0; \
+// }
+
+// Level-Set function
+// #define lssInitialConditions2D(t, x, y, q) \
+// {                                       \
+//  const dfloat rc = 1.0;          \
+//   const dfloat ac = 0.7;          \
+//   const dfloat test1 = (ac-x)/sqrt((ac-x)*(ac-x) + y*y); \
+//   const dfloat test2 = (ac+x)/sqrt((ac+x)*(ac+x) + y*y); \
+//   const dfloat scale = (x-rc) * (x-rc) + (y-rc)*(y-rc)+0.1; \
+// if( ( test1 >= ac/rc ) && ( test2 >= ac/rc ) ){ \
+// *(q) = - scale* min(sqrt( x*x+  ( y-sqrt( rc*rc-ac*ac ) )*( y-sqrt( rc*rc-ac*ac))), sqrt( x*x+( y+sqrt( rc*rc-ac*ac))*(y+sqrt( rc*rc-ac*ac)))); \
+// } \
+// else{ \
+// *(q)= scale*min( sqrt( (x+ac)*(x+ac)+ y*y)-rc, sqrt( (x-ac)*(x-ac)+ y*y)-rc );\
+// } \
+// }
+
 // Level-Set function
 #define lssInitialConditions2D(t, x, y, q) \
 {                                       \
-  const dfloat xc = 0.0f; 			    \
-  const dfloat yc = 0.0f; 				\
-  dfloat rc = 1.0; 					\
-  *(q) = ( (x-1.0)*(x-1.0) + (y-1.0)*(y-1.0) +0.1)*(sqrt((x-xc)*(x-xc) + (y-yc)*(y-yc)) - rc) ; \
+  const dfloat xc = 0.0f;           \
+  const dfloat yc = 0.0f;         \
+  const dfloat rc = 1.0f;          \
+  const dfloat ac = 0.70;          \
+  (*q) = pow( (x-1.0)*(x-1.0) + (y-1.0)*(y-1.0) + 0.1, 1.0 )*(sqrt((x-xc)*(x-xc) + (y-yc)*(y-yc)) - rc) ; \
 }
-
-  // *(q) = sqrt((x-xc)*(x-xc) + (y-yc)*(y-yc)) - rc ; \
-//  *(q) = ( (x-1.0)*(x-1.0) + (y-1.0)*(y-1.0) +0.1)*(sqrt((x-xc)*(x-xc) + (y-yc)*(y-yc)) - rc) ; \
+ 
 // LS Advective field
 #define lssAdvectionField2D(t, x, y, q, u, v) \
 {                                       \

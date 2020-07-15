@@ -55,16 +55,36 @@ void lss_t::Run(){
                        mesh.o_y,
                        mesh.o_z,
                        o_q,
-                       o_sq); 
- if(subcellStabilization)
- subcell->skylineKernel(mesh.Nelements, 
-                        subcell->o_ModMap, 
-                        subcell->o_invVT,
-                        subcell->o_LSF,
-                        o_q,
-                        subcell->o_ElementList);  
+                       o_sgnq); 
+
+ if(subcellStabilization){
+
+
+   const int all = 1; // all elements, do not use element list
+    projectKernel(mesh.Nelements,
+                  all,  
+                  subcell->o_ElementList, 
+                  subcell->o_PMT,
+                  o_sgnq, 
+                  o_ssgnq);
+
+
+  // // This kernel needs to be changed, sq is not defined here, but in timestepper
+  // subcellSignKernel(mesh.Nelements,
+  //                   startTime,
+  //                   eps, 
+  //                   subcell->o_vgeo,
+  //                   o_q,
+  //                   o_ssgnq);
+
+
+  }
 
 }
 
+ // dfloat outputInterval; 
+ // settings.getSetting("OUTPUT INTERVAL", outputInterval);
+ // finalTime = startTime + 1*timeStepper->GetTimeStep();
+ // finalTime = startTime + 53*outputInterval;
   timeStepper->Run(o_q, startTime, finalTime);
 }

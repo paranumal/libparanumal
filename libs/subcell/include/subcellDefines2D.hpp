@@ -27,29 +27,22 @@ SOFTWARE.
 #ifndef SUBCELL_DEFINES2D_H
 #define SUBCELL_DEFINES2D_H 1
 
-// /* offsets for geometric factors */
-// #define RXID 0
-// #define RYID 1
-// #define SXID 2
-// #define SYID 3
-// #define  JID 4
-// #define JWID 5
-// #define IJWID 6
+#define DGDG_TYPE 0
+#define FVFV_TYPE 1
+#define DGFV_TYPE 2
 
-// /* offsets for second order geometric factors */
-// #define G00ID 0
-// #define G01ID 1
-// #define G11ID 2
-// #define GWJID 3
+/* offsets for geometric factors */
+#define CXID 0
+#define CYID 1
+#define IVID 2
 
-// /* offsets for nx, ny, sJ, 1/J */
-// #define NXID 0
-// #define NYID 1
-// #define SJID 2
-// #define IJID 3
-// #define IHID 4
-// #define WSJID 5
-// #define WIJID 6
+
+#define NXID 0
+#define NYID 1
+#define FXID 2
+#define FYID 3
+#define SAID 4
+#define BCID 5
 
 #endif
 

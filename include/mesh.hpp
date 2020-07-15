@@ -388,12 +388,12 @@ public:
   void DegreeRaiseMatrixTet3D(int Nc, int Nf, dfloat *P);
   
   // AK: Making same functions public for subcell instead of inheriting from mesh
-  void VandermondeTri2D(int N, int Npoints, dfloat *r, dfloat *s, dfloat *V);
-  void EquispacedNodesTri2D(int _N, dfloat *_r, dfloat *_s);
+  // void VandermondeTri2D(int N, int Npoints, dfloat *r, dfloat *s, dfloat *V);
+  // void EquispacedNodesTri2D(int _N, dfloat *_r, dfloat *_s);
   // void EquispacedEToVTri2D(int _N, int *_EToV);
 
 
-protected:
+// protected:
   //1D
   void Nodes1D(int N, dfloat *r);
   void EquispacedNodes1D(int _N, dfloat *_r);
@@ -423,13 +423,13 @@ protected:
   void NodesTri2D(int _N, dfloat *_r, dfloat *_s);
   void FaceNodesTri2D(int _N, dfloat *_r, dfloat *_s, int *_faceNodes);
   void VertexNodesTri2D(int _N, dfloat *_r, dfloat *_s, int *_vertexNodes);
-  //void EquispacedNodesTri2D(int _N, dfloat *_r, dfloat *_s);
+  void EquispacedNodesTri2D(int _N, dfloat *_r, dfloat *_s);
   void EquispacedEToVTri2D(int _N, int *_EToV);
   void SEMFEMNodesTri2D(int _N, int *_Np, dfloat **_r, dfloat **_s);
   void SEMFEMEToVTri2D(int _N, int *_NelFEM, int **_EToV);
   void OrthonormalBasisTri2D(dfloat a, dfloat b, int i, int j, dfloat *P);
   void GradOrthonormalBasisTri2D(dfloat a, dfloat b, int i, int j, dfloat *Pr, dfloat *Ps);
-  // void VandermondeTri2D(int N, int Npoints, dfloat *r, dfloat *s, dfloat *V);
+  void VandermondeTri2D(int N, int Npoints, dfloat *r, dfloat *s, dfloat *V);
   void GradVandermondeTri2D(int N, int Npoints, dfloat *r, dfloat *s, dfloat *Vr, dfloat *Vs);
   void MassMatrixTri2D(int _Np, dfloat *V, dfloat *_MM);
   void DmatrixTri2D(int _N, int Npoints, dfloat *_r, dfloat *_s,

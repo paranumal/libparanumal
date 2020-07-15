@@ -30,15 +30,14 @@ SOFTWARE.
 
 class subcellTri2D: public subcell_t {
 public:
-  // subcellTri2D(mesh_t& _mesh, settings_t& _settings):
-  //  subcell_t(_mesh, _settings) {}
-  subcellTri2D(mesh_t& _mesh, settings_t& _settings);
+   subcellTri2D(solver_t& _solver);
 
    void SetupDetector(); 
    void OccaSetup(); 
 
    void CreateMinorGrid(); 
    void GeometricFactors(); 
+   void SetupOperators(); 
    // void LocalConnect();  
    // void GlobalConnect();  
 
@@ -57,8 +56,10 @@ public:
 
 class subcellQuad2D: public subcell_t {
 public:
-  subcellQuad2D(mesh_t& _mesh, settings_t& _settings):
-   subcell_t(_mesh, _settings) {printf("created a new subcellQuad2D\n");}
+  // subcellQuad2D(mesh_t& _mesh, settings_t& _settings):
+   // subcell_t(_mesh, _settings) {printf("created a new subcellQuad2D\n");}
+   subcellQuad2D(solver_t& _solver):
+   subcell_t(_solver) {printf("created a new subcellQuad2D\n");}
   // void ParallelReader(const char *fileName);
   // void SetupBox();
   // void SetupPmlBox();

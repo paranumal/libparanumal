@@ -39,27 +39,50 @@ SOFTWARE.
 class subcell_t {
 public:
   mesh_t& mesh;
-
   MPI_Comm& comm;
   occa::device& device;
   settings_t& settings;
   occa::properties& props;
-  // linAlg_t& linAlg;
+  solver_t& solver; // connect to the solver
 
-int N, Nsubcells;
+int N, Nsubcells, Nint, Next;
+int Nvgeo, Nsgeo; 
 int Nverts, Nfaces, Np; 
 int *mEToV, *mEToE, *mEToF; // Local Connectivity Info
+
 dfloat *vr, *vs, *vt; // local vertex coordinates @ reference element
 dfloat *cr, *cs, *ct; // center points of subcells @ reference element 
 dfloat *fr, *fs, *ft; // center points of subcells @ reference element 
+dfloat *mJ; // Jacobian of minor grid
 
 int *faceVertices, NfaceVertices; 
+
 int *mFToE, *mFToF; 
+occa::memory o_mFToE, o_mFToF;  
 
-// dfloat *xf, *yf, *zf; 
-// dfloat *xe, *ye, *ze; 
+dfloat *PM,  *RM; // volume reconstuction and projection
+occa::memory o_PMT, o_RMT; 
 
-dlong *emapP, *fmapP; // Global connectivity
+dfloat *PFM, *RFM; // face projection and reconstruction 
+occa::memory o_PFMT, o_RFMT; 
+
+int *ielist, *eelist; 
+occa::memory o_ielist, o_eelist; 
+
+// int *iemapP, *ifmapP;   // local connectivity
+// occa::memory o_iemapP, o_ifmapP;   // local connectivity
+
+// dlong *eemapP, *efmapP; // global connectivity
+// occa::memory o_eemapP, o_efmapP; // global connectivity
+
+dlong *emapP, *fmapP; // global connectivity
+occa::memory o_emapP, o_fmapP; // global connectivity
+
+
+dfloat *vgeo, *sgeo; 
+occa::memory o_vgeo, o_sgeo; 
+
+occa::memory o_EToE; 
 
 // Skyline pessimization related
 int Nmodes, Nmodes1D, *ModeMap;
@@ -72,16 +95,21 @@ subcell_t() = delete;
 
   // subcell_t(mesh_t& mesh); 
 
- subcell_t(mesh_t &_mesh,settings_t& _settings);
+ subcell_t(solver_t &_solver);
+ // subcell_t(mesh_t &_mesh,settings_t& _settings);
  virtual ~subcell_t(){}
 
 
-static subcell_t& Setup(mesh_t& _mesh, settings_t& _settings); 
+// static subcell_t& Setup(mesh_t& _mesh, settings_t& _settings); 
+static subcell_t& Setup(solver_t& _solver); 
 
 virtual void SetupDetector()=0;
 virtual void OccaSetup()=0; 
 virtual void CreateMinorGrid()=0;
 virtual void GeometricFactors()=0; 
+virtual void SetupOperators() =0; 
+
+
 
 // Create Local Connectivity
 void LocalConnect(); 
@@ -98,16 +126,10 @@ void BaseLineDecay(int N, dfloat *BLD);
   void EquispacedEToVTri2D(int N, int *EToV);
   //void ComputeSubcell
 
-
-
-
-
-
   // Skyline
-  occa::memory o_LSF, o_ElementList, o_invVT, o_ModMap; 
+  occa::memory o_LSF, o_BLD, o_ElementList;
+  occa::memory o_invVT, o_ModMap; 
   occa::kernel skylineKernel; 
-  
-
 
 #if 0
 

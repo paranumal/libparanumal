@@ -99,6 +99,17 @@ public:
     LIBP_ABORT(string("rhsf_pml not implemented in this solver"))
   }
 
+  //Full rhs evaluation of solver in form dq/dt = rhsf(q,t) with a perfectly matched layer (PML)
+  virtual void rhsf_subcell(occa::memory& o_q, occa::memory& o_sq,
+                        occa::memory& o_rhs, occa::memory& o_srhs, const dfloat time) {
+    LIBP_ABORT(string("rhsf_subcell not implemented in this solver"))
+  }
+
+   //Full rhs evaluation of solver in form dq/dt = rhsf(q,t) with a perfectly matched layer (PML)
+  virtual void reconstruct_subcell(occa::memory& o_q, occa::memory& o_sq) {
+    LIBP_ABORT(string("reconstruct_subcell not implemented in this solver"))
+  }
+
   //Full rhs evaluation of solver in form dq/dt = rhsf(q,t) for multi-rate timestepping with a PML
   virtual void rhsf_MR_pml(occa::memory& o_q, occa::memory& o_pmlq,
                            occa::memory& o_rhs, occa::memory& o_pmlrhs,

@@ -40,6 +40,15 @@ void lss_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
 }
 
 
+
+
+//evaluate ODE rhs = f(q,t)
+void lss_t::rhsf_subcell(occa::memory& o_Q, occa::memory &o_sQ, occa::memory& o_RHS,occa::memory& o_sRHS, const dfloat T){
+  
+   Redistance_Subcell(o_Q, o_sQ, o_RHS, o_sRHS, T); 
+}
+
+
 void lss_t::Advection(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
 
 // extract q halo on DEVICE
@@ -125,21 +134,188 @@ void lss_t::Advection(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
 
 void lss_t::Redistance(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
 
-// extract q halo on DEVICE
-  traceHalo->ExchangeStart(o_Q, 1, ogs_dfloat);
 
-  // printf("I am here \n"); 
-  if(subcellStabilization)
-  subcell->skylineKernel(mesh.Nelements, 
-                            subcell->o_ModMap, 
-                            subcell->o_invVT,
-                            subcell->o_LSF,
-                            o_Q,
-                            subcell->o_ElementList); 
 
-  // printf("but not here\n");
-  
-  redistanceVolumeKernel(mesh.Nelements,
+//   if(subcellStabilization){
+//      // extract q halo on DEVICE
+//     traceHalo->ExchangeStart(o_Q, 1, ogs_dfloat);
+
+//     DetectTroubledCells(o_Q, subcell->o_ElementList); 
+
+//     const int all = 0; // all elements, do not use element list
+//     projectKernel(mesh.Nelements,
+//                   all,  
+//                   subcell->o_ElementList, 
+//                   subcell->o_PMT,
+//                   o_Q, 
+//                   o_sq);
+
+//     // Compute dq/dx for DG and DGFV elements
+//      partialRedistanceVolumeKernel(mesh.Nelements,
+//                                    subcell->o_ElementList,
+//                                    offset, 
+//                                    mesh.o_vgeo,
+//                                    mesh.o_DWmatrices, // o_Dmatrices
+//                                    T,
+//                                    mesh.o_x,
+//                                    mesh.o_y,
+//                                    mesh.o_z,
+//                                    o_Q,
+//                                    o_gradq);
+
+//      // Reconstruct internal subcell's face values using WENO2 
+//      // Later combine with the previous kernel
+//      // reconstructInternalFaceKernel(mesh.Nelements, 
+//      //                              subcell->o_ElementList,
+//      //                              subcell->o_ielist,
+//      //                              subcell->o_vgeo,
+//      //                              subcell->o_sgeo, 
+//      //                              subcell->o_emapP,
+//      //                              subcell->o_fmapP, 
+//      //                              o_Q, 
+//      //                              o_sq,
+//      //                              o_sface);  
+
+//      reconstructInternalFaceKernel(mesh.Nelements, 
+//                                   subcell->o_ElementList,
+//                                   subcell->o_ielist,
+//                                   subcell->o_vgeo,
+//                                   subcell->o_sgeo, 
+//                                   subcell->o_emapP,
+//                                   subcell->o_fmapP, 
+//                                   o_Q, 
+//                                   o_sq,
+//                                   o_sface);  
+
+//      traceHalo->ExchangeFinish(o_Q, 1, ogs_dfloat);
+
+
+//      projectDGKernel(mesh.Nelements,
+//                     all, 
+//                     subcell->o_ElementList, 
+//                     mesh.o_vmapM,
+//                     subcell->o_mFToE,
+//                     subcell->o_mFToF,
+//                     subcell->o_PFMT,
+//                     o_Q,
+//                     o_sface); 
+
+
+
+//      // reconstructExternalFaceKernel(mesh.Nelements, 
+//      //                              subcell->o_ElementList,
+//      //                              subcell->o_eelist,
+//      //                              subcell->o_vgeo,
+//      //                              subcell->o_sgeo, 
+//      //                              subcell->o_emapP,
+//      //                              subcell->o_efmapP, 
+//      //                              o_Q, 
+//      //                              o_sq,
+//      //                              o_sface);
+
+//      reconstructExternalFaceKernel(mesh.Nelements, 
+//                                   subcell->o_ElementList,
+//                                   subcell->o_eelist,
+//                                   subcell->o_vgeo,
+//                                   subcell->o_sgeo, 
+//                                   subcell->o_emapP,
+//                                   subcell->o_fmapP, 
+//                                   o_Q, 
+//                                   o_sq,
+//                                   o_sface);   
+
+
+//  subcellComputeKernel(mesh.Nelements, 
+//                           subcell->o_ElementList,
+//                           subcell->o_emapP,
+//                           subcell->o_fmapP, 
+//                           subcell->o_RMT,
+//                           subcell->o_vgeo,
+//                           subcell->o_sgeo, 
+//                           o_Q,
+//                           o_ssgnq,
+//                           o_sface, 
+//                           o_RHS);  
+
+//       // subcellComputeKernel(mesh.Nelements, 
+//       //                     subcell->o_ElementList,
+//       //                     subcell->o_ielist,
+//       //                     subcell->o_eelist,
+//       //                     subcell->o_iemapP,
+//       //                     subcell->o_ifmapP, 
+//       //                     subcell->o_eemapP,
+//       //                     subcell->o_efmapP, 
+//       //                     subcell->o_RMT,
+//       //                     subcell->o_vgeo,
+//       //                     subcell->o_sgeo, 
+//       //                     o_Q,
+//       //                     o_ssgnq,
+//       //                     o_sface, 
+//       //                     o_RHS);  
+
+// #if 1
+//      partialRedistanceSurfaceKernel(mesh.Nelements,
+//                               offset, 
+//                               subcell->o_ElementList,
+//                               subcell->o_EToE, 
+//                               mesh.o_EToB,
+//                               mesh.o_sgeo,
+//                               subcell->o_sgeo, 
+//                               subcell->o_vgeo,
+//                               mesh.o_LIFTT,
+//                               subcell->o_RFMT,
+//                               mesh.o_vmapM,
+//                               mesh.o_vmapP,
+//                               subcell->o_emapP,
+//                               subcell->o_fmapP, 
+//                               subcell->o_mFToE,
+//                               subcell->o_mFToF,
+//                               T,
+//                               mesh.o_x,
+//                               mesh.o_y,
+//                               mesh.o_z,
+//                               o_sgnq,
+//                               o_Q,
+//                               o_sface,
+//                               o_gradq,
+//                               o_RHS);
+
+// #else
+//  partialRedistanceSurfaceKernel(mesh.Nelements,
+//                               offset, 
+//                               subcell->o_ElementList,
+//                               // subcell->o_EToE, 
+//                               mesh.o_sgeo,
+//                               mesh.o_LIFTT,
+//                               mesh.o_vmapM,
+//                               mesh.o_vmapP,
+//                               mesh.o_EToB,
+//                               T,
+//                               mesh.o_x,
+//                               mesh.o_y,
+//                               mesh.o_z,
+//                               o_sgnq,
+//                               o_Q,
+//                               o_gradq,
+//                               o_RHS);
+
+
+
+
+// #endif
+
+    
+
+
+
+
+
+
+//   }else{
+    // extract q halo on DEVICE
+    traceHalo->ExchangeStart(o_Q, 1, ogs_dfloat);
+
+    redistanceVolumeKernel(mesh.Nelements,
                offset, 
                mesh.o_vgeo,
                mesh.o_DWmatrices, // o_Dmatrices
@@ -149,6 +325,7 @@ void lss_t::Redistance(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
                mesh.o_z,
                o_Q,
                o_gradq);
+
 
   traceHalo->ExchangeFinish(o_Q, 1, ogs_dfloat);
   
@@ -163,8 +340,190 @@ void lss_t::Redistance(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
                 mesh.o_x,
                 mesh.o_y,
                 mesh.o_z,
-                o_sq,
+                o_sgnq,
                 o_Q,
                 o_gradq,
                 o_RHS);
+//   }
+
+  
+// #if 0
+  
+// #else
+
+
+
+//   // // Reconstruct face values: this could be part of subcell
+//   // subcellReconstructFaceKernel(mesh.Nelements, 
+//   //                             subcell->o_ElementList,
+//   //                             subcell->o_vgeo,
+//   //                             subcell->o_sgeo, 
+//   //                             subcell->o_emapP,
+//   //                             subcell->o_fmapP, 
+//   //                             o_Q, 
+//   //                             o_sq,
+//   //                             o_sface);  
+
+
+//   // // Reconstruct face values: this could be part of subcell
+//   // subcellComputeKernel(mesh.Nelements, 
+//   //                     subcell->o_ElementList,
+//   //                     subcell->o_RMT,
+//   //                     subcell->o_vgeo,
+//   //                     subcell->o_sgeo, 
+//   //                     subcell->o_emapP,
+//   //                     subcell->o_fmapP, 
+//   //                     o_Q,
+//   //                     o_ssgnq,
+//   //                     o_sface, 
+//   //                     o_RHS);  
+
+// #endif
   }
+
+void lss_t::reconstruct_subcell(occa::memory& o_Q, occa::memory& o_sQ){
+
+int all = 0; 
+reconstructKernel(mesh.Nelements, 
+                    all,
+                    subcell->o_ElementList,
+                    subcell->o_RMT,
+                    o_sQ, 
+                    o_Q);
+
+
+
+}
+
+void lss_t::Redistance_Subcell(occa::memory& o_Q, occa::memory & o_sQ, 
+                                occa::memory& o_RHS, occa::memory& o_sRHS, const dfloat T){
+
+    
+     // extract q halo on DEVICE
+    // traceHalo->ExchangeStart(o_Q, 1, ogs_dfloat);
+
+    DetectTroubledCells(o_Q, subcell->o_ElementList); 
+
+    const int all = 0; // all elements, do not use element list
+    projectKernel(mesh.Nelements,
+                  all,  
+                  subcell->o_ElementList, 
+                  subcell->o_PMT,
+                  o_Q, 
+                  o_sQ);
+
+    // Compute dq/dx for DG and DGFV elements
+     partialRedistanceVolumeKernel(mesh.Nelements,
+                                   subcell->o_ElementList,
+                                   offset, 
+                                   mesh.o_vgeo,
+                                   mesh.o_DWmatrices, // o_Dmatrices
+                                   T,
+                                   mesh.o_x,
+                                   mesh.o_y,
+                                   mesh.o_z,
+                                   o_Q,
+                                   o_gradq);
+
+    
+     reconstructInternalFaceKernel(mesh.Nelements, 
+                                  subcell->o_ElementList,
+                                  subcell->o_ielist,
+                                  subcell->o_vgeo,
+                                  subcell->o_sgeo, 
+                                  subcell->o_emapP,
+                                  subcell->o_fmapP, 
+                                  o_Q, 
+                                  o_sQ,
+                                  o_sface);  
+
+     traceHalo->ExchangeFinish(o_Q, 1, ogs_dfloat);
+
+
+     projectDGKernel(mesh.Nelements,
+                    all, 
+                    subcell->o_ElementList, 
+                    mesh.o_vmapM,
+                    subcell->o_mFToE,
+                    subcell->o_mFToF,
+                    subcell->o_PFMT,
+                    o_Q,
+                    o_sface); 
+
+
+
+     reconstructExternalFaceKernel(mesh.Nelements, 
+                                  subcell->o_ElementList,
+                                  subcell->o_eelist,
+                                  subcell->o_vgeo,
+                                  subcell->o_sgeo, 
+                                  subcell->o_emapP,
+                                  subcell->o_fmapP, 
+                                  o_Q, 
+                                  o_sQ,
+                                  o_sface);   
+
+
+     subcellComputeKernel(mesh.Nelements, 
+                              subcell->o_ElementList,
+                              subcell->o_emapP,
+                              subcell->o_fmapP, 
+                              subcell->o_RMT,
+                              subcell->o_vgeo,
+                              subcell->o_sgeo, 
+                              o_Q,
+                              o_ssgnq,
+                              o_sface, 
+                              o_sRHS);  
+
+
+     partialRedistanceSurfaceKernel(mesh.Nelements,
+                              offset, 
+                              subcell->o_ElementList,
+                              subcell->o_EToE, 
+                              mesh.o_EToB,
+                              mesh.o_sgeo,
+                              subcell->o_sgeo, 
+                              subcell->o_vgeo,
+                              mesh.o_LIFTT,
+                              subcell->o_RFMT,
+                              mesh.o_vmapM,
+                              mesh.o_vmapP,
+                              subcell->o_emapP,
+                              subcell->o_fmapP, 
+                              subcell->o_mFToE,
+                              subcell->o_mFToF,
+                              T,
+                              mesh.o_x,
+                              mesh.o_y,
+                              mesh.o_z,
+                              o_sgnq,
+                              o_Q,
+                              o_sface,
+                              o_gradq,
+                              o_RHS);
+}
+
+
+void lss_t::DetectTroubledCells(occa::memory& o_Q, occa::memory& o_ElementList){
+
+if(subcellStabilization){
+  skylineKernel(mesh.Nelements,
+                mesh.o_ggeo,
+                subcell->o_EToE, 
+                subcell->o_ModMap, 
+                mesh.o_MM,
+                subcell->o_invVT,
+                subcell->o_LSF,
+                subcell->o_BLD, 
+                o_Q,
+                o_ElementList); 
+
+    
+}
+
+
+
+
+
+}

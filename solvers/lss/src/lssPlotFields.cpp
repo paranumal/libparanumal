@@ -86,7 +86,7 @@ void lss_t::PlotFields(dfloat* Q, char *fileName){
     for(int n=0;n<mesh.plotNp;++n){
       dfloat plotpn = 0;
       for(int m=0;m<mesh.Np;++m){
-        dfloat pm = sq[e*mesh.Np+m];
+        dfloat pm = sgnq[e*mesh.Np+m];
         plotpn += mesh.plotInterp[n*mesh.Np+m]*pm;
       }
 
@@ -101,7 +101,6 @@ void lss_t::PlotFields(dfloat* Q, char *fileName){
   for(dlong e=0;e<mesh.Nelements;++e){
     for(int n=0;n<mesh.plotNp;++n){
       const dfloat plotpn = subcell->ElementList[e];
-      
       fprintf(fp, "       ");
       fprintf(fp, "%g\n", plotpn);
     }

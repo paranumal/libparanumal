@@ -63,8 +63,8 @@ int main(int argc, char **argv){
   // set up level set solver
   lss_t& lss = lss_t::Setup(mesh, linAlg, lssSettings);
 
-  // // run
-  // lss.Run();
+  // run
+  lss.Run();
 
   // clean up
   delete &lss;

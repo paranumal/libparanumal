@@ -26,6 +26,11 @@ SOFTWARE.
 
 #include "lss.hpp"
 
+#define LSS_BLOCKSIZE 512
+#define LSS_DGDG_TYPE 0
+#define LSS_FVFV_TYPE 1
+#define LSS_DGFV_TYPE 2
+
 lss_t& lss_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
                                  lssSettings_t& settings){
 
@@ -35,7 +40,7 @@ lss_t& lss_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   lss->advection  = (settings.compareSetting("ADVECTION SOLVER", "TRUE")) ? 1:0;
   lss->redistance = (settings.compareSetting("REDISTANCE SOLVER", "TRUE")) ? 1:0;
 
-
+  lss->subcellStabilization = (settings.compareSetting("STABILIZATION", "SUBCELL")) ? 1:0;
 
   //setup cubature
   if (lss->cubature) {
@@ -46,25 +51,7 @@ lss_t& lss_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   dlong Nlocal = mesh.Nelements*mesh.Np;
   dlong Nhalo  = mesh.totalHaloPairs*mesh.Np;
 
-  //setup timeStepper
-  if (settings.compareSetting("TIME INTEGRATOR","AB3")){
-    lss->timeStepper = new TimeStepper::ab3(mesh.Nelements, mesh.totalHaloPairs,
-                                              mesh.Np, 1, *lss);
-  } else if (settings.compareSetting("TIME INTEGRATOR","LSERK4")){
-    lss->timeStepper = new TimeStepper::lserk4(mesh.Nelements, mesh.totalHaloPairs,
-                                              mesh.Np, 1, *lss);
-  } else if (settings.compareSetting("TIME INTEGRATOR","DOPRI5")){
-    lss->timeStepper = new TimeStepper::dopri5(mesh.Nelements, mesh.totalHaloPairs,
-                                              mesh.Np, 1, *lss);
-  }
   
-
-  // set time step
-  dfloat hmin = mesh.MinCharacteristicLength();
-  dfloat cfl = 0.5; // depends on the stability region size
-
-  dfloat dt = cfl*hmin/((mesh.N+1.)*(mesh.N+1.));
-  lss->timeStepper->SetTimeStep(dt);
 
   //setup linear algebra module
   lss->linAlg.InitKernels({"innerProd"}, mesh.comm);
@@ -74,10 +61,11 @@ lss_t& lss_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
 
   // compute samples of q at interpolation nodes
   lss->q = (dfloat*) calloc(Nlocal+Nhalo, sizeof(dfloat));
-  lss->o_q = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat), lss->q);
+  lss->o_q = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat), lss->q); // compute samples of q at interpolation nodes
+ 
 
-  lss->sq = (dfloat*) calloc(Nlocal, sizeof(dfloat));
-  lss->o_sq = mesh.device.malloc(Nlocal*sizeof(dfloat), lss->sq);
+  lss->sgnq = (dfloat*) calloc(Nlocal, sizeof(dfloat));
+  lss->o_sgnq = mesh.device.malloc(Nlocal*sizeof(dfloat), lss->sgnq);
 
 
   lss->gradq = (dfloat *) calloc((Nlocal + Nhalo)*mesh.dim, sizeof(dfloat)); 
@@ -87,20 +75,20 @@ lss_t& lss_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   lss->o_U = mesh.device.malloc((Nlocal+Nhalo)*mesh.dim*sizeof(dfloat), lss->U);
 
   lss->offset = (Nlocal+Nhalo);  // AK: check for better solution ?????
-  lss->eps    = 4.f*hmin; 
 
   //printf("hmin = %.4e\n", hmin);
 
   //storage for M*q during reporting
   lss->o_Mq = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat), lss->q);
-
+  
   // OCCA build stuff
-  occa::properties kernelInfo = lss->props; //copy base occa properties
+  occa::properties &kernelInfo = lss->props; 
 
   //add boundary data to kernel info
   string dataFileName;
   settings.getSetting("DATA FILE", dataFileName);
   kernelInfo["includes"] += dataFileName;
+  kernelInfo["defines/" "p_blockSize"]= (int)LSS_BLOCKSIZE; 
 
   kernelInfo["defines/" "p_Nfields"]= 1;
 
@@ -129,11 +117,7 @@ lss_t& lss_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
 
   kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
 
-  lss->subcellStabilization = (settings.compareSetting("STABILIZATION", "SUBCELL")) ? 1:0;
-  if(lss->subcellStabilization){
-  lss->subcell = NULL; 
-  lss->subcell = &(subcell_t::Setup(mesh, settings)); 
-  }
+
   // set kernel name suffix
   char *suffix;
   if(mesh.elementType==TRIANGLES)
@@ -203,13 +187,11 @@ lss_t& lss_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
                                                   kernelInfo, mesh.comm);
   }
 
-  // if(lss->redistance){
-     sprintf(fileName, DLSS "/okl/lssRegularizedSign2D.okl");
-     sprintf(kernelName, "lssRegularizedSign2D");
-     lss->regularizedSignKernel = buildKernel(mesh.device, fileName, kernelName,
-                                                  kernelInfo, mesh.comm);
-  // }
-
+   sprintf(fileName, DLSS "/okl/lssRegularizedSign2D.okl");
+   sprintf(kernelName, "lssRegularizedSign2D");
+   lss->regularizedSignKernel = buildKernel(mesh.device, fileName, kernelName,
+                                                kernelInfo, mesh.comm);
+   
   sprintf(fileName, DLSS "/okl/lssRedistanceVolume%s.okl", suffix);
   sprintf(kernelName, "lssRedistanceVolume%s", suffix);
 
@@ -224,8 +206,38 @@ lss_t& lss_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
                                          kernelInfo, mesh.comm);
 
 
-// #if 0
-// #endif
+
+
+// do it before copying props !!! subcell adds defs to base props
+  if(lss->subcellStabilization)
+    lss->SetupStabilizer();   
+
+
+  //setup timeStepper
+  if (settings.compareSetting("TIME INTEGRATOR","AB3")){
+    lss->timeStepper = new TimeStepper::ab3(mesh.Nelements, mesh.totalHaloPairs,
+                                              mesh.Np, 1, *lss);
+  } else if (settings.compareSetting("TIME INTEGRATOR","LSERK4")){
+    if(lss->subcellStabilization)
+    lss->timeStepper = new TimeStepper::lserk4_subcell(mesh.Nelements, mesh.totalHaloPairs,
+                                              mesh.Np, 1, lss->subcell->Nsubcells, 1, *lss);
+    else
+    lss->timeStepper = new TimeStepper::lserk4(mesh.Nelements, mesh.totalHaloPairs,
+                                              mesh.Np, 1, *lss);
+  } else if (settings.compareSetting("TIME INTEGRATOR","DOPRI5")){
+    lss->timeStepper = new TimeStepper::dopri5(mesh.Nelements, mesh.totalHaloPairs,
+                                              mesh.Np, 1, *lss);
+  }
+
+  // // set time step
+  dfloat hmin = mesh.MinCharacteristicLength();
+  // printf("hmin = %.12e\n", hmin);
+  dfloat cfl = 0.5; // depends on the stability region size
+
+  dfloat dt = cfl*hmin/((mesh.N+1.)*(mesh.N+1.));
+  lss->timeStepper->SetTimeStep(dt);  
+  lss->eps    = 4.f*hmin;  
+
   return *lss;
 }
 
