@@ -104,11 +104,20 @@ void MGLevel::smoothChebyshev (occa::memory &o_r, occa::memory &o_X, bool xIsZer
   } else {
     //res = S*(r-Ax)
     Ax(o_X,o_RES);
+
+#if 0
+    // 5 loads, 3 stores
     linAlg.axpy(Ntotal, 1.f, o_r, -1.f, o_RES);
     linAlg.amx(Ntotal, 1.f, o_invDiagA, o_RES);
 
     //d = invTheta*res
     linAlg.axpy(Ntotal, invTheta, o_RES, 0.f, o_d);
+#else
+    // 3 loads, 2 stores
+    // RES = invDiag*(r-RES);
+    // d = invTheata*RES
+    chebyshevPreSmoothKernel(Ntotal, o_invDiagA, o_r, o_RES, invTheta, o_d);
+#endif
   }
 
   for (int k=0;k<ChebyshevIterations;k++) {
@@ -120,14 +129,20 @@ void MGLevel::smoothChebyshev (occa::memory &o_r, occa::memory &o_X, bool xIsZer
 
     //r_k+1 = r_k - SAd_k
     Ax(o_d,o_Ad);
-    linAlg.amxpy(Ntotal, -1.f, o_invDiagA, o_Ad, 1.f, o_RES);
 
     rho_np1 = 1.0/(2.*sigma-rho_n);
     dfloat rhoDivDelta = 2.0*rho_np1/delta;
 
+#if 0
+    // RES = RES - invDiagA*Ad
+    // d = rhoDivDelta*RES + rho_np1*rho_n*o_d
+    linAlg.amxpy(Ntotal, -1.f, o_invDiagA, o_Ad, 1.f, o_RES);
+
     //d_k+1 = rho_k+1*rho_k*d_k  + 2*rho_k+1*r_k+1/delta
     linAlg.axpy(Ntotal, rhoDivDelta, o_RES, rho_np1*rho_n, o_d);
-
+#else
+    chebyshevPostSmoothKernel(Ntotal, o_invDiagA, o_Ad, rhoDivDelta, o_RES, rho_np1*rho_n, o_d);
+#endif
     rho_n = rho_np1;
   }
   //x_k+1 = x_k + d_k
@@ -223,6 +238,19 @@ MGLevel::MGLevel(elliptic_t& _elliptic, int k,
     sprintf(fileName, DELLIPTIC "/okl/ellipticPreconProlongate%s.okl", suffix);
     sprintf(kernelName, "ellipticPreconProlongate%s", suffix);
     prolongateKernel = buildKernel(mesh.device, fileName, kernelName, kernelInfo, mesh.comm);
+  }
+
+  {
+    occa::properties kernelInfo = elliptic.props;
+    
+    char fileName[BUFSIZ], kernelName[BUFSIZ];
+    sprintf(fileName, DELLIPTIC "/okl/ellipticPreconChebyshevSmooth.okl");
+    sprintf(kernelName, "ellipticPreconChebyshevPreSmooth");
+    chebyshevPreSmoothKernel = buildKernel(mesh.device, fileName, kernelName, kernelInfo, mesh.comm);
+    
+    sprintf(fileName, DELLIPTIC "/okl/ellipticPreconChebyshevSmooth.okl");
+    sprintf(kernelName, "ellipticPreconChebyshevPostSmooth");
+    chebyshevPostSmoothKernel = buildKernel(mesh.device, fileName, kernelName, kernelInfo, mesh.comm);
   }
 }
 

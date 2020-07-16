@@ -171,6 +171,9 @@ public:
   occa::kernel coarsenKernel;
   occa::kernel prolongateKernel;
 
+  occa::kernel chebyshevPostSmoothKernel;
+  occa::kernel chebyshevPreSmoothKernel;
+
   //smoothing params
   typedef enum {JACOBI=1,
                 CHEBYSHEV=2} SmootherType;

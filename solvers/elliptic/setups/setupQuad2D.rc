@@ -14,13 +14,13 @@ BOX
 4
 
 [BOX NX]
-40
+512
 
 [BOX NY]
-40
+512
 
 [BOX NZ]
-40
+1
 
 [BOX DIMX]
 1
@@ -38,6 +38,8 @@ BOX
 4
 
 [THREAD MODEL]
+#OpenMP
+#Serial
 CUDA
 
 [PLATFORM NUMBER]
