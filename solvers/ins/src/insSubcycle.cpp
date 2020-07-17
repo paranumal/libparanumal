@@ -40,20 +40,41 @@ subcycler_t::subcycler_t(ins_t& ins):
 //evaluate ODE rhs = f(q,t)
 void subcycler_t::rhsf(occa::memory& o_U, occa::memory& o_RHS, const dfloat T){
 
+  //interpolate velocity history for advective field (halo elements first)
+  if(mesh.NhaloElements)
+    subCycleAdvectionKernel(mesh.NhaloElements,
+                           mesh.o_haloElementIds,
+                           shiftIndex,
+                           order,
+                           maxOrder,
+                           mesh.Nelements*mesh.Np*NVfields,
+                           T,
+                           T0,
+                           dt,
+                           o_Uh,
+                           o_Ue);
+
+  // extract Ue halo
+  vTraceHalo->ExchangeStart(o_Ue, 1, ogs_dfloat);
+
+  if(mesh.NinternalElements)
+    subCycleAdvectionKernel(mesh.NinternalElements,
+                           mesh.o_internalElementIds,
+                           shiftIndex,
+                           order,
+                           maxOrder,
+                           mesh.Nelements*mesh.Np*NVfields,
+                           T,
+                           T0,
+                           dt,
+                           o_Uh,
+                           o_Ue);
+
+  // finish exchange of Ue
+  vTraceHalo->ExchangeFinish(o_Ue, 1, ogs_dfloat);
+
   // extract u halo on DEVICE
   vTraceHalo->ExchangeStart(o_U, 1, ogs_dfloat);
-
-  //interpolate velocity history for advective field
-  subCycleAdvectionKernel(mesh.Nelements,
-                         shiftIndex,
-                         order,
-                         maxOrder,
-                         mesh.Nelements*mesh.Np*NVfields,
-                         T,
-                         T0,
-                         dt,
-                         o_Uh,
-                         o_Ue);
 
   if (cubature)
     advectionVolumeKernel(mesh.Nelements,

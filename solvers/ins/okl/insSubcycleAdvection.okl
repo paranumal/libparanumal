@@ -26,6 +26,7 @@ SOFTWARE.
 
 //interpolate velocity history for advective field
 @kernel void insSubcycleAdvectionKernel(const dlong Nelements,
+                                       @restrict const  dlong *  elementList,
                                        const int shiftIndex,
                                        const int order,
                                        const int maxOrder,
@@ -39,7 +40,9 @@ SOFTWARE.
   for(dlong e=0;e<Nelements;++e;@outer(0)){
     for(int n=0;n<p_Np;++n;@inner(0)){
 
-      const dlong id = n+ p_NVfields*p_Np*e;
+      const dlong element = elementList[e];
+
+      const dlong id = n+ p_NVfields*p_Np*element;
 
       dfloat c0, c1, c2;
 
