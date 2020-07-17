@@ -289,7 +289,7 @@ ins_t& ins_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
     ins->subcycler->subCycleAdvectionKernel = buildKernel(mesh.device, fileName, kernelName,
                                              kernelInfo, mesh.comm);
 
-    ins->subcycler->o_Ue = mesh.device.malloc(Nlocal*ins->NVfields*sizeof(dfloat), ins->u);
+    ins->subcycler->o_Ue = mesh.device.malloc((Nlocal+Nhalo)*ins->NVfields*sizeof(dfloat), ins->u);
 
   } else {
     //regular advection kernels
