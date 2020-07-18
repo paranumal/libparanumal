@@ -61,7 +61,7 @@ SOFTWARE.
           c0 = (T-t1)/(t0-t1);
           c1 = (T-t0)/(t1-t0);
           for (int fld=0;fld<p_NVfields;fld++) {
-            Ue[id + fld*p_Np] = c0*Uh[id + fld*p_Np + ((shiftIndex+0)%maxOrder)*fieldOffset];
+            Ue[id + fld*p_Np] = c0*Uh[id + fld*p_Np + ((shiftIndex+0)%maxOrder)*fieldOffset]
                                +c1*Uh[id + fld*p_Np + ((shiftIndex+1)%maxOrder)*fieldOffset];
           }
           break;
@@ -71,8 +71,8 @@ SOFTWARE.
           c2 = (T-t0)*(T-t1)/((t2-t0)*(t2-t1));
 
           for (int fld=0;fld<p_NVfields;fld++) {
-            Ue[id + fld*p_Np] = c0*Uh[id + fld*p_Np + ((shiftIndex+0)%maxOrder)*fieldOffset];
-                               +c1*Uh[id + fld*p_Np + ((shiftIndex+1)%maxOrder)*fieldOffset];
+            Ue[id + fld*p_Np] = c0*Uh[id + fld*p_Np + ((shiftIndex+0)%maxOrder)*fieldOffset]
+                               +c1*Uh[id + fld*p_Np + ((shiftIndex+1)%maxOrder)*fieldOffset]
                                +c2*Uh[id + fld*p_Np + ((shiftIndex+2)%maxOrder)*fieldOffset];
           }
           break;
