@@ -5,10 +5,29 @@ libParanumal is funded in part by the US Department of Energy as part of the act
 
 Why is it called libParanumal?: the high-order finite-element implementations in libParanumal are __spectrally__ accurate and rely heavily on __ghost__ elements for MPI communications.
 
-If you use libParanumal as part of a research project see the [references](#7-references) section below for papers to reference.
+### 1. How to cite the libParanumal project:
+If you use any part of libParanumal in your research project including variants on the included compute kernels please use the following bibliographical reference:
+
+<pre>
+@MISC{ChalmersKarakusAustinSwirydowiczWarburton2020,
+      author = "Chalmers, B. N. and Karakus, A. and Austin, A. P. and Swirydowicz, K. and Warburton, T.",
+      title = "{libParanumal}: a performance portable high-order finite element library",
+      year = "2020",
+      url = "https://github.com/paranumal/libparanumal",
+      note = "Release 0.2.1"
+      }
+</pre>
+
+see the [references](#9-references) section below for additional papers to reference about various aspects of the library.
+ 
+---
+### 2. How you can help out:
+libParanumal is a community project. Please help improve the library by submitted an [Issue](https://github.com/paranumal/libparanumal/issues)  if you notice any unexpected behavior, discover a bug, have problems installing/running/trouble shooting your installation. It benefits us as a community when issues and feature requests are shared so that we can understand how to improve the library.
+
+Please submit feature requests as an [Issue](https://github.com/paranumal/libparanumal/issues) for the consideration of all contributors. Likewise if you wish to submit a code change please make a GitHub [Pull Request](https://github.com/paranumal/libparanumal/pulls).
 
 ---
-### 1. Overview 
+### 3. Overview 
 
 Brief summary of major features:
 
@@ -62,14 +81,14 @@ G. Dependencies:
       
 
 ---
-### 2. Code block diagram 
+### 4. Code block diagram 
 <img src="http://intranet.math.vt.edu/people/tcew/libPdiagramCrop.jpg" width="1024" >
 
 ---
-### 3. OCCA dependency
+### 5. OCCA dependency
 `git clone https://github.com/libocca/occa`
 
-#### 3-1. Build OCCA 
+#### 5-1. Build OCCA 
 `cd occa`    
 `export OCCA_DIR=${PWD}`  
 `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OCCA_DIR/lib`    
@@ -77,34 +96,34 @@ G. Dependencies:
 `cd ../  `  
 
 ---
-### 4. Clone: libParanumal
+### 6. Clone: libParanumal
 `git clone https://github.com/paranumal/libparanumal`
 
-#### 4-1. Build all libParanumal solvers
+#### 6-1. Build all libParanumal solvers
 `cd libparanumal`    
 ```make -j `nproc` ```
 
 ---
-### 5. Running the codes: 
+### 7. Running the codes: 
 
 Each solver resides in its respective sub-directory in `solvers/`. Each solver sub-directory includes makefile, src directory, data directory (including header files for defining boundary conditions), okl kernel directory, and setups directory. The setups directory includes a number of example input files that specify input parameters for the solver.
 
-#### 5-1. Build libParanumal elliptic solver
+#### 7-1. Build libParanumal elliptic solver
   
 `cd libparanumal/solvers/elliptic`    
 `make -j  `  
 
-#### 5-2. Run elliptic example with provided quadrilateral set up file on a single device:
+#### 7-2. Run elliptic example with provided quadrilateral set up file on a single device:
   
 `./ellipticMain setups/setupQuad2D.rc`  
 
-#### 5-3. Run the same example with four devices:
+#### 7-3. Run the same example with four devices:
 
 `mpiexec -n 4 ./ellipticMain setups/setupQuad2D.rc`  
  
 ---
 
-### 6. License
+### 8. License
 
 The MIT License (MIT)
 
@@ -128,7 +147,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-### 7. References
+### 9. References
 
 Discontinuous Galerkin Boltzmann (bns) solver: [publisher](https://doi.org/10.1016/j.jcp.2019.03.050), [arXiv version](https://arxiv.org/abs/1805.02082): `Karakus, A., Chalmers, N., Hesthaven, J.S. and Warburton, T., 2018. Discontinuous Galerkin Discretizations of the Boltzmann Equations in 2D: semi-analytic time stepping and absorbing boundary layers, Journal of Computational Physics, Volume 390, Pages 175–202.`
 
