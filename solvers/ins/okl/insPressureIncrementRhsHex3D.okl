@@ -38,8 +38,8 @@ SOFTWARE.
     dfloat dpdxPn1=0.f, dpdyPn1=0.f, dpdzPn1=0.f, pPn1=0.f;             \
     insPressureDirichletConditions3D(bc,nu,time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &pP); \
     insPressureNeumannConditions3D(bc,nu,time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f,0.f, &dpdxP, &dpdyP, &dpdzP); \
-    insPressureDirichletConditions3D(bc,nu,(time-dt), x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &pP); \
-    insPressureNeumannConditions3D(bc,nu,(time-dt), x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f,0.f, &dpdxP, &dpdyP, &dpdzP); \
+    insPressureDirichletConditions3D(bc,nu,(time-dt), x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &pPn1); \
+    insPressureNeumannConditions3D(bc,nu,(time-dt), x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f,0.f, &dpdxPn1, &dpdyPn1, &dpdzPn1); \
     pP -= pPn1;                                                         \
     dpdxP -= dpdxPn1;                                                   \
     dpdyP -= dpdyPn1;                                                   \
@@ -298,8 +298,8 @@ SOFTWARE.
     dfloat dpdxPn1=0.f, dpdyPn1=0.f, dpdzPn1=0.f, pPn1=0.f;             \
     insPressureDirichletConditions3D(bc,nu,time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &pP); \
     insPressureNeumannConditions3D(bc,nu,time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f,0.f, &dpdxP, &dpdyP, &dpdzP); \
-    insPressureDirichletConditions3D(bc,nu,(time-dt), x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &pP); \
-    insPressureNeumannConditions3D(bc,nu,(time-dt), x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f,0.f, &dpdxP, &dpdyP, &dpdzP); \
+    insPressureDirichletConditions3D(bc,nu,(time-dt), x[idM], y[idM], z[idM], nx, ny, nz, 0.f, &pPn1); \
+    insPressureNeumannConditions3D(bc,nu,(time-dt), x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f,0.f, &dpdxPn1, &dpdyPn1, &dpdzPn1); \
     pP -= pPn1;                                                         \
     dpdxP -= dpdxPn1;                                                   \
     dpdyP -= dpdyPn1;                                                   \
