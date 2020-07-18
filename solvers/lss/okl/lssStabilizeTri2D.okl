@@ -48,7 +48,7 @@ SOFTWARE.
     @shared dfloat s_Q[p_Np], s_Mod[p_Np]; //  s_LSF[p_N]; 
 #if BLDEC==1
     @shared dfloat s_L2[p_Np]; 
-    @exclusive dfloat norm;  
+    // @exclusive dfloat norm;  
 #endif
    // @shared int s_ModMap[p_Np]; 
     @shared dfloat s_LogMod[p_Nq], s_SkyMod[p_Nq]; 
@@ -88,21 +88,31 @@ SOFTWARE.
 @barrier("local");
 
 
-#if BLDEC==1 // compute norm = q' * MM * q
- // get modal coefficients and compute L2 norm
-    for(int n=0; n<p_Np; n++; @inner(0)){
-      norm = 0.f; 
-      for(int m=0; m<p_Np;m++){
-        norm +=s_Q[m]*s_L2[m];
-      } 
-    }
+// #if BLDEC==1 // compute local norm = q' * MM * q on element e
+//  // get modal coefficients and compute L2 norm
+//     for(int n=0; n<p_Np; n++; @inner(0)){
+//       norm = 0.f; 
+//       for(int m=0; m<p_Np;m++){
+//         norm +=s_Q[m]*s_L2[m];
+//       } 
+//     }
 
-@barrier("local");
-#endif
+// @barrier("local");
+// #endif
 
 
     //skyline pessimization: get 1D mods from 2D
     for(int n=0; n<p_Np; n++; @inner(0)){
+
+#if BLDEC==1
+      // norm = q' * MM * q on element e
+      dfloat norm = 0.f; 
+      for(int m=0; m<p_Np;m++){
+        norm +=s_Q[m]*s_L2[m];
+      } 
+
+#endif
+
       if(n<p_Nq){ // AK: this could be better!!! too many idle threads
         dfloat modsum = 0; 
         // we have i+1, i'th order mod
@@ -171,7 +181,6 @@ for(int n=0; n<p_Np; n++; @inner(0)){
 
 
 
-
 // Project to FV 
 @kernel void lssProjectTri2D(const dlong Nelements,
                              const int all, 
@@ -213,8 +222,7 @@ for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
   }
  }
 
-
- // Project directly to FV face values without WENO2 reconstruction
+//  AK : Need to test this version of projection more !!!!!
 @kernel void lssProjectDGTri2D(const dlong Nelements,
                              const int all, 
                              @restrict const dlong * elmList, 
@@ -225,22 +233,16 @@ for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
                              @restrict const dfloat *  Q,
                              @restrict dfloat *sface){
 for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
-  @shared dfloat s_q[s_NblocksS][p_Nfaces][p_Nfp];
+  @shared dfloat s_q[s_NblocksS][p_NfacesNfp];
   @exclusive int elmType; 
- 
   for(int es=0;es<s_NblocksS;++es;@inner(1)){
     for(int n=0;n<s_maxNodesS;++n;@inner(0)){
       const dlong e = eo+es; 
       if(e<Nelements){
         elmType = all ? s_DGFV_TYPE: elmList[e]; 
-        if(n<p_Nfp && elmType==s_DGFV_TYPE){
-          // const int face = n/p_Nfp;
-          const dlong id0 = vmapM[e*p_Nfp*p_Nfaces + 0*p_Nfp + n];
-          const dlong id1 = vmapM[e*p_Nfp*p_Nfaces + 1*p_Nfp + n];
-          const dlong id2 = vmapM[e*p_Nfp*p_Nfaces + 2*p_Nfp + n];
-          s_q[es][0][n] = Q[id0]; 
-          s_q[es][1][n] = Q[id1]; 
-          s_q[es][2][n] = Q[id2]; 
+        if(n<p_NfacesNfp && elmType==s_DGFV_TYPE){
+          const dlong id0 = vmapM[e*p_NfacesNfp + n];
+          s_q[es][n] = Q[id0]; 
         }
       }
     }
@@ -252,28 +254,18 @@ for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
      for(int n=0;n<s_maxNodesS;++n;@inner(0)){
       const dlong e = eo+es;
       if(e<Nelements){
-        if(n<s_N && elmType==s_DGFV_TYPE){
-          dfloat sqn0 = 0, sqn1 = 0, sqn2 = 0; 
-         
+        if(n<s_NfacesNfp && elmType==s_DGFV_TYPE){
+          dfloat sqn = 0.f; 
+         const int idn  = n%s_N; 
+         const int face = n/s_N; 
          for(int i=0; i<p_Nfp; i++){
-            const dfloat pfm = PFMT[n + i*s_N]; 
-            sqn0 += pfm*s_q[es][0][i]; 
-            sqn1 += pfm*s_q[es][1][i]; 
-            sqn2 += pfm*s_q[es][2][i]; 
+            const dfloat pfm = PFMT[idn + i*s_N]; // this operator defined on single face only: can expand it all faces
+            sqn += pfm*s_q[es][face*p_Nfp + i]; 
           }
-        
-        const int e0 = mFToE[0*s_N + n]; 
-        const int f0 = mFToF[0*s_N + n]; 
-        
-        const int e1 = mFToE[1*s_N + n]; 
-        const int f1 = mFToF[1*s_N + n]; 
+        const int e0 = mFToE[n];  // get local subcell element number in this cell 
+        const int f0 = mFToF[n];
 
-        const int e2 = mFToE[2*s_N + n]; 
-        const int f2 = mFToF[2*s_N + n]; 
-
-        sface[(e*s_Ncells + e0)*p_Nfaces + f0] = sqn0; 
-        sface[(e*s_Ncells + e1)*p_Nfaces + f1] = sqn1; 
-        sface[(e*s_Ncells + e2)*p_Nfaces + f2] = sqn2; 
+        sface[(e*s_Ncells + e0)*p_Nfaces + f0] = sqn; 
         }
       }
     }
@@ -281,6 +273,7 @@ for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
 
   }
  }
+
 
  // Recontruct DG solution from FV data
  @kernel void lssReconstructTri2D(const dlong Nelements,
@@ -664,15 +657,12 @@ for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
                                    @restrict dfloat *rhsq){
 
 for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
-
-  @shared dfloat s_rhs[s_Nblocks][s_Ncells]; 
-  @exclusive int elmType; 
   
     for(int es=0;es<s_Nblocks;++es;@inner(1)){
       for(int s=0;s<s_Ncells;++s;@inner(0)){ 
         const dlong e = eo + es;
          if(e<Nelements){
-          elmType = elmList[e]; 
+          const dlong elmType = elmList[e]; 
 
           dfloat rhss = 0.f; 
 
@@ -714,7 +704,6 @@ for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
 
           const dfloat p  = 0.5*(p1+p2);
           const dfloat q  = 0.5*(q1+q2);
-          // s_rhs[es][s] = -( rsgn*( sqrt(p*p+q*q)-1.0) - 0.5*(p1-p2) - 0.5*(q1-q2) );
           rhss = -( rsgn*( sqrt(p*p+q*q)-1.0) - 0.5*(p1-p2) - 0.5*(q1-q2) );
         }
         rhsq[e*s_Ncells + s] = rhss;  
@@ -860,11 +849,11 @@ for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
               const dfloat qfp = sface[sep*p_Nfaces + sfp];
 
               const dlong sid   = sem*p_Nfaces*s_Nsgeo; 
-              const dfloat ivm  = svgeo[sem*s_Nvgeo + s_IVID]; 
 
               const dfloat nxm  = ssgeo[sid + sfm*s_Nsgeo + s_NXID];
               const dfloat nym  = ssgeo[sid + sfm*s_Nsgeo + s_NYID]; 
               const dfloat sam  = ssgeo[sid + sfm*s_Nsgeo + s_SAID];
+              // const dfloat ivm  = svgeo[sem*s_Nvgeo + s_IVID]; 
 
               dfloat unx = 0.f, dnx = 1.f; 
               dfloat uny = 0.f, dny = 1.f; 
@@ -872,7 +861,7 @@ for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
               if(nxm>=0){unx = 1.f; dnx = 0.f; };
               if(nym>=0){uny = 1.f; dny = 0.f; };
 
-              const dfloat invJ = sgeo[p_Nsgeo*(e*p_Nfaces+face)+p_IJID];
+              // const dfloat invJ = sgeo[p_Nsgeo*(e*p_Nfaces+face)+p_IJID];
 
               s_spf1[es][n]= nxm*( dnx*qfm + unx*qfp); 
               s_spf2[es][n]= nxm*( unx*qfm + dnx*qfp);

@@ -212,7 +212,7 @@ void lss_t::Redistance_Subcell(occa::memory& o_Q, occa::memory & o_sQ,
                                    o_Q,
                                    o_gradq);
 
-    // Reconstruct internal subcell FV face values using WENO2
+    // Reconstruct internal subcell FV face values using WENO2:FVFV elements
      reconstructInternalFaceKernel(mesh.Nelements, 
                                   subcell->o_ElementList,
                                   subcell->o_ielist,
@@ -226,7 +226,7 @@ void lss_t::Redistance_Subcell(occa::memory& o_Q, occa::memory & o_sQ,
      // AK: Will check MPI later
      // traceHalo->ExchangeFinish(o_Q, 1, ogs_dfloat);
 
-     // Project DG solution to FV reconstructed face values
+     // Project DG solution to FV face values directly for DGFV type
      projectDGKernel(mesh.Nelements,
                     all, 
                     subcell->o_ElementList, 
