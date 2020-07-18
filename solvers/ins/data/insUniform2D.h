@@ -24,18 +24,21 @@ SOFTWARE.
 
 */
 
+#define p_ubar 1.0
+#define p_vbar 0.0
+#define p_pbar 1.0
 
-// Initial conditions 
-#define insFlowField2D(t,x,y,u,v,p)   \
+// Initial conditions
+#define insInitialConditions2D(nu,t,x,y,u,v,p)   \
   {                                   \
     *(u) = p_ubar;                    \
     *(v) = p_vbar;                    \
     *(p) = p_pbar;                    \
-  }   
+  }
 
 // Boundary conditions
 /* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5 */
-#define insVelocityDirichletConditions2D(bc, t, x, y, nx, ny, uM, vM, uB, vB) \
+#define insVelocityDirichletConditions2D(bc, nu, t, x, y, nx, ny, uM, vM, uB, vB) \
 {                                   \
   if(bc==1){                        \
     *(uB) = 0.f;                    \
@@ -55,7 +58,7 @@ SOFTWARE.
   }                                 \
 }
 
-#define insVelocityNeumannConditions2D(bc, t, x, y, nx, ny, uxM, uyM, vxM, vyM, uxB, uyB, vxB, vyB) \
+#define insVelocityNeumannConditions2D(bc, nu, t, x, y, nx, ny, uxM, uyM, vxM, vyM, uxB, uyB, vxB, vyB) \
 {                                          \
   if(bc==1 || bc==2){                      \
     *(uxB) = uxM;                          \
@@ -81,12 +84,12 @@ SOFTWARE.
 }
 
 
-#define insPressureDirichletConditions2D(bc, t, x, y, nx, ny, pM, pB) \
+#define insPressureDirichletConditions2D(bc, nu, t, x, y, nx, ny, pM, pB) \
 {                                   \
   if(bc==1 || bc==2){               \
     *(pB) = pM;                     \
   } else if(bc==3){                 \
-    *(pB) = p_pbar;                 \
+    *(pB) = 0.0;                    \
   } else if(bc==4){                 \
     *(pB) = pM;                     \
   } else if(bc==5){                 \
@@ -94,7 +97,7 @@ SOFTWARE.
   }                                 \
 }
 
-#define insPressureNeumannConditions2D(bc, t, x, y, nx, ny, pxM, pyM, pxB, pyB) \
+#define insPressureNeumannConditions2D(bc, nu, t, x, y, nx, ny, pxM, pyM, pxB, pyB) \
 {                                          \
   if(bc==1 || bc==2){                      \
     *(pxB) = 0.f;                          \

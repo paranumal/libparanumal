@@ -54,11 +54,19 @@ SOFTWARE.
     *(uB) = uM;                                                           \
     *(vB) = vM;                                                           \
     *(wB) = wM;                                                           \
-  } else if(bc==4||bc==5||bc==6){                                         \
-    *(uB) = uM - (nx*uM+ny*vM+nz*wM)*nx;                                  \
-    *(vB) = vM - (nx*uM+ny*vM+nz*wM)*ny;                                  \
-    *(wB) = wM - (nx*uM+ny*vM+nz*wM)*nz;                                  \
-  }                                                                       \
+  } else if(bc==4){                                                       \
+    *(uB) = 0.f;                                                          \
+    *(vB) = vM;                                                           \
+    *(wB) = wM;                                                           \
+  } else if(bc==5){                                                       \
+    *(uB) = uM;                                                           \
+    *(vB) = 0.f;                                                          \
+    *(wB) = wM;                                                           \
+  } else if(bc==6){                                                       \
+    *(uB) = uM;                                                           \
+    *(vB) = vM;                                                           \
+    *(wB) = 0.f;                                                          \
+  }                                                                       \                                                                    \
 }
 
 #define insVelocityNeumannConditions3D(bc, nu, t, x, y, z, nx, ny, nz, uxM, uyM, uzM, vxM, vyM, vzM, wxM, wyM, wzM, uxB, uyB, uzB, vxB, vyB, vzB, wxB, wyB, wzB) \
@@ -85,17 +93,37 @@ SOFTWARE.
     *(wxB) =  a*(a*exp(a*z)*cos(a*x+d*y)-d*exp(a*y)*sin(a*z+d*x))*exp(-d*d*t); \
     *(wyB) =  a*(d*exp(a*z)*cos(a*x+d*y)+a*exp(a*y)*cos(a*z+d*x))*exp(-d*d*t); \
     *(wzB) =  a*(a*exp(a*z)*sin(a*x+d*y)-a*exp(a*y)*sin(a*z+d*x))*exp(-d*d*t); \
-  } else if(bc==4||bc==5||bc==6){                                              \
-    *(uxB) = nx*nx*uxM;                                                        \
-    *(uyB) = nx*nx*uyM;                                                        \
-    *(uzB) = nx*nx*uzM;                                                        \
-    *(vxB) = ny*ny*vxM;                                                        \
-    *(vyB) = ny*ny*vyM;                                                        \
-    *(vzB) = ny*ny*vzM;                                                        \
-    *(wxB) = nz*nz*wxM;                                                        \
-    *(wyB) = nz*nz*wyM;                                                        \
-    *(wzB) = nz*nz*wzM;                                                        \
-  }                                                                            \
+  } else if(bc==4){                                                            \
+    *(uxB) = uxM;                                                              \
+    *(uyB) = uyM;                                                              \
+    *(uzB) = uzM;                                                              \
+    *(vxB) = 0.f;                                                              \
+    *(vyB) = 0.f;                                                              \
+    *(vzB) = 0.f;                                                              \
+    *(wxB) = 0.f;                                                              \
+    *(wyB) = 0.f;                                                              \
+    *(wzB) = 0.f;                                                              \
+  } else if(bc==5){                                                            \
+    *(uxB) = 0.f;                                                              \
+    *(uyB) = 0.f;                                                              \
+    *(uzB) = 0.f;                                                              \
+    *(vxB) = vxM;                                                              \
+    *(vyB) = vyM;                                                              \
+    *(vzB) = vzM;                                                              \
+    *(wxB) = 0.f;                                                              \
+    *(wyB) = 0.f;                                                              \
+    *(wzB) = 0.f;                                                              \
+  } else if(bc==6){                                                            \
+    *(uxB) = 0.f;                                                              \
+    *(uyB) = 0.f;                                                              \
+    *(uzB) = 0.f;                                                              \
+    *(vxB) = 0.f;                                                              \
+    *(vyB) = 0.f;                                                              \
+    *(vzB) = 0.f;                                                              \
+    *(wxB) = wxM;                                                              \
+    *(wyB) = wyM;                                                              \
+    *(wzB) = wzM;                                                              \
+  }                                                                            \                                                                    \
 }
 
 
