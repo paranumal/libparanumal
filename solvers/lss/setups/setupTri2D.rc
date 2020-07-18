@@ -6,11 +6,11 @@
 data/lssCircle2D.h
 
 [MESH FILE]
-BOX
+#BOX
+../../meshes/circle.msh
 #../../meshes/circle.msh
 #../../meshes/lssCircle.msh
 #../../meshes/circle_h01.msh
-#../../meshes/circle.msh
 #../../meshes/lssTest.msh
 
 [MESH DIMENSION]
@@ -20,10 +20,10 @@ BOX
 3
 
 [BOX NX]
-60
+40
 
 [BOX NY]
-60
+40
 
 [BOX DIMX]
 4

@@ -208,7 +208,7 @@ lss_t& lss_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
 
 
 
-// do it before copying props !!! subcell adds defs to base props
+// 
   if(lss->subcellStabilization)
     lss->SetupStabilizer();   
 
@@ -231,7 +231,6 @@ lss_t& lss_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
 
   // // set time step
   dfloat hmin = mesh.MinCharacteristicLength();
-  // printf("hmin = %.12e\n", hmin);
   dfloat cfl = 0.5; // depends on the stability region size
 
   dfloat dt = cfl*hmin/((mesh.N+1.)*(mesh.N+1.));
