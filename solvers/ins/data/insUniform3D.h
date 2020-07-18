@@ -24,19 +24,23 @@ SOFTWARE.
 
 */
 
+#define p_ubar 1.0
+#define p_vbar 0.0
+#define p_wbar 0.0
+#define p_pbar 1.0
 
-// Initial conditions 
-#define insFlowField3D(t,x,y,z, u,v,w,p) \
+// Initial conditions
+#define insInitialConditions3D(nu,t,x,y,z, u,v,w,p) \
   {                                   \
     *(u) = p_ubar;                    \
     *(v) = p_vbar;                    \
     *(w) = p_wbar;                    \
     *(p) = p_pbar;                    \
-  }   
+  }
 
 // Boundary conditions
 /* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5, z-slip 6 */
-#define insVelocityDirichletConditions3D(bc, t, x, y, z, nx, ny, nz, uM, vM, wM, uB, vB, wB) \
+#define insVelocityDirichletConditions3D(bc, nu, t, x, y, z, nx, ny, nz, uM, vM, wM, uB, vB, wB) \
 {                                   \
   if(bc==1){                        \
     *(uB) = 0.f;                    \
@@ -50,14 +54,22 @@ SOFTWARE.
     *(uB) = uM;                     \
     *(vB) = vM;                     \
     *(wB) = wM;                     \
-  } else if(bc==4||bc==5||bc==6){   \
-    *(uB) = uM - (nx*uM+ny*vM+nz*wM)*nx;\
-    *(vB) = vM - (nx*uM+ny*vM+nz*wM)*ny;\
-    *(wB) = wM - (nx*uM+ny*vM+nz*wM)*nz;\
+  } else if(bc==4){                 \
+    *(uB) = 0.f;                    \
+    *(vB) = vM;                     \
+    *(wB) = wM;                     \
+  } else if(bc==5){                 \
+    *(uB) = uM;                     \
+    *(vB) = 0.f;                    \
+    *(wB) = wM;                     \
+  } else if(bc==6){                 \
+    *(uB) = uM;                     \
+    *(vB) = vM;                     \
+    *(wB) = 0.f;                    \
   }                                 \
 }
 
-#define insVelocityNeumannConditions3D(bc, t, x, y, z, nx, ny, nz, uxM, uyM, uzM, vxM, vyM, vzM, wxM, wyM, wzM, uxB, uyB, uzB, vxB, vyB, vzB, wxB, wyB, wzB) \
+#define insVelocityNeumannConditions3D(bc, nu, t, x, y, z, nx, ny, nz, uxM, uyM, uzM, vxM, vyM, vzM, wxM, wyM, wzM, uxB, uyB, uzB, vxB, vyB, vzB, wxB, wyB, wzB) \
 {                                          \
   if(bc==1 || bc==2){                      \
     *(uxB) = uxM;                          \
@@ -79,32 +91,52 @@ SOFTWARE.
     *(wxB) = 0.f;                          \
     *(wyB) = 0.f;                          \
     *(wzB) = 0.f;                          \
-  } else if(bc==4||bc==5||bc==6){          \
-    *(uxB) = nx*nx*uxM;                    \
-    *(uyB) = nx*nx*uyM;                    \
-    *(uzB) = nx*nx*uzM;                    \
-    *(vxB) = ny*ny*vxM;                    \
-    *(vyB) = ny*ny*vyM;                    \
-    *(vzB) = ny*ny*vzM;                    \
-    *(wxB) = nz*nz*wxM;                    \
-    *(wyB) = nz*nz*wyM;                    \
-    *(wzB) = nz*nz*wzM;                    \
+  } else if(bc==4){                        \
+    *(uxB) = uxM;                          \
+    *(uyB) = uyM;                          \
+    *(uzB) = uzM;                          \
+    *(vxB) = 0.f;                          \
+    *(vyB) = 0.f;                          \
+    *(vzB) = 0.f;                          \
+    *(wxB) = 0.f;                          \
+    *(wyB) = 0.f;                          \
+    *(wzB) = 0.f;                          \
+  } else if(bc==5){                        \
+    *(uxB) = 0.f;                          \
+    *(uyB) = 0.f;                          \
+    *(uzB) = 0.f;                          \
+    *(vxB) = vxM;                          \
+    *(vyB) = vyM;                          \
+    *(vzB) = vzM;                          \
+    *(wxB) = 0.f;                          \
+    *(wyB) = 0.f;                          \
+    *(wzB) = 0.f;                          \
+  } else if(bc==6){                        \
+    *(uxB) = 0.f;                          \
+    *(uyB) = 0.f;                          \
+    *(uzB) = 0.f;                          \
+    *(vxB) = 0.f;                          \
+    *(vyB) = 0.f;                          \
+    *(vzB) = 0.f;                          \
+    *(wxB) = wxM;                          \
+    *(wyB) = wyM;                          \
+    *(wzB) = wzM;                          \
   }                                        \
 }
 
 
-#define insPressureDirichletConditions3D(bc, t, x, y, z, nx, ny, nz, pM, pB) \
+#define insPressureDirichletConditions3D(bc, nu, t, x, y, z, nx, ny, nz, pM, pB) \
 {                                   \
   if(bc==1 || bc==2){               \
     *(pB) = pM;                     \
   } else if(bc==3){                 \
-    *(pB) = p_pbar;                 \
+    *(pB) = 0.0;                    \
   } else if(bc==4||bc==5||bc==6){   \
     *(pB) = pM;                     \
   }                                 \
 }
 
-#define insPressureNeumannConditions3D(bc, t, x, y, z, nx, ny, nz, pxM, pyM, pzM, pxB, pyB, pzB) \
+#define insPressureNeumannConditions3D(bc, nu, t, x, y, z, nx, ny, nz, pxM, pyM, pzM, pxB, pyB, pzB) \
 {                                          \
   if(bc==1 || bc==2){                      \
     *(pxB) = 0.f;                          \
