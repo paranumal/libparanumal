@@ -241,6 +241,7 @@ void lserk4_subcell::Step(occa::memory &o_q, dfloat time, dfloat _dt) {
 }
 
 lserk4_subcell::~lserk4_subcell() {
+  if (o_sq.size()) o_sq.free();
   if (o_rhssq.size()) o_rhssq.free();
   if (o_ressq.size()) o_ressq.free();
 }

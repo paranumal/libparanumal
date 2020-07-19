@@ -263,6 +263,56 @@ void lss_t::Redistance_Subcell(occa::memory& o_Q, occa::memory & o_sQ,
                               o_sface, 
                               o_sRHS);  
 
+#if 1
+     // DG elements
+     partialRedistanceSurfaceKernel(mesh.Nelements,
+                offset, 
+                subcell->o_ElementList,
+                mesh.o_sgeo,
+                mesh.o_LIFTT,
+                mesh.o_vmapM,
+                mesh.o_vmapP,
+                mesh.o_EToB,
+                T,
+                mesh.o_x,
+                mesh.o_y,
+                mesh.o_z,
+                o_sgnq,
+                o_Q,
+                o_gradq,
+                o_RHS);
+
+
+
+  // DG/FV elements 
+     mixedRedistanceSurfaceKernel(mesh.Nelements,
+                              offset, 
+                              subcell->o_ElementList,
+                              subcell->o_EToE, 
+                              mesh.o_EToB,
+                              mesh.o_sgeo,
+                              subcell->o_sgeo, 
+                              subcell->o_vgeo,
+                              mesh.o_LIFTT,
+                              subcell->o_SLIFTT,
+                              subcell->o_RFMT,
+                              mesh.o_vmapM,
+                              mesh.o_vmapP,
+                              subcell->o_emapP,
+                              subcell->o_fmapP, 
+                              subcell->o_mFToE,
+                              subcell->o_mFToF,
+                              subcell->o_mDGID,
+                              T,
+                              mesh.o_x,
+                              mesh.o_y,
+                              mesh.o_z,
+                              o_sgnq,
+                              o_Q,
+                              o_sface,
+                              o_gradq,
+                              o_RHS);
+#else
      // DG + DG/FV elements 
      partialRedistanceSurfaceKernel(mesh.Nelements,
                               offset, 
@@ -289,6 +339,7 @@ void lss_t::Redistance_Subcell(occa::memory& o_Q, occa::memory & o_sQ,
                               o_sface,
                               o_gradq,
                               o_RHS);
+#endif
 }
 
 

@@ -66,7 +66,7 @@ void lss_t::SetupStabilizer(){
     sprintf(fileName, DLSS "/okl/lssStabilize%s.okl", suffix);
 
     sprintf(kernelName, "skyline%s", suffix);
-    skylineKernel = buildKernel(device, fileName, kernelName, kernelInfo, comm);
+    skylineKernel = buildKernel(device, fileName, kernelName, kernelInfo, mesh.comm);
 
 
     sprintf(kernelName, "lssProject%s", suffix);
@@ -99,19 +99,19 @@ void lss_t::SetupStabilizer(){
     partialRedistanceSurfaceKernel = buildKernel(mesh.device, fileName, kernelName, 
                                      kernelInfo, mesh.comm); 
 
-    // sprintf(kernelName, "lssSubcellReconstructFace%s", suffix);
-    // subcellReconstructFaceKernel = buildKernel(mesh.device, fileName, kernelName, 
-    //                                     kernelInfo, mesh.comm); 
+     sprintf(kernelName, "lssMixedRedistanceSurface%s", suffix);
+     mixedRedistanceSurfaceKernel = buildKernel(mesh.device, fileName, kernelName, 
+                                     kernelInfo, mesh.comm); 
 
     sprintf(kernelName, "lssSubcellCompute%s", suffix);
     subcellComputeKernel = buildKernel(mesh.device, fileName, kernelName, 
                                      kernelInfo, mesh.comm); 
 
     
-    sprintf(fileName, DLSS "/okl/lssSubcellRegularizedSign2D.okl");
-    sprintf(kernelName, "lssSubcellSign2D");
-    subcellSignKernel = buildKernel(mesh.device, fileName, kernelName, 
-                                     kernelInfo, mesh.comm); 
+    // sprintf(fileName, DLSS "/okl/lssSubcellRegularizedSign2D.okl");
+    // sprintf(kernelName, "lssSubcellSign2D");
+    // subcellSignKernel = buildKernel(mesh.device, fileName, kernelName, 
+    //                                  kernelInfo, mesh.comm); 
 
 
   }else{

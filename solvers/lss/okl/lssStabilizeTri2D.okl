@@ -714,10 +714,126 @@ for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
 
 }
 
-// AK: This kernel is very bad.... 
+
+
+// batch process elements
+@kernel void lssPartialRedistanceSurfaceTri2D(const dlong Nelements,
+                                  const dlong offset,
+                                  @restrict const dlong *elmList, 
+                                  @restrict const  dfloat *  sgeo,
+                                  @restrict const  dfloat *  LIFTT,
+                                  @restrict const  dlong  *  vmapM,
+                                  @restrict const  dlong  *  vmapP,
+                                  @restrict const  int    *  EToB,
+                                            const  dfloat time,
+                                  @restrict const  dfloat *  x,
+                                  @restrict const  dfloat *  y,
+                                  @restrict const  dfloat *  z,
+                                  @restrict const  dfloat *  sq,                                  
+                                  @restrict const  dfloat *  q,
+                                  @restrict const  dfloat *  gradq,
+                                  @restrict dfloat *  rhsq){
+
+  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
+
+    // @shared storage for flux terms
+    @shared dfloat s_pf1[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_pf2[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_qf1[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_qf2[p_NblockS][p_NfacesNfp];
+    
+    @exclusive int elmType; 
+    // for all face nodes of all elements
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
+        const dlong e = eo + es;
+        if(e<Nelements){
+          elmType = elmList[e];
+          if(n<p_NfacesNfp && elmType==s_DGDG_TYPE){
+            // find face that owns this node
+            const int face = n/p_Nfp;
+            // load surface geofactors for this face
+            const dlong sid   = p_Nsgeo*(e*p_Nfaces+face);
+            const dfloat nx   = sgeo[sid+p_NXID];
+            const dfloat ny   = sgeo[sid+p_NYID];
+            const dfloat sJ   = sgeo[sid+p_SJID];
+            const dfloat invJ = sgeo[sid+p_IJID];
+
+            // indices of negative and positive traces of face node
+            const dlong id  = e*p_Nfp*p_Nfaces + n;
+            const dlong idM = vmapM[id];
+            const dlong idP = vmapP[id];
+
+            // load traces
+            const dfloat qM = q[idM];  dfloat qP = q[idP];
+
+            // apply boundary condition
+            const int bc = EToB[face+p_Nfaces*e];
+            if(bc>0){
+              lssDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, qM, &qP);
+            }
+            
+            const dfloat sc = invJ*sJ; 
+            // simple upwind
+            dfloat unx = 0.0, dnx = 1.0; 
+            dfloat uny = 0.0, dny = 1.0; 
+            if(nx>= 0){unx = 1.0, dnx = 0.0;}
+            if(ny>= 0){uny = 1.0, dny = 0.0;}
+            s_pf1[es][n]= sc*nx*( (dnx*qM  + unx*qP));
+            s_pf2[es][n]= sc*nx*( (unx*qM  + dnx*qP));
+            s_qf1[es][n]= sc*ny*( (dny*qM  + uny*qP));
+            s_qf2[es][n]= sc*ny*( (uny*qM  + dny*qP));
+          }
+        }
+      }
+    }
+
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
+
+    // for each node in the element
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
+        const dlong e = eo + es;
+        if(e<Nelements){
+          if(n<p_Np && elmType==s_DGDG_TYPE){
+            const dlong id = e*p_Np+n;
+            dfloat p1 = 0.f, p2 = 0.f; 
+            dfloat q1 = 0.f, q2 = 0.f; 
+            
+            // 
+            #pragma unroll p_NfacesNfp
+              for(int m=0;m<p_NfacesNfp;++m){
+                const dfloat L = LIFTT[n+m*p_Np];
+                p1 += L*s_pf1[es][m];
+                p2 += L*s_pf2[es][m];
+                q1 += L*s_qf1[es][m];
+                q2 += L*s_qf2[es][m];
+              }
+            const dfloat sqn  = sq[id];
+            const dfloat dqdx = gradq[id + 0*offset];
+            const dfloat dqdy = gradq[id + 1*offset];
+
+            p1 +=  dqdx; p2 +=  dqdx; 
+            q1 +=  dqdy; q2 +=  dqdy;
+
+            const dfloat P = 0.5f*(p1+p2); 
+            const dfloat Q = 0.5f*(q1+q2); 
+           
+            // LLF Numerical Hamiltonian
+            rhsq[id] =  -( sqn*( sqrt( P*P+Q*Q )-1.0) -0.5f*(p1-p2)-0.5*(q1-q2));
+          }
+        }
+      }
+    }
+  }
+}
+
+// AK: This kernel could be separated as DGDG and DGFV elements 
 // need to use the same shared memory for DGtoDG connection and DGtoFV connection
 // Surface contribution for DGDG and DGFV
-@kernel void lssPartialRedistanceSurfaceTri2D(const dlong Nelements,
+@kernel void lssMixedRedistanceSurfaceTri2D(const dlong Nelements,
                                   const dlong offset,
                                   @restrict const dlong *elmList, 
                                   @restrict const dlong *EToE, 
@@ -726,6 +842,7 @@ for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
                                   @restrict const  dfloat *  ssgeo,
                                   @restrict const  dfloat *  svgeo,
                                   @restrict const  dfloat *  LIFTT,
+                                  @restrict const  dfloat *  SLIFTT,
                                   @restrict const  dfloat *  RFMT, // face reconstruction FVtoDG
                                   @restrict const  dlong  *  vmapM,
                                   @restrict const  dlong  *  vmapP,
@@ -733,6 +850,7 @@ for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
                                   @restrict const dlong *fmapP,     
                                   @restrict const  int    *  mFToE,
                                   @restrict const  int    *  mFToF,
+                                  @restrict const  int    *  mDGID,
                                             const  dfloat time,
                                   @restrict const  dfloat *  x,
                                   @restrict const  dfloat *  y,
@@ -747,46 +865,51 @@ for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
 
     // @shared storage for flux terms
-    @shared dfloat s_pf1[p_NblockS][p_NfacesNfp];
-    @shared dfloat s_pf2[p_NblockS][p_NfacesNfp];
-    @shared dfloat s_qf1[p_NblockS][p_NfacesNfp];
-    @shared dfloat s_qf2[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_pf1[p_NblockS][s_NfacesNfp];
+    @shared dfloat s_pf2[p_NblockS][s_NfacesNfp];
+    @shared dfloat s_qf1[p_NblockS][s_NfacesNfp];
+    @shared dfloat s_qf2[p_NblockS][s_NfacesNfp];
 
-
-    // we need to get rid of this  part....
-    @shared dfloat s_spf1[p_NblockS][s_NfacesNfp];
-    @shared dfloat s_spf2[p_NblockS][s_NfacesNfp];
-    @shared dfloat s_sqf1[p_NblockS][s_NfacesNfp];
-    @shared dfloat s_sqf2[p_NblockS][s_NfacesNfp];
-
+    @shared int s_type[p_NblockS][s_NfacesNfp];
+    // @shared int s_dgid[p_NblockS][s_NfacesNfp]; // this should be part of subcell
+    // @shared int s_type2[p_NblockS][s_NfacesNfp];
     // @exclusive int elmType, ftype; 
-    @exclusive int elmType; 
+    @exclusive int elmType, ftype; 
     // @exclusive int faceDG, faceFV; 
 
     // for all face nodes of all elements
     for(int es=0;es<p_NblockS;++es;@inner(1)){
-      for(int n=0;n<s_maxNodesS;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
+      // for(int n=0;n<s_maxNodesS;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
+      for(int n=0;n<s_NfacesNfp;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
         const dlong e = eo + es;
         if(e<Nelements){
-          elmType = elmList[e]; 
-          s_pf1[es][n]= 0.f; s_pf2[es][n]= 0.f;
-          s_qf1[es][n]= 0.f; s_qf2[es][n]= 0.f;
-
-          if(n<p_NfacesNfp && elmType!=s_FVFV_TYPE){ // DG elements
-            const int face        = n/p_Nfp;   
+          elmType = elmList[e];
+          if(elmType==s_DGFV_TYPE){ 
+          // if(n<s_NfacesNfp){ // assumes s_Nfp >=p_Nfp which is valid for proper reconstruction 
+            const int face        = n/s_N;  
+            const int lid         = n%s_N;  
             const dlong neigh     = EToE[e*p_Nfaces + face];
-            const int ftype       = elmList[neigh]; 
-            if(ftype!= s_FVFV_TYPE){
+            
+            ftype       = elmList[neigh]; 
+            //
+            s_pf1[es][n]= 0.f;  s_pf2[es][n]= 0.f; 
+            s_qf1[es][n]= 0.f;  s_qf2[es][n]= 0.f; 
+            s_type[es][n]= 0;   
+
             const dlong sid   = p_Nsgeo*(e*p_Nfaces+face);
-            const dfloat nx   = sgeo[sid+p_NXID];
-            const dfloat ny   = sgeo[sid+p_NYID];
             const dfloat sJ   = sgeo[sid+p_SJID];
             const dfloat invJ = sgeo[sid+p_IJID];
-
-            // indices of negative and positive traces of face node
-            const dlong id  = e*p_Nfp*p_Nfaces + n;
-            const dlong idM = vmapM[id];
-            const dlong idP = vmapP[id];
+            const dfloat sc   = invJ*sJ; 
+            
+            if(ftype!= s_FVFV_TYPE && lid<p_Nfp){ // DGDG connection
+              const dfloat nx   = sgeo[sid+p_NXID];
+              const dfloat ny   = sgeo[sid+p_NYID];
+              
+              
+              // indices of negative and positive traces of face node
+              const dlong id  = e*p_Nfp*p_Nfaces + face*p_Nfp + lid;
+              const dlong idM = vmapM[id];
+              const dlong idP = vmapP[id];
               // // load traces
               const dfloat qM = q[idM];   dfloat qP = q[idP];
               // apply boundary condition
@@ -795,51 +918,26 @@ for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
                 lssDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, qM, &qP);
               }
               
-              const dfloat sc = invJ*sJ; 
               // simple upwind
               dfloat unx = 0.0, dnx = 1.0; 
               dfloat uny = 0.0, dny = 1.0; 
               if(nx>= 0){unx = 1.0, dnx = 0.0;}
               if(ny>= 0){uny = 1.0, dny = 0.0;}
+
+              // convert to dg ids
+              const int dgid = face*s_N + lid; 
+              s_pf1[es][dgid]   = sc*nx*( (dnx*qM  + unx*qP));
+              s_pf2[es][dgid]   = sc*nx*( (unx*qM  + dnx*qP));
+              s_qf1[es][dgid]   = sc*ny*( (dny*qM  + uny*qP));
+              s_qf2[es][dgid]   = sc*ny*( (uny*qM  + dny*qP));
+              s_type[es][dgid]  = 1;
+              // s_dgid[es][dgid]  = face*p_Nfp + lid; 
+
+           }else if(ftype== s_FVFV_TYPE && lid<s_N){
               
-              // Assumes s_N >= Nfp, since it has to be for proper recontruction
-              // const int lid = face*s_N + n%p_Nfp;      
-              // s_pf1[es][lid]= sc*nx*( (dnx*qM  + unx*qP));
-              // s_pf2[es][lid]= sc*nx*( (unx*qM  + dnx*qP));
-              // s_qf1[es][lid]= sc*ny*( (dny*qM  + uny*qP));
-              // s_qf2[es][lid]= sc*ny*( (uny*qM  + dny*qP));
-
-              s_pf1[es][n]= sc*nx*( (dnx*qM  + unx*qP));
-              s_pf2[es][n]= sc*nx*( (unx*qM  + dnx*qP));
-              s_qf1[es][n]= sc*ny*( (dny*qM  + uny*qP));
-              s_qf2[es][n]= sc*ny*( (uny*qM  + dny*qP));
-           }
-          }
-        }
-      }
-    }
-
-    // wait for all @shared memory writes of the previous inner loop to complete
-    @barrier("local");
-
-
-
- // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;@inner(1)){
-      for(int n=0;n<s_maxNodesS;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
-        const dlong e = eo + es;
-        if(e<Nelements){
-             s_spf1[es][n] = 0;  s_spf2[es][n] = 0;  
-             s_sqf1[es][n] = 0;  s_sqf2[es][n] = 0; 
-
-          if(n<s_NfacesNfp && elmType==s_DGFV_TYPE){ // DG elements
-            const int face        = n/s_N;
-            const dlong neigh     = EToE[e*p_Nfaces + face];
-            const int ftype       = elmList[neigh]; 
-            if(ftype==s_FVFV_TYPE){
-              // const int sn      = n%s_N; 
-              const int e0      = mFToE[n]; 
-              const int sfm     = mFToF[n]; 
+              const int fvid    = face*s_N + lid;  
+              const int e0      = mFToE[fvid]; 
+              const int sfm     = mFToF[fvid]; 
 
               const dlong sem   = e*s_Ncells + e0; 
               const dlong sep   = emapP[sem*p_Nfaces + sfm];
@@ -848,76 +946,28 @@ for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
               const dfloat qfm = sface[sem*p_Nfaces + sfm]; 
               const dfloat qfp = sface[sep*p_Nfaces + sfp];
 
-              const dlong sid   = sem*p_Nfaces*s_Nsgeo; 
-
-              const dfloat nxm  = ssgeo[sid + sfm*s_Nsgeo + s_NXID];
-              const dfloat nym  = ssgeo[sid + sfm*s_Nsgeo + s_NYID]; 
-              const dfloat sam  = ssgeo[sid + sfm*s_Nsgeo + s_SAID];
-              // const dfloat ivm  = svgeo[sem*s_Nvgeo + s_IVID]; 
+              const dlong ssid  = sem*p_Nfaces*s_Nsgeo; 
+              const dfloat nxm  = ssgeo[ssid + sfm*s_Nsgeo + s_NXID];
+              const dfloat nym  = ssgeo[ssid + sfm*s_Nsgeo + s_NYID]; 
+              const dfloat sam  = ssgeo[ssid + sfm*s_Nsgeo + s_SAID];
 
               dfloat unx = 0.f, dnx = 1.f; 
               dfloat uny = 0.f, dny = 1.f; 
 
               if(nxm>=0){unx = 1.f; dnx = 0.f; };
               if(nym>=0){uny = 1.f; dny = 0.f; };
-
-              // const dfloat invJ = sgeo[p_Nsgeo*(e*p_Nfaces+face)+p_IJID];
-
-              s_spf1[es][n]= nxm*( dnx*qfm + unx*qfp); 
-              s_spf2[es][n]= nxm*( unx*qfm + dnx*qfp);
-              s_sqf1[es][n]= nym*( dny*qfm + uny*qfp);
-              s_sqf2[es][n]= nym*( uny*qfm + dny*qfp);
+              s_pf1[es][fvid]= sc*nxm*( dnx*qfm + unx*qfp); 
+              s_pf2[es][fvid]= sc*nxm*( unx*qfm + dnx*qfp);
+              s_qf1[es][fvid]= sc*nym*( dny*qfm + uny*qfp);
+              s_qf2[es][fvid]= sc*nym*( uny*qfm + dny*qfp);
+              s_type[es][fvid]  = 2;
           }
         }
+       }
       }
     }
-  }
 
-
-
-@barrier("local"); 
-
-   // add flux from FV neighboor to DG element 
-    for(int es=0;es<p_NblockS;++es;@inner(1)){
-      for(int n=0;n<s_maxNodesS;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
-        const dlong e = eo + es;
-        if(e<Nelements){
-          
-         if(n<p_Nfp && elmType==s_DGFV_TYPE){ // DG elements
-            // const int face        = n/s_N;
-        for(int face =0; face<p_Nfaces; face++){
-            const dlong neigh     = EToE[e*p_Nfaces + face];
-            const int ftype       = elmList[neigh]; 
-            if(ftype==s_FVFV_TYPE){
-              dfloat p1 = 0.f, p2 = 0.f; 
-              dfloat q1 = 0.f, q2 = 0.f;   
-
-             for(int i=0; i<s_N; i++){
-                const dfloat rfm = RFMT[n + i*p_Nfp]; 
-                const int m = face*s_N + i; 
-                p1 += rfm*s_spf1[es][m];
-                p2 += rfm*s_spf2[es][m];
-                q1 += rfm*s_sqf1[es][m];
-                q2 += rfm*s_sqf2[es][m];
-              }
- 
-            const dlong sid   = p_Nsgeo*(e*p_Nfaces+face);
-            const dfloat sJ   = sgeo[sid+p_SJID];
-            const dfloat invJ = sgeo[sid+p_IJID];
-            const dfloat sc = invJ*sJ; 
-              s_pf1[es][n + face*p_Nfp]= sc*p1;
-              s_pf2[es][n + face*p_Nfp]= sc*p2;
-              s_qf1[es][n + face*p_Nfp]= sc*q1;
-              s_qf2[es][n + face*p_Nfp]= sc*q2;
-           }
-          }
-        }
-      }
-    }
-  }
-
-
-    // wait for all @shared memory writes of the previous inner loop to complete
+   // wait for all @shared memory writes of the previous inner loop to complete
     @barrier("local");
 
     // for each node in the element
@@ -925,14 +975,24 @@ for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
       for(int n=0;n<p_maxNodes;++n;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements){
-          if(n<p_Np && elmType!=s_FVFV_TYPE){
+          if(n<p_Np && elmType==s_DGFV_TYPE){
              const dlong id = e*p_Np+n;
             dfloat p1 = 0.f, p2 = 0.f; 
             dfloat q1 = 0.f, q2 = 0.f;      
             // 
-            #pragma unroll p_NfacesNfp
-              for(int m=0;m<p_NfacesNfp;++m){
-                const dfloat L = LIFTT[n+m*p_Np];
+            #pragma unroll s_NfacesNfp
+              for(int m=0;m<s_NfacesNfp;++m){
+                dfloat L = 0.f; 
+                const int id = s_type[es][m]; 
+                if(id==1) { 
+                  int mid = mDGID[m];
+                  L = LIFTT[n+mid*p_Np];
+                }
+
+                if(id==2) { 
+                  L = SLIFTT[n+m*p_Np];
+                } 
+
                 p1 += L*s_pf1[es][m];
                 p2 += L*s_pf2[es][m];
                 q1 += L*s_qf1[es][m];
@@ -957,6 +1017,253 @@ for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
     }
   }
 }
+
+
+
+
+// // AK: This kernel is very bad.... 
+// // need to use the same shared memory for DGtoDG connection and DGtoFV connection
+// // Surface contribution for DGDG and DGFV
+// @kernel void lssPartialRedistanceSurfaceTri2D(const dlong Nelements,
+//                                   const dlong offset,
+//                                   @restrict const dlong *elmList, 
+//                                   @restrict const dlong *EToE, 
+//                                   @restrict const  int    *  EToB,
+//                                   @restrict const  dfloat *  sgeo,
+//                                   @restrict const  dfloat *  ssgeo,
+//                                   @restrict const  dfloat *  svgeo,
+//                                   @restrict const  dfloat *  LIFTT,
+//                                   @restrict const  dfloat *  RFMT, // face reconstruction FVtoDG
+//                                   @restrict const  dlong  *  vmapM,
+//                                   @restrict const  dlong  *  vmapP,
+//                                   @restrict const dlong *emapP, 
+//                                   @restrict const dlong *fmapP,     
+//                                   @restrict const  int    *  mFToE,
+//                                   @restrict const  int    *  mFToF,
+//                                             const  dfloat time,
+//                                   @restrict const  dfloat *  x,
+//                                   @restrict const  dfloat *  y,
+//                                   @restrict const  dfloat *  z,
+//                                   @restrict const  dfloat *  sq,                                  
+//                                   @restrict const  dfloat *  q,
+//                                   @restrict const  dfloat *  sface,
+//                                   @restrict const  dfloat *  gradq,
+//                                   @restrict dfloat *  rhsq){
+
+//   // for all elements
+//   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
+
+//     // @shared storage for flux terms
+//     @shared dfloat s_pf1[p_NblockS][p_NfacesNfp];
+//     @shared dfloat s_pf2[p_NblockS][p_NfacesNfp];
+//     @shared dfloat s_qf1[p_NblockS][p_NfacesNfp];
+//     @shared dfloat s_qf2[p_NblockS][p_NfacesNfp];
+
+
+//     // we need to get rid of this  part....
+//     @shared dfloat s_spf1[p_NblockS][s_NfacesNfp];
+//     @shared dfloat s_spf2[p_NblockS][s_NfacesNfp];
+//     @shared dfloat s_sqf1[p_NblockS][s_NfacesNfp];
+//     @shared dfloat s_sqf2[p_NblockS][s_NfacesNfp];
+
+//     // @exclusive int elmType, ftype; 
+//     @exclusive int elmType; 
+//     // @exclusive int faceDG, faceFV; 
+
+//     // for all face nodes of all elements
+//     for(int es=0;es<p_NblockS;++es;@inner(1)){
+//       for(int n=0;n<s_maxNodesS;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
+//         const dlong e = eo + es;
+//         if(e<Nelements){
+//           elmType = elmList[e]; 
+//           s_pf1[es][n]= 0.f; s_pf2[es][n]= 0.f;
+//           s_qf1[es][n]= 0.f; s_qf2[es][n]= 0.f;
+
+//           if(n<p_NfacesNfp && elmType!=s_FVFV_TYPE){ // DG elements
+//             const int face        = n/p_Nfp;   
+//             const dlong neigh     = EToE[e*p_Nfaces + face];
+//             const int ftype       = elmList[neigh]; 
+//             if(ftype!= s_FVFV_TYPE){
+//             const dlong sid   = p_Nsgeo*(e*p_Nfaces+face);
+//             const dfloat nx   = sgeo[sid+p_NXID];
+//             const dfloat ny   = sgeo[sid+p_NYID];
+//             const dfloat sJ   = sgeo[sid+p_SJID];
+//             const dfloat invJ = sgeo[sid+p_IJID];
+
+//             // indices of negative and positive traces of face node
+//             const dlong id  = e*p_Nfp*p_Nfaces + n;
+//             const dlong idM = vmapM[id];
+//             const dlong idP = vmapP[id];
+//               // // load traces
+//               const dfloat qM = q[idM];   dfloat qP = q[idP];
+//               // apply boundary condition
+//               const int bc = EToB[face+p_Nfaces*e];
+//               if(bc>0){
+//                 lssDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, qM, &qP);
+//               }
+              
+//               const dfloat sc = invJ*sJ; 
+//               // simple upwind
+//               dfloat unx = 0.0, dnx = 1.0; 
+//               dfloat uny = 0.0, dny = 1.0; 
+//               if(nx>= 0){unx = 1.0, dnx = 0.0;}
+//               if(ny>= 0){uny = 1.0, dny = 0.0;}
+              
+//               // Assumes s_N >= Nfp, since it has to be for proper recontruction
+//               // const int lid = face*s_N + n%p_Nfp;      
+//               // s_pf1[es][lid]= sc*nx*( (dnx*qM  + unx*qP));
+//               // s_pf2[es][lid]= sc*nx*( (unx*qM  + dnx*qP));
+//               // s_qf1[es][lid]= sc*ny*( (dny*qM  + uny*qP));
+//               // s_qf2[es][lid]= sc*ny*( (uny*qM  + dny*qP));
+
+//               s_pf1[es][n]= sc*nx*( (dnx*qM  + unx*qP));
+//               s_pf2[es][n]= sc*nx*( (unx*qM  + dnx*qP));
+//               s_qf1[es][n]= sc*ny*( (dny*qM  + uny*qP));
+//               s_qf2[es][n]= sc*ny*( (uny*qM  + dny*qP));
+//            }
+//           }
+//         }
+//       }
+//     }
+
+//     // wait for all @shared memory writes of the previous inner loop to complete
+//     @barrier("local");
+
+
+
+//  // for all face nodes of all elements
+//     for(int es=0;es<p_NblockS;++es;@inner(1)){
+//       for(int n=0;n<s_maxNodesS;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
+//         const dlong e = eo + es;
+//         if(e<Nelements){
+//              s_spf1[es][n] = 0;  s_spf2[es][n] = 0;  
+//              s_sqf1[es][n] = 0;  s_sqf2[es][n] = 0; 
+
+//           if(n<s_NfacesNfp && elmType==s_DGFV_TYPE){ // DG elements
+//             const int face        = n/s_N;
+//             const dlong neigh     = EToE[e*p_Nfaces + face];
+//             const int ftype       = elmList[neigh]; 
+//             if(ftype==s_FVFV_TYPE){
+//               // const int sn      = n%s_N; 
+//               const int e0      = mFToE[n]; 
+//               const int sfm     = mFToF[n]; 
+
+//               const dlong sem   = e*s_Ncells + e0; 
+//               const dlong sep   = emapP[sem*p_Nfaces + sfm];
+//               const int   sfp   = fmapP[sem*p_Nfaces + sfm];
+
+//               const dfloat qfm = sface[sem*p_Nfaces + sfm]; 
+//               const dfloat qfp = sface[sep*p_Nfaces + sfp];
+
+//               const dlong sid   = sem*p_Nfaces*s_Nsgeo; 
+
+//               const dfloat nxm  = ssgeo[sid + sfm*s_Nsgeo + s_NXID];
+//               const dfloat nym  = ssgeo[sid + sfm*s_Nsgeo + s_NYID]; 
+//               const dfloat sam  = ssgeo[sid + sfm*s_Nsgeo + s_SAID];
+//               // const dfloat ivm  = svgeo[sem*s_Nvgeo + s_IVID]; 
+
+//               dfloat unx = 0.f, dnx = 1.f; 
+//               dfloat uny = 0.f, dny = 1.f; 
+
+//               if(nxm>=0){unx = 1.f; dnx = 0.f; };
+//               if(nym>=0){uny = 1.f; dny = 0.f; };
+
+//               // const dfloat invJ = sgeo[p_Nsgeo*(e*p_Nfaces+face)+p_IJID];
+
+//               s_spf1[es][n]= nxm*( dnx*qfm + unx*qfp); 
+//               s_spf2[es][n]= nxm*( unx*qfm + dnx*qfp);
+//               s_sqf1[es][n]= nym*( dny*qfm + uny*qfp);
+//               s_sqf2[es][n]= nym*( uny*qfm + dny*qfp);
+//           }
+//         }
+//       }
+//     }
+//   }
+
+
+
+// @barrier("local"); 
+
+//    // add flux from FV neighboor to DG element 
+//     for(int es=0;es<p_NblockS;++es;@inner(1)){
+//       for(int n=0;n<s_maxNodesS;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
+//         const dlong e = eo + es;
+//         if(e<Nelements){
+          
+//          if(n<p_Nfp && elmType==s_DGFV_TYPE){ // DG elements
+//             // const int face        = n/s_N;
+//         for(int face =0; face<p_Nfaces; face++){
+//             const dlong neigh     = EToE[e*p_Nfaces + face];
+//             const int ftype       = elmList[neigh]; 
+//             if(ftype==s_FVFV_TYPE){
+//               dfloat p1 = 0.f, p2 = 0.f; 
+//               dfloat q1 = 0.f, q2 = 0.f;   
+
+//              for(int i=0; i<s_N; i++){
+//                 const dfloat rfm = RFMT[n + i*p_Nfp]; 
+//                 const int m = face*s_N + i; 
+//                 p1 += rfm*s_spf1[es][m];
+//                 p2 += rfm*s_spf2[es][m];
+//                 q1 += rfm*s_sqf1[es][m];
+//                 q2 += rfm*s_sqf2[es][m];
+//               }
+ 
+//             const dlong sid   = p_Nsgeo*(e*p_Nfaces+face);
+//             const dfloat sJ   = sgeo[sid+p_SJID];
+//             const dfloat invJ = sgeo[sid+p_IJID];
+//             const dfloat sc = invJ*sJ; 
+//               s_pf1[es][n + face*p_Nfp]= sc*p1;
+//               s_pf2[es][n + face*p_Nfp]= sc*p2;
+//               s_qf1[es][n + face*p_Nfp]= sc*q1;
+//               s_qf2[es][n + face*p_Nfp]= sc*q2;
+//            }
+//           }
+//         }
+//       }
+//     }
+//   }
+
+
+//     // wait for all @shared memory writes of the previous inner loop to complete
+//     @barrier("local");
+
+//     // for each node in the element
+//     for(int es=0;es<p_NblockS;++es;@inner(1)){
+//       for(int n=0;n<p_maxNodes;++n;@inner(0)){
+//         const dlong e = eo + es;
+//         if(e<Nelements){
+//           if(n<p_Np && elmType!=s_FVFV_TYPE){
+//              const dlong id = e*p_Np+n;
+//             dfloat p1 = 0.f, p2 = 0.f; 
+//             dfloat q1 = 0.f, q2 = 0.f;      
+//             // 
+//             #pragma unroll p_NfacesNfp
+//               for(int m=0;m<p_NfacesNfp;++m){
+//                 const dfloat L = LIFTT[n+m*p_Np];
+//                 p1 += L*s_pf1[es][m];
+//                 p2 += L*s_pf2[es][m];
+//                 q1 += L*s_qf1[es][m];
+//                 q2 += L*s_qf2[es][m];
+//               }
+
+//             const dfloat sqn  = sq[id];
+//             const dfloat dqdx = gradq[id + 0*offset];
+//             const dfloat dqdy = gradq[id + 1*offset];
+
+//             p1 +=  dqdx; p2 +=  dqdx; 
+//             q1 +=  dqdy; q2 +=  dqdy;
+
+//             const dfloat P = 0.5f*(p1+p2); 
+//             const dfloat Q = 0.5f*(q1+q2); 
+           
+//             // LLF Numerical Hamiltonian
+//             rhsq[id] =  -( sqn*( sqrt( P*P+Q*Q )-1.f) -0.5f*(p1-p2)-0.5*(q1-q2));
+//           }
+//         }
+//       }
+//     }
+//   }
+// }
 
 // // too much flops
 // void computeGradient(const dfloat xcm,  const dfloat ycm, 

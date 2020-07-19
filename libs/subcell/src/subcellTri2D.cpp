@@ -112,8 +112,9 @@ void subcellTri2D::OccaSetup(){
     RMT[m*mesh.Np +n] = RM[n*Nsubcells + m]; 
   }
  }
+
  o_RMT  = device.malloc(mesh.Np*Nsubcells*sizeof(dfloat), RMT);
- free(PMT);
+ free(RMT);
 
  // Face projection matrix
  dfloat *PFMT = (dfloat*) malloc(N*mesh.Nfp*sizeof(dfloat));
@@ -136,6 +137,18 @@ free(PFMT);
 o_RFMT  = device.malloc(N*mesh.Nfp*sizeof(dfloat), RFMT);
 free(RFMT);
 
+
+// Face reconstruct matrix 
+ dfloat *SLIFTT = (dfloat*) malloc(mesh.Np*N*mesh.Nfaces*sizeof(dfloat));
+ for(int n=0; n<mesh.Np; n++){
+  for(int m=0; m<(N*Nfaces); m++){
+    SLIFTT[m*mesh.Np+n] = SLIFT[n*(N*Nfaces) + m]; 
+  }
+ }
+o_SLIFTT  = device.malloc(mesh.Np*N*Nfaces*sizeof(dfloat), SLIFTT);
+free(SLIFTT);
+
+
  
  const dlong Nlocal = mesh.Nelements*Nsubcells; 
  const dlong Ntotal = (mesh.Nelements+mesh.totalHaloPairs)*Nsubcells;  
@@ -156,9 +169,9 @@ free(RFMT);
  o_emapP = device.malloc(Nsubcells*Nfaces*mesh.Nelements*sizeof(dlong), emapP); 
  o_fmapP = device.malloc(Nsubcells*Nfaces*mesh.Nelements*sizeof(dlong), fmapP); 
 
-
  o_mFToE = device.malloc(Nfaces*N*sizeof(int), mFToE);
  o_mFToF = device.malloc(Nfaces*N*sizeof(int), mFToF);
+ o_mDGID = device.malloc(Nfaces*N*sizeof(int), mDGID);
 
   // Some Defines
   kernelInfo["defines/" "s_Nvgeo"] = Nvgeo;  
@@ -294,6 +307,17 @@ for(int s=0; s<Nsubcells; s++){
   // A_subcell/A_reference
   mJ[s] = 0.5*((xv2-xv1)*(yv3-yv1) - (xv3-xv1)*(yv2-yv1))/2.0;
   // printf("J = %.12e", mJ[s]);
+}
+
+// Required for mixed element lifting
+mDGID = (int *)malloc(N*Nfaces*sizeof(int)); 
+for(int n=0; n<Nfaces*N; n++){
+ const int face        = n/N;  
+ const int lid         = n%N;  
+ if(lid<mesh.Nfp){
+  const int dgid = face*N + lid; 
+  mDGID[dgid]  = face*mesh.Nfp + lid; 
+ }
 }
 
 #if 0
@@ -617,17 +641,31 @@ for(int s=0; s<N; s++){
   }
 }
 
+// Compute Subcell Lift Matrix
 
- // // fill operators
- //  for(int i=0; i<N; i++){
- //    for(int j=0; j<mesh.Nfp; j++){
- //      // printf(" %.4f ", RFM[i*mesh.Nfp + j]);
- //      printf(" %.4f ", PFM[j*N + i]);
- //    }
- //    printf("\n");
- //  }
+SLIFT = (dfloat *)malloc(mesh.Np*Nfaces*N*sizeof(dfloat)); 
+
+for(int f=0; f<Nfaces; f++){
+  for(int i=0; i<mesh.Np; i++){
+    for(int j=0; j<N; j++){
+      dfloat sum = 0; 
+      for(int m=0; m<mesh.Nfp; m++){
+        const int id = f*mesh.Nfp + m; 
+        sum += mesh.LIFT[i*mesh.Nfp*mesh.Nfaces + id]*RFM[m*N + j]; 
+      }
+     SLIFT[i*(Nfaces*N) + (f*N + j)] = sum; 
+    }
+  }
+}
 
 
+  // for(int i=0; i<mesh.Np; i++){
+  //   for(int j=0; j<(N*Nfaces); j++){
+  //    printf("%.4e ",SLIFT[i*(N*Nfaces) + j] );
+  //   }
+  //   printf("\n");
+  // }
+ 
 free(_fgr); free(r1D);      free(V1D); 
 free(ptemp0); free(ptemp1); free(rtemp1); 
 free(_cx);  free(_cy); 

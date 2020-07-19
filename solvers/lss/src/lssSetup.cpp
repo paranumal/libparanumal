@@ -251,6 +251,23 @@ lss_t::~lss_t() {
   setFlowFieldKernel.free(); 
   regularizedSignKernel.free(); 
 
+  redistanceVolumeKernel.free();
+  redistanceSurfaceKernel.free();
+
+  if(subcellStabilization){
+    skylineKernel.free();
+    projectKernel.free();
+    reconstructKernel.free();
+    partialRedistanceVolumeKernel.free();
+    reconstructInternalFaceKernel.free();
+    projectDGKernel.free();
+    reconstructExternalFaceKernel.free();
+    partialRedistanceSurfaceKernel.free();
+    mixedRedistanceSurfaceKernel.free();
+    subcellComputeKernel.free();
+    delete subcell;
+  }
+  
   if (timeStepper) delete timeStepper;
   if (traceHalo) traceHalo->Free();
 }

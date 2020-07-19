@@ -95,6 +95,7 @@ public:
   occa::kernel regularizedSignKernel;
 
   occa::kernel partialRedistanceVolumeKernel;  // This could be part of subcell 
+  occa::kernel mixedRedistanceSurfaceKernel;  // This could be part of subcell 
   occa::kernel partialRedistanceSurfaceKernel; // This could be part of subcell 
   occa::kernel reconstructInternalFaceKernel; 
   occa::kernel reconstructExternalFaceKernel; 
@@ -104,7 +105,7 @@ public:
   occa::kernel reconstructKernel; 
   occa::kernel subcellComputeKernel; 
 
-  occa::kernel subcellSignKernel; // This could be part of subcell 
+  // occa::kernel subcellSignKernel; // This could be part of subcell 
   // occa::kernel subcellComputeKernel; 
 
   // occa::kernel subcellReconstructFaceKernel; // This could be part of subcell 
