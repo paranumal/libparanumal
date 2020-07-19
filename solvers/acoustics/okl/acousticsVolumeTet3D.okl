@@ -28,7 +28,7 @@ SOFTWARE.
 // isotropic acoustics
 @kernel void acousticsVolumeTet3D_v0(const dlong Nelements,
                                     @restrict const  dfloat *  vgeo,
-                                    @restrict const  dfloat *  DT,
+                                    @restrict const  dfloat *  D,
                                     @restrict const  dfloat *  q,
                                     @restrict dfloat *  rhsq){
 
@@ -110,9 +110,9 @@ SOFTWARE.
       dfloat rhsq0 = 0, rhsq1 = 0, rhsq2 = 0, rhsq3 = 0;
 
       for(int i=0;i<p_Np;++i){
-        const dfloat Drni = DT[n+i*p_Np+0*p_Np*p_Np];
-        const dfloat Dsni = DT[n+i*p_Np+1*p_Np*p_Np];
-        const dfloat Dtni = DT[n+i*p_Np+2*p_Np*p_Np];
+        const dfloat Drni = D[n+i*p_Np+0*p_Np*p_Np];
+        const dfloat Dsni = D[n+i*p_Np+1*p_Np*p_Np];
+        const dfloat Dtni = D[n+i*p_Np+2*p_Np*p_Np];
 
         rhsq0 += Drni*s_F[0][i]+Dsni*s_G[0][i]+Dtni*s_H[0][i];
         rhsq1 += Drni*s_F[1][i]+Dsni*s_G[1][i]+Dtni*s_H[1][i];
@@ -135,7 +135,7 @@ SOFTWARE.
 //
 @kernel void acousticsVolumeTet3D_v1(const dlong Nelements,
                                     @restrict const  dfloat *  vgeo,
-                                    @restrict const  dfloat *  DT,
+                                    @restrict const  dfloat *  D,
                                     @restrict const  dfloat *  q,
                                     @restrict dfloat *  rhsq){
 
@@ -177,9 +177,9 @@ SOFTWARE.
       #pragma unroll p_Np
         for(int m=0;m<p_Np;++m){
           // 3 loads from L1, 4 loads from @shared, 15+6+6 flops => 0.48 flops/(L1+sh byte) FP64)
-          const dfloat Drnm = DT[n+m*p_Np];
-          const dfloat Dsnm = DT[n+m*p_Np+1*p_Np*p_Np];
-          const dfloat Dtnm = DT[n+m*p_Np+2*p_Np*p_Np];
+          const dfloat Drnm = D[n+m*p_Np];
+          const dfloat Dsnm = D[n+m*p_Np+1*p_Np*p_Np];
+          const dfloat Dtnm = D[n+m*p_Np+2*p_Np*p_Np];
 
           const dfloat rhom = s_rho[m];
           const dfloat um = s_u[m];
@@ -215,7 +215,7 @@ SOFTWARE.
 // thread loop over elements
 @kernel void acousticsVolumeTet3D_v2(const dlong Nelements,
                                     @restrict const  dfloat *  vgeo,
-                                    @restrict const  dfloat *  DT,
+                                    @restrict const  dfloat *  D,
                                     @restrict const  dfloat *  q,
                                     @restrict dfloat *  rhsq){
 
@@ -267,9 +267,9 @@ SOFTWARE.
       #pragma unroll p_Np
         for(int m=0;m<p_Np;++m){
           // 3 L1 loads, p_Nvol*4 sh loads, for   24*p_Nvol flops
-          const dfloat Drnm = DT[n+m*p_Np];
-          const dfloat Dsnm = DT[n+m*p_Np+1*p_Np*p_Np];
-          const dfloat Dtnm = DT[n+m*p_Np+2*p_Np*p_Np];
+          const dfloat Drnm = D[n+m*p_Np];
+          const dfloat Dsnm = D[n+m*p_Np+1*p_Np*p_Np];
+          const dfloat Dtnm = D[n+m*p_Np+2*p_Np*p_Np];
 
           #pragma unroll p_Nvol
             for(int es=0;es<p_Nvol;++es){
@@ -338,7 +338,7 @@ SOFTWARE.
 // thread loop over elements
 @kernel void acousticsVolumeTet3D(const dlong Nelements,
                                  @restrict const  dfloat *  vgeo,
-                                 @restrict const  dfloat *  DT,
+                                 @restrict const  dfloat *  D,
                                  @restrict const  dfloat *  q,
                                  @restrict dfloat *  rhsq){
 
@@ -395,9 +395,9 @@ SOFTWARE.
         #pragma unroll p_Np
           for(int m=0;m<p_Np;++m){
 
-            const dfloat Drnm = DT[n+m*p_Np];
-            const dfloat Dsnm = DT[n+m*p_Np+1*p_Np*p_Np];
-            const dfloat Dtnm = DT[n+m*p_Np+2*p_Np*p_Np];
+            const dfloat Drnm = D[n+m*p_Np];
+            const dfloat Dsnm = D[n+m*p_Np+1*p_Np*p_Np];
+            const dfloat Dtnm = D[n+m*p_Np+2*p_Np*p_Np];
 
             #pragma unroll p_Nvol
               for(int es=0;es<p_Nvol;++es){

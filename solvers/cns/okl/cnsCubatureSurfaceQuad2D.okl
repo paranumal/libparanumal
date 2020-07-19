@@ -93,7 +93,7 @@ void surfaceTerms(const int face,
                   const int i,
                   const int j,
                   const dfloat time,
-                  dfloat s_cubProjectT[p_cubNq][p_Nq],
+                  dfloat s_cubProject[p_cubNq][p_Nq],
                   dfloat s_rflux[p_Nfaces][p_cubNq],
                   dfloat s_ruflux[p_Nfaces][p_cubNq],
                   dfloat s_rvflux[p_Nfaces][p_cubNq],
@@ -104,7 +104,7 @@ void surfaceTerms(const int face,
 
   #pragma unroll p_cubNq
     for(int n=0;n<p_cubNq;++n){
-      const dfloat Pni = s_cubProjectT[n][m];
+      const dfloat Pni = s_cubProject[n][m];
       r   += Pni*s_rflux [face][n];
       ru  += Pni*s_ruflux[face][n];
       rv  += Pni*s_rvflux[face][n];
@@ -124,8 +124,8 @@ void surfaceTerms(const int face,
                                      @restrict const  dlong  *  vmapM,
                                      @restrict const  dlong  *  vmapP,
                                      @restrict const  int    *  EToB,
-                                     @restrict const  dfloat *  cubInterpT,
-                                     @restrict const  dfloat *  cubProjectT,
+                                     @restrict const  dfloat *  cubInterp,
+                                     @restrict const  dfloat *  cubProject,
                                      @restrict const  dfloat *  intx,
                                      @restrict const  dfloat *  inty,
                                      @restrict const  dfloat *  intz,
@@ -156,8 +156,8 @@ void surfaceTerms(const int face,
     @exclusive dfloat r_qM[p_Nfields*p_Nfaces], r_qP[p_Nfields*p_Nfaces];
     @exclusive dfloat r_gradqM[p_Nfields*p_Nfaces], r_gradqP[p_Nfields*p_Nfaces];
 
-    @shared dfloat s_cubInterpT[p_Nq][p_cubNq];
-    @shared dfloat s_cubProjectT[p_cubNq][p_Nq];
+    @shared dfloat s_cubInterp[p_Nq][p_cubNq];
+    @shared dfloat s_cubProject[p_cubNq][p_Nq];
 
     //for all face nodes of all elements
     for(int i=0;i<p_cubNq;++i;@inner(0)){
@@ -216,8 +216,8 @@ void surfaceTerms(const int face,
       #pragma unroll p_Nq
         for(int j=0;j<p_Nq;++j){
           const int id = i+j*p_cubNq;
-          s_cubInterpT[0][id] = cubInterpT[id];
-          s_cubProjectT[0][id] = cubProjectT[id];
+          s_cubInterp[0][id] = cubInterp[id];
+          s_cubProject[0][id] = cubProject[id];
         }
     }
 
@@ -240,7 +240,7 @@ void surfaceTerms(const int face,
 
       #pragma unroll p_Nq
         for (int n=0;n<p_Nq;n++) {
-          const dfloat Ini = s_cubInterpT[n][i];
+          const dfloat Ini = s_cubInterp[n][i];
 
           #pragma unroll p_Nfaces
             for (int face=0;face<p_Nfaces;face++) {
@@ -345,12 +345,12 @@ void surfaceTerms(const int face,
       if(i<p_Nq){
         //surfaceTerms(0,i,i,0     );
         surfaceTerms(0, i, i, 0,
-                      time, s_cubProjectT, s_rflux, s_ruflux, s_rvflux, s_Eflux, s_rhsq);
+                      time, s_cubProject, s_rflux, s_ruflux, s_rvflux, s_Eflux, s_rhsq);
 
 
         //surfaceTerms(2,i,i,p_Nq-1);
         surfaceTerms(2, i, i, p_Nq-1,
-                      time, s_cubProjectT, s_rflux, s_ruflux, s_rvflux, s_Eflux, s_rhsq);
+                      time, s_cubProject, s_rflux, s_ruflux, s_rvflux, s_Eflux, s_rhsq);
       }
     }
 
@@ -361,11 +361,11 @@ void surfaceTerms(const int face,
       if(j<p_Nq){
         //surfaceTerms(1,j,p_Nq-1,j);
         surfaceTerms(1, j, p_Nq-1, j,
-                      time, s_cubProjectT, s_rflux, s_ruflux, s_rvflux, s_Eflux, s_rhsq);
+                      time, s_cubProject, s_rflux, s_ruflux, s_rvflux, s_Eflux, s_rhsq);
 
         //surfaceTerms(3,j,0     ,j);
         surfaceTerms(3, j, 0, j,
-                      time, s_cubProjectT, s_rflux, s_ruflux, s_rvflux, s_Eflux, s_rhsq);
+                      time, s_cubProject, s_rflux, s_ruflux, s_rvflux, s_Eflux, s_rhsq);
       }
     }
 

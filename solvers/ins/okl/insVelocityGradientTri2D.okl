@@ -79,7 +79,7 @@ SOFTWARE.
 // map multiple nodes to thread
 @kernel void insVelocityGradientTri2D(const dlong Nelements,
                                      @restrict const  dfloat  *  vgeo,
-                                     @restrict const  dfloat  *  Dmatrices,
+                                     @restrict const  dfloat  *  D,
                                      @restrict const  dfloat  *  U,
                                      @restrict        dfloat4 *  GU){
 
@@ -127,8 +127,8 @@ SOFTWARE.
 
           #pragma unroll p_Np
           for(int k=0;k<p_Np;++k){
-            dfloat drt = Dmatrices[n + k*p_Np +0*p_Np*p_Np];
-            dfloat dst = Dmatrices[n + k*p_Np +1*p_Np*p_Np];
+            dfloat drt = D[n + k*p_Np +0*p_Np*p_Np];
+            dfloat dst = D[n + k*p_Np +1*p_Np*p_Np];
 
             #pragma unroll p_Nmt
             for(int em=0;em<p_Nmt;++em){

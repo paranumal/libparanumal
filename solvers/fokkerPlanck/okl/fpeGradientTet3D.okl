@@ -27,7 +27,7 @@ SOFTWARE.
 
 @kernel void fpeGradientTet3D(const dlong Nelements,
                               @restrict const  dfloat *  vgeo,
-                              @restrict const  dfloat *  const Dmatrices,
+                              @restrict const  dfloat *  const D,
                               @restrict const  dfloat *  q,
                               @restrict dfloat4 *  gradq){
 
@@ -69,9 +69,9 @@ SOFTWARE.
 
           #pragma unroll p_Np
             for(int i=0;i<p_Np;++i) {
-              qr += Dmatrices[n + i*p_Np+0*p_Np*p_Np]*s_q[es][i];
-              qs += Dmatrices[n + i*p_Np+1*p_Np*p_Np]*s_q[es][i];
-              qt += Dmatrices[n + i*p_Np+2*p_Np*p_Np]*s_q[es][i];
+              qr += D[n + i*p_Np+0*p_Np*p_Np]*s_q[es][i];
+              qs += D[n + i*p_Np+1*p_Np*p_Np]*s_q[es][i];
+              qt += D[n + i*p_Np+2*p_Np*p_Np]*s_q[es][i];
             }
 
           dfloat4 gradqn;

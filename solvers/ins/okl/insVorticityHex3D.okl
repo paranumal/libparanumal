@@ -26,7 +26,7 @@ SOFTWARE.
 
 @kernel void insVorticityHex3D(const dlong Nelements,
                                      @restrict const  dfloat *  vgeo,
-                                     @restrict const  dfloat *  D,
+                                     @restrict const  dfloat *  DT,
                                      @restrict const  dfloat *  U,
                                            @restrict  dfloat *  Vort){
 
@@ -37,7 +37,7 @@ SOFTWARE.
     @shared dfloat s_V[p_Nq][p_Nq][p_Nq];
     @shared dfloat s_W[p_Nq][p_Nq][p_Nq];
 
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
 
     for(int k=0;k<p_Nq;++k;@inner(2)){
       for(int j=0;j<p_Nq;++j;@inner(1)){
@@ -49,7 +49,7 @@ SOFTWARE.
           s_W[k][j][i]  = U[id + 2*p_Np];
 
           if (k==0)
-            s_D[j][i] = D[j*p_Nq+i];
+            s_DT[j][i] = DT[j*p_Nq+i];
         }
       }
     }
@@ -78,9 +78,9 @@ SOFTWARE.
 
           #pragma unroll p_Nq
             for(int n=0;n<p_Nq;++n){
-              const dfloat Dr = s_D[i][n];
-              const dfloat Ds = s_D[j][n];
-              const dfloat Dt = s_D[k][n];
+              const dfloat Dr = s_DT[i][n];
+              const dfloat Ds = s_DT[j][n];
+              const dfloat Dt = s_DT[k][n];
 
               dudr += Dr*s_U[k][j][n];
               duds += Ds*s_U[k][n][i];
@@ -151,7 +151,7 @@ if (p1 < TOL){
 // A very bad implementation for fast testing: AK
 @kernel void insVorticityHex3D(const dlong Nelements,
                                      @restrict const  dfloat *  vgeo,
-                                     @restrict const  dfloat *  D,
+                                     @restrict const  dfloat *  DT,
                                      const dlong offset,
                                      @restrict const  dfloat *  U,
                                            @restrict dfloat *  Vort){
@@ -163,7 +163,7 @@ if (p1 < TOL){
     @shared dfloat s_V[p_Nq][p_Nq][p_Nq];
     @shared dfloat s_W[p_Nq][p_Nq][p_Nq];
 
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
 
     for(int k=0;k<p_Nq;++k;@inner(2)){
       for(int j=0;j<p_Nq;++j;@inner(1)){
@@ -175,7 +175,7 @@ if (p1 < TOL){
           s_W[k][j][i]  = U[id + 2*offset];
 
           if (k==0)
-            s_D[j][i] = D[j*p_Nq+i];
+            s_DT[j][i] = DT[j*p_Nq+i];
         }
       }
     }
@@ -204,9 +204,9 @@ if (p1 < TOL){
 
           #pragma unroll p_Nq
             for(int n=0;n<p_Nq;++n){
-              const dfloat Dr = s_D[i][n];
-              const dfloat Ds = s_D[j][n];
-              const dfloat Dt = s_D[k][n];
+              const dfloat Dr = s_DT[i][n];
+              const dfloat Ds = s_DT[j][n];
+              const dfloat Dt = s_DT[k][n];
 
               dudr += Dr*s_U[k][j][n];
               duds += Ds*s_U[k][n][i];

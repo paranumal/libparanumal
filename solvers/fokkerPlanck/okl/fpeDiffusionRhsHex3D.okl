@@ -54,8 +54,8 @@
                                     @restrict const  dfloat *  vgeo,
                                     @restrict const  dfloat *  sgeo,
                                     @restrict const  int    *  EToB,
-                                    @restrict const  dfloat *  D,
-                                    @restrict const  dfloat *  LIFTT,
+                                    @restrict const  dfloat *  DT,
+                                    @restrict const  dfloat *  LIFT,
                                     @restrict const  dfloat *  MM,
                                     const dfloat tau,
                                     const dfloat mu,
@@ -72,7 +72,7 @@
     @shared dfloat s_dqdz[p_Nq][p_Nq];
     @shared dfloat s_rhsq[p_Nq][p_Nq];
 
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
 
     @exclusive dfloat r_dqdx[p_Nq], r_dqdy[p_Nq], r_dqdz[p_Nq], r_rhsq[p_Nq];
     @exclusive dfloat r_dqdt;
@@ -88,7 +88,7 @@
           r_rhsq[k] = 0.f;
         }
 
-        s_D[j][i] = D[j*p_Nq+i];
+        s_DT[j][i] = DT[j*p_Nq+i];
       }
     }
 
@@ -285,9 +285,9 @@
           dfloat qr = 0.f, qs = 0.f;
           #pragma unroll p_Nq
           for(int n=0;n<p_Nq;++n){
-            const dfloat Dr = s_D[n][i];
-            const dfloat Ds = s_D[n][j];
-            const dfloat Dt = s_D[k][n];
+            const dfloat Dr = s_DT[n][i];
+            const dfloat Ds = s_DT[n][j];
+            const dfloat Dt = s_DT[k][n];
             qr        += Dr*s_dqdx[j][n];
             qs        += Ds*s_dqdy[n][i];
             r_rhsq[n] += Dt*r_dqdt; // DT(m,k)*us(i,j,k,e)
@@ -342,7 +342,7 @@
 @kernel void cdsHelmholtzBCHex3D(const dlong Nelements,
                                 @restrict const  dfloat *  ggeo,
                                 @restrict const  dfloat *  sgeo,
-                                @restrict const  dfloat *  D,
+                                @restrict const  dfloat *  DT,
                                 @restrict const  dfloat *  S,
                                 @restrict const  dfloat *  MM,
                                 @restrict const  dlong  *  vmapM,
@@ -359,7 +359,7 @@
 
   for(dlong e=0; e<Nelements; ++e; @outer(0)){
 
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
     @shared dfloat s_U[p_Nq][p_Nq];
     @shared dfloat s_ndU[p_Nq][p_Nq];
 
@@ -376,9 +376,9 @@
     // face 0
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
-        //load D into local memory
-        // s_D[i][j] = d \phi_i at node j
-        s_D[j][i] = D[p_Nq*j+i]; // D is column major
+        //load DT into local memory
+        // s_DT[i][j] = d \phi_i at node j
+        s_DT[j][i] = DT[p_Nq*j+i]; // DT is column major
 
 #pragma unroll p_Nq
         for(int k=0;k<p_Nq;++k){
@@ -567,7 +567,7 @@
           r_ut = 0;
 #pragma   unroll p_Nq
           for(int m = 0; m < p_Nq; m++) {
-            const dfloat Dt = s_D[k][m];
+            const dfloat Dt = s_DT[k][m];
             r_ut += Dt*r_U[m];
           }
         }
@@ -582,8 +582,8 @@
 
 #pragma unroll p_Nq
           for(int m = 0; m < p_Nq; m++) {
-            const dfloat Dr = s_D[i][m];
-            const dfloat Ds = s_D[j][m];
+            const dfloat Dr = s_DT[i][m];
+            const dfloat Ds = s_DT[j][m];
             ur += Dr*s_U[j][m];
             us += Ds*s_U[m][i];
           }
@@ -603,9 +603,9 @@
 
 #pragma unroll p_Nq
           for(int m = 0; m < p_Nq; m++){
-            const dfloat Dr = s_D[m][i];
-            const dfloat Ds = s_D[m][j];
-            const dfloat Dt = s_D[k][m];
+            const dfloat Dr = s_DT[m][i];
+            const dfloat Ds = s_DT[m][j];
+            const dfloat Dt = s_DT[k][m];
             r_Auk     += Dr*s_Gur[j][m];
             r_Auk     += Ds*s_Gus[m][i];
             r_rhsU[m] += Dt*r_Gut; // DT(m,k)*ut(i,j,k,e)

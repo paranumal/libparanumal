@@ -28,9 +28,9 @@ SOFTWARE.
 @kernel void insAdvectionCubatureVolumeTet3D(const dlong Nelements,
                                             @restrict const  dfloat *  vgeo,
                                             @restrict const  dfloat *  cubvgeo,
-                                            @restrict const  dfloat *  cubDWmatrices,
-                                            @restrict const  dfloat *  cubInterpT,
-                                            @restrict const  dfloat *  cubProjectT,
+                                            @restrict const  dfloat *  cubPDT,
+                                            @restrict const  dfloat *  cubInterp,
+                                            @restrict const  dfloat *  cubProject,
                                             const dfloat alpha,
                                             const dfloat beta,
                                             @restrict const  dfloat *  U,
@@ -89,7 +89,7 @@ SOFTWARE.
           dfloat cUn = 0, cVn = 0, cWn = 0;
           #pragma unroll p_Np
           for(int i=0;i<p_Np;++i){
-            const dfloat cIni = cubInterpT[n+i*p_cubNp];
+            const dfloat cIni = cubInterp[n+i*p_cubNp];
             cUn += cIni*s_U[es][i];
             cVn += cIni*s_V[es][i];
             cWn += cIni*s_W[es][i];
@@ -124,9 +124,9 @@ SOFTWARE.
           dfloat nu = 0., nv = 0., nw = 0.;
           #pragma unroll p_cubNp
             for(int i=0;i<p_cubNp;++i){
-              const dfloat cDrWni = cubDWmatrices[n+i*p_Np+0*p_cubNp*p_Np];
-              const dfloat cDsWni = cubDWmatrices[n+i*p_Np+1*p_cubNp*p_Np];
-              const dfloat cDtWni = cubDWmatrices[n+i*p_Np+2*p_cubNp*p_Np];
+              const dfloat cDrWni = cubPDT[n+i*p_Np+0*p_cubNp*p_Np];
+              const dfloat cDsWni = cubPDT[n+i*p_Np+1*p_cubNp*p_Np];
+              const dfloat cDtWni = cubPDT[n+i*p_Np+2*p_cubNp*p_Np];
 
               nu += cDrWni*s_cF11[es][i]
                    +cDsWni*s_cF12[es][i]
@@ -162,8 +162,8 @@ SOFTWARE.
 @kernel void insAdvectionCubatureSurfaceTet3D(const dlong Nelements,
                                              @restrict const  dfloat *  vgeo,
                                              @restrict const  dfloat *  sgeo,
-                                             @restrict const  dfloat *  intInterpT, // interpolate to integration nodes
-                                             @restrict const  dfloat *  intLIFTT, // lift from integration to interpolation nodes
+                                             @restrict const  dfloat *  intInterp, // interpolate to integration nodes
+                                             @restrict const  dfloat *  intLIFT, // lift from integration to interpolation nodes
                                              @restrict const  dlong  *  vmapM,
                                              @restrict const  dlong  *  vmapP,
                                              @restrict const  int    *  EToB,
@@ -244,7 +244,7 @@ SOFTWARE.
           // local block interpolation (face nodes to integration nodes)
           #pragma unroll p_Nfp
           for(int m=0;m<p_Nfp;++m){
-            const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
+            const dfloat iInm = intInterp[n+m*p_Nfaces*p_intNfp];
             const int fm = face*p_Nfp+m;
             iUM += iInm*s_UM[es][fm];
             iVM += iInm*s_VM[es][fm];
@@ -302,7 +302,7 @@ SOFTWARE.
           #pragma unroll p_intNfp*p_Nfaces
           for(int m=0;m<(p_intNfp*p_Nfaces);++m){
             // RefMassMatrix^{-1}*cInterp^t*cWeight
-            const dfloat L = intLIFTT[n+m*p_Np];
+            const dfloat L = intLIFT[n+m*p_Np];
             NUn += L*s_iFluxNx[es][m];
             NVn += L*s_iFluxNy[es][m];
             NWn += L*s_iFluxNz[es][m];

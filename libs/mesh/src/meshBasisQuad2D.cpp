@@ -215,6 +215,34 @@ void mesh_t::MassMatrixQuad2D(int _Np, dfloat *V, dfloat *_MM){
   matrixInverse(_Np, _MM);
 }
 
+void mesh_t::LumpedMassMatrixQuad2D(int _N, dfloat *_gllw, dfloat *_MM){
+
+  int _Nq = _N+1;
+  int _Np = _Nq*_Nq;
+
+  // LumpedMassMatrix = gllw \ctimes gllw
+  for(int n=0;n<_Nq;++n){
+    for(int m=0;m<_Nq;++m){
+      int id = n+m*_Nq;
+      _MM[id+id*_Np] = _gllw[n]*_gllw[m];
+    }
+  }
+}
+
+void mesh_t::invLumpedMassMatrixQuad2D(int _N, dfloat *_gllw, dfloat *_invMM){
+
+  int _Nq = _N+1;
+  int _Np = _Nq*_Nq;
+
+  // invLumpedMassMatrix = invgllw \ctimes invgllw
+  for(int n=0;n<_Nq;++n){
+    for(int m=0;m<_Nq;++m){
+      int id = n+m*_Nq;
+      _invMM[id+id*_Np] = 1.0/(_gllw[n]*_gllw[m]);
+    }
+  }
+}
+
 void mesh_t::DmatrixQuad2D(int _N, int Npoints, dfloat *_r, dfloat *_s,
                                                 dfloat *_Dr, dfloat *_Ds){
 

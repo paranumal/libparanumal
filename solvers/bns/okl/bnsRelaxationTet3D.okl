@@ -33,8 +33,8 @@ SOFTWARE.
                                @restrict const  dlong *  elementIds,
                                @restrict const  dfloat *  vgeo, // only quad @kernels
                                @restrict const  dfloat *  cubvgeo, // only quad @kernels
-                               @restrict const  dfloat *  cubInterpT,
-                               @restrict const  dfloat *  cubProjectT,
+                               @restrict const  dfloat *  cubInterp,
+                               @restrict const  dfloat *  cubProject,
                                const int semiAnalytic,
                                const dfloat tauInv,
                                @restrict const  dfloat *  q,
@@ -86,7 +86,7 @@ SOFTWARE.
 
           #pragma unroll p_Np
           for(int m=0;m<p_Np;++m){
-            const dfloat Icn  = cubInterpT[m*p_cubNp+n];
+            const dfloat Icn  = cubInterp[m*p_cubNp+n];
             #pragma unroll p_Nvars
             for(int fld=0; fld<p_Nvars; fld++){
               r_cubq[fld] += Icn*s_q[es][fld][m];
@@ -131,7 +131,7 @@ SOFTWARE.
 
           #pragma unroll p_cubNp
           for(int i=0;i<p_cubNp;++i){
-            const dfloat Pnc  = cubProjectT[i*p_Np+n];
+            const dfloat Pnc  = cubProject[i*p_Np+n];
             for(int fld=0; fld<p_Nrelax; fld++){
               r_qN[fld] += Pnc*s_cubN[es][fld][i];
             }
@@ -153,8 +153,8 @@ SOFTWARE.
                                   @restrict const  dlong  *  pmlIds,
                                   @restrict const  dfloat *  vgeo,
                                   @restrict const  dfloat *  cubvgeo,
-                                  @restrict const  dfloat *  cubInterpT,
-                                  @restrict const  dfloat *  cubProjectT,
+                                  @restrict const  dfloat *  cubInterp,
+                                  @restrict const  dfloat *  cubProject,
                                   @restrict const  dfloat *  pmlSigma,
                                             const dfloat pmlAlpha,
                                             const int semiAnalytic,
@@ -221,7 +221,7 @@ SOFTWARE.
 
         #pragma unroll p_Np
         for(int m=0;m<p_Np;++m){
-          const dfloat Icn  = cubInterpT[m*p_cubNp+n];
+          const dfloat Icn  = cubInterp[m*p_cubNp+n];
           #pragma unroll p_Nfields
           for(int fld=0; fld<p_Nfields;++fld){
             r_q[fld]  += Icn*s_q[fld][m];
@@ -292,7 +292,7 @@ SOFTWARE.
         // use temporaries for part sums for N4,N5,N6 because of @exclusives
         #pragma unroll p_cubNp
         for(int m=0;m<p_cubNp;++m){
-          const dfloat Pnc  = cubProjectT[m*p_Np+n];
+          const dfloat Pnc  = cubProject[m*p_Np+n];
            #pragma unroll p_Nfields
            for(int fld=0; fld<p_Nfields; fld++){
             r_rhsq [fld] += Pnc*s_cubq[fld][m];

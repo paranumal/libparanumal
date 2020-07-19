@@ -26,19 +26,19 @@ SOFTWARE.
 
 @kernel void insVelocityGradientHex3D(const dlong Nelements,
                                    @restrict const  dfloat  *  vgeo,
-                                   @restrict const  dfloat  *  D,
+                                   @restrict const  dfloat  *  DT,
                                    @restrict const  dfloat  *  U,
                                    @restrict        dfloat4 *  GU){
 
   for(dlong e=0;e<Nelements;++e;@outer(0)){
 
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
     @shared dfloat s_q[p_Nq][p_Nq][p_Nq];
 
-    // prefetch D
+    // prefetch DT
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
-        s_D[j][i] = D[i + p_Nq*j];
+        s_DT[j][i] = DT[i + p_Nq*j];
       }
     }
 
@@ -79,9 +79,9 @@ SOFTWARE.
             // compute 1D derivatives
             dfloat qr = 0, qs = 0, qt = 0;
             for(int n=0;n<p_Nq;++n){
-              qr += s_D[i][n]*s_q[k][j][n];
-              qs += s_D[j][n]*s_q[k][n][i];
-              qt += s_D[k][n]*s_q[n][j][i];
+              qr += s_DT[i][n]*s_q[k][j][n];
+              qs += s_DT[j][n]*s_q[k][n][i];
+              qt += s_DT[k][n]*s_q[n][j][i];
             }
 
             dfloat4 gradqn;

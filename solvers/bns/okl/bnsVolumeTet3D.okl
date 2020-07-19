@@ -27,7 +27,7 @@ SOFTWARE.
 @kernel void bnsVolumeTet3D(const dlong Nelements,
                             @restrict const  dlong  *  elementIds,
                             @restrict const  dfloat *  vgeo,
-                            @restrict const  dfloat *  Dmatrices,
+                            @restrict const  dfloat *  D,
                             @restrict const  dfloat *  x,
                             @restrict const  dfloat *  y,
                             @restrict const  dfloat *  z,
@@ -95,9 +95,9 @@ SOFTWARE.
 
       #pragma unroll p_Np
         for(int i=0;i<p_Np;++i){
-          const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
-          const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
-          const dfloat Dtni = Dmatrices[n+i*p_Np+2*p_Np*p_Np];
+          const dfloat Drni = D[n+i*p_Np+0*p_Np*p_Np];
+          const dfloat Dsni = D[n+i*p_Np+1*p_Np*p_Np];
+          const dfloat Dtni = D[n+i*p_Np+2*p_Np*p_Np];
           #pragma unroll p_Nfields
           for(int fld=0; fld<p_Nfields;++fld){
             r_dqdr[fld] += Drni*s_q[fld][i];
@@ -157,7 +157,7 @@ SOFTWARE.
                                   @restrict const  dlong *  pmlElementIds,
                                   @restrict const  dlong *  pmlIds,
                                   @restrict const  dfloat *  vgeo,
-                                  @restrict const  dfloat *  Dmatrices,
+                                  @restrict const  dfloat *  D,
                                   @restrict const  dfloat *  x,
                                   @restrict const  dfloat *  y,
                                   @restrict const  dfloat *  z,
@@ -229,9 +229,9 @@ SOFTWARE.
       // Compute local derivatives
       #pragma unroll p_Np
         for(int i=0;i<p_Np;++i){
-          const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
-          const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
-          const dfloat Dtni = Dmatrices[n+i*p_Np+2*p_Np*p_Np];
+          const dfloat Drni = D[n+i*p_Np+0*p_Np*p_Np];
+          const dfloat Dsni = D[n+i*p_Np+1*p_Np*p_Np];
+          const dfloat Dtni = D[n+i*p_Np+2*p_Np*p_Np];
           #pragma unroll p_Nfields
           for(int fld=0; fld<p_Nfields;++fld){
             r_dqdr[fld] += Drni*s_q[fld][i];
@@ -320,7 +320,7 @@ SOFTWARE.
                               @restrict const  dlong *  pmlElementIds,
                               @restrict const  dlong *  pmlIds,
                               @restrict const  dfloat *  vgeo,
-                              @restrict const  dfloat *  Dmatrices,
+                              @restrict const  dfloat *  D,
                               @restrict const  dfloat *  x,
                               @restrict const  dfloat *  y,
                               @restrict const  dfloat *  z,
@@ -415,9 +415,9 @@ SOFTWARE.
       // Compute local derivatives
       #pragma unroll p_Np
       for(int i=0;i<p_Np;++i){
-        const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
-        const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
-        const dfloat Dtni = Dmatrices[n+i*p_Np+2*p_Np*p_Np];
+        const dfloat Drni = D[n+i*p_Np+0*p_Np*p_Np];
+        const dfloat Dsni = D[n+i*p_Np+1*p_Np*p_Np];
+        const dfloat Dtni = D[n+i*p_Np+2*p_Np*p_Np];
         #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields;++fld){
           r_dqdr[fld] += Drni*s_q[fld][i];

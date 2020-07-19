@@ -31,133 +31,14 @@ void meshQuad3D::OccaSetup(){
 
   this->mesh3D::OccaSetup();
 
-  //lumped mass matrix
-  MM = (dfloat *) calloc(Np*Np, sizeof(dfloat));
-  for (int j=0;j<Nq;j++) {
-    for (int i=0;i<Nq;i++) {
-      int n = i+j*Nq;
-      MM[n+n*Np] = gllw[i]*gllw[j];
-    }
-  }
-
-  //build inverse of mass matrix
-  invMM = (dfloat *) calloc(Np*Np,sizeof(dfloat));
-  for (int n=0;n<Np*Np;n++)
-    invMM[n] = MM[n];
-  matrixInverse(Np,invMM);
-
-
-  dfloat *cubDWT = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
-  dfloat *cubProjectT = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
-  dfloat *cubInterpT = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
-  for(int n=0;n<Nq;++n){
-    for(int m=0;m<cubNq;++m){
-      cubDWT[n+m*Nq] = cubDW[n*cubNq+m];
-      cubProjectT[n+m*Nq] = cubProject[n*cubNq+m];
-      cubInterpT[m+n*cubNq] = cubInterp[m*Nq+n];
-    }
-  }
-
-  intx = (dfloat*) calloc(Nelements*Nfaces*cubNq, sizeof(dfloat));
-  inty = (dfloat*) calloc(Nelements*Nfaces*cubNq, sizeof(dfloat));
-  intz = (dfloat*) calloc(Nelements*Nfaces*cubNq, sizeof(dfloat));
-  for(dlong e=0;e<Nelements;++e){
-    for(int f=0;f<Nfaces;++f){
-      for(int n=0;n<cubNq;++n){
-        dfloat ix = 0, iy = 0, iz = 0;
-        for(int m=0;m<Nq;++m){
-          dlong vid = vmapM[m+f*Nfp+e*Nfp*Nfaces];
-          dfloat xm = x[vid];
-          dfloat ym = y[vid];
-          dfloat zm = z[vid];
-
-          dfloat Inm = cubInterp[m+n*Nq];
-          ix += Inm*xm;
-          iy += Inm*ym;
-          iz += Inm*zm;
-        }
-        dlong id = n + f*cubNq + e*Nfaces*cubNq;
-        intx[id] = ix;
-        inty[id] = iy;
-        intz[id] = iz;
-      }
-    }
-  }
-
   o_D = device.malloc(Nq*Nq*sizeof(dfloat), D);
 
-  // bundle D and (W^{-1} D^t W)
-  Dmatrices = (dfloat*) calloc(Nq*Nq*2, sizeof(dfloat));
-  for(int n=0;n<Nq*Nq;++n){
-    Dmatrices[n] = D[n];
-  }
-  for(int j=0;j<Nq;++j){
-    for(int i=0;i<Nq;++i){
-      // note minus
-      Dmatrices[Nq*Nq + i + j*Nq] = -D[i*Nq + j]*gllw[i]/gllw[j];
-    }
-  }
+  o_S    = o_D; //dummy
+  o_MM   = o_D; //dummy
+  o_sM   = o_D; //dummy
+  o_LIFT = o_D; //dummy
 
-  o_Dmatrices = device.malloc(2*Nq*Nq*sizeof(dfloat), Dmatrices);
-
-  o_Smatrices = device.malloc(Nq*Nq*sizeof(dfloat), D); //dummy
-
-  o_MM = device.malloc(Np*Np*sizeof(dfloat), MM);
-
-  o_sMT = device.malloc(1*sizeof(dfloat)); //dummy
-
-  o_vgeo =
-    device.malloc((Nelements+totalHaloPairs)*Nvgeo*Np*sizeof(dfloat),
-                        vgeo);
-  o_sgeo =
-    device.malloc(Nelements*Nfaces*Nfp*Nsgeo*sizeof(dfloat),
-                        sgeo);
-  o_ggeo =
-    device.malloc(Nelements*Np*Nggeo*sizeof(dfloat),
-                        ggeo);
-
-  o_cubvgeo =
-    device.malloc(Nelements*Nvgeo*cubNp*sizeof(dfloat),
-                        cubvgeo);
-
-  o_cubsgeo =
-      device.malloc(Nelements*Nfaces*cubNq*Nsgeo*sizeof(dfloat),
-                          cubsgeo);
-
-  o_cubInterpT =
-    device.malloc(Nq*cubNq*sizeof(dfloat),
-                        cubInterpT);
-
-  o_cubProjectT =
-    device.malloc(Nq*cubNq*sizeof(dfloat),
-                        cubProjectT);
-
-  o_cubDWT =
-    device.malloc(Nq*cubNq*sizeof(dfloat),
-                        cubDWT);
-
-  o_cubDWmatrices = device.malloc(cubNq*Nq*sizeof(dfloat), cubDWT);
-
-  o_LIFTT =
-    device.malloc(1*sizeof(dfloat)); // dummy
-
-  o_intx =
-    device.malloc(Nelements*Nfaces*cubNq*sizeof(dfloat),
-                        intx);
-
-  o_inty =
-    device.malloc(Nelements*Nfaces*cubNq*sizeof(dfloat),
-                        inty);
-
-  o_intz =
-    device.malloc(Nelements*Nfaces*cubNq*sizeof(dfloat),
-                        intz);
-
-  //dummy quadrature lifter operators
-  o_intInterpT = device.malloc(cubNq*Nq*sizeof(dfloat));
-  o_intInterpT.copyFrom(o_cubInterpT);
-
-  o_intLIFTT = device.malloc(cubNq*Nq*sizeof(dfloat));
-  o_intLIFTT.copyFrom(o_cubProjectT);
-
+  o_vgeo = device.malloc((Nelements+totalHaloPairs)*Nvgeo*Np*sizeof(dfloat), vgeo);
+  o_sgeo = device.malloc(Nelements*Nfaces*Nfp*Nsgeo*sizeof(dfloat), sgeo);
+  o_ggeo = device.malloc(Nelements*Np*Nggeo*sizeof(dfloat), ggeo);
 }

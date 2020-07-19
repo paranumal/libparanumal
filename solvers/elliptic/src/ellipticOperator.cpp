@@ -29,8 +29,8 @@
 void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
 
   if(disc_c0){
-    int mapType = (mesh.elementType==HEXAHEDRA &&
-                   mesh.settings.compareSetting("ELEMENT MAP", "TRILINEAR")) ? 1:0;
+    // int mapType = (mesh.elementType==HEXAHEDRA &&
+    //                mesh.settings.compareSetting("ELEMENT MAP", "TRILINEAR")) ? 1:0;
 
     // int integrationType = (mesh.elementType==HEXAHEDRA &&
     //                        settings.compareSetting("ELLIPTIC INTEGRATION", "CUBATURE")) ? 1:0;
@@ -38,12 +38,14 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
     if(mesh.NglobalGatherElements) {
 
       // if(integrationType==0) { // GLL or non-hex
-        if(mapType==0)
+        // if(mapType==0)
           partialAxKernel(mesh.NglobalGatherElements, mesh.o_globalGatherElementList,
-                          mesh.o_ggeo, mesh.o_Dmatrices, mesh.o_Smatrices, mesh.o_MM, lambda, o_q, o_Aq);
+                          mesh.o_ggeo, mesh.o_D, mesh.o_S, mesh.o_MM, lambda, o_q, o_Aq);
+        /* NC: disabling until we re-add treatment of affine elements
         else
           partialAxKernel(mesh.NglobalGatherElements, mesh.o_globalGatherElementList,
-                          mesh.o_EXYZ, mesh.o_gllzw, mesh.o_Dmatrices, mesh.o_Smatrices, mesh.o_MM, lambda, o_q, o_Aq);
+                          mesh.o_EXYZ, mesh.o_gllzw, mesh.o_D, mesh.o_S, mesh.o_MM, lambda, o_q, o_Aq);
+        */
       // } else {
       //   partialCubatureAxKernel(mesh.NglobalGatherElements,
       //                           mesh.o_globalGatherElementList,
@@ -58,12 +60,14 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
 
     if(mesh.NlocalGatherElements){
       // if(integrationType==0) { // GLL or non-hex
-        if(mapType==0)
+        // if(mapType==0)
           partialAxKernel(mesh.NlocalGatherElements, mesh.o_localGatherElementList,
-                          mesh.o_ggeo, mesh.o_Dmatrices, mesh.o_Smatrices, mesh.o_MM, lambda, o_q, o_Aq);
+                          mesh.o_ggeo, mesh.o_D, mesh.o_S, mesh.o_MM, lambda, o_q, o_Aq);
+        /* NC: disabling until we re-add treatment of affine elements
         else
           partialAxKernel(mesh.NlocalGatherElements, mesh.o_localGatherElementList,
-                          mesh.o_EXYZ, mesh.o_gllzw, mesh.o_Dmatrices, mesh.o_Smatrices, mesh.o_MM, lambda, o_q, o_Aq);
+                          mesh.o_EXYZ, mesh.o_gllzw, mesh.o_D, mesh.o_S, mesh.o_MM, lambda, o_q, o_Aq);
+        */
       // } else {
       //   partialCubatureAxKernel(mesh.NlocalGatherElements,
       //                           mesh.o_localGatherElementList,
@@ -90,7 +94,7 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
       partialGradientKernel(mesh.Nelements,
                             offset,
                             mesh.o_vgeo,
-                            mesh.o_Dmatrices,
+                            mesh.o_D,
                             o_q,
                             o_grad);
     }
@@ -108,8 +112,8 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
                         mesh.o_vgeo,
                         mesh.o_sgeo,
                         o_EToB,
-                        mesh.o_Dmatrices,
-                        mesh.o_LIFTT,
+                        mesh.o_D,
+                        mesh.o_LIFT,
                         mesh.o_MM,
                         o_grad,
                         o_Aq);
@@ -126,8 +130,8 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
                         mesh.o_vgeo,
                         mesh.o_sgeo,
                         o_EToB,
-                        mesh.o_Dmatrices,
-                        mesh.o_LIFTT,
+                        mesh.o_D,
+                        mesh.o_LIFT,
                         mesh.o_MM,
                         o_grad,
                         o_Aq);

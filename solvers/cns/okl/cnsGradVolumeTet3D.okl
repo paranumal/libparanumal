@@ -26,7 +26,7 @@ SOFTWARE.
 
 @kernel void cnsGradVolumeTet3D(const dlong Nelements,
                                 @restrict const  dfloat *  vgeo,
-                                @restrict const  dfloat *  DT,
+                                @restrict const  dfloat *  D,
                                 @restrict const  dfloat *  q,
                                 @restrict        dfloat *  gradq){
 
@@ -67,9 +67,9 @@ SOFTWARE.
       dfloat dwdr = 0, dwds = 0, dwdt = 0;
 
       for(int i=0;i<p_Np;++i){
-        const dfloat Drni = DT[n+i*p_Np+0*p_Np*p_Np];
-        const dfloat Dsni = DT[n+i*p_Np+1*p_Np*p_Np];
-        const dfloat Dtni = DT[n+i*p_Np+2*p_Np*p_Np];
+        const dfloat Drni = D[n+i*p_Np+0*p_Np*p_Np];
+        const dfloat Dsni = D[n+i*p_Np+1*p_Np*p_Np];
+        const dfloat Dtni = D[n+i*p_Np+2*p_Np*p_Np];
 
         const dfloat u = s_u[i];
         const dfloat v = s_v[i];

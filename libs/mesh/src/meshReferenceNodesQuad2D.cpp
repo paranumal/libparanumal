@@ -53,13 +53,20 @@ void meshQuad2D::ReferenceNodes(int N_){
   VertexNodesQuad2D(N, r, s, vertexNodes);
 
   //GLL quadrature
-  gllz = (dfloat *) malloc((N+1)*sizeof(dfloat));
-  gllw = (dfloat *) malloc((N+1)*sizeof(dfloat));
-  JacobiGLL(N, gllz, gllw);
+  dfloat *gllz = (dfloat *) malloc((N+1)*sizeof(dfloat));
+  w = (dfloat *) malloc((N+1)*sizeof(dfloat));
+  JacobiGLL(N, gllz, w);
+
+  //Lumped Mass matrix
+  MM    = (dfloat *) malloc(Np*Np*sizeof(dfloat));
+  invMM = (dfloat *) malloc(Np*Np*sizeof(dfloat));
+  LumpedMassMatrixQuad2D(N, w, MM);
+  invLumpedMassMatrixQuad2D(N, w, invMM);
 
   // D matrix
   D = (dfloat *) malloc(Nq*Nq*sizeof(dfloat));
   Dmatrix1D(N, Nq, gllz, Nq, gllz, D);
+  free(gllz);
 
   /* Plotting data */
   int plotN = N_ + 3; //enriched interpolation space for plotting

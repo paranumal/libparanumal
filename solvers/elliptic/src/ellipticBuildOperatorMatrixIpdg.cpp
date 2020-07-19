@@ -145,12 +145,10 @@ void elliptic_t::BuildOperatorMatrixIpdgTri2D(parAlmond::parCOO& A){
         SM[n*Np+m]  = J*lambda*mesh.MM[n*Np+m];
         SM[n*Np+m] += J*drdx*drdx*mesh.Srr[n*Np+m];
         SM[n*Np+m] += J*drdx*dsdx*mesh.Srs[n*Np+m];
-        SM[n*Np+m] += J*dsdx*drdx*mesh.Ssr[n*Np+m];
         SM[n*Np+m] += J*dsdx*dsdx*mesh.Sss[n*Np+m];
 
         SM[n*Np+m] += J*drdy*drdy*mesh.Srr[n*Np+m];
         SM[n*Np+m] += J*drdy*dsdy*mesh.Srs[n*Np+m];
-        SM[n*Np+m] += J*dsdy*drdy*mesh.Ssr[n*Np+m];
         SM[n*Np+m] += J*dsdy*dsdy*mesh.Sss[n*Np+m];
       }
     }
@@ -412,17 +410,14 @@ void elliptic_t::BuildOperatorMatrixIpdgTri3D(parAlmond::parCOO& A){
         SM[n*Np+m]  = J*lambda*mesh.MM[n*Np+m];
         SM[n*Np+m] += J*drdx*drdx*mesh.Srr[n*Np+m];
         SM[n*Np+m] += J*drdx*dsdx*mesh.Srs[n*Np+m];
-        SM[n*Np+m] += J*dsdx*drdx*mesh.Ssr[n*Np+m];
         SM[n*Np+m] += J*dsdx*dsdx*mesh.Sss[n*Np+m];
 
         SM[n*Np+m] += J*drdy*drdy*mesh.Srr[n*Np+m];
         SM[n*Np+m] += J*drdy*dsdy*mesh.Srs[n*Np+m];
-        SM[n*Np+m] += J*dsdy*drdy*mesh.Ssr[n*Np+m];
         SM[n*Np+m] += J*dsdy*dsdy*mesh.Sss[n*Np+m];
 
         SM[n*Np+m] += J*drdz*drdz*mesh.Srr[n*Np+m];
         SM[n*Np+m] += J*drdz*dsdz*mesh.Srs[n*Np+m];
-        SM[n*Np+m] += J*dsdz*drdz*mesh.Ssr[n*Np+m];
         SM[n*Np+m] += J*dsdz*dsdz*mesh.Sss[n*Np+m];
 
       }
@@ -1171,11 +1166,8 @@ void elliptic_t::BuildOperatorMatrixIpdgTet3D(parAlmond::parCOO& A){
         BM[m+n*mesh.Np] += Grr*mesh.Srr[m+n*mesh.Np];
         BM[m+n*mesh.Np] += Grs*mesh.Srs[m+n*mesh.Np];
         BM[m+n*mesh.Np] += Grt*mesh.Srt[m+n*mesh.Np];
-        BM[m+n*mesh.Np] += Grs*mesh.Ssr[m+n*mesh.Np];
         BM[m+n*mesh.Np] += Gss*mesh.Sss[m+n*mesh.Np];
         BM[m+n*mesh.Np] += Gst*mesh.Sst[m+n*mesh.Np];
-        BM[m+n*mesh.Np] += Grt*mesh.Str[m+n*mesh.Np];
-        BM[m+n*mesh.Np] += Gst*mesh.Sts[m+n*mesh.Np];
         BM[m+n*mesh.Np] += Gtt*mesh.Stt[m+n*mesh.Np];
       }
     }

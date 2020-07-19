@@ -71,9 +71,9 @@ void surfaceTerms(int e, int sk, int face, int i, int j,
                                  @restrict const  dfloat *  z,
                                  @restrict const  dfloat *  vgeo,
                                  @restrict const  dfloat *  sgeo,
-                                 @restrict const  int   *  EToB,
-                                 @restrict const  dfloat *  D,
-                                 @restrict const  dfloat *  LIFTT,
+                                 @restrict const  int    *  EToB,
+                                 @restrict const  dfloat *  DT,
+                                 @restrict const  dfloat *  LIFT,
                                  @restrict const  dfloat *  MM,
                                  @restrict dfloat  *  rhs){
 
@@ -82,7 +82,7 @@ void surfaceTerms(int e, int sk, int face, int i, int j,
     @shared dfloat s_dqdx[p_Nq][p_Nq];
     @shared dfloat s_dqdy[p_Nq][p_Nq];
     @shared dfloat s_rhsq[p_Nq][p_Nq];
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
 
     // loop over slabs
     for(int j=0;j<p_Nq;++j){
@@ -91,7 +91,7 @@ void surfaceTerms(int e, int sk, int face, int i, int j,
         s_dqdy[j][i] = 0.f;
         s_rhsq[j][i] = 0.f;
 
-        s_D[j][i] = D[j*p_Nq+i];
+        s_DT[j][i] = DT[j*p_Nq+i];
       }
     }
 
@@ -160,8 +160,8 @@ void surfaceTerms(int e, int sk, int face, int i, int j,
         dfloat dr = 0, ds = 0;
 
         for(int n=0;n<p_Nq;++n){
-          dr += s_D[n][i]*s_dqdx[j][n];
-          ds += s_D[n][j]*s_dqdy[n][i];
+          dr += s_DT[n][i]*s_dqdx[j][n];
+          ds += s_DT[n][j]*s_dqdy[n][i];
         }
 
         dlong id = e*p_Np + j*p_Nq + i;

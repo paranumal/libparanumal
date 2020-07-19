@@ -26,7 +26,7 @@ SOFTWARE.
 
 @kernel void insVorticityTet3D(const dlong Nelements,
                               @restrict const  dfloat *  vgeo,
-                              @restrict const  dfloat *  const Dmatrices,
+                              @restrict const  dfloat *  const D,
                               @restrict const  dfloat *  U,
                                     @restrict  dfloat *  Vort){
 
@@ -72,9 +72,9 @@ SOFTWARE.
 
           #pragma unroll p_Np
             for(int i=0;i<p_Np;++i) {
-              const dfloat Drn = Dmatrices[n + i*p_Np+0*p_Np*p_Np];
-              const dfloat Dsn = Dmatrices[n + i*p_Np+1*p_Np*p_Np];
-              const dfloat Dtn = Dmatrices[n + i*p_Np+2*p_Np*p_Np];
+              const dfloat Drn = D[n + i*p_Np+0*p_Np*p_Np];
+              const dfloat Dsn = D[n + i*p_Np+1*p_Np*p_Np];
+              const dfloat Dtn = D[n + i*p_Np+2*p_Np*p_Np];
 
               ur += Drn*s_u[es][i];
               us += Dsn*s_u[es][i];
@@ -151,7 +151,7 @@ void eigenValue(const dfloat a11, const dfloat a12, const dfloat a13, const dflo
 
 @kernel void insVorticityTet3D(const dlong Nelements,
                                   @restrict const  dfloat *  vgeo,
-                                  @restrict const  dfloat *  const Dmatrices,
+                                  @restrict const  dfloat *  const D,
                                   const dlong offset,
                                   @restrict const  dfloat *  U,
                                   @restrict dfloat *  Vort){
@@ -198,9 +198,9 @@ void eigenValue(const dfloat a11, const dfloat a12, const dfloat a13, const dflo
 
           #pragma unroll p_Np
             for(int i=0;i<p_Np;++i) {
-              const dfloat Drn = Dmatrices[n + i*p_Np+0*p_Np*p_Np];
-              const dfloat Dsn = Dmatrices[n + i*p_Np+1*p_Np*p_Np];
-              const dfloat Dtn = Dmatrices[n + i*p_Np+2*p_Np*p_Np];
+              const dfloat Drn = D[n + i*p_Np+0*p_Np*p_Np];
+              const dfloat Dsn = D[n + i*p_Np+1*p_Np*p_Np];
+              const dfloat Dtn = D[n + i*p_Np+2*p_Np*p_Np];
 
               ur += Drn*s_u[es][i];
               us += Dsn*s_u[es][i];

@@ -26,7 +26,7 @@ SOFTWARE.
 
 @kernel void bnsVorticityTet3D(const dlong Nelements,
                               @restrict const  dfloat *  vgeo,
-                              @restrict const  dfloat *  DT,
+                              @restrict const  dfloat *  D,
                               @restrict const  dfloat *  q,
                                         const  dfloat    c,
                                     @restrict  dfloat *  Vort){
@@ -79,9 +79,9 @@ SOFTWARE.
 
           #pragma unroll p_Np
             for(int i=0;i<p_Np;++i) {
-              const dfloat Drn = DT[n + i*p_Np + 0*p_Np*p_Np];
-              const dfloat Dsn = DT[n + i*p_Np + 1*p_Np*p_Np];
-              const dfloat Dtn = DT[n + i*p_Np + 2*p_Np*p_Np];
+              const dfloat Drn = D[n + i*p_Np + 0*p_Np*p_Np];
+              const dfloat Dsn = D[n + i*p_Np + 1*p_Np*p_Np];
+              const dfloat Dtn = D[n + i*p_Np + 2*p_Np*p_Np];
 
               ur += Drn*s_u[es][i];
               us += Dsn*s_u[es][i];

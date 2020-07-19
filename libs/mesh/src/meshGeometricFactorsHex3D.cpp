@@ -93,7 +93,7 @@ void meshHex3D::GeometricFactors(){
           dfloat sx = -(yr*zt - zr*yt)/J, sy =  (xr*zt - zr*xt)/J, sz = -(xr*yt - yr*xt)/J;
           dfloat tx =  (yr*zs - zr*ys)/J, ty = -(xr*zs - zr*xs)/J, tz =  (xr*ys - yr*xs)/J;
 
-          dfloat JW = J*gllw[i]*gllw[j]*gllw[k];
+          dfloat JW = J*w[i]*w[j]*w[k];
 
           /* store geometric factors */
           vgeo[Nvgeo*Np*e + n + Np*RXID] = rx;

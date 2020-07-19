@@ -28,7 +28,7 @@ SOFTWARE.
 // compute NU = -div(uxu) in collocation way (weak form)
 @kernel void insSubcycleAdvectionVolumeQuad2D(const dlong Nelements,
                                     @restrict const  dfloat *  vgeo,
-                                    @restrict const  dfloat *  D,
+                                    @restrict const  dfloat *  DT,
                                     @restrict const  dfloat *  Ue,
                                     @restrict const  dfloat *  U,
                                           @restrict  dfloat *  RHS){
@@ -40,7 +40,7 @@ SOFTWARE.
     @shared dfloat s_F21[p_NblockV][p_Nq][p_Nq];
     @shared dfloat s_F22[p_NblockV][p_Nq][p_Nq];
 
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
 
     for(int es=0;es<p_NblockV;++es;@inner(2)){
       for(int j=0;j<p_Nq;++j;@inner(1)){
@@ -70,7 +70,7 @@ SOFTWARE.
             s_F22[es][j][i] = cVn*Vdn;
 
             if (es==0)
-              s_D[j][i] = D[j*p_Nq+i];
+              s_DT[j][i] = DT[j*p_Nq+i];
           }
         }
       }
@@ -90,8 +90,8 @@ SOFTWARE.
 
             #pragma unroll p_Nq
               for(int n=0;n<p_Nq;++n){
-                const dfloat Dr = s_D[n][i];
-                const dfloat Ds = s_D[n][j];
+                const dfloat Dr = s_DT[n][i];
+                const dfloat Ds = s_DT[n][j];
 
                 nu += Dr*s_F11[es][j][n]
                      +Ds*s_F12[es][n][i];
@@ -152,7 +152,7 @@ SOFTWARE.
 
 @kernel void insSubcycleAdvectionSurfaceQuad2D(const dlong Nelements,
                                     @restrict const  dfloat *  sgeo,
-                                    @restrict const  dfloat *  LIFTT,
+                                    @restrict const  dfloat *  LIFT,
                                     @restrict const  dlong  *  vmapM,
                                     @restrict const  dlong  *  vmapP,
                                     @restrict const  int    *  EToB,

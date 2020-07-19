@@ -108,8 +108,6 @@ mesh_t& mesh_t::SetupNewDegree(int Nf){
   mesh->localGatherElementList = localGatherElementList;
   mesh->o_localGatherElementList = o_localGatherElementList;
 
-  mesh->defaultStream = defaultStream;
-
   // load reference (r,s) element nodes
   mesh->ReferenceNodes(Nf);
 

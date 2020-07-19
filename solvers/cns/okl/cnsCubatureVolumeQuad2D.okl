@@ -28,9 +28,9 @@ SOFTWARE.
 @kernel void cnsCubatureVolumeQuad2D(const dlong Nelements,
                                     @restrict const  dfloat *  vgeo,
                                     @restrict const  dfloat *  cubvgeo,
-                                    @restrict const  dfloat *  cubDWT,
-                                    @restrict const  dfloat *  cubInterpT,
-                                    @restrict const  dfloat *  cubProjectT,
+                                    @restrict const  dfloat *  cubDT,
+                                    @restrict const  dfloat *  cubInterp,
+                                    @restrict const  dfloat *  cubProject,
                                     @restrict const  dfloat *  x,
                                     @restrict const  dfloat *  y,
                                     @restrict const  dfloat *  z,
@@ -49,9 +49,9 @@ SOFTWARE.
     @shared dfloat s_F[p_Nfields][p_cubNq][p_cubNq];
     @shared dfloat s_G[p_Nfields][p_cubNq][p_cubNq];
 
-    @shared dfloat s_cubInterpT[p_Nq][p_cubNq];
-    @shared dfloat s_cubProjectT[p_cubNq][p_Nq];
-    @shared dfloat s_cubDWT[p_cubNq][p_Nq];
+    @shared dfloat s_cubInterp[p_Nq][p_cubNq];
+    @shared dfloat s_cubProject[p_cubNq][p_Nq];
+    @shared dfloat s_cubDT[p_cubNq][p_Nq];
 
     @exclusive dfloat r_q[p_Nfields], r_gradq[p_Ngrads];
     @exclusive dfloat r_F[p_Nfields], r_G[p_Nfields];
@@ -91,9 +91,9 @@ SOFTWARE.
 
         const int id = i+j*p_cubNq;
         if (id<p_Nq*p_cubNq) {
-          s_cubDWT[0][id] = cubDWT[id];
-          s_cubInterpT[0][id] = cubInterpT[id];
-          s_cubProjectT[0][id] = cubProjectT[id];
+          s_cubDT[0][id] = cubDT[id];
+          s_cubInterp[0][id] = cubInterp[id];
+          s_cubProject[0][id] = cubProject[id];
         }
       }
     }
@@ -110,7 +110,7 @@ SOFTWARE.
 
           #pragma unroll p_Nq
           for (int n=0;n<p_Nq;n++) {
-            const dfloat Ini = s_cubInterpT[n][i];
+            const dfloat Ini = s_cubInterp[n][i];
             r_q[0] += Ini*s_q[0][j][n];
             r_q[1] += Ini*s_q[1][j][n];
             r_q[2] += Ini*s_q[2][j][n];
@@ -153,7 +153,7 @@ SOFTWARE.
 
         #pragma unroll p_Nq
         for (int n=0;n<p_Nq;n++) {
-          const dfloat Inj = s_cubInterpT[n][j];
+          const dfloat Inj = s_cubInterp[n][j];
           r_q[0] += Inj*s_q[0][n][i];
           r_q[1] += Inj*s_q[1][n][i];
           r_q[2] += Inj*s_q[2][n][i];
@@ -242,8 +242,8 @@ SOFTWARE.
         if (j<p_Nq) {
           #pragma unroll p_cubNq
           for (int n=0;n<p_cubNq;n++) {
-            const dfloat Pnj = s_cubProjectT[n][j];
-            const dfloat Dnj = s_cubDWT[n][j];
+            const dfloat Pnj = s_cubProject[n][j];
+            const dfloat Dnj = s_cubDT[n][j];
             r_F[0]  += Pnj*s_F[0][n][i];
             r_F[1]  += Pnj*s_F[1][n][i];
             r_F[2]  += Pnj*s_F[2][n][i];
@@ -288,8 +288,8 @@ SOFTWARE.
 
           #pragma unroll p_cubNq
           for(int n=0;n<p_cubNq;++n){
-            const dfloat Pni = s_cubProjectT[n][i];
-            const dfloat Dni = s_cubDWT[n][i];
+            const dfloat Pni = s_cubProject[n][i];
+            const dfloat Dni = s_cubDT[n][i];
 
             rhsq0 += Dni*s_F[0][j][n]
                     +Pni*s_G[0][j][n];

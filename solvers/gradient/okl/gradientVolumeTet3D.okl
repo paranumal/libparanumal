@@ -30,7 +30,7 @@ SOFTWARE.
 #if 0
 void gradientVolumeTet3D(int Nelements,
 			 dfloat *vgeo, // geometric factors
-			 dfloat *Drst, // D matrices
+			 dfloat *D, // D matrices
 			 dfloat *q,    // data at nodes
 			 dfloat *gradq // physical gradient
 			 ){
@@ -44,9 +44,9 @@ void gradientVolumeTet3D(int Nelements,
       dfloat qr = 0, qs = 0, qt = 0;
 
       for(int m=0;m<p_Np;++m){
-	dfloat dr = Drst[n + m*p_Np + 0*p_Np*p_Np];
-	dfloat ds = Drst[n + m*p_Np + 1*p_Np*p_Np];
-	dfloat dt = Drst[n + m*p_Np + 2*p_Np*p_Np];
+	dfloat dr = D[n + m*p_Np + 0*p_Np*p_Np];
+	dfloat ds = D[n + m*p_Np + 1*p_Np*p_Np];
+	dfloat dt = D[n + m*p_Np + 2*p_Np*p_Np];
 
 	int id = e*p_Np + m;
 
@@ -85,7 +85,7 @@ void gradientVolumeTet3D(int Nelements,
 // annotate @kernels with "@kernel" keyword
 @kernel void gradientVolumeTet3D_v0(int Nelements,
 				   dfloat *vgeo, // geometric factors
-				   dfloat *Drst, // D matrices
+				   dfloat *D, // D matrices
 				   dfloat *q,    // data at nodes
 				   dfloat *gradq // physical gradient
 				   ){
@@ -99,9 +99,9 @@ void gradientVolumeTet3D(int Nelements,
       dfloat qr = 0, qs = 0, qt = 0;
 
       for(int m=0;m<p_Np;++m){
-	dfloat dr = Drst[n + m*p_Np + 0*p_Np*p_Np];
-	dfloat ds = Drst[n + m*p_Np + 1*p_Np*p_Np];
-	dfloat dt = Drst[n + m*p_Np + 2*p_Np*p_Np];
+	dfloat dr = D[n + m*p_Np + 0*p_Np*p_Np];
+	dfloat ds = D[n + m*p_Np + 1*p_Np*p_Np];
+	dfloat dt = D[n + m*p_Np + 2*p_Np*p_Np];
 
 	int id = e*p_Np + m;
 
@@ -139,7 +139,7 @@ void gradientVolumeTet3D(int Nelements,
 // @kernel 1: declare po@restrict inters as  and const everything we can
 @kernel void gradientVolumeTet3D_v1(const int Nelements,
 				   @restrict const  dfloat *  vgeo, // geometric factors
-				   @restrict const  dfloat *  Drst, // D matrices
+				   @restrict const  dfloat *  D, // D matrices
 				   @restrict const  dfloat *  q,    // data at nodes
 				   @restrict dfloat *  gradq // physical gradient
 				){
@@ -153,9 +153,9 @@ void gradientVolumeTet3D(int Nelements,
       dfloat qr = 0, qs = 0, qt = 0;
 
       for(int m=0;m<p_Np;++m){
-	const dfloat dr = Drst[n + m*p_Np + 0*p_Np*p_Np];
-	const dfloat ds = Drst[n + m*p_Np + 1*p_Np*p_Np];
-	const dfloat dt = Drst[n + m*p_Np + 2*p_Np*p_Np];
+	const dfloat dr = D[n + m*p_Np + 0*p_Np*p_Np];
+	const dfloat ds = D[n + m*p_Np + 1*p_Np*p_Np];
+	const dfloat dt = D[n + m*p_Np + 2*p_Np*p_Np];
 
 	const int id = e*p_Np + m;
 
@@ -193,7 +193,7 @@ void gradientVolumeTet3D(int Nelements,
 // @kernel 2: unroll innermost loop
 @kernel void gradientVolumeTet3D_v2(const int Nelements,
 				@restrict const  dfloat *  vgeo, // geometric factors
-				@restrict const  dfloat *  Drst, // D matrices
+				@restrict const  dfloat *  D, // D matrices
 				@restrict const  dfloat *  q,    // data at nodes
 				@restrict dfloat *  gradq // physical gradient
 				){
@@ -208,9 +208,9 @@ void gradientVolumeTet3D(int Nelements,
 
       #pragma unroll p_Np
 	for(int m=0;m<p_Np;++m){
-	  const dfloat dr = Drst[n + m*p_Np + 0*p_Np*p_Np];
-	  const dfloat ds = Drst[n + m*p_Np + 1*p_Np*p_Np];
-	  const dfloat dt = Drst[n + m*p_Np + 2*p_Np*p_Np];
+	  const dfloat dr = D[n + m*p_Np + 0*p_Np*p_Np];
+	  const dfloat ds = D[n + m*p_Np + 1*p_Np*p_Np];
+	  const dfloat dt = D[n + m*p_Np + 2*p_Np*p_Np];
 
 	  const int id = e*p_Np + m;
 
@@ -248,7 +248,7 @@ void gradientVolumeTet3D(int Nelements,
 // @kernel 3: @shared memory prefetch
 @kernel void gradientVolumeTet3D_v3(const int Nelements,
 				@restrict const  dfloat *  vgeo, // geometric factors
-				@restrict const  dfloat *  Drst, // D matrices
+				@restrict const  dfloat *  D, // D matrices
 				@restrict const  dfloat *  q,    // data at nodes
 				@restrict dfloat *  gradq // physical gradient
 				){
@@ -275,9 +275,9 @@ void gradientVolumeTet3D(int Nelements,
 
       #pragma unroll p_Np
 	for(int m=0;m<p_Np;++m){
-	  const dfloat dr = Drst[n + m*p_Np + 0*p_Np*p_Np];
-	  const dfloat ds = Drst[n + m*p_Np + 1*p_Np*p_Np];
-	  const dfloat dt = Drst[n + m*p_Np + 2*p_Np*p_Np];
+	  const dfloat dr = D[n + m*p_Np + 0*p_Np*p_Np];
+	  const dfloat ds = D[n + m*p_Np + 1*p_Np*p_Np];
+	  const dfloat dt = D[n + m*p_Np + 2*p_Np*p_Np];
 	  const dfloat qm = s_q[m];
 	  qr += dr*qm;
 	  qs += ds*qm;
@@ -313,7 +313,7 @@ void gradientVolumeTet3D(int Nelements,
 // @kernel 4: multiple nodes per thread
 @kernel void gradientVolumeTet3D_v4(const int Nelements,
 				@restrict const  dfloat *  vgeo, // geometric factors
-				@restrict const  dfloat *  Drst, // D matrices
+				@restrict const  dfloat *  D, // D matrices
 				@restrict const  dfloat *  q,    // data at nodes
 				@restrict dfloat *  gradq // physical gradient
 				){
@@ -356,9 +356,9 @@ void gradientVolumeTet3D(int Nelements,
       #pragma unroll p_Np
 	for(int m=0;m<p_Np;++m){
 	  // Vasily Volkov "multiple outputs" paper
-	  const dfloat dr = Drst[n + m*p_Np + 0*p_Np*p_Np];
-	  const dfloat ds = Drst[n + m*p_Np + 1*p_Np*p_Np];
-	  const dfloat dt = Drst[n + m*p_Np + 2*p_Np*p_Np];
+	  const dfloat dr = D[n + m*p_Np + 0*p_Np*p_Np];
+	  const dfloat ds = D[n + m*p_Np + 1*p_Np*p_Np];
+	  const dfloat dt = D[n + m*p_Np + 2*p_Np*p_Np];
 
 	  #pragma unroll p_Nblock
 	    for(int es=0;es<p_Nblock;++es){
@@ -405,7 +405,7 @@ void gradientVolumeTet3D(int Nelements,
 // @kernel 5: simd cramming
 @kernel void gradientVolumeTet3D(const int Nelements,
 				@restrict const  dfloat *  vgeo, // geometric factors
-				@restrict const  dfloat *  Drst, // D matrices
+				@restrict const  dfloat *  D, // D matrices
 				@restrict const  dfloat *  q,    // data at nodes
 				@restrict dfloat *  gradq // physical gradient
 				){
@@ -452,9 +452,9 @@ void gradientVolumeTet3D(int Nelements,
 	#pragma unroll p_Np
 	  for(int m=0;m<p_Np;++m){
 	    // Vasily Volkov "multiple outputs" paper
-	    const dfloat dr = Drst[n + m*p_Np + 0*p_Np*p_Np];
-	    const dfloat ds = Drst[n + m*p_Np + 1*p_Np*p_Np];
-	    const dfloat dt = Drst[n + m*p_Np + 2*p_Np*p_Np];
+	    const dfloat dr = D[n + m*p_Np + 0*p_Np*p_Np];
+	    const dfloat ds = D[n + m*p_Np + 1*p_Np*p_Np];
+	    const dfloat dt = D[n + m*p_Np + 2*p_Np*p_Np];
 
 	    #pragma unroll p_Nblock
 	      for(int es=0;es<p_Nblock;++es){

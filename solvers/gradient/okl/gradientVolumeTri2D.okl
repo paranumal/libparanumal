@@ -30,7 +30,7 @@ SOFTWARE.
 #if 0
 void gradientVolumeTri2D(int Nelements,
 			 dfloat *vgeo, // geometric factors
-			 dfloat *Drst, // D matrices
+			 dfloat *D, // D matrices
 			 dfloat *q,    // data at nodes
 			 dfloat *gradq // physical gradient
 			 ){
@@ -40,33 +40,33 @@ void gradientVolumeTri2D(int Nelements,
 
     // loop over all nodes in element e
     for(int n=0;n<p_Np;++n){
-      
+
       dfloat qr = 0, qs = 0;
-      
+
       for(int m=0;m<p_Np;++m){
-	dfloat dr = Drst[n + m*p_Np + 0*p_Np*p_Np];
-	dfloat ds = Drst[n + m*p_Np + 1*p_Np*p_Np];
+	dfloat dr = D[n + m*p_Np + 0*p_Np*p_Np];
+	dfloat ds = D[n + m*p_Np + 1*p_Np*p_Np];
 
 	int id = e*p_Np + m;
-	
+
 	qr += dr*q[id];
 	qs += ds*q[id];
       }
-      
+
       dfloat rx = vgeo[e*p_Nvgeo + p_RXID];
       dfloat sx = vgeo[e*p_Nvgeo + p_SXID];
-      
+
       dfloat ry = vgeo[e*p_Nvgeo + p_RYID];
       dfloat sy = vgeo[e*p_Nvgeo + p_SYID];
-      
+
       dfloat qx = rx*qr + sx*qs;
       dfloat qy = ry*qr + sy*qs;
-      
+
       int id = e*p_Np*p_dim + m;
 
       gradq[id + 0*p_Np + n] = qx;
       gradq[id + 1*p_Np + n] = qy;
-      
+
     }
   }
 }
@@ -75,7 +75,7 @@ void gradientVolumeTri2D(int Nelements,
 // annotate @kernels with "@kernel" keyword
 @kernel void gradientVolumeTri2D_v0(int Nelements,
 				   dfloat *vgeo, // geometric factors
-				   dfloat *Drst, // D matrices
+				   dfloat *D, // D matrices
 				   dfloat *q,    // data at nodes
 				   dfloat *gradq // physical gradient
 				   ){
@@ -85,33 +85,33 @@ void gradientVolumeTri2D(int Nelements,
 
     // loop over all nodes in element e
     for(int n=0;n<p_Np;++n;@inner(0)){ // distributed to thread
-      
+
       dfloat qr = 0, qs = 0;
-      
+
       for(int m=0;m<p_Np;++m){
-	dfloat dr = Drst[n + m*p_Np + 0*p_Np*p_Np];
-	dfloat ds = Drst[n + m*p_Np + 1*p_Np*p_Np];
+	dfloat dr = D[n + m*p_Np + 0*p_Np*p_Np];
+	dfloat ds = D[n + m*p_Np + 1*p_Np*p_Np];
 
 	int id = e*p_Np + m;
-	
+
 	qr += dr*q[id];
 	qs += ds*q[id];
       }
-      
+
       dfloat rx = vgeo[e*p_Nvgeo + p_RXID];
       dfloat sx = vgeo[e*p_Nvgeo + p_SXID];
-      
+
       dfloat ry = vgeo[e*p_Nvgeo + p_RYID];
       dfloat sy = vgeo[e*p_Nvgeo + p_SYID];
-      
+
       dfloat qx = rx*qr + sx*qs;
       dfloat qy = ry*qr + sy*qs;
-      
+
       int id = e*p_Np*p_dim + n;
 
       gradq[id + 0*p_Np] = qx;
       gradq[id + 1*p_Np] = qy;
-      
+
     }
   }
 }
@@ -119,7 +119,7 @@ void gradientVolumeTri2D(int Nelements,
 // @kernel 1: declare po@restrict inters as  and const everything we can
 @kernel void gradientVolumeTri2D_v1(const int Nelements,
 				   @restrict const  dfloat *  vgeo, // geometric factors
-				   @restrict const  dfloat *  Drst, // D matrices
+				   @restrict const  dfloat *  D, // D matrices
 				   @restrict const  dfloat *  q,    // data at nodes
 				   @restrict dfloat *  gradq // physical gradient
 				   ){
@@ -129,30 +129,30 @@ void gradientVolumeTri2D(int Nelements,
 
     // loop over all nodes in element e
     for(int n=0;n<p_Np;++n;@inner(0)){ // distributed to thread
-      
+
       dfloat qr = 0, qs = 0;
-      
+
       for(int m=0;m<p_Np;++m){
-	const dfloat dr = Drst[n + m*p_Np + 0*p_Np*p_Np];
-	const dfloat ds = Drst[n + m*p_Np + 1*p_Np*p_Np];
-	
+	const dfloat dr = D[n + m*p_Np + 0*p_Np*p_Np];
+	const dfloat ds = D[n + m*p_Np + 1*p_Np*p_Np];
+
 	const int id = e*p_Np + m;
-	
+
 	qr += dr*q[id];
 	qs += ds*q[id];
       }
-      
+
       const dfloat rx = vgeo[e*p_Nvgeo + p_RXID];
       const dfloat sx = vgeo[e*p_Nvgeo + p_SXID];
-      
+
       const dfloat ry = vgeo[e*p_Nvgeo + p_RYID];
       const dfloat sy = vgeo[e*p_Nvgeo + p_SYID];
-      
+
       const dfloat qx = rx*qr + sx*qs;
       const dfloat qy = ry*qr + sy*qs;
-      
+
       const int id = e*p_Np*p_dim + n;
-      
+
       gradq[id + 0*p_Np] = qx;
       gradq[id + 1*p_Np] = qy;
     }
@@ -162,7 +162,7 @@ void gradientVolumeTri2D(int Nelements,
 // @kernel 2: unroll innermost loop
 @kernel void gradientVolumeTri2D_v2(const int Nelements,
 				   @restrict const  dfloat *  vgeo, // geometric factors
-				   @restrict const  dfloat *  Drst, // D matrices
+				   @restrict const  dfloat *  D, // D matrices
 				   @restrict const  dfloat *  q,    // data at nodes
 				   @restrict dfloat *  gradq // physical gradient
 				   ){
@@ -172,31 +172,31 @@ void gradientVolumeTri2D(int Nelements,
 
     // loop over all nodes in element e
     for(int n=0;n<p_Np;++n;@inner(0)){ // distributed to thread
-      
+
       dfloat qr = 0, qs = 0;
 
       #pragma unroll p_Np
 	for(int m=0;m<p_Np;++m){
-	  const dfloat dr = Drst[n + m*p_Np + 0*p_Np*p_Np];
-	  const dfloat ds = Drst[n + m*p_Np + 1*p_Np*p_Np];
-	  
+	  const dfloat dr = D[n + m*p_Np + 0*p_Np*p_Np];
+	  const dfloat ds = D[n + m*p_Np + 1*p_Np*p_Np];
+
 	  const int id = e*p_Np + m;
-	  
+
 	  qr += dr*q[id];
 	  qs += ds*q[id];
 	}
-      
+
       const dfloat rx = vgeo[e*p_Nvgeo + p_RXID];
       const dfloat sx = vgeo[e*p_Nvgeo + p_SXID];
-      
+
       const dfloat ry = vgeo[e*p_Nvgeo + p_RYID];
       const dfloat sy = vgeo[e*p_Nvgeo + p_SYID];
-      
+
       const dfloat qx = rx*qr + sx*qs;
       const dfloat qy = ry*qr + sy*qs;
-      
+
       const int id = e*p_Np*p_dim + n;
-      
+
       gradq[id + 0*p_Np] = qx;
       gradq[id + 1*p_Np] = qy;
     }
@@ -206,7 +206,7 @@ void gradientVolumeTri2D(int Nelements,
 // @kernel 3: @shared memory prefetch
 @kernel void gradientVolumeTri2D_v3(const int Nelements,
 				   @restrict const  dfloat *  vgeo, // geometric factors
-				   @restrict const  dfloat *  Drst, // D matrices
+				   @restrict const  dfloat *  D, // D matrices
 				   @restrict const  dfloat *  q,    // data at nodes
 				   @restrict dfloat *  gradq // physical gradient
 				   ){
@@ -225,36 +225,36 @@ void gradientVolumeTri2D(int Nelements,
 
     // make sure all values are prefetched
     @barrier("local");
-    
+
     // loop over all nodes in element e
     for(int n=0;n<p_Np;++n;@inner(0)){ // distributed to thread
-      
+
       dfloat qr = 0, qs = 0;
 
       #pragma unroll p_Np
 	for(int m=0;m<p_Np;++m){
-	  const dfloat dr = Drst[n + m*p_Np + 0*p_Np*p_Np];
-	  const dfloat ds = Drst[n + m*p_Np + 1*p_Np*p_Np];
+	  const dfloat dr = D[n + m*p_Np + 0*p_Np*p_Np];
+	  const dfloat ds = D[n + m*p_Np + 1*p_Np*p_Np];
 
 	  const dfloat qm = s_q[m];
 	  qr += dr*qm;
 	  qs += ds*qm;
 	}
-      
+
       const dfloat rx = vgeo[e*p_Nvgeo + p_RXID];
       const dfloat sx = vgeo[e*p_Nvgeo + p_SXID];
-      
+
       const dfloat ry = vgeo[e*p_Nvgeo + p_RYID];
       const dfloat sy = vgeo[e*p_Nvgeo + p_SYID];
 
       const dfloat qx = rx*qr + sx*qs;
       const dfloat qy = ry*qr + sy*qs;
-      
+
       const int id = e*p_Np*p_dim + n;
-      
+
       gradq[id + 0*p_Np] = qx;
       gradq[id + 1*p_Np] = qy;
-      
+
     }
   }
 }
@@ -262,18 +262,18 @@ void gradientVolumeTri2D(int Nelements,
 // @kernel 4: multiple nodes per thread
 @kernel void gradientVolumeTri2D_v4(const int Nelements,
 				   @restrict const  dfloat *  vgeo, // geometric factors
-				   @restrict const  dfloat *  Drst, // D matrices
+				   @restrict const  dfloat *  D, // D matrices
 				   @restrict const  dfloat *  q,    // data at nodes
 				   @restrict dfloat *  gradq // physical gradient
 				   ){
 
 #define p_Nblock 4
-  
+
   // loop over all elements
   for(int eo=0;eo<Nelements;eo+=p_Nblock;@outer(0)){ // distributed amongst cores
-    
+
     @shared dfloat s_q[p_Nblock][p_Np]; // @shared memory array for each element
-    
+
     for(int n=0;n<p_Np;++n;@inner(0)){ // distributed to thread
 
       // prefetch to @shared
@@ -289,27 +289,27 @@ void gradientVolumeTri2D(int Nelements,
 
     // make sure all values are prefetched
     @barrier("local");
-    
+
     // loop over all nodes in element e
     for(int n=0;n<p_Np;++n;@inner(0)){ // distributed to thread
-      
+
       dfloat qr[p_Nblock], qs[p_Nblock];
-      
+
       #pragma unroll p_Nblock
 	for(int es=0;es<p_Nblock;++es){
 	  qr[es] = 0;
 	  qs[es] = 0;
 	}
-      
+
       #pragma unroll p_Np
 	for(int m=0;m<p_Np;++m){
 	  // Vasily Volkov "multiple outputs" paper
-	  const dfloat dr = Drst[n + m*p_Np + 0*p_Np*p_Np];
-	  const dfloat ds = Drst[n + m*p_Np + 1*p_Np*p_Np];
-	  
+	  const dfloat dr = D[n + m*p_Np + 0*p_Np*p_Np];
+	  const dfloat ds = D[n + m*p_Np + 1*p_Np*p_Np];
+
 	  #pragma unroll p_Nblock
 	    for(int es=0;es<p_Nblock;++es){
-	      
+
 	      const dfloat qm = s_q[es][m];
 	      qr[es] += dr*qm;
 	      qs[es] += ds*qm;
@@ -320,18 +320,18 @@ void gradientVolumeTri2D(int Nelements,
 	for(int es=0;es<p_Nblock;++es){
 	  const int e = eo + es;
 	  if(e<Nelements){
-	    
+
 	    const dfloat rx = vgeo[e*p_Nvgeo + p_RXID];
 	    const dfloat sx = vgeo[e*p_Nvgeo + p_SXID];
-	    
+
 	    const dfloat ry = vgeo[e*p_Nvgeo + p_RYID];
 	    const dfloat sy = vgeo[e*p_Nvgeo + p_SYID];
-	    
+
 	    const dfloat qx = rx*qr[es] + sx*qs[es];
 	    const dfloat qy = ry*qr[es] + sy*qs[es];
-	    
+
 	    const int id = e*p_Np*p_dim + n;
-	    
+
 	    gradq[id + 0*p_Np] = qx;
 	    gradq[id + 1*p_Np] = qy;
 	  }
@@ -343,22 +343,22 @@ void gradientVolumeTri2D(int Nelements,
 // @kernel 5: simd cramming
 @kernel void gradientVolumeTri2D(const int Nelements,
 				@restrict const  dfloat *  vgeo, // geometric factors
-				@restrict const  dfloat *  Drst, // D matrices
+				@restrict const  dfloat *  D, // D matrices
 				@restrict const  dfloat *  q,    // data at nodes
 				@restrict dfloat *  gradq // physical gradient
 				){
-  
+
 #define p_Nvec 1
 #define p_Nblock 5
-  
+
   // loop over all elements
   for(int eo=0;eo<Nelements;eo+=p_Nblock*p_Nvec;@outer(0)){ // distributed amongst cores
-    
+
     @shared dfloat s_q[p_Nblock][p_Nvec][p_Np]; // @shared memory array for each element
-    
+
     for(int et=0;et<p_Nvec;++et;@inner(1)){
       for(int n=0;n<p_Np;++n;@inner(0)){ // distributed to thread
-	
+
 	// prefetch to @shared
 	#pragma unroll p_Nblock
 	  for(int es=0;es<p_Nblock;++es){
@@ -373,28 +373,28 @@ void gradientVolumeTri2D(int Nelements,
 
     // make sure all values are prefetched
     @barrier("local");
-    
+
     // loop over all nodes in element e
     for(int et=0;et<p_Nvec;++et;@inner(1)){
       for(int n=0;n<p_Np;++n;@inner(0)){ // distributed to thread
-	
+
 	dfloat qr[p_Nblock], qs[p_Nblock];
-	
+
 	#pragma unroll p_Nblock
 	  for(int es=0;es<p_Nblock;++es){
 	    qr[es] = 0;
 	    qs[es] = 0;
 	  }
-	
+
 	#pragma unroll p_Np
 	  for(int m=0;m<p_Np;++m){
 	    // Vasily Volkov "multiple outputs" paper
-	    const dfloat dr = Drst[n + m*p_Np + 0*p_Np*p_Np];
-	    const dfloat ds = Drst[n + m*p_Np + 1*p_Np*p_Np];
-	    
+	    const dfloat dr = D[n + m*p_Np + 0*p_Np*p_Np];
+	    const dfloat ds = D[n + m*p_Np + 1*p_Np*p_Np];
+
 	    #pragma unroll p_Nblock
 	      for(int es=0;es<p_Nblock;++es){
-		
+
 		const dfloat qm = s_q[es][et][m];
 		qr[es] += dr*qm;
 		qs[es] += ds*qm;
@@ -405,18 +405,18 @@ void gradientVolumeTri2D(int Nelements,
 	  for(int es=0;es<p_Nblock;++es){
 	    const int e = eo + et + p_Nvec*es;
 	    if(e<Nelements){
-	      
+
 	      const dfloat rx = vgeo[e*p_Nvgeo + p_RXID];
 	      const dfloat sx = vgeo[e*p_Nvgeo + p_SXID];
-	      
+
 	      const dfloat ry = vgeo[e*p_Nvgeo + p_RYID];
 	      const dfloat sy = vgeo[e*p_Nvgeo + p_SYID];
 
 	      const dfloat qx = rx*qr[es] + sx*qs[es];
 	      const dfloat qy = ry*qr[es] + sy*qs[es];
-	      
+
 	      const int id = e*p_Np*p_dim + n;
-	      
+
 	      gradq[id + 0*p_Np] = qx;
 	      gradq[id + 1*p_Np] = qy;
 	    }

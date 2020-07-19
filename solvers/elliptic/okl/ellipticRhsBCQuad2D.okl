@@ -27,11 +27,11 @@ SOFTWARE.
 @kernel void ellipticRhsBCQuad2D(const dlong Nelements,
                               @restrict const  dfloat *  ggeo,
                               @restrict const  dfloat *  sgeo,
-                              @restrict const  dfloat *  D,
+                              @restrict const  dfloat *  DT,
                               @restrict const  dfloat *  S,
                               @restrict const  dfloat *  MM,
                               @restrict const  dlong  *  vmapM,
-                              @restrict const  dfloat *  sMT,
+                              @restrict const  dfloat *  sM,
                               const dfloat lambda,
                               @restrict const  dfloat *  x,
                               @restrict const  dfloat *  y,
@@ -42,7 +42,7 @@ SOFTWARE.
   for(dlong e=0;e<Nelements;e++;@outer(0)){
     @shared dfloat s_q[p_Nq][p_Nq];
     @shared dfloat s_ndq[p_Nq][p_Nq];
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
 
     @exclusive dfloat r_qr[p_Nq], r_qs[p_Nq], r_Aq[p_Nq];
     @exclusive dfloat r_G00[p_Nq], r_G01[p_Nq], r_G11[p_Nq], r_GwJ[p_Nq];
@@ -53,7 +53,7 @@ SOFTWARE.
         s_q[j][i] = 0.;
         s_ndq[j][i] = 0.;
 
-        s_D[j][i] = D[j*p_Nq+i];
+        s_DT[j][i] = DT[j*p_Nq+i];
       }
     }
 
@@ -160,8 +160,8 @@ SOFTWARE.
 
         #pragma unroll p_Nq
           for(int n=0; n<p_Nq; ++n){
-            qr += s_D[i][n]*s_q[j][n];
-            qs += s_D[j][n]*s_q[n][i];
+            qr += s_DT[i][n]*s_q[j][n];
+            qs += s_DT[j][n]*s_q[n][i];
           }
 
         r_qr[j] = qr; r_qs[j] = qs;
@@ -186,7 +186,7 @@ SOFTWARE.
         dfloat tmp = 0.f;
         #pragma unroll p_Nq
           for(int n=0;n<p_Nq;++n) {
-            tmp += s_D[n][i]*s_q[j][n];
+            tmp += s_DT[n][i]*s_q[j][n];
           }
 
         r_Aq[j] += tmp;
@@ -210,7 +210,7 @@ SOFTWARE.
 
         #pragma unroll p_Nq
           for(int n=0;n<p_Nq;++n) {
-            tmp += s_D[n][j]*s_q[n][i];
+            tmp += s_DT[n][j]*s_q[n][i];
           }
 
         r_Aq[j] += tmp;

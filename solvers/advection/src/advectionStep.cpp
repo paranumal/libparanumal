@@ -34,7 +34,7 @@ void advection_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
 
   volumeKernel(mesh.Nelements,
                mesh.o_vgeo,
-               mesh.o_Dmatrices,
+               mesh.o_D,
                T,
                mesh.o_x,
                mesh.o_y,
@@ -46,7 +46,7 @@ void advection_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
 
   surfaceKernel(mesh.Nelements,
                 mesh.o_sgeo,
-                mesh.o_LIFTT,
+                mesh.o_LIFT,
                 mesh.o_vmapM,
                 mesh.o_vmapP,
                 mesh.o_EToB,

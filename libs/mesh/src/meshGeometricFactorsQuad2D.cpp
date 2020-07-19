@@ -72,7 +72,7 @@ void meshQuad2D::GeometricFactors(){
         dfloat ry = -xs/J;
         dfloat sx = -yr/J;
         dfloat sy =  xr/J;
-        dfloat JW = J*gllw[i]*gllw[j];
+        dfloat JW = J*w[i]*w[j];
 
         /* store geometric factors */
         vgeo[Nvgeo*Np*e + n + Np*RXID] = rx;

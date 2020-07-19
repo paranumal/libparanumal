@@ -27,7 +27,7 @@ SOFTWARE.
 // Computes volume contribution of div(UI)
 @kernel void insDivergenceVolumeHex3D(const dlong Nelements,
                                       @restrict const  dfloat *  vgeo,
-                                      @restrict const  dfloat *  D,
+                                      @restrict const  dfloat *  DT,
                                       const dfloat alpha,
                                       const dfloat beta,
                                       @restrict const  dfloat *  U,
@@ -38,14 +38,14 @@ SOFTWARE.
     @shared dfloat s_V[p_Nq][p_Nq];
     @shared dfloat s_W[p_Nq][p_Nq];
 
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
 
     @exclusive dfloat r_div[p_Nq];
 
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
         const int id = i+j*p_Nq;
-        s_D[0][id] = D[id];
+        s_DT[0][id] = DT[id];
 
         #pragma unroll p_Nq
         for(int k=0;k<p_Nq;++k){
@@ -92,9 +92,9 @@ SOFTWARE.
         for(int i=0;i<p_Nq;++i;@inner(0)){
           #pragma unroll p_Nq
             for (int n=0;n<p_Nq;n++) {
-              const dfloat Dr = s_D[n][i];
-              const dfloat Ds = s_D[n][j];
-              const dfloat Dt = s_D[k][n];
+              const dfloat Dr = s_DT[n][i];
+              const dfloat Ds = s_DT[n][j];
+              const dfloat Dt = s_DT[k][n];
               r_div[k] += Dr*s_U[j][n];
               r_div[k] += Ds*s_V[n][i];
               r_div[n] += Dt*s_W[j][i];
@@ -160,7 +160,7 @@ SOFTWARE.
 
 @kernel void insDivergenceSurfaceHex3D(const dlong Nelements,
                                        @restrict const  dfloat *  sgeo,
-                                       @restrict const  dfloat *  LIFTT,
+                                       @restrict const  dfloat *  LIFT,
                                        @restrict const  dlong  *  vmapM,
                                        @restrict const  dlong  *  vmapP,
                                        @restrict const  int    *  EToB,
@@ -296,7 +296,7 @@ SOFTWARE.
 // Compute Divergence in strong Form
 @kernel void insStrongDivergenceVolumeHex3D(const dlong Nelements,
                                             @restrict const  dfloat *  vgeo,
-                                            @restrict const  dfloat *  D,
+                                            @restrict const  dfloat *  DT,
                                             const dlong offset,
                                             @restrict const  dfloat *  U,
                                             @restrict dfloat *  divU){
@@ -306,7 +306,7 @@ SOFTWARE.
     @shared dfloat s_V[p_Nq][p_Nq][p_Nq];
     @shared dfloat s_W[p_Nq][p_Nq][p_Nq];
 
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
 
     for(int k=0;k<p_Nq;++k;@inner(2)){
       for(int j=0;j<p_Nq;++j;@inner(1)){
@@ -314,7 +314,7 @@ SOFTWARE.
         for(int i=0;i<p_Nq;++i;@inner(0)){
           dlong id = i+j*p_Nq;
           if(k==0)
-            s_D[0][id] = D[id];
+            s_DT[0][id] = DT[id];
 
           id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
@@ -352,9 +352,9 @@ SOFTWARE.
 
 #pragma unroll p_Nq
           for (int n=0;n<p_Nq;n++) {
-            const dfloat Dr = s_D[i][n];
-            const dfloat Ds = s_D[j][n];
-            const dfloat Dt = s_D[k][n];
+            const dfloat Dr = s_DT[i][n];
+            const dfloat Ds = s_DT[j][n];
+            const dfloat Dt = s_DT[k][n];
             dudr += Dr*s_U[k][j][n];
             duds += Ds*s_U[k][n][i];
             dudt += Dt*s_U[n][j][i];

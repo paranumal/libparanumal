@@ -49,8 +49,6 @@ void mesh_t::OccaSetup(){
 
   o_EToB = device.malloc(Nelements*Nfaces*sizeof(int), EToB);
 
-  defaultStream = device.getStream();
-
   props["defines/" "p_dim"]= dim;
   props["defines/" "p_N"]= N;
   props["defines/" "p_Nq"]= N+1;

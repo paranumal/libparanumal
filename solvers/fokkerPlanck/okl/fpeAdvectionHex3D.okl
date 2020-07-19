@@ -29,7 +29,7 @@ SOFTWARE.
 // compute div(NS)  = div(uxs) in collocation way (weak form)
 @kernel void fpeAdvectionVolumeHex3D(const dlong Nelements,
                                       @restrict const  dfloat *  vgeo,
-                                      @restrict const  dfloat *  D,
+                                      @restrict const  dfloat *  DT,
                                                 const  dfloat    t,
                                       @restrict const  dfloat *  x,
                                       @restrict const  dfloat *  y,
@@ -43,14 +43,14 @@ SOFTWARE.
     @shared dfloat s_F[p_Nq][p_Nq];
     @shared dfloat s_G[p_Nq][p_Nq];
     @shared dfloat s_H[p_Nq][p_Nq];
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
 
     @exclusive dfloat r_rhs[p_Nq];
 
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
         const int id = i+j*p_Nq;
-        s_D[0][id] = D[id];
+        s_DT[0][id] = DT[id];
 
         #pragma unroll p_Nq
         for(int k=0;k<p_Nq;++k){
@@ -97,9 +97,9 @@ SOFTWARE.
         for(int i=0;i<p_Nq;++i;@inner(0)){
           #pragma unroll p_Nq
           for (int n=0;n<p_Nq;n++) {
-            const dfloat Dr = s_D[n][i];
-            const dfloat Ds = s_D[n][j];
-            const dfloat Dt = s_D[k][n];
+            const dfloat Dr = s_DT[n][i];
+            const dfloat Ds = s_DT[n][j];
+            const dfloat Dt = s_DT[k][n];
             r_rhs[k] += Dr*s_F[j][n];
             r_rhs[k] += Ds*s_G[n][i];
             r_rhs[n] += Dt*s_H[j][i];
@@ -166,7 +166,7 @@ SOFTWARE.
 
 @kernel void fpeAdvectionSurfaceHex3D(const dlong Nelements,
                                       @restrict const  dfloat *  sgeo,
-                                      @restrict const  dfloat *  LIFTT,
+                                      @restrict const  dfloat *  LIFT,
                                       @restrict const  dlong  *  vmapM,
                                       @restrict const  dlong  *  vmapP,
                                       @restrict const  int    *  EToB,

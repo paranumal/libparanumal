@@ -47,13 +47,20 @@ void meshHex3D::ReferenceNodes(int N_){
   VertexNodesHex3D(N, r, s, t, vertexNodes);
 
   //GLL quadrature
-  gllz = (dfloat *) malloc(Nq*sizeof(dfloat));
-  gllw = (dfloat *) malloc(Nq*sizeof(dfloat));
-  JacobiGLL(N, gllz, gllw);
+  dfloat *gllz = (dfloat *) malloc((N+1)*sizeof(dfloat));
+  w = (dfloat *) malloc((N+1)*sizeof(dfloat));
+  JacobiGLL(N, gllz, w);
+
+  //Lumped Mass matrix
+  MM    = (dfloat *) malloc(Np*Np*sizeof(dfloat));
+  invMM = (dfloat *) malloc(Np*Np*sizeof(dfloat));
+  LumpedMassMatrixHex3D(N, w, MM);
+  invLumpedMassMatrixHex3D(N, w, invMM);
 
   // D matrix
   D = (dfloat *) malloc(Nq*Nq*sizeof(dfloat));
   Dmatrix1D(N, Nq, gllz, Nq, gllz, D);
+  free(gllz);
 
   /* Plotting data */
   int plotN = N_ + 3; //enriched interpolation space for plotting

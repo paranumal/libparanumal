@@ -27,20 +27,20 @@ SOFTWARE.
 // compute local gradients
 @kernel void fpeGradientQuad2D(const dlong Nelements,
                                @restrict const  dfloat *  vgeo,
-                               @restrict const  dfloat *  const D,
+                               @restrict const  dfloat *  const DT,
                                @restrict const  dfloat *  q,
                                @restrict dfloat4 *  gradq){
 
   for(dlong e=0;e<Nelements;++e;@outer(0)){
 
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
     @shared dfloat s_q[p_Nq][p_Nq];
 
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
 
-        // prefetch D
-        s_D[j][i] = D[i + p_Nq*j];
+        // prefetch DT
+        s_DT[j][i] = DT[i + p_Nq*j];
 
         // prefetch q
         const dlong id = e*p_Np+j*p_Nq+i;
@@ -66,8 +66,8 @@ SOFTWARE.
         dfloat qr = 0, qs = 0;
         #pragma unroll p_Nq
           for(int n=0;n<p_Nq;++n){
-            qr += s_D[i][n]*s_q[j][n];
-            qs += s_D[j][n]*s_q[n][i];
+            qr += s_DT[i][n]*s_q[j][n];
+            qs += s_DT[j][n]*s_q[n][i];
           }
 
         dfloat4 gradqn;

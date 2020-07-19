@@ -27,7 +27,7 @@ SOFTWARE.
 
 @kernel void bnsVorticityHex3D(const dlong Nelements,
                               @restrict const  dfloat *  vgeo,
-                              @restrict const  dfloat *  D,
+                              @restrict const  dfloat *  DT,
                               @restrict const  dfloat *  q,
                                         const  dfloat    c,
                                      @restrict dfloat *  Vort){
@@ -38,7 +38,7 @@ SOFTWARE.
     @shared dfloat s_u[p_Nq][p_Nq][p_Nq];
     @shared dfloat s_v[p_Nq][p_Nq][p_Nq];
     @shared dfloat s_w[p_Nq][p_Nq][p_Nq];
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
 
     for(int k=0;k<p_Nq;++k;@inner(2)){
       for(int j=0;j<p_Nq;++j;@inner(1)){
@@ -54,7 +54,7 @@ SOFTWARE.
           s_w[k][j][i] = c*q3/q0;
 
           if (k==0)
-            s_D[j][i] = D[j*p_Nq+i];
+            s_DT[j][i] = DT[j*p_Nq+i];
         }
       }
     }
@@ -84,9 +84,9 @@ SOFTWARE.
 
           #pragma unroll p_Nq
             for(int n=0;n<p_Nq;++n) {
-              const dfloat Dr = s_D[i][n];
-              const dfloat Ds = s_D[j][n];
-              const dfloat Dt = s_D[k][n];
+              const dfloat Dr = s_DT[i][n];
+              const dfloat Ds = s_DT[j][n];
+              const dfloat Dt = s_DT[k][n];
               ur += Dr*s_u[k][j][n];
               us += Ds*s_u[k][n][i];
               ut += Dt*s_u[n][j][i];

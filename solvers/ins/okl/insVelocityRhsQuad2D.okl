@@ -53,10 +53,10 @@ SOFTWARE.
                                @restrict const  dfloat *  sgeo,
                                @restrict const  dfloat *  ggeo,
                                @restrict const  dfloat *  S,
-                               @restrict const  dfloat *  D,
-                               @restrict const  dfloat *  LIFTT,
+                               @restrict const  dfloat *  DT,
+                               @restrict const  dfloat *  LIFT,
                                @restrict const  dfloat *  MM,
-                               @restrict const  dfloat *  sMT,
+                               @restrict const  dfloat *  sM,
                                @restrict const  dlong  *  vmapM,
                                @restrict const  int    *  EToB,
                                @restrict const  int    *  mapB,
@@ -81,7 +81,7 @@ SOFTWARE.
     @shared dfloat s_v[p_Nq][p_Nq];
     @shared dfloat s_ndu[p_Nq][p_Nq];
     @shared dfloat s_ndv[p_Nq][p_Nq];
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
 
     @exclusive dfloat r_ur[p_Nq], r_us[p_Nq], r_Au[p_Nq];
     @exclusive dfloat r_vr[p_Nq], r_vs[p_Nq], r_Av[p_Nq];
@@ -95,7 +95,7 @@ SOFTWARE.
         s_ndu[j][i] = 0.;
         s_ndv[j][i] = 0.;
 
-        s_D[j][i] = D[j*p_Nq+i];
+        s_DT[j][i] = DT[j*p_Nq+i];
       }
     }
 
@@ -137,10 +137,10 @@ SOFTWARE.
         dfloat vr = 0.f, vs = 0.f;
         #pragma unroll p_Nq
           for(int n=0; n<p_Nq; ++n){
-            ur += s_D[i][n]*s_u[j][n];
-            vr += s_D[i][n]*s_v[j][n];
-            us += s_D[j][n]*s_u[n][i];
-            vs += s_D[j][n]*s_v[n][i];
+            ur += s_DT[i][n]*s_u[j][n];
+            vr += s_DT[i][n]*s_v[j][n];
+            us += s_DT[j][n]*s_u[n][i];
+            vs += s_DT[j][n]*s_v[n][i];
           }
 
         r_ur[j] = ur; r_us[j] = us;
@@ -169,8 +169,8 @@ SOFTWARE.
         dfloat tmpv = 0.f;
         #pragma unroll p_Nq
           for(int n=0;n<p_Nq;++n) {
-            tmpu += s_D[n][i]*s_u[j][n];
-            tmpv += s_D[n][i]*s_v[j][n];
+            tmpu += s_DT[n][i]*s_u[j][n];
+            tmpv += s_DT[n][i]*s_v[j][n];
           }
 
         r_Au[j] += tmpu;
@@ -200,8 +200,8 @@ SOFTWARE.
 
         #pragma unroll p_Nq
           for(int n=0;n<p_Nq;++n) {
-            tmpu += s_D[n][j]*s_u[n][i];
-            tmpv += s_D[n][j]*s_v[n][i];
+            tmpu += s_DT[n][j]*s_u[n][i];
+            tmpv += s_DT[n][j]*s_v[n][i];
           }
 
         r_Au[j] += tmpu;
@@ -256,10 +256,10 @@ SOFTWARE.
                                @restrict const  dfloat *  sgeo,
                                @restrict const  dfloat *  ggeo,
                                @restrict const  dfloat *  S,
-                               @restrict const  dfloat *  D,
-                               @restrict const  dfloat *  LIFTT,
+                               @restrict const  dfloat *  DT,
+                               @restrict const  dfloat *  LIFT,
                                @restrict const  dfloat *  MM,
-                               @restrict const  dfloat *  sMT,
+                               @restrict const  dfloat *  sM,
                                @restrict const  dlong  *  vmapM,
                                @restrict const  int    *  EToB,
                                @restrict const  int    *  mapB,
@@ -287,7 +287,7 @@ SOFTWARE.
     @shared dfloat s_dvdy[p_Nq][p_Nq];
     @shared dfloat s_rhsu[p_Nq][p_Nq];
     @shared dfloat s_rhsv[p_Nq][p_Nq];
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
 
     // loop over slabs
     for(int j=0;j<p_Nq;++j){
@@ -299,7 +299,7 @@ SOFTWARE.
         s_rhsu[j][i] = 0.f;
         s_rhsv[j][i] = 0.f;
 
-        s_D[j][i] = D[j*p_Nq+i];
+        s_DT[j][i] = DT[j*p_Nq+i];
       }
     }
 
@@ -365,10 +365,10 @@ SOFTWARE.
         dfloat dvr = 0, dvs = 0;
 
         for(int n=0;n<p_Nq;++n){
-          dur += s_D[n][i]*s_dudx[j][n];
-          dus += s_D[n][j]*s_dudy[n][i];
-          dvr += s_D[n][i]*s_dvdx[j][n];
-          dvs += s_D[n][j]*s_dvdy[n][i];
+          dur += s_DT[n][i]*s_dudx[j][n];
+          dus += s_DT[n][j]*s_dudy[n][i];
+          dvr += s_DT[n][i]*s_dvdx[j][n];
+          dvs += s_DT[n][j]*s_dvdy[n][i];
         }
 
         //fetch rhs value and add boundary terms

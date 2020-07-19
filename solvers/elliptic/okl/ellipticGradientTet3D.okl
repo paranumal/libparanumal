@@ -27,13 +27,13 @@ SOFTWARE.
 
 @kernel void ellipticGradientTet3D(const dlong Nelements,
           @restrict const  dfloat *  vgeo,
-          @restrict const  dfloat *  const Dmatrices,
+          @restrict const  dfloat *  const D,
           @restrict const  dfloat *  q,
-          @restrict dfloat4 *  gradq){  
-  
+          @restrict dfloat4 *  gradq){
+
   // block partition of elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
-    
+
     @shared dfloat s_q[p_NblockV][p_Np];
 
     for(dlong e=eo;e<eo+p_NblockV;++e;@inner(1)){
@@ -45,7 +45,7 @@ SOFTWARE.
         }
       }
     }
-          
+
     @barrier("local");
 
     for(dlong e=eo;e<eo+p_NblockV;++e;@inner(1)){
@@ -62,16 +62,16 @@ SOFTWARE.
           const dfloat dsdz = vgeo[gid + p_SZID];
           const dfloat dtdx = vgeo[gid + p_TXID];
           const dfloat dtdy = vgeo[gid + p_TYID];
-          const dfloat dtdz = vgeo[gid + p_TZID];    
+          const dfloat dtdz = vgeo[gid + p_TZID];
 
           // compute 1D derivatives
           dfloat qr = 0, qs = 0, qt =0;
 
           #pragma unroll p_Np
             for(int i=0;i<p_Np;++i) {
-              qr += Dmatrices[n + i*p_Np+0*p_Np*p_Np]*s_q[es][i];
-              qs += Dmatrices[n + i*p_Np+1*p_Np*p_Np]*s_q[es][i];
-              qt += Dmatrices[n + i*p_Np+2*p_Np*p_Np]*s_q[es][i];
+              qr += D[n + i*p_Np+0*p_Np*p_Np]*s_q[es][i];
+              qs += D[n + i*p_Np+1*p_Np*p_Np]*s_q[es][i];
+              qt += D[n + i*p_Np+2*p_Np*p_Np]*s_q[es][i];
             }
 
           dfloat4 gradqn;
@@ -79,8 +79,8 @@ SOFTWARE.
           gradqn.y = drdy*qr + dsdy*qs + dtdy*qt;
           gradqn.z = drdz*qr + dsdz*qs + dtdz*qt;
           gradqn.w = s_q[es][n];
-          
-          const dlong id = e*p_Np+n; 
+
+          const dlong id = e*p_Np+n;
           gradq[id] = gradqn;
         }
       }
@@ -91,13 +91,13 @@ SOFTWARE.
 @kernel void ellipticPartialGradientTet3D(const dlong Nelements,
           const dlong offset,
           @restrict const  dfloat *  vgeo,
-          @restrict const  dfloat *  const Dmatrices,
+          @restrict const  dfloat *  const D,
           @restrict const  dfloat *  q,
-          @restrict dfloat4 *  gradq){  
-  
+          @restrict dfloat4 *  gradq){
+
   // block partition of elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
-    
+
     @shared dfloat s_q[p_NblockV][p_Np];
 
     for(dlong e=eo;e<eo+p_NblockV;++e;@inner(1)){
@@ -109,7 +109,7 @@ SOFTWARE.
         }
       }
     }
-          
+
     @barrier("local");
 
     for(dlong e=eo;e<eo+p_NblockV;++e;@inner(1)){
@@ -126,16 +126,16 @@ SOFTWARE.
           const dfloat dsdz = vgeo[gid + p_SZID];
           const dfloat dtdx = vgeo[gid + p_TXID];
           const dfloat dtdy = vgeo[gid + p_TYID];
-          const dfloat dtdz = vgeo[gid + p_TZID];    
+          const dfloat dtdz = vgeo[gid + p_TZID];
 
           // compute 1D derivatives
           dfloat qr = 0, qs = 0, qt =0;
 
           #pragma unroll p_Np
             for(int i=0;i<p_Np;++i) {
-              qr += Dmatrices[n + i*p_Np+0*p_Np*p_Np]*s_q[es][i];
-              qs += Dmatrices[n + i*p_Np+1*p_Np*p_Np]*s_q[es][i];
-              qt += Dmatrices[n + i*p_Np+2*p_Np*p_Np]*s_q[es][i];
+              qr += D[n + i*p_Np+0*p_Np*p_Np]*s_q[es][i];
+              qs += D[n + i*p_Np+1*p_Np*p_Np]*s_q[es][i];
+              qt += D[n + i*p_Np+2*p_Np*p_Np]*s_q[es][i];
             }
 
           dfloat4 gradqn;
@@ -143,8 +143,8 @@ SOFTWARE.
           gradqn.y = drdy*qr + dsdy*qs + dtdy*qt;
           gradqn.z = drdz*qr + dsdz*qs + dtdz*qt;
           gradqn.w = s_q[es][n];
-          
-          const dlong id = (e+offset)*p_Np+n; 
+
+          const dlong id = (e+offset)*p_Np+n;
           gradq[id] = gradqn;
         }
       }

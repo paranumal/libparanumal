@@ -148,7 +148,7 @@ void meshQuad3D::GeometricFactors(){
 
   //  printf("after: grad r = %g,%g,%g\n", rx, ry, rz);
 
-  dfloat JW = J*gllw[i]*gllw[j];
+  dfloat JW = J*w[i]*w[j];
 
   /* store geometric factors */
   int base = Nvgeo*Np*e + j*Nq + i;

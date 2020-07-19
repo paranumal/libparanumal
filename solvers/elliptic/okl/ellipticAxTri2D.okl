@@ -24,16 +24,16 @@ SOFTWARE.
 
 */
 
- 
+
 @kernel void ellipticAxTri2D(const dlong Nelements,
-        @restrict const  dfloat *  ggeo,
-        @restrict const  dfloat *  Dmatrices,
-        @restrict const  dfloat *  Smatrices,
-        @restrict const  dfloat *  MM,
-        const dfloat lambda,
-        @restrict const  dfloat  *  q,
-        @restrict dfloat  *  Aq){
-  
+                            @restrict const  dfloat *  ggeo,
+                            @restrict const  dfloat *  D,
+                            @restrict const  dfloat *  S,
+                            @restrict const  dfloat *  MM,
+                            const dfloat lambda,
+                            @restrict const  dfloat  *  q,
+                            @restrict dfloat  *  Aq){
+
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
 
     @shared dfloat s_q[p_NblockV][p_Np];
@@ -70,9 +70,9 @@ SOFTWARE.
           #pragma unroll p_Np
             for (int k=0;k<p_Np;k++) {
               dfloat qn = s_q[es][k];
-              qrr += Smatrices[n+k*p_Np+0*p_Np*p_Np]*qn;
-              qrs += Smatrices[n+k*p_Np+1*p_Np*p_Np]*qn;
-              qss += Smatrices[n+k*p_Np+2*p_Np*p_Np]*qn;
+              qrr += S[n+k*p_Np+0*p_Np*p_Np]*qn;
+              qrs += S[n+k*p_Np+1*p_Np*p_Np]*qn;
+              qss += S[n+k*p_Np+2*p_Np*p_Np]*qn;
               qM  += MM[n+k*p_Np]*s_q[es][k];
             }
 
@@ -95,15 +95,15 @@ SOFTWARE.
 
 
 @kernel void ellipticPartialAxTri2D(const dlong Nelements,
-        @restrict const  dlong   *  elementList,
-        @restrict const  dfloat *  ggeo,
-        @restrict const  dfloat *  Dmatrices,
-        @restrict const  dfloat *  Smatrices,
-        @restrict const  dfloat *  MM,
-        const dfloat lambda,
-        @restrict const  dfloat  *  q,
-        @restrict dfloat  *  Aq){
-  
+                                    @restrict const  dlong   *  elementList,
+                                    @restrict const  dfloat *  ggeo,
+                                    @restrict const  dfloat *  D,
+                                    @restrict const  dfloat *  S,
+                                    @restrict const  dfloat *  MM,
+                                    const dfloat lambda,
+                                    @restrict const  dfloat  *  q,
+                                    @restrict dfloat  *  Aq){
+
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
 
     @shared dfloat s_q[p_NblockV][p_Np];
@@ -142,12 +142,12 @@ SOFTWARE.
           #pragma unroll p_Np
             for (int k=0;k<p_Np;k++) {
               dfloat qn = s_q[es][k];
-              qrr += Smatrices[n+k*p_Np+0*p_Np*p_Np]*qn;
-              qrs += Smatrices[n+k*p_Np+1*p_Np*p_Np]*qn;
-              qss += Smatrices[n+k*p_Np+2*p_Np*p_Np]*qn;
+              qrr += S[n+k*p_Np+0*p_Np*p_Np]*qn;
+              qrs += S[n+k*p_Np+1*p_Np*p_Np]*qn;
+              qss += S[n+k*p_Np+2*p_Np*p_Np]*qn;
               qM  += MM[n+k*p_Np]*s_q[es][k];
             }
-            
+
           const dlong id = n + element*p_Np;
 
           Aq[id] = Grr*qrr+Grs*qrs+Gss*qss + J*lambda*qM;

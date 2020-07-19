@@ -111,12 +111,12 @@ void upwind_split(const dfloat nx,  const dfloat ny,  const dfloat nz, const dfl
 
 // This @kernel uses Upwind flux
 @kernel void bnsSurfaceTet3D(const dlong Nelements,
-                            @restrict const  dlong *  elementIds,
+                            @restrict const  dlong  *  elementIds,
                             @restrict const  dfloat *  sgeo,
-                            @restrict const  dfloat *  LIFTT,
-                            @restrict const  dlong   *  vmapM,
-                            @restrict const  dlong   *  vmapP,
-                            @restrict const  int   *  EToB,
+                            @restrict const  dfloat *  LIFT,
+                            @restrict const  dlong  *  vmapM,
+                            @restrict const  dlong  *  vmapP,
+                            @restrict const  int    *  EToB,
                             @restrict const  dfloat *  x,
                             @restrict const  dfloat *  y,
                             @restrict const  dfloat *  z,
@@ -262,7 +262,7 @@ void upwind_split(const dfloat nx,  const dfloat ny,  const dfloat nz, const dfl
         // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
         #pragma unroll p_NfacesNfp
           for(int m=0;m<p_NfacesNfp;++m){
-            dfloat L = LIFTT[n+m*p_Np];
+            dfloat L = LIFT[n+m*p_Np];
             #pragma unroll p_Nfields
               for(int fld=0; fld<p_Nfields; fld++){
                 r_rhsq[fld] +=L*s_fluxq[fld][m];
@@ -286,7 +286,7 @@ void upwind_split(const dfloat nx,  const dfloat ny,  const dfloat nz, const dfl
                                @restrict const  dlong  *  pmlElementIds,
                                @restrict const  dlong  *  pmlIds,
                                @restrict const  dfloat *  sgeo,
-                               @restrict const  dfloat *  LIFTT,
+                               @restrict const  dfloat *  LIFT,
                                @restrict const  dlong  *  vmapM,
                                @restrict const  dlong  *  vmapP,
                                @restrict const  int    *  EToB,
@@ -432,7 +432,7 @@ void upwind_split(const dfloat nx,  const dfloat ny,  const dfloat nz, const dfl
         // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
         #pragma unroll p_NfacesNfp
           for(int m=0;m<p_NfacesNfp;++m){
-            const dfloat L = LIFTT[n+m*p_Np];
+            const dfloat L = LIFT[n+m*p_Np];
             #pragma unroll p_Nfields
               for(int fld=0; fld<p_Nfields; fld++){
                 r_lnxdq[fld] += L*s_fluxqx[fld][m];
@@ -461,7 +461,7 @@ void upwind_split(const dfloat nx,  const dfloat ny,  const dfloat nz, const dfl
 @kernel void bnsMRSurfaceTet3D(const dlong Nelements,
                               @restrict const  dlong  *  elementIds,
                               @restrict const  dfloat *  sgeo,
-                              @restrict const  dfloat *  LIFTT,
+                              @restrict const  dfloat *  LIFT,
                               @restrict const  dlong  *  vmapM,
                               @restrict const  dlong  *  mapP,
                               @restrict const  int    *  EToB,
@@ -605,7 +605,7 @@ void upwind_split(const dfloat nx,  const dfloat ny,  const dfloat nz, const dfl
         // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
         #pragma unroll p_NfacesNfp
           for(int m=0;m<p_NfacesNfp;++m){
-            dfloat L = LIFTT[n+m*p_Np];
+            dfloat L = LIFT[n+m*p_Np];
             #pragma unroll p_Nfields
               for(int fld=0; fld<p_Nfields; fld++){
                 r_rhsq[fld] +=L*s_fluxq[fld][m];
@@ -630,7 +630,7 @@ void upwind_split(const dfloat nx,  const dfloat ny,  const dfloat nz, const dfl
                                  @restrict const  dlong  *  pmlElementIds,
                                  @restrict const  dlong  *  pmlIds,
                                  @restrict const  dfloat *  sgeo,
-                                 @restrict const  dfloat *  LIFTT,
+                                 @restrict const  dfloat *  LIFT,
                                  @restrict const  dlong  *  vmapM,
                                  @restrict const  dlong  *  mapP,
                                  @restrict const  int    *  EToB,
@@ -774,7 +774,7 @@ void upwind_split(const dfloat nx,  const dfloat ny,  const dfloat nz, const dfl
         // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
         #pragma unroll p_NfacesNfp
           for(int m=0;m<p_NfacesNfp;++m){
-            const dfloat L = LIFTT[n+m*p_Np];
+            const dfloat L = LIFT[n+m*p_Np];
             #pragma unroll p_Nfields
               for(int fld=0; fld<p_Nfields; fld++){
                 r_lnxdq[fld] += L*s_fluxqx[fld][m];

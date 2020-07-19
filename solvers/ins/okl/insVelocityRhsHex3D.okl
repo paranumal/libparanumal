@@ -56,10 +56,10 @@ SOFTWARE.
                                @restrict const  dfloat *  sgeo,
                                @restrict const  dfloat *  ggeo,
                                @restrict const  dfloat *  S,
-                               @restrict const  dfloat *  D,
-                               @restrict const  dfloat *  LIFTT,
+                               @restrict const  dfloat *  DT,
+                               @restrict const  dfloat *  LIFT,
                                @restrict const  dfloat *  MM,
-                               @restrict const  dfloat *  sMT,
+                               @restrict const  dfloat *  sM,
                                @restrict const  dlong  *  vmapM,
                                @restrict const  int    *  EToB,
                                @restrict const  int    *  mapB,
@@ -80,7 +80,7 @@ SOFTWARE.
                                @restrict       dfloat *  rhsW){
 
   for(dlong e=0;e<Nelements;++e;@outer(0)){
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
     @shared dfloat s_u[2][p_Nq][p_Nq];
     @shared dfloat s_v[2][p_Nq][p_Nq];
     @shared dfloat s_w[2][p_Nq][p_Nq];
@@ -104,9 +104,9 @@ SOFTWARE.
     // face 0 & 5
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
-        //load D into local memory
-        // s_D[i][j] = d \phi_i at node j
-        s_D[j][i] = D[p_Nq*j+i]; // D is column major
+        //load DT into local memory
+        // s_DT[i][j] = d \phi_i at node j
+        s_DT[j][i] = DT[p_Nq*j+i]; // DT is column major
 
         #pragma unroll p_Nq
         for(int k=0;k<p_Nq;++k){
@@ -270,9 +270,9 @@ SOFTWARE.
 
             #pragma unroll p_Nq
               for(int m = 0; m < p_Nq; m++) {
-                r_ut += s_D[k][m]*r_u[m];
-                r_vt += s_D[k][m]*r_v[m];
-                r_wt += s_D[k][m]*r_w[m];
+                r_ut += s_DT[k][m]*r_u[m];
+                r_vt += s_DT[k][m]*r_v[m];
+                r_wt += s_DT[k][m]*r_w[m];
               }
           }
         }
@@ -291,12 +291,12 @@ SOFTWARE.
 
             #pragma unroll p_Nq
               for(int m = 0; m < p_Nq; m++) {
-                ur += s_D[i][m]*s_u[0][j][m];
-                vr += s_D[i][m]*s_v[0][j][m];
-                wr += s_D[i][m]*s_w[0][j][m];
-                us += s_D[j][m]*s_u[0][m][i];
-                vs += s_D[j][m]*s_v[0][m][i];
-                ws += s_D[j][m]*s_w[0][m][i];
+                ur += s_DT[i][m]*s_u[0][j][m];
+                vr += s_DT[i][m]*s_v[0][j][m];
+                wr += s_DT[i][m]*s_w[0][j][m];
+                us += s_DT[j][m]*s_u[0][m][i];
+                vs += s_DT[j][m]*s_v[0][m][i];
+                ws += s_DT[j][m]*s_w[0][m][i];
               }
 
             //reuse the s_ndq array
@@ -324,15 +324,15 @@ SOFTWARE.
 
             #pragma unroll p_Nq
               for(int m = 0; m < p_Nq; m++){
-                r_Auk     += s_D[m][j]*s_ndu[0][m][i];
-                r_Avk     += s_D[m][j]*s_ndv[0][m][i];
-                r_Awk     += s_D[m][j]*s_ndw[0][m][i];
-                r_rhsu[m] += s_D[k][m]*r_Gut; // DT(m,k)*ut(i,j,k,e)
-                r_rhsv[m] += s_D[k][m]*r_Gvt; // DT(m,k)*ut(i,j,k,e)
-                r_rhsw[m] += s_D[k][m]*r_Gwt; // DT(m,k)*ut(i,j,k,e)
-                r_Auk     += s_D[m][i]*s_ndu[1][j][m];
-                r_Avk     += s_D[m][i]*s_ndv[1][j][m];
-                r_Awk     += s_D[m][i]*s_ndw[1][j][m];
+                r_Auk     += s_DT[m][j]*s_ndu[0][m][i];
+                r_Avk     += s_DT[m][j]*s_ndv[0][m][i];
+                r_Awk     += s_DT[m][j]*s_ndw[0][m][i];
+                r_rhsu[m] += s_DT[k][m]*r_Gut; // DT(m,k)*ut(i,j,k,e)
+                r_rhsv[m] += s_DT[k][m]*r_Gvt; // DT(m,k)*ut(i,j,k,e)
+                r_rhsw[m] += s_DT[k][m]*r_Gwt; // DT(m,k)*ut(i,j,k,e)
+                r_Auk     += s_DT[m][i]*s_ndu[1][j][m];
+                r_Avk     += s_DT[m][i]*s_ndv[1][j][m];
+                r_Awk     += s_DT[m][i]*s_ndw[1][j][m];
               }
 
             r_rhsu[k] += r_Auk;
@@ -412,10 +412,10 @@ SOFTWARE.
                                @restrict const  dfloat *  sgeo,
                                @restrict const  dfloat *  ggeo,
                                @restrict const  dfloat *  S,
-                               @restrict const  dfloat *  D,
-                               @restrict const  dfloat *  LIFTT,
+                               @restrict const  dfloat *  DT,
+                               @restrict const  dfloat *  LIFT,
                                @restrict const  dfloat *  MM,
-                               @restrict const  dfloat *  sMT,
+                               @restrict const  dfloat *  sM,
                                @restrict const  dlong  *  vmapM,
                                @restrict const  int    *  EToB,
                                @restrict const  int    *  mapB,
@@ -450,7 +450,7 @@ SOFTWARE.
     @shared dfloat s_rhsV[p_Nq][p_Nq];
     @shared dfloat s_rhsW[p_Nq][p_Nq];
 
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
 
     @exclusive dfloat r_dudx[p_Nq], r_dudy[p_Nq], r_dudz[p_Nq], r_rhsU[p_Nq];
     @exclusive dfloat r_dvdx[p_Nq], r_dvdy[p_Nq], r_dvdz[p_Nq], r_rhsV[p_Nq];
@@ -476,7 +476,7 @@ SOFTWARE.
           r_rhsW[k] = 0.f;
         }
 
-        s_D[j][i] = D[j*p_Nq+i];
+        s_DT[j][i] = DT[j*p_Nq+i];
       }
     }
 
@@ -736,9 +736,9 @@ SOFTWARE.
 
           #pragma unroll p_Nq
           for(int n=0;n<p_Nq;++n){
-            const dfloat Dr = s_D[n][i];
-            const dfloat Ds = s_D[n][j];
-            const dfloat Dt = s_D[k][n];
+            const dfloat Dr = s_DT[n][i];
+            const dfloat Ds = s_DT[n][j];
+            const dfloat Dt = s_DT[k][n];
             ur        += Dr*s_dudx[j][n];
             us        += Ds*s_dudy[n][i];
             r_rhsU[n] += Dt*r_dudt; // DT(m,k)*ut(i,j,k,e)

@@ -29,8 +29,8 @@ SOFTWARE.
                                 @restrict const  dlong  *  elementList,
                                 @restrict const  dfloat *  vgeo,
                                 @restrict const  dfloat *  sgeo,
-                                @restrict const  dfloat *  Dmatrices,
-                                @restrict const  dfloat *  LIFTT,
+                                @restrict const  dfloat *  D,
+                                @restrict const  dfloat *  LIFT,
                                 @restrict const  dlong  *  vmapM,
                                 @restrict const  dlong  *  vmapP,
                                 @restrict const  int    *  EToB,
@@ -156,8 +156,8 @@ SOFTWARE.
 
           #pragma unroll p_NfacesNfp
           for(int k=0;k<p_NfacesNfp;++k){
-            Lnxdq += LIFTT[n+k*p_Np]*s_nxdq[k];
-            Lnydq += LIFTT[n+k*p_Np]*s_nydq[k];
+            Lnxdq += LIFT[n+k*p_Np]*s_nxdq[k];
+            Lnydq += LIFT[n+k*p_Np]*s_nydq[k];
           }
 
           dfloat dqdx = s_dqdx[n] + Lnxdq;
@@ -188,8 +188,8 @@ SOFTWARE.
 
           #pragma unroll p_Np
           for(int k=0;k<p_Np;++k){
-            lapr += Dmatrices[n+k*p_Np+0*p_Np*p_Np]*s_dqdx[k];
-            laps += Dmatrices[n+k*p_Np+1*p_Np*p_Np]*s_dqdy[k];
+            lapr += D[n+k*p_Np+0*p_Np*p_Np]*s_dqdx[k];
+            laps += D[n+k*p_Np+1*p_Np*p_Np]*s_dqdy[k];
           }
 
           LUn = -(lapr+laps);
@@ -197,7 +197,7 @@ SOFTWARE.
           // lift remaining surface terms
           #pragma unroll p_NfacesNfp
           for(int k=0;k<p_NfacesNfp;++k){
-            LUn += LIFTT[n+k*p_Np]*s_lapflux[k];
+            LUn += LIFT[n+k*p_Np]*s_lapflux[k];
           }
 
           const dlong id = n+element*p_Np*p_NVfields+i*p_Np;

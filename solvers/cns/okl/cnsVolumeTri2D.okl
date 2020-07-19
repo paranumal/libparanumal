@@ -28,7 +28,7 @@ SOFTWARE.
 // Compressible Navier-Stokes
 @kernel void cnsVolumeTri2D(const dlong Nelements,
                             @restrict const  dfloat *  vgeo,
-                            @restrict const  dfloat *  DT,
+                            @restrict const  dfloat *  D,
                             @restrict const  dfloat *  x,
                             @restrict const  dfloat *  y,
                             @restrict const  dfloat *  z,
@@ -122,8 +122,8 @@ SOFTWARE.
       dfloat rhsq0 = 0, rhsq1 = 0, rhsq2 = 0, rhsq3 = 0;
 
       for(int i=0;i<p_Np;++i){
-        const dfloat Drni = DT[n+i*p_Np+0*p_Np*p_Np];
-        const dfloat Dsni = DT[n+i*p_Np+1*p_Np*p_Np];
+        const dfloat Drni = D[n+i*p_Np+0*p_Np*p_Np];
+        const dfloat Dsni = D[n+i*p_Np+1*p_Np*p_Np];
 
         rhsq0 += Drni*s_F[0][i]
                 +Dsni*s_G[0][i];

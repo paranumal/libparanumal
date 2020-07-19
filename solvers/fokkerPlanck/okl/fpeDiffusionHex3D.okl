@@ -81,8 +81,8 @@ void surfaceTerms(const int emap,
                               @restrict const  dfloat *  vgeo,
                               @restrict const  dfloat *  sgeo,
                               @restrict const  int    *  EToB,
-                              @restrict const  dfloat *  const D,
-                              @restrict const  dfloat *  LIFTT,
+                              @restrict const  dfloat *  const DT,
+                              @restrict const  dfloat *  LIFT,
                                         const  dfloat    t,
                               @restrict const  dfloat *  x,
                               @restrict const  dfloat *  y,
@@ -98,7 +98,7 @@ void surfaceTerms(const int emap,
     @shared dfloat s_dqdz[2][p_Nq][p_Nq];
     @shared dfloat s_rhsq[2][p_Nq][p_Nq];
 
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
 
     @exclusive dfloat r_dqdx[p_Nq], r_dqdy[p_Nq], r_dqdz[p_Nq], r_rhsq[p_Nq];
     @exclusive dfloat r_dqdt;
@@ -123,7 +123,7 @@ void surfaceTerms(const int emap,
           r_rhsq[k] = 0.0;
         }
 
-        s_D[j][i] = D[j*p_Nq+i];
+        s_DT[j][i] = DT[j*p_Nq+i];
       }
     }
 
@@ -301,9 +301,9 @@ void surfaceTerms(const int emap,
 
           #pragma unroll p_Nq
           for(int n=0;n<p_Nq;++n){
-            dr += s_D[n][i]*s_dqdx[0][j][n];
-            r_rhsq[n] += s_D[k][n]*r_dqdt; // DT(m,k)*ut(i,j,k,e)
-            ds += s_D[n][j]*s_dqdy[0][n][i];
+            dr += s_DT[n][i]*s_dqdx[0][j][n];
+            r_rhsq[n] += s_DT[k][n]*r_dqdt; // DT(m,k)*ut(i,j,k,e)
+            ds += s_DT[n][j]*s_dqdy[0][n][i];
           }
 
           r_rhsq[k] += dr + ds;

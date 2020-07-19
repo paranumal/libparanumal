@@ -29,11 +29,11 @@ SOFTWARE.
                                @restrict const  dfloat *  vgeo,
                                @restrict const  dfloat *  sgeo,
                                @restrict const  dfloat *  ggeo,
-                               @restrict const  dfloat *  Smatrices,
-                               @restrict const  dfloat *  Dmatrices,
-                               @restrict const  dfloat *  LIFTT,
+                               @restrict const  dfloat *  S,
+                               @restrict const  dfloat *  D,
+                               @restrict const  dfloat *  LIFT,
                                @restrict const  dfloat *  MM,
-                               @restrict const  dfloat *  sMT,
+                               @restrict const  dfloat *  sM,
                                @restrict const  dlong  *  vmapM,
                                @restrict const  int    *  EToB,
                                @restrict const  int    *  mapB,
@@ -112,19 +112,19 @@ SOFTWARE.
         dfloat ptt = 0.;
         #pragma unroll p_Np
           for (int k=0;k<p_Np;k++) {
-            prr += Smatrices[n+k*p_Np+0*p_Np*p_Np]*s_p[k];
-            prs += Smatrices[n+k*p_Np+1*p_Np*p_Np]*s_p[k];
-            prt += Smatrices[n+k*p_Np+2*p_Np*p_Np]*s_p[k];
-            pss += Smatrices[n+k*p_Np+3*p_Np*p_Np]*s_p[k];
-            pst += Smatrices[n+k*p_Np+4*p_Np*p_Np]*s_p[k];
-            ptt += Smatrices[n+k*p_Np+5*p_Np*p_Np]*s_p[k];
+            prr += S[n+k*p_Np+0*p_Np*p_Np]*s_p[k];
+            prs += S[n+k*p_Np+1*p_Np*p_Np]*s_p[k];
+            prt += S[n+k*p_Np+2*p_Np*p_Np]*s_p[k];
+            pss += S[n+k*p_Np+3*p_Np*p_Np]*s_p[k];
+            pst += S[n+k*p_Np+4*p_Np*p_Np]*s_p[k];
+            ptt += S[n+k*p_Np+5*p_Np*p_Np]*s_p[k];
           }
 
         dfloat Lndp = 0;
         // surface mass * surface terms
         #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
-            Lndp += sMT[n+i*p_Np]*s_ndp[i];
+            Lndp += sM[n+i*p_Np]*s_ndp[i];
           }
 
         r_rhsP = -(Grr*prr+Grs*prs+Grt*prt
@@ -169,11 +169,11 @@ SOFTWARE.
                                @restrict const  dfloat *  vgeo,
                                @restrict const  dfloat *  sgeo,
                                @restrict const  dfloat *  ggeo,
-                               @restrict const  dfloat *  Smatrices,
-                               @restrict const  dfloat *  Dmatrices,
-                               @restrict const  dfloat *  LIFTT,
+                               @restrict const  dfloat *  S,
+                               @restrict const  dfloat *  D,
+                               @restrict const  dfloat *  LIFT,
                                @restrict const  dfloat *  MM,
-                               @restrict const  dfloat *  sMT,
+                               @restrict const  dfloat *  sM,
                                @restrict const  dlong  *  vmapM,
                                @restrict const  int    *  EToB,
                                @restrict const  int    *  mapB,
@@ -261,7 +261,7 @@ SOFTWARE.
 
         #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
-            dfloat liftt = LIFTT[n+i*p_Np];
+            dfloat liftt = LIFT[n+i*p_Np];
             Lnxdp += liftt*s_nxdp[i];
             Lnydp += liftt*s_nydp[i];
             Lnzdp += liftt*s_nzdp[i];
@@ -293,9 +293,9 @@ SOFTWARE.
         dfloat lasr = 0.f, lass = 0.f, last=0.f;
         #pragma unroll p_Np
         for(int i=0;i<p_Np;++i) {
-          const dfloat Drn = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
-          const dfloat Dsn = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
-          const dfloat Dtn = Dmatrices[n+i*p_Np+2*p_Np*p_Np];
+          const dfloat Drn = D[n+i*p_Np+0*p_Np*p_Np];
+          const dfloat Dsn = D[n+i*p_Np+1*p_Np*p_Np];
+          const dfloat Dtn = D[n+i*p_Np+2*p_Np*p_Np];
           lasr += Drn*s_dpdx[i];
           lass += Dsn*s_dpdy[i];
           last += Dtn*s_dpdz[i];
@@ -316,7 +316,7 @@ SOFTWARE.
         // lift remaining surface terms
         #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
-            las += LIFTT[n+i*p_Np]*s_lappflux[i];
+            las += LIFT[n+i*p_Np]*s_lappflux[i];
           }
 
         s_lapp[n] -= las;

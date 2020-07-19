@@ -28,7 +28,7 @@ SOFTWARE.
 // compute NU = -div(uxu) in collocation way
 @kernel void insSubcycleAdvectionVolumeTet3D(const dlong Nelements,
                                    @restrict const  dfloat *  vgeo,
-                                   @restrict const  dfloat *  Dmatrices,
+                                   @restrict const  dfloat *  D,
                                    @restrict const  dfloat *  Ue,
                                    @restrict const  dfloat *  U,
                                          @restrict  dfloat *  RHS){
@@ -106,9 +106,9 @@ SOFTWARE.
 
           #pragma unroll p_Np
             for(int i=0;i<p_Np;++i){
-              const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
-              const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
-              const dfloat Dtni = Dmatrices[n+i*p_Np+2*p_Np*p_Np];
+              const dfloat Drni = D[n+i*p_Np+0*p_Np*p_Np];
+              const dfloat Dsni = D[n+i*p_Np+1*p_Np*p_Np];
+              const dfloat Dtni = D[n+i*p_Np+2*p_Np*p_Np];
 
               fluxU += Drni*s_F11[es][i]
                       +Dsni*s_F12[es][i]
@@ -135,7 +135,7 @@ SOFTWARE.
 //
 @kernel void insSubcycleAdvectionSurfaceTet3D(const dlong Nelements,
                                     @restrict const  dfloat *  sgeo,
-                                    @restrict const  dfloat *  LIFTT,
+                                    @restrict const  dfloat *  LIFT,
                                     @restrict const  dlong  *  vmapM,
                                     @restrict const  dlong  *  vmapP,
                                     @restrict const  int    *  EToB,
@@ -248,7 +248,7 @@ SOFTWARE.
             // Lift
             #pragma unroll p_NfacesNfp
             for(int m=0;m<p_Nfaces*p_Nfp;++m){
-              const dfloat L = LIFTT[n+m*p_Np];
+              const dfloat L = LIFT[n+m*p_Np];
               rhsu  += L*s_fluxU[es][m];
               rhsv  += L*s_fluxV[es][m];
               rhsw  += L*s_fluxW[es][m];

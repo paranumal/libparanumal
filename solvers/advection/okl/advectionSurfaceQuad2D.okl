@@ -70,7 +70,7 @@ void surfaceTerms(const int e,
 // batch process elements
 @kernel void advectionSurfaceQuad2D(const dlong Nelements,
                                     @restrict const  dfloat *  sgeo,
-                                    @restrict const  dfloat *  LIFTT,
+                                    @restrict const  dfloat *  LIFT,
                                     @restrict const  dlong  *  vmapM,
                                     @restrict const  dlong  *  vmapP,
                                     @restrict const  int    *  EToB,

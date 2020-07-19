@@ -383,6 +383,20 @@ void mesh_t::MassMatrixTri2D(int _Np, dfloat *V, dfloat *_MM){
   matrixInverse(_Np, _MM);
 }
 
+void mesh_t::invMassMatrixTri2D(int _Np, dfloat *V, dfloat *_invMM){
+
+  // massMatrix^{-1} = V*V'
+  for(int n=0;n<_Np;++n){
+    for(int m=0;m<_Np;++m){
+      dfloat res = 0;
+      for(int i=0;i<_Np;++i){
+        res += V[n*_Np+i]*V[m*_Np+i];
+      }
+      _invMM[n*_Np + m] = res;
+    }
+  }
+}
+
 void mesh_t::DmatrixTri2D(int _N, int Npoints, dfloat *_r, dfloat *_s,
                                                 dfloat *_Dr, dfloat *_Ds){
 
@@ -455,6 +469,41 @@ void mesh_t::LIFTmatrixTri2D(int _N, int *_faceNodes,
   free(V); free(r1D); free(V1D); free(MM1D); free(E);
 }
 
+void mesh_t::SurfaceMassMatrixTri2D(int _N, dfloat *_MM, dfloat *_LIFT, dfloat *_sM){
+
+  int _Nfp = (_N+1);
+  int _Np = (_N+1)*(_N+2)/2;
+  int _Nfaces = 3;
+
+  for (int n=0;n<_Np;n++) {
+    for (int m=0;m<_Nfp*_Nfaces;m++) {
+      _sM[m+n*_Nfp*_Nfaces] = 0;
+      for (int i=0;i<_Np;i++){
+        _sM[m+n*_Nfp*_Nfaces] += _MM[i+n*_Np]*_LIFT[m+i*_Nfp*_Nfaces];
+      }
+    }
+  }
+}
+
+void mesh_t::SmatrixTri2D(int _N, dfloat *_Dr, dfloat *_Ds, dfloat *_MM,
+                          dfloat *_Srr, dfloat *_Srs, dfloat *_Sss){
+
+  int _Np = (_N+1)*(_N+2)/2;
+
+  for (int n=0;n<_Np;n++) {
+    for (int m=0;m<_Np;m++) {
+      for (int k=0;k<_Np;k++) {
+        for (int l=0;l<_Np;l++) {
+          _Srr[m+n*_Np] += _Dr[n+l*_Np]*_MM[k+l*_Np]*_Dr[m+k*_Np];
+          _Srs[m+n*_Np] += _Dr[n+l*_Np]*_MM[k+l*_Np]*_Ds[m+k*_Np];
+          _Srs[m+n*_Np] += _Ds[n+l*_Np]*_MM[k+l*_Np]*_Dr[m+k*_Np];
+          _Sss[m+n*_Np] += _Ds[n+l*_Np]*_MM[k+l*_Np]*_Ds[m+k*_Np];
+        }
+      }
+    }
+  }
+}
+
 void mesh_t::InterpolationMatrixTri2D(int _N,
                                int NpointsIn, dfloat *rIn, dfloat *sIn,
                                int NpointsOut, dfloat *rOut, dfloat *sOut,
@@ -495,9 +544,31 @@ void mesh_t::DegreeRaiseMatrixTri2D(int Nc, int Nf, dfloat *P){
   free(rc); free(sc); free(rf); free(sf);
 }
 
+void mesh_t::CubaturePmatrixTri2D(int _N, int _Np, dfloat *_r, dfloat *_s,
+                                  int _cubNp, dfloat *_cubr, dfloat *_cubs, dfloat *_cubProject){
+
+  dfloat *V = (dfloat*) malloc(_Np*_Np*sizeof(dfloat));
+  VandermondeTri2D(_N, _Np, _r, _s, V);
+
+  dfloat *cubV  = (dfloat*) malloc(_cubNp*_Np*sizeof(dfloat));
+  VandermondeTri2D(_N, _cubNp, _cubr, _cubs, cubV);
+
+  // cubProject = V*cV' %% relies on (transpose(cV)*diag(cubw)*cV being the identity)
+  for(int n=0;n<_Np;++n){
+    for(int m=0;m<_cubNp;++m){
+      dfloat resP = 0;
+      for(int i=0;i<_Np;++i){
+        resP += V[n*_Np+i]*cubV[m*_Np+i];
+      }
+      cubProject[n*_cubNp+m] = resP;
+    }
+  }
+  free(V); free(cubV);
+}
+
 void mesh_t::CubatureWeakDmatricesTri2D(int _N, int _Np, dfloat *_r, dfloat *_s,
-                                    int _cubNp, dfloat *_cubr, dfloat *_cubs, dfloat *_cubw,
-                                    dfloat *_cubDrW, dfloat *_cubDsW, dfloat *_cubProject){
+                                        int _cubNp, dfloat *_cubr, dfloat *_cubs,
+                                        dfloat *_cubPDrT, dfloat *_cubPDsT){
 
   dfloat *V = (dfloat*) malloc(_Np*_Np*sizeof(dfloat));
   VandermondeTri2D(_N, _Np, _r, _s, V);
@@ -505,38 +576,23 @@ void mesh_t::CubatureWeakDmatricesTri2D(int _N, int _Np, dfloat *_r, dfloat *_s,
   dfloat *cubV  = (dfloat*) malloc(_cubNp*_Np*sizeof(dfloat));
   dfloat *cubVr = (dfloat*) malloc(_cubNp*_Np*sizeof(dfloat));
   dfloat *cubVs = (dfloat*) malloc(_cubNp*_Np*sizeof(dfloat));
-  VandermondeTri2D(N, _cubNp, _cubr, _cubs, cubV);
+  VandermondeTri2D(_N, _cubNp, _cubr, _cubs, cubV);
   GradVandermondeTri2D(_N, _cubNp, _cubr, _cubs, cubVr, cubVs);
 
-  // cubDrW = V*transpose(cVr)*diag(cubw);
-  // cubDsW = V*transpose(cVs)*diag(cubw);
-  // cubProject = V*cV'*diag(cubw); %% relies on (transpose(cV)*diag(cubw)*cV being the identity)
-  for(int n=0;n<_cubNp;++n){
-    for(int m=0;m<_Np;++m){
-      // scale by cubw
-      cubVr[n*Np+m] *= _cubw[n];
-      cubVs[n*Np+m] *= _cubw[n];
-      cubV[n*Np+m]  *= _cubw[n];
-    }
-  }
-
+  // cubPDrT = V*transpose(cVr);
+  // cubPDsT = V*transpose(cVs);
   for(int n=0;n<_Np;++n){
     for(int m=0;m<_cubNp;++m){
-      dfloat resP = 0, resDrW = 0, resDsW = 0;
-
-      for(int i=0;i<Np;++i){
-        dfloat Vni = V[n*Np+i];
-        resDrW += Vni*cubVr[m*Np+i];
-        resDsW += Vni*cubVs[m*Np+i];
-        resP   += Vni*cubV[m*Np+i];
+      dfloat resPDrT = 0, resPDsT = 0;
+      for(int i=0;i<_Np;++i){
+        dfloat Vni = V[n*_Np+i];
+        resPDrT += Vni*cubVr[m*_Np+i];
+        resPDsT += Vni*cubVs[m*_Np+i];
       }
-
-      cubDrW[n*cubNp+m] = resDrW;
-      cubDsW[n*cubNp+m] = resDsW;
-      cubProject[n*cubNp+m] = resP;
+      _cubPDrT[n*_cubNp+m] = resPDrT;
+      _cubPDsT[n*_cubNp+m] = resPDsT;
     }
   }
-
   free(V); free(cubV); free(cubVr); free(cubVs);
 }
 
@@ -573,9 +629,9 @@ void mesh_t::CubatureSurfaceMatricesTri2D(int _N, int _Np, dfloat *_r, dfloat *_
 
   for(int n=0;n<_intNfp;++n){
     for(int m=0;m<_Nfp;++m){
-      intInterp[0*_intNfp*_Nfp + n*_Nfp + m] = sInterp[(n+0*_intNfp)*_Np+_faceNodes[0*_Nfp+m]];
-      intInterp[1*_intNfp*_Nfp + n*_Nfp + m] = sInterp[(n+1*_intNfp)*_Np+_faceNodes[1*_Nfp+m]];
-      intInterp[2*_intNfp*_Nfp + n*_Nfp + m] = sInterp[(n+2*_intNfp)*_Np+_faceNodes[2*_Nfp+m]];
+      _intInterp[0*_intNfp*_Nfp + n*_Nfp + m] = sInterp[(n+0*_intNfp)*_Np+_faceNodes[0*_Nfp+m]];
+      _intInterp[1*_intNfp*_Nfp + n*_Nfp + m] = sInterp[(n+1*_intNfp)*_Np+_faceNodes[1*_Nfp+m]];
+      _intInterp[2*_intNfp*_Nfp + n*_Nfp + m] = sInterp[(n+2*_intNfp)*_Np+_faceNodes[2*_Nfp+m]];
     }
   }
 
@@ -583,10 +639,10 @@ void mesh_t::CubatureSurfaceMatricesTri2D(int _N, int _Np, dfloat *_r, dfloat *_
   //iLIFT = V*V'*sInterp'*diag(iw(:));
   for(int n=0;n<_Nfaces*_intNfp;++n){
     for(int m=0;m<_Np;++m){
-      intLIFT[m*_Nfaces*_intNfp+n] = 0.0;
+      _intLIFT[m*_Nfaces*_intNfp+n] = 0.0;
       for(int j=0;j<_Np;++j){
         for(int i=0;i<_Np;++i){
-          intLIFT[m*_Nfaces*_intNfp+n] += V[m*Np+i]*V[j*_Np+i]*sInterp[n*_Np+j]*iw[n];
+          _intLIFT[m*_Nfaces*_intNfp+n] += V[m*_Np+i]*V[j*_Np+i]*sInterp[n*_Np+j]*iw[n];
         }
       }
     }

@@ -28,7 +28,7 @@ SOFTWARE.
 // compute div(NU)  = div(uxu) in collocation way (weak form)
 @kernel void fpeAdvectionVolumeQuad2D(const dlong Nelements,
                                       @restrict const  dfloat *  vgeo,
-                                      @restrict const  dfloat *  D,
+                                      @restrict const  dfloat *  DT,
                                                 const  dfloat    t,
                                       @restrict const  dfloat *  x,
                                       @restrict const  dfloat *  y,
@@ -40,7 +40,7 @@ SOFTWARE.
 
     @shared dfloat s_F[p_NblockV][p_Nq][p_Nq];
     @shared dfloat s_G[p_NblockV][p_Nq][p_Nq];
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
 
     for(int es=0;es<p_NblockV;++es;@inner(2)){
       for(int j=0;j<p_Nq;++j;@inner(1)){
@@ -64,7 +64,7 @@ SOFTWARE.
             s_G[es][j][i] = JW*(dsdx*u+dsdy*v)*qn;
 
             if (es==0)
-              s_D[j][i] = D[j*p_Nq+i];
+              s_DT[j][i] = DT[j*p_Nq+i];
           }
         }
       }
@@ -84,8 +84,8 @@ SOFTWARE.
 
             #pragma unroll p_Nq
             for(int n=0;n<p_Nq;++n){
-              const dfloat Dr = s_D[n][i];
-              const dfloat Ds = s_D[n][j];
+              const dfloat Dr = s_DT[n][i];
+              const dfloat Ds = s_DT[n][j];
 
               rhsqn += Dr*s_F[es][j][n]
                       +Ds*s_G[es][n][i];
@@ -149,7 +149,7 @@ void surfaceTerms(dlong e, int es,
 
 @kernel void fpeAdvectionSurfaceQuad2D(const dlong Nelements,
                                       @restrict const  dfloat *  sgeo,
-                                      @restrict const  dfloat *  LIFTT,
+                                      @restrict const  dfloat *  LIFT,
                                       @restrict const  dlong  *  vmapM,
                                       @restrict const  dlong  *  vmapP,
                                       @restrict const  int    *  EToB,
