@@ -77,22 +77,8 @@ void meshQuad2D::CubatureSetup(){
   matrixTranspose(cubNq, Nq, cubInterp, Nq, cubInterpT, cubNq);
   matrixTranspose(Nq, cubNq, cubProject, cubNq, cubProjectT, Nq);
 
-  //pre-multiply cubProject by W on device
-  for(int n=0;n<cubNq;++n){
-    for(int m=0;m<Nq;++m){
-      cubProjectT[m+n*Nq] *= cubw[n];
-    }
-  }
-
   dfloat *cubPDTT     = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
   matrixTranspose(Nq, cubNq, cubPDT, cubNq, cubPDTT, Nq);
-
-  //pre-multiply cubPDT by W on device
-  for(int n=0;n<cubNq;++n){
-    for(int m=0;m<Nq;++m){
-      cubPDTT[m+n*Nq] *= cubw[n];
-    }
-  }
 
   o_cubInterp   = device.malloc(Nq*cubNq*sizeof(dfloat), cubInterpT);
   o_cubProject = device.malloc(Nq*cubNq*sizeof(dfloat), cubProjectT);

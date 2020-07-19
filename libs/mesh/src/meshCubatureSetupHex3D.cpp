@@ -70,25 +70,8 @@ void meshHex3D::CubatureSetup(){
   matrixTranspose(cubNq, Nq, cubInterp, Nq, cubInterpT, cubNq);
   matrixTranspose(Nq, cubNq, cubProject, cubNq, cubProjectT, Nq);
 
-  //pre-multiply cubProject by W on device
-  for(int n=0;n<cubNq;++n){
-    for(int m=0;m<Nq;++m){
-      cubProjectT[m+n*Nq] *= cubw[n];
-    }
-  }
-
   dfloat *cubPDTT     = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
   matrixTranspose(Nq, cubNq, cubPDT, cubNq, cubPDTT, Nq);
-
-  //pre-multiply cubPDT by W on device
-  for(int n=0;n<cubNq;++n){
-    for(int m=0;m<Nq;++m){
-      cubPDTT[m+n*Nq] *= cubw[n];
-    }
-  }
-
-  dfloat *cubDT = (dfloat *) malloc(cubNq*cubNq*sizeof(dfloat));
-  matrixTranspose(cubNq, cubNq, cubD, cubNq, cubDT, cubNq);
 
   o_cubInterp   = device.malloc(Nq*cubNq*sizeof(dfloat), cubInterpT);
   o_cubProject = device.malloc(Nq*cubNq*sizeof(dfloat), cubProjectT);
@@ -102,7 +85,6 @@ void meshHex3D::CubatureSetup(){
   free(cubPDTT);
   free(cubProjectT);
   free(cubInterpT);
-  free(cubDT);
 
   cubvgeo = (dfloat*) calloc(Nelements*Nvgeo*cubNp, sizeof(dfloat));
   cubggeo = (dfloat*) calloc(Nelements*Nggeo*cubNp, sizeof(dfloat));

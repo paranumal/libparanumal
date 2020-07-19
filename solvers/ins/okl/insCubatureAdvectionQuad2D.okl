@@ -28,6 +28,7 @@ SOFTWARE.
 @kernel void insAdvectionCubatureVolumeQuad2D(const dlong Nelements,
                                               @restrict const  dfloat *  vgeo,
                                               @restrict const  dfloat *  cubvgeo,
+                                              @restrict const  dfloat *  cubDT,
                                               @restrict const  dfloat *  cubPDT,
                                               @restrict const  dfloat *  cubInterp,
                                               @restrict const  dfloat *  cubProject,
@@ -140,10 +141,10 @@ SOFTWARE.
             const dfloat drdy = cubvgeo[gid + p_RYID*p_cubNp];
             const dfloat dsdx = cubvgeo[gid + p_SXID*p_cubNp];
             const dfloat dsdy = cubvgeo[gid + p_SYID*p_cubNp];
-            const dfloat J = cubvgeo[gid + p_JID*p_cubNp];
+            const dfloat JW   = cubvgeo[gid + p_JWID*p_cubNp];
 
-            const dfloat cUn = J*(drdx*r_Un+drdy*r_Vn);
-            const dfloat cVn = J*(dsdx*r_Un+dsdy*r_Vn);
+            const dfloat cUn = JW*(drdx*r_Un+drdy*r_Vn);
+            const dfloat cVn = JW*(dsdx*r_Un+dsdy*r_Vn);
 
             s_F11[es][j][i] = cUn*r_Un;
             s_F12[es][j][i] = cVn*r_Un;
@@ -379,7 +380,7 @@ void quadSurfaceTerms(int es, int face, int m, int i, int j,
             const dlong sk = e*p_cubNq*p_Nfaces + face*p_cubNq + i;
             const dfloat nx = cubsgeo[sk*p_Nsgeo+p_NXID];
             const dfloat ny = cubsgeo[sk*p_Nsgeo+p_NYID];
-            const dfloat sJ = cubsgeo[sk*p_Nsgeo+p_SJID];
+            const dfloat WsJ = cubsgeo[sk*p_Nsgeo+p_WSJID];
 
             const dfloat uM = r_UMn[face], vM = r_VMn[face];
                   dfloat uP = r_UPn[face], vP = r_VPn[face];
@@ -395,10 +396,10 @@ void quadSurfaceTerms(int es, int face, int m, int i, int j,
             const dfloat unP   = fabs(nx*uP + ny*vP);
             const dfloat unMax = (unM > unP) ? unM : unP;
 
-            s_fluxNU[es][face][i] = sJ*(.5f*(nx*(uP*uP + uM*uM)
-                                           + ny*(uP*vP + uM*vM)  + unMax*(uM-uP) ));
-            s_fluxNV[es][face][i] = sJ*(.5f*(nx*(vP*uP + vM*uM)
-                                           + ny*(vP*vP + vM*vM)  + unMax*(vM-vP) ));
+            s_fluxNU[es][face][i] = WsJ*(.5f*(nx*(uP*uP + uM*uM)
+                                            + ny*(uP*vP + uM*vM)  + unMax*(uM-uP) ));
+            s_fluxNV[es][face][i] = WsJ*(.5f*(nx*(vP*uP + vM*uM)
+                                            + ny*(vP*vP + vM*vM)  + unMax*(vM-vP) ));
           }
         }
       }
