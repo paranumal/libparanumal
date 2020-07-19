@@ -147,19 +147,19 @@ SOFTWARE.
           dlong et = eo+es; // element in block
           if(et<Nelements) {
             const dlong gid = e*p_cubNp*p_Nvgeo+ j*p_cubNq +i;
-            const dfloat J = cubvgeo[gid + p_JID*p_cubNp];
+            const dfloat JW = cubvgeo[gid + p_JWID*p_cubNp];
 
             if(semiAnalytic){
               // BGK relaxation approximation to the Boltzmann collision operator
-              s_q[es][3][j][i] =  J*tauInv*(r_q[1]*r_q[2]/(r_q[0]          ));
-              s_q[es][4][j][i] =  J*tauInv*(r_q[1]*r_q[1]/(r_q[0]*sqrt(2.0)));
-              s_q[es][5][j][i] =  J*tauInv*(r_q[2]*r_q[2]/(r_q[0]*sqrt(2.0)));
+              s_q[es][3][j][i] =  JW*tauInv*(r_q[1]*r_q[2]/(r_q[0]          ));
+              s_q[es][4][j][i] =  JW*tauInv*(r_q[1]*r_q[1]/(r_q[0]*sqrt(2.0)));
+              s_q[es][5][j][i] =  JW*tauInv*(r_q[2]*r_q[2]/(r_q[0]*sqrt(2.0)));
             }else{
               // BGK relaxation approximation to the Boltzmann collision operator
               // can be simplified by seperating linear part
-              s_q[es][3][j][i] = -J*tauInv*(r_q[3] - r_q[1]*r_q[2]/(r_q[0]          ));
-              s_q[es][4][j][i] = -J*tauInv*(r_q[4] - r_q[1]*r_q[1]/(r_q[0]*sqrt(2.0)));
-              s_q[es][5][j][i] = -J*tauInv*(r_q[5] - r_q[2]*r_q[2]/(r_q[0]*sqrt(2.0)));
+              s_q[es][3][j][i] = -JW*tauInv*(r_q[3] - r_q[1]*r_q[2]/(r_q[0]          ));
+              s_q[es][4][j][i] = -JW*tauInv*(r_q[4] - r_q[1]*r_q[1]/(r_q[0]*sqrt(2.0)));
+              s_q[es][5][j][i] = -JW*tauInv*(r_q[5] - r_q[2]*r_q[2]/(r_q[0]*sqrt(2.0)));
             }
           }
         }
@@ -374,7 +374,7 @@ SOFTWARE.
       for(int i=0;i<p_cubNq;++i;@inner(0)){
 
         const dlong gid = e*p_cubNp*p_Nvgeo+ j*p_cubNq +i;
-        const dfloat J = cubvgeo[gid + p_JID*p_cubNp];
+        const dfloat JW = cubvgeo[gid + p_JWID*p_cubNp];
 
         // Prefetch sigma
         const dfloat sigmaxe = pmlSigma[2*pmlId*p_cubNp + 0*p_cubNp + j*p_cubNq + i];
@@ -385,21 +385,21 @@ SOFTWARE.
 
         #pragma unroll p_Nfields
         for(int fld=0; fld<p_Nfields ; fld++){
-          s_qx[fld][j][i] = -J*msigmaxe*r_qx[fld];
-          s_qy[fld][j][i] = -J*msigmaye*r_qy[fld];
-          s_q [fld][j][i] = -J*(msigmaxe*r_qx[fld] + msigmaye*r_qy[fld]);
+          s_qx[fld][j][i] = -JW*msigmaxe*r_qx[fld];
+          s_qy[fld][j][i] = -JW*msigmaye*r_qy[fld];
+          s_q [fld][j][i] = -JW*(msigmaxe*r_qx[fld] + msigmaye*r_qy[fld]);
         }
 
         if(semiAnalytic){
         // BGK relaxation approximation to the Boltzmann collision operator
-          s_q[3][j][i] +=  J*tauInv*(r_q[1]*r_q[2]/(r_q[0]          ));
-          s_q[4][j][i] +=  J*tauInv*(r_q[1]*r_q[1]/(r_q[0]*sqrt(2.0)));
-          s_q[5][j][i] +=  J*tauInv*(r_q[2]*r_q[2]/(r_q[0]*sqrt(2.0)));
+          s_q[3][j][i] +=  JW*tauInv*(r_q[1]*r_q[2]/(r_q[0]          ));
+          s_q[4][j][i] +=  JW*tauInv*(r_q[1]*r_q[1]/(r_q[0]*sqrt(2.0)));
+          s_q[5][j][i] +=  JW*tauInv*(r_q[2]*r_q[2]/(r_q[0]*sqrt(2.0)));
         }else{
           // can be simplified by seperating linear part
-          s_q[3][j][i] -= J*tauInv*(r_q[3] - r_q[1]*r_q[2]/(r_q[0]          ));
-          s_q[4][j][i] -= J*tauInv*(r_q[4] - r_q[1]*r_q[1]/(r_q[0]*sqrt(2.0)));
-          s_q[5][j][i] -= J*tauInv*(r_q[5] - r_q[2]*r_q[2]/(r_q[0]*sqrt(2.0)));
+          s_q[3][j][i] -= JW*tauInv*(r_q[3] - r_q[1]*r_q[2]/(r_q[0]          ));
+          s_q[4][j][i] -= JW*tauInv*(r_q[4] - r_q[1]*r_q[1]/(r_q[0]*sqrt(2.0)));
+          s_q[5][j][i] -= JW*tauInv*(r_q[5] - r_q[2]*r_q[2]/(r_q[0]*sqrt(2.0)));
         }
       }
     }
