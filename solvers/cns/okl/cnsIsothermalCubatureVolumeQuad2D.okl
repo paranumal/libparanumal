@@ -29,6 +29,7 @@ SOFTWARE.
 @kernel void cnsIsothermalCubatureVolumeQuad2D(const dlong Nelements,
                                     @restrict const  dfloat *  vgeo,
                                     @restrict const  dfloat *  cubvgeo,
+                                    @restrict const  dfloat *  cubDT,
                                     @restrict const  dfloat *  cubPDT,
                                     @restrict const  dfloat *  cubInterp,
                                     @restrict const  dfloat *  cubProject,
@@ -172,7 +173,7 @@ SOFTWARE.
         const dfloat ry = cubvgeo[gid + p_RYID*p_cubNp];
         const dfloat sx = cubvgeo[gid + p_SXID*p_cubNp];
         const dfloat sy = cubvgeo[gid + p_SYID*p_cubNp];
-        const dfloat J = cubvgeo[gid + p_JID*p_cubNp];
+        const dfloat JW = cubvgeo[gid + p_JWID*p_cubNp];
 
         const dfloat r  = r_q[0];
         const dfloat ru = r_q[1];
@@ -196,24 +197,24 @@ SOFTWARE.
           // F0 = ru, G0 = rv
           const dfloat f = -ru;
           const dfloat g = -rv;
-          s_F[0][j][i] = J*(rx*f + ry*g);
-          s_G[0][j][i] = J*(sx*f + sy*g);
+          s_F[0][j][i] = JW*(rx*f + ry*g);
+          s_G[0][j][i] = JW*(sx*f + sy*g);
         }
 
         {
           // F1 = mu*T11 - (ru^2+p), G1 = mu*T12 - (rvu)
           const dfloat f = mu*T11-(ru*u+p);
           const dfloat g = mu*T12-(rv*u);
-          s_F[1][j][i] = J*(rx*f + ry*g);
-          s_G[1][j][i] = J*(sx*f + sy*g);
+          s_F[1][j][i] = JW*(rx*f + ry*g);
+          s_G[1][j][i] = JW*(sx*f + sy*g);
         }
 
         {
           // F2 = mu*T21 - (ruv), G2 = mu*T22 - (rv^2+p)
           const dfloat f = mu*T12-(rv*u);
           const dfloat g = mu*T22-(rv*v+p);
-          s_F[2][j][i] = J*(rx*f + ry*g);
-          s_G[2][j][i] = J*(sx*f + sy*g);
+          s_F[2][j][i] = JW*(rx*f + ry*g);
+          s_G[2][j][i] = JW*(sx*f + sy*g);
         }
       }
     }

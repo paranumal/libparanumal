@@ -29,6 +29,7 @@ SOFTWARE.
                                     @restrict const  dfloat *  vgeo,
                                     @restrict const  dfloat *  cubvgeo,
                                     @restrict const  dfloat *  cubDT,
+                                    @restrict const  dfloat *  cubPDT,
                                     @restrict const  dfloat *  cubInterp,
                                     @restrict const  dfloat *  cubProject,
                                     @restrict const  dfloat *  x,
@@ -51,7 +52,7 @@ SOFTWARE.
 
     @shared dfloat s_cubInterp[p_Nq][p_cubNq];
     @shared dfloat s_cubProject[p_cubNq][p_Nq];
-    @shared dfloat s_cubDT[p_cubNq][p_Nq];
+    @shared dfloat s_cubPDT[p_cubNq][p_Nq];
 
     @exclusive dfloat r_q[p_Nfields], r_gradq[p_Ngrads];
     @exclusive dfloat r_F[p_Nfields], r_G[p_Nfields];
@@ -91,7 +92,7 @@ SOFTWARE.
 
         const int id = i+j*p_cubNq;
         if (id<p_Nq*p_cubNq) {
-          s_cubDT[0][id] = cubDT[id];
+          s_cubPDT[0][id] = cubPDT[id];
           s_cubInterp[0][id] = cubInterp[id];
           s_cubProject[0][id] = cubProject[id];
         }
@@ -176,7 +177,7 @@ SOFTWARE.
         const dfloat ry = cubvgeo[gid + p_RYID*p_cubNp];
         const dfloat sx = cubvgeo[gid + p_SXID*p_cubNp];
         const dfloat sy = cubvgeo[gid + p_SYID*p_cubNp];
-        const dfloat J = cubvgeo[gid + p_JID*p_cubNp];
+        const dfloat JW = cubvgeo[gid + p_JWID*p_cubNp];
 
         const dfloat r  = r_q[0];
         const dfloat ru = r_q[1];
@@ -201,32 +202,32 @@ SOFTWARE.
           // F0 = ru, G0 = rv
           const dfloat f = -ru;
           const dfloat g = -rv;
-          s_F[0][j][i] = J*(rx*f + ry*g);
-          s_G[0][j][i] = J*(sx*f + sy*g);
+          s_F[0][j][i] = JW*(rx*f + ry*g);
+          s_G[0][j][i] = JW*(sx*f + sy*g);
         }
 
         {
           // F1 = mu*T11 - (ru^2+p), G1 = mu*T12 - (rvu)
           const dfloat f = mu*T11-(ru*u+p);
           const dfloat g = mu*T12-(rv*u);
-          s_F[1][j][i] = J*(rx*f + ry*g);
-          s_G[1][j][i] = J*(sx*f + sy*g);
+          s_F[1][j][i] = JW*(rx*f + ry*g);
+          s_G[1][j][i] = JW*(sx*f + sy*g);
         }
 
         {
           // F2 = mu*T21 - (ruv), G2 = mu*T22 - (rv^2+p)
           const dfloat f = mu*T12-(rv*u);
           const dfloat g = mu*T22-(rv*v+p);
-          s_F[2][j][i] = J*(rx*f + ry*g);
-          s_G[2][j][i] = J*(sx*f + sy*g);
+          s_F[2][j][i] = JW*(rx*f + ry*g);
+          s_G[2][j][i] = JW*(sx*f + sy*g);
         }
 
         {
           // F3 = mu*(u*T11+v*T12) - (uE+up), G2 = mu*(u*T12+v*T22) - (vE+vp)
           const dfloat f = mu*(u*T11 + v*T12)-(u*E+u*p);
           const dfloat g = mu*(u*T12 + v*T22)-(v*E+v*p);
-          s_F[3][j][i] = J*(rx*f + ry*g);
-          s_G[3][j][i] = J*(sx*f + sy*g);
+          s_F[3][j][i] = JW*(rx*f + ry*g);
+          s_G[3][j][i] = JW*(sx*f + sy*g);
         }
       }
     }
@@ -243,7 +244,7 @@ SOFTWARE.
           #pragma unroll p_cubNq
           for (int n=0;n<p_cubNq;n++) {
             const dfloat Pnj = s_cubProject[n][j];
-            const dfloat Dnj = s_cubDT[n][j];
+            const dfloat Dnj = s_cubPDT[n][j];
             r_F[0]  += Pnj*s_F[0][n][i];
             r_F[1]  += Pnj*s_F[1][n][i];
             r_F[2]  += Pnj*s_F[2][n][i];
@@ -289,7 +290,7 @@ SOFTWARE.
           #pragma unroll p_cubNq
           for(int n=0;n<p_cubNq;++n){
             const dfloat Pni = s_cubProject[n][i];
-            const dfloat Dni = s_cubDT[n][i];
+            const dfloat Dni = s_cubPDT[n][i];
 
             rhsq0 += Dni*s_F[0][j][n]
                     +Pni*s_G[0][j][n];

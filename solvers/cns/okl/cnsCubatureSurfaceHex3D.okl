@@ -1,0 +1,555 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+// Roe averaged Riemann solver
+void upwindRoeAveraged(const dfloat nx,
+                       const dfloat ny,
+                       const dfloat nz,
+                       const dfloat gamma,
+                       const dfloat rM,
+                       const dfloat uM,
+                       const dfloat vM,
+                       const dfloat wM,
+                       const dfloat pM,
+                       const dfloat rP,
+                       const dfloat uP,
+                       const dfloat vP,
+                       const dfloat wP,
+                       const dfloat pP,
+                       dfloat *rflux,
+                       dfloat *ruflux,
+                       dfloat *rvflux,
+                       dfloat *rwflux,
+                       dfloat *Eflux){
+
+  const dfloat EM = pM/(gamma-1) + 0.5*rM*(uM*uM+vM*vM+wM*wM);
+  const dfloat EP = pP/(gamma-1) + 0.5*rP*(uP*uP+vP*vP+wP*wP);
+  const dfloat HM = (EM+pM)/rM;
+  const dfloat HP = (EP+pP)/rP;
+
+  // Compute Roe average variables
+  const dfloat sqrtrM = sqrt(rM);
+  const dfloat sqrtrP = sqrt(rP);
+
+  const dfloat r = sqrtrM*sqrtrP;
+  const dfloat u = (sqrtrM*uM + sqrtrP*uP)/(sqrtrM + sqrtrP);
+  const dfloat v = (sqrtrM*vM + sqrtrP*vP)/(sqrtrM + sqrtrP);
+  const dfloat w = (sqrtrM*wM + sqrtrP*wP)/(sqrtrM + sqrtrP);
+  const dfloat H = (sqrtrM*HM + sqrtrP*HP)/(sqrtrM + sqrtrP);
+
+  const dfloat c2 = (gamma-1)*(H-0.5*(u*u+v*v+w*w));
+  const dfloat c = sqrt(c2);
+
+  // normal velocity
+  const dfloat qP = nx*uP+ny*vP+nz*wP;
+  const dfloat qM = nx*uM+ny*vM+nz*wM;
+  const dfloat q  = nx*u +ny*v +nz*w;
+
+  // jump terms
+  const dfloat dp = pP-pM;
+  const dfloat dr = rP-rM;
+  const dfloat du = uP-uM;
+  const dfloat dv = vP-vM;
+  const dfloat dw = wP-wM;
+  const dfloat dq = qP-qM;
+
+  const dfloat W1 = fabs(q-c) * 0.5*(dp-r*c*dq)/(c2);
+  const dfloat W2 = fabs(q  ) * r;
+  const dfloat W3 = fabs(q+c) * 0.5*(dp+r*c*dq)/(c2);
+  const dfloat W4 = fabs(q  ) * (dr-(dp/c2));
+
+  // Fluxes from traces n.F(uP) and n.F(uM)
+  *rflux  = 0.5*((rP*qP         ) + (rM*qM         ));
+  *ruflux = 0.5*((rP*uP*qP+nx*pP) + (rM*uM*qM+nx*pM));
+  *rvflux = 0.5*((rP*vP*qP+ny*pP) + (rM*vM*qM+ny*pM));
+  *rwflux = 0.5*((rP*wP*qP+nz*pP) + (rM*wM*qM+nz*pM));
+  *Eflux  = 0.5*((qP*(EP+pP)    ) + (qM*(EM+pM)    ));
+
+  // Roe flux
+  *rflux  -= 0.5*(W1*1.0      + W2*0.0                   + W3*1.0      + W4*1.0              );
+  *ruflux -= 0.5*(W1*(u-nx*c) + W2*(du-nx*dq)            + W3*(u+nx*c) + W4*u                );
+  *rvflux -= 0.5*(W1*(v-ny*c) + W2*(dv-ny*dq)            + W3*(v+ny*c) + W4*v                );
+  *rwflux -= 0.5*(W1*(w-nz*c) + W2*(dw-nz*dq)            + W3*(w+nz*c) + W4*w                );
+  *Eflux  -= 0.5*(W1*(H- q*c) + W2*(u*du+v*dv+w*dw-q*dq) + W3*(H+ q*c) + W4*0.5*(u*u+v*v+w*w));
+}
+
+#define quadSurfaceTerms(face)                                          \
+  {                                                                     \
+    for(int j=0;j<p_cubNq;++j;@inner(1)){                               \
+      for(int i=0;i<p_cubNq;++i;@inner(0)){                             \
+        if(i<p_Nq && j<p_Nq){                                           \
+          const dlong id  = e*p_Nfp*p_Nfaces + face*p_Nfp + j*p_Nq +i;  \
+          const dlong idM = vmapM[id];                                  \
+          const dlong idP = vmapP[id];                                  \
+                                                                        \
+          const dlong eM = e;                                           \
+          const dlong eP = idP/p_Np;                                    \
+          const int vidM = idM%p_Np;                                    \
+          const int vidP = idP%p_Np;                                    \
+                                                                        \
+          const dlong qbaseM = eM*p_Np*p_Nfields + vidM;                \
+          const dlong qbaseP = eP*p_Np*p_Nfields + vidP;                \
+          const dlong sbaseM = eM*p_Np*p_Ngrads + vidM;                 \
+          const dlong sbaseP = eP*p_Np*p_Ngrads + vidP;                 \
+                                                                        \
+          for (int fld=0;fld<p_Nfields;fld++) {                         \
+            s_qM[fld][j][i] = q[qbaseM+fld*p_Np];                       \
+            s_qP[fld][j][i] = q[qbaseP+fld*p_Np];                       \
+          }                                                             \
+          for (int fld=0;fld<p_Ngrads;fld++) {                          \
+            s_gradqM[fld][j][i] = gradq[sbaseM+fld*p_Np];               \
+            s_gradqP[fld][j][i] = gradq[sbaseP+fld*p_Np];               \
+          }                                                             \
+        }                                                               \
+      }                                                                 \
+    }                                                                   \
+                                                                        \
+    @barrier("local");                                                  \
+                                                                        \
+    for(int j=0;j<p_cubNq;++j;@inner(1)){                               \
+      for(int i=0;i<p_cubNq;++i;@inner(0)){                             \
+        if (j<p_Nq) {                                                   \
+          for (int fld=0;fld<p_Nfields;fld++) {                         \
+            r_qM[fld] = 0.0;                                            \
+            r_qP[fld] = 0.0;                                            \
+          }                                                             \
+          for (int fld=0;fld<p_Ngrads;fld++) {                          \
+            r_gradqM[fld] = 0.0;                                        \
+            r_gradqP[fld] = 0.0;                                        \
+          }                                                             \
+                                                                        \
+          for (int n=0;n<p_Nq;n++) {                                    \
+            const dfloat Ini = s_cubInterp[n][i];                       \
+            for (int fld=0;fld<p_Nfields;fld++) {                       \
+              r_qM[fld] += Ini*s_qM[fld][j][n];                         \
+              r_qP[fld] += Ini*s_qP[fld][j][n];                         \
+            }                                                           \
+            for (int fld=0;fld<p_Ngrads;fld++) {                        \
+              r_gradqM[fld] += Ini*s_gradqM[fld][j][n];                 \
+              r_gradqP[fld] += Ini*s_gradqP[fld][j][n];                 \
+            }                                                           \
+          }                                                             \
+        }                                                               \
+      }                                                                 \
+    }                                                                   \
+                                                                        \
+    @barrier("local");                                                  \
+                                                                        \
+    for(int j=0;j<p_cubNq;++j;@inner(1)){                               \
+      for(int i=0;i<p_cubNq;++i;@inner(0)){                             \
+        if (j<p_Nq) {                                                   \
+          for (int fld=0;fld<p_Nfields;fld++) {                         \
+            s_qM[fld][j][i] = r_qM[fld];                                \
+            s_qP[fld][j][i] = r_qP[fld];                                \
+          }                                                             \
+          for (int fld=0;fld<p_Ngrads;fld++) {                          \
+            s_gradqM[fld][j][i] = r_gradqM[fld];                        \
+            s_gradqP[fld][j][i] = r_gradqP[fld];                        \
+          }                                                             \
+        }                                                               \
+      }                                                                 \
+    }                                                                   \
+                                                                        \
+    @barrier("local");                                                  \
+                                                                        \
+    for(int j=0;j<p_cubNq;++j;@inner(1)){                               \
+      for(int i=0;i<p_cubNq;++i;@inner(0)){                             \
+        for (int fld=0;fld<p_Nfields;fld++) {                           \
+          r_qM[fld] = 0.0;                                              \
+          r_qP[fld] = 0.0;                                              \
+        }                                                               \
+        for (int fld=0;fld<p_Ngrads;fld++) {                            \
+          r_gradqM[fld] = 0.0;                                          \
+          r_gradqP[fld] = 0.0;                                          \
+        }                                                               \
+        for (int n=0;n<p_Nq;n++) {                                      \
+          const dfloat Inj = s_cubInterp[n][j];                         \
+          for (int fld=0;fld<p_Nfields;fld++) {                         \
+            r_qM[fld] += Inj*s_qM[fld][n][i];                           \
+            r_qP[fld] += Inj*s_qP[fld][n][i];                           \
+          }                                                             \
+          for (int fld=0;fld<p_Ngrads;fld++) {                          \
+            r_gradqM[fld] += Inj*s_gradqM[fld][n][i];                   \
+            r_gradqP[fld] += Inj*s_gradqP[fld][n][i];                   \
+          }                                                             \
+        }                                                               \
+      }                                                                 \
+    }                                                                   \
+                                                                        \
+    @barrier("local");                                                  \
+                                                                        \
+    for(int j=0;j<p_cubNq;++j;@inner(1)){                               \
+      for(int i=0;i<p_cubNq;++i;@inner(0)){                             \
+        const dlong sk = e*p_cubNfp*p_Nfaces + face*p_cubNfp + j*p_cubNq + i; \
+        const dfloat nx = cubsgeo[sk*p_Nsgeo+p_NXID];                   \
+        const dfloat ny = cubsgeo[sk*p_Nsgeo+p_NYID];                   \
+        const dfloat nz = cubsgeo[sk*p_Nsgeo+p_NZID];                   \
+        const dfloat WsJ = cubsgeo[sk*p_Nsgeo+p_WSJID];                 \
+                                                                        \
+        const dfloat rM = r_qM[0];                                      \
+        const dfloat uM = r_qM[1]/rM;                                   \
+        const dfloat vM = r_qM[2]/rM;                                   \
+        const dfloat wM = r_qM[3]/rM;                                   \
+        const dfloat EM = r_qM[4];                                      \
+        const dfloat pM = (gamma-1)*(EM-0.5*rM*(uM*uM+vM*vM+wM*wM));    \
+                                                                        \
+        const dfloat dudxM = r_gradqM[0];                               \
+        const dfloat dudyM = r_gradqM[1];                               \
+        const dfloat dudzM = r_gradqM[2];                               \
+        const dfloat dvdxM = r_gradqM[3];                               \
+        const dfloat dvdyM = r_gradqM[4];                               \
+        const dfloat dvdzM = r_gradqM[5];                               \
+        const dfloat dwdxM = r_gradqM[6];                               \
+        const dfloat dwdyM = r_gradqM[7];                               \
+        const dfloat dwdzM = r_gradqM[8];                               \
+                                                                        \
+        dfloat rP = r_qP[0];                                            \
+        dfloat uP = r_qP[1]/rP;                                         \
+        dfloat vP = r_qP[2]/rP;                                         \
+        dfloat wP = r_qP[3]/rP;                                         \
+        dfloat EP = r_qP[4];                                            \
+        dfloat pP = (gamma-1)*(EP-0.5*rP*(uP*uP+vP*vP+wP*wP));          \
+                                                                        \
+        dfloat dudxP = r_gradqP[0];                                     \
+        dfloat dudyP = r_gradqP[1];                                     \
+        dfloat dudzP = r_gradqP[2];                                     \
+        dfloat dvdxP = r_gradqP[3];                                     \
+        dfloat dvdyP = r_gradqP[4];                                     \
+        dfloat dvdzP = r_gradqP[5];                                     \
+        dfloat dwdxP = r_gradqP[6];                                     \
+        dfloat dwdyP = r_gradqP[7];                                     \
+        dfloat dwdzP = r_gradqP[8];                                     \
+                                                                        \
+        const int bc = EToB[face+p_Nfaces*e];                           \
+        if(bc>0){                                                       \
+          cnsBoundaryConditions3D(bc, gamma, mu,                        \
+                                  time, intx[sk], inty[sk], intz[sk],   \
+                                  nx, ny, nz,                           \
+                                  rM, uM, vM, wM, pM,                   \
+                                  dudxM, dudyM, dudzM,                  \
+                                  dvdxM, dvdyM, dvdzM,                  \
+                                  dwdxM, dwdyM, dwdzM,                  \
+                                  &rP, &uP, &vP, &wP, &pP,              \
+                                  &dudxP, &dudyP, &dudzP,               \
+                                  &dvdxP, &dvdyP, &dvdzP,               \
+                                  &dwdxP, &dwdyP, &dwdzP);              \
+        }                                                               \
+                                                                        \
+        dfloat rflux, ruflux, rvflux, rwflux, Eflux;                    \
+        upwindRoeAveraged(nx, ny, nz, gamma,                            \
+                          rM, uM, vM, wM, pM, rP, uP, vP, wP, pP,       \
+                          &rflux, &ruflux, &rvflux, &rwflux, &Eflux);   \
+                                                                        \
+        const dfloat T11M = mu*(2.0*dudxM - 2.0*(dudxM+dvdyM+dwdzM)/3.0);\
+        const dfloat T12M = mu*(dudyM+dvdxM);                            \
+        const dfloat T13M = mu*(dudzM+dwdxM);                            \
+        const dfloat T22M = mu*(2.0*dvdyM - 2.0*(dudxM+dvdyM+dwdzM)/3.0);\
+        const dfloat T23M = mu*(dvdzM+dwdyM);                            \
+        const dfloat T33M = mu*(2.0*dwdzM - 2.0*(dudxM+dvdyM+dwdzM)/3.0);\
+        const dfloat T41M = uM*T11M + vM*T12M + wM*T13M;                 \
+        const dfloat T42M = uM*T12M + vM*T22M + wM*T23M;                 \
+        const dfloat T43M = uM*T13M + vM*T23M + wM*T33M;                 \
+                                                                         \
+        const dfloat T11P = mu*(2.0*dudxP - 2.0*(dudxP+dvdyP+dwdzP)/3.0);\
+        const dfloat T12P = mu*(dudyP+dvdxP);                            \
+        const dfloat T13P = mu*(dudzP+dwdxP);                            \
+        const dfloat T22P = mu*(2.0*dvdyP - 2.0*(dudxP+dvdyP+dwdzP)/3.0);\
+        const dfloat T23P = mu*(dvdzP+dwdyP);                            \
+        const dfloat T33P = mu*(2.0*dwdzP - 2.0*(dudxP+dvdyP+dwdzP)/3.0);\
+        const dfloat T41P = uP*T11P + vP*T12P + wP*T13P;                 \
+        const dfloat T42P = uP*T12P + vP*T22P + wP*T23P;                 \
+        const dfloat T43P = uP*T13P + vP*T23P + wP*T33P;                 \
+                                                                         \
+        ruflux -= 0.5*(nx*(T11P+T11M) + ny*(T12P+T12M) + nz*(T13P+T13M));\
+        rvflux -= 0.5*(nx*(T12P+T12M) + ny*(T22P+T22M) + nz*(T23P+T23M));\
+        rwflux -= 0.5*(nx*(T13P+T13M) + ny*(T23P+T23M) + nz*(T33P+T33M));\
+        Eflux  -= 0.5*(nx*(T41P+T41M) + ny*(T42P+T42M) + nz*(T43P+T43M));\
+                                                                        \
+        s_fluxq[0][j][i] = WsJ*rflux;                                   \
+        s_fluxq[1][j][i] = WsJ*ruflux;                                  \
+        s_fluxq[2][j][i] = WsJ*rvflux;                                  \
+        s_fluxq[3][j][i] = WsJ*rwflux;                                  \
+        s_fluxq[4][j][i] = WsJ*Eflux;                                   \
+      }                                                                 \
+    }                                                                   \
+                                                                        \
+    @barrier("local");                                                  \
+                                                                        \
+    for(int j=0;j<p_cubNq;++j;@inner(1)){                               \
+      for(int i=0;i<p_cubNq;++i;@inner(0)){                             \
+        if (j<p_Nq) {                                                   \
+          for (int fld=0;fld<p_Nfields;fld++) {                         \
+            r_fluxq[fld] = 0.0;                                         \
+          }                                                             \
+          for (int n=0;n<p_cubNq;n++) {                                 \
+            const dfloat Pnj = s_cubProject[n][j];                      \
+            for (int fld=0;fld<p_Nfields;fld++) {                       \
+              r_fluxq[fld] += Pnj*s_fluxq[fld][n][i];                   \
+            }                                                           \
+          }                                                             \
+        }                                                               \
+      }                                                                 \
+    }                                                                   \
+                                                                        \
+    @barrier("local");                                                  \
+                                                                        \
+    for(int j=0;j<p_cubNq;++j;@inner(1)){                               \
+      for(int i=0;i<p_cubNq;++i;@inner(0)){                             \
+        if (j<p_Nq) {                                                   \
+          for (int fld=0;fld<p_Nfields;fld++) {                         \
+            s_fluxq[fld][j][i] = r_fluxq[fld];                          \
+          }                                                             \
+        }                                                               \
+      }                                                                 \
+    }                                                                   \
+    @barrier("local");                                                  \
+                                                                        \
+    for(int j=0;j<p_cubNq;++j;@inner(1)){                               \
+      for(int i=0;i<p_cubNq;++i;@inner(0)){                             \
+        if (j<p_Nq && i<p_Nq) {                                         \
+          for (int fld=0;fld<p_Nfields;fld++) {                         \
+            r_fluxq[fld] = 0.0;                                         \
+          }                                                             \
+          for(int n=0;n<p_cubNq;++n){                                   \
+            const dfloat Pni = s_cubProject[n][i];                      \
+            for (int fld=0;fld<p_Nfields;fld++) {                       \
+              r_fluxq[fld] += Pni*s_fluxq[fld][j][n];                   \
+            }                                                           \
+          }                                                             \
+        }                                                               \
+      }                                                                 \
+    }                                                                   \
+                                                                        \
+    @barrier("local");                                                  \
+                                                                        \
+    for(int j=0;j<p_cubNq;++j;@inner(1)){                               \
+      for(int i=0;i<p_cubNq;++i;@inner(0)){                             \
+        if (j<p_Nq && i<p_Nq) {                                         \
+          for (int fld=0;fld<p_Nfields;fld++) {                         \
+            s_fluxq[fld][j][i] = r_fluxq[fld];                          \
+          }                                                             \
+        }                                                               \
+      }                                                                 \
+    }                                                                   \
+  }
+
+@kernel void cnsCubatureSurfaceHex3D(const dlong Nelements,
+                                     @restrict const  dfloat *  vgeo,
+                                     @restrict const  dfloat *  cubsgeo,
+                                     @restrict const  dlong  *  vmapM,
+                                     @restrict const  dlong  *  vmapP,
+                                     @restrict const  int    *  EToB,
+                                     @restrict const  dfloat *  cubInterp,
+                                     @restrict const  dfloat *  cubProject,
+                                     @restrict const  dfloat *  intx,
+                                     @restrict const  dfloat *  inty,
+                                     @restrict const  dfloat *  intz,
+                                     const dfloat time,
+                                     const dfloat mu,
+                                     const dfloat gamma,
+                                     @restrict const  dfloat *  q,
+                                     @restrict const  dfloat *  gradq,
+                                     @restrict dfloat *  rhsq){
+
+  // for all elements
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+    // @shared storage for flux terms
+    @exclusive dfloat r_rhsq[p_Nfields][p_Nq];
+
+    @shared dfloat s_qM[p_Nfields][p_cubNq][p_cubNq];
+    @shared dfloat s_qP[p_Nfields][p_cubNq][p_cubNq];
+    @shared dfloat s_gradqP[p_Ngrads][p_cubNq][p_cubNq];
+    @shared dfloat s_gradqM[p_Ngrads][p_cubNq][p_cubNq];
+
+    // reuse @shared memory buffers
+    #define s_fluxq s_qM
+
+    @exclusive dfloat r_qM[p_Nfields], r_qP[p_Nfields];
+    @exclusive dfloat r_gradqM[p_Ngrads], r_gradqP[p_Ngrads];
+
+    #define r_fluxq r_qM
+
+    @shared dfloat s_cubInterp[p_Nq][p_cubNq];
+    @shared dfloat s_cubProject[p_cubNq][p_Nq];
+
+    // for all face nodes of all elements
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        //zero out resulting surface contributions
+        #pragma unroll p_Nq
+        for(int k=0;k<p_Nq;++k){
+          for (int fld=0;fld<p_Nfields;fld++) {
+            r_rhsq[fld][k] = 0.;
+          }
+        }
+
+        //fetch reference operators
+        const int id = i+j*p_cubNq;
+        if (id<p_Nq*p_cubNq) {
+          s_cubInterp[0][id] = cubInterp[id];
+          s_cubProject[0][id] = cubProject[id];
+        }
+      }
+    }
+
+    @barrier("local");
+
+    quadSurfaceTerms(0) //face 0
+
+    @barrier("local");
+
+    //accumulate in register pencil
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        if (j<p_Nq && i<p_Nq) {
+          for (int fld=0;fld<p_Nfields;fld++) {
+            r_rhsq[fld][0] += s_fluxq[fld][j][i];
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    quadSurfaceTerms(5) //face 5
+
+    @barrier("local");
+
+    //accumulate in register pencil
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        if (j<p_Nq && i<p_Nq) {
+          for (int fld=0;fld<p_Nfields;fld++) {
+            r_rhsq[fld][p_Nq-1] += s_fluxq[fld][j][i];
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    quadSurfaceTerms(1) //face 1
+
+    @barrier("local");
+
+    //accumulate in register pencil
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        if (j==0 && i<p_Nq) {//face 1
+          #pragma unroll p_Nq
+          for (int n=0;n<p_Nq;n++) {
+            for (int fld=0;fld<p_Nfields;fld++) {
+              r_rhsq[fld][n] += s_fluxq[fld][n][i];
+            }
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    quadSurfaceTerms(3) //face 3
+
+    @barrier("local");
+
+    //accumulate in register pencil
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        if (j==p_Nq-1 && i<p_Nq) {//face 3
+          #pragma unroll p_Nq
+          for (int n=0;n<p_Nq;n++) {
+            for (int fld=0;fld<p_Nfields;fld++) {
+              r_rhsq[fld][n] += s_fluxq[fld][n][i];
+            }
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    quadSurfaceTerms(2) //face 2
+
+    @barrier("local");
+
+    //accumulate in register pencil
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        if (j<p_Nq && i==p_Nq-1) {//face 2
+          #pragma unroll p_Nq
+          for (int n=0;n<p_Nq;n++) {
+            for (int fld=0;fld<p_Nfields;fld++) {
+              r_rhsq[fld][n] += s_fluxq[fld][n][j];
+            }
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    quadSurfaceTerms(4) //face 4
+
+    @barrier("local");
+
+    //accumulate in register pencil
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        if (j<p_Nq && i==0) {//face 4
+          #pragma unroll p_Nq
+          for (int n=0;n<p_Nq;n++) {
+            for (int fld=0;fld<p_Nfields;fld++) {
+              r_rhsq[fld][n] += s_fluxq[fld][n][j];
+            }
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+        if(i<p_Nq && j<p_Nq){
+          #pragma unroll p_Nq
+          for(int k=0;k<p_Nq;++k){
+            const dlong gid = e*p_Np*p_Nvgeo+ k*p_Nq*p_Nq + j*p_Nq +i;
+            const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
+
+            const dlong id = e*p_Np*p_Nfields + k*p_Nq*p_Nq + j*p_Nq + i;
+            rhsq[id+0*p_Np] -= invJW*r_rhsq[0][k];
+            rhsq[id+1*p_Np] -= invJW*r_rhsq[1][k];
+            rhsq[id+2*p_Np] -= invJW*r_rhsq[2][k];
+            rhsq[id+3*p_Np] -= invJW*r_rhsq[3][k];
+            rhsq[id+4*p_Np] -= invJW*r_rhsq[4][k];
+          }
+        }
+      }
+    }
+  }
+}
+#undef quadSurfaceTerms
+

@@ -251,7 +251,7 @@ void surfaceTerms(const int face,
           const dlong sk = e*p_cubNq*p_Nfaces + face*p_cubNq + i;
           const dfloat nx = cubsgeo[sk*p_Nsgeo+p_NXID];
           const dfloat ny = cubsgeo[sk*p_Nsgeo+p_NYID];
-          const dfloat sJ = cubsgeo[sk*p_Nsgeo+p_SJID];
+          const dfloat WsJ = cubsgeo[sk*p_Nsgeo+p_WSJID];
 
           const dfloat rM  = r_qM[0*p_Nfaces+face];
           const dfloat ruM = r_qM[1*p_Nfaces+face];
@@ -301,9 +301,9 @@ void surfaceTerms(const int face,
           ruflux -= 0.5*(nx*(T11P+T11M) + ny*(T12P+T12M));
           rvflux -= 0.5*(nx*(T12P+T12M) + ny*(T22P+T22M));
 
-          s_rflux [face][i] = sJ*(-rflux);
-          s_ruflux[face][i] = sJ*(-ruflux);
-          s_rvflux[face][i] = sJ*(-rvflux);
+          s_rflux [face][i] = WsJ*(-rflux);
+          s_ruflux[face][i] = WsJ*(-ruflux);
+          s_rvflux[face][i] = WsJ*(-rvflux);
         }
     }
 

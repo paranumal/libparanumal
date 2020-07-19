@@ -273,7 +273,7 @@ void surfaceTerms(const int face,
           const dlong sk = e*p_cubNq*p_Nfaces + face*p_cubNq + i;
           const dfloat nx = cubsgeo[sk*p_Nsgeo+p_NXID];
           const dfloat ny = cubsgeo[sk*p_Nsgeo+p_NYID];
-          const dfloat sJ = cubsgeo[sk*p_Nsgeo+p_SJID];
+          const dfloat WsJ = cubsgeo[sk*p_Nsgeo+p_WSJID];
 
           const dfloat rM  = r_qM[0*p_Nfaces+face];
           const dfloat ruM = r_qM[1*p_Nfaces+face];
@@ -306,7 +306,7 @@ void surfaceTerms(const int face,
           const int bc = EToB[face+p_Nfaces*e];
           if(bc>0){
             cnsBoundaryConditions2D(bc, gamma, mu,
-                                      time, intx[idM], inty[idM], nx, ny,
+                                      time, intx[sk], inty[sk], nx, ny,
                                       rM, uM, vM, pM, dudxM, dudyM, dvdxM, dvdyM,
                                       &rP, &uP, &vP, &pP, &dudxP, &dudyP, &dvdxP, &dvdyP);
           }
@@ -330,10 +330,10 @@ void surfaceTerms(const int face,
           rvflux -= 0.5*(nx*(T12P+T12M) + ny*(T22P+T22M));
           Eflux  -= 0.5*(nx*(T31P+T31M) + ny*(T32P+T32M));
 
-          s_rflux [face][i] = sJ*(-rflux);
-          s_ruflux[face][i] = sJ*(-ruflux);
-          s_rvflux[face][i] = sJ*(-rvflux);
-          s_Eflux [face][i] = sJ*(-Eflux);
+          s_rflux [face][i] = WsJ*(-rflux);
+          s_ruflux[face][i] = WsJ*(-ruflux);
+          s_rvflux[face][i] = WsJ*(-rvflux);
+          s_Eflux [face][i] = WsJ*(-Eflux);
         }
     }
 
