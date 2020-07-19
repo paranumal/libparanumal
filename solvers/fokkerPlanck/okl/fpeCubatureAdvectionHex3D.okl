@@ -29,6 +29,7 @@ SOFTWARE.
                                     @restrict const  dfloat *  vgeo,
                                     @restrict const  dfloat *  cubvgeo,
                                     @restrict const  dfloat *  cubDT,
+                                    @restrict const  dfloat *  cubPDT,
                                     @restrict const  dfloat *  cubInterp,
                                     @restrict const  dfloat *  cubProject,
                                               const  dfloat    t,
@@ -168,6 +169,7 @@ SOFTWARE.
           const dfloat qn = r_q[k];
 
           dfloat u=0.0, v=0.0, w=0.0;
+          const dlong id = e*p_cubNp + k*j*p_cubNq*p_cubNq + j*p_cubNq +i;
           fpeAdvectionField3D(t, cubx[id], cuby[id], cubz[id], qn, &u, &v, &w);
 
           s_F[j][i] = JW*(drdx*u+drdy*v+drdz*w)*qn;
@@ -320,7 +322,7 @@ SOFTWARE.
                                                                         \
     for(int j=0;j<p_cubNq;++j;@inner(1)){                               \
       for(int i=0;i<p_cubNq;++i;@inner(0)){                             \
-        r_qMn = 0.; r_qMn = 0.;                                         \
+        r_qMn = 0.; r_qPn = 0.;                                         \
         for (int n=0;n<p_Nq;n++) {                                      \
           const dfloat Inj = s_cubInterp[n][j];                        \
           r_qMn += Inj*s_qM[n][i];                                      \

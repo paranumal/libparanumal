@@ -35,9 +35,6 @@ fpe_t& fpe_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
 
   fpe->cubature = (settings.compareSetting("ADVECTION TYPE", "CUBATURE")) ? 1:0;
 
-  if(mesh.elementType==HEXAHEDRA && fpe->cubature)
-    LIBP_ABORT("CUBATURE Not currently supported with Hex meshes.")
-
   //setup cubature
   if (fpe->cubature) {
     mesh.CubatureSetup();
