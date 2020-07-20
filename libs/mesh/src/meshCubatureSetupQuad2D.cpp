@@ -84,7 +84,7 @@ void meshQuad2D::CubatureSetup(){
   o_cubProject = device.malloc(Nq*cubNq*sizeof(dfloat), cubProjectT);
 
   o_cubPDT = device.malloc(Nq*cubNq*sizeof(dfloat), cubPDTT);
-  o_cubD = device.malloc(cubNq*Nq*sizeof(dfloat), cubD);
+  o_cubD = device.malloc(cubNq*cubNq*sizeof(dfloat), cubD);
 
   o_intInterp = o_cubInterp;
   o_intLIFT = o_cubProject;
