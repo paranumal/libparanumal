@@ -225,6 +225,10 @@ info:
 	$(info LIBS      = $(LIBS))
 	@true
 
+#Keep these from propagating to OCCA in tests
+unexport CXX
+unexport CXXFLAGS
+
 test: ellipticMain
 	@printf "%b" "$(TEST_COLOR)Testing elliptic solver with testEllipticQuad2D_01.rc$(NO_COLOR)\n";
 	./ellipticMain $(TEST_DIR)/elliptic/testEllipticQuad2D_01.rc

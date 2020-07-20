@@ -215,6 +215,10 @@ info:
 	$(info LIBS      = $(LIBS))
 	@true
 
+#Keep these from propagating to OCCA in tests
+unexport CXX
+unexport CXXFLAGS
+
 test: cnsMain
 	@printf "%b" "$(TEST_COLOR)Testing cns solver with testCnsQuad2D_01.rc$(NO_COLOR)\n";
 	./cnsMain $(TEST_DIR)/cns/testCnsQuad2D_01.rc

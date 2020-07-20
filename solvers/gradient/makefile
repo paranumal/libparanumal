@@ -203,6 +203,10 @@ help:
 	$(info $(value GRADIENT_HELP_MSG))
 	@true
 
+#Keep these from propagating to OCCA in tests
+unexport CXX
+unexport CXXFLAGS
+
 info:
 	$(info OCCA_DIR  = $(OCCA_DIR))
 	$(info LIBP_DIR  = $(LIBP_DIR))

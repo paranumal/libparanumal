@@ -214,6 +214,10 @@ info:
 	$(info LIBS      = $(LIBS))
 	@true
 
+#Keep these from propagating to OCCA in tests
+unexport CXX
+unexport CXXFLAGS
+
 test: bnsMain
 	@printf "%b" "$(TEST_COLOR)Testing bns solver with testBnsQuad2D_01.rc$(NO_COLOR)\n";
 	./bnsMain $(TEST_DIR)/bns/testBnsQuad2D_01.rc

@@ -230,6 +230,10 @@ info:
 	$(info LIBS      = $(LIBS))
 	@true
 
+#Keep these from propagating to OCCA in tests
+unexport CXX
+unexport CXXFLAGS
+
 test: fpeMain
 	@printf "%b" "$(TEST_COLOR)Testing fokkerPlanck solver with testFpeQuad2D_01.rc$(NO_COLOR)\n";
 	./fpeMain $(TEST_DIR)/fpe/testFpeQuad2D_01.rc

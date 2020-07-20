@@ -229,6 +229,10 @@ info:
 	$(info LIBS      = $(LIBS))
 	@true
 
+#Keep these from propagating to OCCA in tests
+unexport CXX
+unexport CXXFLAGS
+
 test: insMain
 	@printf "%b" "$(TEST_COLOR)Testing ins solver with testInsQuad2D_01.rc$(NO_COLOR)\n";
 	./insMain $(TEST_DIR)/ins/testInsQuad2D_01.rc

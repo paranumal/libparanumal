@@ -214,6 +214,10 @@ info:
 	$(info LIBS      = $(LIBS))
 	@true
 
+#Keep these from propagating to OCCA in tests
+unexport CXX
+unexport CXXFLAGS
+
 test: acousticsMain
 	@printf "%b" "$(TEST_COLOR)Testing acoustics solver with testAcousticsQuad2D.rc$(NO_COLOR)\n";
 	./acousticsMain $(TEST_DIR)/acoustics/testAcousticsQuad2D_01.rc

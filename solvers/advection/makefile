@@ -215,6 +215,10 @@ info:
 	$(info LIBS      = $(LIBS))
 	@true
 
+#Keep these from propagating to OCCA in tests
+unexport CXX
+unexport CXXFLAGS
+
 test: advectionMain
 	@printf "%b" "$(TEST_COLOR)Testing advection solver with testAdvectionQuad2D_01.rc$(NO_COLOR)\n";
 	./advectionMain $(TEST_DIR)/advection/testAdvectionQuad2D_01.rc
