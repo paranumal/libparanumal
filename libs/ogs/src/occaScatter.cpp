@@ -56,7 +56,7 @@ void occaScatterStart(occa::memory& o_v,
     for (int i=0;i<Nvectors;i++)
       o_gv.copyTo((char*)ogs.haloBuf+ogs.Nhalo*Nbytes*Nentries*i,
                   ogs.haloGather.Nrows*Nbytes*Nentries,
-                  ogs.localGather.Nrows*Nbytes + gstride*Nbytes*i,
+                  ogs.localGather.Nrows*Nbytes*Nentries + gstride*Nbytes*i,
                   "async: true");
 
     ogs.device.setStream(currentStream);
@@ -111,7 +111,7 @@ void occaScatterFinish(occa::memory& o_v,
     // copy totally scattered halo data back from HOST to DEVICE
     for (int i=0;i<Nvectors;i++)
       ogs.o_haloBuf.copyFrom((char*)ogs.haloBuf + ogs.Nhalo*Nbytes*Nentries*i,
-                             NhaloScatter*Nbytes*Nentries*Nvectors,
+                             NhaloScatter*Nbytes*Nentries,
                              ogs.Nhalo*Nbytes*Nentries*i,
                              "async: true");
 

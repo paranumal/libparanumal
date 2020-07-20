@@ -118,7 +118,7 @@ void occaGatherFinish(occa::memory& o_gv,
     for (int i=0;i<Nvectors;i++)
       o_gv.copyFrom((char*)ogs.haloBuf+ogs.Nhalo*Nbytes*Nentries*i,
                     ogs.haloGather.Nrows*Nbytes*Nentries,
-                    ogs.localGather.Nrows*Nbytes + gstride*Nbytes*i,
+                    ogs.localGather.Nrows*Nbytes*Nentries + gstride*Nbytes*i,
                     "async: true");
 
     ogs.device.finish();
