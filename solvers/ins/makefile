@@ -85,6 +85,7 @@ MESH_DIR     =${LIBP_LIBS_DIR}/mesh
 ELLIPTIC_DIR =${LIBP_DIR}/solvers/elliptic
 PARALMOND_DIR=${LIBP_LIBS_DIR}/parAlmond
 CORE_DIR     =${LIBP_DIR}/core
+TEST_DIR     =${LIBP_DIR}/test
 
 #includes
 INCLUDES=${LIBP_INCLUDES} \
@@ -229,11 +230,11 @@ info:
 	@true
 
 test: insMain
-	@printf "%b" "$(TEST_COLOR)Testing ins solver with setupQuad2D.rc$(NO_COLOR)\n";
-	./insMain setups/setupQuad2D.rc
-	@printf "%b" "$(TEST_COLOR)Testing ins solver with setupTri2D.rc$(NO_COLOR)\n";
-	./insMain setups/setupTri2D.rc
-	@printf "%b" "$(TEST_COLOR)Testing ins solver with setupHex3D.rc$(NO_COLOR)\n";
-	./insMain setups/setupHex3D.rc
-	@printf "%b" "$(TEST_COLOR)Testing ins solver with setupTet3D.rc$(NO_COLOR)\n";
-	./insMain setups/setupTet3D.rc
+	@printf "%b" "$(TEST_COLOR)Testing ins solver with testInsQuad2D_01.rc$(NO_COLOR)\n";
+	./insMain $(TEST_DIR)/ins/testInsQuad2D_01.rc
+	@printf "%b" "$(TEST_COLOR)Testing ins solver with testInsTri2D_01.rc$(NO_COLOR)\n";
+	./insMain $(TEST_DIR)/ins/testInsTri2D_01.rc
+	@printf "%b" "$(TEST_COLOR)Testing ins solver with testInsHex3D_01.rc$(NO_COLOR)\n";
+	./insMain $(TEST_DIR)/ins/testInsHex3D_01.rc
+	@printf "%b" "$(TEST_COLOR)Testing ins solver with testInsTet3D_01.rc$(NO_COLOR)\n";
+	./insMain $(TEST_DIR)/ins/testInsTet3D_01.rc
