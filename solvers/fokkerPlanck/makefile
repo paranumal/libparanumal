@@ -64,7 +64,7 @@ Can use "make verbose=true" for verbose output.
 endef
 
 ifeq (,$(filter fpeMain lib clean clean-libs clean-kernels \
-                realclean info help,$(MAKECMDGOALS)))
+                realclean info help test,$(MAKECMDGOALS)))
 ifneq (,$(MAKECMDGOALS))
 $(error ${FPE_HELP_MSG})
 endif
@@ -229,12 +229,12 @@ info:
 	$(info LIBS      = $(LIBS))
 	@true
 
-test: fokkerPlanckMain
+test: fpeMain
 	@printf "%b" "$(TEST_COLOR)Testing fokkerPlanck solver with setupQuad2D.rc$(NO_COLOR)\n";
-	./fokkerPlanckMain setups/setupQuad2D.rc
-	@printf "%b" "$(TEST_COLOR)Testing fokkerPlanck solver with setupTri2D.rc$(NO_COLOR)\n";
-	./fokkerPlanckMain setups/setupTri2D.rc
-	@printf "%b" "$(TEST_COLOR)Testing fokkerPlanck solver with setupHex3D.rc$(NO_COLOR)\n";
-	./fokkerPlanckMain setups/setupHex3D.rc
-	@printf "%b" "$(TEST_COLOR)Testing fokkerPlanck solver with setupTet3D.rc$(NO_COLOR)\n";
-	./fokkerPlanckMain setups/setupTet3D.rc
+	./fpeMain setups/setupQuad2D.rc
+	@printf "%b" "$(TEST_COLOR)Testing fpe solver with setupTri2D.rc$(NO_COLOR)\n";
+	./fpeMain setups/setupTri2D.rc
+	@printf "%b" "$(TEST_COLOR)Testing fpe solver with setupHex3D.rc$(NO_COLOR)\n";
+	./fpeMain setups/setupHex3D.rc
+	@printf "%b" "$(TEST_COLOR)Testing fpe solver with setupTet3D.rc$(NO_COLOR)\n";
+	./fpeMain setups/setupTet3D.rc
