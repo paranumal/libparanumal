@@ -83,6 +83,7 @@ BLAS_DIR     =${LIBP_TPL_DIR}/BlasLapack
 OGS_DIR      =${LIBP_LIBS_DIR}/ogs
 MESH_DIR     =${LIBP_LIBS_DIR}/mesh
 CORE_DIR     =${LIBP_DIR}/core
+TEST_DIR     =${LIBP_DIR}/test
 
 #includes
 INCLUDES=${LIBP_INCLUDES} \
@@ -215,10 +216,10 @@ info:
 
 test: bnsMain
 	@printf "%b" "$(TEST_COLOR)Testing bns solver with setupQuad2D.rc$(NO_COLOR)\n";
-	./bnsMain setups/setupQuad2D.rc
+	./bnsMain $(TEST_DIR)/bns/testBnsQuad2D_01.rc
 	@printf "%b" "$(TEST_COLOR)Testing bns solver with setupTri2D.rc$(NO_COLOR)\n";
-	./bnsMain setups/setupTri2D.rc
+	./bnsMain $(TEST_DIR)/bns/testBnsTri2D_01.rc
 	@printf "%b" "$(TEST_COLOR)Testing bns solver with setupHex3D.rc$(NO_COLOR)\n";
-	./bnsMain setups/setupHex3D.rc
+	./bnsMain $(TEST_DIR)/bns/testBnsHex3D_01.rc
 	@printf "%b" "$(TEST_COLOR)Testing bns solver with setupTet3D.rc$(NO_COLOR)\n";
-	./bnsMain setups/setupTet3D.rc
+	./bnsMain $(TEST_DIR)/bns/testBnsTet3D_01.rc

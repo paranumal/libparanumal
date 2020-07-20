@@ -84,6 +84,7 @@ BLAS_DIR     =${LIBP_TPL_DIR}/BlasLapack
 OGS_DIR      =${LIBP_LIBS_DIR}/ogs
 MESH_DIR     =${LIBP_LIBS_DIR}/mesh
 CORE_DIR     =${LIBP_DIR}/core
+TEST_DIR     =${LIBP_DIR}/test
 
 #includes
 INCLUDES=${LIBP_INCLUDES} \
@@ -216,10 +217,10 @@ info:
 
 test: cnsMain
 	@printf "%b" "$(TEST_COLOR)Testing cns solver with setupQuad2D.rc$(NO_COLOR)\n";
-	./cnsMain setups/setupQuad2D.rc
+	./cnsMain $(TEST_DIR)/cns/testQuad2D_01.rc
 	@printf "%b" "$(TEST_COLOR)Testing cns solver with setupTri2D.rc$(NO_COLOR)\n";
-	./cnsMain setups/setupTri2D.rc
+	./cnsMain $(TEST_DIR)/cns/testTri2D_01.rc
 	@printf "%b" "$(TEST_COLOR)Testing cns solver with setupHex3D.rc$(NO_COLOR)\n";
-	./cnsMain setups/setupHex3D.rc
+	./cnsMain $(TEST_DIR)/cns/testHex3D_01.rc
 	@printf "%b" "$(TEST_COLOR)Testing cns solver with setupTet3D.rc$(NO_COLOR)\n";
-	./cnsMain setups/setupTet3D.rc
+	./cnsMain $(TEST_DIR)/cns/testTet3D_01.rc

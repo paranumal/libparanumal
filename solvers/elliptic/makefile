@@ -85,6 +85,7 @@ OGS_DIR      =${LIBP_LIBS_DIR}/ogs
 PARALMOND_DIR=${LIBP_LIBS_DIR}/parAlmond
 MESH_DIR     =${LIBP_LIBS_DIR}/mesh
 CORE_DIR     =${LIBP_DIR}/core
+TEST_DIR     =${LIBP_DIR}/test
 
 #includes
 INCLUDES=${LIBP_INCLUDES} \
@@ -226,10 +227,10 @@ info:
 
 test: ellipticMain
 	@printf "%b" "$(TEST_COLOR)Testing elliptic solver with setupQuad2D.rc$(NO_COLOR)\n";
-	./ellipticMain setups/setupQuad2D.rc
+	./ellipticMain $(TEST_DIR)/elliptic/testEllipticQuad2D_01.rc
 	@printf "%b" "$(TEST_COLOR)Testing elliptic solver with setupTri2D.rc$(NO_COLOR)\n";
-	./ellipticMain setups/setupTri2D.rc
+	./ellipticMain $(TEST_DIR)/elliptic/testEllipticTri2D_01.rc
 	@printf "%b" "$(TEST_COLOR)Testing elliptic solver with setupHex2D.rc$(NO_COLOR)\n";
-	./ellipticMain setups/setupHex3D.rc
+	./ellipticMain $(TEST_DIR)/elliptic/testEllipticHex3D_01.rc
 	@printf "%b" "$(TEST_COLOR)Testing elliptic solver with setupTet3D.rc$(NO_COLOR)\n";
-	./ellipticMain setups/setupTet3D.rc
+	./ellipticMain $(TEST_DIR)/elliptic/testEllipticTet3D_01.rc
