@@ -75,6 +75,7 @@ export OBJ_COLOR = \033[0;36m
 export LIB_COLOR = \033[0;34m
 export EXE_COLOR = \033[0;32m
 export SOL_COLOR = \033[0;33m
+export TEST_COLOR= \033[0;35m
 export NO_COLOR  = \033[m
 
 export LIBP_MAKETOP_LOADED=true
