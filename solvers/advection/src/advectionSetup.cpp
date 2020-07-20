@@ -54,7 +54,7 @@ advection_t& advection_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   advection->timeStepper->SetTimeStep(dt);
 
   //setup linear algebra module
-  advection->linAlg.InitKernels({"innerProd"}, mesh.comm);
+  advection->linAlg.InitKernels({"innerProd", "norm2"}, mesh.comm);
 
   /*setup trace halo exchange */
   advection->traceHalo = mesh.HaloTraceSetup(1); //one field

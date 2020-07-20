@@ -36,6 +36,7 @@ Advection solver makefile targets:
    make realclean
    make info
    make help
+   make test
 
 Usage:
 
@@ -55,13 +56,15 @@ make info
    List directories and compiler flags in use.
 make help
    Display this help message.
+make test
+   Run tests.
 
 Can use "make verbose=true" for verbose output.
 
 endef
 
 ifeq (,$(filter advectionMain lib clean clean-libs clean-kernels \
-                realclean info help,$(MAKECMDGOALS)))
+                realclean info help test,$(MAKECMDGOALS)))
 ifneq (,$(MAKECMDGOALS))
 $(error ${ADVECTION_HELP_MSG})
 endif
@@ -210,3 +213,13 @@ info:
 	$(info CXXFLAGS  = $(ADVECTION_CXXFLAGS))
 	$(info LIBS      = $(LIBS))
 	@true
+
+test: advectionMain
+	@printf "%b" "$(TEST_COLOR)Testing advection solver with setupQuad2D.rc$(NO_COLOR)\n";
+	./advectionMain setups/setupQuad2D.rc
+	@printf "%b" "$(TEST_COLOR)Testing advection solver with setupTri2D.rc$(NO_COLOR)\n";
+	./advectionMain setups/setupTri2D.rc
+	@printf "%b" "$(TEST_COLOR)Testing advection solver with setupHex3D.rc$(NO_COLOR)\n";
+	./advectionMain setups/setupHex3D.rc
+	@printf "%b" "$(TEST_COLOR)Testing advection solver with setupTet3D.rc$(NO_COLOR)\n";
+	./advectionMain setups/setupTet3D.rc

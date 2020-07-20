@@ -42,4 +42,14 @@ void ins_t::Run(){
                          o_p);
 
   timeStepper->Run(o_u, startTime, finalTime);
+
+  // output norm of final solution
+  {
+    dlong Ntotal = mesh.Nelements*mesh.Np*NVfields;
+    
+    dfloat normu = linAlg.norm2(Ntotal, o_u, mesh.comm);
+
+    printf("Testing norm ins solution = %17.15lg\n", normu);
+  }
+
 }

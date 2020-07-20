@@ -35,6 +35,7 @@ LibParanumal makefile targets:
 	 make realclean
 	 make info
 	 make help
+	 make test
 
 Usage:
 
@@ -55,6 +56,8 @@ make info
 	 List directories and compiler flags in use.
 make help
 	 Display this help message.
+make test
+	 Run the included solver examples.
 
 Can use "make verbose=true" for verbose output.
 
@@ -63,7 +66,7 @@ endef
 ifeq (,$(filter solvers \
 				acoustics advection bns cns elliptic fokkerPlanck gradient ins \
 				lib clean clean-kernels \
-				realclean info help,$(MAKECMDGOALS)))
+				realclean info help test,$(MAKECMDGOALS)))
 ifneq (,$(MAKECMDGOALS))
 $(error ${LIBP_HELP_MSG})
 endif
@@ -156,7 +159,7 @@ ifneq (,${verbose})
 	${MAKE} -C ${SOLVER_DIR}/$(@F) verbose=${verbose}
 else
 	@printf "%b" "$(SOL_COLOR)Building $(@F) solver$(NO_COLOR)\n";
-	@${MAKE} -C ${SOLVER_DIR}/$(@F) --no-print-directory
+	@${MAKE} -C ${SOLVER_DIR}/$(@F) --no-print-directory 
 endif
 
 libmesh: libogs libparAlmond libgs libblas libcore
@@ -254,3 +257,19 @@ info:
 	$(info LIBP_ARCH = $(LIBP_ARCH))
 	$(info CXXFLAGS  = $(CXXFLAGS))
 	@true
+
+test:
+	@printf "%b" "$(TEST_COLOR)Testing elliptic solver$(NO_COLOR)\n";
+	@${MAKE} -C solvers/elliptic --no-print-directory  test
+	@printf "%b" "$(TEST_COLOR)Testing cns solver$(NO_COLOR)\n";
+	@${MAKE} -C solvers/cns --no-print-directory  test
+	@printf "%b" "$(TEST_COLOR)Testing acoustics solver$(NO_COLOR)\n";
+	@${MAKE} -C solvers/acoustics --no-print-directory  test
+	@printf "%b" "$(TEST_COLOR)Testing ins solver$(NO_COLOR)\n";
+	@${MAKE} -C solvers/ins --no-print-directory  test
+	@printf "%b" "$(TEST_COLOR)Testing fokkerPlanck solver$(NO_COLOR)\n";
+	@${MAKE} -C solvers/fokkerPlanck --no-print-directory  test
+	@printf "%b" "$(TEST_COLOR)Testing bns solver$(NO_COLOR)\n";
+	@${MAKE} -C solvers/bns --no-print-directory  test
+
+

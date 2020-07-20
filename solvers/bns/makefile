@@ -36,6 +36,7 @@ Boltzmann Navier-Stokes solver makefile targets:
    make realclean
    make info
    make help
+   make test
 
 Usage:
 
@@ -55,13 +56,14 @@ make info
    List directories and compiler flags in use.
 make help
    Display this help message.
-
+make test
+   Run tests.
 Can use "make verbose=true" for verbose output.
 
 endef
 
 ifeq (,$(filter bnsMain lib clean clean-libs clean-kernels \
-                realclean info help,$(MAKECMDGOALS)))
+                realclean info help test,$(MAKECMDGOALS)))
 ifneq (,$(MAKECMDGOALS))
 $(error ${BNS_HELP_MSG})
 endif
@@ -210,3 +212,13 @@ info:
 	$(info CXXFLAGS  = $(BNS_CXXFLAGS))
 	$(info LIBS      = $(LIBS))
 	@true
+
+test: bnsMain
+	@printf "%b" "$(TEST_COLOR)Testing bns solver with setupQuad2D.rc$(NO_COLOR)\n";
+	./bnsMain setups/setupQuad2D.rc
+	@printf "%b" "$(TEST_COLOR)Testing bns solver with setupTri2D.rc$(NO_COLOR)\n";
+	./bnsMain setups/setupTri2D.rc
+	@printf "%b" "$(TEST_COLOR)Testing bns solver with setupHex3D.rc$(NO_COLOR)\n";
+	./bnsMain setups/setupHex3D.rc
+	@printf "%b" "$(TEST_COLOR)Testing bns solver with setupTet3D.rc$(NO_COLOR)\n";
+	./bnsMain setups/setupTet3D.rc
