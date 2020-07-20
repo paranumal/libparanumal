@@ -36,6 +36,7 @@ Elliptic solver makefile targets:
    make realclean
    make info
    make help
+   make tests
 
 Usage:
 
@@ -55,13 +56,15 @@ make info
    List directories and compiler flags in use.
 make help
    Display this help message.
+make tests
+   Run tests.
 
 Can use "make verbose=true" for verbose output.
 
 endef
 
 ifeq (,$(filter ellipticMain lib clean clean-libs clean-kernels \
-                realclean info help,$(MAKECMDGOALS)))
+                realclean info help tests, $(MAKECMDGOALS)))
 ifneq (,$(MAKECMDGOALS))
 $(error ${ELLIPTIC_HELP_MSG})
 endif
@@ -220,3 +223,9 @@ info:
 	$(info CXXFLAGS  = $(ELLIPTIC_CXXFLAGS))
 	$(info LIBS      = $(LIBS))
 	@true
+
+tests: ellipticMain
+	./ellipticMain setups/setupQuad2D.rc
+	./ellipticMain setups/setupTri2D.rc
+	./ellipticMain setups/setupHex3D.rc
+	./ellipticMain setups/setupTet3D.rc

@@ -35,6 +35,8 @@ LibParanumal makefile targets:
 	 make realclean
 	 make info
 	 make help
+	 make tests
+
 
 Usage:
 
@@ -55,6 +57,8 @@ make info
 	 List directories and compiler flags in use.
 make help
 	 Display this help message.
+make tests
+	 Run the included solver examples.
 
 Can use "make verbose=true" for verbose output.
 
@@ -63,7 +67,7 @@ endef
 ifeq (,$(filter solvers \
 				acoustics advection bns cns elliptic fokkerPlanck gradient ins \
 				lib clean clean-kernels \
-				realclean info help,$(MAKECMDGOALS)))
+				realclean info help tests,$(MAKECMDGOALS)))
 ifneq (,$(MAKECMDGOALS))
 $(error ${LIBP_HELP_MSG})
 endif
@@ -156,7 +160,7 @@ ifneq (,${verbose})
 	${MAKE} -C ${SOLVER_DIR}/$(@F) verbose=${verbose}
 else
 	@printf "%b" "$(SOL_COLOR)Building $(@F) solver$(NO_COLOR)\n";
-	@${MAKE} -C ${SOLVER_DIR}/$(@F) --no-print-directory
+	@${MAKE} -C ${SOLVER_DIR}/$(@F) --no-print-directory 
 endif
 
 libmesh: libogs libparAlmond libgs libblas libcore
@@ -254,3 +258,13 @@ info:
 	$(info LIBP_ARCH = $(LIBP_ARCH))
 	$(info CXXFLAGS  = $(CXXFLAGS))
 	@true
+
+# should do something smart here like make the output files dependencies so it does not rerun
+# should also make each solver makefile run the solver specific tests
+tests:
+	@printf "%b" "$(SOL_COLOR)Testing elliptic solver$(NO_COLOR)\n";
+	@${MAKE} -C solvers/elliptic --no-print-directory  tests
+	@printf "%b" "$(SOL_COLOR)Testing cns solver$(NO_COLOR)\n";
+	@${MAKE} -C solvers/cns --no-print-directory  tests
+
+

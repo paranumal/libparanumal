@@ -36,6 +36,7 @@ Compressible Navier-Stokes flow solver makefile targets:
    make realclean
    make info
    make help
+   make tests
 
 Usage:
 
@@ -55,13 +56,15 @@ make info
    List directories and compiler flags in use.
 make help
    Display this help message.
+make tests
+   Run tests.
 
 Can use "make verbose=true" for verbose output.
 
 endef
 
 ifeq (,$(filter cnsMain lib clean clean-libs clean-kernels \
-                realclean info help,$(MAKECMDGOALS)))
+                realclean info help tests,$(MAKECMDGOALS)))
 ifneq (,$(MAKECMDGOALS))
 $(error ${CNS_HELP_MSG})
 endif
@@ -210,3 +213,9 @@ info:
 	$(info CXXFLAGS  = $(CNS_CXXFLAGS))
 	$(info LIBS      = $(LIBS))
 	@true
+
+tests: cnsMain
+	./cnsMain setups/setupQuad2D.rc
+	./cnsMain setups/setupTri2D.rc
+	./cnsMain setups/setupHex3D.rc
+	./cnsMain setups/setupTet3D.rc
