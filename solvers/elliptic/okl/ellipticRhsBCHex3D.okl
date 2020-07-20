@@ -60,11 +60,11 @@ void surfaceTerms(int sk,
 @kernel void ellipticRhsBCHex3D(const dlong Nelements,
                               @restrict const  dfloat *  ggeo,
                               @restrict const  dfloat *  sgeo,
-                              @restrict const  dfloat *  D,
+                              @restrict const  dfloat *  DT,
                               @restrict const  dfloat *  S,
                               @restrict const  dfloat *  MM,
                               @restrict const  dlong  *  vmapM,
-                              @restrict const  dfloat *  sMT,
+                              @restrict const  dfloat *  MT,
                               const dfloat lambda,
                               @restrict const  dfloat *  x,
                               @restrict const  dfloat *  y,
@@ -74,7 +74,7 @@ void surfaceTerms(int sk,
 
   for(dlong e=0; e<Nelements; ++e; @outer(0)){
 
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
     @shared dfloat s_q[2][p_Nq][p_Nq];
     @shared dfloat s_ndq[2][p_Nq][p_Nq];
 
@@ -88,9 +88,9 @@ void surfaceTerms(int sk,
     // face 0 & 5
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
-        //load D into local memory
-        // s_D[i][j] = d \phi_i at node j
-        s_D[j][i] = D[p_Nq*j+i]; // D is column major
+        //load DT into local memory
+        // s_DT[i][j] = d \phi_i at node j
+        s_DT[j][i] = DT[p_Nq*j+i]; // DT is column major
 
         #pragma unroll p_Nq
         for(int k=0;k<p_Nq;++k){
@@ -236,7 +236,7 @@ void surfaceTerms(int sk,
 
             #pragma unroll p_Nq
               for(int m = 0; m < p_Nq; m++) {
-                r_qt += s_D[k][m]*r_q[m];
+                r_qt += s_DT[k][m]*r_q[m];
               }
           }
         }
@@ -251,8 +251,8 @@ void surfaceTerms(int sk,
 
             #pragma unroll p_Nq
               for(int m = 0; m < p_Nq; m++) {
-                qr += s_D[i][m]*s_q[0][j][m];
-                qs += s_D[j][m]*s_q[0][m][i];
+                qr += s_DT[i][m]*s_q[0][j][m];
+                qs += s_DT[j][m]*s_q[0][m][i];
               }
 
             //reuse the s_ndq array
@@ -272,9 +272,9 @@ void surfaceTerms(int sk,
 
             #pragma unroll p_Nq
               for(int m = 0; m < p_Nq; m++){
-                r_Auk    += s_D[m][j]*s_ndq[0][m][i];
-                r_rhs[m] += s_D[k][m]*r_Gqt; // DT(m,k)*ut(i,j,k,e)
-                r_Auk    += s_D[m][i]*s_ndq[1][j][m];
+                r_Auk    += s_DT[m][j]*s_ndq[0][m][i];
+                r_rhs[m] += s_DT[k][m]*r_Gqt; // DT(m,k)*ut(i,j,k,e)
+                r_Auk    += s_DT[m][i]*s_ndq[1][j][m];
               }
 
             r_rhs[k] += r_Auk;

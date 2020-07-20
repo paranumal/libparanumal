@@ -36,7 +36,7 @@ void gradient_t::Run(){
 
   volumeKernel(mesh.Nelements,
                mesh.o_vgeo,
-               mesh.o_Dmatrices,
+               mesh.o_D,
                o_q,
                o_gradq);
 

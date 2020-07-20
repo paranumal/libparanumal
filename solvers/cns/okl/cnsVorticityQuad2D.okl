@@ -26,32 +26,32 @@ SOFTWARE.
 
 @kernel void cnsVorticityQuad2D(const dlong Nelements,
                               @restrict const  dfloat *  vgeo,
-                              @restrict const  dfloat *  D,
+                              @restrict const  dfloat *  DT,
                               @restrict const  dfloat *  q,
-                                    @restrict dfloat *  Vort){  
-  
+                                    @restrict dfloat *  Vort){
+
   // block partition of elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
-    
+
     @shared dfloat s_u[p_NblockV][p_Nq][p_Nq];
     @shared dfloat s_v[p_NblockV][p_Nq][p_Nq];
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
 
-    for(int es=0;es<p_NblockV;++es;@inner(2)){   
-      for(int j=0;j<p_Nq;++j;@inner(1)){ 
-        for(int i=0;i<p_Nq;++i;@inner(0)){    
+    for(int es=0;es<p_NblockV;++es;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           const dlong e = eo+es; // element in block
-          if(e<Nelements){ 
+          if(e<Nelements){
             const dlong qbase = e*p_Nfields*p_Np + j*p_Nq +i;
             const dfloat r  = q[qbase + 0*p_Np];
             const dfloat ru = q[qbase + 1*p_Np];
             const dfloat rv = q[qbase + 2*p_Np];
-            
+
             s_u[es][j][i] = ru/r;
             s_v[es][j][i] = rv/r;
 
             if (es==0)
-              s_D[j][i] = D[j*p_Nq+i];
+              s_DT[j][i] = DT[j*p_Nq+i];
           }
         }
       }
@@ -59,11 +59,11 @@ SOFTWARE.
 
     @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;@inner(2)){   
-      for(int j=0;j<p_Nq;++j;@inner(1)){ 
-        for(int i=0;i<p_Nq;++i;@inner(0)){    
+    for(int es=0;es<p_NblockV;++es;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           const dlong e = eo+es; // element in block
-          if(e<Nelements){ 
+          if(e<Nelements){
             const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
             const dfloat drdx = vgeo[gid + p_RXID*p_Np];
             const dfloat drdy = vgeo[gid + p_RYID*p_Np];
@@ -76,8 +76,8 @@ SOFTWARE.
 
             #pragma unroll p_Nq
               for(int n=0;n<p_Nq;++n) {
-                const dfloat Dr = s_D[i][n];
-                const dfloat Ds = s_D[j][n];
+                const dfloat Dr = s_DT[i][n];
+                const dfloat Ds = s_DT[j][n];
                 ur += Dr*s_u[es][j][n];
                 us += Ds*s_u[es][n][i];
                 vr += Dr*s_v[es][j][n];
@@ -87,7 +87,7 @@ SOFTWARE.
             const dfloat uy = drdy*ur + dsdy*us;
             const dfloat vx = drdx*vr + dsdx*vs;
 
-            const dlong id = e*p_Np+j*p_Nq+i; 
+            const dlong id = e*p_Np+j*p_Nq+i;
             Vort[id] = vx-uy;
           }
         }

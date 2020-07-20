@@ -34,7 +34,7 @@ void acoustics_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
 
   volumeKernel(mesh.Nelements,
                mesh.o_vgeo,
-               mesh.o_Dmatrices,
+               mesh.o_D,
                o_Q,
                o_RHS);
 
@@ -42,7 +42,7 @@ void acoustics_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
 
   surfaceKernel(mesh.Nelements,
                 mesh.o_sgeo,
-                mesh.o_LIFTT,
+                mesh.o_LIFT,
                 mesh.o_vmapM,
                 mesh.o_vmapP,
                 mesh.o_EToB,

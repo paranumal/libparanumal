@@ -27,7 +27,7 @@ SOFTWARE.
 // Compute Gradient in Strong Form
 @kernel void insGradientVolumeTet3D(const dlong Nelements,
                                    @restrict const  dfloat *  vgeo,
-                                   @restrict const  dfloat *  Dmatrices,
+                                   @restrict const  dfloat *  D,
                                    const dfloat alpha,
                                    const dfloat beta,
                                    @restrict const  dfloat *  P,
@@ -69,9 +69,9 @@ SOFTWARE.
           dfloat dpdr  = 0.f,  dpds  = 0.f, dpdt = 0.f;
           #pragma unroll p_Np
           for(int i=0;i<p_Np;++i){
-            const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
-            const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
-            const dfloat Dtni = Dmatrices[n+i*p_Np+2*p_Np*p_Np];
+            const dfloat Drni = D[n+i*p_Np+0*p_Np*p_Np];
+            const dfloat Dsni = D[n+i*p_Np+1*p_Np*p_Np];
+            const dfloat Dtni = D[n+i*p_Np+2*p_Np*p_Np];
 
             dpdr  += Drni*s_P[es][i];
             dpds  += Dsni*s_P[es][i];
@@ -96,7 +96,7 @@ SOFTWARE.
 
 @kernel void insGradientSurfaceTet3D(const dlong Nelements,
                                     @restrict const  dfloat *  sgeo,
-                                    @restrict const  dfloat *  LIFTT,
+                                    @restrict const  dfloat *  LIFT,
                                     @restrict const  dlong  *  vmapM,
                                     @restrict const  dlong  *  vmapP,
                                     @restrict const  int    *  EToB,
@@ -173,7 +173,7 @@ SOFTWARE.
             // Lift
             #pragma unroll p_NfacesNfp
               for(int m=0;m<p_Nfaces*p_Nfp;++m){
-                const dfloat L = LIFTT[n+m*p_Np];
+                const dfloat L = LIFT[n+m*p_Np];
                 px += L*s_fluxPx[es][m];
                 py += L*s_fluxPy[es][m];
                 pz += L*s_fluxPz[es][m];

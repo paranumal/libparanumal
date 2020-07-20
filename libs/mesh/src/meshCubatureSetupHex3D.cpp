@@ -43,20 +43,19 @@ void meshHex3D::CubatureSetup(){
 
   // GLL to GL interpolation matrix
   cubInterp = (dfloat *) malloc(Nq*cubNq*sizeof(dfloat));
-  InterpolationMatrix1D(N, Nq, gllz, cubNq, cubr, cubInterp);
+  InterpolationMatrix1D(N, Nq, r, cubNq, cubr, cubInterp); //uses the fact that r = gllz for 1:Nq
 
-  cubDW = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
-  cubProject = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
-  CubatureWeakDmatrices1D(N, Nq, gllz, cubNq, cubr, cubw,
-                             cubDW, cubProject);
+  //cubature project cubProject = cubInterp^T
+  cubProject = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
+  matrixTranspose(cubNq, Nq, cubInterp, Nq, cubProject, cubNq);
 
-  // GLL to GL differentiation matrix
-  cubD = (dfloat *) malloc(Nq*cubNq*sizeof(dfloat));
-  Dmatrix1D(N, Nq, gllz, cubNq, cubr, cubD);
+  //cubature derivates matrix, cubD: differentiate on cubature nodes
+  cubD = (dfloat *) malloc(cubNq*cubNq*sizeof(dfloat));
+  Dmatrix1D(cubN, cubNq, cubr, cubNq, cubr, cubD);
 
-  // GL to GL differentiation matrix
-  gjD = (dfloat *) malloc(cubNq*cubNq*sizeof(dfloat));
-  Dmatrix1D(cubN, cubNq, cubr, cubNq, cubr, gjD);
+  // weak cubature derivative cubPDT = cubProject * cubD^T
+  cubPDT  = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
+  CubatureWeakDmatrix1D(Nq, cubNq, cubProject, cubD, cubPDT);
 
   // add compile time constants to kernels
   props["defines/" "p_cubNq"]= cubNq;
@@ -65,48 +64,50 @@ void meshHex3D::CubatureSetup(){
   props["defines/" "p_intNfpNfaces"]= intNfp*Nfaces;
   props["defines/" "p_cubNfp"]= cubNfp;
 
-  dfloat *cubDWT = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
+  // build transposes (we hold matrices as column major on device)
   dfloat *cubProjectT = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
-  dfloat *cubInterpT = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
-  for(int n=0;n<Nq;++n){
-    for(int m=0;m<cubNq;++m){
-      cubDWT[n+m*Nq] = cubDW[n*cubNq+m];
-      cubProjectT[n+m*Nq] = cubProject[n*cubNq+m];
-      cubInterpT[m+n*cubNq] = cubInterp[m*Nq+n];
+  dfloat *cubInterpT   = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
+  matrixTranspose(cubNq, Nq, cubInterp, Nq, cubInterpT, cubNq);
+  matrixTranspose(Nq, cubNq, cubProject, cubNq, cubProjectT, Nq);
+
+  //pre-multiply cubProject by W on device
+  for(int n=0;n<cubNq;++n){
+    for(int m=0;m<Nq;++m){
+      cubProjectT[m+n*Nq] *= cubw[n];
     }
   }
 
-  o_cubInterpT =
-    device.malloc(Nq*cubNq*sizeof(dfloat),
-        cubInterpT);
+  dfloat *cubPDTT     = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
+  matrixTranspose(Nq, cubNq, cubPDT, cubNq, cubPDTT, Nq);
 
-  o_cubProjectT =
-    device.malloc(Nq*cubNq*sizeof(dfloat),
-        cubProjectT);
+  //pre-multiply cubPDT by W on device
+  for(int n=0;n<cubNq;++n){
+    for(int m=0;m<Nq;++m){
+      cubPDTT[m+n*Nq] *= cubw[n];
+    }
+  }
 
-  o_cubDWT =
-    device.malloc(Nq*cubNq*sizeof(dfloat),
-        cubDWT);
+  dfloat *cubDT = (dfloat *) malloc(cubNq*cubNq*sizeof(dfloat));
+  matrixTranspose(cubNq, cubNq, cubD, cubNq, cubDT, cubNq);
 
+  o_cubInterp   = device.malloc(Nq*cubNq*sizeof(dfloat), cubInterpT);
+  o_cubProject = device.malloc(Nq*cubNq*sizeof(dfloat), cubProjectT);
+
+  o_cubPDT = device.malloc(Nq*cubNq*sizeof(dfloat), cubPDTT);
   o_cubD = device.malloc(cubNq*cubNq*sizeof(dfloat), cubD);
 
-  o_cubDWmatrices = device.malloc(cubNq*Nq*sizeof(dfloat), cubDWT);
+  o_intInterp = o_cubInterp;
+  o_intLIFT = o_cubProject;
 
-  o_intInterpT = device.malloc(cubNq*Nq*sizeof(dfloat));
-  o_intInterpT.copyFrom(o_cubInterpT);
-
-  o_intLIFTT = device.malloc(cubNq*Nq*sizeof(dfloat));
-  o_intLIFTT.copyFrom(o_cubProjectT);
-
-  free(cubDWT);
+  free(cubPDTT);
   free(cubProjectT);
   free(cubInterpT);
+  free(cubDT);
 
   cubvgeo = (dfloat*) calloc(Nelements*Nvgeo*cubNp, sizeof(dfloat));
   cubggeo = (dfloat*) calloc(Nelements*Nggeo*cubNp, sizeof(dfloat));
 
-  cubsgeo = (dfloat*) calloc(Nelements*Nsgeo*cubNq*cubNq*Nfaces,
-                                sizeof(dfloat));
+  cubsgeo = (dfloat*) calloc(Nelements*Nsgeo*cubNq*cubNq*Nfaces, sizeof(dfloat));
 
   //temp arrays
   dfloat *xre = (dfloat*) calloc(Np, sizeof(dfloat));

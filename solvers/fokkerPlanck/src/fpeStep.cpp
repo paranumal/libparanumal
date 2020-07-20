@@ -52,8 +52,8 @@ void fpe_t::rhs_imex_invg(occa::memory& o_RHS, occa::memory& o_Q, const dfloat g
                       mesh.o_vgeo,
                       mesh.o_sgeo,
                       mesh.o_EToB,
-                      mesh.o_Dmatrices,
-                      mesh.o_LIFTT,
+                      mesh.o_D,
+                      mesh.o_LIFT,
                       mesh.o_MM,
                       tau,
                       mu,
@@ -73,7 +73,7 @@ void fpe_t::rhs_imex_invg(occa::memory& o_RHS, occa::memory& o_Q, const dfloat g
   int iter = elliptic->Solve(*linearSolver, o_Q, o_RHS, tol, maxIter, verbose);
 
   if (mesh.rank==0){
-    printf("\rSolver iterations: %3d", iter); fflush(stdout);
+    printf("\rSolver iterations: %3d.  ", iter); fflush(stdout);
   }
 }
 
@@ -115,9 +115,9 @@ void fpe_t::Advection(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T) {
     advectionVolumeKernel(mesh.Nelements,
                          mesh.o_vgeo,
                          mesh.o_cubvgeo,
-                         mesh.o_cubDWmatrices,
-                         mesh.o_cubInterpT,
-                         mesh.o_cubProjectT,
+                         mesh.o_cubPDT,
+                         mesh.o_cubInterp,
+                         mesh.o_cubProject,
                          T,
                          mesh.o_cubx,
                          mesh.o_cuby,
@@ -127,7 +127,7 @@ void fpe_t::Advection(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T) {
   else
     advectionVolumeKernel(mesh.Nelements,
                          mesh.o_vgeo,
-                         mesh.o_Dmatrices,
+                         mesh.o_D,
                          T,
                          mesh.o_x,
                          mesh.o_y,
@@ -144,8 +144,8 @@ void fpe_t::Advection(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T) {
                           mesh.o_vmapM,
                           mesh.o_vmapP,
                           mesh.o_EToB,
-                          mesh.o_intInterpT,
-                          mesh.o_intLIFTT,
+                          mesh.o_intInterp,
+                          mesh.o_intLIFT,
                           T,
                           mesh.o_intx,
                           mesh.o_inty,
@@ -155,7 +155,7 @@ void fpe_t::Advection(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T) {
   else
     advectionSurfaceKernel(mesh.Nelements,
                           mesh.o_sgeo,
-                          mesh.o_LIFTT,
+                          mesh.o_LIFT,
                           mesh.o_vmapM,
                           mesh.o_vmapP,
                           mesh.o_EToB,
@@ -172,7 +172,7 @@ void fpe_t::Diffusion(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T) {
   //compute gradq and pack with q
   gradientKernel(mesh.Nelements,
                   mesh.o_vgeo,
-                  mesh.o_Dmatrices,
+                  mesh.o_D,
                   o_Q,
                   o_grad);
 
@@ -187,8 +187,8 @@ void fpe_t::Diffusion(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T) {
                     mesh.o_vgeo,
                     mesh.o_sgeo,
                     mesh.o_EToB,
-                    mesh.o_Dmatrices,
-                    mesh.o_LIFTT,
+                    mesh.o_D,
+                    mesh.o_LIFT,
                     T,
                     mesh.o_x,
                     mesh.o_y,
@@ -208,8 +208,8 @@ void fpe_t::Diffusion(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T) {
                     mesh.o_vgeo,
                     mesh.o_sgeo,
                     mesh.o_EToB,
-                    mesh.o_Dmatrices,
-                    mesh.o_LIFTT,
+                    mesh.o_D,
+                    mesh.o_LIFT,
                     T,
                     mesh.o_x,
                     mesh.o_y,

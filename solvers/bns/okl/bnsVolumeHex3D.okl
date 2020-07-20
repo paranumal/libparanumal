@@ -27,7 +27,7 @@ SOFTWARE.
 @kernel void bnsVolumeHex3D(const dlong Nelements,
                              @restrict const  dlong  *  elementIds,
                              @restrict const  dfloat *  vgeo,
-                             @restrict const  dfloat *  Dmatrices,
+                             @restrict const  dfloat *  DT,
                              @restrict const  dfloat *  x,
                              @restrict const  dfloat *  y,
                              @restrict const  dfloat *  z,
@@ -40,7 +40,7 @@ SOFTWARE.
   for(dlong et=0;et<Nelements;et++;@outer(0)){  // for all elements
 
     @shared dfloat s_q[p_Nfields][p_Nq][p_Nq][p_Nq];
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
 
     @exclusive dlong e;
 
@@ -56,7 +56,7 @@ SOFTWARE.
           }
 
           if (k==0)
-            s_D[j][i] = Dmatrices[j*p_Nq+i];
+            s_DT[j][i] = DT[j*p_Nq+i];
 
           const dfloat r =   s_q[0][k][j][i];
           const dfloat u = c*s_q[1][k][j][i]/r;
@@ -107,9 +107,9 @@ SOFTWARE.
 
           #pragma unroll p_Nq
           for(int m=0;m<p_Nq;++m){
-            const dfloat Dim = s_D[i][m];
-            const dfloat Djm = s_D[j][m];
-            const dfloat Dkm = s_D[k][m];
+            const dfloat Dim = s_DT[i][m];
+            const dfloat Djm = s_DT[j][m];
+            const dfloat Dkm = s_DT[k][m];
 
             // differentiate q components with respect to 'r'
             #pragma unroll p_Nfields
@@ -179,7 +179,7 @@ SOFTWARE.
                                    @restrict const  dlong  *  pmlElementIds,
                                    @restrict const  dlong  *  pmlIds,
                                    @restrict const  dfloat *  vgeo,
-                                   @restrict const  dfloat *  Dmatrices,
+                                   @restrict const  dfloat *  DT,
                                    @restrict const  dfloat *  x,
                                    @restrict const  dfloat *  y,
                                    @restrict const  dfloat *  z,
@@ -192,7 +192,7 @@ SOFTWARE.
   for(dlong et=0;et<pmlNelements;et++;@outer(0)){   // for all elements
 
     @shared dfloat s_q[p_Nfields][p_Nq][p_Nq][p_Nq];
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
 
     @exclusive dlong e;
     @exclusive dfloat fx, fy, fz;
@@ -208,7 +208,7 @@ SOFTWARE.
           }
 
           if(k==0)
-            s_D[j][i] = Dmatrices[j*p_Nq+i];
+            s_DT[j][i] = DT[j*p_Nq+i];
 
           const dfloat r =   s_q[0][k][j][i];
           const dfloat u = c*s_q[1][k][j][i]/r;
@@ -259,9 +259,9 @@ SOFTWARE.
 
           #pragma unroll p_Nq
           for(int m=0;m<p_Nq;++m){
-            const dfloat Dim = s_D[i][m];
-            const dfloat Djm = s_D[j][m];
-            const dfloat Dkm = s_D[k][m];
+            const dfloat Dim = s_DT[i][m];
+            const dfloat Djm = s_DT[j][m];
+            const dfloat Dkm = s_DT[k][m];
 
             // differentiate q components with respect to 'r'
             #pragma unroll p_Nfields
@@ -358,7 +358,7 @@ SOFTWARE.
                               @restrict const  dlong  *  pmlElementIds,
                               @restrict const  dlong  *  pmlIds,
                               @restrict const  dfloat *  vgeo,
-                              @restrict const  dfloat *  Dmatrices,
+                              @restrict const  dfloat *  DT,
                               @restrict const  dfloat *  x,
                               @restrict const  dfloat *  y,
                               @restrict const  dfloat *  z,
@@ -375,7 +375,7 @@ SOFTWARE.
 
     @shared dfloat s_q[p_Nfields][p_Nq][p_Nq][p_Nq];
     @exclusive dlong e;
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
 
     @exclusive dfloat fx, fy, fz;
 
@@ -390,7 +390,7 @@ SOFTWARE.
           }
 
           if(k==0)
-            s_D[j][i] = Dmatrices[j*p_Nq+i];
+            s_DT[j][i] = DT[j*p_Nq+i];
 
           const dfloat r =   s_q[0][k][j][i];
           const dfloat u = c*s_q[1][k][j][i]/r;
@@ -460,9 +460,9 @@ SOFTWARE.
 
           #pragma unroll p_Nq
           for(int m=0;m<p_Nq;++m){
-            const dfloat Dim = s_D[i][m];
-            const dfloat Djm = s_D[j][m];
-            const dfloat Dkm = s_D[k][m];
+            const dfloat Dim = s_DT[i][m];
+            const dfloat Djm = s_DT[j][m];
+            const dfloat Dkm = s_DT[k][m];
 
             // differentiate q components with respect to 'r'
             #pragma unroll p_Nfields

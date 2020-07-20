@@ -112,11 +112,9 @@ void elliptic_t::BuildOperatorDiagonalIpdgTri2D(dfloat *A) {
       A[eM*mesh.Np+n]  = J*lambda*mesh.MM[n*mesh.Np+n];
       A[eM*mesh.Np+n] += J*drdx*drdx*mesh.Srr[n*mesh.Np+n];
       A[eM*mesh.Np+n] += J*drdx*dsdx*mesh.Srs[n*mesh.Np+n];
-      A[eM*mesh.Np+n] += J*dsdx*drdx*mesh.Ssr[n*mesh.Np+n];
       A[eM*mesh.Np+n] += J*dsdx*dsdx*mesh.Sss[n*mesh.Np+n];
       A[eM*mesh.Np+n] += J*drdy*drdy*mesh.Srr[n*mesh.Np+n];
       A[eM*mesh.Np+n] += J*drdy*dsdy*mesh.Srs[n*mesh.Np+n];
-      A[eM*mesh.Np+n] += J*dsdy*drdy*mesh.Ssr[n*mesh.Np+n];
       A[eM*mesh.Np+n] += J*dsdy*dsdy*mesh.Sss[n*mesh.Np+n];
     }
 
@@ -249,15 +247,12 @@ void elliptic_t::BuildOperatorDiagonalIpdgTri3D(dfloat *A) {
       A[eM*mesh.Np+n]  = J*lambda*mesh.MM[n*mesh.Np+n];
       A[eM*mesh.Np+n] += J*drdx*drdx*mesh.Srr[n*mesh.Np+n];
       A[eM*mesh.Np+n] += J*drdx*dsdx*mesh.Srs[n*mesh.Np+n];
-      A[eM*mesh.Np+n] += J*dsdx*drdx*mesh.Ssr[n*mesh.Np+n];
       A[eM*mesh.Np+n] += J*dsdx*dsdx*mesh.Sss[n*mesh.Np+n];
       A[eM*mesh.Np+n] += J*drdy*drdy*mesh.Srr[n*mesh.Np+n];
       A[eM*mesh.Np+n] += J*drdy*dsdy*mesh.Srs[n*mesh.Np+n];
-      A[eM*mesh.Np+n] += J*dsdy*drdy*mesh.Ssr[n*mesh.Np+n];
       A[eM*mesh.Np+n] += J*dsdy*dsdy*mesh.Sss[n*mesh.Np+n];
       A[eM*mesh.Np+n] += J*drdz*drdz*mesh.Srr[n*mesh.Np+n];
       A[eM*mesh.Np+n] += J*drdz*dsdz*mesh.Srs[n*mesh.Np+n];
-      A[eM*mesh.Np+n] += J*dsdz*drdz*mesh.Ssr[n*mesh.Np+n];
       A[eM*mesh.Np+n] += J*dsdz*dsdz*mesh.Sss[n*mesh.Np+n];
     }
 
@@ -375,7 +370,6 @@ void elliptic_t::BuildOperatorDiagonalContinuousTri2D(dfloat *A) {
         A[eM*mesh.Np+n] = J*lambda*mesh.MM[n+n*mesh.Np];
         A[eM*mesh.Np+n] += Grr*mesh.Srr[n+n*mesh.Np];
         A[eM*mesh.Np+n] += Grs*mesh.Srs[n+n*mesh.Np];
-        A[eM*mesh.Np+n] += Grs*mesh.Ssr[n+n*mesh.Np];
         A[eM*mesh.Np+n] += Gss*mesh.Sss[n+n*mesh.Np];
       } else {
         A[eM*mesh.Np+n] = 1; //just put a 1 so A is invertable
@@ -734,12 +728,8 @@ void elliptic_t::BuildOperatorDiagonalIpdgTet3D(dfloat *A) {
     dfloat G01 = drdx*dsdx + drdy*dsdy + drdz*dsdz;
     dfloat G02 = drdx*dtdx + drdy*dtdy + drdz*dtdz;
 
-    dfloat G10 = dsdx*drdx + dsdy*drdy + dsdz*drdz;
     dfloat G11 = dsdx*dsdx + dsdy*dsdy + dsdz*dsdz;
     dfloat G12 = dsdx*dtdx + dsdy*dtdy + dsdz*dtdz;
-
-    dfloat G20 = dtdx*drdx + dtdy*drdy + dtdz*drdz;
-    dfloat G21 = dtdx*dsdx + dtdy*dsdy + dtdz*dsdz;
     dfloat G22 = dtdx*dtdx + dtdy*dtdy + dtdz*dtdz;
 
 
@@ -749,11 +739,8 @@ void elliptic_t::BuildOperatorDiagonalIpdgTet3D(dfloat *A) {
       A[eM*mesh.Np+n] += J*G00*mesh.Srr[n*mesh.Np+n];
       A[eM*mesh.Np+n] += J*G01*mesh.Srs[n*mesh.Np+n];
       A[eM*mesh.Np+n] += J*G02*mesh.Srt[n*mesh.Np+n];
-      A[eM*mesh.Np+n] += J*G10*mesh.Ssr[n*mesh.Np+n];
       A[eM*mesh.Np+n] += J*G11*mesh.Sss[n*mesh.Np+n];
       A[eM*mesh.Np+n] += J*G12*mesh.Sst[n*mesh.Np+n];
-      A[eM*mesh.Np+n] += J*G20*mesh.Str[n*mesh.Np+n];
-      A[eM*mesh.Np+n] += J*G21*mesh.Sts[n*mesh.Np+n];
       A[eM*mesh.Np+n] += J*G22*mesh.Stt[n*mesh.Np+n];
     }
 
@@ -875,11 +862,8 @@ void elliptic_t::BuildOperatorDiagonalContinuousTet3D(dfloat *A) {
         A[eM*mesh.Np+n] += Grr*mesh.Srr[n+n*mesh.Np];
         A[eM*mesh.Np+n] += Grs*mesh.Srs[n+n*mesh.Np];
         A[eM*mesh.Np+n] += Grt*mesh.Srt[n+n*mesh.Np];
-        A[eM*mesh.Np+n] += Grs*mesh.Ssr[n+n*mesh.Np];
         A[eM*mesh.Np+n] += Gss*mesh.Sss[n+n*mesh.Np];
         A[eM*mesh.Np+n] += Gst*mesh.Sst[n+n*mesh.Np];
-        A[eM*mesh.Np+n] += Grt*mesh.Str[n+n*mesh.Np];
-        A[eM*mesh.Np+n] += Gst*mesh.Sts[n+n*mesh.Np];
         A[eM*mesh.Np+n] += Gtt*mesh.Stt[n+n*mesh.Np];
       } else {
         A[eM*mesh.Np+n] = 1; //just put a 1 so A is invertable

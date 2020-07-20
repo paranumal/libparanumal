@@ -31,8 +31,8 @@ SOFTWARE.
                                @restrict const  dlong *  elementIds,
                                @restrict const  dfloat *  vgeo,
                                @restrict const  dfloat *  cubvgeo,
-                               @restrict const  dfloat *  cubInterpT,
-                               @restrict const  dfloat *  cubProjectT,
+                               @restrict const  dfloat *  cubInterp,
+                               @restrict const  dfloat *  cubProject,
                                const int semiAnalytic,
                                const dfloat tauInv,
                                @restrict const  dfloat *  q,
@@ -45,8 +45,8 @@ SOFTWARE.
 
     @exclusive dfloat r_q[p_Nfields];
 
-    @shared dfloat s_cubInterpT[p_Nq][p_cubNq];
-    @shared dfloat s_cubProjectT[p_cubNq][p_Nq];
+    @shared dfloat s_cubInterp[p_Nq][p_cubNq];
+    @shared dfloat s_cubProject[p_cubNq][p_Nq];
 
     @exclusive dlong e;
 
@@ -66,8 +66,8 @@ SOFTWARE.
 
           const int ids = i+j*p_cubNq;
           if ((k==0) && (ids<p_Nq*p_cubNq)) {
-            s_cubInterpT[0][ids] = cubInterpT[ids];
-            s_cubProjectT[0][ids] = cubProjectT[ids];
+            s_cubInterp[0][ids] = cubInterp[ids];
+            s_cubProject[0][ids] = cubProject[ids];
           }
         }
       }
@@ -86,7 +86,7 @@ SOFTWARE.
 
             #pragma unroll p_Nq
             for (int n=0;n<p_Nq;n++) {
-              const dfloat Ini = s_cubInterpT[n][i];
+              const dfloat Ini = s_cubInterp[n][i];
               // #pragma unroll p_Nfields
               for(int fld=0; fld<p_Nfields; fld++){
                 r_q[fld]  += Ini*s_q[fld][k][j][n];
@@ -126,7 +126,7 @@ SOFTWARE.
 
             #pragma unroll p_Nq
             for (int n=0;n<p_Nq;n++) {
-              const dfloat Ini = s_cubInterpT[n][j];
+              const dfloat Ini = s_cubInterp[n][j];
               // #pragma unroll p_Nfields
               for(int fld=0; fld<p_Nfields; fld++){
                 r_q[fld]  += Ini*s_q[fld][k][n][i];
@@ -164,7 +164,7 @@ SOFTWARE.
 
           #pragma unroll p_Nq
           for (int n=0;n<p_Nq;n++) {
-            const dfloat Ini = s_cubInterpT[n][k];
+            const dfloat Ini = s_cubInterp[n][k];
             // #pragma unroll p_Nfields
             for(int fld=0; fld<p_Nfields; fld++){
               r_q[fld]  += Ini*s_q[fld][n][j][i];
@@ -218,7 +218,7 @@ SOFTWARE.
           if (k<p_Nq) {
             #pragma unroll p_cubNq
             for (int n=0;n<p_cubNq;n++) {
-              const dfloat Pnk = s_cubProjectT[n][k];
+              const dfloat Pnk = s_cubProject[n][k];
               for(int fld=0; fld<p_Nrelax; fld++){
                 r_q[fld] += Pnk*s_q[fld+p_Nvars][n][j][i];
               }
@@ -256,7 +256,7 @@ SOFTWARE.
           if (j<p_Nq && k<p_Nq) {
             #pragma unroll p_cubNq
             for (int n=0;n<p_cubNq;n++) {
-              const dfloat Pnj = s_cubProjectT[n][j];
+              const dfloat Pnj = s_cubProject[n][j];
               for(int fld=0; fld<p_Nrelax; fld++){
                 r_q[fld] += Pnj*s_q[fld][k][n][i];
               }
@@ -297,7 +297,7 @@ SOFTWARE.
 
             #pragma unroll p_cubNq
             for(int n=0;n<p_cubNq;++n){
-              const dfloat Pni = s_cubProjectT[n][i];
+              const dfloat Pni = s_cubProject[n][i];
               for(int fld=0; fld<p_Nrelax; fld++){
                 r_q[fld] += Pni*s_q[fld][k][j][n];
               }
@@ -325,8 +325,8 @@ SOFTWARE.
                                   @restrict const  dlong *  pmlIds,
                                   @restrict const  dfloat *  vgeo,
                                   @restrict const  dfloat *  cubvgeo,
-                                  @restrict const  dfloat *  cubInterpT,
-                                  @restrict const  dfloat *  cubProjectT,
+                                  @restrict const  dfloat *  cubInterp,
+                                  @restrict const  dfloat *  cubProject,
                                   @restrict const  dfloat *  pmlSigma,
                                             const dfloat pmlAlpha,
                                             const int semiAnalytic,
@@ -349,8 +349,8 @@ SOFTWARE.
     @exclusive dfloat r_qy[p_Nfields];
     @exclusive dfloat r_qz[p_Nfields];
 
-    @shared dfloat s_cubInterpT[p_Nq][p_cubNq];
-    @shared dfloat s_cubProjectT[p_cubNq][p_Nq];
+    @shared dfloat s_cubInterp[p_Nq][p_cubNq];
+    @shared dfloat s_cubProject[p_cubNq][p_Nq];
 
     @exclusive dlong e, pmlId;
 
@@ -376,8 +376,8 @@ SOFTWARE.
 
           const int ids = i+j*p_cubNq;
           if (k==0 && ids<p_Nq*p_cubNq) {
-            s_cubInterpT[0][ids] = cubInterpT[ids];
-            s_cubProjectT[0][ids] = cubProjectT[ids];
+            s_cubInterp[0][ids] = cubInterp[ids];
+            s_cubProject[0][ids] = cubProject[ids];
           }
         }
       }
@@ -400,7 +400,7 @@ SOFTWARE.
 
             #pragma unroll p_Nq
             for (int n=0;n<p_Nq;n++) {
-              const dfloat Ini = s_cubInterpT[n][i];
+              const dfloat Ini = s_cubInterp[n][i];
               // #pragma unroll p_Nfields
               for(int fld=0; fld<p_Nfields; fld++){
                 r_q[fld]   += Ini*s_q[fld][k][j][n];
@@ -450,7 +450,7 @@ SOFTWARE.
 
             #pragma unroll p_Nq
             for (int n=0;n<p_Nq;n++) {
-              const dfloat Ini = s_cubInterpT[n][j];
+              const dfloat Ini = s_cubInterp[n][j];
               // #pragma unroll p_Nfields
               for(int fld=0; fld<p_Nfields; fld++){
                 r_q[fld]   += Ini*s_q[fld][k][n][i];
@@ -498,7 +498,7 @@ SOFTWARE.
 
           #pragma unroll p_Nq
           for (int n=0;n<p_Nq;n++) {
-            const dfloat Ini = s_cubInterpT[n][k];
+            const dfloat Ini = s_cubInterp[n][k];
             // #pragma unroll p_Nfields
             for(int fld=0; fld<p_Nfields; fld++){
               r_q[fld]   += Ini*s_q[fld][n][j][i];
@@ -577,7 +577,7 @@ SOFTWARE.
           if (k<p_Nq) {
             #pragma unroll p_cubNq
             for (int n=0;n<p_cubNq;n++) {
-              const dfloat Pnj = s_cubProjectT[n][k];
+              const dfloat Pnj = s_cubProject[n][k];
               for(int fld=0; fld<p_Nrelax; fld++){
                 r_q[fld]  += Pnj*s_q[fld+p_Nvars][n][j][i];
                 r_qx[fld] += Pnj*s_qx[fld+p_Nvars][n][j][i];
@@ -623,7 +623,7 @@ SOFTWARE.
           if (j<p_Nq && k<p_Nq) {
             #pragma unroll p_cubNq
             for (int n=0;n<p_cubNq;n++) {
-              const dfloat Pnj = s_cubProjectT[n][j];
+              const dfloat Pnj = s_cubProject[n][j];
               for(int fld=0; fld<p_Nrelax; fld++){
                 r_q[fld]  += Pnj*s_q[fld+p_Nvars][k][n][i];
                 r_qx[fld] += Pnj*s_qx[fld+p_Nvars][k][n][i];
@@ -674,7 +674,7 @@ SOFTWARE.
 
             #pragma unroll p_cubNq
             for(int n=0;n<p_cubNq;++n){
-              const dfloat Pni = s_cubProjectT[n][i];
+              const dfloat Pni = s_cubProject[n][i];
               for(int fld=0; fld<p_Nrelax; fld++){
                 r_q[fld]  += Pni*s_q[fld][k][j][n];
                 r_qx[fld] += Pni*s_qx[fld][k][j][n];

@@ -285,54 +285,5 @@ mesh_t* mesh_t::SetupSEMFEM(hlong **globalIds_, int *Nfp_, int **faceNodes_){
   //dont need to setup occa buffers for this mesh
   // femMesh->OccaSetup();
 
-  //just build the stiffness ops
-  if (elementType==TRIANGLES) {
-    //build stiffness matrices
-    femMesh->Srr = (dfloat *) calloc(femMesh->Np*femMesh->Np,sizeof(dfloat));
-    femMesh->Srs = (dfloat *) calloc(femMesh->Np*femMesh->Np,sizeof(dfloat));
-    femMesh->Ssr = (dfloat *) calloc(femMesh->Np*femMesh->Np,sizeof(dfloat));
-    femMesh->Sss = (dfloat *) calloc(femMesh->Np*femMesh->Np,sizeof(dfloat));
-    for (int n=0;n<femMesh->Np;n++) {
-      for (int m=0;m<femMesh->Np;m++) {
-        for (int k=0;k<femMesh->Np;k++) {
-          for (int l=0;l<femMesh->Np;l++) {
-            femMesh->Srr[m+n*femMesh->Np] += femMesh->Dr[n+l*femMesh->Np]*femMesh->MM[k+l*femMesh->Np]*femMesh->Dr[m+k*femMesh->Np];
-            femMesh->Srs[m+n*femMesh->Np] += femMesh->Dr[n+l*femMesh->Np]*femMesh->MM[k+l*femMesh->Np]*femMesh->Ds[m+k*femMesh->Np];
-            femMesh->Ssr[m+n*femMesh->Np] += femMesh->Ds[n+l*femMesh->Np]*femMesh->MM[k+l*femMesh->Np]*femMesh->Dr[m+k*femMesh->Np];
-            femMesh->Sss[m+n*femMesh->Np] += femMesh->Ds[n+l*femMesh->Np]*femMesh->MM[k+l*femMesh->Np]*femMesh->Ds[m+k*femMesh->Np];
-          }
-        }
-      }
-    }
-  } else if (elementType==TETRAHEDRA) {
-    //build stiffness matrices
-    femMesh->Srr = (dfloat *) calloc(femMesh->Np*femMesh->Np,sizeof(dfloat));
-    femMesh->Srs = (dfloat *) calloc(femMesh->Np*femMesh->Np,sizeof(dfloat));
-    femMesh->Srt = (dfloat *) calloc(femMesh->Np*femMesh->Np,sizeof(dfloat));
-    femMesh->Ssr = (dfloat *) calloc(femMesh->Np*femMesh->Np,sizeof(dfloat));
-    femMesh->Sss = (dfloat *) calloc(femMesh->Np*femMesh->Np,sizeof(dfloat));
-    femMesh->Sst = (dfloat *) calloc(femMesh->Np*femMesh->Np,sizeof(dfloat));
-    femMesh->Str = (dfloat *) calloc(femMesh->Np*femMesh->Np,sizeof(dfloat));
-    femMesh->Sts = (dfloat *) calloc(femMesh->Np*femMesh->Np,sizeof(dfloat));
-    femMesh->Stt = (dfloat *) calloc(femMesh->Np*femMesh->Np,sizeof(dfloat));
-    for (int n=0;n<femMesh->Np;n++) {
-      for (int m=0;m<femMesh->Np;m++) {
-        for (int k=0;k<femMesh->Np;k++) {
-          for (int l=0;l<femMesh->Np;l++) {
-            femMesh->Srr[m+n*femMesh->Np] += femMesh->Dr[n+l*femMesh->Np]*femMesh->MM[k+l*femMesh->Np]*femMesh->Dr[m+k*femMesh->Np];
-            femMesh->Srs[m+n*femMesh->Np] += femMesh->Dr[n+l*femMesh->Np]*femMesh->MM[k+l*femMesh->Np]*femMesh->Ds[m+k*femMesh->Np];
-            femMesh->Srt[m+n*femMesh->Np] += femMesh->Dr[n+l*femMesh->Np]*femMesh->MM[k+l*femMesh->Np]*femMesh->Dt[m+k*femMesh->Np];
-            femMesh->Ssr[m+n*femMesh->Np] += femMesh->Ds[n+l*femMesh->Np]*femMesh->MM[k+l*femMesh->Np]*femMesh->Dr[m+k*femMesh->Np];
-            femMesh->Sss[m+n*femMesh->Np] += femMesh->Ds[n+l*femMesh->Np]*femMesh->MM[k+l*femMesh->Np]*femMesh->Ds[m+k*femMesh->Np];
-            femMesh->Sst[m+n*femMesh->Np] += femMesh->Ds[n+l*femMesh->Np]*femMesh->MM[k+l*femMesh->Np]*femMesh->Dt[m+k*femMesh->Np];
-            femMesh->Str[m+n*femMesh->Np] += femMesh->Dt[n+l*femMesh->Np]*femMesh->MM[k+l*femMesh->Np]*femMesh->Dr[m+k*femMesh->Np];
-            femMesh->Sts[m+n*femMesh->Np] += femMesh->Dt[n+l*femMesh->Np]*femMesh->MM[k+l*femMesh->Np]*femMesh->Ds[m+k*femMesh->Np];
-            femMesh->Stt[m+n*femMesh->Np] += femMesh->Dt[n+l*femMesh->Np]*femMesh->MM[k+l*femMesh->Np]*femMesh->Dt[m+k*femMesh->Np];
-          }
-        }
-      }
-    }
-  }
-
   return femMesh;
 }

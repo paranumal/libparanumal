@@ -35,9 +35,9 @@ SOFTWARE.
                                 const dfloat tau,
                                 @restrict const  dfloat *  vgeo,
                                 @restrict const  dfloat *  sgeo,
-                                @restrict const  int   *  EToB,
-                                @restrict const  dfloat *  Dmatrices,
-                                @restrict const  dfloat *  LIFTT,
+                                @restrict const  int    *  EToB,
+                                @restrict const  dfloat *  D,
+                                @restrict const  dfloat *  LIFT,
                                 @restrict const  dfloat *  MM,
                                 @restrict const  dfloat4 *  gradq,
                                       @restrict dfloat  *  Aq){
@@ -120,8 +120,8 @@ SOFTWARE.
 
         #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
-            Lnxdq += LIFTT[n+i*p_Np]*s_nxdq[i];
-            Lnydq += LIFTT[n+i*p_Np]*s_nydq[i];
+            Lnxdq += LIFT[n+i*p_Np]*s_nxdq[i];
+            Lnydq += LIFT[n+i*p_Np]*s_nydq[i];
           }
 
         dfloat dqdx = s_dqdx[n] + Lnxdq;
@@ -147,8 +147,8 @@ SOFTWARE.
 
         #pragma unroll p_Np
           for(int i=0;i<p_Np;++i){
-            lapr += Dmatrices[n+i*p_Np+0*p_Np*p_Np]*s_dqdx[i];
-            laps += Dmatrices[n+i*p_Np+1*p_Np*p_Np]*s_dqdy[i];
+            lapr += D[n+i*p_Np+0*p_Np*p_Np]*s_dqdx[i];
+            laps += D[n+i*p_Np+1*p_Np*p_Np]*s_dqdy[i];
           }
 
         s_lapq[n] -= (lapr+laps);
@@ -165,7 +165,7 @@ SOFTWARE.
         // lift remaining surface terms
         #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
-            lap += LIFTT[n+i*p_Np]*s_lapflux[i];
+            lap += LIFT[n+i*p_Np]*s_lapflux[i];
           }
 
         s_lapq[n] += lap;
@@ -254,8 +254,8 @@ SOFTWARE.
                                 @restrict const  dfloat *  vgeo,
                                 @restrict const  dfloat *  sgeo,
                                 @restrict const  int   *  EToB,
-                                @restrict const  dfloat *  Dmatrices,
-                                @restrict const  dfloat *  LIFTT,
+                                @restrict const  dfloat *  D,
+                                @restrict const  dfloat *  LIFT,
                                 @restrict const  dfloat *  MM,
                                 @restrict const  dfloat4 *  gradq,
                                       @restrict dfloat  *  Aq){
@@ -378,7 +378,7 @@ SOFTWARE.
 
         #pragma unroll p_NfacesNfp
         for(int i=0;i<p_NfacesNfp;++i){
-          const dfloat L = LIFTT[n+i*p_Np];
+          const dfloat L = LIFT[n+i*p_Np];
             #pragma unroll p_Nmt
             for(int em=0;em<p_Nmt;++em){
               Lnxdq[em] += L*s_nxdq[em][es][i];
@@ -436,8 +436,8 @@ SOFTWARE.
         if(n<p_Np){
           #pragma unroll p_Np
             for(int i=0;i<p_Np;++i){
-              const dfloat drT = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
-              const dfloat dsT = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
+              const dfloat drT = D[n+i*p_Np+0*p_Np*p_Np];
+              const dfloat dsT = D[n+i*p_Np+1*p_Np*p_Np];
 
               #pragma unroll p_Nmt
               for(int em=0;em<p_Nmt;++em){
@@ -472,7 +472,7 @@ SOFTWARE.
           // lift remaining surface terms
           #pragma unroll p_NfacesNfp
             for(int i=0;i<p_NfacesNfp;++i){
-                const dfloat L = LIFTT[n+i*p_Np];
+                const dfloat L = LIFT[n+i*p_Np];
                 #pragma unroll p_Nmt
                 for(int em=0;em<p_Nmt;++em){
                 lap[em] += L*s_lapflux[em][es][i];

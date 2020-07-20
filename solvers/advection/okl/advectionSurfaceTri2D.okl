@@ -27,7 +27,7 @@ SOFTWARE.
 // batch process elements
 @kernel void advectionSurfaceTri2D(const dlong Nelements,
                                   @restrict const  dfloat *  sgeo,
-                                  @restrict const  dfloat *  LIFTT,
+                                  @restrict const  dfloat *  LIFT,
                                   @restrict const  dlong  *  vmapM,
                                   @restrict const  dlong  *  vmapP,
                                   @restrict const  int    *  EToB,
@@ -104,7 +104,7 @@ SOFTWARE.
             // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
             #pragma unroll p_NfacesNfp
               for(int m=0;m<p_NfacesNfp;++m){
-                const dfloat L = LIFTT[n+m*p_Np];
+                const dfloat L = LIFT[n+m*p_Np];
                 Lqflux += L*s_qflux[es][m];
               }
 

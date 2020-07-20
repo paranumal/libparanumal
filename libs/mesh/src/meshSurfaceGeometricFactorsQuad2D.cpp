@@ -98,8 +98,8 @@ void meshQuad2D::SurfaceGeometricFactors(){
         sgeo[base+SJID] = sJ;
         sgeo[base+IJID] = 1./J;
 
-        sgeo[base+WIJID] = 1./(J*gllw[0]);
-        sgeo[base+WSJID] = sJ*gllw[i];
+        sgeo[base+WIJID] = 1./(J*w[0]);
+        sgeo[base+WSJID] = sJ*w[i];
       }
     }
   }

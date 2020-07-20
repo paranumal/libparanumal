@@ -24,16 +24,16 @@ SOFTWARE.
 
 */
 
- 
+
 @kernel void ellipticAxTet3D(const dlong Nelements,
-        @restrict const  dfloat *  ggeo,
-        @restrict const  dfloat *  Dmatrices,
-        @restrict const  dfloat *  Smatrices,
-        @restrict const  dfloat *  MM,
-        const dfloat lambda,
-        @restrict const  dfloat  *  q,
-        @restrict dfloat  *  Aq){
-  
+                            @restrict const  dfloat *  ggeo,
+                            @restrict const  dfloat *  D,
+                            @restrict const  dfloat *  S,
+                            @restrict const  dfloat *  MM,
+                            const dfloat lambda,
+                            @restrict const  dfloat  *  q,
+                            @restrict dfloat  *  Aq){
+
   for(dlong e=0;e<Nelements;e++;@outer(0)){
 
     @shared dfloat s_q[p_Np];
@@ -67,12 +67,12 @@ SOFTWARE.
 
       #pragma unroll p_Np
         for (int k=0;k<p_Np;k++) {
-          qrr += Smatrices[n+k*p_Np+0*p_Np*p_Np]*s_q[k];
-          qrs += Smatrices[n+k*p_Np+1*p_Np*p_Np]*s_q[k];
-          qrt += Smatrices[n+k*p_Np+2*p_Np*p_Np]*s_q[k];
-          qss += Smatrices[n+k*p_Np+3*p_Np*p_Np]*s_q[k];
-          qst += Smatrices[n+k*p_Np+4*p_Np*p_Np]*s_q[k];
-          qtt += Smatrices[n+k*p_Np+5*p_Np*p_Np]*s_q[k];
+          qrr += S[n+k*p_Np+0*p_Np*p_Np]*s_q[k];
+          qrs += S[n+k*p_Np+1*p_Np*p_Np]*s_q[k];
+          qrt += S[n+k*p_Np+2*p_Np*p_Np]*s_q[k];
+          qss += S[n+k*p_Np+3*p_Np*p_Np]*s_q[k];
+          qst += S[n+k*p_Np+4*p_Np*p_Np]*s_q[k];
+          qtt += S[n+k*p_Np+5*p_Np*p_Np]*s_q[k];
           qM  += MM[n+k*p_Np]*s_q[k];
         }
 
@@ -80,7 +80,7 @@ SOFTWARE.
       const dlong id = n + e*p_Np;
 
       Aq[id] = Grr*qrr+Grs*qrs+Grt*qrt
-              +Gss*qss+Gst*qst+Gtt*qtt 
+              +Gss*qss+Gst*qst+Gtt*qtt
               +J*lambda*qM;
     }
   }
@@ -90,13 +90,13 @@ SOFTWARE.
 @kernel void ellipticPartialAxTet3D_v0(const dlong Nelements,
                                   @restrict const  dlong   *  elementList,
                                   @restrict const  dfloat *  ggeo,
-                                  @restrict const  dfloat *  Dmatrices,
-                                  @restrict const  dfloat *  Smatrices,
+                                  @restrict const  dfloat *  D,
+                                  @restrict const  dfloat *  S,
                                   @restrict const  dfloat *  MM,
                                   const dfloat lambda,
                                   @restrict const  dfloat  *  q,
                                   @restrict dfloat  *  Aq){
-  
+
   for(dlong e=0;e<Nelements;e++;@outer(0)){
 
     @shared dfloat s_q[p_Np];
@@ -132,12 +132,12 @@ SOFTWARE.
 
       #pragma unroll p_Np
         for (int k=0;k<p_Np;k++) {
-          qrr += Smatrices[n+k*p_Np+0*p_Np*p_Np]*s_q[k];
-          qrs += Smatrices[n+k*p_Np+1*p_Np*p_Np]*s_q[k];
-          qrt += Smatrices[n+k*p_Np+2*p_Np*p_Np]*s_q[k];
-          qss += Smatrices[n+k*p_Np+3*p_Np*p_Np]*s_q[k];
-          qst += Smatrices[n+k*p_Np+4*p_Np*p_Np]*s_q[k];
-          qtt += Smatrices[n+k*p_Np+5*p_Np*p_Np]*s_q[k];
+          qrr += S[n+k*p_Np+0*p_Np*p_Np]*s_q[k];
+          qrs += S[n+k*p_Np+1*p_Np*p_Np]*s_q[k];
+          qrt += S[n+k*p_Np+2*p_Np*p_Np]*s_q[k];
+          qss += S[n+k*p_Np+3*p_Np*p_Np]*s_q[k];
+          qst += S[n+k*p_Np+4*p_Np*p_Np]*s_q[k];
+          qtt += S[n+k*p_Np+5*p_Np*p_Np]*s_q[k];
           qM  += MM[n+k*p_Np]*s_q[k];
         }
 
@@ -145,14 +145,14 @@ SOFTWARE.
       const dlong id = n + element*p_Np;
 
       Aq[id] = Grr*qrr+Grs*qrs+Grt*qrt
-              +Gss*qss+Gst*qst+Gtt*qtt 
+              +Gss*qss+Gst*qst+Gtt*qtt
               +J*lambda*qM;
     }
   }
 }
 
-//Ref3 from benchmarks 
-// number of outputs per thread 
+//Ref3 from benchmarks
+// number of outputs per thread
 // important to tune this at low order
 
 // p_Ne: number of outputs per thread
@@ -187,8 +187,8 @@ SOFTWARE.
 @kernel void ellipticPartialAxTet3D(const dlong Nelements,
                                   @restrict const  dlong   *  elementList,
                                   @restrict const  dfloat *  ggeo,
-                                  @restrict const  dfloat *  Dmatrices,
-                                  @restrict const  dfloat *  Smatrices,
+                                  @restrict const  dfloat *  D,
+                                  @restrict const  dfloat *  S,
                                   @restrict const  dfloat *  MM,
                                   const dfloat lambda,
                                   @restrict const  dfloat  *  q,
@@ -196,7 +196,7 @@ SOFTWARE.
 
   // p_Ne nodes per thread
   // p_Nb elements worth of threads per block
-  
+
   for(dlong eo=0;eo<Nelements;eo+=p_Ne*p_Nb;@outer(0)){
 
     @shared dfloat s_q[p_Ne][p_Nb][p_Np];
@@ -206,17 +206,17 @@ SOFTWARE.
 
     for(int b=0;b<p_Nb;++b;@inner(1)){
       for(int n=0;n<p_Np;++n;@inner(0)){
-  
+
       #pragma unroll p_Ne
         for(int et=0;et<p_Ne;++et){
           const dlong e = eo + b + p_Nb*et;
 
           if(e<Nelements){
             element[et] = elementList[e];
-            
+
             const dlong id = n + element[et]*p_Np;
             s_q[et][b][n] = q[id];
-            
+
             int m=n;
             while(m<p_Nggeo){
               s_ggeo[et][b][m] = ggeo[element[et]*p_Nggeo+m];
@@ -231,9 +231,9 @@ SOFTWARE.
 
     for(int b=0;b<p_Nb;++b;@inner(1)){
       for(int n=0;n<p_Np;++n;@inner(0)){
-  
+
       dfloat qrr[p_Ne], qrs[p_Ne], qrt[p_Ne], qss[p_Ne], qst[p_Ne], qtt[p_Ne], qM[p_Ne];
-      
+
       #pragma unroll p_Ne
         for(int et=0;et<p_Ne;++et){
           qrr[et] = 0;    qrs[et] = 0;    qrt[et] = 0;
@@ -241,24 +241,24 @@ SOFTWARE.
           qtt[et] = 0;
           qM[et] = 0;
         }
-      
+
       // overall this does p_Ne*14 flops for  (7+p_Ne)*|dfloat| L1+@shared accesse
       // arithmetic intensity is  (p_Ne*14/((7+p_Ne)*8)) flops per byte
       #pragma unroll p_Np
         for (int k=0;k<p_Np;k++) {
-          
-          const dfloat Srr_nk = Smatrices[n+k*p_Np+0*p_Np*p_Np];
-          const dfloat Srs_nk = Smatrices[n+k*p_Np+1*p_Np*p_Np];
-          const dfloat Srt_nk = Smatrices[n+k*p_Np+2*p_Np*p_Np];
-          const dfloat Sss_nk = Smatrices[n+k*p_Np+3*p_Np*p_Np];
-          const dfloat Sst_nk = Smatrices[n+k*p_Np+4*p_Np*p_Np];
-          const dfloat Stt_nk = Smatrices[n+k*p_Np+5*p_Np*p_Np];
+
+          const dfloat Srr_nk = S[n+k*p_Np+0*p_Np*p_Np];
+          const dfloat Srs_nk = S[n+k*p_Np+1*p_Np*p_Np];
+          const dfloat Srt_nk = S[n+k*p_Np+2*p_Np*p_Np];
+          const dfloat Sss_nk = S[n+k*p_Np+3*p_Np*p_Np];
+          const dfloat Sst_nk = S[n+k*p_Np+4*p_Np*p_Np];
+          const dfloat Stt_nk = S[n+k*p_Np+5*p_Np*p_Np];
           const dfloat   MM_nk =    MM[n+k*p_Np];
-          
+
           #pragma unroll p_Ne
             for(int et=0;et<p_Ne;++et){
               const dfloat qk = s_q[et][b][k];
-              qrr[et] += Srr_nk*qk;  
+              qrr[et] += Srr_nk*qk;
               qrs[et] += Srs_nk*qk; // assume (Srs stores Srs+Ssr)
               qrt[et] += Srt_nk*qk; // assume (Srt stores Srt+Str)
               qss[et] += Sss_nk*qk;
@@ -267,7 +267,7 @@ SOFTWARE.
               qM[et]  += MM_nk*qk;
             }
         }
-          
+
       #pragma unroll p_Ne
         for(int et=0;et<p_Ne;++et){
           const dlong e = eo + b + p_Nb*et;
@@ -279,16 +279,16 @@ SOFTWARE.
             const dfloat Gst = s_ggeo[et][b][p_G12ID];
             const dfloat Gtt = s_ggeo[et][b][p_G22ID];
             const dfloat J   = s_ggeo[et][b][p_GWJID];
-            
+
             const dlong id = n + element[et]*p_Np;
-            
-            Aq[id] = 
+
+            Aq[id] =
               Grr*qrr[et]+
               Grs*qrs[et]+
               Grt*qrt[et]+
               Gss*qss[et]+
               Gst*qst[et]+
-              Gtt*qtt[et]+ 
+              Gtt*qtt[et]+
 	      J*lambda*qM[et];
           }
         }

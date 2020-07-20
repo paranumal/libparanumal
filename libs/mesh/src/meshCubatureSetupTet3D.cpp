@@ -36,12 +36,22 @@ void meshTet3D::CubatureSetup(){
   cubInterp = (dfloat *) malloc(Np*cubNp*sizeof(dfloat));
   InterpolationMatrixTet3D(N, Np, r, s, t, cubNp, cubr, cubs, cubt, cubInterp);
 
-  cubDrW = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
-  cubDsW = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
-  cubDtW = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
+  //cubature project cubProject = M^{-1} * cubInterp^T
+  // Defined such that cubProject * cubW * cubInterp = Identity
   cubProject = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
-  CubatureWeakDmatricesTet3D(N, Np, r, s, t, cubNp, cubr, cubs, cubt, cubw,
-                             cubDrW, cubDsW, cubDtW, cubProject);
+  CubaturePmatrixTet3D(N, Np, r, s, t, cubNp, cubr, cubs, cubt, cubProject);
+
+  //cubature derivates matrices, cubD: differentiate on cubature nodes
+  // we dont use cubD on Tris/Tets  so skip computing
+
+  // Instead, it's cheaper to:
+  // make weak cubature derivatives cubPDT = cubProject * cubD^T
+  cubPDT  = (dfloat*) calloc(3*cubNp*Np, sizeof(dfloat));
+  cubPDrT = cubPDT + 0*cubNp*Np;
+  cubPDsT = cubPDT + 1*cubNp*Np;
+  cubPDtT = cubPDT + 2*cubNp*Np;
+  CubatureWeakDmatricesTet3D(N, Np, r, s, t, cubNp, cubr, cubs, cubt,
+                             cubPDrT, cubPDsT, cubPDtT);
 
   // Surface cubature nodes
   CubatureNodesTri2D(cubN, &intNfp, &intr, &ints, &intw);
@@ -59,79 +69,57 @@ void meshTet3D::CubatureSetup(){
   props["defines/" "p_intNfpNfaces"]= intNfp*Nfaces;
   props["defines/" "p_cubNfp"]= cubNfp;
 
-  dfloat *cubDrWT = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
-  dfloat *cubDsWT = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
-  dfloat *cubDtWT = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
-  dfloat *cubDrstWT = (dfloat*) calloc(3*cubNp*Np, sizeof(dfloat));
+  // build transposes (we hold matrices as column major on device)
   dfloat *cubProjectT = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
-  dfloat *cubInterpT = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
-  for(int n=0;n<Np;++n){
-    for(int m=0;m<cubNp;++m){
-      cubDrWT[n+m*Np] = cubDrW[n*cubNp+m];
-      cubDsWT[n+m*Np] = cubDsW[n*cubNp+m];
-      cubDtWT[n+m*Np] = cubDtW[n*cubNp+m];
+  dfloat *cubInterpT   = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
+  matrixTranspose(cubNp, Np, cubInterp, Np, cubInterpT, cubNp);
+  matrixTranspose(Np, cubNp, cubProject, cubNp, cubProjectT, Np);
 
-      cubDrstWT[n+m*Np] = cubDrW[n*cubNp+m];
-      cubDrstWT[n+m*Np+cubNp*Np] = cubDsW[n*cubNp+m];
-      cubDrstWT[n+m*Np+2*cubNp*Np] = cubDtW[n*cubNp+m];
-
-      cubProjectT[n+m*Np] = cubProject[n*cubNp+m];
-      cubInterpT[m+n*cubNp] = cubInterp[m*Np+n];
+  //pre-multiply cubProject by W on device
+  for(int n=0;n<cubNp;++n){
+    for(int m=0;m<Np;++m){
+      cubProjectT[m+n*Np] *= cubw[n];
     }
   }
 
-  o_cubInterpT =
-    device.malloc(Np*cubNp*sizeof(dfloat),
-                        cubInterpT);
+  dfloat *cubPDTT = (dfloat*) calloc(3*cubNp*Np, sizeof(dfloat));
+  dfloat *cubPDrTT = cubPDTT + 0*cubNp*Np;
+  dfloat *cubPDsTT = cubPDTT + 1*cubNp*Np;
+  dfloat *cubPDtTT = cubPDTT + 2*cubNp*Np;
+  matrixTranspose(Np, cubNp, cubPDrT, cubNp, cubPDrTT, Np);
+  matrixTranspose(Np, cubNp, cubPDsT, cubNp, cubPDsTT, Np);
+  matrixTranspose(Np, cubNp, cubPDtT, cubNp, cubPDtTT, Np);
 
-  o_cubProjectT =
-    device.malloc(Np*cubNp*sizeof(dfloat),
-                        cubProjectT);
-
-  o_cubDrWT =
-    device.malloc(Np*cubNp*sizeof(dfloat),
-                        cubDrWT);
-
-  o_cubDsWT =
-    device.malloc(Np*cubNp*sizeof(dfloat),
-                        cubDsWT);
-
-  o_cubDtWT =
-    device.malloc(Np*cubNp*sizeof(dfloat),
-                        cubDtWT);
-
-  o_cubDWmatrices = device.malloc(3*cubNp*Np*sizeof(dfloat), cubDrstWT);
-
-  free(cubDrWT);
-  free(cubDsWT);
-  free(cubDtWT);
-  free(cubDrstWT);
-  free(cubProjectT);
-  free(cubInterpT);
+  //pre-multiply cubPDT by W on device
+  for(int n=0;n<cubNp;++n){
+    for(int m=0;m<Np;++m){
+      cubPDrTT[m+n*Np] *= cubw[n];
+      cubPDsTT[m+n*Np] *= cubw[n];
+      cubPDtTT[m+n*Np] *= cubw[n];
+    }
+  }
 
   // build surface integration matrix transposes
   dfloat *intLIFTT = (dfloat*) calloc(Np*Nfaces*intNfp, sizeof(dfloat));
   dfloat *intInterpT = (dfloat*) calloc(Nfp*Nfaces*intNfp, sizeof(dfloat));
-  for(int n=0;n<Np;++n){
-    for(int m=0;m<Nfaces*intNfp;++m){
-      intLIFTT[n+m*Np] = intLIFT[n*intNfp*Nfaces+m];
-    }
-  }
-  for(int n=0;n<intNfp*Nfaces;++n){
-    for(int m=0;m<Nfp;++m){
-      intInterpT[n+m*Nfaces*intNfp] = intInterp[n*Nfp + m];
-    }
-  }
+  matrixTranspose(Np, Nfaces*intNfp, intLIFT, Nfaces*intNfp, intLIFTT, Np);
+  matrixTranspose(Nfaces*intNfp, Nfp, intInterp, Nfp, intInterpT, Nfaces*intNfp);
 
-  o_intInterpT =
-    device.malloc(Nfp*Nfaces*intNfp*sizeof(dfloat),
-                        intInterpT);
-
-  o_intLIFTT =
-    device.malloc(Np*Nfaces*intNfp*sizeof(dfloat),
-                        intLIFTT);
 
   o_cubvgeo = o_vgeo;// dummy
-
   o_cubsgeo = o_sgeo; //dummy cubature geo factors
+
+  o_cubInterp = device.malloc(Np*cubNp*sizeof(dfloat), cubInterpT);
+  o_cubProject = device.malloc(Np*cubNp*sizeof(dfloat), cubProjectT);
+
+  o_cubPDT = device.malloc(3*Np*cubNp*sizeof(dfloat), cubPDTT);
+
+  o_intInterp = device.malloc(Nfp*Nfaces*intNfp*sizeof(dfloat), intInterpT);
+  o_intLIFT = device.malloc(Np*Nfaces*intNfp*sizeof(dfloat), intLIFTT);
+
+  free(cubPDTT);
+  free(cubProjectT);
+  free(cubInterpT);
+  free(intLIFTT);
+  free(intInterpT);
 }

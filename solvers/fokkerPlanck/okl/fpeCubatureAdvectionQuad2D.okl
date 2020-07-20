@@ -28,9 +28,9 @@ SOFTWARE.
 @kernel void fpeAdvectionCubatureVolumeQuad2D(const dlong Nelements,
                                     @restrict const  dfloat *  vgeo,
                                     @restrict const  dfloat *  cubvgeo,
-                                    @restrict const  dfloat *  cubDWT,
-                                    @restrict const  dfloat *  cubInterpT,
-                                    @restrict const  dfloat *  cubProjectT,
+                                    @restrict const  dfloat *  cubPDT,
+                                    @restrict const  dfloat *  cubInterp,
+                                    @restrict const  dfloat *  cubProject,
                                               const  dfloat    t,
                                     @restrict const  dfloat *  cubx,
                                     @restrict const  dfloat *  cuby,
@@ -44,9 +44,9 @@ SOFTWARE.
     @shared dfloat s_F[p_NblockV][p_cubNq][p_cubNq];
     @shared dfloat s_G[p_NblockV][p_cubNq][p_cubNq]; // holding scalar
 
-    @shared dfloat s_cubInterpT[p_Nq][p_cubNq];
-    @shared dfloat s_cubProjectT[p_cubNq][p_Nq];
-    @shared dfloat s_cubDWT[p_cubNq][p_Nq];
+    @shared dfloat s_cubInterp[p_Nq][p_cubNq];
+    @shared dfloat s_cubProject[p_cubNq][p_Nq];
+    @shared dfloat s_cubPDT[p_cubNq][p_Nq];
 
     @exclusive dfloat r_q;
     @exclusive dfloat r_F, r_G;
@@ -63,9 +63,9 @@ SOFTWARE.
 
           const int id = i+j*p_cubNq;
           if ((es==0) && (id<p_Nq*p_cubNq)) {
-            s_cubDWT[0][id] = cubDWT[id];
-            s_cubInterpT[0][id] = cubInterpT[id];
-            s_cubProjectT[0][id] = cubProjectT[id];
+            s_cubPDT[0][id] = cubPDT[id];
+            s_cubInterp[0][id] = cubInterp[id];
+            s_cubProject[0][id] = cubProject[id];
           }
         }
       }
@@ -82,7 +82,7 @@ SOFTWARE.
 
             #pragma unroll p_Nq
             for (int n=0;n<p_Nq;n++) {
-              const dfloat Ini = s_cubInterpT[n][i];
+              const dfloat Ini = s_cubInterp[n][i];
               r_q += Ini*s_q[es][j][n];
             }
           }
@@ -113,7 +113,7 @@ SOFTWARE.
 
           #pragma unroll p_Nq
           for (int n=0;n<p_Nq;n++) {
-            const dfloat Inj = s_cubInterpT[n][j];
+            const dfloat Inj = s_cubInterp[n][j];
             r_q += Inj*s_q[es][n][i];
           }
 
@@ -148,8 +148,8 @@ SOFTWARE.
           if (j<p_Nq) {
             #pragma unroll p_cubNq
             for (int n=0;n<p_cubNq;n++) {
-              const dfloat Pnj = s_cubProjectT[n][j];
-              const dfloat Dnj = s_cubDWT[n][j];
+              const dfloat Pnj = s_cubProject[n][j];
+              const dfloat Dnj = s_cubPDT[n][j];
               r_F += Pnj*s_F[es][n][i];
               r_G += Dnj*s_G[es][n][i];
             }
@@ -187,8 +187,8 @@ SOFTWARE.
 
             #pragma unroll p_cubNq
             for(int n=0;n<p_cubNq;++n){
-              const dfloat Pni = s_cubProjectT[n][i];
-              const dfloat Dni = s_cubDWT[n][i];
+              const dfloat Pni = s_cubProject[n][i];
+              const dfloat Dni = s_cubPDT[n][i];
 
               rhsqn += Dni*s_F[es][j][n]
                       +Pni*s_G[es][j][n];
@@ -206,7 +206,7 @@ SOFTWARE.
 
 
 void surfaceTerms(int es, int face, int m, int i, int j,
-                      @shared dfloat s_cubProjectT[p_cubNq][p_Nq],
+                      @shared dfloat s_cubProject[p_cubNq][p_Nq],
                       @shared dfloat s_flux[p_NblockS][p_Nfaces][p_cubNq],
                       @shared dfloat s_rhsq[p_NblockS][p_Nq][p_Nq]){
 
@@ -214,7 +214,7 @@ void surfaceTerms(int es, int face, int m, int i, int j,
 
   #pragma unroll p_cubNq
   for(int n=0;n<p_cubNq;++n){
-    const dfloat Pni = s_cubProjectT[n][m];
+    const dfloat Pni = s_cubProject[n][m];
     rhsqn  += Pni*s_flux[es][face][n];
   }
   s_rhsq[es][j][i] += rhsqn;
@@ -227,8 +227,8 @@ void surfaceTerms(int es, int face, int m, int i, int j,
                                      @restrict const  dlong  *  vmapM,
                                      @restrict const  dlong  *  vmapP,
                                      @restrict const  int    *  EToB,
-                                     @restrict const  dfloat *  cubInterpT,
-                                     @restrict const  dfloat *  cubProjectT,
+                                     @restrict const  dfloat *  cubInterp,
+                                     @restrict const  dfloat *  cubProject,
                                                const  dfloat    time,
                                      @restrict const  dfloat *  intx,
                                      @restrict const  dfloat *  inty,
@@ -249,8 +249,8 @@ void surfaceTerms(int es, int face, int m, int i, int j,
 
     @exclusive dfloat r_qMn[p_Nfaces], r_qPn[p_Nfaces];
 
-    @shared dfloat s_cubInterpT[p_Nq][p_cubNq];
-    @shared dfloat s_cubProjectT[p_cubNq][p_Nq];
+    @shared dfloat s_cubInterp[p_Nq][p_cubNq];
+    @shared dfloat s_cubProject[p_cubNq][p_Nq];
 
     // for all face nodes of all elements
     for(int es=0;es<p_NblockS;++es;@inner(1)){
@@ -282,8 +282,8 @@ void surfaceTerms(int es, int face, int m, int i, int j,
           #pragma unroll p_Nq
           for(int j=0;j<p_Nq;++j){
             const int id = i+j*p_cubNq;
-            s_cubInterpT[0][id] = cubInterpT[id];
-            s_cubProjectT[0][id] = cubProjectT[id];
+            s_cubInterp[0][id] = cubInterp[id];
+            s_cubProject[0][id] = cubProject[id];
           }
         }
       }
@@ -301,7 +301,7 @@ void surfaceTerms(int es, int face, int m, int i, int j,
 
         #pragma unroll p_Nq
         for (int n=0;n<p_Nq;n++) {
-          const dfloat Ini = s_cubInterpT[n][i];
+          const dfloat Ini = s_cubInterp[n][i];
 
           #pragma unroll p_Nfaces
           for (int face=0;face<p_Nfaces;face++) {
@@ -363,11 +363,11 @@ void surfaceTerms(int es, int face, int m, int i, int j,
         if(i<p_Nq){
           //          surfaceTerms(0,i,i,0     );
           surfaceTerms(es, 0, i, i, 0,
-                            s_cubProjectT, s_flux, s_rhsq);
+                            s_cubProject, s_flux, s_rhsq);
 
           //surfaceTerms(2,i,i,p_Nq-1);
           surfaceTerms(es, 2, i, i, p_Nq-1,
-                            s_cubProjectT, s_flux, s_rhsq);
+                            s_cubProject, s_flux, s_rhsq);
         }
       }
     }
@@ -380,11 +380,11 @@ void surfaceTerms(int es, int face, int m, int i, int j,
         if(j<p_Nq){
           //          surfaceTerms(1,j,p_Nq-1,j);
           surfaceTerms(es, 1, j, p_Nq-1, j,
-                           s_cubProjectT, s_flux, s_rhsq);
+                           s_cubProject, s_flux, s_rhsq);
 
           //          surfaceTerms(3,j,0     ,j);
           surfaceTerms(es, 3, j, 0, j,
-                            s_cubProjectT, s_flux, s_rhsq);
+                            s_cubProject, s_flux, s_rhsq);
         }
       }
     }

@@ -32,7 +32,7 @@ SOFTWARE.
 
 @kernel void fpeGradientTri2D(const int Nelements,
                               @restrict const  dfloat *  vgeo,
-                              @restrict const  dfloat *  const Dmatrices,
+                              @restrict const  dfloat *  const D,
                               @restrict const  dfloat *  q,
                               @restrict dfloat4 *  gradq){
 
@@ -72,8 +72,8 @@ SOFTWARE.
 
           #pragma unroll p_Np
             for(int i=0;i<p_Np;++i) {
-              dfloat drt = Dmatrices[n + i*p_Np + 0*p_Np*p_Np];
-              dfloat dst = Dmatrices[n + i*p_Np + 1*p_Np*p_Np];
+              dfloat drt = D[n + i*p_Np + 0*p_Np*p_Np];
+              dfloat dst = D[n + i*p_Np + 1*p_Np*p_Np];
               dfloat qn  = s_q[es][i];
 
               qr += drt*qn;

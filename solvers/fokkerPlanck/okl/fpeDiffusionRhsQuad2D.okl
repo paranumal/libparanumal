@@ -53,8 +53,8 @@ SOFTWARE.
                                     @restrict const  dfloat *  vgeo,
                                     @restrict const  dfloat *  sgeo,
                                     @restrict const  int    *  EToB,
-                                    @restrict const  dfloat *  D,
-                                    @restrict const  dfloat *  LIFTT,
+                                    @restrict const  dfloat *  DT,
+                                    @restrict const  dfloat *  LIFT,
                                     @restrict const  dfloat *  MM,
                                     const dfloat tau,
                                     const dfloat mu,
@@ -69,7 +69,7 @@ SOFTWARE.
     @shared dfloat s_dqdx[p_Nq][p_Nq];
     @shared dfloat s_dqdy[p_Nq][p_Nq];
     @shared dfloat s_rhsq[p_Nq][p_Nq];
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
 
     // loop over slabs
     for(int j=0;j<p_Nq;++j){
@@ -78,7 +78,7 @@ SOFTWARE.
         s_dqdy[j][i] = 0.f;
         s_rhsq[j][i] = 0.f;
 
-        s_D[j][i] = D[j*p_Nq+i];
+        s_DT[j][i] = DT[j*p_Nq+i];
       }
     }
 
@@ -138,8 +138,8 @@ SOFTWARE.
 
         dfloat dsr = 0, dss = 0;
         for(int n=0;n<p_Nq;++n){
-          dsr += s_D[n][i]*s_dqdx[j][n];
-          dss += s_D[n][j]*s_dqdy[n][i];
+          dsr += s_DT[n][i]*s_dqdx[j][n];
+          dss += s_DT[n][j]*s_dqdy[n][i];
         }
 
         //fetch rhs value and add boundary terms
@@ -176,7 +176,7 @@ SOFTWARE.
 @kernel void cdsHelmholtzBCQuad2D(const dlong Nelements,
                                  @restrict const  dfloat *  ggeo,
                                  @restrict const  dfloat *  sgeo,
-                                 @restrict const  dfloat *  D,
+                                 @restrict const  dfloat *  DT,
                                  @restrict const  dfloat *  S,
                                  @restrict const  dfloat *  MM,
                                  @restrict const  dlong  *  vmapM,
@@ -194,7 +194,7 @@ SOFTWARE.
     @shared dfloat s_s[p_Nq][p_Nq];
     @shared dfloat s_nds[p_Nq][p_Nq];
 
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
     @exclusive dfloat r_sr[p_Nq], r_ss[p_Nq], r_rhss[p_Nq];
     @exclusive dfloat r_G00[p_Nq], r_G01[p_Nq], r_G11[p_Nq], r_GwJ[p_Nq];
 
@@ -205,7 +205,7 @@ SOFTWARE.
         s_s  [j][i] = 0.;
         s_nds[j][i] = 0.;
 
-        s_D[j][i] = D[j*p_Nq+i];
+        s_DT[j][i] = DT[j*p_Nq+i];
       }
     }
 
@@ -248,8 +248,8 @@ SOFTWARE.
 
         #pragma unroll p_Nq
           for(int n=0; n<p_Nq; ++n){
-            sr += s_D[i][n]*s_s[j][n];
-            ss += s_D[j][n]*s_s[n][i];
+            sr += s_DT[i][n]*s_s[j][n];
+            ss += s_DT[j][n]*s_s[n][i];
           }
 
         r_sr[j] = sr; r_ss[j] = ss;
@@ -273,7 +273,7 @@ SOFTWARE.
         dfloat stmp = 0.f;
         #pragma unroll p_Nq
           for(int n=0;n<p_Nq;++n) {
-            stmp += s_D[n][i]*s_s[j][n];
+            stmp += s_DT[n][i]*s_s[j][n];
           }
 
         r_rhss[j] += stmp;
@@ -296,7 +296,7 @@ SOFTWARE.
         dfloat stmp = 0.f;
         #pragma unroll p_Nq
           for(int n=0;n<p_Nq;++n) {
-            stmp += s_D[n][j]*s_s[n][i];
+            stmp += s_DT[n][j]*s_s[n][i];
           }
 
         r_rhss[j] += stmp;

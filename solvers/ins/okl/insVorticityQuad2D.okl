@@ -26,7 +26,7 @@ SOFTWARE.
 
 @kernel void insVorticityQuad2D(const dlong Nelements,
                               @restrict const  dfloat *  vgeo,
-                              @restrict const  dfloat *  const D,
+                              @restrict const  dfloat *  const DT,
                               @restrict const  dfloat *  U,
                                     @restrict  dfloat *  Vort){
 
@@ -35,7 +35,7 @@ SOFTWARE.
 
     @shared dfloat s_U[p_NblockV][p_Nq][p_Nq];
     @shared dfloat s_V[p_NblockV][p_Nq][p_Nq];
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
 
     for(int es=0;es<p_NblockV;++es;@inner(2)){
       for(int j=0;j<p_Nq;++j;@inner(1)){
@@ -48,7 +48,7 @@ SOFTWARE.
             s_V[es][j][i]  = U[id+1*p_Np];
 
             if (es==0)
-              s_D[j][i] = D[j*p_Nq+i];
+              s_DT[j][i] = DT[j*p_Nq+i];
           }
         }
       }
@@ -73,8 +73,8 @@ SOFTWARE.
 
             #pragma unroll p_Nq
               for(int n=0;n<p_Nq;++n){
-                const dfloat Dr = s_D[i][n];
-                const dfloat Ds = s_D[j][n];
+                const dfloat Dr = s_DT[i][n];
+                const dfloat Ds = s_DT[j][n];
 
                 dudr += Dr*s_U[es][j][n];
                 duds += Ds*s_U[es][n][i];

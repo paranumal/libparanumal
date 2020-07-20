@@ -68,4 +68,12 @@ void matrixEig(int N, dfloat *A, dfloat *VR, dfloat *WR, dfloat *WI);
 void matrixInverse(int N, dfloat *A);
 dfloat matrixConditionNumber(int N, dfloat *A);
 
+void matrixTranspose(const int M, const int N,
+                     const dfloat  *A, const int LDA,
+                           dfloat *AT, const int LDAT);
+
+void matrixTranspose(const int M, const int N,
+                     const dlong  *A, const int LDA,
+                           dlong *AT, const int LDAT);
+
 #endif

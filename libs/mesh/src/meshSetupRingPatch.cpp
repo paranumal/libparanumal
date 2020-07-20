@@ -134,27 +134,19 @@ mesh_t* mesh_t::SetupRingPatch(){
   mesh->Nq = Nq;
   mesh->Nfp = Nfp;
 
+  mesh->vertexNodes = vertexNodes;
+
   mesh->r = r;
   mesh->s = s;
   mesh->t = t;
 
+  mesh->D = D;
   mesh->Dr = Dr;
   mesh->Ds = Ds;
   mesh->Dt = Dt;
   mesh->MM = MM;
   mesh->faceNodes = faceNodes;
   mesh->LIFT = LIFT;
-  mesh->interpRaise = interpRaise;
-  mesh->interpLower = interpLower;
-
-  mesh->gllz = gllz;
-  mesh->gllw = gllw;
-  mesh->D = D;
-  mesh->gjr = gjr;
-  mesh->gjw = gjw;
-  mesh->gjI = gjI;
-  mesh->gjD = gjD;
-  mesh->gjD2 = gjD2;
 
   mesh->plotNp = plotNp;
   mesh->plotNelements = plotNelements;
@@ -173,12 +165,12 @@ mesh_t* mesh_t::SetupRingPatch(){
   mesh->cubt = cubt;
   mesh->cubw = cubw;
   mesh->cubInterp = cubInterp;
-  mesh->cubDrW = cubDrW;
-  mesh->cubDsW = cubDsW;
-  mesh->cubDtW = cubDtW;
-  mesh->cubD = cubD;
-  mesh->cubDW = cubDW;
   mesh->cubProject = cubProject;
+  mesh->cubD = cubD;
+  mesh->cubPDT = cubPDT;
+  mesh->cubPDrT = cubPDrT;
+  mesh->cubPDsT = cubPDsT;
+  mesh->cubPDtT = cubPDtT;
   mesh->intNfp = intNfp;
   mesh->intInterp = intInterp;
   mesh->intLIFT = intLIFT;
@@ -191,7 +183,6 @@ mesh_t* mesh_t::SetupRingPatch(){
   mesh->SEMFEMInterp = SEMFEMInterp;
   mesh->FEMEToV = FEMEToV;
 
-  mesh->vertexNodes = vertexNodes;
 
   mesh->ringHalo = NULL;
 

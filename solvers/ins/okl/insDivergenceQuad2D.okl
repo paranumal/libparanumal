@@ -27,7 +27,7 @@ SOFTWARE.
 // Computes volume contribution of div(UI)
 @kernel void insDivergenceVolumeQuad2D(const dlong Nelements,
                                       @restrict const  dfloat *  vgeo,
-                                      @restrict const  dfloat *  D,
+                                      @restrict const  dfloat *  DT,
                                       const dfloat alpha,
                                       const dfloat beta,
                                       @restrict const  dfloat *  U,
@@ -37,7 +37,7 @@ SOFTWARE.
 
     @shared dfloat s_U[p_NblockV][p_Nq][p_Nq];
     @shared dfloat s_V[p_NblockV][p_Nq][p_Nq];
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
 
     for(int es=0;es<p_NblockV;++es;@inner(2)){
       for(int j=0;j<p_Nq;++j;@inner(1)){
@@ -50,7 +50,7 @@ SOFTWARE.
             s_V[es][j][i] = U[id+1*p_Np];
 
             if (es==0)
-              s_D[j][i] = D[j*p_Nq+i];
+              s_DT[j][i] = DT[j*p_Nq+i];
           }
         }
       }
@@ -75,8 +75,8 @@ SOFTWARE.
 
             #pragma unroll p_Nq
               for(int n=0;n<p_Nq;++n){
-                const dfloat Dr = s_D[i][n];
-                const dfloat Ds = s_D[j][n];
+                const dfloat Dr = s_DT[i][n];
+                const dfloat Ds = s_DT[j][n];
 
                 dUdr += Dr*s_U[es][j][n];
                 dUds += Ds*s_U[es][n][i];
@@ -135,7 +135,7 @@ SOFTWARE.
 
 @kernel void insDivergenceSurfaceQuad2D(const dlong Nelements,
                                        @restrict const  dfloat *  sgeo,
-                                       @restrict const  dfloat *  LIFTT,
+                                       @restrict const  dfloat *  LIFT,
                                        @restrict const  dlong  *  vmapM,
                                        @restrict const  dlong  *  vmapP,
                                        @restrict const  int    *  EToB,

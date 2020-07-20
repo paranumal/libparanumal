@@ -85,8 +85,8 @@ SOFTWARE.
                                 @restrict const  dlong  *  elementList,
                                 @restrict const  dfloat *  vgeo,
                                 @restrict const  dfloat *  sgeo,
-                                @restrict const  dfloat *  D,
-                                @restrict const  dfloat *  LIFTT,
+                                @restrict const  dfloat *  DT,
+                                @restrict const  dfloat *  LIFT,
                                 @restrict const  dlong  *  vmapM,
                                 @restrict const  dlong  *  vmapP,
                                 @restrict const  int    *  EToB,
@@ -109,7 +109,7 @@ SOFTWARE.
     @shared dfloat s_dqdz[2][p_Nq][p_Nq];
     @shared dfloat s_Lq[2][p_Nq][p_Nq];
 
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
 
     @exclusive dfloat r_dqdx[p_Nq], r_dqdy[p_Nq], r_dqdz[p_Nq], r_Lq[p_Nq];
     @exclusive dfloat r_dqdt;
@@ -139,7 +139,7 @@ SOFTWARE.
             r_Lq[k] = 0.0;
           }
 
-          s_D[j][i] = D[j*p_Nq+i];
+          s_DT[j][i] = DT[j*p_Nq+i];
         }
       }
 
@@ -294,9 +294,9 @@ SOFTWARE.
 
             #pragma unroll p_Nq
             for(int n=0;n<p_Nq;++n){
-              dr += s_D[n][i]*s_dqdx[0][j][n];
-              r_Lq[n] += s_D[k][n]*r_dqdt; // DT(m,k)*ut(i,j,k,e)
-              ds += s_D[n][j]*s_dqdy[0][n][i];
+              dr += s_DT[n][i]*s_dqdx[0][j][n];
+              r_Lq[n] += s_DT[k][n]*r_dqdt; // DT(m,k)*ut(i,j,k,e)
+              ds += s_DT[n][j]*s_dqdy[0][n][i];
             }
 
             r_Lq[k] += dr + ds;

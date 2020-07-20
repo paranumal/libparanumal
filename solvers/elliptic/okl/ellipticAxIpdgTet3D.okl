@@ -32,18 +32,18 @@ SOFTWARE.
 // nx,ny,nz,sJ,invJ - need WsJ
 
 @kernel void ellipticAxIpdgTet3D(const dlong Nelements,
-        @restrict const  dlong *  vmapM,
-        @restrict const  dlong *  vmapP,
-        const dfloat lambda,
-        const dfloat tau,
-        @restrict const  dfloat *  vgeo,
-        @restrict const  dfloat *  sgeo,
-        @restrict const  int   *  EToB,
-        @restrict const  dfloat *  Dmatrices,
-        @restrict const  dfloat *  LIFTT,
-        @restrict const  dfloat *  MM,
-        @restrict const  dfloat4 *  gradq,
-        @restrict dfloat  *  Aq){
+                                @restrict const  dlong *  vmapM,
+                                @restrict const  dlong *  vmapP,
+                                const dfloat lambda,
+                                const dfloat tau,
+                                @restrict const  dfloat *  vgeo,
+                                @restrict const  dfloat *  sgeo,
+                                @restrict const  int    *  EToB,
+                                @restrict const  dfloat *  D,
+                                @restrict const  dfloat *  LIFT,
+                                @restrict const  dfloat *  MM,
+                                @restrict const  dfloat4 *  gradq,
+                                @restrict dfloat  *  Aq){
 
   for(dlong e=0;e<Nelements;++e;@outer(0)){
     @shared  dfloat s_dqdx[p_Np];
@@ -94,10 +94,10 @@ SOFTWARE.
         int bc = EToB[face+p_Nfaces*e];
         if(bc>0) {
           ellipticHomogeneousBC3D(bc, gradqM.w, gradqM.x, gradqM.y, gradqM.z, gradqP.w, gradqP.x, gradqP.y, gradqP.z)
-	  gradqP.x = 2.f*gradqP.x - gradqM.x;
-	  gradqP.y = 2.f*gradqP.y - gradqM.y;				
-	  gradqP.z = 2.f*gradqP.z - gradqM.z;				
-	  gradqP.w = 2.f*gradqP.w - gradqM.w;				
+          gradqP.x = 2.f*gradqP.x - gradqM.x;
+          gradqP.y = 2.f*gradqP.y - gradqM.y;
+          gradqP.z = 2.f*gradqP.z - gradqM.z;
+          gradqP.w = 2.f*gradqP.w - gradqM.w;
         }
 
         const dfloat dq = gradqP.w - gradqM.w;
@@ -137,9 +137,9 @@ SOFTWARE.
 
         #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
-            Lnxdq += LIFTT[n+i*p_Np]*s_nxdq[i];
-            Lnydq += LIFTT[n+i*p_Np]*s_nydq[i];
-            Lnzdq += LIFTT[n+i*p_Np]*s_nzdq[i];
+            Lnxdq += LIFT[n+i*p_Np]*s_nxdq[i];
+            Lnydq += LIFT[n+i*p_Np]*s_nydq[i];
+            Lnzdq += LIFT[n+i*p_Np]*s_nzdq[i];
           }
 
         dfloat dqdx = s_dqdx[n] + Lnxdq;
@@ -169,9 +169,9 @@ SOFTWARE.
 
         #pragma unroll p_Np
           for(int i=0;i<p_Np;++i){
-            lapr += Dmatrices[n+i*p_Np+0*p_Np*p_Np]*s_dqdx[i];
-            laps += Dmatrices[n+i*p_Np+1*p_Np*p_Np]*s_dqdy[i];
-            lapt += Dmatrices[n+i*p_Np+2*p_Np*p_Np]*s_dqdz[i];
+            lapr += D[n+i*p_Np+0*p_Np*p_Np]*s_dqdx[i];
+            laps += D[n+i*p_Np+1*p_Np*p_Np]*s_dqdy[i];
+            lapt += D[n+i*p_Np+2*p_Np*p_Np]*s_dqdz[i];
           }
 
         s_lapq[n] -= (lapr+laps+lapt);
@@ -188,7 +188,7 @@ SOFTWARE.
         // lift remaining surface terms
         #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
-            lap += LIFTT[n+i*p_Np]*s_lapflux[i];
+            lap += LIFT[n+i*p_Np]*s_lapflux[i];
           }
 
         s_lapq[n] += lap;
@@ -224,8 +224,8 @@ SOFTWARE.
                                       @restrict const  dfloat *  vgeo,
                                       @restrict const  dfloat *  sgeo,
                                       @restrict const  int   *  EToB,
-                                      @restrict const  dfloat *  Dmatrices,
-                                      @restrict const  dfloat *  LIFTT,
+                                      @restrict const  dfloat *  D,
+                                      @restrict const  dfloat *  LIFT,
                                       @restrict const  dfloat *  MM,
                                       @restrict const  dfloat4 *  gradq,
                                       @restrict dfloat  *  Aq){
@@ -281,9 +281,9 @@ SOFTWARE.
         if(bc>0) {
           ellipticHomogeneousBC3D(bc, gradqM.w, gradqM.x, gradqM.y, gradqM.z, gradqP.w, gradqP.x, gradqP.y, gradqP.z);
           gradqP.x = 2.f*gradqP.x - gradqM.x;
-	  gradqP.y = 2.f*gradqP.y - gradqM.y;
-	  gradqP.z = 2.f*gradqP.z - gradqM.z;
-	  gradqP.w = 2.f*gradqP.w - gradqM.w;
+          gradqP.y = 2.f*gradqP.y - gradqM.y;
+          gradqP.z = 2.f*gradqP.z - gradqM.z;
+          gradqP.w = 2.f*gradqP.w - gradqM.w;
         }
 
         const dfloat dq = gradqP.w - gradqM.w;
@@ -323,9 +323,9 @@ SOFTWARE.
 
         #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
-            Lnxdq += LIFTT[n+i*p_Np]*s_nxdq[i];
-            Lnydq += LIFTT[n+i*p_Np]*s_nydq[i];
-            Lnzdq += LIFTT[n+i*p_Np]*s_nzdq[i];
+            Lnxdq += LIFT[n+i*p_Np]*s_nxdq[i];
+            Lnydq += LIFT[n+i*p_Np]*s_nydq[i];
+            Lnzdq += LIFT[n+i*p_Np]*s_nzdq[i];
           }
 
         dfloat dqdx = s_dqdx[n] + Lnxdq;
@@ -355,9 +355,9 @@ SOFTWARE.
 
         #pragma unroll p_Np
           for(int i=0;i<p_Np;++i){
-            lapr += Dmatrices[n+i*p_Np+0*p_Np*p_Np]*s_dqdx[i];
-            laps += Dmatrices[n+i*p_Np+1*p_Np*p_Np]*s_dqdy[i];
-            lapt += Dmatrices[n+i*p_Np+2*p_Np*p_Np]*s_dqdz[i];
+            lapr += D[n+i*p_Np+0*p_Np*p_Np]*s_dqdx[i];
+            laps += D[n+i*p_Np+1*p_Np*p_Np]*s_dqdy[i];
+            lapt += D[n+i*p_Np+2*p_Np*p_Np]*s_dqdz[i];
           }
 
         s_lapq[n] -= (lapr+laps+lapt);
@@ -374,7 +374,7 @@ SOFTWARE.
         // lift remaining surface terms
         #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
-            lap += LIFTT[n+i*p_Np]*s_lapflux[i];
+            lap += LIFT[n+i*p_Np]*s_lapflux[i];
           }
 
         s_lapq[n] += lap;

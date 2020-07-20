@@ -27,11 +27,11 @@ SOFTWARE.
 @kernel void ellipticRhsBCTri2D(const dlong Nelements,
                               @restrict const  dfloat *  ggeo,
                               @restrict const  dfloat *  sgeo,
-                              @restrict const  dfloat *  Dmatrices,
-                              @restrict const  dfloat *  Smatrices,
+                              @restrict const  dfloat *  D,
+                              @restrict const  dfloat *  S,
                               @restrict const  dfloat *  MM,
                               @restrict const  dlong  *  vmapM,
-                              @restrict const  dfloat *  sMT,
+                              @restrict const  dfloat *  sM,
                               const dfloat lambda,
                               @restrict const  dfloat *  x,
                               @restrict const  dfloat *  y,
@@ -101,9 +101,9 @@ SOFTWARE.
 
         #pragma unroll p_Np
           for (int k=0;k<p_Np;k++) {
-            qrr += Smatrices[n+k*p_Np+0*p_Np*p_Np]*s_q[k];
-            qrs += Smatrices[n+k*p_Np+1*p_Np*p_Np]*s_q[k];
-            qss += Smatrices[n+k*p_Np+2*p_Np*p_Np]*s_q[k];
+            qrr += S[n+k*p_Np+0*p_Np*p_Np]*s_q[k];
+            qrs += S[n+k*p_Np+1*p_Np*p_Np]*s_q[k];
+            qss += S[n+k*p_Np+2*p_Np*p_Np]*s_q[k];
             qM  += MM[n+k*p_Np]*s_q[k];
           }
 
@@ -111,7 +111,7 @@ SOFTWARE.
         // surface mass * surface terms
         #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
-            Lndq += sMT[n+i*p_Np]*s_ndq[i];
+            Lndq += sM[n+i*p_Np]*s_ndq[i];
           }
 
         rhs[id] -= Grr*qrr+Grs*qrs+Gss*qss + J*lambda*qM - Lndq;

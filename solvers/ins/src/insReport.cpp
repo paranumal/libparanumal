@@ -41,8 +41,7 @@ void ins_t::Report(dfloat time, int tstep){
 
   if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
     //compute vorticity
-    vorticityKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_Dmatrices,
-                    o_u, o_Vort);
+    vorticityKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_D, o_u, o_Vort);
 
     // copy data back to host
     o_u.copyTo(u);

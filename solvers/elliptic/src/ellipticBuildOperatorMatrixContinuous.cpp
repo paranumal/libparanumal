@@ -84,19 +84,10 @@ void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO& A) {
   int *AsendOffsets = (int*) calloc(mesh.size+1, sizeof(int));
   int *ArecvOffsets = (int*) calloc(mesh.size+1, sizeof(int));
 
-  dfloat *Srr = (dfloat *) calloc(mesh.Np*mesh.Np,sizeof(dfloat));
-  dfloat *Srs = (dfloat *) calloc(mesh.Np*mesh.Np,sizeof(dfloat));
-  dfloat *Sss = (dfloat *) calloc(mesh.Np*mesh.Np,sizeof(dfloat));
-  dfloat *MM  = (dfloat *) calloc(mesh.Np*mesh.Np,sizeof(dfloat));
-
-  for (int n=0;n<mesh.Np;n++) {
-    for (int m=0;m<mesh.Np;m++) {
-      Srr[m+n*mesh.Np] = mesh.Srr[m+n*mesh.Np];
-      Srs[m+n*mesh.Np] = mesh.Srs[m+n*mesh.Np] + mesh.Ssr[m+n*mesh.Np];
-      Sss[m+n*mesh.Np] = mesh.Sss[m+n*mesh.Np];
-      MM[m+n*mesh.Np] = mesh.MM[m+n*mesh.Np];
-    }
-  }
+  dfloat *Srr = mesh.Srr;
+  dfloat *Srs = mesh.Srs;
+  dfloat *Sss = mesh.Sss;
+  dfloat *MM  = mesh.MM ;
 
   if(mesh.rank==0) {printf("Building full FEM matrix...");fflush(stdout);}
 
@@ -203,11 +194,6 @@ void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO& A) {
   free(ArecvCounts);
   free(AsendOffsets);
   free(ArecvOffsets);
-
-  free(Srr);
-  free(Srs);
-  free(Sss);
-  free(MM );
 }
 
 
@@ -645,11 +631,8 @@ void elliptic_t::BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO& A) {
         val += Grr*mesh.Srr[m+n*mesh.Np];
         val += Grs*mesh.Srs[m+n*mesh.Np];
         val += Grt*mesh.Srt[m+n*mesh.Np];
-        val += Grs*mesh.Ssr[m+n*mesh.Np];
         val += Gss*mesh.Sss[m+n*mesh.Np];
         val += Gst*mesh.Sst[m+n*mesh.Np];
-        val += Grt*mesh.Str[m+n*mesh.Np];
-        val += Gst*mesh.Sts[m+n*mesh.Np];
         val += Gtt*mesh.Stt[m+n*mesh.Np];
         val += J*lambda*mesh.MM[m+n*mesh.Np];
 

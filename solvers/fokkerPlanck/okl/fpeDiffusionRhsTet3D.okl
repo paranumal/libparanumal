@@ -30,8 +30,8 @@ SOFTWARE.
                                @restrict const  dfloat *  vgeo,
                                @restrict const  dfloat *  sgeo,
                                @restrict const  int    *  EToB,
-                               @restrict const  dfloat *  Dmatrices,
-                               @restrict const  dfloat *  LIFTT,
+                               @restrict const  dfloat *  D,
+                               @restrict const  dfloat *  LIFT,
                                @restrict const  dfloat *  MM,
                                const dfloat tau,
                                const dfloat mu,
@@ -118,7 +118,7 @@ SOFTWARE.
 
         #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
-            dfloat liftt = LIFTT[n+i*p_Np];
+            dfloat liftt = LIFT[n+i*p_Np];
             Lnxdq += liftt*s_nxdq[i];
             Lnydq += liftt*s_nydq[i];
             Lnzdq += liftt*s_nzdq[i];
@@ -151,9 +151,9 @@ SOFTWARE.
         dfloat lasr = 0.f, lass = 0.f, last=0.f;
         #pragma unroll p_Np
           for(int i=0;i<p_Np;++i) {
-            const dfloat Drn = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
-            const dfloat Dsn = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
-            const dfloat Dtn = Dmatrices[n+i*p_Np+2*p_Np*p_Np];
+            const dfloat Drn = D[n+i*p_Np+0*p_Np*p_Np];
+            const dfloat Dsn = D[n+i*p_Np+1*p_Np*p_Np];
+            const dfloat Dtn = D[n+i*p_Np+2*p_Np*p_Np];
             lasr += Drn*s_dqdx[i];
             lass += Dsn*s_dqdy[i];
             last += Dtn*s_dqdz[i];
@@ -175,7 +175,7 @@ SOFTWARE.
         // lift remaining surface terms
         #pragma unroll p_NfacesNfp
           for(int i=0;i<p_NfacesNfp;++i){
-            las += LIFTT[n+i*p_Np]*s_lapsflux[i];
+            las += LIFT[n+i*p_Np]*s_lapsflux[i];
           }
 
         s_laps[n] -= las;
@@ -208,7 +208,7 @@ SOFTWARE.
 @kernel void cdsHelmholtzBCTet3D(const dlong Nelements,
 				@restrict const  dfloat *  ggeo,
 				@restrict const  dfloat *  sgeo,
-				@restrict const  dfloat *  Dmatrices,
+				@restrict const  dfloat *  D,
 				@restrict const  dfloat *  Smatrices,
 				@restrict const  dfloat *  MM,
 				@restrict const  dlong  *  vmapM,

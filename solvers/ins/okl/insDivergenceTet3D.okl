@@ -28,7 +28,7 @@ SOFTWARE.
 // Computes volume contribution of div(UI)
 @kernel void insDivergenceVolumeTet3D(const dlong Nelements,
                                      @restrict const  dfloat *  vgeo,
-                                     @restrict const  dfloat *  Dmatrices,
+                                     @restrict const  dfloat *  D,
                                      const dfloat alpha,
                                      const dfloat beta,
                                      @restrict const  dfloat *  U,
@@ -79,9 +79,9 @@ SOFTWARE.
           dfloat dwdr = 0.f, dwds = 0.f, dwdt = 0.f;
           #pragma unroll p_Np
           for(int i=0;i<p_Np;++i){
-            const dfloat Drni = Dmatrices[n+i*p_Np+0*p_Np*p_Np];
-            const dfloat Dsni = Dmatrices[n+i*p_Np+1*p_Np*p_Np];
-            const dfloat Dtni = Dmatrices[n+i*p_Np+2*p_Np*p_Np];
+            const dfloat Drni = D[n+i*p_Np+0*p_Np*p_Np];
+            const dfloat Dsni = D[n+i*p_Np+1*p_Np*p_Np];
+            const dfloat Dtni = D[n+i*p_Np+2*p_Np*p_Np];
             //
             dudr += Drni*s_U[es][i];
             duds += Dsni*s_U[es][i];
@@ -115,7 +115,7 @@ SOFTWARE.
 
 @kernel void insDivergenceSurfaceTet3D(const dlong Nelements,
                                       @restrict const  dfloat *  sgeo,
-                                      @restrict const  dfloat *  LIFTT,
+                                      @restrict const  dfloat *  LIFT,
                                       @restrict const  dlong  *  vmapM,
                                       @restrict const  dlong  *  vmapP,
                                       @restrict const  int    *  EToB,
@@ -193,7 +193,7 @@ SOFTWARE.
 
             #pragma unroll p_NfacesNfp
             for(int m=0;m<p_Nfaces*p_Nfp;++m){
-              const dfloat L = LIFTT[n+m*p_Np];
+              const dfloat L = LIFT[n+m*p_Np];
               divu += L*s_fluxU[es][m];
             }
 

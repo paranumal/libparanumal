@@ -26,7 +26,7 @@
 
 @kernel void advectionVolumeHex3D(const dlong Nelements,
                                   @restrict const  dfloat *  vgeo,
-                                  @restrict const  dfloat *  D,
+                                  @restrict const  dfloat *  DT,
                                             const  dfloat    t,
                                   @restrict const  dfloat *  x,
                                   @restrict const  dfloat *  y,
@@ -36,7 +36,7 @@
 
   for(dlong e=0;e<Nelements;++e;@outer(0)){
 
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
 
     @shared dfloat s_F[p_Nq][p_Nq][p_Nq];
     @shared dfloat s_G[p_Nq][p_Nq][p_Nq];
@@ -46,7 +46,7 @@
       for(int j=0;j<p_Nq;++j;@inner(1)){
         for(int i=0;i<p_Nq;++i;@inner(0)){
           if(k==0)
-            s_D[j][i] = D[j*p_Nq+i];
+            s_DT[j][i] = DT[j*p_Nq+i];
 
           // geometric factors
           const dlong gbase = e*p_Np*p_Nvgeo + k*p_Nq*p_Nq + j*p_Nq + i;
@@ -86,9 +86,9 @@
           dfloat rhsqn = 0;
 
           for(int n=0;n<p_Nq;++n){
-            const dfloat Din = s_D[n][i];
-            const dfloat Djn = s_D[n][j];
-            const dfloat Dkn = s_D[n][k];
+            const dfloat Din = s_DT[n][i];
+            const dfloat Djn = s_DT[n][j];
+            const dfloat Dkn = s_DT[n][k];
 
             rhsqn += Din*s_F[k][j][n];
             rhsqn += Djn*s_G[k][n][i];

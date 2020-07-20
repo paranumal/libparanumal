@@ -26,21 +26,21 @@ SOFTWARE.
 
 @kernel void gradientVolumeQuad2D(const dlong Nelements,
                                 @restrict const  dfloat *  vgeo, // geometric factors
-                                @restrict const  dfloat *  D,    // D matrices
+                                @restrict const  dfloat *  DT,    // DT matrices
                                 @restrict const  dfloat *  q,    // data at nodes
                                 @restrict dfloat *  gradq // physical gradient
                                 ){
 
 for(dlong e=0;e<Nelements;++e;@outer(0)){
 
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
     @shared dfloat s_q[p_Nq][p_Nq];
 
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
 
-        // prefetch D
-        s_D[j][i] = D[i + p_Nq*j];
+        // prefetch DT
+        s_DT[j][i] = DT[i + p_Nq*j];
 
         // prefetch q
         const dlong id = e*p_Np+j*p_Nq+i;
@@ -63,8 +63,8 @@ for(dlong e=0;e<Nelements;++e;@outer(0)){
         dfloat qr = 0, qs = 0;
         #pragma unroll p_Nq
           for(int n=0;n<p_Nq;++n){
-            qr += s_D[i][n]*s_q[j][n];
-            qs += s_D[j][n]*s_q[n][i];
+            qr += s_DT[i][n]*s_q[j][n];
+            qs += s_DT[j][n]*s_q[n][i];
           }
 
         const dlong id = e*p_Np*p_dim+j*p_Nq+i;

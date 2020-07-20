@@ -50,17 +50,33 @@ void meshTet3D::ReferenceNodes(int N_){
 
   //Mass matrix
   MM = (dfloat *) malloc(Np*Np*sizeof(dfloat));
+  invMM = (dfloat *) malloc(Np*Np*sizeof(dfloat));
   MassMatrixTet3D(Np, V, MM);
+  invMassMatrixTet3D(Np, V, invMM);
   free(V);
 
-  //D matrices
-  Dr = (dfloat *) malloc(Np*Np*sizeof(dfloat));
-  Ds = (dfloat *) malloc(Np*Np*sizeof(dfloat));
-  Dt = (dfloat *) malloc(Np*Np*sizeof(dfloat));
+  //packed D matrices
+  D  = (dfloat *) malloc(3*Np*Np*sizeof(dfloat));
+  Dr = D + 0*Np*Np;
+  Ds = D + 1*Np*Np;
+  Dt = D + 2*Np*Np;
   DmatrixTet3D(N, Np, r, s, t, Dr, Ds, Dt);
 
   LIFT = (dfloat *) malloc(Np*Nfaces*Nfp*sizeof(dfloat));
   LIFTmatrixTet3D(N, faceNodes, r, s, t, LIFT);
+
+  sM = (dfloat *) calloc(Np*Nfaces*Nfp,sizeof(dfloat));
+  SurfaceMassMatrixTet3D(N, MM, LIFT, sM);
+
+  //packed stiffness matrices
+  S = (dfloat*) calloc(6*Np*Np, sizeof(dfloat));
+  Srr = S + 0*Np*Np;
+  Srs = S + 1*Np*Np;
+  Srt = S + 2*Np*Np;
+  Sss = S + 3*Np*Np;
+  Sst = S + 4*Np*Np;
+  Stt = S + 5*Np*Np;
+  SmatrixTet3D(N, Dr, Ds, Dt, MM, Srr, Srs, Srt, Sss, Sst, Stt);
 
   /* Plotting data */
   int plotN = N + 3; //enriched interpolation space for plotting

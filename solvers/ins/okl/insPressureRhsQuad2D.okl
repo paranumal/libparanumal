@@ -47,10 +47,10 @@ SOFTWARE.
                                @restrict const  dfloat *  sgeo,
                                @restrict const  dfloat *  ggeo,
                                @restrict const  dfloat *  S,
-                               @restrict const  dfloat *  D,
-                               @restrict const  dfloat *  LIFTT,
+                               @restrict const  dfloat *  DT,
+                               @restrict const  dfloat *  LIFT,
                                @restrict const  dfloat *  MM,
-                               @restrict const  dfloat *  sMT,
+                               @restrict const  dfloat *  sM,
                                @restrict const  dlong  *  vmapM,
                                @restrict const  int    *  EToB,
                                @restrict const  int    *  mapB,
@@ -66,7 +66,7 @@ SOFTWARE.
   for(dlong e=0;e<Nelements;e++;@outer(0)){
     @shared dfloat s_p[p_Nq][p_Nq];
     @shared dfloat s_ndp[p_Nq][p_Nq];
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
 
     @exclusive dfloat r_pr[p_Nq], r_ps[p_Nq], r_Ap[p_Nq];
     @exclusive dfloat r_G00[p_Nq], r_G01[p_Nq], r_G11[p_Nq];
@@ -77,7 +77,7 @@ SOFTWARE.
         s_p[j][i] = 0.;
         s_ndp[j][i] = 0.;
 
-        s_D[j][i] = D[j*p_Nq+i];
+        s_DT[j][i] = DT[j*p_Nq+i];
       }
     }
 
@@ -117,8 +117,8 @@ SOFTWARE.
         dfloat qr = 0.f, qs = 0.f;
         #pragma unroll p_Nq
           for(int n=0; n<p_Nq; ++n){
-            qr += s_D[i][n]*s_p[j][n];
-            qs += s_D[j][n]*s_p[n][i];
+            qr += s_DT[i][n]*s_p[j][n];
+            qs += s_DT[j][n]*s_p[n][i];
           }
 
         r_pr[j] = qr; r_ps[j] = qs;
@@ -141,7 +141,7 @@ SOFTWARE.
         dfloat tmp = 0.f;
         #pragma unroll p_Nq
           for(int n=0;n<p_Nq;++n) {
-            tmp += s_D[n][i]*s_p[j][n];
+            tmp += s_DT[n][i]*s_p[j][n];
           }
 
         r_Ap[j] = tmp;
@@ -168,7 +168,7 @@ SOFTWARE.
 
         #pragma unroll p_Nq
           for(int n=0;n<p_Nq;++n) {
-            tmp += s_D[n][j]*s_p[n][i];
+            tmp += s_DT[n][j]*s_p[n][i];
           }
 
         r_Ap[j] += tmp;
@@ -208,10 +208,10 @@ SOFTWARE.
                                @restrict const  dfloat *  sgeo,
                                @restrict const  dfloat *  ggeo,
                                @restrict const  dfloat *  S,
-                               @restrict const  dfloat *  D,
-                               @restrict const  dfloat *  LIFTT,
+                               @restrict const  dfloat *  DT,
+                               @restrict const  dfloat *  LIFT,
                                @restrict const  dfloat *  MM,
-                               @restrict const  dfloat *  sMT,
+                               @restrict const  dfloat *  sM,
                                @restrict const  dlong  *  vmapM,
                                @restrict const  int    *  EToB,
                                @restrict const  int    *  mapB,
@@ -229,7 +229,7 @@ SOFTWARE.
     @shared dfloat s_dpdx[p_Nq][p_Nq];
     @shared dfloat s_dpdy[p_Nq][p_Nq];
     @shared dfloat s_rhsp[p_Nq][p_Nq];
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
 
     // loop over slabs
     for(int j=0;j<p_Nq;++j){
@@ -238,7 +238,7 @@ SOFTWARE.
         s_dpdy[j][i] = 0.f;
         s_rhsp[j][i] = 0.f;
 
-        s_D[j][i] = D[j*p_Nq+i];
+        s_DT[j][i] = DT[j*p_Nq+i];
       }
     }
 
@@ -299,8 +299,8 @@ SOFTWARE.
         dfloat dpr = 0, dps = 0;
 
         for(int n=0;n<p_Nq;++n){
-          dpr += s_D[n][i]*s_dpdx[j][n];
-          dps += s_D[n][j]*s_dpdy[n][i];
+          dpr += s_DT[n][i]*s_dpdx[j][n];
+          dps += s_DT[n][j]*s_dpdy[n][i];
         }
 
         //fetch rhs value and add boundary terms

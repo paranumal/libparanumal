@@ -162,8 +162,8 @@ void meshHex3D::SurfaceGeometricFactors(){
         sgeo[base+SJID] = sJ;
         sgeo[base+IJID] = 1./J;
 
-        sgeo[base+WIJID] = 1./(J*gllw[0]);
-        sgeo[base+WSJID] = sJ*gllw[i%Nq]*gllw[i/Nq];
+        sgeo[base+WIJID] = 1./(J*w[0]);
+        sgeo[base+WSJID] = sJ*w[i%Nq]*w[i/Nq];
 
         // computeFrame(nx, ny, nz,
         //              sgeo[base+STXID], sgeo[base+STYID], sgeo[base+STZID],

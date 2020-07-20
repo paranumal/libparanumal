@@ -31,8 +31,7 @@ void bns_t::Report(dfloat time, int tstep){
   static int frame=0;
 
   //compute vorticity
-  vorticityKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_Dmatrices,
-                  o_q, c, o_Vort);
+  vorticityKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_D, o_q, c, o_Vort);
 
   //compute q.M*q
   MassMatrixKernel(mesh.Nelements, mesh.o_ggeo, mesh.o_MM, o_q, o_Mq);

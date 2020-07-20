@@ -35,7 +35,7 @@ void cns_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
   // compute volume contributions to gradients
   gradVolumeKernel(mesh.Nelements,
                    mesh.o_vgeo,
-                   mesh.o_Dmatrices,
+                   mesh.o_D,
                    o_Q,
                    o_gradq);
 
@@ -45,7 +45,7 @@ void cns_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
   // compute surface contributions to gradients
   gradSurfaceKernel(mesh.Nelements,
                     mesh.o_sgeo,
-                    mesh.o_LIFTT,
+                    mesh.o_LIFT,
                     mesh.o_vmapM,
                     mesh.o_vmapP,
                     mesh.o_EToB,
@@ -66,9 +66,9 @@ void cns_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
     cubatureVolumeKernel(mesh.Nelements,
                          mesh.o_vgeo,
                          mesh.o_cubvgeo,
-                         mesh.o_cubDWmatrices,
-                         mesh.o_cubInterpT,
-                         mesh.o_cubProjectT,
+                         mesh.o_cubPDT,
+                         mesh.o_cubInterp,
+                         mesh.o_cubProject,
                          mesh.o_x,
                          mesh.o_y,
                          mesh.o_z,
@@ -81,7 +81,7 @@ void cns_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
   } else {
     volumeKernel(mesh.Nelements,
                  mesh.o_vgeo,
-                 mesh.o_Dmatrices,
+                 mesh.o_D,
                  mesh.o_x,
                  mesh.o_y,
                  mesh.o_z,
@@ -103,8 +103,8 @@ void cns_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
                             mesh.o_vmapM,
                             mesh.o_vmapP,
                             mesh.o_EToB,
-                            mesh.o_intInterpT,
-                            mesh.o_intLIFTT,
+                            mesh.o_intInterp,
+                            mesh.o_intLIFT,
                             mesh.o_intx,
                             mesh.o_inty,
                             mesh.o_intz,
@@ -117,7 +117,7 @@ void cns_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
     } else {
       surfaceKernel(mesh.Nelements,
                     mesh.o_sgeo,
-                    mesh.o_LIFTT,
+                    mesh.o_LIFT,
                     mesh.o_vmapM,
                     mesh.o_vmapP,
                     mesh.o_EToB,

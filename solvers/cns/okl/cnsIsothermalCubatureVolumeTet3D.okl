@@ -29,9 +29,9 @@ SOFTWARE.
 @kernel void cnsIsothermalCubatureVolumeTet3D(const dlong Nelements,
                                    @restrict const  dfloat *  vgeo,
                                    @restrict const  dfloat *  cubvgeo,
-                                   @restrict const  dfloat *  cubDWmatrices,
-                                   @restrict const  dfloat *  cubInterpT,
-                                   @restrict const  dfloat *  cubProjectT,
+                                   @restrict const  dfloat *  cubPDT,
+                                   @restrict const  dfloat *  cubInterp,
+                                   @restrict const  dfloat *  cubProject,
                                    @restrict const  dfloat *  x,
                                    @restrict const  dfloat *  y,
                                    @restrict const  dfloat *  z,
@@ -101,7 +101,7 @@ SOFTWARE.
 
       #pragma unroll p_Np
         for(int i=0;i<p_Np;++i){
-          const dfloat cIni = cubInterpT[n+i*p_cubNp];
+          const dfloat cIni = cubInterp[n+i*p_cubNp];
           r  += cIni*s_q[0][i];
           ru += cIni*s_q[1][i];
           rv += cIni*s_q[2][i];
@@ -192,9 +192,9 @@ SOFTWARE.
 
         #pragma unroll p_cubNp
           for(int i=0;i<p_cubNp;++i){
-            const dfloat cDrni = cubDWmatrices[n+i*p_Np+0*p_Np*p_cubNp];
-            const dfloat cDsni = cubDWmatrices[n+i*p_Np+1*p_Np*p_cubNp];
-            const dfloat cDtni = cubDWmatrices[n+i*p_Np+2*p_Np*p_cubNp];
+            const dfloat cDrni = cubPDT[n+i*p_Np+0*p_Np*p_cubNp];
+            const dfloat cDsni = cubPDT[n+i*p_Np+1*p_Np*p_cubNp];
+            const dfloat cDtni = cubPDT[n+i*p_Np+2*p_Np*p_cubNp];
 
             df0dr += cDrni*s_F[0][i];
             df1dr += cDrni*s_F[1][i];

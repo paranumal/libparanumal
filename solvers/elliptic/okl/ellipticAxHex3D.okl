@@ -26,17 +26,17 @@ SOFTWARE.
 
 
 @kernel void ellipticAxHex3D(const dlong Nelements,
-			     @restrict const  dfloat *  ggeo,
-			     @restrict const  dfloat *  D,
-			     @restrict const  dfloat *  S,
-			     @restrict const  dfloat *  MM,
-			     const dfloat lambda,
-			     @restrict const  dfloat *  q,
-			     @restrict dfloat *  Aq){
+                             @restrict const  dfloat *  ggeo,
+                             @restrict const  dfloat *  DT,
+                             @restrict const  dfloat *  S,
+                             @restrict const  dfloat *  MM,
+                             const dfloat lambda,
+                             @restrict const  dfloat *  q,
+                             @restrict dfloat *  Aq){
 
   for(dlong e=0; e<Nelements; ++e; @outer(0)){
 
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
     @shared dfloat s_q[p_Nq][p_Nq];
 
     @shared dfloat s_Gqr[p_Nq][p_Nq];
@@ -51,9 +51,9 @@ SOFTWARE.
     // array of threads
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
-        //load D into local memory
-        // s_D[i][j] = d \phi_i at node j
-        s_D[j][i] = D[p_Nq*j+i]; // D is column major
+        //load DT into local memory
+        // s_DT[i][j] = d \phi_i at node j
+        s_DT[j][i] = DT[p_Nq*j+i]; // DT is column major
 
         // load pencil of u into register
         const dlong base = i + j*p_Nq + e*p_Np;
@@ -97,7 +97,7 @@ SOFTWARE.
 
             #pragma unroll p_Nq
               for(int m = 0; m < p_Nq; m++) {
-                r_qt += s_D[k][m]*r_q[m];
+                r_qt += s_DT[k][m]*r_q[m];
               }
           }
         }
@@ -112,8 +112,8 @@ SOFTWARE.
 
 //            #pragma unroll p_Nq
               for(int m = 0; m < p_Nq; m++) {
-                qr += s_D[i][m]*s_q[j][m];
-                qs += s_D[j][m]*s_q[m][i];
+                qr += s_DT[i][m]*s_q[j][m];
+                qs += s_DT[j][m]*s_q[m][i];
               }
 
             s_Gqs[j][i] = (r_G01*qr + r_G11*qs + r_G12*r_qt);
@@ -132,9 +132,9 @@ SOFTWARE.
 
 //            #pragma unroll p_Nq
               for(int m = 0; m < p_Nq; m++){
-                r_Auk   += s_D[m][j]*s_Gqs[m][i];
-                r_Aq[m] += s_D[k][m]*r_Gqt; // DT(m,k)*ut(i,j,k,e)
-                r_Auk   += s_D[m][i]*s_Gqr[j][m];
+                r_Auk   += s_DT[m][j]*s_Gqs[m][i];
+                r_Aq[m] += s_DT[k][m]*r_Gqt; // DT(m,k)*ut(i,j,k,e)
+                r_Auk   += s_DT[m][i]*s_Gqr[j][m];
               }
 
             r_Aq[k] += r_Auk;
@@ -163,7 +163,7 @@ SOFTWARE.
 @kernel void ellipticPartialAxHex3D_v0(const dlong Nelements,
                                     @restrict const  dlong  *  elementList,
                                     @restrict const  dfloat *  ggeo,
-                                    @restrict const  dfloat *  D,
+                                    @restrict const  dfloat *  DT,
                                     @restrict const  dfloat *  S,
                                     @restrict const  dfloat *  MM,
                                     const dfloat lambda,
@@ -172,7 +172,7 @@ SOFTWARE.
 
   for(dlong e=0; e<Nelements; ++e; @outer(0)){
 
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
     @shared dfloat s_q[p_Nq][p_Nq];
 
     @shared dfloat s_Gqr[p_Nq][p_Nq];
@@ -189,22 +189,22 @@ SOFTWARE.
     // array of threads
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
-        //load D into local memory
-        // s_D[i][j] = d \phi_i at node j
-        s_D[j][i] = D[p_Nq*j+i]; // D is column major
-	element = elementList[e];
+        //load DT into local memory
+        // s_DT[i][j] = d \phi_i at node j
+        s_DT[j][i] = DT[p_Nq*j+i]; // DT is column major
+        element = elementList[e];
       }
     }
 
       for(int j=0;j<p_Nq;++j;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
-	  // load pencil of u into register
-	  for(int k = 0; k < p_Nq; k++) {
-	    const dlong base = i + j*p_Nq + element*p_Np;
-	    r_q[k] = q[base + k*p_Nq*p_Nq]; // prefetch operation
-	    r_Aq[k] = 0.f; // zero the accumulator
-	  }
-	}
+        for(int i=0;i<p_Nq;++i;@inner(0)){
+          // load pencil of u into register
+          for(int k = 0; k < p_Nq; k++) {
+            const dlong base = i + j*p_Nq + element*p_Np;
+            r_q[k] = q[base + k*p_Nq*p_Nq]; // prefetch operation
+            r_Aq[k] = 0.f; // zero the accumulator
+          }
+        }
       }
 
     // Layer by layer
@@ -240,7 +240,7 @@ SOFTWARE.
 
             #pragma unroll p_Nq
               for(int m = 0; m < p_Nq; m++) {
-                r_qt += s_D[k][m]*r_q[m];
+                r_qt += s_DT[k][m]*r_q[m];
               }
           }
         }
@@ -255,8 +255,8 @@ SOFTWARE.
 
             #pragma unroll p_Nq
               for(int m = 0; m < p_Nq; m++) {
-                qr += s_D[i][m]*s_q[j][m];
-                qs += s_D[j][m]*s_q[m][i];
+                qr += s_DT[i][m]*s_q[j][m];
+                qs += s_DT[j][m]*s_q[m][i];
               }
 
             s_Gqs[j][i] = (r_G01*qr + r_G11*qs + r_G12*r_qt);
@@ -275,9 +275,9 @@ SOFTWARE.
 
             #pragma unroll p_Nq
               for(int m = 0; m < p_Nq; m++){
-                r_Auk   += s_D[m][j]*s_Gqs[m][i];
-                r_Aq[m] += s_D[k][m]*r_Gqt; // DT(m,k)*ut(i,j,k,e)
-                r_Auk   += s_D[m][i]*s_Gqr[j][m];
+                r_Auk   += s_DT[m][j]*s_Gqs[m][i];
+                r_Aq[m] += s_DT[k][m]*r_Gqt; // DT(m,k)*ut(i,j,k,e)
+                r_Auk   += s_DT[m][i]*s_Gqr[j][m];
               }
 
             r_Aq[k] += r_Auk;
@@ -305,19 +305,19 @@ SOFTWARE.
 
 
 @kernel void ellipticPartialAxHex3D_v1(const dlong Nelements,
-				   @restrict const  dlong  *  elementList,
-				   @restrict const  dfloat *  ggeo,
-				   @restrict const  dfloat *  D,
-				   @restrict const  dfloat *  S,
-				   @restrict const  dfloat *  MM,
-				   const dfloat lambda,
-				   @restrict const  dfloat *  q,
-				   @restrict dfloat *  Aq){
+                                   @restrict const  dlong  *  elementList,
+                                   @restrict const  dfloat *  ggeo,
+                                   @restrict const  dfloat *  DT,
+                                   @restrict const  dfloat *  S,
+                                   @restrict const  dfloat *  MM,
+                                   const dfloat lambda,
+                                   @restrict const  dfloat *  q,
+                                   @restrict dfloat *  Aq){
 
   for(int ko=0;ko<p_Nq;++ko;@outer(1)){
     for(dlong e=0; e<Nelements; ++e; @outer(0)){
 
-      @shared dfloat s_D[p_Nq][p_Nq];
+      @shared dfloat s_DT[p_Nq][p_Nq];
       @shared dfloat s_q[p_Nq][p_Nq];
 
       @shared dfloat s_Gqr[p_Nq][p_Nq];
@@ -332,111 +332,111 @@ SOFTWARE.
 
       // array of threads
       for(int j=0;j<p_Nq;++j;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
-	  //load D into local memory
-	  // s_D[i][j] = d \phi_i at node j
-	  s_D[j][i] = D[p_Nq*j+i]; // D is column major
+        for(int i=0;i<p_Nq;++i;@inner(0)){
+          //load DT into local memory
+          // s_DT[i][j] = d \phi_i at node j
+          s_DT[j][i] = DT[p_Nq*j+i]; // DT is column major
 
-	  // load pencil of u into register
-	  element = elementList[e];
-	  const dlong base = i + j*p_Nq + element*p_Np;
-	  for(int k = 0; k < p_Nq; k++) {
-	    r_q[k] = q[base + k*p_Nq*p_Nq]; // prefetch operation
-	  }
+          // load pencil of u into register
+          element = elementList[e];
+          const dlong base = i + j*p_Nq + element*p_Np;
+          for(int k = 0; k < p_Nq; k++) {
+            r_q[k] = q[base + k*p_Nq*p_Nq]; // prefetch operation
+          }
 
-	  r_Auko = 0;
-	}
+          r_Auko = 0;
+        }
       }
 
       // Layer by layer
 //      #pragma unroll p_Nq
-	for(int k = 0;k < p_Nq; k++){
-	  for(int j=0;j<p_Nq;++j;@inner(1)){
-	    for(int i=0;i<p_Nq;++i;@inner(0)){
+        for(int k = 0;k < p_Nq; k++){
+          for(int j=0;j<p_Nq;++j;@inner(1)){
+            for(int i=0;i<p_Nq;++i;@inner(0)){
 
-	      // prefetch geometric factors
-	      const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+              // prefetch geometric factors
+              const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
-	      if(k==ko){
-		r_G00 = ggeo[gbase+p_G00ID*p_Np];
-		r_G01 = ggeo[gbase+p_G01ID*p_Np];
-		r_G11 = ggeo[gbase+p_G11ID*p_Np];
-		r_GwJ = ggeo[gbase+p_GWJID*p_Np];
-	      }
+              if(k==ko){
+                r_G00 = ggeo[gbase+p_G00ID*p_Np];
+                r_G01 = ggeo[gbase+p_G01ID*p_Np];
+                r_G11 = ggeo[gbase+p_G11ID*p_Np];
+                r_GwJ = ggeo[gbase+p_GWJID*p_Np];
+              }
 
-	      r_G02 = ggeo[gbase+p_G02ID*p_Np];
-	      r_G12 = ggeo[gbase+p_G12ID*p_Np];
-	      r_G22 = ggeo[gbase+p_G22ID*p_Np];
+              r_G02 = ggeo[gbase+p_G02ID*p_Np];
+              r_G12 = ggeo[gbase+p_G12ID*p_Np];
+              r_G22 = ggeo[gbase+p_G22ID*p_Np];
 
-	    }
-	  }
+            }
+          }
 
-	  @barrier("local");
+          @barrier("local");
 
-	  for(int j=0;j<p_Nq;++j;@inner(1)){
-	    for(int i=0;i<p_Nq;++i;@inner(0)){
+          for(int j=0;j<p_Nq;++j;@inner(1)){
+            for(int i=0;i<p_Nq;++i;@inner(0)){
 
-	      // share u(:,:,k)
-	      s_q[j][i] = r_q[k];
+              // share u(:,:,k)
+              s_q[j][i] = r_q[k];
 
-	      r_qt = 0;
+              r_qt = 0;
 
-//	      #pragma unroll p_Nq
-		for(int m = 0; m < p_Nq; m++) {
-		  r_qt += s_D[k][m]*r_q[m];
-		}
-	    }
-	  }
+//            #pragma unroll p_Nq
+                for(int m = 0; m < p_Nq; m++) {
+                  r_qt += s_DT[k][m]*r_q[m];
+                }
+            }
+          }
 
-	  @barrier("local");
+          @barrier("local");
 
-	  for(int j=0;j<p_Nq;++j;@inner(1)){
-	    for(int i=0;i<p_Nq;++i;@inner(0)){
+          for(int j=0;j<p_Nq;++j;@inner(1)){
+            for(int i=0;i<p_Nq;++i;@inner(0)){
 
-	      dfloat qr = 0.f;
-	      dfloat qs = 0.f;
+              dfloat qr = 0.f;
+              dfloat qs = 0.f;
 
-//	      #pragma unroll p_Nq
-		for(int m = 0; m < p_Nq; m++) {
-		  qr += s_D[i][m]*s_q[j][m];
-		  qs += s_D[j][m]*s_q[m][i];
-		}
+//            #pragma unroll p_Nq
+                for(int m = 0; m < p_Nq; m++) {
+                  qr += s_DT[i][m]*s_q[j][m];
+                  qs += s_DT[j][m]*s_q[m][i];
+                }
 
-	      // put this here for a performance bump
-	      const dfloat r_Gqt = (r_G02*qr + r_G12*qs + r_G22*r_qt);
-	      r_Auko += s_D[k][ko]*r_Gqt; // DT(m,k)*ut(i,j,k,e)
+              // put this here for a performance bump
+              const dfloat r_Gqt = (r_G02*qr + r_G12*qs + r_G22*r_qt);
+              r_Auko += s_DT[k][ko]*r_Gqt; // DT(m,k)*ut(i,j,k,e)
 
-	      if(k==ko){
-		s_Gqs[j][i] = (r_G01*qr + r_G11*qs + r_G12*r_qt);
-		s_Gqr[j][i] = (r_G00*qr + r_G01*qs + r_G02*r_qt);
-		r_Auko += r_GwJ*lambda*r_q[k];
-	      }
-	    }
-	  }
+              if(k==ko){
+                s_Gqs[j][i] = (r_G01*qr + r_G11*qs + r_G12*r_qt);
+                s_Gqr[j][i] = (r_G00*qr + r_G01*qs + r_G02*r_qt);
+                r_Auko += r_GwJ*lambda*r_q[k];
+              }
+            }
+          }
 
-	  @barrier("local");
+          @barrier("local");
 
-	  for(int j=0;j<p_Nq;++j;@inner(1)){
-	    for(int i=0;i<p_Nq;++i;@inner(0)){
+          for(int j=0;j<p_Nq;++j;@inner(1)){
+            for(int i=0;i<p_Nq;++i;@inner(0)){
 
-	      if(k==ko){
-//		#pragma unroll p_Nq
-		  for(int m = 0; m < p_Nq; m++){
-		    r_Auko   += s_D[m][j]*s_Gqs[m][i];
-		    r_Auko   += s_D[m][i]*s_Gqr[j][m];
-		  }
-	      }
-	    }
-	  }
-	}
+              if(k==ko){
+//              #pragma unroll p_Nq
+                  for(int m = 0; m < p_Nq; m++){
+                    r_Auko   += s_DT[m][j]*s_Gqs[m][i];
+                    r_Auko   += s_DT[m][i]*s_Gqr[j][m];
+                  }
+              }
+            }
+          }
+        }
 
       // write out
 
       for(int j=0;j<p_Nq;++j;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
-	  const dlong id = element*p_Np +ko*p_Nq*p_Nq+ j*p_Nq + i;
-	  Aq[id] = r_Auko;
-	}
+        for(int i=0;i<p_Nq;++i;@inner(0)){
+          const dlong id = element*p_Np +ko*p_Nq*p_Nq+ j*p_Nq + i;
+          Aq[id] = r_Auko;
+        }
       }
     }
   }
@@ -452,19 +452,19 @@ SOFTWARE.
 #define p_Nverts 8
 
 @kernel void ellipticPartialAxTrilinearHex3D_v0(const dlong Nelements,
-					       @restrict const  dlong  *  elementList,
-					       @restrict const  dfloat *  EXYZ,
-					       @restrict const  dfloat *  gllzw,
-					       @restrict const  dfloat *  D,
-					       @restrict const  dfloat *  S,
-					       @restrict const  dfloat *  MM,
-					       const dfloat lambda,
-					       @restrict const  dfloat *  q,
-					       @restrict dfloat *  Aq){
+                                               @restrict const  dlong  *  elementList,
+                                               @restrict const  dfloat *  EXYZ,
+                                               @restrict const  dfloat *  gllzw,
+                                               @restrict const  dfloat *  DT,
+                                               @restrict const  dfloat *  S,
+                                               @restrict const  dfloat *  MM,
+                                               const dfloat lambda,
+                                               @restrict const  dfloat *  q,
+                                               @restrict dfloat *  Aq){
 
   for(dlong e=0; e<Nelements; ++e; @outer(0)){
 
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
     @shared dfloat s_q[p_Nq][p_Nq];
 
     @shared dfloat s_Gqr[p_Nq][p_Nq];
@@ -484,14 +484,14 @@ SOFTWARE.
     // array of threads
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
-        //load D into local memory
-        // s_D[i][j] = d \phi_i at node j
-        s_D[j][i] = D[p_Nq*j+i]; // D is column major
+        //load DT into local memory
+        // s_DT[i][j] = d \phi_i at node j
+        s_DT[j][i] = DT[p_Nq*j+i]; // DT is column major
 
-	// load gll nodes and weight
-	if(j<2){
-	  s_gllwz[j][i] = gllzw[j*p_Nq+i];
-	}
+        // load gll nodes and weight
+        if(j<2){
+          s_gllwz[j][i] = gllzw[j*p_Nq+i];
+        }
 
         // load pencil of u into register
         element = elementList[e];
@@ -501,12 +501,12 @@ SOFTWARE.
           r_Aq[k] = 0.f; // zero the accumulator
         }
 
-	// load element vertex coordinates
-	int n=i+j*p_Nq;
-	while(n<p_Nverts*p_dim){
-	  s_EXYZ[0][n] = EXYZ[element*p_Nverts*p_dim + n];
-	  n += p_Nq*p_Nq;
-	}
+        // load element vertex coordinates
+        int n=i+j*p_Nq;
+        while(n<p_Nverts*p_dim){
+          s_EXYZ[0][n] = EXYZ[element*p_Nverts*p_dim + n];
+          n += p_Nq*p_Nq;
+        }
       }
     }
 
@@ -518,47 +518,47 @@ SOFTWARE.
         for(int j=0;j<p_Nq;++j;@inner(1)){
           for(int i=0;i<p_Nq;++i;@inner(0)){
 
-	    const dfloat rn = s_gllwz[0][i];
-	    const dfloat sn = s_gllwz[0][j];
-	    const dfloat tn = s_gllwz[0][k];
+            const dfloat rn = s_gllwz[0][i];
+            const dfloat sn = s_gllwz[0][j];
+            const dfloat tn = s_gllwz[0][k];
 
 #define xe s_EXYZ[0]
 #define ye s_EXYZ[1]
 #define ze s_EXYZ[2]
 
-	    /* Jacobian matrix */
-	    const dfloat xr = p_eighth*( (1-tn)*(1-sn)*(xe[1]-xe[0]) + (1-tn)*(1+sn)*(xe[2]-xe[3]) + (1+tn)*(1-sn)*(xe[5]-xe[4]) + (1+tn)*(1+sn)*(xe[6]-xe[7]) );
-	    const dfloat xs = p_eighth*( (1-tn)*(1-rn)*(xe[3]-xe[0]) + (1-tn)*(1+rn)*(xe[2]-xe[1]) + (1+tn)*(1-rn)*(xe[7]-xe[4]) + (1+tn)*(1+rn)*(xe[6]-xe[5]) );
-	    const dfloat xt = p_eighth*( (1-rn)*(1-sn)*(xe[4]-xe[0]) + (1+rn)*(1-sn)*(xe[5]-xe[1]) + (1+rn)*(1+sn)*(xe[6]-xe[2]) + (1-rn)*(1+sn)*(xe[7]-xe[3]) );
+            /* Jacobian matrix */
+            const dfloat xr = p_eighth*( (1-tn)*(1-sn)*(xe[1]-xe[0]) + (1-tn)*(1+sn)*(xe[2]-xe[3]) + (1+tn)*(1-sn)*(xe[5]-xe[4]) + (1+tn)*(1+sn)*(xe[6]-xe[7]) );
+            const dfloat xs = p_eighth*( (1-tn)*(1-rn)*(xe[3]-xe[0]) + (1-tn)*(1+rn)*(xe[2]-xe[1]) + (1+tn)*(1-rn)*(xe[7]-xe[4]) + (1+tn)*(1+rn)*(xe[6]-xe[5]) );
+            const dfloat xt = p_eighth*( (1-rn)*(1-sn)*(xe[4]-xe[0]) + (1+rn)*(1-sn)*(xe[5]-xe[1]) + (1+rn)*(1+sn)*(xe[6]-xe[2]) + (1-rn)*(1+sn)*(xe[7]-xe[3]) );
 
-	    const dfloat yr = p_eighth*( (1-tn)*(1-sn)*(ye[1]-ye[0]) + (1-tn)*(1+sn)*(ye[2]-ye[3]) + (1+tn)*(1-sn)*(ye[5]-ye[4]) + (1+tn)*(1+sn)*(ye[6]-ye[7]) );
-	    const dfloat ys = p_eighth*( (1-tn)*(1-rn)*(ye[3]-ye[0]) + (1-tn)*(1+rn)*(ye[2]-ye[1]) + (1+tn)*(1-rn)*(ye[7]-ye[4]) + (1+tn)*(1+rn)*(ye[6]-ye[5]) );
-	    const dfloat yt = p_eighth*( (1-rn)*(1-sn)*(ye[4]-ye[0]) + (1+rn)*(1-sn)*(ye[5]-ye[1]) + (1+rn)*(1+sn)*(ye[6]-ye[2]) + (1-rn)*(1+sn)*(ye[7]-ye[3]) );
+            const dfloat yr = p_eighth*( (1-tn)*(1-sn)*(ye[1]-ye[0]) + (1-tn)*(1+sn)*(ye[2]-ye[3]) + (1+tn)*(1-sn)*(ye[5]-ye[4]) + (1+tn)*(1+sn)*(ye[6]-ye[7]) );
+            const dfloat ys = p_eighth*( (1-tn)*(1-rn)*(ye[3]-ye[0]) + (1-tn)*(1+rn)*(ye[2]-ye[1]) + (1+tn)*(1-rn)*(ye[7]-ye[4]) + (1+tn)*(1+rn)*(ye[6]-ye[5]) );
+            const dfloat yt = p_eighth*( (1-rn)*(1-sn)*(ye[4]-ye[0]) + (1+rn)*(1-sn)*(ye[5]-ye[1]) + (1+rn)*(1+sn)*(ye[6]-ye[2]) + (1-rn)*(1+sn)*(ye[7]-ye[3]) );
 
-	    const dfloat zr = p_eighth*( (1-tn)*(1-sn)*(ze[1]-ze[0]) + (1-tn)*(1+sn)*(ze[2]-ze[3]) + (1+tn)*(1-sn)*(ze[5]-ze[4]) + (1+tn)*(1+sn)*(ze[6]-ze[7]) );
-	    const dfloat zs = p_eighth*( (1-tn)*(1-rn)*(ze[3]-ze[0]) + (1-tn)*(1+rn)*(ze[2]-ze[1]) + (1+tn)*(1-rn)*(ze[7]-ze[4]) + (1+tn)*(1+rn)*(ze[6]-ze[5]) );
-	    const dfloat zt = p_eighth*( (1-rn)*(1-sn)*(ze[4]-ze[0]) + (1+rn)*(1-sn)*(ze[5]-ze[1]) + (1+rn)*(1+sn)*(ze[6]-ze[2]) + (1-rn)*(1+sn)*(ze[7]-ze[3]) );
+            const dfloat zr = p_eighth*( (1-tn)*(1-sn)*(ze[1]-ze[0]) + (1-tn)*(1+sn)*(ze[2]-ze[3]) + (1+tn)*(1-sn)*(ze[5]-ze[4]) + (1+tn)*(1+sn)*(ze[6]-ze[7]) );
+            const dfloat zs = p_eighth*( (1-tn)*(1-rn)*(ze[3]-ze[0]) + (1-tn)*(1+rn)*(ze[2]-ze[1]) + (1+tn)*(1-rn)*(ze[7]-ze[4]) + (1+tn)*(1+rn)*(ze[6]-ze[5]) );
+            const dfloat zt = p_eighth*( (1-rn)*(1-sn)*(ze[4]-ze[0]) + (1+rn)*(1-sn)*(ze[5]-ze[1]) + (1+rn)*(1+sn)*(ze[6]-ze[2]) + (1-rn)*(1+sn)*(ze[7]-ze[3]) );
 
-	    /* compute geometric factors for affine coordinate transform*/
-	    const dfloat J = xr*(ys*zt-zs*yt) - yr*(xs*zt-zs*xt) + zr*(xs*yt-ys*xt);
+            /* compute geometric factors for affine coordinate transform*/
+            const dfloat J = xr*(ys*zt-zs*yt) - yr*(xs*zt-zs*xt) + zr*(xs*yt-ys*xt);
 
-	    // note delayed J scaling
-	    const dfloat rx =  (ys*zt - zs*yt), ry = -(xs*zt - zs*xt), rz =  (xs*yt - ys*xt);
-	    const dfloat sx = -(yr*zt - zr*yt), sy =  (xr*zt - zr*xt), sz = -(xr*yt - yr*xt);
-	    const dfloat tx =  (yr*zs - zr*ys), ty = -(xr*zs - zr*xs), tz =  (xr*ys - yr*xs);
+            // note delayed J scaling
+            const dfloat rx =  (ys*zt - zs*yt), ry = -(xs*zt - zs*xt), rz =  (xs*yt - ys*xt);
+            const dfloat sx = -(yr*zt - zr*yt), sy =  (xr*zt - zr*xt), sz = -(xr*yt - yr*xt);
+            const dfloat tx =  (yr*zs - zr*ys), ty = -(xr*zs - zr*xs), tz =  (xr*ys - yr*xs);
 
-	    const dfloat W  = s_gllwz[1][i]*s_gllwz[1][j]*s_gllwz[1][k];
-	    const dfloat sc = W/J;
+            const dfloat W  = s_gllwz[1][i]*s_gllwz[1][j]*s_gllwz[1][k];
+            const dfloat sc = W/J;
 
-	    // W*J*(rx/J*rx/J) ..
-	    r_G00 = sc*(rx*rx + ry*ry + rz*rz);
-	    r_G01 = sc*(rx*sx + ry*sy + rz*sz);
-	    r_G02 = sc*(rx*tx + ry*ty + rz*tz);
-	    r_G11 = sc*(sx*sx + sy*sy + sz*sz);
-	    r_G12 = sc*(sx*tx + sy*ty + sz*tz);
-	    r_G22 = sc*(tx*tx + ty*ty + tz*tz);
+            // W*J*(rx/J*rx/J) ..
+            r_G00 = sc*(rx*rx + ry*ry + rz*rz);
+            r_G01 = sc*(rx*sx + ry*sy + rz*sz);
+            r_G02 = sc*(rx*tx + ry*ty + rz*tz);
+            r_G11 = sc*(sx*sx + sy*sy + sz*sz);
+            r_G12 = sc*(sx*tx + sy*ty + sz*tz);
+            r_G22 = sc*(tx*tx + ty*ty + tz*tz);
 
-	    r_GwJ = W*J;
+            r_GwJ = W*J;
           }
         }
 
@@ -574,7 +574,7 @@ SOFTWARE.
 
 //            #pragma unroll p_Nq
               for(int m = 0; m < p_Nq; m++) {
-                r_qt += s_D[k][m]*r_q[m];
+                r_qt += s_DT[k][m]*r_q[m];
               }
           }
         }
@@ -589,8 +589,8 @@ SOFTWARE.
 
 //            #pragma unroll p_Nq
               for(int m = 0; m < p_Nq; m++) {
-                qr += s_D[i][m]*s_q[j][m];
-                qs += s_D[j][m]*s_q[m][i];
+                qr += s_DT[i][m]*s_q[j][m];
+                qs += s_DT[j][m]*s_q[m][i];
               }
 
             s_Gqs[j][i] = (r_G01*qr + r_G11*qs + r_G12*r_qt);
@@ -609,9 +609,9 @@ SOFTWARE.
 
 //            #pragma unroll p_Nq
               for(int m = 0; m < p_Nq; m++){
-                r_Auk   += s_D[m][j]*s_Gqs[m][i];
-                r_Aq[m] += s_D[k][m]*r_Gqt; // DT(m,k)*ut(i,j,k,e)
-                r_Auk   += s_D[m][i]*s_Gqr[j][m];
+                r_Auk   += s_DT[m][j]*s_Gqs[m][i];
+                r_Aq[m] += s_DT[k][m]*r_Gqt; // DT(m,k)*ut(i,j,k,e)
+                r_Auk   += s_DT[m][i]*s_Gqr[j][m];
               }
 
             r_Aq[k] += r_Auk;
@@ -635,21 +635,21 @@ SOFTWARE.
 
 #if 0
 
-// prefetch D to reg
+// prefetch DT to reg
 @kernel void ellipticPartialAxTrilinearHex3D_v1(const dlong Nelements,
-					       @restrict const  dlong  *  elementList,
-					       @restrict const  dfloat *  EXYZ,
-					       @restrict const  dfloat *  gllzw,
-					       @restrict const  dfloat *  D,
-					       @restrict const  dfloat *  S,
-					       @restrict const  dfloat *  MM,
-					       const dfloat lambda,
-					       @restrict const  dfloat *  q,
-					       @restrict dfloat *  Aq){
+                                               @restrict const  dlong  *  elementList,
+                                               @restrict const  dfloat *  EXYZ,
+                                               @restrict const  dfloat *  gllzw,
+                                               @restrict const  dfloat *  DT,
+                                               @restrict const  dfloat *  S,
+                                               @restrict const  dfloat *  MM,
+                                               const dfloat lambda,
+                                               @restrict const  dfloat *  q,
+                                               @restrict dfloat *  Aq){
 
   for(dlong e=0; e<Nelements; ++e; @outer(0)){
 
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
 
     @exclusive dfloat r_Di[p_Nq], r_Dj[p_Nq];
     @shared dfloat s_q[p_Nq][p_Nq];
@@ -671,14 +671,14 @@ SOFTWARE.
     // array of threads
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
-        //load D into local memory
-        // s_D[i][j] = d \phi_i at node j
-	s_D[j][i] = D[p_Nq*j+i]; // D is column major
+        //load DT into local memory
+        // s_DT[i][j] = d \phi_i at node j
+        s_DT[j][i] = DT[p_Nq*j+i]; // DT is column major
 
-	// load gll nodes and weight
-	if(j<2){
-	  s_gllwz[j][i] = gllzw[j*p_Nq+i];
-	}
+        // load gll nodes and weight
+        if(j<2){
+          s_gllwz[j][i] = gllzw[j*p_Nq+i];
+        }
 
         // load pencil of u into register
         element = elementList[e];
@@ -688,12 +688,12 @@ SOFTWARE.
           r_Aq[k] = 0.f; // zero the accumulator
         }
 
-	// load element vertex coordinates
-	int n=i+j*p_Nq;
-	while(n<p_Nverts*p_dim){
-	  s_EXYZ[0][n] = EXYZ[element*p_Nverts*p_dim + n];
-	  n += p_Nq*p_Nq;
-	}
+        // load element vertex coordinates
+        int n=i+j*p_Nq;
+        while(n<p_Nverts*p_dim){
+          s_EXYZ[0][n] = EXYZ[element*p_Nverts*p_dim + n];
+          n += p_Nq*p_Nq;
+        }
       }
     }
 
@@ -701,10 +701,10 @@ SOFTWARE.
 
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
-	for(int n=0;n<p_Nq;++n){
-	  r_Di[n] = s_D[i][n];
-	  r_Dj[n] = s_D[j][n];
-	}
+        for(int n=0;n<p_Nq;++n){
+          r_Di[n] = s_DT[i][n];
+          r_Dj[n] = s_DT[j][n];
+        }
       }
     }
 
@@ -714,47 +714,47 @@ SOFTWARE.
         for(int j=0;j<p_Nq;++j;@inner(1)){
           for(int i=0;i<p_Nq;++i;@inner(0)){
 
-	    const dfloat rn = s_gllwz[0][i];
-	    const dfloat sn = s_gllwz[0][j];
-	    const dfloat tn = s_gllwz[0][k];
+            const dfloat rn = s_gllwz[0][i];
+            const dfloat sn = s_gllwz[0][j];
+            const dfloat tn = s_gllwz[0][k];
 
 #define xe s_EXYZ[0]
 #define ye s_EXYZ[1]
 #define ze s_EXYZ[2]
 
-	    /* Jacobian matrix */
-	    const dfloat xr = p_eighth*( (1-tn)*(1-sn)*(xe[1]-xe[0]) + (1-tn)*(1+sn)*(xe[2]-xe[3]) + (1+tn)*(1-sn)*(xe[5]-xe[4]) + (1+tn)*(1+sn)*(xe[6]-xe[7]) );
-	    const dfloat xs = p_eighth*( (1-tn)*(1-rn)*(xe[3]-xe[0]) + (1-tn)*(1+rn)*(xe[2]-xe[1]) + (1+tn)*(1-rn)*(xe[7]-xe[4]) + (1+tn)*(1+rn)*(xe[6]-xe[5]) );
-	    const dfloat xt = p_eighth*( (1-rn)*(1-sn)*(xe[4]-xe[0]) + (1+rn)*(1-sn)*(xe[5]-xe[1]) + (1+rn)*(1+sn)*(xe[6]-xe[2]) + (1-rn)*(1+sn)*(xe[7]-xe[3]) );
+            /* Jacobian matrix */
+            const dfloat xr = p_eighth*( (1-tn)*(1-sn)*(xe[1]-xe[0]) + (1-tn)*(1+sn)*(xe[2]-xe[3]) + (1+tn)*(1-sn)*(xe[5]-xe[4]) + (1+tn)*(1+sn)*(xe[6]-xe[7]) );
+            const dfloat xs = p_eighth*( (1-tn)*(1-rn)*(xe[3]-xe[0]) + (1-tn)*(1+rn)*(xe[2]-xe[1]) + (1+tn)*(1-rn)*(xe[7]-xe[4]) + (1+tn)*(1+rn)*(xe[6]-xe[5]) );
+            const dfloat xt = p_eighth*( (1-rn)*(1-sn)*(xe[4]-xe[0]) + (1+rn)*(1-sn)*(xe[5]-xe[1]) + (1+rn)*(1+sn)*(xe[6]-xe[2]) + (1-rn)*(1+sn)*(xe[7]-xe[3]) );
 
-	    const dfloat yr = p_eighth*( (1-tn)*(1-sn)*(ye[1]-ye[0]) + (1-tn)*(1+sn)*(ye[2]-ye[3]) + (1+tn)*(1-sn)*(ye[5]-ye[4]) + (1+tn)*(1+sn)*(ye[6]-ye[7]) );
-	    const dfloat ys = p_eighth*( (1-tn)*(1-rn)*(ye[3]-ye[0]) + (1-tn)*(1+rn)*(ye[2]-ye[1]) + (1+tn)*(1-rn)*(ye[7]-ye[4]) + (1+tn)*(1+rn)*(ye[6]-ye[5]) );
-	    const dfloat yt = p_eighth*( (1-rn)*(1-sn)*(ye[4]-ye[0]) + (1+rn)*(1-sn)*(ye[5]-ye[1]) + (1+rn)*(1+sn)*(ye[6]-ye[2]) + (1-rn)*(1+sn)*(ye[7]-ye[3]) );
+            const dfloat yr = p_eighth*( (1-tn)*(1-sn)*(ye[1]-ye[0]) + (1-tn)*(1+sn)*(ye[2]-ye[3]) + (1+tn)*(1-sn)*(ye[5]-ye[4]) + (1+tn)*(1+sn)*(ye[6]-ye[7]) );
+            const dfloat ys = p_eighth*( (1-tn)*(1-rn)*(ye[3]-ye[0]) + (1-tn)*(1+rn)*(ye[2]-ye[1]) + (1+tn)*(1-rn)*(ye[7]-ye[4]) + (1+tn)*(1+rn)*(ye[6]-ye[5]) );
+            const dfloat yt = p_eighth*( (1-rn)*(1-sn)*(ye[4]-ye[0]) + (1+rn)*(1-sn)*(ye[5]-ye[1]) + (1+rn)*(1+sn)*(ye[6]-ye[2]) + (1-rn)*(1+sn)*(ye[7]-ye[3]) );
 
-	    const dfloat zr = p_eighth*( (1-tn)*(1-sn)*(ze[1]-ze[0]) + (1-tn)*(1+sn)*(ze[2]-ze[3]) + (1+tn)*(1-sn)*(ze[5]-ze[4]) + (1+tn)*(1+sn)*(ze[6]-ze[7]) );
-	    const dfloat zs = p_eighth*( (1-tn)*(1-rn)*(ze[3]-ze[0]) + (1-tn)*(1+rn)*(ze[2]-ze[1]) + (1+tn)*(1-rn)*(ze[7]-ze[4]) + (1+tn)*(1+rn)*(ze[6]-ze[5]) );
-	    const dfloat zt = p_eighth*( (1-rn)*(1-sn)*(ze[4]-ze[0]) + (1+rn)*(1-sn)*(ze[5]-ze[1]) + (1+rn)*(1+sn)*(ze[6]-ze[2]) + (1-rn)*(1+sn)*(ze[7]-ze[3]) );
+            const dfloat zr = p_eighth*( (1-tn)*(1-sn)*(ze[1]-ze[0]) + (1-tn)*(1+sn)*(ze[2]-ze[3]) + (1+tn)*(1-sn)*(ze[5]-ze[4]) + (1+tn)*(1+sn)*(ze[6]-ze[7]) );
+            const dfloat zs = p_eighth*( (1-tn)*(1-rn)*(ze[3]-ze[0]) + (1-tn)*(1+rn)*(ze[2]-ze[1]) + (1+tn)*(1-rn)*(ze[7]-ze[4]) + (1+tn)*(1+rn)*(ze[6]-ze[5]) );
+            const dfloat zt = p_eighth*( (1-rn)*(1-sn)*(ze[4]-ze[0]) + (1+rn)*(1-sn)*(ze[5]-ze[1]) + (1+rn)*(1+sn)*(ze[6]-ze[2]) + (1-rn)*(1+sn)*(ze[7]-ze[3]) );
 
-	    /* compute geometric factors for affine coordinate transform*/
-	    const dfloat J = xr*(ys*zt-zs*yt) - yr*(xs*zt-zs*xt) + zr*(xs*yt-ys*xt);
+            /* compute geometric factors for affine coordinate transform*/
+            const dfloat J = xr*(ys*zt-zs*yt) - yr*(xs*zt-zs*xt) + zr*(xs*yt-ys*xt);
 
-	    // note delayed J scaling
-	    const dfloat rx =  (ys*zt - zs*yt), ry = -(xs*zt - zs*xt), rz =  (xs*yt - ys*xt);
-	    const dfloat sx = -(yr*zt - zr*yt), sy =  (xr*zt - zr*xt), sz = -(xr*yt - yr*xt);
-	    const dfloat tx =  (yr*zs - zr*ys), ty = -(xr*zs - zr*xs), tz =  (xr*ys - yr*xs);
+            // note delayed J scaling
+            const dfloat rx =  (ys*zt - zs*yt), ry = -(xs*zt - zs*xt), rz =  (xs*yt - ys*xt);
+            const dfloat sx = -(yr*zt - zr*yt), sy =  (xr*zt - zr*xt), sz = -(xr*yt - yr*xt);
+            const dfloat tx =  (yr*zs - zr*ys), ty = -(xr*zs - zr*xs), tz =  (xr*ys - yr*xs);
 
-	    const dfloat W  = s_gllwz[1][i]*s_gllwz[1][j]*s_gllwz[1][k];
-	    const dfloat sc = W/J;
+            const dfloat W  = s_gllwz[1][i]*s_gllwz[1][j]*s_gllwz[1][k];
+            const dfloat sc = W/J;
 
-	    // W*J*(rx/J*rx/J) ..
-	    r_G00 = sc*(rx*rx + ry*ry + rz*rz);
-	    r_G01 = sc*(rx*sx + ry*sy + rz*sz);
-	    r_G02 = sc*(rx*tx + ry*ty + rz*tz);
-	    r_G11 = sc*(sx*sx + sy*sy + sz*sz);
-	    r_G12 = sc*(sx*tx + sy*ty + sz*tz);
-	    r_G22 = sc*(tx*tx + ty*ty + tz*tz);
+            // W*J*(rx/J*rx/J) ..
+            r_G00 = sc*(rx*rx + ry*ry + rz*rz);
+            r_G01 = sc*(rx*sx + ry*sy + rz*sz);
+            r_G02 = sc*(rx*tx + ry*ty + rz*tz);
+            r_G11 = sc*(sx*sx + sy*sy + sz*sz);
+            r_G12 = sc*(sx*tx + sy*ty + sz*tz);
+            r_G22 = sc*(tx*tx + ty*ty + tz*tz);
 
-	    r_GwJ = W*J;
+            r_GwJ = W*J;
           }
         }
 
@@ -770,7 +770,7 @@ SOFTWARE.
 
 //            #pragma unroll p_Nq
               for(int m = 0; m < p_Nq; m++) {
-                r_qt += s_D[k][m]*r_q[m];
+                r_qt += s_DT[k][m]*r_q[m];
               }
           }
         }
@@ -805,9 +805,9 @@ SOFTWARE.
 
 //            #pragma unroll p_Nq
               for(int m = 0; m < p_Nq; m++){
-                r_Auk   += s_D[m][j]*s_Gqs[m][i];
-                r_Aq[m] += s_D[k][m]*r_Gqt; // DT(m,k)*ut(i,j,k,e)
-                r_Auk   += s_D[m][i]*s_Gqr[j][m];
+                r_Auk   += s_DT[m][j]*s_Gqs[m][i];
+                r_Aq[m] += s_DT[k][m]*r_Gqt; // DT(m,k)*ut(i,j,k,e)
+                r_Auk   += s_DT[m][i]*s_Gqr[j][m];
               }
 
             r_Aq[k] += r_Auk;
@@ -833,19 +833,19 @@ SOFTWARE.
 
 // two output element per thread-block (slower)
 @kernel void ellipticPartialAxTrilinearHex3D_v2(const dlong Nelements,
-					       @restrict const  dlong  *  elementList,
-					       @restrict const  dfloat *  EXYZ,
-					       @restrict const  dfloat *  gllzw,
-					       @restrict const  dfloat *  D,
-					       @restrict const  dfloat *  S,
-					       @restrict const  dfloat *  MM,
-					       const dfloat lambda,
-					       @restrict const  dfloat *  q,
-					       @restrict dfloat *  Aq){
+                                               @restrict const  dlong  *  elementList,
+                                               @restrict const  dfloat *  EXYZ,
+                                               @restrict const  dfloat *  gllzw,
+                                               @restrict const  dfloat *  DT,
+                                               @restrict const  dfloat *  S,
+                                               @restrict const  dfloat *  MM,
+                                               const dfloat lambda,
+                                               @restrict const  dfloat *  q,
+                                               @restrict dfloat *  Aq){
 
   for(dlong eo=0; eo<Nelements; eo+=2; @outer(0)){
 
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
 
     @exclusive dfloat r_Di[p_Nq], r_Dj[p_Nq];
     @shared dfloat s_q[2][p_Nq][p_Nq];
@@ -865,47 +865,47 @@ SOFTWARE.
     // array of threads
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
-        //load D into local memory
-        // s_D[i][j] = d \phi_i at node j
-	s_D[j][i] = D[p_Nq*j+i]; // D is column major
+        //load DT into local memory
+        // s_DT[i][j] = d \phi_i at node j
+        s_DT[j][i] = DT[p_Nq*j+i]; // DT is column major
 
-	// load gll nodes and weight
-	if(j<2){
-	  s_gllwz[j][i] = gllzw[j*p_Nq+i];
-	}
+        // load gll nodes and weight
+        if(j<2){
+          s_gllwz[j][i] = gllzw[j*p_Nq+i];
+        }
 
         // load pencil of u into register
         element[0] = elementList[eo+0];
-	element[1] = elementList[eo+1];
+        element[1] = elementList[eo+1];
         dlong base = i + j*p_Nq + element[0]*p_Np;
-//	#pragma unroll p_Nq
+//      #pragma unroll p_Nq
         for(int k = 0; k < p_Nq; k++) {
           r_q[0][k] = q[base + k*p_Nq*p_Nq]; // prefetch operation
           r_Aq[0][k] = 0.f; // zero the accumulator
-	  r_Aq[1][k] = 0.f; // zero the accumulator
+          r_Aq[1][k] = 0.f; // zero the accumulator
         }
-	if(element[1]<Nelements){
-	  base = i + j*p_Nq + element[1]*p_Np;
-//	  #pragma unroll p_Nq
-	  for(int k = 0; k < p_Nq; k++) {
-	    r_q[1][k] = q[base + k*p_Nq*p_Nq]; // prefetch operation
-	  }
-	}
+        if(element[1]<Nelements){
+          base = i + j*p_Nq + element[1]*p_Np;
+//        #pragma unroll p_Nq
+          for(int k = 0; k < p_Nq; k++) {
+            r_q[1][k] = q[base + k*p_Nq*p_Nq]; // prefetch operation
+          }
+        }
 
-	// load element vertex coordinates
-	int n=i+j*p_Nq;
-	while(n<p_Nverts*p_dim){
-	  s_EXYZ[0][0][n] = EXYZ[element[0]*p_Nverts*p_dim + n];
-	  n += p_Nq*p_Nq;
-	}
+        // load element vertex coordinates
+        int n=i+j*p_Nq;
+        while(n<p_Nverts*p_dim){
+          s_EXYZ[0][0][n] = EXYZ[element[0]*p_Nverts*p_dim + n];
+          n += p_Nq*p_Nq;
+        }
 
-	if(element[1]<Nelements){
-	  n=i+j*p_Nq;
-	  while(n<p_Nverts*p_dim){
-	    s_EXYZ[1][0][n] = EXYZ[element[1]*p_Nverts*p_dim + n];
-	    n += p_Nq*p_Nq;
-	  }
-	}
+        if(element[1]<Nelements){
+          n=i+j*p_Nq;
+          while(n<p_Nverts*p_dim){
+            s_EXYZ[1][0][n] = EXYZ[element[1]*p_Nverts*p_dim + n];
+            n += p_Nq*p_Nq;
+          }
+        }
       }
     }
 
@@ -914,11 +914,11 @@ SOFTWARE.
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
 
-//	#pragma unroll p_Nq
-	  for(int n=0;n<p_Nq;++n){
-	    r_Di[n] = s_D[i][n];
-	    r_Dj[n] = s_D[j][n];
-	  }
+//      #pragma unroll p_Nq
+          for(int n=0;n<p_Nq;++n){
+            r_Di[n] = s_DT[i][n];
+            r_Dj[n] = s_DT[j][n];
+          }
       }
     }
 
@@ -926,23 +926,23 @@ SOFTWARE.
 //    #pragma unroll p_Nq
       for(int k = 0;k < p_Nq; k++){
 
-	@barrier("local");
+        @barrier("local");
 
         for(int j=0;j<p_Nq;++j;@inner(1)){
           for(int i=0;i<p_Nq;++i;@inner(0)){
 
-	    // share u(:,:,k)
-	    s_q[0][j][i] = r_q[0][k];
-	    s_q[1][j][i] = r_q[1][k];
+            // share u(:,:,k)
+            s_q[0][j][i] = r_q[0][k];
+            s_q[1][j][i] = r_q[1][k];
 
             r_qt[0] = 0;
-	    r_qt[1] = 0;
+            r_qt[1] = 0;
 
 //            #pragma unroll p_Nq
               for(int m = 0; m < p_Nq; m++) {
-		const dfloat Dkm = s_D[k][m];
+                const dfloat Dkm = s_DT[k][m];
                 r_qt[0] += Dkm*r_q[0][m];
-		r_qt[1] += Dkm*r_q[1][m];
+                r_qt[1] += Dkm*r_q[1][m];
               }
           }
         }
@@ -952,68 +952,68 @@ SOFTWARE.
         for(int j=0;j<p_Nq;++j;@inner(1)){
           for(int i=0;i<p_Nq;++i;@inner(0)){
 
-	    const dfloat rn = s_gllwz[0][i];
-	    const dfloat sn = s_gllwz[0][j];
-	    const dfloat tn = s_gllwz[0][k];
-	    const dfloat Wn = s_gllwz[1][i]*s_gllwz[1][j]*s_gllwz[1][k];
+            const dfloat rn = s_gllwz[0][i];
+            const dfloat sn = s_gllwz[0][j];
+            const dfloat tn = s_gllwz[0][k];
+            const dfloat Wn = s_gllwz[1][i]*s_gllwz[1][j]*s_gllwz[1][k];
 
-//	    #pragma unroll 2
-	    for(int et=0;et<2;++et){
+//          #pragma unroll 2
+            for(int et=0;et<2;++et){
 
 #define xe s_EXYZ[et][0]
 #define ye s_EXYZ[et][1]
 #define ze s_EXYZ[et][2]
 
-	      /* Jacobian matrix */
-	      const dfloat xr = p_eighth*( (1-tn)*(1-sn)*(xe[1]-xe[0]) + (1-tn)*(1+sn)*(xe[2]-xe[3]) + (1+tn)*(1-sn)*(xe[5]-xe[4]) + (1+tn)*(1+sn)*(xe[6]-xe[7]) );
-	      const dfloat xs = p_eighth*( (1-tn)*(1-rn)*(xe[3]-xe[0]) + (1-tn)*(1+rn)*(xe[2]-xe[1]) + (1+tn)*(1-rn)*(xe[7]-xe[4]) + (1+tn)*(1+rn)*(xe[6]-xe[5]) );
-	      const dfloat xt = p_eighth*( (1-rn)*(1-sn)*(xe[4]-xe[0]) + (1+rn)*(1-sn)*(xe[5]-xe[1]) + (1+rn)*(1+sn)*(xe[6]-xe[2]) + (1-rn)*(1+sn)*(xe[7]-xe[3]) );
+              /* Jacobian matrix */
+              const dfloat xr = p_eighth*( (1-tn)*(1-sn)*(xe[1]-xe[0]) + (1-tn)*(1+sn)*(xe[2]-xe[3]) + (1+tn)*(1-sn)*(xe[5]-xe[4]) + (1+tn)*(1+sn)*(xe[6]-xe[7]) );
+              const dfloat xs = p_eighth*( (1-tn)*(1-rn)*(xe[3]-xe[0]) + (1-tn)*(1+rn)*(xe[2]-xe[1]) + (1+tn)*(1-rn)*(xe[7]-xe[4]) + (1+tn)*(1+rn)*(xe[6]-xe[5]) );
+              const dfloat xt = p_eighth*( (1-rn)*(1-sn)*(xe[4]-xe[0]) + (1+rn)*(1-sn)*(xe[5]-xe[1]) + (1+rn)*(1+sn)*(xe[6]-xe[2]) + (1-rn)*(1+sn)*(xe[7]-xe[3]) );
 
-	      const dfloat yr = p_eighth*( (1-tn)*(1-sn)*(ye[1]-ye[0]) + (1-tn)*(1+sn)*(ye[2]-ye[3]) + (1+tn)*(1-sn)*(ye[5]-ye[4]) + (1+tn)*(1+sn)*(ye[6]-ye[7]) );
-	      const dfloat ys = p_eighth*( (1-tn)*(1-rn)*(ye[3]-ye[0]) + (1-tn)*(1+rn)*(ye[2]-ye[1]) + (1+tn)*(1-rn)*(ye[7]-ye[4]) + (1+tn)*(1+rn)*(ye[6]-ye[5]) );
-	      const dfloat yt = p_eighth*( (1-rn)*(1-sn)*(ye[4]-ye[0]) + (1+rn)*(1-sn)*(ye[5]-ye[1]) + (1+rn)*(1+sn)*(ye[6]-ye[2]) + (1-rn)*(1+sn)*(ye[7]-ye[3]) );
+              const dfloat yr = p_eighth*( (1-tn)*(1-sn)*(ye[1]-ye[0]) + (1-tn)*(1+sn)*(ye[2]-ye[3]) + (1+tn)*(1-sn)*(ye[5]-ye[4]) + (1+tn)*(1+sn)*(ye[6]-ye[7]) );
+              const dfloat ys = p_eighth*( (1-tn)*(1-rn)*(ye[3]-ye[0]) + (1-tn)*(1+rn)*(ye[2]-ye[1]) + (1+tn)*(1-rn)*(ye[7]-ye[4]) + (1+tn)*(1+rn)*(ye[6]-ye[5]) );
+              const dfloat yt = p_eighth*( (1-rn)*(1-sn)*(ye[4]-ye[0]) + (1+rn)*(1-sn)*(ye[5]-ye[1]) + (1+rn)*(1+sn)*(ye[6]-ye[2]) + (1-rn)*(1+sn)*(ye[7]-ye[3]) );
 
-	      const dfloat zr = p_eighth*( (1-tn)*(1-sn)*(ze[1]-ze[0]) + (1-tn)*(1+sn)*(ze[2]-ze[3]) + (1+tn)*(1-sn)*(ze[5]-ze[4]) + (1+tn)*(1+sn)*(ze[6]-ze[7]) );
-	      const dfloat zs = p_eighth*( (1-tn)*(1-rn)*(ze[3]-ze[0]) + (1-tn)*(1+rn)*(ze[2]-ze[1]) + (1+tn)*(1-rn)*(ze[7]-ze[4]) + (1+tn)*(1+rn)*(ze[6]-ze[5]) );
-	      const dfloat zt = p_eighth*( (1-rn)*(1-sn)*(ze[4]-ze[0]) + (1+rn)*(1-sn)*(ze[5]-ze[1]) + (1+rn)*(1+sn)*(ze[6]-ze[2]) + (1-rn)*(1+sn)*(ze[7]-ze[3]) );
+              const dfloat zr = p_eighth*( (1-tn)*(1-sn)*(ze[1]-ze[0]) + (1-tn)*(1+sn)*(ze[2]-ze[3]) + (1+tn)*(1-sn)*(ze[5]-ze[4]) + (1+tn)*(1+sn)*(ze[6]-ze[7]) );
+              const dfloat zs = p_eighth*( (1-tn)*(1-rn)*(ze[3]-ze[0]) + (1-tn)*(1+rn)*(ze[2]-ze[1]) + (1+tn)*(1-rn)*(ze[7]-ze[4]) + (1+tn)*(1+rn)*(ze[6]-ze[5]) );
+              const dfloat zt = p_eighth*( (1-rn)*(1-sn)*(ze[4]-ze[0]) + (1+rn)*(1-sn)*(ze[5]-ze[1]) + (1+rn)*(1+sn)*(ze[6]-ze[2]) + (1-rn)*(1+sn)*(ze[7]-ze[3]) );
 
-	      /* compute geometric factors for affine coordinate transform*/
-	      const dfloat J = xr*(ys*zt-zs*yt) - yr*(xs*zt-zs*xt) + zr*(xs*yt-ys*xt);
+              /* compute geometric factors for affine coordinate transform*/
+              const dfloat J = xr*(ys*zt-zs*yt) - yr*(xs*zt-zs*xt) + zr*(xs*yt-ys*xt);
 
-	      // note delayed J scaling
-	      const dfloat rx =  (ys*zt - zs*yt), ry = -(xs*zt - zs*xt), rz =  (xs*yt - ys*xt);
-	      const dfloat sx = -(yr*zt - zr*yt), sy =  (xr*zt - zr*xt), sz = -(xr*yt - yr*xt);
-	      const dfloat tx =  (yr*zs - zr*ys), ty = -(xr*zs - zr*xs), tz =  (xr*ys - yr*xs);
+              // note delayed J scaling
+              const dfloat rx =  (ys*zt - zs*yt), ry = -(xs*zt - zs*xt), rz =  (xs*yt - ys*xt);
+              const dfloat sx = -(yr*zt - zr*yt), sy =  (xr*zt - zr*xt), sz = -(xr*yt - yr*xt);
+              const dfloat tx =  (yr*zs - zr*ys), ty = -(xr*zs - zr*xs), tz =  (xr*ys - yr*xs);
 
-	      const dfloat sc = Wn/J;
+              const dfloat sc = Wn/J;
 
-	      // W*J*(rx/J*rx/J) ..
-	      const dfloat r_G00 = sc*(rx*rx + ry*ry + rz*rz);
-	      const dfloat r_G01 = sc*(rx*sx + ry*sy + rz*sz);
-	      const dfloat r_G02 = sc*(rx*tx + ry*ty + rz*tz);
-	      const dfloat r_G11 = sc*(sx*sx + sy*sy + sz*sz);
-	      const dfloat r_G12 = sc*(sx*tx + sy*ty + sz*tz);
-	      const dfloat r_G22 = sc*(tx*tx + ty*ty + tz*tz);
+              // W*J*(rx/J*rx/J) ..
+              const dfloat r_G00 = sc*(rx*rx + ry*ry + rz*rz);
+              const dfloat r_G01 = sc*(rx*sx + ry*sy + rz*sz);
+              const dfloat r_G02 = sc*(rx*tx + ry*ty + rz*tz);
+              const dfloat r_G11 = sc*(sx*sx + sy*sy + sz*sz);
+              const dfloat r_G12 = sc*(sx*tx + sy*ty + sz*tz);
+              const dfloat r_G22 = sc*(tx*tx + ty*ty + tz*tz);
 
-	      const dfloat r_GwJ = Wn*J;
+              const dfloat r_GwJ = Wn*J;
 
-	      dfloat qr = 0, qs = 0;
+              dfloat qr = 0, qs = 0;
 
-//	      #pragma unroll p_Nq
-		for(int m = 0; m < p_Nq; m++) {
-		  qr += r_Di[m]*s_q[et][j][m];
-		  qs += r_Dj[m]*s_q[et][m][i];
-		}
+//            #pragma unroll p_Nq
+                for(int m = 0; m < p_Nq; m++) {
+                  qr += r_Di[m]*s_q[et][j][m];
+                  qs += r_Dj[m]*s_q[et][m][i];
+                }
 
-	      s_Gqs[et][j][i] = (r_G01*qr + r_G11*qs + r_G12*r_qt[et]);
-	      s_Gqr[et][j][i] = (r_G00*qr + r_G01*qs + r_G02*r_qt[et]);
+              s_Gqs[et][j][i] = (r_G01*qr + r_G11*qs + r_G12*r_qt[et]);
+              s_Gqr[et][j][i] = (r_G00*qr + r_G01*qs + r_G02*r_qt[et]);
 
-	      // put this here for a performance bump
-	      r_Gqt[et] = (r_G02*qr + r_G12*qs + r_G22*r_qt[et]);
-	      r_Aq[et][k] += r_GwJ*lambda*r_q[et][k];
-	    }
-	  }
-	}
+              // put this here for a performance bump
+              r_Gqt[et] = (r_G02*qr + r_G12*qs + r_G22*r_qt[et]);
+              r_Aq[et][k] += r_GwJ*lambda*r_q[et][k];
+            }
+          }
+        }
 
         @barrier("local");
 
@@ -1022,34 +1022,34 @@ SOFTWARE.
 
 //            #pragma unroll p_Nq
               for(int m = 0; m < p_Nq; m++){
-		const dfloat Dmj = s_D[m][j];
-		const dfloat Dkm = s_D[k][m];
-		const dfloat Dmi = s_D[m][i];
+                const dfloat Dmj = s_DT[m][j];
+                const dfloat Dkm = s_DT[k][m];
+                const dfloat Dmi = s_DT[m][i];
 
-//		#pragma unroll 2
-		  for(int et=0;et<2;++et){
-		    r_Aq[et][k] += Dmj*s_Gqs[et][m][i];
-		    r_Aq[et][m] += Dkm*r_Gqt[et]; // DT(m,k)*ut(i,j,k,e)
-		    r_Aq[et][k] += Dmi*s_Gqr[et][j][m];
-		  }
-	      }
-	  }
-	}
+//              #pragma unroll 2
+                  for(int et=0;et<2;++et){
+                    r_Aq[et][k] += Dmj*s_Gqs[et][m][i];
+                    r_Aq[et][m] += Dkm*r_Gqt[et]; // DT(m,k)*ut(i,j,k,e)
+                    r_Aq[et][k] += Dmi*s_Gqr[et][j][m];
+                  }
+              }
+          }
+        }
       }
 
     // write out
 
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
-//	#pragma unroll p_Nq
-	  for(int k = 0; k < p_Nq; k++){
-	    dlong id = element[0]*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
+//      #pragma unroll p_Nq
+          for(int k = 0; k < p_Nq; k++){
+            dlong id = element[0]*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
             Aq[id] = r_Aq[0][k];
 
-	    if(element[1]<Nelements){
-	      id = element[1]*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
-	      Aq[id] = r_Aq[1][k];
-	    }
+            if(element[1]<Nelements){
+              id = element[1]*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
+              Aq[id] = r_Aq[1][k];
+            }
           }
       }
     }
@@ -1059,14 +1059,14 @@ SOFTWARE.
 
 // SPAM KERNELS
 @kernel void ellipticPartialAxHex3D_v2(const dlong Nelements,
-				       @restrict const  dlong  *  elementList,
-				       @restrict const  dfloat *  ggeo,
-				       @restrict const  dfloat *  D,
-				       @restrict const  dfloat *  S,
-				       @restrict const  dfloat *  MM,
-				       const dfloat lambda,
-				       @restrict const  dfloat *  q,
-				       @restrict dfloat *  Aq){
+                                       @restrict const  dlong  *  elementList,
+                                       @restrict const  dfloat *  ggeo,
+                                       @restrict const  dfloat *  DT,
+                                       @restrict const  dfloat *  S,
+                                       @restrict const  dfloat *  MM,
+                                       const dfloat lambda,
+                                       @restrict const  dfloat *  q,
+                                       @restrict dfloat *  Aq){
 
   for(int k=0;k<p_Nq;++k;@outer(1)){
 
@@ -1075,61 +1075,61 @@ SOFTWARE.
       @shared dfloat s_q[p_Nq][p_Nq];
       @shared dfloat s_Gqr[p_Nq][p_Nq];
       @shared dfloat s_Gqs[p_Nq][p_Nq];
-      @shared dfloat s_D[p_Nq][p_Nq];
+      @shared dfloat s_DT[p_Nq][p_Nq];
       @exclusive dfloat r_Aq;
       @exclusive dlong element;
 
       for(int j=0;j<p_Nq;++j;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
-	  element = elementList[e];
-	  s_q[j][i] = q[i+j*p_Nq+k*p_Nq*p_Nq+element*p_Np];
-	  s_D[j][i] = D[j*p_Nq+i];
-	}
+        for(int i=0;i<p_Nq;++i;@inner(0)){
+          element = elementList[e];
+          s_q[j][i] = q[i+j*p_Nq+k*p_Nq*p_Nq+element*p_Np];
+          s_DT[j][i] = DT[j*p_Nq+i];
+        }
       }
 
       // array of threads
       for(int j=0;j<p_Nq;++j;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
-	  dfloat qr = 0, qs = 0;
+        for(int i=0;i<p_Nq;++i;@inner(0)){
+          dfloat qr = 0, qs = 0;
 
 //#pragma unroll p_Nq
-	  for(int n=0;n<p_Nq;++n){
-	    qr += D[i*p_Nq+n]*s_q[j][n];
-	    qs += D[j*p_Nq+n]*s_q[n][i];
-	  }
+          for(int n=0;n<p_Nq;++n){
+            qr += DT[i*p_Nq+n]*s_q[j][n];
+            qs += DT[j*p_Nq+n]*s_q[n][i];
+          }
 
-	  // prefetch geometric factors
-	  const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+          // prefetch geometric factors
+          const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
-	  const dfloat r_G00 = ggeo[gbase+p_G00ID*p_Np];
-	  const dfloat r_G01 = ggeo[gbase+p_G01ID*p_Np];
-	  const dfloat r_G11 = ggeo[gbase+p_G11ID*p_Np];
+          const dfloat r_G00 = ggeo[gbase+p_G00ID*p_Np];
+          const dfloat r_G01 = ggeo[gbase+p_G01ID*p_Np];
+          const dfloat r_G11 = ggeo[gbase+p_G11ID*p_Np];
 
-	  const dfloat r_GwJ = ggeo[gbase+p_GWJID*p_Np];
+          const dfloat r_GwJ = ggeo[gbase+p_GWJID*p_Np];
 
-	  s_Gqr[j][i] = r_G00*qr + r_G01*qs;
-	  s_Gqs[j][i] = r_G01*qr + r_G11*qs;
+          s_Gqr[j][i] = r_G00*qr + r_G01*qs;
+          s_Gqs[j][i] = r_G01*qr + r_G11*qs;
 
-	  r_Aq  = lambda*r_GwJ*s_q[j][i];
-	}
+          r_Aq  = lambda*r_GwJ*s_q[j][i];
+        }
       }
 
       for(int j=0;j<p_Nq;++j;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
 
-	  dfloat lapqr = 0, lapqs = 0;
+          dfloat lapqr = 0, lapqs = 0;
 
 //#pragma unroll p_Nq
-	  for(int n=0;n<p_Nq;++n){
-	    lapqr += D[n*p_Nq+i]*s_Gqr[j][n];
-	    lapqs += D[n*p_Nq+j]*s_Gqs[n][i];
-	  }
+          for(int n=0;n<p_Nq;++n){
+            lapqr += DT[n*p_Nq+i]*s_Gqr[j][n];
+            lapqs += DT[n*p_Nq+j]*s_Gqs[n][i];
+          }
 
-	  r_Aq += lapqr;
-	  r_Aq += lapqs;
+          r_Aq += lapqr;
+          r_Aq += lapqs;
 
-	  Aq[i + j*p_Nq + k*p_Nq*p_Nq + e*p_Np] = r_Aq;
-	}
+          Aq[i + j*p_Nq + k*p_Nq*p_Nq + e*p_Np] = r_Aq;
+        }
       }
     }
   }
@@ -1137,19 +1137,19 @@ SOFTWARE.
 
 
 @kernel void ellipticPartialAxHex3D_v3(const dlong Nelements,
-				       @restrict const  dlong  *  elementList,
-				       @restrict const  dfloat *  ggeo,
-				       @restrict const  dfloat *  D,
-				       @restrict const  dfloat *  S,
-				       @restrict const  dfloat *  MM,
-				       const dfloat lambda,
-				       @restrict const  dfloat *  q,
-				       @restrict dfloat *  Aq){
+                                       @restrict const  dlong  *  elementList,
+                                       @restrict const  dfloat *  ggeo,
+                                       @restrict const  dfloat *  DT,
+                                       @restrict const  dfloat *  S,
+                                       @restrict const  dfloat *  MM,
+                                       const dfloat lambda,
+                                       @restrict const  dfloat *  q,
+                                       @restrict dfloat *  Aq){
 
   for(int k=0;k<p_Nq;++k; @outer(1)){
     for(dlong e=0; e<Nelements; ++e; @outer(0)){
 
-      @shared dfloat s_D[p_Nq][p_Nq];
+      @shared dfloat s_DT[p_Nq][p_Nq];
       @shared dfloat s_q[p_Nq][p_Nq];
 
       @shared dfloat s_Gqr[p_Nq][p_Nq];
@@ -1161,56 +1161,56 @@ SOFTWARE.
 
       // array of threads
       for(int j=0;j<p_Nq;++j;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
 
-	  s_D[j][i] = D[p_Nq*j+i]; // D is column major
-	  element = elementList[e];
-	  const dlong base = i + j*p_Nq + element*p_Np;
-	  r_q = q[base + k*p_Nq*p_Nq];
-	  s_q[j][i] = r_q;
-	}
+          s_DT[j][i] = DT[p_Nq*j+i]; // DT is column major
+          element = elementList[e];
+          const dlong base = i + j*p_Nq + element*p_Np;
+          r_q = q[base + k*p_Nq*p_Nq];
+          s_q[j][i] = r_q;
+        }
       }
 
       for(int j=0;j<p_Nq;++j;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
 
-	  // prefetch geometric factors
-	  const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+          // prefetch geometric factors
+          const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
-	  const dfloat r_G00 = ggeo[gbase+p_G00ID*p_Np];
-	  const dfloat r_G01 = ggeo[gbase+p_G01ID*p_Np];
-	  const dfloat r_GwJ = ggeo[gbase+p_GWJID*p_Np];
+          const dfloat r_G00 = ggeo[gbase+p_G00ID*p_Np];
+          const dfloat r_G01 = ggeo[gbase+p_G01ID*p_Np];
+          const dfloat r_GwJ = ggeo[gbase+p_GWJID*p_Np];
 
-	  dfloat qr = 0.f;
-	  dfloat qs = 0.f;
+          dfloat qr = 0.f;
+          dfloat qs = 0.f;
 
 //#pragma unroll p_Nq
-	  for(int m = 0; m < p_Nq; m++) {
-	    qr += s_D[i][m]*s_q[j][m];
-	    qs += s_D[j][m]*s_q[m][i];
-	  }
+          for(int m = 0; m < p_Nq; m++) {
+            qr += s_DT[i][m]*s_q[j][m];
+            qs += s_DT[j][m]*s_q[m][i];
+          }
 
-	  s_Gqr[j][i] = (r_G00*qr + r_G01*qs);
-	  s_Gqs[j][i] = (r_G01*qr);
+          s_Gqr[j][i] = (r_G00*qr + r_G01*qs);
+          s_Gqs[j][i] = (r_G01*qr);
 
-	  r_Auk = r_GwJ*lambda*r_q;
-	}
+          r_Auk = r_GwJ*lambda*r_q;
+        }
       }
 
       @barrier("local");
 
       for(int j=0;j<p_Nq;++j;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
 
 //#pragma unroll p_Nq
-	  for(int m = 0; m < p_Nq; m++){
-	    r_Auk   += s_D[m][j]*s_Gqs[m][i];
-	    r_Auk   += s_D[m][i]*s_Gqr[j][m];
-	  }
+          for(int m = 0; m < p_Nq; m++){
+            r_Auk   += s_DT[m][j]*s_Gqs[m][i];
+            r_Auk   += s_DT[m][i]*s_Gqr[j][m];
+          }
 
-	  const dlong id = element*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
-	  Aq[id] = r_Auk;
-	}
+          const dlong id = element*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
+          Aq[id] = r_Auk;
+        }
       }
     }
   }
@@ -1219,7 +1219,7 @@ SOFTWARE.
   for(int j=0;j<p_Nq;++j; @outer(1)){
     for(dlong e=0; e<Nelements; ++e; @outer(0)){
 
-      @shared dfloat s_D[p_Nq][p_Nq];
+      @shared dfloat s_DT[p_Nq][p_Nq];
       @shared dfloat s_q[p_Nq][p_Nq];
 
       @shared dfloat s_Gqr[p_Nq][p_Nq];
@@ -1231,54 +1231,54 @@ SOFTWARE.
 
       // array of threads
       for(int k=0;k<p_Nq;++k;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
 
-	  s_D[k][i] = D[p_Nq*k+i]; // D is column major
-	  element = elementList[e];
-	  const dlong base = i + j*p_Nq + k*p_Nq*p_Nq + element*p_Np;
-	  r_q = q[base];
-	  s_q[k][i] = r_q;
-	}
+          s_DT[k][i] = DT[p_Nq*k+i]; // DT is column major
+          element = elementList[e];
+          const dlong base = i + j*p_Nq + k*p_Nq*p_Nq + element*p_Np;
+          r_q = q[base];
+          s_q[k][i] = r_q;
+        }
       }
 
       for(int k=0;k<p_Nq;++k;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
 
-	  // prefetch geometric factors
-	  const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+          // prefetch geometric factors
+          const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
-	  const dfloat r_G02 = ggeo[gbase+p_G02ID*p_Np];
-	  const dfloat r_G22 = ggeo[gbase+p_G22ID*p_Np];
+          const dfloat r_G02 = ggeo[gbase+p_G02ID*p_Np];
+          const dfloat r_G22 = ggeo[gbase+p_G22ID*p_Np];
 
-	  dfloat qr = 0.f;
-	  dfloat qt = 0.f;
+          dfloat qr = 0.f;
+          dfloat qt = 0.f;
 
 //#pragma unroll p_Nq
-	  for(int m = 0; m < p_Nq; m++) {
-	    qr += s_D[i][m]*s_q[k][m];
-	    qt += s_D[k][m]*s_q[m][i];
-	  }
+          for(int m = 0; m < p_Nq; m++) {
+            qr += s_DT[i][m]*s_q[k][m];
+            qt += s_DT[k][m]*s_q[m][i];
+          }
 
-	  s_Gqr[k][i] = (           r_G02*qt);
-	  s_Gqt[k][i] = (r_G02*qr + r_G22*qt);
+          s_Gqr[k][i] = (           r_G02*qt);
+          s_Gqt[k][i] = (r_G02*qr + r_G22*qt);
 
-	}
+        }
       }
 
       @barrier("local");
 
       for(int k=0;k<p_Nq;++k;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
 
 //#pragma unroll p_Nq
-	  for(int m = 0; m < p_Nq; m++){
-	    r_Auk   += s_D[m][i]*s_Gqr[k][m];
-	    r_Auk   += s_D[m][k]*s_Gqt[m][i];
-	  }
+          for(int m = 0; m < p_Nq; m++){
+            r_Auk   += s_DT[m][i]*s_Gqr[k][m];
+            r_Auk   += s_DT[m][k]*s_Gqt[m][i];
+          }
 
-	  const dlong id = element*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
-	  Aq[id] += r_Auk;
-	}
+          const dlong id = element*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
+          Aq[id] += r_Auk;
+        }
       }
     }
   }
@@ -1287,7 +1287,7 @@ SOFTWARE.
   for(int i=0;i<p_Nq;++i; @outer(1)){
     for(dlong e=0; e<Nelements; ++e; @outer(0)){
 
-      @shared dfloat s_D[p_Nq][p_Nq];
+      @shared dfloat s_DT[p_Nq][p_Nq];
       @shared dfloat s_q[p_Nq][p_Nq];
 
       @shared dfloat s_Gqs[p_Nq][p_Nq];
@@ -1299,54 +1299,54 @@ SOFTWARE.
 
       // array of threads
       for(int k=0;k<p_Nq;++k;@inner(1)){
-	for(int j=0;j<p_Nq;++j;@inner(0)){
+        for(int j=0;j<p_Nq;++j;@inner(0)){
 
-	  s_D[k][j] = D[p_Nq*k+j]; // D is column major
-	  element = elementList[e];
-	  const dlong base = i + j*p_Nq + k*p_Nq*p_Nq + element*p_Np;
-	  r_q = q[base];
-	  s_q[k][j] = r_q;
-	}
+          s_DT[k][j] = DT[p_Nq*k+j]; // DT is column major
+          element = elementList[e];
+          const dlong base = i + j*p_Nq + k*p_Nq*p_Nq + element*p_Np;
+          r_q = q[base];
+          s_q[k][j] = r_q;
+        }
       }
 
       for(int k=0;k<p_Nq;++k;@inner(1)){
-	for(int j=0;j<p_Nq;++j;@inner(0)){
+        for(int j=0;j<p_Nq;++j;@inner(0)){
 
-	  // prefetch geometric factors
-	  const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+          // prefetch geometric factors
+          const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
-	  const dfloat r_G11 = ggeo[gbase+p_G11ID*p_Np];
-	  const dfloat r_G12 = ggeo[gbase+p_G12ID*p_Np];
+          const dfloat r_G11 = ggeo[gbase+p_G11ID*p_Np];
+          const dfloat r_G12 = ggeo[gbase+p_G12ID*p_Np];
 
-	  dfloat qs = 0.f;
-	  dfloat qt = 0.f;
+          dfloat qs = 0.f;
+          dfloat qt = 0.f;
 
 //#pragma unroll p_Nq
-	  for(int m = 0; m < p_Nq; m++) {
-	    qs += s_D[j][m]*s_q[k][m];
-	    qt += s_D[k][m]*s_q[m][j];
-	  }
+          for(int m = 0; m < p_Nq; m++) {
+            qs += s_DT[j][m]*s_q[k][m];
+            qt += s_DT[k][m]*s_q[m][j];
+          }
 
-	  s_Gqs[k][j] = (r_G11*qs + r_G12*qt);
-	  s_Gqt[k][j] = (r_G12*qs);
+          s_Gqs[k][j] = (r_G11*qs + r_G12*qt);
+          s_Gqt[k][j] = (r_G12*qs);
 
-	}
+        }
       }
 
       @barrier("local");
 
       for(int k=0;k<p_Nq;++k;@inner(1)){
-	for(int j=0;j<p_Nq;++j;@inner(0)){
+        for(int j=0;j<p_Nq;++j;@inner(0)){
 
 //#pragma unroll p_Nq
-	  for(int m = 0; m < p_Nq; m++){
-	    r_Auk   += s_D[m][j]*s_Gqs[k][m];
-	    r_Auk   += s_D[m][k]*s_Gqt[m][j];
-	  }
+          for(int m = 0; m < p_Nq; m++){
+            r_Auk   += s_DT[m][j]*s_Gqs[k][m];
+            r_Auk   += s_DT[m][k]*s_Gqt[m][j];
+          }
 
-	  const dlong id = element*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
-	  Aq[id] += r_Auk;
-	}
+          const dlong id = element*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
+          Aq[id] += r_Auk;
+        }
       }
     }
   }
@@ -1357,19 +1357,19 @@ SOFTWARE.
 
 #if 0
 @kernel void ellipticPartialAxHex3D_v4(const dlong Nelements,
-				       @restrict const  dlong  *  elementList,
-				       @restrict const  dfloat *  ggeo,
-				       @restrict const  dfloat *  D,
-				       @restrict const  dfloat *  S,
-				       @restrict const  dfloat *  MM,
-				       const dfloat lambda,
-				       @restrict const  dfloat *  q,
-				       @restrict dfloat *  Aq){
+                                       @restrict const  dlong  *  elementList,
+                                       @restrict const  dfloat *  ggeo,
+                                       @restrict const  dfloat *  DT,
+                                       @restrict const  dfloat *  S,
+                                       @restrict const  dfloat *  MM,
+                                       const dfloat lambda,
+                                       @restrict const  dfloat *  q,
+                                       @restrict dfloat *  Aq){
 
   for(int k=0;k<p_Nq;++k; @outer(1)){
     for(dlong e=0; e<Nelements; ++e; @outer(0)){
 
-      @shared dfloat s_D[p_Nq][p_Nq];
+      @shared dfloat s_DT[p_Nq][p_Nq];
       @shared dfloat s_q[p_Nq][p_Nq];
 
       @shared dfloat s_Gqr[p_Nq][p_Nq];
@@ -1381,56 +1381,56 @@ SOFTWARE.
 
       // array of threads
       for(int j=0;j<p_Nq;++j;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
 
-	  s_D[j][i] = D[p_Nq*j+i]; // D is column major
-	  element = elementList[e];
-	  const dlong base = i + j*p_Nq + element*p_Np;
-	  r_q = q[base + k*p_Nq*p_Nq];
-	  s_q[j][i] = r_q;
-	}
+          s_DT[j][i] = DT[p_Nq*j+i]; // DT is column major
+          element = elementList[e];
+          const dlong base = i + j*p_Nq + element*p_Np;
+          r_q = q[base + k*p_Nq*p_Nq];
+          s_q[j][i] = r_q;
+        }
       }
 
       for(int j=0;j<p_Nq;++j;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
 
-	  // prefetch geometric factors
-	  const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+          // prefetch geometric factors
+          const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
-	  const dfloat r_G00 = ggeo[gbase+p_G00ID*p_Np];
-	  const dfloat r_G01 = ggeo[gbase+p_G01ID*p_Np];
-	  const dfloat r_GwJ = ggeo[gbase+p_GWJID*p_Np];
+          const dfloat r_G00 = ggeo[gbase+p_G00ID*p_Np];
+          const dfloat r_G01 = ggeo[gbase+p_G01ID*p_Np];
+          const dfloat r_GwJ = ggeo[gbase+p_GWJID*p_Np];
 
-	  dfloat qr = 0.f;
-	  dfloat qs = 0.f;
+          dfloat qr = 0.f;
+          dfloat qs = 0.f;
 
 //#pragma unroll p_Nq
-	  for(int m = 0; m < p_Nq; m++) {
-	    qr += s_D[i][m]*s_q[j][m];
-	    qs += s_D[j][m]*s_q[m][i];
-	  }
+          for(int m = 0; m < p_Nq; m++) {
+            qr += s_DT[i][m]*s_q[j][m];
+            qs += s_DT[j][m]*s_q[m][i];
+          }
 
-	  s_Gqr[j][i] = (r_G00*qr + r_G01*qs);
-	  s_Gqs[j][i] = (r_G01*qr);
+          s_Gqr[j][i] = (r_G00*qr + r_G01*qs);
+          s_Gqs[j][i] = (r_G01*qr);
 
-	  r_Auk = r_GwJ*lambda*r_q;
-	}
+          r_Auk = r_GwJ*lambda*r_q;
+        }
       }
 
       @barrier("local");
 
       for(int j=0;j<p_Nq;++j;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
 
 //#pragma unroll p_Nq
-	  for(int m = 0; m < p_Nq; m++){
-	    r_Auk   += s_D[m][j]*s_Gqs[m][i];
-	    r_Auk   += s_D[m][i]*s_Gqr[j][m];
-	  }
+          for(int m = 0; m < p_Nq; m++){
+            r_Auk   += s_DT[m][j]*s_Gqs[m][i];
+            r_Auk   += s_DT[m][i]*s_Gqr[j][m];
+          }
 
-	  const dlong id = element*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
-	  Aq[id] = r_Auk;
-	}
+          const dlong id = element*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
+          Aq[id] = r_Auk;
+        }
       }
     }
   }
@@ -1439,7 +1439,7 @@ SOFTWARE.
   for(int j=0;j<p_Nq;++j; @outer(1)){
     for(dlong e=0; e<Nelements; ++e; @outer(0)){
 
-      @shared dfloat s_D[p_Nq][p_Nq];
+      @shared dfloat s_DT[p_Nq][p_Nq];
       @shared dfloat s_q[p_Nq][p_Nq];
 
       @shared dfloat s_Gqr[p_Nq][p_Nq];
@@ -1451,54 +1451,54 @@ SOFTWARE.
 
       // array of threads
       for(int k=0;k<p_Nq;++k;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
 
-	  s_D[k][i] = D[p_Nq*k+i]; // D is column major
-	  element = elementList[e];
-	  const dlong base = i + j*p_Nq + k*p_Nq*p_Nq + element*p_Np;
-	  r_q = q[base];
-	  s_q[k][i] = r_q;
-	}
+          s_DT[k][i] = DT[p_Nq*k+i]; // DT is column major
+          element = elementList[e];
+          const dlong base = i + j*p_Nq + k*p_Nq*p_Nq + element*p_Np;
+          r_q = q[base];
+          s_q[k][i] = r_q;
+        }
       }
 
       for(int k=0;k<p_Nq;++k;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
 
-	  // prefetch geometric factors
-	  const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+          // prefetch geometric factors
+          const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
-	  const dfloat r_G02 = ggeo[gbase+p_G02ID*p_Np];
-	  const dfloat r_G22 = ggeo[gbase+p_G22ID*p_Np];
+          const dfloat r_G02 = ggeo[gbase+p_G02ID*p_Np];
+          const dfloat r_G22 = ggeo[gbase+p_G22ID*p_Np];
 
-	  dfloat qr = 0.f;
-	  dfloat qt = 0.f;
+          dfloat qr = 0.f;
+          dfloat qt = 0.f;
 
 //#pragma unroll p_Nq
-	  for(int m = 0; m < p_Nq; m++) {
-	    qr += s_D[i][m]*s_q[k][m];
-	    qt += s_D[k][m]*s_q[m][i];
-	  }
+          for(int m = 0; m < p_Nq; m++) {
+            qr += s_DT[i][m]*s_q[k][m];
+            qt += s_DT[k][m]*s_q[m][i];
+          }
 
-	  s_Gqr[k][i] = (           r_G02*qt);
-	  s_Gqt[k][i] = (r_G02*qr + r_G22*qt);
+          s_Gqr[k][i] = (           r_G02*qt);
+          s_Gqt[k][i] = (r_G02*qr + r_G22*qt);
 
-	}
+        }
       }
 
       @barrier("local");
 
       for(int k=0;k<p_Nq;++k;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
 
 //#pragma unroll p_Nq
-	  for(int m = 0; m < p_Nq; m++){
-	    r_Auk   += s_D[m][i]*s_Gqr[k][m];
-	    r_Auk   += s_D[m][k]*s_Gqt[m][i];
-	  }
+          for(int m = 0; m < p_Nq; m++){
+            r_Auk   += s_DT[m][i]*s_Gqr[k][m];
+            r_Auk   += s_DT[m][k]*s_Gqt[m][i];
+          }
 
-	  const dlong id = element*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
-	  Aq[id] += r_Auk;
-	}
+          const dlong id = element*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
+          Aq[id] += r_Auk;
+        }
       }
     }
   }
@@ -1506,7 +1506,7 @@ SOFTWARE.
 
   for(dlong e=0; e<Nelements; ++e; @outer(0)){
 
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
     @shared dfloat s_q[p_Nq][p_Nq][p_Nq];
 
     @shared dfloat s_Gqs[p_Nq][p_Nq][p_Nq];
@@ -1519,42 +1519,42 @@ SOFTWARE.
     // array of threads
     for(int k=0;k<p_Nq;++k;@inner(2)){
       for(int j=0;j<p_Nq;++j;@inner(1)){
-	for(int i=0;i<p_Nq;++i; @inner(0)){
+        for(int i=0;i<p_Nq;++i; @inner(0)){
 
-	  if(k==0)
-	    s_D[j][i] = D[p_Nq*j+i]; // D is column major
+          if(k==0)
+            s_DT[j][i] = DT[p_Nq*j+i]; // DT is column major
 
-	  element = elementList[e];
-	  const dlong base = i + j*p_Nq + k*p_Nq*p_Nq + element*p_Np;
-	  r_q = q[base];
-	  s_q[k][j][i] = r_q;
-	}
+          element = elementList[e];
+          const dlong base = i + j*p_Nq + k*p_Nq*p_Nq + element*p_Np;
+          r_q = q[base];
+          s_q[k][j][i] = r_q;
+        }
       }
     }
 
     for(int k=0;k<p_Nq;++k;@inner(2)){
       for(int j=0;j<p_Nq;++j;@inner(1)){
-	for(int i=0;i<p_Nq;++i; @inner(0)){
+        for(int i=0;i<p_Nq;++i; @inner(0)){
 
-	  // prefetch geometric factors
-	  const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+          // prefetch geometric factors
+          const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
-	  const dfloat r_G11 = ggeo[gbase+p_G11ID*p_Np];
-	  const dfloat r_G12 = ggeo[gbase+p_G12ID*p_Np];
+          const dfloat r_G11 = ggeo[gbase+p_G11ID*p_Np];
+          const dfloat r_G12 = ggeo[gbase+p_G12ID*p_Np];
 
-	  dfloat qs = 0.f;
-	  dfloat qt = 0.f;
+          dfloat qs = 0.f;
+          dfloat qt = 0.f;
 
 //#pragma unroll p_Nq
-	  for(int m = 0; m < p_Nq; m++) {
-	    qs += s_D[j][m]*s_q[k][m][i];
-	    qt += s_D[k][m]*s_q[m][j][i];
-	  }
+          for(int m = 0; m < p_Nq; m++) {
+            qs += s_DT[j][m]*s_q[k][m][i];
+            qt += s_DT[k][m]*s_q[m][j][i];
+          }
 
-	  s_Gqs[k][j][i] = (r_G11*qs + r_G12*qt);
-	  s_Gqt[k][j][i] = (r_G12*qs);
+          s_Gqs[k][j][i] = (r_G11*qs + r_G12*qt);
+          s_Gqt[k][j][i] = (r_G12*qs);
 
-	}
+        }
       }
     }
 
@@ -1563,17 +1563,17 @@ SOFTWARE.
 
     for(int k=0;k<p_Nq;++k;@inner(2)){
       for(int j=0;j<p_Nq;++j;@inner(1)){
-	for(int i=0;i<p_Nq;++i; @inner(0)){
+        for(int i=0;i<p_Nq;++i; @inner(0)){
 
 //#pragma unroll p_Nq
-	  for(int m = 0; m < p_Nq; m++){
-	    r_Auk   += s_D[m][j]*s_Gqs[k][m][i];
-	    r_Auk   += s_D[m][k]*s_Gqt[m][j][i];
-	  }
+          for(int m = 0; m < p_Nq; m++){
+            r_Auk   += s_DT[m][j]*s_Gqs[k][m][i];
+            r_Auk   += s_DT[m][k]*s_Gqt[m][j][i];
+          }
 
-	  const dlong id = element*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
-	  Aq[id] += r_Auk;
-	}
+          const dlong id = element*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
+          Aq[id] += r_Auk;
+        }
       }
     }
   }
@@ -1582,18 +1582,18 @@ SOFTWARE.
 
 
 @kernel void ellipticPartialAxHex3D_v5(const dlong Nelements,
-				       @restrict const  dlong  *  elementList,
-				       @restrict const  dfloat *  ggeo,
-				       @restrict const  dfloat *  D,
-				       @restrict const  dfloat *  S,
-				       @restrict const  dfloat *  MM,
-				       const dfloat lambda,
-				       @restrict const  dfloat *  q,
-				       @restrict dfloat *  Aq){
+                                       @restrict const  dlong  *  elementList,
+                                       @restrict const  dfloat *  ggeo,
+                                       @restrict const  dfloat *  DT,
+                                       @restrict const  dfloat *  S,
+                                       @restrict const  dfloat *  MM,
+                                       const dfloat lambda,
+                                       @restrict const  dfloat *  q,
+                                       @restrict dfloat *  Aq){
 
   for(dlong e=0; e<Nelements; ++e; @outer(0)){
 
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
     @shared dfloat s_q[p_Nq][p_Nq][p_Nq];
 
     @shared dfloat s_Gq1[p_Nq][p_Nq][p_Nq];
@@ -1606,119 +1606,119 @@ SOFTWARE.
     // array of threads
     for(int k=0;k<p_Nq;++k;@inner(2)){
       for(int j=0;j<p_Nq;++j;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
 
-	  s_D[j][i] = D[p_Nq*j+i]; // D is column major
-	  element = elementList[e];
-	  const dlong base = i + j*p_Nq + element*p_Np;
-	  r_q = q[base + k*p_Nq*p_Nq];
-	  s_q[k][j][i] = r_q;
-	}
+          s_DT[j][i] = DT[p_Nq*j+i]; // DT is column major
+          element = elementList[e];
+          const dlong base = i + j*p_Nq + element*p_Np;
+          r_q = q[base + k*p_Nq*p_Nq];
+          s_q[k][j][i] = r_q;
+        }
       }
     }
 
 
     for(int k=0;k<p_Nq;++k;@inner(2)){
       for(int j=0;j<p_Nq;++j;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
 
-	  // prefetch geometric factors
-	  const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+          // prefetch geometric factors
+          const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
-	  const dfloat r_G00 = ggeo[gbase+p_G00ID*p_Np];
-	  const dfloat r_G01 = ggeo[gbase+p_G01ID*p_Np];
-	  const dfloat r_GwJ = ggeo[gbase+p_GWJID*p_Np];
+          const dfloat r_G00 = ggeo[gbase+p_G00ID*p_Np];
+          const dfloat r_G01 = ggeo[gbase+p_G01ID*p_Np];
+          const dfloat r_GwJ = ggeo[gbase+p_GWJID*p_Np];
 
-	  qr = 0.f; qs = 0.f; qt = 0.f;
+          qr = 0.f; qs = 0.f; qt = 0.f;
 
 //#pragma unroll p_Nq
-	  for(int m = 0; m < p_Nq; m++) {
-	    qr += s_D[i][m]*s_q[k][j][m];
-	    qs += s_D[j][m]*s_q[k][m][i];
-	    qt += s_D[k][m]*s_q[m][j][i];
-	  }
+          for(int m = 0; m < p_Nq; m++) {
+            qr += s_DT[i][m]*s_q[k][j][m];
+            qs += s_DT[j][m]*s_q[k][m][i];
+            qt += s_DT[k][m]*s_q[m][j][i];
+          }
 
-	  s_Gq1[k][j][i] = (r_G00*qr + r_G01*qs);
-	  s_Gq2[k][j][i] = (r_G01*qr);
+          s_Gq1[k][j][i] = (r_G00*qr + r_G01*qs);
+          s_Gq2[k][j][i] = (r_G01*qr);
 
-	  r_Auk = r_GwJ*lambda*r_q;
-	}
+          r_Auk = r_GwJ*lambda*r_q;
+        }
       }
     }
 
     for(int k=0;k<p_Nq;++k;@inner(2)){
       for(int j=0;j<p_Nq;++j;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
 
 //#pragma unroll p_Nq
-	  for(int m = 0; m < p_Nq; m++){
-	    r_Auk   += s_D[m][i]*s_Gq1[k][j][m];
-	    r_Auk   += s_D[m][j]*s_Gq2[k][m][i];
-	  }
-	}
+          for(int m = 0; m < p_Nq; m++){
+            r_Auk   += s_DT[m][i]*s_Gq1[k][j][m];
+            r_Auk   += s_DT[m][j]*s_Gq2[k][m][i];
+          }
+        }
       }
     }
 
     for(int k=0;k<p_Nq;++k;@inner(2)){
       for(int j=0;j<p_Nq;++j;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
 
-	  // prefetch geometric factors
-	  const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+          // prefetch geometric factors
+          const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
-	  const dfloat r_G02 = ggeo[gbase+p_G02ID*p_Np];
-	  const dfloat r_G22 = ggeo[gbase+p_G22ID*p_Np];
+          const dfloat r_G02 = ggeo[gbase+p_G02ID*p_Np];
+          const dfloat r_G22 = ggeo[gbase+p_G22ID*p_Np];
 
-	  s_Gq1[k][j][i] = (           r_G02*qt);
-	  s_Gq2[k][j][i] = (r_G02*qr + r_G22*qt);
+          s_Gq1[k][j][i] = (           r_G02*qt);
+          s_Gq2[k][j][i] = (r_G02*qr + r_G22*qt);
 
-	}
+        }
       }
     }
 
     for(int k=0;k<p_Nq;++k;@inner(2)){
       for(int j=0;j<p_Nq;++j;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
 
 //#pragma unroll p_Nq
-	  for(int m = 0; m < p_Nq; m++){
-	    r_Auk   += s_D[m][i]*s_Gq1[k][j][m];
-	    r_Auk   += s_D[m][k]*s_Gq2[m][j][i];
-	  }
-	}
+          for(int m = 0; m < p_Nq; m++){
+            r_Auk   += s_DT[m][i]*s_Gq1[k][j][m];
+            r_Auk   += s_DT[m][k]*s_Gq2[m][j][i];
+          }
+        }
       }
     }
 
     for(int k=0;k<p_Nq;++k;@inner(2)){
       for(int j=0;j<p_Nq;++j;@inner(1)){
-	for(int i=0;i<p_Nq;++i; @inner(0)){
+        for(int i=0;i<p_Nq;++i; @inner(0)){
 
-	  // prefetch geometric factors
-	  const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+          // prefetch geometric factors
+          const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
-	  const dfloat r_G11 = ggeo[gbase+p_G11ID*p_Np];
-	  const dfloat r_G12 = ggeo[gbase+p_G12ID*p_Np];
+          const dfloat r_G11 = ggeo[gbase+p_G11ID*p_Np];
+          const dfloat r_G12 = ggeo[gbase+p_G12ID*p_Np];
 
-	  s_Gq1[k][j][i] = (r_G11*qs + r_G12*qt);
-	  s_Gq2[k][j][i] = (r_G12*qs);
+          s_Gq1[k][j][i] = (r_G11*qs + r_G12*qt);
+          s_Gq2[k][j][i] = (r_G12*qs);
 
-	}
+        }
       }
     }
 
     for(int k=0;k<p_Nq;++k;@inner(2)){
       for(int j=0;j<p_Nq;++j;@inner(1)){
-	for(int i=0;i<p_Nq;++i; @inner(0)){
+        for(int i=0;i<p_Nq;++i; @inner(0)){
 
 //#pragma unroll p_Nq
-	  for(int m = 0; m < p_Nq; m++){
-	    r_Auk   += s_D[m][j]*s_Gq1[k][m][i];
-	    r_Auk   += s_D[m][k]*s_Gq2[m][j][i];
-	  }
+          for(int m = 0; m < p_Nq; m++){
+            r_Auk   += s_DT[m][j]*s_Gq1[k][m][i];
+            r_Auk   += s_DT[m][k]*s_Gq2[m][j][i];
+          }
 
-	  const dlong id = element*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
-	  Aq[id] = r_Auk;
-	}
+          const dlong id = element*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
+          Aq[id] = r_Auk;
+        }
       }
     }
   }
@@ -1728,18 +1728,18 @@ SOFTWARE.
 
 
 @kernel void ellipticPartialAxHex3D_v6(const dlong Nelements,
-				       @restrict const  dlong  *  elementList,
-				       @restrict const  dfloat *  ggeo,
-				       @restrict const  dfloat *  D,
-				       @restrict const  dfloat *  S,
-				       @restrict const  dfloat *  MM,
-				       const dfloat lambda,
-				       @restrict const  dfloat *  q,
-				       @restrict dfloat *  Aq){
+                                       @restrict const  dlong  *  elementList,
+                                       @restrict const  dfloat *  ggeo,
+                                       @restrict const  dfloat *  DT,
+                                       @restrict const  dfloat *  S,
+                                       @restrict const  dfloat *  MM,
+                                       const dfloat lambda,
+                                       @restrict const  dfloat *  q,
+                                       @restrict dfloat *  Aq){
 
   for(dlong e=0; e<Nelements; ++e; @outer(0)){
 
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
     @shared dfloat s_q[p_Nq][p_Nq][p_Nq];
 
     @shared dfloat s_Gq1[p_Nq][p_Nq][p_Nq];
@@ -1753,65 +1753,65 @@ SOFTWARE.
     // array of threads
     for(int k=0;k<p_Nq;++k;@inner(2)){
       for(int j=0;j<p_Nq;++j;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
 
-	  s_D[j][i] = D[p_Nq*j+i]; // D is column major
-	  element = elementList[e];
-	  const dlong base = i + j*p_Nq + element*p_Np;
-	  r_q = q[base + k*p_Nq*p_Nq];
-	  s_q[k][j][i] = r_q;
-	}
+          s_DT[j][i] = DT[p_Nq*j+i]; // DT is column major
+          element = elementList[e];
+          const dlong base = i + j*p_Nq + element*p_Np;
+          r_q = q[base + k*p_Nq*p_Nq];
+          s_q[k][j][i] = r_q;
+        }
       }
     }
 
 
     for(int k=0;k<p_Nq;++k;@inner(2)){
       for(int j=0;j<p_Nq;++j;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
 
-	  // prefetch geometric factors
-	  const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+          // prefetch geometric factors
+          const dlong gbase = element*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
-	  const dfloat r_G00 = ggeo[gbase+p_G00ID*p_Np];
-	  const dfloat r_G01 = ggeo[gbase+p_G01ID*p_Np];
-	  const dfloat r_GwJ = ggeo[gbase+p_GWJID*p_Np];
-	  const dfloat r_G02 = ggeo[gbase+p_G02ID*p_Np];
-	  const dfloat r_G22 = ggeo[gbase+p_G22ID*p_Np];
-	  const dfloat r_G11 = ggeo[gbase+p_G11ID*p_Np];
-	  const dfloat r_G12 = ggeo[gbase+p_G12ID*p_Np];
+          const dfloat r_G00 = ggeo[gbase+p_G00ID*p_Np];
+          const dfloat r_G01 = ggeo[gbase+p_G01ID*p_Np];
+          const dfloat r_GwJ = ggeo[gbase+p_GWJID*p_Np];
+          const dfloat r_G02 = ggeo[gbase+p_G02ID*p_Np];
+          const dfloat r_G22 = ggeo[gbase+p_G22ID*p_Np];
+          const dfloat r_G11 = ggeo[gbase+p_G11ID*p_Np];
+          const dfloat r_G12 = ggeo[gbase+p_G12ID*p_Np];
 
-	  dfloat qr = 0.f, qs = 0.f, qt = 0.f;
+          dfloat qr = 0.f, qs = 0.f, qt = 0.f;
 
 //#pragma unroll p_Nq
-	  for(int m = 0; m < p_Nq; m++) {
-	    qr += s_D[i][m]*s_q[k][j][m];
-	    qs += s_D[j][m]*s_q[k][m][i];
-	    qt += s_D[k][m]*s_q[m][j][i];
-	  }
+          for(int m = 0; m < p_Nq; m++) {
+            qr += s_DT[i][m]*s_q[k][j][m];
+            qs += s_DT[j][m]*s_q[k][m][i];
+            qt += s_DT[k][m]*s_q[m][j][i];
+          }
 
-	  s_Gq1[k][j][i] = (r_G00*qr + r_G01*qs + r_G02*qt);
-	  s_Gq2[k][j][i] = (r_G01*qr + r_G11*qs + r_G12*qt);
-	  s_Gq3[k][j][i] = (r_G02*qr + r_G12*qs + r_G22*qt);
+          s_Gq1[k][j][i] = (r_G00*qr + r_G01*qs + r_G02*qt);
+          s_Gq2[k][j][i] = (r_G01*qr + r_G11*qs + r_G12*qt);
+          s_Gq3[k][j][i] = (r_G02*qr + r_G12*qs + r_G22*qt);
 
-	  r_Auk = r_GwJ*lambda*r_q;
-	}
+          r_Auk = r_GwJ*lambda*r_q;
+        }
       }
     }
 
     for(int k=0;k<p_Nq;++k;@inner(2)){
       for(int j=0;j<p_Nq;++j;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
 
 //#pragma unroll p_Nq
-	  for(int m = 0; m < p_Nq; m++){
-	    r_Auk   += s_D[m][i]*s_Gq1[k][j][m];
-	    r_Auk   += s_D[m][j]*s_Gq2[k][m][i];
-	    r_Auk   += s_D[m][k]*s_Gq3[m][j][i];
-	  }
+          for(int m = 0; m < p_Nq; m++){
+            r_Auk   += s_DT[m][i]*s_Gq1[k][j][m];
+            r_Auk   += s_DT[m][j]*s_Gq2[k][m][i];
+            r_Auk   += s_DT[m][k]*s_Gq3[m][j][i];
+          }
 
-	  const dlong id = element*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
-	  Aq[id] = r_Auk;
-	}
+          const dlong id = element*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
+          Aq[id] = r_Auk;
+        }
       }
     }
   }

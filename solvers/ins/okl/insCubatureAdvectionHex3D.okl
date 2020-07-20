@@ -28,9 +28,9 @@ SOFTWARE.
 @kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
                                              @restrict const  dfloat *  vgeo,
                                              @restrict const  dfloat *  cubvgeo,
-                                             @restrict const  dfloat *  cubD,
-                                             @restrict const  dfloat *  cubInterpT,
-                                             @restrict const  dfloat *  cubProjectT,
+                                             @restrict const  dfloat *  cubDT,
+                                             @restrict const  dfloat *  cubInterp,
+                                             @restrict const  dfloat *  cubProject,
                                              const dfloat alpha,
                                              const dfloat beta,
                                              @restrict const  dfloat *  U,
@@ -39,9 +39,9 @@ SOFTWARE.
   //----------------------------@kernel 1 interpolate velocity fields to quadrature points
   for(dlong e=0; e<Nelements; ++e; @outer(0)) {
 
-    @shared dfloat s_cubD[p_cubNq][p_cubNq];
-    @shared dfloat s_cubInterpT[p_Nq][p_cubNq];
-    @shared dfloat s_cubProjectT[p_cubNq][p_Nq];
+    @shared dfloat s_cubDT[p_cubNq][p_cubNq];
+    @shared dfloat s_cubInterp[p_Nq][p_cubNq];
+    @shared dfloat s_cubProject[p_cubNq][p_Nq];
 
 
     @shared dfloat s_F11[p_cubNq][p_cubNq];
@@ -69,10 +69,10 @@ SOFTWARE.
       for(int i=0;i<p_cubNq;++i;@inner(0)){
         const int id = i+j*p_cubNq;
         if (id<p_Nq*p_cubNq) {
-          s_cubInterpT[0][id] = cubInterpT[id];
-          s_cubProjectT[0][id] = cubProjectT[id];
+          s_cubInterp[0][id] = cubInterp[id];
+          s_cubProject[0][id] = cubProject[id];
         }
-        s_cubD[0][id] = cubD[id];
+        s_cubDT[0][id] = cubDT[id];
 
         #pragma unroll p_cubNq
           for(int k=0;k<p_cubNq;++k){
@@ -101,7 +101,7 @@ SOFTWARE.
 
             #pragma unroll p_cubNq
             for(int n=0;n<p_cubNq;++n){
-              const dfloat Ik = s_cubInterpT[k][n];
+              const dfloat Ik = s_cubInterp[k][n];
               r_cU[n] += Ik*uc;
               r_cV[n] += Ik*vc;
               r_cW[n] += Ik*wc;
@@ -135,7 +135,7 @@ SOFTWARE.
 
             #pragma unroll p_Nq
             for (int n=0;n<p_Nq;n++) {
-              const dfloat Ii = s_cubInterpT[n][i];
+              const dfloat Ii = s_cubInterp[n][i];
               r_cU[k] += Ii*s_U[j][n];
               r_cV[k] += Ii*s_V[j][n];
               r_cW[k] += Ii*s_W[j][n];
@@ -164,7 +164,7 @@ SOFTWARE.
 
           #pragma unroll p_Nq
           for (int n=0;n<p_Nq;n++) {
-            const dfloat Ij = s_cubInterpT[n][j];
+            const dfloat Ij = s_cubInterp[n][j];
             r_cU[k] += Ij*s_U[n][i];
             r_cV[k] += Ij*s_V[n][i];
             r_cW[k] += Ij*s_W[n][i];
@@ -219,9 +219,9 @@ SOFTWARE.
         for(int i=0;i<p_cubNq;++i;@inner(0)){
           #pragma unroll p_cubNq
             for (int n=0;n<p_cubNq;n++) {
-              const dfloat Dr = s_cubD[n][i];
-              const dfloat Ds = s_cubD[n][j];
-              const dfloat Dt = s_cubD[k][n];
+              const dfloat Dr = s_cubDT[n][i];
+              const dfloat Ds = s_cubDT[n][j];
+              const dfloat Dt = s_cubDT[k][n];
               r_NU[k] += Dr*s_F11[j][n];
               r_NV[k] += Dr*s_F21[j][n];
               r_NW[k] += Dr*s_F31[j][n];
@@ -260,7 +260,7 @@ SOFTWARE.
 
             #pragma unroll p_cubNq
             for (int n=0;n<p_cubNq;n++) {
-              const dfloat Pj = s_cubProjectT[n][j];
+              const dfloat Pj = s_cubProject[n][j];
               r_NU[k] += Pj*s_NU[n][i];
               r_NV[k] += Pj*s_NV[n][i];
               r_NW[k] += Pj*s_NW[n][i];
@@ -290,7 +290,7 @@ SOFTWARE.
 
             #pragma unroll p_cubNq
             for (int n=0;n<p_cubNq;n++) {
-              const dfloat Pi = s_cubProjectT[n][i];
+              const dfloat Pi = s_cubProject[n][i];
               r_NU[k] += Pi*s_NU[j][n];
               r_NV[k] += Pi*s_NV[j][n];
               r_NW[k] += Pi*s_NW[j][n];
@@ -315,7 +315,7 @@ SOFTWARE.
 
             #pragma unroll p_cubNq
             for(int n=0;n<p_cubNq;++n){
-              const dfloat Pk = s_cubProjectT[n][k];
+              const dfloat Pk = s_cubProject[n][k];
               nu += Pk*r_NU[n];
               nv += Pk*r_NV[n];
               nw += Pk*r_NW[n];
@@ -375,7 +375,7 @@ SOFTWARE.
           r_UMn = 0.; r_VMn = 0.; r_WMn = 0.;                           \
           r_UPn = 0.; r_VPn = 0.; r_WPn = 0.;                           \
           for (int n=0;n<p_Nq;n++) {                                    \
-            const dfloat Ini = s_cubInterpT[n][i];                      \
+            const dfloat Ini = s_cubInterp[n][i];                      \
             r_UMn  += Ini*s_UM[j][n];                                   \
             r_VMn  += Ini*s_VM[j][n];                                   \
             r_WMn  += Ini*s_WM[j][n];                                   \
@@ -409,7 +409,7 @@ SOFTWARE.
         r_UMn = 0.; r_VMn = 0.; r_WMn = 0.;                             \
         r_UPn = 0.; r_VPn = 0.; r_WPn = 0.;                             \
         for (int n=0;n<p_Nq;n++) {                                      \
-          const dfloat Inj = s_cubInterpT[n][j];                        \
+          const dfloat Inj = s_cubInterp[n][j];                        \
           r_UMn += Inj*s_UM[n][i];                                      \
           r_VMn += Inj*s_VM[n][i];                                      \
           r_WMn += Inj*s_WM[n][i];                                      \
@@ -462,7 +462,7 @@ SOFTWARE.
         if (j<p_Nq) {                                                   \
           r_NUn = 0.; r_NVn = 0.; r_NWn = 0.;                           \
           for (int n=0;n<p_cubNq;n++) {                                 \
-            const dfloat Pnj = s_cubProjectT[n][j];                     \
+            const dfloat Pnj = s_cubProject[n][j];                     \
             r_NUn  += Pnj*s_fluxNU[n][i];                               \
             r_NVn  += Pnj*s_fluxNV[n][i];                               \
             r_NWn  += Pnj*s_fluxNW[n][i];                               \
@@ -489,7 +489,7 @@ SOFTWARE.
         if (j<p_Nq && i<p_Nq) {                                         \
           r_NUn = 0.; r_NVn = 0.; r_NWn = 0.;                           \
           for(int n=0;n<p_cubNq;++n){                                   \
-            const dfloat Pni = s_cubProjectT[n][i];                     \
+            const dfloat Pni = s_cubProject[n][i];                     \
             r_NUn += Pni*s_fluxNU[j][n];                                \
             r_NVn += Pni*s_fluxNV[j][n];                                \
             r_NWn += Pni*s_fluxNW[j][n];                                \
@@ -514,8 +514,8 @@ SOFTWARE.
 @kernel void insAdvectionCubatureSurfaceHex3D(const dlong Nelements,
                                             @restrict const  dfloat *  vgeo,
                                             @restrict const  dfloat *  cubsgeo,
-                                            @restrict const  dfloat *  cubInterpT,
-                                            @restrict const  dfloat *  cubProjectT,
+                                            @restrict const  dfloat *  cubInterp,
+                                            @restrict const  dfloat *  cubProject,
                                             @restrict const  dlong  *  vmapM,
                                             @restrict const  dlong  *  vmapP,
                                             @restrict const  int    *  EToB,
@@ -552,8 +552,8 @@ SOFTWARE.
     #define r_NVn r_VMn
     #define r_NWn r_WMn
 
-    @shared dfloat s_cubInterpT[p_Nq][p_cubNq];
-    @shared dfloat s_cubProjectT[p_cubNq][p_Nq];
+    @shared dfloat s_cubInterp[p_Nq][p_cubNq];
+    @shared dfloat s_cubProject[p_cubNq][p_Nq];
 
     // for all face nodes of all elements
     for(int j=0;j<p_cubNq;++j;@inner(1)){
@@ -569,8 +569,8 @@ SOFTWARE.
         //fetch reference operators
         const int id = i+j*p_cubNq;
         if (id<p_Nq*p_cubNq) {
-          s_cubInterpT[0][id] = cubInterpT[id];
-          s_cubProjectT[0][id] = cubProjectT[id];
+          s_cubInterp[0][id] = cubInterp[id];
+          s_cubProject[0][id] = cubProject[id];
         }
       }
     }
@@ -717,9 +717,9 @@ SOFTWARE.
 @kernel void insAdvectionCubatureVolumeHex3D(const dlong Nelements,
                                              @restrict const  dfloat *  vgeo,
                                              @restrict const  dfloat *  cubvgeo,
-                                             @restrict const  dfloat *  cubD,
-                                             @restrict const  dfloat *  cubInterpT,
-                                             @restrict const  dfloat *  cubProjectT,
+                                             @restrict const  dfloat *  cubDT,
+                                             @restrict const  dfloat *  cubInterp,
+                                             @restrict const  dfloat *  cubProject,
                                              const dlong offset,
                                              @restrict const  dfloat *  U,
                                                    @restrict dfloat *  cU, //storage for interpolated fields
@@ -731,7 +731,7 @@ SOFTWARE.
     @shared dfloat s_U[p_Nq][p_cubNq];
     @shared dfloat s_V[p_Nq][p_cubNq];
     @shared dfloat s_W[p_Nq][p_cubNq];
-    @shared dfloat s_cubInterpT[p_Nq][p_cubNq];
+    @shared dfloat s_cubInterp[p_Nq][p_cubNq];
 
     @exclusive dfloat r_U[p_cubNq], r_V[p_cubNq], r_W[p_cubNq];
 
@@ -739,7 +739,7 @@ SOFTWARE.
       for(int i=0;i<p_cubNq;++i;@inner(0)){
         const int id = i+j*p_cubNq;
         if (id<p_Nq*p_cubNq) {
-          s_cubInterpT[0][id] = cubInterpT[id];
+          s_cubInterp[0][id] = cubInterp[id];
         }
 
         #pragma unroll p_cubNq
@@ -766,7 +766,7 @@ SOFTWARE.
 
             #pragma unroll p_cubNq
             for(int n=0;n<p_cubNq;++n){
-              const dfloat Ik = s_cubInterpT[k][n];
+              const dfloat Ik = s_cubInterp[k][n];
               r_U[n] += Ik*uc;
               r_V[n] += Ik*vc;
               r_W[n] += Ik*wc;
@@ -800,7 +800,7 @@ SOFTWARE.
 
             #pragma unroll p_Nq
             for (int n=0;n<p_Nq;n++) {
-              const dfloat Ii = s_cubInterpT[n][i];
+              const dfloat Ii = s_cubInterp[n][i];
               r_U[k] += Ii*s_U[j][n];
               r_V[k] += Ii*s_V[j][n];
               r_W[k] += Ii*s_W[j][n];
@@ -829,7 +829,7 @@ SOFTWARE.
 
           #pragma unroll p_Nq
           for (int n=0;n<p_Nq;n++) {
-            const dfloat Ij = s_cubInterpT[n][j];
+            const dfloat Ij = s_cubInterp[n][j];
             r_U[k] += Ij*s_U[n][i];
             r_V[k] += Ij*s_V[n][i];
             r_W[k] += Ij*s_W[n][i];
@@ -860,14 +860,14 @@ SOFTWARE.
     @shared dfloat s_F32[p_cubNq][p_cubNq];
     @shared dfloat s_F33[p_cubNq][p_cubNq];
 
-    @shared dfloat s_cubD[p_cubNq][p_cubNq];
+    @shared dfloat s_cubDT[p_cubNq][p_cubNq];
 
     @exclusive dfloat r_NU[p_cubNq], r_NV[p_cubNq], r_NW[p_cubNq];
 
     for(int j=0;j<p_cubNq;++j;@inner(1)){
       for(int i=0;i<p_cubNq;++i;@inner(0)){
         const int id = i+j*p_cubNq;
-        s_cubD[0][id] = cubD[id];
+        s_cubDT[0][id] = cubDT[id];
 
         #pragma unroll p_cubNq
           for(int k=0;k<p_cubNq;++k){
@@ -925,9 +925,9 @@ SOFTWARE.
         for(int i=0;i<p_cubNq;++i;@inner(0)){
           #pragma unroll p_cubNq
             for (int n=0;n<p_cubNq;n++) {
-              const dfloat Dr = s_cubD[n][i];
-              const dfloat Ds = s_cubD[n][j];
-              const dfloat Dt = s_cubD[k][n];
+              const dfloat Dr = s_cubDT[n][i];
+              const dfloat Ds = s_cubDT[n][j];
+              const dfloat Dt = s_cubDT[k][n];
               r_NU[k] += Dr*s_F11[j][n];
               r_NV[k] += Dr*s_F21[j][n];
               r_NW[k] += Dr*s_F31[j][n];
@@ -967,7 +967,7 @@ SOFTWARE.
     @shared dfloat s_NU[p_cubNq][p_cubNq];
     @shared dfloat s_NV[p_cubNq][p_cubNq];
     @shared dfloat s_NW[p_cubNq][p_cubNq];
-    @shared dfloat s_cubProjectT[p_cubNq][p_Nq];
+    @shared dfloat s_cubProject[p_cubNq][p_Nq];
 
     @exclusive dfloat r_NU[p_Nq], r_NV[p_Nq], r_NW[p_Nq];
 
@@ -975,7 +975,7 @@ SOFTWARE.
       for(int i=0;i<p_cubNq;++i;@inner(0)){
         const int id = i+j*p_cubNq;
         if (id<p_Nq*p_cubNq) {
-          s_cubProjectT[0][id] = cubProjectT[id];
+          s_cubProject[0][id] = cubProject[id];
         }
 
         #pragma unroll p_Nq
@@ -1001,7 +1001,7 @@ SOFTWARE.
 
           #pragma unroll p_Nq
           for(int n=0;n<p_Nq;++n){
-            const dfloat Pk = s_cubProjectT[k][n];
+            const dfloat Pk = s_cubProject[k][n];
             r_NU[n] += Pk*NUn;
             r_NV[n] += Pk*NVn;
             r_NW[n] += Pk*NWn;
@@ -1032,7 +1032,7 @@ SOFTWARE.
 
             #pragma unroll p_cubNq
             for (int n=0;n<p_cubNq;n++) {
-              const dfloat Pj = s_cubProjectT[n][j];
+              const dfloat Pj = s_cubProject[n][j];
               r_NU[k] += Pj*s_NU[n][i];
               r_NV[k] += Pj*s_NV[n][i];
               r_NW[k] += Pj*s_NW[n][i];
@@ -1065,7 +1065,7 @@ SOFTWARE.
 
             #pragma unroll p_cubNq
             for (int n=0;n<p_cubNq;n++) {
-              const dfloat Pi = s_cubProjectT[n][i];
+              const dfloat Pi = s_cubProject[n][i];
               r_NU[k] += Pi*s_NU[j][n];
               r_NV[k] += Pi*s_NV[j][n];
               r_NW[k] += Pi*s_NW[j][n];

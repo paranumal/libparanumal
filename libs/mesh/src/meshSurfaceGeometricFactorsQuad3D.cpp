@@ -170,8 +170,8 @@ void meshQuad3D::SurfaceGeometricFactors(){
 
         sgeo[base+IJID] = 1./Jid;
 
-        sgeo[base+WIJID] = 1./(Jid*gllw[0]);
-        sgeo[base+WSJID] = sJ*gllw[n];
+        sgeo[base+WIJID] = 1./(Jid*w[0]);
+        sgeo[base+WSJID] = sJ*w[n];
       }
     }
 

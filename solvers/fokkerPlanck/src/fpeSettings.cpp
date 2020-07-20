@@ -89,6 +89,7 @@ void fpeSettings_t::report() {
   if (rank==0) {
     std::cout << "Fokker Planck Settings:\n\n";
     reportSetting("DATA FILE");
+    reportSetting("ADVECTION TYPE");
     reportSetting("TIME INTEGRATOR");
 
     if (compareSetting("TIME INTEGRATOR","SSBDF3")) {

@@ -56,10 +56,10 @@ SOFTWARE.
                                @restrict const  dfloat *  sgeo,
                                @restrict const  dfloat *  ggeo,
                                @restrict const  dfloat *  S,
-                               @restrict const  dfloat *  D,
-                               @restrict const  dfloat *  LIFTT,
+                               @restrict const  dfloat *  DT,
+                               @restrict const  dfloat *  LIFT,
                                @restrict const  dfloat *  MM,
-                               @restrict const  dfloat *  sMT,
+                               @restrict const  dfloat *  sM,
                                @restrict const  dlong  *  vmapM,
                                @restrict const  int    *  EToB,
                                @restrict const  int    *  mapB,
@@ -75,7 +75,7 @@ SOFTWARE.
 
   for(dlong e=0; e<Nelements; ++e; @outer(0)){
 
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
     @shared dfloat s_p[2][p_Nq][p_Nq];
     @shared dfloat s_ndp[2][p_Nq][p_Nq];
 
@@ -89,9 +89,9 @@ SOFTWARE.
     // face 0 & 5
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
-        //load D into local memory
-        // s_D[i][j] = d \phi_i at node j
-        s_D[j][i] = D[p_Nq*j+i]; // D is column major
+        //load DT into local memory
+        // s_DT[i][j] = d \phi_i at node j
+        s_DT[j][i] = DT[p_Nq*j+i]; // DT is column major
 
         #pragma unroll p_Nq
         for(int k=0;k<p_Nq;++k){
@@ -220,7 +220,7 @@ SOFTWARE.
 
             #pragma unroll p_Nq
               for(int m = 0; m < p_Nq; m++) {
-                r_pt += s_D[k][m]*r_p[m];
+                r_pt += s_DT[k][m]*r_p[m];
               }
           }
         }
@@ -235,8 +235,8 @@ SOFTWARE.
 
             #pragma unroll p_Nq
               for(int m = 0; m < p_Nq; m++) {
-                qr += s_D[i][m]*s_p[0][j][m];
-                qs += s_D[j][m]*s_p[0][m][i];
+                qr += s_DT[i][m]*s_p[0][j][m];
+                qs += s_DT[j][m]*s_p[0][m][i];
               }
 
             //reuse the s_ndp array
@@ -256,9 +256,9 @@ SOFTWARE.
 
             #pragma unroll p_Nq
               for(int m = 0; m < p_Nq; m++){
-                r_Apk    += s_D[m][j]*s_ndp[0][m][i];
-                r_rhs[m] += s_D[k][m]*r_Gpt; // DT(m,k)*ut(i,j,k,e)
-                r_Apk    += s_D[m][i]*s_ndp[1][j][m];
+                r_Apk    += s_DT[m][j]*s_ndp[0][m][i];
+                r_rhs[m] += s_DT[k][m]*r_Gpt; // DT(m,k)*ut(i,j,k,e)
+                r_Apk    += s_DT[m][i]*s_ndp[1][j][m];
               }
 
             r_rhs[k] += r_Apk;
@@ -319,10 +319,10 @@ SOFTWARE.
                                @restrict const  dfloat *  sgeo,
                                @restrict const  dfloat *  ggeo,
                                @restrict const  dfloat *  S,
-                               @restrict const  dfloat *  D,
-                               @restrict const  dfloat *  LIFTT,
+                               @restrict const  dfloat *  DT,
+                               @restrict const  dfloat *  LIFT,
                                @restrict const  dfloat *  MM,
-                               @restrict const  dfloat *  sMT,
+                               @restrict const  dfloat *  sM,
                                @restrict const  dlong  *  vmapM,
                                @restrict const  int    *  EToB,
                                @restrict const  int    *  mapB,
@@ -343,7 +343,7 @@ SOFTWARE.
     @shared dfloat s_dpdz[2][p_Nq][p_Nq];
     @shared dfloat s_rhsp[2][p_Nq][p_Nq];
 
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
 
     @exclusive dfloat r_dpdx[p_Nq], r_dpdy[p_Nq], r_dpdz[p_Nq], r_rhsp[p_Nq];
     @exclusive dfloat r_dpdt;
@@ -359,7 +359,7 @@ SOFTWARE.
           r_rhsp[k] = 0.f;
         }
 
-        s_D[j][i] = D[j*p_Nq+i];
+        s_DT[j][i] = DT[j*p_Nq+i];
       }
     }
 
@@ -514,9 +514,9 @@ SOFTWARE.
 
           #pragma unroll p_Nq
           for(int n=0;n<p_Nq;++n){
-            dr += s_D[n][i]*s_dpdx[0][j][n];
-            r_rhsp[n] += s_D[k][n]*r_dpdt; // DT(m,k)*ut(i,j,k,e)
-            ds += s_D[n][j]*s_dpdy[0][n][i];
+            dr += s_DT[n][i]*s_dpdx[0][j][n];
+            r_rhsp[n] += s_DT[k][n]*r_dpdt; // DT(m,k)*ut(i,j,k,e)
+            ds += s_DT[n][j]*s_dpdy[0][n][i];
           }
 
           r_rhsp[k] += dr + ds;

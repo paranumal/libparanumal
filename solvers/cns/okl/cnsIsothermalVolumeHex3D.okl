@@ -28,7 +28,7 @@ SOFTWARE.
 // isothermal Compressible Navier-Stokes
 @kernel void cnsIsothermalVolumeHex3D(const dlong Nelements,
                             @restrict const  dfloat *  vgeo,
-                            @restrict const  dfloat *  D,
+                            @restrict const  dfloat *  DT,
                             @restrict const  dfloat *  x,
                             @restrict const  dfloat *  y,
                             @restrict const  dfloat *  z,
@@ -41,7 +41,7 @@ SOFTWARE.
 
   for(dlong e=0;e<Nelements;++e;@outer(0)){
 
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
     @shared dfloat s_F[p_Nfields][p_Nq][p_Nq][p_Nq];
     @shared dfloat s_G[p_Nfields][p_Nq][p_Nq][p_Nq];
     @shared dfloat s_H[p_Nfields][p_Nq][p_Nq][p_Nq];
@@ -52,7 +52,7 @@ SOFTWARE.
       for(int j=0;j<p_Nq;++j;@inner(1)){
         for(int i=0;i<p_Nq;++i;@inner(0)){
           if(k==0)
-            s_D[j][i] = D[j*p_Nq+i];
+            s_DT[j][i] = DT[j*p_Nq+i];
 
           // geometric factors
           const dlong gbase = e*p_Np*p_Nvgeo + k*p_Nq*p_Nq + j*p_Nq + i;
@@ -158,9 +158,9 @@ SOFTWARE.
           dfloat rhsq0 = 0, rhsq1 = 0, rhsq2 = 0, rhsq3 = 0;
 
           for(int n=0;n<p_Nq;++n){
-            const dfloat Din = s_D[n][i];
-            const dfloat Djn = s_D[n][j];
-            const dfloat Dkn = s_D[n][k];
+            const dfloat Din = s_DT[n][i];
+            const dfloat Djn = s_DT[n][j];
+            const dfloat Dkn = s_DT[n][k];
 
             rhsq0 += Din*s_F[0][k][j][n];
             rhsq0 += Djn*s_G[0][k][n][i];

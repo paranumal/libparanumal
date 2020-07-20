@@ -80,9 +80,9 @@ SOFTWARE.
 @kernel void insSubcycleAdvectionCubatureVolumeTri2D(const dlong Nelements,
                                            @restrict const  dfloat *  vgeo,
                                            @restrict const  dfloat *  cubvgeo,
-                                           @restrict const  dfloat *  cubDmatrices,
-                                           @restrict const  dfloat *  cubInterpT,
-                                           @restrict const  dfloat *  cubProjectT,
+                                           @restrict const  dfloat *  cubPDT,
+                                           @restrict const  dfloat *  cubInterp,
+                                           @restrict const  dfloat *  cubProject,
                                            @restrict const  dfloat *  Ue,
                                            @restrict const  dfloat *  U,
                                                  @restrict  dfloat *  RHS){
@@ -157,7 +157,7 @@ SOFTWARE.
 
             #pragma unroll p_Np
             for(int i=0;i<p_Np;++i){
-              const dfloat cIni = cubInterpT[n+i*p_cubNp];
+              const dfloat cIni = cubInterp[n+i*p_cubNp];
               #pragma unroll p_Nmt
               for(int em=0;em<p_Nmt;++em){
                 cU[em]  += cIni*s_U[em][es][i];
@@ -188,8 +188,8 @@ SOFTWARE.
           #pragma unroll p_Np
           for(int i=0;i<p_Np;++i){
             if(i+io<p_cubNp){ // differentiate this sub block
-              const dfloat cDrWni = cubDmatrices[n+(i+io)*p_Np+0*p_cubNp*p_Np];
-              const dfloat cDsWni = cubDmatrices[n+(i+io)*p_Np+1*p_cubNp*p_Np];
+              const dfloat cDrWni = cubPDT[n+(i+io)*p_Np+0*p_cubNp*p_Np];
+              const dfloat cDsWni = cubPDT[n+(i+io)*p_Np+1*p_cubNp*p_Np];
 
               #pragma unroll p_Nmt
               for(int em=0;em<p_Nmt;++em){
@@ -282,8 +282,8 @@ SOFTWARE.
 @kernel void insSubcycleAdvectionCubatureSurfaceTri2D(const dlong Nelements,
                                             @restrict const  dfloat *  vgeo,
                                             @restrict const  dfloat *  sgeo,
-                                            @restrict const  dfloat *  intInterpT, // interpolate to integration nodes
-                                            @restrict const  dfloat *  intLIFTT, // lift from integration to interpolation nodes
+                                            @restrict const  dfloat *  intInterp, // interpolate to integration nodes
+                                            @restrict const  dfloat *  intLIFT, // lift from integration to interpolation nodes
                                             @restrict const  dlong  *  vmapM,
                                             @restrict const  dlong  *  vmapP,
                                             @restrict const  int    *  EToB,
@@ -362,7 +362,7 @@ SOFTWARE.
           // local block interpolation (face nodes to integration nodes)
           #pragma unroll p_Nfp
           for(int m=0;m<p_Nfp;++m){
-            const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
+            const dfloat iInm = intInterp[n+m*p_Nfaces*p_intNfp];
             const int fm = face*p_Nfp+m;
 
             #pragma unroll p_NnodesS4
@@ -408,7 +408,7 @@ SOFTWARE.
           // local block interpolation (face nodes to integration nodes)
           #pragma unroll p_Nfp
           for(int m=0;m<p_Nfp;++m){
-            const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
+            const dfloat iInm = intInterp[n+m*p_Nfaces*p_intNfp];
             const int fm = face*p_Nfp+m;
 
             #pragma unroll p_NnodesS4
@@ -455,7 +455,7 @@ SOFTWARE.
           // local block interpolation (face nodes to integration nodes)
           #pragma unroll p_Nfp
           for(int m=0;m<p_Nfp;++m){
-            const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
+            const dfloat iInm = intInterp[n+m*p_Nfaces*p_intNfp];
             const int fm = face*p_Nfp+m;
 
             #pragma unroll p_NnodesS4
@@ -501,7 +501,7 @@ SOFTWARE.
           // local block interpolation (face nodes to integration nodes)
           #pragma unroll p_Nfp
           for(int m=0;m<p_Nfp;++m){
-            const dfloat iInm = intInterpT[n+m*p_Nfaces*p_intNfp];
+            const dfloat iInm = intInterp[n+m*p_Nfaces*p_intNfp];
             const int fm = face*p_Nfp+m;
 
             #pragma unroll p_NnodesS4
@@ -568,7 +568,7 @@ SOFTWARE.
 
           #pragma unroll p_intNfpNfaces
           for(int m=0;m<p_intNfpNfaces;++m){
-            const dfloat L = intLIFTT[n+m*p_Np];
+            const dfloat L = intLIFT[n+m*p_Np];
 
             #pragma unroll p_NnodesS4
             for (int em=0;em<p_NnodesS4;++em){

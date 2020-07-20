@@ -31,22 +31,18 @@ void meshHex3D::OccaSetup(){
 
   this->mesh3D::OccaSetup();
 
-  //lumped mass matrix
-  MM = (dfloat *) calloc(Np*Np, sizeof(dfloat));
-  for (int k=0;k<Nq;k++) {
-    for (int j=0;j<Nq;j++) {
-      for (int i=0;i<Nq;i++) {
-        int n = i+j*Nq+k*Nq*Nq;
-        MM[n+n*Np] = gllw[i]*gllw[j]*gllw[k];
-      }
-    }
-  }
+  o_D = device.malloc(Nq*Nq*sizeof(dfloat), D);
 
-  //build inverse of mass matrix
-  invMM = (dfloat *) calloc(Np*Np,sizeof(dfloat));
-  for (int n=0;n<Np*Np;n++)
-    invMM[n] = MM[n];
-  matrixInverse(Np,invMM);
+  o_S    = o_D; //dummy
+  o_MM   = o_D; //dummy
+  o_sM   = o_D; //dummy
+  o_LIFT = o_D; //dummy
+
+  o_vgeo = device.malloc((Nelements+totalHaloPairs)*Nvgeo*Np*sizeof(dfloat), vgeo);
+  o_sgeo = device.malloc(Nelements*Nfaces*Nfp*Nsgeo*sizeof(dfloat), sgeo);
+  o_ggeo = device.malloc(Nelements*Np*Nggeo*sizeof(dfloat), ggeo);
+
+  /* NC: disabling until we re-add treatment of affine elements
 
   // build trilinear geometric factors for hexes
   if(settings.compareSetting("ELEMENT MAP", "AFFINE")){
@@ -88,27 +84,5 @@ void meshHex3D::OccaSetup(){
     }
   }
   o_ggeoNoJW = device.malloc(Np*Nelements*6*sizeof(dfloat), ggeoNoJW);
-
-
-  o_MM = device.malloc(Np*Np*sizeof(dfloat), MM);
-
-  o_D = device.malloc(Nq*Nq*sizeof(dfloat), D);
-
-  o_Dmatrices = device.malloc(Nq*Nq*sizeof(dfloat), D);
-  o_Smatrices = device.malloc(Nq*Nq*sizeof(dfloat), D); //dummy
-
-  o_sMT = device.malloc(1*sizeof(dfloat)); //dummy
-  o_LIFTT = device.malloc(1*sizeof(dfloat)); // dummy
-
-  o_vgeo =
-    device.malloc((Nelements+totalHaloPairs)*Np*Nvgeo*sizeof(dfloat),
-                        vgeo);
-
-  o_sgeo =
-    device.malloc(Nelements*Nfaces*Nfp*Nsgeo*sizeof(dfloat),
-                        sgeo);
-
-  o_ggeo =
-    device.malloc(Nelements*Np*Nggeo*sizeof(dfloat),
-      ggeo);
+  */
 }

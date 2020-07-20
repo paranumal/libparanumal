@@ -26,13 +26,13 @@ SOFTWARE.
 
 @kernel void cnsGradVolumeHex3D(const dlong Nelements,
                                 @restrict const  dfloat *  vgeo,
-                                @restrict const  dfloat *  D,
+                                @restrict const  dfloat *  DT,
                                 @restrict const  dfloat *  q,
                                 @restrict dfloat *  gradq){
 
   for(dlong e=0;e<Nelements;++e;@outer(0)){
 
-    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
     @shared dfloat s_u[p_Nq][p_Nq][p_Nq];
     @shared dfloat s_v[p_Nq][p_Nq][p_Nq];
     @shared dfloat s_w[p_Nq][p_Nq][p_Nq];
@@ -42,7 +42,7 @@ SOFTWARE.
         for(int i=0;i<p_Nq;++i;@inner(0)){
 
           if(k==0)
-            s_D[j][i] = D[j*p_Nq+i];
+            s_DT[j][i] = DT[j*p_Nq+i];
 
           const dlong qbase = e*p_Nfields*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
           const dfloat r  = q[qbase + 0*p_Np];
@@ -68,9 +68,9 @@ SOFTWARE.
           dfloat dwdr = 0, dwds = 0, dwdt = 0;
 
           for(int n=0;n<p_Nq;++n){
-            const dfloat Din = s_D[i][n];
-            const dfloat Djn = s_D[j][n];
-            const dfloat Dkn = s_D[k][n];
+            const dfloat Din = s_DT[i][n];
+            const dfloat Djn = s_DT[j][n];
+            const dfloat Dkn = s_DT[k][n];
 
             dudr += Din*s_u[k][j][n];
             duds += Djn*s_u[k][n][i];

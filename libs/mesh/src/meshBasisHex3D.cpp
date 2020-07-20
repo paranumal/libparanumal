@@ -279,6 +279,38 @@ void mesh_t::MassMatrixHex3D(int _Np, dfloat *V, dfloat *_MM){
   matrixInverse(_Np, _MM);
 }
 
+void mesh_t::LumpedMassMatrixHex3D(int _N, dfloat *_gllw, dfloat *_MM){
+
+  int _Nq = _N+1;
+  int _Np = _Nq*_Nq*_Nq;
+
+  // LumpedMassMatrix = gllw \ctimes gllw \ctimes gllw
+  for(int k=0;k<_Nq;++k){
+    for(int n=0;n<_Nq;++n){
+      for(int m=0;m<_Nq;++m){
+        int id = n+m*_Nq+k*_Nq*_Nq;
+        _MM[id+id*_Np] = _gllw[n]*_gllw[m]*_gllw[k];
+      }
+    }
+  }
+}
+
+void mesh_t::invLumpedMassMatrixHex3D(int _N, dfloat *_gllw, dfloat *_invMM){
+
+  int _Nq = _N+1;
+  int _Np = _Nq*_Nq*_Nq;
+
+  // invLumpedMassMatrix = invgllw \ctimes invgllw
+  for(int k=0;k<_Nq;++k){
+    for(int n=0;n<_Nq;++n){
+      for(int m=0;m<_Nq;++m){
+        int id = n+m*_Nq+k*_Nq*_Nq;
+        _invMM[id+id*_Np] = 1.0/(_gllw[n]*_gllw[m]*_gllw[k]);
+      }
+    }
+  }
+}
+
 void mesh_t::DmatrixHex3D(int _N, int Npoints, dfloat *_r, dfloat *_s, dfloat *_t,
                                                 dfloat *_Dr, dfloat *_Ds, dfloat *_Dt){
 

@@ -26,7 +26,7 @@ SOFTWARE.
 
 @kernel void cnsGradSurfaceTet3D(const dlong Nelements,
                                  @restrict const  dfloat *  sgeo,
-                                 @restrict const  dfloat *  LIFTT,
+                                 @restrict const  dfloat *  LIFT,
                                  @restrict const  dlong  *  vmapM,
                                  @restrict const  dlong  *  vmapP,
                                  @restrict const  int    *  EToB,
@@ -141,7 +141,7 @@ SOFTWARE.
             // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
             #pragma unroll p_NfacesNfp
               for(int m=0;m<p_NfacesNfp;++m){
-                const dfloat L = LIFTT[n+m*p_Np];
+                const dfloat L = LIFT[n+m*p_Np];
                 LTuxflux += L*s_gradflux[es][0][m];
                 LTuyflux += L*s_gradflux[es][1][m];
                 LTuzflux += L*s_gradflux[es][2][m];

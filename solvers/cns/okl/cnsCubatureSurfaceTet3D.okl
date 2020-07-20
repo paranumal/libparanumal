@@ -104,8 +104,8 @@ void upwindRoeAveraged(const dfloat nx,
                                     @restrict const  dlong  *  vmapM,
                                     @restrict const  dlong  *  vmapP,
                                     @restrict const  int    *  EToB,
-                                    @restrict const  dfloat *  intInterpT, // interpolate to integration nodes
-                                    @restrict const  dfloat *  intLIFTT, // lift from integration to interpolation nodes
+                                    @restrict const  dfloat *  intInterp, // interpolate to integration nodes
+                                    @restrict const  dfloat *  intLIFT, // lift from integration to interpolation nodes
                                     @restrict const  dfloat *  intx,
                                     @restrict const  dfloat *  inty,
                                     @restrict const  dfloat *  intz,
@@ -223,7 +223,7 @@ void upwindRoeAveraged(const dfloat nx,
             // local block interpolation (face nodes to integration nodes)
             #pragma unroll p_Nfp
               for(int m=0;m<p_Nfp;++m){
-                const dfloat iInm = intInterpT[ (n+face*p_intNfp) + m*p_Nfaces*p_intNfp];
+                const dfloat iInm = intInterp[ (n+face*p_intNfp) + m*p_Nfaces*p_intNfp];
                 const int fm = m;
                 rM  += iInm*s_qM[0][fm];
                 ruM += iInm*s_qM[1][fm];
@@ -332,7 +332,7 @@ void upwindRoeAveraged(const dfloat nx,
             // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
             #pragma unroll p_intNfp
               for(int m=0;m<p_intNfp;++m){
-                const dfloat L = intLIFTT[n+(m+face*p_intNfp)*p_Np];
+                const dfloat L = intLIFT[n+(m+face*p_intNfp)*p_Np];
                 Lrflux  += L*s_rflux[m];
                 Lruflux += L*s_ruflux[m];
                 Lrvflux += L*s_rvflux[m];
