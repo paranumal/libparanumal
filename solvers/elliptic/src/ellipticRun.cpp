@@ -191,6 +191,12 @@ void elliptic_t::Run(){
     PlotFields(x, fname);
   }
 
+  {
+    // compute norm of solution
+    dfloat normx = linAlg.norm2(mesh.Np*mesh.Nelements, o_x, mesh.comm);
+    printf("Testing norm elliptic solution = %17.15lg\n", normx);
+  }
+  
   free(r); free(x);
   o_r.free(); o_x.free();
   delete linearSolver;
