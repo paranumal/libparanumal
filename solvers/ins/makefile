@@ -58,13 +58,12 @@ make help
    Display this help message.
 make test
    Run tests.
-
 Can use "make verbose=true" for verbose output.
 
 endef
 
 ifeq (,$(filter insMain lib clean clean-libs clean-kernels \
-                realclean info help,$(MAKECMDGOALS)))
+                realclean info help test,$(MAKECMDGOALS)))
 ifneq (,$(MAKECMDGOALS))
 $(error ${INS_HELP_MSG})
 endif
