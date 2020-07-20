@@ -41,12 +41,12 @@ void acoustics_t::Run(){
 
   timeStepper->Run(o_q, startTime, finalTime);
 
+  // output norm of final solution
   {
     dlong Ntotal = mesh.Nelements*mesh.Np*Nfields;
     
-    // output norm of final solution
     dfloat normq = linAlg.norm2(Ntotal, o_q, mesh.comm);
 
-    printf("Testing norm acoustic solution = %17.15lg\n", normq);
+    printf("Testing norm acoustics solution = %17.15lg\n", normq);
   }
 }
