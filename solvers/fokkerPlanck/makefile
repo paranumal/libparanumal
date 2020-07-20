@@ -36,6 +36,7 @@ Fokker-Planck equation solver makefile targets:
    make realclean
    make info
    make help
+   make test
 
 Usage:
 
@@ -55,6 +56,8 @@ make info
    List directories and compiler flags in use.
 make help
    Display this help message.
+make test
+   Run tests.
 
 Can use "make verbose=true" for verbose output.
 
@@ -225,3 +228,13 @@ info:
 	$(info CXXFLAGS  = $(FPE_CXXFLAGS))
 	$(info LIBS      = $(LIBS))
 	@true
+
+test: fokkerPlanckMain
+	@printf "%b" "$(TEST_COLOR)Testing fokkerPlanck solver with setupQuad2D.rc$(NO_COLOR)\n";
+	./fokkerPlanckMain setups/setupQuad2D.rc
+	@printf "%b" "$(TEST_COLOR)Testing fokkerPlanck solver with setupTri2D.rc$(NO_COLOR)\n";
+	./fokkerPlanckMain setups/setupTri2D.rc
+	@printf "%b" "$(TEST_COLOR)Testing fokkerPlanck solver with setupHex3D.rc$(NO_COLOR)\n";
+	./fokkerPlanckMain setups/setupHex3D.rc
+	@printf "%b" "$(TEST_COLOR)Testing fokkerPlanck solver with setupTet3D.rc$(NO_COLOR)\n";
+	./fokkerPlanckMain setups/setupTet3D.rc
