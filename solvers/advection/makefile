@@ -216,11 +216,11 @@ info:
 	@true
 
 test: advectionMain
-	@printf "%b" "$(TEST_COLOR)Testing advection solver with setupQuad2D.rc$(NO_COLOR)\n";
+	@printf "%b" "$(TEST_COLOR)Testing advection solver with testAdvectionQuad2D_01.rc$(NO_COLOR)\n";
 	./advectionMain $(TEST_DIR)/advection/testAdvectionQuad2D_01.rc
-	@printf "%b" "$(TEST_COLOR)Testing advection solver with setupTri2D.rc$(NO_COLOR)\n";
+	@printf "%b" "$(TEST_COLOR)Testing advection solver with testAdvectionTri2D_01.rc$(NO_COLOR)\n";
 	./advectionMain $(TEST_DIR)/advection/testAdvectionTri2D_01.rc
-	@printf "%b" "$(TEST_COLOR)Testing advection solver with setupHex3D.rc$(NO_COLOR)\n";
+	@printf "%b" "$(TEST_COLOR)Testing advection solver with testAdvectionHex3D_01.rc$(NO_COLOR)\n";
 	./advectionMain $(TEST_DIR)/advection/testAdvectionHex3D_01.rc
-	@printf "%b" "$(TEST_COLOR)Testing advection solver with setupTet3D.rc$(NO_COLOR)\n";
+	@printf "%b" "$(TEST_COLOR)Testing advection solver with testAdvectionTet3D_01.rc$(NO_COLOR)\n";
 	./advectionMain $(TEST_DIR)/advection/testAdvectionTet3D_01.rc

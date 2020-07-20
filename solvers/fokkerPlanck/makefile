@@ -231,11 +231,11 @@ info:
 	@true
 
 test: fpeMain
-	@printf "%b" "$(TEST_COLOR)Testing fokkerPlanck solver with setupQuad2D.rc$(NO_COLOR)\n";
+	@printf "%b" "$(TEST_COLOR)Testing fokkerPlanck solver with testFpeQuad2D_01.rc$(NO_COLOR)\n";
 	./fpeMain $(TEST_DIR)/fpe/testFpeQuad2D_01.rc
-	@printf "%b" "$(TEST_COLOR)Testing fpe solver with setupTri2D.rc$(NO_COLOR)\n";
+	@printf "%b" "$(TEST_COLOR)Testing fpe solver with testFpeTri2D_01.rc$(NO_COLOR)\n";
 	./fpeMain $(TEST_DIR)/fpe/testFpeTri2D_01.rc
-	@printf "%b" "$(TEST_COLOR)Testing fpe solver with setupHex3D.rc$(NO_COLOR)\n";
+	@printf "%b" "$(TEST_COLOR)Testing fpe solver with testFpeHex3D_01.rc$(NO_COLOR)\n";
 	./fpeMain $(TEST_DIR)/fpe/testFpeHex3D_01.rc
-	@printf "%b" "$(TEST_COLOR)Testing fpe solver with setupTet3D.rc$(NO_COLOR)\n";
+	@printf "%b" "$(TEST_COLOR)Testing fpe solver with testFpeTet3D_01.rc$(NO_COLOR)\n";
 	./fpeMain $(TEST_DIR)/fpe/testFpeTet3D_01.rc

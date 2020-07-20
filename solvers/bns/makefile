@@ -215,11 +215,11 @@ info:
 	@true
 
 test: bnsMain
-	@printf "%b" "$(TEST_COLOR)Testing bns solver with setupQuad2D.rc$(NO_COLOR)\n";
+	@printf "%b" "$(TEST_COLOR)Testing bns solver with testBnsQuad2D_01.rc$(NO_COLOR)\n";
 	./bnsMain $(TEST_DIR)/bns/testBnsQuad2D_01.rc
-	@printf "%b" "$(TEST_COLOR)Testing bns solver with setupTri2D.rc$(NO_COLOR)\n";
+	@printf "%b" "$(TEST_COLOR)Testing bns solver with testBnsTri2D_01.rc$(NO_COLOR)\n";
 	./bnsMain $(TEST_DIR)/bns/testBnsTri2D_01.rc
-	@printf "%b" "$(TEST_COLOR)Testing bns solver with setupHex3D.rc$(NO_COLOR)\n";
+	@printf "%b" "$(TEST_COLOR)Testing bns solver with testBnsHex3D_01.rc$(NO_COLOR)\n";
 	./bnsMain $(TEST_DIR)/bns/testBnsHex3D_01.rc
-	@printf "%b" "$(TEST_COLOR)Testing bns solver with setupTet3D.rc$(NO_COLOR)\n";
+	@printf "%b" "$(TEST_COLOR)Testing bns solver with testBnsTet3D_01.rc$(NO_COLOR)\n";
 	./bnsMain $(TEST_DIR)/bns/testBnsTet3D_01.rc

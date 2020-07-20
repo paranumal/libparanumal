@@ -226,11 +226,11 @@ info:
 	@true
 
 test: ellipticMain
-	@printf "%b" "$(TEST_COLOR)Testing elliptic solver with setupQuad2D.rc$(NO_COLOR)\n";
+	@printf "%b" "$(TEST_COLOR)Testing elliptic solver with testEllipticQuad2D_01.rc$(NO_COLOR)\n";
 	./ellipticMain $(TEST_DIR)/elliptic/testEllipticQuad2D_01.rc
-	@printf "%b" "$(TEST_COLOR)Testing elliptic solver with setupTri2D.rc$(NO_COLOR)\n";
+	@printf "%b" "$(TEST_COLOR)Testing elliptic solver with testEllipticTri2D_01.rc$(NO_COLOR)\n";
 	./ellipticMain $(TEST_DIR)/elliptic/testEllipticTri2D_01.rc
-	@printf "%b" "$(TEST_COLOR)Testing elliptic solver with setupHex2D.rc$(NO_COLOR)\n";
+	@printf "%b" "$(TEST_COLOR)Testing elliptic solver with testEllipticHex2D_01.rc$(NO_COLOR)\n";
 	./ellipticMain $(TEST_DIR)/elliptic/testEllipticHex3D_01.rc
-	@printf "%b" "$(TEST_COLOR)Testing elliptic solver with setupTet3D.rc$(NO_COLOR)\n";
+	@printf "%b" "$(TEST_COLOR)Testing elliptic solver with testEllipticTet3D_01.rc$(NO_COLOR)\n";
 	./ellipticMain $(TEST_DIR)/elliptic/testEllipticTet3D_01.rc
