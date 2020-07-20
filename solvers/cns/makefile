@@ -217,10 +217,10 @@ info:
 
 test: cnsMain
 	@printf "%b" "$(TEST_COLOR)Testing cns solver with setupQuad2D.rc$(NO_COLOR)\n";
-	./cnsMain $(TEST_DIR)/cns/testQuad2D_01.rc
+	./cnsMain $(TEST_DIR)/cns/testCnsQuad2D_01.rc
 	@printf "%b" "$(TEST_COLOR)Testing cns solver with setupTri2D.rc$(NO_COLOR)\n";
-	./cnsMain $(TEST_DIR)/cns/testTri2D_01.rc
+	./cnsMain $(TEST_DIR)/cns/testCnsTri2D_01.rc
 	@printf "%b" "$(TEST_COLOR)Testing cns solver with setupHex3D.rc$(NO_COLOR)\n";
-	./cnsMain $(TEST_DIR)/cns/testHex3D_01.rc
+	./cnsMain $(TEST_DIR)/cns/testCnsHex3D_01.rc
 	@printf "%b" "$(TEST_COLOR)Testing cns solver with setupTet3D.rc$(NO_COLOR)\n";
-	./cnsMain $(TEST_DIR)/cns/testTet3D_01.rc
+	./cnsMain $(TEST_DIR)/cns/testCnsTet3D_01.rc
