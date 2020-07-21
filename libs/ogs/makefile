@@ -49,7 +49,7 @@ DEFINES=${LIBP_DEFINES} \
 
 #.cpp compilation flags
 OGS_CFLAGS=${CFLAGS} ${DEFINES} ${INCLUDES}
-OGS_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
+OGS_CXXFLAGS=${MPICXXFLAGS} ${DEFINES} ${INCLUDES}
 
 #object dependancies
 DEPS:=$(wildcard $(LIBP_INCLUDE_DIR)/*.h) \
@@ -96,10 +96,10 @@ endif
 # rule for .cpp files
 %.o: %.cpp $(DEPS)
 ifneq (,${verbose})
-	$(CXX) -o $*.o -c $*.cpp $(OGS_CXXFLAGS)
+	$(MPICXX) -o $*.o -c $*.cpp $(OGS_CXXFLAGS)
 else
 	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
-	@$(CXX) -o $*.o -c $*.cpp $(OGS_CXXFLAGS)
+	@$(MPICXX) -o $*.o -c $*.cpp $(OGS_CXXFLAGS)
 endif
 
 #cleanup

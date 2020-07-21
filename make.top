@@ -47,10 +47,12 @@ endif
 #compilers to use for C/C++
 export CC = mpicc
 export CXX= mpic++
-export LD	= mpic++
+export MPICXX= mpic++
+export LD= mpic++
 
 export CFLAGS=-fopenmp -g -Wall -Wshadow -Wno-unused-function
 export CXXFLAGS=-fopenmp -g -Wall -Wshadow -Wno-unused-function -std=c++11
+export MPICXXFLAGS=-fopenmp -g -Wall -Wshadow -Wno-unused-function -std=c++11
 
 export LIBP_LIBS=-L$(OCCA_DIR)/lib -locca $(links)
 
