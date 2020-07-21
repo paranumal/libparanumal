@@ -14,13 +14,13 @@ BOX
 6
 
 [BOX NX]
-5
+4
 
 [BOX NY]
-5
+4
 
 [BOX NZ]
-5
+4
 
 [BOX DIMX]
 2
@@ -70,7 +70,7 @@ DOPRI5
 0
 
 [FINAL TIME]
-1.0
+0.1
 
 [OUTPUT INTERVAL]
 0.1

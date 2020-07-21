@@ -14,13 +14,13 @@ PMLBOX
 12
 
 [BOX NX]
-7
+5
 
 [BOX NY]
-7
+5
 
 [BOX NZ]
-7
+5
 
 [BOX BOUNDARY FLAG]
 1
@@ -65,7 +65,7 @@ SARK4
 0
 
 [FINAL TIME]
-1
+0.1
 
 [OUTPUT INTERVAL]
 1
