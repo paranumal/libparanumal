@@ -127,10 +127,10 @@ lib: libbns.a
 
 bnsMain:$(OBJS) bnsMain.o | libmesh
 ifneq (,${verbose})
-	$(LD) -o bnsMain bnsMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
+	$(LIBP_LD) -o bnsMain bnsMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
 else
 	@printf "%b" "$(EXE_COLOR)Linking $(@F)$(NO_COLOR)\n";
-	@$(LD) -o bnsMain bnsMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
+	@$(LIBP_LD) -o bnsMain bnsMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
 endif
 
 libbns.a: $(OBJS)
@@ -213,10 +213,6 @@ info:
 	$(info CXXFLAGS  = $(BNS_CXXFLAGS))
 	$(info LIBS      = $(LIBS))
 	@true
-
-#Keep these from propagating to OCCA in tests
-unexport CXX
-unexport CXXFLAGS
 
 test: bnsMain
 	@printf "%b" "$(TEST_COLOR)Testing bns solver with testBnsQuad2D_01.rc$(NO_COLOR)\n";

@@ -130,10 +130,10 @@ lib: libelliptic.a
 
 ellipticMain:$(OBJS) ellipticMain.o | libmesh
 ifneq (,${verbose})
-	$(LD) -o ellipticMain ellipticMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
+	$(LIBP_LD) -o ellipticMain ellipticMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
 else
 	@printf "%b" "$(EXE_COLOR)Linking $(@F)$(NO_COLOR)\n";
-	@$(LD) -o ellipticMain ellipticMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
+	@$(LIBP_LD) -o ellipticMain ellipticMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
 endif
 
 libelliptic.a: $(OBJS)
@@ -224,10 +224,6 @@ info:
 	$(info CXXFLAGS  = $(ELLIPTIC_CXXFLAGS))
 	$(info LIBS      = $(LIBS))
 	@true
-
-#Keep these from propagating to OCCA in tests
-unexport CXX
-unexport CXXFLAGS
 
 test: ellipticMain
 	@printf "%b" "$(TEST_COLOR)Testing elliptic solver with testEllipticQuad2D_01.rc$(NO_COLOR)\n";

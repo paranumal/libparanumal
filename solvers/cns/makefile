@@ -128,10 +128,10 @@ lib: libcns.a
 
 cnsMain:$(OBJS) cnsMain.o | libmesh
 ifneq (,${verbose})
-	$(LD) -o cnsMain cnsMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
+	$(LIBP_LD) -o cnsMain cnsMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
 else
 	@printf "%b" "$(EXE_COLOR)Linking $(@F)$(NO_COLOR)\n";
-	@$(LD) -o cnsMain cnsMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
+	@$(LIBP_LD) -o cnsMain cnsMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
 endif
 
 libcns.a: $(OBJS)
@@ -214,10 +214,6 @@ info:
 	$(info CXXFLAGS  = $(CNS_CXXFLAGS))
 	$(info LIBS      = $(LIBS))
 	@true
-
-#Keep these from propagating to OCCA in tests
-unexport CXX
-unexport CXXFLAGS
 
 test: cnsMain
 	@printf "%b" "$(TEST_COLOR)Testing cns solver with testCnsQuad2D_01.rc$(NO_COLOR)\n";

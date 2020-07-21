@@ -127,10 +127,10 @@ lib: libacoustics.a
 
 acousticsMain:$(OBJS) acousticsMain.o | libmesh
 ifneq (,${verbose})
-	$(LD) -o acousticsMain acousticsMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
+	$(LIBP_LD) -o acousticsMain acousticsMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
 else
 	@printf "%b" "$(EXE_COLOR)Linking $(@F)$(NO_COLOR)\n";
-	@$(LD) -o acousticsMain acousticsMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
+	@$(LIBP_LD) -o acousticsMain acousticsMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
 endif
 
 libacoustics.a: $(OBJS)
@@ -213,10 +213,6 @@ info:
 	$(info CXXFLAGS  = $(ACOUSTICS_CXXFLAGS))
 	$(info LIBS      = $(LIBS))
 	@true
-
-#Keep these from propagating to OCCA in tests
-unexport CXX
-unexport CXXFLAGS
 
 test: acousticsMain
 	@printf "%b" "$(TEST_COLOR)Testing acoustics solver with testAcousticsQuad2D.rc$(NO_COLOR)\n";

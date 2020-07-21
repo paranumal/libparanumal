@@ -133,10 +133,10 @@ lib: libins.a
 
 insMain:$(OBJS) insMain.o | libelliptic
 ifneq (,${verbose})
-	$(LD) -o insMain insMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
+	$(LIBP_LD) -o insMain insMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
 else
 	@printf "%b" "$(EXE_COLOR)Linking $(@F)$(NO_COLOR)\n";
-	@$(LD) -o insMain insMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
+	@$(LIBP_LD) -o insMain insMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
 endif
 
 libins.a: $(OBJS)
@@ -228,10 +228,6 @@ info:
 	$(info CXXFLAGS  = $(INS_CXXFLAGS))
 	$(info LIBS      = $(LIBS))
 	@true
-
-#Keep these from propagating to OCCA in tests
-unexport CXX
-unexport CXXFLAGS
 
 test: insMain
 	@printf "%b" "$(TEST_COLOR)Testing ins solver with testInsQuad2D_01.rc$(NO_COLOR)\n";

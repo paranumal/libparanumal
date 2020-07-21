@@ -92,10 +92,10 @@ G+=-DGLOBAL_LONG_LONG
 #G+=-DPRINT_MALLOCS=1
 #G+=-DGS_TIMING -DGS_BARRIER
 
-CCCMD=$(CC) $(CFLAGS) -I$(INCDIR) $(G)
+CCCMD=$(LIBP_MPICC) $(LIBP_CFLAGS) -I$(INCDIR) $(G)
 FCCMD=$(FC) $(FFLAGS)
 
-LINKCMD=$(CC) $(CFLAGS) -I$(INCDIR) $(G) $^ -o $@ -L$(SRCDIR) \
+LINKCMD=$(LIBP_MPICC) $(LIBP_CFLAGS) -I$(INCDIR) $(G) $^ -o $@ -L$(SRCDIR) \
         -l$(LIBNAME) -lm $(LDFLAGS)
 
 TESTS=$(TESTDIR)/sort_test $(TESTDIR)/sort_test2 $(TESTDIR)/sarray_sort_test \
@@ -140,7 +140,7 @@ tests: $(TESTS) $(FTESTS)
 
 clean: ; @$(RM) $(SRCDIR)/*.o $(SRCDIR)/*.s $(SRCDIR)/*.a $(TESTS) $(TESTS)/*.o $(FTESTS) $(FTESTS)/*.o
 
-cmds: ; @echo CC = $(CCCMD); echo LINK = $(LINKCMD);
+cmds: ; @echo LIBP_MPICC = $(CCCMD); echo LINK = $(LINKCMD);
 
 deps: ; ./cdep.py *.c > makefile.cdep;
 
@@ -182,6 +182,6 @@ objects: $(OBJECTS)
 
 #poly_imp.h: gen_poly_imp.c
 #	$(RM) poly_imp.h;
-#	$(CC) -lgmp -lm gen_poly_imp.c -o gen_poly_imp;
+#	$(LIBP_MPICC) -lgmp -lm gen_poly_imp.c -o gen_poly_imp;
 #	./gen_poly_imp > poly_imp.h;
 #	$(RM) gen_poly_imp

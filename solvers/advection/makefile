@@ -128,10 +128,10 @@ lib: libadvection.a
 
 advectionMain:$(OBJS) advectionMain.o | libmesh
 ifneq (,${verbose})
-	$(LD) -o advectionMain advectionMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
+	$(LIBP_LD) -o advectionMain advectionMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
 else
 	@printf "%b" "$(EXE_COLOR)Linking $(@F)$(NO_COLOR)\n";
-	@$(LD) -o advectionMain advectionMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
+	@$(LIBP_LD) -o advectionMain advectionMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
 endif
 
 libadvection.a: $(OBJS)
@@ -214,10 +214,6 @@ info:
 	$(info CXXFLAGS  = $(ADVECTION_CXXFLAGS))
 	$(info LIBS      = $(LIBS))
 	@true
-
-#Keep these from propagating to OCCA in tests
-unexport CXX
-unexport CXXFLAGS
 
 test: advectionMain
 	@printf "%b" "$(TEST_COLOR)Testing advection solver with testAdvectionQuad2D_01.rc$(NO_COLOR)\n";

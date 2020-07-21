@@ -45,19 +45,15 @@ else
 endif
 
 #compilers to use for C/C++
-export CC = mpicc
-export CXX= mpic++
 export LIBP_MPICC = mpicc
 export LIBP_MPICXX= mpic++
-export LD= mpic++
+export LIBP_LD    = mpic++
 
-export CFLAGS=-fopenmp -g -Wall -Wshadow -Wno-unused-function
-export LIBP_CFLAGS=-fopenmp -g -Wall -Wshadow -Wno-unused-function
-export LIBP_MPICFLAGS=-fopenmp -g -Wall -Wshadow -Wno-unused-function
+export LIBP_CFLAGS=-O2 -fopenmp -g -Wall -Wshadow -Wno-unused-function
+export LIBP_MPICFLAGS=$(LIBP_CFLAGS)
 
-export CXXFLAGS=-fopenmp -g -Wall -Wshadow -Wno-unused-function -std=c++11
-export LIBP_CXXFLAGS=-fopenmp -g -Wall -Wshadow -Wno-unused-function -std=c++11
-export LIBP_MPICXXFLAGS=-fopenmp -g -Wall -Wshadow -Wno-unused-function -std=c++11
+export LIBP_CXXFLAGS=-O2 -fopenmp -g -Wall -Wshadow -Wno-unused-function -std=c++11
+export LIBP_MPICXXFLAGS=$(LIBP_CXXFLAGS)
 
 export LIBP_LIBS=-L$(OCCA_DIR)/lib -locca $(links)
 
@@ -66,11 +62,11 @@ export LIBP_DEFINES=-DUSE_OCCA_MEM_BYTE_ALIGN=32
 export LIBP_INCLUDES=-I${LIBP_INCLUDE_DIR} -I${OCCA_DIR}/include
 
 ifeq (GNU,${LIBP_ARCH})
-  CXXFLAGS+=-DUSE_OCCA_MEM_BYTE_ALIGN=32 -O2 -mavx2 -ftree-vectorize -march=native
+  LIBP_CXXFLAGS+= -mavx2 -ftree-vectorize -march=native
   #-funroll-all-loops
   #LIBP_LIBS+=-L/opt/apps/gcc5_2/atlas/3.10.2/lib/ -llapack -latlas  -lf77blas -lcblas -lptcblas -lptf77blas -lsatlas  -lgfortran  -L../../../libxsmm/lib -lxsmm -ldl
 else ifeq (INTEL,${LIBP_ARCH})
-  CXXFLAGS+=-funroll-loops -xHost
+  LIBP_CXXFLAGS+= -funroll-loops -xHost
   LIBP_LIBS+=-L/opt/apps/intel15_3/mkl/11.2.3/lib/intel64  -lmkl_rt
   #  -fopt-info-vec-missed  -fopt-info
   #-fopt-info
