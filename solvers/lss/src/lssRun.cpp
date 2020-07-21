@@ -87,4 +87,16 @@ void lss_t::Run(){
  // finalTime = startTime + 1*timeStepper->GetTimeStep();
  // finalTime = startTime + 53*outputInterval;
   timeStepper->Run(o_q, startTime, finalTime);
+
+
+   // output norm of final solution
+  {
+    //compute q.M*q
+    MassMatrixKernel(mesh.Nelements, mesh.o_ggeo, mesh.o_MM, o_q, o_Mq);
+
+    dlong Nentries = mesh.Nelements*mesh.Np;
+    dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_q, o_Mq, comm));
+
+    printf("Testing norm advection solution = %17.15lg\n", norm2);
+  }
 }

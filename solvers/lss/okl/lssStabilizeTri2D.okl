@@ -1,26 +1,26 @@
 /*
 
-The MIT License (MIT)
+  The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 
 */
 
@@ -31,17 +31,16 @@ SOFTWARE.
 // Base line decay for the sensor
 #define BLDEC 1 
 
-#if 1
 
- @kernel void lssSkylineTri2D(const dlong Nelements,
-               @restrict const dfloat* ggeo,
-               @restrict const int *  ModMap,
-               @restrict const dfloat * MM,               
-               @restrict const dfloat * InvVT,
-               @restrict const dfloat * LSF,
-               @restrict const dfloat * BLD,
-               @restrict const dfloat * Q, // 
-                     @restrict dlong *  ElementList){
+@kernel void lssSkylineTri2D(const dlong Nelements,
+			     @restrict const dfloat* ggeo,
+			     @restrict const int *  ModMap,
+			     @restrict const dfloat * MM,               
+			     @restrict const dfloat * InvVT,
+			     @restrict const dfloat * LSF,
+			     @restrict const dfloat * BLD,
+			     @restrict const dfloat * Q, // 
+			     @restrict dlong *  ElementList){
   for(dlong e=0;e<Nelements;++e;@outer(0)){
 
     @shared dfloat s_Q[p_Np], s_Mod[p_Np]; //  s_LSF[p_N]; 
@@ -49,21 +48,21 @@ SOFTWARE.
     @shared dfloat s_L2[p_Np]; 
     // @exclusive dfloat norm;  
 #endif
-   // @shared int s_ModMap[p_Np]; 
+    // @shared int s_ModMap[p_Np]; 
     @shared dfloat s_LogMod[p_Nq], s_SkyMod[p_Nq]; 
 
     // prefetch global variables
     for(int n=0; n<p_Np; n++; @inner(0)){
-        const dlong id = n+e*p_Np; 
-        s_Q[n]      = Q[id];     // solution field 
-        // hold on shared if needed
-        // s_ModMap[n] = ModMap[n]; // Mod Map
-        // if(n<p_N){
-        //   s_LSF[n] = LSF[n]; 
-        // } 
+      const dlong id = n+e*p_Np; 
+      s_Q[n]      = Q[id];     // solution field 
+      // hold on shared if needed
+      // s_ModMap[n] = ModMap[n]; // Mod Map
+      // if(n<p_N){
+      //   s_LSF[n] = LSF[n]; 
+      // } 
     }
 
-@barrier("local");
+    @barrier("local");
 
     // get modal coefficients and compute L2 norm
     for(int n=0; n<p_Np; n++; @inner(0)){
@@ -79,26 +78,12 @@ SOFTWARE.
       }
       s_Mod[n] = mod; 
 #if BLDEC==1
-        const dfloat J = ggeo[e*p_Nggeo + p_GWJID];
-        s_L2[n] = J*l2; 
+      const dfloat J = ggeo[e*p_Nggeo + p_GWJID];
+      s_L2[n] = J*l2; 
 #endif
     }
    
-@barrier("local");
-
-
-// #if BLDEC==1 // compute local norm = q' * MM * q on element e
-//  // get modal coefficients and compute L2 norm
-//     for(int n=0; n<p_Np; n++; @inner(0)){
-//       norm = 0.f; 
-//       for(int m=0; m<p_Np;m++){
-//         norm +=s_Q[m]*s_L2[m];
-//       } 
-//     }
-
-// @barrier("local");
-// #endif
-
+    @barrier("local");
 
     //skyline pessimization: get 1D mods from 2D
     for(int n=0; n<p_Np; n++; @inner(0)){
@@ -115,11 +100,11 @@ SOFTWARE.
       if(n<p_Nq){ // AK: this could be better!!! too many idle threads
         dfloat modsum = 0; 
         // we have i+1, i'th order mod
-         for(int i=0; i<n+1; i++){
+	for(int i=0; i<n+1; i++){
           const int nmods = 0.5*n*(n+1) + i; 
           const int m     = ModMap[nmods]; 
           modsum += s_Mod[m]*s_Mod[m];  
-         }
+	}
 #if BLDEC==1
         s_LogMod[n] = log10(sqrt(modsum + BLD[n]*norm));     
 #else
@@ -130,54 +115,54 @@ SOFTWARE.
       }
     }
 
-@barrier("local");
+    @barrier("local");
 
-// Skyline cut for modal potrait
-for(int n=0; n<p_Np; n++; @inner(0)){
-  if(n>0 && n<p_Nq){ // AK: this could be better!!! too many idle threads
-    dfloat maxq = s_LogMod[n]; 
-    for(int j=n; j<p_Nq; j++){
-      maxq = (n==p_N) ? max(maxq, s_LogMod[j-1]) : max(maxq, s_LogMod[j]); 
+    // Skyline cut for modal potrait
+    for(int n=0; n<p_Np; n++; @inner(0)){
+      if(n>0 && n<p_Nq){ // AK: this could be better!!! too many idle threads
+	dfloat maxq = s_LogMod[n]; 
+	for(int j=n; j<p_Nq; j++){
+	  maxq = (n==p_N) ? max(maxq, s_LogMod[j-1]) : max(maxq, s_LogMod[j]); 
+	}
+	s_SkyMod[n] = maxq; 
+      }
     }
-    s_SkyMod[n] = maxq; 
+
+    @barrier("local");
+
+    // totally serial p_N floating point operations
+    for(int n=0; n<p_Np; n++; @inner(0)){
+      if(n==0){
+	dfloat coeff = 0.f; 
+	for(int i=0; i<p_N; i++){
+	  coeff += LSF[i]*s_SkyMod[i+1];
+	}
+	ElementList[e] = fabs(coeff)<3.0? s_FVFV_TYPE: s_DGDG_TYPE; 
+      }
+    }
   }
 }
 
-@barrier("local");
-
-// totally serial p_N floating point operations
-for(int n=0; n<p_Np; n++; @inner(0)){
-  if(n==0){
-    dfloat coeff = 0.f; 
-    for(int i=0; i<p_N; i++){
-      coeff += LSF[i]*s_SkyMod[i+1];
-    }
-    ElementList[e] = fabs(coeff)<3.0? s_FVFV_TYPE: s_DGDG_TYPE; 
-    }
-   }
-  }
-}
 
 
-
- @kernel void lssFindNeighTri2D(const dlong Nelements,
-                              @restrict const dlong * EToE, 
-                              @restrict dlong *  ElementList){
+@kernel void lssFindNeighTri2D(const dlong Nelements,
+			       @restrict const dlong * EToE, 
+			       @restrict dlong *  ElementList){
   for(dlong n=0;n<Nelements;++n;@tile(p_blockSize,@outer,@inner))
-  {
-   const int elmType = ElementList[n];
-   if(elmType==s_DGDG_TYPE){
-     int neighType = s_DGDG_TYPE; 
-     // if any of the face is connected to FV cell, mark it
-     for(int f=0; f<p_Nfaces; f++){
-      const dlong eP = EToE[n*p_Nfaces + f];
-        // should be fine since we never modify FVFV cell 
-        if(ElementList[eP]==s_FVFV_TYPE) 
-          neighType = s_DGFV_TYPE;  
-     }
-     ElementList[n] = neighType; 
-   }
-  }
+    {
+      const int elmType = ElementList[n];
+      if(elmType==s_DGDG_TYPE){
+	int neighType = s_DGDG_TYPE; 
+	// if any of the face is connected to FV cell, mark it
+	for(int f=0; f<p_Nfaces; f++){
+	  const dlong eP = EToE[n*p_Nfaces + f];
+	  // should be fine since we never modify FVFV cell 
+	  if(ElementList[eP]==s_FVFV_TYPE) 
+	    neighType = s_DGFV_TYPE;  
+	}
+	ElementList[n] = neighType; 
+      }
+    }
 
 }
 
@@ -192,145 +177,145 @@ for(int n=0; n<p_Np; n++; @inner(0)){
                              @restrict const dfloat *  Q,
                              @restrict dfloat *pQ){
 
-for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
-  @shared dfloat s_q[s_Nblocks][p_Np];
-  @exclusive int elmType; 
-  for(int es=0;es<s_Nblocks;++es;@inner(1)){
-    for(int n=0;n<s_maxNodes;++n;@inner(0)){
-      const dlong e = eo+es; 
-      if(e<Nelements){
-        elmType = all ? s_FVFV_TYPE: elmList[e]; 
-        if(n<p_Np && elmType==s_FVFV_TYPE){
-          s_q[es][n] = Q[e*p_Np + n]; 
-        }
+  for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
+    @shared dfloat s_q[s_Nblocks][p_Np];
+    @exclusive int elmType; 
+    for(int es=0;es<s_Nblocks;++es;@inner(1)){
+      for(int n=0;n<s_maxNodes;++n;@inner(0)){
+	const dlong e = eo+es; 
+	if(e<Nelements){
+	  elmType = all ? s_FVFV_TYPE: elmList[e]; 
+	  if(n<p_Np && elmType==s_FVFV_TYPE){
+	    s_q[es][n] = Q[e*p_Np + n]; 
+	  }
+	}
       }
     }
-  }
 
-  @barrier("local"); 
+    @barrier("local"); 
 
-  for(int es=0;es<s_Nblocks;++es;@inner(1)){
-     for(int n=0;n<s_maxNodes;++n;@inner(0)){
-      const dlong e = eo+es;
+    for(int es=0;es<s_Nblocks;++es;@inner(1)){
+      for(int n=0;n<s_maxNodes;++n;@inner(0)){
+	const dlong e = eo+es;
         if(n<s_Ncells && e<Nelements && elmType==s_FVFV_TYPE){
           dfloat sqn = 0; 
           for(int i=0; i<p_Np; i++){
             sqn += PMT[n + i*s_Ncells]*s_q[es][i]; 
           }
-        pQ[e*s_Ncells + n] = sqn; 
+	  pQ[e*s_Ncells + n] = sqn; 
         }
+      }
     }
-  }
 
   }
- }
+}
 
 //  AK : Need to test this version of projection more !!!!!
 @kernel void lssProjectDGTri2D(const dlong Nelements,
-                             const int all, 
-                             @restrict const dlong * elmList, 
-                             @restrict const dlong * vmapM, 
-                             @restrict const int *mFToE, 
-                             @restrict const int *mFToF, 
-                             @restrict const dfloat *  PFMT,                            
-                             @restrict const dfloat *  Q,
-                             @restrict dfloat *sface){
-for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
-  @shared dfloat s_q[s_NblocksS][p_NfacesNfp];
-  @exclusive int elmType; 
-  for(int es=0;es<s_NblocksS;++es;@inner(1)){
-    for(int n=0;n<s_maxNodesS;++n;@inner(0)){
-      const dlong e = eo+es; 
-      if(e<Nelements){
-        elmType = all ? s_DGFV_TYPE: elmList[e]; 
-        if(n<p_NfacesNfp && elmType==s_DGFV_TYPE){
-          const dlong id0 = vmapM[e*p_NfacesNfp + n];
-          s_q[es][n] = Q[id0]; 
-        }
+			       const int all, 
+			       @restrict const dlong * elmList, 
+			       @restrict const dlong * vmapM, 
+			       @restrict const int *mFToE, 
+			       @restrict const int *mFToF, 
+			       @restrict const dfloat *  PFMT,                            
+			       @restrict const dfloat *  Q,
+			       @restrict dfloat *sface){
+  for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
+    @shared dfloat s_q[s_NblocksS][p_NfacesNfp];
+    @exclusive int elmType; 
+    for(int es=0;es<s_NblocksS;++es;@inner(1)){
+      for(int n=0;n<s_maxNodesS;++n;@inner(0)){
+	const dlong e = eo+es; 
+	if(e<Nelements){
+	  elmType = all ? s_DGFV_TYPE: elmList[e]; 
+	  if(n<p_NfacesNfp && elmType==s_DGFV_TYPE){
+	    const dlong id0 = vmapM[e*p_NfacesNfp + n];
+	    s_q[es][n] = Q[id0]; 
+	  }
+	}
+      }
+    }
+
+    @barrier("local"); 
+
+    for(int es=0;es<s_NblocksS;++es;@inner(1)){
+      for(int n=0;n<s_maxNodesS;++n;@inner(0)){
+	const dlong e = eo+es;
+	if(e<Nelements){
+	  if(n<s_NfacesNfp && elmType==s_DGFV_TYPE){
+	    dfloat sqn = 0.f; 
+	    const int idn  = n%s_N; 
+	    const int face = n/s_N; 
+	    for(int i=0; i<p_Nfp; i++){
+	      const dfloat pfm = PFMT[idn + i*s_N]; // this operator defined on single face only: can expand it all faces
+	      sqn += pfm*s_q[es][face*p_Nfp + i]; 
+	    }
+	    const int e0 = mFToE[n];  // get local subcell element number in this cell 
+	    const int f0 = mFToF[n];
+
+	    sface[(e*s_Ncells + e0)*p_Nfaces + f0] = sqn; 
+	  }
+	}
+      }
+    }
+
+  }
+}
+
+
+// Recontruct DG solution from FV data
+@kernel void lssReconstructTri2D(const dlong Nelements,
+				 const int all,
+				 @restrict const dlong *elmList,  
+				 @restrict const dfloat *  RMT,                            
+				 @restrict const dfloat *  pQ,
+				 @restrict dfloat *Q){
+
+  for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
+    @shared dfloat s_pq[s_Nblocks][s_Ncells];
+    @exclusive int elmType; 
+    for(int es=0;es<s_Nblocks;++es;@inner(1)){
+      for(int n=0;n<s_maxNodes;++n;@inner(0)){
+	const dlong e = eo+es; 
+	if(e<Nelements){
+	  elmType = all ? s_FVFV_TYPE: elmList[e]; 
+	  if(n<s_Ncells && elmType==s_FVFV_TYPE){
+	    s_pq[es][n] = pQ[e*s_Ncells + n]; 
+	  }
+	}
+      }
+    }
+
+    @barrier("local"); 
+
+    for(int es=0;es<s_Nblocks;++es;@inner(1)){
+      for(int n=0;n<s_maxNodes;++n;@inner(0)){
+	const dlong e = eo+es; 
+	if(n<p_Np && e<Nelements && elmType==s_FVFV_TYPE){
+	  dfloat rq = 0; 
+	  for(int i=0; i<s_Ncells; i++){
+	    rq += RMT[n + i*p_Np]*s_pq[es][i]; 
+	  }
+	  Q[e*p_Np + n] = rq; 
+	}
       }
     }
   }
-
-  @barrier("local"); 
-
-  for(int es=0;es<s_NblocksS;++es;@inner(1)){
-     for(int n=0;n<s_maxNodesS;++n;@inner(0)){
-      const dlong e = eo+es;
-      if(e<Nelements){
-        if(n<s_NfacesNfp && elmType==s_DGFV_TYPE){
-          dfloat sqn = 0.f; 
-         const int idn  = n%s_N; 
-         const int face = n/s_N; 
-         for(int i=0; i<p_Nfp; i++){
-            const dfloat pfm = PFMT[idn + i*s_N]; // this operator defined on single face only: can expand it all faces
-            sqn += pfm*s_q[es][face*p_Nfp + i]; 
-          }
-        const int e0 = mFToE[n];  // get local subcell element number in this cell 
-        const int f0 = mFToF[n];
-
-        sface[(e*s_Ncells + e0)*p_Nfaces + f0] = sqn; 
-        }
-      }
-    }
-  }
-
-  }
- }
-
-
- // Recontruct DG solution from FV data
- @kernel void lssReconstructTri2D(const dlong Nelements,
-                                   const int all,
-                                   @restrict const dlong *elmList,  
-                                   @restrict const dfloat *  RMT,                            
-                                   @restrict const dfloat *  pQ,
-                                   @restrict dfloat *Q){
-
-for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
-  @shared dfloat s_pq[s_Nblocks][s_Ncells];
-  @exclusive int elmType; 
-  for(int es=0;es<s_Nblocks;++es;@inner(1)){
-    for(int n=0;n<s_maxNodes;++n;@inner(0)){
-      const dlong e = eo+es; 
-      if(e<Nelements){
-        elmType = all ? s_FVFV_TYPE: elmList[e]; 
-        if(n<s_Ncells && elmType==s_FVFV_TYPE){
-          s_pq[es][n] = pQ[e*s_Ncells + n]; 
-        }
-      }
-    }
-  }
-
-  @barrier("local"); 
-
-  for(int es=0;es<s_Nblocks;++es;@inner(1)){
-     for(int n=0;n<s_maxNodes;++n;@inner(0)){
-      const dlong e = eo+es; 
-      if(n<p_Np && e<Nelements && elmType==s_FVFV_TYPE){
-        dfloat rq = 0; 
-        for(int i=0; i<s_Ncells; i++){
-          rq += RMT[n + i*p_Np]*s_pq[es][i]; 
-        }
-        Q[e*p_Np + n] = rq; 
-      }
-    }
-  }
-  }
- }
+}
 
 
 // Compute volume terms for DGDG + DGFV elements 
 @kernel void lssPartialRedistanceVolumeTri2D(const dlong Nelements,
-                                            @restrict const dlong *elmList, 
-                                            const dlong offset, 
-                                            @restrict const  dfloat *  vgeo,
-                                            @restrict const  dfloat *  DT,
-                                                      const  dfloat    t,
-                                            @restrict const  dfloat *  x,
-                                            @restrict const  dfloat *  y,
-                                            @restrict const  dfloat *  z,
-                                            @restrict const  dfloat *  q,
-                                            @restrict        dfloat *  gradq){
+					     @restrict const dlong *elmList, 
+					     const dlong offset, 
+					     @restrict const  dfloat *  vgeo,
+					     @restrict const  dfloat *  DT,
+					     const  dfloat    t,
+					     @restrict const  dfloat *  x,
+					     @restrict const  dfloat *  y,
+					     @restrict const  dfloat *  z,
+					     @restrict const  dfloat *  q,
+					     @restrict        dfloat *  gradq){
 
   for(dlong e=0;e<Nelements;++e;@outer(0)){
 
@@ -350,27 +335,27 @@ for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
     for(int n=0;n<p_Np;++n;@inner(0)){
       
       if(elmType!=s_FVFV_TYPE){
-      // prefetch geometric factors (constant on triangle)
-      const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
-      const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
-      const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
-      const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+	// prefetch geometric factors (constant on triangle)
+	const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+	const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+	const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+	const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
 
-      dfloat dqdr = 0, dqds = 0; 
+	dfloat dqdr = 0, dqds = 0; 
 
-      for(int i=0;i<p_Np;++i){
-        const dfloat qn = s_q[i];
-        dqdr += DT[n+i*p_Np+0*p_Np*p_Np]*qn;
-        dqds += DT[n+i*p_Np+1*p_Np*p_Np]*qn;
+	for(int i=0;i<p_Np;++i){
+	  const dfloat qn = s_q[i];
+	  dqdr += DT[n+i*p_Np+0*p_Np*p_Np]*qn;
+	  dqds += DT[n+i*p_Np+1*p_Np*p_Np]*qn;
+	}
+
+	const dfloat dqdx = drdx*dqdr + dsdx*dqds;
+	const dfloat dqdy = drdy*dqdr + dsdy*dqds;
+
+	const dlong id = e*p_Np + n;
+	gradq[id + 0*offset] = -dqdx;
+	gradq[id + 1*offset] = -dqdy;
       }
-
-      const dfloat dqdx = drdx*dqdr + dsdx*dqds;
-      const dfloat dqdy = drdy*dqdr + dsdy*dqds;
-
-      const dlong id = e*p_Np + n;
-      gradq[id + 0*offset] = -dqdx;
-      gradq[id + 1*offset] = -dqdy;
-     }
 
     }
   }
@@ -387,34 +372,34 @@ void WENO2Coeff(const dfloat dx1,  const dfloat dy1,
                 const int bc1, const int bc2, const int bc3, 
                 dfloat *a1, dfloat *a2, dfloat *a3){
 
- const dfloat eps = 1E-12; 
- // Create Stencil size of 3 i.e. [m p1 p2; m p2 p3; m p3 p1]
- dfloat det1 = 1.0 / (dx1*dy2 - dx2*dy1); 
- dfloat a12 = det1*( (dy1-dy2)*qm + ( dy2)*qp1 +(-dy1)*qp2); 
- dfloat a13 = det1*(-(dx1-dx2)*qm + (-dx2)*qp1 +( dx1)*qp2); 
+  const dfloat eps = 1E-12; 
+  // Create Stencil size of 3 i.e. [m p1 p2; m p2 p3; m p3 p1]
+  dfloat det1 = 1.0 / (dx1*dy2 - dx2*dy1); 
+  dfloat a12 = det1*( (dy1-dy2)*qm + ( dy2)*qp1 +(-dy1)*qp2); 
+  dfloat a13 = det1*(-(dx1-dx2)*qm + (-dx2)*qp1 +( dx1)*qp2); 
 
- dfloat det2 = 1.0 / (dx2*dy3 - dx3*dy2); 
- dfloat a22 = det2*( (dy2-dy3)*qm + ( dy3)*qp2 +(-dy2)*qp3); 
- dfloat a23 = det2*(-(dx2-dx3)*qm + (-dx3)*qp2 +( dx2)*qp3); 
+  dfloat det2 = 1.0 / (dx2*dy3 - dx3*dy2); 
+  dfloat a22 = det2*( (dy2-dy3)*qm + ( dy3)*qp2 +(-dy2)*qp3); 
+  dfloat a23 = det2*(-(dx2-dx3)*qm + (-dx3)*qp2 +( dx2)*qp3); 
 
- dfloat det3 = 1.0 / (dx3*dy1 - dx1*dy3); 
- dfloat a32 = det3*( (dy3-dy1)*qm + ( dy1)*qp3 +(-dy3)*qp1); 
- dfloat a33 = det3*(-(dx3-dx1)*qm + (-dx1)*qp3 +( dx3)*qp1); 
+  dfloat det3 = 1.0 / (dx3*dy1 - dx1*dy3); 
+  dfloat a32 = det3*( (dy3-dy1)*qm + ( dy1)*qp3 +(-dy3)*qp1); 
+  dfloat a33 = det3*(-(dx3-dx1)*qm + (-dx1)*qp3 +( dx3)*qp1); 
 
-// AK: need to be muliplied with h^-2, formerly !!!!!
-dfloat l11 = sqrt(a12*a12 + a13*a13); // very ugly
-dfloat l12 = sqrt(a22*a22 + a23*a23); // very ugly
-dfloat l13 = sqrt(a32*a32 + a33*a33); // very ugly
+  // AK: need to be muliplied with h^-2, formerly !!!!!
+  dfloat l11 = sqrt(a12*a12 + a13*a13); // very ugly
+  dfloat l12 = sqrt(a22*a22 + a23*a23); // very ugly
+  dfloat l13 = sqrt(a32*a32 + a33*a33); // very ugly
 
 
-dfloat w1 = 1.0/ pow((eps + l11),3); // very ugly !!!
-dfloat w2 = 1.0/ pow((eps + l12),3); // very ugly !!!
-dfloat w3 = 1.0/ pow((eps + l13),3); // very ugly !!!
+  dfloat w1 = 1.0/ pow((eps + l11),3); // very ugly !!!
+  dfloat w2 = 1.0/ pow((eps + l12),3); // very ugly !!!
+  dfloat w3 = 1.0/ pow((eps + l13),3); // very ugly !!!
 
-// Nonlinear weights
-*a1 = qm; 
-*a2 = (w1*a12 + w2*a22 + w3*a32)/(w1+w2+w3); 
-*a3 = (w1*a13 + w2*a23 + w3*a33)/(w1+w2+w3); 
+  // Nonlinear weights
+  *a1 = qm; 
+  *a2 = (w1*a12 + w2*a22 + w3*a32)/(w1+w2+w3); 
+  *a3 = (w1*a13 + w2*a23 + w3*a33)/(w1+w2+w3); 
 
 }
 
@@ -423,17 +408,17 @@ dfloat w3 = 1.0/ pow((eps + l13),3); // very ugly !!!
 // i.e. the elements have connection only in this macro element
 // Can be done before halo exchange 
 @kernel void lssReconstructInternalFaceTri2D(const dlong Nelements,
-                                   @restrict const dlong *elmList, 
-                                   @restrict const int *localList, 
-                                   @restrict const dfloat *  vgeo,                            
-                                   @restrict const dfloat *  sgeo,                            
-                                   @restrict const dlong *  emapP,                            
-                                   @restrict const dlong *  fmapP,                            
-                                   @restrict const dfloat *  q,
-                                   @restrict const dfloat *  sq,
-                                   @restrict dfloat *sface){
+					     @restrict const dlong *elmList, 
+					     @restrict const int *localList, 
+					     @restrict const dfloat *  vgeo,                            
+					     @restrict const dfloat *  sgeo,                            
+					     @restrict const dlong *  emapP,                            
+					     @restrict const dlong *  fmapP,                            
+					     @restrict const dfloat *  q,
+					     @restrict const dfloat *  sq,
+					     @restrict dfloat *sface){
 
-for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
+  for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
     for(int es=0;es<s_Nblocks;++es;@inner(1)){
       for(int s=0;s<s_Nint;++s;@inner(0)){ 
         const dlong e = eo + es;
@@ -483,9 +468,9 @@ for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
 
             dfloat a1, a2, a3; 
             WENO2Coeff(dx1,dy1, dx2,dy2, dx3,dy3, qm,qp1,qp2,qp3, 
-                             bc1, bc2, bc3, &a1, &a2, &a3);
+		       bc1, bc2, bc3, &a1, &a2, &a3);
 
-           for(int f=0; f<p_Nfaces; f++){
+	    for(int f=0; f<p_Nfaces; f++){
               // modifed 2nd order WENO 
               const dfloat fxm = sgeo[sid + f*s_Nsgeo + s_FXID]; 
               const dfloat fym = sgeo[sid + f*s_Nsgeo + s_FYID];
@@ -505,17 +490,17 @@ for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
 // i.e. the elements having connections with other macro element's subcells
 // has to be done after halo exchange 
 @kernel void lssReconstructExternalFaceTri2D(const dlong Nelements,
-                                   @restrict const dlong * elmList, 
-                                   @restrict const int *localList, 
-                                   @restrict const dfloat * vgeo,                            
-                                   @restrict const dfloat * sgeo,                            
-                                   @restrict const dlong *  emapP,                            
-                                   @restrict const dlong *  fmapP,                            
-                                   @restrict const dfloat *  q,
-                                   @restrict const dfloat *  sq,
-                                   @restrict dfloat *sface){
+					     @restrict const dlong * elmList, 
+					     @restrict const int *localList, 
+					     @restrict const dfloat * vgeo,                            
+					     @restrict const dfloat * sgeo,                            
+					     @restrict const dlong *  emapP,                            
+					     @restrict const dlong *  fmapP,                            
+					     @restrict const dfloat *  q,
+					     @restrict const dfloat *  sq,
+					     @restrict dfloat *sface){
 
-for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
+  for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
     for(int es=0;es<s_Nblocks;++es;@inner(1)){
       for(int s=0;s<s_Next;++s;@inner(0)){ 
         const dlong e = eo + es;
@@ -587,7 +572,7 @@ for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
               ycp3 =  sgeo[sid + 2*s_Nsgeo + s_FYID];
             }
 
-           // Do nothing BC's: a little tricky for FV cells
+	    // Do nothing BC's: a little tricky for FV cells
             if(bc1>0){
               xcp1 =  sgeo[sid + 0*s_Nsgeo + s_FXID];
               ycp1 =  sgeo[sid + 0*s_Nsgeo + s_FYID];
@@ -604,67 +589,67 @@ for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
               qp3 = qm;
             }
 
-          const dfloat dx1 = (xcp1 - xcm); 
-          const dfloat dy1 = (ycp1 - ycm); 
+	    const dfloat dx1 = (xcp1 - xcm); 
+	    const dfloat dy1 = (ycp1 - ycm); 
           
-          const dfloat dx2 = (xcp2 - xcm); 
-          const dfloat dy2 = (ycp2 - ycm); 
+	    const dfloat dx2 = (xcp2 - xcm); 
+	    const dfloat dy2 = (ycp2 - ycm); 
           
-          const dfloat dx3 = (xcp3 - xcm); 
-          const dfloat dy3 = (ycp3 - ycm); 
+	    const dfloat dx3 = (xcp3 - xcm); 
+	    const dfloat dy3 = (ycp3 - ycm); 
 
-          dfloat a1, a2, a3; 
-          WENO2Coeff(dx1,dy1, dx2,dy2, dx3,dy3, qm,qp1,qp2,qp3, 
-                           bc1, bc2, bc3, &a1, &a2, &a3);
+	    dfloat a1, a2, a3; 
+	    WENO2Coeff(dx1,dy1, dx2,dy2, dx3,dy3, qm,qp1,qp2,qp3, 
+		       bc1, bc2, bc3, &a1, &a2, &a3);
           
-           // Do nothing BC's: a little tricky for FV cells
-          if(bc1>0 || bc2>0 || bc3>0){
-            // iterate to reconstruct face values at BC's
-            for(int i=0; i<5; i++){
-              if(bc1>0){qp1 = a1 + a2*dx1 + a3*dy1;}
-              if(bc2>0){qp2 = a1 + a2*dx2 + a3*dy2;}
-              if(bc3>0){qp3 = a1 + a2*dx3 + a3*dy3;}
-              WENO2Coeff(dx1,dy1, dx2,dy2, dx3,dy3, qm,qp1,qp2,qp3, 
+	    // Do nothing BC's: a little tricky for FV cells
+	    if(bc1>0 || bc2>0 || bc3>0){
+	      // iterate to reconstruct face values at BC's
+	      for(int i=0; i<5; i++){
+		if(bc1>0){qp1 = a1 + a2*dx1 + a3*dy1;}
+		if(bc2>0){qp2 = a1 + a2*dx2 + a3*dy2;}
+		if(bc3>0){qp3 = a1 + a2*dx3 + a3*dy3;}
+		WENO2Coeff(dx1,dy1, dx2,dy2, dx3,dy3, qm,qp1,qp2,qp3, 
                            bc1, bc2, bc3, &a1, &a2, &a3);
-            }
-          }
+	      }
+	    }
 
-         for(int f=0; f<p_Nfaces; f++){
-            // modifed 2nd order WENO 
-            const dfloat fxm = sgeo[sid + f*s_Nsgeo + s_FXID]; 
-            const dfloat fym = sgeo[sid + f*s_Nsgeo + s_FYID];     
-            sface[sem*p_Nfaces + f] = a1 + a2*(fxm -xcm) + a3*(fym - ycm); 
+	    for(int f=0; f<p_Nfaces; f++){
+	      // modifed 2nd order WENO 
+	      const dfloat fxm = sgeo[sid + f*s_Nsgeo + s_FXID]; 
+	      const dfloat fym = sgeo[sid + f*s_Nsgeo + s_FYID];     
+	      sface[sem*p_Nfaces + f] = a1 + a2*(fxm -xcm) + a3*(fym - ycm); 
               
-          }
-       }
+	    }
+	  }
+	}
       }
     }
-  }
 
-}
+  }
 
 }
 
 
 // Compute HJ equation, assumes FV face values are already constructed
 @kernel void lssSubcellComputeTri2D(const dlong Nelements,
-                                   @restrict const dlong *elmList, 
-                                   @restrict const dlong *emapP, 
-                                   @restrict const dlong *fmapP,                                   
-                                   @restrict const dfloat *  RMT,  
-                                   @restrict const dfloat *  vgeo,                            
-                                   @restrict const dfloat *  sgeo,                                         
-                                   @restrict const dfloat *  q,
-                                   @restrict const dfloat *  sgnq,
-                                   @restrict const dfloat *  sface,
-                                   @restrict dfloat *rhsq){
+				    @restrict const dlong *elmList, 
+				    @restrict const dlong *emapP, 
+				    @restrict const dlong *fmapP,                                   
+				    @restrict const dfloat *  RMT,  
+				    @restrict const dfloat *  vgeo,                            
+				    @restrict const dfloat *  sgeo,                                         
+				    @restrict const dfloat *  q,
+				    @restrict const dfloat *  sgnq,
+				    @restrict const dfloat *  sface,
+				    @restrict dfloat *rhsq){
 
-for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
+  for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
   
     for(int es=0;es<s_Nblocks;++es;@inner(1)){
       for(int s=0;s<s_Ncells;++s;@inner(0)){ 
         const dlong e = eo + es;
-         if(e<Nelements){
+	if(e<Nelements){
           const dlong elmType = elmList[e]; 
 
           dfloat rhss = 0.f; 
@@ -703,17 +688,17 @@ for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
               q2 += ivm*sam*nym*( uny*qfm + dny*qfp);
             }
 
-          const dfloat rsgn = sgnq[sem]; // regularized sign 
+	    const dfloat rsgn = sgnq[sem]; // regularized sign 
 
-          const dfloat p  = 0.5*(p1+p2);
-          const dfloat q  = 0.5*(q1+q2);
-          rhss = -( rsgn*( sqrt(p*p+q*q)-1.0) - 0.5*(p1-p2) - 0.5*(q1-q2) );
-        }
-        rhsq[e*s_Ncells + s] = rhss;  
-       }
+	    const dfloat p  = 0.5*(p1+p2);
+	    const dfloat q  = 0.5*(q1+q2);
+	    rhss = -( rsgn*( sqrt(p*p+q*q)-1.0) - 0.5*(p1-p2) - 0.5*(q1-q2) );
+	  }
+	  rhsq[e*s_Ncells + s] = rhss;  
+	}
       }
     }
-}
+  }
 
 }
 
@@ -721,21 +706,21 @@ for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
 
 // batch process elements
 @kernel void lssPartialRedistanceSurfaceTri2D(const dlong Nelements,
-                                  const dlong offset,
-                                  @restrict const dlong *elmList, 
-                                  @restrict const  dfloat *  sgeo,
-                                  @restrict const  dfloat *  LIFTT,
-                                  @restrict const  dlong  *  vmapM,
-                                  @restrict const  dlong  *  vmapP,
-                                  @restrict const  int    *  EToB,
-                                            const  dfloat time,
-                                  @restrict const  dfloat *  x,
-                                  @restrict const  dfloat *  y,
-                                  @restrict const  dfloat *  z,
-                                  @restrict const  dfloat *  sq,                                  
-                                  @restrict const  dfloat *  q,
-                                  @restrict const  dfloat *  gradq,
-                                  @restrict dfloat *  rhsq){
+					      const dlong offset,
+					      @restrict const dlong *elmList, 
+					      @restrict const  dfloat *  sgeo,
+					      @restrict const  dfloat *  LIFTT,
+					      @restrict const  dlong  *  vmapM,
+					      @restrict const  dlong  *  vmapP,
+					      @restrict const  int    *  EToB,
+					      const  dfloat time,
+					      @restrict const  dfloat *  x,
+					      @restrict const  dfloat *  y,
+					      @restrict const  dfloat *  z,
+					      @restrict const  dfloat *  sq,                                  
+					      @restrict const  dfloat *  q,
+					      @restrict const  dfloat *  gradq,
+					      @restrict dfloat *  rhsq){
 
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
@@ -806,14 +791,14 @@ for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
             dfloat q1 = 0.f, q2 = 0.f; 
             
             // 
-            #pragma unroll p_NfacesNfp
-              for(int m=0;m<p_NfacesNfp;++m){
-                const dfloat L = LIFTT[n+m*p_Np];
-                p1 += L*s_pf1[es][m];
-                p2 += L*s_pf2[es][m];
-                q1 += L*s_qf1[es][m];
-                q2 += L*s_qf2[es][m];
-              }
+#pragma unroll p_NfacesNfp
+	    for(int m=0;m<p_NfacesNfp;++m){
+	      const dfloat L = LIFTT[n+m*p_Np];
+	      p1 += L*s_pf1[es][m];
+	      p2 += L*s_pf2[es][m];
+	      q1 += L*s_qf1[es][m];
+	      q2 += L*s_qf2[es][m];
+	    }
             const dfloat sqn  = sq[id];
             const dfloat dqdx = gradq[id + 0*offset];
             const dfloat dqdy = gradq[id + 1*offset];
@@ -837,32 +822,32 @@ for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
 // need to use the same shared memory for DGtoDG connection and DGtoFV connection
 // Surface contribution for DGDG and DGFV
 @kernel void lssMixedRedistanceSurfaceTri2D(const dlong Nelements,
-                                  const dlong offset,
-                                  @restrict const dlong *elmList, 
-                                  @restrict const dlong *EToE, 
-                                  @restrict const  int    *  EToB,
-                                  @restrict const  dfloat *  sgeo,
-                                  @restrict const  dfloat *  ssgeo,
-                                  @restrict const  dfloat *  svgeo,
-                                  @restrict const  dfloat *  LIFTT,
-                                  @restrict const  dfloat *  SLIFTT,
-                                  @restrict const  dfloat *  RFMT, // face reconstruction FVtoDG
-                                  @restrict const  dlong  *  vmapM,
-                                  @restrict const  dlong  *  vmapP,
-                                  @restrict const dlong *emapP, 
-                                  @restrict const dlong *fmapP,     
-                                  @restrict const  int    *  mFToE,
-                                  @restrict const  int    *  mFToF,
-                                  @restrict const  int    *  mDGID,
+					    const dlong offset,
+					    @restrict const dlong *elmList, 
+					    @restrict const dlong *EToE, 
+					    @restrict const  int    *  EToB,
+					    @restrict const  dfloat *  sgeo,
+					    @restrict const  dfloat *  ssgeo,
+					    @restrict const  dfloat *  svgeo,
+					    @restrict const  dfloat *  LIFTT,
+					    @restrict const  dfloat *  SLIFTT,
+					    @restrict const  dfloat *  RFMT, // face reconstruction FVtoDG
+					    @restrict const  dlong  *  vmapM,
+					    @restrict const  dlong  *  vmapP,
+					    @restrict const dlong *emapP, 
+					    @restrict const dlong *fmapP,     
+					    @restrict const  int    *  mFToE,
+					    @restrict const  int    *  mFToF,
+					    @restrict const  int    *  mDGID,
                                             const  dfloat time,
-                                  @restrict const  dfloat *  x,
-                                  @restrict const  dfloat *  y,
-                                  @restrict const  dfloat *  z,
-                                  @restrict const  dfloat *  sq,                                  
-                                  @restrict const  dfloat *  q,
-                                  @restrict const  dfloat *  sface,
-                                  @restrict const  dfloat *  gradq,
-                                  @restrict dfloat *  rhsq){
+					    @restrict const  dfloat *  x,
+					    @restrict const  dfloat *  y,
+					    @restrict const  dfloat *  z,
+					    @restrict const  dfloat *  sq,                                  
+					    @restrict const  dfloat *  q,
+					    @restrict const  dfloat *  sface,
+					    @restrict const  dfloat *  gradq,
+					    @restrict dfloat *  rhsq){
 
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
@@ -888,7 +873,7 @@ for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
         if(e<Nelements){
           elmType = elmList[e];
           if(elmType==s_DGFV_TYPE){ 
-          // if(n<s_NfacesNfp){ // assumes s_Nfp >=p_Nfp which is valid for proper reconstruction 
+	    // if(n<s_NfacesNfp){ // assumes s_Nfp >=p_Nfp which is valid for proper reconstruction 
             const int face        = n/s_N;  
             const int lid         = n%s_N;  
             const dlong neigh     = EToE[e*p_Nfaces + face];
@@ -936,7 +921,7 @@ for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
               s_type[es][dgid]  = 1;
               // s_dgid[es][dgid]  = face*p_Nfp + lid; 
 
-           }else if(ftype== s_FVFV_TYPE && lid<s_N){
+	    }else if(ftype== s_FVFV_TYPE && lid<s_N){
               
               const int fvid    = face*s_N + lid;  
               const int e0      = mFToE[fvid]; 
@@ -964,13 +949,13 @@ for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
               s_qf1[es][fvid]= sc*nym*( dny*qfm + uny*qfp);
               s_qf2[es][fvid]= sc*nym*( uny*qfm + dny*qfp);
               s_type[es][fvid]  = 2;
-          }
-        }
-       }
+	    }
+	  }
+	}
       }
     }
 
-   // wait for all @shared memory writes of the previous inner loop to complete
+    // wait for all @shared memory writes of the previous inner loop to complete
     @barrier("local");
 
     // for each node in the element
@@ -979,28 +964,28 @@ for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
         const dlong e = eo + es;
         if(e<Nelements){
           if(n<p_Np && elmType==s_DGFV_TYPE){
-             const dlong id = e*p_Np+n;
+	    const dlong id = e*p_Np+n;
             dfloat p1 = 0.f, p2 = 0.f; 
             dfloat q1 = 0.f, q2 = 0.f;      
             // 
-            #pragma unroll s_NfacesNfp
-              for(int m=0;m<s_NfacesNfp;++m){
-                dfloat L = 0.f; 
-                const int id = s_type[es][m]; 
-                if(id==1) { 
-                  int mid = mDGID[m];
-                  L = LIFTT[n+mid*p_Np];
-                }
+#pragma unroll s_NfacesNfp
+	    for(int m=0;m<s_NfacesNfp;++m){
+	      dfloat L = 0.f; 
+	      const int id = s_type[es][m]; 
+	      if(id==1) { 
+		int mid = mDGID[m];
+		L = LIFTT[n+mid*p_Np];
+	      }
 
-                if(id==2) { 
-                  L = SLIFTT[n+m*p_Np];
-                } 
+	      if(id==2) { 
+		L = SLIFTT[n+m*p_Np];
+	      } 
 
-                p1 += L*s_pf1[es][m];
-                p2 += L*s_pf2[es][m];
-                q1 += L*s_qf1[es][m];
-                q2 += L*s_qf2[es][m];
-              }
+	      p1 += L*s_pf1[es][m];
+	      p2 += L*s_pf2[es][m];
+	      q1 += L*s_qf1[es][m];
+	      q2 += L*s_qf2[es][m];
+	    }
 
             const dfloat sqn  = sq[id];
             const dfloat dqdx = gradq[id + 0*offset];
@@ -1023,2191 +1008,3 @@ for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
 
 
 
-
-// // AK: This kernel is very bad.... 
-// // need to use the same shared memory for DGtoDG connection and DGtoFV connection
-// // Surface contribution for DGDG and DGFV
-// @kernel void lssPartialRedistanceSurfaceTri2D(const dlong Nelements,
-//                                   const dlong offset,
-//                                   @restrict const dlong *elmList, 
-//                                   @restrict const dlong *EToE, 
-//                                   @restrict const  int    *  EToB,
-//                                   @restrict const  dfloat *  sgeo,
-//                                   @restrict const  dfloat *  ssgeo,
-//                                   @restrict const  dfloat *  svgeo,
-//                                   @restrict const  dfloat *  LIFTT,
-//                                   @restrict const  dfloat *  RFMT, // face reconstruction FVtoDG
-//                                   @restrict const  dlong  *  vmapM,
-//                                   @restrict const  dlong  *  vmapP,
-//                                   @restrict const dlong *emapP, 
-//                                   @restrict const dlong *fmapP,     
-//                                   @restrict const  int    *  mFToE,
-//                                   @restrict const  int    *  mFToF,
-//                                             const  dfloat time,
-//                                   @restrict const  dfloat *  x,
-//                                   @restrict const  dfloat *  y,
-//                                   @restrict const  dfloat *  z,
-//                                   @restrict const  dfloat *  sq,                                  
-//                                   @restrict const  dfloat *  q,
-//                                   @restrict const  dfloat *  sface,
-//                                   @restrict const  dfloat *  gradq,
-//                                   @restrict dfloat *  rhsq){
-
-//   // for all elements
-//   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
-
-//     // @shared storage for flux terms
-//     @shared dfloat s_pf1[p_NblockS][p_NfacesNfp];
-//     @shared dfloat s_pf2[p_NblockS][p_NfacesNfp];
-//     @shared dfloat s_qf1[p_NblockS][p_NfacesNfp];
-//     @shared dfloat s_qf2[p_NblockS][p_NfacesNfp];
-
-
-//     // we need to get rid of this  part....
-//     @shared dfloat s_spf1[p_NblockS][s_NfacesNfp];
-//     @shared dfloat s_spf2[p_NblockS][s_NfacesNfp];
-//     @shared dfloat s_sqf1[p_NblockS][s_NfacesNfp];
-//     @shared dfloat s_sqf2[p_NblockS][s_NfacesNfp];
-
-//     // @exclusive int elmType, ftype; 
-//     @exclusive int elmType; 
-//     // @exclusive int faceDG, faceFV; 
-
-//     // for all face nodes of all elements
-//     for(int es=0;es<p_NblockS;++es;@inner(1)){
-//       for(int n=0;n<s_maxNodesS;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
-//         const dlong e = eo + es;
-//         if(e<Nelements){
-//           elmType = elmList[e]; 
-//           s_pf1[es][n]= 0.f; s_pf2[es][n]= 0.f;
-//           s_qf1[es][n]= 0.f; s_qf2[es][n]= 0.f;
-
-//           if(n<p_NfacesNfp && elmType!=s_FVFV_TYPE){ // DG elements
-//             const int face        = n/p_Nfp;   
-//             const dlong neigh     = EToE[e*p_Nfaces + face];
-//             const int ftype       = elmList[neigh]; 
-//             if(ftype!= s_FVFV_TYPE){
-//             const dlong sid   = p_Nsgeo*(e*p_Nfaces+face);
-//             const dfloat nx   = sgeo[sid+p_NXID];
-//             const dfloat ny   = sgeo[sid+p_NYID];
-//             const dfloat sJ   = sgeo[sid+p_SJID];
-//             const dfloat invJ = sgeo[sid+p_IJID];
-
-//             // indices of negative and positive traces of face node
-//             const dlong id  = e*p_Nfp*p_Nfaces + n;
-//             const dlong idM = vmapM[id];
-//             const dlong idP = vmapP[id];
-//               // // load traces
-//               const dfloat qM = q[idM];   dfloat qP = q[idP];
-//               // apply boundary condition
-//               const int bc = EToB[face+p_Nfaces*e];
-//               if(bc>0){
-//                 lssDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, qM, &qP);
-//               }
-              
-//               const dfloat sc = invJ*sJ; 
-//               // simple upwind
-//               dfloat unx = 0.0, dnx = 1.0; 
-//               dfloat uny = 0.0, dny = 1.0; 
-//               if(nx>= 0){unx = 1.0, dnx = 0.0;}
-//               if(ny>= 0){uny = 1.0, dny = 0.0;}
-              
-//               // Assumes s_N >= Nfp, since it has to be for proper recontruction
-//               // const int lid = face*s_N + n%p_Nfp;      
-//               // s_pf1[es][lid]= sc*nx*( (dnx*qM  + unx*qP));
-//               // s_pf2[es][lid]= sc*nx*( (unx*qM  + dnx*qP));
-//               // s_qf1[es][lid]= sc*ny*( (dny*qM  + uny*qP));
-//               // s_qf2[es][lid]= sc*ny*( (uny*qM  + dny*qP));
-
-//               s_pf1[es][n]= sc*nx*( (dnx*qM  + unx*qP));
-//               s_pf2[es][n]= sc*nx*( (unx*qM  + dnx*qP));
-//               s_qf1[es][n]= sc*ny*( (dny*qM  + uny*qP));
-//               s_qf2[es][n]= sc*ny*( (uny*qM  + dny*qP));
-//            }
-//           }
-//         }
-//       }
-//     }
-
-//     // wait for all @shared memory writes of the previous inner loop to complete
-//     @barrier("local");
-
-
-
-//  // for all face nodes of all elements
-//     for(int es=0;es<p_NblockS;++es;@inner(1)){
-//       for(int n=0;n<s_maxNodesS;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
-//         const dlong e = eo + es;
-//         if(e<Nelements){
-//              s_spf1[es][n] = 0;  s_spf2[es][n] = 0;  
-//              s_sqf1[es][n] = 0;  s_sqf2[es][n] = 0; 
-
-//           if(n<s_NfacesNfp && elmType==s_DGFV_TYPE){ // DG elements
-//             const int face        = n/s_N;
-//             const dlong neigh     = EToE[e*p_Nfaces + face];
-//             const int ftype       = elmList[neigh]; 
-//             if(ftype==s_FVFV_TYPE){
-//               // const int sn      = n%s_N; 
-//               const int e0      = mFToE[n]; 
-//               const int sfm     = mFToF[n]; 
-
-//               const dlong sem   = e*s_Ncells + e0; 
-//               const dlong sep   = emapP[sem*p_Nfaces + sfm];
-//               const int   sfp   = fmapP[sem*p_Nfaces + sfm];
-
-//               const dfloat qfm = sface[sem*p_Nfaces + sfm]; 
-//               const dfloat qfp = sface[sep*p_Nfaces + sfp];
-
-//               const dlong sid   = sem*p_Nfaces*s_Nsgeo; 
-
-//               const dfloat nxm  = ssgeo[sid + sfm*s_Nsgeo + s_NXID];
-//               const dfloat nym  = ssgeo[sid + sfm*s_Nsgeo + s_NYID]; 
-//               const dfloat sam  = ssgeo[sid + sfm*s_Nsgeo + s_SAID];
-//               // const dfloat ivm  = svgeo[sem*s_Nvgeo + s_IVID]; 
-
-//               dfloat unx = 0.f, dnx = 1.f; 
-//               dfloat uny = 0.f, dny = 1.f; 
-
-//               if(nxm>=0){unx = 1.f; dnx = 0.f; };
-//               if(nym>=0){uny = 1.f; dny = 0.f; };
-
-//               // const dfloat invJ = sgeo[p_Nsgeo*(e*p_Nfaces+face)+p_IJID];
-
-//               s_spf1[es][n]= nxm*( dnx*qfm + unx*qfp); 
-//               s_spf2[es][n]= nxm*( unx*qfm + dnx*qfp);
-//               s_sqf1[es][n]= nym*( dny*qfm + uny*qfp);
-//               s_sqf2[es][n]= nym*( uny*qfm + dny*qfp);
-//           }
-//         }
-//       }
-//     }
-//   }
-
-
-
-// @barrier("local"); 
-
-//    // add flux from FV neighboor to DG element 
-//     for(int es=0;es<p_NblockS;++es;@inner(1)){
-//       for(int n=0;n<s_maxNodesS;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
-//         const dlong e = eo + es;
-//         if(e<Nelements){
-          
-//          if(n<p_Nfp && elmType==s_DGFV_TYPE){ // DG elements
-//             // const int face        = n/s_N;
-//         for(int face =0; face<p_Nfaces; face++){
-//             const dlong neigh     = EToE[e*p_Nfaces + face];
-//             const int ftype       = elmList[neigh]; 
-//             if(ftype==s_FVFV_TYPE){
-//               dfloat p1 = 0.f, p2 = 0.f; 
-//               dfloat q1 = 0.f, q2 = 0.f;   
-
-//              for(int i=0; i<s_N; i++){
-//                 const dfloat rfm = RFMT[n + i*p_Nfp]; 
-//                 const int m = face*s_N + i; 
-//                 p1 += rfm*s_spf1[es][m];
-//                 p2 += rfm*s_spf2[es][m];
-//                 q1 += rfm*s_sqf1[es][m];
-//                 q2 += rfm*s_sqf2[es][m];
-//               }
- 
-//             const dlong sid   = p_Nsgeo*(e*p_Nfaces+face);
-//             const dfloat sJ   = sgeo[sid+p_SJID];
-//             const dfloat invJ = sgeo[sid+p_IJID];
-//             const dfloat sc = invJ*sJ; 
-//               s_pf1[es][n + face*p_Nfp]= sc*p1;
-//               s_pf2[es][n + face*p_Nfp]= sc*p2;
-//               s_qf1[es][n + face*p_Nfp]= sc*q1;
-//               s_qf2[es][n + face*p_Nfp]= sc*q2;
-//            }
-//           }
-//         }
-//       }
-//     }
-//   }
-
-
-//     // wait for all @shared memory writes of the previous inner loop to complete
-//     @barrier("local");
-
-//     // for each node in the element
-//     for(int es=0;es<p_NblockS;++es;@inner(1)){
-//       for(int n=0;n<p_maxNodes;++n;@inner(0)){
-//         const dlong e = eo + es;
-//         if(e<Nelements){
-//           if(n<p_Np && elmType!=s_FVFV_TYPE){
-//              const dlong id = e*p_Np+n;
-//             dfloat p1 = 0.f, p2 = 0.f; 
-//             dfloat q1 = 0.f, q2 = 0.f;      
-//             // 
-//             #pragma unroll p_NfacesNfp
-//               for(int m=0;m<p_NfacesNfp;++m){
-//                 const dfloat L = LIFTT[n+m*p_Np];
-//                 p1 += L*s_pf1[es][m];
-//                 p2 += L*s_pf2[es][m];
-//                 q1 += L*s_qf1[es][m];
-//                 q2 += L*s_qf2[es][m];
-//               }
-
-//             const dfloat sqn  = sq[id];
-//             const dfloat dqdx = gradq[id + 0*offset];
-//             const dfloat dqdy = gradq[id + 1*offset];
-
-//             p1 +=  dqdx; p2 +=  dqdx; 
-//             q1 +=  dqdy; q2 +=  dqdy;
-
-//             const dfloat P = 0.5f*(p1+p2); 
-//             const dfloat Q = 0.5f*(q1+q2); 
-           
-//             // LLF Numerical Hamiltonian
-//             rhsq[id] =  -( sqn*( sqrt( P*P+Q*Q )-1.f) -0.5f*(p1-p2)-0.5*(q1-q2));
-//           }
-//         }
-//       }
-//     }
-//   }
-// }
-
-// // too much flops
-// void computeGradient(const dfloat xcm,  const dfloat ycm, 
-//                      const dfloat xcp1, const dfloat ycp1,
-//                      const dfloat xcp2, const dfloat ycp2,
-//                      const dfloat xcp3, const dfloat ycp3,
-//                      const dfloat qm,   const dfloat qp1,
-//                      const dfloat qp2,  const dfloat qp3,
-//                            dfloat *dqdx,      dfloat *dqdy){
-// #if WLSQR
-
-//       const dfloat dx1 = (xcp1 - xcm); const dfloat dy1 = (ycp1 - ycm); 
-//       const dfloat dx2 = (xcp2 - xcm); const dfloat dy2 = (ycp2 - ycm); 
-//       const dfloat dx3 = (xcp3 - xcm); const dfloat dy3 = (ycp3 - ycm); 
-
-
-//       const dfloat dq1 = (qp1-qm); 
-//       const dfloat dq2 = (qp2-qm); 
-//       const dfloat dq3 = (qp3-qm); 
-
-//       const dfloat d1 = sqrt( dx1*dx1 + dy1*dy1);
-//       const dfloat d2 = sqrt( dx2*dx2 + dy2*dy2);
-//       const dfloat d3 = sqrt( dx3*dx3 + dy3*dy3);
-
-//        // const dfloat wl1 = dq1*dq1/(d1*d1) + 1.0; 
-//        // const dfloat wl2 = dq2*dq2/(d2*d2) + 1.0; 
-//        // const dfloat wl3 = dq3*dq3/(d3*d3) + 1.0; 
-
-//        // const dfloat wl1 = d1; 
-//        // const dfloat wl2 = d2; 
-//        // const dfloat wl3 = d3;
-
-//        // const dfloat wl1 = (dq1*dq1)/(d1*d1) + 1.0; 
-//        // const dfloat wl2 = (dq2*dq2)/(d2*d2) + 1.0; 
-//        // const dfloat wl3 = (dq3*dq3)/(d3*d3) + 1.0;
-
-//        const dfloat wl1 = sqrt(dq1*dq1 + d1*d1); 
-//        const dfloat wl2 = sqrt(dq2*dq2 + d2*d2); 
-//        const dfloat wl3 = sqrt(dq3*dq3 + d3*d3); 
-
-//        // const dfloat wl1  = 1.0/ sqrt( d1*d1*d1*( (dq1/d1)*(dq1/d1)*(dq1/d1)*(dq1/d1) + 1/(d1*d1)));
-//        // const dfloat wl2  = 1.0/ sqrt( d2*d2*d2*( (dq2/d2)*(dq2/d2)*(dq2/d2)*(dq2/d2) + 1/(d2*d2)));
-//        // const dfloat wl3  = 1.0/ sqrt( d3*d3*d3*( (dq3/d3)*(dq3/d3)*(dq3/d3)*(dq3/d3) + 1/(d3*d3)));
-
-//        // const dfloat wl1 = 1.0; 
-//        // const dfloat wl2 = 1.0; 
-//        // const dfloat wl3 = 1.0;
-       
-//        // distance weighted
-//        const dfloat w1 = 1.0/wl1; 
-//        const dfloat w2 = 1.0/wl2; 
-//        const dfloat w3 = 1.0/wl3;
-
-//        // ULSG
-//        // const dfloat w1 = 1.0; const dfloat w2 = 1.0; const dfloat  w3 = 1.0;  
-
-//        const dfloat a1 = w1*dx1; const dfloat a2 = w1*dy1; 
-//        const dfloat b1 = w2*dx2; const dfloat b2 = w2*dy2; 
-//        const dfloat c1 = w3*dx3; const dfloat c2 = w3*dy3; 
-
-//        const dfloat det = 1.f / ( (a1*b2 - a2*b1)*(a1*b2 - a2*b1) 
-//                                  +(a1*c2 - a2*c1)*(a1*c2 - a2*c1)
-//                                  +(b1*c2 - b2*c1)*(b1*c2 - b2*c1) ); 
-
-//        const dfloat r1 = w1*a1*dq1 + w2*b1*dq2 + w3*c1*dq3;
-//        const dfloat r2 = w1*a2*dq1 + w2*b2*dq2 + w3*c2*dq3;
-
-//       *dqdx = det*(  (a2*a2 + b2*b2 + c2*c2)*r1  - (a1*a2 + b1*b2 + c1*c2)*r2);
-//       *dqdy = det*( -(a1*a2 + b1*b2 + c1*c2)*r1  + (a1*a1 + b1*b1 + c1*c1)*r2);
-// #endif
-
-// #if LSENO
-//       const dfloat dx1 = (xcp1 - xcm); const dfloat dy1 = (ycp1 - ycm); 
-//       const dfloat dx2 = (xcp2 - xcm); const dfloat dy2 = (ycp2 - ycm); 
-//       const dfloat dx3 = (xcp3 - xcm); const dfloat dy3 = (ycp3 - ycm); 
-
-
-//       const dfloat dq1 = (qp1-qm); 
-//       const dfloat dq2 = (qp2-qm); 
-//       const dfloat dq3 = (qp3-qm); 
-
-//       const dfloat d1 = sqrt( dx1*dx1 + dy1*dy1);
-//       const dfloat d2 = sqrt( dx2*dx2 + dy2*dy2);
-//       const dfloat d3 = sqrt( dx3*dx3 + dy3*dy3);
-
-//       const dfloat det1 = 1.0/(dx1*dy2 - dx2*dy1); 
-//       const dfloat dqdx1 = det1*( dy2 * dq1  - dx2*dq2);
-//       const dfloat dqdy1 = det1*(-dy1 * dq1  + dx1*dq2);
-
-//       const dfloat det2 = 1.0/(dx2*dy3 - dx2*dy3); 
-//       const dfloat dqdx2 = det2*( dy3 * dq2  - dx3*dq3);
-//       const dfloat dqdy2 = det2*(-dy2 * dq2  + dx2*dq3);
-
-//       const dfloat det3 = 1.0/(dx3*dy1 - dx3*dy1); 
-//       const dfloat dqdx3 = det3*( dy1 * dq3  - dx1*dq1);
-//       const dfloat dqdy3 = det3*(-dy3 * dq3  + dx3*dq1);
-
-//       const dfloat l11 = abs(dqdx1) + abs(dqdy1);
-//       const dfloat l12 = abs(dqdx2) + abs(dqdy2);
-//       const dfloat l13 = abs(dqdx3) + abs(dqdy3);
-
-//       if (l11 <= l12 && l11 <= l13){
-//         *dqdx = dqdx1;  *dqdy = dqdy1;        
-//       }else if (l12 <= l11 && l12 <= l13){
-//         *dqdx = dqdx2;  *dqdy = dqdy2; 
-//       }else{
-//         *dqdx = dqdx3;  *dqdy = dqdy3; 
-//       }
- 
-// #endif
-
-// #if 0
-//       const dfloat r11 = sqrt( (xcp1 - xcm)*(xcp1 - xcm) + (xcp2 - xcm)*(xcp2 - xcm) 
-//                               +(xcp3 - xcm)*(xcp3 - xcm)); 
-
-//       const dfloat r12 = ( (xcp1 - xcm)*(ycp1 - ycm) + (xcp2 - xcm)*(ycp2 - ycm)
-//                           +(xcp3 - xcm)*(ycp3 - ycm))/r11; 
-
-//       const dfloat r22 = sqrt( ( (ycp1 - ycm) - (xcp1 - xcm)*r12/r11)*( (ycp1 - ycm) - (xcp1 - xcm)*r12/r11)
-//                               +( (ycp2 - ycm) - (xcp2 - xcm)*r12/r11)*( (ycp2 - ycm) - (xcp2 - xcm)*r12/r11)
-//                               +( (ycp3 - ycm) - (xcp3 - xcm)*r12/r11)*( (ycp3 - ycm) - (xcp3 - xcm)*r12/r11));
-
-      
-//       const dfloat w1x = (xcp1 - xcm)/(r11*r11) - r12/(r11*r22*r22)*( (ycp1 - ycm) - (xcp1 - xcm)*r12/r11 );
-//       const dfloat w2x = (xcp2 - xcm)/(r11*r11) - r12/(r11*r22*r22)*( (ycp2 - ycm) - (xcp2 - xcm)*r12/r11 );
-//       const dfloat w3x = (xcp3 - xcm)/(r11*r11) - r12/(r11*r22*r22)*( (ycp3 - ycm) - (xcp3 - xcm)*r12/r11 );
-
-//       const dfloat w1y = 1.f/(r22*r22)*( (ycp1 - ycm) - (xcp1 - xcm)*r12/r11 );
-//       const dfloat w2y = 1.f/(r22*r22)*( (ycp2 - ycm) - (xcp2 - xcm)*r12/r11 );
-//       const dfloat w3y = 1.f/(r22*r22)*( (ycp3 - ycm) - (xcp3 - xcm)*r12/r11 );
-
-//       const dfloat dqdx = w1x*( qp1-qm ) + w2x*( qp2-qm ) + w3x*( qp3-qm );
-//       const dfloat dqdy = w1y*( qp1-qm ) + w2y*( qp2-qm ) + w3y*( qp3-qm );
-// #endif
-
-// }
-
-
-
-// void computeENO2Coeff(const dfloat dx1,  const dfloat dy1, 
-//                         const dfloat dx2,  const dfloat dy2, 
-//                         const dfloat dx3,  const dfloat dy3, 
-//                         dfloat qm,   dfloat qp1, dfloat qp2,  dfloat qp3,
-//                         const int bc1, const int bc2, const int bc3, 
-//                         dfloat *a1, dfloat *a2, dfloat *a3){
-
-//  const dfloat eps = 1E-12; 
-
-//  // Create Stencil size of 3 i.e. [m p1 p2; m p2 p3; m p3 p1]
-
-//  dfloat det1 = 1.0 / (dx1*dy2 - dx2*dy1); 
-//  // const dfloat a11 = qm; 
-//  dfloat a12 = det1*( (dy1-dy2)*qm + ( dy2)*qp1 +(-dy1)*qp2); 
-//  dfloat a13 = det1*(-(dx1-dx2)*qm + (-dx2)*qp1 +( dx1)*qp2); 
-
-//  dfloat det2 = 1.0 / (dx2*dy3 - dx3*dy2); 
-//  // const dfloat a21 = qm; 
-//  dfloat a22 = det2*( (dy2-dy3)*qm + ( dy3)*qp2 +(-dy2)*qp3); 
-//  dfloat a23 = det2*(-(dx2-dx3)*qm + (-dx3)*qp2 +( dx2)*qp3); 
-
-//  dfloat det3 = 1.0 / (dx3*dy1 - dx1*dy3); 
-//  // const dfloat a31 = qm; 
-//  dfloat a32 = det3*( (dy3-dy1)*qm + ( dy1)*qp3 +(-dy3)*qp1); 
-//  dfloat a33 = det3*(-(dx3-dx1)*qm + (-dx1)*qp3 +( dx3)*qp1); 
-
-// //  // need better indicator: check osciallations
-// // const dfloat l11 = abs(a12) + abs(a13);
-// // const dfloat l12 = abs(a22) + abs(a23);
-// // const dfloat l13 = abs(a32) + abs(a33);
-
-// // need to be muliplied with h^-2, formerly !!!!!
-// dfloat l11 = sqrt(a12*a12 + a13*a13);
-// dfloat l12 = sqrt(a22*a22 + a23*a23);
-// dfloat l13 = sqrt(a32*a32 + a33*a33);
-
-
-// dfloat w1 = 1.0/ pow((eps + l11),3);
-// dfloat w2 = 1.0/ pow((eps + l12),3);
-// dfloat w3 = 1.0/ pow((eps + l13),3);
-
-// // Nonlinear weights
-// *a1 = qm; 
-// *a2 = (w1*a12 + w2*a22 + w3*a32)/(w1+w2+w3); 
-// *a3 = (w1*a13 + w2*a23 + w3*a33)/(w1+w2+w3); 
-
-
-
-// // if(bc1>0 || bc2>0 || bc3>0){
-
-// // for(int i=0; i<1; i++){ 
-// //   if(bc1>0){qp1 = (*a1) + (*a2)*(xcp1-xcm) + (*a3)*(ycp1 -ycm);}
-// //   if(bc2>0){qp2 = (*a1) + (*a2)*(xcp2-xcm) + (*a3)*(ycp2 -ycm);}
-// //   if(bc3>0){qp3 = (*a1) + (*a2)*(xcp3-xcm) + (*a3)*(ycp3 -ycm);}
-
-// //    det1 = 1.0 / (dx1*dy2 - dx2*dy1); 
-// //    // const dfloat a11 = qm; 
-// //    a12 = det1*( (dy1-dy2)*qm + ( dy2)*qp1 +(-dy1)*qp2); 
-// //    a13 = det1*(-(dx1-dx2)*qm + (-dx2)*qp1 +( dx1)*qp2); 
-
-// //    det2 = 1.0 / (dx2*dy3 - dx3*dy2); 
-// //    // const dfloat a21 = qm; 
-// //    a22 = det2*( (dy2-dy3)*qm + ( dy3)*qp2 +(-dy2)*qp3); 
-// //    a23 = det2*(-(dx2-dx3)*qm + (-dx3)*qp2 +( dx2)*qp3); 
-
-// //    det3 = 1.0 / (dx3*dy1 - dx1*dy3); 
-// //    // const dfloat a31 = qm; 
-// //    a32 = det3*( (dy3-dy1)*qm + ( dy1)*qp3 +(-dy3)*qp1); 
-// //    a33 = det3*(-(dx3-dx1)*qm + (-dx1)*qp3 +( dx3)*qp1); 
-
-// //   // //  // need better indicator: check osciallations
-// //   // // const dfloat l11 = abs(a12) + abs(a13);
-// //   // // const dfloat l12 = abs(a22) + abs(a23);
-// //   // // const dfloat l13 = abs(a32) + abs(a33);
-
-// //   l11 = sqrt(a12*a12 + a13*a13);
-// //   l12 = sqrt(a22*a22 + a23*a23);
-// //   l13 = sqrt(a32*a32 + a33*a33);
-
-// //   w1 = 1.0/ pow((eps + l11),3);
-// //   w2 = 1.0/ pow((eps + l12),3);
-// //   w3 = 1.0/ pow((eps + l13),3);
-// //   // // Nonlinear weights
-// //   *a1 = qm; 
-// //   *a2 = (w1*a12 + w2*a22 + w3*a32)/(w1+w2+w3); 
-// //   *a3 = (w1*a13 + w2*a23 + w3*a33)/(w1+w2+w3); 
-// //   }
-
-// // }
-
-
-
-// // Digital ENO
-// // if (l11 <= l12 && l11 <= l13){
-// //   *a1 = qm;   *a2 = a12;   *a3 = a13;       
-// // }else if (l12 <= l11 && l12 <= l13){
-// //  *a1 = qm;   *a2 = a22;   *a3 = a23;       
-// // }else{
-// //   *a1 = qm;   *a2 = a32;   *a3 = a33;       
-// // }
-
-// }
-
-
-
-
-// void computeENO2BCCoeff(const dfloat dx1,  const dfloat dy1, 
-//                         const dfloat dx2,  const dfloat dy2, 
-//                         const dfloat dx3,  const dfloat dy3, 
-//                         dfloat qm,   dfloat qp1, dfloat qp2,  dfloat qp3,
-//                         const int bc1, const int bc2, const int bc3, 
-//                         dfloat *a1, dfloat *a2, dfloat *a3){
-
-// // if(bc1>0 || bc2>0 || bc3>0){
-
-// // for(int i=0; i<1; i++){ 
-//   if(bc1>0){qp1 = (*a1) + (*a2)*dx1 + (*a3)*dy1;}
-//   if(bc2>0){qp2 = (*a1) + (*a2)*dx2 + (*a3)*dy2;}
-//   if(bc3>0){qp3 = (*a1) + (*a2)*dx3 + (*a3)*dy3;}
-
-//    dfloat det1 = 1.0 / (dx1*dy2 - dx2*dy1); 
-//    // const dfloat a11 = qm; 
-//    dfloat a12 = det1*( (dy1-dy2)*qm + ( dy2)*qp1 +(-dy1)*qp2); 
-//    dfloat a13 = det1*(-(dx1-dx2)*qm + (-dx2)*qp1 +( dx1)*qp2); 
-
-//    dfloat det2 = 1.0 / (dx2*dy3 - dx3*dy2); 
-//    // const dfloat a21 = qm; 
-//    dfloat a22 = det2*( (dy2-dy3)*qm + ( dy3)*qp2 +(-dy2)*qp3); 
-//    dfloat a23 = det2*(-(dx2-dx3)*qm + (-dx3)*qp2 +( dx2)*qp3); 
-
-//    dfloat det3 = 1.0 / (dx3*dy1 - dx1*dy3); 
-//    // const dfloat a31 = qm; 
-//    dfloat a32 = det3*( (dy3-dy1)*qm + ( dy1)*qp3 +(-dy3)*qp1); 
-//    dfloat a33 = det3*(-(dx3-dx1)*qm + (-dx1)*qp3 +( dx3)*qp1); 
-
-
-//   dfloat l11 = sqrt(a12*a12 + a13*a13);
-//   dfloat l12 = sqrt(a22*a22 + a23*a23);
-//   dfloat l13 = sqrt(a32*a32 + a33*a33);
-
-//   dfloat w1 = 1.0/ pow((1E-12 + l11),3);
-//   dfloat w2 = 1.0/ pow((1E-12 + l12),3);
-//   dfloat w3 = 1.0/ pow((1E-12 + l13),3);
-//   // dfloat w1 = 1.0/ (1E-12 + l11);
-//   // dfloat w2 = 1.0/ (1E-12 + l12);
-//   // dfloat w3 = 1.0/ (1E-12 + l13);
-//   // // Nonlinear weights
-//   *a1 = qm; 
-//   *a2 = (w1*a12 + w2*a22 + w3*a32)/(w1+w2+w3); 
-//   *a3 = (w1*a13 + w2*a23 + w3*a33)/(w1+w2+w3); 
-//   // }
-
-// // }
-
-// }
-
-
-// @kernel void lssSubcellReconstructFaceTri2D(const dlong Nelements,
-//                                    @restrict const dlong *elmList, 
-//                                    @restrict const dfloat *  vgeo,                            
-//                                    @restrict const dfloat *  sgeo,                            
-//                                    @restrict const dlong *  emapP,                            
-//                                    @restrict const dlong *  fmapP,                            
-//                                    @restrict const dfloat *  q,
-//                                    @restrict const dfloat *  sq,
-//                                    @restrict dfloat *sface){
-
-// for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
-//   // @exclusive dfloat r_dx[p_Nfaces]; 
-//   // @exclusive dfloat r_dy[p_Nfaces]; 
-
-// // 1. compute gradient, 
-// // 2. limit the result using Barth-Jaspersen
-// // 3. reconstruct face values
-//     for(int es=0;es<s_Nblocks;++es;@inner(1)){
-//       for(int s=0;s<s_Ncells;++s;@inner(0)){ 
-//         const dlong e = eo + es;
-//         if(e<Nelements){
-//         const int elmType = elmList[e]; 
-//         if(elmType){
-//         const dlong sem = e*s_Ncells + s; 
-//         const dlong vid = sem*s_Nvgeo;  
-//         const dlong sid = sem*p_Nfaces*s_Nsgeo; 
-
-//       //
-//       const dfloat qm   = sq[sem]; // solution
-//       const dfloat xcm  = vgeo[vid + s_CXID]; // center coordinates
-//       const dfloat ycm  = vgeo[vid + s_CYID];
-//       // const dfloat ivm  = vgeo[vid + s_IVID]; // inverse volume
-
-//       const dlong sep1  = emapP[sem*p_Nfaces + 0];
-//       const dlong sep2  = emapP[sem*p_Nfaces + 1];
-//       const dlong sep3  = emapP[sem*p_Nfaces + 2];
-
-//       const int bc1      = sgeo[sid + 0*s_Nsgeo + s_BCID]; 
-//       const int bc2      = sgeo[sid + 1*s_Nsgeo + s_BCID]; 
-//       const int bc3      = sgeo[sid + 2*s_Nsgeo + s_BCID];
-
-
-//       dfloat xcp1  = vgeo[sep1*s_Nvgeo + s_CXID];  
-//       dfloat ycp1  = vgeo[sep1*s_Nvgeo + s_CYID]; 
-
-//       dfloat xcp2  = vgeo[sep2*s_Nvgeo + s_CXID];  
-//       dfloat ycp2  = vgeo[sep2*s_Nvgeo + s_CYID]; 
-      
-//       dfloat xcp3  = vgeo[sep3*s_Nvgeo + s_CXID];  
-//       dfloat ycp3  = vgeo[sep3*s_Nvgeo + s_CYID]; 
-
-//       dfloat qp1   = sq[sep1]; 
-//       dfloat qp2   = sq[sep2]; 
-//       dfloat qp3   = sq[sep3]; 
-
-
-//       if(bc1>0){
-//         xcp1 =  sgeo[sid + 0*s_Nsgeo + s_FXID];
-//         ycp1 =  sgeo[sid + 0*s_Nsgeo + s_FYID];
-//         qp1 = qm; 
-//       }
-//       if(bc2>0){
-//         xcp2 =  sgeo[sid + 1*s_Nsgeo + s_FXID];
-//         ycp2 =  sgeo[sid + 1*s_Nsgeo + s_FYID];
-//         qp2  = qm; 
-//       }
-//       if(bc3>0){
-//         xcp3 =  sgeo[sid + 2*s_Nsgeo + s_FXID];
-//         ycp3 =  sgeo[sid + 2*s_Nsgeo + s_FYID];
-//         qp3 = qm;
-//       }
-
-// const dfloat dx1 = (xcp1 - xcm); const dfloat dy1 = (ycp1 - ycm); 
-// const dfloat dx2 = (xcp2 - xcm); const dfloat dy2 = (ycp2 - ycm); 
-// const dfloat dx3 = (xcp3 - xcm); const dfloat dy3 = (ycp3 - ycm); 
-
-// #if WENO2
-//   dfloat a1, a2, a3; 
-//   computeENO2Coeff(dx1,dy1, dx2,dy2, dx3,dy3, qm,qp1,qp2,qp3, 
-//                    bc1, bc2, bc3, &a1, &a2, &a3);
-
-//   if(bc1>0 || bc2>0 || bc3>0){
-//     // computeENO2BCCoeff(dx1, dy1,dx2, dy2,dx3, dy3, 
-//     //                qm,qp1,qp2,qp3, 
-//     //                bc1, bc2, bc3, 
-//     //                &a1, &a2, &a3);
-//   }
-
-//      for(int f=0; f<p_Nfaces; f++){
-//           // modifed 2nd order WENO 
-//           const dfloat fxm = sgeo[sid + f*s_Nsgeo + s_FXID]; 
-//           const dfloat fym = sgeo[sid + f*s_Nsgeo + s_FYID];
-          
-//           sface[sem*p_Nfaces + f] = a1 + a2*(fxm -xcm) + a3*(fym - ycm); 
-          
-//         }
-
-// #else
-//       dfloat dqdx, dqdy; 
-//       computeGradient(xcm, ycm,xcp1,ycp1,xcp2,ycp2,xcp3,ycp3,qm,qp1,qp2,qp3,&dqdx,&dqdy); 
-
-// // // Just testing implementation for do nothing bcs: seems to be working 
-// //       if(bc1>0 || bc2>0 || bc3>0){
-// //       for(int i=0; i<1; i++){
-// //       if(bc1>0){qp1 = qm + dqdx*(xcp1-xcm) + dqdy*(ycp1 -ycm);}
-// //       if(bc2>0){qp2 = qm + dqdx*(xcp2-xcm) + dqdy*(ycp2 -ycm);}
-// //       if(bc3>0){qp3 = qm + dqdx*(xcp3-xcm) + dqdy*(ycp3 -ycm);}
-// //        computeGradient(xcm, ycm,xcp1,ycp1,xcp2,ycp2,xcp3,ycp3,qm,qp1,qp2,qp3,&dqdx,&dqdy); 
-// //      }
-// //   }
-
-//   for(int f=0; f<p_Nfaces; f++){
-//           // modifed 2nd order WENO 
-//           const dfloat fxm = sgeo[sid + f*s_Nsgeo + s_FXID]; 
-//           const dfloat fym = sgeo[sid + f*s_Nsgeo + s_FYID];
-          
-//           sface[sem*p_Nfaces + f] = qm + dqdx*(fxm -xcm) + dqdy*(fym - ycm); 
-          
-//           // Secons order limited
-//          // const dfloat qf = qm + lim*( dqdx*r_dx[f] + dqdy*r_dy[f]); 
-//          // sface[sem*p_Nfaces + f] = qf; 
-         
-//          // testing 1st order 
-//          // sface[sem*p_Nfaces + f] = qm; 
-//         }
-
-// #endif
-       
-
-// #if 0
-//       dfloat qmin = min(qp1, min(qp2, qp3));
-//       dfloat qmax = max(qp1, max(qp2, qp3));
-//       // simple Barth-Jaspersen gradient limiting
-//       // dfloat lim = 1.0; 
-//         // for(int f=0; f<p_Nfaces; f++){
-//         //   const dfloat fxm = sgeo[sid + f*s_Nsgeo + s_FXID]; 
-//         //   const dfloat fym = sgeo[sid + f*s_Nsgeo + s_FYID];
-
-//         //   r_dx[f] = fxm - xcm;   
-//         //   r_dy[f] = fym - ycm; 
-
-//         //   const dfloat dqf = r_dx[f]*dqdx + r_dy[f]*dqdy; 
-//         //   dfloat limtest = 1.0;
-
-//         //   if(abs(dqf) - 1e-6 <0) {
-//         //   // nada
-//         //   }else{
-
-//         //   if(dqf > 0){ limtest = min(1.0, (qmax - qm)/dqf ); };
-//         //   if(dqf < 0){ limtest = min(1.0, (qmin - qm)/dqf ); };
-//         // }
-//         //   lim = min(lim, limtest); 
-//         // }
-
-//         // lim= 1.0;
-// #endif
-
-// #if 0
-//       dfloat qmin = min(qp1, min(qp2, qp3));
-//       dfloat qmax = max(qp1, max(qp2, qp3));
-//  Vaterekishan modifcation, more diffusive!!!!
-//  const dfloat l1  = sgeo[sid + 0*s_Nsgeo + s_SAID];
-//  const dfloat l2  = sgeo[sid + 1*s_Nsgeo + s_SAID];
-//  const dfloat l3  = sgeo[sid + 2*s_Nsgeo + s_SAID];
- 
-
-//  // lc = A / semi-perimeter = (l1+l2+l3)/2
-//  const dfloat hmin =  2.0/ (ivm*(l1+l2+l3)); 
-
-// for(int f=0; f<p_Nfaces; f++){
-//           const dfloat fxm = sgeo[sid + f*s_Nsgeo + s_FXID]; 
-//           const dfloat fym = sgeo[sid + f*s_Nsgeo + s_FYID];
-
-//           r_dx[f] = fxm - xcm;   
-//           r_dy[f] = fym - ycm; 
-
-//           const dfloat dqf = r_dx[f]*dqdx + r_dy[f]*dqdy; 
-
-//           dfloat limtest = 1.0; 
-//           // const dfloat eps = 1e-4; 
-//           const dfloat eps = pow(0.1*hmin,1.5); 
-//           // const dfloat eps = 0.0; 
-//           if(dqf > 0){ 
-//             const dfloat lambda = qmax -qm; 
-//             limtest = ( lambda*lambda + eps + 2.0*dqf*lambda)/
-//                      (lambda*lambda + 2.0*dqf*dqf+ lambda*dqf + eps) ; 
-//             }
-
-
-//           if(dqf < 0){ 
-//             const dfloat lambda = (qmin -qm); 
-//             limtest = ( lambda*lambda + eps + 2.0*dqf*lambda )/
-//                      (lambda*lambda + 2.0*dqf*dqf+ lambda*dqf + eps) ; 
-//           }
-
-
-//           lim = min(lim, limtest); 
-
-//         }
-// #endif
-
-//       }
-//       }
-//     }
-//   }
-
-// }
-
-// }
-
-#else
-
- @kernel void skylineTri2D(const dlong Nelements,
-               @restrict const dfloat* ggeo,
-               @restrict const dlong * EToE, 
-               @restrict const int *  ModMap,
-               @restrict const dfloat * MM,               
-               @restrict const dfloat * InvVT,
-               @restrict const dfloat * LSF,
-               @restrict const dfloat * BLD,
-               @restrict const dfloat * Q, // 
-                     @restrict dlong *  ElementList){
-  for(dlong e=0;e<Nelements;++e;@outer(0)){
-
-    @shared dfloat s_Q[p_Np], s_Mod[p_Np]; //  s_LSF[p_N]; 
-#if BLDEC==1
-    @shared dfloat s_L2[p_Np]; 
-    @exclusive dfloat norm;  
-#endif
-   // @shared int s_ModMap[p_Np]; 
-    @shared dfloat s_LogMod[p_Nq], s_SkyMod[p_Nq]; 
-
-    // prefetch global variables
-    for(int n=0; n<p_Np; n++; @inner(0)){
-        const dlong id = n+e*p_Np; 
-        s_Q[n]      = Q[id];     // solution field 
-        // hold on shared if needed
-        // s_ModMap[n] = o_ModMap[n]; // Mod Map
-        // if(n<p_N){
-        //   s_LSF[n] = o_LSF[n]; 
-        // } 
-    }
-
-@barrier("local");
-
-    // get modal coefficients and compute L2 norm
-    for(int n=0; n<p_Np; n++; @inner(0)){
-      dfloat mod = 0; 
-#if BLDEC==1
-      dfloat l2  = 0;
-#endif 
-      for(int m=0; m<p_Np;m++){
-        mod +=InvVT[n+m*p_Np]*s_Q[m];
-#if BLDEC==1
-        l2  += MM[n+m*p_Np]*s_Q[m];
-#endif
-      }
-      s_Mod[n] = mod; 
-#if BLDEC==1
-        const dfloat J = ggeo[e*p_Nggeo + p_GWJID];
-        s_L2[n] = J*l2; 
-#endif
-    }
-   
-@barrier("local");
-
-
-#if BLDEC==1 // compute norm = q' * MM * q
- // get modal coefficients and compute L2 norm
-    for(int n=0; n<p_Np; n++; @inner(0)){
-      norm = 0.f; 
-      for(int m=0; m<p_Np;m++){
-        norm +=s_Q[m]*s_L2[m];
-      } 
-    }
-
-@barrier("local");
-#endif
-
-
-    //skyline pessimization: get 1D mods from 2D
-    // we need N threads to do this
-    for(int n=0; n<p_Np; n++; @inner(0)){
-      if(n<p_Nq){ // AK: this could be better!!! too many idle threads
-        dfloat modsum = 0; 
-        // we have i+1, i'th order mod
-         for(int i=0; i<n+1; i++){
-          const int nmods = 0.5*n*(n+1) + i; 
-          const int m     = ModMap[nmods]; 
-          modsum += s_Mod[m]*s_Mod[m];  
-         }
-#if BLDEC==1
-        s_LogMod[n] = log10(sqrt(modsum + BLD[n]*norm));     
-#else
-        s_LogMod[n] = log10(sqrt(modsum )); 
-#endif
-        // Initialize Skyline Modes
-        s_SkyMod[n] = (n==0) ? s_LogMod[n]:0.0; // don't touch to constant mod
-      }
-    }
-
-@barrier("local");
-
-// Skyline cut for modal potrait
-for(int n=0; n<p_Np; n++; @inner(0)){
-  if(n>0 && n<p_Nq){ // AK: this could be better!!! too many idle threads
-    dfloat maxq = s_LogMod[n]; 
-    for(int j=n; j<p_Nq; j++){
-      maxq = (n==p_N) ? max(maxq, s_LogMod[j-1]) : max(maxq, s_LogMod[j]); 
-    }
-    s_SkyMod[n] = maxq; 
-  }
-}
-
-@barrier("local");
-
-// damn!!! totally serial p_N floating point operations
-for(int n=0; n<p_Np; n++; @inner(0)){
-  if(n==0){
-    dfloat coeff = 0.f; 
-    for(int i=0; i<p_N; i++){
-      coeff += LSF[i]*s_SkyMod[i+1];
-    }
-    ElementList[e] = fabs(coeff)<3.0? s_FVFV_TYPE: s_DGDG_TYPE; 
-    }
-   }
-  }
-
-  // now find the neighboor of FVFV cells
-  @barrier("global");
-
-  for(dlong n=0;n<Nelements;++n;@tile(p_blockSize,@outer,@inner))
-  {
-   const int elmType = ElementList[n];
-   if(elmType==s_DGDG_TYPE){
-     int neighType = s_DGDG_TYPE; 
-     // if any of the face is connected to FV cell, mark it
-     for(int f=0; f<p_Nfaces; f++){
-      const dlong eP = EToE[n*p_Nfaces + f];
-        // should be fine since we never modify FVFV cell 
-        if(ElementList[eP]==s_FVFV_TYPE) 
-          neighType = s_DGFV_TYPE;  
-     }
-     ElementList[n] = neighType; 
-   }
-  }
-}
-
-
-
-
-// Project troubled elements
-@kernel void lssProjectTri2D(const dlong Nelements,
-                             const int all, 
-                             @restrict const dlong *elmList, 
-                             @restrict const dfloat *  PMT,                            
-                             @restrict const dfloat *  Q,
-                             @restrict dfloat *pQ){
-
-for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
-  @shared dfloat s_q[s_Nblocks][p_Np];
-  @exclusive int elmType; 
-  for(int es=0;es<s_Nblocks;++es;@inner(1)){
-    for(int n=0;n<s_maxNodes;++n;@inner(0)){
-      const dlong e = eo+es; 
-      if(e<Nelements){
-        elmType = all ? s_FVFV_TYPE: elmList[e]; 
-        if(n<p_Np && elmType==s_FVFV_TYPE){
-          s_q[es][n] = Q[e*p_Np + n]; 
-        }
-      }
-    }
-  }
-
-  @barrier("local"); 
-
-  for(int es=0;es<s_Nblocks;++es;@inner(1)){
-     for(int n=0;n<s_maxNodes;++n;@inner(0)){
-      const dlong e = eo+es;
-        if(n<s_Ncells && e<Nelements && elmType==s_FVFV_TYPE){
-          dfloat sqn = 0; 
-          for(int i=0; i<p_Np; i++){
-            sqn += PMT[n + i*s_Ncells]*s_q[es][i]; 
-          }
-        pQ[e*s_Ncells + n] = sqn; 
-        }
-    }
-  }
-
-  }
- }
-
-
- // Project troubled elements
-@kernel void lssProjectDGTri2D(const dlong Nelements,
-                             const int all, 
-                             @restrict const dlong * elmList, 
-                             @restrict const dlong * vmapM, 
-                             @restrict const int *mFToE, 
-                             @restrict const int *mFToF, 
-                             @restrict const dfloat *  PFMT,                            
-                             @restrict const dfloat *  Q,
-                             @restrict dfloat *sface){
-for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
-  @shared dfloat s_q[s_NblocksS][p_Nfaces][p_Nfp];
-  @exclusive int elmType; 
- 
-  for(int es=0;es<s_NblocksS;++es;@inner(1)){
-    for(int n=0;n<s_maxNodesS;++n;@inner(0)){
-      const dlong e = eo+es; 
-      if(e<Nelements){
-        elmType = all ? s_DGFV_TYPE: elmList[e]; 
-        if(n<p_Nfp && elmType==s_DGFV_TYPE){
-          // const int face = n/p_Nfp;
-          const dlong id0 = vmapM[e*p_Nfp*p_Nfaces + 0*p_Nfp + n];
-          const dlong id1 = vmapM[e*p_Nfp*p_Nfaces + 1*p_Nfp + n];
-          const dlong id2 = vmapM[e*p_Nfp*p_Nfaces + 2*p_Nfp + n];
-          s_q[es][0][n] = Q[id0]; 
-          s_q[es][1][n] = Q[id1]; 
-          s_q[es][2][n] = Q[id2]; 
-        }
-      }
-    }
-  }
-
-  @barrier("local"); 
-
-  for(int es=0;es<s_NblocksS;++es;@inner(1)){
-     for(int n=0;n<s_maxNodesS;++n;@inner(0)){
-      const dlong e = eo+es;
-      if(e<Nelements){
-        if(n<s_N && elmType==s_DGFV_TYPE){
-          dfloat sqn0 = 0, sqn1 = 0, sqn2 = 0; 
-         
-         for(int i=0; i<p_Nfp; i++){
-            const dfloat pfm = PFMT[n + i*s_N]; 
-            sqn0 += pfm*s_q[es][0][i]; 
-            sqn1 += pfm*s_q[es][1][i]; 
-            sqn2 += pfm*s_q[es][2][i]; 
-          }
-        
-        const int e0 = mFToE[0*s_N + n]; 
-        const int f0 = mFToF[0*s_N + n]; 
-        
-        const int e1 = mFToE[1*s_N + n]; 
-        const int f1 = mFToF[1*s_N + n]; 
-
-        const int e2 = mFToE[2*s_N + n]; 
-        const int f2 = mFToF[2*s_N + n]; 
-
-        sface[(e*s_Ncells + e0)*p_Nfaces + f0] = sqn0; 
-        sface[(e*s_Ncells + e1)*p_Nfaces + f1] = sqn1; 
-        sface[(e*s_Ncells + e2)*p_Nfaces + f2] = sqn2; 
-
-        // if(e==1462) 
-        // printf("%d %d %d %d %d %d %d %g %g %g\n", e, e0, e1, e2, f0, f1, f2, sqn0, sqn1, sqn2);  
-        }
-      }
-    }
-  }
-
-  }
- }
-
- @kernel void lssReconstructTri2D(const dlong Nelements,
-                                   const int all,
-                                   @restrict const dlong *elmList,  
-                                   @restrict const dfloat *  RMT,                            
-                                   @restrict const dfloat *  pQ,
-                                   @restrict dfloat *Q){
-
-for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
-  @shared dfloat s_pq[s_Nblocks][s_Ncells];
-  @exclusive int elmType; 
-  for(int es=0;es<s_Nblocks;++es;@inner(1)){
-    for(int n=0;n<s_maxNodes;++n;@inner(0)){
-      const dlong e = eo+es; 
-      if(e<Nelements){
-        elmType = all ? s_FVFV_TYPE: elmList[e]; 
-        if(n<s_Ncells && elmType==s_FVFV_TYPE){
-          s_pq[es][n] = pQ[e*s_Ncells + n]; 
-        }
-      }
-    }
-  }
-
-  @barrier("local"); 
-
-  for(int es=0;es<s_Nblocks;++es;@inner(1)){
-     for(int n=0;n<s_maxNodes;++n;@inner(0)){
-      const dlong e = eo+es; 
-      if(n<p_Np && e<Nelements && elmType==s_FVFV_TYPE){
-        dfloat rq = 0; 
-        for(int i=0; i<s_Ncells; i++){
-          rq += RMT[n + i*p_Np]*s_pq[es][i]; 
-        }
-        Q[e*p_Np + n] = rq; 
-      }
-    }
-  }
-  }
- }
-
-
-
-@kernel void lssPartialRedistanceVolumeTri2D(const dlong Nelements,
-                                            @restrict const dlong *elmList, 
-                                            const dlong offset, 
-                                            @restrict const  dfloat *  vgeo,
-                                            @restrict const  dfloat *  DT,
-                                                      const  dfloat    t,
-                                            @restrict const  dfloat *  x,
-                                            @restrict const  dfloat *  y,
-                                            @restrict const  dfloat *  z,
-                                            @restrict const  dfloat *  q,
-                                            @restrict        dfloat *  gradq){
-
-  for(dlong e=0;e<Nelements;++e;@outer(0)){
-
-    @shared dfloat s_q[p_Np];
-    @exclusive int elmType; 
-
-    for(int n=0;n<p_Np;++n;@inner(0)){
-      elmType = elmList[e]; 
-      if(elmType!=s_FVFV_TYPE){
-        const dlong id = e*p_Np + n;
-        s_q[n]          = q[id];
-      }
-    }
-
-    @barrier("local");
-
-    for(int n=0;n<p_Np;++n;@inner(0)){
-      
-      if(elmType!=s_FVFV_TYPE){
-      // prefetch geometric factors (constant on triangle)
-      const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
-      const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
-      const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
-      const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
-
-      dfloat dqdr = 0, dqds = 0; 
-
-      for(int i=0;i<p_Np;++i){
-        const dfloat qn = s_q[i];
-        dqdr += DT[n+i*p_Np+0*p_Np*p_Np]*qn;
-        dqds += DT[n+i*p_Np+1*p_Np*p_Np]*qn;
-      }
-
-      const dfloat dqdx = drdx*dqdr + dsdx*dqds;
-      const dfloat dqdy = drdy*dqdr + dsdy*dqds;
-
-      const dlong id = e*p_Np + n;
-      gradq[id + 0*offset] = -dqdx;
-      gradq[id + 1*offset] = -dqdy;
-     }
-
-    }
-  }
-}
-
-
-
-
-
-void WENO2Coeff(const dfloat dx1,  const dfloat dy1, 
-                const dfloat dx2,  const dfloat dy2, 
-                const dfloat dx3,  const dfloat dy3, 
-                dfloat qm,   dfloat qp1, dfloat qp2,  dfloat qp3,
-                const int bc1, const int bc2, const int bc3, 
-                dfloat *a1, dfloat *a2, dfloat *a3){
-
- const dfloat eps = 1E-12; 
- // Create Stencil size of 3 i.e. [m p1 p2; m p2 p3; m p3 p1]
- dfloat det1 = 1.0 / (dx1*dy2 - dx2*dy1); 
- dfloat a12 = det1*( (dy1-dy2)*qm + ( dy2)*qp1 +(-dy1)*qp2); 
- dfloat a13 = det1*(-(dx1-dx2)*qm + (-dx2)*qp1 +( dx1)*qp2); 
-
- dfloat det2 = 1.0 / (dx2*dy3 - dx3*dy2); 
- dfloat a22 = det2*( (dy2-dy3)*qm + ( dy3)*qp2 +(-dy2)*qp3); 
- dfloat a23 = det2*(-(dx2-dx3)*qm + (-dx3)*qp2 +( dx2)*qp3); 
-
- dfloat det3 = 1.0 / (dx3*dy1 - dx1*dy3); 
- dfloat a32 = det3*( (dy3-dy1)*qm + ( dy1)*qp3 +(-dy3)*qp1); 
- dfloat a33 = det3*(-(dx3-dx1)*qm + (-dx1)*qp3 +( dx3)*qp1); 
-
-// need to be muliplied with h^-2, formerly !!!!!
-dfloat l11 = sqrt(a12*a12 + a13*a13);
-dfloat l12 = sqrt(a22*a22 + a23*a23);
-dfloat l13 = sqrt(a32*a32 + a33*a33);
-
-
-dfloat w1 = 1.0/ pow((eps + l11),3);
-dfloat w2 = 1.0/ pow((eps + l12),3);
-dfloat w3 = 1.0/ pow((eps + l13),3);
-
-// Nonlinear weights
-*a1 = qm; 
-*a2 = (w1*a12 + w2*a22 + w3*a32)/(w1+w2+w3); 
-*a3 = (w1*a13 + w2*a23 + w3*a33)/(w1+w2+w3); 
-
-}
-
-
-@kernel void lssReconstructInternalFaceTri2D(const dlong Nelements,
-                                   @restrict const dlong *elmList, 
-                                   @restrict const int *localList, 
-                                   @restrict const dfloat *  vgeo,                            
-                                   @restrict const dfloat *  sgeo,                            
-                                   @restrict const dlong *  emapP,                            
-                                   @restrict const dlong *  fmapP,                            
-                                   @restrict const dfloat *  q,
-                                   @restrict const dfloat *  sq,
-                                   @restrict dfloat *sface){
-
-for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
-    for(int es=0;es<s_Nblocks;++es;@inner(1)){
-      for(int s=0;s<s_Nint;++s;@inner(0)){ 
-        const dlong e = eo + es;
-        if(e<Nelements){
-          const int elmType = elmList[e]; 
-          if(elmType==s_FVFV_TYPE){
-            const int slocal =  localList[s]; 
-            const dlong sem  =  e*s_Ncells + slocal; 
-            const dlong vid  =  sem*s_Nvgeo;  
-            const dlong sid  =  sem*p_Nfaces*s_Nsgeo; 
-            //
-            const dfloat qm   = sq[sem]; // solution
-            const dfloat xcm  = vgeo[vid + s_CXID]; // center coordinates
-            const dfloat ycm  = vgeo[vid + s_CYID];
-
-            // const dlong id    = (e*s_Ncells + slocal)*p_Nfaces; 
-            // Use global connection
-            const dlong sep1  = emapP[sem*p_Nfaces + 0];
-            const dlong sep2  = emapP[sem*p_Nfaces + 1];
-            const dlong sep3  = emapP[sem*p_Nfaces + 2];
-
-            const int bc1      = sgeo[sid + 0*s_Nsgeo + s_BCID]; 
-            const int bc2      = sgeo[sid + 1*s_Nsgeo + s_BCID]; 
-            const int bc3      = sgeo[sid + 2*s_Nsgeo + s_BCID];
-
-            dfloat xcp1  = vgeo[sep1*s_Nvgeo + s_CXID];  
-            dfloat ycp1  = vgeo[sep1*s_Nvgeo + s_CYID]; 
-
-            dfloat xcp2  = vgeo[sep2*s_Nvgeo + s_CXID];  
-            dfloat ycp2  = vgeo[sep2*s_Nvgeo + s_CYID]; 
-
-            dfloat xcp3  = vgeo[sep3*s_Nvgeo + s_CXID];  
-            dfloat ycp3  = vgeo[sep3*s_Nvgeo + s_CYID]; 
-
-            dfloat qp1   = sq[sep1]; 
-            dfloat qp2   = sq[sep2]; 
-            dfloat qp3   = sq[sep3]; 
-          
-            const dfloat dx1 = (xcp1 - xcm); 
-            const dfloat dy1 = (ycp1 - ycm); 
-            
-            const dfloat dx2 = (xcp2 - xcm); 
-            const dfloat dy2 = (ycp2 - ycm); 
-            
-            const dfloat dx3 = (xcp3 - xcm); 
-            const dfloat dy3 = (ycp3 - ycm); 
-
-            dfloat a1, a2, a3; 
-            WENO2Coeff(dx1,dy1, dx2,dy2, dx3,dy3, qm,qp1,qp2,qp3, 
-                             bc1, bc2, bc3, &a1, &a2, &a3);
-
-           for(int f=0; f<p_Nfaces; f++){
-              // modifed 2nd order WENO 
-              const dfloat fxm = sgeo[sid + f*s_Nsgeo + s_FXID]; 
-              const dfloat fym = sgeo[sid + f*s_Nsgeo + s_FYID];
-                  
-              sface[sem*p_Nfaces + f] = a1 + a2*(fxm -xcm) + a3*(fym - ycm); 
-                
-            }
-          }
-        }
-      }
-    }
-
-  }
-}
-
-
-@kernel void lssReconstructExternalFaceTri2D(const dlong Nelements,
-                                   @restrict const dlong * elmList, 
-                                   @restrict const int *localList, 
-                                   @restrict const dfloat * vgeo,                            
-                                   @restrict const dfloat * sgeo,                            
-                                   @restrict const dlong *  emapP,                            
-                                   @restrict const dlong *  fmapP,                            
-                                   @restrict const dfloat *  q,
-                                   @restrict const dfloat *  sq,
-                                   @restrict dfloat *sface){
-
-for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
-    for(int es=0;es<s_Nblocks;++es;@inner(1)){
-      for(int s=0;s<s_Next;++s;@inner(0)){ 
-        const dlong e = eo + es;
-        if(e<Nelements){
-          const int elmType = elmList[e]; 
-          if(elmType==s_FVFV_TYPE){
-            const int slocal =  localList[s]; 
-            const dlong sem  =  e*s_Ncells + slocal; 
-            const dlong vid  =  sem*s_Nvgeo;  
-            const dlong sid  =  sem*p_Nfaces*s_Nsgeo; 
-            
-            //Local Infos
-            const dfloat qm   = sq[sem];             // solution
-            const dfloat xcm  = vgeo[vid + s_CXID]; // center coordinates
-            const dfloat ycm  = vgeo[vid + s_CYID];
-            
-            // const dlong id    = (e*s_Ncells + sem)*p_Nfaces; 
-            // Use global connection
-            const dlong sep1  = emapP[sem*p_Nfaces + 0];
-            const dlong sep2  = emapP[sem*p_Nfaces + 1];
-            const dlong sep3  = emapP[sem*p_Nfaces + 2];
-
-            const int bc1      = sgeo[sid + 0*s_Nsgeo + s_BCID]; 
-            const int bc2      = sgeo[sid + 1*s_Nsgeo + s_BCID]; 
-            const int bc3      = sgeo[sid + 2*s_Nsgeo + s_BCID];
-            
-            const dlong ep1 = sep1/s_Ncells; 
-            const dlong ep2 = sep2/s_Ncells; 
-            const dlong ep3 = sep3/s_Ncells; 
-
-            const int etype1 = elmList[ep1]; 
-            const int etype2 = elmList[ep2]; 
-            const int etype3 = elmList[ep3]; 
-            
-            dfloat qp1  = 0,  qp2 =0,   qp3 = 0; 
-            dfloat xcp1 = 0, xcp2 =0,   xcp3= 0; 
-            dfloat ycp1 = 0, ycp2 =0,   ycp3= 0; 
-
-            if(etype1==s_FVFV_TYPE){
-              qp1   = sq[sep1]; 
-              xcp1  = vgeo[sep1*s_Nvgeo + s_CXID];  
-              ycp1  = vgeo[sep1*s_Nvgeo + s_CYID]; 
-            }else{ // DGFV Tpe
-              const int fp = fmapP[sem*p_Nfaces + 0];
-              qp1  = sface[sep1*p_Nfaces + fp];
-              xcp1 =  sgeo[sid + 0*s_Nsgeo + s_FXID];
-              ycp1 =  sgeo[sid + 0*s_Nsgeo + s_FYID];
-            }
-
-            if(etype2==s_FVFV_TYPE){
-              qp2   = sq[sep2]; 
-              xcp2  = vgeo[sep2*s_Nvgeo + s_CXID];  
-              ycp2  = vgeo[sep2*s_Nvgeo + s_CYID]; 
-            }else{
-              const int fp = fmapP[sem*p_Nfaces + 1];  
-              qp2  = sface[sep2*p_Nfaces + fp];
-              xcp2 =  sgeo[sid + 1*s_Nsgeo + s_FXID];
-              ycp2 =  sgeo[sid + 1*s_Nsgeo + s_FYID];
-            }
-
-            if(etype3==s_FVFV_TYPE){
-              qp3   = sq[sep3]; 
-              xcp3  = vgeo[sep3*s_Nvgeo + s_CXID];  
-              ycp3  = vgeo[sep3*s_Nvgeo + s_CYID]; 
-            }else{
-              const int fp = fmapP[sem*p_Nfaces + 2];  
-              qp3  = sface[sep3*p_Nfaces + fp];
-              xcp3 =  sgeo[sid + 2*s_Nsgeo + s_FXID];
-              ycp3 =  sgeo[sid + 2*s_Nsgeo + s_FYID];
-            }
-
-
-            if(bc1>0){
-              xcp1 =  sgeo[sid + 0*s_Nsgeo + s_FXID];
-              ycp1 =  sgeo[sid + 0*s_Nsgeo + s_FYID];
-              qp1 = qm; 
-            }
-            if(bc2>0){
-              xcp2 =  sgeo[sid + 1*s_Nsgeo + s_FXID];
-              ycp2 =  sgeo[sid + 1*s_Nsgeo + s_FYID];
-              qp2  = qm; 
-            }
-            if(bc3>0){
-              xcp3 =  sgeo[sid + 2*s_Nsgeo + s_FXID];
-              ycp3 =  sgeo[sid + 2*s_Nsgeo + s_FYID];
-              qp3 = qm;
-            }
-
-          const dfloat dx1 = (xcp1 - xcm); 
-          const dfloat dy1 = (ycp1 - ycm); 
-          
-          const dfloat dx2 = (xcp2 - xcm); 
-          const dfloat dy2 = (ycp2 - ycm); 
-          
-          const dfloat dx3 = (xcp3 - xcm); 
-          const dfloat dy3 = (ycp3 - ycm); 
-
-          dfloat a1, a2, a3; 
-          WENO2Coeff(dx1,dy1, dx2,dy2, dx3,dy3, qm,qp1,qp2,qp3, 
-                           bc1, bc2, bc3, &a1, &a2, &a3);
-
-          if(bc1>0 || bc2>0 || bc3>0){
-            for(int i=0; i<5; i++){
-              if(bc1>0){qp1 = a1 + a2*dx1 + a3*dy1;}
-              if(bc2>0){qp2 = a1 + a2*dx2 + a3*dy2;}
-              if(bc3>0){qp3 = a1 + a2*dx3 + a3*dy3;}
-              WENO2Coeff(dx1,dy1, dx2,dy2, dx3,dy3, qm,qp1,qp2,qp3, 
-                           bc1, bc2, bc3, &a1, &a2, &a3);
-            }
-          }
-
-         for(int f=0; f<p_Nfaces; f++){
-            // modifed 2nd order WENO 
-            const dfloat fxm = sgeo[sid + f*s_Nsgeo + s_FXID]; 
-            const dfloat fym = sgeo[sid + f*s_Nsgeo + s_FYID];
-                
-            sface[sem*p_Nfaces + f] = a1 + a2*(fxm -xcm) + a3*(fym - ycm); 
-              
-          }
-       }
-      }
-    }
-  }
-
-}
-
-}
-
-
-
-@kernel void lssSubcellComputeTri2D(const dlong Nelements,
-                                   @restrict const dlong *elmList, 
-                                   @restrict const dlong *emapP, 
-                                   @restrict const dlong *fmapP,                                   
-                                   @restrict const dfloat *  RMT,  
-                                   @restrict const dfloat *  vgeo,                            
-                                   @restrict const dfloat *  sgeo,                                         
-                                   @restrict const dfloat *  q,
-                                   @restrict const dfloat *  sgnq,
-                                   @restrict const dfloat *  sface,
-                                   @restrict dfloat *rhsq){
-
-for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
-
-  @shared dfloat s_rhs[s_Nblocks][s_Ncells]; 
-  @exclusive int elmType; 
-  
-    for(int es=0;es<s_Nblocks;++es;@inner(1)){
-      for(int s=0;s<s_Ncells;++s;@inner(0)){ 
-        const dlong e = eo + es;
-         if(e<Nelements){
-          elmType = elmList[e]; 
-
-          dfloat rhss = 0.f; 
-
-          if(elmType==s_FVFV_TYPE){
-            const dlong sem  =  e*s_Ncells + s; 
-
-            const dlong vid   = sem*s_Nvgeo;  
-            const dlong sid   = sem*p_Nfaces*s_Nsgeo; 
-            const dfloat ivm  = vgeo[vid + s_IVID]; 
-
-            dfloat p1 = 0.f, p2 = 0.f; 
-            dfloat q1 = 0.f, q2 = 0.f;
-
-            for(int fm=0; fm<p_Nfaces; fm++){
-              const dlong  sep  = emapP[e*s_Ncells*p_Nfaces + s*p_Nfaces + fm];
-              const int    fp   = fmapP[e*s_Ncells*p_Nfaces + s*p_Nfaces + fm];
-
-              const dfloat qfm  = sface[sem*p_Nfaces + fm]; 
-              const dfloat qfp  = sface[sep*p_Nfaces + fp]; 
-
-              const dfloat nxm  = sgeo[sid + fm*s_Nsgeo + s_NXID];
-              const dfloat nym  = sgeo[sid + fm*s_Nsgeo + s_NYID]; 
-              const dfloat sam  = sgeo[sid + fm*s_Nsgeo + s_SAID];
-
-              dfloat unx = 0.f, dnx = 1.f; 
-              dfloat uny = 0.f, dny = 1.f; 
-
-              if(nxm>=0){unx = 1.f; dnx = 0.f; };
-              if(nym>=0){uny = 1.f; dny = 0.f; };
-
-              p1 += ivm*sam*nxm*( dnx*qfm + unx*qfp);
-              p2 += ivm*sam*nxm*( unx*qfm + dnx*qfp);
-
-              q1 += ivm*sam*nym*( dny*qfm + uny*qfp);
-              q2 += ivm*sam*nym*( uny*qfm + dny*qfp);
-            }
-
-          const dfloat rsgn = sgnq[sem]; // regularized sign 
-
-          const dfloat p  = 0.5*(p1+p2);
-          const dfloat q  = 0.5*(q1+q2);
-          // s_rhs[es][s] = -( rsgn*( sqrt(p*p+q*q)-1.0) - 0.5*(p1-p2) - 0.5*(q1-q2) );
-          rhss = -( rsgn*( sqrt(p*p+q*q)-1.0) - 0.5*(p1-p2) - 0.5*(q1-q2) );
-        }
-        rhsq[e*s_Ncells + s] = rhss;  
-       }
-      }
-    }
-}
-
-}
-
-// batch process elements
-@kernel void lssPartialRedistanceSurfaceTri2D(const dlong Nelements,
-                                  const dlong offset,
-                                  @restrict const dlong *elmList, 
-                                  @restrict const dlong *EToE, 
-                                  @restrict const  int    *  EToB,
-                                  @restrict const  dfloat *  sgeo,
-                                  @restrict const  dfloat *  ssgeo,
-                                  @restrict const  dfloat *  svgeo,
-                                  @restrict const  dfloat *  LIFTT,
-                                  @restrict const  dfloat *  RFMT,
-                                  @restrict const  dlong  *  vmapM,
-                                  @restrict const  dlong  *  vmapP,
-                                  @restrict const dlong *emapP, 
-                                  @restrict const dlong *fmapP,     
-                                  @restrict const  int    *  mFToE,
-                                  @restrict const  int    *  mFToF,
-                                            const  dfloat time,
-                                  @restrict const  dfloat *  x,
-                                  @restrict const  dfloat *  y,
-                                  @restrict const  dfloat *  z,
-                                  @restrict const  dfloat *  sq,                                  
-                                  @restrict const  dfloat *  q,
-                                  @restrict const  dfloat *  sface,
-                                  @restrict const  dfloat *  gradq,
-                                  @restrict dfloat *  rhsq){
-
-  // for all elements
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
-
-    // @shared storage for flux terms
-    @shared dfloat s_pf1[p_NblockS][p_NfacesNfp];
-    @shared dfloat s_pf2[p_NblockS][p_NfacesNfp];
-    @shared dfloat s_qf1[p_NblockS][p_NfacesNfp];
-    @shared dfloat s_qf2[p_NblockS][p_NfacesNfp];
-
-
-    // @shared storage for flux terms
-    @shared dfloat s_spf1[p_NblockS][s_NfacesNfp];
-    @shared dfloat s_spf2[p_NblockS][s_NfacesNfp];
-    @shared dfloat s_sqf1[p_NblockS][s_NfacesNfp];
-    @shared dfloat s_sqf2[p_NblockS][s_NfacesNfp];
-
-    // @exclusive int elmType, ftype; 
-    @exclusive int elmType; 
-    // @exclusive int faceDG, faceFV; 
-
-    // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;@inner(1)){
-      for(int n=0;n<s_maxNodesS;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
-        const dlong e = eo + es;
-        if(e<Nelements){
-          elmType = elmList[e]; 
-          s_pf1[es][n]= 0.f; s_pf2[es][n]= 0.f;
-          s_qf1[es][n]= 0.f; s_qf2[es][n]= 0.f;
-
-          if(n<p_NfacesNfp && elmType!=s_FVFV_TYPE){ // DG elements
-            const int face        = n/p_Nfp;   
-            const dlong neigh     = EToE[e*p_Nfaces + face];
-            const int ftype       = elmList[neigh]; 
-            if(ftype!= s_FVFV_TYPE){
-            const dlong sid   = p_Nsgeo*(e*p_Nfaces+face);
-            const dfloat nx   = sgeo[sid+p_NXID];
-            const dfloat ny   = sgeo[sid+p_NYID];
-            const dfloat sJ   = sgeo[sid+p_SJID];
-            const dfloat invJ = sgeo[sid+p_IJID];
-
-            // indices of negative and positive traces of face node
-            const dlong id  = e*p_Nfp*p_Nfaces + n;
-            const dlong idM = vmapM[id];
-            const dlong idP = vmapP[id];
-              // // load traces
-              const dfloat qM = q[idM];   dfloat qP = q[idP];
-              // apply boundary condition
-              const int bc = EToB[face+p_Nfaces*e];
-              if(bc>0){
-                lssDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, qM, &qP);
-              }
-              
-              const dfloat sc = invJ*sJ; 
-              // simple upwind
-              dfloat unx = 0.0, dnx = 1.0; 
-              dfloat uny = 0.0, dny = 1.0; 
-              if(nx>= 0){unx = 1.0, dnx = 0.0;}
-              if(ny>= 0){uny = 1.0, dny = 0.0;}
-              
-              // Assumes s_N >= Nfp, since it has to be for proper recontruction
-              // const int lid = face*s_N + n%p_Nfp;      
-              // s_pf1[es][lid]= sc*nx*( (dnx*qM  + unx*qP));
-              // s_pf2[es][lid]= sc*nx*( (unx*qM  + dnx*qP));
-              // s_qf1[es][lid]= sc*ny*( (dny*qM  + uny*qP));
-              // s_qf2[es][lid]= sc*ny*( (uny*qM  + dny*qP));
-
-              s_pf1[es][n]= sc*nx*( (dnx*qM  + unx*qP));
-              s_pf2[es][n]= sc*nx*( (unx*qM  + dnx*qP));
-              s_qf1[es][n]= sc*ny*( (dny*qM  + uny*qP));
-              s_qf2[es][n]= sc*ny*( (uny*qM  + dny*qP));
-           }
-          }
-        }
-      }
-    }
-
-    // wait for all @shared memory writes of the previous inner loop to complete
-    @barrier("local");
-
-
-
- // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;@inner(1)){
-      for(int n=0;n<s_maxNodesS;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
-        const dlong e = eo + es;
-        if(e<Nelements){
-             s_spf1[es][n] = 0;  s_spf2[es][n] = 0;  
-             s_sqf1[es][n] = 0;  s_sqf2[es][n] = 0; 
-
-          if(n<s_NfacesNfp && elmType==s_DGFV_TYPE){ // DG elements
-            const int face        = n/s_N;
-            const dlong neigh     = EToE[e*p_Nfaces + face];
-            const int ftype       = elmList[neigh]; 
-            if(ftype==s_FVFV_TYPE){
-              // const int sn      = n%s_N; 
-              const int e0      = mFToE[n]; 
-              const int sfm     = mFToF[n]; 
-
-              const dlong sem   = e*s_Ncells + e0; 
-              const dlong sep   = emapP[sem*p_Nfaces + sfm];
-              const int   sfp   = fmapP[sem*p_Nfaces + sfm];
-
-              const dfloat qfm = sface[sem*p_Nfaces + sfm]; 
-              const dfloat qfp = sface[sep*p_Nfaces + sfp];
-
-              const dlong sid   = sem*p_Nfaces*s_Nsgeo; 
-              const dfloat ivm  = svgeo[sem*s_Nvgeo + s_IVID]; 
-
-              const dfloat nxm  = ssgeo[sid + sfm*s_Nsgeo + s_NXID];
-              const dfloat nym  = ssgeo[sid + sfm*s_Nsgeo + s_NYID]; 
-              const dfloat sam  = ssgeo[sid + sfm*s_Nsgeo + s_SAID];
-
-              dfloat unx = 0.f, dnx = 1.f; 
-              dfloat uny = 0.f, dny = 1.f; 
-
-              if(nxm>=0){unx = 1.f; dnx = 0.f; };
-              if(nym>=0){uny = 1.f; dny = 0.f; };
-
-              const dfloat invJ = sgeo[p_Nsgeo*(e*p_Nfaces+face)+p_IJID];
-
-              s_spf1[es][n]= nxm*( dnx*qfm + unx*qfp); 
-              s_spf2[es][n]= nxm*( unx*qfm + dnx*qfp);
-              s_sqf1[es][n]= nym*( dny*qfm + uny*qfp);
-              s_sqf2[es][n]= nym*( uny*qfm + dny*qfp);
-          }
-        }
-      }
-    }
-  }
-
-
-
-@barrier("local"); 
-
-   // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;@inner(1)){
-      for(int n=0;n<s_maxNodesS;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
-        const dlong e = eo + es;
-        if(e<Nelements){
-          
-         if(n<p_Nfp && elmType==s_DGFV_TYPE){ // DG elements
-            // const int face        = n/s_N;
-        for(int face =0; face<p_Nfaces; face++){
-            const dlong neigh     = EToE[e*p_Nfaces + face];
-            const int ftype       = elmList[neigh]; 
-            if(ftype==s_FVFV_TYPE){
-              dfloat p1 = 0.f, p2 = 0.f; 
-              dfloat q1 = 0.f, q2 = 0.f;   
-
-             for(int i=0; i<s_N; i++){
-                const dfloat rfm = RFMT[n + i*p_Nfp]; 
-                const int m = face*s_N + i; 
-                p1 += rfm*s_spf1[es][m];
-                p2 += rfm*s_spf2[es][m];
-                q1 += rfm*s_sqf1[es][m];
-                q2 += rfm*s_sqf2[es][m];
-              }
-
-            const dlong sid   = p_Nsgeo*(e*p_Nfaces+face);
-            const dfloat sJ   = sgeo[sid+p_SJID];
-            const dfloat invJ = sgeo[sid+p_IJID];
-            const dfloat sc = invJ*sJ; 
-              s_pf1[es][n + face*p_Nfp]= sc*p1;
-              s_pf2[es][n + face*p_Nfp]= sc*p2;
-              s_qf1[es][n + face*p_Nfp]= sc*q1;
-              s_qf2[es][n + face*p_Nfp]= sc*q2;
-           }
-          }
-        }
-      }
-    }
-  }
-
-
-    // wait for all @shared memory writes of the previous inner loop to complete
-    @barrier("local");
-
-    // for each node in the element
-    for(int es=0;es<p_NblockS;++es;@inner(1)){
-      for(int n=0;n<p_maxNodes;++n;@inner(0)){
-        const dlong e = eo + es;
-        if(e<Nelements){
-          if(n<p_Np && elmType!=s_FVFV_TYPE){
-             const dlong id = e*p_Np+n;
-            dfloat p1 = 0.f, p2 = 0.f; 
-            dfloat q1 = 0.f, q2 = 0.f;      
-            // 
-            #pragma unroll p_NfacesNfp
-              for(int m=0;m<p_NfacesNfp;++m){
-                const dfloat L = LIFTT[n+m*p_Np];
-                p1 += L*s_pf1[es][m];
-                p2 += L*s_pf2[es][m];
-                q1 += L*s_qf1[es][m];
-                q2 += L*s_qf2[es][m];
-              }
-
-            const dfloat sqn  = sq[id];
-            const dfloat dqdx = gradq[id + 0*offset];
-            const dfloat dqdy = gradq[id + 1*offset];
-
-            p1 +=  dqdx; p2 +=  dqdx; 
-            q1 +=  dqdy; q2 +=  dqdy;
-
-            const dfloat P = 0.5f*(p1+p2); 
-            const dfloat Q = 0.5f*(q1+q2); 
-           
-            // LLF Numerical Hamiltonian
-            rhsq[id] =  -( sqn*( sqrt( P*P+Q*Q )-1.f) -0.5f*(p1-p2)-0.5*(q1-q2));
-          }
-        }
-      }
-    }
-  }
-}
-
-// too much flops
-void computeGradient(const dfloat xcm,  const dfloat ycm, 
-                     const dfloat xcp1, const dfloat ycp1,
-                     const dfloat xcp2, const dfloat ycp2,
-                     const dfloat xcp3, const dfloat ycp3,
-                     const dfloat qm,   const dfloat qp1,
-                     const dfloat qp2,  const dfloat qp3,
-                           dfloat *dqdx,      dfloat *dqdy){
-#if WLSQR
-
-      const dfloat dx1 = (xcp1 - xcm); const dfloat dy1 = (ycp1 - ycm); 
-      const dfloat dx2 = (xcp2 - xcm); const dfloat dy2 = (ycp2 - ycm); 
-      const dfloat dx3 = (xcp3 - xcm); const dfloat dy3 = (ycp3 - ycm); 
-
-
-      const dfloat dq1 = (qp1-qm); 
-      const dfloat dq2 = (qp2-qm); 
-      const dfloat dq3 = (qp3-qm); 
-
-      const dfloat d1 = sqrt( dx1*dx1 + dy1*dy1);
-      const dfloat d2 = sqrt( dx2*dx2 + dy2*dy2);
-      const dfloat d3 = sqrt( dx3*dx3 + dy3*dy3);
-
-       // const dfloat wl1 = dq1*dq1/(d1*d1) + 1.0; 
-       // const dfloat wl2 = dq2*dq2/(d2*d2) + 1.0; 
-       // const dfloat wl3 = dq3*dq3/(d3*d3) + 1.0; 
-
-       // const dfloat wl1 = d1; 
-       // const dfloat wl2 = d2; 
-       // const dfloat wl3 = d3;
-
-       // const dfloat wl1 = (dq1*dq1)/(d1*d1) + 1.0; 
-       // const dfloat wl2 = (dq2*dq2)/(d2*d2) + 1.0; 
-       // const dfloat wl3 = (dq3*dq3)/(d3*d3) + 1.0;
-
-       const dfloat wl1 = sqrt(dq1*dq1 + d1*d1); 
-       const dfloat wl2 = sqrt(dq2*dq2 + d2*d2); 
-       const dfloat wl3 = sqrt(dq3*dq3 + d3*d3); 
-
-       // const dfloat wl1  = 1.0/ sqrt( d1*d1*d1*( (dq1/d1)*(dq1/d1)*(dq1/d1)*(dq1/d1) + 1/(d1*d1)));
-       // const dfloat wl2  = 1.0/ sqrt( d2*d2*d2*( (dq2/d2)*(dq2/d2)*(dq2/d2)*(dq2/d2) + 1/(d2*d2)));
-       // const dfloat wl3  = 1.0/ sqrt( d3*d3*d3*( (dq3/d3)*(dq3/d3)*(dq3/d3)*(dq3/d3) + 1/(d3*d3)));
-
-       // const dfloat wl1 = 1.0; 
-       // const dfloat wl2 = 1.0; 
-       // const dfloat wl3 = 1.0;
-       
-       // distance weighted
-       const dfloat w1 = 1.0/wl1; 
-       const dfloat w2 = 1.0/wl2; 
-       const dfloat w3 = 1.0/wl3;
-
-       // ULSG
-       // const dfloat w1 = 1.0; const dfloat w2 = 1.0; const dfloat  w3 = 1.0;  
-
-       const dfloat a1 = w1*dx1; const dfloat a2 = w1*dy1; 
-       const dfloat b1 = w2*dx2; const dfloat b2 = w2*dy2; 
-       const dfloat c1 = w3*dx3; const dfloat c2 = w3*dy3; 
-
-       const dfloat det = 1.f / ( (a1*b2 - a2*b1)*(a1*b2 - a2*b1) 
-                                 +(a1*c2 - a2*c1)*(a1*c2 - a2*c1)
-                                 +(b1*c2 - b2*c1)*(b1*c2 - b2*c1) ); 
-
-       const dfloat r1 = w1*a1*dq1 + w2*b1*dq2 + w3*c1*dq3;
-       const dfloat r2 = w1*a2*dq1 + w2*b2*dq2 + w3*c2*dq3;
-
-      *dqdx = det*(  (a2*a2 + b2*b2 + c2*c2)*r1  - (a1*a2 + b1*b2 + c1*c2)*r2);
-      *dqdy = det*( -(a1*a2 + b1*b2 + c1*c2)*r1  + (a1*a1 + b1*b1 + c1*c1)*r2);
-#endif
-
-#if LSENO
-      const dfloat dx1 = (xcp1 - xcm); const dfloat dy1 = (ycp1 - ycm); 
-      const dfloat dx2 = (xcp2 - xcm); const dfloat dy2 = (ycp2 - ycm); 
-      const dfloat dx3 = (xcp3 - xcm); const dfloat dy3 = (ycp3 - ycm); 
-
-
-      const dfloat dq1 = (qp1-qm); 
-      const dfloat dq2 = (qp2-qm); 
-      const dfloat dq3 = (qp3-qm); 
-
-      const dfloat d1 = sqrt( dx1*dx1 + dy1*dy1);
-      const dfloat d2 = sqrt( dx2*dx2 + dy2*dy2);
-      const dfloat d3 = sqrt( dx3*dx3 + dy3*dy3);
-
-      const dfloat det1 = 1.0/(dx1*dy2 - dx2*dy1); 
-      const dfloat dqdx1 = det1*( dy2 * dq1  - dx2*dq2);
-      const dfloat dqdy1 = det1*(-dy1 * dq1  + dx1*dq2);
-
-      const dfloat det2 = 1.0/(dx2*dy3 - dx2*dy3); 
-      const dfloat dqdx2 = det2*( dy3 * dq2  - dx3*dq3);
-      const dfloat dqdy2 = det2*(-dy2 * dq2  + dx2*dq3);
-
-      const dfloat det3 = 1.0/(dx3*dy1 - dx3*dy1); 
-      const dfloat dqdx3 = det3*( dy1 * dq3  - dx1*dq1);
-      const dfloat dqdy3 = det3*(-dy3 * dq3  + dx3*dq1);
-
-      const dfloat l11 = abs(dqdx1) + abs(dqdy1);
-      const dfloat l12 = abs(dqdx2) + abs(dqdy2);
-      const dfloat l13 = abs(dqdx3) + abs(dqdy3);
-
-      if (l11 <= l12 && l11 <= l13){
-        *dqdx = dqdx1;  *dqdy = dqdy1;        
-      }else if (l12 <= l11 && l12 <= l13){
-        *dqdx = dqdx2;  *dqdy = dqdy2; 
-      }else{
-        *dqdx = dqdx3;  *dqdy = dqdy3; 
-      }
- 
-#endif
-
-#if 0
-      const dfloat r11 = sqrt( (xcp1 - xcm)*(xcp1 - xcm) + (xcp2 - xcm)*(xcp2 - xcm) 
-                              +(xcp3 - xcm)*(xcp3 - xcm)); 
-
-      const dfloat r12 = ( (xcp1 - xcm)*(ycp1 - ycm) + (xcp2 - xcm)*(ycp2 - ycm)
-                          +(xcp3 - xcm)*(ycp3 - ycm))/r11; 
-
-      const dfloat r22 = sqrt( ( (ycp1 - ycm) - (xcp1 - xcm)*r12/r11)*( (ycp1 - ycm) - (xcp1 - xcm)*r12/r11)
-                              +( (ycp2 - ycm) - (xcp2 - xcm)*r12/r11)*( (ycp2 - ycm) - (xcp2 - xcm)*r12/r11)
-                              +( (ycp3 - ycm) - (xcp3 - xcm)*r12/r11)*( (ycp3 - ycm) - (xcp3 - xcm)*r12/r11));
-
-      
-      const dfloat w1x = (xcp1 - xcm)/(r11*r11) - r12/(r11*r22*r22)*( (ycp1 - ycm) - (xcp1 - xcm)*r12/r11 );
-      const dfloat w2x = (xcp2 - xcm)/(r11*r11) - r12/(r11*r22*r22)*( (ycp2 - ycm) - (xcp2 - xcm)*r12/r11 );
-      const dfloat w3x = (xcp3 - xcm)/(r11*r11) - r12/(r11*r22*r22)*( (ycp3 - ycm) - (xcp3 - xcm)*r12/r11 );
-
-      const dfloat w1y = 1.f/(r22*r22)*( (ycp1 - ycm) - (xcp1 - xcm)*r12/r11 );
-      const dfloat w2y = 1.f/(r22*r22)*( (ycp2 - ycm) - (xcp2 - xcm)*r12/r11 );
-      const dfloat w3y = 1.f/(r22*r22)*( (ycp3 - ycm) - (xcp3 - xcm)*r12/r11 );
-
-      const dfloat dqdx = w1x*( qp1-qm ) + w2x*( qp2-qm ) + w3x*( qp3-qm );
-      const dfloat dqdy = w1y*( qp1-qm ) + w2y*( qp2-qm ) + w3y*( qp3-qm );
-#endif
-
-}
-
-
-
-void computeENO2Coeff(const dfloat dx1,  const dfloat dy1, 
-                        const dfloat dx2,  const dfloat dy2, 
-                        const dfloat dx3,  const dfloat dy3, 
-                        dfloat qm,   dfloat qp1, dfloat qp2,  dfloat qp3,
-                        const int bc1, const int bc2, const int bc3, 
-                        dfloat *a1, dfloat *a2, dfloat *a3){
-
- const dfloat eps = 1E-12; 
-
- // Create Stencil size of 3 i.e. [m p1 p2; m p2 p3; m p3 p1]
-
- dfloat det1 = 1.0 / (dx1*dy2 - dx2*dy1); 
- // const dfloat a11 = qm; 
- dfloat a12 = det1*( (dy1-dy2)*qm + ( dy2)*qp1 +(-dy1)*qp2); 
- dfloat a13 = det1*(-(dx1-dx2)*qm + (-dx2)*qp1 +( dx1)*qp2); 
-
- dfloat det2 = 1.0 / (dx2*dy3 - dx3*dy2); 
- // const dfloat a21 = qm; 
- dfloat a22 = det2*( (dy2-dy3)*qm + ( dy3)*qp2 +(-dy2)*qp3); 
- dfloat a23 = det2*(-(dx2-dx3)*qm + (-dx3)*qp2 +( dx2)*qp3); 
-
- dfloat det3 = 1.0 / (dx3*dy1 - dx1*dy3); 
- // const dfloat a31 = qm; 
- dfloat a32 = det3*( (dy3-dy1)*qm + ( dy1)*qp3 +(-dy3)*qp1); 
- dfloat a33 = det3*(-(dx3-dx1)*qm + (-dx1)*qp3 +( dx3)*qp1); 
-
-//  // need better indicator: check osciallations
-// const dfloat l11 = abs(a12) + abs(a13);
-// const dfloat l12 = abs(a22) + abs(a23);
-// const dfloat l13 = abs(a32) + abs(a33);
-
-// need to be muliplied with h^-2, formerly !!!!!
-dfloat l11 = sqrt(a12*a12 + a13*a13);
-dfloat l12 = sqrt(a22*a22 + a23*a23);
-dfloat l13 = sqrt(a32*a32 + a33*a33);
-
-
-dfloat w1 = 1.0/ pow((eps + l11),3);
-dfloat w2 = 1.0/ pow((eps + l12),3);
-dfloat w3 = 1.0/ pow((eps + l13),3);
-
-// Nonlinear weights
-*a1 = qm; 
-*a2 = (w1*a12 + w2*a22 + w3*a32)/(w1+w2+w3); 
-*a3 = (w1*a13 + w2*a23 + w3*a33)/(w1+w2+w3); 
-
-
-
-// if(bc1>0 || bc2>0 || bc3>0){
-
-// for(int i=0; i<1; i++){ 
-//   if(bc1>0){qp1 = (*a1) + (*a2)*(xcp1-xcm) + (*a3)*(ycp1 -ycm);}
-//   if(bc2>0){qp2 = (*a1) + (*a2)*(xcp2-xcm) + (*a3)*(ycp2 -ycm);}
-//   if(bc3>0){qp3 = (*a1) + (*a2)*(xcp3-xcm) + (*a3)*(ycp3 -ycm);}
-
-//    det1 = 1.0 / (dx1*dy2 - dx2*dy1); 
-//    // const dfloat a11 = qm; 
-//    a12 = det1*( (dy1-dy2)*qm + ( dy2)*qp1 +(-dy1)*qp2); 
-//    a13 = det1*(-(dx1-dx2)*qm + (-dx2)*qp1 +( dx1)*qp2); 
-
-//    det2 = 1.0 / (dx2*dy3 - dx3*dy2); 
-//    // const dfloat a21 = qm; 
-//    a22 = det2*( (dy2-dy3)*qm + ( dy3)*qp2 +(-dy2)*qp3); 
-//    a23 = det2*(-(dx2-dx3)*qm + (-dx3)*qp2 +( dx2)*qp3); 
-
-//    det3 = 1.0 / (dx3*dy1 - dx1*dy3); 
-//    // const dfloat a31 = qm; 
-//    a32 = det3*( (dy3-dy1)*qm + ( dy1)*qp3 +(-dy3)*qp1); 
-//    a33 = det3*(-(dx3-dx1)*qm + (-dx1)*qp3 +( dx3)*qp1); 
-
-//   // //  // need better indicator: check osciallations
-//   // // const dfloat l11 = abs(a12) + abs(a13);
-//   // // const dfloat l12 = abs(a22) + abs(a23);
-//   // // const dfloat l13 = abs(a32) + abs(a33);
-
-//   l11 = sqrt(a12*a12 + a13*a13);
-//   l12 = sqrt(a22*a22 + a23*a23);
-//   l13 = sqrt(a32*a32 + a33*a33);
-
-//   w1 = 1.0/ pow((eps + l11),3);
-//   w2 = 1.0/ pow((eps + l12),3);
-//   w3 = 1.0/ pow((eps + l13),3);
-//   // // Nonlinear weights
-//   *a1 = qm; 
-//   *a2 = (w1*a12 + w2*a22 + w3*a32)/(w1+w2+w3); 
-//   *a3 = (w1*a13 + w2*a23 + w3*a33)/(w1+w2+w3); 
-//   }
-
-// }
-
-
-
-// Digital ENO
-// if (l11 <= l12 && l11 <= l13){
-//   *a1 = qm;   *a2 = a12;   *a3 = a13;       
-// }else if (l12 <= l11 && l12 <= l13){
-//  *a1 = qm;   *a2 = a22;   *a3 = a23;       
-// }else{
-//   *a1 = qm;   *a2 = a32;   *a3 = a33;       
-// }
-
-}
-
-
-
-
-void computeENO2BCCoeff(const dfloat dx1,  const dfloat dy1, 
-                        const dfloat dx2,  const dfloat dy2, 
-                        const dfloat dx3,  const dfloat dy3, 
-                        dfloat qm,   dfloat qp1, dfloat qp2,  dfloat qp3,
-                        const int bc1, const int bc2, const int bc3, 
-                        dfloat *a1, dfloat *a2, dfloat *a3){
-
-// if(bc1>0 || bc2>0 || bc3>0){
-
-// for(int i=0; i<1; i++){ 
-  if(bc1>0){qp1 = (*a1) + (*a2)*dx1 + (*a3)*dy1;}
-  if(bc2>0){qp2 = (*a1) + (*a2)*dx2 + (*a3)*dy2;}
-  if(bc3>0){qp3 = (*a1) + (*a2)*dx3 + (*a3)*dy3;}
-
-   dfloat det1 = 1.0 / (dx1*dy2 - dx2*dy1); 
-   // const dfloat a11 = qm; 
-   dfloat a12 = det1*( (dy1-dy2)*qm + ( dy2)*qp1 +(-dy1)*qp2); 
-   dfloat a13 = det1*(-(dx1-dx2)*qm + (-dx2)*qp1 +( dx1)*qp2); 
-
-   dfloat det2 = 1.0 / (dx2*dy3 - dx3*dy2); 
-   // const dfloat a21 = qm; 
-   dfloat a22 = det2*( (dy2-dy3)*qm + ( dy3)*qp2 +(-dy2)*qp3); 
-   dfloat a23 = det2*(-(dx2-dx3)*qm + (-dx3)*qp2 +( dx2)*qp3); 
-
-   dfloat det3 = 1.0 / (dx3*dy1 - dx1*dy3); 
-   // const dfloat a31 = qm; 
-   dfloat a32 = det3*( (dy3-dy1)*qm + ( dy1)*qp3 +(-dy3)*qp1); 
-   dfloat a33 = det3*(-(dx3-dx1)*qm + (-dx1)*qp3 +( dx3)*qp1); 
-
-
-  dfloat l11 = sqrt(a12*a12 + a13*a13);
-  dfloat l12 = sqrt(a22*a22 + a23*a23);
-  dfloat l13 = sqrt(a32*a32 + a33*a33);
-
-  dfloat w1 = 1.0/ pow((1E-12 + l11),3);
-  dfloat w2 = 1.0/ pow((1E-12 + l12),3);
-  dfloat w3 = 1.0/ pow((1E-12 + l13),3);
-  // dfloat w1 = 1.0/ (1E-12 + l11);
-  // dfloat w2 = 1.0/ (1E-12 + l12);
-  // dfloat w3 = 1.0/ (1E-12 + l13);
-  // // Nonlinear weights
-  *a1 = qm; 
-  *a2 = (w1*a12 + w2*a22 + w3*a32)/(w1+w2+w3); 
-  *a3 = (w1*a13 + w2*a23 + w3*a33)/(w1+w2+w3); 
-  // }
-
-// }
-
-}
-
-
-@kernel void lssSubcellReconstructFaceTri2D(const dlong Nelements,
-                                   @restrict const dlong *elmList, 
-                                   @restrict const dfloat *  vgeo,                            
-                                   @restrict const dfloat *  sgeo,                            
-                                   @restrict const dlong *  emapP,                            
-                                   @restrict const dlong *  fmapP,                            
-                                   @restrict const dfloat *  q,
-                                   @restrict const dfloat *  sq,
-                                   @restrict dfloat *sface){
-
-for(dlong eo=0;eo<Nelements;eo+=s_Nblocks;@outer(0)){
-  // @exclusive dfloat r_dx[p_Nfaces]; 
-  // @exclusive dfloat r_dy[p_Nfaces]; 
-
-// 1. compute gradient, 
-// 2. limit the result using Barth-Jaspersen
-// 3. reconstruct face values
-    for(int es=0;es<s_Nblocks;++es;@inner(1)){
-      for(int s=0;s<s_Ncells;++s;@inner(0)){ 
-        const dlong e = eo + es;
-        if(e<Nelements){
-        const int elmType = elmList[e]; 
-        if(elmType){
-        const dlong sem = e*s_Ncells + s; 
-        const dlong vid = sem*s_Nvgeo;  
-        const dlong sid = sem*p_Nfaces*s_Nsgeo; 
-
-      //
-      const dfloat qm   = sq[sem]; // solution
-      const dfloat xcm  = vgeo[vid + s_CXID]; // center coordinates
-      const dfloat ycm  = vgeo[vid + s_CYID];
-      // const dfloat ivm  = vgeo[vid + s_IVID]; // inverse volume
-
-      const dlong sep1  = emapP[sem*p_Nfaces + 0];
-      const dlong sep2  = emapP[sem*p_Nfaces + 1];
-      const dlong sep3  = emapP[sem*p_Nfaces + 2];
-
-      const int bc1      = sgeo[sid + 0*s_Nsgeo + s_BCID]; 
-      const int bc2      = sgeo[sid + 1*s_Nsgeo + s_BCID]; 
-      const int bc3      = sgeo[sid + 2*s_Nsgeo + s_BCID];
-
-
-      dfloat xcp1  = vgeo[sep1*s_Nvgeo + s_CXID];  
-      dfloat ycp1  = vgeo[sep1*s_Nvgeo + s_CYID]; 
-
-      dfloat xcp2  = vgeo[sep2*s_Nvgeo + s_CXID];  
-      dfloat ycp2  = vgeo[sep2*s_Nvgeo + s_CYID]; 
-      
-      dfloat xcp3  = vgeo[sep3*s_Nvgeo + s_CXID];  
-      dfloat ycp3  = vgeo[sep3*s_Nvgeo + s_CYID]; 
-
-      dfloat qp1   = sq[sep1]; 
-      dfloat qp2   = sq[sep2]; 
-      dfloat qp3   = sq[sep3]; 
-
-
-      if(bc1>0){
-        xcp1 =  sgeo[sid + 0*s_Nsgeo + s_FXID];
-        ycp1 =  sgeo[sid + 0*s_Nsgeo + s_FYID];
-        qp1 = qm; 
-      }
-      if(bc2>0){
-        xcp2 =  sgeo[sid + 1*s_Nsgeo + s_FXID];
-        ycp2 =  sgeo[sid + 1*s_Nsgeo + s_FYID];
-        qp2  = qm; 
-      }
-      if(bc3>0){
-        xcp3 =  sgeo[sid + 2*s_Nsgeo + s_FXID];
-        ycp3 =  sgeo[sid + 2*s_Nsgeo + s_FYID];
-        qp3 = qm;
-      }
-
-const dfloat dx1 = (xcp1 - xcm); const dfloat dy1 = (ycp1 - ycm); 
-const dfloat dx2 = (xcp2 - xcm); const dfloat dy2 = (ycp2 - ycm); 
-const dfloat dx3 = (xcp3 - xcm); const dfloat dy3 = (ycp3 - ycm); 
-
-#if WENO2
-  dfloat a1, a2, a3; 
-  computeENO2Coeff(dx1,dy1, dx2,dy2, dx3,dy3, qm,qp1,qp2,qp3, 
-                   bc1, bc2, bc3, &a1, &a2, &a3);
-
-  if(bc1>0 || bc2>0 || bc3>0){
-    // computeENO2BCCoeff(dx1, dy1,dx2, dy2,dx3, dy3, 
-    //                qm,qp1,qp2,qp3, 
-    //                bc1, bc2, bc3, 
-    //                &a1, &a2, &a3);
-  }
-
-     for(int f=0; f<p_Nfaces; f++){
-          // modifed 2nd order WENO 
-          const dfloat fxm = sgeo[sid + f*s_Nsgeo + s_FXID]; 
-          const dfloat fym = sgeo[sid + f*s_Nsgeo + s_FYID];
-          
-          sface[sem*p_Nfaces + f] = a1 + a2*(fxm -xcm) + a3*(fym - ycm); 
-          
-        }
-
-#else
-      dfloat dqdx, dqdy; 
-      computeGradient(xcm, ycm,xcp1,ycp1,xcp2,ycp2,xcp3,ycp3,qm,qp1,qp2,qp3,&dqdx,&dqdy); 
-
-// // Just testing implementation for do nothing bcs: seems to be working 
-//       if(bc1>0 || bc2>0 || bc3>0){
-//       for(int i=0; i<1; i++){
-//       if(bc1>0){qp1 = qm + dqdx*(xcp1-xcm) + dqdy*(ycp1 -ycm);}
-//       if(bc2>0){qp2 = qm + dqdx*(xcp2-xcm) + dqdy*(ycp2 -ycm);}
-//       if(bc3>0){qp3 = qm + dqdx*(xcp3-xcm) + dqdy*(ycp3 -ycm);}
-//        computeGradient(xcm, ycm,xcp1,ycp1,xcp2,ycp2,xcp3,ycp3,qm,qp1,qp2,qp3,&dqdx,&dqdy); 
-//      }
-//   }
-
-  for(int f=0; f<p_Nfaces; f++){
-          // modifed 2nd order WENO 
-          const dfloat fxm = sgeo[sid + f*s_Nsgeo + s_FXID]; 
-          const dfloat fym = sgeo[sid + f*s_Nsgeo + s_FYID];
-          
-          sface[sem*p_Nfaces + f] = qm + dqdx*(fxm -xcm) + dqdy*(fym - ycm); 
-          
-          // Secons order limited
-         // const dfloat qf = qm + lim*( dqdx*r_dx[f] + dqdy*r_dy[f]); 
-         // sface[sem*p_Nfaces + f] = qf; 
-         
-         // testing 1st order 
-         // sface[sem*p_Nfaces + f] = qm; 
-        }
-
-#endif
-       
-
-#if 0
-      dfloat qmin = min(qp1, min(qp2, qp3));
-      dfloat qmax = max(qp1, max(qp2, qp3));
-      // simple Barth-Jaspersen gradient limiting
-      // dfloat lim = 1.0; 
-        // for(int f=0; f<p_Nfaces; f++){
-        //   const dfloat fxm = sgeo[sid + f*s_Nsgeo + s_FXID]; 
-        //   const dfloat fym = sgeo[sid + f*s_Nsgeo + s_FYID];
-
-        //   r_dx[f] = fxm - xcm;   
-        //   r_dy[f] = fym - ycm; 
-
-        //   const dfloat dqf = r_dx[f]*dqdx + r_dy[f]*dqdy; 
-        //   dfloat limtest = 1.0;
-
-        //   if(abs(dqf) - 1e-6 <0) {
-        //   // nada
-        //   }else{
-
-        //   if(dqf > 0){ limtest = min(1.0, (qmax - qm)/dqf ); };
-        //   if(dqf < 0){ limtest = min(1.0, (qmin - qm)/dqf ); };
-        // }
-        //   lim = min(lim, limtest); 
-        // }
-
-        // lim= 1.0;
-#endif
-
-#if 0
-      dfloat qmin = min(qp1, min(qp2, qp3));
-      dfloat qmax = max(qp1, max(qp2, qp3));
- Vaterekishan modifcation, more diffusive!!!!
- const dfloat l1  = sgeo[sid + 0*s_Nsgeo + s_SAID];
- const dfloat l2  = sgeo[sid + 1*s_Nsgeo + s_SAID];
- const dfloat l3  = sgeo[sid + 2*s_Nsgeo + s_SAID];
- 
-
- // lc = A / semi-perimeter = (l1+l2+l3)/2
- const dfloat hmin =  2.0/ (ivm*(l1+l2+l3)); 
-
-for(int f=0; f<p_Nfaces; f++){
-          const dfloat fxm = sgeo[sid + f*s_Nsgeo + s_FXID]; 
-          const dfloat fym = sgeo[sid + f*s_Nsgeo + s_FYID];
-
-          r_dx[f] = fxm - xcm;   
-          r_dy[f] = fym - ycm; 
-
-          const dfloat dqf = r_dx[f]*dqdx + r_dy[f]*dqdy; 
-
-          dfloat limtest = 1.0; 
-          // const dfloat eps = 1e-4; 
-          const dfloat eps = pow(0.1*hmin,1.5); 
-          // const dfloat eps = 0.0; 
-          if(dqf > 0){ 
-            const dfloat lambda = qmax -qm; 
-            limtest = ( lambda*lambda + eps + 2.0*dqf*lambda)/
-                     (lambda*lambda + 2.0*dqf*dqf+ lambda*dqf + eps) ; 
-            }
-
-
-          if(dqf < 0){ 
-            const dfloat lambda = (qmin -qm); 
-            limtest = ( lambda*lambda + eps + 2.0*dqf*lambda )/
-                     (lambda*lambda + 2.0*dqf*dqf+ lambda*dqf + eps) ; 
-          }
-
-
-          lim = min(lim, limtest); 
-
-        }
-#endif
-
-      }
-      }
-    }
-  }
-
-}
-
-}
-
-#endif

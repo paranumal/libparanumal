@@ -20,10 +20,10 @@ BOX
 3
 
 [BOX NX]
-40
+80
 
 [BOX NY]
-40
+80
 
 [BOX DIMX]
 4
@@ -78,7 +78,7 @@ EQUISPACED
 
 [FINAL TIME]
 #8
-3
+.1
 #0.1
 
 [OUTPUT INTERVAL]
