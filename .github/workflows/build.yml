@@ -26,7 +26,10 @@ jobs:
         OCCA_DIR: ${PWD}/occa
         LD_LIBRARY_PATH: ${PWD}/occa/lib
     - name: Test
-      run: make test
+      run: |
+        echo ${LD_LIBRARY_PATH}
+        ls ${OCCA_DIR}/lib
+        make test
       env: 
         OCCA_DIR: ${PWD}/occa
         LD_LIBRARY_PATH: ${PWD}/occa/lib
