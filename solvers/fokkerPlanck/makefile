@@ -86,6 +86,7 @@ MESH_DIR     =${LIBP_LIBS_DIR}/mesh
 ELLIPTIC_DIR =${LIBP_DIR}/solvers/elliptic
 PARALMOND_DIR=${LIBP_LIBS_DIR}/parAlmond
 CORE_DIR     =${LIBP_DIR}/core
+TEST_DIR     =${LIBP_DIR}/test
 
 #includes
 INCLUDES=${LIBP_INCLUDES} \
@@ -229,12 +230,16 @@ info:
 	$(info LIBS      = $(LIBS))
 	@true
 
+#Keep these from propagating to OCCA in tests
+unexport CXX
+unexport CXXFLAGS
+
 test: fpeMain
-	@printf "%b" "$(TEST_COLOR)Testing fokkerPlanck solver with setupQuad2D.rc$(NO_COLOR)\n";
-	./fpeMain setups/setupQuad2D.rc
-	@printf "%b" "$(TEST_COLOR)Testing fpe solver with setupTri2D.rc$(NO_COLOR)\n";
-	./fpeMain setups/setupTri2D.rc
-	@printf "%b" "$(TEST_COLOR)Testing fpe solver with setupHex3D.rc$(NO_COLOR)\n";
-	./fpeMain setups/setupHex3D.rc
-	@printf "%b" "$(TEST_COLOR)Testing fpe solver with setupTet3D.rc$(NO_COLOR)\n";
-	./fpeMain setups/setupTet3D.rc
+	@printf "%b" "$(TEST_COLOR)Testing fokkerPlanck solver with testFpeQuad2D_01.rc$(NO_COLOR)\n";
+	./fpeMain $(TEST_DIR)/fpe/testFpeQuad2D_01.rc
+	@printf "%b" "$(TEST_COLOR)Testing fpe solver with testFpeTri2D_01.rc$(NO_COLOR)\n";
+	./fpeMain $(TEST_DIR)/fpe/testFpeTri2D_01.rc
+	@printf "%b" "$(TEST_COLOR)Testing fpe solver with testFpeHex3D_01.rc$(NO_COLOR)\n";
+	./fpeMain $(TEST_DIR)/fpe/testFpeHex3D_01.rc
+	@printf "%b" "$(TEST_COLOR)Testing fpe solver with testFpeTet3D_01.rc$(NO_COLOR)\n";
+	./fpeMain $(TEST_DIR)/fpe/testFpeTet3D_01.rc

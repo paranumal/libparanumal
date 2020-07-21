@@ -85,6 +85,7 @@ OGS_DIR      =${LIBP_LIBS_DIR}/ogs
 PARALMOND_DIR=${LIBP_LIBS_DIR}/parAlmond
 MESH_DIR     =${LIBP_LIBS_DIR}/mesh
 CORE_DIR     =${LIBP_DIR}/core
+TEST_DIR     =${LIBP_DIR}/test
 
 #includes
 INCLUDES=${LIBP_INCLUDES} \
@@ -224,12 +225,16 @@ info:
 	$(info LIBS      = $(LIBS))
 	@true
 
+#Keep these from propagating to OCCA in tests
+unexport CXX
+unexport CXXFLAGS
+
 test: ellipticMain
-	@printf "%b" "$(TEST_COLOR)Testing elliptic solver with setupQuad2D.rc$(NO_COLOR)\n";
-	./ellipticMain setups/setupQuad2D.rc
-	@printf "%b" "$(TEST_COLOR)Testing elliptic solver with setupTri2D.rc$(NO_COLOR)\n";
-	./ellipticMain setups/setupTri2D.rc
-	@printf "%b" "$(TEST_COLOR)Testing elliptic solver with setupHex2D.rc$(NO_COLOR)\n";
-	./ellipticMain setups/setupHex3D.rc
-	@printf "%b" "$(TEST_COLOR)Testing elliptic solver with setupTet3D.rc$(NO_COLOR)\n";
-	./ellipticMain setups/setupTet3D.rc
+	@printf "%b" "$(TEST_COLOR)Testing elliptic solver with testEllipticQuad2D_01.rc$(NO_COLOR)\n";
+	./ellipticMain $(TEST_DIR)/elliptic/testEllipticQuad2D_01.rc
+	@printf "%b" "$(TEST_COLOR)Testing elliptic solver with testEllipticTri2D_01.rc$(NO_COLOR)\n";
+	./ellipticMain $(TEST_DIR)/elliptic/testEllipticTri2D_01.rc
+	@printf "%b" "$(TEST_COLOR)Testing elliptic solver with testEllipticHex2D_01.rc$(NO_COLOR)\n";
+	./ellipticMain $(TEST_DIR)/elliptic/testEllipticHex3D_01.rc
+	@printf "%b" "$(TEST_COLOR)Testing elliptic solver with testEllipticTet3D_01.rc$(NO_COLOR)\n";
+	./ellipticMain $(TEST_DIR)/elliptic/testEllipticTet3D_01.rc

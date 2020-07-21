@@ -84,6 +84,7 @@ BLAS_DIR     =${LIBP_TPL_DIR}/BlasLapack
 OGS_DIR      =${LIBP_LIBS_DIR}/ogs
 MESH_DIR     =${LIBP_LIBS_DIR}/mesh
 CORE_DIR     =${LIBP_DIR}/core
+TEST_DIR     =${LIBP_DIR}/test
 
 #includes
 INCLUDES=${LIBP_INCLUDES} \
@@ -214,12 +215,16 @@ info:
 	$(info LIBS      = $(LIBS))
 	@true
 
+#Keep these from propagating to OCCA in tests
+unexport CXX
+unexport CXXFLAGS
+
 test: advectionMain
-	@printf "%b" "$(TEST_COLOR)Testing advection solver with setupQuad2D.rc$(NO_COLOR)\n";
-	./advectionMain setups/setupQuad2D.rc
-	@printf "%b" "$(TEST_COLOR)Testing advection solver with setupTri2D.rc$(NO_COLOR)\n";
-	./advectionMain setups/setupTri2D.rc
-	@printf "%b" "$(TEST_COLOR)Testing advection solver with setupHex3D.rc$(NO_COLOR)\n";
-	./advectionMain setups/setupHex3D.rc
-	@printf "%b" "$(TEST_COLOR)Testing advection solver with setupTet3D.rc$(NO_COLOR)\n";
-	./advectionMain setups/setupTet3D.rc
+	@printf "%b" "$(TEST_COLOR)Testing advection solver with testAdvectionQuad2D_01.rc$(NO_COLOR)\n";
+	./advectionMain $(TEST_DIR)/advection/testAdvectionQuad2D_01.rc
+	@printf "%b" "$(TEST_COLOR)Testing advection solver with testAdvectionTri2D_01.rc$(NO_COLOR)\n";
+	./advectionMain $(TEST_DIR)/advection/testAdvectionTri2D_01.rc
+	@printf "%b" "$(TEST_COLOR)Testing advection solver with testAdvectionHex3D_01.rc$(NO_COLOR)\n";
+	./advectionMain $(TEST_DIR)/advection/testAdvectionHex3D_01.rc
+	@printf "%b" "$(TEST_COLOR)Testing advection solver with testAdvectionTet3D_01.rc$(NO_COLOR)\n";
+	./advectionMain $(TEST_DIR)/advection/testAdvectionTet3D_01.rc

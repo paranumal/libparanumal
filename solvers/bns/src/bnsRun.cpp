@@ -42,6 +42,17 @@ void bns_t::Run(){
                          o_q);
 
   timeStepper->Run(o_q, startTime, finalTime);
+
+  // output norm of final solution
+  {
+    //compute q.M*q
+    MassMatrixKernel(mesh.Nelements, mesh.o_ggeo, mesh.o_MM, o_q, o_Mq);
+
+    dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
+    dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_q, o_Mq, comm));
+
+    printf("Testing norm bns solution = %17.15lg\n", norm2);
+  }
 }
 
 

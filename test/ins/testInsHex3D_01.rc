@@ -1,0 +1,187 @@
+[FORMAT]
+2.0
+
+[DATA FILE]
+data/insBeltrami3D.h
+
+[MESH FILE]
+BOX
+
+[MESH DIMENSION]
+3
+
+[ELEMENT TYPE] # number of edges
+12
+
+[BOX NX]
+5
+
+[BOX NY]
+5
+
+[BOX NZ]
+5
+
+[BOX DIMX]
+2
+
+[BOX DIMY]
+2
+
+[BOX DIMZ]
+2
+
+[BOX BOUNDARY FLAG]
+2
+
+[POLYNOMIAL DEGREE]
+4
+
+[THREAD MODEL]
+CUDA
+
+[PLATFORM NUMBER]
+0
+
+[DEVICE NUMBER]
+0
+
+[VISCOSITY]
+0.1
+
+# can be CUBATURE or COLLOCATION
+[ADVECTION TYPE]
+COLLOCATION
+
+#currently experimental
+[PRESSURE INCREMENT]
+FALSE
+
+[TIME INTEGRATOR]
+SSBDF3
+
+[NUMBER OF SUBCYCLES]
+4
+
+[SUBCYCLING TIME INTEGRATOR]
+DOPRI5
+
+[START TIME]
+0
+
+[FINAL TIME]
+0.1
+
+[OUTPUT INTERVAL]
+0.1
+
+[OUTPUT TO FILE]
+FALSE
+
+[OUTPUT FILE NAME]
+ins
+
+#################################################
+########## Velocity Solver Options ##############
+#################################################
+
+# can be PCG, FPCG, NBPCG, or NBFPCG
+[VELOCITY LINEAR SOLVER]
+PCG
+
+# can be IPDG, or CONTINUOUS
+[VELOCITY DISCRETIZATION]
+CONTINUOUS
+
+# can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, MULTIGRID, or OAS
+[VELOCITY PRECONDITIONER]
+JACOBI
+
+[VELOCITY VERBOSE]
+TRUE
+
+########## MULTIGRID Options ##############
+
+# can be ALLDEGREES, HALFDEGREES, HALFDOFS
+[VELOCITY MULTIGRID COARSENING]
+HALFDOFS
+
+# can be DAMPEDJACOBI or CHEBYSHEV
+[VELOCITY MULTIGRID SMOOTHER]
+CHEBYSHEV
+
+# can be any integer >0
+[VELOCITY MULTIGRID CHEBYSHEV DEGREE]
+2
+
+###########################################
+
+########## ParAlmond Options ##############
+
+# can be KCYCLE, or VCYCLE
+# can add the EXACT and NONSYM option
+[VELOCITY PARALMOND CYCLE]
+KCYCLE
+
+# can be DAMPEDJACOBI or CHEBYSHEV
+[VELOCITY PARALMOND SMOOTHER]
+CHEBYSHEV
+
+# can be any integer >0
+[VELOCITY PARALMOND CHEBYSHEV DEGREE]
+2
+
+###########################################
+
+#################################################
+########## Pressure Solver Options ##############
+#################################################
+
+# can be PCG, FPCG, NBPCG, or NBFPCG
+[PRESSURE LINEAR SOLVER]
+FPCG
+
+# can be IPDG, or CONTINUOUS
+[PRESSURE DISCRETIZATION]
+CONTINUOUS
+
+# can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, or MULTIGRID
+[PRESSURE PRECONDITIONER]
+MULTIGRID
+
+[PRESSURE VERBOSE]
+TRUE
+
+########## MULTIGRID Options ##############
+
+# can be ALLDEGREES, HALFDEGREES, HALFDOFS
+[PRESSURE MULTIGRID COARSENING]
+HALFDOFS
+
+# can be DAMPEDJACOBI or CHEBYSHEV
+[PRESSURE MULTIGRID SMOOTHER]
+CHEBYSHEV
+
+# can be any integer >0
+[PRESSURE MULTIGRID CHEBYSHEV DEGREE]
+2
+
+###########################################
+
+########## ParAlmond Options ##############
+
+# can be KCYCLE, or VCYCLE
+# can add the EXACT and NONSYM option
+[PRESSURE PARALMOND CYCLE]
+KCYCLE
+
+# can be DAMPEDJACOBI or CHEBYSHEV
+[PRESSURE PARALMOND SMOOTHER]
+CHEBYSHEV
+
+# can be any integer >0
+[PRESSURE PARALMOND CHEBYSHEV DEGREE]
+2
+
+###########################################
+

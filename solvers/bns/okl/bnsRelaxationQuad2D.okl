@@ -38,10 +38,10 @@ SOFTWARE.
                                @restrict const  dfloat *  q,
                                      @restrict dfloat *  rhsq){
 
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockCub;@outer(0)){  // for all elements
 
     // @shared memory for q at nodes
-    @shared dfloat s_q[p_NblockV][p_Nfields][p_cubNq][p_cubNq];
+    @shared dfloat s_q[p_NblockCub][p_Nfields][p_cubNq][p_cubNq];
 
     @exclusive dfloat r_q[p_Nfields];
 
@@ -51,7 +51,7 @@ SOFTWARE.
     @exclusive dlong e;
 
     //fetch the U and V values and store in flux arrays in @shared
-    for(int es=0;es<p_NblockV;++es;@inner(2)){
+    for(int es=0;es<p_NblockCub;++es;@inner(2)){
       for(int j=0;j<p_cubNq;++j;@inner(1)){
         for(int i=0;i<p_cubNq;++i;@inner(0)){
           dlong et = eo+es; // element in block
@@ -79,7 +79,7 @@ SOFTWARE.
     @barrier("local");
 
     //interpolate in i, store in register
-    for(int es=0;es<p_NblockV;++es;@inner(2)){
+    for(int es=0;es<p_NblockCub;++es;@inner(2)){
       for(int j=0;j<p_cubNq;++j;@inner(1)){
         for(int i=0;i<p_cubNq;++i;@inner(0)){
           if (j<p_Nq) {
@@ -103,7 +103,7 @@ SOFTWARE.
     @barrier("local");
 
     //write register back to @shared
-    for(int es=0;es<p_NblockV;++es;@inner(2)){
+    for(int es=0;es<p_NblockCub;++es;@inner(2)){
       for(int j=0;j<p_cubNq;++j;@inner(1)){
         for(int i=0;i<p_cubNq;++i;@inner(0)){
           if (j<p_Nq) {
@@ -119,7 +119,7 @@ SOFTWARE.
 
 
     //interpolate in j, store in register
-    for(int es=0;es<p_NblockV;++es;@inner(2)){
+    for(int es=0;es<p_NblockCub;++es;@inner(2)){
       for(int j=0;j<p_cubNq;++j;@inner(1)){
         for(int i=0;i<p_cubNq;++i;@inner(0)){
 
@@ -141,7 +141,7 @@ SOFTWARE.
     @barrier("local");
 
     //construct nonlinear term from registers
-    for(int es=0;es<p_NblockV;++es;@inner(2)){
+    for(int es=0;es<p_NblockCub;++es;@inner(2)){
       for(int j=0;j<p_cubNq;++j;@inner(1)){
         for(int i=0;i<p_cubNq;++i;@inner(0)){
           dlong et = eo+es; // element in block
@@ -169,7 +169,7 @@ SOFTWARE.
     @barrier("local");
 
     //project in j
-    for(int es=0;es<p_NblockV;++es;@inner(2)){
+    for(int es=0;es<p_NblockCub;++es;@inner(2)){
       for(int j=0;j<p_cubNq;++j;@inner(1)){
         for(int i=0;i<p_cubNq;++i;@inner(0)){
 
@@ -192,7 +192,7 @@ SOFTWARE.
     @barrier("local");
 
     //write register back to @shared
-    for(int es=0;es<p_NblockV;++es;@inner(2)){
+    for(int es=0;es<p_NblockCub;++es;@inner(2)){
       for(int j=0;j<p_cubNq;++j;@inner(1)){
         for(int i=0;i<p_cubNq;++i;@inner(0)){
           if (j<p_Nq) {
@@ -207,7 +207,7 @@ SOFTWARE.
     @barrier("local");
 
     // project in i and update
-    for(int es=0;es<p_NblockV;++es;@inner(2)){
+    for(int es=0;es<p_NblockCub;++es;@inner(2)){
       for(int j=0;j<p_cubNq;++j;@inner(1)){
         for(int i=0;i<p_cubNq;++i;@inner(0)){
           const dlong et = eo+es; // element in block

@@ -45,11 +45,13 @@ void ins_t::Run(){
 
   // output norm of final solution
   {
-    dlong Ntotal = mesh.Nelements*mesh.Np*NVfields;
-    
-    dfloat normu = linAlg.norm2(Ntotal, o_u, mesh.comm);
+    //compute U.M*U
+    MassMatrixKernel(mesh.Nelements, mesh.o_ggeo, mesh.o_MM, o_u, o_MU);
 
-    printf("Testing norm ins solution = %17.15lg\n", normu);
+    dlong Nentries = mesh.Nelements*mesh.Np*NVfields;
+    dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_u, o_MU, comm));
+
+    printf("Testing norm ins solution = %17.15lg\n", norm2);
   }
 
 }

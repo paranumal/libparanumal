@@ -56,7 +56,7 @@ acoustics_t& acoustics_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   acoustics->timeStepper->SetTimeStep(dt);
 
   //setup linear algebra module
-  acoustics->linAlg.InitKernels({"innerProd","norm2"}, mesh.comm);
+  acoustics->linAlg.InitKernels({"innerProd"}, mesh.comm);
 
   // set penalty parameter
   dfloat Lambda2 = 0.5;

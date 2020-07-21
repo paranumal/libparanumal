@@ -84,6 +84,7 @@ BLAS_DIR     =${LIBP_TPL_DIR}/BlasLapack
 OGS_DIR      =${LIBP_LIBS_DIR}/ogs
 MESH_DIR     =${LIBP_LIBS_DIR}/mesh
 CORE_DIR     =${LIBP_DIR}/core
+TEST_DIR     =${LIBP_DIR}/test
 
 #includes
 INCLUDES=${LIBP_INCLUDES} \
@@ -214,12 +215,16 @@ info:
 	$(info LIBS      = $(LIBS))
 	@true
 
+#Keep these from propagating to OCCA in tests
+unexport CXX
+unexport CXXFLAGS
+
 test: cnsMain
-	@printf "%b" "$(TEST_COLOR)Testing cns solver with setupQuad2D.rc$(NO_COLOR)\n";
-	./cnsMain setups/setupQuad2D.rc
-	@printf "%b" "$(TEST_COLOR)Testing cns solver with setupTri2D.rc$(NO_COLOR)\n";
-	./cnsMain setups/setupTri2D.rc
-	@printf "%b" "$(TEST_COLOR)Testing cns solver with setupHex3D.rc$(NO_COLOR)\n";
-	./cnsMain setups/setupHex3D.rc
-	@printf "%b" "$(TEST_COLOR)Testing cns solver with setupTet3D.rc$(NO_COLOR)\n";
-	./cnsMain setups/setupTet3D.rc
+	@printf "%b" "$(TEST_COLOR)Testing cns solver with testCnsQuad2D_01.rc$(NO_COLOR)\n";
+	./cnsMain $(TEST_DIR)/cns/testCnsQuad2D_01.rc
+	@printf "%b" "$(TEST_COLOR)Testing cns solver with testCnsTri2D_01.rc$(NO_COLOR)\n";
+	./cnsMain $(TEST_DIR)/cns/testCnsTri2D_01.rc
+	@printf "%b" "$(TEST_COLOR)Testing cns solver with testCnsHex3D_01.rc$(NO_COLOR)\n";
+	./cnsMain $(TEST_DIR)/cns/testCnsHex3D_01.rc
+	@printf "%b" "$(TEST_COLOR)Testing cns solver with testCnsTet3D_01.rc$(NO_COLOR)\n";
+	./cnsMain $(TEST_DIR)/cns/testCnsTet3D_01.rc

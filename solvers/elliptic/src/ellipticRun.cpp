@@ -51,6 +51,8 @@ void elliptic_t::Run(){
   int Nmax = mymax(mesh.Np, mesh.Nfaces*mesh.Nfp);
   kernelInfo["defines/" "p_Nmax"]= Nmax;
 
+  kernelInfo["defines/" "p_Nfields"]= Nfields;
+
   // set kernel name suffix
   char *suffix;
   if(mesh.elementType==TRIANGLES)
@@ -63,9 +65,15 @@ void elliptic_t::Run(){
     suffix = strdup("Hex3D");
 
   char fileName[BUFSIZ], kernelName[BUFSIZ];
+
+  // mass matrix operator
+  sprintf(fileName, LIBP_DIR "/core/okl/MassMatrixOperator%s.okl", suffix);
+  sprintf(kernelName, "MassMatrixOperator%s", suffix);
+  occa::kernel MassMatrixKernel = buildKernel(device, fileName, kernelName,
+                                                    kernelInfo, comm);
+
   sprintf(fileName, DELLIPTIC "/okl/ellipticRhs%s.okl", suffix);
   sprintf(kernelName, "ellipticRhs%s", suffix);
-
   occa::kernel forcingKernel = buildKernel(device, fileName, kernelName,
                                                     kernelInfo, comm);
 
@@ -93,6 +101,9 @@ void elliptic_t::Run(){
   dfloat *x = (dfloat*) calloc(Nall, sizeof(dfloat));
   occa::memory o_r = device.malloc(Nall*sizeof(dfloat));
   occa::memory o_x = device.malloc(Nall*sizeof(dfloat), x);
+
+  //storage for M*q during reporting
+  occa::memory o_Mx = mesh.device.malloc(Nall*sizeof(dfloat), x);
 
   //populate rhs forcing
   forcingKernel(mesh.Nelements,
@@ -191,13 +202,19 @@ void elliptic_t::Run(){
     PlotFields(x, fname);
   }
 
+  // output norm of final solution
   {
-    // compute norm of solution
-    dfloat normx = linAlg.norm2(mesh.Np*mesh.Nelements, o_x, mesh.comm);
-    printf("Testing norm elliptic solution = %17.15lg\n", normx);
+    //compute q.M*q
+    MassMatrixKernel(mesh.Nelements, mesh.o_ggeo, mesh.o_MM, o_x, o_Mx);
+
+    dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
+    dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_x, o_Mx, comm));
+
+    printf("Testing norm elliptic solution = %17.15lg\n", norm2);
   }
-  
+
   free(r); free(x);
   o_r.free(); o_x.free();
+  o_Mx.free();
   delete linearSolver;
 }

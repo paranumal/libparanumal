@@ -83,6 +83,7 @@ BLAS_DIR     =${LIBP_TPL_DIR}/BlasLapack
 OGS_DIR      =${LIBP_LIBS_DIR}/ogs
 MESH_DIR     =${LIBP_LIBS_DIR}/mesh
 CORE_DIR     =${LIBP_DIR}/core
+TEST_DIR     =${LIBP_DIR}/test
 
 #includes
 INCLUDES=${LIBP_INCLUDES} \
@@ -213,12 +214,16 @@ info:
 	$(info LIBS      = $(LIBS))
 	@true
 
+#Keep these from propagating to OCCA in tests
+unexport CXX
+unexport CXXFLAGS
+
 test: acousticsMain
-	@printf "%b" "$(TEST_COLOR)Testing acoustics solver with setupQuad2D.rc$(NO_COLOR)\n";
-	./acousticsMain setups/setupQuad2D.rc
-	@printf "%b" "$(TEST_COLOR)Testing acoustics solver with setupTri2D.rc$(NO_COLOR)\n";
-	./acousticsMain setups/setupTri2D.rc
-	@printf "%b" "$(TEST_COLOR)Testing acoustics solver with setupHex3D.rc$(NO_COLOR)\n";
-	./acousticsMain setups/setupHex3D.rc
-	@printf "%b" "$(TEST_COLOR)Testing acoustics solver with setupTet3D.rc$(NO_COLOR)\n";
-	./acousticsMain setups/setupTet3D.rc
+	@printf "%b" "$(TEST_COLOR)Testing acoustics solver with testAcousticsQuad2D.rc$(NO_COLOR)\n";
+	./acousticsMain $(TEST_DIR)/acoustics/testAcousticsQuad2D_01.rc
+	@printf "%b" "$(TEST_COLOR)Testing acoustics solver with testAcousticsTri2D.rc$(NO_COLOR)\n";
+	./acousticsMain $(TEST_DIR)/acoustics/testAcousticsTri2D_01.rc
+	@printf "%b" "$(TEST_COLOR)Testing acoustics solver with testAcousticsHex3D.rc$(NO_COLOR)\n";
+	./acousticsMain $(TEST_DIR)/acoustics/testAcousticsHex3D_01.rc
+	@printf "%b" "$(TEST_COLOR)Testing acoustics solver with testAcousticsTet3D.rc$(NO_COLOR)\n";
+	./acousticsMain $(TEST_DIR)/acoustics/testAcousticsTet3D_01.rc

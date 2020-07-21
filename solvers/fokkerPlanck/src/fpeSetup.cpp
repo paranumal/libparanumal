@@ -112,7 +112,7 @@ fpe_t& fpe_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   }
 
   //setup linear algebra module
-  fpe->linAlg.InitKernels({"innerProd", "axpy", "norm2"}, mesh.comm);
+  fpe->linAlg.InitKernels({"innerProd", "axpy"}, mesh.comm);
 
   /*setup trace halo exchange */
   fpe->traceHalo = mesh.HaloTraceSetup(1); //one field

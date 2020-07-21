@@ -258,7 +258,7 @@ info:
 	$(info CXXFLAGS  = $(CXXFLAGS))
 	@true
 
-test:
+test: solvers
 	@printf "%b" "$(TEST_COLOR)Testing elliptic solver$(NO_COLOR)\n";
 	@${MAKE} -C solvers/elliptic --no-print-directory  test
 	@printf "%b" "$(TEST_COLOR)Testing cns solver$(NO_COLOR)\n";
