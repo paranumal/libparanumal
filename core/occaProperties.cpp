@@ -60,8 +60,10 @@ void occaDeviceProperties(occa::device &device, occa::properties& props){
     props["defines/" "dlong"]="long long int";
   }
 
-  if(device.mode()=="Serial")
+  if(device.mode()=="Serial") {
+    props["compiler_flags"] += "-O3 ";
     props["compiler_flags"] += "-g "; //debugging
+  }
 
   if(device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
     props["compiler_flags"] += "--ftz=true ";
