@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install Dependencies
+      run:  
+          sudo apt install -y libopenmpi-dev openmpi-bin
+          git clone https://github.com/libocca/occa
+          cd occa
+          make -j `nproc`
+          export OCCA_DIR=${PWD}
+          export LD_LIBRARY_PATH=${OCCA_DIR}/lib:$LD_LIBRARY_PATH
+          cd ..
+    - name: Build
+      run: make -j `nproc`
+    - name: Test
+      run: make test
