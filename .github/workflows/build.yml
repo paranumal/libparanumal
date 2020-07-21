@@ -14,7 +14,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Install Dependencies
-      run:  
+      run: |
           sudo apt install -y libopenmpi-dev openmpi-bin
           git clone https://github.com/libocca/occa
           cd occa
