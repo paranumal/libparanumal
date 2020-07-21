@@ -19,10 +19,14 @@ jobs:
           git clone https://github.com/libocca/occa
           cd occa
           make -j `nproc`
-          export OCCA_DIR=${PWD}
-          export LD_LIBRARY_PATH=${OCCA_DIR}/lib:$LD_LIBRARY_PATH
           cd ..
     - name: Build
       run: make -j `nproc`
+      env: 
+        OCCA_DIR: ${PWD}/occa
+        LD_LIBRARY_PATH: ${PWD}/occa/lib
     - name: Test
       run: make test
+      env: 
+        OCCA_DIR: ${PWD}/occa
+        LD_LIBRARY_PATH: ${PWD}/occa/lib
