@@ -6,8 +6,8 @@
 data/lssCircle2D.h
 
 [MESH FILE]
-#BOX
-../../meshes/circle.msh
+BOX
+#../../meshes/circle.msh
 #../../meshes/circle.msh
 #../../meshes/lssCircle.msh
 #../../meshes/circle_h01.msh
@@ -20,10 +20,10 @@ data/lssCircle2D.h
 3
 
 [BOX NX]
-80
+40
 
 [BOX NY]
-80
+40
 
 [BOX DIMX]
 4
@@ -68,7 +68,7 @@ LSERK4
 SUBCELL
 
 [SUBCELL NUMBER]
-6
+5
 
 [SUBCELL MINOR GRID]
 EQUISPACED

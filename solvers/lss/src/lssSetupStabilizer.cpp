@@ -65,9 +65,13 @@ void lss_t::SetupStabilizer(){
 
     sprintf(fileName, DLSS "/okl/lssStabilize%s.okl", suffix);
 
-    sprintf(kernelName, "skyline%s", suffix);
-    skylineKernel = buildKernel(device, fileName, kernelName, kernelInfo, mesh.comm);
+    sprintf(kernelName, "lssSkyline%s", suffix);
+    skylineKernel = buildKernel(mesh.device, fileName, kernelName, 
+                                     kernelInfo, mesh.comm); 
 
+    sprintf(kernelName, "lssFindNeigh%s", suffix);
+    findNeighKernel = buildKernel(mesh.device, fileName, kernelName, 
+                                     kernelInfo, mesh.comm); 
 
     sprintf(kernelName, "lssProject%s", suffix);
     projectKernel = buildKernel(mesh.device, fileName, kernelName, 

@@ -104,6 +104,8 @@ public:
   occa::kernel projectDGKernel; 
   occa::kernel reconstructKernel; 
   occa::kernel subcellComputeKernel; 
+  occa::kernel skylineKernel; 
+  occa::kernel findNeighKernel; 
 
   // occa::kernel subcellSignKernel; // This could be part of subcell 
   // occa::kernel subcellComputeKernel; 
@@ -115,7 +117,6 @@ public:
   // occa::kernel reconstructKernel; 
 
 
-  occa::kernel skylineKernel; 
 
   lss_t() = delete;
   lss_t(mesh_t& _mesh, linAlg_t& _linAlg, settings_t& _settings):

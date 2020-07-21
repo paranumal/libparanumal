@@ -97,7 +97,7 @@ subcell_t() = delete;
 
  subcell_t(solver_t &_solver);
  // subcell_t(mesh_t &_mesh,settings_t& _settings);
- virtual ~subcell_t(){}
+ virtual ~subcell_t();
 
 
 // static subcell_t& Setup(mesh_t& _mesh, settings_t& _settings); 
@@ -129,7 +129,7 @@ void BaseLineDecay(int N, dfloat *BLD);
   // Skyline
   occa::memory o_LSF, o_BLD, o_ElementList;
   occa::memory o_invVT, o_ModMap; 
-  occa::kernel skylineKernel; 
+  // occa::kernel skylineKernel; 
 
 #if 0
 

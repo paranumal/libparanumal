@@ -256,6 +256,7 @@ lss_t::~lss_t() {
 
   if(subcellStabilization){
     skylineKernel.free();
+    findNeighKernel.free();
     projectKernel.free();
     reconstructKernel.free();
     partialRedistanceVolumeKernel.free();
@@ -265,7 +266,7 @@ lss_t::~lss_t() {
     partialRedistanceSurfaceKernel.free();
     mixedRedistanceSurfaceKernel.free();
     subcellComputeKernel.free();
-    delete subcell;
+    if(subcell) delete subcell;
   }
   
   if (timeStepper) delete timeStepper;

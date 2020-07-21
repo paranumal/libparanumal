@@ -173,3 +173,8 @@ for(int n=1; n<_N+1; n++){
 }
 
 
+subcell_t::~subcell_t() {
+  
+}
+
+

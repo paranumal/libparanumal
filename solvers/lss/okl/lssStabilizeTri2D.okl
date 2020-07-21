@@ -33,9 +33,8 @@ SOFTWARE.
 
 #if 1
 
- @kernel void skylineTri2D(const dlong Nelements,
+ @kernel void lssSkylineTri2D(const dlong Nelements,
                @restrict const dfloat* ggeo,
-               @restrict const dlong * EToE, 
                @restrict const int *  ModMap,
                @restrict const dfloat * MM,               
                @restrict const dfloat * InvVT,
@@ -157,10 +156,13 @@ for(int n=0; n<p_Np; n++; @inner(0)){
     }
    }
   }
+}
 
-  // now find the neighboor of FVFV cells
-  @barrier("global");
 
+
+ @kernel void lssFindNeighTri2D(const dlong Nelements,
+                              @restrict const dlong * EToE, 
+                              @restrict dlong *  ElementList){
   for(dlong n=0;n<Nelements;++n;@tile(p_blockSize,@outer,@inner))
   {
    const int elmType = ElementList[n];
@@ -176,6 +178,7 @@ for(int n=0; n<p_Np; n++; @inner(0)){
      ElementList[n] = neighType; 
    }
   }
+
 }
 
 

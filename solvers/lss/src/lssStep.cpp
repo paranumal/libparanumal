@@ -349,7 +349,6 @@ void lss_t::DetectTroubledCells(occa::memory& o_Q, occa::memory& o_ElementList){
 if(subcellStabilization){
   skylineKernel(mesh.Nelements,
                 mesh.o_ggeo,
-                subcell->o_EToE, 
                 subcell->o_ModMap, 
                 mesh.o_MM,
                 subcell->o_invVT,
@@ -357,6 +356,10 @@ if(subcellStabilization){
                 subcell->o_BLD, 
                 o_Q,
                 o_ElementList); 
+
+  findNeighKernel(mesh.Nelements,
+                 subcell->o_EToE, 
+                 o_ElementList); 
 
     
 }
