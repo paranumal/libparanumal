@@ -97,7 +97,7 @@ DEFINES =${LIBP_DEFINES} \
          -DLIBP_DIR='"${LIBP_DIR}"'
 
 #.cpp compilation flags
-ADVECTION_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
+ADVECTION_CXXFLAGS=${LIBP_MPICXXFLAGS} ${DEFINES} ${INCLUDES}
 
 #link libraries
 LIBS=-L${LIBP_LIBS_DIR} -lmesh -logs\
@@ -128,10 +128,10 @@ lib: libadvection.a
 
 advectionMain:$(OBJS) advectionMain.o | libmesh
 ifneq (,${verbose})
-	$(LD) -o advectionMain advectionMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
+	$(LIBP_LD) -o advectionMain advectionMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
 else
 	@printf "%b" "$(EXE_COLOR)Linking $(@F)$(NO_COLOR)\n";
-	@$(LD) -o advectionMain advectionMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
+	@$(LIBP_LD) -o advectionMain advectionMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
 endif
 
 libadvection.a: $(OBJS)
@@ -180,10 +180,10 @@ endif
 # rule for .cpp files
 %.o: %.cpp $(DEPS) | libmesh
 ifneq (,${verbose})
-	$(CXX) -o $*.o -c $*.cpp $(ADVECTION_CXXFLAGS)
+	$(LIBP_MPICXX) -o $*.o -c $*.cpp $(ADVECTION_CXXFLAGS)
 else
 	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
-	@$(CXX) -o $*.o -c $*.cpp $(ADVECTION_CXXFLAGS)
+	@$(LIBP_MPICXX) -o $*.o -c $*.cpp $(ADVECTION_CXXFLAGS)
 endif
 
 #cleanup
@@ -214,10 +214,6 @@ info:
 	$(info CXXFLAGS  = $(ADVECTION_CXXFLAGS))
 	$(info LIBS      = $(LIBS))
 	@true
-
-#Keep these from propagating to OCCA in tests
-unexport CXX
-unexport CXXFLAGS
 
 test: advectionMain
 	@printf "%b" "$(TEST_COLOR)Testing advection solver with testAdvectionQuad2D_01.rc$(NO_COLOR)\n";

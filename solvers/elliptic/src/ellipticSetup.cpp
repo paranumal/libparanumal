@@ -109,7 +109,10 @@ elliptic_t& elliptic_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
     boundaryHeaderFileName = strdup(DELLIPTIC "/data/ellipticBoundary3D.h");
   kernelInfo["includes"] += boundaryHeaderFileName;
 
-  int NblockV = mymax(1,512/mesh.Np);
+  int blockMax = 256;
+  if (mesh.device.mode() == "CUDA") blockMax = 512;
+
+  int NblockV = mymax(1,blockMax/mesh.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;
 
   // Ax kernel

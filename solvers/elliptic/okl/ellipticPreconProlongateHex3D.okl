@@ -40,12 +40,14 @@ SOFTWARE.
     for(int k=0;k<p_NqFine;++k;@inner(2)){
       for(int j=0;j<p_NqFine;++j;@inner(1)){
         for(int i=0;i<p_NqFine;++i;@inner(0)){
-          const int id = i+j*p_NqFine+k*p_NqFine*p_NqFine;
-          if(id<p_NpCoarse){
-            s_qccc[0][0][id] = qc[id+e*p_NpCoarse];
+
+          const int id = i+j*p_NqCoarse+k*p_NqCoarse*p_NqCoarse;
+          if(k<p_NqCoarse && j<p_NqCoarse && i<p_NqCoarse){
+            s_qccc[k][j][i] = qc[id+e*p_NpCoarse];
           }
-          if(id<p_NqCoarse*p_NqFine){
-            s_P[0][id] = P[id];
+
+          if(k==0 && i<p_NqCoarse){
+            s_P[j][i] = P[i + j*p_NqCoarse];
           }
         }
       }
@@ -120,14 +122,12 @@ SOFTWARE.
     @shared dfloat s_q[p_NqCoarse][p_NqCoarse];
     @shared dfloat s_Pq[p_NqFine][p_NqCoarse];
 
-    @shared dfloat s_P[p_NqCoarse][p_NqFine];
+    @shared dfloat s_P[p_NqFine][p_NqCoarse];
 
     for(int j=0;j<p_NqFine;++j;@inner(1)){
       for(int i=0;i<p_NqFine;++i;@inner(0)){
-
-        int t=i+j*p_NqFine;
-        if(t<p_NqCoarse*p_NqFine){
-          s_P[0][t] = P[t];
+        if(i<p_NqCoarse){
+          s_P[j][i] = P[i+j*p_NqCoarse];
         }
       }
     }

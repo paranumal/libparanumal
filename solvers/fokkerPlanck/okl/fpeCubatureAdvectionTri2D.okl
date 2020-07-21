@@ -137,16 +137,16 @@ SOFTWARE.
                                                    @restrict  dfloat *  rhs){
 
   // for all elements
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
+  for(dlong eo=0;eo<Nelements;eo+=p_cubNblockS;@outer(0)){
 
     // @shared storage for flux terms
-    @shared dfloat s_qM[p_NblockS][p_NfacesNfp];
-    @shared dfloat s_qP[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_qM[p_cubNblockS][p_NfacesNfp];
+    @shared dfloat s_qP[p_cubNblockS][p_NfacesNfp];
 
-    @shared dfloat s_flux[p_NblockS][p_intNfpNfaces];
+    @shared dfloat s_flux[p_cubNblockS][p_intNfpNfaces];
 
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;@inner(1)){
+    for(int es=0;es<p_cubNblockS;++es;@inner(1)){
       for(int n=0;n<p_cubMaxNodes;++n;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements && n<(p_Nfaces*p_Nfp)){
@@ -163,7 +163,7 @@ SOFTWARE.
     @barrier("local");
 
     // interpolate to surface integration nodes
-    for(int es=0;es<p_NblockS;++es;@inner(1)){
+    for(int es=0;es<p_cubNblockS;++es;@inner(1)){
       for(int n=0;n<p_cubMaxNodes;++n;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements && n<(p_Nfaces*p_intNfp)){
@@ -220,7 +220,7 @@ SOFTWARE.
     @barrier("local");
 
     // lift from surface integration to volume nodes
-    for(int es=0;es<p_NblockS;++es;@inner(1)){
+    for(int es=0;es<p_cubNblockS;++es;@inner(1)){
       for(int n=0;n<p_cubMaxNodes;++n;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements && n<p_Np ){

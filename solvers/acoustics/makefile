@@ -96,7 +96,7 @@ DEFINES =${LIBP_DEFINES} \
          -DLIBP_DIR='"${LIBP_DIR}"'
 
 #.cpp compilation flags
-ACOUSTICS_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
+ACOUSTICS_CXXFLAGS=${LIBP_MPICXXFLAGS} ${DEFINES} ${INCLUDES}
 
 #link libraries
 LIBS=-L${LIBP_LIBS_DIR} -lmesh -logs\
@@ -127,10 +127,10 @@ lib: libacoustics.a
 
 acousticsMain:$(OBJS) acousticsMain.o | libmesh
 ifneq (,${verbose})
-	$(LD) -o acousticsMain acousticsMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
+	$(LIBP_LD) -o acousticsMain acousticsMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
 else
 	@printf "%b" "$(EXE_COLOR)Linking $(@F)$(NO_COLOR)\n";
-	@$(LD) -o acousticsMain acousticsMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
+	@$(LIBP_LD) -o acousticsMain acousticsMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
 endif
 
 libacoustics.a: $(OBJS)
@@ -179,10 +179,10 @@ endif
 # rule for .cpp files
 %.o: %.cpp $(DEPS) | libmesh
 ifneq (,${verbose})
-	$(CXX) -o $*.o -c $*.cpp $(ACOUSTICS_CXXFLAGS)
+	$(LIBP_MPICXX) -o $*.o -c $*.cpp $(ACOUSTICS_CXXFLAGS)
 else
 	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
-	@$(CXX) -o $*.o -c $*.cpp $(ACOUSTICS_CXXFLAGS)
+	@$(LIBP_MPICXX) -o $*.o -c $*.cpp $(ACOUSTICS_CXXFLAGS)
 endif
 
 #cleanup
@@ -213,10 +213,6 @@ info:
 	$(info CXXFLAGS  = $(ACOUSTICS_CXXFLAGS))
 	$(info LIBS      = $(LIBS))
 	@true
-
-#Keep these from propagating to OCCA in tests
-unexport CXX
-unexport CXXFLAGS
 
 test: acousticsMain
 	@printf "%b" "$(TEST_COLOR)Testing acoustics solver with testAcousticsQuad2D.rc$(NO_COLOR)\n";

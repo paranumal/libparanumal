@@ -101,7 +101,7 @@ DEFINES =${LIBP_DEFINES} \
          -DLIBP_DIR='"${LIBP_DIR}"'
 
 #.cpp compilation flags
-FPE_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
+FPE_CXXFLAGS=${LIBP_MPICXXFLAGS} ${DEFINES} ${INCLUDES}
 
 #link libraries
 LIBS=-L${ELLIPTIC_DIR} -lelliptic \
@@ -134,10 +134,10 @@ lib: libfpe.a
 
 fpeMain:$(OBJS) fpeMain.o | libelliptic
 ifneq (,${verbose})
-	$(LD) -o fpeMain fpeMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
+	$(LIBP_LD) -o fpeMain fpeMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
 else
 	@printf "%b" "$(EXE_COLOR)Linking $(@F)$(NO_COLOR)\n";
-	@$(LD) -o fpeMain fpeMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
+	@$(LIBP_LD) -o fpeMain fpeMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
 endif
 
 libfpe.a: $(OBJS)
@@ -193,10 +193,10 @@ endif
 # rule for .cpp files
 %.o: %.cpp $(DEPS) | libelliptic
 ifneq (,${verbose})
-	$(CXX) -o $*.o -c $*.cpp $(FPE_CXXFLAGS)
+	$(LIBP_MPICXX) -o $*.o -c $*.cpp $(FPE_CXXFLAGS)
 else
 	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
-	@$(CXX) -o $*.o -c $*.cpp $(FPE_CXXFLAGS)
+	@$(LIBP_MPICXX) -o $*.o -c $*.cpp $(FPE_CXXFLAGS)
 endif
 
 #cleanup
@@ -229,10 +229,6 @@ info:
 	$(info CXXFLAGS  = $(FPE_CXXFLAGS))
 	$(info LIBS      = $(LIBS))
 	@true
-
-#Keep these from propagating to OCCA in tests
-unexport CXX
-unexport CXXFLAGS
 
 test: fpeMain
 	@printf "%b" "$(TEST_COLOR)Testing fokkerPlanck solver with testFpeQuad2D_01.rc$(NO_COLOR)\n";

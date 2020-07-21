@@ -142,10 +142,8 @@ SOFTWARE.
     for(int j=0;j<p_NqFine;++j;@inner(1)){
       for(int i=0;i<p_NqFine;++i;@inner(0)){
 
-        int t=i+j*p_NqFine;
-        if(t<p_NqCoarse*p_NqFine){
-          s_RT[0][t] = RT[t];
-        }
+        if (i<p_NqCoarse)
+          s_RT[j][i] = RT[j*p_NqCoarse + i];
       }
     }
 

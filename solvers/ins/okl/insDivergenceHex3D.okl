@@ -44,8 +44,7 @@ SOFTWARE.
 
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
-        const int id = i+j*p_Nq;
-        s_DT[0][id] = DT[id];
+        s_DT[j][i] = DT[i+j*p_Nq];
 
         #pragma unroll p_Nq
         for(int k=0;k<p_Nq;++k){

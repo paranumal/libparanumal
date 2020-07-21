@@ -100,7 +100,7 @@ DEFINES =${LIBP_DEFINES} \
          -DLIBP_DIR='"${LIBP_DIR}"'
 
 #.cpp compilation flags
-INS_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
+INS_CXXFLAGS=${LIBP_MPICXXFLAGS} ${DEFINES} ${INCLUDES}
 
 #link libraries
 LIBS=-L${ELLIPTIC_DIR} -lelliptic \
@@ -133,10 +133,10 @@ lib: libins.a
 
 insMain:$(OBJS) insMain.o | libelliptic
 ifneq (,${verbose})
-	$(LD) -o insMain insMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
+	$(LIBP_LD) -o insMain insMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
 else
 	@printf "%b" "$(EXE_COLOR)Linking $(@F)$(NO_COLOR)\n";
-	@$(LD) -o insMain insMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
+	@$(LIBP_LD) -o insMain insMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
 endif
 
 libins.a: $(OBJS)
@@ -192,10 +192,10 @@ endif
 # rule for .cpp files
 %.o: %.cpp $(DEPS) | libelliptic
 ifneq (,${verbose})
-	$(CXX) -o $*.o -c $*.cpp $(INS_CXXFLAGS)
+	$(LIBP_MPICXX) -o $*.o -c $*.cpp $(INS_CXXFLAGS)
 else
 	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
-	@$(CXX) -o $*.o -c $*.cpp $(INS_CXXFLAGS)
+	@$(LIBP_MPICXX) -o $*.o -c $*.cpp $(INS_CXXFLAGS)
 endif
 
 #cleanup
@@ -228,10 +228,6 @@ info:
 	$(info CXXFLAGS  = $(INS_CXXFLAGS))
 	$(info LIBS      = $(LIBS))
 	@true
-
-#Keep these from propagating to OCCA in tests
-unexport CXX
-unexport CXXFLAGS
 
 test: insMain
 	@printf "%b" "$(TEST_COLOR)Testing ins solver with testInsQuad2D_01.rc$(NO_COLOR)\n";

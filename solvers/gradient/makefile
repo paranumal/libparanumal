@@ -93,7 +93,7 @@ DEFINES =${LIBP_DEFINES} \
          -DLIBP_DIR='"${LIBP_DIR}"'
 
 #.cpp compilation flags
-GRADIENT_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
+GRADIENT_CXXFLAGS=${LIBP_CXXFLAGS} ${DEFINES} ${INCLUDES}
 
 #link libraries
 LIBS=-L${LIBP_LIBS_DIR} -lmesh -logs\
@@ -124,10 +124,10 @@ lib: libgradient.a
 
 gradientMain:$(OBJS) gradientMain.o | libmesh
 ifneq (,${verbose})
-	$(LD) -o gradientMain gradientMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
+	$(LIBP_LD) -o gradientMain gradientMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
 else
 	@printf "%b" "$(EXE_COLOR)Linking $(@F)$(NO_COLOR)\n";
-	@$(LD) -o gradientMain gradientMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
+	@$(LIBP_LD) -o gradientMain gradientMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
 endif
 
 libgradient.a: $(OBJS)
@@ -176,10 +176,10 @@ endif
 # rule for .cpp files
 %.o: %.cpp $(DEPS) | libmesh
 ifneq (,${verbose})
-	$(CXX) -o $*.o -c $*.cpp $(GRADIENT_CXXFLAGS)
+	$(LIBP_MPICXX) -o $*.o -c $*.cpp $(GRADIENT_CXXFLAGS)
 else
 	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
-	@$(CXX) -o $*.o -c $*.cpp $(GRADIENT_CXXFLAGS)
+	@$(LIBP_MPICXX) -o $*.o -c $*.cpp $(GRADIENT_CXXFLAGS)
 endif
 
 #cleanup
@@ -202,10 +202,6 @@ realclean: clean-libs
 help:
 	$(info $(value GRADIENT_HELP_MSG))
 	@true
-
-#Keep these from propagating to OCCA in tests
-unexport CXX
-unexport CXXFLAGS
 
 info:
 	$(info OCCA_DIR  = $(OCCA_DIR))
