@@ -23,13 +23,13 @@ jobs:
     - name: Build
       run: make -j `nproc`
       env: 
-        OCCA_DIR: ${GITHUB_WORKSPACE}/occa
-        LD_LIBRARY_PATH: ${GITHUB_WORKSPACE}/occa/lib
+        OCCA_DIR: /home/runner/work/libparanumal/libparanumal/occa/
+        LD_LIBRARY_PATH: /home/runner/work/libparanumal/libparanumal/occa/lib
     - name: Test
       run: |
         echo ${LD_LIBRARY_PATH}
         ls ${OCCA_DIR}/lib
         make test
       env: 
-        OCCA_DIR: ${GITHUB_WORKSPACE}/occa
-        LD_LIBRARY_PATH: ${GITHUB_WORKSPACE}/occa/lib
+        OCCA_DIR: /home/runner/work/libparanumal/libparanumal/occa/
+        LD_LIBRARY_PATH: /home/runner/work/libparanumal/libparanumal/occa/lib
