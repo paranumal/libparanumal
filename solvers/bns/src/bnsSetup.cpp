@@ -189,13 +189,16 @@ bns_t& bns_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   int maxNodes = mymax(mesh.Np, (mesh.Nfp*mesh.Nfaces));
   kernelInfo["defines/" "p_maxNodes"]= maxNodes;
 
-  int NblockV = 512/mesh.Np; // works for CUDA
+  int blockMax = 256;
+  if (mesh.device.mode()=="CUDA") blockMax = 512;
+
+  int NblockV = blockMax/mesh.Np; // works for CUDA
   kernelInfo["defines/" "p_NblockV"]= NblockV;
 
-  int NblockS = 512/maxNodes; // works for CUDA
+  int NblockS = blockMax/maxNodes; // works for CUDA
   kernelInfo["defines/" "p_NblockS"]= NblockS;
 
-  int NblockCub = 512/mesh.cubNp; // works for CUDA
+  int NblockCub = blockMax/mesh.cubNp; // works for CUDA
   kernelInfo["defines/" "p_NblockCub"]= NblockCub;
 
   kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
