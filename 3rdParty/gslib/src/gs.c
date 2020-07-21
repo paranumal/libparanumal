@@ -729,7 +729,7 @@ static void crl_work_init(struct array *cw, struct array *sh,
                           const unsigned send_mask, uint this_p)
 {
   const unsigned recv_mask = send_mask^(FLAGS_REMOTE|FLAGS_LOCAL);
-  uint last_i=UINT_MAX; int added_myself;
+  uint last_i=UINT_MAX; int added_myself=0;
   uint cw_n = 0, cw_max = cw->max;
   struct crl_id *w = cw->ptr;
   struct shared_id *s, *se;
