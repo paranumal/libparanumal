@@ -31,6 +31,8 @@
 // Base line decay for the sensor
 #define BLDEC 1 
 
+#define mymax(a,b) (((a)>(b))?(a):(b))
+
 
 @kernel void lssSkylineTri2D(const dlong Nelements,
 			     @restrict const dfloat* ggeo,
@@ -41,48 +43,250 @@
 			     @restrict const dfloat * BLD,
 			     @restrict const dfloat * Q, // 
 			     @restrict dlong *  ElementList){
+
+  
+#define p_Nel 6
+  
+  for(dlong eo=0;eo<Nelements;++eo;@outer(0)){
+
+    @shared dfloat s_Q[p_Nel][p_Np], s_Qhat2[p_Nel][p_Np];
+
+#if BLDEC==1
+    @shared dfloat s_L2[p_Nel][p_Nq]; 
+#endif
+
+    @shared int s_ModMap[p_Np]; 
+    @shared dfloat s_LogMod[p_Nel][p_Nq];
+    @shared dfloat s_LSF[p_Nq];
+    @shared dfloat s_BLD[p_Nq];
+
+    // prefetch global variables
+    for(int es=0;es<p_Nel;++es;@inner(1)){
+      for(int n=0; n<p_Nq; n++; @inner(0)){
+	dlong e = eo+es;
+
+	if(es==0){
+	  s_LSF[n] = LSF[n];
+	  s_BLD[n] = BLD[n];
+	}
+
+	int m = n + es*p_Nq;
+	while(m<p_Np*p_Nel && eo*p_Np+m<Nelements*p_Np){
+	  const dlong id = m+eo*p_Np; 
+	  s_Q[0][m]  = Q[id];      // yes - this is bad on CPU
+	  m += p_Nel*p_Nq;
+	}
+
+	// reset counter
+	m = n + es*p_Nq;
+	while(m<p_Np){
+	  s_ModMap[m] = ModMap[m];
+	  m += p_Nel*p_Nq;
+	}
+      }
+    }
+    
+    @barrier("local");
+
+    // get modal coefficients and compute L2 norm
+    for(int es=0;es<p_Nel;++es;@inner(1)){
+      for(int n=0; n<p_Nq; n++; @inner(0)){
+
+	dlong e = eo+es;
+	dfloat L2 = 0;
+	
+	if(e<Nelements){
+	  int nn = n;
+
+	  while(nn<p_Np){
+	    dfloat Qhatn = 0; 
+	    
+#pragma unroll p_Np
+	    for(int m=0; m<p_Np;m++){
+	      Qhatn += InvVT[nn+m*p_Np]*s_Q[es][m];
+	    }
+	    
+	    dfloat Qhatn2 = Qhatn*Qhatn;
+	    
+	    s_Qhat2[es][nn] = Qhatn2; 
+	    
+#if BLDEC==1
+	    L2 += Qhatn2; // accumulate
+#endif
+	    nn += p_Nq;
+	  }
+
+	  const dfloat J = ggeo[e*p_Nggeo + p_GWJID];
+	  L2 *= J;
+	}
+	
+#if BLDEC==1
+	s_L2[es][n] = L2;
+#endif
+      }
+    }
+    
+    @barrier("local");
+
+    // LIVING Dangerously
+#if BLDEC==1    
+#define reduce02(s_L2, NT)				\
+    /*   @barrier("local");	 */			\
+    if(NT<p_Nq){					\
+      for(int es=0;es<p_Nel;++es;@inner(1)){		\
+	for(int n=0; n<p_Nq; n++; @inner(0)){		\
+	  if(n<NT && n+NT<p_Nq){			\
+	    s_L2[es][n] += s_L2[es][n+NT];		\
+	  }						\
+	}						\
+      }							\
+    }
+
+#if 0
+    reduce02(s_L2, 512);
+    reduce02(s_L2, 256);
+    reduce02(s_L2, 128);
+    reduce02(s_L2,  64);
+    reduce02(s_L2,  32);
+    reduce02(s_L2,  16);
+    reduce02(s_L2,   8);
+#endif
+    reduce02(s_L2,   4);
+    reduce02(s_L2,   2);
+    reduce02(s_L2,   1);
+#endif
+    
+    @barrier("local");
+
+    //skyline pessimization: get 1D mods from 2D
+    for(int es=0;es<p_Nel;++es;@inner(1)){		
+      for(int n=0; n<p_Nq; n++; @inner(0)){		
+
+	dlong e = eo+es;
+	
+	if(e<Nelements){
+	  
+	  dfloat modsum = 0;
+	  
+	  for(int i=0; i<n+1; i++){
+	    const int nmods = 0.5*n*(n+1) + i; 
+	    const int m     = s_ModMap[nmods];  // this is problematic, not coalesced
+	    modsum += s_Qhat2[es][m];
+	  }
+	  
+#if BLDEC==1
+	// norm = q' * MM * q on element e
+	  dfloat norm = s_L2[es][0];
+	  
+	  dfloat res = log10f((float)(modsum + s_BLD[n]*norm));     
+#else
+	  dfloat res = log10f((float)(modsum )); 
+#endif
+	  
+	  s_LogMod[es][n] = 0.5*res; // use log(sqrt(a)) = 0.5*log(a)
+	
+	  // assumes p_Nel*p_Nq <= 32
+	
+	  if(n==0){
+	    // use running max from highest mode
+	    dfloat runningMax = mymax(s_LogMod[es][p_Nq-1], s_LogMod[es][p_Nq-2]);
+	    dfloat coeff = runningMax*s_LSF[p_Nq-2];
+	    
+	    for(int j=p_Nq-2;j>0;--j){
+	      runningMax = mymax(runningMax, s_LogMod[es][j]);
+	      
+	      // accumulate in least squares fit
+	      coeff += s_LSF[j-1]*runningMax;
+	    }
+	    
+	    ElementList[e] = (coeff*coeff)<9.0? s_FVFV_TYPE: s_DGDG_TYPE;
+	  }
+	}
+      }
+    }
+  }
+}
+
+
+@kernel void lssSkylineTri2D_old(const dlong Nelements,
+			     @restrict const dfloat* ggeo,
+			     @restrict const int *  ModMap,
+			     @restrict const dfloat * MM,               
+			     @restrict const dfloat * InvVT,
+			     @restrict const dfloat * LSF,
+			     @restrict const dfloat * BLD,
+			     @restrict const dfloat * Q, // 
+			     @restrict dlong *  ElementList){
+
   for(dlong e=0;e<Nelements;++e;@outer(0)){
 
-    @shared dfloat s_Q[p_Np], s_Mod[p_Np]; //  s_LSF[p_N]; 
+    @shared dfloat s_Q[p_Np], s_Qhat2[p_Np];
+    @shared int s_ModMap[p_Np]; 
+
 #if BLDEC==1
     @shared dfloat s_L2[p_Np]; 
-    // @exclusive dfloat norm;  
 #endif
-    // @shared int s_ModMap[p_Np]; 
+
     @shared dfloat s_LogMod[p_Nq], s_SkyMod[p_Nq]; 
 
     // prefetch global variables
     for(int n=0; n<p_Np; n++; @inner(0)){
       const dlong id = n+e*p_Np; 
-      s_Q[n]      = Q[id];     // solution field 
-      // hold on shared if needed
-      // s_ModMap[n] = ModMap[n]; // Mod Map
-      // if(n<p_N){
-      //   s_LSF[n] = LSF[n]; 
-      // } 
+      s_Q[n]  = Q[id];     
+      s_ModMap[n] = ModMap[n];
     }
 
     @barrier("local");
 
     // get modal coefficients and compute L2 norm
     for(int n=0; n<p_Np; n++; @inner(0)){
-      dfloat mod = 0; 
+      dfloat Qhatn = 0; 
 #if BLDEC==1
       dfloat l2  = 0;
-#endif 
-      for(int m=0; m<p_Np;m++){
-        mod +=InvVT[n+m*p_Np]*s_Q[m];
-#if BLDEC==1
-        l2  += MM[n+m*p_Np]*s_Q[m];
 #endif
+
+#pragma unroll p_Np
+      for(int m=0; m<p_Np;m++){
+	dfloat Qm = s_Q[m];
+        Qhatn += InvVT[n+m*p_Np]*Qm;
       }
-      s_Mod[n] = mod; 
+
+      dfloat Qhatn2 = Qhatn*Qhatn;
+      
+      s_Qhat2[n] = Qhatn2; 
+
 #if BLDEC==1
       const dfloat J = ggeo[e*p_Nggeo + p_GWJID];
-      s_L2[n] = J*l2; 
+      s_L2[n] = J*Qhatn2;
 #endif
+      
     }
-   
+    
+    @barrier("local");
+
+#if BLDEC==1    
+#define reduce01(s_L2, NT)				\
+    @barrier("local");					\
+    if(NT<p_Np){					\
+      for(int n=0; n<p_Np; n++; @inner(0)){		\
+	if(n<NT && n+NT<p_Np){				\
+	  s_L2[n] += s_L2[n+NT];			\
+	}						\
+      }							\
+    }
+
+    reduce01(s_L2, 512);
+    reduce01(s_L2, 256);
+    reduce01(s_L2, 128);
+    reduce01(s_L2,  64);
+    reduce01(s_L2,  32);
+    reduce01(s_L2,  16);
+    reduce01(s_L2,   8);
+    reduce01(s_L2,   4);
+    reduce01(s_L2,   2);
+    reduce01(s_L2,   1);
+#endif
+    
     @barrier("local");
 
     //skyline pessimization: get 1D mods from 2D
@@ -90,58 +294,74 @@
 
 #if BLDEC==1
       // norm = q' * MM * q on element e
-      dfloat norm = 0.f; 
-      for(int m=0; m<p_Np;m++){
-        norm +=s_Q[m]*s_L2[m];
-      } 
-
+      dfloat norm = s_L2[0];
 #endif
 
       if(n<p_Nq){ // AK: this could be better!!! too many idle threads
         dfloat modsum = 0; 
         // we have i+1, i'th order mod
+	// TW: upper bound is not fixed
+	// TW: doesn't seem to make much difference to perf if #if this out
 	for(int i=0; i<n+1; i++){
           const int nmods = 0.5*n*(n+1) + i; 
-          const int m     = ModMap[nmods]; 
-          modsum += s_Mod[m]*s_Mod[m];  
+          const int m     = s_ModMap[nmods];  // this is problematic, not coalesced
+          modsum += s_Qhat2[m];
 	}
+
+	
+	// TW: use fast log10 and fast sqrt [ float is ok ]
+	dfloat res = 0;
 #if BLDEC==1
-        s_LogMod[n] = log10(sqrt(modsum + BLD[n]*norm));     
+        res = log10f(sqrtf((float)(modsum + BLD[n]*norm)));     
 #else
-        s_LogMod[n] = log10(sqrt(modsum )); 
+        res = log10f(sqrtf((float)(modsum ))); 
 #endif
+	s_LogMod[n] = res;
+
         // Initialize Skyline Modes
-        s_SkyMod[n] = (n==0) ? s_LogMod[n]:0.0; // don't touch to constant mod
+        s_SkyMod[n] = (n==0) ? res:0.0; // don't touch to constant mod
       }
+#if 1
+      // rely on Nq<=32
     }
 
     @barrier("local");
 
     // Skyline cut for modal potrait
     for(int n=0; n<p_Np; n++; @inner(0)){
+#endif
+      
       if(n>0 && n<p_Nq){ // AK: this could be better!!! too many idle threads
-	dfloat maxq = s_LogMod[n]; 
+	dfloat maxq = s_LogMod[n];
+	// TW: this is just a scan 
 	for(int j=n; j<p_Nq; j++){
-	  maxq = (n==p_N) ? max(maxq, s_LogMod[j-1]) : max(maxq, s_LogMod[j]); 
+	  maxq = (n==p_N) ? mymax(maxq, s_LogMod[j-1]) : mymax(maxq, s_LogMod[j]); 
 	}
-	s_SkyMod[n] = maxq; 
+	// TW: moved this product earlier
+	s_SkyMod[n] = LSF[n-1]*maxq; 
       }
+#if 1
     }
 
     @barrier("local");
 
     // totally serial p_N floating point operations
     for(int n=0; n<p_Np; n++; @inner(0)){
+#endif
+      
       if(n==0){
+	// TW: this poor thread has to load p_N values
 	dfloat coeff = 0.f; 
 	for(int i=0; i<p_N; i++){
-	  coeff += LSF[i]*s_SkyMod[i+1];
+	  coeff += s_SkyMod[i+1];
 	}
-	ElementList[e] = fabs(coeff)<3.0? s_FVFV_TYPE: s_DGDG_TYPE; 
+	ElementList[e] = (coeff*coeff)<9.0? s_FVFV_TYPE: s_DGDG_TYPE; 
       }
     }
   }
+  
 }
+
 
 
 
