@@ -31,5 +31,5 @@ jobs:
         ls ${OCCA_DIR}/lib
         make test
       env: 
-        OCCA_DIR: ${PWD}/occa
-        LD_LIBRARY_PATH: ${PWD}/occa/lib
+        OCCA_DIR: ${GITHUB_WORKSPACE}/occa
+        LD_LIBRARY_PATH: ${GITHUB_WORKSPACE}/occa/lib
