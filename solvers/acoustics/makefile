@@ -96,7 +96,7 @@ DEFINES =${LIBP_DEFINES} \
          -DLIBP_DIR='"${LIBP_DIR}"'
 
 #.cpp compilation flags
-ACOUSTICS_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
+ACOUSTICS_CXXFLAGS=${LIBP_MPICXXFLAGS} ${DEFINES} ${INCLUDES}
 
 #link libraries
 LIBS=-L${LIBP_LIBS_DIR} -lmesh -logs\
@@ -179,10 +179,10 @@ endif
 # rule for .cpp files
 %.o: %.cpp $(DEPS) | libmesh
 ifneq (,${verbose})
-	$(CXX) -o $*.o -c $*.cpp $(ACOUSTICS_CXXFLAGS)
+	$(LIBP_MPICXX) -o $*.o -c $*.cpp $(ACOUSTICS_CXXFLAGS)
 else
 	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
-	@$(CXX) -o $*.o -c $*.cpp $(ACOUSTICS_CXXFLAGS)
+	@$(LIBP_MPICXX) -o $*.o -c $*.cpp $(ACOUSTICS_CXXFLAGS)
 endif
 
 #cleanup

@@ -43,7 +43,7 @@ DEFINES =${LIBP_DEFINES} \
          -DLIBP_DIR='"${LIBP_DIR}"' \
 
 #.cpp compilation flags
-MESH_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
+MESH_CXXFLAGS=${LIBP_MPICXXFLAGS} ${DEFINES} ${INCLUDES}
 
 #object dependancies
 DEPS=$(wildcard $(LIBP_INCLUDE_DIR)/*.h) \
@@ -73,10 +73,10 @@ silentUpdate:
 # rule for .cpp files
 %.o: %.cpp $(DEPS)
 ifneq (,${verbose})
-	$(CXX) -o $*.o -c $*.cpp $(MESH_CXXFLAGS)
+	$(LIBP_MPICXX) -o $*.o -c $*.cpp $(MESH_CXXFLAGS)
 else
 	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
-	@$(CXX) -o $*.o -c $*.cpp $(MESH_CXXFLAGS)
+	@$(LIBP_MPICXX) -o $*.o -c $*.cpp $(MESH_CXXFLAGS)
 endif
 
 #cleanup

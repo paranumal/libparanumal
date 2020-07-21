@@ -48,7 +48,7 @@ DEFINES =${LIBP_DEFINES} \
          -DDPARALMOND='"${CURDIR}"'
 
 #.cpp compilation flags
-PARALMOND_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
+PARALMOND_CXXFLAGS=${LIBP_MPICXXFLAGS} ${DEFINES} ${INCLUDES}
 
 #object dependancies
 DEPS=$(wildcard $(LIBP_INCLUDE_DIR)/*.h) \
@@ -84,10 +84,10 @@ silentUpdate:
 # rule for .c files
 %.o: %.cpp $(DEPS)
 ifneq (,${verbose})
-	$(CXX) -o $*.o -c $*.cpp $(PARALMOND_CXXFLAGS)
+	$(LIBP_MPICXX) -o $*.o -c $*.cpp $(PARALMOND_CXXFLAGS)
 else
 	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
-	@$(CXX) -o $*.o -c $*.cpp $(PARALMOND_CXXFLAGS)
+	@$(LIBP_MPICXX) -o $*.o -c $*.cpp $(PARALMOND_CXXFLAGS)
 endif
 
 #cleanup

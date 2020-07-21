@@ -100,7 +100,7 @@ DEFINES =${LIBP_DEFINES} \
          -DLIBP_DIR='"${LIBP_DIR}"'
 
 #.cpp compilation flags
-INS_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
+INS_CXXFLAGS=${LIBP_MPICXXFLAGS} ${DEFINES} ${INCLUDES}
 
 #link libraries
 LIBS=-L${ELLIPTIC_DIR} -lelliptic \
@@ -192,10 +192,10 @@ endif
 # rule for .cpp files
 %.o: %.cpp $(DEPS) | libelliptic
 ifneq (,${verbose})
-	$(CXX) -o $*.o -c $*.cpp $(INS_CXXFLAGS)
+	$(LIBP_MPICXX) -o $*.o -c $*.cpp $(INS_CXXFLAGS)
 else
 	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
-	@$(CXX) -o $*.o -c $*.cpp $(INS_CXXFLAGS)
+	@$(LIBP_MPICXX) -o $*.o -c $*.cpp $(INS_CXXFLAGS)
 endif
 
 #cleanup

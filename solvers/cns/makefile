@@ -97,7 +97,7 @@ DEFINES =${LIBP_DEFINES} \
          -DLIBP_DIR='"${LIBP_DIR}"'
 
 #.cpp compilation flags
-CNS_CXXFLAGS=${CXXFLAGS} ${DEFINES} ${INCLUDES}
+CNS_CXXFLAGS=${LIBP_MPICXXFLAGS} ${DEFINES} ${INCLUDES}
 
 #link libraries
 LIBS=-L${LIBP_LIBS_DIR} -lmesh -logs\
@@ -180,10 +180,10 @@ endif
 # rule for .cpp files
 %.o: %.cpp $(DEPS) | libmesh
 ifneq (,${verbose})
-	$(CXX) -o $*.o -c $*.cpp $(CNS_CXXFLAGS)
+	$(LIBP_MPICXX) -o $*.o -c $*.cpp $(CNS_CXXFLAGS)
 else
 	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
-	@$(CXX) -o $*.o -c $*.cpp $(CNS_CXXFLAGS)
+	@$(LIBP_MPICXX) -o $*.o -c $*.cpp $(CNS_CXXFLAGS)
 endif
 
 #cleanup
