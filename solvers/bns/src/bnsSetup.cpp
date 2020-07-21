@@ -213,10 +213,6 @@ bns_t& bns_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
 
   char fileName[BUFSIZ], kernelName[BUFSIZ];
 
-
-  if(mesh.elementType==HEXAHEDRA && bns->pmlcubature)
-    LIBP_ABORT("PML CUBATURE Not currently supported with Hex meshes.")
-
   // kernels from volume file
   sprintf(fileName, DBNS "/okl/bnsVolume%s.okl", suffix);
   sprintf(kernelName, "bnsVolume%s", suffix);

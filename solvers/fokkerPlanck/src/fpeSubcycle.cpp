@@ -44,6 +44,7 @@ void subcycler_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
     advectionVolumeKernel(mesh.Nelements,
                          mesh.o_vgeo,
                          mesh.o_cubvgeo,
+                         mesh.o_cubD,
                          mesh.o_cubPDT,
                          mesh.o_cubInterp,
                          mesh.o_cubProject,

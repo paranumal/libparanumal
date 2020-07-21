@@ -29,6 +29,7 @@ SOFTWARE.
 @kernel void cnsIsothermalCubatureVolumeTet3D(const dlong Nelements,
                                    @restrict const  dfloat *  vgeo,
                                    @restrict const  dfloat *  cubvgeo,
+                                   @restrict const  dfloat *  cubD,
                                    @restrict const  dfloat *  cubPDT,
                                    @restrict const  dfloat *  cubInterp,
                                    @restrict const  dfloat *  cubProject,

@@ -28,6 +28,7 @@ SOFTWARE.
 @kernel void fpeAdvectionCubatureVolumeQuad2D(const dlong Nelements,
                                     @restrict const  dfloat *  vgeo,
                                     @restrict const  dfloat *  cubvgeo,
+                                    @restrict const  dfloat *  cubDT,
                                     @restrict const  dfloat *  cubPDT,
                                     @restrict const  dfloat *  cubInterp,
                                     @restrict const  dfloat *  cubProject,
@@ -124,14 +125,14 @@ SOFTWARE.
             const dfloat drdy = cubvgeo[gid + p_RYID*p_cubNp];
             const dfloat dsdx = cubvgeo[gid + p_SXID*p_cubNp];
             const dfloat dsdy = cubvgeo[gid + p_SYID*p_cubNp];
-            const dfloat J = cubvgeo[gid + p_JID*p_cubNp];
+            const dfloat JW   = cubvgeo[gid + p_JWID*p_cubNp];
 
             dfloat u=0.0, v=0.0;
             const dlong id = e*p_cubNp + j*p_cubNq +i;
             fpeAdvectionField2D(t, cubx[id], cuby[id], r_q, &u, &v);
 
-            s_F[es][j][i] = J*(drdx*u+drdy*v)*r_q;
-            s_G[es][j][i] = J*(dsdx*u+dsdy*v)*r_q;
+            s_F[es][j][i] = JW*(drdx*u+drdy*v)*r_q;
+            s_G[es][j][i] = JW*(dsdx*u+dsdy*v)*r_q;
           }
         }
       }
@@ -324,7 +325,7 @@ void surfaceTerms(int es, int face, int m, int i, int j,
             const dlong sk = e*p_cubNq*p_Nfaces + face*p_cubNq + i;
             const dfloat nx = cubsgeo[sk*p_Nsgeo+p_NXID];
             const dfloat ny = cubsgeo[sk*p_Nsgeo+p_NYID];
-            const dfloat sJ = cubsgeo[sk*p_Nsgeo+p_SJID];
+            const dfloat WsJ = cubsgeo[sk*p_Nsgeo+p_WSJID];
 
             const dfloat qM = r_qMn[face];
             dfloat qP = r_qPn[face];
@@ -347,8 +348,8 @@ void surfaceTerms(int es, int face, int m, int i, int j,
             const dfloat unP   = fabs(nx*uP + ny*vP);
             const dfloat unMax = (unM > unP) ? unM : unP;
 
-            s_flux[es][face][i] = -sJ*(.5f*(nx*(qP*uP + qM*uM)
-                                          + ny*(qP*vP + qM*vM)  + unMax*(qM-qP) ));
+            s_flux[es][face][i] = -WsJ*(.5f*(nx*(qP*uP + qM*uM)
+                                           + ny*(qP*vP + qM*vM)  + unMax*(qM-qP) ));
           }
         }
       }

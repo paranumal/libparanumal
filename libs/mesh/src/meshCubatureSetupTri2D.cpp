@@ -118,6 +118,7 @@ void meshTri2D::CubatureSetup(){
   o_cubProject = device.malloc(Np*cubNp*sizeof(dfloat), cubProjectT);
 
   o_cubPDT = device.malloc(2*cubNp*Np*sizeof(dfloat), cubPDTT);
+  o_cubD = o_cubPDT; //dummy
 
   o_intInterp = device.malloc(Nfp*Nfaces*intNfp*sizeof(dfloat), intInterpT);
   o_intLIFT = device.malloc(Np*Nfaces*intNfp*sizeof(dfloat), intLIFTT);

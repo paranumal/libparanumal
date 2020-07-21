@@ -77,7 +77,7 @@ SOFTWARE.
 
           // primitive variables (velocity)
           const dfloat u = ru/r, v = rv/r, w = rw/r;
-          const dfloat p = (gamma-1)*(E-0.5*r*(u*u+v*v));
+          const dfloat p = (gamma-1)*(E-0.5*r*(u*u+v*v+w*w));
 
           // gradients
           const dlong id = e*p_Np*p_Ngrads + k*p_Nq*p_Nq + j*p_Nq + i;
