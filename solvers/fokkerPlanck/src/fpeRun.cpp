@@ -43,10 +43,12 @@ void fpe_t::Run(){
 
   // output norm of final solution
   {
-    dlong Ntotal = mesh.Nelements*mesh.Np;
+    //compute q.M*q
+    MassMatrixKernel(mesh.Nelements, mesh.o_ggeo, mesh.o_MM, o_q, o_Mq);
 
-    dfloat normq = linAlg.norm2(Ntotal, o_q, mesh.comm);
+    dlong Nentries = mesh.Nelements*mesh.Np;
+    dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_q, o_Mq, comm));
 
-    printf("Testing norm fpe solution = %17.15lg\n", normq);
+    printf("Testing norm fpe solution = %17.15lg\n", norm2);
   }
 }

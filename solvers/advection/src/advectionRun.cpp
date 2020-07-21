@@ -38,16 +38,18 @@ void advection_t::Run(){
                          mesh.o_y,
                          mesh.o_z,
                          o_q);
-  
+
   timeStepper->Run(o_q, startTime, finalTime);
 
   // output norm of final solution
   {
-    dlong Ntotal = mesh.Nelements*mesh.Np;
-    
-    dfloat normq = linAlg.norm2(Ntotal, o_q, mesh.comm);
-    
-    printf("Testing norm advection solution = %17.15lg\n", normq);
+    //compute q.M*q
+    MassMatrixKernel(mesh.Nelements, mesh.o_ggeo, mesh.o_MM, o_q, o_Mq);
+
+    dlong Nentries = mesh.Nelements*mesh.Np;
+    dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_q, o_Mq, comm));
+
+    printf("Testing norm advection solution = %17.15lg\n", norm2);
   }
 
 }

@@ -77,7 +77,7 @@ cns_t& cns_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   cns->timeStepper->SetTimeStep(dt);
 
   //setup linear algebra module
-  cns->linAlg.InitKernels({"innerProd", "norm2"}, mesh.comm);
+  cns->linAlg.InitKernels({"innerProd"}, mesh.comm);
 
   /*setup trace halo exchange */
   cns->fieldTraceHalo = mesh.HaloTraceSetup(cns->Nfields);

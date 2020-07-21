@@ -45,11 +45,13 @@ void cns_t::Run(){
 
   // output norm of final solution
   {
-    dlong Ntotal = mesh.Nelements*mesh.Np*Nfields;
-    
-    dfloat normq = linAlg.norm2(Ntotal, o_q, mesh.comm);
+    //compute q.M*q
+    MassMatrixKernel(mesh.Nelements, mesh.o_ggeo, mesh.o_MM, o_q, o_Mq);
 
-    printf("Testing norm cns solution = %17.15lg\n", normq);
+    dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
+    dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_q, o_Mq, comm));
+
+    printf("Testing norm cns solution = %17.15lg\n", norm2);
   }
 
 }
