@@ -1,3 +1,5 @@
+![Build](https://github.com/paranumal/libparanumal/workflows/Build/badge.svg)
+
 ## libParanumal
 An experimental set of finite element flow solvers for heterogeneous (GPU/CPU) systems. The initial development of libParanumal was performed by the [Parallel Numerical Algorithms Group at Virginia Tech](http://paranumal.com).   
 
