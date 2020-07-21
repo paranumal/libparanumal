@@ -502,10 +502,14 @@ SOFTWARE.
         }
 
         // load element vertex coordinates
-        int n=i+j*p_Nq;
-        while(n<p_Nverts*p_dim){
-          s_EXYZ[0][n] = EXYZ[element*p_Nverts*p_dim + n];
-          n += p_Nq*p_Nq;
+        int n=i;
+        int m=j;
+        while(m<p_dim){
+          while(n<p_Nverts){
+            s_EXYZ[m][n] = EXYZ[element*p_Nverts*p_dim + m*p_Nverts + n];
+            n += p_Nq;
+          }
+          m += p_Nq;
         }
       }
     }

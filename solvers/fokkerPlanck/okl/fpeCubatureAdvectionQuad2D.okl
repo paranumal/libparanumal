@@ -39,11 +39,11 @@ SOFTWARE.
                                     @restrict const  dfloat *  q,
                                           @restrict  dfloat *  rhs){
 
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_cubNblockV;@outer(0)){  // for all elements
 
-    @shared dfloat s_q[p_NblockV][p_Nq][p_cubNq];
-    @shared dfloat s_F[p_NblockV][p_cubNq][p_cubNq];
-    @shared dfloat s_G[p_NblockV][p_cubNq][p_cubNq]; // holding scalar
+    @shared dfloat s_q[p_cubNblockV][p_Nq][p_cubNq];
+    @shared dfloat s_F[p_cubNblockV][p_cubNq][p_cubNq];
+    @shared dfloat s_G[p_cubNblockV][p_cubNq][p_cubNq]; // holding scalar
 
     @shared dfloat s_cubInterp[p_Nq][p_cubNq];
     @shared dfloat s_cubProject[p_cubNq][p_Nq];
@@ -53,7 +53,7 @@ SOFTWARE.
     @exclusive dfloat r_F, r_G;
 
     //fetch the U and V values and store in flux arrays in @shared
-    for(int es=0;es<p_NblockV;++es;@inner(2)){
+    for(int es=0;es<p_cubNblockV;++es;@inner(2)){
       for(int j=0;j<p_cubNq;++j;@inner(1)){
         for(int i=0;i<p_cubNq;++i;@inner(0)){
           const dlong e = eo+es; // element in block
@@ -75,7 +75,7 @@ SOFTWARE.
     @barrier("local");
 
     //interpolate in i, store in register
-    for(int es=0;es<p_NblockV;++es;@inner(2)){
+    for(int es=0;es<p_cubNblockV;++es;@inner(2)){
       for(int j=0;j<p_cubNq;++j;@inner(1)){
         for(int i=0;i<p_cubNq;++i;@inner(0)){
           if (j<p_Nq) {
@@ -94,7 +94,7 @@ SOFTWARE.
     @barrier("local");
 
     //write register back to @shared
-    for(int es=0;es<p_NblockV;++es;@inner(2)){
+    for(int es=0;es<p_cubNblockV;++es;@inner(2)){
       for(int j=0;j<p_cubNq;++j;@inner(1)){
         for(int i=0;i<p_cubNq;++i;@inner(0)){
           if (j<p_Nq) {
@@ -107,7 +107,7 @@ SOFTWARE.
     @barrier("local");
 
     //interpolate in j and store flux in register
-    for(int es=0;es<p_NblockV;++es;@inner(2)){
+    for(int es=0;es<p_cubNblockV;++es;@inner(2)){
       for(int j=0;j<p_cubNq;++j;@inner(1)){
         for(int i=0;i<p_cubNq;++i;@inner(0)){
           r_q = 0.;
@@ -141,7 +141,7 @@ SOFTWARE.
     @barrier("local");
 
     //project/differentiate in j
-    for(int es=0;es<p_NblockV;++es;@inner(2)){
+    for(int es=0;es<p_cubNblockV;++es;@inner(2)){
       for(int j=0;j<p_cubNq;++j;@inner(1)){
         for(int i=0;i<p_cubNq;++i;@inner(0)){
           r_F = 0.; r_G = 0.;
@@ -162,7 +162,7 @@ SOFTWARE.
     @barrier("local");
 
     //write register back to @shared
-    for(int es=0;es<p_NblockV;++es;@inner(2)){
+    for(int es=0;es<p_cubNblockV;++es;@inner(2)){
       for(int j=0;j<p_cubNq;++j;@inner(1)){
         for(int i=0;i<p_cubNq;++i;@inner(0)){
           if (j<p_Nq) {
@@ -176,7 +176,7 @@ SOFTWARE.
     @barrier("local");
 
     //project/differentiate in i and write back
-    for(int es=0;es<p_NblockV;++es;@inner(2)){
+    for(int es=0;es<p_cubNblockV;++es;@inner(2)){
       for(int j=0;j<p_cubNq;++j;@inner(1)){
         for(int i=0;i<p_cubNq;++i;@inner(0)){
           const dlong e = eo+es; // element in block
@@ -208,8 +208,8 @@ SOFTWARE.
 
 void surfaceTerms(int es, int face, int m, int i, int j,
                       @shared dfloat s_cubProject[p_cubNq][p_Nq],
-                      @shared dfloat s_flux[p_NblockS][p_Nfaces][p_cubNq],
-                      @shared dfloat s_rhsq[p_NblockS][p_Nq][p_Nq]){
+                      @shared dfloat s_flux[p_cubNblockS][p_Nfaces][p_cubNq],
+                      @shared dfloat s_rhsq[p_cubNblockS][p_Nq][p_Nq]){
 
   dfloat rhsqn = 0.f;
 
@@ -238,12 +238,12 @@ void surfaceTerms(int es, int face, int m, int i, int j,
                                      @restrict dfloat *  rhs){
 
   // for all elements
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
+  for(dlong eo=0;eo<Nelements;eo+=p_cubNblockS;@outer(0)){
     // @shared storage for flux terms
-    @shared dfloat s_rhsq[p_NblockS][p_Nq][p_Nq];
+    @shared dfloat s_rhsq[p_cubNblockS][p_Nq][p_Nq];
 
-    @shared dfloat s_qM[p_NblockS][p_Nfaces][p_cubNq];
-    @shared dfloat s_qP[p_NblockS][p_Nfaces][p_cubNq];
+    @shared dfloat s_qM[p_cubNblockS][p_Nfaces][p_cubNq];
+    @shared dfloat s_qP[p_cubNblockS][p_Nfaces][p_cubNq];
 
     // reuse @shared memory buffers
     #define s_flux s_qM
@@ -254,7 +254,7 @@ void surfaceTerms(int es, int face, int m, int i, int j,
     @shared dfloat s_cubProject[p_cubNq][p_Nq];
 
     // for all face nodes of all elements
-    for(int es=0;es<p_NblockS;++es;@inner(1)){
+    for(int es=0;es<p_cubNblockS;++es;@inner(1)){
       for(int i=0;i<p_cubNq;++i;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements && i<p_Nq){
@@ -282,9 +282,14 @@ void surfaceTerms(int es, int face, int m, int i, int j,
         if (es==0) {
           #pragma unroll p_Nq
           for(int j=0;j<p_Nq;++j){
-            const int id = i+j*p_cubNq;
-            s_cubInterp[0][id] = cubInterp[id];
-            s_cubProject[0][id] = cubProject[id];
+            s_cubInterp[j][i] = cubInterp[i+j*p_cubNq];
+          }
+
+          if (i<p_Nq) {
+            #pragma unroll p_cubNq
+            for(int j=0;j<p_cubNq;++j){
+              s_cubProject[j][i] = cubProject[i+j*p_Nq];
+            }
           }
         }
       }
@@ -293,7 +298,7 @@ void surfaceTerms(int es, int face, int m, int i, int j,
     @barrier("local");
 
     //interpolate traces, store flux in register
-    for(int es=0;es<p_NblockS;++es;@inner(1)){
+    for(int es=0;es<p_cubNblockS;++es;@inner(1)){
       for(int i=0;i<p_cubNq;++i;@inner(0)){
         #pragma unroll p_Nfaces
         for (int face=0;face<p_Nfaces;face++) {
@@ -316,7 +321,7 @@ void surfaceTerms(int es, int face, int m, int i, int j,
     @barrier("local");
 
     //write fluxes to @shared
-    for(int es=0;es<p_NblockS;++es;@inner(1)){
+    for(int es=0;es<p_cubNblockS;++es;@inner(1)){
       for(int i=0;i<p_cubNq;++i;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements){
@@ -359,7 +364,7 @@ void surfaceTerms(int es, int face, int m, int i, int j,
 
     // for all face nodes of all elements
     // face 0 & 2
-    for(int es=0;es<p_NblockS;++es;@inner(1)){
+    for(int es=0;es<p_cubNblockS;++es;@inner(1)){
       for(int i=0;i<p_cubNq;++i;@inner(0)){
         if(i<p_Nq){
           //          surfaceTerms(0,i,i,0     );
@@ -376,7 +381,7 @@ void surfaceTerms(int es, int face, int m, int i, int j,
     @barrier("local");
 
     // face 1 & 3
-    for(int es=0;es<p_NblockS;++es;@inner(1)){
+    for(int es=0;es<p_cubNblockS;++es;@inner(1)){
       for(int j=0;j<p_cubNq;++j;@inner(0)){
         if(j<p_Nq){
           //          surfaceTerms(1,j,p_Nq-1,j);
@@ -392,7 +397,7 @@ void surfaceTerms(int es, int face, int m, int i, int j,
 
     @barrier("local");
 
-    for(int es=0;es<p_NblockS;++es;@inner(1)){
+    for(int es=0;es<p_cubNblockS;++es;@inner(1)){
       for(int i=0;i<p_cubNq;++i;@inner(0)){
         const dlong e = eo + es;
         if(e<Nelements && i<p_Nq){
