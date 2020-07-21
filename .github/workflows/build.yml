@@ -21,7 +21,7 @@ jobs:
           make -j `nproc`
           cd ..
     - name: Build
-      run: make -j `nproc`
+      run: make -j `nproc` verbose=true
       env: 
         OCCA_DIR: /home/runner/work/libparanumal/libparanumal/occa/
         LD_LIBRARY_PATH: /home/runner/work/libparanumal/libparanumal/occa/lib
