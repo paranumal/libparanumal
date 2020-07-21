@@ -140,16 +140,27 @@ fpe_t& fpe_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   int maxNodes = mymax(mesh.Np, (mesh.Nfp*mesh.Nfaces));
   kernelInfo["defines/" "p_maxNodes"]= maxNodes;
 
-  int NblockV = 512/mesh.Np; // works for CUDA
+  int blockMax = 256;
+  if (mesh.device.mode() == "CUDA") blockMax = 512;
+
+  int NblockV = mymax(1, blockMax/mesh.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;
 
-  int NblockS = 512/maxNodes; // works for CUDA
+  int NblockS = mymax(1, blockMax/maxNodes);
   kernelInfo["defines/" "p_NblockS"]= NblockS;
 
-  int cubMaxNodes = mymax(mesh.Np, (mesh.intNfp*mesh.Nfaces));
-  kernelInfo["defines/" "p_cubMaxNodes"]= cubMaxNodes;
-  int cubMaxNodes1 = mymax(mesh.Np, (mesh.intNfp));
-  kernelInfo["defines/" "p_cubMaxNodes1"]= cubMaxNodes1;
+  if (fpe->cubature) {
+    int cubMaxNodes = mymax(mesh.Np, (mesh.intNfp*mesh.Nfaces));
+    kernelInfo["defines/" "p_cubMaxNodes"]= cubMaxNodes;
+    int cubMaxNodes1 = mymax(mesh.Np, (mesh.intNfp));
+    kernelInfo["defines/" "p_cubMaxNodes1"]= cubMaxNodes1;
+
+    int cubNblockV = mymax(1, blockMax/mesh.cubNp);
+    kernelInfo["defines/" "p_cubNblockV"]= cubNblockV;
+
+    int cubNblockS = mymax(1, blockMax/cubMaxNodes);
+    kernelInfo["defines/" "p_cubNblockS"]= cubNblockS;
+  }
 
   kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
 
