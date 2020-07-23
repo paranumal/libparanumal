@@ -46,7 +46,8 @@ static unsigned long long int bitSplitter3D(unsigned int i){
 }
 
 // compute Morton index of (ix,iy) relative to a bitRange x bitRange  Morton lattice
-static unsigned long long int mortonIndex3D(unsigned int ix, unsigned int iy, unsigned int iz){
+static unsigned long long int mortonIndex3D(unsigned int ix, unsigned int iy, unsigned int iz,
+                                            const int shiftx, const int shifty, const int shiftz){
 
   // spread bits of ix apart (introduce zeros)
   unsigned long long int sx = bitSplitter3D(ix);
@@ -54,7 +55,7 @@ static unsigned long long int mortonIndex3D(unsigned int ix, unsigned int iy, un
   unsigned long long int sz = bitSplitter3D(iz);
 
   // interleave bits of ix and iy
-  unsigned long long int mi = sx | (sy<<1) | (sz<<2);
+  unsigned long long int mi = (sx<<shiftx) | (sy<<shifty) | (sz<<shiftz);
 
   return mi;
 }
@@ -130,6 +131,24 @@ void mesh3D::GeometricPartition(){
   // choose sub-range of Morton lattice coordinates to embed element centers in
   unsigned long long int Nboxes = (((unsigned long long int)1)<<(bitRange-1));
 
+  // Set the fastest moving indicies in the Morton ordering based on the smallest physical dimensions
+  int shiftx=0, shifty=0, shiftz=0;
+  if ((gmaxvx-gminvx)<(gmaxvy-gminvy) && (gmaxvy-gminvy)<(gmaxvz-gminvz)) {
+    shiftx=0; shifty=1; shiftz=2;
+  } else if ((gmaxvx-gminvx)<(gmaxvz-gminvz) && (gmaxvz-gminvz)<(gmaxvy-gminvy)) {
+    shiftx=0; shifty=2; shiftz=1;
+  } else if ((gmaxvy-gminvy)<(gmaxvx-gminvx) && (gmaxvx-gminvx)<(gmaxvz-gminvz)) {
+    shiftx=1; shifty=0; shiftz=2;
+  } else if ((gmaxvy-gminvy)<(gmaxvz-gminvz) && (gmaxvz-gminvz)<(gmaxvx-gminvx)) {
+    shiftx=2; shifty=0; shiftz=1;
+  } else if ((gmaxvz-gminvz)<(gmaxvx-gminvx) && (gmaxvx-gminvx)<(gmaxvy-gminvy)) {
+    shiftx=1; shifty=2; shiftz=0;
+  } else {
+    shiftx=2; shifty=1; shiftz=0;
+  }
+
+  dfloat maxlength = mymax(gmaxvx-gminvx, mymax(gmaxvy-gminvy, gmaxvz-gminvz));
+
   // compute Morton index for each element
   for(dlong e=0;e<Nelements;++e){
 
@@ -155,20 +174,19 @@ void mesh3D::GeometricPartition(){
 
     elements[e].type = elementInfo[e];
 
-    dfloat maxlength = mymax(gmaxvx-gminvx, mymax(gmaxvy-gminvy, gmaxvz-gminvz));
 
     // avoid stretching axes
     unsigned long long int ix = (cx-gminvx)*Nboxes/maxlength;
     unsigned long long int iy = (cy-gminvy)*Nboxes/maxlength;
     unsigned long long int iz = (cz-gminvz)*Nboxes/maxlength;
 
-    elements[e].index = mortonIndex3D(ix, iy, iz);
+    elements[e].index = mortonIndex3D(ix, iy, iz, shiftx, shifty, shiftz);
   }
 
   // pad element array with dummy elements
   for(dlong e=Nelements;e<maxNelements;++e){
     elements[e].element = -1;
-    elements[e].index = mortonIndex3D(Nboxes+1, Nboxes+1, Nboxes+1);
+    elements[e].index = mortonIndex3D(Nboxes+1, Nboxes+1, Nboxes+1, shiftx, shifty, shiftz);
   }
 
   // odd-even parallel sort of element capsules based on their Morton index

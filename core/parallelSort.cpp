@@ -107,7 +107,7 @@ void parallelSort(int size, int rank, MPI_Comm comm,
   void *tmp = (void*) calloc(N, sz);
 
   /* max and min elements out of place hop one process at each step */
-  for(int step=0;step<size-1;++step){
+  for(int step=0;step<size;++step){
 
     /* send C, receive A */
     if(rank<size-1)
