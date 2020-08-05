@@ -47,8 +47,8 @@ void gradient_t::Run(){
     //compute q.M*dqdx
     MassMatrixKernel(mesh.Nelements, mesh.o_ggeo, mesh.o_MM, o_gradq, o_Mgradq);
 
-    dlong Nentries = mesh.Nelements*mesh.Np;
-    dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_q, o_Mgradq, comm));
+    dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
+    dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_gradq, o_Mgradq, comm));
 
     // actually probably only doing x-component
     printf("Testing norm of gradient of solution = %17.15lg\n", norm2);
