@@ -215,11 +215,13 @@ info:
 	@true
 
 test: acousticsMain
-	@printf "%b" "$(TEST_COLOR)Testing acoustics solver with testAcousticsQuad2D.rc$(NO_COLOR)\n";
+	@printf "%b" "$(TEST_COLOR)Testing acoustics solver with testAcousticsQuad2D_01.rc$(NO_COLOR)\n";
 	./acousticsMain $(TEST_DIR)/acoustics/testAcousticsQuad2D_01.rc
-	@printf "%b" "$(TEST_COLOR)Testing acoustics solver with testAcousticsTri2D.rc$(NO_COLOR)\n";
+	@printf "%b" "$(TEST_COLOR)Testing acoustics solver with testAcousticsTri2D_01.rc$(NO_COLOR)\n";
 	./acousticsMain $(TEST_DIR)/acoustics/testAcousticsTri2D_01.rc
-	@printf "%b" "$(TEST_COLOR)Testing acoustics solver with testAcousticsHex3D.rc$(NO_COLOR)\n";
+	@printf "%b" "$(TEST_COLOR)Testing acoustics solver and MPI with testAcousticsTri2D_02.rc$(NO_COLOR)\n";
+	mpiexec -n 4 ./acousticsMain $(TEST_DIR)/acoustics/testAcousticsTri2D_02.rc
+	@printf "%b" "$(TEST_COLOR)Testing acoustics solver with testAcousticsHex3D_01.rc$(NO_COLOR)\n";
 	./acousticsMain $(TEST_DIR)/acoustics/testAcousticsHex3D_01.rc
-	@printf "%b" "$(TEST_COLOR)Testing acoustics solver with testAcousticsTet3D.rc$(NO_COLOR)\n";
+	@printf "%b" "$(TEST_COLOR)Testing acoustics solver with testAcousticsTet3D_01.rc$(NO_COLOR)\n";
 	./acousticsMain $(TEST_DIR)/acoustics/testAcousticsTet3D_01.rc
