@@ -49,11 +49,17 @@ export LIBP_MPICC = mpicc
 export LIBP_MPICXX= mpic++
 export LIBP_LD    = mpic++
 
-export LIBP_CFLAGS=-O2 -fopenmp -g -Wall -Wshadow -Wno-unused-function
-export LIBP_MPICFLAGS=$(LIBP_CFLAGS)
+export LIBP_CFLAGS=-O2 -fopenmp -g -Wall -Wshadow -Wno-unused-function 
+export LIBP_MPICFLAGS=$(LIBP_CFLAGS) 
 
-export LIBP_CXXFLAGS=-O2 -fopenmp -g -Wall -Wshadow -Wno-unused-function -std=c++11
-export LIBP_MPICXXFLAGS=$(LIBP_CXXFLAGS)
+export LIBP_CXXFLAGS=-O2 -fopenmp -g -Wall -Wshadow -Wno-unused-function -std=c++11 
+export LIBP_MPICXXFLAGS=$(LIBP_CXXFLAGS) 
+
+ifeq (1,${LIBP_COVERAGE})
+export LIBP_CFLAGS+=--coverage
+export LIBP_CXXFLAGS+=--coverage
+export LIBP_MPICXXFLAGS+=--coverage
+endif
 
 export LIBP_LIBS=-L$(OCCA_DIR)/lib -locca $(links)
 
