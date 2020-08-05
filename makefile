@@ -271,5 +271,9 @@ test: solvers
 	@${MAKE} -C solvers/fokkerPlanck --no-print-directory  test
 	@printf "%b" "$(TEST_COLOR)Testing bns solver$(NO_COLOR)\n";
 	@${MAKE} -C solvers/bns --no-print-directory  test
+	@printf "%b" "$(TEST_COLOR)Testing advection solver$(NO_COLOR)\n";
+	@${MAKE} -C solvers/advection --no-print-directory  test
+	@printf "%b" "$(TEST_COLOR)Testing gradient solver$(NO_COLOR)\n";
+	@${MAKE} -C solvers/gradient --no-print-directory  test
 
 

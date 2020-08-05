@@ -36,6 +36,7 @@ Gradient solver makefile targets:
    make realclean
    make info
    make help
+   make test
 
 Usage:
 
@@ -55,13 +56,15 @@ make info
    List directories and compiler flags in use.
 make help
    Display this help message.
+make test
+   Run tests.
 
 Can use "make verbose=true" for verbose output.
 
 endef
 
 ifeq (,$(filter gradientMain lib clean clean-libs clean-kernels \
-                realclean info help,$(MAKECMDGOALS)))
+                realclean info help test,$(MAKECMDGOALS)))
 ifneq (,$(MAKECMDGOALS))
 $(error ${GRADIENT_HELP_MSG})
 endif
@@ -81,6 +84,7 @@ BLAS_DIR     =${LIBP_TPL_DIR}/BlasLapack
 OGS_DIR      =${LIBP_LIBS_DIR}/ogs
 MESH_DIR     =${LIBP_LIBS_DIR}/mesh
 CORE_DIR     =${LIBP_DIR}/core
+TEST_DIR     =${LIBP_DIR}/test
 
 #includes
 INCLUDES=${LIBP_INCLUDES} \
@@ -210,3 +214,13 @@ info:
 	$(info CXXFLAGS  = $(GRADIENT_CXXFLAGS))
 	$(info LIBS      = $(LIBS))
 	@true
+
+test: gradientMain
+	@printf "%b" "$(TEST_COLOR)Testing gradient solver with testGradientQuad2D_01.rc$(NO_COLOR)\n";
+	./gradientMain $(TEST_DIR)/gradient/testGradientQuad2D_01.rc
+	@printf "%b" "$(TEST_COLOR)Testing gradient solver with testGradientTri2D_01.rc$(NO_COLOR)\n";
+	./gradientMain $(TEST_DIR)/gradient/testGradientTri2D_01.rc
+	@printf "%b" "$(TEST_COLOR)Testing gradient solver with testGradientHex3D_01.rc$(NO_COLOR)\n";
+	./gradientMain $(TEST_DIR)/gradient/testGradientHex3D_01.rc
+	@printf "%b" "$(TEST_COLOR)Testing gradient solver with testGradientTet3D_01.rc$(NO_COLOR)\n";
+	./gradientMain $(TEST_DIR)/gradient/testGradientTet3D_01.rc

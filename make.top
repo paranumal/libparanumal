@@ -56,7 +56,6 @@ export LIBP_CXXFLAGS=-O2 -fopenmp -g -Wall -Wshadow -Wno-unused-function -std=c+
 export LIBP_MPICXXFLAGS=$(LIBP_CXXFLAGS) 
 
 ifeq (1,${LIBP_COVERAGE})
-export LIBP_CFLAGS+=--coverage
 export LIBP_CXXFLAGS+=--coverage
 export LIBP_MPICXXFLAGS+=--coverage
 endif
