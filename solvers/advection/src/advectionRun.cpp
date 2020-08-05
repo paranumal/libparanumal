@@ -49,7 +49,8 @@ void advection_t::Run(){
     dlong Nentries = mesh.Nelements*mesh.Np;
     dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_q, o_Mq, comm));
 
-    printf("Testing norm advection solution = %17.15lg\n", norm2);
+    if(mesh.rank==0)
+      printf("Testing norm advection solution = %17.15lg\n", norm2);
   }
 
 }

@@ -210,7 +210,8 @@ void elliptic_t::Run(){
     dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
     dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_x, o_Mx, comm));
 
-    printf("Testing norm elliptic solution = %17.15lg\n", norm2);
+    if(mesh.rank==0)
+      printf("Testing norm elliptic solution = %17.15lg\n", norm2);
   }
 
   free(r); free(x);

@@ -50,8 +50,8 @@ void gradient_t::Run(){
     dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
     dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_gradq, o_Mgradq, comm));
 
-    // actually probably only doing x-component
-    printf("Testing norm of gradient of solution = %17.15lg\n", norm2);
+    if(mesh.rank==0)
+      printf("Testing norm of gradient of solution = %17.15lg\n", norm2);
   }
 
 }

@@ -51,7 +51,8 @@ void ins_t::Run(){
     dlong Nentries = mesh.Nelements*mesh.Np*NVfields;
     dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_u, o_MU, comm));
 
-    printf("Testing norm ins solution = %17.15lg\n", norm2);
+    if(mesh.rank==0)
+      printf("Testing norm ins solution = %17.15lg\n", norm2);
   }
 
 }
