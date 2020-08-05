@@ -55,6 +55,11 @@ export LIBP_MPICFLAGS=$(LIBP_CFLAGS)
 export LIBP_CXXFLAGS=-O2 -fopenmp -g -Wall -Wshadow -Wno-unused-function -std=c++11
 export LIBP_MPICXXFLAGS=$(LIBP_CXXFLAGS)
 
+ifeq (TRUE,${LIBP_COVERAGE})
+LIBP_CFLAGS+=--coverage
+LIBP_CXXFLAGS+=--coverage
+endif
+
 export LIBP_LIBS=-L$(OCCA_DIR)/lib -locca $(links)
 
 export LIBP_DEFINES=-DUSE_OCCA_MEM_BYTE_ALIGN=32
