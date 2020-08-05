@@ -13,7 +13,7 @@ If you use any part of libParanumal in your research project including variants 
 
 <pre>
 @MISC{ChalmersKarakusAustinSwirydowiczWarburton2020,
-      author = "Chalmers, B. N. and Karakus, A. and Austin, A. P. and Swirydowicz, K. and Warburton, T.",
+      author = "Chalmers, N. and Karakus, A. and Austin, A. P. and Swirydowicz, K. and Warburton, T.",
       title = "{libParanumal}: a performance portable high-order finite element library",
       year = "2020",
       url = "https://github.com/paranumal/libparanumal",
