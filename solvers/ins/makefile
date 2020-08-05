@@ -232,11 +232,15 @@ info:
 test: insMain
 	@printf "%b" "$(TEST_COLOR)Testing ins solver with testInsQuad2D_01.rc$(NO_COLOR)\n";
 	./insMain $(TEST_DIR)/ins/testInsQuad2D_01.rc
+	@printf "%b" "$(TEST_COLOR)Testing ins solver with testInsQuad2D_02.rc using MPI$(NO_COLOR)\n";
+	mpiexec -n 4 ./insMain $(TEST_DIR)/ins/testInsQuad2D_02.rc
+	@printf "%b" "$(TEST_COLOR)Testing ins solver with testInsQuad2D_03.rc using MPI$(NO_COLOR)\n";
+	mpiexec -n 4 ./insMain $(TEST_DIR)/ins/testInsQuad2D_03.rc
 	@printf "%b" "$(TEST_COLOR)Testing ins solver with testInsTri2D_01.rc$(NO_COLOR)\n";
 	./insMain $(TEST_DIR)/ins/testInsTri2D_01.rc
+	@printf "%b" "$(TEST_COLOR)Testing ins solver with testInsTri2D_02.rc$(NO_COLOR)\n";
+	mpiexec -n 4 ./insMain $(TEST_DIR)/ins/testInsTri2D_02.rc
 	@printf "%b" "$(TEST_COLOR)Testing ins solver with testInsHex3D_01.rc$(NO_COLOR)\n";
 	./insMain $(TEST_DIR)/ins/testInsHex3D_01.rc
 	@printf "%b" "$(TEST_COLOR)Testing ins solver with testInsTet3D_01.rc$(NO_COLOR)\n";
 	./insMain $(TEST_DIR)/ins/testInsTet3D_01.rc
-	@printf "%b" "$(TEST_COLOR)Testing ins solver with testInsQuad2D_02.rc using MPI$(NO_COLOR)\n";
-	mpiexec -n 4 ./insMain $(TEST_DIR)/ins/testInsQuad2D_02.rc
