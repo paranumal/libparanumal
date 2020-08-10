@@ -196,11 +196,16 @@ void surfaceTerms(const int face,
 
       //fetch reference operators
       #pragma unroll p_Nq
-        for(int j=0;j<p_Nq;++j){
-          const int id = i+j*p_cubNq;
-          s_cubInterp[0][id] = cubInterp[id];
-          s_cubProject[0][id] = cubProject[id];
+      for(int j=0;j<p_Nq;++j){
+        s_cubInterp[j][i] = cubInterp[i+j*p_cubNq];
+      }
+
+      if (i<p_Nq) {
+        #pragma unroll p_cubNq
+        for(int j=0;j<p_cubNq;++j){
+          s_cubProject[j][i] = cubProject[i+j*p_Nq];
         }
+      }
     }
 
     @barrier("local");

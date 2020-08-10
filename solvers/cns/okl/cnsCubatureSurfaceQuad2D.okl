@@ -215,7 +215,6 @@ void surfaceTerms(const int face,
       //fetch reference operators
       #pragma unroll p_Nq
       for(int j=0;j<p_Nq;++j){
-        const int id = i+j*p_cubNq;
         s_cubInterp[j][i] = cubInterp[i+j*p_cubNq];
       }
 

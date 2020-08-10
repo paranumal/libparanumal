@@ -66,11 +66,12 @@ SOFTWARE.
             s_F12[es][j][i] = Vn;
           }
 
-          const int id = i+j*p_cubNq;
-          if ((es==0) && (id<p_Nq*p_cubNq)) {
-            s_cubPDT[0][id] = cubPDT[id];
-            s_cubInterp[0][id] = cubInterp[id];
-            s_cubProject[0][id] = cubProject[id];
+          if ((es==0) && j<p_Nq) {
+            s_cubInterp[j][i] = cubInterp[i+j*p_cubNq];
+          }
+          if ((es==0) && i<p_Nq) {
+            s_cubProject[j][i] = cubProject[i+j*p_Nq];
+            s_cubPDT[j][i] = cubPDT[i+j*p_Nq];
           }
         }
       }
@@ -334,9 +335,14 @@ void quadSurfaceTerms(int es, int face, int m, int i, int j,
         if (es==0) {
           #pragma unroll p_Nq
           for(int j=0;j<p_Nq;++j){
-            const int id = i+j*p_cubNq;
-            s_cubInterp[0][id] = cubInterp[id];
-            s_cubProject[0][id] = cubProject[id];
+            s_cubInterp[j][i] = cubInterp[i+j*p_cubNq];
+          }
+
+          if (i<p_Nq) {
+            #pragma unroll p_cubNq
+            for(int j=0;j<p_cubNq;++j){
+              s_cubProject[j][i] = cubProject[i+j*p_Nq];
+            }
           }
         }
       }
