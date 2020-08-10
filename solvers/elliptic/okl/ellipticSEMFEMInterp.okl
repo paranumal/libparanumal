@@ -36,11 +36,12 @@ SOFTWARE.
 
     for(int es=0;es<p_NblockV;++es;@inner(1)){
       for(int n=0;n<p_NpFEM;++n;@inner(0)){
-        dlong t = n + es*p_NpFEM;
-
-        if(t<p_Np*p_NblockV)
-          if((eo*p_Np + t)<Nelements*p_Np)
-            s_q[0][t] = q[eo*p_Np+t];
+        const dlong e = eo + es;
+        if(e<Nelements){
+          for (int t=n;t<p_Np;t+=p_NpFEM) {
+            s_q[es][t] = q[e*p_Np+t];
+          }
+        }
       }
     }
 
