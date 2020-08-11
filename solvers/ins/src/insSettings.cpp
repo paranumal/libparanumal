@@ -44,7 +44,7 @@ insSettings_t::insSettings_t(MPI_Comm& _comm):
              {"COLLOCATION", "CUBATURE"});
 
   newSetting("PRESSURE INCREMENT",
-             "TRUE",
+             "FALSE",
              "Use Pressure increment update",
              {"TRUE", "FALSE"});
 
@@ -97,6 +97,7 @@ void insSettings_t::report() {
   if (rank==0) {
     std::cout << "INS Settings:\n\n";
     reportSetting("DATA FILE");
+    reportSetting("VISCOSITY");
     reportSetting("ADVECTION TYPE");
     reportSetting("PRESSURE INCREMENT");
     reportSetting("TIME INTEGRATOR");
