@@ -351,4 +351,17 @@ if __name__ == "__main__":
                                               discretization="IPDG"),
                     referenceNorm=0.059540839002614)
 
+  #MPI tests
+  failCount += test(name="testEllipticTri_C0_Multigrid_MPI", ranks=4,
+                    cmd=ellipticBin,
+                    settings=ellipticSettings(element=3,data_file=ellipticData2D,dim=2,
+                                              precon="MULTIGRID"),
+                    referenceNorm=0.500000001211135)
+
+  failCount += test(name="testEllipticTri_Ipdg_Multigrid_MPI", ranks=4,
+                    cmd=ellipticBin,
+                    settings=ellipticSettings(element=3,data_file=ellipticData2D,dim=2,
+                                              precon="MULTIGRID", discretization="IPDG"),
+                    referenceNorm=0.500000001211135)
+
   sys.exit(failCount)

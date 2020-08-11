@@ -76,4 +76,10 @@ if __name__ == "__main__":
                     settings=advectionSettings(element=12,data_file=advectionData3D,dim=3),
                     referenceNorm=0.833820360927384)
 
+  failCount += test(name="testAdvectionTri_MPI", ranks=4,
+                    cmd=advectionBin,
+                    settings=advectionSettings(element=3,data_file=advectionData2D,dim=2),
+                    referenceNorm=0.723627520020827)
+
+
   sys.exit(failCount)

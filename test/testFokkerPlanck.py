@@ -98,4 +98,9 @@ if __name__ == "__main__":
                                          nx=6, ny=6, nz=6, degree=2),
                     referenceNorm=0.449816553834368)
 
+  failCount += test(name="testFpeTri_MPI", ranks=4,
+                    cmd=fpeBin,
+                    settings=fpeSettings(element=3,data_file=fpeData2D,dim=2),
+                    referenceNorm=0.68309158901944)
+
   sys.exit(failCount)

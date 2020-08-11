@@ -67,12 +67,19 @@ failCount += test(name="testAcousticsQuad",
 
 failCount += test(name="testAcousticsTet",
                   cmd=acousticsBin,
-                  settings=acousticsSettings(element=6,data_file=data3D,dim=3),
-                  referenceNorm=31.6627340682941)
+                  settings=acousticsSettings(element=6,data_file=data3D,dim=3,
+                                             degree=2),
+                  referenceNorm=31.6577046152384)
 
 failCount += test(name="testAcousticsHex",
                   cmd=acousticsBin,
-                  settings=acousticsSettings(element=12,data_file=data3D,dim=3),
-                  referenceNorm=31.6625958456183)
+                  settings=acousticsSettings(element=12,data_file=data3D,dim=3,
+                                             degree=2),
+                  referenceNorm=31.6576028812776)
+
+failCount += test(name="testAcousticsTri_MPI", ranks=4,
+                  cmd=acousticsBin,
+                  settings=acousticsSettings(element=3,data_file=data2D,dim=2),
+                  referenceNorm=10.1300558638317)
 
 sys.exit(failCount)

@@ -89,4 +89,28 @@ if __name__ == "__main__":
                                               mesh=testDir+"/cubeHex.msh"),
                     referenceNorm=0.942816869518335)
 
+  failCount += test(name="testMeshTri_ReadMsh_MPI", ranks=2,
+                    cmd=gradientBin,
+                    settings=gradientSettings(element=3,data_file=gradientData2D,dim=2,
+                                              mesh=testDir+"/squareTri.msh"),
+                    referenceNorm=0.580787485719841)
+
+  failCount += test(name="testMeshQuad_ReadMsh_MPI", ranks=2,
+                    cmd=gradientBin,
+                    settings=gradientSettings(element=4,data_file=gradientData2D,dim=2,
+                                              mesh=testDir+"/squareQuad.msh"),
+                    referenceNorm=0.580787485654967)
+
+  failCount += test(name="testMeshTet_ReadMsh_MPI", ranks=2,
+                    cmd=gradientBin,
+                    settings=gradientSettings(element=6,data_file=gradientData3D,dim=3,
+                                              mesh=testDir+"/cubeTet.msh"),
+                    referenceNorm=0.942816947760423)
+
+  failCount += test(name="testMeshHex_ReadMsh_MPI", ranks=2,
+                    cmd=gradientBin,
+                    settings=gradientSettings(element=12,data_file=gradientData3D,dim=3,
+                                              mesh=testDir+"/cubeHex.msh"),
+                    referenceNorm=0.942816869518335)
+
   sys.exit(failCount)

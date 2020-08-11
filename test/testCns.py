@@ -108,4 +108,9 @@ if __name__ == "__main__":
                                          nx=8, ny=8, nz=8, degree=2),
                     referenceNorm=31.661686876588)
 
+  failCount += test(name="testCnsTri_MPI", ranks=4,
+                    cmd=cnsBin,
+                    settings=cnsSettings(element=3,data_file=cnsData2D,dim=2),
+                    referenceNorm=27.4601137743012)
+
   sys.exit(failCount)

@@ -114,4 +114,9 @@ if __name__ == "__main__":
                                          nx=6, ny=6, nz=6, degree=2),
                     referenceNorm=1.20458245694617)
 
+  failCount += test(name="testInsTri_MPI", ranks=4,
+                    cmd=insBin,
+                    settings=insSettings(element=3,data_file=insData2D,dim=2),
+                    referenceNorm=0.820805880537194)
+
   sys.exit(failCount)

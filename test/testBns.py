@@ -86,4 +86,9 @@ if __name__ == "__main__":
                     settings=bnsSettings(element=12,data_file=bnsData3D,dim=3, degree=2),
                     referenceNorm=52.4192100907009)
 
+  failCount += test(name="testBnsTri_MPI", ranks=4,
+                    cmd=bnsBin,
+                    settings=bnsSettings(element=3,data_file=bnsData2D,dim=2),
+                    referenceNorm=14.210272880731)
+
   sys.exit(failCount)

@@ -64,4 +64,20 @@ if __name__ == "__main__":
                                               paralmond_smoother="CHEBYSHEV"),
                     referenceNorm=0.500000001211135)
 
+  failCount += test(name="testParAlmond_Vcycle_cheby_MPI", ranks=4,
+                    cmd=ellipticBin,
+                    settings=ellipticSettings(element=3,data_file=ellipticData2D,
+                                              dim=2, precon="FULLALMOND",
+                                              paralmond_cycle="VCYCLE",
+                                              paralmond_smoother="CHEBYSHEV"),
+                    referenceNorm=0.500000001211135)
+
+  failCount += test(name="testParAlmond_Kcycle_cheby_MPI", ranks=4,
+                    cmd=ellipticBin,
+                    settings=ellipticSettings(element=3,data_file=ellipticData2D,
+                                              dim=2, precon="FULLALMOND",
+                                              paralmond_cycle="KCYCLE",
+                                              paralmond_smoother="CHEBYSHEV"),
+                    referenceNorm=0.500000001211135)
+
   sys.exit(failCount)
