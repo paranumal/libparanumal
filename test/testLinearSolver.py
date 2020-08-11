@@ -47,13 +47,13 @@ if __name__ == "__main__":
   failCount += test(name="testLinearSolver_NBPCG",
                     cmd=ellipticBin,
                     settings=ellipticSettings(element=3,data_file=ellipticData2D,dim=2,
-                                              precon="NONE", linear_solver="FPCG"),
+                                              precon="NONE", linear_solver="NBPCG"),
                     referenceNorm=0.500000001211135)
 
   failCount += test(name="testLinearSolver_NBFPCG",
                     cmd=ellipticBin,
                     settings=ellipticSettings(element=3,data_file=ellipticData2D,dim=2,
-                                              precon="NONE", linear_solver="FPCG"),
+                                              precon="NONE", linear_solver="NBFPCG"),
                     referenceNorm=0.500000001211135)
 
   sys.exit(failCount)
