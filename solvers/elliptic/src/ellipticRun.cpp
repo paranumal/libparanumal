@@ -99,7 +99,7 @@ void elliptic_t::Run(){
   dlong Nall = mesh.Np*(mesh.Nelements+mesh.totalHaloPairs);
   dfloat *r = (dfloat*) calloc(Nall, sizeof(dfloat));
   dfloat *x = (dfloat*) calloc(Nall, sizeof(dfloat));
-  occa::memory o_r = device.malloc(Nall*sizeof(dfloat));
+  occa::memory o_r = device.malloc(Nall*sizeof(dfloat), r);
   occa::memory o_x = device.malloc(Nall*sizeof(dfloat), x);
 
   //storage for M*q during reporting
@@ -211,7 +211,7 @@ void elliptic_t::Run(){
     dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_x, o_Mx, comm));
 
     if(mesh.rank==0)
-      printf("Testing norm elliptic solution = %17.15lg\n", norm2);
+      printf("Solution norm = %17.15lg\n", norm2);
   }
 
   free(r); free(x);

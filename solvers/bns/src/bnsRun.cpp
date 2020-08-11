@@ -51,8 +51,8 @@ void bns_t::Run(){
     dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
     dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_q, o_Mq, comm));
 
-    if(mesh.rank==0)    
-      printf("Testing norm bns solution = %17.15lg\n", norm2);
+    if(mesh.rank==0)
+      printf("Solution norm = %17.15lg\n", norm2);
   }
 }
 
