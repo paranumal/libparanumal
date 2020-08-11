@@ -95,10 +95,10 @@ def test(name, cmd, settings, referenceNorm, ranks=1):
 
   #run test
   run = subprocess.run(["mpirun", "-np", str(ranks), cmd, inputRC],
-                        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
   #collect last line of output
-  output = run.stdout.splitlines()[-1]
+  output = run.stdout.decode().splitlines()[-1]
 
   #check last line's syntax
   failed=0;
@@ -116,9 +116,9 @@ def test(name, cmd, settings, referenceNorm, ranks=1):
     #this failure is worse, so dump the whole output for debug
     print(bcolors.FAIL + "FAIL" + bcolors.ENDC)
     print(bcolors.WARNING + name + " stdout:" + bcolors.ENDC)
-    print(run.stdout)
+    print(run.stdout.decode())
     print(bcolors.WARNING + name + " stderr:" + bcolors.ENDC)
-    print(run.stderr)
+    print(run.stderr.decode())
     failed = 1
 
   #clean up
