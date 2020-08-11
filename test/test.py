@@ -1,0 +1,127 @@
+#!/usr/bin/env python3
+
+#####################################################################################
+#
+#The MIT License (MIT)
+#
+#Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+#
+#Permission is hereby granted, free of charge, to any person obtaining a copy
+#of this software and associated documentation files (the "Software"), to deal
+#in the Software without restriction, including without limitation the rights
+#to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#copies of the Software, and to permit persons to whom the Software is
+#furnished to do so, subject to the following conditions:
+#
+#The above copyright notice and this permission notice shall be included in all
+#copies or substantial portions of the Software.
+#
+#THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#SOFTWARE.
+#
+#####################################################################################
+
+import os
+import sys
+import subprocess
+import re
+from pathlib import Path
+
+#can only run the tests from LIBP_DIR/test
+pwd = Path(os.getcwd())
+testDir = str(pwd)
+libPDir = str(pwd.parent)
+solverDir = libPDir + "/solvers"
+
+gradientDir      = solverDir + "/gradient"
+advectionDir     = solverDir + "/advection"
+acousticsDir     = solverDir + "/acoustics"
+ellipticDir      = solverDir + "/elliptic"
+fokkerPlanckDir  = solverDir + "/fokkerPlanck"
+cnsDir           = solverDir + "/cns"
+bnsDir           = solverDir + "/bns"
+insDir           = solverDir + "/ins"
+
+gradientBin  = gradientDir      + "/gradientMain"
+advectionBin = advectionDir     + "/advectionMain"
+acousticsBin = acousticsDir     + "/acousticsMain"
+ellipticBin  = ellipticDir      + "/ellipticMain"
+fpeBin       = fokkerPlanckDir  + "/fpeMain"
+cnsBin       = cnsDir           + "/cnsMain"
+bnsBin       = bnsDir           + "/bnsMain"
+insBin       = insDir           + "/insMain"
+
+inputRC = testDir + "/setup.rc"
+
+TOL = 1.0e-5
+alignWidth = 40
+
+numeric_const_pattern = r"[-+]? (?: (?: \d* \. \d+ ) | (?: \d+ \.? ) )(?: [Ee] [+-]? \d+ ) ?"
+
+class bcolors:
+  TEST    = '\033[35m'
+  PASS    = '\033[92m'
+  WARNING = '\033[93m'
+  FAIL    = '\033[91m'
+  ENDC    = '\033[0m'
+
+class setting_t:
+  def __init__(self, name, value):
+    self.name = name
+    self.value = value
+
+def writeSetup(settings):
+  str_settings=""
+  for setting in settings:
+    str_settings += "[" + setting.name + "]\n"
+    str_settings += str(setting.value) + "\n\n"
+
+  file = open("setup.rc", "w")
+  file.write(str_settings)
+  file.close()
+
+def test(name, cmd, settings, referenceNorm, ranks=1):
+
+  #create input file
+  writeSetup(settings)
+
+  #print test name
+  print(bcolors.TEST + f"{name:.<{alignWidth}}" + bcolors.ENDC, end="", flush=True)
+
+  #run test
+  run = subprocess.run(["mpirun", "-np", str(ranks), cmd, inputRC],
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+  #collect last line of output
+  output = run.stdout.splitlines()[-1]
+
+  #check last line's syntax
+  failed=0;
+  if "Solution norm = " in output:
+    norm = float(output.split()[3])
+    if abs(norm - referenceNorm) < TOL:
+      print(bcolors.PASS + "PASS" + bcolors.ENDC)
+    else:
+      #failed residual check
+      print(bcolors.FAIL + "FAIL" + bcolors.ENDC)
+      print(bcolors.WARNING + "Expected Result: " + str(referenceNorm) + bcolors.ENDC)
+      print(bcolors.WARNING + "Observed Result: " + str(norm) + bcolors.ENDC)
+      failed = 1
+  else:
+    #this failure is worse, so dump the whole output for debug
+    print(bcolors.FAIL + "FAIL" + bcolors.ENDC)
+    print(bcolors.WARNING + name + " stdout:" + bcolors.ENDC)
+    print(run.stdout)
+    print(bcolors.WARNING + name + " stderr:" + bcolors.ENDC)
+    print(run.stderr)
+    failed = 1
+
+  #clean up
+  os.remove(inputRC)
+
+  return failed
