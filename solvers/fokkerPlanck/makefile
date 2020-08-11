@@ -231,11 +231,4 @@ info:
 	@true
 
 test: fpeMain
-	@printf "%b" "$(TEST_COLOR)Testing fokkerPlanck solver with testFpeQuad2D_01.rc$(NO_COLOR)\n";
-	./fpeMain $(TEST_DIR)/fpe/testFpeQuad2D_01.rc
-	@printf "%b" "$(TEST_COLOR)Testing fpe solver with testFpeTri2D_01.rc$(NO_COLOR)\n";
-	./fpeMain $(TEST_DIR)/fpe/testFpeTri2D_01.rc
-	@printf "%b" "$(TEST_COLOR)Testing fpe solver with testFpeHex3D_01.rc$(NO_COLOR)\n";
-	./fpeMain $(TEST_DIR)/fpe/testFpeHex3D_01.rc
-	@printf "%b" "$(TEST_COLOR)Testing fpe solver with testFpeTet3D_01.rc$(NO_COLOR)\n";
-	./fpeMain $(TEST_DIR)/fpe/testFpeTet3D_01.rc
+	@${MAKE} -C $(LIBP_DIR)/test --no-print-directory  test-fpe

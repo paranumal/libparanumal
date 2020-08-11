@@ -216,11 +216,4 @@ info:
 	@true
 
 test: advectionMain
-	@printf "%b" "$(TEST_COLOR)Testing advection solver with testAdvectionQuad2D_01.rc$(NO_COLOR)\n";
-	./advectionMain $(TEST_DIR)/advection/testAdvectionQuad2D_01.rc
-	@printf "%b" "$(TEST_COLOR)Testing advection solver with testAdvectionTri2D_01.rc$(NO_COLOR)\n";
-	./advectionMain $(TEST_DIR)/advection/testAdvectionTri2D_01.rc
-	@printf "%b" "$(TEST_COLOR)Testing advection solver with testAdvectionHex3D_01.rc$(NO_COLOR)\n";
-	./advectionMain $(TEST_DIR)/advection/testAdvectionHex3D_01.rc
-	@printf "%b" "$(TEST_COLOR)Testing advection solver with testAdvectionTet3D_01.rc$(NO_COLOR)\n";
-	./advectionMain $(TEST_DIR)/advection/testAdvectionTet3D_01.rc
+	@${MAKE} -C $(LIBP_DIR)/test --no-print-directory  test-advection

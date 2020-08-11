@@ -159,7 +159,7 @@ ifneq (,${verbose})
 	${MAKE} -C ${SOLVER_DIR}/$(@F) verbose=${verbose}
 else
 	@printf "%b" "$(SOL_COLOR)Building $(@F) solver$(NO_COLOR)\n";
-	@${MAKE} -C ${SOLVER_DIR}/$(@F) --no-print-directory 
+	@${MAKE} -C ${SOLVER_DIR}/$(@F) --no-print-directory
 endif
 
 libmesh: libogs libparAlmond libgs libblas libcore
@@ -258,22 +258,5 @@ info:
 	$(info CXXFLAGS  = $(CXXFLAGS))
 	@true
 
-test: solvers
-	@printf "%b" "$(TEST_COLOR)Testing elliptic solver$(NO_COLOR)\n";
-	@${MAKE} -C solvers/elliptic --no-print-directory  test
-	@printf "%b" "$(TEST_COLOR)Testing cns solver$(NO_COLOR)\n";
-	@${MAKE} -C solvers/cns --no-print-directory  test
-	@printf "%b" "$(TEST_COLOR)Testing acoustics solver$(NO_COLOR)\n";
-	@${MAKE} -C solvers/acoustics --no-print-directory  test
-	@printf "%b" "$(TEST_COLOR)Testing ins solver$(NO_COLOR)\n";
-	@${MAKE} -C solvers/ins --no-print-directory  test
-	@printf "%b" "$(TEST_COLOR)Testing fokkerPlanck solver$(NO_COLOR)\n";
-	@${MAKE} -C solvers/fokkerPlanck --no-print-directory  test
-	@printf "%b" "$(TEST_COLOR)Testing bns solver$(NO_COLOR)\n";
-	@${MAKE} -C solvers/bns --no-print-directory  test
-	@printf "%b" "$(TEST_COLOR)Testing advection solver$(NO_COLOR)\n";
-	@${MAKE} -C solvers/advection --no-print-directory  test
-	@printf "%b" "$(TEST_COLOR)Testing gradient solver$(NO_COLOR)\n";
-	@${MAKE} -C solvers/gradient --no-print-directory  test
-
-
+test: all
+	@${MAKE} -C $(LIBP_DIR)/test --no-print-directory  test

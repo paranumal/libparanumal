@@ -45,7 +45,8 @@ Can use "make verbose=true" for verbose output.
 
 endef
 
-ifeq (,$(filter info help test,$(MAKECMDGOALS)))
+ifeq (,$(filter info help test test-mesh test-gradient test-advection test-acoustics \
+				test-elliptic test-fpe test-cns test-bns test-ins test-core,$(MAKECMDGOALS)))
 ifneq (,$(MAKECMDGOALS))
 $(error ${TEST_HELP_MSG})
 endif
@@ -67,9 +68,13 @@ MESH_DIR     =${LIBP_LIBS_DIR}/mesh
 CORE_DIR     =${LIBP_DIR}/core
 TEST_DIR     =${LIBP_DIR}/test
 
-.PHONY: all help info test
+.PHONY: all help info test test-mesh test-gradient test-advection test-acoustics \
+				test-elliptic test-fpe test-cns test-bns test-ins test-core
 
-all: test
+
+all: test-all
+
+test: all
 
 help:
 	$(info $(value TEST_HELP_MSG))
@@ -82,7 +87,39 @@ info:
 	$(info LIBS      = $(LIBS))
 	@true
 
-test:
+test-core:
+	@./testTimeStepper.py
+	@./testLinearSolver.py
+
+test-mesh:
+	@./testMesh.py
+
+test-gradient:
+	@./testGradient.py
+
+test-advection:
+	@./testAdvection.py
+
+test-acoustics:
+	@./testAcoustics.py
+
+test-elliptic:
+	@./testElliptic.py
+	@./testParAlmond.py
+
+test-fpe:
+	@./testFokkerPlanck.py
+
+test-cns:
+	@./testCns.py
+
+test-bns:
+	@./testBns.py
+
+test-ins:
+	@./testIns.py
+
+test-all:
 	@./testMesh.py
 	@./testGradient.py
 	@./testAdvection.py

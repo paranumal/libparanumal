@@ -216,11 +216,4 @@ info:
 	@true
 
 test: cnsMain
-	@printf "%b" "$(TEST_COLOR)Testing cns solver with testCnsQuad2D_01.rc$(NO_COLOR)\n";
-	./cnsMain $(TEST_DIR)/cns/testCnsQuad2D_01.rc
-	@printf "%b" "$(TEST_COLOR)Testing cns solver with testCnsTri2D_01.rc$(NO_COLOR)\n";
-	./cnsMain $(TEST_DIR)/cns/testCnsTri2D_01.rc
-	@printf "%b" "$(TEST_COLOR)Testing cns solver with testCnsHex3D_01.rc$(NO_COLOR)\n";
-	./cnsMain $(TEST_DIR)/cns/testCnsHex3D_01.rc
-	@printf "%b" "$(TEST_COLOR)Testing cns solver with testCnsTet3D_01.rc$(NO_COLOR)\n";
-	./cnsMain $(TEST_DIR)/cns/testCnsTet3D_01.rc
+	@${MAKE} -C $(LIBP_DIR)/test --no-print-directory  test-cns

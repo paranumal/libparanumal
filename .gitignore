@@ -6,11 +6,6 @@
 !*/*/Makefile
 !LICENSE
 
-!test/squareTri.msh
-!test/squareQuad.msh
-!test/cubeTet.msh
-!test/cubeHex.msh
-
 *.o
 *.a
 .DS_STORE
@@ -32,3 +27,8 @@
 *.m~
 *.nvprof
 test/__pycache__
+
+!test/squareTri.msh
+!test/squareQuad.msh
+!test/cubeTet.msh
+!test/cubeHex.msh
