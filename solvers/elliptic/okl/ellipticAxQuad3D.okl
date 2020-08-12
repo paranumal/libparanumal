@@ -47,10 +47,10 @@
     @shared dfloat s_D[p_Nq][p_Nq];
 
     @exclusive dfloat r_qr, r_qs, r_q, r_Aq;
-    @exclusive pfloat r_G00, r_G01, r_G02;
-    @exclusive pfloat r_G11, r_G12;
-    @exclusive pfloat r_G22;
-    @exclusive pfloat r_GwJ;
+    @exclusive dfloat r_G00, r_G01, r_G02;
+    @exclusive dfloat r_G11, r_G12;
+    @exclusive dfloat r_G22;
+    @exclusive dfloat r_GwJ;
     
     // prefetch q(:,:,:,e) to @shared
     squareThreads{

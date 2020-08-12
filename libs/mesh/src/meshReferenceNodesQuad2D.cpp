@@ -31,7 +31,7 @@ SOFTWARE.
 void meshQuad3D::ReferenceNodes(int N_){
   mesh_t *mesh_p = (mesh_t*) this;
   meshQuad2D* quadmesh = (meshQuad2D*) mesh_p;
-  quadmesh->meshQuad2D::ReferenceNodes(N);
+  quadmesh->meshQuad2D::ReferenceNodes(N_);
 }
 
 void meshQuad2D::ReferenceNodes(int N_){
