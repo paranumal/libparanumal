@@ -17,7 +17,7 @@ If you use any part of libParanumal in your research project including variants 
       title = "{libParanumal}: a performance portable high-order finite element library",
       year = "2020",
       url = "https://github.com/paranumal/libparanumal",
-      note = "Release 0.2.1"
+      note = "Release 0.3.1"
       }
 </pre>
 
