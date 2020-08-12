@@ -37,7 +37,7 @@ def bnsSettings(rcformat="2.0", data_file=bnsData2D,
                viscosity=0.01, speed_of_sound=1.0,
                pml_order=4, pml_sigx=50, pml_sigy=50, pml_sigz=50,
                pml_type="COLLOCATION",
-               time_integrator="SARK4", start_time=0.0, final_time=0.1):
+                time_integrator="SARK4", start_time=0.0, final_time=0.1, output_to_file="FALSE"):
   return [setting_t("FORMAT", rcformat),
           setting_t("DATA FILE", data_file),
           setting_t("MESH FILE", mesh),
@@ -61,7 +61,7 @@ def bnsSettings(rcformat="2.0", data_file=bnsData2D,
           setting_t("TIME INTEGRATOR", time_integrator),
           setting_t("START TIME", start_time),
           setting_t("FINAL TIME", final_time),
-          setting_t("OUTPUT TO FILE", "FALSE")]
+          setting_t("OUTPUT TO FILE", output_to_file)]
 
 def main():
   failCount=0;
@@ -112,7 +112,7 @@ def main():
 
   failCount += test(name="testBnsTri_MPI", ranks=4,
                     cmd=bnsBin,
-                    settings=bnsSettings(element=3,data_file=bnsData2D,dim=2),
+                    settings=bnsSettings(element=3,data_file=bnsData2D,dim=2,output_to_file="TRUE"),
                     referenceNorm=14.210272880731)
 
   return failCount
