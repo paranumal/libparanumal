@@ -63,6 +63,17 @@ alignWidth = 40
 
 numeric_const_pattern = r"[-+]? (?: (?: \d* \. \d+ ) | (?: \d+ \.? ) )(?: [Ee] [+-]? \d+ ) ?"
 
+if len(sys.argv)>1:
+  device = sys.argv[1];
+  if device!="Serial" and \
+     device!="OpenMP" and \
+     device!="CUDA"   and \
+     device!="HIP"    and \
+     device!="OpenCL":
+    exit("Invalid mode requested.")
+else:
+  device="Serial"
+
 class bcolors:
   TEST    = '\033[35m'
   PASS    = '\033[92m'
@@ -125,3 +136,33 @@ def test(name, cmd, settings, referenceNorm, ranks=1):
   os.remove(inputRC)
 
   return failed
+
+if __name__ == "__main__":
+  import testMesh
+  import testGradient
+  import testAdvection
+  import testAcoustics
+  import testElliptic
+  import testFokkerPlanck
+  import testCns
+  import testBns
+  import testIns
+  import testTimeStepper
+  import testLinearSolver
+  import testParAlmond
+
+  failCount=0;
+  failCount+=testMesh.main()
+  failCount+=testGradient.main()
+  failCount+=testAdvection.main()
+  failCount+=testAcoustics.main()
+  failCount+=testElliptic.main()
+  failCount+=testFokkerPlanck.main()
+  failCount+=testCns.main()
+  failCount+=testBns.main()
+  failCount+=testIns.main()
+  failCount+=testTimeStepper.main()
+  failCount+=testLinearSolver.main()
+  failCount+=testParAlmond.main()
+
+  sys.exit(failCount)

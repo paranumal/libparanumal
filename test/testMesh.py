@@ -29,7 +29,7 @@
 from test import *
 from testGradient import *
 
-if __name__ == "__main__":
+def main():
   failCount=0;
 
   testMeshTriP_refnorm =[4.37016024448821, 4.4426446089857, 4.44319809556755, 4.44288849919259, 4.44288258145188, 4.44288293226037, 4.44288293848078, 4.44288293816329, 4.44288293815814, 4.44288293815836, 4.44288293815835, 4.44288293815838, 4.44288293815836, 4.44288293815835, 4.44288293815839]
@@ -113,4 +113,9 @@ if __name__ == "__main__":
                                               mesh=testDir+"/cubeHex.msh"),
                     referenceNorm=0.942816869518335)
 
+  return failCount
+
+if __name__ == "__main__":
+  failCount=0;
+  failCount+=main()
   sys.exit(failCount)

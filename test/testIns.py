@@ -33,10 +33,10 @@ insData3D = insDir + "/data/insBeltrami3D.h"
 
 def insSettings(rcformat="2.0", data_file=insData2D,
                mesh="BOX", dim=2, element=4, nx=10, ny=10, nz=10, boundary_flag=2,
-               degree=4, thread_model="Serial", platform_number=0, device_number=0,
+               degree=4, thread_model=device, platform_number=0, device_number=0,
                viscosity=0.05,
                advection_type="COLLOCATION",
-               time_integrator="SSBDF3", start_time=0.0, final_time=0.1,
+               time_integrator="EXTBDF3", start_time=0.0, final_time=0.1,
                num_subcycles=4, subcycle_integrator="DOPRI5",
                velocity_discretization="CONTINUOUS",
                velocity_linear_solver="PCG",
@@ -89,34 +89,126 @@ def insSettings(rcformat="2.0", data_file=insData2D,
           setting_t("PRESSURE VERBOSE", "TRUE"),
           setting_t("OUTPUT TO FILE", "FALSE")]
 
-if __name__ == "__main__":
+def main():
   failCount=0;
 
+  #test non-subcycle
   failCount += test(name="testInsTri",
                     cmd=insBin,
                     settings=insSettings(element=3,data_file=insData2D,dim=2),
-                    referenceNorm=0.820259718324697)
+                    referenceNorm=0.820792600394893)
 
   failCount += test(name="testInsQuad",
                     cmd=insBin,
                     settings=insSettings(element=4,data_file=insData2D,dim=2),
-                    referenceNorm=0.819325040055746)
+                    referenceNorm=0.820483555285512)
 
   failCount += test(name="testInsTet",
                     cmd=insBin,
                     settings=insSettings(element=6,data_file=insData3D,dim=3,
                                          nx=6, ny=6, nz=6, degree=2),
-                    referenceNorm=1.20564625692643)
+                    referenceNorm=1.20768114201421)
 
   failCount += test(name="testInsHex",
                     cmd=insBin,
                     settings=insSettings(element=12,data_file=insData3D,dim=3,
                                          nx=6, ny=6, nz=6, degree=2),
+                    referenceNorm=1.20751891719514)
+
+  #test cubature
+  failCount += test(name="testInsTri_cub",
+                    cmd=insBin,
+                    settings=insSettings(element=3,data_file=insData2D,dim=2,
+                                         advection_type="CUBATURE"),
+                    referenceNorm=0.820792629049566)
+
+  failCount += test(name="testInsQuad_cub",
+                    cmd=insBin,
+                    settings=insSettings(element=4,data_file=insData2D,dim=2,
+                                         advection_type="CUBATURE"),
+                    referenceNorm=0.820483554297878)
+
+  failCount += test(name="testInsTet_cub",
+                    cmd=insBin,
+                    settings=insSettings(element=6,data_file=insData3D,dim=3,
+                                         nx=6, ny=6, nz=6, degree=2,
+                                         advection_type="CUBATURE"),
+                    referenceNorm=1.20772892218052)
+
+  failCount += test(name="testInsHex_cub",
+                    cmd=insBin,
+                    settings=insSettings(element=12,data_file=insData3D,dim=3,
+                                         nx=6, ny=6, nz=6, degree=2,
+                                         advection_type="CUBATURE"),
+                    referenceNorm=1.20756590561643)
+
+  #test subcycle
+  failCount += test(name="testInsTri_ss",
+                    cmd=insBin,
+                    settings=insSettings(element=3,data_file=insData2D,dim=2,
+                                         time_integrator="SSBDF3"),
+                    referenceNorm=0.820259718324697)
+
+  failCount += test(name="testInsQuad_ss",
+                    cmd=insBin,
+                    settings=insSettings(element=4,data_file=insData2D,dim=2,
+                                         time_integrator="SSBDF3"),
+                    referenceNorm=0.819325040055746)
+
+  failCount += test(name="testInsTet_ss",
+                    cmd=insBin,
+                    settings=insSettings(element=6,data_file=insData3D,dim=3,
+                                         nx=6, ny=6, nz=6, degree=2,
+                                         time_integrator="SSBDF3"),
+                    referenceNorm=1.20564625692643)
+
+  failCount += test(name="testInsHex_ss",
+                    cmd=insBin,
+                    settings=insSettings(element=12,data_file=insData3D,dim=3,
+                                         nx=6, ny=6, nz=6, degree=2,
+                                         time_integrator="SSBDF3"),
                     referenceNorm=1.20458245694617)
 
+  #test cubature
+  failCount += test(name="testInsTri_ss_cub",
+                    cmd=insBin,
+                    settings=insSettings(element=3,data_file=insData2D,dim=2,
+                                         advection_type="CUBATURE",
+                                         time_integrator="SSBDF3"),
+                    referenceNorm=0.820259718324697)
+
+  failCount += test(name="testInsQuad_ss_cub",
+                    cmd=insBin,
+                    settings=insSettings(element=4,data_file=insData2D,dim=2,
+                                         advection_type="CUBATURE",
+                                         time_integrator="SSBDF3"),
+                    referenceNorm=0.819325040055746)
+
+  failCount += test(name="testInsTet_ss_cub",
+                    cmd=insBin,
+                    settings=insSettings(element=6,data_file=insData3D,dim=3,
+                                         nx=6, ny=6, nz=6, degree=2,
+                                         advection_type="CUBATURE",
+                                         time_integrator="SSBDF3"),
+                    referenceNorm=1.20569732082373)
+
+  failCount += test(name="testInsHex_ss_cub",
+                    cmd=insBin,
+                    settings=insSettings(element=12,data_file=insData3D,dim=3,
+                                         nx=6, ny=6, nz=6, degree=2,
+                                         advection_type="CUBATURE",
+                                         time_integrator="SSBDF3"),
+                    referenceNorm=1.20463427860078)
+
+  #test wth MPI
   failCount += test(name="testInsTri_MPI", ranks=4,
                     cmd=insBin,
                     settings=insSettings(element=3,data_file=insData2D,dim=2),
-                    referenceNorm=0.820805880537194)
+                    referenceNorm=0.820785579220035)
 
+  return failCount
+
+if __name__ == "__main__":
+  failCount=0;
+  failCount+=main()
   sys.exit(failCount)

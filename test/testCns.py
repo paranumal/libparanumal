@@ -33,7 +33,7 @@ cnsData3D = cnsDir + "/data/cnsGaussian3D.h"
 
 def cnsSettings(rcformat="2.0", data_file=cnsData2D,
                mesh="BOX", dim=2, element=4, nx=10, ny=10, nz=10, boundary_flag=-1,
-               degree=4, thread_model="Serial", platform_number=0, device_number=0,
+               degree=4, thread_model=device, platform_number=0, device_number=0,
                gamma=1.4, viscosity=0.01, isothermal="FALSE",
                advection_type="COLLOCATION",
                time_integrator="DOPRI5", start_time=0.0, final_time=1.0):
@@ -59,7 +59,7 @@ def cnsSettings(rcformat="2.0", data_file=cnsData2D,
           setting_t("FINAL TIME", final_time),
           setting_t("OUTPUT TO FILE", "FALSE")]
 
-if __name__ == "__main__":
+def main():
   failCount=0;
 
   failCount += test(name="testCnsTri",
@@ -81,6 +81,30 @@ if __name__ == "__main__":
                     cmd=cnsBin,
                     settings=cnsSettings(element=12,data_file=cnsData3D,dim=3, degree=2),
                     referenceNorm=85.2655372370673)
+
+  failCount += test(name="testCnsTri_cub",
+                    cmd=cnsBin,
+                    settings=cnsSettings(element=3,data_file=cnsData2D,dim=2,
+                                         advection_type="CUBATURE"),
+                    referenceNorm=27.458656841783)
+
+  failCount += test(name="testCnsQuad_cub",
+                    cmd=cnsBin,
+                    settings=cnsSettings(element=4,data_file=cnsData2D,dim=2,
+                                         advection_type="CUBATURE"),
+                    referenceNorm=27.4589632969659)
+
+  failCount += test(name="testCnsTet_cub",
+                    cmd=cnsBin,
+                    settings=cnsSettings(element=6,data_file=cnsData3D,dim=3, degree=2,
+                                         advection_type="CUBATURE"),
+                    referenceNorm=85.25499794991)
+
+  failCount += test(name="testCnsHex_cub",
+                    cmd=cnsBin,
+                    settings=cnsSettings(element=12,data_file=cnsData3D,dim=3, degree=2,
+                                         advection_type="CUBATURE"),
+                    referenceNorm=85.2651118652474)
 
   failCount += test(name="testCnsTri_Isothermal",
                     cmd=cnsBin,
@@ -108,9 +132,44 @@ if __name__ == "__main__":
                                          nx=8, ny=8, nz=8, degree=2),
                     referenceNorm=31.661686876588)
 
+  failCount += test(name="testCnsTri_Isothermal_cub",
+                    cmd=cnsBin,
+                    settings=cnsSettings(element=3,data_file=cnsData2D,dim=2,
+                                         isothermal="TRUE",
+                                         advection_type="CUBATURE"),
+                    referenceNorm=10.2198591595802)
+
+  failCount += test(name="testCnsQuad_Isothermal_cub",
+                    cmd=cnsBin,
+                    settings=cnsSettings(element=4,data_file=cnsData2D,dim=2,
+                                         isothermal="TRUE",
+                                         advection_type="CUBATURE"),
+                    referenceNorm=10.219823597509)
+
+  failCount += test(name="testCnsTet_Isothermal_cub",
+                    cmd=cnsBin,
+                    settings=cnsSettings(element=6,data_file=cnsData3D,dim=3,
+                                         isothermal="TRUE",
+                                         advection_type="CUBATURE",
+                                         nx=6, ny=6, nz=6, degree=2),
+                    referenceNorm=31.6385359664938)
+
+  failCount += test(name="testCnsHex_Isothermal_cub",
+                    cmd=cnsBin,
+                    settings=cnsSettings(element=12,data_file=cnsData3D,dim=3,
+                                         isothermal="TRUE",
+                                         advection_type="CUBATURE",
+                                         nx=8, ny=8, nz=8, degree=2),
+                    referenceNorm=31.6604814034179)
+
   failCount += test(name="testCnsTri_MPI", ranks=4,
                     cmd=cnsBin,
                     settings=cnsSettings(element=3,data_file=cnsData2D,dim=2),
                     referenceNorm=27.4601137743012)
 
+  return failCount
+
+if __name__ == "__main__":
+  failCount=0;
+  failCount+=main()
   sys.exit(failCount)

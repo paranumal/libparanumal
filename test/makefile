@@ -120,15 +120,4 @@ test-ins:
 	@./testIns.py
 
 test-all:
-	@./testMesh.py
-	@./testGradient.py
-	@./testAdvection.py
-	@./testAcoustics.py
-	@./testElliptic.py
-	@./testFokkerPlanck.py
-	@./testCns.py
-	@./testBns.py
-	@./testIns.py
-	@./testTimeStepper.py
-	@./testLinearSolver.py
-	@./testParAlmond.py
+	@./test.py

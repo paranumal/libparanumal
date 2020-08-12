@@ -33,7 +33,7 @@ bnsData3D = bnsDir + "/data/bnsGaussian3D.h"
 
 def bnsSettings(rcformat="2.0", data_file=bnsData2D,
                mesh="PMLBOX", dim=2, element=4, nx=10, ny=10, nz=10, boundary_flag=1,
-               degree=4, thread_model="Serial", platform_number=0, device_number=0,
+               degree=4, thread_model=device, platform_number=0, device_number=0,
                viscosity=0.01, speed_of_sound=1.0,
                pml_order=4, pml_sigx=50, pml_sigy=50, pml_sigz=50,
                pml_type="COLLOCATION",
@@ -63,7 +63,7 @@ def bnsSettings(rcformat="2.0", data_file=bnsData2D,
           setting_t("FINAL TIME", final_time),
           setting_t("OUTPUT TO FILE", "FALSE")]
 
-if __name__ == "__main__":
+def main():
   failCount=0;
 
   failCount += test(name="testBnsTri",
@@ -86,9 +86,38 @@ if __name__ == "__main__":
                     settings=bnsSettings(element=12,data_file=bnsData3D,dim=3, degree=2),
                     referenceNorm=52.4192100907009)
 
+  failCount += test(name="testBnsTri_pmlcub",
+                    cmd=bnsBin,
+                    settings=bnsSettings(element=3,data_file=bnsData2D,dim=2,
+                                         pml_type="CUBATURE"),
+                    referenceNorm=14.2323950507604)
+
+  failCount += test(name="testBnsQuad_pmlcub",
+                    cmd=bnsBin,
+                    settings=bnsSettings(element=4,data_file=bnsData2D,dim=2,
+                                         pml_type="CUBATURE"),
+                    referenceNorm=14.2251640502562)
+
+  failCount += test(name="testBnsTet_pmlcub",
+                    cmd=bnsBin,
+                    settings=bnsSettings(element=6,data_file=bnsData3D,dim=3, degree=2,
+                                         pml_type="CUBATURE"),
+                    referenceNorm=52.4225432446159)
+
+  failCount += test(name="testBnsHex_pmlcub",
+                    cmd=bnsBin,
+                    settings=bnsSettings(element=12,data_file=bnsData3D,dim=3, degree=2,
+                                         pml_type="CUBATURE"),
+                    referenceNorm=52.4192100907009)
+
   failCount += test(name="testBnsTri_MPI", ranks=4,
                     cmd=bnsBin,
                     settings=bnsSettings(element=3,data_file=bnsData2D,dim=2),
                     referenceNorm=14.210272880731)
 
+  return failCount
+
+if __name__ == "__main__":
+  failCount=0;
+  failCount+=main()
   sys.exit(failCount)

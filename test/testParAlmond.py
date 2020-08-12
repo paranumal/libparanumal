@@ -29,7 +29,7 @@
 from test import *
 from testElliptic import *
 
-if __name__ == "__main__":
+def main():
   failCount=0;
 
   failCount += test(name="testParAlmond_Vcycle_jacobi",
@@ -80,4 +80,9 @@ if __name__ == "__main__":
                                               paralmond_smoother="CHEBYSHEV"),
                     referenceNorm=0.500000001211135)
 
+  return failCount
+
+if __name__ == "__main__":
+  failCount=0;
+  failCount+=main()
   sys.exit(failCount)

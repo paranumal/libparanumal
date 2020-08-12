@@ -31,7 +31,7 @@ from testAdvection import *
 from testFokkerPlanck import *
 from testBns import *
 
-if __name__ == "__main__":
+def main():
   failCount=0;
 
   failCount += test(name="testTimeStepper_ab3",
@@ -112,4 +112,9 @@ if __name__ == "__main__":
                                          time_integrator="MRSAAB3"),
                     referenceNorm=14.254975343422)
 
+  return failCount
+
+if __name__ == "__main__":
+  failCount=0;
+  failCount+=main()
   sys.exit(failCount)

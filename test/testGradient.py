@@ -33,7 +33,7 @@ gradientData3D = gradientDir + "/data/gradientCos3D.h"
 
 def gradientSettings(rcformat="2.0", data_file=gradientData2D,
                      mesh="BOX", dim=2, element=4, nx=10, ny=10, nz=10, boundary_flag=1,
-                     degree=4, thread_model="Serial", platform_number=0, device_number=0):
+                     degree=4, thread_model=device, platform_number=0, device_number=0):
   return [setting_t("FORMAT", rcformat),
           setting_t("DATA FILE", data_file),
           setting_t("MESH FILE", mesh),
@@ -49,7 +49,7 @@ def gradientSettings(rcformat="2.0", data_file=gradientData2D,
           setting_t("DEVICE NUMBER", device_number),
           setting_t("OUTPUT TO FILE", "FALSE")]
 
-if __name__ == "__main__":
+def main():
   failCount=0;
 
   failCount += test(name="testGradientTri",
@@ -72,4 +72,9 @@ if __name__ == "__main__":
                     settings=gradientSettings(element=12,data_file=gradientData3D,dim=3),
                     referenceNorm=12.1673360264757)
 
+  return failCount
+
+if __name__ == "__main__":
+  failCount=0;
+  failCount+=main()
   sys.exit(failCount)

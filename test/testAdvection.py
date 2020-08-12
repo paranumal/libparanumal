@@ -33,7 +33,7 @@ advectionData3D = advectionDir + "/data/advectionLinear3D.h"
 
 def advectionSettings(rcformat="2.0", data_file=advectionData2D,
                      mesh="BOX", dim=2, element=4, nx=10, ny=10, nz=10, boundary_flag=-1,
-                     degree=4, thread_model="Serial", platform_number=0, device_number=0,
+                     degree=4, thread_model=device, platform_number=0, device_number=0,
                      time_integrator="DOPRI5", start_time=0.0, final_time=1.0):
   return [setting_t("FORMAT", rcformat),
           setting_t("DATA FILE", data_file),
@@ -53,7 +53,7 @@ def advectionSettings(rcformat="2.0", data_file=advectionData2D,
           setting_t("FINAL TIME", final_time),
           setting_t("OUTPUT TO FILE", "FALSE")]
 
-if __name__ == "__main__":
+def main():
   failCount=0;
 
   failCount += test(name="testAdvectionTri",
@@ -81,5 +81,9 @@ if __name__ == "__main__":
                     settings=advectionSettings(element=3,data_file=advectionData2D,dim=2),
                     referenceNorm=0.723627520020827)
 
+  return failCount
 
+if __name__ == "__main__":
+  failCount=0;
+  failCount+=main()
   sys.exit(failCount)

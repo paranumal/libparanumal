@@ -33,7 +33,7 @@ ellipticData3D = ellipticDir + "/data/ellipticSine3D.h"
 
 def ellipticSettings(rcformat="2.0", data_file=ellipticData2D,
                      mesh="BOX", dim=2, element=4, nx=10, ny=10, nz=10, boundary_flag=1,
-                     degree=4, thread_model="Serial", platform_number=0, device_number=0,
+                     degree=4, thread_model=device, platform_number=0, device_number=0,
                      Lambda=1.0,
                      discretization="CONTINUOUS",
                      linear_solver="PCG",
@@ -66,7 +66,7 @@ def ellipticSettings(rcformat="2.0", data_file=ellipticData2D,
           setting_t("OUTPUT TO FILE", "FALSE"),
           setting_t("VERBOSE", "TRUE")]
 
-if __name__ == "__main__":
+def main():
   failCount=0;
 
   ################
@@ -351,6 +351,13 @@ if __name__ == "__main__":
                                               discretization="IPDG"),
                     referenceNorm=0.059540839002614)
 
+  #large pMG test
+  failCount += test(name="testEllipticTri_C0_Multigrid_large",
+                    cmd=ellipticBin,
+                    settings=ellipticSettings(element=3,data_file=ellipticData2D,dim=2,
+                                              nx=100, ny=100,
+                                              precon="MULTIGRID"),
+                                              referenceNorm=0.500000001211135)
   #MPI tests
   failCount += test(name="testEllipticTri_C0_Multigrid_MPI", ranks=4,
                     cmd=ellipticBin,
@@ -364,4 +371,9 @@ if __name__ == "__main__":
                                               precon="MULTIGRID", discretization="IPDG"),
                     referenceNorm=0.500000001211135)
 
+  return failCount
+
+if __name__ == "__main__":
+  failCount=0;
+  failCount+=main()
   sys.exit(failCount)
