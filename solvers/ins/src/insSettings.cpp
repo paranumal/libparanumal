@@ -51,7 +51,7 @@ insSettings_t::insSettings_t(MPI_Comm& _comm):
   newSetting("TIME INTEGRATOR",
              "DOPRI5",
              "Time integration method",
-             {"AB3", "DOPRI5", "LSERK4", "EXTBDF3", "SSBDF3"});
+             {"EXTBDF3", "SSBDF3"});
 
   newSetting("NUMBER OF SUBCYCLES",
              "1",
