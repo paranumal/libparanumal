@@ -164,8 +164,8 @@ def main():
 
   failCount += test(name="testCnsTri_MPI", ranks=4,
                     cmd=cnsBin,
-                    settings=cnsSettings(element=3,data_file=cnsData2D,dim=2),
-                    referenceNorm=27.4601137743012, output_to_file="TRUE")
+                    settings=cnsSettings(element=3,data_file=cnsData2D,dim=2, output_to_file="TRUE"),
+                    referenceNorm=27.4601137743012)
 
   return failCount
 
