@@ -34,7 +34,7 @@ data3D = acousticsDir + "/data/acousticsGaussian3D.h"
 def acousticsSettings(rcformat="2.0", data_file=data2D,
                      mesh="BOX", dim=2, element=4, nx=10, ny=10, nz=10, boundary_flag=-1,
                      degree=4, thread_model=device, platform_number=0, device_number=0,
-                     time_integrator="DOPRI5", start_time=0.0, final_time=1.0):
+                      time_integrator="DOPRI5", start_time=0.0, final_time=1.0, output_to_file="FALSE"):
   return [setting_t("FORMAT", rcformat),
           setting_t("DATA FILE", data_file),
           setting_t("MESH FILE", mesh),
@@ -51,7 +51,7 @@ def acousticsSettings(rcformat="2.0", data_file=data2D,
           setting_t("TIME INTEGRATOR", time_integrator),
           setting_t("START TIME", start_time),
           setting_t("FINAL TIME", final_time),
-          setting_t("OUTPUT TO FILE", "FALSE")]
+          setting_t("OUTPUT TO FILE", output_to_file)]
 
 def main():
   failCount=0;
@@ -80,7 +80,7 @@ def main():
 
   failCount += test(name="testAcousticsTri_MPI", ranks=4,
                     cmd=acousticsBin,
-                    settings=acousticsSettings(element=3,data_file=data2D,dim=2),
+                    settings=acousticsSettings(element=3,data_file=data2D,dim=2,output_to_file="TRUE"),
                     referenceNorm=10.1300558638317)
 
   return failCount

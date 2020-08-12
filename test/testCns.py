@@ -36,7 +36,7 @@ def cnsSettings(rcformat="2.0", data_file=cnsData2D,
                degree=4, thread_model=device, platform_number=0, device_number=0,
                gamma=1.4, viscosity=0.01, isothermal="FALSE",
                advection_type="COLLOCATION",
-               time_integrator="DOPRI5", start_time=0.0, final_time=1.0):
+                time_integrator="DOPRI5", start_time=0.0, final_time=1.0, output_to_file="FALSE"):
   return [setting_t("FORMAT", rcformat),
           setting_t("DATA FILE", data_file),
           setting_t("MESH FILE", mesh),
@@ -57,7 +57,7 @@ def cnsSettings(rcformat="2.0", data_file=cnsData2D,
           setting_t("TIME INTEGRATOR", time_integrator),
           setting_t("START TIME", start_time),
           setting_t("FINAL TIME", final_time),
-          setting_t("OUTPUT TO FILE", "FALSE")]
+          setting_t("OUTPUT TO FILE", output_to_file)]
 
 def main():
   failCount=0;
@@ -165,7 +165,7 @@ def main():
   failCount += test(name="testCnsTri_MPI", ranks=4,
                     cmd=cnsBin,
                     settings=cnsSettings(element=3,data_file=cnsData2D,dim=2),
-                    referenceNorm=27.4601137743012)
+                    referenceNorm=27.4601137743012, output_to_file="TRUE")
 
   return failCount
 
