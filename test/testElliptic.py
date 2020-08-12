@@ -40,7 +40,8 @@ def ellipticSettings(rcformat="2.0", data_file=ellipticData2D,
                      precon="MULTIGRID",
                      multigrid_smoother="CHEBYSHEV",
                      paralmond_cycle="VCYCLE",
-                     paralmond_smoother="CHEBYSHEV"):
+                     paralmond_smoother="CHEBYSHEV",
+                     output_to_file="FALSE"):
   return [setting_t("FORMAT", rcformat),
           setting_t("DATA FILE", data_file),
           setting_t("MESH FILE", mesh),
@@ -64,7 +65,7 @@ def ellipticSettings(rcformat="2.0", data_file=ellipticData2D,
           setting_t("PARALMOND CYCLE", paralmond_cycle),
           setting_t("PARALMOND SMOOTHER", paralmond_smoother),
           setting_t("OUTPUT TO FILE", "FALSE"),
-          setting_t("VERBOSE", "TRUE")]
+          setting_t("VERBOSE", output_to_file)]
 
 def main():
   failCount=0;
@@ -374,9 +375,9 @@ def main():
   failCount += test(name="testEllipticTri_Ipdg_Multigrid_MPI", ranks=4,
                     cmd=ellipticBin,
                     settings=ellipticSettings(element=3,data_file=ellipticData2D,dim=2,
-                                              precon="MULTIGRID", discretization="IPDG"),
+                                              precon="MULTIGRID", discretization="IPDG", output_to_file="TRUE"),
                     referenceNorm=0.500000001211135)
-
+  
   return failCount
 
 if __name__ == "__main__":

@@ -43,7 +43,8 @@ def fpeSettings(rcformat="2.0", data_file=fpeData2D,
                      elliptic_precon="MULTIGRID",
                      elliptic_multigrid_smoother="CHEBYSHEV",
                      elliptic_paralmond_cycle="VCYCLE",
-                     elliptic_paralmond_smoother="CHEBYSHEV"):
+                     elliptic_paralmond_smoother="CHEBYSHEV",
+                    output_to_file="FALSE"):
   return [setting_t("FORMAT", rcformat),
           setting_t("DATA FILE", data_file),
           setting_t("MESH FILE", mesh),
@@ -71,7 +72,7 @@ def fpeSettings(rcformat="2.0", data_file=fpeData2D,
           setting_t("ELLIPTIC PARALMOND CYCLE", elliptic_paralmond_cycle),
           setting_t("ELLIPTIC PARALMOND SMOOTHER", elliptic_paralmond_smoother),
           setting_t("ELLIPTIC VERBOSE", "TRUE"),
-          setting_t("OUTPUT TO FILE", "FALSE")]
+          setting_t("OUTPUT TO FILE", output_to_file)]
 
 def main():
   failCount=0;
@@ -187,7 +188,7 @@ def main():
   #test MPI
   failCount += test(name="testFpeTri_MPI", ranks=4,
                     cmd=fpeBin,
-                    settings=fpeSettings(element=3,data_file=fpeData2D,dim=2),
+                    settings=fpeSettings(element=3,data_file=fpeData2D,dim=2,output_to_file="TRUE"),
                     referenceNorm=0.6837407953719)
 
   return failCount

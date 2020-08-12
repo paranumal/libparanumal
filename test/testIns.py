@@ -49,7 +49,8 @@ def insSettings(rcformat="2.0", data_file=insData2D,
                pressure_precon="MULTIGRID",
                pressure_multigrid_smoother="CHEBYSHEV",
                pressure_paralmond_cycle="KCYCLE",
-               pressure_paralmond_smoother="CHEBYSHEV"):
+                pressure_paralmond_smoother="CHEBYSHEV",
+                output_to_file="FALSE"):
   return [setting_t("FORMAT", rcformat),
           setting_t("DATA FILE", data_file),
           setting_t("MESH FILE", mesh),
@@ -87,7 +88,7 @@ def insSettings(rcformat="2.0", data_file=insData2D,
           setting_t("PRESSURE PARALMOND CYCLE", pressure_paralmond_cycle),
           setting_t("PRESSURE PARALMOND SMOOTHER", pressure_paralmond_smoother),
           setting_t("PRESSURE VERBOSE", "TRUE"),
-          setting_t("OUTPUT TO FILE", "FALSE")]
+          setting_t("OUTPUT TO FILE", output_to_file)]
 
 def main():
   failCount=0;
@@ -203,7 +204,7 @@ def main():
   #test wth MPI
   failCount += test(name="testInsTri_MPI", ranks=4,
                     cmd=insBin,
-                    settings=insSettings(element=3,data_file=insData2D,dim=2),
+                    settings=insSettings(element=3,data_file=insData2D,dim=2,output_to_file="TRUE"),
                     referenceNorm=0.820785579220035)
 
   return failCount
