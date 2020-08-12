@@ -34,7 +34,6 @@ SOFTWARE.
     @shared dfloat s_qfff[p_NqFine][p_NqFine][p_NqFine];
     @shared dfloat s_qcff[p_NqCoarse][p_NqFine][p_NqFine];
     @shared dfloat s_qccf[p_NqCoarse][p_NqCoarse][p_NqFine];
-    @shared dfloat s_qccc[p_NqCoarse][p_NqCoarse][p_NqCoarse];
 
     @shared dfloat s_RT[p_NqFine][p_NqCoarse];
 
@@ -100,21 +99,9 @@ SOFTWARE.
               for(int m=0;m<p_NqFine;++m) {
                 rtmp += s_RT[m][i]*s_qccf[k][j][m];
               }
-            s_qccc[k][j][i] = rtmp;
-          }
-        }
-      }
-    }
 
-    @barrier("local");
-
-    // collect writes
-    for(int k=0;k<p_NqFine;++k;@inner(2)){
-      for(int j=0;j<p_NqFine;++j;@inner(1)){
-        for(int i=0;i<p_NqFine;++i;@inner(0)){
-          const int id = i + j*p_NqFine+k*p_NqFine*p_NqFine;
-          if(id<p_NpCoarse){
-            qc[id + p_NpCoarse*e] = s_qccc[0][0][id];
+            const int id = i + j*p_NqCoarse + k*p_NqCoarse*p_NqCoarse + p_NpCoarse*e;
+            qc[id] = rtmp;
           }
         }
       }

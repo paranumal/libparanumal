@@ -52,7 +52,7 @@ void cns_t::Run(){
     dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_q, o_Mq, comm));
 
     if(mesh.rank==0)
-      printf("Testing norm cns solution = %17.15lg\n", norm2);
+      printf("Solution norm = %17.15lg\n", norm2);
   }
 
 }

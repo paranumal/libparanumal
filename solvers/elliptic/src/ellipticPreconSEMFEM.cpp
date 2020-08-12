@@ -237,12 +237,16 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
 
     free(SEMFEMAnterp);
 
-    o_rFEM = mesh.device.malloc(mesh.Nelements*mesh.NpFEM*sizeof(dfloat));
-    o_zFEM = mesh.device.malloc(mesh.Nelements*mesh.NpFEM*sizeof(dfloat));
+    dfloat *dummy = (dfloat*) calloc(mesh.Nelements*mesh.NpFEM,sizeof(dfloat)); //need this to avoid uninitialized memory warnings
+    o_rFEM = mesh.device.malloc(mesh.Nelements*mesh.NpFEM*sizeof(dfloat), dummy);
+    o_zFEM = mesh.device.malloc(mesh.Nelements*mesh.NpFEM*sizeof(dfloat), dummy);
+    free(dummy);
 
     parAlmond::multigridLevel *baseLevel = parAlmondHandle->levels[0];
-    o_GrFEM = mesh.device.malloc(baseLevel->Ncols*sizeof(dfloat));
-    o_GzFEM = mesh.device.malloc(baseLevel->Ncols*sizeof(dfloat));
+    dummy = (dfloat*) calloc(baseLevel->Ncols,sizeof(dfloat));
+    o_GrFEM = mesh.device.malloc(baseLevel->Ncols*sizeof(dfloat),dummy);
+    o_GzFEM = mesh.device.malloc(baseLevel->Ncols*sizeof(dfloat),dummy);
+    free(dummy);
 
     //build kernels
     occa::properties kernelInfo = elliptic.props;
@@ -262,8 +266,10 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
     parAlmond::multigridLevel *baseLevel = parAlmondHandle->levels[0];
     // rhsG = (dfloat*) calloc(baseLevel->Ncols,sizeof(dfloat));
     // xG   = (dfloat*) calloc(baseLevel->Ncols,sizeof(dfloat));
-    o_rhsG = mesh.device.malloc(baseLevel->Ncols*sizeof(dfloat));
-    o_xG   = mesh.device.malloc(baseLevel->Ncols*sizeof(dfloat));
+    dfloat *dummy = (dfloat*) calloc(baseLevel->Ncols,sizeof(dfloat));
+    o_rhsG = mesh.device.malloc(baseLevel->Ncols*sizeof(dfloat),dummy);
+    o_xG   = mesh.device.malloc(baseLevel->Ncols*sizeof(dfloat),dummy);
+    free(dummy);
   }
 }
 

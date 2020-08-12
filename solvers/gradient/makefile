@@ -216,11 +216,4 @@ info:
 	@true
 
 test: gradientMain
-	@printf "%b" "$(TEST_COLOR)Testing gradient solver with testGradientQuad2D_01.rc$(NO_COLOR)\n";
-	./gradientMain $(TEST_DIR)/gradient/testGradientQuad2D_01.rc
-	@printf "%b" "$(TEST_COLOR)Testing gradient solver with testGradientTri2D_01.rc$(NO_COLOR)\n";
-	./gradientMain $(TEST_DIR)/gradient/testGradientTri2D_01.rc
-	@printf "%b" "$(TEST_COLOR)Testing gradient solver with testGradientHex3D_01.rc$(NO_COLOR)\n";
-	./gradientMain $(TEST_DIR)/gradient/testGradientHex3D_01.rc
-	@printf "%b" "$(TEST_COLOR)Testing gradient solver with testGradientTet3D_01.rc$(NO_COLOR)\n";
-	./gradientMain $(TEST_DIR)/gradient/testGradientTet3D_01.rc
+	@${MAKE} -C $(LIBP_DIR)/test --no-print-directory  test-gradient

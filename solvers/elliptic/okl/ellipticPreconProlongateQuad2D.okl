@@ -38,12 +38,13 @@ SOFTWARE.
     // prefetch to @shared
     for(int j=0;j<p_NqFine;++j;@inner(1)){
       for(int i=0;i<p_NqFine;++i;@inner(0)){
-        const int id = i+j*p_NqFine;
-        if(id<p_NpCoarse){
-          s_qcc[0][id] = qc[id+e*p_NpCoarse];
+        if(j<p_NqCoarse && i<p_NqCoarse){
+          const int id = i+j*p_NqCoarse;
+          s_qcc[j][i] = qc[id+e*p_NpCoarse];
         }
-        if(id<p_NqCoarse*p_NqFine){
-          s_P[0][id] = P[id];
+
+        if(i<p_NqCoarse){
+          s_P[j][i] = P[i + j*p_NqCoarse];
         }
       }
     }

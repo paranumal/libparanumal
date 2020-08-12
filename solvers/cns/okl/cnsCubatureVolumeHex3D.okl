@@ -65,12 +65,14 @@ SOFTWARE.
 
     for(int j=0;j<p_cubNq;++j;@inner(1)){
       for(int i=0;i<p_cubNq;++i;@inner(0)){
-        const int id = i+j*p_cubNq;
-        if (id<p_Nq*p_cubNq) {
-          s_cubInterp[0][id] = cubInterp[id];
-          s_cubProject[0][id] = cubProject[id];
+        //fetch reference operators
+        if (j<p_Nq) {
+          s_cubInterp[j][i] = cubInterp[i+j*p_cubNq];
         }
-        s_cubDT[0][id] = cubDT[id];
+        if (i<p_Nq) {
+          s_cubProject[j][i] = cubProject[i+j*p_Nq];
+        }
+        s_cubDT[j][i] = cubDT[i+j*p_cubNq];
 
         for(int fld=0;fld<p_Nfields;++fld){
           #pragma unroll p_cubNq

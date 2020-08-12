@@ -51,7 +51,7 @@ void gradient_t::Run(){
     dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_gradq, o_Mgradq, comm));
 
     if(mesh.rank==0)
-      printf("Testing norm of gradient of solution = %17.15lg\n", norm2);
+      printf("Solution norm = %17.15lg\n", norm2);
   }
 
 }

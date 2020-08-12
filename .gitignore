@@ -26,3 +26,9 @@
 **/*.c~
 *.m~
 *.nvprof
+test/__pycache__
+
+!test/squareTri.msh
+!test/squareQuad.msh
+!test/cubeTet.msh
+!test/cubeHex.msh

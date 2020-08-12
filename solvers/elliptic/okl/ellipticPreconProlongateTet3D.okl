@@ -36,11 +36,12 @@ SOFTWARE.
 
     for(int es=0;es<p_NblockVFine;++es;@inner(1)){
       for(int n=0;n<p_NpFine;++n;@inner(0)){
-        dlong t = n + es*p_NpFine;
-
-        if(t<p_NpCoarse*p_NblockVFine)
-          if((eo*p_NpCoarse + t)<Nelements*p_NpCoarse)
-            s_qCoarse[0][t] = qCoarse[eo*p_NpCoarse+t];
+        const dlong e = eo + es;
+        if(e<Nelements){
+          if(n<p_NpCoarse) {
+            s_qCoarse[es][n] = qCoarse[e*p_NpCoarse+n];
+          }
+        }
       }
     }
 

@@ -37,12 +37,11 @@ SOFTWARE.
 
     for(int es=0;es<p_NblockVCoarse;++es;@inner(1)){
       for(int n=0;n<p_NpCoarse;++n;@inner(0)){
-        dlong t = n + es*p_NpCoarse;
-
-        while(t<p_NpFine*p_NblockVCoarse){
-          if(eo*p_NpFine + t< Nelements*p_NpFine)
-            s_qN[0][t] = qN[eo*p_NpFine+t];
-          t += p_NpCoarse*p_NblockVCoarse;
+        const dlong e = eo + es;
+        if (e<Nelements) {
+          for (int t=n; t<p_NpFine; t+=p_NpCoarse){
+            s_qN[es][t] = qN[e*p_NpFine+t];
+          }
         }
       }
     }
