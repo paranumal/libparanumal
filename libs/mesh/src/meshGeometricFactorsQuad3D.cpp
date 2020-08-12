@@ -61,71 +61,73 @@ void meshQuad3D::GeometricFactors(){
       cx[n] = 0;  cy[n] = 0;  cz[n] = 0;
     }
 
-    for(int j=0;j<Nq;++j){
-      for(int i=0;i<Nq;++i){
+    
+  for(int j=0;j<Nq;++j){
+    for(int i=0;i<Nq;++i){
+      
+      dfloat xij = x[i+j*Nq+e*Np];
+      dfloat yij = y[i+j*Nq+e*Np];
+      dfloat zij = z[i+j*Nq+e*Np];
+      
+      dfloat xr = 0, yr = 0, zr = 0;
+      dfloat xs = 0, ys = 0, zs = 0;
 
-  dfloat xij = x[i+j*Nq+e*Np];
-  dfloat yij = y[i+j*Nq+e*Np];
-  dfloat zij = z[i+j*Nq+e*Np];
-
-  dfloat xr = 0, yr = 0, zr = 0;
-  dfloat xs = 0, ys = 0, zs = 0;
-
-  for(int n=0;n<Nq;++n){
-
-    dfloat Din = D[i*Nq+n];
-    dfloat Djn = D[j*Nq+n];
-
-    xr += Din*x[n+j*Nq+e*Np];
-    yr += Din*y[n+j*Nq+e*Np];
-    zr += Din*z[n+j*Nq+e*Np];
-
-    xs += Djn*x[i+n*Nq+e*Np];
-    ys += Djn*y[i+n*Nq+e*Np];
-    zs += Djn*z[i+n*Nq+e*Np];
-
-  }
-
-  {
-    dfloat rx = ys*zij - zs*yij; // dXds x X
-    dfloat ry = zs*xij - xs*zij;
-    dfloat rz = xs*yij - ys*xij;
-
-    dfloat sx = zr*yij - yr*zij; // -dXdr x X
-    dfloat sy = xr*zij - zr*xij;
-    dfloat sz = yr*xij - xr*yij;
-
-    dfloat tx = yr*zs - zr*ys; // dXdr x dXds ~ X*|dXdr x dXds|/|X|
-    dfloat ty = zr*xs - xr*zs;
-    dfloat tz = xr*ys - yr*xs;
-
-    dfloat Gx = tx, Gy = ty, Gz = tz;
-
-    dfloat J = xij*tx + yij*ty + zij*tz;
-
-    if(J<1e-8) {
-      stringstream ss;
-      ss << "Negative J found at element " << e << "\n";
-      LIBP_ABORT(ss.str())
-    }
-
-    rx /= J;      sx /= J;      tx /= J;
-    ry /= J;      sy /= J;      ty /= J;
-    rz /= J;      sz /= J;      tz /= J;
-
-    // use this for "volume" Jacobian
-    dfloat Jnew = sqrt(Gx*Gx+Gy*Gy+Gz*Gz);  //(difference between actual Jacobian and sphere Jac)
-    J = Jnew;
-
-    if(J<1e-8) {
-      stringstream ss;
-      ss << "Negative J found at element " << e << "\n";
-      LIBP_ABORT(ss.str())
-    }
-    //    printf("before: grad r = %g,%g,%g\n", rx, ry, rz);
-  }
-
-  dfloat GG00 = xr*xr+yr*yr+zr*zr;
+      for(int n=0;n<Nq;++n){
+	
+	dfloat Din = D[i*Nq+n];
+	dfloat Djn = D[j*Nq+n];
+	
+	xr += Din*x[n+j*Nq+e*Np];
+	yr += Din*y[n+j*Nq+e*Np];
+	zr += Din*z[n+j*Nq+e*Np];
+	
+	xs += Djn*x[i+n*Nq+e*Np];
+	ys += Djn*y[i+n*Nq+e*Np];
+	zs += Djn*z[i+n*Nq+e*Np];
+	
+      }
+      
+      {
+	dfloat rx = ys*zij - zs*yij; // dXds x X
+	dfloat ry = zs*xij - xs*zij;
+	dfloat rz = xs*yij - ys*xij;
+	
+	dfloat sx = zr*yij - yr*zij; // -dXdr x X
+	dfloat sy = xr*zij - zr*xij;
+	dfloat sz = yr*xij - xr*yij;
+	
+	dfloat tx = yr*zs - zr*ys; // dXdr x dXds ~ X*|dXdr x dXds|/|X|
+	dfloat ty = zr*xs - xr*zs;
+	dfloat tz = xr*ys - yr*xs;
+	
+	dfloat Gx = tx, Gy = ty, Gz = tz;
+	
+	dfloat J = xij*tx + yij*ty + zij*tz;
+	
+	if(J<1e-8) {
+	  stringstream ss;
+	  ss << "Negative J found at element " << e << "x=" << xij << " y=" << yij << " z=" << zij << "\n";
+	  LIBP_ABORT(ss.str())
+	    }
+	
+	rx /= J;      sx /= J;      tx /= J;
+	ry /= J;      sy /= J;      ty /= J;
+	rz /= J;      sz /= J;      tz /= J;
+	
+	// use this for "volume" Jacobian
+	dfloat Jnew = sqrt(Gx*Gx+Gy*Gy+Gz*Gz);  //(difference between actual Jacobian and sphere Jac)
+	J = Jnew;
+	
+	if(J<1e-8) {
+	  stringstream ss;
+	  ss << "Negative J found at element " << e << "x=" << xij << " y=" << yij << " z=" << zij << "\n";
+	  ss << "Negative J found at element " << e << "\n";
+	  LIBP_ABORT(ss.str())
+	    }
+	//    printf("before: grad r = %g,%g,%g\n", rx, ry, rz);
+      }
+      
+      dfloat GG00 = xr*xr+yr*yr+zr*zr;
   dfloat GG11 = xs*xs+ys*ys+zs*zs;
   dfloat GG01 = xr*xs+yr*ys+zr*zs;
   dfloat detGG = GG00*GG11 - GG01*GG01;
@@ -198,7 +200,6 @@ void meshQuad3D::GeometricFactors(){
       }
     }
 
-
     for(int n=0;n<cubNq*cubNq;++n){
 
       dfloat rx = cys[n]*cz[n] - czs[n]*cy[n]; // dXds x X
@@ -220,6 +221,7 @@ void meshQuad3D::GeometricFactors(){
       if(J<1e-8) {
         stringstream ss;
         ss << "Negative J found at element " << e << "\n";
+	//	ss << "Negative J found at element " << e << "x=" << xij << " y=" << yij << " z=" << zij << "\n";
         LIBP_ABORT(ss.str())
       }
 
@@ -233,6 +235,7 @@ void meshQuad3D::GeometricFactors(){
       if(J<1e-8) {
         stringstream ss;
         ss << "Negative J found at element " << e << "\n";
+	//	ss << "Negative J found at element " << e << "x=" << xij << " y=" << yij << " z=" << zij << "\n";
         LIBP_ABORT(ss.str())
       }
 

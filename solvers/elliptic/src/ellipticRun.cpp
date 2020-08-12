@@ -59,6 +59,7 @@ void elliptic_t::Run(){
     suffix = strdup("Tri2D");
   if(mesh.elementType==QUADRILATERALS)
     suffix = strdup("Quad2D");
+
   if(mesh.elementType==TETRAHEDRA)
     suffix = strdup("Tet3D");
   if(mesh.elementType==HEXAHEDRA)
@@ -72,6 +73,13 @@ void elliptic_t::Run(){
   occa::kernel MassMatrixKernel = buildKernel(device, fileName, kernelName,
                                                     kernelInfo, comm);
 
+  if(mesh.elementType==QUADRILATERALS){
+    if(mesh.dim==2)
+      suffix = strdup("Quad2D");
+    else
+      suffix = strdup("Quad3D");
+  }
+  
   sprintf(fileName, DELLIPTIC "/okl/ellipticRhs%s.okl", suffix);
   sprintf(kernelName, "ellipticRhs%s", suffix);
   occa::kernel forcingKernel = buildKernel(device, fileName, kernelName,

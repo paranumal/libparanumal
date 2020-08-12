@@ -93,6 +93,12 @@ def main():
                     settings=ellipticSettings(element=12,data_file=ellipticData3D,dim=3, precon="NONE"),
                     referenceNorm=0.353553390458384)
 
+  failCount += test(name="testEllipticQuad3D_C0",
+                    cmd=ellipticBin,
+                    settings=ellipticSettings(element=4,data_file=ellipticData3D,mesh="sphereQuad.msh", dim=3, precon="NONE"),
+                    referenceNorm=3.274235742251)
+
+  
   #C0 precons
   #tri
   failCount += test(name="testEllipticTri_C0_Jacobi",
