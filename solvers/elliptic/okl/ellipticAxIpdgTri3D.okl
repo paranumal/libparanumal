@@ -80,13 +80,13 @@
 	dfloat4 gradqP = gradq[idP];
 
 	// load surface geofactors for this face
-	dlong sid = p_Nsgeo*(e*p_Nfaces+face);
-	nx   = sgeo[sid+p_NXID];
-	ny   = sgeo[sid+p_NYID];
-	nz   = sgeo[sid+p_NZID];
-	sJ   = sgeo[sid+p_SJID];
-	invJ = sgeo[sid+p_IJID];
-	hinv = sgeo[sid+p_IHID];
+	dlong sid = e*p_Nsgeo*p_Nfaces*p_Nfp + n;
+	nx   = sgeo[sid+p_Nfp*p_Nfaces*p_NXID];
+	ny   = sgeo[sid+p_Nfp*p_Nfaces*p_NYID];
+	nz   = sgeo[sid+p_Nfp*p_Nfaces*p_NZID];
+	sJ   = sgeo[sid+p_Nfp*p_Nfaces*p_SJID];
+	invJ = sgeo[sid+p_Nfp*p_Nfaces*p_IJID];
+	hinv = sgeo[sid+p_Nfp*p_Nfaces*p_IHID];
 
 	const dfloat dq = gradqP.w - gradqM.w;
 	const dfloat hlf = 0.5f;
@@ -108,13 +108,13 @@
     for(int n=0;n<p_Nmax;++n;@inner(0)){
 
       if(n<p_Np){
-	const dlong gid = e*p_Nvgeo;
-	const dfloat drdx = vgeo[gid + p_RXID];
-	const dfloat drdy = vgeo[gid + p_RYID];
-	const dfloat drdz = vgeo[gid + p_RZID];
-	const dfloat dsdx = vgeo[gid + p_SXID];
-	const dfloat dsdy = vgeo[gid + p_SYID];
-	const dfloat dsdz = vgeo[gid + p_SZID];
+	const dlong gid = e*p_Nvgeo*p_Np+n;
+	const dfloat drdx = vgeo[gid + p_Np*p_RXID];
+	const dfloat drdy = vgeo[gid + p_Np*p_RYID];
+	const dfloat drdz = vgeo[gid + p_Np*p_RZID];
+	const dfloat dsdx = vgeo[gid + p_Np*p_SXID];
+	const dfloat dsdy = vgeo[gid + p_Np*p_SYID];
+	const dfloat dsdz = vgeo[gid + p_Np*p_SZID];
 
 	dfloat Lnxdq = 0;
 	dfloat Lnydq = 0;
@@ -182,7 +182,7 @@
     for(int n=0;n<p_Nmax;++n;@inner(0)){
 
       if(n<p_Np){
-	const dfloat J = vgeo[e*p_Nvgeo + p_JID];
+	const dfloat J = vgeo[e*p_Nvgeo*p_Np + n+p_Np*p_JID];
 
 	dfloat Mlapq = 0;
 
@@ -327,13 +327,13 @@
 	      dfloat4 gradqP = gradq[idP];
 
 	      // load surface geofactors for this face
-	      dlong sid = p_Nsgeo*(element[em]*p_Nfaces+face);
-	      nx[em]   = sgeo[sid+p_NXID];
-	      ny[em]   = sgeo[sid+p_NYID];
-	      nz[em]   = sgeo[sid+p_NZID];
-	      sJ[em]   = sgeo[sid+p_SJID];
-	      invJ[em] = sgeo[sid+p_IJID];
-	      hinv[em] = sgeo[sid+p_IHID];
+	      dlong sid = p_Nsgeo*element[em]*p_Nfaces*p_Nfp+n;
+	      nx[em]   = sgeo[sid+p_Nfaces*p_Nfp*p_NXID];
+	      ny[em]   = sgeo[sid+p_Nfaces*p_Nfp*p_NYID];
+	      nz[em]   = sgeo[sid+p_Nfaces*p_Nfp*p_NZID];
+	      sJ[em]   = sgeo[sid+p_Nfaces*p_Nfp*p_SJID];
+	      invJ[em] = sgeo[sid+p_Nfaces*p_Nfp*p_IJID];
+	      hinv[em] = sgeo[sid+p_Nfaces*p_Nfp*p_IHID];
 
 	      const dfloat dq = gradqP.w - gradqM.w;
 	      const dfloat hlf = 0.5f;
@@ -396,15 +396,16 @@
 	    const dlong e = eo+es*p_Nmt + em;
 	    if(e<Nelements){
 	      // const int element = elementList[e];
-	      const dlong gid = element[em]*p_Nvgeo;
+	      const dlong gid = element[em]*p_Nvgeo*p_Np+n;
 
 	      // These data can be stored on @shared
-	      const dfloat drdx = vgeo[gid + p_RXID];
-	      const dfloat drdy = vgeo[gid + p_RYID];
-	      const dfloat drdz = vgeo[gid + p_RZID];
-	      const dfloat dsdx = vgeo[gid + p_SXID];
-	      const dfloat dsdy = vgeo[gid + p_SYID];
-	      const dfloat dsdz = vgeo[gid + p_SZID];
+	      const dfloat drdx = vgeo[gid + p_Np*p_RXID];
+	      const dfloat drdy = vgeo[gid + p_Np*p_RYID];
+	      const dfloat drdz = vgeo[gid + p_Np*p_RZID];
+	      const dfloat dsdx = vgeo[gid + p_Np*p_SXID];
+	      const dfloat dsdy = vgeo[gid + p_Np*p_SYID];
+	      const dfloat dsdz = vgeo[gid + p_Np*p_SZID];
+
 
 	      dfloat dqdx = s_dqdx[em][es][n] + Lnxdq[em];
 	      dfloat dqdy = s_dqdy[em][es][n] + Lnydq[em];
@@ -527,7 +528,7 @@
 
 	    if(e<Nelements){
 	      // const int element = elementList[e];
-	      const dfloat J = vgeo[element[em]*p_Nvgeo + p_JID];
+	      const dfloat J = vgeo[element[em]*p_Nvgeo*p_Np + p_Np*p_JID+n];
 
 	      Aq[n+element[em]*p_Np] = J*Mlapq[em];
 	    }

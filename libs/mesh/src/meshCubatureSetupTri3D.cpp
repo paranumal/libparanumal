@@ -28,8 +28,7 @@ SOFTWARE.
 #include "mesh2D.hpp"
 #include "mesh3D.hpp"
 
-
-void meshTri2D::CubatureSetup(){
+void meshTri3D::CubatureSetup(){
 
   /* Cubature data */
   cubN = 2*N; //cubature order

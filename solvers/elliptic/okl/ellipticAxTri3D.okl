@@ -55,12 +55,12 @@
       for(int n=0;n<p_Np;++n;@inner(0)){
         if (e<Nelements) {
           const dlong es = e-eo;
-          const dlong gid = e*p_Nggeo;
+          const dlong gid = e*p_Nggeo*p_Np + n;
 
-          const dfloat Grr = ggeo[gid + p_G00ID];
-          const dfloat Grs = ggeo[gid + p_G01ID];
-          const dfloat Gss = ggeo[gid + p_G11ID];
-          const dfloat J   = ggeo[gid + p_GWJID];
+          const dfloat Grr = ggeo[gid + p_Np*p_G00ID];
+          const dfloat Grs = ggeo[gid + p_Np*p_G01ID];
+          const dfloat Gss = ggeo[gid + p_Np*p_G11ID];
+          const dfloat J   = ggeo[gid + p_Np*p_GWJID];
 
           dfloat qrr = 0.;
           dfloat qrs = 0.;
@@ -127,12 +127,12 @@
         if (e<Nelements) {
           const dlong es = e-eo;
           const dlong element = elementList[e];
-          const dlong gid = element*p_Nggeo;
+          const dlong gid = element*p_Nggeo*p_Np+n;
 
-          const dfloat Grr = ggeo[gid + p_G00ID];
-          const dfloat Grs = ggeo[gid + p_G01ID];
-          const dfloat Gss = ggeo[gid + p_G11ID];
-          const dfloat J   = ggeo[gid + p_GWJID];
+          const dfloat Grr = ggeo[gid + p_Np*p_G00ID];
+          const dfloat Grs = ggeo[gid + p_Np*p_G01ID];
+          const dfloat Gss = ggeo[gid + p_Np*p_G11ID];
+          const dfloat J   = ggeo[gid + p_Np*p_GWJID];
 
           dfloat qrr = 0.;
           dfloat qrs = 0.;

@@ -79,6 +79,13 @@ void elliptic_t::Run(){
     else
       suffix = strdup("Quad3D");
   }
+
+  if(mesh.elementType==TRIANGLES){
+    if(mesh.dim==2)
+      suffix = strdup("Tri2D");
+    else
+      suffix = strdup("Tri3D");
+  }
   
   sprintf(fileName, DELLIPTIC "/okl/ellipticRhs%s.okl", suffix);
   sprintf(kernelName, "ellipticRhs%s", suffix);
@@ -166,6 +173,7 @@ void elliptic_t::Run(){
 
   MPI_Barrier(comm);
   double startTime = MPI_Wtime();
+
 
   //call the solver
   dfloat tol = 1e-8;

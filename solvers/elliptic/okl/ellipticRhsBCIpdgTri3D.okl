@@ -1,0 +1,191 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+@kernel void ellipticRhsBCIpdgTri3D(const dlong Nelements,
+                                  @restrict const  dlong *  vmapM,
+                                  const dfloat tau,
+                                  @restrict const  dfloat *  x,
+                                  @restrict const  dfloat *  y,
+                                  @restrict const  dfloat *  z,
+                                  @restrict const  dfloat *  vgeo,
+                                  @restrict const  dfloat *  sgeo,
+                                  @restrict const  int    *  EToB,
+                                  @restrict const  dfloat *  D,
+                                  @restrict const  dfloat *  LIFT,
+                                  @restrict const  dfloat *  MM,
+                                  @restrict dfloat *  rhs){
+
+  for(int e=0;e<Nelements;++e;@outer(0)){
+    @shared  dfloat s_dudx[p_Np];
+    @shared  dfloat s_dudy[p_Np];
+    @shared  dfloat s_dudz[p_Np];
+    @shared  dfloat s_lapu[p_Np];
+    @shared  dfloat s_nxdu[p_NfacesNfp];
+    @shared  dfloat s_nydu[p_NfacesNfp];
+    @shared  dfloat s_nzdu[p_NfacesNfp];
+    @shared  dfloat s_lapuflux[p_NfacesNfp];
+    @shared  dfloat s_Lnxdu[p_Np];
+    @shared  dfloat s_Lnydu[p_Np];
+    @shared  dfloat s_Lnzdu[p_Np];
+
+    @exclusive int idM;
+    @exclusive dfloat nx, ny, nz, sJ, invJ, hinv;
+
+    for(int n=0;n<p_Nmax;++n;@inner(0)){
+      if(n<p_NfacesNfp){
+        const int id  = n + e*p_Nfaces*p_Nfp;
+        idM = vmapM[id];
+
+        const int face = n/p_Nfp;
+
+        dfloat dudxP=0, dudyP=0, dudzP=0, uP=0;
+
+        // load surface geofactors for this face
+        int sid = e*p_Nsgeo*p_Nfaces*p_Nfp + n;
+
+        nx = sgeo[sid+p_Nfaces*p_Nfp*p_NXID];
+        ny = sgeo[sid+p_Nfaces*p_Nfp*p_NYID];
+	nz = sgeo[sid+p_Nfaces*p_Nfp*p_NYID];
+        sJ = sgeo[sid+p_Nfaces*p_Nfp*p_SJID];
+        invJ = sgeo[sid+p_Nfaces*p_Nfp*p_IJID];
+        hinv = sgeo[sid+p_Nfaces*p_Nfp*p_IHID];
+
+	//	printf("nor=%f,%f,%f - sJ=%f, invJ=%f, hinv=%f\n", nx, ny, nz, sJ, invJ, hinv);
+	
+        const int bc = EToB[face+p_Nfaces*e];
+        if(bc>0) {
+          ellipticBoundaryConditions3D(bc, x[idM], y[idM], z[idM], nx, ny, nz, \
+				       0.f, 0.f, 0.f, 0.f,		\
+				       uP, dudxP, dudyP, dudzP);
+        }
+
+        const dfloat du = uP;
+        const dfloat half = 1.f;
+
+        s_nxdu[n] = half*sJ*invJ*nx*du;
+        s_nydu[n] = half*sJ*invJ*ny*du;
+	s_nzdu[n] = half*sJ*invJ*nz*du;
+
+        s_lapuflux[n] = half*sJ*invJ*(-nx*(dudxP)-ny*(dudyP)-nz*(dudzP) -tau*hinv*du);
+      }
+    }
+
+    @barrier("local");
+
+    // TW CHECK FROM HERE
+    // dqdx += LIFT*(sJ/J)*nx*dq
+    for(int n=0;n<p_Nmax;++n;@inner(0)){
+      if(n<p_Np){
+        const int gid = e*p_Nvgeo*p_Np+n;
+        const dfloat drdx = vgeo[gid + p_Np*p_RXID];
+        const dfloat drdy = vgeo[gid + p_Np*p_RYID];
+	const dfloat drdz = vgeo[gid + p_Np*p_RZID];
+        const dfloat dsdx = vgeo[gid + p_Np*p_SXID];
+        const dfloat dsdy = vgeo[gid + p_Np*p_SYID];
+	const dfloat dsdz = vgeo[gid + p_Np*p_SZID];
+
+        dfloat Lnxdu = 0;
+        dfloat Lnydu = 0;
+	dfloat Lnzdu = 0;
+
+        #pragma unroll p_NfacesNfp
+          for(int i=0;i<p_NfacesNfp;++i){
+            Lnxdu += LIFT[n+i*p_Np]*s_nxdu[i];
+            Lnydu += LIFT[n+i*p_Np]*s_nydu[i];
+	    Lnzdu += LIFT[n+i*p_Np]*s_nzdu[i];
+          }
+
+        dfloat dudx = Lnxdu;
+        dfloat dudy = Lnydu;
+	dfloat dudz = Lnzdu;
+
+        s_dudx[n] = drdx*dudx + drdy*dudy + drdz*dudz; // abuse of notation
+        s_dudy[n] = dsdx*dudx + dsdy*dudy + dsdz*dudz;
+
+        s_Lnxdu[n] = Lnxdu;
+        s_Lnydu[n] = Lnydu;
+	s_Lnzdu[n] = Lnydu;
+      }
+    }
+
+    @barrier("local");
+
+    for(int n=0;n<p_Nmax;++n;@inner(0)){
+      if(n<p_NfacesNfp){
+        int id = idM%p_Np;
+        s_lapuflux[n] += sJ*invJ*(nx*s_Lnxdu[id]+ny*s_Lnydu[id]+nz*s_Lnzdu[id]);
+      }
+
+      if(n<p_Np){
+        dfloat laur = 0, laus = 0;
+
+        #pragma unroll p_Np
+        for(int i=0;i<p_Np;++i) {
+          laur += D[n+i*p_Np+0*p_Np*p_Np]*s_dudx[i];
+          laus += D[n+i*p_Np+1*p_Np*p_Np]*s_dudy[i];
+        }
+
+        s_lapu[n] = -(laur+laus);
+      }
+
+    }
+
+    @barrier("local");
+
+    for(int n=0;n<p_Nmax;++n;@inner(0)){
+      if(n<p_Np){
+        dfloat lau = 0;
+
+        // lift remaining surface terms
+        #pragma unroll p_NfacesNfp
+        for(int i=0;i<p_NfacesNfp;++i){
+          lau += LIFT[n+i*p_Np]*s_lapuflux[i];
+        }
+
+        s_lapu[n] += lau;
+      }
+    }
+
+    @barrier("local");
+
+    for(int n=0;n<p_Nmax;++n;@inner(0)){
+      if(n<p_Np){
+        const dfloat J = vgeo[e*p_Nvgeo*p_Np + p_Np*p_JID + n];
+
+        dfloat Mlapu = 0;
+
+        // multiply by mass matrix
+        #pragma unroll p_Np
+        for(int i=0;i<p_Np;++i){
+          Mlapu += MM[n+i*p_Np]*s_lapu[i];
+        }
+
+        const int id = e*p_Np+n;
+        rhs[id] -=  J*Mlapu;
+      }
+    }
+  }
+}

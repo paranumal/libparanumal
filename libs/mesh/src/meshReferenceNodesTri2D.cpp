@@ -31,7 +31,7 @@ SOFTWARE.
 void meshTri3D::ReferenceNodes(int N_){
   mesh_t *mesh_p = (mesh_t*) this;
   meshTri2D* trimesh = (meshTri2D*) mesh_p;
-  trimesh->meshTri2D::ReferenceNodes(N);
+  trimesh->meshTri2D::ReferenceNodes(N_);
 }
 
 void meshTri2D::ReferenceNodes(int N_){
