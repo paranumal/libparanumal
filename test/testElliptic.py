@@ -95,7 +95,7 @@ def main():
 
   failCount += test(name="testEllipticQuad3D_C0",
                     cmd=ellipticBin,
-                    settings=ellipticSettings(element=4,data_file=ellipticData3D,mesh="sphereQuad.msh", dim=3, precon="NONE"),
+                    settings=ellipticSettings(element=4,data_file=ellipticData3D,mesh="sphereQuad.msh",dim=3, precon="NONE"),
                     referenceNorm=3.274235742251)
 
   
@@ -232,11 +232,11 @@ def main():
                                               precon="NONE", discretization="IPDG"),
                     referenceNorm=0.500000001211135)
 
-  failCount += test(name="testEllipticQuad_Ipdg",
+  failCount += test(name="testEllipticQuad3D_Ipdg",
                     cmd=ellipticBin,
-                    settings=ellipticSettings(element=4,data_file=ellipticData2D,dim=2,
+                    settings=ellipticSettings(element=4,data_file=ellipticData3D,dim=3,mesh="sphereQuad.msh",
                                               precon="NONE", discretization="IPDG"),
-                    referenceNorm=0.499999999969716)
+                    referenceNorm=3.27423574482769)
 
   failCount += test(name="testEllipticTet_Ipdg",
                     cmd=ellipticBin,
@@ -290,6 +290,24 @@ def main():
                                               precon="MULTIGRID", discretization="IPDG"),
                     referenceNorm=0.500000001211135)
 
+  #quad3d
+  failCount += test(name="testEllipticQuad3D_Ipdg_Jacobi",
+                    cmd=ellipticBin,
+                    settings=ellipticSettings(element=4,data_file=ellipticData3D,dim=3,mesh="sphereQuad.msh",
+                                              precon="JACOBI", discretization="IPDG"),
+                    referenceNorm=3.27423574485566)
+  failCount += test(name="testEllipticQuad3D_Ipdg_ParAlmond",
+                    cmd=ellipticBin,
+                    settings=ellipticSettings(element=4,data_file=ellipticData3D,dim=3,mesh="sphereQuad.msh",
+                                              precon="FULLALMOND", discretization="IPDG"),
+                    referenceNorm=3.27423574480735)
+  failCount += test(name="testEllipticQuad3D_Ipdg_Multigrid",
+                    cmd=ellipticBin,
+                    settings=ellipticSettings(element=4,data_file=ellipticData3D,dim=3,mesh="sphereQuad.msh",
+                                              precon="MULTIGRID", discretization="IPDG"),
+                    referenceNorm=3.27423574481717)
+
+  
   #tet
   failCount += test(name="testEllipticTet_Ipdg_Jacobi",
                     cmd=ellipticBin,
