@@ -25,11 +25,10 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh2D.hpp"
+#include "mesh3D.hpp"
 #include "mesh3D.hpp"
 
-
-void meshQuad2D::CubatureSetup(){
+void meshQuad3D::CubatureSetup(){
 
   /* Quadrature data */
   cubN = N+1;
@@ -94,25 +93,43 @@ void meshQuad2D::CubatureSetup(){
   cubsgeo = (dfloat*) calloc(Nelements*Nsgeo*cubNq*Nfaces, sizeof(dfloat));
 
   //temp arrays
+  dfloat *xe = (dfloat*) calloc(Np, sizeof(dfloat));
+  dfloat *ye = (dfloat*) calloc(Np, sizeof(dfloat));
+  dfloat *ze = (dfloat*) calloc(Np, sizeof(dfloat));
+  
   dfloat *xre = (dfloat*) calloc(Np, sizeof(dfloat));
   dfloat *xse = (dfloat*) calloc(Np, sizeof(dfloat));
   dfloat *yre = (dfloat*) calloc(Np, sizeof(dfloat));
   dfloat *yse = (dfloat*) calloc(Np, sizeof(dfloat));
+  dfloat *zre = (dfloat*) calloc(Np, sizeof(dfloat));
+  dfloat *zse = (dfloat*) calloc(Np, sizeof(dfloat));
 
   dfloat *xre1 = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
   dfloat *xse1 = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
   dfloat *yre1 = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
   dfloat *yse1 = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
+  dfloat *zre1 = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
+  dfloat *zse1 = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
 
+  dfloat *xe1 = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
+  dfloat *ye1 = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
+  dfloat *ze1 = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
+  
   //geometric data for quadrature
   for(dlong e=0;e<Nelements;++e){ /* for each element */
     for(int j=0;j<Nq;++j){
       for(int i=0;i<Nq;++i){
         int n = i + j*Nq;
 
+	int id = e*Np + n;
+	xe[n] = x[id];
+	ye[n] = y[id];
+	ze[n] = z[id];
+	
         //differentiate physical coordinates
         xre[n] = 0.0; xse[n] = 0.0;
         yre[n] = 0.0; yse[n] = 0.0;
+	zre[n] = 0.0; zse[n] = 0.0;
 
         for(int m=0;m<Nq;++m){
           int idr = e*Np + j*Nq + m;
@@ -121,6 +138,8 @@ void meshQuad2D::CubatureSetup(){
           xse[n] += D[j*Nq+m]*x[ids];
           yre[n] += D[i*Nq+m]*y[idr];
           yse[n] += D[j*Nq+m]*y[ids];
+          zre[n] += D[i*Nq+m]*z[idr];
+          zse[n] += D[j*Nq+m]*z[ids];
         }
       }
     }
@@ -128,13 +147,25 @@ void meshQuad2D::CubatureSetup(){
     //interpolate derivaties to cubature
     for(int j=0;j<Nq;++j){
       for(int i=0;i<cubNq;++i){
+
+        xe1[j*cubNq+i] = 0.0;
+        ye1[j*cubNq+i] = 0.0;
+	ze1[j*cubNq+i] = 0.0;
+	
         xre1[j*cubNq+i] = 0.0; xse1[j*cubNq+i] = 0.0;
         yre1[j*cubNq+i] = 0.0; yse1[j*cubNq+i] = 0.0;
+	zre1[j*cubNq+i] = 0.0; zse1[j*cubNq+i] = 0.0;
         for(int n=0;n<Nq;++n){
+          xe1[j*cubNq+i] += cubInterp[i*Nq + n]*xe[j*Nq+n];
+          ye1[j*cubNq+i] += cubInterp[i*Nq + n]*ye[j*Nq+n];
+          ze1[j*cubNq+i] += cubInterp[i*Nq + n]*ze[j*Nq+n];
+	  
           xre1[j*cubNq+i] += cubInterp[i*Nq + n]*xre[j*Nq+n];
           xse1[j*cubNq+i] += cubInterp[i*Nq + n]*xse[j*Nq+n];
           yre1[j*cubNq+i] += cubInterp[i*Nq + n]*yre[j*Nq+n];
           yse1[j*cubNq+i] += cubInterp[i*Nq + n]*yse[j*Nq+n];
+	  zre1[j*cubNq+i] += cubInterp[i*Nq + n]*zre[j*Nq+n];
+          zse1[j*cubNq+i] += cubInterp[i*Nq + n]*zse[j*Nq+n];
         }
       }
     }
@@ -143,25 +174,49 @@ void meshQuad2D::CubatureSetup(){
       for(int i=0;i<cubNq;++i){
         dfloat xr = 0.0, xs = 0.0;
         dfloat yr = 0.0, ys = 0.0;
+	dfloat zr = 0.0, zs = 0.0;
+	dfloat xij = 0.0;
+        dfloat yij = 0.0;
+	dfloat zij = 0.0;
         for(int n=0;n<Nq;++n){
+	  xij += cubInterp[j*Nq + n]*xe1[n*cubNq+i];
+          yij += cubInterp[j*Nq + n]*ye1[n*cubNq+i];
+	  zij += cubInterp[j*Nq + n]*ze1[n*cubNq+i];
+
           xr += cubInterp[j*Nq + n]*xre1[n*cubNq+i];
           xs += cubInterp[j*Nq + n]*xse1[n*cubNq+i];
           yr += cubInterp[j*Nq + n]*yre1[n*cubNq+i];
           ys += cubInterp[j*Nq + n]*yse1[n*cubNq+i];
+	  zr += cubInterp[j*Nq + n]*zre1[n*cubNq+i];
+          zs += cubInterp[j*Nq + n]*zse1[n*cubNq+i];
         }
 
+	dfloat rx = ys*zij - zs*yij; // dXds x X
+	dfloat ry = zs*xij - xs*zij;
+	dfloat rz = xs*yij - ys*xij;
+	
+	dfloat sx = zr*yij - yr*zij; // -dXdr x X
+	dfloat sy = xr*zij - zr*xij;
+	dfloat sz = yr*xij - xr*yij;
+	
+	dfloat tx = yr*zs - zr*ys; // dXdr x dXds ~ X*|dXdr x dXds|/|X|
+	dfloat ty = zr*xs - xr*zs;
+	dfloat tz = xr*ys - yr*xs;
+	
+	dfloat Gx = tx, Gy = ty, Gz = tz;
+	
+	dfloat J = xij*tx + yij*ty + zij*tz;
+	
         /* compute geometric factors for affine coordinate transform*/
-        dfloat J = xr*ys - xs*yr;
-
         if(J<1e-8) {
           stringstream ss;
           ss << "Negative J found at element " << e << "\n";
           LIBP_ABORT(ss.str())
         }
-        dfloat rx =  ys/J;
-        dfloat ry = -xs/J;
-        dfloat sx = -yr/J;
-        dfloat sy =  xr/J;
+
+	rx /= J;      sx /= J;      tx /= J;
+	ry /= J;      sy /= J;      ty /= J;
+	rz /= J;      sz /= J;      tz /= J;
 
         dfloat JW = J*cubw[i]*cubw[j];
 
@@ -169,18 +224,27 @@ void meshQuad2D::CubatureSetup(){
         dlong base = Nvgeo*cubNp*e + i + j*cubNq;
         cubvgeo[base + cubNp*RXID] = rx;
         cubvgeo[base + cubNp*RYID] = ry;
+	cubvgeo[base + cubNp*RZID] = rz;
         cubvgeo[base + cubNp*SXID] = sx;
         cubvgeo[base + cubNp*SYID] = sy;
+	cubvgeo[base + cubNp*SZID] = sz;
+        cubvgeo[base + cubNp*TXID] = tx;
+        cubvgeo[base + cubNp*TYID] = ty;
+	cubvgeo[base + cubNp*TZID] = tz;
         cubvgeo[base + cubNp*JID]  = J;
         cubvgeo[base + cubNp*JWID] = JW;
         cubvgeo[base + cubNp*IJWID] = 1./JW;
 
         /* store second order geometric factors */
-        base = Nggeo*cubNp*e + i + j*cubNq;
-        cubggeo[base + cubNp*G00ID] = JW*(rx*rx + ry*ry);
-        cubggeo[base + cubNp*G01ID] = JW*(rx*sx + ry*sy);
-        cubggeo[base + cubNp*G11ID] = JW*(sx*sx + sy*sy);
-        cubggeo[base + cubNp*GWJID] = JW;
+	int gbase = Nggeo*Np*e + j*Nq + i;
+	ggeo[gbase + cubNp*G00ID] = JW*(rx*rx + ry*ry + rz*rz);
+	ggeo[gbase + cubNp*G01ID] = JW*(rx*sx + ry*sy + rz*sz);
+	ggeo[gbase + cubNp*G02ID] = JW*(rx*tx + ry*ty + rz*tz);
+	ggeo[gbase + cubNp*G11ID] = JW*(sx*sx + sy*sy + sz*sz);
+	ggeo[gbase + cubNp*G12ID] = JW*(sx*tx + sy*ty + sz*tz);
+	
+	ggeo[gbase + cubNp*G22ID] = JW*(tx*tx + ty*ty + tz*tz);
+	ggeo[gbase + cubNp*GWJID] = JW;
       }
     }
 
@@ -188,36 +252,75 @@ void meshQuad2D::CubatureSetup(){
       for(int m=0;m<cubNq;++m){  // for each node on face
 
         //interpolate derivatives of physical coordinates
-        dfloat xr = 0.0, xs = 0.0;
-        dfloat yr = 0.0, ys = 0.0;
+        dfloat xm = 0, xrm = 0.0, xsm = 0.0;
+        dfloat ym = 0, yrm = 0.0, ysm = 0.0;
+	dfloat zm = 0, zrm = 0.0, zsm = 0.0;
         for(int n=0;n<Nfp;++n){  // for each node on face
           /* volume index of face node */
           int idn = faceNodes[f*Nfp+n];
-          xr += cubInterp[m*Nq + n]*xre[idn];
-          xs += cubInterp[m*Nq + n]*xse[idn];
-          yr += cubInterp[m*Nq + n]*yre[idn];
-          ys += cubInterp[m*Nq + n]*yse[idn];
+	  xm += cubInterp[m*Nq + n]*xe[idn];
+          ym += cubInterp[m*Nq + n]*ye[idn];
+          zm += cubInterp[m*Nq + n]*ze[idn];
+          xrm += cubInterp[m*Nq + n]*xre[idn];
+          xsm += cubInterp[m*Nq + n]*xse[idn];
+          yrm += cubInterp[m*Nq + n]*yre[idn];
+          ysm += cubInterp[m*Nq + n]*yse[idn];
+          zrm += cubInterp[m*Nq + n]*zre[idn];
+          zsm += cubInterp[m*Nq + n]*zse[idn];
         }
 
+        dfloat txm = yrm*zsm - zrm*ysm;
+        dfloat tym = zrm*xsm - xrm*zsm;
+        dfloat tzm = xrm*ysm - yrm*xsm;
+
+        dfloat Gx = txm, Gy = tym, Gz = tzm;
+	
         /* compute geometric factors for affine coordinate transform*/
-        dfloat J = xr*ys - xs*yr;
+        dfloat J = sqrt(Gx*Gx+Gy*Gy+Gz*Gz);
 
-        dfloat rx =  ys/J;
-        dfloat ry = -xs/J;
-        dfloat sx = -yr/J;
-        dfloat sy =  xr/J;
+        dfloat nx=0.0, ny=0.0, nz=0.0;
 
-        /* face f normal and length */
-        dfloat nx=0.0, ny=0.0;
-        switch(f){
-        case 0: nx = -sx; ny = -sy; break;
-        case 1: nx = +rx; ny = +ry; break;
-        case 2: nx = +sx; ny = +sy; break;
-        case 3: nx = -rx; ny = -ry; break;
+        if(f==0){
+          nx = yrm*zm - zrm*ym;
+          ny = zrm*xm - xrm*zm;
+          nz = xrm*ym - yrm*xm;
         }
-        dfloat  sJ = sqrt((nx)*(nx)+(ny)*(ny));
-        nx /= sJ; ny /= sJ;
-        sJ *= J;
+
+        if(f==1){
+          nx = ysm*zm - zsm*ym;
+          ny = zsm*xm - xsm*zm;
+          nz = xsm*ym - ysm*xm;
+        }
+
+        if(f==2){
+          nx = -yrm*zm + zrm*ym;
+          ny = -zrm*xm + xrm*zm;
+          nz = -xrm*ym + yrm*xm;
+        }
+
+        if(f==3){
+          nx = -ysm*zm + zsm*ym;
+          ny = -zsm*xm + xsm*zm;
+          nz = -xsm*ym + ysm*xm;
+        }
+
+        dfloat R = sqrt(xm*xm+ym*ym+zm*zm);
+
+        nx /= R;
+        ny /= R;
+        nz /= R;
+
+        dfloat sJ = sqrt(nx*nx+ny*ny+nz*nz);
+
+        nx /= sJ;
+        ny /= sJ;
+        nz /= sJ;
+	
+        if(sJ<1e-8) {
+	  stringstream ss;
+	  ss << "Negative sJ found at element " << e << "\n";
+	  LIBP_ABORT(ss.str())
+        }
 
         /* output index */
         dlong base = Nsgeo*(Nfaces*cubNq*e + cubNq*f + m);
@@ -225,6 +328,7 @@ void meshQuad2D::CubatureSetup(){
         /* store normal, surface Jacobian, and reciprocal of volume Jacobian */
         cubsgeo[base+NXID] = nx;
         cubsgeo[base+NYID] = ny;
+	cubsgeo[base+NZID] = nz;
         cubsgeo[base+SJID] = sJ;
         cubsgeo[base+IJID] = 1./J;
 
