@@ -34,6 +34,12 @@ export LIBP_INCLUDE_DIR=${LIBP_DIR}/include
 export LIBP_TPL_DIR=${LIBP_DIR}/3rdParty
 export LIBP_LIBS_DIR=${LIBP_DIR}/libs
 
+#paths to installed blas and lapack libraries
+export LIBP_BLAS_DIR  =/usr/lib/x86_64-linux-gnu
+export LIBP_LAPACK_DIR=/usr/lib/x86_64-linux-gnu
+export LIBP_BLAS_LIB  =-L${LIBP_BLAS_DIR} -lblas
+export LIBP_LAPACK_LIB=-L${LIBP_LAPACK_DIR} -llapack
+
 #include OCCA
 ifndef OCCA_DIR
   $(error environment variable [OCCA_DIR] is not set)
@@ -49,18 +55,20 @@ export LIBP_MPICC = mpicc
 export LIBP_MPICXX= mpic++
 export LIBP_LD    = mpic++
 
-export LIBP_CFLAGS=-O2 -fopenmp -g -Wall -Wshadow -Wno-unused-function 
-export LIBP_MPICFLAGS=$(LIBP_CFLAGS) 
+export LIBP_CFLAGS=-O2 -fopenmp -g -Wall -Wshadow -Wno-unused-function
+export LIBP_MPICFLAGS=$(LIBP_CFLAGS)
 
-export LIBP_CXXFLAGS=-O2 -fopenmp -g -Wall -Wshadow -Wno-unused-function -std=c++11 
-export LIBP_MPICXXFLAGS=$(LIBP_CXXFLAGS) 
+export LIBP_CXXFLAGS=-O2 -fopenmp -g -Wall -Wshadow -Wno-unused-function -std=c++11
+export LIBP_MPICXXFLAGS=$(LIBP_CXXFLAGS)
 
 ifeq (1,${LIBP_COVERAGE})
 export LIBP_CXXFLAGS+=--coverage
 export LIBP_MPICXXFLAGS+=--coverage
 endif
 
-export LIBP_LIBS=-L$(OCCA_DIR)/lib -locca $(links)
+export LIBP_LIBS=${LIBP_BLAS_LIB} \
+                 ${LIBP_LAPACK_LIB} \
+                 -L$(OCCA_DIR)/lib -locca $(links)
 
 export LIBP_DEFINES=-DUSE_OCCA_MEM_BYTE_ALIGN=32
 
