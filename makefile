@@ -82,7 +82,6 @@ endif
 
 #libraries
 GS_DIR       =${LIBP_TPL_DIR}/gslib
-BLAS_DIR     =${LIBP_TPL_DIR}/BlasLapack
 CORE_DIR     =${LIBP_DIR}/core
 OGS_DIR      =${LIBP_LIBS_DIR}/ogs
 MESH_DIR     =${LIBP_LIBS_DIR}/mesh
@@ -91,7 +90,7 @@ SOLVER_DIR   =${LIBP_DIR}/solvers
 
 .PHONY: all solvers \
 			acoustics advection bns cns elliptic fokkerPlanck gradient ins \
-			libparAlmond libmesh libogs libgs libblas \
+			libparAlmond libmesh libogs libgs \
 			clean clean-libs realclean help info
 
 all: solvers
@@ -162,14 +161,14 @@ else
 	@${MAKE} -C ${SOLVER_DIR}/$(@F) --no-print-directory
 endif
 
-libmesh: libogs libparAlmond libgs libblas libcore
+libmesh: libogs libparAlmond libgs libcore
 ifneq (,${verbose})
 	${MAKE} -C ${MESH_DIR} lib verbose=${verbose}
 else
 	@${MAKE} -C ${MESH_DIR} lib --no-print-directory
 endif
 
-libparAlmond: libogs libgs libblas libcore
+libparAlmond: libogs libgs libcore
 ifneq (,${verbose})
 	${MAKE} -C ${PARALMOND_DIR} lib verbose=${verbose}
 else
@@ -190,18 +189,11 @@ else
 	@${MAKE} -C ${CORE_DIR} lib --no-print-directory
 endif
 
-libgs: libblas
+libgs:
 ifneq (,${verbose})
 	${MAKE} -C $(GS_DIR) install verbose=${verbose}
 else
 	@${MAKE} -C $(GS_DIR) install --no-print-directory
-endif
-
-libblas:
-ifneq (,${verbose})
-	${MAKE} -C ${BLAS_DIR} lib verbose=${verbose}
-else
-	@${MAKE} -C ${BLAS_DIR} lib --no-print-directory
 endif
 
 #cleanup
@@ -245,7 +237,6 @@ clean-kernels: clean
 
 realclean: clean
 	${MAKE} -C ${GS_DIR} clean
-	${MAKE} -C ${BLAS_DIR} clean
 
 help:
 	$(info $(value LIBP_HELP_MSG))

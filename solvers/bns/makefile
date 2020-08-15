@@ -79,7 +79,6 @@ endif
 
 #libraries
 GS_DIR       =${LIBP_TPL_DIR}/gslib
-BLAS_DIR     =${LIBP_TPL_DIR}/BlasLapack
 OGS_DIR      =${LIBP_LIBS_DIR}/ogs
 MESH_DIR     =${LIBP_LIBS_DIR}/mesh
 CORE_DIR     =${LIBP_DIR}/core
@@ -102,8 +101,6 @@ BNS_CXXFLAGS=${LIBP_MPICXXFLAGS} ${DEFINES} ${INCLUDES}
 LIBS=-L${LIBP_LIBS_DIR} -lmesh -logs\
      -L$(GS_DIR)/lib -lgs \
      -L${CORE_DIR} -lcore \
-     -L${BLAS_DIR} -lBlasLapack \
-     -lgfortran \
      ${LIBP_LIBS}
 
 #link flags
@@ -118,7 +115,7 @@ SRC =$(wildcard src/*.cpp)
 
 OBJS=$(SRC:.cpp=.o)
 
-.PHONY: all lib libcore libmesh libogs libblas clean clean-libs \
+.PHONY: all lib libcore libmesh libogs clean clean-libs \
 		clean-kernels realclean help info bnsMain
 
 all: bnsMain
@@ -141,7 +138,7 @@ else
 	@ar -cr libbns.a $(OBJS)
 endif
 
-libmesh: libogs libgs libblas libcore
+libmesh: libogs libgs libcore
 ifneq (,${verbose})
 	${MAKE} -C ${MESH_DIR} lib verbose=${verbose}
 else
@@ -162,18 +159,11 @@ else
 	@${MAKE} -C ${CORE_DIR} lib --no-print-directory
 endif
 
-libgs: libblas
+libgs:
 ifneq (,${verbose})
 	${MAKE} -C $(GS_DIR) install verbose=${verbose}
 else
 	@${MAKE} -C $(GS_DIR) install --no-print-directory
-endif
-
-libblas:
-ifneq (,${verbose})
-	${MAKE} -C ${BLAS_DIR} lib verbose=${verbose}
-else
-	@${MAKE} -C ${BLAS_DIR} lib --no-print-directory
 endif
 
 # rule for .cpp files
@@ -200,7 +190,6 @@ clean-kernels: clean-libs
 
 realclean: clean-libs
 	${MAKE} -C ${GS_DIR} clean
-	${MAKE} -C ${BLAS_DIR} clean
 
 help:
 	$(info $(value BNS_HELP_MSG))
