@@ -390,7 +390,7 @@ dfloat MGLevel::maxEigSmoothAx(){
   hlong Nlocal = (hlong) Nrows;
   hlong Ntotal = 0;
   MPI_Allreduce(&Nlocal, &Ntotal, 1, MPI_HLONG, MPI_SUM, mesh.comm);
-  if(k > Ntotal) k = (int) Ntotal;
+  if(k > Ntotal) k = static_cast<int>(Ntotal);
 
   // do an arnoldi
 
@@ -460,8 +460,8 @@ dfloat MGLevel::maxEigSmoothAx(){
     }
   }
 
-  double *WR = (double *) calloc(k,sizeof(double));
-  double *WI = (double *) calloc(k,sizeof(double));
+  double *WR = (double *) malloc(k*sizeof(double));
+  double *WI = (double *) malloc(k*sizeof(double));
 
   eig(k, H, WR, WI);
 
