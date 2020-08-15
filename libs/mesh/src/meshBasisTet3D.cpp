@@ -739,7 +739,7 @@ void mesh_t::WarpBlendTransformTet3D(int _N, int _Npoints, dfloat *_r, dfloat *_
   for (int v=0;v<4;v++) {
     dfloat normt1 = sqrt(t1[v][0]*t1[v][0]+t1[v][1]*t1[v][1]+t1[v][2]*t1[v][2]);
     dfloat normt2 = sqrt(t2[v][0]*t2[v][0]+t2[v][1]*t2[v][1]+t2[v][2]*t2[v][2]);
-    for (int i=0;i<4;i++) {
+    for (int i=0;i<3;i++) {
       t1[v][i] /= normt1;
       t2[v][i] /= normt2;
     }
