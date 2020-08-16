@@ -28,6 +28,7 @@ SOFTWARE.
 #define CNS_HPP 1
 
 #include "core.hpp"
+#include "platform.hpp"
 #include "mesh.hpp"
 #include "solver.hpp"
 #include "timeStepper.hpp"

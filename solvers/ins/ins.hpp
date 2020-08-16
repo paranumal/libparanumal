@@ -28,6 +28,7 @@
 #define INS_HPP
 
 #include "core.hpp"
+#include "platform.hpp"
 #include "mesh.hpp"
 #include "solver.hpp"
 #include "timeStepper.hpp"
