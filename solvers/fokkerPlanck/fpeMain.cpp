@@ -36,40 +36,29 @@ int main(int argc, char **argv){
     LIBP_ABORT(string("Usage: ./fpeMain setupfile"));
 
   //create default settings
-  occaSettings_t occaSettings(comm);
+  platformSettings_t platformSettings(comm);
   meshSettings_t meshSettings(comm);
   fpeSettings_t fpeSettings(comm);
 
   //load settings from file
-  fpeSettings.parseFromFile(occaSettings, meshSettings,
+  fpeSettings.parseFromFile(platformSettings, meshSettings,
                             argv[1]);
 
-  occaSettings.report();
+  // set up platform
+  platform_t platform(platformSettings);
+
+  platformSettings.report();
   meshSettings.report();
   fpeSettings.report();
 
-  // set up occa device
-  occa::device device;
-  occa::properties props;
-  occaDeviceConfig(device, comm, occaSettings, props);
-
   // set up mesh
-  mesh_t& mesh = mesh_t::Setup(device, comm, meshSettings, props);
-
-  // set up linear algebra module
-  linAlg_t& linAlg = linAlg_t::Setup(device, props);
+  mesh_t& mesh = mesh_t::Setup(platform, meshSettings, comm);
 
   // set up fpe solver
-  fpe_t& fpe = fpe_t::Setup(mesh, linAlg, fpeSettings);
+  fpe_t& fpe = fpe_t::Setup(platform, mesh, fpeSettings);
 
   // run
   fpe.Run();
-
-  // clean up
-  delete &fpe;
-  delete &linAlg;
-  delete &mesh;
-  device.free();
 
   // close down MPI
   MPI_Finalize();

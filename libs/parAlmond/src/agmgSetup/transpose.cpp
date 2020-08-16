@@ -41,7 +41,7 @@ parCSR *transpose(parCSR *A){
   dlong Nrows = (dlong) (globalColStarts[rank+1]-globalColStarts[rank]);
   dlong Ncols = (dlong) (globalRowStarts[rank+1]-globalRowStarts[rank]);
 
-  parCSR *At = new parCSR(Nrows, Ncols, A->comm, A->device);
+  parCSR *At = new parCSR(Nrows, Ncols, A->comm, A->platform);
 
   At->globalRowStarts = globalColStarts;
   At->globalColStarts = globalRowStarts;

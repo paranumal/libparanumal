@@ -117,7 +117,8 @@ void MCSR::syncToDevice(occa::device device) {
 //  parCSR matrix
 //
 //------------------------------------------------------------------------
-parCSR::parCSR(dlong N, dlong M): matrix_t(N,M) {
+parCSR::parCSR(dlong N, dlong M, platform_t& _platform):
+  matrix_t(N,M), platform(_platform) {
   diag = new CSR(N,M);
   offd = new CSR(N,M);
 
@@ -126,9 +127,8 @@ parCSR::parCSR(dlong N, dlong M): matrix_t(N,M) {
 
 parCSR::parCSR(dlong N, dlong M,
                MPI_Comm comm_,
-               occa::device device_): matrix_t(N,M) {
+               platform_t& _platform): matrix_t(N,M), platform(_platform) {
   MPI_Comm_dup(comm_, &comm);
-  device = device_;
 
   diag = new CSR(N,M);
   offd = new CSR(N,M);
@@ -143,9 +143,8 @@ parCSR::parCSR(dlong N,         // number of rows on this rank
                dfloat *Null,            //null vector (or low energy mode)
                dfloat NullSpacePenalty, //penalty parameter for rank boost
                MPI_Comm comm_,
-               occa::device device_) {
+               platform_t& _platform): platform(_platform) {
 
-  device = device_;
   MPI_Comm_dup(comm_, &comm);
 
   int rank, size;
@@ -290,7 +289,7 @@ void parCSR::haloSetup(hlong *colIds) {
 
   //make a halo exchange to share column entries and an ogs for gsops accross columns
   int verbose = 0;
-  halo = halo_t::Setup(Ncols, colMap, comm, verbose, device);
+  halo = halo_t::Setup(Ncols, colMap, comm, verbose, platform);
 
   //shift back to 0-indexed
   for (dlong n=0; n<Ncols; n++) colMap[n]=abs(colMap[n])-1;
@@ -575,8 +574,6 @@ parHYB::parHYB(parCSR *A): matrix_t(A->Nrows, A->Ncols) {
 
   halo = A->halo;
   NlocalCols = A->NlocalCols;
-
-  device = A->device;
 }
 
 parHYB::~parHYB() {
@@ -600,7 +597,9 @@ parHYB::~parHYB() {
   if (halo) halo->Free();
 };
 
-void parHYB::syncToDevice() {
+void parHYB::syncToDevice(platform_t& platform) {
+
+  occa::device& device = platform.device;
 
   E->syncToDevice(device);
   C->syncToDevice(device);

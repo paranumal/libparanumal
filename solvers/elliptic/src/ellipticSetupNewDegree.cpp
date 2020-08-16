@@ -32,7 +32,7 @@ elliptic_t& elliptic_t::SetupNewDegree(mesh_t& meshC){
   //if asking for the same degree, return the original solver
   if (meshC.N == mesh.N) return *this;
 
-  elliptic_t* elliptic = new elliptic_t(meshC, linAlg, settings, lambda);
+  elliptic_t* elliptic = new elliptic_t(platform, meshC, settings, lambda);
 
   //shallow copy
   elliptic->Nfields = Nfields;
@@ -71,7 +71,7 @@ elliptic_t& elliptic_t::SetupNewDegree(mesh_t& meshC){
   }
 
   // OCCA build stuff
-  occa::properties kernelInfo = elliptic->props; //copy base occa properties
+  occa::properties kernelInfo = meshC.props; //copy base occa properties
 
   // set kernel name suffix
   char *suffix;
@@ -115,8 +115,8 @@ elliptic_t& elliptic_t::SetupNewDegree(mesh_t& meshC){
       sprintf(kernelName, "ellipticPartialAx%s", suffix);
     }
 
-    elliptic->partialAxKernel = buildKernel(meshC.device, fileName, kernelName,
-                                            kernelInfo, meshC.comm);
+    elliptic->partialAxKernel = platform.buildKernel(fileName, kernelName,
+                                            kernelInfo);
 
   } else if (settings.compareSetting("DISCRETIZATION","IPDG")) {
     int Nmax = mymax(meshC.Np, meshC.Nfaces*meshC.Nfp);
@@ -124,13 +124,13 @@ elliptic_t& elliptic_t::SetupNewDegree(mesh_t& meshC){
 
     sprintf(fileName, DELLIPTIC "/okl/ellipticGradient%s.okl", suffix);
     sprintf(kernelName, "ellipticPartialGradient%s", suffix);
-    elliptic->partialGradientKernel = buildKernel(meshC.device, fileName, kernelName,
-                                                  kernelInfo, meshC.comm);
+    elliptic->partialGradientKernel = platform.buildKernel(fileName, kernelName,
+                                                  kernelInfo);
 
     sprintf(fileName, DELLIPTIC "/okl/ellipticAxIpdg%s.okl", suffix);
     sprintf(kernelName, "ellipticPartialAxIpdg%s", suffix);
-    elliptic->partialIpdgKernel = buildKernel(meshC.device, fileName, kernelName,
-                                              kernelInfo, meshC.comm);
+    elliptic->partialIpdgKernel = platform.buildKernel(fileName, kernelName,
+                                              kernelInfo);
   }
 
   elliptic->precon = NULL;

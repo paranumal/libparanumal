@@ -29,10 +29,10 @@ SOFTWARE.
 namespace parAlmond {
 
 
-solver_t *Init(occa::device device, MPI_Comm comm, settings_t& settings) {
-  solver_t *M = new solver_t(device, comm, settings);
+solver_t *Init(platform_t& _platform, settings_t& _settings, MPI_Comm _comm) {
+  solver_t *M = new solver_t(_platform, _settings, _comm);
 
-  if (Nrefs==0) buildParAlmondKernels(comm, device);
+  if (Nrefs==0) buildParAlmondKernels(_comm, _platform);
   Nrefs++;
 
   return M;
@@ -60,7 +60,7 @@ void AMGSetup(solver_t *MM,
 
   parCSR *csrA = new parCSR(numLocalRows, A,
                             nullSpace, null, nullSpacePenalty,
-                            M->comm, M->device);
+                            M->comm, M->platform);
   free(null);
 
   M->AMGSetup(csrA);

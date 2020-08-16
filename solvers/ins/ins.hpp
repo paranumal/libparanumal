@@ -40,7 +40,7 @@ class insSettings_t: public settings_t {
 public:
   insSettings_t(MPI_Comm& _comm);
   void report();
-  void parseFromFile(occaSettings_t& occaSettings,
+  void parseFromFile(platformSettings_t& platformSettings,
                      meshSettings_t& meshSettings,
                      const string filename);
 
@@ -52,6 +52,8 @@ class ins_t;
 
 class subcycler_t: public solver_t {
 public:
+  mesh_t& mesh;
+
   int cubature;
   halo_t* vTraceHalo;
   occa::kernel advectionVolumeKernel;
@@ -77,6 +79,8 @@ public:
 
 class ins_t: public solver_t {
 public:
+  mesh_t& mesh;
+  linAlg_t& linAlg;
   TimeStepper::timeStepper_t* timeStepper;
 
   halo_t* vTraceHalo;
@@ -150,13 +154,14 @@ public:
   occa::kernel initialConditionKernel;
 
   ins_t() = delete;
-  ins_t(mesh_t& _mesh, linAlg_t& _linAlg, settings_t& _settings):
-    solver_t(_mesh, _linAlg, _settings) {}
+  ins_t(platform_t &_platform, mesh_t &_mesh,
+              insSettings_t& _settings):
+    solver_t(_platform, _settings), mesh(_mesh), linAlg(platform.linAlg) {}
 
   ~ins_t();
 
   //setup
-  static ins_t& Setup(mesh_t& mesh, linAlg_t& linAlg,
+  static ins_t& Setup(platform_t& platform, mesh_t& mesh,
                       insSettings_t& settings);
 
   void BoundarySetup();

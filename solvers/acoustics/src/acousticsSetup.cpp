@@ -26,10 +26,10 @@ SOFTWARE.
 
 #include "acoustics.hpp"
 
-acoustics_t& acoustics_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
+acoustics_t& acoustics_t::Setup(platform_t& platform, mesh_t& mesh,
                                 acousticsSettings_t& settings){
 
-  acoustics_t* acoustics = new acoustics_t(mesh, linAlg, settings);
+  acoustics_t* acoustics = new acoustics_t(platform, mesh, settings);
 
   acoustics->Nfields = (mesh.dim==3) ? 4:3;
 
@@ -56,7 +56,7 @@ acoustics_t& acoustics_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   acoustics->timeStepper->SetTimeStep(dt);
 
   //setup linear algebra module
-  acoustics->linAlg.InitKernels({"innerProd"}, mesh.comm);
+  platform.linAlg.InitKernels({"innerProd"});
 
   // set penalty parameter
   dfloat Lambda2 = 0.5;
@@ -72,7 +72,7 @@ acoustics_t& acoustics_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   acoustics->o_Mq = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat), acoustics->q);
 
   // OCCA build stuff
-  occa::properties kernelInfo = acoustics->props; //copy base occa properties
+  occa::properties kernelInfo = mesh.props; //copy base occa properties
 
   //add boundary data to kernel info
   string dataFileName;
@@ -118,21 +118,21 @@ acoustics_t& acoustics_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   sprintf(fileName, DACOUSTICS "/okl/acousticsVolume%s.okl", suffix);
   sprintf(kernelName, "acousticsVolume%s", suffix);
 
-  acoustics->volumeKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                         kernelInfo, mesh.comm);
+  acoustics->volumeKernel =  platform.buildKernel(fileName, kernelName,
+                                         kernelInfo);
   // kernels from surface file
   sprintf(fileName, DACOUSTICS "/okl/acousticsSurface%s.okl", suffix);
   sprintf(kernelName, "acousticsSurface%s", suffix);
 
-  acoustics->surfaceKernel = buildKernel(mesh.device, fileName, kernelName,
-                                         kernelInfo, mesh.comm);
+  acoustics->surfaceKernel = platform.buildKernel(fileName, kernelName,
+                                         kernelInfo);
 
   // mass matrix operator
   sprintf(fileName, LIBP_DIR "/core/okl/MassMatrixOperator%s.okl", suffix);
   sprintf(kernelName, "MassMatrixOperator%s", suffix);
 
-  acoustics->MassMatrixKernel = buildKernel(mesh.device, fileName, kernelName,
-                                            kernelInfo, mesh.comm);
+  acoustics->MassMatrixKernel = platform.buildKernel(fileName, kernelName,
+                                            kernelInfo);
 
 
   if (mesh.dim==2) {
@@ -143,8 +143,8 @@ acoustics_t& acoustics_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
     sprintf(kernelName, "acousticsInitialCondition3D");
   }
 
-  acoustics->initialConditionKernel = buildKernel(mesh.device, fileName, kernelName,
-                                                  kernelInfo, mesh.comm);
+  acoustics->initialConditionKernel = platform.buildKernel(fileName, kernelName,
+                                                  kernelInfo);
 
   return *acoustics;
 }

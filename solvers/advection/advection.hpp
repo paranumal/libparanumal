@@ -28,6 +28,7 @@ SOFTWARE.
 #define ADVECTION_HPP 1
 
 #include "core.hpp"
+#include "platform.hpp"
 #include "mesh.hpp"
 #include "solver.hpp"
 #include "timeStepper.hpp"
@@ -39,13 +40,14 @@ class advectionSettings_t: public settings_t {
 public:
   advectionSettings_t(MPI_Comm& _comm);
   void report();
-  void parseFromFile(occaSettings_t& occaSettings,
+  void parseFromFile(platformSettings_t& platformSettings,
                      meshSettings_t& meshSettings,
                      const string filename);
 };
 
 class advection_t: public solver_t {
 public:
+  mesh_t &mesh;
   TimeStepper::timeStepper_t* timeStepper;
 
   halo_t* traceHalo;
@@ -63,13 +65,14 @@ public:
   occa::kernel initialConditionKernel;
 
   advection_t() = delete;
-  advection_t(mesh_t& _mesh, linAlg_t& _linAlg, settings_t& _settings):
-    solver_t(_mesh, _linAlg, _settings) {}
+  advection_t(platform_t &_platform, mesh_t &_mesh,
+              advectionSettings_t& _settings):
+    solver_t(_platform, _settings), mesh(_mesh) {}
 
   ~advection_t();
 
   //setup
-  static advection_t& Setup(mesh_t& mesh, linAlg_t& linAlg,
+  static advection_t& Setup(platform_t& platform, mesh_t& mesh,
                             advectionSettings_t& settings);
 
   void Run();

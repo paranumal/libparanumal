@@ -35,29 +35,25 @@ mesh_t& mesh_t::SetupNewDegree(int Nf){
   //just reuse the current mesh if the degree isnt changing.
   if (Nf==N) return *this;
 
-  //make a new occa properties list
-  occa::properties *newProps = new occa::properties();
-  occaDeviceProperties(device, *newProps);
-
   mesh_t *mesh=NULL;
   switch(elementType){
   case TRIANGLES:
     if(dim==2)
-      mesh = new meshTri2D(device, comm, settings, *newProps);
+      mesh = new meshTri2D(platform, settings, comm);
     else
-      mesh = new meshTri3D(device, comm, settings, *newProps);
+      mesh = new meshTri3D(platform, settings, comm);
     break;
   case QUADRILATERALS:
     if(dim==2)
-      mesh = new meshQuad2D(device, comm, settings, *newProps);
+      mesh = new meshQuad2D(platform, settings, comm);
     else
-      mesh = new meshQuad3D(device, comm, settings, *newProps);
+      mesh = new meshQuad3D(platform, settings, comm);
     break;
   case TETRAHEDRA:
-    mesh = new meshTet3D(device, comm, settings, *newProps);
+    mesh = new meshTet3D(platform, settings, comm);
     break;
   case HEXAHEDRA:
-    mesh = new meshHex3D(device, comm, settings, *newProps);
+    mesh = new meshHex3D(platform, settings, comm);
     break;
   }
 

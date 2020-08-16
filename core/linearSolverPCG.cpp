@@ -28,20 +28,16 @@ SOFTWARE.
 
 #define PCG_BLOCKSIZE 512
 
-pcg::pcg(solver_t& _solver):
-  linearSolver_t(_solver) {};
+pcg::pcg(dlong _N, dlong _Nhalo,
+         platform_t& _platform, settings_t& _settings,
+         int _weighted, occa::memory& _o_weight):
+  linearSolver_t(_N, _Nhalo, _platform, _settings) {
 
-pcg::~pcg() {
-  updatePCGKernel.free();
-}
-
-void pcg::Init(int _weighted, occa::memory& o_weight) {
-
-  N = mesh.Np*mesh.Nelements;
-  dlong Nhalo  = mesh.Np*mesh.totalHaloPairs;
   dlong Ntotal = N + Nhalo;
 
   flexible = settings.compareSetting("LINEAR SOLVER", "FPCG");
+
+  occa::device &device = platform.device;
 
   /*aux variables */
   dfloat *dummy = (dfloat *) calloc(Ntotal,sizeof(dfloat)); //need this to avoid uninitialized memory warnings
@@ -52,7 +48,7 @@ void pcg::Init(int _weighted, occa::memory& o_weight) {
   free(dummy);
 
   weighted = _weighted;
-  o_w = o_weight;
+  o_w = _o_weight;
 
   //pinned tmp buffer for reductions
   occa::properties mprops;
@@ -62,22 +58,22 @@ void pcg::Init(int _weighted, occa::memory& o_weight) {
   o_tmprdotr = device.malloc(PCG_BLOCKSIZE*sizeof(dfloat));
 
   /* build kernels */
-  occa::properties kernelInfo = props; //copy base properties
+  occa::properties kernelInfo = platform.props; //copy base properties
 
   //add defines
   kernelInfo["defines/" "p_blockSize"] = (int)PCG_BLOCKSIZE;
 
   // combined PCG update and r.r kernel
-  updatePCGKernel = buildKernel(device,
-                                LIBP_DIR "/core/okl/linearSolverUpdatePCG.okl",
-                                "updatePCG", kernelInfo, comm);
+  updatePCGKernel = platform.buildKernel(LIBP_DIR "/core/okl/linearSolverUpdatePCG.okl",
+                                "updatePCG", kernelInfo);
 }
 
 int pcg::Solve(solver_t& solver, precon_t& precon,
                occa::memory &o_x, occa::memory &o_r,
                const dfloat tol, const int MAXIT, const int verbose) {
 
-  int rank = mesh.rank;
+  int rank = platform.rank;
+  linAlg_t &linAlg = platform.linAlg;
 
   // register scalars
   dfloat rdotz1 = 0.0;
@@ -92,9 +88,9 @@ int pcg::Solve(solver_t& solver, precon_t& precon,
   linAlg.axpy(N, -1.f, o_Ax, 1.f, o_r);
 
   if (weighted)
-    rdotr = linAlg.weightedNorm2(N, o_w, o_r, comm);
+    rdotr = linAlg.weightedNorm2(N, o_w, o_r, platform.comm);
   else
-    rdotr = linAlg.norm2(N, o_r, comm);
+    rdotr = linAlg.norm2(N, o_r, platform.comm);
   rdotr = rdotr*rdotr;
 
   dfloat TOL = mymax(tol*tol*rdotr,tol*tol);
@@ -114,16 +110,16 @@ int pcg::Solve(solver_t& solver, precon_t& precon,
     // r.z
     rdotz2 = rdotz1;
     if (weighted)
-      rdotz1 = linAlg.weightedInnerProd(N, o_w, o_r, o_z, comm);
+      rdotz1 = linAlg.weightedInnerProd(N, o_w, o_r, o_z, platform.comm);
     else
-      rdotz1 = linAlg.innerProd(N, o_r, o_z, comm);
+      rdotz1 = linAlg.innerProd(N, o_r, o_z, platform.comm);
 
     if(flexible){
       dfloat zdotAp;
       if (weighted)
-        zdotAp = linAlg.weightedInnerProd(N, o_w, o_z, o_Ap, comm);
+        zdotAp = linAlg.weightedInnerProd(N, o_w, o_z, o_Ap, platform.comm);
       else
-        zdotAp = linAlg.innerProd(N, o_z, o_Ap, comm);
+        zdotAp = linAlg.innerProd(N, o_z, o_Ap, platform.comm);
 
       beta = (iter==0) ? 0.0 : -alpha*zdotAp/rdotz2;
     } else {
@@ -138,9 +134,9 @@ int pcg::Solve(solver_t& solver, precon_t& precon,
 
     // p.Ap
     if (weighted)
-      pAp =  linAlg.weightedInnerProd(N, o_w, o_p, o_Ap, comm);
+      pAp =  linAlg.weightedInnerProd(N, o_w, o_p, o_Ap, platform.comm);
     else
-      pAp =  linAlg.innerProd(N, o_p, o_Ap, comm);
+      pAp =  linAlg.innerProd(N, o_p, o_Ap, platform.comm);
 
     alpha = rdotz1/pAp;
 
@@ -177,6 +173,10 @@ dfloat pcg::UpdatePCG(const dfloat alpha, occa::memory &o_x, occa::memory &o_r){
     rdotr1 += tmprdotr[n];
 
   dfloat globalrdotr1 = 0;
-  MPI_Allreduce(&rdotr1, &globalrdotr1, 1, MPI_DFLOAT, MPI_SUM, comm);
+  MPI_Allreduce(&rdotr1, &globalrdotr1, 1, MPI_DFLOAT, MPI_SUM, platform.comm);
   return globalrdotr1;
+}
+
+pcg::~pcg() {
+  updatePCGKernel.free();
 }

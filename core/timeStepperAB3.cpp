@@ -34,20 +34,23 @@ ab3::ab3(dlong Nelements, dlong NhaloElements,
          int Np, int Nfields, solver_t& _solver):
   timeStepper_t(Nelements, NhaloElements, Np, Nfields, _solver) {
 
+  platform_t &platform = solver.platform;
+  occa::device &device = platform.device;
+
   Nstages = 3;
   shiftIndex = 0;
 
   o_rhsq = device.malloc(Nstages*N*sizeof(dfloat));
 
-  occa::properties kernelInfo = props; //copy base occa properties from solver
+  occa::properties kernelInfo = platform.props; //copy base occa properties from solver
 
   kernelInfo["defines/" "p_blockSize"] = BLOCKSIZE;
   kernelInfo["defines/" "p_Nstages"] = Nstages;
 
-  updateKernel = buildKernel(device, LIBP_DIR "/core/okl/"
+  updateKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
                                     "timeStepperAB.okl",
                                     "abUpdate",
-                                    kernelInfo, comm);
+                                    kernelInfo);
 
   // initialize AB time stepping coefficients
   dfloat _ab_a[Nstages*Nstages] = {
@@ -68,7 +71,7 @@ void ab3::Run(occa::memory &o_q, dfloat start, dfloat end) {
   solver.Report(time,0);
 
   dfloat outputInterval;
-  settings.getSetting("OUTPUT INTERVAL", outputInterval);
+  solver.settings.getSetting("OUTPUT INTERVAL", outputInterval);
 
   dfloat outputTime = time + outputInterval;
 
@@ -131,6 +134,9 @@ ab3_pml::ab3_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
   Npml(NpmlElements*Np*Npmlfields) {
 
   if (Npml) {
+    platform_t &platform = solver.platform;
+    occa::device &device = platform.device;
+
     dfloat *pmlq = (dfloat *) calloc(Npml,sizeof(dfloat));
     o_pmlq   = device.malloc(Npml*sizeof(dfloat), pmlq);
     free(pmlq);

@@ -138,7 +138,7 @@ halo_t** mesh_t::MultiRateHaloTraceSetup(int Nfields){
 
     int verbose = 0;
     mrTraceHalo[lev] = halo_t::Setup((Nelements+totalHaloPairs)*Nfp*Nfaces*Nfields,
-                                      mrTraceIds, comm, verbose, device);
+                                      mrTraceIds, comm, verbose, platform);
 
     //no need to zero out mrTraceIds for next multirate level
     // the next level set includes the lower level elements

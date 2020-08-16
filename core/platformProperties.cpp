@@ -24,12 +24,10 @@ SOFTWARE.
 
 */
 
-#include <occa.hpp>
-#include "types.h"
-#include "utils.hpp"
+#include "platform.hpp"
 
 //initialize occa::properties with common props
-void occaDeviceProperties(occa::device &device, occa::properties& props){
+void platform_t::DeviceProperties(){
 
   props["defines"].asObject();
   props["includes"].asArray();

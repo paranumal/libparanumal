@@ -30,11 +30,14 @@ SOFTWARE.
 namespace TimeStepper {
 
 mrab3::mrab3(dlong Nelements, dlong NhaloElements,
-               int Np, int _Nfields, solver_t& _solver):
+               int Np, int _Nfields, solver_t& _solver, mesh_t& _mesh):
   timeStepper_t(Nelements, NhaloElements, Np, _Nfields, _solver),
-  mesh(solver.mesh),
+  mesh(_mesh),
   Nlevels(mesh.mrNlevels),
   Nfields(_Nfields) {
+
+  platform_t &platform = solver.platform;
+  occa::device &device = platform.device;
 
   Nstages = 3;
 
@@ -49,7 +52,7 @@ mrab3::mrab3(dlong Nelements, dlong NhaloElements,
   o_fQM = device.malloc((mesh.Nelements+mesh.totalHaloPairs)*mesh.Nfp
                           *mesh.Nfaces*Nfields*sizeof(dfloat));
 
-  occa::properties kernelInfo = props; //copy base occa properties from solver
+  occa::properties kernelInfo = platform.props; //copy base occa properties from solver
 
   kernelInfo["defines/" "p_blockSize"] = BLOCKSIZE;
   kernelInfo["defines/" "p_Nstages"] = Nstages;
@@ -60,14 +63,14 @@ mrab3::mrab3(dlong Nelements, dlong NhaloElements,
   int maxNodes = mymax(mesh.Np, mesh.Nfp*mesh.Nfaces);
   kernelInfo["defines/" "p_maxNodes"] = maxNodes;
 
-  updateKernel = buildKernel(device, LIBP_DIR "/core/okl/"
+  updateKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
                                     "timeStepperMRAB.okl",
                                     "mrabUpdate",
-                                    kernelInfo, comm);
-  traceUpdateKernel = buildKernel(device, LIBP_DIR "/core/okl/"
+                                    kernelInfo);
+  traceUpdateKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
                                     "timeStepperMRAB.okl",
                                     "mrabTraceUpdate",
-                                    kernelInfo, comm);
+                                    kernelInfo);
 
   // initialize AB time stepping coefficients
   dfloat _ab_a[Nstages*Nstages] = {
@@ -109,7 +112,7 @@ void mrab3::Run(occa::memory &o_q, dfloat start, dfloat end) {
   solver.Report(time,0);
 
   dfloat outputInterval;
-  settings.getSetting("OUTPUT INTERVAL", outputInterval);
+  solver.settings.getSetting("OUTPUT INTERVAL", outputInterval);
 
   dfloat outputTime = time + outputInterval;
 
@@ -222,12 +225,15 @@ mrab3::~mrab3() {
 /**************************************************/
 
 mrab3_pml::mrab3_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
-               int Np, int _Nfields, int _Npmlfields, solver_t& _solver):
-  mrab3(Nelements, NhaloElements, Np, _Nfields, _solver),
+               int Np, int _Nfields, int _Npmlfields, solver_t& _solver, mesh_t& _mesh):
+  mrab3(Nelements, NhaloElements, Np, _Nfields, _solver, _mesh),
   Npml(NpmlElements*Np*_Npmlfields),
   Npmlfields(_Npmlfields) {
 
   if (Npml) {
+    platform_t &platform = solver.platform;
+    occa::device &device = platform.device;
+
     dfloat *pmlq = (dfloat*) calloc(Npml, sizeof(dfloat));
     o_pmlq = device.malloc(Npml*sizeof(dfloat), pmlq);
     free(pmlq);
@@ -240,7 +246,7 @@ mrab3_pml::mrab3_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
     o_rhspmlq = device.malloc((Nstages-1)*Npml*sizeof(dfloat), rhspmlq);
     free(rhspmlq);
 
-    occa::properties kernelInfo = props; //copy base occa properties from solver
+    occa::properties kernelInfo = platform.props; //copy base occa properties from solver
 
     kernelInfo["defines/" "p_blockSize"] = BLOCKSIZE;
     kernelInfo["defines/" "p_Nstages"] = Nstages;
@@ -251,10 +257,10 @@ mrab3_pml::mrab3_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
     int maxNodes = mymax(mesh.Np, mesh.Nfp*mesh.Nfaces);
     kernelInfo["defines/" "p_maxNodes"] = maxNodes;
 
-    pmlUpdateKernel = buildKernel(device, LIBP_DIR "/core/okl/"
+    pmlUpdateKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
                                       "timeStepperMRAB.okl",
                                       "mrabPmlUpdate",
-                                      kernelInfo, comm);
+                                      kernelInfo);
   }
 }
 

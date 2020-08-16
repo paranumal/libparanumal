@@ -230,9 +230,9 @@ void solver_t::device_pgmres(const int maxIt,
   // initial residual
   dfloat nb = sqrt(vectorInnerProd(m, o_r, o_r, levels[0]->comm));
 
-  occa::memory  o_x = device.malloc(n*sizeof(dfloat), levels[0]->x);
-  occa::memory  o_Av= device.malloc(n*sizeof(dfloat), levels[0]->x);
-  occa::memory  o_w = device.malloc(n*sizeof(dfloat), levels[0]->x);
+  occa::memory  o_x = platform.device.malloc(n*sizeof(dfloat), levels[0]->x);
+  occa::memory  o_Av= platform.device.malloc(n*sizeof(dfloat), levels[0]->x);
+  occa::memory  o_w = platform.device.malloc(n*sizeof(dfloat), levels[0]->x);
 
   //sanity check
   if (nb<=tol) {
@@ -258,7 +258,7 @@ void solver_t::device_pgmres(const int maxIt,
 
   occa::memory *o_V = (occa::memory *) calloc(maxIt, sizeof(occa::memory));
   for(int i=0; i<maxIt; ++i){
-    o_V[i] = device.malloc(n*sizeof(dfloat), levels[0]->x);
+    o_V[i] = platform.device.malloc(n*sizeof(dfloat), levels[0]->x);
   }
 
   // V(:,0) = r/nr

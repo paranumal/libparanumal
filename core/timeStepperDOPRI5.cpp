@@ -33,6 +33,9 @@ dopri5::dopri5(dlong Nelements, dlong NhaloElements,
                int Np, int Nfields, solver_t& _solver):
   timeStepper_t(Nelements, NhaloElements, Np, Nfields, _solver) {
 
+  platform_t &platform = solver.platform;
+  occa::device &device = platform.device;
+
   Nrk = 7;
 
   o_rhsq   = device.malloc(N*sizeof(dfloat));
@@ -48,27 +51,27 @@ dopri5::dopri5(dlong Nelements, dlong NhaloElements,
 
   hlong Nlocal = N;
   hlong Ntotal;
-  MPI_Allreduce(&Nlocal, &Ntotal, 1, MPI_HLONG, MPI_SUM, comm);
+  MPI_Allreduce(&Nlocal, &Ntotal, 1, MPI_HLONG, MPI_SUM, platform.comm);
 
-  occa::properties kernelInfo = props; //copy base occa properties from solver
+  occa::properties kernelInfo = platform.props; //copy base occa properties from solver
 
   //add defines
   kernelInfo["defines/" "p_blockSize"] = (int)BLOCKSIZE;
 
-  rkUpdateKernel = buildKernel(device, LIBP_DIR "/core/okl/"
+  rkUpdateKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
                                     "timeStepperDOPRI5.okl",
                                     "dopri5RkUpdate",
-                                    kernelInfo, comm);
+                                    kernelInfo);
 
-  rkStageKernel = buildKernel(device, LIBP_DIR "/core/okl/"
+  rkStageKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
                                     "timeStepperDOPRI5.okl",
                                     "dopri5RkStage",
-                                    kernelInfo, comm);
+                                    kernelInfo);
 
-  rkErrorEstimateKernel = buildKernel(device, LIBP_DIR "/core/okl/"
+  rkErrorEstimateKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
                                     "timeStepperDOPRI5.okl",
                                     "dopri5ErrorEstimate",
-                                    kernelInfo, comm);
+                                    kernelInfo);
 
   // Dormand Prince -order (4) 5 with PID timestep control
   dfloat _rkC[7] = {0.0, 0.2, 0.3, 0.8, 8.0/9.0, 1.0, 1.0};
@@ -113,13 +116,12 @@ void dopri5::Run(occa::memory &o_q, dfloat start, dfloat end) {
 
   dfloat time = start;
 
-  int rank;
-  MPI_Comm_rank(comm, &rank);
+  // const int rank = solver.platform.rank;
 
   solver.Report(time,0);
 
   dfloat outputInterval;
-  settings.getSetting("OUTPUT INTERVAL", outputInterval);
+  solver.settings.getSetting("OUTPUT INTERVAL", outputInterval);
 
   dfloat outputTime = time + outputInterval;
 
@@ -289,7 +291,7 @@ dfloat dopri5::Estimater(occa::memory& o_q){
   for(dlong n=0;n<Nblock;++n){
     localerr += errtmp[n];
   }
-  MPI_Allreduce(&localerr, &err, 1, MPI_DFLOAT, MPI_SUM, comm);
+  MPI_Allreduce(&localerr, &err, 1, MPI_DFLOAT, MPI_SUM, solver.platform.comm);
 
   err = sqrt(err)*sqrtinvNtotal;
 
@@ -323,6 +325,9 @@ dopri5_pml::dopri5_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
   Npml(Npmlfields*Np*NpmlElements) {
 
   if (Npml) {
+    platform_t &platform = solver.platform;
+    occa::device &device = platform.device;
+
     dfloat *pmlq = (dfloat *) calloc(Npml,sizeof(dfloat));
     o_pmlq   = device.malloc(Npml*sizeof(dfloat), pmlq);
     free(pmlq);
@@ -333,15 +338,15 @@ dopri5_pml::dopri5_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
 
     o_savepmlq  = device.malloc(Npml*sizeof(dfloat));
 
-    occa::properties kernelInfo = props; //copy base occa properties from solver
+    occa::properties kernelInfo = platform.props; //copy base occa properties from solver
 
     //add defines
     kernelInfo["defines/" "p_blockSize"] = (int)BLOCKSIZE;
 
-    rkPmlUpdateKernel = buildKernel(device, LIBP_DIR "/core/okl/"
+    rkPmlUpdateKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
                                       "timeStepperDOPRI5.okl",
                                       "dopri5RkPmlUpdate",
-                                      kernelInfo, comm);
+                                      kernelInfo);
   }
 }
 

@@ -26,10 +26,10 @@ SOFTWARE.
 
 #include "cns.hpp"
 
-cns_t& cns_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
+cns_t& cns_t::Setup(platform_t& platform, mesh_t& mesh,
                     cnsSettings_t& settings){
 
-  cns_t* cns = new cns_t(mesh, linAlg, settings);
+  cns_t* cns = new cns_t(platform, mesh, settings);
 
   //get physical paramters
   settings.getSetting("VISCOSITY", cns->mu);
@@ -77,7 +77,7 @@ cns_t& cns_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   cns->timeStepper->SetTimeStep(dt);
 
   //setup linear algebra module
-  cns->linAlg.InitKernels({"innerProd"}, mesh.comm);
+  platform.linAlg.InitKernels({"innerProd"});
 
   /*setup trace halo exchange */
   cns->fieldTraceHalo = mesh.HaloTraceSetup(cns->Nfields);
@@ -100,7 +100,7 @@ cns_t& cns_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   cns->o_Mq = mesh.device.malloc((NlocalFields+NhaloFields)*sizeof(dfloat), cns->q);
 
   // OCCA build stuff
-  occa::properties kernelInfo = cns->props; //copy base occa properties
+  occa::properties kernelInfo = mesh.props; //copy base occa properties
 
   //add boundary data to kernel info
   string dataFileName;
@@ -156,27 +156,27 @@ cns_t& cns_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
       sprintf(fileName, DCNS "/okl/cnsIsothermalCubatureVolume%s.okl", suffix);
       sprintf(kernelName, "cnsIsothermalCubatureVolume%s", suffix);
 
-      cns->cubatureVolumeKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                               kernelInfo, mesh.comm);
+      cns->cubatureVolumeKernel =  platform.buildKernel(fileName, kernelName,
+                                               kernelInfo);
       // kernels from surface file
       sprintf(fileName, DCNS "/okl/cnsIsothermalCubatureSurface%s.okl", suffix);
       sprintf(kernelName, "cnsIsothermalCubatureSurface%s", suffix);
 
-      cns->cubatureSurfaceKernel = buildKernel(mesh.device, fileName, kernelName,
-                                               kernelInfo, mesh.comm);
+      cns->cubatureSurfaceKernel = platform.buildKernel(fileName, kernelName,
+                                               kernelInfo);
     } else {
       // kernels from volume file
       sprintf(fileName, DCNS "/okl/cnsIsothermalVolume%s.okl", suffix);
       sprintf(kernelName, "cnsIsothermalVolume%s", suffix);
 
-      cns->volumeKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                             kernelInfo, mesh.comm);
+      cns->volumeKernel =  platform.buildKernel(fileName, kernelName,
+                                             kernelInfo);
       // kernels from surface file
       sprintf(fileName, DCNS "/okl/cnsIsothermalSurface%s.okl", suffix);
       sprintf(kernelName, "cnsIsothermalSurface%s", suffix);
 
-      cns->surfaceKernel = buildKernel(mesh.device, fileName, kernelName,
-                                             kernelInfo, mesh.comm);
+      cns->surfaceKernel = platform.buildKernel(fileName, kernelName,
+                                             kernelInfo);
     }
   } else {
     if (cns->cubature) {
@@ -184,27 +184,27 @@ cns_t& cns_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
       sprintf(fileName, DCNS "/okl/cnsCubatureVolume%s.okl", suffix);
       sprintf(kernelName, "cnsCubatureVolume%s", suffix);
 
-      cns->cubatureVolumeKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                               kernelInfo, mesh.comm);
+      cns->cubatureVolumeKernel =  platform.buildKernel(fileName, kernelName,
+                                               kernelInfo);
       // kernels from surface file
       sprintf(fileName, DCNS "/okl/cnsCubatureSurface%s.okl", suffix);
       sprintf(kernelName, "cnsCubatureSurface%s", suffix);
 
-      cns->cubatureSurfaceKernel = buildKernel(mesh.device, fileName, kernelName,
-                                               kernelInfo, mesh.comm);
+      cns->cubatureSurfaceKernel = platform.buildKernel(fileName, kernelName,
+                                               kernelInfo);
     } else {
       // kernels from volume file
       sprintf(fileName, DCNS "/okl/cnsVolume%s.okl", suffix);
       sprintf(kernelName, "cnsVolume%s", suffix);
 
-      cns->volumeKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                             kernelInfo, mesh.comm);
+      cns->volumeKernel =  platform.buildKernel(fileName, kernelName,
+                                             kernelInfo);
       // kernels from surface file
       sprintf(fileName, DCNS "/okl/cnsSurface%s.okl", suffix);
       sprintf(kernelName, "cnsSurface%s", suffix);
 
-      cns->surfaceKernel = buildKernel(mesh.device, fileName, kernelName,
-                                             kernelInfo, mesh.comm);
+      cns->surfaceKernel = platform.buildKernel(fileName, kernelName,
+                                             kernelInfo);
     }
   }
 
@@ -212,28 +212,28 @@ cns_t& cns_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   sprintf(fileName, DCNS "/okl/cnsGradVolume%s.okl", suffix);
   sprintf(kernelName, "cnsGradVolume%s", suffix);
 
-  cns->gradVolumeKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                           kernelInfo, mesh.comm);
+  cns->gradVolumeKernel =  platform.buildKernel(fileName, kernelName,
+                                           kernelInfo);
   // kernels from surface file
   sprintf(fileName, DCNS "/okl/cnsGradSurface%s.okl", suffix);
   sprintf(kernelName, "cnsGradSurface%s", suffix);
 
-  cns->gradSurfaceKernel = buildKernel(mesh.device, fileName, kernelName,
-                                           kernelInfo, mesh.comm);
+  cns->gradSurfaceKernel = platform.buildKernel(fileName, kernelName,
+                                           kernelInfo);
 
   // mass matrix operator
   sprintf(fileName, LIBP_DIR "/core/okl/MassMatrixOperator%s.okl", suffix);
   sprintf(kernelName, "MassMatrixOperator%s", suffix);
 
-  cns->MassMatrixKernel = buildKernel(mesh.device, fileName, kernelName,
-                                      kernelInfo, mesh.comm);
+  cns->MassMatrixKernel = platform.buildKernel(fileName, kernelName,
+                                      kernelInfo);
 
   // vorticity calculation
   sprintf(fileName, DCNS "/okl/cnsVorticity%s.okl", suffix);
   sprintf(kernelName, "cnsVorticity%s", suffix);
 
-  cns->vorticityKernel = buildKernel(mesh.device, fileName, kernelName,
-                                     kernelInfo, mesh.comm);
+  cns->vorticityKernel = platform.buildKernel(fileName, kernelName,
+                                     kernelInfo);
 
   if (mesh.dim==2) {
     sprintf(fileName, DCNS "/okl/cnsInitialCondition2D.okl");
@@ -249,8 +249,8 @@ cns_t& cns_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
       sprintf(kernelName, "cnsInitialCondition3D");
   }
 
-  cns->initialConditionKernel = buildKernel(mesh.device, fileName, kernelName,
-                                            kernelInfo, mesh.comm);
+  cns->initialConditionKernel = platform.buildKernel(fileName, kernelName,
+                                            kernelInfo);
 
   return *cns;
 }

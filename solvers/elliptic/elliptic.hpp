@@ -39,9 +39,9 @@ SOFTWARE.
 
 class ellipticSettings_t: public settings_t {
 public:
-  ellipticSettings_t(MPI_Comm& _comm);
+  ellipticSettings_t(const MPI_Comm& _comm);
   void report();
-  void parseFromFile(occaSettings_t& occaSettings,
+  void parseFromFile(platformSettings_t& platformSettings,
                      meshSettings_t& meshSettings,
                      const string filename);
 };
@@ -51,6 +51,9 @@ void ellipticAddSettings(settings_t& settings,
 
 class elliptic_t: public solver_t {
 public:
+  mesh_t &mesh;
+  linAlg_t &linAlg;
+
   int Nfields;
 
   dfloat lambda;
@@ -95,14 +98,15 @@ public:
   occa::kernel partialIpdgKernel;
 
   elliptic_t() = delete;
-  elliptic_t(mesh_t& _mesh, linAlg_t& _linAlg,
-             settings_t& _settings, dfloat _lambda):
-    solver_t(_mesh, _linAlg, _settings), lambda(_lambda) {}
+  elliptic_t(platform_t &_platform, mesh_t &_mesh,
+              settings_t& _settings, dfloat _lambda):
+    solver_t(_platform, _settings), mesh(_mesh),
+    linAlg(_platform.linAlg), lambda(_lambda) {}
 
   ~elliptic_t();
 
   //setup
-  static elliptic_t& Setup(mesh_t& mesh, linAlg_t& linAlg,
+  static elliptic_t& Setup(platform_t& platform, mesh_t& mesh,
                            ellipticSettings_t& settings, dfloat lambda,
                            const int NBCTypes, const int *BCType);
 

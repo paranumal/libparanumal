@@ -33,19 +33,22 @@ lserk4::lserk4(dlong Nelements, dlong NhaloElements,
                int Np, int Nfields, solver_t& _solver):
   timeStepper_t(Nelements, NhaloElements, Np, Nfields, _solver) {
 
+  platform_t &platform = solver.platform;
+  occa::device &device = platform.device;
+
   Nrk = 5;
 
   o_resq = device.malloc(N*sizeof(dfloat));
   o_rhsq = device.malloc(N*sizeof(dfloat));
 
-  occa::properties kernelInfo = props; //copy base occa properties from solver
+  occa::properties kernelInfo = platform.props; //copy base occa properties from solver
 
   kernelInfo["defines/" "p_blockSize"] = BLOCKSIZE;
 
-  updateKernel = buildKernel(device, LIBP_DIR "/core/okl/"
+  updateKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
                                     "timeStepperLSERK4.okl",
                                     "lserk4Update",
-                                    kernelInfo, comm);
+                                    kernelInfo);
 
   // initialize LSERK4 time stepping coefficients
   dfloat _rka[5] = {0.0,
@@ -76,12 +79,15 @@ lserk4::lserk4(dlong Nelements, dlong NhaloElements,
 
 void lserk4::Run(occa::memory &o_q, dfloat start, dfloat end) {
 
+  platform_t &platform = solver.platform;
+  occa::device &device = platform.device;
+
   dfloat time = start;
 
   solver.Report(time,0);
 
   dfloat outputInterval;
-  settings.getSetting("OUTPUT INTERVAL", outputInterval);
+  solver.settings.getSetting("OUTPUT INTERVAL", outputInterval);
 
   dfloat outputTime = time + outputInterval;
 
@@ -161,6 +167,9 @@ lserk4_pml::lserk4_pml(dlong _Nelements, dlong _NpmlElements, dlong _NhaloElemen
   Npml(_Npmlfields*_Np*_NpmlElements) {
 
   if (Npml) {
+    platform_t &platform = solver.platform;
+    occa::device &device = platform.device;
+
     dfloat *pmlq = (dfloat *) calloc(Npml,sizeof(dfloat));
     o_pmlq   = device.malloc(Npml*sizeof(dfloat), pmlq);
     free(pmlq);

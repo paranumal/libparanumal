@@ -32,8 +32,7 @@ elliptic_t* elliptic_t::SetupRingPatch(mesh_t& meshPatch){
   //just reuse the current solver if there are no neighbors
   if (mesh.size == 1) return this;
 
-  elliptic_t* elliptic = new elliptic_t(meshPatch, linAlg,
-                                        settings, lambda);
+  elliptic_t* elliptic = new elliptic_t(platform, meshPatch, settings, lambda);
 
   //shallow copy
   elliptic->Nfields = Nfields;

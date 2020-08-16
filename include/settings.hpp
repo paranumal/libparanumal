@@ -82,11 +82,11 @@ private:
   vector<string> insertOrder;
 
 public:
-  MPI_Comm& comm;
+  const MPI_Comm comm;
   std::map<string, setting_t*> settings;
 
   settings_t() = delete;
-  settings_t(MPI_Comm& _comm);
+  settings_t(MPI_Comm _comm);
 
   ~settings_t();
 

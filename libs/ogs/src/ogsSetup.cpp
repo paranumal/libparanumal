@@ -70,13 +70,15 @@ static int compareLocalId(const void *a, const void *b){
 void setupRowBlocks(ogsData_t &A, occa::device &device);
 
 ogs_t *ogs_t::Setup(dlong N, hlong *ids, MPI_Comm &comm,
-                    int verbose, occa::device &device){
+                    int verbose, platform_t& platform){
 
-  ogs_t *ogs = new ogs_t(comm, device);
+  ogs_t *ogs = new ogs_t(platform, comm);
+
+  occa::device &device = platform.device;
 
   //Keep track of how many gs handles we've created, and
   // build kernels if this is the first
-  if (!ogs::Nrefs) ogs::initKernels(comm, device);
+  if (!ogs::Nrefs) ogs::initKernels(platform);
   ogs::Nrefs++;
 
   ogs->N = N;

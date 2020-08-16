@@ -38,7 +38,7 @@ JacobiPrecon::JacobiPrecon(elliptic_t& _elliptic):
   for (dlong n=0;n<mesh.Np*mesh.Nelements;n++)
     invDiagA[n] = 1.0/diagA[n];
 
-  o_invDiagA = elliptic.device.malloc(mesh.Np*mesh.Nelements*sizeof(dfloat), invDiagA);
+  o_invDiagA = elliptic.platform.device.malloc(mesh.Np*mesh.Nelements*sizeof(dfloat), invDiagA);
 
   free(diagA);
   free(invDiagA);

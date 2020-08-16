@@ -24,9 +24,9 @@ SOFTWARE.
 
 */
 
-#include "core.hpp"
+#include "platform.hpp"
 
-occaSettings_t::occaSettings_t(MPI_Comm& _comm):
+platformSettings_t::platformSettings_t(MPI_Comm _comm):
   settings_t(_comm) {
 
   //settings format
@@ -49,7 +49,7 @@ occaSettings_t::occaSettings_t(MPI_Comm& _comm):
              "Parallel device number");
 }
 
-void occaSettings_t::report() {
+void platformSettings_t::report() {
 
   int rank;
   MPI_Comm_rank(comm, &rank);
@@ -63,7 +63,7 @@ void occaSettings_t::report() {
       reportSetting("PLATFORM NUMBER");
 
     int size;
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    MPI_Comm_size(comm, &size);
     if ((size==1)
         &&(compareSetting("THREAD MODEL","CUDA")
         ||compareSetting("THREAD MODEL","HIP")

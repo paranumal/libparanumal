@@ -34,6 +34,9 @@ ssbdf3::ssbdf3(dlong Nelements, dlong NhaloElements,
                  int Np, int Nfields, solver_t& _solver):
   timeStepper_t(Nelements, NhaloElements, Np, Nfields, _solver) {
 
+  platform_t &platform = solver.platform;
+  occa::device &device = platform.device;
+
   Nstages = 3;
   shiftIndex = 0;
 
@@ -41,15 +44,15 @@ ssbdf3::ssbdf3(dlong Nelements, dlong NhaloElements,
   o_qhat = device.malloc(Nstages*N*sizeof(dfloat)); //F(q) history (explicit part)
   o_rhs  = device.malloc(N*sizeof(dfloat)); //rhs storage
 
-  occa::properties kernelInfo = props; //copy base occa properties from solver
+  occa::properties kernelInfo = platform.props; //copy base occa properties from solver
 
   kernelInfo["defines/" "p_blockSize"] = BLOCKSIZE;
   kernelInfo["defines/" "p_Nstages"] = Nstages;
 
-  rhsKernel = buildKernel(device, LIBP_DIR "/core/okl/"
+  rhsKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
                                     "timeStepperSSBDF.okl",
                                     "ssbdfRHS",
-                                    kernelInfo, comm);
+                                    kernelInfo);
 
   // initialize BDF time stepping coefficients
   dfloat _b[Nstages*(Nstages+1)] = {
@@ -74,7 +77,7 @@ void ssbdf3::Run(occa::memory &o_q, dfloat start, dfloat end) {
   solver.Report(time,0);
 
   dfloat outputInterval;
-  settings.getSetting("OUTPUT INTERVAL", outputInterval);
+  solver.settings.getSetting("OUTPUT INTERVAL", outputInterval);
 
   dfloat outputTime = time + outputInterval;
 

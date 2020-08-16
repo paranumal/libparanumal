@@ -51,7 +51,7 @@ SOFTWARE.
 
 namespace parAlmond {
 
-solver_t *Init(occa::device device, MPI_Comm comm, settings_t& settings);
+solver_t *Init(platform_t& _platform, settings_t& _settings, MPI_Comm _comm);
 
 void AMGSetup(solver_t* M,
              parCOO& A,

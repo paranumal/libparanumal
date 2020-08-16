@@ -51,12 +51,14 @@ public:
 
 class mesh_t {
 public:
+  platform_t& platform;
   occa::device& device;
-  MPI_Comm& comm;
   meshSettings_t& settings;
-  occa::properties& props;
 
-  int rank, size; // MPI rank and size (process count)
+  occa::properties props;
+
+  MPI_Comm comm;
+  int rank, size;
 
   int dim;
   int Nverts, Nfaces, NfaceVertices;
@@ -266,14 +268,14 @@ public:
 
 
   mesh_t() = delete;
-  mesh_t(occa::device& device, MPI_Comm& comm,
-         meshSettings_t& settings, occa::properties& props);
+  mesh_t(platform_t& _platform, meshSettings_t& _settings,
+         MPI_Comm _comm);
 
   virtual ~mesh_t();
 
   // generic mesh setup
-  static mesh_t& Setup(occa::device& device, MPI_Comm& comm,
-                       meshSettings_t& settings, occa::properties& props);
+  static mesh_t& Setup(platform_t& _platform, meshSettings_t& _settings,
+                       MPI_Comm _comm);
 
   // box mesh
   virtual void SetupBox() = 0;

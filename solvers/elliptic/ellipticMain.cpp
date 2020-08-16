@@ -37,29 +37,24 @@ int main(int argc, char **argv){
     LIBP_ABORT(string("Usage: ./ellipticMain setupfile"));
 
   //create default settings
-  occaSettings_t occaSettings(comm);
+  platformSettings_t platformSettings(comm);
   meshSettings_t meshSettings(comm);
   ellipticSettings_t ellipticSettings(comm);
   ellipticAddRunSettings(ellipticSettings);
 
   //load settings from file
-  ellipticSettings.parseFromFile(occaSettings, meshSettings,
+  ellipticSettings.parseFromFile(platformSettings, meshSettings,
                                  argv[1]);
 
-  occaSettings.report();
+  // set up platform
+  platform_t platform(platformSettings);
+
+  platformSettings.report();
   meshSettings.report();
   ellipticSettings.report();
 
-  // set up occa device
-  occa::device device;
-  occa::properties props;
-  occaDeviceConfig(device, comm, occaSettings, props);
-
   // set up mesh
-  mesh_t& mesh = mesh_t::Setup(device, comm, meshSettings, props);
-
-  // set up linear algebra module
-  linAlg_t& linAlg = linAlg_t::Setup(device, props);
+  mesh_t& mesh = mesh_t::Setup(platform, meshSettings, comm);
 
   dfloat lambda = 0.0;
   ellipticSettings.getSetting("LAMBDA", lambda);
@@ -69,17 +64,11 @@ int main(int argc, char **argv){
   int BCType[NBCTypes] = {0,1,2};
 
   // set up elliptic solver
-  elliptic_t& elliptic = elliptic_t::Setup(mesh, linAlg, ellipticSettings,
+  elliptic_t& elliptic = elliptic_t::Setup(platform, mesh, ellipticSettings,
                                            lambda, NBCTypes, BCType);
 
   // run
   elliptic.Run();
-
-  // clean up
-  delete &elliptic;
-  delete &linAlg;
-  delete &mesh;
-  device.free();
 
   // close down MPI
   MPI_Finalize();

@@ -24,14 +24,8 @@ SOFTWARE.
 
 */
 
-#include <unistd.h>
-#include <mpi.h>
-#include "occa.hpp"
-#include "types.h"
-#include "utils.hpp"
-#include "core.hpp"
-#include "settings.hpp"
-#include "omp.h"
+#include "platform.hpp"
+// #include "omp.h"
 
 //hack the hook to ask OCCA to return a device count
 namespace occa {
@@ -71,111 +65,109 @@ namespace occa {
 #endif
 }
 
-void occaDeviceConfig(occa::device &device, MPI_Comm comm,
-                      settings_t& settings, occa::properties& props){
+// OCCA build stuff
+void platform_t::DeviceConfig(){
 
-  // OCCA build stuff
-  int rank, size;
-  MPI_Comm_rank(comm, &rank);
-  MPI_Comm_size(comm, &size);
-
-  char deviceConfig[BUFSIZ];
-
-  char hostname[1024];
-  hostname[1023] = '\0';
-  gethostname(hostname, 1023);
-  long int hostId = gethostid();
-
-  long int* hostIds = (long int*) calloc(size,sizeof(long int));
-  MPI_Allgather(&hostId,1,MPI_LONG,hostIds,1,MPI_LONG,comm);
-
-  int device_id = 0;
-  int totalDevices = 0;
-  for (int r=0;r<rank;r++) {
-    if (hostIds[r]==hostId) device_id++;
-  }
-  for (int r=0;r<size;r++) {
-    if (hostIds[r]==hostId) totalDevices++;
-  }
+  int plat=0;
+  int device_id=0;
 
   //for testing a single device, run with 1 rank and specify DEVICE NUMBER
-  if (size==1) settings.getSetting("DEVICE NUMBER",device_id);
+  if (size==1) {
+    settings.getSetting("DEVICE NUMBER",device_id);
+  } else {
+    //find out how many ranks and devices are on this system
+    char* hostnames = (char *) malloc(size*sizeof(char)*MPI_MAX_PROCESSOR_NAME);
+    char* hostname = hostnames+rank*MPI_MAX_PROCESSOR_NAME;
 
-  //check for over-subscribing devices
-  if(settings.compareSetting("THREAD MODEL", "CUDA")){
+    int namelen;
+    MPI_Get_processor_name(hostname,&namelen);
+
+    MPI_Allgather(hostname , MPI_MAX_PROCESSOR_NAME, MPI_CHAR,
+                  hostnames, MPI_MAX_PROCESSOR_NAME, MPI_CHAR, MPI_COMM_WORLD);
+
+    int localRank = 0;
+    int localSize = 0;
+    for (int n=0; n<rank; n++){
+      if (!strcmp(hostname, hostnames+n*MPI_MAX_PROCESSOR_NAME)) localRank++;
+    }
+    for (int n=0; n<size; n++){
+      if (!strcmp(hostname, hostnames+n*MPI_MAX_PROCESSOR_NAME)) localSize++;
+    }
+
+    device_id = localRank;
+
+    //check for over-subscribing devices
+    if(settings.compareSetting("THREAD MODEL", "CUDA")){
 #if OCCA_CUDA_ENABLED
-    int deviceCount = occa::cuda::getDeviceCount();
-    if (device_id>=deviceCount) {
-      stringstream ss;
-      ss << "Rank " << rank << " oversubscribing CUDA device " << device_id%deviceCount << " on node \"" << hostname<< "\"";
-      LIBP_WARNING(ss.str());
-      device_id = device_id%deviceCount;
-    }
+      int deviceCount = occa::cuda::getDeviceCount();
+      if (deviceCount>0 && localRank>=deviceCount) {
+        stringstream ss;
+        ss << "Rank " << rank << " oversubscribing CUDA device " << device_id%deviceCount << " on node \"" << hostname<< "\"";
+        LIBP_WARNING(ss.str());
+        device_id = device_id%deviceCount;
+      }
 #endif
-  }
-  else if(settings.compareSetting("THREAD MODEL", "HIP")){
+    }
+    else if(settings.compareSetting("THREAD MODEL", "HIP")){
 #if OCCA_HIP_ENABLED
-    int deviceCount = occa::hip::getDeviceCount();
-    if (device_id>=deviceCount) {
-      stringstream ss;
-      ss << "Rank " << rank << " oversubscribing HIP device " << device_id%deviceCount << " on node \"" << hostname<< "\"";
-      LIBP_WARNING(ss.str());
-      device_id = device_id%deviceCount;
-    }
+      int deviceCount = occa::hip::getDeviceCount();
+      if (deviceCount>0 && localRank>=deviceCount) {
+        stringstream ss;
+        ss << "Rank " << rank << " oversubscribing HIP device " << device_id%deviceCount << " on node \"" << hostname<< "\"";
+        LIBP_WARNING(ss.str());
+        device_id = device_id%deviceCount;
+      }
 #endif
-
-  }
-  else if(settings.compareSetting("THREAD MODEL", "OpenCL")){
+    }
+    else if(settings.compareSetting("THREAD MODEL", "OpenCL")){
 #if OCCA_OPENCL_ENABLED
-    int plat;
-    settings.getSetting("PLATFORM NUMBER", plat);
-    int deviceCount = occa::opencl::getDeviceCountInPlatform(plat);
-    if (device_id>=deviceCount) {
-      stringstream ss;
-      ss << "Rank " << rank << " oversubscribing OpenCL device " << device_id%deviceCount << " on node \"" << hostname<< "\"";
-      LIBP_WARNING(ss.str());
-      device_id = device_id%deviceCount;
-    }
+      settings.getSetting("PLATFORM NUMBER", plat);
+      int deviceCount = occa::opencl::getDeviceCountInPlatform(plat);
+      if (deviceCount>0 && localRank>=deviceCount) {
+        stringstream ss;
+        ss << "Rank " << rank << " oversubscribing OpenCL device " << device_id%deviceCount << " on node \"" << hostname<< "\"";
+        LIBP_WARNING(ss.str());
+        device_id = device_id%deviceCount;
+      }
 #endif
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    free(hostnames);
   }
 
   // read thread model/device/platform from settings
+  std::string mode;
+
   if(settings.compareSetting("THREAD MODEL", "CUDA")){
-    sprintf(deviceConfig, "mode: 'CUDA', device_id: %d", device_id);
+    mode = "mode: 'CUDA', device_id: " + std::to_string(device_id);
   }
   else if(settings.compareSetting("THREAD MODEL", "HIP")){
-    sprintf(deviceConfig, "mode: 'HIP', device_id: %d", device_id);
+    mode = "mode: 'HIP', device_id: " + std::to_string(device_id);
   }
   else if(settings.compareSetting("THREAD MODEL", "OpenCL")){
-    int plat;
-    settings.getSetting("PLATFORM NUMBER", plat);
-    sprintf(deviceConfig, "mode: 'OpenCL', device_id: %d, platform_id: %d", device_id, plat);
+    mode = "mode: 'OpenCL', platform_id : " + std::to_string(plat)
+                          + ", device_id: " + std::to_string(device_id);
   }
   else if(settings.compareSetting("THREAD MODEL", "OpenMP")){
-    sprintf(deviceConfig, "mode: 'OpenMP' ");
+    mode = "mode: 'OpenMP'";
   }
   else{
-    sprintf(deviceConfig, "mode: 'Serial' ");
+    mode = "mode: 'Serial'";
   }
 
   //set number of omp threads to use
-  int Ncores = sysconf(_SC_NPROCESSORS_ONLN);
-  int Nthreads = Ncores/totalDevices;
-
-  //  Nthreads = mymax(1,Nthreads/2);
-  Nthreads = mymax(1,Nthreads/2);
-  omp_set_num_threads(Nthreads);
+  //int Ncores = sysconf(_SC_NPROCESSORS_ONLN);
+  //int Nthreads = Ncores/localSize;
+  // Nthreads = mymax(1,Nthreads/2);
+  // omp_set_num_threads(Nthreads);
 
   // if (settings.compareSetting("VERBOSE","TRUE"))
   //   printf("Rank %d: Ncores = %d, Nthreads = %d, device_id = %d \n", rank, Ncores, Nthreads, device_id);
 
-  //  mesh->device.setup( (std::string) deviceConfig); // deviceProps);
-  device.setup( (std::string)deviceConfig);
+  device.setup(mode);
 
 #ifdef USE_OCCA_MEM_BYTE_ALIGN
   // change OCCA MEM BYTE ALIGNMENT
   occa::env::OCCA_MEM_BYTE_ALIGN = USE_OCCA_MEM_BYTE_ALIGN;
 #endif
-
-  occaDeviceProperties(device, props);
 }

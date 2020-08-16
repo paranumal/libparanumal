@@ -48,7 +48,7 @@ extern int Nrefs;
 
 extern occa::stream dataStream;
 
-void initKernels(MPI_Comm& comm, occa::device& device);
+void initKernels(platform_t& platform);
 
 void freeKernels();
 

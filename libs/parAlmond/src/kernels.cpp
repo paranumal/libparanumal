@@ -55,7 +55,7 @@ occa::kernel kcycleWeightedCombinedOp2Kernel;
 occa::kernel vectorAddInnerProdKernel;
 occa::kernel vectorAddWeightedInnerProdKernel;
 
-void buildParAlmondKernels(MPI_Comm comm, occa::device device){
+void buildParAlmondKernels(MPI_Comm comm, platform_t& platform){
 
   int rank, size;
   MPI_Comm_rank(comm, &rank);
@@ -64,69 +64,37 @@ void buildParAlmondKernels(MPI_Comm comm, occa::device device){
   double seed = (double) rank;
   srand48(seed);
 
-  occa::properties kernelInfo;
-  kernelInfo["defines"].asObject();
-  kernelInfo["includes"].asArray();
-  kernelInfo["header"].asArray();
-  kernelInfo["flags"].asObject();
-
-  if(sizeof(dlong)==4){
-    kernelInfo["defines/" "dlong"]="int";
-  }
-  if(sizeof(dlong)==8){
-    kernelInfo["defines/" "dlong"]="long long int";
-  }
-
-  if(sizeof(dfloat) == sizeof(double)){
-    kernelInfo["defines/" "dfloat"]= "double";
-    kernelInfo["defines/" "dfloat4"]= "double4";
-  }
-  else if(sizeof(dfloat) == sizeof(float)){
-    kernelInfo["defines/" "dfloat"]= "float";
-    kernelInfo["defines/" "dfloat4"]= "float4";
-  }
+  occa::properties kernelInfo = platform.props;
 
   kernelInfo["defines/" "p_BLOCKSIZE"]= BLOCKSIZE;
 
-  if(device.mode()=="OpenCL"){
-    //kernelInfo["compiler_flags"] += "-cl-opt-disable";
-  }
-
-  if(device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
-    kernelInfo["compiler_flags"] += " --ftz=true";
-    kernelInfo["compiler_flags"] += " --prec-div=false";
-    kernelInfo["compiler_flags"] += " --prec-sqrt=false";
-    kernelInfo["compiler_flags"] += " --use_fast_math";
-    kernelInfo["compiler_flags"] += " --fmad=true"; // compiler option for cuda
-  }
-
   if (rank==0) {printf("Compiling parALMOND Kernels...");fflush(stdout);}
 
-  SpMVcsrKernel1  = buildKernel(device, DPARALMOND"/okl/SpMVcsr.okl",  "SpMVcsr1",  kernelInfo, comm);
-  SpMVcsrKernel2  = buildKernel(device, DPARALMOND"/okl/SpMVcsr.okl",  "SpMVcsr2",  kernelInfo, comm);
-  SpMVellKernel1  = buildKernel(device, DPARALMOND"/okl/SpMVell.okl",  "SpMVell1",  kernelInfo, comm);
-  SpMVellKernel2  = buildKernel(device, DPARALMOND"/okl/SpMVell.okl",  "SpMVell2",  kernelInfo, comm);
-  SpMVmcsrKernel1 = buildKernel(device, DPARALMOND"/okl/SpMVmcsr.okl", "SpMVmcsr1", kernelInfo, comm);
-  SpMVmcsrKernel2 = buildKernel(device, DPARALMOND"/okl/SpMVmcsr.okl", "SpMVmcsr2", kernelInfo, comm);
+  SpMVcsrKernel1  = platform.buildKernel(DPARALMOND"/okl/SpMVcsr.okl",  "SpMVcsr1",  kernelInfo);
+  SpMVcsrKernel2  = platform.buildKernel(DPARALMOND"/okl/SpMVcsr.okl",  "SpMVcsr2",  kernelInfo);
+  SpMVellKernel1  = platform.buildKernel(DPARALMOND"/okl/SpMVell.okl",  "SpMVell1",  kernelInfo);
+  SpMVellKernel2  = platform.buildKernel(DPARALMOND"/okl/SpMVell.okl",  "SpMVell2",  kernelInfo);
+  SpMVmcsrKernel1 = platform.buildKernel(DPARALMOND"/okl/SpMVmcsr.okl", "SpMVmcsr1", kernelInfo);
+  SpMVmcsrKernel2 = platform.buildKernel(DPARALMOND"/okl/SpMVmcsr.okl", "SpMVmcsr2", kernelInfo);
 
-  vectorSetKernel = buildKernel(device, DPARALMOND"/okl/vectorSet.okl", "vectorSet", kernelInfo, comm);
-  vectorScaleKernel = buildKernel(device, DPARALMOND"/okl/vectorScale.okl", "vectorScale", kernelInfo, comm);
-  vectorAddScalarKernel = buildKernel(device, DPARALMOND"/okl/vectorAddScalar.okl", "vectorAddScalar", kernelInfo, comm);
-  vectorAddKernel1 = buildKernel(device, DPARALMOND"/okl/vectorAdd.okl", "vectorAdd1", kernelInfo, comm);
-  vectorAddKernel2 = buildKernel(device, DPARALMOND"/okl/vectorAdd.okl", "vectorAdd2", kernelInfo, comm);
-  vectorDotStarKernel1 = buildKernel(device, DPARALMOND"/okl/vectorDotStar.okl", "vectorDotStar1", kernelInfo, comm);
-  vectorDotStarKernel2 = buildKernel(device, DPARALMOND"/okl/vectorDotStar.okl", "vectorDotStar2", kernelInfo, comm);
-  vectorInnerProdKernel = buildKernel(device, DPARALMOND"/okl/vectorInnerProd.okl", "vectorInnerProd", kernelInfo, comm);
+  vectorSetKernel = platform.buildKernel(DPARALMOND"/okl/vectorSet.okl", "vectorSet", kernelInfo);
+  vectorScaleKernel = platform.buildKernel(DPARALMOND"/okl/vectorScale.okl", "vectorScale", kernelInfo);
+  vectorAddScalarKernel = platform.buildKernel(DPARALMOND"/okl/vectorAddScalar.okl", "vectorAddScalar", kernelInfo);
+  vectorAddKernel1 = platform.buildKernel(DPARALMOND"/okl/vectorAdd.okl", "vectorAdd1", kernelInfo);
+  vectorAddKernel2 = platform.buildKernel(DPARALMOND"/okl/vectorAdd.okl", "vectorAdd2", kernelInfo);
+  vectorDotStarKernel1 = platform.buildKernel(DPARALMOND"/okl/vectorDotStar.okl", "vectorDotStar1", kernelInfo);
+  vectorDotStarKernel2 = platform.buildKernel(DPARALMOND"/okl/vectorDotStar.okl", "vectorDotStar2", kernelInfo);
+  vectorInnerProdKernel = platform.buildKernel(DPARALMOND"/okl/vectorInnerProd.okl", "vectorInnerProd", kernelInfo);
 
-  vectorAddInnerProdKernel = buildKernel(device, DPARALMOND"/okl/vectorAddInnerProd.okl", "vectorAddInnerProd", kernelInfo, comm);
-  vectorAddWeightedInnerProdKernel = buildKernel(device, DPARALMOND"/okl/vectorAddInnerProd.okl", "vectorAddWeightedInnerProd", kernelInfo, comm);
+  vectorAddInnerProdKernel = platform.buildKernel(DPARALMOND"/okl/vectorAddInnerProd.okl", "vectorAddInnerProd", kernelInfo);
+  vectorAddWeightedInnerProdKernel = platform.buildKernel(DPARALMOND"/okl/vectorAddInnerProd.okl", "vectorAddWeightedInnerProd", kernelInfo);
 
-  kcycleCombinedOp1Kernel = buildKernel(device, DPARALMOND"/okl/kcycleCombinedOp.okl", "kcycleCombinedOp1", kernelInfo, comm);
-  kcycleCombinedOp2Kernel = buildKernel(device, DPARALMOND"/okl/kcycleCombinedOp.okl", "kcycleCombinedOp2", kernelInfo, comm);
-  kcycleWeightedCombinedOp1Kernel = buildKernel(device, DPARALMOND"/okl/kcycleCombinedOp.okl", "kcycleWeightedCombinedOp1", kernelInfo, comm);
-  kcycleWeightedCombinedOp2Kernel = buildKernel(device, DPARALMOND"/okl/kcycleCombinedOp.okl", "kcycleWeightedCombinedOp2", kernelInfo, comm);
+  kcycleCombinedOp1Kernel = platform.buildKernel(DPARALMOND"/okl/kcycleCombinedOp.okl", "kcycleCombinedOp1", kernelInfo);
+  kcycleCombinedOp2Kernel = platform.buildKernel(DPARALMOND"/okl/kcycleCombinedOp.okl", "kcycleCombinedOp2", kernelInfo);
+  kcycleWeightedCombinedOp1Kernel = platform.buildKernel(DPARALMOND"/okl/kcycleCombinedOp.okl", "kcycleWeightedCombinedOp1", kernelInfo);
+  kcycleWeightedCombinedOp2Kernel = platform.buildKernel(DPARALMOND"/okl/kcycleCombinedOp.okl", "kcycleWeightedCombinedOp2", kernelInfo);
 
-  haloExtractKernel = buildKernel(device, DPARALMOND"/okl/haloExtract.okl", "haloExtract", kernelInfo, comm);
+  haloExtractKernel = platform.buildKernel(DPARALMOND"/okl/haloExtract.okl", "haloExtract", kernelInfo);
 
   if(rank==0) printf("done.\n");
 }

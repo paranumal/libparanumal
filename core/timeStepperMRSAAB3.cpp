@@ -34,11 +34,14 @@ using std::complex;
 
 mrsaab3::mrsaab3(dlong _Nelements, dlong _NhaloElements,
              int _Np, int _Nfields,
-             dfloat *_lambda, solver_t& _solver):
+             dfloat *_lambda, solver_t& _solver, mesh_t& _mesh):
   timeStepper_t(_Nelements, _NhaloElements, _Np, _Nfields, _solver),
-  mesh(solver.mesh),
+  mesh(_mesh),
   Nlevels(mesh.mrNlevels),
   Nfields(_Nfields) {
+
+  platform_t &platform = solver.platform;
+  occa::device &device = platform.device;
 
   lambda = (dfloat *) malloc(Nfields*sizeof(dfloat));
   memcpy(lambda, _lambda, Nfields*sizeof(dfloat));
@@ -56,7 +59,7 @@ mrsaab3::mrsaab3(dlong _Nelements, dlong _NhaloElements,
   o_fQM = device.malloc((mesh.Nelements+mesh.totalHaloPairs)*mesh.Nfp
                           *mesh.Nfaces*Nfields*sizeof(dfloat));
 
-  occa::properties kernelInfo = props; //copy base occa properties from solver
+  occa::properties kernelInfo = platform.props; //copy base occa properties from solver
 
   kernelInfo["defines/" "p_blockSize"] = BLOCKSIZE;
   kernelInfo["defines/" "p_Nstages"] = Nstages;
@@ -67,14 +70,14 @@ mrsaab3::mrsaab3(dlong _Nelements, dlong _NhaloElements,
   int maxNodes = mymax(mesh.Np, mesh.Nfp*mesh.Nfaces);
   kernelInfo["defines/" "p_maxNodes"] = maxNodes;
 
-  updateKernel = buildKernel(device, LIBP_DIR "/core/okl/"
+  updateKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
                                     "timeStepperMRSAAB.okl",
                                     "mrsaabUpdate",
-                                    kernelInfo, comm);
-  traceUpdateKernel = buildKernel(device, LIBP_DIR "/core/okl/"
+                                    kernelInfo);
+  traceUpdateKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
                                     "timeStepperMRSAAB.okl",
                                     "mrsaabTraceUpdate",
-                                    kernelInfo, comm);
+                                    kernelInfo);
 
   saab_x = (dfloat*) calloc(Nlevels*Nfields, sizeof(dfloat));
   saab_a = (dfloat*) calloc(Nlevels*Nfields*Nstages*Nstages, sizeof(dfloat));
@@ -106,7 +109,7 @@ void mrsaab3::Run(occa::memory &o_q, dfloat start, dfloat end) {
   solver.Report(time,0);
 
   dfloat outputInterval;
-  settings.getSetting("OUTPUT INTERVAL", outputInterval);
+  solver.settings.getSetting("OUTPUT INTERVAL", outputInterval);
 
   dfloat outputTime = time + outputInterval;
 
@@ -349,12 +352,15 @@ mrsaab3::~mrsaab3() {
 
 mrsaab3_pml::mrsaab3_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
                          int Np, int _Nfields, int _Npmlfields,
-                         dfloat *_lambda, solver_t& _solver):
-  mrsaab3(Nelements, NhaloElements, Np, _Nfields, _lambda, _solver),
+                         dfloat *_lambda, solver_t& _solver, mesh_t& _mesh):
+  mrsaab3(Nelements, NhaloElements, Np, _Nfields, _lambda, _solver, _mesh),
   Npml(NpmlElements*Np*_Npmlfields),
   Npmlfields(_Npmlfields) {
 
   if (Npml) {
+    platform_t &platform = solver.platform;
+    occa::device &device = platform.device;
+
     dfloat *pmlq = (dfloat*) calloc(Npml, sizeof(dfloat));
     o_pmlq = device.malloc(Npml*sizeof(dfloat), pmlq);
     free(pmlq);
@@ -367,7 +373,7 @@ mrsaab3_pml::mrsaab3_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElement
     o_rhspmlq = device.malloc((Nstages-1)*Npml*sizeof(dfloat), rhspmlq);
     free(rhspmlq);
 
-    occa::properties kernelInfo = props; //copy base occa properties from solver
+    occa::properties kernelInfo = platform.props; //copy base occa properties from solver
 
     kernelInfo["defines/" "p_blockSize"] = BLOCKSIZE;
     kernelInfo["defines/" "p_Nstages"] = Nstages;
@@ -378,10 +384,10 @@ mrsaab3_pml::mrsaab3_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElement
     int maxNodes = mymax(mesh.Np, mesh.Nfp*mesh.Nfaces);
     kernelInfo["defines/" "p_maxNodes"] = maxNodes;
 
-    pmlUpdateKernel = buildKernel(device, LIBP_DIR "/core/okl/"
+    pmlUpdateKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
                                       "timeStepperMRSAAB.okl",
                                       "mrsaabPmlUpdate",
-                                      kernelInfo, comm);
+                                      kernelInfo);
 
     // initialize AB time stepping coefficients
     dfloat _ab_a[Nstages*Nstages] = {

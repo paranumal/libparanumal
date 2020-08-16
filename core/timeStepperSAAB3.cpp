@@ -41,6 +41,9 @@ saab3::saab3(dlong _Nelements, dlong _NhaloElements,
   Nelements(_Nelements),
   NhaloElements(_NhaloElements) {
 
+  platform_t &platform = solver.platform;
+  occa::device &device = platform.device;
+
   lambda = (dfloat *) malloc(Nfields*sizeof(dfloat));
   memcpy(lambda, _lambda, Nfields*sizeof(dfloat));
 
@@ -49,17 +52,17 @@ saab3::saab3(dlong _Nelements, dlong _NhaloElements,
 
   o_rhsq = device.malloc(Nstages*N*sizeof(dfloat));
 
-  occa::properties kernelInfo = props; //copy base occa properties from solver
+  occa::properties kernelInfo = platform.props; //copy base occa properties from solver
 
   kernelInfo["defines/" "p_blockSize"] = BLOCKSIZE;
   kernelInfo["defines/" "p_Nstages"] = Nstages;
   kernelInfo["defines/" "p_Np"]      = (int)Np;
   kernelInfo["defines/" "p_Nfields"] = (int)Nfields;
 
-  updateKernel = buildKernel(device, LIBP_DIR "/core/okl/"
+  updateKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
                                     "timeStepperSAAB.okl",
                                     "saabUpdate",
-                                    kernelInfo, comm);
+                                    kernelInfo);
 
   saab_x = (dfloat*) malloc(Nfields*sizeof(dfloat));
   o_saab_x = device.malloc(Nfields*sizeof(dfloat));
@@ -75,7 +78,7 @@ void saab3::Run(occa::memory &o_q, dfloat start, dfloat end) {
   solver.Report(time,0);
 
   dfloat outputInterval;
-  settings.getSetting("OUTPUT INTERVAL", outputInterval);
+  solver.settings.getSetting("OUTPUT INTERVAL", outputInterval);
 
   dfloat outputTime = time + outputInterval;
 
@@ -220,23 +223,26 @@ saab3_pml::saab3_pml(dlong _Nelements, dlong _NpmlElements, dlong _NhaloElements
   Npml(Npmlfields*_Np*_NpmlElements) {
 
   if (Npml) {
+    platform_t &platform = solver.platform;
+    occa::device &device = platform.device;
+
     dfloat *pmlq = (dfloat *) calloc(Npml,sizeof(dfloat));
     o_pmlq   = device.malloc(Npml*sizeof(dfloat), pmlq);
     free(pmlq);
 
     o_rhspmlq = device.malloc(Nstages*Npml*sizeof(dfloat));
 
-    occa::properties kernelInfo = props; //copy base occa properties from solver
+    occa::properties kernelInfo = platform.props; //copy base occa properties from solver
 
     kernelInfo["defines/" "p_blockSize"] = BLOCKSIZE;
     kernelInfo["defines/" "p_Nstages"] = Nstages;
     kernelInfo["defines/" "p_Np"]      = (int)Np;
     kernelInfo["defines/" "p_Nfields"] = (int)Nfields;
 
-    pmlUpdateKernel = buildKernel(device, LIBP_DIR "/core/okl/"
+    pmlUpdateKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
                                       "timeStepperSAAB.okl",
                                       "saabPmlUpdate",
-                                      kernelInfo, comm);
+                                      kernelInfo);
 
     // initialize AB time stepping coefficients
     dfloat _ab_a[Nstages*Nstages] = {

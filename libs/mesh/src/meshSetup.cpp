@@ -28,8 +28,8 @@ SOFTWARE.
 #include "mesh2D.hpp"
 #include "mesh3D.hpp"
 
-mesh_t& mesh_t::Setup(occa::device& device, MPI_Comm& comm,
-                      meshSettings_t& settings, occa::properties& props){
+mesh_t& mesh_t::Setup(platform_t& platform, meshSettings_t& settings,
+                      MPI_Comm comm){
 
   string fileName;
   int N, dim, elementType;
@@ -43,21 +43,21 @@ mesh_t& mesh_t::Setup(occa::device& device, MPI_Comm& comm,
   switch(elementType){
   case TRIANGLES:
     if(dim==2)
-      mesh = new meshTri2D(device, comm, settings, props);
+      mesh = new meshTri2D(platform, settings, comm);
     else
-      mesh = new meshTri3D(device, comm, settings, props);
+      mesh = new meshTri3D(platform, settings, comm);
     break;
   case QUADRILATERALS:
     if(dim==2)
-      mesh = new meshQuad2D(device, comm, settings, props);
+      mesh = new meshQuad2D(platform, settings, comm);
     else
-      mesh = new meshQuad3D(device, comm, settings, props);
+      mesh = new meshQuad3D(platform, settings, comm);
     break;
   case TETRAHEDRA:
-    mesh = new meshTet3D(device, comm, settings, props);
+    mesh = new meshTet3D(platform, settings, comm);
     break;
   case HEXAHEDRA:
-    mesh = new meshHex3D(device, comm, settings, props);
+    mesh = new meshHex3D(platform, settings, comm);
     break;
   }
 

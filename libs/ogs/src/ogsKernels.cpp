@@ -59,16 +59,13 @@ namespace ogs {
 OGS_FOR_EACH_TYPE(DEFINE_KERNELS)
 
 
-void initKernels(MPI_Comm& comm, occa::device& device) {
+void initKernels(platform_t& platform) {
 
-  int rank, size;
-  MPI_Comm_rank(comm, &rank);
-  MPI_Comm_size(comm, &size);
+  int rank = platform.rank;
 
-  dataStream = device.createStream();
+  dataStream = platform.device.createStream();
 
-  occa::properties kernelInfo;
-  occaDeviceProperties(device, kernelInfo);
+  occa::properties kernelInfo = platform.props;
 
   kernelInfo["defines/p_blockSize"] = blockSize;
   kernelInfo["defines/p_gatherNodesPerBlock"] = gatherNodesPerBlock;
@@ -88,22 +85,19 @@ typedef int64_t long_long;
   if (rank==0) {printf("Compiling GatherScatter Kernels...");fflush(stdout);}
 
 #define DEFINE_GATHERSCATTER_BUILD(T,OP)                                           \
-  gatherScatterKernel_##T##_##OP = buildKernel(device,                             \
-                                             DOGS "/okl/gatherScatter.okl",        \
+  gatherScatterKernel_##T##_##OP = platform.buildKernel(DOGS "/okl/gatherScatter.okl",\
                                              "gatherScatter_" STR(T) "_" STR(OP),  \
-                                             kernelInfo, comm);                    \
+                                             kernelInfo);                          \
 
 #define DEFINE_GATHER_BUILD(T,OP)                                                  \
-  gatherKernel_##T##_##OP = buildKernel(device,                                    \
-                                             DOGS "/okl/gatherScatter.okl",        \
+  gatherKernel_##T##_##OP = platform.buildKernel(DOGS "/okl/gatherScatter.okl",    \
                                              "gather_" STR(T) "_" STR(OP),         \
-                                             kernelInfo, comm);                    \
+                                             kernelInfo);                          \
 
 #define DEFINE_SCATTER_BUILD(T)                                                    \
-  scatterKernel_##T      = buildKernel(device,                                     \
-                                             DOGS "/okl/gatherScatter.okl",        \
+  scatterKernel_##T      = platform.buildKernel(DOGS "/okl/gatherScatter.okl",     \
                                              "scatter_" STR(T),                    \
-                                             kernelInfo, comm);                    \
+                                             kernelInfo);                          \
 
 #define DEFINE_BUILD(T)                         \
   OGS_FOR_EACH_OP(T,DEFINE_GATHERSCATTER_BUILD) \

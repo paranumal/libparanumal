@@ -29,7 +29,7 @@ SOFTWARE.
 
 namespace parAlmond {
 
-  void buildParAlmondKernels(MPI_Comm comm, occa::device device);
+  void buildParAlmondKernels(MPI_Comm comm, platform_t& platform);
 
   void freeParAlmondKernels();
 

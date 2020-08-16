@@ -24,13 +24,10 @@ SOFTWARE.
 
 */
 
-#include "utils.hpp"
+#include "platform.hpp"
 
-occa::kernel buildKernel(occa::device& device, std::string fileName, std::string kernelName,
-                         occa::properties& kernelInfo, MPI_Comm& comm){
-
-  int rank;
-  MPI_Comm_rank(comm, &rank);
+occa::kernel platform_t::buildKernel(std::string fileName, std::string kernelName,
+                                     occa::properties& kernelInfo){
 
   occa::kernel kernel;
 

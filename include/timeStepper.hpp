@@ -30,8 +30,9 @@ SOFTWARE.
 #include <occa.hpp>
 #include "types.h"
 #include "utils.hpp"
-#include "solver.hpp"
 #include "settings.hpp"
+#include "solver.hpp"
+#include "mesh.hpp"
 
 namespace TimeStepper {
 
@@ -43,22 +44,13 @@ public:
 
   solver_t& solver;
 
-  MPI_Comm& comm;
-  occa::device& device;
-  settings_t& settings;
-  occa::properties& props;
-
   dfloat dt;
 
   timeStepper_t(dlong Nelements, dlong NhaloElements,
                  int Np, int Nfields, solver_t& _solver):
     N(Nelements*Np*Nfields),
     Nhalo(NhaloElements*Np*Nfields),
-    solver(_solver),
-    comm(_solver.comm),
-    device(_solver.device),
-    settings(_solver.settings),
-    props(_solver.props) {}
+    solver(_solver) {}
 
   virtual ~timeStepper_t() {};
   virtual void Run(occa::memory& o_q, dfloat start, dfloat end)=0;
@@ -417,7 +409,7 @@ protected:
 public:
   mrab3(dlong _Nelements, dlong _NhaloElements,
          int _Np, int _Nfields,
-         solver_t& _solver);
+         solver_t& _solver, mesh_t& _mesh);
   ~mrab3();
 
   void Run(occa::memory& o_q, dfloat start, dfloat end);
@@ -456,7 +448,7 @@ public:
   mrsaab3(dlong _Nelements, dlong _NhaloElements,
          int _Np, int _Nfields,
          dfloat *_lambda,
-         solver_t& _solver);
+         solver_t& _solver, mesh_t& _mesh);
   ~mrsaab3();
 
   void Init();
@@ -631,7 +623,7 @@ private:
 
 public:
   mrab3_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
-            int Np, int Nfields, int _Npmlfields, solver_t& solver);
+            int Np, int Nfields, int _Npmlfields, solver_t& solver, mesh_t& _mesh);
   ~mrab3_pml();
 };
 
@@ -655,7 +647,7 @@ private:
 public:
   mrsaab3_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
             int Np, int Nfields, int _Npmlfields,
-            dfloat *_lambda, solver_t& solver);
+            dfloat *_lambda, solver_t& solver, mesh_t& _mesh);
   ~mrsaab3_pml();
 };
 

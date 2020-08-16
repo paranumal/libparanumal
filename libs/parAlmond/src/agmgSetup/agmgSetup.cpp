@@ -67,7 +67,7 @@ void solver_t::AMGSetup(parCSR *A){
   }
 
   size_t requiredBytes = 3*levels[AMGstartLev]->Ncols*sizeof(dfloat);
-  allocateScratchSpace(requiredBytes, device);
+  allocateScratchSpace(requiredBytes, platform.device);
 
   for (int n=AMGstartLev;n<numLevels;n++) {
 
@@ -159,15 +159,16 @@ void allocateAgmgVectors(agmgLevel *level, int k, int AMGstartLev, CycleType cty
 
 void syncAgmgToDevice(agmgLevel *level, int k, int AMGstartLev, CycleType ctype) {
 
-  occa::device device = level->A->device;
+  platform_t &platform = level->A->platform;
+  occa::device device = platform.device;
 
   level->o_A = new parHYB(level->A);
-  level->o_A->syncToDevice();
+  level->o_A->syncToDevice(platform);
   if (k>AMGstartLev) {
     level->o_R = new parHYB(level->R);
     level->o_P = new parHYB(level->P);
-    level->o_R->syncToDevice();
-    level->o_P->syncToDevice();
+    level->o_R->syncToDevice(platform);
+    level->o_P->syncToDevice(platform);
   }
 
   if (level->x  ) level->o_x   = device.malloc(level->Ncols*sizeof(dfloat),level->x);

@@ -29,48 +29,36 @@ SOFTWARE.
 #include "mesh3D.hpp"
 
 //makeing a mesh object requires it to be bound to a device and communicator
-mesh_t::mesh_t(occa::device& device_, MPI_Comm& comm_,
-               meshSettings_t& settings_, occa::properties& props_):
-  device(device_),
-  comm(comm_),
-  settings(settings_),
-  props(props_)
-{
+mesh_t::mesh_t(platform_t& _platform, meshSettings_t& _settings, MPI_Comm _comm):
+  platform(_platform), device(platform.device), settings(_settings), comm(_comm) {
+  props = platform.props;
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
 }
 
-mesh2D::mesh2D(occa::device& device_, MPI_Comm& comm_,
-               meshSettings_t& settings_, occa::properties& props_):
-  mesh_t(device_, comm_, settings_, props_) {}
+mesh2D::mesh2D(platform_t& _platform, meshSettings_t& _settings, MPI_Comm _comm):
+  mesh_t(_platform, _settings, _comm) {}
 
-mesh3D::mesh3D(occa::device& device_, MPI_Comm& comm_,
-               meshSettings_t& settings_, occa::properties& props_):
-  mesh_t(device_, comm_, settings_, props_) {}
+mesh3D::mesh3D(platform_t& _platform, meshSettings_t& _settings, MPI_Comm _comm):
+  mesh_t(_platform, _settings, _comm) {}
 
-meshTri2D::meshTri2D(occa::device& device_, MPI_Comm& comm_,
-                     meshSettings_t& settings_, occa::properties& props_):
-  mesh2D(device_, comm_, settings_, props_) {}
+meshTri2D::meshTri2D(platform_t& _platform, meshSettings_t& _settings, MPI_Comm _comm):
+  mesh2D(_platform, _settings, _comm) {}
 
-meshQuad2D::meshQuad2D(occa::device& device_, MPI_Comm& comm_,
-                       meshSettings_t& settings_, occa::properties& props_):
-  mesh2D(device_, comm_, settings_, props_) {}
+meshQuad2D::meshQuad2D(platform_t& _platform, meshSettings_t& _settings, MPI_Comm _comm):
+  mesh2D(_platform, _settings, _comm) {}
 
-meshTri3D::meshTri3D(occa::device& device_, MPI_Comm& comm_,
-                     meshSettings_t& settings_, occa::properties& props_):
-  mesh3D(device_, comm_, settings_, props_) {}
+meshTri3D::meshTri3D(platform_t& _platform, meshSettings_t& _settings, MPI_Comm _comm):
+  mesh3D(_platform, _settings, _comm) {}
 
-meshQuad3D::meshQuad3D(occa::device& device_, MPI_Comm& comm_,
-                       meshSettings_t& settings_, occa::properties& props_):
-  mesh3D(device_, comm_, settings_, props_) {}
+meshQuad3D::meshQuad3D(platform_t& _platform, meshSettings_t& _settings, MPI_Comm _comm):
+  mesh3D(_platform, _settings, _comm) {}
 
-meshTet3D::meshTet3D(occa::device& device_, MPI_Comm& comm_,
-                     meshSettings_t& settings_, occa::properties& props_):
-  mesh3D(device_, comm_, settings_, props_) {}
+meshTet3D::meshTet3D(platform_t& _platform, meshSettings_t& _settings, MPI_Comm _comm):
+  mesh3D(_platform, _settings, _comm) {}
 
-meshHex3D::meshHex3D(occa::device& device_, MPI_Comm& comm_,
-                     meshSettings_t& settings_, occa::properties& props_):
-  mesh3D(device_, comm_, settings_, props_) {}
+meshHex3D::meshHex3D(platform_t& _platform, meshSettings_t& _settings, MPI_Comm _comm):
+  mesh3D(_platform, _settings, _comm) {}
 
 mesh_t::~mesh_t() {
   if (halo) halo->Free();

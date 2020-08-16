@@ -27,29 +27,18 @@ SOFTWARE.
 #ifndef SOLVER_HPP
 #define SOLVER_HPP
 
-#include "mesh.hpp"
-#include "linAlg.hpp"
+#include "platform.hpp"
 
 class solver_t {
 public:
-  mesh_t& mesh;
-
-  MPI_Comm& comm;
-  occa::device& device;
+  platform_t& platform;
   settings_t& settings;
-  occa::properties& props;
-  linAlg_t& linAlg;
 
   solver_t() = delete;
 
-  solver_t(mesh_t& _mesh, linAlg_t& _linAlg,
-           settings_t& _settings):
-    mesh(_mesh),
-    comm(_mesh.comm),
-    device(_mesh.device),
-    settings(_settings),
-    props(_mesh.props),
-    linAlg(_linAlg) {};
+  solver_t(platform_t& _platform, settings_t& _settings):
+    platform(_platform),
+    settings(_settings) {};
 
   virtual ~solver_t(){}
 

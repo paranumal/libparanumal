@@ -35,7 +35,7 @@ public:
   MPI_Comm comm;
   int rank, size;
 
-  occa::device device;
+  platform_t& platform;
   settings_t& settings;
 
   bool exact;
@@ -51,8 +51,7 @@ public:
 
   int ChebyshevIterations;
 
-  solver_t(occa::device otherdevice, MPI_Comm othercomm,
-                         settings_t& otherSettings);
+  solver_t(platform_t& _platform, settings_t& settings_, MPI_Comm comm_);
 
   ~solver_t();
 

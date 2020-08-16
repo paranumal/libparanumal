@@ -42,9 +42,9 @@ mesh_t* mesh_t::SetupSEMFEM(hlong **globalIds_, int *Nfp_, int **faceNodes_){
     pmesh = this; break;
   case TRIANGLES:
     if(dim==2)
-      pmesh = new meshTri2D(device, comm, settings, props);
+      pmesh = new meshTri2D(platform, settings, comm);
     else
-      pmesh = new meshTri3D(device, comm, settings, props);
+      pmesh = new meshTri3D(platform, settings, comm);
     break;
   }
 
@@ -143,29 +143,29 @@ mesh_t* mesh_t::SetupSEMFEM(hlong **globalIds_, int *Nfp_, int **faceNodes_){
   switch(elementType){
   case TRIANGLES:
     if(dim==2)
-      femMesh = new meshTri2D(device, comm, settings, props);
+      femMesh = new meshTri2D(platform, settings, comm);
     else
-      femMesh = new meshTri3D(device, comm, settings, props);
+      femMesh = new meshTri3D(platform, settings, comm);
     break;
   case QUADRILATERALS:
     if(dim==2)
-      femMesh = new meshQuad2D(device, comm, settings, props);
+      femMesh = new meshQuad2D(platform, settings, comm);
     else
-      femMesh = new meshQuad3D(device, comm, settings, props);
+      femMesh = new meshQuad3D(platform, settings, comm);
     NpFEM = Np;
     NelFEM = N*N;
     FEMEToV = (int*) malloc(NelFEM*Nverts*sizeof(int));
     SEMFEMEToVQuad2D(N, FEMEToV);
     break;
   case TETRAHEDRA:
-    femMesh = new meshTet3D(device, comm, settings, props);
+    femMesh = new meshTet3D(platform, settings, comm);
     NpFEM = Np;
     NelFEM = N*N*N;
     FEMEToV = (int*) malloc(NelFEM*Nverts*sizeof(int));
     SEMFEMEToVTet3D(N, FEMEToV);
     break;
   case HEXAHEDRA:
-    femMesh = new meshHex3D(device, comm, settings, props);
+    femMesh = new meshHex3D(platform, settings, comm);
     NpFEM = Np;
     NelFEM = N*N*N;
     FEMEToV = (int*) malloc(NelFEM*Nverts*sizeof(int));

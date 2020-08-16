@@ -190,7 +190,7 @@ MGLevel::MGLevel(elliptic_t& _elliptic, int k,
     }
 
     //build kernels
-    occa::properties kernelInfo = elliptic.props;
+    occa::properties kernelInfo = elliptic.platform.props;
 
     // set kernel name suffix
     char *suffix;
@@ -218,11 +218,11 @@ MGLevel::MGLevel(elliptic_t& _elliptic, int k,
 
     sprintf(fileName, DELLIPTIC "/okl/ellipticPreconCoarsen%s.okl", suffix);
     sprintf(kernelName, "ellipticPreconCoarsen%s", suffix);
-    coarsenKernel = buildKernel(mesh.device, fileName, kernelName, kernelInfo, mesh.comm);
+    coarsenKernel = elliptic.platform.buildKernel(fileName, kernelName, kernelInfo);
 
     sprintf(fileName, DELLIPTIC "/okl/ellipticPreconProlongate%s.okl", suffix);
     sprintf(kernelName, "ellipticPreconProlongate%s", suffix);
-    prolongateKernel = buildKernel(mesh.device, fileName, kernelName, kernelInfo, mesh.comm);
+    prolongateKernel = elliptic.platform.buildKernel(fileName, kernelName, kernelInfo);
   }
 }
 

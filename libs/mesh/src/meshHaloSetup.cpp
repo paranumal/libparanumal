@@ -108,7 +108,7 @@ void mesh_t::HaloSetup(){
   //make a halo exchange op
   int verbose = 0;
   halo = halo_t::Setup(Nelements+totalHaloPairs, globalElementId, comm,
-                       verbose, device);
+                       verbose, platform);
 
   free(globalElementId);
   free(globalOffset);

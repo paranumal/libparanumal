@@ -49,7 +49,7 @@ void ins_t::Run(){
     MassMatrixKernel(mesh.Nelements, mesh.o_ggeo, mesh.o_MM, o_u, o_MU);
 
     dlong Nentries = mesh.Nelements*mesh.Np*NVfields;
-    dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_u, o_MU, comm));
+    dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_u, o_MU, mesh.comm));
 
     if(mesh.rank==0)
       printf("Solution norm = %17.15lg\n", norm2);

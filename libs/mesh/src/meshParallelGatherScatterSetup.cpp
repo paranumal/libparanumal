@@ -31,7 +31,7 @@ void mesh_t::ParallelGatherScatterSetup() {
   dlong Ntotal = Np*Nelements;
 
   int verbose = 0;
-  ogs = ogs_t::Setup(Ntotal, globalIds, comm, verbose, device);
+  ogs = ogs_t::Setup(Ntotal, globalIds, comm, verbose, platform);
 
   //use the gs to find what nodes are local to this rank
   int *minRank = (int *) calloc(Ntotal,sizeof(int));

@@ -28,13 +28,10 @@ SOFTWARE.
 
 namespace parAlmond {
 
-solver_t::solver_t(occa::device device_, MPI_Comm comm_,
-                   settings_t& settings_):
-  settings(settings_) {
+solver_t::solver_t(platform_t& _platform, settings_t& _settings, MPI_Comm _comm):
+  platform(_platform), settings(_settings) {
 
-  device = device_;
-
-  comm = comm_;
+  comm = _comm;
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
 

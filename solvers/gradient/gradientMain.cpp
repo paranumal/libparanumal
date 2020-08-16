@@ -37,40 +37,29 @@ int main(int argc, char **argv){
     LIBP_ABORT(string("Usage: ./gradientMain setupfile"));
 
   //create default settings
-  occaSettings_t occaSettings(comm);
+  platformSettings_t platformSettings(comm);
   meshSettings_t meshSettings(comm);
   gradientSettings_t gradientSettings(comm);
 
   //load settings from file
-  gradientSettings.parseFromFile(occaSettings, meshSettings,
+  gradientSettings.parseFromFile(platformSettings, meshSettings,
                             argv[1]);
 
-  occaSettings.report();
+  // set up platform
+  platform_t platform(platformSettings);
+
+  platformSettings.report();
   meshSettings.report();
   gradientSettings.report();
 
-  // set up occa device
-  occa::device device;
-  occa::properties props;
-  occaDeviceConfig(device, comm, occaSettings, props);
-
   // set up mesh
-  mesh_t& mesh = mesh_t::Setup(device, comm, meshSettings, props);
-
-  // set up linear algebra module
-  linAlg_t& linAlg = linAlg_t::Setup(device, props);
+  mesh_t& mesh = mesh_t::Setup(platform, meshSettings, comm);
 
   // set up gradient solver
-  gradient_t& gradient = gradient_t::Setup(mesh, linAlg, gradientSettings);
+  gradient_t& gradient = gradient_t::Setup(platform, mesh, gradientSettings);
 
   // run
   gradient.Run();
-
-  // clean up
-  delete &gradient;
-  delete &linAlg;
-  delete &mesh;
-  device.free();
 
   // close down MPI
   MPI_Finalize();

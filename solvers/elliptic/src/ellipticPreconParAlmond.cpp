@@ -40,7 +40,7 @@ ParAlmondPrecon::ParAlmondPrecon(elliptic_t& _elliptic):
     elliptic.BuildOperatorMatrixContinuous(A);
   }
 
-  parAlmondHandle = parAlmond::Init(mesh.device, mesh.comm, settings);
+  parAlmondHandle = parAlmond::Init(elliptic.platform, settings, mesh.comm);
   parAlmond::AMGSetup(parAlmondHandle, A,
                       elliptic.allNeumann, elliptic.allNeumannPenalty);
 

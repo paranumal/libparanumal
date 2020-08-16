@@ -32,7 +32,7 @@ void gradient_t::Report(){
   MassMatrixKernel(mesh.Nelements, mesh.o_ggeo, mesh.o_MM, o_gradq, o_Mgradq);
 
   dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
-  dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_gradq, o_Mgradq, comm));
+  dfloat norm2 = sqrt(platform.linAlg.innerProd(Nentries, o_gradq, o_Mgradq, mesh.comm));
 
   if(mesh.rank==0)
     printf("%5.2f (norm)\n", norm2);

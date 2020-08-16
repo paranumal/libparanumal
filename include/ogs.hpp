@@ -179,6 +179,7 @@ SOFTWARE.
 #include "types.h"
 #include "utils.hpp"
 #include "core.hpp"
+#include "platform.hpp"
 
 //ogs defs
 #include "../libs/ogs/include/ogsDefs.h"
@@ -229,8 +230,9 @@ public:
 // OCCA+gslib gather scatter
 class ogs_t {
 public:
-  MPI_Comm& comm;
+  platform_t& platform;
   occa::device& device;
+  MPI_Comm comm;
 
   dlong         N=0;
   dlong         Nlocal=0;         //  number of local nodes
@@ -255,13 +257,13 @@ public:
   occa::memory o_haloBuf;
   occa::memory h_haloBuf;
 
-  ogs_t(MPI_Comm& _comm, occa::device& _device):
-    comm(_comm), device(_device) {};
+  ogs_t(platform_t& _platform, MPI_Comm _comm):
+    platform(_platform), device(platform.device), comm(_comm) {};
 
   void Free();
 
   static ogs_t *Setup(dlong N, hlong *ids, MPI_Comm &comm,
-                      int verbose, occa::device& device);
+                      int verbose, platform_t& platform);
 
   static void Unique(hlong *ids, dlong _N, MPI_Comm _comm);
 
@@ -370,9 +372,9 @@ public:
   void Free() { if (ogs) { ogs->Free(); ogs=nullptr; } }
 
   static halo_t *Setup(dlong N, hlong *ids, MPI_Comm &comm,
-                       int verbose, occa::device& device) {
+                       int verbose, platform_t& platform) {
     halo_t *halo = new halo_t();
-    halo->ogs = ogs_t::Setup(N, ids, comm, verbose, device);
+    halo->ogs = ogs_t::Setup(N, ids, comm, verbose, platform);
     return halo;
   }
 

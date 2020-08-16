@@ -40,7 +40,7 @@ class fpeSettings_t: public settings_t {
 public:
   fpeSettings_t(MPI_Comm& _comm);
   void report();
-  void parseFromFile(occaSettings_t& occaSettings,
+  void parseFromFile(platformSettings_t& platformSettings,
                      meshSettings_t& meshSettings,
                      const string filename);
 
@@ -51,6 +51,8 @@ class fpe_t;
 
 class subcycler_t: public solver_t {
 public:
+  mesh_t& mesh;
+
   int cubature;
   halo_t* traceHalo;
   occa::kernel advectionVolumeKernel;
@@ -68,6 +70,7 @@ public:
 
 class fpe_t: public solver_t {
 public:
+  mesh_t& mesh;
   TimeStepper::timeStepper_t* timeStepper;
 
   halo_t* traceHalo;
@@ -107,13 +110,14 @@ public:
   occa::kernel initialConditionKernel;
 
   fpe_t() = delete;
-  fpe_t(mesh_t& _mesh, linAlg_t& _linAlg, settings_t& _settings):
-    solver_t(_mesh, _linAlg, _settings) {}
+  fpe_t(platform_t &_platform, mesh_t &_mesh,
+        settings_t& _settings):
+    solver_t(_platform, _settings), mesh(_mesh) {}
 
   ~fpe_t();
 
   //setup
-  static fpe_t& Setup(mesh_t& mesh, linAlg_t& linAlg,
+  static fpe_t& Setup(platform_t& platform, mesh_t& mesh,
                       fpeSettings_t& settings);
 
   void Run();

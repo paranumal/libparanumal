@@ -140,6 +140,8 @@ public:
 class parCSR: public matrix_t {
 
 public:
+  platform_t& platform;
+
   //local
   CSR *diag;
 
@@ -166,10 +168,8 @@ public:
   halo_t *halo = NULL;
   dlong NlocalCols = 0;
 
-  occa::device device;
-
-  parCSR(dlong N=0, dlong M=0);
-  parCSR(dlong N, dlong M, MPI_Comm Comm, occa::device Device);
+  parCSR(dlong N, dlong M, platform_t& _platform);
+  parCSR(dlong N, dlong M, MPI_Comm Comm, platform_t& _platform);
 
   //build a parCSR matrix from a distributed COO matrix
   parCSR(dlong N,         // number of rows on this rank
@@ -178,7 +178,7 @@ public:
          dfloat *Null,            //null vector (or low energy mode)
          dfloat NullSpacePenalty, //penalty parameter for rank boost
          MPI_Comm Comm,
-         occa::device Device);
+         platform_t &_platform);
 
   ~parCSR();
 
@@ -220,14 +220,12 @@ public:
   halo_t *halo = NULL;
   dlong NlocalCols = 0;
 
-  occa::device device;
-
   parHYB(dlong N=0, dlong M=0);
   parHYB(parCSR *A); //build from parCSR
 
   ~parHYB();
 
-  void syncToDevice();
+  void syncToDevice(platform_t& platform);
 
   void SpMV(const dfloat alpha,        dfloat *x, const dfloat beta, dfloat *y);
   void SpMV(const dfloat alpha,        dfloat *x, const dfloat beta, const dfloat *y, dfloat *z);

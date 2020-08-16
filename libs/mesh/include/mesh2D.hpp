@@ -31,8 +31,7 @@ SOFTWARE.
 
 class mesh2D: public mesh_t {
 public:
-  mesh2D(occa::device& _device, MPI_Comm& _comm,
-         meshSettings_t& _settings, occa::properties& _props);
+  mesh2D(platform_t& _platform, meshSettings_t& _settings, MPI_Comm _comm);
 
   // repartition elements in parallel
   void GeometricPartition();
@@ -53,8 +52,7 @@ public:
 
 class meshTri2D: public mesh2D {
 public:
-  meshTri2D(occa::device& _device, MPI_Comm& _comm,
-            meshSettings_t& _settings, occa::properties& _props);
+  meshTri2D(platform_t& _platform, meshSettings_t& _settings, MPI_Comm _comm);
   void ParallelReader(const char *fileName);
   void SetupBox();
   void SetupPmlBox();
@@ -70,8 +68,7 @@ public:
 
 class meshQuad2D: public mesh2D {
 public:
-  meshQuad2D(occa::device& _device, MPI_Comm& _comm,
-             meshSettings_t& _settings, occa::properties& _props);
+  meshQuad2D(platform_t& _platform, meshSettings_t& _settings, MPI_Comm _comm);
   void ParallelReader(const char *fileName);
   void SetupBox();
   void SetupPmlBox();

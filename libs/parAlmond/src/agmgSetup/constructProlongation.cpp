@@ -40,7 +40,7 @@ parCSR *constructProlongation(parCSR *A, hlong *FineToCoarse,
   const hlong globalAggOffset = globalAggStarts[rank];
   const dlong NCoarse = (dlong) (globalAggStarts[rank+1]-globalAggStarts[rank]); //local num agg
 
-  parCSR* P = new parCSR(N, NCoarse, A->comm, A->device);
+  parCSR* P = new parCSR(N, NCoarse, A->comm, A->platform);
 
   P->globalRowStarts = A->globalRowStarts;
   P->globalColStarts = globalAggStarts;

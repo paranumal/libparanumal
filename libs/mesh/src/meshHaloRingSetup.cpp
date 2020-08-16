@@ -321,7 +321,7 @@ void mesh_t::HaloRingSetup(){
   //make the halo exchange op
   int verbose = 0;
   ringHalo = halo_t::Setup(Nelements+totalRingElements, globalElementId, comm,
-                           verbose, device);
+                           verbose, platform);
 
   //clean up
   free(globalElementId);

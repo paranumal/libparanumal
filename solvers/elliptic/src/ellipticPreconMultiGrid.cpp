@@ -41,7 +41,7 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   elliptic(_elliptic), mesh(_elliptic.mesh), settings(_elliptic.settings) {
 
   //initialize parAlmond
-  parAlmondHandle = parAlmond::Init(mesh.device, mesh.comm, settings);
+  parAlmondHandle = parAlmond::Init(elliptic.platform, settings, mesh.comm);
   parAlmond::multigridLevel **levels = parAlmondHandle->levels;
 
   int Nf = mesh.N;

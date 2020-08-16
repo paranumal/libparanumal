@@ -29,12 +29,14 @@ SOFTWARE.
 void elliptic_t::Run(){
 
   //setup linear solver
-  linearSolver_t *linearSolver = linearSolver_t::Setup(*this);
-
   int weighted = settings.compareSetting("DISCRETIZATION", "CONTINUOUS") ? 1 : 0;
-  linearSolver->Init(weighted, o_weight);
 
-  occa::properties kernelInfo = props; //copy base occa properties
+  dlong Nlocal = mesh.Nelements*mesh.Np*Nfields;
+  dlong Nhalo  = mesh.totalHaloPairs*mesh.Np*Nfields;
+  linearSolver_t *linearSolver = linearSolver_t::Setup(Nlocal, Nhalo, platform, settings,
+                                                       weighted, o_weight);
+
+  occa::properties kernelInfo = mesh.props; //copy base occa properties
 
   string dataFileName;
   settings.getSetting("DATA FILE", dataFileName);
@@ -70,8 +72,8 @@ void elliptic_t::Run(){
   // mass matrix operator
   sprintf(fileName, LIBP_DIR "/core/okl/MassMatrixOperator%s.okl", suffix);
   sprintf(kernelName, "MassMatrixOperator%s", suffix);
-  occa::kernel MassMatrixKernel = buildKernel(device, fileName, kernelName,
-                                                    kernelInfo, comm);
+  occa::kernel MassMatrixKernel = platform.buildKernel(fileName, kernelName,
+                                                    kernelInfo);
 
   if(mesh.elementType==QUADRILATERALS){
     if(mesh.dim==2)
@@ -79,36 +81,36 @@ void elliptic_t::Run(){
     else
       suffix = strdup("Quad3D");
   }
-  
+
   sprintf(fileName, DELLIPTIC "/okl/ellipticRhs%s.okl", suffix);
   sprintf(kernelName, "ellipticRhs%s", suffix);
-  occa::kernel forcingKernel = buildKernel(device, fileName, kernelName,
-                                                    kernelInfo, comm);
+  occa::kernel forcingKernel = platform.buildKernel(fileName, kernelName,
+                                                    kernelInfo);
 
   occa::kernel rhsBCKernel, addBCKernel;
   if (settings.compareSetting("DISCRETIZATION","IPDG")) {
     sprintf(fileName, DELLIPTIC "/okl/ellipticRhsBCIpdg%s.okl", suffix);
     sprintf(kernelName, "ellipticRhsBCIpdg%s", suffix);
 
-    rhsBCKernel = buildKernel(device, fileName,kernelName, kernelInfo, comm);
+    rhsBCKernel = platform.buildKernel(fileName,kernelName, kernelInfo);
   } else if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
     sprintf(fileName, DELLIPTIC "/okl/ellipticRhsBC%s.okl", suffix);
     sprintf(kernelName, "ellipticRhsBC%s", suffix);
 
-    rhsBCKernel = buildKernel(device, fileName, kernelName, kernelInfo, comm);
+    rhsBCKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 
     sprintf(fileName, DELLIPTIC "/okl/ellipticAddBC%s.okl", suffix);
     sprintf(kernelName, "ellipticAddBC%s", suffix);
 
-    addBCKernel = buildKernel(device, fileName, kernelName, kernelInfo, comm);
+    addBCKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
   }
 
   //create occa buffers
   dlong Nall = mesh.Np*(mesh.Nelements+mesh.totalHaloPairs);
   dfloat *r = (dfloat*) calloc(Nall, sizeof(dfloat));
   dfloat *x = (dfloat*) calloc(Nall, sizeof(dfloat));
-  occa::memory o_r = device.malloc(Nall*sizeof(dfloat), r);
-  occa::memory o_x = device.malloc(Nall*sizeof(dfloat), x);
+  occa::memory o_r = mesh.device.malloc(Nall*sizeof(dfloat), r);
+  occa::memory o_x = mesh.device.malloc(Nall*sizeof(dfloat), x);
 
   //storage for M*q during reporting
   occa::memory o_Mx = mesh.device.malloc(Nall*sizeof(dfloat), x);
@@ -164,7 +166,7 @@ void elliptic_t::Run(){
   int maxIter = 5000;
   int verbose = settings.compareSetting("VERBOSE", "TRUE") ? 1 : 0;
 
-  MPI_Barrier(comm);
+  MPI_Barrier(platform.comm);
   double startTime = MPI_Wtime();
 
   //call the solver
@@ -181,7 +183,7 @@ void elliptic_t::Run(){
                 o_x);
   }
 
-  MPI_Barrier(comm);
+  MPI_Barrier(platform.comm);
   double endTime = MPI_Wtime();
   double elapsedTime = endTime - startTime;
 
@@ -216,7 +218,7 @@ void elliptic_t::Run(){
     MassMatrixKernel(mesh.Nelements, mesh.o_ggeo, mesh.o_MM, o_x, o_Mx);
 
     dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
-    dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_x, o_Mx, comm));
+    dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_x, o_Mx, mesh.comm));
 
     if(mesh.rank==0)
       printf("Solution norm = %17.15lg\n", norm2);

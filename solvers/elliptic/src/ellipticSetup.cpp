@@ -27,11 +27,11 @@ SOFTWARE.
 #include "elliptic.hpp"
 #include "ellipticPrecon.hpp"
 
-elliptic_t& elliptic_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
+elliptic_t& elliptic_t::Setup(platform_t& platform, mesh_t& mesh,
                               ellipticSettings_t& settings, dfloat lambda,
                               const int NBCTypes, const int *BCType){
 
-  elliptic_t* elliptic = new elliptic_t(mesh, linAlg, settings, lambda);
+  elliptic_t* elliptic = new elliptic_t(platform, mesh, settings, lambda);
 
   elliptic->Nfields = 1;
 
@@ -39,13 +39,12 @@ elliptic_t& elliptic_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   elliptic->disc_c0   = settings.compareSetting("DISCRETIZATION","CONTINUOUS");
 
   //setup linear algebra module
-  elliptic->linAlg.InitKernels({"add", "sum", "scale",
+  platform.linAlg.InitKernels({"add", "sum", "scale",
                                 "axpy", "zaxpy",
                                 "amx", "amxpy", "zamxpy",
                                 "adx", "adxpy", "zadxpy",
                                 "innerProd", "weightedInnerProd",
-                                "norm2", "weightedNorm2"},
-                                mesh.comm);
+                                "norm2", "weightedNorm2"});
 
   /*setup trace halo exchange */
   elliptic->traceHalo = mesh.HaloTraceSetup(elliptic->Nfields);
@@ -76,7 +75,7 @@ elliptic_t& elliptic_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   }
 
   // OCCA build stuff
-  occa::properties kernelInfo = elliptic->props; //copy base occa properties
+  occa::properties kernelInfo = mesh.props; //copy base occa properties
 
   // set kernel name suffix
   char *suffix;
@@ -98,8 +97,8 @@ elliptic_t& elliptic_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   char fileName[BUFSIZ], kernelName[BUFSIZ];
 
   // mask
-  elliptic->maskKernel = buildKernel(mesh.device, DELLIPTIC "/okl/ellipticMask.okl",
-                                     "mask", kernelInfo, mesh.comm);
+  elliptic->maskKernel = platform.buildKernel(DELLIPTIC "/okl/ellipticMask.okl",
+                                     "mask", kernelInfo);
 
   //add standard boundary functions
   char *boundaryHeaderFileName;
@@ -127,8 +126,8 @@ elliptic_t& elliptic_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
       sprintf(kernelName, "ellipticPartialAx%s", suffix);
     }
 
-    elliptic->partialAxKernel = buildKernel(mesh.device, fileName, kernelName,
-                                     kernelInfo, mesh.comm);
+    elliptic->partialAxKernel = platform.buildKernel(fileName, kernelName,
+                                     kernelInfo);
 
   } else if (settings.compareSetting("DISCRETIZATION","IPDG")) {
     int Nmax = mymax(mesh.Np, mesh.Nfaces*mesh.Nfp);
@@ -136,13 +135,13 @@ elliptic_t& elliptic_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
 
     sprintf(fileName, DELLIPTIC "/okl/ellipticGradient%s.okl", suffix);
     sprintf(kernelName, "ellipticPartialGradient%s", suffix);
-    elliptic->partialGradientKernel = buildKernel(mesh.device, fileName, kernelName,
-                                                  kernelInfo, mesh.comm);
+    elliptic->partialGradientKernel = platform.buildKernel(fileName, kernelName,
+                                                  kernelInfo);
 
     sprintf(fileName, DELLIPTIC "/okl/ellipticAxIpdg%s.okl", suffix);
     sprintf(kernelName, "ellipticPartialAxIpdg%s", suffix);
-    elliptic->partialIpdgKernel = buildKernel(mesh.device, fileName, kernelName,
-                                              kernelInfo, mesh.comm);
+    elliptic->partialIpdgKernel = platform.buildKernel(fileName, kernelName,
+                                              kernelInfo);
   }
 
   /* Preconditioner Setup */

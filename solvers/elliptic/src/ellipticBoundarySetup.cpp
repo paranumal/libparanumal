@@ -28,6 +28,8 @@ SOFTWARE.
 
 void elliptic_t::BoundarySetup(){
 
+  occa::device& device = platform.device;
+
   //check all the bounaries for a Dirichlet
   int localAllNeumann = (lambda==0) ? 1 : 0; //if lambda>0 we don't care about all Neumann problem
   allNeumannPenalty = 1.;
@@ -55,7 +57,7 @@ void elliptic_t::BoundarySetup(){
   o_EToB = device.malloc(mesh.Nelements*mesh.Nfaces*sizeof(int), EToB);
 
   //collect the allNeumann flags from other ranks
-  MPI_Allreduce(&localAllNeumann, &allNeumann, 1, MPI_INT, MPI_MIN, comm);
+  MPI_Allreduce(&localAllNeumann, &allNeumann, 1, MPI_INT, MPI_MIN, mesh.comm);
 
 
   //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
@@ -102,9 +104,9 @@ void elliptic_t::BoundarySetup(){
 
   //use the masked ids to make another gs handle (signed so the gather is defined)
   int verbose = 0;
-  ogs_t::Unique(maskedGlobalIds, mesh.Nelements*mesh.Np, comm);     //flag a unique node in every gather node
+  ogs_t::Unique(maskedGlobalIds, mesh.Nelements*mesh.Np, mesh.comm);     //flag a unique node in every gather node
   ogsMasked = ogs_t::Setup(mesh.Nelements*mesh.Np, maskedGlobalIds,
-                           comm, verbose, device);
+                           mesh.comm, verbose, platform);
 
   /* use the masked gs handle to define a global ordering */
   dlong Ntotal  = mesh.Np*mesh.Nelements; // number of degrees of freedom on this rank (before gathering)

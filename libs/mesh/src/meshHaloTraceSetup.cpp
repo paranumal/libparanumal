@@ -88,7 +88,7 @@ halo_t* mesh_t::HaloTraceSetup(int Nfields){
 
   int verbose = 0;
   halo_t* traceHalo = halo_t::Setup((Nelements+totalHaloPairs)*Np*Nfields,
-                                    globalids, comm, verbose, device);
+                                    globalids, comm, verbose, platform);
 
   free(globalids);
 

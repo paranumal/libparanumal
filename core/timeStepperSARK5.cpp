@@ -42,6 +42,9 @@ sark5::sark5(dlong _Nelements, dlong _NhaloElements,
   Nelements(_Nelements),
   NhaloElements(_NhaloElements) {
 
+  platform_t &platform = solver.platform;
+  occa::device &device = platform.device;
+
   lambda = (dfloat *) malloc(Nfields*sizeof(dfloat));
   memcpy(lambda, _lambda, Nfields*sizeof(dfloat));
 
@@ -65,9 +68,9 @@ sark5::sark5(dlong _Nelements, dlong _NhaloElements,
 
   hlong gNlocal = Nlocal;
   hlong gNtotal;
-  MPI_Allreduce(&gNlocal, &gNtotal, 1, MPI_HLONG, MPI_SUM, comm);
+  MPI_Allreduce(&gNlocal, &gNtotal, 1, MPI_HLONG, MPI_SUM, platform.comm);
 
-  occa::properties kernelInfo = props; //copy base occa properties from solver
+  occa::properties kernelInfo = platform.props; //copy base occa properties from solver
 
   //add defines
   kernelInfo["defines/" "p_blockSize"] = (int)BLOCKSIZE;
@@ -75,20 +78,20 @@ sark5::sark5(dlong _Nelements, dlong _NhaloElements,
   kernelInfo["defines/" "p_Np"]      = (int)Np;
   kernelInfo["defines/" "p_Nfields"] = (int)Nfields;
 
-  rkUpdateKernel = buildKernel(device, LIBP_DIR "/core/okl/"
+  rkUpdateKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
                                     "timeStepperSARK.okl",
                                     "sarkRkUpdate",
-                                    kernelInfo, comm);
+                                    kernelInfo);
 
-  rkStageKernel = buildKernel(device, LIBP_DIR "/core/okl/"
+  rkStageKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
                                     "timeStepperSARK.okl",
                                     "sarkRkStage",
-                                    kernelInfo, comm);
+                                    kernelInfo);
 
-  rkErrorEstimateKernel = buildKernel(device, LIBP_DIR "/core/okl/"
+  rkErrorEstimateKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
                                     "timeStepperSARK.okl",
                                     "sarkErrorEstimate",
-                                    kernelInfo, comm);
+                                    kernelInfo);
 
   // Semi-Analytic Runge Kutta - order (4) 5 with PID timestep control
   dfloat _rkC[Nrk] = {0.0, 0.25, 0.25, 0.5, 0.75, 1.0, 1.0};
@@ -123,13 +126,12 @@ void sark5::Run(occa::memory &o_q, dfloat start, dfloat end) {
 
   dfloat time = start;
 
-  int rank;
-  MPI_Comm_rank(comm, &rank);
+  const int rank = solver.platform.rank;
 
   solver.Report(time,0);
 
   dfloat outputInterval;
-  settings.getSetting("OUTPUT INTERVAL", outputInterval);
+  solver.settings.getSetting("OUTPUT INTERVAL", outputInterval);
 
   dfloat outputTime = time + outputInterval;
 
@@ -312,7 +314,7 @@ dfloat sark5::Estimater(occa::memory& o_q){
   for(dlong n=0;n<Nblock;++n){
     localerr += errtmp[n];
   }
-  MPI_Allreduce(&localerr, &err, 1, MPI_DFLOAT, MPI_SUM, comm);
+  MPI_Allreduce(&localerr, &err, 1, MPI_DFLOAT, MPI_SUM, solver.platform.comm);
 
   err = sqrt(err)*sqrtinvNtotal;
 
@@ -510,6 +512,9 @@ sark5_pml::sark5_pml(dlong _Nelements, dlong _NpmlElements, dlong _NhaloElements
   Npml(_Npmlfields*_Np*_NpmlElements) {
 
   if (Npml) {
+    platform_t &platform = solver.platform;
+    occa::device &device = platform.device;
+
     dfloat *pmlq = (dfloat *) calloc(Npml,sizeof(dfloat));
     o_pmlq   = device.malloc(Npml*sizeof(dfloat), pmlq);
     free(pmlq);
@@ -520,7 +525,7 @@ sark5_pml::sark5_pml(dlong _Nelements, dlong _NpmlElements, dlong _NhaloElements
 
     o_savepmlq   = device.malloc(Npml*sizeof(dfloat));
 
-    occa::properties kernelInfo = props; //copy base occa properties from solver
+    occa::properties kernelInfo = platform.props; //copy base occa properties from solver
 
     //add defines
     kernelInfo["defines/" "p_blockSize"] = (int)BLOCKSIZE;
@@ -528,15 +533,15 @@ sark5_pml::sark5_pml(dlong _Nelements, dlong _NpmlElements, dlong _NhaloElements
     kernelInfo["defines/" "p_Np"]      = (int)Np;
     kernelInfo["defines/" "p_Nfields"] = (int)Nfields;
 
-    rkPmlUpdateKernel = buildKernel(device, LIBP_DIR "/core/okl/"
+    rkPmlUpdateKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
                                       "timeStepperSARK.okl",
                                       "sarkRkPmlUpdate",
-                                      kernelInfo, comm);
+                                      kernelInfo);
 
-    rkPmlStageKernel = buildKernel(device, LIBP_DIR "/core/okl/"
+    rkPmlStageKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
                                       "timeStepperSARK.okl",
                                       "sarkRkPmlStage",
-                                      kernelInfo, comm);
+                                      kernelInfo);
 
     // Semi-Analytic Runge Kutta - order (3) 4 with PID timestep control
     pmlrkA = (dfloat*) malloc(Nrk*Nrk*sizeof(dfloat));

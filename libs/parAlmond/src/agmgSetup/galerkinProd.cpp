@@ -187,7 +187,7 @@ parCSR *galerkinProd(parCSR *A, parCSR *P){
 
   dlong numAggs = (dlong) (globalAggStarts[rank+1]-globalAggStarts[rank]); //local number of aggregates
 
-  parCSR *Ac = new parCSR(numAggs, numAggs, A->comm, A->device);
+  parCSR *Ac = new parCSR(numAggs, numAggs, A->comm, A->platform);
 
   Ac->globalRowStarts = globalAggStarts;
   Ac->globalColStarts = globalAggStarts;

@@ -34,21 +34,8 @@ SOFTWARE.
 #include "utils.hpp"
 #include "settings.hpp"
 
-class occaSettings_t: public settings_t {
-public:
-  occaSettings_t(MPI_Comm& _comm);
-  void report();
-};
-
-void occaDeviceConfig(occa::device &device, MPI_Comm comm,
-                      settings_t& settings, occa::properties& kernelInfo);
-
-void occaDeviceProperties(occa::device &device, occa::properties& props);
 
 void *occaHostMallocPinned(occa::device &device, size_t size, void *source, occa::memory &mem, occa::memory &h_mem);
-
-occa::kernel buildKernel(occa::device& device, std::string fileName, std::string kernelName,
-                         occa::properties& kernelInfo, MPI_Comm& comm);
 
 // serial sort
 void mysort(hlong *data, int N, const char *order);

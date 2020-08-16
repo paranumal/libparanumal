@@ -37,7 +37,7 @@ void cns_t::Report(dfloat time, int tstep){
   MassMatrixKernel(mesh.Nelements, mesh.o_ggeo, mesh.o_MM, o_q, o_Mq);
 
   dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
-  dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_q, o_Mq, comm));
+  dfloat norm2 = sqrt(platform.linAlg.innerProd(Nentries, o_q, o_Mq, mesh.comm));
 
   if(mesh.rank==0)
     printf("%5.2f (%d), %5.2f (time, timestep, norm)\n", time, tstep, norm2);

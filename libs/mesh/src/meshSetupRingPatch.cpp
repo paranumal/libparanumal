@@ -43,29 +43,25 @@ mesh_t* mesh_t::SetupRingPatch(){
   MPI_Comm* splitComm = new MPI_Comm;
   MPI_Comm_split(comm, rank, rank, splitComm);
 
-  //make a new occa properties list
-  occa::properties *newProps = new occa::properties();
-  occaDeviceProperties(device, *newProps);
-
   mesh_t *mesh=NULL;
   switch(elementType){
   case TRIANGLES:
     if(dim==2)
-      mesh = new meshTri2D(device, *splitComm, settings, *newProps);
+      mesh = new meshTri2D(platform, settings, *splitComm);
     else
-      mesh = new meshTri3D(device, *splitComm, settings, *newProps);
+      mesh = new meshTri3D(platform, settings, *splitComm);
     break;
   case QUADRILATERALS:
     if(dim==2)
-      mesh = new meshQuad2D(device, *splitComm, settings, *newProps);
+      mesh = new meshQuad2D(platform, settings, *splitComm);
     else
-      mesh = new meshQuad3D(device, *splitComm, settings, *newProps);
+      mesh = new meshQuad3D(platform, settings, *splitComm);
     break;
   case TETRAHEDRA:
-    mesh = new meshTet3D(device, *splitComm, settings, *newProps);
+    mesh = new meshTet3D(platform, settings, *splitComm);
     break;
   case HEXAHEDRA:
-    mesh = new meshHex3D(device, *splitComm, settings, *newProps);
+    mesh = new meshHex3D(platform, settings, *splitComm);
     break;
   }
 

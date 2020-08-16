@@ -26,10 +26,12 @@ SOFTWARE.
 
 #include "advection.hpp"
 
-advection_t& advection_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
+advection_t& advection_t::Setup(platform_t& platform, mesh_t& mesh,
                                  advectionSettings_t& settings){
 
-  advection_t* advection = new advection_t(mesh, linAlg, settings);
+  advection_t* advection = new advection_t(platform, mesh, settings);
+
+  occa::device &device = platform.device;
 
   dlong Nlocal = mesh.Nelements*mesh.Np;
   dlong Nhalo  = mesh.totalHaloPairs*mesh.Np;
@@ -54,20 +56,20 @@ advection_t& advection_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   advection->timeStepper->SetTimeStep(dt);
 
   //setup linear algebra module
-  advection->linAlg.InitKernels({"innerProd"}, mesh.comm);
+  platform.linAlg.InitKernels({"innerProd"});
 
   /*setup trace halo exchange */
   advection->traceHalo = mesh.HaloTraceSetup(1); //one field
 
   // compute samples of q at interpolation nodes
   advection->q = (dfloat*) calloc(Nlocal+Nhalo, sizeof(dfloat));
-  advection->o_q = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat), advection->q);
+  advection->o_q = device.malloc((Nlocal+Nhalo)*sizeof(dfloat), advection->q);
 
   //storage for M*q during reporting
-  advection->o_Mq = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat), advection->q);
+  advection->o_Mq = device.malloc((Nlocal+Nhalo)*sizeof(dfloat), advection->q);
 
   // OCCA build stuff
-  occa::properties kernelInfo = advection->props; //copy base occa properties
+  occa::properties kernelInfo = mesh.props; //copy base occa properties
 
   //add boundary data to kernel info
   string dataFileName;
@@ -80,7 +82,7 @@ advection_t& advection_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   kernelInfo["defines/" "p_maxNodes"]= maxNodes;
 
   int blockMax = 256;
-  if (mesh.device.mode() == "CUDA") blockMax = 512;
+  if (device.mode() == "CUDA") blockMax = 512;
 
   int NblockV = mymax(1, blockMax/mesh.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;
@@ -107,21 +109,18 @@ advection_t& advection_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   sprintf(fileName, DADVECTION "/okl/advectionVolume%s.okl", suffix);
   sprintf(kernelName, "advectionVolume%s", suffix);
 
-  advection->volumeKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                         kernelInfo, mesh.comm);
+  advection->volumeKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
   // kernels from surface file
   sprintf(fileName, DADVECTION "/okl/advectionSurface%s.okl", suffix);
   sprintf(kernelName, "advectionSurface%s", suffix);
 
-  advection->surfaceKernel = buildKernel(mesh.device, fileName, kernelName,
-                                         kernelInfo, mesh.comm);
+  advection->surfaceKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 
   // mass matrix operator
   sprintf(fileName, LIBP_DIR "/core/okl/MassMatrixOperator%s.okl", suffix);
   sprintf(kernelName, "MassMatrixOperator%s", suffix);
 
-  advection->MassMatrixKernel = buildKernel(mesh.device, fileName, kernelName,
-                                            kernelInfo, mesh.comm);
+  advection->MassMatrixKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 
 
   if (mesh.dim==2) {
@@ -132,8 +131,7 @@ advection_t& advection_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
     sprintf(kernelName, "advectionInitialCondition3D");
   }
 
-  advection->initialConditionKernel = buildKernel(mesh.device, fileName, kernelName,
-                                                  kernelInfo, mesh.comm);
+  advection->initialConditionKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 
   return *advection;
 }

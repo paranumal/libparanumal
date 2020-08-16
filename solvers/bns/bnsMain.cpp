@@ -37,40 +37,29 @@ int main(int argc, char **argv){
     LIBP_ABORT(string("Usage: ./bnsMain setupfile"));
 
   //create default settings
-  occaSettings_t occaSettings(comm);
+  platformSettings_t platformSettings(comm);
   meshSettings_t meshSettings(comm);
   bnsSettings_t bnsSettings(comm);
 
   //load settings from file
-  bnsSettings.parseFromFile(occaSettings, meshSettings,
+  bnsSettings.parseFromFile(platformSettings, meshSettings,
                             argv[1]);
 
-  occaSettings.report();
+  // set up platform
+  platform_t platform(platformSettings);
+
+  platformSettings.report();
   meshSettings.report();
   bnsSettings.report();
 
-  // set up occa device
-  occa::device device;
-  occa::properties props;
-  occaDeviceConfig(device, comm, occaSettings, props);
-
   // set up mesh
-  mesh_t& mesh = mesh_t::Setup(device, comm, meshSettings, props);
-
-  // set up linear algebra module
-  linAlg_t& linAlg = linAlg_t::Setup(device, props);
+  mesh_t& mesh = mesh_t::Setup(platform, meshSettings, comm);
 
   // set up bns solver
-  bns_t& bns = bns_t::Setup(mesh, linAlg, bnsSettings);
+  bns_t& bns = bns_t::Setup(platform, mesh, bnsSettings);
 
   // run
   bns.Run();
-
-  // clean up
-  delete &bns;
-  delete &linAlg;
-  delete &mesh;
-  device.free();
 
   // close down MPI
   MPI_Finalize();

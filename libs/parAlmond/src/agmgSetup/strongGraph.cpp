@@ -46,7 +46,7 @@ parCSR* RugeStubenStrength(parCSR *A) {
   const dlong N = A->Nrows;
   const dlong M = A->Ncols;
 
-  parCSR *C = new parCSR(N, M);
+  parCSR *C = new parCSR(N, M, A->platform);
 
   C->diag->rowStarts = (dlong *) calloc(N+1,sizeof(dlong));
   C->offd->rowStarts = (dlong *) calloc(N+1,sizeof(dlong));
@@ -150,7 +150,7 @@ parCSR* SymmetricStrength(parCSR *A) {
   const dlong N = A->Nrows;
   const dlong M = A->Ncols;
 
-  parCSR *C = new parCSR(N, M);
+  parCSR *C = new parCSR(N, M, A->platform);
 
   C->diag->rowStarts = (dlong *) calloc(N+1,sizeof(dlong));
   C->offd->rowStarts = (dlong *) calloc(N+1,sizeof(dlong));

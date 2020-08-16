@@ -31,8 +31,7 @@ SOFTWARE.
 
 class mesh3D: public mesh_t {
 public:
-  mesh3D(occa::device& _device, MPI_Comm& _comm,
-         meshSettings_t& _settings, occa::properties& _props);
+  mesh3D(platform_t& _platform, meshSettings_t& _settings, MPI_Comm _comm);
 
   // repartition elements in parallel
   void GeometricPartition();
@@ -56,8 +55,7 @@ public:
 
 class meshTri3D: public mesh3D {
 public:
-  meshTri3D(occa::device& _device, MPI_Comm& _comm,
-            meshSettings_t& _settings, occa::properties& _props);
+  meshTri3D(platform_t& _platform, meshSettings_t& _settings, MPI_Comm _comm);
   void ParallelReader(const char *fileName);
   void SetupBox();
   void SetupPmlBox();
@@ -73,8 +71,7 @@ public:
 
 class meshQuad3D: public mesh3D {
 public:
-  meshQuad3D(occa::device& _device, MPI_Comm& _comm,
-             meshSettings_t& _settings, occa::properties& _props);
+  meshQuad3D(platform_t& _platform, meshSettings_t& _settings, MPI_Comm _comm);
   void ParallelReader(const char *fileName);
   void SetupBox();
   void SetupPmlBox();
@@ -90,8 +87,7 @@ public:
 
 class meshTet3D: public mesh3D {
 public:
-  meshTet3D(occa::device& _device, MPI_Comm& _comm,
-            meshSettings_t& _settings, occa::properties& _props);
+  meshTet3D(platform_t& _platform, meshSettings_t& _settings, MPI_Comm _comm);
   void ParallelReader(const char *fileName);
   void SetupBox();
   void SetupPmlBox();
@@ -107,8 +103,7 @@ public:
 
 class meshHex3D: public mesh3D {
 public:
-  meshHex3D(occa::device& _device, MPI_Comm& _comm,
-            meshSettings_t& _settings, occa::properties& _props);
+  meshHex3D(platform_t& _platform, meshSettings_t& _settings, MPI_Comm _comm);
   void ParallelReader(const char *fileName);
   void SetupBox();
   void SetupPmlBox();

@@ -28,21 +28,14 @@ SOFTWARE.
 
 #define NBFPCG_BLOCKSIZE 512
 
-nbfpcg::nbfpcg(solver_t& _solver):
-  linearSolver_t(_solver) {};
+nbfpcg::nbfpcg(dlong _N, dlong _Nhalo,
+         platform_t& _platform, settings_t& _settings,
+         int _weighted, occa::memory& _o_weight):
+  linearSolver_t(_N, _Nhalo, _platform, _settings) {
 
-nbfpcg::~nbfpcg() {
-  update0NBFPCGKernel.free();
-  update1NBFPCGKernel.free();
-}
-
-void nbfpcg::Init(int _weighted, occa::memory& o_weight_) {
-
-  N = mesh.Np*mesh.Nelements;
-  dlong Nhalo  = mesh.Np*mesh.totalHaloPairs;
   dlong Ntotal = N + Nhalo;
 
-  weighted = settings.compareSetting("DISCRETIZATION", "CONTINUOUS");
+  occa::device &device = platform.device;
 
   /*aux variables */
   o_u  = device.malloc(Ntotal*sizeof(dfloat));
@@ -59,7 +52,7 @@ void nbfpcg::Init(int _weighted, occa::memory& o_weight_) {
   globaldots = (dfloat*) calloc(4, sizeof(dfloat));
 
   weighted = _weighted;
-  o_weight = o_weight_;
+  o_weight = _o_weight;
 
   //pinned tmp buffer for reductions
   occa::properties mprops;
@@ -69,25 +62,24 @@ void nbfpcg::Init(int _weighted, occa::memory& o_weight_) {
   o_tmpdots = device.malloc(4*NBFPCG_BLOCKSIZE*sizeof(dfloat));
 
   /* build kernels */
-  occa::properties kernelInfo = props; //copy base properties
+  occa::properties kernelInfo = platform.props; //copy base properties
 
   //add defines
   kernelInfo["defines/" "p_blockSize"] = (int)NBFPCG_BLOCKSIZE;
 
   // combined NBFPCG update kernels
-  update0NBFPCGKernel = buildKernel(device,
-                                LIBP_DIR "/core/okl/linearSolverUpdateNBFPCG.okl",
-                                "update0NBFPCG", kernelInfo, comm);
-  update1NBFPCGKernel = buildKernel(device,
-                                LIBP_DIR "/core/okl/linearSolverUpdateNBFPCG.okl",
-                                "update1NBFPCG", kernelInfo, comm);
+  update0NBFPCGKernel = platform.buildKernel(LIBP_DIR "/core/okl/linearSolverUpdateNBFPCG.okl",
+                                "update0NBFPCG", kernelInfo);
+  update1NBFPCGKernel = platform.buildKernel(LIBP_DIR "/core/okl/linearSolverUpdateNBFPCG.okl",
+                                "update1NBFPCG", kernelInfo);
 }
 
 int nbfpcg::Solve(solver_t& solver, precon_t& precon,
                   occa::memory &o_x, occa::memory &o_r,
                   const dfloat tol, const int MAXIT, const int verbose) {
 
-  int rank = mesh.rank;
+  int rank = platform.rank;
+  linAlg_t &linAlg = platform.linAlg;
 
   // register scalars
   dfloat alpha0 = 0;
@@ -225,7 +217,7 @@ void nbfpcg::Update0NBFPCG(occa::memory &o_r){
   globaldots[0] = 0;
   globaldots[1] = 0;
   globaldots[2] = 0;
-  MPI_Iallreduce(localdots, globaldots, 3, MPI_DFLOAT, MPI_SUM, comm, &request);
+  MPI_Iallreduce(localdots, globaldots, 3, MPI_DFLOAT, MPI_SUM, platform.comm, &request);
 }
 
 void nbfpcg::Update1NBFPCG(const dfloat alpha, occa::memory &o_x, occa::memory &o_r){
@@ -255,5 +247,10 @@ void nbfpcg::Update1NBFPCG(const dfloat alpha, occa::memory &o_x, occa::memory &
   globaldots[1] = 0;
   globaldots[2] = 0;
   globaldots[3] = 0;
-  MPI_Iallreduce(localdots, globaldots, 4, MPI_DFLOAT, MPI_SUM, comm, &request);
+  MPI_Iallreduce(localdots, globaldots, 4, MPI_DFLOAT, MPI_SUM, platform.comm, &request);
+}
+
+nbfpcg::~nbfpcg() {
+  update0NBFPCGKernel.free();
+  update1NBFPCGKernel.free();
 }

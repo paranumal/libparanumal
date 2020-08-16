@@ -26,10 +26,10 @@ SOFTWARE.
 
 #include "fpe.hpp"
 
-fpe_t& fpe_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
+fpe_t& fpe_t::Setup(platform_t& platform, mesh_t& mesh,
                     fpeSettings_t& settings){
 
-  fpe_t* fpe = new fpe_t(mesh, linAlg, settings);
+  fpe_t* fpe = new fpe_t(platform, mesh, settings);
 
   settings.getSetting("VISCOSITY", fpe->mu);
 
@@ -93,13 +93,13 @@ fpe_t& fpe_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
 
     fpe->ellipticSettings = settings.extractEllipticSettings();
     dfloat lambda = gamma/(dtAdvc*fpe->mu);
-    fpe->elliptic = &(elliptic_t::Setup(mesh, linAlg, *(fpe->ellipticSettings),
+    fpe->elliptic = &(elliptic_t::Setup(platform, mesh, *(fpe->ellipticSettings),
                                              lambda, NBCTypes, BCType));
     fpe->tau = fpe->elliptic->tau;
 
-    fpe->linearSolver = linearSolver_t::Setup(*(fpe->elliptic));
     int weighted = settings.compareSetting("ELLIPTIC DISCRETIZATION", "CONTINUOUS") ? 1 : 0;
-    fpe->linearSolver->Init(weighted, fpe->elliptic->o_weight);
+    fpe->linearSolver = linearSolver_t::Setup(Nlocal, Nhalo, platform, *(fpe->ellipticSettings),
+                                              weighted, fpe->elliptic->o_weight);
   } else {
     //set penalty
     if (mesh.elementType==TRIANGLES ||
@@ -112,7 +112,7 @@ fpe_t& fpe_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   }
 
   //setup linear algebra module
-  fpe->linAlg.InitKernels({"innerProd", "axpy"}, mesh.comm);
+  platform.linAlg.InitKernels({"innerProd", "axpy"});
 
   /*setup trace halo exchange */
   fpe->traceHalo = mesh.HaloTraceSetup(1); //one field
@@ -128,7 +128,7 @@ fpe_t& fpe_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   fpe->o_grad  = mesh.device.malloc((Nlocal+Nhalo)*4*sizeof(dfloat), fpe->grad);
 
   // OCCA build stuff
-  occa::properties kernelInfo = fpe->props; //copy base occa properties
+  occa::properties kernelInfo = mesh.props; //copy base occa properties
 
   //add boundary data to kernel info
   string dataFileName;
@@ -181,19 +181,19 @@ fpe_t& fpe_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   if (fpe->cubature) {
     sprintf(fileName, DFPE "/okl/fpeCubatureAdvection%s.okl", suffix);
     sprintf(kernelName, "fpeAdvectionCubatureVolume%s", suffix);
-    fpe->advectionVolumeKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                           kernelInfo, mesh.comm);
+    fpe->advectionVolumeKernel =  platform.buildKernel(fileName, kernelName,
+                                           kernelInfo);
     sprintf(kernelName, "fpeAdvectionCubatureSurface%s", suffix);
-    fpe->advectionSurfaceKernel = buildKernel(mesh.device, fileName, kernelName,
-                                           kernelInfo, mesh.comm);
+    fpe->advectionSurfaceKernel = platform.buildKernel(fileName, kernelName,
+                                           kernelInfo);
   } else {
     sprintf(fileName, DFPE "/okl/fpeAdvection%s.okl", suffix);
     sprintf(kernelName, "fpeAdvectionVolume%s", suffix);
-    fpe->advectionVolumeKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                           kernelInfo, mesh.comm);
+    fpe->advectionVolumeKernel =  platform.buildKernel(fileName, kernelName,
+                                           kernelInfo);
     sprintf(kernelName, "fpeAdvectionSurface%s", suffix);
-    fpe->advectionSurfaceKernel = buildKernel(mesh.device, fileName, kernelName,
-                                           kernelInfo, mesh.comm);
+    fpe->advectionSurfaceKernel = platform.buildKernel(fileName, kernelName,
+                                           kernelInfo);
   }
 
 
@@ -202,27 +202,27 @@ fpe_t& fpe_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
     ||settings.compareSetting("TIME INTEGRATOR","SSBDF3")) {
     sprintf(fileName, DFPE "/okl/fpeDiffusionRhs%s.okl", suffix);
     sprintf(kernelName, "fpeDiffusionRhs%s", suffix);
-    fpe->diffusionRhsKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                           kernelInfo, mesh.comm);
+    fpe->diffusionRhsKernel =  platform.buildKernel(fileName, kernelName,
+                                           kernelInfo);
   } else {
     // gradient kernel
     sprintf(fileName, DFPE "/okl/fpeGradient%s.okl", suffix);
     sprintf(kernelName, "fpeGradient%s", suffix);
-    fpe->gradientKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                           kernelInfo, mesh.comm);
+    fpe->gradientKernel =  platform.buildKernel(fileName, kernelName,
+                                           kernelInfo);
 
     sprintf(fileName, DFPE "/okl/fpeDiffusion%s.okl", suffix);
     sprintf(kernelName, "fpeDiffusion%s", suffix);
-    fpe->diffusionKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                           kernelInfo, mesh.comm);
+    fpe->diffusionKernel =  platform.buildKernel(fileName, kernelName,
+                                           kernelInfo);
   }
 
   // mass matrix operator
   sprintf(fileName, LIBP_DIR "/core/okl/MassMatrixOperator%s.okl", suffix);
   sprintf(kernelName, "MassMatrixOperator%s", suffix);
 
-  fpe->MassMatrixKernel = buildKernel(mesh.device, fileName, kernelName,
-                                            kernelInfo, mesh.comm);
+  fpe->MassMatrixKernel = platform.buildKernel(fileName, kernelName,
+                                            kernelInfo);
 
 
   if (mesh.dim==2) {
@@ -233,8 +233,8 @@ fpe_t& fpe_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
     sprintf(kernelName, "fpeInitialCondition3D");
   }
 
-  fpe->initialConditionKernel = buildKernel(mesh.device, fileName, kernelName,
-                                                  kernelInfo, mesh.comm);
+  fpe->initialConditionKernel = platform.buildKernel(fileName, kernelName,
+                                                  kernelInfo);
 
   //build subcycler
   fpe->subcycler=NULL;
