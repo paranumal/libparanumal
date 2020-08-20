@@ -173,6 +173,21 @@ for(int n=1; n<_N+1; n++){
 }
 
 
+void subcell_t::InvVandermonde1D(int _N, dfloat *invV1D){
+  
+  int _Nq = _N+1;
+
+  dfloat *r1D = (dfloat*) malloc(_Nq*sizeof(dfloat));
+  
+  mesh.JacobiGLL(_N, r1D); //Gauss-Legendre-Lobatto nodes
+
+  mesh.Vandermonde1D(_N, _Nq, r1D, invV1D);
+
+  matrixInverse(_Nq, invV1D); 
+
+}
+
+
 subcell_t::~subcell_t() {
   
 }

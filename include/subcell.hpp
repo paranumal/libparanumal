@@ -45,7 +45,7 @@ public:
   occa::properties& props;
   solver_t& solver; // connect to the solver
 
-int N, Nsubcells, Nint, Next;
+int N, Nsubcells, Nint, Next, Nedges;
 int Nvgeo, Nsgeo; 
 int Nverts, Nfaces, Np; 
 int *mEToV, *mEToE, *mEToF; // Local Connectivity Info
@@ -85,12 +85,14 @@ occa::memory o_vgeo, o_sgeo;
 occa::memory o_EToE; 
 
 // Skyline pessimization related
-int Nmodes, Nmodes1D, *ModeMap;
+int Nmodes, Nmodes1D, *ModeMap, *edgeNodes;
 // dfloat  *ElementList;  
 dlong *ElementList;  
 dfloat *LSF; // Precomputed Least Squares Matrix i.e. R\Q' in QR decomposition 
 dfloat *BLD; // Precomputed Baseline Decay Scaling  
 dfloat *invVT; // Inverse Vandemonde Matrix
+dfloat *invVT1D; // Inverse Vandemonde Matrix for edge based approach
+dfloat *MM1D; // Inverse Vandemonde Matrix for edge based approach
 subcell_t() = delete;
 
   // subcell_t(mesh_t& mesh); 
@@ -109,7 +111,7 @@ virtual void CreateMinorGrid()=0;
 virtual void GeometricFactors()=0; 
 virtual void SetupOperators() =0; 
 
-
+virtual void EdgeNodes(int *eNodes) = 0; 
 
 // Create Local Connectivity
 void LocalConnect(); 
@@ -117,6 +119,7 @@ void GlobalConnect();
 
 void LeastSquaresFit(int N, dfloat *LSF);
 void BaseLineDecay(int N, dfloat *BLD);
+void InvVandermonde1D(int N, dfloat *BLD);
 
 
 
@@ -128,7 +131,9 @@ void BaseLineDecay(int N, dfloat *BLD);
 
   // Skyline
   occa::memory o_LSF, o_BLD, o_ElementList;
-  occa::memory o_invVT, o_ModMap; 
+  occa::memory o_invVT, o_ModMap, o_invVT1D;
+  occa::memory o_edgeNodes;  
+  occa::memory o_MM1D;  
   // occa::kernel skylineKernel; 
 
 #if 0

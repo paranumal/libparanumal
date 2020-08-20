@@ -29,7 +29,7 @@ SOFTWARE.
 void lss_t::Report(dfloat time, int tstep){
 
   static int frame=0;
-#if 0
+#if 1
   // //compute q.M*q
   MassMatrixKernel(mesh.Nelements, mesh.o_ggeo, mesh.o_MM, o_q, o_Mq);
 

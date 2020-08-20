@@ -105,6 +105,7 @@ public:
   occa::kernel reconstructKernel; 
   occa::kernel subcellComputeKernel; 
   occa::kernel skylineKernel; 
+  occa::kernel skyline1DKernel; 
   occa::kernel findNeighKernel; 
 
   // occa::kernel subcellSignKernel; // This could be part of subcell 

@@ -6,12 +6,14 @@
 data/lssCircle2D.h
 
 [MESH FILE]
-BOX
+#BOX
 #../../meshes/circle.msh
-#../../meshes/circle.msh
+../../meshes/circle.msh
 #../../meshes/lssCircle.msh
 #../../meshes/circle_h01.msh
 #../../meshes/lssTest.msh
+#../../meshes/circle_3.msh
+
 
 [MESH DIMENSION]
 2
@@ -89,4 +91,4 @@ TRUE
 
 [OUTPUT FILE NAME]
 #vortex
-circle
+circle2

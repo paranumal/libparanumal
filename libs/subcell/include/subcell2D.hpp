@@ -38,6 +38,8 @@ public:
    void CreateMinorGrid(); 
    void GeometricFactors(); 
    void SetupOperators(); 
+
+   void EdgeNodes(int *eNodes); 
    // void LocalConnect();  
    // void GlobalConnect();  
 

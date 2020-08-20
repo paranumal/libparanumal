@@ -69,22 +69,33 @@ void lss_t::Run(){
                   o_ssgnq);
 
 
-  // // This kernel needs to be changed, sq is not defined here, but in timestepper
-  // subcellSignKernel(mesh.Nelements,
-  //                   startTime,
-  //                   eps, 
-  //                   subcell->o_vgeo,
-  //                   o_q,
-  //                   o_ssgnq);
+    // skylineKernel(mesh.Nelements,
+    //             mesh.o_ggeo,
+    //             subcell->o_ModMap, 
+    //             mesh.o_MM,
+    //             subcell->o_invVT,
+    //             subcell->o_LSF,
+    //             subcell->o_BLD, 
+    //             o_q,
+    //             subcell->o_ElementList); 
 
-
+    skyline1DKernel(mesh.Nelements,
+                mesh.o_sgeo,
+                subcell->o_edgeNodes, 
+                subcell->o_MM1D,
+                subcell->o_invVT1D,
+                subcell->o_LSF,
+                subcell->o_BLD, 
+                o_q,
+                subcell->o_ElementList); 
+  
   }
 
 }
 
  // dfloat outputInterval; 
  // settings.getSetting("OUTPUT INTERVAL", outputInterval);
- // finalTime = startTime + 1*timeStepper->GetTimeStep();
+ finalTime = startTime + 1*timeStepper->GetTimeStep();
  // finalTime = startTime + 53*outputInterval;
   timeStepper->Run(o_q, startTime, finalTime);
 }

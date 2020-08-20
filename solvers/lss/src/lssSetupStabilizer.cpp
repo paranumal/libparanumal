@@ -69,6 +69,10 @@ void lss_t::SetupStabilizer(){
     skylineKernel = buildKernel(mesh.device, fileName, kernelName, 
                                      kernelInfo, mesh.comm); 
 
+    sprintf(kernelName, "lssSkyline1D%s", suffix);
+    skyline1DKernel = buildKernel(mesh.device, fileName, kernelName, 
+                                     kernelInfo, mesh.comm); 
+
     sprintf(kernelName, "lssFindNeigh%s", suffix);
     findNeighKernel = buildKernel(mesh.device, fileName, kernelName, 
                                      kernelInfo, mesh.comm); 

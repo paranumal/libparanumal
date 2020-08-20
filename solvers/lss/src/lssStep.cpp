@@ -347,11 +347,21 @@ void lss_t::DetectTroubledCells(occa::memory& o_Q, occa::memory& o_ElementList){
 
 // Currently modal decay + skyline only
 if(subcellStabilization){
-  skylineKernel(mesh.Nelements,
-                mesh.o_ggeo,
-                subcell->o_ModMap, 
-                mesh.o_MM,
-                subcell->o_invVT,
+  // skylineKernel(mesh.Nelements,
+  //               mesh.o_ggeo,
+  //               subcell->o_ModMap, 
+  //               mesh.o_MM,
+  //               subcell->o_invVT,
+  //               subcell->o_LSF,
+  //               subcell->o_BLD, 
+  //               o_Q,
+  //               o_ElementList); 
+
+  skyline1DKernel(mesh.Nelements,
+                mesh.o_sgeo,
+                subcell->o_edgeNodes, 
+                subcell->o_MM1D,
+                subcell->o_invVT1D,
                 subcell->o_LSF,
                 subcell->o_BLD, 
                 o_Q,

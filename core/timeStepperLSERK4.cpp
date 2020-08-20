@@ -200,7 +200,7 @@ lserk4_pml::~lserk4_pml() {
 
 
 /**************************************************/
-/* PML version                                    */
+/* SUBCELL version                                    */
 /**************************************************/
 
 lserk4_subcell::lserk4_subcell(dlong _Nelements, dlong _NhaloElements,
