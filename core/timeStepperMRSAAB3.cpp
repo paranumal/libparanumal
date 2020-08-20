@@ -41,7 +41,6 @@ mrsaab3::mrsaab3(dlong _Nelements, dlong _NhaloElements,
   Nfields(_Nfields) {
 
   platform_t &platform = solver.platform;
-  occa::device &device = platform.device;
 
   lambda = (dfloat *) malloc(Nfields*sizeof(dfloat));
   memcpy(lambda, _lambda, Nfields*sizeof(dfloat));
@@ -49,14 +48,14 @@ mrsaab3::mrsaab3(dlong _Nelements, dlong _NhaloElements,
   Nstages = 3;
 
   dfloat *rhsq0 = (dfloat*) calloc(N, sizeof(dfloat));
-  o_rhsq0 = device.malloc(N*sizeof(dfloat), rhsq0);
+  o_rhsq0 = platform.malloc(N*sizeof(dfloat), rhsq0);
   free(rhsq0);
 
   dfloat *rhsq = (dfloat*) calloc((Nstages-1)*N, sizeof(dfloat));
-  o_rhsq = device.malloc((Nstages-1)*N*sizeof(dfloat), rhsq);
+  o_rhsq = platform.malloc((Nstages-1)*N*sizeof(dfloat), rhsq);
   free(rhsq);
 
-  o_fQM = device.malloc((mesh.Nelements+mesh.totalHaloPairs)*mesh.Nfp
+  o_fQM = platform.malloc((mesh.Nelements+mesh.totalHaloPairs)*mesh.Nfp
                           *mesh.Nfaces*Nfields*sizeof(dfloat));
 
   occa::properties kernelInfo = platform.props; //copy base occa properties from solver
@@ -83,15 +82,16 @@ mrsaab3::mrsaab3(dlong _Nelements, dlong _NhaloElements,
   saab_a = (dfloat*) calloc(Nlevels*Nfields*Nstages*Nstages, sizeof(dfloat));
   saab_b = (dfloat*) calloc(Nlevels*Nfields*Nstages*Nstages, sizeof(dfloat));
 
-  shiftIndex = (int*) occaHostMallocPinned(device, Nlevels*sizeof(int),
-                                       NULL, o_shiftIndex, h_shiftIndex);
+  shiftIndex = (int*) platform.hostMalloc(Nlevels*sizeof(int),
+                                          NULL, h_shiftIndex);
+  o_shiftIndex = platform.malloc(Nlevels*sizeof(int));
 
   mrdt = (dfloat*) calloc(Nlevels, sizeof(dfloat));
-  o_mrdt = device.malloc(Nlevels*sizeof(dfloat), mrdt);
+  o_mrdt = platform.malloc(Nlevels*sizeof(dfloat), mrdt);
 
-  o_saab_x = device.malloc(Nlevels*Nfields*sizeof(dfloat));
-  o_saab_a = device.malloc(Nlevels*Nfields*Nstages*Nstages*sizeof(dfloat));
-  o_saab_b = device.malloc(Nlevels*Nfields*Nstages*Nstages*sizeof(dfloat));
+  o_saab_x = platform.malloc(Nlevels*Nfields*sizeof(dfloat));
+  o_saab_a = platform.malloc(Nlevels*Nfields*Nstages*Nstages*sizeof(dfloat));
+  o_saab_b = platform.malloc(Nlevels*Nfields*Nstages*Nstages*sizeof(dfloat));
 }
 
 void mrsaab3::Run(occa::memory &o_q, dfloat start, dfloat end) {
@@ -323,7 +323,7 @@ void mrsaab3::UpdateCoefficients() {
       }
     }
 
-    // move data to device
+    // move data to platform
     o_saab_x.copyFrom(saab_x);
     o_saab_a.copyFrom(saab_a);
     o_saab_b.copyFrom(saab_b);
@@ -359,18 +359,17 @@ mrsaab3_pml::mrsaab3_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElement
 
   if (Npml) {
     platform_t &platform = solver.platform;
-    occa::device &device = platform.device;
 
     dfloat *pmlq = (dfloat*) calloc(Npml, sizeof(dfloat));
-    o_pmlq = device.malloc(Npml*sizeof(dfloat), pmlq);
+    o_pmlq = platform.malloc(Npml*sizeof(dfloat), pmlq);
     free(pmlq);
 
     dfloat *rhspmlq0 = (dfloat*) calloc(Npml, sizeof(dfloat));
-    o_rhspmlq0 = device.malloc(Npml*sizeof(dfloat), rhspmlq0);
+    o_rhspmlq0 = platform.malloc(Npml*sizeof(dfloat), rhspmlq0);
     free(rhspmlq0);
 
     dfloat *rhspmlq = (dfloat*) calloc((Nstages-1)*Npml, sizeof(dfloat));
-    o_rhspmlq = device.malloc((Nstages-1)*Npml*sizeof(dfloat), rhspmlq);
+    o_rhspmlq = platform.malloc((Nstages-1)*Npml*sizeof(dfloat), rhspmlq);
     free(rhspmlq);
 
     occa::properties kernelInfo = platform.props; //copy base occa properties from solver
@@ -404,8 +403,8 @@ mrsaab3_pml::mrsaab3_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElement
     memcpy(pmlsaab_a, _ab_a, Nstages*Nstages*sizeof(dfloat));
     memcpy(pmlsaab_b, _ab_b, Nstages*Nstages*sizeof(dfloat));
 
-    o_pmlsaab_a = device.malloc(Nstages*Nstages*sizeof(dfloat), pmlsaab_a);
-    o_pmlsaab_b = device.malloc(Nstages*Nstages*sizeof(dfloat), pmlsaab_b);
+    o_pmlsaab_a = platform.malloc(Nstages*Nstages*sizeof(dfloat), pmlsaab_a);
+    o_pmlsaab_b = platform.malloc(Nstages*Nstages*sizeof(dfloat), pmlsaab_b);
   }
 }
 

@@ -37,25 +37,21 @@ pcg::pcg(dlong _N, dlong _Nhalo,
 
   flexible = settings.compareSetting("LINEAR SOLVER", "FPCG");
 
-  occa::device &device = platform.device;
-
   /*aux variables */
   dfloat *dummy = (dfloat *) calloc(Ntotal,sizeof(dfloat)); //need this to avoid uninitialized memory warnings
-  o_p  = device.malloc(Ntotal*sizeof(dfloat),dummy);
-  o_z  = device.malloc(Ntotal*sizeof(dfloat),dummy);
-  o_Ax = device.malloc(Ntotal*sizeof(dfloat),dummy);
-  o_Ap = device.malloc(Ntotal*sizeof(dfloat),dummy);
+  o_p  = platform.malloc(Ntotal*sizeof(dfloat),dummy);
+  o_z  = platform.malloc(Ntotal*sizeof(dfloat),dummy);
+  o_Ax = platform.malloc(Ntotal*sizeof(dfloat),dummy);
+  o_Ap = platform.malloc(Ntotal*sizeof(dfloat),dummy);
   free(dummy);
 
   weighted = _weighted;
   o_w = _o_weight;
 
   //pinned tmp buffer for reductions
-  occa::properties mprops;
-  mprops["mapped"] = true;
-  h_tmprdotr = device.malloc(PCG_BLOCKSIZE*sizeof(dfloat), mprops);
-  tmprdotr = (dfloat*) h_tmprdotr.ptr(mprops);
-  o_tmprdotr = device.malloc(PCG_BLOCKSIZE*sizeof(dfloat));
+  tmprdotr = (dfloat*) platform.hostMalloc(PCG_BLOCKSIZE*sizeof(dfloat),
+                                          NULL, h_tmprdotr);
+  o_tmprdotr = platform.malloc(PCG_BLOCKSIZE*sizeof(dfloat));
 
   /* build kernels */
   occa::properties kernelInfo = platform.props; //copy base properties

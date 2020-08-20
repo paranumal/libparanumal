@@ -42,6 +42,7 @@ void occaScatterStart(occa::memory& o_v,
                       const ogs_transpose trans,
                       ogs_t &ogs){
 
+  occa::device &device = ogs.platform.device;
   const size_t Nbytes = ogs_type_size[type];
 
   if (trans == ogs_sym)
@@ -50,8 +51,8 @@ void occaScatterStart(occa::memory& o_v,
   ogs.reallocOccaBuffer(Nbytes*Nentries*Nvectors);
 
   if (ogs.haloGather.Nrows) {
-    occa::stream currentStream = ogs.device.getStream();
-    ogs.device.setStream(dataStream);
+    occa::stream currentStream = device.getStream();
+    device.setStream(dataStream);
 
     for (int i=0;i<Nvectors;i++)
       o_gv.copyTo((char*)ogs.haloBuf+ogs.Nhalo*Nbytes*Nentries*i,
@@ -59,7 +60,7 @@ void occaScatterStart(occa::memory& o_v,
                   ogs.localGather.Nrows*Nbytes*Nentries + gstride*Nbytes*i,
                   "async: true");
 
-    ogs.device.setStream(currentStream);
+    device.setStream(currentStream);
   }
 }
 
@@ -75,6 +76,7 @@ void occaScatterFinish(occa::memory& o_v,
                        const ogs_transpose trans,
                        ogs_t &ogs){
 
+  occa::device &device = ogs.platform.device;
   const size_t Nbytes = ogs_type_size[type];
 
   if (trans == ogs_sym)
@@ -91,11 +93,11 @@ void occaScatterFinish(occa::memory& o_v,
                         type, op, o_gv, o_v);
   }
 
-  occa::stream currentStream = ogs.device.getStream();
+  occa::stream currentStream = device.getStream();
   if (ogs.Nhalo) {
-    ogs.device.setStream(dataStream);
-    ogs.device.finish();
-    ogs.device.setStream(currentStream);
+    device.setStream(dataStream);
+    device.finish();
+    device.setStream(currentStream);
   }
 
   // MPI based scatter using gslib
@@ -106,7 +108,7 @@ void occaScatterFinish(occa::memory& o_v,
   dlong NhaloScatter = (trans == ogs_notrans) ? ogs.haloScatter.Nrows : ogs.haloGather.Nrows;
 
   if (NhaloScatter) {
-    ogs.device.setStream(dataStream);
+    device.setStream(dataStream);
 
     // copy totally scattered halo data back from HOST to DEVICE
     for (int i=0;i<Nvectors;i++)
@@ -115,8 +117,8 @@ void occaScatterFinish(occa::memory& o_v,
                              ogs.Nhalo*Nbytes*Nentries*i,
                              "async: true");
 
-    ogs.device.finish();
-    ogs.device.setStream(currentStream);
+    device.finish();
+    device.setStream(currentStream);
 
     if (trans == ogs_notrans)
       occaScatterKernel(ogs.haloScatter, Nentries, Nvectors, ogs.Nhalo, stride,

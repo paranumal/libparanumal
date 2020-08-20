@@ -35,18 +35,16 @@ nbfpcg::nbfpcg(dlong _N, dlong _Nhalo,
 
   dlong Ntotal = N + Nhalo;
 
-  occa::device &device = platform.device;
-
   /*aux variables */
-  o_u  = device.malloc(Ntotal*sizeof(dfloat));
-  o_p  = device.malloc(Ntotal*sizeof(dfloat));
-  o_w  = device.malloc(Ntotal*sizeof(dfloat));
-  o_n  = device.malloc(Ntotal*sizeof(dfloat));
-  o_m  = device.malloc(Ntotal*sizeof(dfloat));
-  o_s  = device.malloc(Ntotal*sizeof(dfloat));
-  o_z  = device.malloc(Ntotal*sizeof(dfloat));
-  o_q  = device.malloc(Ntotal*sizeof(dfloat));
-  o_Ax = device.malloc(Ntotal*sizeof(dfloat));
+  o_u  = platform.malloc(Ntotal*sizeof(dfloat));
+  o_p  = platform.malloc(Ntotal*sizeof(dfloat));
+  o_w  = platform.malloc(Ntotal*sizeof(dfloat));
+  o_n  = platform.malloc(Ntotal*sizeof(dfloat));
+  o_m  = platform.malloc(Ntotal*sizeof(dfloat));
+  o_s  = platform.malloc(Ntotal*sizeof(dfloat));
+  o_z  = platform.malloc(Ntotal*sizeof(dfloat));
+  o_q  = platform.malloc(Ntotal*sizeof(dfloat));
+  o_Ax = platform.malloc(Ntotal*sizeof(dfloat));
 
   localdots  = (dfloat*) calloc(4, sizeof(dfloat));
   globaldots = (dfloat*) calloc(4, sizeof(dfloat));
@@ -55,11 +53,10 @@ nbfpcg::nbfpcg(dlong _N, dlong _Nhalo,
   o_weight = _o_weight;
 
   //pinned tmp buffer for reductions
-  occa::properties mprops;
-  mprops["mapped"] = true;
-  h_tmpdots = device.malloc(4*NBFPCG_BLOCKSIZE*sizeof(dfloat), mprops);
-  tmpdots = (dfloat*) h_tmpdots.ptr(mprops);
-  o_tmpdots = device.malloc(4*NBFPCG_BLOCKSIZE*sizeof(dfloat));
+  tmpdots = (dfloat*) platform.hostMalloc(4*NBFPCG_BLOCKSIZE*sizeof(dfloat),
+                                          NULL, h_tmpdots);
+
+  o_tmpdots = platform.malloc(4*NBFPCG_BLOCKSIZE*sizeof(dfloat));
 
   /* build kernels */
   occa::properties kernelInfo = platform.props; //copy base properties

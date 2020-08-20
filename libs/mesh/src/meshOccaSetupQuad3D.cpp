@@ -31,14 +31,14 @@ void meshQuad3D::OccaSetup(){
 
   this->mesh3D::OccaSetup();
 
-  o_D = device.malloc(Nq*Nq*sizeof(dfloat), D);
+  o_D = platform.malloc(Nq*Nq*sizeof(dfloat), D);
 
   o_S    = o_D; //dummy
   o_MM   = o_D; //dummy
   o_sM   = o_D; //dummy
   o_LIFT = o_D; //dummy
 
-  o_vgeo = device.malloc((Nelements+totalHaloPairs)*Nvgeo*Np*sizeof(dfloat), vgeo);
-  o_sgeo = device.malloc(Nelements*Nfaces*Nfp*Nsgeo*sizeof(dfloat), sgeo);
-  o_ggeo = device.malloc(Nelements*Np*Nggeo*sizeof(dfloat), ggeo);
+  o_vgeo = platform.malloc((Nelements+totalHaloPairs)*Nvgeo*Np*sizeof(dfloat), vgeo);
+  o_sgeo = platform.malloc(Nelements*Nfaces*Nfp*Nsgeo*sizeof(dfloat), sgeo);
+  o_ggeo = platform.malloc(Nelements*Np*Nggeo*sizeof(dfloat), ggeo);
 }

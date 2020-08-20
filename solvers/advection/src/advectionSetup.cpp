@@ -31,8 +31,6 @@ advection_t& advection_t::Setup(platform_t& platform, mesh_t& mesh,
 
   advection_t* advection = new advection_t(platform, mesh, settings);
 
-  occa::device &device = platform.device;
-
   dlong Nlocal = mesh.Nelements*mesh.Np;
   dlong Nhalo  = mesh.totalHaloPairs*mesh.Np;
 
@@ -63,10 +61,10 @@ advection_t& advection_t::Setup(platform_t& platform, mesh_t& mesh,
 
   // compute samples of q at interpolation nodes
   advection->q = (dfloat*) calloc(Nlocal+Nhalo, sizeof(dfloat));
-  advection->o_q = device.malloc((Nlocal+Nhalo)*sizeof(dfloat), advection->q);
+  advection->o_q = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), advection->q);
 
   //storage for M*q during reporting
-  advection->o_Mq = device.malloc((Nlocal+Nhalo)*sizeof(dfloat), advection->q);
+  advection->o_Mq = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), advection->q);
 
   // OCCA build stuff
   occa::properties kernelInfo = mesh.props; //copy base occa properties
@@ -82,7 +80,7 @@ advection_t& advection_t::Setup(platform_t& platform, mesh_t& mesh,
   kernelInfo["defines/" "p_maxNodes"]= maxNodes;
 
   int blockMax = 256;
-  if (device.mode() == "CUDA") blockMax = 512;
+  if (platform.device.mode() == "CUDA") blockMax = 512;
 
   int NblockV = mymax(1, blockMax/mesh.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;

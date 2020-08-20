@@ -69,7 +69,7 @@ elliptic_t& elliptic_t::Setup(platform_t& platform, mesh_t& mesh,
     //buffer for gradient
     dlong Ntotal = mesh.Np*(mesh.Nelements+mesh.totalHaloPairs);
     elliptic->grad = (dfloat*) calloc(Ntotal*4, sizeof(dfloat));
-    elliptic->o_grad  = mesh.device.malloc(Ntotal*4*sizeof(dfloat), elliptic->grad);
+    elliptic->o_grad  = platform.malloc(Ntotal*4*sizeof(dfloat), elliptic->grad);
   } else {
     elliptic->tau = 0.0;
   }
@@ -109,7 +109,7 @@ elliptic_t& elliptic_t::Setup(platform_t& platform, mesh_t& mesh,
   kernelInfo["includes"] += boundaryHeaderFileName;
 
   int blockMax = 256;
-  if (mesh.device.mode() == "CUDA") blockMax = 512;
+  if (platform.device.mode() == "CUDA") blockMax = 512;
 
   int NblockV = mymax(1,blockMax/mesh.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;

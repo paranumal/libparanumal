@@ -31,8 +31,8 @@ void mesh2D::OccaSetup(){
 
   this->mesh_t::OccaSetup();
 
-  o_x = device.malloc(Nelements*Np*sizeof(dfloat), x);
-  o_y = device.malloc(Nelements*Np*sizeof(dfloat), y);
+  o_x = platform.malloc(Nelements*Np*sizeof(dfloat), x);
+  o_y = platform.malloc(Nelements*Np*sizeof(dfloat), y);
   o_z = o_y; // dummy z variable
 
   props["defines/" "p_NXID"]= NXID;

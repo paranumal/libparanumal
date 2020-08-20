@@ -109,11 +109,11 @@ void elliptic_t::Run(){
   dlong Nall = mesh.Np*(mesh.Nelements+mesh.totalHaloPairs);
   dfloat *r = (dfloat*) calloc(Nall, sizeof(dfloat));
   dfloat *x = (dfloat*) calloc(Nall, sizeof(dfloat));
-  occa::memory o_r = mesh.device.malloc(Nall*sizeof(dfloat), r);
-  occa::memory o_x = mesh.device.malloc(Nall*sizeof(dfloat), x);
+  occa::memory o_r = platform.malloc(Nall*sizeof(dfloat), r);
+  occa::memory o_x = platform.malloc(Nall*sizeof(dfloat), x);
 
   //storage for M*q during reporting
-  occa::memory o_Mx = mesh.device.malloc(Nall*sizeof(dfloat), x);
+  occa::memory o_Mx = platform.malloc(Nall*sizeof(dfloat), x);
 
   //populate rhs forcing
   forcingKernel(mesh.Nelements,

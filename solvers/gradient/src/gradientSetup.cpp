@@ -40,13 +40,13 @@ gradient_t& gradient_t::Setup(platform_t& platform, mesh_t& mesh,
 
   // compute samples of q at interpolation nodes
   gradient->q = (dfloat*) calloc(Nlocal, sizeof(dfloat));
-  gradient->o_q = mesh.device.malloc(Nlocal*sizeof(dfloat), gradient->q);
+  gradient->o_q = platform.malloc(Nlocal*sizeof(dfloat), gradient->q);
 
   gradient->gradq = (dfloat*) calloc(Nlocal*mesh.dim, sizeof(dfloat));
-  gradient->o_gradq = mesh.device.malloc(Nlocal*mesh.dim*sizeof(dfloat), gradient->gradq);
+  gradient->o_gradq = platform.malloc(Nlocal*mesh.dim*sizeof(dfloat), gradient->gradq);
 
   //storage for M*gradq during reporting
-  gradient->o_Mgradq = mesh.device.malloc(Nlocal*mesh.dim*sizeof(dfloat), gradient->gradq);
+  gradient->o_Mgradq = platform.malloc(Nlocal*mesh.dim*sizeof(dfloat), gradient->gradq);
 
   // OCCA build stuff
   occa::properties kernelInfo = mesh.props; //copy base occa properties

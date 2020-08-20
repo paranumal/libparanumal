@@ -35,19 +35,15 @@ linAlg_t::linAlg_t(): blocksize(LINALG_BLOCKSIZE) {};
 void linAlg_t::Setup(platform_t *_platform) {
 
   platform = _platform;
-  occa::device &device = platform->device;
   kernelInfo = platform->props;
 
   //add defines
   kernelInfo["defines/" "p_blockSize"] = (int)LINALG_BLOCKSIZE;
 
   //pinned scratch buffer
-  occa::properties mprops;
-  mprops["mapped"] = true;
-  h_scratch = device.malloc(LINALG_BLOCKSIZE*sizeof(dfloat), mprops);
-  scratch = (dfloat*) h_scratch.ptr(mprops);
-
-  o_scratch = device.malloc(LINALG_BLOCKSIZE*sizeof(dfloat));
+  scratch = (dfloat*) platform->hostMalloc(LINALG_BLOCKSIZE*sizeof(dfloat),
+                                           NULL, h_scratch);
+  o_scratch = platform->malloc(LINALG_BLOCKSIZE*sizeof(dfloat));
 }
 
 //initialize list of kernels

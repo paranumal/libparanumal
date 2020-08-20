@@ -82,6 +82,32 @@ public:
   occa::kernel buildKernel(std::string fileName, std::string kernelName,
                            occa::properties& kernelInfo);
 
+  occa::memory malloc(const size_t bytes,
+                      const void *src = NULL,
+                      const occa::properties &prop = occa::properties()) {
+    return device.malloc(bytes, src, prop);
+  }
+
+  occa::memory malloc(const size_t bytes,
+                      const occa::memory &src,
+                      const occa::properties &prop = occa::properties()) {
+    return device.malloc(bytes, src, prop);
+  }
+
+  occa::memory malloc(const size_t bytes,
+                      const occa::properties &prop) {
+    return device.malloc(bytes, prop);
+  }
+
+  void *hostMalloc(const size_t bytes,
+                   const void *src,
+                   occa::memory &h_mem){
+    occa::properties prop;
+    prop["mapped"] = true;
+    h_mem = device.malloc(bytes, prop);
+    return h_mem.ptr(prop);
+  }
+
 private:
   void DeviceConfig();
   void DeviceProperties();

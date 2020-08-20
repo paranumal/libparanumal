@@ -40,6 +40,7 @@ void occaGatherScatterStart(occa::memory& o_v,
                             const ogs_transpose trans,
                             ogs_t &ogs){
 
+  occa::device &device = ogs.platform.device;
   const size_t Nbytes = ogs_type_size[type];
 
   ogs.reallocOccaBuffer(Nbytes*Nentries*Nvectors);
@@ -55,9 +56,9 @@ void occaGatherScatterStart(occa::memory& o_v,
       occaGatherKernel(ogs.haloScatter, Nentries, Nvectors, stride, ogs.Nhalo,
                        type, op, o_v, ogs.o_haloBuf);
 
-    ogs.device.finish();
-    occa::stream currentStream = ogs.device.getStream();
-    ogs.device.setStream(dataStream);
+    device.finish();
+    occa::stream currentStream = device.getStream();
+    device.setStream(dataStream);
 
     for (int i=0;i<Nvectors;i++)
       ogs.o_haloBuf.copyTo((char*)ogs.haloBuf + ogs.Nhalo*Nbytes*Nentries*i,
@@ -65,7 +66,7 @@ void occaGatherScatterStart(occa::memory& o_v,
                            ogs.Nhalo*Nbytes*Nentries*i,
                            "async: true");
 
-    ogs.device.setStream(currentStream);
+    device.setStream(currentStream);
   }
 }
 
@@ -79,6 +80,7 @@ void occaGatherScatterFinish(occa::memory& o_v,
                              const ogs_transpose trans,
                              ogs_t &ogs){
 
+  occa::device &device = ogs.platform.device;
   const size_t Nbytes = ogs_type_size[type];
 
   void* gsh = (trans == ogs_sym) ? ogs.gshSym : ogs.gsh;
@@ -97,11 +99,11 @@ void occaGatherScatterFinish(occa::memory& o_v,
                               Nentries, Nvectors, stride, type, op, o_v);
   }
 
-  occa::stream currentStream = ogs.device.getStream();
+  occa::stream currentStream = device.getStream();
   if (ogs.Nhalo) {
-    ogs.device.setStream(dataStream);
-    ogs.device.finish();
-    ogs.device.setStream(currentStream);
+    device.setStream(dataStream);
+    device.finish();
+    device.setStream(currentStream);
   }
 
   // MPI based gather scatter using libgs
@@ -111,7 +113,7 @@ void occaGatherScatterFinish(occa::memory& o_v,
   dlong NhaloScatter = (trans == ogs_trans) ? ogs.haloGather.Nrows : ogs.haloScatter.Nrows;
 
   if (NhaloScatter) {
-    ogs.device.setStream(dataStream);
+    device.setStream(dataStream);
 
     // copy gatherScattered halo data back from HOST to DEVICE
     for (int i=0;i<Nvectors;i++)
@@ -120,8 +122,8 @@ void occaGatherScatterFinish(occa::memory& o_v,
                              ogs.Nhalo*Nbytes*Nentries*i,
                              "async: true");
 
-    ogs.device.finish();
-    ogs.device.setStream(currentStream);
+    device.finish();
+    device.setStream(currentStream);
 
     // scatter back to local nodes
     if (trans == ogs_trans)

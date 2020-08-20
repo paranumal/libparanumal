@@ -154,48 +154,48 @@ ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
 
   // u and p at interpolation nodes
   ins->u = (dfloat*) calloc((Nlocal+Nhalo)*ins->NVfields, sizeof(dfloat));
-  ins->o_u = mesh.device.malloc((Nlocal+Nhalo)*ins->NVfields*sizeof(dfloat), ins->u);
+  ins->o_u = platform.malloc((Nlocal+Nhalo)*ins->NVfields*sizeof(dfloat), ins->u);
 
   ins->p = (dfloat*) calloc(Nlocal+Nhalo, sizeof(dfloat));
-  ins->o_p = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat), ins->p);
+  ins->o_p = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), ins->p);
 
   //storage for velocity gradient
   if ( !settings.compareSetting("TIME INTEGRATOR","EXTBDF3")
     && !settings.compareSetting("TIME INTEGRATOR","SSBDF3"))
-    ins->o_GU = mesh.device.malloc((Nlocal+Nhalo)*4*sizeof(dfloat));
+    ins->o_GU = platform.malloc((Nlocal+Nhalo)*4*sizeof(dfloat));
 
   //extra buffers for solvers
   if (settings.compareSetting("TIME INTEGRATOR","EXTBDF3")
     ||settings.compareSetting("TIME INTEGRATOR","SSBDF3")) {
-    ins->o_UH = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat));
-    ins->o_VH = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat));
+    ins->o_UH = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat));
+    ins->o_VH = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat));
     if (mesh.dim==3)
-      ins->o_WH = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat));
+      ins->o_WH = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat));
     else
-      ins->o_WH = mesh.device.malloc((1)*sizeof(dfloat));
+      ins->o_WH = platform.malloc((1)*sizeof(dfloat));
 
-    ins->o_rhsU = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat));
-    ins->o_rhsV = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat));
+    ins->o_rhsU = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat));
+    ins->o_rhsV = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat));
     if (mesh.dim==3)
-      ins->o_rhsW = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat));
+      ins->o_rhsW = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat));
     else
-      ins->o_rhsW = mesh.device.malloc((1)*sizeof(dfloat));
+      ins->o_rhsW = platform.malloc((1)*sizeof(dfloat));
   }
 
   if (ins->pressureIncrement)
-    ins->o_PI = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat), ins->p);
+    ins->o_PI = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), ins->p);
 
-  ins->o_rhsP = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat));
+  ins->o_rhsP = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat));
 
   //storage for M*u during reporting
-  ins->o_MU = mesh.device.malloc((Nlocal+Nhalo)*ins->NVfields*sizeof(dfloat), ins->u);
+  ins->o_MU = platform.malloc((Nlocal+Nhalo)*ins->NVfields*sizeof(dfloat), ins->u);
 
   if (mesh.dim==2) {
     ins->Vort = (dfloat*) calloc((Nlocal+Nhalo), sizeof(dfloat));
-    ins->o_Vort = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat), ins->Vort);
+    ins->o_Vort = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), ins->Vort);
   } else {
     ins->Vort = (dfloat*) calloc((Nlocal+Nhalo)*ins->NVfields, sizeof(dfloat));
-    ins->o_Vort = mesh.device.malloc((Nlocal+Nhalo)*ins->NVfields*sizeof(dfloat), ins->Vort);
+    ins->o_Vort = platform.malloc((Nlocal+Nhalo)*ins->NVfields*sizeof(dfloat), ins->Vort);
   }
 
   // OCCA build stuff
@@ -291,7 +291,7 @@ ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
     ins->subcycler->subCycleAdvectionKernel = platform.buildKernel(fileName, kernelName,
                                              kernelInfo);
 
-    ins->subcycler->o_Ue = mesh.device.malloc((Nlocal+Nhalo)*ins->NVfields*sizeof(dfloat), ins->u);
+    ins->subcycler->o_Ue = platform.malloc((Nlocal+Nhalo)*ins->NVfields*sizeof(dfloat), ins->u);
 
   } else {
     //regular advection kernels

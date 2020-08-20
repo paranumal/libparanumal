@@ -35,19 +35,18 @@ extbdf3::extbdf3(dlong Nelements, dlong NhaloElements,
   timeStepper_t(Nelements, NhaloElements, Np, Nfields, _solver) {
 
   platform_t &platform = solver.platform;
-  occa::device &device = platform.device;
 
   Nstages = 3;
   shiftIndex = 0;
 
   dfloat *qn = (dfloat *) calloc(Nstages*N,sizeof(dfloat));
-  o_qn = device.malloc(Nstages*N*sizeof(dfloat),qn); //q history
+  o_qn = platform.malloc(Nstages*N*sizeof(dfloat),qn); //q history
 
   dfloat *rhs = (dfloat *) calloc(N,sizeof(dfloat));
-  o_rhs = device.malloc(N*sizeof(dfloat), rhs); //rhs storage
+  o_rhs = platform.malloc(N*sizeof(dfloat), rhs); //rhs storage
   free(rhs);
 
-  o_F  = device.malloc(Nstages*N*sizeof(dfloat), qn); //F(q) history (explicit part)
+  o_F  = platform.malloc(Nstages*N*sizeof(dfloat), qn); //F(q) history (explicit part)
   free(qn);
 
   occa::properties kernelInfo = platform.props; //copy base occa properties from solver
@@ -75,8 +74,8 @@ extbdf3::extbdf3(dlong Nelements, dlong NhaloElements,
   memcpy(extbdf_a, _a, Nstages*Nstages*sizeof(dfloat));
   memcpy(extbdf_b, _b, Nstages*(Nstages+1)*sizeof(dfloat));
 
-  o_extbdf_a = device.malloc(Nstages*Nstages*sizeof(dfloat), extbdf_a);
-  o_extbdf_b = device.malloc(Nstages*(Nstages+1)*sizeof(dfloat), extbdf_b);
+  o_extbdf_a = platform.malloc(Nstages*Nstages*sizeof(dfloat), extbdf_a);
+  o_extbdf_b = platform.malloc(Nstages*(Nstages+1)*sizeof(dfloat), extbdf_b);
 }
 
 dfloat extbdf3::getGamma() {

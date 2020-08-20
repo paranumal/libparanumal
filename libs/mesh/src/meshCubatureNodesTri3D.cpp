@@ -70,9 +70,9 @@ void meshTri3D::CubatureNodes(){
     }
   }
 
-  o_cubx = device.malloc(Nelements*cubNp*sizeof(dfloat), cubx);
-  o_cuby = device.malloc(Nelements*cubNp*sizeof(dfloat), cuby);
-  o_cubz = device.malloc(Nelements*cubNp*sizeof(dfloat), cubz);
+  o_cubx = platform.malloc(Nelements*cubNp*sizeof(dfloat), cubx);
+  o_cuby = platform.malloc(Nelements*cubNp*sizeof(dfloat), cuby);
+  o_cubz = platform.malloc(Nelements*cubNp*sizeof(dfloat), cubz);
 
   //Face cubature
   intx = (dfloat*) calloc(Nelements*Nfaces*intNfp, sizeof(dfloat));
@@ -102,7 +102,7 @@ void meshTri3D::CubatureNodes(){
     }
   }
 
-  o_intx = device.malloc(Nelements*Nfaces*intNfp*sizeof(dfloat), intx);
-  o_inty = device.malloc(Nelements*Nfaces*intNfp*sizeof(dfloat), inty);
-  o_intz = device.malloc(Nelements*Nfaces*intNfp*sizeof(dfloat), intz);
+  o_intx = platform.malloc(Nelements*Nfaces*intNfp*sizeof(dfloat), intx);
+  o_inty = platform.malloc(Nelements*Nfaces*intNfp*sizeof(dfloat), inty);
+  o_intz = platform.malloc(Nelements*Nfaces*intNfp*sizeof(dfloat), intz);
 }

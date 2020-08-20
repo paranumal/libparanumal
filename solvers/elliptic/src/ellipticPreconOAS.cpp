@@ -120,8 +120,8 @@ OASPrecon::OASPrecon(elliptic_t& _elliptic):
       nextLevel->o_gatherWeight = ellipticC.o_weightG;
       nextLevel->Gx = (dfloat*) calloc(nextLevel->R->Ncols,sizeof(dfloat));
       nextLevel->Sx = (dfloat*) calloc(meshC.Np*meshC.Nelements,sizeof(dfloat));
-      nextLevel->o_Gx = meshC.device.malloc(nextLevel->R->Ncols*sizeof(dfloat),nextLevel->Gx);
-      nextLevel->o_Sx = meshC.device.malloc(meshC.Np*meshC.Nelements*sizeof(dfloat),nextLevel->Sx);
+      nextLevel->o_Gx = elliptic.platform.malloc(nextLevel->R->Ncols*sizeof(dfloat),nextLevel->Gx);
+      nextLevel->o_Sx = elliptic.platform.malloc(meshC.Np*meshC.Nelements*sizeof(dfloat),nextLevel->Sx);
     } else {
       //this level is the base
       parAlmond::coarseSolver *coarseLevel = parAlmondHandle->coarseLevel;
@@ -129,7 +129,7 @@ OASPrecon::OASPrecon(elliptic_t& _elliptic):
       coarseLevel->gatherLevel = true;
       coarseLevel->ogs = ellipticC.ogsMasked;
       coarseLevel->Gx = (dfloat*) calloc(coarseLevel->ogs->Ngather,sizeof(dfloat));
-      coarseLevel->o_Gx = meshC.device.malloc(coarseLevel->ogs->Ngather*sizeof(dfloat),coarseLevel->Gx);
+      coarseLevel->o_Gx = elliptic.platform.malloc(coarseLevel->ogs->Ngather*sizeof(dfloat),coarseLevel->Gx);
     }
   }
 
@@ -140,11 +140,11 @@ OASPrecon::OASPrecon(elliptic_t& _elliptic):
     rC = (dfloat*) calloc(levels[0]->Ncols,sizeof(dfloat));
     zC = (dfloat*) calloc(levels[0]->Ncols,sizeof(dfloat));
 
-    o_rPatch = mesh.device.malloc(mesh.Np*(mesh.Nelements+mesh.totalRingElements)*sizeof(dfloat), rPatch);
-    o_zPatch = mesh.device.malloc(mesh.Np*(mesh.Nelements+mesh.totalRingElements)*sizeof(dfloat), zPatch);
+    o_rPatch = elliptic.platform.malloc(mesh.Np*(mesh.Nelements+mesh.totalRingElements)*sizeof(dfloat), rPatch);
+    o_zPatch = elliptic.platform.malloc(mesh.Np*(mesh.Nelements+mesh.totalRingElements)*sizeof(dfloat), zPatch);
 
-    o_rC = mesh.device.malloc(levels[0]->Ncols*sizeof(dfloat), rC);
-    o_zC = mesh.device.malloc(levels[0]->Ncols*sizeof(dfloat), zC);
+    o_rC = elliptic.platform.malloc(levels[0]->Ncols*sizeof(dfloat), rC);
+    o_zC = elliptic.platform.malloc(levels[0]->Ncols*sizeof(dfloat), zC);
 
     //compute patch overlap weighting
     patchWeight = (dfloat*) malloc(mesh.Np*(mesh.Nelements+mesh.totalRingElements)*sizeof(dfloat));
@@ -157,7 +157,7 @@ OASPrecon::OASPrecon(elliptic_t& _elliptic):
     for (int i=0;i<mesh.Np*(mesh.Nelements+mesh.totalRingElements);i++)
       patchWeight[i] = 1.0/patchWeight[i];
 
-    o_patchWeight = mesh.device.malloc(mesh.Np*(mesh.Nelements+mesh.totalRingElements)*sizeof(dfloat), patchWeight);
+    o_patchWeight = elliptic.platform.malloc(mesh.Np*(mesh.Nelements+mesh.totalRingElements)*sizeof(dfloat), patchWeight);
   }
 
   //report

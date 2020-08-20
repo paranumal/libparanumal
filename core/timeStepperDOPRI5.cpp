@@ -34,20 +34,20 @@ dopri5::dopri5(dlong Nelements, dlong NhaloElements,
   timeStepper_t(Nelements, NhaloElements, Np, Nfields, _solver) {
 
   platform_t &platform = solver.platform;
-  occa::device &device = platform.device;
 
   Nrk = 7;
 
-  o_rhsq   = device.malloc(N*sizeof(dfloat));
-  o_rkq    = device.malloc((N+Nhalo)*sizeof(dfloat));
-  o_rkrhsq = device.malloc(Nrk*N*sizeof(dfloat));
-  o_rkerr  = device.malloc(N*sizeof(dfloat));
+  o_rhsq   = platform.malloc(N*sizeof(dfloat));
+  o_rkq    = platform.malloc((N+Nhalo)*sizeof(dfloat));
+  o_rkrhsq = platform.malloc(Nrk*N*sizeof(dfloat));
+  o_rkerr  = platform.malloc(N*sizeof(dfloat));
 
-  o_saveq  = device.malloc(N*sizeof(dfloat));
+  o_saveq  = platform.malloc(N*sizeof(dfloat));
 
   Nblock = (N+BLOCKSIZE-1)/BLOCKSIZE;
-  errtmp = (dfloat*) occaHostMallocPinned(device, Nblock*sizeof(dfloat),
-                                       NULL, o_errtmp, h_errtmp);
+  errtmp = (dfloat*) platform.hostMalloc(Nblock*sizeof(dfloat),
+                                          NULL, h_errtmp);
+  o_errtmp = platform.malloc(Nblock*sizeof(dfloat));
 
   hlong Nlocal = N;
   hlong Ntotal;
@@ -92,8 +92,8 @@ dopri5::dopri5(dlong Nelements, dlong NhaloElements,
   memcpy(rkE, _rkE, Nrk*sizeof(dfloat));
   memcpy(rkA, _rkA, Nrk*Nrk*sizeof(dfloat));
 
-  o_rkA = device.malloc(Nrk*Nrk*sizeof(dfloat), rkA);
-  o_rkE = device.malloc(Nrk*sizeof(dfloat), rkE);
+  o_rkA = platform.malloc(Nrk*Nrk*sizeof(dfloat), rkA);
+  o_rkE = platform.malloc(Nrk*sizeof(dfloat), rkE);
 
   dtMIN = 1E-9; //minumum allowed timestep
   ATOL = 1E-6;  //absolute error tolerance
@@ -326,17 +326,16 @@ dopri5_pml::dopri5_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
 
   if (Npml) {
     platform_t &platform = solver.platform;
-    occa::device &device = platform.device;
 
     dfloat *pmlq = (dfloat *) calloc(Npml,sizeof(dfloat));
-    o_pmlq   = device.malloc(Npml*sizeof(dfloat), pmlq);
+    o_pmlq   = platform.malloc(Npml*sizeof(dfloat), pmlq);
     free(pmlq);
 
-    o_rhspmlq   = device.malloc(Npml*sizeof(dfloat));
-    o_rkpmlq    = device.malloc(Npml*sizeof(dfloat));
-    o_rkrhspmlq = device.malloc(Nrk*Npml*sizeof(dfloat));
+    o_rhspmlq   = platform.malloc(Npml*sizeof(dfloat));
+    o_rkpmlq    = platform.malloc(Npml*sizeof(dfloat));
+    o_rkrhspmlq = platform.malloc(Nrk*Npml*sizeof(dfloat));
 
-    o_savepmlq  = device.malloc(Npml*sizeof(dfloat));
+    o_savepmlq  = platform.malloc(Npml*sizeof(dfloat));
 
     occa::properties kernelInfo = platform.props; //copy base occa properties from solver
 

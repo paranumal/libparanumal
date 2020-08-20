@@ -52,7 +52,6 @@ public:
 class mesh_t {
 public:
   platform_t& platform;
-  occa::device& device;
   meshSettings_t& settings;
 
   occa::properties props;

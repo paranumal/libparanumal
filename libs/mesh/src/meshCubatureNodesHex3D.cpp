@@ -101,9 +101,9 @@ void meshHex3D::CubatureNodes(){
   free(Ix1); free(Iy1); free(Iz1);
   free(Ix2); free(Iy2); free(Iz2);
 
-  o_cubx = device.malloc(Nelements*cubNp*sizeof(dfloat), cubx);
-  o_cuby = device.malloc(Nelements*cubNp*sizeof(dfloat), cuby);
-  o_cubz = device.malloc(Nelements*cubNp*sizeof(dfloat), cubz);
+  o_cubx = platform.malloc(Nelements*cubNp*sizeof(dfloat), cubx);
+  o_cuby = platform.malloc(Nelements*cubNp*sizeof(dfloat), cuby);
+  o_cubz = platform.malloc(Nelements*cubNp*sizeof(dfloat), cubz);
 
   //Face cubature
   intx = (dfloat*) calloc(Nelements*Nfaces*cubNfp, sizeof(dfloat));
@@ -164,7 +164,7 @@ void meshHex3D::CubatureNodes(){
   }
   free(ix); free(iy); free(iz);
 
-  o_intx = device.malloc(Nelements*Nfaces*cubNfp*sizeof(dfloat), intx);
-  o_inty = device.malloc(Nelements*Nfaces*cubNfp*sizeof(dfloat), inty);
-  o_intz = device.malloc(Nelements*Nfaces*cubNfp*sizeof(dfloat), intz);
+  o_intx = platform.malloc(Nelements*Nfaces*cubNfp*sizeof(dfloat), intx);
+  o_inty = platform.malloc(Nelements*Nfaces*cubNfp*sizeof(dfloat), inty);
+  o_intz = platform.malloc(Nelements*Nfaces*cubNfp*sizeof(dfloat), intz);
 }

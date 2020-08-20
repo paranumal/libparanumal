@@ -166,14 +166,14 @@ bns_t& bns_t::Setup(platform_t& platform, mesh_t& mesh,
 
   // compute samples of q at interpolation nodes
   bns->q = (dfloat*) calloc(Nlocal+Nhalo, sizeof(dfloat));
-  bns->o_q = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat), bns->q);
+  bns->o_q = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), bns->q);
 
   bns->Vort = (dfloat*) calloc(mesh.dim*mesh.Nelements*mesh.Np, sizeof(dfloat));
-  bns->o_Vort = mesh.device.malloc((mesh.dim*mesh.Nelements*mesh.Np)*sizeof(dfloat),
+  bns->o_Vort = platform.malloc((mesh.dim*mesh.Nelements*mesh.Np)*sizeof(dfloat),
                                               bns->Vort);
 
   //storage for M*q during reporting
-  bns->o_Mq = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat), bns->q);
+  bns->o_Mq = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), bns->q);
 
   // OCCA build stuff
   occa::properties kernelInfo = mesh.props; //copy base occa properties
@@ -190,7 +190,7 @@ bns_t& bns_t::Setup(platform_t& platform, mesh_t& mesh,
   kernelInfo["defines/" "p_maxNodes"]= maxNodes;
 
   int blockMax = 256;
-  if (mesh.device.mode()=="CUDA") blockMax = 512;
+  if (platform.device.mode()=="CUDA") blockMax = 512;
 
   int NblockV = mymax(1, blockMax/mesh.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;

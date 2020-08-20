@@ -44,7 +44,7 @@ elliptic_t* elliptic_t::SetupRingPatch(mesh_t& meshPatch){
   //buffer for gradient
   dlong Ntotal = meshPatch.Np*meshPatch.Nelements;
   elliptic->grad = (dfloat*) calloc(Ntotal*4, sizeof(dfloat));
-  elliptic->o_grad  = mesh.device.malloc(Ntotal*4*sizeof(dfloat), elliptic->grad);
+  elliptic->o_grad  = platform.malloc(Ntotal*4*sizeof(dfloat), elliptic->grad);
 
   /*setup trace halo exchange */
   elliptic->traceHalo = mesh.HaloTraceSetup(elliptic->Nfields);

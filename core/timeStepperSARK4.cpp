@@ -43,7 +43,6 @@ sark4::sark4(dlong _Nelements, dlong _NhaloElements,
   NhaloElements(_NhaloElements) {
 
   platform_t &platform = solver.platform;
-  occa::device &device = platform.device;
 
   lambda = (dfloat *) malloc(Nfields*sizeof(dfloat));
   memcpy(lambda, _lambda, Nfields*sizeof(dfloat));
@@ -55,16 +54,16 @@ sark4::sark4(dlong _Nelements, dlong _NhaloElements,
   dlong Nlocal = Nelements*Np*Nfields;
   dlong Ntotal = (Nelements+NhaloElements)*Np*Nfields;
 
-  o_rkq    = device.malloc(Ntotal*sizeof(dfloat));
-  o_rhsq   = device.malloc(Nlocal*sizeof(dfloat));
-  o_rkrhsq = device.malloc(Nlocal*Nrk*sizeof(dfloat));
-  o_rkerr  = device.malloc(Nlocal*sizeof(dfloat));
+  o_rkq    = platform.malloc(Ntotal*sizeof(dfloat));
+  o_rhsq   = platform.malloc(Nlocal*sizeof(dfloat));
+  o_rkrhsq = platform.malloc(Nlocal*Nrk*sizeof(dfloat));
+  o_rkerr  = platform.malloc(Nlocal*sizeof(dfloat));
 
-  o_saveq  = device.malloc(Nlocal*sizeof(dfloat));
+  o_saveq  = platform.malloc(Nlocal*sizeof(dfloat));
 
   Nblock = (N+BLOCKSIZE-1)/BLOCKSIZE;
   errtmp = (dfloat*) calloc(Nblock, sizeof(dfloat));
-  o_errtmp = device.malloc(Nblock*sizeof(dfloat));
+  o_errtmp = platform.malloc(Nblock*sizeof(dfloat));
 
   hlong gNlocal = Nlocal;
   hlong gNtotal;
@@ -99,12 +98,13 @@ sark4::sark4(dlong _Nelements, dlong _NhaloElements,
   rkC = (dfloat*) calloc(Nrk, sizeof(dfloat));
   memcpy(rkC, _rkC, Nrk*sizeof(dfloat));
 
-  rkX = (dfloat*) occaHostMallocPinned(device, Nfields*Nrk*    sizeof(dfloat),
-                                       NULL, o_rkX, h_rkX);
-  rkA = (dfloat*) occaHostMallocPinned(device, Nfields*Nrk*Nrk*sizeof(dfloat),
-                                       NULL, o_rkA, h_rkA);
-  rkE = (dfloat*) occaHostMallocPinned(device, Nfields*Nrk*    sizeof(dfloat),
-                                       NULL, o_rkE, h_rkE);
+  rkX = (dfloat*) platform.hostMalloc(Nfields*Nrk*    sizeof(dfloat), NULL, h_rkX);
+  rkA = (dfloat*) platform.hostMalloc(Nfields*Nrk*Nrk*sizeof(dfloat), NULL, h_rkA);
+  rkE = (dfloat*) platform.hostMalloc(Nfields*Nrk*    sizeof(dfloat), NULL, h_rkE);
+
+  o_rkX = platform.malloc(Nfields*Nrk*    sizeof(dfloat));
+  o_rkA = platform.malloc(Nfields*Nrk*Nrk*sizeof(dfloat));
+  o_rkE = platform.malloc(Nfields*Nrk*    sizeof(dfloat));
 
   dtMIN = 1E-9; //minumum allowed timestep
   ATOL = 1E-5;  //absolute error tolerance
@@ -413,7 +413,7 @@ void sark4::UpdateCoefficients() {
       memcpy(rkE+n*Nrk    ,_rkE,    Nrk*sizeof(dfloat));
     }
 
-    // move data to device
+    // move data to platform
     // o_rkX.copyFrom(rkX, "async: true");
     // o_rkA.copyFrom(rkA, "async: true");
     // o_rkE.copyFrom(rkE, "async: true");
@@ -457,20 +457,19 @@ sark4_pml::sark4_pml(dlong _Nelements, dlong _NpmlElements, dlong _NhaloElements
 
   if (Npml) {
     platform_t &platform = solver.platform;
-    occa::device &device = platform.device;
 
     dfloat *pmlq = (dfloat *) calloc(Npml,sizeof(dfloat));
-    o_pmlq   = device.malloc(Npml*sizeof(dfloat), pmlq);
+    o_pmlq   = platform.malloc(Npml*sizeof(dfloat), pmlq);
     free(pmlq);
 
-    o_rkpmlq    = device.malloc(Npml*sizeof(dfloat));
-    o_rhspmlq   = device.malloc(Npml*sizeof(dfloat));
-    o_rkrhspmlq = device.malloc(Npml*Nrk*sizeof(dfloat));
+    o_rkpmlq    = platform.malloc(Npml*sizeof(dfloat));
+    o_rhspmlq   = platform.malloc(Npml*sizeof(dfloat));
+    o_rkrhspmlq = platform.malloc(Npml*Nrk*sizeof(dfloat));
 
-    o_savepmlq   = device.malloc(Npml*sizeof(dfloat));
+    o_savepmlq   = platform.malloc(Npml*sizeof(dfloat));
 
     //copy base occa properties from solver
-    occa::properties kernelInfo = solver.platform.props;
+    occa::properties kernelInfo = platform.props;
 
     //add defines
     kernelInfo["defines/" "p_blockSize"] = (int)BLOCKSIZE;
@@ -499,7 +498,7 @@ sark4_pml::sark4_pml(dlong _Nelements, dlong _NpmlElements, dlong _NhaloElements
                          1.0/6.0,  1.0/3.0,   1.0/3.0,   1.0/6.0,      0.0};
     memcpy(pmlrkA, _pmlrkA, Nrk*Nrk*sizeof(dfloat));
 
-    o_pmlrkA = device.malloc(Nrk*Nrk*sizeof(dfloat), pmlrkA);
+    o_pmlrkA = platform.malloc(Nrk*Nrk*sizeof(dfloat), pmlrkA);
   }
 }
 

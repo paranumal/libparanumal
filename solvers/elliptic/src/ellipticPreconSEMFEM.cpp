@@ -232,20 +232,20 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
       }
     }
 
-    mesh.o_SEMFEMInterp = mesh.device.malloc(mesh.NpFEM*mesh.Np*sizeof(dfloat),mesh.SEMFEMInterp);
-    mesh.o_SEMFEMAnterp = mesh.device.malloc(mesh.NpFEM*mesh.Np*sizeof(dfloat),SEMFEMAnterp);
+    mesh.o_SEMFEMInterp = elliptic.platform.malloc(mesh.NpFEM*mesh.Np*sizeof(dfloat),mesh.SEMFEMInterp);
+    mesh.o_SEMFEMAnterp = elliptic.platform.malloc(mesh.NpFEM*mesh.Np*sizeof(dfloat),SEMFEMAnterp);
 
     free(SEMFEMAnterp);
 
     dfloat *dummy = (dfloat*) calloc(mesh.Nelements*mesh.NpFEM,sizeof(dfloat)); //need this to avoid uninitialized memory warnings
-    o_rFEM = mesh.device.malloc(mesh.Nelements*mesh.NpFEM*sizeof(dfloat), dummy);
-    o_zFEM = mesh.device.malloc(mesh.Nelements*mesh.NpFEM*sizeof(dfloat), dummy);
+    o_rFEM = elliptic.platform.malloc(mesh.Nelements*mesh.NpFEM*sizeof(dfloat), dummy);
+    o_zFEM = elliptic.platform.malloc(mesh.Nelements*mesh.NpFEM*sizeof(dfloat), dummy);
     free(dummy);
 
     parAlmond::multigridLevel *baseLevel = parAlmondHandle->levels[0];
     dummy = (dfloat*) calloc(baseLevel->Ncols,sizeof(dfloat));
-    o_GrFEM = mesh.device.malloc(baseLevel->Ncols*sizeof(dfloat),dummy);
-    o_GzFEM = mesh.device.malloc(baseLevel->Ncols*sizeof(dfloat),dummy);
+    o_GrFEM = elliptic.platform.malloc(baseLevel->Ncols*sizeof(dfloat),dummy);
+    o_GzFEM = elliptic.platform.malloc(baseLevel->Ncols*sizeof(dfloat),dummy);
     free(dummy);
 
     //build kernels
@@ -267,8 +267,8 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
     // rhsG = (dfloat*) calloc(baseLevel->Ncols,sizeof(dfloat));
     // xG   = (dfloat*) calloc(baseLevel->Ncols,sizeof(dfloat));
     dfloat *dummy = (dfloat*) calloc(baseLevel->Ncols,sizeof(dfloat));
-    o_rhsG = mesh.device.malloc(baseLevel->Ncols*sizeof(dfloat),dummy);
-    o_xG   = mesh.device.malloc(baseLevel->Ncols*sizeof(dfloat),dummy);
+    o_rhsG = elliptic.platform.malloc(baseLevel->Ncols*sizeof(dfloat),dummy);
+    o_xG   = elliptic.platform.malloc(baseLevel->Ncols*sizeof(dfloat),dummy);
     free(dummy);
   }
 }

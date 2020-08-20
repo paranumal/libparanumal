@@ -52,18 +52,18 @@ void meshTri3D::OccaSetup(){
   matrixTranspose(Np, Np, Srs, Np, SrsT, Np);
   matrixTranspose(Np, Np, Sss, Np, SssT, Np);
 
-  o_D = device.malloc(2*Np*Np*sizeof(dfloat), DT);
-  o_MM = device.malloc(Np*Np*sizeof(dfloat), MM); //MM is symmetric
+  o_D = platform.malloc(2*Np*Np*sizeof(dfloat), DT);
+  o_MM = platform.malloc(Np*Np*sizeof(dfloat), MM); //MM is symmetric
 
-  o_sM = device.malloc(Np*Nfaces*Nfp*sizeof(dfloat), sMT);
+  o_sM = platform.malloc(Np*Nfaces*Nfp*sizeof(dfloat), sMT);
 
-  o_LIFT = device.malloc(Np*Nfaces*Nfp*sizeof(dfloat), LIFTT);
+  o_LIFT = platform.malloc(Np*Nfaces*Nfp*sizeof(dfloat), LIFTT);
 
-  o_S = device.malloc(3*Np*Np*sizeof(dfloat), ST);
+  o_S = platform.malloc(3*Np*Np*sizeof(dfloat), ST);
 
-  o_vgeo = device.malloc((Nelements+totalHaloPairs)*Nvgeo*sizeof(dfloat), vgeo);
-  o_sgeo = device.malloc(Nelements*Nfaces*Nsgeo*sizeof(dfloat), sgeo);
-  o_ggeo = device.malloc(Nelements*Nggeo*sizeof(dfloat), ggeo);
+  o_vgeo = platform.malloc((Nelements+totalHaloPairs)*Nvgeo*sizeof(dfloat), vgeo);
+  o_sgeo = platform.malloc(Nelements*Nfaces*Nsgeo*sizeof(dfloat), sgeo);
+  o_ggeo = platform.malloc(Nelements*Nggeo*sizeof(dfloat), ggeo);
 
   free(DT);
   free(LIFTT);

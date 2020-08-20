@@ -38,8 +38,8 @@ MassMatrixPrecon::MassMatrixPrecon(elliptic_t& _elliptic):
     LIBP_ABORT(string("MASSMATRIX preconditioner is unavailble when lambda=0."));
 
   dlong Ntotal = mesh.Np*mesh.Nelements;
-  o_rtmp = mesh.device.malloc(Ntotal*sizeof(dfloat));
-  o_invMM = mesh.device.malloc(mesh.Np*mesh.Np*sizeof(dfloat), mesh.invMM);
+  o_rtmp = elliptic.platform.malloc(Ntotal*sizeof(dfloat));
+  o_invMM = elliptic.platform.malloc(mesh.Np*mesh.Np*sizeof(dfloat), mesh.invMM);
 
   // OCCA build stuff
   occa::properties kernelInfo = elliptic.mesh.props; //copy base occa properties

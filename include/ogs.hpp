@@ -231,7 +231,6 @@ public:
 class ogs_t {
 public:
   platform_t& platform;
-  occa::device& device;
   MPI_Comm comm;
 
   dlong         N=0;
@@ -258,7 +257,7 @@ public:
   occa::memory h_haloBuf;
 
   ogs_t(platform_t& _platform, MPI_Comm _comm):
-    platform(_platform), device(platform.device), comm(_comm) {};
+    platform(_platform), comm(_comm) {};
 
   void Free();
 

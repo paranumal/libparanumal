@@ -30,7 +30,7 @@ SOFTWARE.
 
 //makeing a mesh object requires it to be bound to a device and communicator
 mesh_t::mesh_t(platform_t& _platform, meshSettings_t& _settings, MPI_Comm _comm):
-  platform(_platform), device(platform.device), settings(_settings), comm(_comm) {
+  platform(_platform), settings(_settings), comm(_comm) {
   props = platform.props;
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);

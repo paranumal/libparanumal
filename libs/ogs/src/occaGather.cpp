@@ -42,6 +42,7 @@ void occaGatherStart(occa::memory& o_gv,
                      const ogs_transpose trans,
                      ogs_t &ogs){
 
+  occa::device &device = ogs.platform.device;
   const size_t Nbytes = ogs_type_size[type];
 
   if (trans == ogs_sym)
@@ -60,9 +61,9 @@ void occaGatherStart(occa::memory& o_gv,
       occaGatherKernel(ogs.haloScatter, Nentries, Nvectors, stride, ogs.Nhalo,
                        type, op, o_v, ogs.o_haloBuf);
 
-    ogs.device.finish();
-    occa::stream currentStream = ogs.device.getStream();
-    ogs.device.setStream(dataStream);
+    device.finish();
+    occa::stream currentStream = device.getStream();
+    device.setStream(dataStream);
 
     for (int i=0;i<Nvectors;i++)
       ogs.o_haloBuf.copyTo((char*)ogs.haloBuf + ogs.Nhalo*Nbytes*Nentries*i,
@@ -70,7 +71,7 @@ void occaGatherStart(occa::memory& o_gv,
                            ogs.Nhalo*Nbytes*Nentries*i,
                            "async: true");
 
-    ogs.device.setStream(currentStream);
+    device.setStream(currentStream);
   }
 }
 
@@ -86,6 +87,7 @@ void occaGatherFinish(occa::memory& o_gv,
                       const ogs_transpose trans,
                       ogs_t &ogs){
 
+  occa::device &device = ogs.platform.device;
   const size_t Nbytes = ogs_type_size[type];
 
   if (trans == ogs_sym)
@@ -100,11 +102,11 @@ void occaGatherFinish(occa::memory& o_gv,
                        type, op, o_v, o_gv);
   }
 
-  occa::stream currentStream = ogs.device.getStream();
+  occa::stream currentStream = device.getStream();
   if (ogs.Nhalo) {
-    ogs.device.setStream(dataStream);
-    ogs.device.finish();
-    ogs.device.setStream(currentStream);
+    device.setStream(dataStream);
+    device.finish();
+    device.setStream(currentStream);
   }
 
   // MPI based gather using libgs
@@ -113,7 +115,7 @@ void occaGatherFinish(occa::memory& o_gv,
 
   // copy totally gathered halo data back from HOST to DEVICE
   if (ogs.haloGather.Nrows) {
-    ogs.device.setStream(dataStream);
+    device.setStream(dataStream);
 
     for (int i=0;i<Nvectors;i++)
       o_gv.copyFrom((char*)ogs.haloBuf+ogs.Nhalo*Nbytes*Nentries*i,
@@ -121,8 +123,8 @@ void occaGatherFinish(occa::memory& o_gv,
                     ogs.localGather.Nrows*Nbytes*Nentries + gstride*Nbytes*i,
                     "async: true");
 
-    ogs.device.finish();
-    ogs.device.setStream(currentStream);
+    device.finish();
+    device.setStream(currentStream);
   }
 }
 

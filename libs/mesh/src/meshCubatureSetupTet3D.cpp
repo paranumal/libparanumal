@@ -109,14 +109,14 @@ void meshTet3D::CubatureSetup(){
   o_cubvgeo = o_vgeo;// dummy
   o_cubsgeo = o_sgeo; //dummy cubature geo factors
 
-  o_cubInterp = device.malloc(Np*cubNp*sizeof(dfloat), cubInterpT);
-  o_cubProject = device.malloc(Np*cubNp*sizeof(dfloat), cubProjectT);
+  o_cubInterp = platform.malloc(Np*cubNp*sizeof(dfloat), cubInterpT);
+  o_cubProject = platform.malloc(Np*cubNp*sizeof(dfloat), cubProjectT);
 
-  o_cubPDT = device.malloc(3*Np*cubNp*sizeof(dfloat), cubPDTT);
+  o_cubPDT = platform.malloc(3*Np*cubNp*sizeof(dfloat), cubPDTT);
   o_cubD = o_cubPDT; //dummy
 
-  o_intInterp = device.malloc(Nfp*Nfaces*intNfp*sizeof(dfloat), intInterpT);
-  o_intLIFT = device.malloc(Np*Nfaces*intNfp*sizeof(dfloat), intLIFTT);
+  o_intInterp = platform.malloc(Nfp*Nfaces*intNfp*sizeof(dfloat), intInterpT);
+  o_intLIFT = platform.malloc(Np*Nfaces*intNfp*sizeof(dfloat), intLIFTT);
 
   free(cubPDTT);
   free(cubProjectT);

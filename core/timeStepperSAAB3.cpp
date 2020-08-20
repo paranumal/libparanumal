@@ -42,7 +42,6 @@ saab3::saab3(dlong _Nelements, dlong _NhaloElements,
   NhaloElements(_NhaloElements) {
 
   platform_t &platform = solver.platform;
-  occa::device &device = platform.device;
 
   lambda = (dfloat *) malloc(Nfields*sizeof(dfloat));
   memcpy(lambda, _lambda, Nfields*sizeof(dfloat));
@@ -50,7 +49,7 @@ saab3::saab3(dlong _Nelements, dlong _NhaloElements,
   Nstages = 3;
   shiftIndex = 0;
 
-  o_rhsq = device.malloc(Nstages*N*sizeof(dfloat));
+  o_rhsq = platform.malloc(Nstages*N*sizeof(dfloat));
 
   occa::properties kernelInfo = platform.props; //copy base occa properties from solver
 
@@ -65,10 +64,10 @@ saab3::saab3(dlong _Nelements, dlong _NhaloElements,
                                     kernelInfo);
 
   saab_x = (dfloat*) malloc(Nfields*sizeof(dfloat));
-  o_saab_x = device.malloc(Nfields*sizeof(dfloat));
+  o_saab_x = platform.malloc(Nfields*sizeof(dfloat));
 
   saab_a = (dfloat*) malloc(Nfields*Nstages*Nstages*sizeof(dfloat));
-  o_saab_a =  device.malloc(Nfields*Nstages*Nstages*sizeof(dfloat));
+  o_saab_a =  platform.malloc(Nfields*Nstages*Nstages*sizeof(dfloat));
 }
 
 void saab3::Run(occa::memory &o_q, dfloat start, dfloat end) {
@@ -197,7 +196,7 @@ void saab3::UpdateCoefficients() {
       memcpy(saab_a+n*Nstages*Nstages,_saab_A,Nstages*Nstages*sizeof(dfloat));
     }
 
-    // move data to device
+    // move data to platform
     o_saab_x.copyFrom(saab_x);
     o_saab_a.copyFrom(saab_a);
   }
@@ -224,13 +223,12 @@ saab3_pml::saab3_pml(dlong _Nelements, dlong _NpmlElements, dlong _NhaloElements
 
   if (Npml) {
     platform_t &platform = solver.platform;
-    occa::device &device = platform.device;
 
     dfloat *pmlq = (dfloat *) calloc(Npml,sizeof(dfloat));
-    o_pmlq   = device.malloc(Npml*sizeof(dfloat), pmlq);
+    o_pmlq   = platform.malloc(Npml*sizeof(dfloat), pmlq);
     free(pmlq);
 
-    o_rhspmlq = device.malloc(Nstages*Npml*sizeof(dfloat));
+    o_rhspmlq = platform.malloc(Nstages*Npml*sizeof(dfloat));
 
     occa::properties kernelInfo = platform.props; //copy base occa properties from solver
 
@@ -253,7 +251,7 @@ saab3_pml::saab3_pml(dlong _Nelements, dlong _NpmlElements, dlong _NhaloElements
     pmlsaab_a = (dfloat*) calloc(Nstages*Nstages, sizeof(dfloat));
     memcpy(pmlsaab_a, _ab_a, Nstages*Nstages*sizeof(dfloat));
 
-    o_pmlsaab_a = device.malloc(Nstages*Nstages*sizeof(dfloat), pmlsaab_a);
+    o_pmlsaab_a = platform.malloc(Nstages*Nstages*sizeof(dfloat), pmlsaab_a);
   }
 }
 

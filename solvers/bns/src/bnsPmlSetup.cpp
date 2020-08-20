@@ -237,6 +237,6 @@ void bns_t::PmlSetup(){
 
     // printf("# of PML elements: %d and # of Non-PML elements: %d \n",mesh.NpmlElements, mesh.Nelements-mesh.NpmlElements);
     if (mesh.NpmlElements)
-      o_pmlSigma = mesh.device.malloc(mesh.dim*mesh.NpmlElements*pmlNp*sizeof(dfloat),pmlSigma);
+      o_pmlSigma = platform.malloc(mesh.dim*mesh.NpmlElements*pmlNp*sizeof(dfloat),pmlSigma);
   }
 }

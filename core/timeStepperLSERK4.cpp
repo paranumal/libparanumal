@@ -34,12 +34,11 @@ lserk4::lserk4(dlong Nelements, dlong NhaloElements,
   timeStepper_t(Nelements, NhaloElements, Np, Nfields, _solver) {
 
   platform_t &platform = solver.platform;
-  occa::device &device = platform.device;
 
   Nrk = 5;
 
-  o_resq = device.malloc(N*sizeof(dfloat));
-  o_rhsq = device.malloc(N*sizeof(dfloat));
+  o_resq = platform.malloc(N*sizeof(dfloat));
+  o_rhsq = platform.malloc(N*sizeof(dfloat));
 
   occa::properties kernelInfo = platform.props; //copy base occa properties from solver
 
@@ -80,7 +79,6 @@ lserk4::lserk4(dlong Nelements, dlong NhaloElements,
 void lserk4::Run(occa::memory &o_q, dfloat start, dfloat end) {
 
   platform_t &platform = solver.platform;
-  occa::device &device = platform.device;
 
   dfloat time = start;
 
@@ -98,7 +96,7 @@ void lserk4::Run(occa::memory &o_q, dfloat start, dfloat end) {
     if (time<outputTime && time+dt>=outputTime) {
 
       //save current state
-      occa::memory o_saveq = device.malloc(N*sizeof(dfloat));
+      occa::memory o_saveq = platform.malloc(N*sizeof(dfloat));
       o_saveq.copyFrom(o_q, N*sizeof(dfloat));
 
       stepdt = outputTime-time;
@@ -168,14 +166,13 @@ lserk4_pml::lserk4_pml(dlong _Nelements, dlong _NpmlElements, dlong _NhaloElemen
 
   if (Npml) {
     platform_t &platform = solver.platform;
-    occa::device &device = platform.device;
 
     dfloat *pmlq = (dfloat *) calloc(Npml,sizeof(dfloat));
-    o_pmlq   = device.malloc(Npml*sizeof(dfloat), pmlq);
+    o_pmlq   = platform.malloc(Npml*sizeof(dfloat), pmlq);
     free(pmlq);
 
-    o_respmlq = device.malloc(Npml*sizeof(dfloat));
-    o_rhspmlq = device.malloc(Npml*sizeof(dfloat));
+    o_respmlq = platform.malloc(Npml*sizeof(dfloat));
+    o_rhspmlq = platform.malloc(Npml*sizeof(dfloat));
   }
 }
 

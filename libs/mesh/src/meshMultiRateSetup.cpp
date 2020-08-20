@@ -141,18 +141,18 @@ void mesh_t::MultiRateSetup(dfloat *EToDT) {
   }
   free(cnt); free(cnt2);
 
-  o_mrLevel = device.malloc(Nelements*sizeof(int), mrLevel);
-  o_mrNelements = device.malloc(mrNlevels*sizeof(dlong), mrNelements);
-  o_mrInterfaceNelements = device.malloc(mrNlevels*sizeof(dlong), mrInterfaceNelements);
+  o_mrLevel = platform.malloc(Nelements*sizeof(int), mrLevel);
+  o_mrNelements = platform.malloc(mrNlevels*sizeof(dlong), mrNelements);
+  o_mrInterfaceNelements = platform.malloc(mrNlevels*sizeof(dlong), mrInterfaceNelements);
 
   o_mrElements          = new occa::memory[mrNlevels];
   o_mrInterfaceElements = new occa::memory[mrNlevels];
 
   for (int lev =0;lev<mrNlevels;lev++){
     if (mrNelements[lev])
-      o_mrElements[lev]          = device.malloc(mrNelements[lev]*sizeof(dlong), mrElements[lev]);
+      o_mrElements[lev]          = platform.malloc(mrNelements[lev]*sizeof(dlong), mrElements[lev]);
     if (mrInterfaceNelements[lev])
-      o_mrInterfaceElements[lev] = device.malloc(mrInterfaceNelements[lev]*sizeof(dlong), mrInterfaceElements[lev]);
+      o_mrInterfaceElements[lev] = platform.malloc(mrInterfaceNelements[lev]*sizeof(dlong), mrInterfaceElements[lev]);
   }
 
   if (rank==0){

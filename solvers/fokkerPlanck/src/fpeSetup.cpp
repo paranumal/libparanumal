@@ -119,13 +119,13 @@ fpe_t& fpe_t::Setup(platform_t& platform, mesh_t& mesh,
 
   // compute samples of q at interpolation nodes
   fpe->q = (dfloat*) calloc(Nlocal+Nhalo, sizeof(dfloat));
-  fpe->o_q = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat), fpe->q);
+  fpe->o_q = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), fpe->q);
 
   //storage for M*q during reporting
-  fpe->o_Mq = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat), fpe->q);
+  fpe->o_Mq = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), fpe->q);
 
   fpe->grad = (dfloat*) calloc((Nlocal+Nhalo)*4, sizeof(dfloat));
-  fpe->o_grad  = mesh.device.malloc((Nlocal+Nhalo)*4*sizeof(dfloat), fpe->grad);
+  fpe->o_grad  = platform.malloc((Nlocal+Nhalo)*4*sizeof(dfloat), fpe->grad);
 
   // OCCA build stuff
   occa::properties kernelInfo = mesh.props; //copy base occa properties
@@ -141,7 +141,7 @@ fpe_t& fpe_t::Setup(platform_t& platform, mesh_t& mesh,
   kernelInfo["defines/" "p_maxNodes"]= maxNodes;
 
   int blockMax = 256;
-  if (mesh.device.mode() == "CUDA") blockMax = 512;
+  if (platform.device.mode() == "CUDA") blockMax = 512;
 
   int NblockV = mymax(1, blockMax/mesh.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;

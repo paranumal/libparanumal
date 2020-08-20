@@ -67,14 +67,12 @@ static int compareLocalId(const void *a, const void *b){
   return 0;
 }
 
-void setupRowBlocks(ogsData_t &A, occa::device &device);
+void setupRowBlocks(ogsData_t &A, platform_t &platform);
 
 ogs_t *ogs_t::Setup(dlong N, hlong *ids, MPI_Comm &comm,
                     int verbose, platform_t& platform){
 
   ogs_t *ogs = new ogs_t(platform, comm);
-
-  occa::device &device = platform.device;
 
   //Keep track of how many gs handles we've created, and
   // build kernels if this is the first
@@ -226,16 +224,16 @@ ogs_t *ogs_t::Setup(dlong N, hlong *ids, MPI_Comm &comm,
   free(localGatherCounts);
   free(localScatterCounts);
 
-  ogs->localGather.o_rowStarts  = device.malloc((ogs->localScatter.Nrows+1)*sizeof(dlong), ogs->localGather.rowStarts);
-  ogs->localScatter.o_rowStarts = device.malloc((ogs->localScatter.Nrows+1)*sizeof(dlong), ogs->localScatter.rowStarts);
+  ogs->localGather.o_rowStarts  = platform.malloc((ogs->localScatter.Nrows+1)*sizeof(dlong), ogs->localGather.rowStarts);
+  ogs->localScatter.o_rowStarts = platform.malloc((ogs->localScatter.Nrows+1)*sizeof(dlong), ogs->localScatter.rowStarts);
 
-  ogs->localGather.o_colIds  = device.malloc((ogs->localGather.nnz+1)*sizeof(dlong), ogs->localGather.colIds);
-  ogs->localScatter.o_colIds = device.malloc((ogs->localScatter.nnz+1)*sizeof(dlong), ogs->localScatter.colIds);
+  ogs->localGather.o_colIds  = platform.malloc((ogs->localGather.nnz+1)*sizeof(dlong), ogs->localGather.colIds);
+  ogs->localScatter.o_colIds = platform.malloc((ogs->localScatter.nnz+1)*sizeof(dlong), ogs->localScatter.colIds);
 
   //divide the list of colIds into roughly equal sized blocks so that each
   // threadblock loads approxiamtely an equal amount of data
-  setupRowBlocks(ogs->localGather, device);
-  setupRowBlocks(ogs->localScatter, device);
+  setupRowBlocks(ogs->localGather, platform);
+  setupRowBlocks(ogs->localScatter, platform);
 
   free(localNodes);
 
@@ -313,17 +311,17 @@ ogs_t *ogs_t::Setup(dlong N, hlong *ids, MPI_Comm &comm,
     }
   }
 
-  ogs->fusedGather.o_rowStarts  = device.malloc((ogs->fusedScatter.Nrows+1)*sizeof(dlong), ogs->fusedGather.rowStarts);
-  ogs->fusedScatter.o_rowStarts = device.malloc((ogs->fusedScatter.Nrows+1)*sizeof(dlong), ogs->fusedScatter.rowStarts);
-  ogs->symGatherScatter.o_rowStarts = device.malloc((ogs->symGatherScatter.Nrows+1)*sizeof(dlong), ogs->symGatherScatter.rowStarts);
+  ogs->fusedGather.o_rowStarts  = platform.malloc((ogs->fusedScatter.Nrows+1)*sizeof(dlong), ogs->fusedGather.rowStarts);
+  ogs->fusedScatter.o_rowStarts = platform.malloc((ogs->fusedScatter.Nrows+1)*sizeof(dlong), ogs->fusedScatter.rowStarts);
+  ogs->symGatherScatter.o_rowStarts = platform.malloc((ogs->symGatherScatter.Nrows+1)*sizeof(dlong), ogs->symGatherScatter.rowStarts);
 
-  ogs->fusedGather.o_colIds  = device.malloc((ogs->fusedGather.nnz+1)*sizeof(dlong), ogs->fusedGather.colIds);
-  ogs->fusedScatter.o_colIds = device.malloc((ogs->fusedScatter.nnz+1)*sizeof(dlong), ogs->fusedScatter.colIds);
-  ogs->symGatherScatter.o_colIds = device.malloc((ogs->symGatherScatter.nnz+1)*sizeof(dlong), ogs->symGatherScatter.colIds);
+  ogs->fusedGather.o_colIds  = platform.malloc((ogs->fusedGather.nnz+1)*sizeof(dlong), ogs->fusedGather.colIds);
+  ogs->fusedScatter.o_colIds = platform.malloc((ogs->fusedScatter.nnz+1)*sizeof(dlong), ogs->fusedScatter.colIds);
+  ogs->symGatherScatter.o_colIds = platform.malloc((ogs->symGatherScatter.nnz+1)*sizeof(dlong), ogs->symGatherScatter.colIds);
 
-  setupRowBlocks(ogs->fusedGather, device);
-  setupRowBlocks(ogs->fusedScatter, device);
-  setupRowBlocks(ogs->symGatherScatter, device);
+  setupRowBlocks(ogs->fusedGather, platform);
+  setupRowBlocks(ogs->fusedScatter, platform);
+  setupRowBlocks(ogs->symGatherScatter, platform);
 
   //use the blocking from the fused scatter for the fusded gather as well
   if (ogs->fusedGather.blockRowStarts) free(ogs->fusedGather.blockRowStarts);
@@ -442,14 +440,14 @@ ogs_t *ogs_t::Setup(dlong N, hlong *ids, MPI_Comm &comm,
   free(haloGatherCounts);
   free(haloScatterCounts);
 
-  ogs->haloGather.o_rowStarts  = device.malloc((ogs->haloGather.Nrows+1)*sizeof(dlong), ogs->haloGather.rowStarts);
-  ogs->haloScatter.o_rowStarts = device.malloc((ogs->haloScatter.Nrows+1)*sizeof(dlong), ogs->haloScatter.rowStarts);
+  ogs->haloGather.o_rowStarts  = platform.malloc((ogs->haloGather.Nrows+1)*sizeof(dlong), ogs->haloGather.rowStarts);
+  ogs->haloScatter.o_rowStarts = platform.malloc((ogs->haloScatter.Nrows+1)*sizeof(dlong), ogs->haloScatter.rowStarts);
 
-  ogs->haloGather.o_colIds  = device.malloc((ogs->haloGather.nnz+1)*sizeof(dlong), ogs->haloGather.colIds);
-  ogs->haloScatter.o_colIds = device.malloc((ogs->haloScatter.nnz+1)*sizeof(dlong), ogs->haloScatter.colIds);
+  ogs->haloGather.o_colIds  = platform.malloc((ogs->haloGather.nnz+1)*sizeof(dlong), ogs->haloGather.colIds);
+  ogs->haloScatter.o_colIds = platform.malloc((ogs->haloScatter.nnz+1)*sizeof(dlong), ogs->haloScatter.colIds);
 
-  setupRowBlocks(ogs->haloGather, device);
-  setupRowBlocks(ogs->haloScatter, device);
+  setupRowBlocks(ogs->haloGather, platform);
+  setupRowBlocks(ogs->haloScatter, platform);
 
   free(haloNodes);
 
@@ -499,13 +497,13 @@ void ogs_t::reallocOccaBuffer(size_t Nbytes) {
   if (Nhalo) {
     if (o_haloBuf.size() < Nhalo*Nbytes) {
       if (o_haloBuf.size()) o_haloBuf.free();
-      haloBuf = occaHostMallocPinned(device, Nhalo*Nbytes, nullptr,
-                                     o_haloBuf, h_haloBuf);
+      haloBuf = platform.hostMalloc(Nhalo*Nbytes, nullptr, h_haloBuf);
+      o_haloBuf = platform.malloc(Nhalo*Nbytes);
     }
   }
 }
 
-void setupRowBlocks(ogsData_t &A, occa::device &device) {
+void setupRowBlocks(ogsData_t &A, platform_t &platform) {
 
   dlong blockSum=0;
   A.NrowBlocks=0;
@@ -545,5 +543,5 @@ void setupRowBlocks(ogsData_t &A, occa::device &device) {
   }
   A.blockRowStarts[A.NrowBlocks] = A.Nrows;
 
-  A.o_blockRowStarts = device.malloc((A.NrowBlocks+1)*sizeof(dlong), A.blockRowStarts);
+  A.o_blockRowStarts = platform.malloc((A.NrowBlocks+1)*sizeof(dlong), A.blockRowStarts);
 }

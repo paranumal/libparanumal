@@ -52,8 +52,8 @@ ParAlmondPrecon::ParAlmondPrecon(elliptic_t& _elliptic):
 
     rhsG = (dfloat*) calloc(baseLevel->Ncols,sizeof(dfloat));
     xG   = (dfloat*) calloc(baseLevel->Ncols,sizeof(dfloat));
-    o_rhsG = mesh.device.malloc(baseLevel->Ncols*sizeof(dfloat));
-    o_xG   = mesh.device.malloc(baseLevel->Ncols*sizeof(dfloat));
+    o_rhsG = elliptic.platform.malloc(baseLevel->Ncols*sizeof(dfloat));
+    o_xG   = elliptic.platform.malloc(baseLevel->Ncols*sizeof(dfloat));
   }
 }
 

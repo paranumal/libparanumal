@@ -66,10 +66,10 @@ acoustics_t& acoustics_t::Setup(platform_t& platform, mesh_t& mesh,
 
   // compute samples of q at interpolation nodes
   acoustics->q = (dfloat*) calloc(Nlocal+Nhalo, sizeof(dfloat));
-  acoustics->o_q = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat), acoustics->q);
+  acoustics->o_q = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), acoustics->q);
 
   //storage for M*q during reporting
-  acoustics->o_Mq = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat), acoustics->q);
+  acoustics->o_Mq = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), acoustics->q);
 
   // OCCA build stuff
   occa::properties kernelInfo = mesh.props; //copy base occa properties
@@ -89,7 +89,7 @@ acoustics_t& acoustics_t::Setup(platform_t& platform, mesh_t& mesh,
   kernelInfo["defines/" "p_maxNodes"]= maxNodes;
 
   int blockMax = 256;
-  if (mesh.device.mode() == "CUDA") blockMax = 512;
+  if (platform.device.mode() == "CUDA") blockMax = 512;
 
   int NblockV = mymax(1, blockMax/mesh.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;

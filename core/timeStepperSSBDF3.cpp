@@ -35,14 +35,13 @@ ssbdf3::ssbdf3(dlong Nelements, dlong NhaloElements,
   timeStepper_t(Nelements, NhaloElements, Np, Nfields, _solver) {
 
   platform_t &platform = solver.platform;
-  occa::device &device = platform.device;
 
   Nstages = 3;
   shiftIndex = 0;
 
-  o_qn   = device.malloc(Nstages*N*sizeof(dfloat)); //q history
-  o_qhat = device.malloc(Nstages*N*sizeof(dfloat)); //F(q) history (explicit part)
-  o_rhs  = device.malloc(N*sizeof(dfloat)); //rhs storage
+  o_qn   = platform.malloc(Nstages*N*sizeof(dfloat)); //q history
+  o_qhat = platform.malloc(Nstages*N*sizeof(dfloat)); //F(q) history (explicit part)
+  o_rhs  = platform.malloc(N*sizeof(dfloat)); //rhs storage
 
   occa::properties kernelInfo = platform.props; //copy base occa properties from solver
 
@@ -63,7 +62,7 @@ ssbdf3::ssbdf3(dlong Nelements, dlong NhaloElements,
   ssbdf_b = (dfloat*) calloc(Nstages*(Nstages+1), sizeof(dfloat));
   memcpy(ssbdf_b, _b, Nstages*(Nstages+1)*sizeof(dfloat));
 
-  o_ssbdf_b = device.malloc(Nstages*(Nstages+1)*sizeof(dfloat), ssbdf_b);
+  o_ssbdf_b = platform.malloc(Nstages*(Nstages+1)*sizeof(dfloat), ssbdf_b);
 }
 
 dfloat ssbdf3::getGamma() {

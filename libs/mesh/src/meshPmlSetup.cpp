@@ -71,12 +71,12 @@ void mesh_t::PmlSetup(){
   }
 
   if (NpmlElements) {
-    o_pmlElements = device.malloc(NpmlElements*sizeof(dlong), pmlElements);
-    o_pmlIds = device.malloc(NpmlElements*sizeof(dlong), pmlIds);
+    o_pmlElements = platform.malloc(NpmlElements*sizeof(dlong), pmlElements);
+    o_pmlIds = platform.malloc(NpmlElements*sizeof(dlong), pmlIds);
   }
 
   if (NnonPmlElements)
-    o_nonPmlElements = device.malloc(NnonPmlElements*sizeof(dlong), nonPmlElements);
+    o_nonPmlElements = platform.malloc(NnonPmlElements*sizeof(dlong), nonPmlElements);
 }
 
 
@@ -143,10 +143,10 @@ void mesh_t::MultiRatePmlSetup(){
 
   for (int lev=0;lev<mrNlevels;lev++){
     if (mrNpmlElements[lev]) {
-      o_mrPmlElements[lev]   = device.malloc(mrNpmlElements[lev]*sizeof(dlong), mrPmlElements[lev]);
-      o_mrPmlIds[lev] = device.malloc(mrNpmlElements[lev]*sizeof(dlong), mrPmlIds[lev]);
+      o_mrPmlElements[lev]   = platform.malloc(mrNpmlElements[lev]*sizeof(dlong), mrPmlElements[lev]);
+      o_mrPmlIds[lev] = platform.malloc(mrNpmlElements[lev]*sizeof(dlong), mrPmlIds[lev]);
     }
     if (mrNnonPmlElements[lev])
-      o_mrNonPmlElements[lev] = device.malloc(mrNnonPmlElements[lev]*sizeof(dlong), mrNonPmlElements[lev]);
+      o_mrNonPmlElements[lev] = platform.malloc(mrNnonPmlElements[lev]*sizeof(dlong), mrNonPmlElements[lev]);
   }
 }

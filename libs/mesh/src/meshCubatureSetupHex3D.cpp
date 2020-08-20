@@ -73,11 +73,11 @@ void meshHex3D::CubatureSetup(){
   dfloat *cubPDTT     = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
   matrixTranspose(Nq, cubNq, cubPDT, cubNq, cubPDTT, Nq);
 
-  o_cubInterp   = device.malloc(Nq*cubNq*sizeof(dfloat), cubInterpT);
-  o_cubProject = device.malloc(Nq*cubNq*sizeof(dfloat), cubProjectT);
+  o_cubInterp   = platform.malloc(Nq*cubNq*sizeof(dfloat), cubInterpT);
+  o_cubProject = platform.malloc(Nq*cubNq*sizeof(dfloat), cubProjectT);
 
-  o_cubPDT = device.malloc(Nq*cubNq*sizeof(dfloat), cubPDTT);
-  o_cubD = device.malloc(cubNq*cubNq*sizeof(dfloat), cubD);
+  o_cubPDT = platform.malloc(Nq*cubNq*sizeof(dfloat), cubPDTT);
+  o_cubD = platform.malloc(cubNq*cubNq*sizeof(dfloat), cubD);
 
   o_intInterp = o_cubInterp;
   o_intLIFT = o_cubProject;
@@ -361,11 +361,11 @@ void meshHex3D::CubatureSetup(){
 
 
   o_cubvgeo =
-    device.malloc(Nelements*Nvgeo*cubNp*sizeof(dfloat),
+    platform.malloc(Nelements*Nvgeo*cubNp*sizeof(dfloat),
         cubvgeo);
 
   o_cubsgeo =
-    device.malloc(Nelements*Nfaces*cubNq*cubNq*Nsgeo*sizeof(dfloat),
+    platform.malloc(Nelements*Nfaces*cubNq*cubNq*Nsgeo*sizeof(dfloat),
         cubsgeo);
 
   free(xre); free(xse); free(xte);

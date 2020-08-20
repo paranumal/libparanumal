@@ -35,12 +35,11 @@ ab3::ab3(dlong Nelements, dlong NhaloElements,
   timeStepper_t(Nelements, NhaloElements, Np, Nfields, _solver) {
 
   platform_t &platform = solver.platform;
-  occa::device &device = platform.device;
 
   Nstages = 3;
   shiftIndex = 0;
 
-  o_rhsq = device.malloc(Nstages*N*sizeof(dfloat));
+  o_rhsq = platform.malloc(Nstages*N*sizeof(dfloat));
 
   occa::properties kernelInfo = platform.props; //copy base occa properties from solver
 
@@ -61,7 +60,7 @@ ab3::ab3(dlong Nelements, dlong NhaloElements,
   ab_a = (dfloat*) calloc(Nstages*Nstages, sizeof(dfloat));
   memcpy(ab_a, _ab_a, Nstages*Nstages*sizeof(dfloat));
 
-  o_ab_a = device.malloc(Nstages*Nstages*sizeof(dfloat), ab_a);
+  o_ab_a = platform.malloc(Nstages*Nstages*sizeof(dfloat), ab_a);
 }
 
 void ab3::Run(occa::memory &o_q, dfloat start, dfloat end) {
@@ -135,13 +134,12 @@ ab3_pml::ab3_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
 
   if (Npml) {
     platform_t &platform = solver.platform;
-    occa::device &device = platform.device;
 
     dfloat *pmlq = (dfloat *) calloc(Npml,sizeof(dfloat));
-    o_pmlq   = device.malloc(Npml*sizeof(dfloat), pmlq);
+    o_pmlq   = platform.malloc(Npml*sizeof(dfloat), pmlq);
     free(pmlq);
 
-    o_rhspmlq = device.malloc(Nstages*Npml*sizeof(dfloat));
+    o_rhspmlq = platform.malloc(Nstages*Npml*sizeof(dfloat));
   }
 }
 

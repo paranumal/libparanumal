@@ -34,9 +34,6 @@ SOFTWARE.
 #include "utils.hpp"
 #include "settings.hpp"
 
-
-void *occaHostMallocPinned(occa::device &device, size_t size, void *source, occa::memory &mem, occa::memory &h_mem);
-
 // serial sort
 void mysort(hlong *data, int N, const char *order);
 

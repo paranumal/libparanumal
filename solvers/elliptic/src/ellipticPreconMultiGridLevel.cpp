@@ -178,15 +178,15 @@ MGLevel::MGLevel(elliptic_t& _elliptic, int k,
     if (mesh.elementType==QUADRILATERALS || mesh.elementType==HEXAHEDRA) {
       P = (dfloat *) calloc((Nf+1)*(mesh.N+1),sizeof(dfloat));
       mesh.DegreeRaiseMatrix1D(mesh.N, Nf, P);
-      o_P = mesh.device.malloc((Nf+1)*(mesh.N+1)*sizeof(dfloat), P);
+      o_P = elliptic.platform.malloc((Nf+1)*(mesh.N+1)*sizeof(dfloat), P);
     } else if (mesh.elementType==TRIANGLES) {
       P = (dfloat *) calloc(Npf*mesh.Np,sizeof(dfloat));
       mesh.DegreeRaiseMatrixTri2D(mesh.N, Nf, P);
-      o_P = mesh.device.malloc(Npf*mesh.Np*sizeof(dfloat), P);
+      o_P = elliptic.platform.malloc(Npf*mesh.Np*sizeof(dfloat), P);
     } else {
       P = (dfloat *) calloc(Npf*mesh.Np,sizeof(dfloat));
       mesh.DegreeRaiseMatrixTet3D(mesh.N, Nf, P);
-      o_P = mesh.device.malloc(Npf*mesh.Np*sizeof(dfloat), P);
+      o_P = elliptic.platform.malloc(Npf*mesh.Np*sizeof(dfloat), P);
     }
 
     //build kernels
@@ -238,19 +238,19 @@ void MGLevel::AllocateStorage(int k, parAlmond::CycleType ctype) {
     }
 
     smootherResidual = (dfloat *) calloc(Ncols,sizeof(dfloat));
-    o_smootherResidual = mesh.device.malloc(Nbytes,smootherResidual);
-    o_smootherResidual2 = mesh.device.malloc(Nbytes,smootherResidual);
-    o_smootherUpdate = mesh.device.malloc(Nbytes,smootherResidual);
+    o_smootherResidual = elliptic.platform.malloc(Nbytes,smootherResidual);
+    o_smootherResidual2 = elliptic.platform.malloc(Nbytes,smootherResidual);
+    o_smootherUpdate = elliptic.platform.malloc(Nbytes,smootherResidual);
     smootherResidualBytes = Nbytes;
   }
 
   if (k) x    = (dfloat *) calloc(Ncols,sizeof(dfloat));
   if (k) rhs  = (dfloat *) calloc(Nrows,sizeof(dfloat));
-  if (k) o_x   = mesh.device.malloc(Ncols*sizeof(dfloat),x);
-  if (k) o_rhs = mesh.device.malloc(Nrows*sizeof(dfloat),rhs);
+  if (k) o_x   = elliptic.platform.malloc(Ncols*sizeof(dfloat),x);
+  if (k) o_rhs = elliptic.platform.malloc(Nrows*sizeof(dfloat),rhs);
 
   res  = (dfloat *) calloc(Ncols,sizeof(dfloat));
-  o_res = mesh.device.malloc(Ncols*sizeof(dfloat),res);
+  o_res = elliptic.platform.malloc(Ncols*sizeof(dfloat),res);
 
   //kcycle vectors
   if (ctype==parAlmond::KCYCLE) {
@@ -258,9 +258,9 @@ void MGLevel::AllocateStorage(int k, parAlmond::CycleType ctype) {
       ck = (dfloat *) calloc(Ncols,sizeof(dfloat));
       vk = (dfloat *) calloc(Nrows,sizeof(dfloat));
       wk = (dfloat *) calloc(Nrows,sizeof(dfloat));
-      o_ck = mesh.device.malloc(Ncols*sizeof(dfloat),ck);
-      o_vk = mesh.device.malloc(Nrows*sizeof(dfloat),vk);
-      o_wk = mesh.device.malloc(Nrows*sizeof(dfloat),wk);
+      o_ck = elliptic.platform.malloc(Ncols*sizeof(dfloat),ck);
+      o_vk = elliptic.platform.malloc(Nrows*sizeof(dfloat),vk);
+      o_wk = elliptic.platform.malloc(Nrows*sizeof(dfloat),wk);
     }
   }
 }
@@ -313,7 +313,7 @@ void MGLevel::SetupSmoother() {
   for (dlong n=0;n<mesh.Nelements*mesh.Np;n++)
     invDiagA[n] = 1.0/diagA[n];
 
-  o_invDiagA = mesh.device.malloc(mesh.Np*mesh.Nelements*sizeof(dfloat), invDiagA);
+  o_invDiagA = elliptic.platform.malloc(mesh.Np*mesh.Nelements*sizeof(dfloat), invDiagA);
 
   if (elliptic.settings.compareSetting("MULTIGRID SMOOTHER","CHEBYSHEV")) {
     stype = CHEBYSHEV;
@@ -402,11 +402,11 @@ dfloat MGLevel::maxEigSmoothAx(){
   //  occa::memory *o_V = (occa::memory *) calloc(k+1, sizeof(occa::memory));
   occa::memory *o_V = new occa::memory[k+1];
 
-  occa::memory o_Vx  = mesh.device.malloc(M*sizeof(dfloat),Vx);
-  occa::memory o_AVx = mesh.device.malloc(M*sizeof(dfloat),Vx);
+  occa::memory o_Vx  = elliptic.platform.malloc(M*sizeof(dfloat),Vx);
+  occa::memory o_AVx = elliptic.platform.malloc(M*sizeof(dfloat),Vx);
 
   for(int i=0; i<=k; i++)
-    o_V[i] = mesh.device.malloc(M*sizeof(dfloat),Vx);
+    o_V[i] = elliptic.platform.malloc(M*sizeof(dfloat),Vx);
 
   // generate a random vector for initial basis vector
   for (dlong i=0;i<N;i++) Vx[i] = (dfloat) drand48();

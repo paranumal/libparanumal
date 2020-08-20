@@ -76,7 +76,7 @@ void platform_t::DeviceConfig(){
     settings.getSetting("DEVICE NUMBER",device_id);
   } else {
     //find out how many ranks and devices are on this system
-    char* hostnames = (char *) malloc(size*sizeof(char)*MPI_MAX_PROCESSOR_NAME);
+    char* hostnames = (char *) ::malloc(size*sizeof(char)*MPI_MAX_PROCESSOR_NAME);
     char* hostname = hostnames+rank*MPI_MAX_PROCESSOR_NAME;
 
     int namelen;

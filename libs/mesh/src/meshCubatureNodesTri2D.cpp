@@ -58,8 +58,8 @@ void meshTri2D::CubatureNodes(){
     }
   }
 
-  o_cubx = device.malloc(Nelements*cubNp*sizeof(dfloat), cubx);
-  o_cuby = device.malloc(Nelements*cubNp*sizeof(dfloat), cuby);
+  o_cubx = platform.malloc(Nelements*cubNp*sizeof(dfloat), cubx);
+  o_cuby = platform.malloc(Nelements*cubNp*sizeof(dfloat), cuby);
   o_cubz = o_cuby; // dummy to align with 3d
 
   //Face cubature
@@ -84,7 +84,7 @@ void meshTri2D::CubatureNodes(){
     }
   }
 
-  o_intx = device.malloc(Nelements*Nfaces*intNfp*sizeof(dfloat), intx);
-  o_inty = device.malloc(Nelements*Nfaces*intNfp*sizeof(dfloat), inty);
+  o_intx = platform.malloc(Nelements*Nfaces*intNfp*sizeof(dfloat), intx);
+  o_inty = platform.malloc(Nelements*Nfaces*intNfp*sizeof(dfloat), inty);
   o_intz = o_inty; // dummy to align with 3d
 }
