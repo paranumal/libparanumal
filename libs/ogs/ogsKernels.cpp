@@ -80,7 +80,7 @@ void initKernels(platform_t& platform) {
 typedef int64_t long_long;
   OGS_FOR_EACH_TYPE(DEFINE_OCCA_ADD_INIT)
 
-  kernelInfo["includes"] += LIBP_DIR "/include/ogsDefs.h";
+  kernelInfo["includes"] += LIBP_DIR "/include/ogs/ogsDefs.h";
 
   if (rank==0) {printf("Compiling GatherScatter Kernels...");fflush(stdout);}
 
