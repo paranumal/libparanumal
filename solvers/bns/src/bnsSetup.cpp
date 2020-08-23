@@ -76,7 +76,7 @@ bns_t& bns_t::Setup(platform_t& platform, mesh_t& mesh,
     /*
     Artificial warping of time step size for multirate testing
     */
-#if 1
+#if 0
     dfloat x=0., y=0, z=0;
     for (int v=0;v<mesh.Nverts;v++){
       x += mesh.EX[e*mesh.Nverts+v];
