@@ -149,7 +149,6 @@ public:
   occa::kernel pressureIncrementRhsKernel;
   occa::kernel pressureIncrementBCKernel;
 
-  occa::kernel MassMatrixKernel;
   occa::kernel vorticityKernel;
 
   occa::kernel initialConditionKernel;

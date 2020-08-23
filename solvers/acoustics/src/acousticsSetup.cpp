@@ -70,6 +70,7 @@ acoustics_t& acoustics_t::Setup(platform_t& platform, mesh_t& mesh,
 
   //storage for M*q during reporting
   acoustics->o_Mq = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), acoustics->q);
+  mesh.MassMatrixKernelSetup(acoustics->Nfields); // mass matrix operator
 
   // OCCA build stuff
   occa::properties kernelInfo = mesh.props; //copy base occa properties
@@ -127,14 +128,6 @@ acoustics_t& acoustics_t::Setup(platform_t& platform, mesh_t& mesh,
   acoustics->surfaceKernel = platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
 
-  // mass matrix operator
-  sprintf(fileName, LIBP_DIR "/core/okl/MassMatrixOperator%s.okl", suffix);
-  sprintf(kernelName, "MassMatrixOperator%s", suffix);
-
-  acoustics->MassMatrixKernel = platform.buildKernel(fileName, kernelName,
-                                            kernelInfo);
-
-
   if (mesh.dim==2) {
     sprintf(fileName, DACOUSTICS "/okl/acousticsInitialCondition2D.okl");
     sprintf(kernelName, "acousticsInitialCondition2D");
@@ -152,7 +145,6 @@ acoustics_t& acoustics_t::Setup(platform_t& platform, mesh_t& mesh,
 acoustics_t::~acoustics_t() {
   volumeKernel.free();
   surfaceKernel.free();
-  MassMatrixKernel.free();
   initialConditionKernel.free();
 
   if (timeStepper) delete timeStepper;

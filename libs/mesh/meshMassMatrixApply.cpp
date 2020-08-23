@@ -74,5 +74,10 @@ void meshTri3D::MassMatrixKernelSetup(int Nfields) {
 }
 
 void meshQuad3D::MassMatrixKernelSetup(int Nfields) {
-  LIBP_ABORT("MassMatrixOperatorQuad3D not implemented yet.")
+  occa::properties kernelInfo = props; //copy base occa properties
+  kernelInfo["defines/" "p_Nfields"]= Nfields;
+
+  MassMatrixKernel = platform.buildKernel(MESH_DIR "/okl/MassMatrixOperatorQuad2D.okl",
+                                          "MassMatrixOperatorQuad2D",
+                                          kernelInfo);
 }

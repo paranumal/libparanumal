@@ -174,6 +174,7 @@ bns_t& bns_t::Setup(platform_t& platform, mesh_t& mesh,
 
   //storage for M*q during reporting
   bns->o_Mq = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), bns->q);
+  mesh.MassMatrixKernelSetup(bns->Nfields); // mass matrix operator
 
   // OCCA build stuff
   occa::properties kernelInfo = mesh.props; //copy base occa properties
@@ -268,14 +269,6 @@ bns_t& bns_t::Setup(platform_t& platform, mesh_t& mesh,
                                            kernelInfo);
   }
 
-
-  // mass matrix operator
-  sprintf(fileName, LIBP_DIR "/core/okl/MassMatrixOperator%s.okl", suffix);
-  sprintf(kernelName, "MassMatrixOperator%s", suffix);
-
-  bns->MassMatrixKernel = platform.buildKernel(fileName, kernelName,
-                                      kernelInfo);
-
   // vorticity calculation
   sprintf(fileName, DBNS "/okl/bnsVorticity%s.okl", suffix);
   sprintf(kernelName, "bnsVorticity%s", suffix);
@@ -305,7 +298,6 @@ bns_t::~bns_t() {
   pmlSurfaceKernel.free();
   pmlRelaxationKernel.free();
   vorticityKernel.free();
-  MassMatrixKernel.free();
   initialConditionKernel.free();
 
   if (timeStepper) delete timeStepper;

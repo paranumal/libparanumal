@@ -60,8 +60,6 @@ public:
   occa::kernel volumeKernel;
   occa::kernel surfaceKernel;
 
-  occa::kernel MassMatrixKernel;
-
   occa::kernel initialConditionKernel;
 
   advection_t() = delete;

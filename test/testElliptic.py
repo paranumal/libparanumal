@@ -98,7 +98,7 @@ def main():
                     settings=ellipticSettings(element=4,data_file=ellipticData3D,mesh="sphereQuad.msh", dim=3, precon="NONE"),
                     referenceNorm=3.274235742251)
 
-  
+
   #C0 precons
   #tri
   failCount += test(name="testEllipticTri_C0_Jacobi",
@@ -377,7 +377,12 @@ def main():
                     settings=ellipticSettings(element=3,data_file=ellipticData2D,dim=2,
                                               precon="MULTIGRID", discretization="IPDG", output_to_file="TRUE"),
                     referenceNorm=0.500000001211135)
-  
+
+  #clean up
+  for file_name in os.listdir(testDir):
+    if file_name.endswith('.vtu'):
+      os.remove(testDir + "/" + file_name)
+
   return failCount
 
 if __name__ == "__main__":

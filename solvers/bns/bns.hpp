@@ -91,8 +91,6 @@ public:
 
   occa::kernel vorticityKernel;
 
-  occa::kernel MassMatrixKernel;
-
   occa::kernel initialConditionKernel;
 
   bns_t() = delete;

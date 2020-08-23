@@ -106,8 +106,6 @@ public:
   occa::kernel diffusionKernel;
   occa::kernel diffusionRhsKernel;
 
-  occa::kernel MassMatrixKernel;
-
   occa::kernel initialConditionKernel;
 
   fpe_t() = delete;

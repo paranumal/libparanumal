@@ -189,6 +189,7 @@ ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
 
   //storage for M*u during reporting
   ins->o_MU = platform.malloc((Nlocal+Nhalo)*ins->NVfields*sizeof(dfloat), ins->u);
+  mesh.MassMatrixKernelSetup(ins->NVfields); // mass matrix operator
 
   if (mesh.dim==2) {
     ins->Vort = (dfloat*) calloc((Nlocal+Nhalo), sizeof(dfloat));
@@ -388,17 +389,10 @@ ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
                                            kernelInfo);
   }
 
-  // mass matrix operator
-  sprintf(fileName, LIBP_DIR "/core/okl/MassMatrixOperator%s.okl", suffix);
-  sprintf(kernelName, "MassMatrixOperator%s", suffix);
-  ins->MassMatrixKernel = platform.buildKernel(fileName, kernelName,
-                                            kernelInfo);
-
   sprintf(fileName, DINS "/okl/insVorticity%s.okl", suffix);
   sprintf(kernelName, "insVorticity%s", suffix);
   ins->vorticityKernel =  platform.buildKernel(fileName, kernelName,
                                             kernelInfo);
-
 
   if (mesh.dim==2) {
     sprintf(fileName, DINS "/okl/insInitialCondition2D.okl");
@@ -429,7 +423,6 @@ ins_t::~ins_t() {
   velocityBCKernel.free();
   pressureRhsKernel.free();
   pressureBCKernel.free();
-  MassMatrixKernel.free();
   vorticityKernel.free();
   initialConditionKernel.free();
 

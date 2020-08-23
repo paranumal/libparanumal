@@ -83,6 +83,11 @@ def main():
                     settings=acousticsSettings(element=3,data_file=data2D,dim=2,output_to_file="TRUE"),
                     referenceNorm=10.1300558638317)
 
+  #clean up
+  for file_name in os.listdir(testDir):
+    if file_name.endswith('.vtu'):
+      os.remove(testDir + "/" + file_name)
+
   return failCount
 
 if __name__ == "__main__":

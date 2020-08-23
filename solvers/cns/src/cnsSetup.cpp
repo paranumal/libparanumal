@@ -98,6 +98,7 @@ cns_t& cns_t::Setup(platform_t& platform, mesh_t& mesh,
 
   //storage for M*q during reporting
   cns->o_Mq = platform.malloc((NlocalFields+NhaloFields)*sizeof(dfloat), cns->q);
+  mesh.MassMatrixKernelSetup(cns->Nfields); // mass matrix operator
 
   // OCCA build stuff
   occa::properties kernelInfo = mesh.props; //copy base occa properties
@@ -221,13 +222,6 @@ cns_t& cns_t::Setup(platform_t& platform, mesh_t& mesh,
   cns->gradSurfaceKernel = platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
 
-  // mass matrix operator
-  sprintf(fileName, LIBP_DIR "/core/okl/MassMatrixOperator%s.okl", suffix);
-  sprintf(kernelName, "MassMatrixOperator%s", suffix);
-
-  cns->MassMatrixKernel = platform.buildKernel(fileName, kernelName,
-                                      kernelInfo);
-
   // vorticity calculation
   sprintf(fileName, DCNS "/okl/cnsVorticity%s.okl", suffix);
   sprintf(kernelName, "cnsVorticity%s", suffix);
@@ -264,7 +258,6 @@ cns_t::~cns_t() {
   gradSurfaceKernel.free();
   vorticityKernel.free();
   constrainKernel.free();
-  MassMatrixKernel.free();
   initialConditionKernel.free();
 
   if (timeStepper) delete timeStepper;

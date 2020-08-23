@@ -63,8 +63,6 @@ public:
   occa::kernel volumeKernel;
   occa::kernel surfaceKernel;
 
-  occa::kernel MassMatrixKernel;
-
   occa::kernel initialConditionKernel;
 
   acoustics_t() = delete;

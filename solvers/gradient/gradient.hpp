@@ -59,8 +59,6 @@ public:
 
   occa::kernel volumeKernel;
 
-  occa::kernel MassMatrixKernel;
-
   occa::kernel initialConditionKernel;
 
   gradient_t() = delete;

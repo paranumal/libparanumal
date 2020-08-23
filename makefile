@@ -43,7 +43,7 @@ make solvers
 	 Builds each solver executable.
 make {solver}
 	 Builds a solver executable,
-	 solver can be acoustics/advection/bns/cns/elliptic/gradient/ins.
+	 solver can be acoustics/advection/bns/cns/elliptic/fokkerPlanck/gradient/ins.
 make clean
 	 Cleans all solver executables, libraries, and object files.
 make clean-{solver}
@@ -80,24 +80,29 @@ include make.top
 endif
 endif
 
+#gslib
+GS_DIR=${LIBP_TPL_DIR}/gslib
+
 #libraries
-GS_DIR       =${LIBP_TPL_DIR}/gslib
-CORE_DIR     =${LIBP_DIR}/core
-OGS_DIR      =${LIBP_LIBS_DIR}/ogs
-MESH_DIR     =${LIBP_LIBS_DIR}/mesh
-PARALMOND_DIR=${LIBP_LIBS_DIR}/parAlmond
+LIBP_CORE_LIBS=timeStepper linearSolver parAlmond mesh ogs linAlg core
 SOLVER_DIR   =${LIBP_DIR}/solvers
 
-.PHONY: all solvers \
+.PHONY: all solvers libp_libs \
 			acoustics advection bns cns elliptic fokkerPlanck gradient ins \
-			libparAlmond libmesh libogs libgs \
 			clean clean-libs realclean help info
 
 all: solvers
 
 solvers: acoustics advection bns cns elliptic fokkerPlanck gradient ins
 
-acoustics: libmesh
+libp_libs:
+ifneq (,${verbose})
+	${MAKE} -C ${LIBP_LIBS_DIR} $(LIBP_CORE_LIBS) verbose=${verbose}
+else
+	@${MAKE} -C ${LIBP_LIBS_DIR} $(LIBP_CORE_LIBS) --no-print-directory
+endif
+
+acoustics: libp_libs
 ifneq (,${verbose})
 	${MAKE} -C ${SOLVER_DIR}/$(@F) verbose=${verbose}
 else
@@ -105,7 +110,7 @@ else
 	@${MAKE} -C ${SOLVER_DIR}/$(@F) --no-print-directory
 endif
 
-advection: libmesh
+advection: libp_libs
 ifneq (,${verbose})
 	${MAKE} -C ${SOLVER_DIR}/$(@F) verbose=${verbose}
 else
@@ -113,7 +118,7 @@ else
 	@${MAKE} -C ${SOLVER_DIR}/$(@F) --no-print-directory
 endif
 
-bns: libmesh
+bns: libp_libs
 ifneq (,${verbose})
 	${MAKE} -C ${SOLVER_DIR}/$(@F) verbose=${verbose}
 else
@@ -121,7 +126,7 @@ else
 	@${MAKE} -C ${SOLVER_DIR}/$(@F) --no-print-directory
 endif
 
-cns: libmesh
+cns: libp_libs
 ifneq (,${verbose})
 	${MAKE} -C ${SOLVER_DIR}/$(@F) verbose=${verbose}
 else
@@ -129,7 +134,7 @@ else
 	@${MAKE} -C ${SOLVER_DIR}/$(@F) --no-print-directory
 endif
 
-elliptic: libmesh
+elliptic: libp_libs
 ifneq (,${verbose})
 	${MAKE} -C ${SOLVER_DIR}/$(@F) verbose=${verbose}
 else
@@ -137,7 +142,7 @@ else
 	@${MAKE} -C ${SOLVER_DIR}/$(@F) --no-print-directory
 endif
 
-fokkerPlanck: libmesh | elliptic
+fokkerPlanck: libp_libs | elliptic
 ifneq (,${verbose})
 	${MAKE} -C ${SOLVER_DIR}/$(@F) verbose=${verbose}
 else
@@ -145,7 +150,7 @@ else
 	@${MAKE} -C ${SOLVER_DIR}/$(@F) --no-print-directory
 endif
 
-gradient: libmesh
+gradient: libp_libs
 ifneq (,${verbose})
 	${MAKE} -C ${SOLVER_DIR}/$(@F) verbose=${verbose}
 else
@@ -153,47 +158,12 @@ else
 	@${MAKE} -C ${SOLVER_DIR}/$(@F) --no-print-directory
 endif
 
-ins: libmesh | elliptic
+ins: libp_libs | elliptic
 ifneq (,${verbose})
 	${MAKE} -C ${SOLVER_DIR}/$(@F) verbose=${verbose}
 else
 	@printf "%b" "$(SOL_COLOR)Building $(@F) solver$(NO_COLOR)\n";
 	@${MAKE} -C ${SOLVER_DIR}/$(@F) --no-print-directory
-endif
-
-libmesh: libogs libparAlmond libgs libcore
-ifneq (,${verbose})
-	${MAKE} -C ${MESH_DIR} lib verbose=${verbose}
-else
-	@${MAKE} -C ${MESH_DIR} lib --no-print-directory
-endif
-
-libparAlmond: libogs libgs libcore
-ifneq (,${verbose})
-	${MAKE} -C ${PARALMOND_DIR} lib verbose=${verbose}
-else
-	@${MAKE} -C ${PARALMOND_DIR} lib --no-print-directory
-endif
-
-libogs: libcore
-ifneq (,${verbose})
-	${MAKE} -C ${OGS_DIR} lib verbose=${verbose}
-else
-	@${MAKE} -C ${OGS_DIR} lib --no-print-directory
-endif
-
-libcore: libgs
-ifneq (,${verbose})
-	${MAKE} -C ${CORE_DIR} lib verbose=${verbose}
-else
-	@${MAKE} -C ${CORE_DIR} lib --no-print-directory
-endif
-
-libgs:
-ifneq (,${verbose})
-	${MAKE} -C $(GS_DIR) install verbose=${verbose}
-else
-	@${MAKE} -C $(GS_DIR) install --no-print-directory
 endif
 
 #cleanup
@@ -226,17 +196,14 @@ clean-ins:
 	${MAKE} -C ${SOLVER_DIR}/ins clean
 
 clean-libs:
-	${MAKE} -C ${CORE_DIR} clean
-	${MAKE} -C ${MESH_DIR} clean
-	${MAKE} -C ${OGS_DIR} clean
-	${MAKE} -C ${PARALMOND_DIR} clean
+	${MAKE} -C ${LIBP_LIBS_DIR} clean
 
 clean-kernels: clean
 # 	$(shell ${OCCA_DIR}/bin/occa clear all -y)
 	rm -rf ~/.occa/
 
 realclean: clean
-	${MAKE} -C ${GS_DIR} clean
+	${MAKE} -C ${LIBP_LIBS_DIR} realclean
 
 help:
 	$(info $(value LIBP_HELP_MSG))
@@ -250,4 +217,4 @@ info:
 	@true
 
 test: all
-	@${MAKE} -C $(LIBP_DIR)/test --no-print-directory  test
+	@${MAKE} -C $(LIBP_TEST_DIR) --no-print-directory  test

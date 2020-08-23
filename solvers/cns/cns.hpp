@@ -86,8 +86,6 @@ public:
 
   occa::kernel constrainKernel;
 
-  occa::kernel MassMatrixKernel;
-
   occa::kernel initialConditionKernel;
 
   cns_t() = delete;

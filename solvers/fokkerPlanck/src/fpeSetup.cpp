@@ -123,6 +123,7 @@ fpe_t& fpe_t::Setup(platform_t& platform, mesh_t& mesh,
 
   //storage for M*q during reporting
   fpe->o_Mq = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), fpe->q);
+  mesh.MassMatrixKernelSetup(1); // mass matrix operator
 
   fpe->grad = (dfloat*) calloc((Nlocal+Nhalo)*4, sizeof(dfloat));
   fpe->o_grad  = platform.malloc((Nlocal+Nhalo)*4*sizeof(dfloat), fpe->grad);
@@ -217,14 +218,6 @@ fpe_t& fpe_t::Setup(platform_t& platform, mesh_t& mesh,
                                            kernelInfo);
   }
 
-  // mass matrix operator
-  sprintf(fileName, LIBP_DIR "/core/okl/MassMatrixOperator%s.okl", suffix);
-  sprintf(kernelName, "MassMatrixOperator%s", suffix);
-
-  fpe->MassMatrixKernel = platform.buildKernel(fileName, kernelName,
-                                            kernelInfo);
-
-
   if (mesh.dim==2) {
     sprintf(fileName, DFPE "/okl/fpeInitialCondition2D.okl");
     sprintf(kernelName, "fpeInitialCondition2D");
@@ -263,7 +256,6 @@ fpe_t::~fpe_t() {
   gradientKernel.free();
   diffusionKernel.free();
   diffusionRhsKernel.free();
-  MassMatrixKernel.free();
   initialConditionKernel.free();
 
   if (elliptic) delete elliptic;

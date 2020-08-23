@@ -65,6 +65,7 @@ advection_t& advection_t::Setup(platform_t& platform, mesh_t& mesh,
 
   //storage for M*q during reporting
   advection->o_Mq = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), advection->q);
+  mesh.MassMatrixKernelSetup(1); // mass matrix operator
 
   // OCCA build stuff
   occa::properties kernelInfo = mesh.props; //copy base occa properties
@@ -114,13 +115,6 @@ advection_t& advection_t::Setup(platform_t& platform, mesh_t& mesh,
 
   advection->surfaceKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 
-  // mass matrix operator
-  sprintf(fileName, LIBP_DIR "/core/okl/MassMatrixOperator%s.okl", suffix);
-  sprintf(kernelName, "MassMatrixOperator%s", suffix);
-
-  advection->MassMatrixKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
-
-
   if (mesh.dim==2) {
     sprintf(fileName, DADVECTION "/okl/advectionInitialCondition2D.okl");
     sprintf(kernelName, "advectionInitialCondition2D");
@@ -137,7 +131,6 @@ advection_t& advection_t::Setup(platform_t& platform, mesh_t& mesh,
 advection_t::~advection_t() {
   volumeKernel.free();
   surfaceKernel.free();
-  MassMatrixKernel.free();
   initialConditionKernel.free();
 
   if (timeStepper) delete timeStepper;

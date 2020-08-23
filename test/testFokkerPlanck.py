@@ -191,6 +191,11 @@ def main():
                     settings=fpeSettings(element=3,data_file=fpeData2D,dim=2,output_to_file="TRUE"),
                     referenceNorm=0.6837407953719)
 
+  #clean up
+  for file_name in os.listdir(testDir):
+    if file_name.endswith('.vtu'):
+      os.remove(testDir + "/" + file_name)
+
   return failCount
 
 if __name__ == "__main__":

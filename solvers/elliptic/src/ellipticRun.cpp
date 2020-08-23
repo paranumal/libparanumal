@@ -69,12 +69,6 @@ void elliptic_t::Run(){
 
   char fileName[BUFSIZ], kernelName[BUFSIZ];
 
-  // mass matrix operator
-  sprintf(fileName, LIBP_DIR "/core/okl/MassMatrixOperator%s.okl", suffix);
-  sprintf(kernelName, "MassMatrixOperator%s", suffix);
-  occa::kernel MassMatrixKernel = platform.buildKernel(fileName, kernelName,
-                                                    kernelInfo);
-
   if(mesh.elementType==QUADRILATERALS){
     if(mesh.dim==2)
       suffix = strdup("Quad2D");
@@ -114,6 +108,7 @@ void elliptic_t::Run(){
 
   //storage for M*q during reporting
   occa::memory o_Mx = platform.malloc(Nall*sizeof(dfloat), x);
+  mesh.MassMatrixKernelSetup(Nfields); // mass matrix operator
 
   //populate rhs forcing
   forcingKernel(mesh.Nelements,
@@ -215,7 +210,7 @@ void elliptic_t::Run(){
   // output norm of final solution
   {
     //compute q.M*q
-    MassMatrixKernel(mesh.Nelements, mesh.o_ggeo, mesh.o_MM, o_x, o_Mx);
+    mesh.MassMatrixApply(o_x, o_Mx);
 
     dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
     dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_x, o_Mx, mesh.comm));

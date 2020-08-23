@@ -25,8 +25,8 @@ SOFTWARE.
 */
 
 #include "elliptic.hpp"
-#include "../mesh/include/meshDefines2D.h"
-#include "../mesh/include/meshDefines3D.h"
+#include "mesh/meshDefines2D.h"
+#include "mesh/meshDefines3D.h"
 
 // compare on global indices
 int parallelCompareRowColumn(const void *a, const void *b){

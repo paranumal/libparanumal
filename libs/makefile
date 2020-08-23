@@ -281,7 +281,7 @@ else
 	@$(LIBP_MPICXX) -o $@ -c $< ${LIBPARALMOND_DEFINES} $(LIB_CXXFLAGS)
 endif
 
-timeStepper/%.o: timeStepper/%.cpp $(LIB_DEPS) | libcore.a
+timeStepper/%.o: timeStepper/%.cpp $(LIB_DEPS) | libmesh.a
 ifneq (,${verbose})
 	$(LIBP_MPICXX) -o $@ -c $< ${LIBTIMESTEPPER_DEFINES} $(LIB_CXXFLAGS)
 else

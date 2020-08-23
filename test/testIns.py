@@ -207,6 +207,11 @@ def main():
                     settings=insSettings(element=3,data_file=insData2D,dim=2,output_to_file="TRUE"),
                     referenceNorm=0.820785579220035)
 
+  #clean up
+  for file_name in os.listdir(testDir):
+    if file_name.endswith('.vtu'):
+      os.remove(testDir + "/" + file_name)
+
   return failCount
 
 if __name__ == "__main__":

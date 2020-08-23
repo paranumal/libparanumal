@@ -47,6 +47,7 @@ gradient_t& gradient_t::Setup(platform_t& platform, mesh_t& mesh,
 
   //storage for M*gradq during reporting
   gradient->o_Mgradq = platform.malloc(Nlocal*mesh.dim*sizeof(dfloat), gradient->gradq);
+  mesh.MassMatrixKernelSetup(gradient->Nfields); // mass matrix operator
 
   // OCCA build stuff
   occa::properties kernelInfo = mesh.props; //copy base occa properties
@@ -79,13 +80,6 @@ gradient_t& gradient_t::Setup(platform_t& platform, mesh_t& mesh,
 
   gradient->volumeKernel =  platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
-  // mass matrix operator
-  sprintf(fileName, LIBP_DIR "/core/okl/MassMatrixOperator%s.okl", suffix);
-  sprintf(kernelName, "MassMatrixOperator%s", suffix);
-
-  gradient->MassMatrixKernel = platform.buildKernel(fileName, kernelName,
-                                            kernelInfo);
-
 
   if (mesh.dim==2) {
     sprintf(fileName, DGRADIENT "/okl/gradientInitialCondition2D.okl");
@@ -103,6 +97,5 @@ gradient_t& gradient_t::Setup(platform_t& platform, mesh_t& mesh,
 
 gradient_t::~gradient_t() {
   volumeKernel.free();
-  MassMatrixKernel.free();
   initialConditionKernel.free();
 }
