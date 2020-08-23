@@ -39,10 +39,9 @@ Libraries makefile targets:
 Usage:
 
 make all
-	 Build libcore, libogs, libmesh, liblinAlg, libtimeStepper,
-				 liblinearSovler, and libparAlmond libraries.
-make lib{}
-	 Build only lib{} library.
+	 Build core, ogs, mesh, linAlg, timeStepper, linearSovler, and parAlmond libraries.
+make {lib}
+	 Build only {lib} library.
 make clean
 	 Clean all libraries, and object files.
 make clean-kernels
@@ -58,10 +57,8 @@ Can use "make verbose=true" for verbose output.
 
 endef
 
-ifeq (,$(filter libcore liblinAlg liblinearSolver libmesh     \
-								libogs libparAlmond libtimeStepper            \
-								clean realcleanclean clean-libs clean-kernels \
-								realclean info help, $(MAKECMDGOALS)))
+ifeq (,$(filter core linAlg linearSolver mesh ogs parAlmond timeStepper \
+								clean clean-libs clean-kernels realclean info help, $(MAKECMDGOALS)))
 ifneq (,$(MAKECMDGOALS))
 $(error ${LIB_HELP_MSG})
 endif
@@ -135,23 +132,21 @@ LIBOGS_OBJS=$(LIBOGS_SRC:.cpp=.o)
 LIBPARALMOND_OBJS=$(LIBPARALMOND_SRC:.cpp=.o)
 LIBTIMESTEPPER_OBJS=$(LIBTIMESTEPPER_SRC:.cpp=.o)
 
-.PHONY: all libcore liblinAlg liblinearSolver libmesh \
-				libogs libparAlmond libtimeStepper            \
+.PHONY: all core linAlg linearSolver mesh ogs parAlmond timeStepper \
 				clean realclean silentUpdate-core             \
 				silentUpdate-linAlg silentUpdate-linearSolver \
 				silentUpdate-ogs silentUpdate-mesh            \
 				silentUpdate-parAlmond silentUpdate-timeStepper
 
-all: libcore liblinAlg liblinearSolver libmesh \
-		 libogs libparAlmond libtimeStepper
+all: core linAlg linearSolver mesh ogs parAlmond timeStepper
 
-libcore: libcore.a silentUpdate-core
-liblinAlg: liblinAlg.a silentUpdate-linAlg
-liblinearSolver: liblinearSolver.a silentUpdate-linearSolver
-libmesh: libmesh.a silentUpdate-mesh
-libogs: libogs.a silentUpdate-ogs
-libparAlmond: libparAlmond.a silentUpdate-parAlmond
-libtimeStepper: libtimeStepper.a silentUpdate-timeStepper
+core: libcore.a silentUpdate-core
+linAlg: liblinAlg.a silentUpdate-linAlg
+linearSolver: liblinearSolver.a silentUpdate-linearSolver
+mesh: libmesh.a silentUpdate-mesh
+ogs: libogs.a silentUpdate-ogs
+parAlmond: libparAlmond.a silentUpdate-parAlmond
+timeStepper: libtimeStepper.a silentUpdate-timeStepper
 
 libcore.a: $(LIBCORE_OBJS)
 ifneq (,${verbose})
