@@ -110,7 +110,7 @@ def main():
                     cmd=bnsBin,
                     settings=bnsSettings(element=3,data_file=bnsData2D,dim=2,
                                          time_integrator="MRSAAB3"),
-                    referenceNorm=14.254975343422)
+                    referenceNorm=14.2549885777409)
 
   return failCount
 
