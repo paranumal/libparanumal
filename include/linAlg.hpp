@@ -27,9 +27,7 @@ SOFTWARE.
 #ifndef LINALG_HPP
 #define LINALG_HPP
 
-#include <occa.hpp>
-#include "types.h"
-#include "utils.hpp"
+#include "core.hpp"
 
 using std::vector;
 using std::string;

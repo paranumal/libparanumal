@@ -27,12 +27,10 @@ SOFTWARE.
 #ifndef TIMESTEPPER_HPP
 #define TIMESTEPPER_HPP
 
-#include <occa.hpp>
-#include "types.h"
-#include "utils.hpp"
+#include "core.hpp"
 #include "settings.hpp"
-#include "solver.hpp"
 #include "mesh.hpp"
+#include "solver.hpp"
 
 namespace TimeStepper {
 

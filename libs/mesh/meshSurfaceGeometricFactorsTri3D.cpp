@@ -25,7 +25,7 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh3D.hpp"
+#include "mesh/mesh3D.hpp"
 
 /* compute outwards facing normals, surface Jacobian, and volume Jacobian for all face nodes */
 void meshTri3D::SurfaceGeometricFactors(){

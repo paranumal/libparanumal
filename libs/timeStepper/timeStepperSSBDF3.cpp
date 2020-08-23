@@ -48,7 +48,7 @@ ssbdf3::ssbdf3(dlong Nelements, dlong NhaloElements,
   kernelInfo["defines/" "p_blockSize"] = BLOCKSIZE;
   kernelInfo["defines/" "p_Nstages"] = Nstages;
 
-  rhsKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
+  rhsKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
                                     "timeStepperSSBDF.okl",
                                     "ssbdfRHS",
                                     kernelInfo);

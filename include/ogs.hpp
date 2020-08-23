@@ -171,18 +171,11 @@ SOFTWARE.
 #ifndef OGS_HPP
 #define OGS_HPP
 
-#include <math.h>
-#include <stdlib.h>
-#include <occa.hpp>
-#include <mpi.h>
-
-#include "types.h"
-#include "utils.hpp"
 #include "core.hpp"
 #include "platform.hpp"
 
 //ogs defs
-#include "../libs/ogs/include/ogsDefs.h"
+#include "ogs/ogsDefs.h"
 
 /* type enum */
 #define LIST OGS_FOR_EACH_TYPE(ITEM) ogs_type_n

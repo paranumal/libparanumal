@@ -25,8 +25,8 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh2D.hpp"
-#include "mesh3D.hpp"
+#include "mesh/mesh2D.hpp"
+#include "mesh/mesh3D.hpp"
 
 void meshQuad3D::CubatureSetup(){
   mesh_t *mesh_p = (mesh_t*) this;

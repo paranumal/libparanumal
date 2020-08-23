@@ -62,11 +62,11 @@ mrab3::mrab3(dlong Nelements, dlong NhaloElements,
   int maxNodes = mymax(mesh.Np, mesh.Nfp*mesh.Nfaces);
   kernelInfo["defines/" "p_maxNodes"] = maxNodes;
 
-  updateKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
+  updateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
                                     "timeStepperMRAB.okl",
                                     "mrabUpdate",
                                     kernelInfo);
-  traceUpdateKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
+  traceUpdateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
                                     "timeStepperMRAB.okl",
                                     "mrabTraceUpdate",
                                     kernelInfo);
@@ -256,7 +256,7 @@ mrab3_pml::mrab3_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
     int maxNodes = mymax(mesh.Np, mesh.Nfp*mesh.Nfaces);
     kernelInfo["defines/" "p_maxNodes"] = maxNodes;
 
-    pmlUpdateKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
+    pmlUpdateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
                                       "timeStepperMRAB.okl",
                                       "mrabPmlUpdate",
                                       kernelInfo);

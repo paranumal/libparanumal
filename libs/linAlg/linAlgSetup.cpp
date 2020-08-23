@@ -53,97 +53,97 @@ void linAlg_t::InitKernels(vector<string> kernels) {
     string name = kernels[i];
     if (name=="set") {
       if (setKernel.isInitialized()==false)
-        setKernel = platform->buildKernel(LIBP_DIR "/core/okl/"
+        setKernel = platform->buildKernel(LINALG_DIR "/okl/"
                                         "linAlgSet.okl",
                                         "set",
                                         kernelInfo);
     } else if (name=="add") {
       if (addKernel.isInitialized()==false)
-        addKernel = platform->buildKernel(LIBP_DIR "/core/okl/"
+        addKernel = platform->buildKernel(LINALG_DIR "/okl/"
                                         "linAlgAdd.okl",
                                         "add",
                                         kernelInfo);
     } else if (name=="scale") {
       if (scaleKernel.isInitialized()==false)
-        scaleKernel = platform->buildKernel(LIBP_DIR "/core/okl/"
+        scaleKernel = platform->buildKernel(LINALG_DIR "/okl/"
                                         "linAlgScale.okl",
                                         "scale",
                                         kernelInfo);
     } else if (name=="axpy") {
       if (axpyKernel.isInitialized()==false)
-        axpyKernel = platform->buildKernel(LIBP_DIR "/core/okl/"
+        axpyKernel = platform->buildKernel(LINALG_DIR "/okl/"
                                         "linAlgAXPY.okl",
                                         "axpy",
                                         kernelInfo);
     } else if (name=="zaxpy") {
       if (zaxpyKernel.isInitialized()==false)
-        zaxpyKernel = platform->buildKernel(LIBP_DIR "/core/okl/"
+        zaxpyKernel = platform->buildKernel(LINALG_DIR "/okl/"
                                         "linAlgAXPY.okl",
                                         "zaxpy",
                                         kernelInfo);
     } else if (name=="amx") {
       if (amxKernel.isInitialized()==false)
-        amxKernel = platform->buildKernel(LIBP_DIR "/core/okl/"
+        amxKernel = platform->buildKernel(LINALG_DIR "/okl/"
                                         "linAlgAMXPY.okl",
                                         "amx",
                                         kernelInfo);
     } else if (name=="amxpy") {
       if (amxpyKernel.isInitialized()==false)
-        amxpyKernel = platform->buildKernel(LIBP_DIR "/core/okl/"
+        amxpyKernel = platform->buildKernel(LINALG_DIR "/okl/"
                                         "linAlgAMXPY.okl",
                                         "amxpy",
                                         kernelInfo);
     } else if (name=="zamxpy") {
       if (zamxpyKernel.isInitialized()==false)
-        zamxpyKernel = platform->buildKernel(LIBP_DIR "/core/okl/"
+        zamxpyKernel = platform->buildKernel(LINALG_DIR "/okl/"
                                         "linAlgAMXPY.okl",
                                         "zamxpy",
                                         kernelInfo);
     } else if (name=="adx") {
       if (adxKernel.isInitialized()==false)
-        adxKernel = platform->buildKernel(LIBP_DIR "/core/okl/"
+        adxKernel = platform->buildKernel(LINALG_DIR "/okl/"
                                         "linAlgADXPY.okl",
                                         "adx",
                                         kernelInfo);
     } else if (name=="adxpy") {
       if (adxpyKernel.isInitialized()==false)
-        adxpyKernel = platform->buildKernel(LIBP_DIR "/core/okl/"
+        adxpyKernel = platform->buildKernel(LINALG_DIR "/okl/"
                                         "linAlgADXPY.okl",
                                         "adxpy",
                                         kernelInfo);
     } else if (name=="zadxpy") {
       if (zadxpyKernel.isInitialized()==false)
-        zadxpyKernel = platform->buildKernel(LIBP_DIR "/core/okl/"
+        zadxpyKernel = platform->buildKernel(LINALG_DIR "/okl/"
                                         "linAlgADXPY.okl",
                                         "zadxpy",
                                         kernelInfo);
     } else if (name=="sum") {
       if (sumKernel.isInitialized()==false)
-        sumKernel = platform->buildKernel(LIBP_DIR "/core/okl/"
+        sumKernel = platform->buildKernel(LINALG_DIR "/okl/"
                                         "linAlgSum.okl",
                                         "sum",
                                         kernelInfo);
     } else if (name=="norm2") {
       if (norm2Kernel.isInitialized()==false)
-        norm2Kernel = platform->buildKernel(LIBP_DIR "/core/okl/"
+        norm2Kernel = platform->buildKernel(LINALG_DIR "/okl/"
                                         "linAlgNorm2.okl",
                                         "norm2",
                                         kernelInfo);
     } else if (name=="weightedNorm2") {
       if (weightedNorm2Kernel.isInitialized()==false)
-        weightedNorm2Kernel = platform->buildKernel(LIBP_DIR "/core/okl/"
+        weightedNorm2Kernel = platform->buildKernel(LINALG_DIR "/okl/"
                                         "linAlgWeightedNorm2.okl",
                                         "weightedNorm2",
                                         kernelInfo);
     } else if (name=="innerProd") {
       if (innerProdKernel.isInitialized()==false)
-        innerProdKernel = platform->buildKernel(LIBP_DIR "/core/okl/"
+        innerProdKernel = platform->buildKernel(LINALG_DIR "/okl/"
                                         "linAlgInnerProd.okl",
                                         "innerProd",
                                         kernelInfo);
     } else if (name=="weightedInnerProd") {
       if (weightedInnerProdKernel.isInitialized()==false)
-        weightedInnerProdKernel = platform->buildKernel(LIBP_DIR "/core/okl/"
+        weightedInnerProdKernel = platform->buildKernel(LINALG_DIR "/okl/"
                                         "linAlgWeightedInnerProd.okl",
                                         "weightedInnerProd",
                                         kernelInfo);

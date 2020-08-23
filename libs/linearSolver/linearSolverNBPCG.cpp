@@ -62,9 +62,9 @@ nbpcg::nbpcg(dlong _N, dlong _Nhalo,
   kernelInfo["defines/" "p_blockSize"] = (int)NBPCG_BLOCKSIZE;
 
   // combined NBPCG update kernels
-  update1NBPCGKernel = platform.buildKernel(LIBP_DIR "/core/okl/linearSolverUpdateNBPCG.okl",
+  update1NBPCGKernel = platform.buildKernel(LINEARSOLVER_DIR "/okl/linearSolverUpdateNBPCG.okl",
                                 "update1NBPCG", kernelInfo);
-  update2NBPCGKernel = platform.buildKernel(LIBP_DIR "/core/okl/linearSolverUpdateNBPCG.okl",
+  update2NBPCGKernel = platform.buildKernel(LINEARSOLVER_DIR "/okl/linearSolverUpdateNBPCG.okl",
                                 "update2NBPCG", kernelInfo);
 }
 

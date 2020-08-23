@@ -44,7 +44,7 @@ lserk4::lserk4(dlong Nelements, dlong NhaloElements,
 
   kernelInfo["defines/" "p_blockSize"] = BLOCKSIZE;
 
-  updateKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
+  updateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
                                     "timeStepperLSERK4.okl",
                                     "lserk4Update",
                                     kernelInfo);

@@ -60,7 +60,7 @@ pcg::pcg(dlong _N, dlong _Nhalo,
   kernelInfo["defines/" "p_blockSize"] = (int)PCG_BLOCKSIZE;
 
   // combined PCG update and r.r kernel
-  updatePCGKernel = platform.buildKernel(LIBP_DIR "/core/okl/linearSolverUpdatePCG.okl",
+  updatePCGKernel = platform.buildKernel(LINEARSOLVER_DIR "/okl/linearSolverUpdatePCG.okl",
                                 "updatePCG", kernelInfo);
 }
 

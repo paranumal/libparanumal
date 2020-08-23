@@ -25,7 +25,7 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh2D.hpp"
+#include "mesh/mesh2D.hpp"
 
 void meshTri2D::PhysicalNodes(){
 

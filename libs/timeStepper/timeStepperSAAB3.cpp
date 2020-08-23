@@ -58,7 +58,7 @@ saab3::saab3(dlong _Nelements, dlong _NhaloElements,
   kernelInfo["defines/" "p_Np"]      = (int)Np;
   kernelInfo["defines/" "p_Nfields"] = (int)Nfields;
 
-  updateKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
+  updateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
                                     "timeStepperSAAB.okl",
                                     "saabUpdate",
                                     kernelInfo);
@@ -237,7 +237,7 @@ saab3_pml::saab3_pml(dlong _Nelements, dlong _NpmlElements, dlong _NhaloElements
     kernelInfo["defines/" "p_Np"]      = (int)Np;
     kernelInfo["defines/" "p_Nfields"] = (int)Nfields;
 
-    pmlUpdateKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
+    pmlUpdateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
                                       "timeStepperSAAB.okl",
                                       "saabPmlUpdate",
                                       kernelInfo);

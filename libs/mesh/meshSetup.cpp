@@ -25,8 +25,8 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh2D.hpp"
-#include "mesh3D.hpp"
+#include "mesh/mesh2D.hpp"
+#include "mesh/mesh3D.hpp"
 
 mesh_t& mesh_t::Setup(platform_t& platform, meshSettings_t& settings,
                       MPI_Comm comm){

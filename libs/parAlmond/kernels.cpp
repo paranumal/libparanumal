@@ -24,7 +24,6 @@ SOFTWARE.
 
 */
 
-#include "core.hpp"
 #include "parAlmond.hpp"
 
 namespace parAlmond {
@@ -70,31 +69,31 @@ void buildParAlmondKernels(MPI_Comm comm, platform_t& platform){
 
   if (rank==0) {printf("Compiling parALMOND Kernels...");fflush(stdout);}
 
-  SpMVcsrKernel1  = platform.buildKernel(DPARALMOND"/okl/SpMVcsr.okl",  "SpMVcsr1",  kernelInfo);
-  SpMVcsrKernel2  = platform.buildKernel(DPARALMOND"/okl/SpMVcsr.okl",  "SpMVcsr2",  kernelInfo);
-  SpMVellKernel1  = platform.buildKernel(DPARALMOND"/okl/SpMVell.okl",  "SpMVell1",  kernelInfo);
-  SpMVellKernel2  = platform.buildKernel(DPARALMOND"/okl/SpMVell.okl",  "SpMVell2",  kernelInfo);
-  SpMVmcsrKernel1 = platform.buildKernel(DPARALMOND"/okl/SpMVmcsr.okl", "SpMVmcsr1", kernelInfo);
-  SpMVmcsrKernel2 = platform.buildKernel(DPARALMOND"/okl/SpMVmcsr.okl", "SpMVmcsr2", kernelInfo);
+  SpMVcsrKernel1  = platform.buildKernel(PARALMOND_DIR"/okl/SpMVcsr.okl",  "SpMVcsr1",  kernelInfo);
+  SpMVcsrKernel2  = platform.buildKernel(PARALMOND_DIR"/okl/SpMVcsr.okl",  "SpMVcsr2",  kernelInfo);
+  SpMVellKernel1  = platform.buildKernel(PARALMOND_DIR"/okl/SpMVell.okl",  "SpMVell1",  kernelInfo);
+  SpMVellKernel2  = platform.buildKernel(PARALMOND_DIR"/okl/SpMVell.okl",  "SpMVell2",  kernelInfo);
+  SpMVmcsrKernel1 = platform.buildKernel(PARALMOND_DIR"/okl/SpMVmcsr.okl", "SpMVmcsr1", kernelInfo);
+  SpMVmcsrKernel2 = platform.buildKernel(PARALMOND_DIR"/okl/SpMVmcsr.okl", "SpMVmcsr2", kernelInfo);
 
-  vectorSetKernel = platform.buildKernel(DPARALMOND"/okl/vectorSet.okl", "vectorSet", kernelInfo);
-  vectorScaleKernel = platform.buildKernel(DPARALMOND"/okl/vectorScale.okl", "vectorScale", kernelInfo);
-  vectorAddScalarKernel = platform.buildKernel(DPARALMOND"/okl/vectorAddScalar.okl", "vectorAddScalar", kernelInfo);
-  vectorAddKernel1 = platform.buildKernel(DPARALMOND"/okl/vectorAdd.okl", "vectorAdd1", kernelInfo);
-  vectorAddKernel2 = platform.buildKernel(DPARALMOND"/okl/vectorAdd.okl", "vectorAdd2", kernelInfo);
-  vectorDotStarKernel1 = platform.buildKernel(DPARALMOND"/okl/vectorDotStar.okl", "vectorDotStar1", kernelInfo);
-  vectorDotStarKernel2 = platform.buildKernel(DPARALMOND"/okl/vectorDotStar.okl", "vectorDotStar2", kernelInfo);
-  vectorInnerProdKernel = platform.buildKernel(DPARALMOND"/okl/vectorInnerProd.okl", "vectorInnerProd", kernelInfo);
+  vectorSetKernel = platform.buildKernel(PARALMOND_DIR"/okl/vectorSet.okl", "vectorSet", kernelInfo);
+  vectorScaleKernel = platform.buildKernel(PARALMOND_DIR"/okl/vectorScale.okl", "vectorScale", kernelInfo);
+  vectorAddScalarKernel = platform.buildKernel(PARALMOND_DIR"/okl/vectorAddScalar.okl", "vectorAddScalar", kernelInfo);
+  vectorAddKernel1 = platform.buildKernel(PARALMOND_DIR"/okl/vectorAdd.okl", "vectorAdd1", kernelInfo);
+  vectorAddKernel2 = platform.buildKernel(PARALMOND_DIR"/okl/vectorAdd.okl", "vectorAdd2", kernelInfo);
+  vectorDotStarKernel1 = platform.buildKernel(PARALMOND_DIR"/okl/vectorDotStar.okl", "vectorDotStar1", kernelInfo);
+  vectorDotStarKernel2 = platform.buildKernel(PARALMOND_DIR"/okl/vectorDotStar.okl", "vectorDotStar2", kernelInfo);
+  vectorInnerProdKernel = platform.buildKernel(PARALMOND_DIR"/okl/vectorInnerProd.okl", "vectorInnerProd", kernelInfo);
 
-  vectorAddInnerProdKernel = platform.buildKernel(DPARALMOND"/okl/vectorAddInnerProd.okl", "vectorAddInnerProd", kernelInfo);
-  vectorAddWeightedInnerProdKernel = platform.buildKernel(DPARALMOND"/okl/vectorAddInnerProd.okl", "vectorAddWeightedInnerProd", kernelInfo);
+  vectorAddInnerProdKernel = platform.buildKernel(PARALMOND_DIR"/okl/vectorAddInnerProd.okl", "vectorAddInnerProd", kernelInfo);
+  vectorAddWeightedInnerProdKernel = platform.buildKernel(PARALMOND_DIR"/okl/vectorAddInnerProd.okl", "vectorAddWeightedInnerProd", kernelInfo);
 
-  kcycleCombinedOp1Kernel = platform.buildKernel(DPARALMOND"/okl/kcycleCombinedOp.okl", "kcycleCombinedOp1", kernelInfo);
-  kcycleCombinedOp2Kernel = platform.buildKernel(DPARALMOND"/okl/kcycleCombinedOp.okl", "kcycleCombinedOp2", kernelInfo);
-  kcycleWeightedCombinedOp1Kernel = platform.buildKernel(DPARALMOND"/okl/kcycleCombinedOp.okl", "kcycleWeightedCombinedOp1", kernelInfo);
-  kcycleWeightedCombinedOp2Kernel = platform.buildKernel(DPARALMOND"/okl/kcycleCombinedOp.okl", "kcycleWeightedCombinedOp2", kernelInfo);
+  kcycleCombinedOp1Kernel = platform.buildKernel(PARALMOND_DIR"/okl/kcycleCombinedOp.okl", "kcycleCombinedOp1", kernelInfo);
+  kcycleCombinedOp2Kernel = platform.buildKernel(PARALMOND_DIR"/okl/kcycleCombinedOp.okl", "kcycleCombinedOp2", kernelInfo);
+  kcycleWeightedCombinedOp1Kernel = platform.buildKernel(PARALMOND_DIR"/okl/kcycleCombinedOp.okl", "kcycleWeightedCombinedOp1", kernelInfo);
+  kcycleWeightedCombinedOp2Kernel = platform.buildKernel(PARALMOND_DIR"/okl/kcycleCombinedOp.okl", "kcycleWeightedCombinedOp2", kernelInfo);
 
-  haloExtractKernel = platform.buildKernel(DPARALMOND"/okl/haloExtract.okl", "haloExtract", kernelInfo);
+  haloExtractKernel = platform.buildKernel(PARALMOND_DIR"/okl/haloExtract.okl", "haloExtract", kernelInfo);
 
   if(rank==0) printf("done.\n");
 }

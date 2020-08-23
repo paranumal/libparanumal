@@ -25,8 +25,8 @@ SOFTWARE.
 */
 
 
-#include "core.hpp"
-#include "ogsKernels.hpp"
+#include "ogs.hpp"
+#include "ogs/ogsKernels.hpp"
 
 //convert a macro command into a string
 #define _STR(x) #x
@@ -80,22 +80,22 @@ void initKernels(platform_t& platform) {
 typedef int64_t long_long;
   OGS_FOR_EACH_TYPE(DEFINE_OCCA_ADD_INIT)
 
-  kernelInfo["includes"] += DOGS "/include/ogsDefs.h";
+  kernelInfo["includes"] += LIBP_DIR "/include/ogsDefs.h";
 
   if (rank==0) {printf("Compiling GatherScatter Kernels...");fflush(stdout);}
 
 #define DEFINE_GATHERSCATTER_BUILD(T,OP)                                           \
-  gatherScatterKernel_##T##_##OP = platform.buildKernel(DOGS "/okl/gatherScatter.okl",\
+  gatherScatterKernel_##T##_##OP = platform.buildKernel(OGS_DIR "/okl/gatherScatter.okl",\
                                              "gatherScatter_" STR(T) "_" STR(OP),  \
                                              kernelInfo);                          \
 
 #define DEFINE_GATHER_BUILD(T,OP)                                                  \
-  gatherKernel_##T##_##OP = platform.buildKernel(DOGS "/okl/gatherScatter.okl",    \
+  gatherKernel_##T##_##OP = platform.buildKernel(OGS_DIR "/okl/gatherScatter.okl",    \
                                              "gather_" STR(T) "_" STR(OP),         \
                                              kernelInfo);                          \
 
 #define DEFINE_SCATTER_BUILD(T)                                                    \
-  scatterKernel_##T      = platform.buildKernel(DOGS "/okl/gatherScatter.okl",     \
+  scatterKernel_##T      = platform.buildKernel(OGS_DIR "/okl/gatherScatter.okl",     \
                                              "scatter_" STR(T),                    \
                                              kernelInfo);                          \
 

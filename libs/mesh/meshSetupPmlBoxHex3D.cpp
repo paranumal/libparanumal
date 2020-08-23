@@ -25,7 +25,7 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh3D.hpp"
+#include "mesh/mesh3D.hpp"
 
 static void addHex(hlong i0, hlong j0, hlong k0, hlong NnX, hlong NnY, hlong NnZ,
                     dfloat x0, dfloat y0, dfloat z0, dfloat dx, dfloat dy, dfloat dz,

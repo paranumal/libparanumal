@@ -58,17 +58,17 @@ dopri5::dopri5(dlong Nelements, dlong NhaloElements,
   //add defines
   kernelInfo["defines/" "p_blockSize"] = (int)BLOCKSIZE;
 
-  rkUpdateKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
+  rkUpdateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
                                     "timeStepperDOPRI5.okl",
                                     "dopri5RkUpdate",
                                     kernelInfo);
 
-  rkStageKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
+  rkStageKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
                                     "timeStepperDOPRI5.okl",
                                     "dopri5RkStage",
                                     kernelInfo);
 
-  rkErrorEstimateKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
+  rkErrorEstimateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
                                     "timeStepperDOPRI5.okl",
                                     "dopri5ErrorEstimate",
                                     kernelInfo);
@@ -342,7 +342,7 @@ dopri5_pml::dopri5_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
     //add defines
     kernelInfo["defines/" "p_blockSize"] = (int)BLOCKSIZE;
 
-    rkPmlUpdateKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
+    rkPmlUpdateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
                                       "timeStepperDOPRI5.okl",
                                       "dopri5RkPmlUpdate",
                                       kernelInfo);

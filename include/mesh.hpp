@@ -27,16 +27,9 @@ SOFTWARE.
 #ifndef MESH_HPP
 #define MESH_HPP 1
 
-#include <unistd.h>
-#include <mpi.h>
-#include <math.h>
-#include <stdlib.h>
-#include <occa.hpp>
-
-#include "types.h"
-#include "utils.hpp"
-#include "ogs.hpp"
+#include "core.hpp"
 #include "settings.hpp"
+#include "ogs.hpp"
 
 #define TRIANGLES 3
 #define QUADRILATERALS 4

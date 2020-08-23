@@ -25,7 +25,7 @@ SOFTWARE.
 */
 
 #include "ogs.hpp"
-#include "ogsKernels.hpp"
+#include "ogs/ogsKernels.hpp"
 
 // Host buffer versions
 void ogs_t::GatherScatter    (void  *v,

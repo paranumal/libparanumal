@@ -25,7 +25,7 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh3D.hpp"
+#include "mesh/mesh3D.hpp"
 
 // 20 bits per coordinate
 #define bitRange 20

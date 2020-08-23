@@ -27,6 +27,7 @@ SOFTWARE.
 #ifndef SOLVER_HPP
 #define SOLVER_HPP
 
+#include "settings.hpp"
 #include "platform.hpp"
 
 class solver_t {

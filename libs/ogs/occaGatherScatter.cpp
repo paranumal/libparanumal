@@ -25,7 +25,7 @@ SOFTWARE.
 */
 
 #include "ogs.hpp"
-#include "ogsKernels.hpp"
+#include "ogs/ogsKernels.hpp"
 
 namespace ogs {
 

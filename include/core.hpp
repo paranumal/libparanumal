@@ -30,9 +30,10 @@ SOFTWARE.
 #include <mpi.h>
 #include <occa.h>
 #include <string>
+#include <math.h>
+#include <stdlib.h>
 #include "types.h"
 #include "utils.hpp"
-#include "settings.hpp"
 
 // serial sort
 void mysort(hlong *data, int N, const char *order);

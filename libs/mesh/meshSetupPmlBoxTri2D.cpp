@@ -25,8 +25,8 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh2D.hpp"
-#include "mesh3D.hpp"
+#include "mesh/mesh2D.hpp"
+#include "mesh/mesh3D.hpp"
 
 void meshTri3D::SetupPmlBox(){
   LIBP_ABORT(string("PMLBOX mesh not currently supprted for Tri3D meshes."))

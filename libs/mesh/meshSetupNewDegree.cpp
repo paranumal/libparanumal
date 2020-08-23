@@ -24,10 +24,9 @@ SOFTWARE.
 
 */
 
-#include "core.hpp"
 #include "mesh.hpp"
-#include "mesh2D.hpp"
-#include "mesh3D.hpp"
+#include "mesh/mesh2D.hpp"
+#include "mesh/mesh3D.hpp"
 
 //build a new mesh object from another with a different degree.
 mesh_t& mesh_t::SetupNewDegree(int Nf){

@@ -25,7 +25,7 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh3D.hpp"
+#include "mesh/mesh3D.hpp"
 
 static int findBestMatch(dfloat x1, dfloat y1, dfloat z1,
                    int Np2, int *nodeList, dfloat *x2, dfloat *y2, dfloat *z2, int *nP){

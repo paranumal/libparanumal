@@ -27,6 +27,7 @@ SOFTWARE.
 #ifndef LINEARSOLVER_HPP
 #define LINEARSOLVER_HPP
 
+#include "core.hpp"
 #include "platform.hpp"
 #include "solver.hpp"
 #include "precon.hpp"

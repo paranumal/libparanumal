@@ -25,8 +25,8 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh2D.hpp"
-#include "mesh3D.hpp"
+#include "mesh/mesh2D.hpp"
+#include "mesh/mesh3D.hpp"
 
 //makeing a mesh object requires it to be bound to a device and communicator
 mesh_t::mesh_t(platform_t& _platform, meshSettings_t& _settings, MPI_Comm _comm):

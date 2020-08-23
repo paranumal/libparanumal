@@ -46,7 +46,7 @@ ab3::ab3(dlong Nelements, dlong NhaloElements,
   kernelInfo["defines/" "p_blockSize"] = BLOCKSIZE;
   kernelInfo["defines/" "p_Nstages"] = Nstages;
 
-  updateKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
+  updateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
                                     "timeStepperAB.okl",
                                     "abUpdate",
                                     kernelInfo);

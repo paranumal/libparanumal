@@ -24,10 +24,9 @@ SOFTWARE.
 
 */
 
-#include "core.hpp"
 #include "mesh.hpp"
-#include "mesh2D.hpp"
-#include "mesh3D.hpp"
+#include "mesh/mesh2D.hpp"
+#include "mesh/mesh3D.hpp"
 
 //build a new mesh object consisting of the orignal mesh with an
 // 1-element overlap with neighboring meshes

@@ -25,8 +25,8 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh2D.hpp"
-#include "mesh3D.hpp"
+#include "mesh/mesh2D.hpp"
+#include "mesh/mesh3D.hpp"
 
 void meshTri3D::SetupBox(){
   LIBP_ABORT(string("BOX mesh not currently supprted for Tri3D meshes."))

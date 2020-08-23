@@ -77,17 +77,17 @@ sark5::sark5(dlong _Nelements, dlong _NhaloElements,
   kernelInfo["defines/" "p_Np"]      = (int)Np;
   kernelInfo["defines/" "p_Nfields"] = (int)Nfields;
 
-  rkUpdateKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
+  rkUpdateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
                                     "timeStepperSARK.okl",
                                     "sarkRkUpdate",
                                     kernelInfo);
 
-  rkStageKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
+  rkStageKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
                                     "timeStepperSARK.okl",
                                     "sarkRkStage",
                                     kernelInfo);
 
-  rkErrorEstimateKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
+  rkErrorEstimateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
                                     "timeStepperSARK.okl",
                                     "sarkErrorEstimate",
                                     kernelInfo);
@@ -532,12 +532,12 @@ sark5_pml::sark5_pml(dlong _Nelements, dlong _NpmlElements, dlong _NhaloElements
     kernelInfo["defines/" "p_Np"]      = (int)Np;
     kernelInfo["defines/" "p_Nfields"] = (int)Nfields;
 
-    rkPmlUpdateKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
+    rkPmlUpdateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
                                       "timeStepperSARK.okl",
                                       "sarkRkPmlUpdate",
                                       kernelInfo);
 
-    rkPmlStageKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
+    rkPmlStageKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
                                       "timeStepperSARK.okl",
                                       "sarkRkPmlStage",
                                       kernelInfo);

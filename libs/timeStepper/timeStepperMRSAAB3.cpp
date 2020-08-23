@@ -69,11 +69,11 @@ mrsaab3::mrsaab3(dlong _Nelements, dlong _NhaloElements,
   int maxNodes = mymax(mesh.Np, mesh.Nfp*mesh.Nfaces);
   kernelInfo["defines/" "p_maxNodes"] = maxNodes;
 
-  updateKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
+  updateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
                                     "timeStepperMRSAAB.okl",
                                     "mrsaabUpdate",
                                     kernelInfo);
-  traceUpdateKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
+  traceUpdateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
                                     "timeStepperMRSAAB.okl",
                                     "mrsaabTraceUpdate",
                                     kernelInfo);
@@ -383,7 +383,7 @@ mrsaab3_pml::mrsaab3_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElement
     int maxNodes = mymax(mesh.Np, mesh.Nfp*mesh.Nfaces);
     kernelInfo["defines/" "p_maxNodes"] = maxNodes;
 
-    pmlUpdateKernel = platform.buildKernel(LIBP_DIR "/core/okl/"
+    pmlUpdateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
                                       "timeStepperMRSAAB.okl",
                                       "mrsaabPmlUpdate",
                                       kernelInfo);
