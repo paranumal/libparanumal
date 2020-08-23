@@ -35,18 +35,12 @@ SOFTWARE.
 #include "types.h"
 #include "utils.hpp"
 
-// serial sort
-void mysort(hlong *data, int N, const char *order);
-
 // sort entries in an array in parallel
 void parallelSort(int size, int rank, MPI_Comm comm,
       int N, void *vv, size_t sz,
       int (*compare)(const void *, const void *),
       void (*match)(void *, void *)
       );
-
-void readDfloatArray(MPI_Comm comm, FILE *fp, const char *label, dfloat **A, int *Nrows, int* Ncols);
-void readIntArray   (MPI_Comm comm, FILE *fp, const char *label, int **A   , int *Nrows, int* Ncols);
 
 void matrixRightSolve(int NrowsA, int NcolsA, dfloat *A, int NrowsB, int NcolsB, dfloat *B, dfloat *C);
 void matrixEig(int N, dfloat *A, dfloat *VR, dfloat *WR, dfloat *WI);

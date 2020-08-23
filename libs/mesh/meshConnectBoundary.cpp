@@ -59,6 +59,16 @@ static int compareBoundaryFaces(const void *a,
 
 }
 
+static int isLower(const void *a, const void *b){
+
+  hlong *pta = (hlong*) a;
+  hlong *ptb = (hlong*) b;
+
+  if(*pta > *ptb) return -1;
+  if(*pta < *ptb) return +1;
+
+  return 0;
+}
 
 /* routine to find EToB (Element To Boundary)*/
 void mesh_t::ConnectBoundary(){
@@ -91,7 +101,7 @@ void mesh_t::ConnectBoundary(){
           boundaryFaces[bcnt].v[n] = EToV[vid];
         }
 
-        mysort(boundaryFaces[bcnt].v,NfaceVertices, "descending");
+        qsort(boundaryFaces[bcnt].v,NfaceVertices, sizeof(hlong), isLower);
 
         boundaryFaces[bcnt].NfaceVertices = NfaceVertices;
         boundaryFaces[bcnt].element = e;
@@ -108,7 +118,7 @@ void mesh_t::ConnectBoundary(){
     for(int n=0;n<NfaceVertices;++n)
       boundaryFaces[bcnt].v[n] = boundaryInfo[b*(NfaceVertices+1)+n+1];
 
-    mysort(boundaryFaces[bcnt].v,NfaceVertices, "descending");
+    qsort(boundaryFaces[bcnt].v,NfaceVertices, sizeof(hlong), isLower);
 
     boundaryFaces[bcnt].NfaceVertices = NfaceVertices;
     boundaryFaces[bcnt].element = -1;

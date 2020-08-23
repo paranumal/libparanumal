@@ -71,6 +71,17 @@ static int parallelCompareFaces(const void *a,
   return 0;
 }
 
+static int isLower(const void *a, const void *b){
+
+  hlong *pta = (hlong*) a;
+  hlong *ptb = (hlong*) b;
+
+  if(*pta > *ptb) return -1;
+  if(*pta < *ptb) return +1;
+
+  return 0;
+}
+
 // mesh is the local partition
 void mesh_t::ParallelConnect(){
 
@@ -166,7 +177,7 @@ void mesh_t::ParallelConnect(){
           sendFaces[id].v[n] = EToV[e*Nverts + nid];
         }
 
-        mysort(sendFaces[id].v,NfaceVertices, "descending");
+        qsort(sendFaces[id].v, NfaceVertices, sizeof(hlong), isLower);
 
         sendFaces[id].NfaceVertices = NfaceVertices;
         sendFaces[id].rank = rank;

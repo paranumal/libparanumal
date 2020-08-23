@@ -77,6 +77,17 @@ static int compareFaces(const void *a,
 
 }
 
+static int isLower(const void *a, const void *b){
+
+  hlong *pta = (hlong*) a;
+  hlong *ptb = (hlong*) b;
+
+  if(*pta > *ptb) return -1;
+  if(*pta < *ptb) return +1;
+
+  return 0;
+}
+
 /* routine to find EToE (Element To Element)
    and EToF (Element To Local Face) connectivity arrays */
 void mesh_t::Connect(){
@@ -94,7 +105,7 @@ void mesh_t::Connect(){
         faces[cnt].v[n] = EToV[vid];
       }
 
-      mysort(faces[cnt].v, NfaceVertices, "descending");
+      qsort(faces[cnt].v, NfaceVertices, sizeof(hlong), isLower);
 
       faces[cnt].NfaceVertices = NfaceVertices;
 
