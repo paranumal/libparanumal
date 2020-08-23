@@ -150,7 +150,7 @@ bns_t& bns_t::Setup(platform_t& platform, mesh_t& mesh,
 /*
     Artificial warping of time step size for multirate testing
     */
-#if 1
+#if 0
   if (settings.compareSetting("TIME INTEGRATOR","MRAB3") ||
       settings.compareSetting("TIME INTEGRATOR","MRSAAB3"))
     dt /= (1<<(mesh.mrNlevels-1));
