@@ -67,6 +67,8 @@ public:
 
   void CubatureSetup();
   void CubatureNodes();
+
+  void MassMatrixKernelSetup(int Nfields);
 };
 
 class meshQuad3D: public mesh3D {
@@ -83,6 +85,8 @@ public:
 
   void CubatureSetup();
   void CubatureNodes();
+
+  void MassMatrixKernelSetup(int Nfields);
 };
 
 class meshTet3D: public mesh3D {
@@ -99,6 +103,8 @@ public:
 
   void CubatureSetup();
   void CubatureNodes();
+
+  void MassMatrixKernelSetup(int Nfields);
 };
 
 class meshHex3D: public mesh3D {
@@ -115,6 +121,8 @@ public:
 
   void CubatureSetup();
   void CubatureNodes();
+
+  void MassMatrixKernelSetup(int Nfields);
 };
 
 #endif

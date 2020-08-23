@@ -64,6 +64,8 @@ public:
 
   void CubatureSetup();
   void CubatureNodes();
+
+  void MassMatrixKernelSetup(int Nfields);
 };
 
 class meshQuad2D: public mesh2D {
@@ -80,6 +82,8 @@ public:
 
   void CubatureSetup();
   void CubatureNodes();
+
+  void MassMatrixKernelSetup(int Nfields);
 };
 
 #endif

@@ -257,7 +257,7 @@ public:
   occa::memory *o_mrPmlElements, *o_mrNonPmlElements;
   occa::memory *o_mrPmlIds;
 
-
+  occa::kernel MassMatrixKernel;
 
   mesh_t() = delete;
   mesh_t(platform_t& _platform, meshSettings_t& _settings,
@@ -340,6 +340,9 @@ public:
   virtual dfloat MinCharacteristicLength() = 0;
 
   void RecursiveSpectralBisectionPartition();
+
+  void MassMatrixApply(occa::memory& o_q, occa::memory& o_Mq);
+  virtual void MassMatrixKernelSetup(int Nfields)=0;
 
   //create a new mesh object with the same geometry, but different degree
   mesh_t& SetupNewDegree(int Nf);

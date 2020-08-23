@@ -161,7 +161,7 @@ else
 	@ar -cr libcore.a $(LIBCORE_OBJS)
 endif
 
-libgs:
+libgs: | libcore.a
 ifneq (,${verbose})
 	${MAKE} -C $(GS_DIR) install verbose=${verbose}
 else
