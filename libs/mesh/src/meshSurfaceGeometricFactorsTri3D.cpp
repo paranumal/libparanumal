@@ -138,7 +138,7 @@ void meshTri3D::SurfaceGeometricFactors(){
 		LIBP_ABORT(ss.str())
 	}
 
-	int base = e*Nfp*Nfaces*Nsgeo + n + f*Nfp;
+	int base = e*Nfp*Nfaces*Nsgeo + f*Nfp + n;
 
 	sgeo[base+Nfp*Nfaces*NXID] = nx;
 	sgeo[base+Nfp*Nfaces*NYID] = ny;
@@ -146,6 +146,8 @@ void meshTri3D::SurfaceGeometricFactors(){
 	sgeo[base+Nfp*Nfaces*SJID] = sJ;
 
 	sgeo[base+Nfp*Nfaces*IJID] = 1./Jid;
+	sgeo[base+Nfp*Nfaces*IHID] = 1000;
+	// TW missing 1./h here in sgeo
       }
     }
   }

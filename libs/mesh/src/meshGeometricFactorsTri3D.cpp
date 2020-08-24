@@ -39,7 +39,7 @@ void meshTri3D::GeometricFactors(){
 
   /* number of second order geometric factors */
   Nggeo = 7;
-  ggeo = (dfloat*) calloc(Nelements*Nggeo, sizeof(dfloat));
+  ggeo = (dfloat*) calloc(Nelements*Nggeo*Np, sizeof(dfloat));
 
   for(int e=0;e<Nelements;++e){ /* for each element */
 
@@ -124,10 +124,14 @@ void meshTri3D::GeometricFactors(){
       vgeo[base + Np*TZID] = tz;
       vgeo[base + Np*JID]  = J;
 
-      ggeo[Nggeo*e + G00ID] = J*(rx*rx + ry*ry + rz*rz);
-      ggeo[Nggeo*e + G01ID] = J*(rx*sx + ry*sy + rz*sz);
-      ggeo[Nggeo*e + G11ID] = J*(sx*sx + sy*sy + sz*sz);
-      ggeo[Nggeo*e + GWJID]  = J;
+
+      //      printf("geos=(%f,%f,%f)x(%f,%f,%f)x(%f,%f,%f), J+%f;\n",
+      //	     rx, ry, rz, sx, sy, sz, tx, ty, tz, J);
+      base = Nggeo*Np*e + n;
+      ggeo[base + Np*G00ID] = J*(rx*rx + ry*ry + rz*rz);
+      ggeo[base + Np*G01ID] = J*(rx*sx + ry*sy + rz*sz);
+      ggeo[base + Np*G11ID] = J*(sx*sx + sy*sy + sz*sz);
+      ggeo[base + Np*GWJID]  = J;
 
     }
   }

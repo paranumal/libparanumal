@@ -148,7 +148,7 @@ SOFTWARE.
 
     @barrier("local");
 
-    // INCOMPLETENESS STARTS HERE
+        // TW: This needs to be checked for INCOMPLETENESS STARTS HERE
     
     // loop over slabs
     for(int j=0;j<p_Nq;++j){

@@ -25,13 +25,6 @@ SOFTWARE.
 */
 
 
-#define drdx s_vgeo[es][p_RXID]
-#define drdy s_vgeo[es][p_RYID]
-#define drdz s_vgeo[es][p_RZID]
-#define dsdx s_vgeo[es][p_SXID]
-#define dsdy s_vgeo[es][p_SYID]
-#define dsdz s_vgeo[es][p_SZID]
-
 @kernel void ellipticGradientTri3D(const int Nelements,
                                   @restrict const  dfloat *  vgeo,
                                   @restrict const  dfloat *  const Dmatrices,
@@ -42,7 +35,6 @@ SOFTWARE.
   for(int eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
     
     @shared dfloat s_q[p_NblockV][p_Np];
-    @shared dfloat s_vgeo[p_NblockV][p_Nvgeo];
 
     for(int e=eo;e<eo+p_NblockV;++e;@inner(1)){
       for(int n=0;n<p_Np;++n;@inner(0)){
@@ -50,14 +42,6 @@ SOFTWARE.
           // prefetch q
           const int id = e*p_Np+n;
           s_q[e-eo][n] = q[id];
-        }
-        
-        // coalesce volume geofac reads to @shared
-        int t = n + p_Np*(e-eo);
-        while(t<p_Nvgeo*p_NblockV){
-          if(eo*p_Nvgeo+t<Nelements*p_Nvgeo)
-            s_vgeo[0][t] = vgeo[eo*p_Nvgeo+t];
-          t+=p_NblockV*p_Np;
         }
       }
     }
@@ -83,6 +67,14 @@ SOFTWARE.
             }
           
           dfloat4 gradqn;
+	  dlong base = e*p_Np*p_Nvgeo+n;
+	  dfloat drdx = vgeo[base+p_RXID*p_Np];
+	  dfloat dsdx = vgeo[base+p_SXID*p_Np];
+	  dfloat drdy = vgeo[base+p_RYID*p_Np];
+	  dfloat dsdy = vgeo[base+p_SYID*p_Np];
+	  dfloat drdz = vgeo[base+p_RZID*p_Np];
+	  dfloat dsdz = vgeo[base+p_SZID*p_Np];
+
           gradqn.x = drdx*qr + dsdx*qs;
           gradqn.y = drdy*qr + dsdy*qs;
 	  gradqn.z = drdz*qr + dsdz*qs;
@@ -152,11 +144,11 @@ SOFTWARE.
 
 // map multiple nodes to thread
 @kernel void ellipticPartialGradientTri3D(const dlong Nelements,
-         const dlong offset,
-         @restrict const  dfloat *  vgeo,
-         @restrict const  dfloat *  Dmatrices, 
-         @restrict const  dfloat *  q,
-              @restrict dfloat4 *  gradq){
+					  const dlong offset,
+					  @restrict const  dfloat *  vgeo,
+					  @restrict const  dfloat *  Dmatrices, 
+					  @restrict const  dfloat *  q,
+					  @restrict dfloat4 *  gradq){
   
   for(dlong eo=0;eo<Nelements;eo+=(p_NbV*p_Nmt);@outer(0)){
 
@@ -192,12 +184,13 @@ SOFTWARE.
           qr[em] = 0.f;
           qs[em] = 0.f;
           //
-          drdx2[em] = vgeo[p_Nvgeo*e+p_RXID];
-          drdy2[em] = vgeo[p_Nvgeo*e+p_RYID];
-	  drdz2[em] = vgeo[p_Nvgeo*e+p_RZID];
-          dsdx2[em] = vgeo[p_Nvgeo*e+p_SXID];
-          dsdy2[em] = vgeo[p_Nvgeo*e+p_SYID];
-	  dsdz2[em] = vgeo[p_Nvgeo*e+p_SZID];
+	  dlong base = e*p_Nvgeo*p_Np + n;
+          drdx2[em] = vgeo[base+p_Np*p_RXID];
+          drdy2[em] = vgeo[base+p_Np*p_RYID];
+	  drdz2[em] = vgeo[base+p_Np*p_RZID];
+          dsdx2[em] = vgeo[base+p_Np*p_SXID];
+          dsdy2[em] = vgeo[base+p_Np*p_SYID];
+	  dsdz2[em] = vgeo[base+p_Np*p_SZID];
         }
 
         #pragma unroll p_Np

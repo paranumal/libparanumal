@@ -1,0 +1,100 @@
+[FORMAT]
+2.0
+
+[DATA FILE]
+data/ellipticSine3D.h
+
+[MESH FILE]
+../../meshes/sphereTri3D.msh
+
+[MESH DIMENSION]
+3
+
+[ELEMENT TYPE] # number of edges
+3
+
+
+[POLYNOMIAL DEGREE]
+4
+
+[THREAD MODEL]
+CUDA
+
+[PLATFORM NUMBER]
+0
+
+[DEVICE NUMBER]
+0
+
+[LAMBDA]
+1
+
+# can be IPDG, or CONTINUOUS
+[DISCRETIZATION]
+#IPDG
+CONTINUOUS
+
+# can be PCG, FPCG, NBPCG, or NBFPCG
+[LINEAR SOLVER]
+#PCG
+FPCG
+
+# can be NONE, JACOBI, MASSMATRIX, FULLALMOND, SEMFEM, MULTIGRID, or OAS
+[PRECONDITIONER]
+#MULTIGRID
+JACOBI
+#NONE
+
+########## MULTIGRID Options ##############
+
+# can be ALLDEGREES, HALFDEGREES, HALFDOFS
+[MULTIGRID COARSENING]
+HALFDOFS
+
+# can be DAMPEDJACOBI or CHEBYSHEV
+[MULTIGRID SMOOTHER]
+CHEBYSHEV
+
+# can be any integer >0
+[MULTIGRID CHEBYSHEV DEGREE]
+2
+
+###########################################
+
+########## ParAlmond Options ##############
+
+# can be KCYCLE, or VCYCLE
+# can add the EXACT and NONSYM option
+[PARALMOND CYCLE]
+KCYCLE
+
+# can be DAMPEDJACOBI or CHEBYSHEV
+[PARALMOND SMOOTHER]
+CHEBYSHEV
+
+# can be any integer >0
+[PARALMOND CHEBYSHEV DEGREE]
+2
+
+# can be STRONGNODES, DISTRIBUTED, SATURATE
+[PARALMOND PARTITION]
+STRONGNODES
+
+# can be DEFAULT or LPSCN
+[PARALMOND AGGREGATION STRATEGY]
+DEFAULT
+
+# can be MAX, MIN, or NONE
+[PARALMOND LPSCN ORDERING]
+MAX
+
+###########################################
+
+[OUTPUT TO FILE]
+TRUE
+
+[OUTPUT FILE NAME]
+elliptic
+
+[VERBOSE]
+TRUE

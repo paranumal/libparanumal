@@ -27,16 +27,14 @@
 // Only difference with boltzmannVolume2D is size of rhsq and shifting
 @kernel void bnsVolumeQuad3D(const dlong Nelements,
 			     @restrict const  dlong *  elementIds,
-			     const dlong offset,
-			     const int shift,
-			     const dfloat fx,
-			     const dfloat fy,
-			     const dfloat fz,
 			     @restrict const  dfloat *  vgeo,
+			     @restrict const  dfloat *  Dmatrices,
 			     @restrict const  dfloat * x, 
 			     @restrict const  dfloat * y,
 			     @restrict const  dfloat * z, 
-			     @restrict const  dfloat *  Dmatrices,
+			     const dfloat T,
+			     const dfloat c,
+			     const dfloat nu,
 			     @restrict const  dfloat *  q,
 			     @restrict dfloat *  rhsq){
   
@@ -61,7 +59,7 @@
 	  
 	  if(es==0){
 	    s_D[j][i] = Dmatrices[j*p_Nq+i];
-	    s_DW[j][i] = Dmatrices[p_Nq*p_Nq + j*p_Nq+i];
+	    s_DW[j][i] = Dmatrices[p_Nq*p_Nq + j*p_Nq+i]; // TW: HMMM!
 	  }
 	}
       }
@@ -190,19 +188,19 @@
 			const dfloat dq10dz = drdz*dqdr[9] + dsdz*dqds[9];
 #endif
 
-	    const dfloat rhsq1 = -p_sqrtRT*(dq2dx + dq3dy + dq4dz);
+	    const dfloat rhsq1 = -c*(dq2dx + dq3dy + dq4dz);
 
-	    dfloat rhsq2 = -p_sqrtRT*(dq1dx + p_sqrt2*dq5dx + dq8dy + dq9dz);
-	    dfloat rhsq3 = -p_sqrtRT*(dq1dy + p_sqrt2*dq6dy + dq8dx + dq10dz);
-	    dfloat rhsq4 = -p_sqrtRT*(dq1dz + p_sqrt2*dq7dz + dq9dx + dq10dy);
+	    dfloat rhsq2 = -c*(dq1dx + sqrt(2.0)*dq5dx + dq8dy + dq9dz);
+	    dfloat rhsq3 = -c*(dq1dy + sqrt(2.0)*dq6dy + dq8dx + dq10dz);
+	    dfloat rhsq4 = -c*(dq1dz + sqrt(2.0)*dq7dz + dq9dx + dq10dy);
 
-	    const dfloat rhsq5 = -p_sqrtRT*p_sqrt2*dq2dx;
-	    const dfloat rhsq6 = -p_sqrtRT*p_sqrt2*dq3dy;
-	    const dfloat rhsq7 = -p_sqrtRT*p_sqrt2*dq4dz;
+	    const dfloat rhsq5 = -c*sqrt(2.0)*dq2dx;
+	    const dfloat rhsq6 = -c*sqrt(2.0)*dq3dy;
+	    const dfloat rhsq7 = -c*sqrt(2.0)*dq4dz;
 
-	    const dfloat rhsq8  = -p_sqrtRT*(dq3dx+dq2dy);
-	    const dfloat rhsq9  = -p_sqrtRT*(dq4dx+dq2dz);
-	    const dfloat rhsq10 = -p_sqrtRT*(dq4dy+dq3dz);
+	    const dfloat rhsq8  = -c*(dq3dx+dq2dy);
+	    const dfloat rhsq9  = -c*(dq4dx+dq2dz);
+	    const dfloat rhsq10 = -c*(dq4dy+dq3dz);
 
 	    // constrain momentum changes to lie on sphere
 	    const dfloat xij = x[i+j*p_Nq+e*p_Np];
@@ -211,6 +209,7 @@
 
 
 	    // add coriolis force to momentum equation
+	    dfloat p_fainv = 0;
 	    rhsq2 -= p_fainv*zij*(yij*q4-zij*q3);
 	    rhsq3 -= p_fainv*zij*(zij*q2-xij*q4);
 	    rhsq4 -= p_fainv*zij*(xij*q3-yij*q2);
@@ -225,10 +224,6 @@
 #endif
 
 	    int base = e*p_Np*p_Nfields+n;
-
-	    if(p_MRSAAB){
-	      base += shift*offset;
-	    }
 
 	    rhsq[base+0*p_Np] = rhsq1;
 	    rhsq[base+1*p_Np] = rhsq2;

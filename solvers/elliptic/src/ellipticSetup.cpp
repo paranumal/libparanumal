@@ -63,7 +63,8 @@ elliptic_t& elliptic_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
         mesh.elementType==QUADRILATERALS){
       elliptic->tau = 2.0*(mesh.N+1)*(mesh.N+2)/2.0;
       if(mesh.dim==3)
-        elliptic->tau *= 1.5;
+	//	elliptic->tau *= 1.5;
+	elliptic->tau *= 3.;
     } else
       elliptic->tau = 2.0*(mesh.N+1)*(mesh.N+3);
 

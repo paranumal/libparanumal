@@ -61,9 +61,9 @@ void meshTri3D::OccaSetup(){
 
   o_S = device.malloc(3*Np*Np*sizeof(dfloat), ST);
 
-  o_vgeo = device.malloc((Nelements+totalHaloPairs)*Nvgeo*sizeof(dfloat), vgeo);
-  o_sgeo = device.malloc(Nelements*Nfaces*Nsgeo*sizeof(dfloat), sgeo);
-  o_ggeo = device.malloc(Nelements*Nggeo*sizeof(dfloat), ggeo);
+  o_vgeo = device.malloc((Nelements+totalHaloPairs)*Nvgeo*Np*sizeof(dfloat), vgeo);
+  o_sgeo = device.malloc(Nelements*Nfaces*Nsgeo*Nfp*sizeof(dfloat), sgeo);
+  o_ggeo = device.malloc(Nelements*Nggeo*Np*sizeof(dfloat), ggeo);
 
   free(DT);
   free(LIFTT);

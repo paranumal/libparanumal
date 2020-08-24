@@ -207,8 +207,12 @@ bns_t& bns_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   char *suffix;
   if(mesh.elementType==TRIANGLES)
     suffix = strdup("Tri2D");
-  if(mesh.elementType==QUADRILATERALS)
-    suffix = strdup("Quad2D");
+  if(mesh.elementType==QUADRILATERALS){
+    if(mesh.dim==2)
+      suffix = strdup("Quad2D");
+    else
+      suffix = strdup("Quad3D");
+  }
   if(mesh.elementType==TETRAHEDRA)
     suffix = strdup("Tet3D");
   if(mesh.elementType==HEXAHEDRA)
