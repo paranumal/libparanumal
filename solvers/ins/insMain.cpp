@@ -36,40 +36,29 @@ int main(int argc, char **argv){
     LIBP_ABORT(string("Usage: ./insMain setupfile"));
 
   //create default settings
-  occaSettings_t occaSettings(comm);
+  platformSettings_t platformSettings(comm);
   meshSettings_t meshSettings(comm);
   insSettings_t insSettings(comm);
 
   //load settings from file
-  insSettings.parseFromFile(occaSettings, meshSettings,
+  insSettings.parseFromFile(platformSettings, meshSettings,
                             argv[1]);
 
-  occaSettings.report();
+  // set up platform
+  platform_t platform(platformSettings);
+
+  platformSettings.report();
   meshSettings.report();
   insSettings.report();
 
-  // set up occa device
-  occa::device device;
-  occa::properties props;
-  occaDeviceConfig(device, comm, occaSettings, props);
-
   // set up mesh
-  mesh_t& mesh = mesh_t::Setup(device, comm, meshSettings, props);
-
-  // set up linear algebra module
-  linAlg_t& linAlg = linAlg_t::Setup(device, props);
+  mesh_t& mesh = mesh_t::Setup(platform, meshSettings, comm);
 
   // set up ins solver
-  ins_t& ins = ins_t::Setup(mesh, linAlg, insSettings);
+  ins_t& ins = ins_t::Setup(platform, mesh, insSettings);
 
   // run
   ins.Run();
-
-  // clean up
-  delete &ins;
-  delete &linAlg;
-  delete &mesh;
-  device.free();
 
   // close down MPI
   MPI_Finalize();

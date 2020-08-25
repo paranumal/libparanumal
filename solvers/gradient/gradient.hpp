@@ -28,6 +28,7 @@ SOFTWARE.
 #define GRADIENT_HPP 1
 
 #include "core.hpp"
+#include "platform.hpp"
 #include "mesh.hpp"
 #include "solver.hpp"
 
@@ -37,13 +38,15 @@ class gradientSettings_t: public settings_t {
 public:
   gradientSettings_t(MPI_Comm& _comm);
   void report();
-  void parseFromFile(occaSettings_t& occaSettings,
+  void parseFromFile(platformSettings_t& platformSettings,
                      meshSettings_t& meshSettings,
                      const string filename);
 };
 
 class gradient_t: public solver_t {
 public:
+  mesh_t& mesh;
+
   int Nfields;
 
   dfloat *q;
@@ -56,18 +59,17 @@ public:
 
   occa::kernel volumeKernel;
 
-  occa::kernel MassMatrixKernel;
-
   occa::kernel initialConditionKernel;
 
   gradient_t() = delete;
-  gradient_t(mesh_t& _mesh, linAlg_t& _linAlg, settings_t& _settings):
-    solver_t(_mesh, _linAlg, _settings) {}
+  gradient_t(platform_t &_platform, mesh_t &_mesh,
+              gradientSettings_t& _settings):
+    solver_t(_platform, _settings), mesh(_mesh) {}
 
   ~gradient_t();
 
   //setup
-  static gradient_t& Setup(mesh_t& mesh, linAlg_t& linAlg,
+  static gradient_t& Setup(platform_t& platform, mesh_t& mesh,
                           gradientSettings_t& settings);
 
   void Run();

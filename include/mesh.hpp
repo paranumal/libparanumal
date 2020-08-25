@@ -27,16 +27,9 @@ SOFTWARE.
 #ifndef MESH_HPP
 #define MESH_HPP 1
 
-#include <unistd.h>
-#include <mpi.h>
-#include <math.h>
-#include <stdlib.h>
-#include <occa.hpp>
-
-#include "types.h"
-#include "utils.hpp"
-#include "ogs.hpp"
+#include "core.hpp"
 #include "settings.hpp"
+#include "ogs.hpp"
 
 #define TRIANGLES 3
 #define QUADRILATERALS 4
@@ -51,12 +44,13 @@ public:
 
 class mesh_t {
 public:
-  occa::device& device;
-  MPI_Comm& comm;
+  platform_t& platform;
   meshSettings_t& settings;
-  occa::properties& props;
 
-  int rank, size; // MPI rank and size (process count)
+  occa::properties props;
+
+  MPI_Comm comm;
+  int rank, size;
 
   int dim;
   int Nverts, Nfaces, NfaceVertices;
@@ -263,17 +257,17 @@ public:
   occa::memory *o_mrPmlElements, *o_mrNonPmlElements;
   occa::memory *o_mrPmlIds;
 
-
+  occa::kernel MassMatrixKernel;
 
   mesh_t() = delete;
-  mesh_t(occa::device& device, MPI_Comm& comm,
-         meshSettings_t& settings, occa::properties& props);
+  mesh_t(platform_t& _platform, meshSettings_t& _settings,
+         MPI_Comm _comm);
 
   virtual ~mesh_t();
 
   // generic mesh setup
-  static mesh_t& Setup(occa::device& device, MPI_Comm& comm,
-                       meshSettings_t& settings, occa::properties& props);
+  static mesh_t& Setup(platform_t& _platform, meshSettings_t& _settings,
+                       MPI_Comm _comm);
 
   // box mesh
   virtual void SetupBox() = 0;
@@ -346,6 +340,9 @@ public:
   virtual dfloat MinCharacteristicLength() = 0;
 
   void RecursiveSpectralBisectionPartition();
+
+  void MassMatrixApply(occa::memory& o_q, occa::memory& o_Mq);
+  virtual void MassMatrixKernelSetup(int Nfields)=0;
 
   //create a new mesh object with the same geometry, but different degree
   mesh_t& SetupNewDegree(int Nf);

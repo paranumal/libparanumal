@@ -37,40 +37,29 @@ int main(int argc, char **argv){
     LIBP_ABORT(string("Usage: ./acousticsMain setupfile"));
 
   //create default settings
-  occaSettings_t occaSettings(comm);
+  platformSettings_t platformSettings(comm);
   meshSettings_t meshSettings(comm);
   acousticsSettings_t acousticsSettings(comm);
 
   //load settings from file
-  acousticsSettings.parseFromFile(occaSettings, meshSettings,
+  acousticsSettings.parseFromFile(platformSettings, meshSettings,
                             argv[1]);
 
-  occaSettings.report();
+  // set up platform
+  platform_t platform(platformSettings);
+
+  platformSettings.report();
   meshSettings.report();
   acousticsSettings.report();
 
-  // set up occa device
-  occa::device device;
-  occa::properties props;
-  occaDeviceConfig(device, comm, occaSettings, props);
-
   // set up mesh
-  mesh_t& mesh = mesh_t::Setup(device, comm, meshSettings, props);
-
-  // set up linear algebra module
-  linAlg_t& linAlg = linAlg_t::Setup(device, props);
+  mesh_t& mesh = mesh_t::Setup(platform, meshSettings, comm);
 
   // set up acoustics solver
-  acoustics_t& acoustics = acoustics_t::Setup(mesh, linAlg, acousticsSettings);
+  acoustics_t& acoustics = acoustics_t::Setup(platform, mesh, acousticsSettings);
 
   // run
   acoustics.Run();
-
-  // clean up
-  delete &acoustics;
-  delete &linAlg;
-  delete &mesh;
-  device.free();
 
   // close down MPI
   MPI_Finalize();

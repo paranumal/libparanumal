@@ -98,8 +98,8 @@ void fpe_t::rhs_subcycle_f(occa::memory& o_Q, occa::memory& o_QHAT,
     occa::memory o_Qn = o_Q + ((shiftIndex+n)%maxOrder)*N*sizeof(dfloat);
 
     //next scaled partial sum
-    linAlg.axpy(N, B[n+1]/(B[n+1]+bSum), o_Qn,
-                   bSum/(B[n+1]+bSum), o_QHAT);
+    platform.linAlg.axpy(N, B[n+1]/(B[n+1]+bSum), o_Qn,
+                            bSum/(B[n+1]+bSum), o_QHAT);
     bSum += B[n+1];
 
     subStepper->Run(o_QHAT, T-n*dt, T-(n-1)*dt);

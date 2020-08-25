@@ -27,31 +27,24 @@ SOFTWARE.
 #ifndef PARALMOND_HPP
 #define PARALMOND_HPP
 
-#include <math.h>
-#include <stdlib.h>
-#include <occa.hpp>
-
-#include "mpi.h"
-#include "types.h"
-#include "utils.hpp"
 #include "core.hpp"
 #include "ogs.hpp"
 #include "settings.hpp"
 
-#include "include/defines.hpp"
-#include "include/utils.hpp"
-#include "include/kernels.hpp"
-#include "include/vector.hpp"
-#include "include/matrix.hpp"
-#include "include/level.hpp"
-#include "include/agmg.hpp"
-#include "include/coarse.hpp"
-#include "include/solver.hpp"
+#include "parAlmond/defines.hpp"
+#include "parAlmond/utils.hpp"
+#include "parAlmond/kernels.hpp"
+#include "parAlmond/vector.hpp"
+#include "parAlmond/matrix.hpp"
+#include "parAlmond/level.hpp"
+#include "parAlmond/agmg.hpp"
+#include "parAlmond/coarse.hpp"
+#include "parAlmond/solver.hpp"
 
 
 namespace parAlmond {
 
-solver_t *Init(occa::device device, MPI_Comm comm, settings_t& settings);
+solver_t *Init(platform_t& _platform, settings_t& _settings, MPI_Comm _comm);
 
 void AMGSetup(solver_t* M,
              parCOO& A,

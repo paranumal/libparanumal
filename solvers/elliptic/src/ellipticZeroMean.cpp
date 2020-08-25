@@ -33,14 +33,14 @@ void elliptic_t::ZeroMean(occa::memory &o_q){
   dfloat qmean=0.0;
 
   if (disc_c0) {
-    qmean = linAlg.innerProd(N, o_weight, o_q, comm);
+    qmean = linAlg.innerProd(N, o_weight, o_q, mesh.comm);
   } else {
-    qmean = linAlg.sum(N, o_q, comm);
+    qmean = linAlg.sum(N, o_q, mesh.comm);
   }
 
   // normalize
   qmean *= allNeumannScale*allNeumannScale;
 
   // q[n] = q[n] - qmean
-  linAlg.add(N, -qmean, o_q);
+  platform.linAlg.add(N, -qmean, o_q);
 }

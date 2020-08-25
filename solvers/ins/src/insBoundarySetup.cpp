@@ -51,5 +51,5 @@ void ins_t::BoundarySetup(){
     }
   }
 
-  o_mapB = mesh.device.malloc(mesh.Nelements*mesh.Np*sizeof(int), mapB);
+  o_mapB = platform.malloc(mesh.Nelements*mesh.Np*sizeof(int), mapB);
 }

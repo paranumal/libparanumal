@@ -40,7 +40,7 @@ ParAlmondPrecon::ParAlmondPrecon(elliptic_t& _elliptic):
     elliptic.BuildOperatorMatrixContinuous(A);
   }
 
-  parAlmondHandle = parAlmond::Init(mesh.device, mesh.comm, settings);
+  parAlmondHandle = parAlmond::Init(elliptic.platform, settings, mesh.comm);
   parAlmond::AMGSetup(parAlmondHandle, A,
                       elliptic.allNeumann, elliptic.allNeumannPenalty);
 
@@ -52,8 +52,8 @@ ParAlmondPrecon::ParAlmondPrecon(elliptic_t& _elliptic):
 
     rhsG = (dfloat*) calloc(baseLevel->Ncols,sizeof(dfloat));
     xG   = (dfloat*) calloc(baseLevel->Ncols,sizeof(dfloat));
-    o_rhsG = mesh.device.malloc(baseLevel->Ncols*sizeof(dfloat));
-    o_xG   = mesh.device.malloc(baseLevel->Ncols*sizeof(dfloat));
+    o_rhsG = elliptic.platform.malloc(baseLevel->Ncols*sizeof(dfloat));
+    o_xG   = elliptic.platform.malloc(baseLevel->Ncols*sizeof(dfloat));
   }
 }
 

@@ -30,28 +30,10 @@ SOFTWARE.
 #include <mpi.h>
 #include <occa.h>
 #include <string>
+#include <math.h>
+#include <stdlib.h>
 #include "types.h"
 #include "utils.hpp"
-#include "settings.hpp"
-
-class occaSettings_t: public settings_t {
-public:
-  occaSettings_t(MPI_Comm& _comm);
-  void report();
-};
-
-void occaDeviceConfig(occa::device &device, MPI_Comm comm,
-                      settings_t& settings, occa::properties& kernelInfo);
-
-void occaDeviceProperties(occa::device &device, occa::properties& props);
-
-void *occaHostMallocPinned(occa::device &device, size_t size, void *source, occa::memory &mem, occa::memory &h_mem);
-
-occa::kernel buildKernel(occa::device& device, std::string fileName, std::string kernelName,
-                         occa::properties& kernelInfo, MPI_Comm& comm);
-
-// serial sort
-void mysort(hlong *data, int N, const char *order);
 
 // sort entries in an array in parallel
 void parallelSort(int size, int rank, MPI_Comm comm,
@@ -59,9 +41,6 @@ void parallelSort(int size, int rank, MPI_Comm comm,
       int (*compare)(const void *, const void *),
       void (*match)(void *, void *)
       );
-
-void readDfloatArray(MPI_Comm comm, FILE *fp, const char *label, dfloat **A, int *Nrows, int* Ncols);
-void readIntArray   (MPI_Comm comm, FILE *fp, const char *label, int **A   , int *Nrows, int* Ncols);
 
 void matrixRightSolve(int NrowsA, int NcolsA, dfloat *A, int NrowsB, int NcolsB, dfloat *B, dfloat *C);
 void matrixEig(int N, dfloat *A, dfloat *VR, dfloat *WR, dfloat *WI);

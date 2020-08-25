@@ -27,38 +27,28 @@ SOFTWARE.
 #ifndef LINEARSOLVER_HPP
 #define LINEARSOLVER_HPP
 
-#include <occa.hpp>
-#include "types.h"
-#include "utils.hpp"
 #include "core.hpp"
-#include "settings.hpp"
+#include "platform.hpp"
 #include "solver.hpp"
 #include "precon.hpp"
-#include "linAlg.hpp"
 
 //virtual base linear solver class
 class linearSolver_t {
 public:
-  MPI_Comm& comm;
-  occa::device& device;
+  platform_t& platform;
   settings_t& settings;
-  occa::properties& props;
-  mesh_t& mesh;
-  linAlg_t& linAlg;
 
   dlong N;
+  dlong Nhalo;
 
-  linearSolver_t(solver_t& solver):
-    comm(solver.comm),
-    device(solver.device),
-    settings(solver.settings),
-    props(solver.props),
-    mesh(solver.mesh),
-    linAlg(solver.linAlg) {}
+  linearSolver_t(dlong _N, dlong _Nhalo,
+                 platform_t& _platform, settings_t& _settings):
+    platform(_platform), settings(_settings), N(_N), Nhalo(_Nhalo) {}
 
-  static linearSolver_t* Setup(solver_t& solver);
+  static linearSolver_t* Setup(dlong _N, dlong _Nhalo,
+                               platform_t& platform, settings_t& settings,
+                               int _weighted, occa::memory& _o_weight);
 
-  virtual void Init(int _weighted, occa::memory& o_weight)=0;
   virtual int Solve(solver_t& solver, precon_t& precon,
                     occa::memory& o_x, occa::memory& o_rhs,
                     const dfloat tol, const int MAXIT, const int verbose)=0;
@@ -82,10 +72,11 @@ private:
   dfloat UpdatePCG(const dfloat alpha, occa::memory &o_x, occa::memory &o_r);
 
 public:
-  pcg(solver_t& solver);
+  pcg(dlong _N, dlong _Nhalo,
+       platform_t& _platform, settings_t& _settings,
+       int _weighted, occa::memory& _o_weight);
   ~pcg();
 
-  void Init(int _weighted, occa::memory& o_weight);
   int Solve(solver_t& solver, precon_t& precon,
             occa::memory& o_x, occa::memory& o_rhs,
             const dfloat tol, const int MAXIT, const int verbose);
@@ -114,10 +105,11 @@ private:
   void Update2NBPCG(const dfloat alpha, occa::memory &o_r);
 
 public:
-  nbpcg(solver_t& solver);
+  nbpcg(dlong _N, dlong _Nhalo,
+       platform_t& _platform, settings_t& _settings,
+       int _weighted, occa::memory& _o_weight);
   ~nbpcg();
 
-  void Init(int _weighted, occa::memory& o_weight_);
   int Solve(solver_t& solver, precon_t& precon,
             occa::memory& o_x, occa::memory& o_rhs,
             const dfloat tol, const int MAXIT, const int verbose);
@@ -146,10 +138,11 @@ private:
   void Update1NBFPCG(const dfloat alpha, occa::memory &o_x, occa::memory &o_r);
 
 public:
-  nbfpcg(solver_t& solver);
+  nbfpcg(dlong _N, dlong _Nhalo,
+       platform_t& _platform, settings_t& _settings,
+       int _weighted, occa::memory& _o_weight);
   ~nbfpcg();
 
-  void Init(int _weighted, occa::memory& o_weight_);
   int Solve(solver_t& solver, precon_t& precon,
             occa::memory& o_x, occa::memory& o_rhs,
             const dfloat tol, const int MAXIT, const int verbose);

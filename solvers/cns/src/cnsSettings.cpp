@@ -100,7 +100,7 @@ void cnsSettings_t::report() {
   }
 }
 
-void cnsSettings_t::parseFromFile(occaSettings_t& occaSettings,
+void cnsSettings_t::parseFromFile(platformSettings_t& platformSettings,
                                   meshSettings_t& meshSettings,
                                   const string filename) {
   //read all settings from file
@@ -111,8 +111,8 @@ void cnsSettings_t::parseFromFile(occaSettings_t& occaSettings,
     setting_t* set = it->second;
     const string name = set->getName();
     const string val = set->getVal<string>();
-    if (occaSettings.hasSetting(name))
-      occaSettings.changeSetting(name, val);
+    if (platformSettings.hasSetting(name))
+      platformSettings.changeSetting(name, val);
     else if (meshSettings.hasSetting(name))
       meshSettings.changeSetting(name, val);
     else if (hasSetting(name)) //self

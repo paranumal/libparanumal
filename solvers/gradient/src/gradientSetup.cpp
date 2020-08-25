@@ -26,30 +26,31 @@ SOFTWARE.
 
 #include "gradient.hpp"
 
-gradient_t& gradient_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
+gradient_t& gradient_t::Setup(platform_t& platform, mesh_t& mesh,
                               gradientSettings_t& settings){
 
-  gradient_t* gradient = new gradient_t(mesh, linAlg, settings);
+  gradient_t* gradient = new gradient_t(platform, mesh, settings);
 
   gradient->Nfields = mesh.dim;
 
   dlong Nlocal = mesh.Nelements*mesh.Np;
 
   //setup linear algebra module
-  gradient->linAlg.InitKernels({"innerProd"}, mesh.comm);
+  platform.linAlg.InitKernels({"innerProd"});
 
   // compute samples of q at interpolation nodes
   gradient->q = (dfloat*) calloc(Nlocal, sizeof(dfloat));
-  gradient->o_q = mesh.device.malloc(Nlocal*sizeof(dfloat), gradient->q);
+  gradient->o_q = platform.malloc(Nlocal*sizeof(dfloat), gradient->q);
 
   gradient->gradq = (dfloat*) calloc(Nlocal*mesh.dim, sizeof(dfloat));
-  gradient->o_gradq = mesh.device.malloc(Nlocal*mesh.dim*sizeof(dfloat), gradient->gradq);
+  gradient->o_gradq = platform.malloc(Nlocal*mesh.dim*sizeof(dfloat), gradient->gradq);
 
   //storage for M*gradq during reporting
-  gradient->o_Mgradq = mesh.device.malloc(Nlocal*mesh.dim*sizeof(dfloat), gradient->gradq);
+  gradient->o_Mgradq = platform.malloc(Nlocal*mesh.dim*sizeof(dfloat), gradient->gradq);
+  mesh.MassMatrixKernelSetup(gradient->Nfields); // mass matrix operator
 
   // OCCA build stuff
-  occa::properties kernelInfo = gradient->props; //copy base occa properties
+  occa::properties kernelInfo = mesh.props; //copy base occa properties
 
   //add boundary data to kernel info
   string dataFileName;
@@ -77,15 +78,8 @@ gradient_t& gradient_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   sprintf(fileName, DGRADIENT "/okl/gradientVolume%s.okl", suffix);
   sprintf(kernelName, "gradientVolume%s", suffix);
 
-  gradient->volumeKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                         kernelInfo, mesh.comm);
-  // mass matrix operator
-  sprintf(fileName, LIBP_DIR "/core/okl/MassMatrixOperator%s.okl", suffix);
-  sprintf(kernelName, "MassMatrixOperator%s", suffix);
-
-  gradient->MassMatrixKernel = buildKernel(mesh.device, fileName, kernelName,
-                                            kernelInfo, mesh.comm);
-
+  gradient->volumeKernel =  platform.buildKernel(fileName, kernelName,
+                                         kernelInfo);
 
   if (mesh.dim==2) {
     sprintf(fileName, DGRADIENT "/okl/gradientInitialCondition2D.okl");
@@ -95,14 +89,13 @@ gradient_t& gradient_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
     sprintf(kernelName, "gradientInitialCondition3D");
   }
 
-  gradient->initialConditionKernel = buildKernel(mesh.device, fileName, kernelName,
-                                                  kernelInfo, mesh.comm);
+  gradient->initialConditionKernel = platform.buildKernel(fileName, kernelName,
+                                                  kernelInfo);
 
   return *gradient;
 }
 
 gradient_t::~gradient_t() {
   volumeKernel.free();
-  MassMatrixKernel.free();
   initialConditionKernel.free();
 }

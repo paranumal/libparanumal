@@ -26,10 +26,10 @@ SOFTWARE.
 
 #include "acoustics.hpp"
 
-acoustics_t& acoustics_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
+acoustics_t& acoustics_t::Setup(platform_t& platform, mesh_t& mesh,
                                 acousticsSettings_t& settings){
 
-  acoustics_t* acoustics = new acoustics_t(mesh, linAlg, settings);
+  acoustics_t* acoustics = new acoustics_t(platform, mesh, settings);
 
   acoustics->Nfields = (mesh.dim==3) ? 4:3;
 
@@ -56,7 +56,7 @@ acoustics_t& acoustics_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   acoustics->timeStepper->SetTimeStep(dt);
 
   //setup linear algebra module
-  acoustics->linAlg.InitKernels({"innerProd"}, mesh.comm);
+  platform.linAlg.InitKernels({"innerProd"});
 
   // set penalty parameter
   dfloat Lambda2 = 0.5;
@@ -66,13 +66,14 @@ acoustics_t& acoustics_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
 
   // compute samples of q at interpolation nodes
   acoustics->q = (dfloat*) calloc(Nlocal+Nhalo, sizeof(dfloat));
-  acoustics->o_q = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat), acoustics->q);
+  acoustics->o_q = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), acoustics->q);
 
   //storage for M*q during reporting
-  acoustics->o_Mq = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat), acoustics->q);
+  acoustics->o_Mq = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), acoustics->q);
+  mesh.MassMatrixKernelSetup(acoustics->Nfields); // mass matrix operator
 
   // OCCA build stuff
-  occa::properties kernelInfo = acoustics->props; //copy base occa properties
+  occa::properties kernelInfo = mesh.props; //copy base occa properties
 
   //add boundary data to kernel info
   string dataFileName;
@@ -89,7 +90,7 @@ acoustics_t& acoustics_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   kernelInfo["defines/" "p_maxNodes"]= maxNodes;
 
   int blockMax = 256;
-  if (mesh.device.mode() == "CUDA") blockMax = 512;
+  if (platform.device.mode() == "CUDA") blockMax = 512;
 
   int NblockV = mymax(1, blockMax/mesh.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;
@@ -118,22 +119,14 @@ acoustics_t& acoustics_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   sprintf(fileName, DACOUSTICS "/okl/acousticsVolume%s.okl", suffix);
   sprintf(kernelName, "acousticsVolume%s", suffix);
 
-  acoustics->volumeKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                         kernelInfo, mesh.comm);
+  acoustics->volumeKernel =  platform.buildKernel(fileName, kernelName,
+                                         kernelInfo);
   // kernels from surface file
   sprintf(fileName, DACOUSTICS "/okl/acousticsSurface%s.okl", suffix);
   sprintf(kernelName, "acousticsSurface%s", suffix);
 
-  acoustics->surfaceKernel = buildKernel(mesh.device, fileName, kernelName,
-                                         kernelInfo, mesh.comm);
-
-  // mass matrix operator
-  sprintf(fileName, LIBP_DIR "/core/okl/MassMatrixOperator%s.okl", suffix);
-  sprintf(kernelName, "MassMatrixOperator%s", suffix);
-
-  acoustics->MassMatrixKernel = buildKernel(mesh.device, fileName, kernelName,
-                                            kernelInfo, mesh.comm);
-
+  acoustics->surfaceKernel = platform.buildKernel(fileName, kernelName,
+                                         kernelInfo);
 
   if (mesh.dim==2) {
     sprintf(fileName, DACOUSTICS "/okl/acousticsInitialCondition2D.okl");
@@ -143,8 +136,8 @@ acoustics_t& acoustics_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
     sprintf(kernelName, "acousticsInitialCondition3D");
   }
 
-  acoustics->initialConditionKernel = buildKernel(mesh.device, fileName, kernelName,
-                                                  kernelInfo, mesh.comm);
+  acoustics->initialConditionKernel = platform.buildKernel(fileName, kernelName,
+                                                  kernelInfo);
 
   return *acoustics;
 }
@@ -152,7 +145,6 @@ acoustics_t& acoustics_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
 acoustics_t::~acoustics_t() {
   volumeKernel.free();
   surfaceKernel.free();
-  MassMatrixKernel.free();
   initialConditionKernel.free();
 
   if (timeStepper) delete timeStepper;

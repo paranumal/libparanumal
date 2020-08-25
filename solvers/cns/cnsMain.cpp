@@ -37,40 +37,29 @@ int main(int argc, char **argv){
     LIBP_ABORT(string("Usage: ./cnsMain setupfile"));
 
   //create default settings
-  occaSettings_t occaSettings(comm);
+  platformSettings_t platformSettings(comm);
   meshSettings_t meshSettings(comm);
   cnsSettings_t cnsSettings(comm);
 
   //load settings from file
-  cnsSettings.parseFromFile(occaSettings, meshSettings,
+  cnsSettings.parseFromFile(platformSettings, meshSettings,
                             argv[1]);
 
-  occaSettings.report();
+  // set up platform
+  platform_t platform(platformSettings);
+
+  platformSettings.report();
   meshSettings.report();
   cnsSettings.report();
 
-  // set up occa device
-  occa::device device;
-  occa::properties props;
-  occaDeviceConfig(device, comm, occaSettings, props);
-
   // set up mesh
-  mesh_t& mesh = mesh_t::Setup(device, comm, meshSettings, props);
-
-  // set up linear algebra module
-  linAlg_t& linAlg = linAlg_t::Setup(device, props);
+  mesh_t& mesh = mesh_t::Setup(platform, meshSettings, comm);
 
   // set up cns solver
-  cns_t& cns = cns_t::Setup(mesh, linAlg, cnsSettings);
+  cns_t& cns = cns_t::Setup(platform, mesh, cnsSettings);
 
   // run
   cns.Run();
-
-  // clean up
-  delete &cns;
-  delete &linAlg;
-  delete &mesh;
-  device.free();
 
   // close down MPI
   MPI_Finalize();

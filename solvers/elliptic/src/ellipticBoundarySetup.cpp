@@ -52,10 +52,10 @@ void elliptic_t::BoundarySetup(){
       }
     }
   }
-  o_EToB = device.malloc(mesh.Nelements*mesh.Nfaces*sizeof(int), EToB);
+  o_EToB = platform.malloc(mesh.Nelements*mesh.Nfaces*sizeof(int), EToB);
 
   //collect the allNeumann flags from other ranks
-  MPI_Allreduce(&localAllNeumann, &allNeumann, 1, MPI_INT, MPI_MIN, comm);
+  MPI_Allreduce(&localAllNeumann, &allNeumann, 1, MPI_INT, MPI_MIN, mesh.comm);
 
 
   //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
@@ -84,7 +84,7 @@ void elliptic_t::BoundarySetup(){
       Nmasked++;
     }
   }
-  o_mapB = device.malloc(mesh.Nelements*mesh.Np*sizeof(int), mapB);
+  o_mapB = platform.malloc(mesh.Nelements*mesh.Np*sizeof(int), mapB);
 
 
   maskIds = (dlong *) calloc(Nmasked, sizeof(dlong));
@@ -92,7 +92,7 @@ void elliptic_t::BoundarySetup(){
   for (dlong n=0;n<mesh.Nelements*mesh.Np;n++)
     if (mapB[n] == 1) maskIds[Nmasked++] = n;
 
-  if (Nmasked) o_maskIds = device.malloc(Nmasked*sizeof(dlong), maskIds);
+  if (Nmasked) o_maskIds = platform.malloc(Nmasked*sizeof(dlong), maskIds);
 
   //make a masked version of the global id numbering
   maskedGlobalIds = (hlong *) calloc(mesh.Nelements*mesh.Np,sizeof(hlong));
@@ -102,9 +102,9 @@ void elliptic_t::BoundarySetup(){
 
   //use the masked ids to make another gs handle (signed so the gather is defined)
   int verbose = 0;
-  ogs_t::Unique(maskedGlobalIds, mesh.Nelements*mesh.Np, comm);     //flag a unique node in every gather node
+  ogs_t::Unique(maskedGlobalIds, mesh.Nelements*mesh.Np, mesh.comm);     //flag a unique node in every gather node
   ogsMasked = ogs_t::Setup(mesh.Nelements*mesh.Np, maskedGlobalIds,
-                           comm, verbose, device);
+                           mesh.comm, verbose, platform);
 
   /* use the masked gs handle to define a global ordering */
   dlong Ntotal  = mesh.Np*mesh.Nelements; // number of degrees of freedom on this rank (before gathering)
@@ -122,8 +122,8 @@ void elliptic_t::BoundarySetup(){
 
   ogsMasked->Scatter(weight, weightG, ogs_dfloat, ogs_add, ogs_notrans);
 
-  o_weight  = device.malloc(Ntotal*sizeof(dfloat), weight);
-  o_weightG = device.malloc(ogsMasked->Ngather*sizeof(dfloat), weightG);
+  o_weight  = platform.malloc(Ntotal*sizeof(dfloat), weight);
+  o_weightG = platform.malloc(ogsMasked->Ngather*sizeof(dfloat), weightG);
 
   // create a global numbering system
   hlong *globalIds = (hlong *) calloc(Ngather,sizeof(hlong));

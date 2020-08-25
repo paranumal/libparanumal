@@ -28,6 +28,7 @@ SOFTWARE.
 #define BNS_HPP 1
 
 #include "core.hpp"
+#include "platform.hpp"
 #include "mesh.hpp"
 #include "solver.hpp"
 #include "timeStepper.hpp"
@@ -39,13 +40,15 @@ class bnsSettings_t: public settings_t {
 public:
   bnsSettings_t(MPI_Comm& _comm);
   void report();
-  void parseFromFile(occaSettings_t& occaSettings,
+  void parseFromFile(platformSettings_t& platformSettings,
                      meshSettings_t& meshSettings,
                      const string filename);
 };
 
 class bns_t: public solver_t {
 public:
+  mesh_t& mesh;
+
   int Nfields;
   int Npmlfields;
 
@@ -88,18 +91,17 @@ public:
 
   occa::kernel vorticityKernel;
 
-  occa::kernel MassMatrixKernel;
-
   occa::kernel initialConditionKernel;
 
   bns_t() = delete;
-  bns_t(mesh_t& _mesh, linAlg_t& _linAlg, settings_t& _settings):
-    solver_t(_mesh, _linAlg, _settings) {}
+  bns_t(platform_t &_platform, mesh_t &_mesh,
+              bnsSettings_t& _settings):
+    solver_t(_platform, _settings), mesh(_mesh) {}
 
   ~bns_t();
 
   //setup
-  static bns_t& Setup(mesh_t& mesh, linAlg_t& linAlg,
+  static bns_t& Setup(platform_t& platform, mesh_t& mesh,
                       bnsSettings_t& settings);
 
   void PmlSetup();

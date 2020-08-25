@@ -115,6 +115,11 @@ def main():
                     settings=bnsSettings(element=3,data_file=bnsData2D,dim=2,output_to_file="TRUE"),
                     referenceNorm=14.210272880731)
 
+  #clean up
+  for file_name in os.listdir(testDir):
+    if file_name.endswith('.vtu'):
+      os.remove(testDir + "/" + file_name)
+
   return failCount
 
 if __name__ == "__main__":

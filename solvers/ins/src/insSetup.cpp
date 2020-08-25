@@ -26,10 +26,10 @@ SOFTWARE.
 
 #include "ins.hpp"
 
-ins_t& ins_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
+ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
                     insSettings_t& settings){
 
-  ins_t* ins = new ins_t(mesh, linAlg, settings);
+  ins_t* ins = new ins_t(platform, mesh, settings);
 
   ins->NVfields = (mesh.dim==3) ? 3:2; // Total Number of Velocity Fields
   ins->NTfields = (mesh.dim==3) ? 4:3; // Total Velocity + Pressure
@@ -99,17 +99,17 @@ ins_t& ins_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
 
     ins->vSettings = settings.extractVelocitySettings();
     dfloat lambda = gamma/(dtAdvc*ins->nu);
-    ins->uSolver = &(elliptic_t::Setup(mesh, linAlg, *(ins->vSettings),
+    ins->uSolver = &(elliptic_t::Setup(platform, mesh, *(ins->vSettings),
                                              lambda, NBCTypes, uBCType));
-    ins->vSolver = &(elliptic_t::Setup(mesh, linAlg, *(ins->vSettings),
+    ins->vSolver = &(elliptic_t::Setup(platform, mesh, *(ins->vSettings),
                                              lambda, NBCTypes, vBCType));
-    ins->wSolver = &(elliptic_t::Setup(mesh, linAlg, *(ins->vSettings),
+    ins->wSolver = &(elliptic_t::Setup(platform, mesh, *(ins->vSettings),
                                              lambda, NBCTypes, wBCType));
     ins->vTau = ins->uSolver->tau;
 
-    ins->vLinearSolver = linearSolver_t::Setup(*(ins->uSolver));
     ins->vDisc_c0 = settings.compareSetting("VELOCITY DISCRETIZATION", "CONTINUOUS") ? 1 : 0;
-    ins->vLinearSolver->Init(ins->vDisc_c0, ins->uSolver->o_weight);
+    ins->vLinearSolver = linearSolver_t::Setup(Nlocal, Nhalo, platform, *(ins->vSettings),
+                                              ins->vDisc_c0, ins->uSolver->o_weight);
   } else {
     ins->vDisc_c0 = 0;
 
@@ -129,13 +129,13 @@ ins_t& ins_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
     int pBCType[NBCTypes] = {0,2,2,1,2,2,2}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
 
     ins->pSettings = settings.extractPressureSettings();
-    ins->pSolver = &(elliptic_t::Setup(mesh, linAlg, *(ins->pSettings),
+    ins->pSolver = &(elliptic_t::Setup(platform, mesh, *(ins->pSettings),
                                              0.0, NBCTypes, pBCType));
     ins->pTau = ins->pSolver->tau;
 
-    ins->pLinearSolver = linearSolver_t::Setup(*(ins->pSolver));
     ins->pDisc_c0 = settings.compareSetting("PRESSURE DISCRETIZATION", "CONTINUOUS") ? 1 : 0;
-    ins->pLinearSolver->Init(ins->pDisc_c0, ins->pSolver->o_weight);
+    ins->pLinearSolver = linearSolver_t::Setup(Nlocal, Nhalo, platform, *(ins->pSettings),
+                                                ins->pDisc_c0, ins->pSolver->o_weight);
   }
 
   //Solver tolerances
@@ -146,7 +146,7 @@ ins_t& ins_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   ins->BoundarySetup();
 
   //setup linear algebra module
-  ins->linAlg.InitKernels({"innerProd", "axpy"}, mesh.comm);
+  platform.linAlg.InitKernels({"innerProd", "axpy"});
 
   /*setup trace halo exchange */
   ins->pTraceHalo = mesh.HaloTraceSetup(1); //one field
@@ -154,52 +154,53 @@ ins_t& ins_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
 
   // u and p at interpolation nodes
   ins->u = (dfloat*) calloc((Nlocal+Nhalo)*ins->NVfields, sizeof(dfloat));
-  ins->o_u = mesh.device.malloc((Nlocal+Nhalo)*ins->NVfields*sizeof(dfloat), ins->u);
+  ins->o_u = platform.malloc((Nlocal+Nhalo)*ins->NVfields*sizeof(dfloat), ins->u);
 
   ins->p = (dfloat*) calloc(Nlocal+Nhalo, sizeof(dfloat));
-  ins->o_p = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat), ins->p);
+  ins->o_p = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), ins->p);
 
   //storage for velocity gradient
   if ( !settings.compareSetting("TIME INTEGRATOR","EXTBDF3")
     && !settings.compareSetting("TIME INTEGRATOR","SSBDF3"))
-    ins->o_GU = mesh.device.malloc((Nlocal+Nhalo)*4*sizeof(dfloat));
+    ins->o_GU = platform.malloc((Nlocal+Nhalo)*4*sizeof(dfloat));
 
   //extra buffers for solvers
   if (settings.compareSetting("TIME INTEGRATOR","EXTBDF3")
     ||settings.compareSetting("TIME INTEGRATOR","SSBDF3")) {
-    ins->o_UH = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat));
-    ins->o_VH = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat));
+    ins->o_UH = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat));
+    ins->o_VH = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat));
     if (mesh.dim==3)
-      ins->o_WH = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat));
+      ins->o_WH = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat));
     else
-      ins->o_WH = mesh.device.malloc((1)*sizeof(dfloat));
+      ins->o_WH = platform.malloc((1)*sizeof(dfloat));
 
-    ins->o_rhsU = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat));
-    ins->o_rhsV = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat));
+    ins->o_rhsU = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat));
+    ins->o_rhsV = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat));
     if (mesh.dim==3)
-      ins->o_rhsW = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat));
+      ins->o_rhsW = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat));
     else
-      ins->o_rhsW = mesh.device.malloc((1)*sizeof(dfloat));
+      ins->o_rhsW = platform.malloc((1)*sizeof(dfloat));
   }
 
   if (ins->pressureIncrement)
-    ins->o_PI = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat), ins->p);
+    ins->o_PI = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), ins->p);
 
-  ins->o_rhsP = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat));
+  ins->o_rhsP = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat));
 
   //storage for M*u during reporting
-  ins->o_MU = mesh.device.malloc((Nlocal+Nhalo)*ins->NVfields*sizeof(dfloat), ins->u);
+  ins->o_MU = platform.malloc((Nlocal+Nhalo)*ins->NVfields*sizeof(dfloat), ins->u);
+  mesh.MassMatrixKernelSetup(ins->NVfields); // mass matrix operator
 
   if (mesh.dim==2) {
     ins->Vort = (dfloat*) calloc((Nlocal+Nhalo), sizeof(dfloat));
-    ins->o_Vort = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat), ins->Vort);
+    ins->o_Vort = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), ins->Vort);
   } else {
     ins->Vort = (dfloat*) calloc((Nlocal+Nhalo)*ins->NVfields, sizeof(dfloat));
-    ins->o_Vort = mesh.device.malloc((Nlocal+Nhalo)*ins->NVfields*sizeof(dfloat), ins->Vort);
+    ins->o_Vort = platform.malloc((Nlocal+Nhalo)*ins->NVfields*sizeof(dfloat), ins->Vort);
   }
 
   // OCCA build stuff
-  occa::properties kernelInfo = ins->props; //copy base occa properties
+  occa::properties kernelInfo = mesh.props; //copy base occa properties
 
   //add boundary data to kernel info
   string dataFileName;
@@ -257,19 +258,19 @@ ins_t& ins_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
     if (ins->cubature) {
       sprintf(fileName, DINS "/okl/insSubcycleCubatureAdvection%s.okl", suffix);
       sprintf(kernelName, "insSubcycleAdvectionCubatureVolume%s", suffix);
-      ins->advectionVolumeKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                             kernelInfo, mesh.comm);
+      ins->advectionVolumeKernel =  platform.buildKernel(fileName, kernelName,
+                                             kernelInfo);
       sprintf(kernelName, "insSubcycleAdvectionCubatureSurface%s", suffix);
-      ins->advectionSurfaceKernel = buildKernel(mesh.device, fileName, kernelName,
-                                             kernelInfo, mesh.comm);
+      ins->advectionSurfaceKernel = platform.buildKernel(fileName, kernelName,
+                                             kernelInfo);
     } else {
       sprintf(fileName, DINS "/okl/insSubcycleAdvection%s.okl", suffix);
       sprintf(kernelName, "insSubcycleAdvectionVolume%s", suffix);
-      ins->advectionVolumeKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                             kernelInfo, mesh.comm);
+      ins->advectionVolumeKernel =  platform.buildKernel(fileName, kernelName,
+                                             kernelInfo);
       sprintf(kernelName, "insSubcycleAdvectionSurface%s", suffix);
-      ins->advectionSurfaceKernel = buildKernel(mesh.device, fileName, kernelName,
-                                             kernelInfo, mesh.comm);
+      ins->advectionSurfaceKernel = platform.buildKernel(fileName, kernelName,
+                                             kernelInfo);
     }
 
     //build subcycler
@@ -288,29 +289,29 @@ ins_t& ins_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
 
     sprintf(fileName, DINS "/okl/insSubcycleAdvection.okl");
     sprintf(kernelName, "insSubcycleAdvectionKernel");
-    ins->subcycler->subCycleAdvectionKernel = buildKernel(mesh.device, fileName, kernelName,
-                                             kernelInfo, mesh.comm);
+    ins->subcycler->subCycleAdvectionKernel = platform.buildKernel(fileName, kernelName,
+                                             kernelInfo);
 
-    ins->subcycler->o_Ue = mesh.device.malloc((Nlocal+Nhalo)*ins->NVfields*sizeof(dfloat), ins->u);
+    ins->subcycler->o_Ue = platform.malloc((Nlocal+Nhalo)*ins->NVfields*sizeof(dfloat), ins->u);
 
   } else {
     //regular advection kernels
     if (ins->cubature) {
       sprintf(fileName, DINS "/okl/insCubatureAdvection%s.okl", suffix);
       sprintf(kernelName, "insAdvectionCubatureVolume%s", suffix);
-      ins->advectionVolumeKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                             kernelInfo, mesh.comm);
+      ins->advectionVolumeKernel =  platform.buildKernel(fileName, kernelName,
+                                             kernelInfo);
       sprintf(kernelName, "insAdvectionCubatureSurface%s", suffix);
-      ins->advectionSurfaceKernel = buildKernel(mesh.device, fileName, kernelName,
-                                             kernelInfo, mesh.comm);
+      ins->advectionSurfaceKernel = platform.buildKernel(fileName, kernelName,
+                                             kernelInfo);
     } else {
       sprintf(fileName, DINS "/okl/insAdvection%s.okl", suffix);
       sprintf(kernelName, "insAdvectionVolume%s", suffix);
-      ins->advectionVolumeKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                             kernelInfo, mesh.comm);
+      ins->advectionVolumeKernel =  platform.buildKernel(fileName, kernelName,
+                                             kernelInfo);
       sprintf(kernelName, "insAdvectionSurface%s", suffix);
-      ins->advectionSurfaceKernel = buildKernel(mesh.device, fileName, kernelName,
-                                             kernelInfo, mesh.comm);
+      ins->advectionSurfaceKernel = platform.buildKernel(fileName, kernelName,
+                                             kernelInfo);
     }
   }
 
@@ -323,42 +324,42 @@ ins_t& ins_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
       sprintf(kernelName, "insVelocityRhs%s", suffix);
     else
       sprintf(kernelName, "insVelocityIpdgRhs%s", suffix);
-    ins->velocityRhsKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                           kernelInfo, mesh.comm);
+    ins->velocityRhsKernel =  platform.buildKernel(fileName, kernelName,
+                                           kernelInfo);
 
     sprintf(kernelName, "insVelocityBC%s", suffix);
-    ins->velocityBCKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                           kernelInfo, mesh.comm);
+    ins->velocityBCKernel =  platform.buildKernel(fileName, kernelName,
+                                           kernelInfo);
   } else {
     // gradient kernel
     sprintf(fileName, DINS "/okl/insVelocityGradient%s.okl", suffix);
     sprintf(kernelName, "insVelocityGradient%s", suffix);
-    ins->velocityGradientKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                               kernelInfo, mesh.comm);
+    ins->velocityGradientKernel =  platform.buildKernel(fileName, kernelName,
+                                               kernelInfo);
 
     sprintf(fileName, DINS "/okl/insDiffusion%s.okl", suffix);
     sprintf(kernelName, "insDiffusion%s", suffix);
-    ins->diffusionKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                           kernelInfo, mesh.comm);
+    ins->diffusionKernel =  platform.buildKernel(fileName, kernelName,
+                                           kernelInfo);
   }
 
   //pressure gradient kernels
   sprintf(fileName, DINS "/okl/insGradient%s.okl", suffix);
   sprintf(kernelName, "insGradientVolume%s", suffix);
-  ins->gradientVolumeKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                         kernelInfo, mesh.comm);
+  ins->gradientVolumeKernel =  platform.buildKernel(fileName, kernelName,
+                                         kernelInfo);
   sprintf(kernelName, "insGradientSurface%s", suffix);
-  ins->gradientSurfaceKernel = buildKernel(mesh.device, fileName, kernelName,
-                                         kernelInfo, mesh.comm);
+  ins->gradientSurfaceKernel = platform.buildKernel(fileName, kernelName,
+                                         kernelInfo);
 
   //velocity divergence kernels
   sprintf(fileName, DINS "/okl/insDivergence%s.okl", suffix);
   sprintf(kernelName, "insDivergenceVolume%s", suffix);
-  ins->divergenceVolumeKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                         kernelInfo, mesh.comm);
+  ins->divergenceVolumeKernel =  platform.buildKernel(fileName, kernelName,
+                                         kernelInfo);
   sprintf(kernelName, "insDivergenceSurface%s", suffix);
-  ins->divergenceSurfaceKernel = buildKernel(mesh.device, fileName, kernelName,
-                                         kernelInfo, mesh.comm);
+  ins->divergenceSurfaceKernel = platform.buildKernel(fileName, kernelName,
+                                         kernelInfo);
 
   //pressure solver kernels
   if (ins->pressureIncrement) {
@@ -368,37 +369,30 @@ ins_t& ins_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
       sprintf(kernelName, "insPressureIncrementRhs%s", suffix);
     else
       sprintf(kernelName, "insPressureIncrementIpdgRhs%s", suffix);
-    ins->pressureIncrementRhsKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                           kernelInfo, mesh.comm);
+    ins->pressureIncrementRhsKernel =  platform.buildKernel(fileName, kernelName,
+                                           kernelInfo);
 
     sprintf(kernelName, "insPressureIncrementBC%s", suffix);
-    ins->pressureIncrementBCKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                           kernelInfo, mesh.comm);
+    ins->pressureIncrementBCKernel =  platform.buildKernel(fileName, kernelName,
+                                           kernelInfo);
   } else {
     sprintf(fileName, DINS "/okl/insPressureRhs%s.okl", suffix);
     if (ins->pDisc_c0)
       sprintf(kernelName, "insPressureRhs%s", suffix);
     else
       sprintf(kernelName, "insPressureIpdgRhs%s", suffix);
-    ins->pressureRhsKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                           kernelInfo, mesh.comm);
+    ins->pressureRhsKernel =  platform.buildKernel(fileName, kernelName,
+                                           kernelInfo);
 
     sprintf(kernelName, "insPressureBC%s", suffix);
-    ins->pressureBCKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                           kernelInfo, mesh.comm);
+    ins->pressureBCKernel =  platform.buildKernel(fileName, kernelName,
+                                           kernelInfo);
   }
-
-  // mass matrix operator
-  sprintf(fileName, LIBP_DIR "/core/okl/MassMatrixOperator%s.okl", suffix);
-  sprintf(kernelName, "MassMatrixOperator%s", suffix);
-  ins->MassMatrixKernel = buildKernel(mesh.device, fileName, kernelName,
-                                            kernelInfo, mesh.comm);
 
   sprintf(fileName, DINS "/okl/insVorticity%s.okl", suffix);
   sprintf(kernelName, "insVorticity%s", suffix);
-  ins->vorticityKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                            kernelInfo, mesh.comm);
-
+  ins->vorticityKernel =  platform.buildKernel(fileName, kernelName,
+                                            kernelInfo);
 
   if (mesh.dim==2) {
     sprintf(fileName, DINS "/okl/insInitialCondition2D.okl");
@@ -408,8 +402,8 @@ ins_t& ins_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
     sprintf(kernelName, "insInitialCondition3D");
   }
 
-  ins->initialConditionKernel = buildKernel(mesh.device, fileName, kernelName,
-                                                  kernelInfo, mesh.comm);
+  ins->initialConditionKernel = platform.buildKernel(fileName, kernelName,
+                                                  kernelInfo);
 
 
 
@@ -429,7 +423,6 @@ ins_t::~ins_t() {
   velocityBCKernel.free();
   pressureRhsKernel.free();
   pressureBCKernel.free();
-  MassMatrixKernel.free();
   vorticityKernel.free();
   initialConditionKernel.free();
 

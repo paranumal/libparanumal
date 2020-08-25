@@ -26,10 +26,10 @@ SOFTWARE.
 
 #include "bns.hpp"
 
-bns_t& bns_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
+bns_t& bns_t::Setup(platform_t& platform, mesh_t& mesh,
                     bnsSettings_t& settings){
 
-  bns_t* bns = new bns_t(mesh, linAlg, settings);
+  bns_t* bns = new bns_t(platform, mesh, settings);
 
   //get physical paramters
   settings.getSetting("SPEED OF SOUND", bns->c);
@@ -76,7 +76,7 @@ bns_t& bns_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
     /*
     Artificial warping of time step size for multirate testing
     */
-#if 1
+#if 0
     dfloat x=0., y=0, z=0;
     for (int v=0;v<mesh.Nverts;v++){
       x += mesh.EX[e*mesh.Nverts+v];
@@ -107,10 +107,10 @@ bns_t& bns_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
 
   if (settings.compareSetting("TIME INTEGRATOR","MRAB3")){
     bns->timeStepper = new TimeStepper::mrab3_pml(mesh.Nelements, mesh.NpmlElements, mesh.totalHaloPairs,
-                                              mesh.Np, bns->Nfields, bns->Npmlfields, *bns);
+                                              mesh.Np, bns->Nfields, bns->Npmlfields, *bns, mesh);
   } else if (settings.compareSetting("TIME INTEGRATOR","MRSAAB3")){
     bns->timeStepper = new TimeStepper::mrsaab3_pml(mesh.Nelements, mesh.NpmlElements, mesh.totalHaloPairs,
-                                              mesh.Np, bns->Nfields, bns->Npmlfields, lambda, *bns);
+                                              mesh.Np, bns->Nfields, bns->Npmlfields, lambda, *bns, mesh);
   } else if (settings.compareSetting("TIME INTEGRATOR","SAAB3")) {
     bns->timeStepper = new TimeStepper::saab3_pml(mesh.Nelements, mesh.NpmlElements, mesh.totalHaloPairs,
                                               mesh.Np, bns->Nfields, bns->Npmlfields, lambda, *bns);
@@ -150,7 +150,7 @@ bns_t& bns_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
 /*
     Artificial warping of time step size for multirate testing
     */
-#if 1
+#if 0
   if (settings.compareSetting("TIME INTEGRATOR","MRAB3") ||
       settings.compareSetting("TIME INTEGRATOR","MRSAAB3"))
     dt /= (1<<(mesh.mrNlevels-1));
@@ -159,24 +159,25 @@ bns_t& bns_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   bns->timeStepper->SetTimeStep(dt);
 
   //setup linear algebra module
-  bns->linAlg.InitKernels({"innerProd"}, mesh.comm);
+  platform.linAlg.InitKernels({"innerProd"});
 
   /*setup trace halo exchange */
   bns->traceHalo = mesh.HaloTraceSetup(bns->Nfields);
 
   // compute samples of q at interpolation nodes
   bns->q = (dfloat*) calloc(Nlocal+Nhalo, sizeof(dfloat));
-  bns->o_q = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat), bns->q);
+  bns->o_q = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), bns->q);
 
   bns->Vort = (dfloat*) calloc(mesh.dim*mesh.Nelements*mesh.Np, sizeof(dfloat));
-  bns->o_Vort = mesh.device.malloc((mesh.dim*mesh.Nelements*mesh.Np)*sizeof(dfloat),
+  bns->o_Vort = platform.malloc((mesh.dim*mesh.Nelements*mesh.Np)*sizeof(dfloat),
                                               bns->Vort);
 
   //storage for M*q during reporting
-  bns->o_Mq = mesh.device.malloc((Nlocal+Nhalo)*sizeof(dfloat), bns->q);
+  bns->o_Mq = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), bns->q);
+  mesh.MassMatrixKernelSetup(bns->Nfields); // mass matrix operator
 
   // OCCA build stuff
-  occa::properties kernelInfo = bns->props; //copy base occa properties
+  occa::properties kernelInfo = mesh.props; //copy base occa properties
 
   //add boundary data to kernel info
   string dataFileName;
@@ -190,7 +191,7 @@ bns_t& bns_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   kernelInfo["defines/" "p_maxNodes"]= maxNodes;
 
   int blockMax = 256;
-  if (mesh.device.mode()=="CUDA") blockMax = 512;
+  if (platform.device.mode()=="CUDA") blockMax = 512;
 
   int NblockV = mymax(1, blockMax/mesh.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;
@@ -219,31 +220,31 @@ bns_t& bns_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   // kernels from volume file
   sprintf(fileName, DBNS "/okl/bnsVolume%s.okl", suffix);
   sprintf(kernelName, "bnsVolume%s", suffix);
-  bns->volumeKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                         kernelInfo, mesh.comm);
+  bns->volumeKernel =  platform.buildKernel(fileName, kernelName,
+                                         kernelInfo);
 
   if (bns->pmlcubature) {
     sprintf(kernelName, "bnsPmlVolumeCub%s", suffix);
-    bns->pmlVolumeKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                         kernelInfo, mesh.comm);
+    bns->pmlVolumeKernel =  platform.buildKernel(fileName, kernelName,
+                                         kernelInfo);
   } else {
     sprintf(kernelName, "bnsPmlVolume%s", suffix);
-    bns->pmlVolumeKernel =  buildKernel(mesh.device, fileName, kernelName,
-                                         kernelInfo, mesh.comm);
+    bns->pmlVolumeKernel =  platform.buildKernel(fileName, kernelName,
+                                         kernelInfo);
   }
 
   // kernels from relaxation file
   sprintf(fileName, DBNS "/okl/bnsRelaxation%s.okl", suffix);
   sprintf(kernelName, "bnsRelaxation%s", suffix);
-  bns->relaxationKernel = buildKernel(mesh.device, fileName, kernelName,
-                                         kernelInfo, mesh.comm);
+  bns->relaxationKernel = platform.buildKernel(fileName, kernelName,
+                                         kernelInfo);
   if (bns->pmlcubature) {
     sprintf(kernelName, "bnsPmlRelaxationCub%s", suffix);
-    bns->pmlRelaxationKernel = buildKernel(mesh.device, fileName, kernelName,
-                                           kernelInfo, mesh.comm);
+    bns->pmlRelaxationKernel = platform.buildKernel(fileName, kernelName,
+                                           kernelInfo);
   } else {
-    bns->pmlRelaxationKernel = buildKernel(mesh.device, fileName, kernelName,
-                                           kernelInfo, mesh.comm);
+    bns->pmlRelaxationKernel = platform.buildKernel(fileName, kernelName,
+                                           kernelInfo);
   }
 
 
@@ -252,36 +253,28 @@ bns_t& bns_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
   if (settings.compareSetting("TIME INTEGRATOR","MRAB3") ||
       settings.compareSetting("TIME INTEGRATOR","MRSAAB3")) {
     sprintf(kernelName, "bnsMRSurface%s", suffix);
-    bns->surfaceKernel = buildKernel(mesh.device, fileName, kernelName,
-                                           kernelInfo, mesh.comm);
+    bns->surfaceKernel = platform.buildKernel(fileName, kernelName,
+                                           kernelInfo);
 
     sprintf(kernelName, "bnsMRPmlSurface%s", suffix);
-    bns->pmlSurfaceKernel = buildKernel(mesh.device, fileName, kernelName,
-                                           kernelInfo, mesh.comm);
+    bns->pmlSurfaceKernel = platform.buildKernel(fileName, kernelName,
+                                           kernelInfo);
   } else {
     sprintf(kernelName, "bnsSurface%s", suffix);
-    bns->surfaceKernel = buildKernel(mesh.device, fileName, kernelName,
-                                           kernelInfo, mesh.comm);
+    bns->surfaceKernel = platform.buildKernel(fileName, kernelName,
+                                           kernelInfo);
 
     sprintf(kernelName, "bnsPmlSurface%s", suffix);
-    bns->pmlSurfaceKernel = buildKernel(mesh.device, fileName, kernelName,
-                                           kernelInfo, mesh.comm);
+    bns->pmlSurfaceKernel = platform.buildKernel(fileName, kernelName,
+                                           kernelInfo);
   }
-
-
-  // mass matrix operator
-  sprintf(fileName, LIBP_DIR "/core/okl/MassMatrixOperator%s.okl", suffix);
-  sprintf(kernelName, "MassMatrixOperator%s", suffix);
-
-  bns->MassMatrixKernel = buildKernel(mesh.device, fileName, kernelName,
-                                      kernelInfo, mesh.comm);
 
   // vorticity calculation
   sprintf(fileName, DBNS "/okl/bnsVorticity%s.okl", suffix);
   sprintf(kernelName, "bnsVorticity%s", suffix);
 
-  bns->vorticityKernel = buildKernel(mesh.device, fileName, kernelName,
-                                     kernelInfo, mesh.comm);
+  bns->vorticityKernel = platform.buildKernel(fileName, kernelName,
+                                     kernelInfo);
 
   if (mesh.dim==2) {
     sprintf(fileName, DBNS "/okl/bnsInitialCondition2D.okl");
@@ -291,8 +284,8 @@ bns_t& bns_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
     sprintf(kernelName, "bnsInitialCondition3D");
   }
 
-  bns->initialConditionKernel = buildKernel(mesh.device, fileName, kernelName,
-                                            kernelInfo, mesh.comm);
+  bns->initialConditionKernel = platform.buildKernel(fileName, kernelName,
+                                            kernelInfo);
 
   return *bns;
 }
@@ -305,7 +298,6 @@ bns_t::~bns_t() {
   pmlSurfaceKernel.free();
   pmlRelaxationKernel.free();
   vorticityKernel.free();
-  MassMatrixKernel.free();
   initialConditionKernel.free();
 
   if (timeStepper) delete timeStepper;

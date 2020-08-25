@@ -28,6 +28,7 @@ SOFTWARE.
 #define CNS_HPP 1
 
 #include "core.hpp"
+#include "platform.hpp"
 #include "mesh.hpp"
 #include "solver.hpp"
 #include "timeStepper.hpp"
@@ -39,13 +40,15 @@ class cnsSettings_t: public settings_t {
 public:
   cnsSettings_t(MPI_Comm& _comm);
   void report();
-  void parseFromFile(occaSettings_t& occaSettings,
+  void parseFromFile(platformSettings_t& platformSettings,
                      meshSettings_t& meshSettings,
                      const string filename);
 };
 
 class cns_t: public solver_t {
 public:
+  mesh_t &mesh;
+
   int Nfields;
   int Ngrads;
 
@@ -83,18 +86,17 @@ public:
 
   occa::kernel constrainKernel;
 
-  occa::kernel MassMatrixKernel;
-
   occa::kernel initialConditionKernel;
 
   cns_t() = delete;
-  cns_t(mesh_t& _mesh, linAlg_t& _linAlg, settings_t& _settings):
-    solver_t(_mesh, _linAlg, _settings) {}
+  cns_t(platform_t &_platform, mesh_t &_mesh,
+              cnsSettings_t& _settings):
+    solver_t(_platform, _settings), mesh(_mesh) {}
 
   ~cns_t();
 
   //setup
-  static cns_t& Setup(mesh_t& mesh, linAlg_t& linAlg,
+  static cns_t& Setup(platform_t& platform, mesh_t& mesh,
                       cnsSettings_t& settings);
 
   void Run();

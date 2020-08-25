@@ -27,7 +27,7 @@ SOFTWARE.
 #include "fpe.hpp"
 
 subcycler_t::subcycler_t(fpe_t& fpe):
-  solver_t(fpe.mesh, fpe.linAlg, fpe.settings) {
+  solver_t(fpe.platform, fpe.settings), mesh(fpe.mesh) {
 
   cubature = fpe.cubature;
   traceHalo = fpe.traceHalo;

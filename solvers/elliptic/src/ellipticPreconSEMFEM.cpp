@@ -83,7 +83,7 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
   if (mesh.elementType==TRIANGLES) { //build a new mask for NpFEM>Np node sets
     // gather-scatter
     int verbose = 0;
-    ogs_t *ogs = ogs_t::Setup(Ntotal, globalIds, mesh.comm, verbose, mesh.device);
+    ogs_t *ogs = ogs_t::Setup(Ntotal, globalIds, mesh.comm, verbose, elliptic.platform);
 
     //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
     const int largeNumber = 1<<20;
@@ -119,7 +119,7 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
   //build masked gs handle to gather from enriched sem nodes to assembled fem problem
   int verbose = 0;
   ogs_t::Unique(maskedGlobalIds, Ntotal, mesh.comm);     //flag a unique node in every gather node
-  FEMogs = ogs_t::Setup(Ntotal, maskedGlobalIds, mesh.comm, verbose, mesh.device);
+  FEMogs = ogs_t::Setup(Ntotal, maskedGlobalIds, mesh.comm, verbose, elliptic.platform);
 
   //make a map from the fem mesh's nodes to the (enriched) sem nodes
   dlong *localIds = (dlong *) calloc(femMesh->Nelements*femMesh->Nverts,sizeof(dlong));
@@ -165,7 +165,7 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
   }
 
   //make a fem elliptic solver
-  femElliptic = new elliptic_t(*femMesh, elliptic.linAlg,
+  femElliptic = new elliptic_t(elliptic.platform, *femMesh,
                                elliptic.settings, elliptic.lambda);
   femElliptic->ogsMasked = FEMogs; //only for getting Ngather when building matrix
 
@@ -217,7 +217,7 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
   parAlmond::parCOO A;
   femElliptic->BuildOperatorMatrixContinuous(A);
 
-  parAlmondHandle = parAlmond::Init(mesh.device, mesh.comm, elliptic.settings);
+  parAlmondHandle = parAlmond::Init(elliptic.platform, elliptic.settings, mesh.comm);
   parAlmond::AMGSetup(parAlmondHandle, A,
                       elliptic.allNeumann, elliptic.allNeumannPenalty);
 
@@ -232,24 +232,24 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
       }
     }
 
-    mesh.o_SEMFEMInterp = mesh.device.malloc(mesh.NpFEM*mesh.Np*sizeof(dfloat),mesh.SEMFEMInterp);
-    mesh.o_SEMFEMAnterp = mesh.device.malloc(mesh.NpFEM*mesh.Np*sizeof(dfloat),SEMFEMAnterp);
+    mesh.o_SEMFEMInterp = elliptic.platform.malloc(mesh.NpFEM*mesh.Np*sizeof(dfloat),mesh.SEMFEMInterp);
+    mesh.o_SEMFEMAnterp = elliptic.platform.malloc(mesh.NpFEM*mesh.Np*sizeof(dfloat),SEMFEMAnterp);
 
     free(SEMFEMAnterp);
 
     dfloat *dummy = (dfloat*) calloc(mesh.Nelements*mesh.NpFEM,sizeof(dfloat)); //need this to avoid uninitialized memory warnings
-    o_rFEM = mesh.device.malloc(mesh.Nelements*mesh.NpFEM*sizeof(dfloat), dummy);
-    o_zFEM = mesh.device.malloc(mesh.Nelements*mesh.NpFEM*sizeof(dfloat), dummy);
+    o_rFEM = elliptic.platform.malloc(mesh.Nelements*mesh.NpFEM*sizeof(dfloat), dummy);
+    o_zFEM = elliptic.platform.malloc(mesh.Nelements*mesh.NpFEM*sizeof(dfloat), dummy);
     free(dummy);
 
     parAlmond::multigridLevel *baseLevel = parAlmondHandle->levels[0];
     dummy = (dfloat*) calloc(baseLevel->Ncols,sizeof(dfloat));
-    o_GrFEM = mesh.device.malloc(baseLevel->Ncols*sizeof(dfloat),dummy);
-    o_GzFEM = mesh.device.malloc(baseLevel->Ncols*sizeof(dfloat),dummy);
+    o_GrFEM = elliptic.platform.malloc(baseLevel->Ncols*sizeof(dfloat),dummy);
+    o_GzFEM = elliptic.platform.malloc(baseLevel->Ncols*sizeof(dfloat),dummy);
     free(dummy);
 
     //build kernels
-    occa::properties kernelInfo = elliptic.props;
+    occa::properties kernelInfo = mesh.props;
 
     kernelInfo["defines/" "p_Np"]= mesh.Np;
     kernelInfo["defines/" "p_NpFEM"]= mesh.NpFEM;
@@ -257,18 +257,18 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
     int NblockV = 512/mesh.NpFEM;
     kernelInfo["defines/" "p_NblockV"]= NblockV;
 
-    SEMFEMInterpKernel = buildKernel(mesh.device, DELLIPTIC "/okl/ellipticSEMFEMInterp.okl",
-                                     "ellipticSEMFEMInterp", kernelInfo, mesh.comm);
+    SEMFEMInterpKernel = elliptic.platform.buildKernel(DELLIPTIC "/okl/ellipticSEMFEMInterp.okl",
+                                     "ellipticSEMFEMInterp", kernelInfo);
 
-    SEMFEMAnterpKernel = buildKernel(mesh.device, DELLIPTIC "/okl/ellipticSEMFEMAnterp.okl",
-                                     "ellipticSEMFEMAnterp", kernelInfo, mesh.comm);
+    SEMFEMAnterpKernel = elliptic.platform.buildKernel(DELLIPTIC "/okl/ellipticSEMFEMAnterp.okl",
+                                     "ellipticSEMFEMAnterp", kernelInfo);
   } else {
     parAlmond::multigridLevel *baseLevel = parAlmondHandle->levels[0];
     // rhsG = (dfloat*) calloc(baseLevel->Ncols,sizeof(dfloat));
     // xG   = (dfloat*) calloc(baseLevel->Ncols,sizeof(dfloat));
     dfloat *dummy = (dfloat*) calloc(baseLevel->Ncols,sizeof(dfloat));
-    o_rhsG = mesh.device.malloc(baseLevel->Ncols*sizeof(dfloat),dummy);
-    o_xG   = mesh.device.malloc(baseLevel->Ncols*sizeof(dfloat),dummy);
+    o_rhsG = elliptic.platform.malloc(baseLevel->Ncols*sizeof(dfloat),dummy);
+    o_xG   = elliptic.platform.malloc(baseLevel->Ncols*sizeof(dfloat),dummy);
     free(dummy);
   }
 }

@@ -25,8 +25,8 @@ SOFTWARE.
 */
 
 #include "elliptic.hpp"
-#include "../mesh/include/meshDefines2D.h"
-#include "../mesh/include/meshDefines3D.h"
+#include "mesh/meshDefines2D.h"
+#include "mesh/meshDefines3D.h"
 
 void elliptic_t::BuildOperatorDiagonal(dfloat *diagA){
 

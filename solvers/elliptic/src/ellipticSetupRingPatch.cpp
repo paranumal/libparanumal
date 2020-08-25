@@ -32,8 +32,7 @@ elliptic_t* elliptic_t::SetupRingPatch(mesh_t& meshPatch){
   //just reuse the current solver if there are no neighbors
   if (mesh.size == 1) return this;
 
-  elliptic_t* elliptic = new elliptic_t(meshPatch, linAlg,
-                                        settings, lambda);
+  elliptic_t* elliptic = new elliptic_t(platform, meshPatch, settings, lambda);
 
   //shallow copy
   elliptic->Nfields = Nfields;
@@ -45,7 +44,7 @@ elliptic_t* elliptic_t::SetupRingPatch(mesh_t& meshPatch){
   //buffer for gradient
   dlong Ntotal = meshPatch.Np*meshPatch.Nelements;
   elliptic->grad = (dfloat*) calloc(Ntotal*4, sizeof(dfloat));
-  elliptic->o_grad  = mesh.device.malloc(Ntotal*4*sizeof(dfloat), elliptic->grad);
+  elliptic->o_grad  = platform.malloc(Ntotal*4*sizeof(dfloat), elliptic->grad);
 
   /*setup trace halo exchange */
   elliptic->traceHalo = mesh.HaloTraceSetup(elliptic->Nfields);

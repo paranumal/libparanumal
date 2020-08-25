@@ -27,9 +27,6 @@ SOFTWARE.
 #ifndef PRECON_HPP
 #define PRECON_HPP
 
-#include <occa.hpp>
-#include "types.h"
-#include "utils.hpp"
 #include "core.hpp"
 
 //base preconditioner

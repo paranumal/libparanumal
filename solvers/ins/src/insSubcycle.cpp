@@ -27,7 +27,7 @@ SOFTWARE.
 #include "ins.hpp"
 
 subcycler_t::subcycler_t(ins_t& ins):
-  solver_t(ins.mesh, ins.linAlg, ins.settings) {
+  solver_t(ins.platform, ins.settings), mesh(ins.mesh) {
 
   NVfields = ins.NVfields;
   nu = ins.nu;

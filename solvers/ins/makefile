@@ -77,22 +77,17 @@ include ../../make.top
 endif
 endif
 
+#gslib
+GS_DIR=${LIBP_TPL_DIR}/gslib
+
 #libraries
-GS_DIR       =${LIBP_TPL_DIR}/gslib
-OGS_DIR      =${LIBP_LIBS_DIR}/ogs
-MESH_DIR     =${LIBP_LIBS_DIR}/mesh
 ELLIPTIC_DIR =${LIBP_DIR}/solvers/elliptic
-PARALMOND_DIR=${LIBP_LIBS_DIR}/parAlmond
-CORE_DIR     =${LIBP_DIR}/core
-TEST_DIR     =${LIBP_DIR}/test
+FPE_LIBP_LIBS=timeStepper linearSolver parAlmond mesh ogs linAlg core
 
 #includes
-INCLUDES=${LIBP_INCLUDES} \
-		 -I${LIBP_LIBS_DIR}/include \
-		 -I${ELLIPTIC_DIR} \
-		 -I${PARALMOND_DIR} \
-         -I.
-
+INCLUDES=-I${ELLIPTIC_DIR} \
+					${LIBP_INCLUDES} \
+				 -I.
 
 #defines
 DEFINES =${LIBP_DEFINES} \
@@ -103,9 +98,8 @@ INS_CXXFLAGS=${LIBP_MPICXXFLAGS} ${DEFINES} ${INCLUDES}
 
 #link libraries
 LIBS=-L${ELLIPTIC_DIR} -lelliptic \
-     -L${LIBP_LIBS_DIR} -lmesh -logs -lparAlmond \
+		 -L${LIBP_LIBS_DIR} $(addprefix -l,$(FPE_LIBP_LIBS)) \
      -L$(GS_DIR)/lib -lgs \
-     -L${CORE_DIR} -lcore \
      ${LIBP_LIBS}
 
 #link flags
@@ -121,14 +115,28 @@ SRC =$(wildcard src/*.cpp)
 
 OBJS=$(SRC:.cpp=.o)
 
-.PHONY: all lib libcore libelliptic libmesh libogs clean clean-libs \
-		clean-kernels realclean help info insMain
+.PHONY: all lib libp_libs libelliptic clean clean-libs \
+		clean-kernels realclean help info silentUpdate
 
 all: insMain
 
 lib: libins.a
 
-insMain:$(OBJS) insMain.o | libelliptic
+libp_libs:
+ifneq (,${verbose})
+	${MAKE} -C ${LIBP_LIBS_DIR} $(FPE_LIBP_LIBS) verbose=${verbose}
+else
+	@${MAKE} -C ${LIBP_LIBS_DIR} $(FPE_LIBP_LIBS) --no-print-directory
+endif
+
+libelliptic: libp_libs
+ifneq (,${verbose})
+	${MAKE} -C ${ELLIPTIC_DIR} lib verbose=${verbose}
+else
+	@${MAKE} -C ${ELLIPTIC_DIR} lib --no-print-directory
+endif
+
+insMain:$(OBJS) insMain.o | libelliptic silentUpdate
 ifneq (,${verbose})
 	$(LIBP_LD) -o insMain insMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
 else
@@ -144,41 +152,6 @@ else
 	@ar -cr libins.a $(OBJS)
 endif
 
-libelliptic: libmesh
-ifneq (,${verbose})
-	${MAKE} -C ${ELLIPTIC_DIR} lib verbose=${verbose}
-else
-	@${MAKE} -C ${ELLIPTIC_DIR} lib --no-print-directory
-endif
-
-libmesh: libogs libgs libcore
-ifneq (,${verbose})
-	${MAKE} -C ${MESH_DIR} lib verbose=${verbose}
-else
-	@${MAKE} -C ${MESH_DIR} lib --no-print-directory
-endif
-
-libogs: libcore
-ifneq (,${verbose})
-	${MAKE} -C ${OGS_DIR} lib verbose=${verbose}
-else
-	@${MAKE} -C ${OGS_DIR} lib --no-print-directory
-endif
-
-libcore: libgs
-ifneq (,${verbose})
-	${MAKE} -C ${CORE_DIR} lib verbose=${verbose}
-else
-	@${MAKE} -C ${CORE_DIR} lib --no-print-directory
-endif
-
-libgs:
-ifneq (,${verbose})
-	${MAKE} -C $(GS_DIR) install verbose=${verbose}
-else
-	@${MAKE} -C $(GS_DIR) install --no-print-directory
-endif
-
 # rule for .cpp files
 %.o: %.cpp $(DEPS) | libelliptic
 ifneq (,${verbose})
@@ -188,23 +161,24 @@ else
 	@$(LIBP_MPICXX) -o $*.o -c $*.cpp $(INS_CXXFLAGS)
 endif
 
+silentUpdate:
+	@true
+
 #cleanup
 clean:
 	rm -f src/*.o *.o insMain libins.a
 
 clean-libs: clean
 	${MAKE} -C ${ELLIPTIC_DIR} clean
-	${MAKE} -C ${PARALMOND_DIR} clean
-	${MAKE} -C ${OGS_DIR} clean
-	${MAKE} -C ${MESH_DIR} clean
-	${MAKE} -C ${CORE_DIR} clean
+	${MAKE} -C ${LIBP_LIBS_DIR} clean
 
 clean-kernels: clean-libs
 # 	$(shell ${OCCA_DIR}/bin/occa clear all -y)
 	rm -rf ~/.occa/
 
-realclean: clean-libs
-	${MAKE} -C ${GS_DIR} clean
+realclean: clean
+	${MAKE} -C ${ELLIPTIC_DIR} clean
+	${MAKE} -C ${LIBP_LIBS_DIR} realclean
 
 help:
 	$(info $(value INS_HELP_MSG))
@@ -219,4 +193,4 @@ info:
 	@true
 
 test: insMain
-	@${MAKE} -C $(LIBP_DIR)/test --no-print-directory  test-ins
+	@${MAKE} -C $(LIBP_TEST_DIR) --no-print-directory  test-ins

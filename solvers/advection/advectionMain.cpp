@@ -37,40 +37,28 @@ int main(int argc, char **argv){
     LIBP_ABORT(string("Usage: ./advectionMain setupfile"));
 
   //create default settings
-  occaSettings_t occaSettings(comm);
+  platformSettings_t platformSettings(comm);
   meshSettings_t meshSettings(comm);
   advectionSettings_t advectionSettings(comm);
 
   //load settings from file
-  advectionSettings.parseFromFile(occaSettings, meshSettings,
-                            argv[1]);
+  advectionSettings.parseFromFile(platformSettings, meshSettings, argv[1]);
 
-  occaSettings.report();
+  // set up platform
+  platform_t platform(platformSettings);
+
+  platformSettings.report();
   meshSettings.report();
   advectionSettings.report();
 
-  // set up occa device
-  occa::device device;
-  occa::properties props;
-  occaDeviceConfig(device, comm, occaSettings, props);
-
   // set up mesh
-  mesh_t& mesh = mesh_t::Setup(device, comm, meshSettings, props);
-
-  // set up linear algebra module
-  linAlg_t& linAlg = linAlg_t::Setup(device, props);
+  mesh_t& mesh = mesh_t::Setup(platform, meshSettings, comm);
 
   // set up advection solver
-  advection_t& advection = advection_t::Setup(mesh, linAlg, advectionSettings);
+  advection_t& advection = advection_t::Setup(platform, mesh, advectionSettings);
 
   // run
   advection.Run();
-
-  // clean up
-  delete &advection;
-  delete &linAlg;
-  delete &mesh;
-  device.free();
 
   // close down MPI
   MPI_Finalize();

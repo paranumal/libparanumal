@@ -33,6 +33,7 @@ export LIBP_DIR:=$(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 export LIBP_INCLUDE_DIR=${LIBP_DIR}/include
 export LIBP_TPL_DIR=${LIBP_DIR}/3rdParty
 export LIBP_LIBS_DIR=${LIBP_DIR}/libs
+export LIBP_TEST_DIR=${LIBP_DIR}/test
 
 #paths to installed blas and lapack libraries
 export LIBP_BLAS_DIR  =/usr/lib/x86_64-linux-gnu

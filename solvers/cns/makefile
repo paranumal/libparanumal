@@ -47,7 +47,7 @@ make lib
 make clean
    Clean the cnsMain executable, library, and object files.
 make clean-libs
-   In addition to "make clean", also clean the mesh and ogs libraries.
+   In addition to "make clean", also clean needed libraries.
 make clean-kernels
    In addition to "make clean-libs", also cleans the cached OCCA kernels.
 make realclean
@@ -78,18 +78,15 @@ include ../../make.top
 endif
 endif
 
+#gslib
+GS_DIR=${LIBP_TPL_DIR}/gslib
+
 #libraries
-GS_DIR       =${LIBP_TPL_DIR}/gslib
-OGS_DIR      =${LIBP_LIBS_DIR}/ogs
-MESH_DIR     =${LIBP_LIBS_DIR}/mesh
-CORE_DIR     =${LIBP_DIR}/core
-TEST_DIR     =${LIBP_DIR}/test
+CNS_LIBP_LIBS=timeStepper mesh ogs linAlg core
 
 #includes
 INCLUDES=${LIBP_INCLUDES} \
-		 -I${LIBP_LIBS_DIR}/include \
-         -I.
-
+				 -I.
 
 #defines
 DEFINES =${LIBP_DEFINES} \
@@ -99,9 +96,8 @@ DEFINES =${LIBP_DEFINES} \
 CNS_CXXFLAGS=${LIBP_MPICXXFLAGS} ${DEFINES} ${INCLUDES}
 
 #link libraries
-LIBS=-L${LIBP_LIBS_DIR} -lmesh -logs\
+LIBS=-L${LIBP_LIBS_DIR} $(addprefix -l,$(CNS_LIBP_LIBS)) \
      -L$(GS_DIR)/lib -lgs \
-     -L${CORE_DIR} -lcore \
      ${LIBP_LIBS}
 
 #link flags
@@ -116,14 +112,21 @@ SRC =$(wildcard src/*.cpp)
 
 OBJS=$(SRC:.cpp=.o)
 
-.PHONY: all lib libcore libmesh libogs clean clean-libs \
-		clean-kernels realclean help info cnsMain
+.PHONY: all lib libp_libs clean clean-libs \
+		clean-kernels realclean help info silentUpdate
 
 all: cnsMain
 
 lib: libcns.a
 
-cnsMain:$(OBJS) cnsMain.o | libmesh
+libp_libs:
+ifneq (,${verbose})
+	${MAKE} -C ${LIBP_LIBS_DIR} $(CNS_LIBP_LIBS) verbose=${verbose}
+else
+	@${MAKE} -C ${LIBP_LIBS_DIR} $(CNS_LIBP_LIBS) --no-print-directory
+endif
+
+cnsMain:$(OBJS) cnsMain.o | libp_libs silentUpdate
 ifneq (,${verbose})
 	$(LIBP_LD) -o cnsMain cnsMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
 else
@@ -139,36 +142,8 @@ else
 	@ar -cr libcns.a $(OBJS)
 endif
 
-libmesh: libogs libgs libcore
-ifneq (,${verbose})
-	${MAKE} -C ${MESH_DIR} lib verbose=${verbose}
-else
-	@${MAKE} -C ${MESH_DIR} lib --no-print-directory
-endif
-
-libogs: libcore
-ifneq (,${verbose})
-	${MAKE} -C ${OGS_DIR} lib verbose=${verbose}
-else
-	@${MAKE} -C ${OGS_DIR} lib --no-print-directory
-endif
-
-libcore: libgs
-ifneq (,${verbose})
-	${MAKE} -C ${CORE_DIR} lib verbose=${verbose}
-else
-	@${MAKE} -C ${CORE_DIR} lib --no-print-directory
-endif
-
-libgs:
-ifneq (,${verbose})
-	${MAKE} -C $(GS_DIR) install verbose=${verbose}
-else
-	@${MAKE} -C $(GS_DIR) install --no-print-directory
-endif
-
 # rule for .cpp files
-%.o: %.cpp $(DEPS) | libmesh
+%.o: %.cpp $(DEPS) | libp_libs
 ifneq (,${verbose})
 	$(LIBP_MPICXX) -o $*.o -c $*.cpp $(CNS_CXXFLAGS)
 else
@@ -176,21 +151,22 @@ else
 	@$(LIBP_MPICXX) -o $*.o -c $*.cpp $(CNS_CXXFLAGS)
 endif
 
+silentUpdate:
+	@true
+
 #cleanup
 clean:
 	rm -f src/*.o *.o cnsMain libcns.a
 
 clean-libs: clean
-	${MAKE} -C ${OGS_DIR} clean
-	${MAKE} -C ${MESH_DIR} clean
-	${MAKE} -C ${CORE_DIR} clean
+	${MAKE} -C ${LIBP_LIBS_DIR} clean
 
 clean-kernels: clean-libs
 # 	$(shell ${OCCA_DIR}/bin/occa clear all -y)
 	rm -rf ~/.occa/
 
-realclean: clean-libs
-	${MAKE} -C ${GS_DIR} clean
+realclean: clean
+	${MAKE} -C ${LIBP_LIBS_DIR} realclean
 
 help:
 	$(info $(value CNS_HELP_MSG))
@@ -205,4 +181,4 @@ info:
 	@true
 
 test: cnsMain
-	@${MAKE} -C $(LIBP_DIR)/test --no-print-directory  test-cns
+	@${MAKE} -C $(LIBP_TEST_DIR) --no-print-directory  test-cns
