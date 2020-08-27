@@ -1,5 +1,6 @@
 ![Build](https://github.com/paranumal/libparanumal/workflows/Build/badge.svg)
 [![codecov](https://codecov.io/gh/paranumal/libparanumal/branch/master/graph/badge.svg)](https://codecov.io/gh/paranumal/libparanumal)
+[![DOI](https://zenodo.org/badge/142787012.svg)](https://zenodo.org/badge/latestdoi/142787012)
 
 ## libParanumal
 An experimental set of finite element flow solvers for heterogeneous (GPU/CPU) systems. The initial development of libParanumal was performed by the [Parallel Numerical Algorithms Group at Virginia Tech](http://paranumal.com).
@@ -17,6 +18,7 @@ If you use any part of libParanumal in your research project including variants 
       title = "{libParanumal}: a performance portable high-order finite element library",
       year = "2020",
       url = "https://github.com/paranumal/libparanumal",
+      doi = "10.5281/zenodo.4004744",
       note = "Release 0.3.1"
       }
 </pre>
@@ -85,7 +87,7 @@ G. Dependencies:
 
 ---
 ### 4. Code block diagram
-<img src="http://intranet.math.vt.edu/people/tcew/libPdiagramCrop.jpg" width="1024" >
+<img src="http://intranet.math.vt.edu/people/tcew/libPdiagramCropV2.jpg" width="512" >
 
 ---
 ### 5. OCCA dependency
