@@ -162,13 +162,10 @@ void syncAgmgToDevice(agmgLevel *level, int k, int AMGstartLev, CycleType ctype)
   platform_t &platform = level->A->platform;
   occa::device device = platform.device;
 
-  level->o_A = new parHYB(level->A);
-  level->o_A->syncToDevice(platform);
+  level->A->syncToDevice();
   if (k>AMGstartLev) {
-    level->o_R = new parHYB(level->R);
-    level->o_P = new parHYB(level->P);
-    level->o_R->syncToDevice(platform);
-    level->o_P->syncToDevice(platform);
+    level->R->syncToDevice();
+    level->P->syncToDevice();
   }
 
   if (level->x  ) level->o_x   = device.malloc(level->Ncols*sizeof(dfloat),level->x);

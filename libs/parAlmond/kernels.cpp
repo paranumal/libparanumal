@@ -34,8 +34,6 @@ occa::kernel haloExtractKernel;
 
 occa::kernel SpMVcsrKernel1;
 occa::kernel SpMVcsrKernel2;
-occa::kernel SpMVellKernel1;
-occa::kernel SpMVellKernel2;
 occa::kernel SpMVmcsrKernel1;
 occa::kernel SpMVmcsrKernel2;
 
@@ -71,8 +69,6 @@ void buildParAlmondKernels(MPI_Comm comm, platform_t& platform){
 
   SpMVcsrKernel1  = platform.buildKernel(PARALMOND_DIR"/okl/SpMVcsr.okl",  "SpMVcsr1",  kernelInfo);
   SpMVcsrKernel2  = platform.buildKernel(PARALMOND_DIR"/okl/SpMVcsr.okl",  "SpMVcsr2",  kernelInfo);
-  SpMVellKernel1  = platform.buildKernel(PARALMOND_DIR"/okl/SpMVell.okl",  "SpMVell1",  kernelInfo);
-  SpMVellKernel2  = platform.buildKernel(PARALMOND_DIR"/okl/SpMVell.okl",  "SpMVell2",  kernelInfo);
   SpMVmcsrKernel1 = platform.buildKernel(PARALMOND_DIR"/okl/SpMVmcsr.okl", "SpMVmcsr1", kernelInfo);
   SpMVmcsrKernel2 = platform.buildKernel(PARALMOND_DIR"/okl/SpMVmcsr.okl", "SpMVmcsr2", kernelInfo);
 
@@ -104,8 +100,6 @@ void freeParAlmondKernels() {
 
   SpMVcsrKernel1.free();
   SpMVcsrKernel2.free();
-  SpMVellKernel1.free();
-  SpMVellKernel2.free();
   SpMVmcsrKernel1.free();
   SpMVmcsrKernel2.free();
 

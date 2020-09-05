@@ -32,8 +32,7 @@ namespace parAlmond {
 class agmgLevel: public multigridLevel {
 
 public:
-  parCSR   *A,   *P,   *R;
-  parHYB *o_A, *o_P, *o_R;
+  parCSR *A=nullptr, *P=nullptr, *R=nullptr;
 
   SmoothType stype;
   dfloat lambda, lambda1, lambda0; //smoothing params

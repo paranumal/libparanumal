@@ -33,14 +33,11 @@ agmgLevel::agmgLevel(parCSR *A_, KrylovType ktype_):
 
   weighted = false;
   gatherLevel = false;
-  ogs=NULL;
+  ogs=nullptr;
 
   A = A_;
-  P = NULL;
-  R = NULL;
-  o_A = NULL;
-  o_P = NULL;
-  o_R = NULL;
+  P = nullptr;
+  R = nullptr;
 }
 
 agmgLevel::agmgLevel(parCSR *A_, parCSR *P_, parCSR *R_, KrylovType ktype_):
@@ -51,24 +48,17 @@ agmgLevel::agmgLevel(parCSR *A_, parCSR *P_, parCSR *R_, KrylovType ktype_):
 
   weighted = false;
   gatherLevel = false;
-  ogs=NULL;
+  ogs=nullptr;
 
   A = A_;
   P = P_;
   R = R_;
-  o_A = NULL;
-  o_P = NULL;
-  o_R = NULL;
 }
 
 agmgLevel::~agmgLevel() {
-
   if (  A) delete   A;
   if (  P) delete   P;
   if (  R) delete   R;
-  if (o_A) delete o_A;
-  if (o_P) delete o_P;
-  if (o_R) delete o_R;
 }
 
 void agmgLevel::Ax        (dfloat *X, dfloat *Ax){ A->SpMV(1.0, X, 0.0, Ax); }
@@ -94,29 +84,29 @@ void agmgLevel::prolongate(dfloat *X, dfloat *Px){
 
 void agmgLevel::residual  (dfloat *RHS, dfloat *X, dfloat *RES) { A->SpMV(-1.0, X, 1.0, RHS, RES); }
 
-void agmgLevel::Ax        (occa::memory& o_X, occa::memory& o_Ax){ o_A->SpMV(1.0, o_X, 0.0, o_Ax); }
+void agmgLevel::Ax        (occa::memory& o_X, occa::memory& o_Ax){ A->SpMV(1.0, o_X, 0.0, o_Ax); }
 
 void agmgLevel::coarsen   (occa::memory& o_r, occa::memory& o_Rr){
   if (gatherLevel) {
     ogs->Gather(o_Gx, o_r, ogs_dfloat, ogs_add, ogs_notrans);
     // vectorDotStar(ogs->Ngather, o_gatherWeight, o_Gx);
-    o_R->SpMV(1.0, o_Gx, 0.0, o_Rr);
+    R->SpMV(1.0, o_Gx, 0.0, o_Rr);
   } else {
-    o_R->SpMV(1.0, o_r, 0.0, o_Rr);
+    R->SpMV(1.0, o_r, 0.0, o_Rr);
   }
 }
 
 void agmgLevel::prolongate(occa::memory& o_X, occa::memory& o_Px){
   if (gatherLevel) {
-    o_P->SpMV(1.0, o_X, 0.0, o_Gx);
+    P->SpMV(1.0, o_X, 0.0, o_Gx);
     ogs->Scatter(o_Sx, o_Gx, ogs_dfloat, ogs_add, ogs_notrans);
     vectorAdd(ogs->N, 1.0, o_Sx, 1.0, o_Px);
   } else {
-    o_P->SpMV(1.0, o_X, 1.0, o_Px);
+    P->SpMV(1.0, o_X, 1.0, o_Px);
   }
 }
 
-void agmgLevel::residual  (occa::memory& o_RHS, occa::memory& o_X, occa::memory& o_RES) { o_A->SpMV(-1.0, o_X, 1.0, o_RHS, o_RES); }
+void agmgLevel::residual  (occa::memory& o_RHS, occa::memory& o_X, occa::memory& o_RES) { A->SpMV(-1.0, o_X, 1.0, o_RHS, o_RES); }
 
 void agmgLevel::smooth(dfloat *RHS, dfloat *X, bool x_is_zero){
   if(stype == JACOBI){

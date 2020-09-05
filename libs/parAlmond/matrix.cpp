@@ -46,40 +46,14 @@ CSR::~CSR() {
   if (o_vals.size()) o_vals.free();
 }
 
-//------------------------------------------------------------------------
-//
-//  ELL matrix
-//
-//------------------------------------------------------------------------
-
-ELL::ELL(dlong N, dlong M): matrix_t(N,M) {}
-
-
-ELL::~ELL() {
-  free(cols);
-  free(vals);
-
-  if (o_cols.size()) o_cols.free();
-  if (o_vals.size()) o_vals.free();
-}
-
-void ELL::syncToDevice(occa::device device) {
-
-  dlong  *colsT = (dlong *)  malloc(Nrows*nnzPerRow*sizeof(dlong));
-  dfloat *valsT = (dfloat *) malloc(Nrows*nnzPerRow*sizeof(dfloat));
-  for (dlong n=0;n<Nrows;n++) {
-    for (int i=0;i<nnzPerRow;i++) {
-      colsT[n+i*Nrows] = cols[n*nnzPerRow+i];
-      valsT[n+i*Nrows] = vals[n*nnzPerRow+i];
-    }
+void CSR::syncToDevice(occa::device& device) {
+  if (Nrows) {
+    o_rowStarts = device.malloc((Nrows+1)*sizeof(dlong), rowStarts);
   }
-
-  if(nnzPerRow && Nrows){
-    o_cols = device.malloc(Nrows*nnzPerRow*sizeof(dlong),  colsT);
-    o_vals = device.malloc(Nrows*nnzPerRow*sizeof(dfloat), valsT);
+  if (nnz) {
+    o_cols = device.malloc(nnz*sizeof(dlong),   cols);
+    o_vals = device.malloc(nnz*sizeof(dfloat),  vals);
   }
-
-  free(colsT); free(valsT);
 }
 
 //------------------------------------------------------------------------
@@ -101,7 +75,7 @@ MCSR::~MCSR() {
   if (o_vals.size()) o_vals.free();
 }
 
-void MCSR::syncToDevice(occa::device device) {
+void MCSR::syncToDevice(occa::device& device) {
   if (actualRows) {
     o_rowStarts = device.malloc((actualRows+1)*sizeof(dlong), rowStarts);
     o_rows      = device.malloc(actualRows*sizeof(dlong), rows);
@@ -411,198 +385,12 @@ dfloat parCSR::rhoDinvA(){
   return rho;
 }
 
-
-
-
-//------------------------------------------------------------------------
-//
-//  parHYB matrix
-//
-//------------------------------------------------------------------------
-
-//build from parCSR
-parHYB::parHYB(parCSR *A): matrix_t(A->Nrows, A->Ncols) {
-
-  int *rowCounters = (int*) calloc(A->Nrows, sizeof(int));
-
-  int maxNnzPerRow = 0;
-  int minNnzPerRow = 0;
-  if (A->Nrows)
-    minNnzPerRow = (int) A->diag->rowStarts[1] - A->diag->rowStarts[0];
-
-  for(dlong i=0; i<A->Nrows; i++) {
-    int rowNnz = (int) A->diag->rowStarts[i+1] - A->diag->rowStarts[i];
-    rowCounters[i] = rowNnz;
-
-    maxNnzPerRow = (rowNnz > maxNnzPerRow) ? rowNnz : maxNnzPerRow;
-    minNnzPerRow = (rowNnz < minNnzPerRow) ? rowNnz : minNnzPerRow;
-  }
-
-  // This chooses the nnzPerRow by binning. Just pack all the local nonzeros in ELL
-  /*
-  // create bins
-  int numBins = maxNnzPerRow - minNnzPerRow + 1;
-
-  //zero row check
-  if (numBins<0) numBins =0;
-
-  int *bins;
-  if (numBins)
-    bins = (int *) calloc(numBins, sizeof(int));
-
-  for(dlong i=0; i<A->Nrows; i++)
-    bins[rowCounters[i]-minNnzPerRow]++;
-
-  dfloat threshold = 2.0/3.0;
-  dlong totalNNZ = csrA->diagNNZ+csrA->offdNNZ;
-  int nnzPerRow = 0;
-  dlong nnz = 0;
-
-  //increase the nnz per row in E until it holds threshold*totalnnz nonzeros
-  for(int i=0; i<numBins; i++){
-    nnz += bins[i] * (i+minNnzPerRow);
-    if((nnz > threshold*totalNNZ)||(i==numBins-1)){
-      nnzPerRow = i+minNnzPerRow;
-      break;
-    }
-  }
-  */
-  if(Nrows) {
-    free(rowCounters);
-    // free(bins);
-  }
-
-  int nnzPerRow = maxNnzPerRow;
-
-  //build the ELL matrix from the local CSR
-  E = new ELL(Nrows, Ncols);
-  C = new MCSR(Nrows, Ncols);
-
-  E->nnzPerRow = nnzPerRow;
-
-  E->cols  = (dlong *) calloc(Nrows*E->nnzPerRow, sizeof(dlong));
-  E->vals = (dfloat *) calloc(Nrows*E->nnzPerRow, sizeof(dfloat));
-
-  C->nnz = 0;
-  C->actualRows = 0;
-
-  for(dlong i=0; i<Nrows; i++){
-    dlong Jstart = A->diag->rowStarts[i];
-    dlong Jend   = A->diag->rowStarts[i+1];
-    int rowNnz = (int)  (Jend - Jstart);
-
-    // store only min of nnzPerRow and rowNnz
-    int maxNnz = (nnzPerRow >= rowNnz) ? rowNnz : nnzPerRow;
-
-    for(int c=0; c<maxNnz; c++){
-      E->cols[i*nnzPerRow+c] = A->diag->cols[Jstart+c];
-      E->vals[i*nnzPerRow+c] = A->diag->vals[Jstart+c];
-    }
-
-    for(int c=maxNnz; c<nnzPerRow; c++){
-      E->cols[i*nnzPerRow+c] = -1; //ignore this column
-    }
-
-    // count the number of nonzeros to be stored in MCSR format
-
-    //all of offd
-    int cnt= (int) (A->offd->rowStarts[i+1]-A->offd->rowStarts[i]);
-    if (rowNnz>nnzPerRow)
-      cnt += rowNnz-nnzPerRow; //excess of diag
-
-    if (cnt) {
-      C->nnz += cnt;
-      C->actualRows++;
-    }
-  }
-
-  C->rowStarts = (dlong *) calloc(C->actualRows+1, sizeof(dlong));
-  C->rows = (dlong  *) calloc(C->actualRows, sizeof(dlong));
-  C->cols = (dlong  *) calloc(C->nnz, sizeof(dlong));
-  C->vals = (dfloat *) calloc(C->nnz, sizeof(dfloat));
-
-  dlong row = 0;
-  dlong cnt = 0;
-  for(dlong i=0; i<Nrows; i++){
-    dlong Jstart = A->diag->rowStarts[i];
-    dlong Jend   = A->diag->rowStarts[i+1];
-    int rowNnz = (int)  (Jend - Jstart);
-    int rowCnt =0;
-
-    // store the remaining row in MCSR format
-    if(rowNnz > nnzPerRow){
-      rowCnt += rowNnz-nnzPerRow;
-      for(int c=nnzPerRow; c<rowNnz; c++){
-        C->cols[cnt] = A->diag->cols[Jstart+c];
-        C->vals[cnt] = A->diag->vals[Jstart+c];
-        cnt++;
-      }
-    }
-
-    //add the offd non-zeros
-    Jstart = A->offd->rowStarts[i];
-    Jend   = A->offd->rowStarts[i+1];
-    rowCnt += (int) (Jend-Jstart);
-    for (dlong j=Jstart;j<Jend;j++) {
-      C->cols[cnt] = A->offd->cols[j];
-      C->vals[cnt] = A->offd->vals[j];
-      cnt++;
-    }
-
-    if (rowCnt) {
-      C->rows[row++] = i;
-      C->rowStarts[row] = cnt;
-    }
-  }
-
-  nullSpace = A->nullSpace;
-  nullSpacePenalty = A->nullSpacePenalty;
-
-  null = A->null;
-  o_null = A->o_null;
-
-  diagA = A->diagA;
-  o_diagA = A->o_diagA;
-
-  diagInv = A->diagInv;
-  o_diagInv = A->o_diagInv;
-
-  comm = A->comm;
-  globalRowStarts = A->globalRowStarts;
-  globalColStarts = A->globalColStarts;
-  colMap = A->colMap;
-
-  halo = A->halo;
-  NlocalCols = A->NlocalCols;
-}
-
-parHYB::~parHYB() {
-  delete E;
-  delete C;
-
-  // if (diagA)  free(diagA);
-  // if (diagInv)  free(diagInv);
-
-  if (o_diagA.size()) o_diagA.free();
-  if (o_diagInv.size()) o_diagInv.free();
-
-  // if (null) free(null);
-  if (o_null.size()) o_null.free();
-
-  // if (globalRowStarts) free(globalRowStarts);
-  // if (globalColStarts) free(globalColStarts);
-
-  // if (colMap) free(colMap);
-
-  if (halo) halo->Free();
-};
-
-void parHYB::syncToDevice(platform_t& platform) {
+void parCSR::syncToDevice() {
 
   occa::device& device = platform.device;
 
-  E->syncToDevice(device);
-  C->syncToDevice(device);
+  diag->syncToDevice(device);
+  offd->syncToDevice(device);
 
   if (Nrows) {
     o_diagA   = device.malloc(Nrows*sizeof(dfloat), diagA);

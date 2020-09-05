@@ -39,8 +39,6 @@ namespace parAlmond {
 
   extern occa::kernel SpMVcsrKernel1;
   extern occa::kernel SpMVcsrKernel2;
-  extern occa::kernel SpMVellKernel1;
-  extern occa::kernel SpMVellKernel2;
   extern occa::kernel SpMVmcsrKernel1;
   extern occa::kernel SpMVmcsrKernel2;
 

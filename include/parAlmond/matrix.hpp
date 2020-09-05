@@ -57,10 +57,12 @@ class CSR: public matrix_t {
 
 public:
   dlong nnz;
-  dlong  *rowStarts=NULL;
-  dlong  *cols=NULL;
-  dfloat *vals=NULL;
+  dlong  *blockRowStarts=nullptr;
+  dlong  *rowStarts=nullptr;
+  dlong  *cols=nullptr;
+  dfloat *vals=nullptr;
 
+  occa::memory o_blockRowStarts;
   occa::memory o_rowStarts;
   occa::memory o_cols;
   occa::memory o_vals;
@@ -68,28 +70,7 @@ public:
   CSR(dlong N=0, dlong M=0);
   ~CSR();
 
-  void SpMV(const dfloat alpha,        dfloat *x, const dfloat beta, dfloat *y);
-  void SpMV(const dfloat alpha,        dfloat *x, const dfloat beta, const dfloat *y, dfloat *z);
-  void SpMV(const dfloat alpha, occa::memory o_x, const dfloat beta, const occa::memory o_y);
-  void SpMV(const dfloat alpha, occa::memory o_x, const dfloat beta, occa::memory o_y, occa::memory o_z);
-};
-
-class ELL: public matrix_t {
-
-public:
-  int   nnzPerRow;
-  dlong actualNNZ;
-
-  dlong  *cols=NULL;
-  dfloat *vals=NULL;
-
-  occa::memory o_cols;
-  occa::memory o_vals;
-
-  ELL(dlong N=0, dlong M=0);
-  ~ELL();
-
-  void syncToDevice(occa::device device);
+  void syncToDevice(occa::device &device);
 
   void SpMV(const dfloat alpha,        dfloat *x, const dfloat beta, dfloat *y);
   void SpMV(const dfloat alpha,        dfloat *x, const dfloat beta, const dfloat *y, dfloat *z);
@@ -102,11 +83,13 @@ class MCSR: public matrix_t {
 public:
   dlong nnz;
   dlong actualRows;
-  dlong  *rowStarts=NULL;
-  dlong  *rows=NULL;
-  dlong  *cols=NULL;
-  dfloat *vals=NULL;
+  dlong  *blockRowStarts=nullptr;
+  dlong  *rowStarts=nullptr;
+  dlong  *rows=nullptr;
+  dlong  *cols=nullptr;
+  dfloat *vals=nullptr;
 
+  occa::memory o_blockRowStarts;
   occa::memory o_rowStarts;
   occa::memory o_rows;
   occa::memory o_cols;
@@ -115,7 +98,7 @@ public:
   MCSR(dlong N=0, dlong M=0);
   ~MCSR();
 
-  void syncToDevice(occa::device device);
+  void syncToDevice(occa::device& device);
 
   void SpMV(const dfloat alpha,        dfloat *x, const dfloat beta, dfloat *y);
   void SpMV(const dfloat alpha,        dfloat *x, const dfloat beta, const dfloat *y, dfloat *z);
@@ -127,8 +110,8 @@ class parCOO {
 
 public:
   dlong nnz=0;
-  nonZero_t *entries=NULL;
-  hlong *globalStarts=NULL;
+  nonZero_t *entries=nullptr;
+  hlong *globalStarts=nullptr;
 
   parCOO(): nnz(0) {}
   ~parCOO() {
@@ -148,24 +131,24 @@ public:
   //non-local
   CSR *offd;
 
-  dfloat *diagA=NULL;
-  dfloat *diagInv=NULL;
+  dfloat *diagA=nullptr;
+  dfloat *diagInv=nullptr;
 
   occa::memory o_diagA;
   occa::memory o_diagInv;
 
   bool nullSpace;
   dfloat nullSpacePenalty;
-  dfloat *null=NULL;
+  dfloat *null=nullptr;
   occa::memory o_null;
 
   //partition info
   MPI_Comm comm;
-  hlong *globalRowStarts=NULL;
-  hlong *globalColStarts=NULL;
-  hlong *colMap=NULL;
+  hlong *globalRowStarts=nullptr;
+  hlong *globalColStarts=nullptr;
+  hlong *colMap=nullptr;
 
-  halo_t *halo = NULL;
+  halo_t *halo = nullptr;
   dlong NlocalCols = 0;
 
   parCSR(dlong N, dlong M, platform_t& _platform);
@@ -186,53 +169,13 @@ public:
 
   dfloat rhoDinvA();
 
-  void SpMV(const dfloat alpha,        dfloat *x, const dfloat beta, dfloat *y);
-  void SpMV(const dfloat alpha,        dfloat *x, const dfloat beta, const dfloat *y, dfloat *z);
-  void SpMV(const dfloat alpha, occa::memory o_x, const dfloat beta, const occa::memory o_y);
-  void SpMV(const dfloat alpha, occa::memory o_x, const dfloat beta, occa::memory o_y, occa::memory o_z);
-};
-
-
-class parHYB: public matrix_t {
-
-public:
-
-  ELL  *E;
-  MCSR *C;
-
-  dfloat *diagA=NULL;
-  dfloat *diagInv=NULL;
-
-  occa::memory o_diagA;
-  occa::memory o_diagInv;
-
-  bool nullSpace;
-  dfloat nullSpacePenalty;
-  dfloat *null=NULL;
-  occa::memory o_null;
-
-  //partition info
-  MPI_Comm comm;
-  hlong *globalRowStarts=NULL;
-  hlong *globalColStarts=NULL;
-  hlong *colMap=NULL;
-
-  halo_t *halo = NULL;
-  dlong NlocalCols = 0;
-
-  parHYB(dlong N=0, dlong M=0);
-  parHYB(parCSR *A); //build from parCSR
-
-  ~parHYB();
-
-  void syncToDevice(platform_t& platform);
+  void syncToDevice();
 
   void SpMV(const dfloat alpha,        dfloat *x, const dfloat beta, dfloat *y);
   void SpMV(const dfloat alpha,        dfloat *x, const dfloat beta, const dfloat *y, dfloat *z);
   void SpMV(const dfloat alpha, occa::memory o_x, const dfloat beta, const occa::memory o_y);
   void SpMV(const dfloat alpha, occa::memory o_x, const dfloat beta, occa::memory o_y, occa::memory o_z);
 };
-
 
 } //namespace parAlmond
 
