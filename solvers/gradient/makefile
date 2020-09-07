@@ -113,7 +113,7 @@ SRC =$(wildcard src/*.cpp)
 OBJS=$(SRC:.cpp=.o)
 
 .PHONY: all lib libp_libs clean clean-libs \
-		clean-kernels realclean help info silentUpdate
+		clean-kernels realclean help info
 
 all: gradientMain
 
@@ -126,7 +126,7 @@ else
 	@${MAKE} -C ${LIBP_LIBS_DIR} $(GRADIENT_LIBP_LIBS) --no-print-directory
 endif
 
-gradientMain:$(OBJS) gradientMain.o | libp_libs silentUpdate
+gradientMain:$(OBJS) gradientMain.o libp_libs
 ifneq (,${verbose})
 	$(LIBP_LD) -o gradientMain gradientMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
 else
@@ -150,9 +150,6 @@ else
 	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
 	@$(LIBP_MPICXX) -o $*.o -c $*.cpp $(GRADIENT_CXXFLAGS)
 endif
-
-silentUpdate:
-	@true
 
 #cleanup
 clean:

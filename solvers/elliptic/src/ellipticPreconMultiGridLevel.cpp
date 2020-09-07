@@ -27,7 +27,7 @@ SOFTWARE.
 #include "elliptic.hpp"
 #include "ellipticPrecon.hpp"
 
-void MGLevel::Ax(occa::memory &o_X, occa::memory &o_Ax) {
+void MGLevel::Operator(occa::memory &o_X, occa::memory &o_Ax) {
   elliptic.Operator(o_X,o_Ax);
 }
 
@@ -74,7 +74,7 @@ void MGLevel::smoothJacobi(occa::memory &o_r, occa::memory &o_X, bool xIsZero) {
   }
 
   //res = r-Ax
-  Ax(o_X,o_RES);
+  Operator(o_X,o_RES);
   linAlg.axpy(Ntotal, 1.f, o_r, -1.f, o_RES);
 
   //smooth the fine problem x = x + S(r-Ax)
@@ -103,7 +103,7 @@ void MGLevel::smoothChebyshev (occa::memory &o_r, occa::memory &o_X, bool xIsZer
     linAlg.axpy(Ntotal, invTheta, o_RES, 0.f, o_d);
   } else {
     //res = S*(r-Ax)
-    Ax(o_X,o_RES);
+    Operator(o_X,o_RES);
     linAlg.axpy(Ntotal, 1.f, o_r, -1.f, o_RES);
     linAlg.amx(Ntotal, 1.f, o_invDiagA, o_RES);
 
@@ -119,7 +119,7 @@ void MGLevel::smoothChebyshev (occa::memory &o_r, occa::memory &o_X, bool xIsZer
       linAlg.axpy(Ntotal, 1.f, o_d, 1.f, o_X);
 
     //r_k+1 = r_k - SAd_k
-    Ax(o_d,o_Ad);
+    Operator(o_d,o_Ad);
     linAlg.amxpy(Ntotal, -1.f, o_invDiagA, o_Ad, 1.f, o_RES);
 
     rho_np1 = 1.0/(2.*sigma-rho_n);
@@ -148,13 +148,10 @@ occa::memory MGLevel::o_smootherResidual2;
 occa::memory MGLevel::o_smootherUpdate;
 
 //build a level and connect it to the previous one
-MGLevel::MGLevel(elliptic_t& _elliptic, int k,
-                 int Nf, int Npf, occa::memory o_weightF_,
-                 parAlmond::KrylovType ktype_, parAlmond::CycleType ctype):
+MGLevel::MGLevel(elliptic_t& _elliptic, int Nf, int Npf, occa::memory& o_weightF_):
   multigridLevel(_elliptic.mesh.Nelements*_elliptic.mesh.Np,
                 (_elliptic.mesh.Nelements+_elliptic.mesh.totalHaloPairs)*_elliptic.mesh.Np,
-                ktype_,
-                _elliptic.mesh.comm),
+                 _elliptic.platform, _elliptic.settings),
   elliptic(_elliptic),
   mesh(_elliptic.mesh),
   linAlg(_elliptic.linAlg) {
@@ -172,7 +169,7 @@ MGLevel::MGLevel(elliptic_t& _elliptic, int k,
   }
 
   SetupSmoother();
-  AllocateStorage(k, ctype);
+  AllocateStorage();
 
   if (mesh.N<Nf) {
     if (mesh.elementType==QUADRILATERALS || mesh.elementType==HEXAHEDRA) {
@@ -226,7 +223,7 @@ MGLevel::MGLevel(elliptic_t& _elliptic, int k,
   }
 }
 
-void MGLevel::AllocateStorage(int k, parAlmond::CycleType ctype) {
+void MGLevel::AllocateStorage() {
   // extra storage for smoothing op
   size_t Nbytes = Ncols*sizeof(dfloat);
   if (smootherResidualBytes < Nbytes) {
@@ -242,26 +239,6 @@ void MGLevel::AllocateStorage(int k, parAlmond::CycleType ctype) {
     o_smootherResidual2 = elliptic.platform.malloc(Nbytes,smootherResidual);
     o_smootherUpdate = elliptic.platform.malloc(Nbytes,smootherResidual);
     smootherResidualBytes = Nbytes;
-  }
-
-  if (k) x    = (dfloat *) calloc(Ncols,sizeof(dfloat));
-  if (k) rhs  = (dfloat *) calloc(Nrows,sizeof(dfloat));
-  if (k) o_x   = elliptic.platform.malloc(Ncols*sizeof(dfloat),x);
-  if (k) o_rhs = elliptic.platform.malloc(Nrows*sizeof(dfloat),rhs);
-
-  res  = (dfloat *) calloc(Ncols,sizeof(dfloat));
-  o_res = elliptic.platform.malloc(Ncols*sizeof(dfloat),res);
-
-  //kcycle vectors
-  if (ctype==parAlmond::KCYCLE) {
-    if ((k>0) && (k<NUMKCYCLES+1)) {
-      ck = (dfloat *) calloc(Ncols,sizeof(dfloat));
-      vk = (dfloat *) calloc(Nrows,sizeof(dfloat));
-      wk = (dfloat *) calloc(Nrows,sizeof(dfloat));
-      o_ck = elliptic.platform.malloc(Ncols*sizeof(dfloat),ck);
-      o_vk = elliptic.platform.malloc(Nrows*sizeof(dfloat),vk);
-      o_wk = elliptic.platform.malloc(Nrows*sizeof(dfloat),wk);
-    }
   }
 }
 
@@ -429,7 +406,7 @@ dfloat MGLevel::maxEigSmoothAx(){
 
   for(int j=0; j<k; j++){
     // v[j+1] = invD*(A*v[j])
-    Ax(o_V[j],o_AVx);
+    Operator(o_V[j],o_AVx);
     linAlg.amxpy(N, 1.0, o_invDiagA, o_AVx, 0.0, o_V[j+1]);
 
     // modified Gram-Schmidth

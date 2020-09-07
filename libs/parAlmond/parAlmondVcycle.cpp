@@ -24,39 +24,38 @@ SOFTWARE.
 
 */
 
-#ifndef PARALMOND_KERNELS_HPP
-#define PARALMOND_KERNELS_HPP
+#include "parAlmond.hpp"
+#include "parAlmond/parAlmondMultigrid.hpp"
 
 namespace parAlmond {
 
-  void buildParAlmondKernels(MPI_Comm comm, platform_t& platform);
+void multigrid_t::vcycle(const int k, occa::memory& o_RHS, occa::memory& o_X){
 
-  void freeParAlmondKernels();
+  //check for base level
+  if(k==baseLevel) {
+    coarseSolver->solve(o_RHS, o_X);
+    return;
+  }
 
-  extern int Nrefs;
+  multigridLevel *level  = levels[k];
+  multigridLevel *levelC = levels[k+1];
+  occa::memory& o_RHSC = o_rhs[k+1];
+  occa::memory& o_XC   = o_x[k+1];
+  occa::memory& o_RES   = o_scratch;
 
-  extern occa::kernel haloExtractKernel;
+  //apply smoother to x and then compute res = rhs-Ax
+  level->smooth(o_RHS, o_X, true);
+  level->residual(o_RHS, o_X, o_RES);
 
-  extern occa::kernel SpMVcsrKernel1;
-  extern occa::kernel SpMVcsrKernel2;
-  extern occa::kernel SpMVmcsrKernel1;
-  extern occa::kernel SpMVmcsrKernel2;
+  // rhsC = P^T res
+  levelC->coarsen(o_RES, o_RHSC);
 
-  extern occa::kernel vectorSetKernel;
-  extern occa::kernel vectorScaleKernel;
-  extern occa::kernel vectorAddScalarKernel;
-  extern occa::kernel vectorAddKernel1;
-  extern occa::kernel vectorAddKernel2;
-  extern occa::kernel vectorDotStarKernel1;
-  extern occa::kernel vectorDotStarKernel2;
-  extern occa::kernel vectorInnerProdKernel;
-  extern occa::kernel vectorAddInnerProdKernel;
-  extern occa::kernel vectorAddWeightedInnerProdKernel;
-  extern occa::kernel kcycleCombinedOp1Kernel;
-  extern occa::kernel kcycleCombinedOp2Kernel;
-  extern occa::kernel kcycleWeightedCombinedOp1Kernel;
-  extern occa::kernel kcycleWeightedCombinedOp2Kernel;
+  vcycle(k+1, o_RHSC, o_XC);
+
+  // x = x + P xC
+  levelC->prolongate(o_XC, o_X);
+
+  level->smooth(o_RHS, o_X, false);
+}
 
 } //namespace parAlmond
-
-#endif

@@ -24,52 +24,43 @@ SOFTWARE.
 
 */
 
-#ifndef PARALMOND_SOLVER_HPP
-#define PARALMOND_SOLVER_HPP
+#include "parAlmond.hpp"
+#include "parAlmond/parAlmondAMGSetup.hpp"
 
 namespace parAlmond {
 
-class solver_t {
+//create coarsened problem
+amgLevel *coarsenAmgLevel(amgLevel *level, dfloat *null){
 
-public:
-  MPI_Comm comm;
-  int rank, size;
+  int size = level->platform.size;
 
-  platform_t& platform;
-  settings_t& settings;
+  //TODO: Make this a runtime option
+  //hard code for now
+  // StrengthType strType = RUGESTUBEN;
+  StrengthType strType = SYMMETRIC;
 
-  bool exact;
-  CycleType    ctype;
-  KrylovType   ktype;
-  SmoothType stype;
+  strongGraph_t *C = strongGraph(level->A, strType);
 
-  int numLevels;
-  int AMGstartLev, baseLevel;
-  multigridLevel **levels=NULL;
+  hlong *FineToCoarse = (hlong *) malloc(level->A->Ncols*sizeof(hlong));
+  hlong *globalAggStarts = (hlong *) calloc(size+1,sizeof(hlong));
 
-  coarseSolver *coarseLevel;
+  formAggregates(level->A, C, FineToCoarse, globalAggStarts);
+  delete C;
 
-  int ChebyshevIterations;
+  // adjustPartition(FineToCoarse, settings);
 
-  solver_t(platform_t& _platform, settings_t& settings_, MPI_Comm comm_);
+  parCSR *P = constructProlongation(level->A, FineToCoarse, globalAggStarts, null);
 
-  ~solver_t();
+  parCSR *R = transpose(P);
 
-  void AMGSetup(parCSR *A);
+  parCSR *A = galerkinProd(level->A, P);
 
-  void Report();
+  amgLevel *coarseLevel = new amgLevel(A,P,R,level->settings);
 
-  void kcycle(int k);
-  void vcycle(int k);
-  void device_kcycle(int k);
-  void device_vcycle(int k);
+  //update the number of columns required for this level (from R)
+  level->Ncols = (level->Ncols > R->Ncols) ? level->Ncols : R->Ncols;
 
-  void pcg(const int maxIt, const dfloat tol);
-  void pgmres(const int maxIt, const dfloat tol);
-  void device_pcg(const int maxIt, const dfloat tol);
-  void device_pgmres(const int maxIt, const dfloat tol);
-};
+  return coarseLevel;
+}
 
 } //namespace parAlmond
-
-#endif

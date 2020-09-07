@@ -24,12 +24,28 @@ SOFTWARE.
 
 */
 
+#ifndef PARALMOND_KERNELS_HPP
+#define PARALMOND_KERNELS_HPP
 
-@kernel void vectorSet(const dlong  N,
-                       const dfloat alpha,
-                       @restrict dfloat *x){
+namespace parAlmond {
 
-  for(dlong n=0;n<N;++n;@tile(p_BLOCKSIZE,@outer,@inner)){
-    x[n] = alpha;
-  }
-}
+  void buildParAlmondKernels(platform_t& platform);
+
+  void freeParAlmondKernels();
+
+  extern int Nrefs;
+
+  extern occa::kernel SpMVcsrKernel1;
+  extern occa::kernel SpMVcsrKernel2;
+  extern occa::kernel SpMVmcsrKernel;
+
+  extern occa::kernel vectorAddInnerProdKernel;
+  extern occa::kernel vectorAddWeightedInnerProdKernel;
+  extern occa::kernel kcycleCombinedOp1Kernel;
+  extern occa::kernel kcycleCombinedOp2Kernel;
+  extern occa::kernel kcycleWeightedCombinedOp1Kernel;
+  extern occa::kernel kcycleWeightedCombinedOp2Kernel;
+
+} //namespace parAlmond
+
+#endif

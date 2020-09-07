@@ -149,7 +149,7 @@ elliptic_t& elliptic_t::Setup(platform_t& platform, mesh_t& mesh,
     elliptic->precon = new JacobiPrecon(*elliptic);
   else if(settings.compareSetting("PRECONDITIONER", "MASSMATRIX"))
     elliptic->precon = new MassMatrixPrecon(*elliptic);
-  else if(settings.compareSetting("PRECONDITIONER", "FULLALMOND"))
+  else if(settings.compareSetting("PRECONDITIONER", "PARALMOND"))
     elliptic->precon = new ParAlmondPrecon(*elliptic);
   else if(settings.compareSetting("PRECONDITIONER", "MULTIGRID"))
     elliptic->precon = new MultiGridPrecon(*elliptic);

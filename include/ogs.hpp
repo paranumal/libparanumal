@@ -254,7 +254,7 @@ public:
 
   void Free();
 
-  static ogs_t *Setup(dlong N, hlong *ids, MPI_Comm &comm,
+  static ogs_t *Setup(dlong N, hlong *ids, const MPI_Comm &comm,
                       int verbose, platform_t& platform);
 
   static void Unique(hlong *ids, dlong _N, MPI_Comm _comm);
@@ -363,7 +363,7 @@ public:
 
   void Free() { if (ogs) { ogs->Free(); ogs=nullptr; } }
 
-  static halo_t *Setup(dlong N, hlong *ids, MPI_Comm &comm,
+  static halo_t *Setup(dlong N, hlong *ids, const MPI_Comm &comm,
                        int verbose, platform_t& platform) {
     halo_t *halo = new halo_t();
     halo->ogs = ogs_t::Setup(N, ids, comm, verbose, platform);

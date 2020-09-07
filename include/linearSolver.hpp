@@ -82,6 +82,30 @@ public:
             const dfloat tol, const int MAXIT, const int verbose);
 };
 
+//Preconditioned GMRES
+class pgmres: public linearSolver_t {
+private:
+  occa::memory *o_V=nullptr;
+  occa::memory o_Ax, o_z, o_r, o_w;
+
+  int restart;
+  int weighted;
+
+  dfloat *H=nullptr, *sn=nullptr, *cs=nullptr, *s=nullptr, *y=nullptr;
+
+  void UpdateGMRES(occa::memory& o_x, const int I);
+
+public:
+  pgmres(dlong _N, dlong _Nhalo,
+       platform_t& _platform, settings_t& _settings,
+       int _weighted, occa::memory& _o_weight);
+  ~pgmres();
+
+  int Solve(solver_t& solver, precon_t& precon,
+            occa::memory& o_x, occa::memory& o_rhs,
+            const dfloat tol, const int MAXIT, const int verbose);
+};
+
 //Non-Blocking Preconditioned Conjugate Gradient
 class nbpcg: public linearSolver_t {
 private:

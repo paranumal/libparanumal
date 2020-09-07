@@ -118,7 +118,7 @@ void fpeSettings_t::report() {
     }
 
     if (compareSetting("ELLIPTIC PRECONDITIONER","MULTIGRID")
-      ||compareSetting("ELLIPTIC PRECONDITIONER","FULLALMOND")) {
+      ||compareSetting("ELLIPTIC PRECONDITIONER","PARALMOND")) {
       reportSetting("ELLIPTIC PARALMOND CYCLE");
       reportSetting("ELLIPTIC PARALMOND SMOOTHER");
       reportSetting("ELLIPTIC PARALMOND CHEBYSHEV DEGREE");

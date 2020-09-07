@@ -25,68 +25,49 @@ SOFTWARE.
 */
 
 #include "parAlmond.hpp"
+#include "parAlmond/parAlmondAMGLevel.hpp"
 
 namespace parAlmond {
 
-agmgLevel::agmgLevel(parCSR *A_, KrylovType ktype_):
-  multigridLevel(A_->Nrows, A_->Ncols, ktype_, A_->comm) {
+amgLevel::amgLevel(parCSR *_A, settings_t& _settings):
+  multigridLevel(_A->Nrows, _A->Ncols, _A->platform, _settings),
+  A(_A) {
 
-  weighted = false;
-  gatherLevel = false;
-  ogs=nullptr;
-
-  A = A_;
-  P = nullptr;
-  R = nullptr;
+  //determine smoother
+  if (settings.compareSetting("PARALMOND SMOOTHER", "CHEBYSHEV")) {
+    stype = CHEBYSHEV;
+    settings.getSetting("PARALMOND CHEBYSHEV DEGREE", ChebyshevIterations);
+  } else { //default to DAMPED_JACOBI
+    stype = DAMPED_JACOBI;
+  }
 }
 
-agmgLevel::agmgLevel(parCSR *A_, parCSR *P_, parCSR *R_, KrylovType ktype_):
-  multigridLevel(A_->Nrows, A_->Ncols, ktype_, A_->comm) {
-
+amgLevel::amgLevel(parCSR *_A, parCSR *_P, parCSR *_R, settings_t& _settings):
+  multigridLevel(_A->Nrows, _A->Ncols, _A->platform, _settings),
+  A(_A), P(_P), R(_R) {
   //max
-  Ncols = (A_->Ncols>P_->Ncols) ? A_->Ncols : P_->Ncols;
+  Ncols = (A->Ncols>P->Ncols) ? A->Ncols : P->Ncols;
 
-  weighted = false;
-  gatherLevel = false;
-  ogs=nullptr;
-
-  A = A_;
-  P = P_;
-  R = R_;
+  //determine smoother
+  if (settings.compareSetting("PARALMOND SMOOTHER", "CHEBYSHEV")) {
+    stype = CHEBYSHEV;
+    settings.getSetting("PARALMOND CHEBYSHEV DEGREE", ChebyshevIterations);
+  } else { //default to DAMPED_JACOBI
+    stype = DAMPED_JACOBI;
+  }
 }
 
-agmgLevel::~agmgLevel() {
+amgLevel::~amgLevel() {
   if (  A) delete   A;
   if (  P) delete   P;
   if (  R) delete   R;
 }
 
-void agmgLevel::Ax        (dfloat *X, dfloat *Ax){ A->SpMV(1.0, X, 0.0, Ax); }
-
-void agmgLevel::coarsen   (dfloat *r, dfloat *Rr){
-  if (gatherLevel) {
-    ogs->Gather(Gx, r, ogs_dfloat, ogs_add, ogs_notrans);
-    R->SpMV(1.0, Gx, 0.0, Rr);
-  } else {
-    R->SpMV(1.0, r, 0.0, Rr);
-  }
+void amgLevel::Operator(occa::memory& o_X, occa::memory& o_Ax){
+  A->SpMV(1.0, o_X, 0.0, o_Ax);
 }
 
-void agmgLevel::prolongate(dfloat *X, dfloat *Px){
-  if (gatherLevel) {
-    P->SpMV(1.0, X, 0.0, Gx);
-    ogs->Scatter(Sx, Gx, ogs_dfloat, ogs_add, ogs_notrans);
-    vectorAdd(P->Nrows, 1.0, Sx, 1.0, Px);
-  } else {
-    P->SpMV(1.0, X, 1.0, Px);
-  }
-}
-
-void agmgLevel::residual  (dfloat *RHS, dfloat *X, dfloat *RES) { A->SpMV(-1.0, X, 1.0, RHS, RES); }
-
-void agmgLevel::Ax        (occa::memory& o_X, occa::memory& o_Ax){ A->SpMV(1.0, o_X, 0.0, o_Ax); }
-
-void agmgLevel::coarsen   (occa::memory& o_r, occa::memory& o_Rr){
+void amgLevel::coarsen   (occa::memory& o_r, occa::memory& o_Rr){
   if (gatherLevel) {
     ogs->Gather(o_Gx, o_r, ogs_dfloat, ogs_add, ogs_notrans);
     // vectorDotStar(ogs->Ngather, o_gatherWeight, o_Gx);
@@ -96,80 +77,89 @@ void agmgLevel::coarsen   (occa::memory& o_r, occa::memory& o_Rr){
   }
 }
 
-void agmgLevel::prolongate(occa::memory& o_X, occa::memory& o_Px){
+void amgLevel::prolongate(occa::memory& o_X, occa::memory& o_Px){
   if (gatherLevel) {
     P->SpMV(1.0, o_X, 0.0, o_Gx);
     ogs->Scatter(o_Sx, o_Gx, ogs_dfloat, ogs_add, ogs_notrans);
-    vectorAdd(ogs->N, 1.0, o_Sx, 1.0, o_Px);
+    platform.linAlg.axpy(ogs->N, 1.0, o_Sx, 1.0, o_Px);
   } else {
     P->SpMV(1.0, o_X, 1.0, o_Px);
   }
 }
 
-void agmgLevel::residual  (occa::memory& o_RHS, occa::memory& o_X, occa::memory& o_RES) { A->SpMV(-1.0, o_X, 1.0, o_RHS, o_RES); }
+void amgLevel::residual  (occa::memory& o_RHS, occa::memory& o_X,
+                          occa::memory& o_RES) {
+  A->SpMV(-1.0, o_X, 1.0, o_RHS, o_RES);
+}
 
-void agmgLevel::smooth(dfloat *RHS, dfloat *X, bool x_is_zero){
-  if(stype == JACOBI){
-    this->smoothJacobi(RHS, X, x_is_zero);
-  } else if(stype == DAMPED_JACOBI){
-    this->smoothDampedJacobi(RHS, X, x_is_zero);
+void amgLevel::smooth(occa::memory& o_RHS, occa::memory& o_X, bool x_is_zero){
+  if(stype == DAMPED_JACOBI){
+    smoothDampedJacobi(o_RHS, o_X, x_is_zero);
   } else if(stype == CHEBYSHEV){
-    this->smoothChebyshev(RHS, X, x_is_zero);
+    smoothChebyshev(o_RHS, o_X, x_is_zero);
   }
 }
 
-void agmgLevel::smooth(occa::memory& o_RHS, occa::memory& o_X, bool x_is_zero){
-  if(stype == JACOBI){
-    this->smoothJacobi(o_RHS, o_X, x_is_zero);
-  } else if(stype == DAMPED_JACOBI){
-    this->smoothDampedJacobi(o_RHS, o_X, x_is_zero);
-  } else if(stype == CHEBYSHEV){
-    this->smoothChebyshev(o_RHS, o_X, x_is_zero);
+void amgLevel::setupSmoother(){
+
+  // estimate rho(invD * A)
+  dfloat rho = A->rhoDinvA();
+
+  if (stype == DAMPED_JACOBI) {
+    lambda = (4./3.)/rho;
+  } else if (stype == CHEBYSHEV) {
+    lambda1 = rho;
+    lambda0 = rho/10.;
   }
 }
 
-void agmgLevel::Report() {
+void amgLevel::syncToDevice(){
+  A->syncToDevice();
+  if (P) P->syncToDevice();
+  if (R) R->syncToDevice();
+}
+
+void amgLevel::Report() {
 
   //This setup can be called by many subcommunicators, so only
   // print on the global root.
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  int rank=platform.rank;
 
   hlong hNrows = (hlong) Nrows;
 
   int active = (Nrows>0) ? 1:0;
   int totalActive=0;
-  MPI_Allreduce(&active, &totalActive, 1, MPI_INT, MPI_SUM, comm);
+  MPI_Allreduce(&active, &totalActive, 1, MPI_INT, MPI_SUM, platform.comm);
 
   dlong minNrows=0, maxNrows=0;
   hlong totalNrows=0;
   dfloat avgNrows;
-  MPI_Allreduce(&Nrows, &maxNrows, 1, MPI_DLONG, MPI_MAX, comm);
-  MPI_Allreduce(&hNrows, &totalNrows, 1, MPI_HLONG, MPI_SUM, comm);
+  MPI_Allreduce(&Nrows, &maxNrows, 1, MPI_DLONG, MPI_MAX, platform.comm);
+  MPI_Allreduce(&hNrows, &totalNrows, 1, MPI_HLONG, MPI_SUM, platform.comm);
   avgNrows = (dfloat) totalNrows/totalActive;
 
   if (Nrows==0) Nrows=maxNrows; //set this so it's ignored for the global min
-  MPI_Allreduce(&Nrows, &minNrows, 1, MPI_DLONG, MPI_MIN, comm);
+  MPI_Allreduce(&Nrows, &minNrows, 1, MPI_DLONG, MPI_MIN, platform.comm);
 
 
   long long int nnz;
-  nnz = A->diag->nnz+A->offd->nnz;
+  nnz = A->diag.nnz+A->offd.nnz;
 
   long long int minNnz=0, maxNnz=0, totalNnz=0;
-  MPI_Allreduce(&nnz, &maxNnz,   1, MPI_LONG_LONG_INT, MPI_MAX, comm);
-  MPI_Allreduce(&nnz, &totalNnz, 1, MPI_LONG_LONG_INT, MPI_SUM, comm);
+  MPI_Allreduce(&nnz, &maxNnz,   1, MPI_LONG_LONG_INT, MPI_MAX, platform.comm);
+  MPI_Allreduce(&nnz, &totalNnz, 1, MPI_LONG_LONG_INT, MPI_SUM, platform.comm);
 
   if (nnz==0) nnz = maxNnz; //set this so it's ignored for the global min
-  MPI_Allreduce(&nnz, &minNnz, 1, MPI_LONG_LONG_INT, MPI_MIN, comm);
+  MPI_Allreduce(&nnz, &minNnz, 1, MPI_LONG_LONG_INT, MPI_MIN, platform.comm);
 
   dfloat nnzPerRow = (Nrows==0) ? 0 : (dfloat) nnz/Nrows;
   dfloat minNnzPerRow=0, maxNnzPerRow=0, avgNnzPerRow=0;
-  MPI_Allreduce(&nnzPerRow, &maxNnzPerRow, 1, MPI_DFLOAT, MPI_MAX, comm);
-  MPI_Allreduce(&nnzPerRow, &avgNnzPerRow, 1, MPI_DFLOAT, MPI_SUM, comm);
+  MPI_Allreduce(&nnzPerRow, &maxNnzPerRow, 1, MPI_DFLOAT, MPI_MAX, platform.comm);
+  MPI_Allreduce(&nnzPerRow, &avgNnzPerRow, 1, MPI_DFLOAT, MPI_SUM, platform.comm);
   avgNnzPerRow /= totalActive;
 
   if (Nrows==0) nnzPerRow = maxNnzPerRow;
-  MPI_Allreduce(&nnzPerRow, &minNnzPerRow, 1, MPI_DFLOAT, MPI_MIN, comm);
+  MPI_Allreduce(&nnzPerRow, &minNnzPerRow, 1, MPI_DFLOAT, MPI_MIN, platform.comm);
 
   char smootherString[BUFSIZ];
   if (stype==DAMPED_JACOBI)

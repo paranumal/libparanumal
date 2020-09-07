@@ -114,7 +114,7 @@ def main():
   failCount += test(name="testEllipticTri_C0_ParAlmond",
                     cmd=ellipticBin,
                     settings=ellipticSettings(element=3,data_file=ellipticData2D,dim=2,
-                                              precon="FULLALMOND"),
+                                              precon="PARALMOND"),
                     referenceNorm=0.500000001211135)
   failCount += test(name="testEllipticTri_C0_Multigrid",
                     cmd=ellipticBin,
@@ -136,7 +136,7 @@ def main():
   failCount += test(name="testEllipticQuad_C0_ParAlmond",
                     cmd=ellipticBin,
                     settings=ellipticSettings(element=4,data_file=ellipticData2D,dim=2,
-                                              precon="FULLALMOND"),
+                                              precon="PARALMOND"),
                     referenceNorm=0.500000001211135)
   failCount += test(name="testEllipticQuad_C0_Multigrid",
                     cmd=ellipticBin,
@@ -163,7 +163,7 @@ def main():
   failCount += test(name="testEllipticTet_C0_ParAlmond",
                     cmd=ellipticBin,
                     settings=ellipticSettings(element=6,data_file=ellipticData3D,dim=3, degree=2,
-                                              precon="FULLALMOND"),
+                                              precon="PARALMOND"),
                     referenceNorm=0.353474740220582)
   failCount += test(name="testEllipticTet_C0_Multigrid",
                     cmd=ellipticBin,
@@ -185,7 +185,7 @@ def main():
   failCount += test(name="testEllipticHex_C0_ParAlmond",
                     cmd=ellipticBin,
                     settings=ellipticSettings(element=12,data_file=ellipticData3D,dim=3, degree=2,
-                                              precon="FULLALMOND"),
+                                              precon="PARALMOND"),
                     referenceNorm=0.353553400508458)
   failCount += test(name="testEllipticHex_C0_Multigrid",
                     cmd=ellipticBin,
@@ -265,7 +265,7 @@ def main():
   failCount += test(name="testEllipticTri_Ipdg_ParAlmond",
                     cmd=ellipticBin,
                     settings=ellipticSettings(element=3,data_file=ellipticData2D,dim=2,
-                                              precon="FULLALMOND", discretization="IPDG"),
+                                              precon="PARALMOND", discretization="IPDG"),
                     referenceNorm=0.500000001211135)
   failCount += test(name="testEllipticTri_Ipdg_Multigrid",
                     cmd=ellipticBin,
@@ -282,7 +282,7 @@ def main():
   failCount += test(name="testEllipticQuad_Ipdg_ParAlmond",
                     cmd=ellipticBin,
                     settings=ellipticSettings(element=4,data_file=ellipticData2D,dim=2,
-                                              precon="FULLALMOND", discretization="IPDG"),
+                                              precon="PARALMOND", discretization="IPDG"),
                     referenceNorm=0.500000001211135)
   failCount += test(name="testEllipticQuad_Ipdg_Multigrid",
                     cmd=ellipticBin,
@@ -304,7 +304,7 @@ def main():
   failCount += test(name="testEllipticTet_Ipdg_ParAlmond",
                     cmd=ellipticBin,
                     settings=ellipticSettings(element=6,data_file=ellipticData3D,dim=3, degree=2,
-                                              precon="FULLALMOND", discretization="IPDG"),
+                                              precon="PARALMOND", discretization="IPDG"),
                     referenceNorm=0.353502126562155)
   failCount += test(name="testEllipticTet_Ipdg_Multigrid",
                     cmd=ellipticBin,
@@ -321,7 +321,7 @@ def main():
   failCount += test(name="testEllipticHex_Ipdg_ParAlmond",
                     cmd=ellipticBin,
                     settings=ellipticSettings(element=12,data_file=ellipticData3D,dim=3, degree=2,
-                                              precon="FULLALMOND", discretization="IPDG"),
+                                              precon="PARALMOND", discretization="IPDG"),
                     referenceNorm=0.353553400508458)
   failCount += test(name="testEllipticHex_Ipdg_Multigrid",
                     cmd=ellipticBin,

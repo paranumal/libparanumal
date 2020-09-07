@@ -27,45 +27,15 @@ SOFTWARE.
 #include "ellipticPrecon.hpp"
 
 //AMG preconditioner via parAlmond
-ParAlmondPrecon::ParAlmondPrecon(elliptic_t& _elliptic):
-  elliptic(_elliptic), settings(_elliptic.settings) {
-
-  mesh_t& mesh = elliptic.mesh;
-
-  //build full A matrix and pass to parAlmond
-  parAlmond::parCOO A;
-  if (settings.compareSetting("DISCRETIZATION", "IPDG")) {
-    elliptic.BuildOperatorMatrixIpdg(A);
-  } else if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
-    elliptic.BuildOperatorMatrixContinuous(A);
-  }
-
-  parAlmondHandle = parAlmond::Init(elliptic.platform, settings, mesh.comm);
-  parAlmond::AMGSetup(parAlmondHandle, A,
-                      elliptic.allNeumann, elliptic.allNeumannPenalty);
-
-  parAlmond::Report(parAlmondHandle);
-
-  if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
-    //make buffers to gather this level before passing to parAlmond
-    parAlmond::multigridLevel *baseLevel = parAlmondHandle->levels[0];
-
-    rhsG = (dfloat*) calloc(baseLevel->Ncols,sizeof(dfloat));
-    xG   = (dfloat*) calloc(baseLevel->Ncols,sizeof(dfloat));
-    o_rhsG = elliptic.platform.malloc(baseLevel->Ncols*sizeof(dfloat));
-    o_xG   = elliptic.platform.malloc(baseLevel->Ncols*sizeof(dfloat));
-  }
-}
-
 void ParAlmondPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
 
   if (settings.compareSetting("DISCRETIZATION", "IPDG")) {
 
-    parAlmond::Precon(parAlmondHandle, o_Mr, o_r);
+    parAlmond.Operator(o_r, o_Mr);
 
   } else if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
     elliptic.ogsMasked->Gather(o_rhsG, o_r, ogs_dfloat, ogs_add, ogs_notrans);
-    parAlmond::Precon(parAlmondHandle, o_xG, o_rhsG);
+    parAlmond.Operator(o_rhsG, o_xG);
     elliptic.ogsMasked->Scatter(o_Mr, o_xG, ogs_dfloat, ogs_add, ogs_notrans);
   }
 
@@ -73,6 +43,43 @@ void ParAlmondPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
   if(elliptic.allNeumann) elliptic.ZeroMean(o_Mr);
 }
 
+ParAlmondPrecon::ParAlmondPrecon(elliptic_t& _elliptic):
+  elliptic(_elliptic), settings(_elliptic.settings),
+  parAlmond(elliptic.platform, settings) {
+
+  //build full A matrix and pass to parAlmond
+  parAlmond::parCOO A(elliptic.platform);
+  if (settings.compareSetting("DISCRETIZATION", "IPDG")) {
+    elliptic.BuildOperatorMatrixIpdg(A);
+  } else if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
+    elliptic.BuildOperatorMatrixContinuous(A);
+  }
+
+  //populate null space unit vector
+  int rank = elliptic.platform.rank;
+  int size = elliptic.platform.size;
+  hlong TotalRows = A.globalStarts[size];
+  dlong numLocalRows = (dlong) (A.globalStarts[rank+1]-A.globalStarts[rank]);
+  dfloat *null = (dfloat *) malloc(numLocalRows*sizeof(dfloat));
+  for (dlong i=0;i<numLocalRows;i++) null[i] = 1.0/sqrt(TotalRows);
+
+  parAlmond.AMGSetup(A, elliptic.allNeumann, null, elliptic.allNeumannPenalty);
+  free(null);
+
+  parAlmond.Report();
+
+  if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
+    //make buffers to gather this level before passing to parAlmond
+    dlong Ncols = parAlmond.getNumCols(0);
+
+    rhsG = (dfloat*) calloc(Ncols,sizeof(dfloat));
+    xG   = (dfloat*) calloc(Ncols,sizeof(dfloat));
+    o_rhsG = elliptic.platform.malloc(Ncols*sizeof(dfloat));
+    o_xG   = elliptic.platform.malloc(Ncols*sizeof(dfloat));
+  }
+}
+
 ParAlmondPrecon::~ParAlmondPrecon() {
-  if (parAlmondHandle) parAlmond::Free(parAlmondHandle);
+  if (rhsG) free(rhsG);
+  if (xG) free(xG);
 }

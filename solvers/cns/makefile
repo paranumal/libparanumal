@@ -113,7 +113,7 @@ SRC =$(wildcard src/*.cpp)
 OBJS=$(SRC:.cpp=.o)
 
 .PHONY: all lib libp_libs clean clean-libs \
-		clean-kernels realclean help info silentUpdate
+		clean-kernels realclean help info
 
 all: cnsMain
 
@@ -126,7 +126,7 @@ else
 	@${MAKE} -C ${LIBP_LIBS_DIR} $(CNS_LIBP_LIBS) --no-print-directory
 endif
 
-cnsMain:$(OBJS) cnsMain.o | libp_libs silentUpdate
+cnsMain:$(OBJS) cnsMain.o libp_libs
 ifneq (,${verbose})
 	$(LIBP_LD) -o cnsMain cnsMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
 else
@@ -150,9 +150,6 @@ else
 	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
 	@$(LIBP_MPICXX) -o $*.o -c $*.cpp $(CNS_CXXFLAGS)
 endif
-
-silentUpdate:
-	@true
 
 #cleanup
 clean:

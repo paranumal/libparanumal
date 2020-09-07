@@ -33,7 +33,7 @@ ellipticSettings_t::ellipticSettings_t(const MPI_Comm& _comm):
   //common settings used when the elliptic solver
   // is used inside another solver
   ellipticAddSettings(*this);
-  parAlmondAddSettings(*this);
+  parAlmond::AddSettings(*this);
 }
 
 void ellipticAddRunSettings(settings_t& settings) {
@@ -69,7 +69,7 @@ void ellipticAddSettings(settings_t& settings,
   settings.newSetting(prefix+"PRECONDITIONER",
                       "NONE",
                       "Preconditioning Strategy",
-                      {"NONE", "JACOBI", "MASSMATRIX", "FULLALMOND", "MULTIGRID", "SEMFEM", "OAS"});
+                      {"NONE", "JACOBI", "MASSMATRIX", "PARALMOND", "MULTIGRID", "SEMFEM", "OAS"});
 
   /* MULTIGRID options */
   settings.newSetting(prefix+"MULTIGRID COARSENING",
@@ -114,8 +114,8 @@ void ellipticSettings_t::report() {
     }
 
     if (compareSetting("PRECONDITIONER","MULTIGRID")
-      ||compareSetting("PRECONDITIONER","FULLALMOND"))
-      parAlmondReportSettings(*this);
+      ||compareSetting("PRECONDITIONER","PARALMOND"))
+      parAlmond::ReportSettings(*this);
 
     reportSetting("OUTPUT TO FILE");
     reportSetting("OUTPUT FILE NAME");

@@ -69,7 +69,7 @@ static int compareLocalId(const void *a, const void *b){
 
 void setupRowBlocks(ogsData_t &A, platform_t &platform);
 
-ogs_t *ogs_t::Setup(dlong N, hlong *ids, MPI_Comm &comm,
+ogs_t *ogs_t::Setup(dlong N, hlong *ids, const MPI_Comm &comm,
                     int verbose, platform_t& platform){
 
   ogs_t *ogs = new ogs_t(platform, comm);

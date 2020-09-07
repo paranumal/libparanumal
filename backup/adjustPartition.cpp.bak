@@ -28,6 +28,39 @@ SOFTWARE.
 
 namespace parAlmond {
 
+int compareOwner(const void *a, const void *b){
+  parallelAggregate_t *pa = (parallelAggregate_t *) a;
+  parallelAggregate_t *pb = (parallelAggregate_t *) b;
+
+  if (pa->ownerRank < pb->ownerRank) return -1;
+  if (pa->ownerRank > pb->ownerRank) return +1;
+
+  return 0;
+}
+
+int compareAgg(const void *a, const void *b){
+  parallelAggregate_t *pa = (parallelAggregate_t *) a;
+  parallelAggregate_t *pb = (parallelAggregate_t *) b;
+
+  if (pa->coarseId < pb->coarseId) return -1;
+  if (pa->coarseId > pb->coarseId) return +1;
+
+  if (pa->originRank < pb->originRank) return -1;
+  if (pa->originRank > pb->originRank) return +1;
+
+  return 0;
+}
+
+int compareOrigin(const void *a, const void *b){
+  parallelAggregate_t *pa = (parallelAggregate_t *) a;
+  parallelAggregate_t *pb = (parallelAggregate_t *) b;
+
+  if (pa->originRank < pb->originRank) return -1;
+  if (pa->originRank > pb->originRank) return +1;
+
+  return 0;
+}
+
 void adjustPartition(agmgLevel *level, hlong* FineToCoarse, setupAide options) {
   // MPI info
   int rank, size;

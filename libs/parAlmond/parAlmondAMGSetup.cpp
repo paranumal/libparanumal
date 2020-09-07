@@ -1,0 +1,97 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Rajesh Gandham
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+#include "parAlmond.hpp"
+#include "parAlmond/parAlmondAMGSetup.hpp"
+
+namespace parAlmond {
+
+void parAlmond_t::AMGSetup(parCOO& cooA,
+                         bool nullSpace,
+                         dfloat *nullVector,
+                         dfloat nullSpacePenalty){
+
+  int rank = platform.rank;
+  int size = platform.size;
+
+  if(rank==0) {printf("Setting up AMG...");fflush(stdout);}
+
+  //make csr matrix from coo input
+  parCSR *A = new parCSR(cooA);
+
+  //copy fine nullvector
+  dfloat *null = (dfloat *) malloc(A->Nrows*sizeof(dfloat));
+  memcpy(null, nullVector, A->Nrows*sizeof(dfloat));
+
+  // find target Nrows at coarsest level
+  const int gCoarseSize = multigrid->coarseSolver->getTargetSize();
+
+  amgLevel *L = new amgLevel(A, settings);
+  multigrid->AddLevel(L);
+  L->syncToDevice();
+
+  hlong globalSize = L->A->globalRowStarts[size];
+
+  //if the system if already small, dont create MG levels
+  bool done = false;
+  if(globalSize <= gCoarseSize){
+    multigrid->coarseSolver->setup(A, nullSpace, null, nullSpacePenalty);
+    multigrid->coarseSolver->syncToDevice();
+    multigrid->baseLevel = multigrid->numLevels-1;
+    done = true;
+  }
+
+  while(!done){
+    L->setupSmoother();
+
+    // Create coarse level via AMG. Coarsen null vector
+    amgLevel* Lcoarse = coarsenAmgLevel(L, null);
+
+    multigrid->AddLevel(Lcoarse);
+    Lcoarse->syncToDevice();
+    hlong globalCoarseSize = Lcoarse->A->globalRowStarts[size];
+
+    if(globalCoarseSize <= gCoarseSize || globalSize < 2*globalCoarseSize){
+      if (globalSize < 2*globalCoarseSize && rank==0) {
+        stringstream ss;
+        ss << "AMG coarsening stalling, attemping coarse solver setup with dimension N=" << globalCoarseSize;
+        LIBP_WARNING(ss.str());
+      }
+      multigrid->coarseSolver->setup(Lcoarse->A, nullSpace, null, nullSpacePenalty);
+      multigrid->coarseSolver->syncToDevice();
+      multigrid->baseLevel = multigrid->numLevels-1;
+      break;
+    }
+    globalSize = globalCoarseSize;
+    L = Lcoarse;
+  }
+
+  free(null);
+
+  if(rank==0) printf("done.\n");
+}
+
+} //namespace parAlmond

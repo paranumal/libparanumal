@@ -112,7 +112,7 @@ SRC =$(wildcard src/*.cpp)
 OBJS=$(SRC:.cpp=.o)
 
 .PHONY: all libp_libs clean clean-libs \
-		clean-kernels realclean help info silentUpdate
+		clean-kernels realclean help info
 
 all: ellipticMain
 
@@ -125,7 +125,7 @@ else
 	@${MAKE} -C ${LIBP_LIBS_DIR} $(ELLIPTIC_LIBP_LIBS) --no-print-directory
 endif
 
-ellipticMain:$(OBJS) ellipticMain.o | libp_libs silentUpdate
+ellipticMain:$(OBJS) ellipticMain.o libp_libs
 ifneq (,${verbose})
 	$(LIBP_LD) -o ellipticMain ellipticMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
 else
@@ -149,9 +149,6 @@ else
 	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
 	@$(LIBP_MPICXX) -o $*.o -c $*.cpp $(ELLIPTIC_CXXFLAGS)
 endif
-
-silentUpdate:
-	@true
 
 #cleanup
 clean:

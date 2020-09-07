@@ -25,26 +25,59 @@ SOFTWARE.
 */
 
 #include "parAlmond.hpp"
+#include "parAlmond/parAlmondCoarseSolver.hpp"
 
 namespace parAlmond {
 
-coarseSolver::coarseSolver(settings_t& settings_):
-  settings(settings_) {
-  gatherLevel = false;
+void coarseSolver_t::solve(occa::memory& o_rhs, occa::memory& o_x) {
+
+  if (gatherLevel) {
+    ogs->Gather(o_Gx, o_rhs, ogs_dfloat, ogs_add, ogs_notrans);
+
+    if(N) o_Gx.copyTo(rhsLocal, N*sizeof(dfloat), 0);
+  } else {
+    if(N) o_rhs.copyTo(rhsLocal, N*sizeof(dfloat), 0);
+  }
+
+  //gather the full vector
+  MPI_Allgatherv(rhsLocal,             N,                MPI_DFLOAT,
+                 rhsCoarse, coarseCounts, coarseOffsets, MPI_DFLOAT, platform.comm);
+
+  //multiply by local part of the exact matrix inverse
+  // #pragma omp parallel for
+  for (int n=0;n<N;n++) {
+    xLocal[n] = 0.;
+    for (int m=0;m<coarseTotal;m++) {
+      xLocal[n] += invCoarseA[n*coarseTotal+m]*rhsCoarse[m];
+    }
+  }
+
+  if (gatherLevel) {
+    if(N) o_Gx.copyFrom(xLocal, N*sizeof(dfloat), 0);
+    ogs->Scatter(o_x, o_Gx, ogs_dfloat, ogs_add, ogs_notrans);
+  } else {
+    if(N) o_x.copyFrom(xLocal, N*sizeof(dfloat), 0);
+  }
 }
 
-int coarseSolver::getTargetSize() {
+
+int coarseSolver_t::getTargetSize() {
   return 1000;
 }
 
-//set up exact solver using xxt
-void coarseSolver::setup(parCSR *A) {
+typedef struct {
 
-  comm = A->comm;
+  hlong row;
+  hlong col;
+  dfloat val;
 
-  int rank, size;
-  MPI_Comm_rank(comm,&rank);
-  MPI_Comm_size(comm,&size);
+} nonzero_t;
+
+void coarseSolver_t::setup(parCSR *A, bool nullSpace,
+                           dfloat *nullVector, dfloat nullSpacePenalty) {
+
+  int rank = platform.rank;
+  int size = platform.size;
 
   //copy the global coarse partition as ints
   coarseOffsets = (int* ) calloc(size+1,sizeof(int));
@@ -57,15 +90,7 @@ void coarseSolver::setup(parCSR *A) {
 
   coarseCounts = (int*) calloc(size,sizeof(int));
 
-  // had to move this later
-  // if(settings.compareSetting("PARALMOND SMOOTH COARSEST", "TRUE")){
-  //   if(rank==0) printf("WARNING !!!!!: not building coarsest level matrix\n");
-  //   return; // bail early as this will not get used
-  // }
-
-
-
-  int sendNNZ = (int) (A->diag->nnz+A->offd->nnz);
+  int sendNNZ = (int) (A->diag.nnz+A->offd.nnz);
 
   if((rank==0)&&(settings.compareSetting("VERBOSE","TRUE")))
     {printf("Setting up coarse solver...");fflush(stdout);}
@@ -90,20 +115,24 @@ void coarseSolver::setup(parCSR *A) {
   //populate matrix
   int cnt = 0;
   for (int n=0;n<N;n++) {
-    int start = (int) A->diag->rowStarts[n];
-    int end   = (int) A->diag->rowStarts[n+1];
+    const int start = (int) A->diag.rowStarts[n];
+    const int end   = (int) A->diag.rowStarts[n+1];
     for (int m=start;m<end;m++) {
       sendNonZeros[cnt].row = n + coarseOffset;
-      sendNonZeros[cnt].col = A->diag->cols[m] + coarseOffset;
-      sendNonZeros[cnt].val = A->diag->vals[m];
+      sendNonZeros[cnt].col = A->diag.cols[m] + coarseOffset;
+      sendNonZeros[cnt].val = A->diag.vals[m];
       cnt++;
     }
-    start = (int) A->offd->rowStarts[n];
-    end   = (int) A->offd->rowStarts[n+1];
+  }
+
+  for (int n=0;n<A->offd.nzRows;n++) {
+    const int row   = (int) A->offd.rows[n];
+    const int start = (int) A->offd.rowStarts[n];
+    const int end   = (int) A->offd.rowStarts[n+1];
     for (dlong m=start;m<end;m++) {
-      sendNonZeros[cnt].row = n + coarseOffset;
-      sendNonZeros[cnt].col = A->colMap[A->offd->cols[m]];
-      sendNonZeros[cnt].val = A->offd->vals[m];
+      sendNonZeros[cnt].row = row + coarseOffset;
+      sendNonZeros[cnt].col = A->colMap[A->offd.cols[m]];
+      sendNonZeros[cnt].val = A->offd.vals[m];
       cnt++;
     }
   }
@@ -112,7 +141,7 @@ void coarseSolver::setup(parCSR *A) {
   int *recvNNZ    = (int*) calloc(size,sizeof(int));
   int *NNZoffsets = (int*) calloc(size+1,sizeof(int));
   MPI_Allgather(&sendNNZ, 1, MPI_INT,
-                 recvNNZ, 1, MPI_INT, comm);
+                 recvNNZ, 1, MPI_INT, platform.comm);
 
   int totalNNZ = 0;
   for (int r=0;r<size;r++) {
@@ -123,7 +152,7 @@ void coarseSolver::setup(parCSR *A) {
   nonzero_t *recvNonZeros = (nonzero_t *) calloc(totalNNZ, sizeof(nonzero_t));
 
   MPI_Allgatherv(sendNonZeros, sendNNZ,             MPI_NONZERO_T,
-                 recvNonZeros, recvNNZ, NNZoffsets, MPI_NONZERO_T, comm);
+                 recvNonZeros, recvNNZ, NNZoffsets, MPI_NONZERO_T, platform.comm);
 
   //gather null vector
   dfloat *nullTotal = (dfloat*) calloc(coarseTotal,sizeof(dfloat));
@@ -131,12 +160,12 @@ void coarseSolver::setup(parCSR *A) {
   for (int r=0;r<size;r++)
     coarseCounts[r] = coarseOffsets[r+1]-coarseOffsets[r];
 
-  MPI_Allgatherv(  A->null,          N,                MPI_DFLOAT,
-                 nullTotal, coarseCounts, coarseOffsets, MPI_DFLOAT,
-                 comm);
+  MPI_Allgatherv(nullVector,            N,                MPI_DFLOAT,
+                  nullTotal, coarseCounts, coarseOffsets, MPI_DFLOAT,
+                 platform.comm);
 
   //clean up
-  MPI_Barrier(comm);
+  MPI_Barrier(platform.comm);
   MPI_Type_free(&MPI_NONZERO_T);
   free(sendNonZeros);
   free(NNZoffsets);
@@ -150,10 +179,10 @@ void coarseSolver::setup(parCSR *A) {
     coarseA[n*coarseTotal+m] = recvNonZeros[i].val;
   }
 
-  if (A->nullSpace) { //A is dense due to nullspace augmentation
+  if (nullSpace) { //A is dense due to nullspace augmentation
     for (int n=0;n<coarseTotal;n++) {
       for (int m=0;m<coarseTotal;m++) {
-        coarseA[n*coarseTotal+m] += A->nullSpacePenalty*nullTotal[n]*nullTotal[m];
+        coarseA[n*coarseTotal+m] += nullSpacePenalty*nullTotal[n]*nullTotal[m];
       }
     }
   }
@@ -179,90 +208,19 @@ void coarseSolver::setup(parCSR *A) {
 
   free(coarseA);
 
-   if((rank==0)&&(settings.compareSetting("VERBOSE","TRUE"))) printf("done.\n");
+  if((rank==0)&&(settings.compareSetting("VERBOSE","TRUE"))) printf("done.\n");
 }
 
-void coarseSolver::syncToDevice() {}
+void coarseSolver_t::syncToDevice() {}
 
-void coarseSolver::solve(dfloat *rhs, dfloat *x) {
-
-  if (gatherLevel) {
-    ogs->Gather(Gx, rhs, ogs_dfloat, ogs_add, ogs_notrans);
-
-    //gather the full vector
-    MPI_Allgatherv(Gx,                  N,                MPI_DFLOAT,
-                   rhsCoarse, coarseCounts, coarseOffsets, MPI_DFLOAT, comm);
-
-    //multiply by local part of the exact matrix inverse
-    // #pragma omp parallel for
-    for (int n=0;n<N;n++) {
-#if 1
-      xLocal[n] = 0.;
-      for (int m=0;m<coarseTotal;m++) {
-        xLocal[n] += invCoarseA[n*coarseTotal+m]*rhsCoarse[m];
-      }
-
-#else
-      xLocal[n] = rhsCoarse[n];
-#endif
-
-    }
-    ogs->Scatter(x, xLocal, ogs_dfloat, ogs_add, ogs_notrans);
-
-  } else {
-    //gather the full vector
-    MPI_Allgatherv(rhs,                  N,                MPI_DFLOAT,
-                   rhsCoarse, coarseCounts, coarseOffsets, MPI_DFLOAT, comm);
-
-    printf("HACKING COARSE GRID\n");
-
-    //multiply by local part of the exact matrix inverse
-    // #pragma omp parallel for
-    for (int n=0;n<N;n++) {
-#if 1
-      x[n] = 0.;
-      for (int m=0;m<coarseTotal;m++) {
-        x[n] += invCoarseA[n*coarseTotal+m]*rhsCoarse[m];
-      }
-#else
-      x[n] = rhsCoarse[n];
-#endif
-
-    }
-  }
-
-
-}
-
-void coarseSolver::solve(occa::memory o_rhs, occa::memory o_x) {
-
-  if (gatherLevel) {
-    ogs->Gather(o_Gx, o_rhs, ogs_dfloat, ogs_add, ogs_notrans);
-
-    if(N) o_Gx.copyTo(rhsLocal, N*sizeof(dfloat), 0);
-  } else {
-    if(N) o_rhs.copyTo(rhsLocal, N*sizeof(dfloat), 0);
-  }
-
-  //gather the full vector
-  MPI_Allgatherv(rhsLocal,             N,                MPI_DFLOAT,
-                 rhsCoarse, coarseCounts, coarseOffsets, MPI_DFLOAT, comm);
-
-  //multiply by local part of the exact matrix inverse
-  // #pragma omp parallel for
-  for (int n=0;n<N;n++) {
-    xLocal[n] = 0.;
-    for (int m=0;m<coarseTotal;m++) {
-      xLocal[n] += invCoarseA[n*coarseTotal+m]*rhsCoarse[m];
-    }
-  }
-
-  if (gatherLevel) {
-    if(N) o_Gx.copyFrom(xLocal, N*sizeof(dfloat), 0);
-    ogs->Scatter(o_x, o_Gx, ogs_dfloat, ogs_add, ogs_notrans);
-  } else {
-    if(N) o_x.copyFrom(xLocal, N*sizeof(dfloat), 0);
-  }
+coarseSolver_t::~coarseSolver_t() {
+  if (coarseOffsets) free(coarseOffsets);
+  if (coarseCounts) free(coarseCounts);
+  if (invCoarseA) free(invCoarseA);
+  if (xLocal) free(xLocal);
+  if (rhsLocal) free(rhsLocal);
+  if (xCoarse) free(xCoarse);
+  if (rhsCoarse) free(rhsCoarse);
 }
 
 } //namespace parAlmond

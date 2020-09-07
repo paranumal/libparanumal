@@ -30,9 +30,7 @@ SOFTWARE.
                  @restrict       dfloat *x){
 
   for(dlong n=0;n<N;++n;@tile(p_blockSize,@outer,@inner)){
-    if(n<N){
-      x[n] = alpha*x[n]/a[n];
-    }
+    x[n] = alpha*x[n]/a[n];
   }
 }
 
@@ -44,12 +42,10 @@ SOFTWARE.
                    @restrict dfloat *y){
 
   for(dlong n=0;n<N;++n;@tile(p_blockSize,@outer,@inner)){
-    if(n<N){
-      if (beta!=0)
-        y[n] = alpha*x[n]/a[n] + beta*y[n];
-      else
-        y[n] = alpha*x[n]/a[n];
-    }
+    if (beta!=0)
+      y[n] = alpha*x[n]/a[n] + beta*y[n];
+    else
+      y[n] = alpha*x[n]/a[n];
   }
 }
 
@@ -62,8 +58,6 @@ SOFTWARE.
                     @restrict dfloat *z){
 
   for(dlong n=0;n<N;++n;@tile(p_blockSize,@outer,@inner)){
-    if(n<N){
-      z[n] = alpha*x[n]/a[n] + beta*y[n];
-    }
+    z[n] = alpha*x[n]/a[n] + beta*y[n];
   }
 }

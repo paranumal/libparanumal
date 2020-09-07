@@ -28,38 +28,111 @@ SOFTWARE.
 #define PARALMOND_HPP
 
 #include "core.hpp"
-#include "ogs.hpp"
 #include "settings.hpp"
-
-#include "parAlmond/defines.hpp"
-#include "parAlmond/utils.hpp"
-#include "parAlmond/kernels.hpp"
-#include "parAlmond/vector.hpp"
-#include "parAlmond/matrix.hpp"
-#include "parAlmond/level.hpp"
-#include "parAlmond/agmg.hpp"
-#include "parAlmond/coarse.hpp"
-#include "parAlmond/solver.hpp"
-
+#include "platform.hpp"
+#include "ogs.hpp"
+#include "solver.hpp"
+#include "precon.hpp"
+#include "linearSolver.hpp"
 
 namespace parAlmond {
 
-solver_t *Init(platform_t& _platform, settings_t& _settings, MPI_Comm _comm);
+#define PARALMOND_MAX_LEVELS 100
 
-void AMGSetup(solver_t* M,
-             parCOO& A,
-             bool nullSpace,
-             dfloat nullSpacePenalty);
+typedef enum {VCYCLE=0,KCYCLE=1,EXACT=3} CycleType;
+typedef enum {PCG=0,GMRES=1} KrylovType;
+typedef enum {DAMPED_JACOBI=0,CHEBYSHEV=1} SmoothType;
+typedef enum {RUGESTUBEN=0,SYMMETRIC=1} StrengthType;
 
-void Precon(solver_t* M, occa::memory o_x, occa::memory o_rhs);
+void AddSettings(settings_t& settings, const string prefix="");
+void ReportSettings(settings_t& settings);
 
-void Report(solver_t *M);
+//distributed matrix class passed to AMG setup
+class parCOO {
+public:
+  platform_t &platform;
 
-void Free(solver_t* M);
+  dlong nnz=0;
+  hlong *globalStarts=nullptr;
+
+  //non-zero matrix entries
+  struct nonZero_t {
+    hlong row;
+    hlong col;
+    dfloat val;
+
+    int ownerRank;
+  };
+  nonZero_t *entries=nullptr;
+
+  parCOO(platform_t &_platform):
+    platform(_platform) {};
+
+  ~parCOO() {
+    if(entries) free(entries);
+    if(globalStarts) free(globalStarts);
+  }
+};
+
+//abstract multigrid level
+// Class is derived from solver, and must have Operator defined
+class multigridLevel: public solver_t  {
+public:
+  dlong Nrows=0, Ncols=0;
+
+  //switch for weighted inner products
+  bool weighted=false;
+  dfloat *weight=nullptr;
+  occa::memory o_weight;
+
+  occa::memory o_scratch;
+
+  multigridLevel(dlong N, dlong M, platform_t& _platform, settings_t& _settings):
+    solver_t(_platform, _settings), Nrows(N), Ncols(M) {}
+  virtual ~multigridLevel() {};
+
+  virtual void smooth(occa::memory& o_rhs, occa::memory& o_x, bool x_is_zero)=0;
+  virtual void residual(occa::memory& o_rhs, occa::memory& o_x, occa::memory& o_res)=0;
+  virtual void coarsen(occa::memory& o_x, occa::memory& o_Cx)=0;
+  virtual void prolongate(occa::memory& o_x, occa::memory& o_Px)=0;
+  virtual void Report()=0;
+};
+
+//forward declaration
+//multigrid preconditioner
+class multigrid_t;
+
+class parAlmond_t: public precon_t {
+public:
+  parAlmond_t(platform_t& _platform, settings_t& settings_);
+  ~parAlmond_t();
+
+  //Add level to multigrid heirarchy
+  void AddLevel(multigridLevel* level);
+
+  // Setup AMG
+  //-- Local A matrix data must be globally indexed & row sorted
+  void AMGSetup(parCOO& A,
+               bool nullSpace,
+               dfloat *nullVector,
+               dfloat nullSpacePenalty);
+
+  void Operator(occa::memory& o_rhs, occa::memory& o_x);
+
+  void Report();
+
+  dlong getNumCols(int k);
+  dlong getNumRows(int k);
+private:
+  platform_t& platform;
+  settings_t& settings;
+
+  bool exact;
+  linearSolver_t *linearSolver=nullptr;
+
+  multigrid_t *multigrid=nullptr;
+};
 
 } //namespace parAlmond
-
-void parAlmondAddSettings(settings_t& settings, const string prefix="");
-void parAlmondReportSettings(settings_t& settings);
 
 #endif

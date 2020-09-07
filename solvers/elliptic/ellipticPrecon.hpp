@@ -67,7 +67,7 @@ private:
   elliptic_t& elliptic;
   settings_t& settings;
 
-  parAlmond::solver_t *parAlmondHandle;
+  parAlmond::parAlmond_t parAlmond;
 
   dfloat *xG, *rhsG;
   occa::memory o_xG, o_rhsG;
@@ -85,12 +85,11 @@ private:
   mesh_t& mesh;
   settings_t& settings;
 
-  parAlmond::solver_t *parAlmondHandle;
+  parAlmond::parAlmond_t parAlmond;
 
-  int NpMGlevels;
 public:
-  ~MultiGridPrecon();
   MultiGridPrecon(elliptic_t& elliptic);
+  ~MultiGridPrecon() = default;
   void Operator(occa::memory& o_r, occa::memory& o_Mr);
 };
 
@@ -103,7 +102,7 @@ private:
 
   mesh_t *femMesh;
   elliptic_t* femElliptic;
-  parAlmond::solver_t *parAlmondHandle;
+  parAlmond::parAlmond_t parAlmond;
 
   occa::memory o_xG, o_rhsG;
 
@@ -121,6 +120,7 @@ public:
   void Operator(occa::memory& o_r, occa::memory& o_Mr);
 };
 
+class MGLevel;
 // Overlapping additive Schwarz with patch problems consisting of the
 //  entire local mesh + 1 ring overlap, solved with a local multigrid
 //  precon and coarse problem consisting of the global degree 1
@@ -135,9 +135,10 @@ private:
   mesh_t* meshPatch;
   elliptic_t* ellipticPatch;
   MultiGridPrecon *preconPatch;
+  MGLevel *level;
 
   //Coarse Precon
-  parAlmond::solver_t *parAlmondHandle;
+  parAlmond::parAlmond_t parAlmond;
 
   dfloat *rPatch, *zPatch;
   occa::memory o_rPatch, o_zPatch;
@@ -155,9 +156,7 @@ public:
 };
 
 class MGLevel: public parAlmond::multigridLevel {
-
 public:
-
   elliptic_t& elliptic;
   mesh_t& mesh;
   linAlg_t& linAlg;
@@ -189,25 +188,18 @@ public:
   occa::memory o_invDiagA;
 
   //build a p-multigrid level and connect it to the previous one
-  MGLevel(elliptic_t& _elliptic, int k, int Nf, int Npf, occa::memory o_weightF_,
-          parAlmond::KrylovType ktype_, parAlmond::CycleType ctype);
-
+  MGLevel(elliptic_t& _elliptic, int Nf, int Npf, occa::memory& o_weightF_);
   ~MGLevel();
 
-  void Ax(dfloat        *X, dfloat        *Ax) {};
-  void Ax(occa::memory &o_X, occa::memory &o_Ax);
+  void Operator(occa::memory &o_X, occa::memory &o_Ax);
 
-  void residual(dfloat        *RHS, dfloat        *X, dfloat        *RES) {};
   void residual(occa::memory &o_RHS, occa::memory &o_X, occa::memory &o_RES);
 
-  void coarsen(dfloat        *X, dfloat        *Cx) {};
   void coarsen(occa::memory &o_X, occa::memory &o_Cx);
 
-  void prolongate(dfloat        *X, dfloat        *Px) {};
   void prolongate(occa::memory &o_X, occa::memory &o_Px);
 
   //smoother ops
-  void smooth(dfloat        *RHS, dfloat        *X, bool x_is_zero) {};
   void smooth(occa::memory &o_RHS, occa::memory &o_X, bool x_is_zero);
 
   void smoothJacobi    (occa::memory &o_r, occa::memory &o_X, bool xIsZero);
@@ -218,7 +210,7 @@ public:
   void SetupSmoother();
   dfloat maxEigSmoothAx();
 
-  void AllocateStorage(int k, parAlmond::CycleType ctype);
+  void AllocateStorage();
 };
 
 

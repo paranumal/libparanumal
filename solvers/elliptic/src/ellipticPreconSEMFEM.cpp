@@ -39,7 +39,7 @@ void SEMFEMPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
     SEMFEMInterpKernel(mesh.Nelements,mesh.o_SEMFEMAnterp,o_Mr,o_rFEM);
     FEMogs->Gather(o_GrFEM, o_rFEM, ogs_dfloat, ogs_add, ogs_trans);
 
-    parAlmond::Precon(parAlmondHandle, o_GzFEM, o_GrFEM);
+    parAlmond.Operator(o_GrFEM, o_GzFEM);
 
     FEMogs->Scatter(o_zFEM, o_GzFEM, ogs_dfloat, ogs_add, ogs_notrans);
     SEMFEMAnterpKernel(mesh.Nelements,mesh.o_SEMFEMAnterp,o_zFEM,o_Mr);
@@ -52,7 +52,7 @@ void SEMFEMPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
   } else {
 
     FEMogs->Gather(o_rhsG, o_r, ogs_dfloat, ogs_add, ogs_notrans);
-    parAlmond::Precon(parAlmondHandle, o_xG, o_rhsG);
+    parAlmond.Operator(o_rhsG, o_xG);
     FEMogs->Scatter(o_Mr, o_xG, ogs_dfloat, ogs_add, ogs_notrans);
   }
 
@@ -64,7 +64,8 @@ void SEMFEMPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
 }
 
 SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
-  elliptic(_elliptic), mesh(_elliptic.mesh), settings(_elliptic.settings) {
+  elliptic(_elliptic), mesh(_elliptic.mesh), settings(_elliptic.settings),
+  parAlmond(elliptic.platform, settings) {
 
   //sanity checking
   if (!settings.compareSetting("DISCRETIZATION", "CONTINUOUS") )
@@ -214,14 +215,21 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
   free(localIds); free(maskedGlobalNumbering); free(maskedGlobalOwners);
 
   //finally, build the fem matrix and pass to parAlmond
-  parAlmond::parCOO A;
+  parAlmond::parCOO A(elliptic.platform);
   femElliptic->BuildOperatorMatrixContinuous(A);
 
-  parAlmondHandle = parAlmond::Init(elliptic.platform, elliptic.settings, mesh.comm);
-  parAlmond::AMGSetup(parAlmondHandle, A,
-                      elliptic.allNeumann, elliptic.allNeumannPenalty);
+  //populate null space unit vector
+  int rank = elliptic.platform.rank;
+  int size = elliptic.platform.size;
+  hlong TotalRows = A.globalStarts[size];
+  dlong numLocalRows = (dlong) (A.globalStarts[rank+1]-A.globalStarts[rank]);
+  dfloat *null = (dfloat *) malloc(numLocalRows*sizeof(dfloat));
+  for (dlong i=0;i<numLocalRows;i++) null[i] = 1.0/sqrt(TotalRows);
 
-  parAlmond::Report(parAlmondHandle);
+  parAlmond.AMGSetup(A, elliptic.allNeumann, null, elliptic.allNeumannPenalty);
+  free(null);
+
+  parAlmond.Report();
 
   if (mesh.elementType==TRIANGLES) {
     // build interp and anterp
@@ -242,10 +250,10 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
     o_zFEM = elliptic.platform.malloc(mesh.Nelements*mesh.NpFEM*sizeof(dfloat), dummy);
     free(dummy);
 
-    parAlmond::multigridLevel *baseLevel = parAlmondHandle->levels[0];
-    dummy = (dfloat*) calloc(baseLevel->Ncols,sizeof(dfloat));
-    o_GrFEM = elliptic.platform.malloc(baseLevel->Ncols*sizeof(dfloat),dummy);
-    o_GzFEM = elliptic.platform.malloc(baseLevel->Ncols*sizeof(dfloat),dummy);
+    dlong Ncols = parAlmond.getNumCols(0);
+    dummy = (dfloat*) calloc(Ncols,sizeof(dfloat));
+    o_GrFEM = elliptic.platform.malloc(Ncols*sizeof(dfloat),dummy);
+    o_GzFEM = elliptic.platform.malloc(Ncols*sizeof(dfloat),dummy);
     free(dummy);
 
     //build kernels
@@ -263,19 +271,17 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
     SEMFEMAnterpKernel = elliptic.platform.buildKernel(DELLIPTIC "/okl/ellipticSEMFEMAnterp.okl",
                                      "ellipticSEMFEMAnterp", kernelInfo);
   } else {
-    parAlmond::multigridLevel *baseLevel = parAlmondHandle->levels[0];
-    // rhsG = (dfloat*) calloc(baseLevel->Ncols,sizeof(dfloat));
-    // xG   = (dfloat*) calloc(baseLevel->Ncols,sizeof(dfloat));
-    dfloat *dummy = (dfloat*) calloc(baseLevel->Ncols,sizeof(dfloat));
-    o_rhsG = elliptic.platform.malloc(baseLevel->Ncols*sizeof(dfloat),dummy);
-    o_xG   = elliptic.platform.malloc(baseLevel->Ncols*sizeof(dfloat),dummy);
+    dlong Ncols = parAlmond.getNumCols(0);
+    // rhsG = (dfloat*) calloc(Ncols,sizeof(dfloat));
+    // xG   = (dfloat*) calloc(Ncols,sizeof(dfloat));
+    dfloat *dummy = (dfloat*) calloc(Ncols,sizeof(dfloat));
+    o_rhsG = elliptic.platform.malloc(Ncols*sizeof(dfloat),dummy);
+    o_xG   = elliptic.platform.malloc(Ncols*sizeof(dfloat),dummy);
     free(dummy);
   }
 }
 
 SEMFEMPrecon::~SEMFEMPrecon() {
-  // if (FEMogs) FEMogs->Free();
-  if (parAlmondHandle) parAlmond::Free(parAlmondHandle);
   femElliptic->ogsMasked->Free();
 
   femMesh->halo->Free();
