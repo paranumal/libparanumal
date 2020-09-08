@@ -40,12 +40,6 @@ parAlmond_t::parAlmond_t(platform_t& _platform, settings_t& _settings):
                                 "innerProd", "weightedInnerProd",
                                 "norm2", "weightedNorm2"});
 
-  //determine whether parAlmond should do an exact solve when called
-  if(settings.compareSetting("PARALMOND CYCLE", "EXACT"))
-    exact = true;
-  else
-    exact = false;
-
   multigrid = new multigrid_t(platform, settings);
 
   //build parAlmond kernels on first construction
@@ -55,12 +49,12 @@ parAlmond_t::parAlmond_t(platform_t& _platform, settings_t& _settings):
 
 void parAlmond_t::Operator(occa::memory& o_rhs, occa::memory& o_x) {
 
-  if (exact){ //call the linear solver
+  if (multigrid->exact){ //call the linear solver
     int maxIter = 500;
     int verbose = settings.compareSetting("VERBOSE", "TRUE") ? 1 : 0;
     dfloat tol = 1e-8;
     solver_t &A = *(multigrid->levels[0]);
-    (void) linearSolver->Solve(A, *multigrid, o_x, o_rhs, tol, maxIter, verbose);
+    (void) multigrid->linearSolver->Solve(A, *multigrid, o_x, o_rhs, tol, maxIter, verbose);
   } else { //apply a multigrid cycle
     multigrid->Operator(o_rhs, o_x);
   }
@@ -68,17 +62,6 @@ void parAlmond_t::Operator(occa::memory& o_rhs, occa::memory& o_x) {
 
 //Add level to multigrid heirarchy
 void parAlmond_t::AddLevel(multigridLevel* level) {
-
-  //If using an exact solver and this is the first level, setup a linearSovler
-  if (exact && multigrid->numLevels==0) {
-    if (settings.compareSetting("PARALMOND CYCLE", "NONSYM"))
-      linearSolver = new pgmres(level->Nrows, level->Ncols - level->Nrows,
-                             platform, settings, level->weighted, level->o_weight);
-    else
-      linearSolver = new pcg(level->Nrows, level->Ncols - level->Nrows,
-                             platform, settings, level->weighted, level->o_weight);
-  }
-
   multigrid->AddLevel(level);
 }
 
@@ -112,8 +95,6 @@ dlong parAlmond_t::getNumRows(int k) {
 parAlmond_t::~parAlmond_t() {
   Nrefs--;
   if (Nrefs==0) freeParAlmondKernels();
-
-  if (linearSolver) delete linearSolver;
 
   delete multigrid;
 }

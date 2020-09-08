@@ -34,7 +34,7 @@ void AddSettings(settings_t& settings,
   settings.newSetting(prefix+"PARALMOND CYCLE",
                       "KCYCLE",
                       "Type of Multigrid Cycle",
-                      {"VCYCLE", "KCYCLE"});
+                      {"VCYCLE", "KCYCLE", "EXACT"});
 
   settings.newSetting(prefix+"PARALMOND SMOOTHER",
                       "CHEBYSHEV",

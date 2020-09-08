@@ -127,9 +127,6 @@ private:
   platform_t& platform;
   settings_t& settings;
 
-  bool exact;
-  linearSolver_t *linearSolver=nullptr;
-
   multigrid_t *multigrid=nullptr;
 };
 

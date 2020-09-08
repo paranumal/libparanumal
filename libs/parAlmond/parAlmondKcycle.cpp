@@ -52,7 +52,7 @@ void multigrid_t::kcycle(const int k, occa::memory& o_RHS, occa::memory& o_X){
   level->residual(o_RHS, o_X, o_RES);
 
   // rhsC = P^T res
-  levelC->coarsen(o_RES, o_RHSC);
+  level->coarsen(o_RES, o_RHSC);
 
   if(k+1>NUMKCYCLES) {
     vcycle(k+1, o_RHSC, o_XC);
@@ -89,7 +89,7 @@ void multigrid_t::kcycle(const int k, occa::memory& o_RHS, occa::memory& o_X){
   }
 
   // x = x + P xC
-  levelC->prolongate(o_XC, o_X);
+  level->prolongate(o_XC, o_X);
 
   level->smooth(o_RHS, o_X, false);
 }

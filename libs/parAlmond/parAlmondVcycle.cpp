@@ -38,7 +38,6 @@ void multigrid_t::vcycle(const int k, occa::memory& o_RHS, occa::memory& o_X){
   }
 
   multigridLevel *level  = levels[k];
-  multigridLevel *levelC = levels[k+1];
   occa::memory& o_RHSC = o_rhs[k+1];
   occa::memory& o_XC   = o_x[k+1];
   occa::memory& o_RES   = o_scratch;
@@ -48,12 +47,12 @@ void multigrid_t::vcycle(const int k, occa::memory& o_RHS, occa::memory& o_X){
   level->residual(o_RHS, o_X, o_RES);
 
   // rhsC = P^T res
-  levelC->coarsen(o_RES, o_RHSC);
+  level->coarsen(o_RES, o_RHSC);
 
   vcycle(k+1, o_RHSC, o_XC);
 
   // x = x + P xC
-  levelC->prolongate(o_XC, o_X);
+  level->prolongate(o_XC, o_X);
 
   level->smooth(o_RHS, o_X, false);
 }

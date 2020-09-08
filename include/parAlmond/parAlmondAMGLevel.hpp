@@ -49,7 +49,6 @@ public:
   occa::memory o_Sx, o_Gx;
 
   amgLevel(parCSR *AA, settings_t& _settings);
-  amgLevel(parCSR *AA, parCSR *PP, parCSR *RR, settings_t& _settings);
   ~amgLevel();
 
   void Operator(occa::memory& o_x, occa::memory& o_Ax);

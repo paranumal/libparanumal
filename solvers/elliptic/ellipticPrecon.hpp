@@ -87,6 +87,9 @@ private:
 
   parAlmond::parAlmond_t parAlmond;
 
+  bool gather=false;
+  occa::memory o_xG, o_rhsG;
+
 public:
   MultiGridPrecon(elliptic_t& elliptic);
   ~MultiGridPrecon() = default;
@@ -164,11 +167,17 @@ public:
   //prologation
   dfloat *P;
   occa::memory o_P;
-  int NpF;
-  occa::memory o_weightF;
 
   occa::kernel coarsenKernel;
   occa::kernel prolongateKernel;
+
+  bool gatherLevel=false;
+  ogs_t *ogsMasked=nullptr;
+  occa::memory o_SX, o_GX;
+
+  //masking data
+  dlong Nmasked;
+  occa::memory o_maskIds;
 
   //smoothing params
   typedef enum {JACOBI=1,
@@ -187,8 +196,8 @@ public:
   //jacobi data
   occa::memory o_invDiagA;
 
-  //build a p-multigrid level and connect it to the previous one
-  MGLevel(elliptic_t& _elliptic, int Nf, int Npf, occa::memory& o_weightF_);
+  //build a p-multigrid level and connect it to the next one
+  MGLevel(elliptic_t& _elliptic, int Nc, int NpCoarse);
   ~MGLevel();
 
   void Operator(occa::memory &o_X, occa::memory &o_Ax);

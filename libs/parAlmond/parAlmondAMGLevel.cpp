@@ -42,21 +42,6 @@ amgLevel::amgLevel(parCSR *_A, settings_t& _settings):
   }
 }
 
-amgLevel::amgLevel(parCSR *_A, parCSR *_P, parCSR *_R, settings_t& _settings):
-  multigridLevel(_A->Nrows, _A->Ncols, _A->platform, _settings),
-  A(_A), P(_P), R(_R) {
-  //max
-  Ncols = (A->Ncols>P->Ncols) ? A->Ncols : P->Ncols;
-
-  //determine smoother
-  if (settings.compareSetting("PARALMOND SMOOTHER", "CHEBYSHEV")) {
-    stype = CHEBYSHEV;
-    settings.getSetting("PARALMOND CHEBYSHEV DEGREE", ChebyshevIterations);
-  } else { //default to DAMPED_JACOBI
-    stype = DAMPED_JACOBI;
-  }
-}
-
 amgLevel::~amgLevel() {
   if (  A) delete   A;
   if (  P) delete   P;

@@ -51,7 +51,6 @@ void parAlmond_t::AMGSetup(parCOO& cooA,
 
   amgLevel *L = new amgLevel(A, settings);
   multigrid->AddLevel(L);
-  L->syncToDevice();
 
   hlong globalSize = L->A->globalRowStarts[size];
 
@@ -69,9 +68,9 @@ void parAlmond_t::AMGSetup(parCOO& cooA,
 
     // Create coarse level via AMG. Coarsen null vector
     amgLevel* Lcoarse = coarsenAmgLevel(L, null);
+    L->syncToDevice();
 
     multigrid->AddLevel(Lcoarse);
-    Lcoarse->syncToDevice();
     hlong globalCoarseSize = Lcoarse->A->globalRowStarts[size];
 
     if(globalCoarseSize <= gCoarseSize || globalSize < 2*globalCoarseSize){
@@ -80,6 +79,7 @@ void parAlmond_t::AMGSetup(parCOO& cooA,
         ss << "AMG coarsening stalling, attemping coarse solver setup with dimension N=" << globalCoarseSize;
         LIBP_WARNING(ss.str());
       }
+      Lcoarse->syncToDevice();
       multigrid->coarseSolver->setup(Lcoarse->A, nullSpace, null, nullSpacePenalty);
       multigrid->coarseSolver->syncToDevice();
       multigrid->baseLevel = multigrid->numLevels-1;

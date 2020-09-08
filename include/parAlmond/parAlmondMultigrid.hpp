@@ -43,6 +43,9 @@ public:
   platform_t& platform;
   settings_t& settings;
 
+  bool exact;
+  linearSolver_t *linearSolver=nullptr;
+
   CycleType ctype;
 
   int numLevels=0;

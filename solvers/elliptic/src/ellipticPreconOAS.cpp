@@ -130,7 +130,8 @@ OASPrecon::OASPrecon(elliptic_t& _elliptic):
   // }
 
   if (mesh.N>1) {
-    level = new MGLevel(ellipticC, Nf, NpFine, o_weightF);
+    // FIX
+    // level = new MGLevel(ellipticC, Nf, NpFine, o_weightF);
 
     rPatch = (dfloat*) calloc(mesh.Np*(mesh.Nelements+mesh.totalRingElements),sizeof(dfloat));
     zPatch = (dfloat*) calloc(mesh.Np*(mesh.Nelements+mesh.totalRingElements),sizeof(dfloat));

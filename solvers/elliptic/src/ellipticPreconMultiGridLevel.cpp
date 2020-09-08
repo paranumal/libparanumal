@@ -39,20 +39,30 @@ void MGLevel::residual(occa::memory &o_RHS, occa::memory &o_X, occa::memory &o_R
 }
 
 void MGLevel::coarsen(occa::memory &o_X, occa::memory &o_Rx) {
-  if (elliptic.disc_c0)
-    linAlg.amx(mesh.Nelements*NpF, 1.0, o_weightF, o_X);
+  if (elliptic.disc_c0) //pre-weight
+    linAlg.amx(mesh.Nelements*mesh.Np, 1.0, elliptic.o_weight, o_X);
 
-  coarsenKernel(mesh.Nelements, o_P, o_X, o_Rx);
+  if (gatherLevel==true) {
+    coarsenKernel(mesh.Nelements, o_P, o_X, o_GX);
+    ogsMasked->Gather(o_Rx, o_GX, ogs_dfloat, ogs_add, ogs_trans);
+  } else {
+    coarsenKernel(mesh.Nelements, o_P, o_X, o_Rx);
 
-  if (elliptic.disc_c0) {
-    elliptic.ogsMasked->GatherScatter(o_Rx, ogs_dfloat, ogs_add, ogs_sym);
-    if (elliptic.Nmasked)
-      elliptic.maskKernel(elliptic.Nmasked, elliptic.o_maskIds, o_Rx);
+    if (elliptic.disc_c0) {
+      ogsMasked->GatherScatter(o_Rx, ogs_dfloat, ogs_add, ogs_sym);
+      if (Nmasked)
+        elliptic.maskKernel(Nmasked, o_maskIds, o_Rx);
+    }
   }
 }
 
 void MGLevel::prolongate(occa::memory &o_X, occa::memory &o_Px) {
-  prolongateKernel(mesh.Nelements, o_P, o_X, o_Px);
+  if (gatherLevel==true) {
+    ogsMasked->Scatter(o_SX, o_X, ogs_dfloat, ogs_add, ogs_notrans);
+    prolongateKernel(mesh.Nelements, o_P, o_SX, o_Px);
+  } else {
+    prolongateKernel(mesh.Nelements, o_P, o_X, o_Px);
+  }
 }
 
 void MGLevel::smooth(occa::memory &o_RHS, occa::memory &o_X, bool x_is_zero) {
@@ -147,8 +157,8 @@ occa::memory MGLevel::o_smootherResidual;
 occa::memory MGLevel::o_smootherResidual2;
 occa::memory MGLevel::o_smootherUpdate;
 
-//build a level and connect it to the previous one
-MGLevel::MGLevel(elliptic_t& _elliptic, int Nf, int Npf, occa::memory& o_weightF_):
+//build a level and connect it to the next one
+MGLevel::MGLevel(elliptic_t& _elliptic, int Nc, int NpCoarse):
   multigridLevel(_elliptic.mesh.Nelements*_elliptic.mesh.Np,
                 (_elliptic.mesh.Nelements+_elliptic.mesh.totalHaloPairs)*_elliptic.mesh.Np,
                  _elliptic.platform, _elliptic.settings),
@@ -157,10 +167,6 @@ MGLevel::MGLevel(elliptic_t& _elliptic, int Nf, int Npf, occa::memory& o_weightF
   linAlg(_elliptic.linAlg) {
 
   weighted = false;
-
-  //save size and weight of previous level
-  NpF = Npf;
-  o_weightF = o_weightF_;
 
   //check for weighted inner products
   if (elliptic.settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
@@ -171,56 +177,57 @@ MGLevel::MGLevel(elliptic_t& _elliptic, int Nf, int Npf, occa::memory& o_weightF
   SetupSmoother();
   AllocateStorage();
 
-  if (mesh.N<Nf) {
-    if (mesh.elementType==QUADRILATERALS || mesh.elementType==HEXAHEDRA) {
-      P = (dfloat *) calloc((Nf+1)*(mesh.N+1),sizeof(dfloat));
-      mesh.DegreeRaiseMatrix1D(mesh.N, Nf, P);
-      o_P = elliptic.platform.malloc((Nf+1)*(mesh.N+1)*sizeof(dfloat), P);
-    } else if (mesh.elementType==TRIANGLES) {
-      P = (dfloat *) calloc(Npf*mesh.Np,sizeof(dfloat));
-      mesh.DegreeRaiseMatrixTri2D(mesh.N, Nf, P);
-      o_P = elliptic.platform.malloc(Npf*mesh.Np*sizeof(dfloat), P);
-    } else {
-      P = (dfloat *) calloc(Npf*mesh.Np,sizeof(dfloat));
-      mesh.DegreeRaiseMatrixTet3D(mesh.N, Nf, P);
-      o_P = elliptic.platform.malloc(Npf*mesh.Np*sizeof(dfloat), P);
-    }
-
-    //build kernels
-    occa::properties kernelInfo = elliptic.platform.props;
-
-    // set kernel name suffix
-    char *suffix;
-    if(mesh.elementType==TRIANGLES)
-      suffix = strdup("Tri2D");
-    else if(mesh.elementType==QUADRILATERALS)
-      suffix = strdup("Quad2D");
-    else if(mesh.elementType==TETRAHEDRA)
-      suffix = strdup("Tet3D");
-    else if(mesh.elementType==HEXAHEDRA)
-      suffix = strdup("Hex3D");
-
-    char fileName[BUFSIZ], kernelName[BUFSIZ];
-
-    kernelInfo["defines/" "p_NqFine"]= Nf+1;
-    kernelInfo["defines/" "p_NqCoarse"]= mesh.N+1;
-
-    kernelInfo["defines/" "p_NpFine"]= Npf;
-    kernelInfo["defines/" "p_NpCoarse"]= mesh.Np;
-
-    int NblockVFine = 512/Npf;
-    int NblockVCoarse = 512/mesh.Np;
-    kernelInfo["defines/" "p_NblockVFine"]= NblockVFine;
-    kernelInfo["defines/" "p_NblockVCoarse"]= NblockVCoarse;
-
-    sprintf(fileName, DELLIPTIC "/okl/ellipticPreconCoarsen%s.okl", suffix);
-    sprintf(kernelName, "ellipticPreconCoarsen%s", suffix);
-    coarsenKernel = elliptic.platform.buildKernel(fileName, kernelName, kernelInfo);
-
-    sprintf(fileName, DELLIPTIC "/okl/ellipticPreconProlongate%s.okl", suffix);
-    sprintf(kernelName, "ellipticPreconProlongate%s", suffix);
-    prolongateKernel = elliptic.platform.buildKernel(fileName, kernelName, kernelInfo);
+  if (mesh.elementType==QUADRILATERALS || mesh.elementType==HEXAHEDRA) {
+    P = (dfloat *) calloc((mesh.N+1)*(Nc+1),sizeof(dfloat));
+    mesh.DegreeRaiseMatrix1D(Nc, mesh.N, P);
+    o_P = elliptic.platform.malloc((mesh.N+1)*(Nc+1)*sizeof(dfloat), P);
+  } else if (mesh.elementType==TRIANGLES) {
+    P = (dfloat *) calloc(mesh.Np*NpCoarse,sizeof(dfloat));
+    mesh.DegreeRaiseMatrixTri2D(Nc, mesh.N, P);
+    o_P = elliptic.platform.malloc(mesh.Np*NpCoarse*sizeof(dfloat), P);
+  } else {
+    P = (dfloat *) calloc(mesh.Np*NpCoarse,sizeof(dfloat));
+    mesh.DegreeRaiseMatrixTet3D(Nc, mesh.N, P);
+    o_P = elliptic.platform.malloc(mesh.Np*NpCoarse*sizeof(dfloat), P);
   }
+
+  //build kernels
+  occa::properties kernelInfo = elliptic.platform.props;
+
+  // set kernel name suffix
+  char *suffix;
+  if(mesh.elementType==TRIANGLES)
+    suffix = strdup("Tri2D");
+  else if(mesh.elementType==QUADRILATERALS)
+    suffix = strdup("Quad2D");
+  else if(mesh.elementType==TETRAHEDRA)
+    suffix = strdup("Tet3D");
+  else if(mesh.elementType==HEXAHEDRA)
+    suffix = strdup("Hex3D");
+
+  char fileName[BUFSIZ], kernelName[BUFSIZ];
+
+  kernelInfo["defines/" "p_NqFine"]= mesh.N+1;
+  kernelInfo["defines/" "p_NqCoarse"]= Nc+1;
+
+  kernelInfo["defines/" "p_NpFine"]= mesh.Np;
+  kernelInfo["defines/" "p_NpCoarse"]= NpCoarse;
+
+  int blockMax = 256;
+  if (elliptic.platform.device.mode() == "CUDA") blockMax = 512;
+
+  int NblockVFine = mymax(1,blockMax/mesh.Np);
+  int NblockVCoarse = mymax(1,blockMax/NpCoarse);
+  kernelInfo["defines/" "p_NblockVFine"]= NblockVFine;
+  kernelInfo["defines/" "p_NblockVCoarse"]= NblockVCoarse;
+
+  sprintf(fileName, DELLIPTIC "/okl/ellipticPreconCoarsen%s.okl", suffix);
+  sprintf(kernelName, "ellipticPreconCoarsen%s", suffix);
+  coarsenKernel = elliptic.platform.buildKernel(fileName, kernelName, kernelInfo);
+
+  sprintf(fileName, DELLIPTIC "/okl/ellipticPreconProlongate%s.okl", suffix);
+  sprintf(kernelName, "ellipticPreconProlongate%s", suffix);
+  prolongateKernel = elliptic.platform.buildKernel(fileName, kernelName, kernelInfo);
 }
 
 void MGLevel::AllocateStorage() {

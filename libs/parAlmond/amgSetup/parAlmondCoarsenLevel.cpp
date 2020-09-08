@@ -50,15 +50,18 @@ amgLevel *coarsenAmgLevel(amgLevel *level, dfloat *null){
   // adjustPartition(FineToCoarse, settings);
 
   parCSR *P = constructProlongation(level->A, FineToCoarse, globalAggStarts, null);
-
   parCSR *R = transpose(P);
 
-  parCSR *A = galerkinProd(level->A, P);
+  level->P = P;
+  level->R = R;
 
-  amgLevel *coarseLevel = new amgLevel(A,P,R,level->settings);
+  parCSR *Acoarse = galerkinProd(level->A, P);
 
-  //update the number of columns required for this level (from R)
+  amgLevel *coarseLevel = new amgLevel(Acoarse,level->settings);
+
+  //update the number of columns required for this level
   level->Ncols = (level->Ncols > R->Ncols) ? level->Ncols : R->Ncols;
+  // coarseLevel->Ncols = (coarseLevel->Ncols > P->Ncols) ? coarseLevel->Ncols : P->Ncols;
 
   return coarseLevel;
 }

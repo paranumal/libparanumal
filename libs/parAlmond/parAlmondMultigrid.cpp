@@ -55,15 +55,32 @@ multigrid_t::multigrid_t(platform_t& _platform, settings_t& _settings):
     ktype = PCG;
   }
 
+  //determine whether parAlmond should do an exact solve when called
+  if(settings.compareSetting("PARALMOND CYCLE", "EXACT"))
+    exact = true;
+  else
+    exact = false;
+
   coarseSolver = new coarseSolver_t(_platform, _settings);
 }
 
 multigrid_t::~multigrid_t() {
+  if (linearSolver) delete linearSolver;
   if (coarseSolver) delete coarseSolver;
   for (int n=0;n<numLevels;n++) delete levels[n];
 }
 
 void multigrid_t::AddLevel(multigridLevel* level){
+
+  //If using an exact solver and this is the first level, setup a linearSovler
+  if (exact && numLevels==0) {
+    if (settings.compareSetting("PARALMOND CYCLE", "NONSYM"))
+      linearSolver = new pgmres(level->Nrows, level->Ncols - level->Nrows,
+                             platform, settings, level->weighted, level->o_weight);
+    else
+      linearSolver = new pcg(level->Nrows, level->Ncols - level->Nrows,
+                             platform, settings, level->weighted, level->o_weight);
+  }
 
   if (ctype==KCYCLE) {
     //first level
