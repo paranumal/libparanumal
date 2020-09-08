@@ -24,11 +24,7 @@ SOFTWARE.
 
 */
 
-#include <unistd.h>
-#include <math.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include "types.h"
+#include "core.hpp"
 
 extern "C" {
   void dgesv_ ( int     *N, int     *NRHS, double  *A,
@@ -37,11 +33,17 @@ extern "C" {
                 double  *B,
                 int     *LDB,
                 int     *INFO );
+  void sgesv_ ( int     *N, int     *NRHS, float  *A,
+                int     *LDA,
+                int     *IPIV,
+                float  *B,
+                int     *LDB,
+                int     *INFO );
 }
 
 // C = A/B  = trans(trans(B)\trans(A))
 // assume row major
-void matrixRightSolve(int NrowsA, int NcolsA, dfloat *A, int NrowsB, int NcolsB, dfloat *B, dfloat *C){
+void matrixRightSolve(int NrowsA, int NcolsA, double *A, int NrowsB, int NcolsB, double *B, double *C){
 
   int info;
 
@@ -70,12 +72,62 @@ void matrixRightSolve(int NrowsA, int NcolsA, dfloat *A, int NrowsB, int NcolsB,
 
   dgesv_(&NrowsX, &NcolsY, tmpX, &NrowsX, ipiv, tmpY, &NrowsY, &info); // ?
 
+  if(info) {
+    std::stringstream ss;
+    ss << "dgesv_ reports info = " << info;
+    LIBP_ABORT(ss.str());
+  }
+
   for(int n=0;n<NrowsY*NcolsY;++n){
     C[n] = tmpY[n];
   }
 
-  if(info)
-    printf("matrixRightSolve: dgesv reports info = %d when inverting matrix\n", info);
+  free(work);
+  free(ipiv);
+  free(tmpX);
+  free(tmpY);
+}
+
+// C = A/B  = trans(trans(B)\trans(A))
+// assume row major
+void matrixRightSolve(int NrowsA, int NcolsA, float *A, int NrowsB, int NcolsB, float *B, float *C){
+
+  int info;
+
+  int NrowsX = NcolsB;
+  int NcolsX = NrowsB;
+
+  int NrowsY = NcolsA;
+  int NcolsY = NrowsA;
+
+  int lwork = NrowsX*NcolsX;
+
+  // compute inverse mass matrix
+  float *tmpX = (float*) calloc(NrowsX*NcolsX, sizeof(float));
+  float *tmpY = (float*) calloc(NrowsY*NcolsY, sizeof(float));
+
+  int    *ipiv = (int*) calloc(NrowsX, sizeof(int));
+  float *work = (float*) calloc(lwork, sizeof(float));
+
+  for(int n=0;n<NrowsX*NcolsX;++n){
+    tmpX[n] = B[n];
+  }
+
+  for(int n=0;n<NrowsY*NcolsY;++n){
+    tmpY[n] =A[n];
+  }
+
+  sgesv_(&NrowsX, &NcolsY, tmpX, &NrowsX, ipiv, tmpY, &NrowsY, &info); // ?
+
+  if(info) {
+    std::stringstream ss;
+    ss << "sgesv_ reports info = " << info;
+    LIBP_ABORT(ss.str());
+  }
+
+  for(int n=0;n<NrowsY*NcolsY;++n){
+    C[n] = tmpY[n];
+  }
 
   free(work);
   free(ipiv);

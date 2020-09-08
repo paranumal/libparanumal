@@ -378,44 +378,6 @@ parCSR::~parCSR() {
 //
 //------------------------------------------------------------------------
 
-extern "C"{
-  void dgetrf_(int* M, int *N, double* A, int* lda, int* IPIV, int* INFO);
-  void dgetri_(int* N, double* A, int* lda, int* IPIV, double* WORK, int* lwork, int* INFO);
-  void dgeev_(char *JOBVL, char *JOBVR, int *N, double *A, int *LDA, double *WR, double *WI,
-  double *VL, int *LDVL, double *VR, int *LDVR, double *WORK, int *LWORK, int *INFO );
-}
-
-void matrixInverse(int N, dfloat *A);
-
-
-static void eig(const int Nrows, double *A, double *WR, double *WI){
-
-  if(Nrows){
-    int NB  = 256;
-    char JOBVL  = 'V';
-    char JOBVR  = 'V';
-    int     N = Nrows;
-    int   LDA = Nrows;
-    int  LWORK  = (NB+2)*N;
-
-    double *WORK  = new double[LWORK];
-    double *VL  = new double[Nrows*Nrows];
-    double *VR  = new double[Nrows*Nrows];
-
-    int INFO = -999;
-
-    dgeev_ (&JOBVL, &JOBVR, &N, A, &LDA, WR, WI,
-      VL, &LDA, VR, &LDA, WORK, &LWORK, &INFO);
-
-
-    // assert(INFO == 0);
-
-    delete [] VL;
-    delete [] VR;
-    delete [] WORK;
-  }
-}
-
 dfloat parCSR::rhoDinvA(){
 
   int k = 10;
@@ -492,7 +454,7 @@ dfloat parCSR::rhoDinvA(){
   double *WR = (double *) calloc(k,sizeof(double));
   double *WI = (double *) calloc(k,sizeof(double));
 
-  eig(k, H, WR, WI);
+  matrixEigenValues(k, H, WR, WI);
 
   double rho = 0.;
 
@@ -513,7 +475,7 @@ dfloat parCSR::rhoDinvA(){
   free(Vx);
   free(V);
 
-  printf("weight = %g \n", rho);
+  // printf("weight = %g \n", rho);
 
   return rho;
 }

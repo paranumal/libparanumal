@@ -24,34 +24,17 @@ SOFTWARE.
 
 */
 
-#include <unistd.h>
-#include <math.h>
-#include <stdlib.h>
-#include <stdio.h>
+#include "core.hpp"
 
 extern "C" {
-  void dgesv_ ( int     *N, int     *NRHS, double  *A,
-                int     *LDA,
-                int     *IPIV,
-                double  *B,
-                int     *LDB,
-                int     *INFO );
-
-  void sgesv_(int *N, int *NRHS,float  *A, int *LDA, int *IPIV, float  *B, int *LDB,int *INFO);
-
   void dgetrf_(int* M, int *N, double* A, int* lda, int* IPIV, int* INFO);
-
   void sgetrf_(int* M, int *N, float* A, int* lda, int* IPIV, int* INFO);
 
-  void dgetri_(int* N, double* A, int* lda, int* IPIV, double* WORK, int* lwork, int* INFO);
-  void dgeev_(char *JOBVL, char *JOBVR, int *N, double *A, int *LDA, double *WR, double *WI,
-              double *VL, int *LDVL, double *VR, int *LDVR, double *WORK, int *LWORK, int *INFO );
-
   double dlange_(char *NORM, int *M, int *N, double *A, int *LDA, double *WORK);
+  double slange_(char *NORM, int *M, int *N, float *A, int *LDA, float *WORK);
+
   void dgecon_(char *NORM, int *N, double *A, int *LDA, double *ANORM,
                 double *RCOND, double *WORK, int *IWORK, int *INFO );
-
-  double slange_(char *NORM, int *M, int *N, float *A, int *LDA, float *WORK);
   void sgecon_(char *NORM, int *N, float *A, int *LDA, float *ANORM,
                 float *RCOND, float *WORK, int *IWORK, int *INFO );
 }
@@ -82,11 +65,20 @@ double matrixConditionNumber(int N, double *A) {
   //compute LU factorization
   dgetrf_ (&N, &N, tmpLU, &N, ipiv, &info);
 
+  if(info) {
+    std::stringstream ss;
+    ss << "dgetrf reports info = " << info << " when computing condition number";
+    LIBP_ABORT(ss.str());
+  }
+
   //compute inverse condition number
   dgecon_(&norm, &N, tmpLU, &N, &Anorm, &Acond, work, iwork, &info);
 
-  if(info)
-    printf("inv: dgetrf/dgecon reports info = %d when computing condition number\n", info);
+  if(info) {
+    std::stringstream ss;
+    ss << "dgecon reports info = " << info << " when computing condition number";
+    LIBP_ABORT(ss.str());
+  }
 
   free(work);
   free(iwork);
@@ -122,11 +114,20 @@ float matrixConditionNumber(int N, float *A) {
   //compute LU factorization
   sgetrf_ (&N, &N, tmpLU, &N, ipiv, &info);
 
+  if(info) {
+    std::stringstream ss;
+    ss << "sgetrf reports info = " << info << " when computing condition number";
+    LIBP_ABORT(ss.str());
+  }
+
   //compute inverse condition number
   sgecon_(&norm, &N, tmpLU, &N, &Anorm, &Acond, work, iwork, &info);
 
-  if(info)
-    printf("inv: sgetrf/sgecon reports info = %d when computing condition number\n", info);
+  if(info) {
+    std::stringstream ss;
+    ss << "sgecon reports info = " << info << " when computing condition number";
+    LIBP_ABORT(ss.str());
+  }
 
   free(work);
   free(iwork);

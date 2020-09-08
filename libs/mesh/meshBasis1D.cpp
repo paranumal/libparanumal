@@ -306,7 +306,7 @@ void mesh_t::JacobiGQ(dfloat alpha, dfloat beta, int _N, dfloat *_x, dfloat *_w)
   dfloat *VR = (dfloat*) calloc((_N+1)*(_N+1), sizeof(dfloat));
 
   // _x = diag(D);
-  matrixEig(_N+1, J, VR, _x, WI);
+  matrixEigenVectors(_N+1, J, VR, _x, WI);
 
   //_w = (V(1,:)').^2*2^(alpha+beta+1)/(alpha+beta+1)*gamma(alpha+1)*.gamma(beta+1)/gamma(alpha+beta+1);
   for(int n=0;n<=_N;++n){
