@@ -72,7 +72,7 @@ fpe
 ########## Elliptic Solver Options ##############
 #################################################
 
-# can be PCG, FPCG, NBPCG, or NBFPCG
+# can be PCG, FPCG, NBPCG, NBFPCG, or PGMRES
 [ELLIPTIC LINEAR SOLVER]
 PCG
 

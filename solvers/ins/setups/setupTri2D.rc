@@ -86,7 +86,7 @@ ins
 ########## Velocity Solver Options ##############
 #################################################
 
-# can be PCG, FPCG, NBPCG, or NBFPCG
+# can be PCG, FPCG, NBPCG, NBFPCG, or PGMRES
 [VELOCITY LINEAR SOLVER]
 PCG
 
@@ -138,7 +138,7 @@ CHEBYSHEV
 ########## Pressure Solver Options ##############
 #################################################
 
-# can be PCG, FPCG, NBPCG, or NBFPCG
+# can be PCG, FPCG, NBPCG, NBFPCG, or PGMRES
 [PRESSURE LINEAR SOLVER]
 FPCG
 

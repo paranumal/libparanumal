@@ -64,7 +64,7 @@ void ellipticAddSettings(settings_t& settings,
   settings.newSetting(prefix+"LINEAR SOLVER",
                       "PCG",
                       "Iterative Linear Solver to use for solve",
-                      {"PCG", "FPCG", "NBPCG", "NBFPCG"});
+                      {"PCG", "FPCG", "NBPCG", "NBFPCG", "PGMRES"});
 
   settings.newSetting(prefix+"PRECONDITIONER",
                       "NONE",
