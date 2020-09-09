@@ -45,7 +45,8 @@ void OASPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
     //Coarsen problem to N=1 and pass to parAlmond
     // TODO: This is blocking due to H<->D transfers.
     //       Should modify precons so size=1 is non-blocking
-    level->coarsen(o_r, o_rC);
+    level->coarsen(o_r, o_rC); //this should also gather the level
+
     parAlmond.Operator(o_rC, o_zC);
 
     //Add contributions from all patches together
@@ -58,7 +59,13 @@ void OASPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
     level->prolongate(o_zC, o_Mr);
   } else {
     //if N=1 just call the coarse solver
-    parAlmond.Operator(o_r, o_Mr);
+    if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
+      ogsMasked->Gather(o_rhsG, o_r, ogs_dfloat, ogs_add, ogs_notrans);
+      parAlmond.Operator(o_rhsG, o_xG);
+      ogsMasked->Scatter(o_Mr, o_xG, ogs_dfloat, ogs_add, ogs_notrans);
+    } else {
+      parAlmond.Operator(o_r, o_Mr);
+    }
   }
 
   // zero mean of RHS
@@ -77,10 +84,18 @@ OASPrecon::OASPrecon(elliptic_t& _elliptic):
   }
 
   //build the coarse precon
-  int Nf = mesh.N;
   int Nc = 1;  //hard code
-  int NpFine   = mesh.Np;
-  occa::memory o_weightF = elliptic.o_weight;
+  int NpCoarse = mesh.Np;
+  switch(mesh.elementType){
+    case TRIANGLES:
+      NpCoarse = ((Nc+1)*(Nc+2))/2; break;
+    case QUADRILATERALS:
+      NpCoarse = (Nc+1)*(Nc+1); break;
+    case TETRAHEDRA:
+      NpCoarse = ((Nc+1)*(Nc+2)*(Nc+3))/6; break;
+    case HEXAHEDRA:
+      NpCoarse = (Nc+1)*(Nc+1)*(Nc+1); break;
+  }
 
   //build mesh and elliptic objects for this degree
   mesh_t &meshC = mesh.SetupNewDegree(Nc);
@@ -105,33 +120,31 @@ OASPrecon::OASPrecon(elliptic_t& _elliptic):
   parAlmond.AMGSetup(A, ellipticC.allNeumann, null,ellipticC.allNeumannPenalty);
 
 
-  // if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
-  //   if (parAlmondHandle->numLevels > numMGLevels+1) {
-  //     //tell parAlmond to gather when going to the next level
-  //     parAlmond::agmgLevel *nextLevel
-  //           = (parAlmond::agmgLevel*)parAlmondHandle->levels[numMGLevels+1];
+  if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
+    //make buffers to gather this level before passing to parAlmond
+    ogsMasked = ellipticC. ogsMasked;
 
-  //     nextLevel->gatherLevel = true;
-  //     nextLevel->ogs = ellipticC.ogsMasked;
-  //     nextLevel->o_gatherWeight = ellipticC.o_weightG;
-  //     nextLevel->Gx = (dfloat*) calloc(nextLevel->R->Ncols,sizeof(dfloat));
-  //     nextLevel->Sx = (dfloat*) calloc(meshC.Np*meshC.Nelements,sizeof(dfloat));
-  //     nextLevel->o_Gx = elliptic.platform.malloc(nextLevel->R->Ncols*sizeof(dfloat),nextLevel->Gx);
-  //     nextLevel->o_Sx = elliptic.platform.malloc(meshC.Np*meshC.Nelements*sizeof(dfloat),nextLevel->Sx);
-  //   } else {
-  //     //this level is the base
-  //     parAlmond::coarseSolver *coarseLevel = parAlmondHandle->coarseLevel;
-
-  //     coarseLevel->gatherLevel = true;
-  //     coarseLevel->ogs = ellipticC.ogsMasked;
-  //     coarseLevel->Gx = (dfloat*) calloc(coarseLevel->ogs->Ngather,sizeof(dfloat));
-  //     coarseLevel->o_Gx = elliptic.platform.malloc(coarseLevel->ogs->Ngather*sizeof(dfloat),coarseLevel->Gx);
-  //   }
-  // }
+    dlong Ncols = parAlmond.getNumCols(0);
+    o_rhsG = elliptic.platform.malloc(Ncols*sizeof(dfloat));
+    o_xG   = elliptic.platform.malloc(Ncols*sizeof(dfloat));
+  }
 
   if (mesh.N>1) {
-    // FIX
-    // level = new MGLevel(ellipticC, Nf, NpFine, o_weightF);
+    level = new MGLevel(elliptic, Nc, NpCoarse);
+
+    //tell the last pMG level to gather after coarsening
+    level->gatherLevel = true;
+    level->ogsMasked = ellipticC.ogsMasked;
+
+    dfloat *dummy = (dfloat *) calloc(meshC.Np*meshC.Nelements,sizeof(dfloat));
+    level->o_SX = elliptic.platform.malloc(meshC.Np*meshC.Nelements*sizeof(dfloat), dummy);
+    level->o_GX = elliptic.platform.malloc(meshC.Np*meshC.Nelements*sizeof(dfloat), dummy);
+    free(dummy);
+
+    //share masking data with MG level
+    level->Nmasked = ellipticC.Nmasked;
+    level->o_maskIds = ellipticC.o_maskIds;
+    level->ogsMasked = ellipticC.ogsMasked;
 
     rPatch = (dfloat*) calloc(mesh.Np*(mesh.Nelements+mesh.totalRingElements),sizeof(dfloat));
     zPatch = (dfloat*) calloc(mesh.Np*(mesh.Nelements+mesh.totalRingElements),sizeof(dfloat));

@@ -141,7 +141,9 @@ private:
   MGLevel *level;
 
   //Coarse Precon
+  ogs_t *ogsMasked=nullptr;
   parAlmond::parAlmond_t parAlmond;
+  occa::memory o_xG, o_rhsG;
 
   dfloat *rPatch, *zPatch;
   occa::memory o_rPatch, o_zPatch;
