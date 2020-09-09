@@ -83,10 +83,10 @@ insSettings_t::insSettings_t(MPI_Comm& _comm):
              "ins");
 
   ellipticAddSettings(*this, "VELOCITY ");
-  parAlmondAddSettings(*this, "VELOCITY ");
+  parAlmond::AddSettings(*this, "VELOCITY ");
 
   ellipticAddSettings(*this, "PRESSURE ");
-  parAlmondAddSettings(*this, "PRESSURE ");
+  parAlmond::AddSettings(*this, "PRESSURE ");
 }
 
 void insSettings_t::report() {

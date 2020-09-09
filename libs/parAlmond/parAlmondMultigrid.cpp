@@ -76,10 +76,12 @@ void multigrid_t::AddLevel(multigridLevel* level){
   if (exact && numLevels==0) {
     if (settings.compareSetting("PARALMOND CYCLE", "NONSYM"))
       linearSolver = new pgmres(level->Nrows, level->Ncols - level->Nrows,
-                             platform, settings, level->weighted, level->o_weight);
+                             platform, settings, platform.comm,
+                             level->weighted, level->o_weight);
     else
       linearSolver = new pcg(level->Nrows, level->Ncols - level->Nrows,
-                             platform, settings, level->weighted, level->o_weight);
+                             platform, settings, platform.comm,
+                             level->weighted, level->o_weight);
   }
 
   if (ctype==KCYCLE) {

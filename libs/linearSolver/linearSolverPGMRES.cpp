@@ -29,9 +29,9 @@ SOFTWARE.
 #define PGMRES_RESTART 20
 
 pgmres::pgmres(dlong _N, dlong _Nhalo,
-         platform_t& _platform, settings_t& _settings,
+         platform_t& _platform, settings_t& _settings, MPI_Comm _comm,
          int _weighted, occa::memory& _o_weight):
-  linearSolver_t(_N, _Nhalo, _platform, _settings) {
+  linearSolver_t(_N, _Nhalo, _platform, _settings, _comm) {
 
   // Make sure LinAlg has the necessary kernels
   platform.linAlg.InitKernels({"axpy", "zaxpy",
@@ -71,7 +71,8 @@ int pgmres::Solve(solver_t& solver, precon_t& precon,
                occa::memory &o_x, occa::memory &o_b,
                const dfloat tol, const int MAXIT, const int verbose) {
 
-  int rank = platform.rank;
+  int rank;
+  MPI_Comm_rank(comm, &rank);
   linAlg_t &linAlg = platform.linAlg;
 
   // compute A*x
@@ -85,9 +86,9 @@ int pgmres::Solve(solver_t& solver, precon_t& precon,
 
   dfloat nr;
   if (weighted)
-    nr = linAlg.weightedNorm2(N, o_w, o_r, platform.comm);
+    nr = linAlg.weightedNorm2(N, o_w, o_r, comm);
   else
-    nr = linAlg.norm2(N, o_r, platform.comm);
+    nr = linAlg.norm2(N, o_r, comm);
 
   dfloat error = nr;
   const dfloat TOL = mymax(tol*nr,tol);
@@ -119,9 +120,9 @@ int pgmres::Solve(solver_t& solver, precon_t& precon,
       for(int k=0; k<=i; ++k){
         dfloat hki;
         if (weighted)
-          hki = linAlg.weightedInnerProd(N, o_w, o_r, o_V[k], platform.comm);
+          hki = linAlg.weightedInnerProd(N, o_w, o_r, o_V[k], comm);
         else
-          hki = linAlg.innerProd(N, o_r, o_V[k], platform.comm);
+          hki = linAlg.innerProd(N, o_r, o_V[k], comm);
 
         // r = r - hki*V[k]
         linAlg.axpy(N, -hki, o_V[k], 1.0, o_r);
@@ -132,9 +133,9 @@ int pgmres::Solve(solver_t& solver, precon_t& precon,
 
       dfloat nw;
       if (weighted)
-        nw = linAlg.weightedNorm2(N, o_w, o_r, platform.comm);
+        nw = linAlg.weightedNorm2(N, o_w, o_r, comm);
       else
-        nw = linAlg.norm2(N, o_r, platform.comm);
+        nw = linAlg.norm2(N, o_r, comm);
       H[i+1 + i*(restart+1)] = nw;
 
       // V(:,i+1) = r/nw
@@ -194,9 +195,9 @@ int pgmres::Solve(solver_t& solver, precon_t& precon,
     precon.Operator(o_z, o_r);
 
     if (weighted)
-      nr = linAlg.weightedNorm2(N, o_w, o_r, platform.comm);
+      nr = linAlg.weightedNorm2(N, o_w, o_r, comm);
     else
-      nr = linAlg.norm2(N, o_r, platform.comm);
+      nr = linAlg.norm2(N, o_r, comm);
 
     error = nr;
     //exit if tolerance is reached

@@ -29,9 +29,9 @@ SOFTWARE.
 #define NBPCG_BLOCKSIZE 512
 
 nbpcg::nbpcg(dlong _N, dlong _Nhalo,
-         platform_t& _platform, settings_t& _settings,
+         platform_t& _platform, settings_t& _settings, MPI_Comm _comm,
          int _weighted, occa::memory& _o_weight):
-  linearSolver_t(_N, _Nhalo, _platform, _settings) {
+  linearSolver_t(_N, _Nhalo, _platform, _settings, _comm) {
 
   dlong Ntotal = N + Nhalo;
 
@@ -72,7 +72,8 @@ int nbpcg::Solve(solver_t& solver, precon_t& precon,
                  occa::memory &o_x, occa::memory &o_r,
                  const dfloat tol, const int MAXIT, const int verbose) {
 
-  int rank = platform.rank;
+  int rank;
+  MPI_Comm_rank(comm, &rank);
   linAlg_t &linAlg = platform.linAlg;
 
   // register scalars
@@ -185,7 +186,7 @@ void nbpcg::Update1NBPCG(const dfloat beta){
     localdots[0] += tmpdots[n];
 
   globaldots[0] = 0;
-  MPI_Iallreduce(localdots, globaldots, 1, MPI_DFLOAT, MPI_SUM, platform.comm, &request);
+  MPI_Iallreduce(localdots, globaldots, 1, MPI_DFLOAT, MPI_SUM, comm, &request);
 }
 
 void nbpcg::Update2NBPCG(const dfloat alpha, occa::memory &o_r){
@@ -214,7 +215,7 @@ void nbpcg::Update2NBPCG(const dfloat alpha, occa::memory &o_r){
   globaldots[0] = 0;
   globaldots[1] = 0;
   globaldots[2] = 0;
-  MPI_Iallreduce(localdots, globaldots, 3, MPI_DFLOAT, MPI_SUM, platform.comm, &request);
+  MPI_Iallreduce(localdots, globaldots, 3, MPI_DFLOAT, MPI_SUM, comm, &request);
 }
 
 nbpcg::~nbpcg() {

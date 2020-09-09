@@ -98,7 +98,8 @@ fpe_t& fpe_t::Setup(platform_t& platform, mesh_t& mesh,
     fpe->tau = fpe->elliptic->tau;
 
     int weighted = settings.compareSetting("ELLIPTIC DISCRETIZATION", "CONTINUOUS") ? 1 : 0;
-    fpe->linearSolver = linearSolver_t::Setup(Nlocal, Nhalo, platform, *(fpe->ellipticSettings),
+    fpe->linearSolver = linearSolver_t::Setup(Nlocal, Nhalo,
+                                              platform, *(fpe->ellipticSettings), mesh.comm,
                                               weighted, fpe->elliptic->o_weight);
   } else {
     //set penalty

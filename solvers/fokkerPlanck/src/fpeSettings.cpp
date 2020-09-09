@@ -78,7 +78,7 @@ fpeSettings_t::fpeSettings_t(MPI_Comm& _comm):
              "fpe");
 
   ellipticAddSettings(*this, "ELLIPTIC ");
-  parAlmondAddSettings(*this, "ELLIPTIC ");
+  parAlmond::AddSettings(*this, "ELLIPTIC ");
 }
 
 void fpeSettings_t::report() {
