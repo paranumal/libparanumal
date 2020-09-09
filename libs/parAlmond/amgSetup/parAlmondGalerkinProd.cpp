@@ -53,8 +53,9 @@ static int compareNonZeroByRow(const void *a, const void *b){
 parCSR *galerkinProd(parCSR *A, parCSR *P){
 
   // MPI info
-  int rank=A->platform.rank;
-  int size=A->platform.size;
+  int rank, size;
+  MPI_Comm_rank(A->comm, &rank);
+  MPI_Comm_size(A->comm, &size);
 
   hlong *globalAggStarts = P->globalColStarts;
   hlong globalAggOffset = globalAggStarts[rank];
@@ -163,7 +164,7 @@ parCSR *galerkinProd(parCSR *A, parCSR *P){
 
   // find how many nodes to expect (should use sparse version)
   MPI_Alltoall(sendCounts, 1, MPI_INT,
-               recvCounts, 1, MPI_INT, A->platform.comm);
+               recvCounts, 1, MPI_INT, A->comm);
 
   // find send and recv offsets for gather
   for(int rr=0;rr<size;++rr){
@@ -176,10 +177,10 @@ parCSR *galerkinProd(parCSR *A, parCSR *P){
 
   MPI_Alltoallv(sendPTAP, sendCounts, sendOffsets, MPI_NONZERO_T,
                 recvPTAP, recvCounts, recvOffsets, MPI_NONZERO_T,
-                A->platform.comm);
+                A->comm);
 
   //clean up
-  MPI_Barrier(A->platform.comm);
+  MPI_Barrier(A->comm);
   free(sendPTAP);
   free(sendCounts); free(recvCounts);
   free(sendOffsets); free(recvOffsets);
@@ -209,12 +210,12 @@ parCSR *galerkinProd(parCSR *A, parCSR *P){
   }
 
   //clean up
-  MPI_Barrier(A->platform.comm);
+  MPI_Barrier(A->comm);
   free(recvPTAP);
 
   dlong numAggs = (dlong) (globalAggStarts[rank+1]-globalAggStarts[rank]); //local number of aggregates
 
-  parCSR *Ac = new parCSR(numAggs, numAggs, A->platform);
+  parCSR *Ac = new parCSR(numAggs, numAggs, A->platform, A->comm);
 
   Ac->globalRowStarts = globalAggStarts;
   Ac->globalColStarts = globalAggStarts;
@@ -306,7 +307,7 @@ parCSR *galerkinProd(parCSR *A, parCSR *P){
   for (dlong n=0;n<Ac->Nrows;n++) Ac->diagInv[n] = 1.0/Ac->diagA[n];
 
   //clean up
-  MPI_Barrier(A->platform.comm);
+  MPI_Barrier(A->comm);
   MPI_Type_free(&MPI_NONZERO_T);
   free(PTAP);
 

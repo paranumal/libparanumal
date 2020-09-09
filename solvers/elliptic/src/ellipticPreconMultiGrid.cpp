@@ -45,7 +45,7 @@ void MultiGridPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
 
 MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   elliptic(_elliptic), mesh(_elliptic.mesh), settings(_elliptic.settings),
-  parAlmond(elliptic.platform, settings) {
+  parAlmond(elliptic.platform, settings, mesh.comm) {
 
   int Nf = mesh.N;
   int Nc = Nf;
@@ -103,15 +103,15 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   elliptic_t &ellipticF = elliptic.SetupNewDegree(meshF);
 
   //build full A matrix and pass to parAlmond
-  parAlmond::parCOO A(elliptic.platform);
+  parAlmond::parCOO A(elliptic.platform, mesh.comm);
   if (settings.compareSetting("DISCRETIZATION", "IPDG"))
     ellipticF.BuildOperatorMatrixIpdg(A);
   else if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS"))
     ellipticF.BuildOperatorMatrixContinuous(A);
 
   //populate null space unit vector
-  int rank = elliptic.platform.rank;
-  int size = elliptic.platform.size;
+  int rank = mesh.rank;
+  int size = mesh.size;
   hlong TotalRows = A.globalStarts[size];
   dlong numLocalRows = (dlong) (A.globalStarts[rank+1]-A.globalStarts[rank]);
   dfloat *null = (dfloat *) malloc(numLocalRows*sizeof(dfloat));

@@ -67,7 +67,7 @@ void OASPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
 
 OASPrecon::OASPrecon(elliptic_t& _elliptic):
   elliptic(_elliptic), mesh(_elliptic.mesh), settings(_elliptic.settings),
-  parAlmond(elliptic.platform, settings) {
+  parAlmond(elliptic.platform, settings, mesh.comm) {
 
   //build the one ring mesh
   if (mesh.N>1) {
@@ -87,22 +87,22 @@ OASPrecon::OASPrecon(elliptic_t& _elliptic):
   elliptic_t &ellipticC = elliptic.SetupNewDegree(meshC);
 
   //build full A matrix and pass to parAlmond
-  parAlmond::parCOO A(elliptic.platform);
+  parAlmond::parCOO A(elliptic.platform, meshC.comm);
   if (settings.compareSetting("DISCRETIZATION", "IPDG"))
     ellipticC.BuildOperatorMatrixIpdg(A);
   else if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS"))
     ellipticC.BuildOperatorMatrixContinuous(A);
 
   //populate null space unit vector
-  int rank = elliptic.platform.rank;
-  int size = elliptic.platform.size;
+  int rank = meshC.rank;
+  int size = meshC.size;
   hlong TotalRows = A.globalStarts[size];
   dlong numLocalRows = (dlong) (A.globalStarts[rank+1]-A.globalStarts[rank]);
   dfloat *null = (dfloat *) malloc(numLocalRows*sizeof(dfloat));
   for (dlong i=0;i<numLocalRows;i++) null[i] = 1.0/sqrt(TotalRows);
 
   //set up AMG levels (treating the N=1 level as a matrix level)
-  parAlmond.AMGSetup(A, elliptic.allNeumann, null,elliptic.allNeumannPenalty);
+  parAlmond.AMGSetup(A, ellipticC.allNeumann, null,ellipticC.allNeumannPenalty);
 
 
   // if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {

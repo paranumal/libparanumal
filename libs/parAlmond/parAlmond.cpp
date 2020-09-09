@@ -30,7 +30,7 @@ SOFTWARE.
 
 namespace parAlmond {
 
-parAlmond_t::parAlmond_t(platform_t& _platform, settings_t& _settings):
+parAlmond_t::parAlmond_t(platform_t& _platform, settings_t& _settings, MPI_Comm comm):
   platform(_platform), settings(_settings) {
 
   platform.linAlg.InitKernels({"set", "add", "sum", "scale",
@@ -40,7 +40,7 @@ parAlmond_t::parAlmond_t(platform_t& _platform, settings_t& _settings):
                                 "innerProd", "weightedInnerProd",
                                 "norm2", "weightedNorm2"});
 
-  multigrid = new multigrid_t(platform, settings);
+  multigrid = new multigrid_t(platform, settings, comm);
 
   //build parAlmond kernels on first construction
   if (Nrefs==0) buildParAlmondKernels(platform);
@@ -67,7 +67,10 @@ void parAlmond_t::AddLevel(multigridLevel* level) {
 
 void parAlmond_t::Report() {
 
-  if(platform.rank==0) {
+  int rank;
+  MPI_Comm_rank(multigrid->comm, &rank);
+
+  if(rank==0) {
     printf("------------------Multigrid Report----------------------------------------\n");
     printf("--------------------------------------------------------------------------\n");
     printf("level|    Type    |    dimension   |   nnz per row   |   Smoother        |\n");
@@ -76,11 +79,11 @@ void parAlmond_t::Report() {
   }
 
   for(int lev=0; lev<multigrid->numLevels; lev++) {
-    if(platform.rank==0) {printf(" %3d ", lev);fflush(stdout);}
+    if(rank==0) {printf(" %3d ", lev);fflush(stdout);}
     multigrid->levels[lev]->Report();
   }
 
-  if(platform.rank==0)
+  if(rank==0)
     printf("--------------------------------------------------------------------------\n");
 }
 

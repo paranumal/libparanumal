@@ -39,8 +39,9 @@ void multigrid_t::Operator(occa::memory& o_RHS, occa::memory& o_X) {
   }
 }
 
-multigrid_t::multigrid_t(platform_t& _platform, settings_t& _settings):
-    platform(_platform), settings(_settings) {
+multigrid_t::multigrid_t(platform_t& _platform, settings_t& _settings,
+                         MPI_Comm _comm):
+    platform(_platform), settings(_settings), comm(_comm) {
 
   //determine what sort of multigrid cycle to construct
   if(settings.compareSetting("PARALMOND CYCLE", "KCYCLE")) {
@@ -76,11 +77,11 @@ void multigrid_t::AddLevel(multigridLevel* level){
   if (exact && numLevels==0) {
     if (settings.compareSetting("PARALMOND CYCLE", "NONSYM"))
       linearSolver = new pgmres(level->Nrows, level->Ncols - level->Nrows,
-                             platform, settings, platform.comm,
+                             platform, settings, comm,
                              level->weighted, level->o_weight);
     else
       linearSolver = new pcg(level->Nrows, level->Ncols - level->Nrows,
-                             platform, settings, platform.comm,
+                             platform, settings, comm,
                              level->weighted, level->o_weight);
   }
 

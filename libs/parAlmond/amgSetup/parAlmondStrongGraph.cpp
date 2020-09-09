@@ -48,7 +48,7 @@ static strongGraph_t* RugeStubenStrength(parCSR *A) {
   const dlong M = A->Ncols;
   const dlong nzRows = A->offd.nzRows;
 
-  strongGraph_t *C = new strongGraph_t(N, M, A->platform);
+  strongGraph_t *C = new strongGraph_t(N, M, A->platform, A->comm);
 
   C->rowStarts = (dlong *) calloc(N+1,sizeof(dlong));
 
@@ -174,7 +174,7 @@ static strongGraph_t* SymmetricStrength(parCSR *A) {
   const dlong M = A->Ncols;
   const dlong nzRows = A->offd.nzRows;
 
-  strongGraph_t *C = new strongGraph_t(N, M, A->platform);
+  strongGraph_t *C = new strongGraph_t(N, M, A->platform, A->comm);
 
   C->rowStarts = (dlong *) calloc(N+1,sizeof(dlong));
 

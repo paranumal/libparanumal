@@ -41,7 +41,7 @@ void coarseSolver_t::solve(occa::memory& o_rhs, occa::memory& o_x) {
 
   //gather the full vector
   MPI_Allgatherv(rhsLocal,             N,                MPI_DFLOAT,
-                 rhsCoarse, coarseCounts, coarseOffsets, MPI_DFLOAT, platform.comm);
+                 rhsCoarse, coarseCounts, coarseOffsets, MPI_DFLOAT, comm);
 
   //multiply by local part of the exact matrix inverse
   // #pragma omp parallel for
@@ -76,8 +76,12 @@ typedef struct {
 void coarseSolver_t::setup(parCSR *A, bool nullSpace,
                            dfloat *nullVector, dfloat nullSpacePenalty) {
 
-  int rank = platform.rank;
-  int size = platform.size;
+  comm = A->comm;
+
+  int rank;
+  int size;
+  MPI_Comm_rank(comm, &rank);
+  MPI_Comm_size(comm, &size);
 
   //copy the global coarse partition as ints
   coarseOffsets = (int* ) calloc(size+1,sizeof(int));
@@ -141,7 +145,7 @@ void coarseSolver_t::setup(parCSR *A, bool nullSpace,
   int *recvNNZ    = (int*) calloc(size,sizeof(int));
   int *NNZoffsets = (int*) calloc(size+1,sizeof(int));
   MPI_Allgather(&sendNNZ, 1, MPI_INT,
-                 recvNNZ, 1, MPI_INT, platform.comm);
+                 recvNNZ, 1, MPI_INT, comm);
 
   int totalNNZ = 0;
   for (int r=0;r<size;r++) {
@@ -152,7 +156,7 @@ void coarseSolver_t::setup(parCSR *A, bool nullSpace,
   nonzero_t *recvNonZeros = (nonzero_t *) calloc(totalNNZ, sizeof(nonzero_t));
 
   MPI_Allgatherv(sendNonZeros, sendNNZ,             MPI_NONZERO_T,
-                 recvNonZeros, recvNNZ, NNZoffsets, MPI_NONZERO_T, platform.comm);
+                 recvNonZeros, recvNNZ, NNZoffsets, MPI_NONZERO_T, comm);
 
   //gather null vector
   dfloat *nullTotal = (dfloat*) calloc(coarseTotal,sizeof(dfloat));
@@ -162,10 +166,10 @@ void coarseSolver_t::setup(parCSR *A, bool nullSpace,
 
   MPI_Allgatherv(nullVector,            N,                MPI_DFLOAT,
                   nullTotal, coarseCounts, coarseOffsets, MPI_DFLOAT,
-                 platform.comm);
+                 comm);
 
   //clean up
-  MPI_Barrier(platform.comm);
+  MPI_Barrier(comm);
   MPI_Type_free(&MPI_NONZERO_T);
   free(sendNonZeros);
   free(NNZoffsets);

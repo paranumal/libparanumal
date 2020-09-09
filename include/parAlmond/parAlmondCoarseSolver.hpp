@@ -39,6 +39,7 @@ namespace parAlmond {
 class coarseSolver_t: public solver_t {
 
 public:
+  MPI_Comm comm;
   int coarseTotal;
   int coarseOffset;
   int *coarseOffsets=nullptr;

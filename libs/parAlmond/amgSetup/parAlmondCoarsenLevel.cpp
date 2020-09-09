@@ -32,7 +32,8 @@ namespace parAlmond {
 //create coarsened problem
 amgLevel *coarsenAmgLevel(amgLevel *level, dfloat *null){
 
-  int size = level->platform.size;
+  int size;
+  MPI_Comm_size(level->A->comm, &size);
 
   //TODO: Make this a runtime option
   //hard code for now

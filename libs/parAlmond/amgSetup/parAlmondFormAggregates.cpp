@@ -53,8 +53,9 @@ void formAggregates(parCSR *A, strongGraph_t *C,
                     hlong* FineToCoarse,
                     hlong* globalAggStarts){
 
-  int rank = A->platform.rank;
-  int size = A->platform.size;
+  int rank, size;
+  MPI_Comm_rank(A->comm, &rank);
+  MPI_Comm_size(A->comm, &size);
 
   const dlong N   = C->Nrows;
   const dlong M   = C->Ncols;
@@ -155,7 +156,7 @@ void formAggregates(parCSR *A, strongGraph_t *C,
     hlong cnt = 0;
     for (dlong n=0;n<N;n++) if (states[n]==0) cnt++;
 
-    MPI_Allreduce(&cnt,&done,1,MPI_HLONG, MPI_SUM,A->platform.comm);
+    MPI_Allreduce(&cnt,&done,1,MPI_HLONG, MPI_SUM,A->comm);
     done = (done == 0) ? 1 : 0;
   }
 
@@ -166,7 +167,7 @@ void formAggregates(parCSR *A, strongGraph_t *C,
   for(dlong i=0; i<N; i++)
     if(states[i] == 1) numAggs++;
 
-  MPI_Allgather(&numAggs,1,MPI_DLONG,gNumAggs,1,MPI_DLONG,A->platform.comm);
+  MPI_Allgather(&numAggs,1,MPI_DLONG,gNumAggs,1,MPI_DLONG,A->comm);
 
   globalAggStarts[0] = 0;
   for (int r=0;r<size;r++)

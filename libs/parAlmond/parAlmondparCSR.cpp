@@ -139,10 +139,13 @@ void parCSR::SpMV(const dfloat alpha, occa::memory& o_x, const dfloat beta,
 
 //build a parCSR matrix from a distributed COO matrix
 parCSR::parCSR(parCOO& A):       // number of nonzeros on this rank
-  platform(A.platform) {
+  platform(A.platform),
+  comm(A.comm) {
 
-  int rank=platform.rank;
-  int size=platform.size;
+  int rank;
+  int size;
+  MPI_Comm_rank(comm, &rank);
+  MPI_Comm_size(comm, &size);
 
   Nrows = (dlong)(A.globalStarts[rank+1]-A.globalStarts[rank]);
   Ncols = Nrows;
@@ -288,7 +291,9 @@ static int CompareLocalId(const void *a, const void *b){
 
 void parCSR::haloSetup(hlong *colIds) {
 
-  int rank = platform.rank;
+  int rank;
+  MPI_Comm_rank(comm, &rank);
+
   const hlong globalOffset = globalColStarts[rank];
 
   //collect the unique nonlocal column ids
@@ -335,7 +340,7 @@ void parCSR::haloSetup(hlong *colIds) {
 
   //make a halo exchange to share column entries and an ogs for gsops accross columns
   int verbose = 0;
-  halo = halo_t::Setup(Ncols, colMap, platform.comm, verbose, platform);
+  halo = halo_t::Setup(Ncols, colMap, comm, verbose, platform);
 
   //shift back to 0-indexed
   for (dlong n=0; n<Ncols; n++) colMap[n]=abs(colMap[n])-1;
@@ -380,9 +385,12 @@ parCSR::~parCSR() {
 
 dfloat parCSR::rhoDinvA(){
 
+  int size;
+  MPI_Comm_size(comm, &size);
+
   int k = 10;
 
-  hlong Ntotal = globalRowStarts[platform.size];
+  hlong Ntotal = globalRowStarts[size];
   if(k > Ntotal) k = (int) Ntotal;
 
   // do an arnoldi
@@ -403,7 +411,7 @@ dfloat parCSR::rhoDinvA(){
   // dfloat norm_vo = vectorNorm(Nrows,Vx, comm);
   dfloat norm_vo=0.0, gnorm_vo=0.0;
   for(dlong n=0; n<Nrows; n++) norm_vo += Vx[n]*Vx[n];
-  MPI_Allreduce(&norm_vo, &gnorm_vo, 1, MPI_DFLOAT, MPI_SUM, platform.comm);
+  MPI_Allreduce(&norm_vo, &gnorm_vo, 1, MPI_DFLOAT, MPI_SUM, comm);
   norm_vo = sqrt(gnorm_vo);
 
   // vectorScale(Nrows, 1.0/norm_vo, Vx);
@@ -427,7 +435,7 @@ dfloat parCSR::rhoDinvA(){
       // dfloat hij = vectorInnerProd(Nrows, V[i], V[j+1],comm);
       dfloat local_hij=0.0, hij=0.0;
       for(dlong n=0; n<Nrows; n++) local_hij += V[i][n]*V[j+1][n];
-      MPI_Allreduce(&local_hij, &hij, 1, MPI_DFLOAT, MPI_SUM, platform.comm);
+      MPI_Allreduce(&local_hij, &hij, 1, MPI_DFLOAT, MPI_SUM, comm);
 
       // v[j+1] = v[j+1] - hij*v[i]
       // vectorAdd(Nrows,-hij, V[i], 1.0, V[j+1]);
@@ -441,7 +449,7 @@ dfloat parCSR::rhoDinvA(){
       // dfloat norm_vj = vectorNorm(Nrows,V[j+1],comm);
       dfloat norm_vj=0.0, gnorm_vj=0.0;
       for(dlong n=0; n<Nrows; n++) norm_vj += V[j+1][n]*V[j+1][n];
-      MPI_Allreduce(&norm_vj, &gnorm_vj, 1, MPI_DFLOAT, MPI_SUM, platform.comm);
+      MPI_Allreduce(&norm_vj, &gnorm_vj, 1, MPI_DFLOAT, MPI_SUM, comm);
       norm_vj = sqrt(gnorm_vj);
 
       H[j+1+ j*k] = (double) norm_vj;

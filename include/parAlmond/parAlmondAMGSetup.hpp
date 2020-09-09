@@ -37,6 +37,7 @@ namespace parAlmond {
 class strongGraph_t {
 public:
   platform_t& platform;
+  MPI_Comm comm;
   dlong Nrows=0;
   dlong Ncols=0;
   dlong nnz=0;
@@ -44,8 +45,8 @@ public:
   dlong  *rowStarts=nullptr;
   dlong  *cols=nullptr;
 
-  strongGraph_t(dlong N, dlong M, platform_t& _platform):
-    platform(_platform), Nrows(N), Ncols(M) {}
+  strongGraph_t(dlong N, dlong M, platform_t& _platform, MPI_Comm _comm):
+    platform(_platform), comm(_comm), Nrows(N), Ncols(M) {}
   ~strongGraph_t() {
     if (rowStarts) free(rowStarts);
     if (cols) free(cols);

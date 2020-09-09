@@ -32,14 +32,15 @@ namespace parAlmond {
 parCSR *constructProlongation(parCSR *A, hlong *FineToCoarse,
                             hlong *globalAggStarts, dfloat *null){
 
-  int rank = A->platform.rank;
+  int rank;
+  MPI_Comm_rank(A->comm, &rank);
 
   const dlong N = A->Nrows;
 
   const hlong globalAggOffset = globalAggStarts[rank];
   const dlong NCoarse = (dlong) (globalAggStarts[rank+1]-globalAggStarts[rank]); //local num agg
 
-  parCSR* P = new parCSR(N, NCoarse, A->platform);
+  parCSR* P = new parCSR(N, NCoarse, A->platform, A->comm);
 
   P->globalRowStarts = A->globalRowStarts;
   P->globalColStarts = globalAggStarts;

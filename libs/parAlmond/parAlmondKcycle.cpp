@@ -181,7 +181,7 @@ void multigrid_t::kcycleCombinedOp1(multigridLevel* level,
     result[1] += ((dfloat*)reductionScratch)[3*i+1];
     result[2] += ((dfloat*)reductionScratch)[3*i+2];
   }
-  MPI_Allreduce(result,aDotbc,3,MPI_DFLOAT,MPI_SUM,platform.comm);
+  MPI_Allreduce(result,aDotbc,3,MPI_DFLOAT,MPI_SUM,comm);
 }
 
 // returns aDotbcd[0] = a\dot b, aDotbcd[1] = a\dot c, aDotbcd[2] = a\dot d,
@@ -206,7 +206,7 @@ void multigrid_t::kcycleCombinedOp2(multigridLevel* level, dfloat *aDotbcd,
     result[1] += ((dfloat*)reductionScratch)[3*i+1];
     result[2] += ((dfloat*)reductionScratch)[3*i+2];
   }
-  MPI_Allreduce(result,aDotbcd,3,MPI_DFLOAT,MPI_SUM,platform.comm);
+  MPI_Allreduce(result,aDotbcd,3,MPI_DFLOAT,MPI_SUM,comm);
 }
 
 // y = beta*y + alpha*x, and return y\dot y
@@ -231,7 +231,7 @@ dfloat multigrid_t::vectorAddInnerProd(multigridLevel* level,
   for (dlong i=0; i<numBlocks; i++) {
     result += ((dfloat*)reductionScratch)[i];
   }
-  MPI_Allreduce(&result,&gresult,1,MPI_DFLOAT,MPI_SUM,platform.comm);
+  MPI_Allreduce(&result,&gresult,1,MPI_DFLOAT,MPI_SUM,comm);
   return gresult;
 }
 

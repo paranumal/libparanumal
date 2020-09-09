@@ -42,6 +42,7 @@ class multigrid_t: public precon_t {
 public:
   platform_t& platform;
   settings_t& settings;
+  MPI_Comm comm;
 
   bool exact;
   linearSolver_t *linearSolver=nullptr;
@@ -73,7 +74,7 @@ public:
   occa::memory h_reductionScratch;
   occa::memory o_reductionScratch;
 
-  multigrid_t(platform_t& _platform, settings_t& _settings);
+  multigrid_t(platform_t& _platform, settings_t& _settings, MPI_Comm _comm);
   ~multigrid_t();
 
   void AddLevel(multigridLevel* level);

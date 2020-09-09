@@ -45,10 +45,10 @@ void ParAlmondPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
 
 ParAlmondPrecon::ParAlmondPrecon(elliptic_t& _elliptic):
   elliptic(_elliptic), settings(_elliptic.settings),
-  parAlmond(elliptic.platform, settings) {
+  parAlmond(elliptic.platform, settings, elliptic.mesh.comm) {
 
   //build full A matrix and pass to parAlmond
-  parAlmond::parCOO A(elliptic.platform);
+  parAlmond::parCOO A(elliptic.platform, elliptic.mesh.comm);
   if (settings.compareSetting("DISCRETIZATION", "IPDG")) {
     elliptic.BuildOperatorMatrixIpdg(A);
   } else if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
@@ -56,8 +56,8 @@ ParAlmondPrecon::ParAlmondPrecon(elliptic_t& _elliptic):
   }
 
   //populate null space unit vector
-  int rank = elliptic.platform.rank;
-  int size = elliptic.platform.size;
+  int rank = elliptic.mesh.rank;
+  int size = elliptic.mesh.size;
   hlong TotalRows = A.globalStarts[size];
   dlong numLocalRows = (dlong) (A.globalStarts[rank+1]-A.globalStarts[rank]);
   dfloat *null = (dfloat *) malloc(numLocalRows*sizeof(dfloat));

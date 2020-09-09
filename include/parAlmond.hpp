@@ -51,6 +51,7 @@ void ReportSettings(settings_t& settings);
 class parCOO {
 public:
   platform_t &platform;
+  MPI_Comm comm;
 
   dlong nnz=0;
   hlong *globalStarts=nullptr;
@@ -65,8 +66,8 @@ public:
   };
   nonZero_t *entries=nullptr;
 
-  parCOO(platform_t &_platform):
-    platform(_platform) {};
+  parCOO(platform_t &_platform, MPI_Comm _comm):
+    platform(_platform), comm(_comm) {};
 
   ~parCOO() {
     if(entries) free(entries);
@@ -87,7 +88,8 @@ public:
 
   occa::memory o_scratch;
 
-  multigridLevel(dlong N, dlong M, platform_t& _platform, settings_t& _settings):
+  multigridLevel(dlong N, dlong M, platform_t& _platform,
+                 settings_t& _settings):
     solver_t(_platform, _settings), Nrows(N), Ncols(M) {}
   virtual ~multigridLevel() {};
 
@@ -104,7 +106,7 @@ class multigrid_t;
 
 class parAlmond_t: public precon_t {
 public:
-  parAlmond_t(platform_t& _platform, settings_t& settings_);
+  parAlmond_t(platform_t& _platform, settings_t& settings_, MPI_Comm comm);
   ~parAlmond_t();
 
   //Add level to multigrid heirarchy

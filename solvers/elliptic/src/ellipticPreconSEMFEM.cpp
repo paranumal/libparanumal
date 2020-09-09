@@ -65,7 +65,7 @@ void SEMFEMPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
 
 SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
   elliptic(_elliptic), mesh(_elliptic.mesh), settings(_elliptic.settings),
-  parAlmond(elliptic.platform, settings) {
+  parAlmond(elliptic.platform, settings, mesh.comm) {
 
   //sanity checking
   if (!settings.compareSetting("DISCRETIZATION", "CONTINUOUS") )
@@ -215,12 +215,12 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
   free(localIds); free(maskedGlobalNumbering); free(maskedGlobalOwners);
 
   //finally, build the fem matrix and pass to parAlmond
-  parAlmond::parCOO A(elliptic.platform);
+  parAlmond::parCOO A(elliptic.platform, femMesh->comm);
   femElliptic->BuildOperatorMatrixContinuous(A);
 
   //populate null space unit vector
-  int rank = elliptic.platform.rank;
-  int size = elliptic.platform.size;
+  int rank = femMesh->rank;
+  int size = femMesh->size;
   hlong TotalRows = A.globalStarts[size];
   dlong numLocalRows = (dlong) (A.globalStarts[rank+1]-A.globalStarts[rank]);
   dfloat *null = (dfloat *) malloc(numLocalRows*sizeof(dfloat));

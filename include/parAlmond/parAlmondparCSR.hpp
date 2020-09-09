@@ -32,6 +32,8 @@ namespace parAlmond {
 class parCSR {
 public:
   platform_t& platform;
+  MPI_Comm comm;
+
   dlong Nrows;
   dlong Ncols;
 
@@ -84,8 +86,8 @@ public:
   halo_t *halo = nullptr;
   dlong NlocalCols = 0;
 
-  parCSR(dlong N, dlong M, platform_t& _platform):
-    platform(_platform), Nrows(N), Ncols(M) {}
+  parCSR(dlong N, dlong M, platform_t& _platform, MPI_Comm _comm):
+    platform(_platform), comm(_comm), Nrows(N), Ncols(M) {}
 
   //build a parCSR matrix from a distributed COO matrix
   parCSR(parCOO& A);

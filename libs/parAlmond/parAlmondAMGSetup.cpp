@@ -34,8 +34,11 @@ void parAlmond_t::AMGSetup(parCOO& cooA,
                          dfloat *nullVector,
                          dfloat nullSpacePenalty){
 
-  int rank = platform.rank;
-  int size = platform.size;
+
+  int rank;
+  int size;
+  MPI_Comm_rank(cooA.comm, &rank);
+  MPI_Comm_size(cooA.comm, &size);
 
   if(rank==0) {printf("Setting up AMG...");fflush(stdout);}
 

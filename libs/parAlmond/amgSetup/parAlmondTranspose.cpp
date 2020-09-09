@@ -53,8 +53,9 @@ static int compareNonZeroByRow(const void *a, const void *b){
 parCSR *transpose(parCSR *A){
 
   // MPI info
-  int rank =A->platform.rank;
-  int size =A->platform.size;
+  int rank, size;
+  MPI_Comm_rank(A->comm, &rank);
+  MPI_Comm_size(A->comm, &size);
 
   hlong *globalRowStarts = A->globalRowStarts;
   hlong *globalColStarts = A->globalColStarts;
@@ -62,7 +63,7 @@ parCSR *transpose(parCSR *A){
   dlong Nrows = (dlong) (globalColStarts[rank+1]-globalColStarts[rank]);
   dlong Ncols = (dlong) (globalRowStarts[rank+1]-globalRowStarts[rank]);
 
-  parCSR *At = new parCSR(Nrows, Ncols, A->platform);
+  parCSR *At = new parCSR(Nrows, Ncols, A->platform, A->comm);
 
   At->globalRowStarts = globalColStarts;
   At->globalColStarts = globalRowStarts;
@@ -155,7 +156,7 @@ parCSR *transpose(parCSR *A){
   }
 
   MPI_Alltoall(sendCounts, 1, MPI_INT,
-               recvCounts, 1, MPI_INT, A->platform.comm);
+               recvCounts, 1, MPI_INT, A->comm);
 
   for (r=0;r<size;r++) {
     sendOffsets[r+1] = sendOffsets[r]+sendCounts[r];
@@ -167,10 +168,10 @@ parCSR *transpose(parCSR *A){
 
   MPI_Alltoallv(sendNonZeros, sendCounts, sendOffsets, MPI_NONZERO_T,
                 recvNonZeros, recvCounts, recvOffsets, MPI_NONZERO_T,
-                A->platform.comm);
+                A->comm);
 
   //clean up
-  MPI_Barrier(A->platform.comm);
+  MPI_Barrier(A->comm);
   free(sendNonZeros);
   free(sendCounts);
   free(recvCounts);
@@ -223,7 +224,7 @@ parCSR *transpose(parCSR *A){
     At->offd.vals[n] = recvNonZeros[n].val;
   }
 
-  MPI_Barrier(A->platform.comm);
+  MPI_Barrier(A->comm);
   free(recvNonZeros);
   free(colIds);
 
