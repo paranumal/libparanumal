@@ -285,7 +285,7 @@ ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
                                                 mesh.Np, ins->NVfields, *(ins->subcycler));
     } else if (settings.compareSetting("SUBCYCLING TIME INTEGRATOR","DOPRI5")){
       ins->subStepper = new TimeStepper::dopri5(mesh.Nelements, mesh.totalHaloPairs,
-                                                mesh.Np, ins->NVfields, *(ins->subcycler));
+                                                mesh.Np, ins->NVfields, *(ins->subcycler), mesh.comm);
     }
     ins->subStepper->SetTimeStep(dtAdvc);
 

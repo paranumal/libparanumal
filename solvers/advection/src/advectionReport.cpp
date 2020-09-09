@@ -48,7 +48,7 @@ void advection_t::Report(dfloat time, int tstep){
     string name;
     settings.getSetting("OUTPUT FILE NAME", name);
     char fname[BUFSIZ];
-    sprintf(fname, "%s_%04d_%04d.vtu", name.c_str(), platform.rank, frame++);
+    sprintf(fname, "%s_%04d_%04d.vtu", name.c_str(), mesh.rank, frame++);
 
     PlotFields(q, fname);
   }

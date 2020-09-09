@@ -122,13 +122,13 @@ bns_t& bns_t::Setup(platform_t& platform, mesh_t& mesh,
                                               mesh.Np, bns->Nfields, bns->Npmlfields, *bns);
   } else if (settings.compareSetting("TIME INTEGRATOR","DOPRI5")){
     bns->timeStepper = new TimeStepper::dopri5_pml(mesh.Nelements, mesh.NpmlElements, mesh.totalHaloPairs,
-                                              mesh.Np, bns->Nfields, bns->Npmlfields, *bns);
+                                              mesh.Np, bns->Nfields, bns->Npmlfields, *bns, mesh.comm);
   } else if (settings.compareSetting("TIME INTEGRATOR","SARK4")) {
     bns->timeStepper = new TimeStepper::sark4_pml(mesh.Nelements, mesh.NpmlElements, mesh.totalHaloPairs,
-                                              mesh.Np, bns->Nfields, bns->Npmlfields, lambda, *bns);
+                                              mesh.Np, bns->Nfields, bns->Npmlfields, lambda, *bns, mesh.comm);
   } else if (settings.compareSetting("TIME INTEGRATOR","SARK5")) {
     bns->timeStepper = new TimeStepper::sark5_pml(mesh.Nelements, mesh.NpmlElements, mesh.totalHaloPairs,
-                                              mesh.Np, bns->Nfields, bns->Npmlfields, lambda, *bns);
+                                              mesh.Np, bns->Nfields, bns->Npmlfields, lambda, *bns, mesh.comm);
   } else {
     LIBP_ABORT(string("Requested TIME INTEGRATOR not found."));
   }

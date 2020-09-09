@@ -105,6 +105,7 @@ public:
 /* Explict Runge-Kutta, order 5 with embedded order 4 and adaptive time-stepping */
 class dopri5: public timeStepper_t {
 protected:
+  MPI_Comm comm;
   int Nrk;
 
   dlong Nblock;
@@ -153,7 +154,7 @@ protected:
 
 public:
   dopri5(dlong Nelements, dlong NhaloElements,
-         int Np, int Nfields, solver_t& solver);
+         int Np, int Nfields, solver_t& solver, MPI_Comm _comm);
   ~dopri5();
 
   void Run(occa::memory& o_q, dfloat start, dfloat end);
@@ -194,6 +195,7 @@ public:
 /* Semi-Analytic Explict Runge-Kutta, order 4 with embedded order 3 and adaptive time-stepping */
 class sark4: public timeStepper_t {
 protected:
+  MPI_Comm comm;
   int Nrk;
   int order, embeddedOrder;
 
@@ -251,7 +253,7 @@ public:
   sark4(dlong _Nelements, dlong _NhaloElements,
         int _Np, int _Nfields,
         dfloat *_lambda,
-        solver_t& _solver);
+        solver_t& _solver, MPI_Comm _comm);
   ~sark4();
 
   void Run(occa::memory& o_q, dfloat start, dfloat end);
@@ -260,6 +262,7 @@ public:
 /* Semi-Analytic Explict Runge-Kutta, order 5 with embedded order 4 and adaptive time-stepping */
 class sark5: public timeStepper_t {
 protected:
+  MPI_Comm comm;
   int Nrk;
   int order, embeddedOrder;
 
@@ -317,7 +320,7 @@ public:
   sark5(dlong _Nelements, dlong _NhaloElements,
         int _Np, int _Nfields,
         dfloat *_lambda,
-        solver_t& _solver);
+        solver_t& _solver, MPI_Comm _comm);
   ~sark5();
 
   void Run(occa::memory& o_q, dfloat start, dfloat end);
@@ -514,7 +517,7 @@ private:
 
 public:
   dopri5_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
-            int Np, int Nfields, int Npmlfields, solver_t& solver);
+            int Np, int Nfields, int Npmlfields, solver_t& solver, MPI_Comm _comm);
   ~dopri5_pml();
 };
 
@@ -569,7 +572,7 @@ private:
 public:
   sark4_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
             int Np, int Nfields, int _Npmlfields,
-            dfloat *_lambda, solver_t& solver);
+            dfloat *_lambda, solver_t& solver, MPI_Comm _comm);
   ~sark4_pml();
 };
 
@@ -601,7 +604,7 @@ private:
 public:
   sark5_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
             int Np, int Nfields, int _Npmlfields,
-            dfloat *_lambda, solver_t& solver);
+            dfloat *_lambda, solver_t& solver, MPI_Comm _comm);
   ~sark5_pml();
 };
 

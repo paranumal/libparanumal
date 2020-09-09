@@ -45,7 +45,7 @@ acoustics_t& acoustics_t::Setup(platform_t& platform, mesh_t& mesh,
                                               mesh.Np, acoustics->Nfields, *acoustics);
   } else if (settings.compareSetting("TIME INTEGRATOR","DOPRI5")){
     acoustics->timeStepper = new TimeStepper::dopri5(mesh.Nelements, mesh.totalHaloPairs,
-                                              mesh.Np, acoustics->Nfields, *acoustics);
+                                              mesh.Np, acoustics->Nfields, *acoustics, mesh.comm);
   }
 
   // set time step

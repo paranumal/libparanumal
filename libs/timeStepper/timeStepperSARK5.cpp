@@ -35,8 +35,9 @@ using std::complex;
 
 sark5::sark5(dlong _Nelements, dlong _NhaloElements,
              int _Np, int _Nfields,
-             dfloat *_lambda, solver_t& _solver):
+             dfloat *_lambda, solver_t& _solver, MPI_Comm _comm):
   timeStepper_t(_Nelements, _NhaloElements, _Np, _Nfields, _solver),
+  comm(_comm),
   Np(_Np),
   Nfields(_Nfields),
   Nelements(_Nelements),
@@ -67,7 +68,7 @@ sark5::sark5(dlong _Nelements, dlong _NhaloElements,
 
   hlong gNlocal = Nlocal;
   hlong gNtotal;
-  MPI_Allreduce(&gNlocal, &gNtotal, 1, MPI_HLONG, MPI_SUM, platform.comm);
+  MPI_Allreduce(&gNlocal, &gNtotal, 1, MPI_HLONG, MPI_SUM, comm);
 
   occa::properties kernelInfo = platform.props; //copy base occa properties from solver
 
@@ -126,7 +127,8 @@ void sark5::Run(occa::memory &o_q, dfloat start, dfloat end) {
 
   dfloat time = start;
 
-  const int rank = solver.platform.rank;
+  int rank;
+  MPI_Comm_rank(comm, &rank);
 
   solver.Report(time,0);
 
@@ -314,7 +316,7 @@ dfloat sark5::Estimater(occa::memory& o_q){
   for(dlong n=0;n<Nblock;++n){
     localerr += errtmp[n];
   }
-  MPI_Allreduce(&localerr, &err, 1, MPI_DFLOAT, MPI_SUM, solver.platform.comm);
+  MPI_Allreduce(&localerr, &err, 1, MPI_DFLOAT, MPI_SUM, comm);
 
   err = sqrt(err)*sqrtinvNtotal;
 
@@ -507,8 +509,8 @@ sark5::~sark5() {
 
 sark5_pml::sark5_pml(dlong _Nelements, dlong _NpmlElements, dlong _NhaloElements,
             int _Np, int _Nfields, int _Npmlfields,
-            dfloat *_lambda, solver_t& _solver):
-  sark5(_Nelements, _NhaloElements, _Np, _Nfields, _lambda, _solver),
+            dfloat *_lambda, solver_t& _solver, MPI_Comm _comm):
+  sark5(_Nelements, _NhaloElements, _Np, _Nfields, _lambda, _solver, _comm),
   Npml(_Npmlfields*_Np*_NpmlElements) {
 
   if (Npml) {
