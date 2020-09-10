@@ -63,6 +63,7 @@ void parAlmond_t::AMGSetup(parCOO& cooA,
     multigrid->coarseSolver->setup(A, nullSpace, null, nullSpacePenalty);
     multigrid->coarseSolver->syncToDevice();
     multigrid->baseLevel = multigrid->numLevels-1;
+    L->syncToDevice();
     done = true;
   }
 
