@@ -46,10 +46,19 @@ void matrixEigenVectors(int N, double *A, double *VR, double *WR, double *WI){
   double *VL = NULL;
   double *WORK  = (double*) calloc(LWORK,sizeof(double));
 
+  double *tmpA  = (double*) calloc(N*N,sizeof(double));
+  double *tmpVR = (double*) calloc(N*N,sizeof(double));
+
+  for(int n=0;n<N;++n){
+    for(int m=0;m<N;++m){
+      tmpA[n+m*N] = A[n*N+m];
+    }
+  }
+
   int INFO = -999;
 
-  dgeev_ (&JOBVL, &JOBVR, &N, A, &LDA, WR, WI,
-          VL, &LDVL, VR, &LDVR, WORK, &LWORK, &INFO);
+  dgeev_ (&JOBVL, &JOBVR, &N, tmpA, &LDA, WR, WI,
+          VL, &LDVL, tmpVR, &LDVR, WORK, &LWORK, &INFO);
 
   if(INFO) {
     std::stringstream ss;
@@ -57,6 +66,14 @@ void matrixEigenVectors(int N, double *A, double *VR, double *WR, double *WI){
     LIBP_ABORT(ss.str());
   }
 
+  for(int n=0;n<N;++n){
+    for(int m=0;m<N;++m){
+      VR[n+m*N] = tmpVR[n*N+m];
+    }
+  }
+
+  free(tmpVR);
+  free(tmpA);
   free(WORK);
 }
 
@@ -73,10 +90,19 @@ void matrixEigenVectors(int N, float *A, float *VR, float *WR, float *WI){
   float *VL = NULL;
   float *WORK  = (float*) calloc(LWORK,sizeof(float));
 
+  float *tmpA  = (float*) calloc(N*N,sizeof(float));
+  float *tmpVR = (float*) calloc(N*N,sizeof(float));
+
+  for(int n=0;n<N;++n){
+    for(int m=0;m<N;++m){
+      tmpA[n+m*N] = A[n*N+m];
+    }
+  }
+
   int INFO = -999;
 
-  sgeev_ (&JOBVL, &JOBVR, &N, A, &LDA, WR, WI,
-          VL, &LDVL, VR, &LDVR, WORK, &LWORK, &INFO);
+  sgeev_ (&JOBVL, &JOBVR, &N, tmpA, &LDA, WR, WI,
+          VL, &LDVL, tmpVR, &LDVR, WORK, &LWORK, &INFO);
 
   if(INFO) {
     std::stringstream ss;
@@ -84,6 +110,14 @@ void matrixEigenVectors(int N, float *A, float *VR, float *WR, float *WI){
     LIBP_ABORT(ss.str());
   }
 
+  for(int n=0;n<N;++n){
+    for(int m=0;m<N;++m){
+      VR[n+m*N] = tmpVR[n*N+m];
+    }
+  }
+
+  free(tmpVR);
+  free(tmpA);
   free(WORK);
 }
 
