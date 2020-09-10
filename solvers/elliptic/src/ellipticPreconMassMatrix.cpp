@@ -59,12 +59,8 @@ MassMatrixPrecon::MassMatrixPrecon(elliptic_t& _elliptic):
 void MassMatrixPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
   dfloat invLambda = 1./elliptic.lambda;
 
-  if (settings.compareSetting("DISCRETIZATION", "IPDG")) {
-
-    blockJacobiKernel(mesh.Nelements, invLambda, mesh.o_vgeo, o_invMM, o_r, o_Mr);
-
-  } else if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
-
+  if (elliptic.disc_c0) {
+    //C0
     dlong Ntotal = mesh.Np*mesh.Nelements;
 
     // rtmp = invDegree.*r
@@ -90,7 +86,11 @@ void MassMatrixPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
     //post-mask
     if (elliptic.Nmasked)
       elliptic.maskKernel(elliptic.Nmasked, elliptic.o_maskIds, o_Mr);
+  } else {
+    //IPDG
+    blockJacobiKernel(mesh.Nelements, invLambda, mesh.o_vgeo, o_invMM, o_r, o_Mr);
   }
+
 
   // zero mean of RHS
   if(elliptic.allNeumann) elliptic.ZeroMean(o_Mr);

@@ -126,6 +126,11 @@ def main():
                     settings=ellipticSettings(element=3,data_file=ellipticData2D,dim=2,
                                               precon="SEMFEM"),
                     referenceNorm=0.500000001211135)
+  failCount += test(name="testEllipticTri_C0_OAS",
+                    cmd=ellipticBin,
+                    settings=ellipticSettings(element=3,data_file=ellipticData2D,dim=2,
+                                              precon="OAS"),
+                    referenceNorm=0.500000001211135)
 
   #quad
   failCount += test(name="testEllipticQuad_C0_Jacobi",
@@ -147,6 +152,11 @@ def main():
                     cmd=ellipticBin,
                     settings=ellipticSettings(element=4,data_file=ellipticData2D,dim=2,
                                               precon="SEMFEM"),
+                    referenceNorm=0.500000001211135)
+  failCount += test(name="testEllipticQuad_C0_OAS",
+                    cmd=ellipticBin,
+                    settings=ellipticSettings(element=4,data_file=ellipticData2D,dim=2,
+                                              precon="OAS"),
                     referenceNorm=0.500000001211135)
 
   #tet
@@ -175,6 +185,11 @@ def main():
                     settings=ellipticSettings(element=6,data_file=ellipticData3D,dim=3,
                                               precon="SEMFEM"),
                     referenceNorm=0.353553400508458)
+  failCount += test(name="testEllipticTet_C0_OAS",
+                    cmd=ellipticBin,
+                    settings=ellipticSettings(element=6,data_file=ellipticData3D,dim=3,
+                                              precon="OAS"),
+                    referenceNorm=0.353553400508458)
 
   #hex
   failCount += test(name="testEllipticHex_C0_Jacobi",
@@ -196,6 +211,11 @@ def main():
                     cmd=ellipticBin,
                     settings=ellipticSettings(element=12,data_file=ellipticData3D,dim=3,
                                               precon="SEMFEM"),
+                    referenceNorm=0.353553400508458)
+  failCount += test(name="testEllipticHex_C0_OAS",
+                    cmd=ellipticBin,
+                    settings=ellipticSettings(element=12,data_file=ellipticData3D,dim=3,
+                                              precon="OAS"),
                     referenceNorm=0.353553400508458)
 
   # all Neumann
@@ -272,6 +292,11 @@ def main():
                     settings=ellipticSettings(element=3,data_file=ellipticData2D,dim=2,
                                               precon="MULTIGRID", discretization="IPDG"),
                     referenceNorm=0.500000001211135)
+  failCount += test(name="testEllipticTri_Ipdg_OAS",
+                    cmd=ellipticBin,
+                    settings=ellipticSettings(element=3,data_file=ellipticData2D,dim=2,
+                                              precon="OAS", discretization="IPDG"),
+                    referenceNorm=0.500000001211135)
 
   #quad
   failCount += test(name="testEllipticQuad_Ipdg_Jacobi",
@@ -288,6 +313,11 @@ def main():
                     cmd=ellipticBin,
                     settings=ellipticSettings(element=4,data_file=ellipticData2D,dim=2,
                                               precon="MULTIGRID", discretization="IPDG"),
+                    referenceNorm=0.500000001211135)
+  failCount += test(name="testEllipticQuad_Ipdg_OAS",
+                    cmd=ellipticBin,
+                    settings=ellipticSettings(element=4,data_file=ellipticData2D,dim=2,
+                                              precon="OAS", discretization="IPDG"),
                     referenceNorm=0.500000001211135)
 
   #tet
@@ -311,6 +341,11 @@ def main():
                     settings=ellipticSettings(element=6,data_file=ellipticData3D,dim=3,
                                               precon="MULTIGRID", discretization="IPDG"),
                     referenceNorm=0.353553400508458)
+  failCount += test(name="testEllipticTet_Ipdg_OAS",
+                    cmd=ellipticBin,
+                    settings=ellipticSettings(element=6,data_file=ellipticData3D,dim=3,
+                                              precon="OAS", discretization="IPDG"),
+                    referenceNorm=0.353553400508458)
 
   #hex
   failCount += test(name="testEllipticHex_Ipdg_Jacobi",
@@ -327,6 +362,11 @@ def main():
                     cmd=ellipticBin,
                     settings=ellipticSettings(element=12,data_file=ellipticData3D,dim=3,
                                               precon="MULTIGRID", discretization="IPDG"),
+                    referenceNorm=0.353553400508458)
+  failCount += test(name="testEllipticHex_Ipdg_OAS",
+                    cmd=ellipticBin,
+                    settings=ellipticSettings(element=12,data_file=ellipticData3D,dim=3,
+                                              precon="OAS", discretization="IPDG"),
                     referenceNorm=0.353553400508458)
 
   # all Neumann
@@ -376,6 +416,12 @@ def main():
                     cmd=ellipticBin,
                     settings=ellipticSettings(element=3,data_file=ellipticData2D,dim=2,
                                               precon="MULTIGRID", discretization="IPDG", output_to_file="TRUE"),
+                    referenceNorm=0.500000001211135)
+
+  failCount += test(name="testEllipticTri_C0_OAS_MPI", ranks=4,
+                    cmd=ellipticBin,
+                    settings=ellipticSettings(element=3,data_file=ellipticData2D,dim=2,
+                                              precon="OAS"),
                     referenceNorm=0.500000001211135)
 
   #clean up

@@ -137,8 +137,10 @@ private:
   //Patch precon
   mesh_t* meshPatch;
   elliptic_t* ellipticPatch;
-  MultiGridPrecon *preconPatch;
+  precon_t *preconPatch;
   MGLevel *level;
+
+  ogs_t *ogsMaskedRing; //ogs for 1-ring patch
 
   //Coarse Precon
   ogs_t *ogsMasked=nullptr;

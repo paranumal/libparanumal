@@ -29,14 +29,13 @@ SOFTWARE.
 //AMG preconditioner via parAlmond
 void ParAlmondPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
 
-  if (settings.compareSetting("DISCRETIZATION", "IPDG")) {
-
-    parAlmond.Operator(o_r, o_Mr);
-
-  } else if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
+  if (elliptic.disc_c0) {
     elliptic.ogsMasked->Gather(o_rhsG, o_r, ogs_dfloat, ogs_add, ogs_notrans);
     parAlmond.Operator(o_rhsG, o_xG);
     elliptic.ogsMasked->Scatter(o_Mr, o_xG, ogs_dfloat, ogs_add, ogs_notrans);
+  } else {
+    //IPDG
+    parAlmond.Operator(o_r, o_Mr);
   }
 
   // zero mean of RHS

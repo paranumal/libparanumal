@@ -39,20 +39,23 @@ void MGLevel::residual(occa::memory &o_RHS, occa::memory &o_X, occa::memory &o_R
 }
 
 void MGLevel::coarsen(occa::memory &o_X, occa::memory &o_Rx) {
-  if (elliptic.disc_c0) //pre-weight
-    linAlg.amx(mesh.Nelements*mesh.Np, 1.0, elliptic.o_weight, o_X);
+  occa::memory &o_sctch = o_smootherResidual;
 
-  if (gatherLevel==true) {
-    coarsenKernel(mesh.Nelements, o_P, o_X, o_GX);
-    ogsMasked->Gather(o_Rx, o_GX, ogs_dfloat, ogs_add, ogs_trans);
-  } else {
-    coarsenKernel(mesh.Nelements, o_P, o_X, o_Rx);
+  if (elliptic.disc_c0) {
+    //pre-weight
+    linAlg.amxpy(mesh.Nelements*mesh.Np, 1.0, elliptic.o_weight, o_X, 0.0, o_sctch);
 
-    if (elliptic.disc_c0) {
+    if (gatherLevel==true) {
+      coarsenKernel(mesh.Nelements, o_P, o_sctch, o_GX);
+      ogsMasked->Gather(o_Rx, o_GX, ogs_dfloat, ogs_add, ogs_trans);
+    } else {
+      coarsenKernel(mesh.Nelements, o_P, o_sctch, o_Rx);
       ogsMasked->GatherScatter(o_Rx, ogs_dfloat, ogs_add, ogs_sym);
       if (Nmasked)
         elliptic.maskKernel(Nmasked, o_maskIds, o_Rx);
     }
+  } else {
+    coarsenKernel(mesh.Nelements, o_P, o_X, o_Rx);
   }
 }
 
