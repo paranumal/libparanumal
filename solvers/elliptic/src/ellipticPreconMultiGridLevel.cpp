@@ -329,40 +329,12 @@ void MGLevel::SetupSmoother() {
   free(invDiagA);
 }
 
-extern "C"
-{
-  void dgeev_(char *JOBVL, char *JOBVR, int *N, double *A, int *LDA, double *WR, double *WI,
-              double *VL, int *LDVL, double *VR, int *LDVR, double *WORK, int *LWORK, int *INFO );
-}
 
-static void eig(const int Nrows, double *A, double *WR, double *WI){
-
-  int NB  = 256;
-  char JOBVL  = 'V';
-  char JOBVR  = 'V';
-  int     N = Nrows;
-  int   LDA = Nrows;
-  int  LWORK  = (NB+2)*N;
-
-  double *WORK  = new double[LWORK];
-  double *VL  = new double[Nrows*Nrows];
-  double *VR  = new double[Nrows*Nrows];
-
-  int INFO = -999;
-
-  dgeev_ (&JOBVL, &JOBVR, &N, A, &LDA, WR, WI,
-    VL, &LDA, VR, &LDA, WORK, &LWORK, &INFO);
-
-  if(INFO) {
-    stringstream ss;
-    ss << "MGLevel: dgeev reports info = " << INFO;
-    LIBP_WARNING(ss.str())
-  }
-
-  delete [] VL;
-  delete [] VR;
-  delete [] WORK;
-}
+//------------------------------------------------------------------------
+//
+//  Estimate max Eigenvalue of diagA^{-1}*A
+//
+//------------------------------------------------------------------------
 
 dfloat MGLevel::maxEigSmoothAx(){
 
@@ -447,7 +419,7 @@ dfloat MGLevel::maxEigSmoothAx(){
   double *WR = (double *) malloc(k*sizeof(double));
   double *WI = (double *) malloc(k*sizeof(double));
 
-  eig(k, H, WR, WI);
+  matrixEigenValues(k, H, WR, WI);
 
   double rho = 0.;
 
@@ -470,7 +442,7 @@ dfloat MGLevel::maxEigSmoothAx(){
   for(int i=0; i<=k; i++) o_V[i].free();
   delete[] o_V;
 
-  // if((mesh.rank==0)&&(mesh.settings.compareSetting("VERBOSE","TRUE"))) printf("weight = %g \n", rho);
+  // if((mesh.rank==0)) printf("weight = %g \n", rho);
 
   return rho;
 }
