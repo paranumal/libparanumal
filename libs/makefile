@@ -120,8 +120,7 @@ LIBLINALG_SRC =$(wildcard linAlg/*.cpp)
 LIBLINEARSOLVER_SRC =$(wildcard linearSolver/*.cpp)
 LIBMESH_SRC =$(wildcard mesh/*.cpp)
 LIBOGS_SRC =$(wildcard ogs/*.cpp)
-LIBPARALMOND_SRC =$(wildcard parAlmond/*.cpp) \
-									$(wildcard parAlmond/amgSetup/*.cpp)
+LIBPARALMOND_SRC =$(wildcard parAlmond/*.cpp)
 LIBTIMESTEPPER_SRC =$(wildcard timeStepper/*.cpp)
 
 LIBCORE_OBJS=$(LIBCORE_SRC:.cpp=.o)
