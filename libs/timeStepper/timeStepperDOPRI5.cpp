@@ -30,8 +30,8 @@ SOFTWARE.
 namespace TimeStepper {
 
 dopri5::dopri5(dlong Nelements, dlong NhaloElements,
-               int Np, int Nfields, solver_t& _solver):
-  timeStepper_t(Nelements, NhaloElements, Np, Nfields, _solver) {
+               int Np, int Nfields, solver_t& _solver, MPI_Comm _comm):
+  timeStepper_t(Nelements, NhaloElements, Np, Nfields, _solver), comm(_comm) {
 
   platform_t &platform = solver.platform;
 
@@ -51,7 +51,7 @@ dopri5::dopri5(dlong Nelements, dlong NhaloElements,
 
   hlong Nlocal = N;
   hlong Ntotal;
-  MPI_Allreduce(&Nlocal, &Ntotal, 1, MPI_HLONG, MPI_SUM, platform.comm);
+  MPI_Allreduce(&Nlocal, &Ntotal, 1, MPI_HLONG, MPI_SUM, comm);
 
   occa::properties kernelInfo = platform.props; //copy base occa properties from solver
 
@@ -116,7 +116,8 @@ void dopri5::Run(occa::memory &o_q, dfloat start, dfloat end) {
 
   dfloat time = start;
 
-  // const int rank = solver.platform.rank;
+  // int rank;
+  // MPI_Comm_rank(comm, &rank);
 
   solver.Report(time,0);
 
@@ -291,7 +292,7 @@ dfloat dopri5::Estimater(occa::memory& o_q){
   for(dlong n=0;n<Nblock;++n){
     localerr += errtmp[n];
   }
-  MPI_Allreduce(&localerr, &err, 1, MPI_DFLOAT, MPI_SUM, solver.platform.comm);
+  MPI_Allreduce(&localerr, &err, 1, MPI_DFLOAT, MPI_SUM, comm);
 
   err = sqrt(err)*sqrtinvNtotal;
 
@@ -320,8 +321,9 @@ dopri5::~dopri5() {
 /**************************************************/
 
 dopri5_pml::dopri5_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
-                      int Np, int Nfields, int Npmlfields, solver_t& _solver):
-  dopri5(Nelements, NhaloElements, Np, Nfields, _solver),
+                      int Np, int Nfields, int Npmlfields,
+                      solver_t& _solver, MPI_Comm _comm):
+  dopri5(Nelements, NhaloElements, Np, Nfields, _solver, _comm),
   Npml(Npmlfields*Np*NpmlElements) {
 
   if (Npml) {

@@ -43,7 +43,7 @@ advection_t& advection_t::Setup(platform_t& platform, mesh_t& mesh,
                                               mesh.Np, 1, *advection);
   } else if (settings.compareSetting("TIME INTEGRATOR","DOPRI5")){
     advection->timeStepper = new TimeStepper::dopri5(mesh.Nelements, mesh.totalHaloPairs,
-                                              mesh.Np, 1, *advection);
+                                              mesh.Np, 1, *advection, mesh.comm);
   }
 
   // set time step

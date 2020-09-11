@@ -78,7 +78,7 @@ fpeSettings_t::fpeSettings_t(MPI_Comm& _comm):
              "fpe");
 
   ellipticAddSettings(*this, "ELLIPTIC ");
-  parAlmondAddSettings(*this, "ELLIPTIC ");
+  parAlmond::AddSettings(*this, "ELLIPTIC ");
 }
 
 void fpeSettings_t::report() {
@@ -118,7 +118,7 @@ void fpeSettings_t::report() {
     }
 
     if (compareSetting("ELLIPTIC PRECONDITIONER","MULTIGRID")
-      ||compareSetting("ELLIPTIC PRECONDITIONER","FULLALMOND")) {
+      ||compareSetting("ELLIPTIC PRECONDITIONER","PARALMOND")) {
       reportSetting("ELLIPTIC PARALMOND CYCLE");
       reportSetting("ELLIPTIC PARALMOND SMOOTHER");
       reportSetting("ELLIPTIC PARALMOND CHEBYSHEV DEGREE");

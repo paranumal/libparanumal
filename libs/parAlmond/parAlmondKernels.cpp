@@ -30,23 +30,10 @@ namespace parAlmond {
 
 int Nrefs = 0;
 
-occa::kernel haloExtractKernel;
-
 occa::kernel SpMVcsrKernel1;
 occa::kernel SpMVcsrKernel2;
-occa::kernel SpMVellKernel1;
-occa::kernel SpMVellKernel2;
-occa::kernel SpMVmcsrKernel1;
-occa::kernel SpMVmcsrKernel2;
+occa::kernel SpMVmcsrKernel;
 
-occa::kernel vectorSetKernel;
-occa::kernel vectorScaleKernel;
-occa::kernel vectorAddScalarKernel;
-occa::kernel vectorAddKernel1;
-occa::kernel vectorAddKernel2;
-occa::kernel vectorDotStarKernel1;
-occa::kernel vectorDotStarKernel2;
-occa::kernel vectorInnerProdKernel;
 occa::kernel kcycleCombinedOp1Kernel;
 occa::kernel kcycleCombinedOp2Kernel;
 occa::kernel kcycleWeightedCombinedOp1Kernel;
@@ -54,11 +41,9 @@ occa::kernel kcycleWeightedCombinedOp2Kernel;
 occa::kernel vectorAddInnerProdKernel;
 occa::kernel vectorAddWeightedInnerProdKernel;
 
-void buildParAlmondKernels(MPI_Comm comm, platform_t& platform){
+void buildParAlmondKernels(platform_t& platform){
 
-  int rank, size;
-  MPI_Comm_rank(comm, &rank);
-  MPI_Comm_size(comm, &size);
+  int rank=platform.rank;
 
   double seed = (double) rank;
   srand48(seed);
@@ -71,19 +56,7 @@ void buildParAlmondKernels(MPI_Comm comm, platform_t& platform){
 
   SpMVcsrKernel1  = platform.buildKernel(PARALMOND_DIR"/okl/SpMVcsr.okl",  "SpMVcsr1",  kernelInfo);
   SpMVcsrKernel2  = platform.buildKernel(PARALMOND_DIR"/okl/SpMVcsr.okl",  "SpMVcsr2",  kernelInfo);
-  SpMVellKernel1  = platform.buildKernel(PARALMOND_DIR"/okl/SpMVell.okl",  "SpMVell1",  kernelInfo);
-  SpMVellKernel2  = platform.buildKernel(PARALMOND_DIR"/okl/SpMVell.okl",  "SpMVell2",  kernelInfo);
-  SpMVmcsrKernel1 = platform.buildKernel(PARALMOND_DIR"/okl/SpMVmcsr.okl", "SpMVmcsr1", kernelInfo);
-  SpMVmcsrKernel2 = platform.buildKernel(PARALMOND_DIR"/okl/SpMVmcsr.okl", "SpMVmcsr2", kernelInfo);
-
-  vectorSetKernel = platform.buildKernel(PARALMOND_DIR"/okl/vectorSet.okl", "vectorSet", kernelInfo);
-  vectorScaleKernel = platform.buildKernel(PARALMOND_DIR"/okl/vectorScale.okl", "vectorScale", kernelInfo);
-  vectorAddScalarKernel = platform.buildKernel(PARALMOND_DIR"/okl/vectorAddScalar.okl", "vectorAddScalar", kernelInfo);
-  vectorAddKernel1 = platform.buildKernel(PARALMOND_DIR"/okl/vectorAdd.okl", "vectorAdd1", kernelInfo);
-  vectorAddKernel2 = platform.buildKernel(PARALMOND_DIR"/okl/vectorAdd.okl", "vectorAdd2", kernelInfo);
-  vectorDotStarKernel1 = platform.buildKernel(PARALMOND_DIR"/okl/vectorDotStar.okl", "vectorDotStar1", kernelInfo);
-  vectorDotStarKernel2 = platform.buildKernel(PARALMOND_DIR"/okl/vectorDotStar.okl", "vectorDotStar2", kernelInfo);
-  vectorInnerProdKernel = platform.buildKernel(PARALMOND_DIR"/okl/vectorInnerProd.okl", "vectorInnerProd", kernelInfo);
+  SpMVmcsrKernel  = platform.buildKernel(PARALMOND_DIR"/okl/SpMVmcsr.okl", "SpMVmcsr1", kernelInfo);
 
   vectorAddInnerProdKernel = platform.buildKernel(PARALMOND_DIR"/okl/vectorAddInnerProd.okl", "vectorAddInnerProd", kernelInfo);
   vectorAddWeightedInnerProdKernel = platform.buildKernel(PARALMOND_DIR"/okl/vectorAddInnerProd.okl", "vectorAddWeightedInnerProd", kernelInfo);
@@ -93,37 +66,21 @@ void buildParAlmondKernels(MPI_Comm comm, platform_t& platform){
   kcycleWeightedCombinedOp1Kernel = platform.buildKernel(PARALMOND_DIR"/okl/kcycleCombinedOp.okl", "kcycleWeightedCombinedOp1", kernelInfo);
   kcycleWeightedCombinedOp2Kernel = platform.buildKernel(PARALMOND_DIR"/okl/kcycleCombinedOp.okl", "kcycleWeightedCombinedOp2", kernelInfo);
 
-  haloExtractKernel = platform.buildKernel(PARALMOND_DIR"/okl/haloExtract.okl", "haloExtract", kernelInfo);
-
   if(rank==0) printf("done.\n");
 }
 
 void freeParAlmondKernels() {
 
-  haloExtractKernel.free();
-
   SpMVcsrKernel1.free();
   SpMVcsrKernel2.free();
-  SpMVellKernel1.free();
-  SpMVellKernel2.free();
-  SpMVmcsrKernel1.free();
-  SpMVmcsrKernel2.free();
+  SpMVmcsrKernel.free();
 
-  vectorSetKernel.free();
-  vectorScaleKernel.free();
-  vectorAddScalarKernel.free();
-  vectorAddKernel1.free();
-  vectorAddKernel2.free();
-  vectorDotStarKernel1.free();
-  vectorDotStarKernel2.free();
-  vectorInnerProdKernel.free();
   kcycleCombinedOp1Kernel.free();
   kcycleCombinedOp2Kernel.free();
   kcycleWeightedCombinedOp1Kernel.free();
   kcycleWeightedCombinedOp2Kernel.free();
   vectorAddInnerProdKernel.free();
   vectorAddWeightedInnerProdKernel.free();
-
 }
 
 

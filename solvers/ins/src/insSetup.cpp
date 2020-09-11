@@ -108,7 +108,8 @@ ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
     ins->vTau = ins->uSolver->tau;
 
     ins->vDisc_c0 = settings.compareSetting("VELOCITY DISCRETIZATION", "CONTINUOUS") ? 1 : 0;
-    ins->vLinearSolver = linearSolver_t::Setup(Nlocal, Nhalo, platform, *(ins->vSettings),
+    ins->vLinearSolver = linearSolver_t::Setup(Nlocal, Nhalo,
+                                              platform, *(ins->vSettings), mesh.comm,
                                               ins->vDisc_c0, ins->uSolver->o_weight);
   } else {
     ins->vDisc_c0 = 0;
@@ -134,8 +135,9 @@ ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
     ins->pTau = ins->pSolver->tau;
 
     ins->pDisc_c0 = settings.compareSetting("PRESSURE DISCRETIZATION", "CONTINUOUS") ? 1 : 0;
-    ins->pLinearSolver = linearSolver_t::Setup(Nlocal, Nhalo, platform, *(ins->pSettings),
-                                                ins->pDisc_c0, ins->pSolver->o_weight);
+    ins->pLinearSolver = linearSolver_t::Setup(Nlocal, Nhalo,
+                                               platform, *(ins->pSettings), mesh.comm,
+                                               ins->pDisc_c0, ins->pSolver->o_weight);
   }
 
   //Solver tolerances
@@ -283,7 +285,7 @@ ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
                                                 mesh.Np, ins->NVfields, *(ins->subcycler));
     } else if (settings.compareSetting("SUBCYCLING TIME INTEGRATOR","DOPRI5")){
       ins->subStepper = new TimeStepper::dopri5(mesh.Nelements, mesh.totalHaloPairs,
-                                                mesh.Np, ins->NVfields, *(ins->subcycler));
+                                                mesh.Np, ins->NVfields, *(ins->subcycler), mesh.comm);
     }
     ins->subStepper->SetTimeStep(dtAdvc);
 

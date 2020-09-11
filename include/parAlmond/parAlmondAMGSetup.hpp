@@ -24,27 +24,50 @@ SOFTWARE.
 
 */
 
-#ifndef PARALMOND_DEFINES_HPP
-#define PARALMOND_DEFINES_HPP
+#ifndef PARALMOND_AMGSETUP_HPP
+#define PARALMOND_AMGSETUP_HPP
 
-#define NBLOCKS 128
+#include "parAlmond.hpp"
+#include "parAlmond/parAlmondMultigrid.hpp"
+#include "parAlmond/parAlmondAMGLevel.hpp"
 
-#define MAX_LEVELS 100
-#define GPU_CPU_SWITCH_SIZE 0 //host-device switch threshold
-
-#define NUMKCYCLES 3
-#define COARSENTHREASHOLD 0.12
-#define KCYCLETOL 0.2
 
 namespace parAlmond {
 
-extern int ChebyshevIterations;
+class strongGraph_t {
+public:
+  platform_t& platform;
+  MPI_Comm comm;
+  dlong Nrows=0;
+  dlong Ncols=0;
+  dlong nnz=0;
 
-typedef enum {VCYCLE=0,KCYCLE=1,EXACT=3} CycleType;
-typedef enum {PCG=0,GMRES=1} KrylovType;
-typedef enum {JACOBI=0,DAMPED_JACOBI=1,CHEBYSHEV=2} SmoothType;
-typedef enum {RUGESTUBEN=0,SYMMETRIC=1} StrengthType;
+  dlong  *rowStarts=nullptr;
+  dlong  *cols=nullptr;
 
-} //namespace parAlmond
+  strongGraph_t(dlong N, dlong M, platform_t& _platform, MPI_Comm _comm):
+    platform(_platform), comm(_comm), Nrows(N), Ncols(M) {}
+  ~strongGraph_t() {
+    if (rowStarts) free(rowStarts);
+    if (cols) free(cols);
+  }
+};
+
+amgLevel *coarsenAmgLevel(amgLevel *level, dfloat *null);
+
+strongGraph_t* strongGraph(parCSR *A, StrengthType type);
+
+void formAggregates(parCSR *A, strongGraph_t *C,
+                     hlong* FineToCoarse,
+                     hlong* globalAggStarts);
+
+parCSR *constructProlongation(parCSR *A, hlong *FineToCoarse,
+                            hlong *globalAggStarts, dfloat *null);
+
+parCSR *transpose(parCSR *A);
+
+parCSR *galerkinProd(parCSR *A, parCSR *P);
+
+}
 
 #endif

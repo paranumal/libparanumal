@@ -120,8 +120,7 @@ LIBLINALG_SRC =$(wildcard linAlg/*.cpp)
 LIBLINEARSOLVER_SRC =$(wildcard linearSolver/*.cpp)
 LIBMESH_SRC =$(wildcard mesh/*.cpp)
 LIBOGS_SRC =$(wildcard ogs/*.cpp)
-LIBPARALMOND_SRC =$(wildcard parAlmond/*.cpp) \
-									$(wildcard parAlmond/agmgSetup/*.cpp)
+LIBPARALMOND_SRC =$(wildcard parAlmond/*.cpp)
 LIBTIMESTEPPER_SRC =$(wildcard timeStepper/*.cpp)
 
 LIBCORE_OBJS=$(LIBCORE_SRC:.cpp=.o)
@@ -203,7 +202,7 @@ else
 	@ar -cr liblinearSolver.a $(LIBLINEARSOLVER_OBJS)
 endif
 
-libparAlmond.a: $(LIBPARALMOND_OBJS) | libcore.a libogs.a
+libparAlmond.a: $(LIBPARALMOND_OBJS) | liblinearSolver.a libogs.a
 ifneq (,${verbose})
 	ar -cr libparAlmond.a $(LIBPARALMOND_OBJS)
 else
@@ -273,7 +272,7 @@ else
 	@$(LIBP_MPICXX) -o $@ -c $< ${LIBOGS_DEFINES} -I${GS_DIR}/src $(LIB_CXXFLAGS)
 endif
 
-parAlmond/%.o: parAlmond/%.cpp $(LIBPARALMOND_DEPS) | libcore.a libogs.a
+parAlmond/%.o: parAlmond/%.cpp $(LIBPARALMOND_DEPS) | liblinearSolver.a
 ifneq (,${verbose})
 	$(LIBP_MPICXX) -o $@ -c $< ${LIBPARALMOND_DEFINES} $(LIB_CXXFLAGS)
 else

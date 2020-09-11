@@ -24,41 +24,49 @@ SOFTWARE.
 
 */
 
-#ifndef PARALMOND_KERNELS_HPP
-#define PARALMOND_KERNELS_HPP
+#ifndef PARALMOND_AMGLEVEL_HPP
+#define PARALMOND_AMGLEVEL_HPP
+
+#include "parAlmond.hpp"
+#include "parAlmond/parAlmondparCSR.hpp"
+
 
 namespace parAlmond {
 
-  void buildParAlmondKernels(MPI_Comm comm, platform_t& platform);
+class amgLevel: public multigridLevel {
 
-  void freeParAlmondKernels();
+public:
+  parCSR *A=nullptr, *P=nullptr, *R=nullptr;
 
-  extern int Nrefs;
+  SmoothType stype;
+  dfloat lambda, lambda1, lambda0; //smoothing params
 
-  extern occa::kernel haloExtractKernel;
+  int ChebyshevIterations=2;
 
-  extern occa::kernel SpMVcsrKernel1;
-  extern occa::kernel SpMVcsrKernel2;
-  extern occa::kernel SpMVellKernel1;
-  extern occa::kernel SpMVellKernel2;
-  extern occa::kernel SpMVmcsrKernel1;
-  extern occa::kernel SpMVmcsrKernel2;
+  bool gatherLevel=false;
+  ogs_t *ogs=nullptr;
+  occa::memory o_gatherWeight;
+  occa::memory o_Sx, o_Gx;
 
-  extern occa::kernel vectorSetKernel;
-  extern occa::kernel vectorScaleKernel;
-  extern occa::kernel vectorAddScalarKernel;
-  extern occa::kernel vectorAddKernel1;
-  extern occa::kernel vectorAddKernel2;
-  extern occa::kernel vectorDotStarKernel1;
-  extern occa::kernel vectorDotStarKernel2;
-  extern occa::kernel vectorInnerProdKernel;
-  extern occa::kernel vectorAddInnerProdKernel;
-  extern occa::kernel vectorAddWeightedInnerProdKernel;
-  extern occa::kernel kcycleCombinedOp1Kernel;
-  extern occa::kernel kcycleCombinedOp2Kernel;
-  extern occa::kernel kcycleWeightedCombinedOp1Kernel;
-  extern occa::kernel kcycleWeightedCombinedOp2Kernel;
+  amgLevel(parCSR *AA, settings_t& _settings);
+  ~amgLevel();
 
-} //namespace parAlmond
+  void Operator(occa::memory& o_x, occa::memory& o_Ax);
+  void residual(occa::memory& o_rhs, occa::memory& o_x, occa::memory& o_res);
+  void coarsen(occa::memory& o_x, occa::memory& o_Cx);
+  void prolongate(occa::memory& o_x, occa::memory& o_Px);
+
+  void smooth(occa::memory& o_rhs, occa::memory& o_x, bool x_is_zero);
+  void smoothDampedJacobi(occa::memory& o_r, occa::memory& o_x, bool x_is_zero);
+  void smoothChebyshev(occa::memory& o_r, occa::memory& o_x, bool x_is_zero);
+
+  void Report();
+
+  /*   Setup routines */
+  void setupSmoother();
+  void syncToDevice();
+};
+
+}
 
 #endif

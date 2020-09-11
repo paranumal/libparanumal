@@ -32,7 +32,6 @@ SOFTWARE.
 #include <string>
 #include <math.h>
 #include <stdlib.h>
-#include "types.h"
 #include "utils.hpp"
 
 // sort entries in an array in parallel
@@ -42,17 +41,33 @@ void parallelSort(int size, int rank, MPI_Comm comm,
       void (*match)(void *, void *)
       );
 
-void matrixRightSolve(int NrowsA, int NcolsA, dfloat *A, int NrowsB, int NcolsB, dfloat *B, dfloat *C);
-void matrixEig(int N, dfloat *A, dfloat *VR, dfloat *WR, dfloat *WI);
-void matrixInverse(int N, dfloat *A);
-dfloat matrixConditionNumber(int N, dfloat *A);
+void matrixRightSolve(int NrowsA, int NcolsA, double *A, int NrowsB, int NcolsB, double *B, double *C);
+void matrixRightSolve(int NrowsA, int NcolsA, float *A, int NrowsB, int NcolsB, float *B, float *C);
+
+void matrixEigenVectors(int N, double *A, double *VR, double *WR, double *WI);
+void matrixEigenVectors(int N, float *A, float *VR, float *WR, float *WI);
+
+void matrixEigenValues(int N, double *A, double *WR, double *WI);
+void matrixEigenValues(int N, float *A, float *WR, float *WI);
+
+void matrixInverse(int N, double *A);
+void matrixInverse(int N, float *A);
+
+double matrixConditionNumber(int N, double *A);
+float  matrixConditionNumber(int N, float *A);
 
 void matrixTranspose(const int M, const int N,
-                     const dfloat  *A, const int LDA,
-                           dfloat *AT, const int LDAT);
+                     const double  *A, const int LDA,
+                           double *AT, const int LDAT);
+void matrixTranspose(const int M, const int N,
+                     const float  *A, const int LDA,
+                           float *AT, const int LDAT);
 
 void matrixTranspose(const int M, const int N,
-                     const dlong  *A, const int LDA,
-                           dlong *AT, const int LDAT);
+                     const int  *A, const int LDA,
+                           int *AT, const int LDAT);
+void matrixTranspose(const int M, const int N,
+                     const long long int  *A, const int LDA,
+                           long long int *AT, const int LDAT);
 
 #endif

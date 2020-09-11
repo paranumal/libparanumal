@@ -24,31 +24,13 @@ SOFTWARE.
 
 */
 
-// y = beta*y + alpha*x
-@kernel void vectorAdd1(const dlong   N,
-                        const dfloat  alpha,
-                        const dfloat  beta,
-                        @restrict const dfloat * x,
-                        @restrict       dfloat * y){
+#ifndef PARALMOND_DEFINES_HPP
+#define PARALMOND_DEFINES_HPP
 
-  for(dlong i=0;i<N;++i;@tile(p_BLOCKSIZE,@outer,@inner)){
-    dfloat yi = 0.0;
-    if (beta)
-      yi = beta*y[i];
+#define PARALMOND_NBLOCKS 128
 
-    y[i] = yi + alpha*x[i];
-  }
-}
+#define NUMKCYCLES 3
+#define COARSENTHREASHOLD 0.12
+#define KCYCLETOL 0.2
 
-// z = alpha*x + beta*y
-@kernel void vectorAdd2(const dlong  N,
-                        const dfloat alpha,
-                        const dfloat beta,
-                        @restrict const dfloat * x,
-                        @restrict const dfloat * y,
-                        @restrict       dfloat * z){
-
-  for(dlong i=0;i<N;++i;@tile(p_BLOCKSIZE,@outer,@inner)){
-    z[i] = beta*y[i] + alpha*x[i];
-  }
-}
+#endif

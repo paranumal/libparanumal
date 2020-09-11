@@ -25,78 +25,81 @@ SOFTWARE.
 */
 
 #include "parAlmond.hpp"
+#include "parAlmond/parAlmondMultigrid.hpp"
+#include "parAlmond/parAlmondKernels.hpp"
 
 namespace parAlmond {
 
+parAlmond_t::parAlmond_t(platform_t& _platform, settings_t& _settings, MPI_Comm comm):
+  platform(_platform), settings(_settings) {
 
-solver_t *Init(platform_t& _platform, settings_t& _settings, MPI_Comm _comm) {
-  solver_t *M = new solver_t(_platform, _settings, _comm);
+  platform.linAlg.InitKernels({"set", "add", "sum", "scale",
+                                "axpy", "zaxpy",
+                                "amx", "amxpy", "zamxpy",
+                                "adx", "adxpy", "zadxpy",
+                                "innerProd", "weightedInnerProd",
+                                "norm2", "weightedNorm2"});
 
-  if (Nrefs==0) buildParAlmondKernels(_comm, _platform);
+  multigrid = new multigrid_t(platform, settings, comm);
+
+  //build parAlmond kernels on first construction
+  if (Nrefs==0) buildParAlmondKernels(platform);
   Nrefs++;
-
-  return M;
 }
 
-void AMGSetup(solver_t *MM,
-               parCOO& A,                    //-- Local A matrix data (globally indexed, COO storage, row sorted)
-               bool nullSpace,
-               dfloat nullSpacePenalty){
+void parAlmond_t::Operator(occa::memory& o_rhs, occa::memory& o_x) {
 
-  solver_t *M = (solver_t *) MM;
-
-  int rank, size;
-  MPI_Comm_rank(M->comm, &rank);
-  MPI_Comm_size(M->comm, &size);
-
-  hlong TotalRows = A.globalStarts[M->size];
-  dlong numLocalRows = (dlong) (A.globalStarts[M->rank+1]-A.globalStarts[M->rank]);
-
-  if(rank==0) {printf("Setting up AMG...");fflush(stdout);}
-
-  //populate null space vector
-  dfloat *null = (dfloat *) calloc(numLocalRows, sizeof(dfloat));
-  for (dlong i=0;i<numLocalRows;i++) null[i] = 1.0/sqrt(TotalRows);
-
-  parCSR *csrA = new parCSR(numLocalRows, A,
-                            nullSpace, null, nullSpacePenalty,
-                            M->comm, M->platform);
-  free(null);
-
-  M->AMGSetup(csrA);
-
-  if(rank==0) printf("done.\n");
-}
-
-void Precon(solver_t *M, occa::memory o_x, occa::memory o_rhs) {
-
-  M->levels[0]->o_x   = o_x;
-  M->levels[0]->o_rhs = o_rhs;
-
-  if       ((M->exact)&&(M->ktype==PCG)){
-    M->device_pcg(1000,1e-8);
-  } else if((M->exact)&&(M->ktype==GMRES)){
-    M->device_pgmres(1000,1e-8);
-  } else if(M->ctype==KCYCLE) {
-    M->device_kcycle(0);
-  } else if(M->ctype==VCYCLE) {
-    M->device_vcycle(0);
+  if (multigrid->exact){ //call the linear solver
+    int maxIter = 500;
+    int verbose = settings.compareSetting("VERBOSE", "TRUE") ? 1 : 0;
+    dfloat tol = 1e-8;
+    solver_t &A = *(multigrid->levels[0]);
+    (void) multigrid->linearSolver->Solve(A, *multigrid, o_x, o_rhs, tol, maxIter, verbose);
+  } else { //apply a multigrid cycle
+    multigrid->Operator(o_rhs, o_x);
   }
 }
 
-void Report(solver_t *M) {
-  M->Report();
+//Add level to multigrid heirarchy
+void parAlmond_t::AddLevel(multigridLevel* level) {
+  multigrid->AddLevel(level);
 }
 
-void Free(solver_t* M) {
+void parAlmond_t::Report() {
+
+  int rank;
+  MPI_Comm_rank(multigrid->comm, &rank);
+
+  if(rank==0) {
+    printf("------------------Multigrid Report----------------------------------------\n");
+    printf("--------------------------------------------------------------------------\n");
+    printf("level|    Type    |    dimension   |   nnz per row   |   Smoother        |\n");
+    printf("     |            |  (min,max,avg) |  (min,max,avg)  |                   |\n");
+    printf("--------------------------------------------------------------------------\n");
+  }
+
+  for(int lev=0; lev<multigrid->numLevels; lev++) {
+    if(rank==0) {printf(" %3d ", lev);fflush(stdout);}
+    multigrid->levels[lev]->Report();
+  }
+
+  if(rank==0)
+    printf("--------------------------------------------------------------------------\n");
+}
+
+dlong parAlmond_t::getNumCols(int k) {
+  return multigrid->levels[k]->Ncols;
+}
+
+dlong parAlmond_t::getNumRows(int k) {
+  return multigrid->levels[k]->Nrows;
+}
+
+parAlmond_t::~parAlmond_t() {
   Nrefs--;
-  if (Nrefs==0) {
-    freeParAlmondKernels();
-    freeScratchSpace();
-    freePinnedScratchSpace();
-  }
+  if (Nrefs==0) freeParAlmondKernels();
 
-  delete M;
+  delete multigrid;
 }
 
 } //namespace parAlmond

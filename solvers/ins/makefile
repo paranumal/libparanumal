@@ -116,7 +116,7 @@ SRC =$(wildcard src/*.cpp)
 OBJS=$(SRC:.cpp=.o)
 
 .PHONY: all lib libp_libs libelliptic clean clean-libs \
-		clean-kernels realclean help info silentUpdate
+		clean-kernels realclean help info
 
 all: insMain
 
@@ -136,7 +136,7 @@ else
 	@${MAKE} -C ${ELLIPTIC_DIR} lib --no-print-directory
 endif
 
-insMain:$(OBJS) insMain.o | libelliptic silentUpdate
+insMain:$(OBJS) insMain.o libelliptic
 ifneq (,${verbose})
 	$(LIBP_LD) -o insMain insMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
 else
@@ -160,9 +160,6 @@ else
 	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
 	@$(LIBP_MPICXX) -o $*.o -c $*.cpp $(INS_CXXFLAGS)
 endif
-
-silentUpdate:
-	@true
 
 #cleanup
 clean:

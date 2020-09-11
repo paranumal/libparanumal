@@ -31,8 +31,8 @@ SOFTWARE.
 // compare on global indices
 int parallelCompareRowColumn(const void *a, const void *b){
 
-  parAlmond::nonZero_t *fa = (parAlmond::nonZero_t*) a;
-  parAlmond::nonZero_t *fb = (parAlmond::nonZero_t*) b;
+  parAlmond::parCOO::nonZero_t *fa = (parAlmond::parCOO::nonZero_t*) a;
+  parAlmond::parCOO::nonZero_t *fb = (parAlmond::parCOO::nonZero_t*) b;
 
   if(fa->row < fb->row) return -1;
   if(fa->row > fb->row) return +1;
@@ -78,7 +78,7 @@ void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO& A) {
   // Build non-zeros of stiffness matrix (unassembled)
   dlong nnzLocal = mesh.Np*mesh.Np*mesh.Nelements;
 
-  parAlmond::nonZero_t *sendNonZeros = (parAlmond::nonZero_t*) calloc(nnzLocal, sizeof(parAlmond::nonZero_t));
+  parAlmond::parCOO::nonZero_t *sendNonZeros = (parAlmond::parCOO::nonZero_t*) calloc(nnzLocal, sizeof(parAlmond::parCOO::nonZero_t));
   int *AsendCounts  = (int*) calloc(mesh.size, sizeof(int));
   int *ArecvCounts  = (int*) calloc(mesh.size, sizeof(int));
   int *AsendOffsets = (int*) calloc(mesh.size+1, sizeof(int));
@@ -145,7 +145,7 @@ void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO& A) {
     AsendCounts[sendNonZeros[n].ownerRank]++;
 
   // sort by row ordering
-  qsort(sendNonZeros, cnt, sizeof(parAlmond::nonZero_t), parallelCompareRowColumn);
+  qsort(sendNonZeros, cnt, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
 
   // find how many nodes to expect (should use sparse version)
   MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, mesh.comm);
@@ -158,7 +158,7 @@ void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO& A) {
     A.nnz += ArecvCounts[r];
   }
 
-  A.entries = (parAlmond::nonZero_t*) calloc(A.nnz, sizeof(parAlmond::nonZero_t));
+  A.entries = (parAlmond::parCOO::nonZero_t*) calloc(A.nnz, sizeof(parAlmond::parCOO::nonZero_t));
 
   // determine number to receive
   MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_NONZERO_T,
@@ -166,7 +166,7 @@ void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO& A) {
                    mesh.comm);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
-  qsort((A.entries), A.nnz, sizeof(parAlmond::nonZero_t), parallelCompareRowColumn);
+  qsort((A.entries), A.nnz, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
 
   // compress duplicates
   cnt = 0;
@@ -210,7 +210,7 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO& A) {
 
   // 2. Build non-zeros of stiffness matrix (unassembled)
   dlong nnzLocal = mesh.Np*mesh.Np*mesh.Nelements;
-  parAlmond::nonZero_t *sendNonZeros = (parAlmond::nonZero_t*) calloc(nnzLocal, sizeof(parAlmond::nonZero_t));
+  parAlmond::parCOO::nonZero_t *sendNonZeros = (parAlmond::parCOO::nonZero_t*) calloc(nnzLocal, sizeof(parAlmond::parCOO::nonZero_t));
   int *AsendCounts  = (int*) calloc(mesh.size, sizeof(int));
   int *ArecvCounts  = (int*) calloc(mesh.size, sizeof(int));
   int *AsendOffsets = (int*) calloc(mesh.size+1, sizeof(int));
@@ -353,7 +353,7 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO& A) {
     AsendCounts[sendNonZeros[n].ownerRank]++;
 
   // sort by row ordering
-  qsort(sendNonZeros, cnt, sizeof(parAlmond::nonZero_t), parallelCompareRowColumn);
+  qsort(sendNonZeros, cnt, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
 
   // find how many nodes to expect (should use sparse version)
   MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, mesh.comm);
@@ -366,7 +366,7 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO& A) {
     A.nnz += ArecvCounts[r];
   }
 
-  A.entries = (parAlmond::nonZero_t*) calloc(A.nnz, sizeof(parAlmond::nonZero_t));
+  A.entries = (parAlmond::parCOO::nonZero_t*) calloc(A.nnz, sizeof(parAlmond::parCOO::nonZero_t));
 
   // determine number to receive
   MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_NONZERO_T,
@@ -374,7 +374,7 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO& A) {
                    mesh.comm);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
-  qsort((A.entries), A.nnz, sizeof(parAlmond::nonZero_t), parallelCompareRowColumn);
+  qsort((A.entries), A.nnz, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
 
   // compress duplicates
   cnt = 0;
@@ -432,7 +432,7 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO& A) {
 
   // 2. Build non-zeros of stiffness matrix (unassembled)
   dlong nnzLocal = mesh.Np*mesh.Np*mesh.Nelements;
-  parAlmond::nonZero_t *sendNonZeros = (parAlmond::nonZero_t*) calloc(nnzLocal, sizeof(parAlmond::nonZero_t));
+  parAlmond::parCOO::nonZero_t *sendNonZeros = (parAlmond::parCOO::nonZero_t*) calloc(nnzLocal, sizeof(parAlmond::parCOO::nonZero_t));
   int *AsendCounts  = (int*) calloc(mesh.size, sizeof(int));
   int *ArecvCounts  = (int*) calloc(mesh.size, sizeof(int));
   int *AsendOffsets = (int*) calloc(mesh.size+1, sizeof(int));
@@ -522,7 +522,7 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO& A) {
     AsendCounts[sendNonZeros[n].ownerRank]++;
 
   // sort by row ordering
-  qsort(sendNonZeros, cnt, sizeof(parAlmond::nonZero_t), parallelCompareRowColumn);
+  qsort(sendNonZeros, cnt, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
 
   // find how many nodes to expect (should use sparse version)
   MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, mesh.comm);
@@ -535,7 +535,7 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO& A) {
     A.nnz += ArecvCounts[r];
   }
 
-  A.entries = (parAlmond::nonZero_t*) calloc(A.nnz, sizeof(parAlmond::nonZero_t));
+  A.entries = (parAlmond::parCOO::nonZero_t*) calloc(A.nnz, sizeof(parAlmond::parCOO::nonZero_t));
 
   // determine number to receive
   MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_NONZERO_T,
@@ -543,7 +543,7 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO& A) {
                    mesh.comm);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
-  qsort((A.entries), A.nnz, sizeof(parAlmond::nonZero_t), parallelCompareRowColumn);
+  qsort((A.entries), A.nnz, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
 
   // compress duplicates
   cnt = 0;
@@ -601,7 +601,7 @@ void elliptic_t::BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO& A) {
   // Build non-zeros of stiffness matrix (unassembled)
   dlong nnzLocal = mesh.Np*mesh.Np*mesh.Nelements;
 
-  parAlmond::nonZero_t *sendNonZeros = (parAlmond::nonZero_t*) calloc(nnzLocal, sizeof(parAlmond::nonZero_t));
+  parAlmond::parCOO::nonZero_t *sendNonZeros = (parAlmond::parCOO::nonZero_t*) calloc(nnzLocal, sizeof(parAlmond::parCOO::nonZero_t));
   int *AsendCounts  = (int*) calloc(mesh.size, sizeof(int));
   int *ArecvCounts  = (int*) calloc(mesh.size, sizeof(int));
   int *AsendOffsets = (int*) calloc(mesh.size+1, sizeof(int));
@@ -673,7 +673,7 @@ void elliptic_t::BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO& A) {
     AsendCounts[sendNonZeros[n].ownerRank] += 1;
 
   // sort by row ordering
-  qsort(sendNonZeros, cnt, sizeof(parAlmond::nonZero_t), parallelCompareRowColumn);
+  qsort(sendNonZeros, cnt, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
 
   // find how many nodes to expect (should use sparse version)
   MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, mesh.comm);
@@ -686,7 +686,7 @@ void elliptic_t::BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO& A) {
     A.nnz += ArecvCounts[r];
   }
 
-  A.entries = (parAlmond::nonZero_t*) calloc(A.nnz, sizeof(parAlmond::nonZero_t));
+  A.entries = (parAlmond::parCOO::nonZero_t*) calloc(A.nnz, sizeof(parAlmond::parCOO::nonZero_t));
 
   // determine number to receive
   MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_NONZERO_T,
@@ -694,7 +694,7 @@ void elliptic_t::BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO& A) {
                    mesh.comm);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
-  qsort((A.entries), A.nnz, sizeof(parAlmond::nonZero_t), parallelCompareRowColumn);
+  qsort((A.entries), A.nnz, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
 
   // compress duplicates
   cnt = 0;
@@ -737,7 +737,7 @@ void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO& A) {
 
   // 2. Build non-zeros of stiffness matrix (unassembled)
   dlong nnzLocal = mesh.Np*mesh.Np*mesh.Nelements;
-  parAlmond::nonZero_t *sendNonZeros = (parAlmond::nonZero_t*) calloc(nnzLocal, sizeof(parAlmond::nonZero_t));
+  parAlmond::parCOO::nonZero_t *sendNonZeros = (parAlmond::parCOO::nonZero_t*) calloc(nnzLocal, sizeof(parAlmond::parCOO::nonZero_t));
   int *AsendCounts  = (int*) calloc(mesh.size, sizeof(int));
   int *ArecvCounts  = (int*) calloc(mesh.size, sizeof(int));
   int *AsendOffsets = (int*) calloc(mesh.size+1, sizeof(int));
@@ -863,7 +863,7 @@ void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO& A) {
     AsendCounts[sendNonZeros[n].ownerRank]++;
 
   // sort by row ordering
-  qsort(sendNonZeros, cnt, sizeof(parAlmond::nonZero_t), parallelCompareRowColumn);
+  qsort(sendNonZeros, cnt, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
 
   // find how many nodes to expect (should use sparse version)
   MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, mesh.comm);
@@ -876,7 +876,7 @@ void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO& A) {
     A.nnz += ArecvCounts[r];
   }
 
-  A.entries = (parAlmond::nonZero_t*) calloc(A.nnz, sizeof(parAlmond::nonZero_t));
+  A.entries = (parAlmond::parCOO::nonZero_t*) calloc(A.nnz, sizeof(parAlmond::parCOO::nonZero_t));
 
   // determine number to receive
   MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_NONZERO_T,
@@ -884,7 +884,7 @@ void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO& A) {
                    mesh.comm);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
-  qsort((A.entries), A.nnz, sizeof(parAlmond::nonZero_t), parallelCompareRowColumn);
+  qsort((A.entries), A.nnz, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
 
   // compress duplicates
   cnt = 0;

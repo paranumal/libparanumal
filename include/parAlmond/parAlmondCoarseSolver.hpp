@@ -27,46 +27,49 @@ SOFTWARE.
 #ifndef PARALMOND_COARSESOLVE_HPP
 #define PARALMOND_COARSESOLVE_HPP
 
+#include "settings.hpp"
+#include "platform.hpp"
+#include "solver.hpp"
+#include "parAlmond.hpp"
+#include "parAlmond/parAlmondDefines.hpp"
+#include "parAlmond/parAlmondparCSR.hpp"
+
 namespace parAlmond {
 
-class coarseSolver {
+class coarseSolver_t: public solver_t {
 
 public:
+  MPI_Comm comm;
   int coarseTotal;
   int coarseOffset;
-  int *coarseOffsets=NULL;
-  int *coarseCounts=NULL;
+  int *coarseOffsets=nullptr;
+  int *coarseCounts=nullptr;
 
   int N;
-  dfloat *invCoarseA=NULL;
+  dfloat *invCoarseA=nullptr;
 
-  dfloat *xLocal=NULL;
-  dfloat *rhsLocal=NULL;
+  dfloat *xLocal=nullptr;
+  dfloat *rhsLocal=nullptr;
 
-  dfloat *xCoarse=NULL;
-  dfloat *rhsCoarse=NULL;
+  dfloat *xCoarse=nullptr;
+  dfloat *rhsCoarse=nullptr;
 
-  bool gatherLevel;
-  ogs_t *ogs;
-  dfloat *Gx;
+  bool gatherLevel=false;
+  ogs_t *ogs=nullptr;
+  dfloat *Gx=nullptr;
   occa::memory o_Gx;
 
-  MPI_Comm comm;
-  occa::device device;
-
-  settings_t& settings;
-
-  coarseSolver(settings_t& settings);
-  ~coarseSolver();
+  coarseSolver_t(platform_t& _platform, settings_t& _settings):
+    solver_t(_platform, _settings) {}
+  ~coarseSolver_t();
 
   int getTargetSize();
 
-  void setup(parCSR *A);
+  void setup(parCSR *A, bool nullSpace, dfloat *nullVector, dfloat nullSpacePenalty);
 
   void syncToDevice();
 
-  void solve(dfloat *rhs, dfloat *x);
-  void solve(occa::memory o_rhs, occa::memory o_x);
+  void solve(occa::memory& o_rhs, occa::memory& o_x);
 };
 
 }

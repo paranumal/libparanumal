@@ -47,7 +47,7 @@ elliptic_t* elliptic_t::SetupRingPatch(mesh_t& meshPatch){
   elliptic->o_grad  = platform.malloc(Ntotal*4*sizeof(dfloat), elliptic->grad);
 
   /*setup trace halo exchange */
-  elliptic->traceHalo = mesh.HaloTraceSetup(elliptic->Nfields);
+  elliptic->traceHalo = meshPatch.HaloTraceSetup(elliptic->Nfields);
 
   elliptic->BCType = BCType;
 

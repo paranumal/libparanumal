@@ -24,51 +24,27 @@ SOFTWARE.
 
 */
 
-#ifndef PARALMOND_SOLVER_HPP
-#define PARALMOND_SOLVER_HPP
+#ifndef PARALMOND_KERNELS_HPP
+#define PARALMOND_KERNELS_HPP
 
 namespace parAlmond {
 
-class solver_t {
+  void buildParAlmondKernels(platform_t& platform);
 
-public:
-  MPI_Comm comm;
-  int rank, size;
+  void freeParAlmondKernels();
 
-  platform_t& platform;
-  settings_t& settings;
+  extern int Nrefs;
 
-  bool exact;
-  CycleType    ctype;
-  KrylovType   ktype;
-  SmoothType stype;
+  extern occa::kernel SpMVcsrKernel1;
+  extern occa::kernel SpMVcsrKernel2;
+  extern occa::kernel SpMVmcsrKernel;
 
-  int numLevels;
-  int AMGstartLev, baseLevel;
-  multigridLevel **levels=NULL;
-
-  coarseSolver *coarseLevel;
-
-  int ChebyshevIterations;
-
-  solver_t(platform_t& _platform, settings_t& settings_, MPI_Comm comm_);
-
-  ~solver_t();
-
-  void AMGSetup(parCSR *A);
-
-  void Report();
-
-  void kcycle(int k);
-  void vcycle(int k);
-  void device_kcycle(int k);
-  void device_vcycle(int k);
-
-  void pcg(const int maxIt, const dfloat tol);
-  void pgmres(const int maxIt, const dfloat tol);
-  void device_pcg(const int maxIt, const dfloat tol);
-  void device_pgmres(const int maxIt, const dfloat tol);
-};
+  extern occa::kernel vectorAddInnerProdKernel;
+  extern occa::kernel vectorAddWeightedInnerProdKernel;
+  extern occa::kernel kcycleCombinedOp1Kernel;
+  extern occa::kernel kcycleCombinedOp2Kernel;
+  extern occa::kernel kcycleWeightedCombinedOp1Kernel;
+  extern occa::kernel kcycleWeightedCombinedOp2Kernel;
 
 } //namespace parAlmond
 

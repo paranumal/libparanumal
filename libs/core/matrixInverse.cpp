@@ -24,33 +24,14 @@ SOFTWARE.
 
 */
 
-#include <unistd.h>
-#include <math.h>
-#include <stdlib.h>
-#include <stdio.h>
+#include "core.hpp"
 
 extern "C" {
-  void dgesv_ ( int     *N, int     *NRHS, double  *A,
-                int     *LDA,
-                int     *IPIV,
-                double  *B,
-                int     *LDB,
-                int     *INFO );
-
-  void sgesv_(int *N, int *NRHS,float  *A, int *LDA, int *IPIV, float  *B, int *LDB,int *INFO);
-
   void dgetrf_(int* M, int *N, double* A, int* lda, int* IPIV, int* INFO);
   void dgetri_(int* N, double* A, int* lda, int* IPIV, double* WORK, int* lwork, int* INFO);
 
   void sgetrf_(int* M, int *N, float* A, int* lda, int* IPIV, int* INFO);
   void sgetri_(int* N, float* A, int* lda, int* IPIV, float* WORK, int* lwork, int* INFO);
-
-  void dgeev_(char *JOBVL, char *JOBVR, int *N, double *A, int *LDA, double *WR, double *WI,
-              double *VL, int *LDVL, double *VR, int *LDVR, double *WORK, int *LWORK, int *INFO );
-
-  double dlange_(char *NORM, int *M, int *N, double *A, int *LDA, double *WORK);
-  void dgecon_(char *NORM, int *N, double *A, int *LDA, double *ANORM,
-                double *RCOND, double *WORK, int *IWORK, int *INFO );
 }
 
 void matrixInverse(int N, double *A){
@@ -58,27 +39,27 @@ void matrixInverse(int N, double *A){
   int info;
 
   // compute inverse mass matrix
-  double *tmpInvA = (double*) calloc(N*N, sizeof(double));
-
   int *ipiv = (int*) calloc(N, sizeof(int));
   double *work = (double*) calloc(lwork, sizeof(double));
 
-  for(int n=0;n<N*N;++n){
-    tmpInvA[n] = A[n];
+  dgetrf_ (&N, &N, A, &N, ipiv, &info);
+
+  if(info) {
+    std::stringstream ss;
+    ss << "dgetrf_ reports info = " << info;
+    LIBP_ABORT(ss.str());
   }
 
-  dgetrf_ (&N, &N, tmpInvA, &N, ipiv, &info);
-  dgetri_ (&N, tmpInvA, &N, ipiv, work, &lwork, &info);
+  dgetri_ (&N, A, &N, ipiv, work, &lwork, &info);
 
-  if(info)
-    printf("inv: dgetrf/dgetri reports info = %d when inverting matrix\n", info);
-
-  for(int n=0;n<N*N;++n)
-    A[n] = tmpInvA[n];
+  if(info) {
+    std::stringstream ss;
+    ss << "dgetri_ reports info = " << info;
+    LIBP_ABORT(ss.str());
+  }
 
   free(work);
   free(ipiv);
-  free(tmpInvA);
 }
 
 void matrixInverse(int N, float *A){
@@ -86,27 +67,25 @@ void matrixInverse(int N, float *A){
   int info;
 
   // compute inverse mass matrix
-  float *tmpInvA = (float*) calloc(N*N, sizeof(float));
-
   int *ipiv = (int*) calloc(N, sizeof(int));
   float *work = (float*) calloc(lwork, sizeof(float));
 
-  for(int n=0;n<N*N;++n){
-    tmpInvA[n] = A[n];
+  sgetrf_ (&N, &N, A, &N, ipiv, &info);
+
+  if(info) {
+    std::stringstream ss;
+    ss << "sgetrf_ reports info = " << info;
+    LIBP_ABORT(ss.str());
   }
 
-  //NC: are we missing these?
-  // sgetrf_ (&N, &N, tmpInvA, &N, ipiv, &info);
-  // sgetri_ (&N, tmpInvA, &N, ipiv, work, &lwork, &info);
-  info =1; //NC: throw an error for now
+  sgetri_ (&N, A, &N, ipiv, work, &lwork, &info);
 
-  if(info)
-    printf("inv: sgetrf/sgetri reports info = %d when inverting matrix\n", info);
-
-  for(int n=0;n<N*N;++n)
-    A[n] = tmpInvA[n];
+  if(info) {
+    std::stringstream ss;
+    ss << "sgetri_ reports info = " << info;
+    LIBP_ABORT(ss.str());
+  }
 
   free(work);
   free(ipiv);
-  free(tmpInvA);
 }

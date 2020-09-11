@@ -54,7 +54,7 @@ fpe_t& fpe_t::Setup(platform_t& platform, mesh_t& mesh,
                                               mesh.Np, 1, *fpe);
   } else if (settings.compareSetting("TIME INTEGRATOR","DOPRI5")){
     fpe->timeStepper = new TimeStepper::dopri5(mesh.Nelements, mesh.totalHaloPairs,
-                                              mesh.Np, 1, *fpe);
+                                              mesh.Np, 1, *fpe, mesh.comm);
   } else if (settings.compareSetting("TIME INTEGRATOR","EXTBDF3")){
     fpe->timeStepper = new TimeStepper::extbdf3(mesh.Nelements, mesh.totalHaloPairs,
                                               mesh.Np, 1, *fpe);
@@ -98,7 +98,8 @@ fpe_t& fpe_t::Setup(platform_t& platform, mesh_t& mesh,
     fpe->tau = fpe->elliptic->tau;
 
     int weighted = settings.compareSetting("ELLIPTIC DISCRETIZATION", "CONTINUOUS") ? 1 : 0;
-    fpe->linearSolver = linearSolver_t::Setup(Nlocal, Nhalo, platform, *(fpe->ellipticSettings),
+    fpe->linearSolver = linearSolver_t::Setup(Nlocal, Nhalo,
+                                              platform, *(fpe->ellipticSettings), mesh.comm,
                                               weighted, fpe->elliptic->o_weight);
   } else {
     //set penalty
@@ -242,7 +243,7 @@ fpe_t& fpe_t::Setup(platform_t& platform, mesh_t& mesh,
                                                 mesh.Np, 1, *(fpe->subcycler));
     } else if (settings.compareSetting("SUBCYCLING TIME INTEGRATOR","DOPRI5")){
       fpe->subStepper = new TimeStepper::dopri5(mesh.Nelements, mesh.totalHaloPairs,
-                                                mesh.Np, 1, *(fpe->subcycler));
+                                                mesh.Np, 1, *(fpe->subcycler), mesh.comm);
     }
     fpe->subStepper->SetTimeStep(dtAdvc);
   }

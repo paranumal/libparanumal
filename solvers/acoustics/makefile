@@ -112,7 +112,7 @@ SRC =$(wildcard src/*.cpp)
 OBJS=$(SRC:.cpp=.o)
 
 .PHONY: all lib libp_libs clean clean-libs \
-		clean-kernels realclean help info silentUpdate
+		clean-kernels realclean help info
 
 all: acousticsMain
 
@@ -125,7 +125,7 @@ else
 	@${MAKE} -C ${LIBP_LIBS_DIR} $(ACOUSTICS_LIBP_LIBS) --no-print-directory
 endif
 
-acousticsMain:$(OBJS) acousticsMain.o | libp_libs silentUpdate
+acousticsMain:$(OBJS) acousticsMain.o libp_libs
 ifneq (,${verbose})
 	$(LIBP_LD) -o acousticsMain acousticsMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
 else
@@ -149,9 +149,6 @@ else
 	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
 	@$(LIBP_MPICXX) -o $*.o -c $*.cpp $(ACOUSTICS_CXXFLAGS)
 endif
-
-silentUpdate:
-	@true
 
 #cleanup
 clean:

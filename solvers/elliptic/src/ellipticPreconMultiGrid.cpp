@@ -30,98 +30,51 @@ SOFTWARE.
 // Matrix-free p-Multigrid levels followed by AMG
 void MultiGridPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
 
-  //just pass to parAlmond
-  parAlmond::Precon(parAlmondHandle, o_Mr, o_r);
+  if (gather==true) { //gather before passing to parAlmond
+    elliptic.ogsMasked->Gather(o_rhsG, o_r, ogs_dfloat, ogs_add, ogs_notrans);
+    parAlmond.Operator(o_rhsG, o_xG);
+    elliptic.ogsMasked->Scatter(o_Mr, o_xG, ogs_dfloat, ogs_add, ogs_notrans);
+  } else {
+    //just pass to parAlmond
+    parAlmond.Operator(o_r, o_Mr);
+  }
 
   // zero mean of RHS
   if(elliptic.allNeumann) elliptic.ZeroMean(o_Mr);
 }
 
 MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
-  elliptic(_elliptic), mesh(_elliptic.mesh), settings(_elliptic.settings) {
-
-  //initialize parAlmond
-  parAlmondHandle = parAlmond::Init(elliptic.platform, settings, mesh.comm);
-  parAlmond::multigridLevel **levels = parAlmondHandle->levels;
+  elliptic(_elliptic), mesh(_elliptic.mesh), settings(_elliptic.settings),
+  parAlmond(elliptic.platform, settings, mesh.comm) {
 
   int Nf = mesh.N;
   int Nc = Nf;
   int NpFine   = mesh.Np;
   int NpCoarse = mesh.Np;
-  occa::memory o_weightF = elliptic.o_weight;
 
-  NpMGlevels=0;
+  MGLevel* prevLevel=nullptr;
+  MGLevel* currLevel=nullptr;
 
-  while(true) {
+  while(Nc>1) {
     //build mesh and elliptic objects for this degree
-    mesh_t &meshC = mesh.SetupNewDegree(Nc);
-    elliptic_t &ellipticC = elliptic.SetupNewDegree(meshC);
-    NpMGlevels++;
+    mesh_t &meshF = mesh.SetupNewDegree(Nf);
+    elliptic_t &ellipticF = elliptic.SetupNewDegree(meshF);
 
-    if (Nc==1) { //base p-MG level
-      //build full A matrix and pass to parAlmond
-      parAlmond::parCOO A;
-      if (settings.compareSetting("DISCRETIZATION", "IPDG"))
-        ellipticC.BuildOperatorMatrixIpdg(A);
-      else if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS"))
-        ellipticC.BuildOperatorMatrixContinuous(A);
-
-      int numMGLevels = parAlmondHandle->numLevels;
-
-      //set up AMG levels (treating the N=1 level as a matrix level)
-      parAlmond::AMGSetup(parAlmondHandle, A,
-                      elliptic.allNeumann, elliptic.allNeumannPenalty);
-
-      //overwrite the finest AMG level with the degree 1 matrix free level
-      delete levels[numMGLevels];
-
-      levels[numMGLevels] = new MGLevel(ellipticC, numMGLevels, Nf, NpFine, o_weightF,
-                                        parAlmondHandle->ktype, parAlmondHandle->ctype);
-
-      if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
-        if (parAlmondHandle->numLevels > numMGLevels+1) {
-          //tell parAlmond to gather when going to the next level
-          parAlmond::agmgLevel *nextLevel
-                = (parAlmond::agmgLevel*)parAlmondHandle->levels[numMGLevels+1];
-
-          nextLevel->gatherLevel = true;
-          nextLevel->ogs = ellipticC.ogsMasked;
-          nextLevel->o_gatherWeight = ellipticC.o_weightG;
-          nextLevel->Gx = (dfloat*) calloc(nextLevel->R->Ncols,sizeof(dfloat));
-          nextLevel->Sx = (dfloat*) calloc(meshC.Np*meshC.Nelements,sizeof(dfloat));
-          nextLevel->o_Gx = elliptic.platform.malloc(nextLevel->R->Ncols*sizeof(dfloat),nextLevel->Gx);
-          nextLevel->o_Sx = elliptic.platform.malloc(meshC.Np*meshC.Nelements*sizeof(dfloat),nextLevel->Sx);
-        } else {
-          //this level is the base
-          parAlmond::coarseSolver *coarseLevel = parAlmondHandle->coarseLevel;
-
-          coarseLevel->gatherLevel = true;
-          coarseLevel->ogs = ellipticC.ogsMasked;
-          coarseLevel->Gx = (dfloat*) calloc(coarseLevel->ogs->Ngather,sizeof(dfloat));
-          coarseLevel->o_Gx = elliptic.platform.malloc(coarseLevel->ogs->Ngather*sizeof(dfloat),coarseLevel->Gx);
-        }
-      }
-      break;
-
-    } else {
-      //make a multigrid level
-      int numMGLevels = parAlmondHandle->numLevels;
-      levels[numMGLevels] = new MGLevel(ellipticC, numMGLevels, Nf, NpFine, o_weightF,
-                                        parAlmondHandle->ktype, parAlmondHandle->ctype);
-      parAlmondHandle->numLevels++;
+    //share masking data with previous MG level
+    if (prevLevel) {
+      prevLevel->Nmasked = ellipticF.Nmasked;
+      prevLevel->o_maskIds = ellipticF.o_maskIds;
+      prevLevel->ogsMasked = ellipticF.ogsMasked;
     }
 
     //find the degree of the next level
-    Nf = Nc;
-    NpFine = meshC.Np;
-    o_weightF = ellipticC.o_weight; //save previous weights
     if (settings.compareSetting("MULTIGRID COARSENING","ALLDEGREES")) {
       Nc = Nf-1;
     } else if (settings.compareSetting("MULTIGRID COARSENING","HALFDEGREES")) {
-      Nc = (Nf+1)/2;
+      Nc = mymax(1,(Nf+1)/2);
     } else { //default "HALFDOFS"
       // pick the degrees so the dofs of each level halfs (roughly)
-      while (NpCoarse > NpFine/2) {
+      while (NpCoarse > NpFine/2 && Nc>1) {
         Nc--;
         switch(mesh.elementType){
           case TRIANGLES:
@@ -135,40 +88,58 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
         }
       }
     }
+
+    //make a multigrid level
+    currLevel = new MGLevel(ellipticF, Nc, NpCoarse);
+    parAlmond.AddLevel(currLevel);
+
+    Nf = Nc;
+    NpFine = NpCoarse;
+    prevLevel = currLevel;
+  }
+
+  //build matrix at degree 1
+  mesh_t &meshF = mesh.SetupNewDegree(1);
+  elliptic_t &ellipticF = elliptic.SetupNewDegree(meshF);
+
+  //build full A matrix and pass to parAlmond
+  parAlmond::parCOO A(elliptic.platform, mesh.comm);
+  if (settings.compareSetting("DISCRETIZATION", "IPDG"))
+    ellipticF.BuildOperatorMatrixIpdg(A);
+  else if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS"))
+    ellipticF.BuildOperatorMatrixContinuous(A);
+
+  //populate null space unit vector
+  int rank = mesh.rank;
+  int size = mesh.size;
+  hlong TotalRows = A.globalStarts[size];
+  dlong numLocalRows = (dlong) (A.globalStarts[rank+1]-A.globalStarts[rank]);
+  dfloat *null = (dfloat *) malloc(numLocalRows*sizeof(dfloat));
+  for (dlong i=0;i<numLocalRows;i++) null[i] = 1.0/sqrt(TotalRows);
+
+  //set up AMG levels (treating the N=1 level as a matrix level)
+  parAlmond.AMGSetup(A, elliptic.allNeumann, null, elliptic.allNeumannPenalty);
+  free(null);
+
+  if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
+    if (mesh.N>1) {
+      //tell the last pMG level to gather after coarsening
+      prevLevel->gatherLevel = true;
+      prevLevel->ogsMasked = ellipticF.ogsMasked;
+
+      dfloat *dummy = (dfloat *) calloc(meshF.Np*meshF.Nelements,sizeof(dfloat));
+      prevLevel->o_SX = elliptic.platform.malloc(meshF.Np*meshF.Nelements*sizeof(dfloat), dummy);
+      prevLevel->o_GX = elliptic.platform.malloc(meshF.Np*meshF.Nelements*sizeof(dfloat), dummy);
+      free(dummy);
+    } else {
+      //gather before passing to parAlmond
+      gather=true;
+      dlong Ncols = parAlmond.getNumCols(0);
+      o_rhsG = elliptic.platform.malloc(Ncols*sizeof(dfloat));
+      o_xG   = elliptic.platform.malloc(Ncols*sizeof(dfloat));
+    }
   }
 
   //report
-  if (settings.compareSetting("VERBOSE","TRUE")) {
-    //This setup can be called by many subcommunicators, so only
-    // print on the global root.
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-    if (rank==0) { //report the upper multigrid levels
-      printf("------------------Multigrid Report----------------------------------------\n");
-      printf("--------------------------------------------------------------------------\n");
-      printf("level|    Type    |    dimension   |   nnz per row   |   Smoother        |\n");
-      printf("     |            |  (min,max,avg) |  (min,max,avg)  |                   |\n");
-      printf("--------------------------------------------------------------------------\n");
-    }
-
-    for(int lev=0; lev<parAlmondHandle->numLevels; lev++) {
-      if(rank==0) {printf(" %3d ", lev);fflush(stdout);}
-      levels[lev]->Report();
-    }
-
-    if (rank==0)
-      printf("--------------------------------------------------------------------------\n");
-  }
-}
-
-MultiGridPrecon::~MultiGridPrecon() {
-
-  for (int i=1;i<NpMGlevels;i++) {
-    MGLevel *level = (MGLevel *) parAlmondHandle->levels[i];
-    delete &(level->elliptic);
-    if (level->mesh.ogs) level->mesh.ogs->Free();
-  }
-
-  if (parAlmondHandle) parAlmond::Free(parAlmondHandle);
+  parAlmond.Report();
 }

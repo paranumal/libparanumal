@@ -122,7 +122,7 @@ void elliptic_t::BuildOperatorMatrixIpdgTri2D(parAlmond::parCOO& A){
   // reset non-zero counter
   dlong nnz = 0;
 
-  A.entries = (parAlmond::nonZero_t*) calloc(nnzLocalBound, sizeof(parAlmond::nonZero_t));
+  A.entries = (parAlmond::parCOO::nonZero_t*) calloc(nnzLocalBound, sizeof(parAlmond::parCOO::nonZero_t));
 
   dfloat *SM = (dfloat*) calloc(Np*Np,sizeof(dfloat));
   dfloat *SP = (dfloat*) calloc(Np*Np,sizeof(dfloat));
@@ -290,8 +290,8 @@ void elliptic_t::BuildOperatorMatrixIpdgTri2D(parAlmond::parCOO& A){
 
   //printf("nnz = %d\n", nnz);
 
-  qsort(A.entries, nnz, sizeof(parAlmond::nonZero_t), parallelCompareRowColumn);
-  //*A = (parAlmond::nonZero_t*) realloc(*A, nnz*sizeof(parAlmond::nonZero_t));
+  qsort(A.entries, nnz, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
+  //*A = (parAlmond::parCOO::nonZero_t*) realloc(*A, nnz*sizeof(parAlmond::parCOO::nonZero_t));
   A.nnz = nnz;
 
   if(rankM==0) printf("done.\n");
@@ -385,7 +385,7 @@ void elliptic_t::BuildOperatorMatrixIpdgTri3D(parAlmond::parCOO& A){
   // reset non-zero counter
   dlong nnz = 0;
 
-  A.entries = (parAlmond::nonZero_t*) calloc(nnzLocalBound, sizeof(parAlmond::nonZero_t));
+  A.entries = (parAlmond::parCOO::nonZero_t*) calloc(nnzLocalBound, sizeof(parAlmond::parCOO::nonZero_t));
 
   dfloat *SM = (dfloat*) calloc(Np*Np,sizeof(dfloat));
   dfloat *SP = (dfloat*) calloc(Np*Np,sizeof(dfloat));
@@ -570,8 +570,8 @@ void elliptic_t::BuildOperatorMatrixIpdgTri3D(parAlmond::parCOO& A){
 
   //printf("nnz = %d\n", nnz);
 
-  qsort(A.entries, nnz, sizeof(parAlmond::nonZero_t), parallelCompareRowColumn);
-  //*A = (parAlmond::nonZero_t*) realloc(*A, nnz*sizeof(parAlmond::nonZero_t));
+  qsort(A.entries, nnz, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
+  //*A = (parAlmond::parCOO::nonZero_t*) realloc(*A, nnz*sizeof(parAlmond::parCOO::nonZero_t));
   A.nnz = nnz;
 
   if(rankM==0) printf("done.\n");
@@ -656,7 +656,7 @@ void elliptic_t::BuildOperatorMatrixIpdgQuad2D(parAlmond::parCOO& A){
     }
   }
 
-  A.entries = (parAlmond::nonZero_t*) calloc(nnzLocalBound,sizeof(parAlmond::nonZero_t));
+  A.entries = (parAlmond::parCOO::nonZero_t*) calloc(nnzLocalBound,sizeof(parAlmond::parCOO::nonZero_t));
 
   if(rankM==0) {printf("Building full IPDG matrix...");fflush(stdout);}
 
@@ -795,8 +795,8 @@ void elliptic_t::BuildOperatorMatrixIpdgQuad2D(parAlmond::parCOO& A){
   }
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
-  qsort(A.entries, nnz, sizeof(parAlmond::nonZero_t), parallelCompareRowColumn);
-  //*A = (parAlmond::nonZero_t*) realloc(*A, nnz*sizeof(parAlmond::nonZero_t));
+  qsort(A.entries, nnz, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
+  //*A = (parAlmond::parCOO::nonZero_t*) realloc(*A, nnz*sizeof(parAlmond::parCOO::nonZero_t));
   A.nnz = nnz;
 
   if(rankM==0) printf("done.\n");
@@ -877,7 +877,7 @@ void elliptic_t::BuildOperatorMatrixIpdgQuad3D(parAlmond::parCOO& A){
     }
   }
 
-  A.entries = (parAlmond::nonZero_t*) calloc(nnzLocalBound,sizeof(parAlmond::nonZero_t));
+  A.entries = (parAlmond::parCOO::nonZero_t*) calloc(nnzLocalBound,sizeof(parAlmond::parCOO::nonZero_t));
 
   if(rankM==0) {printf("Building full IPDG matrix...");fflush(stdout);}
 
@@ -1025,8 +1025,8 @@ void elliptic_t::BuildOperatorMatrixIpdgQuad3D(parAlmond::parCOO& A){
   }
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
-  qsort(A.entries, nnz, sizeof(parAlmond::nonZero_t), parallelCompareRowColumn);
-  //*A = (parAlmond::nonZero_t*) realloc(*A, nnz*sizeof(parAlmond::nonZero_t));
+  qsort(A.entries, nnz, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
+  //*A = (parAlmond::parCOO::nonZero_t*) realloc(*A, nnz*sizeof(parAlmond::parCOO::nonZero_t));
   A.nnz = nnz;
 
   if(rankM==0) printf("done.\n");
@@ -1129,7 +1129,7 @@ void elliptic_t::BuildOperatorMatrixIpdgTet3D(parAlmond::parCOO& A){
     }
   }
 
-  A.entries = (parAlmond::nonZero_t*) calloc(nnzLocalBound,sizeof(parAlmond::nonZero_t));
+  A.entries = (parAlmond::parCOO::nonZero_t*) calloc(nnzLocalBound,sizeof(parAlmond::parCOO::nonZero_t));
 
   // reset non-zero counter
   dlong nnz = 0;
@@ -1307,9 +1307,9 @@ void elliptic_t::BuildOperatorMatrixIpdgTet3D(parAlmond::parCOO& A){
   free(qmM); free(qmP);
   free(ndotgradqmM); free(ndotgradqmP);
 }
-  qsort(A.entries, nnz, sizeof(parAlmond::nonZero_t), parallelCompareRowColumn);
+  qsort(A.entries, nnz, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
   // free up unused storage
-  //*A = (parAlmond::nonZero_t*) realloc(*A, nnz*sizeof(parAlmond::nonZero_t));
+  //*A = (parAlmond::parCOO::nonZero_t*) realloc(*A, nnz*sizeof(parAlmond::parCOO::nonZero_t));
   A.nnz = nnz;
 
   if(rankM==0) printf("done.\n");
@@ -1399,7 +1399,7 @@ void elliptic_t::BuildOperatorMatrixIpdgHex3D(parAlmond::parCOO& A){
     }
   }
 
-  A.entries = (parAlmond::nonZero_t*) calloc(nnzLocalBound,sizeof(parAlmond::nonZero_t));
+  A.entries = (parAlmond::parCOO::nonZero_t*) calloc(nnzLocalBound,sizeof(parAlmond::parCOO::nonZero_t));
 
   if(rankM==0) {printf("Building full IPDG matrix...");fflush(stdout);}
 
@@ -1566,8 +1566,8 @@ void elliptic_t::BuildOperatorMatrixIpdgHex3D(parAlmond::parCOO& A){
   }
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
-  qsort(A.entries, nnz, sizeof(parAlmond::nonZero_t), parallelCompareRowColumn);
-  //*A = (parAlmond::nonZero_t*) realloc(*A, nnz*sizeof(parAlmond::nonZero_t));
+  qsort(A.entries, nnz, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
+  //*A = (parAlmond::parCOO::nonZero_t*) realloc(*A, nnz*sizeof(parAlmond::parCOO::nonZero_t));
   A.nnz = nnz;
 
   if(rankM==0) printf("done.\n");

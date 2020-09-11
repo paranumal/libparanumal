@@ -24,19 +24,17 @@ SOFTWARE.
 
 */
 
-#include <unistd.h>
-#include <math.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include "types.h"
+#include "core.hpp"
 
 extern "C" {
+  void sgeev_(char *JOBVL, char *JOBVR, int *N, float *A, int *LDA, float *WR, float *WI,
+              float *VL, int *LDVL, float *VR, int *LDVR, float *WORK, int *LWORK, int *INFO );
   void dgeev_(char *JOBVL, char *JOBVR, int *N, double *A, int *LDA, double *WR, double *WI,
               double *VL, int *LDVL, double *VR, int *LDVR, double *WORK, int *LWORK, int *INFO );
 }
 
 // compute right eigenvectors
-void matrixEig(int N, dfloat *A, dfloat *VR, dfloat *WR, dfloat *WI){
+void matrixEigenVectors(int N, double *A, double *VR, double *WR, double *WI){
 
   char JOBVL = 'N';
   char JOBVR = 'V';
@@ -45,14 +43,11 @@ void matrixEig(int N, dfloat *A, dfloat *VR, dfloat *WR, dfloat *WI){
   int LDVR = N;
   int LWORK = 8*N;
 
-  double *tmpA  = (double*) calloc(N*N,sizeof(double));
-  double *tmpWR = (double*) calloc(N,sizeof(double));
-  double *tmpWI = (double*) calloc(N,sizeof(double));
-  double *tmpVR = (double*) calloc(N*N,sizeof(double));
-  double *tmpVL = NULL;
+  double *VL = NULL;
   double *WORK  = (double*) calloc(LWORK,sizeof(double));
 
-  int info;
+  double *tmpA  = (double*) calloc(N*N,sizeof(double));
+  double *tmpVR = (double*) calloc(N*N,sizeof(double));
 
   for(int n=0;n<N;++n){
     for(int m=0;m<N;++m){
@@ -60,13 +55,124 @@ void matrixEig(int N, dfloat *A, dfloat *VR, dfloat *WR, dfloat *WI){
     }
   }
 
-  dgeev_ (&JOBVL, &JOBVR, &N, tmpA, &LDA, tmpWR, tmpWI, tmpVL, &LDVL, tmpVR, &LDVR, WORK, &LWORK, &info);
+  int INFO = -999;
+
+  dgeev_ (&JOBVL, &JOBVR, &N, tmpA, &LDA, WR, WI,
+          VL, &LDVL, tmpVR, &LDVR, WORK, &LWORK, &INFO);
+
+  if(INFO) {
+    std::stringstream ss;
+    ss << "dgeev_ reports info = " << INFO;
+    LIBP_ABORT(ss.str());
+  }
 
   for(int n=0;n<N;++n){
-    WR[n] = tmpWR[n];
-    WI[n] = tmpWI[n];
     for(int m=0;m<N;++m){
       VR[n+m*N] = tmpVR[n*N+m];
     }
   }
+
+  free(tmpVR);
+  free(tmpA);
+  free(WORK);
+}
+
+// compute right eigenvectors
+void matrixEigenVectors(int N, float *A, float *VR, float *WR, float *WI){
+
+  char JOBVL = 'N';
+  char JOBVR = 'V';
+  int LDA = N;
+  int LDVL = N;
+  int LDVR = N;
+  int LWORK = 8*N;
+
+  float *VL = NULL;
+  float *WORK  = (float*) calloc(LWORK,sizeof(float));
+
+  float *tmpA  = (float*) calloc(N*N,sizeof(float));
+  float *tmpVR = (float*) calloc(N*N,sizeof(float));
+
+  for(int n=0;n<N;++n){
+    for(int m=0;m<N;++m){
+      tmpA[n+m*N] = A[n*N+m];
+    }
+  }
+
+  int INFO = -999;
+
+  sgeev_ (&JOBVL, &JOBVR, &N, tmpA, &LDA, WR, WI,
+          VL, &LDVL, tmpVR, &LDVR, WORK, &LWORK, &INFO);
+
+  if(INFO) {
+    std::stringstream ss;
+    ss << "sgeev_ reports info = " << INFO;
+    LIBP_ABORT(ss.str());
+  }
+
+  for(int n=0;n<N;++n){
+    for(int m=0;m<N;++m){
+      VR[n+m*N] = tmpVR[n*N+m];
+    }
+  }
+
+  free(tmpVR);
+  free(tmpA);
+  free(WORK);
+}
+
+// compute eigenvalues
+void matrixEigenValues(int N, double *A, double *WR, double *WI){
+
+  char JOBVL  = 'N';
+  char JOBVR  = 'N';
+  int LDA = N;
+  int LDVL = N;
+  int LDVR = N;
+  int LWORK = 8*N;
+
+  double *VR = nullptr;
+  double *VL = nullptr;
+  double *WORK  = (double*) calloc(LWORK,sizeof(double));
+
+  int INFO = -999;
+
+  dgeev_ (&JOBVL, &JOBVR, &N, A, &LDA, WR, WI,
+          VL, &LDVL, VR, &LDVR, WORK, &LWORK, &INFO);
+
+  if(INFO) {
+    std::stringstream ss;
+    ss << "dgeev_ reports info = " << INFO;
+    LIBP_ABORT(ss.str());
+  }
+
+  free(WORK);
+}
+
+// compute eigenvalues
+void matrixEigenValues(int N, float *A, float *WR, float *WI){
+
+  char JOBVL  = 'N';
+  char JOBVR  = 'N';
+  int LDA = N;
+  int LDVL = N;
+  int LDVR = N;
+  int LWORK = 8*N;
+
+  float *VR = nullptr;
+  float *VL = nullptr;
+  float *WORK  = (float*) calloc(LWORK,sizeof(float));
+
+  int INFO = -999;
+
+  sgeev_ (&JOBVL, &JOBVR, &N, A, &LDA, WR, WI,
+          VL, &LDVL, VR, &LDVR, WORK, &LWORK, &INFO);
+
+  if(INFO) {
+    std::stringstream ss;
+    ss << "sgeev_ reports info = " << INFO;
+    LIBP_ABORT(ss.str());
+  }
+
+  free(WORK);
 }

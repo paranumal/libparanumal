@@ -33,7 +33,8 @@ void elliptic_t::Run(){
 
   dlong Nlocal = mesh.Nelements*mesh.Np*Nfields;
   dlong Nhalo  = mesh.totalHaloPairs*mesh.Np*Nfields;
-  linearSolver_t *linearSolver = linearSolver_t::Setup(Nlocal, Nhalo, platform, settings,
+  linearSolver_t *linearSolver = linearSolver_t::Setup(Nlocal, Nhalo,
+                                                       platform, settings, mesh.comm,
                                                        weighted, o_weight);
 
   occa::properties kernelInfo = mesh.props; //copy base occa properties
@@ -161,7 +162,7 @@ void elliptic_t::Run(){
   int maxIter = 5000;
   int verbose = settings.compareSetting("VERBOSE", "TRUE") ? 1 : 0;
 
-  MPI_Barrier(platform.comm);
+  MPI_Barrier(mesh.comm);
   double startTime = MPI_Wtime();
 
   //call the solver
@@ -178,7 +179,7 @@ void elliptic_t::Run(){
                 o_x);
   }
 
-  MPI_Barrier(platform.comm);
+  MPI_Barrier(mesh.comm);
   double endTime = MPI_Wtime();
   double elapsedTime = endTime - startTime;
 

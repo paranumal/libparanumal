@@ -25,8 +25,30 @@ SOFTWARE.
 */
 
 #include "parAlmond.hpp"
+#include "parAlmond/parAlmondAMGSetup.hpp"
 
 namespace parAlmond {
+
+typedef struct {
+
+  hlong row;
+  hlong col;
+  dfloat val;
+
+} nonzero_t;
+
+static int compareNonZeroByRow(const void *a, const void *b){
+  nonzero_t *pa = (nonzero_t *) a;
+  nonzero_t *pb = (nonzero_t *) b;
+
+  if (pa->row < pb->row) return -1;
+  if (pa->row > pb->row) return +1;
+
+  if (pa->col < pb->col) return -1;
+  if (pa->col > pb->col) return +1;
+
+  return 0;
+};
 
 parCSR *galerkinProd(parCSR *A, parCSR *P){
 
@@ -48,30 +70,30 @@ parCSR *galerkinProd(parCSR *A, parCSR *P){
 
   //printf("Level has %d rows, and is making %d aggregates\n", N, globalAggStarts[rank+1]-globalAggStarts[rank]);
 
+  // Exploit the fact that we know P has one non-zero per row to
+  // compress the global Ids of the columns and nonzero values to
+  // single vectors
   hlong  *Pcols = (hlong  *) calloc(M,sizeof(hlong));
   dfloat *Pvals = (dfloat *) calloc(M,sizeof(dfloat));
 
   //record the entries of P that this rank has
-  dlong cnt =0;
   for (dlong i=0;i<N;i++) {
-    for (dlong j=P->diag->rowStarts[i];j<P->diag->rowStarts[i+1];j++) {
-      Pcols[cnt] = P->diag->cols[j] + globalAggOffset; //global ID
-      Pvals[cnt] = P->diag->vals[j];
-      cnt++;
+    for (dlong j=P->diag.rowStarts[i];j<P->diag.rowStarts[i+1];j++) {
+      Pcols[i] = P->diag.cols[j] + globalAggOffset; //global ID
+      Pvals[i] = P->diag.vals[j];
     }
-    for (dlong j=P->offd->rowStarts[i];j<P->offd->rowStarts[i+1];j++) {
-      Pcols[cnt] = P->colMap[P->offd->cols[j]]; //global ID
-      Pvals[cnt] = P->offd->vals[j];
-      cnt++;
+  }
+  for (dlong i=0;i<P->offd.nzRows;i++) {
+    const dlong row = P->offd.rows[i];
+    for (dlong j=P->offd.rowStarts[i];j<P->offd.rowStarts[i+1];j++) {
+      Pcols[row] = P->colMap[P->offd.cols[j]]; //global ID
+      Pvals[row] = P->offd.vals[j];
     }
   }
 
   //fill the halo region
   A->halo->Exchange(Pcols, 1, ogs_hlong);
   A->halo->Exchange(Pvals, 1, ogs_dfloat);
-
-  dlong sendNtotal = A->diag->nnz+A->offd->nnz;
-  nonzero_t *sendPTAP = (nonzero_t *) calloc(sendNtotal,sizeof(nonzero_t));
 
   // Make the MPI_NONZERO_T data type
   nonzero_t NZ;
@@ -88,29 +110,35 @@ parCSR *galerkinProd(parCSR *A, parCSR *P){
   MPI_Type_create_struct (3, blength, displ, dtype, &MPI_NONZERO_T);
   MPI_Type_commit (&MPI_NONZERO_T);
 
+  dlong sendNtotal = A->diag.nnz+A->offd.nnz;
+  nonzero_t *sendPTAP = (nonzero_t *) calloc(sendNtotal,sizeof(nonzero_t));
+
   //form the fine PTAP products
-  cnt =0;
+  dlong cnt =0;
   for (dlong i=0;i<N;i++) {
-    dlong start = A->diag->rowStarts[i];
-    dlong end   = A->diag->rowStarts[i+1];
+    const dlong start = A->diag.rowStarts[i];
+    const dlong end   = A->diag.rowStarts[i+1];
     for (dlong j=start;j<end;j++) {
-      const dlong  col = A->diag->cols[j];
-      const dfloat val = A->diag->vals[j];
+      const dlong  col = A->diag.cols[j];
+      const dfloat val = A->diag.vals[j];
 
       sendPTAP[cnt].row = Pcols[i];
       sendPTAP[cnt].col = Pcols[col];
       sendPTAP[cnt].val = val*Pvals[i]*Pvals[col];
       cnt++;
     }
-    start = A->offd->rowStarts[i];
-    end   = A->offd->rowStarts[i+1];
+  }
+  for (dlong i=0;i<A->offd.nzRows;i++) {
+    const dlong row   = A->offd.rows[i];
+    const dlong start = A->offd.rowStarts[i];
+    const dlong end   = A->offd.rowStarts[i+1];
     for (dlong j=start;j<end;j++) {
-      const dlong  col = A->offd->cols[j];
-      const dfloat val = A->offd->vals[j];
+      const dlong  col = A->offd.cols[j];
+      const dfloat val = A->offd.vals[j];
 
-      sendPTAP[cnt].row = Pcols[i];
+      sendPTAP[cnt].row = Pcols[row];
       sendPTAP[cnt].col = Pcols[col];
-      sendPTAP[cnt].val = val*Pvals[i]*Pvals[col];
+      sendPTAP[cnt].val = val*Pvals[row]*Pvals[col];
       cnt++;
     }
   }
@@ -187,82 +215,100 @@ parCSR *galerkinProd(parCSR *A, parCSR *P){
 
   dlong numAggs = (dlong) (globalAggStarts[rank+1]-globalAggStarts[rank]); //local number of aggregates
 
-  parCSR *Ac = new parCSR(numAggs, numAggs, A->comm, A->platform);
+  parCSR *Ac = new parCSR(numAggs, numAggs, A->platform, A->comm);
 
   Ac->globalRowStarts = globalAggStarts;
   Ac->globalColStarts = globalAggStarts;
 
-  Ac->diag->rowStarts = (dlong *) calloc(numAggs+1, sizeof(dlong));
-  Ac->offd->rowStarts = (dlong *) calloc(numAggs+1, sizeof(dlong));
+  Ac->diag.rowStarts = (dlong *) calloc(numAggs+1, sizeof(dlong));
+
+  int* offdRowCounts = (dlong *) calloc(numAggs+1, sizeof(dlong));
 
   for (dlong n=0;n<nnz;n++) {
     dlong row = (dlong) (PTAP[n].row - globalAggOffset);
     if ((PTAP[n].col > globalAggStarts[rank]-1)&&
         (PTAP[n].col < globalAggStarts[rank+1])) {
-      Ac->diag->rowStarts[row+1]++;
+      Ac->diag.rowStarts[row+1]++;
     } else {
-      Ac->offd->rowStarts[row+1]++;
+      offdRowCounts[row+1]++;
     }
   }
 
+  Ac->offd.nzRows=0;
+
+  // count how many rows are shared
+  for(dlong i=0; i<numAggs; i++)
+    if (offdRowCounts[i+1]>0) Ac->offd.nzRows++;
+
+  Ac->offd.rows      = (dlong *) calloc(Ac->offd.nzRows, sizeof(dlong));
+  Ac->offd.rowStarts = (dlong *) calloc(Ac->offd.nzRows+1, sizeof(dlong));
+
   // cumulative sum
+  cnt=0;
   for(dlong i=0; i<numAggs; i++) {
-    Ac->diag->rowStarts[i+1] += Ac->diag->rowStarts[i];
-    Ac->offd->rowStarts[i+1] += Ac->offd->rowStarts[i];
+
+    Ac->diag.rowStarts[i+1] += Ac->diag.rowStarts[i];
+
+    if (offdRowCounts[i+1]>0) {
+      Ac->offd.rows[cnt] = i; //record row id
+      Ac->offd.rowStarts[cnt+1] = Ac->offd.rowStarts[cnt] + offdRowCounts[i+1];
+      cnt++;
+    }
   }
-  Ac->diag->nnz = Ac->diag->rowStarts[numAggs];
-  Ac->offd->nnz = Ac->offd->rowStarts[numAggs];
+  Ac->diag.nnz = Ac->diag.rowStarts[numAggs];
+  Ac->offd.nnz = Ac->offd.rowStarts[Ac->offd.nzRows];
+
+  free(offdRowCounts);
 
   // Halo setup
-  hlong *colIds = (hlong *) malloc(Ac->offd->nnz*sizeof(hlong));
   cnt=0;
+  hlong *colIds = (hlong *) malloc(Ac->offd.nnz*sizeof(hlong));
   for (dlong n=0;n<nnz;n++) {
     if ((PTAP[n].col <= (globalAggStarts[rank]-1))||
         (PTAP[n].col >= globalAggStarts[rank+1])) {
       colIds[cnt++] = PTAP[n].col;
     }
   }
-  Ac->haloSetup(colIds);
+  Ac->haloSetup(colIds); //setup halo, and transform colIds to a local indexing
 
   //fill the CSR matrices
   Ac->diagA   = (dfloat *) calloc(Ac->Ncols, sizeof(dfloat));
   Ac->diagInv = (dfloat *) calloc(Ac->Ncols, sizeof(dfloat));
-  Ac->diag->cols = (dlong *)  calloc(Ac->diag->nnz, sizeof(dlong));
-  Ac->offd->cols = (dlong *)  calloc(Ac->offd->nnz, sizeof(dlong));
-  Ac->diag->vals = (dfloat *) calloc(Ac->diag->nnz, sizeof(dfloat));
-  Ac->offd->vals = (dfloat *) calloc(Ac->offd->nnz, sizeof(dfloat));
+  Ac->diag.cols = (dlong *)  calloc(Ac->diag.nnz, sizeof(dlong));
+  Ac->offd.cols = (dlong *)  calloc(Ac->offd.nnz, sizeof(dlong));
+  Ac->diag.vals = (dfloat *) calloc(Ac->diag.nnz, sizeof(dfloat));
+  Ac->offd.vals = (dfloat *) calloc(Ac->offd.nnz, sizeof(dfloat));
   dlong diagCnt = 0;
   dlong offdCnt = 0;
   for (dlong n=0;n<nnz;n++) {
     if ((PTAP[n].col > globalAggStarts[rank]-1)&&
         (PTAP[n].col < globalAggStarts[rank+1])) {
-      Ac->diag->cols[diagCnt] = (dlong) (PTAP[n].col - globalAggOffset);
-      Ac->diag->vals[diagCnt] = PTAP[n].val;
+      Ac->diag.cols[diagCnt] = (dlong) (PTAP[n].col - globalAggOffset);
+      Ac->diag.vals[diagCnt] = PTAP[n].val;
 
       //record the diagonal
       dlong row = (dlong) (PTAP[n].row - globalAggOffset);
-      if (row==Ac->diag->cols[diagCnt])
-        Ac->diagA[row] = Ac->diag->vals[diagCnt];
+      if (row==Ac->diag.cols[diagCnt])
+        Ac->diagA[row] = Ac->diag.vals[diagCnt];
 
       diagCnt++;
     } else {
-      Ac->offd->cols[offdCnt] = colIds[offdCnt];
-      Ac->offd->vals[offdCnt] = PTAP[n].val;
+      Ac->offd.cols[offdCnt] = colIds[offdCnt];
+      Ac->offd.vals[offdCnt] = PTAP[n].val;
       offdCnt++;
     }
   }
+  free(colIds);
+
+  //fill the halo region
+  Ac->halo->Exchange(Ac->diagA, 1, ogs_dfloat);
 
   //compute the inverse diagonal
   for (dlong n=0;n<Ac->Nrows;n++) Ac->diagInv[n] = 1.0/Ac->diagA[n];
 
-  //propagate nullspace flag
-  Ac->nullSpace = A->nullSpace;
-  Ac->nullSpacePenalty = A->nullSpacePenalty;
-
   //clean up
   MPI_Barrier(A->comm);
   MPI_Type_free(&MPI_NONZERO_T);
-  free(colIds);
   free(PTAP);
 
   return Ac;

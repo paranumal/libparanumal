@@ -63,7 +63,7 @@ cns_t& cns_t::Setup(platform_t& platform, mesh_t& mesh,
                                               mesh.Np, cns->Nfields, *cns);
   } else if (settings.compareSetting("TIME INTEGRATOR","DOPRI5")){
     cns->timeStepper = new TimeStepper::dopri5(mesh.Nelements, mesh.totalHaloPairs,
-                                              mesh.Np, cns->Nfields, *cns);
+                                              mesh.Np, cns->Nfields, *cns, mesh.comm);
   }
 
   // set time step

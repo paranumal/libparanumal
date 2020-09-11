@@ -29,9 +29,9 @@ SOFTWARE.
 #define PCG_BLOCKSIZE 512
 
 pcg::pcg(dlong _N, dlong _Nhalo,
-         platform_t& _platform, settings_t& _settings,
+         platform_t& _platform, settings_t& _settings, MPI_Comm _comm,
          int _weighted, occa::memory& _o_weight):
-  linearSolver_t(_N, _Nhalo, _platform, _settings) {
+  linearSolver_t(_N, _Nhalo, _platform, _settings, _comm) {
 
   dlong Ntotal = N + Nhalo;
 
@@ -68,7 +68,8 @@ int pcg::Solve(solver_t& solver, precon_t& precon,
                occa::memory &o_x, occa::memory &o_r,
                const dfloat tol, const int MAXIT, const int verbose) {
 
-  int rank = platform.rank;
+  int rank;
+  MPI_Comm_rank(comm, &rank);
   linAlg_t &linAlg = platform.linAlg;
 
   // register scalars
@@ -84,9 +85,9 @@ int pcg::Solve(solver_t& solver, precon_t& precon,
   linAlg.axpy(N, -1.f, o_Ax, 1.f, o_r);
 
   if (weighted)
-    rdotr = linAlg.weightedNorm2(N, o_w, o_r, platform.comm);
+    rdotr = linAlg.weightedNorm2(N, o_w, o_r, comm);
   else
-    rdotr = linAlg.norm2(N, o_r, platform.comm);
+    rdotr = linAlg.norm2(N, o_r, comm);
   rdotr = rdotr*rdotr;
 
   dfloat TOL = mymax(tol*tol*rdotr,tol*tol);
@@ -106,16 +107,16 @@ int pcg::Solve(solver_t& solver, precon_t& precon,
     // r.z
     rdotz2 = rdotz1;
     if (weighted)
-      rdotz1 = linAlg.weightedInnerProd(N, o_w, o_r, o_z, platform.comm);
+      rdotz1 = linAlg.weightedInnerProd(N, o_w, o_r, o_z, comm);
     else
-      rdotz1 = linAlg.innerProd(N, o_r, o_z, platform.comm);
+      rdotz1 = linAlg.innerProd(N, o_r, o_z, comm);
 
     if(flexible){
       dfloat zdotAp;
       if (weighted)
-        zdotAp = linAlg.weightedInnerProd(N, o_w, o_z, o_Ap, platform.comm);
+        zdotAp = linAlg.weightedInnerProd(N, o_w, o_z, o_Ap, comm);
       else
-        zdotAp = linAlg.innerProd(N, o_z, o_Ap, platform.comm);
+        zdotAp = linAlg.innerProd(N, o_z, o_Ap, comm);
 
       beta = (iter==0) ? 0.0 : -alpha*zdotAp/rdotz2;
     } else {
@@ -130,9 +131,9 @@ int pcg::Solve(solver_t& solver, precon_t& precon,
 
     // p.Ap
     if (weighted)
-      pAp =  linAlg.weightedInnerProd(N, o_w, o_p, o_Ap, platform.comm);
+      pAp =  linAlg.weightedInnerProd(N, o_w, o_p, o_Ap, comm);
     else
-      pAp =  linAlg.innerProd(N, o_p, o_Ap, platform.comm);
+      pAp =  linAlg.innerProd(N, o_p, o_Ap, comm);
 
     alpha = rdotz1/pAp;
 
@@ -169,7 +170,7 @@ dfloat pcg::UpdatePCG(const dfloat alpha, occa::memory &o_x, occa::memory &o_r){
     rdotr1 += tmprdotr[n];
 
   dfloat globalrdotr1 = 0;
-  MPI_Allreduce(&rdotr1, &globalrdotr1, 1, MPI_DFLOAT, MPI_SUM, platform.comm);
+  MPI_Allreduce(&rdotr1, &globalrdotr1, 1, MPI_DFLOAT, MPI_SUM, comm);
   return globalrdotr1;
 }
 

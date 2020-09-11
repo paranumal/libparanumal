@@ -24,15 +24,17 @@ SOFTWARE.
 
 */
 
-#include "settings.hpp"
+#include "parAlmond.hpp"
 
-void parAlmondAddSettings(settings_t& settings,
+namespace parAlmond {
+
+void AddSettings(settings_t& settings,
                           const string prefix) {
 
   settings.newSetting(prefix+"PARALMOND CYCLE",
                       "KCYCLE",
                       "Type of Multigrid Cycle",
-                      {"VCYCLE", "KCYCLE"});
+                      {"VCYCLE", "KCYCLE", "EXACT"});
 
   settings.newSetting(prefix+"PARALMOND SMOOTHER",
                       "CHEBYSHEV",
@@ -43,34 +45,15 @@ void parAlmondAddSettings(settings_t& settings,
                       "2",
                       "Number of Chebyshev iteration to run in smoother");
 
-  settings.newSetting(prefix+"PARALMOND PARTITION",
-                      "STRONGNODES",
-                      "Type of parallel node-distribution in coarse problems",
-                      {"STRONGNODES", "DISTRIBUTED", "SATURATE"});
-
-  settings.newSetting(prefix+"PARALMOND AGGREGATION STRATEGY",
-                      "DEFAULT",
-                      "Type of coarse node aggregation to use",
-                      {"DEFAULT", "LPSCN"});
-
-  settings.newSetting(prefix+"PARALMOND LPSCN ORDERING",
-                      "NONE",
-                      "Type of node ordering to use in LPSCN aggregation",
-                      {"MIN", "MAX", "NONE"});
-
 }
 
-void parAlmondReportSettings(settings_t& settings) {
+void ReportSettings(settings_t& settings) {
 
   settings.reportSetting("PARALMOND CYCLE");
   settings.reportSetting("PARALMOND SMOOTHER");
 
   if (settings.compareSetting("PARALMOND SMOOTHER","CHEBYSHEV"))
     settings.reportSetting("PARALMOND CHEBYSHEV DEGREE");
-
-  settings.reportSetting("PARALMOND PARTITION");
-  settings.reportSetting("PARALMOND AGGREGATION STRATEGY");
-
-  if (settings.compareSetting("PARALMOND AGGREGATION STRATEGY", "LPSCN"))
-    settings.reportSetting("PARALMOND LPSCN ORDERING");
 }
+
+} //namespace parAlmond
