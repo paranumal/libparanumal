@@ -44,6 +44,7 @@ void parAlmond_t::AMGSetup(parCOO& cooA,
 
   //make csr matrix from coo input
   parCSR *A = new parCSR(cooA);
+  A->diagSetup();
 
   //copy fine nullvector
   dfloat *null = (dfloat *) malloc(A->Nrows*sizeof(dfloat));

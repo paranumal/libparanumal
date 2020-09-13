@@ -147,25 +147,26 @@ parCSR::parCSR(parCOO& A):       // number of nonzeros on this rank
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
 
-  Nrows = (dlong)(A.globalStarts[rank+1]-A.globalStarts[rank]);
-  Ncols = Nrows;
-
   //copy global partition
   globalRowStarts = (hlong *) calloc(size+1,sizeof(hlong));
   globalColStarts = (hlong *) calloc(size+1,sizeof(hlong));
-  memcpy(globalRowStarts, A.globalStarts, (size+1)*sizeof(hlong));
-  memcpy(globalColStarts, A.globalStarts, (size+1)*sizeof(hlong));
+  memcpy(globalRowStarts, A.globalRowStarts, (size+1)*sizeof(hlong));
+  memcpy(globalColStarts, A.globalColStarts, (size+1)*sizeof(hlong));
 
-  const hlong globalOffset = globalRowStarts[rank];
+  const hlong globalRowOffset = globalRowStarts[rank];
+  const hlong globalColOffset = globalColStarts[rank];
+
+  Nrows = (dlong)(globalRowStarts[rank+1]-globalRowStarts[rank]);
+  Ncols = (dlong)(globalColStarts[rank+1]-globalColStarts[rank]);
 
   diag.rowStarts = (dlong *) calloc(Nrows+1, sizeof(dlong));
   offd.rowStarts = (dlong *) calloc(Nrows+1, sizeof(dlong));
 
   //count the entries in each row
   for (dlong n=0;n<A.nnz;n++) {
-    const dlong row = (dlong) (A.entries[n].row - globalOffset);
-    if (   (A.entries[n].col < globalOffset)
-        || (A.entries[n].col > globalOffset+Nrows-1))
+    const dlong row = (dlong) (A.entries[n].row - globalRowOffset);
+    if (   (A.entries[n].col < globalColOffset)
+        || (A.entries[n].col > globalColOffset+Nrows-1))
       offd.rowStarts[row+1]++;
     else
       diag.rowStarts[row+1]++;
@@ -198,8 +199,8 @@ parCSR::parCSR(parCOO& A):       // number of nonzeros on this rank
   cnt=0;
   hlong *colIds = (hlong *) malloc(offd.nnz*sizeof(hlong));
   for (dlong n=0;n<A.nnz;n++) {
-    if ( (A.entries[n].col < globalOffset)
-      || (A.entries[n].col > globalOffset+Nrows-1))
+    if ( (A.entries[n].col < globalColOffset)
+      || (A.entries[n].col > globalColOffset+Nrows-1))
       colIds[cnt++] = A.entries[n].col;
   }
   haloSetup(colIds); //setup halo, and transform colIds to a local indexing
@@ -214,30 +215,18 @@ parCSR::parCSR(parCOO& A):       // number of nonzeros on this rank
   dlong diagCnt = 0;
   dlong offdCnt = 0;
   for (dlong n=0;n<A.nnz;n++) {
-    if ( (A.entries[n].col < globalOffset)
-      || (A.entries[n].col > globalOffset+Nrows-1)) {
+    if ( (A.entries[n].col < globalColOffset)
+      || (A.entries[n].col > globalColOffset+Nrows-1)) {
       offd.cols[offdCnt] = colIds[offdCnt];
       offd.vals[offdCnt] = A.entries[n].val;
       offdCnt++;
     } else {
-      diag.cols[diagCnt] = (dlong) (A.entries[n].col - globalOffset);
+      diag.cols[diagCnt] = (dlong) (A.entries[n].col - globalColOffset);
       diag.vals[diagCnt] = A.entries[n].val;
-
-      //record the diagonal
-      dlong row = (dlong) (A.entries[n].row - globalOffset);
-      if (row==diag.cols[diagCnt])
-        diagA[row] = diag.vals[diagCnt];
-
       diagCnt++;
     }
   }
   free(colIds);
-
-  //fill the halo region
-  halo->Exchange(diagA, 1, ogs_dfloat);
-
-  //compute the inverse diagonal
-  for (dlong n=0;n<Nrows;n++) diagInv[n] = 1.0/diagA[n];
 }
 
 //------------------------------------------------------------------------
@@ -346,6 +335,36 @@ void parCSR::haloSetup(hlong *colIds) {
     colIds[n] = NlocalCols + parIds[n].newId;
 
   free(parIds);
+}
+
+//------------------------------------------------------------------------
+//
+//  parCSR diagonal setup
+//
+//------------------------------------------------------------------------
+
+void parCSR::diagSetup() {
+  //fill the CSR matrices
+  diagA   = (dfloat *) calloc(Ncols, sizeof(dfloat));
+  diagInv = (dfloat *) calloc(Ncols, sizeof(dfloat));
+
+  for (dlong i=0;i<Nrows;i++) {
+    const dlong start = diag.rowStarts[i];
+    const dlong end   = diag.rowStarts[i+1];
+
+    for (dlong j=start;j<end;j++) {
+      //record the diagonal
+      if (diag.cols[j]==i)
+        diagA[i] = diag.vals[j];
+    }
+  }
+
+  //fill the halo region
+  halo->Exchange(diagA, 1, ogs_dfloat);
+
+  //compute the inverse diagonal
+  for (dlong n=0;n<Nrows;n++)
+    diagInv[n] = (diagA[n] != 0.0) ? 1.0/diagA[n] : 0.0;
 }
 
 parCSR::~parCSR() {
@@ -495,8 +514,10 @@ void parCSR::syncToDevice() {
       diag.o_vals = platform.malloc(diag.nnz*sizeof(dfloat),  diag.vals);
     }
 
-    o_diagA   = platform.malloc(Nrows*sizeof(dfloat), diagA);
-    o_diagInv = platform.malloc(Nrows*sizeof(dfloat), diagInv);
+    if (diagA) {
+      o_diagA = platform.malloc(Nrows*sizeof(dfloat), diagA);
+      o_diagInv = platform.malloc(Nrows*sizeof(dfloat), diagInv);
+    }
 
     if (offd.nzRows) {
       offd.o_rows       = platform.malloc(offd.nzRows*sizeof(dlong), offd.rows);

@@ -175,7 +175,6 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
 
   // create a global numbering system
   hlong *globalIds2 = (hlong *) calloc(Ngather,sizeof(hlong));
-  int   *owner     = (int *) calloc(Ngather,sizeof(int));
 
   // every gathered degree of freedom has its own global id
   hlong *globalStarts = (hlong *) calloc(mesh.size+1,sizeof(hlong));
@@ -186,33 +185,28 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
   //use the offsets to set a consecutive global numbering
   for (dlong n =0;n<FEMogs->Ngather;n++) {
     globalIds2[n] = n + globalStarts[mesh.rank];
-    owner[n] = mesh.rank;
   }
   free(globalStarts);
 
   //scatter this numbering to the original nodes
   Ntotal = mesh.NpFEM*mesh.Nelements;
   hlong* maskedGlobalNumbering = (hlong *) calloc(Ntotal,sizeof(hlong));
-  int  * maskedGlobalOwners    = (int *) calloc(Ntotal,sizeof(int));
   for (dlong n=0;n<Ntotal;n++) maskedGlobalNumbering[n] = -1;
   FEMogs->Scatter(maskedGlobalNumbering, globalIds2, ogs_hlong, ogs_add, ogs_notrans);
-  FEMogs->Scatter(maskedGlobalOwners, owner, ogs_int, ogs_add, ogs_notrans);
-  free(globalIds2); free(owner);
+  free(globalIds2);
 
   //transfer the consecutive global numbering to the fem mesh
   Ntotal = femMesh->Np*femMesh->Nelements;
   femElliptic->maskedGlobalNumbering = (hlong *) calloc(Ntotal,sizeof(hlong));
-  femElliptic->maskedGlobalOwners    = (int *) calloc(Ntotal,sizeof(int));
 
   for (dlong e=0;e<femMesh->Nelements;e++) {
     for (int n=0;n<femMesh->Np;n++) {
       dlong id = e*femMesh->Np + n;
       dlong localId = localIds[id];
       femElliptic->maskedGlobalNumbering[id] = maskedGlobalNumbering[localId];
-      femElliptic->maskedGlobalOwners[id] = maskedGlobalOwners[localId];
     }
   }
-  free(localIds); free(maskedGlobalNumbering); free(maskedGlobalOwners);
+  free(localIds); free(maskedGlobalNumbering);
 
   //finally, build the fem matrix and pass to parAlmond
   parAlmond::parCOO A(elliptic.platform, femMesh->comm);
@@ -221,8 +215,8 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
   //populate null space unit vector
   int rank = femMesh->rank;
   int size = femMesh->size;
-  hlong TotalRows = A.globalStarts[size];
-  dlong numLocalRows = (dlong) (A.globalStarts[rank+1]-A.globalStarts[rank]);
+  hlong TotalRows = A.globalRowStarts[size];
+  dlong numLocalRows = (dlong) (A.globalRowStarts[rank+1]-A.globalRowStarts[rank]);
   dfloat *null = (dfloat *) malloc(numLocalRows*sizeof(dfloat));
   for (dlong i=0;i<numLocalRows;i++) null[i] = 1.0/sqrt(TotalRows);
 

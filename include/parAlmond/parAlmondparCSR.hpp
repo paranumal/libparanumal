@@ -97,6 +97,8 @@ public:
 
   void haloSetup(hlong *colIds);
 
+  void diagSetup();
+
   dfloat rhoDinvA();
 
   void syncToDevice();

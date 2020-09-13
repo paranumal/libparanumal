@@ -70,10 +70,13 @@ void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO& A) {
   hlong Ngather = ogsMasked->Ngather;
 
   // every gathered degree of freedom has its own global id
-  A.globalStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
-  MPI_Allgather(&Ngather, 1, MPI_HLONG, A.globalStarts+1, 1, MPI_HLONG, mesh.comm);
-  for(int r=0;r<mesh.size;++r)
-    A.globalStarts[r+1] = A.globalStarts[r]+A.globalStarts[r+1];
+  A.globalRowStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  A.globalColStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  MPI_Allgather(&Ngather, 1, MPI_HLONG, A.globalRowStarts+1, 1, MPI_HLONG, mesh.comm);
+  for(int r=0;r<mesh.size;++r) {
+    A.globalRowStarts[r+1] = A.globalRowStarts[r]+A.globalRowStarts[r+1];
+    A.globalColStarts[r+1] = A.globalRowStarts[r+1];
+  }
 
   // Build non-zeros of stiffness matrix (unassembled)
   dlong nnzLocal = mesh.Np*mesh.Np*mesh.Nelements;
@@ -117,35 +120,22 @@ void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO& A) {
           sendNonZeros[cnt].val = val;
           sendNonZeros[cnt].row = maskedGlobalNumbering[e*mesh.Np + n];
           sendNonZeros[cnt].col = maskedGlobalNumbering[e*mesh.Np + m];
-          sendNonZeros[cnt].ownerRank = maskedGlobalOwners[e*mesh.Np + n];
           cnt++;
         }
       }
     }
   }
 
-  // Make the MPI_NONZERO_T data type
-  MPI_Datatype MPI_NONZERO_T;
-  MPI_Datatype dtype[4] = {MPI_HLONG, MPI_HLONG, MPI_INT, MPI_DFLOAT};
-  int blength[4] = {1, 1, 1, 1};
-  MPI_Aint addr[4], displ[4];
-  MPI_Get_address ( &(sendNonZeros[0]          ), addr+0);
-  MPI_Get_address ( &(sendNonZeros[0].col      ), addr+1);
-  MPI_Get_address ( &(sendNonZeros[0].ownerRank), addr+2);
-  MPI_Get_address ( &(sendNonZeros[0].val      ), addr+3);
-  displ[0] = 0;
-  displ[1] = addr[1] - addr[0];
-  displ[2] = addr[2] - addr[0];
-  displ[3] = addr[3] - addr[0];
-  MPI_Type_create_struct (4, blength, displ, dtype, &MPI_NONZERO_T);
-  MPI_Type_commit (&MPI_NONZERO_T);
-
-  // count how many non-zeros to send to each process
-  for(dlong n=0;n<cnt;++n)
-    AsendCounts[sendNonZeros[n].ownerRank]++;
-
   // sort by row ordering
   qsort(sendNonZeros, cnt, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
+
+  // count how many non-zeros to send to each process
+  int rr=0;
+  for(dlong n=0;n<cnt;++n) {
+    const hlong id = sendNonZeros[n].row;
+    while(id>=A.globalRowStarts[rr+1]) rr++;
+    AsendCounts[rr]++;
+  }
 
   // find how many nodes to expect (should use sparse version)
   MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, mesh.comm);
@@ -161,8 +151,8 @@ void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO& A) {
   A.entries = (parAlmond::parCOO::nonZero_t*) calloc(A.nnz, sizeof(parAlmond::parCOO::nonZero_t));
 
   // determine number to receive
-  MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_NONZERO_T,
-                   A.entries, ArecvCounts, ArecvOffsets, MPI_NONZERO_T,
+  MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, parAlmond::MPI_NONZERO_T,
+                   A.entries, ArecvCounts, ArecvOffsets, parAlmond::MPI_NONZERO_T,
                    mesh.comm);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
@@ -186,10 +176,7 @@ void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO& A) {
   if(mesh.rank==0) printf("done.\n");
 
   MPI_Barrier(mesh.comm);
-  MPI_Type_free(&MPI_NONZERO_T);
-
   free(sendNonZeros);
-
   free(AsendCounts);
   free(ArecvCounts);
   free(AsendOffsets);
@@ -203,10 +190,13 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO& A) {
   hlong Ngather = ogsMasked->Ngather;
 
   // every gathered degree of freedom has its own global id
-  A.globalStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
-  MPI_Allgather(&Ngather, 1, MPI_HLONG, A.globalStarts+1, 1, MPI_HLONG, mesh.comm);
-  for(int r=0;r<mesh.size;++r)
-    A.globalStarts[r+1] = A.globalStarts[r]+A.globalStarts[r+1];
+  A.globalRowStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  A.globalColStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  MPI_Allgather(&Ngather, 1, MPI_HLONG, A.globalRowStarts+1, 1, MPI_HLONG, mesh.comm);
+  for(int r=0;r<mesh.size;++r) {
+    A.globalRowStarts[r+1] = A.globalRowStarts[r]+A.globalRowStarts[r+1];
+    A.globalColStarts[r+1] = A.globalRowStarts[r+1];
+  }
 
   // 2. Build non-zeros of stiffness matrix (unassembled)
   dlong nnzLocal = mesh.Np*mesh.Np*mesh.Nelements;
@@ -305,7 +295,6 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO& A) {
               sendNonZeros[cnt].val = val;
               sendNonZeros[cnt].row = maskedGlobalNumbering[e*mesh.Np + nx+ny*mesh.Nq];
               sendNonZeros[cnt].col = maskedGlobalNumbering[e*mesh.Np + mx+my*mesh.Nq];
-              sendNonZeros[cnt].ownerRank = maskedGlobalOwners[e*mesh.Np + nx+ny*mesh.Nq];
               cnt++;
             }
           }
@@ -332,28 +321,16 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO& A) {
  fclose(fp);
 #endif
 
-  // Make the MPI_NONZERO_T data type
-  MPI_Datatype MPI_NONZERO_T;
-  MPI_Datatype dtype[4] = {MPI_HLONG, MPI_HLONG, MPI_INT, MPI_DFLOAT};
-  int blength[4] = {1, 1, 1, 1};
-  MPI_Aint addr[4], displ[4];
-  MPI_Get_address ( &(sendNonZeros[0]          ), addr+0);
-  MPI_Get_address ( &(sendNonZeros[0].col      ), addr+1);
-  MPI_Get_address ( &(sendNonZeros[0].ownerRank), addr+2);
-  MPI_Get_address ( &(sendNonZeros[0].val      ), addr+3);
-  displ[0] = 0;
-  displ[1] = addr[1] - addr[0];
-  displ[2] = addr[2] - addr[0];
-  displ[3] = addr[3] - addr[0];
-  MPI_Type_create_struct (4, blength, displ, dtype, &MPI_NONZERO_T);
-  MPI_Type_commit (&MPI_NONZERO_T);
-
-  // count how many non-zeros to send to each process
-  for(dlong n=0;n<cnt;++n)
-    AsendCounts[sendNonZeros[n].ownerRank]++;
-
   // sort by row ordering
   qsort(sendNonZeros, cnt, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
+
+  // count how many non-zeros to send to each process
+  int rr=0;
+  for(dlong n=0;n<cnt;++n) {
+    const hlong id = sendNonZeros[n].row;
+    while(id>=A.globalRowStarts[rr+1]) rr++;
+    AsendCounts[rr]++;
+  }
 
   // find how many nodes to expect (should use sparse version)
   MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, mesh.comm);
@@ -369,8 +346,8 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO& A) {
   A.entries = (parAlmond::parCOO::nonZero_t*) calloc(A.nnz, sizeof(parAlmond::parCOO::nonZero_t));
 
   // determine number to receive
-  MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_NONZERO_T,
-                   A.entries, ArecvCounts, ArecvOffsets, MPI_NONZERO_T,
+  MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, parAlmond::MPI_NONZERO_T,
+                   A.entries, ArecvCounts, ArecvOffsets, parAlmond::MPI_NONZERO_T,
                    mesh.comm);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
@@ -408,10 +385,7 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO& A) {
   if(mesh.rank==0) printf("done.\n");
 
   MPI_Barrier(mesh.comm);
-  MPI_Type_free(&MPI_NONZERO_T);
-
   free(sendNonZeros);
-
   free(AsendCounts);
   free(ArecvCounts);
   free(AsendOffsets);
@@ -425,10 +399,13 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO& A) {
   hlong Ngather = ogsMasked->Ngather;
 
   // every gathered degree of freedom has its own global id
-  A.globalStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
-  MPI_Allgather(&Ngather, 1, MPI_HLONG, A.globalStarts+1, 1, MPI_HLONG, mesh.comm);
-  for(int r=0;r<mesh.size;++r)
-    A.globalStarts[r+1] = A.globalStarts[r]+A.globalStarts[r+1];
+  A.globalRowStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  A.globalColStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  MPI_Allgather(&Ngather, 1, MPI_HLONG, A.globalRowStarts+1, 1, MPI_HLONG, mesh.comm);
+  for(int r=0;r<mesh.size;++r) {
+    A.globalRowStarts[r+1] = A.globalRowStarts[r]+A.globalRowStarts[r+1];
+    A.globalColStarts[r+1] = A.globalRowStarts[r+1];
+  }
 
   // 2. Build non-zeros of stiffness matrix (unassembled)
   dlong nnzLocal = mesh.Np*mesh.Np*mesh.Nelements;
@@ -492,7 +469,6 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO& A) {
               sendNonZeros[cnt].val = val;
               sendNonZeros[cnt].row = maskedGlobalNumbering[e*mesh.Np + nx+ny*mesh.Nq];
               sendNonZeros[cnt].col = maskedGlobalNumbering[e*mesh.Np + mx+my*mesh.Nq];
-              sendNonZeros[cnt].ownerRank = maskedGlobalOwners[e*mesh.Np + nx+ny*mesh.Nq];
               cnt++;
             }
           }
@@ -501,28 +477,16 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO& A) {
     }
   }
 
-  // Make the MPI_NONZERO_T data type
-  MPI_Datatype MPI_NONZERO_T;
-  MPI_Datatype dtype[4] = {MPI_HLONG, MPI_HLONG, MPI_INT, MPI_DFLOAT};
-  int blength[4] = {1, 1, 1, 1};
-  MPI_Aint addr[4], displ[4];
-  MPI_Get_address ( &(sendNonZeros[0]          ), addr+0);
-  MPI_Get_address ( &(sendNonZeros[0].col      ), addr+1);
-  MPI_Get_address ( &(sendNonZeros[0].ownerRank), addr+2);
-  MPI_Get_address ( &(sendNonZeros[0].val      ), addr+3);
-  displ[0] = 0;
-  displ[1] = addr[1] - addr[0];
-  displ[2] = addr[2] - addr[0];
-  displ[3] = addr[3] - addr[0];
-  MPI_Type_create_struct (4, blength, displ, dtype, &MPI_NONZERO_T);
-  MPI_Type_commit (&MPI_NONZERO_T);
-
-  // count how many non-zeros to send to each process
-  for(dlong n=0;n<cnt;++n)
-    AsendCounts[sendNonZeros[n].ownerRank]++;
-
   // sort by row ordering
   qsort(sendNonZeros, cnt, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
+
+  // count how many non-zeros to send to each process
+  int rr=0;
+  for(dlong n=0;n<cnt;++n) {
+    const hlong id = sendNonZeros[n].row;
+    while(id>=A.globalRowStarts[rr+1]) rr++;
+    AsendCounts[rr]++;
+  }
 
   // find how many nodes to expect (should use sparse version)
   MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, mesh.comm);
@@ -538,8 +502,8 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO& A) {
   A.entries = (parAlmond::parCOO::nonZero_t*) calloc(A.nnz, sizeof(parAlmond::parCOO::nonZero_t));
 
   // determine number to receive
-  MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_NONZERO_T,
-                   A.entries, ArecvCounts, ArecvOffsets, MPI_NONZERO_T,
+  MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, parAlmond::MPI_NONZERO_T,
+                   A.entries, ArecvCounts, ArecvOffsets, parAlmond::MPI_NONZERO_T,
                    mesh.comm);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
@@ -577,10 +541,7 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO& A) {
   if(mesh.rank==0) printf("done.\n");
 
   MPI_Barrier(mesh.comm);
-  MPI_Type_free(&MPI_NONZERO_T);
-
   free(sendNonZeros);
-
   free(AsendCounts);
   free(ArecvCounts);
   free(AsendOffsets);
@@ -593,10 +554,13 @@ void elliptic_t::BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO& A) {
   hlong Ngather = ogsMasked->Ngather;
 
   // every gathered degree of freedom has its own global id
-  A.globalStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
-  MPI_Allgather(&Ngather, 1, MPI_HLONG, A.globalStarts+1, 1, MPI_HLONG, mesh.comm);
-  for(int r=0;r<mesh.size;++r)
-    A.globalStarts[r+1] = A.globalStarts[r]+A.globalStarts[r+1];
+  A.globalRowStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  A.globalColStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  MPI_Allgather(&Ngather, 1, MPI_HLONG, A.globalRowStarts+1, 1, MPI_HLONG, mesh.comm);
+  for(int r=0;r<mesh.size;++r) {
+    A.globalRowStarts[r+1] = A.globalRowStarts[r]+A.globalRowStarts[r+1];
+    A.globalColStarts[r+1] = A.globalRowStarts[r+1];
+  }
 
   // Build non-zeros of stiffness matrix (unassembled)
   dlong nnzLocal = mesh.Np*mesh.Np*mesh.Nelements;
@@ -644,7 +608,6 @@ void elliptic_t::BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO& A) {
             sendNonZeros[cnt].val = val;
             sendNonZeros[cnt].row = maskedGlobalNumbering[e*mesh.Np + n];
             sendNonZeros[cnt].col = maskedGlobalNumbering[e*mesh.Np + m];
-            sendNonZeros[cnt].ownerRank = maskedGlobalOwners[e*mesh.Np + n];
             cnt++;
           }
         }
@@ -652,28 +615,16 @@ void elliptic_t::BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO& A) {
     }
   }
 
-  // Make the MPI_NONZERO_T data type
-  MPI_Datatype MPI_NONZERO_T;
-  MPI_Datatype dtype[4] = {MPI_HLONG, MPI_HLONG, MPI_INT, MPI_DFLOAT};
-  int blength[4] = {1, 1, 1, 1};
-  MPI_Aint addr[4], displ[4];
-  MPI_Get_address ( &(sendNonZeros[0]          ), addr+0);
-  MPI_Get_address ( &(sendNonZeros[0].col      ), addr+1);
-  MPI_Get_address ( &(sendNonZeros[0].ownerRank), addr+2);
-  MPI_Get_address ( &(sendNonZeros[0].val      ), addr+3);
-  displ[0] = 0;
-  displ[1] = addr[1] - addr[0];
-  displ[2] = addr[2] - addr[0];
-  displ[3] = addr[3] - addr[0];
-  MPI_Type_create_struct (4, blength, displ, dtype, &MPI_NONZERO_T);
-  MPI_Type_commit (&MPI_NONZERO_T);
-
-  // count how many non-zeros to send to each process
-  for(dlong n=0;n<cnt;++n)
-    AsendCounts[sendNonZeros[n].ownerRank] += 1;
-
   // sort by row ordering
   qsort(sendNonZeros, cnt, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
+
+  // count how many non-zeros to send to each process
+  int rr=0;
+  for(dlong n=0;n<cnt;++n) {
+    const hlong id = sendNonZeros[n].row;
+    while(id>=A.globalRowStarts[rr+1]) rr++;
+    AsendCounts[rr]++;
+  }
 
   // find how many nodes to expect (should use sparse version)
   MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, mesh.comm);
@@ -689,8 +640,8 @@ void elliptic_t::BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO& A) {
   A.entries = (parAlmond::parCOO::nonZero_t*) calloc(A.nnz, sizeof(parAlmond::parCOO::nonZero_t));
 
   // determine number to receive
-  MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_NONZERO_T,
-                   A.entries, ArecvCounts, ArecvOffsets, MPI_NONZERO_T,
+  MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, parAlmond::MPI_NONZERO_T,
+                   A.entries, ArecvCounts, ArecvOffsets, parAlmond::MPI_NONZERO_T,
                    mesh.comm);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
@@ -714,10 +665,7 @@ void elliptic_t::BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO& A) {
   if(mesh.rank==0) printf("done.\n");
 
   MPI_Barrier(mesh.comm);
-  MPI_Type_free(&MPI_NONZERO_T);
-
   free(sendNonZeros);
-
   free(AsendCounts);
   free(ArecvCounts);
   free(AsendOffsets);
@@ -730,10 +678,13 @@ void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO& A) {
   hlong Ngather = ogsMasked->Ngather;
 
   // every gathered degree of freedom has its own global id
-  A.globalStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
-  MPI_Allgather(&Ngather, 1, MPI_HLONG, A.globalStarts+1, 1, MPI_HLONG, mesh.comm);
-  for(int r=0;r<mesh.size;++r)
-    A.globalStarts[r+1] = A.globalStarts[r]+A.globalStarts[r+1];
+  A.globalRowStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  A.globalColStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  MPI_Allgather(&Ngather, 1, MPI_HLONG, A.globalRowStarts+1, 1, MPI_HLONG, mesh.comm);
+  for(int r=0;r<mesh.size;++r) {
+    A.globalRowStarts[r+1] = A.globalRowStarts[r]+A.globalRowStarts[r+1];
+    A.globalColStarts[r+1] = A.globalRowStarts[r+1];
+  }
 
   // 2. Build non-zeros of stiffness matrix (unassembled)
   dlong nnzLocal = mesh.Np*mesh.Np*mesh.Nelements;
@@ -831,7 +782,6 @@ void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO& A) {
               sendNonZeros[cnt].val = val;
               sendNonZeros[cnt].row = maskedGlobalNumbering[e*mesh.Np + idn];
               sendNonZeros[cnt].col = maskedGlobalNumbering[e*mesh.Np + idm];
-              sendNonZeros[cnt].ownerRank = maskedGlobalOwners[e*mesh.Np + idn];
               cnt++;
             }
         }
@@ -842,28 +792,16 @@ void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO& A) {
       }
   }
 
-  // Make the MPI_NONZERO_T data type
-  MPI_Datatype MPI_NONZERO_T;
-  MPI_Datatype dtype[4] = {MPI_HLONG, MPI_HLONG, MPI_INT, MPI_DFLOAT};
-  int blength[4] = {1, 1, 1, 1};
-  MPI_Aint addr[4], displ[4];
-  MPI_Get_address ( &(sendNonZeros[0]          ), addr+0);
-  MPI_Get_address ( &(sendNonZeros[0].col      ), addr+1);
-  MPI_Get_address ( &(sendNonZeros[0].ownerRank), addr+2);
-  MPI_Get_address ( &(sendNonZeros[0].val      ), addr+3);
-  displ[0] = 0;
-  displ[1] = addr[1] - addr[0];
-  displ[2] = addr[2] - addr[0];
-  displ[3] = addr[3] - addr[0];
-  MPI_Type_create_struct (4, blength, displ, dtype, &MPI_NONZERO_T);
-  MPI_Type_commit (&MPI_NONZERO_T);
-
-  // count how many non-zeros to send to each process
-  for(dlong n=0;n<cnt;++n)
-    AsendCounts[sendNonZeros[n].ownerRank]++;
-
   // sort by row ordering
   qsort(sendNonZeros, cnt, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
+
+  // count how many non-zeros to send to each process
+  int rr=0;
+  for(dlong n=0;n<cnt;++n) {
+    const hlong id = sendNonZeros[n].row;
+    while(id>=A.globalRowStarts[rr+1]) rr++;
+    AsendCounts[rr]++;
+  }
 
   // find how many nodes to expect (should use sparse version)
   MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, mesh.comm);
@@ -879,8 +817,8 @@ void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO& A) {
   A.entries = (parAlmond::parCOO::nonZero_t*) calloc(A.nnz, sizeof(parAlmond::parCOO::nonZero_t));
 
   // determine number to receive
-  MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, MPI_NONZERO_T,
-                   A.entries, ArecvCounts, ArecvOffsets, MPI_NONZERO_T,
+  MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, parAlmond::MPI_NONZERO_T,
+                   A.entries, ArecvCounts, ArecvOffsets, parAlmond::MPI_NONZERO_T,
                    mesh.comm);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
@@ -904,10 +842,7 @@ void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO& A) {
   if(mesh.rank==0) printf("done.\n");
 
   MPI_Barrier(mesh.comm);
-  MPI_Type_free(&MPI_NONZERO_T);
-
   free(sendNonZeros);
-
   free(AsendCounts);
   free(ArecvCounts);
   free(AsendOffsets);

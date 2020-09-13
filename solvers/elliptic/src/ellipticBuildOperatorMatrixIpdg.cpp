@@ -72,10 +72,13 @@ void elliptic_t::BuildOperatorMatrixIpdgTri2D(parAlmond::parCOO& A){
   hlong *globalIds = (hlong *) calloc((Nelements+mesh.totalHaloPairs)*Np,sizeof(hlong));
 
   // every degree of freedom has its own global id
-  A.globalStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
-  MPI_Allgather(&Nnum, 1, MPI_HLONG, A.globalStarts+1, 1, MPI_HLONG, mesh.comm);
-  for(int r=0;r<mesh.size;++r)
-    A.globalStarts[r+1] = A.globalStarts[r]+A.globalStarts[r+1];
+  A.globalRowStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  A.globalColStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  MPI_Allgather(&Nnum, 1, MPI_HLONG, A.globalRowStarts+1, 1, MPI_HLONG, mesh.comm);
+  for(int r=0;r<mesh.size;++r) {
+    A.globalRowStarts[r+1] = A.globalRowStarts[r]+A.globalRowStarts[r+1];
+    A.globalColStarts[r+1] = A.globalRowStarts[r+1];
+  }
 
   /* so find number of elements on each rank */
   dlong *rankNelements = (dlong*) calloc(mesh.size, sizeof(dlong));
@@ -267,7 +270,6 @@ void elliptic_t::BuildOperatorMatrixIpdgTri2D(parAlmond::parCOO& A){
             A.entries[nnz].row = globalIds[eM*Np + n];
             A.entries[nnz].col = globalIds[eP*Np + m];
             A.entries[nnz].val = val;
-            A.entries[nnz].ownerRank = rankM;
             ++nnz;
           }
         }
@@ -281,7 +283,6 @@ void elliptic_t::BuildOperatorMatrixIpdgTri2D(parAlmond::parCOO& A){
           A.entries[nnz].row = globalIds[eM*Np + n];
           A.entries[nnz].col = globalIds[eM*Np + m];
           A.entries[nnz].val = val;
-          A.entries[nnz].ownerRank = rankM;
           ++nnz;
         }
       }
@@ -335,10 +336,13 @@ void elliptic_t::BuildOperatorMatrixIpdgTri3D(parAlmond::parCOO& A){
   hlong *globalIds = (hlong *) calloc((Nelements+mesh.totalHaloPairs)*Np,sizeof(hlong));
 
   // every degree of freedom has its own global id
-  A.globalStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
-  MPI_Allgather(&Nnum, 1, MPI_HLONG, A.globalStarts+1, 1, MPI_HLONG, mesh.comm);
-  for(int r=0;r<mesh.size;++r)
-    A.globalStarts[r+1] = A.globalStarts[r]+A.globalStarts[r+1];
+  A.globalRowStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  A.globalColStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  MPI_Allgather(&Nnum, 1, MPI_HLONG, A.globalRowStarts+1, 1, MPI_HLONG, mesh.comm);
+  for(int r=0;r<mesh.size;++r) {
+    A.globalRowStarts[r+1] = A.globalRowStarts[r]+A.globalRowStarts[r+1];
+    A.globalColStarts[r+1] = A.globalRowStarts[r+1];
+  }
 
   /* so find number of elements on each rank */
   dlong *rankNelements = (dlong*) calloc(mesh.size, sizeof(dlong));
@@ -547,7 +551,6 @@ void elliptic_t::BuildOperatorMatrixIpdgTri3D(parAlmond::parCOO& A){
             A.entries[nnz].row = globalIds[eM*Np + n];
             A.entries[nnz].col = globalIds[eP*Np + m];
             A.entries[nnz].val = val;
-            A.entries[nnz].ownerRank = rankM;
             ++nnz;
           }
         }
@@ -561,7 +564,6 @@ void elliptic_t::BuildOperatorMatrixIpdgTri3D(parAlmond::parCOO& A){
           A.entries[nnz].row = globalIds[eM*Np + n];
           A.entries[nnz].col = globalIds[eM*Np + m];
           A.entries[nnz].val = val;
-          A.entries[nnz].ownerRank = rankM;
           ++nnz;
         }
       }
@@ -598,10 +600,13 @@ void elliptic_t::BuildOperatorMatrixIpdgQuad2D(parAlmond::parCOO& A){
   hlong *globalIds = (hlong *) calloc((Nelements+mesh.totalHaloPairs)*Np,sizeof(hlong));
 
   // every degree of freedom has its own global id
-  A.globalStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
-  MPI_Allgather(&Nnum, 1, MPI_HLONG, A.globalStarts+1, 1, MPI_HLONG, mesh.comm);
-  for(int r=0;r<mesh.size;++r)
-    A.globalStarts[r+1] = A.globalStarts[r]+A.globalStarts[r+1];
+  A.globalRowStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  A.globalColStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  MPI_Allgather(&Nnum, 1, MPI_HLONG, A.globalRowStarts+1, 1, MPI_HLONG, mesh.comm);
+  for(int r=0;r<mesh.size;++r) {
+    A.globalRowStarts[r+1] = A.globalRowStarts[r]+A.globalRowStarts[r+1];
+    A.globalColStarts[r+1] = A.globalRowStarts[r+1];
+  }
 
   /* so find number of elements on each rank */
   dlong *rankNelements = (dlong*) calloc(mesh.size, sizeof(dlong));
@@ -778,7 +783,6 @@ void elliptic_t::BuildOperatorMatrixIpdgQuad2D(parAlmond::parCOO& A){
             A.entries[nnz].row = globalIds[eM*mesh.Np + n];
             A.entries[nnz].col = globalIds[eP*mesh.Np + m];
             A.entries[nnz].val = AnmP;
-            A.entries[nnz].ownerRank = rankM;
             ++nnz;
           }
         }
@@ -787,7 +791,6 @@ void elliptic_t::BuildOperatorMatrixIpdgQuad2D(parAlmond::parCOO& A){
           A.entries[nnz].row = globalIds[eM*mesh.Np+n];
           A.entries[nnz].col = globalIds[eM*mesh.Np+m];
           A.entries[nnz].val = Anm;
-          A.entries[nnz].ownerRank = rankM;
           ++nnz;
         }
       }
@@ -820,10 +823,13 @@ void elliptic_t::BuildOperatorMatrixIpdgQuad3D(parAlmond::parCOO& A){
   hlong *globalIds = (hlong *) calloc((Nelements+mesh.totalHaloPairs)*Np,sizeof(hlong));
 
   // every degree of freedom has its own global id
-  A.globalStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
-  MPI_Allgather(&Nnum, 1, MPI_HLONG, A.globalStarts+1, 1, MPI_HLONG, mesh.comm);
-  for(int r=0;r<mesh.size;++r)
-    A.globalStarts[r+1] = A.globalStarts[r]+A.globalStarts[r+1];
+  A.globalRowStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  A.globalColStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  MPI_Allgather(&Nnum, 1, MPI_HLONG, A.globalRowStarts+1, 1, MPI_HLONG, mesh.comm);
+  for(int r=0;r<mesh.size;++r) {
+    A.globalRowStarts[r+1] = A.globalRowStarts[r]+A.globalRowStarts[r+1];
+    A.globalColStarts[r+1] = A.globalRowStarts[r+1];
+  }
 
   /* so find number of elements on each rank */
   dlong *rankNelements = (dlong*) calloc(mesh.size, sizeof(dlong));
@@ -1007,7 +1013,6 @@ void elliptic_t::BuildOperatorMatrixIpdgQuad3D(parAlmond::parCOO& A){
             A.entries[nnz].row = globalIds[eM*mesh.Np + n];
             A.entries[nnz].col = globalIds[eP*mesh.Np + m];
             A.entries[nnz].val = AnmP;
-            A.entries[nnz].ownerRank = rankM;
             ++nnz;
           }
         }
@@ -1017,7 +1022,6 @@ void elliptic_t::BuildOperatorMatrixIpdgQuad3D(parAlmond::parCOO& A){
           A.entries[nnz].row = globalIds[eM*mesh.Np+n];
           A.entries[nnz].col = globalIds[eM*mesh.Np+m];
           A.entries[nnz].val = Anm;
-          A.entries[nnz].ownerRank = rankM;
           ++nnz;
         }
       }
@@ -1064,10 +1068,13 @@ void elliptic_t::BuildOperatorMatrixIpdgTet3D(parAlmond::parCOO& A){
   hlong *globalIds = (hlong *) calloc((mesh.Nelements+mesh.totalHaloPairs)*mesh.Np,sizeof(hlong));
 
   // every degree of freedom has its own global id
-  A.globalStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
-  MPI_Allgather(&Nnum, 1, MPI_HLONG, A.globalStarts+1, 1, MPI_HLONG, mesh.comm);
-    for(int r=0;r<mesh.size;++r)
-      A.globalStarts[r+1] = A.globalStarts[r]+A.globalStarts[r+1];
+  A.globalRowStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  A.globalColStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  MPI_Allgather(&Nnum, 1, MPI_HLONG, A.globalRowStarts+1, 1, MPI_HLONG, mesh.comm);
+  for(int r=0;r<mesh.size;++r) {
+    A.globalRowStarts[r+1] = A.globalRowStarts[r]+A.globalRowStarts[r+1];
+    A.globalColStarts[r+1] = A.globalRowStarts[r+1];
+  }
 
   /* so find number of elements on each rank */
   dlong *rankNelements = (dlong*) calloc(mesh.size, sizeof(dlong));
@@ -1277,7 +1284,6 @@ void elliptic_t::BuildOperatorMatrixIpdgTet3D(parAlmond::parCOO& A){
               A.entries[nnz].row = globalIds[eM*mesh.Np+n];
               A.entries[nnz].col = globalIds[eP*mesh.Np+m];
               A.entries[nnz].val = AnmP;
-              A.entries[nnz].ownerRank = rankM;
               ++nnz;
             }
           }
@@ -1295,7 +1301,6 @@ void elliptic_t::BuildOperatorMatrixIpdgTet3D(parAlmond::parCOO& A){
             A.entries[nnz].row = globalIds[eM*mesh.Np+n];
             A.entries[nnz].col = globalIds[eM*mesh.Np+m];
             A.entries[nnz].val = Anm;
-            A.entries[nnz].ownerRank = rankM;
             ++nnz;
           }
         }
@@ -1334,10 +1339,13 @@ void elliptic_t::BuildOperatorMatrixIpdgHex3D(parAlmond::parCOO& A){
   hlong *globalIds = (hlong *) calloc((Nelements+mesh.totalHaloPairs)*Np,sizeof(hlong));
 
   // every degree of freedom has its own global id
-  A.globalStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
-  MPI_Allgather(&Nnum, 1, MPI_HLONG, A.globalStarts+1, 1, MPI_HLONG, mesh.comm);
-  for(int r=0;r<mesh.size;++r)
-    A.globalStarts[r+1] = A.globalStarts[r]+A.globalStarts[r+1];
+  A.globalRowStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  A.globalColStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  MPI_Allgather(&Nnum, 1, MPI_HLONG, A.globalRowStarts+1, 1, MPI_HLONG, mesh.comm);
+  for(int r=0;r<mesh.size;++r) {
+    A.globalRowStarts[r+1] = A.globalRowStarts[r]+A.globalRowStarts[r+1];
+    A.globalColStarts[r+1] = A.globalRowStarts[r+1];
+  }
 
   /* so find number of elements on each rank */
   dlong *rankNelements = (dlong*) calloc(mesh.size, sizeof(dlong));
@@ -1545,7 +1553,6 @@ void elliptic_t::BuildOperatorMatrixIpdgHex3D(parAlmond::parCOO& A){
               A.entries[nnz].row = globalIds[eM*mesh.Np + n];
               A.entries[nnz].col = globalIds[eP*mesh.Np + m];
               A.entries[nnz].val = AnmP;
-              A.entries[nnz].ownerRank = rankM;
               ++nnz;
             }
           }
@@ -1557,7 +1564,6 @@ void elliptic_t::BuildOperatorMatrixIpdgHex3D(parAlmond::parCOO& A){
             A.entries[nnz].row = globalIds[eM*mesh.Np+n];
             A.entries[nnz].col = globalIds[eM*mesh.Np+m];
             A.entries[nnz].val = Anm;
-            A.entries[nnz].ownerRank = rankM;
             ++nnz;
           }
         }

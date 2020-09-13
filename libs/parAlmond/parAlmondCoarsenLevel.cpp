@@ -57,6 +57,7 @@ amgLevel *coarsenAmgLevel(amgLevel *level, dfloat *null){
   level->R = R;
 
   parCSR *Acoarse = galerkinProd(level->A, P);
+  Acoarse->diagSetup();
 
   amgLevel *coarseLevel = new amgLevel(Acoarse,level->settings);
 

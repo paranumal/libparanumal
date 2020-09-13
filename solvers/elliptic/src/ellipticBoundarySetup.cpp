@@ -127,7 +127,6 @@ void elliptic_t::BoundarySetup(){
 
   // create a global numbering system
   hlong *globalIds = (hlong *) calloc(Ngather,sizeof(hlong));
-  int   *owner     = (int *) calloc(Ngather,sizeof(int));
 
   // every gathered degree of freedom has its own global id
   hlong *globalStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
@@ -138,15 +137,11 @@ void elliptic_t::BoundarySetup(){
   //use the offsets to set a consecutive global numbering
   for (dlong n =0;n<ogsMasked->Ngather;n++) {
     globalIds[n] = n + globalStarts[mesh.rank];
-    owner[n] = mesh.rank;
   }
 
   //scatter this numbering to the original nodes
   maskedGlobalNumbering = (hlong *) calloc(Ntotal,sizeof(hlong));
-  maskedGlobalOwners    = (int *)   calloc(Ntotal,sizeof(int));
   for (dlong n=0;n<Ntotal;n++) maskedGlobalNumbering[n] = -1;
   ogsMasked->Scatter(maskedGlobalNumbering, globalIds, ogs_hlong, ogs_add, ogs_notrans);
-  ogsMasked->Scatter(maskedGlobalOwners, owner, ogs_int, ogs_add, ogs_notrans);
-
-  free(globalIds); free(owner);
+  free(globalIds);
 }

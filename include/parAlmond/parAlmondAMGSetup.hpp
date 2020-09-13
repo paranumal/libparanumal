@@ -66,6 +66,8 @@ parCSR *constructProlongation(parCSR *A, hlong *FineToCoarse,
 
 parCSR *transpose(parCSR *A);
 
+parCSR *SpMM(parCSR *A, parCSR *B);
+
 parCSR *galerkinProd(parCSR *A, parCSR *P);
 
 }
