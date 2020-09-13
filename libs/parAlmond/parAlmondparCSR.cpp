@@ -206,8 +206,6 @@ parCSR::parCSR(parCOO& A):       // number of nonzeros on this rank
   haloSetup(colIds); //setup halo, and transform colIds to a local indexing
 
   //fill the CSR matrices
-  diagA   = (dfloat *) calloc(Ncols, sizeof(dfloat));
-  diagInv = (dfloat *) calloc(Ncols, sizeof(dfloat));
   diag.cols = (dlong *)  calloc(diag.nnz, sizeof(dlong));
   offd.cols = (dlong *)  calloc(offd.nnz, sizeof(dlong));
   diag.vals = (dfloat *) calloc(diag.nnz, sizeof(dfloat));

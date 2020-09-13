@@ -54,7 +54,7 @@ parCSR *transpose(parCSR *A){
                                     calloc(A->offd.nnz, sizeof(parCOO::nonZero_t));
   for(dlong i=0;i<A->offd.nzRows;++i){
     const hlong row = A->offd.rows[i] + A->globalRowStarts[rank]; //global ids
-    for (dlong j=A->offd.rowStarts[i];j<A->offd.rowStarts[i+1];j++) {
+    for (dlong j=A->offd.mRowStarts[i];j<A->offd.mRowStarts[i+1];j++) {
       const hlong col =  A->colMap[A->offd.cols[j]]; //global ids
       sendNonZeros[j].row = col;
       sendNonZeros[j].col = row;

@@ -56,7 +56,11 @@ amgLevel *coarsenAmgLevel(amgLevel *level, dfloat *null){
   level->P = P;
   level->R = R;
 
-  parCSR *Acoarse = galerkinProd(level->A, P);
+  // parCSR *Acoarse = galerkinProd(level->A, P);
+  parCSR *AP = SpMM(level->A, P);
+  parCSR *Acoarse = SpMM(R, AP);
+  delete AP;
+
   Acoarse->diagSetup();
 
   amgLevel *coarseLevel = new amgLevel(Acoarse,level->settings);
@@ -64,6 +68,9 @@ amgLevel *coarsenAmgLevel(amgLevel *level, dfloat *null){
   //update the number of columns required for this level
   level->Ncols = (level->Ncols > R->Ncols) ? level->Ncols : R->Ncols;
   // coarseLevel->Ncols = (coarseLevel->Ncols > P->Ncols) ? coarseLevel->Ncols : P->Ncols;
+
+  free(FineToCoarse);
+  free(globalAggStarts);
 
   return coarseLevel;
 }
