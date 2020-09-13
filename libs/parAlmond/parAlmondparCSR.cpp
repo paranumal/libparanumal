@@ -166,7 +166,7 @@ parCSR::parCSR(parCOO& A):       // number of nonzeros on this rank
   for (dlong n=0;n<A.nnz;n++) {
     const dlong row = (dlong) (A.entries[n].row - globalRowOffset);
     if (   (A.entries[n].col < globalColOffset)
-        || (A.entries[n].col > globalColOffset+Nrows-1))
+        || (A.entries[n].col > globalColOffset+Ncols-1))
       offd.rowStarts[row+1]++;
     else
       diag.rowStarts[row+1]++;
@@ -200,7 +200,7 @@ parCSR::parCSR(parCOO& A):       // number of nonzeros on this rank
   hlong *colIds = (hlong *) malloc(offd.nnz*sizeof(hlong));
   for (dlong n=0;n<A.nnz;n++) {
     if ( (A.entries[n].col < globalColOffset)
-      || (A.entries[n].col > globalColOffset+Nrows-1))
+      || (A.entries[n].col > globalColOffset+Ncols-1))
       colIds[cnt++] = A.entries[n].col;
   }
   haloSetup(colIds); //setup halo, and transform colIds to a local indexing
@@ -216,7 +216,7 @@ parCSR::parCSR(parCOO& A):       // number of nonzeros on this rank
   dlong offdCnt = 0;
   for (dlong n=0;n<A.nnz;n++) {
     if ( (A.entries[n].col < globalColOffset)
-      || (A.entries[n].col > globalColOffset+Nrows-1)) {
+      || (A.entries[n].col > globalColOffset+NlocalCols-1)) {
       offd.cols[offdCnt] = colIds[offdCnt];
       offd.vals[offdCnt] = A.entries[n].val;
       offdCnt++;

@@ -34,7 +34,6 @@ void parAlmond_t::AMGSetup(parCOO& cooA,
                          dfloat *nullVector,
                          dfloat nullSpacePenalty){
 
-
   int rank;
   int size;
   MPI_Comm_rank(cooA.comm, &rank);

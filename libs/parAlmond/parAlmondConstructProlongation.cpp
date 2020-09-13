@@ -32,85 +32,35 @@ namespace parAlmond {
 parCSR *constructProlongation(parCSR *A, hlong *FineToCoarse,
                             hlong *globalAggStarts, dfloat *null){
 
-  int rank;
+  int rank, size;
   MPI_Comm_rank(A->comm, &rank);
+  MPI_Comm_size(A->comm, &size);
 
-  const dlong N = A->Nrows;
-
-  const hlong globalAggOffset = globalAggStarts[rank];
   const dlong NCoarse = (dlong) (globalAggStarts[rank+1]-globalAggStarts[rank]); //local num agg
 
-  parCSR* P = new parCSR(N, NCoarse, A->platform, A->comm);
+  parCOO cooP(A->platform, A->comm);
 
-  P->globalRowStarts = A->globalRowStarts;
-  P->globalColStarts = globalAggStarts;
+  //copy global partition
+  cooP.globalRowStarts = (hlong *) calloc(size+1,sizeof(hlong));
+  cooP.globalColStarts = (hlong *) calloc(size+1,sizeof(hlong));
+  memcpy(cooP.globalRowStarts, A->globalRowStarts, (size+1)*sizeof(hlong));
+  memcpy(cooP.globalColStarts, globalAggStarts,   (size+1)*sizeof(hlong));
 
-  P->diag.rowStarts = (dlong *) calloc(N+1, sizeof(dlong));
-  P->offd.rowStarts = (dlong *) calloc(N+1, sizeof(dlong));
+  const hlong globalRowOffset = A->globalRowStarts[rank];
 
-  // each row has exactly one nonzero
-  for(dlong i=0; i<N; i++) {
-    const hlong col = FineToCoarse[i];
-    if ((col>globalAggOffset-1)&&(col<globalAggOffset+NCoarse)) {
-      P->diag.rowStarts[i+1]++;
-    } else {
-      P->offd.rowStarts[i+1]++;
-    }
+  cooP.nnz = A->Nrows;
+  cooP.entries = (parCOO::nonZero_t *) malloc(cooP.nnz*sizeof(parCOO::nonZero_t));
+
+  for(dlong n=0; n<cooP.nnz; n++) {
+    cooP.entries[n].row = n + globalRowOffset;
+    cooP.entries[n].col = FineToCoarse[n];
+    cooP.entries[n].val = null[n];
   }
 
-  // count how many rows are shared
-  P->offd.nzRows=0;
-  for(dlong i=0; i<N; i++)
-    if (P->offd.rowStarts[i+1]>0) P->offd.nzRows++;
+  //build P from coo matrix
+  parCSR* P = new parCSR(cooP);
 
-  P->offd.rows       = (dlong *) calloc(P->offd.nzRows, sizeof(dlong));
-  P->offd.mRowStarts = (dlong *) calloc(P->offd.nzRows+1, sizeof(dlong));
-
-  // cumulative sum
-  dlong cnt=0;
-  for(dlong i=0; i<N; i++) {
-    if (P->offd.rowStarts[i+1]>0) {
-      P->offd.rows[cnt] = i; //record row id
-      P->offd.mRowStarts[cnt+1] = P->offd.mRowStarts[cnt] + P->offd.rowStarts[i+1];
-      cnt++;
-    }
-
-    P->diag.rowStarts[i+1] += P->diag.rowStarts[i];
-    P->offd.rowStarts[i+1] += P->offd.rowStarts[i];
-  }
-  P->diag.nnz = P->diag.rowStarts[N];
-  P->offd.nnz = P->offd.rowStarts[N];
-
-  // Halo setup
-  cnt=0;
-  hlong *colIds = (hlong *) malloc(P->offd.nnz*sizeof(hlong));
-  for (dlong i=0;i<N;i++) {
-    hlong col = FineToCoarse[i];
-    if ((col<globalAggOffset)||(col>globalAggOffset+NCoarse-1))
-      colIds[cnt++] = col;
-  }
-  P->haloSetup(colIds); //setup halo, and transform colIds to a local indexing
-
-  //fill entries of P with null vector
-  P->diag.cols = (dlong *)  calloc(P->diag.nnz, sizeof(dlong));
-  P->diag.vals = (dfloat *) calloc(P->diag.nnz, sizeof(dfloat));
-  P->offd.cols = (dlong *)  calloc(P->offd.nnz, sizeof(dlong));
-  P->offd.vals = (dfloat *) calloc(P->offd.nnz, sizeof(dfloat));
-
-  dlong diagCnt = 0;
-  dlong offdCnt = 0;
-  for(dlong i=0; i<N; i++) {
-    const hlong col = FineToCoarse[i];
-    if ((col>globalAggStarts[rank]-1)&&(col<globalAggStarts[rank+1])) {
-      P->diag.cols[diagCnt  ] = (dlong) (col - globalAggOffset); //local index
-      P->diag.vals[diagCnt++] = null[i];
-    } else {
-      P->offd.cols[offdCnt  ] = colIds[offdCnt];
-      P->offd.vals[offdCnt++] = null[i];
-    }
-  }
-
-  // normalize the columns of P
+  // normalize the columns of P and fill null with coarse null vector
 
   //check size. If this ever triggers, we'll have to implement a re-alloc of null
   if (P->Ncols > A->Ncols)

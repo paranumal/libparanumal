@@ -65,14 +65,6 @@ int coarseSolver_t::getTargetSize() {
   return 1000;
 }
 
-typedef struct {
-
-  hlong row;
-  hlong col;
-  dfloat val;
-
-} nonzero_t;
-
 void coarseSolver_t::setup(parCSR *A, bool nullSpace,
                            dfloat *nullVector, dfloat nullSpacePenalty) {
 
@@ -99,7 +91,7 @@ void coarseSolver_t::setup(parCSR *A, bool nullSpace,
   if((rank==0)&&(settings.compareSetting("VERBOSE","TRUE")))
     {printf("Setting up coarse solver...");fflush(stdout);}
 
-  nonzero_t *sendNonZeros = (nonzero_t *) calloc(sendNNZ, sizeof(nonzero_t));
+  parCOO::nonZero_t *sendNonZeros = (parCOO::nonZero_t *) calloc(sendNNZ, sizeof(parCOO::nonZero_t));
 
   //populate matrix
   int cnt = 0;
@@ -138,7 +130,7 @@ void coarseSolver_t::setup(parCSR *A, bool nullSpace,
     NNZoffsets[r+1] = NNZoffsets[r] + recvNNZ[r];
   }
 
-  nonzero_t *recvNonZeros = (nonzero_t *) calloc(totalNNZ, sizeof(nonzero_t));
+  parCOO::nonZero_t *recvNonZeros = (parCOO::nonZero_t *) calloc(totalNNZ, sizeof(parCOO::nonZero_t));
 
   MPI_Allgatherv(sendNonZeros, sendNNZ,             MPI_NONZERO_T,
                  recvNonZeros, recvNNZ, NNZoffsets, MPI_NONZERO_T, comm);

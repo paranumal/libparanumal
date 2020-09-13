@@ -29,17 +29,9 @@ SOFTWARE.
 
 namespace parAlmond {
 
-typedef struct {
-
-  hlong row;
-  hlong col;
-  dfloat val;
-
-} nonzero_t;
-
 static int compareNonZeroByRow(const void *a, const void *b){
-  nonzero_t *pa = (nonzero_t *) a;
-  nonzero_t *pb = (nonzero_t *) b;
+  parCOO::nonZero_t *pa = (parCOO::nonZero_t *) a;
+  parCOO::nonZero_t *pb = (parCOO::nonZero_t *) b;
 
   if (pa->row < pb->row) return -1;
   if (pa->row > pb->row) return +1;
@@ -96,7 +88,7 @@ parCSR *galerkinProd(parCSR *A, parCSR *P){
   A->halo->Exchange(Pvals, 1, ogs_dfloat);
 
   dlong sendNtotal = A->diag.nnz+A->offd.nnz;
-  nonzero_t *sendPTAP = (nonzero_t *) calloc(sendNtotal,sizeof(nonzero_t));
+  parCOO::nonZero_t *sendPTAP = (parCOO::nonZero_t *) calloc(sendNtotal,sizeof(parCOO::nonZero_t));
 
   //form the fine PTAP products
   dlong cnt =0;
@@ -132,7 +124,7 @@ parCSR *galerkinProd(parCSR *A, parCSR *P){
   free(Pvals);
 
   //sort entries by the coarse row and col
-  qsort(sendPTAP, sendNtotal, sizeof(nonzero_t), compareNonZeroByRow);
+  qsort(sendPTAP, sendNtotal, sizeof(parCOO::nonZero_t), compareNonZeroByRow);
 
   //count number of non-zeros we're sending
   int *sendCounts = (int *) calloc(size,sizeof(int));
@@ -158,7 +150,7 @@ parCSR *galerkinProd(parCSR *A, parCSR *P){
   }
   dlong recvNtotal = recvOffsets[size];
 
-  nonzero_t *recvPTAP = (nonzero_t *) calloc(recvNtotal,sizeof(nonzero_t));
+  parCOO::nonZero_t *recvPTAP = (parCOO::nonZero_t *) calloc(recvNtotal,sizeof(parCOO::nonZero_t));
 
   MPI_Alltoallv(sendPTAP, sendCounts, sendOffsets, MPI_NONZERO_T,
                 recvPTAP, recvCounts, recvOffsets, MPI_NONZERO_T,
@@ -171,7 +163,7 @@ parCSR *galerkinProd(parCSR *A, parCSR *P){
   free(sendOffsets); free(recvOffsets);
 
   //sort entries by the coarse row and col
-  qsort(recvPTAP, recvNtotal, sizeof(nonzero_t), compareNonZeroByRow);
+  qsort(recvPTAP, recvNtotal, sizeof(parCOO::nonZero_t), compareNonZeroByRow);
 
   //count total number of nonzeros;
   dlong nnz =0;
@@ -180,17 +172,27 @@ parCSR *galerkinProd(parCSR *A, parCSR *P){
     if ((recvPTAP[i].row!=recvPTAP[i-1].row)||
         (recvPTAP[i].col!=recvPTAP[i-1].col)) nnz++;
 
-  nonzero_t *PTAP = (nonzero_t *) calloc(nnz,sizeof(nonzero_t));
+
+  parCOO PTAP(A->platform, A->comm);
+
+  //copy global partition
+  PTAP.globalRowStarts = (hlong *) calloc(size+1,sizeof(hlong));
+  PTAP.globalColStarts = (hlong *) calloc(size+1,sizeof(hlong));
+  memcpy(PTAP.globalRowStarts, globalAggStarts, (size+1)*sizeof(hlong));
+  memcpy(PTAP.globalColStarts, globalAggStarts, (size+1)*sizeof(hlong));
+
+  PTAP.nnz = nnz;
+  PTAP.entries = (parCOO::nonZero_t *) malloc(PTAP.nnz*sizeof(parCOO::nonZero_t));
 
   //compress nonzeros
   nnz = 0;
-  if (recvNtotal) PTAP[nnz++] = recvPTAP[0];
+  if (recvNtotal) PTAP.entries[nnz++] = recvPTAP[0];
   for (dlong i=1;i<recvNtotal;i++) {
     if ((recvPTAP[i].row!=recvPTAP[i-1].row)||
         (recvPTAP[i].col!=recvPTAP[i-1].col)) {
-      PTAP[nnz++] = recvPTAP[i];
+      PTAP.entries[nnz++] = recvPTAP[i];
     } else {
-      PTAP[nnz-1].val += recvPTAP[i].val;
+      PTAP.entries[nnz-1].val += recvPTAP[i].val;
     }
   }
 
@@ -198,100 +200,8 @@ parCSR *galerkinProd(parCSR *A, parCSR *P){
   MPI_Barrier(A->comm);
   free(recvPTAP);
 
-  dlong numAggs = (dlong) (globalAggStarts[rank+1]-globalAggStarts[rank]); //local number of aggregates
-
-  parCSR *Ac = new parCSR(numAggs, numAggs, A->platform, A->comm);
-
-  Ac->globalRowStarts = globalAggStarts;
-  Ac->globalColStarts = globalAggStarts;
-
-  Ac->diag.rowStarts = (dlong *) calloc(numAggs+1, sizeof(dlong));
-  Ac->offd.rowStarts = (dlong *) calloc(numAggs+1, sizeof(dlong));
-
-  for (dlong n=0;n<nnz;n++) {
-    dlong row = (dlong) (PTAP[n].row - globalAggOffset);
-    if ((PTAP[n].col > globalAggStarts[rank]-1)&&
-        (PTAP[n].col < globalAggStarts[rank+1])) {
-      Ac->diag.rowStarts[row+1]++;
-    } else {
-      Ac->offd.rowStarts[row+1]++;
-    }
-  }
-
-  Ac->offd.nzRows=0;
-
-  // count how many rows are shared
-  for(dlong i=0; i<numAggs; i++)
-    if (Ac->offd.rowStarts[i+1]>0) Ac->offd.nzRows++;
-
-  Ac->offd.rows       = (dlong *) calloc(Ac->offd.nzRows, sizeof(dlong));
-  Ac->offd.mRowStarts = (dlong *) calloc(Ac->offd.nzRows+1, sizeof(dlong));
-
-  // cumulative sum
-  cnt=0;
-  for(dlong i=0; i<numAggs; i++) {
-    if (Ac->offd.rowStarts[i+1]>0) {
-      Ac->offd.rows[cnt] = i; //record row id
-      Ac->offd.mRowStarts[cnt+1] = Ac->offd.mRowStarts[cnt] + Ac->offd.rowStarts[i+1];
-      cnt++;
-    }
-    Ac->diag.rowStarts[i+1] += Ac->diag.rowStarts[i];
-    Ac->offd.rowStarts[i+1] += Ac->offd.rowStarts[i];
-  }
-  Ac->diag.nnz = Ac->diag.rowStarts[numAggs];
-  Ac->offd.nnz = Ac->offd.rowStarts[numAggs];
-
-  // Halo setup
-  cnt=0;
-  hlong *colIds = (hlong *) malloc(Ac->offd.nnz*sizeof(hlong));
-  for (dlong n=0;n<nnz;n++) {
-    if ((PTAP[n].col <= (globalAggStarts[rank]-1))||
-        (PTAP[n].col >= globalAggStarts[rank+1])) {
-      colIds[cnt++] = PTAP[n].col;
-    }
-  }
-  Ac->haloSetup(colIds); //setup halo, and transform colIds to a local indexing
-
-  //fill the CSR matrices
-  Ac->diagA   = (dfloat *) calloc(Ac->Ncols, sizeof(dfloat));
-  Ac->diagInv = (dfloat *) calloc(Ac->Ncols, sizeof(dfloat));
-  Ac->diag.cols = (dlong *)  calloc(Ac->diag.nnz, sizeof(dlong));
-  Ac->offd.cols = (dlong *)  calloc(Ac->offd.nnz, sizeof(dlong));
-  Ac->diag.vals = (dfloat *) calloc(Ac->diag.nnz, sizeof(dfloat));
-  Ac->offd.vals = (dfloat *) calloc(Ac->offd.nnz, sizeof(dfloat));
-  dlong diagCnt = 0;
-  dlong offdCnt = 0;
-  for (dlong n=0;n<nnz;n++) {
-    if ((PTAP[n].col > globalAggStarts[rank]-1)&&
-        (PTAP[n].col < globalAggStarts[rank+1])) {
-      Ac->diag.cols[diagCnt] = (dlong) (PTAP[n].col - globalAggOffset);
-      Ac->diag.vals[diagCnt] = PTAP[n].val;
-
-      //record the diagonal
-      dlong row = (dlong) (PTAP[n].row - globalAggOffset);
-      if (row==Ac->diag.cols[diagCnt])
-        Ac->diagA[row] = Ac->diag.vals[diagCnt];
-
-      diagCnt++;
-    } else {
-      Ac->offd.cols[offdCnt] = colIds[offdCnt];
-      Ac->offd.vals[offdCnt] = PTAP[n].val;
-      offdCnt++;
-    }
-  }
-  free(colIds);
-
-  //fill the halo region
-  Ac->halo->Exchange(Ac->diagA, 1, ogs_dfloat);
-
-  //compute the inverse diagonal
-  for (dlong n=0;n<Ac->Nrows;n++) Ac->diagInv[n] = 1.0/Ac->diagA[n];
-
-  //clean up
-  MPI_Barrier(A->comm);
-  free(PTAP);
-
-  return Ac;
+  //build Ac from coo matrix
+  return new parCSR(PTAP);
 }
 
 } //namespace parAlmond
