@@ -93,7 +93,6 @@ void formAggregates(parCSR *A, strongGraph_t *C,
   hlong done = 0;
   while(!done){
     // first neighbours
-    // local entries
     // #pragma omp parallel for
     for(dlong i=0; i<N; i++){
       int    smax = states[i];
@@ -122,7 +121,6 @@ void formAggregates(parCSR *A, strongGraph_t *C,
     A->halo->Exchange(Ti, 1, ogs_hlong);
 
     // second neighbours
-    //local entries
     // #pragma omp parallel for
     for(dlong i=0; i<N; i++){
       int    smax = Ts[i];
@@ -197,7 +195,6 @@ void formAggregates(parCSR *A, strongGraph_t *C,
     hlong  cmax = FineToCoarse[i];
 
     if(smax != 1){
-      //local entries
       for(dlong jj=C->rowStarts[i];jj<C->rowStarts[i+1];jj++){
         const dlong col = C->cols[jj];
         if (col==i) continue;
@@ -233,7 +230,6 @@ void formAggregates(parCSR *A, strongGraph_t *C,
     hlong  imax = Ti[i];
     hlong  cmax = Tc[i];
 
-    //local entries
     for(dlong jj=C->rowStarts[i];jj<C->rowStarts[i+1];jj++){
       const dlong col = C->cols[jj];
       if (col==i) continue;

@@ -131,9 +131,9 @@ void coarseSolver_t::setup(parCSR *A, bool nullSpace,
 
   for (int n=0;n<A->offd.nzRows;n++) {
     const int row   = (int) A->offd.rows[n];
-    const int start = (int) A->offd.rowStarts[n];
-    const int end   = (int) A->offd.rowStarts[n+1];
-    for (dlong m=start;m<end;m++) {
+    const int start = (int) A->offd.mRowStarts[n];
+    const int end   = (int) A->offd.mRowStarts[n+1];
+    for (int m=start;m<end;m++) {
       sendNonZeros[cnt].row = row + coarseOffset;
       sendNonZeros[cnt].col = A->colMap[A->offd.cols[m]];
       sendNonZeros[cnt].val = A->offd.vals[m];

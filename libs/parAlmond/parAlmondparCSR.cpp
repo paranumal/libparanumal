@@ -58,7 +58,7 @@ void parCSR::SpMV(const dfloat alpha, dfloat *x,
   for(dlong i=0; i<offd.nzRows; i++){ //local
     const dlong row = offd.rows[i];
     dfloat result = 0.0;
-    for(dlong jj=offd.rowStarts[i]; jj<offd.rowStarts[i+1]; jj++)
+    for(dlong jj=offd.mRowStarts[i]; jj<offd.mRowStarts[i+1]; jj++)
       result += offd.vals[jj]*x[offd.cols[jj]];
 
     y[row] += alpha*result;
@@ -83,7 +83,7 @@ void parCSR::SpMV(const dfloat alpha, dfloat *x,
   for(dlong i=0; i<offd.nzRows; i++){ //local
     const dlong row = offd.rows[i];
     dfloat result = 0.0;
-    for(dlong jj=offd.rowStarts[i]; jj<offd.rowStarts[i+1]; jj++)
+    for(dlong jj=offd.mRowStarts[i]; jj<offd.mRowStarts[i+1]; jj++)
       result += offd.vals[jj]*x[offd.cols[jj]];
 
     z[row] += alpha*result;
@@ -106,7 +106,7 @@ void parCSR::SpMV(const dfloat alpha, occa::memory& o_x, const dfloat beta,
   const dfloat one = 1.0;
   if (offd.nzRows)
     SpMVmcsrKernel(offd.nzRows, alpha, one,
-                    offd.o_rowStarts, offd.o_rows, offd.o_cols, offd.o_vals,
+                    offd.o_mRowStarts, offd.o_rows, offd.o_cols, offd.o_vals,
                     o_x, o_y);
 }
 
@@ -126,7 +126,7 @@ void parCSR::SpMV(const dfloat alpha, occa::memory& o_x, const dfloat beta,
   const dfloat one = 1.0;
   if (offd.nzRows)
     SpMVmcsrKernel(offd.nzRows, alpha, one,
-                    offd.o_rowStarts, offd.o_rows, offd.o_cols, offd.o_vals,
+                    offd.o_mRowStarts, offd.o_rows, offd.o_cols, offd.o_vals,
                     o_x, o_z);
 }
 
@@ -159,15 +159,14 @@ parCSR::parCSR(parCOO& A):       // number of nonzeros on this rank
   const hlong globalOffset = globalRowStarts[rank];
 
   diag.rowStarts = (dlong *) calloc(Nrows+1, sizeof(dlong));
-
-  int* offdRowCounts = (dlong *) calloc(Nrows+1, sizeof(dlong));
+  offd.rowStarts = (dlong *) calloc(Nrows+1, sizeof(dlong));
 
   //count the entries in each row
   for (dlong n=0;n<A.nnz;n++) {
     const dlong row = (dlong) (A.entries[n].row - globalOffset);
     if (   (A.entries[n].col < globalOffset)
         || (A.entries[n].col > globalOffset+Nrows-1))
-      offdRowCounts[row+1]++;
+      offd.rowStarts[row+1]++;
     else
       diag.rowStarts[row+1]++;
   }
@@ -176,27 +175,24 @@ parCSR::parCSR(parCOO& A):       // number of nonzeros on this rank
 
   // count how many rows are shared
   for(dlong i=0; i<Nrows; i++)
-    if (offdRowCounts[i+1]>0) offd.nzRows++;
+    if (offd.rowStarts[i+1]>0) offd.nzRows++;
 
-  offd.rows      = (dlong *) calloc(offd.nzRows, sizeof(dlong));
-  offd.rowStarts = (dlong *) calloc(offd.nzRows+1, sizeof(dlong));
+  offd.rows       = (dlong *) calloc(offd.nzRows, sizeof(dlong));
+  offd.mRowStarts = (dlong *) calloc(offd.nzRows+1, sizeof(dlong));
 
   // cumulative sum
   dlong cnt=0;
   for(dlong i=0; i<Nrows; i++) {
-
-    diag.rowStarts[i+1] += diag.rowStarts[i];
-
-    if (offdRowCounts[i+1]>0) {
+    if (offd.rowStarts[i+1]>0) {
       offd.rows[cnt] = i; //record row id
-      offd.rowStarts[cnt+1] = offd.rowStarts[cnt] + offdRowCounts[i+1];
+      offd.mRowStarts[cnt+1] = offd.mRowStarts[cnt] + offd.rowStarts[i+1];
       cnt++;
     }
+    diag.rowStarts[i+1] += diag.rowStarts[i];
+    offd.rowStarts[i+1] += offd.rowStarts[i];
   }
   diag.nnz = diag.rowStarts[Nrows];
-  offd.nnz = offd.rowStarts[offd.nzRows];
-
-  free(offdRowCounts);
+  offd.nnz = offd.rowStarts[Nrows];
 
   // Halo setup
   cnt=0;
@@ -360,6 +356,7 @@ parCSR::~parCSR() {
 
   if (offd.blockRowStarts) free(offd.blockRowStarts);
   if (offd.rowStarts) free(offd.rowStarts);
+  if (offd.mRowStarts) free(offd.mRowStarts);
   if (offd.rows) free(offd.rows);
   if (offd.cols) free(offd.cols);
   if (offd.vals) free(offd.vals);
@@ -502,8 +499,8 @@ void parCSR::syncToDevice() {
     o_diagInv = platform.malloc(Nrows*sizeof(dfloat), diagInv);
 
     if (offd.nzRows) {
-      offd.o_rows      = platform.malloc(offd.nzRows*sizeof(dlong), offd.rows);
-      offd.o_rowStarts = platform.malloc((offd.nzRows+1)*sizeof(dlong), offd.rowStarts);
+      offd.o_rows       = platform.malloc(offd.nzRows*sizeof(dlong), offd.rows);
+      offd.o_mRowStarts = platform.malloc((offd.nzRows+1)*sizeof(dlong), offd.mRowStarts);
     }
     if (offd.nnz) {
       offd.o_cols = platform.malloc(offd.nnz*sizeof(dlong),   offd.cols);

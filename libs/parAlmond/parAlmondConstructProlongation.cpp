@@ -46,8 +46,7 @@ parCSR *constructProlongation(parCSR *A, hlong *FineToCoarse,
   P->globalColStarts = globalAggStarts;
 
   P->diag.rowStarts = (dlong *) calloc(N+1, sizeof(dlong));
-
-  dlong* offdRowCounts = (dlong *) calloc(N+1, sizeof(dlong));
+  P->offd.rowStarts = (dlong *) calloc(N+1, sizeof(dlong));
 
   // each row has exactly one nonzero
   for(dlong i=0; i<N; i++) {
@@ -55,34 +54,32 @@ parCSR *constructProlongation(parCSR *A, hlong *FineToCoarse,
     if ((col>globalAggOffset-1)&&(col<globalAggOffset+NCoarse)) {
       P->diag.rowStarts[i+1]++;
     } else {
-      offdRowCounts[i+1]++;
+      P->offd.rowStarts[i+1]++;
     }
   }
 
   // count how many rows are shared
   P->offd.nzRows=0;
   for(dlong i=0; i<N; i++)
-    if (offdRowCounts[i+1]>0) P->offd.nzRows++;
+    if (P->offd.rowStarts[i+1]>0) P->offd.nzRows++;
 
-  P->offd.rows      = (dlong *) calloc(P->offd.nzRows, sizeof(dlong));
-  P->offd.rowStarts = (dlong *) calloc(P->offd.nzRows+1, sizeof(dlong));
+  P->offd.rows       = (dlong *) calloc(P->offd.nzRows, sizeof(dlong));
+  P->offd.mRowStarts = (dlong *) calloc(P->offd.nzRows+1, sizeof(dlong));
 
   // cumulative sum
   dlong cnt=0;
   for(dlong i=0; i<N; i++) {
-
-    P->diag.rowStarts[i+1] += P->diag.rowStarts[i];
-
-    if (offdRowCounts[i+1]>0) {
+    if (P->offd.rowStarts[i+1]>0) {
       P->offd.rows[cnt] = i; //record row id
-      P->offd.rowStarts[cnt+1] = P->offd.rowStarts[cnt] + offdRowCounts[i+1];
+      P->offd.mRowStarts[cnt+1] = P->offd.mRowStarts[cnt] + P->offd.rowStarts[i+1];
       cnt++;
     }
+
+    P->diag.rowStarts[i+1] += P->diag.rowStarts[i];
+    P->offd.rowStarts[i+1] += P->offd.rowStarts[i];
   }
   P->diag.nnz = P->diag.rowStarts[N];
-  P->offd.nnz = P->offd.rowStarts[P->offd.nzRows];
-
-  free(offdRowCounts);
+  P->offd.nnz = P->offd.rowStarts[N];
 
   // Halo setup
   cnt=0;

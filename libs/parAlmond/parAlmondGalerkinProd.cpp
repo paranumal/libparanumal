@@ -85,7 +85,7 @@ parCSR *galerkinProd(parCSR *A, parCSR *P){
   }
   for (dlong i=0;i<P->offd.nzRows;i++) {
     const dlong row = P->offd.rows[i];
-    for (dlong j=P->offd.rowStarts[i];j<P->offd.rowStarts[i+1];j++) {
+    for (dlong j=P->offd.mRowStarts[i];j<P->offd.mRowStarts[i+1];j++) {
       Pcols[row] = P->colMap[P->offd.cols[j]]; //global ID
       Pvals[row] = P->offd.vals[j];
     }
@@ -130,8 +130,8 @@ parCSR *galerkinProd(parCSR *A, parCSR *P){
   }
   for (dlong i=0;i<A->offd.nzRows;i++) {
     const dlong row   = A->offd.rows[i];
-    const dlong start = A->offd.rowStarts[i];
-    const dlong end   = A->offd.rowStarts[i+1];
+    const dlong start = A->offd.mRowStarts[i];
+    const dlong end   = A->offd.mRowStarts[i+1];
     for (dlong j=start;j<end;j++) {
       const dlong  col = A->offd.cols[j];
       const dfloat val = A->offd.vals[j];
@@ -221,8 +221,7 @@ parCSR *galerkinProd(parCSR *A, parCSR *P){
   Ac->globalColStarts = globalAggStarts;
 
   Ac->diag.rowStarts = (dlong *) calloc(numAggs+1, sizeof(dlong));
-
-  int* offdRowCounts = (dlong *) calloc(numAggs+1, sizeof(dlong));
+  Ac->offd.rowStarts = (dlong *) calloc(numAggs+1, sizeof(dlong));
 
   for (dlong n=0;n<nnz;n++) {
     dlong row = (dlong) (PTAP[n].row - globalAggOffset);
@@ -230,7 +229,7 @@ parCSR *galerkinProd(parCSR *A, parCSR *P){
         (PTAP[n].col < globalAggStarts[rank+1])) {
       Ac->diag.rowStarts[row+1]++;
     } else {
-      offdRowCounts[row+1]++;
+      Ac->offd.rowStarts[row+1]++;
     }
   }
 
@@ -238,27 +237,24 @@ parCSR *galerkinProd(parCSR *A, parCSR *P){
 
   // count how many rows are shared
   for(dlong i=0; i<numAggs; i++)
-    if (offdRowCounts[i+1]>0) Ac->offd.nzRows++;
+    if (Ac->offd.rowStarts[i+1]>0) Ac->offd.nzRows++;
 
-  Ac->offd.rows      = (dlong *) calloc(Ac->offd.nzRows, sizeof(dlong));
-  Ac->offd.rowStarts = (dlong *) calloc(Ac->offd.nzRows+1, sizeof(dlong));
+  Ac->offd.rows       = (dlong *) calloc(Ac->offd.nzRows, sizeof(dlong));
+  Ac->offd.mRowStarts = (dlong *) calloc(Ac->offd.nzRows+1, sizeof(dlong));
 
   // cumulative sum
   cnt=0;
   for(dlong i=0; i<numAggs; i++) {
-
-    Ac->diag.rowStarts[i+1] += Ac->diag.rowStarts[i];
-
-    if (offdRowCounts[i+1]>0) {
+    if (Ac->offd.rowStarts[i+1]>0) {
       Ac->offd.rows[cnt] = i; //record row id
-      Ac->offd.rowStarts[cnt+1] = Ac->offd.rowStarts[cnt] + offdRowCounts[i+1];
+      Ac->offd.mRowStarts[cnt+1] = Ac->offd.mRowStarts[cnt] + Ac->offd.rowStarts[i+1];
       cnt++;
     }
+    Ac->diag.rowStarts[i+1] += Ac->diag.rowStarts[i];
+    Ac->offd.rowStarts[i+1] += Ac->offd.rowStarts[i];
   }
   Ac->diag.nnz = Ac->diag.rowStarts[numAggs];
-  Ac->offd.nnz = Ac->offd.rowStarts[Ac->offd.nzRows];
-
-  free(offdRowCounts);
+  Ac->offd.nnz = Ac->offd.rowStarts[numAggs];
 
   // Halo setup
   cnt=0;

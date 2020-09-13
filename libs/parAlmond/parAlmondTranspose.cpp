@@ -181,32 +181,32 @@ parCSR *transpose(parCSR *A){
   //sort by row
   qsort(recvNonZeros, At->offd.nnz, sizeof(nonzero_t), compareNonZeroByRow);
 
-  // count how many rows are shared
   const hlong globalRowOffset = At->globalRowStarts[rank];
-  int* offdRowCounts = (int *) calloc(At->Nrows+1, sizeof(int));
+
+  // count how many rows are shared
+  At->offd.rowStarts = (dlong *) calloc(At->Nrows+1, sizeof(dlong));
   for (dlong n=0;n<At->offd.nnz;n++) {
     const dlong row = (dlong) (recvNonZeros[n].row - globalRowOffset);
-    offdRowCounts[row]++;
+    At->offd.rowStarts[row+1]++;
   }
 
   At->offd.nzRows=0;
   for(dlong i=0; i<At->Nrows; i++)
-    if (offdRowCounts[i]>0) At->offd.nzRows++;
+    if (At->offd.rowStarts[i+1]>0) At->offd.nzRows++;
 
-  At->offd.rows      = (dlong *) calloc(At->offd.nzRows, sizeof(dlong));
-  At->offd.rowStarts = (dlong *) calloc(At->offd.nzRows+1, sizeof(dlong));
+  At->offd.rows       = (dlong *) calloc(At->offd.nzRows, sizeof(dlong));
+  At->offd.mRowStarts = (dlong *) calloc(At->offd.nzRows+1, sizeof(dlong));
 
   // cumulative sum
   dlong cnt=0;
   for(dlong i=0; i<At->Nrows; i++) {
-    if (offdRowCounts[i]>0) {
+    if (At->offd.rowStarts[i+1]>0) {
       At->offd.rows[cnt] = i; //record row id
-      At->offd.rowStarts[cnt+1] = At->offd.rowStarts[cnt] + offdRowCounts[i];
+      At->offd.mRowStarts[cnt+1] = At->offd.mRowStarts[cnt] + At->offd.rowStarts[i+1];
       cnt++;
     }
+    At->offd.rowStarts[i+1] += At->offd.rowStarts[i];
   }
-
-  free(offdRowCounts);
 
   //Halo setup
   hlong *colIds = (hlong *) malloc(At->offd.nnz*sizeof(hlong));

@@ -60,12 +60,13 @@ public:
 
     dlong  *blockRowStarts=nullptr;
     dlong  *rowStarts=nullptr;
+    dlong  *mRowStarts=nullptr; //compressed version of rowStarts
     dlong  *rows=nullptr;
     dlong  *cols=nullptr;
     dfloat *vals=nullptr;
 
     occa::memory o_blockRowStarts;
-    occa::memory o_rowStarts;
+    occa::memory o_mRowStarts;
     occa::memory o_rows;
     occa::memory o_cols;
     occa::memory o_vals;
