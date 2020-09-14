@@ -91,12 +91,12 @@ def main():
                     referenceNorm=0.500000000429642)
 
   # unsmoothed aggregation
-  failCount += test(name="testParAlmond_Kcycle_unsmoothed_MPI", ranks=4,
+  failCount += test(name="testParAlmond_Vcycle_smoothed_MPI", ranks=4,
                     cmd=ellipticBin,
                     settings=ellipticSettings(element=3,data_file=ellipticData2D,
                                               dim=2, precon="PARALMOND",
                                               paralmond_cycle="KCYCLE",
-                                              paralmond_aggregation="UNSMOOTHED",
+                                              paralmond_aggregation="SMOOTHED",
                                               paralmond_smoother="CHEBYSHEV"),
                     referenceNorm=0.500000001211135)
 

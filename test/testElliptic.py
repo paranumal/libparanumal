@@ -41,7 +41,7 @@ def ellipticSettings(rcformat="2.0", data_file=ellipticData2D,
                      multigrid_smoother="CHEBYSHEV",
                      paralmond_cycle="VCYCLE",
                      paralmond_strength="SYMMETRIC",
-                     paralmond_aggregation="SMOOTHED",
+                     paralmond_aggregation="UNSMOOTHED",
                      paralmond_smoother="CHEBYSHEV",
                      output_to_file="FALSE"):
   return [setting_t("FORMAT", rcformat),
