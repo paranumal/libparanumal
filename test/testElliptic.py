@@ -360,7 +360,8 @@ def main():
   failCount += test(name="testEllipticHex_Ipdg_ParAlmond",
                     cmd=ellipticBin,
                     settings=ellipticSettings(element=12,data_file=ellipticData3D,dim=3, degree=2,
-                                              precon="PARALMOND", discretization="IPDG"),
+                                              precon="PARALMOND", paralmond_aggregation="UNSMOOTHED",
+                                              discretization="IPDG"),
                     referenceNorm=0.353553400508458)
   failCount += test(name="testEllipticHex_Ipdg_Multigrid",
                     cmd=ellipticBin,
