@@ -363,6 +363,9 @@ void parCSR::diagSetup() {
   //compute the inverse diagonal
   for (dlong n=0;n<Nrows;n++)
     diagInv[n] = (diagA[n] != 0.0) ? 1.0/diagA[n] : 0.0;
+
+  // estimate rho(invD * A)
+  rho = rhoDinvA();
 }
 
 parCSR::~parCSR() {
@@ -478,13 +481,13 @@ dfloat parCSR::rhoDinvA(){
 
   matrixEigenValues(k, H, WR, WI);
 
-  double rho = 0.;
+  double RHO = 0.;
 
   for(int i=0; i<k; i++){
-    double rho_i  = sqrt(WR[i]*WR[i] + WI[i]*WI[i]);
+    double RHO_i  = sqrt(WR[i]*WR[i] + WI[i]*WI[i]);
 
-    if(rho < rho_i) {
-      rho = rho_i;
+    if(RHO < RHO_i) {
+      RHO = RHO_i;
     }
   }
 
@@ -497,9 +500,9 @@ dfloat parCSR::rhoDinvA(){
   free(Vx);
   free(V);
 
-  // printf("weight = %g \n", rho);
+  // printf("weight = %g \n", RHO);
 
-  return rho;
+  return RHO;
 }
 
 void parCSR::syncToDevice() {

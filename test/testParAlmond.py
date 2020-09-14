@@ -40,20 +40,20 @@ def main():
                                               paralmond_smoother="DAMPEDJACOBI"),
                     referenceNorm=0.500000001211135)
 
-  failCount += test(name="testParAlmond_Vcycle_cheby",
-                    cmd=ellipticBin,
-                    settings=ellipticSettings(element=3,data_file=ellipticData2D,
-                                              dim=2, precon="PARALMOND",
-                                              paralmond_cycle="VCYCLE",
-                                              paralmond_smoother="CHEBYSHEV"),
-                    referenceNorm=0.500000001211135)
-
   failCount += test(name="testParAlmond_Kcycle_jacobi",
                     cmd=ellipticBin,
                     settings=ellipticSettings(element=3,data_file=ellipticData2D,
                                               dim=2, precon="PARALMOND",
                                               paralmond_cycle="KCYCLE",
                                               paralmond_smoother="DAMPEDJACOBI"),
+                    referenceNorm=0.500000001211135)
+
+  failCount += test(name="testParAlmond_Vcycle_cheby",
+                    cmd=ellipticBin,
+                    settings=ellipticSettings(element=3,data_file=ellipticData2D,
+                                              dim=2, precon="PARALMOND",
+                                              paralmond_cycle="VCYCLE",
+                                              paralmond_smoother="CHEBYSHEV"),
                     referenceNorm=0.500000001211135)
 
   failCount += test(name="testParAlmond_Kcycle_cheby",
@@ -77,6 +77,26 @@ def main():
                     settings=ellipticSettings(element=3,data_file=ellipticData2D,
                                               dim=2, precon="PARALMOND",
                                               paralmond_cycle="KCYCLE",
+                                              paralmond_smoother="CHEBYSHEV"),
+                    referenceNorm=0.500000001211135)
+
+  # Ruge-Stuben strength
+  failCount += test(name="testParAlmond_Vcycle_rugestuben_MPI", ranks=4,
+                    cmd=ellipticBin,
+                    settings=ellipticSettings(element=3,data_file=ellipticData2D,
+                                              dim=2, precon="PARALMOND",
+                                              paralmond_cycle="VCYCLE",
+                                              paralmond_strength="RUGESTUBEN",
+                                              paralmond_smoother="CHEBYSHEV"),
+                    referenceNorm=0.500000000429642)
+
+  # unsmoothed aggregation
+  failCount += test(name="testParAlmond_Kcycle_unsmoothed_MPI", ranks=4,
+                    cmd=ellipticBin,
+                    settings=ellipticSettings(element=3,data_file=ellipticData2D,
+                                              dim=2, precon="PARALMOND",
+                                              paralmond_cycle="KCYCLE",
+                                              paralmond_aggregation="UNSMOOTHED",
                                               paralmond_smoother="CHEBYSHEV"),
                     referenceNorm=0.500000001211135)
 

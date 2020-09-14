@@ -29,7 +29,7 @@ SOFTWARE.
 
 namespace parAlmond {
 
-parCSR *constructProlongation(parCSR *A, hlong *FineToCoarse,
+parCSR *tentativeProlongator(parCSR *A, hlong *FineToCoarse,
                             hlong *globalAggStarts, dfloat *null){
 
   int rank, size;

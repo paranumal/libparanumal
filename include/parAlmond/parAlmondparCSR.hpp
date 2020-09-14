@@ -87,6 +87,9 @@ public:
   halo_t *halo = nullptr;
   dlong NlocalCols = 0;
 
+  //rho ~= cond(invD * A)
+  dfloat rho=0.0;
+
   parCSR(dlong N, dlong M, platform_t& _platform, MPI_Comm _comm):
     platform(_platform), comm(_comm), Nrows(N), Ncols(M) {}
 

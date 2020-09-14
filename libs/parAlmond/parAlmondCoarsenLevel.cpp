@@ -30,17 +30,13 @@ SOFTWARE.
 namespace parAlmond {
 
 //create coarsened problem
-amgLevel *coarsenAmgLevel(amgLevel *level, dfloat *null){
+amgLevel *coarsenAmgLevel(amgLevel *level, dfloat *null,
+                          StrengthType strtype, AggType aggtype){
 
   int size;
   MPI_Comm_size(level->A->comm, &size);
 
-  //TODO: Make this a runtime option
-  //hard code for now
-  // StrengthType strType = RUGESTUBEN;
-  StrengthType strType = SYMMETRIC;
-
-  strongGraph_t *C = strongGraph(level->A, strType);
+  strongGraph_t *C = strongGraph(level->A, strtype);
 
   hlong *FineToCoarse = (hlong *) malloc(level->A->Ncols*sizeof(hlong));
   hlong *globalAggStarts = (hlong *) calloc(size+1,sizeof(hlong));
@@ -50,16 +46,29 @@ amgLevel *coarsenAmgLevel(amgLevel *level, dfloat *null){
 
   // adjustPartition(FineToCoarse, settings);
 
-  parCSR *P = constructProlongation(level->A, FineToCoarse, globalAggStarts, null);
+  parCSR *P;
+  parCSR *T = tentativeProlongator(level->A, FineToCoarse, globalAggStarts, null);
+  if (aggtype == SMOOTHED) {
+    P = smoothProlongator(level->A, T);
+    delete T;
+  } else {
+    P = T;
+  }
+
+  // R = P^T
   parCSR *R = transpose(P);
 
   level->P = P;
   level->R = R;
 
-  // parCSR *Acoarse = galerkinProd(level->A, P);
-  parCSR *AP = SpMM(level->A, P);
-  parCSR *Acoarse = SpMM(R, AP);
-  delete AP;
+  parCSR *Acoarse;
+  if (aggtype == SMOOTHED) {
+    parCSR *AP = SpMM(level->A, P);
+    Acoarse = SpMM(R, AP);
+    delete AP;
+  } else {
+    Acoarse = galerkinProd(level->A, P); //specialize for unsmoothed aggregation
+  }
 
   Acoarse->diagSetup();
 

@@ -25,6 +25,7 @@ SOFTWARE.
 */
 
 #include "parAlmond.hpp"
+#include "parAlmond/parAlmondMultigrid.hpp"
 #include "parAlmond/parAlmondAMGLevel.hpp"
 
 namespace parAlmond {
@@ -87,14 +88,11 @@ void amgLevel::smooth(occa::memory& o_RHS, occa::memory& o_X, bool x_is_zero){
 
 void amgLevel::setupSmoother(){
 
-  // estimate rho(invD * A)
-  dfloat rho = A->rhoDinvA();
-
   if (stype == DAMPED_JACOBI) {
-    lambda = (4./3.)/rho;
+    lambda = (4./3.)/A->rho;
   } else if (stype == CHEBYSHEV) {
-    lambda1 = rho;
-    lambda0 = rho/10.;
+    lambda1 = A->rho;
+    lambda0 = A->rho/10.;
   }
 }
 

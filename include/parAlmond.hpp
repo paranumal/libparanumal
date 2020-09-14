@@ -37,13 +37,6 @@ SOFTWARE.
 
 namespace parAlmond {
 
-#define PARALMOND_MAX_LEVELS 100
-
-typedef enum {VCYCLE=0,KCYCLE=1,EXACT=3} CycleType;
-typedef enum {PCG=0,GMRES=1} KrylovType;
-typedef enum {DAMPED_JACOBI=0,CHEBYSHEV=1} SmoothType;
-typedef enum {RUGESTUBEN=0,SYMMETRIC=1} StrengthType;
-
 void AddSettings(settings_t& settings, const string prefix="");
 void ReportSettings(settings_t& settings);
 

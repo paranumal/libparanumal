@@ -71,7 +71,9 @@ void parAlmond_t::AMGSetup(parCOO& cooA,
     L->setupSmoother();
 
     // Create coarse level via AMG. Coarsen null vector
-    amgLevel* Lcoarse = coarsenAmgLevel(L, null);
+    amgLevel* Lcoarse = coarsenAmgLevel(L, null,
+                                        multigrid->strtype,
+                                        multigrid->aggtype);
     L->syncToDevice();
 
     multigrid->AddLevel(Lcoarse);
