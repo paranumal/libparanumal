@@ -34,7 +34,6 @@ void parAlmond_t::AMGSetup(parCOO& cooA,
                          dfloat *nullVector,
                          dfloat nullSpacePenalty){
 
-
   int rank;
   int size;
   MPI_Comm_rank(cooA.comm, &rank);
@@ -44,6 +43,7 @@ void parAlmond_t::AMGSetup(parCOO& cooA,
 
   //make csr matrix from coo input
   parCSR *A = new parCSR(cooA);
+  A->diagSetup();
 
   //copy fine nullvector
   dfloat *null = (dfloat *) malloc(A->Nrows*sizeof(dfloat));
@@ -53,13 +53,13 @@ void parAlmond_t::AMGSetup(parCOO& cooA,
   const int gCoarseSize = multigrid->coarseSolver->getTargetSize();
 
   amgLevel *L = new amgLevel(A, settings);
-  multigrid->AddLevel(L);
 
   hlong globalSize = L->A->globalRowStarts[size];
 
   //if the system if already small, dont create MG levels
   bool done = false;
   if(globalSize <= gCoarseSize){
+    multigrid->AddLevel(L);
     multigrid->coarseSolver->setup(A, nullSpace, null, nullSpacePenalty);
     multigrid->coarseSolver->syncToDevice();
     multigrid->baseLevel = multigrid->numLevels-1;
@@ -71,10 +71,12 @@ void parAlmond_t::AMGSetup(parCOO& cooA,
     L->setupSmoother();
 
     // Create coarse level via AMG. Coarsen null vector
-    amgLevel* Lcoarse = coarsenAmgLevel(L, null);
+    amgLevel* Lcoarse = coarsenAmgLevel(L, null,
+                                        multigrid->strtype,
+                                        multigrid->aggtype);
+    multigrid->AddLevel(L);
     L->syncToDevice();
 
-    multigrid->AddLevel(Lcoarse);
     hlong globalCoarseSize = Lcoarse->A->globalRowStarts[size];
 
     if(globalCoarseSize <= gCoarseSize || globalSize < 2*globalCoarseSize){
@@ -83,6 +85,7 @@ void parAlmond_t::AMGSetup(parCOO& cooA,
         ss << "AMG coarsening stalling, attemping coarse solver setup with dimension N=" << globalCoarseSize;
         LIBP_WARNING(ss.str());
       }
+      multigrid->AddLevel(Lcoarse);
       Lcoarse->syncToDevice();
       multigrid->coarseSolver->setup(Lcoarse->A, nullSpace, null, nullSpacePenalty);
       multigrid->coarseSolver->syncToDevice();

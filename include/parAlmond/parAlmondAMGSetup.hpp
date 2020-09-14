@@ -53,7 +53,8 @@ public:
   }
 };
 
-amgLevel *coarsenAmgLevel(amgLevel *level, dfloat *null);
+amgLevel *coarsenAmgLevel(amgLevel *level, dfloat *null,
+                          StrengthType strtype, AggType aggtype);
 
 strongGraph_t* strongGraph(parCSR *A, StrengthType type);
 
@@ -61,10 +62,14 @@ void formAggregates(parCSR *A, strongGraph_t *C,
                      hlong* FineToCoarse,
                      hlong* globalAggStarts);
 
-parCSR *constructProlongation(parCSR *A, hlong *FineToCoarse,
+parCSR *tentativeProlongator(parCSR *A, hlong *FineToCoarse,
                             hlong *globalAggStarts, dfloat *null);
 
+parCSR *smoothProlongator(parCSR *A, parCSR *T);
+
 parCSR *transpose(parCSR *A);
+
+parCSR *SpMM(parCSR *A, parCSR *B);
 
 parCSR *galerkinProd(parCSR *A, parCSR *P);
 

@@ -41,13 +41,30 @@ occa::kernel kcycleWeightedCombinedOp2Kernel;
 occa::kernel vectorAddInnerProdKernel;
 occa::kernel vectorAddWeightedInnerProdKernel;
 
+MPI_Datatype MPI_NONZERO_T;
+
 void buildParAlmondKernels(platform_t& platform){
 
-  int rank=platform.rank;
+  // Make the MPI_NONZERO_T data type
+  parCOO::nonZero_t NZ;
+  MPI_Datatype dtype[3] = {MPI_HLONG, MPI_HLONG, MPI_DFLOAT};
+  int blength[3] = {1, 1, 1};
+  MPI_Aint addr[3], displ[3];
+  MPI_Get_address ( &(NZ.row), addr+0);
+  MPI_Get_address ( &(NZ.col), addr+1);
+  MPI_Get_address ( &(NZ.val), addr+2);
+  displ[0] = 0;
+  displ[1] = addr[1] - addr[0];
+  displ[2] = addr[2] - addr[0];
+  MPI_Type_create_struct (3, blength, displ, dtype, &MPI_NONZERO_T);
+  MPI_Type_commit (&MPI_NONZERO_T);
 
+  //seed rng
+  int rank=platform.rank;
   double seed = (double) rank;
   srand48(seed);
 
+  //build kernels
   occa::properties kernelInfo = platform.props;
 
   kernelInfo["defines/" "p_BLOCKSIZE"]= BLOCKSIZE;

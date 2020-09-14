@@ -37,15 +37,10 @@ SOFTWARE.
 
 namespace parAlmond {
 
-#define PARALMOND_MAX_LEVELS 100
-
-typedef enum {VCYCLE=0,KCYCLE=1,EXACT=3} CycleType;
-typedef enum {PCG=0,GMRES=1} KrylovType;
-typedef enum {DAMPED_JACOBI=0,CHEBYSHEV=1} SmoothType;
-typedef enum {RUGESTUBEN=0,SYMMETRIC=1} StrengthType;
-
 void AddSettings(settings_t& settings, const string prefix="");
 void ReportSettings(settings_t& settings);
+
+extern MPI_Datatype MPI_NONZERO_T;
 
 //distributed matrix class passed to AMG setup
 class parCOO {
@@ -54,15 +49,14 @@ public:
   MPI_Comm comm;
 
   dlong nnz=0;
-  hlong *globalStarts=nullptr;
+  hlong *globalRowStarts=nullptr;
+  hlong *globalColStarts=nullptr;
 
   //non-zero matrix entries
   struct nonZero_t {
     hlong row;
     hlong col;
     dfloat val;
-
-    int ownerRank;
   };
   nonZero_t *entries=nullptr;
 
@@ -71,7 +65,8 @@ public:
 
   ~parCOO() {
     if(entries) free(entries);
-    if(globalStarts) free(globalStarts);
+    if(globalRowStarts) free(globalRowStarts);
+    if(globalColStarts) free(globalColStarts);
   }
 };
 

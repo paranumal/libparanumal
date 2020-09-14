@@ -32,9 +32,19 @@ void AddSettings(settings_t& settings,
                           const string prefix) {
 
   settings.newSetting(prefix+"PARALMOND CYCLE",
-                      "KCYCLE",
+                      "VCYCLE",
                       "Type of Multigrid Cycle",
                       {"VCYCLE", "KCYCLE", "EXACT"});
+
+  settings.newSetting(prefix+"PARALMOND STRENGTH",
+                      "SYMMETRIC",
+                      "Type of Alegraic Stength-of-Connection Measure",
+                      {"RUGESTUBEN", "SYMMETRIC"});
+
+  settings.newSetting(prefix+"PARALMOND AGGREGATION",
+                      "SMOOTHED",
+                      "Type of Prologation Operator",
+                      {"SMOOTHED", "UNSMOOTHED"});
 
   settings.newSetting(prefix+"PARALMOND SMOOTHER",
                       "CHEBYSHEV",
@@ -50,6 +60,7 @@ void AddSettings(settings_t& settings,
 void ReportSettings(settings_t& settings) {
 
   settings.reportSetting("PARALMOND CYCLE");
+  settings.reportSetting("PARALMOND AGGREGATION");
   settings.reportSetting("PARALMOND SMOOTHER");
 
   if (settings.compareSetting("PARALMOND SMOOTHER","CHEBYSHEV"))

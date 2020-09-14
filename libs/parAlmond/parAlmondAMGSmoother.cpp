@@ -25,6 +25,7 @@ SOFTWARE.
 */
 
 #include "parAlmond.hpp"
+#include "parAlmond/parAlmondMultigrid.hpp"
 #include "parAlmond/parAlmondAMGLevel.hpp"
 
 namespace parAlmond {

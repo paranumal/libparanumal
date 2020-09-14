@@ -60,12 +60,13 @@ public:
 
     dlong  *blockRowStarts=nullptr;
     dlong  *rowStarts=nullptr;
+    dlong  *mRowStarts=nullptr; //compressed version of rowStarts
     dlong  *rows=nullptr;
     dlong  *cols=nullptr;
     dfloat *vals=nullptr;
 
     occa::memory o_blockRowStarts;
-    occa::memory o_rowStarts;
+    occa::memory o_mRowStarts;
     occa::memory o_rows;
     occa::memory o_cols;
     occa::memory o_vals;
@@ -86,6 +87,9 @@ public:
   halo_t *halo = nullptr;
   dlong NlocalCols = 0;
 
+  //rho ~= cond(invD * A)
+  dfloat rho=0.0;
+
   parCSR(dlong N, dlong M, platform_t& _platform, MPI_Comm _comm):
     platform(_platform), comm(_comm), Nrows(N), Ncols(M) {}
 
@@ -95,6 +99,8 @@ public:
   ~parCSR();
 
   void haloSetup(hlong *colIds);
+
+  void diagSetup();
 
   dfloat rhoDinvA();
 

@@ -112,8 +112,8 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   //populate null space unit vector
   int rank = mesh.rank;
   int size = mesh.size;
-  hlong TotalRows = A.globalStarts[size];
-  dlong numLocalRows = (dlong) (A.globalStarts[rank+1]-A.globalStarts[rank]);
+  hlong TotalRows = A.globalRowStarts[size];
+  dlong numLocalRows = (dlong) (A.globalRowStarts[rank+1]-A.globalRowStarts[rank]);
   dfloat *null = (dfloat *) malloc(numLocalRows*sizeof(dfloat));
   for (dlong i=0;i<numLocalRows;i++) null[i] = 1.0/sqrt(TotalRows);
 

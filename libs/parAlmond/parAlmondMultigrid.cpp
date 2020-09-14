@@ -50,6 +50,20 @@ multigrid_t::multigrid_t(platform_t& _platform, settings_t& _settings,
     ctype = VCYCLE;
   }
 
+  //strength type
+  if(settings.compareSetting("PARALMOND STRENGTH", "SYMMETRIC")) {
+    strtype = SYMMETRIC;
+  } else {
+    strtype = RUGESTUBEN;
+  }
+
+  //aggregation type
+  if(settings.compareSetting("PARALMOND AGGREGATION", "UNSMOOTHED")) {
+    aggtype = UNSMOOTHED;
+  } else {
+    aggtype = SMOOTHED;
+  }
+
   if (settings.compareSetting("PARALMOND CYCLE", "NONSYM")) {
     ktype = GMRES;
   } else {

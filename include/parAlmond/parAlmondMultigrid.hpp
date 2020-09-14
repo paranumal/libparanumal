@@ -37,6 +37,14 @@ SOFTWARE.
 
 namespace parAlmond {
 
+#define PARALMOND_MAX_LEVELS 100
+
+typedef enum {VCYCLE=0,KCYCLE=1,EXACT=3} CycleType;
+typedef enum {SMOOTHED=0,UNSMOOTHED=1} AggType;
+typedef enum {PCG=0,GMRES=1} KrylovType;
+typedef enum {DAMPED_JACOBI=0,CHEBYSHEV=1} SmoothType;
+typedef enum {RUGESTUBEN=0,SYMMETRIC=1} StrengthType;
+
 //multigrid preconditioner
 class multigrid_t: public precon_t {
 public:
@@ -48,6 +56,8 @@ public:
   linearSolver_t *linearSolver=nullptr;
 
   CycleType ctype;
+  AggType aggtype;
+  StrengthType strtype;
 
   int numLevels=0;
   int baseLevel=0;
