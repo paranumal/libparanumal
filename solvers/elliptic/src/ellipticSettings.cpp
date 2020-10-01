@@ -69,11 +69,20 @@ void ellipticAddSettings(settings_t& settings,
   settings.newSetting(prefix+"INITIAL GUESS STRATEGY",
                       "NONE",
                       "Strategy for selecting initial guess for linear solver",
-                      {"NONE", "ZERO", "CLASSIC", "QR"});
+                      {"NONE", "ZERO", "CLASSIC", "QR", "EXTRAP"});
 
   settings.newSetting(prefix+"INITIAL GUESS HISTORY SPACE DIMENSION",
                       "-1",
                       "Dimension of the initial guess space");
+
+  settings.newSetting(prefix+"INITIAL GUESS EXTRAP DEGREE",
+                      "-1",
+                      "Degree used for EXTRAP initial guess schemes.");
+
+  settings.newSetting(prefix+"INITIAL GUESS EXTRAP COEFFS METHOD",
+                      "MINNORM",
+                      "Method for selecting coefficients with EXTRAP initial guess schemes.",
+                      {"MINNORM", "CPQR"});
 
   settings.newSetting(prefix+"PRECONDITIONER",
                       "NONE",

@@ -127,6 +127,30 @@ public:
   void Update(solver_t &solver, occa::memory& o_x, occa::memory& o_rhs);
 };
 
+// Extrapolation initial guess strategy.
+class igExtrapStrategy : public initialGuessStrategy_t {
+private:
+  int Nhistory;
+  int shift;
+  int entry;
+  occa::memory o_xh;
+  occa::memory o_coeffs;
+  occa::kernel igExtrapKernel;
+  occa::kernel igExtrapSparseKernel;
+
+  int Nsparse;
+  occa::memory o_sparseIds;
+  occa::memory o_sparseCoeffs;
+
+  void extrapCoeffs(int m, int M, dfloat *c);
+
+public:
+  igExtrapStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm, int _weighted, occa::memory& _o_weight);
+
+  void FormInitialGuess(occa::memory& o_x, occa::memory& o_rhs);
+  void Update(solver_t &solver, occa::memory& o_x, occa::memory& o_rhs);
+};
+
 // Linear solver with successive-RHS initial-guess generation.
 class initialGuessSolver_t : public linearSolver_t {
 protected:

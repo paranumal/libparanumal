@@ -43,6 +43,8 @@ void parallelSort(int size, int rank, MPI_Comm comm,
 
 void matrixRightSolve(int NrowsA, int NcolsA, double *A, int NrowsB, int NcolsB, double *B, double *C);
 void matrixRightSolve(int NrowsA, int NcolsA, float *A, int NrowsB, int NcolsB, float *B, float *C);
+void matrixUnderdeterminedRightSolveMinNorm(int NrowsA, int NcolsA, dfloat *A, dfloat *b, dfloat *x);
+void matrixUnderdeterminedRightSolveCPQR(int NrowsA, int NcolsA, dfloat *A, dfloat *b, dfloat *x);
 
 void matrixEigenVectors(int N, double *A, double *VR, double *WR, double *WI);
 void matrixEigenVectors(int N, float *A, float *VR, float *WR, float *WI);

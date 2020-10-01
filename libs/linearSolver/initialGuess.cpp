@@ -25,6 +25,7 @@ SOFTWARE.
 */
 
 #include "initialGuess.hpp"
+#include "mesh.hpp"
 
 initialGuessSolver_t* initialGuessSolver_t::Setup(dlong N, dlong Nhalo, platform_t& platform, settings_t& settings, MPI_Comm comm, int weighted, occa::memory& o_weight)
 {
@@ -40,6 +41,8 @@ initialGuessSolver_t* initialGuessSolver_t::Setup(dlong N, dlong Nhalo, platform
     initialGuessSolver->igStrategy = new igClassicProjectionStrategy(N, platform, settings, comm, weighted, o_weight);
   } else if (settings.compareSetting("INITIAL GUESS STRATEGY", "QR")) {
     initialGuessSolver->igStrategy = new igRollingQRProjectionStrategy(N, platform, settings, comm, weighted, o_weight);
+  } else if (settings.compareSetting("INITIAL GUESS STRATEGY", "EXTRAP")) {
+    initialGuessSolver->igStrategy = new igExtrapStrategy(N, platform, settings, comm, weighted, o_weight);
   } else {
     LIBP_ABORT("Requested INITIAL GUESS STRATEGY not found.");
   }
@@ -419,6 +422,147 @@ void igRollingQRProjectionStrategy::givensRotation(dfloat a, dfloat b, dfloat *c
     *c = 1.0;
     *s = 0.0;
   }
+
+  return;
+}
+
+/*****************************************************************************/
+
+igExtrapStrategy::igExtrapStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm, int _weighted, occa::memory& _o_weight):
+  initialGuessStrategy_t(_N, _platform, _settings, _comm, _weighted, _o_weight)
+{
+  int M, m;
+  settings.getSetting("INITIAL GUESS HISTORY SPACE DIMENSION", M);
+  settings.getSetting("INITIAL GUESS EXTRAP DEGREE", m);
+
+  dfloat *c = new dfloat[M]();
+  extrapCoeffs(m, M, c);
+
+  Nhistory = M;
+
+  entry = 0;
+
+  o_coeffs = platform.malloc(Nhistory*sizeof(dfloat), c);
+
+  shift = 0;
+
+  o_xh = platform.malloc(Nhistory*Ntotal*sizeof(dfloat));
+
+  occa::properties kernelInfo = platform.props;
+  kernelInfo["defines/" "p_igNhist"] = Nhistory;
+
+  igExtrapKernel       = platform.buildKernel(LINEARSOLVER_DIR "/okl/igExtrap.okl",       "igExtrap",   kernelInfo);
+  igExtrapSparseKernel = platform.buildKernel(LINEARSOLVER_DIR "/okl/igExtrap.okl", "igExtrapSparse",   kernelInfo);
+
+  platform.linAlg.set(Nhistory*Ntotal, 0.0, o_xh);
+
+  delete[] c;
+
+  return;
+}
+
+void igExtrapStrategy::FormInitialGuess(occa::memory& o_x, occa::memory& o_rhs)
+{
+  if (entry < Nhistory) {
+    int M, m;
+    if (entry == Nhistory - 1) {
+      settings.getSetting("INITIAL GUESS HISTORY SPACE DIMENSION", M);
+      settings.getSetting("INITIAL GUESS EXTRAP DEGREE", m);
+    } else {
+      M = mymax(1, entry + 1);
+      m = sqrt((double)M);
+    }
+
+    // Construct the extrapolation coefficients.
+    dfloat *c, *d, *sparseCoeffs;
+
+    c = new dfloat[Nhistory]();
+    d = new dfloat[Nhistory]();
+    sparseCoeffs = new dfloat[Nhistory]();
+    for (int n = 0; n < Nhistory; ++n) {
+      c[n] = 0;
+      d[n] = 0;
+      sparseCoeffs[n] = 0;
+    }
+
+    if (M == 1) {
+        d[Nhistory - 1] = 1.0;
+    } else {
+      extrapCoeffs(m, M, c);
+
+      // need d[0:M-1] = {0, 0, 0, .., c[0], c[1], .., c[M-1]}
+      for (int i = 0; i < M; i++)
+        d[Nhistory - M + i] = c[i];
+    }
+
+    int *sparseIds = new int[Nhistory]();
+    Nsparse = 0;
+    for (int n = 0; n < Nhistory; ++n) {
+      if (fabs(d[n]) > 1e-14) { // hmm
+        sparseIds[Nsparse] = n;
+        sparseCoeffs[Nsparse] = d[n];
+        ++Nsparse;
+      }
+    }
+
+    o_coeffs = platform.malloc(Nhistory*sizeof(dfloat), d);
+    o_sparseIds = platform.malloc(Nhistory*sizeof(int), sparseIds);
+    o_sparseCoeffs = platform.malloc(Nhistory*sizeof(dfloat), sparseCoeffs);
+
+    ++entry;
+
+    delete[] sparseIds;
+  }
+
+  if (settings.compareSetting("INITIAL GUESS EXTRAP COEFFS METHOD", "MINNORM"))
+    igExtrapKernel(Ntotal, Nhistory, shift, o_coeffs, o_xh, o_x);
+  else {
+    igExtrapSparseKernel(Ntotal, Nhistory, shift, Nsparse, o_sparseIds, o_sparseCoeffs, o_xh, o_x);
+  }
+
+  return;
+}
+
+void igExtrapStrategy::Update(solver_t &solver, occa::memory& o_x, occa::memory& o_rhs)
+{
+  occa::memory o_tmp = o_xh + Ntotal*shift*sizeof(dfloat);
+  o_x.copyTo(o_tmp, Ntotal*sizeof(dfloat));
+  shift = (shift + 1) % Nhistory;
+
+  return;
+}
+
+void igExtrapStrategy::extrapCoeffs(int m, int M, dfloat *c)
+{
+  dfloat h, ro, *r, *V, *b;
+
+  if (M < m + 1) {
+    std::stringstream ss;
+    ss << "Extrapolation space dimension (" << M << ") too low for degree (" << m << ").";
+    LIBP_ABORT(ss.str());
+  }
+
+  h = 2.0/(M - 1);
+  r = new dfloat[M]();
+  for (int i = 0; i < M; i++)
+    r[i] = -1.0 + i*h;
+  ro = 1.0 + h;  // Evaluation point.
+
+  V = new dfloat[(m + 1)*M]();
+  mesh_t::Vandermonde1D(m, M, r, V);
+
+  b = new dfloat[m + 1]();
+  mesh_t::Vandermonde1D(m, 1, &ro, b);
+
+  if (settings.compareSetting("INITIAL GUESS EXTRAP COEFFS METHOD", "MINNORM")) {
+    matrixUnderdeterminedRightSolveMinNorm(M, m + 1, V, b, c);
+  } else if (settings.compareSetting("INITIAL GUESS EXTRAP COEFFS METHOD", "CPQR")) {
+    matrixUnderdeterminedRightSolveCPQR(M, m + 1, V, b, c);
+  }
+
+  delete[] r;
+  delete[] V;
+  delete[] b;
 
   return;
 }
