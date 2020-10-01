@@ -69,7 +69,7 @@ void ellipticAddSettings(settings_t& settings,
   settings.newSetting(prefix+"INITIAL GUESS STRATEGY",
                       "NONE",
                       "Strategy for selecting initial guess for linear solver",
-                      {"NONE", "ZERO"});
+                      {"NONE", "ZERO", "CLASSIC"});
 
   settings.newSetting(prefix+"INITIAL GUESS HISTORY SPACE DIMENSION",
                       "-1",

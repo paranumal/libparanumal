@@ -64,6 +64,52 @@ public:
   void Update(solver_t &solver, occa::memory& o_x, occa::memory& o_rhs);
 };
 
+// Initial guess strategies based on RHS projection.
+class igProjectionStrategy : public initialGuessStrategy_t {
+protected:
+  dlong curDim;           // Current dimension of the initial guess space
+  dlong maxDim;           // Maximum dimension of the initial guess space
+
+  occa::memory o_btilde;  //  vector (e.g., to be added to space)
+  occa::memory o_xtilde;  // Solution vector corresponding to o_btilde
+  occa::memory o_Btilde;  //  space (orthogonalized)
+  occa::memory o_Xtilde;  // Solution space corresponding to  space
+
+  occa::memory o_w;       // Inverse-degree weights for inner products.
+
+  // temporary buffer for basis inner product output
+  dlong        ctmpNblocks;
+  dfloat       *ctmp;
+  occa::memory o_ctmp;
+
+  dfloat *alphas;         // Buffers for storing inner products.
+  dfloat *alphasThisRank;
+  occa::memory o_alphas;
+
+  occa::kernel igBasisInnerProductsKernel;
+  occa::kernel igReconstructKernel;
+  occa::kernel igScaleKernel;
+  occa::kernel igUpdateKernel;
+
+  void igBasisInnerProducts(occa::memory& o_x, occa::memory& o_Q, occa::memory& o_c, dfloat *c, dfloat *cThisRank);
+  void igReconstruct(occa::memory& o_u, dfloat a, occa::memory& o_c, occa::memory& o_Q, occa::memory& o_unew);
+
+public:
+  igProjectionStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm, int _weighted, occa::memory& _o_weight);
+  virtual ~igProjectionStrategy();
+
+  virtual void FormInitialGuess(occa::memory& o_x, occa::memory& o_rhs);
+  virtual void Update(solver_t& solver, occa::memory& o_x, occa::memory& o_rhs) = 0;
+};
+
+// "Classic" initial guess strategy from Fischer's 1998 paper.
+class igClassicProjectionStrategy : public igProjectionStrategy {
+public:
+  igClassicProjectionStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm, int _weighted, occa::memory& _o_weight);
+
+  void Update(solver_t &solver, occa::memory& o_x, occa::memory& o_rhs);
+};
+
 // Linear solver with successive-RHS initial-guess generation.
 class initialGuessSolver_t : public linearSolver_t {
 protected:
