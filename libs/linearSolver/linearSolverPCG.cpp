@@ -113,8 +113,11 @@ int pcg::Solve(solver_t& solver, precon_t& precon,
   int iter;
   for(iter=0;iter<MAXIT;++iter){
 
-    //exit if tolerance is reached
-    if(rdotr<=TOL) break;
+    // Exit if tolerance is reached, taking at least one step.
+    if (((iter == 0) && (rdotr == 0.0)) ||
+        ((iter > 0) && (rdotr <= TOL))) {
+      break;
+    }
 
     // z = Precon^{-1} r
     precon.Operator(o_r, o_z);
