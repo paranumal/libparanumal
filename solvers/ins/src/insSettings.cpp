@@ -117,6 +117,8 @@ void insSettings_t::report() {
 
     reportSetting("VELOCITY DISCRETIZATION");
     reportSetting("VELOCITY LINEAR SOLVER");
+    reportSetting("VELOCITY INITIAL GUESS STRATEGY");
+    reportSetting("VELOCITY INITIAL GUESS HISTORY SPACE DIMENSION");
     reportSetting("VELOCITY PRECONDITIONER");
 
     if (compareSetting("VELOCITY PRECONDITIONER","MULTIGRID")) {
@@ -137,6 +139,8 @@ void insSettings_t::report() {
 
     reportSetting("PRESSURE DISCRETIZATION");
     reportSetting("PRESSURE LINEAR SOLVER");
+    reportSetting("PRESSURE INITIAL GUESS STRATEGY");
+    reportSetting("PRESSURE INITIAL GUESS HISTORY SPACE DIMENSION");
     reportSetting("PRESSURE PRECONDITIONER");
 
     if (compareSetting("PRESSURE PRECONDITIONER","MULTIGRID")) {

@@ -66,6 +66,15 @@ void ellipticAddSettings(settings_t& settings,
                       "Iterative Linear Solver to use for solve",
                       {"PCG", "FPCG", "NBPCG", "NBFPCG", "PGMRES"});
 
+  settings.newSetting(prefix+"INITIAL GUESS STRATEGY",
+                      "NONE",
+                      "Strategy for selecting initial guess for linear solver",
+                      {"NONE"});
+
+  settings.newSetting(prefix+"INITIAL GUESS HISTORY SPACE DIMENSION",
+                      "-1",
+                      "Dimension of the initial guess space");
+
   settings.newSetting(prefix+"PRECONDITIONER",
                       "NONE",
                       "Preconditioning Strategy",
