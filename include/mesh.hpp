@@ -354,159 +354,163 @@ public:
   void DegreeRaiseMatrix1D(int Nc, int Nf, dfloat *P);
   void DegreeRaiseMatrixTri2D(int Nc, int Nf, dfloat *P);
   void DegreeRaiseMatrixTet3D(int Nc, int Nf, dfloat *P);
-protected:
-  //1D
-  void Nodes1D(int N, dfloat *r);
-  void EquispacedNodes1D(int _N, dfloat *_r);
-  void OrthonormalBasis1D(dfloat a, int i, dfloat *P);
-  void GradOrthonormalBasis1D(dfloat a, int i, dfloat *Pr);
-  void Vandermonde1D(int N, int Npoints, dfloat *r, dfloat *V);
-  void GradVandermonde1D(int N, int Npoints, dfloat *r, dfloat *Vr);
 
-  void MassMatrix1D(int _Np, dfloat *V, dfloat *MM);
-  void Dmatrix1D(int _N, int NpointsIn, dfloat *_rIn, int NpointsOut, dfloat *_rOut, dfloat *_Dr);
-  void InterpolationMatrix1D(int _N,int NpointsIn, dfloat *rIn, int NpointsOut, dfloat *rOut, dfloat *I);
-  void CubatureWeakDmatrix1D(int _Nq, int _cubNq, dfloat *_cubProject, dfloat *_cubD, dfloat *_cubPDT);
+  /***************************************************************************/
+  // Basic codes for generating nodes, polynomials, matrices, etc.
+
+public:
+  //1D
+  static void Nodes1D(int N, dfloat *r);
+  static void EquispacedNodes1D(int _N, dfloat *_r);
+  static void OrthonormalBasis1D(dfloat a, int i, dfloat *P);
+  static void GradOrthonormalBasis1D(dfloat a, int i, dfloat *Pr);
+  static void Vandermonde1D(int N, int Npoints, dfloat *r, dfloat *V);
+  static void GradVandermonde1D(int N, int Npoints, dfloat *r, dfloat *Vr);
+
+  static void MassMatrix1D(int _Np, dfloat *V, dfloat *MM);
+  static void Dmatrix1D(int _N, int NpointsIn, dfloat *_rIn, int NpointsOut, dfloat *_rOut, dfloat *_Dr);
+  static void InterpolationMatrix1D(int _N,int NpointsIn, dfloat *rIn, int NpointsOut, dfloat *rOut, dfloat *I);
+  static void CubatureWeakDmatrix1D(int _Nq, int _cubNq, dfloat *_cubProject, dfloat *_cubD, dfloat *_cubPDT);
 
   //Jacobi polynomial evaluation
-  dfloat JacobiP(dfloat a, dfloat alpha, dfloat beta, int N);
-  dfloat GradJacobiP(dfloat a, dfloat alpha, dfloat beta, int N);
+  static dfloat JacobiP(dfloat a, dfloat alpha, dfloat beta, int N);
+  static dfloat GradJacobiP(dfloat a, dfloat alpha, dfloat beta, int N);
 
   //Gauss-Legendre-Lobatto quadrature nodes
-  void JacobiGLL(int N, dfloat *x, dfloat *w=NULL);
+  static void JacobiGLL(int N, dfloat *x, dfloat *w=NULL);
 
   //Nth order Gauss-Jacobi quadrature nodes and weights
-  void JacobiGQ(dfloat alpha, dfloat beta, int N, dfloat *x, dfloat *w);
+  static void JacobiGQ(dfloat alpha, dfloat beta, int N, dfloat *x, dfloat *w);
 
   //Tris
-  void NodesTri2D(int _N, dfloat *_r, dfloat *_s);
-  void FaceNodesTri2D(int _N, dfloat *_r, dfloat *_s, int *_faceNodes);
-  void VertexNodesTri2D(int _N, dfloat *_r, dfloat *_s, int *_vertexNodes);
-  void EquispacedNodesTri2D(int _N, dfloat *_r, dfloat *_s);
-  void EquispacedEToVTri2D(int _N, int *_EToV);
-  void SEMFEMNodesTri2D(int _N, int *_Np, dfloat **_r, dfloat **_s);
-  void SEMFEMEToVTri2D(int _N, int *_NelFEM, int **_EToV);
-  void OrthonormalBasisTri2D(dfloat a, dfloat b, int i, int j, dfloat *P);
-  void GradOrthonormalBasisTri2D(dfloat a, dfloat b, int i, int j, dfloat *Pr, dfloat *Ps);
-  void VandermondeTri2D(int N, int Npoints, dfloat *r, dfloat *s, dfloat *V);
-  void GradVandermondeTri2D(int N, int Npoints, dfloat *r, dfloat *s, dfloat *Vr, dfloat *Vs);
-  void MassMatrixTri2D(int _Np, dfloat *V, dfloat *_MM);
-  void invMassMatrixTri2D(int _Np, dfloat *V, dfloat *_invMM);
-  void DmatrixTri2D(int _N, int Npoints, dfloat *_r, dfloat *_s,
-                                          dfloat *_Dr, dfloat *_Ds);
-  void LIFTmatrixTri2D(int _N, int *_faceNodes,
-                             dfloat *_r, dfloat *_s, dfloat *_LIFT);
-  void SurfaceMassMatrixTri2D(int _N, dfloat *_MM, dfloat *_LIFT, dfloat *_sM);
-  void SmatrixTri2D(int _N, dfloat *_Dr, dfloat *_Ds, dfloat *_MM,
-                          dfloat *_Srr, dfloat *_Srs, dfloat *_Sss);
-  void InterpolationMatrixTri2D(int _N,
-                               int NpointsIn, dfloat *rIn, dfloat *sIn,
-                               int NpointsOut, dfloat *rOut, dfloat *sOut,
-                               dfloat *I);
-  void CubatureNodesTri2D(int cubTriN, int*cubNp, dfloat **cubTrir, dfloat **cubTris, dfloat **cubTriw);
-  void CubaturePmatrixTri2D(int _N, int _Np, dfloat *_r, dfloat *_s,
-                            int _cubNp, dfloat *_cubr, dfloat *_cubs, dfloat *_cubProject);
-  void CubatureWeakDmatricesTri2D(int _N, int _Np, dfloat *_r, dfloat *_s,
-                                  int _cubNp, dfloat *_cubr, dfloat *_cubs,
-                                  dfloat *_cubPDrT, dfloat *_cubPDsT);
-  void CubatureSurfaceMatricesTri2D(int _N, int _Np, dfloat *_r, dfloat *_s, int *_faceNodes,
-                                    int _intNfp, dfloat *_intr, dfloat *_intw,
-                                    dfloat *_intInterp, dfloat *_intLIFT);
-  void SEMFEMInterpMatrixTri2D(int _N,
-                                int _Np, dfloat *_r, dfloat *_s,
-                                int _NpFEM, dfloat *rFEM, dfloat *sFEM,
-                                dfloat *I);
+  static void NodesTri2D(int _N, dfloat *_r, dfloat *_s);
+  static void FaceNodesTri2D(int _N, dfloat *_r, dfloat *_s, int *_faceNodes);
+  static void VertexNodesTri2D(int _N, dfloat *_r, dfloat *_s, int *_vertexNodes);
+  static void EquispacedNodesTri2D(int _N, dfloat *_r, dfloat *_s);
+  static void EquispacedEToVTri2D(int _N, int *_EToV);
+  static void SEMFEMNodesTri2D(int _N, int *_Np, dfloat **_r, dfloat **_s);
+  static void SEMFEMEToVTri2D(int _N, int *_NelFEM, int **_EToV);
+  static void OrthonormalBasisTri2D(dfloat a, dfloat b, int i, int j, dfloat *P);
+  static void GradOrthonormalBasisTri2D(dfloat a, dfloat b, int i, int j, dfloat *Pr, dfloat *Ps);
+  static void VandermondeTri2D(int N, int Npoints, dfloat *r, dfloat *s, dfloat *V);
+  static void GradVandermondeTri2D(int N, int Npoints, dfloat *r, dfloat *s, dfloat *Vr, dfloat *Vs);
+  static void MassMatrixTri2D(int _Np, dfloat *V, dfloat *_MM);
+  static void invMassMatrixTri2D(int _Np, dfloat *V, dfloat *_invMM);
+  static void DmatrixTri2D(int _N, int Npoints, dfloat *_r, dfloat *_s,
+                           dfloat *_Dr, dfloat *_Ds);
+  static void LIFTmatrixTri2D(int _N, int *_faceNodes,
+                              dfloat *_r, dfloat *_s, dfloat *_LIFT);
+  static void SurfaceMassMatrixTri2D(int _N, dfloat *_MM, dfloat *_LIFT, dfloat *_sM);
+  static void SmatrixTri2D(int _N, dfloat *_Dr, dfloat *_Ds, dfloat *_MM,
+                           dfloat *_Srr, dfloat *_Srs, dfloat *_Sss);
+  static void InterpolationMatrixTri2D(int _N,
+                                       int NpointsIn, dfloat *rIn, dfloat *sIn,
+                                       int NpointsOut, dfloat *rOut, dfloat *sOut,
+                                       dfloat *I);
+  static void CubatureNodesTri2D(int cubTriN, int*cubNp, dfloat **cubTrir, dfloat **cubTris, dfloat **cubTriw);
+  static void CubaturePmatrixTri2D(int _N, int _Np, dfloat *_r, dfloat *_s,
+                                   int _cubNp, dfloat *_cubr, dfloat *_cubs, dfloat *_cubProject);
+  static void CubatureWeakDmatricesTri2D(int _N, int _Np, dfloat *_r, dfloat *_s,
+                                         int _cubNp, dfloat *_cubr, dfloat *_cubs,
+                                         dfloat *_cubPDrT, dfloat *_cubPDsT);
+  static void CubatureSurfaceMatricesTri2D(int _N, int _Np, dfloat *_r, dfloat *_s, int *_faceNodes,
+                                           int _intNfp, dfloat *_intr, dfloat *_intw,
+                                           dfloat *_intInterp, dfloat *_intLIFT);
+  static void SEMFEMInterpMatrixTri2D(int _N,
+                                      int _Np, dfloat *_r, dfloat *_s,
+                                      int _NpFEM, dfloat *rFEM, dfloat *sFEM,
+                                      dfloat *I);
 
-  void Warpfactor(int _N, int Npoints, dfloat *r, dfloat *w);
-  void WarpBlendTransformTri2D(int _N, int _Npoints, dfloat *_r, dfloat *_s, dfloat alphaIn=-1);
+  static void Warpfactor(int _N, int Npoints, dfloat *r, dfloat *w);
+  static void WarpBlendTransformTri2D(int _N, int _Npoints, dfloat *_r, dfloat *_s, dfloat alphaIn=-1);
 
 
   //Quads
-  void NodesQuad2D(int _N, dfloat *_r, dfloat *_s);
-  void FaceNodesQuad2D(int _N, dfloat *_r, dfloat *_s, int *_faceNodes);
-  void VertexNodesQuad2D(int _N, dfloat *_r, dfloat *_s, int *_vertexNodes);
-  void EquispacedNodesQuad2D(int _N, dfloat *_r, dfloat *_s);
-  void EquispacedEToVQuad2D(int _N, int *_EToV);
-  void SEMFEMEToVQuad2D(int _N, int *_EToV);
-  void OrthonormalBasisQuad2D(dfloat a, dfloat b, int i, int j, dfloat *P);
-  void GradOrthonormalBasisQuad2D(dfloat a, dfloat b, int i, int j, dfloat *Pr, dfloat *Ps);
-  void VandermondeQuad2D(int N, int Npoints, dfloat *r, dfloat *s, dfloat *V);
-  void GradVandermondeQuad2D(int N, int Npoints, dfloat *r, dfloat *s, dfloat *Vr, dfloat *Vs);
-  void MassMatrixQuad2D(int _Np, dfloat *V, dfloat *_MM);
-  void LumpedMassMatrixQuad2D(int _N, dfloat *_gllw, dfloat *_MM);
-  void invLumpedMassMatrixQuad2D(int _N, dfloat *_gllw, dfloat *_invMM);
-  void DmatrixQuad2D(int _N, int Npoints, dfloat *_r, dfloat *_s,
+  static void NodesQuad2D(int _N, dfloat *_r, dfloat *_s);
+  static void FaceNodesQuad2D(int _N, dfloat *_r, dfloat *_s, int *_faceNodes);
+  static void VertexNodesQuad2D(int _N, dfloat *_r, dfloat *_s, int *_vertexNodes);
+  static void EquispacedNodesQuad2D(int _N, dfloat *_r, dfloat *_s);
+  static void EquispacedEToVQuad2D(int _N, int *_EToV);
+  static void SEMFEMEToVQuad2D(int _N, int *_EToV);
+  static void OrthonormalBasisQuad2D(dfloat a, dfloat b, int i, int j, dfloat *P);
+  static void GradOrthonormalBasisQuad2D(dfloat a, dfloat b, int i, int j, dfloat *Pr, dfloat *Ps);
+  static void VandermondeQuad2D(int N, int Npoints, dfloat *r, dfloat *s, dfloat *V);
+  static void GradVandermondeQuad2D(int N, int Npoints, dfloat *r, dfloat *s, dfloat *Vr, dfloat *Vs);
+  static void MassMatrixQuad2D(int _Np, dfloat *V, dfloat *_MM);
+  static void LumpedMassMatrixQuad2D(int _N, dfloat *_gllw, dfloat *_MM);
+  static void invLumpedMassMatrixQuad2D(int _N, dfloat *_gllw, dfloat *_invMM);
+  static void DmatrixQuad2D(int _N, int Npoints, dfloat *_r, dfloat *_s,
                                           dfloat *_Dr, dfloat *_Ds);
-  void InterpolationMatrixQuad2D(int _N,
-                               int NpointsIn, dfloat *rIn, dfloat *sIn,
-                               int NpointsOut, dfloat *rOut, dfloat *sOut,
-                               dfloat *I);
+  static void InterpolationMatrixQuad2D(int _N,
+                                        int NpointsIn, dfloat *rIn, dfloat *sIn,
+                                        int NpointsOut, dfloat *rOut, dfloat *sOut,
+                                        dfloat *I);
 
   //Tets
-  void NodesTet3D(int _N, dfloat *_r, dfloat *_s, dfloat *_t);
-  void FaceNodesTet3D(int _N, dfloat *_r, dfloat *_s, dfloat *_t, int *_faceNodes);
-  void VertexNodesTet3D(int _N, dfloat *_r, dfloat *_s, dfloat *_t, int *_vertexNodes);
-  void EquispacedNodesTet3D(int _N, dfloat *_r, dfloat *_s, dfloat *_t);
-  void EquispacedEToVTet3D(int _N, int *_EToV);
-  void SEMFEMEToVTet3D(int _N, int *_EToV);
-  void OrthonormalBasisTet3D(dfloat a, dfloat b, dfloat c, int i, int j, int k, dfloat *P);
-  void GradOrthonormalBasisTet3D(dfloat a, dfloat b, dfloat c, int i, int j, int k, dfloat *Pr, dfloat *Ps, dfloat *Pt);
-  void VandermondeTet3D(int N, int Npoints, dfloat *r, dfloat *s, dfloat *t, dfloat *V);
-  void GradVandermondeTet3D(int N, int Npoints, dfloat *r, dfloat *s, dfloat *t, dfloat *Vr, dfloat *Vs, dfloat *Vt);
-  void MassMatrixTet3D(int _Np, dfloat *V, dfloat *_MM);
-  void invMassMatrixTet3D(int _Np, dfloat *V, dfloat *_invMM);
-  void DmatrixTet3D(int _N, int Npoints, dfloat *_r, dfloat *_s, dfloat *_t,
-                                          dfloat *_Dr, dfloat *_Ds, dfloat *_Dt);
-  void LIFTmatrixTet3D(int _N, int *_faceNodes,
-                             dfloat *_r, dfloat *_s, dfloat *_t, dfloat *_LIFT);
-  void SurfaceMassMatrixTet3D(int _N, dfloat *_MM, dfloat *_LIFT, dfloat *_sM);
-  void SmatrixTet3D(int _N, dfloat *_Dr, dfloat *_Ds, dfloat *_Dt, dfloat *_MM,
-                          dfloat *_Srr, dfloat *_Srs, dfloat *_Srt,
-                          dfloat *_Sss, dfloat *_Sst, dfloat *_Stt);
-  void InterpolationMatrixTet3D(int _N,
-                               int NpointsIn, dfloat *rIn, dfloat *sIn, dfloat *tIn,
-                               int NpointsOut, dfloat *rOut, dfloat *sOut, dfloat *tOut,
-                               dfloat *I);
-  void CubatureNodesTet3D(int cubN, int*cubNp, dfloat **cubr, dfloat **cubs, dfloat **cubt, dfloat **cubw);
-  void CubaturePmatrixTet3D(int _N, int _Np, dfloat *_r, dfloat *_s, dfloat *_t,
-                          int _cubNp, dfloat *_cubr, dfloat *_cubs, dfloat *_cubt,
-                          dfloat *_cubProject);
-  void CubatureWeakDmatricesTet3D(int _N, int _Np, dfloat *_r, dfloat *_s, dfloat *_t,
-                                int _cubNp, dfloat *_cubr, dfloat *_cubs, dfloat *_cubt,
-                                dfloat *_cubPDrT, dfloat *_cubPDsT, dfloat *_cubPDtT);
-  void CubatureSurfaceMatricesTet3D(int _N, int _Np, dfloat *_r, dfloat *_s, dfloat *_t, int *_faceNodes,
-                                    int _intNfp, dfloat *_intr, dfloat *_ints, dfloat *_intw,
-                                    dfloat *_intInterp, dfloat *_intLIFT);
-  void SEMFEMInterpMatrixTet3D(int _N, int _Np, dfloat *_r, dfloat *_s, dfloat *_t,
-                                    int _NpFEM, dfloat *_rFEM, dfloat *_sFEM, dfloat *_tFEM,
-                                    dfloat *I);
-  void WarpShiftFace3D(int _N, int Npoints, dfloat alpha,
-                             dfloat *L1, dfloat *L2, dfloat *L3,
-                             dfloat *w1, dfloat *w2);
-  void WarpBlendTransformTet3D(int _N, int _Npoints, dfloat *_r, dfloat *_s, dfloat *_t, dfloat alphaIn=-1);
+  static void NodesTet3D(int _N, dfloat *_r, dfloat *_s, dfloat *_t);
+  static void FaceNodesTet3D(int _N, dfloat *_r, dfloat *_s, dfloat *_t, int *_faceNodes);
+  static void VertexNodesTet3D(int _N, dfloat *_r, dfloat *_s, dfloat *_t, int *_vertexNodes);
+  static void EquispacedNodesTet3D(int _N, dfloat *_r, dfloat *_s, dfloat *_t);
+  static void EquispacedEToVTet3D(int _N, int *_EToV);
+  static void SEMFEMEToVTet3D(int _N, int *_EToV);
+  static void OrthonormalBasisTet3D(dfloat a, dfloat b, dfloat c, int i, int j, int k, dfloat *P);
+  static void GradOrthonormalBasisTet3D(dfloat a, dfloat b, dfloat c, int i, int j, int k, dfloat *Pr, dfloat *Ps, dfloat *Pt);
+  static void VandermondeTet3D(int N, int Npoints, dfloat *r, dfloat *s, dfloat *t, dfloat *V);
+  static void GradVandermondeTet3D(int N, int Npoints, dfloat *r, dfloat *s, dfloat *t, dfloat *Vr, dfloat *Vs, dfloat *Vt);
+  static void MassMatrixTet3D(int _Np, dfloat *V, dfloat *_MM);
+  static void invMassMatrixTet3D(int _Np, dfloat *V, dfloat *_invMM);
+  static void DmatrixTet3D(int _N, int Npoints, dfloat *_r, dfloat *_s, dfloat *_t,
+                           dfloat *_Dr, dfloat *_Ds, dfloat *_Dt);
+  static void LIFTmatrixTet3D(int _N, int *_faceNodes,
+                              dfloat *_r, dfloat *_s, dfloat *_t, dfloat *_LIFT);
+  static void SurfaceMassMatrixTet3D(int _N, dfloat *_MM, dfloat *_LIFT, dfloat *_sM);
+  static void SmatrixTet3D(int _N, dfloat *_Dr, dfloat *_Ds, dfloat *_Dt, dfloat *_MM,
+                           dfloat *_Srr, dfloat *_Srs, dfloat *_Srt,
+                           dfloat *_Sss, dfloat *_Sst, dfloat *_Stt);
+  static void InterpolationMatrixTet3D(int _N,
+                                       int NpointsIn, dfloat *rIn, dfloat *sIn, dfloat *tIn,
+                                       int NpointsOut, dfloat *rOut, dfloat *sOut, dfloat *tOut,
+                                       dfloat *I);
+  static void CubatureNodesTet3D(int cubN, int*cubNp, dfloat **cubr, dfloat **cubs, dfloat **cubt, dfloat **cubw);
+  static void CubaturePmatrixTet3D(int _N, int _Np, dfloat *_r, dfloat *_s, dfloat *_t,
+                                   int _cubNp, dfloat *_cubr, dfloat *_cubs, dfloat *_cubt,
+                                   dfloat *_cubProject);
+  static void CubatureWeakDmatricesTet3D(int _N, int _Np, dfloat *_r, dfloat *_s, dfloat *_t,
+                                         int _cubNp, dfloat *_cubr, dfloat *_cubs, dfloat *_cubt,
+                                         dfloat *_cubPDrT, dfloat *_cubPDsT, dfloat *_cubPDtT);
+  static void CubatureSurfaceMatricesTet3D(int _N, int _Np, dfloat *_r, dfloat *_s, dfloat *_t, int *_faceNodes,
+                                           int _intNfp, dfloat *_intr, dfloat *_ints, dfloat *_intw,
+                                           dfloat *_intInterp, dfloat *_intLIFT);
+  static void SEMFEMInterpMatrixTet3D(int _N, int _Np, dfloat *_r, dfloat *_s, dfloat *_t,
+                                      int _NpFEM, dfloat *_rFEM, dfloat *_sFEM, dfloat *_tFEM,
+                                      dfloat *I);
+  static void WarpShiftFace3D(int _N, int Npoints, dfloat alpha,
+                              dfloat *L1, dfloat *L2, dfloat *L3,
+                              dfloat *w1, dfloat *w2);
+  static void WarpBlendTransformTet3D(int _N, int _Npoints, dfloat *_r, dfloat *_s, dfloat *_t, dfloat alphaIn=-1);
 
 
   //Hexs
-  void NodesHex3D(int _N, dfloat *_r, dfloat *_s, dfloat *_t);
-  void FaceNodesHex3D(int _N, dfloat *_r, dfloat *_s, dfloat *_t,  int *_faceNodes);
-  void VertexNodesHex3D(int _N, dfloat *_r, dfloat *_s, dfloat *_t, int *_vertexNodes);
-  void EquispacedNodesHex3D(int _N, dfloat *_r, dfloat *_s, dfloat *_t);
-  void EquispacedEToVHex3D(int _N, int *_EToV);
-  void SEMFEMEToVHex3D(int _N, int *_EToV);
-  void OrthonormalBasisHex3D(dfloat a, dfloat b, dfloat c, int i, int j, int k, dfloat *P);
-  void GradOrthonormalBasisHex3D(dfloat a, dfloat b, dfloat c, int i, int j, int k, dfloat *Pr, dfloat *Ps, dfloat *Pt);
-  void VandermondeHex3D(int N, int Npoints, dfloat *r, dfloat *s, dfloat *t, dfloat *V);
-  void GradVandermondeHex3D(int N, int Npoints, dfloat *r, dfloat *s, dfloat *t,
-                                                dfloat *Vr, dfloat *Vs, dfloat *Vt);
-  void MassMatrixHex3D(int _Np, dfloat *V, dfloat *_MM);
-  void LumpedMassMatrixHex3D(int _N, dfloat *_gllw, dfloat *_MM);
-  void invLumpedMassMatrixHex3D(int _N, dfloat *_gllw, dfloat *_invMM);
-  void DmatrixHex3D(int _N, int Npoints, dfloat *_r, dfloat *_s, dfloat *_t,
-                                          dfloat *_Dr, dfloat *_Ds, dfloat *_Dt);
-  void InterpolationMatrixHex3D(int _N,
-                               int NpointsIn, dfloat *rIn, dfloat *sIn, dfloat *tIn,
-                               int NpointsOut, dfloat *rOut, dfloat *sOut, dfloat *tOut,
-                               dfloat *I);
+  static void NodesHex3D(int _N, dfloat *_r, dfloat *_s, dfloat *_t);
+  static void FaceNodesHex3D(int _N, dfloat *_r, dfloat *_s, dfloat *_t,  int *_faceNodes);
+  static void VertexNodesHex3D(int _N, dfloat *_r, dfloat *_s, dfloat *_t, int *_vertexNodes);
+  static void EquispacedNodesHex3D(int _N, dfloat *_r, dfloat *_s, dfloat *_t);
+  static void EquispacedEToVHex3D(int _N, int *_EToV);
+  static void SEMFEMEToVHex3D(int _N, int *_EToV);
+  static void OrthonormalBasisHex3D(dfloat a, dfloat b, dfloat c, int i, int j, int k, dfloat *P);
+  static void GradOrthonormalBasisHex3D(dfloat a, dfloat b, dfloat c, int i, int j, int k, dfloat *Pr, dfloat *Ps, dfloat *Pt);
+  static void VandermondeHex3D(int N, int Npoints, dfloat *r, dfloat *s, dfloat *t, dfloat *V);
+  static void GradVandermondeHex3D(int N, int Npoints, dfloat *r, dfloat *s, dfloat *t,
+                                   dfloat *Vr, dfloat *Vs, dfloat *Vt);
+  static void MassMatrixHex3D(int _Np, dfloat *V, dfloat *_MM);
+  static void LumpedMassMatrixHex3D(int _N, dfloat *_gllw, dfloat *_MM);
+  static void invLumpedMassMatrixHex3D(int _N, dfloat *_gllw, dfloat *_invMM);
+  static void DmatrixHex3D(int _N, int Npoints, dfloat *_r, dfloat *_s, dfloat *_t,
+                           dfloat *_Dr, dfloat *_Ds, dfloat *_Dt);
+  static void InterpolationMatrixHex3D(int _N,
+                                       int NpointsIn, dfloat *rIn, dfloat *sIn, dfloat *tIn,
+                                       int NpointsOut, dfloat *rOut, dfloat *sOut, dfloat *tOut,
+                                       dfloat *I);
 };
 
 #endif
