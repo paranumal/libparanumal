@@ -77,6 +77,19 @@ int pcg::Solve(solver_t& solver, precon_t& precon,
   dfloat rdotz2 = 0.0;
   dfloat alpha = 0.0, beta = 0.0, pAp = 0.0;
   dfloat rdotr = 0.0;
+  dfloat TOL = 0.0;
+
+  // Comput norm of RHS (for stopping tolerance).
+  if (settings.compareSetting("LINEAR SOLVER STOPPING CRITERION", "ABS/REL-RHS-2NORM")) {
+    dfloat normb = 0.0;
+
+    if (weighted)
+      normb = linAlg.weightedNorm2(N, o_w, o_r, comm);
+    else
+      normb = linAlg.norm2(N, o_r, comm);
+
+    TOL = mymax(tol*tol*normb*normb, tol*tol);
+  }
 
   // compute A*x
   solver.Operator(o_x, o_Ax);
@@ -90,7 +103,9 @@ int pcg::Solve(solver_t& solver, precon_t& precon,
     rdotr = linAlg.norm2(N, o_r, comm);
   rdotr = rdotr*rdotr;
 
-  dfloat TOL = mymax(tol*tol*rdotr,tol*tol);
+  if (settings.compareSetting("LINEAR SOLVER STOPPING CRITERION", "ABS/REL-INITRESID")) {
+    TOL = mymax(tol*tol*rdotr,tol*tol);
+  }
 
   if (verbose&&(rank==0))
     printf("PCG: initial res norm %12.12f \n", sqrt(rdotr));
