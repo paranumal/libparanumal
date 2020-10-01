@@ -34,12 +34,12 @@ class initialGuessStrategy_t {
 protected:
   platform_t& platform;
   settings_t& settings;
-  MPI_Comm&   comm;
+  MPI_Comm   comm;
 
   dlong Ntotal;     // Degrees of freedom
 
 public:
-  initialGuessStrategy_t(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm& _comm, int _weighted, occa::memory& _o_weight);
+  initialGuessStrategy_t(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm, int _weighted, occa::memory& _o_weight);
   virtual ~initialGuessStrategy_t();
 
   virtual void FormInitialGuess(occa::memory& o_x, occa::memory& o_rhs) = 0;
@@ -49,7 +49,16 @@ public:
 // Default initial guess strategy:  use whatever the user gave us.
 class igDefaultStrategy : public initialGuessStrategy_t {
 public:
-  igDefaultStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm& _comm, int _weighted, occa::memory& _o_weight);
+  igDefaultStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm, int _weighted, occa::memory& _o_weight);
+
+  void FormInitialGuess(occa::memory& o_x, occa::memory& o_rhs);
+  void Update(solver_t &solver, occa::memory& o_x, occa::memory& o_rhs);
+};
+
+// Zero initial guess strategy:  use a zero initial guess.
+class igZeroStrategy : public initialGuessStrategy_t {
+public:
+  igZeroStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm, int _weighted, occa::memory& _o_weight);
 
   void FormInitialGuess(occa::memory& o_x, occa::memory& o_rhs);
   void Update(solver_t &solver, occa::memory& o_x, occa::memory& o_rhs);

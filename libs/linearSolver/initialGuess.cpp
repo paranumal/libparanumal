@@ -34,6 +34,8 @@ initialGuessSolver_t* initialGuessSolver_t::Setup(dlong N, dlong Nhalo, platform
 
   if (settings.compareSetting("INITIAL GUESS STRATEGY", "NONE")) {
     initialGuessSolver->igStrategy = new igDefaultStrategy(N, platform, settings, comm, weighted, o_weight);
+  } else if (settings.compareSetting("INITIAL GUESS STRATEGY", "ZERO")) {
+    initialGuessSolver->igStrategy = new igZeroStrategy(N, platform, settings, comm, weighted, o_weight);
   } else {
     LIBP_ABORT("Requested INITIAL GUESS STRATEGY not found.");
   }
@@ -68,7 +70,7 @@ int initialGuessSolver_t::Solve(solver_t& solver, precon_t& precon, occa::memory
 
 /*****************************************************************************/
 
-initialGuessStrategy_t::initialGuessStrategy_t(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm& _comm, int _weighted, occa::memory& _o_weight):
+initialGuessStrategy_t::initialGuessStrategy_t(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm, int _weighted, occa::memory& _o_weight):
   platform(_platform),
   settings(_settings),
   comm(_comm),
@@ -84,7 +86,7 @@ initialGuessStrategy_t::~initialGuessStrategy_t()
 
 /*****************************************************************************/
 
-igDefaultStrategy::igDefaultStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm& _comm, int _weighted, occa::memory& _o_weight):
+igDefaultStrategy::igDefaultStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm, int _weighted, occa::memory& _o_weight):
   initialGuessStrategy_t(_N, _platform, _settings, _comm, _weighted, _o_weight)
 {
   return;
@@ -96,6 +98,25 @@ void igDefaultStrategy::FormInitialGuess(occa::memory& o_x, occa::memory& o_rhs)
 }
 
 void igDefaultStrategy::Update(solver_t &solver, occa::memory& o_x, occa::memory& o_rhs)
+{
+  return;
+}
+
+/*****************************************************************************/
+
+igZeroStrategy::igZeroStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm, int _weighted, occa::memory& _o_weight):
+  initialGuessStrategy_t(_N, _platform, _settings, _comm, _weighted, _o_weight)
+{
+  return;
+}
+
+void igZeroStrategy::FormInitialGuess(occa::memory& o_x, occa::memory& o_rhs)
+{
+  platform.linAlg.set(Ntotal, 0.0, o_x);
+  return;
+}
+
+void igZeroStrategy::Update(solver_t &solver, occa::memory& o_x, occa::memory& o_rhs)
 {
   return;
 }
