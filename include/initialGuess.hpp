@@ -110,6 +110,23 @@ public:
   void Update(solver_t &solver, occa::memory& o_x, occa::memory& o_rhs);
 };
 
+// Rolling QR update for projection history space a la Christensen's thesis.
+class igRollingQRProjectionStrategy : public igProjectionStrategy {
+private:
+  dfloat       *R;   // R factor in QR decomposition (row major)
+  occa::memory o_R;
+
+  occa::kernel igDropQRFirstColumnKernel;
+
+	void givensRotation(dfloat a, dfloat b, dfloat *c, dfloat *s);
+
+public:
+  igRollingQRProjectionStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm, int _weighted, occa::memory& _o_weight);
+  ~igRollingQRProjectionStrategy();
+
+  void Update(solver_t &solver, occa::memory& o_x, occa::memory& o_rhs);
+};
+
 // Linear solver with successive-RHS initial-guess generation.
 class initialGuessSolver_t : public linearSolver_t {
 protected:
