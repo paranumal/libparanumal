@@ -114,6 +114,7 @@ void igDefaultStrategy::Update(solver_t &solver, occa::memory& o_x, occa::memory
 igZeroStrategy::igZeroStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm, int _weighted, occa::memory& _o_weight):
   initialGuessStrategy_t(_N, _platform, _settings, _comm, _weighted, _o_weight)
 {
+  platform.linAlg.InitKernels({"set"});
   return;
 }
 
@@ -152,6 +153,8 @@ igProjectionStrategy::igProjectionStrategy(dlong _N, platform_t& _platform, sett
   o_ctmp = platform.malloc(ctmpNblocks*maxDim*sizeof(dfloat), ctmp);
 
   // Build kernels.
+  platform.linAlg.InitKernels({"set"});
+
   occa::properties kernelInfo = platform.props;
   kernelInfo["defines/" "p_igNhist"] = maxDim;
 
@@ -447,6 +450,8 @@ igExtrapStrategy::igExtrapStrategy(dlong _N, platform_t& _platform, settings_t& 
   shift = 0;
 
   o_xh = platform.malloc(Nhistory*Ntotal*sizeof(dfloat));
+
+  platform.linAlg.InitKernels({"set"});
 
   occa::properties kernelInfo = platform.props;
   kernelInfo["defines/" "p_igNhist"] = Nhistory;
