@@ -144,6 +144,17 @@ def main():
                                          nx=6, ny=6, nz=6, degree=2),
                     referenceNorm=1.20751891719514)
 
+  failCount += test(name="testInitialGuess_VclassicPclassic",
+                    cmd=insBin,
+                    settings=insSettings(element=12,data_file=insData3D,dim=3,
+                                         nx=6, ny=6, nz=6, degree=2,
+                                         advection_type="CUBATURE",
+                                         time_integrator="SSBDF3",
+                                         velocity_initial_guess_strategy="CLASSIC",
+                                         pressure_initial_guess_strategy="CLASSIC"),
+                    referenceNorm=1.20463427860078)
+
+  
   #test wth MPI
   failCount += test(name="testInitialGuess_MPI", ranks=4,
                     cmd=insBin,
