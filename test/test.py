@@ -150,8 +150,10 @@ if __name__ == "__main__":
   import testTimeStepper
   import testLinearSolver
   import testParAlmond
+  import testInitialGuess
 
   failCount=0;
+  failCount+=testInitialGuess.main()
   failCount+=testMesh.main()
   failCount+=testGradient.main()
   failCount+=testAdvection.main()

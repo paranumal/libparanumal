@@ -112,21 +112,21 @@ def main():
 
   # IG
   #test classic
-  failCount += test(name="testInitialGuessVextrapPqr",
+  failCount += test(name="testInitialGuess_VextrapPqr",
                     cmd=insBin,
                     settings=insSettings(element=3,data_file=insData2D,dim=2,
                                          velocity_initial_guess_strategy="QR",
                                          pressure_initial_guess_strategy="QR"),
                     referenceNorm=0.820792600394893)
 
-  failCount += test(name="testInitialGuessVextrapPqr",
+  failCount += test(name="testInitialGuess_VextrapPqr",
                     cmd=insBin,
                     settings=insSettings(element=4,data_file=insData2D,dim=2,
                                          velocity_initial_guess_strategy="EXTRAP",
                                          pressure_initial_guess_strategy="QR"),
                     referenceNorm=0.820483555285512)
 
-  failCount += test(name="testInitialGuessVqrPextrap",
+  failCount += test(name="testInitialGuess_VqrPextrap",
                     cmd=insBin,
                     settings=insSettings(element=6,data_file=insData3D,dim=3,
                                          velocity_initial_guess_strategy="QR",
@@ -134,7 +134,7 @@ def main():
                                          nx=6, ny=6, nz=6, degree=2),
                   referenceNorm=1.20768114201421)
   
-  failCount += test(name="testInitialGuessVspextrapPspextrap",
+  failCount += test(name="testInitialGuess_VspextrapPspextrap",
                     cmd=insBin,
                     settings=insSettings(element=12,data_file=insData3D,dim=3,
                                          velocity_initial_guess_strategy="EXTRAP",
@@ -145,7 +145,7 @@ def main():
                     referenceNorm=1.20751891719514)
 
   #test wth MPI
-  failCount += test(name="testInnitialGuessMPI", ranks=4,
+  failCount += test(name="testInitialGuess_MPI", ranks=4,
                     cmd=insBin,
                     settings=insSettings(element=3,data_file=insData2D,dim=2,output_to_file="TRUE",
                                          velocity_initial_guess_strategy="QR",
