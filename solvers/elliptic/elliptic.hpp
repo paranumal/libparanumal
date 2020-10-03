@@ -97,6 +97,9 @@ public:
   occa::kernel partialGradientKernel;
   occa::kernel partialIpdgKernel;
 
+  occa::kernel partialAxGeo32Kernel;
+
+  
   elliptic_t() = delete;
   elliptic_t(platform_t &_platform, mesh_t &_mesh,
               settings_t& _settings, dfloat _lambda):
@@ -120,6 +123,7 @@ public:
   void PlotFields(dfloat* Q, char *fileName);
 
   void Operator(occa::memory& o_q, occa::memory& o_Aq);
+  void Operator(occa::memory& o_q, occa::memory& o_Aq, int geo32);
 
   void BuildOperatorMatrixIpdg(parAlmond::parCOO& A);
   void BuildOperatorMatrixContinuous(parAlmond::parCOO& A);

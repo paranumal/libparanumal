@@ -28,11 +28,13 @@ SOFTWARE.
 #include "ellipticPrecon.hpp"
 
 void MGLevel::Operator(occa::memory &o_X, occa::memory &o_Ax) {
-  elliptic.Operator(o_X,o_Ax);
+  int geo32 = 1;
+  elliptic.Operator(o_X,o_Ax,geo32);
 }
 
 void MGLevel::residual(occa::memory &o_RHS, occa::memory &o_X, occa::memory &o_RES) {
-  elliptic.Operator(o_X,o_RES);
+  int geo32 = 1;
+  elliptic.Operator(o_X,o_RES,geo32);
 
   // subtract res = rhs - A*x
   linAlg.axpy(mesh.Np*mesh.Nelements, 1.f, o_RHS, -1.f, o_RES);

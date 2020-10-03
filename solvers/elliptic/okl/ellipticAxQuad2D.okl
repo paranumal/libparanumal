@@ -132,7 +132,7 @@ SOFTWARE.
 // square thread version
 @kernel void ellipticPartialAxQuad2D(const dlong Nelements,
                                    @restrict const  dlong   *  elementList,
-                                   @restrict const  dfloat *  ggeo,
+                                   @restrict const  gfloat *  ggeo,
                                    @restrict const  dfloat *  DT,
                                    @restrict const  dfloat *  S,
                                    @restrict const  dfloat *  MM,

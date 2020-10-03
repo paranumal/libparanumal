@@ -65,6 +65,13 @@ void meshTri2D::OccaSetup(){
   o_sgeo = platform.malloc(Nelements*Nfaces*Nsgeo*sizeof(dfloat), sgeo);
   o_ggeo = platform.malloc(Nelements*Nggeo*sizeof(dfloat), ggeo);
 
+  float *ggeo32 = (float*) calloc(Nelements*Nggeo,sizeof(float));
+  for(int n=0;n<Nelements*Nggeo;++n){    
+    ggeo32[n] = ggeo[n];
+  }
+  o_ggeo32 = platform.malloc(Nelements*Nggeo*sizeof(dfloat), ggeo32);
+  free(ggeo32);
+  
   free(DT);
   free(LIFTT);
   free(sMT);

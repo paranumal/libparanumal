@@ -41,4 +41,11 @@ void meshQuad2D::OccaSetup(){
   o_vgeo = platform.malloc((Nelements+totalHaloPairs)*Nvgeo*Np*sizeof(dfloat), vgeo);
   o_sgeo = platform.malloc(Nelements*Nfaces*Nfp*Nsgeo*sizeof(dfloat), sgeo);
   o_ggeo = platform.malloc(Nelements*Np*Nggeo*sizeof(dfloat), ggeo);
+
+  float *ggeo32 = (float*) calloc(Nelements*Np*Nggeo,sizeof(float));
+  for(int n=0;n<Nelements*Np*Nggeo;++n){    
+    ggeo32[n] = ggeo[n];
+  }
+  o_ggeo32 = platform.malloc(Nelements*Np*Nggeo*sizeof(dfloat), ggeo32);
+  free(ggeo32);
 }

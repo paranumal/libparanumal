@@ -126,8 +126,16 @@ elliptic_t& elliptic_t::Setup(platform_t& platform, mesh_t& mesh,
       sprintf(kernelName, "ellipticPartialAx%s", suffix);
     }
 
+
+    kernelInfo["defines/gfloat"] =  "double";
+    
     elliptic->partialAxKernel = platform.buildKernel(fileName, kernelName,
-                                     kernelInfo);
+						     kernelInfo);
+
+    kernelInfo["defines/gfloat"] = "float";
+
+    elliptic->partialAxGeo32Kernel = platform.buildKernel(fileName, kernelName,
+							  kernelInfo);
 
   } else if (settings.compareSetting("DISCRETIZATION","IPDG")) {
     int Nmax = mymax(mesh.Np, mesh.Nfaces*mesh.Nfp);

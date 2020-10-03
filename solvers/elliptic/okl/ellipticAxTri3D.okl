@@ -96,7 +96,7 @@
 
 @kernel void ellipticPartialAxTri3D(const dlong Nelements,
 				    @restrict const  dlong   *  elementList,
-				    @restrict const  dfloat *  ggeo,
+				    @restrict const  gfloat *  ggeo,
 				    @restrict const  dfloat *  Dmatrices,
 				    @restrict const  dfloat *  Smatrices,
 				    @restrict const  dfloat *  MM,

@@ -186,7 +186,7 @@ SOFTWARE.
 // #define p_Nb 2
 @kernel void ellipticPartialAxTet3D(const dlong Nelements,
                                   @restrict const  dlong   *  elementList,
-                                  @restrict const  dfloat *  ggeo,
+                                  @restrict const  gfloat *  ggeo,
                                   @restrict const  dfloat *  D,
                                   @restrict const  dfloat *  S,
                                   @restrict const  dfloat *  MM,

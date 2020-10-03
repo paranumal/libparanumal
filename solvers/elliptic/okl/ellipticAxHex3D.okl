@@ -162,13 +162,14 @@ SOFTWARE.
 
 @kernel void ellipticPartialAxHex3D_v0(const dlong Nelements,
                                     @restrict const  dlong  *  elementList,
-                                    @restrict const  dfloat *  ggeo,
+                                    @restrict const  gfloat *  ggeo,
                                     @restrict const  dfloat *  DT,
                                     @restrict const  dfloat *  S,
                                     @restrict const  dfloat *  MM,
                                     const dfloat lambda,
                                     @restrict const  dfloat *  q,
-                                          @restrict dfloat *  Aq){
+                                          @restrict dfloat *  Aq,
+				       const int geo32){
 
   for(dlong e=0; e<Nelements; ++e; @outer(0)){
 
@@ -184,11 +185,12 @@ SOFTWARE.
 
     @exclusive dlong element;
 
-    @exclusive dfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
+    @exclusive gfloat r_G00, r_G01, r_G02, r_G11, r_G12, r_G22, r_GwJ;
 
     // array of threads
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
+
         //load DT into local memory
         // s_DT[i][j] = d \phi_i at node j
         s_DT[j][i] = DT[p_Nq*j+i]; // DT is column major
@@ -225,6 +227,17 @@ SOFTWARE.
             r_G22 = ggeo[gbase+p_G22ID*p_Np];
 
             r_GwJ = ggeo[gbase+p_GWJID*p_Np];
+
+	    if(geo32==1){
+	      // reduce precision of geometric factors
+	      r_G00 = (float) r_G00;
+	      r_G01 = (float) r_G01;
+	      r_G02 = (float) r_G02;
+	      r_G11 = (float) r_G11;
+	      r_G12 = (float) r_G12;
+	      r_G22 = (float) r_G22;
+	      r_GwJ = (float) r_GwJ;
+	    }	    
           }
         }
 

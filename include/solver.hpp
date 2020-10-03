@@ -97,9 +97,16 @@ public:
   }
 
   //Evaluation of solver as a operator in the form A(q)
-  virtual void Operator(occa::memory& o_q, occa::memory& o_Aq) {
+  virtual void Operator(occa::memory& o_q, occa::memory& o_A, int geo32) {
     LIBP_ABORT(string("Operator not implemented in this solver"))
   }
+
+
+  virtual void Operator(occa::memory& o_q, occa::memory& o_A) {
+    LIBP_ABORT(string("Operator not implemented in this solver"))
+  }
+
+
 };
 
 #endif
