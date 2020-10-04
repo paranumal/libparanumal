@@ -40,9 +40,12 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq, int geo32){
       if(geo32==0)
 	partialAxKernel(mesh.NglobalGatherElements, mesh.o_globalGatherElementList,
 			mesh.o_ggeo, mesh.o_D, mesh.o_S, mesh.o_MM, lambda, o_q, o_Aq);
-      else
+      else{
+
 	partialAxGeo32Kernel(mesh.NglobalGatherElements, mesh.o_globalGatherElementList,
 			     mesh.o_ggeo32, mesh.o_D, mesh.o_S, mesh.o_MM, lambda, o_q, o_Aq);
+
+      }
       
     }
 

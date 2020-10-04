@@ -132,6 +132,8 @@ elliptic_t& elliptic_t::Setup(platform_t& platform, mesh_t& mesh,
     elliptic->partialAxKernel = platform.buildKernel(fileName, kernelName,
 						     kernelInfo);
 
+    MPI_Barrier(MPI_COMM_WORLD);
+    
     kernelInfo["defines/gfloat"] = "float";
 
     elliptic->partialAxGeo32Kernel = platform.buildKernel(fileName, kernelName,
@@ -174,6 +176,7 @@ elliptic_t& elliptic_t::Setup(platform_t& platform, mesh_t& mesh,
 elliptic_t::~elliptic_t() {
   maskKernel.free();
   partialAxKernel.free();
+  partialAxGeo32Kernel.free();
   partialGradientKernel.free();
   partialIpdgKernel.free();
 

@@ -62,6 +62,7 @@ elliptic_t* elliptic_t::SetupRingPatch(mesh_t& meshPatch){
   // Ax kernel
   if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
     elliptic->partialAxKernel = partialAxKernel;
+    elliptic->partialAxGeo32Kernel = partialAxGeo32Kernel;
   } else if (settings.compareSetting("DISCRETIZATION","IPDG")) {
     elliptic->partialGradientKernel = partialGradientKernel;
     elliptic->partialIpdgKernel = partialIpdgKernel;
