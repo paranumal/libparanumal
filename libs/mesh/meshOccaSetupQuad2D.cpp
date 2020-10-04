@@ -46,6 +46,6 @@ void meshQuad2D::OccaSetup(){
   for(int n=0;n<Nelements*Np*Nggeo;++n){    
     ggeo32[n] = ggeo[n];
   }
-  o_ggeo32 = platform.malloc(Nelements*Np*Nggeo*sizeof(dfloat), ggeo32);
+  o_ggeo32 = platform.malloc(Nelements*Np*Nggeo*sizeof(float), ggeo32);
   free(ggeo32);
 }

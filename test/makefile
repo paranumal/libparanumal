@@ -45,8 +45,8 @@ Can use "make verbose=true" for verbose output.
 
 endef
 
-ifeq (,$(filter info help test test-mesh test-gradient test-advection test-acoustics \
-				test-elliptic test-fpe test-cns test-bns test-ins test-initial-guess test-core,$(MAKECMDGOALS)))
+ifeq (,$(filter info help test test-initial-guess test-mesh test-gradient test-advection test-acoustics \
+				test-elliptic test-fpe test-cns test-bns test-ins test-core,$(MAKECMDGOALS)))
 ifneq (,$(MAKECMDGOALS))
 $(error ${TEST_HELP_MSG})
 endif
@@ -68,8 +68,8 @@ MESH_DIR     =${LIBP_LIBS_DIR}/mesh
 CORE_DIR     =${LIBP_DIR}/core
 TEST_DIR     =${LIBP_DIR}/test
 
-.PHONY: all help info test test-mesh test-gradient test-advection test-acoustics \
-				test-elliptic test-fpe test-cns test-bns test-ins test-initial-guess test-core
+.PHONY: all help info test test-initial-guess test-mesh test-gradient test-advection test-acoustics \
+				test-elliptic test-fpe test-cns test-bns test-ins  test-core
 
 
 all: test-all
@@ -97,6 +97,9 @@ test-mesh:
 test-gradient:
 	@./testGradient.py
 
+test-initial-guess:
+	@./testInitialGuess.py
+
 test-advection:
 	@./testAdvection.py
 
@@ -118,9 +121,6 @@ test-bns:
 
 test-ins:
 	@./testIns.py
-
-test-initial-guess:
-	@./testInitialGuess.py
 
 test-all:
 	@./test.py

@@ -69,7 +69,7 @@ void meshTri3D::OccaSetup(){
   for(int n=0;n<Nelements*Nggeo;++n){    
     ggeo32[n] = ggeo[n];
   }
-  o_ggeo32 = platform.malloc(Nelements*Nggeo*sizeof(dfloat), ggeo32);
+  o_ggeo32 = platform.malloc(Nelements*Nggeo*sizeof(float), ggeo32);
   free(ggeo32);
   
   free(DT);

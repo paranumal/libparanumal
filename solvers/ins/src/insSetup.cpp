@@ -39,6 +39,9 @@ ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
   ins->cubature = (settings.compareSetting("ADVECTION TYPE", "CUBATURE")) ? 1:0;
   ins->pressureIncrement = (settings.compareSetting("PRESSURE INCREMENT", "TRUE")) ? 1:0;
 
+  //setup linear algebra module
+  platform.linAlg.InitKernels({"innerProd", "axpy", "set"});
+  
   //setup cubature
   if (ins->cubature) {
     mesh.CubatureSetup();
@@ -59,7 +62,7 @@ ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
                                               mesh.Np, ins->NVfields, *ins);
     gamma = ((TimeStepper::ssbdf3*) ins->timeStepper)->getGamma();
   }
-
+  
   // set time step
   dfloat hmin = mesh.MinCharacteristicLength();
   dfloat cfl = 0.25; // depends on the stability region size
@@ -168,9 +171,6 @@ ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
 
   //build node-wise boundary flag
   ins->BoundarySetup();
-
-  //setup linear algebra module
-  platform.linAlg.InitKernels({"innerProd", "axpy"});
 
   /*setup trace halo exchange */
   ins->pTraceHalo = mesh.HaloTraceSetup(1); //one field
