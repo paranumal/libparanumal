@@ -33,12 +33,61 @@ extern "C" {
                 double  *B,
                 int     *LDB,
                 int     *INFO );
+
   void sgesv_ ( int     *N, int     *NRHS, float  *A,
                 int     *LDA,
                 int     *IPIV,
                 float  *B,
                 int     *LDB,
                 int     *INFO );
+
+  void dgels_ ( char   *TRANS,
+                int    *M,
+                int    *N,
+                int    *NRHS,
+                double *A,
+                int    *LDA,
+                double *B,
+                int    *LDB,
+                double *WORK,
+                int    *LWORK,
+                int    *INFO);
+
+  void dgeqp3_( int    *M,
+                int    *N,
+                double *A,
+                int    *LDA,
+                int    *JPVT,
+                double *TAU,
+                double *WORK,
+                int    *LWORK,
+                int    *INFO);
+
+  void dormqr_( char   *SIDE,
+                char   *TRANS,
+                int    *M,
+                int    *N,
+                int    *K,
+                double *A,
+                int    *LDA,
+                double *TAU,
+                double *C,
+                int    *LDC,
+                double *WORK,
+                int    *LWORK,
+                int    *INFO);
+
+  void dtrsm_ ( char   *SIDE,
+                char   *UPLO,
+                char   *TRANSA,
+                char   *DIAG,
+                int    *M,
+                int    *N,
+                double *ALPHA,
+                double *A,
+                int    *LDA,
+                double *B,
+                int    *LDB);
 }
 
 // C = A/B  = trans(trans(B)\trans(A))
@@ -133,4 +182,120 @@ void matrixRightSolve(int NrowsA, int NcolsA, float *A, int NrowsB, int NcolsB, 
   free(ipiv);
   free(tmpX);
   free(tmpY);
+}
+
+// Find minimum-norm solution to xA = b with NrowsA > NcolsA (underdetermined).
+//
+// NB:  A must be stored ROW MAJOR.
+void matrixUnderdeterminedRightSolveMinNorm(int NrowsA, int NcolsA, dfloat *A, dfloat *b, dfloat *x)
+{
+  int     LWORK, INFO = 0;
+  dfloat* WORK;
+
+  dfloat* tmpA = new dfloat[NrowsA*NcolsA]();
+  for (int i = 0; i < NrowsA*NcolsA; i++)
+    tmpA[i] = A[i];
+
+  dfloat* tmpb = new dfloat[NrowsA]();
+  for (int i = 0; i < NcolsA; i++)
+    tmpb[i] = b[i];
+
+  // Solve A^T x^T = b^T.  Note TRANS = 'N', since A is row major.
+  char TRANS = 'N';
+  int  NRHS = 1;
+
+  LWORK = 2*NrowsA*NcolsA;
+  WORK = new dfloat[LWORK]();
+  dgels_(&TRANS, &NcolsA, &NrowsA, &NRHS, tmpA, &NcolsA, tmpb, &NrowsA, WORK, &LWORK, &INFO);
+
+  if (INFO != 0) {
+    std::stringstream ss;
+    ss << "dgels_ returned INFO = " << INFO;
+    LIBP_ABORT(ss.str());
+  }
+
+  // Copy to output.
+  for (int i = 0; i < NrowsA; i++)
+    x[i] = tmpb[i];
+
+  delete[] WORK;
+  delete[] tmpA;
+  delete[] tmpb;
+}
+
+// Solve xA = b with NrowsA > NcolsA (underdetermined) using column-pivoted QR.
+//
+// Done by solving A^T x^T = b^T in 4 steps:
+//   1.  Decompose A^T * P = Q * R.  -->  Q * R * P^T x^T = b^T
+//   2.  Multiply by Q^T.            -->  R * P^T x^T = Q^T b^T
+//   3.  Backsolve with R1.          -->  P^T * x^T = R1^{-1} Q^T b^T
+//       where R1 = leading NcolsA * NcolsA submatrix of R.
+//   4.  Apply permutation.          -->  x^T = P R1^{-1} Q^T b^T
+//
+// NB:  A must be stored ROW MAJOR.
+void matrixUnderdeterminedRightSolveCPQR(int NrowsA, int NcolsA, dfloat *A, dfloat *b, dfloat *x)
+{
+  int     LWORK, INFO = 0;
+  dfloat* WORK;
+
+  dfloat* tmpA = new dfloat[NrowsA*NcolsA]();
+  for (int i = 0; i < NrowsA*NcolsA; i++)
+    tmpA[i] = A[i];
+
+  dfloat* tmpb = new dfloat[NrowsA]();
+  for (int i = 0; i < NcolsA; i++)
+    tmpb[i] = b[i];
+
+  // Compute A^T * P = Q * R.
+  int*    JPVT = new int[NrowsA]();
+  dfloat* TAU = new dfloat[mymin(NrowsA, NcolsA)]();
+
+  LWORK = 3*NrowsA + 1;
+  WORK  = new dfloat[LWORK]();
+  dgeqp3_(&NcolsA, &NrowsA, tmpA, &NcolsA, JPVT, TAU, WORK, &LWORK, &INFO);
+
+  if (INFO != 0) {
+    std::stringstream ss;
+    ss << "dgeqp3_ returned INFO = " << INFO;
+    LIBP_ABORT(ss.str());
+  }
+
+  delete[] WORK;
+
+  // Compute Q^T * b^T.
+  char SIDE = 'L';
+  char TRANS = 'T';
+  int  NRHS = 1;
+  int  NREFLS = NcolsA;
+
+  LWORK = 1;
+  WORK  = new dfloat[LWORK]();
+  dormqr_(&SIDE, &TRANS, &NcolsA, &NRHS, &NREFLS, tmpA, &NcolsA, TAU, tmpb, &NcolsA, WORK, &LWORK, &INFO);
+
+  if (INFO != 0) {
+    std::stringstream ss;
+    ss << "dormqr_ returned INFO = " << INFO;
+    LIBP_ABORT(ss.str());
+  }
+
+  delete[] WORK;
+
+  // Compute R1^{-1} * Q^T * b^T
+  SIDE = 'L';
+  char UPLO = 'U';
+  char TRANSA = 'N';
+  char DIAG = 'N';
+  NRHS = 1;
+  dfloat ALPHA = 1.0;
+
+  dtrsm_(&SIDE, &UPLO, &TRANSA, &DIAG, &NcolsA, &NRHS, &ALPHA, tmpA, &NcolsA, tmpb, &NcolsA);
+
+  // Apply the permutation.
+  for (int i = 0; i < NrowsA; i++)
+    x[JPVT[i] - 1] = tmpb[i];
+
+  delete[] JPVT;
+  delete[] TAU;
+  delete[] tmpA;
+  delete[] tmpb;
 }

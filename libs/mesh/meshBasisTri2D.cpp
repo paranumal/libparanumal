@@ -560,7 +560,7 @@ void mesh_t::CubaturePmatrixTri2D(int _N, int _Np, dfloat *_r, dfloat *_s,
       for(int i=0;i<_Np;++i){
         resP += V[n*_Np+i]*cubV[m*_Np+i];
       }
-      cubProject[n*_cubNp+m] = resP;
+      _cubProject[n*_cubNp+m] = resP;
     }
   }
   free(V); free(cubV);

@@ -34,6 +34,7 @@
 #include "timeStepper.hpp"
 #include "linAlg.hpp"
 #include "elliptic.hpp"
+#include "initialGuess.hpp"
 
 #define DINS LIBP_DIR"/solvers/ins/"
 
@@ -91,7 +92,9 @@ public:
   elliptic_t *uSolver, *vSolver, *wSolver;
   elliptic_t *pSolver;
 
+  linearSolver_t *uLinearSolver;
   linearSolver_t *vLinearSolver;
+  linearSolver_t *wLinearSolver;
   linearSolver_t *pLinearSolver;
 
   int NVfields, NTfields;

@@ -66,6 +66,11 @@ void ellipticAddSettings(settings_t& settings,
                       "Iterative Linear Solver to use for solve",
                       {"PCG", "FPCG", "NBPCG", "NBFPCG", "PGMRES"});
 
+  settings.newSetting(prefix+"LINEAR SOLVER STOPPING CRITERION",
+                      "ABS/REL-INITRESID",
+                      "Stopping criterion for the linear solver",
+                      {"ABS/REL-INITRESID", "ABS/REL-RHS-2NORM"});
+
   settings.newSetting(prefix+"PRECONDITIONER",
                       "NONE",
                       "Preconditioning Strategy",

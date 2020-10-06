@@ -74,13 +74,13 @@ void mesh_t::VertexNodesTet3D(int _N, dfloat *_r, dfloat *_s, dfloat *_t, int *_
 
   for(int n=0;n<_Np;++n){
     if( (_r[n]+1)*(_r[n]+1)+(_s[n]+1)*(_s[n]+1)+(_t[n]+1)*(_t[n]+1)<NODETOL)
-      vertexNodes[0] = n;
+      _vertexNodes[0] = n;
     if( (_r[n]-1)*(_r[n]-1)+(_s[n]+1)*(_s[n]+1)+(_t[n]+1)*(_t[n]+1)<NODETOL)
-      vertexNodes[1] = n;
+      _vertexNodes[1] = n;
     if( (_r[n]+1)*(_r[n]+1)+(_s[n]-1)*(_s[n]-1)+(_t[n]+1)*(_t[n]+1)<NODETOL)
-      vertexNodes[2] = n;
+      _vertexNodes[2] = n;
     if( (_r[n]+1)*(_r[n]+1)+(_s[n]+1)*(_s[n]+1)+(_t[n]-1)*(_t[n]-1)<NODETOL)
-      vertexNodes[3] = n;
+      _vertexNodes[3] = n;
   }
 }
 
@@ -492,7 +492,7 @@ void mesh_t::CubaturePmatrixTet3D(int _N, int _Np, dfloat *_r, dfloat *_s, dfloa
       for(int i=0;i<_Np;++i){
         resP += V[n*_Np+i]*cubV[m*_Np+i];
       }
-      cubProject[n*_cubNp+m] = resP;
+     _cubProject[n*_cubNp+m] = resP;
     }
   }
   free(V); free(cubV);

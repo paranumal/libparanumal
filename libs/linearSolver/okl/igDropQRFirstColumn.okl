@@ -1,0 +1,145 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+void givensRotation(dfloat a, dfloat b, dfloat *c, dfloat *s)
+{
+  if (b != 0) {
+    dfloat h = hypot(a, b);
+    dfloat d = 1.0/h;
+    *c = fabs(a)*d;
+    *s = copysign(d, a)*b;
+  } else {
+    *c = 1.0;
+    *s = 0.0;
+  }
+}
+
+// Drops the first column of the QR factorization,
+// 	 zeroing the last columns of Q and R
+@kernel void igDropQRFirstColumn(const dlong Ndof,
+                                 @restrict dfloat *Q,
+                                 @restrict dfloat *U,
+                                 @restrict dfloat *R)
+{
+#define p_NT 256
+
+  for (dlong b = 0; b < (Ndof + p_NT - 1)/p_NT; ++b; @outer(0)) {
+
+    @shared dfloat s_R[p_igNhist][p_igNhist];
+    @shared dfloat s_G[2];
+
+    @exclusive dfloat Qnip1, Unip1;
+
+    for (dlong t = 0; t < p_NT; ++t; @inner(0)) {
+      int id = t;
+
+      while (id < p_igNhist*p_igNhist) {
+        s_R[0][id] = R[id];
+        id += p_NT;
+      }
+
+      const dlong n = b*p_NT + t;
+
+      Qnip1 = 0;
+      Unip1 = 0;
+
+      if (n < Ndof) { // load first set of data
+        Qnip1 = Q[0*Ndof + n];
+        Unip1 = U[0*Ndof + n];
+      }
+    }
+
+    for (int i = 0; i < p_igNhist - 1; ++i) {
+
+      @barrier("local");
+
+      // thread 0 computes the Given's rotation and updates R
+      for (dlong t = 0; t < p_NT; ++t; @inner(0)) {
+        if (t == 0) {
+          // G = planerot(R(i:(i + 1), i));
+          // G = [c s; -s c]
+
+          dfloat Ri0 = s_R[i][i];
+          dfloat Ri1 = s_R[i + 1][i];
+
+          dfloat c, s;
+          givensRotation(Ri0, Ri1, &c, &s);
+
+          // need to renornamlize c,s here ?
+          s_G[0] = c;
+          s_G[1] = s;
+
+          // R(i:(i + 1), :) = G*R(i:(i + 1), :);
+          for (int j = 0; j < p_igNhist; ++j) {
+            dfloat Rij    = s_R[i][j];
+            dfloat Rip1j  = s_R[i + 1][j];
+            s_R[i][j]     =  c*Rij + s*Rip1j;
+            s_R[i + 1][j] = -s*Rij + c*Rip1j;
+          }
+        }
+      }
+
+      @barrier("local");
+
+      // all threads perform Givens rotations at a node
+      for (dlong t = 0; t < p_NT; ++t; @inner(0)) {
+        const dlong n = b*p_NT + t;
+
+        if (n < Ndof) {
+          dfloat c = s_G[0];
+          dfloat s = s_G[1];
+
+          dfloat Qni = Qnip1;
+          dfloat Uni = Unip1;
+
+          Qnip1 = Q[Ndof*(i + 1) + n];
+          Unip1 = U[Ndof*(i + 1) + n];
+
+          // Q(:, i:(i + 1)) = Q(:, i:(i + 1))*G';
+          Q[Ndof*i + n] =  c*Qni + s*Qnip1;
+          Qnip1         = -s*Qni + c*Qnip1;
+
+          // U(:, i:(i + 1)) = U(:, i:(i + 1))*G';
+          U[Ndof*i + n] =  c*Uni + s*Unip1;
+          Unip1         = -s*Uni + c*Unip1;
+        }
+      }
+    }
+
+    @barrier("global");
+
+    for (dlong t = 0; t < p_NT; ++t; @inner(0)) {
+      const dlong n = b*p_NT + t;
+      if (n < Ndof) {
+        // Q(:, dim) = 0;
+        Q[Ndof*(p_igNhist - 1) + n] = 0;
+
+        // U(:, dim) = 0;
+        U[Ndof*(p_igNhist - 1) + n] = 0;
+      }
+    }
+  }
+}

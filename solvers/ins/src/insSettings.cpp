@@ -84,9 +84,11 @@ insSettings_t::insSettings_t(MPI_Comm& _comm):
 
   ellipticAddSettings(*this, "VELOCITY ");
   parAlmond::AddSettings(*this, "VELOCITY ");
+  initialGuessAddSettings(*this, "VELOCITY ");
 
   ellipticAddSettings(*this, "PRESSURE ");
   parAlmond::AddSettings(*this, "PRESSURE ");
+  initialGuessAddSettings(*this, "PRESSURE ");
 }
 
 void insSettings_t::report() {
@@ -117,6 +119,8 @@ void insSettings_t::report() {
 
     reportSetting("VELOCITY DISCRETIZATION");
     reportSetting("VELOCITY LINEAR SOLVER");
+    reportSetting("VELOCITY INITIAL GUESS STRATEGY");
+    reportSetting("VELOCITY INITIAL GUESS HISTORY SPACE DIMENSION");
     reportSetting("VELOCITY PRECONDITIONER");
 
     if (compareSetting("VELOCITY PRECONDITIONER","MULTIGRID")) {
@@ -137,6 +141,8 @@ void insSettings_t::report() {
 
     reportSetting("PRESSURE DISCRETIZATION");
     reportSetting("PRESSURE LINEAR SOLVER");
+    reportSetting("PRESSURE INITIAL GUESS STRATEGY");
+    reportSetting("PRESSURE INITIAL GUESS HISTORY SPACE DIMENSION");
     reportSetting("PRESSURE PRECONDITIONER");
 
     if (compareSetting("PRESSURE PRECONDITIONER","MULTIGRID")) {
@@ -184,6 +190,8 @@ ellipticSettings_t* insSettings_t::extractVelocitySettings() {
 
   ellipticSettings_t* velocitySettings = new ellipticSettings_t(comm);
 
+  initialGuessAddSettings(*velocitySettings);
+
   for(auto it = velocitySettings->settings.begin(); it != velocitySettings->settings.end(); ++it) {
     setting_t* set = it->second;
     const string name = set->getName();
@@ -200,6 +208,8 @@ ellipticSettings_t* insSettings_t::extractVelocitySettings() {
 ellipticSettings_t* insSettings_t::extractPressureSettings() {
 
   ellipticSettings_t* pressureSettings = new ellipticSettings_t(comm);
+
+  initialGuessAddSettings(*pressureSettings);
 
   for(auto it = pressureSettings->settings.begin(); it != pressureSettings->settings.end(); ++it) {
     setting_t* set = it->second;

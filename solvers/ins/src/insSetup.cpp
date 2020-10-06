@@ -81,7 +81,9 @@ ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
   ins->uSolver=NULL;
   ins->vSolver=NULL;
   ins->wSolver=NULL;
+  ins->uLinearSolver=NULL;
   ins->vLinearSolver=NULL;
+  ins->wLinearSolver=NULL;
   if (settings.compareSetting("TIME INTEGRATOR","EXTBDF3")
     ||settings.compareSetting("TIME INTEGRATOR","SSBDF3")){
 
@@ -108,9 +110,24 @@ ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
     ins->vTau = ins->uSolver->tau;
 
     ins->vDisc_c0 = settings.compareSetting("VELOCITY DISCRETIZATION", "CONTINUOUS") ? 1 : 0;
-    ins->vLinearSolver = linearSolver_t::Setup(Nlocal, Nhalo,
-                                              platform, *(ins->vSettings), mesh.comm,
-                                              ins->vDisc_c0, ins->uSolver->o_weight);
+
+    //ins->vLinearSolver = linearSolver_t::Setup(Nlocal, Nhalo,
+    //                                           platform, *(ins->vSettings), mesh.comm,
+    //                                           ins->vDisc_c0, ins->vSolver->o_weight);
+
+    ins->uLinearSolver = initialGuessSolver_t::Setup(Nlocal, Nhalo,
+                                                    platform, *(ins->vSettings), mesh.comm,
+                                                    ins->vDisc_c0, ins->uSolver->o_weight);
+
+    ins->vLinearSolver = initialGuessSolver_t::Setup(Nlocal, Nhalo,
+                                                    platform, *(ins->vSettings), mesh.comm,
+                                                    ins->vDisc_c0, ins->vSolver->o_weight);
+    if (mesh.dim == 3) {
+      ins->wLinearSolver = initialGuessSolver_t::Setup(Nlocal, Nhalo,
+                                                       platform, *(ins->vSettings), mesh.comm,
+                                                       ins->vDisc_c0, ins->wSolver->o_weight);
+    }
+
   } else {
     ins->vDisc_c0 = 0;
 
@@ -135,9 +152,14 @@ ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
     ins->pTau = ins->pSolver->tau;
 
     ins->pDisc_c0 = settings.compareSetting("PRESSURE DISCRETIZATION", "CONTINUOUS") ? 1 : 0;
-    ins->pLinearSolver = linearSolver_t::Setup(Nlocal, Nhalo,
-                                               platform, *(ins->pSettings), mesh.comm,
-                                               ins->pDisc_c0, ins->pSolver->o_weight);
+
+    //ins->pLinearSolver = linearSolver_t::Setup(Nlocal, Nhalo,
+    //                                           platform, *(ins->pSettings), mesh.comm,
+    //                                           ins->pDisc_c0, ins->pSolver->o_weight);
+
+    ins->pLinearSolver = initialGuessSolver_t::Setup(Nlocal, Nhalo,
+                                                     platform, *(ins->pSettings), mesh.comm,
+                                                     ins->pDisc_c0, ins->pSolver->o_weight);
   }
 
   //Solver tolerances
@@ -434,7 +456,9 @@ ins_t::~ins_t() {
   if (wSolver) delete wSolver;
   if (timeStepper) delete timeStepper;
   if (pLinearSolver) delete pLinearSolver;
+  if (uLinearSolver) delete uLinearSolver;
   if (vLinearSolver) delete vLinearSolver;
+  if (wLinearSolver) delete wLinearSolver;
   if (subStepper) delete subStepper;
   if (subcycler) {
     subcycler->subCycleAdvectionKernel.free();

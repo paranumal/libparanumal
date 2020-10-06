@@ -37,6 +37,12 @@ void MultiGridPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
   } else {
     //just pass to parAlmond
     parAlmond.Operator(o_r, o_Mr);
+
+    if (elliptic.disc_c0) {
+      dlong Ntotal = elliptic.mesh.Nelements*elliptic.mesh.Np;
+      elliptic.ogsMasked->GatherScatter(o_Mr, ogs_dfloat, ogs_add, ogs_sym);
+      elliptic.linAlg.amx(Ntotal, (dfloat)1.0, elliptic.o_weight, o_Mr);
+    }
   }
 
   // zero mean of RHS

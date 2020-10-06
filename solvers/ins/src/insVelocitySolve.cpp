@@ -98,10 +98,10 @@ void ins_t::VelocitySolve(occa::memory& o_U, occa::memory& o_RHS,
   wSolver->lambda = gamma/nu;
 
   //  Solve lambda*U - Laplacian*U = rhs
-  NiterU = uSolver->Solve(*vLinearSolver, o_UH, o_rhsU, velTOL, maxIter, verbose);
+  NiterU = uSolver->Solve(*uLinearSolver, o_UH, o_rhsU, velTOL, maxIter, verbose);
   NiterV = vSolver->Solve(*vLinearSolver, o_VH, o_rhsV, velTOL, maxIter, verbose);
   if (mesh.dim==3)
-    NiterW = wSolver->Solve(*vLinearSolver, o_WH, o_rhsW, velTOL, maxIter, verbose);
+    NiterW = wSolver->Solve(*wLinearSolver, o_WH, o_rhsW, velTOL, maxIter, verbose);
 
   // merge arrays back, and enter BCs if C0
   velocityBCKernel(mesh.Nelements,
