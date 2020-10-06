@@ -26,7 +26,7 @@ SOFTWARE.
 
 
 // compute NU = -div(uxu) with cubature
-@kernel void insSubcycleAdvectionCubatureVolumeTet3D(const dlong Nelements,
+@kernel void insSubcycleAdvectionCubatureVolumeTet3D_old(const dlong Nelements,
                                            @restrict const  dfloat *  vgeo,
                                            @restrict const  dfloat *  cubvgeo,
                                            @restrict const  dfloat *  cubD,
@@ -170,6 +170,133 @@ SOFTWARE.
     }
   }
 }
+
+
+@kernel void insSubcycleAdvectionCubatureVolumeTet3D(const dlong Nelements,
+						     @restrict const  dfloat *  vgeo,
+						     @restrict const  dfloat *  cubvgeo,
+						     @restrict const  dfloat *  cubD,
+						     @restrict const  dfloat *  cubPDT,
+						     @restrict const  dfloat *  cubInterp,
+						     @restrict const  dfloat *  cubProject,
+						     @restrict const  dfloat *  cUe,
+						     @restrict const  dfloat *  U,
+						     @restrict  dfloat *  RHS){
+  
+  for(dlong eo=0;eo<Nelements;eo+=p_cubNblockV;@outer(0)){  // for all elements
+
+    @shared dfloat s_U[p_cubNblockV][p_Np];
+    @shared dfloat s_V[p_cubNblockV][p_Np];
+    @shared dfloat s_W[p_cubNblockV][p_Np];
+
+    @shared dfloat s_Ud[p_cubNblockV][p_Np];
+    @shared dfloat s_Vd[p_cubNblockV][p_Np];
+    @shared dfloat s_Wd[p_cubNblockV][p_Np];
+
+    @shared dfloat s_cF11[p_cubNblockV][p_cubNp];
+    @shared dfloat s_cF12[p_cubNblockV][p_cubNp];
+    @shared dfloat s_cF13[p_cubNblockV][p_cubNp];
+
+    @shared dfloat s_cF21[p_cubNblockV][p_cubNp];
+    @shared dfloat s_cF22[p_cubNblockV][p_cubNp];
+    @shared dfloat s_cF23[p_cubNblockV][p_cubNp];
+
+    @shared dfloat s_cF31[p_cubNblockV][p_cubNp];
+    @shared dfloat s_cF32[p_cubNblockV][p_cubNp];
+    @shared dfloat s_cF33[p_cubNblockV][p_cubNp];
+    //
+    for(int es=0;es<p_cubNblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_cubNp;++n;@inner(0)){     // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements && n<p_Np){
+          const dlong id = e*p_Np*p_NVfields+n;
+
+          s_Ud[es][n] = U[id+0*p_Np];
+          s_Vd[es][n] = U[id+1*p_Np];
+          s_Wd[es][n] = U[id+2*p_Np];
+
+        }
+      }
+    }
+
+    @barrier("local");
+
+    for(int es=0;es<p_cubNblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_cubNp;++n;@inner(0)){     // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements && n<p_cubNp){
+
+          dfloat  cU = 0.f,  cV = 0.f,  cW = 0.f;
+          dfloat cUd = 0.f, cVd = 0.f, cWd = 0.f;
+
+	  dlong id = e*p_cubNp*p_dim + n;
+	  cU = cUe[id+0*p_cubNp];
+	  cV = cUe[id+1*p_cubNp];
+	  cW = cUe[id+2*p_cubNp];
+	  
+#pragma unroll p_Np
+	  for(int i=0;i<p_Np;++i){
+	    const dfloat cIni = cubInterp[n+i*p_cubNp];
+	    cUd += cIni*s_Ud[es][i];
+	    cVd += cIni*s_Vd[es][i];
+	    cWd += cIni*s_Wd[es][i];
+	  }
+	  
+          s_cF11[es][n] = cU*cUd;
+          s_cF12[es][n] = cV*cUd;
+          s_cF13[es][n] = cW*cUd;
+
+          s_cF21[es][n] = cU*cVd;
+          s_cF22[es][n] = cV*cVd;
+          s_cF23[es][n] = cW*cVd;
+
+          s_cF31[es][n] = cU*cWd;
+          s_cF32[es][n] = cV*cWd;
+          s_cF33[es][n] = cW*cWd;
+        }
+      }
+    }
+
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
+
+    for(int es=0;es<p_cubNblockV;++es;@inner(1)){
+      for(int n=0;n<p_cubNp;++n;@inner(0)){
+        const dlong e = eo+es;
+
+        if(e<Nelements && n<p_Np){
+
+          dfloat fluxU = 0., fluxV = 0., fluxW = 0.;
+
+          #pragma unroll p_cubNp
+            for(int i=0;i<p_cubNp;++i){
+              const dfloat cDrWni = cubPDT[n+i*p_Np+0*p_cubNp*p_Np];
+              const dfloat cDsWni = cubPDT[n+i*p_Np+1*p_cubNp*p_Np];
+              const dfloat cDtWni = cubPDT[n+i*p_Np+2*p_cubNp*p_Np];
+
+              fluxU += cDrWni*s_cF11[es][i]
+                      +cDsWni*s_cF12[es][i]
+                      +cDtWni*s_cF13[es][i];
+
+              fluxV += cDrWni*s_cF21[es][i]
+                      +cDsWni*s_cF22[es][i]
+                      +cDtWni*s_cF23[es][i];
+
+              fluxW += cDrWni*s_cF31[es][i]
+                      +cDsWni*s_cF32[es][i]
+                      +cDtWni*s_cF33[es][i];
+            }
+
+          const dlong id = e*p_Np*p_NVfields+n;
+          RHS[id+0*p_Np] = fluxU; // note  change in sign
+          RHS[id+1*p_Np] = fluxV;
+          RHS[id+2*p_Np] = fluxW;
+        }
+      }
+    }
+  }
+}
+
 
 
 @kernel void insSubcycleAdvectionCubatureSurfaceTet3D(const dlong Nelements,
