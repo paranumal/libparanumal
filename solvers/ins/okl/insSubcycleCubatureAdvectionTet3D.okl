@@ -365,3 +365,63 @@ SOFTWARE.
 }
 
 
+
+@kernel void insSubcycleAdvectionCubatureInterpolationTet3D(const dlong Nelements,
+							    @restrict const  dfloat *  cubvgeo,
+							    @restrict const  dfloat *  cubInterp,
+							    @restrict const  dfloat *  Ue,
+							    @restrict  dfloat *  cUe){
+
+  //----------------------------@kernel 1 interpolate velocity fields to quadrature points
+  for(dlong e=0; e<Nelements; ++e; @outer(0)) {
+
+    @shared dfloat s_Ue[p_Np];
+    @shared dfloat s_Ve[p_Np];
+    @shared dfloat s_We[p_Np];
+		    
+    for(int n=0;n<p_cubNp;++n;@inner(0)){
+      if(n<p_Np){
+	const dlong id = e*p_Np*p_NVfields + n;
+	s_Ue[n] = Ue[id+0*p_Np];
+	s_Ve[n] = Ue[id+1*p_Np];
+	s_We[n] = Ue[id+2*p_Np];
+      }
+    }
+
+    @barrier("local");
+    
+    for(int n=0;n<p_cubNp;++n;@inner(0)){
+      
+      dfloat IUe = 0, IVe = 0, IWe = 0;
+      
+#pragma unroll p_Np
+      for(int m=0;m<p_Np;++m){
+	dfloat Iin = cubInterp[n+p_cubNp*m];
+	
+	IUe += Iin*s_Ue[n];
+	IVe += Iin*s_Ve[n];
+	IWe += Iin*s_We[n];
+      }
+
+      const dlong gid = e*p_Nvgeo+ n;
+      const dfloat drdx = cubvgeo[gid + p_RXID];
+      const dfloat drdy = cubvgeo[gid + p_RYID];
+      const dfloat drdz = cubvgeo[gid + p_RZID];
+      const dfloat dsdx = cubvgeo[gid + p_SXID];
+      const dfloat dsdy = cubvgeo[gid + p_SYID];
+      const dfloat dsdz = cubvgeo[gid + p_SZID];
+      const dfloat dtdx = cubvgeo[gid + p_TXID];
+      const dfloat dtdy = cubvgeo[gid + p_TYID];
+      const dfloat dtdz = cubvgeo[gid + p_TZID];
+      
+      const dfloat cUn = (drdx*IUe+drdy*IVe+drdz*IWe);
+      const dfloat cVn = (dsdx*IUe+dsdy*IVe+dsdz*IWe);
+      const dfloat cWn = (dtdx*IUe+dtdy*IVe+dtdz*IWe);
+
+      const dlong id = e*p_cubNp*p_NVfields + n;
+      cUe[id+0*p_cubNp] = cUn;
+      cUe[id+1*p_cubNp] = cVn;
+      cUe[id+2*p_cubNp] = cWn;
+    }
+  }
+}
