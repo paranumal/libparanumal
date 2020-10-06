@@ -26,7 +26,7 @@ SOFTWARE.
 
 
 // compute NU = -div(uxu) in collocation way (weak form)
-@kernel void insSubcycleAdvectionVolumeQuad2D(const dlong Nelements,
+@kernel void insSubcycleAdvectionVolumeQuad2D_old(const dlong Nelements,
                                     @restrict const  dfloat *  vgeo,
                                     @restrict const  dfloat *  DT,
                                     @restrict const  dfloat *  Ue,
@@ -109,7 +109,6 @@ SOFTWARE.
     }
   }
 }
-
 
 #define surfaceTerms(sk,face,i, j)                                      \
   {                                                                     \

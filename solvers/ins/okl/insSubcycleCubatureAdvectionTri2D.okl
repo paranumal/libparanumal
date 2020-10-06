@@ -737,7 +737,6 @@ SOFTWARE.
 #undef s_iFluxU
 #undef s_iFluxV
 
-
 @kernel void insSubcycleAdvectionCubatureInterpolationTri2D(const dlong Nelements,
 							    @restrict const  dfloat *  cubvgeo,
 							    @restrict const  dfloat *  cubInterp,
