@@ -77,6 +77,29 @@ int initialGuessSolver_t::Solve(solver_t& solver, precon_t& precon, occa::memory
 
 /*****************************************************************************/
 
+void initialGuessAddSettings(settings_t& settings, const string prefix)
+{
+  settings.newSetting(prefix + "INITIAL GUESS STRATEGY",
+                      "NONE",
+                      "Strategy for selecting initial guess for linear solver",
+                      {"NONE", "ZERO", "CLASSIC", "QR", "EXTRAP"});
+
+  settings.newSetting(prefix + "INITIAL GUESS HISTORY SPACE DIMENSION",
+                      "-1",
+                      "Dimension of the initial guess space");
+
+  settings.newSetting(prefix + "INITIAL GUESS EXTRAP DEGREE",
+                      "-1",
+                      "Degree used for EXTRAP initial guess schemes.");
+
+  settings.newSetting(prefix + "INITIAL GUESS EXTRAP COEFFS METHOD",
+                      "MINNORM",
+                      "Method for selecting coefficients with EXTRAP initial guess schemes.",
+                      {"MINNORM", "CPQR"});
+}
+
+/*****************************************************************************/
+
 initialGuessStrategy_t::initialGuessStrategy_t(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm, int _weighted, occa::memory& _o_weight):
   platform(_platform),
   settings(_settings),

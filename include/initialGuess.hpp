@@ -170,4 +170,6 @@ public:
             const dfloat tol, const int MAXIT, const int verbose);
 };
 
+void initialGuessAddSettings(settings_t& settings, const string prefix = "");
+
 #endif /* INITIALGUESS_HPP */
