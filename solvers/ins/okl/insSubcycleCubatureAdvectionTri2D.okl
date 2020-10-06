@@ -77,7 +77,7 @@ SOFTWARE.
 
 
 
-@kernel void insSubcycleAdvectionCubatureVolumeTri2D(const dlong Nelements,
+@kernel void insSubcycleAdvectionCubatureVolumeTri2D_old(const dlong Nelements,
                                            @restrict const  dfloat *  vgeo,
                                            @restrict const  dfloat *  cubvgeo,
                                            @restrict const  dfloat *  cubD,
@@ -225,6 +225,147 @@ SOFTWARE.
     }
   }
 }
+
+// new version
+@kernel void insSubcycleAdvectionCubatureVolumeTri2D(const dlong Nelements,
+						     @restrict const  dfloat *  vgeo,
+						     @restrict const  dfloat *  cubvgeo,
+						     @restrict const  dfloat *  cubD,
+						     @restrict const  dfloat *  cubPDT,
+						     @restrict const  dfloat *  cubInterp,
+						     @restrict const  dfloat *  cubProject,
+						     @restrict const  dfloat *  cUe,
+						     @restrict const  dfloat *  U,
+						     @restrict  dfloat *  RHS){
+  
+  for(dlong eo=0;eo<Nelements;eo+=(p_NbV*p_Nmt);@outer(0)){  // for all elements
+
+    // Hold Flux Vector on Shared
+    @shared dfloat s_Ud[p_Nmt][p_NbV][p_Np];
+    @shared dfloat s_Vd[p_Nmt][p_NbV][p_Np];
+
+    @shared dfloat s_cF11[p_Nmt][p_NbV][p_Np];
+    @shared dfloat s_cF12[p_Nmt][p_NbV][p_Np];
+    @shared dfloat s_cF21[p_Nmt][p_NbV][p_Np];
+    @shared dfloat s_cF22[p_Nmt][p_NbV][p_Np];
+
+    @exclusive dfloat fluxU[p_Nmt], fluxV[p_Nmt];
+
+    for(int es=0;es<p_NbV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+        #pragma unroll p_Nmt
+        for(int em=0;em<p_Nmt;++em){
+          const dlong e = eo + es*p_Nmt + em;
+          const dlong id = e*p_Np*p_NVfields + n;
+
+          if(e<Nelements){
+            s_Ud[em][es][n] = U[id+0*p_Np];
+            s_Vd[em][es][n] = U[id+1*p_Np];
+
+          }
+        }
+
+        #pragma unroll p_Nmt
+        for(int em=0;em<p_Nmt;++em){
+          fluxU[em] = 0;
+          fluxV[em] = 0;
+        }
+      }
+    }
+
+    //#pragma unroll
+    for(int io=0;io<p_cubNp;io+=p_Np){ // block the cubature nodes
+
+      @barrier("local");
+
+      for(int es=0;es<p_NbV;++es;@inner(1)){// for all elements in block
+        for(int ns=0;ns<p_Np;++ns;@inner(0)){     // for all nodes in this element
+          const int n = ns+io; // choose cubature node to interpolate to
+          if(n<p_cubNp){
+            // compute Np of the cubNp cubature values
+	    dfloat cUd[p_Nmt], cVd[p_Nmt];
+
+            #pragma unroll p_Nmt
+            for(int em=0;em<p_Nmt;++em){
+              cUd[em] = 0.f;
+              cVd[em] = 0.f;
+            }
+
+            #pragma unroll p_Np
+            for(int i=0;i<p_Np;++i){
+              const dfloat cIni = cubInterp[n+i*p_cubNp];
+              #pragma unroll p_Nmt
+              for(int em=0;em<p_Nmt;++em){
+                cUd[em] += cIni*s_Ud[em][es][i];
+                cVd[em] += cIni*s_Vd[em][es][i];
+              }
+            }
+
+            // share up to the Np cubature vals computed in this block
+#pragma unroll p_Nmt
+            for(int em=0;em<p_Nmt;++em){
+
+	      const dlong e = eo + es*p_Nmt + em;
+	      if(e<Nelements){
+		dlong id = e*p_cubNp*p_dim + n;
+		dfloat cU = cUe[id+0*p_cubNp];
+		dfloat cV = cUe[id+1*p_cubNp];
+		s_cF11[em][es][ns] = cU*cUd[em];
+		s_cF12[em][es][ns] = cV*cUd[em];
+		s_cF21[em][es][ns] = cU*cVd[em];
+		s_cF22[em][es][ns] = cV*cVd[em];
+	      }
+            }
+          }
+        }
+      }
+
+      // Make sure all node data is loaded into @shared
+      @barrier("local");
+
+      for(int es=0;es<p_NbV;++es;@inner(1)){
+        for(int n=0;n<p_Np;++n;@inner(0)){
+
+          #pragma unroll p_Np
+          for(int i=0;i<p_Np;++i){
+            if(i+io<p_cubNp){ // differentiate this sub block
+              const dfloat cDrWni = cubPDT[n+(i+io)*p_Np+0*p_cubNp*p_Np];
+              const dfloat cDsWni = cubPDT[n+(i+io)*p_Np+1*p_cubNp*p_Np];
+
+              #pragma unroll p_Nmt
+              for(int em=0;em<p_Nmt;++em){
+                const dfloat cF11 = s_cF11[em][es][i];
+                const dfloat cF12 = s_cF12[em][es][i];
+                const dfloat cF21 = s_cF21[em][es][i];
+                const dfloat cF22 = s_cF22[em][es][i];
+
+                fluxU[em] += cDrWni*cF11;
+                fluxU[em] += cDsWni*cF12;
+                fluxV[em] += cDrWni*cF21;
+                fluxV[em] += cDsWni*cF22;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    for(int es=0;es<p_NbV;++es;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
+        #pragma unroll p_Nmt
+        for(int em=0;em<p_Nmt;++em){
+          const dlong e = eo+es*p_Nmt+em;
+          if(e<Nelements){
+            const dlong id = e*p_Np*p_NVfields+n;
+            RHS[id+0*p_Np] = fluxU[em]; // note  change in sign
+            RHS[id+1*p_Np] = fluxV[em];
+          }
+        }
+      }
+    }
+  }
+}
+
 
 // Optimized sizes for @kernel 5
 #if p_N==1
@@ -596,3 +737,53 @@ SOFTWARE.
 #undef s_iFluxU
 #undef s_iFluxV
 
+
+@kernel void insSubcycleAdvectionCubatureInterpolationTri2D(const dlong Nelements,
+							    @restrict const  dfloat *  cubvgeo,
+							    @restrict const  dfloat *  cubInterp,
+							    @restrict const  dfloat *  Ue,
+							    @restrict  dfloat *  cUe){
+
+  //----------------------------@kernel 1 interpolate velocity fields to quadrature points
+  for(dlong e=0; e<Nelements; ++e; @outer(0)) {
+
+    @shared dfloat s_Ue[p_Np];
+    @shared dfloat s_Ve[p_Np];
+		    
+    for(int n=0;n<p_cubNp;++n;@inner(0)){
+      if(n<p_Np){
+	const dlong id = e*p_Np*p_NVfields + n;
+	s_Ue[n] = Ue[id+0*p_Np];
+	s_Ve[n] = Ue[id+1*p_Np];
+      }
+    }
+
+    @barrier("local");
+    
+    for(int n=0;n<p_cubNp;++n;@inner(0)){
+      
+      dfloat IUe = 0, IVe = 0;
+      
+#pragma unroll p_Np
+      for(int m=0;m<p_Np;++m){
+	dfloat Iin = cubInterp[n+p_cubNp*m];
+	
+	IUe += Iin*s_Ue[n];
+	IVe += Iin*s_Ve[n];
+      }
+
+      const dlong gid = e*p_Nvgeo+ n;
+      const dfloat drdx = cubvgeo[gid + p_RXID];
+      const dfloat drdy = cubvgeo[gid + p_RYID];
+      const dfloat dsdx = cubvgeo[gid + p_SXID];
+      const dfloat dsdy = cubvgeo[gid + p_SYID];
+      
+      const dfloat cUn = (drdx*IUe+drdy*IVe);
+      const dfloat cVn = (dsdx*IUe+dsdy*IVe);
+
+      const dlong id = e*p_cubNp*p_NVfields + n;
+      cUe[id+0*p_cubNp] = cUn;
+      cUe[id+1*p_cubNp] = cVn;
+    }
+  }
+}

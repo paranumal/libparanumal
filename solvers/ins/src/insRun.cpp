@@ -41,8 +41,13 @@ void ins_t::Run(){
                          o_u,
                          o_p);
 
+  MPI_Barrier(MPI_COMM_WORLD);
+  double tic = MPI_Wtime();
   timeStepper->Run(o_u, startTime, finalTime);
-
+  MPI_Barrier(MPI_COMM_WORLD);
+  double toc = MPI_Wtime();
+  printf("elapsed=%g\n", toc-tic);
+  
   // output norm of final solution
   {
     //compute U.M*U

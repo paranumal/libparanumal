@@ -35,15 +35,22 @@ subcycler_t::subcycler_t(ins_t& ins):
   vTraceHalo = ins.vTraceHalo;
   advectionVolumeKernel = ins.advectionVolumeKernel;
   advectionSurfaceKernel = ins.advectionSurfaceKernel;
+  advectionInterpolationKernel = ins.advectionInterpolationKernel;
+
+  printf("o_cUh\n");
+  // HACK
+  int mOrder = 6;
+  o_cUh = platform.malloc(mOrder*ins.mesh.cubNp*ins.mesh.Nelements*NVfields*sizeof(dfloat));
 }
 
 //evaluate ODE rhs = f(q,t)
 void subcycler_t::rhsf(occa::memory& o_U, occa::memory& o_RHS, const dfloat T){
 
   //interpolate velocity history for advective field (halo elements first)
-  if(mesh.NhaloElements)
+  if(mesh.NhaloElements){
     subCycleAdvectionKernel(mesh.NhaloElements,
                            mesh.o_haloElementIds,
+			    mesh.Np,
                            shiftIndex,
                            order,
                            maxOrder,
@@ -53,13 +60,15 @@ void subcycler_t::rhsf(occa::memory& o_U, occa::memory& o_RHS, const dfloat T){
                            dt,
                            o_Uh,
                            o_Ue);
-
+  }
+  
   // extract Ue halo
   vTraceHalo->ExchangeStart(o_Ue, 1, ogs_dfloat);
 
-  if(mesh.NinternalElements)
+  if(mesh.NinternalElements){
     subCycleAdvectionKernel(mesh.NinternalElements,
                            mesh.o_internalElementIds,
+			    mesh.Np,
                            shiftIndex,
                            order,
                            maxOrder,
@@ -69,6 +78,21 @@ void subcycler_t::rhsf(occa::memory& o_U, occa::memory& o_RHS, const dfloat T){
                            dt,
                            o_Uh,
                            o_Ue);
+
+    subCycleAdvectionKernel(mesh.NinternalElements,
+			    mesh.o_internalElementIds,
+			    mesh.cubNp,
+			    shiftIndex,
+			    order,
+			    maxOrder,
+			    mesh.Nelements*mesh.cubNp*NVfields, // correct offset ?
+			    T,
+			    T0,
+			    dt,
+			    o_cUh,
+			    o_cUe);
+  }
+
 
   // finish exchange of Ue
   vTraceHalo->ExchangeFinish(o_Ue, 1, ogs_dfloat);
@@ -84,7 +108,7 @@ void subcycler_t::rhsf(occa::memory& o_U, occa::memory& o_RHS, const dfloat T){
                          mesh.o_cubPDT,
                          mesh.o_cubInterp,
                          mesh.o_cubProject,
-                         o_Ue,
+                         o_cUe,
                          o_U,
                          o_RHS);
   else
