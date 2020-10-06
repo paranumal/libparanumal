@@ -77,9 +77,9 @@ void ins_t::rhs_imex_invg(occa::memory& o_RHS, occa::memory& o_U, const dfloat g
 
 
   if (mesh.rank==0 && mesh.dim==2) {
-    printf("\rSolver iterations: U - %3d, V - %3d, P - %3d", NiterU, NiterV, NiterP); fflush(stdout);
+    printf("\nSolver iterations: U - %3d, V - %3d, P - %3d", NiterU, NiterV, NiterP); fflush(stdout);
   } else if (mesh.rank==0 && mesh.dim==3) {
-    printf("\rSolver iterations: U - %3d, V - %3d, W - %3d, P - %3d", NiterU, NiterV, NiterW, NiterP); fflush(stdout);
+    printf("\nSolver iterations: U - %3d, V - %3d, W - %3d, P - %3d", NiterU, NiterV, NiterW, NiterP); fflush(stdout);
   }
 }
 
@@ -107,6 +107,19 @@ void ins_t::rhs_subcycle_f(occa::memory& o_U, occa::memory& o_UHAT,
 
   subcycler->o_Uh = o_U; //history
 
+  dlong Ntot = mesh.Nelements*mesh.Np*NVfields;
+  dlong cNtot = mesh.Nelements*mesh.cubNp*NVfields;
+
+  // interpolate Uh at (shiftIndex)%maxOrder to cUh
+  occa::memory o_Unow = o_U + ((shiftIndex)%maxOrder)*Ntot*sizeof(dfloat);
+  occa::memory o_cUnow = subcycler->o_cUh + ((shiftIndex)%maxOrder)*cNtot*sizeof(dfloat);
+  advectionInterpolationKernel(mesh.Nelements,
+			       mesh.o_cubvgeo,
+			       mesh.o_cubInterp,
+			       o_Unow,
+			       o_cUnow);
+  
+  
   //At each iteration of n, we step the partial sum
   // sum_i=n^order B[i]*U(t-i*dt) from t-n*dt to t-(n-1)*dt
   //To keep BCs consistent, we step the scaled partial sum:

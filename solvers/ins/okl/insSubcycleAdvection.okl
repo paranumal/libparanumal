@@ -27,6 +27,70 @@ SOFTWARE.
 //interpolate velocity history for advective field
 @kernel void insSubcycleAdvectionKernel(const dlong Nelements,
                                        @restrict const  dlong *  elementList,
+					const int Np,
+                                       const int shiftIndex,
+                                       const int order,
+                                       const int maxOrder,
+                                       const dlong fieldOffset,
+                                       const dfloat T,
+                                       const dfloat T0,
+                                       const dfloat dt,
+                                       @restrict const  dfloat *  Uh,
+                                             @restrict  dfloat *  Ue){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<Np;++n;@inner(0)){
+
+      const dlong element = elementList[e];
+
+      const dlong id = n+ p_NVfields*Np*element;
+
+      dfloat c0, c1, c2;
+
+      const dfloat t0 = T0;
+      const dfloat t1 = T0-dt;
+      const dfloat t2 = T0-2*dt;
+
+
+      switch(order){
+        case 0:
+          for (int fld=0;fld<p_NVfields;fld++) {
+            Ue[id + fld*Np] = Uh[id + fld*Np + ((shiftIndex+0)%maxOrder)*fieldOffset];
+          }
+          break;
+        case 1:
+          c0 = (T-t1)/(t0-t1);
+          c1 = (T-t0)/(t1-t0);
+          for (int fld=0;fld<p_NVfields;fld++) {
+            Ue[id + fld*Np] = c0*Uh[id + fld*Np + ((shiftIndex+0)%maxOrder)*fieldOffset]
+                               +c1*Uh[id + fld*Np + ((shiftIndex+1)%maxOrder)*fieldOffset];
+          }
+          break;
+        case 2:
+          c0 = (T-t1)*(T-t2)/((t0-t1)*(t0-t2));
+          c1 = (T-t0)*(T-t2)/((t1-t0)*(t1-t2));
+          c2 = (T-t0)*(T-t1)/((t2-t0)*(t2-t1));
+
+          for (int fld=0;fld<p_NVfields;fld++) {
+            Ue[id + fld*Np] = c0*Uh[id + fld*Np + ((shiftIndex+0)%maxOrder)*fieldOffset]
+                               +c1*Uh[id + fld*Np + ((shiftIndex+1)%maxOrder)*fieldOffset]
+                               +c2*Uh[id + fld*Np + ((shiftIndex+2)%maxOrder)*fieldOffset];
+          }
+          break;
+        default:
+          break;
+      }
+    }
+  }
+}
+
+
+
+#if 0
+
+//interpolate velocity history for advective field
+@kernel void insSubcycleAdvectionKernel(const dlong Nelements,
+                                       @restrict const  dlong *  elementList,
                                        const int shiftIndex,
                                        const int order,
                                        const int maxOrder,
@@ -82,3 +146,4 @@ SOFTWARE.
     }
   }
 }
+#endif

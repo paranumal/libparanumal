@@ -60,14 +60,14 @@ public:
   halo_t* vTraceHalo;
   occa::kernel advectionVolumeKernel;
   occa::kernel advectionSurfaceKernel;
-
+  occa::kernel advectionInterpolationKernel;
   occa::kernel subCycleAdvectionKernel;
 
   int NVfields;
   int order, maxOrder, shiftIndex;
   dfloat nu, T0, dt;
 
-  occa::memory o_Ue, o_Uh;
+  occa::memory o_Ue, o_Uh, o_cUe, o_cUh;
 
   subcycler_t() = delete;
   subcycler_t(ins_t& ins);
@@ -133,6 +133,7 @@ public:
 
   occa::kernel advectionVolumeKernel;
   occa::kernel advectionSurfaceKernel;
+  occa::kernel advectionInterpolationKernel;
 
   occa::kernel divergenceVolumeKernel;
   occa::kernel divergenceSurfaceKernel;
