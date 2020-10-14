@@ -82,7 +82,7 @@ void platform_t::DeviceConfig(){
     int namelen;
     MPI_Get_processor_name(hostname,&namelen);
 
-    MPI_Allgather(hostname , MPI_MAX_PROCESSOR_NAME, MPI_CHAR,
+    MPI_Allgather(MPI_IN_PLACE , MPI_MAX_PROCESSOR_NAME, MPI_CHAR,
                   hostnames, MPI_MAX_PROCESSOR_NAME, MPI_CHAR, MPI_COMM_WORLD);
 
     int localRank = 0;
