@@ -67,9 +67,9 @@ export LIBP_CXXFLAGS+=--coverage
 export LIBP_MPICXXFLAGS+=--coverage
 endif
 
-export LIBP_LIBS=${LIBP_BLAS_LIB} \
-                 ${LIBP_LAPACK_LIB} \
-                 -L$(OCCA_DIR)/lib -locca $(links)
+export LIBP_LIBS=${LIBP_LAPACK_LIB} \
+		 ${LIBP_BLAS_LIB} \
+                 -L$(OCCA_DIR)/lib -locca $(links) -lgfortran -lstdc++
 
 export LIBP_DEFINES=-DUSE_OCCA_MEM_BYTE_ALIGN=32
 
