@@ -108,6 +108,35 @@ public:
             const dfloat tol, const int MAXIT, const int verbose);
 };
 
+// Preconditioned MINRES
+class pminres : public linearSolver_t {
+private:
+  occa::memory o_p;
+  occa::memory o_z;
+  occa::memory o_r;
+  occa::memory o_r_old;
+  occa::memory o_q;
+  occa::memory o_q_old;
+
+  int weighted;
+  occa::memory o_w;
+
+  occa::kernel updateMINRESKernel;
+
+  dfloat innerProd(occa::memory& o_x, occa::memory& o_y);
+  void UpdateMINRES(const dfloat ma2, const dfloat ma3, const dfloat alpha, const dfloat beta);
+
+public:
+  pminres(dlong _N, dlong _Nhalo,
+         platform_t& _platform, settings_t& _settings, MPI_Comm _comm,
+         int _weighted, occa::memory& _o_weight);
+  ~pminres();
+
+  int Solve(solver_t& solver, precon_t& precon,
+            occa::memory& o_x, occa::memory& o_rhs,
+            const dfloat tol, const int MAXIT, const int verbose);
+};
+
 //Non-Blocking Preconditioned Conjugate Gradient
 class nbpcg: public linearSolver_t {
 private:

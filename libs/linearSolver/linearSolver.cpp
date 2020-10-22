@@ -41,6 +41,8 @@ linearSolver_t* linearSolver_t::Setup(dlong N, dlong Nhalo,
     linearSolver = new pcg(N, Nhalo, platform, settings, comm, weighted, o_weight);
   } else if (settings.compareSetting("LINEAR SOLVER","PGMRES")){
     linearSolver = new pgmres(N, Nhalo, platform, settings, comm, weighted, o_weight);
+  } else if (settings.compareSetting("LINEAR SOLVER","PMINRES")){
+    linearSolver = new pminres(N, Nhalo, platform, settings, comm, weighted, o_weight);
   } else {
     LIBP_ABORT(string("Requested LINEAR SOLVER not found."));
   }

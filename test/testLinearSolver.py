@@ -56,6 +56,12 @@ def main():
                                               precon="NONE", linear_solver="NBFPCG"),
                     referenceNorm=0.500000001211135)
 
+  failCount += test(name="testLinearSolver_PMINRES",
+                    cmd=ellipticBin,
+                    settings=ellipticSettings(element=3,data_file=ellipticData2D,dim=2,
+                                              precon="NONE", linear_solver="PMINRES"),
+                    referenceNorm=0.500000001211135)
+
   return failCount
 
 if __name__ == "__main__":

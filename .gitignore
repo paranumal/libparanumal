@@ -32,3 +32,5 @@ test/__pycache__
 !test/squareQuad.msh
 !test/cubeTet.msh
 !test/cubeHex.msh
+
+.vimrc
