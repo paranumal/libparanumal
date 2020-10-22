@@ -38,43 +38,39 @@ SOFTWARE.
                           @restrict dfloat *r,
                           @restrict dfloat *p)
 {
-  for (int no = 0; no < Ntotal; no += p_NT; @outer(0)) {
-    for (int n = no; n < no + p_NT; n++; @inner(0)) {
-      if (n < Ntotal) {
-        dfloat zn = z[n];
-        dfloat qn = q[n];
-        dfloat q_oldn = q_old[n];
-        dfloat rn = r[n];
-        dfloat r_oldn = r_old[n];
-        dfloat pn = p[n];
+  for (dlong n = 0; n < Ntotal; n++; @tile(p_NT, @outer, @inner)) {
+      dfloat zn = z[n];
+      dfloat qn = q[n];
+      dfloat q_oldn = q_old[n];
+      dfloat rn = r[n];
+      dfloat r_oldn = r_old[n];
+      dfloat pn = p[n];
 
-        /* z = z - a2*q - a3*q_old  */
-        zn += ma2*qn;
-        zn += ma3*q_oldn;
+      /* z = z - a2*q - a3*q_old  */
+      zn += ma2*qn;
+      zn += ma3*q_oldn;
 
-        /* q_old = q                */
-        q_old[n] = qn;
+      /* q_old = q                */
+      q_old[n] = qn;
 
-        /* q = z                    */
-        qn = zn;
+      /* q = z                    */
+      qn = zn;
 
-        /* z = r                    */
-        zn = rn;
+      /* z = r                    */
+      zn = rn;
 
-        /* r = p - (del/gam)*r      */
-        rn = pn + alpha*rn;
+      /* r = p - (del/gam)*r      */
+      rn = pn + alpha*rn;
 
-        /* r = r - (gam/gamp)*r_old */
-        rn = rn + beta*r_oldn;
+      /* r = r - (gam/gamp)*r_old */
+      rn = rn + beta*r_oldn;
 
-        /* r_old = z                */
-        r_oldn = zn;
+      /* r_old = z                */
+      r_oldn = zn;
 
-        r_old[n] = r_oldn;
-        r[n] = rn;
-        z[n] = zn;
-        q[n] = qn;
-      }
-    }
+      r_old[n] = r_oldn;
+      r[n] = rn;
+      z[n] = zn;
+      q[n] = qn;
   }
 }
