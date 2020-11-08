@@ -231,7 +231,7 @@ lss_t& lss_t::Setup(mesh_t& mesh, linAlg_t& linAlg,
 
   // // set time step
   dfloat hmin = mesh.MinCharacteristicLength();
-  dfloat cfl = 0.5; // depends on the stability region size
+  dfloat cfl = 0.25; // depends on the stability region size
 
   dfloat dt = cfl*hmin/((mesh.N+1.)*(mesh.N+1.));
   lss->timeStepper->SetTimeStep(dt);  
@@ -255,7 +255,7 @@ lss_t::~lss_t() {
   redistanceSurfaceKernel.free();
 
   if(subcellStabilization){
-    skylineKernel.free();
+    indicatorMDAKernel.free();
     findNeighKernel.free();
     projectKernel.free();
     reconstructKernel.free();

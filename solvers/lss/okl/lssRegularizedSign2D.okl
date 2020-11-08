@@ -60,7 +60,8 @@ else{
 sgn= scale*min( sqrt( (xn+ac)*(xn+ac)+ yn*yn)-rc, sqrt( (xn-ac)*(xn-ac)+ yn*yn)-rc );
 } 
 
-sgn = tanh(M_PI*sgn/(15.0*eps)); 
+sgn = tanh(M_PI*sgn/(7.0*eps)); 
+// sgn = sgn / sqrt(sgn*sgn + 4*eps*eps);   
 
  sq[id] = sgn;
 #endif

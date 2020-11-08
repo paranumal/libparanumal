@@ -209,8 +209,8 @@ lserk4_subcell::lserk4_subcell(dlong _Nelements, dlong _NhaloElements,
   lserk4(_Nelements, _NhaloElements, _Np, _Nfields, _solver),
   Ns(_Nsubcellfields*_Nsubcell*_Nelements) {
   if (Ns) {
-    dfloat *sq = (dfloat *) calloc(Ns,sizeof(dfloat));
-    o_sq   = device.malloc(Ns*sizeof(dfloat), sq);
+    dfloat *sq = (dfloat *) calloc((Ns + _NhaloElements*_Nsubcellfields*_Nsubcell),sizeof(dfloat));
+    o_sq   = device.malloc((Ns + _NhaloElements*_Nsubcellfields*_Nsubcell)*sizeof(dfloat), sq);
     free(sq);
     o_ressq = device.malloc(Ns*sizeof(dfloat));
     o_rhssq = device.malloc(Ns*sizeof(dfloat));

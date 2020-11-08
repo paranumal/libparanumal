@@ -2,13 +2,16 @@
 2.0
 
 [DATA FILE]
+#data/lssSBRotation.h
 #data/lssVortex2D.h
 data/lssCircle2D.h
 
 [MESH FILE]
 #BOX
-#../../meshes/circle.msh
+#../../meshes/lssVortex.msh
 ../../meshes/circle.msh
+#../../meshes/circle_coarse.msh
+
 #../../meshes/lssCircle.msh
 #../../meshes/circle_h01.msh
 #../../meshes/lssTest.msh
@@ -22,10 +25,10 @@ data/lssCircle2D.h
 3
 
 [BOX NX]
-40
+20
 
 [BOX NY]
-40
+20
 
 [BOX DIMX]
 4
@@ -34,8 +37,8 @@ data/lssCircle2D.h
 4
 
 [BOX BOUNDARY FLAG]
-1
-#-1
+#1
+-1
 
 [POLYNOMIAL DEGREE]
 4
@@ -68,12 +71,17 @@ LSERK4
 
 [STABILIZATION]
 SUBCELL
+#NONE
 
 [SUBCELL NUMBER]
 5
 
+[INDICATOR TYPE]
+MDA
+
 [SUBCELL MINOR GRID]
 EQUISPACED
+#WARPBLEND
 
 [START TIME]
 0
@@ -81,7 +89,8 @@ EQUISPACED
 [FINAL TIME]
 #8
 3
-#0.1
+#1.5
+#0.01
 
 [OUTPUT INTERVAL]
 0.1
@@ -91,4 +100,4 @@ TRUE
 
 [OUTPUT FILE NAME]
 #vortex
-circle2
+circle1

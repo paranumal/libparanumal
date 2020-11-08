@@ -440,6 +440,7 @@ void mesh_t::DWmatrixTri2D(int _N, int Npoints, dfloat *_r, dfloat *_s, dfloat *
 
 
   free(V); free(Vr); free(Vs); free(tmpr); free(tmps);
+
 }
 
 
@@ -462,27 +463,11 @@ void mesh_t::LIFTmatrixTri2D(int _N, int *_faceNodes,
     if (f==1) rFace = _r;
     if (f==2) rFace = _s;
 
-    for (int i=0;i<_Nfp;i++){
+    for (int i=0;i<_Nfp;i++)
       r1D[i] = rFace[_faceNodes[f*_Nfp+i]];
-      // printf("f = %d  n = %d  %.8e\n", f, _faceNodes[f*_Nfp+i], r1D[i]);
-    }
 
     Vandermonde1D(_N, _Nfp, r1D, V1D);
     MassMatrix1D(_Nfp, V1D, MM1D);
-
-
-    // // 
-    //  matrixInverse(_Nfp, V1D); 
-    // for(int i=0; i<_Nfp; i++){
-    //   for(int j=0; j<_Nfp; j++){
-    //     printf("%.8e ", V1D[i + j*_Nfp]);
-    //   }
-    //   printf("\n");
-    // }
-
-
-    // printf("\n\n");
-
 
     for (int j=0;j<_Nfp;j++) {
       int fid = _faceNodes[f*_Nfp+j];

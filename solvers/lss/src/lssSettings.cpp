@@ -62,7 +62,12 @@ lssSettings_t::lssSettings_t(MPI_Comm& _comm):
   newSetting("SUBCELL MINOR GRID",
              "EQUISPACED",
              "Minor Triangulation",
-             {"EQUISPACED"});
+             {"EQUISPACED", "WARPBLEND"});
+
+  newSetting("INDICATOR TYPE",
+             "MDA",
+             "Troubled Cell Indicator Type",
+             {"MDA", "MDH"});
 
   newSetting("SUBCELL NUMBER",
              "0",
@@ -104,6 +109,7 @@ void lssSettings_t::report() {
     reportSetting("STABILIZATION");
     reportSetting("SUBCELL NUMBER");
     reportSetting("SUBCELL MINOR GRID");
+    reportSetting("INDICATOR TYPE");
     reportSetting("START TIME");
     reportSetting("FINAL TIME");
     reportSetting("OUTPUT INTERVAL");

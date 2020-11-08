@@ -39,38 +39,38 @@ void lss_t::SetupStabilizer(){
      
     // Storage required for subcell stabilization
     const dlong sNlocal = mesh.Nelements*subcell->Nsubcells; 
+    const dlong sNtotal = (mesh.Nelements + mesh.totalHaloPairs)*subcell->Nsubcells; 
     // this->sq = (dfloat*) calloc(sNlocal, sizeof(dfloat));
     // this->o_sq = mesh.device.malloc(sNlocal*sizeof(dfloat), this->sq);
     
     this->ssgnq = (dfloat*) calloc(sNlocal, sizeof(dfloat));
     this->o_ssgnq = mesh.device.malloc(sNlocal*sizeof(dfloat), this->ssgnq);
     
-    this->sface = (dfloat *) calloc(sNlocal*mesh.Nfaces, sizeof(dfloat)); 
-    this->o_sface = mesh.device.malloc(sNlocal*mesh.Nfaces*sizeof(dfloat), this->sface); 
+    this->sface = (dfloat *) calloc(sNtotal*mesh.Nfaces, sizeof(dfloat)); 
+    this->o_sface = mesh.device.malloc(sNtotal*mesh.Nfaces*sizeof(dfloat), this->sface); 
 
-      char *suffix;
-      if(mesh.elementType==TRIANGLES)
-      suffix = strdup("Tri2D");
-      if(mesh.elementType==QUADRILATERALS)
-      suffix = strdup("Quad2D");
-      if(mesh.elementType==TETRAHEDRA)
-      suffix = strdup("Tet3D");
-      if(mesh.elementType==HEXAHEDRA)
-      suffix = strdup("Hex3D");
+    char *suffix;
+    if(mesh.elementType==TRIANGLES)
+    suffix = strdup("Tri2D");
+    if(mesh.elementType==QUADRILATERALS)
+    suffix = strdup("Quad2D");
+    if(mesh.elementType==TETRAHEDRA)
+    suffix = strdup("Tet3D");
+    if(mesh.elementType==HEXAHEDRA)
+    suffix = strdup("Hex3D");
 
-      char fileName[BUFSIZ], kernelName[BUFSIZ];
+    char fileName[BUFSIZ], kernelName[BUFSIZ];
   
     occa::properties kernelInfo = props; // copy base props
 
-
     sprintf(fileName, DLSS "/okl/lssStabilize%s.okl", suffix);
 
-    sprintf(kernelName, "lssSkyline%s", suffix);
-    skylineKernel = buildKernel(mesh.device, fileName, kernelName, 
+    sprintf(kernelName, "lssIndicatorMDA%s", suffix);
+    indicatorMDAKernel = buildKernel(mesh.device, fileName, kernelName, 
                                      kernelInfo, mesh.comm); 
 
-    sprintf(kernelName, "lssSkyline1D%s", suffix);
-    skyline1DKernel = buildKernel(mesh.device, fileName, kernelName, 
+    sprintf(kernelName, "lssIndicatorMDH%s", suffix);
+    indicatorMDHKernel = buildKernel(mesh.device, fileName, kernelName, 
                                      kernelInfo, mesh.comm); 
 
     sprintf(kernelName, "lssFindNeigh%s", suffix);
@@ -93,11 +93,13 @@ void lss_t::SetupStabilizer(){
     reconstructInternalFaceKernel = buildKernel(mesh.device, fileName, kernelName, 
                                      kernelInfo, mesh.comm); 
 
+    sprintf(kernelName, "lssReconstructFace%s", suffix);
+    reconstructFaceKernel = buildKernel(mesh.device, fileName, kernelName, 
+                                     kernelInfo, mesh.comm); 
 
     sprintf(kernelName, "lssProjectDG%s", suffix);
     projectDGKernel = buildKernel(mesh.device, fileName, kernelName, 
                                      kernelInfo, mesh.comm); 
-
 
     sprintf(kernelName, "lssReconstructExternalFace%s", suffix);
     reconstructExternalFaceKernel = buildKernel(mesh.device, fileName, kernelName, 

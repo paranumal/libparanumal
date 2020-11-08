@@ -94,18 +94,20 @@ public:
   occa::kernel setFlowFieldKernel;
   occa::kernel regularizedSignKernel;
 
-  occa::kernel partialRedistanceVolumeKernel;  // This could be part of subcell 
-  occa::kernel mixedRedistanceSurfaceKernel;  // This could be part of subcell 
-  occa::kernel partialRedistanceSurfaceKernel; // This could be part of subcell 
+  occa::kernel partialRedistanceVolumeKernel;  
+  occa::kernel mixedRedistanceSurfaceKernel;  
+  occa::kernel partialRedistanceSurfaceKernel; 
   occa::kernel reconstructInternalFaceKernel; 
   occa::kernel reconstructExternalFaceKernel; 
+  occa::kernel reconstructFaceKernel; 
 
   occa::kernel projectKernel; 
   occa::kernel projectDGKernel; 
   occa::kernel reconstructKernel; 
   occa::kernel subcellComputeKernel; 
-  occa::kernel skylineKernel; 
-  occa::kernel skyline1DKernel; 
+  occa::kernel indicatorMDAKernel; // Averaged Modal Decay i.e. skyline 
+  occa::kernel indicatorMDHKernel; // Highest Modal Decay i.e. Pearsson and Perreira 
+  // occa::kernel skyline1DKernel; 
   occa::kernel findNeighKernel; 
 
   // occa::kernel subcellSignKernel; // This could be part of subcell 

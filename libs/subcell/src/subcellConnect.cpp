@@ -155,10 +155,7 @@ void subcell_t::LocalConnect(){
       Nint++;
   }
 
-  // printf("%d %d \n", Nint, Next);
-
-  // iemapP = (int*) calloc(Nint*Nfaces,sizeof(int));
-  // ifmapP = (int*) calloc(Nint*Nfaces,sizeof(int));
+ 
   ielist = (int*) calloc(Nint,sizeof(int));
   eelist = (int*) calloc(Next,sizeof(int));
   int icnt = 0, ecnt = 0;  
@@ -222,6 +219,17 @@ void subcell_t::LocalConnect(){
       }
     }
   }
+
+ // for(dlong e=0;e<Nsubcells;++e){
+ //  printf("%d ", e);
+ //    for(int f=0;f<Nfaces;++f){
+ //      printf("%d ", mEToF[e*Nfaces + f]);
+ //    }
+ //    printf("\n");
+ //  }
+
+
+
 }
 
 
@@ -233,8 +241,11 @@ void subcell_t::GlobalConnect(){
   const dlong Nelements = mesh.Nelements; 
   emapP = (dlong*) calloc(Nsubcells*Nfaces*Nelements, sizeof(dlong));
   fmapP = (dlong*) calloc(Nsubcells*Nfaces*Nelements, sizeof(dlong));
+
   // first connect internal elements 
   for(dlong e=0; e<Nelements; e++){
+  // for(dlong e=0; e<NTotalElements; e++){
+  // for(dlong e=0; e<Nelements; e++){
     for(int s =0; s<Nsubcells; s++){
       const dlong eshift = e*Nsubcells*Nfaces + s*Nfaces; 
       for(int f=0; f<Nfaces; f++){
@@ -265,11 +276,12 @@ void subcell_t::GlobalConnect(){
   DIMY /= 2.0;
 
   // Compute Face Centers and Connect
-  dfloat *xf = (dfloat *) malloc(mesh.Nelements*Nsubcells*Nfaces*sizeof(dfloat));
-  dfloat *yf = (dfloat *) malloc(mesh.Nelements*Nsubcells*Nfaces*sizeof(dfloat));
+  dfloat *xf = (dfloat *) malloc((mesh.Nelements + mesh.totalHaloPairs)*Nsubcells*Nfaces*sizeof(dfloat));
+  dfloat *yf = (dfloat *) malloc((mesh.Nelements + mesh.totalHaloPairs)*Nsubcells*Nfaces*sizeof(dfloat));
 
   dlong cnt = 0; 
   for(dlong e=0; e<mesh.Nelements; e++){
+  // for(dlong e=0; e<(mesh.Nelements + mesh.totalHaloPairs); e++){
     dlong id = e*Nverts;
     dfloat xe1 = mesh.EX[id+0]; /* x-coordinates of vertices */
     dfloat xe2 = mesh.EX[id+1];
@@ -291,6 +303,9 @@ void subcell_t::GlobalConnect(){
       }
     }
   }
+
+  mesh.halo->Exchange(xf, Nsubcells*Nfaces, ogs_dfloat);
+  mesh.halo->Exchange(yf, Nsubcells*Nfaces, ogs_dfloat);
 
   for(dlong e=0; e<Nelements; e++){
     for(int f=0;f<Nfaces;++f){
@@ -331,6 +346,8 @@ void subcell_t::GlobalConnect(){
         dfloat xM = xf[idM] + offsetX;
         dfloat yM = yf[idM] + offsetY;
 
+
+        // printf("%d %d %d %d \n", mesh.rank, e, sem, sfm);
         int idE, idF; // mEToE[sem*Nfaces + sfm]; 
         findBestMatch(xM, yM, Nfaces, N, mFToE+fP*N,
                       xf+eP*Nsubcells*Nfaces,
@@ -340,29 +357,31 @@ void subcell_t::GlobalConnect(){
         emapP[eshift]     = idE + eP*Nsubcells; 
         fmapP[eshift]     = idF; //
 
+        // if(eP>=Nelements){ // Halo Connect
+        //   printf("e = %d eP = %d \n", e, eP);
+        //   emapP[eP*Nsubcells*Nfaces + idE*Nfaces + idF] = e*Nsubcells + sem; 
+        //   fmapP[eP*Nsubcells*Nfaces + idE*Nfaces + idF] = sfm; 
+        // }
+
+
       }
     }
   }
 
   free(xf); 
   free(yf);
+
+// if(mesh.rank==0){
+//   for(dlong e=0; e<NTotalElements; e++){
+//     for(int s =0; s<Nsubcells; s++){
+//       const dlong eshift = e*Nsubcells*Nfaces + s*Nfaces; 
+//       for(int f=0; f<Nfaces; f++){
+//        printf("%d %d %d %d %d %d\n", e, emapP[eshift + f]/Nsubcells, s, f, emapP[eshift + f], fmapP[eshift + f]);
+//       }
+//     }
+//   }
+// }
   
-#if 0
-  // first connect internal elements 
-  for(dlong e=0; e<Nelements; e++){
-    for(int s =0; s<Nsubcells; s++){
-      for(int f=0; f<Nfaces; f++){
-	const dlong sfm = e*Nsubcells*Nfaces + s*Nfaces + f; 
-	const dlong sfp = emapP[sfm]*Nfaces + fmapP[sfm]; 
-	if( fabs( x[sfm] - x[sfp] ) > 1e-12){
-          stringstream ss;
-          ss << "bad index= " << e << ", " << s << ", "<<f<<"\n";
-          LIBP_ABORT(ss.str())
-	    }
-      }
-    }
-  }
-#endif
 
 }
 

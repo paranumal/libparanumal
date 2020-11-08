@@ -39,7 +39,9 @@ public:
    void GeometricFactors(); 
    void SetupOperators(); 
 
-   void EdgeNodes(int *eNodes); 
+   // void EdgeNodes(int *eNodes); 
+
+   
    // void LocalConnect();  
    // void GlobalConnect();  
 

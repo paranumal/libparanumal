@@ -69,25 +69,8 @@ void lss_t::Run(){
                   o_ssgnq);
 
 
-    // skylineKernel(mesh.Nelements,
-    //             mesh.o_ggeo,
-    //             subcell->o_ModMap, 
-    //             mesh.o_MM,
-    //             subcell->o_invVT,
-    //             subcell->o_LSF,
-    //             subcell->o_BLD, 
-    //             o_q,
-    //             subcell->o_ElementList); 
+   DetectTroubledCells(o_q, subcell->o_ElementList); 
 
-    skyline1DKernel(mesh.Nelements,
-                mesh.o_sgeo,
-                subcell->o_edgeNodes, 
-                subcell->o_MM1D,
-                subcell->o_invVT1D,
-                subcell->o_LSF,
-                subcell->o_BLD, 
-                o_q,
-                subcell->o_ElementList); 
   
   }
 
@@ -95,7 +78,11 @@ void lss_t::Run(){
 
  // dfloat outputInterval; 
  // settings.getSetting("OUTPUT INTERVAL", outputInterval);
- finalTime = startTime + 1*timeStepper->GetTimeStep();
+// printf("%.4e\n",timeStepper->GetTimeStep() );
+//  finalTime = startTime + 500*timeStepper->GetTimeStep();
+// printf("%.4e %.4e\n",finalTime, timeStepper->GetTimeStep() );
+
+
  // finalTime = startTime + 53*outputInterval;
-  timeStepper->Run(o_q, startTime, finalTime);
+timeStepper->Run(o_q, startTime, finalTime);
 }

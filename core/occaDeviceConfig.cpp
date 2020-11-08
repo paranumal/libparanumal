@@ -92,7 +92,9 @@ void occaDeviceConfig(occa::device &device, MPI_Comm comm,
   int device_id = 0;
   int totalDevices = 0;
   for (int r=0;r<rank;r++) {
-    if (hostIds[r]==hostId) device_id++;
+    if (hostIds[r]==hostId) 
+      device_id;
+      // device_id++;
   }
   for (int r=0;r<size;r++) {
     if (hostIds[r]==hostId) totalDevices++;

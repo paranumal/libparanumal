@@ -57,6 +57,10 @@ SOFTWARE.
   const dfloat ac = 0.70;          \
   (*q) = pow( (x-1.0)*(x-1.0) + (y-1.0)*(y-1.0) + 0.1, 1.0 )*(sqrt((x-xc)*(x-xc) + (y-yc)*(y-yc)) - rc) ; \
 }
+
+
+//(*q) = (sqrt((x-xc)*(x-xc) + (y-yc)*(y-yc)) - rc) ; \
+  // (*q) = pow( (x-1.0)*(x-1.0) + (y-1.0)*(y-1.0) + 0.1, 1.0 )*(sqrt((x-xc)*(x-xc) + (y-yc)*(y-yc)) - rc) ; \
  
 // LS Advective field
 #define lssAdvectionField2D(t, x, y, q, u, v) \

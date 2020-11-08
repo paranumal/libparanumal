@@ -255,4 +255,30 @@ void mesh_t::ParallelConnect(){
   hlong NelementsLocal = (hlong) Nelements;
   NelementsGlobal = 0;
   MPI_Allreduce(&NelementsLocal, &NelementsGlobal, 1, MPI_HLONG, MPI_SUM, comm);
+
+
+  // if(rank==0){
+
+  //   for(int e=0; e<Nelements; e++){
+  //     for(int f=0; f<Nfaces; f++){
+  //     printf("%d %d %d %d %d %d \n", rank, e, f, EToE[e*Nfaces+f], EToF[e*Nfaces + f], EToP[e*Nfaces + f]);
+  //   }
+  //   printf("\n");
+  // }
+
+
+  // }
+
+  //  if(rank==1){
+
+  //   for(int e=0; e<Nelements; e++){
+  //     for(int f=0; f<Nfaces; f++){
+  //     printf("%d %d %d %d %d %d \n", rank, e, f, EToE[e*Nfaces+f], EToF[e*Nfaces + f], EToP[e*Nfaces + f]);
+  //   }
+  //   printf("\n");
+  // }
+
+
+  // }
+
 }

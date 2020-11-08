@@ -28,18 +28,6 @@ SOFTWARE.
 #include "subcell2D.hpp"
 // #include "mesh3D.hpp"
 
-// subcellTri2D::subcellTri2D(mesh_t& _mesh, settings_t& _settings):
-//    subcell_t(_mesh, _settings) {
-//    _settings.getSetting("SUBCELL NUMBER", N);
-//     // Nverts = mesh.Nverts; // Subcell could be in different topology but not now
-//     // Nfaces = mesh.Nfaces; 
-//     // // Currently equispaced triangle
-//     // Nsubcells = N*N;  // 
-//     // // Number of nodes
-//     // Np = 0.5*(N+1)*(N+2);
-//     //
-//    }
-
 subcellTri2D::subcellTri2D(solver_t& _solver):
    subcell_t(_solver) {
    settings.getSetting("SUBCELL NUMBER", N);
@@ -57,12 +45,12 @@ void subcellTri2D::SetupDetector(){
   // Set mode map info for skyline 
   Nmodes   = mesh.Np; 
   Nmodes1D = mesh.N+1; 
-  int Nq   = mesh.N + 1; 
+  // int Nq   = mesh.N + 1; 
 
   ModeMap  = (int *) malloc(Nmodes*sizeof(int));
   ModeInfoTri2D(mesh.N, ModeMap); 
   //
-
+  
   LSF = (dfloat *) malloc(mesh.N*sizeof(dfloat));
   LeastSquaresFit(mesh.N, LSF);
 
@@ -71,7 +59,12 @@ void subcellTri2D::SetupDetector(){
 
   // Get inverse Vandermonde Matrix 
   dfloat *invV = (dfloat *) malloc(mesh.Np*mesh.Np*sizeof(dfloat));
-  mesh.VandermondeTri2D(mesh.N, mesh.Np, mesh.r, mesh.s, invV);
+  dfloat *V    = (dfloat *) malloc(mesh.Np*mesh.Np*sizeof(dfloat));
+
+  mesh.VandermondeTri2D(mesh.N, mesh.Np, mesh.r, mesh.s, V);
+  for(int n=0; n<mesh.Np*mesh.Np; n++)
+    invV[n] = V[n]; 
+
   matrixInverse(mesh.Np, invV); 
   // Create transpose
   invVT = (dfloat *) malloc(mesh.Np*mesh.Np*sizeof(dfloat));
@@ -79,36 +72,69 @@ void subcellTri2D::SetupDetector(){
     for(int n=0; n<mesh.Np; n++)
       invVT[n+m*mesh.Np]  = invV[m+n*mesh.Np]; 
 
+
+
+  // Create Highest Mode Version :MDH  
+  dfloat *trnMods = (dfloat*) calloc(mesh.Np, sizeof(dfloat)); 
+  // cut out Nth order, N+1 mods
+  for(int n=0; n<(mesh.Np -(mesh.N+1)); n++){
+    int modid = ModeMap[n]; 
+    trnMods[modid] = 1.0; 
+  }
+
+  dfloat *tmp       = (dfloat *)malloc(mesh.Np*mesh.Np*sizeof(dfloat)); 
+  interpNM1 = (dfloat *)malloc(mesh.Np*mesh.Np*sizeof(dfloat));
+
+  for(int n=0; n<mesh.Np; n++){
+    const dfloat cut = trnMods[n]; 
+    for(int m=0; m<mesh.Np; m++){
+      tmp[m + n*mesh.Np] = cut*invV[m + n*mesh.Np]; 
+    }
+  }
+
+
+for(int n=0; n<mesh.Np; n++){
+  for(int m=0; m<mesh.Np; m++){
+    dfloat  dump= 0; 
+    for(int i=0; i<mesh.Np; i++){
+    dump += V[n*mesh.Np + i]*tmp[i*mesh.Np + m];
+    }
+    interpNM1[m + n*mesh.Np] = dump; 
+  }
+ }
+
+
+
   
-  // Create 1D version
-  dfloat *invV1D = (dfloat *) malloc(Nq*Nq*sizeof(dfloat));
-  InvVandermonde1D(mesh.N, invV1D); 
+  // // Create 1D version
+  // dfloat *invV1D = (dfloat *) malloc(Nq*Nq*sizeof(dfloat));
+  // InvVandermonde1D(mesh.N, invV1D); 
 
-  invVT1D = (dfloat *) malloc(Nq*Nq*sizeof(dfloat));
-   for(int m=0; m<Nq; m++)
-    for(int n=0; n<Nq; n++)
-      invVT1D[n+m*Nq]  = invV1D[m+n*Nq]; 
+  // invVT1D = (dfloat *) malloc(Nq*Nq*sizeof(dfloat));
+  //  for(int m=0; m<Nq; m++)
+  //   for(int n=0; n<Nq; n++)
+  //     invVT1D[n+m*Nq]  = invV1D[m+n*Nq]; 
 
-  // int Nedges = 3; 
-  edgeNodes = (int *) malloc(Nedges*Nq*sizeof(int));
-  EdgeNodes(edgeNodes);
+  // // int Nedges = 3; 
+  // edgeNodes = (int *) malloc(Nedges*Nq*sizeof(int));
+  // EdgeNodes(edgeNodes);
 
   
-  dfloat *r1D    = (dfloat *) malloc(Nq*sizeof(dfloat));
-  MM1D           = (dfloat *) malloc(Nq*Nq*sizeof(dfloat));
-  dfloat *V1D    = (dfloat *) malloc(Nq*Nq*sizeof(dfloat));
-  mesh.JacobiGLL(mesh.N, r1D); //Gauss-Legendre-Lobatto nodes
-  mesh.Vandermonde1D(mesh.N, Nq, r1D, V1D);
-  mesh.MassMatrix1D(Nq, V1D, MM1D); 
+  // dfloat *r1D    = (dfloat *) malloc(Nq*sizeof(dfloat));
+  // MM1D           = (dfloat *) malloc(Nq*Nq*sizeof(dfloat));
+  // dfloat *V1D    = (dfloat *) malloc(Nq*Nq*sizeof(dfloat));
+  // mesh.JacobiGLL(mesh.N, r1D); //Gauss-Legendre-Lobatto nodes
+  // mesh.Vandermonde1D(mesh.N, Nq, r1D, V1D);
+  // mesh.MassMatrix1D(Nq, V1D, MM1D); 
 
 
   // Initialize Element List on host
-  ElementList = (dlong *) calloc(mesh.Nelements, sizeof(dlong)); 
+  ElementList = (dlong *) calloc((mesh.Nelements+mesh.totalHaloPairs), sizeof(dlong)); 
 
 
   free(invV); 
-  free(invV1D); 
-  free(V1D); 
+  // free(invV1D); 
+  // free(V1D); 
 
 
 }
@@ -118,13 +144,12 @@ void subcellTri2D::OccaSetup(){
  // occa::properties kernelInfo = props; //copy base properties
  occa::properties &kernelInfo = props; 
  // Detector Related
- o_ElementList = device.malloc(mesh.Nelements*sizeof(dlong), ElementList);
- // o_ElementList = device.malloc(mesh.Nelements*sizeof(dfloat), ElementList);
+ o_ElementList = device.malloc((mesh.Nelements+mesh.totalHaloPairs)*sizeof(dlong), ElementList);
  o_invVT       = device.malloc(mesh.Np*mesh.Np*sizeof(dfloat), invVT); 
 
- o_invVT1D     = device.malloc(mesh.Nfp*mesh.Nfp*sizeof(dfloat), invVT1D); 
- o_MM1D        = device.malloc(mesh.Nfp*mesh.Nfp*sizeof(dfloat), MM1D); 
- o_edgeNodes   = device.malloc(Nedges*mesh.Nfp*sizeof(int), edgeNodes); 
+ // o_invVT1D     = device.malloc(mesh.Nfp*mesh.Nfp*sizeof(dfloat), invVT1D); 
+ // o_MM1D        = device.malloc(mesh.Nfp*mesh.Nfp*sizeof(dfloat), MM1D); 
+ // o_edgeNodes   = device.malloc(Nedges*mesh.Nfp*sizeof(int), edgeNodes); 
 
  o_ModMap      = device.malloc(mesh.Np*sizeof(int), ModeMap); 
  o_LSF         = device.malloc(mesh.N*sizeof(dfloat), LSF); 
@@ -184,7 +209,19 @@ o_SLIFTT  = device.malloc(mesh.Np*N*Nfaces*sizeof(dfloat), SLIFTT);
 free(SLIFTT);
 
 
- 
+// Projection Matrix
+ dfloat *interpNM1T = (dfloat *) malloc(mesh.Np*mesh.Np*sizeof(dfloat)); 
+
+ for(int n=0; n<mesh.Np; n++){
+  for(int m=0; m<mesh.Np; m++){
+    interpNM1T[m*mesh.Np +n] = interpNM1[n*mesh.Np + m]; 
+  }
+ }
+ o_interpNM1T  = device.malloc(mesh.Np*mesh.Np*sizeof(dfloat), interpNM1T);
+ free(interpNM1T); 
+
+
+
  // const dlong Nlocal = mesh.Nelements*Nsubcells; 
  const dlong Ntotal = (mesh.Nelements+mesh.totalHaloPairs)*Nsubcells;  
  o_vgeo = device.malloc(Ntotal*Nvgeo*sizeof(dfloat), vgeo); 
@@ -215,7 +252,7 @@ free(SLIFTT);
   kernelInfo["defines/" "s_N"]     = N; 
   kernelInfo["defines/" "s_Nint"]  = Nint; 
   kernelInfo["defines/" "s_Next"]  = Next; 
-  kernelInfo["defines/" "s_Nedges"]  = Nedges; 
+  // kernelInfo["defines/" "s_Nedges"]  = Nedges; 
   
 
   kernelInfo["defines/" "s_DGDG_TYPE"]  = (int)DGDG_TYPE; 
@@ -227,7 +264,7 @@ free(SLIFTT);
   kernelInfo["defines/" "s_maxNodes"] = maxNodes;  
 
   kernelInfo["defines/" "s_NfacesNfp"] = Nfaces*N;   
-  kernelInfo["defines/" "s_NedgesNq"]  = Nedges*(N+1);   
+  // kernelInfo["defines/" "s_NedgesNq"]  = Nedges*(N+1);   
 
   int Nblock = 1; //1024/ maxNodes; 
   kernelInfo["defines/" "s_Nblocks"] = Nblock; 
@@ -269,7 +306,7 @@ if(settings.compareSetting("SUBCELL MINOR GRID","EQUISPACED")){
   // Using triangle does not have to be!!!!
   Nverts = mesh.Nverts; // Subcell could be in different topology but not now
   Nfaces = mesh.Nfaces; 
-  Nedges = mesh.Nfaces; 
+  // Nedges = mesh.Nfaces; 
   // Currently equispaced triangle
   Nsubcells = N*N;  // 
   // Number of nodes in this triangulation
@@ -291,8 +328,33 @@ if(settings.compareSetting("SUBCELL MINOR GRID","EQUISPACED")){
   EquispacedEToVTri2D(N, mEToV);
 
   // Create Local Face to Element and Face To Face; 
-}else{
-  printf("This minor grid method has not been implemented yet \n ");
+}else if(settings.compareSetting("SUBCELL MINOR GRID","WARPBLEND")){
+  Nverts = mesh.Nverts; // Subcell could be in different topology but not now
+  Nfaces = mesh.Nfaces; 
+  // Nedges = mesh.Nfaces; 
+  // Currently equispaced triangle
+  Nsubcells = N*N;  // 
+  // Number of nodes in this triangulation
+  Np = 0.5*(N+1)*(N+2);
+
+  NfaceVertices = mesh.NfaceVertices; 
+  faceVertices  = mesh.faceVertices; 
+
+  vr = (dfloat *)malloc(Np*sizeof(dfloat));
+  vs = (dfloat *)malloc(Np*sizeof(dfloat));
+  // Currently very simple tesselation
+  mesh.NodesTri2D(N, vr, vs); 
+  
+  mEToV = (int*) malloc(Nsubcells*Nverts*sizeof(int));
+  WBNodesEToVTri2D(N, mEToV);
+  
+  // for(int s=0; s<Nsubcells; s++){
+  //   for(int v=0; v<Nverts; v++){
+  //     printf("%d ", mEToV[s*Nverts + v]);
+  //   }
+  //   printf("\n");
+  // } 
+
 }
 
 
@@ -344,7 +406,7 @@ for(int s=0; s<Nsubcells; s++){
   const dfloat yv3 = vs[v3];    
   // A_subcell/A_reference
   mJ[s] = 0.5*((xv2-xv1)*(yv3-yv1) - (xv3-xv1)*(yv2-yv1))/2.0;
-  // printf("J = %.12e", mJ[s]);
+  // printf("J = %.12e \n", mJ[s]);
 }
 
 // Required for mixed element lifting
@@ -355,29 +417,9 @@ for(int n=0; n<Nfaces*N; n++){
  if(lid<mesh.Nfp){
   const int dgid = face*N + lid; 
   mDGID[dgid]  = face*mesh.Nfp + lid; 
+  // printf("%d %d\n", dgid, mDGID[dgid]);
  }
 }
-
-#if 0
-  for(int e=0; e<Nsubcells; e++)
-    printf("%d %d %d \n", EToV[e*Nverts + 0]+1,EToV[e*Nverts + 1]+1,EToV[e*Nverts + 2]+1 );
-
-  for(int f=0; f<mesh.Nfaces; f++)
-    for(int n=0; n<mesh.Nfp; n++)
-      printf("f: %d n= %d \n", f, mesh.faceNodes[f*mesh.Nfp + n]);
-
-  rc = (dfloat *)malloc(Nsubcells*sizeof(dfloat));
-  sc = (dfloat *)malloc(Nsubcells*sizeof(dfloat));
-
-  for(int e=0; e<Nsubcells;e++){
-    dfloat vr = 0.0, vs = 0.0; 
-    for(int n=0; n<Nverts; n++){
-     vr += sr[mEToV[e*Nverts + n]]; 
-     vs += ss[mEToV[e*Nverts + n]]; 
-    }
-    rc[e] = vr/Nverts; sc[e] = vs/Nverts; 
-  }
-#endif
 }
 
 
@@ -388,6 +430,7 @@ void subcellTri2D::GeometricFactors(){
                            sizeof(dfloat));
 
   // Compute Volume Geometric Facors
+  // for(dlong e=0; e<(mesh.Nelements+mesh.totalHaloPairs); e++){
   for(dlong e=0; e<mesh.Nelements; e++){
     dlong id = e*Nverts;
     const dfloat xe1 = mesh.EX[id+0]; /* x-coordinates of vertices */
@@ -414,8 +457,10 @@ void subcellTri2D::GeometricFactors(){
 
      const dfloat rn1 = vr[sv1];    
      const dfloat sn1 = vs[sv1];    
+
      const dfloat rn2 = vr[sv2];    
      const dfloat sn2 = vs[sv2];    
+     
      const dfloat rn3 = vr[sv3];    
      const dfloat sn3 = vs[sv3];    
 
@@ -433,14 +478,15 @@ void subcellTri2D::GeometricFactors(){
     }
   }
   // //Use mesh halo exchange 
-  // mesh.halo->Exchange(vgeo, Nvgeo*Nsubcells, ogs_dfloat);
+  mesh.halo->Exchange(vgeo, Nvgeo*Nsubcells, ogs_dfloat);
 
   
   // Compute Surface Geometric Factors
   sgeo = (dfloat*) calloc((mesh.Nelements+mesh.totalHaloPairs)*Nsubcells*Nfaces*Nsgeo, 
                            sizeof(dfloat));
 
-  for(dlong e=0; e<(mesh.Nelements + mesh.totalHaloPairs); e++){
+  // for(dlong e=0; e<(mesh.Nelements + mesh.totalHaloPairs); e++){
+  for(dlong e=0; e<mesh.Nelements; e++){
     dlong id = e*Nverts;
     const dfloat xe1 = mesh.EX[id+0]; /* x-coordinates of vertices */
     const dfloat xe2 = mesh.EX[id+1];
@@ -511,7 +557,6 @@ void subcellTri2D::GeometricFactors(){
   }
 
   // Create Boundary Info: Might be needed
-  // for(dlong e=0; e<(mesh.Nelements+mesh.totalHaloPairs); e++){
   for(dlong e=0; e<mesh.Nelements; e++){
     for(int f = 0; f<Nfaces; f++){
       int bc = mesh.EToB[e*mesh.Nfaces + f]; 
@@ -528,6 +573,10 @@ void subcellTri2D::GeometricFactors(){
       }
     }
   }
+
+ mesh.halo->Exchange(sgeo, Nsgeo*Nsubcells*Nfaces, ogs_dfloat);
+
+
 }
 
 
@@ -538,13 +587,16 @@ int  cubNp = 0;
 dfloat *cubr, *cubs, *cubw; 
 mesh.CubatureNodesTri2D(cubN, &cubNp, &cubr, &cubs, &cubw); 
 
-PM = (dfloat*)malloc(Nsubcells*mesh.Np*sizeof(dfloat));
+// PM = (dfloat*) malloc(Nsubcells*mesh.Np*sizeof(dfloat));
 
-dfloat *Ptemp = (dfloat*)malloc(Nsubcells*mesh.Np*sizeof(dfloat));
 
 dfloat *_cx = (dfloat *)malloc(cubNp*sizeof(dfloat));  
 dfloat *_cy = (dfloat *)malloc(cubNp*sizeof(dfloat));  
 
+// for(int s=0; s<cubNp; s++)
+//   printf("%d %d %.4f \n", cubN, cubNp, cubw[s]);
+
+dfloat *Ptemp = (dfloat*)malloc(Nsubcells*mesh.Np*sizeof(dfloat));
 for(int s=0; s<Nsubcells; s++){
   
   // First compute cubature nodes on this element
@@ -560,8 +612,9 @@ for(int s=0; s<Nsubcells; s++){
   for(int n=0; n<cubNp; n++){
     _cx[n] = -0.5*(cubr[n]+cubs[n])*xe1 + 0.5*(1+cubr[n])*xe2 + 0.5*(1+cubs[n])*xe3;
     _cy[n] = -0.5*(cubr[n]+cubs[n])*ye1 + 0.5*(1+cubr[n])*ye2 + 0.5*(1+cubs[n])*ye3;
-  }
 
+  }
+ 
   int sk=0; 
   for(int i=0; i<mesh.N+1; i++){
       for(int j=0; j<mesh.N+1-i; j++){
@@ -570,6 +623,9 @@ for(int s=0; s<Nsubcells; s++){
         for(int n=0; n<cubNp; n++){
           dfloat pn = 0; 
           mesh.OrthonormalBasisTri2D(_cx[n], _cy[n], i, j, &pn);
+          // if(s==0){
+          //   printf("%.8e \n", pn);
+          // }
           phi += mJ[s]*cubw[n]*pn; 
         } 
         // Divide by the volume of subcell now
@@ -577,14 +633,25 @@ for(int s=0; s<Nsubcells; s++){
         sk++;
     }
   }
-
 }
 
+
+// for(int i=0; i<Nsubcells; i++){
+//   for(int j=0; j<mesh.Np; j++){
+//     printf("%.4f ", Ptemp[i*mesh.Np + j]);
+//   }
+//   printf("\n");
+// }
+// printf("\n\n");
+
 // Get Vandermonde Matrix 
-dfloat *V = (dfloat *) malloc(mesh.Np*mesh.Np*sizeof(dfloat));
-mesh.VandermondeTri2D(mesh.N, mesh.Np, mesh.r, mesh.s, V);
+dfloat *V2D = (dfloat *) malloc(mesh.Np*mesh.Np*sizeof(dfloat));
+mesh.VandermondeTri2D(mesh.N, mesh.Np, mesh.r, mesh.s, V2D);
+
+
 // PM = Pt*V^-1
-matrixRightSolve(Nsubcells, mesh.Np, Ptemp, mesh.Np, mesh.Np, V, PM); 
+PM = (dfloat*)malloc(Nsubcells*mesh.Np*sizeof(dfloat));
+matrixRightSolve(Nsubcells, mesh.Np, Ptemp, mesh.Np, mesh.Np, V2D, PM); 
 // Pseudo Inverse of PM to recontruct solution from FV
 // This is a overdetermined system which needs LS approximation 
 RM = (dfloat*)malloc(Nsubcells*mesh.Np*sizeof(dfloat));
@@ -592,6 +659,14 @@ for(int n=0; n<Nsubcells*mesh.Np; n++)
  RM[n] = PM[n];
 
 matrixPInverse(Nsubcells, mesh.Np, RM);
+
+
+// for(int i=0; i<Nsubcells; i++){
+//   for(int j=0; j<mesh.Np; j++){
+//     printf("%.4f ", PM[i*mesh.Np + j]);
+//   }
+//   printf("\n");
+// }
 
 // Create conservative face interpolation and its inverse
 // Required for DG-FV interface flux evaluation
@@ -668,7 +743,6 @@ for(int s=0; s<N; s++){
   for(int n=0; n<N*mesh.Nfp; n++)
     rtemp1[n] = ptemp1[n]; 
   
-  printf("B = %d nesh.Nfp = %d\n", N, mesh.Nfp);
   matrixPInverse(N, mesh.Nfp, rtemp1);
 
   // fill operators
@@ -680,11 +754,19 @@ for(int s=0; s<N; s++){
   }
 }
 
+// for(int j=0; j<mesh.Nfp; j++){
+//   for(int i=0; i<N; i++){
+//     printf("%.4f ", RFM[j*N+ i]);
+//   }
+//   printf("\n");
+// }
+
 // Compute Subcell Lift Matrix
 
 SLIFT = (dfloat *)malloc(mesh.Np*Nfaces*N*sizeof(dfloat)); 
 
 for(int f=0; f<Nfaces; f++){
+
   for(int i=0; i<mesh.Np; i++){
     for(int j=0; j<N; j++){
       dfloat sum = 0; 
@@ -696,74 +778,88 @@ for(int f=0; f<Nfaces; f++){
     }
   }
 }
+
+
+  // for(int i=0; i<mesh.Np; i++){
+
+  //   for(int j=0; j<mesh.Nfaces*N; j++){
+  //     printf("%.4f ", SLIFT[i*N*Nfaces + j]);
+  //   }
+
+  //   printf("\n");
+  // }
+
+
+
+
  
 free(_fgr); free(r1D);      free(V1D); 
 free(ptemp0); free(ptemp1); free(rtemp1); 
 free(_cx);  free(_cy); 
 free(cubr); free(cubs); free(cubw);
-free(V);
+free(V2D);
 
 
 }
 
 
-void subcellTri2D::EdgeNodes(int *_edgeNodes){
+// void subcellTri2D::EdgeNodes(int *_edgeNodes){
 
-int Nq     = mesh.N + 1; 
-// printf("%d\n", Nq);
+// int Nq     = mesh.N + 1; 
+// // printf("%d\n", Nq);
 
- int cnt[3];
- int order[3]; 
-  for (int i=0;i<Nedges;i++){
-    cnt[i]=0; order[i] = 0; 
-  } 
+//  int cnt[3];
+//  int order[3]; 
+//   for (int i=0;i<Nedges;i++){
+//     cnt[i]=0; order[i] = 0; 
+//   } 
 
-  dfloat deps = 1.;
-  while((1.+deps)>1.)
-    deps *= 0.5;
+//   dfloat deps = 1.;
+//   while((1.+deps)>1.)
+//     deps *= 0.5;
 
-  const dfloat NODETOL = 1000.*deps;
-// No that ordering is important to use the same Mass Matrix and Vandermonde
+//   const dfloat NODETOL = 1000.*deps;
+// // No that ordering is important to use the same Mass Matrix and Vandermonde
   
-   for (int n=0;n<mesh.Np;n++) {
-    if(fabs(mesh.s[n]+1)<NODETOL){
-      _edgeNodes[0*Nq+(cnt[0]++)] = n;
-      if(order[0]==0)
-        order[0] = fabs(mesh.r[n] +1.0) < NODETOL ? 1:2;  
-    }
-    if(fabs(mesh.r[n]+mesh.s[n])<NODETOL){
-      _edgeNodes[1*Nq+(cnt[1]++)] = n;
-      if(order[1]==0)
-        order[1] = fabs(mesh.r[n] + 1.0) < NODETOL ? 1:2;  
-    }
-    if(fabs(mesh.r[n]+1)<NODETOL){
-      _edgeNodes[2*Nq+(cnt[2]++)] = n;
-      if(order[2]==0)
-        order[2] = fabs(mesh.s[n] +1.0) < NODETOL ? 1:2;  
-    }
-  }
+//    for (int n=0;n<mesh.Np;n++) {
+//     if(fabs(mesh.s[n]+1)<NODETOL){
+//       _edgeNodes[0*Nq+(cnt[0]++)] = n;
+//       if(order[0]==0)
+//         order[0] = fabs(mesh.r[n] +1.0) < NODETOL ? 1:2;  
+//     }
+//     if(fabs(mesh.r[n]+mesh.s[n])<NODETOL){
+//       _edgeNodes[1*Nq+(cnt[1]++)] = n;
+//       if(order[1]==0)
+//         order[1] = fabs(mesh.r[n] + 1.0) < NODETOL ? 1:2;  
+//     }
+//     if(fabs(mesh.r[n]+1)<NODETOL){
+//       _edgeNodes[2*Nq+(cnt[2]++)] = n;
+//       if(order[2]==0)
+//         order[2] = fabs(mesh.s[n] +1.0) < NODETOL ? 1:2;  
+//     }
+//   }
 
- // Now but them in crrect order i.e. always starts with -1 and end with 1 order
+//  // Now but them in crrect order i.e. always starts with -1 and end with 1 order
 
-int *tmpList = (int *) malloc(Nq*sizeof(int)); 
+// int *tmpList = (int *) malloc(Nq*sizeof(int)); 
 
-for(int e = 0; e<Nedges; e++){
+// for(int e = 0; e<Nedges; e++){
   
-  if(order[e] == 2){
+//   if(order[e] == 2){
     
-    for(int n=0; n<Nq; n++)      
-      tmpList[n] = _edgeNodes[e*Nq + n];
+//     for(int n=0; n<Nq; n++)      
+//       tmpList[n] = _edgeNodes[e*Nq + n];
 
-    for(int n=0; n<Nq; n++)      
-     _edgeNodes[e*Nq + n] = tmpList[(Nq -1)-n]; 
+//     for(int n=0; n<Nq; n++)      
+//      _edgeNodes[e*Nq + n] = tmpList[(Nq -1)-n]; 
     
- }
+//  }
 
-// for(int n = 0; n<Nq; n++)
-//   printf("%d %d %d\n", e, _edgeNodes[e*Nq + n], mesh.faceNodes[e*mesh.Nfp + n]);
+// // for(int n = 0; n<Nq; n++)
+// //   printf("%d %d %d\n", e, _edgeNodes[e*Nq + n], mesh.faceNodes[e*mesh.Nfp + n]);
 
 
-}
+// }
  
 
-}
+// }

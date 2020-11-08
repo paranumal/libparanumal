@@ -50,7 +50,7 @@ void lss_t::rhsf_subcell(occa::memory& o_Q, occa::memory &o_sQ, occa::memory& o_
 
 
 void lss_t::Advection(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
-
+ 
 // extract q halo on DEVICE
   traceHalo->ExchangeStart(o_Q, 1, ogs_dfloat);
 
@@ -186,18 +186,12 @@ reconstructKernel(mesh.Nelements,
 void lss_t::Redistance_Subcell(occa::memory& o_Q, occa::memory & o_sQ, 
                                 occa::memory& o_RHS, occa::memory& o_sRHS, const dfloat T){
 
-    // AK: Will check MPI later:  // extract q halo on DEVICE
+    // extract q halo on DEVICE
     // traceHalo->ExchangeStart(o_Q, 1, ogs_dfloat);
 
     DetectTroubledCells(o_Q, subcell->o_ElementList); 
 
-    const int all = 0; // all elements, do not use element list
-    projectKernel(mesh.Nelements,
-                  all,  
-                  subcell->o_ElementList, 
-                  subcell->o_PMT,
-                  o_Q, 
-                  o_sQ);
+    mesh.halo->ExchangeStart(o_Q, mesh.Np, ogs_dfloat); 
 
     // Compute dq/dx for DG and DGFV elements
      partialRedistanceVolumeKernel(mesh.Nelements,
@@ -212,20 +206,7 @@ void lss_t::Redistance_Subcell(occa::memory& o_Q, occa::memory & o_sQ,
                                    o_Q,
                                    o_gradq);
 
-    // Reconstruct internal subcell FV face values using WENO2:FVFV elements
-     reconstructInternalFaceKernel(mesh.Nelements, 
-                                  subcell->o_ElementList,
-                                  subcell->o_ielist,
-                                  subcell->o_vgeo,
-                                  subcell->o_sgeo, 
-                                  subcell->o_emapP,
-                                  subcell->o_fmapP, 
-                                  o_Q, 
-                                  o_sQ,
-                                  o_sface);  
-     // AK: Will check MPI later
-     // traceHalo->ExchangeFinish(o_Q, 1, ogs_dfloat);
-
+     const int all = 0; // all elements->do not use element list
      // Project DG solution to FV face values directly for DGFV type
      projectDGKernel(mesh.Nelements,
                     all, 
@@ -238,33 +219,10 @@ void lss_t::Redistance_Subcell(occa::memory& o_Q, occa::memory & o_sQ,
                     o_sface); 
 
 
-     // Reconstruct external subcell FV face values using WENO2
-     reconstructExternalFaceKernel(mesh.Nelements, 
-                                  subcell->o_ElementList,
-                                  subcell->o_eelist,
-                                  subcell->o_vgeo,
-                                  subcell->o_sgeo, 
-                                  subcell->o_emapP,
-                                  subcell->o_fmapP, 
-                                  o_Q, 
-                                  o_sQ,
-                                  o_sface);   
+    mesh.halo->ExchangeFinish(o_Q, mesh.Np, ogs_dfloat); 
 
-     // FV compute 
-     subcellComputeKernel(mesh.Nelements, 
-                              subcell->o_ElementList,
-                              subcell->o_emapP,
-                              subcell->o_fmapP, 
-                              subcell->o_RMT,
-                              subcell->o_vgeo,
-                              subcell->o_sgeo, 
-                              o_Q,
-                              o_ssgnq,
-                              o_sface, 
-                              o_sRHS);  
 
-#if 1
-     // DG elements
+     // Add the Contribution of DG Elements
      partialRedistanceSurfaceKernel(mesh.Nelements,
                 offset, 
                 subcell->o_ElementList,
@@ -284,62 +242,100 @@ void lss_t::Redistance_Subcell(occa::memory& o_Q, occa::memory & o_sQ,
 
 
 
-  // DG/FV elements 
-     mixedRedistanceSurfaceKernel(mesh.Nelements,
-                              offset, 
-                              subcell->o_ElementList,
-                              subcell->o_EToE, 
-                              mesh.o_EToB,
-                              mesh.o_sgeo,
-                              subcell->o_sgeo, 
-                              subcell->o_vgeo,
-                              mesh.o_LIFTT,
-                              subcell->o_SLIFTT,
-                              subcell->o_RFMT,
-                              mesh.o_vmapM,
-                              mesh.o_vmapP,
-                              subcell->o_emapP,
-                              subcell->o_fmapP, 
-                              subcell->o_mFToE,
-                              subcell->o_mFToF,
-                              subcell->o_mDGID,
-                              T,
-                              mesh.o_x,
-                              mesh.o_y,
-                              mesh.o_z,
-                              o_sgnq,
-                              o_Q,
-                              o_sface,
-                              o_gradq,
-                              o_RHS);
+    // Compute Cell-Centered Subcell Values 
+    projectKernel(mesh.Nelements + mesh.totalHaloPairs,
+                  all,  
+                  subcell->o_ElementList, 
+                  subcell->o_PMT,
+                  o_Q, 
+                  o_sQ);
+
+       
+#if 0 
+    // Reconstruct internal subcell FV face values using WENO2:FVFV elements
+     reconstructInternalFaceKernel(mesh.Nelements, 
+                                  subcell->o_ElementList,
+                                  subcell->o_ielist,
+                                  subcell->o_vgeo,
+                                  subcell->o_sgeo, 
+                                  subcell->o_emapP,
+                                  subcell->o_fmapP, 
+                                  o_Q, 
+                                  o_sQ,
+                                  o_sface);  
+
+
+     // Reconstruct external subcell FV face values using WENO2
+     reconstructExternalFaceKernel(mesh.Nelements, 
+                                  subcell->o_ElementList,
+                                  subcell->o_eelist,
+                                  subcell->o_vgeo,
+                                  subcell->o_sgeo, 
+                                  subcell->o_emapP,
+                                  subcell->o_fmapP, 
+                                  o_Q, 
+                                  o_sQ,
+                                  o_sface);   
 #else
-     // DG + DG/FV elements 
-     partialRedistanceSurfaceKernel(mesh.Nelements,
-                              offset, 
+
+ // Reconstruct face values for all subcells 
+     reconstructFaceKernel(mesh.Nelements, 
+                          subcell->o_ElementList,
+                          subcell->o_vgeo,
+                          subcell->o_sgeo, 
+                          subcell->o_emapP,
+                          subcell->o_fmapP, 
+                          o_Q, 
+                          o_sQ,
+                          o_sface);   
+
+
+
+#endif
+
+
+     mesh.halo->Exchange(o_sface, subcell->Nsubcells*mesh.Nfaces, ogs_dfloat);
+
+    // FV compute 
+     subcellComputeKernel(mesh.Nelements, 
                               subcell->o_ElementList,
-                              subcell->o_EToE, 
-                              mesh.o_EToB,
-                              mesh.o_sgeo,
-                              subcell->o_sgeo, 
-                              subcell->o_vgeo,
-                              mesh.o_LIFTT,
-                              subcell->o_RFMT,
-                              mesh.o_vmapM,
-                              mesh.o_vmapP,
                               subcell->o_emapP,
                               subcell->o_fmapP, 
-                              subcell->o_mFToE,
-                              subcell->o_mFToF,
-                              T,
-                              mesh.o_x,
-                              mesh.o_y,
-                              mesh.o_z,
-                              o_sgnq,
+                              subcell->o_RMT,
+                              subcell->o_vgeo,
+                              subcell->o_sgeo, 
                               o_Q,
-                              o_sface,
-                              o_gradq,
-                              o_RHS);
-#endif
+                              o_ssgnq,
+                              o_sface, 
+                              o_sRHS);  
+
+      mixedRedistanceSurfaceKernel(mesh.Nelements,
+                          offset, 
+                          subcell->o_ElementList,
+                          subcell->o_EToE, 
+                          mesh.o_EToB,
+                          mesh.o_sgeo,
+                          subcell->o_sgeo, 
+                          subcell->o_vgeo,
+                          mesh.o_LIFTT,
+                          subcell->o_SLIFTT,
+                          subcell->o_RFMT,
+                          mesh.o_vmapM,
+                          mesh.o_vmapP,
+                          subcell->o_emapP,
+                          subcell->o_fmapP, 
+                          subcell->o_mFToE,
+                          subcell->o_mFToF,
+                          subcell->o_mDGID,
+                          T,
+                          mesh.o_x,
+                          mesh.o_y,
+                          mesh.o_z,
+                          o_sgnq,
+                          o_Q,
+                          o_sface,
+                          o_gradq,
+                          o_RHS);
 }
 
 
@@ -347,30 +343,37 @@ void lss_t::DetectTroubledCells(occa::memory& o_Q, occa::memory& o_ElementList){
 
 // Currently modal decay + skyline only
 if(subcellStabilization){
-  // skylineKernel(mesh.Nelements,
-  //               mesh.o_ggeo,
-  //               subcell->o_ModMap, 
-  //               mesh.o_MM,
-  //               subcell->o_invVT,
-  //               subcell->o_LSF,
-  //               subcell->o_BLD, 
-  //               o_Q,
-  //               o_ElementList); 
 
-  skyline1DKernel(mesh.Nelements,
-                mesh.o_sgeo,
-                subcell->o_edgeNodes, 
-                subcell->o_MM1D,
-                subcell->o_invVT1D,
+  if(settings.compareSetting("INDICATOR TYPE", "MDA")){
+  indicatorMDAKernel(mesh.Nelements,
+                mesh.o_ggeo,
+                subcell->o_ModMap, 
+                mesh.o_MM,
+                subcell->o_invVT,
                 subcell->o_LSF,
                 subcell->o_BLD, 
                 o_Q,
                 o_ElementList); 
 
+
+  }else if(settings.compareSetting("INDICATOR TYPE", "MDH")){
+  indicatorMDHKernel(mesh.Nelements,
+                mesh.o_ggeo,
+                mesh.o_MM,
+                subcell->o_interpNM1T,
+                o_Q,
+                o_ElementList); 
+  }else{
+    printf("The detector type is not impmented\n");
+  }
+
+  // exchange element info before 
+  mesh.halo->Exchange(o_ElementList, 1, ogs_dlong);
+
+  // Find neighs i.e. DG neighs of FV elements....
   findNeighKernel(mesh.Nelements,
                  subcell->o_EToE, 
-                 o_ElementList); 
-
-    
+                 o_ElementList);     
 }
+
 }

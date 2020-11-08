@@ -26,19 +26,19 @@ SOFTWARE.
 
 // Level-Set function
 #define lssInitialConditions2D(t, x, y, q) \
-{                                       \
-  const dfloat xc = 0.50; 			    \
+{                                 \
+  const dfloat xc = 0.50; 			  \
   const dfloat yc = 0.75; 				\
-  dfloat rc = 0.15; 					\
-  *(q) = sqrt((x-xc+0.5)*(x-xc+0.5) + (y-yc+0.5)*(y-yc+0.5)) - rc; ; \
+  dfloat rc = 0.15; 					    \
+  *(q) = sqrt((x-xc)*(x-xc) + (y-yc)*(y-yc)) - rc; ; \
 }
 
 // LS Advective field
 #define lssAdvectionField2D(t, x, y, q, u, v) \
 {                                       \
   const dfloat PERIOD = 8.f; 			\
-  const dfloat xs = x + 0.5; 			\
-  const dfloat ys = y + 0.5; 			\
+  const dfloat xs = x; 			\
+  const dfloat ys = y; 			\
  *(u) = sin(M_PI*xs)*sin(M_PI*xs)*sin(2.f*M_PI*ys)*cos(M_PI*t/PERIOD); \
  *(v) =-sin(M_PI*ys)*sin(M_PI*ys)*sin(2.f*M_PI*xs)*cos(M_PI*t/PERIOD); \
 }

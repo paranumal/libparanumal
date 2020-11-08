@@ -49,7 +49,6 @@ void subcell_t::ModeInfoTri2D(int _N, int *_ModeMap){
 
 void subcell_t::EquispacedEToVTri2D(int _N, int *_EToV){
   int _Nverts = 3;
-#if 1
   int cnt=0;
   int sk=0;
   for (int j=0;j<_N;j++) {
@@ -70,30 +69,21 @@ void subcell_t::EquispacedEToVTri2D(int _N, int *_EToV){
     }
     sk++;
   }
-#else
+}
 
+
+void subcell_t::WBNodesEToVTri2D(int _N, int *_EToV){
+  int _Nverts = 3;
   int cnt=0;
   int sk=0;
-  // First create downward facing triangles 
   for (int j=0;j<_N;j++) {
-
     int shift = _N+1-j; //number of nodes in this row
 
     for (int i=0;i<_N-j;i++) { // upward triangle
       _EToV[cnt*_Nverts+0] = sk  ;
       _EToV[cnt*_Nverts+1] = sk+1;
       _EToV[cnt*_Nverts+2] = sk+shift;
-       cnt++;
-      sk++;
-    }
-    sk++;
-  }
-  
-  // downward facing triangles, these are totally local elements
-  sk = 0; 
-  for (int j=0;j<_N;j++) {
-    int shift = _N+1-j; //number of nodes in this row
-    for (int i=0;i<_N-j;i++) { 
+      cnt++;
       if (i!=_N-j-1) { // downward triangle
         _EToV[cnt*_Nverts+0] = sk+shift+1; 
         _EToV[cnt*_Nverts+1] = sk+shift;
@@ -103,10 +93,11 @@ void subcell_t::EquispacedEToVTri2D(int _N, int *_EToV){
       sk++;
     }
     sk++;
-}
-#endif  
+  }
 
 }
+
+
 
 
 
