@@ -24,6 +24,7 @@ SOFTWARE.
 
 */
 
+#if 0
 @kernel void weightedInnerProd(const dlong Nblocks,
                                const dlong N,
                                @restrict const  dfloat *w,
@@ -70,70 +71,87 @@ SOFTWARE.
     for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  1) wxy[b] = s_wxy[0] + s_wxy[1];
   }
 }
+#else
 
-#if 0
-// barrier avoiding (partial) reduction
-@kernel void weightedInnerProduct2(const int N,
-                                  @restrict const  dfloat *  w,
-                                  @restrict const  dfloat *  x,
-                                  @restrict const  dfloat *  y,
-                                  @restrict dfloat *  wxy){
+@kernel void weightedInnerProd(const int NB,
+			       const int N,
+			       @restrict const dfloat *ww,
+			       @restrict const dfloat *x,
+			       @restrict const dfloat *y,
+			       @restrict dfloat *dot){
+  
+#define USE_HIP 1
+  
+#if USE_HIP==1
+#define p_SIMD 64
+#define p_NW 4
+#else
+#define p_SIMD 32
+#define p_NW 8
+#endif
 
-#define G 8
-#define S 32
+  for(int b=0;b<NB;++b;@outer(0)){
 
-  // loop over blocks
-  for(int b=0;b<(N+G*S-1)/(G*S);++b;@outer(0)){
+    @shared dfloat s_dot[p_NW];
+    
+    // assume NT is a multiple of p_WARP
+    for(int w=0;w<p_NW;++w;@inner(1)){
+      for(int t=0;t<p_SIMD;++t;@inner(0)){
+	dfloat res = 0;
+	int n =  t + p_SIMD*w + b*p_NW*p_SIMD;
 
-    @shared volatile dfloat s_a[G][S];
-    @shared volatile dfloat s_b[G];
+	// do this second
+	while(n<N){
+	  res += ww[n]*x[n]*y[n];
+	  n += p_NW*p_SIMD*NB;
+	}
 
-    for(int g=0;g<G;++g;@inner(1)){
-      for(int s=0;s<S;++s;@inner(0)){
-        const int n = b*G*S + g*S + s;
-
-        const dfloat wgs = (n<N) ? w[n]:0.f;
-        const dfloat xgs = (n<N) ? x[n]:0.f;
-        const dfloat ygs = (n<N) ? y[n]:0.f;
-
-        s_a[g][s] = wgs*xgs*ygs;
+#if USE_HIP==1
+	res += __shfl_down(res, 32, p_SIMD);
+	res += __shfl_down(res, 16, p_SIMD);
+	res += __shfl_down(res,  8, p_SIMD);
+	res += __shfl_down(res,  4, p_SIMD);
+	res += __shfl_down(res,  2, p_SIMD);
+	res += __shfl_down(res,  1, p_SIMD);
+#else
+	res += __shfl_down_sync(0xFFFFFFFF, res, 16, p_SIMD);
+	res += __shfl_down_sync(0xFFFFFFFF, res,  8, p_SIMD);
+	res += __shfl_down_sync(0xFFFFFFFF, res,  4, p_SIMD);
+	res += __shfl_down_sync(0xFFFFFFFF, res,  2, p_SIMD);
+	res += __shfl_down_sync(0xFFFFFFFF, res,  1, p_SIMD);
+#endif
+	
+	if(t==0)
+	  s_dot[w] = res;
       }
     }
 
-    @barrier("local");
-
-    for(int g=0;g<G;++g;@inner(1)){
-      for(int s=0;s<S;++s;@inner(0)){
-        const int n = b*G*S + g*S + s;
-
-        if(s<16) s_a[g][s] += s_a[g][s + 16];
-        if(s< 8) s_a[g][s] += s_a[g][s +  8];
-        if(s< 4) s_a[g][s] += s_a[g][s +  4];
-        if(s< 2) s_a[g][s] += s_a[g][s +  2];
-        if(s==0) s_b[g] = s_a[g][0] + s_a[g][1];
-      }
-    }
 
     @barrier("local");
 
-    for(int g=0;g<G;++g;@inner(1)){
-      for(int s=0;s<S;++s;@inner(0)){
-        if(g==0){
-          if(s< 4) s_b[s] += s_b[s + 4];
-          if(s< 2) s_b[s] += s_b[s + 2];
-          if(s==0) s_b[s] += s_b[s + 1];
-        }
-      }
-    }
-
-    @barrier("local");
-
-    for(int g=0;g<G;++g;@inner(1)){
-      for(int s=0;s<S;++s;@inner(0)){
-        if(g==0 && s==0)
-          wxy[b] = s_b[0];
+    // assume p_NW<=p_SIMD
+    for(int w=0;w<p_NW;++w;@inner(1)){
+      for(int t=0;t<p_SIMD;++t;@inner(0)){
+	
+	if(w==0){
+	  dfloat res = s_dot[t];
+	  // assume p_NW = 4
+#if USE_HIP==1
+	  res += __shfl_down(res,  2, p_SIMD);
+	  res += __shfl_down(res,  1, p_SIMD);
+#else
+	  res += __shfl_down_sync(0xFFFFFFFF, res,  4, p_SIMD);
+	  res += __shfl_down_sync(0xFFFFFFFF, res,  2, p_SIMD);
+	  res += __shfl_down_sync(0xFFFFFFFF, res,  1, p_SIMD);
+#endif
+	  if(t==0)
+	    dot[b] = res;
+	}
       }
     }
   }
 }
+
+
+
 #endif

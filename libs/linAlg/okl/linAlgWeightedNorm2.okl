@@ -24,6 +24,7 @@ SOFTWARE.
 
 */
 
+#if 0
 @kernel void weightedNorm2(const dlong Nblocks,
                            const dlong N,
                            @restrict const  dfloat *w,
@@ -70,3 +71,87 @@ SOFTWARE.
   }
 }
 
+#else
+
+@kernel void weightedNorm2(const int NB,
+			   const int N,
+			   @restrict const dfloat *ww,
+			   @restrict const dfloat *x,
+			   @restrict dfloat *norm2){
+  
+#define USE_HIP 1
+  
+#if USE_HIP==1
+#define p_SIMD 64
+#define p_NW 4
+#else
+#define p_SIMD 32
+#define p_NW 8
+#endif
+
+  for(int b=0;b<NB;++b;@outer(0)){
+
+    @shared dfloat s_norm2[p_NW];
+    
+    // assume NT is a multiple of p_WARP
+    for(int w=0;w<p_NW;++w;@inner(1)){
+      for(int t=0;t<p_SIMD;++t;@inner(0)){
+	dfloat res = 0;
+	int n =  t + p_SIMD*w + b*p_NW*p_SIMD;
+
+	// do this second
+	while(n<N){
+	  dfloat xn = x[n];
+	  res += ww[n]*xn*xn;
+	  n += p_NW*p_SIMD*NB;
+	}
+
+#if USE_HIP==1
+	res += __shfl_down(res, 32, p_SIMD);
+	res += __shfl_down(res, 16, p_SIMD);
+	res += __shfl_down(res,  8, p_SIMD);
+	res += __shfl_down(res,  4, p_SIMD);
+	res += __shfl_down(res,  2, p_SIMD);
+	res += __shfl_down(res,  1, p_SIMD);
+#else
+	res += __shfl_down_sync(0xFFFFFFFF, res, 16, p_SIMD);
+	res += __shfl_down_sync(0xFFFFFFFF, res,  8, p_SIMD);
+	res += __shfl_down_sync(0xFFFFFFFF, res,  4, p_SIMD);
+	res += __shfl_down_sync(0xFFFFFFFF, res,  2, p_SIMD);
+	res += __shfl_down_sync(0xFFFFFFFF, res,  1, p_SIMD);
+#endif
+	
+	if(t==0)
+	  s_norm2[w] = res;
+      }
+    }
+
+
+    @barrier("local");
+
+    // assume p_NW<=p_SIMD
+    for(int w=0;w<p_NW;++w;@inner(1)){
+      for(int t=0;t<p_SIMD;++t;@inner(0)){
+	
+	if(w==0){
+	  dfloat res = s_norm2[t];
+	  // assume p_NW = 4
+#if USE_HIP==1
+	  res += __shfl_down(res,  2, p_SIMD);
+	  res += __shfl_down(res,  1, p_SIMD);
+#else
+	  res += __shfl_down_sync(0xFFFFFFFF, res,  4, p_SIMD);
+	  res += __shfl_down_sync(0xFFFFFFFF, res,  2, p_SIMD);
+	  res += __shfl_down_sync(0xFFFFFFFF, res,  1, p_SIMD);
+#endif
+	  if(t==0)
+	    norm2[b] = res;
+	}
+      }
+    }
+  }
+}
+
+
+
+#endif
