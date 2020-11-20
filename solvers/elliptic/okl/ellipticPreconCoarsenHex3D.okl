@@ -110,7 +110,7 @@ SOFTWARE.
 }
 
 
-@kernel void ellipticPreconCoarsenHex3D_new(const dlong Nelements,
+@kernel void ellipticPreconCoarsenHex3D_V1(const dlong Nelements,
                                             @restrict const  dfloat *  RT,
                                             @restrict const  dfloat *  qf,
                                             @restrict dfloat *  qc){
@@ -207,6 +207,126 @@ SOFTWARE.
             qc[id] = res;
           }
         }
+      }
+    }
+  }
+}
+
+
+
+@kernel void ellipticPreconCoarsenHex3D_new(const dlong Nelements,
+                                            @restrict const  dfloat *  RT,
+                                            @restrict const  dfloat *  qf,
+                                            @restrict dfloat *  qc){
+
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @exclusive dfloat r_q[p_NqCoarse];
+
+    @shared dfloat s_RT[p_NqFine][p_NqCoarse];
+
+    @shared dfloat s_tmp[p_NqFine][p_NqFine][p_NqFine];
+    
+    for(int j=0;j<p_NqFine;++j;@inner(1)){
+      for(int i=0;i<p_NqFine;++i;@inner(0)){
+	
+        if (i<p_NqCoarse)
+          s_RT[j][i] = RT[j*p_NqCoarse + i];
+      }
+    }
+
+    @barrier("local");
+
+    for(int j=0;j<p_NqFine;++j;@inner(1)){
+      for(int i=0;i<p_NqFine;++i;@inner(0)){
+	
+        for(int k=0;k<p_NqCoarse;++k){
+          r_q[k] = 0;
+        }
+
+        for(int k=0;k<p_NqFine;++k){
+          const int id = i + j*p_NqFine +k*p_NqFine*p_NqFine + e*p_NpFine;
+          const dfloat tmp = qf[id];
+	  
+          for(int m=0;m<p_NqCoarse;++m){
+            r_q[m] += s_RT[k][m]*tmp;
+          }
+        }
+	
+	for(int k=0;k<p_NqCoarse;++k){
+	  s_tmp[k][j][i] = r_q[k];
+	}
+      }
+    }
+
+    @barrier("local");
+
+    for(int k=0;k<p_NqFine;++k;@inner(1)){
+      for(int i=0;i<p_NqFine;++i;@inner(0)){
+	
+	if(k<p_NqCoarse){
+	  for(int m=0;m<p_NqCoarse;++m){
+	    r_q[m] = 0;
+	  }
+	  
+	  for(int j=0;j<p_NqFine;++j){
+	    dfloat tmp = s_tmp[k][j][i];
+	    for(int m=0;m<p_NqCoarse;++m){
+	      r_q[m] += s_RT[j][m]*tmp;
+	    }
+	  }
+	  
+	  for(int j=0;j<p_NqCoarse;++j){
+	    s_tmp[k][j][i] = r_q[j];
+	  }
+	}
+      }
+    }
+
+
+    @barrier("local");
+    
+    for(int k=0;k<p_NqFine;++k;@inner(1)){
+      for(int j=0;j<p_NqFine;++j;@inner(0)){
+	
+	if(j<p_NqCoarse && k<p_NqCoarse){
+	  for(int m=0;m<p_NqCoarse;++m){
+	    r_q[m] = 0;
+	  }
+	  
+	  for(int i=0;i<p_NqFine;++i){
+	    dfloat tmp = s_tmp[k][j][i];
+	    for(int m=0;m<p_NqCoarse;++m){
+	      r_q[m] += s_RT[i][m]*tmp;
+	    }
+	  }
+	  
+	  for(int i=0;i<p_NqCoarse;++i){
+	    s_tmp[k][j][i] = r_q[i];
+	  }
+	}
+      }
+    }
+    
+    @barrier("local");
+    
+    for(int j=0;j<p_NqFine;++j;@inner(1)){
+      for(int i=0;i<p_NqFine;++i;@inner(0)){
+	
+	int t=i+j*p_NqFine;
+	
+	while(t<p_NpCoarse){
+	  
+	  int ti = t%p_NqCoarse;
+	  int tj = (t/p_NqCoarse)%p_NqCoarse;
+	  int tk = t/(p_NqCoarse*p_NqCoarse);
+	  
+	  const int id = ti + tj*p_NqCoarse + tk*p_NqCoarse*p_NqCoarse + e*p_NpCoarse;
+	  qc[id] = s_tmp[tk][tj][ti];
+	  
+	  t += p_NqFine*p_NqFine;
+	}
       }
     }
   }
