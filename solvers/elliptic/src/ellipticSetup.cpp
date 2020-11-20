@@ -116,7 +116,7 @@ elliptic_t& elliptic_t::Setup(platform_t& platform, mesh_t& mesh,
 
   // Ax kernel
   if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
-    sprintf(fileName,  DELLIPTIC "/okl/ellipticAx%s.okl", suffix);
+    sprintf(fileName,  DELLIPTIC "/okl/ellipticAx%snew.okl", suffix);
     if(mesh.elementType==HEXAHEDRA){
       if(mesh.settings.compareSetting("ELEMENT MAP", "TRILINEAR"))
         sprintf(kernelName, "ellipticPartialAxTrilinear%s", suffix);
