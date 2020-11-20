@@ -525,11 +525,14 @@ SOFTWARE.
 #if 1
 	  //	  dlong id = e*p_cubNp*p_dim + i*p_cubNq*p_cubNq + b*p_cubNq + a;
 	  dlong id1 = e*p_cubNp*p_dim + b*p_cubNq*p_cubNq + a*p_cubNq + i;
-	  dfloat Uei = __ldg(cUe+id1+0*p_cubNp);
+//	  dfloat Uei = __ldg(cUe+id1+0*p_cubNp);
+	  dfloat Uei = cUe[id1+0*p_cubNp];
 	  dlong id2 = e*p_cubNp*p_dim + b*p_cubNq*p_cubNq + i*p_cubNq + a;
-	  dfloat Vei = __ldg(cUe+id2+1*p_cubNp);
+	  //	  dfloat Vei = __ldg(cUe+id2+1*p_cubNp);
+	  dfloat Vei = cUe[id2+1*p_cubNp];
 	  dlong id3 = e*p_cubNp*p_dim + i*p_cubNq*p_cubNq + b*p_cubNq + a;
-	  dfloat Wei = __ldg(cUe+id3+2*p_cubNp);
+	  //	  dfloat Wei = __ldg(cUe+id3+2*p_cubNp);
+	  dfloat Wei = cUe[id3+2*p_cubNp];
 #endif
 
 	  dfloat UF = Uei*s_tmpU[fld][b][a][i];

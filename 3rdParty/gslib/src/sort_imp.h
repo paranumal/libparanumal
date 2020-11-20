@@ -50,7 +50,7 @@ typedef struct { T v; uint i; } sort_data;
 
   ----------------------------------------------------------------------------*/
 
-#define STATIC_DIGIT_BUCKETS 1
+#define STATIC_DIGIT_BUCKETS 0
 
 #define DIGIT_BITS   8
 #define DIGIT_VALUES (1<<DIGIT_BITS)
@@ -278,7 +278,7 @@ static void radix_sortp(
   } while(0)
 #define MERGE_SORT() \
   do {                                                                 \
-    uint i=0, n=An, base=-n, odd=0, c=0, b=1;                          \
+    int i=0, n=An, base=-n, odd=0, c=0, b=1;                          \
     for(;;) {                                                          \
       DATA *restrict p;                                                \
       if((c&1)==0) {                                                   \
@@ -492,6 +492,8 @@ uint *sortp(buffer *restrict buf, int start_perm,
     }
   } else if(STATIC_DIGIT_BUCKETS){
     static uint count[DIGITS][DIGIT_VALUES];
+    printf("buf=%p, work_off=%ull, n=%d, sz=%ull, DIGITS*DIGIT_VALUES=%d\n", buf, work_off, n, sizeof(sort_data), DIGITS*DIGIT_VALUES);
+    
     buffer_reserve(buf,work_off+2*n*sizeof(sort_data));
     perm = buf->ptr;
     work = (sort_data*)((char*)buf->ptr+work_off);

@@ -26,7 +26,7 @@ SOFTWARE.
 
 void givensRotation(dfloat a, dfloat b, dfloat *c, dfloat *s)
 {
-  if (b != 0) {
+  if (b != 0.0) {
     dfloat h = hypot(a, b);
     dfloat d = 1.0/h;
     *c = fabs(a)*d;
