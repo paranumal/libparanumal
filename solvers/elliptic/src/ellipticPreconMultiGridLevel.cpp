@@ -231,7 +231,7 @@ MGLevel::MGLevel(elliptic_t& _elliptic, int Nc, int NpCoarse):
   coarsenKernel = elliptic.platform.buildKernel(fileName, kernelName, kernelInfo);
 
   sprintf(fileName, DELLIPTIC "/okl/ellipticPreconProlongate%s.okl", suffix);
-  sprintf(kernelName, "ellipticPreconProlongate%s", suffix);
+  sprintf(kernelName, "ellipticPreconProlongate%s_new", suffix);
   prolongateKernel = elliptic.platform.buildKernel(fileName, kernelName, kernelInfo);
 }
 
