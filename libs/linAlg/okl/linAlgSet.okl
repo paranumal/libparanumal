@@ -29,7 +29,21 @@ SOFTWARE.
                  const dfloat alpha,
                  @restrict dfloat *a){
 
+#if 0
   for(dlong n=0;n<N;++n;@tile(p_blockSize,@outer,@inner)){
     a[n] = alpha;
   }
+#else
+#define p_Nreads 4
+  for(dlong n0=0;n0<N;n0+=p_Nreads*p_blockSize;@outer){
+    for(int t=0;t<p_blockSize;++t;@inner){
+      dlong n = t + n0;
+      while(n<n0+p_Nreads*p_blockSize && n<N){
+	a[n] = alpha;
+	n+=p_blockSize;
+      }
+    }
+  }
+#endif
+
 }
