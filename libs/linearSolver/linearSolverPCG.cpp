@@ -26,7 +26,7 @@ SOFTWARE.
 
 #include "linearSolver.hpp"
 
-#define PCG_BLOCKSIZE 512
+#define PCG_BLOCKSIZE 256
 
 pcg::pcg(dlong _N, dlong _Nhalo,
          platform_t& _platform, settings_t& _settings, MPI_Comm _comm,
@@ -48,10 +48,13 @@ pcg::pcg(dlong _N, dlong _Nhalo,
   weighted = _weighted;
   o_w = _o_weight;
 
+  //  o_tmprdotr = platform.malloc(PCG_BLOCKSIZE*sizeof(dfloat));
+  int Nblocks = (_N+PCG_BLOCKSIZE-1)/PCG_BLOCKSIZE;
+  o_tmprdotr = platform.malloc(Nblocks*sizeof(dfloat));
+
   //pinned tmp buffer for reductions
-  tmprdotr = (dfloat*) platform.hostMalloc(PCG_BLOCKSIZE*sizeof(dfloat),
+  tmprdotr = (dfloat*) platform.hostMalloc(Nblocks*sizeof(dfloat),
                                           NULL, h_tmprdotr);
-  o_tmprdotr = platform.malloc(PCG_BLOCKSIZE*sizeof(dfloat));
 
   /* build kernels */
   occa::properties kernelInfo = platform.props; //copy base properties
@@ -177,7 +180,7 @@ dfloat pcg::UpdatePCG(const dfloat alpha, occa::memory &o_x, occa::memory &o_r){
   // r <= r - alpha*A*p
   // dot(r,r)
   int Nblocks = (N+PCG_BLOCKSIZE-1)/PCG_BLOCKSIZE;
-  Nblocks = (Nblocks>PCG_BLOCKSIZE) ? PCG_BLOCKSIZE : Nblocks; //limit to PCG_BLOCKSIZE entries
+  //  Nblocks = (Nblocks>PCG_BLOCKSIZE) ? PCG_BLOCKSIZE : Nblocks; //limit to PCG_BLOCKSIZE entries
 
   updatePCGKernel(N, Nblocks, weighted, o_w, o_p, o_Ap, alpha, o_x, o_r, o_tmprdotr);
 

@@ -127,13 +127,13 @@
       for(int t=0;t<p_SIMD;++t;@inner(0)){
 	int n =  t + p_SIMD*w + b*p_NW*p_SIMD;
 
+	dfloat res = 0;
+#if 0
 	// do this first
 	while(n<N){
 	  x[n] += alpha*p[n];
 	  n += p_NW*p_SIMD*NB;
 	}
-
-	dfloat res = 0;
 	n =  t + p_SIMD*w + b*p_NW*p_SIMD;
 
 	// do this second
@@ -145,6 +145,16 @@
 	  res += wn*r[n]*r[n];
 	  n += p_NW*p_SIMD*NB;
 	}
+#else
+	if(n<N){
+	  x[n] += alpha*p[n];	
+	  r[n] -= alpha*Ap[n];
+	  
+	  const dfloat wn = (weighted) ? weight[n] : 1.0;
+	  
+	  res += wn*r[n]*r[n];
+	}
+#endif
 
 #if USE_HIP==1
 	res += __shfl_down(res, 32, p_SIMD);

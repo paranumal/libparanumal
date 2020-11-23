@@ -31,7 +31,7 @@ SOFTWARE.
                            @restrict const  dfloat *  q,
                            @restrict const  dfloat *  rkrhsq,
                            @restrict dfloat *  rkq){
-
+#if 0
   // Runge Kutta intermediate stage
   for(dlong n=0;n<N;++n;@tile(256,@outer,@inner)){
 
@@ -42,6 +42,68 @@ SOFTWARE.
 
     rkq[n] = r_q;
   }
+#endif
+
+#if 1
+#define p_Nreads 1
+#define p_blkSize 512
+  
+  for(dlong n0=0;n0<N;n0+=p_Nreads*p_blkSize;@outer){
+    @shared dfloat s_rkA[7];
+    for(int t=0;t<p_blkSize;++t;@inner){
+      if(t<rk){
+	s_rkA[t] = dt*rkA[7*rk+t];
+      }
+    }
+
+    for(int t=0;t<p_blkSize;++t;@inner){
+      dlong n = t + n0;
+      //#pragma unroll p_Nreads
+      for(int read=0;read<p_Nreads;++read){
+	if(n<N){
+
+	  dfloat r_q = q[n];
+
+	  for (int i=0;i<rk;i++)
+	    r_q += s_rkA[i]*rkrhsq[n+i*N];
+	  
+	  rkq[n] = r_q;
+	}
+	n+=p_blkSize;
+      }
+    }
+  }
+
+#endif
+
+#if 0
+#define p_blkSize 256
+  
+  for(dlong n0=0;n0<N;n0+=p_blkSize;@outer){
+    @shared dfloat s_rkA[7];
+    for(int t=0;t<p_blkSize;++t;@inner){
+      if(t<7){ // slightly dodgy
+	s_rkA[t] = dt*rkA[7*rk+t];
+      }
+    }
+
+    for(int t=0;t<p_blkSize;++t;@inner){
+      dlong n = t + n0;
+      if(n<N){
+	
+	dfloat r_q = q[n];
+	
+	for (int i=0;i<rk;i++)
+	  r_q += s_rkA[i]*rkrhsq[n+i*N];
+	
+	rkq[n] = r_q;
+      }
+    }
+  }
+  
+#endif
+
+  
 }
 
 @kernel void dopri5RkUpdate(const dlong N,
@@ -114,6 +176,7 @@ SOFTWARE.
                                  @restrict const  dfloat *  rkerr,
                                  @restrict dfloat *  errtmp){
 
+#if 0
   for(dlong b=0;b<(N+p_blockSize-1)/p_blockSize;++b;@outer(0)){
 
     @shared volatile dfloat s_err[p_blockSize];
@@ -125,12 +188,17 @@ SOFTWARE.
         const dfloat rkqn = fabs(rkq[id]);
         const dfloat qmax = (qn>rkqn) ? qn : rkqn;
         dfloat sk = ATOL + RTOL*qmax;
-
+#if 0
         s_err[t] = (rkerr[id]/sk)*(rkerr[id]/sk);
+#else
+	const dfloat tmp = (rkerr[id]/sk);
+	s_err[t] = tmp*tmp;
+#endif
       } else {
         s_err[t] = 0.f;
       }
     }
+
 
     @barrier("local");
 #if p_blockSize>512
@@ -156,4 +224,65 @@ SOFTWARE.
 
     for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  1) errtmp[b] = s_err[0] + s_err[1];
   }
+#else
+#define p_NWARP 4
+#define p_SIMD 64
+#define USE_HIP 1    
+
+  for(dlong b=0;b<(N+p_blockSize-1)/p_blockSize;++b;@outer(0)){
+    @shared volatile dfloat s_err[p_NWARP];
+    
+    for(int t=0;t<p_blockSize;++t;@inner(0)){
+      dfloat res = 0;
+      
+      const dlong id = t + p_blockSize*b;
+      if (id<N) {
+        const dfloat   qn = fabs(  q[id]);
+        const dfloat rkqn = fabs(rkq[id]);
+        const dfloat qmax = (qn>rkqn) ? qn : rkqn;
+        dfloat sk = ATOL + RTOL*qmax;
+
+	const dfloat tmp = (rkerr[id]/sk);
+	res = tmp*tmp;
+      }
+      
+#if USE_HIP==1
+      res += __shfl_down(res, 32, p_SIMD);
+      res += __shfl_down(res, 16, p_SIMD);
+      res += __shfl_down(res,  8, p_SIMD);
+      res += __shfl_down(res,  4, p_SIMD);
+      res += __shfl_down(res,  2, p_SIMD);
+      res += __shfl_down(res,  1, p_SIMD);
+#else
+      res += __shfl_down_sync(0xFFFFFFFF, res, 16, p_SIMD);
+      res += __shfl_down_sync(0xFFFFFFFF, res,  8, p_SIMD);
+      res += __shfl_down_sync(0xFFFFFFFF, res,  4, p_SIMD);
+      res += __shfl_down_sync(0xFFFFFFFF, res,  2, p_SIMD);
+      res += __shfl_down_sync(0xFFFFFFFF, res,  1, p_SIMD);
+#endif
+      if(t%p_NWARP==0)
+	s_err[t/p_NWARP] = res;   
+    }
+
+
+    for(int t=0;t<p_blockSize;++t;@inner(0)){
+      if(t/p_NWARP==0){
+	dfloat res = s_err[t];
+
+#if USE_HIP==1
+	res += __shfl_down(res,  2, p_SIMD);
+	res += __shfl_down(res,  1, p_SIMD);
+#else
+	res += __shfl_down_sync(0xFFFFFFFF, res,  4, p_SIMD);
+	res += __shfl_down_sync(0xFFFFFFFF, res,  2, p_SIMD);
+	res += __shfl_down_sync(0xFFFFFFFF, res,  1, p_SIMD);
+#endif
+	if(t==0)
+	  errtmp[b] = s_err[0] + s_err[1];
+      }
+    }
+  }
+#endif
+
+  
 }

@@ -26,6 +26,7 @@ SOFTWARE.
 
 #define p_blockSize 256
 
+#if 0
 @kernel void igBasisInnerProducts(const dlong Ntotal,
 				  const dlong Nblocks,
                                   @restrict const dfloat *w,
@@ -142,3 +143,186 @@ SOFTWARE.
     }
   }
 }
+#endif
+
+
+#if 0
+@kernel void igBasisInnerProducts(const dlong Ntotal,
+				  const dlong Nblocks,
+                                  @restrict const dfloat *w,
+                                  const dlong dim, // how many inner products
+                                  const dfloat *x, // one x
+                                  const dfloat *y, // multiple y
+                                  dfloat *wxy){
+
+#define p_NWARP 4
+#define p_SIMD 64
+#define USE_HIP 1    
+  
+  for (dlong b = 0; b < Nblocks; ++b; @outer(0)) {
+    
+    @shared dfloat s_wxy[p_NWARP];
+
+    // load x to register
+    // block over igNhist
+
+    @exclusive dfloat r_wx;
+
+    for (int t = 0; t < p_blockSize; ++t; @inner(0)) {
+      const dlong id = t + p_blockSize*b;
+
+      if (id < Ntotal) {
+        r_wx = w[id]*x[id];
+      }
+    }
+
+    for (int fld = 0; fld < dim; ++fld) {
+
+      @barrier("local");
+
+      for (int t = 0; t < p_blockSize; ++t; @inner(0)) {
+        dlong id = t + p_blockSize*b;
+
+        dfloat res = 0;
+
+        if (id < Ntotal) {
+          dlong vid = id + fld*Ntotal;
+
+          res += r_wx*y[vid]; // fmad
+        }
+
+#if USE_HIP==1
+	res += __shfl_down(res, 32, p_SIMD);
+	res += __shfl_down(res, 16, p_SIMD);
+	res += __shfl_down(res,  8, p_SIMD);
+	res += __shfl_down(res,  4, p_SIMD);
+	res += __shfl_down(res,  2, p_SIMD);
+	res += __shfl_down(res,  1, p_SIMD);
+#else
+	res += __shfl_down_sync(0xFFFFFFFF, res, 16, p_SIMD);
+	res += __shfl_down_sync(0xFFFFFFFF, res,  8, p_SIMD);
+	res += __shfl_down_sync(0xFFFFFFFF, res,  4, p_SIMD);
+	res += __shfl_down_sync(0xFFFFFFFF, res,  2, p_SIMD);
+	res += __shfl_down_sync(0xFFFFFFFF, res,  1, p_SIMD);
+#endif
+	if(t%p_NWARP==0)
+	  s_wxy[t/p_NWARP] = res;   
+      }
+    
+      for(int t=0;t<p_blockSize;++t;@inner(0)){
+	if(t/p_NWARP==0){
+	  dfloat res = s_wxy[t];
+	  
+#if USE_HIP==1
+	  res += __shfl_down(res,  2, p_SIMD);
+	  res += __shfl_down(res,  1, p_SIMD);
+#else
+	  res += __shfl_down_sync(0xFFFFFFFF, res,  4, p_SIMD);
+	  res += __shfl_down_sync(0xFFFFFFFF, res,  2, p_SIMD);
+	  res += __shfl_down_sync(0xFFFFFFFF, res,  1, p_SIMD);
+#endif
+	  if(t==0){
+	    dlong id = b + Nblocks*fld;
+	    wxy[id] = res;
+	  }
+	}
+      }
+    }
+  }
+}
+
+
+
+#else
+
+@kernel void igBasisInnerProducts(const dlong Ntotal,
+				  const dlong Nblocks,
+                                  @restrict const dfloat *w,
+                                  const dlong dim, // how many inner products
+                                  const dfloat *x, // one x
+                                  const dfloat *y, // multiple y
+                                  dfloat *wxy){
+
+#define p_NWARP 4
+#define p_SIMD 64
+#define USE_HIP 1    
+  
+  for (dlong b = 0; b < Nblocks; ++b; @outer(0)) {
+    
+    @shared dfloat s_wxy[p_igNhist][p_NWARP];
+
+    // load x to register
+    // block over igNhist
+
+    @exclusive dfloat r_wx;
+
+    for (int t = 0; t < p_blockSize; ++t; @inner(0)) {
+      const dlong id = t + p_blockSize*b;
+
+      if (id < Ntotal) {
+        r_wx = w[id]*x[id];
+      }
+    }
+
+    @barrier("local");
+    
+    for (int t = 0; t < p_blockSize; ++t; @inner(0)) {
+      dlong id = t + p_blockSize*b;
+      
+      for (int fld = 0; fld < dim; ++fld) {
+	dfloat res = 0;
+	
+	if (id < Ntotal) {
+	  dlong vid = id + fld*Ntotal;
+	  
+	  res += r_wx*y[vid]; // fmad
+	}
+	
+#if USE_HIP==1
+	res += __shfl_down(res, 32, p_SIMD);
+	res += __shfl_down(res, 16, p_SIMD);
+	res += __shfl_down(res,  8, p_SIMD);
+	res += __shfl_down(res,  4, p_SIMD);
+	res += __shfl_down(res,  2, p_SIMD);
+	res += __shfl_down(res,  1, p_SIMD);
+#else
+	res += __shfl_down_sync(0xFFFFFFFF, res, 16, p_SIMD);
+	res += __shfl_down_sync(0xFFFFFFFF, res,  8, p_SIMD);
+	res += __shfl_down_sync(0xFFFFFFFF, res,  4, p_SIMD);
+	res += __shfl_down_sync(0xFFFFFFFF, res,  2, p_SIMD);
+	res += __shfl_down_sync(0xFFFFFFFF, res,  1, p_SIMD);
+#endif
+	if(t%p_NWARP==0){
+	  s_wxy[fld][t/p_NWARP] = res;   
+	}
+      }
+    }
+    
+    
+    for(int t=0;t<p_blockSize;++t;@inner(0)){
+      if(t/p_NWARP==0){
+	
+	for (int fld = 0; fld < dim; ++fld) {
+	  dfloat res = s_wxy[fld][t];
+
+#if USE_HIP==1
+	  res += __shfl_down(res,  2, p_SIMD);
+	  res += __shfl_down(res,  1, p_SIMD);
+#else
+	  res += __shfl_down_sync(0xFFFFFFFF, res,  4, p_SIMD);
+	  res += __shfl_down_sync(0xFFFFFFFF, res,  2, p_SIMD);
+	  res += __shfl_down_sync(0xFFFFFFFF, res,  1, p_SIMD);
+#endif
+	  if(t==0){
+	    for (int fld = 0; fld < dim; ++fld) {
+	      dlong id = b + Nblocks*fld;
+	      wxy[id] = res;
+	    }
+	  }
+	}
+      }
+    }
+  }
+}
+
+#endif
