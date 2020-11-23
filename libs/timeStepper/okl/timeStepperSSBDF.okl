@@ -31,9 +31,25 @@ SOFTWARE.
                       @restrict const dfloat * qhat,
                       @restrict dfloat *  rhs){
 
+#if 0
   // Adams Bashforth time step update
   for(dlong n=0;n<N;++n;@tile(p_blockSize,@outer,@inner)){
     //compute rhs
     rhs[n] = b[0]*qhat[n]/dt;
+  } 
+#else
+  
+#define p_Nreads 4
+  for(dlong n0=0;n0<N;n0+=p_Nreads*p_blockSize;@outer){
+    for(int t=0;t<p_blockSize;++t;@inner){
+      dfloat fac = b[0]/dt;
+      dlong n = t + n0;
+      while(n<n0+p_Nreads*p_blockSize && n<N){
+	rhs[n] = fac*qhat[n];
+	n+=p_blockSize;
+      }
+    }
   }
+
+#endif
 }

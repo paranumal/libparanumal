@@ -46,7 +46,7 @@ SOFTWARE.
 
 #if 1
 #define p_Nreads 1
-#define p_blkSize 512
+#define p_blkSize 256
   
   for(dlong n0=0;n0<N;n0+=p_Nreads*p_blkSize;@outer){
     @shared dfloat s_rkA[7];
@@ -117,6 +117,7 @@ SOFTWARE.
                             @restrict dfloat *  rkq,
                             @restrict dfloat *  rkerr){
 
+#if 0
   // Runge Kutta intermediate stage
   for(dlong n=0;n<N;++n;@tile(256,@outer,@inner)){
 
@@ -138,6 +139,58 @@ SOFTWARE.
 
     rkrhsq[n+rk*N] = r_rhsq;
   }
+
+#else
+
+#define p_Nreads 2
+#define p_blkSize 256
+  
+  for(dlong n0=0;n0<N;n0+=p_Nreads*p_blkSize;@outer){
+    @shared dfloat s_rkA[7], s_rkE[7];
+
+    for(int t=0;t<p_blkSize;++t;@inner){
+      if(t<7){
+	if(rk==6){
+	  s_rkA[t] = dt*rkA[7*rk+t];
+	  s_rkE[t] = dt*rkE[t];
+	}
+      }
+    }
+      
+    for(int t=0;t<p_blkSize;++t;@inner){
+      dlong n = t + n0;
+      //#pragma unroll p_Nreads
+      for(int read=0;read<p_Nreads;++read){
+	
+	if(n<N){
+	  if(rk<6){
+	    dfloat r_rhsq = rhsq[n];
+	    rkrhsq[n+rk*N] = r_rhsq;
+	  }
+	  else{ //last stage
+	    dfloat r_rhsq = rhsq[n];
+	    dfloat r_q = q[n];
+	    dfloat r_rkerr = 0.;
+	    for (int i=0;i<6;i++) {
+	      dfloat rkrhsqn = rkrhsq[n+i*N];
+	      r_q     += s_rkA[i]*rkrhsqn;
+	      r_rkerr += s_rkE[i]*rkrhsqn;
+	    }
+	    r_q     += s_rkA[6]*r_rhsq;
+	    r_rkerr += s_rkE[6]*r_rhsq;
+	    
+	    rkq[n] = r_q;
+	    rkerr[n] = r_rkerr;
+	    rkrhsq[n+rk*N] = r_rhsq;
+	  }
+	}
+
+	n+=p_blkSize;
+      }
+    }
+  }
+#endif
+  
 }
 
 @kernel void dopri5RkPmlUpdate(const dlong N,

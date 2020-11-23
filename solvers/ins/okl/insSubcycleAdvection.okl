@@ -25,7 +25,7 @@ SOFTWARE.
 */
 
 //interpolate velocity history for advective field
-@kernel void insSubcycleAdvectionKernel(const dlong Nelements,
+@kernel void insSubcycleAdvectionKernel_v0(const dlong Nelements,
                                        @restrict const  dlong *  elementList,
 					const int Np,
                                        const int shiftIndex,
@@ -83,6 +83,52 @@ SOFTWARE.
     }
   }
 }
+
+
+@kernel  void insSubcycleAdvectionKernel(const dlong Nelements,
+					 @restrict const  dlong *  elementList,
+					 const int Np,
+					 const int order,
+					 const dlong offset0,
+					 const dlong offset1,
+					 const dlong offset2,
+					 const dfloat c0,
+					 const dfloat c1,
+					 const dfloat c2,
+					 @restrict const  dfloat *  Uh,
+					 @restrict  dfloat *  Ue){
+
+#if 1
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<Np;++n;@inner(0)){
+
+      const dlong element = elementList[e];
+
+      dlong id = n+ p_NVfields*Np*element;
+
+      for (int fld=0;fld<p_NVfields;fld++) {      
+	dfloat tmp        =  c0*Uh[id+offset0];
+	if(order>0)  tmp +=  c1*Uh[id+offset1];
+	if(order>1)  tmp +=  c2*Uh[id+offset2];
+	Ue[id] = tmp;
+	id += Np;
+      }
+    }
+  }
+#else
+  for(dlong id=0;id<Nelements*Np*p_NVfields;++id;@tile(256, @outer, @inner)){
+    dlong element = elementList[id/(p_NVfields*Np)];
+    for (int fld=0;fld<p_NVfields;fld++) {      
+      dfloat tmp        =  c0*Uh[id+fld*Np+offset0];
+      if(order>0)  tmp +=  c1*Uh[id+fld*Np+offset1];
+      if(order>1)  tmp +=  c2*Uh[id+fld*Np+offset2];
+      Ue[id+fld*Np] = tmp;
+    }
+  }
+#endif
+
+}
+
 
 
 

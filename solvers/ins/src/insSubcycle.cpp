@@ -46,49 +46,68 @@ subcycler_t::subcycler_t(ins_t& ins):
 //evaluate ODE rhs = f(q,t)
 void subcycler_t::rhsf(occa::memory& o_U, occa::memory& o_RHS, const dfloat T){
 
+  dfloat c0 = 1, c1 = 0, c2 = 0;
+  const dfloat t0 = T;
+  const dfloat t1 = T-dt;
+  const dfloat t2 = T-2*dt;
+  
+  switch(order){
+  case 0:
+    c0 = 1; c1 = 0; c2 = 0; break;
+  case 1:
+    c0 = (T-t1)/(t0-t1);  c1 = (T-t0)/(t1-t0);  c2 = 0;  break;
+  case 2:
+    c0 = (T-t1)*(T-t2)/((t0-t1)*(t0-t2));
+    c1 = (T-t0)*(T-t2)/((t1-t0)*(t1-t2));
+    c2 = (T-t0)*(T-t1)/((t2-t0)*(t2-t1));
+    break;
+  default:
+    printf("WEIRD ORDER: %d\n", order);
+    exit(-1);
+  }
+
+  dlong fieldOffset = mesh.Nelements*mesh.Np*NVfields;
+  dlong offset0 = ((shiftIndex+0)%maxOrder)*fieldOffset;
+  dlong offset1 = ((shiftIndex+1)%maxOrder)*fieldOffset;
+  dlong offset2 = ((shiftIndex+2)%maxOrder)*fieldOffset;
+  
   //interpolate velocity history for advective field (halo elements first)
   if(mesh.NhaloElements){
     subCycleAdvectionKernel(mesh.NhaloElements,
-                           mesh.o_haloElementIds,
+			    mesh.o_haloElementIds,
 			    mesh.Np,
-                           shiftIndex,
-                           order,
-                           maxOrder,
-                           mesh.Nelements*mesh.Np*NVfields,
-                           T,
-                           T0,
-                           dt,
-                           o_Uh,
-                           o_Ue);
+			    order,
+			    offset0, offset1, offset2,
+			    c0, c1, c2,
+			    o_Uh,
+			    o_Ue);
   }
   
   // extract Ue halo
   vTraceHalo->ExchangeStart(o_Ue, 1, ogs_dfloat);
-
+  
   if(mesh.NinternalElements){
     subCycleAdvectionKernel(mesh.NinternalElements,
-                           mesh.o_internalElementIds,
+			    mesh.o_internalElementIds,
 			    mesh.Np,
-                           shiftIndex,
-                           order,
-                           maxOrder,
-                           mesh.Nelements*mesh.Np*NVfields,
-                           T,
-                           T0,
-                           dt,
-                           o_Uh,
-                           o_Ue);
+			    order,
+			    offset0, offset1, offset2,
+			    c0, c1, c2,
+			    o_Uh,
+			    o_Ue);
 
+
+    dlong cubFieldOffset = mesh.Nelements*mesh.cubNp*NVfields;
+    dlong cubOffset0 = ((shiftIndex+0)%maxOrder)*cubFieldOffset;
+    dlong cubOffset1 = ((shiftIndex+1)%maxOrder)*cubFieldOffset;
+    dlong cubOffset2 = ((shiftIndex+2)%maxOrder)*cubFieldOffset;
+    
     subCycleAdvectionKernel(mesh.NinternalElements,
 			    mesh.o_internalElementIds,
 			    mesh.cubNp,
-			    shiftIndex,
 			    order,
-			    maxOrder,
-			    mesh.Nelements*mesh.cubNp*NVfields, // correct offset ?
-			    T,
-			    T0,
-			    dt,
+			    cubOffset0, cubOffset1, cubOffset2,
+			    c0, c1, c2,
 			    o_cUh,
 			    o_cUe);
   }
