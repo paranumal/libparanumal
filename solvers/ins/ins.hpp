@@ -67,7 +67,7 @@ public:
   int order, maxOrder, shiftIndex;
   dfloat nu, T0, dt;
 
-  occa::memory o_Ue, o_Uh, o_cUe, o_cUh;
+  occa::memory o_Ue, o_Uh, o_cUe, o_cUh, o_GUe;
 
   subcycler_t() = delete;
   subcycler_t(ins_t& ins);

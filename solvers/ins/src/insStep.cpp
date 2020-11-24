@@ -111,14 +111,26 @@ void ins_t::rhs_subcycle_f(occa::memory& o_U, occa::memory& o_UHAT,
   dlong cNtot = mesh.Nelements*mesh.cubNp*NVfields;
 
   // interpolate Uh at (shiftIndex)%maxOrder to cUh
-  occa::memory o_Unow = o_U + ((shiftIndex)%maxOrder)*Ntot*sizeof(dfloat);
-  occa::memory o_cUnow = subcycler->o_cUh + ((shiftIndex)%maxOrder)*cNtot*sizeof(dfloat);
-  advectionInterpolationKernel(mesh.Nelements,
-			       mesh.o_cubvgeo,
-			       mesh.o_cubInterp,
-			       o_Unow,
-			       o_cUnow);
-  
+  if(cubature==1){
+    occa::memory o_Unow = o_U + ((shiftIndex)%maxOrder)*Ntot*sizeof(dfloat);
+    occa::memory o_cUnow = subcycler->o_cUh + ((shiftIndex)%maxOrder)*cNtot*sizeof(dfloat);
+    advectionInterpolationKernel(mesh.Nelements,
+				 mesh.o_cubvgeo,
+				 mesh.o_cubInterp,
+				 o_Unow,
+				 o_cUnow);
+  }
+
+#if 0
+  if(0){ // to be completed to store G*U 
+    occa::memory o_Unow = o_U + ((shiftIndex)%maxOrder)*Ntot*sizeof(dfloat);
+        occa::memory o_GUnow = subcycler->o_GUh + ((shiftIndex)%maxOrder)*Ntot*sizeof(dfloat);
+    advectionInterpolationKernel(mesh.Nelements,
+				 mesh.o_vgeo,
+				 o_Unow,
+				 o_GUnow);
+  }
+#endif
   
   //At each iteration of n, we step the partial sum
   // sum_i=n^order B[i]*U(t-i*dt) from t-n*dt to t-(n-1)*dt

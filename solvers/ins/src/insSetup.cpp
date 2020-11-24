@@ -299,6 +299,10 @@ ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
       sprintf(kernelName, "insSubcycleAdvectionSurface%s", suffix);
       ins->advectionSurfaceKernel = platform.buildKernel(fileName, kernelName,
                                              kernelInfo);
+
+      sprintf(kernelName, "insSubcycleAdvectionInterpolation%s", suffix);
+      ins->advectionInterpolationKernel = platform.buildKernel(fileName, kernelName,
+							       kernelInfo);
     }
 
     //build subcycler
@@ -325,6 +329,10 @@ ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
     dlong cubNlocal = mesh.Nelements*mesh.cubNp;
     dlong cubNhalo  = mesh.totalHaloPairs*mesh.cubNp;
     ins->subcycler->o_cUe = platform.malloc((cubNlocal+cubNhalo)*ins->NVfields*sizeof(dfloat));
+
+    //    dlong Nlocal = mesh.Nelements*mesh.Np;
+    //    dlong Nhalo  = mesh.totalHaloPairs*mesh.Np;
+    //    ins->subcycler->o_GUe = platform.malloc((Nlocal+Nhalo)*ins->NVfields*sizeof(dfloat));
 
   } else {
     //regular advection kernels

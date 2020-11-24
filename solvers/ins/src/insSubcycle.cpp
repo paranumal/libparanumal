@@ -37,10 +37,9 @@ subcycler_t::subcycler_t(ins_t& ins):
   advectionSurfaceKernel = ins.advectionSurfaceKernel;
   advectionInterpolationKernel = ins.advectionInterpolationKernel;
 
-  printf("o_cUh\n");
-  // HACK
-  int mOrder = 6;
+  int mOrder = 6; // HACK
   o_cUh = platform.malloc(mOrder*ins.mesh.cubNp*ins.mesh.Nelements*NVfields*sizeof(dfloat));
+  //  o_GUh = platform.malloc(mOrder*ins.mesh.Np*ins.mesh.Nelements*NVfields*sizeof(dfloat));
 }
 
 //evaluate ODE rhs = f(q,t)
@@ -70,6 +69,8 @@ void subcycler_t::rhsf(occa::memory& o_U, occa::memory& o_RHS, const dfloat T){
   dlong offset0 = ((shiftIndex+0)%maxOrder)*fieldOffset;
   dlong offset1 = ((shiftIndex+1)%maxOrder)*fieldOffset;
   dlong offset2 = ((shiftIndex+2)%maxOrder)*fieldOffset;
+
+  // TW: need to time interpolate GUh to GUe instead of Uh to Ue
   
   //interpolate velocity history for advective field (halo elements first)
   if(mesh.NhaloElements){
@@ -96,20 +97,21 @@ void subcycler_t::rhsf(occa::memory& o_U, occa::memory& o_RHS, const dfloat T){
 			    o_Uh,
 			    o_Ue);
 
-
-    dlong cubFieldOffset = mesh.Nelements*mesh.cubNp*NVfields;
-    dlong cubOffset0 = ((shiftIndex+0)%maxOrder)*cubFieldOffset;
-    dlong cubOffset1 = ((shiftIndex+1)%maxOrder)*cubFieldOffset;
-    dlong cubOffset2 = ((shiftIndex+2)%maxOrder)*cubFieldOffset;
-    
-    subCycleAdvectionKernel(mesh.NinternalElements,
-			    mesh.o_internalElementIds,
-			    mesh.cubNp,
-			    order,
-			    cubOffset0, cubOffset1, cubOffset2,
-			    c0, c1, c2,
-			    o_cUh,
-			    o_cUe);
+    if(cubature){
+      dlong cubFieldOffset = mesh.Nelements*mesh.cubNp*NVfields;
+      dlong cubOffset0 = ((shiftIndex+0)%maxOrder)*cubFieldOffset;
+      dlong cubOffset1 = ((shiftIndex+1)%maxOrder)*cubFieldOffset;
+      dlong cubOffset2 = ((shiftIndex+2)%maxOrder)*cubFieldOffset;
+      
+      subCycleAdvectionKernel(mesh.NinternalElements,
+			      mesh.o_internalElementIds,
+			      mesh.cubNp,
+			      order,
+			      cubOffset0, cubOffset1, cubOffset2,
+			      c0, c1, c2,
+			      o_cUh,
+			      o_cUe);
+    }
   }
 
 
