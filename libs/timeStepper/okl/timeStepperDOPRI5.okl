@@ -205,16 +205,17 @@ SOFTWARE.
 
 
     for(int t=0;t<p_blockSize;++t;@inner(0)){
-      if(t/p_NWARP==0){
-	dfloat res = s_err[t];
+      if(t<p_SIMD){
+	dfloat res = (t<p_NWARP) ? s_err[t]:0;
 
 #if USE_HIP==1
 	res += __shfl_down(res,  2, p_SIMD);
 	res += __shfl_down(res,  1, p_SIMD);
 #else
-	res += __shfl_down_sync(0xFFFFFFFF, res,  4, p_SIMD);
-	res += __shfl_down_sync(0xFFFFFFFF, res,  2, p_SIMD);
-	res += __shfl_down_sync(0xFFFFFFFF, res,  1, p_SIMD);
+	unsigned int MASK = 0xFFFFFFFF;
+	res += __shfl_down_sync(MASK, res,  4, p_SIMD);
+	res += __shfl_down_sync(MASK, res,  2, p_SIMD);
+	res += __shfl_down_sync(MASK, res,  1, p_SIMD);
 #endif
 	if(t==0)
 	  errtmp[b] = s_err[0] + s_err[1];

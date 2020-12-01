@@ -174,7 +174,7 @@ int pcg::Solve(solver_t& solver, precon_t& precon,
     if (verbose&&(rank==0)) {
       if(rdotr<0)
         printf("WARNING CG: rdotr = %17.15lf\n", rdotr);
-
+      
       printf("CG: it %d, r norm %12.12le, alpha = %le \n", iter+1, sqrt(rdotr), alpha);
     }
   }

@@ -134,7 +134,7 @@ SOFTWARE.
       for(int t=0;t<p_SIMD;++t;@inner(0)){
 	
 	if(w==0){
-	  dfloat res = s_dot[t];
+	  dfloat res = (t<p_NW) ? s_dot[t]:0.f;
 	  // assume p_NW = 4
 #if USE_HIP==1
 	  res += __shfl_down(res,  2, p_SIMD);
