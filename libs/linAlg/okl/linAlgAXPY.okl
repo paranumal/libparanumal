@@ -30,12 +30,26 @@ SOFTWARE.
                   const dfloat beta,
                   @restrict dfloat *y){
 
+#if 0
   for(dlong n=0;n<N;++n;@tile(p_blockSize,@outer,@inner)){
     if (beta!=0)
       y[n] = alpha*x[n] + beta*y[n];
     else
       y[n] = alpha*x[n];
   }
+#else
+#define p_Nreads 2
+  for(dlong n0=0;n0<N;n0+=p_Nreads*p_blockSize;@outer){
+    for(int t=0;t<p_blockSize;++t;@inner){
+      dlong n = t + n0;
+      while(n<n0+p_Nreads*p_blockSize && n<N){
+	dfloat yn = (beta) ? y[n]:0;
+	y[n] = alpha*x[n] + beta*yn;
+	n+=p_blockSize;
+      }
+    }
+  }
+#endif
 }
 
 @kernel void zaxpy(const dlong N,
@@ -45,24 +59,25 @@ SOFTWARE.
                    @restrict const dfloat *y,
                    @restrict dfloat *z){
 
+#if 0
   for(dlong n=0;n<N;++n;@tile(p_blockSize,@outer,@inner)){
     z[n] = alpha*x[n] + beta*y[n];
   }
-}
+#else
 
-#if 0
-@kernel void scaledAddwOffset(const dlong N,
-                      const dfloat alpha,
-                      const dlong sourceOffset,
-                      @restrict const  dfloat *  x,
-                      const dfloat beta,
-                      const dlong destOffset,
-                      @restrict dfloat *  y){
-
-  for(dlong n=0;n<N;++n;@tile(256,@outer,@inner)){
-    if(n<N){
-      y[n+destOffset] = alpha*x[n+sourceOffset] + beta*y[n+destOffset];
+#define p_Nreads 2
+  for(dlong n0=0;n0<N;n0+=p_Nreads*p_blockSize;@outer){
+    for(int t=0;t<p_blockSize;++t;@inner){
+      dlong n = t + n0;
+      while(n<n0+p_Nreads*p_blockSize && n<N){
+	dfloat xn = (alpha) ? x[n]:0;
+	dfloat yn = (beta) ? y[n]:0;
+	z[n] = alpha*xn + beta*yn;
+	n+=p_blockSize;
+      }
     }
   }
-}
+
 #endif
+}
+

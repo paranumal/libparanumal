@@ -62,6 +62,14 @@ pcg::pcg(dlong _N, dlong _Nhalo,
   //add defines
   kernelInfo["defines/" "p_blockSize"] = (int)PCG_BLOCKSIZE;
 
+  if(platform.device.mode() == "HIP"){
+    kernelInfo["defines/" "USE_HIP"] = (int)1;
+  }else{
+    kernelInfo["defines/" "USE_HIP"] = (int)0;
+  }
+
+
+  
   // combined PCG update and r.r kernel
   updatePCGKernel = platform.buildKernel(LINEARSOLVER_DIR "/okl/linearSolverUpdatePCG.okl",
                                 "updatePCG", kernelInfo);

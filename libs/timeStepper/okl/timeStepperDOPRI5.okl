@@ -31,20 +31,6 @@ SOFTWARE.
                            @restrict const  dfloat *  q,
                            @restrict const  dfloat *  rkrhsq,
                            @restrict dfloat *  rkq){
-#if 0
-  // Runge Kutta intermediate stage
-  for(dlong n=0;n<N;++n;@tile(256,@outer,@inner)){
-
-    dfloat r_q = q[n];
-
-    for (int i=0;i<rk;i++)
-      r_q += dt*rkA[7*rk + i]*rkrhsq[n+i*N];
-
-    rkq[n] = r_q;
-  }
-#endif
-
-#if 1
 #define p_Nreads 1
 #define p_blkSize 256
   
@@ -73,36 +59,6 @@ SOFTWARE.
       }
     }
   }
-
-#endif
-
-#if 0
-#define p_blkSize 256
-  
-  for(dlong n0=0;n0<N;n0+=p_blkSize;@outer){
-    @shared dfloat s_rkA[7];
-    for(int t=0;t<p_blkSize;++t;@inner){
-      if(t<7){ // slightly dodgy
-	s_rkA[t] = dt*rkA[7*rk+t];
-      }
-    }
-
-    for(int t=0;t<p_blkSize;++t;@inner){
-      dlong n = t + n0;
-      if(n<N){
-	
-	dfloat r_q = q[n];
-	
-	for (int i=0;i<rk;i++)
-	  r_q += s_rkA[i]*rkrhsq[n+i*N];
-	
-	rkq[n] = r_q;
-      }
-    }
-  }
-  
-#endif
-
   
 }
 
@@ -117,30 +73,6 @@ SOFTWARE.
                             @restrict dfloat *  rkq,
                             @restrict dfloat *  rkerr){
 
-#if 0
-  // Runge Kutta intermediate stage
-  for(dlong n=0;n<N;++n;@tile(256,@outer,@inner)){
-
-    dfloat r_rhsq = rhsq[n];
-
-    if (rk==6) { //last stage
-      dfloat r_q = q[n];
-      dfloat r_rkerr = 0.;
-      for (int i=0;i<6;i++) {
-        r_q     += dt*rkA[7*rk + i]*rkrhsq[n+i*N];
-        r_rkerr += dt*rkE[       i]*rkrhsq[n+i*N];
-      }
-      r_q     += dt*rkA[7*rk + 6]*r_rhsq;
-      r_rkerr += dt*rkE[       6]*r_rhsq;
-
-      rkq[n] = r_q;
-      rkerr[n] = r_rkerr;
-    }
-
-    rkrhsq[n+rk*N] = r_rhsq;
-  }
-
-#else
 
 #define p_Nreads 2
 #define p_blkSize 256
@@ -189,7 +121,6 @@ SOFTWARE.
       }
     }
   }
-#endif
   
 }
 
@@ -229,58 +160,13 @@ SOFTWARE.
                                  @restrict const  dfloat *  rkerr,
                                  @restrict dfloat *  errtmp){
 
-#if 0
-  for(dlong b=0;b<(N+p_blockSize-1)/p_blockSize;++b;@outer(0)){
-
-    @shared volatile dfloat s_err[p_blockSize];
-
-    for(int t=0;t<p_blockSize;++t;@inner(0)){
-      const dlong id = t + p_blockSize*b;
-      if (id<N) {
-        const dfloat   qn = fabs(  q[id]);
-        const dfloat rkqn = fabs(rkq[id]);
-        const dfloat qmax = (qn>rkqn) ? qn : rkqn;
-        dfloat sk = ATOL + RTOL*qmax;
-#if 0
-        s_err[t] = (rkerr[id]/sk)*(rkerr[id]/sk);
-#else
-	const dfloat tmp = (rkerr[id]/sk);
-	s_err[t] = tmp*tmp;
-#endif
-      } else {
-        s_err[t] = 0.f;
-      }
-    }
-
-
-    @barrier("local");
-#if p_blockSize>512
-    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<512) s_err[t] += s_err[t+512];
-    @barrier("local");
-#endif
-#if p_blockSize>256
-    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<256) s_err[t] += s_err[t+256];
-    @barrier("local");
-#endif
-
-    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<128) s_err[t] += s_err[t+128];
-    @barrier("local");
-
-    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 64) s_err[t] += s_err[t+64];
-    @barrier("local");
-
-    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 32) s_err[t] += s_err[t+32];
-    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 16) s_err[t] += s_err[t+16];
-    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  8) s_err[t] += s_err[t+8];
-    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  4) s_err[t] += s_err[t+4];
-    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  2) s_err[t] += s_err[t+2];
-
-    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  1) errtmp[b] = s_err[0] + s_err[1];
-  }
-#else
+#if USE_HIP==1
 #define p_NWARP 4
 #define p_SIMD 64
-#define USE_HIP 1    
+#else
+#define p_NWARP 8
+#define p_SIMD 32
+#endif
 
   for(dlong b=0;b<(N+p_blockSize-1)/p_blockSize;++b;@outer(0)){
     @shared volatile dfloat s_err[p_NWARP];
@@ -335,7 +221,4 @@ SOFTWARE.
       }
     }
   }
-#endif
-
-  
 }

@@ -58,6 +58,12 @@ dopri5::dopri5(dlong Nelements, dlong NhaloElements,
   //add defines
   kernelInfo["defines/" "p_blockSize"] = (int)BLOCKSIZE;
 
+  if(platform.device.mode() == "HIP"){
+    kernelInfo["defines/" "USE_HIP"] = (int)1;
+  }else{
+    kernelInfo["defines/" "USE_HIP"] = (int)0;
+  }
+  
   rkUpdateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
                                     "timeStepperDOPRI5.okl",
                                     "dopri5RkUpdate",

@@ -40,6 +40,12 @@ void linAlg_t::Setup(platform_t *_platform) {
   //add defines
   kernelInfo["defines/" "p_blockSize"] = (int)LINALG_BLOCKSIZE;
 
+  if(platform->device.mode() == "HIP"){
+    kernelInfo["defines/" "USE_HIP"] = (int)1;
+  }else{
+    kernelInfo["defines/" "USE_HIP"] = (int)0;
+  }
+  
   //pinned scratch buffer
   scratch = (dfloat*) platform->hostMalloc(LINALG_BLOCKSIZE*sizeof(dfloat),
                                            NULL, h_scratch);

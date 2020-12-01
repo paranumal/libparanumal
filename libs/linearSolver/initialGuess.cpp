@@ -158,6 +158,13 @@ igProjectionStrategy::igProjectionStrategy(dlong _N, platform_t& _platform, sett
   occa::properties kernelInfo = platform.props;
   kernelInfo["defines/" "p_igNhist"] = maxDim;
 
+  if(platform.device.mode() == "HIP"){
+    kernelInfo["defines/" "USE_HIP"] = (int)1;
+  }else{
+    kernelInfo["defines/" "USE_HIP"] = (int)0;
+  }
+
+  
   igBasisInnerProductsKernel = platform.buildKernel(LINEARSOLVER_DIR "/okl/igBasisInnerProducts.okl", "igBasisInnerProducts", kernelInfo);
   igReconstructKernel        = platform.buildKernel(LINEARSOLVER_DIR "/okl/igReconstruct.okl",        "igReconstruct",        kernelInfo);
   igScaleKernel              = platform.buildKernel(LINEARSOLVER_DIR "/okl/igScale.okl",              "igScale",              kernelInfo);

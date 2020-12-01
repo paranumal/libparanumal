@@ -29,9 +29,24 @@ SOFTWARE.
                  @restrict const dfloat *a,
                  @restrict       dfloat *x){
 
+#if 0		 
   for(dlong n=0;n<N;++n;@tile(p_blockSize,@outer,@inner)){
     x[n] = alpha*a[n]*x[n];
   }
+#else
+
+#define p_Nreads 2
+  for(dlong n0=0;n0<N;n0+=p_Nreads*p_blockSize;@outer){
+    for(int t=0;t<p_blockSize;++t;@inner){
+      dlong n = t + n0;
+      while(n<n0+p_Nreads*p_blockSize && n<N){
+	x[n] = alpha*a[n]*x[n];
+	n+=p_blockSize;
+      }
+    }
+  }
+  
+#endif	
 }
 
 @kernel void amxpy(const dlong N,
@@ -41,12 +56,30 @@ SOFTWARE.
                    const dfloat beta,
                    @restrict dfloat *y){
 
+#if 0
   for(dlong n=0;n<N;++n;@tile(p_blockSize,@outer,@inner)){
     if (beta!=0)
       y[n] = alpha*a[n]*x[n] + beta*y[n];
     else
       y[n] = alpha*a[n]*x[n];
   }
+#else
+
+#define p_Nreads 2
+  for(dlong n0=0;n0<N;n0+=p_Nreads*p_blockSize;@outer){
+    for(int t=0;t<p_blockSize;++t;@inner){
+      dlong n = t + n0;
+      while(n<n0+p_Nreads*p_blockSize && n<N){
+	dfloat xn = (alpha) ? x[n]:0;
+	dfloat yn = (beta) ? y[n]:0;
+	y[n] = alpha*a[n]*xn + beta*yn;
+	n+=p_blockSize;
+      }
+    }
+  }
+  
+#endif	
+
 }
 
 @kernel void zamxpy(const dlong N,
@@ -57,7 +90,24 @@ SOFTWARE.
                     @restrict const dfloat *y,
                     @restrict dfloat *z){
 
+#if 0
   for(dlong n=0;n<N;++n;@tile(p_blockSize,@outer,@inner)){
     z[n] = alpha*a[n]*x[n] + beta*y[n];
   }
+#else
+
+#define p_Nreads 2
+  for(dlong n0=0;n0<N;n0+=p_Nreads*p_blockSize;@outer){
+    for(int t=0;t<p_blockSize;++t;@inner){
+      dlong n = t + n0;
+      while(n<n0+p_Nreads*p_blockSize && n<N){
+	dfloat xn = (alpha) ? x[n]:0;
+	dfloat yn = (beta) ? y[n]:0;
+	z[n] = alpha*a[n]*xn + beta*yn;
+	n+=p_blockSize;
+      }
+    }
+  }
+#endif	
+
 }

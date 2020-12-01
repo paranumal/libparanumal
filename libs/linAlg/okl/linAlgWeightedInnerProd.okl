@@ -80,7 +80,7 @@ SOFTWARE.
 			       @restrict const dfloat *y,
 			       @restrict dfloat *dot){
   
-#define USE_HIP 1
+//#define USE_HIP 1
   
 #if USE_HIP==1
 #define p_SIMD 64

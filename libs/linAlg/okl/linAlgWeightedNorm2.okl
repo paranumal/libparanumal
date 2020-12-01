@@ -79,7 +79,7 @@ SOFTWARE.
 			   @restrict const dfloat *x,
 			   @restrict dfloat *norm2){
   
-#define USE_HIP 1
+//#define USE_HIP 1
   
 #if USE_HIP==1
 #define p_SIMD 64
