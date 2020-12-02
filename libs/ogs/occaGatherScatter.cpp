@@ -127,10 +127,10 @@ void occaGatherScatterFinish(occa::memory& o_v,
 
     // scatter back to local nodes
     if (trans == ogs_trans)
-      occaScatterKernel(ogs.haloGather, Nentries, Nvectors, stride, ogs.Nhalo,
+      occaScatterKernel(ogs.haloGather, Nentries, Nvectors, ogs.Nhalo, stride,
                         type, op, ogs.o_haloBuf, o_v);
     else
-      occaScatterKernel(ogs.haloScatter, Nentries, Nvectors, stride, ogs.Nhalo,
+      occaScatterKernel(ogs.haloScatter, Nentries, Nvectors, ogs.Nhalo, stride,
                         type, op, ogs.o_haloBuf, o_v);
   }
 }

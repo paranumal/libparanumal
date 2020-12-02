@@ -30,9 +30,9 @@ typedef struct { T v; uint i; } sort_data;
 #define INDEX_PTR(A,stride,i) (*(T*)((char*)(A)+(i)*(stride)))
 
 /*------------------------------------------------------------------------------
-  
+
   Radix Sort
-  
+
   stable; O(n+k) time and extra storage
     where k = (digits in an int) * 2^(bits per digit)
     (e.g. k = 4 * 256 = 1024 for 32-bit ints with 8-bit digits)
@@ -42,7 +42,7 @@ typedef struct { T v; uint i; } sort_data;
     counting sort is used for each digit:
       a pass through the input counts the occurences of each digit value
       on a second pass, each input has a known destination
-  
+
   tricks:
     all counting passes are combined into one
     the counting pass also computes the inclusive bit-wise or of all inputs,
@@ -103,7 +103,7 @@ static void radix_offsets(uint *restrict c)
   uint *const ce = c+DIGIT_VALUES;
   uint sum = 0;
   do {
-    const uint c0=c[0], c1=c[1], c2=c[2], c3=c[3]; 
+    const uint c0=c[0], c1=c[1], c2=c[2], c3=c[3];
     const uint o1=sum+c0, o2=o1+c1, o3=o2+c2;
     c[0]=sum, c[1]=o1, c[2]=o2, c[3]=o3;
     sum = o3+c3;
@@ -256,9 +256,9 @@ static void radix_sortp(
 }
 
 /*------------------------------------------------------------------------------
-  
+
   Merge Sort
-  
+
   stable; O(n log n) time
 
   ----------------------------------------------------------------------------*/
@@ -278,7 +278,8 @@ static void radix_sortp(
   } while(0)
 #define MERGE_SORT() \
   do {                                                                 \
-    uint i=0, n=An, base=-n, odd=0, c=0, b=1;                          \
+    uint i=0, n=An, odd=0, c=0, b=1;                                   \
+    sint base=-n;                                                      \
     for(;;) {                                                          \
       DATA *restrict p;                                                \
       if((c&1)==0) {                                                   \
@@ -386,9 +387,9 @@ static void merge_sortp(
 #undef MERGE_2
 
 /*------------------------------------------------------------------------------
-  
+
   Heap Sort
-  
+
   in-place, stability unobservable; O(n log n) time
 
   ----------------------------------------------------------------------------*/
@@ -420,14 +421,14 @@ static void heap_sortv(T *const restrict A, unsigned n)
 
 
 /*------------------------------------------------------------------------------
-  
+
   Hybrid Stable Sort
-  
+
   low-overhead merge sort when n is small,
   otherwise asymptotically superior radix sort
 
   result = O(n) sort with good performance for all n
-  
+
   A, n, stride : specifices the input, stride in bytes
   out : the sorted values on output
 
@@ -504,7 +505,7 @@ uint *sortp(buffer *restrict buf, int start_perm,
     work = (sort_data*)((char*)buf->ptr+work_off);
     count = (uint(*)[DIGIT_VALUES])((char*)buf->ptr+count_off);
     radix_sortp(perm,start_perm, A,n,stride, work,count);
-  }  
+  }
   return perm;
 }
 
