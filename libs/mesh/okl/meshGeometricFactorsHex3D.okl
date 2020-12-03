@@ -128,4 +128,4 @@ SOFTWARE.
   
   // do ogs halo exchange via HOST call
   // halo->Exchange(vgeo, p_Nvgeo*p_Np, ogs_dfloat);
-}
+}      

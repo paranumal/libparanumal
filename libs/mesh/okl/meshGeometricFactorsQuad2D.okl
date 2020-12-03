@@ -1,0 +1,104 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+@kernel meshGeometricFactorsQuad2D(dlong Nelements,
+				  const dfloat *D,
+				  const dfloat *w,
+				  const dfloat *x,
+				  const dfloat *y,
+				  dfloat *vgeo,
+				  dfloat *ggeo){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){ /* for each element */
+
+    @shared dfloat s_D[p_Nq][p_Nq];
+
+    @shared dfloat s_x[p_Nq][p_Nq];
+    @shared dfloat s_y[p_Nq][p_Nq];
+    
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+	s_D[j][i] = D[j*p_Nq+i];
+	int id = e*p_Np + j*p_Nq + i;
+	s_x[j][i] = x[id];
+	s_y[j][i] = y[id];
+      }
+    }
+
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+	int n = i + j*p_Nq;
+	
+	dfloat xr = 0, xs = 0;
+	dfloat yr = 0, ys = 0;
+        
+	for(int m=0;m<p_Nq;++m){
+	  dfloat Dim = s_D[i][m];
+	  dfloat Djm = s_D[j][m];
+	  xr += Dim*s_x[j][m];
+	  xs += Djm*s_x[m][i];
+	  yr += Dim*s_y[j][m];
+	  ys += Djm*s_y[m][i];
+	}
+	
+	/* compute geometric factors for affine coordinate transform*/
+	dfloat J = xr*ys - yr*xs;
+
+#ifdef DEBUG
+	// WHAT TO DO ABOUT THIS ?
+	if(J<1e-12) {
+	  printf("Negative J found at element %d\n", e);
+	}
+#endif
+	
+	dfloat rx =  (ys)/J, ry = -(xs)/J;
+	dfloat sx = -(yr)/J, sy =  (xr)/J;
+	
+	// should be L1
+	dfloat JW = J*w[i]*w[j];
+	
+	/* store geometric factors */
+	vgeo[p_Nvgeo*p_Np*e + n + p_Np*RXID] = rx;
+	vgeo[p_Nvgeo*p_Np*e + n + p_Np*RYID] = ry;
+	
+	vgeo[p_Nvgeo*p_Np*e + n + p_Np*SXID] = sx;
+	vgeo[p_Nvgeo*p_Np*e + n + p_Np*SYID] = sy;
+	
+	vgeo[p_Nvgeo*p_Np*e + n + p_Np*JID]  = J;
+	vgeo[p_Nvgeo*p_Np*e + n + p_Np*JWID] = JW;
+	vgeo[p_Nvgeo*p_Np*e + n + p_Np*IJWID] = ((dfloat)1.)/JW;
+	
+	/* store second order geometric factors */
+	ggeo[p_Nggeo*p_Np*e + n + p_Np*G00ID] = JW*(rx*rx + ry*ry);
+	ggeo[p_Nggeo*p_Np*e + n + p_Np*G01ID] = JW*(rx*sx + ry*sy);
+	ggeo[p_Nggeo*p_Np*e + n + p_Np*G11ID] = JW*(sx*sx + sy*sy);
+	ggeo[p_Nggeo*p_Np*e + n + p_Np*GWJID] = JW;
+      }
+    }
+  }
+}
+// do ogs halo exchange via HOST call
+// halo->Exchange(vgeo, p_Nvgeo*p_Np, ogs_dfloat);
