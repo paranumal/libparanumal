@@ -1,0 +1,80 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+
+@kernel void ellipticBuildOperatorDiagonalContinuousQuad2D(const dlong Nelements,
+							   const dfloat *ggeo,
+							   const int allNeumann,
+							   const dfloat allNeumannPenalty,
+							   const dfloat allNeumannScale,
+							   dfloat *A) {
+  
+  for(dlong e=0;e<mesh.Nelements;++e;@outer(0)){
+
+    for (int ny=0;ny<p_Nq;ny++;@inner(1)) {
+      for (int nx=0;nx<p_Nq;nx++;@inner(0)) {
+
+	const int n = nx+ny*p_Nq;
+	dlong int id = n+e*p_Np;
+	
+	dfloat Ann = 0;
+	
+	if (mapB[id]!=1) {
+	  
+	  dlong base = e*p_Np*p_Nggeo;
+	  dfloat Grs = ggeo[base + n + p_G01ID*p_Np];
+	  Ann += 2*Grs*D[nx+nx*p_Nq]*D[ny+ny*p_Nq];
+	  
+	  for (int k=0;k<p_Nq;k++) {
+	    int iid = k+ny*p_Nq;
+	    dfloat Grr = ggeo[base + iid + p_G00ID*p_Np];
+	    Ann += Grr*D[nx+k*p_Nq]*D[nx+k*p_Nq];
+	  }
+	  
+	  for (int k=0;k<p_Nq;k++) {
+	    int iid = nx+k*p_Nq;
+	    dfloat Gss = ggeo[base + iid + p_G11ID*p_Np];
+	    Ann += Gss*D[ny+k*p_Nq]*D[ny+k*p_Nq];
+	  }
+	  
+	  dfloat JW = ggeo[base + n + p_GWJID*p_Np];
+	  Ann += JW*lambda;
+	} else {
+	  Ann = 1; //just put a 1 so A is invertable
+	}
+	
+	//add the rank boost for the allNeumann Poisson problem
+	if (allNeumann) {
+	  if (mapB[id]!=1) { //dont fill rows for masked nodes
+	    Ann += allNeumannPenalty*allNeumannScale*allNeumannScale;
+	  }
+	}
+	
+	A[id] = Ann;
+      }
+    }
+  }
+}
