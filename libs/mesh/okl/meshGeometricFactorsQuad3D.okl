@@ -1,0 +1,320 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+// custom geometric factors specialized for 3D quad on sphere
+
+@kernel void meshGeometricFactorsQuad3D(const dlong Nelements,
+					const dfloat *D,
+					const dfloat *w,
+					dfloat *vgeo,
+					dfloat *cubvgeo,
+					dfloat *ggeo){
+  
+  
+  for(int e=0;e<Nelements;++e;@outer(0)){ /* for each element */
+
+    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_cubInterp[p_cubNq][p_Nq];
+    
+    @shared dfloat s_x[p_Nq][p_Nq];
+    @shared dfloat s_y[p_Nq][p_Nq];
+    @shared dfloat s_z[p_Nq][p_Nq];
+
+    @shared dfloat s_xr[p_cubNq][p_cubNq];
+    @shared dfloat s_yr[p_cubNq][p_cubNq];
+    @shared dfloat s_zr[p_cubNq][p_cubNq];
+    @shared dfloat s_xs[p_cubNq][p_cubNq];
+    @shared dfloat s_ys[p_cubNq][p_cubNq];
+    @shared dfloat s_zs[p_cubNq][p_cubNq];
+
+    @exclusive dfloat cx , cxr , cxs ;
+    @exclusive dfloat cy , cyr , cys ;
+    @exclusive dfloat cz , czr , czs ;
+    
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+
+	if(i<p_Nq && j<p_Nq){
+	  dlong id = i + j*p_Nq + e*p_Np;
+	  s_x[j][i] = x[id];
+	  s_y[j][i] = y[id];
+	  s_z[j][i] = z[id];
+	  s_D[j][i] = D[i+j*p_Nq];
+	}
+	if(i<p_Nq){
+	  s_cubInterp[j][i] = cubInterp[j*p_Nq + i];
+	}
+      }
+    }
+
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+
+	if(i<p_Nq && j<p_Nq){
+	  
+	  dfloat xij = s_x[j][i];
+	  dfloat yij = s_y[j][i];
+	  dfloat zij = s_z[j][i];
+	  
+	  dfloat xr = 0, yr = 0, zr = 0;
+	  dfloat xs = 0, ys = 0, zs = 0;
+	  
+	  for(int n=0;n<p_Nq;++n){
+	    
+	    dfloat Din = s_D[i][n];
+	    dfloat Djn = s_D[j][n];
+	    
+	    xr += Din*s_x[j][n];
+	    yr += Din*s_y[j][n];
+	    zr += Din*s_z[j][n];
+	    
+	    xs += Djn*s_x[n][i];
+	    ys += Djn*s_y[n][i];
+	    zs += Djn*s_z[n][i];
+	  }
+
+	  s_xr[j][i] = xr;
+	  s_yr[j][i] = yr;
+	  s_zr[j][i] = zr;
+	  s_xs[j][i] = xs;
+	  s_ys[j][i] = ys;
+	  s_zs[j][i] = zs;
+	  
+	  dfloat rx = ys*zij - zs*yij; // dXds x X
+	  dfloat ry = zs*xij - xs*zij;
+	  dfloat rz = xs*yij - ys*xij;
+	  
+	  dfloat sx = zr*yij - yr*zij; // -dXdr x X
+	  dfloat sy = xr*zij - zr*xij;
+	  dfloat sz = yr*xij - xr*yij;
+	    
+	  dfloat tx = yr*zs - zr*ys; // dXdr x dXds ~ X*|dXdr x dXds|/|X|
+	  dfloat ty = zr*xs - xr*zs;
+	  dfloat tz = xr*ys - yr*xs;
+	  
+	  dfloat Gx = tx, Gy = ty, Gz = tz;
+	  
+	  dfloat J = xij*tx + yij*ty + zij*tz;
+	  
+#if DEBUG==1
+	  if(J<1e-8) {
+	    printf("Negative J found at element %d (x=%f,y=%f,z=%f)\n", e, xij, yij, zij);
+	  }
+#endif
+	  
+	  rx /= J;      sx /= J;      tx /= J;
+	  ry /= J;      sy /= J;      ty /= J;
+	  rz /= J;      sz /= J;      tz /= J;
+	  
+	  // use this for "volume" Jacobian
+	  dfloat Jnew = sqrt(Gx*Gx+Gy*Gy+Gz*Gz);  //(difference between actual Jacobian and sphere Jac)
+	  J = Jnew;
+
+	  
+#if DEBUG==1
+	  if(J<1e-8) {
+	    printf("Negative J found at element %d (x=%f,y=%f,z=%f)\n", e, xij, yij, zij);
+	  }
+#endif
+	
+	  dfloat GG00 = xr*xr+yr*yr+zr*zr;
+	  dfloat GG11 = xs*xs+ys*ys+zs*zs;
+	  dfloat GG01 = xr*xs+yr*ys+zr*zs;
+	  dfloat detGG = GG00*GG11 - GG01*GG01;
+	  
+	  // are these tangential
+	  dfloat rx = (xr*GG11-xs*GG01)/detGG;
+	  dfloat ry = (yr*GG11-ys*GG01)/detGG;
+	  dfloat rz = (zr*GG11-zs*GG01)/detGG;
+	
+	  dfloat sx = (-xr*GG01+xs*GG00)/detGG;
+	  dfloat sy = (-yr*GG01+ys*GG00)/detGG;
+	  dfloat sz = (-zr*GG01+zs*GG00)/detGG;
+	  
+	  dfloat tx = yr*zs - zr*ys; // dXdr x dXds ~ X*|dXdr x dXds|/|X|
+	  dfloat ty = zr*xs - xr*zs;
+	  dfloat tz = xr*ys - yr*xs;
+	  
+	  // use this for "volume" Jacobian
+	  dfloat J = sqrt(tx*tx+ty*ty+tz*tz); // (difference between actual Jacobian and sphere Jac)
+	  dfloat JW = J*w[i]*w[j];
+	  
+	  /* store geometric factors */
+	  int base = p_Nvgeo*p_Np*e + j*Nq + i;
+	  
+	  vgeo[base + p_Np*p_RXID] = rx;
+	  vgeo[base + p_Np*p_RYID] = ry;
+	  vgeo[base + p_Np*p_RZID] = rz;
+	  vgeo[base + p_Np*p_SXID] = sx;
+	  vgeo[base + p_Np*p_SYID] = sy;
+	  vgeo[base + p_Np*p_SZID] = sz;
+	  vgeo[base + p_Np*p_TXID] = tx;
+	  vgeo[base + p_Np*p_TYID] = ty;
+	  vgeo[base + p_Np*p_TZID] = tz;
+	  vgeo[base + p_Np*p_JID]  = J;
+	  vgeo[base + p_Np*p_JWID] = JW;
+	  vgeo[base + p_Np*p_IJWID] = 1./JW;
+	  
+	  /* store second order geometric factors (can be computed on the fly, later!!!)*/
+	  int gbase = Nggeo*p_Np*e + j*Nq + i;
+	  ggeo[gbase + p_Np*G00ID] = JW*(rx*rx + ry*ry + rz*rz);
+	  ggeo[gbase + p_Np*G01ID] = JW*(rx*sx + ry*sy + rz*sz);
+	  ggeo[gbase + p_Np*G02ID] = JW*(rx*tx + ry*ty + rz*tz);
+	  
+	  ggeo[gbase + p_Np*G11ID] = JW*(sx*sx + sy*sy + sz*sz);
+	  ggeo[gbase + p_Np*G12ID] = JW*(sx*tx + sy*ty + sz*tz);
+	  
+	  ggeo[gbase + p_Np*G22ID] = JW*(tx*tx + ty*ty + tz*tz);
+	  ggeo[gbase + p_Np*GWJID] = JW;
+	}
+      }
+    }
+    
+    // OCCA inerts barrier here
+
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+
+	// now start interpolating to cubature
+	if(i<p_Nq){
+
+	  cx = 0; cxr = 0; cxs = 0;
+	  cy = 0; cyr = 0; cys = 0;
+	  cz = 0; czr = 0; czs = 0;
+	  
+	  for(int m=0;m<Nq;++m){
+	    dfloat Ijm = s_cubInterp[j][m];
+	    cx += Ijm*s_x[m][i];
+	    cy += Ijm*s_y[m][i];
+	    cz += Ijm*s_z[m][i];
+	    cxr += Ijm*s_xr[m][i];
+	    cyr += Ijm*s_yr[m][i];
+	    czr += Ijm*s_zr[m][i];
+	    cxs += Ijm*s_xs[m][i];
+	    cys += Ijm*s_ys[m][i];
+	    czs += Ijm*s_zs[m][i];
+	  }
+	}
+      }
+    }
+
+    // OCCA inerts barrier here
+
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+	if(i<p_Nq){
+	  s_x[j][i] = cx;
+	  s_y[j][i] = cy;
+	  s_z[j][i] = cz;
+	  s_xr[j][i] = cxr;
+	  s_yr[j][i] = cyr;
+	  s_zr[j][i] = czr;
+	  s_xs[j][i] = cxs;
+	  s_ys[j][i] = cys;
+	  s_zs[j][i] = czs;
+	}
+      }
+    }
+
+    // OCCA inerts barrier here
+    
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+	
+	cx = 0; cxr = 0; cxs = 0;
+	cy = 0; cyr = 0; cys = 0;
+	cz = 0; czr = 0; czs = 0;
+	
+	for(int m=0;m<Nq;++m){
+	  dfloat Iim = s_cubInterp[i][m];
+	  cx += Iim*s_x[j][m];
+	  cy += Iim*s_y[j][m];
+	  cz += Iim*s_z[j][m];
+	  cxr += Iim*s_xr[j][m];
+	  cyr += Iim*s_yr[j][m];
+	  czr += Iim*s_zr[j][m];
+	  cxs += Iim*s_xs[j][m];
+	  cys += Iim*s_ys[j][m];
+	  czs += Iim*s_zs[j][m];
+	}
+	
+	dfloat rx = cys*cz - czs*cy; // dXds x X
+	dfloat ry = czs*cx - cxs*cz;
+	dfloat rz = cxs*cy - cys*cx;
+	
+	dfloat sx = czr*cy - cyr*cz; // -dXdr x X
+	dfloat sy = cxr*cz - czr*cx;
+	dfloat sz = cyr*cx - cxr*cy;
+
+	dfloat tx = cyr*czs - czr*cys; // dXdr x dXds ~ X*|dXdr x dXds|/|X|
+	dfloat ty = czr*cxs - cxr*czs;
+	dfloat tz = cxr*cys - cyr*cxs;
+	
+	dfloat Gx = tx, Gy = ty, Gz = tz;
+	
+	dfloat J = cx*tx + cy*ty + cz*tz;
+
+#if DEBUG==1
+	if(J<1e-8) {
+	  printf("Negative J found at element %d (x=%f,y=%f,z=%f)\n", e, xij, yij, zij);
+	}
+#endif
+	
+	rx /= J;      sx /= J;      tx /= J;
+	ry /= J;      sy /= J;      ty /= J;
+	rz /= J;      sz /= J;      tz /= J;
+	
+	// use this for "volume" Jacobian
+	J = sqrt(Gx*Gx+Gy*Gy+Gz*Gz);
+
+#if DEBUG==1
+	if(J<1e-8) {
+	  printf("Negative J found at element %d (x=%f,y=%f,z=%f)\n", e, xij, yij, zij);
+	}
+#endif
+
+	dfloat JW = J*cubw[j]*cubw[i];
+	
+	/* store geometric factors */
+	int base = p_Nvgeo*p_cubNp*e + j*p_cubNq + i;
+
+	cubvgeo[base + p_cubNp*p_RXID] = rx;
+	cubvgeo[base + p_cubNp*p_RYID] = ry;
+	cubvgeo[base + p_cubNp*p_RZID] = rz;
+	cubvgeo[base + p_cubNp*p_SXID] = sx;
+	cubvgeo[base + p_cubNp*p_SYID] = sy;
+	cubvgeo[base + p_cubNp*p_SZID] = sz;
+	cubvgeo[base + p_cubNp*p_TXID] = tx;
+	cubvgeo[base + p_cubNp*p_TYID] = ty;
+	cubvgeo[base + p_cubNp*p_TZID] = tz;
+	cubvgeo[base + p_cubNp*p_JID]  = J;
+	cubvgeo[base + p_cubNp*p_JWID] = JW;
+	cubvgeo[base + p_cubNp*p_IJWID] = 1./JW;
+      }
+    }
+  } 
+  //    halo->Exchange(vgeo, Nvgeo*p_Np, ogs_dfloat);
+}
