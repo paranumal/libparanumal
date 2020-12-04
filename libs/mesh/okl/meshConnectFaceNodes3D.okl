@@ -1,0 +1,103 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+// face-node to face-node connection
+// 
+@kernel void meshConnectFaceNodes3D(const dlong Nelements,
+				    const dlong *EToE,
+				    const dlong *EToF,
+				    dlong *vmapM,
+				    dlong *vmapP,
+				    dlong *mapP){
+
+  /* assume elements already connected */
+  for(dlong eM=0;eM<Nelements;++eM;@outer(0)){
+
+    @shared dfloat s_xP[p_Nfaces][p_Nfp];
+    @shared dfloat s_yP[p_Nfaces][p_Nfp];
+    @shared dfloat s_zP[p_Nfaces][p_Nfp];
+
+    @shared int s_faceNodes[p_Nfaces][p_Nfp];
+    
+    @exclusive dlong eP;
+    @exclusive int fP;
+    
+    for(int fM=0;fM<p_Nfaces;++fM;@inner(1)){
+      for(int nM=0;nM<p_Nfp;++nM;@inner(0)){
+	
+	eP = EToE[e*p_Nfaces+f];
+	fP = EToF[e*p_Nfaces+f];
+    
+	if(eP<0 || fP<0){ // fake connections for unconnected faces
+	  eP = e;
+	  fP = f;
+	}
+
+	// fetch coordinates for nodes on neighbor faces
+	dlong idP = faceNodes[fP*p_Nfp+nM] + eP*p_Np;
+
+	// note we store the '+' trace stuff relatve to each '-' face
+	s_faceNodesP[fM][nM] = faceNodes[fP*p_Nfp+nM];
+	s_xP[fM][nM] = x[idP];
+	s_yP[fM][nM] = y[idP];
+	s_zP[fM][nM] = z[idP];
+      }
+    }
+
+    for(int fM=0;fM<p_Nfaces;++fM;@inner(1)){
+      for(int nM=0;nM<p_Nfp;++nM;@inner(0)){
+    
+	dlong  idM = faceNodes[fM*p_Nfp+nM] + eM*p_Np;
+	dfloat xM = x[idM];
+	dfloat yM = y[idM];
+	dfloat zM = z[idM];
+	
+	/* for each node on this face find the neighbor node */
+	dfloat mindist2 = 0;
+	int nP = 0;
+	
+	for(int n=0;n<p_Nfp;++n){
+	  dfloat dx = xM-s_xP[fM][n];
+	  dfloat dy = yM-s_yP[fM][n];
+	  dfloat dz = zM-s_zP[fM][n];
+	  dfloat dist2 =  dx*dx+dy*dy+dz*dz;
+	  if(n==0 || dist2<mindist2){
+	    mindist2 = dist2;
+	    nP = n;
+	  }
+	}
+	
+	/* now map to '+' trace node */
+        dlong id = p_Nfaces*p_Nfp*eM + fM*p_Nfp + nM;
+	dlong idP = eP*p_Np + s_faceNodesP[fM][nP];
+        vmapM[id] = idM;
+        vmapP[id] = idP;
+        mapP[id] = eP*p_Nfaces*p_Nfp + fP*p_Nfp + nP;
+      }
+    }
+  }
+}
+
