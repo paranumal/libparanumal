@@ -26,12 +26,11 @@ SOFTWARE.
 
 // face-node to face-node connection
 // 
-@kernel void meshConnectFaceNodes3D(const dlong Nelements,
+@kernel void meshConnectFaceNodes2D(const dlong Nelements,
 				    const dlong *EToE,
 				    const dlong *EToF,
 				    const dfloat *x,
 				    const dfloat *y,
-				    const dfloat *z,
 				    dlong *vmapM,
 				    dlong *vmapP,
 				    dlong *mapP){
@@ -41,7 +40,6 @@ SOFTWARE.
 
     @shared dfloat s_xP[p_Nfaces][p_Nfp];
     @shared dfloat s_yP[p_Nfaces][p_Nfp];
-    @shared dfloat s_zP[p_Nfaces][p_Nfp];
 
     @shared int s_faceNodes[p_Nfaces][p_Nfp];
     
@@ -66,7 +64,6 @@ SOFTWARE.
 	s_faceNodesP[fM][nM] = faceNodes[fP*p_Nfp+nM];
 	s_xP[fM][nM] = x[idP];
 	s_yP[fM][nM] = y[idP];
-	s_zP[fM][nM] = z[idP];
       }
     }
 
@@ -76,7 +73,6 @@ SOFTWARE.
 	dlong  idM = faceNodes[fM*p_Nfp+nM] + eM*p_Np;
 	dfloat xM = x[idM];
 	dfloat yM = y[idM];
-	dfloat zM = z[idM];
 	
 	/* for each node on this face find the neighbor node */
 	dfloat mindist2 = 0;
@@ -85,8 +81,8 @@ SOFTWARE.
 	for(int n=0;n<p_Nfp;++n){
 	  dfloat dx = xM-s_xP[fM][n];
 	  dfloat dy = yM-s_yP[fM][n];
-	  dfloat dz = zM-s_zP[fM][n];
-	  dfloat dist2 =  dx*dx+dy*dy+dz*dz;
+
+	  dfloat dist2 =  dx*dx+dy*dy;
 	  if(n==0 || dist2<mindist2){
 	    mindist2 = dist2;
 	    nP = n;
