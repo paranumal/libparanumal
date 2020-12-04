@@ -24,19 +24,18 @@ SOFTWARE.
 
 */
 
-@kernel void meshPhysicalNodesHex3D(const dlong Nelements,
-				    const dfloat *r,
-				    const dfloat *s,
-				    const dfloat *t,
-				    const dfloat *EX,
-				    const dfloat *EY,
-				    const dfloat *EZ,
-				    dfloat *x,
-				    dfloat *y,
-				    dfloat *z){
+@kernel void meshPhysicalNodesQuad3D(const dlong Nelements,
+				     const dfloat *r,
+				     const dfloat *s,
+				     const dfloat *EX,
+				     const dfloat *EY,
+				     const dfloat *EZ,
+				     dfloat *x,
+				     dfloat *y,
+				     dfloat *z){
   
   for(dlong e=0;e<Nelements;++e;@outer(0)){ /* for each element */
-    
+
     @shared dfloat s_xe[p_Nverts], s_ye[p_Nverts], s_ze[p_Nverts];
     
     for(int n=0;n<p_Np;++n;@inner(0)){ /* for each node */
@@ -53,36 +52,28 @@ SOFTWARE.
       /* (r,s,t) coordinates of interpolation nodes*/
       dfloat rn = r[n];
       dfloat sn = s[n];
-      dfloat tn = t[n];
+
+      /* physical coordinate of interpolation node */
+      dfloat xn = 0.25*(  (1-rn)*(1-sn)*s_xe[0]
+		      +(1+rn)*(1-sn)*s_xe[1]
+		      +(1+rn)*(1+sn)*s_xe[2]
+		      +(1-rn)*(1+sn)*s_xe[3]);
+
+      dfloat yn  = 0.25*(  (1-rn)*(1-sn)*s_ye[0]
+		      +(1+rn)*(1-sn)*s_ye[1]
+		      +(1+rn)*(1+sn)*s_ye[2]
+		      +(1-rn)*(1+sn)*s_ye[3]);
+
+      dfloat zn = 0.25*(  (1-rn)*(1-sn)*s_ze[0]
+		      +(1+rn)*(1-sn)*s_ze[1]
+		      +(1+rn)*(1+sn)*s_ze[2]
+		      +(1-rn)*(1+sn)*s_ze[3]);
 
       dlong vid = e*p_Np + n;
-      /* physical coordinate of interpolation node */
-      x[vid] = 0.125*( (1-rn)*(1-sn)*(1-tn)*s_xe[0]
-		      +(1+rn)*(1-sn)*(1-tn)*s_xe[1]
-		      +(1+rn)*(1+sn)*(1-tn)*s_xe[2]
-		      +(1-rn)*(1+sn)*(1-tn)*s_xe[3]
-		      +(1-rn)*(1-sn)*(1+tn)*s_xe[4]
-		      +(1+rn)*(1-sn)*(1+tn)*s_xe[5]
-		      +(1+rn)*(1+sn)*(1+tn)*s_xe[6]
-		       +(1-rn)*(1+sn)*(1+tn)*s_xe[7]);
-
-      y[vid] = 0.125*( (1-rn)*(1-sn)*(1-tn)*s_ye[0]
-		      +(1+rn)*(1-sn)*(1-tn)*s_ye[1]
-		      +(1+rn)*(1+sn)*(1-tn)*s_ye[2]
-		      +(1-rn)*(1+sn)*(1-tn)*s_ye[3]
-		      +(1-rn)*(1-sn)*(1+tn)*s_ye[4]
-		      +(1+rn)*(1-sn)*(1+tn)*s_ye[5]
-		      +(1+rn)*(1+sn)*(1+tn)*s_ye[6]
-		       +(1-rn)*(1+sn)*(1+tn)*s_ye[7]);
-
-      z[vid] = 0.125*( (1-rn)*(1-sn)*(1-tn)*s_ze[0]
-		      +(1+rn)*(1-sn)*(1-tn)*s_ze[1]
-		      +(1+rn)*(1+sn)*(1-tn)*s_ze[2]
-		      +(1-rn)*(1+sn)*(1-tn)*s_ze[3]
-		      +(1-rn)*(1-sn)*(1+tn)*s_ze[4]
-		      +(1+rn)*(1-sn)*(1+tn)*s_ze[5]
-		      +(1+rn)*(1+sn)*(1+tn)*s_ze[6]
-		       +(1-rn)*(1+sn)*(1+tn)*s_ze[7]);
+      dfloat rlin = sqrt(xn*xn+yn*yn+zn*zn);
+      x[vid] = xn/rlin;
+      y[vid] = yn/rlin;
+      z[vid] = zn/rlin;
     }
   }
   
