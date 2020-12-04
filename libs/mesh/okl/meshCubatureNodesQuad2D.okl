@@ -1,0 +1,136 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+@kernel void meshCubatureNodesQuad2D(const dlong Nelements,
+				     const dfloat *cubInterp,
+				     const dfloat *x,
+				     const dfloat *y,
+				     dfloat *cubx,
+				     dfloat *cuby){
+  
+  for(dlong e=0;e<Nelements;++e;@outer(0)){ /* for each element */
+
+    @shared dfloat s_x[p_cubNq][p_cubNq];
+    @shared dfloat s_y[p_cubNq][p_cubNq];
+
+    @shared dfloat s_Ix[p_cubNq][p_cubNq];
+    @shared dfloat s_Iy[p_cubNq][p_cubNq];
+    
+    @shared dfloat s_I[p_cubNq][p_Nq];
+
+    for(int b=0;b<p_cubNq;++b;@inner(1)){
+      for(int a=0;a<p_cubNq;++a;@inner(1)){
+	
+	if(a<p_Nq){
+	  s_I[b][a] = cubInterp[b*p_Nq+a];
+	}
+	if(a<p_Nq && b<p_Nq){
+	  dlong id = a + b*p_Nq + e*p_Np;
+	  s_x[b][a] = x[id];
+	  s_y[b][a] = y[id];
+	}
+      }
+    }
+
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int a=0;a<p_cubNq;++a;@inner(1)){
+
+	if(a<p_Nq){
+	  dfloat Ix = 0, Iy = 0;
+	  for(int b=0;b<p_Nq;++b){
+	    dfloat Ijb = s_I[j][b];
+	    Ix += Ijb*s_x[b][a];
+	    Iy += Ijb*s_y[b][a];
+	  }
+	  s_Ix[j][a] = Ix;
+	  s_Iy[j][a] = Iy;
+	}
+      }
+    }
+    
+    // OCCA barrier here
+    
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(1)){
+
+	dfloat Ix = 0, Iy = 0;
+	for(int a=0;a<p_Nq;++a){
+	  dfloat Iia = s_I[i][a];
+	  Ix += Iia*s_Ix[j][a];
+	  Iy += Iia*s_Iy[j][a];
+	}
+
+	dlong id = e*p_cubNp + j*p_cubNq + i;
+	cubx[id] = Ix;
+	cuby[id] = Iy;
+      }
+    }
+  }
+}
+
+@kernel void meshCubatureSurfaceNodesQuad2D(const dlong Nelements,
+					    const dlong *vmapM,
+					    const dfloat *cubInterp,
+					    const dfloat *x,
+					    const dfloat *y,
+					    dfloat *intx,
+					    dfloat *inty){
+  
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_x[p_Nfaces][p_Nfp];
+    @shared dfloat s_y[p_Nfaces][p_Nfp];
+    
+    for(int f=0;f<Nfaces;++f;@inner(1)){
+      for(int n=0;n<intNfp;++n;@inner(0)){
+	if(n<p_Nfp){
+	  dlong vid = vmapM[n+f*p_Nfp+e*p_Nfp*p_Nfaces];
+	  s_x[f][n] = x[vid];
+	  s_y[f][n] = y[vid];
+	}
+      }
+    }
+    
+    for(int f=0;f<Nfaces;++f;@inner(1)){
+      for(int n=0;n<intNfp;++n;@inner(0)){    
+    
+        dfloat Ix = 0, Iy = 0;
+        for(int m=0;m<p_Nfp;++m){
+	  
+          dfloat Inm = cubInterp[m+n*p_Nfp+f*p_intNfp*p_Nfp];
+          Ix += Inm*s_x[f][m];
+          Iy += Inm*s_y[f][m];
+        }
+	
+        dlong id = n + f*p_intNfp + e*p_Nfaces*p_intNfp;
+
+        // project to sphere
+        intx[id] = Ix;
+        inty[id] = Iy;
+      }
+    }
+  }
+}
