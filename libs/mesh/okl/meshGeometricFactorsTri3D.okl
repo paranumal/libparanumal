@@ -1,0 +1,131 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+// custom geometric factors specialized for 3D tri on sphere
+@kernel void meshGeometricFactorsTri3D(dlong Nelements,
+				       const dfloat *Dr,
+				       const dfloat *Ds,
+				       dfloat *vgeo,
+				       dfloat *ggeo){
+
+  for(int e=0;e<Nelements;++e;@outer(0)){ /* for each element */
+
+    @shared dfloat s_x[p_Np];
+    @shared dfloat s_y[p_Np];
+    @shared dfloat s_z[p_Np];
+    
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      s_x[n] = x[n+e*p_Np];
+      s_y[n] = y[n+e*p_Np];
+      s_z[n] = z[n+e*p_Np];
+    }
+
+    
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      dfloat xr = 0, yr = 0, zr = 0;
+      dfloat xs = 0, ys = 0, zs = 0;
+
+      for(int m=0;m<p_Np;++m){
+
+        dfloat Drnm = Dr[n*p_Np+m]; // maybe too big for LDS
+        dfloat Dsnm = Ds[n*p_Np+m];
+
+        xr += Drnm*s_x[m];
+        yr += Drnm*s_y[m];
+        zr += Drnm*s_z[m];
+
+        xs += Dsnm*s_x[m];
+        ys += Dsnm*s_y[m];
+        zs += Dsnm*s_z[m];
+      }
+      
+      dfloat rx = ys*zn - zs*yn; // dXds x X
+      dfloat ry = zs*xn - xs*zn;
+      dfloat rz = xs*yn - ys*xn;
+      
+      dfloat sx = zr*yn - yr*zn; // -dXdr x X
+      dfloat sy = xr*zn - zr*xn;
+      dfloat sz = yr*xn - xr*yn;
+
+      dfloat tx = yr*zs - zr*ys; // dXdr x dXds ~ X*|dXdr x dXds|/|X|
+      dfloat ty = zr*xs - xr*zs;
+      dfloat tz = xr*ys - yr*xs;
+
+      dfloat Gx = tx, Gy = ty, Gz = tz;
+
+      dfloat J = xn*tx + yn*ty + zn*tz;
+
+#if DEBUG==1
+      if(J<1e-8) {
+        printf("Negative J found at element %d \n", e);
+      }
+#endif
+
+      rx /= J;
+      ry /= J;
+      rz /= J;
+
+      sx /= J;
+      sy /= J;
+      sz /= J;
+
+      tx /= J;
+      ty /= J;
+      tz /= J;
+
+      // use this for "volume" Jacobian
+      J = sqrt(Gx*Gx+Gy*Gy+Gz*Gz);
+
+#if DEBUG==1
+      if(J<1e-8) {
+        printf("Negative J found at element %d \n", e);
+      }
+#endif
+
+      /* store geometric factors */
+      int base = p_Nvgeo*p_Np*e + n;
+      
+      vgeo[base + p_Np*RXID] = rx;
+      vgeo[base + p_Np*RYID] = ry;
+      vgeo[base + p_Np*RZID] = rz;
+      vgeo[base + p_Np*SXID] = sx;
+      vgeo[base + p_Np*SYID] = sy;
+      vgeo[base + p_Np*SZID] = sz;
+      vgeo[base + p_Np*TXID] = tx;
+      vgeo[base + p_Np*TYID] = ty;
+      vgeo[base + p_Np*TZID] = tz;
+      vgeo[base + p_Np*JID]  = J;
+
+      // TW: uh oh -- this needs to be Np - heck size of ggeo
+      ggeo[p_Nggeo*e + G00ID] = J*(rx*rx + ry*ry + rz*rz);
+      ggeo[p_Nggeo*e + G01ID] = J*(rx*sx + ry*sy + rz*sz);
+      ggeo[p_Nggeo*e + G11ID] = J*(sx*sx + sy*sy + sz*sz);
+      ggeo[p_Nggeo*e + GWJID] = J;
+    }
+  }
+}
+//  halo->Exchange(vgeo, Nvgeo*p_Np, ogs_dfloat);
+
