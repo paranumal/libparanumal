@@ -1,0 +1,75 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+@kernel void meshPhysicalNodesTri3D(const dlong Nelements,
+				    const dfloat *r,
+				    const dfloat *s,
+				    const dfloat *EX,
+				    const dfloat *EY,
+				    const dfloat *EZ,
+				    dfloat *x,
+				    dfloat *y,
+				    dfloat *z){
+  
+  for(dlong e=0;e<Nelements;++e;@outer(0)){ /* for each element */
+    
+    @shared dfloat s_xe[p_Nverts], s_ye[p_Nverts], s_ze[p_Nverts];
+    
+    for(int n=0;n<p_Np;++n;@inner(0)){ /* for each node */
+      
+      dlong id = e*p_Nverts;
+      
+      // load vertex coordinates (relies on p_Np>=p_Nverts for N>=1)
+      if(n<p_Nverts){
+	s_xe[n] = EX[id+n];
+	s_ye[n] = EY[id+n];
+	s_ze[n] = EZ[id+n];
+      }
+      
+      /* (r,s) coordinates of interpolation nodes*/
+      dfloat rn = r[n];
+      dfloat sn = s[n];
+
+      dlong vid = e*p_Np + n;
+      /* physical coordinate of interpolation node */
+      x[vid] = -0.5*(rn+sn)*s_xe[0]
+	+ 0.5*(1+rn)*s_xe[1]
+	+ 0.5*(1+sn)*s_xe[2];
+
+      y[vid] = -0.5*(rn+sn)*s_ye[0]
+	+ 0.5*(1+rn)*s_ye[1]
+	+ 0.5*(1+sn)*s_ye[2];
+
+      z[vid] = -0.5*(rn+sn)*s_ze[0]
+	+ 0.5*(1+rn)*s_ze[1]
+	+ 0.5*(1+sn)*s_ze[2];
+    }
+  }
+  
+  //  halo->Exchange(x, Np, ogs_dfloat);
+  //  halo->Exchange(y, Np, ogs_dfloat);
+  //  halo->Exchange(z, Np, ogs_dfloat);
+}
