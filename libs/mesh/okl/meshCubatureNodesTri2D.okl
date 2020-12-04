@@ -1,0 +1,99 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+@kernel void meshCubatureVolumeNodesTri2D(const dlong Nelements,
+					  const dfloat *cubInterp,
+					  const dfloat *cubr,
+					  const dfloat *cubs,
+					  const dfloat *EX,
+					  const dfloat *EY,
+					  dfloat *cubx,
+					  dfloat *cuby){
+  
+  // still assumes affine tris
+  for(dlong e=0;e<Nelements;++e;@outer(0)){ /* for each element */
+    
+    for(int n=0;n<p_cubNp;++n;@inner(0)){ /* for each node */
+      
+      dlong id = e*p_Nverts;
+      
+      dfloat xe1 = EX[id+0]; /* x-coordinates of vertices */
+      dfloat xe2 = EX[id+1];
+      dfloat xe3 = EX[id+2];
+
+      dfloat ye1 = EY[id+0]; /* y-coordinates of vertices */
+      dfloat ye2 = EY[id+1];
+      dfloat ye3 = EY[id+2];
+
+      /* (r,s) coordinates of interpolation nodes*/
+      dfloat rn = cubr[n];
+      dfloat sn = cubs[n];
+
+      /* physical coordinate of interpolation node */
+      dlong id = e*p_cubNp+n;
+      cubx[id] = -0.5*(rn+sn)*xe1 + 0.5*(1+rn)*xe2 + 0.5*(1+sn)*xe3;
+      cuby[id] = -0.5*(rn+sn)*ye1 + 0.5*(1+rn)*ye2 + 0.5*(1+sn)*ye3;
+    }
+  }
+}
+
+@kernel void meshCubatureSurfaceNodesTri2D(const dlong Nelements,
+					   const dfloat *cubInterp,
+					   const dfloat *x,
+					   const dfloat *y,
+					   dfloat *intx,
+					   dfloat *inty){
+
+  //Face cubature
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    for(int f=0;f<p_Nfaces;++f;@inner(1)){
+      for(int n=0;n<p_intNfp;++n;@inner(0)){
+	if(n<p_Nfp){
+	  dlong vid = vmapM[n+f*p_Nfp+e*p_Nfp*p_Nfaces];
+	  s_x[f][n] = x[vid];
+	  s_y[f][n] = y[vid];
+	}
+      }
+    }
+
+    // OCCA barrier here
+    
+    for(int f=0;f<p_Nfaces;++f;@inner(1)){
+      for(int n=0;n<p_intNfp;++n;@inner(0)){
+	dfloat ix = 0, iy = 0;
+	for(int m=0;m<p_Nfp;++m){
+	  dfloat Inm = intInterp[m+n*Nfp+f*intNfp*Nfp];
+	  ix += Inm*s_x[f][m];
+	  iy += Inm*s_y[f][m];
+	}
+	dlong id = n + f*p_intNfp + e*p_Nfaces*p_intNfp;
+	intx[id] = ix;
+	inty[id] = iy;
+      }
+    }
+  }
+}

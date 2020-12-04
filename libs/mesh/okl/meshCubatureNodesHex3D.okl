@@ -29,9 +29,9 @@ SOFTWARE.
 					  const dfloat *x,
 					  const dfloat *y,
 					  const dfloat *z,
-					  const dfloat *cubx,
-					  const dfloat *cuby,
-					  const dfloat *cubz){
+					  dfloat *cubx,
+					  dfloat *cuby,
+					  dfloat *cubz){
 
   for(dlong e=0;e<Nelements;++e;@outer(0)){ /* for each element */
 
@@ -126,9 +126,9 @@ SOFTWARE.
 					const dfloat *x,
 					const dfloat *y,
 					const dfloat *z,
-					const dfloat *cubx,
-					const dfloat *cuby,
-					const dfloat *cubz){
+					dfloat *cubx,
+					dfloat *cuby,
+					dfloat *cubz){
   
   for(dlong e=0;e<Nelements;++e){
 
