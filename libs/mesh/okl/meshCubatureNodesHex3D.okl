@@ -1,0 +1,212 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+@kernel void meshCubatureVolumeNodesHex3D(const dlong Nelements,
+					  const dfloat *cubInterp,
+					  const dfloat *x,
+					  const dfloat *y,
+					  const dfloat *z,
+					  const dfloat *cubx,
+					  const dfloat *cuby,
+					  const dfloat *cubz){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){ /* for each element */
+
+    // bit heavy on LDS (about 15KB at cubNq=8)
+    @shared dfloat s_xe[p_cubNq][p_cubNq][p_cubNq];
+    @shared dfloat s_ye[p_cubNq][p_cubNq][p_cubNq];
+    @shared dfloat s_ze[p_cubNq][p_cubNq][p_cubNq];
+
+    @shared dfloat s_cubx[p_cubNq][p_cubNq];
+    @shared dfloat s_cuby[p_cubNq][p_cubNq];
+    @shared dfloat s_cubz[p_cubNq][p_cubNq];
+    
+    @shared dfloat s_I[p_cubNq][p_Nq];
+
+    for(int b=0;b<p_cubNq;++b;@inner(1)){
+      for(int a=0;a<p_cubNq;++a;@inner(1)){
+
+	if(a<p_Nq){
+	  s_I[b][a] = cubInterp[b*p_Nq+a];
+	}
+      }
+    }
+    
+    for(int b=0;b<p_cubNq;++b;@inner(1)){
+      for(int a=0;a<p_cubNq;++a;@inner(1)){
+
+	if(a<p_Nq && b<p_Nq){
+	  for(int k=0;k<p_cubNq;++k){
+	    s_xe[k][b][a] = 0;
+	    s_ye[k][b][a] = 0;
+	    s_ze[k][b][a] = 0;
+	  }
+	  
+	  for(int c=0;c<p_Nq;++c){
+	    dlong id = a + b*p_Nq + c*p_Nq*p_Nq + e*p_Np;
+	    dfloat xid = x[id], yid = y[id], zid = z[id];
+	    
+	    for(int k=0;k<p_cubNq;++k){
+	      dfloat Ikc = s_I[k][c];
+	      s_xe[k][b][a] += Ikc*xid;
+	      s_ye[k][b][a] += Ikc*yid;
+	      s_ze[k][b][a] += Ikc*zid;
+	    }
+	  }
+	}
+      }
+    }
+
+    for(int k=0;k<p_cubNq;++k){
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
+	for(int a=0;a<p_cubNq;++a;@inner(1)){
+	  // interpolate in 'j'
+	  if(a<p_Nq){
+	    dfloat Ix = 0, Iy = 0, Iz = 0;
+	    for(int b=0;b<p_Nq;++b){
+	      dfloat Ijb = s_I[j][b];
+	      Ix += Ijb*s_x[k][b][a];
+	      Iy += Ijb*s_y[k][b][a];
+	      Iz += Ijb*s_z[k][b][a];
+	    }
+	    s_cubx[j][a] = Ix;
+	    s_cuby[j][a] = Iy;
+	    s_cubz[j][a] = Iz;
+	  }
+	}
+      }
+      
+      // OCCA barrier here
+
+      for(int j=0;j<p_cubNq;++j;@inner(1)){
+	for(int i=0;i<p_cubNq;++i;@inner(1)){
+	  // interpolate in 'i'
+	  dfloat Ix = 0, Iy = 0, Iz = 0;
+	  for(int a=0;a<p_Nq;++a){
+	    dfloat Iia = s_I[i][a];
+	    Ix += Iia*s_cubx[j][a];
+	    Iy += Iia*s_cuby[j][a];
+	    Iz += Iia*s_cubz[j][a];
+	  }
+	  dlong id = e*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i;
+	  cubx[id] = Ix;
+	  cuby[id] = Iy;
+	  cubz[id] = Iz;
+	}
+      }
+    }
+  }
+}
+
+@kernel void meshCubatureSurfNodesHex3D(const dlong Nelements,
+					const dfloat *cubInterp,
+					const dfloat *x,
+					const dfloat *y,
+					const dfloat *z,
+					const dfloat *cubx,
+					const dfloat *cuby,
+					const dfloat *cubz){
+  
+  for(dlong e=0;e<Nelements;++e){
+
+    @shared dfloat s_I[p_cubNq][p_Nq];
+    
+    @shared dfloat s_x[p_cubNq][p_cubNq];
+    @shared dfloat s_y[p_cubNq][p_cubNq];
+    @shared dfloat s_z[p_cubNq][p_cubNq];
+
+    @shared dfloat s_Ix[p_cubNq][p_cubNq];
+    @shared dfloat s_Iy[p_cubNq][p_cubNq];
+    @shared dfloat s_Iz[p_cubNq][p_cubNq];
+
+    for(int ny=0;ny<p_cubNq;++ny;@inner(1)){
+      for(int nx=0;nx<p_cubNq;++nx;@inner(0)){
+	if(nx<p_Nq){
+	  s_I[ny][nx] = cubInterp[ny*p_Nq+nx];
+	}
+      }
+    }
+    
+    for(int f=0;f<Nfaces;++f){
+
+      @barrier("local"); 
+      
+      for(int ny=0;ny<p_cubNq;++ny;@inner(1)){
+        for(int nx=0;nx<p_cubNq;++nx;@inner(0)){
+
+	  if(nx<p_Nq && ny<p_Nq){
+	    dlong vid = m+ny*p_Nq+f*p_Nfp+e*p_Nfp*p_Nfaces;
+	    dlong idM = vmapM[vid];
+	    s_x[ny][nx] = x[idM];
+	    s_y[ny][nx] = y[idM];
+	    s_z[ny][nx] = z[idM];
+	  }
+	}
+      }
+
+      // OCCA barrier here
+      
+      // interpolate in 'j'
+      for(int ny=0;ny<p_cubNq;++ny;@inner(1)){
+        for(int nx=0;nx<p_cubNq;++nx;@inner(0)){
+	  if(nx<p_Nq){
+	    dfloat Ix = 0, Iy = 0, Iz = 0;
+	    for(int m=0;m<p_Nq;++m){
+	      dfloat Inm = s_I[ny][m];
+	      Ix += Inm*s_x[m][nx];
+	      Iy += Inm*s_y[m][nx];
+	      Iz += Inm*s_z[m][nx];
+	    }
+	    s_Ix[ny][nx] = Ix;
+	    s_Iy[ny][nx] = Iy;
+	    s_Iz[ny][nx] = Iz;
+	  }
+	}
+      }
+
+      // OCCA barrier here
+      
+      // interpolate in 'i' and store
+      for(int ny=0;ny<p_cubNq;++ny;@inner(1)){
+        for(int nx=0;nx<p_cubNq;++nx;@inner(0)){
+
+	  dfloat Ix = 0, Iy = 0, Iz = 0;
+	  for(int m=0;m<p_Nq;++m){
+	    dfloat Inm = s_I[nx][m];
+	    Ix += Inm*s_Ix[ny][m];
+	    Iy += Inm*s_Iy[ny][m];
+	    Iz += Inm*s_Iz[ny][m];
+	  }
+	  
+          dlong id = nx + ny*p_cubNq + f*p_cubNfp + e*p_Nfaces*p_cubNfp;
+          cubx[id] = Ix;
+          cuby[id] = Iy;
+          cubz[id] = Iz;
+        }
+      }
+    }
+  }
+}
