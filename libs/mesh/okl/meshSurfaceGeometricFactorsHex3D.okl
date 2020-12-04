@@ -1,0 +1,104 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+	
+#define mymax(a,b) ( ((a)>(b))?(a):(b) )
+
+/* compute outwards facing normals, surface Jacobian, and volume Jacobian for all face nodes */
+@kernel void meshSurfaceGeometricFactorsHex3D(const dlong Nelements,
+					      const dlong totalHaloPairs,
+					      const dfloat *w,
+					      const dfloat *vgeo,
+					      const dlong *faceNodes,
+					      const dlong *mapP,
+					      dfloat *sgeo){
+
+  for(dlong e=0;e<Nelements+totalHaloPairs;++e;@outer(0)){ /* for each element */
+
+    for(int n=0;n<p_Nq*p_Nq;++n;@inner(0)){
+      
+      for(int f=0;f<p_Nfaces;++f){ // for each face
+
+	/* volume index of face node */
+	int m = faceNodes[f*p_Nfp+n];
+	
+	dlong base = p_Np*p_Nvgeo*e + m;
+	
+	dfloat rx = vgeo[base+p_RXID*p_Np];
+	dfloat sx = vgeo[base+p_SXID*p_Np];
+	dfloat tx = vgeo[base+p_TXID*p_Np];
+	dfloat ry = vgeo[base+p_RYID*p_Np];
+	dfloat sy = vgeo[base+p_SYID*p_Np];
+	dfloat ty = vgeo[base+p_TYID*p_Np];
+	dfloat rz = vgeo[base+p_RZID*p_Np];
+	dfloat sz = vgeo[base+p_SZID*p_Np];
+	dfloat tz = vgeo[base+p_TZID*p_Np];
+	dfloat J = vgeo[base+p_JID*p_Np];
+	
+	/* face f normal and length */
+	dfloat nx=0.0, ny=0.0, nz=0.0;
+	switch(f){
+	case 0: nx = -tx; ny = -ty; nz = -tz; break;
+	case 1: nx = -sx; ny = -sy; nz = -sz; break;
+	case 2: nx = +rx; ny = +ry; nz = +rz; break;
+	case 3: nx = +sx; ny = +sy; nz = +sz; break;
+	case 4: nx = -rx; ny = -ry; nz = -rz; break;
+	case 5: nx = +tx; ny = +ty; nz = +tz; break;
+	}
+	
+	dfloat sJ = sqrt(nx*nx+ny*ny+nz*nz);
+	nx /= sJ; ny /= sJ; nz /= sJ;
+	sJ *= J;
+	
+	/* output index */
+	dlong base = p_Nsgeo*(p_Nfaces*p_Nfp*e + p_Nfp*f + i);
+	
+	/* store normal, surface Jacobian, and reciprocal of volume Jacobian */
+	sgeo[base+p_NXID] = nx;
+	sgeo[base+p_NYID] = ny;
+	sgeo[base+p_NZID] = nz;
+	sgeo[base+p_SJID] = sJ;
+	sgeo[base+p_IJID] = 1./J;
+	
+	sgeo[base+p_WIJID] = 1./(J*w[0]);
+	sgeo[base+p_WSJID] = sJ*w[n%p_Nq]*w[n/p_Nq];
+      }
+    }
+  }
+  
+  for(dlong e=0;e<Nelements;++e;@outer(0)){ /* for each non-halo element */
+    for(int n=0;n<p_Nfp*p_Nfaces;++n;@inner(0)){
+      dlong baseM = e*p_Nfp*p_Nfaces + n;
+      dlong baseP = mapP[baseM];
+      // rescaling - missing factor of 2 ? (only impacts penalty and thus stiffness)
+      dfloat hinvM = sgeo[baseM*p_Nsgeo + p_SJID]*sgeo[baseM*p_Nsgeo + p_IJID];
+      dfloat hinvP = sgeo[baseP*p_Nsgeo + p_SJID]*sgeo[baseP*p_Nsgeo + p_IJID];
+      sgeo[baseM*p_Nsgeo+p_IHID] = mymax(hinvM,hinvP);
+      if((baseP/p_Nfp*p_Nfaces)>=Nelements){
+	sgeo[baseP*p_Nsgeo+p_IHID] = mymax(hinvM,hinvP);
+      }
+    }
+  }
+}

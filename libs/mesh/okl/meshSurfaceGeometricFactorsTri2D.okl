@@ -24,6 +24,8 @@ SOFTWARE.
 
 */
 
+#define mymax(a,b) ( ((a)>(b))?(a):(b) )
+
 // need to pass Nelements+totalHaloPairs
 @kernel void meshSurfaceGeometricFactorsTri2D(dlong Nelements,
 					      const dfloat *EX,
@@ -91,11 +93,11 @@ SOFTWARE.
   dfloat href = 0.;
   dfloat tol  = 1.;
   for(dlong e=0;e<Nelements;++e){ /* for each non-halo element */
-    for(int f=0;f<Nfaces;++f){
-      dlong baseM = e*Nfaces + f;
+    for(int f=0;f<p_Nfaces;++f){
+      dlong baseM = e*p_Nfaces + f;
 
       // rescaling - missing factor of 2 ? (only impacts penalty and thus stiffness)  A = L*h/2 => (J*2) = (sJ*2)*h/2 => h  = 2*J/sJ
-      dfloat hinvM = sgeo[baseM*Nsgeo + SJID]*sgeo[baseM*Nsgeo + IJID];
+      dfloat hinvM = sgeo[baseM*p_Nsgeo + p_SJID]*sgeo[baseM*p_Nsgeo + p_IJID];
 
       href = mymax(hinvM,href);
     }
@@ -103,28 +105,28 @@ SOFTWARE.
 
 
   for(dlong e=0;e<Nelements;++e){ /* for each non-halo element */
-    for(int f=0;f<Nfaces;++f){
-      dlong baseM = e*Nfaces + f;
+    for(int f=0;f<p_Nfaces;++f){
+      dlong baseM = e*p_Nfaces + f;
 
       // awkward: (need to find eP,fP relative to bulk+halo)
-      dlong idP = vmapP[e*Nfp*Nfaces+f*Nfp+0];
-      dlong eP = (idP>=0) ? (idP/Np):e;
+      dlong idP = vmapP[e*p_Nfp*p_Nfaces+f*p_Nfp+0];
+      dlong eP = (idP>=0) ? (idP/p_Np):e;
 
       int fP = EToF[baseM];
       fP = (fP==-1) ? f:fP;
 
-      dlong baseP = eP*Nfaces + fP;
+      dlong baseP = eP*p_Nfaces + fP;
 
       // rescaling - missing factor of 2 ? (only impacts penalty and thus stiffness)  A = L*h/2 => (J*2) = (sJ*2)*h/2 => h  = 2*J/sJ
-      dfloat hinvM = sgeo[baseM*Nsgeo + SJID]*sgeo[baseM*Nsgeo + IJID];
-      dfloat hinvP = sgeo[baseP*Nsgeo + SJID]*sgeo[baseP*Nsgeo + IJID];
+      dfloat hinvM = sgeo[baseM*p_Nsgeo + p_SJID]*sgeo[baseM*p_Nsgeo + p_IJID];
+      dfloat hinvP = sgeo[baseP*p_Nsgeo + p_SJID]*sgeo[baseP*p_Nsgeo + p_IJID];
 
-      sgeo[baseM*Nsgeo+IHID] = mymax(hinvM,hinvP);
-      sgeo[baseP*Nsgeo+IHID] = mymax(hinvM,hinvP);
+      sgeo[baseM*p_Nsgeo+p_IHID] = mymax(hinvM,hinvP);
+      sgeo[baseP*p_Nsgeo+p_IHID] = mymax(hinvM,hinvP);
 
-      if (EToB[f+e*Nfaces] > 0) { //enforce a stronger penalty on boundaries
-        sgeo[baseM*Nsgeo+IHID] = mymax(sgeo[baseM*Nsgeo+IHID],tol*href);
-        sgeo[baseP*Nsgeo+IHID] = mymax(sgeo[baseP*Nsgeo+IHID],tol*href);
+      if (EToB[f+e*p_Nfaces] > 0) { //enforce a stronger penalty on boundaries
+        sgeo[baseM*p_Nsgeo+p_IHID] = mymax(sgeo[baseM*p_Nsgeo+p_IHID],tol*href);
+        sgeo[baseP*p_Nsgeo+p_IHID] = mymax(sgeo[baseP*p_Nsgeo+p_IHID],tol*href);
       }
     }
   }

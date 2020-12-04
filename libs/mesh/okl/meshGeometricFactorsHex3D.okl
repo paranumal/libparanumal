@@ -97,30 +97,30 @@ SOFTWARE.
           dfloat JW = J*w[i]*w[j]*w[k];
 	  
           /* store geometric factors */
-	  vgeo[p_Nvgeo*p_Np*e + n + p_Np*RXID] = rx;
-          vgeo[p_Nvgeo*p_Np*e + n + p_Np*RYID] = ry;
-          vgeo[p_Nvgeo*p_Np*e + n + p_Np*RZID] = rz;
-
-          vgeo[p_Nvgeo*p_Np*e + n + p_Np*SXID] = sx;
-          vgeo[p_Nvgeo*p_Np*e + n + p_Np*SYID] = sy;
-          vgeo[p_Nvgeo*p_Np*e + n + p_Np*SZID] = sz;
-
-          vgeo[p_Nvgeo*p_Np*e + n + p_Np*TXID] = tx;
-          vgeo[p_Nvgeo*p_Np*e + n + p_Np*TYID] = ty;
-          vgeo[p_Nvgeo*p_Np*e + n + p_Np*TZID] = tz;
-
-          vgeo[p_Nvgeo*p_Np*e + n + p_Np*JID]  = J;
-          vgeo[p_Nvgeo*p_Np*e + n + p_Np*JWID] = JW;
-          vgeo[p_Nvgeo*p_Np*e + n + p_Np*IJWID] = ((dfloat)1.)/JW;
+	  vgeo[p_Nvgeo*p_Np*e + n + p_Np*p_RXID] = rx;
+          vgeo[p_Nvgeo*p_Np*e + n + p_Np*p_RYID] = ry;
+          vgeo[p_Nvgeo*p_Np*e + n + p_Np*p_RZID] = rz;
+				      	   
+          vgeo[p_Nvgeo*p_Np*e + n + p_Np*p_SXID] = sx;
+          vgeo[p_Nvgeo*p_Np*e + n + p_Np*p_SYID] = sy;
+          vgeo[p_Nvgeo*p_Np*e + n + p_Np*p_SZID] = sz;
+				      	   
+          vgeo[p_Nvgeo*p_Np*e + n + p_Np*p_TXID] = tx;
+          vgeo[p_Nvgeo*p_Np*e + n + p_Np*p_TYID] = ty;
+          vgeo[p_Nvgeo*p_Np*e + n + p_Np*p_TZID] = tz;
+				      	   
+          vgeo[p_Nvgeo*p_Np*e + n + p_Np*p_JID]  = J;
+          vgeo[p_Nvgeo*p_Np*e + n + p_Np*p_JWID] = JW;
+          vgeo[p_Nvgeo*p_Np*e + n + p_Np*p_IJWID] = ((dfloat)1.)/JW;
 
           /* store second order geometric factors */
-          ggeo[p_Nggeo*p_Np*e + n + p_Np*G00ID] = JW*(rx*rx + ry*ry + rz*rz);
-          ggeo[p_Nggeo*p_Np*e + n + p_Np*G01ID] = JW*(rx*sx + ry*sy + rz*sz);
-          ggeo[p_Nggeo*p_Np*e + n + p_Np*G02ID] = JW*(rx*tx + ry*ty + rz*tz);
-          ggeo[p_Nggeo*p_Np*e + n + p_Np*G11ID] = JW*(sx*sx + sy*sy + sz*sz);
-          ggeo[p_Nggeo*p_Np*e + n + p_Np*G12ID] = JW*(sx*tx + sy*ty + sz*tz);
-          ggeo[p_Nggeo*p_Np*e + n + p_Np*G22ID] = JW*(tx*tx + ty*ty + tz*tz);
-          ggeo[p_Nggeo*p_Np*e + n + p_Np*GWJID] = JW;
+          ggeo[p_Nggeo*p_Np*e + n + p_Np*p_G00ID] = JW*(rx*rx + ry*ry + rz*rz);
+          ggeo[p_Nggeo*p_Np*e + n + p_Np*p_G01ID] = JW*(rx*sx + ry*sy + rz*sz);
+          ggeo[p_Nggeo*p_Np*e + n + p_Np*p_G02ID] = JW*(rx*tx + ry*ty + rz*tz);
+          ggeo[p_Nggeo*p_Np*e + n + p_Np*p_G11ID] = JW*(sx*sx + sy*sy + sz*sz);
+          ggeo[p_Nggeo*p_Np*e + n + p_Np*p_G12ID] = JW*(sx*tx + sy*ty + sz*tz);
+          ggeo[p_Nggeo*p_Np*e + n + p_Np*p_G22ID] = JW*(tx*tx + ty*ty + tz*tz);
+          ggeo[p_Nggeo*p_Np*e + n + p_Np*p_GWJID] = JW;
         }
       }
     }
