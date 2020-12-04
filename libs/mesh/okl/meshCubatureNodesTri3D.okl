@@ -24,55 +24,54 @@ SOFTWARE.
 
 */
 
-@kernel void meshCubatureVolumeNodesTet3D(const dlong Nelements,
-					  const dfloat *cubInterp,
-					  const dfloat *cubr,	
-					  const dfloat *cubs,
-					  const dfloat *cubt,
-					  const dfloat *EX,
-					  const dfloat *EY,
-					  const dfloat *EZ,
-					  dfloat *cubx,
-					  dfloat *cuby,
-					  dfloat *cubz){
+@kernel void meshCubatureNodesTri3D(const dlong Nelements,
+				    const dfloat *cubInterp,
+				    const dfloat *cubr,	
+				    const dfloat *cubs,
+				    const dfloat *EX,
+				    const dfloat *EY,
+				    const dfloat *EZ,
+				    dfloat *cubx,
+				    dfloat *cuby,
+				    dfloat *cubz){
   
-  // still assumes affine tets
   for(dlong e=0;e<Nelements;++e;@outer(0)){ /* for each element */
-    
-    for(int n=0;n<p_cubNp;++n;@inner(0)){ /* for each node */
-      
-      dlong id = e*p_Nverts;
+
+    for(int n=0;n<p_cubNp;++n){
+      dlong id = e*Nverts;
       
       dfloat xe1 = EX[id+0]; /* x-coordinates of vertices */
       dfloat xe2 = EX[id+1];
       dfloat xe3 = EX[id+2];
-      dfloat xe4 = EX[id+3];
-
+      
       dfloat ye1 = EY[id+0]; /* y-coordinates of vertices */
       dfloat ye2 = EY[id+1];
       dfloat ye3 = EY[id+2];
-      dfloat ye4 = EY[id+3];
-
+      
       dfloat ze1 = EZ[id+0]; /* z-coordinates of vertices */
       dfloat ze2 = EZ[id+1];
       dfloat ze3 = EZ[id+2];
-      dfloat ze4 = EZ[id+3];
-
-      /* (r,s,t) coordinates of interpolation nodes*/
+      
+      /* (r,s) coordinates of interpolation nodes*/
       dfloat rn = cubr[n];
       dfloat sn = cubs[n];
-      dfloat tn = cubt[n];
 
       /* physical coordinate of interpolation node */
-      dlong id = e*p_cubNp+n;
-      cubx[id] = -0.5*(1+rn+sn+tn)*xe1 + 0.5*(1+rn)*xe2 + 0.5*(1+sn)*xe3 + 0.5*(1+tn)*xe4;
-      cuby[id] = -0.5*(1+rn+sn+tn)*ye1 + 0.5*(1+rn)*ye2 + 0.5*(1+sn)*ye3 + 0.5*(1+tn)*ye4;
-      cubz[id] = -0.5*(1+rn+sn+tn)*ze1 + 0.5*(1+rn)*ze2 + 0.5*(1+sn)*ze3 + 0.5*(1+tn)*ze4;
+      dfloat xlin = -0.5*(rn+sn)*xe1 + 0.5*(1+rn)*xe2 + 0.5*(1+sn)*xe3;
+      dfloat ylin = -0.5*(rn+sn)*ye1 + 0.5*(1+rn)*ye2 + 0.5*(1+sn)*ye3;
+      dfloat zlin = -0.5*(rn+sn)*ze1 + 0.5*(1+rn)*ze2 + 0.5*(1+sn)*ze3;
+      
+      // project to sphere
+      dfloat rlin = sqrt(xlin*xlin+ylin*ylin+zlin*zlin);
+      dlong id = e*p_cubNp + n;
+      cubx[id] = xlin/rlin;
+      cuby[id] = ylin/rlin;
+      cubz[id] = zlin/rlin;
     }
   }
 }
 
-@kernel void meshCubatureSurfaceNodesTet3D(const dlong Nelements,
+@kernel void meshCubatureSurfaceNodesTri3D(const dlong Nelements,
 					   const dlong *vmapM,
 					   const dfloat *cubInterp,
 					   const dfloat *x,
@@ -82,16 +81,14 @@ SOFTWARE.
 					   dfloat *inty,
 					   dfloat *intz){
 
-
-  //Face cubature
   for(dlong e=0;e<Nelements;++e;@outer(0)){
 
     @shared dfloat s_x[p_Nfaces][p_Nfp];
     @shared dfloat s_y[p_Nfaces][p_Nfp];
     @shared dfloat s_z[p_Nfaces][p_Nfp];
-
-    for(int f=0;f<p_Nfaces;++f;@inner(1)){
-      for(int n=0;n<p_intNfp;++n;@inner(0)){
+    
+    for(int f=0;f<Nfaces;++f;@inner(1)){
+      for(int n=0;n<intNfp;++n;@inner(0)){
 	if(n<p_Nfp){
 	  dlong vid = vmapM[n+f*p_Nfp+e*p_Nfp*p_Nfaces];
 	  s_x[f][n] = x[vid];
@@ -100,22 +97,26 @@ SOFTWARE.
 	}
       }
     }
-
-    // OCCA barrier here
     
-    for(int f=0;f<p_Nfaces;++f;@inner(1)){
-      for(int n=0;n<p_intNfp;++n;@inner(0)){
-	dfloat ix = 0, iy = 0, iz=0;
-	for(int m=0;m<p_Nfp;++m){
-	  dfloat Inm = intInterp[m+n*Nfp+f*intNfp*Nfp];
-	  ix += Inm*s_x[f][m];
-	  iy += Inm*s_y[f][m];
-	  iz += Inm*s_z[f][m];
-	}
-	dlong id = n + f*p_intNfp + e*p_Nfaces*p_intNfp;
-	intx[id] = ix;
-	inty[id] = iy;
-	intz[id] = iz;
+    for(int f=0;f<Nfaces;++f;@inner(1)){
+      for(int n=0;n<intNfp;++n;@inner(0)){    
+    
+        dfloat Ix = 0, Iy = 0, Iz = 0;
+        for(int m=0;m<p_Nfp;++m){
+	  
+          dfloat Inm = cubInterp[m+n*p_Nfp+f*p_intNfp*p_Nfp];
+          Ix += Inm*s_x[f][m];
+          Iy += Inm*s_y[f][m];
+          Iz += Inm*s_z[f][m];
+        }
+	
+        dlong id = n + f*p_intNfp + e*p_Nfaces*p_intNfp;
+
+        // project to sphere
+        dfloat rlin = sqrt(ix*ix+iy*iy+iz*iz);
+        intx[id] = ix/rlin;
+        inty[id] = iy/rlin;
+        intz[id] = iz/rlin;
       }
     }
   }

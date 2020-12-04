@@ -122,6 +122,7 @@ SOFTWARE.
 }
 
 @kernel void meshCubatureSurfNodesHex3D(const dlong Nelements,
+					const dlong *vmapM,
 					const dfloat *cubInterp,
 					const dfloat *x,
 					const dfloat *y,
