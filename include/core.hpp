@@ -33,6 +33,7 @@ SOFTWARE.
 #include <math.h>
 #include <stdlib.h>
 #include "utils.hpp"
+#include "deviceSort.h"
 
 // sort entries in an array in parallel
 void parallelSort(int size, int rank, MPI_Comm comm,

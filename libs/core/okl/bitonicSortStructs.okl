@@ -1,0 +1,233 @@
+/* The MIT License (MIT)
+ *
+ * Copyright (c) 2014-2018 David Medina and Tim Warburton
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ */
+
+#define BLOCK_SIZE 512
+
+void compareAndSwap(  entry_t* A,
+                      entry_t* B,
+                    const int  idA,
+                    const int  idB,
+                    const int  entries) {
+
+  if ((idA>=entries) || (idB>=entries)) return;
+
+  const int cmp = compareEntry(A, B);
+
+  if(cmp>0){
+    entry_t tmp = A[0];
+    A[0] = B[0];
+    B[0] = tmp;
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Monolithic bitonic sort kernel for short arrays fitting into shared memory
+////////////////////////////////////////////////////////////////////////////////
+@kernel void bitonicSortShared(const int entries,
+                               entry_t*  list){
+
+  for (int e = 0; e < entries; e+=2*BLOCK_SIZE; @outer) {
+
+    //Shared memory storage for one or more short vectors
+    @shared entry_t s_list[2*BLOCK_SIZE];
+
+    for (int i = 0; i < BLOCK_SIZE; ++i; @inner) {
+      //load data
+      if ((e + i)<entries) {
+	s_list[i] = list[e+i];
+      }
+      if((e+i+1)<entries){
+	s_list[i+BLOCK_SIZE] = list[e+i+BLOCK_SIZE];
+      }
+    }
+
+    const int bound = (entries < 2*BLOCK_SIZE) ? entries : 2*BLOCK_SIZE;
+
+    for (int size = 2; size < 2*bound; size <<= 1) {
+      @barrier("local");
+      //swap step
+      for (int i = 0; i < BLOCK_SIZE; ++i; @inner) {
+        const int pos1 = (2 * i - (i & (size/2 - 1)));
+        const int pos2 = pos1 + size-1 - 2*(i%(size/2));
+        compareAndSwap(s_list+pos1,
+                       s_list+pos2,
+                       e+pos1,
+                       e+pos2,
+                       entries);
+      }
+
+      //Bitonic merge
+      for (int stride = size / 4; stride > 0; stride >>= 1) {
+        @barrier("local");
+        for (int i = 0; i < BLOCK_SIZE; ++i; @inner) {
+          const int pos1 = (2 * i - (i & (stride - 1)));
+          const int pos2 = pos1 + stride;
+          compareAndSwap(s_list+pos1,
+                         s_list+pos2,
+                         e+pos1,
+                         e+pos2,
+                         entries);
+        }
+      }
+    }
+
+    @barrier("local");
+
+    for (int i = 0; i < BLOCK_SIZE; ++i; @inner) {
+      // copy result
+      if ((e + i + 0*BLOCK_SIZE)<entries) {
+	list[e+i] = s_list[i];
+      }
+      if ((e + i + 1*BLOCK_SIZE)<entries) {
+	list[e+i+1*BLOCK_SIZE] = s_list[i+BLOCK_SIZE];
+      }
+    }
+  }
+}
+
+//Bitonic swap iteration for stride > 2*BLOCK_SIZE
+@kernel void bitonicSwapGlobal(const int   entries,
+                                 entry_t*  list,
+                                const int  size) {
+
+  for (int e = 0; e < entries; e+=size; @outer(1)) {
+    for (int s = 0; s < size/2; s+=BLOCK_SIZE; @outer(0)) {
+      for (int i = 0; i < BLOCK_SIZE; ++i; @inner) {
+        const int pos1 = e + 2 * (s + i) - ((s + i) & (size/2 - 1));
+        const int pos2 = pos1 + size-1 - 2*((s+i)%(size/2));
+
+        entry_t r_list[2];
+
+        //load data
+        if (pos1<entries) {
+	  r_list[0] = list[pos1];
+        }
+        if (pos2<entries) {
+	  r_list[1] = list[pos2];
+        }
+
+        compareAndSwap(r_list+0,
+                       r_list+1,
+                       pos1,
+                       pos2,
+                       entries);
+
+        if (pos1<entries) { //both entries are in the list
+          // printf("pos %d\n", pos);
+	  list[pos1] = r_list[0];
+        }
+        if (pos2<entries) { //both entries are in the list
+	  list[pos2] = r_list[1];
+        }
+      }
+    }
+  }
+}
+
+//Bitonic merge iteration for stride >= 2*BLOCK_SIZE
+@kernel void bitonicMergeGlobal(const int  entries,
+                                  entry_t* list,
+                                const int  stride) {
+
+  for (int e = 0; e < entries; e+=2*stride; @outer(1)) {
+    for (int s = 0; s < stride; s+=BLOCK_SIZE; @outer(0)) {
+      for (int i = 0; i < BLOCK_SIZE; ++i; @inner) {
+        //Bitonic merge
+        const int pos1 = e + 2 * (s + i) - ((s + i) & (stride - 1));
+        const int pos2 = pos1 + stride;
+
+        entry_t r_list[2];
+
+        //load data
+        if (pos1<entries) {
+	  r_list[0] = list[pos1];
+        }
+        if (pos2<entries) {
+	  r_list[1] = list[pos2];
+        }
+
+        compareAndSwap(r_list+0,
+                       r_list+1,
+                       pos1,
+                       pos2,
+                       entries);
+
+        if (pos1<entries) { //both entries are in the list
+	  list[pos1] = r_list[0];
+        }
+        if (pos2<entries) { //both entries are in the list
+	  list[pos2] = r_list[1];
+        }
+      }
+    }
+  }
+}
+
+//Combined bitonic merge steps for
+//size < 2*BLOCK_SIZE and stride = [1 .. 2*BLOCK_SIZE / 2]
+@kernel void bitonicMergeShared(const int   entries,
+                                  entry_t*  list,
+                                const int   size) {
+
+  for (int e = 0; e < entries; e+=2*BLOCK_SIZE; @outer) {
+
+    //Shared memory storage for one or more short vectors
+    @shared entry_t s_list[2*BLOCK_SIZE];
+
+    for (int i = 0; i < BLOCK_SIZE; ++i; @inner) {
+      //load data
+      if ((e + i + 0*BLOCK_SIZE)<entries) {
+	s_list[i] = list[e+i];
+      }
+      if ((e + i + 1*BLOCK_SIZE)<entries) {
+	s_list[i+BLOCK_SIZE] = list[e+i+BLOCK_SIZE];
+      }
+    }
+
+    //Bitonic merge
+    for (int stride = size; stride > 0; stride >>= 1) {
+
+      @barrier("local");
+      for (int i = 0; i < BLOCK_SIZE; ++i; @inner) {
+        const int pos1 = (2 * i - (i & (stride - 1)));
+        const int pos2 = pos1 + stride;
+        compareAndSwap(s_list+pos1,
+                       s_list+pos2,
+                       e+pos1,
+                       e+pos2,
+                       entries);
+      }
+    }
+
+    @barrier("local");
+
+    for (int i = 0; i < BLOCK_SIZE; ++i; @inner) {
+      // copy result
+      if ((e + i + 0*BLOCK_SIZE)<entries) {
+	list[e+i] = s_list[i];
+      }
+      if ((e + i + 1*BLOCK_SIZE)<entries) {
+	list[e+i+BLOCK_SIZE] = s_list[i+BLOCK_SIZE];
+      }
+    }
+  }
+}
