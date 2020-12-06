@@ -25,6 +25,7 @@ SOFTWARE.
 */
 
 #include "elliptic.hpp"
+#include "mesh/meshDefines3D.h"
 
 int main(int argc, char **argv){
 
@@ -70,6 +71,61 @@ int main(int argc, char **argv){
   // run
   elliptic.Run();
 
+#if 1
+  printf("Building Matrix\n");
+  
+  parAlmond::parCOO A(elliptic.platform, mesh.comm);
+  elliptic.BuildOperatorMatrixContinuous(A);
+
+  occa::properties kernelInfo = mesh.props;
+
+  if(sizeof(hlong)==8)
+    kernelInfo["defines/hlong"]= "long long int";
+  if(sizeof(hlong)==4)
+    kernelInfo["defines/hlong"]= "int";
+
+  kernelInfo["defines/" "p_G00ID"]= G00ID;
+  kernelInfo["defines/" "p_G01ID"]= G01ID;
+  kernelInfo["defines/" "p_G02ID"]= G02ID;
+  kernelInfo["defines/" "p_G11ID"]= G11ID;
+  kernelInfo["defines/" "p_G12ID"]= G12ID;
+  kernelInfo["defines/" "p_G22ID"]= G22ID;
+  kernelInfo["defines/" "p_GWJID"]= GWJID;
+
+  char kernelName[BUFSIZ];
+  switch(mesh.elementType){
+  case TRIANGLES:
+    sprintf(kernelName, "ellipticBuildOperatorMatrixContinuousTri2D");
+    break;
+  case QUADRILATERALS:
+    sprintf(kernelName, "ellipticBuildOperatorMatrixContinuousQuad2D");
+    break;
+  case TETRAHEDRA:
+    sprintf(kernelName, "ellipticBuildOperatorMatrixContinuousTet3D");
+    break;
+  }
+
+  occa::kernel buildMatrixKernel =
+    elliptic.platform.buildKernel(DELLIPTIC "/okl/ellipticBuildOperatorMatrixContinuous.okl",
+				  kernelName,
+				  kernelInfo);
+  
+  occa::memory o_maskedGlobalNumbering =
+    platform.malloc(mesh.Np*mesh.Nelements*sizeof(hlong), elliptic.maskedGlobalNumbering);
+  occa::memory o_Srr =
+    platform.malloc(mesh.Np*mesh.Np*sizeof(dfloat), mesh.Srr);
+  occa::memory o_Srs =
+    platform.malloc(mesh.Np*mesh.Np*sizeof(dfloat), mesh.Srs);
+  occa::memory o_Sss =
+    platform.malloc(mesh.Np*mesh.Np*sizeof(dfloat), mesh.Sss);
+  occa::memory o_AL =
+    platform.malloc(mesh.Nelements*mesh.Np*mesh.Np*sizeof(parAlmond::parCOO::nonZero_t));
+
+  buildMatrixKernel(mesh.Nelements, o_maskedGlobalNumbering,
+		    o_Srr, o_Srs, o_Sss,
+		    mesh.o_MM, mesh.o_ggeo, elliptic.lambda, o_AL);
+#endif
+  
   // close down MPI
   MPI_Finalize();
   return LIBP_SUCCESS;
