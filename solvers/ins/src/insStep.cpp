@@ -105,13 +105,17 @@ void ins_t::rhs_subcycle_f(occa::memory& o_U, occa::memory& o_UHAT,
   subcycler->T0 = T;
   subcycler->dt = dt;
 
+  dlong Ntot   = (mesh.Nelements+mesh.totalHaloPairs)*mesh.Np*NVfields;
 
   if (cubature) {
-    dlong Ntot   = (mesh.Nelements+mesh.totalHaloPairs)*mesh.Np*NVfields;
+    //if computing with cubature, interpolate U to all the cubature
+    // nodes once to avoid repeatedly interpolating when time stepping
+
     dlong cNtot  = mesh.Nelements*mesh.cubNp*NVfields;
     dlong cNftot = (mesh.Nelements+mesh.totalHaloPairs)*mesh.intNfp*mesh.Nfaces*NVfields;
 
-    if (subcycler->o_cUh.size() < maxOrder*cNtot*sizeof(dfloat))
+    if (subcycler->o_cUh.size() < maxOrder*cNtot*sizeof(dfloat)
+      ||subcycler->o_sUh.size() < maxOrder*cNftot*sizeof(dfloat))
       LIBP_ABORT("Cubature history field allocated too small.")
 
     // interpolate current U to cubature nodes and insert in sperate history
@@ -129,15 +133,14 @@ void ins_t::rhs_subcycle_f(occa::memory& o_U, occa::memory& o_UHAT,
                                        o_Unow,
                                        o_cUnow);
 
-
     vTraceHalo->ExchangeFinish(o_Unow, 1, ogs_dfloat);
 
-    //interpolate current U to cubature volume nodes and save
+    //interpolate current U and halo to surface cubature nodes and save
     advectionInterpolationSurfaceKernel(mesh.Nelements+mesh.totalHaloPairs,
                                         mesh.o_cubsgeo,
                                         mesh.o_intInterp,
                                         o_Unow,
-                                        o_Unow);
+                                        o_sUnow);
 
   } else {
     subcycler->o_Uh = o_U; //history
@@ -155,7 +158,7 @@ void ins_t::rhs_subcycle_f(occa::memory& o_U, occa::memory& o_UHAT,
   for (int n=order;n>=0;n--) { //for each history state, starting with oldest
 
     //q at t-n*dt
-    occa::memory o_Un = o_U + ((shiftIndex+n)%maxOrder)*N*sizeof(dfloat);
+    occa::memory o_Un = o_U + ((shiftIndex+n)%maxOrder)*Ntot*sizeof(dfloat);
 
     //next scaled partial sum
     linAlg.axpy(N, B[n+1]/(B[n+1]+bSum), o_Un,
