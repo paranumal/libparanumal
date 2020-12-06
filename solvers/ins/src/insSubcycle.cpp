@@ -107,32 +107,8 @@ void subcycler_t::rhsf(occa::memory& o_U, occa::memory& o_RHS, const dfloat T){
     // extract u halo on DEVICE
     vTraceHalo->ExchangeStart(o_U, 1, ogs_dfloat);
 
-    //interpolate velocity history at cubature volume nodes for advective field
-    subCycleAdvectionVolumeKernel(mesh.Nlements,
-                           shiftIndex,
-                           order,
-                           maxOrder,
-                           mesh.Nelements*mesh.Np*NVfields,
-                           T,
-                           T0,
-                           dt,
-                           o_cUh,
-                           o_cUe);
-
-    //interpolate velocity history at cubature surface nodes for advective field
-    subCycleAdvectionSurfaceKernel(mesh.Nlements+mesh.totalHaloPairs,
-                           shiftIndex,
-                           order,
-                           maxOrder,
-                           (mesh.Nelements+mesh.totalHaloPairs)*mesh.Nfp*mesh.Nfaces*NVfields,
-                           T,
-                           T0,
-                           dt,
-                           o_sUh,
-                           o_sUe);
-
-    //TODO? fuse the temporal interpolation into the volume/surface kernels?
-
+    //interpolate in time the velocity history at cubature
+    // volume nodes for advective field when computing rhs volume
     advectionVolumeKernel(mesh.Nelements,
                          mesh.o_vgeo,
                          mesh.o_cubvgeo,
@@ -140,12 +116,21 @@ void subcycler_t::rhsf(occa::memory& o_U, occa::memory& o_RHS, const dfloat T){
                          mesh.o_cubPDT,
                          mesh.o_cubInterp,
                          mesh.o_cubProject,
+                         shiftIndex,
+                         order,
+                         maxOrder,
+                         mesh.Nelements*mesh.Np*NVfields,
+                         T,
+                         T0,
+                         dt,
                          o_cUe,
                          o_U,
                          o_RHS);
 
     vTraceHalo->ExchangeFinish(o_U, 1, ogs_dfloat);
 
+    //interpolate in time the velocity history at surface cubature
+    // nodes for advective field when computing rhs surface
     advectionSurfaceKernel(mesh.Nelements,
                           mesh.o_vgeo,
                           mesh.o_cubsgeo,
@@ -154,11 +139,17 @@ void subcycler_t::rhsf(occa::memory& o_U, occa::memory& o_RHS, const dfloat T){
                           mesh.o_vmapM,
                           mesh.o_vmapP,
                           mesh.o_EToB,
-                          T,
                           mesh.o_intx,
                           mesh.o_inty,
                           mesh.o_intz,
                           nu,
+                          shiftIndex,
+                          order,
+                          maxOrder,
+                          (mesh.Nelements+mesh.totalHaloPairs)*mesh.Nfp*mesh.Nfaces*NVfields,
+                          T,
+                          T0,
+                          dt,
                           o_sUe,
                           o_U,
                           o_RHS);
