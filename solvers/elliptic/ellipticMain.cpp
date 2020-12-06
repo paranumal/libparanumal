@@ -103,6 +103,9 @@ int main(int argc, char **argv){
   case TETRAHEDRA:
     sprintf(kernelName, "ellipticBuildOperatorMatrixContinuousTet3D");
     break;
+  case HEXAHEDRA:
+    sprintf(kernelName, "ellipticBuildOperatorMatrixContinuousHex3D");
+    break;
   }
 
   occa::kernel buildMatrixKernel =
@@ -112,18 +115,45 @@ int main(int argc, char **argv){
   
   occa::memory o_maskedGlobalNumbering =
     platform.malloc(mesh.Np*mesh.Nelements*sizeof(hlong), elliptic.maskedGlobalNumbering);
-  occa::memory o_Srr =
-    platform.malloc(mesh.Np*mesh.Np*sizeof(dfloat), mesh.Srr);
-  occa::memory o_Srs =
-    platform.malloc(mesh.Np*mesh.Np*sizeof(dfloat), mesh.Srs);
-  occa::memory o_Sss =
-    platform.malloc(mesh.Np*mesh.Np*sizeof(dfloat), mesh.Sss);
+
+  occa::memory o_Srr, o_Srs, o_Srt, o_Sss, o_Sst, o_Stt;
+  o_Srr = platform.malloc(mesh.Np*mesh.Np*sizeof(dfloat), mesh.Srr);
+  o_Srs = platform.malloc(mesh.Np*mesh.Np*sizeof(dfloat), mesh.Srs);
+  o_Sss = platform.malloc(mesh.Np*mesh.Np*sizeof(dfloat), mesh.Sss);
+  if(mesh.dim==3 && mesh.elementType==TETRAHEDRA){
+    o_Srt = platform.malloc(mesh.Np*mesh.Np*sizeof(dfloat), mesh.Srt);
+    o_Sst = platform.malloc(mesh.Np*mesh.Np*sizeof(dfloat), mesh.Sst);
+    o_Stt = platform.malloc(mesh.Np*mesh.Np*sizeof(dfloat), mesh.Stt);
+  }
+  
   occa::memory o_AL =
     platform.malloc(mesh.Nelements*mesh.Np*mesh.Np*sizeof(parAlmond::parCOO::nonZero_t));
 
-  buildMatrixKernel(mesh.Nelements, o_maskedGlobalNumbering,
-		    o_Srr, o_Srs, o_Sss,
-		    mesh.o_MM, mesh.o_ggeo, elliptic.lambda, o_AL);
+  switch(mesh.elementType){
+  case TRIANGLES:
+    buildMatrixKernel(mesh.Nelements, o_maskedGlobalNumbering,
+		      o_Srr, o_Srs, o_Sss,
+		      mesh.o_MM, mesh.o_ggeo, elliptic.lambda, o_AL);
+    break;
+  case QUADRILATERALS:
+    buildMatrixKernel(mesh.Nelements, o_maskedGlobalNumbering,
+		      mesh.o_D,
+		      mesh.o_ggeo, elliptic.lambda, o_AL);
+    break;
+  case TETRAHEDRA:
+    buildMatrixKernel(mesh.Nelements, o_maskedGlobalNumbering,
+		      o_Srr, o_Srs, o_Srt, o_Sss, o_Sst, o_Stt,
+		      mesh.o_MM, mesh.o_ggeo, elliptic.lambda, o_AL);
+    break;
+  case HEXAHEDRA:
+    buildMatrixKernel(mesh.Nelements, o_maskedGlobalNumbering,
+		      mesh.o_D,
+		      mesh.o_ggeo, elliptic.lambda, o_AL);
+    break;
+  }
+
+
+  
 #endif
   
   // close down MPI
