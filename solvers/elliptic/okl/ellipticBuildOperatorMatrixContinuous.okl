@@ -1,0 +1,449 @@
+/*
+
+  The MIT License (MIT)
+
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+*/
+
+//non-zero matrix entries
+typedef struct {
+  hlong row;
+  hlong col;
+  dfloat val;
+} nonZero_t;
+
+// need definition of nonZero_t
+
+@kernel void ellipticBuildOperatorMatrixContinuousTri2D(const dlong Nelements,
+							const hlong *maskedGlobalNumbering,
+							const dfloat *Srr,
+							const dfloat *Srs,
+							const dfloat *Sss,
+							const dfloat *ggeo,
+							nonZero_t *AL){
+  //Build unassembed non-zeros
+  for (dlong e=0;e<Nelements;++e;@outer(0)) {
+
+    @shared hlong s_gnum[p_Np];
+    for (int n=0;n<p_Np;n++;@inner(0)) {
+      s_gnum[n] = maskedGlobalNumbering[e*p_Np+n];
+    }
+
+    // OCCA barrier
+    // loop over rows
+    for (int m=0;m<p_Np;m++;@inner(0)) {
+
+      // really a broadcast
+      dfloat Grr = gggeo[e*p_Nggeo + p_G00ID];
+      dfloat Grs = gggeo[e*p_Nggeo + p_G01ID];
+      dfloat Gss = gggeo[e*p_Nggeo + p_G11ID];
+      dfloat J   = gggeo[e*p_Nggeo + p_GWJID];
+      
+      if (s_gnum[m]<0) continue; //skip masked nodes
+      
+      for (int n=0;n<p_Np;n++) {
+        if (s_gnum[n]<0) continue; //skip masked nodes
+	
+        dfloat val = 0.;
+	
+	// double check this ( I assume these are symmetric )
+        val += Grr*Srr[m+n*p_Np];
+        val += Grs*Srs[m+n*p_Np];
+        val += Gss*Sss[m+n*p_Np];
+        val += J*lambda*MM[m+n*p_Np];
+
+	// pack non-zero
+	nonZero_t ent;
+	ent.val = val;
+	ent.row = s_gnum[n];
+	ent.col = s_gnum[m];
+	
+	// chunk write 
+	int id = e*p_Np*p_Np + n*p_Np +m; 
+	AL[id] = ent;
+      }
+    }
+  }
+}
+
+
+@kernel void ellipticBuildOperatorMatrixContinuousQuad3D(const dlong Nelements,
+							 const hlong *maskedGlobalNumbering,
+							 const dfloat *D,
+							 const dfloat *ggeo,
+							 nonZero_t *AL) {
+
+  //Build unassembed non-zeros
+  for (dlong e=0;e<Nelements;++e;@outer(0)) {
+
+    @shared hlong s_gnum[p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
+    
+    for (int ny=0;ny<p_Nq;ny++;@inner(1)) {
+      for (int nx=0;nx<p_Nq;nx++;@inner(0)) {
+	s_gnum[ny][nx] = maskedGlobalNumbering[e*p_Np+ny*p_Nq+nx];
+	s_D[ny][nx] = D[ny*p_Nq+nx];
+      }
+    }
+
+    // OCCA barrier
+    
+    for (int my=0;my<p_Nq;my++;@inner(1)) {
+      for (int mx=0;mx<p_Nq;mx++;@inner(0)) {
+	
+	if (s_gnum[my][mx]<0) continue; //skip masked nodes
+
+	dlong base = e*p_Np*p_Nggeo;
+	
+        for (int ny=0;ny<p_Nq;ny++) {
+          for (int nx=0;nx<p_Nq;nx++) {
+
+	    if (s_gnum[ny][nx]<0) continue; //skip masked nodes
+	    
+            int id;
+            dfloat val = 0.;
+	    
+            if (ny==my) {
+              for (int k=0;k<p_Nq;k++) {
+                id = k+ny*p_Nq;
+                dfloat Grr = gggeo[base + id + p_G00ID*p_Np];
+
+                val += Grr*s_D[k][nx]*s_D[k][mx];
+              }
+            }
+
+            id = mx+ny*p_Nq;
+            dfloat Grs = gggeo[base + id + p_G01ID*p_Np];
+            val += Grs*s_D[mx][nx]*s_D[ny][my];
+
+            id = nx+my*p_Nq;
+            dfloat Gsr = gggeo[base + id + p_G01ID*p_Np];
+            val += Gsr*s_D[nx][mx]*s_D[my][ny];
+
+            if (nx==mx) {
+              for (int k=0;k<p_Nq;k++) {
+                id = nx+k*p_Nq;
+                dfloat Gss = gggeo[base + id + p_G11ID*p_Np];
+
+                val += Gss*s_D[k][ny]*s_D[k][my];
+              }
+            }
+
+
+            if ((nx==mx)&&(ny==my)) {
+              id = nx + ny*p_Nq;
+
+              dfloat JW = gggeo[base + id + p_GWJID*p_Np];
+              val += JW*lambda;
+            }
+
+	    // pack non-zero
+	    int r = nx+ny*p_Nq;
+	    int c = mx+my*p_Nq;
+	    nonZero_t ent;
+	    ent.val = val;
+	    ent.row = s_gnum[r];
+	    ent.col = s_gnum[c];
+	    
+	    // chunk write 
+	    id = e*p_Np*p_Np + r*p_Np + c; 
+	    AL[id] = ent;
+          }
+        }
+      }
+    }
+  }
+}
+
+
+@kernel void ellipticBuildOperatorMatrixContinuousQuad2D(const dlong Nelements,
+							 const hlong *maskedGlobalNumbering,
+							 const dfloat *D,
+							 const dfloat *ggeo,
+							 nonZero_t *AL) {
+
+  //Build unassembed non-zeros
+  for (dlong e=0;e<Nelements;++e;@outer(0)) {
+
+    @shared hlong s_gnum[p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
+    
+    for (int ny=0;ny<p_Nq;ny++;@inner(1)) {
+      for (int nx=0;nx<p_Nq;nx++;@inner(0)) {
+	s_gnum[ny][nx] = maskedGlobalNumbering[e*p_Np+ny*p_Nq+nx];
+	s_D[ny][nx] = D[ny*p_Nq+nx];
+      }
+    }
+
+    // OCCA barrier
+    
+    for (int my=0;my<p_Nq;my++;@inner(1)) {
+      for (int mx=0;mx<p_Nq;mx++;@inner(0)) {
+	
+	if (s_gnum[my][mx]<0) continue; //skip masked nodes
+
+	dlong base = e*p_Np*p_Nggeo;
+	
+        for (int ny=0;ny<p_Nq;ny++) {
+          for (int nx=0;nx<p_Nq;nx++) {
+
+	    if (s_gnum[ny][nx]<0) continue; //skip masked nodes
+	    
+            int id;
+            dfloat val = 0.;
+	    
+            if (ny==my) {
+              for (int k=0;k<p_Nq;k++) {
+                id = k+ny*p_Nq;
+                dfloat Grr = gggeo[base + id + p_G00ID*p_Np];
+
+                val += Grr*s_D[k][nx]*s_D[k][mx];
+              }
+            }
+
+            id = mx+ny*p_Nq;
+            dfloat Grs = gggeo[base + id + p_G01ID*p_Np];
+            val += Grs*s_D[mx][nx]*s_D[ny][my];
+
+            id = nx+my*p_Nq;
+            dfloat Gsr = gggeo[base + id + p_G01ID*p_Np];
+            val += Gsr*s_D[nx][mx]*s_D[my][ny];
+
+            if (nx==mx) {
+              for (int k=0;k<p_Nq;k++) {
+                id = nx+k*p_Nq;
+                dfloat Gss = gggeo[base + id + p_G11ID*p_Np];
+
+                val += Gss*s_D[k][ny]*s_D[k][my];
+              }
+            }
+
+
+            if ((nx==mx)&&(ny==my)) {
+              id = nx + ny*p_Nq;
+
+              dfloat JW = gggeo[base + id + p_GWJID*p_Np];
+              val += JW*lambda;
+            }
+
+	    // pack non-zero
+	    int r = nx+ny*p_Nq;
+	    int c = mx+my*p_Nq;
+	    nonZero_t ent;
+	    ent.val = val;
+	    ent.row = s_gnum[r];
+	    ent.col = s_gnum[c];
+	    
+	    // chunk write 
+	    id = e*p_Np*p_Np + r*p_Np + c; 
+	    AL[id] = ent;
+          }
+        }
+      }
+    }
+  }
+}
+
+
+
+@kernel void ellipticBuildOperatorMatrixContinuousTet3D(const dlong Nelements,
+							const hlong *maskedGlobalNumbering,
+							const dfloat *Srr,
+							const dfloat *Srs,
+							const dfloat *Srt,
+							const dfloat *Sss,
+							const dfloat *Sst,
+							const dfloat *Stt,
+							const dfloat *ggeo,
+							nonZero_t *AL){
+  //Build unassembed non-zeros
+  for (dlong e=0;e<Nelements;++e;@outer(0)) {
+
+    @shared hlong s_gnum[p_Np];
+    for (int n=0;n<p_Np;n++;@inner(0)) {
+      s_gnum[n] = maskedGlobalNumbering[e*p_Np+n];
+    }
+
+    // OCCA barrier
+    
+    // loop over rows
+    for (int m=0;m<p_Np;m++;@inner(0)) {
+
+      // really a broadcast
+      dfloat Grr = gggeo[e*p_Nggeo + p_G00ID];
+      dfloat Grs = gggeo[e*p_Nggeo + p_G01ID];
+      dfloat Grt = gggeo[e*p_Nggeo + p_G02ID];
+      dfloat Gss = gggeo[e*p_Nggeo + p_G11ID];
+      dfloat Gst = gggeo[e*p_Nggeo + p_G12ID];
+      dfloat Gtt = gggeo[e*p_Nggeo + p_G22ID];
+      
+      dfloat J   = gggeo[e*p_Nggeo + p_GWJID];
+      
+      if (s_gnum[m]<0) continue; //skip masked nodes
+      
+      for (int n=0;n<p_Np;n++) {
+        if (s_gnum[n]<0) continue; //skip masked nodes
+	
+        dfloat val = 0.;
+	
+	// double check this ( I assume these are symmetric )
+        val += Grr*Srr[m+n*p_Np];
+        val += Grs*Srs[m+n*p_Np];
+	val += Grt*Srt[m+n*p_Np];
+        val += Gss*Sss[m+n*p_Np];
+	val += Gst*Sst[m+n*p_Np];
+	val += Gtt*Stt[m+n*p_Np];
+        val += J*lambda*MM[m+n*p_Np];
+
+	// pack non-zero
+	nonZero_t ent;
+	ent.val = val;
+	ent.row = s_gnum[n];
+	ent.col = s_gnum[m];
+	
+	// chunk write 
+	int id = e*p_Np*p_Np + n*p_Np +m; 
+	AL[id] = ent;
+      }
+    }
+  }
+}
+
+@kernel void ellipticBuildOperatorMatrixContinuousHex3D(const dlong Nelements,
+							const hlong *maskedGlobalNumbering,
+							const dfloat *D,
+							const dfloat *ggeo,
+							nonZero_t *AL) {
+
+  for (dlong e=0;e<Nelements;++e;@outer(0)) {
+
+    @shared hlong s_gnum[p_Nq][p_Nq];
+    @shared dfloat s_D[p_Nq][p_Nq];
+    
+    for (int ny=0;ny<p_Nq;ny++;@inner(1)) {
+      for (int nx=0;nx<p_Nq;nx++;@inner(0)) {
+	s_gnum[ny][nx] = maskedGlobalNumbering[e*p_Np+ny*p_Nq+nx];
+	s_D[ny][nx] = D[ny*p_Nq+nx];
+      }
+    }
+
+    // OCCA BARRIER
+    
+    for (int my=0;my<p_Nq;my++;@inner(1)) {
+      for (int mx=0;mx<p_Nq;mx++;@inner(0)) {
+	
+	for (int mz=0;mz<p_Nq;mz++) {
+	  
+	  int idm = mx+my*p_Nq+mz*p_Nq*p_Nq;
+	  if (s_gnum[idm]<0) continue; //skip masked nodes
+	  
+	  for (int nz=0;nz<p_Nq;nz++) {
+	    for (int ny=0;ny<p_Nq;ny++){
+	      for (int nx=0;nx<p_Nq;nx++) {
+		int idn = nx+ny*p_Nq+nz*p_Nq*p_Nq;
+		if (s_gnum[idn]<0) continue; //skip masked nodes
+		
+		int id;
+		dfloat val = 0.;
+		
+		dlong base = e*p_Np*p_Nggeo;
+		if ((ny==my)&&(nz==mz)) {
+		  for (int k=0;k<p_Nq;k++) {
+		    id = k+ny*p_Nq+nz*p_Nq*p_Nq;
+		    dfloat Grr = gggeo[base + id + p_G00ID*p_Np];
+		    
+		    val += Grr*s_D[k][nx]*s_D[k][mx];
+		  }
+		}
+		
+		if (nz==mz) {
+		  id = mx+ny*p_Nq+nz*p_Nq*p_Nq;
+		  dfloat Grs = gggeo[base + id + p_G01ID*p_Np];
+		  val += Grs*s_D[mx][nx]*s_D[ny][my];
+		  
+		  id = nx+my*p_Nq+nz*p_Nq*p_Nq;
+		  dfloat Gsr = gggeo[base + id + p_G01ID*p_Np];
+		  val += Gsr*s_D[nx][mx]*s_D[ny][my];
+		}
+		
+		if (ny==my) {
+		  id = mx+ny*p_Nq+nz*p_Nq*p_Nq;
+		  dfloat Grt = gggeo[base + id + p_G02ID*p_Np];
+		  val += Grt*s_D[mx][nx]*s_D[nz][mz];
+		  
+		  id = nx+ny*p_Nq+mz*p_Nq*p_Nq;
+		  dfloat Gst = gggeo[base + id + p_G02ID*p_Np];
+		  val += Gst*s_D[nx][mx]*s_D[mz][nz];
+		}
+	      
+		if ((nx==mx)&&(nz==mz)) {
+		  for (int k=0;k<p_Nq;k++) {
+		    id = nx+k*p_Nq+nz*p_Nq*p_Nq;
+		    dfloat Gss = gggeo[base + id + p_G11ID*p_Np];
+		  
+		    val += Gss*s_D[k][ny]*s_D[k][my];
+		  }
+		}
+	      
+		if (nx==mx) {
+		  id = nx+my*p_Nq+nz*p_Nq*p_Nq;
+		  dfloat Gst = gggeo[base + id + p_G12ID*p_Np];
+		  val += Gst*s_D[my][ny]*s_D[nz][mz];
+		
+		  id = nx+ny*p_Nq+mz*p_Nq*p_Nq;
+		  dfloat Gts = gggeo[base + id + p_G12ID*p_Np];
+		  val += Gts*s_D[ny][my]*s_D[mz][nz];
+		}
+
+		if ((nx==mx)&&(ny==my)) {
+		  for (int k=0;k<p_Nq;k++) {
+		    id = nx+ny*p_Nq+k*p_Nq*p_Nq;
+		    dfloat Gtt = gggeo[base + id + p_G22ID*p_Np];
+
+		    val += Gtt*s_D[k][nz]*s_D[k][mz];
+		  }
+		}
+
+		if ((nx==mx)&&(ny==my)&&(nz==mz)) {
+		  id = nx + ny*p_Nq+nz*p_Nq*p_Nq;
+		  dfloat JW = gggeo[base + id + p_GWJID*p_Np];
+		  val += JW*lambda;
+		}
+
+		// pack non-zero
+		nonZero_t ent;
+		ent.val = val;
+		ent.row = s_gnum[idn];
+		ent.col = s_gnum[idm];
+	
+		// chunk write 
+		id = e*p_Np*p_Np + idn*p_Np + idm; 
+		AL[id] = ent;
+	      }
+	    }
+	  }
+	}
+      }
+    }
+  }
+
+}
