@@ -125,20 +125,30 @@ int main(int argc, char **argv){
     o_Sst = platform.malloc(mesh.Np*mesh.Np*sizeof(dfloat), mesh.Sst);
     o_Stt = platform.malloc(mesh.Np*mesh.Np*sizeof(dfloat), mesh.Stt);
   }
-  
-  occa::memory o_AL =
-    platform.malloc(mesh.Nelements*mesh.Np*mesh.Np*sizeof(parAlmond::parCOO::nonZero_t));
 
+#define nnz_t parAlmond::parCOO::nonZero_t
+  dlong Nnz = mesh.Nelements*mesh.Np*mesh.Np;
+  // note - have to zero matrix before building because of unwritten boundary nodes
+  nnz_t *d_AL = (nnz_t*) calloc(Nnz,sizeof(nnz_t));
+  nnz_t *h_AL = (nnz_t*) calloc(Nnz,sizeof(nnz_t));
+  
+  occa::memory o_AL =  platform.malloc(Nnz*sizeof(nnz_t), d_AL);
+
+  platform.device.finish();
+  double t0 = MPI_Wtime();
+  
   switch(mesh.elementType){
   case TRIANGLES:
     buildMatrixKernel(mesh.Nelements, o_maskedGlobalNumbering,
-		      o_Srr, o_Srs, o_Sss,
-		      mesh.o_MM, mesh.o_ggeo, elliptic.lambda, o_AL);
+		      o_Srr, o_Srs, o_Sss, mesh.o_MM, mesh.o_ggeo,
+		      elliptic.lambda, o_AL);
+
     break;
   case QUADRILATERALS:
     buildMatrixKernel(mesh.Nelements, o_maskedGlobalNumbering,
-		      mesh.o_D,
-		      mesh.o_ggeo, elliptic.lambda, o_AL);
+		      mesh.o_D, mesh.o_ggeo,
+		      elliptic.lambda, o_AL);
+
     break;
   case TETRAHEDRA:
     buildMatrixKernel(mesh.Nelements, o_maskedGlobalNumbering,
@@ -147,12 +157,50 @@ int main(int argc, char **argv){
     break;
   case HEXAHEDRA:
     buildMatrixKernel(mesh.Nelements, o_maskedGlobalNumbering,
-		      mesh.o_D,
-		      mesh.o_ggeo, elliptic.lambda, o_AL);
+		      mesh.o_D,  mesh.o_ggeo,
+		      elliptic.lambda, o_AL);
     break;
   }
 
+  platform.device.finish();
+  double t1 = MPI_Wtime();
+  
+  switch(mesh.elementType){
+  case TRIANGLES:
+    elliptic.BuildOperatorMatrixContinuousTri2D(h_AL); 
+    break;
+  case QUADRILATERALS:
+    elliptic.BuildOperatorMatrixContinuousQuad2D(h_AL); 
+    break;
+  case TETRAHEDRA:
+    elliptic.BuildOperatorMatrixContinuousTet3D(h_AL); 
+    break;
+  case HEXAHEDRA:
+    elliptic.BuildOperatorMatrixContinuousHex3D(h_AL); 
+    break;
+  }
 
+  double t2 = MPI_Wtime();
+
+  printf("DEVICE build took: %e\n", t1-t0);
+  printf("HOST   build took: %e\n", t2-t1);
+
+  o_AL.copyTo(d_AL);
+
+  // double check results
+  double tol = 1e-10;
+  for(int n=0;n<mesh.Nelements*mesh.Np*mesh.Np;++n){
+    nnz_t tmp1 = h_AL[n], tmp2 = d_AL[n];
+    if(tmp1.row != tmp2.row ||
+       tmp1.col != tmp2.col ||
+       fabs(tmp1.val-tmp2.val)>tol){
+
+      printf("mismatch: %d,  (" hlongFormat "," hlongFormat ",%e) => (" hlongFormat"," hlongFormat ",%e)\n", 
+	     n,
+	     tmp1.row, tmp1.col, tmp1.val,
+	     tmp2.row, tmp2.col, tmp2.val);
+    }
+  }
   
 #endif
   

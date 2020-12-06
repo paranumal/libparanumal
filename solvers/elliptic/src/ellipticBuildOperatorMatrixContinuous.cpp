@@ -162,7 +162,6 @@ void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO::nonZero_t
   dfloat *MM  = mesh.MM ;
 
   //Build unassembed non-zeros
-  dlong cnt =0;
   for (dlong e=0;e<mesh.Nelements;e++) {
     dfloat Grr = mesh.ggeo[e*mesh.Nggeo + G00ID];
     dfloat Grs = mesh.ggeo[e*mesh.Nggeo + G01ID];
@@ -182,10 +181,10 @@ void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO::nonZero_t
         val += J*lambda*MM[m+n*mesh.Np];
 
 	// pack non-zero
+	dlong cnt = e*mesh.Np*mesh.Np + n*mesh.Np + m;
 	AL[cnt].val = val;
 	AL[cnt].row = maskedGlobalNumbering[e*mesh.Np + n];
 	AL[cnt].col = maskedGlobalNumbering[e*mesh.Np + m];
-	cnt++;
       }
     }
   }
@@ -196,7 +195,6 @@ void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO::nonZero_t
 void elliptic_t::BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO::nonZero_t *AL) {
 
   //Build unassembed non-zeros
-  dlong cnt =0;
   for (dlong e=0;e<mesh.Nelements;e++) {
     for (int ny=0;ny<mesh.Nq;ny++) {
       for (int nx=0;nx<mesh.Nq;nx++) {
@@ -246,10 +244,10 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO::nonZero_
             }
 
 	    // pack non-zero
+	    dlong cnt = e*mesh.Np*mesh.Np + (nx+ny*mesh.Nq)*mesh.Np + mx+my*mesh.Nq;
 	    AL[cnt].val = val;
 	    AL[cnt].row = maskedGlobalNumbering[e*mesh.Np + nx+ny*mesh.Nq];
 	    AL[cnt].col = maskedGlobalNumbering[e*mesh.Np + mx+my*mesh.Nq];
-	    cnt++;
           }
         }
       }
@@ -262,7 +260,6 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO::nonZero_
 void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO::nonZero_t *AL) {
 
   //Build unassembed non-zeros
-  dlong cnt =0;
   for (dlong e=0;e<mesh.Nelements;e++) {
     for (int ny=0;ny<mesh.Nq;ny++) {
       for (int nx=0;nx<mesh.Nq;nx++) {
@@ -308,10 +305,10 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO::nonZero_
             }
 
 	    // pack non-zero
+	    dlong cnt = e*mesh.Np*mesh.Np + (nx+ny*mesh.Nq)*mesh.Np + mx+my*mesh.Nq;
 	    AL[cnt].val = val;
 	    AL[cnt].row = maskedGlobalNumbering[e*mesh.Np + nx+ny*mesh.Nq];
 	    AL[cnt].col = maskedGlobalNumbering[e*mesh.Np + mx+my*mesh.Nq];
-	    cnt++;
           }
         }
       }
@@ -320,9 +317,6 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO::nonZero_
 }
 
 void elliptic_t::BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO::nonZero_t *AL) {
-
-
-  dlong cnt =0;
 
   for (dlong e=0;e<mesh.Nelements;e++) {
 
@@ -349,10 +343,10 @@ void elliptic_t::BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO::nonZero_t
         val += J*lambda*mesh.MM[m+n*mesh.Np];
 
 	// pack non-zero
+	dlong cnt = e*mesh.Np*mesh.Np + n*mesh.Np + m;
 	AL[cnt].val = val;
 	AL[cnt].row = maskedGlobalNumbering[e*mesh.Np + n];
 	AL[cnt].col = maskedGlobalNumbering[e*mesh.Np + m];
-	cnt++;
       }
     }
   }
@@ -360,7 +354,6 @@ void elliptic_t::BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO::nonZero_t
 
 void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO::nonZero_t *AL) {
 
-  dlong cnt =0;
   for (dlong e=0;e<mesh.Nelements;e++) {
     for (int nz=0;nz<mesh.Nq;nz++) {
       for (int ny=0;ny<mesh.Nq;ny++) {
@@ -440,10 +433,13 @@ void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO::nonZero_t
 		  val += JW*lambda;
 		}
 
+		dlong cnt = e*mesh.Np*mesh.Np +
+		  idn*mesh.Np +
+		  idm;
+
 		AL[cnt].val = val;
 		AL[cnt].row = maskedGlobalNumbering[e*mesh.Np + idn];
 		AL[cnt].col = maskedGlobalNumbering[e*mesh.Np + idm];
-		cnt++;
 	      }
 	    }
 	  }

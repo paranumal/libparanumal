@@ -34,7 +34,7 @@ typedef struct  {
 // need definition of nonZero_t
 
 @kernel void ellipticBuildOperatorMatrixContinuousTri2D(const dlong Nelements,
-							const hlong *maskedGlobalNumbering,
+							const hlong  *maskedGlobalNumbering,
 							const dfloat *Srr,
 							const dfloat *Srs,
 							const dfloat *Sss,
@@ -59,7 +59,7 @@ typedef struct  {
       dfloat Grs = ggeo[e*p_Nggeo + p_G01ID];
       dfloat Gss = ggeo[e*p_Nggeo + p_G11ID];
       dfloat J   = ggeo[e*p_Nggeo + p_GWJID];
-
+      
       //skip masked nodes
       if (s_gnum[m]>=0)
 	for (int n=0;n<p_Np;n++) {
