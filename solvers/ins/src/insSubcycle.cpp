@@ -36,82 +36,48 @@ subcycler_t::subcycler_t(ins_t& ins):
   advectionVolumeKernel = ins.advectionVolumeKernel;
   advectionSurfaceKernel = ins.advectionSurfaceKernel;
   advectionInterpolationKernel = ins.advectionInterpolationKernel;
-
-  printf("o_cUh\n");
-  // HACK
-  int mOrder = 6;
-  o_cUh = platform.malloc(mOrder*ins.mesh.cubNp*ins.mesh.Nelements*NVfields*sizeof(dfloat));
 }
 
 //evaluate ODE rhs = f(q,t)
 void subcycler_t::rhsf(occa::memory& o_U, occa::memory& o_RHS, const dfloat T){
 
-  //interpolate velocity history for advective field (halo elements first)
-  if(mesh.NhaloElements){
-    subCycleAdvectionKernel(mesh.NhaloElements,
-                           mesh.o_haloElementIds,
-			    mesh.Np,
-                           shiftIndex,
-                           order,
-                           maxOrder,
-                           mesh.Nelements*mesh.Np*NVfields,
-                           T,
-                           T0,
-                           dt,
-                           o_Uh,
-                           o_Ue);
-  }
-  
-  // extract Ue halo
-  vTraceHalo->ExchangeStart(o_Ue, 1, ogs_dfloat);
+  if (!cubature) {
+    //interpolate velocity history for advective field (halo elements first)
+    if(mesh.NhaloElements)
+      subCycleAdvectionKernel(mesh.NhaloElements,
+                             mesh.o_haloElementIds,
+                             shiftIndex,
+                             order,
+                             maxOrder,
+                             mesh.Nelements*mesh.Np*NVfields,
+                             T,
+                             T0,
+                             dt,
+                             o_Uh,
+                             o_Ue);
 
-  if(mesh.NinternalElements){
-    subCycleAdvectionKernel(mesh.NinternalElements,
-                           mesh.o_internalElementIds,
-			    mesh.Np,
-                           shiftIndex,
-                           order,
-                           maxOrder,
-                           mesh.Nelements*mesh.Np*NVfields,
-                           T,
-                           T0,
-                           dt,
-                           o_Uh,
-                           o_Ue);
+    // extract Ue halo
+    vTraceHalo->ExchangeStart(o_Ue, 1, ogs_dfloat);
 
-    subCycleAdvectionKernel(mesh.NinternalElements,
-			    mesh.o_internalElementIds,
-			    mesh.cubNp,
-			    shiftIndex,
-			    order,
-			    maxOrder,
-			    mesh.Nelements*mesh.cubNp*NVfields, // correct offset ?
-			    T,
-			    T0,
-			    dt,
-			    o_cUh,
-			    o_cUe);
-  }
+    if(mesh.NinternalElements)
+      subCycleAdvectionKernel(mesh.NinternalElements,
+                             mesh.o_internalElementIds,
+                             shiftIndex,
+                             order,
+                             maxOrder,
+                             mesh.Nelements*mesh.Np*NVfields,
+                             T,
+                             T0,
+                             dt,
+                             o_Uh,
+                             o_Ue);
 
+    // finish exchange of Ue
+    vTraceHalo->ExchangeFinish(o_Ue, 1, ogs_dfloat);
 
-  // finish exchange of Ue
-  vTraceHalo->ExchangeFinish(o_Ue, 1, ogs_dfloat);
+    // extract u halo on DEVICE
+    vTraceHalo->ExchangeStart(o_U, 1, ogs_dfloat);
 
-  // extract u halo on DEVICE
-  vTraceHalo->ExchangeStart(o_U, 1, ogs_dfloat);
-
-  if (cubature)
-    advectionVolumeKernel(mesh.Nelements,
-                         mesh.o_vgeo,
-                         mesh.o_cubvgeo,
-                         mesh.o_cubD,
-                         mesh.o_cubPDT,
-                         mesh.o_cubInterp,
-                         mesh.o_cubProject,
-                         o_cUe,
-                         o_U,
-                         o_RHS);
-  else
     advectionVolumeKernel(mesh.Nelements,
                          mesh.o_vgeo,
                          mesh.o_D,
@@ -119,26 +85,8 @@ void subcycler_t::rhsf(occa::memory& o_U, occa::memory& o_RHS, const dfloat T){
                          o_U,
                          o_RHS);
 
-  vTraceHalo->ExchangeFinish(o_U, 1, ogs_dfloat);
+    vTraceHalo->ExchangeFinish(o_U, 1, ogs_dfloat);
 
-  if (cubature)
-    advectionSurfaceKernel(mesh.Nelements,
-                          mesh.o_vgeo,
-                          mesh.o_cubsgeo,
-                          mesh.o_intInterp,
-                          mesh.o_intLIFT,
-                          mesh.o_vmapM,
-                          mesh.o_vmapP,
-                          mesh.o_EToB,
-                          T,
-                          mesh.o_intx,
-                          mesh.o_inty,
-                          mesh.o_intz,
-                          nu,
-                          o_Ue,
-                          o_U,
-                          o_RHS);
-  else
     advectionSurfaceKernel(mesh.Nelements,
                           mesh.o_sgeo,
                           mesh.o_LIFT,
@@ -153,4 +101,66 @@ void subcycler_t::rhsf(occa::memory& o_U, occa::memory& o_RHS, const dfloat T){
                           o_Ue,
                           o_U,
                           o_RHS);
+  } else {
+    //cubature
+
+    // extract u halo on DEVICE
+    vTraceHalo->ExchangeStart(o_U, 1, ogs_dfloat);
+
+    //interpolate velocity history at cubature volume nodes for advective field
+    subCycleAdvectionVolumeKernel(mesh.Nlements,
+                           shiftIndex,
+                           order,
+                           maxOrder,
+                           mesh.Nelements*mesh.Np*NVfields,
+                           T,
+                           T0,
+                           dt,
+                           o_cUh,
+                           o_cUe);
+
+    //interpolate velocity history at cubature surface nodes for advective field
+    subCycleAdvectionSurfaceKernel(mesh.Nlements+mesh.totalHaloPairs,
+                           shiftIndex,
+                           order,
+                           maxOrder,
+                           (mesh.Nelements+mesh.totalHaloPairs)*mesh.Nfp*mesh.Nfaces*NVfields,
+                           T,
+                           T0,
+                           dt,
+                           o_sUh,
+                           o_sUe);
+
+    //TODO? fuse the temporal interpolation into the volume/surface kernels?
+
+    advectionVolumeKernel(mesh.Nelements,
+                         mesh.o_vgeo,
+                         mesh.o_cubvgeo,
+                         mesh.o_cubD,
+                         mesh.o_cubPDT,
+                         mesh.o_cubInterp,
+                         mesh.o_cubProject,
+                         o_cUe,
+                         o_U,
+                         o_RHS);
+
+    vTraceHalo->ExchangeFinish(o_U, 1, ogs_dfloat);
+
+    advectionSurfaceKernel(mesh.Nelements,
+                          mesh.o_vgeo,
+                          mesh.o_cubsgeo,
+                          mesh.o_intInterp,
+                          mesh.o_intLIFT,
+                          mesh.o_vmapM,
+                          mesh.o_vmapP,
+                          mesh.o_EToB,
+                          T,
+                          mesh.o_intx,
+                          mesh.o_inty,
+                          mesh.o_intz,
+                          nu,
+                          o_sUe,
+                          o_U,
+                          o_RHS);
+  }
 }

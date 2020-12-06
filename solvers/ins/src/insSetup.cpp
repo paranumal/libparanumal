@@ -50,14 +50,17 @@ ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
 
   //setup timeStepper
   dfloat gamma = 0.0;
+  int Nstages=1;
   if (settings.compareSetting("TIME INTEGRATOR","EXTBDF3")){
     ins->timeStepper = new TimeStepper::extbdf3(mesh.Nelements, mesh.totalHaloPairs,
                                               mesh.Np, ins->NVfields, *ins);
     gamma = ((TimeStepper::extbdf3*) ins->timeStepper)->getGamma();
+    Nstages = ((TimeStepper::extbdf3*) ins->timeStepper)->Nstages;
   } else if (settings.compareSetting("TIME INTEGRATOR","SSBDF3")){
     ins->timeStepper = new TimeStepper::ssbdf3(mesh.Nelements, mesh.totalHaloPairs,
                                               mesh.Np, ins->NVfields, *ins);
     gamma = ((TimeStepper::ssbdf3*) ins->timeStepper)->getGamma();
+    Nstages = ((TimeStepper::ssbdf3*) ins->timeStepper)->Nstages;
   }
 
   // set time step
@@ -290,7 +293,7 @@ ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
       sprintf(kernelName, "insSubcycleAdvectionCubatureInterpolation%s", suffix);
       ins->advectionInterpolationKernel = platform.buildKernel(fileName, kernelName,
 							       kernelInfo);
-      
+
     } else {
       sprintf(fileName, DINS "/okl/insSubcycleAdvection%s.okl", suffix);
       sprintf(kernelName, "insSubcycleAdvectionVolume%s", suffix);
@@ -320,11 +323,17 @@ ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
     ins->subcycler->subCycleAdvectionKernel = platform.buildKernel(fileName, kernelName,
                                              kernelInfo);
 
-    ins->subcycler->o_Ue = platform.malloc((Nlocal+Nhalo)*ins->NVfields*sizeof(dfloat), ins->u);
+    if (ins->cubature) {
+      dlong cubNlocal = mesh.Nelements*mesh.cubNp;
+      dlong cubNhalo  = mesh.totalHaloPairs*mesh.cubNp;
 
-    dlong cubNlocal = mesh.Nelements*mesh.cubNp;
-    dlong cubNhalo  = mesh.totalHaloPairs*mesh.cubNp;
-    ins->subcycler->o_cUe = platform.malloc((cubNlocal+cubNhalo)*ins->NVfields*sizeof(dfloat));
+      //history space of U interpolated to cubature nodes
+      ins->subcycler->o_cUh = platform.malloc(Nstages*cubNlocal*NVfields*sizeof(dfloat));
+
+      ins->subcycler->o_Ue = platform.malloc((cubNlocal+cubNhalo)*ins->NVfields*sizeof(dfloat));
+    } else {
+      ins->subcycler->o_Ue = platform.malloc((Nlocal+Nhalo)*ins->NVfields*sizeof(dfloat), ins->u);
+    }
 
   } else {
     //regular advection kernels

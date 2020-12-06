@@ -39,8 +39,8 @@ ssbdf3::ssbdf3(dlong Nelements, dlong NhaloElements,
   Nstages = 3;
   shiftIndex = 0;
 
-  o_qn   = platform.malloc(Nstages*N*sizeof(dfloat)); //q history
-  o_qhat = platform.malloc(Nstages*N*sizeof(dfloat)); //F(q) history (explicit part)
+  o_qn   = platform.malloc(Nstages*(N+Nhalo)*sizeof(dfloat)); //q history
+  o_qhat = platform.malloc(Nstages*(N+Nhalo)*sizeof(dfloat));
   o_rhs  = platform.malloc(N*sizeof(dfloat)); //rhs storage
 
   occa::properties kernelInfo = platform.props; //copy base occa properties from solver
@@ -103,7 +103,7 @@ void ssbdf3::Step(occa::memory &o_q, dfloat time, dfloat _dt, int order) {
   dfloat *B = ssbdf_b + order*(Nstages+1);
 
   //put current q into history
-  occa::memory o_qn0 = o_qn + shiftIndex*N*sizeof(dfloat);
+  occa::memory o_qn0 = o_qn + shiftIndex*(N+Nhalo)*sizeof(dfloat);
   o_qn0.copyFrom(o_q, N*sizeof(dfloat));
 
   // Compute qhat = sum_i=1^s B_i qhat(t_n+1-i) by

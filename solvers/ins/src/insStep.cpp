@@ -105,21 +105,45 @@ void ins_t::rhs_subcycle_f(occa::memory& o_U, occa::memory& o_UHAT,
   subcycler->T0 = T;
   subcycler->dt = dt;
 
-  subcycler->o_Uh = o_U; //history
 
-  dlong Ntot = mesh.Nelements*mesh.Np*NVfields;
-  dlong cNtot = mesh.Nelements*mesh.cubNp*NVfields;
+  if (cubature) {
+    dlong Ntot   = (mesh.Nelements+mesh.totalHaloPairs)*mesh.Np*NVfields;
+    dlong cNtot  = mesh.Nelements*mesh.cubNp*NVfields;
+    dlong cNftot = (mesh.Nelements+mesh.totalHaloPairs)*mesh.intNfp*mesh.Nfaces*NVfields;
 
-  // interpolate Uh at (shiftIndex)%maxOrder to cUh
-  occa::memory o_Unow = o_U + ((shiftIndex)%maxOrder)*Ntot*sizeof(dfloat);
-  occa::memory o_cUnow = subcycler->o_cUh + ((shiftIndex)%maxOrder)*cNtot*sizeof(dfloat);
-  advectionInterpolationKernel(mesh.Nelements,
-			       mesh.o_cubvgeo,
-			       mesh.o_cubInterp,
-			       o_Unow,
-			       o_cUnow);
-  
-  
+    if (subcycler->o_cUh.size() < maxOrder*cNtot*sizeof(dfloat))
+      LIBP_ABORT("Cubature history field allocated too small.")
+
+    // interpolate current U to cubature nodes and insert in sperate history
+    occa::memory o_Unow = o_U + shiftIndex*Ntot*sizeof(dfloat);
+    occa::memory o_cUnow = subcycler->o_cUh + shiftIndex*cNtot*sizeof(dfloat);
+    occa::memory o_sUnow = subcycler->o_sUh + shiftIndex*cNftot*sizeof(dfloat);
+
+    // extract U halo
+    vTraceHalo->ExchangeStart(o_Unow, 1, ogs_dfloat);
+
+    //interpolate current U to cubature volume nodes and save
+    advectionInterpolationVolumeKernel(mesh.Nelements,
+                                       mesh.o_cubvgeo,
+                                       mesh.o_cubInterp,
+                                       o_Unow,
+                                       o_cUnow);
+
+
+    vTraceHalo->ExchangeFinish(o_Unow, 1, ogs_dfloat);
+
+    //interpolate current U to cubature volume nodes and save
+    advectionInterpolationSurfaceKernel(mesh.Nelements+mesh.totalHaloPairs,
+                                        mesh.o_cubsgeo,
+                                        mesh.o_intInterp,
+                                        o_Unow,
+                                        o_Unow);
+
+  } else {
+    subcycler->o_Uh = o_U; //history
+  }
+
+
   //At each iteration of n, we step the partial sum
   // sum_i=n^order B[i]*U(t-i*dt) from t-n*dt to t-(n-1)*dt
   //To keep BCs consistent, we step the scaled partial sum:

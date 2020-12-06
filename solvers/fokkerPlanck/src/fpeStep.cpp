@@ -91,11 +91,12 @@ void fpe_t::rhs_subcycle_f(occa::memory& o_Q, occa::memory& o_QHAT,
   dfloat bSum = 0.0;
 
   dlong N = mesh.Nelements*mesh.Np;
+  dlong Ntot = (mesh.Nelements+mesh.totalHaloPairs)*mesh.Np;
 
   for (int n=order;n>=0;n--) { //for each history state, starting with oldest
 
     //q at t-n*dt
-    occa::memory o_Qn = o_Q + ((shiftIndex+n)%maxOrder)*N*sizeof(dfloat);
+    occa::memory o_Qn = o_Q + ((shiftIndex+n)%maxOrder)*Ntot*sizeof(dfloat);
 
     //next scaled partial sum
     platform.linAlg.axpy(N, B[n+1]/(B[n+1]+bSum), o_Qn,
