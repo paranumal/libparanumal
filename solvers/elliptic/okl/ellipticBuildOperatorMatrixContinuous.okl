@@ -268,7 +268,7 @@ typedef struct  {
 
 
 
-@kernel void ellipticBuildOperatorMatrixContinuousTet3D(const dlong Nelements,
+@kernel void ellipticBuildOperatorMatrixContinuousTet3D_v0(const dlong Nelements,
 							const hlong *maskedGlobalNumbering,
 							const dfloat *S,
 							const dfloat *MM,
@@ -278,6 +278,8 @@ typedef struct  {
   //Build unassembed non-zeros
   for (dlong e=0;e<Nelements;++e;@outer(0)) {
 
+    
+    
     @shared hlong s_gnum[p_Np];
     for (int n=0;n<p_Np;n++;@inner(0)) {
       s_gnum[n] = maskedGlobalNumbering[e*p_Np+n];
@@ -334,6 +336,85 @@ typedef struct  {
     }
   }
 }
+
+@kernel void ellipticBuildOperatorMatrixContinuousTet3D(const dlong Nelements,
+							const hlong *maskedGlobalNumbering,
+							const dfloat *S,
+							const dfloat *MM,
+							const dfloat *ggeo,
+							const dfloat lambda,
+							nonZero_t *AL){
+
+#define p_Nblk 8
+
+  //Build unassembed non-zeros
+  for (dlong e=0;e<Nelements;e+=p_Nblk;@outer(0)) {
+
+    @shared hlong s_gnum[p_Nblk][p_Np];
+    @shared dfloat s_G[p_Nblk][p_Nggeo];
+    
+    for (int n=0;n<p_Np;n++;@inner(0)) {
+      for(int f=0;f<p_Nblk;++f){
+	s_gnum[f][n] = (e+f<Nelements) ? maskedGlobalNumbering[(e+f)*p_Np+n]: 0;
+      }
+
+      int m = n;
+      dlong base = e*p_Nggeo;
+      while(m<p_Nblk*p_Nggeo && (base + m)<Nelements*p_Nggeo){
+	s_G[0][m] = ggeo[base+m];
+	m+=p_Np;
+      }
+    }
+
+    // OCCA barrier
+
+    
+    // loop over columns
+    for (int m=0;m<p_Np;m++;@inner(0)) {
+
+      //#pragma unroll p_Np
+      for (int n=0;n<p_Np;n++) {
+	int base = m+n*p_Np;
+	const dfloat Srr_nm = S[base+0*p_Np*p_Np];
+	const dfloat Srs_nm = S[base+1*p_Np*p_Np];
+	const dfloat Srt_nm = S[base+2*p_Np*p_Np];
+	const dfloat Sss_nm = S[base+3*p_Np*p_Np];
+	const dfloat Sst_nm = S[base+4*p_Np*p_Np];
+	const dfloat Stt_nm = S[base+5*p_Np*p_Np];
+	const dfloat lambdaMM_nm = lambda*MM[base];
+	
+	// double check this ( I assume these are symmetric )
+#pragma unroll p_Nblk
+	for(int f=0;f<p_Nblk;++f){
+	  const hlong idm = s_gnum[f][m];
+	  const hlong idn = s_gnum[f][n];
+	  if(e+f<Nelements && idm>=0 && idn>=0){
+	    
+	    dfloat val = 0;
+	    val += s_G[f][p_G00ID]*Srr_nm;
+	    val += s_G[f][p_G01ID]*Srs_nm;
+	    val += s_G[f][p_G02ID]*Srt_nm;
+	    val += s_G[f][p_G11ID]*Sss_nm;
+	    val += s_G[f][p_G12ID]*Sst_nm;
+	    val += s_G[f][p_G22ID]*Stt_nm;
+	    val += s_G[f][p_GWJID]*lambdaMM_nm;
+
+	    // pack non-zero
+	    nonZero_t ent;
+	    ent.val = val;
+	    ent.row = idn;
+	    ent.col = idm;
+	    
+	    // chunk write 
+	    int id = (e+f)*p_Np*p_Np + base; 
+	    AL[id] = ent;
+	  }
+	}
+      }
+    }
+  }
+}
+
 
 @kernel void ellipticBuildOperatorMatrixContinuousHex3D(const dlong Nelements,
 							const hlong *maskedGlobalNumbering,
