@@ -20,7 +20,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  */
 
-#define BLOCK_SIZE 512
+//#define BLOCK_SIZE 512
 
 void compareAndSwap(  entry_t* A,
                       entry_t* B,

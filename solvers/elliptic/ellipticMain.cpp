@@ -27,6 +27,21 @@ SOFTWARE.
 #include "elliptic.hpp"
 #include "mesh/meshDefines3D.h"
 
+#include <algorithm> 
+#define nnz_t parAlmond::parCOO::nonZero_t
+
+// compare on global indices
+bool parallelCompareRowColumnV2(nnz_t &a, nnz_t &b){
+  if(a.row < b.row) return +1;
+  if(a.row > b.row) return  0;
+
+  if(a.col < b.col) return +1;
+  if(a.col > b.col) return  0;
+
+  return 0;
+}
+
+
 int main(int argc, char **argv){
 
   // start up MPI
@@ -126,11 +141,12 @@ int main(int argc, char **argv){
     o_Stt = platform.malloc(mesh.Np*mesh.Np*sizeof(dfloat), mesh.Stt);
   }
 
-#define nnz_t parAlmond::parCOO::nonZero_t
+  
   dlong Nnz = mesh.Nelements*mesh.Np*mesh.Np;
   // note - have to zero matrix before building because of unwritten boundary nodes
   nnz_t *d_AL = (nnz_t*) calloc(Nnz,sizeof(nnz_t));
   nnz_t *h_AL = (nnz_t*) calloc(Nnz,sizeof(nnz_t));
+  nnz_t *h_AL2 = (nnz_t*) calloc(Nnz,sizeof(nnz_t));
   
   occa::memory o_AL =  platform.malloc(Nnz*sizeof(nnz_t), d_AL);
 
@@ -181,11 +197,14 @@ int main(int argc, char **argv){
 
   double t2 = MPI_Wtime();
 
+  memcpy(h_AL2, h_AL, Nnz*sizeof(nnz_t));
+  
   printf("DEVICE build took: %e\n", t1-t0);
   printf("HOST   build took: %e\n", t2-t1);
 
   o_AL.copyTo(d_AL);
 
+#if 0
   // double check results
   double tol = 1e-10;
   for(int n=0;n<Nnz;++n){
@@ -200,18 +219,43 @@ int main(int argc, char **argv){
 	     tmp2.row, tmp2.col, tmp2.val);
     }
   }
+#endif
 
   deviceSort_t sorter(platform.device, DELLIPTIC "okl/nonZero.h", DELLIPTIC "okl/nonZeroCompare.h", kernelInfo);
 
+  platform.device.finish();
+  double t3 = MPI_Wtime();
+  
   // sort based on row (fastest) then column in each row
   sorter.sort(Nnz, o_AL);
 
+  platform.device.finish();
+  double t4 = MPI_Wtime();
+
+  int parallelCompareRowColumn(const void *a, const void *b);
+  qsort(h_AL, Nnz, sizeof(nnz_t), parallelCompareRowColumn);
+
+  double t5 = MPI_Wtime();
+  std::sort(h_AL2, h_AL2+Nnz, parallelCompareRowColumnV2);
+  double t6 = MPI_Wtime();
+  
+  printf("DEVICE    sort took: %e\n", t4-t3);
+  printf("HOST     qsort took: %e\n", t5-t4);
+  printf("HOST std::sort took: %e\n", t6-t5);
+  
+  printf("DEVICE: sorted %e gdofs at a rate of %e gdofs/s\n", Nnz/1.e9, Nnz/(1.e9*(t4-t3)));
+  printf("HOST: qsorted %e gdofs at a rate of %e gdofs/s\n", Nnz/1.e9, Nnz/(1.e9*(t5-t4)));
+  printf("HOST: std::sorted %e gdofs at a rate of %e gdofs/s\n", Nnz/1.e9, Nnz/(1.e9*(t6-t5)));
+  
 #if 0
   o_AL.copyTo(d_AL);
   for(int n=0;n<Nnz;++n){
-    if(d_AL[n].val)
+    if(d_AL[n].val){
       printf("o_AL[%d] = [" hlongFormat "," hlongFormat ",%e]\n",
 	     n, d_AL[n].row, d_AL[n].col, d_AL[n].val);
+      printf("h_AL[%d] = [" hlongFormat "," hlongFormat ",%e]\n",
+	     n, h_AL[n].row, h_AL[n].col, h_AL[n].val);
+    }
   }
 #endif
 #endif

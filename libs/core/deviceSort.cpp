@@ -22,7 +22,8 @@
 
 #include "mesh.hpp"
 
-#define BLOCK_SIZE 512
+// was 512
+#define BLOCK_SIZE 1024
 
 void deviceSort_t::sort(const int    entries,
 			occa::memory o_list) {
@@ -62,7 +63,8 @@ deviceSort_t::deviceSort_t(occa::device &device, const char *entryType, const ch
   
   kernelInfo["includes"] += entryType; // "entry.h";
   kernelInfo["includes"] += entryHeader; // "compareEntry.h";
-
+  kernelInfo["defines/BLOCK_SIZE"] = (int)BLOCK_SIZE;
+  
   bitonicSortSharedKernel = device.buildKernel(LIBCORE_DIR "/okl/bitonicSortStructs.okl",
                                                "bitonicSortShared", kernelInfo);
   bitonicSwapGlobalKernel = device.buildKernel(LIBCORE_DIR "/okl/bitonicSortStructs.okl",
