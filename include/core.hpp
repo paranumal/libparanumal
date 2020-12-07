@@ -34,6 +34,7 @@ SOFTWARE.
 #include <stdlib.h>
 #include "utils.hpp"
 #include "deviceSort.h"
+#include "deviceScan.h"
 
 // sort entries in an array in parallel
 void parallelSort(int size, int rank, MPI_Comm comm,

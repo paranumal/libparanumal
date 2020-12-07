@@ -1,0 +1,115 @@
+/* The MIT License (MIT)
+ *
+ * Copyright (c) 2014-2018 David Medina and Tim Warburton
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ */
+
+
+#define MASK 0xffffffff
+
+#define p_SIMD 32
+#define p_NWARPS (SCAN_BLOCK_SIZE/p_SIMD)
+
+@kernel void blockShflScan(dlong N, entry_t *o_a, scan_t *o_scana, scan_t *o_offsets){
+
+  for(dlong b=0;b<(N+SCAN_BLOCK_SIZE-1)/SCAN_BLOCK_SIZE;++b;@outer(0)){
+
+    @shared scan_t s_offsets[p_NWARPS];
+    @exclusive scan_t x;
+    @exclusive int l, w;
+    @exclusive dlong n;
+    
+    for(int t=0;t<SCAN_BLOCK_SIZE;++t;@inner(0)){
+  
+      // find lane
+      l = t%p_SIMD;
+      
+      // find warp
+      w = t >> 5; // divides by 32
+      
+      // construct map from thread and thread-block indices into linear array index
+      n = t + b*SCAN_BLOCK_SIZE;
+
+      dlong n1 = (n>0) ? n-1:0;
+      
+      // assume map to integer depends on entry n and n-1
+      x = entryMap(o_a[n],o_a[n1]); 
+      
+      // warp based scan using shfl op
+      scan_t y;
+      y = __shfl_up_sync(MASK, x,  1, p_SIMD); x += (l>= 1) ? y : 0;
+      y = __shfl_up_sync(MASK, x,  2, p_SIMD); x += (l>= 2) ? y : 0;
+      y = __shfl_up_sync(MASK, x,  4, p_SIMD); x += (l>= 4) ? y : 0;
+      y = __shfl_up_sync(MASK, x,  8, p_SIMD); x += (l>= 8) ? y : 0;
+      y = __shfl_up_sync(MASK, x, 16, p_SIMD); x += (l>=16) ? y : 0;
+
+      // collect warp offsets
+      if(l==31) s_offsets[w] = x;
+    }
+
+    @barrier("local"); // ensure all warps have contributed offset
+    
+    for(int t=0;t<SCAN_BLOCK_SIZE;++t;@inner(0)){
+      
+      // nominate warp 0 to scan offsets
+      if(w==0){
+	scan_t offx = s_offsets[l];
+	scan_t y;
+	y = __shfl_up_sync(MASK, offx,  1, p_SIMD); offx += (l>= 1) ? y : 0;
+	y = __shfl_up_sync(MASK, offx,  2, p_SIMD); offx += (l>= 2) ? y : 0;
+	y = __shfl_up_sync(MASK, offx,  4, p_SIMD); offx += (l>= 4) ? y : 0;
+	y = __shfl_up_sync(MASK, offx,  8, p_SIMD); offx += (l>= 8) ? y : 0;
+	y = __shfl_up_sync(MASK, offx, 16, p_SIMD); offx += (l>=16) ? y : 0;
+
+	s_offsets[l] = offx;
+      }
+    }
+
+    @barrier("local"); // ensure all warps have contributed offset
+    
+    for(int t=0;t<SCAN_BLOCK_SIZE;++t;@inner(0)){
+      
+      // shift by warp offset
+      x += (w!=0) ? s_offsets[w-1]:0;
+      
+      if(n<N)
+	o_scana[n] = x;
+      
+      if(t==SCAN_BLOCK_SIZE-1)
+	o_offsets[b] = x;
+    }
+  }
+}
+
+
+
+
+@kernel void finalizeScan(dlong N, scan_t *o_offsets, scan_t *o_scana){
+
+  for(dlong b=0;b<(N+SCAN_BLOCK_SIZE-1)/SCAN_BLOCK_SIZE;++b;@outer(0)){
+
+    for(int t=0;t<SCAN_BLOCK_SIZE;++t;@inner(0)){
+      // construct map from thread and thread-block indices into linear array index
+      dlong n = t + b*SCAN_BLOCK_SIZE;
+      
+      if(b>0)
+	o_scana[n] += o_offsets[b-1];
+    }
+  }
+}

@@ -221,7 +221,8 @@ int main(int argc, char **argv){
   }
 #endif
 
-  deviceSort_t sorter(platform.device, DELLIPTIC "okl/nonZero.h", DELLIPTIC "okl/nonZeroCompare.h", kernelInfo);
+  deviceScan_t scanner(platform.device, DELLIPTIC "okl/nonZero.h", DELLIPTIC "okl/nonZeroCompare2.h", kernelInfo);
+  deviceSort_t  sorter(platform.device, DELLIPTIC "okl/nonZero.h", DELLIPTIC "okl/nonZeroCompare.h", kernelInfo);
 
   platform.device.finish();
   double t3 = MPI_Wtime();
@@ -238,7 +239,21 @@ int main(int argc, char **argv){
   double t5 = MPI_Wtime();
   std::sort(h_AL2, h_AL2+Nnz, parallelCompareRowColumnV2);
   double t6 = MPI_Wtime();
+
+  occa::memory o_tmp;
+  dlong  *h_tmp;
+  occa::memory o_scan = platform.device.malloc(Nnz*sizeof(dlong));
   
+  scanner.mallocTemps(platform.device, Nnz, o_tmp, &h_tmp);
+
+  platform.device.finish();
+  double t7 = MPI_Wtime();
+  
+  scanner.scan(Nnz, o_AL, o_tmp, h_tmp, o_scan);
+  
+  platform.device.finish();
+  double t8 = MPI_Wtime();
+
   printf("DEVICE    sort took: %e\n", t4-t3);
   printf("HOST     qsort took: %e\n", t5-t4);
   printf("HOST std::sort took: %e\n", t6-t5);
@@ -246,6 +261,18 @@ int main(int argc, char **argv){
   printf("DEVICE: sorted %e gdofs at a rate of %e gdofs/s\n", Nnz/1.e9, Nnz/(1.e9*(t4-t3)));
   printf("HOST: qsorted %e gdofs at a rate of %e gdofs/s\n", Nnz/1.e9, Nnz/(1.e9*(t5-t4)));
   printf("HOST: std::sorted %e gdofs at a rate of %e gdofs/s\n", Nnz/1.e9, Nnz/(1.e9*(t6-t5)));
+
+  printf("DEVICE    scan took: %e\n", t8-t7);
+  
+#if 0
+  // check scan worked
+  dlong *h_scan = (dlong*) calloc(Nnz, sizeof(dlong));
+  o_AL.copyTo(d_AL);
+  o_scan.copyTo(h_scan);
+  for(int n=0;n<Nnz;++n){
+    printf("h_scan[%d] = %d (row:%d, col:%d)\n", n, h_scan[n], d_AL[n].row, d_AL[n].col);
+  }
+#endif
   
 #if 0
   o_AL.copyTo(d_AL);
