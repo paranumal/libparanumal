@@ -152,8 +152,7 @@ int main(int argc, char **argv){
     break;
   case TETRAHEDRA:
     buildMatrixKernel(mesh.Nelements, o_maskedGlobalNumbering,
-		      o_Srr, o_Srs, o_Srt, o_Sss, o_Sst, o_Stt,
-		      mesh.o_MM, mesh.o_ggeo, elliptic.lambda, o_AL);
+		      mesh.o_S, mesh.o_MM, mesh.o_ggeo, elliptic.lambda, o_AL);
     break;
   case HEXAHEDRA:
     buildMatrixKernel(mesh.Nelements, o_maskedGlobalNumbering,

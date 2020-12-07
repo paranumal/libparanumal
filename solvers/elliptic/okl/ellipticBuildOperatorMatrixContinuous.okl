@@ -270,12 +270,7 @@ typedef struct  {
 
 @kernel void ellipticBuildOperatorMatrixContinuousTet3D(const dlong Nelements,
 							const hlong *maskedGlobalNumbering,
-							const dfloat *Srr,
-							const dfloat *Srs,
-							const dfloat *Srt,
-							const dfloat *Sss,
-							const dfloat *Sst,
-							const dfloat *Stt,
+							const dfloat *S,
 							const dfloat *MM,
 							const dfloat *ggeo,
 							const dfloat lambda,
@@ -290,7 +285,7 @@ typedef struct  {
 
     // OCCA barrier
     
-    // loop over rows
+    // loop over columns
     for (int m=0;m<p_Np;m++;@inner(0)) {
 
       // really a broadcast
@@ -308,15 +303,23 @@ typedef struct  {
         if (s_gnum[n]<0) continue; //skip masked nodes
 	
         dfloat val = 0.;
+
+	const dfloat Srr_nm = S[m+n*p_Np+0*p_Np*p_Np];
+	const dfloat Srs_nm = S[m+n*p_Np+1*p_Np*p_Np];
+	const dfloat Srt_nm = S[m+n*p_Np+2*p_Np*p_Np];
+	const dfloat Sss_nm = S[m+n*p_Np+3*p_Np*p_Np];
+	const dfloat Sst_nm = S[m+n*p_Np+4*p_Np*p_Np];
+	const dfloat Stt_nm = S[m+n*p_Np+5*p_Np*p_Np];
+	const dfloat  MM_nm = MM[m+n*p_Np];
 	
 	// double check this ( I assume these are symmetric )
-        val += Grr*Srr[m+n*p_Np];
-        val += Grs*Srs[m+n*p_Np];
-	val += Grt*Srt[m+n*p_Np];
-        val += Gss*Sss[m+n*p_Np];
-	val += Gst*Sst[m+n*p_Np];
-	val += Gtt*Stt[m+n*p_Np];
-        val += J*lambda*MM[m+n*p_Np];
+        val += Grr*Srr_nm;
+        val += Grs*Srs_nm;
+	val += Grt*Srt_nm;
+        val += Gss*Sss_nm;
+	val += Gst*Sst_nm;
+	val += Gtt*Stt_nm;
+        val += J*lambda*MM_nm;
 
 	// pack non-zero
 	nonZero_t ent;

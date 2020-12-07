@@ -130,7 +130,7 @@ SOFTWARE.
       dfloat qtt = 0.;
       dfloat qM = 0.;
 
-      #pragma unroll p_Np
+      //      #pragma unroll p_Np
         for (int k=0;k<p_Np;k++) {
           qrr += S[n+k*p_Np+0*p_Np*p_Np]*s_q[k];
           qrs += S[n+k*p_Np+1*p_Np*p_Np]*s_q[k];
@@ -174,7 +174,8 @@ SOFTWARE.
 #define p_Ne 3
 #define p_Nb 5
 #elif p_N==6
-#define p_Ne 4
+//#define p_Ne 4
+#define p_Ne 2
 #define p_Nb 6
 #else
 // from N=7
