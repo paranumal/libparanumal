@@ -188,7 +188,7 @@ int main(int argc, char **argv){
 
   // double check results
   double tol = 1e-10;
-  for(int n=0;n<mesh.Nelements*mesh.Np*mesh.Np;++n){
+  for(int n=0;n<Nnz;++n){
     nnz_t tmp1 = h_AL[n], tmp2 = d_AL[n];
     if(tmp1.row != tmp2.row ||
        tmp1.col != tmp2.col ||
@@ -200,7 +200,20 @@ int main(int argc, char **argv){
 	     tmp2.row, tmp2.col, tmp2.val);
     }
   }
-  
+
+  deviceSort_t sorter(platform.device, DELLIPTIC "okl/nonZero.h", DELLIPTIC "okl/nonZeroCompare.h", kernelInfo);
+
+  // sort based on row (fastest) then column in each row
+  sorter.sort(Nnz, o_AL);
+
+#if 0
+  o_AL.copyTo(d_AL);
+  for(int n=0;n<Nnz;++n){
+    if(d_AL[n].val)
+      printf("o_AL[%d] = [" hlongFormat "," hlongFormat ",%e]\n",
+	     n, d_AL[n].row, d_AL[n].col, d_AL[n].val);
+  }
+#endif
 #endif
   
   // close down MPI
