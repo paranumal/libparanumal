@@ -112,7 +112,7 @@ void compressMatrix(mesh_t &mesh, ogs_t *ogsMasked,
   if (A.nnz) cnt++;
   A.nnz = cnt;
 
-  if(mesh.rank==0) printf("done.\n");
+  if(mesh.rank==0) printf("done %d entries.\n", cnt);
 
   MPI_Barrier(mesh.comm);
   free(AL);

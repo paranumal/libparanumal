@@ -256,7 +256,8 @@ int main(int argc, char **argv){
   double t8 = MPI_Wtime();
 
   occa::memory o_compactedAL;
-  dlong compactedNnz = scanner.trashCompactor(platform, Nnz, sizeof(nnz_t), o_AL, o_compactedAL);
+  int includeLast = (elliptic.allNeumann);
+  dlong compactedNnz = scanner.trashCompactor(platform, Nnz, sizeof(nnz_t), includeLast, o_AL, o_compactedAL);
   platform.device.finish();
   double t9 = MPI_Wtime();
 

@@ -24,6 +24,8 @@
 
 */
 
+#define BIG_NUM  ( 1 << 30 )
+
 //non-zero matrix entries
 typedef struct  {
   hlong row;
@@ -47,7 +49,8 @@ typedef struct  {
 
     @shared hlong s_gnum[p_Np];
     for (int n=0;n<p_Np;n++;@inner(0)) {
-      s_gnum[n] = maskedGlobalNumbering[e*p_Np+n];
+      hlong id = maskedGlobalNumbering[e*p_Np+n];
+      s_gnum[n] = (id<0) ? BIG_NUM : id;
     }
 
     // OCCA barrier
@@ -61,9 +64,9 @@ typedef struct  {
       dfloat J   = ggeo[e*p_Nggeo + p_GWJID];
       
       //skip masked nodes
-      if (s_gnum[m]>=0)
+      //      if (s_gnum[m]>=0)
 	for (int n=0;n<p_Np;n++) {
-	  if (s_gnum[n]<0) continue; //skip masked nodes
+	  //	  if (s_gnum[n]<0) continue; //skip masked nodes
 	  
 	  dfloat val = 0.;
 	  
@@ -74,10 +77,16 @@ typedef struct  {
 	  val += J*lambda*MM[m+n*p_Np];
 	  
 	  // pack non-zero
+	  hlong row = s_gnum[n];
+	  hlong col = s_gnum[m];
+	  if(row==BIG_NUM) col = BIG_NUM;
+	  else if(col==BIG_NUM) row = BIG_NUM;
+
 	  nonZero_t ent;
 	  ent.val = val;
-	  ent.row = s_gnum[n];
-	  ent.col = s_gnum[m];
+	  ent.row = row;
+	  ent.col = col;
+
 	  
 	  // chunk write 
 	  int id = e*p_Np*p_Np + n*p_Np +m; 
@@ -103,7 +112,9 @@ typedef struct  {
     
     for (int ny=0;ny<p_Nq;ny++;@inner(1)) {
       for (int nx=0;nx<p_Nq;nx++;@inner(0)) {
-	s_gnum[ny][nx] = maskedGlobalNumbering[e*p_Np+ny*p_Nq+nx];
+	//	s_gnum[ny][nx] = maskedGlobalNumbering[e*p_Np+ny*p_Nq+nx];
+	hlong id = maskedGlobalNumbering[e*p_Np+ny*p_Nq+nx];
+	s_gnum[ny][nx] = (id<0) ? BIG_NUM : id;
 	s_D[ny][nx] = D[ny*p_Nq+nx];
       }
     }
@@ -116,11 +127,11 @@ typedef struct  {
 	dlong base = e*p_Np*p_Nggeo;
 
 	//skip masked nodes
-	if(s_gnum[my][mx]>=0)
+	//	if(s_gnum[my][mx]>=0)
         for (int ny=0;ny<p_Nq;ny++) {
           for (int nx=0;nx<p_Nq;nx++) {
 
-	    if (s_gnum[ny][nx]<0) continue; //skip masked nodes
+	    //	    if (s_gnum[ny][nx]<0) continue; //skip masked nodes
 	    
             int id;
             dfloat val = 0.;
@@ -160,14 +171,19 @@ typedef struct  {
             }
 
 	    // pack non-zero
-	    int r = nx+ny*p_Nq;
-	    int c = mx+my*p_Nq;
+	    hlong row = s_gnum[ny][nx];
+	    hlong col = s_gnum[my][mx];
+	    if(row==BIG_NUM) col = BIG_NUM;
+	    else if(col==BIG_NUM) row = BIG_NUM;
+
 	    nonZero_t ent;
 	    ent.val = val;
-	    ent.row = s_gnum[ny][nx];
-	    ent.col = s_gnum[my][mx];
+	    ent.row = row;
+	    ent.col = col;
 	    
-	    // chunk write 
+	    // chunk write
+	    int r = nx+ny*p_Nq;
+	    int c = mx+my*p_Nq;
 	    id = e*p_Np*p_Np + r*p_Np + c; 
 	    AL[id] = ent;
           }
@@ -193,7 +209,9 @@ typedef struct  {
     
     for (int ny=0;ny<p_Nq;ny++;@inner(1)) {
       for (int nx=0;nx<p_Nq;nx++;@inner(0)) {
-	s_gnum[ny][nx] = maskedGlobalNumbering[e*p_Np+ny*p_Nq+nx];
+	//	s_gnum[ny][nx] = maskedGlobalNumbering[e*p_Np+ny*p_Nq+nx];
+	hlong id = maskedGlobalNumbering[e*p_Np+ny*p_Nq+nx];
+	s_gnum[ny][nx] = (id<0) ? BIG_NUM : id;
 	s_D[ny][nx] = D[ny*p_Nq+nx];
       }
     }
@@ -205,11 +223,11 @@ typedef struct  {
 	
 	dlong base = e*p_Np*p_Nggeo;
 
-	if (s_gnum[my][mx]>=0)//skip masked nodes
+	//	if (s_gnum[my][mx]>=0)//skip masked nodes
         for (int ny=0;ny<p_Nq;ny++) {
           for (int nx=0;nx<p_Nq;nx++) {
 
-	    if (s_gnum[ny][nx]<0) continue; //skip masked nodes
+	    //	    if (s_gnum[ny][nx]<0) continue; //skip masked nodes
 	    
             int id;
             dfloat val = 0.;
@@ -249,14 +267,15 @@ typedef struct  {
             }
 
 	    // pack non-zero
-	    int r = nx+ny*p_Nq;
-	    int c = mx+my*p_Nq;
 	    nonZero_t ent;
 	    ent.val = val;
 	    ent.row = s_gnum[ny][nx];
 	    ent.col = s_gnum[my][mx];
 	    
-	    // chunk write 
+	    // chunk write
+	    int r = nx+ny*p_Nq;
+	    int c = mx+my*p_Nq;
+
 	    id = e*p_Np*p_Np + r*p_Np + c; 
 	    AL[id] = ent;
           }
@@ -282,7 +301,9 @@ typedef struct  {
     
     @shared hlong s_gnum[p_Np];
     for (int n=0;n<p_Np;n++;@inner(0)) {
-      s_gnum[n] = maskedGlobalNumbering[e*p_Np+n];
+      //      s_gnum[n] = maskedGlobalNumbering[e*p_Np+n];
+      hlong id = maskedGlobalNumbering[e*p_Np+n];
+      s_gnum[n] = (id<0) ? BIG_NUM : id;
     }
 
     // OCCA barrier
@@ -300,9 +321,9 @@ typedef struct  {
       
       dfloat J   = ggeo[e*p_Nggeo + p_GWJID];
       
-      if (s_gnum[m]>=0)//skip masked nodes
+      //      if (s_gnum[m]>=0)//skip masked nodes
       for (int n=0;n<p_Np;n++) {
-        if (s_gnum[n]<0) continue; //skip masked nodes
+	//        if (s_gnum[n]<0) continue; //skip masked nodes
 	
         dfloat val = 0.;
 
@@ -386,9 +407,7 @@ typedef struct  {
 	// double check this ( I assume these are symmetric )
 #pragma unroll p_Nblk
 	for(int f=0;f<p_Nblk;++f){
-	  const hlong idm = s_gnum[f][m];
-	  const hlong idn = s_gnum[f][n];
-	  if(e+f<Nelements && idm>=0 && idn>=0){
+	  if(e+f<Nelements){
 	    
 	    dfloat val = 0;
 	    val += s_G[f][p_G00ID]*Srr_nm;
@@ -400,10 +419,15 @@ typedef struct  {
 	    val += s_G[f][p_GWJID]*lambdaMM_nm;
 
 	    // pack non-zero
+	    hlong row = s_gnum[f][n];
+	    hlong col = s_gnum[f][m];
+	    if(row==BIG_NUM) col = BIG_NUM;
+	    else if(col==BIG_NUM) row = BIG_NUM;
+
 	    nonZero_t ent;
 	    ent.val = val;
-	    ent.row = idn;
-	    ent.col = idm;
+	    ent.row = row;
+	    ent.col = col;
 	    
 	    // chunk write 
 	    int id = (e+f)*p_Np*p_Np + base; 
@@ -431,7 +455,10 @@ typedef struct  {
     for (int ny=0;ny<p_Nq;ny++;@inner(1)) {
       for (int nx=0;nx<p_Nq;nx++;@inner(0)) {
 	for (int nz=0;nz<p_Nq;nz++) {
-	  s_gnum[nz][ny][nx] = maskedGlobalNumbering[e*p_Np+nz*p_Nq*p_Nq+ny*p_Nq+nx];
+	  //	  s_gnum[nz][ny][nx] = maskedGlobalNumbering[e*p_Np+nz*p_Nq*p_Nq+ny*p_Nq+nx];
+	  hlong id = maskedGlobalNumbering[e*p_Np+nz*p_Nq*p_Nq+ny*p_Nq+nx];
+	  s_gnum[nz][ny][nx] = (id<0) ? BIG_NUM : id;
+
 	}
 	s_D[ny][nx] = D[ny*p_Nq+nx];
       }
@@ -446,12 +473,12 @@ typedef struct  {
 	  
 	  int idm = mx+my*p_Nq+mz*p_Nq*p_Nq;
 
-	  if (s_gnum[mz][my][mx]>=0)//skip masked nodes
+	  //	  if (s_gnum[mz][my][mx]>=0)//skip masked nodes
 	  for (int nz=0;nz<p_Nq;nz++) {
 	    for (int ny=0;ny<p_Nq;ny++){
 	      for (int nx=0;nx<p_Nq;nx++) {
 		int idn = nx+ny*p_Nq+nz*p_Nq*p_Nq;
-		if (s_gnum[nz][ny][nx]<0) continue; //skip masked nodes
+		//		if (s_gnum[nz][ny][nx]<0) continue; //skip masked nodes
 		
 		int id;
 		dfloat val = 0.;
@@ -521,11 +548,16 @@ typedef struct  {
 		}
 
 		// pack non-zero
+		hlong row = s_gnum[nz][ny][nx];
+		hlong col = s_gnum[mz][my][mx];
+		if(row==BIG_NUM) col = BIG_NUM;
+		else if(col==BIG_NUM) row = BIG_NUM;
+
 		nonZero_t ent;
 		ent.val = val;
-		ent.row = s_gnum[nz][ny][nx];
-		ent.col = s_gnum[mz][my][mx];
-	
+		ent.row = row;
+		ent.col = col;
+		
 		// chunk write 
 		id = e*p_Np*p_Np + idn*p_Np + idm; 
 		AL[id] = ent;

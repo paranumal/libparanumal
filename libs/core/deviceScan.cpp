@@ -61,6 +61,7 @@ void deviceScan_t::scan(const dlong   entries,
 dlong deviceScan_t::trashCompactor(platform_t &platform,
 				   const dlong entries,
 				   const int entrySize,
+				   const int includeLast,
 				   occa::memory &o_list,
 				   occa::memory &o_compactedList){
 
@@ -76,13 +77,17 @@ dlong deviceScan_t::trashCompactor(platform_t &platform,
 
   // find number of unique values
   dlong Nstarts = 0;
-  (o_scan+sizeof(dlong)*(entries-1)).copyTo(&Nstarts);
+  (o_scan+sizeof(dlong)*(entries-1)).copyTo(&Nstarts); // last scanned value
   ++Nstarts;
-
+  
   // find starts
-  occa::memory o_starts = platform.device.malloc(Nstarts*sizeof(dlong));
-  findStartsKernel(entries, o_scan, o_starts);
+  occa::memory o_starts = platform.device.malloc((Nstarts+1)*sizeof(dlong));
+  findStartsKernel(entries, Nstarts, o_scan, o_starts);
 
+  // reduce start count if excluding last entry
+  if(!includeLast)
+    --Nstarts;
+  
   // compactify duplicate entries  
   o_compactedList = platform.device.malloc(Nstarts*entrySize);
   trashCompactorKernel(entries, Nstarts, o_starts, o_list, o_compactedList);

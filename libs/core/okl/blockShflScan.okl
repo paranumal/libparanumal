@@ -115,7 +115,7 @@
 }
 
 
-@kernel void findStarts(dlong N, scan_t *o_scan, scan_t *o_starts){
+@kernel void findStarts(dlong N, dlong Nstarts, scan_t *o_scan, scan_t *o_starts){
 
   for(int n=0;n<N;++n;@tile(256, @outer,@inner)){
 
@@ -125,6 +125,8 @@
       dlong id = o_scan[n];
       if(id!=o_scan[n-1]) // rely on l1
 	o_starts[id] = n;
+      if(n==N-1)
+	o_starts[Nstarts] = N;
     }
   }
 
@@ -138,7 +140,7 @@
     for(int t=0;t<p_SIMD;++t;@inner(0)){
 
       dlong id0 = o_starts[s];
-      dlong id1 = (s<Nstarts-1) ? o_starts[s+1] : N;
+      dlong id1 = o_starts[s+1];
       
       dlong n = id0 + t;
 

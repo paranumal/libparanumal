@@ -57,6 +57,7 @@ public:
   dlong trashCompactor(platform_t &platform,
 		       const dlong entries,
 		       const int entrySize,
+		       const int includeLast,
 		       occa::memory &o_list,
 		       occa::memory &o_compactedList);
 
