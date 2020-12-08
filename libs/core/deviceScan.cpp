@@ -79,14 +79,39 @@ dlong deviceScan_t::trashCompactor(platform_t &platform,
   dlong Nstarts = 0;
   (o_scan+sizeof(dlong)*(entries-1)).copyTo(&Nstarts); // last scanned value
   ++Nstarts;
-  
+
   // find starts
   occa::memory o_starts = platform.device.malloc((Nstarts+1)*sizeof(dlong));
   findStartsKernel(entries, Nstarts, o_scan, o_starts);
 
+  // grab starts to HOST for testing
+  dlong *h_starts = (dlong*) calloc((Nstarts+1), sizeof(dlong));
+  o_starts.copyTo(h_starts);  
+
   // reduce start count if excluding last entry
   if(!includeLast)
     --Nstarts;
+  
+#if 1
+  int maxDegree = 0;
+  for(int n=0;n<Nstarts;++n){
+    int deg = h_starts[n+1]-h_starts[n];
+    //    printf("deg[%d]=%d\n", n, h_starts[n+1]-h_starts[n]);
+    maxDegree = mymax(maxDegree, deg);
+  }
+  printf("maxDegree=%d\n", maxDegree);
+
+  int *degreeCounts = (int*) calloc(maxDegree+1, sizeof(int));
+  for(int n=0;n<Nstarts;++n){
+    int deg = h_starts[n+1]-h_starts[n];
+    ++degreeCounts[deg];
+  }
+
+  for(int n=0;n<maxDegree+1;++n){
+    printf("degreeCounts[%d]=%d\n", n, degreeCounts[n]);
+  }
+#endif
+
   
   // compactify duplicate entries  
   o_compactedList = platform.device.malloc(Nstarts*entrySize);

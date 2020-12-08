@@ -87,10 +87,14 @@ int main(int argc, char **argv){
   elliptic.Run();
 
 #if 1
+  int testHOST = 0;
+  
   printf("Building Matrix\n");
   
   parAlmond::parCOO A(elliptic.platform, mesh.comm);
-  elliptic.BuildOperatorMatrixContinuous(A);
+
+  if(testHOST)
+    elliptic.BuildOperatorMatrixContinuous(A);
 
   occa::properties kernelInfo = mesh.props;
 
@@ -168,20 +172,22 @@ int main(int argc, char **argv){
 
   platform.device.finish();
   double t1 = MPI_Wtime();
-  
-  switch(mesh.elementType){
-  case TRIANGLES:
-    elliptic.BuildOperatorMatrixContinuousTri2D(h_AL); 
-    break;
-  case QUADRILATERALS:
-    elliptic.BuildOperatorMatrixContinuousQuad2D(h_AL); 
-    break;
-  case TETRAHEDRA:
-    elliptic.BuildOperatorMatrixContinuousTet3D(h_AL); 
-    break;
-  case HEXAHEDRA:
-    elliptic.BuildOperatorMatrixContinuousHex3D(h_AL); 
-    break;
+
+  if(testHOST){
+    switch(mesh.elementType){
+    case TRIANGLES:
+      elliptic.BuildOperatorMatrixContinuousTri2D(h_AL); 
+      break;
+    case QUADRILATERALS:
+      elliptic.BuildOperatorMatrixContinuousQuad2D(h_AL); 
+      break;
+    case TETRAHEDRA:
+      elliptic.BuildOperatorMatrixContinuousTet3D(h_AL); 
+      break;
+    case HEXAHEDRA:
+      elliptic.BuildOperatorMatrixContinuousHex3D(h_AL); 
+      break;
+    }
   }
 
   double t2 = MPI_Wtime();
@@ -223,10 +229,12 @@ int main(int argc, char **argv){
   double t4 = MPI_Wtime();
 
   int parallelCompareRowColumn(const void *a, const void *b);
-  qsort(h_AL, Nnz, sizeof(nnz_t), parallelCompareRowColumn);
+  if(testHOST)
+    qsort(h_AL, Nnz, sizeof(nnz_t), parallelCompareRowColumn);
 
   double t5 = MPI_Wtime();
-  std::sort(h_AL2, h_AL2+Nnz, parallelCompareRowColumnV2);
+  if(testHOST)
+    std::sort(h_AL2, h_AL2+Nnz, parallelCompareRowColumnV2);
   double t6 = MPI_Wtime();
 
   // 2. perform scan  to find unique entries
@@ -258,38 +266,43 @@ int main(int argc, char **argv){
   // 3.b compress
 
   printf("DEVICE    sort took: %e\n", t4-t3);
-  printf("HOST     qsort took: %e\n", t5-t4);
-  printf("HOST std::sort took: %e\n", t6-t5);
+  if(testHOST){
+    printf("HOST     qsort took: %e\n", t5-t4);
+    printf("HOST std::sort took: %e\n", t6-t5);
+  }
   
   printf("DEVICE: sorted %e gdofs at a rate of %e gdofs/s\n", Nnz/1.e9, Nnz/(1.e9*(t4-t3)));
-  printf("HOST: qsorted %e gdofs at a rate of %e gdofs/s\n", Nnz/1.e9, Nnz/(1.e9*(t5-t4)));
-  printf("HOST: std::sorted %e gdofs at a rate of %e gdofs/s\n", Nnz/1.e9, Nnz/(1.e9*(t6-t5)));
-
+  if(testHOST){
+    printf("HOST: qsorted %e gdofs at a rate of %e gdofs/s\n", Nnz/1.e9, Nnz/(1.e9*(t5-t4)));
+    printf("HOST: std::sorted %e gdofs at a rate of %e gdofs/s\n", Nnz/1.e9, Nnz/(1.e9*(t6-t5)));
+  }
+  
   printf("DEVICE    scan took: %e\n", t8-t7);
   printf("DEVICE trash compactor: %e\n", t9-t8);
   
 
-  // check scan worked
-  nnz_t *d_compactedAL = (nnz_t*) calloc(compactedNnz, sizeof(nnz_t));
-  o_compactedAL.copyTo(d_compactedAL);
-
-  dfloat tol = 1e-10;
-  for(int n=0;n<A.nnz;++n){
-    dfloat d = A.entries[n].val -  d_compactedAL[n].val;
-    if(A.entries[n].row != d_compactedAL[n].row ||
-       A.entries[n].col != d_compactedAL[n].col ||
-       d*d>tol){
-      printf("mismatch: %d,%d,%e => %d,%d,%e\n",
-	     A.entries[n].row,
-	     A.entries[n].col,
-	     A.entries[n].val,
-	     d_compactedAL[n].row,
-	     d_compactedAL[n].col,
-	     d_compactedAL[n].val);
-      
+  if(testHOST){
+    // check scan worked
+    nnz_t *d_compactedAL = (nnz_t*) calloc(compactedNnz, sizeof(nnz_t));
+    o_compactedAL.copyTo(d_compactedAL);
+    
+    dfloat tol = 1e-10;
+    for(int n=0;n<A.nnz;++n){
+      dfloat d = A.entries[n].val -  d_compactedAL[n].val;
+      if(A.entries[n].row != d_compactedAL[n].row ||
+	 A.entries[n].col != d_compactedAL[n].col ||
+	 d*d>tol){
+	printf("mismatch: %d,%d,%e => %d,%d,%e\n",
+	       A.entries[n].row,
+	       A.entries[n].col,
+	       A.entries[n].val,
+	       d_compactedAL[n].row,
+	       d_compactedAL[n].col,
+	       d_compactedAL[n].val);
+	
+      }
     }
   }
-       
        
   
 #if 0
@@ -300,29 +313,6 @@ int main(int argc, char **argv){
 #endif
 
 
-  
-#if 0
-  // check scan worked
-  dlong *h_scan = (dlong*) calloc(Nnz, sizeof(dlong));
-  o_AL.copyTo(d_AL);
-  o_scan.copyTo(h_scan);
-  for(int n=0;n<Nnz;++n){
-    printf("h_scan[%d] = %d (row:%d, col:%d)\n", n, h_scan[n], d_AL[n].row, d_AL[n].col);
-  }
-#endif
-
-  
-#if 0
-  o_AL.copyTo(d_AL);
-  for(int n=0;n<Nnz;++n){
-    if(d_AL[n].val){
-      printf("o_AL[%d] = [" hlongFormat "," hlongFormat ",%e]\n",
-	     n, d_AL[n].row, d_AL[n].col, d_AL[n].val);
-      printf("h_AL[%d] = [" hlongFormat "," hlongFormat ",%e]\n",
-	     n, h_AL[n].row, h_AL[n].col, h_AL[n].val);
-    }
-  }
-#endif
 #endif
   
   // close down MPI
