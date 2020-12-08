@@ -31,7 +31,7 @@ dlong deviceScan_t::blockCount(const dlong entries){
   return ((entries+SCAN_BLOCK_SIZE-1)/SCAN_BLOCK_SIZE);  
 }
 
-void deviceScan_t::scan(const int    entries,
+void deviceScan_t::scan(const dlong   entries,
 			occa::memory &o_list,
 			occa::memory &o_tmp,
 			dlong *h_tmp,
@@ -58,6 +58,43 @@ void deviceScan_t::scan(const int    entries,
   
 }
 
+dlong deviceScan_t::trashCompactor(occa::device &device,
+				   const dlong entries,
+				   const int entrySize,
+				   occa::memory &o_list,
+				   occa::memory &o_compactedList){
+
+
+  // set up some temprs
+  dlong  *h_tmp;
+  occa::memory o_tmp;
+  mallocTemps(device, entries, o_tmp, &h_tmp);
+  
+  // scan
+  occa::memory o_scan = device.malloc(entries*sizeof(dlong));
+  scan(entries, o_list, o_tmp, h_tmp, o_scan);
+
+  // find number of unique values
+  dlong Nstarts = 0;
+  (o_scan+sizeof(dlong)*(entries-1)).copyTo(&Nstarts);
+  ++Nstarts;
+
+  // find starts
+  occa::memory o_starts = device.malloc(Nstarts*sizeof(dlong));
+  findStartsKernel(entries, o_scan, o_starts);
+
+  // compactify duplicate entries  
+  o_compactedList = device.malloc(Nstarts*entrySize);
+  trashCompactorKernel(entries, Nstarts, o_starts, o_list, o_compactedList);
+
+  // tidy up
+  free(h_tmp);
+		      
+  return Nstarts;
+		      
+}
+			     
+
 void  deviceScan_t::mallocTemps(occa::device &device, dlong entries, occa::memory &o_tmp, dlong **h_tmp){
   
   size_t sz =  sizeof(dlong)*blockCount(entries);
@@ -83,6 +120,14 @@ deviceScan_t::deviceScan_t(occa::device &device, const char *entryType, const ch
   finalizeScanKernel = device.buildKernel(LIBCORE_DIR "/okl/blockShflScan.okl",
 				      "finalizeScan", kernelInfo);
   
+  findStartsKernel = device.buildKernel(LIBCORE_DIR "/okl/blockShflScan.okl",
+					"findStarts", kernelInfo);
 
+  
+  trashCompactorKernel = device.buildKernel(LIBCORE_DIR "/okl/blockShflScan.okl",
+					    "trashCompactor", kernelInfo);
+
+
+  
 }
 

@@ -227,7 +227,7 @@ int main(int argc, char **argv){
   platform.device.finish();
   double t3 = MPI_Wtime();
   
-  // sort based on row (fastest) then column in each row
+  // 1. sort based on row (fastest) then column in each row
   sorter.sort(Nnz, o_AL);
 
   platform.device.finish();
@@ -240,6 +240,7 @@ int main(int argc, char **argv){
   std::sort(h_AL2, h_AL2+Nnz, parallelCompareRowColumnV2);
   double t6 = MPI_Wtime();
 
+  // 2. perform scan  to find unique entries
   occa::memory o_tmp;
   dlong  *h_tmp;
   occa::memory o_scan = platform.device.malloc(Nnz*sizeof(dlong));
@@ -248,11 +249,22 @@ int main(int argc, char **argv){
 
   platform.device.finish();
   double t7 = MPI_Wtime();
-  
+
   scanner.scan(Nnz, o_AL, o_tmp, h_tmp, o_scan);
   
   platform.device.finish();
   double t8 = MPI_Wtime();
+
+  occa::memory o_compactedAL;
+  dlong compactedNnz = scanner.trashCompactor(platform.device, Nnz, sizeof(nnz_t), o_AL, o_compactedAL);
+  platform.device.finish();
+  
+  double t9 = MPI_Wtime();
+  
+  // 3. use block reduce with 32 threads to compress entries
+
+  // 3.a extract starts
+  // 3.b compress
 
   printf("DEVICE    sort took: %e\n", t4-t3);
   printf("HOST     qsort took: %e\n", t5-t4);
@@ -263,6 +275,7 @@ int main(int argc, char **argv){
   printf("HOST: std::sorted %e gdofs at a rate of %e gdofs/s\n", Nnz/1.e9, Nnz/(1.e9*(t6-t5)));
 
   printf("DEVICE    scan took: %e\n", t8-t7);
+  printf("DEVICE trash compactor: %e\n", t9-t8);
   
 #if 0
   // check scan worked

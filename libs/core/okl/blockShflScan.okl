@@ -113,3 +113,55 @@
     }
   }
 }
+
+
+@kernel void findStarts(dlong N, scan_t *o_scan, scan_t *o_starts){
+
+  for(int n=0;n<N;++n;@tile(256, @outer,@inner)){
+
+    if(n==0)
+      o_starts[n] = 0;
+    else{
+      dlong id = o_scan[n];
+      if(id!=o_scan[n-1]) // rely on l1
+	o_starts[id] = n;
+    }
+  }
+
+
+}
+
+@kernel void trashCompactor(dlong N, dlong Nstarts, scan_t *o_starts, entry_t *o_list, entry_t *o_compactedList){
+
+  for(dlong s=0;s<Nstarts;++s;@outer(0)){
+
+    for(int t=0;t<p_SIMD;++t;@inner(0)){
+
+      dlong id0 = o_starts[s];
+      dlong id1 = (s<Nstarts-1) ? o_starts[s+1] : N;
+      
+      dlong n = id0 + t;
+
+      // assume 1 val (sorry)
+      dfloat val = 0;
+      while(n<id1){
+	val += o_list[n].val; // nasty striding
+	n+=p_SIMD;
+      }
+
+      dfloat y;
+      y = __shfl_down_sync(MASK, val,  16, p_SIMD); val += (t<16) ? y : 0;
+      y = __shfl_down_sync(MASK, val,   8, p_SIMD); val += (t< 8) ? y : 0;
+      y = __shfl_down_sync(MASK, val,   4, p_SIMD); val += (t< 4) ? y : 0;
+      y = __shfl_down_sync(MASK, val,   2, p_SIMD); val += (t< 2) ? y : 0;
+      y = __shfl_down_sync(MASK, val,   1, p_SIMD); val += (t< 1) ? y : 0;
+
+      if(t==0){
+	entry_t acc = o_list[id0]; // should be in l1 (recovers nasty striding  a bit)
+	acc.val = val;
+	o_compactedList[s] = acc;
+      }
+    }
+  }
+
+}
