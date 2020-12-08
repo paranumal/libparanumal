@@ -92,7 +92,7 @@ dlong deviceScan_t::trashCompactor(platform_t &platform,
   if(!includeLast)
     --Nstarts;
   
-#if 1
+#if 0
   int maxDegree = 0;
   for(int n=0;n<Nstarts;++n){
     int deg = h_starts[n+1]-h_starts[n];

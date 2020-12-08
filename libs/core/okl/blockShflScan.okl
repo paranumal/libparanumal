@@ -133,7 +133,7 @@
 
 }
 
-@kernel void trashCompactor(dlong N, dlong Nstarts, scan_t *o_starts, entry_t *o_list, entry_t *o_compactedList){
+@kernel void trashCompactor_orig(dlong N, dlong Nstarts, scan_t *o_starts, entry_t *o_list, entry_t *o_compactedList){
 
   for(dlong s=0;s<Nstarts;++s;@outer(0)){
 
@@ -166,4 +166,23 @@
     }
   }
 
+}
+
+
+
+@kernel void trashCompactor(dlong N, dlong Nstarts, scan_t *o_starts, entry_t *o_list, entry_t *o_compactedList){
+
+  for(dlong s=0;s<Nstarts;++s;@tile(1024,@outer,@inner)){
+
+    dlong id0 = o_starts[s];
+    dlong id1 = o_starts[s+1];
+
+    entry_t acc = o_list[id0]; // should be in l1 (recovers nasty striding  a bit)
+    for(dlong n=id0+1;n<id1;++n){
+      acc.val += o_list[n].val; // nasty striding
+    }
+
+    o_compactedList[s] = acc;
+  }
+  
 }
