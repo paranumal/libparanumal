@@ -37,9 +37,7 @@ typedef struct  {
 
 @kernel void ellipticBuildOperatorMatrixContinuousTri2D(const dlong Nelements,
 							const hlong  *maskedGlobalNumbering,
-							const dfloat *Srr,
-							const dfloat *Srs,
-							const dfloat *Sss,
+							const dfloat *S,
 							const dfloat *MM,
 							const dfloat *ggeo,
 							const dfloat lambda,
@@ -71,9 +69,9 @@ typedef struct  {
 	  dfloat val = 0.;
 	  
 	  // double check this ( I assume these are symmetric )
-	  val += Grr*Srr[m+n*p_Np];
-	  val += Grs*Srs[m+n*p_Np];
-	  val += Gss*Sss[m+n*p_Np];
+	  val += Grr*S[m+n*p_Np+0*p_Np*p_Np];
+	  val += Grs*S[m+n*p_Np+1*p_Np*p_Np];
+	  val += Gss*S[m+n*p_Np+2*p_Np*p_Np];
 	  val += J*lambda*MM[m+n*p_Np];
 	  
 	  // pack non-zero
@@ -267,10 +265,17 @@ typedef struct  {
             }
 
 	    // pack non-zero
+	    
+	    hlong row = s_gnum[ny][nx];
+	    hlong col = s_gnum[my][mx];
+
+	    if(row==BIG_NUM) col = BIG_NUM;
+	    else if(col==BIG_NUM) row = BIG_NUM;
+
 	    nonZero_t ent;
 	    ent.val = val;
-	    ent.row = s_gnum[ny][nx];
-	    ent.col = s_gnum[my][mx];
+	    ent.row = row;
+	    ent.col = col;
 	    
 	    // chunk write
 	    int r = nx+ny*p_Nq;
@@ -376,7 +381,11 @@ typedef struct  {
     
     for (int n=0;n<p_Np;n++;@inner(0)) {
       for(int f=0;f<p_Nblk;++f){
-	s_gnum[f][n] = (e+f<Nelements) ? maskedGlobalNumbering[(e+f)*p_Np+n]: 0;
+	//	s_gnum[f][n] = (e+f<Nelements) ? maskedGlobalNumbering[(e+f)*p_Np+n]: 0;
+	if(e+f<Nelements){
+	  hlong id = maskedGlobalNumbering[(e+f)*p_Np+n];
+	  s_gnum[f][n] = (id<0) ? BIG_NUM : id;
+	}
       }
 
       int m = n;

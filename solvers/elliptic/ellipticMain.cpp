@@ -131,17 +131,6 @@ int main(int argc, char **argv){
   occa::memory o_maskedGlobalNumbering =
     platform.malloc(mesh.Np*mesh.Nelements*sizeof(hlong), elliptic.maskedGlobalNumbering);
 
-  occa::memory o_Srr, o_Srs, o_Srt, o_Sss, o_Sst, o_Stt;
-  o_Srr = platform.malloc(mesh.Np*mesh.Np*sizeof(dfloat), mesh.Srr);
-  o_Srs = platform.malloc(mesh.Np*mesh.Np*sizeof(dfloat), mesh.Srs);
-  o_Sss = platform.malloc(mesh.Np*mesh.Np*sizeof(dfloat), mesh.Sss);
-  if(mesh.dim==3 && mesh.elementType==TETRAHEDRA){
-    o_Srt = platform.malloc(mesh.Np*mesh.Np*sizeof(dfloat), mesh.Srt);
-    o_Sst = platform.malloc(mesh.Np*mesh.Np*sizeof(dfloat), mesh.Sst);
-    o_Stt = platform.malloc(mesh.Np*mesh.Np*sizeof(dfloat), mesh.Stt);
-  }
-
-  
   dlong Nnz = mesh.Nelements*mesh.Np*mesh.Np;
   // note - have to zero matrix before building because of unwritten boundary nodes
   nnz_t *d_AL = (nnz_t*) calloc(Nnz,sizeof(nnz_t));
@@ -156,7 +145,7 @@ int main(int argc, char **argv){
   switch(mesh.elementType){
   case TRIANGLES:
     buildMatrixKernel(mesh.Nelements, o_maskedGlobalNumbering,
-		      o_Srr, o_Srs, o_Sss, mesh.o_MM, mesh.o_ggeo,
+		      mesh.o_S, mesh.o_MM, mesh.o_ggeo,
 		      elliptic.lambda, o_AL);
 
     break;
