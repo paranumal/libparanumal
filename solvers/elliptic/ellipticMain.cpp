@@ -221,8 +221,8 @@ int main(int argc, char **argv){
   }
 #endif
 
-  deviceScan_t scanner(platform.device, DELLIPTIC "okl/nonZero.h", DELLIPTIC "okl/nonZeroCompare2.h", kernelInfo);
-  deviceSort_t  sorter(platform.device, DELLIPTIC "okl/nonZero.h", DELLIPTIC "okl/nonZeroCompare.h", kernelInfo);
+  deviceScan_t scanner(platform, DELLIPTIC "okl/nonZero.h", DELLIPTIC "okl/nonZeroCompare2.h", kernelInfo);
+  deviceSort_t  sorter(platform, DELLIPTIC "okl/nonZero.h", DELLIPTIC "okl/nonZeroCompare.h", kernelInfo);
 
   platform.device.finish();
   double t3 = MPI_Wtime();
@@ -245,7 +245,7 @@ int main(int argc, char **argv){
   dlong  *h_tmp;
   occa::memory o_scan = platform.device.malloc(Nnz*sizeof(dlong));
   
-  scanner.mallocTemps(platform.device, Nnz, o_tmp, &h_tmp);
+  scanner.mallocTemps(platform, Nnz, o_tmp, &h_tmp);
 
   platform.device.finish();
   double t7 = MPI_Wtime();
@@ -256,7 +256,7 @@ int main(int argc, char **argv){
   double t8 = MPI_Wtime();
 
   occa::memory o_compactedAL;
-  dlong compactedNnz = scanner.trashCompactor(platform.device, Nnz, sizeof(nnz_t), o_AL, o_compactedAL);
+  dlong compactedNnz = scanner.trashCompactor(platform, Nnz, sizeof(nnz_t), o_AL, o_compactedAL);
   platform.device.finish();
   double t9 = MPI_Wtime();
 

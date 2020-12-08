@@ -48,7 +48,7 @@ void deviceSort_t::sort(const int    entries,
   }
 }
 
-deviceSort_t::deviceSort_t(occa::device &device, const char *entryType, const char *entryHeader, occa::properties props){
+deviceSort_t::deviceSort_t(platform_t &platform, const char *entryType, const char *entryHeader, occa::properties props){
 
   // Compile the kernel at run-time
   occa::settings()["kernel/verbose"] = true;
@@ -65,12 +65,12 @@ deviceSort_t::deviceSort_t(occa::device &device, const char *entryType, const ch
   kernelInfo["includes"] += entryHeader; // "compareEntry.h";
   kernelInfo["defines/BLOCK_SIZE"] = (int)BLOCK_SIZE;
   
-  bitonicSortSharedKernel = device.buildKernel(LIBCORE_DIR "/okl/bitonicSortStructs.okl",
+  bitonicSortSharedKernel = platform.buildKernel(LIBCORE_DIR "/okl/bitonicSortStructs.okl",
                                                "bitonicSortShared", kernelInfo);
-  bitonicSwapGlobalKernel = device.buildKernel(LIBCORE_DIR "/okl/bitonicSortStructs.okl",
+  bitonicSwapGlobalKernel = platform.buildKernel(LIBCORE_DIR "/okl/bitonicSortStructs.okl",
                                                "bitonicSwapGlobal", kernelInfo);
-  bitonicMergeGlobalKernel = device.buildKernel(LIBCORE_DIR "/okl/bitonicSortStructs.okl",
+  bitonicMergeGlobalKernel = platform.buildKernel(LIBCORE_DIR "/okl/bitonicSortStructs.okl",
                                                "bitonicMergeGlobal", kernelInfo);
-  bitonicMergeSharedKernel = device.buildKernel(LIBCORE_DIR "/okl/bitonicSortStructs.okl",
+  bitonicMergeSharedKernel = platform.buildKernel(LIBCORE_DIR "/okl/bitonicSortStructs.okl",
                                                "bitonicMergeShared", kernelInfo);
 }

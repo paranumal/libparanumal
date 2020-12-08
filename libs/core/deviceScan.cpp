@@ -58,7 +58,7 @@ void deviceScan_t::scan(const dlong   entries,
   
 }
 
-dlong deviceScan_t::trashCompactor(occa::device &device,
+dlong deviceScan_t::trashCompactor(platform_t &platform,
 				   const dlong entries,
 				   const int entrySize,
 				   occa::memory &o_list,
@@ -68,10 +68,10 @@ dlong deviceScan_t::trashCompactor(occa::device &device,
   // set up some temprs
   dlong  *h_tmp;
   occa::memory o_tmp;
-  mallocTemps(device, entries, o_tmp, &h_tmp);
+  mallocTemps(platform, entries, o_tmp, &h_tmp);
   
   // scan
-  occa::memory o_scan = device.malloc(entries*sizeof(dlong));
+  occa::memory o_scan = platform.device.malloc(entries*sizeof(dlong));
   scan(entries, o_list, o_tmp, h_tmp, o_scan);
 
   // find number of unique values
@@ -80,11 +80,11 @@ dlong deviceScan_t::trashCompactor(occa::device &device,
   ++Nstarts;
 
   // find starts
-  occa::memory o_starts = device.malloc(Nstarts*sizeof(dlong));
+  occa::memory o_starts = platform.device.malloc(Nstarts*sizeof(dlong));
   findStartsKernel(entries, o_scan, o_starts);
 
   // compactify duplicate entries  
-  o_compactedList = device.malloc(Nstarts*entrySize);
+  o_compactedList = platform.device.malloc(Nstarts*entrySize);
   trashCompactorKernel(entries, Nstarts, o_starts, o_list, o_compactedList);
 
   // tidy up
@@ -95,15 +95,15 @@ dlong deviceScan_t::trashCompactor(occa::device &device,
 }
 			     
 
-void  deviceScan_t::mallocTemps(occa::device &device, dlong entries, occa::memory &o_tmp, dlong **h_tmp){
+void  deviceScan_t::mallocTemps(platform_t &platform, dlong entries, occa::memory &o_tmp, dlong **h_tmp){
   
   size_t sz =  sizeof(dlong)*blockCount(entries);
-  o_tmp = device.malloc(sz);
+  o_tmp = platform.device.malloc(sz);
   *h_tmp = (dlong*) malloc(sz);
 }
 
 
-deviceScan_t::deviceScan_t(occa::device &device, const char *entryType, const char *entryMap, occa::properties props){
+deviceScan_t::deviceScan_t(platform_t &platform, const char *entryType, const char *entryMap, occa::properties props){
 
   // Compile the kernel at run-time
   occa::settings()["kernel/verbose"] = true;
@@ -114,17 +114,17 @@ deviceScan_t::deviceScan_t(occa::device &device, const char *entryType, const ch
   kernelInfo["includes"] += entryMap;  // "compareEntry.h";
   kernelInfo["defines/SCAN_BLOCK_SIZE"] = (int)SCAN_BLOCK_SIZE;
   
-  blockShflScanKernel = device.buildKernel(LIBCORE_DIR "/okl/blockShflScan.okl",
+  blockShflScanKernel = platform.buildKernel(LIBCORE_DIR "/okl/blockShflScan.okl",
 				      "blockShflScan", kernelInfo);
 
-  finalizeScanKernel = device.buildKernel(LIBCORE_DIR "/okl/blockShflScan.okl",
+  finalizeScanKernel = platform.buildKernel(LIBCORE_DIR "/okl/blockShflScan.okl",
 				      "finalizeScan", kernelInfo);
   
-  findStartsKernel = device.buildKernel(LIBCORE_DIR "/okl/blockShflScan.okl",
+  findStartsKernel = platform.buildKernel(LIBCORE_DIR "/okl/blockShflScan.okl",
 					"findStarts", kernelInfo);
 
   
-  trashCompactorKernel = device.buildKernel(LIBCORE_DIR "/okl/blockShflScan.okl",
+  trashCompactorKernel = platform.buildKernel(LIBCORE_DIR "/okl/blockShflScan.okl",
 					    "trashCompactor", kernelInfo);
 
 
