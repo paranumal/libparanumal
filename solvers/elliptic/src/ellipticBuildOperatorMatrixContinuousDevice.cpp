@@ -30,9 +30,10 @@
 
 #define nonZero_t parAlmond::parCOO::nonZero_t
 
-static void compressMatrixMultiDevice(platform_t &platform, mesh_t &mesh, ogs_t *ogsMasked, int includeLast,
+static void compressMatrixMultiDevice(platform_t &platform, mesh_t &mesh, ogs_t *ogsMasked, 
 				      occa::memory &o_AL,
 				      dlong nnzLocal,
+				      hlong BIG_NUM,
 				      deviceSort_t &sorter,
 				      deviceScan_t &scanner,
 				      occa::memory &o_A,
@@ -43,15 +44,10 @@ static void compressMatrixMultiDevice(platform_t &platform, mesh_t &mesh, ogs_t 
   // 1. sort based on row (fastest) then column in each row
   sorter.sort(nnzLocal, o_AL);
 
-  // 2. compactify
-  occa::memory o_AL2;
-  nnzLocal = scanner.trashCompactor(platform, nnzLocal, sizeof(nonZero_t), includeLast, o_AL, o_AL2);
-  o_AL.free();
-  
-  // 3. copy to host
+  // 2. copy to host
   nonZero_t *h_AL = (nonZero_t*) calloc(nnzLocal, sizeof(nonZero_t));
-  o_AL2.copyTo(h_AL);
-  o_AL2.free();
+  o_AL.copyTo(h_AL);
+  o_AL.free(); // release this memory - it will likely bite us later
   
   // number of degrees of freedom on this rank (after gathering)
   hlong Ngather = ogsMasked->Ngather;
@@ -64,9 +60,9 @@ static void compressMatrixMultiDevice(platform_t &platform, mesh_t &mesh, ogs_t 
     A.globalRowStarts[r+1] = A.globalRowStarts[r]+A.globalRowStarts[r+1];
     A.globalColStarts[r+1] = A.globalRowStarts[r+1];
   }
-  
-  int *AsendCounts  = (int*) calloc(mesh.size, sizeof(int));
-  int *ArecvCounts  = (int*) calloc(mesh.size, sizeof(int));
+
+  int *AsendCounts  = (int*) calloc(mesh.size+1, sizeof(int)); // note padding
+  int *ArecvCounts  = (int*) calloc(mesh.size+1, sizeof(int));
   int *AsendOffsets = (int*) calloc(mesh.size+1, sizeof(int));
   int *ArecvOffsets = (int*) calloc(mesh.size+1, sizeof(int));
   
@@ -74,6 +70,8 @@ static void compressMatrixMultiDevice(platform_t &platform, mesh_t &mesh, ogs_t 
   int rr=0;
   for(dlong n=0;n<nnzLocal;++n) {
     const hlong id = h_AL[n].row;
+    if(id==BIG_NUM) break; // got to bogus bc entries
+    
     while(id>=A.globalRowStarts[rr+1]) rr++;
     AsendCounts[rr]++;
   }
@@ -86,7 +84,7 @@ static void compressMatrixMultiDevice(platform_t &platform, mesh_t &mesh, ogs_t 
   for(int r=0;r<mesh.size;++r){
     AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
     ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
-    A.nnz += ArecvCounts[r];
+    A.nnz += ArecvCounts[r];    
   }
 
   nonZero_t *entriesIn = (nonZero_t*) calloc(A.nnz, sizeof(nonZero_t));
@@ -96,6 +94,11 @@ static void compressMatrixMultiDevice(platform_t &platform, mesh_t &mesh, ogs_t 
 		entriesIn, ArecvCounts, ArecvOffsets, parAlmond::MPI_NONZERO_T,
 		mesh.comm);
 
+  int maxrow = 0;
+  for(int n=0;n<A.nnz;++n){
+    maxrow = mymax(maxrow, entriesIn[n].row);
+  }
+
   // 1. load onto device and sort
   occa::memory o_AL3 = platform.device.malloc(A.nnz*sizeof(nonZero_t), entriesIn);
   sorter.sort(A.nnz, o_AL3);
@@ -104,27 +107,27 @@ static void compressMatrixMultiDevice(platform_t &platform, mesh_t &mesh, ogs_t 
   free(entriesIn);
   
   // 3. assemble matrix (gather duplicates)
-  occa::memory o_AL4;
-  includeLast = 1; // the bc nodes are already removed
-  Annz = scanner.trashCompactor(platform, A.nnz, sizeof(nonZero_t), includeLast, o_AL3, o_A);
-  o_AL3.free();
-
-  // 4. build final host storage of compressed matrix
-  //  A.entries = (nonZero_t*) calloc(A.nnz, sizeof(nonZero_t));
-  //  o_AL4.copyTo(A.entries);
+  {
+    int includeLast = 1; // the bc nodes are already removed
+    Annz = scanner.trashCompactor(platform, A.nnz, sizeof(nonZero_t), includeLast, o_AL3, o_A);
+  }
 
   // release buffers
+  o_AL3.free();
+
   free(AsendCounts);
   free(ArecvCounts);
   free(AsendOffsets);
   free(ArecvOffsets);
   free(h_AL);
+
 }
 
 
 void elliptic_t::BuildOperatorMatrixContinuousDevice(occa::kernel &buildMatrixKernel, occa::memory &o_maskedGlobalNumbering, hlong BIG_NUM,
 						     deviceSort_t &sorter, deviceScan_t &scanner, parAlmond::parCOO& A, occa::memory &o_A, dlong &Annz) {
 
+  // pad to add dummy entry at end
   dlong nnzLocal = mesh.Np*mesh.Np*mesh.Nelements+1;
 
 
@@ -162,11 +165,9 @@ void elliptic_t::BuildOperatorMatrixContinuousDevice(occa::kernel &buildMatrixKe
     break;
   }
 
-  int includeLast = 0; 
-  
   // assemble on device + MPI
   // [ warning - destroys o_AL ]
   // output is to host A
-  compressMatrixMultiDevice(platform, mesh, ogsMasked, includeLast, o_AL, nnzLocal, sorter, scanner, o_A, Annz, A);
+  compressMatrixMultiDevice(platform, mesh, ogsMasked, o_AL, nnzLocal, BIG_NUM, sorter, scanner, o_A, Annz, A);
   
 }

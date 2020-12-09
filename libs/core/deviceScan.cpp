@@ -119,7 +119,9 @@ dlong deviceScan_t::trashCompactor(platform_t &platform,
 
   // tidy up
   free(h_tmp);
-		      
+
+  platform.device.finish();
+  
   return Nstarts;
 		      
 }

@@ -154,9 +154,21 @@ int main(int argc, char **argv){
   platform.device.finish();
   double t12 = MPI_Wtime();
 
-  printf("DEVICE build whole matrix (host): %e\n", t11-t10);
-  printf("DEVICE build whole matrix (dev): %e\n",  t12-t11);
+  double elapsedHost = t11-t10;
+  double elapsedDevice = t12-t11;
 
+  double globalElapsedHost, globalElapsedDevice;
+  int root = 0;
+  
+  MPI_Reduce(&elapsedHost, &globalElapsedHost, 1, MPI_DOUBLE, MPI_MAX, root, MPI_COMM_WORLD);
+  MPI_Reduce(&elapsedDevice, &globalElapsedDevice, 1, MPI_DOUBLE, MPI_MAX, root, MPI_COMM_WORLD);
+
+  if(mesh.rank==root){
+    printf("DEVICE build whole matrix (host): %e\n", elapsedHost);
+    printf("DEVICE build whole matrix (dev): %e\n",  elapsedDevice);
+  }
+  
+  
   Adev.nnz = devAnnz;
   Adev.entries = (nonZero_t*) calloc(Adev.nnz, sizeof(nonZero_t));
   o_A.copyTo(Adev.entries);
@@ -167,7 +179,7 @@ int main(int argc, char **argv){
     if(Ahost.nnz!=Adev.nnz){ printf("mismatch in HOST and DEVICE non-zero count: %d to %d\n",
 				    Ahost.nnz, Adev.nnz); }
     
-    dfloat tol = 1e-10;
+    dfloat tol = 1e-15;
     for(int n=0;n<mymin(Ahost.nnz,Adev.nnz);++n){
       nonZero_t Ahostn = Ahost.entries[n];
       nonZero_t Adevn  = Adev.entries[n];
