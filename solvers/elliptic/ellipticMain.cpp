@@ -28,10 +28,10 @@ SOFTWARE.
 #include "mesh/meshDefines3D.h"
 
 #include <algorithm> 
-#define nnz_t parAlmond::parCOO::nonZero_t
+#define nonZero_t parAlmond::parCOO::nonZero_t
 
 // compare on global indices
-bool parallelCompareRowColumnV2(nnz_t &a, nnz_t &b){
+bool parallelCompareRowColumnV2(nonZero_t &a, nonZero_t &b){
   if(a.row < b.row) return +1;
   if(a.row > b.row) return  0;
 
@@ -86,18 +86,20 @@ int main(int argc, char **argv){
   // run
   elliptic.Run();
 
-#if 1
-  int testHOST = 0;
-  
-  printf("Building Matrix\n");
-  
-  parAlmond::parCOO A(elliptic.platform, mesh.comm);
-
-  if(testHOST)
-    elliptic.BuildOperatorMatrixContinuous(A);
-
+  // build scanner and sorter
   occa::properties kernelInfo = mesh.props;
 
+  if(sizeof(hlong)==8)
+    kernelInfo["defines/hlong"]= "long long int";
+  if(sizeof(hlong)==4)
+    kernelInfo["defines/hlong"]= "int";
+  
+  deviceScan_t scanner(platform, DELLIPTIC "okl/nonZero.h", DELLIPTIC "okl/nonZeroCompare2.h", kernelInfo);
+  deviceSort_t  sorter(platform, DELLIPTIC "okl/nonZero.h", DELLIPTIC "okl/nonZeroCompare.h", kernelInfo);
+
+  dlong BIG_NUM = 1 << (8*sizeof(hlong)-2);
+  kernelInfo["defines/" "BIG_NUM"] = BIG_NUM;
+  
   if(sizeof(hlong)==8)
     kernelInfo["defines/hlong"]= "long long int";
   if(sizeof(hlong)==4)
@@ -110,7 +112,7 @@ int main(int argc, char **argv){
   kernelInfo["defines/" "p_G12ID"]= G12ID;
   kernelInfo["defines/" "p_G22ID"]= G22ID;
   kernelInfo["defines/" "p_GWJID"]= GWJID;
-
+  
   char kernelName[BUFSIZ];
   switch(mesh.elementType){
   case TRIANGLES:
@@ -128,192 +130,61 @@ int main(int argc, char **argv){
   }
 
   occa::kernel buildMatrixKernel =
-    elliptic.platform.buildKernel(DELLIPTIC "/okl/ellipticBuildOperatorMatrixContinuous.okl",
-				  kernelName,
-				  kernelInfo);
+    platform.buildKernel(DELLIPTIC "/okl/ellipticBuildOperatorMatrixContinuous.okl",
+			 kernelName,
+			 kernelInfo);
   
   occa::memory o_maskedGlobalNumbering =
     platform.malloc(mesh.Np*mesh.Nelements*sizeof(hlong), elliptic.maskedGlobalNumbering);
-
-  dlong Nnz = mesh.Nelements*mesh.Np*mesh.Np;
-  // note - have to zero matrix before building because of unwritten boundary nodes
-  nnz_t *d_AL = (nnz_t*) calloc(Nnz,sizeof(nnz_t));
-  nnz_t *h_AL = (nnz_t*) calloc(Nnz,sizeof(nnz_t));
-  nnz_t *h_AL2 = (nnz_t*) calloc(Nnz,sizeof(nnz_t));
   
-  occa::memory o_AL =  platform.malloc(Nnz*sizeof(nnz_t), d_AL);
+  platform.device.finish();
+  double t10 = MPI_Wtime();
+  parAlmond::parCOO Ahost(elliptic.platform, mesh.comm);
+  elliptic.BuildOperatorMatrixContinuous(Ahost);
+
+  parAlmond::parCOO Adev(elliptic.platform, mesh.comm);
+  occa::memory o_A;
+  dlong devAnnz;
 
   platform.device.finish();
-  double t0 = MPI_Wtime();
+  double t11 = MPI_Wtime();
+    
+  elliptic.BuildOperatorMatrixContinuousDevice(buildMatrixKernel, o_maskedGlobalNumbering, BIG_NUM, sorter, scanner, Adev, o_A, devAnnz);
   
-  switch(mesh.elementType){
-  case TRIANGLES:
-    buildMatrixKernel(mesh.Nelements, o_maskedGlobalNumbering,
-		      mesh.o_S, mesh.o_MM, mesh.o_ggeo,
-		      elliptic.lambda, o_AL);
-
-    break;
-  case QUADRILATERALS:
-    buildMatrixKernel(mesh.Nelements, o_maskedGlobalNumbering,
-		      mesh.o_D, mesh.o_ggeo,
-		      elliptic.lambda, o_AL);
-
-    break;
-  case TETRAHEDRA:
-    buildMatrixKernel(mesh.Nelements, o_maskedGlobalNumbering,
-		      mesh.o_S, mesh.o_MM, mesh.o_ggeo, elliptic.lambda, o_AL);
-    break;
-  case HEXAHEDRA:
-    buildMatrixKernel(mesh.Nelements, o_maskedGlobalNumbering,
-		      mesh.o_D,  mesh.o_ggeo,
-		      elliptic.lambda, o_AL);
-    break;
-  }
-
   platform.device.finish();
-  double t1 = MPI_Wtime();
+  double t12 = MPI_Wtime();
 
+  printf("DEVICE build whole matrix (host): %e\n", t11-t10);
+  printf("DEVICE build whole matrix (dev): %e\n",  t12-t11);
+
+  Adev.nnz = devAnnz;
+  Adev.entries = (nonZero_t*) calloc(Adev.nnz, sizeof(nonZero_t));
+  o_A.copyTo(Adev.entries);
+  
+  int testHOST = 1;
   if(testHOST){
-    switch(mesh.elementType){
-    case TRIANGLES:
-      elliptic.BuildOperatorMatrixContinuousTri2D(h_AL); 
-      break;
-    case QUADRILATERALS:
-      elliptic.BuildOperatorMatrixContinuousQuad2D(h_AL); 
-      break;
-    case TETRAHEDRA:
-      elliptic.BuildOperatorMatrixContinuousTet3D(h_AL); 
-      break;
-    case HEXAHEDRA:
-      elliptic.BuildOperatorMatrixContinuousHex3D(h_AL); 
-      break;
-    }
-  }
 
-  double t2 = MPI_Wtime();
-
-  memcpy(h_AL2, h_AL, Nnz*sizeof(nnz_t));
-  
-  printf("DEVICE build took: %e\n", t1-t0);
-  printf("HOST   build took: %e\n", t2-t1);
-
-  o_AL.copyTo(d_AL);
-
-#if 0
-  // double check results
-  double tol = 1e-10;
-  for(int n=0;n<Nnz;++n){
-    nnz_t tmp1 = h_AL[n], tmp2 = d_AL[n];
-    if(tmp1.row != tmp2.row ||
-       tmp1.col != tmp2.col ||
-       fabs(tmp1.val-tmp2.val)>tol){
-
-      printf("mismatch: %d,  (" hlongFormat "," hlongFormat ",%e) => (" hlongFormat"," hlongFormat ",%e)\n", 
-	     n,
-	     tmp1.row, tmp1.col, tmp1.val,
-	     tmp2.row, tmp2.col, tmp2.val);
-    }
-  }
-#endif
-
-  deviceScan_t scanner(platform, DELLIPTIC "okl/nonZero.h", DELLIPTIC "okl/nonZeroCompare2.h", kernelInfo);
-  deviceSort_t  sorter(platform, DELLIPTIC "okl/nonZero.h", DELLIPTIC "okl/nonZeroCompare.h", kernelInfo);
-
-  platform.device.finish();
-  double t3 = MPI_Wtime();
-  
-  // 1. sort based on row (fastest) then column in each row
-  sorter.sort(Nnz, o_AL);
-
-  platform.device.finish();
-  double t4 = MPI_Wtime();
-
-  int parallelCompareRowColumn(const void *a, const void *b);
-  if(testHOST)
-    qsort(h_AL, Nnz, sizeof(nnz_t), parallelCompareRowColumn);
-
-  double t5 = MPI_Wtime();
-  if(testHOST)
-    std::sort(h_AL2, h_AL2+Nnz, parallelCompareRowColumnV2);
-  double t6 = MPI_Wtime();
-
-  // 2. perform scan  to find unique entries
-  occa::memory o_tmp;
-  dlong  *h_tmp;
-  occa::memory o_scan = platform.device.malloc(Nnz*sizeof(dlong));
-  
-  scanner.mallocTemps(platform, Nnz, o_tmp, &h_tmp);
-
-  platform.device.finish();
-  double t7 = MPI_Wtime();
-
-  scanner.scan(Nnz, o_AL, o_tmp, h_tmp, o_scan);
-  
-  platform.device.finish();
-  double t8 = MPI_Wtime();
-
-  occa::memory o_compactedAL;
-  int includeLast = (elliptic.allNeumann);
-  dlong compactedNnz = scanner.trashCompactor(platform, Nnz, sizeof(nnz_t), includeLast, o_AL, o_compactedAL);
-  platform.device.finish();
-  double t9 = MPI_Wtime();
-
-  printf("compactedNnz=%d\n", compactedNnz);
-  
-  // 3. use block reduce with 32 threads to compress entries
-
-  // 3.a extract starts
-  // 3.b compress
-
-  printf("DEVICE    sort took: %e\n", t4-t3);
-  if(testHOST){
-    printf("HOST     qsort took: %e\n", t5-t4);
-    printf("HOST std::sort took: %e\n", t6-t5);
-  }
-  
-  printf("DEVICE: sorted %e gdofs at a rate of %e gdofs/s\n", Nnz/1.e9, Nnz/(1.e9*(t4-t3)));
-  if(testHOST){
-    printf("HOST: qsorted %e gdofs at a rate of %e gdofs/s\n", Nnz/1.e9, Nnz/(1.e9*(t5-t4)));
-    printf("HOST: std::sorted %e gdofs at a rate of %e gdofs/s\n", Nnz/1.e9, Nnz/(1.e9*(t6-t5)));
-  }
-  
-  printf("DEVICE    scan took: %e\n", t8-t7);
-  printf("DEVICE trash compactor: %e\n", t9-t8);
-  
-
-  if(testHOST){
-    // check scan worked
-    nnz_t *d_compactedAL = (nnz_t*) calloc(compactedNnz, sizeof(nnz_t));
-    o_compactedAL.copyTo(d_compactedAL);
+    if(Ahost.nnz!=Adev.nnz){ printf("mismatch in HOST and DEVICE non-zero count: %d to %d\n",
+				    Ahost.nnz, Adev.nnz); }
     
     dfloat tol = 1e-10;
-    for(int n=0;n<A.nnz;++n){
-      dfloat d = A.entries[n].val -  d_compactedAL[n].val;
-      if(A.entries[n].row != d_compactedAL[n].row ||
-	 A.entries[n].col != d_compactedAL[n].col ||
+    for(int n=0;n<mymin(Ahost.nnz,Adev.nnz);++n){
+      nonZero_t Ahostn = Ahost.entries[n];
+      nonZero_t Adevn  = Adev.entries[n];
+      
+      dfloat d = Ahostn.val -  Adevn.val;
+      if(Ahostn.row != Adevn.row ||
+	 Ahostn.col  != Adevn.col ||
 	 d*d>tol){
+
 	printf("mismatch: %d,%d,%e => %d,%d,%e\n",
-	       A.entries[n].row,
-	       A.entries[n].col,
-	       A.entries[n].val,
-	       d_compactedAL[n].row,
-	       d_compactedAL[n].col,
-	       d_compactedAL[n].val);
-	
+	       Ahostn.row, Ahostn.col,  Ahostn.val,
+	       Adevn.row,  Adevn.col,   Adevn.val);
       }
     }
   }
        
   
-#if 0
-  for(int n=0;n<compactedNnz;++n){
-    nnz_t ent = d_compactedAL[n];
-    printf("d_compactedAL[%d] = [%d,%d,%g]\n", n, ent.row, ent.col, ent.val);
-  }
-#endif
-
-
-#endif
   
   // close down MPI
   MPI_Finalize();

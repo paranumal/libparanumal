@@ -35,7 +35,7 @@ void deviceScan_t::scan(const dlong   entries,
 			occa::memory &o_list,
 			occa::memory &o_tmp,
 			dlong *h_tmp,
-			occa::memory &o_scan) {
+			occa::memory &o_scan){
 
   dlong Nblocks = blockCount(entries);
   

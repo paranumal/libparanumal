@@ -47,9 +47,12 @@
       n = t + b*SCAN_BLOCK_SIZE;
 
       dlong n1 = (n>0) ? n-1:0;
-      
+
+      // load entry and store val
+      entry_t an = o_a[n];
+
       // assume map to integer depends on entry n and n-1
-      x = entryMap(o_a[n],o_a[n1]); 
+      x = entryMap(an,o_a[n1]); 
       
       // warp based scan using shfl op
       scan_t y;
@@ -178,6 +181,7 @@
     dlong id1 = o_starts[s+1];
 
     entry_t acc = o_list[id0]; // should be in l1 (recovers nasty striding  a bit)
+
     for(dlong n=id0+1;n<id1;++n){
       acc.val += o_list[n].val; // nasty striding
     }

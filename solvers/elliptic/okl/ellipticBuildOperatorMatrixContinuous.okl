@@ -24,7 +24,6 @@
 
 */
 
-#define BIG_NUM  ( 1 << 30 )
 
 //non-zero matrix entries
 typedef struct  {
@@ -73,6 +72,7 @@ typedef struct  {
 	// pack non-zero
 	hlong row = s_gnum[n];
 	hlong col = s_gnum[m];
+
 	if(row==BIG_NUM) col = BIG_NUM;
 	else if(col==BIG_NUM) row = BIG_NUM;
 	
