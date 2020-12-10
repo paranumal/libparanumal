@@ -97,8 +97,8 @@ int main(int argc, char **argv){
   deviceScan_t scanner(platform, DELLIPTIC "okl/nonZero.h", DELLIPTIC "okl/nonZeroCompare2.h", kernelInfo);
   deviceSort_t  sorter(platform, DELLIPTIC "okl/nonZero.h", DELLIPTIC "okl/nonZeroCompare.h", kernelInfo);
 
-  hlong BIG_NUM = 1 << (8*sizeof(hlong)-2);
-  kernelInfo["defines/" "BIG_NUM"] = (hlong)BIG_NUM;
+  hlong BIG_NUM = ((hlong)1) << (8*sizeof(hlong)-2);
+  kernelInfo["defines/" "BIG_NUM"] = (const int64_t)BIG_NUM;
   
   if(sizeof(hlong)==8)
     kernelInfo["defines/hlong"]= "long long int";
