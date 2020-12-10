@@ -21,6 +21,9 @@
  */
 
 
+dfloat __shfl_up   (dfloat var, unsigned int delta, int width=warpSize);
+dfloat __shfl_down (dfloat var, unsigned int delta, int width=warpSize);
+
 #define MASK 0xffffffff
 
 #define p_SIMD 32
@@ -56,12 +59,20 @@
       
       // warp based scan using shfl op
       scan_t y;
+#if USE_CUDA==1
       y = __shfl_up_sync(MASK, x,  1, p_SIMD); x += (l>= 1) ? y : 0;
       y = __shfl_up_sync(MASK, x,  2, p_SIMD); x += (l>= 2) ? y : 0;
       y = __shfl_up_sync(MASK, x,  4, p_SIMD); x += (l>= 4) ? y : 0;
       y = __shfl_up_sync(MASK, x,  8, p_SIMD); x += (l>= 8) ? y : 0;
       y = __shfl_up_sync(MASK, x, 16, p_SIMD); x += (l>=16) ? y : 0;
+#else
+      y = __shfl_up(x,  1, p_SIMD); x += (l>= 1) ? y : 0;
+      y = __shfl_up(x,  2, p_SIMD); x += (l>= 2) ? y : 0;
+      y = __shfl_up(x,  4, p_SIMD); x += (l>= 4) ? y : 0;
+      y = __shfl_up(x,  8, p_SIMD); x += (l>= 8) ? y : 0;
+      y = __shfl_up(x, 16, p_SIMD); x += (l>=16) ? y : 0;
 
+#endif
       // collect warp offsets
       if(l==31) s_offsets[w] = x;
     }
@@ -74,12 +85,21 @@
       if(w==0){
 	scan_t offx = s_offsets[l];
 	scan_t y;
+
+#if USE_CUDA==1
 	y = __shfl_up_sync(MASK, offx,  1, p_SIMD); offx += (l>= 1) ? y : 0;
 	y = __shfl_up_sync(MASK, offx,  2, p_SIMD); offx += (l>= 2) ? y : 0;
 	y = __shfl_up_sync(MASK, offx,  4, p_SIMD); offx += (l>= 4) ? y : 0;
 	y = __shfl_up_sync(MASK, offx,  8, p_SIMD); offx += (l>= 8) ? y : 0;
 	y = __shfl_up_sync(MASK, offx, 16, p_SIMD); offx += (l>=16) ? y : 0;
+#else
+	y = __shfl_up(offx,  1, p_SIMD); offx += (l>= 1) ? y : 0;
+	y = __shfl_up(offx,  2, p_SIMD); offx += (l>= 2) ? y : 0;
+	y = __shfl_up(offx,  4, p_SIMD); offx += (l>= 4) ? y : 0;
+	y = __shfl_up(offx,  8, p_SIMD); offx += (l>= 8) ? y : 0;
+	y = __shfl_up(offx, 16, p_SIMD); offx += (l>=16) ? y : 0;
 
+#endif
 	s_offsets[l] = offx;
       }
     }
@@ -155,12 +175,21 @@
       }
 
       dfloat y;
+
+#if USE_CUDA==1
       y = __shfl_down_sync(MASK, val,  16, p_SIMD); val += (t<16) ? y : 0;
       y = __shfl_down_sync(MASK, val,   8, p_SIMD); val += (t< 8) ? y : 0;
       y = __shfl_down_sync(MASK, val,   4, p_SIMD); val += (t< 4) ? y : 0;
       y = __shfl_down_sync(MASK, val,   2, p_SIMD); val += (t< 2) ? y : 0;
       y = __shfl_down_sync(MASK, val,   1, p_SIMD); val += (t< 1) ? y : 0;
-
+#else
+      y = __shfl_down(val,  16, p_SIMD); val += (t<16) ? y : 0;
+      y = __shfl_down(val,   8, p_SIMD); val += (t< 8) ? y : 0;
+      y = __shfl_down(val,   4, p_SIMD); val += (t< 4) ? y : 0;
+      y = __shfl_down(val,   2, p_SIMD); val += (t< 2) ? y : 0;
+      y = __shfl_down(val,   1, p_SIMD); val += (t< 1) ? y : 0;
+#endif
+      
       if(t==0){
 	entry_t acc = o_list[id0]; // should be in l1 (recovers nasty striding  a bit)
 	acc.val = val;

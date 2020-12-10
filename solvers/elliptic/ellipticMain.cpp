@@ -195,8 +195,6 @@ int main(int argc, char **argv){
       }
     }
   }
-       
-  
   
   // close down MPI
   MPI_Finalize();

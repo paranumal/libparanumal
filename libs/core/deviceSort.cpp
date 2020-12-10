@@ -23,7 +23,7 @@
 #include "mesh.hpp"
 
 // was 512
-#define BLOCK_SIZE 1024
+#define BLOCK_SIZE 256
 
 void deviceSort_t::sort(const int    entries,
 			occa::memory o_list) {
@@ -64,6 +64,13 @@ deviceSort_t::deviceSort_t(platform_t &platform, const char *entryType, const ch
   kernelInfo["includes"] += entryType; // "entry.h";
   kernelInfo["includes"] += entryHeader; // "compareEntry.h";
   kernelInfo["defines/BLOCK_SIZE"] = (int)BLOCK_SIZE;
+
+  if(platform.device.mode() == "CUDA")
+    kernelInfo["defines/USE_CUDA"] = (int)1;
+
+  if(platform.device.mode() == "HIP")
+    kernelInfo["defines/USE_HIP"] = (int)1;
+
   
   bitonicSortSharedKernel = platform.buildKernel(LIBCORE_DIR "/okl/bitonicSortStructs.okl",
                                                "bitonicSortShared", kernelInfo);

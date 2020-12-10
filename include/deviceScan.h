@@ -29,7 +29,7 @@ class platform_t;
 #define DEVICE_SCAN 1
 
 // was 512
-#define SCAN_BLOCK_SIZE 1024
+//#define SCAN_BLOCK_SIZE 256
 
 
 //template <class T>

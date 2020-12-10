@@ -23,7 +23,8 @@
 #include "mesh.hpp"
 
 // was 512
-#define SCAN_BLOCK_SIZE 1024
+//#define SCAN_BLOCK_SIZE 1024
+#define SCAN_BLOCK_SIZE 256
 
 
 //template <class T>
@@ -75,6 +76,15 @@ dlong deviceScan_t::segmentedReduction(platform_t &platform,
   occa::memory o_scan = platform.device.malloc(entries*sizeof(dlong));
   scan(entries, o_list, o_tmp, h_tmp, o_scan);
 
+#if 0
+  dlong *h_scan = (dlong*) calloc(entries, sizeof(dlong));
+  o_scan.copyTo(h_scan);
+
+  for(dlong n=0;n<entries;++n){
+    printf("h_scan[%d] = %d\n", n, h_scan[n]);
+  }
+#endif
+  
   // find number of unique values
   dlong Nstarts = 0;
   (o_scan+sizeof(dlong)*(entries-1)).copyTo(&Nstarts); // last scanned value
@@ -145,6 +155,13 @@ deviceScan_t::deviceScan_t(platform_t &platform, const char *entryType, const ch
   kernelInfo["includes"] += entryType; // "entry.h";
   kernelInfo["includes"] += entryMap;  // "compareEntry.h";
   kernelInfo["defines/SCAN_BLOCK_SIZE"] = (int)SCAN_BLOCK_SIZE;
+
+  if(platform.device.mode() == "CUDA")
+    kernelInfo["defines/USE_CUDA"] = (int)1;
+
+  if(platform.device.mode() == "HIP")
+    kernelInfo["defines/USE_HIP"] = (int)1;
+
   
   blockShflScanKernel = platform.buildKernel(LIBCORE_DIR "/okl/blockShflScan.okl",
 					     "blockShflScan", kernelInfo);
