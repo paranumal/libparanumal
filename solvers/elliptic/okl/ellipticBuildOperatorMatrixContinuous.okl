@@ -25,6 +25,8 @@
 */
 
 
+#define tol 1e-12
+
 //non-zero matrix entries
 typedef struct  {
   hlong row;
@@ -73,8 +75,9 @@ typedef struct  {
 	hlong row = s_gnum[n];
 	hlong col = s_gnum[m];
 
-	if(row==BIG_NUM) col = BIG_NUM;
-	else if(col==BIG_NUM) row = BIG_NUM;
+	if(row==BIG_NUM || col==BIG_NUM || fabs(val)<tol){
+	  row = BIG_NUM; col = BIG_NUM; val = 0;
+	}
 	
 	nonZero_t ent;
 	ent.val = val;
@@ -162,9 +165,11 @@ typedef struct  {
 	    // pack non-zero
 	    hlong row = s_gnum[ny][nx];
 	    hlong col = s_gnum[my][mx];
-	    if(row==BIG_NUM) col = BIG_NUM;
-	    else if(col==BIG_NUM) row = BIG_NUM;
 
+	    if(row==BIG_NUM || col==BIG_NUM || fabs(val)<tol){
+	      row = BIG_NUM; col = BIG_NUM; val = 0;
+	    }
+	    
 	    nonZero_t ent;
 	    ent.val = val;
 	    ent.row = row;
@@ -255,9 +260,10 @@ typedef struct  {
 	    hlong row = s_gnum[ny][nx];
 	    hlong col = s_gnum[my][mx];
 
-	    if(row==BIG_NUM) col = BIG_NUM;
-	    else if(col==BIG_NUM) row = BIG_NUM;
-
+	    if(row==BIG_NUM || col==BIG_NUM || fabs(val)<tol){
+	      row = BIG_NUM; col = BIG_NUM; val = 0;
+	    }
+	    
 	    nonZero_t ent;
 	    ent.val = val;
 	    ent.row = row;
@@ -287,8 +293,6 @@ typedef struct  {
 							nonZero_t *AL){
   //Build unassembed non-zeros
   for (dlong e=0;e<Nelements;++e;@outer(0)) {
-
-    
     
     @shared hlong s_gnum[p_Np];
     for (int n=0;n<p_Np;n++;@inner(0)) {
@@ -332,11 +336,18 @@ typedef struct  {
 	val += Gtt*Stt_nm;
         val += J*lambda*MM_nm;
 
+	hlong row = s_gnum[n];
+	hlong col = s_gnum[m];
+	
+	if(row==BIG_NUM || col==BIG_NUM || fabs(val)<tol){
+	  row = BIG_NUM; col = BIG_NUM; val = 0;
+	}
+	
 	// pack non-zero
 	nonZero_t ent;
 	ent.val = val;
-	ent.row = s_gnum[n];
-	ent.col = s_gnum[m];
+	ent.row = row;
+	ent.col = col;
 	
 	// chunk write 
 	int id = e*p_Np*p_Np + n*p_Np +m; 
@@ -411,9 +422,11 @@ typedef struct  {
 	    // pack non-zero
 	    hlong row = s_gnum[f][n];
 	    hlong col = s_gnum[f][m];
-	    if(row==BIG_NUM) col = BIG_NUM;
-	    else if(col==BIG_NUM) row = BIG_NUM;
 
+	    if(row==BIG_NUM || col==BIG_NUM || fabs(val)<tol){
+	      row = BIG_NUM; col = BIG_NUM; val = 0;
+	    }
+	    
 	    nonZero_t ent;
 	    ent.val = val;
 	    ent.row = row;
@@ -537,8 +550,10 @@ typedef struct  {
 		// pack non-zero
 		hlong row = s_gnum[nz][ny][nx];
 		hlong col = s_gnum[mz][my][mx];
-		if(row==BIG_NUM) col = BIG_NUM;
-		else if(col==BIG_NUM) row = BIG_NUM;
+
+		if(row==BIG_NUM || col==BIG_NUM || fabs(val)<tol){
+		  row = BIG_NUM; col = BIG_NUM; val = 0;
+		}
 
 		nonZero_t ent;
 		ent.val = val;

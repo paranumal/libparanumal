@@ -180,7 +180,7 @@ int main(int argc, char **argv){
 				    Ahost.nnz, Adev.nnz); }
     
     dfloat tol = 1e-15;
-    for(int n=0;n<mymin(Ahost.nnz,Adev.nnz);++n){
+    for(int n=0;n<mymin(10,mymin(Ahost.nnz,Adev.nnz));++n){
       nonZero_t Ahostn = Ahost.entries[n];
       nonZero_t Adevn  = Adev.entries[n];
       

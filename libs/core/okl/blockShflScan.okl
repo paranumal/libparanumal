@@ -172,8 +172,9 @@
 }
 
 
-
-@kernel void trashCompactor(dlong N, dlong Nstarts, scan_t *o_starts, entry_t *o_list, entry_t *o_compactedList){
+//#define trashCompactor_naive trashCompactor
+#define trashCompactor_segred trashCompactor
+@kernel void trashCompactor_naive(dlong N, dlong Nstarts, scan_t *o_starts, entry_t *o_list, entry_t *o_compactedList){
 
   for(dlong s=0;s<Nstarts;++s;@tile(1024,@outer,@inner)){
 
@@ -189,4 +190,53 @@
     o_compactedList[s] = acc;
   }
   
+}
+
+
+#define mymin(a,b) ( ((a)<(b)) ? (a):(b) )
+#define mymax(a,b) ( ((a)>(b)) ? (a):(b) )
+
+@kernel void trashCompactor_segred(dlong N, dlong Nstarts, scan_t *o_starts, entry_t *o_list, entry_t *o_compactedList){
+
+#define p_NT 32
+
+  for(int b=0;b<(Nstarts+p_NT-1)/p_NT;++b;@outer(0)){
+
+    @shared dfloat s_vals[p_NT];
+    
+    for(int t=0;t<p_NT;++t;@inner(0)){
+
+      // data range for NT outputs 
+      dlong bstart = o_starts[b*p_NT];
+      dlong bend   = o_starts[mymin(Nstarts,(b+1)*p_NT)];
+
+      // output for this thread
+      dlong s = b*p_NT+t;
+      
+      dlong tstart = (s<Nstarts)   ? o_starts[s]  :(-1);
+      dlong tend   = (s+1<Nstarts+1) ? o_starts[s+1]:(-1);
+
+      dfloat res = 0;
+
+      // all threads step through all blocks
+      for(int bb=bstart;bb<bend;bb+=p_NT){
+	//	@barrier("local");
+	int loadn = bb + t;
+	s_vals[t] = (loadn<N) ? (o_list[loadn].val):(0.0f);
+	//	@barrier("local");
+	if(tstart!=-1 && tend !=-1){
+	  int t0 = mymax(bb,tstart) - bb;
+	  int t1 = mymin(bb+p_NT,tend) - bb;
+	  for(int l=t0;l<t1;++l){
+	    res += s_vals[l]; // likely prone to bank conflicts
+	  }
+	}
+      }
+      if(s<Nstarts){
+	entry_t ent = o_list[tstart];
+	ent.val = res;
+	o_compactedList[s] = ent;
+      }
+    }
+  }
 }
