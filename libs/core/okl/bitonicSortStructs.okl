@@ -22,7 +22,7 @@
 
 //#define BLOCK_SIZE 512
 
-#define p_Nchunk 4
+#define p_Nchunk 32
 
 void compareAndSwap(  entry_t* A,
                       entry_t* B,
@@ -47,8 +47,8 @@ void compareAndSwap(  entry_t* A,
 @kernel void bitonicSortShared(const int entries,
                                entry_t*  list){
 
-  //  for (int e = 0; e < entries; e+=2*BLOCK_SIZE; @tile(4,@outer(0),@outer(1))) {
   for (int eo = 0; eo < (entries+2*BLOCK_SIZE-1)/(2*BLOCK_SIZE); ++eo; @tile(p_Nchunk,@outer(1),@outer(0))) {
+    //   for (int e = 0; e < entries; e+=2*BLOCK_SIZE; @outer){
     //Shared memory storage for one or more short vectors
     @shared entry_t s_list[2*BLOCK_SIZE];
     @exclusive dlong e;
@@ -118,10 +118,11 @@ void compareAndSwap(  entry_t* A,
   //  for (int e = 0; e < entries; e+=size; @tile(p_Nchunk,@outer(1),@outer(2))) {
   for (int eo = 0; eo < (entries+size-1)/size; ++eo; @tile(p_Nchunk,@outer(2),@outer(1))) {
     for (int s = 0; s < size/2; s+=BLOCK_SIZE; @outer(0)) {
+    //    for (int e = 0; e < entries; e+=size; @outer(0)){
       for (int i = 0; i < BLOCK_SIZE; ++i; @inner) {
 
 	dlong e = eo*size;
-
+	
 	if(e<entries){
 	  const int pos1 = e + 2 * (s + i) - ((s + i) & (size/2 - 1));
 	  const int pos2 = pos1 + size-1 - 2*((s+i)%(size/2));
@@ -161,8 +162,11 @@ void compareAndSwap(  entry_t* A,
                                 const int  stride) {
 
   //  for (int e = 0; e < entries; e+=2*stride; @tile(p_Nchunk,@outer(1),@outer(2))) {
-  for (int eo = 0; eo < (entries+2*stride-1)/(2*stride); ++eo; @tile(p_Nchunk,@outer(2),@outer(1))) {
-    for (int s = 0; s < stride; s+=BLOCK_SIZE; @outer(0)) {
+  for (int eo = 0; eo < (entries+2*stride-1)/(2*stride); ++eo; @tile(p_Nchunk,@outer(2),@outer(1))) { // TW
+    for (int s = 0; s < stride; s+=BLOCK_SIZE; @outer(0)) { // TW
+
+      //    for (int e = 0; e < entries; e+=2*stride; @outer(0)){
+
       for (int i = 0; i < BLOCK_SIZE; ++i; @inner) {
 
 	dlong e = eo*2*stride;
@@ -209,7 +213,7 @@ void compareAndSwap(  entry_t* A,
 
   //  for (int e = 0; e < entries; e+=2*BLOCK_SIZE; @outer) {
   //  for (int e = 0; e < entries; e+=2*BLOCK_SIZE; @tile(p_Nchunk,@outer)) {
-  for (int eo = 0; eo < (entries+2*BLOCK_SIZE-1)/(2*BLOCK_SIZE); ++eo; @tile(p_Nchunk,@outer(1),@outer(0))) {
+    for (int eo = 0; eo < (entries+2*BLOCK_SIZE-1)/(2*BLOCK_SIZE); ++eo; @tile(p_Nchunk,@outer(1),@outer(0))) {
     
     //Shared memory storage for one or more short vectors
     @shared entry_t s_list[2*BLOCK_SIZE];
@@ -258,5 +262,7 @@ void compareAndSwap(  entry_t* A,
 	}
       }
     }
-  }
+
+
+}
 }

@@ -120,11 +120,12 @@ dlong deviceScan_t::segmentedReduction(platform_t &platform,
   for(int n=0;n<maxDegree+1;++n){
     printf("degreeCounts[%d]=%d\n", n, degreeCounts[n]);
   }
+  printf("Nstarts=%lld\n", Nstarts);
 #endif
 
   
   // compactify duplicate entries  
-  o_compactedList = platform.device.malloc(Nstarts*entrySize);
+  o_compactedList = platform.device.malloc(((long long int)Nstarts)*entrySize);
   segmentedReductionKernel(entries, Nstarts, o_starts, o_list, o_compactedList);
 
   // tidy up
