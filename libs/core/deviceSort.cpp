@@ -31,6 +31,8 @@ void deviceSort_t::sort(const int    entries,
   //Nothing to sort
   if (entries < 2) return;
 
+  if(entries/(2*BLOCK_SIZE) >= 65536) printf("WARNING: bitonicSortSharedKernel using %d thread-blocks\n", entries/(2*BLOCK_SIZE));
+  
   bitonicSortSharedKernel(entries, o_list);
 
   for (int size = 4*BLOCK_SIZE; size < 2*entries; size <<= 1){
