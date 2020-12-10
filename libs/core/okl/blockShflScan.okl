@@ -136,7 +136,7 @@
 
 }
 
-@kernel void trashCompactor_orig(dlong N, dlong Nstarts, scan_t *o_starts, entry_t *o_list, entry_t *o_compactedList){
+@kernel void segmentedReduction_orig(dlong N, dlong Nstarts, scan_t *o_starts, entry_t *o_list, entry_t *o_compactedList){
 
   for(dlong s=0;s<Nstarts;++s;@outer(0)){
 
@@ -172,9 +172,9 @@
 }
 
 
-//#define trashCompactor_naive trashCompactor
-#define trashCompactor_segred trashCompactor
-@kernel void trashCompactor_naive(dlong N, dlong Nstarts, scan_t *o_starts, entry_t *o_list, entry_t *o_compactedList){
+//#define segmentedReduction_naive segmentedReduction
+#define segmentedReduction_segred segmentedReduction
+@kernel void segmentedReduction_naive(dlong N, dlong Nstarts, scan_t *o_starts, entry_t *o_list, entry_t *o_compactedList){
 
   for(dlong s=0;s<Nstarts;++s;@tile(1024,@outer,@inner)){
 
@@ -196,7 +196,7 @@
 #define mymin(a,b) ( ((a)<(b)) ? (a):(b) )
 #define mymax(a,b) ( ((a)>(b)) ? (a):(b) )
 
-@kernel void trashCompactor_segred(dlong N, dlong Nstarts, scan_t *o_starts, entry_t *o_list, entry_t *o_compactedList){
+@kernel void segmentedReduction_segred(dlong N, dlong Nstarts, scan_t *o_starts, entry_t *o_list, entry_t *o_compactedList){
 
 #define p_NT 32
 

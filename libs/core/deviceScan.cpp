@@ -58,13 +58,13 @@ void deviceScan_t::scan(const dlong   entries,
   
 }
 
-dlong deviceScan_t::trashCompactor(platform_t &platform,
-				   const dlong entries,
-				   const int entrySize,
-				   const int includeLast,
-				   occa::memory &o_list,
-				   occa::memory &o_compactedList){
-
+dlong deviceScan_t::segmentedReduction(platform_t &platform,
+				       const dlong entries,
+				       const int entrySize,
+				       const int includeLast,
+				       occa::memory &o_list,
+				       occa::memory &o_compactedList){
+  
 
   // set up some temprs
   dlong  *h_tmp;
@@ -115,7 +115,7 @@ dlong deviceScan_t::trashCompactor(platform_t &platform,
   
   // compactify duplicate entries  
   o_compactedList = platform.device.malloc(Nstarts*entrySize);
-  trashCompactorKernel(entries, Nstarts, o_starts, o_list, o_compactedList);
+  segmentedReductionKernel(entries, Nstarts, o_starts, o_list, o_compactedList);
 
   // tidy up
   free(h_tmp);
@@ -147,17 +147,17 @@ deviceScan_t::deviceScan_t(platform_t &platform, const char *entryType, const ch
   kernelInfo["defines/SCAN_BLOCK_SIZE"] = (int)SCAN_BLOCK_SIZE;
   
   blockShflScanKernel = platform.buildKernel(LIBCORE_DIR "/okl/blockShflScan.okl",
-				      "blockShflScan", kernelInfo);
-
+					     "blockShflScan", kernelInfo);
+  
   finalizeScanKernel = platform.buildKernel(LIBCORE_DIR "/okl/blockShflScan.okl",
-				      "finalizeScan", kernelInfo);
+					    "finalizeScan", kernelInfo);
   
   findStartsKernel = platform.buildKernel(LIBCORE_DIR "/okl/blockShflScan.okl",
-					"findStarts", kernelInfo);
+					  "findStarts", kernelInfo);
 
   
-  trashCompactorKernel = platform.buildKernel(LIBCORE_DIR "/okl/blockShflScan.okl",
-					    "trashCompactor", kernelInfo);
+  segmentedReductionKernel = platform.buildKernel(LIBCORE_DIR "/okl/blockShflScan.okl",
+						  "segmentedReduction", kernelInfo);
 
 
   

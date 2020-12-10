@@ -38,7 +38,7 @@ private:
   occa::kernel blockShflScanKernel;
   occa::kernel finalizeScanKernel;
   occa::kernel findStartsKernel;
-  occa::kernel trashCompactorKernel;
+  occa::kernel segmentedReductionKernel;
 public:
 
   // constructor
@@ -54,12 +54,12 @@ public:
 
   void mallocTemps(platform_t &platform, dlong entries, occa::memory &o_tmp, dlong **h_tmp);
 
-  dlong trashCompactor(platform_t &platform,
-		       const dlong entries,
-		       const int entrySize,
-		       const int includeLast,
-		       occa::memory &o_list,
-		       occa::memory &o_compactedList);
+  dlong segmentedReduction(platform_t &platform,
+			   const dlong entries,
+			   const int entrySize,
+			   const int includeLast,
+			   occa::memory &o_list,
+			   occa::memory &o_compactedList);
 
   
 };

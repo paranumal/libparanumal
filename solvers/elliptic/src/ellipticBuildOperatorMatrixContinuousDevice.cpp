@@ -109,7 +109,7 @@ static void compressMatrixMultiDevice(platform_t &platform, mesh_t &mesh, ogs_t 
   // 3. assemble matrix (gather duplicates)
   {
     int includeLast = 1; // the bc nodes are already removed
-    Annz = scanner.trashCompactor(platform, A.nnz, sizeof(nonZero_t), includeLast, o_AL3, o_A);
+    Annz = scanner.segmentedReduction(platform, A.nnz, sizeof(nonZero_t), includeLast, o_AL3, o_A);
   }
 
   // release buffers
