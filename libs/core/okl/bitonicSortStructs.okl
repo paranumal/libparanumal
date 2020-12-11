@@ -118,7 +118,6 @@ void compareAndSwap(  entry_t* A,
   //  for (int e = 0; e < entries; e+=size; @tile(p_Nchunk,@outer(1),@outer(2))) {
   for (int eo = 0; eo < (entries+size-1)/size; ++eo; @tile(p_Nchunk,@outer(2),@outer(1))) {
     for (int s = 0; s < size/2; s+=BLOCK_SIZE; @outer(0)) {
-    //    for (int e = 0; e < entries; e+=size; @outer(0)){
       for (int i = 0; i < BLOCK_SIZE; ++i; @inner) {
 
 	dlong e = eo*size;

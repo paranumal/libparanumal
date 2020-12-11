@@ -38,6 +38,7 @@ typedef struct  {
 
 @kernel void ellipticBuildOperatorMatrixContinuousTri2D(const dlong Nelements,
 							const hlong  *maskedGlobalNumbering,
+							const dlong  *nodeMap,
 							const dfloat *S,
 							const dfloat *MM,
 							const dfloat *ggeo,
@@ -47,6 +48,7 @@ typedef struct  {
   for (dlong e=0;e<Nelements;++e;@outer(0)) {
 
     @shared hlong s_gnum[p_Np];
+
     for (int n=0;n<p_Np;n++;@inner(0)) {
       hlong id = maskedGlobalNumbering[e*p_Np+n];
       s_gnum[n] = (id<0) ? BIG_NUM : id;
@@ -61,33 +63,38 @@ typedef struct  {
       dfloat Grs = ggeo[e*p_Nggeo + p_G01ID];
       dfloat Gss = ggeo[e*p_Nggeo + p_G11ID];
       dfloat J   = ggeo[e*p_Nggeo + p_GWJID];
-      
-      for (int n=0;n<p_Np;n++) {
-	dfloat val = 0.;
-	
-	// double check this ( I assume these are symmetric )
-	val += Grr*S[m+n*p_Np+0*p_Np*p_Np];
-	val += Grs*S[m+n*p_Np+1*p_Np*p_Np];
-	val += Gss*S[m+n*p_Np+2*p_Np*p_Np];
-	val += J*lambda*MM[m+n*p_Np];
-	
-	// pack non-zero
-	hlong row = s_gnum[n];
-	hlong col = s_gnum[m];
 
-	if(row==BIG_NUM || col==BIG_NUM || fabs(val)<tol){
-	  row = BIG_NUM; col = BIG_NUM; val = 0;
+      for (int n=0;n<p_Np;n++) {
+	// broadcast to all threads
+	int nid = nodeMap[e*p_Np+n];
+
+	if(nid>=0){
+	  
+	  dfloat val = 0.;
+	  
+	  // double check this ( I assume these are symmetric )
+	  val += Grr*S[m+n*p_Np+0*p_Np*p_Np];
+	  val += Grs*S[m+n*p_Np+1*p_Np*p_Np];
+	  val += Gss*S[m+n*p_Np+2*p_Np*p_Np];
+	  val += J*lambda*MM[m+n*p_Np];
+	  
+	  // pack non-zero
+	  hlong row = s_gnum[n];
+	  hlong col = s_gnum[m];
+
+	  if(row==BIG_NUM || col==BIG_NUM || fabs(val)<tol){
+	    row = BIG_NUM; col = BIG_NUM; val = 0;
+	  }
+	  
+	  nonZero_t ent;
+	  ent.val = val;
+	  ent.row = col;
+	  ent.col = row;
+	  
+	  // chunk write 
+	  int id = nid*p_Np + m; // sneaky transpose and write of entire "col" of block
+	  AL[id] = ent;
 	}
-	
-	nonZero_t ent;
-	ent.val = val;
-	ent.row = row;
-	ent.col = col;
-	
-	
-	// chunk write 
-	int id = e*p_Np*p_Np + n*p_Np +m; 
-	AL[id] = ent;
       }
     }
   }
