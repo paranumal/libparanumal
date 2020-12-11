@@ -65,11 +65,11 @@ typedef struct  {
       dfloat J   = ggeo[e*p_Nggeo + p_GWJID];
 
       for (int n=0;n<p_Np;n++) {
-	// broadcast to all threads
-	int nid = nodeMap[e*p_Np+n];
+	
+	int nid = nodeMap[e*p_Np+n]; // broadcast to all threads
 
 	if(nid>=0){
-	  
+  
 	  dfloat val = 0.;
 	  
 	  // double check this ( I assume these are symmetric )
@@ -103,6 +103,7 @@ typedef struct  {
 
 @kernel void ellipticBuildOperatorMatrixContinuousQuad3D(const dlong Nelements,
 							 const hlong *maskedGlobalNumbering,
+							 const dlong  *nodeMap,
 							 const dfloat *D,
 							 const dfloat *ggeo,
 							 const dfloat lambda,
@@ -197,6 +198,7 @@ typedef struct  {
 
 @kernel void ellipticBuildOperatorMatrixContinuousQuad2D(const dlong Nelements,
 							 const hlong *maskedGlobalNumbering,
+							 const dlong  *nodeMap,
 							 const dfloat *D,
 							 const dfloat *ggeo,
 							 const dfloat lambda,
@@ -280,9 +282,13 @@ typedef struct  {
 	    int r = nx+ny*p_Nq;
 	    int c = mx+my*p_Nq;
 
-	    id = e*p_Np*p_Np + r*p_Np + c; 
-	    AL[id] = ent;
-          }
+	    int nid = nodeMap[e*p_Np+r];
+	    
+	    if(nid>=0){
+	      id = nid*p_Np + c;
+	      AL[id] = ent;
+	    }
+	  }
         }
       }
     }
@@ -292,12 +298,13 @@ typedef struct  {
 
 
 @kernel void ellipticBuildOperatorMatrixContinuousTet3D_v0(const dlong Nelements,
-							const hlong *maskedGlobalNumbering,
-							const dfloat *S,
-							const dfloat *MM,
-							const dfloat *ggeo,
-							const dfloat lambda,
-							nonZero_t *AL){
+							   const hlong *maskedGlobalNumbering,
+							   const dlong  *nodeMap,
+							   const dfloat *S,
+							   const dfloat *MM,
+							   const dfloat *ggeo,
+							   const dfloat lambda,
+							   nonZero_t *AL){
   //Build unassembed non-zeros
   for (dlong e=0;e<Nelements;++e;@outer(0)) {
     
@@ -324,41 +331,46 @@ typedef struct  {
       
       for (int n=0;n<p_Np;n++) {
 
-        dfloat val = 0.;
+	int nid = nodeMap[e*p_Np+n]; // broadcast to all threads
 
-	const dfloat Srr_nm = S[m+n*p_Np+0*p_Np*p_Np];
-	const dfloat Srs_nm = S[m+n*p_Np+1*p_Np*p_Np];
-	const dfloat Srt_nm = S[m+n*p_Np+2*p_Np*p_Np];
-	const dfloat Sss_nm = S[m+n*p_Np+3*p_Np*p_Np];
-	const dfloat Sst_nm = S[m+n*p_Np+4*p_Np*p_Np];
-	const dfloat Stt_nm = S[m+n*p_Np+5*p_Np*p_Np];
-	const dfloat  MM_nm = MM[m+n*p_Np];
+	if(nid>=0){
 	
-	// double check this ( I assume these are symmetric )
-        val += Grr*Srr_nm;
-        val += Grs*Srs_nm;
-	val += Grt*Srt_nm;
-        val += Gss*Sss_nm;
-	val += Gst*Sst_nm;
-	val += Gtt*Stt_nm;
-        val += J*lambda*MM_nm;
+	  dfloat val = 0.;
 
-	hlong row = s_gnum[n];
-	hlong col = s_gnum[m];
+	  const dfloat Srr_nm = S[m+n*p_Np+0*p_Np*p_Np];
+	  const dfloat Srs_nm = S[m+n*p_Np+1*p_Np*p_Np];
+	  const dfloat Srt_nm = S[m+n*p_Np+2*p_Np*p_Np];
+	  const dfloat Sss_nm = S[m+n*p_Np+3*p_Np*p_Np];
+	  const dfloat Sst_nm = S[m+n*p_Np+4*p_Np*p_Np];
+	  const dfloat Stt_nm = S[m+n*p_Np+5*p_Np*p_Np];
+	  const dfloat  MM_nm = MM[m+n*p_Np];
 	
-	if(row==BIG_NUM || col==BIG_NUM || fabs(val)<tol){
-	  row = BIG_NUM; col = BIG_NUM; val = 0;
+	  // double check this ( I assume these are symmetric )
+	  val += Grr*Srr_nm;
+	  val += Grs*Srs_nm;
+	  val += Grt*Srt_nm;
+	  val += Gss*Sss_nm;
+	  val += Gst*Sst_nm;
+	  val += Gtt*Stt_nm;
+	  val += J*lambda*MM_nm;
+
+	  hlong row = s_gnum[n];
+	  hlong col = s_gnum[m];
+	
+	  if(row==BIG_NUM || col==BIG_NUM || fabs(val)<tol){
+	    row = BIG_NUM; col = BIG_NUM; val = 0;
+	  }
+	
+	  // pack non-zero
+	  nonZero_t ent;
+	  ent.val = val;
+	  ent.row = row;
+	  ent.col = col;
+	
+	  // chunk write 
+	  int id = nid*p_Np + m; // sneaky transpose and write of entire "col" of block
+	  AL[id] = ent;
 	}
-	
-	// pack non-zero
-	nonZero_t ent;
-	ent.val = val;
-	ent.row = row;
-	ent.col = col;
-	
-	// chunk write 
-	int id = e*p_Np*p_Np + n*p_Np +m; 
-	AL[id] = ent;
       }
     }
   }
@@ -366,6 +378,7 @@ typedef struct  {
 
 @kernel void ellipticBuildOperatorMatrixContinuousTet3D(const dlong Nelements,
 							const hlong *maskedGlobalNumbering,
+							const dlong  *nodeMap,
 							const dfloat *S,
 							const dfloat *MM,
 							const dfloat *ggeo,
@@ -379,12 +392,14 @@ typedef struct  {
 
     @shared hlong s_gnum[p_Nblk][p_Np];
     @shared dfloat s_G[p_Nblk][p_Nggeo];
+    @shared dlong s_nodeMap[p_Nblk][p_Np];
     
     for (int n=0;n<p_Np;n++;@inner(0)) {
       for(int f=0;f<p_Nblk;++f){
 	if(e+f<Nelements){
 	  hlong id = maskedGlobalNumbering[(e+f)*p_Np+n];
 	  s_gnum[f][n] = (id<0) ? BIG_NUM : id;
+	  s_nodeMap[f][n] = nodeMap[(e+f)*p_Np+n];
 	}
       }
 
@@ -403,6 +418,7 @@ typedef struct  {
 
       //#pragma unroll p_Np
       for (int n=0;n<p_Np;n++) {
+	
 	int base = m+n*p_Np;
 	const dfloat Srr_nm = S[base+0*p_Np*p_Np];
 	const dfloat Srs_nm = S[base+1*p_Np*p_Np];
@@ -411,37 +427,41 @@ typedef struct  {
 	const dfloat Sst_nm = S[base+4*p_Np*p_Np];
 	const dfloat Stt_nm = S[base+5*p_Np*p_Np];
 	const dfloat lambdaMM_nm = lambda*MM[base];
-	
+	  
 	// double check this ( I assume these are symmetric )
 #pragma unroll p_Nblk
 	for(int f=0;f<p_Nblk;++f){
+	  
+	  int nid = s_nodeMap[f][n]; // broadcast to all threads
+
 	  if(e+f<Nelements){
-	    
-	    dfloat val = 0;
-	    val += s_G[f][p_G00ID]*Srr_nm;
-	    val += s_G[f][p_G01ID]*Srs_nm;
-	    val += s_G[f][p_G02ID]*Srt_nm;
-	    val += s_G[f][p_G11ID]*Sss_nm;
-	    val += s_G[f][p_G12ID]*Sst_nm;
-	    val += s_G[f][p_G22ID]*Stt_nm;
-	    val += s_G[f][p_GWJID]*lambdaMM_nm;
-
-	    // pack non-zero
-	    hlong row = s_gnum[f][n];
-	    hlong col = s_gnum[f][m];
-
-	    if(row==BIG_NUM || col==BIG_NUM || fabs(val)<tol){
-	      row = BIG_NUM; col = BIG_NUM; val = 0;
+	    if(nid>=0){
+	      dfloat val = 0;
+	      val += s_G[f][p_G00ID]*Srr_nm;
+	      val += s_G[f][p_G01ID]*Srs_nm;
+	      val += s_G[f][p_G02ID]*Srt_nm;
+	      val += s_G[f][p_G11ID]*Sss_nm;
+	      val += s_G[f][p_G12ID]*Sst_nm;
+	      val += s_G[f][p_G22ID]*Stt_nm;
+	      val += s_G[f][p_GWJID]*lambdaMM_nm;
+	      
+	      // pack non-zero
+	      hlong row = s_gnum[f][n];
+	      hlong col = s_gnum[f][m];
+	      
+	      if(row==BIG_NUM || col==BIG_NUM || fabs(val)<tol){
+		row = BIG_NUM; col = BIG_NUM; val = 0;
+	      }
+	      
+	      nonZero_t ent;
+	      ent.val = val;
+	      ent.row = row;
+	      ent.col = col;
+	      
+	      // chunk write 
+	      int id = nid*p_Np + m;
+	      AL[id] = ent;
 	    }
-	    
-	    nonZero_t ent;
-	    ent.val = val;
-	    ent.row = row;
-	    ent.col = col;
-	    
-	    // chunk write 
-	    int id = (e+f)*p_Np*p_Np + base; 
-	    AL[id] = ent;
 	  }
 	}
       }
@@ -451,7 +471,8 @@ typedef struct  {
 
 
 @kernel void ellipticBuildOperatorMatrixContinuousHex3D(const dlong Nelements,
-							const hlong *maskedGlobalNumbering,
+							const hlong *maskedGlobalNumbering,							
+							const dlong  *nodeMap,
 							const dfloat *D,
 							const dfloat *ggeo,
 							const dfloat lambda,
@@ -486,90 +507,97 @@ typedef struct  {
 	    for (int ny=0;ny<p_Nq;ny++){
 	      for (int nx=0;nx<p_Nq;nx++) {
 		int idn = nx+ny*p_Nq+nz*p_Nq*p_Nq;
+
+		int nid = nodeMap[e*p_Np+idn]; // broadcast to all threads
 		
-		int id;
-		dfloat val = 0.;
+		if(nid>=0){
+
 		
-		dlong base = e*p_Np*p_Nggeo;
-		if ((ny==my)&&(nz==mz)) {
-		  for (int k=0;k<p_Nq;k++) {
-		    id = k+ny*p_Nq+nz*p_Nq*p_Nq;
-		    dfloat Grr = ggeo[base + id + p_G00ID*p_Np];
+		  int id;
+		  dfloat val = 0.;
+		
+		  dlong base = e*p_Np*p_Nggeo;
+		  if ((ny==my)&&(nz==mz)) {
+		    for (int k=0;k<p_Nq;k++) {
+		      id = k+ny*p_Nq+nz*p_Nq*p_Nq;
+		      dfloat Grr = ggeo[base + id + p_G00ID*p_Np];
 		    
-		    val += Grr*s_D[k][nx]*s_D[k][mx];
+		      val += Grr*s_D[k][nx]*s_D[k][mx];
+		    }
 		  }
-		}
 		
-		if (nz==mz) {
-		  id = mx+ny*p_Nq+nz*p_Nq*p_Nq;
-		  dfloat Grs = ggeo[base + id + p_G01ID*p_Np];
-		  val += Grs*s_D[mx][nx]*s_D[ny][my];
+		  if (nz==mz) {
+		    id = mx+ny*p_Nq+nz*p_Nq*p_Nq;
+		    dfloat Grs = ggeo[base + id + p_G01ID*p_Np];
+		    val += Grs*s_D[mx][nx]*s_D[ny][my];
 		  
-		  id = nx+my*p_Nq+nz*p_Nq*p_Nq;
-		  dfloat Gsr = ggeo[base + id + p_G01ID*p_Np];
-		  val += Gsr*s_D[nx][mx]*s_D[ny][my];
-		}
+		    id = nx+my*p_Nq+nz*p_Nq*p_Nq;
+		    dfloat Gsr = ggeo[base + id + p_G01ID*p_Np];
+		    val += Gsr*s_D[nx][mx]*s_D[ny][my];
+		  }
 		
-		if (ny==my) {
-		  id = mx+ny*p_Nq+nz*p_Nq*p_Nq;
-		  dfloat Grt = ggeo[base + id + p_G02ID*p_Np];
-		  val += Grt*s_D[mx][nx]*s_D[nz][mz];
+		  if (ny==my) {
+		    id = mx+ny*p_Nq+nz*p_Nq*p_Nq;
+		    dfloat Grt = ggeo[base + id + p_G02ID*p_Np];
+		    val += Grt*s_D[mx][nx]*s_D[nz][mz];
 		  
-		  id = nx+ny*p_Nq+mz*p_Nq*p_Nq;
-		  dfloat Gst = ggeo[base + id + p_G02ID*p_Np];
-		  val += Gst*s_D[nx][mx]*s_D[mz][nz];
-		}
+		    id = nx+ny*p_Nq+mz*p_Nq*p_Nq;
+		    dfloat Gst = ggeo[base + id + p_G02ID*p_Np];
+		    val += Gst*s_D[nx][mx]*s_D[mz][nz];
+		  }
 	      
-		if ((nx==mx)&&(nz==mz)) {
-		  for (int k=0;k<p_Nq;k++) {
-		    id = nx+k*p_Nq+nz*p_Nq*p_Nq;
-		    dfloat Gss = ggeo[base + id + p_G11ID*p_Np];
+		  if ((nx==mx)&&(nz==mz)) {
+		    for (int k=0;k<p_Nq;k++) {
+		      id = nx+k*p_Nq+nz*p_Nq*p_Nq;
+		      dfloat Gss = ggeo[base + id + p_G11ID*p_Np];
 		  
-		    val += Gss*s_D[k][ny]*s_D[k][my];
+		      val += Gss*s_D[k][ny]*s_D[k][my];
+		    }
 		  }
-		}
 	      
-		if (nx==mx) {
-		  id = nx+my*p_Nq+nz*p_Nq*p_Nq;
-		  dfloat Gst = ggeo[base + id + p_G12ID*p_Np];
-		  val += Gst*s_D[my][ny]*s_D[nz][mz];
+		  if (nx==mx) {
+		    id = nx+my*p_Nq+nz*p_Nq*p_Nq;
+		    dfloat Gst = ggeo[base + id + p_G12ID*p_Np];
+		    val += Gst*s_D[my][ny]*s_D[nz][mz];
 		
-		  id = nx+ny*p_Nq+mz*p_Nq*p_Nq;
-		  dfloat Gts = ggeo[base + id + p_G12ID*p_Np];
-		  val += Gts*s_D[ny][my]*s_D[mz][nz];
-		}
-
-		if ((nx==mx)&&(ny==my)) {
-		  for (int k=0;k<p_Nq;k++) {
-		    id = nx+ny*p_Nq+k*p_Nq*p_Nq;
-		    dfloat Gtt = ggeo[base + id + p_G22ID*p_Np];
-
-		    val += Gtt*s_D[k][nz]*s_D[k][mz];
+		    id = nx+ny*p_Nq+mz*p_Nq*p_Nq;
+		    dfloat Gts = ggeo[base + id + p_G12ID*p_Np];
+		    val += Gts*s_D[ny][my]*s_D[mz][nz];
 		  }
-		}
 
-		if ((nx==mx)&&(ny==my)&&(nz==mz)) {
-		  id = nx + ny*p_Nq+nz*p_Nq*p_Nq;
-		  dfloat JW = ggeo[base + id + p_GWJID*p_Np];
-		  val += JW*lambda;
-		}
+		  if ((nx==mx)&&(ny==my)) {
+		    for (int k=0;k<p_Nq;k++) {
+		      id = nx+ny*p_Nq+k*p_Nq*p_Nq;
+		      dfloat Gtt = ggeo[base + id + p_G22ID*p_Np];
 
-		// pack non-zero
-		hlong row = s_gnum[nz][ny][nx];
-		hlong col = s_gnum[mz][my][mx];
+		      val += Gtt*s_D[k][nz]*s_D[k][mz];
+		    }
+		  }
 
-		if(row==BIG_NUM || col==BIG_NUM || fabs(val)<tol){
-		  row = BIG_NUM; col = BIG_NUM; val = 0;
-		}
+		  if ((nx==mx)&&(ny==my)&&(nz==mz)) {
+		    id = nx + ny*p_Nq+nz*p_Nq*p_Nq;
+		    dfloat JW = ggeo[base + id + p_GWJID*p_Np];
+		    val += JW*lambda;
+		  }
 
-		nonZero_t ent;
-		ent.val = val;
-		ent.row = row;
-		ent.col = col;
+		  // pack non-zero
+		  hlong row = s_gnum[nz][ny][nx];
+		  hlong col = s_gnum[mz][my][mx];
+
+		  if(row==BIG_NUM || col==BIG_NUM || fabs(val)<tol){
+		    row = BIG_NUM; col = BIG_NUM; val = 0;
+		  }
+
+		  nonZero_t ent;
+		  ent.val = val;
+		  ent.row = row;
+		  ent.col = col;
 		
-		// chunk write 
-		id = e*p_Np*p_Np + idn*p_Np + idm; 
-		AL[id] = ent;
+		  // chunk write 
+		  //id = e*p_Np*p_Np + idn*p_Np + idm;
+		  id = nid*p_Np + idm;
+		  AL[id] = ent;
+		}
 	      }
 	    }
 	  }
@@ -577,5 +605,4 @@ typedef struct  {
       }
     }
   }
-
 }
