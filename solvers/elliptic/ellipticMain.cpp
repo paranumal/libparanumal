@@ -177,7 +177,7 @@ int main(int argc, char **argv){
   if(testHOST){
 
     if(Ahost.nnz!=Adev.nnz){ printf("mismatch in HOST and DEVICE non-zero count: %d to %d\n",
-				    Ahost.nnz, Adev.nnz); }
+				    Ahost.nnz, Adev.nnz);  }
     
     dfloat tol = 1e-15;
     for(int n=0;n<mymin(Ahost.nnz,Adev.nnz);++n){
@@ -189,7 +189,7 @@ int main(int argc, char **argv){
 	 Ahostn.col  != Adevn.col ||
 	 d*d>tol){
 
-	printf("mismatch: %d,%d,%e => %d,%d,%e\n",
+	printf("mismatch: (host) %d,%d,%e => %d,%d,%e (dev)\n",
 	       Ahostn.row, Ahostn.col,  Ahostn.val,
 	       Adevn.row,  Adevn.col,   Adevn.val);
       }

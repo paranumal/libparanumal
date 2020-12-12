@@ -265,3 +265,84 @@ void compareAndSwap(  entry_t* A,
 
 }
 }
+
+
+#if 0
+#define SHARED_SIZE_LIMIT 2048
+
+@kernel void segmentedOddEvenMergeSort(const dlong Nrows, const dlong *starts, const dlong *map, entry_t *o_list){
+
+  for(dlong n=0;n<Nrows;++n;@outer(0)){
+
+    @shared entry_t s_list[SHARED_SIZE_LIMIT];
+
+    @exclusive int Nsort;
+    @exclusive int stride, offset;
+    
+    for(int t=0;t<p_Np;++t;@inner(0)){
+      // load data
+      dlong start = starts[n];
+      dlong end   = starts[n+1];
+      
+      for(int m=start;m<end;m+=p_Np){
+	dlong id = map[m];
+	s_list[m-start] = o_list[p_Np*id+t];
+      }
+      
+      Nsort = p_Np*(end-start);
+    }
+
+    // adapted from: https://ecee.colorado.edu/~siewerts/extra/code/example_code_archive/a490dmis_code/CUDA/cuda_work/samples/6_Advanced/sortingNetworks/oddEvenMergeSort.cu
+    
+    for (int size = 2; size <= Nsort; size <<= 1){
+      
+      for(unsigned int t=0;t<p_Np;++t;@inner(0)){
+        stride = size / 2;
+        offset = t & (stride - 1);
+      }
+      
+      @barrier("local");
+      
+      for(unsigned int t=0;t<p_Np;++t;@inner(0)){
+	uint pos = 2 * t - (t & (stride - 1));
+	compareAndSwap(s_list+pos, s_list, pos, stride, nnz);
+	stride >>= 1;
+      }
+
+      for (; stride > 0; stride >>= 1)
+        {
+	  @barrier("local");
+
+	  for(unsigned int t=0;t<p_Np;++t;@inner(0)){
+            uint pos = 2 * t - (t & (stride - 1));
+
+            if (offset >= stride)
+	      compareAndSwap(s_list+pos-stride, s_list+0, pos-stride, 0, nnz);
+	  }
+	}
+    }
+
+    for(int t=0;t<p_Np;++t;@inner(0)){
+      // load data
+      dlong start = starts[n];
+      dlong end   = starts[n+1];
+      
+      for(int m=start;m<end;m+=p_Np){
+	dlong id = map[m];
+	o_list[p_Np*id + t] = s_list[m-start];
+      }
+      
+      Nsort = p_Np*(end-start);
+    }
+
+    
+    __syncthreads();
+    d_DstKey[                      0] = s_key[threadIdx.x +                       0];
+    d_DstVal[                      0] = s_val[threadIdx.x +                       0];
+    d_DstKey[(SHARED_SIZE_LIMIT / 2)] = s_key[threadIdx.x + (SHARED_SIZE_LIMIT / 2)];
+    d_DstVal[(SHARED_SIZE_LIMIT / 2)] = s_val[threadIdx.x + (SHARED_SIZE_LIMIT / 2)];
+}
+
+
+
+#endif

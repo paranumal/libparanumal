@@ -88,10 +88,10 @@ typedef struct  {
 	  
 	  nonZero_t ent;
 	  ent.val = val;
-	  ent.row = col;
-	  ent.col = row;
+	  ent.row = row;
+	  ent.col = col;
 	  
-	  // chunk write 
+	  // chunk write  (might have to fix up other kernels too)
 	  int id = nid*p_Np + m; // sneaky transpose and write of entire "col" of block
 	  AL[id] = ent;
 	}
