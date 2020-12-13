@@ -227,6 +227,8 @@ void elliptic_t::BuildOperatorMatrixContinuousDevice(occa::memory &o_A,
   double ticA = MPI_Wtime();
 
   
+
+  
   switch(mesh.elementType){
   case TRIANGLES:
     buildMatrixKernel(allNel, o_ringMaskedGlobalNumbering,  o_rowMap, o_colMap,

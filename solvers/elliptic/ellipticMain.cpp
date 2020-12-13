@@ -107,7 +107,7 @@ int main(int argc, char **argv){
   double t10 = MPI_Wtime();
   parAlmond::parCOO Ahost(elliptic.platform, mesh.comm);
 
-  int testHOST = 0;
+  int testHOST = 1;
 
   if(testHOST)
     elliptic.BuildOperatorMatrixContinuous(Ahost);

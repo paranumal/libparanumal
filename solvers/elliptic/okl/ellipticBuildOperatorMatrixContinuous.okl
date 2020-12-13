@@ -445,64 +445,80 @@ typedef struct  {
 				     nonZero_t *AL2,
 				     dlong *counts){
 
-  for(int g=0;g<Ngather;++g;@tile(32, @outer, @inner)){
+  //  for(int g=0;g<Ngather;++g;@tile(32, @outer, @inner)){
+#define NT 32
+  for(int b=0;b<(Ngather+NT-1)/NT;++b;@outer(0)){
+    @shared dlong s_offsets[NT][MAX_DEGREE];
 
-    dlong offsets[MAX_DEGREE];
-    dlong start = (g==0) ? 0:starts[g-1];
-    dlong end = starts[g];
-
-    int deg = end-start;
-    
-    dlong cnt = 0;
-    int merged = 0;
-    int written = 0;
-
-    for(int c=0;c<deg;++c){
-      offsets[c] = 0;
-    }
-    
-    while(merged<deg*p_Np){
+    for(int t=0;t<NT;++t;@inner(0)){
       
-      // find next entry with smallest column from Nchunks lists
-      nonZero_t minEnt;
-      minEnt.col = BIG_NUM;
-      int minc = -1;
-      for(int c=0;c<deg;++c){
+      //    dlong offsets[MAX_DEGREE];
+      dlong g = t + NT*b;
+
+      if(g<Ngather){
+      
+	dlong start = (g==0) ? 0:starts[g-1];
+	dlong end = starts[g];
 	
-	// skip BIG_NUM entries
-	while(offsets[c]<p_Np && AL[(start+c)*p_Np + offsets[c]].row == BIG_NUM){
-	  ++offsets[c];
-	  ++merged;
+	int deg = end-start;
+	
+	dlong cnt = 0;
+	int merged = 0;
+	int written = 0;
+	
+	for(int c=0;c<deg;++c){
+	  s_offsets[t][c] = 0;
 	}
-	// is this the smallest next entry ?
-	if(offsets[c]<p_Np){
-	  if(AL[(start+c)*p_Np + offsets[c]].col < minEnt.col){
-	    minEnt = AL[(start+c)*p_Np + offsets[c]];
-	    minc = c;
+
+	nonZero_t lastEnt;
+	while(merged<deg*p_Np){
+	  
+	  // find next entry with smallest column from Nchunks lists
+	  nonZero_t minEnt;
+	  minEnt.col = BIG_NUM;
+	  int minc = -1;
+	  for(int c=0;c<deg;++c){
+	    dlong off = s_offsets[t][c];
+	    
+	    // skip BIG_NUM entries
+	    while(off<p_Np && AL[(start+c)*p_Np + off].row == BIG_NUM){
+	      ++off;
+	      ++merged;
+	    }
+	    // is this the smallest next entry ?
+	    if(off<p_Np){
+	      if(AL[(start+c)*p_Np + off].col < minEnt.col){
+		minEnt = AL[(start+c)*p_Np + off];
+		minc = c;
+	      }
+	    }
+
+	    s_offsets[t][c] = off;
+	  }
+	  
+	  if(merged==deg*p_Np || minc==-1) break; // forward wind
+	  
+	  ++s_offsets[t][minc];
+	  
+	  // is this a duplicate of last written entry ?
+	  if(written && minEnt.col==lastEnt.col){
+	    lastEnt.val += minEnt.val;
+	    AL2[start*p_Np + cnt-1].val = lastEnt.val; // could delay this write I suppose
+	    ++merged;
+	  }	
+	  else{
+	    // or a new entry
+	    AL2[start*p_Np + cnt] = minEnt;
+	    lastEnt = minEnt;
+	    ++merged;
+	    ++cnt;
+	    written = 1;
 	  }
 	}
-      }
-      
-      if(merged==deg*p_Np || minc==-1) break; // forward wind
 	
-      ++offsets[minc];
-      
-      // is this a duplicate of last written entry ?
-      if(written && minEnt.col==AL2[start*p_Np + cnt-1].col){
-	AL2[start*p_Np + cnt-1].val += minEnt.val;
-	++merged;
-      }	
-      else{
-	// or a new entry
-	AL2[start*p_Np + cnt] = minEnt;
-	++merged;
-	++cnt;
-	written = 1;
+	counts[g] = cnt;
       }
     }
-
-    counts[g] = cnt;
-    
   }
 }
 
