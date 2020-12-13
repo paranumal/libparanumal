@@ -30,253 +30,113 @@
 
 #define nonZero_t parAlmond::parCOO::nonZero_t
 
-int compareColumns(const void *a, const void *b){
-
-  nonZero_t *ea = (nonZero_t*) a;
-  nonZero_t *eb = (nonZero_t*) b;
-
-  if(ea->col < eb->col) return -1;
-  if(ea->col > eb->col) return +1;
-
-  return 0;
-}
-
 typedef struct{
   hlong gnum;
   int   lnum;
 }globalNode_t;
 
-int compareGlobalNodes(const void *a, const void *b){
-
+int compareGlobalNodes2(const void *a, const void *b){
+  
   globalNode_t *ea = (globalNode_t*) a;
   globalNode_t *eb = (globalNode_t*) b;
-
+  
   if(ea->gnum < eb->gnum) return -1;
   if(ea->gnum > eb->gnum) return +1;
-
+  
   return 0;
 }
 
 
-static void compressMatrixMultiDevice(platform_t &platform, mesh_t &mesh, ogs_t *ogsMasked, 
-				      occa::memory &o_AL,
-				      dlong nnzLocal,
-				      dlong *AsendCounts,
-				      hlong BIG_NUM,
-				      deviceSort_t &sorter,
-				      deviceScan_t &scanner,
-				      occa::memory &o_A,
-				      dlong &Annz,
-				      parAlmond::parCOO& A){
+void elliptic_t::BuildOperatorMatrixContinuousDevice(occa::memory &o_A,
+						     dlong &Annz) {
 
-  // 1. copy to host
-  nonZero_t *h_AL = (nonZero_t*) calloc(nnzLocal, sizeof(nonZero_t));
-  o_AL.copyTo(h_AL);
-  o_AL.free(); // release this memory - it will likely bite us later
+  // build scanner and sorter
+  occa::properties kernelInfo = mesh.props;
   
-  // 2. number of degrees of freedom on this rank (after gathering)
-  hlong Ngather = ogsMasked->Ngather;
+  if(sizeof(hlong)==8)
+    kernelInfo["defines/hlong"]= "long long int";
+  if(sizeof(hlong)==4)
+    kernelInfo["defines/hlong"]= "int";
+  
+  hlong BIG_NUM = ((hlong)1) << (8*sizeof(hlong)-2);
+  kernelInfo["defines/" "BIG_NUM"] = (const int64_t)BIG_NUM;
+  
+  if(sizeof(hlong)==8)
+    kernelInfo["defines/hlong"]= "long long int";
+  if(sizeof(hlong)==4)
+    kernelInfo["defines/hlong"]= "int";
 
-  // 3. every gathered degree of freedom has its own global id
-  A.globalRowStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
-  A.globalColStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
-  MPI_Allgather(&Ngather, 1, MPI_HLONG, A.globalRowStarts+1, 1, MPI_HLONG, mesh.comm);
-  for(int r=0;r<mesh.size;++r) {
-    A.globalRowStarts[r+1] = A.globalRowStarts[r]+A.globalRowStarts[r+1];
-    A.globalColStarts[r+1] = A.globalRowStarts[r+1];
-  }
-
-  int *ArecvCounts  = (int*) calloc(mesh.size+1, sizeof(int));
-  int *AsendOffsets = (int*) calloc(mesh.size+1, sizeof(int));
-  int *ArecvOffsets = (int*) calloc(mesh.size+1, sizeof(int));
-
-  // 4. find how many nodes to expect (should use sparse version)
-  MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, mesh.comm);
-
-  // 5. find send and recv offsets for gather
-  A.nnz = 0;
-  for(int r=0;r<mesh.size;++r){
-    AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
-    ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
-    A.nnz += ArecvCounts[r];    
+  kernelInfo["defines/" "p_G00ID"]= G00ID;
+  kernelInfo["defines/" "p_G01ID"]= G01ID;
+  kernelInfo["defines/" "p_G02ID"]= G02ID;
+  kernelInfo["defines/" "p_G11ID"]= G11ID;
+  kernelInfo["defines/" "p_G12ID"]= G12ID;
+  kernelInfo["defines/" "p_G22ID"]= G22ID;
+  kernelInfo["defines/" "p_GWJID"]= GWJID;
+  
+  char kernelName[BUFSIZ];
+  switch(mesh.elementType){
+  case TRIANGLES:
+    sprintf(kernelName, "ellipticBuildOperatorMatrixContinuousTri2D");
+    break;
+  case QUADRILATERALS:
+    sprintf(kernelName, "ellipticBuildOperatorMatrixContinuousQuad2D");
+    break;
+  case TETRAHEDRA:
+    sprintf(kernelName, "ellipticBuildOperatorMatrixContinuousTet3D");
+    break;
+  case HEXAHEDRA:
+    sprintf(kernelName, "ellipticBuildOperatorMatrixContinuousHex3D");
+    break;
   }
   
-  nonZero_t *entriesIn = (nonZero_t*) calloc(A.nnz+1, sizeof(nonZero_t));
+  occa::kernel buildMatrixKernel =
+    platform.buildKernel(DELLIPTIC "/okl/ellipticBuildOperatorMatrixContinuous.okl",
+			 kernelName,
+			 kernelInfo);
 
-  // 6. determine number to receive
-  MPI_Alltoallv(h_AL,      AsendCounts, AsendOffsets, parAlmond::MPI_NONZERO_T,
-		entriesIn, ArecvCounts, ArecvOffsets, parAlmond::MPI_NONZERO_T,
-		mesh.comm);
-
-
-  if(1){
-    
-    double tic2 = MPI_Wtime();
-    
-    // find location of block starts
-    hlong start = A.globalRowStarts[mesh.rank];
-    dlong *h_countConns = (dlong*) calloc(Ngather,sizeof(dlong));
-    
-    // each partial row gets Np entries
-    for(dlong n=0;n<A.nnz/mesh.Np;++n){
-      hlong row = entriesIn[n*mesh.Np].row - start;
-      for(dlong m=0;m<mesh.Np;++m){
-	row = mymin(row, entriesIn[n*mesh.Np+m].row - start);
-      }
-      if(row<Ngather){
-	++(h_countConns[row]); // assumes blocks of Np
-      }
-    }
-    
-    dlong maxCountNodes = 0;
-    dlong *h_starts = (dlong*) calloc(Ngather+1,sizeof(dlong));
-    for(dlong n=1;n<=Ngather;++n){
-      h_starts[n] = h_starts[n-1] + h_countConns[n-1];
-    }
-    for(dlong n=0;n<Ngather;++n){
-      maxCountNodes = mymax(maxCountNodes, h_countConns[n]);
-    }
-    
-    dlong *h_colMap = (dlong*) calloc((A.nnz)/mesh.Np, sizeof(dlong));
-    dlong *h_countOffsets = (dlong*) calloc(Ngather, sizeof(dlong));
-    for(dlong n=0;n<(A.nnz/mesh.Np);++n){
-      hlong row = entriesIn[n*mesh.Np].row - start;
-      for(dlong m=0;m<mesh.Np;++m){
-	row = mymin(row, entriesIn[n*mesh.Np+m].row - start);
-      }
-      if(row<Ngather){
-	dlong id = h_starts[row] +  (h_countOffsets[row]++);
-	h_colMap[id] = n;
-      }
-    }
-    double tic3 = MPI_Wtime();
-    printf("HOST assembly set up %f\n", tic3-tic2);
-    
-    nonZero_t *h_AL2 = (nonZero_t*) calloc(nnzLocal, sizeof(nonZero_t));
-    nonZero_t *h_tmp = (nonZero_t*) calloc(mesh.Np*maxCountNodes, sizeof(nonZero_t));
-    int *offsets = (int*) calloc(maxCountNodes, sizeof(int));
-    
-    double tic0 = MPI_Wtime();
-    
-    dlong cnt = 0;
-    // test run for segmented sort
-    for(dlong n=0;n<Ngather;++n){
-      dlong sn = h_starts[n];
-      dlong sp = h_starts[n+1];
-
-      dlong cnt1 = 0;
-      for(dlong s=sn;s<sp;++s){
-	dlong id = mesh.Np*h_colMap[s];
-	memcpy(h_tmp+cnt1, entriesIn+id, mesh.Np*sizeof(nonZero_t));
-	cnt1 += mesh.Np;
-      }
-
-#if 0
-      for(dlong m=0;m<cnt1;++m){
-	if(!(m%mesh.Np)) printf("---\n");
-	printf("h_tmp[%d] = (%lld,%lld,%e)\n",m, h_tmp[m].row, h_tmp[m].col, h_tmp[m].val);
-      }
-#endif 
-      // merge row chunks
-      int Nchunks = sp-sn;
-      memset(offsets, 0, Nchunks*sizeof(int));
-      
-      int merged = 0;
-      int written = 0;
-      while(merged<cnt1){
-
-	// find next entry with smallest column from Nchunks lists
-	nonZero_t minEnt;
-	minEnt.col = BIG_NUM;
-	int minc = -1;
-	for(int c=0;c<Nchunks;++c){
-
-	  // skip BIG_NUM entries
-	  while(offsets[c]<mesh.Np && h_tmp[offsets[c]+c*mesh.Np].row == BIG_NUM){
-	    ++offsets[c];
-	    ++merged;
-	  }
-	  // is this the smallest next entry ?
-	  if(offsets[c]<mesh.Np){
-	    if(h_tmp[offsets[c]+c*mesh.Np].col < minEnt.col){
-	      minEnt = h_tmp[offsets[c]+c*mesh.Np];
-	      minc = c;
-	    }
-	  }
-	}
-
-	if(merged<cnt1  && minc==-1) printf("lost some entries: merged=%d, cnt1=%d\n", merged, cnt1);
-	
-	if(merged==cnt1 || minc==-1) break; // forward wind
-	
-	++offsets[minc];
-
-	// is this a duplicate of last written entry ?
-	if(written && minEnt.col==h_AL2[cnt-1].col){
-	  h_AL2[cnt-1].val += minEnt.val;
-	  ++merged;
-	}	
-	else{
-	  // or a new entry
-	  h_AL2[cnt] = minEnt;
-	  ++merged;
-	  ++cnt;
-	  written = 1;
-	}
-      }
-    }
-    Annz = cnt;
-    double tic1 = MPI_Wtime();
-    printf("HOST assembly = %g\n", tic1-tic0);
-    
-    o_A = platform.device.malloc(Annz*sizeof(nonZero_t), h_AL2);
-
-    free(h_AL2);
-    free(h_tmp);
-    free(offsets);
-
-  }
-  else{
-   // 7. make sure at least one fake entry is in local matrix
-   nonZero_t dummyEnt;
-   dummyEnt.row = BIG_NUM;
-   dummyEnt.col = BIG_NUM;
-   dummyEnt.val = 0;
-   
-   entriesIn[A.nnz] = dummyEnt;
-   ++A.nnz;
-   
-   // 8. load onto device and sort
-   occa::memory o_AL3 = platform.device.malloc(A.nnz*sizeof(nonZero_t), entriesIn);
-   sorter.sort(A.nnz, o_AL3);
-   
-   // 10. free up host storage
-   free(entriesIn);
-   
-   // 11. assemble matrix (gather duplicates and drop fakes)
-   int includeLast = 0; 
-   Annz = scanner.segmentedReduction(platform, A.nnz, sizeof(nonZero_t), includeLast, o_AL3, o_A);
-   // release buffers
-   o_AL3.free();
-   
-  }
-
-//  free(AsendCounts);
-  free(ArecvCounts);
-  free(AsendOffsets);
-  free(ArecvOffsets);
-  free(h_AL);
-
-}
+  // ---------------------------------------------------------------------
+  // #1. create one-ring mesh 
 
 
-void elliptic_t::BuildOperatorMatrixContinuousDevice(occa::kernel &buildMatrixKernel, occa::memory &o_maskedGlobalNumbering, hlong BIG_NUM,
-						     deviceSort_t &sorter, deviceScan_t &scanner, parAlmond::parCOO& A, occa::memory &o_A, dlong &Annz) {
+  // A. build one ring mesh
+  mesh.HaloRingSetup();
 
+  // B. transfer into halo
+  dlong Nel = mesh.Nelements;
+  dlong ringNel = mesh.totalRingElements;
+  dlong allNel = Nel+ringNel;
 
-  // build nodeMap [ map local node to local node - sorted so that maps to outgoing rank ]
+  // i. import ggeo
+  size_t NggeoBlk;
+  if(mesh.elementType == TRIANGLES ||
+     mesh.elementType == TETRAHEDRA)
+    NggeoBlk = mesh.Nggeo;
+  else
+    NggeoBlk = mesh.Nggeo*mesh.Np;
   
-  // find ranges on each rank
+  occa::memory o_ringGgeo =
+    platform.device.malloc(allNel*NggeoBlk*sizeof(dfloat));
+
+  o_ringGgeo.copyFrom(mesh.o_ggeo, Nel*NggeoBlk*sizeof(dfloat), 0, 0);
+					   
+  mesh.ringHalo->Exchange(o_ringGgeo, NggeoBlk, ogs_dfloat);
+
+  // ii. import globalNumbers
+  size_t NnumBlk = mesh.Np;
+  occa::memory o_ringMaskedGlobalNumbering =
+    platform.device.malloc(allNel*NnumBlk*sizeof(hlong));
+
+  occa::memory o_maskedGlobalNumbering = platform.device.malloc(Nel*NnumBlk*sizeof(hlong), maskedGlobalNumbering);
+  
+  o_ringMaskedGlobalNumbering.copyFrom(o_maskedGlobalNumbering, Nel*NnumBlk*sizeof(hlong), 0, 0);
+
+  mesh.ringHalo->Exchange(o_ringMaskedGlobalNumbering, NnumBlk, ogs_hlong);
+
+  hlong *ringMaskedGlobalNumbering = (hlong*) calloc(allNel*NnumBlk,sizeof(hlong));
+  o_ringMaskedGlobalNumbering.copyTo(ringMaskedGlobalNumbering);
+
+  // iii. build output map
   hlong Ngather = ogsMasked->Ngather;
   hlong *globalRowStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
   MPI_Allgather(&Ngather, 1, MPI_HLONG, globalRowStarts+1, 1, MPI_HLONG, mesh.comm);
@@ -284,86 +144,144 @@ void elliptic_t::BuildOperatorMatrixContinuousDevice(occa::kernel &buildMatrixKe
     globalRowStarts[r+1] = globalRowStarts[r]+globalRowStarts[r+1];
   }
 
-  dlong Nlocal = mesh.Np*mesh.Nelements;
-  dlong *h_nodeMap = (dlong*) calloc(Nlocal, sizeof(dlong));
-  hlong *h_sendNodeMap = (hlong*) calloc(Nlocal, sizeof(hlong));
+  hlong gatherStart = globalRowStarts[mesh.rank];
+  hlong gatherEnd   = globalRowStarts[mesh.rank+1];
 
-  memset(h_nodeMap, -1, Nlocal*sizeof(dlong));
-  
-  dlong cnt = 0;
-  dlong *AsendCounts = (dlong*) calloc(mesh.size+1, sizeof(dlong));
-
-  for(int r=0;r<mesh.size;++r){ // yuck
-    hlong start = globalRowStarts[r];
-    hlong end = globalRowStarts[r+1];
-    dlong cntr = 0;
-    for(dlong n=0;n<Nlocal;++n){
-      hlong id = maskedGlobalNumbering[n];
-      if(start<=id && id<end){
-	h_nodeMap[n] = cnt;
-	h_sendNodeMap[cnt] = id;
-	++cnt;
-	++cntr;
-      }
-    }
-    AsendCounts[r] = cntr*mesh.Np; // note scaling by mesh.Np
-  }
-  
-  // copy to device
-  occa::memory o_nodeMap = platform.device.malloc(Nlocal*sizeof(dlong), h_nodeMap);
-  
-  // for each element build map to shuffle output
+  // iv. for each element build map to shuffle output
   globalNode_t *gnodes = (globalNode_t*) calloc(mesh.Np, sizeof(globalNode_t));
-  dlong *outNodeMap = (dlong*) calloc(mesh.Np*mesh.Nelements, sizeof(dlong));
-  for(dlong e=0;e<mesh.Nelements;++e){
+  dlong    *colMap = (dlong*) calloc(mesh.Np*allNel, sizeof(dlong));
+  for(dlong e=0;e<allNel;++e){
     for(int n=0;n<mesh.Np;++n){
-      hlong id = maskedGlobalNumbering[e*mesh.Np+n];
+      hlong id = ringMaskedGlobalNumbering[e*mesh.Np+n];
       gnodes[n].gnum = (id<0) ? BIG_NUM:id;
       gnodes[n].lnum = n;
     }
-    qsort(gnodes, mesh.Np, sizeof(globalNode_t), compareGlobalNodes);
+    qsort(gnodes, mesh.Np, sizeof(globalNode_t), compareGlobalNodes2);
     for(int n=0;n<mesh.Np;++n){
-      //      printf("gnodes[%d] = %lld,%d\n", n, gnodes[n].gnum, gnodes[n].lnum);
-      outNodeMap[e*mesh.Np+n] = gnodes[n].lnum;
+      colMap[e*mesh.Np+gnodes[n].lnum] = n; // order to map write index into
     }
   }
+
+  occa::memory o_colMap = platform.device.malloc(allNel*mesh.Np*sizeof(dlong), colMap);
+
+  // find where to put the row segments
+  dlong *rowCount = (dlong*) calloc(mesh.Np*allNel, sizeof(dlong));
+  for(dlong e=0;e<allNel;++e){
+    for(int n=0;n<mesh.Np;++n){
+      hlong id = ringMaskedGlobalNumbering[e*mesh.Np+n];
+      if(gatherStart<=id && id<gatherEnd){
+	++(rowCount[id-gatherStart]);
+      }
+    }
+  }
+  dlong *rowStarts = (dlong*) calloc(Ngather+1, sizeof(dlong));
+  for(dlong n=0;n<Ngather;++n){
+    rowStarts[n+1] = rowStarts[n] + rowCount[n];
+  }
   
-  occa::memory o_outNodeMap = platform.device.malloc(mesh.Nelements*mesh.Np*sizeof(dlong), outNodeMap);
+  dlong *rowMap = (dlong*) calloc(mesh.Np*allNel, sizeof(dlong));
+  memset(rowMap, -1, mesh.Np*allNel*sizeof(dlong));
+  for(dlong e=0;e<allNel;++e){
+    for(int n=0;n<mesh.Np;++n){
+      
+      hlong id = ringMaskedGlobalNumbering[e*mesh.Np+n];
+      if(gatherStart<=id && id<gatherEnd){
+	rowMap[e*mesh.Np+n] = (rowStarts[id-gatherStart]++);
+      }
+    }
+  }
+
+  dlong maxDegree = 0;
+  for(dlong g=0;g<Ngather;++g){
+    dlong deg = (g==0) ? rowStarts[g] : rowStarts[g]-rowStarts[g-1];
+    ///    printf("rowCount[%d] = %d\n", g,deg);
+    maxDegree = mymax(maxDegree, deg);
+  }
+  printf("maxDegree=%d\n", maxDegree);
   
-  // count number of entries
-  dlong nnzLocal = cnt*mesh.Np;
-  occa::memory o_AL =  platform.malloc(nnzLocal*sizeof(nonZero_t));
+  kernelInfo["defines/" "MAX_DEGREE"]= (int) maxDegree;
+
+  occa::kernel squeezeGapsKernel = 
+    platform.buildKernel(DELLIPTIC "/okl/ellipticBuildOperatorMatrixContinuous.okl",
+			 "ellipticSqueezeGaps",
+			 kernelInfo);
+  
+  occa::kernel assembleMatrixKernel = 
+    platform.buildKernel(DELLIPTIC "/okl/ellipticBuildOperatorMatrixContinuous.okl",
+			 "ellipticAssembleEntries",
+			 kernelInfo);
+  
+  occa::memory o_rowStarts = platform.device.malloc(Ngather*sizeof(dlong), rowStarts);
+
+  dlong allNgather = rowStarts[Ngather-1];
+  printf("gatherStart = %lld, gatherEnd = %lld, Ngather=%d, allNgather=%d\n",
+	 gatherStart, gatherEnd, Ngather, allNgather*mesh.Np);
+  
+  occa::memory o_rowMap = platform.device.malloc(allNel*mesh.Np*sizeof(dlong), rowMap);
+  
+  o_A = platform.device.malloc(allNgather*mesh.Np*sizeof(nonZero_t));
+  occa::memory o_rowCounts = platform.malloc(Ngather*sizeof(dlong));
+  occa::memory o_AL2 = platform.malloc(allNgather*mesh.Np*sizeof(nonZero_t)); // wasteful until fixed
+
+  platform.device.finish();
+  double ticA = MPI_Wtime();
+
   
   switch(mesh.elementType){
   case TRIANGLES:
-    buildMatrixKernel(mesh.Nelements, o_maskedGlobalNumbering, o_nodeMap, o_outNodeMap,
-		      mesh.o_S, mesh.o_MM, mesh.o_ggeo, 
-		      lambda, o_AL);
+    buildMatrixKernel(allNel, o_ringMaskedGlobalNumbering,  o_rowMap, o_colMap,
+		      mesh.o_S, mesh.o_MM, o_ringGgeo, 
+		      lambda, o_A);
 
     break;
   case QUADRILATERALS:
-    buildMatrixKernel(mesh.Nelements, o_maskedGlobalNumbering, o_nodeMap, o_outNodeMap,
-		      mesh.o_D, mesh.o_ggeo, 
-		      lambda, o_AL);
+    buildMatrixKernel(allNel, o_ringMaskedGlobalNumbering, o_rowMap, o_colMap,
+		      mesh.o_D, o_ringGgeo,
+		      lambda, o_A);
 
     break;
   case TETRAHEDRA:
-    buildMatrixKernel(mesh.Nelements, o_maskedGlobalNumbering, o_nodeMap, o_outNodeMap,
-		      mesh.o_S, mesh.o_MM, mesh.o_ggeo, 
-		      lambda, o_AL);
+    buildMatrixKernel(allNel, o_ringMaskedGlobalNumbering, o_rowMap, o_colMap,
+		      mesh.o_S, mesh.o_MM, o_ringGgeo, 
+		      lambda, o_A);
     break;
   case HEXAHEDRA:
-    buildMatrixKernel(mesh.Nelements, o_maskedGlobalNumbering, o_nodeMap, o_outNodeMap,
-		      mesh.o_D,  mesh.o_ggeo,
-		      lambda, o_AL);
+    buildMatrixKernel(allNel, o_ringMaskedGlobalNumbering, o_rowMap, o_colMap,
+		      mesh.o_D,  o_ringGgeo,
+		      lambda, o_A);
     break;
   }
 
-  // assemble on device + MPI
-  // [ warning - destroys o_AL ]
-  // output is to host A
-  compressMatrixMultiDevice(platform, mesh, ogsMasked, o_AL, nnzLocal, AsendCounts, BIG_NUM, sorter, scanner, o_A, Annz, A);
-
-  free(AsendCounts);
+  occa::memory o_newCounts = platform.device.malloc((Ngather+1)*sizeof(dlong));
+  assembleMatrixKernel(Ngather, o_rowStarts, o_A, o_AL2, o_newCounts);
+  o_A.free();
   
+  dlong *newCounts = (dlong*) calloc(Ngather, sizeof(dlong));
+  o_newCounts.copyTo(newCounts);
+  dlong *newStarts = (dlong*) calloc(Ngather+1, sizeof(dlong));
+  for(int n=0;n<Ngather;++n){
+    newStarts[n+1] = newStarts[n] + newCounts[n];
+  }
+  Annz = newStarts[Ngather];
+  printf("Annz = %d\n", Annz);
+  occa::memory o_newStarts = platform.device.malloc((Ngather+1)*sizeof(dlong), newStarts);
+  
+  o_A = platform.device.malloc(Annz*sizeof(nonZero_t));
+  squeezeGapsKernel(Ngather, o_rowStarts, o_newStarts, o_AL2, o_A);
+  platform.device.finish();
+  double ticB = MPI_Wtime();
+
+  printf("matrix build on device took %g\n", ticB-ticA);
+
+  free(ringMaskedGlobalNumbering);
+  free(globalRowStarts);
+  free(gnodes);
+  free(rowCount);
+  free(rowStarts);
+  free(rowMap);
+  free(newCounts);
+  free(newStarts);
 }
+
+  
+

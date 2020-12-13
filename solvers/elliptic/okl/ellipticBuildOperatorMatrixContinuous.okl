@@ -505,3 +505,20 @@ typedef struct  {
     
   }
 }
+
+@kernel void ellipticSqueezeGaps(const dlong Ngather,
+				 const dlong *origStarts, 
+				 const dlong *newStarts,
+				 const nonZero_t *AL,
+				 nonZero_t *AL2){
+
+  for(int g=0;g<Ngather;++g;@tile(32, @outer, @inner)){
+    dlong origStart = (g==0) ? 0: origStarts[g-1]*p_Np;
+    dlong start =  newStarts[g];
+    dlong end = newStarts[g+1];
+    dlong count = end-start;
+    for(int n=0;n<count;++n){
+      AL2[start+n] = AL[origStart+n];
+    }
+  }
+}

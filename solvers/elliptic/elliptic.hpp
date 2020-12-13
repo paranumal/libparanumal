@@ -124,8 +124,11 @@ public:
   void BuildOperatorMatrixIpdg(parAlmond::parCOO& A);
   void BuildOperatorMatrixContinuous(parAlmond::parCOO& A);
   //  void BuildOperatorMatrixContinuousDevice(parAlmond::parCOO& A, occa::memory &o_A, dlong &Annz);
-  void BuildOperatorMatrixContinuousDevice(occa::kernel &buildMatrixKernel, occa::memory &o_maskedGlobalNumbering, hlong BIG_NUM,
-					   deviceSort_t &sorter, deviceScan_t &scanner, parAlmond::parCOO& A, occa::memory &o_A, dlong &Annz);
+  //  void BuildOperatorMatrixContinuousDevice(occa::kernel &buildMatrixKernel, occa::memory &o_maskedGlobalNumbering, hlong BIG_NUM,
+  //					   deviceSort_t &sorter, deviceScan_t &scanner, parAlmond::parCOO& A, occa::memory &o_A, dlong &Annz);
+
+  void BuildOperatorMatrixContinuousDevice(occa::memory &o_A, dlong &Annz);
+
   
   void BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO::nonZero_t  *AL);
   void BuildOperatorMatrixContinuousTri3D(parAlmond::parCOO::nonZero_t  *AL);
