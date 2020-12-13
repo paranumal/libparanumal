@@ -41,6 +41,22 @@ int compareColumns(const void *a, const void *b){
   return 0;
 }
 
+typedef struct{
+  hlong gnum;
+  int   lnum;
+}globalNode_t;
+
+int compareGlobalNodes(const void *a, const void *b){
+
+  globalNode_t *ea = (globalNode_t*) a;
+  globalNode_t *eb = (globalNode_t*) b;
+
+  if(ea->gnum < eb->gnum) return -1;
+  if(ea->gnum > eb->gnum) return +1;
+
+  return 0;
+}
+
 
 static void compressMatrixMultiDevice(platform_t &platform, mesh_t &mesh, ogs_t *ogsMasked, 
 				      occa::memory &o_AL,
@@ -92,13 +108,8 @@ static void compressMatrixMultiDevice(platform_t &platform, mesh_t &mesh, ogs_t 
 		entriesIn, ArecvCounts, ArecvOffsets, parAlmond::MPI_NONZERO_T,
 		mesh.comm);
 
-#if 0
-  for(dlong n=0;n<100;++n){
-    printf("h_AL[%d] = (%lld,%lld,%e)\n", n, entriesIn[n].row, entriesIn[n].col, entriesIn[n].val);
-  }
-#endif
 
-  if(0){
+  if(1){
     
     double tic2 = MPI_Wtime();
     
@@ -135,7 +146,7 @@ static void compressMatrixMultiDevice(platform_t &platform, mesh_t &mesh, ogs_t 
       }
       if(row<Ngather){
 	dlong id = h_starts[row] +  (h_countOffsets[row]++);
-      h_colMap[id] = n;
+	h_colMap[id] = n;
       }
     }
     double tic3 = MPI_Wtime();
@@ -143,7 +154,8 @@ static void compressMatrixMultiDevice(platform_t &platform, mesh_t &mesh, ogs_t 
     
     nonZero_t *h_AL2 = (nonZero_t*) calloc(nnzLocal, sizeof(nonZero_t));
     nonZero_t *h_tmp = (nonZero_t*) calloc(mesh.Np*maxCountNodes, sizeof(nonZero_t));
-
+    int *offsets = (int*) calloc(maxCountNodes, sizeof(int));
+    
     double tic0 = MPI_Wtime();
     
     dlong cnt = 0;
@@ -159,29 +171,57 @@ static void compressMatrixMultiDevice(platform_t &platform, mesh_t &mesh, ogs_t 
 	cnt1 += mesh.Np;
       }
 
-      int mstart = 0, mend=cnt1-1;
-      while(mstart<mend){
-	while(h_tmp[mstart].row!=BIG_NUM && mstart<cnt1) ++mstart;
-	while(h_tmp[mend].row==BIG_NUM && mend>=0) --mend;
-	if(mstart<mend && mstart<cnt1 && mend>=0){
-	  nonZero_t tmp = h_tmp[mstart];
-	  h_tmp[mstart] = h_tmp[mend];
-	  h_tmp[mend] = tmp;
-	}
-      }
-
-      // local sort valid row entries
-      qsort(h_tmp, mstart, sizeof(nonZero_t), compareColumns);
-      
-      // collect duplicates and trim BIG_NUM_entries
+#if 0
       for(dlong m=0;m<cnt1;++m){
-	if(h_tmp[m].row == BIG_NUM){ // all subsequent entries are BIG_NUM
-	  break;
-	}else if(m>0 && h_tmp[m].col==h_AL2[cnt-1].col){ // same as the last entry
-	  h_AL2[cnt-1].val += h_tmp[m].val;
-	}else{
-	  h_AL2[cnt] = h_tmp[m];
+	if(!(m%mesh.Np)) printf("---\n");
+	printf("h_tmp[%d] = (%lld,%lld,%e)\n",m, h_tmp[m].row, h_tmp[m].col, h_tmp[m].val);
+      }
+#endif 
+      // merge row chunks
+      int Nchunks = sp-sn;
+      memset(offsets, 0, Nchunks*sizeof(int));
+      
+      int merged = 0;
+      int written = 0;
+      while(merged<cnt1){
+
+	// find next entry with smallest column from Nchunks lists
+	nonZero_t minEnt;
+	minEnt.col = BIG_NUM;
+	int minc = -1;
+	for(int c=0;c<Nchunks;++c){
+
+	  // skip BIG_NUM entries
+	  while(offsets[c]<mesh.Np && h_tmp[offsets[c]+c*mesh.Np].row == BIG_NUM){
+	    ++offsets[c];
+	    ++merged;
+	  }
+	  // is this the smallest next entry ?
+	  if(offsets[c]<mesh.Np){
+	    if(h_tmp[offsets[c]+c*mesh.Np].col < minEnt.col){
+	      minEnt = h_tmp[offsets[c]+c*mesh.Np];
+	      minc = c;
+	    }
+	  }
+	}
+
+	if(merged<cnt1  && minc==-1) printf("lost some entries: merged=%d, cnt1=%d\n", merged, cnt1);
+	
+	if(merged==cnt1 || minc==-1) break; // forward wind
+	
+	++offsets[minc];
+
+	// is this a duplicate of last written entry ?
+	if(written && minEnt.col==h_AL2[cnt-1].col){
+	  h_AL2[cnt-1].val += minEnt.val;
+	  ++merged;
+	}	
+	else{
+	  // or a new entry
+	  h_AL2[cnt] = minEnt;
+	  ++merged;
 	  ++cnt;
+	  written = 1;
 	}
       }
     }
@@ -193,7 +233,7 @@ static void compressMatrixMultiDevice(platform_t &platform, mesh_t &mesh, ogs_t 
 
     free(h_AL2);
     free(h_tmp);
-
+    free(offsets);
 
   }
   else{
@@ -272,30 +312,48 @@ void elliptic_t::BuildOperatorMatrixContinuousDevice(occa::kernel &buildMatrixKe
   // copy to device
   occa::memory o_nodeMap = platform.device.malloc(Nlocal*sizeof(dlong), h_nodeMap);
   
+  // for each element build map to shuffle output
+  globalNode_t *gnodes = (globalNode_t*) calloc(mesh.Np, sizeof(globalNode_t));
+  dlong *outNodeMap = (dlong*) calloc(mesh.Np*mesh.Nelements, sizeof(dlong));
+  for(dlong e=0;e<mesh.Nelements;++e){
+    for(int n=0;n<mesh.Np;++n){
+      hlong id = maskedGlobalNumbering[e*mesh.Np+n];
+      gnodes[n].gnum = (id<0) ? BIG_NUM:id;
+      gnodes[n].lnum = n;
+    }
+    qsort(gnodes, mesh.Np, sizeof(globalNode_t), compareGlobalNodes);
+    for(int n=0;n<mesh.Np;++n){
+      //      printf("gnodes[%d] = %lld,%d\n", n, gnodes[n].gnum, gnodes[n].lnum);
+      outNodeMap[e*mesh.Np+n] = gnodes[n].lnum;
+    }
+  }
+  
+  occa::memory o_outNodeMap = platform.device.malloc(mesh.Nelements*mesh.Np*sizeof(dlong), outNodeMap);
+  
   // count number of entries
   dlong nnzLocal = cnt*mesh.Np;
   occa::memory o_AL =  platform.malloc(nnzLocal*sizeof(nonZero_t));
   
   switch(mesh.elementType){
   case TRIANGLES:
-    buildMatrixKernel(mesh.Nelements, o_maskedGlobalNumbering, o_nodeMap,
+    buildMatrixKernel(mesh.Nelements, o_maskedGlobalNumbering, o_nodeMap, o_outNodeMap,
 		      mesh.o_S, mesh.o_MM, mesh.o_ggeo, 
 		      lambda, o_AL);
 
     break;
   case QUADRILATERALS:
-    buildMatrixKernel(mesh.Nelements, o_maskedGlobalNumbering, o_nodeMap,
+    buildMatrixKernel(mesh.Nelements, o_maskedGlobalNumbering, o_nodeMap, o_outNodeMap,
 		      mesh.o_D, mesh.o_ggeo, 
 		      lambda, o_AL);
 
     break;
   case TETRAHEDRA:
-    buildMatrixKernel(mesh.Nelements, o_maskedGlobalNumbering, o_nodeMap,
+    buildMatrixKernel(mesh.Nelements, o_maskedGlobalNumbering, o_nodeMap, o_outNodeMap,
 		      mesh.o_S, mesh.o_MM, mesh.o_ggeo, 
 		      lambda, o_AL);
     break;
   case HEXAHEDRA:
-    buildMatrixKernel(mesh.Nelements, o_maskedGlobalNumbering, o_nodeMap,
+    buildMatrixKernel(mesh.Nelements, o_maskedGlobalNumbering, o_nodeMap, o_outNodeMap,
 		      mesh.o_D,  mesh.o_ggeo,
 		      lambda, o_AL);
     break;

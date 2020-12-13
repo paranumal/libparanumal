@@ -38,7 +38,8 @@ typedef struct  {
 
 @kernel void ellipticBuildOperatorMatrixContinuousTri2D(const dlong Nelements,
 							const hlong  *maskedGlobalNumbering,
-							const dlong  *nodeMap,
+							const dlong  *rowMap,
+							const dlong  *colMap,
 							const dfloat *S,
 							const dfloat *MM,
 							const dfloat *ggeo,
@@ -48,148 +49,51 @@ typedef struct  {
   for (dlong e=0;e<Nelements;++e;@outer(0)) {
 
     @shared hlong s_gnum[p_Np];
-
+    @exclusive dlong r_colMap;
+    
     for (int n=0;n<p_Np;n++;@inner(0)) {
       hlong id = maskedGlobalNumbering[e*p_Np+n];
       s_gnum[n] = (id<0) ? BIG_NUM : id;
+      r_colMap = colMap[e*p_Np+n];
     }
 
     // OCCA barrier
     // loop over rows
     for (int m=0;m<p_Np;m++;@inner(0)) {
-
       // really a broadcast
       dfloat Grr = ggeo[e*p_Nggeo + p_G00ID];
       dfloat Grs = ggeo[e*p_Nggeo + p_G01ID];
       dfloat Gss = ggeo[e*p_Nggeo + p_G11ID];
       dfloat J   = ggeo[e*p_Nggeo + p_GWJID];
-
+      
       for (int n=0;n<p_Np;n++) {
 	
-	int nid = nodeMap[e*p_Np+n]; // broadcast to all threads
-
-	if(nid>=0){
-  
-	  dfloat val = 0.;
-	  
-	  // double check this ( I assume these are symmetric )
-	  val += Grr*S[m+n*p_Np+0*p_Np*p_Np];
-	  val += Grs*S[m+n*p_Np+1*p_Np*p_Np];
-	  val += Gss*S[m+n*p_Np+2*p_Np*p_Np];
-	  val += J*lambda*MM[m+n*p_Np];
-	  
-	  // pack non-zero
-	  hlong row = s_gnum[n];
-	  hlong col = s_gnum[m];
-
-	  if(row==BIG_NUM || col==BIG_NUM || fabs(val)<tol){
-	    row = BIG_NUM; col = BIG_NUM; val = 0;
-	  }
-	  
-	  nonZero_t ent;
-	  ent.val = val;
-	  ent.row = row;
-	  ent.col = col;
-	  
-	  // chunk write  (might have to fix up other kernels too)
-	  int id = nid*p_Np + m; // sneaky transpose and write of entire "col" of block
+	dfloat val = 0.;
+	
+	// double check this ( I assume these are symmetric )
+	val += Grr*S[m+n*p_Np+0*p_Np*p_Np];
+	val += Grs*S[m+n*p_Np+1*p_Np*p_Np];
+	val += Gss*S[m+n*p_Np+2*p_Np*p_Np];
+	val += J*lambda*MM[m+n*p_Np];
+	
+	// pack non-zero
+	hlong row = s_gnum[n];
+	hlong col = s_gnum[m];
+	
+	if(row==BIG_NUM || col==BIG_NUM || fabs(val)<tol){
+	  row = BIG_NUM; col = BIG_NUM; val = 0;
+	}
+	
+	nonZero_t ent;
+	ent.val = val;
+	ent.row = row;
+	ent.col = col;
+	dlong r_rowMap = rowMap[e*p_Np+n];
+	
+	if(r_rowMap>=0){
+	  int id = r_rowMap*p_Np + r_colMap; // sneaky transpose and write of entire "col" of block
 	  AL[id] = ent;
 	}
-      }
-    }
-  }
-}
-
-
-@kernel void ellipticBuildOperatorMatrixContinuousQuad3D(const dlong Nelements,
-							 const hlong *maskedGlobalNumbering,
-							 const dlong  *nodeMap,
-							 const dfloat *D,
-							 const dfloat *ggeo,
-							 const dfloat lambda,
-							 nonZero_t *AL) {
-
-  //Build unassembed non-zeros
-  for (dlong e=0;e<Nelements;++e;@outer(0)) {
-
-    @shared hlong s_gnum[p_Nq][p_Nq];
-    @shared dfloat s_D[p_Nq][p_Nq];
-    
-    for (int ny=0;ny<p_Nq;ny++;@inner(1)) {
-      for (int nx=0;nx<p_Nq;nx++;@inner(0)) {
-	hlong id = maskedGlobalNumbering[e*p_Np+ny*p_Nq+nx];
-	s_gnum[ny][nx] = (id<0) ? BIG_NUM : id;
-	s_D[ny][nx] = D[ny*p_Nq+nx];
-      }
-    }
-
-    // OCCA barrier
-    
-    for (int my=0;my<p_Nq;my++;@inner(1)) {
-      for (int mx=0;mx<p_Nq;mx++;@inner(0)) {
-	
-	dlong base = e*p_Np*p_Nggeo;
-
-        for (int ny=0;ny<p_Nq;ny++) {
-          for (int nx=0;nx<p_Nq;nx++) {
-	    
-            int id;
-            dfloat val = 0.;
-	    
-            if (ny==my) {
-              for (int k=0;k<p_Nq;k++) {
-                id = k+ny*p_Nq;
-                dfloat Grr = ggeo[base + id + p_G00ID*p_Np];
-
-                val += Grr*s_D[k][nx]*s_D[k][mx];
-              }
-            }
-
-            id = mx+ny*p_Nq;
-            dfloat Grs = ggeo[base + id + p_G01ID*p_Np];
-            val += Grs*s_D[mx][nx]*s_D[ny][my];
-
-            id = nx+my*p_Nq;
-            dfloat Gsr = ggeo[base + id + p_G01ID*p_Np];
-            val += Gsr*s_D[nx][mx]*s_D[my][ny];
-
-            if (nx==mx) {
-              for (int k=0;k<p_Nq;k++) {
-                id = nx+k*p_Nq;
-                dfloat Gss = ggeo[base + id + p_G11ID*p_Np];
-
-                val += Gss*s_D[k][ny]*s_D[k][my];
-              }
-            }
-
-
-            if ((nx==mx)&&(ny==my)) {
-              id = nx + ny*p_Nq;
-
-              dfloat JW = ggeo[base + id + p_GWJID*p_Np];
-              val += JW*lambda;
-            }
-
-	    // pack non-zero
-	    hlong row = s_gnum[ny][nx];
-	    hlong col = s_gnum[my][mx];
-
-	    if(row==BIG_NUM || col==BIG_NUM || fabs(val)<tol){
-	      row = BIG_NUM; col = BIG_NUM; val = 0;
-	    }
-	    
-	    nonZero_t ent;
-	    ent.val = val;
-	    ent.row = row;
-	    ent.col = col;
-	    
-	    // chunk write
-	    int r = nx+ny*p_Nq;
-	    int c = mx+my*p_Nq;
-	    id = e*p_Np*p_Np + r*p_Np + c; 
-	    AL[id] = ent;
-          }
-        }
       }
     }
   }
@@ -198,7 +102,8 @@ typedef struct  {
 
 @kernel void ellipticBuildOperatorMatrixContinuousQuad2D(const dlong Nelements,
 							 const hlong *maskedGlobalNumbering,
-							 const dlong  *nodeMap,
+							const dlong  *rowMap,
+							 const dlong  *colMap,
 							 const dfloat *D,
 							 const dfloat *ggeo,
 							 const dfloat lambda,
@@ -209,25 +114,29 @@ typedef struct  {
 
     @shared hlong s_gnum[p_Nq][p_Nq];
     @shared dfloat s_D[p_Nq][p_Nq];
+    @exclusive dlong r_colMap;
     
     for (int ny=0;ny<p_Nq;ny++;@inner(1)) {
       for (int nx=0;nx<p_Nq;nx++;@inner(0)) {
 	hlong id = maskedGlobalNumbering[e*p_Np+ny*p_Nq+nx];
 	s_gnum[ny][nx] = (id<0) ? BIG_NUM : id;
 	s_D[ny][nx] = D[ny*p_Nq+nx];
+	r_colMap = colMap[e*p_Np+ny*p_Nq+nx];
       }
     }
 
     // OCCA barrier
-    
-    for (int my=0;my<p_Nq;my++;@inner(1)) {
-      for (int mx=0;mx<p_Nq;mx++;@inner(0)) {
+
+    for (int ny=0;ny<p_Nq;ny++) {
+      for (int nx=0;nx<p_Nq;nx++) {
+
+	@barrier("local");
 	
-	dlong base = e*p_Np*p_Nggeo;
-
-        for (int ny=0;ny<p_Nq;ny++) {
-          for (int nx=0;nx<p_Nq;nx++) {
-
+	for (int my=0;my<p_Nq;my++;@inner(1)) {
+	  for (int mx=0;mx<p_Nq;mx++;@inner(0)) {
+	    
+	    dlong base = e*p_Np*p_Nggeo;
+	    
             int id;
             dfloat val = 0.;
 	    
@@ -235,11 +144,11 @@ typedef struct  {
               for (int k=0;k<p_Nq;k++) {
                 id = k+ny*p_Nq;
                 dfloat Grr = ggeo[base + id + p_G00ID*p_Np];
-
+		
                 val += Grr*s_D[k][nx]*s_D[k][mx];
               }
             }
-
+	    
             id = mx+ny*p_Nq;
             dfloat Grs = ggeo[base + id + p_G01ID*p_Np];
             val += Grs*s_D[mx][nx]*s_D[ny][my];
@@ -247,28 +156,28 @@ typedef struct  {
             id = nx+my*p_Nq;
             dfloat Gsr = ggeo[base + id + p_G01ID*p_Np];
             val += Gsr*s_D[nx][mx]*s_D[my][ny];
-
+	    
             if (nx==mx) {
               for (int k=0;k<p_Nq;k++) {
                 id = nx+k*p_Nq;
                 dfloat Gss = ggeo[base + id + p_G11ID*p_Np];
-
+		
                 val += Gss*s_D[k][ny]*s_D[k][my];
               }
             }
-
-
+	    
+	    
             if ((nx==mx)&&(ny==my)) {
               id = nx + ny*p_Nq;
-
+	      
               dfloat JW = ggeo[base + id + p_GWJID*p_Np];
               val += JW*lambda;
             }
-
+	    
 	    // pack non-zero
 	    hlong row = s_gnum[ny][nx];
 	    hlong col = s_gnum[my][mx];
-
+	    
 	    if(row==BIG_NUM || col==BIG_NUM || fabs(val)<tol){
 	      row = BIG_NUM; col = BIG_NUM; val = 0;
 	    }
@@ -282,124 +191,50 @@ typedef struct  {
 	    int r = nx+ny*p_Nq;
 	    int c = mx+my*p_Nq;
 
-	    int nid = nodeMap[e*p_Np+r];
-	    
-	    if(nid>=0){
-	      id = nid*p_Np + c;
-	      AL[id] = ent;
+	    dlong r_rowMap = rowMap[e*p_Np+r];
+
+	    if(r_rowMap>=0){
+	      dlong id1 = r_rowMap*p_Np + r_colMap;
+	      AL[id1] = ent;
 	    }
-	  }
+	  }	  
         }
+
+	@barrier("local");
+	
       }
     }
   }
 }
 
-
-
-@kernel void ellipticBuildOperatorMatrixContinuousTet3D_v0(const dlong Nelements,
-							   const hlong *maskedGlobalNumbering,
-							   const dlong  *nodeMap,
-							   const dfloat *S,
-							   const dfloat *MM,
-							   const dfloat *ggeo,
-							   const dfloat lambda,
-							   nonZero_t *AL){
-  //Build unassembed non-zeros
-  for (dlong e=0;e<Nelements;++e;@outer(0)) {
-    
-    @shared hlong s_gnum[p_Np];
-    for (int n=0;n<p_Np;n++;@inner(0)) {
-      hlong id = maskedGlobalNumbering[e*p_Np+n];
-      s_gnum[n] = (id<0) ? BIG_NUM : id;
-    }
-
-    // OCCA barrier
-    
-    // loop over columns
-    for (int m=0;m<p_Np;m++;@inner(0)) {
-
-      // really a broadcast
-      dfloat Grr = ggeo[e*p_Nggeo + p_G00ID];
-      dfloat Grs = ggeo[e*p_Nggeo + p_G01ID];
-      dfloat Grt = ggeo[e*p_Nggeo + p_G02ID];
-      dfloat Gss = ggeo[e*p_Nggeo + p_G11ID];
-      dfloat Gst = ggeo[e*p_Nggeo + p_G12ID];
-      dfloat Gtt = ggeo[e*p_Nggeo + p_G22ID];
-      
-      dfloat J   = ggeo[e*p_Nggeo + p_GWJID];
-      
-      for (int n=0;n<p_Np;n++) {
-
-	int nid = nodeMap[e*p_Np+n]; // broadcast to all threads
-
-	if(nid>=0){
-	
-	  dfloat val = 0.;
-
-	  const dfloat Srr_nm = S[m+n*p_Np+0*p_Np*p_Np];
-	  const dfloat Srs_nm = S[m+n*p_Np+1*p_Np*p_Np];
-	  const dfloat Srt_nm = S[m+n*p_Np+2*p_Np*p_Np];
-	  const dfloat Sss_nm = S[m+n*p_Np+3*p_Np*p_Np];
-	  const dfloat Sst_nm = S[m+n*p_Np+4*p_Np*p_Np];
-	  const dfloat Stt_nm = S[m+n*p_Np+5*p_Np*p_Np];
-	  const dfloat  MM_nm = MM[m+n*p_Np];
-	
-	  // double check this ( I assume these are symmetric )
-	  val += Grr*Srr_nm;
-	  val += Grs*Srs_nm;
-	  val += Grt*Srt_nm;
-	  val += Gss*Sss_nm;
-	  val += Gst*Sst_nm;
-	  val += Gtt*Stt_nm;
-	  val += J*lambda*MM_nm;
-
-	  hlong row = s_gnum[n];
-	  hlong col = s_gnum[m];
-	
-	  if(row==BIG_NUM || col==BIG_NUM || fabs(val)<tol){
-	    row = BIG_NUM; col = BIG_NUM; val = 0;
-	  }
-	
-	  // pack non-zero
-	  nonZero_t ent;
-	  ent.val = val;
-	  ent.row = row;
-	  ent.col = col;
-	
-	  // chunk write 
-	  int id = nid*p_Np + m; // sneaky transpose and write of entire "col" of block
-	  AL[id] = ent;
-	}
-      }
-    }
-  }
-}
 
 @kernel void ellipticBuildOperatorMatrixContinuousTet3D(const dlong Nelements,
 							const hlong *maskedGlobalNumbering,
-							const dlong  *nodeMap,
+							const dlong  *rowMap,
+							const dlong  *colMap,
 							const dfloat *S,
 							const dfloat *MM,
 							const dfloat *ggeo,
 							const dfloat lambda,
 							nonZero_t *AL){
 
-#define p_Nblk 8
+#define p_Nblk 4
 
   //Build unassembed non-zeros
   for (dlong e=0;e<Nelements;e+=p_Nblk;@outer(0)) {
 
-    @shared hlong s_gnum[p_Nblk][p_Np];
-    @shared dfloat s_G[p_Nblk][p_Nggeo];
-    @shared dlong s_nodeMap[p_Nblk][p_Np];
+    @shared hlong    s_gnum[p_Nblk][p_Np];
+    @shared dfloat   s_G[p_Nblk][p_Nggeo];
+    @shared dlong    s_colMap[p_Nblk][p_Np];
+    @shared dlong    s_rowMap[p_Nblk][p_Np];
     
     for (int n=0;n<p_Np;n++;@inner(0)) {
       for(int f=0;f<p_Nblk;++f){
 	if(e+f<Nelements){
 	  hlong id = maskedGlobalNumbering[(e+f)*p_Np+n];
 	  s_gnum[f][n] = (id<0) ? BIG_NUM : id;
-	  s_nodeMap[f][n] = nodeMap[(e+f)*p_Np+n];
+	  s_colMap[f][n] = colMap[(e+f)*p_Np+n];
+	  s_rowMap[f][n] = rowMap[(e+f)*p_Np+n];
 	}
       }
 
@@ -413,53 +248,50 @@ typedef struct  {
 
     // OCCA barrier
 
-    // loop over columns
-    for (int m=0;m<p_Np;m++;@inner(0)) {
+    for (int n=0;n<p_Np;n++) {
 
-      //#pragma unroll p_Np
-      for (int n=0;n<p_Np;n++) {
-	
+      @barrier("local");
+      
+      for (int m=0;m<p_Np;m++;@inner(0)) {	
 	int base = m+n*p_Np;
-	const dfloat Srr_nm = S[base+0*p_Np*p_Np];
-	const dfloat Srs_nm = S[base+1*p_Np*p_Np];
-	const dfloat Srt_nm = S[base+2*p_Np*p_Np];
-	const dfloat Sss_nm = S[base+3*p_Np*p_Np];
-	const dfloat Sst_nm = S[base+4*p_Np*p_Np];
-	const dfloat Stt_nm = S[base+5*p_Np*p_Np];
-	const dfloat lambdaMM_nm = lambda*MM[base];
-	  
+	dfloat Srr = S[base+0*p_Np*p_Np];
+	dfloat Srs = S[base+1*p_Np*p_Np];
+	dfloat Srt = S[base+2*p_Np*p_Np];
+	dfloat Sss = S[base+3*p_Np*p_Np];
+	dfloat Sst = S[base+4*p_Np*p_Np];
+	dfloat Stt = S[base+5*p_Np*p_Np];
+	dfloat lambdaMM = lambda*MM[base];
+
 	// double check this ( I assume these are symmetric )
 #pragma unroll p_Nblk
 	for(int f=0;f<p_Nblk;++f){
 	  
-	  int nid = s_nodeMap[f][n]; // broadcast to all threads
-
 	  if(e+f<Nelements){
-	    if(nid>=0){
-	      dfloat val = 0;
-	      val += s_G[f][p_G00ID]*Srr_nm;
-	      val += s_G[f][p_G01ID]*Srs_nm;
-	      val += s_G[f][p_G02ID]*Srt_nm;
-	      val += s_G[f][p_G11ID]*Sss_nm;
-	      val += s_G[f][p_G12ID]*Sst_nm;
-	      val += s_G[f][p_G22ID]*Stt_nm;
-	      val += s_G[f][p_GWJID]*lambdaMM_nm;
-	      
-	      // pack non-zero
-	      hlong row = s_gnum[f][n];
-	      hlong col = s_gnum[f][m];
-	      
-	      if(row==BIG_NUM || col==BIG_NUM || fabs(val)<tol){
-		row = BIG_NUM; col = BIG_NUM; val = 0;
-	      }
-	      
-	      nonZero_t ent;
-	      ent.val = val;
-	      ent.row = row;
-	      ent.col = col;
-	      
-	      // chunk write 
-	      int id = nid*p_Np + m;
+	    dfloat val = 0;
+	    val += s_G[f][p_G00ID]*Srr;
+	    val += s_G[f][p_G01ID]*Srs;
+	    val += s_G[f][p_G02ID]*Srt;
+	    val += s_G[f][p_G11ID]*Sss;
+	    val += s_G[f][p_G12ID]*Sst;
+	    val += s_G[f][p_G22ID]*Stt;
+	    val += s_G[f][p_GWJID]*lambdaMM;
+	    
+	    // pack non-zero
+	    hlong row = s_gnum[f][n];
+	    hlong col = s_gnum[f][m];
+	    
+	    if(row==BIG_NUM || col==BIG_NUM || fabs(val)<tol){
+	      row = BIG_NUM; col = BIG_NUM; val = 0;
+	    }
+	    
+	    nonZero_t ent;
+	    ent.val = val;
+	    ent.row = row;
+	    ent.col = col;
+	    
+	    // chunk write
+	    if(s_rowMap[f][n]>=0){
+	      int id = s_rowMap[f][n]*p_Np + s_colMap[f][m];
 	      AL[id] = ent;
 	    }
 	  }
@@ -471,8 +303,9 @@ typedef struct  {
 
 
 @kernel void ellipticBuildOperatorMatrixContinuousHex3D(const dlong Nelements,
-							const hlong *maskedGlobalNumbering,							
-							const dlong  *nodeMap,
+							const hlong *maskedGlobalNumbering,			
+							const dlong  *rowMap,
+							const dlong  *colMap,
 							const dfloat *D,
 							const dfloat *ggeo,
 							const dfloat lambda,
@@ -488,121 +321,187 @@ typedef struct  {
 	for (int nz=0;nz<p_Nq;nz++) {
 	  hlong id = maskedGlobalNumbering[e*p_Np+nz*p_Nq*p_Nq+ny*p_Nq+nx];
 	  s_gnum[nz][ny][nx] = (id<0) ? BIG_NUM : id;
-
 	}
 	s_D[ny][nx] = D[ny*p_Nq+nx];
       }
     }
 
     // OCCA BARRIER
-    
-    for (int my=0;my<p_Nq;my++;@inner(1)) {
-      for (int mx=0;mx<p_Nq;mx++;@inner(0)) {
-	
-	for (int mz=0;mz<p_Nq;mz++) {
+    for (int nz=0;nz<p_Nq;nz++) {
+      for (int ny=0;ny<p_Nq;ny++){
+	for (int nx=0;nx<p_Nq;nx++) {
+
+	  @barrier("local");
 	  
-	  int idm = mx+my*p_Nq+mz*p_Nq*p_Nq;
+	  for (int my=0;my<p_Nq;my++;@inner(1)) {
+	    for (int mx=0;mx<p_Nq;mx++;@inner(0)) {
 
-	  for (int nz=0;nz<p_Nq;nz++) {
-	    for (int ny=0;ny<p_Nq;ny++){
-	      for (int nx=0;nx<p_Nq;nx++) {
-		int idn = nx+ny*p_Nq+nz*p_Nq*p_Nq;
-
-		int nid = nodeMap[e*p_Np+idn]; // broadcast to all threads
+	      for (int mz=0;mz<p_Nq;mz++) {
+	      
+		int id;
+		dfloat val = 0.;
 		
-		if(nid>=0){
-
-		
-		  int id;
-		  dfloat val = 0.;
-		
-		  dlong base = e*p_Np*p_Nggeo;
-		  if ((ny==my)&&(nz==mz)) {
-		    for (int k=0;k<p_Nq;k++) {
-		      id = k+ny*p_Nq+nz*p_Nq*p_Nq;
-		      dfloat Grr = ggeo[base + id + p_G00ID*p_Np];
+		dlong base = e*p_Np*p_Nggeo;
+		if ((ny==my)&&(nz==mz)) {
+		  for (int k=0;k<p_Nq;k++) {
+		    id = k+ny*p_Nq+nz*p_Nq*p_Nq;
+		    dfloat Grr = ggeo[base + id + p_G00ID*p_Np];
 		    
-		      val += Grr*s_D[k][nx]*s_D[k][mx];
-		    }
+		    val += Grr*s_D[k][nx]*s_D[k][mx];
 		  }
-		
-		  if (nz==mz) {
-		    id = mx+ny*p_Nq+nz*p_Nq*p_Nq;
-		    dfloat Grs = ggeo[base + id + p_G01ID*p_Np];
-		    val += Grs*s_D[mx][nx]*s_D[ny][my];
-		  
-		    id = nx+my*p_Nq+nz*p_Nq*p_Nq;
-		    dfloat Gsr = ggeo[base + id + p_G01ID*p_Np];
-		    val += Gsr*s_D[nx][mx]*s_D[ny][my];
-		  }
-		
-		  if (ny==my) {
-		    id = mx+ny*p_Nq+nz*p_Nq*p_Nq;
-		    dfloat Grt = ggeo[base + id + p_G02ID*p_Np];
-		    val += Grt*s_D[mx][nx]*s_D[nz][mz];
-		  
-		    id = nx+ny*p_Nq+mz*p_Nq*p_Nq;
-		    dfloat Gst = ggeo[base + id + p_G02ID*p_Np];
-		    val += Gst*s_D[nx][mx]*s_D[mz][nz];
-		  }
-	      
-		  if ((nx==mx)&&(nz==mz)) {
-		    for (int k=0;k<p_Nq;k++) {
-		      id = nx+k*p_Nq+nz*p_Nq*p_Nq;
-		      dfloat Gss = ggeo[base + id + p_G11ID*p_Np];
-		  
-		      val += Gss*s_D[k][ny]*s_D[k][my];
-		    }
-		  }
-	      
-		  if (nx==mx) {
-		    id = nx+my*p_Nq+nz*p_Nq*p_Nq;
-		    dfloat Gst = ggeo[base + id + p_G12ID*p_Np];
-		    val += Gst*s_D[my][ny]*s_D[nz][mz];
-		
-		    id = nx+ny*p_Nq+mz*p_Nq*p_Nq;
-		    dfloat Gts = ggeo[base + id + p_G12ID*p_Np];
-		    val += Gts*s_D[ny][my]*s_D[mz][nz];
-		  }
-
-		  if ((nx==mx)&&(ny==my)) {
-		    for (int k=0;k<p_Nq;k++) {
-		      id = nx+ny*p_Nq+k*p_Nq*p_Nq;
-		      dfloat Gtt = ggeo[base + id + p_G22ID*p_Np];
-
-		      val += Gtt*s_D[k][nz]*s_D[k][mz];
-		    }
-		  }
-
-		  if ((nx==mx)&&(ny==my)&&(nz==mz)) {
-		    id = nx + ny*p_Nq+nz*p_Nq*p_Nq;
-		    dfloat JW = ggeo[base + id + p_GWJID*p_Np];
-		    val += JW*lambda;
-		  }
-
-		  // pack non-zero
-		  hlong row = s_gnum[nz][ny][nx];
-		  hlong col = s_gnum[mz][my][mx];
-
-		  if(row==BIG_NUM || col==BIG_NUM || fabs(val)<tol){
-		    row = BIG_NUM; col = BIG_NUM; val = 0;
-		  }
-
-		  nonZero_t ent;
-		  ent.val = val;
-		  ent.row = row;
-		  ent.col = col;
-		
-		  // chunk write 
-		  //id = e*p_Np*p_Np + idn*p_Np + idm;
-		  id = nid*p_Np + idm;
-		  AL[id] = ent;
 		}
-	      }
+		
+		if (nz==mz) {
+		  id = mx+ny*p_Nq+nz*p_Nq*p_Nq;
+		  dfloat Grs = ggeo[base + id + p_G01ID*p_Np];
+		  val += Grs*s_D[mx][nx]*s_D[ny][my];
+		  
+		  id = nx+my*p_Nq+nz*p_Nq*p_Nq;
+		  dfloat Gsr = ggeo[base + id + p_G01ID*p_Np];
+		  val += Gsr*s_D[nx][mx]*s_D[ny][my];
+		}
+		
+		if (ny==my) {
+		  id = mx+ny*p_Nq+nz*p_Nq*p_Nq;
+		  dfloat Grt = ggeo[base + id + p_G02ID*p_Np];
+		  val += Grt*s_D[mx][nx]*s_D[nz][mz];
+		  
+		  id = nx+ny*p_Nq+mz*p_Nq*p_Nq;
+		  dfloat Gst = ggeo[base + id + p_G02ID*p_Np];
+		  val += Gst*s_D[nx][mx]*s_D[mz][nz];
+		}
+		
+		if ((nx==mx)&&(nz==mz)) {
+		  for (int k=0;k<p_Nq;k++) {
+		    id = nx+k*p_Nq+nz*p_Nq*p_Nq;
+		    dfloat Gss = ggeo[base + id + p_G11ID*p_Np];
+		    
+		    val += Gss*s_D[k][ny]*s_D[k][my];
+		  }
+		}
+		
+		if (nx==mx) {
+		  id = nx+my*p_Nq+nz*p_Nq*p_Nq;
+		  dfloat Gst = ggeo[base + id + p_G12ID*p_Np];
+		  val += Gst*s_D[my][ny]*s_D[nz][mz];
+		  
+		  id = nx+ny*p_Nq+mz*p_Nq*p_Nq;
+		  dfloat Gts = ggeo[base + id + p_G12ID*p_Np];
+		  val += Gts*s_D[ny][my]*s_D[mz][nz];
+		}
+		
+		if ((nx==mx)&&(ny==my)) {
+		  for (int k=0;k<p_Nq;k++) {
+		    id = nx+ny*p_Nq+k*p_Nq*p_Nq;
+		    dfloat Gtt = ggeo[base + id + p_G22ID*p_Np];
+		    
+		    val += Gtt*s_D[k][nz]*s_D[k][mz];
+		  }
+		}
+		
+		if ((nx==mx)&&(ny==my)&&(nz==mz)) {
+		  id = nx + ny*p_Nq+nz*p_Nq*p_Nq;
+		  dfloat JW = ggeo[base + id + p_GWJID*p_Np];
+		  val += JW*lambda;
+		}
+		
+		// pack non-zero
+		hlong row = s_gnum[nz][ny][nx];
+		hlong col = s_gnum[mz][my][mx];
+		
+		if(row==BIG_NUM || col==BIG_NUM || fabs(val)<tol){
+		  row = BIG_NUM; col = BIG_NUM; val = 0;
+		}
+		
+		nonZero_t ent;
+		ent.val = val;
+		ent.row = row;
+		ent.col = col;
+
+		int idm = mx+my*p_Nq+mz*p_Nq*p_Nq;
+		int idn = nx+ny*p_Nq+nz*p_Nq*p_Nq;
+		
+		// should replace with outEntryMap
+		dlong r_rowMap = rowMap[e*p_Np+idn];
+		if(r_rowMap>=0){
+		  dlong id1 = r_rowMap*p_Np + colMap[e*p_Np+idm];
+		  AL[id1] = ent;
+		}
+	      }	    
 	    }
 	  }
 	}
       }
     }
+  }
+}
+
+#ifndef MAX_DEGREE
+#define MAX_DEGREE 10
+#endif
+@kernel void ellipticAssembleEntries(const dlong Ngather,
+				     const dlong *starts,
+				     const nonZero_t *AL,
+				     nonZero_t *AL2,
+				     dlong *counts){
+
+  for(int g=0;g<Ngather;++g;@tile(32, @outer, @inner)){
+
+    dlong offsets[MAX_DEGREE];
+    dlong start = (g==0) ? 0:starts[g-1];
+    dlong end = starts[g];
+
+    int deg = end-start;
+    
+    dlong cnt = 0;
+    int merged = 0;
+    int written = 0;
+
+    for(int c=0;c<deg;++c){
+      offsets[c] = 0;
+    }
+    
+    while(merged<deg*p_Np){
+      
+      // find next entry with smallest column from Nchunks lists
+      nonZero_t minEnt;
+      minEnt.col = BIG_NUM;
+      int minc = -1;
+      for(int c=0;c<deg;++c){
+	
+	// skip BIG_NUM entries
+	while(offsets[c]<p_Np && AL[(start+c)*p_Np + offsets[c]].row == BIG_NUM){
+	  ++offsets[c];
+	  ++merged;
+	}
+	// is this the smallest next entry ?
+	if(offsets[c]<p_Np){
+	  if(AL[(start+c)*p_Np + offsets[c]].col < minEnt.col){
+	    minEnt = AL[(start+c)*p_Np + offsets[c]];
+	    minc = c;
+	  }
+	}
+      }
+      
+      if(merged==deg*p_Np || minc==-1) break; // forward wind
+	
+      ++offsets[minc];
+      
+      // is this a duplicate of last written entry ?
+      if(written && minEnt.col==AL2[start*p_Np + cnt-1].col){
+	AL2[start*p_Np + cnt-1].val += minEnt.val;
+	++merged;
+      }	
+      else{
+	// or a new entry
+	AL2[start*p_Np + cnt] = minEnt;
+	++merged;
+	++cnt;
+	written = 1;
+      }
+    }
+
+    counts[g] = cnt;
+    
   }
 }
