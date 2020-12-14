@@ -172,11 +172,12 @@ SOFTWARE.
 #define p_Nb 5
 #elif p_N==5
 #define p_Ne 3
-#define p_Nb 5
+//#define p_Nb 5
+#define p_Nb 4
 #elif p_N==6
 //#define p_Ne 4
 #define p_Ne 2
-#define p_Nb 6
+#define p_Nb 3
 #else
 // from N=7
 #define p_Ne 4

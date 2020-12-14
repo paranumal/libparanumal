@@ -255,7 +255,7 @@ void elliptic_t::BuildOperatorMatrixContinuousDevice(occa::memory &o_A,
   }
 
   occa::memory o_newCounts = platform.device.malloc((Ngather+1)*sizeof(dlong));
-  assembleMatrixKernel(Ngather, o_rowStarts, o_A, o_AL2, o_newCounts);
+  assembleMatrixKernel((dlong)Ngather, o_rowStarts, o_A, o_AL2, o_newCounts);
   o_A.free();
   
   dlong *newCounts = (dlong*) calloc(Ngather, sizeof(dlong));
@@ -269,7 +269,7 @@ void elliptic_t::BuildOperatorMatrixContinuousDevice(occa::memory &o_A,
   occa::memory o_newStarts = platform.device.malloc((Ngather+1)*sizeof(dlong), newStarts);
   
   o_A = platform.device.malloc(Annz*sizeof(nonZero_t));
-  squeezeGapsKernel(Ngather, o_rowStarts, o_newStarts, o_AL2, o_A);
+  squeezeGapsKernel((dlong)Ngather, o_rowStarts, o_newStarts, o_AL2, o_A);
   platform.device.finish();
   double ticB = MPI_Wtime();
 
