@@ -104,19 +104,28 @@ int main(int argc, char **argv){
   elliptic.Run();
 
   platform.device.finish();
-  double t10 = MPI_Wtime();
+
   parAlmond::parCOO Ahost(elliptic.platform, mesh.comm);
 
   int testHOST = 1;
 
-  if(testHOST)
+  if(testHOST){
+    double t1 = MPI_Wtime();
     elliptic.BuildOperatorMatrixContinuous(Ahost);
-
+    double t2 = MPI_Wtime();
+    printf("HOST took %g secs to build matrix\n", t2-t1);
+  }
   occa::memory o_A;
   dlong devAnnz;
 
+  platform.device.finish();
+  double t3 = MPI_Wtime();
   elliptic.BuildOperatorMatrixContinuousDevice(o_A, devAnnz);
-  
+
+  platform.device.finish();
+  double t4 = MPI_Wtime();
+  printf("DEVICE took %g secs to build matrix\n", t4-t3);
+
   if(testHOST){
     nonZero_t *h_A = (nonZero_t*) calloc(devAnnz, sizeof(nonZero_t));
     o_A.copyTo(h_A);
@@ -138,8 +147,6 @@ int main(int argc, char **argv){
     }
 
   }
-  exit(-1);
-  
   
   // close down MPI
   MPI_Finalize();

@@ -133,6 +133,8 @@ void elliptic_t::BuildOperatorMatrixContinuous(parAlmond::parCOO& A) {
     (parAlmond::parCOO::nonZero_t*) calloc(nnzLocal, sizeof(parAlmond::parCOO::nonZero_t));
 
   if(mesh.rank==0) {printf("Building full FEM matrix...");fflush(stdout);}
+
+  double tic0 = MPI_Wtime();
   
   switch(mesh.elementType){
   case TRIANGLES:
@@ -152,6 +154,9 @@ void elliptic_t::BuildOperatorMatrixContinuous(parAlmond::parCOO& A) {
     BuildOperatorMatrixContinuousHex3D(AL); break;
   }
 
+  double tic1 = MPI_Wtime();
+  printf("Local matrices took %g secs on HOST\n", tic1-tic0);
+  
   compressMatrix(mesh, ogsMasked, AL, nnzLocal, A);
 }
 
