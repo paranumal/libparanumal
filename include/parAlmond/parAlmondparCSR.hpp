@@ -40,6 +40,7 @@ public:
   //local sparse matrix
   struct CSR {
     dlong nnz=0;
+    dlong NrowBlocks=0;
 
     dlong  *blockRowStarts=nullptr;
     dlong  *rowStarts=nullptr;
@@ -57,6 +58,7 @@ public:
   struct MCSR {
     dlong nnz=0;
     dlong nzRows=0;
+    dlong NrowBlocks=0;
 
     dlong  *blockRowStarts=nullptr;
     dlong  *rowStarts=nullptr;

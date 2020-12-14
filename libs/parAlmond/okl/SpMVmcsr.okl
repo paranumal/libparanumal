@@ -24,9 +24,10 @@ SOFTWARE.
 
 */
 
-@kernel void SpMVmcsr1(const dlong   Nrows,
+@kernel void SpMVmcsr1(const dlong   Nblocks,
                        const dfloat  alpha,
                        const dfloat  beta,
+                       @restrict const  dlong  * blockStarts,
                        @restrict const  dlong  * rowStarts,
                        @restrict const  dlong  * rows,
                        @restrict const  dlong  * cols,
@@ -35,29 +36,44 @@ SOFTWARE.
                        @restrict        dfloat * y){
 
   // y = alpha * A * x + beta * y
-  for(dlong n=0;n<Nrows;++n;@tile(p_BLOCKSIZE,@outer,@inner)){
-    const dlong row = rows[n];
+  for(dlong b=0;b<Nblocks;++b;@outer){
+    @exclusive dlong blockStart, blockEnd, start;
+    @shared dfloat temp[p_NonzerosPerBlock];
 
-    dfloat betay = 0.;
+    for(dlong n=0;n<p_BLOCKSIZE;++n;@inner){
+      blockStart = blockStarts[b];
+      blockEnd   = blockStarts[b+1];
+      start = rowStarts[blockStart];
 
-    if (beta)
-      betay = beta*y[row];
-
-    dfloat result = 0.;
-    const dlong start = rowStarts[n];
-    const dlong end   = rowStarts[n+1];
-
-    for(dlong i=start; i<end; i++){
-      const dlong col = cols[i];
-      result += vals[i]*x[col];
+      for (dlong id=start+n;id<rowStarts[blockEnd];id+=p_BLOCKSIZE) {
+        temp[id-start] = vals[id]*x[cols[id]];
+      }
     }
-    y[row] = alpha*result + betay;
+
+    for(dlong n=0;n<p_BLOCKSIZE;++n;@inner){
+      for (dlong row=blockStart+n;row<blockEnd;row+=p_BLOCKSIZE) {
+
+        const dlong m = rows[row];
+        const dfloat betay = (beta==0.) ? 0. : beta*y[m];
+
+        const dlong colStart = rowStarts[row]  -start;
+        const dlong colEnd   = rowStarts[row+1]-start;
+
+        dfloat result = 0.;
+        for (int i=colStart;i<colEnd;i++) {
+          result += temp[i];
+        }
+
+        y[m] = alpha*result + betay;
+      }
+    }
   }
 }
 
-@kernel void SpMVmcsr2(const dlong  Nrows,
+@kernel void SpMVmcsr2(const dlong  Nblocks,
                        const dfloat alpha,
                        const dfloat beta,
+                       @restrict const  dlong  * blockStarts,
                        @restrict const  dlong  * rowStarts,
                        @restrict const  dlong  * rows,
                        @restrict const  dlong  * cols,
@@ -67,17 +83,35 @@ SOFTWARE.
                        @restrict        dfloat * z){
 
   // z = alpha * A * x + beta * y
-  for(dlong n=0;n<Nrows;++n;@tile(p_BLOCKSIZE,@outer,@inner)){
-    const dlong row = rows[n];
+  for(dlong b=0;b<Nblocks;++b;@outer){
+    @exclusive dlong blockStart, blockEnd, start;
+    @shared dfloat temp[p_NonzerosPerBlock];
 
-    dfloat result = 0.;
-    const dlong start = rowStarts[n];
-    const dlong end   = rowStarts[n+1];
+    for(dlong n=0;n<p_BLOCKSIZE;++n;@inner){
+      blockStart = blockStarts[b];
+      blockEnd   = blockStarts[b+1];
+      start = rowStarts[blockStart];
 
-    for(dlong i=start; i<end; i++){
-      const dlong col = cols[i];
-      result += vals[i]*x[col];
+      for (dlong id=start+n;id<rowStarts[blockEnd];id+=p_BLOCKSIZE) {
+        temp[id-start] = vals[id]*x[cols[id]];
+      }
     }
-    z[row] = alpha*result + beta*y[row];
+
+    for(dlong n=0;n<p_BLOCKSIZE;++n;@inner){
+      for (dlong row=blockStart+n;row<blockEnd;row+=p_BLOCKSIZE) {
+
+        const dlong m = rows[row];
+
+        const dlong colStart = rowStarts[row]  -start;
+        const dlong colEnd   = rowStarts[row+1]-start;
+
+        dfloat result = 0.;
+        for (int i=colStart;i<colEnd;i++) {
+          result += temp[i];
+        }
+
+        z[m] = alpha*result + beta*y[m];
+      }
+    }
   }
 }

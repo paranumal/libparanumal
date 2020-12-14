@@ -30,6 +30,10 @@ namespace parAlmond {
 
 int Nrefs = 0;
 
+//NC: Hard code these for now. Should be sufficient for GPU devices, but needs attention for CPU
+const int blockSize = 256;
+int NonzerosPerBlock = 1024; //should be a multiple of blockSize for good unrolling
+
 occa::kernel SpMVcsrKernel1;
 occa::kernel SpMVcsrKernel2;
 occa::kernel SpMVmcsrKernel;
@@ -67,7 +71,8 @@ void buildParAlmondKernels(platform_t& platform){
   //build kernels
   occa::properties kernelInfo = platform.props;
 
-  kernelInfo["defines/" "p_BLOCKSIZE"]= BLOCKSIZE;
+  kernelInfo["defines/" "p_BLOCKSIZE"]= blockSize;
+  kernelInfo["defines/" "p_NonzerosPerBlock"]= NonzerosPerBlock;
 
   if (rank==0) {printf("Compiling parALMOND Kernels...");fflush(stdout);}
 
