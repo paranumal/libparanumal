@@ -32,9 +32,10 @@ SOFTWARE.
                       const dfloat  lambda,
                       @restrict const  dfloat * diagInv,
                       @restrict const  dfloat * r,
-                      @restrict        dfloat * x){
+                      @restrict const  dfloat * x,
+                      @restrict        dfloat * d){
 
-  // x = x + lambda*inv(D)*(r-A*x)
+  // d = lambda*inv(D)*(r-A*x)
   for(dlong b=0;b<Nblocks;++b;@outer){
     @exclusive dlong blockStart, blockEnd, start;
     @shared dfloat temp[p_NonzerosPerBlock];
@@ -60,7 +61,7 @@ SOFTWARE.
           result -= temp[i];
         }
 
-        x[row] += lambda*diagInv[row]*result;
+        d[row] = lambda*diagInv[row]*result;
       }
     }
   }
@@ -74,9 +75,10 @@ SOFTWARE.
                       @restrict const  dfloat * vals,
                       const dfloat  lambda,
                       @restrict const  dfloat * diagInv,
-                      @restrict        dfloat * x){
+                      @restrict const  dfloat * x,
+                      @restrict        dfloat * d){
 
-  // x = x + lambda*inv(D)*(-A*x)
+  // d = lambda*inv(D)*(-A*x)
   for(dlong b=0;b<Nblocks;++b;@outer){
     @exclusive dlong blockStart, blockEnd, start;
     @shared dfloat temp[p_NonzerosPerBlock];
@@ -103,7 +105,7 @@ SOFTWARE.
           result -= temp[i];
         }
 
-        x[m] += lambda*diagInv[m]*result;
+        d[m] += lambda*diagInv[m]*result;
       }
     }
   }

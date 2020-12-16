@@ -32,7 +32,8 @@ SOFTWARE.
 namespace parAlmond {
 
 void parCSR::smoothDampedJacobi(occa::memory& o_r, occa::memory& o_x,
-                                const dfloat lambda, bool x_is_zero){
+                                const dfloat lambda, bool x_is_zero,
+                                occa::memory& o_scratch){
 
   if(x_is_zero){
     // x = lambda*inv(D)*r
@@ -40,16 +41,17 @@ void parCSR::smoothDampedJacobi(occa::memory& o_r, occa::memory& o_x,
     return;
   }
 
+  occa::memory o_d = o_scratch;
 
   halo->ExchangeStart(o_x, 1, ogs_dfloat);
 
-  // x = x + lambda*inv(D)*(r-A*x)
+  // d = lambda*inv(D)*(r-A*x)
   if (diag.NrowBlocks)
     SmoothJacobiCSRKernel(diag.NrowBlocks,
                    diag.o_blockRowStarts, diag.o_rowStarts,
                    diag.o_cols, diag.o_vals,
                    lambda, o_diagInv,
-                   o_r, o_x);
+                   o_r, o_x, o_d);
 
   halo->ExchangeFinish(o_x, 1, ogs_dfloat);
 
@@ -57,7 +59,9 @@ void parCSR::smoothDampedJacobi(occa::memory& o_r, occa::memory& o_x,
     SmoothJacobiMCSRKernel(offd.NrowBlocks,
                    offd.o_blockRowStarts, offd.o_mRowStarts,
                    offd.o_rows, offd.o_cols, offd.o_vals,
-                   lambda, o_diagInv, o_x);
+                   lambda, o_diagInv, o_x, o_d);
+
+  platform.linAlg.axpy(Nrows, 1.0, o_d, 1.0, o_x);
 }
 
 void parCSR::smoothChebyshev(occa::memory& o_b, occa::memory& o_x,
