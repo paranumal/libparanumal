@@ -107,7 +107,7 @@ int main(int argc, char **argv){
 
   parAlmond::parCOO Ahost(elliptic.platform, mesh.comm);
 
-  int testHOST = 1;
+  int testHOST = 0;
 
   if(testHOST){
     double t1 = MPI_Wtime();

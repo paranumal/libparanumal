@@ -436,6 +436,10 @@ typedef struct  {
   }
 }
 
+
+//#define NT 8
+#define NT 8
+
 #ifndef MAX_DEGREE
 #define MAX_DEGREE 10
 #endif
@@ -446,7 +450,7 @@ typedef struct  {
 				     dlong *counts){
 
   //  for(int g=0;g<Ngather;++g;@tile(32, @outer, @inner)){
-#define NT 32
+
   for(int b=0;b<(Ngather+NT-1)/NT;++b;@outer(0)){
     @shared dlong s_offsets[NT][MAX_DEGREE];
 
@@ -520,19 +524,44 @@ typedef struct  {
   }
 }
 
+#if 0
 @kernel void ellipticSqueezeGaps(const dlong Ngather,
 				 const dlong *origStarts, 
 				 const dlong *newStarts,
 				 const nonZero_t *AL,
 				 nonZero_t *AL2){
 
-  for(int g=0;g<Ngather;++g;@tile(32, @outer, @inner)){
+  for(int g=0;g<Ngather;++g;@tile(NT, @outer, @inner)){
     dlong origStart = (g==0) ? 0: origStarts[g-1]*p_Np;
     dlong start =  newStarts[g];
     dlong end = newStarts[g+1];
     dlong count = end-start;
     for(int n=0;n<count;++n){
       AL2[start+n] = AL[origStart+n];
+    }
+  }
+}
+#endif
+
+#define SNT 8
+
+@kernel void ellipticSqueezeGaps(const dlong Ngather,
+				 const dlong *origStarts, 
+				 const dlong *newStarts,
+				 const nonZero_t *AL,
+				 nonZero_t *AL2){
+
+  for(int g=0;g<Ngather;++g;@outer){
+    for(int t=0;t<SNT;++t;@inner){
+      dlong origStart = (g==0) ? 0: origStarts[g-1]*p_Np;
+      dlong start =  newStarts[g];
+      dlong end = newStarts[g+1];
+      dlong count = end-start;
+      int n = t;
+      while(n<count){
+	AL2[start+n] = AL[origStart+n];
+	n+=SNT;
+      }
     }
   }
 }
