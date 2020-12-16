@@ -80,9 +80,11 @@ void amgLevel::residual  (occa::memory& o_RHS, occa::memory& o_X,
 
 void amgLevel::smooth(occa::memory& o_RHS, occa::memory& o_X, bool x_is_zero){
   if(stype == DAMPED_JACOBI){
-    smoothDampedJacobi(o_RHS, o_X, x_is_zero);
+    A->smoothDampedJacobi(o_RHS, o_X, lambda, x_is_zero);
   } else if(stype == CHEBYSHEV){
-    smoothChebyshev(o_RHS, o_X, x_is_zero);
+    A->smoothChebyshev(o_RHS, o_X, lambda0, lambda1,
+                       x_is_zero, o_scratch,
+                       ChebyshevIterations);
   }
 }
 

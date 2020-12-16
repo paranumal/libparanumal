@@ -127,11 +127,11 @@ void multigrid_t::AddLevel(multigridLevel* level){
     free(dummy);
   }
 
-  //scratch space includes space for residual and 3 vectors used in Chebyshev smoothing
-  size_t requiredBytes = 3*level->Ncols*sizeof(dfloat);
+  //scratch space includes space for residual and 2 vectors used in Chebyshev smoothing
+  size_t requiredBytes = 2*level->Ncols*sizeof(dfloat);
   if (requiredBytes>scratchSpaceBytes) {
     scratchSpaceBytes = requiredBytes;
-    dfloat *dummy = (dfloat *) calloc(3*level->Ncols,sizeof(dfloat));
+    dfloat *dummy = (dfloat *) calloc(2*level->Ncols,sizeof(dfloat));
     o_scratch = platform.malloc(requiredBytes, dummy);
     free(dummy);
   }
