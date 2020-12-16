@@ -218,7 +218,7 @@ typedef struct  {
 							const dfloat lambda,
 							nonZero_t *AL){
 
-#define p_Nblk 4
+#define p_Nblk 1
 
   //Build unassembed non-zeros
   for (dlong e=0;e<Nelements;e+=p_Nblk;@outer(0)) {

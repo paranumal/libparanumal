@@ -26,7 +26,7 @@ SOFTWARE.
 
 #include "linearSolver.hpp"
 
-#define PCG_BLOCKSIZE 512
+#define PCG_BLOCKSIZE 256
 
 pcg::pcg(dlong _N, dlong _Nhalo,
          platform_t& _platform, settings_t& _settings, MPI_Comm _comm,
