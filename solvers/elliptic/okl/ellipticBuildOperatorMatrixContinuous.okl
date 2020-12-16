@@ -25,7 +25,7 @@
 */
 
 
-#define tol 1e-12
+#define tol 0
 
 //non-zero matrix entries
 typedef struct  {
@@ -39,7 +39,9 @@ typedef struct  {
 @kernel void ellipticBuildOperatorMatrixContinuousTri2D(const dlong Nelements,
 							const hlong  *maskedGlobalNumbering,
 							const dlong  *rowMap,
-							const dlong  *colMap,
+							//							const dlong  *colMap,
+							const dlong  *invColMap,
+							const dlong  *invColMapCount,
 							const dfloat *S,
 							const dfloat *MM,
 							const dfloat *ggeo,
@@ -49,24 +51,37 @@ typedef struct  {
   for (dlong e=0;e<Nelements;++e;@outer(0)) {
 
     @shared hlong s_gnum[p_Np];
-    @exclusive dlong r_colMap;
+    //    @exclusive dlong r_colMap;
+    @exclusive dlong r_invColMap;
+    @exclusive dlong r_invColMapCount;
+    @shared nonZero_t s_ents[p_Np];
     
     for (int n=0;n<p_Np;n++;@inner(0)) {
       hlong id = maskedGlobalNumbering[e*p_Np+n];
       s_gnum[n] = (id<0) ? BIG_NUM : id;
-      r_colMap = colMap[e*p_Np+n];
+      //      r_colMap = colMap[e*p_Np+n];
+      r_invColMap = invColMap[e*p_Np+n];
+      r_invColMapCount = invColMapCount[e];
     }
 
     // OCCA barrier
     // loop over rows
+    @exclusive dfloat Grr, Grs, Gss, J;
+      
     for (int m=0;m<p_Np;m++;@inner(0)) {
       // really a broadcast
-      dfloat Grr = ggeo[e*p_Nggeo + p_G00ID];
-      dfloat Grs = ggeo[e*p_Nggeo + p_G01ID];
-      dfloat Gss = ggeo[e*p_Nggeo + p_G11ID];
-      dfloat J   = ggeo[e*p_Nggeo + p_GWJID];
+      Grr = ggeo[e*p_Nggeo + p_G00ID];
+      Grs = ggeo[e*p_Nggeo + p_G01ID];
+      Gss = ggeo[e*p_Nggeo + p_G11ID];
+      J   = ggeo[e*p_Nggeo + p_GWJID];
+    }
+    
+    
+    for (int n=0;n<p_Np;n++) {
       
-      for (int n=0;n<p_Np;n++) {
+      @barrier("local");
+      
+      for (int m=0;m<p_Np;m++;@inner(0)) {
 	
 	dfloat val = 0.;
 	
@@ -88,11 +103,22 @@ typedef struct  {
 	ent.val = val;
 	ent.row = row;
 	ent.col = col;
-	dlong r_rowMap = rowMap[e*p_Np+n];
 	
-	if(r_rowMap>=0){
-	  int id = r_rowMap*p_Np + r_colMap; // sneaky transpose and write of entire "col" of block
-	  AL[id] = ent;
+	s_ents[m] = ent;
+      }
+      
+      @barrier("local");
+      
+      for (int m=0;m<p_Np;m++;@inner(0)) {
+
+	//if(m<r_invColMapCount){
+	{
+	  dlong r_rowMap = rowMap[e*p_Np+n];
+	
+	  if(r_rowMap>=0){
+	    int id = r_rowMap*p_Np + m; // sneaky transpose and write of entire "col" of block
+	    AL[id] = s_ents[r_invColMap];
+	  }
 	}
       }
     }
@@ -211,7 +237,9 @@ typedef struct  {
 @kernel void ellipticBuildOperatorMatrixContinuousTet3D(const dlong Nelements,
 							const hlong *maskedGlobalNumbering,
 							const dlong  *rowMap,
-							const dlong  *colMap,
+							//							const dlong  *colMap,
+							const dlong  *invColMap,
+							const dlong  *invColMapCount,
 							const dfloat *S,
 							const dfloat *MM,
 							const dfloat *ggeo,
@@ -225,15 +253,18 @@ typedef struct  {
 
     @shared hlong    s_gnum[p_Nblk][p_Np];
     @shared dfloat   s_G[p_Nblk][p_Nggeo];
-    @shared dlong    s_colMap[p_Nblk][p_Np];
+    //    @shared dlong    s_colMap[p_Nblk][p_Np];
+    @shared dlong    s_invColMap[p_Nblk][p_Np];
     @shared dlong    s_rowMap[p_Nblk][p_Np];
+    @shared nonZero_t s_ents[p_Nblk][p_Np];
     
     for (int n=0;n<p_Np;n++;@inner(0)) {
       for(int f=0;f<p_Nblk;++f){
 	if(e+f<Nelements){
 	  hlong id = maskedGlobalNumbering[(e+f)*p_Np+n];
 	  s_gnum[f][n] = (id<0) ? BIG_NUM : id;
-	  s_colMap[f][n] = colMap[(e+f)*p_Np+n];
+	  //	  s_colMap[f][n] = colMap[(e+f)*p_Np+n];
+	  s_invColMap[f][n] = invColMap[(e+f)*p_Np+n];
 	  s_rowMap[f][n] = rowMap[(e+f)*p_Np+n];
 	}
       }
@@ -289,11 +320,19 @@ typedef struct  {
 	    ent.row = row;
 	    ent.col = col;
 	    
-	    // chunk write
-	    if(s_rowMap[f][n]>=0){
-	      int id = s_rowMap[f][n]*p_Np + s_colMap[f][m];
-	      AL[id] = ent;
-	    }
+	    s_ents[f][m] = ent;
+	  }
+	}
+      }
+      
+      @barrier("local");
+      
+      for (int m=0;m<p_Np;m++;@inner(0)) {	
+	for(int f=0;f<p_Nblk;++f){	    
+	  // chunk write
+	  if(s_rowMap[f][n]>=0){
+	    int id = s_rowMap[f][n]*p_Np + m;
+	    AL[id] = s_ents[f][s_invColMap[f][m]];
 	  }
 	}
       }
@@ -482,40 +521,62 @@ typedef struct  {
 	  int minc = -1;
 	  for(int c=0;c<deg;++c){
 	    dlong off = s_offsets[t][c];
-	    
-	    // skip BIG_NUM entries
-	    while(off<p_Np && AL[(start+c)*p_Np + off].row == BIG_NUM){
-	      ++off;
-	      ++merged;
-	    }
-	    // is this the smallest next entry ?
+
 	    if(off<p_Np){
-	      if(AL[(start+c)*p_Np + off].col < minEnt.col){
-		minEnt = AL[(start+c)*p_Np + off];
+	      nonZero_t newEntry = AL[(start+c)*p_Np+off];
+	      
+	      if(newEntry.row == BIG_NUM){
+		// skip remaining BIG_NUM entries (relies on the invColMap having been used)
+		merged += p_Np-off;
+		off = p_Np;
+		s_offsets[t][c] = off;
+		continue;
+	      }
+	      
+	      // is this the smallest next entry ?
+	      if(newEntry.col < minEnt.col){
+		minEnt = newEntry;
 		minc = c;
 	      }
-	    }
 
-	    s_offsets[t][c] = off;
+	    }
 	  }
 	  
 	  if(merged==deg*p_Np || minc==-1) break; // forward wind
 	  
-	  ++s_offsets[t][minc];
+	  // consume dups (only one per chunk - and cannot have appeared already)
+	  for(int c=minc+1;c<deg;++c){ // flagged first of dups
+	    dlong off = s_offsets[t][c];
+	    
+	    if(off<p_Np){
+	      nonZero_t newEntry = AL[(start+c)*p_Np+off];
+	      if(newEntry.col==minEnt.col){
+		minEnt.val += newEntry.val;
+		++s_offsets[t][c];
+		++merged;
+	      }
+	    }
+	  }
 	  
+	  ++s_offsets[t][minc];
+
+#if 0
 	  // is this a duplicate of last written entry ?
 	  if(cnt>0 && minEnt.col==lastEnt.col){
+	    printf("FOUND DUP\n");
 	    lastEnt.val += minEnt.val;
 	    AL2[start*p_Np + cnt-1].val = lastEnt.val; // could delay this write I suppose
 	    ++merged;
 	  }	
-	  else{
-	    // or a new entry
-	    AL2[start*p_Np + cnt] = minEnt;
-	    lastEnt = minEnt;
-	    ++merged;
-	    ++cnt;
-	  }
+	  else
+#endif
+	    {
+	      // or a new entry
+	      AL2[start*p_Np + cnt] = minEnt;
+	      lastEnt = minEnt;
+	      ++merged;
+	      ++cnt;
+	    }
 	}
 	
 	counts[g] = cnt;

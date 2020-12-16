@@ -150,6 +150,8 @@ void elliptic_t::BuildOperatorMatrixContinuousDevice(occa::memory &o_A,
   // iv. for each element build map to shuffle output
   globalNode_t *gnodes = (globalNode_t*) calloc(mesh.Np, sizeof(globalNode_t));
   dlong    *colMap = (dlong*) calloc(mesh.Np*allNel, sizeof(dlong));
+  dlong    *invColMap = (dlong*) calloc(mesh.Np*allNel, sizeof(dlong));
+  dlong    *invColMapCount = (dlong*) calloc(allNel, sizeof(dlong));  
   for(dlong e=0;e<allNel;++e){
     for(int n=0;n<mesh.Np;++n){
       hlong id = ringMaskedGlobalNumbering[e*mesh.Np+n];
@@ -157,12 +159,19 @@ void elliptic_t::BuildOperatorMatrixContinuousDevice(occa::memory &o_A,
       gnodes[n].lnum = n;
     }
     qsort(gnodes, mesh.Np, sizeof(globalNode_t), compareGlobalNodes2);
+    int m=0;
     for(int n=0;n<mesh.Np;++n){
       colMap[e*mesh.Np+gnodes[n].lnum] = n; // order to map write index into
+      invColMap[e*mesh.Np+n] = gnodes[n].lnum;
+      if(!m && gnodes[n].gnum==BIG_NUM) // first instance of BIG_NUM 
+	m = n;
     }
+    invColMapCount[e] = m;
   }
 
   occa::memory o_colMap = platform.device.malloc(allNel*mesh.Np*sizeof(dlong), colMap);
+  occa::memory o_invColMap = platform.device.malloc(allNel*mesh.Np*sizeof(dlong), invColMap);
+  occa::memory o_invColMapCount = platform.device.malloc(allNel*sizeof(dlong), invColMap);
 
   // find where to put the row segments
   dlong *rowCount = (dlong*) calloc(mesh.Np*allNel, sizeof(dlong));
@@ -201,6 +210,9 @@ void elliptic_t::BuildOperatorMatrixContinuousDevice(occa::memory &o_A,
   
   kernelInfo["defines/" "MAX_DEGREE"]= (int) maxDegree;
 
+  //  deviceScan_t scanner(platform, DELLIPTIC "okl/nonZero.h", DELLIPTIC "okl/nonZeroBigNode.h", kernelInfo);
+
+  
   occa::kernel squeezeGapsKernel = 
     platform.buildKernel(DELLIPTIC "/okl/ellipticBuildOperatorMatrixContinuous.okl",
 			 "ellipticSqueezeGaps",
@@ -231,7 +243,7 @@ void elliptic_t::BuildOperatorMatrixContinuousDevice(occa::memory &o_A,
   
   switch(mesh.elementType){
   case TRIANGLES:
-    buildMatrixKernel(allNel, o_ringMaskedGlobalNumbering,  o_rowMap, o_colMap,
+    buildMatrixKernel(allNel, o_ringMaskedGlobalNumbering,  o_rowMap, o_invColMap, o_invColMapCount, // o_colMap,
 		      mesh.o_S, mesh.o_MM, o_ringGgeo, 
 		      lambda, o_A);
 
@@ -243,7 +255,7 @@ void elliptic_t::BuildOperatorMatrixContinuousDevice(occa::memory &o_A,
 
     break;
   case TETRAHEDRA:
-    buildMatrixKernel(allNel, o_ringMaskedGlobalNumbering, o_rowMap, o_colMap,
+    buildMatrixKernel(allNel, o_ringMaskedGlobalNumbering, o_rowMap, o_invColMap, o_invColMapCount, // o_colMap,
 		      mesh.o_S, mesh.o_MM, o_ringGgeo, 
 		      lambda, o_A);
     break;
@@ -270,6 +282,7 @@ void elliptic_t::BuildOperatorMatrixContinuousDevice(occa::memory &o_A,
   
   o_A = platform.device.malloc(Annz*sizeof(nonZero_t));
   squeezeGapsKernel((dlong)Ngather, o_rowStarts, o_newStarts, o_AL2, o_A);
+  
   platform.device.finish();
   double ticB = MPI_Wtime();
 
