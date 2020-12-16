@@ -464,7 +464,6 @@ typedef struct  {
 	
 	dlong cnt = 0;
 	int merged = 0;
-	int written = 0;
 	
 	for(int c=0;c<deg;++c){
 	  s_offsets[t][c] = 0;
@@ -501,7 +500,7 @@ typedef struct  {
 	  ++s_offsets[t][minc];
 	  
 	  // is this a duplicate of last written entry ?
-	  if(written && minEnt.col==lastEnt.col){
+	  if(cnt>0 && minEnt.col==lastEnt.col){
 	    lastEnt.val += minEnt.val;
 	    AL2[start*p_Np + cnt-1].val = lastEnt.val; // could delay this write I suppose
 	    ++merged;
@@ -512,7 +511,6 @@ typedef struct  {
 	    lastEnt = minEnt;
 	    ++merged;
 	    ++cnt;
-	    written = 1;
 	  }
 	}
 	

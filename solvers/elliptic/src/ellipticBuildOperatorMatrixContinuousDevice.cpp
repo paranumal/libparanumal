@@ -258,7 +258,7 @@ void elliptic_t::BuildOperatorMatrixContinuousDevice(occa::memory &o_A,
   assembleMatrixKernel(Ngather, o_rowStarts, o_A, o_AL2, o_newCounts);
   o_A.free();
   
-  dlong *newCounts = (dlong*) calloc(Ngather, sizeof(dlong));
+  dlong *newCounts = (dlong*) calloc(Ngather+1, sizeof(dlong));
   o_newCounts.copyTo(newCounts);
   dlong *newStarts = (dlong*) calloc(Ngather+1, sizeof(dlong));
   for(int n=0;n<Ngather;++n){
