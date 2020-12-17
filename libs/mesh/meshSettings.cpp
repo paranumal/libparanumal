@@ -73,6 +73,11 @@ meshSettings_t::meshSettings_t(MPI_Comm& _comm):
              "4",
              "Degree of polynomial finite element space",
              {"1","2","3","4","5","6","7","8","9","10","11","12","13","14","15"});
+
+  newSetting("BOX COORDINATE MAP FILE",
+             "NONE",
+             "Name of file containing box transformation kernel");
+
 }
 
 void meshSettings_t::report() {
@@ -101,6 +106,7 @@ void meshSettings_t::report() {
       reportSetting("BOX NY");
       reportSetting("BOX NZ");
       reportSetting("BOX BOUNDARY FLAG");
+      reportSetting("BOX COORDINATE MAP FILE");
     }
 
     reportSetting("POLYNOMIAL DEGREE");
