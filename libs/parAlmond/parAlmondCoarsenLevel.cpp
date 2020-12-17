@@ -31,12 +31,13 @@ namespace parAlmond {
 
 //create coarsened problem
 amgLevel *coarsenAmgLevel(amgLevel *level, dfloat *null,
-                          StrengthType strtype, AggType aggtype){
+                          StrengthType strtype, dfloat theta,
+                          AggType aggtype){
 
   int size;
   MPI_Comm_size(level->A->comm, &size);
 
-  strongGraph_t *C = strongGraph(level->A, strtype);
+  strongGraph_t *C = strongGraph(level->A, strtype, theta);
 
   hlong *FineToCoarse = (hlong *) malloc(level->A->Ncols*sizeof(hlong));
   hlong *globalAggStarts = (hlong *) calloc(size+1,sizeof(hlong));

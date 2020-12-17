@@ -29,20 +29,20 @@ SOFTWARE.
 
 namespace parAlmond {
 
-static strongGraph_t* RugeStubenStrength(parCSR *A);
-static strongGraph_t* SymmetricStrength(parCSR *A);
+static strongGraph_t* RugeStubenStrength(parCSR *A, dfloat theta);
+static strongGraph_t* SymmetricStrength(parCSR *A, dfloat theta);
 
-strongGraph_t* strongGraph(parCSR *A, StrengthType type){
+strongGraph_t* strongGraph(parCSR *A, StrengthType type, dfloat theta){
 
   if (type==RUGESTUBEN) {
-    return RugeStubenStrength(A);
+    return RugeStubenStrength(A, theta);
   } else { // (type==SYMMETRIC)
-    return SymmetricStrength(A);
+    return SymmetricStrength(A, theta);
   }
 
 }
 
-static strongGraph_t* RugeStubenStrength(parCSR *A) {
+static strongGraph_t* RugeStubenStrength(parCSR *A, dfloat theta) {
 
   const dlong N = A->Nrows;
   const dlong M = A->Ncols;
@@ -87,14 +87,14 @@ static strongGraph_t* RugeStubenStrength(parCSR *A) {
       const dlong col = A->diag.cols[jj];
       if (col==i) continue;
       const dfloat OD = -sign*A->diag.vals[jj];
-      if(OD > COARSENTHREASHOLD*maxOD[i]) strong_per_row++;
+      if(OD > theta*maxOD[i]) strong_per_row++;
     }
     //non-local entries
     Jstart = A->offd.rowStarts[i];
     Jend   = A->offd.rowStarts[i+1];
     for(dlong jj= Jstart; jj<Jend; jj++){
       const dfloat OD = -sign*A->offd.vals[jj];
-      if(OD > COARSENTHREASHOLD*maxOD[i]) strong_per_row++;
+      if(OD > theta*maxOD[i]) strong_per_row++;
     }
     C->rowStarts[i+1] = strong_per_row;
   }
@@ -125,7 +125,7 @@ static strongGraph_t* RugeStubenStrength(parCSR *A) {
       }
 
       const dfloat OD = -sign*A->diag.vals[jj];
-      if(OD > COARSENTHREASHOLD*maxOD[i])
+      if(OD > theta*maxOD[i])
         C->cols[counter++] = col;
     }
     //nonlocal entries
@@ -134,7 +134,7 @@ static strongGraph_t* RugeStubenStrength(parCSR *A) {
     for(dlong jj = Jstart; jj<Jend; jj++){
       const dlong col = A->offd.cols[jj];
       const dfloat OD = -sign*A->offd.vals[jj];
-      if(OD > COARSENTHREASHOLD*maxOD[i])
+      if(OD > theta*maxOD[i])
         C->cols[counter++] = col;
     }
   }
@@ -143,7 +143,7 @@ static strongGraph_t* RugeStubenStrength(parCSR *A) {
   return C;
 }
 
-static strongGraph_t* SymmetricStrength(parCSR *A) {
+static strongGraph_t* SymmetricStrength(parCSR *A, dfloat theta) {
 
   const dlong N = A->Nrows;
   const dlong M = A->Ncols;
@@ -169,7 +169,7 @@ static strongGraph_t* SymmetricStrength(parCSR *A) {
 
       const dfloat Ajj = fabs(diagA[col]);
 
-      if(fabs(A->diag.vals[jj]) > COARSENTHREASHOLD*(sqrt(Aii*Ajj)))
+      if(fabs(A->diag.vals[jj]) > theta*(sqrt(Aii*Ajj)))
         strong_per_row++;
     }
     //non-local entries
@@ -179,7 +179,7 @@ static strongGraph_t* SymmetricStrength(parCSR *A) {
       const dlong col = A->offd.cols[jj];
       const dfloat Ajj = fabs(diagA[col]);
 
-      if(fabs(A->offd.vals[jj]) > COARSENTHREASHOLD*(sqrt(Aii*Ajj)))
+      if(fabs(A->offd.vals[jj]) > theta*(sqrt(Aii*Ajj)))
         strong_per_row++;
     }
 
@@ -213,7 +213,7 @@ static strongGraph_t* SymmetricStrength(parCSR *A) {
 
       const dfloat Ajj = fabs(diagA[col]);
 
-      if(fabs(A->diag.vals[jj]) > COARSENTHREASHOLD*(sqrt(Aii*Ajj)))
+      if(fabs(A->diag.vals[jj]) > theta*(sqrt(Aii*Ajj)))
         C->cols[counter++] = col;
     }
     //non-local entries
@@ -224,7 +224,7 @@ static strongGraph_t* SymmetricStrength(parCSR *A) {
 
       const dfloat Ajj = fabs(diagA[col]);
 
-      if(fabs(A->offd.vals[jj]) > COARSENTHREASHOLD*(sqrt(Aii*Ajj)))
+      if(fabs(A->offd.vals[jj]) > theta*(sqrt(Aii*Ajj)))
         C->cols[counter++] = col;
     }
   }

@@ -67,15 +67,31 @@ void parAlmond_t::AMGSetup(parCOO& cooA,
     done = true;
   }
 
+  //TODO: make the coarsen threasholds user-provided inputs
+  // For now, let default to some sensible threasholds
+  dfloat theta=0.0;
+  if (multigrid->strtype==RUGESTUBEN) {
+    theta=0.5; //default for 3D problems
+    //See: A GPU accelerated aggregation algebraic multigrid method, R. Gandham, K. Esler, Y. Zhang.
+  } else { // (type==SYMMETRIC)
+    theta=0.08;
+    //See: Algebraic Multigrid On Unstructured Meshes, P Vanek, J. Mandel, M. Brezina.
+  }
+
   while(!done){
     L->setupSmoother();
 
     // Create coarse level via AMG. Coarsen null vector
     amgLevel* Lcoarse = coarsenAmgLevel(L, null,
-                                        multigrid->strtype,
+                                        multigrid->strtype, theta,
                                         multigrid->aggtype);
     multigrid->AddLevel(L);
     L->syncToDevice();
+
+    // Increase coarsening rate as we add levels.
+    //See: Algebraic Multigrid On Unstructured Meshes, P Vanek, J. Mandel, M. Brezina.
+    if (multigrid->strtype==SYMMETRIC)
+      theta=theta/2;
 
     hlong globalCoarseSize = Lcoarse->A->globalRowStarts[size];
 

@@ -32,7 +32,7 @@ int Nrefs = 0;
 
 //NC: Hard code these for now. Should be sufficient for GPU devices, but needs attention for CPU
 const int blockSize = 256;
-int NonzerosPerBlock = 1024; //should be a multiple of blockSize for good unrolling
+int NonzerosPerBlock = 2048; //should be a multiple of blockSize for good unrolling
 
 occa::kernel SpMVcsrKernel1;
 occa::kernel SpMVcsrKernel2;

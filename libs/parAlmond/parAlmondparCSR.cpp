@@ -526,7 +526,7 @@ void parCSR::syncToDevice() {
         if (rowSize > parAlmond::NonzerosPerBlock) {
           //this row is pathalogically big. We can't currently run this
           stringstream ss;
-          ss << "Multiplicity of row: " << i << "in parAlmond::parCSR setup is too large.";
+          ss << "Multiplicity of row: " << i << " is " << rowSize << " in parAlmond::parCSR setup and is too large.";
           LIBP_ABORT(ss.str())
         }
 
@@ -570,7 +570,7 @@ void parCSR::syncToDevice() {
         if (rowSize > parAlmond::NonzerosPerBlock) {
           //this row is pathalogically big. We can't currently run this
           stringstream ss;
-          ss << "Multiplicity of row: " << i << "in parAlmond::parCSR setup is too large.";
+          ss << "Multiplicity of row: " << i << " is " << rowSize << " in parAlmond::parCSR setup and is too large.";
           LIBP_ABORT(ss.str())
         }
 

@@ -54,9 +54,10 @@ public:
 };
 
 amgLevel *coarsenAmgLevel(amgLevel *level, dfloat *null,
-                          StrengthType strtype, AggType aggtype);
+                          StrengthType strtype, dfloat theta,
+                          AggType aggtype);
 
-strongGraph_t* strongGraph(parCSR *A, StrengthType type);
+strongGraph_t* strongGraph(parCSR *A, StrengthType type, dfloat theta);
 
 void formAggregates(parCSR *A, strongGraph_t *C,
                      hlong* FineToCoarse,
