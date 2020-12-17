@@ -56,6 +56,7 @@ int main(int argc, char **argv){
   // set up mesh
   mesh_t& mesh = mesh_t::Setup(platform, meshSettings, comm);
 
+  
   dfloat lambda = 0.0;
   ellipticSettings.getSetting("LAMBDA", lambda);
 
@@ -70,6 +71,20 @@ int main(int argc, char **argv){
   // run
   elliptic.Run();
 
+  // plot mesh
+  dfloat *q = (dfloat*) calloc(elliptic.Nfields*mesh.Np*mesh.Nelements, sizeof(dfloat));
+  for(dlong e=0;e<mesh.Nelements;++e){
+    for(dlong n=0;n<mesh.Np;++n){
+      dlong id = e*mesh.Np*elliptic.Nfields + n;
+      q[id] = e%5;
+    }
+  }
+
+  char fileName[BUFSIZ];
+  sprintf(fileName, "geometry%05d.vtu", mesh.rank);
+  elliptic.PlotFields(q, fileName);
+
+  
   // close down MPI
   MPI_Finalize();
   return LIBP_SUCCESS;
