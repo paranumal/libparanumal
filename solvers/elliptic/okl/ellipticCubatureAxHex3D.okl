@@ -45,7 +45,8 @@ SOFTWARE.
 #define p_cubPad 0
 #define p_gllPad 0
 
-@kernel void ellipticCubaturePartialAxHex3D_v0(const dlong Nelements,
+#if 0
+@kernel void ellipticPartialCubatureAxHex3D_v0(const dlong Nelements,
 					       @restrict const dlong  * elementList,
 					       @restrict const dfloat * cubggeo,
 					       @restrict const dfloat * cubD,
@@ -383,9 +384,9 @@ SOFTWARE.
     }//b
   }//e
 }//kernel
+#endif
 
-
-@kernel void ellipticCubaturePartialAxHex3D(const dlong Nelements,
+@kernel void ellipticPartialCubatureAxHex3D(const dlong Nelements,
 					    @restrict const dlong  * elementList,
 					    @restrict const dfloat * cubggeo,
 					    @restrict const dfloat * cubD,
