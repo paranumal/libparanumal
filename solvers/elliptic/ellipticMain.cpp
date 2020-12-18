@@ -81,7 +81,7 @@ int main(int argc, char **argv){
   for(dlong e=0;e<mesh.Nelements;++e){
     dlong ex = e%nx;
     dlong ey = (e/nx)%ny;
-    dlong ez = (e/(nx*ny));
+    dlong ez = (mesh.dim==3) ? (e/(nx*ny)):1;
     dlong flag = ((ex+ey+ez)%2)==0;
     //    printf("e=%d,flag=%d\n", e, flag);
     for(dlong n=0;n<mesh.Np;++n){

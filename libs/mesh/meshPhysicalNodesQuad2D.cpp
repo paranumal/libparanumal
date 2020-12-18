@@ -71,6 +71,44 @@ void meshQuad2D::PhysicalNodes(){
     }
   }
 
+  /* */
+  string mapFileName;
+  settings.getSetting("BOX COORDINATE MAP FILE", mapFileName);
+
+  if(mapFileName != "NONE"){
+    {
+      dfloat xmin = 1e9, xmax = -1e9;
+      dfloat ymin = 1e9, ymax = -1e9;
+
+      for(dlong n=0;n<Np*Nelements;++n){
+	xmin = mymin(xmin, x[n]);
+	xmax = mymax(xmax, x[n]);
+
+	ymin = mymin(ymin, y[n]);
+	ymax = mymax(ymax, y[n]);
+
+      }
+    
+      printf("mapping  physical nodes (from [%g,%g]x[%g,%g])\n",
+	     xmin, xmax, ymin, ymax);
+    }    
+    dfloat epsy = .3;
+    occa::properties kernelInfo = props;
+
+    // build kernel
+    occa::kernel coordMapKernel = platform.buildKernel(mapFileName, "coordMapKernel", kernelInfo);
+
+    occa::memory o_tmpx, o_tmpy, o_tmpz;
+    o_tmpx = platform.device.malloc(Np*Nelements*sizeof(dfloat), x);
+    o_tmpy = platform.device.malloc(Np*Nelements*sizeof(dfloat), y);
+    
+    coordMapKernel(Np*Nelements, epsy, o_tmpx, o_tmpy);
+    
+    o_tmpx.copyTo(x);
+    o_tmpy.copyTo(y);
+  }
+
+  
   halo->Exchange(x, Np, ogs_dfloat);
   halo->Exchange(y, Np, ogs_dfloat);
 }

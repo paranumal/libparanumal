@@ -1,0 +1,82 @@
+
+// 1D transformation at the right boundary.
+dfloat right(const dfloat eps, const dfloat x){
+   return (x <= 0.5) ? (2-eps) * x : 1 + eps*(x-1);
+}
+
+// 1D transformation at the left boundary
+dfloat left(const dfloat eps, const dfloat x){
+   return 1-right(eps,1-x);
+}
+
+// Transition from a value of "a" for x=0, to a value of "b" for x=1.  Optionally
+// smooth -- see the commented versions at the end.
+dfloat step(const dfloat a, const dfloat b, dfloat x)
+{
+   if (x <= 0) return a;
+   if (x >= 1) return b;
+   return a + (b-a) * (x);
+   //return a + (b-a) * (x*x*(3-2*x));
+   //  return a + (b-a) * (x*x*x*(x*(6*x-15)+10));
+}
+
+// 3D version of a generalized Kershaw mesh transformation, see D. Kershaw,
+// "Differencing of the diffusion equation in Lagrangian hydrodynamic codes",
+// JCP, 39:375–395, 1981.
+//
+// The input mesh should be Cartesian nx x ny x nz with nx divisible by 6 and
+// ny, nz divisible by 2.
+//
+// The eps parameters are in (0, 1]. Uniform mesh is recovered for epsy=1
+void coordMap(const dfloat epsy, 
+             const dfloat x, const dfloat y, 
+             dfloat *X, dfloat *Y)
+{
+   *X = x;
+
+   int layer = x*6.0;
+   dfloat lambda = (x-layer/6.0)*6;
+
+   // The x-range is split in 6 layers going from left-to-left, left-to-right,
+   // right-to-left (2 layers), left-to-right and right-to-right yz-faces.
+   switch (layer)
+   {
+   case 0:
+      *Y = left(epsy, y);
+      break;
+   case 1:
+   case 4:
+      *Y = step(left(epsy, y), right(epsy, y), lambda);
+      break;
+   case 2:
+      *Y = step(right(epsy, y), left(epsy, y), lambda/2);
+      break;
+   case 3:
+      *Y = step(right(epsy, y), left(epsy, y), (1+lambda)/2);
+      break;
+   default:
+      *Y = right(epsy, y);
+      break;
+   }
+}
+
+@kernel void coordMapKernel(dlong N, dfloat param1, dfloat *x, dfloat *y){
+
+  for(dlong n=0;n<N;++n;@tile(256, @outer(0), @inner(0))){
+    dfloat xn = x[n];
+    dfloat yn = y[n];
+
+    dfloat Xn, Yn;
+
+#if 1
+    // assume bi-unit box
+    coordMap(param1, xn+.5, yn+.5, &Xn, &Yn);
+
+    x[n] = Xn-.5;
+    y[n] = Yn-.5;
+#else
+    x[n] = xn;
+    y[n] = yn;
+#endif	
+  }
+}
