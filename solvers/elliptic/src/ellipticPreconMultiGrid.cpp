@@ -61,7 +61,11 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   MGLevel* prevLevel=nullptr;
   MGLevel* currLevel=nullptr;
 
-  while(Nc>1) {
+  int minN = 1; // degree of coarsest mesh
+  
+  printf("allNeumannPenalty=%g\n", elliptic.allNeumannPenalty);
+  
+  while(Nc>minN) {
     //build mesh and elliptic objects for this degree
     mesh_t &meshF = mesh.SetupNewDegree(Nf);
     elliptic_t &ellipticF = elliptic.SetupNewDegree(meshF);
@@ -116,7 +120,7 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   }
 
   //build matrix at degree 1
-  mesh_t &meshF = mesh.SetupNewDegree(1);
+  mesh_t &meshF = mesh.SetupNewDegree(minN);
   elliptic_t &ellipticF = elliptic.SetupNewDegree(meshF);
 
   //build full A matrix and pass to parAlmond
@@ -139,7 +143,7 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   free(null);
 
   if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
-    if (mesh.N>1) {
+    if (mesh.N>minN) {
       //tell the last pMG level to gather after coarsening
       prevLevel->gatherLevel = true;
       prevLevel->ogsMasked = ellipticF.ogsMasked;
