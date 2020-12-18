@@ -75,7 +75,7 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
 
     //find the degree of the next level
     if (settings.compareSetting("MULTIGRID COARSENING","ALLDEGREES")) {
-      Nc = Nf-1;
+      Nc = mymax(1,Nf-1);
     } else if (settings.compareSetting("MULTIGRID COARSENING","HALFDEGREES")) {
       Nc = mymax(1,(Nf+1)/2);
     } else { //default "HALFDOFS"
@@ -105,8 +105,6 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
     case HEXAHEDRA:
       NpCoarse = (Nc+1)*(Nc+1)*(Nc+1); break;
     }
-
-
     
     //make a multigrid level
     currLevel = new MGLevel(ellipticF, Nc, NpCoarse);

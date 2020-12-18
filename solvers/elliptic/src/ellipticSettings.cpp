@@ -52,6 +52,12 @@ void ellipticAddRunSettings(settings_t& settings) {
 
   settings.newSetting("OUTPUT FILE NAME",
                       "elliptic");
+
+  settings.newSetting("ELLIPTIC INTEGRATION",
+                      "GLL",
+		      "Choice of integration rule type for elliptic integration",
+		      {"GLL", "CUBATURE"}
+		      );
 }
 
 void ellipticAddSettings(settings_t& settings,
@@ -110,7 +116,8 @@ void ellipticSettings_t::report() {
     reportSetting("DISCRETIZATION");
     reportSetting("LINEAR SOLVER");
     reportSetting("PRECONDITIONER");
-
+    reportSetting("ELLIPTIC INTEGRATION");
+    
     if (compareSetting("PRECONDITIONER","MULTIGRID")) {
       reportSetting("MULTIGRID COARSENING");
       reportSetting("MULTIGRID SMOOTHER");

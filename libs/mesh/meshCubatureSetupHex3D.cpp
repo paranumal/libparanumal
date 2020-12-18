@@ -368,6 +368,11 @@ void meshHex3D::CubatureSetup(){
     platform.malloc(Nelements*Nfaces*cubNq*cubNq*Nsgeo*sizeof(dfloat),
         cubsgeo);
 
+  o_cubggeo =
+    platform.malloc(Nelements*Nggeo*cubNp*sizeof(dfloat),
+        cubggeo);
+
+
   free(xre); free(xse); free(xte);
   free(yre); free(yse); free(yte);
   free(zre); free(zse); free(zte);

@@ -129,6 +129,16 @@ elliptic_t& elliptic_t::Setup(platform_t& platform, mesh_t& mesh,
     elliptic->partialAxKernel = platform.buildKernel(fileName, kernelName,
                                      kernelInfo);
 
+
+    if(mesh.elementType==HEXAHEDRA){
+      sprintf(fileName,  DELLIPTIC "/okl/ellipticCubatureAx%s.okl", suffix);
+      sprintf(kernelName, "ellipticPartialCubatureAx%s", suffix);
+
+      elliptic->partialCubatureAxKernel = platform.buildKernel(fileName, kernelName,
+							       kernelInfo);
+    }
+
+    
   } else if (settings.compareSetting("DISCRETIZATION","IPDG")) {
     int Nmax = mymax(mesh.Np, mesh.Nfaces*mesh.Nfp);
     kernelInfo["defines/" "p_Nmax"]= Nmax;

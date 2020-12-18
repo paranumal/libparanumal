@@ -148,7 +148,7 @@ void meshHex3D::PhysicalNodes(){
     o_tmpx.copyTo(x);
     o_tmpy.copyTo(y);
     o_tmpz.copyTo(z);
-
+    
   }
   
   halo->Exchange(x, Np, ogs_dfloat);

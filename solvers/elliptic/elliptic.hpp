@@ -94,6 +94,7 @@ public:
 
   occa::kernel maskKernel;
   occa::kernel partialAxKernel;
+  occa::kernel partialCubatureAxKernel;
   occa::kernel partialGradientKernel;
   occa::kernel partialIpdgKernel;
 

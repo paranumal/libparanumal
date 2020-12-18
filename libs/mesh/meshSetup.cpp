@@ -114,5 +114,11 @@ mesh_t& mesh_t::Setup(platform_t& platform, meshSettings_t& settings,
 
   mesh->OccaSetup();
 
+  switch(elementType){
+  case HEXAHEDRA:
+    mesh->CubatureSetup();
+  }
+
+  
   return *mesh;
 }

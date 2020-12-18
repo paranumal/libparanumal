@@ -71,12 +71,22 @@ int main(int argc, char **argv){
   // run
   elliptic.Run();
 
+  dlong nx, ny, nz;
+  mesh.settings.getSetting("BOX NX", nx);
+  mesh.settings.getSetting("BOX NY", ny);
+  mesh.settings.getSetting("BOX NZ", nz);
+  
   // plot mesh
   dfloat *q = (dfloat*) calloc(elliptic.Nfields*mesh.Np*mesh.Nelements, sizeof(dfloat));
   for(dlong e=0;e<mesh.Nelements;++e){
+    dlong ex = e%nx;
+    dlong ey = (e/nx)%ny;
+    dlong ez = (e/(nx*ny));
+    dlong flag = ((ex+ey+ez)%2)==0;
+    //    printf("e=%d,flag=%d\n", e, flag);
     for(dlong n=0;n<mesh.Np;++n){
       dlong id = e*mesh.Np*elliptic.Nfields + n;
-      q[id] = e%5;
+      q[id] = flag;
     }
   }
 

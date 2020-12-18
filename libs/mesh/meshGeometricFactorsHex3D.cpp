@@ -40,7 +40,7 @@ void meshHex3D::GeometricFactors(){
 
   ggeo = (dfloat*) calloc(Nelements*Nggeo*Np, sizeof(dfloat));
 
-  // dfloat minJ = 1e9, maxJ = -1e9, maxSkew = 0;
+  dfloat minJ = 1e9, maxJ = -1e9, maxSkew = 0;
 
   for(dlong e=0;e<Nelements;++e){ /* for each element */
 
@@ -74,8 +74,8 @@ void meshHex3D::GeometricFactors(){
           // dfloat hr = sqrt(xr*xr+yr*yr+zr*zr);
           // dfloat hs = sqrt(xs*xs+ys*ys+zs*zs);
           // dfloat ht = sqrt(xt*xt+yt*yt+zt*zt);
-          // minJ = mymin(J, minJ);
-          // maxJ = mymax(J, maxJ);
+           minJ = mymin(J, minJ);
+	   maxJ = mymax(J, maxJ);
           // maxSkew = mymax(maxSkew, hr/hs);
           // maxSkew = mymax(maxSkew, hr/ht);
           // maxSkew = mymax(maxSkew, hs/hr);
@@ -125,7 +125,8 @@ void meshHex3D::GeometricFactors(){
     }
   }
 
-  #if 0
+  #if 1
+
     dfloat globalMinJ, globalMaxJ, globalMaxSkew;
 
     MPI_Reduce(&minJ, &globalMinJ, 1, MPI_DFLOAT, MPI_MIN, 0, comm);
