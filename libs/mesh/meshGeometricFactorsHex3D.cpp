@@ -113,12 +113,14 @@ void meshHex3D::GeometricFactors(){
           vgeo[Nvgeo*Np*e + n + Np*IJWID] = 1./JW;
 
           /* store second order geometric factors */
+#if 1
           ggeo[Nggeo*Np*e + n + Np*G00ID] = JW*(rx*rx + ry*ry + rz*rz);
           ggeo[Nggeo*Np*e + n + Np*G01ID] = JW*(rx*sx + ry*sy + rz*sz);
           ggeo[Nggeo*Np*e + n + Np*G02ID] = JW*(rx*tx + ry*ty + rz*tz);
           ggeo[Nggeo*Np*e + n + Np*G11ID] = JW*(sx*sx + sy*sy + sz*sz);
           ggeo[Nggeo*Np*e + n + Np*G12ID] = JW*(sx*tx + sy*ty + sz*tz);
           ggeo[Nggeo*Np*e + n + Np*G22ID] = JW*(tx*tx + ty*ty + tz*tz);
+#endif
           ggeo[Nggeo*Np*e + n + Np*GWJID] = JW;
         }
       }

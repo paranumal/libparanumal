@@ -27,6 +27,8 @@ SOFTWARE.
 #include "ellipticPrecon.hpp"
 
 
+
+
 // Matrix-free p-Multigrid levels followed by AMG
 void MultiGridPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
 
@@ -49,6 +51,54 @@ void MultiGridPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
   if(elliptic.allNeumann) elliptic.ZeroMean(o_Mr);
 }
 
+void interpolateGeometricFactors(mesh_t &meshIn, mesh_t &meshOut){
+
+  if(meshOut.N<meshIn.N && meshOut.elementType == HEXAHEDRA){
+    
+    printf("3) interpolating ggeo from N=%d to N=%d\n", meshIn.N, meshOut.N);
+    // interpolate ggeo to new degree
+
+    dfloat *Idown = (dfloat*) calloc(meshIn.Np*meshOut.Np, sizeof(dfloat));
+    dfloat *Iup   = (dfloat*) calloc(meshIn.Np*meshOut.Np, sizeof(dfloat));
+    meshIn.InterpolationMatrixHex3D(meshIn.N,
+				    meshIn.Np, meshIn.r, meshIn.s, meshIn.t,
+				    meshOut.Np, meshOut.r, meshOut.s, meshOut.t,
+				    Idown);
+
+    meshIn.InterpolationMatrixHex3D(meshOut.N,
+				    meshOut.Np, meshOut.r, meshOut.s, meshOut.t,
+				    meshIn.Np, meshIn.r, meshIn.s, meshIn.t,
+				    Iup);
+    
+    dfloat ggeoF[meshOut.Nggeo];
+    for(dlong e=0;e<meshOut.Nelements;++e){
+      for(dlong n=0;n<meshOut.Np;++n){
+	
+	for(dlong g=0;g<meshOut.Nggeo;++g){
+	  ggeoF[g] = 0;
+	}
+	for(dlong m=0;m<meshIn.Np;++m){
+	  //	  dfloat Inm = Idown[n*meshIn.Np+m];
+	  dfloat Inm = Iup[m*meshOut.Np+n];
+	  for(dlong g=0;g<meshOut.Nggeo;++g){
+	    dlong id = e*meshIn.Np*meshIn.Nggeo + m + g*meshIn.Np;
+	    ggeoF[g] += Inm*meshIn.ggeo[id];
+	  }
+	}
+	
+	for(dlong g=0;g<meshOut.Nggeo;++g){
+	  dlong id = e*meshOut.Np*meshIn.Nggeo + n + g*meshOut.Np;
+	  meshOut.ggeo[id] = ggeoF[g];
+	}
+      }
+    }
+
+    free(Iup);
+    free(Idown);
+  }
+}
+
+
 MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   elliptic(_elliptic), mesh(_elliptic.mesh), settings(_elliptic.settings),
   parAlmond(elliptic.platform, settings, mesh.comm) {
@@ -68,6 +118,8 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   while(Nc>minN) {
     //build mesh and elliptic objects for this degree
     mesh_t &meshF = mesh.SetupNewDegree(Nf);
+    meshF.CubatureSetup(mesh.N, "GLL");
+    
     elliptic_t &ellipticF = elliptic.SetupNewDegree(meshF);
 
     //share masking data with previous MG level
@@ -118,9 +170,11 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
     NpFine = NpCoarse;
     prevLevel = currLevel;
   }
-
+    
   //build matrix at degree 1
-  mesh_t &meshF = mesh.SetupNewDegree(minN);
+  mesh_t &meshF = mesh.SetupNewDegree(minN);  
+  meshF.CubatureSetup(mesh.N, "GLL");
+    
   elliptic_t &ellipticF = elliptic.SetupNewDegree(meshF);
 
   //build full A matrix and pass to parAlmond

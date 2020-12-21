@@ -1010,6 +1010,25 @@ void elliptic_t::BuildOperatorDiagonalIpdgHex3D(dfloat *A) {
 void elliptic_t::BuildOperatorDiagonalContinuousHex3D(dfloat *A) {
 
   for(dlong eM=0;eM<mesh.Nelements;++eM){
+
+    dfloat maxGrr = 0, maxGrs = 0, maxGrt = 0;
+    dfloat maxGss = 0, maxGst = 0;
+    dfloat maxGtt = 0;
+    for (int nz=0;nz<mesh.Nq;nz++) {
+    for (int ny=0;ny<mesh.Nq;ny++) {
+    for (int nx=0;nx<mesh.Nq;nx++) {
+      int id = nx+ny*mesh.Nq+nz*mesh.Nq*mesh.Nq;
+      dlong base = eM*mesh.Np*mesh.Nggeo;
+      dfloat Grs = mesh.ggeo[base + id + G01ID*mesh.Np];
+      dfloat Grt = mesh.ggeo[base + id + G02ID*mesh.Np];
+      dfloat Gst = mesh.ggeo[base + id + G12ID*mesh.Np];
+      maxGrs = mymax(maxGrs, fabs(Grs));
+      maxGrt = mymax(maxGrt, fabs(Grt));
+      maxGst = mymax(maxGst, fabs(Gst));
+    }
+    }
+    }
+
     for (int nz=0;nz<mesh.Nq;nz++) {
     for (int ny=0;ny<mesh.Nq;ny++) {
     for (int nx=0;nx<mesh.Nq;nx++) {
@@ -1021,16 +1040,42 @@ void elliptic_t::BuildOperatorDiagonalContinuousHex3D(dfloat *A) {
         dlong base = eM*mesh.Np*mesh.Nggeo;
 
 
-        dfloat Grs = mesh.ggeo[base + id + G01ID*mesh.Np];
+#if 1
+	//    dfloat Grs = mesh.ggeo[base + id + G01ID*mesh.Np];
+	dfloat Grs = 0;
+	for (int k=0;k<mesh.Nq;k++) {
+	  int id1 = nx+ny*mesh.Nq+k*mesh.Nq*mesh.Nq;
+	  dfloat Grs1 = mesh.ggeo[base + id1 + G01ID*mesh.Np];
+	  if(fabs(Grs1)>Grs)
+	    Grs = Grs1;
+	}
         A[eM*mesh.Np+idn] += 2*Grs*mesh.D[nx+nx*mesh.Nq]*mesh.D[ny+ny*mesh.Nq];
 
-        dfloat Grt = mesh.ggeo[base + id + G02ID*mesh.Np];
+	//        dfloat Grt = mesh.ggeo[base + id + G02ID*mesh.Np];
+	dfloat Grt = 0;
+	for (int k=0;k<mesh.Nq;k++) {
+	  int id1 = nx+k*mesh.Nq+nz*mesh.Nq*mesh.Nq;
+	  dfloat Grt1 = mesh.ggeo[base + id1 + G02ID*mesh.Np];
+	  if(fabs(Grt1)>Grt)
+	    Grt = Grt1;
+	}
+	
         A[eM*mesh.Np+idn] += 2*Grt*mesh.D[nx+nx*mesh.Nq]*mesh.D[nz+nz*mesh.Nq];
 
-        dfloat Gst = mesh.ggeo[base + id + G12ID*mesh.Np];
+	//        dfloat Gst = mesh.ggeo[base + id + G12ID*mesh.Np];
+	dfloat Gst = 0;
+	for (int k=0;k<mesh.Nq;k++) {
+	  int id1 = k+ny*mesh.Nq+nz*mesh.Nq*mesh.Nq;
+	  dfloat Gst1 = mesh.ggeo[base + id1 + G12ID*mesh.Np];
+	  if(fabs(Gst1)>Gst)
+	    Gst = Gst1;
+	}
+	
         A[eM*mesh.Np+idn] += 2*Gst*mesh.D[ny+ny*mesh.Nq]*mesh.D[nz+nz*mesh.Nq];
+#endif
 
-        for (int k=0;k<mesh.Nq;k++) {
+
+	for (int k=0;k<mesh.Nq;k++) {
           int iid = k+ny*mesh.Nq+nz*mesh.Nq*mesh.Nq;
           dfloat Grr = mesh.ggeo[base + iid + G00ID*mesh.Np];
           A[eM*mesh.Np+idn] += Grr*mesh.D[nx+k*mesh.Nq]*mesh.D[nx+k*mesh.Nq];

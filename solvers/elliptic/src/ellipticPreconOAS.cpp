@@ -35,6 +35,8 @@ void OASPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
   dlong Ntotal = mesh.Np*mesh.Nelements;
 
   if (mesh.N>1) {
+    printf("OAS: mesh.N=%d\n", mesh.N);
+    
     //Copy to patch buffer and queue to the ring exchange
     o_rPatch.copyFrom(o_r, Ntotal*sizeof(dfloat));
     mesh.ringHalo->Exchange(o_rPatch, mesh.Np, ogs_dfloat);

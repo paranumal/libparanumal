@@ -27,10 +27,18 @@ SOFTWARE.
 #include "mesh.hpp"
 #include "mesh/mesh3D.hpp"
 
+
 void meshTet3D::CubatureSetup(){
 
+  CubatureSetup(N, " ");
+  
+}
+
+void meshTet3D::CubatureSetup(int _cubN, const char *cubatureType){
+
   /* Cubature data */
-  cubN = 2*N; //cubature order
+  //  cubN = 2*N; //cubature order
+  cubN = 2*_cubN; //cubature order
   CubatureNodesTet3D(cubN, &cubNp, &cubr, &cubs, &cubt, &cubw);
 
   cubInterp = (dfloat *) malloc(Np*cubNp*sizeof(dfloat));

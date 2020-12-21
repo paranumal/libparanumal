@@ -62,6 +62,8 @@ public:
   void SurfaceGeometricFactors();
   void OccaSetup();
 
+  void CubatureSetup(int _cubN, const char *cubatureType);
+  
   void CubatureSetup();
   void CubatureNodes();
 
@@ -80,6 +82,8 @@ public:
   void SurfaceGeometricFactors();
   void OccaSetup();
 
+  void CubatureSetup(int _cubN, const char *cubatureType);
+  
   void CubatureSetup();
   void CubatureNodes();
 

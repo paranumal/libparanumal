@@ -442,7 +442,7 @@ dfloat MGLevel::maxEigSmoothAx(){
   for(int i=0; i<=k; i++) o_V[i].free();
   delete[] o_V;
 
-  // if((mesh.rank==0)) printf("weight = %g \n", rho);
+  if((mesh.rank==0)) printf("RHO WEIGHT = %g \n", rho);
 
   return rho;
 }
