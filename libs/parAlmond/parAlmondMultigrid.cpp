@@ -80,7 +80,9 @@ multigrid_t::multigrid_t(platform_t& _platform, settings_t& _settings,
   coarsetype=COARSEEXACT;
 
   if (coarsetype==COARSEEXACT) {
-    coarseSolver = new exactSolver_t(_platform, _settings);
+    coarseSolver = new exactSolver_t(_platform, _settings, _comm);
+  } else {
+    coarseSolver = new oasSolver_t(_platform, _settings, _comm);
   }
 }
 
@@ -128,7 +130,7 @@ void multigrid_t::AddLevel(multigridLevel* level){
   if (numLevels>0) {
     dfloat *dummy = (dfloat *) calloc(level->Ncols,sizeof(dfloat));
     o_x[numLevels]   = platform.malloc(level->Ncols*sizeof(dfloat),dummy);
-    o_rhs[numLevels] = platform.malloc(level->Nrows*sizeof(dfloat),dummy);
+    o_rhs[numLevels] = platform.malloc(level->Ncols*sizeof(dfloat),dummy);
     free(dummy);
   }
 

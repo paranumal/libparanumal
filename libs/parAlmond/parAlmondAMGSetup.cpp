@@ -49,12 +49,19 @@ void parAlmond_t::AMGSetup(parCOO& cooA,
   dfloat *null = (dfloat *) malloc(A->Nrows*sizeof(dfloat));
   memcpy(null, nullVector, A->Nrows*sizeof(dfloat));
 
-  // find target Nrows at coarsest level
+  // find target N at coarsest level
   const int gCoarseSize = multigrid->coarseSolver->getTargetSize();
 
   amgLevel *L = new amgLevel(A, settings);
 
-  hlong globalSize = L->A->globalRowStarts[size];
+  hlong globalSize;
+  if (multigrid->coarsetype==COARSEEXACT) {
+    globalSize = L->A->globalRowStarts[size];
+  } else { //COARSEOAS
+    //OAS cares about Ncols for size
+    hlong localSize = A->Ncols;
+    MPI_Allreduce(&localSize,&globalSize,1,MPI_HLONG,MPI_SUM,A->comm);
+  }
 
   //if the system if already small, dont create MG levels
   bool done = false;
@@ -93,7 +100,14 @@ void parAlmond_t::AMGSetup(parCOO& cooA,
     if (multigrid->strtype==SYMMETRIC)
       theta=theta/2;
 
-    hlong globalCoarseSize = Lcoarse->A->globalRowStarts[size];
+    hlong globalCoarseSize;
+    if (multigrid->coarsetype==COARSEEXACT) {
+      globalCoarseSize = Lcoarse->A->globalRowStarts[size];;
+    } else { //COARSEOAS
+      //OAS cares about Ncols for size
+      hlong localSize = Lcoarse->A->Ncols;
+      MPI_Allreduce(&localSize,&globalCoarseSize,1,MPI_HLONG,MPI_SUM,Lcoarse->A->comm);
+    }
 
     if(globalCoarseSize <= gCoarseSize || globalSize < 2*globalCoarseSize){
       if (globalSize < 2*globalCoarseSize && rank==0) {

@@ -104,8 +104,8 @@ void exactSolver_t::setup(parCSR *_A, bool nullSpace,
 
   int sendNNZ = (int) (A->diag.nnz+A->offd.nnz);
 
-  if((rank==0)&&(settings.compareSetting("VERBOSE","TRUE")))
-    {printf("Setting up coarse solver...");fflush(stdout);}
+  // if((rank==0)&&(settings.compareSetting("VERBOSE","TRUE")))
+  //   {printf("Setting up coarse solver...");fflush(stdout);}
 
   parCOO::nonZero_t *sendNonZeros = (parCOO::nonZero_t *) calloc(sendNNZ, sizeof(parCOO::nonZero_t));
 
@@ -234,7 +234,7 @@ void exactSolver_t::setup(parCSR *_A, bool nullSpace,
 
   o_offdRhs = platform.malloc(offdTotal*sizeof(dfloat));
 
-  if((rank==0)&&(settings.compareSetting("VERBOSE","TRUE"))) printf("done.\n");
+  // if((rank==0)&&(settings.compareSetting("VERBOSE","TRUE"))) printf("done.\n");
 }
 
 void exactSolver_t::syncToDevice() {}
