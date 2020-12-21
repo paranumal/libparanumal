@@ -276,9 +276,9 @@ void MGLevel::Report() {
   //This setup can be called by many subcommunicators, so only
   // print on the global root.
   if (mesh.rank==0){
-    printf(     "|    pMG     |    %10d  |   Matrix-free   |   %s|\n",minNrows, smootherString);
-    printf("     |            |    %10d  |     Degree %2d   |                   |\n", maxNrows, mesh.N);
-    printf("     |            |    %10d  |                 |                   |\n", (int) avgNrows);
+    printf(      "|    pMG     |    %10lld  |    %10d  |   Matrix-free   |   %s|\n", (long long int)totalNrows, minNrows, smootherString);
+    printf("      |            |                |    %10d  |     Degree %2d   |                   |\n", maxNrows, mesh.N);
+    printf("      |            |                |    %10d  |                 |                   |\n", (int) avgNrows);
   }
 }
 

@@ -95,6 +95,18 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
       }
     }
 
+    //set Npcoarse
+    switch(mesh.elementType){
+      case TRIANGLES:
+        NpCoarse = ((Nc+1)*(Nc+2))/2; break;
+      case QUADRILATERALS:
+        NpCoarse = (Nc+1)*(Nc+1); break;
+      case TETRAHEDRA:
+        NpCoarse = ((Nc+1)*(Nc+2)*(Nc+3))/6; break;
+      case HEXAHEDRA:
+        NpCoarse = (Nc+1)*(Nc+1)*(Nc+1); break;
+    }
+
     //make a multigrid level
     currLevel = new MGLevel(ellipticF, Nc, NpCoarse);
     parAlmond.AddLevel(currLevel);
