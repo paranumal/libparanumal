@@ -118,7 +118,10 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   while(Nc>minN) {
     //build mesh and elliptic objects for this degree
     mesh_t &meshF = mesh.SetupNewDegree(Nf);
+
+    // reset geometry and quadrature to match finest grid
     meshF.CubatureSetup(mesh.N, "GLL");
+    meshF.o_cubggeo.copyFrom(mesh.o_cubggeo);
     
     elliptic_t &ellipticF = elliptic.SetupNewDegree(meshF);
 
@@ -172,9 +175,12 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   }
     
   //build matrix at degree 1
-  mesh_t &meshF = mesh.SetupNewDegree(minN);  
+  mesh_t &meshF = mesh.SetupNewDegree(minN);
+
+  // reset geometry and quadrature to match finest grid
   meshF.CubatureSetup(mesh.N, "GLL");
-    
+  meshF.o_cubggeo.copyFrom(mesh.o_cubggeo);
+  
   elliptic_t &ellipticF = elliptic.SetupNewDegree(meshF);
 
   //build full A matrix and pass to parAlmond
