@@ -76,7 +76,12 @@ multigrid_t::multigrid_t(platform_t& _platform, settings_t& _settings,
   else
     exact = false;
 
-  coarseSolver = new coarseSolver_t(_platform, _settings);
+  //Hard code for now
+  coarsetype=COARSEEXACT;
+
+  if (coarsetype==COARSEEXACT) {
+    coarseSolver = new exactSolver_t(_platform, _settings);
+  }
 }
 
 multigrid_t::~multigrid_t() {

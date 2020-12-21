@@ -44,6 +44,7 @@ typedef enum {SMOOTHED=0,UNSMOOTHED=1} AggType;
 typedef enum {PCG=0,GMRES=1} KrylovType;
 typedef enum {DAMPED_JACOBI=0,CHEBYSHEV=1} SmoothType;
 typedef enum {RUGESTUBEN=0,SYMMETRIC=1} StrengthType;
+typedef enum {COARSEEXACT=0,COARSEOAS=1} CoarseType;
 
 //multigrid preconditioner
 class multigrid_t: public precon_t {
@@ -58,6 +59,7 @@ public:
   CycleType ctype;
   AggType aggtype;
   StrengthType strtype;
+  CoarseType coarsetype;
 
   int numLevels=0;
   int baseLevel=0;

@@ -57,6 +57,8 @@ namespace parAlmond {
   extern occa::kernel kcycleWeightedCombinedOp1Kernel;
   extern occa::kernel kcycleWeightedCombinedOp2Kernel;
 
+  extern occa::kernel dGEMVKernel;
+
 } //namespace parAlmond
 
 #endif
