@@ -71,20 +71,23 @@ void parAlmond_t::Report() {
   MPI_Comm_rank(multigrid->comm, &rank);
 
   if(rank==0) {
-    printf("------------------Multigrid Report----------------------------------------\n");
-    printf("--------------------------------------------------------------------------\n");
-    printf("level|    Type    |    dimension   |   nnz per row   |   Smoother        |\n");
-    printf("     |            |  (min,max,avg) |  (min,max,avg)  |                   |\n");
-    printf("--------------------------------------------------------------------------\n");
+    printf("-----------------------------Multigrid Report-----------------------------------------------\n");
+    printf("--------------------------------------------------------------------------------------------\n");
+    printf("Level |    Type    |    Dimension   |  Per Rank Dim  |   nnz per row   |   Smoother        |\n");
+    printf("      |            |                |  (min,max,avg) |  (min,max,avg)  |                   |\n");
+    printf("--------------------------------------------------------------------------------------------\n");
   }
 
-  for(int lev=0; lev<multigrid->numLevels; lev++) {
-    if(rank==0) {printf(" %3d ", lev);fflush(stdout);}
+  for(int lev=0; lev<multigrid->numLevels-1; lev++) {
+    if(rank==0) {printf(" %3d  ", lev);fflush(stdout);}
     multigrid->levels[lev]->Report();
   }
 
+  //base level
+  multigrid->coarseSolver->Report(multigrid->numLevels-1);
+
   if(rank==0)
-    printf("--------------------------------------------------------------------------\n");
+    printf("--------------------------------------------------------------------------------------------\n");
 }
 
 dlong parAlmond_t::getNumCols(int k) {

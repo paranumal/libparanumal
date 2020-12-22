@@ -24,18 +24,18 @@ SOFTWARE.
 
 */
 
-@kernel void SpMVmcsr1(const dlong   Nblocks,
-                       const dfloat  alpha,
-                       const dfloat  beta,
-                       @restrict const  dlong  * blockStarts,
-                       @restrict const  dlong  * rowStarts,
-                       @restrict const  dlong  * rows,
-                       @restrict const  dlong  * cols,
-                       @restrict const  dfloat * vals,
-                       @restrict const  dfloat * x,
-                       @restrict        dfloat * y){
+@kernel void SmoothJacobiCSR(const dlong   Nblocks,
+                      @restrict const  dlong  * blockStarts,
+                      @restrict const  dlong  * rowStarts,
+                      @restrict const  dlong  * cols,
+                      @restrict const  dfloat * vals,
+                      const dfloat  lambda,
+                      @restrict const  dfloat * diagInv,
+                      @restrict const  dfloat * r,
+                      @restrict const  dfloat * x,
+                      @restrict        dfloat * d){
 
-  // y = alpha * A * x + beta * y
+  // d = lambda*inv(D)*(r-A*x)
   for(dlong b=0;b<Nblocks;++b;@outer){
     @exclusive dlong blockStart, blockEnd, start;
     @shared dfloat temp[p_NonzerosPerBlock];
@@ -53,36 +53,32 @@ SOFTWARE.
     for(dlong n=0;n<p_BLOCKSIZE;++n;@inner){
       for (dlong row=blockStart+n;row<blockEnd;row+=p_BLOCKSIZE) {
 
-        const dlong m = rows[row];
-        const dfloat betay = (beta==0.) ? 0. : beta*y[m];
-
         const dlong colStart = rowStarts[row]  -start;
         const dlong colEnd   = rowStarts[row+1]-start;
 
-        dfloat result = 0.;
+        dfloat result = r[row];
         for (int i=colStart;i<colEnd;i++) {
-          result += temp[i];
+          result -= temp[i];
         }
 
-        y[m] = alpha*result + betay;
+        d[row] = lambda*diagInv[row]*result;
       }
     }
   }
 }
 
-@kernel void SpMVmcsr2(const dlong  Nblocks,
-                       const dfloat alpha,
-                       const dfloat beta,
-                       @restrict const  dlong  * blockStarts,
-                       @restrict const  dlong  * rowStarts,
-                       @restrict const  dlong  * rows,
-                       @restrict const  dlong  * cols,
-                       @restrict const  dfloat * vals,
-                       @restrict const  dfloat * x,
-                       @restrict const  dfloat * y,
-                       @restrict        dfloat * z){
+@kernel void SmoothJacobiMCSR(const dlong   Nblocks,
+                      @restrict const  dlong  * blockStarts,
+                      @restrict const  dlong  * rowStarts,
+                      @restrict const  dlong  * rows,
+                      @restrict const  dlong  * cols,
+                      @restrict const  dfloat * vals,
+                      const dfloat  lambda,
+                      @restrict const  dfloat * diagInv,
+                      @restrict const  dfloat * x,
+                      @restrict        dfloat * d){
 
-  // z = alpha * A * x + beta * y
+  // d = lambda*inv(D)*(-A*x)
   for(dlong b=0;b<Nblocks;++b;@outer){
     @exclusive dlong blockStart, blockEnd, start;
     @shared dfloat temp[p_NonzerosPerBlock];
@@ -101,16 +97,15 @@ SOFTWARE.
       for (dlong row=blockStart+n;row<blockEnd;row+=p_BLOCKSIZE) {
 
         const dlong m = rows[row];
-
         const dlong colStart = rowStarts[row]  -start;
         const dlong colEnd   = rowStarts[row+1]-start;
 
-        dfloat result = 0.;
+        dfloat result = 0.0;
         for (int i=colStart;i<colEnd;i++) {
-          result += temp[i];
+          result -= temp[i];
         }
 
-        z[m] = alpha*result + beta*y[m];
+        d[m] += lambda*diagInv[m]*result;
       }
     }
   }

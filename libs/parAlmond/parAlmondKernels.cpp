@@ -30,9 +30,21 @@ namespace parAlmond {
 
 int Nrefs = 0;
 
+//NC: Hard code these for now. Should be sufficient for GPU devices, but needs attention for CPU
+const int blockSize = 256;
+int NonzerosPerBlock = 2048; //should be a multiple of blockSize for good unrolling
+
 occa::kernel SpMVcsrKernel1;
 occa::kernel SpMVcsrKernel2;
 occa::kernel SpMVmcsrKernel;
+
+occa::kernel SmoothJacobiCSRKernel;
+occa::kernel SmoothJacobiMCSRKernel;
+
+occa::kernel SmoothChebyshevStartKernel;
+occa::kernel SmoothChebyshevCSRKernel;
+occa::kernel SmoothChebyshevMCSRKernel;
+occa::kernel SmoothChebyshevUpdateKernel;
 
 occa::kernel kcycleCombinedOp1Kernel;
 occa::kernel kcycleCombinedOp2Kernel;
@@ -40,6 +52,8 @@ occa::kernel kcycleWeightedCombinedOp1Kernel;
 occa::kernel kcycleWeightedCombinedOp2Kernel;
 occa::kernel vectorAddInnerProdKernel;
 occa::kernel vectorAddWeightedInnerProdKernel;
+
+occa::kernel dGEMVKernel;
 
 MPI_Datatype MPI_NONZERO_T;
 
@@ -67,13 +81,22 @@ void buildParAlmondKernels(platform_t& platform){
   //build kernels
   occa::properties kernelInfo = platform.props;
 
-  kernelInfo["defines/" "p_BLOCKSIZE"]= BLOCKSIZE;
+  kernelInfo["defines/" "p_BLOCKSIZE"]= blockSize;
+  kernelInfo["defines/" "p_NonzerosPerBlock"]= NonzerosPerBlock;
 
   if (rank==0) {printf("Compiling parALMOND Kernels...");fflush(stdout);}
 
   SpMVcsrKernel1  = platform.buildKernel(PARALMOND_DIR"/okl/SpMVcsr.okl",  "SpMVcsr1",  kernelInfo);
   SpMVcsrKernel2  = platform.buildKernel(PARALMOND_DIR"/okl/SpMVcsr.okl",  "SpMVcsr2",  kernelInfo);
   SpMVmcsrKernel  = platform.buildKernel(PARALMOND_DIR"/okl/SpMVmcsr.okl", "SpMVmcsr1", kernelInfo);
+
+  SmoothJacobiCSRKernel  = platform.buildKernel(PARALMOND_DIR"/okl/SmoothJacobi.okl", "SmoothJacobiCSR", kernelInfo);
+  SmoothJacobiMCSRKernel = platform.buildKernel(PARALMOND_DIR"/okl/SmoothJacobi.okl", "SmoothJacobiMCSR", kernelInfo);
+
+  SmoothChebyshevStartKernel = platform.buildKernel(PARALMOND_DIR"/okl/SmoothChebyshev.okl", "SmoothChebyshevStart", kernelInfo);
+  SmoothChebyshevCSRKernel  = platform.buildKernel(PARALMOND_DIR"/okl/SmoothChebyshev.okl", "SmoothChebyshevCSR", kernelInfo);
+  SmoothChebyshevMCSRKernel = platform.buildKernel(PARALMOND_DIR"/okl/SmoothChebyshev.okl", "SmoothChebyshevMCSR", kernelInfo);
+  SmoothChebyshevUpdateKernel = platform.buildKernel(PARALMOND_DIR"/okl/SmoothChebyshev.okl", "SmoothChebyshevUpdate", kernelInfo);
 
   vectorAddInnerProdKernel = platform.buildKernel(PARALMOND_DIR"/okl/vectorAddInnerProd.okl", "vectorAddInnerProd", kernelInfo);
   vectorAddWeightedInnerProdKernel = platform.buildKernel(PARALMOND_DIR"/okl/vectorAddInnerProd.okl", "vectorAddWeightedInnerProd", kernelInfo);
@@ -82,6 +105,8 @@ void buildParAlmondKernels(platform_t& platform){
   kcycleCombinedOp2Kernel = platform.buildKernel(PARALMOND_DIR"/okl/kcycleCombinedOp.okl", "kcycleCombinedOp2", kernelInfo);
   kcycleWeightedCombinedOp1Kernel = platform.buildKernel(PARALMOND_DIR"/okl/kcycleCombinedOp.okl", "kcycleWeightedCombinedOp1", kernelInfo);
   kcycleWeightedCombinedOp2Kernel = platform.buildKernel(PARALMOND_DIR"/okl/kcycleCombinedOp.okl", "kcycleWeightedCombinedOp2", kernelInfo);
+
+  dGEMVKernel = platform.buildKernel(PARALMOND_DIR"/okl/dGEMV.okl", "dGEMV", kernelInfo);
 
   if(rank==0) printf("done.\n");
 }

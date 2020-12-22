@@ -35,9 +35,20 @@ namespace parAlmond {
 
   extern int Nrefs;
 
+  extern const int blockSize;
+  extern const int NonzerosPerBlock;
+
   extern occa::kernel SpMVcsrKernel1;
   extern occa::kernel SpMVcsrKernel2;
   extern occa::kernel SpMVmcsrKernel;
+
+  extern occa::kernel SmoothJacobiCSRKernel;
+  extern occa::kernel SmoothJacobiMCSRKernel;
+
+  extern occa::kernel SmoothChebyshevStartKernel;
+  extern occa::kernel SmoothChebyshevCSRKernel;
+  extern occa::kernel SmoothChebyshevMCSRKernel;
+  extern occa::kernel SmoothChebyshevUpdateKernel;
 
   extern occa::kernel vectorAddInnerProdKernel;
   extern occa::kernel vectorAddWeightedInnerProdKernel;
@@ -45,6 +56,8 @@ namespace parAlmond {
   extern occa::kernel kcycleCombinedOp2Kernel;
   extern occa::kernel kcycleWeightedCombinedOp1Kernel;
   extern occa::kernel kcycleWeightedCombinedOp2Kernel;
+
+  extern occa::kernel dGEMVKernel;
 
 } //namespace parAlmond
 

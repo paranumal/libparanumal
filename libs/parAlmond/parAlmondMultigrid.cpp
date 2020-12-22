@@ -76,7 +76,14 @@ multigrid_t::multigrid_t(platform_t& _platform, settings_t& _settings,
   else
     exact = false;
 
-  coarseSolver = new coarseSolver_t(_platform, _settings);
+  //Hard code for now
+  coarsetype=COARSEEXACT;
+
+  if (coarsetype==COARSEEXACT) {
+    coarseSolver = new exactSolver_t(_platform, _settings, _comm);
+  } else {
+    coarseSolver = new oasSolver_t(_platform, _settings, _comm);
+  }
 }
 
 multigrid_t::~multigrid_t() {
@@ -123,15 +130,15 @@ void multigrid_t::AddLevel(multigridLevel* level){
   if (numLevels>0) {
     dfloat *dummy = (dfloat *) calloc(level->Ncols,sizeof(dfloat));
     o_x[numLevels]   = platform.malloc(level->Ncols*sizeof(dfloat),dummy);
-    o_rhs[numLevels] = platform.malloc(level->Nrows*sizeof(dfloat),dummy);
+    o_rhs[numLevels] = platform.malloc(level->Ncols*sizeof(dfloat),dummy);
     free(dummy);
   }
 
-  //scratch space includes space for residual and 3 vectors used in Chebyshev smoothing
-  size_t requiredBytes = 3*level->Ncols*sizeof(dfloat);
+  //scratch space includes space for residual and 2 vectors used in Chebyshev smoothing
+  size_t requiredBytes = 2*level->Ncols*sizeof(dfloat);
   if (requiredBytes>scratchSpaceBytes) {
     scratchSpaceBytes = requiredBytes;
-    dfloat *dummy = (dfloat *) calloc(3*level->Ncols,sizeof(dfloat));
+    dfloat *dummy = (dfloat *) calloc(2*level->Ncols,sizeof(dfloat));
     o_scratch = platform.malloc(requiredBytes, dummy);
     free(dummy);
   }

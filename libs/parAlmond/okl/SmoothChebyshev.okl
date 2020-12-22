@@ -24,17 +24,50 @@ SOFTWARE.
 
 */
 
-@kernel void SpMVcsr1(const dlong   Nblocks,
-                      const dfloat  alpha,
-                      const dfloat  beta,
+//r = D^{-1}b
+//d = lambda*r
+//x = d
+@kernel void SmoothChebyshevStart(const dlong   Nrows,
+                      const dfloat  lambda,
+                      @restrict const  dfloat * diagInv,
+                      @restrict const  dfloat * b,
+                      @restrict        dfloat * r,
+                      @restrict        dfloat * d,
+                      @restrict        dfloat * x){
+
+  for(dlong n=0;n<Nrows;++n;@tile(p_BLOCKSIZE,@outer,@inner)){
+
+    const dfloat r_r = diagInv[n]*b[n];
+    r[n] = r_r;
+    d[n] = lambda*r_r;
+    x[n] = lambda*r_r;
+  }
+}
+
+//Computes either:
+//
+//r = D^{-1}(b-A*x)
+//
+// on the first Chebyshev iteration, or
+//
+//r = r - D^{-1}A*d
+//
+//on later iterations.
+//The general form is:
+//r = alpha*r + D^{-1}(beta*b-A*x)
+//
+@kernel void SmoothChebyshevCSR(const dlong   Nblocks,
                       @restrict const  dlong  * blockStarts,
                       @restrict const  dlong  * rowStarts,
                       @restrict const  dlong  * cols,
                       @restrict const  dfloat * vals,
+                      const dfloat  alpha,
+                      const dfloat  beta,
+                      @restrict const  dfloat * diagInv,
+                      @restrict const  dfloat * B,
                       @restrict const  dfloat * x,
-                      @restrict        dfloat * y){
+                      @restrict        dfloat * r){
 
-  // y = alpha * A * x + beta * y
   for(dlong b=0;b<Nblocks;++b;@outer){
     @exclusive dlong blockStart, blockEnd, start;
     @shared dfloat temp[p_NonzerosPerBlock];
@@ -52,34 +85,31 @@ SOFTWARE.
     for(dlong n=0;n<p_BLOCKSIZE;++n;@inner){
       for (dlong row=blockStart+n;row<blockEnd;row+=p_BLOCKSIZE) {
 
-        const dfloat betay = (beta==0.) ? 0. : beta*y[row];
-
         const dlong colStart = rowStarts[row]  -start;
         const dlong colEnd   = rowStarts[row+1]-start;
 
-        dfloat result = 0.;
+        dfloat result = (beta!=0.0) ? beta*B[row] : 0.0;
         for (int i=colStart;i<colEnd;i++) {
-          result += temp[i];
+          result -= temp[i];
         }
 
-        y[row] = alpha*result + betay;
+        const dfloat r_k = (alpha!=0.0) ? alpha*r[row] : 0.0;
+        r[row] = r_k + diagInv[row]*result;
       }
     }
   }
 }
 
-@kernel void SpMVcsr2(const dlong  Nblocks,
-                      const dfloat alpha,
-                      const dfloat beta,
+@kernel void SmoothChebyshevMCSR(const dlong   Nblocks,
                       @restrict const  dlong  * blockStarts,
                       @restrict const  dlong  * rowStarts,
+                      @restrict const  dlong  * rows,
                       @restrict const  dlong  * cols,
                       @restrict const  dfloat * vals,
+                      @restrict const  dfloat * diagInv,
                       @restrict const  dfloat * x,
-                      @restrict const  dfloat * y,
-                      @restrict        dfloat * z){
+                      @restrict        dfloat * r){
 
-  // z = alpha * A * x + beta * y
   for(dlong b=0;b<Nblocks;++b;@outer){
     @exclusive dlong blockStart, blockEnd, start;
     @shared dfloat temp[p_NonzerosPerBlock];
@@ -97,16 +127,41 @@ SOFTWARE.
     for(dlong n=0;n<p_BLOCKSIZE;++n;@inner){
       for (dlong row=blockStart+n;row<blockEnd;row+=p_BLOCKSIZE) {
 
+        const dlong m = rows[row];
         const dlong colStart = rowStarts[row]  -start;
         const dlong colEnd   = rowStarts[row+1]-start;
 
-        dfloat result = 0.;
+        dfloat result = 0.0;
         for (int i=colStart;i<colEnd;i++) {
-          result += temp[i];
+          result -= temp[i];
         }
 
-        z[row] = alpha*result + beta*y[row];
+        r[m] += diagInv[m]*result;
       }
     }
+  }
+}
+
+//Computes
+// d_k+1 = alpha*d_k + beta*r_k+1
+// x_k+1 = x_k + d_k+1
+@kernel void SmoothChebyshevUpdate(const dlong   Nrows,
+                      const dfloat  alpha,
+                      const dfloat  beta,
+                      const int last_it,
+                      @restrict const  dfloat * r,
+                      @restrict        dfloat * d,
+                      @restrict        dfloat * x){
+
+  for(dlong n=0;n<Nrows;++n;@tile(p_BLOCKSIZE,@outer,@inner)){
+
+    const dfloat d_k = (alpha!=0.0) ? d[n] : 0.0;
+    const dfloat d_kp1 = alpha*d_k + beta*r[n];
+
+    //skip writing d on last Chebyshev iteration
+    if (!last_it)
+      d[n] = d_kp1;
+
+    x[n] += d_kp1;
   }
 }

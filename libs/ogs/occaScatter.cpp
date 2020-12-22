@@ -52,6 +52,7 @@ void occaScatterStart(occa::memory& o_v,
 
   if (ogs.haloGather.Nrows) {
     occa::stream currentStream = device.getStream();
+    device.finish(); //make sure its safe to start the transfer
     device.setStream(dataStream);
 
     for (int i=0;i<Nvectors;i++)

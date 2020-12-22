@@ -40,6 +40,7 @@ public:
   //local sparse matrix
   struct CSR {
     dlong nnz=0;
+    dlong NrowBlocks=0;
 
     dlong  *blockRowStarts=nullptr;
     dlong  *rowStarts=nullptr;
@@ -57,6 +58,7 @@ public:
   struct MCSR {
     dlong nnz=0;
     dlong nzRows=0;
+    dlong NrowBlocks=0;
 
     dlong  *blockRowStarts=nullptr;
     dlong  *rowStarts=nullptr;
@@ -115,6 +117,15 @@ public:
             occa::memory& o_y);
   void SpMV(const dfloat alpha, occa::memory& o_x, const dfloat beta,
             occa::memory& o_y, occa::memory& o_z);
+
+  void smoothDampedJacobi(occa::memory& o_r, occa::memory& o_x,
+                          const dfloat lambda, bool x_is_zero,
+                          occa::memory& o_scratch);
+
+  void smoothChebyshev(occa::memory& o_b, occa::memory& o_x,
+                       const dfloat lambda0, const dfloat lambda1,
+                       bool x_is_zero, occa::memory& o_scratch,
+                       const int ChebyshevIterations);
 };
 
 

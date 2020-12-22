@@ -39,35 +39,91 @@ namespace parAlmond {
 class coarseSolver_t: public solver_t {
 
 public:
+  int Nrows;
+  int Ncols;
+
   MPI_Comm comm;
+  int rank, size;
+
+  coarseSolver_t(platform_t& _platform, settings_t& _settings,
+                 MPI_Comm _comm):
+    solver_t(_platform, _settings), comm(_comm) {}
+  virtual ~coarseSolver_t() {}
+
+  virtual int getTargetSize()=0;
+
+  virtual void setup(parCSR *A, bool nullSpace,
+                     dfloat *nullVector, dfloat nullSpacePenalty)=0;
+
+  virtual void syncToDevice()=0;
+
+  virtual void Report(int lev)=0;
+
+  virtual void solve(occa::memory& o_rhs, occa::memory& o_x)=0;
+};
+
+class exactSolver_t: public coarseSolver_t {
+
+public:
+  parCSR *A=nullptr;
+
   int coarseTotal;
   int coarseOffset;
   int *coarseOffsets=nullptr;
   int *coarseCounts=nullptr;
+  int *sendOffsets=nullptr;
+  int *sendCounts=nullptr;
 
   int N;
-  dfloat *invCoarseA=nullptr;
+  int offdTotal=0;
 
-  dfloat *xLocal=nullptr;
-  dfloat *rhsLocal=nullptr;
+  dfloat *diagInvAT=nullptr, *offdInvAT=nullptr;
+  occa::memory o_diagInvAT, o_offdInvAT;
 
-  dfloat *xCoarse=nullptr;
-  dfloat *rhsCoarse=nullptr;
+  dfloat *diagRhs=nullptr, *offdRhs=nullptr;
+  occa::memory o_offdRhs;
 
-  bool gatherLevel=false;
-  ogs_t *ogs=nullptr;
-  dfloat *Gx=nullptr;
-  occa::memory o_Gx;
-
-  coarseSolver_t(platform_t& _platform, settings_t& _settings):
-    solver_t(_platform, _settings) {}
-  ~coarseSolver_t();
+  exactSolver_t(platform_t& _platform, settings_t& _settings,
+                MPI_Comm _comm):
+    coarseSolver_t(_platform, _settings, _comm) {}
+  ~exactSolver_t();
 
   int getTargetSize();
 
-  void setup(parCSR *A, bool nullSpace, dfloat *nullVector, dfloat nullSpacePenalty);
+  void setup(parCSR *A, bool nullSpace,
+             dfloat *nullVector, dfloat nullSpacePenalty);
 
   void syncToDevice();
+
+  void Report(int lev);
+
+  void solve(occa::memory& o_rhs, occa::memory& o_x);
+};
+
+class oasSolver_t: public coarseSolver_t {
+
+public:
+  parCSR* A;
+
+  int N;
+  int diagTotal=0, offdTotal=0;
+
+  dfloat *diagInvAT=nullptr, *offdInvAT=nullptr;
+  occa::memory o_diagInvAT, o_offdInvAT;
+
+  oasSolver_t(platform_t& _platform, settings_t& _settings,
+              MPI_Comm _comm):
+    coarseSolver_t(_platform, _settings, _comm) {}
+  ~oasSolver_t();
+
+  int getTargetSize();
+
+  void setup(parCSR *A, bool nullSpace,
+             dfloat *nullVector, dfloat nullSpacePenalty);
+
+  void syncToDevice();
+
+  void Report(int lev);
 
   void solve(occa::memory& o_rhs, occa::memory& o_x);
 };

@@ -96,18 +96,20 @@ void parCSR::SpMV(const dfloat alpha, occa::memory& o_x, const dfloat beta,
   halo->ExchangeStart(o_x, 1, ogs_dfloat);
 
   // z[i] = beta*y[i] + alpha* (sum_{ij} Aij*x[j])
-  if (Nrows)
-    SpMVcsrKernel1(Nrows, alpha, beta,
-                   diag.o_rowStarts, diag.o_cols, diag.o_vals,
+  if (diag.NrowBlocks)
+    SpMVcsrKernel1(diag.NrowBlocks, alpha, beta,
+                   diag.o_blockRowStarts, diag.o_rowStarts,
+                   diag.o_cols, diag.o_vals,
                    o_x, o_y);
 
   halo->ExchangeFinish(o_x, 1, ogs_dfloat);
 
   const dfloat one = 1.0;
-  if (offd.nzRows)
-    SpMVmcsrKernel(offd.nzRows, alpha, one,
-                    offd.o_mRowStarts, offd.o_rows, offd.o_cols, offd.o_vals,
-                    o_x, o_y);
+  if (offd.NrowBlocks)
+    SpMVmcsrKernel(offd.NrowBlocks, alpha, one,
+                   offd.o_blockRowStarts, offd.o_mRowStarts,
+                   offd.o_rows, offd.o_cols, offd.o_vals,
+                   o_x, o_y);
 }
 
 void parCSR::SpMV(const dfloat alpha, occa::memory& o_x, const dfloat beta,
@@ -116,18 +118,20 @@ void parCSR::SpMV(const dfloat alpha, occa::memory& o_x, const dfloat beta,
   halo->ExchangeStart(o_x, 1, ogs_dfloat);
 
   // z[i] = beta*y[i] + alpha* (sum_{ij} Aij*x[j])
-  if (Nrows)
-    SpMVcsrKernel2(Nrows, alpha, beta,
-                   diag.o_rowStarts, diag.o_cols, diag.o_vals,
+  if (diag.NrowBlocks)
+    SpMVcsrKernel2(diag.NrowBlocks, alpha, beta,
+                   diag.o_blockRowStarts, diag.o_rowStarts,
+                   diag.o_cols, diag.o_vals,
                    o_x, o_y, o_z);
 
   halo->ExchangeFinish(o_x, 1, ogs_dfloat);
 
   const dfloat one = 1.0;
-  if (offd.nzRows)
-    SpMVmcsrKernel(offd.nzRows, alpha, one,
-                    offd.o_mRowStarts, offd.o_rows, offd.o_cols, offd.o_vals,
-                    o_x, o_z);
+  if (offd.NrowBlocks)
+    SpMVmcsrKernel(offd.NrowBlocks, alpha, one,
+                   offd.o_blockRowStarts, offd.o_mRowStarts,
+                   offd.o_rows, offd.o_cols, offd.o_vals,
+                   o_x, o_z);
 }
 
 
@@ -508,25 +512,104 @@ dfloat parCSR::rhoDinvA(){
 void parCSR::syncToDevice() {
 
   if (Nrows) {
+    //transfer matrix data
     diag.o_rowStarts = platform.malloc((Nrows+1)*sizeof(dlong), diag.rowStarts);
 
+    diag.NrowBlocks=0;
     if (diag.nnz) {
+      //setup row blocking
+      dlong blockSum=0;
+      diag.NrowBlocks=1;
+      for (dlong i=0;i<Nrows;i++) {
+        dlong rowSize = diag.rowStarts[i+1]-diag.rowStarts[i];
+
+        if (rowSize > parAlmond::NonzerosPerBlock) {
+          //this row is pathalogically big. We can't currently run this
+          stringstream ss;
+          ss << "Multiplicity of row: " << i << " is " << rowSize << " in parAlmond::parCSR setup and is too large.";
+          LIBP_ABORT(ss.str())
+        }
+
+        if (blockSum+rowSize > parAlmond::NonzerosPerBlock) { //adding this row will exceed the nnz per block
+          diag.NrowBlocks++; //count the previous block
+          blockSum=rowSize; //start a new row block
+        } else {
+          blockSum+=rowSize; //add this row to the block
+        }
+      }
+
+      diag.blockRowStarts  = (dlong*) calloc(diag.NrowBlocks+1,sizeof(dlong));
+
+      blockSum=0;
+      diag.NrowBlocks=1;
+      for (dlong i=0;i<Nrows;i++) {
+        dlong rowSize = diag.rowStarts[i+1]-diag.rowStarts[i];
+
+        if (blockSum+rowSize > parAlmond::NonzerosPerBlock) { //adding this row will exceed the nnz per block
+          diag.blockRowStarts[diag.NrowBlocks++] = i; //mark the previous block
+          blockSum=rowSize; //start a new row block
+        } else {
+          blockSum+=rowSize; //add this row to the block
+        }
+      }
+      diag.blockRowStarts[diag.NrowBlocks] = Nrows;
+      diag.o_blockRowStarts = platform.malloc((diag.NrowBlocks+1)*sizeof(dlong), diag.blockRowStarts);
+
+      //transfer matrix data
       diag.o_cols = platform.malloc(diag.nnz*sizeof(dlong),   diag.cols);
       diag.o_vals = platform.malloc(diag.nnz*sizeof(dfloat),  diag.vals);
+    }
+
+    if (offd.nnz) {
+      //setup row blocking
+      dlong blockSum=0;
+      offd.NrowBlocks=1;
+      for (dlong i=0;i<offd.nzRows;i++) {
+        dlong rowSize = offd.mRowStarts[i+1]-offd.mRowStarts[i];
+
+        if (rowSize > parAlmond::NonzerosPerBlock) {
+          //this row is pathalogically big. We can't currently run this
+          stringstream ss;
+          ss << "Multiplicity of row: " << i << " is " << rowSize << " in parAlmond::parCSR setup and is too large.";
+          LIBP_ABORT(ss.str())
+        }
+
+        if (blockSum+rowSize > parAlmond::NonzerosPerBlock) { //adding this row will exceed the nnz per block
+          offd.NrowBlocks++; //count the previous block
+          blockSum=rowSize; //start a new row block
+        } else {
+          blockSum+=rowSize; //add this row to the block
+        }
+      }
+
+      offd.blockRowStarts  = (dlong*) calloc(offd.NrowBlocks+1,sizeof(dlong));
+
+      blockSum=0;
+      offd.NrowBlocks=1;
+      for (dlong i=0;i<offd.nzRows;i++) {
+        dlong rowSize = offd.mRowStarts[i+1]-offd.mRowStarts[i];
+
+        if (blockSum+rowSize > parAlmond::NonzerosPerBlock) { //adding this row will exceed the nnz per block
+          offd.blockRowStarts[offd.NrowBlocks++] = i; //mark the previous block
+          blockSum=rowSize; //start a new row block
+        } else {
+          blockSum+=rowSize; //add this row to the block
+        }
+      }
+      offd.blockRowStarts[offd.NrowBlocks] = offd.nzRows;
+      offd.o_blockRowStarts = platform.malloc((offd.NrowBlocks+1)*sizeof(dlong), offd.blockRowStarts);
+
+      //transfer matrix data
+      offd.o_rows       = platform.malloc(offd.nzRows*sizeof(dlong), offd.rows);
+      offd.o_mRowStarts = platform.malloc((offd.nzRows+1)*sizeof(dlong), offd.mRowStarts);
+
+      offd.o_cols = platform.malloc(offd.nnz*sizeof(dlong),   offd.cols);
+      offd.o_vals = platform.malloc(offd.nnz*sizeof(dfloat),  offd.vals);
     }
 
     if (diagA) {
       o_diagA = platform.malloc(Nrows*sizeof(dfloat), diagA);
       o_diagInv = platform.malloc(Nrows*sizeof(dfloat), diagInv);
-    }
-
-    if (offd.nzRows) {
-      offd.o_rows       = platform.malloc(offd.nzRows*sizeof(dlong), offd.rows);
-      offd.o_mRowStarts = platform.malloc((offd.nzRows+1)*sizeof(dlong), offd.mRowStarts);
-    }
-    if (offd.nnz) {
-      offd.o_cols = platform.malloc(offd.nnz*sizeof(dlong),   offd.cols);
-      offd.o_vals = platform.malloc(offd.nnz*sizeof(dfloat),  offd.vals);
     }
   }
 }
