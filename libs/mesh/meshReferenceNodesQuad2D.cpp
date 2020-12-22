@@ -66,11 +66,10 @@ void meshQuad2D::ReferenceNodes(int N_){
   // D matrix
   D = (dfloat *) malloc(Nq*Nq*sizeof(dfloat));
   Dmatrix1D(N, Nq, gllz, Nq, gllz, D);
-  free(gllz);
 
   /* Plotting data */
-  int plotN = N_ + 3; //enriched interpolation space for plotting
-  int plotNq = plotN + 1;
+  plotN = N_ + 3; //enriched interpolation space for plotting
+  plotNq = plotN + 1;
   plotNp = plotNq*plotNq;
 
   /* Plotting nodes */
@@ -83,7 +82,13 @@ void meshQuad2D::ReferenceNodes(int N_){
   plotEToV = (int*) malloc(plotNelements*plotNverts*sizeof(int));
   EquispacedEToVQuad2D(plotN, plotEToV);
 
-  plotInterp = (dfloat *) malloc(Np*plotNp*sizeof(dfloat));
-  InterpolationMatrixQuad2D(N, Np, r, s, plotNp, plotR, plotS, plotInterp);
+  dfloat *plot1D = (dfloat *) malloc(plotNq*sizeof(dfloat));
+  EquispacedNodes1D(plotN, plot1D);
+
+  plotInterp = (dfloat *) malloc(Nq*plotNq*sizeof(dfloat));
+  InterpolationMatrix1D(N, Nq, gllz, plotNq, plot1D, plotInterp);
+
+  free(gllz);
+  free(plot1D);
 }
 

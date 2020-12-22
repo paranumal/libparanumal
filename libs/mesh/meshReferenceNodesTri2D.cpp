@@ -81,7 +81,7 @@ void meshTri2D::ReferenceNodes(int N_){
   SmatrixTri2D(N, Dr, Ds, MM, Srr, Srs, Sss);
 
   /* Plotting data */
-  int plotN = N + 3; //enriched interpolation space for plotting
+  plotN = N + 3; //enriched interpolation space for plotting
   plotNp = (plotN+1)*(plotN+2)/2;
 
   /* Plotting nodes */

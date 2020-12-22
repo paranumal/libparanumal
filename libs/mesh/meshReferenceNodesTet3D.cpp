@@ -79,7 +79,7 @@ void meshTet3D::ReferenceNodes(int N_){
   SmatrixTet3D(N, Dr, Ds, Dt, MM, Srr, Srs, Srt, Sss, Sst, Stt);
 
   /* Plotting data */
-  int plotN = N + 3; //enriched interpolation space for plotting
+  plotN = N + 3; //enriched interpolation space for plotting
   plotNp = (plotN+1)*(plotN+2)*(plotN+3)/6;
 
   /* Plotting nodes */

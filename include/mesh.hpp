@@ -195,6 +195,8 @@ public:
 
   // plotting info for generating field vtu
   int    plotNverts=0;    // number of vertices for each plot element
+  int    plotN=0;         // degree of plot interpolation
+  int    plotNq=0;        // plotNq = plotN+1
   int    plotNp=0;        // number of plot nodes per element
   int    plotNelements=0; // number of "plot elements" per element
   int    *plotEToV;       // triangulation of plot nodes
@@ -338,6 +340,8 @@ public:
   virtual dfloat ElementCharacteristicLength(dlong e) = 0;
 
   virtual dfloat MinCharacteristicLength() = 0;
+
+  virtual void PlotInterp(const dfloat* q, dfloat* Iq, dfloat* scratch=nullptr)=0;
 
   void RecursiveSpectralBisectionPartition();
 

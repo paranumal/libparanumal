@@ -43,39 +43,49 @@ void bns_t::PlotFields(dfloat* Q, dfloat *V, char *fileName){
   fprintf(fp, "      <Points>\n");
   fprintf(fp, "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
 
+  //scratch space for interpolation
+  size_t NscratchBytes = mymax(mesh.Np, mesh.plotNp)*sizeof(dfloat);
+  dfloat* scratch = (dfloat *) malloc(2*NscratchBytes);
+
+  dfloat* Ix = (dfloat *) malloc(mesh.plotNp*sizeof(dfloat));
+  dfloat* Iy = (dfloat *) malloc(mesh.plotNp*sizeof(dfloat));
+  dfloat* Iz = (dfloat *) malloc(mesh.plotNp*sizeof(dfloat));
+
   // compute plot node coordinates on the fly
   for(dlong e=0;e<mesh.Nelements;++e){
+    mesh.PlotInterp(mesh.x + e*mesh.Np, Ix, scratch);
+    mesh.PlotInterp(mesh.y + e*mesh.Np, Iy, scratch);
+    mesh.PlotInterp(mesh.z + e*mesh.Np, Iz, scratch);
+
     for(int n=0;n<mesh.plotNp;++n){
-      dfloat plotxn = 0, plotyn = 0, plotzn = 0;
-
-      for(int m=0;m<mesh.Np;++m){
-        plotxn += mesh.plotInterp[n*mesh.Np+m]*mesh.x[m+e*mesh.Np];
-        plotyn += mesh.plotInterp[n*mesh.Np+m]*mesh.y[m+e*mesh.Np];
-        plotzn += mesh.plotInterp[n*mesh.Np+m]*mesh.z[m+e*mesh.Np];
-      }
-
       fprintf(fp, "       ");
-      fprintf(fp, "%g %g %g\n", plotxn,plotyn,plotzn);
+      fprintf(fp, "%g %g %g\n", Ix[n],Iy[n],Iz[n]);
     }
   }
   fprintf(fp, "        </DataArray>\n");
   fprintf(fp, "      </Points>\n");
 
+  free(Ix); free(Iy); free(Iz);
+
+  dfloat* u = (dfloat *) malloc(mesh.Np*sizeof(dfloat));
+  dfloat* v = (dfloat *) malloc(mesh.Np*sizeof(dfloat));
+  dfloat* w = (dfloat *) malloc(mesh.Np*sizeof(dfloat));
+
+  dfloat* Ip = (dfloat *) malloc(mesh.plotNp*sizeof(dfloat));
+  dfloat* Iu = (dfloat *) malloc(mesh.plotNp*sizeof(dfloat));
+  dfloat* Iv = (dfloat *) malloc(mesh.plotNp*sizeof(dfloat));
+  dfloat* Iw = (dfloat *) malloc(mesh.plotNp*sizeof(dfloat));
 
   if (Q!=NULL) {
     // write out density
     fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
     fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Density\" Format=\"ascii\">\n");
     for(dlong e=0;e<mesh.Nelements;++e){
-      for(int n=0;n<mesh.plotNp;++n){
-        dfloat plotpn = 0;
-        for(int m=0;m<mesh.Np;++m){
-          dfloat pm = Q[e*mesh.Np*Nfields+m];
-          plotpn += mesh.plotInterp[n*mesh.Np+m]*pm;
-        }
+      mesh.PlotInterp(Q + e*mesh.Np*Nfields, Ip, scratch);
 
+      for(int n=0;n<mesh.plotNp;++n){
         fprintf(fp, "       ");
-        fprintf(fp, "%g\n", plotpn);
+        fprintf(fp, "%g\n", Ip[n]);
       }
     }
     fprintf(fp, "       </DataArray>\n");
@@ -83,29 +93,26 @@ void bns_t::PlotFields(dfloat* Q, dfloat *V, char *fileName){
     // write out velocity
     fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"%d\" Format=\"ascii\">\n", mesh.dim);
     for(dlong e=0;e<mesh.Nelements;++e){
+      for(int n=0;n<mesh.Np;++n){
+        const dfloat rm = Q[e*mesh.Np*Nfields+n];
+        u[n] = c*Q[e*mesh.Np*Nfields+n+mesh.Np*1]/rm;
+        v[n] = c*Q[e*mesh.Np*Nfields+n+mesh.Np*2]/rm;
+        if(mesh.dim==3)
+          w[n] = c*Q[e*mesh.Np*Nfields+n+mesh.Np*3]/rm;
+      }
+
+      mesh.PlotInterp(u, Iu, scratch);
+      mesh.PlotInterp(v, Iv, scratch);
+      if(mesh.dim==3)
+        mesh.PlotInterp(w, Iw, scratch);
+
       for(int n=0;n<mesh.plotNp;++n){
-        dfloat plotun = 0, plotvn = 0, plotwn = 0;
-        for(int m=0;m<mesh.Np;++m){
-          dfloat rm = Q[e*mesh.Np*Nfields+m+mesh.Np*0];
-          dfloat um = c*Q[e*mesh.Np*Nfields+m+mesh.Np*1]/rm;
-          dfloat vm = c*Q[e*mesh.Np*Nfields+m+mesh.Np*2]/rm;
-
-          plotun += mesh.plotInterp[n*mesh.Np+m]*um;
-          plotvn += mesh.plotInterp[n*mesh.Np+m]*vm;
-
-          if(mesh.dim==3){
-            dfloat wm = c*Q[e*mesh.Np*Nfields+m+mesh.Np*3]/rm;
-
-            plotwn += mesh.plotInterp[n*mesh.Np+m]*wm;
-          }
-        }
-
         fprintf(fp, "       ");
         fprintf(fp, "       ");
         if (mesh.dim==2)
-          fprintf(fp, "%g %g\n", plotun, plotvn);
+          fprintf(fp, "%g %g\n", Iu[n], Iv[n]);
         else
-          fprintf(fp, "%g %g %g\n", plotun, plotvn, plotwn);
+          fprintf(fp, "%g %g %g\n", Iu[n], Iv[n], Iw[n]);
       }
     }
     fprintf(fp, "       </DataArray>\n");
@@ -113,15 +120,11 @@ void bns_t::PlotFields(dfloat* Q, dfloat *V, char *fileName){
     // write out pressure
     fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Pressure\" Format=\"ascii\">\n");
     for(dlong e=0;e<mesh.Nelements;++e){
-      for(int n=0;n<mesh.plotNp;++n){
-        dfloat plotpn = 0;
-        for(int m=0;m<mesh.Np;++m){
-          dfloat pm = RT*Q[e*mesh.Np*Nfields+m+mesh.Np*0];
-          plotpn += mesh.plotInterp[n*mesh.Np+m]*pm;
-        }
+      mesh.PlotInterp(Q + e*mesh.Np*Nfields, Ip, scratch);
 
+      for(int n=0;n<mesh.plotNp;++n){
         fprintf(fp, "       ");
-        fprintf(fp, "%g\n", plotpn);
+        fprintf(fp, "%g\n", RT*Ip[n]);
       }
     }
     fprintf(fp, "       </DataArray>\n");
@@ -132,42 +135,33 @@ void bns_t::PlotFields(dfloat* Q, dfloat *V, char *fileName){
     if(mesh.dim==2){
       fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticity\" Format=\"ascii\">\n");
       for(dlong e=0;e<mesh.Nelements;++e){
-        for(int n=0;n<mesh.plotNp;++n){
-          dfloat plotVort = 0;
-          for(int m=0;m<mesh.Np;++m){
-            dlong id = m+e*mesh.Np;
-            dfloat vort = V[id];
-            plotVort += mesh.plotInterp[n*mesh.Np+m]*vort;
-          }
+        mesh.PlotInterp(V + e*mesh.Np, Ip, scratch);
 
+        for(int n=0;n<mesh.plotNp;++n){
           fprintf(fp, "       ");
-          fprintf(fp, "%g\n", plotVort);
+          fprintf(fp, "%g\n", Ip[n]);
         }
       }
     } else {
       fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticity\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
       for(dlong e=0;e<mesh.Nelements;++e){
-        for(int n=0;n<mesh.plotNp;++n){
-          dfloat plotVortx = 0, plotVorty = 0, plotVortz = 0;
-          for(int m=0;m<mesh.Np;++m){
-            dlong id = m+e*mesh.Np*3;
-            dfloat vortx = V[id+mesh.Np*0];
-            dfloat vorty = V[id+mesh.Np*1];
-            dfloat vortz = V[id+mesh.Np*2];
-            plotVortx += mesh.plotInterp[n*mesh.Np+m]*vortx;
-            plotVorty += mesh.plotInterp[n*mesh.Np+m]*vorty;
-            plotVortz += mesh.plotInterp[n*mesh.Np+m]*vortz;
-          }
+        mesh.PlotInterp(V + 0*mesh.Np + e*mesh.Np*3, Iu, scratch);
+        mesh.PlotInterp(V + 1*mesh.Np + e*mesh.Np*3, Iv, scratch);
+        mesh.PlotInterp(V + 2*mesh.Np + e*mesh.Np*3, Iw, scratch);
 
+        for(int n=0;n<mesh.plotNp;++n){
           fprintf(fp, "       ");
-          fprintf(fp, "%g %g %g\n", plotVortx, plotVorty, plotVortz);
+          fprintf(fp, "       ");
+          fprintf(fp, "%g %g %g\n", Iu[n], Iv[n], Iw[n]);
         }
       }
     }
     fprintf(fp, "       </DataArray>\n");
   }
-
   fprintf(fp, "     </PointData>\n");
+
+  free(u); free(v); free(w);
+  free(Ip); free(Iu); free(Iv); free(Iw);
 
   fprintf(fp, "    <Cells>\n");
   fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");
@@ -210,4 +204,5 @@ void bns_t::PlotFields(dfloat* Q, dfloat *V, char *fileName){
   fprintf(fp, "</VTKFile>\n");
   fclose(fp);
 
+  free(scratch);
 }

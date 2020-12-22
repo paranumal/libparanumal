@@ -60,11 +60,10 @@ void meshHex3D::ReferenceNodes(int N_){
   // D matrix
   D = (dfloat *) malloc(Nq*Nq*sizeof(dfloat));
   Dmatrix1D(N, Nq, gllz, Nq, gllz, D);
-  free(gllz);
 
   /* Plotting data */
-  int plotN = N_ + 3; //enriched interpolation space for plotting
-  int plotNq = plotN + 1;
+  plotN = N_ + 3; //enriched interpolation space for plotting
+  plotNq = plotN + 1;
   plotNp = plotNq*plotNq*plotNq;
 
   /* Plotting nodes */
@@ -78,7 +77,13 @@ void meshHex3D::ReferenceNodes(int N_){
   plotEToV = (int*) malloc(plotNelements*plotNverts*sizeof(int));
   EquispacedEToVHex3D(plotN, plotEToV);
 
-  plotInterp = (dfloat *) malloc(Np*plotNp*sizeof(dfloat));
-  InterpolationMatrixHex3D(N, Np, r, s, t, plotNp, plotR, plotS, plotT, plotInterp);
+  dfloat *plot1D = (dfloat *) malloc(plotNq*sizeof(dfloat));
+  EquispacedNodes1D(plotN, plot1D);
+
+  plotInterp = (dfloat *) malloc(Nq*plotNq*sizeof(dfloat));
+  InterpolationMatrix1D(N, Nq, gllz, plotNq, plot1D, plotInterp);
+
+  free(gllz);
+  free(plot1D);
 }
 
