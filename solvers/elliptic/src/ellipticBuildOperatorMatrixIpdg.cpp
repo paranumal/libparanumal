@@ -28,8 +28,6 @@ SOFTWARE.
 #include "mesh/meshDefines2D.h"
 #include "mesh/meshDefines3D.h"
 
-int parallelCompareRowColumn(const void *a, const void *b);
-
 void elliptic_t::BuildOperatorMatrixIpdg(parAlmond::parCOO& A){
 
   switch(mesh.elementType){
@@ -291,7 +289,15 @@ void elliptic_t::BuildOperatorMatrixIpdgTri2D(parAlmond::parCOO& A){
 
   //printf("nnz = %d\n", nnz);
 
-  qsort(A.entries, nnz, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
+  std::sort(A.entries, A.entries+nnz,
+            [](const parAlmond::parCOO::nonZero_t& a,
+               const parAlmond::parCOO::nonZero_t& b) {
+              if (a.row < b.row) return true;
+              if (a.row > b.row) return false;
+
+              return a.col < b.col;
+            });
+
   //*A = (parAlmond::parCOO::nonZero_t*) realloc(*A, nnz*sizeof(parAlmond::parCOO::nonZero_t));
   A.nnz = nnz;
 
@@ -572,7 +578,15 @@ void elliptic_t::BuildOperatorMatrixIpdgTri3D(parAlmond::parCOO& A){
 
   //printf("nnz = %d\n", nnz);
 
-  qsort(A.entries, nnz, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
+  std::sort(A.entries, A.entries+nnz,
+            [](const parAlmond::parCOO::nonZero_t& a,
+               const parAlmond::parCOO::nonZero_t& b) {
+              if (a.row < b.row) return true;
+              if (a.row > b.row) return false;
+
+              return a.col < b.col;
+            });
+
   //*A = (parAlmond::parCOO::nonZero_t*) realloc(*A, nnz*sizeof(parAlmond::parCOO::nonZero_t));
   A.nnz = nnz;
 
@@ -797,8 +811,16 @@ void elliptic_t::BuildOperatorMatrixIpdgQuad2D(parAlmond::parCOO& A){
     }
   }
 
-  // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
-  qsort(A.entries, nnz, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
+  // sort received non-zero entries by row block
+  std::sort(A.entries, A.entries+nnz,
+            [](const parAlmond::parCOO::nonZero_t& a,
+               const parAlmond::parCOO::nonZero_t& b) {
+              if (a.row < b.row) return true;
+              if (a.row > b.row) return false;
+
+              return a.col < b.col;
+            });
+
   //*A = (parAlmond::parCOO::nonZero_t*) realloc(*A, nnz*sizeof(parAlmond::parCOO::nonZero_t));
   A.nnz = nnz;
 
@@ -1028,8 +1050,16 @@ void elliptic_t::BuildOperatorMatrixIpdgQuad3D(parAlmond::parCOO& A){
     }
   }
 
-  // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
-  qsort(A.entries, nnz, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
+  // sort received non-zero entries by row block
+  std::sort(A.entries, A.entries+nnz,
+            [](const parAlmond::parCOO::nonZero_t& a,
+               const parAlmond::parCOO::nonZero_t& b) {
+              if (a.row < b.row) return true;
+              if (a.row > b.row) return false;
+
+              return a.col < b.col;
+            });
+
   //*A = (parAlmond::parCOO::nonZero_t*) realloc(*A, nnz*sizeof(parAlmond::parCOO::nonZero_t));
   A.nnz = nnz;
 
@@ -1312,7 +1342,15 @@ void elliptic_t::BuildOperatorMatrixIpdgTet3D(parAlmond::parCOO& A){
   free(qmM); free(qmP);
   free(ndotgradqmM); free(ndotgradqmP);
 }
-  qsort(A.entries, nnz, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
+
+  std::sort(A.entries, A.entries+nnz,
+            [](const parAlmond::parCOO::nonZero_t& a,
+               const parAlmond::parCOO::nonZero_t& b) {
+              if (a.row < b.row) return true;
+              if (a.row > b.row) return false;
+
+              return a.col < b.col;
+            });
   // free up unused storage
   //*A = (parAlmond::parCOO::nonZero_t*) realloc(*A, nnz*sizeof(parAlmond::parCOO::nonZero_t));
   A.nnz = nnz;
@@ -1571,8 +1609,16 @@ void elliptic_t::BuildOperatorMatrixIpdgHex3D(parAlmond::parCOO& A){
     }
   }
 
-  // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
-  qsort(A.entries, nnz, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
+  // sort received non-zero entries by row block
+  std::sort(A.entries, A.entries+nnz,
+            [](const parAlmond::parCOO::nonZero_t& a,
+               const parAlmond::parCOO::nonZero_t& b) {
+              if (a.row < b.row) return true;
+              if (a.row > b.row) return false;
+
+              return a.col < b.col;
+            });
+
   //*A = (parAlmond::parCOO::nonZero_t*) realloc(*A, nnz*sizeof(parAlmond::parCOO::nonZero_t));
   A.nnz = nnz;
 

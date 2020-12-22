@@ -37,56 +37,10 @@ typedef struct{
   dlong elementNeighbor; // neighbor element
   int faceNeighbor;    // neighbor face
 
-  int NfaceVertices;
-
   hlong v[4];
 
 }face_t;
 
-// comparison function that orders vertices
-// based on their combined vertex indices
-static int compareVertices(const void *a,
-                    const void *b){
-
-  face_t *fa = (face_t*) a;
-  face_t *fb = (face_t*) b;
-
-  for(int n=0;n<fa->NfaceVertices;++n){
-    if(fa->v[n] < fb->v[n]) return -1;
-    if(fa->v[n] > fb->v[n]) return +1;
-  }
-
-  return 0;
-
-}
-/* comparison function that orders element/face
-   based on their indexes */
-static int compareFaces(const void *a,
-                 const void *b){
-
-  face_t *fa = (face_t*) a;
-  face_t *fb = (face_t*) b;
-
-  if(fa->element < fb->element) return -1;
-  if(fa->element > fb->element) return +1;
-
-  if(fa->face < fb->face) return -1;
-  if(fa->face > fb->face) return +1;
-
-  return 0;
-
-}
-
-static int isLower(const void *a, const void *b){
-
-  hlong *pta = (hlong*) a;
-  hlong *ptb = (hlong*) b;
-
-  if(*pta > *ptb) return -1;
-  if(*pta < *ptb) return +1;
-
-  return 0;
-}
 
 /* routine to find EToE (Element To Element)
    and EToF (Element To Local Face) connectivity arrays */
@@ -105,9 +59,8 @@ void mesh_t::Connect(){
         faces[cnt].v[n] = EToV[vid];
       }
 
-      qsort(faces[cnt].v, NfaceVertices, sizeof(hlong), isLower);
-
-      faces[cnt].NfaceVertices = NfaceVertices;
+      std::sort(faces[cnt].v, faces[cnt].v+NfaceVertices,
+                std::less<hlong>());
 
       faces[cnt].element = e;
       faces[cnt].face = f;
@@ -120,15 +73,17 @@ void mesh_t::Connect(){
   }
 
   /* sort faces by their vertex number pairs */
-  qsort(faces,
-        Nelements*Nfaces,
-        sizeof(face_t),
-        compareVertices);
+  std::sort(faces, faces+Nelements*Nfaces,
+            [&](const face_t& a, const face_t& b) {
+              return std::lexicographical_compare(a.v, a.v+NfaceVertices,
+                                                  b.v, b.v+NfaceVertices);
+            });
 
   /* scan through sorted face lists looking for adjacent
      faces that have the same vertex ids */
   for(cnt=0;cnt<Nelements*Nfaces-1;++cnt){
-    if(!compareVertices(faces+cnt, faces+cnt+1)){
+    if(std::equal(faces[cnt].v, faces[cnt].v+NfaceVertices,
+                  faces[cnt+1].v)){
       // match
       faces[cnt].elementNeighbor = faces[cnt+1].element;
       faces[cnt].faceNeighbor = faces[cnt+1].face;
@@ -139,10 +94,13 @@ void mesh_t::Connect(){
   }
 
   /* resort faces back to the original element/face ordering */
-  qsort(faces,
-        Nelements*Nfaces,
-        sizeof(face_t),
-        compareFaces);
+  std::sort(faces, faces+Nelements*Nfaces,
+            [](const face_t& a, const face_t& b) {
+              if(a.element < b.element) return true;
+              if(a.element > b.element) return false;
+
+              return (a.face < b.face);
+            });
 
   /* extract the element to element and element to face connectivity */
   EToE = (dlong*) calloc(Nelements*Nfaces, sizeof(dlong));

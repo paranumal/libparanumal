@@ -28,10 +28,10 @@ SOFTWARE.
 #define CORE_HPP
 
 #include <mpi.h>
-#include <occa.h>
+#include <occa.hpp>
 #include <string>
-#include <math.h>
-#include <stdlib.h>
+#include <cmath>
+#include <algorithm>
 #include "utils.hpp"
 
 // sort entries in an array in parallel

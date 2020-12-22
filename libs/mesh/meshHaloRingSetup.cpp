@@ -35,48 +35,6 @@ typedef struct{
 
 }vertex_t;
 
-// comparator on destination rank
-static int compareDest(const void *a,
-                       const void *b){
-
-  vertex_t *va = (vertex_t*) a;
-  vertex_t *vb = (vertex_t*) b;
-
-  if(va->dest < vb->dest) return -1;
-  if(va->dest > vb->dest) return +1;
-
-  return 0;
-}
-
-// comparator on global id
-static int compareGlobalId(const void *a,
-                           const void *b){
-
-  vertex_t *va = (vertex_t*) a;
-  vertex_t *vb = (vertex_t*) b;
-
-  if(va->gid < vb->gid) return -1;
-  if(va->gid > vb->gid) return +1;
-
-  return 0;
-}
-
-// comparator on rank and element
-static int compareRank(const void *a,
-                       const void *b){
-
-  vertex_t *va = (vertex_t*) a;
-  vertex_t *vb = (vertex_t*) b;
-
-  if(va->rank < vb->rank) return -1;
-  if(va->rank > vb->rank) return +1;
-
-  if(va->element < vb->element) return -1;
-  if(va->element > vb->element) return +1;
-
-  return 0;
-}
-
 // set up halo exchange for entire boundary ring elements for inter-processor MPI
 // exchange of trace nodes
 void mesh_t::HaloRingSetup(){
@@ -161,7 +119,9 @@ void mesh_t::HaloRingSetup(){
   free(minRank); free(maxRank);
 
   // sort based on destination (=gid%size)
-  qsort(vertexSendList, NsendVerts, sizeof(vertex_t), compareDest);
+  std::sort(vertexSendList, vertexSendList+NsendVerts,
+            [](const vertex_t& a, const vertex_t& b)
+              {return a.dest < b.dest;});
 
   // share counts
   MPI_Alltoall(vertexSendCounts, 1, MPI_INT,
@@ -184,7 +144,9 @@ void mesh_t::HaloRingSetup(){
                 comm);
 
   // sort based on globalId to find matches
-  qsort(vertexRecvList, NrecvVerts, sizeof(vertex_t), compareGlobalId);
+  std::sort(vertexRecvList, vertexRecvList+NrecvVerts,
+            [](const vertex_t& a, const vertex_t& b)
+              {return a.gid < b.gid;});
 
   //count the number of unique vertices we have
   dlong Nunique=(NrecvVerts) ? 1:0; //at least one if there's any
@@ -247,7 +209,9 @@ void mesh_t::HaloRingSetup(){
   }
 
   // sort based on destination
-  qsort(vertexSendList, NsendVerts, sizeof(vertex_t), compareDest);
+  std::sort(vertexSendList, vertexSendList+NsendVerts,
+            [](const vertex_t& a, const vertex_t& b)
+              {return a.dest < b.dest;});
 
   // share counts
   MPI_Alltoall(vertexSendCounts, 1, MPI_INT,
@@ -271,7 +235,13 @@ void mesh_t::HaloRingSetup(){
                 comm);
 
   // sort based on rank then element id to find matches
-  qsort(vertexRecvList, NrecvVerts, sizeof(vertex_t), compareRank);
+  std::sort(vertexRecvList, vertexRecvList+NrecvVerts,
+            [](const vertex_t& a, const vertex_t& b) {
+              if(a.rank < b.rank) return true;
+              if(a.rank > b.rank) return false;
+
+              return a.element < b.element;
+            });
 
   //count the number of elements in the 1-ring
   totalRingElements=(NrecvVerts) ? 1:0;
