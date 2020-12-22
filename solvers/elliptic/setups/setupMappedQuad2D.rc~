@@ -2,28 +2,25 @@
 2.0
 
 [DATA FILE]
-data/ellipticSine3D.h
+data/ellipticSine2D.h
 
 [MESH FILE]
 BOX
 
 [MESH DIMENSION]
-3
+2
 
 [ELEMENT TYPE] # number of edges
-12
-
-[ELEMENT MAP]
-ISOPARAMETRIC
+4
 
 [BOX NX]
-12
+40
 
 [BOX NY]
-12
+40
 
 [BOX NZ]
-12
+40
 
 [BOX DIMX]
 1
@@ -37,11 +34,8 @@ ISOPARAMETRIC
 [BOX BOUNDARY FLAG]
 1
 
-[BOX COORDINATE MAP FILE]
-data/kershaw.okl
-
 [POLYNOMIAL DEGREE]
-7
+4
 
 [THREAD MODEL]
 CUDA
@@ -53,48 +47,35 @@ CUDA
 0
 
 [LAMBDA]
-0
+1
 
 # can be IPDG, or CONTINUOUS
 [DISCRETIZATION]
-#IPDG
 CONTINUOUS
-
-# can be CUBATURE or GLL
-[ELLIPTIC INTEGRATION]
-CUBATURE
-#GLL
 
 # can be PCG, FPCG, NBPCG, NBFPCG, or PGMRES
 [LINEAR SOLVER]
-PCG
-#PCG
+FPCG
 
 # can be NONE, JACOBI, MASSMATRIX, PARALMOND, SEMFEM, MULTIGRID, or OAS
 [PRECONDITIONER]
-#NONE
-#SEMFEM
 MULTIGRID
-#OAS
 
 ########## MULTIGRID Options ##############
 
 # can be ALLDEGREES, HALFDEGREES, HALFDOFS
 [MULTIGRID COARSENING]
-#HALFDEGREES
-ALLDEGREES
-#HALFDOFS
+HALFDOFS
 
 # can be LOCALPATCH, or DAMPEDJACOBI
 # LOCALPATCH smoother can include EXACT
 # can include CHEBYSHEV for smoother acceleration
 [MULTIGRID SMOOTHER]
-#DAMPEDJACOBI
 CHEBYSHEV
 
 # can be any integer >0
 [MULTIGRID CHEBYSHEV DEGREE]
-1
+2
 
 ###########################################
 
@@ -115,12 +96,12 @@ CHEBYSHEV
 
 # can be any integer >0
 [PARALMOND CHEBYSHEV DEGREE]
-1
+2
 
 ###########################################
 
 [OUTPUT TO FILE]
-FALSE
+TRUE
 
 [OUTPUT FILE NAME]
 elliptic

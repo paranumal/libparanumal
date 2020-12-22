@@ -35,7 +35,7 @@ void OASPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
   dlong Ntotal = mesh.Np*mesh.Nelements;
 
   if (mesh.N>1) {
-    printf("OAS: mesh.N=%d\n", mesh.N);
+    //    printf("OAS: mesh.N=%d\n", mesh.N);
     
     //Copy to patch buffer and queue to the ring exchange
     o_rPatch.copyFrom(o_r, Ntotal*sizeof(dfloat));
@@ -105,6 +105,10 @@ OASPrecon::OASPrecon(elliptic_t& _elliptic):
 
   //build mesh and elliptic objects for this degree
   mesh_t &meshC = mesh.SetupNewDegree(Nc);
+  meshC.CubatureSetup(Nc, "GLL");
+  //  meshC.CubatureSetup(mesh.N, "GLL");
+  //  meshC.o_cubggeo.copyFrom(mesh.o_cubggeo);
+
   elliptic_t &ellipticC = elliptic.SetupNewDegree(meshC);
 
   //build full A matrix and pass to parAlmond

@@ -33,6 +33,7 @@ void meshHex3D::CoordinateTransform(int _cubN, const char *cubatureType){
   string mapFileName;
   settings.getSetting("BOX COORDINATE MAP FILE", mapFileName);
 
+  if(0)
   if(mapFileName != "NONE"){
     
     dfloat epsy = .3;

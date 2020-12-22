@@ -71,7 +71,7 @@ void meshQuad2D::PhysicalNodes(){
     }
   }
 
-  if(0){
+  if(1){
   /* */
   string mapFileName;
   settings.getSetting("BOX COORDINATE MAP FILE", mapFileName);

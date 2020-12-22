@@ -287,12 +287,96 @@ MGLevel::~MGLevel() {
   prolongateKernel.free();
 }
 
+
+void ellipticBuildOperatorConsistentDiagonal(elliptic_t &elliptic, dfloat *diagA){
+
+  mesh_t &mesh = elliptic.mesh;
+
+  int integrationType = ((mesh.elementType==HEXAHEDRA||mesh.elementType==QUADRILATERALS) &&
+			 elliptic.settings.compareSetting("ELLIPTIC INTEGRATION", "CUBATURE")) ? 1:0;
+
+  int Np = mesh.Np;
+  int Nelements = mesh.Nelements;
+  
+  dfloat *q = (dfloat*) calloc(Np*Nelements, sizeof(dfloat));
+  dfloat *Aq = (dfloat*) calloc(Np*Nelements, sizeof(dfloat));
+
+  occa::memory o_q  = elliptic.platform.device.malloc(Np*Nelements*sizeof(dfloat), q);
+  occa::memory o_Aq = elliptic.platform.device.malloc(Np*Nelements*sizeof(dfloat), Aq);
+
+  for(dlong n=0;n<Np;++n){
+    for(dlong e=0;e<Nelements;++e){
+      dlong id = e*Np+n;
+      q[id] = 1;
+    }
+
+    o_q.copyFrom(q);
+    
+    //    elliptic.Operator(o_q, o_Aq);
+
+    if(mesh.NglobalGatherElements) {
+
+      if(integrationType==0) { // GLL or non-hex
+	elliptic.partialAxKernel(mesh.NglobalGatherElements, mesh.o_globalGatherElementList,
+				 mesh.o_ggeo, mesh.o_D, mesh.o_S, mesh.o_MM, elliptic.lambda, o_q, o_Aq);
+      }else{
+	elliptic.partialCubatureAxKernel(mesh.NglobalGatherElements,
+					 mesh.o_globalGatherElementList,
+					 mesh.o_cubggeo,
+					 mesh.o_cubD, // check layout
+					 mesh.o_cubInterp, // check layout
+					 elliptic.lambda, o_q, o_Aq);
+      }	
+    }
+    
+    if(mesh.NlocalGatherElements){
+      if(integrationType==0) { // GLL or non-hex
+	elliptic.partialAxKernel(mesh.NlocalGatherElements, mesh.o_localGatherElementList,
+				 mesh.o_ggeo, mesh.o_D, mesh.o_S, mesh.o_MM, elliptic.lambda, o_q, o_Aq);
+      }else{
+	elliptic.partialCubatureAxKernel(mesh.NlocalGatherElements,
+					 mesh.o_localGatherElementList,
+					 mesh.o_cubggeo,
+					 mesh.o_cubD, //right layout
+					 mesh.o_cubInterp, // dropped T ?
+					 elliptic.lambda,
+					 o_q,
+					 o_Aq);
+      }
+    }
+    
+    
+    o_Aq.copyTo(Aq);
+
+    // could use this to also grab entire col block Ae
+    for(dlong e=0;e<Nelements;++e){
+      dlong id = e*Np+n;
+      q[id] = 0;
+      diagA[id] = Aq[id];
+    }
+  }
+
+  for(dlong n=0;n<Np;++n){
+    for(dlong e=0;e<Nelements;++e){
+      dlong id = e*Np+n;
+      if(diagA[id] == 0)
+	diagA[id] = 1;
+    }
+  }
+  
+  elliptic.ogsMasked->GatherScatter(diagA, ogs_dfloat, ogs_add, ogs_sym);
+  
+  free(q);
+  free(Aq);
+}
+
 void MGLevel::SetupSmoother() {
 
   //set up the fine problem smoothing
   dfloat *diagA    = (dfloat*) calloc(mesh.Np*mesh.Nelements, sizeof(dfloat));
   dfloat *invDiagA = (dfloat*) calloc(mesh.Np*mesh.Nelements, sizeof(dfloat));
-  elliptic.BuildOperatorDiagonal(diagA);
+  //  elliptic.BuildOperatorDiagonal(diagA);
+  ellipticBuildOperatorConsistentDiagonal(elliptic, diagA);
 
   for (dlong n=0;n<mesh.Nelements*mesh.Np;n++)
     invDiagA[n] = 1.0/diagA[n];

@@ -91,6 +91,9 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
     
     elliptic_t &ellipticF = elliptic.SetupNewDegree(meshF);
 
+    void plotGeometry(elliptic_t &elliptic, int num);
+    plotGeometry(ellipticF, Nf);
+    
     //share masking data with previous MG level
     if (prevLevel) {
       prevLevel->Nmasked = ellipticF.Nmasked;
@@ -142,16 +145,18 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
     
   //build matrix at degree 1
   mesh_t &meshF = mesh.SetupNewDegree(minN);
-
+  
   // reset geometry and quadrature to match finest grid
   if(mesh.elementType==HEXAHEDRA || mesh.elementType==QUADRILATERALS){
     meshF.CubatureSetup(mesh.N, "GLL");
     meshF.o_cubggeo.copyFrom(mesh.o_cubggeo);
   }
-
   
   elliptic_t &ellipticF = elliptic.SetupNewDegree(meshF);
 
+  void plotGeometry(elliptic_t &elliptic, int num);
+  plotGeometry(ellipticF, minN);
+  
   //build full A matrix and pass to parAlmond
   parAlmond::parCOO A(elliptic.platform, mesh.comm);
   if (settings.compareSetting("DISCRETIZATION", "IPDG"))

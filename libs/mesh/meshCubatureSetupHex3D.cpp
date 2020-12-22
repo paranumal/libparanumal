@@ -284,7 +284,11 @@ void meshHex3D::CubatureSetup(int _cubN, const char *cubatureType){
           cubggeo[base + cubNp*G12ID] = JW*(sx*tx + sy*ty + sz*tz);
           cubggeo[base + cubNp*G22ID] = JW*(tx*tx + ty*ty + tz*tz);
           cubggeo[base + cubNp*GWJID] = JW;
-        }
+
+	  //	  printf("G = [%g,%g,%g;%g,%g,%g;%g,%g,%g] + JW=%g\n",
+	  //		 rx, ry, rz, sx, sy, sz, tx, ty, tz, JW);
+	  
+	}
       }
     }
 

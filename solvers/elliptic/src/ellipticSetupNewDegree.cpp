@@ -32,6 +32,9 @@ elliptic_t& elliptic_t::SetupNewDegree(mesh_t& meshC){
   //if asking for the same degree, return the original solver
   if (meshC.N == mesh.N) return *this;
 
+
+  printf("meshC.N=%d, meshC.cubN=%d\n", meshC.N, meshC.cubN);
+  
   elliptic_t* elliptic = new elliptic_t(platform, meshC, settings, lambda);
 
   //shallow copy
