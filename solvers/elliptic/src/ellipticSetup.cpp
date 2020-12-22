@@ -130,7 +130,8 @@ elliptic_t& elliptic_t::Setup(platform_t& platform, mesh_t& mesh,
                                      kernelInfo);
 
 
-    if(mesh.elementType==HEXAHEDRA){
+
+    if(mesh.elementType==HEXAHEDRA || mesh.elementType==QUADRILATERALS){
       sprintf(fileName,  DELLIPTIC "/okl/ellipticCubatureAx%s.okl", suffix);
       sprintf(kernelName, "ellipticPartialCubatureAx%s", suffix);
 
@@ -138,7 +139,6 @@ elliptic_t& elliptic_t::Setup(platform_t& platform, mesh_t& mesh,
 							       kernelInfo);
     }
 
-    
   } else if (settings.compareSetting("DISCRETIZATION","IPDG")) {
     int Nmax = mymax(mesh.Np, mesh.Nfaces*mesh.Nfp);
     kernelInfo["defines/" "p_Nmax"]= Nmax;

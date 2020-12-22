@@ -32,7 +32,7 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
     // int mapType = (mesh.elementType==HEXAHEDRA &&
     //                mesh.settings.compareSetting("ELEMENT MAP", "TRILINEAR")) ? 1:0;
 
-    int integrationType = (mesh.elementType==HEXAHEDRA &&
+    int integrationType = ((mesh.elementType==HEXAHEDRA||mesh.elementType==QUADRILATERALS) &&
 			   settings.compareSetting("ELLIPTIC INTEGRATION", "CUBATURE")) ? 1:0;
 
     if(mesh.NglobalGatherElements) {

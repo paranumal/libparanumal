@@ -25,6 +25,8 @@ SOFTWARE.
 */
 
 #include "elliptic.hpp"
+#include "mesh/meshDefines2D.h"
+#include "mesh/meshDefines3D.h"
 
 void elliptic_t::Run(){
 
@@ -121,6 +123,17 @@ void elliptic_t::Run(){
                 lambda,
                 o_r);
 
+#if 0
+  dfloat *h_r = (dfloat*) calloc(mesh.Np*mesh.Nelements, sizeof(dfloat));
+  for(dlong e=0;e<mesh.Nelements;++e){
+    for(dlong n=0;n<mesh.Np;++n){
+      h_r[e*mesh.Np+n] =
+	drand48()*mesh.ggeo[mesh.Np*mesh.Nggeo*e+n+GWJID*mesh.Np];
+    }
+  }
+  o_r.copyFrom(h_r);
+#endif
+  
   //add boundary condition contribution to rhs
   if (settings.compareSetting("DISCRETIZATION","IPDG")) {
     rhsBCKernel(mesh.Nelements,

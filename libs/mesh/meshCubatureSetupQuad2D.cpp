@@ -30,7 +30,7 @@ SOFTWARE.
 
 void meshQuad2D::CubatureSetup(){
 
-  CubatureSetup(N, "GLL"); // FOR THE MOMENT
+  CubatureSetup(N, "GL"); // FOR THE MOMENT
 }
 
 void meshQuad3D::CubatureSetup(){
@@ -259,7 +259,7 @@ void meshQuad2D::CubatureSetup(int _cubN, const char *cubatureType){
   }
 
   o_cubvgeo = platform.malloc(Nelements*Nvgeo*cubNp*sizeof(dfloat), cubvgeo);
-  o_cubggeo = platform.malloc(Nelements*Nggeo*cubNp*sizeof(dfloat), cubvgeo);
+  o_cubggeo = platform.malloc(Nelements*Nggeo*cubNp*sizeof(dfloat), cubggeo);
   o_cubsgeo = platform.malloc(Nelements*Nfaces*cubNq*Nsgeo*sizeof(dfloat), cubsgeo);
 
   free(xre); free(xse); free(yre); free(yse);

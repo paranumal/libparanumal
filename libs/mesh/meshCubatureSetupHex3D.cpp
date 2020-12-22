@@ -29,7 +29,7 @@ SOFTWARE.
 
 void meshHex3D::CubatureSetup(){
 
-  CubatureSetup(N, "GLL");
+  CubatureSetup(N, "GL");
 
 }
 

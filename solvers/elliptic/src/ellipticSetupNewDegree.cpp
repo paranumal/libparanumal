@@ -118,7 +118,7 @@ elliptic_t& elliptic_t::SetupNewDegree(mesh_t& meshC){
     elliptic->partialAxKernel = platform.buildKernel(fileName, kernelName,
                                             kernelInfo);
 
-    if(mesh.elementType==HEXAHEDRA){
+    if(mesh.elementType==HEXAHEDRA || mesh.elementType==QUADRILATERALS){
       sprintf(fileName,  DELLIPTIC "/okl/ellipticCubatureAx%s.okl", suffix);
       sprintf(kernelName, "ellipticPartialCubatureAx%s", suffix);
 

@@ -25,75 +25,18 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh2D.hpp"
+#include "mesh/mesh3D.hpp"
 
-void meshQuad2D::PhysicalNodes(){
+void meshHex3D::CoordinateTransform(int _cubN, const char *cubatureType){
 
-  x = (dfloat*) calloc((Nelements+totalHaloPairs)*Np,sizeof(dfloat));
-  y = (dfloat*) calloc((Nelements+totalHaloPairs)*Np,sizeof(dfloat));
-  z = (dfloat*) calloc((Nelements+totalHaloPairs)*Np,sizeof(dfloat));
-
-  dlong cnt = 0;
-  for(dlong e=0;e<Nelements;++e){ /* for each element */
-
-    dlong id = e*Nverts;
-
-    dfloat xe1 = EX[id+0]; /* x-coordinates of vertices */
-    dfloat xe2 = EX[id+1];
-    dfloat xe3 = EX[id+2];
-    dfloat xe4 = EX[id+3];
-
-    dfloat ye1 = EY[id+0]; /* y-coordinates of vertices */
-    dfloat ye2 = EY[id+1];
-    dfloat ye3 = EY[id+2];
-    dfloat ye4 = EY[id+3];
-
-    for(int n=0;n<Np;++n){ /* for each node */
-
-      /* (r,s) coordinates of interpolation nodes*/
-      dfloat rn = r[n];
-      dfloat sn = s[n];
-
-      /* physical coordinate of interpolation node */
-      x[cnt] =
-        +0.25*(1-rn)*(1-sn)*xe1
-        +0.25*(1+rn)*(1-sn)*xe2
-        +0.25*(1+rn)*(1+sn)*xe3
-        +0.25*(1-rn)*(1+sn)*xe4;
-
-      y[cnt] =
-        +0.25*(1-rn)*(1-sn)*ye1
-        +0.25*(1+rn)*(1-sn)*ye2
-        +0.25*(1+rn)*(1+sn)*ye3
-        +0.25*(1-rn)*(1+sn)*ye4;
-
-      ++cnt;
-    }
-  }
-
-  if(0){
   /* */
   string mapFileName;
   settings.getSetting("BOX COORDINATE MAP FILE", mapFileName);
 
   if(mapFileName != "NONE"){
-    {
-      dfloat xmin = 1e9, xmax = -1e9;
-      dfloat ymin = 1e9, ymax = -1e9;
-
-      for(dlong n=0;n<Np*Nelements;++n){
-	xmin = mymin(xmin, x[n]);
-	xmax = mymax(xmax, x[n]);
-
-	ymin = mymin(ymin, y[n]);
-	ymax = mymax(ymax, y[n]);
-
-      }
     
-      printf("mapping  physical nodes (from [%g,%g]x[%g,%g])\n",
-	     xmin, xmax, ymin, ymax);
-    }    
     dfloat epsy = .3;
+    dfloat epsz = .3;
     occa::properties kernelInfo = props;
 
     // build kernel
@@ -102,14 +45,32 @@ void meshQuad2D::PhysicalNodes(){
     occa::memory o_tmpx, o_tmpy, o_tmpz;
     o_tmpx = platform.device.malloc(Np*Nelements*sizeof(dfloat), x);
     o_tmpy = platform.device.malloc(Np*Nelements*sizeof(dfloat), y);
+    o_tmpz = platform.device.malloc(Np*Nelements*sizeof(dfloat), z);
     
-    coordMapKernel(Np*Nelements, epsy, o_tmpx, o_tmpy);
+    coordMapKernel(Np*Nelements, epsy, epsz, o_tmpx, o_tmpy, o_tmpz);
     
     o_tmpx.copyTo(x);
     o_tmpy.copyTo(y);
-  }
+    o_tmpz.copyTo(z);
+    
   }
   
   halo->Exchange(x, Np, ogs_dfloat);
   halo->Exchange(y, Np, ogs_dfloat);
+  halo->Exchange(z, Np, ogs_dfloat);
+
+  // compute geometric factors
+  GeometricFactors();
+
+  // compute surface geofacs
+  SurfaceGeometricFactors();
+
+  // compute cubature stuff
+  CubatureSetup(_cubN, cubatureType);
+  
+  // copy to DEVICE
+  o_vgeo = platform.malloc((Nelements+totalHaloPairs)*Nvgeo*Np*sizeof(dfloat), vgeo);
+  o_sgeo = platform.malloc(Nelements*Nfaces*Nfp*Nsgeo*sizeof(dfloat), sgeo);
+  o_ggeo = platform.malloc(Nelements*Np*Nggeo*sizeof(dfloat), ggeo);
+
 }

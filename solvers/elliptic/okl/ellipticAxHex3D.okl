@@ -73,6 +73,7 @@ SOFTWARE.
             // prefetch geometric factors
             const dlong gbase = e*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
 
+
             r_G00 = ggeo[gbase+p_G00ID*p_Np];
             r_G01 = ggeo[gbase+p_G01ID*p_Np];
             r_G02 = ggeo[gbase+p_G02ID*p_Np];

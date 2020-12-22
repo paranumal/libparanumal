@@ -88,6 +88,8 @@ public:
   void CubatureNodes();
 
   void MassMatrixKernelSetup(int Nfields);
+
+  void CoordinateTransform(int _cubN, const char *cubatureType);
 };
 
 #endif

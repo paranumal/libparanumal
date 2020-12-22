@@ -1039,41 +1039,38 @@ void elliptic_t::BuildOperatorDiagonalContinuousHex3D(dfloat *A) {
         int id = nx+ny*mesh.Nq+nz*mesh.Nq*mesh.Nq;
         dlong base = eM*mesh.Np*mesh.Nggeo;
 
+	dfloat Grs = mesh.ggeo[base + id + G01ID*mesh.Np];
+	dfloat Grt = mesh.ggeo[base + id + G02ID*mesh.Np];
+	dfloat Gst = mesh.ggeo[base + id + G12ID*mesh.Np];
 
-#if 1
-	//    dfloat Grs = mesh.ggeo[base + id + G01ID*mesh.Np];
-	dfloat Grs = 0;
+#if 0
+	Grs = 0;
 	for (int k=0;k<mesh.Nq;k++) {
 	  int id1 = nx+ny*mesh.Nq+k*mesh.Nq*mesh.Nq;
 	  dfloat Grs1 = mesh.ggeo[base + id1 + G01ID*mesh.Np];
 	  if(fabs(Grs1)>Grs)
 	    Grs = Grs1;
 	}
-        A[eM*mesh.Np+idn] += 2*Grs*mesh.D[nx+nx*mesh.Nq]*mesh.D[ny+ny*mesh.Nq];
 
-	//        dfloat Grt = mesh.ggeo[base + id + G02ID*mesh.Np];
-	dfloat Grt = 0;
+	Grt = 0;
 	for (int k=0;k<mesh.Nq;k++) {
 	  int id1 = nx+k*mesh.Nq+nz*mesh.Nq*mesh.Nq;
 	  dfloat Grt1 = mesh.ggeo[base + id1 + G02ID*mesh.Np];
 	  if(fabs(Grt1)>Grt)
 	    Grt = Grt1;
 	}
-	
-        A[eM*mesh.Np+idn] += 2*Grt*mesh.D[nx+nx*mesh.Nq]*mesh.D[nz+nz*mesh.Nq];
 
-	//        dfloat Gst = mesh.ggeo[base + id + G12ID*mesh.Np];
-	dfloat Gst = 0;
+	Gst = 0;
 	for (int k=0;k<mesh.Nq;k++) {
 	  int id1 = k+ny*mesh.Nq+nz*mesh.Nq*mesh.Nq;
 	  dfloat Gst1 = mesh.ggeo[base + id1 + G12ID*mesh.Np];
 	  if(fabs(Gst1)>Gst)
 	    Gst = Gst1;
 	}
-	
-        A[eM*mesh.Np+idn] += 2*Gst*mesh.D[ny+ny*mesh.Nq]*mesh.D[nz+nz*mesh.Nq];
 #endif
-
+	A[eM*mesh.Np+idn] += 2*Grs*mesh.D[nx+nx*mesh.Nq]*mesh.D[ny+ny*mesh.Nq];
+        A[eM*mesh.Np+idn] += 2*Grt*mesh.D[nx+nx*mesh.Nq]*mesh.D[nz+nz*mesh.Nq];
+        A[eM*mesh.Np+idn] += 2*Gst*mesh.D[ny+ny*mesh.Nq]*mesh.D[nz+nz*mesh.Nq];
 
 	for (int k=0;k<mesh.Nq;k++) {
           int iid = k+ny*mesh.Nq+nz*mesh.Nq*mesh.Nq;

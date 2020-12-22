@@ -26,9 +26,6 @@ SOFTWARE.
 
 #include "ellipticPrecon.hpp"
 
-
-
-
 // Matrix-free p-Multigrid levels followed by AMG
 void MultiGridPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
 
@@ -51,54 +48,6 @@ void MultiGridPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
   if(elliptic.allNeumann) elliptic.ZeroMean(o_Mr);
 }
 
-void interpolateGeometricFactors(mesh_t &meshIn, mesh_t &meshOut){
-
-  if(meshOut.N<meshIn.N && meshOut.elementType == HEXAHEDRA){
-    
-    printf("3) interpolating ggeo from N=%d to N=%d\n", meshIn.N, meshOut.N);
-    // interpolate ggeo to new degree
-
-    dfloat *Idown = (dfloat*) calloc(meshIn.Np*meshOut.Np, sizeof(dfloat));
-    dfloat *Iup   = (dfloat*) calloc(meshIn.Np*meshOut.Np, sizeof(dfloat));
-    meshIn.InterpolationMatrixHex3D(meshIn.N,
-				    meshIn.Np, meshIn.r, meshIn.s, meshIn.t,
-				    meshOut.Np, meshOut.r, meshOut.s, meshOut.t,
-				    Idown);
-
-    meshIn.InterpolationMatrixHex3D(meshOut.N,
-				    meshOut.Np, meshOut.r, meshOut.s, meshOut.t,
-				    meshIn.Np, meshIn.r, meshIn.s, meshIn.t,
-				    Iup);
-    
-    dfloat ggeoF[meshOut.Nggeo];
-    for(dlong e=0;e<meshOut.Nelements;++e){
-      for(dlong n=0;n<meshOut.Np;++n){
-	
-	for(dlong g=0;g<meshOut.Nggeo;++g){
-	  ggeoF[g] = 0;
-	}
-	for(dlong m=0;m<meshIn.Np;++m){
-	  //	  dfloat Inm = Idown[n*meshIn.Np+m];
-	  dfloat Inm = Iup[m*meshOut.Np+n];
-	  for(dlong g=0;g<meshOut.Nggeo;++g){
-	    dlong id = e*meshIn.Np*meshIn.Nggeo + m + g*meshIn.Np;
-	    ggeoF[g] += Inm*meshIn.ggeo[id];
-	  }
-	}
-	
-	for(dlong g=0;g<meshOut.Nggeo;++g){
-	  dlong id = e*meshOut.Np*meshIn.Nggeo + n + g*meshOut.Np;
-	  meshOut.ggeo[id] = ggeoF[g];
-	}
-      }
-    }
-
-    free(Iup);
-    free(Idown);
-  }
-}
-
-
 MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   elliptic(_elliptic), mesh(_elliptic.mesh), settings(_elliptic.settings),
   parAlmond(elliptic.platform, settings, mesh.comm) {
@@ -112,16 +61,33 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   MGLevel* currLevel=nullptr;
 
   int minN = 1; // degree of coarsest mesh
-  
-  printf("allNeumannPenalty=%g\n", elliptic.allNeumannPenalty);
+
+  // reset operator
+  occa::properties kernelInfo = mesh.props; //copy base occa properties (update in CubatureSetup)
+
+  printf("Rebuilding elliptic Ax\n");
+  if(mesh.elementType==HEXAHEDRA){
+    elliptic.partialCubatureAxKernel =
+      elliptic.platform.buildKernel(DELLIPTIC "/okl/ellipticCubatureAxHex3D.okl",
+				    "ellipticPartialCubatureAxHex3D",
+				    kernelInfo);
+  }
+  if(mesh.elementType==QUADRILATERALS){
+    elliptic.partialCubatureAxKernel =
+      elliptic.platform.buildKernel(DELLIPTIC "/okl/ellipticCubatureAxQuad2D.okl",
+				    "ellipticPartialCubatureAxQuad2D",
+				    kernelInfo);
+  }
   
   while(Nc>minN) {
     //build mesh and elliptic objects for this degree
     mesh_t &meshF = mesh.SetupNewDegree(Nf);
 
     // reset geometry and quadrature to match finest grid
-    meshF.CubatureSetup(mesh.N, "GLL");
-    meshF.o_cubggeo.copyFrom(mesh.o_cubggeo);
+    if(mesh.elementType==HEXAHEDRA || mesh.elementType==QUADRILATERALS){
+      meshF.CubatureSetup(mesh.N, "GLL");
+      meshF.o_cubggeo.copyFrom(mesh.o_cubggeo);
+    }
     
     elliptic_t &ellipticF = elliptic.SetupNewDegree(meshF);
 
@@ -178,8 +144,11 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   mesh_t &meshF = mesh.SetupNewDegree(minN);
 
   // reset geometry and quadrature to match finest grid
-  meshF.CubatureSetup(mesh.N, "GLL");
-  meshF.o_cubggeo.copyFrom(mesh.o_cubggeo);
+  if(mesh.elementType==HEXAHEDRA || mesh.elementType==QUADRILATERALS){
+    meshF.CubatureSetup(mesh.N, "GLL");
+    meshF.o_cubggeo.copyFrom(mesh.o_cubggeo);
+  }
+
   
   elliptic_t &ellipticF = elliptic.SetupNewDegree(meshF);
 
