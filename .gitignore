@@ -34,3 +34,4 @@ test/__pycache__
 !test/cubeHex.msh
 
 .vimrc
+.occa/
