@@ -297,22 +297,26 @@ void ellipticBuildOperatorConsistentDiagonal(elliptic_t &elliptic, dfloat *diagA
 
   int Np = mesh.Np;
   int Nelements = mesh.Nelements;
+
+  //build kernels
+  occa::properties kernelInfo = elliptic.platform.props;
+  occa::kernel setLocalNodeKernel = 
+    elliptic.platform.buildKernel(DELLIPTIC "/okl/ellipticSetLocalNode.okl", "ellipticSetLocalNodeKernel", kernelInfo);
+  occa::kernel stridedCopyKernel = 
+    elliptic.platform.buildKernel(DELLIPTIC "/okl/ellipticSetLocalNode.okl", "ellipticStridedCopyKernel", kernelInfo);
   
   dfloat *q = (dfloat*) calloc(Np*Nelements, sizeof(dfloat));
   dfloat *Aq = (dfloat*) calloc(Np*Nelements, sizeof(dfloat));
 
-  occa::memory o_q  = elliptic.platform.device.malloc(Np*Nelements*sizeof(dfloat), q);
-  occa::memory o_Aq = elliptic.platform.device.malloc(Np*Nelements*sizeof(dfloat), Aq);
+  occa::memory o_q  = elliptic.platform.device.malloc(Np*Nelements*sizeof(dfloat));
+  occa::memory o_Aq = elliptic.platform.device.malloc(Np*Nelements*sizeof(dfloat));
+  occa::memory o_diagA = elliptic.platform.device.malloc(Np*Nelements*sizeof(dfloat));  
 
+  double tic = MPI_Wtime();
+  
   for(dlong n=0;n<Np;++n){
-    for(dlong e=0;e<Nelements;++e){
-      dlong id = e*Np+n;
-      q[id] = 1;
-    }
 
-    o_q.copyFrom(q);
-    
-    //    elliptic.Operator(o_q, o_Aq);
+    setLocalNodeKernel(Nelements, Np, n, (dfloat)1.0, o_q);
 
     if(mesh.NglobalGatherElements) {
 
@@ -344,20 +348,15 @@ void ellipticBuildOperatorConsistentDiagonal(elliptic_t &elliptic, dfloat *diagA
 					 o_Aq);
       }
     }
-    
-    
-    o_Aq.copyTo(Aq);
 
-    // could use this to also grab entire col block Ae
-    for(dlong e=0;e<Nelements;++e){
-      dlong id = e*Np+n;
-      q[id] = 0;
-      diagA[id] = Aq[id];
-    }
+    // strided by Np, offset n
+    stridedCopyKernel(Nelements, Np, n, o_Aq, o_diagA);
   }
+  
+  o_diagA.copyTo(diagA);
 
-  for(dlong n=0;n<Np;++n){
-    for(dlong e=0;e<Nelements;++e){
+  for(dlong e=0;e<Nelements;++e){
+    for(dlong n=0;n<Np;++n){
       dlong id = e*Np+n;
       if(diagA[id] == 0)
 	diagA[id] = 1;
@@ -365,6 +364,9 @@ void ellipticBuildOperatorConsistentDiagonal(elliptic_t &elliptic, dfloat *diagA
   }
   
   elliptic.ogsMasked->GatherScatter(diagA, ogs_dfloat, ogs_add, ogs_sym);
+  double toc = MPI_Wtime();
+
+  printf("Diagonal build (sloppy) took %g seconds\n", toc-tic);
   
   free(q);
   free(Aq);
