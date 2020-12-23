@@ -34,7 +34,11 @@ JacobiPrecon::JacobiPrecon(elliptic_t& _elliptic):
 
   dfloat *diagA    = (dfloat*) calloc(mesh.Np*mesh.Nelements, sizeof(dfloat));
   dfloat *invDiagA = (dfloat*) calloc(mesh.Np*mesh.Nelements, sizeof(dfloat));
-  elliptic.BuildOperatorDiagonal(diagA);
+  //  elliptic.BuildOperatorDiagonal(diagA);
+
+  void ellipticBuildOperatorConsistentDiagonal(elliptic_t &elliptic, dfloat *diagA);
+  ellipticBuildOperatorConsistentDiagonal(elliptic, diagA);
+
   for (dlong n=0;n<mesh.Np*mesh.Nelements;n++)
     invDiagA[n] = 1.0/diagA[n];
 

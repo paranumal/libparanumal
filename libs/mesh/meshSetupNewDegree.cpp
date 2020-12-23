@@ -126,10 +126,12 @@ mesh_t& mesh_t::SetupNewDegree(int Nf){
 
   mesh->OccaSetup();
 
+#if 0
   switch(elementType){
   case HEXAHEDRA:
     mesh->CubatureSetup();
   }
+#endif
   
   return *mesh;
 }

@@ -109,6 +109,7 @@ int main(int argc, char **argv){
     }else{
       ((meshQuad2D&)mesh).CoordinateTransform(mesh.N, "GLL");
     }
+    //    mesh.CubatureSetup(mesh.N, "GLL");
   }
   
   dfloat lambda = 0.0;

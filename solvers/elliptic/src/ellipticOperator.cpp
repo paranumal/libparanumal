@@ -38,6 +38,7 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
     if(mesh.NglobalGatherElements) {
 
       if(integrationType==0) { // GLL or non-hex
+	printf("WARNING: CALLING PARTIAL AX\n");
 	partialAxKernel(mesh.NglobalGatherElements, mesh.o_globalGatherElementList,
 			mesh.o_ggeo, mesh.o_D, mesh.o_S, mesh.o_MM, lambda, o_q, o_Aq);
       }else{
@@ -54,6 +55,7 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
 
     if(mesh.NlocalGatherElements){
       if(integrationType==0) { // GLL or non-hex
+	printf("WARNING: CALLING PARTIAL AX\n");
 	partialAxKernel(mesh.NlocalGatherElements, mesh.o_localGatherElementList,
 			mesh.o_ggeo, mesh.o_D, mesh.o_S, mesh.o_MM, lambda, o_q, o_Aq);
       }else{

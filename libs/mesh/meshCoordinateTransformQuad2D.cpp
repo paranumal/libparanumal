@@ -33,7 +33,7 @@ void meshQuad2D::CoordinateTransform(int _cubN, const char *cubatureType){
   string mapFileName;
   settings.getSetting("BOX COORDINATE MAP FILE", mapFileName);
 
-  if(0)
+  if(1)
   if(mapFileName != "NONE"){
     printf("MAPPING COORDINATES\n");
     
