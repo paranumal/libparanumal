@@ -166,6 +166,8 @@ void platform_t::DeviceConfig(){
 
   device.setup(mode);
 
+  occa::env::setOccaCacheDir(LIBP_DIR "/.occa");
+
 #ifdef USE_OCCA_MEM_BYTE_ALIGN
   // change OCCA MEM BYTE ALIGNMENT
   occa::env::OCCA_MEM_BYTE_ALIGN = USE_OCCA_MEM_BYTE_ALIGN;
