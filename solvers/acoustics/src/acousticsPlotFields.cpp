@@ -43,38 +43,44 @@ void acoustics_t::PlotFields(dfloat* Q, char *fileName){
   fprintf(fp, "      <Points>\n");
   fprintf(fp, "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
 
+  //scratch space for interpolation
+  size_t NscratchBytes = mymax(mesh.Np, mesh.plotNp)*sizeof(dfloat);
+  dfloat* scratch = (dfloat *) malloc(2*NscratchBytes);
+
+  dfloat* Ix = (dfloat *) malloc(mesh.plotNp*sizeof(dfloat));
+  dfloat* Iy = (dfloat *) malloc(mesh.plotNp*sizeof(dfloat));
+  dfloat* Iz = (dfloat *) malloc(mesh.plotNp*sizeof(dfloat));
+
   // compute plot node coordinates on the fly
   for(dlong e=0;e<mesh.Nelements;++e){
+    mesh.PlotInterp(mesh.x + e*mesh.Np, Ix, scratch);
+    mesh.PlotInterp(mesh.y + e*mesh.Np, Iy, scratch);
+    mesh.PlotInterp(mesh.z + e*mesh.Np, Iz, scratch);
+
     for(int n=0;n<mesh.plotNp;++n){
-      dfloat plotxn = 0, plotyn = 0, plotzn = 0;
-
-      for(int m=0;m<mesh.Np;++m){
-        plotxn += mesh.plotInterp[n*mesh.Np+m]*mesh.x[m+e*mesh.Np];
-        plotyn += mesh.plotInterp[n*mesh.Np+m]*mesh.y[m+e*mesh.Np];
-        plotzn += mesh.plotInterp[n*mesh.Np+m]*mesh.z[m+e*mesh.Np];
-      }
-
       fprintf(fp, "       ");
-      fprintf(fp, "%g %g %g\n", plotxn,plotyn,plotzn);
+      fprintf(fp, "%g %g %g\n", Ix[n],Iy[n],Iz[n]);
     }
   }
   fprintf(fp, "        </DataArray>\n");
   fprintf(fp, "      </Points>\n");
 
+  free(Ix); free(Iy); free(Iz);
+
+  dfloat* Ip = (dfloat *) malloc(mesh.plotNp*sizeof(dfloat));
+  dfloat* Iu = (dfloat *) malloc(mesh.plotNp*sizeof(dfloat));
+  dfloat* Iv = (dfloat *) malloc(mesh.plotNp*sizeof(dfloat));
+  dfloat* Iw = (dfloat *) malloc(mesh.plotNp*sizeof(dfloat));
 
   // write out density
   fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Density\" Format=\"ascii\">\n");
   for(dlong e=0;e<mesh.Nelements;++e){
-    for(int n=0;n<mesh.plotNp;++n){
-      dfloat plotpn = 0;
-      for(int m=0;m<mesh.Np;++m){
-        dfloat pm = Q[e*mesh.Np*Nfields+m];
-        plotpn += mesh.plotInterp[n*mesh.Np+m]*pm;
-      }
+    mesh.PlotInterp(Q + e*mesh.Np*Nfields, Ip, scratch);
 
+    for(int n=0;n<mesh.plotNp;++n){
       fprintf(fp, "       ");
-      fprintf(fp, "%g\n", plotpn);
+      fprintf(fp, "%g\n", Ip[n]);
     }
   }
   fprintf(fp, "       </DataArray>\n");
@@ -82,33 +88,24 @@ void acoustics_t::PlotFields(dfloat* Q, char *fileName){
   // write out velocity
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"%d\" Format=\"ascii\">\n", mesh.dim);
   for(dlong e=0;e<mesh.Nelements;++e){
+    mesh.PlotInterp(Q + 1*mesh.Np + e*mesh.Np*Nfields, Iu, scratch);
+    mesh.PlotInterp(Q + 2*mesh.Np + e*mesh.Np*Nfields, Iv, scratch);
+    if(mesh.dim==3)
+      mesh.PlotInterp(Q + 3*mesh.Np + e*mesh.Np*Nfields, Iw, scratch);
+
     for(int n=0;n<mesh.plotNp;++n){
-      dfloat plotun = 0, plotvn = 0, plotwn = 0;
-      for(int m=0;m<mesh.Np;++m){
-        dfloat um = Q[e*mesh.Np*Nfields+m+mesh.Np  ];
-        dfloat vm = Q[e*mesh.Np*Nfields+m+mesh.Np*2];
-
-        plotun += mesh.plotInterp[n*mesh.Np+m]*um;
-        plotvn += mesh.plotInterp[n*mesh.Np+m]*vm;
-
-        if(mesh.dim==3){
-          dfloat wm = Q[e*mesh.Np*Nfields+m+mesh.Np*3];
-
-          plotwn += mesh.plotInterp[n*mesh.Np+m]*wm;
-        }
-      }
-
       fprintf(fp, "       ");
       fprintf(fp, "       ");
       if (mesh.dim==2)
-        fprintf(fp, "%g %g\n", plotun, plotvn);
+        fprintf(fp, "%g %g\n", Iu[n], Iv[n]);
       else
-        fprintf(fp, "%g %g %g\n", plotun, plotvn, plotwn);
+        fprintf(fp, "%g %g %g\n", Iu[n], Iv[n], Iw[n]);
     }
   }
   fprintf(fp, "       </DataArray>\n");
-
   fprintf(fp, "     </PointData>\n");
+
+  free(Ip); free(Iu); free(Iv); free(Iw);
 
   fprintf(fp, "    <Cells>\n");
   fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");
@@ -151,4 +148,5 @@ void acoustics_t::PlotFields(dfloat* Q, char *fileName){
   fprintf(fp, "</VTKFile>\n");
   fclose(fp);
 
+  free(scratch);
 }

@@ -66,6 +66,8 @@ public:
   void CubatureNodes();
 
   void MassMatrixKernelSetup(int Nfields);
+
+  void PlotInterp(const dfloat* q, dfloat* Iq, dfloat* scratch=nullptr);
 };
 
 class meshQuad2D: public mesh2D {
@@ -84,6 +86,8 @@ public:
   void CubatureNodes();
 
   void MassMatrixKernelSetup(int Nfields);
+
+  void PlotInterp(const dfloat* q, dfloat* Iq, dfloat* scratch=nullptr);
 };
 
 #endif

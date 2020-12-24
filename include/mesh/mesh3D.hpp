@@ -69,6 +69,8 @@ public:
   void CubatureNodes();
 
   void MassMatrixKernelSetup(int Nfields);
+
+  void PlotInterp(const dfloat* q, dfloat* Iq, dfloat* scratch=nullptr);
 };
 
 class meshQuad3D: public mesh3D {
@@ -87,6 +89,8 @@ public:
   void CubatureNodes();
 
   void MassMatrixKernelSetup(int Nfields);
+
+  void PlotInterp(const dfloat* q, dfloat* Iq, dfloat* scratch=nullptr);
 };
 
 class meshTet3D: public mesh3D {
@@ -105,6 +109,8 @@ public:
   void CubatureNodes();
 
   void MassMatrixKernelSetup(int Nfields);
+
+  void PlotInterp(const dfloat* q, dfloat* Iq, dfloat* scratch=nullptr);
 };
 
 class meshHex3D: public mesh3D {
@@ -123,6 +129,8 @@ public:
   void CubatureNodes();
 
   void MassMatrixKernelSetup(int Nfields);
+
+  void PlotInterp(const dfloat* q, dfloat* Iq, dfloat* scratch=nullptr);
 };
 
 #endif
