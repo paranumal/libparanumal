@@ -29,19 +29,6 @@ SOFTWARE.
 
 namespace parAlmond {
 
-static int compareNonZeroByRow(const void *a, const void *b){
-  parCOO::nonZero_t *pa = (parCOO::nonZero_t *) a;
-  parCOO::nonZero_t *pb = (parCOO::nonZero_t *) b;
-
-  if (pa->row < pb->row) return -1;
-  if (pa->row > pb->row) return +1;
-
-  if (pa->col < pb->col) return -1;
-  if (pa->col > pb->col) return +1;
-
-  return 0;
-};
-
 parCSR *transpose(parCSR *A){
 
   // MPI info
@@ -63,7 +50,13 @@ parCSR *transpose(parCSR *A){
   }
 
   //sort by destination row
-  qsort(sendNonZeros, A->offd.nnz, sizeof(parCOO::nonZero_t), compareNonZeroByRow);
+  std::sort(sendNonZeros, sendNonZeros+A->offd.nnz,
+            [](const parCOO::nonZero_t& a, const parCOO::nonZero_t& b) {
+              if (a.row < b.row) return true;
+              if (a.row > b.row) return false;
+
+              return a.col < b.col;
+            });
 
   //count number of non-zeros we're sending
   int *sendCounts = (int*) calloc(size, sizeof(int));
@@ -125,7 +118,13 @@ parCSR *transpose(parCSR *A){
   free(recvOffsets);
 
   //sort by row
-  qsort(cooAt.entries, cooAt.nnz, sizeof(parCOO::nonZero_t), compareNonZeroByRow);
+  std::sort(cooAt.entries, cooAt.entries+cooAt.nnz,
+            [](const parCOO::nonZero_t& a, const parCOO::nonZero_t& b) {
+              if (a.row < b.row) return true;
+              if (a.row > b.row) return false;
+
+              return a.col < b.col;
+            });
 
   return new parCSR(cooAt);
 }

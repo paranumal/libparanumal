@@ -29,19 +29,6 @@ SOFTWARE.
 
 namespace parAlmond {
 
-static int compareNonZeroByRow(const void *a, const void *b){
-  parCOO::nonZero_t *pa = (parCOO::nonZero_t *) a;
-  parCOO::nonZero_t *pb = (parCOO::nonZero_t *) b;
-
-  if (pa->row < pb->row) return -1;
-  if (pa->row > pb->row) return +1;
-
-  if (pa->col < pb->col) return -1;
-  if (pa->col > pb->col) return +1;
-
-  return 0;
-};
-
 parCSR *galerkinProd(parCSR *A, parCSR *P){
 
   // MPI info
@@ -124,7 +111,13 @@ parCSR *galerkinProd(parCSR *A, parCSR *P){
   free(Pvals);
 
   //sort entries by the coarse row and col
-  qsort(sendPTAP, sendNtotal, sizeof(parCOO::nonZero_t), compareNonZeroByRow);
+  std::sort(sendPTAP, sendPTAP+sendNtotal,
+            [](const parCOO::nonZero_t& a, const parCOO::nonZero_t& b) {
+              if (a.row < b.row) return true;
+              if (a.row > b.row) return false;
+
+              return a.col < b.col;
+            });
 
   //count number of non-zeros we're sending
   int *sendCounts = (int *) calloc(size,sizeof(int));
@@ -163,7 +156,13 @@ parCSR *galerkinProd(parCSR *A, parCSR *P){
   free(sendOffsets); free(recvOffsets);
 
   //sort entries by the coarse row and col
-  qsort(recvPTAP, recvNtotal, sizeof(parCOO::nonZero_t), compareNonZeroByRow);
+  std::sort(recvPTAP, recvPTAP+recvNtotal,
+            [](const parCOO::nonZero_t& a, const parCOO::nonZero_t& b) {
+              if (a.row < b.row) return true;
+              if (a.row > b.row) return false;
+
+              return a.col < b.col;
+            });
 
   //count total number of nonzeros;
   dlong nnz =0;

@@ -34,41 +34,12 @@ typedef struct{
   dlong element;
   int face;
 
-  int NfaceVertices;
-
   hlong v[4]; // max number of face vertices
 
   int bctype;
 
 }boundaryFace_t;
 
-// comparison function that orders vertices
-// based on their combined vertex indices
-static int compareBoundaryFaces(const void *a,
-                         const void *b){
-
-  boundaryFace_t *fa = (boundaryFace_t*) a;
-  boundaryFace_t *fb = (boundaryFace_t*) b;
-
-  for(int n=0;n<fa->NfaceVertices;++n){
-    if(fa->v[n] < fb->v[n]) return -1;
-    if(fa->v[n] > fb->v[n]) return +1;
-  }
-
-  return 0;
-
-}
-
-static int isLower(const void *a, const void *b){
-
-  hlong *pta = (hlong*) a;
-  hlong *ptb = (hlong*) b;
-
-  if(*pta > *ptb) return -1;
-  if(*pta < *ptb) return +1;
-
-  return 0;
-}
 
 /* routine to find EToB (Element To Boundary)*/
 void mesh_t::ConnectBoundary(){
@@ -101,9 +72,9 @@ void mesh_t::ConnectBoundary(){
           boundaryFaces[bcnt].v[n] = EToV[vid];
         }
 
-        qsort(boundaryFaces[bcnt].v,NfaceVertices, sizeof(hlong), isLower);
+        std::sort(boundaryFaces[bcnt].v, boundaryFaces[bcnt].v+NfaceVertices,
+                  std::less<hlong>());
 
-        boundaryFaces[bcnt].NfaceVertices = NfaceVertices;
         boundaryFaces[bcnt].element = e;
         boundaryFaces[bcnt].face = f;
         boundaryFaces[bcnt].bctype = -1;
@@ -118,9 +89,9 @@ void mesh_t::ConnectBoundary(){
     for(int n=0;n<NfaceVertices;++n)
       boundaryFaces[bcnt].v[n] = boundaryInfo[b*(NfaceVertices+1)+n+1];
 
-    qsort(boundaryFaces[bcnt].v,NfaceVertices, sizeof(hlong), isLower);
+    std::sort(boundaryFaces[bcnt].v, boundaryFaces[bcnt].v+NfaceVertices,
+              std::less<hlong>());
 
-    boundaryFaces[bcnt].NfaceVertices = NfaceVertices;
     boundaryFaces[bcnt].element = -1;
     boundaryFaces[bcnt].face = -1;
     boundaryFaces[bcnt].bctype = boundaryInfo[b*(NfaceVertices+1)];
@@ -142,14 +113,19 @@ void mesh_t::ConnectBoundary(){
 #endif
 
   /* sort boundaryFaces by their vertex number pairs */
-  qsort(boundaryFaces, bcnt, sizeof(boundaryFace_t), compareBoundaryFaces);
+  std::sort(boundaryFaces, boundaryFaces+bcnt,
+            [&](const boundaryFace_t& a, const boundaryFace_t& b) {
+              return std::lexicographical_compare(a.v, a.v+NfaceVertices,
+                                                  b.v, b.v+NfaceVertices);
+            });
 
   /* scan through sorted face lists looking for element-boundary matches */
   EToB = (int*) calloc(Nelements*Nfaces, sizeof(int));
   for(dlong n=0;n<Nelements*Nfaces;++n) EToB[n] = -1;
 
   for(hlong cnt=0;cnt<bcnt-1;++cnt){
-    if(!compareBoundaryFaces(boundaryFaces+cnt, boundaryFaces+cnt+1)){
+    if(std::equal(boundaryFaces[cnt].v, boundaryFaces[cnt].v+NfaceVertices,
+                  boundaryFaces[cnt+1].v)){
       dlong e = mymax(boundaryFaces[cnt].element, boundaryFaces[cnt+1].element);
       int f   = mymax(boundaryFaces[cnt].face,    boundaryFaces[cnt+1].face);
 

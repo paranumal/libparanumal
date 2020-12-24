@@ -37,36 +37,6 @@ typedef struct{
 
 }parallelNode_t;
 
-// compare on baseId then by localId
-static int compareBaseId(const void *a, const void *b){
-
-  parallelNode_t *fa = (parallelNode_t*) a;
-  parallelNode_t *fb = (parallelNode_t*) b;
-
-  if(abs(fa->baseId) < abs(fb->baseId)) return -1; //group by abs(baseId)
-  if(abs(fa->baseId) > abs(fb->baseId)) return +1;
-
-  if(fa->baseId > fb->baseId) return -1; //positive ids first
-  if(fa->baseId < fb->baseId) return +1;
-
-  if(fa->localId < fb->localId) return -1; //sort by local id
-  if(fa->localId > fb->localId) return +1;
-
-  return 0;
-}
-
-// compare on haloOwned then localId
-static int compareLocalId(const void *a, const void *b){
-
-  parallelNode_t *fa = (parallelNode_t*) a;
-  parallelNode_t *fb = (parallelNode_t*) b;
-
-  if(fa->localId < fb->localId) return -1;
-  if(fa->localId > fb->localId) return +1;
-
-  return 0;
-}
-
 void setupRowBlocks(ogsData_t &A, platform_t &platform);
 
 ogs_t *ogs_t::Setup(dlong N, hlong *ids, MPI_Comm &comm,
@@ -132,7 +102,16 @@ ogs_t *ogs_t::Setup(dlong N, hlong *ids, MPI_Comm &comm,
   }
 
   // sort based on base ids (putting positive ids first) then local id
-  qsort(localNodes, ogs->Nlocal, sizeof(parallelNode_t), compareBaseId);
+  std::sort(localNodes, localNodes+ogs->Nlocal,
+            [](const parallelNode_t& a, const parallelNode_t& b) {
+              if(abs(a.baseId) < abs(b.baseId)) return true; //group by abs(baseId)
+              if(abs(a.baseId) > abs(b.baseId)) return false;
+
+              if(a.baseId > b.baseId) return true; //positive ids first
+              if(a.baseId < b.baseId) return false;
+
+              return (a.localId < b.localId); //sort by local id
+            });
 
   //flag each set of ids by whether there is at least one positive id
   // and count how many local gather/scatter nodes we have
@@ -158,7 +137,10 @@ ogs_t *ogs_t::Setup(dlong N, hlong *ids, MPI_Comm &comm,
   }
 
   // sort back to local ids
-  qsort(localNodes, ogs->Nlocal, sizeof(parallelNode_t), compareLocalId);
+  std::sort(localNodes, localNodes+ogs->Nlocal,
+            [](const parallelNode_t& a, const parallelNode_t& b) {
+              return (a.localId < b.localId); //sort by local id
+            });
 
   //tally up how many nodes are being gathered to each gatherNode and
   //  map to a local ordering
@@ -345,7 +327,16 @@ ogs_t *ogs_t::Setup(dlong N, hlong *ids, MPI_Comm &comm,
   }
 
   // sort based on base ids (putting positive ids first) then local id
-  qsort(haloNodes, ogs->Nhalo, sizeof(parallelNode_t), compareBaseId);
+  std::sort(haloNodes, haloNodes+ogs->Nhalo,
+            [](const parallelNode_t& a, const parallelNode_t& b) {
+              if(abs(a.baseId) < abs(b.baseId)) return true; //group by abs(baseId)
+              if(abs(a.baseId) > abs(b.baseId)) return false;
+
+              if(a.baseId > b.baseId) return true; //positive ids first
+              if(a.baseId < b.baseId) return false;
+
+              return (a.localId < b.localId); //sort by local id
+            });
 
   ogs->haloGather.Nrows = 0;
   ogs->haloScatter.Nrows = 0;
@@ -370,7 +361,10 @@ ogs_t *ogs_t::Setup(dlong N, hlong *ids, MPI_Comm &comm,
   }
 
   // sort based on local ids
-  qsort(haloNodes, ogs->Nhalo, sizeof(parallelNode_t), compareLocalId);
+  std::sort(haloNodes, haloNodes+ogs->Nhalo,
+            [](const parallelNode_t& a, const parallelNode_t& b) {
+              return (a.localId < b.localId); //sort by local id
+            });
 
   //tally up how many nodes are being gathered to each gatherNode and
   //  map to a local ordering

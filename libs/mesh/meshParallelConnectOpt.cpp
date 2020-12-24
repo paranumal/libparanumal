@@ -29,58 +29,10 @@ SOFTWARE.
 typedef struct {
   hlong v[4]; // vertices on face
   dlong element, elementN;
-  int NfaceVertices;
   int face, rank;    // face info
   int faceN, rankN; // N for neighbor face info
 
 }parallelFace_t;
-
-// comparison function that orders vertices
-// based on their combined vertex indices
-static int parallelCompareVertices(const void *a,
-                            const void *b){
-
-  parallelFace_t *fa = (parallelFace_t*) a;
-  parallelFace_t *fb = (parallelFace_t*) b;
-
-  for(int n=0;n<fa->NfaceVertices;++n){
-    if(fa->v[n] < fb->v[n]) return -1;
-    if(fa->v[n] > fb->v[n]) return +1;
-  }
-
-  return 0;
-}
-
-/* comparison function that orders element/face
-   based on their indexes */
-static int parallelCompareFaces(const void *a,
-                         const void *b){
-
-  parallelFace_t *fa = (parallelFace_t*) a;
-  parallelFace_t *fb = (parallelFace_t*) b;
-
-  if(fa->rank < fb->rank) return -1;
-  if(fa->rank > fb->rank) return +1;
-
-  if(fa->element < fb->element) return -1;
-  if(fa->element > fb->element) return +1;
-
-  if(fa->face < fb->face) return -1;
-  if(fa->face > fb->face) return +1;
-
-  return 0;
-}
-
-static int isLower(const void *a, const void *b){
-
-  hlong *pta = (hlong*) a;
-  hlong *ptb = (hlong*) b;
-
-  if(*pta > *ptb) return -1;
-  if(*pta < *ptb) return +1;
-
-  return 0;
-}
 
 // mesh is the local partition
 void mesh_t::ParallelConnect(){
@@ -129,18 +81,17 @@ void mesh_t::ParallelConnect(){
 
   // Make the MPI_PARALLELFACE_T data type
   MPI_Datatype MPI_PARALLELFACE_T;
-  MPI_Datatype dtype[8] = {MPI_HLONG, MPI_DLONG, MPI_DLONG, MPI_INT,
-                            MPI_INT, MPI_INT, MPI_INT, MPI_INT};
-  int blength[8] = {4, 1, 1, 1, 1, 1, 1, 1};
-  MPI_Aint addr[8], displ[8];
+  MPI_Datatype dtype[7] = {MPI_HLONG, MPI_DLONG, MPI_DLONG, MPI_INT,
+                            MPI_INT, MPI_INT, MPI_INT};
+  int blength[7] = {4, 1, 1, 1, 1, 1, 1};
+  MPI_Aint addr[7], displ[7];
   MPI_Get_address ( &(sendFaces[0]              ), addr+0);
   MPI_Get_address ( &(sendFaces[0].element      ), addr+1);
   MPI_Get_address ( &(sendFaces[0].elementN     ), addr+2);
-  MPI_Get_address ( &(sendFaces[0].NfaceVertices), addr+3);
-  MPI_Get_address ( &(sendFaces[0].face         ), addr+4);
-  MPI_Get_address ( &(sendFaces[0].rank         ), addr+5);
-  MPI_Get_address ( &(sendFaces[0].faceN        ), addr+6);
-  MPI_Get_address ( &(sendFaces[0].rankN        ), addr+7);
+  MPI_Get_address ( &(sendFaces[0].face         ), addr+3);
+  MPI_Get_address ( &(sendFaces[0].rank         ), addr+4);
+  MPI_Get_address ( &(sendFaces[0].faceN        ), addr+5);
+  MPI_Get_address ( &(sendFaces[0].rankN        ), addr+6);
   displ[0] = 0;
   displ[1] = addr[1] - addr[0];
   displ[2] = addr[2] - addr[0];
@@ -148,8 +99,7 @@ void mesh_t::ParallelConnect(){
   displ[4] = addr[4] - addr[0];
   displ[5] = addr[5] - addr[0];
   displ[6] = addr[6] - addr[0];
-  displ[7] = addr[7] - addr[0];
-  MPI_Type_create_struct (8, blength, displ, dtype, &MPI_PARALLELFACE_T);
+  MPI_Type_create_struct (7, blength, displ, dtype, &MPI_PARALLELFACE_T);
   MPI_Type_commit (&MPI_PARALLELFACE_T);
 
   // pack face data
@@ -177,9 +127,9 @@ void mesh_t::ParallelConnect(){
           sendFaces[id].v[n] = EToV[e*Nverts + nid];
         }
 
-        qsort(sendFaces[id].v, NfaceVertices, sizeof(hlong), isLower);
+        std::sort(sendFaces[id].v, sendFaces[id].v+NfaceVertices,
+                  std::less<hlong>());
 
-        sendFaces[id].NfaceVertices = NfaceVertices;
         sendFaces[id].rank = rank;
 
         sendFaces[id].elementN = -1;
@@ -214,12 +164,17 @@ void mesh_t::ParallelConnect(){
                 comm);
 
   // local sort allNrecv received faces
-  qsort(recvFaces, allNrecv, sizeof(parallelFace_t), parallelCompareVertices);
+  std::sort(recvFaces, recvFaces+allNrecv,
+            [&](const parallelFace_t& a, const parallelFace_t& b) {
+              return std::lexicographical_compare(a.v, a.v+NfaceVertices,
+                                                  b.v, b.v+NfaceVertices);
+            });
 
   // find matches
   for(int n=0;n<allNrecv-1;++n){
     // since vertices are ordered we just look for pairs
-    if(!parallelCompareVertices(recvFaces+n, recvFaces+n+1)){
+    if(std::equal(recvFaces[n].v, recvFaces[n].v+NfaceVertices,
+                  recvFaces[n+1].v)){
       recvFaces[n].elementN = recvFaces[n+1].element;
       recvFaces[n].faceN = recvFaces[n+1].face;
       recvFaces[n].rankN = recvFaces[n+1].rank;
@@ -231,7 +186,16 @@ void mesh_t::ParallelConnect(){
   }
 
   // sort back to original ordering
-  qsort(recvFaces, allNrecv, sizeof(parallelFace_t), parallelCompareFaces);
+  std::sort(recvFaces, recvFaces+allNrecv,
+            [](const parallelFace_t& a, const parallelFace_t& b) {
+              if(a.rank < b.rank) return true;
+              if(a.rank > b.rank) return false;
+
+              if(a.element < b.element) return true;
+              if(a.element > b.element) return false;
+
+              return (a.face < b.face);
+            });
 
   // send faces back from whence they came
   MPI_Alltoallv(recvFaces, Nrecv, recvOffsets, MPI_PARALLELFACE_T,

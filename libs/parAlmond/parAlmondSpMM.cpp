@@ -29,19 +29,6 @@ SOFTWARE.
 
 namespace parAlmond {
 
-static int compareNonZeroByRow(const void *a, const void *b){
-  parCOO::nonZero_t *pa = (parCOO::nonZero_t *) a;
-  parCOO::nonZero_t *pb = (parCOO::nonZero_t *) b;
-
-  if (pa->row < pb->row) return -1;
-  if (pa->row > pb->row) return +1;
-
-  if (pa->col < pb->col) return -1;
-  if (pa->col > pb->col) return +1;
-
-  return 0;
-};
-
 parCSR *SpMM(parCSR *A, parCSR *B){
 
   // MPI info
@@ -245,7 +232,13 @@ parCSR *SpMM(parCSR *A, parCSR *B){
 
 
   //sort entries by the row and col
-  qsort(Ctmp, nnzTotal, sizeof(parCOO::nonZero_t), compareNonZeroByRow);
+  std::sort(Ctmp, Ctmp+nnzTotal,
+            [](const parCOO::nonZero_t& a, const parCOO::nonZero_t& b) {
+              if (a.row < b.row) return true;
+              if (a.row > b.row) return false;
+
+              return a.col < b.col;
+            });
 
   //count total number of nonzeros;
   dlong nnz =0;

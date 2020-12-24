@@ -28,21 +28,6 @@ SOFTWARE.
 #include "mesh/meshDefines2D.h"
 #include "mesh/meshDefines3D.h"
 
-// compare on global indices
-int parallelCompareRowColumn(const void *a, const void *b){
-
-  parAlmond::parCOO::nonZero_t *fa = (parAlmond::parCOO::nonZero_t*) a;
-  parAlmond::parCOO::nonZero_t *fb = (parAlmond::parCOO::nonZero_t*) b;
-
-  if(fa->row < fb->row) return -1;
-  if(fa->row > fb->row) return +1;
-
-  if(fa->col < fb->col) return -1;
-  if(fa->col > fb->col) return +1;
-
-  return 0;
-}
-
 void elliptic_t::BuildOperatorMatrixContinuous(parAlmond::parCOO& A) {
 
   switch(mesh.elementType){
@@ -127,7 +112,14 @@ void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO& A) {
   }
 
   // sort by row ordering
-  qsort(sendNonZeros, cnt, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
+  std::sort(sendNonZeros, sendNonZeros+cnt,
+            [](const parAlmond::parCOO::nonZero_t& a,
+               const parAlmond::parCOO::nonZero_t& b) {
+              if (a.row < b.row) return true;
+              if (a.row > b.row) return false;
+
+              return a.col < b.col;
+            });
 
   // count how many non-zeros to send to each process
   int rr=0;
@@ -156,7 +148,14 @@ void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO& A) {
                    mesh.comm);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
-  qsort((A.entries), A.nnz, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
+  std::sort(A.entries, A.entries+A.nnz,
+            [](const parAlmond::parCOO::nonZero_t& a,
+               const parAlmond::parCOO::nonZero_t& b) {
+              if (a.row < b.row) return true;
+              if (a.row > b.row) return false;
+
+              return a.col < b.col;
+            });
 
   // compress duplicates
   cnt = 0;
@@ -322,7 +321,14 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO& A) {
 #endif
 
   // sort by row ordering
-  qsort(sendNonZeros, cnt, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
+  std::sort(sendNonZeros, sendNonZeros+cnt,
+            [](const parAlmond::parCOO::nonZero_t& a,
+               const parAlmond::parCOO::nonZero_t& b) {
+              if (a.row < b.row) return true;
+              if (a.row > b.row) return false;
+
+              return a.col < b.col;
+            });
 
   // count how many non-zeros to send to each process
   int rr=0;
@@ -351,7 +357,14 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO& A) {
                    mesh.comm);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
-  qsort((A.entries), A.nnz, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
+  std::sort(A.entries, A.entries+A.nnz,
+            [](const parAlmond::parCOO::nonZero_t& a,
+               const parAlmond::parCOO::nonZero_t& b) {
+              if (a.row < b.row) return true;
+              if (a.row > b.row) return false;
+
+              return a.col < b.col;
+            });
 
   // compress duplicates
   cnt = 0;
@@ -478,7 +491,14 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO& A) {
   }
 
   // sort by row ordering
-  qsort(sendNonZeros, cnt, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
+  std::sort(sendNonZeros, sendNonZeros+cnt,
+            [](const parAlmond::parCOO::nonZero_t& a,
+               const parAlmond::parCOO::nonZero_t& b) {
+              if (a.row < b.row) return true;
+              if (a.row > b.row) return false;
+
+              return a.col < b.col;
+            });
 
   // count how many non-zeros to send to each process
   int rr=0;
@@ -507,7 +527,14 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO& A) {
                    mesh.comm);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
-  qsort((A.entries), A.nnz, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
+  std::sort(A.entries, A.entries+A.nnz,
+            [](const parAlmond::parCOO::nonZero_t& a,
+               const parAlmond::parCOO::nonZero_t& b) {
+              if (a.row < b.row) return true;
+              if (a.row > b.row) return false;
+
+              return a.col < b.col;
+            });
 
   // compress duplicates
   cnt = 0;
@@ -616,7 +643,14 @@ void elliptic_t::BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO& A) {
   }
 
   // sort by row ordering
-  qsort(sendNonZeros, cnt, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
+  std::sort(sendNonZeros, sendNonZeros+cnt,
+            [](const parAlmond::parCOO::nonZero_t& a,
+               const parAlmond::parCOO::nonZero_t& b) {
+              if (a.row < b.row) return true;
+              if (a.row > b.row) return false;
+
+              return a.col < b.col;
+            });
 
   // count how many non-zeros to send to each process
   int rr=0;
@@ -645,7 +679,14 @@ void elliptic_t::BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO& A) {
                    mesh.comm);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
-  qsort((A.entries), A.nnz, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
+  std::sort(A.entries, A.entries+A.nnz,
+            [](const parAlmond::parCOO::nonZero_t& a,
+               const parAlmond::parCOO::nonZero_t& b) {
+              if (a.row < b.row) return true;
+              if (a.row > b.row) return false;
+
+              return a.col < b.col;
+            });
 
   // compress duplicates
   cnt = 0;
@@ -793,7 +834,14 @@ void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO& A) {
   }
 
   // sort by row ordering
-  qsort(sendNonZeros, cnt, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
+  std::sort(sendNonZeros, sendNonZeros+cnt,
+            [](const parAlmond::parCOO::nonZero_t& a,
+               const parAlmond::parCOO::nonZero_t& b) {
+              if (a.row < b.row) return true;
+              if (a.row > b.row) return false;
+
+              return a.col < b.col;
+            });
 
   // count how many non-zeros to send to each process
   int rr=0;
@@ -822,7 +870,14 @@ void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO& A) {
                    mesh.comm);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
-  qsort((A.entries), A.nnz, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
+  std::sort(A.entries, A.entries+A.nnz,
+            [](const parAlmond::parCOO::nonZero_t& a,
+               const parAlmond::parCOO::nonZero_t& b) {
+              if (a.row < b.row) return true;
+              if (a.row > b.row) return false;
+
+              return a.col < b.col;
+            });
 
   // compress duplicates
   cnt = 0;

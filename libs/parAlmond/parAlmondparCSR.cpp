@@ -246,35 +246,6 @@ typedef struct {
 
 } parallelId_t;
 
-// compare on global indices
-static int CompareGlobalId(const void *a, const void *b){
-
-  parallelId_t *fa = (parallelId_t*) a;
-  parallelId_t *fb = (parallelId_t*) b;
-
-  if(fa->globalId < fb->globalId) return -1;
-  if(fa->globalId > fb->globalId) return +1;
-
-  if(fa->localId < fb->localId) return -1;
-  if(fa->localId > fb->localId) return +1;
-
-  return 0;
-}
-
-// compare on local indices
-static int CompareLocalId(const void *a, const void *b){
-
-  parallelId_t *fa = (parallelId_t*) a;
-  parallelId_t *fb = (parallelId_t*) b;
-
-  if(fa->localId < fb->localId) return -1;
-  if(fa->localId > fb->localId) return +1;
-
-  if(fa->globalId < fb->globalId) return -1;
-  if(fa->globalId > fb->globalId) return +1;
-
-  return 0;
-}
 
 void parCSR::haloSetup(hlong *colIds) {
 
@@ -292,7 +263,13 @@ void parCSR::haloSetup(hlong *colIds) {
   }
 
   //sort by global index
-  qsort(parIds, offd.nnz, sizeof(parallelId_t), CompareGlobalId);
+  std::sort(parIds, parIds+offd.nnz,
+            [](const parallelId_t& a, const parallelId_t& b) {
+              if(a.globalId < b.globalId) return true;
+              if(a.globalId > b.globalId) return false;
+
+              return (a.localId < b.localId);
+            });
 
   //count unique nonlocal column ids
   dlong Noffdcols = 0; //number of unique columns
@@ -314,7 +291,13 @@ void parCSR::haloSetup(hlong *colIds) {
       offdcols[Noffdcols++] = parIds[n].globalId;
 
   //sort back to local order
-  qsort(parIds, offd.nnz, sizeof(parallelId_t), CompareLocalId);
+  std::sort(parIds, parIds+offd.nnz,
+            [](const parallelId_t& a, const parallelId_t& b) {
+              if(a.localId < b.localId) return true;
+              if(a.localId > b.localId) return false;
+
+              return (a.globalId < b.globalId);
+            });
 
   // be careful to make sure Ncols is set at this point
   NlocalCols = Ncols;
