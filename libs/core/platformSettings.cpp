@@ -45,8 +45,12 @@ platformSettings_t::platformSettings_t(MPI_Comm _comm):
              "Parallel platform number (used in OpenCL mode)");
 
   newSetting("DEVICE NUMBER",
-             "0"
+             "0",
              "Parallel device number");
+
+  newSetting("CACHE DIR",
+             LIBP_DIR "/.occa",
+             "Path for OCCA to place kernel cache");
 }
 
 void platformSettings_t::report() {
