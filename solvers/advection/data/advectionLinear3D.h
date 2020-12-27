@@ -24,12 +24,24 @@ SOFTWARE.
 
 */
 
+#define ADVECTION_SPEED_X 1.0
+#define ADVECTION_SPEED_Y 0.5
+#define ADVECTION_SPEED_Z 0.75
+
 // Flux function
 #define advectionFlux3D(t, x, y, z, q, cx, cy, cz) \
-{                                       \
-  *(cx) = 1.0*q;                        \
-  *(cy) = 0.5*q;                        \
-  *(cz) = 0.75*q;                       \
+{                                                  \
+  *(cx) = ADVECTION_SPEED_X*q;                     \
+  *(cy) = ADVECTION_SPEED_Y*q;                     \
+  *(cz) = ADVECTION_SPEED_Z*q;                     \
+}
+
+// max wavespeed (should be max eigen of Jacobian of flux function)
+#define advectionMaxWaveSpeed3D(t, x, y, z, q, c) \
+{                                                 \
+  *(c) = sqrt(ADVECTION_SPEED_X*ADVECTION_SPEED_X + \
+              ADVECTION_SPEED_Y*ADVECTION_SPEED_Y + \
+              ADVECTION_SPEED_Z*ADVECTION_SPEED_Z); \
 }
 
 // Boundary conditions

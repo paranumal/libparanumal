@@ -46,15 +46,8 @@ advection_t& advection_t::Setup(platform_t& platform, mesh_t& mesh,
                                               mesh.Np, 1, *advection, mesh.comm);
   }
 
-  // set time step
-  dfloat hmin = mesh.MinCharacteristicLength();
-  dfloat cfl = 0.5; // depends on the stability region size
-
-  dfloat dt = cfl*hmin/((mesh.N+1.)*(mesh.N+1.));
-  advection->timeStepper->SetTimeStep(dt);
-
   //setup linear algebra module
-  platform.linAlg.InitKernels({"innerProd"});
+  platform.linAlg.InitKernels({"innerProd", "max"});
 
   /*setup trace halo exchange */
   advection->traceHalo = mesh.HaloTraceSetup(1); //one field
@@ -125,6 +118,11 @@ advection_t& advection_t::Setup(platform_t& platform, mesh_t& mesh,
 
   advection->initialConditionKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 
+  sprintf(fileName, DADVECTION "/okl/advectionMaxWaveSpeed%s.okl", suffix);
+  sprintf(kernelName, "advectionMaxWaveSpeed%s", suffix);
+
+  advection->maxWaveSpeedKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
+
   return *advection;
 }
 
@@ -132,6 +130,7 @@ advection_t::~advection_t() {
   volumeKernel.free();
   surfaceKernel.free();
   initialConditionKernel.free();
+  maxWaveSpeedKernel.free();
 
   if (timeStepper) delete timeStepper;
   if (traceHalo) traceHalo->Free();
