@@ -40,6 +40,9 @@ void linAlg_t::Setup(platform_t *_platform) {
   //add defines
   kernelInfo["defines/" "p_blockSize"] = (int)LINALG_BLOCKSIZE;
 
+  kernelInfo["defines/init_dfloat_min"] =  std::numeric_limits<dfloat>::max();
+  kernelInfo["defines/init_dfloat_max"] = -std::numeric_limits<dfloat>::max();
+
   //pinned scratch buffer
   scratch = (dfloat*) platform->hostMalloc(LINALG_BLOCKSIZE*sizeof(dfloat),
                                            NULL, h_scratch);
@@ -117,6 +120,18 @@ void linAlg_t::InitKernels(vector<string> kernels) {
                                         "linAlgADXPY.okl",
                                         "zadxpy",
                                         kernelInfo);
+    } else if (name=="min") {
+      if (minKernel.isInitialized()==false)
+        minKernel = platform->buildKernel(LINALG_DIR "/okl/"
+                                        "linAlgMin.okl",
+                                        "min",
+                                        kernelInfo);
+    } else if (name=="max") {
+      if (maxKernel.isInitialized()==false)
+        maxKernel = platform->buildKernel(LINALG_DIR "/okl/"
+                                        "linAlgMax.okl",
+                                        "max",
+                                        kernelInfo);
     } else if (name=="sum") {
       if (sumKernel.isInitialized()==false)
         sumKernel = platform->buildKernel(LINALG_DIR "/okl/"
@@ -167,6 +182,8 @@ linAlg_t::~linAlg_t() {
   adxKernel.free();
   adxpyKernel.free();
   zadxpyKernel.free();
+  minKernel.free();
+  maxKernel.free();
   sumKernel.free();
   norm2Kernel.free();
   weightedNorm2Kernel.free();

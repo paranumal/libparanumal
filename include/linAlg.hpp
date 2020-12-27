@@ -106,6 +106,12 @@ public:
               occa::memory& o_a, occa::memory& o_x,
               const dfloat beta, occa::memory& o_y, occa::memory& o_z);
 
+  // \min o_a
+  dfloat min(const dlong N, occa::memory& o_a, MPI_Comm comm);
+
+  // \max o_a
+  dfloat max(const dlong N, occa::memory& o_a, MPI_Comm comm);
+
   // \sum o_a
   dfloat sum(const dlong N, occa::memory& o_a, MPI_Comm comm);
 
@@ -135,6 +141,8 @@ public:
   occa::kernel adxKernel;
   occa::kernel adxpyKernel;
   occa::kernel zadxpyKernel;
+  occa::kernel minKernel;
+  occa::kernel maxKernel;
   occa::kernel sumKernel;
   occa::kernel norm2Kernel;
   occa::kernel weightedNorm2Kernel;
