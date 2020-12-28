@@ -49,7 +49,7 @@ acoustics_t& acoustics_t::Setup(platform_t& platform, mesh_t& mesh,
   }
 
   //setup linear algebra module
-  platform.linAlg.InitKernels({"innerProd", "max"});
+  platform.linAlg.InitKernels({"innerProd"});
 
   // set penalty parameter
   dfloat Lambda2 = 0.5;
