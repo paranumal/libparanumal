@@ -41,6 +41,19 @@ void cns_t::Run(){
                          mesh.o_z,
                          o_q);
 
+  dfloat cfl=0.5;
+  settings.getSetting("CFL NUMBER", cfl);
+
+  // set time step
+  dfloat hmin = mesh.MinCharacteristicLength();
+  dfloat vmax = MaxWaveSpeed(o_q, startTime);
+
+  dfloat dtAdv  = hmin/(vmax*(mesh.N+1.)*(mesh.N+1.));
+  dfloat dtVisc = pow(hmin, 2)/(pow(mesh.N+1,4)*mu);
+
+  dfloat dt = cfl*mymin(dtAdv, dtVisc);
+  timeStepper->SetTimeStep(dt);
+
   timeStepper->Run(o_q, startTime, finalTime);
 
   // output norm of final solution

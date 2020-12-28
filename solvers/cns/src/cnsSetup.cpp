@@ -66,18 +66,8 @@ cns_t& cns_t::Setup(platform_t& platform, mesh_t& mesh,
                                               mesh.Np, cns->Nfields, *cns, mesh.comm);
   }
 
-  // set time step
-  dfloat hmin = mesh.MinCharacteristicLength();
-  dfloat cfl = 0.5; // depends on the stability region size
-
-  dfloat dtAdv  = hmin/((mesh.N+1.)*(mesh.N+1.)*cns->gamma); //just an estimate
-  dfloat dtVisc = pow(hmin, 2)/(pow(mesh.N+1,4)*cns->mu);
-
-  dfloat dt = cfl*mymin(dtAdv, dtVisc);
-  cns->timeStepper->SetTimeStep(dt);
-
   //setup linear algebra module
-  platform.linAlg.InitKernels({"innerProd"});
+  platform.linAlg.InitKernels({"innerProd", "max"});
 
   /*setup trace halo exchange */
   cns->fieldTraceHalo = mesh.HaloTraceSetup(cns->Nfields);
@@ -243,7 +233,18 @@ cns_t& cns_t::Setup(platform_t& platform, mesh_t& mesh,
       sprintf(kernelName, "cnsInitialCondition3D");
   }
 
+
   cns->initialConditionKernel = platform.buildKernel(fileName, kernelName,
+                                            kernelInfo);
+
+  sprintf(fileName, DCNS "/okl/cnsMaxWaveSpeed%s.okl", suffix);
+  if (cns->isothermal) {
+    sprintf(kernelName, "cnsIsothermalMaxWaveSpeed%s", suffix);
+  } else {
+    sprintf(kernelName, "cnsMaxWaveSpeed%s", suffix);
+  }
+
+  cns->maxWaveSpeedKernel = platform.buildKernel(fileName, kernelName,
                                             kernelInfo);
 
   return *cns;
@@ -259,6 +260,7 @@ cns_t::~cns_t() {
   vorticityKernel.free();
   constrainKernel.free();
   initialConditionKernel.free();
+  maxWaveSpeedKernel.free();
 
   if (timeStepper) delete timeStepper;
   if (fieldTraceHalo) fieldTraceHalo->Free();

@@ -87,6 +87,7 @@ public:
   occa::kernel constrainKernel;
 
   occa::kernel initialConditionKernel;
+  occa::kernel maxWaveSpeedKernel;
 
   cns_t() = delete;
   cns_t(platform_t &_platform, mesh_t &_mesh,
@@ -106,6 +107,8 @@ public:
   void PlotFields(dfloat* Q, dfloat *V, char *fileName);
 
   void rhsf(occa::memory& o_q, occa::memory& o_rhs, const dfloat time);
+
+  dfloat MaxWaveSpeed(occa::memory& o_Q, const dfloat T);
 };
 
 #endif
