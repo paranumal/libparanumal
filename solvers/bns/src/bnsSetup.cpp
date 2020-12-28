@@ -64,8 +64,10 @@ bns_t& bns_t::Setup(platform_t& platform, mesh_t& mesh,
 
   //make array of time step estimates for each element
   dfloat *EtoDT = (dfloat *) calloc(mesh.Nelements,sizeof(dfloat));
+  dfloat vmax = bns->MaxWaveSpeed();
   for(dlong e=0;e<mesh.Nelements;++e){
-    dfloat dtAdv  = mesh.ElementCharacteristicLength(e)/((mesh.N+1.)*(mesh.N+1.)*sqrt(3.0)*bns->c); //just an estimate
+    dfloat h = mesh.ElementCharacteristicLength(e);
+    dfloat dtAdv  = h/(vmax*(mesh.N+1.)*(mesh.N+1.));
     dfloat dtVisc = 1.0/bns->tauInv;
 
     if (bns->semiAnalytic)
@@ -133,30 +135,6 @@ bns_t& bns_t::Setup(platform_t& platform, mesh_t& mesh,
     LIBP_ABORT(string("Requested TIME INTEGRATOR not found."));
   }
   free(EtoDT);
-
-  // set time step
-  dfloat hmin = mesh.MinCharacteristicLength();
-  dfloat cfl = 0.4; // depends on the stability region size
-
-  dfloat dtAdv  = hmin/((mesh.N+1.)*(mesh.N+1.)*sqrt(3.0)*bns->c); //just an estimate
-  dfloat dtVisc = 1.0/bns->tauInv;
-
-  dfloat dt;
-  if (bns->semiAnalytic)
-    dt = cfl*dtAdv;
-  else
-    dt = cfl*mymin(dtAdv, dtVisc);
-
-/*
-    Artificial warping of time step size for multirate testing
-    */
-#if 0
-  if (settings.compareSetting("TIME INTEGRATOR","MRAB3") ||
-      settings.compareSetting("TIME INTEGRATOR","MRSAAB3"))
-    dt /= (1<<(mesh.mrNlevels-1));
-#endif
-
-  bns->timeStepper->SetTimeStep(dt);
 
   //setup linear algebra module
   platform.linAlg.InitKernels({"innerProd"});

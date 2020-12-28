@@ -26,6 +26,11 @@ SOFTWARE.
 
 #include "bns.hpp"
 
+dfloat bns_t::MaxWaveSpeed(){
+  const dfloat vmax = sqrt(3.0)*c;
+  return vmax;
+}
+
 //evaluate ODE rhs = f(q,t)
 void bns_t::rhsf_pml(occa::memory& o_Q, occa::memory& o_pmlQ,
                      occa::memory& o_RHS, occa::memory& o_pmlRHS, const dfloat T){

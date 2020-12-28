@@ -112,6 +112,8 @@ public:
 
   void PlotFields(dfloat* Q, dfloat* V, char *fileName);
 
+  dfloat MaxWaveSpeed();
+
   void rhsf_pml(occa::memory& o_Q, occa::memory& o_pmlQ,
                 occa::memory& o_RHS, occa::memory& o_pmlRHS, const dfloat T);
 
