@@ -39,6 +39,10 @@ acousticsSettings_t::acousticsSettings_t(MPI_Comm& _comm):
              "Time integration method",
              {"AB3", "DOPRI5", "LSERK4"});
 
+  newSetting("CFL NUMBER",
+             "0.5",
+             "Multiplier for timestep stability bound");
+
   newSetting("START TIME",
              "0",
              "Start time for time integration");
