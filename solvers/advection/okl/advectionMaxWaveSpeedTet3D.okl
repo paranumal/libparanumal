@@ -50,11 +50,11 @@ SOFTWARE.
         //find max wavespeed at each node
         const dlong id = e*p_Np+n;
         const dfloat qn = q[id];
-        dfloat c=0.0;
 
-        advectionMaxWaveSpeed3D(time, x[id], y[id], z[id], qn, &c);
+        dfloat u=0.0, v=0.0, w=0.0;
+        advectionMaxWaveSpeed3D(time, x[id], y[id], z[id], qn, &u, &v, &w);
 
-        s_maxSpeed[n] = c;
+        s_maxSpeed[n] = sqrt(u*u + v*v + w*w);
       }
     }
 
@@ -82,8 +82,9 @@ SOFTWARE.
           advectionDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, qM, &qP);
 
           //determine max wavespeed from boundary value
-          dfloat c=0.0;
-          advectionMaxWaveSpeed3D(time, x[idM], y[idM], z[idM], qB, &c);
+          dfloat u=0.0, v=0.0, w=0.0;
+          advectionMaxWaveSpeed3D(time, x[idM], y[idM], z[idM], qB, &u, &v, &w);
+          dfloat c=sqrt(u*u + v*v + w*w);
 
           s_maxSpeed[n] = (c > s_maxSpeed[n]) ? c : s_maxSpeed[n];
         }

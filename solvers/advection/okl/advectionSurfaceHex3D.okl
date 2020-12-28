@@ -66,8 +66,18 @@ void surfaceTerms(const int e,
   const dfloat ndotcM = nx*cxM + ny*cyM + nz*czM;
   const dfloat ndotcP = nx*cxP + ny*cyP + nz*czP;
 
+  // Find max normal velocity on the face
+  dfloat uM=0.0, vM=0.0, wM=0.0;
+  dfloat uP=0.0, vP=0.0, wP=0.0;
+  advectionMaxWaveSpeed3D(t, x[idM], y[idM], z[idM], qM, &uM, &vM, &wM);
+  advectionMaxWaveSpeed3D(t, x[idM], y[idM], z[idM], qP, &uP, &vP, &wP);
+
+  const dfloat unM   = fabs(nx*uM + ny*vM + nz*wM);
+  const dfloat unP   = fabs(nx*uP + ny*vP + nz*wP);
+  const dfloat unMax = (unM > unP) ? unM : unP;
+
   const dlong id = e*p_Np+k*p_Nq*p_Nq+j*p_Nq+i;
-  rhsq[id] -= 0.5*invWJ*sJ*(ndotcM+ndotcP-(qP-qM));
+  rhsq[id] -= 0.5*invWJ*sJ*(ndotcM+ndotcP-unMax*(qP-qM));
 }
 
 // batch process elements

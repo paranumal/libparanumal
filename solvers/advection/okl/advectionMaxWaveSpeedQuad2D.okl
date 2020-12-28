@@ -50,9 +50,10 @@ SOFTWARE.
         //find max wavespeed
         const dlong id = e*p_Np+j*p_Nq+i;
         const dfloat qn = q[id];
-        dfloat c=0.0;
 
-        advectionMaxWaveSpeed2D(time, x[id], y[id], qn, &c);
+        dfloat u=0.0, v=0.0;
+        advectionMaxWaveSpeed2D(time, x[id], y[id], qn, &u, &v);
+        dfloat c=sqrt(u*u + v*v);
 
         s_maxSpeed[i] = (c > s_maxSpeed[i]) ? c : s_maxSpeed[i];
       }
@@ -77,8 +78,9 @@ SOFTWARE.
           advectionDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, qM, &qP);
 
           //determine max wavespeed from boundary value
-          dfloat c=0.0;
-          advectionMaxWaveSpeed2D(time, x[idM], y[idM], qB, &c);
+          dfloat u=0.0, v=0.0;
+          advectionMaxWaveSpeed2D(time, x[idM], y[idM], qB, &u, &v);
+          dfloat c=sqrt(u*u + v*v);
 
           s_maxSpeed[i] = (c > s_maxSpeed[i]) ? c : s_maxSpeed[i];
         }

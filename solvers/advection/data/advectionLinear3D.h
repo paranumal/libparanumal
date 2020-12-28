@@ -37,11 +37,11 @@ SOFTWARE.
 }
 
 // max wavespeed (should be max eigen of Jacobian of flux function)
-#define advectionMaxWaveSpeed3D(t, x, y, z, q, c) \
-{                                                 \
-  *(c) = sqrt(ADVECTION_SPEED_X*ADVECTION_SPEED_X + \
-              ADVECTION_SPEED_Y*ADVECTION_SPEED_Y + \
-              ADVECTION_SPEED_Z*ADVECTION_SPEED_Z); \
+#define advectionMaxWaveSpeed3D(t, x, y, z, q, u, v, w) \
+{                                                       \
+  *(u) = ADVECTION_SPEED_X;                             \
+  *(v) = ADVECTION_SPEED_Y;                             \
+  *(w) = ADVECTION_SPEED_Z;                             \
 }
 
 // Boundary conditions
