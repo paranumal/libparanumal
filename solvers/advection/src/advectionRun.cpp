@@ -46,9 +46,6 @@ void advection_t::Run(){
   dfloat hmin = mesh.MinCharacteristicLength();
   dfloat vmax = MaxWaveSpeed(o_q, startTime);
 
-  printf("vmax = %f\n", vmax);
-  printf("hmin = %f\n", hmin);
-
   dfloat dt = cfl*hmin/(vmax*(mesh.N+1.)*(mesh.N+1.));
   timeStepper->SetTimeStep(dt);
 
