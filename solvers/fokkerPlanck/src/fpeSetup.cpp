@@ -85,6 +85,7 @@ fpe_t& fpe_t::Setup(platform_t& platform, mesh_t& mesh,
     dfloat hmin = mesh.MinCharacteristicLength();
     dfloat dtAdvc = fpe->Nsubcycles*hmin/((mesh.N+1.)*(mesh.N+1.));
     dfloat lambda = gamma/(dtAdvc*fpe->mu);
+
     fpe->elliptic = &(elliptic_t::Setup(platform, mesh, *(fpe->ellipticSettings),
                                              lambda, NBCTypes, BCType));
     fpe->tau = fpe->elliptic->tau;

@@ -54,7 +54,7 @@ insSettings_t::insSettings_t(MPI_Comm& _comm):
              {"EXTBDF3", "SSBDF3"});
 
   newSetting("CFL NUMBER",
-             "0.5",
+             "1.0",
              "Multiplier for timestep stability bound");
 
   newSetting("NUMBER OF SUBCYCLES",

@@ -41,7 +41,7 @@ void ins_t::Run(){
                          o_u,
                          o_p);
 
-  dfloat cfl=0.5;
+  dfloat cfl=1.0;
   settings.getSetting("CFL NUMBER", cfl);
 
   // set time step

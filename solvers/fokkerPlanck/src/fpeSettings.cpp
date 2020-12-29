@@ -49,7 +49,7 @@ fpeSettings_t::fpeSettings_t(MPI_Comm& _comm):
              {"AB3", "DOPRI5", "LSERK4", "EXTBDF3", "SSBDF3"});
 
   newSetting("CFL NUMBER",
-             "0.5",
+             "1.0",
              "Multiplier for timestep stability bound");
 
   newSetting("NUMBER OF SUBCYCLES",

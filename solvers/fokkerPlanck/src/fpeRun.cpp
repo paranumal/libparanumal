@@ -39,7 +39,7 @@ void fpe_t::Run(){
                          mesh.o_z,
                          o_q);
 
-  dfloat cfl=0.5;
+  dfloat cfl=1.0;
   settings.getSetting("CFL NUMBER", cfl);
 
   // set time step
