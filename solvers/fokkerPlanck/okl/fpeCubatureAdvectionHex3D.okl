@@ -171,11 +171,11 @@ SOFTWARE.
 
           dfloat u=0.0, v=0.0, w=0.0;
           const dlong id = e*p_cubNp + k*j*p_cubNq*p_cubNq + j*p_cubNq +i;
-          fpeAdvectionField3D(t, cubx[id], cuby[id], cubz[id], qn, &u, &v, &w);
+          fpeAdvectionFlux3D(t, cubx[id], cuby[id], cubz[id], qn, &u, &v, &w);
 
-          s_F[j][i] = JW*(drdx*u+drdy*v+drdz*w)*qn;
-          s_G[j][i] = JW*(dsdx*u+dsdy*v+dsdz*w)*qn;
-          s_H[j][i] = JW*(dtdx*u+dtdy*v+dtdz*w)*qn;
+          s_F[j][i] = JW*(drdx*u+drdy*v+drdz*w);
+          s_G[j][i] = JW*(dsdx*u+dsdy*v+dsdz*w);
+          s_H[j][i] = JW*(dtdx*u+dtdy*v+dtdz*w);
         }
       }
 
@@ -352,18 +352,24 @@ SOFTWARE.
                                    qM, 0.0, 0.0, 0.0,                   \
                                    &qP, &qxP, &qyP, &qzP);              \
         }                                                               \
+        dfloat fxM=0.0, fyM=0.0, fzM=0.0;                               \
+        dfloat fxP=0.0, fyP=0.0, fzP=0.0;                               \
+        fpeAdvectionFlux3D(t, intx[id], inty[id], intz[id], qM, &fxM, &fyM, &fzM);\
+        fpeAdvectionFlux3D(t, intx[id], inty[id], intz[id], qP, &fxP, &fyP, &fzP);\
+                                                                        \
+        const dfloat ndotfM = nx*fxM + ny*fyM + nz*fzM;                 \
+        const dfloat ndotfP = nx*fxP + ny*fyP + nz*fzP;                 \
+                                                                        \
         dfloat uM=0.0, vM=0.0, wM=0.0;                                  \
         dfloat uP=0.0, vP=0.0, wP=0.0;                                  \
-        fpeAdvectionField3D(t, intx[id], inty[id], intz[id], qM, &uM, &vM, &wM);\
-        fpeAdvectionField3D(t, intx[id], inty[id], intz[id], qP, &uP, &vP, &wP);\
+        fpeMaxWaveSpeed3D(t, intx[id], inty[id], intz[id], qM, &uM, &vM, &wM);\
+        fpeMaxWaveSpeed3D(t, intx[id], inty[id], intz[id], qP, &uP, &vP, &wP);\
                                                                         \
         const dfloat unM   = fabs(nx*uM + ny*vM + nz*wM);               \
         const dfloat unP   = fabs(nx*uP + ny*vP + nz*wP);               \
         const dfloat unMax = (unM > unP) ? unM : unP;                   \
                                                                         \
-        s_flux[j][i] = -WsJ*(.5f  *(nx*(qP*uP + qM*uM)                  \
-                                  + ny*(qP*vP + qM*vM)                  \
-                                  + nz*(qP*wP + qM*wM)  + unMax*(qM-qP) )); \
+        s_flux[j][i] = -WsJ*(.5f  *(ndotfP+ndotfM + unMax*(qM-qP) ));   \
       }                                                                 \
     }                                                                   \
                                                                         \
@@ -425,7 +431,7 @@ SOFTWARE.
                                      @restrict const  int    *  EToB,
                                      @restrict const  dfloat *  cubInterp,
                                      @restrict const  dfloat *  cubProject,
-                                               const  dfloat    time,
+                                               const  dfloat    t,
                                      @restrict const  dfloat *  intx,
                                      @restrict const  dfloat *  inty,
                                      @restrict const  dfloat *  intz,

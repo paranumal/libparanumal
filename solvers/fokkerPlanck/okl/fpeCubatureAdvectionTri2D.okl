@@ -73,10 +73,10 @@ SOFTWARE.
         dfloat u=0.0, v=0.0;
         const dlong e = eo+es; // element in block
         const dlong id = e*p_cubNp + n;
-        fpeAdvectionField2D(t, cubx[id], cuby[id], qn, &u, &v);
+        fpeAdvectionFlux2D(t, cubx[id], cuby[id], qn, &u, &v);
 
-        s_F[es][n] = u*qn;
-        s_G[es][n] = v*qn;
+        s_F[es][n] = u;
+        s_G[es][n] = v;
       }
     }
 
@@ -198,20 +198,27 @@ SOFTWARE.
           }
 
           // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
-          dfloat uM=0.0, vM=0.0;
-          dfloat uP=0.0, vP=0.0;
-          fpeAdvectionField2D(t, intx[id], inty[id], qM, &uM, &vM);
-          fpeAdvectionField2D(t, intx[id], inty[id], qP, &uP, &vP);
+          dfloat fxM=0.0, fyM=0.0;
+          dfloat fxP=0.0, fyP=0.0;
+          fpeAdvectionFlux2D(t, intx[id], inty[id], qM, &fxM, &fyM);
+          fpeAdvectionFlux2D(t, intx[id], inty[id], qP, &fxP, &fyP);
+
+          const dfloat ndotfM = nx*fxM + ny*fyM;
+          const dfloat ndotfP = nx*fxP + ny*fyP;
 
           // Find max normal velocity on the face
+          dfloat uM=0.0, vM=0.0;
+          dfloat uP=0.0, vP=0.0;
+          fpeMaxWaveSpeed2D(t, intx[id], inty[id], qM, &uM, &vM);
+          fpeMaxWaveSpeed2D(t, intx[id], inty[id], qP, &uP, &vP);
+
           const dfloat unM   = fabs(nx*uM + ny*vM);
           const dfloat unP   = fabs(nx*uP + ny*vP);
           const dfloat unMax = (unM > unP) ? unM : unP;
 
           // evaluate "flux" terms: LLF
           const dfloat sc = invJ * sJ ;  // notice sign changes in flux because of weak form
-          s_flux[es][n] = -sc*(.5f*( nx*(qP*uP + qM*uM)
-                                   + ny*(qP*vP + qM*vM) + unMax*(qM-qP) ));
+          s_flux[es][n] = -sc*(.5f*( ndotfP+ndotfM + unMax*(qM-qP) ));
         }
       }
     }
