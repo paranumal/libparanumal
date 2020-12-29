@@ -83,7 +83,7 @@ fpe_t& fpe_t::Setup(platform_t& platform, mesh_t& mesh,
     //make a guess at dt for the lambda value
     //TODO: we should allow preconditioners to be re-setup if lambda is updated
     dfloat hmin = mesh.MinCharacteristicLength();
-    dfloat dtAdvc = hmin/((mesh.N+1.)*(mesh.N+1.));
+    dfloat dtAdvc = fpe->Nsubcycles*hmin/((mesh.N+1.)*(mesh.N+1.));
     dfloat lambda = gamma/(dtAdvc*fpe->mu);
     fpe->elliptic = &(elliptic_t::Setup(platform, mesh, *(fpe->ellipticSettings),
                                              lambda, NBCTypes, BCType));
