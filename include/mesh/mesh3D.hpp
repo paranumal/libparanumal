@@ -47,8 +47,6 @@ public:
 
   // print out mesh partition in parallel
   void PrintVTU(const char *fileName);
-
-  dfloat ElementCharacteristicLength(dlong e);
 };
 
 class meshTri3D: public mesh3D {
