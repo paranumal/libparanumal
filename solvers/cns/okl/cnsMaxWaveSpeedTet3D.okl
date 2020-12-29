@@ -202,7 +202,7 @@ SOFTWARE.
   }
 }
 
-@kernel void cnsIsothermalMaxWaveSpeedTri2D(const dlong Nelements,
+@kernel void cnsIsothermalMaxWaveSpeedTet3D(const dlong Nelements,
                                   @restrict const  dfloat *  sgeo,
                                   @restrict const  dlong  *  vmapM,
                                   @restrict const  int    *  EToB,
