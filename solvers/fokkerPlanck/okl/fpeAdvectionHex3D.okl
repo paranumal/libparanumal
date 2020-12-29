@@ -142,7 +142,7 @@ SOFTWARE.
   const int bc = EToB[face+p_Nfaces*e];                                 \
   if(bc>0){                                                             \
     dfloat qxP=0.0, qyP=0.0, qzP=0.0;                                   \
-    fpeBoundaryConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz,\
+    fpeBoundaryConditions3D(bc, t, x[idM], y[idM], z[idM], nx, ny, nz,  \
                              qM, 0.0, 0.0, 0.0,                         \
                              &qP, &qxP, &qyP, &qzP);                    \
   }                                                                     \
