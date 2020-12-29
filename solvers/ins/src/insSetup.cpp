@@ -60,22 +60,9 @@ ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
     gamma = ((TimeStepper::ssbdf3*) ins->timeStepper)->getGamma();
   }
 
-  // set time step
-  dfloat hmin = mesh.MinCharacteristicLength();
-  dfloat cfl = 0.25; // depends on the stability region size
-
-  dfloat dtAdvc = cfl*hmin/((mesh.N+1.)*(mesh.N+1.));
-  dfloat dtDiff = ins->nu>0.0 ? pow(hmin, 2)/(pow(mesh.N+1,4)*ins->nu) : 1.0e9;
-  dfloat dt = mymin(dtAdvc, dtDiff);
-
-  if (settings.compareSetting("TIME INTEGRATOR","EXTBDF3"))
-    ins->timeStepper->SetTimeStep(dtAdvc);
-  else if (settings.compareSetting("TIME INTEGRATOR","SSBDF3")) {
-    ins->Nsubcycles=1;
+  ins->Nsubcycles=1;
+  if (settings.compareSetting("TIME INTEGRATOR","SSBDF3"))
     settings.getSetting("NUMBER OF SUBCYCLES", ins->Nsubcycles);
-    ins->timeStepper->SetTimeStep(ins->Nsubcycles*dtAdvc);
-  } else
-    ins->timeStepper->SetTimeStep(dt);
 
   //Setup velocity Elliptic solvers
   ins->uSolver=NULL;
@@ -100,6 +87,11 @@ ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
     int wBCType[NBCTypes] = {0,1,1,2,2,2,1}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
 
     ins->vSettings = settings.extractVelocitySettings();
+
+    //make a guess at dt for the lambda value
+    //TODO: we should allow preconditioners to be re-setup if lambda is updated
+    dfloat hmin = mesh.MinCharacteristicLength();
+    dfloat dtAdvc = ins->Nsubcycles*hmin/((mesh.N+1.)*(mesh.N+1.));
     dfloat lambda = gamma/(dtAdvc*ins->nu);
     ins->uSolver = &(elliptic_t::Setup(platform, mesh, *(ins->vSettings),
                                              lambda, NBCTypes, uBCType));
@@ -170,7 +162,7 @@ ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
   ins->BoundarySetup();
 
   //setup linear algebra module
-  platform.linAlg.InitKernels({"innerProd", "axpy"});
+  platform.linAlg.InitKernels({"innerProd", "axpy", "max"});
 
   /*setup trace halo exchange */
   ins->pTraceHalo = mesh.HaloTraceSetup(1); //one field
@@ -309,7 +301,6 @@ ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
       ins->subStepper = new TimeStepper::dopri5(mesh.Nelements, mesh.totalHaloPairs,
                                                 mesh.Np, ins->NVfields, *(ins->subcycler), mesh.comm);
     }
-    ins->subStepper->SetTimeStep(dtAdvc);
 
     sprintf(fileName, DINS "/okl/insSubcycleAdvection.okl");
     sprintf(kernelName, "insSubcycleAdvectionKernel");
@@ -429,7 +420,10 @@ ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
   ins->initialConditionKernel = platform.buildKernel(fileName, kernelName,
                                                   kernelInfo);
 
+  sprintf(fileName, DINS "/okl/insMaxWaveSpeed%s.okl", suffix);
+  sprintf(kernelName, "insMaxWaveSpeed%s", suffix);
 
+  ins->maxWaveSpeedKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 
   return *ins;
 }
@@ -449,6 +443,7 @@ ins_t::~ins_t() {
   pressureBCKernel.free();
   vorticityKernel.free();
   initialConditionKernel.free();
+  maxWaveSpeedKernel.free();
 
   if (pSolver) delete pSolver;
   if (uSolver) delete uSolver;

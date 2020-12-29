@@ -26,6 +26,29 @@ SOFTWARE.
 
 #include "ins.hpp"
 
+dfloat ins_t::MaxWaveSpeed(occa::memory& o_U, const dfloat T){
+
+  //Note: if this is on the critical path in the future, we should pre-allocate this
+  occa::memory o_maxSpeed = platform.malloc(mesh.Nelements*sizeof(dfloat));
+
+  maxWaveSpeedKernel(mesh.Nelements,
+                     mesh.o_sgeo,
+                     mesh.o_vmapM,
+                     mesh.o_EToB,
+                     nu,
+                     T,
+                     mesh.o_x,
+                     mesh.o_y,
+                     mesh.o_z,
+                     o_U,
+                     o_maxSpeed);
+
+  const dfloat vmax = platform.linAlg.max(mesh.Nelements, o_maxSpeed, mesh.comm);
+
+  o_maxSpeed.free();
+  return vmax;
+}
+
 // Inversion of diffusion operator
 //  Solves gamma*U - mu*Laplacian*U = rhs
 //  Afterwards, imposes incompressiblity via pressure problem

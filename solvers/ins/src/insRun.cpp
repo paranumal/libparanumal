@@ -41,6 +41,28 @@ void ins_t::Run(){
                          o_u,
                          o_p);
 
+  dfloat cfl=0.5;
+  settings.getSetting("CFL NUMBER", cfl);
+
+  // set time step
+  dfloat hmin = mesh.MinCharacteristicLength();
+  dfloat vmax = MaxWaveSpeed(o_u, startTime);
+
+  dfloat dtAdvc = cfl*hmin/(vmax*(mesh.N+1.)*(mesh.N+1.));
+  dfloat dtDiff = nu>0.0 ? cfl*pow(hmin, 2)/(pow(mesh.N+1,4)*nu) : 1.0e9;
+
+  dfloat dt = 0.0;
+  if (settings.compareSetting("TIME INTEGRATOR","EXTBDF3")) {
+    dt = dtAdvc;
+  } else if (settings.compareSetting("TIME INTEGRATOR","SSBDF3")) {
+    dt = Nsubcycles*dtAdvc;
+    subStepper->SetTimeStep(dtAdvc);
+  } else {
+    dt = mymin(dtAdvc, dtDiff);
+  }
+
+  timeStepper->SetTimeStep(dt);
+
   timeStepper->Run(o_u, startTime, finalTime);
 
   // output norm of final solution
