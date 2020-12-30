@@ -34,7 +34,8 @@ advectionData3D = advectionDir + "/data/advectionLinear3D.h"
 def advectionSettings(rcformat="2.0", data_file=advectionData2D,
                      mesh="BOX", dim=2, element=4, nx=10, ny=10, nz=10, boundary_flag=-1,
                      degree=4, thread_model=device, platform_number=0, device_number=0,
-                      time_integrator="DOPRI5", start_time=0.0, final_time=1.0, output_to_file="FALSE"):
+                      time_integrator="DOPRI5", cfl=1.0, start_time=0.0, final_time=1.0,
+                      output_to_file="FALSE"):
   return [setting_t("FORMAT", rcformat),
           setting_t("DATA FILE", data_file),
           setting_t("MESH FILE", mesh),
@@ -49,6 +50,7 @@ def advectionSettings(rcformat="2.0", data_file=advectionData2D,
           setting_t("PLATFORM NUMBER", platform_number),
           setting_t("DEVICE NUMBER", device_number),
           setting_t("TIME INTEGRATOR", time_integrator),
+          setting_t("CFL NUMBER", cfl),
           setting_t("START TIME", start_time),
           setting_t("FINAL TIME", final_time),
           setting_t("OUTPUT TO FILE", output_to_file)]

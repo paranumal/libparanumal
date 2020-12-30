@@ -37,7 +37,7 @@ def main():
   failCount += test(name="testTimeStepper_ab3",
                     cmd=advectionBin,
                     settings=advectionSettings(element=3,data_file=advectionData2D,
-                                               dim=2, time_integrator="AB3"),
+                                               dim=2, time_integrator="AB3", cfl=0.25),
                     referenceNorm=0.723914029332577)
 
   failCount += test(name="testTimeStepper_dopri5",
@@ -67,13 +67,13 @@ def main():
   failCount += test(name="testTimeStepper_ab3_pml",
                     cmd=bnsBin,
                     settings=bnsSettings(element=3,data_file=bnsData2D,dim=2,
-                                         time_integrator="AB3"),
+                                         time_integrator="AB3", cfl=0.25),
                     referenceNorm=14.2549805474957)
 
   failCount += test(name="testTimeStepper_saab3_pml",
                     cmd=bnsBin,
                     settings=bnsSettings(element=3,data_file=bnsData2D,dim=2,
-                                         time_integrator="SAAB3"),
+                                         time_integrator="SAAB3", cfl=0.25),
                     referenceNorm=14.2549885777409)
 
   failCount += test(name="testTimeStepper_dopri5_pml",
@@ -103,13 +103,13 @@ def main():
   failCount += test(name="testTimeStepper_mrab3_pml",
                     cmd=bnsBin,
                     settings=bnsSettings(element=3,data_file=bnsData2D,dim=2,
-                                         time_integrator="MRAB3"),
+                                         time_integrator="MRAB3", cfl=0.25),
                     referenceNorm=14.2549732468256)
 
   failCount += test(name="testTimeStepper_mrsaab3_pml",
                     cmd=bnsBin,
                     settings=bnsSettings(element=3,data_file=bnsData2D,dim=2,
-                                         time_integrator="MRSAAB3"),
+                                         time_integrator="MRSAAB3", cfl=0.25),
                     referenceNorm=14.2549885777409)
 
   return failCount

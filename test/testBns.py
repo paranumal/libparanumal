@@ -37,7 +37,8 @@ def bnsSettings(rcformat="2.0", data_file=bnsData2D,
                viscosity=0.01, speed_of_sound=1.0,
                pml_order=4, pml_sigx=50, pml_sigy=50, pml_sigz=50,
                pml_type="COLLOCATION",
-                time_integrator="SARK4", start_time=0.0, final_time=0.1, output_to_file="FALSE"):
+               time_integrator="SARK4", cfl=1.0, start_time=0.0, final_time=0.1,
+               output_to_file="FALSE"):
   return [setting_t("FORMAT", rcformat),
           setting_t("DATA FILE", data_file),
           setting_t("MESH FILE", mesh),
@@ -59,6 +60,7 @@ def bnsSettings(rcformat="2.0", data_file=bnsData2D,
           setting_t("PML SIGMAZ MAX", pml_sigz),
           setting_t("PML INTEGRATION", pml_type),
           setting_t("TIME INTEGRATOR", time_integrator),
+          setting_t("CFL NUMBER", cfl),
           setting_t("START TIME", start_time),
           setting_t("FINAL TIME", final_time),
           setting_t("OUTPUT TO FILE", output_to_file)]
