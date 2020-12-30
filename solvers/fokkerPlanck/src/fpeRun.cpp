@@ -46,7 +46,7 @@ void fpe_t::Run(){
   dfloat hmin = mesh.MinCharacteristicLength();
   dfloat vmax = MaxWaveSpeed(o_q, startTime);
 
-  dfloat dtAdvc = cfl*hmin/(vmax*(mesh.N+1.)*(mesh.N+1.));
+  dfloat dtAdvc = cfl/(vmax*(mesh.N+1.)*(mesh.N+1.));
   dfloat dtDiff = (mu>0.0) ? cfl*pow(hmin, 2)/(pow(mesh.N+1,4)*mu) : 1.0e9;
 
   dfloat dt=0.0;
