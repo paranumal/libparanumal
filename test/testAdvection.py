@@ -61,7 +61,7 @@ def main():
   failCount += test(name="testAdvectionTri",
                     cmd=advectionBin,
                     settings=advectionSettings(element=3,data_file=advectionData2D,dim=2),
-                    referenceNorm=0.723897834264616)
+                    referenceNorm=0.723924419144375)
 
   failCount += test(name="testAdvectionQuad",
                     cmd=advectionBin,
@@ -71,7 +71,7 @@ def main():
   failCount += test(name="testAdvectionTet",
                     cmd=advectionBin,
                     settings=advectionSettings(element=6,data_file=advectionData3D,dim=3),
-                    referenceNorm=0.835474966415895)
+                    referenceNorm=0.835495461081062)
 
   failCount += test(name="testAdvectionHex",
                     cmd=advectionBin,
