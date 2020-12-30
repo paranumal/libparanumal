@@ -25,6 +25,7 @@ SOFTWARE.
 */
 
 @kernel void insMaxWaveSpeedTet3D(const dlong Nelements,
+                                  @restrict const  dfloat *  vgeo,
                                   @restrict const  dfloat *  sgeo,
                                   @restrict const  dlong  *  vmapM,
                                   @restrict const  int    *  EToB,
@@ -158,8 +159,24 @@ SOFTWARE.
         s_maxSpeed[n] = (s_maxSpeed[n+2]>s_maxSpeed[n]) ? s_maxSpeed[n+2] : s_maxSpeed[n];
     }
     for(int n=0;n<p_maxNodes;++n;@inner(0)) {
-      if(n==0) //write out
-        maxSpeed[e] = (s_maxSpeed[1]>s_maxSpeed[0]) ? s_maxSpeed[1] : s_maxSpeed[0];
+      if(n==0) {
+        //find the min characteristic length in this element
+        dfloat hmin = 1.0e9;
+        for(int f=0;f<p_Nfaces;++f){
+          const dlong sid = p_Nsgeo*(p_Nfaces*e + f);
+          const dfloat sJ   = sgeo[sid + p_SJID];
+          const dfloat invJ = sgeo[sid + p_IJID];
+
+          const dfloat hest = 2.0/(sJ*invJ);
+
+          hmin = (hmin < hest) ? hmin : hest;
+        }
+
+        const dfloat vmax = (s_maxSpeed[1]>s_maxSpeed[0]) ? s_maxSpeed[1] : s_maxSpeed[0];
+
+        //write out
+        maxSpeed[e] = vmax/hmin;
+      }
     }
   }
 }

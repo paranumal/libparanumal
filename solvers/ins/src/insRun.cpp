@@ -48,7 +48,7 @@ void ins_t::Run(){
   dfloat hmin = mesh.MinCharacteristicLength();
   dfloat vmax = MaxWaveSpeed(o_u, startTime);
 
-  dfloat dtAdvc = cfl*hmin/(vmax*(mesh.N+1.)*(mesh.N+1.));
+  dfloat dtAdvc = cfl/(vmax*(mesh.N+1.)*(mesh.N+1.));
   dfloat dtDiff = nu>0.0 ? cfl*pow(hmin, 2)/(pow(mesh.N+1,4)*nu) : 1.0e9;
 
   dfloat dt = 0.0;
