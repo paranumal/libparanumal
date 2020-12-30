@@ -48,10 +48,10 @@ void cns_t::Run(){
   dfloat hmin = mesh.MinCharacteristicLength();
   dfloat vmax = MaxWaveSpeed(o_q, startTime);
 
-  dfloat dtAdv  = hmin/(vmax*(mesh.N+1.)*(mesh.N+1.));
-  dfloat dtVisc = pow(hmin, 2)/(pow(mesh.N+1,4)*mu);
+  dfloat dtAdv  = cfl/(vmax*(mesh.N+1.)*(mesh.N+1.));
+  dfloat dtVisc = cfl*pow(hmin, 2)/(pow(mesh.N+1,4)*mu);
 
-  dfloat dt = cfl*mymin(dtAdv, dtVisc);
+  dfloat dt = mymin(dtAdv, dtVisc);
   timeStepper->SetTimeStep(dt);
 
   timeStepper->Run(o_q, startTime, finalTime);
