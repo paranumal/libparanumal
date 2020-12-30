@@ -32,6 +32,7 @@ dfloat advection_t::MaxWaveSpeed(occa::memory& o_Q, const dfloat T){
   occa::memory o_maxSpeed = platform.malloc(mesh.Nelements*sizeof(dfloat));
 
   maxWaveSpeedKernel(mesh.Nelements,
+                     mesh.o_vgeo,
                      mesh.o_sgeo,
                      mesh.o_vmapM,
                      mesh.o_EToB,
