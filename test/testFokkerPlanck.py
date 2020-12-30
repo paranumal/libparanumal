@@ -82,78 +82,78 @@ def main():
   failCount += test(name="testFpeTri",
                     cmd=fpeBin,
                     settings=fpeSettings(element=3,data_file=fpeData2D,dim=2),
-                    referenceNorm=0.684125456748507)
+                    referenceNorm=0.684357054802834)
 
   failCount += test(name="testFpeQuad",
                     cmd=fpeBin,
                     settings=fpeSettings(element=4,data_file=fpeData2D,dim=2),
-                    referenceNorm=0.683000269841823)
+                    referenceNorm=0.684243684323532)
 
   failCount += test(name="testFpeTet",
                     cmd=fpeBin,
                     settings=fpeSettings(element=6,data_file=fpeData3D,dim=3,
                                          nx=6, ny=6, nz=6, degree=2),
-                    referenceNorm=0.492380293637161)
+                    referenceNorm=0.492149400541327)
 
   failCount += test(name="testFpeHex",
                     cmd=fpeBin,
                     settings=fpeSettings(element=12,data_file=fpeData3D,dim=3,
                                          nx=6, ny=6, nz=6, degree=2),
-                    referenceNorm=0.456762106540177)
+                    referenceNorm=0.455956622483511)
 
   #cubature tests
   failCount += test(name="testFpeTri_cub",
                     cmd=fpeBin,
                     settings=fpeSettings(element=3,data_file=fpeData2D,dim=2,
                                          advection_type="CUBATURE"),
-                    referenceNorm=0.684125456748507)
+                    referenceNorm=0.684357054802834)
 
   failCount += test(name="testFpeQuad_cub",
                     cmd=fpeBin,
                     settings=fpeSettings(element=4,data_file=fpeData2D,dim=2,
                                          advection_type="CUBATURE"),
-                    referenceNorm=0.682995058262135)
+                    referenceNorm=0.684243684323532)
 
   failCount += test(name="testFpeTet_cub",
                     cmd=fpeBin,
                     settings=fpeSettings(element=6,data_file=fpeData3D,dim=3,
                                          nx=6, ny=6, nz=6, degree=2,
                                          advection_type="CUBATURE"),
-                    referenceNorm=0.492380293637161)
+                    referenceNorm=0.492149400541327)
 
   failCount += test(name="testFpeHex_cub",
                     cmd=fpeBin,
                     settings=fpeSettings(element=12,data_file=fpeData3D,dim=3,
                                          nx=6, ny=6, nz=6, degree=2,
                                          advection_type="CUBATURE"),
-                    referenceNorm=0.460239935232229)
+                    referenceNorm=0.459185797449144)
 
   #test subcycle
   failCount += test(name="testFpeTri_ss",
                     cmd=fpeBin,
                     settings=fpeSettings(element=3,data_file=fpeData2D,dim=2,
                                          time_integrator="SSBDF3"),
-                    referenceNorm=0.683461253229019)
+                    referenceNorm=0.676721364985541)
 
   failCount += test(name="testFpeQuad_ss",
                     cmd=fpeBin,
                     settings=fpeSettings(element=4,data_file=fpeData2D,dim=2,
                                          time_integrator="SSBDF3"),
-                    referenceNorm=0.681691439234246)
+                    referenceNorm=0.678629090148834)
 
   failCount += test(name="testFpeTet_ss",
                     cmd=fpeBin,
                     settings=fpeSettings(element=6,data_file=fpeData3D,dim=3,
                                          nx=6, ny=6, nz=6, degree=2,
                                          time_integrator="SSBDF3"),
-                    referenceNorm=0.489892205483849)
+                    referenceNorm=0.464060993161937)
 
   failCount += test(name="testFpeHex_ss",
                     cmd=fpeBin,
                     settings=fpeSettings(element=12,data_file=fpeData3D,dim=3,
                                          nx=6, ny=6, nz=6, degree=2,
                                          time_integrator="SSBDF3"),
-                    referenceNorm=0.449816553834368)
+                    referenceNorm=0.389099535288541)
 
   #cubature tests
   failCount += test(name="testFpeTri_ss_cub",
@@ -161,14 +161,14 @@ def main():
                     settings=fpeSettings(element=3,data_file=fpeData2D,dim=2,
                                          time_integrator="SSBDF3",
                                          advection_type="CUBATURE"),
-                    referenceNorm=0.683461253229019)
+                    referenceNorm=0.676721364985541)
 
   failCount += test(name="testFpeQuad_ss_cub",
                     cmd=fpeBin,
                     settings=fpeSettings(element=4,data_file=fpeData2D,dim=2,
                                          time_integrator="SSBDF3",
                                          advection_type="CUBATURE"),
-                    referenceNorm=0.681691439234246)
+                    referenceNorm=0.678621302711163)
 
   failCount += test(name="testFpeTet_ss_cub",
                     cmd=fpeBin,
@@ -176,7 +176,7 @@ def main():
                                          nx=6, ny=6, nz=6, degree=2,
                                          time_integrator="SSBDF3",
                                          advection_type="CUBATURE"),
-                    referenceNorm=0.489892205483849)
+                    referenceNorm=0.464060993161937)
 
   failCount += test(name="testFpeHex_ss_cub",
                     cmd=fpeBin,
@@ -184,13 +184,13 @@ def main():
                                          nx=6, ny=6, nz=6, degree=2,
                                          time_integrator="SSBDF3",
                                          advection_type="CUBATURE"),
-                    referenceNorm=0.452730112537489)
+                    referenceNorm=0.390359551549932)
 
   #test MPI
   failCount += test(name="testFpeTri_MPI", ranks=4,
                     cmd=fpeBin,
                     settings=fpeSettings(element=3,data_file=fpeData2D,dim=2,output_to_file="TRUE"),
-                    referenceNorm=0.6837407953719)
+                    referenceNorm=0.683519576398795)
 
   #clean up
   for file_name in os.listdir(testDir):
