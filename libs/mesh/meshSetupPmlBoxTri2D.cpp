@@ -45,22 +45,37 @@ void meshTri2D::SetupPmlBox(){
   faceVertices = (int*) calloc(NfaceVertices*Nfaces, sizeof(int));
   memcpy(faceVertices, faceVertices_[0], NfaceVertices*Nfaces*sizeof(int));
 
-  //local grid physical sizes
-  dfloat DIMX, DIMY;
-  settings.getSetting("BOX DIMX", DIMX);
-  settings.getSetting("BOX DIMY", DIMY);
+  // find a factorization size = size_x*size_y such that
+  //  size_x>=size_y and are all 'close' to one another
+  int size_x, size_y;
+  factor2(size, size_x, size_y);
 
-  //relative PML width
-  const dfloat pmlScale = 0.2;
+  //find our coordinates in the MPI grid such that
+  // rank = rank_x + rank_y*size_x
+  int rank_y = rank / size_x;
+  int rank_x = rank % size_x;
+
+  //get global size from settings
+  dlong NX, NY;
+  settings.getSetting("BOX GLOBAL NX", NX);
+  settings.getSetting("BOX GLOBAL NY", NY);
 
   //number of local elements in each dimension
   dlong nx, ny;
   settings.getSetting("BOX NX", nx);
   settings.getSetting("BOX NY", ny);
 
-  int size_x = std::sqrt(size); //number of ranks in each dimension
-  if (size_x*size_x != size)
-    LIBP_ABORT(string("2D PMLBOX mesh requires a square number of ranks for now."))
+  if (NX*NY <= 0) { //if the user hasn't given global sizes
+    //set global size by multiplying local size by grid dims
+    NX = nx * size_x;
+    NY = ny * size_y;
+    settings.changeSetting("BOX GLOBAL NX", std::to_string(NX));
+    settings.changeSetting("BOX GLOBAL NY", std::to_string(NY));
+  } else {
+    //WARNING setting global sizes on input overrides any local sizes provided
+    nx = NX/size_x + ((rank_x < (NX % size_x)) ? 1 : 0);
+    ny = NY/size_y + ((rank_y < (NY % size_y)) ? 1 : 0);
+  }
 
   int boundaryFlag;
   settings.getSetting("BOX BOUNDARY FLAG", boundaryFlag);
@@ -70,27 +85,31 @@ void meshTri2D::SetupPmlBox(){
     LIBP_ABORT(string("Periodic boundary unsupported for PMLBOX mesh."))
 
   //local grid physical sizes
-  dfloat dimx = DIMX/size_x;
-  dfloat dimy = DIMY/size_x;
+  dfloat DIMX, DIMY;
+  settings.getSetting("BOX DIMX", DIMX);
+  settings.getSetting("BOX DIMY", DIMY);
+
+  //relative PML width
+  const dfloat pmlScale = 0.2;
+
+  //element sizes
+  dfloat dx = DIMX/NX;
+  dfloat dy = DIMY/NY;
+
+  dlong offset_x = rank_x*(NX/size_x) + mymin(rank_x, (NX % size_x));
+  dlong offset_y = rank_y*(NY/size_y) + mymin(rank_y, (NY % size_y));
+
+  //local grid physical sizes
+  dfloat dimx = nx*dx;
+  dfloat dimy = ny*dy;
 
   //pml width
   dfloat pmlWidthx = pmlScale*DIMX;
   dfloat pmlWidthy = pmlScale*DIMY;
 
-  //rank coordinates
-  int rank_y = rank / size_x;
-  int rank_x = rank % size_x;
-
   //bottom corner of physical domain
-  dfloat X0 = -DIMX/2.0 + rank_x*dimx;
-  dfloat Y0 = -DIMY/2.0 + rank_y*dimy;
-
-  //global number of elements in each dimension
-  hlong NX = size_x*nx;
-  hlong NY = size_x*ny;
-
-  dfloat dx = dimx/nx;
-  dfloat dy = dimy/ny;
+  dfloat X0 = -DIMX/2.0 + offset_x*dx;
+  dfloat Y0 = -DIMY/2.0 + offset_y*dy;
 
   //try and have roughly the same resolution in the pml region
   dlong pmlNx, pmlNy;
@@ -117,13 +136,13 @@ void meshTri2D::SetupPmlBox(){
   if (rank_x==0)        Nelements+=2*ny*pmlNx;
   if (rank_x==size_x-1) Nelements+=2*ny*pmlNx;
   if (rank_y==0)        Nelements+=2*nx*pmlNy;
-  if (rank_y==size_x-1) Nelements+=2*nx*pmlNy;
+  if (rank_y==size_y-1) Nelements+=2*nx*pmlNy;
 
   //pml corners
   if (rank_x==0        && rank_y==0       ) Nelements+=2*pmlNx*pmlNy;
   if (rank_x==size_x-1 && rank_y==0       ) Nelements+=2*pmlNx*pmlNy;
-  if (rank_x==0        && rank_y==size_x-1) Nelements+=2*pmlNx*pmlNy;
-  if (rank_x==size_x-1 && rank_y==size_x-1) Nelements+=2*pmlNx*pmlNy;
+  if (rank_x==0        && rank_y==size_y-1) Nelements+=2*pmlNx*pmlNy;
+  if (rank_x==size_x-1 && rank_y==size_y-1) Nelements+=2*pmlNx*pmlNy;
 
 
   EToV = (hlong*) calloc(Nelements*Nverts, sizeof(hlong));
@@ -138,10 +157,10 @@ void meshTri2D::SetupPmlBox(){
   for(int j=0;j<ny;++j){
     for(int i=0;i<nx;++i){
 
-      const hlong i0 = i+rank_x*nx + pmlNx;
-      const hlong i1 = (i+1+rank_x*nx + pmlNx)%NnX;
-      const hlong j0 = j+rank_y*ny + pmlNy;
-      const hlong j1 = (j+1+rank_y*ny + pmlNy)%NnY;
+      const hlong i0 = i+offset_x + pmlNx;
+      const hlong i1 = (i+1+offset_x + pmlNx)%NnX;
+      const hlong j0 = j+offset_y + pmlNy;
+      const hlong j1 = (j+1+offset_y + pmlNy)%NnY;
 
       dfloat x0 = X0 + dx*i;
       dfloat y0 = Y0 + dy*j;
@@ -175,10 +194,10 @@ void meshTri2D::SetupPmlBox(){
     for(int j=0;j<ny;++j){
       for(int i=0;i<pmlNx;++i){
 
-        const hlong i0 = i+rank_x*nx;
-        const hlong i1 = (i+1+rank_x*nx)%NnX;
-        const hlong j0 = j+rank_y*ny + pmlNy;
-        const hlong j1 = (j+1+rank_y*ny + pmlNy)%NnY;
+        const hlong i0 = i+offset_x;
+        const hlong i1 = (i+1+offset_x)%NnX;
+        const hlong j0 = j+offset_y + pmlNy;
+        const hlong j1 = (j+1+offset_y + pmlNy)%NnY;
 
         dfloat x0 = X0-pmlWidthx + pmldx*i;
         dfloat y0 = Y0 + dy*j;
@@ -213,10 +232,10 @@ void meshTri2D::SetupPmlBox(){
     for(int j=0;j<ny;++j){
       for(int i=0;i<pmlNx;++i){
 
-        const hlong i0 = i+rank_x*nx + pmlNx + nx;
-        const hlong i1 = (i+1+rank_x*nx + pmlNx + nx)%NnX;
-        const hlong j0 = j+rank_y*ny + pmlNy;
-        const hlong j1 = (j+1+rank_y*ny + pmlNy)%NnY;
+        const hlong i0 = i+offset_x + pmlNx + nx;
+        const hlong i1 = (i+1+offset_x + pmlNx + nx)%NnX;
+        const hlong j0 = j+offset_y + pmlNy;
+        const hlong j1 = (j+1+offset_y + pmlNy)%NnY;
 
         dfloat x0 = X0 + dimx + pmldx*i;
         dfloat y0 = Y0 + dy*j;
@@ -251,10 +270,10 @@ void meshTri2D::SetupPmlBox(){
     for(int j=0;j<pmlNy;++j){
       for(int i=0;i<nx;++i){
 
-        const hlong i0 = i+rank_x*nx + pmlNx;
-        const hlong i1 = (i+1+rank_x*nx + pmlNx)%NnX;
-        const hlong j0 = j+rank_y*ny;
-        const hlong j1 = (j+1+rank_y*ny)%NnY;
+        const hlong i0 = i+offset_x + pmlNx;
+        const hlong i1 = (i+1+offset_x + pmlNx)%NnX;
+        const hlong j0 = j+offset_y;
+        const hlong j1 = (j+1+offset_y)%NnY;
 
         dfloat x0 = X0 + dx*i;
         dfloat y0 = Y0-pmlWidthy + pmldy*j;
@@ -285,14 +304,14 @@ void meshTri2D::SetupPmlBox(){
   }
 
   //Y+ pml
-  if (rank_y==size_x-1) {
+  if (rank_y==size_y-1) {
     for(int j=0;j<pmlNy;++j){
       for(int i=0;i<nx;++i){
 
-        const hlong i0 = i+rank_x*nx + pmlNx;
-        const hlong i1 = (i+1+rank_x*nx + pmlNx)%NnX;
-        const hlong j0 = j+rank_y*ny + pmlNy + ny;
-        const hlong j1 = (j+1+rank_y*ny + pmlNy + ny)%NnY;
+        const hlong i0 = i+offset_x + pmlNx;
+        const hlong i1 = (i+1+offset_x + pmlNx)%NnX;
+        const hlong j0 = j+offset_y + pmlNy + ny;
+        const hlong j1 = (j+1+offset_y + pmlNy + ny)%NnY;
 
         dfloat x0 = X0 + dx*i;
         dfloat y0 = Y0 + dimy + pmldy*j;
@@ -327,10 +346,10 @@ void meshTri2D::SetupPmlBox(){
     for(int j=0;j<pmlNy;++j){
       for(int i=0;i<pmlNx;++i){
 
-        const hlong i0 = i+rank_x*nx;
-        const hlong i1 = (i+1+rank_x*nx)%NnX;
-        const hlong j0 = j+rank_y*ny;
-        const hlong j1 = (j+1+rank_y*ny)%NnY;
+        const hlong i0 = i+offset_x;
+        const hlong i1 = (i+1+offset_x)%NnX;
+        const hlong j0 = j+offset_y;
+        const hlong j1 = (j+1+offset_y)%NnY;
 
         dfloat x0 = X0-pmlWidthx + pmldx*i;
         dfloat y0 = Y0-pmlWidthy + pmldy*j;
@@ -365,10 +384,10 @@ void meshTri2D::SetupPmlBox(){
     for(int j=0;j<pmlNy;++j){
       for(int i=0;i<pmlNx;++i){
 
-        const hlong i0 = i+rank_x*nx + pmlNx + nx;
-        const hlong i1 = (i+1+rank_x*nx + pmlNx + nx)%NnX;
-        const hlong j0 = j+rank_y*ny;
-        const hlong j1 = (j+1+rank_y*ny)%NnY;
+        const hlong i0 = i+offset_x + pmlNx + nx;
+        const hlong i1 = (i+1+offset_x + pmlNx + nx)%NnX;
+        const hlong j0 = j+offset_y;
+        const hlong j1 = (j+1+offset_y)%NnY;
 
         dfloat x0 = X0+dimx      + pmldx*i;
         dfloat y0 = Y0-pmlWidthy + pmldy*j;
@@ -399,14 +418,14 @@ void meshTri2D::SetupPmlBox(){
   }
 
   //X-Y+ pml
-  if (rank_x==0 && rank_y==size_x-1) {
+  if (rank_x==0 && rank_y==size_y-1) {
     for(int j=0;j<pmlNy;++j){
       for(int i=0;i<pmlNx;++i){
 
-        const hlong i0 = i+rank_x*nx;
-        const hlong i1 = (i+1+rank_x*nx)%NnX;
-        const hlong j0 = j+rank_y*ny + pmlNy + ny;
-        const hlong j1 = (j+1+rank_y*ny + pmlNy + ny)%NnY;
+        const hlong i0 = i+offset_x;
+        const hlong i1 = (i+1+offset_x)%NnX;
+        const hlong j0 = j+offset_y + pmlNy + ny;
+        const hlong j1 = (j+1+offset_y + pmlNy + ny)%NnY;
 
         dfloat x0 = X0-pmlWidthx + pmldx*i;
         dfloat y0 = Y0+dimy      + pmldy*j;
@@ -437,14 +456,14 @@ void meshTri2D::SetupPmlBox(){
   }
 
   //X+Y+ pml
-  if (rank_x==size_x-1 && rank_y==size_x-1) {
+  if (rank_x==size_x-1 && rank_y==size_y-1) {
     for(int j=0;j<pmlNy;++j){
       for(int i=0;i<pmlNx;++i){
 
-        const hlong i0 = i+rank_x*nx + pmlNx + nx;
-        const hlong i1 = (i+1+rank_x*nx + pmlNx + nx)%NnX;
-        const hlong j0 = j+rank_y*ny + pmlNy + ny;
-        const hlong j1 = (j+1+rank_y*ny + pmlNy + ny)%NnY;
+        const hlong i0 = i+offset_x + pmlNx + nx;
+        const hlong i1 = (i+1+offset_x + pmlNx + nx)%NnX;
+        const hlong j0 = j+offset_y + pmlNy + ny;
+        const hlong j1 = (j+1+offset_y + pmlNy + ny)%NnY;
 
         dfloat x0 = X0+dimx      + pmldx*i;
         dfloat y0 = Y0+dimy      + pmldy*j;

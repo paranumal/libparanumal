@@ -65,6 +65,16 @@ meshSettings_t::meshSettings_t(MPI_Comm& _comm):
              "10",
              "Number of elements in Z-dimension per rank");
 
+  newSetting("BOX GLOBAL NX",
+             "0",
+             "Global number of elements in X-dimension per rank");
+  newSetting("BOX GLOBAL NY",
+             "0",
+             "Global number of elements in Y-dimension per rank");
+  newSetting("BOX GLOBAL NZ",
+             "0",
+             "Global number of elements in Z-dimension per rank");
+
   newSetting("BOX BOUNDARY FLAG",
              "1",
              "Type of boundary conditions for BOX domain (-1 for periodic)");
@@ -97,9 +107,22 @@ void meshSettings_t::report() {
       reportSetting("BOX DIMX");
       reportSetting("BOX DIMY");
       reportSetting("BOX DIMZ");
-      reportSetting("BOX NX");
-      reportSetting("BOX NY");
-      reportSetting("BOX NZ");
+
+      dlong NX, NY, NZ;
+      getSetting("BOX GLOBAL NX", NX);
+      getSetting("BOX GLOBAL NY", NY);
+      getSetting("BOX GLOBAL NZ", NZ);
+
+      if (NX*NY*NZ > 0) {
+        reportSetting("BOX GLOBAL NX");
+        reportSetting("BOX GLOBAL NY");
+        reportSetting("BOX GLOBAL NZ");
+      } else {//global sizes not provided, report local size
+        reportSetting("BOX NX");
+        reportSetting("BOX NY");
+        reportSetting("BOX NZ");
+      }
+
       reportSetting("BOX BOUNDARY FLAG");
     }
 

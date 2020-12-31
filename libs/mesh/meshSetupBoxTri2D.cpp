@@ -45,40 +45,58 @@ void meshTri2D::SetupBox(){
   faceVertices = (int*) calloc(NfaceVertices*Nfaces, sizeof(int));
   memcpy(faceVertices, faceVertices_[0], NfaceVertices*Nfaces*sizeof(int));
 
-  //local grid physical sizes
-  dfloat DIMX, DIMY;
-  settings.getSetting("BOX DIMX", DIMX);
-  settings.getSetting("BOX DIMY", DIMY);
+  // find a factorization size = size_x*size_y such that
+  //  size_x>=size_y and are 'close' to one another
+  int size_x, size_y;
+  factor2(size, size_x, size_y);
+
+  //find our coordinates in the MPI grid such that
+  // rank = rank_x + rank_y*size_x
+  int rank_y = rank / size_x;
+  int rank_x = rank % size_x;
+
+  //get global size from settings
+  dlong NX, NY;
+  settings.getSetting("BOX GLOBAL NX", NX);
+  settings.getSetting("BOX GLOBAL NY", NY);
 
   //number of local elements in each dimension
   dlong nx, ny;
   settings.getSetting("BOX NX", nx);
   settings.getSetting("BOX NY", ny);
 
-  int size_x = std::sqrt(size); //number of ranks in each dimension
-  if (size_x*size_x != size)
-    LIBP_ABORT(string("2D BOX mesh requires a square number of ranks for now."))
+  if (NX*NY <= 0) { //if the user hasn't given global sizes
+    //set global size by multiplying local size by grid dims
+    NX = nx * size_x;
+    NY = ny * size_y;
+    settings.changeSetting("BOX GLOBAL NX", std::to_string(NX));
+    settings.changeSetting("BOX GLOBAL NY", std::to_string(NY));
+  } else {
+    //WARNING setting global sizes on input overrides any local sizes provided
+    nx = NX/size_x + ((rank_x < (NX % size_x)) ? 1 : 0);
+    ny = NY/size_y + ((rank_y < (NY % size_y)) ? 1 : 0);
+  }
 
   int boundaryFlag;
   settings.getSetting("BOX BOUNDARY FLAG", boundaryFlag);
 
   const int periodicFlag = (boundaryFlag == -1) ? 1 : 0;
 
-  //local grid physical sizes
-  dfloat dimx = DIMX/size_x;
-  dfloat dimy = DIMY/size_x;
+  //grid physical sizes
+  dfloat DIMX, DIMY;
+  settings.getSetting("BOX DIMX", DIMX);
+  settings.getSetting("BOX DIMY", DIMY);
 
-  //rank coordinates
-  int rank_y = rank / size_x;
-  int rank_x = rank % size_x;
+  //element sizes
+  dfloat dx = DIMX/NX;
+  dfloat dy = DIMY/NY;
+
+  dlong offset_x = rank_x*(NX/size_x) + mymin(rank_x, (NX % size_x));
+  dlong offset_y = rank_y*(NY/size_y) + mymin(rank_y, (NY % size_y));
 
   //bottom corner of physical domain
-  dfloat X0 = -DIMX/2.0 + rank_x*dimx;
-  dfloat Y0 = -DIMY/2.0 + rank_y*dimy;
-
-  //global number of elements in each dimension
-  hlong NX = size_x*nx;
-  hlong NY = size_x*ny;
+  dfloat X0 = -DIMX/2.0 + offset_x*dx;
+  dfloat Y0 = -DIMY/2.0 + offset_y*dy;
 
   //global number of nodes in each dimension
   hlong NnX = periodicFlag ? NX : NX+1; //lose a node when periodic (repeated node)
@@ -95,15 +113,13 @@ void meshTri2D::SetupBox(){
   elementInfo = (hlong*) calloc(Nelements, sizeof(hlong));
 
   dlong e = 0;
-  dfloat dx = dimx/nx;
-  dfloat dy = dimy/ny;
   for(int j=0;j<ny;++j){
     for(int i=0;i<nx;++i){
 
-      const hlong i0 = i+rank_x*nx;
-      const hlong i1 = (i+1+rank_x*nx)%NnX;
-      const hlong j0 = j+rank_y*ny;
-      const hlong j1 = (j+1+rank_y*ny)%NnY;
+      const hlong i0 = i+offset_x;
+      const hlong i1 = (i+1+offset_x)%NnX;
+      const hlong j0 = j+offset_y;
+      const hlong j1 = (j+1+offset_y)%NnY;
 
       dfloat x0 = X0 + dx*i;
       dfloat y0 = Y0 + dy*j;

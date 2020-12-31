@@ -41,6 +41,14 @@ void parallelSort(int size, int rank, MPI_Comm comm,
       void (*match)(void *, void *)
       );
 
+// find a factorization n = nx*ny such that
+//  nx>=ny are 'close' to one another
+void factor2(const int n, int &nx, int &ny);
+
+// find a factorization n = nx*ny*nz such that
+//  nx>=ny>=nz are all 'close' to one another
+void factor3(const int n, int &nx, int &ny, int &nz);
+
 void matrixRightSolve(int NrowsA, int NcolsA, double *A, int NrowsB, int NcolsB, double *B, double *C);
 void matrixRightSolve(int NrowsA, int NcolsA, float *A, int NrowsB, int NcolsB, float *B, float *C);
 void matrixUnderdeterminedRightSolveMinNorm(int NrowsA, int NcolsA, dfloat *A, dfloat *b, dfloat *x);
