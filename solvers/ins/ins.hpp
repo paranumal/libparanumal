@@ -155,6 +155,7 @@ public:
   occa::kernel vorticityKernel;
 
   occa::kernel initialConditionKernel;
+  occa::kernel maxWaveSpeedKernel;
 
   ins_t() = delete;
   ins_t(platform_t &_platform, mesh_t &_mesh,
@@ -174,6 +175,8 @@ public:
   void Report(dfloat time, int tstep);
 
   void PlotFields(dfloat* U, dfloat* P, dfloat *V, char *fileName);
+
+  dfloat MaxWaveSpeed(occa::memory& o_U, const dfloat T);
 
   // void rhsf(occa::memory& o_q, occa::memory& o_rhs, const dfloat time);
 

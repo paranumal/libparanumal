@@ -48,13 +48,6 @@ acoustics_t& acoustics_t::Setup(platform_t& platform, mesh_t& mesh,
                                               mesh.Np, acoustics->Nfields, *acoustics, mesh.comm);
   }
 
-  // set time step
-  dfloat hmin = mesh.MinCharacteristicLength();
-  dfloat cfl = 0.5; // depends on the stability region size
-
-  dfloat dt = cfl*hmin/((mesh.N+1.)*(mesh.N+1.));
-  acoustics->timeStepper->SetTimeStep(dt);
-
   //setup linear algebra module
   platform.linAlg.InitKernels({"innerProd"});
 

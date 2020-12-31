@@ -30,11 +30,21 @@ SOFTWARE.
   *(q) = exp(-3*(x*x+y*y));             \
 }
 
+#define ADVECTION_SPEED_X 1.0
+#define ADVECTION_SPEED_Y 0.5
+
 // Advective field
-#define fpeAdvectionField2D(t, x, y, q, u, v) \
+#define fpeAdvectionFlux2D(t, x, y, q, u, v) \
 {                                       \
-  *(u) = 1.0;                           \
-  *(v) = 0.5;                           \
+  *(u) = ADVECTION_SPEED_X*q;           \
+  *(v) = ADVECTION_SPEED_Y*q;           \
+}
+
+// max wavespeed (should be max eigen of Jacobian of flux function)
+#define fpeMaxWaveSpeed2D(t, x, y, q, u, v) \
+{                                           \
+  *(u) = ADVECTION_SPEED_X;                 \
+  *(v) = ADVECTION_SPEED_Y;                 \
 }
 
 // Boundary conditions

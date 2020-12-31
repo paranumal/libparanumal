@@ -85,7 +85,17 @@ SOFTWARE.
             const dfloat ndotcM = nx*cxM + ny*cyM + nz*czM;
             const dfloat ndotcP = nx*cxP + ny*cyP + nz*czP;
 
-            s_qflux[es][n] = -0.5*invJ*sJ*(ndotcP-ndotcM-(qP-qM));
+            // Find max normal velocity on the face
+            dfloat uM=0.0, vM=0.0, wM=0.0;
+            dfloat uP=0.0, vP=0.0, wP=0.0;
+            advectionMaxWaveSpeed3D(t, x[idM], y[idM], z[idM], qM, &uM, &vM, &wM);
+            advectionMaxWaveSpeed3D(t, x[idM], y[idM], z[idM], qP, &uP, &vP, &wP);
+
+            const dfloat unM   = fabs(nx*uM + ny*vM + nz*wM);
+            const dfloat unP   = fabs(nx*uP + ny*vP + nz*wP);
+            const dfloat unMax = (unM > unP) ? unM : unP;
+
+            s_qflux[es][n] = -0.5*invJ*sJ*(ndotcP-ndotcM-unMax*(qP-qM));
           }
         }
       }

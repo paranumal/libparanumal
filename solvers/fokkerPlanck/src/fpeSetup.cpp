@@ -65,22 +65,9 @@ fpe_t& fpe_t::Setup(platform_t& platform, mesh_t& mesh,
     gamma = ((TimeStepper::ssbdf3*) fpe->timeStepper)->getGamma();
   }
 
-  // set time step
-  dfloat hmin = mesh.MinCharacteristicLength();
-  dfloat cfl = 0.5; // depends on the stability region size
-
-  dfloat dtAdvc = cfl*hmin/((mesh.N+1.)*(mesh.N+1.));
-  dfloat dtDiff = fpe->mu>0.0 ? pow(hmin, 2)/(pow(mesh.N+1,4)*fpe->mu) : 1.0e9;
-  dfloat dt = mymin(dtAdvc, dtDiff);
-
-  if (settings.compareSetting("TIME INTEGRATOR","EXTBDF3"))
-    fpe->timeStepper->SetTimeStep(dtAdvc);
-  else if (settings.compareSetting("TIME INTEGRATOR","SSBDF3")) {
-    fpe->Nsubcycles=1;
+  fpe->Nsubcycles=1;
+  if (settings.compareSetting("TIME INTEGRATOR","SSBDF3"))
     settings.getSetting("NUMBER OF SUBCYCLES", fpe->Nsubcycles);
-    fpe->timeStepper->SetTimeStep(fpe->Nsubcycles*dtAdvc);
-  } else
-    fpe->timeStepper->SetTimeStep(dt);
 
   //Setup Elliptic solver
   fpe->elliptic=NULL;
@@ -92,7 +79,13 @@ fpe_t& fpe_t::Setup(platform_t& platform, mesh_t& mesh,
     int BCType[NBCTypes] = {0,1,1,2,1,1,1}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
 
     fpe->ellipticSettings = settings.extractEllipticSettings();
+
+    //make a guess at dt for the lambda value
+    //TODO: we should allow preconditioners to be re-setup if lambda is updated
+    dfloat hmin = mesh.MinCharacteristicLength();
+    dfloat dtAdvc = fpe->Nsubcycles*hmin/((mesh.N+1.)*(mesh.N+1.));
     dfloat lambda = gamma/(dtAdvc*fpe->mu);
+
     fpe->elliptic = &(elliptic_t::Setup(platform, mesh, *(fpe->ellipticSettings),
                                              lambda, NBCTypes, BCType));
     fpe->tau = fpe->elliptic->tau;
@@ -113,7 +106,7 @@ fpe_t& fpe_t::Setup(platform_t& platform, mesh_t& mesh,
   }
 
   //setup linear algebra module
-  platform.linAlg.InitKernels({"innerProd", "axpy"});
+  platform.linAlg.InitKernels({"innerProd", "axpy", "max"});
 
   /*setup trace halo exchange */
   fpe->traceHalo = mesh.HaloTraceSetup(1); //one field
@@ -230,6 +223,11 @@ fpe_t& fpe_t::Setup(platform_t& platform, mesh_t& mesh,
   fpe->initialConditionKernel = platform.buildKernel(fileName, kernelName,
                                                   kernelInfo);
 
+  sprintf(fileName, DFPE "/okl/fpeMaxWaveSpeed%s.okl", suffix);
+  sprintf(kernelName, "fpeMaxWaveSpeed%s", suffix);
+
+  fpe->maxWaveSpeedKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
+
   //build subcycler
   fpe->subcycler=NULL;
   fpe->subStepper=NULL;
@@ -245,7 +243,6 @@ fpe_t& fpe_t::Setup(platform_t& platform, mesh_t& mesh,
       fpe->subStepper = new TimeStepper::dopri5(mesh.Nelements, mesh.totalHaloPairs,
                                                 mesh.Np, 1, *(fpe->subcycler), mesh.comm);
     }
-    fpe->subStepper->SetTimeStep(dtAdvc);
   }
 
   return *fpe;
@@ -258,6 +255,7 @@ fpe_t::~fpe_t() {
   diffusionKernel.free();
   diffusionRhsKernel.free();
   initialConditionKernel.free();
+  maxWaveSpeedKernel.free();
 
   if (elliptic) delete elliptic;
   if (timeStepper) delete timeStepper;

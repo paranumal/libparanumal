@@ -26,6 +26,29 @@ SOFTWARE.
 
 #include "fpe.hpp"
 
+dfloat fpe_t::MaxWaveSpeed(occa::memory& o_Q, const dfloat T){
+
+  //Note: if this is on the critical path in the future, we should pre-allocate this
+  occa::memory o_maxSpeed = platform.malloc(mesh.Nelements*sizeof(dfloat));
+
+  maxWaveSpeedKernel(mesh.Nelements,
+                     mesh.o_vgeo,
+                     mesh.o_sgeo,
+                     mesh.o_vmapM,
+                     mesh.o_EToB,
+                     T,
+                     mesh.o_x,
+                     mesh.o_y,
+                     mesh.o_z,
+                     o_Q,
+                     o_maxSpeed);
+
+  const dfloat vmax = platform.linAlg.max(mesh.Nelements, o_maxSpeed, mesh.comm);
+
+  o_maxSpeed.free();
+  return vmax;
+}
+
 //evaluate ODE rhs = f(q,t)
 void fpe_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
   Advection(o_Q, o_RHS, T);

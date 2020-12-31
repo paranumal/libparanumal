@@ -1,0 +1,481 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+@kernel void cnsMaxWaveSpeedHex3D(const dlong Nelements,
+                                  @restrict const  dfloat *  vgeo,
+                                  @restrict const  dfloat *  sgeo,
+                                  @restrict const  dlong  *  vmapM,
+                                  @restrict const  int    *  EToB,
+                                            const  dfloat gamma,
+                                            const  dfloat mu,
+                                            const  dfloat time,
+                                  @restrict const  dfloat *  x,
+                                  @restrict const  dfloat *  y,
+                                  @restrict const  dfloat *  z,
+                                  @restrict const  dfloat *  q,
+                                  @restrict dfloat *  maxSpeed){
+
+  // for all elements
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+
+    @shared dfloat s_maxSpeed[p_Nfp];
+    @shared dfloat s_J[p_Nfp];
+    @shared dfloat s_sJ[p_Nfaces][p_Nfp];
+
+    for(int n=0;n<p_Nfp;++n;@inner(0)){
+      //initialize
+      s_maxSpeed[n] = 0.0;
+      s_J[n] = 0.0;
+
+      // for each node in the element
+      #pragma unroll p_Nq
+      for(int k=0;k<p_Nq;++k){
+        //sum jacobians to find element volume
+        s_J[n] += vgeo[p_Nvgeo*p_Np*e + k*p_Nq*p_Nq + n + p_Np*p_JWID];
+
+        //find max wavespeed
+        const dlong id = e*p_Np*p_Nfields+k*p_Nfp+n;
+        const dfloat r  = q[id + 0*p_Np];
+        const dfloat ru = q[id + 1*p_Np];
+        const dfloat rv = q[id + 2*p_Np];
+        const dfloat rw = q[id + 3*p_Np];
+        const dfloat E  = q[id + 4*p_Np];
+
+        const dfloat u = ru/r;
+        const dfloat v = rv/r;
+        const dfloat w = rw/r;
+        const dfloat p = (gamma-1)*(E-0.5*r*(u*u+v*v+w*w));
+
+        const dfloat U = sqrt(u*u+v*v+w*w);
+        const dfloat c = sqrt(gamma*p/r);
+
+        const dfloat UP = fabs(U+c);
+        const dfloat UM = fabs(U-c);
+
+        const dfloat Umax = (UP > UM) ? UP : UM;
+
+        s_maxSpeed[n] = (Umax > s_maxSpeed[n]) ? Umax : s_maxSpeed[n];
+      }
+    }
+
+    // for all face nodes of all elements
+    for(int n=0;n<p_Nfp;++n;@inner(0)){
+
+      for (int f=0;f<p_Nfaces;f++) {
+        //load suface jacobians to find face area
+        s_sJ[f][n] = sgeo[p_Nsgeo*(p_Nfaces*p_Nfp*e + p_Nfp*f + n) + p_WSJID];
+
+        const int bc = EToB[f+p_Nfaces*e];
+        if (bc>0) {
+          const dlong sk = e*p_Nfp*p_Nfaces + f*p_Nfp + n;
+          const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
+          const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
+          const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];
+
+          const dlong idM = vmapM[sk];
+
+          const int vidM = idM%p_Np;
+          const dlong qbaseM = e*p_Np*p_Nfields + vidM;
+
+          const dfloat rM  = q[qbaseM + 0*p_Np];
+          const dfloat ruM = q[qbaseM + 1*p_Np];
+          const dfloat rvM = q[qbaseM + 2*p_Np];
+          const dfloat rwM = q[qbaseM + 3*p_Np];
+          const dfloat EM  = q[qbaseM + 4*p_Np];
+
+          const dfloat uM = ruM/rM;
+          const dfloat vM = rvM/rM;
+          const dfloat wM = rwM/rM;
+          const dfloat pM = (gamma-1)*(EM-0.5*rM*(uM*uM+vM*vM+wM*wM));
+
+          dfloat rP = rM;
+          dfloat uP = uM;
+          dfloat vP = vM;
+          dfloat wP = wM;
+          dfloat pP = pM;
+
+          dfloat dudxP, dudyP, dudzP;
+          dfloat dvdxP, dvdyP, dvdzP;
+          dfloat dwdxP, dwdyP, dwdzP;
+
+          //get boundary value
+          cnsBoundaryConditions3D(bc, gamma, mu,
+                                  time, x[idM], y[idM], z[idM], nx, ny, nz,
+                                  rM, uM, vM, wM, pM,
+                                  0.0, 0.0, 0.0,
+                                  0.0, 0.0, 0.0,
+                                  0.0, 0.0, 0.0,
+                                  &rP, &uP, &vP, &wP, &pP,
+                                  &dudxP, &dudyP, &dudzP,
+                                  &dvdxP, &dvdyP, &dvdzP,
+                                  &dwdxP, &dwdyP, &dwdzP);
+
+          //determine max wavespeed from boundary value
+          const dfloat U = sqrt(uP*uP+vP*vP+wP*wP);
+          const dfloat c = sqrt(gamma*pP/rP);
+
+          const dfloat UP = fabs(U+c);
+          const dfloat UM = fabs(U-c);
+
+          const dfloat Umax = (UP > UM) ? UP : UM;
+
+          s_maxSpeed[n] = (Umax > s_maxSpeed[n]) ? Umax : s_maxSpeed[n];
+        }
+      }
+    }
+
+    // reduce
+#if p_Nfp>256
+    for(int n=0;n<p_Nfp;++n;@inner(0)) {
+      if(n<256 && n+256<p_Nfp) {
+        s_maxSpeed[n] = (s_maxSpeed[n+256]>s_maxSpeed[n]) ? s_maxSpeed[n+256] : s_maxSpeed[n];
+        s_J[n] += s_J[n+256];
+        for (int f=0;f<p_Nfaces;f++)
+          s_sJ[f][n] += s_sJ[f][n+256];
+      }
+    }
+#endif
+#if p_Nfp>128
+    for(int n=0;n<p_Nfp;++n;@inner(0)) {
+      if(n<128 && n+128<p_Nfp) {
+        s_maxSpeed[n] = (s_maxSpeed[n+128]>s_maxSpeed[n]) ? s_maxSpeed[n+128] : s_maxSpeed[n];
+        s_J[n] += s_J[n+128];
+        for (int f=0;f<p_Nfaces;f++)
+          s_sJ[f][n] += s_sJ[f][n+128];
+      }
+    }
+#endif
+#if p_Nfp>64
+    for(int n=0;n<p_Nfp;++n;@inner(0)) {
+      if(n<64 && n+64<p_Nfp) {
+        s_maxSpeed[n] = (s_maxSpeed[n+64]>s_maxSpeed[n]) ? s_maxSpeed[n+64] : s_maxSpeed[n];
+        s_J[n] += s_J[n+64];
+        for (int f=0;f<p_Nfaces;f++)
+          s_sJ[f][n] += s_sJ[f][n+64];
+      }
+    }
+#endif
+#if p_Nfp>32
+    for(int n=0;n<p_Nfp;++n;@inner(0)) {
+      if(n<32 && n+32<p_Nfp) {
+        s_maxSpeed[n] = (s_maxSpeed[n+32]>s_maxSpeed[n]) ? s_maxSpeed[n+32] : s_maxSpeed[n];
+        s_J[n] += s_J[n+32];
+        for (int f=0;f<p_Nfaces;f++)
+          s_sJ[f][n] += s_sJ[f][n+32];
+      }
+    }
+#endif
+#if p_Nfp>16
+    for(int n=0;n<p_Nfp;++n;@inner(0)) {
+      if(n<16 && n+16<p_Nfp) {
+        s_maxSpeed[n] = (s_maxSpeed[n+16]>s_maxSpeed[n]) ? s_maxSpeed[n+16] : s_maxSpeed[n];
+        s_J[n] += s_J[n+16];
+        for (int f=0;f<p_Nfaces;f++)
+          s_sJ[f][n] += s_sJ[f][n+16];
+      }
+    }
+#endif
+#if p_Nfp>8
+    for(int n=0;n<p_Nfp;++n;@inner(0)) {
+      if(n<8 && n+8<p_Nfp) {
+        s_maxSpeed[n] = (s_maxSpeed[n+8]>s_maxSpeed[n]) ? s_maxSpeed[n+8] : s_maxSpeed[n];
+        s_J[n] += s_J[n+8];
+        for (int f=0;f<p_Nfaces;f++)
+          s_sJ[f][n] += s_sJ[f][n+8];
+      }
+    }
+#endif
+#if p_Nfp>4
+    for(int n=0;n<p_Nfp;++n;@inner(0)) {
+      if(n<4 && n+4<p_Nfp) {
+        s_maxSpeed[n] = (s_maxSpeed[n+4]>s_maxSpeed[n]) ? s_maxSpeed[n+4] : s_maxSpeed[n];
+        s_J[n] += s_J[n+4];
+        for (int f=0;f<p_Nfaces;f++)
+          s_sJ[f][n] += s_sJ[f][n+4];
+      }
+    }
+#endif
+#if p_Nfp>2
+    for(int n=0;n<p_Nfp;++n;@inner(0)) {
+      if(n<2 && n+2<p_Nfp) {
+        s_maxSpeed[n] = (s_maxSpeed[n+2]>s_maxSpeed[n]) ? s_maxSpeed[n+2] : s_maxSpeed[n];
+        s_J[n] += s_J[n+2];
+        for (int f=0;f<p_Nfaces;f++)
+          s_sJ[f][n] += s_sJ[f][n+2];
+      }
+    }
+#endif
+    for(int n=0;n<p_Nfp;++n;@inner(0)) {
+      if(n==0) {
+        //volume
+        const dfloat J = s_J[0] += s_J[1];
+
+        //max side area
+        dfloat sJmax = s_sJ[0][0]+s_sJ[0][1];
+        for (int f=1;f<p_Nfaces;f++) {
+          dfloat sJ = s_sJ[f][0]+s_sJ[f][1];
+          sJmax = (sJ > sJmax) ? sJ : sJmax;
+        }
+
+        //min element length
+        const dfloat hmin = J/sJmax;
+
+        //max speed on this element
+        const dfloat vmax = (s_maxSpeed[1]>s_maxSpeed[0]) ? s_maxSpeed[1] : s_maxSpeed[0];
+
+        //write out
+        maxSpeed[e] = vmax/hmin;
+      }
+    }
+  }
+}
+
+
+@kernel void cnsIsothermalMaxWaveSpeedHex3D(const dlong Nelements,
+                                  @restrict const  dfloat *  vgeo,
+                                  @restrict const  dfloat *  sgeo,
+                                  @restrict const  dlong  *  vmapM,
+                                  @restrict const  int    *  EToB,
+                                            const  dfloat gamma,
+                                            const  dfloat mu,
+                                            const  dfloat time,
+                                  @restrict const  dfloat *  x,
+                                  @restrict const  dfloat *  y,
+                                  @restrict const  dfloat *  z,
+                                  @restrict const  dfloat *  q,
+                                  @restrict dfloat *  maxSpeed){
+
+  // for all elements
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+
+    @shared dfloat s_maxSpeed[p_Nfp];
+    @shared dfloat s_J[p_Nfp];
+    @shared dfloat s_sJ[p_Nfaces][p_Nfp];
+
+    for(int n=0;n<p_Nfp;++n;@inner(0)){
+      //initialize
+      s_maxSpeed[n] = 0.0;
+      s_J[n] = 0.0;
+
+      // for each node in the element
+      #pragma unroll p_Nq
+      for(int k=0;k<p_Nq;++k){
+        //sum jacobians to find element volume
+        s_J[n] += vgeo[p_Nvgeo*p_Np*e + k*p_Nq*p_Nq + n + p_Np*p_JWID];
+
+        //find max wavespeed
+        const dlong id = e*p_Np*p_Nfields+k*p_Nfp+n;
+        const dfloat r  = q[id + 0*p_Np];
+        const dfloat ru = q[id + 1*p_Np];
+        const dfloat rv = q[id + 2*p_Np];
+        const dfloat rw = q[id + 3*p_Np];
+
+        const dfloat u = ru/r;
+        const dfloat v = rv/r;
+        const dfloat w = rw/r;
+
+        const dfloat U = sqrt(u*u+v*v+w*w);
+        const dfloat c = gamma;
+
+        const dfloat UP = fabs(U+c);
+        const dfloat UM = fabs(U-c);
+
+        const dfloat Umax = (UP > UM) ? UP : UM;
+
+        s_maxSpeed[n] = (Umax > s_maxSpeed[n]) ? Umax : s_maxSpeed[n];
+      }
+    }
+
+    // for all face nodes of all elements
+    for(int n=0;n<p_Nfp;++n;@inner(0)){
+
+      for (int f=0;f<p_Nfaces;f++) {
+        //load suface jacobians to find face area
+        s_sJ[f][n] = sgeo[p_Nsgeo*(p_Nfaces*p_Nfp*e + p_Nfp*f + n) + p_WSJID];
+
+        const int bc = EToB[f+p_Nfaces*e];
+        if (bc>0) {
+          const dlong sk = e*p_Nfp*p_Nfaces + f*p_Nfp + n;
+          const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
+          const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
+          const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];
+
+          const dlong idM = vmapM[sk];
+
+          const int vidM = idM%p_Np;
+          const dlong qbaseM = e*p_Np*p_Nfields + vidM;
+
+          const dfloat rM  = q[qbaseM + 0*p_Np];
+          const dfloat ruM = q[qbaseM + 1*p_Np];
+          const dfloat rvM = q[qbaseM + 2*p_Np];
+          const dfloat rwM = q[qbaseM + 3*p_Np];
+
+          const dfloat uM = ruM/rM;
+          const dfloat vM = rvM/rM;
+          const dfloat wM = rwM/rM;
+          const dfloat pM = gamma*gamma*rM; // gamma^2 = RT
+
+          dfloat rP = rM;
+          dfloat uP = uM;
+          dfloat vP = vM;
+          dfloat wP = wM;
+          dfloat pP = pM;
+
+          dfloat dudxP, dudyP, dudzP;
+          dfloat dvdxP, dvdyP, dvdzP;
+          dfloat dwdxP, dwdyP, dwdzP;
+
+          //get boundary value
+          cnsBoundaryConditions3D(bc, gamma, mu,
+                                  time, x[idM], y[idM], z[idM], nx, ny, nz,
+                                  rM, uM, vM, wM, pM,
+                                  0.0, 0.0, 0.0,
+                                  0.0, 0.0, 0.0,
+                                  0.0, 0.0, 0.0,
+                                  &rP, &uP, &vP, &wP, &pP,
+                                  &dudxP, &dudyP, &dudzP,
+                                  &dvdxP, &dvdyP, &dvdzP,
+                                  &dwdxP, &dwdyP, &dwdzP);
+
+          //determine max wavespeed from boundary value
+          const dfloat U = sqrt(uP*uP+vP*vP+wP*wP);
+          const dfloat c = gamma;
+
+          const dfloat UP = fabs(U+c);
+          const dfloat UM = fabs(U-c);
+
+          const dfloat Umax = (UP > UM) ? UP : UM;
+
+          s_maxSpeed[n] = (Umax > s_maxSpeed[n]) ? Umax : s_maxSpeed[n];
+        }
+      }
+    }
+
+    // reduce
+#if p_Nfp>256
+    for(int n=0;n<p_Nfp;++n;@inner(0)) {
+      if(n<256 && n+256<p_Nfp) {
+        s_maxSpeed[n] = (s_maxSpeed[n+256]>s_maxSpeed[n]) ? s_maxSpeed[n+256] : s_maxSpeed[n];
+        s_J[n] += s_J[n+256];
+        for (int f=0;f<p_Nfaces;f++)
+          s_sJ[f][n] += s_sJ[f][n+256];
+      }
+    }
+#endif
+#if p_Nfp>128
+    for(int n=0;n<p_Nfp;++n;@inner(0)) {
+      if(n<128 && n+128<p_Nfp) {
+        s_maxSpeed[n] = (s_maxSpeed[n+128]>s_maxSpeed[n]) ? s_maxSpeed[n+128] : s_maxSpeed[n];
+        s_J[n] += s_J[n+128];
+        for (int f=0;f<p_Nfaces;f++)
+          s_sJ[f][n] += s_sJ[f][n+128];
+      }
+    }
+#endif
+#if p_Nfp>64
+    for(int n=0;n<p_Nfp;++n;@inner(0)) {
+      if(n<64 && n+64<p_Nfp) {
+        s_maxSpeed[n] = (s_maxSpeed[n+64]>s_maxSpeed[n]) ? s_maxSpeed[n+64] : s_maxSpeed[n];
+        s_J[n] += s_J[n+64];
+        for (int f=0;f<p_Nfaces;f++)
+          s_sJ[f][n] += s_sJ[f][n+64];
+      }
+    }
+#endif
+#if p_Nfp>32
+    for(int n=0;n<p_Nfp;++n;@inner(0)) {
+      if(n<32 && n+32<p_Nfp) {
+        s_maxSpeed[n] = (s_maxSpeed[n+32]>s_maxSpeed[n]) ? s_maxSpeed[n+32] : s_maxSpeed[n];
+        s_J[n] += s_J[n+32];
+        for (int f=0;f<p_Nfaces;f++)
+          s_sJ[f][n] += s_sJ[f][n+32];
+      }
+    }
+#endif
+#if p_Nfp>16
+    for(int n=0;n<p_Nfp;++n;@inner(0)) {
+      if(n<16 && n+16<p_Nfp) {
+        s_maxSpeed[n] = (s_maxSpeed[n+16]>s_maxSpeed[n]) ? s_maxSpeed[n+16] : s_maxSpeed[n];
+        s_J[n] += s_J[n+16];
+        for (int f=0;f<p_Nfaces;f++)
+          s_sJ[f][n] += s_sJ[f][n+16];
+      }
+    }
+#endif
+#if p_Nfp>8
+    for(int n=0;n<p_Nfp;++n;@inner(0)) {
+      if(n<8 && n+8<p_Nfp) {
+        s_maxSpeed[n] = (s_maxSpeed[n+8]>s_maxSpeed[n]) ? s_maxSpeed[n+8] : s_maxSpeed[n];
+        s_J[n] += s_J[n+8];
+        for (int f=0;f<p_Nfaces;f++)
+          s_sJ[f][n] += s_sJ[f][n+8];
+      }
+    }
+#endif
+#if p_Nfp>4
+    for(int n=0;n<p_Nfp;++n;@inner(0)) {
+      if(n<4 && n+4<p_Nfp) {
+        s_maxSpeed[n] = (s_maxSpeed[n+4]>s_maxSpeed[n]) ? s_maxSpeed[n+4] : s_maxSpeed[n];
+        s_J[n] += s_J[n+4];
+        for (int f=0;f<p_Nfaces;f++)
+          s_sJ[f][n] += s_sJ[f][n+4];
+      }
+    }
+#endif
+#if p_Nfp>2
+    for(int n=0;n<p_Nfp;++n;@inner(0)) {
+      if(n<2 && n+2<p_Nfp) {
+        s_maxSpeed[n] = (s_maxSpeed[n+2]>s_maxSpeed[n]) ? s_maxSpeed[n+2] : s_maxSpeed[n];
+        s_J[n] += s_J[n+2];
+        for (int f=0;f<p_Nfaces;f++)
+          s_sJ[f][n] += s_sJ[f][n+2];
+      }
+    }
+#endif
+    for(int n=0;n<p_Nfp;++n;@inner(0)) {
+      if(n==0) {
+        //volume
+        const dfloat J = s_J[0] += s_J[1];
+
+        //max side area
+        dfloat sJmax = s_sJ[0][0]+s_sJ[0][1];
+        for (int f=1;f<p_Nfaces;f++) {
+          dfloat sJ = s_sJ[f][0]+s_sJ[f][1];
+          sJmax = (sJ > sJmax) ? sJ : sJmax;
+        }
+
+        //min element length
+        const dfloat hmin = J/sJmax;
+
+        //max speed on this element
+        const dfloat vmax = (s_maxSpeed[1]>s_maxSpeed[0]) ? s_maxSpeed[1] : s_maxSpeed[0];
+
+        //write out
+        maxSpeed[e] = vmax/hmin;
+      }
+    }
+  }
+}

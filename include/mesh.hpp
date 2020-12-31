@@ -339,7 +339,7 @@ public:
 
   virtual dfloat ElementCharacteristicLength(dlong e) = 0;
 
-  virtual dfloat MinCharacteristicLength() = 0;
+  dfloat MinCharacteristicLength();
 
   virtual void PlotInterp(const dfloat* q, dfloat* Iq, dfloat* scratch=nullptr)=0;
 

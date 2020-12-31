@@ -1,0 +1,412 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+@kernel void cnsMaxWaveSpeedTet3D(const dlong Nelements,
+                                  @restrict const  dfloat *  vgeo,
+                                  @restrict const  dfloat *  sgeo,
+                                  @restrict const  dlong  *  vmapM,
+                                  @restrict const  int    *  EToB,
+                                            const  dfloat gamma,
+                                            const  dfloat mu,
+                                            const  dfloat time,
+                                  @restrict const  dfloat *  x,
+                                  @restrict const  dfloat *  y,
+                                  @restrict const  dfloat *  z,
+                                  @restrict const  dfloat *  q,
+                                  @restrict dfloat *  maxSpeed){
+
+  // for all elements
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+
+    @shared dfloat s_maxSpeed[p_maxNodes];
+
+    // for each node in the element
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+
+      //initialize
+      s_maxSpeed[n] = 0.0;
+
+      if(n<p_Np){
+        //find max wavespeed at each node
+        const dlong id = e*p_Np*p_Nfields+n;
+        const dfloat r  = q[id + 0*p_Np];
+        const dfloat ru = q[id + 1*p_Np];
+        const dfloat rv = q[id + 2*p_Np];
+        const dfloat rw = q[id + 3*p_Np];
+        const dfloat E  = q[id + 4*p_Np];
+
+        const dfloat u = ru/r;
+        const dfloat v = rv/r;
+        const dfloat w = rw/r;
+        const dfloat p = (gamma-1)*(E-0.5*r*(u*u+v*v+w*w));
+
+        const dfloat U = sqrt(u*u+v*v+w*w);
+        const dfloat c = sqrt(gamma*p/r);
+
+        const dfloat UP = fabs(U+c);
+        const dfloat UM = fabs(U-c);
+
+        const dfloat Umax = (UP > UM) ? UP : UM;
+
+        s_maxSpeed[n] = Umax;
+      }
+    }
+
+    // for all face nodes of all elements
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
+
+      if(n<p_NfacesNfp){
+        // check for boundary face
+        const int face = n/p_Nfp;
+        const int bc = EToB[face+p_Nfaces*e];
+        if(bc>0){
+          // load surface geofactors for this face
+          const dlong sid = p_Nsgeo*(e*p_Nfaces+face);
+          const dfloat nx = sgeo[sid+p_NXID];
+          const dfloat ny = sgeo[sid+p_NYID];
+          const dfloat nz = sgeo[sid+p_NZID];
+
+          const dlong id  = e*p_Nfp*p_Nfaces + n;
+          const dlong idM = vmapM[id];
+
+          const int vidM = idM%p_Np;
+          const dlong qbaseM = e*p_Np*p_Nfields + vidM;
+
+          const dfloat rM  = q[qbaseM + 0*p_Np];
+          const dfloat ruM = q[qbaseM + 1*p_Np];
+          const dfloat rvM = q[qbaseM + 2*p_Np];
+          const dfloat rwM = q[qbaseM + 3*p_Np];
+          const dfloat EM  = q[qbaseM + 4*p_Np];
+
+          const dfloat uM = ruM/rM;
+          const dfloat vM = rvM/rM;
+          const dfloat wM = rwM/rM;
+          const dfloat pM = (gamma-1)*(EM-0.5*rM*(uM*uM+vM*vM+wM*wM));
+
+          dfloat rP = rM;
+          dfloat uP = uM;
+          dfloat vP = vM;
+          dfloat wP = wM;
+          dfloat pP = pM;
+
+          dfloat dudxP, dudyP, dudzP;
+          dfloat dvdxP, dvdyP, dvdzP;
+          dfloat dwdxP, dwdyP, dwdzP;
+
+          //get boundary value
+          cnsBoundaryConditions3D(bc, gamma, mu,
+                                  time, x[idM], y[idM], z[idM], nx, ny, nz,
+                                  rM, uM, vM, wM, pM,
+                                  0.0, 0.0, 0.0,
+                                  0.0, 0.0, 0.0,
+                                  0.0, 0.0, 0.0,
+                                  &rP, &uP, &vP, &wP, &pP,
+                                  &dudxP, &dudyP, &dudzP,
+                                  &dvdxP, &dvdyP, &dvdzP,
+                                  &dwdxP, &dwdyP, &dwdzP);
+
+          //determine max wavespeed from boundary value
+          const dfloat U = sqrt(uP*uP+vP*vP+wP*wP);
+          const dfloat c = sqrt(gamma*pP/rP);
+
+          const dfloat UP = fabs(U+c);
+          const dfloat UM = fabs(U-c);
+
+          const dfloat Umax = (UP > UM) ? UP : UM;
+
+          s_maxSpeed[n] = (Umax > s_maxSpeed[n]) ? Umax : s_maxSpeed[n];
+        }
+      }
+    }
+
+    // reduce
+#if p_maxNodes>512
+    for(int n=0;n<p_maxNodes;++n;@inner(0)) {
+      if(n<512 && n+512<p_maxNodes)
+        s_maxSpeed[n] = (s_maxSpeed[n+512]>s_maxSpeed[n]) ? s_maxSpeed[n+512] : s_maxSpeed[n];
+    }
+#endif
+#if p_maxNodes>256
+    for(int n=0;n<p_maxNodes;++n;@inner(0)) {
+      if(n<256 && n+256<p_maxNodes)
+        s_maxSpeed[n] = (s_maxSpeed[n+256]>s_maxSpeed[n]) ? s_maxSpeed[n+256] : s_maxSpeed[n];
+    }
+#endif
+#if p_maxNodes>128
+    for(int n=0;n<p_maxNodes;++n;@inner(0)) {
+      if(n<128 && n+128<p_maxNodes)
+        s_maxSpeed[n] = (s_maxSpeed[n+128]>s_maxSpeed[n]) ? s_maxSpeed[n+128] : s_maxSpeed[n];
+    }
+#endif
+#if p_maxNodes>64
+    for(int n=0;n<p_maxNodes;++n;@inner(0)) {
+      if(n<64 && n+64<p_maxNodes)
+        s_maxSpeed[n] = (s_maxSpeed[n+64]>s_maxSpeed[n]) ? s_maxSpeed[n+64] : s_maxSpeed[n];
+    }
+#endif
+#if p_maxNodes>32
+    for(int n=0;n<p_maxNodes;++n;@inner(0)) {
+      if(n<32 && n+32<p_maxNodes)
+        s_maxSpeed[n] = (s_maxSpeed[n+32]>s_maxSpeed[n]) ? s_maxSpeed[n+32] : s_maxSpeed[n];
+    }
+#endif
+#if p_maxNodes>16
+    for(int n=0;n<p_maxNodes;++n;@inner(0)) {
+      if(n<16 && n+16<p_maxNodes)
+        s_maxSpeed[n] = (s_maxSpeed[n+16]>s_maxSpeed[n]) ? s_maxSpeed[n+16] : s_maxSpeed[n];
+    }
+#endif
+#if p_maxNodes>8
+    for(int n=0;n<p_maxNodes;++n;@inner(0)) {
+      if(n<8 && n+8<p_maxNodes)
+        s_maxSpeed[n] = (s_maxSpeed[n+8]>s_maxSpeed[n]) ? s_maxSpeed[n+8] : s_maxSpeed[n];
+    }
+#endif
+#if p_maxNodes>4
+    for(int n=0;n<p_maxNodes;++n;@inner(0)) {
+      if(n<4 && n+4<p_maxNodes)
+        s_maxSpeed[n] = (s_maxSpeed[n+4]>s_maxSpeed[n]) ? s_maxSpeed[n+4] : s_maxSpeed[n];
+    }
+#endif
+
+    for(int n=0;n<p_maxNodes;++n;@inner(0)) {
+      if(n<2 && n+2<p_maxNodes)
+        s_maxSpeed[n] = (s_maxSpeed[n+2]>s_maxSpeed[n]) ? s_maxSpeed[n+2] : s_maxSpeed[n];
+    }
+    for(int n=0;n<p_maxNodes;++n;@inner(0)) {
+      if(n==0) {
+        //find the min characteristic length in this element
+        dfloat hmin = 1.0e9;
+        for(int f=0;f<p_Nfaces;++f){
+          const dlong sid = p_Nsgeo*(p_Nfaces*e + f);
+          const dfloat sJ   = sgeo[sid + p_SJID];
+          const dfloat invJ = sgeo[sid + p_IJID];
+
+          const dfloat hest = 2.0/(sJ*invJ);
+
+          hmin = (hmin < hest) ? hmin : hest;
+        }
+
+        const dfloat vmax = (s_maxSpeed[1]>s_maxSpeed[0]) ? s_maxSpeed[1] : s_maxSpeed[0];
+
+        //write out
+        maxSpeed[e] = vmax/hmin;
+      }
+    }
+  }
+}
+
+@kernel void cnsIsothermalMaxWaveSpeedTet3D(const dlong Nelements,
+                                  @restrict const  dfloat *  vgeo,
+                                  @restrict const  dfloat *  sgeo,
+                                  @restrict const  dlong  *  vmapM,
+                                  @restrict const  int    *  EToB,
+                                            const  dfloat gamma,
+                                            const  dfloat mu,
+                                            const  dfloat time,
+                                  @restrict const  dfloat *  x,
+                                  @restrict const  dfloat *  y,
+                                  @restrict const  dfloat *  z,
+                                  @restrict const  dfloat *  q,
+                                  @restrict dfloat *  maxSpeed){
+
+  // for all elements
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+
+    @shared dfloat s_maxSpeed[p_maxNodes];
+
+    // for each node in the element
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+
+      //initialize
+      s_maxSpeed[n] = 0.0;
+
+      if(n<p_Np){
+        //find max wavespeed at each node
+        const dlong id = e*p_Np*p_Nfields+n;
+        const dfloat r  = q[id + 0*p_Np];
+        const dfloat ru = q[id + 1*p_Np];
+        const dfloat rv = q[id + 2*p_Np];
+        const dfloat rw = q[id + 3*p_Np];
+
+        const dfloat u = ru/r;
+        const dfloat v = rv/r;
+        const dfloat w = rw/r;
+
+        const dfloat U = sqrt(u*u+v*v+w*w);
+        const dfloat c = gamma;
+
+        const dfloat UP = fabs(U+c);
+        const dfloat UM = fabs(U-c);
+
+        const dfloat Umax = (UP > UM) ? UP : UM;
+
+        s_maxSpeed[n] = Umax;
+      }
+    }
+
+    // for all face nodes of all elements
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
+
+      if(n<p_NfacesNfp){
+        // check for boundary face
+        const int face = n/p_Nfp;
+        const int bc = EToB[face+p_Nfaces*e];
+        if(bc>0){
+          // load surface geofactors for this face
+          const dlong sid = p_Nsgeo*(e*p_Nfaces+face);
+          const dfloat nx = sgeo[sid+p_NXID];
+          const dfloat ny = sgeo[sid+p_NYID];
+          const dfloat nz = sgeo[sid+p_NZID];
+
+          const dlong id  = e*p_Nfp*p_Nfaces + n;
+          const dlong idM = vmapM[id];
+
+          const int vidM = idM%p_Np;
+          const dlong qbaseM = e*p_Np*p_Nfields + vidM;
+
+          const dfloat rM  = q[qbaseM + 0*p_Np];
+          const dfloat ruM = q[qbaseM + 1*p_Np];
+          const dfloat rvM = q[qbaseM + 2*p_Np];
+          const dfloat rwM = q[qbaseM + 3*p_Np];
+
+          const dfloat uM = ruM/rM;
+          const dfloat vM = rvM/rM;
+          const dfloat wM = rwM/rM;
+          const dfloat pM = gamma*gamma*rM; // gamma^2 = RT
+
+          dfloat rP = rM;
+          dfloat uP = uM;
+          dfloat vP = vM;
+          dfloat wP = wM;
+          dfloat pP = pM;
+
+          dfloat dudxP, dudyP, dudzP;
+          dfloat dvdxP, dvdyP, dvdzP;
+          dfloat dwdxP, dwdyP, dwdzP;
+
+          //get boundary value
+          cnsBoundaryConditions3D(bc, gamma, mu,
+                                  time, x[idM], y[idM], z[idM], nx, ny, nz,
+                                  rM, uM, vM, wM, pM,
+                                  0.0, 0.0, 0.0,
+                                  0.0, 0.0, 0.0,
+                                  0.0, 0.0, 0.0,
+                                  &rP, &uP, &vP, &wP, &pP,
+                                  &dudxP, &dudyP, &dudzP,
+                                  &dvdxP, &dvdyP, &dvdzP,
+                                  &dwdxP, &dwdyP, &dwdzP);
+
+          //determine max wavespeed from boundary value
+          const dfloat U = sqrt(uP*uP+vP*vP+wP*wP);
+          const dfloat c = gamma;
+
+          const dfloat UP = fabs(U+c);
+          const dfloat UM = fabs(U-c);
+
+          const dfloat Umax = (UP > UM) ? UP : UM;
+
+          s_maxSpeed[n] = (Umax > s_maxSpeed[n]) ? Umax : s_maxSpeed[n];
+        }
+      }
+    }
+
+    // reduce
+#if p_maxNodes>512
+    for(int n=0;n<p_maxNodes;++n;@inner(0)) {
+      if(n<512 && n+512<p_maxNodes)
+        s_maxSpeed[n] = (s_maxSpeed[n+512]>s_maxSpeed[n]) ? s_maxSpeed[n+512] : s_maxSpeed[n];
+    }
+#endif
+#if p_maxNodes>256
+    for(int n=0;n<p_maxNodes;++n;@inner(0)) {
+      if(n<256 && n+256<p_maxNodes)
+        s_maxSpeed[n] = (s_maxSpeed[n+256]>s_maxSpeed[n]) ? s_maxSpeed[n+256] : s_maxSpeed[n];
+    }
+#endif
+#if p_maxNodes>128
+    for(int n=0;n<p_maxNodes;++n;@inner(0)) {
+      if(n<128 && n+128<p_maxNodes)
+        s_maxSpeed[n] = (s_maxSpeed[n+128]>s_maxSpeed[n]) ? s_maxSpeed[n+128] : s_maxSpeed[n];
+    }
+#endif
+#if p_maxNodes>64
+    for(int n=0;n<p_maxNodes;++n;@inner(0)) {
+      if(n<64 && n+64<p_maxNodes)
+        s_maxSpeed[n] = (s_maxSpeed[n+64]>s_maxSpeed[n]) ? s_maxSpeed[n+64] : s_maxSpeed[n];
+    }
+#endif
+#if p_maxNodes>32
+    for(int n=0;n<p_maxNodes;++n;@inner(0)) {
+      if(n<32 && n+32<p_maxNodes)
+        s_maxSpeed[n] = (s_maxSpeed[n+32]>s_maxSpeed[n]) ? s_maxSpeed[n+32] : s_maxSpeed[n];
+    }
+#endif
+#if p_maxNodes>16
+    for(int n=0;n<p_maxNodes;++n;@inner(0)) {
+      if(n<16 && n+16<p_maxNodes)
+        s_maxSpeed[n] = (s_maxSpeed[n+16]>s_maxSpeed[n]) ? s_maxSpeed[n+16] : s_maxSpeed[n];
+    }
+#endif
+#if p_maxNodes>8
+    for(int n=0;n<p_maxNodes;++n;@inner(0)) {
+      if(n<8 && n+8<p_maxNodes)
+        s_maxSpeed[n] = (s_maxSpeed[n+8]>s_maxSpeed[n]) ? s_maxSpeed[n+8] : s_maxSpeed[n];
+    }
+#endif
+#if p_maxNodes>4
+    for(int n=0;n<p_maxNodes;++n;@inner(0)) {
+      if(n<4 && n+4<p_maxNodes)
+        s_maxSpeed[n] = (s_maxSpeed[n+4]>s_maxSpeed[n]) ? s_maxSpeed[n+4] : s_maxSpeed[n];
+    }
+#endif
+
+    for(int n=0;n<p_maxNodes;++n;@inner(0)) {
+      if(n<2 && n+2<p_maxNodes)
+        s_maxSpeed[n] = (s_maxSpeed[n+2]>s_maxSpeed[n]) ? s_maxSpeed[n+2] : s_maxSpeed[n];
+    }
+    for(int n=0;n<p_maxNodes;++n;@inner(0)) {
+      if(n==0) {
+        //find the min characteristic length in this element
+        dfloat hmin = 1.0e9;
+        for(int f=0;f<p_Nfaces;++f){
+          const dlong sid = p_Nsgeo*(p_Nfaces*e + f);
+          const dfloat sJ   = sgeo[sid + p_SJID];
+          const dfloat invJ = sgeo[sid + p_IJID];
+
+          const dfloat hest = 2.0/(sJ*invJ);
+
+          hmin = (hmin < hest) ? hmin : hest;
+        }
+
+        const dfloat vmax = (s_maxSpeed[1]>s_maxSpeed[0]) ? s_maxSpeed[1] : s_maxSpeed[0];
+
+        //write out
+        maxSpeed[e] = vmax/hmin;
+      }
+    }
+  }
+}

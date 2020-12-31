@@ -36,7 +36,8 @@ def cnsSettings(rcformat="2.0", data_file=cnsData2D,
                degree=4, thread_model=device, platform_number=0, device_number=0,
                gamma=1.4, viscosity=0.01, isothermal="FALSE",
                advection_type="COLLOCATION",
-                time_integrator="DOPRI5", start_time=0.0, final_time=1.0, output_to_file="FALSE"):
+                time_integrator="DOPRI5", cfl=1.0, start_time=0.0, final_time=1.0,
+                output_to_file="FALSE"):
   return [setting_t("FORMAT", rcformat),
           setting_t("DATA FILE", data_file),
           setting_t("MESH FILE", mesh),
@@ -55,6 +56,7 @@ def cnsSettings(rcformat="2.0", data_file=cnsData2D,
           setting_t("ISOTHERMAL", isothermal),
           setting_t("ADVECTION TYPE", advection_type),
           setting_t("TIME INTEGRATOR", time_integrator),
+          setting_t("CFL NUMBER", cfl),
           setting_t("START TIME", start_time),
           setting_t("FINAL TIME", final_time),
           setting_t("OUTPUT TO FILE", output_to_file)]

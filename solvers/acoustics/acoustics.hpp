@@ -83,6 +83,8 @@ public:
   void PlotFields(dfloat* Q, char *fileName);
 
   void rhsf(occa::memory& o_q, occa::memory& o_rhs, const dfloat time);
+
+  dfloat MaxWaveSpeed();
 };
 
 #endif

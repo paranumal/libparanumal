@@ -48,6 +48,10 @@ fpeSettings_t::fpeSettings_t(MPI_Comm& _comm):
              "Time integration method",
              {"AB3", "DOPRI5", "LSERK4", "EXTBDF3", "SSBDF3"});
 
+  newSetting("CFL NUMBER",
+             "1.0",
+             "Multiplier for timestep stability bound");
+
   newSetting("NUMBER OF SUBCYCLES",
              "1",
              "Ratio of full timestep size to subcycling step size");

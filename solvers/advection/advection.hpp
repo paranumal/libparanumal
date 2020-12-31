@@ -61,6 +61,7 @@ public:
   occa::kernel surfaceKernel;
 
   occa::kernel initialConditionKernel;
+  occa::kernel maxWaveSpeedKernel;
 
   advection_t() = delete;
   advection_t(platform_t &_platform, mesh_t &_mesh,
@@ -80,6 +81,8 @@ public:
   void PlotFields(dfloat* Q, char *fileName);
 
   void rhsf(occa::memory& o_q, occa::memory& o_rhs, const dfloat time);
+
+  dfloat MaxWaveSpeed(occa::memory& o_Q, const dfloat T);
 };
 
 #endif

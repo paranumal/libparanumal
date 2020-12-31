@@ -41,6 +41,27 @@ void bns_t::Run(){
                          mesh.o_z,
                          o_q);
 
+  dfloat cfl=1.0;
+  settings.getSetting("CFL NUMBER", cfl);
+
+  // set time step
+  dfloat hmin = mesh.MinCharacteristicLength();
+  dfloat vmax = MaxWaveSpeed();
+
+  dfloat dtAdv  = hmin/(vmax*(mesh.N+1.)*(mesh.N+1.));
+  dfloat dtVisc = 1.0/tauInv;
+
+  dfloat dt = (semiAnalytic) ? cfl*dtAdv : cfl*mymin(dtAdv, dtVisc);
+  /*
+    Artificial warping of time step size for multirate testing
+    */
+#if 0
+  if (settings.compareSetting("TIME INTEGRATOR","MRAB3") ||
+      settings.compareSetting("TIME INTEGRATOR","MRSAAB3"))
+    dt /= (1<<(mesh.mrNlevels-1));
+#endif
+  timeStepper->SetTimeStep(dt);
+
   timeStepper->Run(o_q, startTime, finalTime);
 
   // output norm of final solution

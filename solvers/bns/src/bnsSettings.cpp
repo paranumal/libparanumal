@@ -68,6 +68,10 @@ bnsSettings_t::bnsSettings_t(MPI_Comm& _comm):
              "Time integration method",
              {"AB3", "SAAB3", "DOPRI5", "LSERK4", "SARK4", "SARK5", "MRAB3", "MRSAAB3"});
 
+  newSetting("CFL NUMBER",
+             "1.0",
+             "Multiplier for timestep stability bound");
+
   newSetting("START TIME",
              "0",
              "Start time for time integration");

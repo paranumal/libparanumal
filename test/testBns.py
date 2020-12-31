@@ -37,7 +37,8 @@ def bnsSettings(rcformat="2.0", data_file=bnsData2D,
                viscosity=0.01, speed_of_sound=1.0,
                pml_order=4, pml_sigx=50, pml_sigy=50, pml_sigz=50,
                pml_type="COLLOCATION",
-                time_integrator="SARK4", start_time=0.0, final_time=0.1, output_to_file="FALSE"):
+               time_integrator="SARK4", cfl=1.0, start_time=0.0, final_time=0.1,
+               output_to_file="FALSE"):
   return [setting_t("FORMAT", rcformat),
           setting_t("DATA FILE", data_file),
           setting_t("MESH FILE", mesh),
@@ -59,6 +60,7 @@ def bnsSettings(rcformat="2.0", data_file=bnsData2D,
           setting_t("PML SIGMAZ MAX", pml_sigz),
           setting_t("PML INTEGRATION", pml_type),
           setting_t("TIME INTEGRATOR", time_integrator),
+          setting_t("CFL NUMBER", cfl),
           setting_t("START TIME", start_time),
           setting_t("FINAL TIME", final_time),
           setting_t("OUTPUT TO FILE", output_to_file)]
@@ -69,51 +71,51 @@ def main():
   failCount += test(name="testBnsTri",
                     cmd=bnsBin,
                     settings=bnsSettings(element=3,data_file=bnsData2D,dim=2),
-                    referenceNorm=14.2323950507604)
+                    referenceNorm=14.2114867833305)
 
   failCount += test(name="testBnsQuad",
                     cmd=bnsBin,
                     settings=bnsSettings(element=4,data_file=bnsData2D,dim=2),
-                    referenceNorm=14.2251640502562)
+                    referenceNorm=14.2051862745618)
 
   failCount += test(name="testBnsTet",
                     cmd=bnsBin,
                     settings=bnsSettings(element=6,data_file=bnsData3D,dim=3, degree=2),
-                    referenceNorm=52.4225432446159)
+                    referenceNorm=52.4193877177605)
 
   failCount += test(name="testBnsHex",
                     cmd=bnsBin,
                     settings=bnsSettings(element=12,data_file=bnsData3D,dim=3, degree=2),
-                    referenceNorm=52.4192100907009)
+                    referenceNorm=52.4199503907978)
 
   failCount += test(name="testBnsTri_pmlcub",
                     cmd=bnsBin,
                     settings=bnsSettings(element=3,data_file=bnsData2D,dim=2,
                                          pml_type="CUBATURE"),
-                    referenceNorm=14.2323950507604)
+                    referenceNorm=14.2114867833305)
 
   failCount += test(name="testBnsQuad_pmlcub",
                     cmd=bnsBin,
                     settings=bnsSettings(element=4,data_file=bnsData2D,dim=2,
                                          pml_type="CUBATURE"),
-                    referenceNorm=14.2251640502562)
+                    referenceNorm=14.2051862745618)
 
   failCount += test(name="testBnsTet_pmlcub",
                     cmd=bnsBin,
                     settings=bnsSettings(element=6,data_file=bnsData3D,dim=3, degree=2,
                                          pml_type="CUBATURE"),
-                    referenceNorm=52.4225432446159)
+                    referenceNorm=52.4193877177605)
 
   failCount += test(name="testBnsHex_pmlcub",
                     cmd=bnsBin,
                     settings=bnsSettings(element=12,data_file=bnsData3D,dim=3, degree=2,
                                          pml_type="CUBATURE"),
-                    referenceNorm=52.4192100907009)
+                    referenceNorm=52.4199503907978)
 
   failCount += test(name="testBnsTri_MPI", ranks=4,
                     cmd=bnsBin,
                     settings=bnsSettings(element=3,data_file=bnsData2D,dim=2,output_to_file="TRUE"),
-                    referenceNorm=14.210272880731)
+                    referenceNorm=14.2019468231955)
 
   #clean up
   for file_name in os.listdir(testDir):

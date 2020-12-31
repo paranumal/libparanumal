@@ -107,6 +107,7 @@ public:
   occa::kernel diffusionRhsKernel;
 
   occa::kernel initialConditionKernel;
+  occa::kernel maxWaveSpeedKernel;
 
   fpe_t() = delete;
   fpe_t(platform_t &_platform, mesh_t &_mesh,
@@ -124,6 +125,8 @@ public:
   void Report(dfloat time, int tstep);
 
   void PlotFields(dfloat* Q, char *fileName);
+
+  dfloat MaxWaveSpeed(occa::memory& o_Q, const dfloat T);
 
   void rhsf(occa::memory& o_q, occa::memory& o_rhs, const dfloat time);
 

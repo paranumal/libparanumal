@@ -47,10 +47,6 @@ public:
 
   // print out mesh partition in parallel
   void PrintVTU(const char *fileName);
-
-  dfloat ElementCharacteristicLength(dlong e);
-
-  dfloat MinCharacteristicLength();
 };
 
 class meshTri3D: public mesh3D {
@@ -71,6 +67,8 @@ public:
   void MassMatrixKernelSetup(int Nfields);
 
   void PlotInterp(const dfloat* q, dfloat* Iq, dfloat* scratch=nullptr);
+
+  dfloat ElementCharacteristicLength(dlong e);
 };
 
 class meshQuad3D: public mesh3D {
@@ -91,6 +89,8 @@ public:
   void MassMatrixKernelSetup(int Nfields);
 
   void PlotInterp(const dfloat* q, dfloat* Iq, dfloat* scratch=nullptr);
+
+  dfloat ElementCharacteristicLength(dlong e);
 };
 
 class meshTet3D: public mesh3D {
@@ -111,6 +111,8 @@ public:
   void MassMatrixKernelSetup(int Nfields);
 
   void PlotInterp(const dfloat* q, dfloat* Iq, dfloat* scratch=nullptr);
+
+  dfloat ElementCharacteristicLength(dlong e);
 };
 
 class meshHex3D: public mesh3D {
@@ -131,6 +133,8 @@ public:
   void MassMatrixKernelSetup(int Nfields);
 
   void PlotInterp(const dfloat* q, dfloat* Iq, dfloat* scratch=nullptr);
+
+  dfloat ElementCharacteristicLength(dlong e);
 };
 
 #endif

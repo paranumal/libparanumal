@@ -30,12 +30,24 @@ SOFTWARE.
   *(q) = exp(-2*(x*x+y*y+z*z));         \
 }
 
+#define ADVECTION_SPEED_X 1.0
+#define ADVECTION_SPEED_Y 0.5
+#define ADVECTION_SPEED_Z 0.75
+
 // Advective field
-#define fpeAdvectionField3D(t, x, y, z, q, u, v, w) \
-{                                       \
-  *(u) = 1.0;                           \
-  *(v) = 0.5;                           \
-  *(w) = 0.75;                          \
+#define fpeAdvectionFlux3D(t, x, y, z, q, u, v, w) \
+{                                                  \
+  *(u) = ADVECTION_SPEED_X*q;                      \
+  *(v) = ADVECTION_SPEED_Y*q;                      \
+  *(w) = ADVECTION_SPEED_Z*q;                      \
+}
+
+// max wavespeed (should be max eigen of Jacobian of flux function)
+#define fpeMaxWaveSpeed3D(t, x, y, z, q, u, v, w) \
+{                                           \
+  *(u) = ADVECTION_SPEED_X;                 \
+  *(v) = ADVECTION_SPEED_Y;                 \
+  *(w) = ADVECTION_SPEED_Z;                 \
 }
 
 // Boundary conditions

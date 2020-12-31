@@ -153,7 +153,6 @@ if __name__ == "__main__":
   import testInitialGuess
 
   failCount=0;
-  failCount+=testInitialGuess.main()
   failCount+=testMesh.main()
   failCount+=testGradient.main()
   failCount+=testAdvection.main()
@@ -163,6 +162,7 @@ if __name__ == "__main__":
   failCount+=testCns.main()
   failCount+=testBns.main()
   failCount+=testIns.main()
+  failCount+=testInitialGuess.main()
   failCount+=testTimeStepper.main()
   failCount+=testLinearSolver.main()
   failCount+=testParAlmond.main()

@@ -39,6 +39,28 @@ void fpe_t::Run(){
                          mesh.o_z,
                          o_q);
 
+  dfloat cfl=1.0;
+  settings.getSetting("CFL NUMBER", cfl);
+
+  // set time step
+  dfloat hmin = mesh.MinCharacteristicLength();
+  dfloat vmax = MaxWaveSpeed(o_q, startTime);
+
+  dfloat dtAdvc = cfl/(vmax*(mesh.N+1.)*(mesh.N+1.));
+  dfloat dtDiff = (mu>0.0) ? cfl*pow(hmin, 2)/(pow(mesh.N+1,4)*mu) : 1.0e9;
+
+  dfloat dt=0.0;
+  if (settings.compareSetting("TIME INTEGRATOR","EXTBDF3")) {
+    dt = dtAdvc;
+  } else if (settings.compareSetting("TIME INTEGRATOR","SSBDF3")) {
+    dt = Nsubcycles*dtAdvc;
+    subStepper->SetTimeStep(dtAdvc);
+  } else {
+    dt = mymin(dtAdvc, dtDiff);
+  }
+
+  timeStepper->SetTimeStep(dt);
+
   timeStepper->Run(o_q, startTime, finalTime);
 
   // output norm of final solution

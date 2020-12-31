@@ -64,7 +64,17 @@ void surfaceTerms(const int e,
   const dfloat ndotcM = nx*cxM + ny*cyM;
   const dfloat ndotcP = nx*cxP + ny*cyP;
 
-  s_qflux[es][j][i] += 0.5*invWJ*sJ*(ndotcM+ndotcP-(qP-qM));
+  // Find max normal velocity on the face
+  dfloat uM=0.0, vM=0.0;
+  dfloat uP=0.0, vP=0.0;
+  advectionMaxWaveSpeed2D(t, x[idM], y[idM], qM, &uM, &vM);
+  advectionMaxWaveSpeed2D(t, x[idM], y[idM], qP, &uP, &vP);
+
+  const dfloat unM   = fabs(nx*uM + ny*vM);
+  const dfloat unP   = fabs(nx*uP + ny*vP);
+  const dfloat unMax = (unM > unP) ? unM : unP;
+
+  s_qflux[es][j][i] += 0.5*invWJ*sJ*(ndotcM+ndotcP-unMax*(qP-qM));
 }
 
 // batch process elements

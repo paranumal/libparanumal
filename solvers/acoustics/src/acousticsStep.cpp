@@ -26,6 +26,12 @@ SOFTWARE.
 
 #include "acoustics.hpp"
 
+dfloat acoustics_t::MaxWaveSpeed(){
+  //wavespeed is constant 1 everywhere
+  const dfloat vmax = 1.0;
+  return vmax;
+}
+
 //evaluate ODE rhs = f(q,t)
 void acoustics_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
 

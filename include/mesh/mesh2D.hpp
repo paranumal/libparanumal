@@ -44,10 +44,6 @@ public:
 
   // print out mesh partition in parallel
   void PrintVTU(const char *fileName);
-
-  dfloat ElementCharacteristicLength(dlong e);
-
-  dfloat MinCharacteristicLength();
 };
 
 class meshTri2D: public mesh2D {
@@ -68,6 +64,8 @@ public:
   void MassMatrixKernelSetup(int Nfields);
 
   void PlotInterp(const dfloat* q, dfloat* Iq, dfloat* scratch=nullptr);
+
+  dfloat ElementCharacteristicLength(dlong e);
 };
 
 class meshQuad2D: public mesh2D {
@@ -88,6 +86,8 @@ public:
   void MassMatrixKernelSetup(int Nfields);
 
   void PlotInterp(const dfloat* q, dfloat* Iq, dfloat* scratch=nullptr);
+
+  dfloat ElementCharacteristicLength(dlong e);
 };
 
 #endif

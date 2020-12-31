@@ -97,6 +97,48 @@ void linAlg_t::zadxpy(const dlong N, const dfloat alpha,
   zadxpyKernel(N, alpha, o_a, o_x, beta, o_y, o_z);
 }
 
+// \min o_a
+dfloat linAlg_t::min(const dlong N, occa::memory& o_a, MPI_Comm comm) {
+  //TODO, maybe complete reduction on device with second kernel?
+  int Nblock = (N+blocksize-1)/blocksize;
+  Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
+
+  minKernel(Nblock, N, o_a, o_scratch);
+
+  o_scratch.copyTo(scratch, Nblock*sizeof(dfloat));
+
+  dfloat min = std::numeric_limits<dfloat>::max();
+  for(dlong n=0;n<Nblock;++n){
+    min = (scratch[n]<min) ? scratch[n] : min;
+  }
+
+  dfloat globalmin = 0;
+  MPI_Allreduce(&min, &globalmin, 1, MPI_DFLOAT, MPI_MIN, comm);
+
+  return globalmin;
+}
+
+// \max o_a
+dfloat linAlg_t::max(const dlong N, occa::memory& o_a, MPI_Comm comm) {
+  //TODO, maybe complete reduction on device with second kernel?
+  int Nblock = (N+blocksize-1)/blocksize;
+  Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
+
+  maxKernel(Nblock, N, o_a, o_scratch);
+
+  o_scratch.copyTo(scratch, Nblock*sizeof(dfloat));
+
+  dfloat max = -std::numeric_limits<dfloat>::max();
+  for(dlong n=0;n<Nblock;++n){
+    max = (scratch[n]>max) ? scratch[n] : max;
+  }
+
+  dfloat globalmax = 0;
+  MPI_Allreduce(&max, &globalmax, 1, MPI_DFLOAT, MPI_MAX, comm);
+
+  return globalmax;
+}
+
 // \sum o_a
 dfloat linAlg_t::sum(const dlong N, occa::memory& o_a, MPI_Comm comm) {
   //TODO, maybe complete reduction on device with second kernel?
