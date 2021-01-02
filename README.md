@@ -96,7 +96,6 @@ G. Dependencies:
 #### 5-1. Build OCCA
 `cd occa`
 `export OCCA_DIR=${PWD}`
-`export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OCCA_DIR/lib`
 ```make -j `nproc` ```
 `cd ../  `
 
