@@ -45,11 +45,6 @@ export LIBP_LAPACK_LIB=-L${LIBP_LAPACK_DIR} -llapack
 ifndef OCCA_DIR
   $(error environment variable [OCCA_DIR] is not set)
 endif
-ifeq (,$(wildcard ${OCCA_DIR}/scripts/Makefile))
-  $(error cannot locate {OCCA_DIR}/scripts/Makefile)
-else
-  include ${OCCA_DIR}/scripts/Makefile
-endif
 
 #compilers to use for C/C++
 export LIBP_MPICC = mpicc
@@ -69,9 +64,9 @@ endif
 
 export LIBP_LIBS=${LIBP_BLAS_LIB} \
                  ${LIBP_LAPACK_LIB} \
-                 -L$(OCCA_DIR)/lib -locca $(links)
+                 -Wl,-rpath=$(OCCA_DIR)/lib -L$(OCCA_DIR)/lib -locca
 
-export LIBP_DEFINES=-DUSE_OCCA_MEM_BYTE_ALIGN=32
+export LIBP_DEFINES=
 
 export LIBP_INCLUDES=-I${LIBP_INCLUDE_DIR} -I${OCCA_DIR}/include
 
