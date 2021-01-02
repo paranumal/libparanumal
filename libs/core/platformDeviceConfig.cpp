@@ -114,9 +114,4 @@ void platform_t::DeviceConfig(){
   std::string occaCacheDir = LIBP_DIR "/.occa";
   settings.getSetting("CACHE DIR", occaCacheDir);
   occa::env::setOccaCacheDir(occaCacheDir);
-
-#ifdef USE_OCCA_MEM_BYTE_ALIGN
-  // change OCCA MEM BYTE ALIGNMENT
-  occa::env::OCCA_MEM_BYTE_ALIGN = USE_OCCA_MEM_BYTE_ALIGN;
-#endif
 }
