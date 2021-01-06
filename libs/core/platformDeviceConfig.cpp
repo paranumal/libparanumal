@@ -40,19 +40,19 @@ void platform_t::DeviceConfig(){
   std::string mode;
 
   if(settings.compareSetting("THREAD MODEL", "CUDA")){
-    mode = "mode: 'CUDA'";
+    mode = "{mode: 'CUDA'}";
   }
   else if(settings.compareSetting("THREAD MODEL", "HIP")){
-    mode = "mode: 'HIP'";
+    mode = "{mode: 'HIP'}";
   }
   else if(settings.compareSetting("THREAD MODEL", "OpenCL")){
-    mode = "mode: 'OpenCL', platform_id : " + std::to_string(plat);
+    mode = "{mode: 'OpenCL', platform_id : " + std::to_string(plat) +"}";
   }
   else if(settings.compareSetting("THREAD MODEL", "OpenMP")){
-    mode = "mode: 'OpenMP'";
+    mode = "{mode: 'OpenMP'}";
   }
   else{
-    mode = "mode: 'Serial'";
+    mode = "{mode: 'Serial'}";
   }
 
   //add a device_id number for some modes
@@ -97,7 +97,8 @@ void platform_t::DeviceConfig(){
     }
 
     // add device_id to setup string
-    mode += ", device_id: " + std::to_string(device_id);
+    mode.pop_back();
+    mode += ", device_id: " + std::to_string(device_id) + "}";
   }
 
   //set number of omp threads to use
