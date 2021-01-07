@@ -29,6 +29,7 @@ SOFTWARE.
 
 #include <mpi.h>
 #include <occa.hpp>
+#include <cstring>
 #include <string>
 #include <cmath>
 #include <algorithm>
