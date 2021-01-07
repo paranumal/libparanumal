@@ -139,7 +139,7 @@ void surfaceTerms(const int face,
 #define s_rvflux s_qM[2]
 
     @exclusive dfloat r_qM[p_Nfields*p_Nfaces], r_qP[p_Nfields*p_Nfaces];
-    @exclusive dfloat r_gradqM[p_Nfields*p_Nfaces], r_gradqP[p_Nfields*p_Nfaces];
+    @exclusive dfloat r_gradqM[p_Ngrads*p_Nfaces], r_gradqP[p_Ngrads*p_Nfaces];
 
     @shared dfloat s_cubInterp[p_Nq][p_cubNq];
     @shared dfloat s_cubProject[p_cubNq][p_Nq];

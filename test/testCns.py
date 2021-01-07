@@ -146,7 +146,7 @@ def main():
                     settings=cnsSettings(element=4,data_file=cnsData2D,dim=2,
                                          isothermal="TRUE",
                                          advection_type="CUBATURE"),
-                    referenceNorm=10.219823597509)
+                    referenceNorm=10.2198492835052)
 
   failCount += test(name="testCnsTet_Isothermal_cub",
                     cmd=cnsBin,
