@@ -56,8 +56,8 @@ elliptic_t& elliptic_t::Setup(platform_t& platform, mesh_t& mesh,
   //setup boundary flags and make mask and masked ogs
   elliptic->BoundarySetup();
 
-  //tau (penalty term in IPDG)
   if (settings.compareSetting("DISCRETIZATION","IPDG")) {
+    //tau (penalty term in IPDG)
     if (mesh.elementType==TRIANGLES ||
         mesh.elementType==QUADRILATERALS){
       elliptic->tau = 2.0*(mesh.N+1)*(mesh.N+2)/2.0;
@@ -72,6 +72,10 @@ elliptic_t& elliptic_t::Setup(platform_t& platform, mesh_t& mesh,
     elliptic->o_grad  = platform.malloc(Ntotal*4*sizeof(dfloat), elliptic->grad);
   } else {
     elliptic->tau = 0.0;
+
+    //buffer for local Ax
+    dlong Ntotal = mesh.Np*mesh.Nelements;
+    elliptic->o_AqL  = platform.malloc(Ntotal*sizeof(dfloat));
   }
 
   // OCCA build stuff
@@ -95,10 +99,6 @@ elliptic_t& elliptic_t::Setup(platform_t& platform, mesh_t& mesh,
     suffix = strdup("Hex3D");
 
   char fileName[BUFSIZ], kernelName[BUFSIZ];
-
-  // mask
-  elliptic->maskKernel = platform.buildKernel(DELLIPTIC "/okl/ellipticMask.okl",
-                                     "mask", kernelInfo);
 
   //add standard boundary functions
   char *boundaryHeaderFileName;

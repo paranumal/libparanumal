@@ -29,10 +29,18 @@ SOFTWARE.
 void elliptic_t::Run(){
 
   //setup linear solver
-  int weighted = settings.compareSetting("DISCRETIZATION", "CONTINUOUS") ? 1 : 0;
+  // int weighted = settings.compareSetting("DISCRETIZATION", "CONTINUOUS") ? 1 : 0;
+  int weighted = 0;
 
-  dlong Nlocal = mesh.Nelements*mesh.Np*Nfields;
-  dlong Nhalo  = mesh.totalHaloPairs*mesh.Np*Nfields;
+  dlong Nlocal;
+  dlong Nhalo;
+  if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
+    Nlocal = ogsMasked->Ngather*Nfields;
+    Nhalo  = ogsMasked->Nhalo*Nfields;
+  } else {
+    Nlocal = mesh.Nelements*mesh.Np*Nfields;
+    Nhalo  = mesh.totalHaloPairs*mesh.Np*Nfields;
+  }
   linearSolver_t *linearSolver = linearSolver_t::Setup(Nlocal, Nhalo,
                                                        platform, settings, mesh.comm,
                                                        weighted, o_weight);
