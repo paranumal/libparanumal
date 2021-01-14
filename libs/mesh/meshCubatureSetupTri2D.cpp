@@ -44,8 +44,10 @@ void meshTri2D::CubatureSetup(){
   CubatureSetup(N, " ");
 }
 
-void meshTri2D::CubatureSetup(int _cubN, const char *cubatureType){
+void meshTri2D::CubatureSetup(int _cubN, const char *_cubatureType){
 
+  cubatureType = strdup(_cubatureType);
+  
   /* Cubature data */
   //  cubN = 2*N; //cubature order
   cubN = 2*_cubN; //cubature order

@@ -27,8 +27,10 @@ SOFTWARE.
 #include "mesh.hpp"
 #include "mesh/mesh3D.hpp"
 
-void meshHex3D::CoordinateTransform(int _cubN, const char *cubatureType){
+void meshHex3D::CoordinateTransform(int _cubN, const char *_cubatureType){
 
+  cubatureType = strdup(_cubatureType);
+  
   /* */
   string mapFileName;
   settings.getSetting("BOX COORDINATE MAP FILE", mapFileName);

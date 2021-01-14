@@ -33,8 +33,10 @@ void meshHex3D::CubatureSetup(){
 
 }
 
-void meshHex3D::CubatureSetup(int _cubN, const char *cubatureType){
+void meshHex3D::CubatureSetup(int _cubN, const char *_cubatureType){
 
+  cubatureType = strdup(_cubatureType);
+  
   /* Quadrature data */
   //  cubN = N+1;
   cubN  = _cubN;

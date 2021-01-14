@@ -154,6 +154,7 @@ public:
   dfloat *sgeo;
 
   // cubature
+  char *cubatureType;
   int cubN=0, cubNp=0, cubNfp=0, cubNq=0;
   dfloat *cubr, *cubs, *cubt, *cubw;    // coordinates and weights of reference cubature nodes
   dfloat *cubx, *cuby, *cubz;           // coordinates of physical cubature nodes

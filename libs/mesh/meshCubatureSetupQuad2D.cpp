@@ -42,15 +42,17 @@ void meshQuad3D::CubatureSetup(){
 }
 
 
-void meshQuad3D::CubatureSetup(int _cubN, const char *cubatureType){
+void meshQuad3D::CubatureSetup(int _cubN, const char *_cubatureType){
   
   mesh_t *mesh_p = (mesh_t*) this;
   meshQuad2D* trimesh = (meshQuad2D*) mesh_p;
-  trimesh->meshQuad2D::CubatureSetup(_cubN, cubatureType);
+  trimesh->meshQuad2D::CubatureSetup(_cubN, _cubatureType);
 }
 
-void meshQuad2D::CubatureSetup(int _cubN, const char *cubatureType){
+void meshQuad2D::CubatureSetup(int _cubN, const char *_cubatureType){
 
+  cubatureType = strdup(_cubatureType);
+  
   /* Quadrature data */
   //  cubN = N+1;
   cubN = _cubN;

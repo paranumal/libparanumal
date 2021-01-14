@@ -25,6 +25,8 @@ SOFTWARE.
 */
 
 #include "ellipticPrecon.hpp"
+#include "mesh/mesh2D.hpp"
+#include "mesh/mesh3D.hpp"
 
 // Matrix-free p-Multigrid levels followed by AMG
 void MultiGridPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
@@ -78,15 +80,29 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
 				    "ellipticPartialCubatureAxQuad2D",
 				    kernelInfo);
   }
-  
+
+  // compute cubature stuff
+  char *cubatureType = strdup(mesh.cubatureType);
+  //  mesh.CubatureSetup(mesh.N+1, cubatureType);
+
   while(Nc>minN) {
     //build mesh and elliptic objects for this degree
     mesh_t &meshF = mesh.SetupNewDegree(Nf);
 
     // reset geometry and quadrature to match finest grid
+    //    if(mesh.N!=meshF.N)
     if(mesh.elementType==HEXAHEDRA || mesh.elementType==QUADRILATERALS){
-      meshF.CubatureSetup(mesh.N, "GLL");
-      meshF.o_cubggeo.copyFrom(mesh.o_cubggeo);
+
+      if(meshF.N!=mesh.N){
+	meshF.CubatureSetup(mesh.N+1, cubatureType);
+	// THIS COSTS A LOT OF ITERATIONS
+	//meshF.CubatureSetup(meshF.N, cubatureType);
+	
+	// import geofacs from fine mesh if cubature matches
+	if(meshF.cubN == mesh.cubN && strcmp(meshF.cubatureType, mesh.cubatureType)==0){
+	  meshF.o_cubggeo.copyFrom(mesh.o_cubggeo);
+	}
+      }
     }
     
     elliptic_t &ellipticF = elliptic.SetupNewDegree(meshF);
@@ -148,8 +164,15 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   
   // reset geometry and quadrature to match finest grid
   if(mesh.elementType==HEXAHEDRA || mesh.elementType==QUADRILATERALS){
-    meshF.CubatureSetup(mesh.N, "GLL");
-    meshF.o_cubggeo.copyFrom(mesh.o_cubggeo);
+
+    meshF.CubatureSetup(mesh.N+1, cubatureType);
+    // THIS COSTS SOME ITERATIONS
+    //    meshF.CubatureSetup(meshF.N+1, cubatureType);
+    
+    // preserve original degree N isoparametric map  if cubature matches
+    if(meshF.cubN == mesh.cubN){
+      meshF.o_cubggeo.copyFrom(mesh.o_cubggeo);
+    }
   }
   
   elliptic_t &ellipticF = elliptic.SetupNewDegree(meshF);

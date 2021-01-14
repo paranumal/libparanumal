@@ -101,15 +101,14 @@ int main(int argc, char **argv){
 
   // set up mesh
   mesh_t& mesh = mesh_t::Setup(platform, meshSettings, comm);
-
+  
   // map coords
   if(mesh.elementType==HEXAHEDRA || mesh.elementType==QUADRILATERALS){
     if(mesh.elementType==HEXAHEDRA){
-      ((meshHex3D&)mesh).CoordinateTransform(mesh.N, "GLL");
+      ((meshHex3D&)mesh).CoordinateTransform(mesh.N+1, "GLL");
     }else{
-      ((meshQuad2D&)mesh).CoordinateTransform(mesh.N, "GLL");
+      ((meshQuad2D&)mesh).CoordinateTransform(mesh.N+1, "GLL");
     }
-    //    mesh.CubatureSetup(mesh.N, "GLL");
   }
   
   dfloat lambda = 0.0;

@@ -27,8 +27,12 @@ SOFTWARE.
 #include "mesh.hpp"
 #include "mesh/mesh2D.hpp"
 
-void meshQuad2D::CoordinateTransform(int _cubN, const char *cubatureType){
+void meshQuad2D::CoordinateTransform(int _cubN, const char *_cubatureType){
 
+  cubatureType = strdup(_cubatureType);
+  
+  printf("CoordinateTransform\n");
+  
   /* */
   string mapFileName;
   settings.getSetting("BOX COORDINATE MAP FILE", mapFileName);
@@ -63,7 +67,7 @@ void meshQuad2D::CoordinateTransform(int _cubN, const char *cubatureType){
   SurfaceGeometricFactors();
 
   // compute cubature stuff
-  CubatureSetup(_cubN, cubatureType);
+  CubatureSetup(_cubN, _cubatureType);
   
   // copy to DEVICE
   o_vgeo = platform.malloc((Nelements+totalHaloPairs)*Nvgeo*Np*sizeof(dfloat), vgeo);
