@@ -28,6 +28,126 @@ SOFTWARE.
 #include "mesh/mesh2D.hpp"
 #include "mesh/mesh3D.hpp"
 
+void interpolateFieldQuad2D(mesh_t &mesh, int outNq, dfloat *outr, dfloat *outs, dfloat *inx, dfloat *outx){
+  int inNq = mesh.Nq;
+  dfloat tmpxOI[outNq][inNq];
+
+  dfloat I[outNq][inNq];
+  mesh.InterpolationMatrix1D(mesh.N,
+			     inNq, mesh.r,
+			     outNq, outr,
+			     I[0]);
+  
+  for(dlong e=0;e<mesh.Nelements;++e){
+    // interpolate in 's'
+    for(int i=0;i<inNq;++i){
+      for(int j=0;j<outNq;++j){
+	tmpxOI[j][i] = 0;
+	for(int n=0;n<inNq;++n){
+	  tmpxOI[j][i] += I[j][n]*inx[e*mesh.Np + n*inNq + i];
+	}
+      }
+    }
+    
+    // interpolate in 'r'
+    for(int j=0;j<outNq;++j){
+      for(int i=0;i<outNq;++i){
+	dfloat xOO = 0;
+	for(int n=0;n<inNq;++n){
+	  xOO += I[i][n]*tmpxOI[j][n];
+	}
+	outx[e*outNq*outNq + j*outNq + i] = xOO;
+      }
+    }
+  }
+}
+
+
+void interpolateFieldHex3D(mesh_t &mesh, int outNq, dfloat *outr, dfloat *outs, dfloat *outt, dfloat *inx, dfloat *outx){
+  int inNq = mesh.Nq;
+  dfloat tmpxOII[outNq][inNq][inNq];
+  dfloat tmpxOOI[outNq][outNq][inNq];
+
+  dfloat I[outNq][inNq];
+  mesh.InterpolationMatrix1D(mesh.N,
+			     inNq, mesh.r,
+			     outNq, outr,
+			     I[0]);
+  
+  for(dlong e=0;e<mesh.Nelements;++e){
+    // interpolate in 't'
+    for(int j=0;j<inNq;++j){
+      for(int i=0;i<inNq;++i){
+	for(int k=0;k<outNq;++k){
+	  tmpxOII[k][j][i] = 0;
+	  for(int n=0;n<inNq;++n){
+	    tmpxOII[k][j][i] += I[k][n]*inx[e*mesh.Np + n*inNq*inNq + j*inNq + i];
+	  }
+	}
+      }
+    }
+    // interpolate in 's'
+    for(int k=0;k<outNq;++k){
+      for(int i=0;i<inNq;++i){
+	for(int j=0;j<outNq;++j){
+	  tmpxOOI[k][j][i] = 0;
+	  for(int n=0;n<inNq;++n){
+	    tmpxOOI[k][j][i] += I[j][n]*tmpxOII[k][n][i];
+	  }
+	}
+      }
+    }
+    
+    // interpolate in 'r'
+    for(int k=0;k<outNq;++k){
+      for(int j=0;j<outNq;++j){
+	for(int i=0;i<outNq;++i){
+	  dfloat xOOO = 0;
+	  for(int n=0;n<inNq;++n){
+	    xOOO += I[i][n]*tmpxOOI[k][j][n];
+	  }
+	  outx[e*outNq*outNq*outNq + k*outNq*outNq + j*outNq + i] = xOOO;
+	}
+      }
+    }
+  }
+}
+    
+
+void interpolateField(mesh_t &mesh, int outNq, dfloat *outr, dfloat *outs, dfloat *outt, dfloat *inx, dfloat *outx){
+
+  if(mesh.elementType==HEXAHEDRA)
+    interpolateFieldHex3D(mesh, outNq, outr, outs, outt, inx, outx);
+
+  if(mesh.elementType==QUADRILATERALS)
+    interpolateFieldQuad2D(mesh, outNq, outr, outs, inx, outx);
+  
+}
+
+void interpolatePhysicalNodes(mesh_t &meshI, mesh_t &meshO){
+
+  // interpolate coordinates from degree N mesh to new mesh
+  interpolateField(meshI, meshO.Nq, meshO.r, meshO.s, meshO.t, meshI.x, meshO.x);
+  interpolateField(meshI, meshO.Nq, meshO.r, meshO.s, meshO.t, meshI.y, meshO.y);
+  if(meshI.dim==3)
+    interpolateField(meshI, meshO.Nq, meshO.r, meshO.s, meshO.t, meshI.z, meshO.z);
+  
+  // compute geometric factors
+  meshO.GeometricFactors();
+  
+  // compute surface geofacs
+  meshO.SurfaceGeometricFactors();
+  
+  // reup geofacs
+  meshO.o_ggeo.copyFrom(meshO.ggeo);
+  meshO.o_sgeo.copyFrom(meshO.sgeo);
+  meshO.o_vgeo.copyFrom(meshO.vgeo);
+  
+  // initialize cubature
+  meshO.CubatureSetup(meshI.cubN, meshI.cubatureType);
+  //  meshO.CubatureSetup(meshO.N+1, meshI.cubatureType); 
+}
+
 // Matrix-free p-Multigrid levels followed by AMG
 void MultiGridPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
 
@@ -81,10 +201,6 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
 				    kernelInfo);
   }
 
-  // compute cubature stuff
-  char *cubatureType = strdup(mesh.cubatureType);
-  //  mesh.CubatureSetup(mesh.N+1, cubatureType);
-
   while(Nc>minN) {
     //build mesh and elliptic objects for this degree
     mesh_t &meshF = mesh.SetupNewDegree(Nf);
@@ -93,10 +209,7 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
     if(mesh.elementType==HEXAHEDRA || mesh.elementType==QUADRILATERALS){
 
       if(meshF.N!=mesh.N){
-	//	meshF.CubatureSetup(mesh.cubN, cubatureType);
-	// THIS COSTS A LOT OF ITERATIONS
-	meshF.CubatureSetup(meshF.N, cubatureType);
-	
+	interpolatePhysicalNodes(mesh, meshF);
 	// import geofacs from fine mesh if cubature matches
 	if(meshF.cubN == mesh.cubN){
 	  meshF.o_cubggeo.copyFrom(mesh.o_cubggeo);
@@ -164,9 +277,7 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   // reset geometry and quadrature to match finest grid
   if(mesh.elementType==HEXAHEDRA || mesh.elementType==QUADRILATERALS){
 
-    //    meshF.CubatureSetup(mesh.cubN, cubatureType);
-    // THIS COSTS SOME ITERATIONS
-    meshF.CubatureSetup(meshF.N, cubatureType);
+    interpolatePhysicalNodes(mesh, meshF);
     
     // preserve original degree N isoparametric map  if cubature matches
     if(meshF.cubN == mesh.cubN){
