@@ -45,17 +45,26 @@ void meshHex3D::CoordinateTransform(int _cubN, const char *_cubatureType){
     // build kernel
     occa::kernel coordMapKernel = platform.buildKernel(mapFileName, "coordMapKernel", kernelInfo);
 
-    occa::memory o_tmpx, o_tmpy, o_tmpz;
+    occa::memory o_tmpx, o_tmpy, o_tmpz, o_tmpEX, o_tmpEY, o_tmpEZ;
     o_tmpx = platform.device.malloc(Np*Nelements*sizeof(dfloat), x);
     o_tmpy = platform.device.malloc(Np*Nelements*sizeof(dfloat), y);
     o_tmpz = platform.device.malloc(Np*Nelements*sizeof(dfloat), z);
     
     coordMapKernel(Np*Nelements, epsy, epsz, o_tmpx, o_tmpy, o_tmpz);
-    
+
+    o_tmpEX = platform.device.malloc(Nverts*Nelements*sizeof(dfloat), EX);
+    o_tmpEY = platform.device.malloc(Nverts*Nelements*sizeof(dfloat), EY);
+    o_tmpEZ = platform.device.malloc(Nverts*Nelements*sizeof(dfloat), EZ);
+
+    coordMapKernel(Nverts*Nelements, epsy, epsz, o_tmpEX, o_tmpEY, o_tmpEZ);
+
     o_tmpx.copyTo(x);
     o_tmpy.copyTo(y);
     o_tmpz.copyTo(z);
-    
+
+    o_tmpEX.copyTo(EX);
+    o_tmpEY.copyTo(EY);
+    o_tmpEZ.copyTo(EZ);
   }
   
   halo->Exchange(x, Np, ogs_dfloat);

@@ -90,16 +90,15 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
     mesh_t &meshF = mesh.SetupNewDegree(Nf);
 
     // reset geometry and quadrature to match finest grid
-    //    if(mesh.N!=meshF.N)
     if(mesh.elementType==HEXAHEDRA || mesh.elementType==QUADRILATERALS){
 
       if(meshF.N!=mesh.N){
-	meshF.CubatureSetup(mesh.N+1, cubatureType);
+	//	meshF.CubatureSetup(mesh.cubN, cubatureType);
 	// THIS COSTS A LOT OF ITERATIONS
-	//meshF.CubatureSetup(meshF.N, cubatureType);
+	meshF.CubatureSetup(meshF.N, cubatureType);
 	
 	// import geofacs from fine mesh if cubature matches
-	if(meshF.cubN == mesh.cubN && strcmp(meshF.cubatureType, mesh.cubatureType)==0){
+	if(meshF.cubN == mesh.cubN){
 	  meshF.o_cubggeo.copyFrom(mesh.o_cubggeo);
 	}
       }
@@ -165,9 +164,9 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   // reset geometry and quadrature to match finest grid
   if(mesh.elementType==HEXAHEDRA || mesh.elementType==QUADRILATERALS){
 
-    meshF.CubatureSetup(mesh.N+1, cubatureType);
+    //    meshF.CubatureSetup(mesh.cubN, cubatureType);
     // THIS COSTS SOME ITERATIONS
-    //    meshF.CubatureSetup(meshF.N+1, cubatureType);
+    meshF.CubatureSetup(meshF.N, cubatureType);
     
     // preserve original degree N isoparametric map  if cubature matches
     if(meshF.cubN == mesh.cubN){

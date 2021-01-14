@@ -47,14 +47,23 @@ void meshQuad2D::CoordinateTransform(int _cubN, const char *_cubatureType){
     // build kernel
     occa::kernel coordMapKernel = platform.buildKernel(mapFileName, "coordMapKernel", kernelInfo);
 
-    occa::memory o_tmpx, o_tmpy;
+    occa::memory o_tmpx, o_tmpy, o_tmpz, o_tmpEX, o_tmpEY, o_tmpEZ;
     o_tmpx = platform.device.malloc(Np*Nelements*sizeof(dfloat), x);
     o_tmpy = platform.device.malloc(Np*Nelements*sizeof(dfloat), y);
     
     coordMapKernel(Np*Nelements, epsy, o_tmpx, o_tmpy);
-    
+
+    o_tmpEX = platform.device.malloc(Nverts*Nelements*sizeof(dfloat), EX);
+    o_tmpEY = platform.device.malloc(Nverts*Nelements*sizeof(dfloat), EY);
+
+    coordMapKernel(Nverts*Nelements, epsy, o_tmpEX, o_tmpEY);
+
     o_tmpx.copyTo(x);
     o_tmpy.copyTo(y);
+
+    o_tmpEX.copyTo(EX);
+    o_tmpEY.copyTo(EY);
+
   }
   
   halo->Exchange(x, Np, ogs_dfloat);
