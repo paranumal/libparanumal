@@ -123,6 +123,14 @@ void elliptic_t::Run(){
                 lambda,
                 o_r);
 
+  dfloat *tmpr = (dfloat*) calloc(mesh.Np*mesh.Nelements, sizeof(dfloat));
+  for(dlong e=0;e<mesh.Nelements;++e){
+    for(dlong n=0;n<mesh.Np;++n){
+      tmpr[e*mesh.Np+n] = drand48()*mesh.ggeo[e*mesh.Np*mesh.Nggeo + n + GWJID*mesh.Np];
+    }
+  }
+  o_r.copyFrom(tmpr);
+  
 #if 0
   dfloat *h_r = (dfloat*) calloc(mesh.Np*mesh.Nelements, sizeof(dfloat));
   for(dlong e=0;e<mesh.Nelements;++e){
