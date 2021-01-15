@@ -145,6 +145,13 @@ elliptic_t& elliptic_t::Setup(platform_t& platform, mesh_t& mesh,
   }
 
   /* Preconditioner Setup */
+  dlong Nlocal;
+  if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
+    Nlocal = elliptic->ogsMasked->Ngather;
+  } else {
+    Nlocal = mesh.Np*mesh.Nelements;
+  }
+
   if       (settings.compareSetting("PRECONDITIONER", "JACOBI"))
     elliptic->precon = new JacobiPrecon(*elliptic);
   else if(settings.compareSetting("PRECONDITIONER", "MASSMATRIX"))
@@ -158,7 +165,7 @@ elliptic_t& elliptic_t::Setup(platform_t& platform, mesh_t& mesh,
   else if(settings.compareSetting("PRECONDITIONER", "OAS"))
     elliptic->precon = new OASPrecon(*elliptic);
   else if(settings.compareSetting("PRECONDITIONER", "NONE"))
-    elliptic->precon = new IdentityPrecon(mesh.Np*mesh.Nelements);
+    elliptic->precon = new IdentityPrecon(Nlocal);
 
   return *elliptic;
 }

@@ -62,6 +62,8 @@ public:
 
   int disc_ipdg, disc_c0;
 
+  occa::memory o_AqL;
+
   halo_t* traceHalo;
 
   precon_t* precon;
