@@ -55,6 +55,7 @@ public:
   mesh_t &mesh;
   linAlg_t &linAlg;
 
+  dlong Ndofs;
   int Nfields;
 
   dfloat lambda;

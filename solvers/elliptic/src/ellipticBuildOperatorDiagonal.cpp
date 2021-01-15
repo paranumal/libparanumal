@@ -53,28 +53,31 @@ void elliptic_t::BuildOperatorDiagonal(dfloat *diagA){
         break;
     }
   } else if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
+    dfloat* diagAL = (dfloat*) malloc(mesh.Np*mesh.Nelements*sizeof(dfloat));
+
     switch(mesh.elementType){
       case TRIANGLES:
-        BuildOperatorDiagonalContinuousTri2D(diagA);
+        BuildOperatorDiagonalContinuousTri2D(diagAL);
         break;
       case QUADRILATERALS:
       {
         if(mesh.dim==2)
-          BuildOperatorDiagonalContinuousQuad2D(diagA);
+          BuildOperatorDiagonalContinuousQuad2D(diagAL);
         else
-          BuildOperatorDiagonalContinuousQuad3D(diagA);
+          BuildOperatorDiagonalContinuousQuad3D(diagAL);
         break;
       }
       case TETRAHEDRA:
-        BuildOperatorDiagonalContinuousTet3D(diagA);
+        BuildOperatorDiagonalContinuousTet3D(diagAL);
         break;
       case HEXAHEDRA:
-        BuildOperatorDiagonalContinuousHex3D(diagA);
+        BuildOperatorDiagonalContinuousHex3D(diagAL);
         break;
     }
 
-    //gatherscatter the diagonal to assemble it
-    ogsMasked->GatherScatter(diagA, ogs_dfloat, ogs_add, ogs_sym);
+    //gather the diagonal to assemble it
+    ogsMasked->Gather(diagA, diagAL, ogs_dfloat, ogs_add, ogs_trans);
+    free(diagAL);
   }
   if(mesh.rank==0) printf("done.\n");
 }
