@@ -41,7 +41,8 @@ void meshQuad2D::CoordinateTransform(int _cubN, const char *_cubatureType){
   if(mapFileName != "NONE"){
     printf("MAPPING COORDINATES\n");
     
-    dfloat epsy = .3;
+    dfloat epsy = 1.;
+    settings.getSetting("BOX COORDINATE MAP PARAMETER Y", epsy);
     occa::properties kernelInfo = props;
 
     // build kernel

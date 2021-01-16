@@ -78,6 +78,15 @@ meshSettings_t::meshSettings_t(MPI_Comm& _comm):
              "NONE",
              "Name of file containing box transformation kernel");
 
+  newSetting("BOX COORDINATE MAP PARAMETER Y",
+             "1.0",
+             "Parameter to be used in defining box coordinate map");
+
+
+  newSetting("BOX COORDINATE MAP PARAMETER Z",
+             "1.0",
+             "Parameter to be used in defining box coordinate map");
+
 }
 
 void meshSettings_t::report() {
@@ -107,6 +116,8 @@ void meshSettings_t::report() {
       reportSetting("BOX NZ");
       reportSetting("BOX BOUNDARY FLAG");
       reportSetting("BOX COORDINATE MAP FILE");
+      reportSetting("BOX COORDINATE MAP PARAMETER Y");
+      reportSetting("BOX COORDINATE MAP PARAMETER Z");
     }
 
     reportSetting("POLYNOMIAL DEGREE");

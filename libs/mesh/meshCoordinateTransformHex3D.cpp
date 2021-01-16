@@ -38,8 +38,10 @@ void meshHex3D::CoordinateTransform(int _cubN, const char *_cubatureType){
   if(1)
   if(mapFileName != "NONE"){
     
-    dfloat epsy = .3;
-    dfloat epsz = .3;
+    dfloat epsy = 1., epsz = 1.;
+    settings.getSetting("BOX COORDINATE MAP PARAMETER Y", epsy);
+    settings.getSetting("BOX COORDINATE MAP PARAMETER Z", epsz);
+    
     occa::properties kernelInfo = props;
 
     // build kernel

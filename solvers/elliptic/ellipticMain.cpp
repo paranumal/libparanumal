@@ -123,7 +123,7 @@ int main(int argc, char **argv){
                                            lambda, NBCTypes, BCType);
 
   
-  plotGeometry(elliptic, 100);
+  //  plotGeometry(elliptic, 100);
   
   // run
   elliptic.Run();

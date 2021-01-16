@@ -136,7 +136,7 @@ void meshHex3D::GeometricFactors(){
     MPI_Reduce(&maxSkew, &globalMaxSkew, 1, MPI_DFLOAT, MPI_MAX, 0, comm);
 
     if(rank==0)
-      printf("J in range [%g,%g] and max Skew = %g\n", globalMinJ, globalMaxJ, globalMaxSkew);
+      printf("J in range [%15.14lg,%15.14lg] and max Skew = %g\n", globalMinJ, globalMaxJ, globalMaxSkew);
   #endif
 
   halo->Exchange(vgeo, Nvgeo*Np, ogs_dfloat);
