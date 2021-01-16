@@ -49,7 +49,7 @@ private:
   mesh_t& mesh;
   settings_t& settings;
 
-  occa::memory o_rtmp;
+  occa::memory o_MrL, o_rtmp;
   occa::memory o_invMM;
 
   occa::kernel blockJacobiKernel;
@@ -107,7 +107,7 @@ private:
   elliptic_t* femElliptic;
   parAlmond::parAlmond_t parAlmond;
 
-  occa::memory o_xG, o_rhsG;
+  occa::memory o_MrL;
 
   occa::memory o_zFEM, o_rFEM;
   occa::memory o_GzFEM, o_GrFEM;
