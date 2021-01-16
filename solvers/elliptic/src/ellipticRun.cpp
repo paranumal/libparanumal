@@ -123,6 +123,7 @@ void elliptic_t::Run(){
                 lambda,
                 o_r);
 
+#if 0
   dfloat *tmpr = (dfloat*) calloc(mesh.Np*mesh.Nelements, sizeof(dfloat));
   for(dlong e=0;e<mesh.Nelements;++e){
     for(dlong n=0;n<mesh.Np;++n){
@@ -130,6 +131,7 @@ void elliptic_t::Run(){
     }
   }
   o_r.copyFrom(tmpr);
+#endif
   
 #if 0
   dfloat *h_r = (dfloat*) calloc(mesh.Np*mesh.Nelements, sizeof(dfloat));
@@ -188,6 +190,8 @@ void elliptic_t::Run(){
 
   //call the solver
   dfloat tol = 1e-8;
+  settings.getSetting("LINEAR SOLVER CONVERGENCE TOLERANCE", tol);
+  
   int iter = Solve(*linearSolver, o_x, o_r, tol, maxIter, verbose);
 
   //add the boundary data to the masked nodes

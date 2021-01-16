@@ -58,6 +58,10 @@ void ellipticAddRunSettings(settings_t& settings) {
 		      "Choice of integration rule type for elliptic integration",
 		      {"GLL", "CUBATURE"}
 		      );
+
+  settings.newSetting("LINEAR SOLVER CONVERGENCE TOLERANCE",
+                      "1.e-8",
+                      "Residual convergence tolerance for linear solver");
 }
 
 void ellipticAddSettings(settings_t& settings,
@@ -101,6 +105,8 @@ void ellipticAddSettings(settings_t& settings,
                       "FALSE",
                       "Enable verbose output",
                       {"TRUE", "FALSE"});
+
+
 }
 
 void ellipticSettings_t::report() {
@@ -114,9 +120,12 @@ void ellipticSettings_t::report() {
 
     reportSetting("LAMBDA");
     reportSetting("DISCRETIZATION");
+
     reportSetting("LINEAR SOLVER");
+    reportSetting("LINEAR SOLVER CONVERGENCE TOLERANCE");
+    
     reportSetting("PRECONDITIONER");
-    reportSetting("ELLIPTIC INTEGRATION");
+    reportSetting("ELLIPTIC INTEGRATION");    
     
     if (compareSetting("PRECONDITIONER","MULTIGRID")) {
       reportSetting("MULTIGRID COARSENING");

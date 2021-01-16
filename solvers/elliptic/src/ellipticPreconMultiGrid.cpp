@@ -127,11 +127,12 @@ void interpolateField(mesh_t &mesh, int outNq, dfloat *outr, dfloat *outs, dfloa
 void interpolatePhysicalNodes(mesh_t &meshI, mesh_t &meshO){
 
   // interpolate coordinates from degree N mesh to new mesh
-  interpolateField(meshI, meshO.Nq, meshO.r, meshO.s, meshO.t, meshI.x, meshO.x);
-  interpolateField(meshI, meshO.Nq, meshO.r, meshO.s, meshO.t, meshI.y, meshO.y);
-  if(meshI.dim==3)
-    interpolateField(meshI, meshO.Nq, meshO.r, meshO.s, meshO.t, meshI.z, meshO.z);
-  
+  if(1){
+    interpolateField(meshI, meshO.Nq, meshO.r, meshO.s, meshO.t, meshI.x, meshO.x);
+    interpolateField(meshI, meshO.Nq, meshO.r, meshO.s, meshO.t, meshI.y, meshO.y);
+    if(meshI.dim==3)
+      interpolateField(meshI, meshO.Nq, meshO.r, meshO.s, meshO.t, meshI.z, meshO.z);
+  }
   // compute geometric factors
   meshO.GeometricFactors();
   
@@ -144,8 +145,8 @@ void interpolatePhysicalNodes(mesh_t &meshI, mesh_t &meshO){
   meshO.o_vgeo.copyFrom(meshO.vgeo);
   
   // initialize cubature
-  meshO.CubatureSetup(meshI.cubN, meshI.cubatureType);
-  //  meshO.CubatureSetup(meshO.N+1, meshI.cubatureType); 
+  //meshO.CubatureSetup(meshI.cubN, meshI.cubatureType);
+  meshO.CubatureSetup(meshO.N+1, meshI.cubatureType); 
 }
 
 // Matrix-free p-Multigrid levels followed by AMG
