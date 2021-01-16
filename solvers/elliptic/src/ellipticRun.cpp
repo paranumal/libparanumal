@@ -209,13 +209,17 @@ void elliptic_t::Run(){
   double elapsedTime = endTime - startTime;
 
   if ((mesh.rank==0) && verbose){
-    printf("%d, " hlongFormat ", %g, %d, %g, %g; global: N, dofs, elapsed, iterations, time per node, nodes*iterations/time %s\n",
+    dfloat epsy = 1.;
+    mesh.settings.getSetting("BOX COORDINATE MAP PARAMETER Y", epsy);
+    
+    printf("%d, " hlongFormat ", %g, %d, %g, %g, %g; global: N, dofs, elapsed, iterations, time per node, nodes*iterations/time, epsy, %s\n",
            mesh.N,
            mesh.NelementsGlobal*mesh.Np,
            elapsedTime,
            iter,
            elapsedTime/(mesh.Np*mesh.NelementsGlobal),
            mesh.NelementsGlobal*((dfloat)iter*mesh.Np/elapsedTime),
+	   epsy,
            (char*) settings.getSetting("PRECONDITIONER").c_str());
   }
 

@@ -220,8 +220,8 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
     
     elliptic_t &ellipticF = elliptic.SetupNewDegree(meshF);
 
-    void plotGeometry(elliptic_t &elliptic, int num);
-    plotGeometry(ellipticF, Nf);
+    //    void plotGeometry(elliptic_t &elliptic, int num);
+    //    plotGeometry(ellipticF, Nf);
     
     //share masking data with previous MG level
     if (prevLevel) {
@@ -288,8 +288,8 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   
   elliptic_t &ellipticF = elliptic.SetupNewDegree(meshF);
 
-  void plotGeometry(elliptic_t &elliptic, int num);
-  plotGeometry(ellipticF, minN);
+  //  void plotGeometry(elliptic_t &elliptic, int num);
+  //  plotGeometry(ellipticF, minN);
   
   //build full A matrix and pass to parAlmond
   parAlmond::parCOO A(elliptic.platform, mesh.comm);

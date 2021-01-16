@@ -27,6 +27,7 @@
 #####################################################################################
 
 from test import *
+import numpy as np
 
 ellipticData2D = ellipticDir + "/data/ellipticSine2D.h"
 ellipticData3D = ellipticDir + "/data/ellipticSine3D.h"
@@ -86,17 +87,21 @@ def main():
   mapFile1 = ellipticDir + "/data/kershaw2D.okl"
 
   for degree in range(1,10):
-    failCount += test(name="testEllipticQuad_C0",
-                      cmd=ellipticBin,
-                      settings=ellipticSettings(element=4,
-                                                degree=degree,
-                                                data_file=ellipticData2D,
-                                                dim=2,
-                                                precon="MULTIGRID",
-                                                map_file=mapFile1,
-                                                map_param_y=0.3),
-                      referenceNorm=0.499999999969716)
-    
+    for epsy in np.arange(0.1,1,0.1):
+      for nx in range(6,54,6):
+        failCount += test(name="testEllipticQuad_C0",
+                          cmd=ellipticBin,
+                          settings=ellipticSettings(element=4,
+                                                    nx=nx,
+                                                    ny=nx,
+                                                    degree=degree,
+                                                    data_file=ellipticData2D,
+                                                    dim=2,
+                                                    precon="MULTIGRID",
+                                                    map_file=mapFile1,
+                                                    map_param_y=epsy),
+                          referenceNorm=0.499999999969716)
+      
   #clean up
   for file_name in os.listdir(testDir):
     if file_name.endswith('.vtu'):
