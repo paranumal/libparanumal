@@ -211,8 +211,9 @@ void elliptic_t::Run(){
   if ((mesh.rank==0) && verbose){
     dfloat epsy = 1.;
     mesh.settings.getSetting("BOX COORDINATE MAP PARAMETER Y", epsy);
-    
-    printf("%d, " hlongFormat ", %g, %d, %g, %g, %g; global: N, dofs, elapsed, iterations, time per node, nodes*iterations/time, epsy, %s\n",
+    int chebyDegree = 1;
+    settings.getSetting("MULTIGRID CHEBYSHEV DEGREE", chebyDegree);
+    printf("%d, " hlongFormat ", %g, %d, %g, %g, %g, %d; global: N, dofs, elapsed, iterations, time per node, nodes*iterations/time, epsy, cheby degree, %s\n",
            mesh.N,
            mesh.NelementsGlobal*mesh.Np,
            elapsedTime,
@@ -220,6 +221,7 @@ void elliptic_t::Run(){
            elapsedTime/(mesh.Np*mesh.NelementsGlobal),
            mesh.NelementsGlobal*((dfloat)iter*mesh.Np/elapsedTime),
 	   epsy,
+	   chebyDegree,
            (char*) settings.getSetting("PRECONDITIONER").c_str());
   }
 

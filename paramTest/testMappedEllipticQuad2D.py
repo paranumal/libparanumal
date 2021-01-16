@@ -43,10 +43,12 @@ def ellipticSettings(rcformat="2.0", data_file=ellipticData2D,
                      linear_solver="PCG",
                      precon="MULTIGRID",
                      multigrid_smoother="CHEBYSHEV",
+                     multigrid_cheby_degree=1,
                      paralmond_cycle="VCYCLE",
                      paralmond_strength="SYMMETRIC",
-                     paralmond_aggregation="UNSMOOTHED",
+                     paralmond_aggregation="SMOOTHED",
                      paralmond_smoother="CHEBYSHEV",
+                     paralmond_cheby_degree=1,
                      output_to_file="FALSE"):
   return [setting_t("FORMAT", rcformat),
           setting_t("DATA FILE", data_file),
@@ -70,10 +72,12 @@ def ellipticSettings(rcformat="2.0", data_file=ellipticData2D,
           setting_t("LINEAR SOLVER", linear_solver),
           setting_t("PRECONDITIONER", precon),
           setting_t("MULTIGRID SMOOTHER", multigrid_smoother),
+          setting_t("MULTIGRID CHEBYSHEV DEGREE", multigrid_cheby_degree),
           setting_t("PARALMOND CYCLE", paralmond_cycle),
           setting_t("PARALMOND STRENGTH", paralmond_strength),
           setting_t("PARALMOND AGGREGATION", paralmond_aggregation),
           setting_t("PARALMOND SMOOTHER", paralmond_smoother),
+          setting_t("PARALMOND CHEBYSHEV DEGREE", paralmond_cheby_degree),
           setting_t("OUTPUT TO FILE", "FALSE"),
           setting_t("VERBOSE", "TRUE")]
 
@@ -87,19 +91,22 @@ def main():
   mapFile1 = ellipticDir + "/data/kershaw2D.okl"
 
   for degree in range(1,10):
-    for epsy in np.arange(0.1,1,0.1):
-      for nx in range(6,54,6):
-        failCount += test(name="testEllipticQuad_C0",
-                          cmd=ellipticBin,
-                          settings=ellipticSettings(element=4,
-                                                    nx=nx,
-                                                    ny=nx,
-                                                    degree=degree,
-                                                    data_file=ellipticData2D,
-                                                    dim=2,
-                                                    precon="MULTIGRID",
-                                                    map_file=mapFile1,
-                                                    map_param_y=epsy),
+    for epsy in np.arange(0.1,1.1,0.1):
+      for chebdeg in range(1,4,1):
+        for nx in range(6,54,6):
+          failCount += test(name="testEllipticQuad_C0",
+                            cmd=ellipticBin,
+                            settings=ellipticSettings(element=4,
+                                                      nx=nx,
+                                                      ny=nx,
+                                                      degree=degree,
+                                                      data_file=ellipticData2D,
+                                                      dim=2,
+                                                      precon="MULTIGRID",
+                                                      multigrid_cheby_degree=chebdeg,
+                                                      paralmond_cheby_degree=chebdeg,
+                                                      map_file=mapFile1,
+                                                      map_param_y=epsy),
                           referenceNorm=0.499999999969716)
       
   #clean up
