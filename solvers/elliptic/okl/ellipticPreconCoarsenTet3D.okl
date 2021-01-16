@@ -64,3 +64,50 @@ SOFTWARE.
   }
 }
 
+@kernel void ellipticPartialPreconCoarsenTet3D(const dlong Nelements,
+                                  @restrict const  dlong   *  elementList,
+                                  @restrict const  dlong   *  GlobalToLocal,
+                                  @restrict const  dfloat *  P,
+                                  @restrict const  dfloat *  qN,
+                                  @restrict dfloat *  q1){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockVCoarse;@outer(0)){
+
+    @shared dfloat s_qN[p_NblockVCoarse][p_NpFine];
+
+    for(int es=0;es<p_NblockVCoarse;++es;@inner(1)){
+      for(int n=0;n<p_NpCoarse;++n;@inner(0)){
+        const dlong e = eo + es;
+        if (e<Nelements) {
+          const dlong element = elementList[e];
+
+          for (int t=n; t<p_NpFine; t+=p_NpCoarse){
+            const dlong base = t + element*p_NpFine;
+            const dlong id = GlobalToLocal[base];
+
+            s_qN[es][t] = (id!=-1) ? qN[id] : 0.0;
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    for(int es=0;es<p_NblockVCoarse;++es;@inner(1)){
+      for(int n=0;n<p_NpCoarse;++n;@inner(0)){
+        const dlong e = eo + es;
+        if(e<Nelements){
+          dfloat tmp = 0;
+          #pragma unroll p_NpFine
+            for(int i=0;i<p_NpFine;++i){
+              tmp += P[n + i*p_NpCoarse]*s_qN[es][i]; // bank conflict ?
+            }
+
+          const dlong element = elementList[e];
+          q1[element*p_NpCoarse+n] = tmp; // *invDegree[e*p_NpCoarse+n];
+        }
+      }
+    }
+  }
+}
+

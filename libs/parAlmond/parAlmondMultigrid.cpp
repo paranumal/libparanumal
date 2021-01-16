@@ -94,16 +94,19 @@ multigrid_t::~multigrid_t() {
 
 void multigrid_t::AddLevel(multigridLevel* level){
 
+  bool weighted=false;
+  occa::memory o_weight;
+
   //If using an exact solver and this is the first level, setup a linearSovler
   if (exact && numLevels==0) {
     if (settings.compareSetting("PARALMOND CYCLE", "NONSYM"))
       linearSolver = new pgmres(level->Nrows, level->Ncols - level->Nrows,
                              platform, settings, comm,
-                             level->weighted, level->o_weight);
+                             weighted, o_weight);
     else
       linearSolver = new pcg(level->Nrows, level->Ncols - level->Nrows,
                              platform, settings, comm,
-                             level->weighted, level->o_weight);
+                             weighted, o_weight);
   }
 
   if (ctype==KCYCLE) {

@@ -63,13 +63,7 @@ void OASPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
     level->prolongate(o_zC, o_Mr);
   } else {
     //if N=1 just call the coarse solver
-    if (elliptic.disc_c0) {
-      ogsMasked->Gather(o_rhsG, o_r, ogs_dfloat, ogs_add, ogs_notrans);
-      parAlmond.Operator(o_rhsG, o_xG);
-      ogsMasked->Scatter(o_Mr, o_xG, ogs_dfloat, ogs_add, ogs_notrans);
-    } else {
-      parAlmond.Operator(o_r, o_Mr);
-    }
+    parAlmond.Operator(o_r, o_Mr);
   }
 
   // zero mean of RHS
@@ -124,28 +118,25 @@ OASPrecon::OASPrecon(elliptic_t& _elliptic):
   parAlmond.AMGSetup(A, ellipticC.allNeumann, null,ellipticC.allNeumannPenalty);
 
   if (mesh.N>1) {
-    level = new MGLevel(elliptic, Nc, NpCoarse);
+    dlong Nrows, Ncols;
+    if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
+      Nrows = elliptic.ogsMasked->Ngather;
+      Ncols = Nrows + elliptic.ogsMasked->NgatherHalo;
+    } else {
+      Nrows = mesh.Nelements*mesh.Np;
+      Ncols = Nrows + mesh.totalHaloPairs*mesh.Np;
+    }
+
+    level = new MGLevel(elliptic, Nrows, Ncols, Nc, NpCoarse);
 
     if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
-      //tell the pMG level to gather after coarsening
-      level->gatherLevel = true;
-      level->ogsMasked = ellipticC.ogsMasked;
 
-      dfloat *dummy = (dfloat *) calloc(meshC.Np*(mesh.Nelements+mesh.totalRingElements),sizeof(dfloat));
-      level->o_SX = elliptic.platform.malloc(meshC.Np*(mesh.Nelements+mesh.totalRingElements)*sizeof(dfloat), dummy);
-      level->o_GX = elliptic.platform.malloc(meshC.Np*(mesh.Nelements+mesh.totalRingElements)*sizeof(dfloat), dummy);
-      free(dummy);
-
-      //share masking data with MG level
-      level->Nmasked = ellipticC.Nmasked;
-      level->o_maskIds = ellipticC.o_maskIds;
-      level->ogsMasked = ellipticC.ogsMasked;
     }
 
     rPatch = (dfloat*) calloc(mesh.Np*(mesh.Nelements+mesh.totalRingElements),sizeof(dfloat));
     zPatch = (dfloat*) calloc(mesh.Np*(mesh.Nelements+mesh.totalRingElements),sizeof(dfloat));
 
-    dlong Ncols = parAlmond.getNumCols(0);
+    Ncols = parAlmond.getNumCols(0);
     rC = (dfloat*) calloc(Ncols,sizeof(dfloat));
     zC = (dfloat*) calloc(Ncols,sizeof(dfloat));
 

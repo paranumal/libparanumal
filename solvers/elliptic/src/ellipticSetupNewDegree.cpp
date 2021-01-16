@@ -44,6 +44,8 @@ elliptic_t& elliptic_t::SetupNewDegree(mesh_t& meshC){
   elliptic->grad = grad;
   elliptic->o_grad = o_grad;
 
+  elliptic->o_AqL = o_AqL;
+
   elliptic->BCType = BCType;
 
   elliptic->maskKernel = maskKernel;
@@ -100,7 +102,10 @@ elliptic_t& elliptic_t::SetupNewDegree(mesh_t& meshC){
     boundaryHeaderFileName = strdup(DELLIPTIC "/data/ellipticBoundary3D.h");
   kernelInfo["includes"] += boundaryHeaderFileName;
 
-  int NblockV = mymax(1,512/meshC.Np);
+  int blockMax = 256;
+  if (platform.device.mode() == "CUDA") blockMax = 512;
+
+  int NblockV = mymax(1,blockMax/meshC.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;
 
   // Ax kernel
@@ -131,6 +136,12 @@ elliptic_t& elliptic_t::SetupNewDegree(mesh_t& meshC){
     sprintf(kernelName, "ellipticPartialAxIpdg%s", suffix);
     elliptic->partialIpdgKernel = platform.buildKernel(fileName, kernelName,
                                               kernelInfo);
+  }
+
+  if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
+    elliptic->Ndofs = elliptic->ogsMasked->Ngather*elliptic->Nfields;
+  } else {
+    elliptic->Ndofs = meshC.Nelements*meshC.Np*elliptic->Nfields;
   }
 
   elliptic->precon = NULL;

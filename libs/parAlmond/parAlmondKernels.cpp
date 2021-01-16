@@ -48,10 +48,7 @@ occa::kernel SmoothChebyshevUpdateKernel;
 
 occa::kernel kcycleCombinedOp1Kernel;
 occa::kernel kcycleCombinedOp2Kernel;
-occa::kernel kcycleWeightedCombinedOp1Kernel;
-occa::kernel kcycleWeightedCombinedOp2Kernel;
 occa::kernel vectorAddInnerProdKernel;
-occa::kernel vectorAddWeightedInnerProdKernel;
 
 occa::kernel dGEMVKernel;
 
@@ -99,12 +96,9 @@ void buildParAlmondKernels(platform_t& platform){
   SmoothChebyshevUpdateKernel = platform.buildKernel(PARALMOND_DIR"/okl/SmoothChebyshev.okl", "SmoothChebyshevUpdate", kernelInfo);
 
   vectorAddInnerProdKernel = platform.buildKernel(PARALMOND_DIR"/okl/vectorAddInnerProd.okl", "vectorAddInnerProd", kernelInfo);
-  vectorAddWeightedInnerProdKernel = platform.buildKernel(PARALMOND_DIR"/okl/vectorAddInnerProd.okl", "vectorAddWeightedInnerProd", kernelInfo);
 
   kcycleCombinedOp1Kernel = platform.buildKernel(PARALMOND_DIR"/okl/kcycleCombinedOp.okl", "kcycleCombinedOp1", kernelInfo);
   kcycleCombinedOp2Kernel = platform.buildKernel(PARALMOND_DIR"/okl/kcycleCombinedOp.okl", "kcycleCombinedOp2", kernelInfo);
-  kcycleWeightedCombinedOp1Kernel = platform.buildKernel(PARALMOND_DIR"/okl/kcycleCombinedOp.okl", "kcycleWeightedCombinedOp1", kernelInfo);
-  kcycleWeightedCombinedOp2Kernel = platform.buildKernel(PARALMOND_DIR"/okl/kcycleCombinedOp.okl", "kcycleWeightedCombinedOp2", kernelInfo);
 
   dGEMVKernel = platform.buildKernel(PARALMOND_DIR"/okl/dGEMV.okl", "dGEMV", kernelInfo);
 
@@ -119,10 +113,7 @@ void freeParAlmondKernels() {
 
   kcycleCombinedOp1Kernel.free();
   kcycleCombinedOp2Kernel.free();
-  kcycleWeightedCombinedOp1Kernel.free();
-  kcycleWeightedCombinedOp2Kernel.free();
   vectorAddInnerProdKernel.free();
-  vectorAddWeightedInnerProdKernel.free();
 }
 
 

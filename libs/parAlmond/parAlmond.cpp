@@ -37,8 +37,7 @@ parAlmond_t::parAlmond_t(platform_t& _platform, settings_t& _settings, MPI_Comm 
                                 "axpy", "zaxpy",
                                 "amx", "amxpy", "zamxpy",
                                 "adx", "adxpy", "zadxpy",
-                                "innerProd", "weightedInnerProd",
-                                "norm2", "weightedNorm2"});
+                                "innerProd", "norm2"});
 
   multigrid = new multigrid_t(platform, settings, comm);
 

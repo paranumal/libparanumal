@@ -76,11 +76,6 @@ class multigridLevel: public solver_t  {
 public:
   dlong Nrows=0, Ncols=0;
 
-  //switch for weighted inner products
-  bool weighted=false;
-  dfloat *weight=nullptr;
-  occa::memory o_weight;
-
   occa::memory o_scratch;
 
   multigridLevel(dlong N, dlong M, platform_t& _platform,

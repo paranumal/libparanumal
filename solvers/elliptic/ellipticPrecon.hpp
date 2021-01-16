@@ -87,9 +87,6 @@ private:
 
   parAlmond::parAlmond_t parAlmond;
 
-  bool gather=false;
-  occa::memory o_xG, o_rhsG;
-
 public:
   MultiGridPrecon(elliptic_t& elliptic);
   ~MultiGridPrecon() = default;
@@ -172,16 +169,12 @@ public:
   dfloat *P;
   occa::memory o_P;
 
-  occa::kernel coarsenKernel;
-  occa::kernel prolongateKernel;
+  occa::kernel coarsenKernel, partialCoarsenKernel;
+  occa::kernel prolongateKernel, partialProlongateKernel;
 
-  bool gatherLevel=false;
-  ogs_t *ogsMasked=nullptr;
-  occa::memory o_SX, o_GX;
-
-  //masking data
-  dlong Nmasked;
-  occa::memory o_maskIds;
+  //coarse gather op
+  mesh_t *meshC=nullptr;
+  ogs_t *ogsMaskedC=nullptr;
 
   //smoothing params
   typedef enum {JACOBI=1,
@@ -191,17 +184,20 @@ public:
   dfloat lambda1, lambda0;
   int ChebyshevIterations;
 
-  static size_t smootherResidualBytes;
+  static size_t smootherResidualBytes, scratchBytes;
   static dfloat *smootherResidual;
   static occa::memory o_smootherResidual;
   static occa::memory o_smootherResidual2;
   static occa::memory o_smootherUpdate;
+  static occa::memory o_transferScratch;
 
   //jacobi data
   occa::memory o_invDiagA;
 
   //build a p-multigrid level and connect it to the next one
-  MGLevel(elliptic_t& _elliptic, int Nc, int NpCoarse);
+  MGLevel(elliptic_t& _elliptic,
+          dlong _Nrows, dlong _Ncols,
+          int Nc, int NpCoarse);
   ~MGLevel();
 
   void Operator(occa::memory &o_X, occa::memory &o_Ax);

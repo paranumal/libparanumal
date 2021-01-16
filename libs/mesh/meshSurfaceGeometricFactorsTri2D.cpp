@@ -117,9 +117,9 @@ void meshTri2D::SurfaceGeometricFactors(){
 
       dlong baseP = eP*Nfaces + fP;
 
-      // rescaling - missing factor of 2 ? (only impacts penalty and thus stiffness)  A = L*h/2 => (J*2) = (sJ*2)*h/2 => h  = 2*J/sJ
-      dfloat hinvM = sgeo[baseM*Nsgeo + SJID]*sgeo[baseM*Nsgeo + IJID];
-      dfloat hinvP = sgeo[baseP*Nsgeo + SJID]*sgeo[baseP*Nsgeo + IJID];
+      // rescaling - A = L*h/2 => (J*2) = (sJ*2)*h/2 => h  = 2*J/sJ
+      dfloat hinvM = 0.5*sgeo[baseM*Nsgeo + SJID]*sgeo[baseM*Nsgeo + IJID];
+      dfloat hinvP = 0.5*sgeo[baseP*Nsgeo + SJID]*sgeo[baseP*Nsgeo + IJID];
 
       sgeo[baseM*Nsgeo+IHID] = mymax(hinvM,hinvP);
       sgeo[baseP*Nsgeo+IHID] = mymax(hinvM,hinvP);
