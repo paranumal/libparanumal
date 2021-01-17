@@ -149,6 +149,7 @@ mesh_t* mesh_t::SetupRingPatch(){
   mesh->Sst = Sst;
   mesh->Stt = Stt;
   mesh->MM = MM;
+  mesh->invMM = invMM;
   mesh->sM = sM;
   mesh->faceNodes = faceNodes;
   mesh->LIFT = LIFT;

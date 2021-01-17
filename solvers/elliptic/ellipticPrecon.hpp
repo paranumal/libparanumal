@@ -142,10 +142,11 @@ private:
   //Coarse Precon
   ogs_t *ogsMasked=nullptr;
   parAlmond::parAlmond_t parAlmond;
-  occa::memory o_xG, o_rhsG;
 
   dfloat *rPatch, *zPatch;
+  dfloat *rPatchL, *zPatchL;
   occa::memory o_rPatch, o_zPatch;
+  occa::memory o_rPatchL, o_zPatchL;
 
   dfloat *rC, *zC;
   occa::memory o_rC, o_zC;
