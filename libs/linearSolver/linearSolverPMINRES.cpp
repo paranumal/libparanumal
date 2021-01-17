@@ -27,8 +27,7 @@ SOFTWARE.
 #include "linearSolver.hpp"
 
 pminres::pminres(dlong _N, dlong _Nhalo,
-                 platform_t& _platform, settings_t& _settings, MPI_Comm _comm,
-                 int _weighted, occa::memory& _o_weight):
+                 platform_t& _platform, settings_t& _settings, MPI_Comm _comm):
   linearSolver_t(_N, _Nhalo, _platform, _settings, _comm)
 {
   platform.linAlg.InitKernels({"axpy", "zaxpy", "scale", "set",
@@ -45,9 +44,6 @@ pminres::pminres(dlong _N, dlong _Nhalo,
   o_q     = platform.malloc(Ntotal*sizeof(dfloat), dummy);
   o_q_old = platform.malloc(Ntotal*sizeof(dfloat), dummy);
   delete[] dummy;
-
-  weighted = _weighted;
-  o_w = _o_weight;
 
   occa::properties kernelInfo = platform.props;
   updateMINRESKernel = platform.buildKernel(LINEARSOLVER_DIR "/okl/linearSolverUpdateMINRES.okl", "updateMINRES", kernelInfo);
@@ -144,10 +140,7 @@ int pminres::Solve(solver_t& solver, precon_t& precon,
 
 dfloat pminres::innerProd(occa::memory& o_x, occa::memory& o_y)
 {
-  if (weighted)
-    return platform.linAlg.weightedInnerProd(N, o_w, o_x, o_y, comm);
-  else
-    return platform.linAlg.innerProd(N, o_x, o_y, comm);
+  return platform.linAlg.innerProd(N, o_x, o_y, comm);
 }
 
 void pminres::UpdateMINRES(const dfloat ma2, const dfloat ma3, const dfloat alpha, const dfloat beta)

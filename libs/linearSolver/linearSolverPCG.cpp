@@ -29,8 +29,7 @@ SOFTWARE.
 #define PCG_BLOCKSIZE 512
 
 pcg::pcg(dlong _N, dlong _Nhalo,
-         platform_t& _platform, settings_t& _settings, MPI_Comm _comm,
-         int _weighted, occa::memory& _o_weight):
+         platform_t& _platform, settings_t& _settings, MPI_Comm _comm):
   linearSolver_t(_N, _Nhalo, _platform, _settings, _comm) {
 
   dlong Ntotal = N + Nhalo;
@@ -44,9 +43,6 @@ pcg::pcg(dlong _N, dlong _Nhalo,
   o_Ax = platform.malloc(Ntotal*sizeof(dfloat),dummy);
   o_Ap = platform.malloc(Ntotal*sizeof(dfloat),dummy);
   free(dummy);
-
-  weighted = _weighted;
-  o_w = _o_weight;
 
   //pinned tmp buffer for reductions
   tmprdotr = (dfloat*) platform.hostMalloc(PCG_BLOCKSIZE*sizeof(dfloat),
@@ -81,13 +77,7 @@ int pcg::Solve(solver_t& solver, precon_t& precon,
 
   // Comput norm of RHS (for stopping tolerance).
   if (settings.compareSetting("LINEAR SOLVER STOPPING CRITERION", "ABS/REL-RHS-2NORM")) {
-    dfloat normb = 0.0;
-
-    if (weighted)
-      normb = linAlg.weightedNorm2(N, o_w, o_r, comm);
-    else
-      normb = linAlg.norm2(N, o_r, comm);
-
+    dfloat normb = linAlg.norm2(N, o_r, comm);
     TOL = mymax(tol*tol*normb*normb, tol*tol);
   }
 
@@ -97,10 +87,7 @@ int pcg::Solve(solver_t& solver, precon_t& precon,
   // subtract r = r - A*x
   linAlg.axpy(N, -1.f, o_Ax, 1.f, o_r);
 
-  if (weighted)
-    rdotr = linAlg.weightedNorm2(N, o_w, o_r, comm);
-  else
-    rdotr = linAlg.norm2(N, o_r, comm);
+  rdotr = linAlg.norm2(N, o_r, comm);
   rdotr = rdotr*rdotr;
 
   if (settings.compareSetting("LINEAR SOLVER STOPPING CRITERION", "ABS/REL-INITRESID")) {
@@ -124,18 +111,10 @@ int pcg::Solve(solver_t& solver, precon_t& precon,
 
     // r.z
     rdotz2 = rdotz1;
-    if (weighted)
-      rdotz1 = linAlg.weightedInnerProd(N, o_w, o_r, o_z, comm);
-    else
-      rdotz1 = linAlg.innerProd(N, o_r, o_z, comm);
+    rdotz1 = linAlg.innerProd(N, o_r, o_z, comm);
 
     if(flexible){
-      dfloat zdotAp;
-      if (weighted)
-        zdotAp = linAlg.weightedInnerProd(N, o_w, o_z, o_Ap, comm);
-      else
-        zdotAp = linAlg.innerProd(N, o_z, o_Ap, comm);
-
+      dfloat zdotAp = linAlg.innerProd(N, o_z, o_Ap, comm);
       beta = (iter==0) ? 0.0 : -alpha*zdotAp/rdotz2;
     } else {
       beta = (iter==0) ? 0.0 : rdotz1/rdotz2;
@@ -148,10 +127,7 @@ int pcg::Solve(solver_t& solver, precon_t& precon,
     solver.Operator(o_p, o_Ap);
 
     // p.Ap
-    if (weighted)
-      pAp =  linAlg.weightedInnerProd(N, o_w, o_p, o_Ap, comm);
-    else
-      pAp =  linAlg.innerProd(N, o_p, o_Ap, comm);
+    pAp =  linAlg.innerProd(N, o_p, o_Ap, comm);
 
     alpha = rdotz1/pAp;
 
@@ -179,7 +155,7 @@ dfloat pcg::UpdatePCG(const dfloat alpha, occa::memory &o_x, occa::memory &o_r){
   int Nblocks = (N+PCG_BLOCKSIZE-1)/PCG_BLOCKSIZE;
   Nblocks = (Nblocks>PCG_BLOCKSIZE) ? PCG_BLOCKSIZE : Nblocks; //limit to PCG_BLOCKSIZE entries
 
-  updatePCGKernel(N, Nblocks, weighted, o_w, o_p, o_Ap, alpha, o_x, o_r, o_tmprdotr);
+  updatePCGKernel(N, Nblocks, o_p, o_Ap, alpha, o_x, o_r, o_tmprdotr);
 
   o_tmprdotr.copyTo(tmprdotr, Nblocks*sizeof(dfloat));
 

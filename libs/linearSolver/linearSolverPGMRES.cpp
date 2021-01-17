@@ -29,8 +29,7 @@ SOFTWARE.
 #define PGMRES_RESTART 20
 
 pgmres::pgmres(dlong _N, dlong _Nhalo,
-         platform_t& _platform, settings_t& _settings, MPI_Comm _comm,
-         int _weighted, occa::memory& _o_weight):
+         platform_t& _platform, settings_t& _settings, MPI_Comm _comm):
   linearSolver_t(_N, _Nhalo, _platform, _settings, _comm) {
 
   // Make sure LinAlg has the necessary kernels
@@ -62,9 +61,6 @@ pgmres::pgmres(dlong _N, dlong _Nhalo,
   o_z  = platform.malloc(Ntotal*sizeof(dfloat), dummy);
   o_r  = platform.malloc(Ntotal*sizeof(dfloat), dummy);
   free(dummy);
-
-  weighted = _weighted;
-  o_w = _o_weight;
 }
 
 int pgmres::Solve(solver_t& solver, precon_t& precon,
@@ -84,11 +80,7 @@ int pgmres::Solve(solver_t& solver, precon_t& precon,
   // r = Precon^{-1} (r-A*x)
   precon.Operator(o_z, o_r);
 
-  dfloat nr;
-  if (weighted)
-    nr = linAlg.weightedNorm2(N, o_w, o_r, comm);
-  else
-    nr = linAlg.norm2(N, o_r, comm);
+  dfloat nr = linAlg.norm2(N, o_r, comm);
 
   dfloat error = nr;
   const dfloat TOL = mymax(tol*nr,tol);
@@ -118,11 +110,7 @@ int pgmres::Solve(solver_t& solver, precon_t& precon,
       precon.Operator(o_z, o_r);
 
       for(int k=0; k<=i; ++k){
-        dfloat hki;
-        if (weighted)
-          hki = linAlg.weightedInnerProd(N, o_w, o_r, o_V[k], comm);
-        else
-          hki = linAlg.innerProd(N, o_r, o_V[k], comm);
+        dfloat hki = linAlg.innerProd(N, o_r, o_V[k], comm);
 
         // r = r - hki*V[k]
         linAlg.axpy(N, -hki, o_V[k], 1.0, o_r);
@@ -131,11 +119,7 @@ int pgmres::Solve(solver_t& solver, precon_t& precon,
         H[k + i*(restart+1)] = hki;
       }
 
-      dfloat nw;
-      if (weighted)
-        nw = linAlg.weightedNorm2(N, o_w, o_r, comm);
-      else
-        nw = linAlg.norm2(N, o_r, comm);
+      dfloat nw = linAlg.norm2(N, o_r, comm);
       H[i+1 + i*(restart+1)] = nw;
 
       // V(:,i+1) = r/nw
@@ -194,10 +178,7 @@ int pgmres::Solve(solver_t& solver, precon_t& precon,
     // r = Precon^{-1} (r-A*x)
     precon.Operator(o_z, o_r);
 
-    if (weighted)
-      nr = linAlg.weightedNorm2(N, o_w, o_r, comm);
-    else
-      nr = linAlg.norm2(N, o_r, comm);
+    nr = linAlg.norm2(N, o_r, comm);
 
     error = nr;
     //exit if tolerance is reached
