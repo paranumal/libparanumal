@@ -94,8 +94,8 @@ int pminres::Solve(solver_t& solver, precon_t& precon,
     if ((fabs(eta) < TOL) && (iter >= 1)) {
       if (verbose && (rank == 0)) {
         printf("PMINRES converged in %d iterations (eta = % .15e).\n", iter, eta);
-        return iter;
       }
+      return iter;
     }
 
     linAlg.scale(N, 1.0/gam, o_z);                    // z = z/gam

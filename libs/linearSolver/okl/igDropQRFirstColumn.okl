@@ -38,7 +38,7 @@ void givensRotation(dfloat a, dfloat b, dfloat *c, dfloat *s)
 }
 
 // Drops the first column of the QR factorization,
-// 	 zeroing the last columns of Q and R
+//       zeroing the last columns of Q and R
 @kernel void igDropQRFirstColumn(const dlong Ndof,
                                  @restrict dfloat *Q,
                                  @restrict dfloat *U,

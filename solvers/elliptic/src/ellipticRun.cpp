@@ -29,9 +29,6 @@ SOFTWARE.
 void elliptic_t::Run(){
 
   //setup linear solver
-  // int weighted = settings.compareSetting("DISCRETIZATION", "CONTINUOUS") ? 1 : 0;
-  int weighted = 0;
-
   dlong Nlocal;
   dlong Nhalo;
   hlong NglobalDofs;
@@ -45,8 +42,7 @@ void elliptic_t::Run(){
     NglobalDofs = mesh.NelementsGlobal*mesh.Np*Nfields;
   }
   linearSolver_t *linearSolver = linearSolver_t::Setup(Nlocal, Nhalo,
-                                                       platform, settings, mesh.comm,
-                                                       weighted, o_weight);
+                                                       platform, settings, mesh.comm);
 
   occa::properties kernelInfo = mesh.props; //copy base occa properties
 

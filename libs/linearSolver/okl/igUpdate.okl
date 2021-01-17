@@ -27,14 +27,14 @@ SOFTWARE.
 #define blockSize 256
 
 @kernel void igUpdate(const dlong N,    /* Length of vectors */
-		      const dlong curDim, /* field to update */
-		      const dfloat scale, /* scale factor */
-		      @restrict dfloat *btilde,   /* new vector */
-		      const int bwrite,
-		      @restrict dfloat *Btilde,   /* initial guess history space */
-		      @restrict dfloat *xtilde,   /* new soln vector */
-		      const int xwrite,
-		      @restrict dfloat *Xtilde)   /* initial guess history space */
+                      const dlong curDim, /* field to update */
+                      const dfloat scale, /* scale factor */
+                      @restrict dfloat *btilde,   /* new vector */
+                      const int bwrite,
+                      @restrict dfloat *Btilde,   /* initial guess history space */
+                      @restrict dfloat *xtilde,   /* new soln vector */
+                      const int xwrite,
+                      @restrict dfloat *Xtilde)   /* initial guess history space */
 {
   for (dlong n = 0; n < N; n += blockSize; @outer(0)) {
     for (dlong i = n; i < (n + blockSize); i++; @inner(0)) {
