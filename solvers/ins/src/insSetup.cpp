@@ -71,6 +71,9 @@ ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
   ins->uLinearSolver=NULL;
   ins->vLinearSolver=NULL;
   ins->wLinearSolver=NULL;
+
+  dlong uNlocal=0, vNlocal=0, wNlocal=0;
+  dlong uNhalo=0, vNhalo=0, wNhalo=0;
   if (settings.compareSetting("TIME INTEGRATOR","EXTBDF3")
     ||settings.compareSetting("TIME INTEGRATOR","SSBDF3")){
 
@@ -103,21 +106,32 @@ ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
 
     ins->vDisc_c0 = settings.compareSetting("VELOCITY DISCRETIZATION", "CONTINUOUS") ? 1 : 0;
 
-    //ins->vLinearSolver = linearSolver_t::Setup(Nlocal, Nhalo,
-    //                                           platform, *(ins->vSettings), mesh.comm,
-    //                                           ins->vDisc_c0, ins->vSolver->o_weight);
+    if (ins->vDisc_c0) {
+      uNlocal = ins->uSolver->ogsMasked->Ngather;
+      vNlocal = ins->vSolver->ogsMasked->Ngather;
+      if (mesh.dim == 3) wNlocal = ins->wSolver->ogsMasked->Ngather;
 
-    ins->uLinearSolver = initialGuessSolver_t::Setup(Nlocal, Nhalo,
-                                                    platform, *(ins->vSettings), mesh.comm,
-                                                    ins->vDisc_c0, ins->uSolver->o_weight);
+      uNhalo = ins->uSolver->ogsMasked->NgatherHalo;
+      vNhalo = ins->vSolver->ogsMasked->NgatherHalo;
+      if (mesh.dim == 3) wNhalo = ins->wSolver->ogsMasked->NgatherHalo;
+    } else {
+      uNlocal = mesh.Nelements*mesh.Np;
+      vNlocal = mesh.Nelements*mesh.Np;
+      if (mesh.dim == 3) wNlocal = mesh.Nelements*mesh.Np;
 
-    ins->vLinearSolver = initialGuessSolver_t::Setup(Nlocal, Nhalo,
-                                                    platform, *(ins->vSettings), mesh.comm,
-                                                    ins->vDisc_c0, ins->vSolver->o_weight);
+      uNhalo = mesh.totalHaloPairs*mesh.Np;
+      vNhalo = mesh.totalHaloPairs*mesh.Np;
+      if (mesh.dim == 3) wNhalo = mesh.totalHaloPairs*mesh.Np;
+    }
+
+    ins->uLinearSolver = initialGuessSolver_t::Setup(uNlocal, uNhalo,
+                                                    platform, *(ins->vSettings), mesh.comm);
+
+    ins->vLinearSolver = initialGuessSolver_t::Setup(vNlocal, vNhalo,
+                                                    platform, *(ins->vSettings), mesh.comm);
     if (mesh.dim == 3) {
-      ins->wLinearSolver = initialGuessSolver_t::Setup(Nlocal, Nhalo,
-                                                       platform, *(ins->vSettings), mesh.comm,
-                                                       ins->vDisc_c0, ins->wSolver->o_weight);
+      ins->wLinearSolver = initialGuessSolver_t::Setup(wNlocal, wNhalo,
+                                                       platform, *(ins->vSettings), mesh.comm);
     }
 
   } else {
@@ -134,6 +148,7 @@ ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
   }
 
   //Setup pressure Elliptic solver
+  dlong pNlocal=0, pNhalo=0;
   {
     int NBCTypes = 7;
     int pBCType[NBCTypes] = {0,2,2,1,2,2,2}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
@@ -145,13 +160,16 @@ ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
 
     ins->pDisc_c0 = settings.compareSetting("PRESSURE DISCRETIZATION", "CONTINUOUS") ? 1 : 0;
 
-    //ins->pLinearSolver = linearSolver_t::Setup(Nlocal, Nhalo,
-    //                                           platform, *(ins->pSettings), mesh.comm,
-    //                                           ins->pDisc_c0, ins->pSolver->o_weight);
+    if (ins->pDisc_c0) {
+      pNlocal = ins->pSolver->ogsMasked->Ngather;
+      pNhalo  = ins->pSolver->ogsMasked->NgatherHalo;
+    } else {
+      pNlocal = mesh.Nelements*mesh.Np;
+      pNhalo  = mesh.totalHaloPairs*mesh.Np;
+    }
 
-    ins->pLinearSolver = initialGuessSolver_t::Setup(Nlocal, Nhalo,
-                                                     platform, *(ins->pSettings), mesh.comm,
-                                                     ins->pDisc_c0, ins->pSolver->o_weight);
+    ins->pLinearSolver = initialGuessSolver_t::Setup(pNlocal, pNhalo,
+                                                     platform, *(ins->pSettings), mesh.comm);
   }
 
   //Solver tolerances
@@ -196,12 +214,30 @@ ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
       ins->o_rhsW = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat));
     else
       ins->o_rhsW = platform.malloc((1)*sizeof(dfloat));
+
+    if (ins->vDisc_c0) {
+      ins->o_GUH = platform.malloc((uNlocal+uNhalo)*sizeof(dfloat), ins->u);
+      ins->o_GVH = platform.malloc((vNlocal+vNhalo)*sizeof(dfloat), ins->u);
+      if (mesh.dim==3)
+        ins->o_GWH = platform.malloc((wNlocal+wNhalo)*sizeof(dfloat), ins->u);
+
+      ins->o_GrhsU = platform.malloc((uNlocal+uNhalo)*sizeof(dfloat));
+      ins->o_GrhsV = platform.malloc((vNlocal+vNhalo)*sizeof(dfloat));
+      if (mesh.dim==3)
+        ins->o_GrhsW = platform.malloc((wNlocal+wNhalo)*sizeof(dfloat));
+    }
   }
 
-  if (ins->pressureIncrement)
+  if (ins->pressureIncrement) {
     ins->o_PI = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), ins->p);
+    ins->o_GPI = platform.malloc((pNlocal+pNhalo)*sizeof(dfloat), ins->p);
+  }
 
   ins->o_rhsP = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat));
+  if (ins->pDisc_c0) {
+    ins->o_GP    = platform.malloc((pNlocal+pNhalo)*sizeof(dfloat), ins->p);
+    ins->o_GrhsP = platform.malloc((pNlocal+pNhalo)*sizeof(dfloat));
+  }
 
   //storage for M*u during reporting
   ins->o_MU = platform.malloc((Nlocal+Nhalo)*ins->NVfields*sizeof(dfloat), ins->u);

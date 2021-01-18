@@ -52,24 +52,17 @@ void ins_t::PressureSolve(occa::memory& o_P, occa::memory& o_RHS,
                     gamma,
                     o_RHS);
 
-  // gather-scatter
-  if(pDisc_c0) {
-    mesh.ogs->GatherScatter(o_RHS, ogs_dfloat, ogs_add, ogs_sym);
-
-    //P should always be C0 so skip the gs+weighting
-
-    if (pSolver->Nmasked) pSolver->maskKernel(pSolver->Nmasked, pSolver->o_maskIds, o_P);
-    if (pSolver->Nmasked) pSolver->maskKernel(pSolver->Nmasked, pSolver->o_maskIds, o_RHS);
-  }
-
+  //  Solve - Laplacian*P = RHS
   int maxIter = 5000;
   int verbose = 0;
 
-  //  Solve - Laplacian*P = RHS
-  NiterP = pSolver->Solve(*pLinearSolver, o_P, o_RHS, presTOL, maxIter, verbose);
-
-  // enter BCs if C0
   if(pDisc_c0) {
+    // gather, solve, scatter
+    pSolver->ogsMasked->Gather(o_GrhsP, o_RHS, ogs_dfloat, ogs_add, ogs_trans);
+    NiterP = pSolver->Solve(*pLinearSolver, o_GP, o_GrhsP, presTOL, maxIter, verbose);
+    pSolver->ogsMasked->Scatter(o_P, o_GP, ogs_dfloat, ogs_add, ogs_notrans);
+
+    // enter BCs if C0
     pressureBCKernel(mesh.Nelements,
                      mesh.o_sgeo,
                      mesh.o_vmapM,
@@ -80,5 +73,7 @@ void ins_t::PressureSolve(occa::memory& o_P, occa::memory& o_RHS,
                      mesh.o_z,
                      nu,
                      o_P);
+  } else {
+    NiterP = pSolver->Solve(*pLinearSolver, o_P, o_RHS, presTOL, maxIter, verbose);
   }
 }

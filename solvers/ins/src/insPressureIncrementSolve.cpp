@@ -54,21 +54,18 @@ void ins_t::PressureIncrementSolve(occa::memory& o_P, occa::memory& o_RHS,
                     gamma,
                     o_RHS);
 
-  // gather-scatter
-  if(pDisc_c0) {
-    mesh.ogs->GatherScatter(o_RHS, ogs_dfloat, ogs_add, ogs_sym);
-
-    //PI should always be C0 so skip the gs+weighting
-
-    if (pSolver->Nmasked) pSolver->maskKernel(pSolver->Nmasked, pSolver->o_maskIds, o_P);
-    if (pSolver->Nmasked) pSolver->maskKernel(pSolver->Nmasked, pSolver->o_maskIds, o_RHS);
-  }
-
   int maxIter = 5000;
   int verbose = 0;
 
   //  Solve - Laplacian*PI = RHS
-  NiterP = pSolver->Solve(*pLinearSolver, o_PI, o_RHS, presTOL, maxIter, verbose);
+  if(pDisc_c0) {
+    // gather, solve, scatter
+    pSolver->ogsMasked->Gather(o_GrhsP, o_RHS, ogs_dfloat, ogs_add, ogs_trans);
+    NiterP = pSolver->Solve(*pLinearSolver, o_GPI, o_GrhsP, presTOL, maxIter, verbose);
+    pSolver->ogsMasked->Scatter(o_PI, o_GPI, ogs_dfloat, ogs_add, ogs_notrans);
+  } else {
+    NiterP = pSolver->Solve(*pLinearSolver, o_PI, o_RHS, presTOL, maxIter, verbose);
+  }
 
   // P += PI and enter BCs if C0
   pressureIncrementBCKernel(mesh.Nelements,
