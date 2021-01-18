@@ -97,7 +97,7 @@ def main():
 
   mapFile1 = ellipticDir + "/data/kershaw.okl"
 
-  for degree in range(2,9): 
+  for degree in range(1,9): 
     for epsy in np.arange(0.1,1.1,0.1):
       for model in range(1,4,1):
         chebdeg = 1;

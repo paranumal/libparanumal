@@ -82,6 +82,9 @@ meshSettings_t::meshSettings_t(MPI_Comm& _comm):
              "1.0",
              "Parameter to be used in defining box coordinate map");
 
+  newSetting("BOX COORDINATE MAP MODEL",
+             "1",
+             "Parameter to define model for box coordinate map");
 
   newSetting("BOX COORDINATE MAP PARAMETER Z",
              "1.0",
@@ -118,6 +121,7 @@ void meshSettings_t::report() {
       reportSetting("BOX COORDINATE MAP FILE");
       reportSetting("BOX COORDINATE MAP PARAMETER Y");
       reportSetting("BOX COORDINATE MAP PARAMETER Z");
+      reportSetting("BOX COORDINATE MAP MODEL");
     }
 
     reportSetting("POLYNOMIAL DEGREE");
