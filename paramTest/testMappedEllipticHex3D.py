@@ -39,6 +39,7 @@ def ellipticSettings(rcformat="2.0", data_file=ellipticData3D,
                      mesh="BOX", dim=3, element=4, nx=10, ny=10, nz=10, boundary_flag=1,
                      map_file=mappedData3D,
                      map_param_y="1.0",
+                     map_model="1",
                      degree=4, thread_model=device, platform_number=0, device_number=0,
                      Lambda=1.0,
                      discretization="CONTINUOUS",
@@ -68,6 +69,7 @@ def ellipticSettings(rcformat="2.0", data_file=ellipticData3D,
           setting_t("BOX COORDINATE MAP FILE", map_file),
           setting_t("BOX COORDINATE MAP PARAMETER Y", map_param_y),
           setting_t("BOX COORDINATE MAP PARAMETER Z", map_param_y),
+          setting_t("BOX COORDINATE MAP MODEL", map_model),
           setting_t("POLYNOMIAL DEGREE", degree),
           setting_t("THREAD MODEL", thread_model),
           setting_t("PLATFORM NUMBER", platform_number),
@@ -95,33 +97,30 @@ def main():
 
   mapFile1 = ellipticDir + "/data/kershaw.okl"
 
-  for degree in range(2,7): 
+  for degree in range(2,9): 
     for epsy in np.arange(0.1,1.1,0.1):
-      chebdeg = 1;
-
- ##     maxDof = 3.e6;
-
-##      nxMax = math.floor((maxDof/((degree+1)**3))**(1./3));
-##      print("N=", degree, " nxMax=", nxMax);
-#      for nx in range(6,24,6):
-      for nx in range(6,37,6):
-        failCount += test(name="testEllipticHex_C0",
-                          cmd=ellipticBin,
-                          settings=ellipticSettings(element=12,
-                                                    nx=nx,
-                                                    ny=nx,
-                                                    nz=nx,
-                                                    degree=degree,
-                                                    data_file=ellipticData3D,
-                                                    dim=3,
-                                                    precon="MULTIGRID",
-                                                    multigrid_cheby_degree=chebdeg,
-                                                    multigrid_coarsening="HALFDEGREES",
-                                                    paralmond_cheby_degree=chebdeg,
-                                                    map_file=mapFile1,
-                                                    map_param_y=epsy),
-                          referenceNorm=0.499999999969716)
+      for model in range(1,4,1):
+        chebdeg = 1;
       
+        for nx in range(6,43,6):
+          failCount += test(name="testEllipticHex_C0",
+                            cmd=ellipticBin,
+                            settings=ellipticSettings(element=12,
+                                                      nx=nx,
+                                                      ny=nx,
+                                                      nz=nx,
+                                                      degree=degree,
+                                                      data_file=ellipticData3D,
+                                                      dim=3,
+                                                      precon="MULTIGRID",
+                                                      multigrid_cheby_degree=chebdeg,
+                                                      multigrid_coarsening="HALFDEGREES",
+                                                      paralmond_cheby_degree=chebdeg,
+                                                      map_file=mapFile1,
+                                                      map_mode=model,
+                                                      map_param_y=epsy),
+                            referenceNorm=0.499999999969716)
+        
   #clean up
   for file_name in os.listdir(testDir):
     if file_name.endswith('.vtu'):

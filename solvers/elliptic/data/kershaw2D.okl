@@ -15,9 +15,15 @@ dfloat step(const dfloat a, const dfloat b, dfloat x)
 {
    if (x <= 0) return a;
    if (x >= 1) return b;
+
+#if p_mapModel==1
    return a + (b-a) * (x);
-//   return a + (b-a) * (x*x*(3-2*x));
-//   return a + (b-a) * (x*x*x*(x*(6*x-15)+10));
+#elif p_mapModel==2
+   return a + (b-a) * (x*x*(3-2*x));
+#else
+   // default
+   return a + (b-a) * (x*x*x*(x*(6*x-15)+10));
+#endif
 }
 
 // 3D version of a generalized Kershaw mesh transformation, see D. Kershaw,
