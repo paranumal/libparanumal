@@ -28,6 +28,7 @@
 
 from test import *
 import numpy as np
+import math 
 
 ellipticData2D = ellipticDir + "/data/ellipticSine2D.h"
 ellipticData3D = ellipticDir + "/data/ellipticSine3D.h"
@@ -96,7 +97,10 @@ def main():
     for epsy in np.arange(0.1,1.1,0.1):
       for model in range(1,4,1):
         for chebdeg in range(1,2,1):
-          for nx in range(6,54,6):
+          maxNx = math.floor( (4.e6/( (degree+1)**2 ))**(0.5));
+          maxNx = min(200,max(maxNx,6));
+          print("degree=", degree, "maxNx=", maxNx);
+          for nx in range(6,maxNx,6):
             failCount += test(name="testEllipticQuad_C0",
                               cmd=ellipticBin,
                               settings=ellipticSettings(element=4,

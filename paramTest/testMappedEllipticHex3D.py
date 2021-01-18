@@ -26,7 +26,7 @@
 #
 #####################################################################################
 
-from test import *
+from testHex3D import *
 import numpy as np
 import math
 
@@ -103,23 +103,23 @@ def main():
         chebdeg = 1;
       
         for nx in range(6,43,6):
-          failCount += test(name="testEllipticHex_C0",
-                            cmd=ellipticBin,
-                            settings=ellipticSettings(element=12,
-                                                      nx=nx,
-                                                      ny=nx,
-                                                      nz=nx,
-                                                      degree=degree,
-                                                      data_file=ellipticData3D,
-                                                      dim=3,
-                                                      precon="MULTIGRID",
-                                                      multigrid_cheby_degree=chebdeg,
-                                                      multigrid_coarsening="HALFDEGREES",
-                                                      paralmond_cheby_degree=chebdeg,
-                                                      map_file=mapFile1,
-                                                      map_model=model,
-                                                      map_param_y=epsy),
-                            referenceNorm=0.499999999969716)
+          failCount += testHex3D(name="testEllipticHex_C0",
+                                 cmd=ellipticBin,
+                                 settings=ellipticSettings(element=12,
+                                                           nx=nx,
+                                                           ny=nx,
+                                                           nz=nx,
+                                                           degree=degree,
+                                                           data_file=ellipticData3D,
+                                                           dim=3,
+                                                           precon="MULTIGRID",
+                                                           multigrid_cheby_degree=chebdeg,
+                                                           multigrid_coarsening="HALFDEGREES",
+                                                          paralmond_cheby_degree=chebdeg,
+                                                           map_file=mapFile1,
+                                                           map_model=model,
+                                                           map_param_y=epsy),
+                                 referenceNorm=0.499999999969716)
         
   #clean up
   for file_name in os.listdir(testDir):
