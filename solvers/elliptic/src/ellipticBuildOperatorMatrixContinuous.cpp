@@ -107,7 +107,7 @@ void compressMatrix(mesh_t &mesh, ogs_t *ogsMasked,
       A.entries[cnt].val += A.entries[n].val;
     }
     else{
-      double tol = 0; // 1e-12;
+      double tol =  0;
       if(fabs(A.entries[n].val)>tol){
 	++cnt;
 	A.entries[cnt] = A.entries[n];

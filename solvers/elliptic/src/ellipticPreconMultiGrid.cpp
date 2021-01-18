@@ -146,7 +146,7 @@ void interpolatePhysicalNodes(mesh_t &meshI, mesh_t &meshO){
   
   // initialize cubature
   //meshO.CubatureSetup(meshI.cubN, meshI.cubatureType);
-  meshO.CubatureSetup(meshO.N+1, meshI.cubatureType); 
+  meshO.CubatureSetup(meshO.N, meshI.cubatureType); // was N+1
 }
 
 // Matrix-free p-Multigrid levels followed by AMG
