@@ -117,7 +117,7 @@ def main():
                                                       multigrid_coarsening="HALFDEGREES",
                                                       paralmond_cheby_degree=chebdeg,
                                                       map_file=mapFile1,
-                                                      map_mode=model,
+                                                      map_model=model,
                                                       map_param_y=epsy),
                             referenceNorm=0.499999999969716)
         

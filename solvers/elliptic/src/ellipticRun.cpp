@@ -213,8 +213,11 @@ void elliptic_t::Run(){
     mesh.settings.getSetting("BOX COORDINATE MAP PARAMETER Y", epsy);
     int chebyDegree = 1;
     settings.getSetting("MULTIGRID CHEBYSHEV DEGREE", chebyDegree);
+    int mapModel = 1;
+    settings.getSetting("BOX COORDINATE MAP MODEL", mapModel);
+      
     dlong NGlobal = ogsMasked->NgatherGlobal;
-    printf("%d, " hlongFormat ", %g, %d, %g, %g, %g, %d; global (dofs) N, dofs, elapsed, iterations, time per node, nodes*iterations/time, epsy, cheby degree, %s\n",
+    printf("%d, " hlongFormat ", %g, %d, %g, %g, %g, %d, %d; global (dofs) N, dofs, elapsed, iterations, time per node, nodes*iterations/time, epsy, cheby degree, map model%s\n",
            mesh.N,
 	   NGlobal,
            elapsedTime,
@@ -223,6 +226,7 @@ void elliptic_t::Run(){
 	   NGlobal*((dfloat)iter/elapsedTime),
 	   epsy,
 	   chebyDegree,
+	   mapModel,
            (char*) settings.getSetting("PRECONDITIONER").c_str());
   }
 
