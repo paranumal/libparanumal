@@ -106,23 +106,13 @@ ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
 
     ins->vDisc_c0 = settings.compareSetting("VELOCITY DISCRETIZATION", "CONTINUOUS") ? 1 : 0;
 
-    if (ins->vDisc_c0) {
-      uNlocal = ins->uSolver->ogsMasked->Ngather;
-      vNlocal = ins->vSolver->ogsMasked->Ngather;
-      if (mesh.dim == 3) wNlocal = ins->wSolver->ogsMasked->Ngather;
+    uNlocal = ins->uSolver->Ndofs;
+    vNlocal = ins->vSolver->Ndofs;
+    if (mesh.dim == 3) wNlocal = ins->wSolver->Ndofs;
 
-      uNhalo = ins->uSolver->ogsMasked->NgatherHalo;
-      vNhalo = ins->vSolver->ogsMasked->NgatherHalo;
-      if (mesh.dim == 3) wNhalo = ins->wSolver->ogsMasked->NgatherHalo;
-    } else {
-      uNlocal = mesh.Nelements*mesh.Np;
-      vNlocal = mesh.Nelements*mesh.Np;
-      if (mesh.dim == 3) wNlocal = mesh.Nelements*mesh.Np;
-
-      uNhalo = mesh.totalHaloPairs*mesh.Np;
-      vNhalo = mesh.totalHaloPairs*mesh.Np;
-      if (mesh.dim == 3) wNhalo = mesh.totalHaloPairs*mesh.Np;
-    }
+    uNhalo = ins->uSolver->Nhalo;
+    vNhalo = ins->vSolver->Nhalo;
+    if (mesh.dim == 3) wNhalo = ins->wSolver->Nhalo;
 
     ins->uLinearSolver = initialGuessSolver_t::Setup(uNlocal, uNhalo,
                                                     platform, *(ins->vSettings), mesh.comm);

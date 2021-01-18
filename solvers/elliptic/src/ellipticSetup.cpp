@@ -147,8 +147,10 @@ elliptic_t& elliptic_t::Setup(platform_t& platform, mesh_t& mesh,
   /* Preconditioner Setup */
   if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
     elliptic->Ndofs = elliptic->ogsMasked->Ngather*elliptic->Nfields;
+    elliptic->Nhalo = elliptic->ogsMasked->NgatherHalo*elliptic->Nfields;
   } else {
     elliptic->Ndofs = mesh.Nelements*mesh.Np*elliptic->Nfields;
+    elliptic->Nhalo = mesh.totalHaloPairs*mesh.Np*elliptic->Nfields;
   }
 
   if       (settings.compareSetting("PRECONDITIONER", "JACOBI"))

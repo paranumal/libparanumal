@@ -90,7 +90,7 @@ fpe_t& fpe_t::Setup(platform_t& platform, mesh_t& mesh,
                                              lambda, NBCTypes, BCType));
     fpe->tau = fpe->elliptic->tau;
 
-    fpe->linearSolver = linearSolver_t::Setup(Nlocal, Nhalo,
+    fpe->linearSolver = linearSolver_t::Setup(fpe->elliptic->Ndofs, fpe->elliptic->Nhalo,
                                               platform, *(fpe->ellipticSettings), mesh.comm);
   } else {
     //set penalty

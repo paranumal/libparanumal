@@ -29,19 +29,13 @@ SOFTWARE.
 void elliptic_t::Run(){
 
   //setup linear solver
-  dlong Nlocal;
-  dlong Nhalo;
   hlong NglobalDofs;
   if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
-    Nlocal = ogsMasked->Ngather*Nfields;
-    Nhalo  = ogsMasked->NgatherHalo*Nfields;
     NglobalDofs = ogsMasked->NgatherGlobal*Nfields;
   } else {
-    Nlocal = mesh.Nelements*mesh.Np*Nfields;
-    Nhalo  = mesh.totalHaloPairs*mesh.Np*Nfields;
     NglobalDofs = mesh.NelementsGlobal*mesh.Np*Nfields;
   }
-  linearSolver_t *linearSolver = linearSolver_t::Setup(Nlocal, Nhalo,
+  linearSolver_t *linearSolver = linearSolver_t::Setup(Ndofs, Nhalo,
                                                        platform, settings, mesh.comm);
 
   occa::properties kernelInfo = mesh.props; //copy base occa properties

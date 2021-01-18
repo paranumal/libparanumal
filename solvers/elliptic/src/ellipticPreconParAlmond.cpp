@@ -60,6 +60,13 @@ ParAlmondPrecon::ParAlmondPrecon(elliptic_t& _elliptic):
   free(null);
 
   parAlmond.Report();
+
+  //The csr matrix at the top level of parAlmond may have a larger
+  // halo region than the matrix free kernel. Adjust if necessary
+  dlong parAlmondNrows = parAlmond.getNumRows(0);
+  dlong parAlmondNcols = parAlmond.getNumCols(0);
+  dlong parAlmondNhalo = parAlmondNcols - parAlmondNrows;
+  elliptic.Nhalo = mymax(elliptic.Nhalo, parAlmondNhalo);
 }
 
 ParAlmondPrecon::~ParAlmondPrecon() {}
