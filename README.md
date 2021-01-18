@@ -19,7 +19,7 @@ If you use any part of libParanumal in your research project including variants 
       year = "2020",
       url = "https://github.com/paranumal/libparanumal",
       doi = "10.5281/zenodo.4004744",
-      note = "Release 0.3.1"
+      note = "Release 0.4.0"
       }
 </pre>
 
@@ -53,11 +53,13 @@ C. Time integrators:
 D. Iterative linear solvers:
   - Preconditioned (flexible) Conjugate Gradient method.
   - Non-blocking Preconditioned (flexible) Conjugate Gradient method.
+  - Preconditioned (Generalized) Minimal Residual Method.
+  - Improved initial guess techniques (History Projection/Extrapolation). 
 
 E. Elliptic solver:
   - Linear Poisson and screened Poisson potential solvers.
   - GPU-optimized matrix-vector products.
-  - p-type multigrid, algebraic multigrid, low-order SEMFEM, and Jacobi preconditioning.
+  - p-type multigrid, algebraic multigrid, low-order SEMFEM, Overlapping Additive Schwarz, and Jacobi preconditioning.
   - Matrix-free p-multigrid for fine levels of multigrid hierarchy.
 
 F. Heterogeneous accelerated flow solvers:
@@ -141,7 +143,7 @@ Each solver resides in its respective sub-directory in `solvers/`. Each solver s
 
 The MIT License (MIT)
 
-Copyright (c) 2017-2020 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2021 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -163,10 +165,35 @@ SOFTWARE.
 
 ### 10. References
 
-Discontinuous Galerkin Boltzmann (bns) solver: [publisher](https://doi.org/10.1016/j.jcp.2019.03.050), [arXiv version](https://arxiv.org/abs/1805.02082): `Karakus, A., Chalmers, N., Hesthaven, J.S. and Warburton, T., 2018. Discontinuous Galerkin Discretizations of the Boltzmann Equations in 2D: semi-analytic time stepping and absorbing boundary layers, Journal of Computational Physics, Volume 390, Pages 175–202.`
+Entroy Stable DG schemes for compressible Navier-Stokes (cns): [arXiv version](https://arxiv.org/abs/2011.11089): `Chan, J., Lin, Y. and Warburton, T., 2020. Entropy stable modal discontinuous Galerkin schemes and wall boundary conditions for the compressible Navier-Stokes equations.`
 
-Incompressible Navier-Stokes (discontinuous) Galerkin (ins) solver: [publisher](https://doi.org/10.1016/j.jcp.2019.04.010), [arXiv version](https://arxiv.org/abs/1801.00246): `Karakus, A., Chalmers, N., Swirydowicz, K. and Warburton, T., 2017.A GPU accelerated discontinuous Galerkin incompressible flow solver, Journal of Computational Physics, Volume 390, Pages 380–404, 2019.`
+Initial Guesses for Sequences of Linear Systems: [arXiv version](https://arxiv.org/abs/2009.10863): `Austin, A.P., Chalmers, N. and Warburton, T., 2020. Initial Guesses for Sequences of Linear Systems in a GPU-Accelerated Incompressible Flow Solver.`
+
+Portable Streaming kernels: [arXiv version](https://arxiv.org/abs/2009.10917): `Chalmers, N. and Warburton, T., 2020. Portable high-order finite element kernels I: Streaming Operations.`
+
+Massive parallel nodal DG simulator for (acoustics): [preprint](https://infoscience.epfl.ch/record/279868/files/hpc-20-0135.pdf): `Melander, A., Strøm, E., Pind, F., Engsig-Karup, A., Jeong, C.H., Warburton, T., Chalmers, N., and Hesthaven, J.S., 2020. Massive parallel nodal discontinuous Galerkin finite element method simulator for room acoustics.`
+
+Scalability of high-performance PDE solvers: [publisher](https://journals.sagepub.com/doi/10.1177/1094342020915762), [arXiv version](https://arxiv.org/abs/2004.06722): `Fischer, P., Min, M., Rathnayake, T., Dutta, S., Kolev, T., Dobrev, V., Camier, J.S., Kronbichler, M., Warburton, T., Swirydowicz, K. and Brown, J., 2020. Scalability of high-performance PDE solvers, 
+The International Journal of High Performance Computing Applications, Vol 34, Issue 5, Pages 562-586.`
+
+Discontinuous Galerkin Boltzmann (bns) solver: [publisher](https://doi.org/10.1016/j.jcp.2019.03.050), [arXiv version](https://arxiv.org/abs/1805.02082): `Karakus, A., Chalmers, N., Hesthaven, J.S. and Warburton, T., 2019. Discontinuous Galerkin Discretizations of the Boltzmann Equations in 2D: semi-analytic time stepping and absorbing boundary layers, Journal of Computational Physics, Volume 390, Pages 175–202.`
+
+Incompressible Navier-Stokes (discontinuous) Galerkin (ins) solver: [publisher](https://doi.org/10.1016/j.jcp.2019.04.010), [arXiv version](https://arxiv.org/abs/1801.00246): `Karakus, A., Chalmers, N., Swirydowicz, K. and Warburton, T., 2019. A GPU accelerated discontinuous Galerkin incompressible flow solver, Journal of Computational Physics, Volume 390, Pages 380–404, 2019.`
 
 Optimization of elliptic mat-vec operations for (elliptic) solver on hexes: [publisher](https://doi.org/10.1177/1094342018816368), [arXiv version](https://arxiv.org/abs/1711.00903): `Swirydowicz, K., Chalmers, N., Karakus, A., and Warburton, T. 2019. Acceleration of tensor-product operations for high-order finite element methods, The International Journal of High Performance Computing Applications, Vol 33, Issue 4.`
 
 Low-order preconditioning of triangular elements (elliptic precon): [publisher](https://epubs.siam.org/doi/abs/10.1137/17M1149444): `Chalmers, N. and Warburton, T. 2018. Low-order preconditioning of high-order triangular finite elements, SIAM Journal on Scientific Computing, Vol 40, Issue 6, Pages A4040-A4059`
+
+### 11. Technical Reports
+
+CEED MS35: [link](https://doi.org/10.5281/zenodo.4146400): `Kolev, T., Fischer, P.,  Abdelfattah, A.,  Barra, V.,  Beams, N.,  Brown, J., Camier, J.S., Chalmers, N.,  Dobrev, V., Kerkemeier, S., Lan, Y.H., Merzari, E.,  Min, M., Phillips, M., Ratnayaka, T., Rowe, K.,  Thompson, J., Tomboulides, A.,  Tomov, S., Tomov, V,. and Warburton, T., 2020. ECP Milestone Report: Support CEED-enabled ECP applications in their preparation for Aurora/Frontier, WBS 2.2.6.06, Milestone CEED-MS35.`
+
+CEED MS34: [link](https://doi.org/10.5281/zenodo.3860803): `Kolev, T., Fischer, P.,  Abdelfattah, A., Ananthan, S.,  Barra, V.,  Beams, N., Bleile, R.,  Brown, J., Carson, R,. Camier, J.S., Churchfield, M.,  Dobrev, V., Dongarra, J., Dudouit, Y., Karakus, A., Kerkemeier, S., Lan, Y., Medina, D., Merzari, E., Min, M., Parker, S., Ratnayaka, T.,  Smith, C., Sprague, M., Stitt, T.,  Thompson, J., Tomboulides, A.,  Tomov, S., Tomov, V., Vargas, A., Warburton, T., and Weiss, K., 2020. ECP Milestone Report: Improve performance and capabilities of CEED-enabled ECP applications on Summit/Sierra, WBS 2.2.6.06, Milestone CEED-MS34.`
+
+CEED MS29: [link](https://doi.org/10.5281/zenodo.3336419): `Shephard, M.,  Barra, V.,  Brown, J., Camier, J.S., Dudouit, Y., Fischer, P.,  Kolev, T., Medina, D., Min, M., Smith, C., Siboni, M.H., Thompson, J., and Warburton, T., 2019. ECP Milestone Report: Improved Support for Parallel Adaptive Simulation in CEED, WBS 2.2.6.06, Milestone CEED-MS29.`
+
+CEED MS25: [link](https://doi.org/10.5281/zenodo.2641315): `Brown, J., Abdelfattah, A.,  Barra, V., Dobrev, V., Dudouit, Y., Fischer, P.,  Kolev, T., Medina, D., Min, M., Ratnayaka, T., Smith, C., Thompson, J., Tomov, S., Tomov, V., and Warburton, T., 2019. ECP Milestone Report: Public release of CEED 2.0, WBS 2.2.6.06, Milestone CEED-MS25.`
+
+CEED MS23: [link](https://doi.org/10.5281/zenodo.2542358): `Min, M., Camier, J.S., Fischer, P., Karakus, A., Kerkemeier, S., Kolev, T., Lan, Y.H., Medina, D., Merzari, E., Obabko, A., Ratnayaka, T., Shaver, D., Tomboulides, A., Tomov, V., and Warburton, T., 2018. ECP Milestone Report: Engage second wave ECP/CEED applications, WBS 2.2. 6.06, Milestone CEED-MS23.`
+
+CEED MS20: [link](https://doi.org/10.5281/zenodo.2542349): `Tomov, S., Bello-Maldonado, P., Brown, J., Camier, J.S., Dobrev, V., Dongarra, J., Fischer, P., Haidar, A., Kolev, T., Merzari, E., Min, M., Obabko, A., Parker, S., Ratnayaka, T., Thompson, J., Abdelfattah, A., Tomov, V., and Warburton, T., 2018. ECP Milestone Report: Performance tuning of CEED software and first wave apps, WBS 2.2.6.06, Milestone CEED-MS20.`
