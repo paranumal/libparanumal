@@ -56,13 +56,13 @@ def main():
                     cmd=fpeBin,
                     settings=fpeSettings(element=3,data_file=fpeData2D,dim=2,
                                          time_integrator="EXTBDF3"),
-                    referenceNorm=0.684357054802834)
+                    referenceNorm=0.684376309866456)
 
   failCount += test(name="testTimeStepper_ssbdf3",
                     cmd=fpeBin,
                     settings=fpeSettings(element=3,data_file=fpeData2D,dim=2,
                                          time_integrator="SSBDF3"),
-                    referenceNorm=0.676721364985541)
+                    referenceNorm=0.67676248716463)
 
   failCount += test(name="testTimeStepper_ab3_pml",
                     cmd=bnsBin,

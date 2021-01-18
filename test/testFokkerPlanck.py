@@ -82,7 +82,7 @@ def main():
   failCount += test(name="testFpeTri",
                     cmd=fpeBin,
                     settings=fpeSettings(element=3,data_file=fpeData2D,dim=2),
-                    referenceNorm=0.684357054802834)
+                    referenceNorm=0.684376309866456)
 
   failCount += test(name="testFpeQuad",
                     cmd=fpeBin,
@@ -106,7 +106,7 @@ def main():
                     cmd=fpeBin,
                     settings=fpeSettings(element=3,data_file=fpeData2D,dim=2,
                                          advection_type="CUBATURE"),
-                    referenceNorm=0.684357054802834)
+                    referenceNorm=0.684376309866456)
 
   failCount += test(name="testFpeQuad_cub",
                     cmd=fpeBin,
@@ -133,7 +133,7 @@ def main():
                     cmd=fpeBin,
                     settings=fpeSettings(element=3,data_file=fpeData2D,dim=2,
                                          time_integrator="SSBDF3"),
-                    referenceNorm=0.676721364985541)
+                    referenceNorm=0.67676248716463)
 
   failCount += test(name="testFpeQuad_ss",
                     cmd=fpeBin,
@@ -161,7 +161,7 @@ def main():
                     settings=fpeSettings(element=3,data_file=fpeData2D,dim=2,
                                          time_integrator="SSBDF3",
                                          advection_type="CUBATURE"),
-                    referenceNorm=0.676721364985541)
+                    referenceNorm=0.676762487164629)
 
   failCount += test(name="testFpeQuad_ss_cub",
                     cmd=fpeBin,
