@@ -27,6 +27,12 @@ SOFTWARE.
 #ifndef PLATFORM_HPP
 #define PLATFORM_HPP
 
+#define LIBP_MAJOR_VERSION 0
+#define LIBP_MINOR_VERSION 4
+#define LIBP_PATCH_VERSION 0
+#define LIBP_VERSION       00400
+#define LIBP_VERSION_STR   "0.4.0"
+
 #include "core.hpp"
 #include "settings.hpp"
 #include "linAlg.hpp"
@@ -65,7 +71,7 @@ public:
       std::cout << "|_|_|_.__/|_|   \\__,_|_|  \\__,_|_| |_|\\__,_|_| |_| |_|\\__,_|_|\n";
       std::cout << "\033[0m";
       std::cout << "\n";
-      std::cout << "Version: 0.3.1\n";
+      std::cout << "Version: " LIBP_VERSION_STR " \n";
       std::cout << "Contributing developers: Noel Chalmers, Ali Karakus, Kasia Swirydowicz,\n";
       std::cout << "                         Anthony Austin, & Tim Warburton\n";
       std::cout << "\n";
