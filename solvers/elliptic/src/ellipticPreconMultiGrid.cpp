@@ -354,10 +354,9 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
 
     if(meshF.N!=mesh.N){
       //    interpolatePhysicalNodes(mesh, meshF);
-      meshF.CubatureSetup(meshF.N, mesh.cubatureType); // was N
+      meshF.CubatureSetup(meshF.N, "GLL"); // was N
     }else{
-      meshF.CubatureSetup(mesh.cubN, mesh.cubatureType); // was N
-      meshF.o_cubggeo.copyFrom(mesh.o_cubggeo);
+      meshF.CubatureSetup(mesh.cubN, "GLL"); // was N
     }
 #if 0
     printf("CUB INTERP=\n");

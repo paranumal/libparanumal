@@ -53,7 +53,7 @@ def ellipticSettings(rcformat="2.0", data_file=ellipticData3D,
                      paralmond_strength="RUGESTUBEN",
                      paralmond_aggregation="SMOOTHED",
                      paralmond_smoother="CHEBYSHEV",
-                     paralmond_cheby_degree=1,
+                     paralmond_cheby_degree=2,
                      output_to_file="FALSE"):
   return [setting_t("FORMAT", rcformat),
           setting_t("DATA FILE", data_file),
@@ -103,7 +103,6 @@ def main():
   for degree in range(1,9): 
     for epsy in np.arange(0.1,1.1,0.1):
       for model in range(1,4,1):
-        chebdeg = 1;
         maxNx = math.floor( (6.e6/( (degree+1)**3 ))**(0.333));
         maxNx = max(25,min(40,max(maxNx,6)));
         print("degree=", degree, "maxNx=", maxNx);
@@ -119,9 +118,7 @@ def main():
                                                            data_file=ellipticData3D,
                                                            dim=3,
                                                            precon="MULTIGRID",
-                                                           multigrid_cheby_degree=chebdeg,
                                                            multigrid_coarsening="HALFDEGREES",
-                                                          paralmond_cheby_degree=chebdeg,
                                                            map_file=mapFile1,
                                                            map_model=model,
                                                            map_param_y=epsy),

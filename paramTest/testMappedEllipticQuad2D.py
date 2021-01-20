@@ -42,6 +42,7 @@ def ellipticSettings(rcformat="2.0", data_file=ellipticData2D,
                      degree=4, thread_model=device, platform_number=0, device_number=1,
                      Lambda=0.0,
                      discretization="CONTINUOUS",
+                     discretization_quadrature="CUBATURE",
                      linear_solver="PCG",
                      precon="MULTIGRID",
                      multigrid_smoother="CHEBYSHEV",
@@ -50,7 +51,7 @@ def ellipticSettings(rcformat="2.0", data_file=ellipticData2D,
                      paralmond_strength="RUGESTUBEN",
                      paralmond_aggregation="SMOOTHED",
                      paralmond_smoother="CHEBYSHEV",
-                     paralmond_cheby_degree=1,
+                     paralmond_cheby_degree=2,
                      output_to_file="FALSE"):
   return [setting_t("FORMAT", rcformat),
           setting_t("DATA FILE", data_file),
@@ -72,6 +73,7 @@ def ellipticSettings(rcformat="2.0", data_file=ellipticData2D,
           setting_t("PLATFORM NUMBER", platform_number),
           setting_t("DEVICE NUMBER", device_number),
           setting_t("DISCRETIZATION", discretization),
+          setting_t("ELLIPTIC INTEGRATION", discretization_quadrature),
           setting_t("LINEAR SOLVER", linear_solver),
           setting_t("LAMBDA", Lambda),
           setting_t("PRECONDITIONER", precon),
@@ -97,27 +99,24 @@ def main():
   for degree in range(1,10):
     for epsy in np.arange(0.1,1.1,0.1):
       for model in range(1,4,1):
-        for chebdeg in range(1,2,1):
-          maxNx = math.floor( (4.e6/( (degree+1)**2 ))**(0.5));
-          maxNx = min(200,max(maxNx,6));
-          print("degree=", degree, "maxNx=", maxNx);
-          for nx in range(6,maxNx,12):
-            failCount += test(name="testEllipticQuad_C0",
-                              cmd=ellipticBin,
-                              settings=ellipticSettings(element=4,
-                                                        nx=nx,
-                                                        ny=nx,
-                                                        degree=degree,
-                                                        data_file=ellipticData2D,
-                                                        dim=2,
-                                                        precon="MULTIGRID",
-                                                        multigrid_cheby_degree=chebdeg,
-                                                        paralmond_cheby_degree=chebdeg,
-                                                        map_file=mapFile1,
-                                                        map_model=model,
-                                                        map_param_y=epsy),
-                          referenceNorm=0.499999999969716)
-      
+        maxNx = math.floor( (4.e6/( (degree+1)**2 ))**(0.5));
+        maxNx = min(200,max(maxNx,6));
+        print("degree=", degree, "maxNx=", maxNx);
+        for nx in range(6,maxNx,12):
+          failCount += test(name="testEllipticQuad_C0",
+                            cmd=ellipticBin,
+                            settings=ellipticSettings(element=4,
+                                                      nx=nx,
+                                                      ny=nx,
+                                                      degree=degree,
+                                                      data_file=ellipticData2D,
+                                                      dim=2,
+                                                      precon="MULTIGRID",
+                                                      map_file=mapFile1,
+                                                      map_model=model,
+                                                      map_param_y=epsy),
+                            referenceNorm=0.499999999969716)
+          
   #clean up
   for file_name in os.listdir(testDir):
     if file_name.endswith('.vtu'):

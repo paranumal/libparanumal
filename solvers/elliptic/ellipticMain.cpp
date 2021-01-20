@@ -103,13 +103,10 @@ int main(int argc, char **argv){
   mesh_t& mesh = mesh_t::Setup(platform, meshSettings, comm);
   
   // map coords
-  if(mesh.elementType==HEXAHEDRA || mesh.elementType==QUADRILATERALS){
-    if(mesh.elementType==HEXAHEDRA){
-      ((meshHex3D&)mesh).CoordinateTransform(mesh.N, "GLL");
-    }else{
-      ((meshQuad2D&)mesh).CoordinateTransform(mesh.N, "GLL");
-    }
-  }
+  if(mesh.elementType==HEXAHEDRA)
+    ((meshHex3D&)mesh).CoordinateTransform(mesh.N+1, "GL");
+  if(mesh.elementType==QUADRILATERALS)
+    ((meshQuad2D&)mesh).CoordinateTransform(mesh.N+1, "GL");
   
   dfloat lambda = 0.0;
   ellipticSettings.getSetting("LAMBDA", lambda);
