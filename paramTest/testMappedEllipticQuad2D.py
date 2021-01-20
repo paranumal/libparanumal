@@ -40,15 +40,15 @@ def ellipticSettings(rcformat="2.0", data_file=ellipticData2D,
                      map_param_y="1.0",
                      map_model="1",
                      degree=4, thread_model=device, platform_number=0, device_number=1,
-                     Lambda=1.0,
+                     Lambda=0.0,
                      discretization="CONTINUOUS",
                      linear_solver="PCG",
                      precon="MULTIGRID",
                      multigrid_smoother="CHEBYSHEV",
                      multigrid_cheby_degree=1,
                      paralmond_cycle="VCYCLE",
-                     paralmond_strength="SYMMETRIC",
-                     paralmond_aggregation="UNSMOOTHED",
+                     paralmond_strength="RUGESTUBEN",
+                     paralmond_aggregation="SMOOTHED",
                      paralmond_smoother="CHEBYSHEV",
                      paralmond_cheby_degree=1,
                      output_to_file="FALSE"):
@@ -73,6 +73,7 @@ def ellipticSettings(rcformat="2.0", data_file=ellipticData2D,
           setting_t("DEVICE NUMBER", device_number),
           setting_t("DISCRETIZATION", discretization),
           setting_t("LINEAR SOLVER", linear_solver),
+          setting_t("LAMBDA", Lambda),
           setting_t("PRECONDITIONER", precon),
           setting_t("MULTIGRID SMOOTHER", multigrid_smoother),
           setting_t("MULTIGRID CHEBYSHEV DEGREE", multigrid_cheby_degree),
@@ -100,7 +101,7 @@ def main():
           maxNx = math.floor( (4.e6/( (degree+1)**2 ))**(0.5));
           maxNx = min(200,max(maxNx,6));
           print("degree=", degree, "maxNx=", maxNx);
-          for nx in range(6,maxNx,6):
+          for nx in range(6,maxNx,12):
             failCount += test(name="testEllipticQuad_C0",
                               cmd=ellipticBin,
                               settings=ellipticSettings(element=4,

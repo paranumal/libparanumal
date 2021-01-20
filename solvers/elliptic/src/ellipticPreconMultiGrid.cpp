@@ -73,6 +73,20 @@ void interpolateFieldHex3D(mesh_t &mesh, int outNq, dfloat *outr, dfloat *outs, 
 			     inNq, mesh.r,
 			     outNq, outr,
 			     I[0]);
+
+#if 0
+  printf("mesh.r[\n");
+  for(int i=0;i<inNq;++i){
+    printf("%g,", mesh.r[i]);
+  }
+  printf("];\n");
+
+  printf("outr[\n");
+  for(int i=0;i<outNq;++i){
+    printf("%g,", outr[i]);
+  }
+  printf("];\n");
+#endif
   
   for(dlong e=0;e<mesh.Nelements;++e){
     // interpolate in 't'
@@ -110,6 +124,26 @@ void interpolateFieldHex3D(mesh_t &mesh, int outNq, dfloat *outr, dfloat *outs, 
 	}
       }
     }
+#if 0
+    if(e==0){
+      printf("IN:\n");
+      for(int k=0;k<inNq;++k){
+	for(int j=0;j<inNq;++j){
+	  for(int i=0;i<inNq;++i){
+	    printf("%d,%d,%d => %g\n", i,j,k, inx[e*inNq*inNq*inNq + k*inNq*inNq + j*inNq + i]);
+	  }
+	}
+      }
+      printf("OUT:\n");
+      for(int k=0;k<outNq;++k){
+	for(int j=0;j<outNq;++j){
+	  for(int i=0;i<outNq;++i){
+	    printf("%d,%d,%d => %g\n", i,j,k, outx[e*outNq*outNq*outNq + k*outNq*outNq + j*outNq + i]);
+	  }
+	}
+      }
+    }
+#endif
   }
 }
     
@@ -126,6 +160,8 @@ void interpolateField(mesh_t &mesh, int outNq, dfloat *outr, dfloat *outs, dfloa
 
 void interpolatePhysicalNodes(mesh_t &meshI, mesh_t &meshO){
 
+  printf("interpolating physical nodes from N=%d to %d\n", meshI.N, meshO.N);
+  
   // interpolate coordinates from degree N mesh to new mesh
   if(1){
     interpolateField(meshI, meshO.Nq, meshO.r, meshO.s, meshO.t, meshI.x, meshO.x);
@@ -143,10 +179,45 @@ void interpolatePhysicalNodes(mesh_t &meshI, mesh_t &meshO){
   meshO.o_ggeo.copyFrom(meshO.ggeo);
   meshO.o_sgeo.copyFrom(meshO.sgeo);
   meshO.o_vgeo.copyFrom(meshO.vgeo);
-  
+
   // initialize cubature
   //meshO.CubatureSetup(meshI.cubN, meshI.cubatureType);
-  meshO.CubatureSetup(meshO.N, meshI.cubatureType); // was N+1
+  meshO.CubatureSetup(meshO.N+1, "GL"); // meshI.cubatureType); // was N
+
+#if 0
+  for(dlong e=0;e<meshI.Nelements;++e){
+    if(e==0)
+      for(int k=0;k<meshI.cubNq;++k){
+	for(int j=0;j<meshI.cubNq;++j){
+	  for(int i=0;i<meshI.cubNq;++i){
+	    printf("IN ijk=%d,%d,%d: ggeo=[", i,j,k);
+	    for(int g=0;g<meshI.Nggeo;++g){
+	      dlong base = e*meshI.cubNp*meshI.Nggeo+k*meshI.cubNq*meshI.cubNq+j*meshI.cubNq+i;
+	      printf("%g, ",  meshI.cubggeo[base + g*meshI.cubNp]/meshI.cubggeo[base+GWJID*meshI.cubNp]);
+	    }
+	    printf("];\n");
+	  }
+	}
+      }
+  }
+  
+  for(dlong e=0;e<meshO.Nelements;++e){
+    if(e==0)
+      for(int k=0;k<meshO.cubNq;++k){
+	for(int j=0;j<meshO.cubNq;++j){
+	  for(int i=0;i<meshO.cubNq;++i){
+	    printf("OUT ijk=%d,%d,%d: ggeo=[", i,j,k);
+	    for(int g=0;g<meshO.Nggeo;++g){
+	      dlong base = e*meshO.cubNp*meshO.Nggeo+k*meshO.cubNq*meshO.cubNq+j*meshO.cubNq+i;
+	      printf("%g, ",  meshO.cubggeo[base + g*meshO.cubNp]/meshO.cubggeo[base+GWJID*meshO.cubNp]);
+	    }
+	    printf("];\n");
+	  }
+	}
+      }
+  }
+#endif
+  
 }
 
 // Matrix-free p-Multigrid levels followed by AMG
@@ -188,7 +259,9 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   // reset operator
   occa::properties kernelInfo = mesh.props; //copy base occa properties (update in CubatureSetup)
 
-  printf("Rebuilding elliptic Ax\n");
+  //  printf("Rebuilding elliptic Ax\n");
+  //  std::cout << kernelInfo << std::endl;
+  
   if(mesh.elementType==HEXAHEDRA){
     elliptic.partialCubatureAxKernel =
       elliptic.platform.buildKernel(DELLIPTIC "/okl/ellipticCubatureAxHex3D.okl",
@@ -212,9 +285,9 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
       if(meshF.N!=mesh.N){
 	interpolatePhysicalNodes(mesh, meshF);
 	// import geofacs from fine mesh if cubature matches
-	if(meshF.cubN == mesh.cubN){
-	  meshF.o_cubggeo.copyFrom(mesh.o_cubggeo);
-	}
+	//	if(meshF.cubN == mesh.cubN){
+	//	  meshF.o_cubggeo.copyFrom(mesh.o_cubggeo);
+	//	}
       }
     }
     
@@ -274,20 +347,37 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
     
   //build matrix at degree 1
   mesh_t &meshF = mesh.SetupNewDegree(minN);
-  
+
+#if 1
   // reset geometry and quadrature to match finest grid
   if(mesh.elementType==HEXAHEDRA || mesh.elementType==QUADRILATERALS){
 
-    interpolatePhysicalNodes(mesh, meshF);
-    
-    // preserve original degree N isoparametric map  if cubature matches
-    if(meshF.cubN == mesh.cubN){
+    if(meshF.N!=mesh.N){
+      //    interpolatePhysicalNodes(mesh, meshF);
+      meshF.CubatureSetup(meshF.N, mesh.cubatureType); // was N
+    }else{
+      meshF.CubatureSetup(mesh.cubN, mesh.cubatureType); // was N
       meshF.o_cubggeo.copyFrom(mesh.o_cubggeo);
     }
+#if 0
+    printf("CUB INTERP=\n");
+    for(int j=0;j<meshF.cubNq;++j){
+      for(int i=0;i<meshF.Nq;++i){
+	printf("%g ", meshF.cubInterp[j*meshF.Nq+i]);
+      }
+      printf("\n");
+    }
+#endif
+    // preserve original degree N isoparametric map  if cubature matches
+    //    if(meshF.cubN == mesh.cubN){
+    //      meshF.o_cubggeo.copyFrom(mesh.o_cubggeo);
+    //    }
   }
+#endif
   
   elliptic_t &ellipticF = elliptic.SetupNewDegree(meshF);
-
+  occa::properties kernelInfoF = meshF.props; //copy base occa properties (update in CubatureSetup)
+  
   //  void plotGeometry(elliptic_t &elliptic, int num);
   //  plotGeometry(ellipticF, minN);
   

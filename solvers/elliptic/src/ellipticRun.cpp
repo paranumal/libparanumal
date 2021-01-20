@@ -124,6 +124,7 @@ void elliptic_t::Run(){
                 o_r);
 
 #if 1
+  srand48(12345);
   dfloat *tmpr = (dfloat*) calloc(mesh.Np*mesh.Nelements, sizeof(dfloat));
   for(dlong e=0;e<mesh.Nelements;++e){
     for(dlong n=0;n<mesh.Np;++n){

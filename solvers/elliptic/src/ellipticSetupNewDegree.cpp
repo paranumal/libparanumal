@@ -122,6 +122,7 @@ elliptic_t& elliptic_t::SetupNewDegree(mesh_t& meshC){
                                             kernelInfo);
 
     if(mesh.elementType==HEXAHEDRA || mesh.elementType==QUADRILATERALS){
+      //      std::cout << "REBUILD Partial Cubature AX Kernel with: " << kernelInfo << std::endl;
       sprintf(fileName,  DELLIPTIC "/okl/ellipticCubatureAx%s.okl", suffix);
       sprintf(kernelName, "ellipticPartialCubatureAx%s", suffix);
 

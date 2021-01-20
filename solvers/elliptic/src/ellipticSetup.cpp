@@ -130,11 +130,11 @@ elliptic_t& elliptic_t::Setup(platform_t& platform, mesh_t& mesh,
                                      kernelInfo);
 
 
-
     if(mesh.elementType==HEXAHEDRA || mesh.elementType==QUADRILATERALS){
+      //      printf("REBUILDING cubature Ax\n");
       sprintf(fileName,  DELLIPTIC "/okl/ellipticCubatureAx%s.okl", suffix);
       sprintf(kernelName, "ellipticPartialCubatureAx%s", suffix);
-
+      
       elliptic->partialCubatureAxKernel = platform.buildKernel(fileName, kernelName,
 							       kernelInfo);
     }

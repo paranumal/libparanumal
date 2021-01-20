@@ -47,7 +47,7 @@ void meshQuad2D::CoordinateTransform(int _cubN, const char *_cubatureType){
 
     int coordMapModel = 1;
     settings.getSetting("BOX COORDINATE MAP MODEL", coordMapModel);
-    props["defines/p_mapModel"] = coordMapModel;
+    kernelInfo["defines/p_mapModel"] = coordMapModel;
     
     // build kernel
     occa::kernel coordMapKernel = platform.buildKernel(mapFileName, "coordMapKernel", kernelInfo);

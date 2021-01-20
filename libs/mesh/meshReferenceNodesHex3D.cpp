@@ -79,6 +79,6 @@ void meshHex3D::ReferenceNodes(int N_){
   EquispacedEToVHex3D(plotN, plotEToV);
 
   plotInterp = (dfloat *) malloc(Np*plotNp*sizeof(dfloat));
-  InterpolationMatrixHex3D(N, Np, r, s, t, plotNp, plotR, plotS, plotT, plotInterp);
+  //  InterpolationMatrixHex3D(N, Np, r, s, t, plotNp, plotR, plotS, plotT, plotInterp);
 }
 

@@ -297,7 +297,12 @@ void MGLevel::SetupSmoother() {
   dfloat *invDiagA = (dfloat*) calloc(mesh.Np*mesh.Nelements, sizeof(dfloat));
   //  elliptic.BuildOperatorDiagonal(diagA);
   ellipticBuildOperatorConsistentDiagonal(elliptic, diagA);
-
+#if 0
+  for(int n=0;n<10;++n){
+    printf("diag[%d]=%g\n", n, diagA[n]);
+  }
+#endif
+  
   for (dlong n=0;n<mesh.Nelements*mesh.Np;n++)
     invDiagA[n] = 1.0/diagA[n];
 

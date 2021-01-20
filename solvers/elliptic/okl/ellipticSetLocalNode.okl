@@ -34,7 +34,7 @@ SOFTWARE.
 
   for(dlong e=0;e<Nelements;++e;@outer(0)){
     for(int n=0;n<Np;++n;@inner(0)){
-      o_q[e*Np+n] = (n==nout) ? val:0;
+      o_q[e*Np+n] = ((n==nout) ? val:0);
     }
   }
 }

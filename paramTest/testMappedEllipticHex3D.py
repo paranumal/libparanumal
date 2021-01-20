@@ -41,16 +41,17 @@ def ellipticSettings(rcformat="2.0", data_file=ellipticData3D,
                      map_param_y="1.0",
                      map_model="1",
                      degree=4, thread_model=device, platform_number=0, device_number=0,
-                     Lambda=1.0,
+                     Lambda=0.0,
                      discretization="CONTINUOUS",
+                     discretization_quadrature="GLL",
                      linear_solver="PCG",
                      precon="MULTIGRID",
                      multigrid_smoother="CHEBYSHEV",
                      multigrid_cheby_degree=1,
                      multigrid_coarsening="HALFDEGREES",
                      paralmond_cycle="VCYCLE",
-                     paralmond_strength="SYMMETRIC",
-                     paralmond_aggregation="UNSMOOTHED",
+                     paralmond_strength="RUGESTUBEN",
+                     paralmond_aggregation="SMOOTHED",
                      paralmond_smoother="CHEBYSHEV",
                      paralmond_cheby_degree=1,
                      output_to_file="FALSE"):
@@ -75,7 +76,9 @@ def ellipticSettings(rcformat="2.0", data_file=ellipticData3D,
           setting_t("PLATFORM NUMBER", platform_number),
           setting_t("DEVICE NUMBER", device_number),
           setting_t("DISCRETIZATION", discretization),
+          setting_t("ELLIPTIC INTEGRATION", discretization_quadrature),
           setting_t("LINEAR SOLVER", linear_solver),
+          setting_t("LAMBDA", Lambda),
           setting_t("PRECONDITIONER", precon),
           setting_t("MULTIGRID SMOOTHER", multigrid_smoother),
           setting_t("MULTIGRID COARSENING", multigrid_coarsening),
@@ -101,8 +104,10 @@ def main():
     for epsy in np.arange(0.1,1.1,0.1):
       for model in range(1,4,1):
         chebdeg = 1;
-      
-        for nx in range(6,43,6):
+        maxNx = math.floor( (6.e6/( (degree+1)**3 ))**(0.333));
+        maxNx = max(25,min(40,max(maxNx,6)));
+        print("degree=", degree, "maxNx=", maxNx);
+        for nx in range(6,maxNx,6):
           failCount += testHex3D(name="testEllipticHex_C0",
                                  cmd=ellipticBin,
                                  settings=ellipticSettings(element=12,
@@ -110,6 +115,7 @@ def main():
                                                            ny=nx,
                                                            nz=nx,
                                                            degree=degree,
+                                                           discretization_quadrature="CUBATURE",
                                                            data_file=ellipticData3D,
                                                            dim=3,
                                                            precon="MULTIGRID",

@@ -141,7 +141,7 @@ void elliptic_t::BuildOperatorMatrixContinuous(parAlmond::parCOO& A) {
   double tic0 = MPI_Wtime();
 
 #if 1
-  nnzLocal = ellipticBuildOperatorConsistentMatrix(*this, AL);
+  ellipticBuildOperatorConsistentMatrix(*this, AL);
 #else
   switch(mesh.elementType){
   case TRIANGLES:
@@ -161,11 +161,41 @@ void elliptic_t::BuildOperatorMatrixContinuous(parAlmond::parCOO& A) {
     BuildOperatorMatrixContinuousHex3D(AL); break;
   }
 #endif
+
+#if 0
+  for(dlong e=0;e<mesh.Nelements;++e){
+    for(int n=0;n<mesh.Np;++n){
+      for(int m=0;m<mesh.Np;++m){
+	dlong cnt = e*mesh.Np*mesh.Np + n*mesh.Np + m;
+	if(e==10){
+	  printf("(%lld,%lld,%g) ", AL[cnt].row, AL[cnt].col, AL[cnt].val);
+	}
+      }
+      if(e==10){
+	printf("\n");
+      }
+    }
+  }
+#endif
+  
+  compressMatrix(mesh, ogsMasked, AL, nnzLocal, A);
+
+#if 0
+  printf("nnzLocal=%d\n", nnzLocal);
+  printf("A.nnz=%d\n", A.nnz);
+  for(int n=0;n<10;++n){
+    printf("A[%d] = (%lld,%lld,%g)\n",
+	   n,
+	   A.entries[n].row,
+	   A.entries[n].col,
+	   A.entries[n].val);
+  }
+#endif
   
   double tic1 = MPI_Wtime();
   printf("Local matrices took %g secs on HOST\n", tic1-tic0);
   
-  compressMatrix(mesh, ogsMasked, AL, nnzLocal, A);
+
 }
 
 void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO::nonZero_t *AL) {

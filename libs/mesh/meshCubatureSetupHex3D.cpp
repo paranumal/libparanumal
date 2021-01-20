@@ -29,7 +29,7 @@ SOFTWARE.
 
 void meshHex3D::CubatureSetup(){
 
-  CubatureSetup(N, "GL");
+  CubatureSetup(N+1, "GL");
 
 }
 
@@ -68,6 +68,17 @@ void meshHex3D::CubatureSetup(int _cubN, const char *_cubatureType){
   cubD = (dfloat *) malloc(cubNq*cubNq*sizeof(dfloat));
   Dmatrix1D(cubN, cubNq, cubr, cubNq, cubr, cubD);
 
+
+#if 0
+  printf("Dmatrix on host: ");
+  for(int j=0;j<cubNq;++j){
+    for(int i=0;i<cubNq;++i){
+      printf("%g ", cubD[j*cubNq+i]);
+    }
+    printf("\n");
+  }
+#endif
+  
   // weak cubature derivative cubPDT = cubProject * cubD^T
   cubPDT  = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
   CubatureWeakDmatrix1D(Nq, cubNq, cubProject, cubD, cubPDT);
@@ -287,9 +298,24 @@ void meshHex3D::CubatureSetup(int _cubN, const char *_cubatureType){
           cubggeo[base + cubNp*G22ID] = JW*(tx*tx + ty*ty + tz*tz);
           cubggeo[base + cubNp*GWJID] = JW;
 
-	  //	  printf("G = [%g,%g,%g;%g,%g,%g;%g,%g,%g] + JW=%g\n",
-	  //		 rx, ry, rz, sx, sy, sz, tx, ty, tz, JW);
-	  
+#if 0
+	  if(e==0){
+#if 0
+	    printf("N=%d, cubN=%d, G = [%g,%g,%g;%g,%g,%g;%g,%g,%g] + JW=%g\n",
+		   N, cubN, JW*rx, JW*ry, JW*rz, JW*sx, JW*sy, JW*sz, JW*tx, JW*ty, JW*tz, JW);
+#endif
+	    printf("N=%d, cubN=%d, GG=[%g,%g,%g; *,%g,%g; *,*,%g\n",
+		   N,
+		   cubN,
+		   cubggeo[base+cubNp*G00ID],
+		   cubggeo[base+cubNp*G01ID],
+		   cubggeo[base+cubNp*G02ID],
+		   cubggeo[base+cubNp*G11ID],
+		   cubggeo[base+cubNp*G12ID],
+		   cubggeo[base+cubNp*G22ID]);
+	    
+	  }
+#endif	  
 	}
       }
     }
@@ -387,6 +413,9 @@ void meshHex3D::CubatureSetup(int _cubN, const char *_cubatureType){
     platform.malloc(Nelements*Nfaces*cubNq*cubNq*Nsgeo*sizeof(dfloat),
         cubsgeo);
 
+  //
+  printf("BUILDING o_cubggeo for degree %d with cub degree %d\n", N, cubN);
+  
   o_cubggeo =
     platform.malloc(Nelements*Nggeo*cubNp*sizeof(dfloat),
         cubggeo);
