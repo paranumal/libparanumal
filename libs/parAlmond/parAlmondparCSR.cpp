@@ -208,8 +208,8 @@ parCSR::parCSR(parCOO& A):       // number of nonzeros on this rank
   //fill the CSR matrices
   diag.cols = (dlong *)  calloc(diag.nnz, sizeof(dlong));
   offd.cols = (dlong *)  calloc(offd.nnz, sizeof(dlong));
-  diag.vals = (dfloat *) calloc(diag.nnz, sizeof(dfloat));
-  offd.vals = (dfloat *) calloc(offd.nnz, sizeof(dfloat));
+  diag.vals = (pfloat *) calloc(diag.nnz, sizeof(pfloat));
+  offd.vals = (pfloat *) calloc(offd.nnz, sizeof(pfloat));
   dlong diagCnt = 0;
   dlong offdCnt = 0;
   for (dlong n=0;n<A.nnz;n++) {
@@ -512,7 +512,7 @@ void parCSR::syncToDevice() {
 
     if (diag.nnz) {
       diag.o_cols = platform.malloc(diag.nnz*sizeof(dlong),   diag.cols);
-      diag.o_vals = platform.malloc(diag.nnz*sizeof(dfloat),  diag.vals);
+      diag.o_vals = platform.malloc(diag.nnz*sizeof(pfloat),  diag.vals);
     }
 
     if (diagA) {
@@ -526,7 +526,7 @@ void parCSR::syncToDevice() {
     }
     if (offd.nnz) {
       offd.o_cols = platform.malloc(offd.nnz*sizeof(dlong),   offd.cols);
-      offd.o_vals = platform.malloc(offd.nnz*sizeof(dfloat),  offd.vals);
+      offd.o_vals = platform.malloc(offd.nnz*sizeof(pfloat),  offd.vals);
     }
   }
 }

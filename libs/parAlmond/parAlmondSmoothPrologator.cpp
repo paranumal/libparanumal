@@ -281,6 +281,7 @@ parCSR *smoothProlongator(parCSR *A, parCSR *T){
 
 
   //sort entries by the row and col
+  printf("sorting nnzTotal=%d\n", nnzTotal);
   qsort(Ptmp, nnzTotal, sizeof(parCOO::nonZero_t), compareNonZeroByRow);
 
   //count total number of nonzeros;

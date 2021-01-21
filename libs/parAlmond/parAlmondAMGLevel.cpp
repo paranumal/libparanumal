@@ -92,6 +92,7 @@ void amgLevel::setupSmoother(){
     lambda = (4./3.)/A->rho;
   } else if (stype == CHEBYSHEV) {
     lambda1 = A->rho;
+    //    lambda0 = A->rho/10.;
     lambda0 = A->rho/10.;
   }
 }

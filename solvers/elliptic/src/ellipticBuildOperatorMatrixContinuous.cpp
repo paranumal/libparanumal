@@ -140,7 +140,7 @@ void elliptic_t::BuildOperatorMatrixContinuous(parAlmond::parCOO& A) {
 
   double tic0 = MPI_Wtime();
 
-#if 1
+#if 0
   ellipticBuildOperatorConsistentMatrix(*this, AL);
 #else
   switch(mesh.elementType){

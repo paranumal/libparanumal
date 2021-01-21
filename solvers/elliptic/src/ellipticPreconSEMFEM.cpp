@@ -25,6 +25,8 @@ SOFTWARE.
 */
 
 #include "ellipticPrecon.hpp"
+#include "mesh/meshDefines2D.h"
+#include "mesh/meshDefines3D.h"
 
 // Cast problem into spectrally-equivalent N=1 FEM space and precondition with AMG
 void SEMFEMPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
@@ -76,7 +78,14 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
   int *faceNodes = NULL;
   hlong *globalIds = NULL;
   femMesh = mesh.SetupSEMFEM(&globalIds, &Nfp, &faceNodes);
-
+#if 0
+  printf("femMesh elementType %d\n", femMesh->elementType);
+  femMesh->ConnectFaceNodes();
+  femMesh->SurfaceGeometricFactors();
+  femMesh->ParallelConnectNodes();
+  femMesh->CubatureSetup(femMesh->N, "GLL"); 
+#endif
+  
   //use the BCs to make a maskedGlobalIds array
   dlong Ntotal = mesh.NpFEM*mesh.Nelements;
   hlong* maskedGlobalIds = (hlong *) calloc(Ntotal,sizeof(hlong));
@@ -170,6 +179,9 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
                                elliptic.settings, elliptic.lambda);
   femElliptic->ogsMasked = FEMogs; //only for getting Ngather when building matrix
 
+  //  void plotGeometry(elliptic_t &elliptic, int num);
+  //  plotGeometry(*femElliptic, 0);
+  
   // number of degrees of freedom on this rank (after gathering)
   hlong Ngather = FEMogs->Ngather;
 
@@ -208,6 +220,34 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
   }
   free(localIds); free(maskedGlobalNumbering);
 
+#if 0
+  if(femMesh->elementType==HEXAHEDRA || femMesh->elementType==QUADRILATERALS){
+    char fileName[BUFSIZ], kernelName[BUFSIZ];
+    char *suffix;
+    if(femMesh->elementType==QUADRILATERALS){
+      suffix = strdup("Quad2D");
+    } else if(femMesh->elementType==HEXAHEDRA)
+      suffix = strdup("Hex3D");
+
+    occa::properties kernelInfo = femMesh->props;
+    
+    kernelInfo["defines/" "p_Nq"]= femMesh->Nq;
+    kernelInfo["defines/" "p_cubNq"]= femMesh->cubNq;
+    kernelInfo["defines/" "p_Np"]= femMesh->Np;
+    kernelInfo["defines/" "p_cubNp"]= femMesh->cubNp;
+    kernelInfo["defines/" "p_Nggeo"]= femMesh->Nggeo;
+    kernelInfo["defines/" "p_GWJID"]= GWJID;
+    kernelInfo["defines/" "p_G00ID"]= G00ID;
+    kernelInfo["defines/" "p_G01ID"]= G01ID;
+    kernelInfo["defines/" "p_G11ID"]= G11ID;
+    
+    sprintf(fileName,  DELLIPTIC "/okl/ellipticCubatureAx%s.okl", suffix);
+    sprintf(kernelName, "ellipticPartialCubatureAx%s", suffix);
+    
+    femElliptic->partialCubatureAxKernel = femMesh->platform.buildKernel(fileName, kernelName,
+									 kernelInfo);
+  }
+#endif
   //finally, build the fem matrix and pass to parAlmond
   parAlmond::parCOO A(elliptic.platform, femMesh->comm);
   femElliptic->BuildOperatorMatrixContinuous(A);
