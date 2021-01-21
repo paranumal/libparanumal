@@ -37,6 +37,8 @@ SOFTWARE.
 #else
 #define dfloat double
 #define ogs_dfloat ogs_double
+#define pfloat float
+#define ogs_pfloat ogs_float
 #define MPI_DFLOAT MPI_DOUBLE
 #define dfloatFormat "%lf"
 #define dfloatString "double"
