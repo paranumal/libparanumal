@@ -27,8 +27,7 @@ SOFTWARE.
 #define p_blockSize 256
 
 @kernel void igBasisInnerProducts(const dlong Ntotal,
-				  const dlong Nblocks,
-                                  @restrict const dfloat *w,
+                                  const dlong Nblocks,
                                   const dlong dim, // how many inner products
                                   const dfloat *x, // one x
                                   const dfloat *y, // multiple y
@@ -47,7 +46,7 @@ SOFTWARE.
       const dlong id = t + p_blockSize*b;
 
       if (id < Ntotal) {
-        r_wx = w[id]*x[id];
+        r_wx = x[id];
       }
     }
 
@@ -135,8 +134,8 @@ SOFTWARE.
         if(t==0){
           dfloat res = s_wxy[0] + s_wxy[1];
 //          atomicAdd(wxy + fld, res); // note - assumes zerod accumulator
-	  dlong id = b + Nblocks*fld;
-	  wxy[id] = res;
+          dlong id = b + Nblocks*fld;
+          wxy[id] = res;
         }
       }
     }

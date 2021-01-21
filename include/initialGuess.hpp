@@ -39,7 +39,7 @@ protected:
   dlong Ntotal;     // Degrees of freedom
 
 public:
-  initialGuessStrategy_t(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm, int _weighted, occa::memory& _o_weight);
+  initialGuessStrategy_t(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm);
   virtual ~initialGuessStrategy_t();
 
   virtual void FormInitialGuess(occa::memory& o_x, occa::memory& o_rhs) = 0;
@@ -49,7 +49,7 @@ public:
 // Default initial guess strategy:  use whatever the user gave us.
 class igDefaultStrategy : public initialGuessStrategy_t {
 public:
-  igDefaultStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm, int _weighted, occa::memory& _o_weight);
+  igDefaultStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm);
 
   void FormInitialGuess(occa::memory& o_x, occa::memory& o_rhs);
   void Update(solver_t &solver, occa::memory& o_x, occa::memory& o_rhs);
@@ -58,7 +58,7 @@ public:
 // Zero initial guess strategy:  use a zero initial guess.
 class igZeroStrategy : public initialGuessStrategy_t {
 public:
-  igZeroStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm, int _weighted, occa::memory& _o_weight);
+  igZeroStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm);
 
   void FormInitialGuess(occa::memory& o_x, occa::memory& o_rhs);
   void Update(solver_t &solver, occa::memory& o_x, occa::memory& o_rhs);
@@ -74,8 +74,6 @@ protected:
   occa::memory o_xtilde;  // Solution vector corresponding to o_btilde
   occa::memory o_Btilde;  //  space (orthogonalized)
   occa::memory o_Xtilde;  // Solution space corresponding to  space
-
-  occa::memory o_w;       // Inverse-degree weights for inner products.
 
   // temporary buffer for basis inner product output
   dlong        ctmpNblocks;
@@ -95,7 +93,7 @@ protected:
   void igReconstruct(occa::memory& o_u, dfloat a, occa::memory& o_c, occa::memory& o_Q, occa::memory& o_unew);
 
 public:
-  igProjectionStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm, int _weighted, occa::memory& _o_weight);
+  igProjectionStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm);
   virtual ~igProjectionStrategy();
 
   virtual void FormInitialGuess(occa::memory& o_x, occa::memory& o_rhs);
@@ -105,7 +103,7 @@ public:
 // "Classic" initial guess strategy from Fischer's 1998 paper.
 class igClassicProjectionStrategy : public igProjectionStrategy {
 public:
-  igClassicProjectionStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm, int _weighted, occa::memory& _o_weight);
+  igClassicProjectionStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm);
 
   void Update(solver_t &solver, occa::memory& o_x, occa::memory& o_rhs);
 };
@@ -121,7 +119,7 @@ private:
 	void givensRotation(dfloat a, dfloat b, dfloat *c, dfloat *s);
 
 public:
-  igRollingQRProjectionStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm, int _weighted, occa::memory& _o_weight);
+  igRollingQRProjectionStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm);
   ~igRollingQRProjectionStrategy();
 
   void Update(solver_t &solver, occa::memory& o_x, occa::memory& o_rhs);
@@ -145,7 +143,7 @@ private:
   void extrapCoeffs(int m, int M, dfloat *c);
 
 public:
-  igExtrapStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm, int _weighted, occa::memory& _o_weight);
+  igExtrapStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm);
 
   void FormInitialGuess(occa::memory& o_x, occa::memory& o_rhs);
   void Update(solver_t &solver, occa::memory& o_x, occa::memory& o_rhs);
@@ -162,8 +160,7 @@ public:
   ~initialGuessSolver_t();
 
   static initialGuessSolver_t* Setup(dlong _N, dlong _Nhalo,
-                                     platform_t& platform, settings_t& settings, MPI_Comm _comm,
-                                     int _weighted, occa::memory& _o_weight);
+                                     platform_t& platform, settings_t& settings, MPI_Comm _comm);
 
   int Solve(solver_t& solver, precon_t& precon,
             occa::memory& o_x, occa::memory& o_rhs,

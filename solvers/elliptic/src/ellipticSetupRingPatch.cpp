@@ -42,9 +42,17 @@ elliptic_t* elliptic_t::SetupRingPatch(mesh_t& meshPatch){
   elliptic->disc_c0 = disc_c0;
 
   //buffer for gradient
-  dlong Ntotal = meshPatch.Np*meshPatch.Nelements;
-  elliptic->grad = (dfloat*) calloc(Ntotal*4, sizeof(dfloat));
-  elliptic->o_grad  = platform.malloc(Ntotal*4*sizeof(dfloat), elliptic->grad);
+  if (settings.compareSetting("DISCRETIZATION","IPDG")) {
+    dlong Ntotal = meshPatch.Np*meshPatch.Nelements;
+    elliptic->grad = (dfloat*) calloc(Ntotal*4, sizeof(dfloat));
+    elliptic->o_grad  = platform.malloc(Ntotal*4*sizeof(dfloat), elliptic->grad);
+  } else {
+    //buffer for local Ax
+    dlong Ntotal = meshPatch.Np*meshPatch.Nelements;
+    elliptic->o_AqL  = platform.malloc(Ntotal*sizeof(dfloat));
+  }
+  //tau (penalty term in IPDG)
+  elliptic->tau = tau;
 
   /*setup trace halo exchange */
   elliptic->traceHalo = meshPatch.HaloTraceSetup(elliptic->Nfields);
@@ -56,8 +64,6 @@ elliptic_t* elliptic_t::SetupRingPatch(mesh_t& meshPatch){
   //setup boundary flags and make mask and masked ogs
   elliptic->BoundarySetup();
 
-  //tau (penalty term in IPDG)
-  elliptic->tau = tau;
 
   // Ax kernel
   if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
@@ -65,6 +71,12 @@ elliptic_t* elliptic_t::SetupRingPatch(mesh_t& meshPatch){
   } else if (settings.compareSetting("DISCRETIZATION","IPDG")) {
     elliptic->partialGradientKernel = partialGradientKernel;
     elliptic->partialIpdgKernel = partialIpdgKernel;
+  }
+
+  if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
+    elliptic->Ndofs = elliptic->ogsMasked->Ngather*elliptic->Nfields;
+  } else {
+    elliptic->Ndofs = meshPatch.Nelements*meshPatch.Np*elliptic->Nfields;
   }
 
   elliptic->precon = NULL;

@@ -56,8 +56,8 @@ elliptic_t& elliptic_t::Setup(platform_t& platform, mesh_t& mesh,
   //setup boundary flags and make mask and masked ogs
   elliptic->BoundarySetup();
 
-  //tau (penalty term in IPDG)
   if (settings.compareSetting("DISCRETIZATION","IPDG")) {
+    //tau (penalty term in IPDG)
     if (mesh.elementType==TRIANGLES ||
         mesh.elementType==QUADRILATERALS){
       elliptic->tau = 2.0*(mesh.N+1)*(mesh.N+2)/2.0;
@@ -72,6 +72,10 @@ elliptic_t& elliptic_t::Setup(platform_t& platform, mesh_t& mesh,
     elliptic->o_grad  = platform.malloc(Ntotal*4*sizeof(dfloat), elliptic->grad);
   } else {
     elliptic->tau = 0.0;
+
+    //buffer for local Ax
+    dlong Ntotal = mesh.Np*mesh.Nelements;
+    elliptic->o_AqL  = platform.malloc(Ntotal*sizeof(dfloat));
   }
 
   // OCCA build stuff
@@ -95,10 +99,6 @@ elliptic_t& elliptic_t::Setup(platform_t& platform, mesh_t& mesh,
     suffix = strdup("Hex3D");
 
   char fileName[BUFSIZ], kernelName[BUFSIZ];
-
-  // mask
-  elliptic->maskKernel = platform.buildKernel(DELLIPTIC "/okl/ellipticMask.okl",
-                                     "mask", kernelInfo);
 
   //add standard boundary functions
   char *boundaryHeaderFileName;
@@ -145,6 +145,14 @@ elliptic_t& elliptic_t::Setup(platform_t& platform, mesh_t& mesh,
   }
 
   /* Preconditioner Setup */
+  if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
+    elliptic->Ndofs = elliptic->ogsMasked->Ngather*elliptic->Nfields;
+    elliptic->Nhalo = elliptic->ogsMasked->NgatherHalo*elliptic->Nfields;
+  } else {
+    elliptic->Ndofs = mesh.Nelements*mesh.Np*elliptic->Nfields;
+    elliptic->Nhalo = mesh.totalHaloPairs*mesh.Np*elliptic->Nfields;
+  }
+
   if       (settings.compareSetting("PRECONDITIONER", "JACOBI"))
     elliptic->precon = new JacobiPrecon(*elliptic);
   else if(settings.compareSetting("PRECONDITIONER", "MASSMATRIX"))
@@ -158,7 +166,7 @@ elliptic_t& elliptic_t::Setup(platform_t& platform, mesh_t& mesh,
   else if(settings.compareSetting("PRECONDITIONER", "OAS"))
     elliptic->precon = new OASPrecon(*elliptic);
   else if(settings.compareSetting("PRECONDITIONER", "NONE"))
-    elliptic->precon = new IdentityPrecon(mesh.Np*mesh.Nelements);
+    elliptic->precon = new IdentityPrecon(elliptic->Ndofs);
 
   return *elliptic;
 }

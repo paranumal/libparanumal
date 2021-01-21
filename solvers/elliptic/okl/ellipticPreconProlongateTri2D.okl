@@ -65,6 +65,52 @@ SOFTWARE.
   }
 }
 
+@kernel void ellipticPartialPreconProlongateTri2D(const dlong Nelements,
+                                     @restrict const  dlong   *  elementList,
+                                     @restrict const  dlong   *  GlobalToLocal,
+                                     @restrict const  dfloat *  P,
+                                     @restrict const  dfloat *  qCoarse,
+                                     @restrict dfloat *  qFine){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockVFine;@outer(0)){
+
+    @shared dfloat s_qCoarse[p_NblockVFine][p_NpCoarse];
+
+    for(int es=0;es<p_NblockVFine;++es;@inner(1)){
+      for(int n=0;n<p_NpFine;++n;@inner(0)){
+        const dlong e = eo + es;
+        if(e<Nelements){
+          const dlong element = elementList[e];
+          if(n<p_NpCoarse) {
+            const dlong base = n + element*p_NpCoarse;
+            const dlong id = GlobalToLocal[base];
+            s_qCoarse[es][n] = (id!=-1) ? qCoarse[id] : 0.0;
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    for(int es=0;es<p_NblockVFine;++es;@inner(1)){
+      for(int n=0;n<p_NpFine;++n;@inner(0)){
+        const dlong e = eo + es;
+        if(e<Nelements){
+          dfloat tmp = 0.;
+          // dfloat tmp = qFine[e*p_NpFine+n];
+
+          #pragma unroll p_NpCoarse
+            for(int i=0;i<p_NpCoarse;++i){
+              tmp += P[i + n*p_NpCoarse]*s_qCoarse[es][i];
+            }
+
+          const dlong element = elementList[e];
+          qFine[element*p_NpFine+n] = tmp;
+        }
+      }
+    }
+  }
+}
 
 //storing P in @shared is too much for 3D
 #if 0

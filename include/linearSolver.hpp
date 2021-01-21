@@ -48,8 +48,7 @@ public:
     N(_N), Nhalo(_Nhalo) {}
 
   static linearSolver_t* Setup(dlong _N, dlong _Nhalo,
-                               platform_t& platform, settings_t& settings, MPI_Comm _comm,
-                               int _weighted, occa::memory& _o_weight);
+                               platform_t& platform, settings_t& settings, MPI_Comm _comm);
 
   virtual int Solve(solver_t& solver, precon_t& precon,
                     occa::memory& o_x, occa::memory& o_rhs,
@@ -61,13 +60,13 @@ public:
 //Preconditioned Conjugate Gradient
 class pcg: public linearSolver_t {
 private:
-  occa::memory o_p, o_Ap, o_z, o_Ax, o_w;
+  occa::memory o_p, o_Ap, o_z, o_Ax;
 
   dfloat* tmprdotr;
   occa::memory h_tmprdotr;
   occa::memory o_tmprdotr;
 
-  int flexible, weighted;
+  int flexible;
 
   occa::kernel updatePCGKernel;
 
@@ -75,8 +74,7 @@ private:
 
 public:
   pcg(dlong _N, dlong _Nhalo,
-       platform_t& _platform, settings_t& _settings, MPI_Comm _comm,
-       int _weighted, occa::memory& _o_weight);
+       platform_t& _platform, settings_t& _settings, MPI_Comm _comm);
   ~pcg();
 
   int Solve(solver_t& solver, precon_t& precon,
@@ -88,10 +86,9 @@ public:
 class pgmres: public linearSolver_t {
 private:
   occa::memory *o_V=nullptr;
-  occa::memory o_Ax, o_z, o_r, o_w;
+  occa::memory o_Ax, o_z, o_r;
 
   int restart;
-  int weighted;
 
   dfloat *H=nullptr, *sn=nullptr, *cs=nullptr, *s=nullptr, *y=nullptr;
 
@@ -99,8 +96,7 @@ private:
 
 public:
   pgmres(dlong _N, dlong _Nhalo,
-       platform_t& _platform, settings_t& _settings, MPI_Comm _comm,
-       int _weighted, occa::memory& _o_weight);
+       platform_t& _platform, settings_t& _settings, MPI_Comm _comm);
   ~pgmres();
 
   int Solve(solver_t& solver, precon_t& precon,
@@ -118,9 +114,6 @@ private:
   occa::memory o_q;
   occa::memory o_q_old;
 
-  int weighted;
-  occa::memory o_w;
-
   occa::kernel updateMINRESKernel;
 
   dfloat innerProd(occa::memory& o_x, occa::memory& o_y);
@@ -128,8 +121,7 @@ private:
 
 public:
   pminres(dlong _N, dlong _Nhalo,
-         platform_t& _platform, settings_t& _settings, MPI_Comm _comm,
-         int _weighted, occa::memory& _o_weight);
+         platform_t& _platform, settings_t& _settings, MPI_Comm _comm);
   ~pminres();
 
   int Solve(solver_t& solver, precon_t& precon,
@@ -140,13 +132,11 @@ public:
 //Non-Blocking Preconditioned Conjugate Gradient
 class nbpcg: public linearSolver_t {
 private:
-  occa::memory o_p, o_s, o_S, o_z, o_Z, o_Ax, o_weight;
+  occa::memory o_p, o_s, o_S, o_z, o_Z, o_Ax;
 
   dfloat* tmpdots;
   occa::memory h_tmpdots;
   occa::memory o_tmpdots;
-
-  int weighted;
 
   occa::kernel update1NBPCGKernel;
   occa::kernel update2NBPCGKernel;
@@ -161,8 +151,7 @@ private:
 
 public:
   nbpcg(dlong _N, dlong _Nhalo,
-       platform_t& _platform, settings_t& _settings, MPI_Comm _comm,
-       int _weighted, occa::memory& _o_weight);
+       platform_t& _platform, settings_t& _settings, MPI_Comm _comm);
   ~nbpcg();
 
   int Solve(solver_t& solver, precon_t& precon,
@@ -173,13 +162,11 @@ public:
 //Non-Blocking Flexible Preconditioned Conjugate Gradient
 class nbfpcg: public linearSolver_t {
 private:
-  occa::memory o_u, o_p, o_w, o_n, o_m, o_s, o_z, o_q, o_Ax, o_weight;
+  occa::memory o_u, o_p, o_w, o_n, o_m, o_s, o_z, o_q, o_Ax;
 
   dfloat* tmpdots;
   occa::memory h_tmpdots;
   occa::memory o_tmpdots;
-
-  int weighted;
 
   occa::kernel update0NBFPCGKernel;
   occa::kernel update1NBFPCGKernel;
@@ -194,8 +181,7 @@ private:
 
 public:
   nbfpcg(dlong _N, dlong _Nhalo,
-       platform_t& _platform, settings_t& _settings, MPI_Comm _comm,
-       int _weighted, occa::memory& _o_weight);
+       platform_t& _platform, settings_t& _settings, MPI_Comm _comm);
   ~nbfpcg();
 
   int Solve(solver_t& solver, precon_t& precon,

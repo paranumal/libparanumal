@@ -43,11 +43,6 @@ public:
 
   int ChebyshevIterations=2;
 
-  bool gatherLevel=false;
-  ogs_t *ogs=nullptr;
-  occa::memory o_gatherWeight;
-  occa::memory o_Sx, o_Gx;
-
   amgLevel(parCSR *AA, settings_t& _settings);
   ~amgLevel();
 

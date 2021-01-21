@@ -30,20 +30,8 @@ SOFTWARE.
 // Matrix-free p-Multigrid levels followed by AMG
 void MultiGridPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
 
-  if (gather==true) { //gather before passing to parAlmond
-    elliptic.ogsMasked->Gather(o_rhsG, o_r, ogs_dfloat, ogs_add, ogs_notrans);
-    parAlmond.Operator(o_rhsG, o_xG);
-    elliptic.ogsMasked->Scatter(o_Mr, o_xG, ogs_dfloat, ogs_add, ogs_notrans);
-  } else {
-    //just pass to parAlmond
-    parAlmond.Operator(o_r, o_Mr);
-
-    if (elliptic.disc_c0) {
-      dlong Ntotal = elliptic.mesh.Nelements*elliptic.mesh.Np;
-      elliptic.ogsMasked->GatherScatter(o_Mr, ogs_dfloat, ogs_add, ogs_sym);
-      elliptic.linAlg.amx(Ntotal, (dfloat)1.0, elliptic.o_weight, o_Mr);
-    }
-  }
+  //just pass to parAlmond
+  parAlmond.Operator(o_r, o_Mr);
 
   // zero mean of RHS
   if(elliptic.allNeumann) elliptic.ZeroMean(o_Mr);
@@ -68,9 +56,8 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
 
     //share masking data with previous MG level
     if (prevLevel) {
-      prevLevel->Nmasked = ellipticF.Nmasked;
-      prevLevel->o_maskIds = ellipticF.o_maskIds;
-      prevLevel->ogsMasked = ellipticF.ogsMasked;
+      prevLevel->meshC = &meshF;
+      prevLevel->ogsMaskedC = ellipticF.ogsMasked;
     }
 
     //find the degree of the next level
@@ -107,8 +94,17 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
         NpCoarse = (Nc+1)*(Nc+1)*(Nc+1); break;
     }
 
+    dlong Nrows, Ncols;
+    if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
+      Nrows = ellipticF.ogsMasked->Ngather;
+      Ncols = Nrows + ellipticF.ogsMasked->NgatherHalo;
+    } else {
+      Nrows = meshF.Nelements*meshF.Np;
+      Ncols = Nrows + meshF.totalHaloPairs*mesh.Np;
+    }
+
     //make a multigrid level
-    currLevel = new MGLevel(ellipticF, Nc, NpCoarse);
+    currLevel = new MGLevel(ellipticF, Nrows, Ncols, Nc, NpCoarse);
     parAlmond.AddLevel(currLevel);
 
     Nf = Nc;
@@ -119,6 +115,12 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   //build matrix at degree 1
   mesh_t &meshF = mesh.SetupNewDegree(1);
   elliptic_t &ellipticF = elliptic.SetupNewDegree(meshF);
+
+  //share masking data with previous MG level
+  if (prevLevel) {
+    prevLevel->meshC = &meshF;
+    prevLevel->ogsMaskedC = ellipticF.ogsMasked;
+  }
 
   //build full A matrix and pass to parAlmond
   parAlmond::parCOO A(elliptic.platform, mesh.comm);
@@ -138,25 +140,6 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   //set up AMG levels (treating the N=1 level as a matrix level)
   parAlmond.AMGSetup(A, elliptic.allNeumann, null, elliptic.allNeumannPenalty);
   free(null);
-
-  if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
-    if (mesh.N>1) {
-      //tell the last pMG level to gather after coarsening
-      prevLevel->gatherLevel = true;
-      prevLevel->ogsMasked = ellipticF.ogsMasked;
-
-      dfloat *dummy = (dfloat *) calloc(meshF.Np*meshF.Nelements,sizeof(dfloat));
-      prevLevel->o_SX = elliptic.platform.malloc(meshF.Np*meshF.Nelements*sizeof(dfloat), dummy);
-      prevLevel->o_GX = elliptic.platform.malloc(meshF.Np*meshF.Nelements*sizeof(dfloat), dummy);
-      free(dummy);
-    } else {
-      //gather before passing to parAlmond
-      gather=true;
-      dlong Ncols = parAlmond.getNumCols(0);
-      o_rhsG = elliptic.platform.malloc(Ncols*sizeof(dfloat));
-      o_xG   = elliptic.platform.malloc(Ncols*sizeof(dfloat));
-    }
-  }
 
   //report
   parAlmond.Report();

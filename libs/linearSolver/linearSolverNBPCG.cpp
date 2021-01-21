@@ -29,8 +29,7 @@ SOFTWARE.
 #define NBPCG_BLOCKSIZE 512
 
 nbpcg::nbpcg(dlong _N, dlong _Nhalo,
-         platform_t& _platform, settings_t& _settings, MPI_Comm _comm,
-         int _weighted, occa::memory& _o_weight):
+         platform_t& _platform, settings_t& _settings, MPI_Comm _comm):
   linearSolver_t(_N, _Nhalo, _platform, _settings, _comm) {
 
   dlong Ntotal = N + Nhalo;
@@ -45,9 +44,6 @@ nbpcg::nbpcg(dlong _N, dlong _Nhalo,
 
   localdots  = (dfloat*) calloc(3, sizeof(dfloat));
   globaldots = (dfloat*) calloc(3, sizeof(dfloat));
-
-  weighted = _weighted;
-  o_weight = _o_weight;
 
   //pinned tmp buffer for reductions
   tmpdots = (dfloat*) platform.hostMalloc(3*NBPCG_BLOCKSIZE*sizeof(dfloat),
@@ -177,7 +173,7 @@ void nbpcg::Update1NBPCG(const dfloat beta){
   int Nblocks = (N+NBPCG_BLOCKSIZE-1)/NBPCG_BLOCKSIZE;
   Nblocks = (Nblocks>NBPCG_BLOCKSIZE) ? NBPCG_BLOCKSIZE : Nblocks; //limit to NBPCG_BLOCKSIZE entries
 
-  update1NBPCGKernel(N, Nblocks, weighted, o_weight, o_z, o_Z, beta, o_p, o_s, o_tmpdots);
+  update1NBPCGKernel(N, Nblocks, o_z, o_Z, beta, o_p, o_s, o_tmpdots);
 
   o_tmpdots.copyTo(tmpdots, Nblocks*sizeof(dfloat));
 
@@ -199,7 +195,7 @@ void nbpcg::Update2NBPCG(const dfloat alpha, occa::memory &o_r){
   int Nblocks = (N+NBPCG_BLOCKSIZE-1)/NBPCG_BLOCKSIZE;
   Nblocks = (Nblocks>NBPCG_BLOCKSIZE) ? NBPCG_BLOCKSIZE : Nblocks; //limit to NBPCG_BLOCKSIZE entries
 
-  update2NBPCGKernel(N, Nblocks, weighted, o_weight, o_s, o_S, alpha, o_r, o_z, o_tmpdots);
+  update2NBPCGKernel(N, Nblocks, o_s, o_S, alpha, o_r, o_z, o_tmpdots);
 
   o_tmpdots.copyTo(tmpdots, 3*Nblocks*sizeof(dfloat));
 

@@ -132,6 +132,7 @@ SOFTWARE.
 // square thread version
 @kernel void ellipticPartialAxQuad2D(const dlong Nelements,
                                    @restrict const  dlong   *  elementList,
+                                   @restrict const  dlong   *  GlobalToLocal,
                                    @restrict const  dfloat *  ggeo,
                                    @restrict const  dfloat *  DT,
                                    @restrict const  dfloat *  S,
@@ -153,8 +154,8 @@ SOFTWARE.
     squareThreads{
       element = elementList[e];
       const dlong base = i + j*p_Nq + element*p_Np;
-
-      s_q[j][i] = q[base];
+      const dlong id = GlobalToLocal[base];
+      s_q[j][i] = (id!=-1) ? q[id] : 0.0;
 
       // fetch DT to @shared
       s_DT[j][i] = DT[j*p_Nq+i];

@@ -30,25 +30,22 @@ SOFTWARE.
 JacobiPrecon::JacobiPrecon(elliptic_t& _elliptic):
   elliptic(_elliptic) {
 
-  mesh_t& mesh = elliptic.mesh;
-
-  dfloat *diagA    = (dfloat*) calloc(mesh.Np*mesh.Nelements, sizeof(dfloat));
-  dfloat *invDiagA = (dfloat*) calloc(mesh.Np*mesh.Nelements, sizeof(dfloat));
+  dfloat *diagA    = (dfloat*) calloc(elliptic.Ndofs, sizeof(dfloat));
+  dfloat *invDiagA = (dfloat*) calloc(elliptic.Ndofs, sizeof(dfloat));
   elliptic.BuildOperatorDiagonal(diagA);
-  for (dlong n=0;n<mesh.Np*mesh.Nelements;n++)
+  for (dlong n=0;n<elliptic.Ndofs;n++)
     invDiagA[n] = 1.0/diagA[n];
 
-  o_invDiagA = elliptic.platform.malloc(mesh.Np*mesh.Nelements*sizeof(dfloat), invDiagA);
+  o_invDiagA = elliptic.platform.malloc(elliptic.Ndofs*sizeof(dfloat), invDiagA);
 
   free(diagA);
   free(invDiagA);
 }
 
 void JacobiPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
-  dlong Ntotal = elliptic.mesh.Np*elliptic.mesh.Nelements;
 
   // Mr = invDiag.*r
-  elliptic.linAlg.amxpy(Ntotal, 1.0, o_invDiagA, o_r, 0.0, o_Mr);
+  elliptic.linAlg.amxpy(elliptic.Ndofs, 1.0, o_invDiagA, o_r, 0.0, o_Mr);
 
   // zero mean of RHS
   if(elliptic.allNeumann) elliptic.ZeroMean(o_Mr);

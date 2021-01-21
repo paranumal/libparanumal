@@ -35,34 +35,16 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
     // int integrationType = (mesh.elementType==HEXAHEDRA &&
     //                        settings.compareSetting("ELLIPTIC INTEGRATION", "CUBATURE")) ? 1:0;
 
-    if(mesh.NglobalGatherElements) {
-
-      // if(integrationType==0) { // GLL or non-hex
-        // if(mapType==0)
-          partialAxKernel(mesh.NglobalGatherElements, mesh.o_globalGatherElementList,
-                          mesh.o_ggeo, mesh.o_D, mesh.o_S, mesh.o_MM, lambda, o_q, o_Aq);
-        /* NC: disabling until we re-add treatment of affine elements
-        else
-          partialAxKernel(mesh.NglobalGatherElements, mesh.o_globalGatherElementList,
-                          mesh.o_EXYZ, mesh.o_gllzw, mesh.o_D, mesh.o_S, mesh.o_MM, lambda, o_q, o_Aq);
-        */
-      // } else {
-      //   partialCubatureAxKernel(mesh.NglobalGatherElements,
-      //                           mesh.o_globalGatherElementList,
-      //                           mesh.o_cubggeo,
-      //                           mesh.o_cubD,
-      //                           mesh.o_cubInterpT,
-      //                           lambda, o_q, o_Aq);
-      // }
-    }
-
-    ogsMasked->GatherScatterStart(o_Aq, ogs_dfloat, ogs_add, ogs_sym);
+    ogsMasked->GatheredHaloExchangeStart(o_q, 1, ogs_dfloat);
 
     if(mesh.NlocalGatherElements){
       // if(integrationType==0) { // GLL or non-hex
         // if(mapType==0)
-          partialAxKernel(mesh.NlocalGatherElements, mesh.o_localGatherElementList,
-                          mesh.o_ggeo, mesh.o_D, mesh.o_S, mesh.o_MM, lambda, o_q, o_Aq);
+          partialAxKernel(mesh.NlocalGatherElements,
+                          mesh.o_localGatherElementList,
+                          ogsMasked->o_GlobalToLocal,
+                          mesh.o_ggeo, mesh.o_D, mesh.o_S,
+                          mesh.o_MM, lambda, o_q, o_AqL);
         /* NC: disabling until we re-add treatment of affine elements
         else
           partialAxKernel(mesh.NlocalGatherElements, mesh.o_localGatherElementList,
@@ -80,12 +62,35 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
       // }
     }
 
-    // finalize gather using local and global contributions
-    ogsMasked->GatherScatterFinish(o_Aq, ogs_dfloat, ogs_add, ogs_sym);
+    // finalize halo exchange
+    ogsMasked->GatheredHaloExchangeFinish(o_q, 1, ogs_dfloat);
 
-    //post-mask
-    if (Nmasked)
-      maskKernel(Nmasked, o_maskIds, o_Aq);
+    if(mesh.NglobalGatherElements) {
+
+      // if(integrationType==0) { // GLL or non-hex
+        // if(mapType==0)
+          partialAxKernel(mesh.NglobalGatherElements,
+                          mesh.o_globalGatherElementList,
+                          ogsMasked->o_GlobalToLocal,
+                          mesh.o_ggeo, mesh.o_D, mesh.o_S,
+                          mesh.o_MM, lambda, o_q, o_AqL);
+        /* NC: disabling until we re-add treatment of affine elements
+        else
+          partialAxKernel(mesh.NglobalGatherElements, mesh.o_globalGatherElementList,
+                          mesh.o_EXYZ, mesh.o_gllzw, mesh.o_D, mesh.o_S, mesh.o_MM, lambda, o_q, o_Aq);
+        */
+      // } else {
+      //   partialCubatureAxKernel(mesh.NglobalGatherElements,
+      //                           mesh.o_globalGatherElementList,
+      //                           mesh.o_cubggeo,
+      //                           mesh.o_cubD,
+      //                           mesh.o_cubInterpT,
+      //                           lambda, o_q, o_Aq);
+      // }
+    }
+
+    //gather result to Aq
+    ogsMasked->Gather(o_Aq, o_AqL, ogs_dfloat, ogs_add, ogs_trans);
 
   } else if(disc_ipdg) {
 

@@ -190,7 +190,7 @@ void meshTet3D::SurfaceGeometricFactors(){
 
       dlong baseP = eP*Nfaces + fP;
 
-      // rescaling,  V = A*h/3 => (J*4/3) = (sJ*2)*h/3 => h  = 0.5*J/sJ
+      // rescaling,  V = A*h/3 => (J*4/3) = (sJ*2)*h/3 => h  = 2*J/sJ
       dfloat hinvM = 0.5*sgeo[baseM*Nsgeo + SJID]*sgeo[baseM*Nsgeo + IJID];
       dfloat hinvP = 0.5*sgeo[baseP*Nsgeo + SJID]*sgeo[baseP*Nsgeo + IJID];
 

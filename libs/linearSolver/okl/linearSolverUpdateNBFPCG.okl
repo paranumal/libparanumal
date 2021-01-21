@@ -28,8 +28,6 @@
 
 @kernel void update0NBFPCG(const dlong N,
                            const dlong Nblocks,
-                           const int   weighted,
-                           @restrict const dfloat *weight,
                            @restrict const dfloat *u,
                            @restrict const dfloat *r,
                            @restrict const dfloat *w,
@@ -46,10 +44,9 @@
         const dfloat un = u[n];
         const dfloat rn = r[n];
         const dfloat wn = w[n];
-        const dfloat weightn = (weighted) ? weight[n]: 1.0;
-        sumudotr += weightn*un*rn;
-        sumudotw += weightn*un*wn;
-        sumrdotr += weightn*rn*rn;
+        sumudotr += un*rn;
+        sumudotw += un*wn;
+        sumrdotr += rn*rn;
       }
 
       s_dot[0][t] = sumudotr;
@@ -137,8 +134,6 @@
 
 @kernel void update1NBFPCG(const dlong N,
                            const dlong Nblocks,
-                           const int   weighted,
-                           @restrict const dfloat *weight,
                            @restrict const dfloat *p,
                            @restrict const dfloat *s,
                            @restrict const dfloat *q,
@@ -177,12 +172,10 @@
         un = un - alpha*qn;
         wn = wn - alpha*zn;
 
-        dfloat weightn = (weighted) ? weight[n]: 1.0;
-
-        sumudotr += weightn*un*rn;
-        sumudots += weightn*un*sn;
-        sumudotw += weightn*un*wn;
-        sumrdotr += weightn*rn*rn;
+        sumudotr += un*rn;
+        sumudots += un*sn;
+        sumudotw += un*wn;
+        sumrdotr += rn*rn;
 
         x[n] = xn;
         r[n] = rn;

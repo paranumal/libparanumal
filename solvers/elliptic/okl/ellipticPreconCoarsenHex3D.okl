@@ -211,3 +211,94 @@ SOFTWARE.
     }
   }
 }
+
+
+@kernel void ellipticPartialPreconCoarsenHex3D(const dlong Nelements,
+                                        @restrict const  dlong   *  elementList,
+                                        @restrict const  dlong   *  GlobalToLocal,
+                                        @restrict const  dfloat *  RT,
+                                        @restrict const  dfloat *  qf,
+                                        @restrict dfloat *  qc){
+
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    @shared dfloat s_qfff[p_NqFine][p_NqFine][p_NqFine];
+    @shared dfloat s_qcff[p_NqCoarse][p_NqFine][p_NqFine];
+    @shared dfloat s_qccf[p_NqCoarse][p_NqCoarse][p_NqFine];
+
+    @shared dfloat s_RT[p_NqFine][p_NqCoarse];
+
+    // prefetch to @shared
+
+    for(int k=0;k<p_NqFine;++k;@inner(2)){
+      for(int j=0;j<p_NqFine;++j;@inner(1)){
+        for(int i=0;i<p_NqFine;++i;@inner(0)){
+          const dlong element = elementList[e];
+          const dlong base = i+j*p_NqFine+k*p_NqFine*p_NqFine+element*p_NpFine;
+          const dlong id = GlobalToLocal[base];
+          s_qfff[k][j][i] = (id!=-1) ? qf[id] : 0.0;
+
+          if ((k==0) && (i<p_NqCoarse))
+            s_RT[j][i] = RT[j*p_NqCoarse + i];
+        }
+      }
+    }
+
+    @barrier("local");
+
+    // coarsen in k index
+    for(int k=0;k<p_NqFine;++k;@inner(2)){
+      for(int j=0;j<p_NqFine;++j;@inner(1)){
+        for(int i=0;i<p_NqFine;++i;@inner(0)){
+          if(k<p_NqCoarse){
+            dfloat res = 0;
+            #pragma unroll p_NqFine
+              for(int m=0;m<p_NqFine;++m) {
+                res += s_RT[m][k]*s_qfff[m][j][i];
+              }
+            s_qcff[k][j][i] = res;
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    // coarsen in j index
+    for(int k=0;k<p_NqFine;++k;@inner(2)){
+      for(int j=0;j<p_NqFine;++j;@inner(1)){
+        for(int i=0;i<p_NqFine;++i;@inner(0)){
+          if((k<p_NqCoarse)&&(j<p_NqCoarse)){
+            dfloat res = 0;
+            #pragma unroll p_NqFine
+              for(int m=0;m<p_NqFine;++m) {
+                res += s_RT[m][j]*s_qcff[k][m][i];
+              }
+            s_qccf[k][j][i] = res;
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    // coarsen in i index
+    for(int k=0;k<p_NqFine;++k;@inner(2)){
+      for(int j=0;j<p_NqFine;++j;@inner(1)){
+        for(int i=0;i<p_NqFine;++i;@inner(0)){
+          if((k<p_NqCoarse) && (j<p_NqCoarse) && (i<p_NqCoarse)){
+            dfloat rtmp = 0;
+            #pragma unroll p_NqFine
+              for(int m=0;m<p_NqFine;++m) {
+                rtmp += s_RT[m][i]*s_qccf[k][j][m];
+              }
+
+            const dlong element = elementList[e];
+            const int id = i + j*p_NqCoarse + k*p_NqCoarse*p_NqCoarse + p_NpCoarse*element;
+            qc[id] = rtmp;
+          }
+        }
+      }
+    }
+  }
+}

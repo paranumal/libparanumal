@@ -144,4 +144,7 @@ void elliptic_t::BoundarySetup(){
   for (dlong n=0;n<Ntotal;n++) maskedGlobalNumbering[n] = -1;
   ogsMasked->Scatter(maskedGlobalNumbering, globalIds, ogs_hlong, ogs_add, ogs_notrans);
   free(globalIds);
+
+  /* Build halo exchange for gathered ordering */
+  ogsMasked->GatheredHaloExchangeSetup();
 }

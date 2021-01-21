@@ -459,6 +459,9 @@ ogs_t *ogs_t::Setup(dlong N, hlong *ids, MPI_Comm &comm,
   //total number of owned gathered nodes
   ogs->Ngather = ogs->localGather.Nrows+ogs->haloGather.Nrows;
 
+  //total size of halo for gathered array
+  ogs->NgatherHalo = ogs->haloScatter.Nrows-ogs->haloGather.Nrows;
+
   hlong NgatherLocal = (hlong) ogs->Ngather;
   MPI_Allreduce(&NgatherLocal, &(ogs->NgatherGlobal), 1, MPI_HLONG, MPI_SUM, comm);
 

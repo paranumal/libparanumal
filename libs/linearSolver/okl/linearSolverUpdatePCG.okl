@@ -28,8 +28,6 @@
 
 @kernel void updatePCG(const dlong N,
                        const dlong Nblocks,
-                       const int weighted,
-                       @restrict const dfloat *weight,
                        @restrict const dfloat *p,
                        @restrict const dfloat *Ap,
                        const dfloat alpha,
@@ -50,9 +48,7 @@
         x[id] += alpha*p[id];
         rn -= alpha*Ap[id];
 
-        const dfloat wn = (weighted) ? weight[id] : 1.0;
-
-        s_dot[t] += wn*rn*rn;
+        s_dot[t] += rn*rn;
 
         r[id] = rn;
         id += p_blockSize*Nblocks;

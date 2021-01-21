@@ -27,22 +27,22 @@ SOFTWARE.
 #include "initialGuess.hpp"
 #include "mesh.hpp"
 
-initialGuessSolver_t* initialGuessSolver_t::Setup(dlong N, dlong Nhalo, platform_t& platform, settings_t& settings, MPI_Comm comm, int weighted, occa::memory& o_weight)
+initialGuessSolver_t* initialGuessSolver_t::Setup(dlong N, dlong Nhalo, platform_t& platform, settings_t& settings, MPI_Comm comm)
 {
   initialGuessSolver_t* initialGuessSolver = new initialGuessSolver_t(N, Nhalo, platform, settings, comm);
-  initialGuessSolver->linearSolver = linearSolver_t::Setup(N, Nhalo, platform, settings, comm, weighted, o_weight);
+  initialGuessSolver->linearSolver = linearSolver_t::Setup(N, Nhalo, platform, settings, comm);
   initialGuessSolver->igStrategy = nullptr;
 
   if (settings.compareSetting("INITIAL GUESS STRATEGY", "NONE")) {
-    initialGuessSolver->igStrategy = new igDefaultStrategy(N, platform, settings, comm, weighted, o_weight);
+    initialGuessSolver->igStrategy = new igDefaultStrategy(N, platform, settings, comm);
   } else if (settings.compareSetting("INITIAL GUESS STRATEGY", "ZERO")) {
-    initialGuessSolver->igStrategy = new igZeroStrategy(N, platform, settings, comm, weighted, o_weight);
+    initialGuessSolver->igStrategy = new igZeroStrategy(N, platform, settings, comm);
   } else if (settings.compareSetting("INITIAL GUESS STRATEGY", "CLASSIC")) {
-    initialGuessSolver->igStrategy = new igClassicProjectionStrategy(N, platform, settings, comm, weighted, o_weight);
+    initialGuessSolver->igStrategy = new igClassicProjectionStrategy(N, platform, settings, comm);
   } else if (settings.compareSetting("INITIAL GUESS STRATEGY", "QR")) {
-    initialGuessSolver->igStrategy = new igRollingQRProjectionStrategy(N, platform, settings, comm, weighted, o_weight);
+    initialGuessSolver->igStrategy = new igRollingQRProjectionStrategy(N, platform, settings, comm);
   } else if (settings.compareSetting("INITIAL GUESS STRATEGY", "EXTRAP")) {
-    initialGuessSolver->igStrategy = new igExtrapStrategy(N, platform, settings, comm, weighted, o_weight);
+    initialGuessSolver->igStrategy = new igExtrapStrategy(N, platform, settings, comm);
   } else {
     LIBP_ABORT("Requested INITIAL GUESS STRATEGY not found.");
   }
@@ -100,7 +100,7 @@ void initialGuessAddSettings(settings_t& settings, const string prefix)
 
 /*****************************************************************************/
 
-initialGuessStrategy_t::initialGuessStrategy_t(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm, int _weighted, occa::memory& _o_weight):
+initialGuessStrategy_t::initialGuessStrategy_t(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm):
   platform(_platform),
   settings(_settings),
   comm(_comm),
@@ -116,8 +116,8 @@ initialGuessStrategy_t::~initialGuessStrategy_t()
 
 /*****************************************************************************/
 
-igDefaultStrategy::igDefaultStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm, int _weighted, occa::memory& _o_weight):
-  initialGuessStrategy_t(_N, _platform, _settings, _comm, _weighted, _o_weight)
+igDefaultStrategy::igDefaultStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm):
+  initialGuessStrategy_t(_N, _platform, _settings, _comm)
 {
   return;
 }
@@ -134,8 +134,8 @@ void igDefaultStrategy::Update(solver_t &solver, occa::memory& o_x, occa::memory
 
 /*****************************************************************************/
 
-igZeroStrategy::igZeroStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm, int _weighted, occa::memory& _o_weight):
-  initialGuessStrategy_t(_N, _platform, _settings, _comm, _weighted, _o_weight)
+igZeroStrategy::igZeroStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm):
+  initialGuessStrategy_t(_N, _platform, _settings, _comm)
 {
   platform.linAlg.InitKernels({"set"});
   return;
@@ -154,8 +154,8 @@ void igZeroStrategy::Update(solver_t &solver, occa::memory& o_x, occa::memory& o
 
 /*****************************************************************************/
 
-igProjectionStrategy::igProjectionStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm, int _weighted, occa::memory& _o_weight):
-  initialGuessStrategy_t(_N, _platform, _settings, _comm, _weighted, _o_weight)
+igProjectionStrategy::igProjectionStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm):
+  initialGuessStrategy_t(_N, _platform, _settings, _comm)
 {
   curDim = 0;
   settings.getSetting("INITIAL GUESS HISTORY SPACE DIMENSION", maxDim);
@@ -164,8 +164,6 @@ igProjectionStrategy::igProjectionStrategy(dlong _N, platform_t& _platform, sett
   o_xtilde = platform.malloc(Ntotal*sizeof(dfloat));
   o_Btilde = platform.malloc(Ntotal*maxDim*sizeof(dfloat));
   o_Xtilde = platform.malloc(Ntotal*maxDim*sizeof(dfloat));
-
-  o_w = _o_weight;
 
   alphas = new dfloat[maxDim]();
   alphasThisRank = new dfloat[maxDim]();
@@ -214,7 +212,7 @@ void igProjectionStrategy::FormInitialGuess(occa::memory& o_x, occa::memory& o_r
 
 void igProjectionStrategy::igBasisInnerProducts(occa::memory& o_x, occa::memory& o_Q, occa::memory& o_c, dfloat *c, dfloat *cThisRank)
 {
-  igBasisInnerProductsKernel(Ntotal, ctmpNblocks, o_w, curDim, o_x, o_Q, o_ctmp);
+  igBasisInnerProductsKernel(Ntotal, ctmpNblocks, curDim, o_x, o_Q, o_ctmp);
 
   o_ctmp.copyTo(ctmp, ctmpNblocks*curDim*sizeof(dfloat));
 
@@ -242,8 +240,8 @@ void igProjectionStrategy::igReconstruct(occa::memory& o_u, dfloat a, occa::memo
 
 /*****************************************************************************/
 
-igClassicProjectionStrategy::igClassicProjectionStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm, int _weighted, occa::memory& _o_weight):
-  igProjectionStrategy(_N, _platform, _settings, _comm, _weighted, _o_weight)
+igClassicProjectionStrategy::igClassicProjectionStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm):
+  igProjectionStrategy(_N, _platform, _settings, _comm)
 {
   return;
 }
@@ -257,7 +255,7 @@ void igClassicProjectionStrategy::Update(solver_t &solver, occa::memory& o_x, oc
   if ((curDim >= maxDim) || (curDim == 0)) {
     dfloat normbtilde = 0.0;
 
-    normbtilde = platform.linAlg.weightedNorm2(Ntotal,  o_w, o_btilde, comm);
+    normbtilde = platform.linAlg.norm2(Ntotal,  o_btilde, comm);
 
     if (normbtilde > 0) {
       igScaleKernel(Ntotal, 1.0/normbtilde, o_btilde, o_Btilde);
@@ -279,7 +277,7 @@ void igClassicProjectionStrategy::Update(solver_t &solver, occa::memory& o_x, oc
     }
 
     // Normalize.
-    invnormbtilde = platform.linAlg.weightedNorm2(Ntotal, o_w, o_btilde, comm);
+    invnormbtilde = platform.linAlg.norm2(Ntotal, o_btilde, comm);
     invnormbtilde = 1.0/invnormbtilde;
 
 #if 0
@@ -301,8 +299,8 @@ void igClassicProjectionStrategy::Update(solver_t &solver, occa::memory& o_x, oc
 
 /*****************************************************************************/
 
-igRollingQRProjectionStrategy::igRollingQRProjectionStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm, int _weighted, occa::memory& _o_weight):
-  igProjectionStrategy(_N, _platform, _settings, _comm, _weighted, _o_weight)
+igRollingQRProjectionStrategy::igRollingQRProjectionStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm):
+  igProjectionStrategy(_N, _platform, _settings, _comm)
 {
   R = new dfloat[maxDim*maxDim]();
   o_R = platform.malloc(maxDim*maxDim*sizeof(dfloat));
@@ -370,7 +368,7 @@ void igRollingQRProjectionStrategy::Update(solver_t &solver, occa::memory& o_x, 
   if (curDim == 0) {
     dfloat normbtilde = 0.0;
 
-    normbtilde = platform.linAlg.weightedNorm2(Ntotal, o_w, o_btilde, comm);
+    normbtilde = platform.linAlg.norm2(Ntotal, o_btilde, comm);
 
     if (normbtilde > 0) {
 #if 0
@@ -392,7 +390,7 @@ void igRollingQRProjectionStrategy::Update(solver_t &solver, occa::memory& o_x, 
     o_x.copyTo(o_xtilde, Ntotal*sizeof(dfloat));
 
     // Compute the initial norm of the new vector.
-    normbtilde = platform.linAlg.weightedNorm2(Ntotal, o_w, o_btilde, comm);
+    normbtilde = platform.linAlg.norm2(Ntotal, o_btilde, comm);
 
     // Zero the entries above/on the diagonal of the column of R into which we want to write.
     for (int i = 0; i < curDim; i++)
@@ -409,7 +407,7 @@ void igRollingQRProjectionStrategy::Update(solver_t &solver, occa::memory& o_x, 
     }
 
     // Normalize.
-    normbtildeproj = platform.linAlg.weightedNorm2(Ntotal, o_w, o_btilde, comm);
+    normbtildeproj = platform.linAlg.norm2(Ntotal, o_btilde, comm);
 
     // Only add if the remainder after projection is large enough.
     //
@@ -454,8 +452,8 @@ void igRollingQRProjectionStrategy::givensRotation(dfloat a, dfloat b, dfloat *c
 
 /*****************************************************************************/
 
-igExtrapStrategy::igExtrapStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm, int _weighted, occa::memory& _o_weight):
-  initialGuessStrategy_t(_N, _platform, _settings, _comm, _weighted, _o_weight)
+igExtrapStrategy::igExtrapStrategy(dlong _N, platform_t& _platform, settings_t& _settings, MPI_Comm _comm):
+  initialGuessStrategy_t(_N, _platform, _settings, _comm)
 {
   int M, m;
   settings.getSetting("INITIAL GUESS HISTORY SPACE DIMENSION", M);

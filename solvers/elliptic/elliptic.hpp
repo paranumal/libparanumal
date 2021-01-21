@@ -55,12 +55,15 @@ public:
   mesh_t &mesh;
   linAlg_t &linAlg;
 
+  dlong Ndofs, Nhalo;
   int Nfields;
 
   dfloat lambda;
   dfloat tau;
 
   int disc_ipdg, disc_c0;
+
+  occa::memory o_AqL;
 
   halo_t* traceHalo;
 
