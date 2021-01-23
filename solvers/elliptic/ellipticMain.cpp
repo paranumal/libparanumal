@@ -25,6 +25,8 @@ SOFTWARE.
 */
 
 #include "elliptic.hpp"
+#include "mesh/mesh2D.hpp"
+#include "mesh/mesh3D.hpp"
 
 int main(int argc, char **argv){
 
@@ -56,6 +58,13 @@ int main(int argc, char **argv){
   // set up mesh
   mesh_t& mesh = mesh_t::Setup(platform, meshSettings, comm);
 
+  // map coords
+  if(mesh.elementType==HEXAHEDRA)
+    ((meshHex3D&)mesh).CoordinateTransform(mesh.N+1, "GL");
+  if(mesh.elementType==QUADRILATERALS)
+    ((meshQuad2D&)mesh).CoordinateTransform(mesh.N+1, "GL");
+
+  
   dfloat lambda = 0.0;
   ellipticSettings.getSetting("LAMBDA", lambda);
 

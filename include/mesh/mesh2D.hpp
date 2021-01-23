@@ -92,6 +92,8 @@ public:
   void PlotInterp(const dfloat* q, dfloat* Iq, dfloat* scratch=nullptr);
 
   dfloat ElementCharacteristicLength(dlong e);
+
+  void CoordinateTransform(int _cubN, const char *cubatureType);
 };
 
 #endif

@@ -332,7 +332,7 @@ public:
   virtual void OccaSetup();
 
   virtual void CubatureSetup()=0;
-  //  virtual void CubatureSetup(int _cubN, const char *cubatureType);
+  virtual void CubatureSetup(int _cubN, const char *cubatureType)=0;
   
   virtual void CubatureNodes()=0;
 

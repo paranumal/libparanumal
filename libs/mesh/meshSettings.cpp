@@ -83,6 +83,24 @@ meshSettings_t::meshSettings_t(MPI_Comm& _comm):
              "4",
              "Degree of polynomial finite element space",
              {"1","2","3","4","5","6","7","8","9","10","11","12","13","14","15"});
+
+  newSetting("BOX COORDINATE MAP FILE",
+	     "NONE",
+	     "Name of file containing box transformation kernel");
+  
+  newSetting("BOX COORDINATE MAP PARAMETER Y",
+	     "1.0",
+	     "Parameter to be used in defining box coordinate map");
+  
+  newSetting("BOX COORDINATE MAP MODEL",
+	     "1",
+	     "Parameter to define model for box coordinate map");
+  
+  newSetting("BOX COORDINATE MAP PARAMETER Z",
+	     "1.0",
+	     "Parameter to be used in defining box coordinate map");
+  
+  
 }
 
 void meshSettings_t::report() {
@@ -124,8 +142,14 @@ void meshSettings_t::report() {
       }
 
       reportSetting("BOX BOUNDARY FLAG");
-    }
 
+      reportSetting("BOX COORDINATE MAP FILE");
+      reportSetting("BOX COORDINATE MAP PARAMETER Y");
+      reportSetting("BOX COORDINATE MAP PARAMETER Z");
+      reportSetting("BOX COORDINATE MAP MODEL");
+      
+    }
+    
     reportSetting("POLYNOMIAL DEGREE");
   }
 }
