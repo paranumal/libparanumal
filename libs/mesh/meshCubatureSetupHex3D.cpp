@@ -29,8 +29,16 @@ SOFTWARE.
 
 void meshHex3D::CubatureSetup(){
 
+  CubatureSetup(N+1, "GL");
+
+}
+
+void meshHex3D::CubatureSetup(int _cubN, const char *_cubatureType){
+
+  cubatureType = strdup(_cubatureType);
+
   /* Quadrature data */
-  cubN = N+1;
+  cubN = _cubN;
   cubNq = cubN+1;
   cubNp = cubNq*cubNq*cubNq;
   cubNfp = cubNq*cubNq;
@@ -39,7 +47,13 @@ void meshHex3D::CubatureSetup(){
   // cubN+1 point Gauss-Legendre quadrature
   cubr = (dfloat *) malloc(cubNq*sizeof(dfloat));
   cubw = (dfloat *) malloc(cubNq*sizeof(dfloat));
-  JacobiGQ(0, 0, cubN, cubr, cubw);
+  //  JacobiGQ(0, 0, cubN, cubr, cubw);
+
+  if(!strcmp(cubatureType,"GL"))
+    JacobiGQ(0, 0, cubN, cubr, cubw);
+  else
+    JacobiGLL(cubN, cubr, cubw);
+
 
   // GLL to GL interpolation matrix
   cubInterp = (dfloat *) malloc(Nq*cubNq*sizeof(dfloat));

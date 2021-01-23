@@ -62,6 +62,8 @@ public:
   void OccaSetup();
 
   void CubatureSetup();
+  void CubatureSetup(int _cubN, const char *cubatureType);
+  
   void CubatureNodes();
 
   void MassMatrixKernelSetup(int Nfields);
@@ -84,6 +86,8 @@ public:
   void OccaSetup();
 
   void CubatureSetup();
+  void CubatureSetup(int _cubN, const char *cubatureType);
+
   void CubatureNodes();
 
   void MassMatrixKernelSetup(int Nfields);
@@ -106,6 +110,8 @@ public:
   void OccaSetup();
 
   void CubatureSetup();
+  void CubatureSetup(int _cubN, const char *cubatureType);
+  
   void CubatureNodes();
 
   void MassMatrixKernelSetup(int Nfields);
@@ -128,6 +134,8 @@ public:
   void OccaSetup();
 
   void CubatureSetup();
+  void CubatureSetup(int _cubN, const char *cubatureType);
+
   void CubatureNodes();
 
   void MassMatrixKernelSetup(int Nfields);

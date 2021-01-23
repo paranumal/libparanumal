@@ -28,16 +28,31 @@ SOFTWARE.
 #include "mesh/mesh2D.hpp"
 #include "mesh/mesh3D.hpp"
 
+
 void meshQuad3D::CubatureSetup(){
   mesh_t *mesh_p = (mesh_t*) this;
   meshQuad2D* trimesh = (meshQuad2D*) mesh_p;
-  trimesh->meshQuad2D::CubatureSetup();
+  
+  trimesh->meshQuad2D::CubatureSetup(N, "GL");
+}
+
+void meshQuad3D::CubatureSetup(int _cubN, const char *_cubatureType){
+  mesh_t *mesh_p = (mesh_t*) this;
+  meshQuad2D* trimesh = (meshQuad2D*) mesh_p;
+  trimesh->meshQuad2D::CubatureSetup(_cubN, _cubatureType);
 }
 
 void meshQuad2D::CubatureSetup(){
 
+  CubatureSetup(N, "GL"); // FOR THE MOMENT
+}
+
+void meshQuad2D::CubatureSetup(int _cubN, const char *_cubatureType){
+
+  cubatureType = strdup(_cubatureType);
+
   /* Quadrature data */
-  cubN = N+1;
+  cubN = _cubN;
   cubNq = cubN+1;
   cubNp = cubNq*cubNq;
   cubNfp = cubNq;

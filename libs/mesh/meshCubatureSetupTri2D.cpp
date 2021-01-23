@@ -29,15 +29,27 @@ SOFTWARE.
 #include "mesh/mesh3D.hpp"
 
 void meshTri3D::CubatureSetup(){
+
+  CubatureSetup(N, " ");
+}
+
+void meshTri3D::CubatureSetup(int _cubN, const char *_cubatureType){
   mesh_t *mesh_p = (mesh_t*) this;
   meshTri2D* trimesh = (meshTri2D*) mesh_p;
-  trimesh->meshTri2D::CubatureSetup();
+  trimesh->meshTri2D::CubatureSetup(_cubN, _cubatureType);
 }
 
 void meshTri2D::CubatureSetup(){
 
+  CubatureSetup(N, " ");
+}
+
+void meshTri2D::CubatureSetup(int _cubN, const char *_cubatureType){
+
+  cubatureType = strdup(_cubatureType);
+
   /* Cubature data */
-  cubN = 2*N; //cubature order
+  cubN = 2*_cubN; //cubature order
   CubatureNodesTri2D(cubN, &cubNp, &cubr, &cubs, &cubw);
 
   cubInterp = (dfloat *) malloc(Np*cubNp*sizeof(dfloat));

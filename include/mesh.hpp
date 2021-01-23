@@ -154,6 +154,7 @@ public:
   dfloat *sgeo;
 
   // cubature
+  char *cubatureType;
   int cubN=0, cubNp=0, cubNfp=0, cubNq=0;
   dfloat *cubr, *cubs, *cubt, *cubw;    // coordinates and weights of reference cubature nodes
   dfloat *cubx, *cuby, *cubz;           // coordinates of physical cubature nodes
@@ -331,7 +332,8 @@ public:
   virtual void OccaSetup();
 
   virtual void CubatureSetup()=0;
-
+  //  virtual void CubatureSetup(int _cubN, const char *cubatureType);
+  
   virtual void CubatureNodes()=0;
 
   // print out parallel partition i
