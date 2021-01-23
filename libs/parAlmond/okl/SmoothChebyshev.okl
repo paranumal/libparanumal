@@ -60,7 +60,7 @@ SOFTWARE.
                       @restrict const  dlong  * blockStarts,
                       @restrict const  dlong  * rowStarts,
                       @restrict const  dlong  * cols,
-                      @restrict const  dfloat * vals,
+                      @restrict const  pfloat * vals,
                       const dfloat  alpha,
                       const dfloat  beta,
                       @restrict const  dfloat * diagInv,
@@ -105,7 +105,7 @@ SOFTWARE.
                       @restrict const  dlong  * rowStarts,
                       @restrict const  dlong  * rows,
                       @restrict const  dlong  * cols,
-                      @restrict const  dfloat * vals,
+                      @restrict const  pfloat * vals,
                       @restrict const  dfloat * diagInv,
                       @restrict const  dfloat * x,
                       @restrict        dfloat * r){

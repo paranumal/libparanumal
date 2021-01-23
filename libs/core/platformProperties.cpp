@@ -51,6 +51,20 @@ void platform_t::DeviceProperties(){
     props["defines/" "dfloat8"]="double8";
   }
 
+  if(sizeof(pfloat)==4){
+    props["defines/" "pfloat"]="float";
+    props["defines/" "pfloat2"]="float2";
+    props["defines/" "pfloat4"]="float4";
+    props["defines/" "pfloat8"]="float8";
+  }
+  if(sizeof(pfloat)==8){
+    props["defines/" "pfloat"]="double";
+    props["defines/" "pfloat2"]="double2";
+    props["defines/" "pfloat4"]="double4";
+    props["defines/" "pfloat8"]="double8";
+  }
+
+  
   if(sizeof(dlong)==4){
     props["defines/" "dlong"]="int";
   }

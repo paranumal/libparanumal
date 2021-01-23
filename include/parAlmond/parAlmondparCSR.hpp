@@ -45,7 +45,7 @@ public:
     dlong  *blockRowStarts=nullptr;
     dlong  *rowStarts=nullptr;
     dlong  *cols=nullptr;
-    dfloat *vals=nullptr;
+    pfloat *vals=nullptr;
 
     occa::memory o_blockRowStarts;
     occa::memory o_rowStarts;
@@ -65,7 +65,7 @@ public:
     dlong  *mRowStarts=nullptr; //compressed version of rowStarts
     dlong  *rows=nullptr;
     dlong  *cols=nullptr;
-    dfloat *vals=nullptr;
+    pfloat *vals=nullptr;
 
     occa::memory o_blockRowStarts;
     occa::memory o_mRowStarts;
