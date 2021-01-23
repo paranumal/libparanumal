@@ -39,6 +39,8 @@ void meshQuad2D::GeometricFactors(){
   Nggeo = 4;
   ggeo = (dfloat*) calloc(Nelements*Nggeo*Np, sizeof(dfloat));
 
+  dfloat minJ = 1e9, maxJ = -1e9;
+  
   for(dlong e=0;e<Nelements;++e){ /* for each element */
     for(int j=0;j<Nq;++j){
       for(int i=0;i<Nq;++i){
@@ -62,6 +64,8 @@ void meshQuad2D::GeometricFactors(){
 
         /* compute geometric factors for affine coordinate transform*/
         dfloat J = xr*ys - xs*yr;
+	minJ = mymin(J, minJ);
+	maxJ = mymax(J, maxJ);
 
         if(J<1e-8) {
           stringstream ss;
@@ -91,6 +95,14 @@ void meshQuad2D::GeometricFactors(){
       }
     }
   }
+
+  dfloat globalMinJ, globalMaxJ;
+  
+  MPI_Reduce(&minJ, &globalMinJ, 1, MPI_DFLOAT, MPI_MIN, 0, comm);
+  MPI_Reduce(&maxJ, &globalMaxJ, 1, MPI_DFLOAT, MPI_MAX, 0, comm);
+  
+  if(rank==0)
+    printf("J in range [%g,%g]\n", globalMinJ, globalMaxJ);
 
   halo->Exchange(vgeo, Nvgeo*Np, ogs_dfloat);
 }

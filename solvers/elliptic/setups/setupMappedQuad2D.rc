@@ -14,10 +14,10 @@ BOX
 4
 
 [BOX NX]
-18
+54
 
 [BOX NY]
-18
+54
 
 [BOX NZ]
 40
@@ -41,7 +41,7 @@ data/kershaw2D.okl
 .3
 
 [BOX COORDINATE MAP MODEL]
-1
+2
 
 [POLYNOMIAL DEGREE]
 6
@@ -93,7 +93,7 @@ CHEBYSHEV
 
 # can be any integer >0
 [MULTIGRID CHEBYSHEV DEGREE]
-2
+1
 
 ###########################################
 

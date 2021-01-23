@@ -185,6 +185,10 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
 
     elliptic_t &ellipticF = elliptic.SetupNewDegree(meshF);
 
+    void plotGeometry(elliptic_t &elliptic, int num);
+    plotGeometry(ellipticF, Nc);
+
+    
     //share masking data with previous MG level
     if (prevLevel) {
       prevLevel->meshC = &meshF;
@@ -246,6 +250,7 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   //build matrix at degree 1
   mesh_t &meshF = mesh.SetupNewDegree(1);
 
+ 
   // reset geometry and quadrature to match finest grid
   if(mesh.elementType==HEXAHEDRA || mesh.elementType==QUADRILATERALS){
 
@@ -260,6 +265,9 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   
   elliptic_t &ellipticF = elliptic.SetupNewDegree(meshF);
 
+  void plotGeometry(elliptic_t &elliptic, int num);
+  plotGeometry(ellipticF, meshF.N);
+  
   //share masking data with previous MG level
   if (prevLevel) {
     prevLevel->meshC = &meshF;

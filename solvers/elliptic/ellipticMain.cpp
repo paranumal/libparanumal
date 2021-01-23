@@ -28,6 +28,49 @@ SOFTWARE.
 #include "mesh/mesh2D.hpp"
 #include "mesh/mesh3D.hpp"
 
+void plotGeometry(elliptic_t &elliptic, int num){
+  mesh_t &mesh = elliptic.mesh;
+
+  dlong nx, ny, nz;
+  dfloat *q = (dfloat*) calloc(elliptic.Nfields*mesh.Np*mesh.Nelements, sizeof(dfloat));
+
+  mesh.settings.getSetting("BOX NX", nx);
+  mesh.settings.getSetting("BOX NY", ny);
+
+  // plot mesh
+  if(mesh.dim==3){
+    mesh.settings.getSetting("BOX NZ", nz);
+    
+    for(dlong e=0;e<mesh.Nelements;++e){
+      dlong ex = e%nx;
+      dlong ey = (e/nx)%ny;
+      dlong ez = (e/(nx*ny));
+      dlong flag = ((ex+ey+ez)%2)==0;
+      //    printf("e=%d,flag=%d\n", e, flag);
+      for(dlong n=0;n<mesh.Np;++n){
+	dlong id = e*mesh.Np*elliptic.Nfields + n;
+	q[id] = flag;
+      }
+    }
+  }
+  else{
+    for(dlong e=0;e<mesh.Nelements;++e){
+      dlong ex = e%nx;
+      dlong ey = (e/nx);
+      dlong flag = ((ex+ey)%2)==0;
+      for(dlong n=0;n<mesh.Np;++n){
+	dlong id = e*mesh.Np*elliptic.Nfields + n;
+	q[id] = flag;
+      }
+    }
+  }
+  
+  char fileName[BUFSIZ];
+  sprintf(fileName, "geometry%05d.vtu", num);
+  elliptic.PlotFields(q, fileName);
+}
+
+
 int main(int argc, char **argv){
 
   // start up MPI

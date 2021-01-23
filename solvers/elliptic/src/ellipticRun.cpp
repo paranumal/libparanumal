@@ -25,6 +25,8 @@ SOFTWARE.
 */
 
 #include "elliptic.hpp"
+#include "mesh/meshDefines2D.h"
+#include "mesh/meshDefines3D.h"
 
 void elliptic_t::Run(){
 
@@ -134,6 +136,19 @@ void elliptic_t::Run(){
                 lambda,
                 o_rL);
 
+#if 1
+  srand48(12345);
+  dfloat *tmpr = (dfloat*) calloc(mesh.Np*mesh.Nelements, sizeof(dfloat));
+  for(dlong e=0;e<mesh.Nelements;++e){
+    for(dlong n=0;n<mesh.Np;++n){
+      tmpr[e*mesh.Np+n] = drand48()*mesh.ggeo[e*mesh.Np*mesh.Nggeo + n + GWJID*mesh.Np];
+    }
+  }
+  o_rL.copyFrom(tmpr);
+  free(tmpr);
+#endif
+
+  
   //add boundary condition contribution to rhs
   if (settings.compareSetting("DISCRETIZATION","IPDG")) {
     rhsBCKernel(mesh.Nelements,
@@ -180,6 +195,8 @@ void elliptic_t::Run(){
 
   //call the solver
   dfloat tol = 1e-8;
+  settings.getSetting("LINEAR SOLVER CONVERGENCE TOLERANCE", tol);
+  
   int iter = Solve(*linearSolver, o_x, o_r, tol, maxIter, verbose);
 
 
@@ -201,14 +218,26 @@ void elliptic_t::Run(){
   double elapsedTime = endTime - startTime;
 
   if ((mesh.rank==0) && verbose){
-    printf("%d, " hlongFormat ", %g, %d, %g, %g; global: N, dofs, elapsed, iterations, time per node, nodes*iterations/time %s\n",
+
+    dfloat epsy = 1.;
+    mesh.settings.getSetting("BOX COORDINATE MAP PARAMETER Y", epsy);
+    int mapModel = 1;
+    mesh.settings.getSetting("BOX COORDINATE MAP MODEL", mapModel);
+
+    dlong NGlobal = ogsMasked->NgatherGlobal;
+    printf("%d, " hlongFormat ", %g, %d, %g, %g, %g, %d; global (dofs) N, dofs, elapsed, iterations, time per node, nodes*iterations/time, epsy, map model, %s\n",
            mesh.N,
-           NglobalDofs,
+	   NGlobal,
            elapsedTime,
            iter,
-           elapsedTime/(NglobalDofs),
-           NglobalDofs*((dfloat)iter/elapsedTime),
+           elapsedTime/(NGlobal),
+	   NGlobal*((dfloat)iter/elapsedTime),
+	   epsy,
+	   mapModel,
            (char*) settings.getSetting("PRECONDITIONER").c_str());
+
+
+    
   }
 
   if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
