@@ -181,26 +181,6 @@ dlong ellipticBuildOperatorConsistentMatrix(elliptic_t &elliptic, nonZero_t *A){
 
   int useGlobalToLocal = 0;
   
-#if 0
-  dfloat *tmpCubInterp = (dfloat*) calloc(mesh.Nq*mesh.cubNq, sizeof(dfloat));
-  dfloat *tmpCubD      = (dfloat*) calloc(mesh.cubNq*mesh.cubNq, sizeof(dfloat));
-  mesh.o_cubInterp.copyTo(tmpCubInterp);
-  mesh.o_cubD.copyTo(tmpCubD);
-  printf("cubInterp=\n");
-  for(int n=0;n<mesh.cubNq;++n){
-    for(int m=0;m<mesh.Nq;++m){
-      printf("%g, ", tmpCubInterp[n+ m*mesh.cubNq]);
-    }
-    printf("\n");
-  }
-  printf("cubD=\n");
-  for(int n=0;n<mesh.cubNq;++n){
-    for(int m=0;m<mesh.cubNq;++m){
-      printf("%g, ", tmpCubD[n*mesh.cubNq+m]);
-    }
-    printf("\n");
-  }
-#endif
   
   for(dlong n=0;n<Np;++n){
 
@@ -244,11 +224,15 @@ dlong ellipticBuildOperatorConsistentMatrix(elliptic_t &elliptic, nonZero_t *A){
       if(useCubature==0) { // GLL or non-hex
 	printf("WARNING: using partial Ax\n");
 	elliptic.partialAxKernel(mesh.NlocalGatherElements, mesh.o_localGatherElementList,
+				 elliptic.ogsMasked->o_GlobalToLocal,
+				 useGlobalToLocal,
 				 mesh.o_ggeo, mesh.o_D, mesh.o_S, mesh.o_MM, elliptic.lambda, o_q, o_Aqn);
       }else{
 	printf("WARNING: using cubature partial Ax\n");
 	elliptic.partialCubatureAxKernel(mesh.NlocalGatherElements,
 					 mesh.o_localGatherElementList,
+					 elliptic.ogsMasked->o_GlobalToLocal,
+					 useGlobalToLocal,
 					 mesh.o_cubggeo,
 					 mesh.o_cubD, //right layout
 					 mesh.o_cubInterp, // dropped T ?

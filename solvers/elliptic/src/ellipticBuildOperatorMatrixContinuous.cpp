@@ -28,8 +28,121 @@ SOFTWARE.
 #include "mesh/meshDefines2D.h"
 #include "mesh/meshDefines3D.h"
 
+// compare on global indices
+int parallelCompareRowColumn(const void *a, const void *b){
+
+  parAlmond::parCOO::nonZero_t *fa = (parAlmond::parCOO::nonZero_t*) a;
+  parAlmond::parCOO::nonZero_t *fb = (parAlmond::parCOO::nonZero_t*) b;
+
+  if(fa->row < fb->row) return -1;
+  if(fa->row > fb->row) return +1;
+
+  if(fa->col < fb->col) return -1;
+  if(fa->col > fb->col) return +1;
+
+  return 0;
+}
+
+void compressMatrix(mesh_t &mesh, ogs_t *ogsMasked,
+		    parAlmond::parCOO::nonZero_t *AL,
+		    dlong cnt,
+		    parAlmond::parCOO& A){
+
+  // number of degrees of freedom on this rank (after gathering)
+  hlong Ngather = ogsMasked->Ngather;
+
+  // every gathered degree of freedom has its own global id
+  A.globalRowStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  A.globalColStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
+  MPI_Allgather(&Ngather, 1, MPI_HLONG, A.globalRowStarts+1, 1, MPI_HLONG, mesh.comm);
+  for(int r=0;r<mesh.size;++r) {
+    A.globalRowStarts[r+1] = A.globalRowStarts[r]+A.globalRowStarts[r+1];
+    A.globalColStarts[r+1] = A.globalRowStarts[r+1];
+  }
+  
+  int *AsendCounts  = (int*) calloc(mesh.size, sizeof(int));
+  int *ArecvCounts  = (int*) calloc(mesh.size, sizeof(int));
+  int *AsendOffsets = (int*) calloc(mesh.size+1, sizeof(int));
+  int *ArecvOffsets = (int*) calloc(mesh.size+1, sizeof(int));
+  
+  // sort by row ordering
+  qsort(AL, cnt, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
+
+  // count how many non-zeros to send to each process
+  int rr=0;
+  for(dlong n=0;n<cnt;++n) {
+    const hlong id = AL[n].row;
+    while(id>=A.globalRowStarts[rr+1]) rr++;
+    AsendCounts[rr]++;
+  }
+
+  // find how many nodes to expect (should use sparse version)
+  MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, mesh.comm);
+
+  // find send and recv offsets for gather
+  A.nnz = 0;
+  for(int r=0;r<mesh.size;++r){
+    AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
+    ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
+    A.nnz += ArecvCounts[r];
+  }
+
+  A.entries = (parAlmond::parCOO::nonZero_t*) calloc(A.nnz, sizeof(parAlmond::parCOO::nonZero_t));
+
+  // determine number to receive
+  MPI_Alltoallv(AL, AsendCounts, AsendOffsets, parAlmond::MPI_NONZERO_T,
+		A.entries, ArecvCounts, ArecvOffsets, parAlmond::MPI_NONZERO_T,
+		mesh.comm);
+
+  // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
+  qsort((A.entries), A.nnz, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
+
+  // compress duplicates
+  cnt = 0;
+  for(dlong n=1;n<A.nnz;++n){
+    if(A.entries[n].row == A.entries[cnt].row &&
+       A.entries[n].col == A.entries[cnt].col){
+      A.entries[cnt].val += A.entries[n].val;
+    }
+    else{
+      double tol =  0;
+      if(fabs(A.entries[n].val)>tol){
+	++cnt;
+	A.entries[cnt] = A.entries[n];
+      }
+    }
+  }
+  if (A.nnz) cnt++;
+  A.nnz = cnt;
+
+  if(mesh.rank==0) printf("done %d entries.\n", cnt);
+
+  MPI_Barrier(mesh.comm);
+  free(AL);
+  free(AsendCounts);
+  free(ArecvCounts);
+  free(AsendOffsets);
+  free(ArecvOffsets);
+
+}
+
+
 void elliptic_t::BuildOperatorMatrixContinuous(parAlmond::parCOO& A) {
 
+#if 0
+  // does not work with FEM grid from SEMFEM
+  dlong ellipticBuildOperatorConsistentMatrix(elliptic_t &elliptic, parAlmond::parCOO::nonZero_t *A);
+    
+  dlong nnzLocal = mesh.Np*mesh.Np*mesh.Nelements;
+  parAlmond::parCOO::nonZero_t *AL =
+    (parAlmond::parCOO::nonZero_t*) calloc(nnzLocal, sizeof(parAlmond::parCOO::nonZero_t));
+  
+  
+  ellipticBuildOperatorConsistentMatrix(*this, AL);
+
+  compressMatrix(mesh, ogsMasked, AL, nnzLocal, A);
+#else
+  
   switch(mesh.elementType){
   case TRIANGLES:
     BuildOperatorMatrixContinuousTri2D(A); break;
@@ -47,6 +160,7 @@ void elliptic_t::BuildOperatorMatrixContinuous(parAlmond::parCOO& A) {
   case HEXAHEDRA:
     BuildOperatorMatrixContinuousHex3D(A); break;
   }
+#endif
 }
 
 void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO& A) {
