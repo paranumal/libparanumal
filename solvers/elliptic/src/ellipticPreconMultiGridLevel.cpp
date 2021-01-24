@@ -338,12 +338,15 @@ MGLevel::~MGLevel() {
   partialProlongateKernel.free();
 }
 
+void ellipticBuildOperatorConsistentDiagonal(elliptic_t &elliptic, dfloat *diagA);
+
 void MGLevel::SetupSmoother() {
 
   //set up the fine problem smoothing
   dfloat *diagA    = (dfloat*) calloc(Nrows, sizeof(dfloat));
   dfloat *invDiagA = (dfloat*) calloc(Nrows, sizeof(dfloat));
-  elliptic.BuildOperatorDiagonal(diagA);
+  //  elliptic.BuildOperatorDiagonal(diagA);
+  ellipticBuildOperatorConsistentDiagonal(elliptic, diagA);
 
   for (dlong n=0;n<Nrows;n++)
     invDiagA[n] = 1.0/diagA[n];

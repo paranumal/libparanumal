@@ -61,7 +61,10 @@ void meshQuad2D::CubatureSetup(int _cubN, const char *_cubatureType){
   // cubN+1 point Gauss-Legendre quadrature
   cubr = (dfloat *) malloc(cubNq*sizeof(dfloat));
   cubw = (dfloat *) malloc(cubNq*sizeof(dfloat));
-  JacobiGQ(0, 0, cubN, cubr, cubw);
+  if(!strcmp(cubatureType,"GL"))    
+    JacobiGQ(0, 0, cubN, cubr, cubw);
+  else
+    JacobiGLL(cubN, cubr, cubw);
 
   // GLL to GL interpolation matrix
   cubInterp = (dfloat *) malloc(Nq*cubNq*sizeof(dfloat));

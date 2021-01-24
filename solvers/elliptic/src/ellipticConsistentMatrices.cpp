@@ -31,7 +31,7 @@ void ellipticBuildOperatorConsistentDiagonal(elliptic_t &elliptic, dfloat *diagA
 
   mesh_t &mesh = elliptic.mesh;
 
-  int integrationType = ((mesh.elementType==HEXAHEDRA||mesh.elementType==QUADRILATERALS) &&
+  int useCubature = ((mesh.elementType==HEXAHEDRA||mesh.elementType==QUADRILATERALS) &&
 			 (elliptic.settings.compareSetting("ELLIPTIC INTEGRATION", "CUBATURE") ? 1:0));
   
   int Np = mesh.Np;
@@ -44,35 +44,42 @@ void ellipticBuildOperatorConsistentDiagonal(elliptic_t &elliptic, dfloat *diagA
   occa::kernel stridedCopyKernel = 
     elliptic.platform.buildKernel(DELLIPTIC "/okl/ellipticSetLocalNode.okl", "ellipticStridedCopyKernel", kernelInfo);
   
-  dfloat *q = (dfloat*) calloc(Np*Nelements, sizeof(dfloat));
-  dfloat *Aq = (dfloat*) calloc(Np*Nelements, sizeof(dfloat));
+  dfloat *qL = (dfloat*) calloc(Np*Nelements, sizeof(dfloat));
+  dfloat *AqL = (dfloat*) calloc(Np*Nelements, sizeof(dfloat));
+  dfloat *diagAL = (dfloat*) calloc(Np*Nelements, sizeof(dfloat));
 
-  occa::memory o_q  = elliptic.platform.device.malloc(Np*Nelements*sizeof(dfloat));
-  occa::memory o_Aq = elliptic.platform.device.malloc(Np*Nelements*sizeof(dfloat));
-  occa::memory o_diagA = elliptic.platform.device.malloc(Np*Nelements*sizeof(dfloat));  
-
+  occa::memory o_qL  = elliptic.platform.device.malloc(Np*Nelements*sizeof(dfloat));
+  occa::memory o_AqL = elliptic.platform.device.malloc(Np*Nelements*sizeof(dfloat));
+  occa::memory o_diagAL = elliptic.platform.device.malloc(Np*Nelements*sizeof(dfloat));  
+  int useGlobalToLocal = 0;
+  
   double tic = MPI_Wtime();
   
   for(dlong n=0;n<Np;++n){
 
-    setLocalNodeKernel(Nelements, Np, n, (dfloat)1.0, o_q);
+    setLocalNodeKernel(Nelements, Np, n, (dfloat)1.0, o_qL);
 
     elliptic.platform.device.finish();
     //    printf("Stage %d\n", 1);
     
     if(mesh.NglobalGatherElements) {
 
-      if(integrationType==0) { // GLL or non-hex
+      if(useCubature==0) { // GLL or non-hex
 	printf("WARNING: using GLL kernel\n");
-	elliptic.partialAxKernel(mesh.NglobalGatherElements, mesh.o_globalGatherElementList,
-				 mesh.o_ggeo, mesh.o_D, mesh.o_S, mesh.o_MM, elliptic.lambda, o_q, o_Aq);
+	elliptic.partialAxKernel(mesh.NglobalGatherElements,
+				 mesh.o_globalGatherElementList,
+				 elliptic.ogsMasked->o_GlobalToLocal,
+				 useGlobalToLocal,
+				 mesh.o_ggeo, mesh.o_D, mesh.o_S, mesh.o_MM, elliptic.lambda, o_qL, o_AqL);
       }else{
 	elliptic.partialCubatureAxKernel(mesh.NglobalGatherElements,
 					 mesh.o_globalGatherElementList,
+					 elliptic.ogsMasked->o_GlobalToLocal,
+					 useGlobalToLocal,
 					 mesh.o_cubggeo,
 					 mesh.o_cubD, // check layout
 					 mesh.o_cubInterp, // check layout
-					 elliptic.lambda, o_q, o_Aq);
+					 elliptic.lambda, o_qL, o_AqL);
       }	
     }
 
@@ -80,19 +87,24 @@ void ellipticBuildOperatorConsistentDiagonal(elliptic_t &elliptic, dfloat *diagA
     //    printf("Stage %d\n", 2);
     
     if(mesh.NlocalGatherElements){
-      if(integrationType==0) { // GLL or non-hex
+      if(useCubature==0) { // GLL or non-hex
 	printf("WARNING: using GLL kernel\n");
-	elliptic.partialAxKernel(mesh.NlocalGatherElements, mesh.o_localGatherElementList,
-				 mesh.o_ggeo, mesh.o_D, mesh.o_S, mesh.o_MM, elliptic.lambda, o_q, o_Aq);
+	elliptic.partialAxKernel(mesh.NlocalGatherElements, 
+				 mesh.o_localGatherElementList,
+				 elliptic.ogsMasked->o_GlobalToLocal,
+				 useGlobalToLocal,
+				 mesh.o_ggeo, mesh.o_D, mesh.o_S, mesh.o_MM, elliptic.lambda, o_qL, o_AqL);
       }else{
-	elliptic.partialCubatureAxKernel(mesh.NlocalGatherElements,
+	elliptic.partialCubatureAxKernel(mesh.NlocalGatherElements,					 
 					 mesh.o_localGatherElementList,
-					 mesh.o_cubggeo,
+					 elliptic.ogsMasked->o_GlobalToLocal,
+					 useGlobalToLocal,
+					 mesh.o_cubggeo,					 
 					 mesh.o_cubD, //right layout
 					 mesh.o_cubInterp, // dropped T ?
 					 elliptic.lambda,
-					 o_q,
-					 o_Aq);
+					 o_qL,
+					 o_AqL);
       }
     }
 
@@ -100,35 +112,39 @@ void ellipticBuildOperatorConsistentDiagonal(elliptic_t &elliptic, dfloat *diagA
     //    printf("Stage %d\n", 3);
     
     // strided by Np, offset n
-    stridedCopyKernel(Nelements, Np, n, o_Aq, o_diagA);
+    stridedCopyKernel(Nelements, Np, n, o_AqL, o_diagAL);
 
     elliptic.platform.device.finish();
     //    printf("Stage %d\n", 4);
+
+    //    elliptic.ogsMasked->Gather(diagA, o_diagAL, ogs_dfloat, ogs_add, ogs_trans);
+    
   }
   
-  o_diagA.copyTo(diagA);
+  o_diagAL.copyTo(diagAL);
 
   for(dlong e=0;e<Nelements;++e){
     for(dlong n=0;n<Np;++n){
       dlong id = e*Np+n;
-      if(diagA[id] == 0 || elliptic.mapB[id])
-	diagA[id] = 1;
-
+      if(diagAL[id] == 0 || elliptic.mapB[id])
+	diagAL[id] = 1;
+      
       if (elliptic.allNeumann) {
 	if (elliptic.mapB[id]!=1) { //dont fill rows for masked nodes
-	  diagA[id] += elliptic.allNeumannPenalty*elliptic.allNeumannScale*elliptic.allNeumannScale;
+	  diagAL[id] += elliptic.allNeumannPenalty*elliptic.allNeumannScale*elliptic.allNeumannScale;
 	}
       }
     }
   }
   
-  elliptic.ogsMasked->GatherScatter(diagA, ogs_dfloat, ogs_add, ogs_sym);
+  elliptic.ogsMasked->Gather(diagA, diagAL, ogs_dfloat, ogs_add, ogs_trans);
   double toc = MPI_Wtime();
 
   printf("Diagonal build (sloppy) took %g seconds\n", toc-tic);
   
-  free(q);
-  free(Aq);
+  free(qL);
+  free(AqL);
+  free(diagAL);
 }
 
 #define nonZero_t parAlmond::parCOO::nonZero_t
@@ -137,10 +153,10 @@ dlong ellipticBuildOperatorConsistentMatrix(elliptic_t &elliptic, nonZero_t *A){
 
   mesh_t &mesh = elliptic.mesh;
 
-  int integrationType = ((mesh.elementType==HEXAHEDRA||mesh.elementType==QUADRILATERALS) &&
+  int useCubature = ((mesh.elementType==HEXAHEDRA||mesh.elementType==QUADRILATERALS) &&
 			 elliptic.settings.compareSetting("ELLIPTIC INTEGRATION", "CUBATURE")) ? 1:0;
 
-  //  integrationType = 0;
+  //  useCubature = 0;
   
   int Np = mesh.Np;
   int Nelements = mesh.Nelements;
@@ -148,7 +164,7 @@ dlong ellipticBuildOperatorConsistentMatrix(elliptic_t &elliptic, nonZero_t *A){
   //build kernels
   occa::properties kernelInfo = elliptic.platform.props;
 
-  //  printf("CONSISTENT MATRIX INTEGRATION TYPE: %d\n",  integrationType);
+  //  printf("CONSISTENT MATRIX INTEGRATION TYPE: %d\n",  useCubature);
   //  std::cout << kernelInfo << std::endl;
   
   occa::kernel setLocalNodeKernel = 
@@ -163,6 +179,8 @@ dlong ellipticBuildOperatorConsistentMatrix(elliptic_t &elliptic, nonZero_t *A){
 
   double tic = MPI_Wtime();
 
+  int useGlobalToLocal = 0;
+  
 #if 0
   dfloat *tmpCubInterp = (dfloat*) calloc(mesh.Nq*mesh.cubNq, sizeof(dfloat));
   dfloat *tmpCubD      = (dfloat*) calloc(mesh.cubNq*mesh.cubNq, sizeof(dfloat));
@@ -194,10 +212,12 @@ dlong ellipticBuildOperatorConsistentMatrix(elliptic_t &elliptic, nonZero_t *A){
     
     if(mesh.NglobalGatherElements) {
 
-      if(integrationType==0) { // GLL or non-hex
+      if(useCubature==0) { // GLL or non-hex
 	printf("WARNING: using partial Ax\n");
 	elliptic.partialAxKernel(mesh.NglobalGatherElements,
 				 mesh.o_globalGatherElementList,
+				 elliptic.ogsMasked->o_GlobalToLocal,
+				 useGlobalToLocal,
 				 mesh.o_ggeo,
 				 mesh.o_D,
 				 mesh.o_S,
@@ -209,6 +229,8 @@ dlong ellipticBuildOperatorConsistentMatrix(elliptic_t &elliptic, nonZero_t *A){
 	printf("WARNING: using cubature partial Ax\n");
 	elliptic.partialCubatureAxKernel(mesh.NglobalGatherElements,
 					 mesh.o_globalGatherElementList,
+					 elliptic.ogsMasked->o_GlobalToLocal,
+					 useGlobalToLocal,
 					 mesh.o_cubggeo,
 					 mesh.o_cubD, // check layout
 					 mesh.o_cubInterp, // check layout
@@ -219,7 +241,7 @@ dlong ellipticBuildOperatorConsistentMatrix(elliptic_t &elliptic, nonZero_t *A){
     }
     
     if(mesh.NlocalGatherElements){
-      if(integrationType==0) { // GLL or non-hex
+      if(useCubature==0) { // GLL or non-hex
 	printf("WARNING: using partial Ax\n");
 	elliptic.partialAxKernel(mesh.NlocalGatherElements, mesh.o_localGatherElementList,
 				 mesh.o_ggeo, mesh.o_D, mesh.o_S, mesh.o_MM, elliptic.lambda, o_q, o_Aqn);
