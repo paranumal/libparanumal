@@ -28,7 +28,7 @@ SOFTWARE.
 
 @kernel void ellipticPartialCubatureAxHex3D_orig(const dlong Nelements,
 						 @restrict const dlong  * elementList,
-						 @restrict const  dlong   *  GlobalToLocal,
+						 @restrict const dlong  *  globalToLocal,
 						 const int useGlobalToLocal,
 						 @restrict const dfloat * cubggeo,
 						 @restrict const dfloat * cubD,
