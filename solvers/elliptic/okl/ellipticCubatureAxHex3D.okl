@@ -70,7 +70,7 @@ SOFTWARE.
 	  for(int c=0;c<p_Nq;++c){
 	    dlong id = r_element*p_Np + c*p_Nq*p_Nq + b*p_Nq + a;
 	    if(useGlobalToLocal) id = globalToLocal[id];
-	    s_q[c][b][a] = q[id];
+	    s_q[c][b][a] = (id>=0) ? q[id]: (dfloat)0;
 	  }
         }
       }

@@ -70,7 +70,7 @@ SOFTWARE.
 
 	  dlong id = r_element*p_Np + b*p_Nq + a;
 	  if(useGlobalToLocal) id = GlobalToLocal[id];
-	  s_q[b][a] = q[id];
+	  s_q[b][a] = (id>=0) ? q[id]: (dfloat)0;
         }
       }
     }

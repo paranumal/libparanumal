@@ -123,6 +123,17 @@ elliptic_t& elliptic_t::SetupNewDegree(mesh_t& meshC){
     elliptic->partialAxKernel = platform.buildKernel(fileName, kernelName,
                                             kernelInfo);
 
+
+    if(mesh.elementType==HEXAHEDRA || mesh.elementType==QUADRILATERALS){
+      //      printf("REBUILDING cubature Ax\n");
+      sprintf(fileName,  DELLIPTIC "/okl/ellipticCubatureAx%s.okl", suffix);
+      sprintf(kernelName, "ellipticPartialCubatureAx%s", suffix);
+      
+      elliptic->partialCubatureAxKernel = platform.buildKernel(fileName, kernelName,
+							       kernelInfo);
+    }
+
+    
   } else if (settings.compareSetting("DISCRETIZATION","IPDG")) {
     int Nmax = mymax(meshC.Np, meshC.Nfaces*meshC.Nfp);
     kernelInfo["defines/" "p_Nmax"]= Nmax;
