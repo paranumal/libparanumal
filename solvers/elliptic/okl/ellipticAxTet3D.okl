@@ -187,6 +187,7 @@ SOFTWARE.
 @kernel void ellipticPartialAxTet3D(const dlong Nelements,
                                   @restrict const  dlong   *  elementList,
                                   @restrict const  dlong   *  GlobalToLocal,
+				    const int useGlobalToLocal,
                                   @restrict const  dfloat *  ggeo,
                                   @restrict const  dfloat *  D,
                                   @restrict const  dfloat *  S,
@@ -216,7 +217,9 @@ SOFTWARE.
             element[et] = elementList[e];
 
             const dlong base = n + element[et]*p_Np;
-            const dlong id = GlobalToLocal[base];
+            dlong id = base;
+	    if(useGlobalToLocal) id = GlobalToLocal[id];
+	    
             s_q[et][b][n] = (id!=-1) ? q[id] : 0.0;
 
             int m=n;

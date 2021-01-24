@@ -97,6 +97,7 @@ SOFTWARE.
 @kernel void ellipticPartialAxTri2D(const dlong Nelements,
                                     @restrict const  dlong   *  elementList,
                                     @restrict const  dlong   *  GlobalToLocal,
+				    const int useGlobalToLocal,
                                     @restrict const  dfloat *  ggeo,
                                     @restrict const  dfloat *  D,
                                     @restrict const  dfloat *  S,
@@ -115,7 +116,8 @@ SOFTWARE.
           //prefetch q
           const dlong element = elementList[e];
           const dlong base = n + element*p_Np;
-          const dlong id = GlobalToLocal[base];
+	  dlong id = base;
+	  if(useGlobalToLocal) id = GlobalToLocal[id];
           s_q[e-eo][n] = (id!=-1) ? q[id] : 0.0;
         }
       }

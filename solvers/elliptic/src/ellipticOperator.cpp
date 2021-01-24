@@ -40,11 +40,13 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
     if(mesh.NlocalGatherElements){
       // if(integrationType==0) { // GLL or non-hex
         // if(mapType==0)
-          partialAxKernel(mesh.NlocalGatherElements,
-                          mesh.o_localGatherElementList,
-                          ogsMasked->o_GlobalToLocal,
-                          mesh.o_ggeo, mesh.o_D, mesh.o_S,
-                          mesh.o_MM, lambda, o_q, o_AqL);
+      int useLocalToGlobal = 1;
+      partialAxKernel(mesh.NlocalGatherElements,
+		      mesh.o_localGatherElementList,
+		      ogsMasked->o_GlobalToLocal,
+		      useLocalToGlobal,
+		      mesh.o_ggeo, mesh.o_D, mesh.o_S,
+		      mesh.o_MM, lambda, o_q, o_AqL);
         /* NC: disabling until we re-add treatment of affine elements
         else
           partialAxKernel(mesh.NlocalGatherElements, mesh.o_localGatherElementList,
@@ -69,11 +71,13 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
 
       // if(integrationType==0) { // GLL or non-hex
         // if(mapType==0)
-          partialAxKernel(mesh.NglobalGatherElements,
-                          mesh.o_globalGatherElementList,
-                          ogsMasked->o_GlobalToLocal,
-                          mesh.o_ggeo, mesh.o_D, mesh.o_S,
-                          mesh.o_MM, lambda, o_q, o_AqL);
+      int useLocalToGlobal = 1;
+      partialAxKernel(mesh.NglobalGatherElements,
+		      mesh.o_globalGatherElementList,
+		      ogsMasked->o_GlobalToLocal,
+		      useLocalToGlobal,
+		      mesh.o_ggeo, mesh.o_D, mesh.o_S,
+		      mesh.o_MM, lambda, o_q, o_AqL);
         /* NC: disabling until we re-add treatment of affine elements
         else
           partialAxKernel(mesh.NglobalGatherElements, mesh.o_globalGatherElementList,

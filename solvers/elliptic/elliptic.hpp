@@ -100,6 +100,8 @@ public:
   occa::kernel partialGradientKernel;
   occa::kernel partialIpdgKernel;
 
+  occa::kernel partialCubatureAxKernel;
+  
   elliptic_t() = delete;
   elliptic_t(platform_t &_platform, mesh_t &_mesh,
               settings_t& _settings, dfloat _lambda):
