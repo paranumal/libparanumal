@@ -1,0 +1,208 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Kasia Swirydowicz, Noel Chalmers, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+#define p_cubNp (p_cubNq*p_cubNq)
+
+@kernel void ellipticPartialCubatureAxQuad2D(const dlong Nelements,
+					     @restrict const dlong  * elementList,
+					     @restrict const  dlong   *  GlobalToLocal,
+					     const int useGlobalToLocal,
+					     @restrict const dfloat * cubggeo,
+					     @restrict const dfloat * cubD,
+					     @restrict const dfloat * cubInterpT,
+					     const dfloat lambda,
+					     @restrict const dfloat * q,
+					     @restrict       dfloat * Aq){
+
+  
+  for(int e=0; e<Nelements; ++e; @outer(0)) {
+    
+    @shared dfloat s_cubD[p_cubNq][p_cubNq];
+
+    @shared dfloat s_q[p_cubNq][p_cubNq];
+    @shared dfloat s_q1[p_cubNq][p_cubNq];
+
+    @shared dfloat s_qr[p_cubNq][p_cubNq];
+    @shared dfloat s_qs[p_cubNq][p_cubNq];
+
+    @shared dfloat s_I[p_cubNq][p_Nq];
+
+    @exclusive dfloat r_Aq;
+    
+    @exclusive dlong r_element;
+    
+    for(int b=0;b<p_cubNq;++b;@inner(1)){
+      for(int a=0;a<p_cubNq;++a;@inner(0)){
+
+	r_element = elementList[e];
+
+	int id = a + b*p_cubNq;
+        if(id<p_cubNq*p_Nq){
+          s_I[a][b] = cubInterpT[id];
+        }
+
+        s_cubD[b][a] = cubD[id];
+
+        if(a<p_Nq && b<p_Nq){
+
+	  dlong id = r_element*p_Np + b*p_Nq + a;
+	  if(useGlobalToLocal) id = GlobalToLocal[id];
+	  s_q[b][a] = q[id];
+        }
+      }
+    }
+
+    @barrier("local");
+    
+    // 2. interpolate in b
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int a=0;a<p_cubNq;++a;@inner(0)){
+
+        if(a<p_Nq){
+	  
+	  // mat-vec Ijb*r_q[b]
+	  dfloat tmp = 0; 
+	  for(int b=0;b<p_Nq;++b){
+	    const dfloat sIjb= s_I[j][b];
+	    tmp  += sIjb*s_q[b][a];
+	  }
+	  // store to s_q[c][j][a], ok since only this thread walks [c][:][a]
+	  s_q1[j][a] = tmp;
+	}
+      }
+    }
+
+    @barrier("local");
+
+    // 3. transform in a
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+
+	dfloat tmp = 0;
+	
+	for(int a=0;a<p_Nq;++a){
+	  const dfloat sIia = s_I[i][a];
+	  tmp  += sIia*s_q1[j][a];
+	}
+	
+	s_q[j][i] = tmp; 
+      }
+    }
+    
+    @barrier("local");
+    //===============================================
+    // 5. differentiate once interpolated
+  
+    for(int j=0; j<p_cubNq; ++j; @inner(1)) {
+      for(int i=0; i<p_cubNq; ++i; @inner(0)) {
+	
+	const int base = r_element*p_Nggeo*p_cubNp + j*p_cubNq + i;
+	
+	//geofactors for j i thread
+	const dfloat r_GwJ = cubggeo[base+p_GWJID*p_cubNp];
+	
+	const dfloat r_G00 = cubggeo[base+p_G00ID*p_cubNp];
+	const dfloat r_G01 = cubggeo[base+p_G01ID*p_cubNp];
+	const dfloat r_G11 = cubggeo[base+p_G11ID*p_cubNp];
+
+	// 'r', 's', 't' derivatives
+	dfloat dr = 0.0f;
+	dfloat ds = 0.0f;
+	
+#pragma unroll p_cubNq
+	for (int n = 0; n<p_cubNq; ++n) {
+	  dr += s_cubD[i][n]*s_q[j][n];
+	  ds += s_cubD[j][n]*s_q[n][i];
+	}
+	
+	s_qr[j][i] = r_G00*dr + r_G01*ds;
+	s_qs[j][i] = r_G01*dr + r_G11*ds;
+	
+	r_Aq = lambda*r_GwJ*s_q[j][i];
+      }
+    }
+    
+    @barrier("local");
+    
+    // weak diff
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+	
+	dfloat lapqr = 0.0f, lapqs = 0.0f;
+	
+#pragma unroll p_cubNq
+	for(int n=0;n<p_cubNq;++n){
+	  lapqr += s_cubD[n][i]*s_qr[j][n];
+	  lapqs += s_cubD[n][j]*s_qs[n][i];
+	}
+	
+	r_Aq += lapqr+lapqs;
+	s_q[j][i] = r_Aq;
+      }
+    }
+  
+    //=========== now project =================================================
+    // b -> c -> a
+
+    @barrier("local");
+    // test in b
+    for(int b=0;b<p_cubNq;++b;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+
+	if(b<p_Nq){
+	  dfloat tmp = 0.0f;
+	    
+#pragma unroll p_cubNq
+	  for(int j=0;j<p_cubNq;++j){
+	    const dfloat sIjb = s_I[j][b];
+	    tmp  += sIjb*s_q[j][i];
+	  }
+	  
+	  s_q1[b][i] = tmp; 
+	}
+      }
+    }
+    
+    // transform back in a
+    for(int b=0;b<p_cubNq;++b;@inner(1)){
+      for(int a=0;a<p_cubNq;++a;@inner(0)){
+	if(a<p_Nq && b<p_Nq){
+	  dfloat tmp  = 0.0f;
+	  
+#pragma unroll p_cubNq
+	  for(int i=0;i<p_cubNq;++i){
+	    
+	      const dfloat sIia = s_I[i][a];
+	      tmp  += sIia*s_q1[b][i];
+	  }
+	  
+	  dlong id = r_element*p_Np + b*p_Nq + a;
+	  Aq[id] = tmp;
+	}
+      }
+    }
+  }
+}//kernel
