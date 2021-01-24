@@ -28,7 +28,7 @@ SOFTWARE.
 #define TYPES_HPP
 
 // precision of AMG storage
-#if 0
+#if 1
 #define pfloat float
 #define ogs_pfloat ogs_float
 #else
