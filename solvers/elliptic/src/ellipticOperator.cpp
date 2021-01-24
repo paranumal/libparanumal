@@ -55,7 +55,7 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
 				mesh.o_cubInterp,
 				lambda,
 				o_q,
-				o_Aq);
+				o_AqL);
       
     }
 
@@ -78,7 +78,7 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
 				mesh.o_cubggeo,
 				mesh.o_cubD,
 				mesh.o_cubInterp,
-				lambda, o_q, o_Aq);
+				lambda, o_q, o_AqL);
       
     }
 
