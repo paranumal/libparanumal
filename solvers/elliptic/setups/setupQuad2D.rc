@@ -81,6 +81,10 @@ CHEBYSHEV
 
 ########## ParAlmond Options ##############
 
+# can be double or float
+[PARALMOND DEVICE MATRIX TYPE]
+double
+
 # can be KCYCLE, or VCYCLE
 # can add the EXACT and NONSYM option
 [PARALMOND CYCLE]

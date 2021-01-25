@@ -88,6 +88,10 @@ public:
   occa::kernel buildKernel(std::string fileName, std::string kernelName,
                            occa::properties& kernelInfo);
 
+  occa::kernel buildKernelFromString(std::string kernelString,
+				     std::string kernelName,
+				     occa::properties& kernelInfo);
+
   occa::memory malloc(const size_t bytes,
                       const void *src = NULL,
                       const occa::properties &prop = occa::properties()) {
@@ -114,6 +118,8 @@ public:
     return h_mem.ptr();
   }
 
+  occa::memory mallocConvert(const dlong N, const dfloat *dataIn, const char *typeOutString);
+  
 private:
   void DeviceConfig();
   void DeviceProperties();

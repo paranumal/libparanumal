@@ -83,6 +83,20 @@ void buildParAlmondKernels(platform_t& platform){
 
   if (rank==0) {printf("Compiling parALMOND Kernels...");fflush(stdout);}
 
+  if(parAlmondDeviceMatrixType=="float"){
+    kernelInfo["defines/" "pfloat"]="float";
+    kernelInfo["defines/" "pfloat2"]="float2";
+    kernelInfo["defines/" "pfloat4"]="float4";
+    kernelInfo["defines/" "pfloat8"]="float8";
+  }
+  if(parAlmondDeviceMatrixType=="double"){
+    kernelInfo["defines/" "pfloat"]="double";
+    kernelInfo["defines/" "pfloat2"]="double2";
+    kernelInfo["defines/" "pfloat4"]="double4";
+    kernelInfo["defines/" "pfloat8"]="double8";
+  }
+
+  
   SpMVcsrKernel1  = platform.buildKernel(PARALMOND_DIR"/okl/SpMVcsr.okl",  "SpMVcsr1",  kernelInfo);
   SpMVcsrKernel2  = platform.buildKernel(PARALMOND_DIR"/okl/SpMVcsr.okl",  "SpMVcsr2",  kernelInfo);
   SpMVmcsrKernel  = platform.buildKernel(PARALMOND_DIR"/okl/SpMVmcsr.okl", "SpMVmcsr1", kernelInfo);

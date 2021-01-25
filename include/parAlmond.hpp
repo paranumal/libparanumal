@@ -42,7 +42,9 @@ void ReportSettings(settings_t& settings);
 
 extern MPI_Datatype MPI_NONZERO_T;
 
-//distributed matrix class passed to AMG setup
+extern string parAlmondDeviceMatrixType;
+  
+  //distributed matrix class passed to AMG setup
 class parCOO {
 public:
   platform_t &platform;
