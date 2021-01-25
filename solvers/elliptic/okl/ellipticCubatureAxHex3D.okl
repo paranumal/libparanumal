@@ -367,6 +367,8 @@ SOFTWARE.
 
 @kernel void ellipticPartialCubatureAxHex3D(const dlong Nelements,
 					    @restrict const dlong  * elementList,
+					    @restrict const dlong  *  globalToLocal,
+					    const int useGlobalToLocal,
 					    @restrict const dfloat * cubggeo,
 					    @restrict const dfloat * cubD,
 					    @restrict const dfloat * cubInterpT,
@@ -418,7 +420,8 @@ SOFTWARE.
 	  
 	  if(a<p_Nq && b<p_Nq && c<p_Nq){
 	    dlong id = r_element*p_Np + c*p_Nq*p_Nq + b*p_Nq + a;
-	    s_q[c][b][a] = q[id];
+	    if(useGlobalToLocal) id = globalToLocal[id];
+	    s_q[c][b][a] = (id>=0) ? q[id]: (dfloat)0;
 	  }
 	}
       }
