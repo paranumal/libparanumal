@@ -29,7 +29,12 @@ SOFTWARE.
 namespace parAlmond {
 
 void AddSettings(settings_t& settings,
-                          const string prefix) {
+		 const string prefix) {
+
+  settings.newSetting(prefix+"PARALMOND DEVICE MATRIX TYPE",
+                      dfloatString,
+                      "Type of entries of offloaded matrices",
+                      {"double", "float", "half"});
 
   settings.newSetting(prefix+"PARALMOND CYCLE",
                       "VCYCLE",
@@ -63,6 +68,8 @@ void ReportSettings(settings_t& settings) {
   settings.reportSetting("PARALMOND AGGREGATION");
   settings.reportSetting("PARALMOND SMOOTHER");
 
+  settings.reportSetting("PARALMOND DEVICE MATRIX TYPE");
+  
   if (settings.compareSetting("PARALMOND SMOOTHER","CHEBYSHEV"))
     settings.reportSetting("PARALMOND CHEBYSHEV DEGREE");
 }

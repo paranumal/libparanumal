@@ -53,7 +53,7 @@ parCSR *galerkinProd(parCSR *A, parCSR *P){
   // compress the global Ids of the columns and nonzero values to
   // single vectors
   hlong  *Pcols = (hlong  *) calloc(M,sizeof(hlong));
-  pfloat *Pvals = (pfloat *) calloc(M,sizeof(pfloat));
+  dfloat *Pvals = (dfloat *) calloc(M,sizeof(dfloat));
 
   //record the entries of P that this rank has
   for (dlong i=0;i<N;i++) {
@@ -72,7 +72,7 @@ parCSR *galerkinProd(parCSR *A, parCSR *P){
 
   //fill the halo region
   A->halo->Exchange(Pcols, 1, ogs_hlong);
-  A->halo->Exchange(Pvals, 1, ogs_pfloat);
+  A->halo->Exchange(Pvals, 1, ogs_dfloat);
 
   dlong sendNtotal = A->diag.nnz+A->offd.nnz;
   parCOO::nonZero_t *sendPTAP = (parCOO::nonZero_t *) calloc(sendNtotal,sizeof(parCOO::nonZero_t));

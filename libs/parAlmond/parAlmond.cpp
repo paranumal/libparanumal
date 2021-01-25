@@ -30,6 +30,8 @@ SOFTWARE.
 
 namespace parAlmond {
 
+std::string parAlmondDeviceMatrixType = "float";
+  
 parAlmond_t::parAlmond_t(platform_t& _platform, settings_t& _settings, MPI_Comm comm):
   platform(_platform), settings(_settings) {
 
@@ -39,6 +41,8 @@ parAlmond_t::parAlmond_t(platform_t& _platform, settings_t& _settings, MPI_Comm 
                                 "adx", "adxpy", "zadxpy",
                                 "innerProd", "norm2"});
 
+  settings.getSetting("PARALMOND DEVICE MATRIX TYPE", parAlmondDeviceMatrixType);
+  
   multigrid = new multigrid_t(platform, settings, comm);
 
   //build parAlmond kernels on first construction
