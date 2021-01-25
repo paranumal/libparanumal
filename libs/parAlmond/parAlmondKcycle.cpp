@@ -168,12 +168,7 @@ void multigrid_t::kcycleCombinedOp1(multigridLevel* level,
   dfloat result[3] = {0.,0.,0.};
   dlong numBlocks = (N < PARALMOND_NBLOCKS) ? N : PARALMOND_NBLOCKS;
 
-  if (level->weighted) {
-    kcycleWeightedCombinedOp1Kernel(numBlocks,N,o_a,o_b,o_c,level->o_weight,
-                                    o_reductionScratch);
-  } else {
-    kcycleCombinedOp1Kernel(numBlocks,N,o_a,o_b,o_c,o_reductionScratch);
-  }
+  kcycleCombinedOp1Kernel(numBlocks,N,o_a,o_b,o_c,o_reductionScratch);
   o_reductionScratch.copyTo(reductionScratch,3*numBlocks*sizeof(dfloat),0);
 
   for(dlong i=0; i<numBlocks; i++) {
@@ -193,12 +188,7 @@ void multigrid_t::kcycleCombinedOp2(multigridLevel* level, dfloat *aDotbcd,
   dfloat result[3] = {0.,0.,0.};
   dlong numBlocks = (N < PARALMOND_NBLOCKS) ? N : PARALMOND_NBLOCKS;
 
-  if (level->weighted) {
-    kcycleWeightedCombinedOp2Kernel(numBlocks,N,o_a,o_b,o_c,o_d,
-                                    level->o_weight,o_reductionScratch);
-  } else {
-    kcycleCombinedOp2Kernel(numBlocks,N,o_a,o_b,o_c,o_d,o_reductionScratch);
-  }
+  kcycleCombinedOp2Kernel(numBlocks,N,o_a,o_b,o_c,o_d,o_reductionScratch);
   o_reductionScratch.copyTo(reductionScratch,3*numBlocks*sizeof(dfloat),0);
 
   for(dlong i=0; i<numBlocks; i++) {
@@ -219,12 +209,7 @@ dfloat multigrid_t::vectorAddInnerProd(multigridLevel* level,
   dfloat gresult = 0.;
   dlong numBlocks = (N < PARALMOND_NBLOCKS) ? N : PARALMOND_NBLOCKS;
 
-  if (level->weighted) {
-    vectorAddWeightedInnerProdKernel(numBlocks,N,alpha,beta,o_X,o_Y,
-                                      level->o_weight,o_reductionScratch);
-  } else {
-    vectorAddInnerProdKernel(numBlocks,N,alpha,beta,o_X,o_Y,o_reductionScratch);
-  }
+  vectorAddInnerProdKernel(numBlocks,N,alpha,beta,o_X,o_Y,o_reductionScratch);
   o_reductionScratch.copyTo(reductionScratch,numBlocks*sizeof(dfloat),0);
 
   // #pragma omp parallel for reduction(+:result)

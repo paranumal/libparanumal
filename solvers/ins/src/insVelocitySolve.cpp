@@ -60,36 +60,6 @@ void ins_t::VelocitySolve(occa::memory& o_U, occa::memory& o_RHS,
                       o_rhsV,
                       o_rhsW);
 
-  // gather-scatter and mask if C0
-  if (vDisc_c0){
-    mesh.ogs->GatherScatter(o_rhsU, ogs_dfloat, ogs_add, ogs_sym);
-    mesh.ogs->GatherScatter(o_rhsV, ogs_dfloat, ogs_add, ogs_sym);
-    if (mesh.dim==3)
-      mesh.ogs->GatherScatter(o_rhsW, ogs_dfloat, ogs_add, ogs_sym);
-
-    //make velocity fields C0
-    mesh.ogs->GatherScatter(o_UH, ogs_dfloat, ogs_add, ogs_sym);
-    mesh.ogs->GatherScatter(o_VH, ogs_dfloat, ogs_add, ogs_sym);
-    if (mesh.dim==3)
-      mesh.ogs->GatherScatter(o_WH, ogs_dfloat, ogs_add, ogs_sym);
-
-    linAlg.amx(mesh.Nelements*mesh.Np, 1.0, uSolver->o_weight, o_UH);
-    linAlg.amx(mesh.Nelements*mesh.Np, 1.0, vSolver->o_weight, o_VH);
-    if (mesh.dim==3)
-      linAlg.amx(mesh.Nelements*mesh.Np, 1.0, wSolver->o_weight, o_WH);
-
-    //mask
-    if (uSolver->Nmasked) uSolver->maskKernel(uSolver->Nmasked, uSolver->o_maskIds, o_rhsU);
-    if (vSolver->Nmasked) vSolver->maskKernel(vSolver->Nmasked, vSolver->o_maskIds, o_rhsV);
-    if (mesh.dim==3)
-      if (wSolver->Nmasked) wSolver->maskKernel(wSolver->Nmasked, wSolver->o_maskIds, o_rhsW);
-
-    if (uSolver->Nmasked) uSolver->maskKernel(uSolver->Nmasked, uSolver->o_maskIds, o_UH);
-    if (vSolver->Nmasked) vSolver->maskKernel(vSolver->Nmasked, vSolver->o_maskIds, o_VH);
-    if (mesh.dim==3)
-      if (wSolver->Nmasked) wSolver->maskKernel(wSolver->Nmasked, wSolver->o_maskIds, o_WH);
-  }
-
   int maxIter = 5000;
   int verbose = 0;
 
@@ -98,10 +68,31 @@ void ins_t::VelocitySolve(occa::memory& o_U, occa::memory& o_RHS,
   wSolver->lambda = gamma/nu;
 
   //  Solve lambda*U - Laplacian*U = rhs
-  NiterU = uSolver->Solve(*uLinearSolver, o_UH, o_rhsU, velTOL, maxIter, verbose);
-  NiterV = vSolver->Solve(*vLinearSolver, o_VH, o_rhsV, velTOL, maxIter, verbose);
-  if (mesh.dim==3)
-    NiterW = wSolver->Solve(*wLinearSolver, o_WH, o_rhsW, velTOL, maxIter, verbose);
+  if (vDisc_c0){
+    uSolver->ogsMasked->Gather(o_GUH, o_UH, ogs_dfloat, ogs_add, ogs_trans);
+    vSolver->ogsMasked->Gather(o_GVH, o_VH, ogs_dfloat, ogs_add, ogs_trans);
+
+    // gather, solve, scatter
+    uSolver->ogsMasked->Gather(o_GrhsU, o_rhsU, ogs_dfloat, ogs_add, ogs_trans);
+    NiterU = uSolver->Solve(*uLinearSolver, o_GUH, o_GrhsU, velTOL, maxIter, verbose);
+    uSolver->ogsMasked->Scatter(o_UH, o_GUH, ogs_dfloat, ogs_add, ogs_notrans);
+
+    vSolver->ogsMasked->Gather(o_GrhsV, o_rhsV, ogs_dfloat, ogs_add, ogs_trans);
+    NiterV = vSolver->Solve(*vLinearSolver, o_GVH, o_GrhsV, velTOL, maxIter, verbose);
+    vSolver->ogsMasked->Scatter(o_VH, o_GVH, ogs_dfloat, ogs_add, ogs_notrans);
+
+    if (mesh.dim==3) {
+      wSolver->ogsMasked->Gather(o_GrhsW, o_rhsW, ogs_dfloat, ogs_add, ogs_trans);
+      NiterW = wSolver->Solve(*wLinearSolver, o_GWH, o_GrhsW, velTOL, maxIter, verbose);
+      wSolver->ogsMasked->Scatter(o_WH, o_GWH, ogs_dfloat, ogs_add, ogs_notrans);
+    }
+
+  } else {
+    NiterU = uSolver->Solve(*uLinearSolver, o_UH, o_rhsU, velTOL, maxIter, verbose);
+    NiterV = vSolver->Solve(*vLinearSolver, o_VH, o_rhsV, velTOL, maxIter, verbose);
+    if (mesh.dim==3)
+      NiterW = wSolver->Solve(*wLinearSolver, o_WH, o_rhsW, velTOL, maxIter, verbose);
+  }
 
   // merge arrays back, and enter BCs if C0
   velocityBCKernel(mesh.Nelements,

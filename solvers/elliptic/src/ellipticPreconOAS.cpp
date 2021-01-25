@@ -32,12 +32,21 @@ SOFTWARE.
 //  problem, solved with parAlmond
 void OASPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
 
-  dlong Ntotal = mesh.Np*mesh.Nelements;
-
   if (mesh.N>1) {
-    //Copy to patch buffer and queue to the ring exchange
-    o_rPatch.copyFrom(o_r, Ntotal*sizeof(dfloat));
-    mesh.ringHalo->Exchange(o_rPatch, mesh.Np, ogs_dfloat);
+    if (elliptic.disc_c0) {
+      //Scatter to localDof ordering, exchange ring halo,
+      // then compress the ring mesh to globalDofs order.
+      // TODO: Technically, these steps couple be fused
+      // to a single operation, but currently theres no easy way
+      // as the ordering of globalDofs between the original mesh
+      // partition and the ring mesh could be different
+      elliptic.ogsMasked->Scatter(o_rPatchL, o_r, ogs_dfloat, ogs_add, ogs_notrans);
+      mesh.ringHalo->Exchange(o_rPatchL, mesh.Np, ogs_dfloat);
+      ellipticPatch->ogsMasked->Gather(o_rPatch, o_rPatchL, ogs_dfloat, ogs_add, ogs_notrans);
+    } else {
+      o_rPatch.copyFrom(o_r, elliptic.Ndofs*sizeof(dfloat));
+      mesh.ringHalo->Exchange(o_rPatch, mesh.Np, ogs_dfloat);
+    }
 
     //Apply local patch precon
     preconPatch->Operator(o_rPatch, o_zPatch);
@@ -45,31 +54,34 @@ void OASPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
     //Coarsen problem to N=1 and pass to parAlmond
     // TODO: This is blocking due to H<->D transfers.
     //       Should modify precons so size=1 is non-blocking
-    level->coarsen(o_r, o_rC); //this should also gather the level
+    level->coarsen(o_r, o_rC);
 
     parAlmond.Operator(o_rC, o_zC);
 
     //Add contributions from all patches together
     if (elliptic.disc_c0) {
-      ogsMaskedRing->GatherScatter(o_zPatch, ogs_dfloat, ogs_add, ogs_sym);
+      dlong Ntotal=mesh.Nelements*mesh.Np;
+
+      ellipticPatch->ogsMasked->Scatter(o_zPatchL, o_zPatch, ogs_dfloat, ogs_add, ogs_notrans);
+      ogsMaskedRing->GatherScatter(o_zPatchL, ogs_dfloat, ogs_add, ogs_sym);
+
+      // Weight by overlap degree, zPatch = patchWeight*zPatch
+      elliptic.linAlg.amx(Ntotal, 1.0, o_patchWeight, o_zPatchL);
+
+      elliptic.ogsMasked->Gather(o_Mr, o_zPatchL, ogs_dfloat, ogs_add, ogs_notrans);
+
     } else {
       mesh.ringHalo->Combine(o_zPatch, mesh.Np, ogs_dfloat);
-    }
 
-    // Weight by overlap degree, Mr = patchWeight*zPatch
-    elliptic.linAlg.amxpy(Ntotal, 1.0, o_patchWeight, o_zPatch, 0.0, o_Mr);
+      // Weight by overlap degree, Mr = patchWeight*zPatch
+      elliptic.linAlg.amxpy(elliptic.Ndofs, 1.0, o_patchWeight, o_zPatch, 0.0, o_Mr);
+    }
 
     // Add prologatated coarse solution
     level->prolongate(o_zC, o_Mr);
   } else {
     //if N=1 just call the coarse solver
-    if (elliptic.disc_c0) {
-      ogsMasked->Gather(o_rhsG, o_r, ogs_dfloat, ogs_add, ogs_notrans);
-      parAlmond.Operator(o_rhsG, o_xG);
-      ogsMasked->Scatter(o_Mr, o_xG, ogs_dfloat, ogs_add, ogs_notrans);
-    } else {
-      parAlmond.Operator(o_r, o_Mr);
-    }
+    parAlmond.Operator(o_r, o_Mr);
   }
 
   // zero mean of RHS
@@ -85,6 +97,54 @@ OASPrecon::OASPrecon(elliptic_t& _elliptic):
     meshPatch = mesh.SetupRingPatch();
     ellipticPatch = elliptic.SetupRingPatch(*meshPatch);
     preconPatch = new MultiGridPrecon(*ellipticPatch);
+
+    if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
+      rPatchL = (dfloat*) calloc(mesh.Np*(mesh.Nelements+mesh.totalRingElements),sizeof(dfloat));
+      zPatchL = (dfloat*) calloc(mesh.Np*(mesh.Nelements+mesh.totalRingElements),sizeof(dfloat));
+
+      o_rPatchL = elliptic.platform.malloc(mesh.Np*(mesh.Nelements+mesh.totalRingElements)*sizeof(dfloat), rPatchL);
+      o_zPatchL = elliptic.platform.malloc(mesh.Np*(mesh.Nelements+mesh.totalRingElements)*sizeof(dfloat), zPatchL);
+    }
+
+    rPatch  = (dfloat*) calloc(ellipticPatch->Ndofs,sizeof(dfloat));
+    zPatch  = (dfloat*) calloc(ellipticPatch->Ndofs,sizeof(dfloat));
+    o_rPatch = elliptic.platform.malloc(ellipticPatch->Ndofs*sizeof(dfloat), rPatch);
+    o_zPatch = elliptic.platform.malloc(ellipticPatch->Ndofs*sizeof(dfloat), zPatch);
+
+    //compute patch overlap weighting
+    patchWeight = (dfloat*) malloc(meshPatch->Nelements*meshPatch->Np*sizeof(dfloat));
+    for (int i=0;i<meshPatch->Nelements*meshPatch->Np;i++)
+      patchWeight[i] = 1.0;
+
+    if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
+      //share the masked version of the global id numbering
+      hlong *maskedRingGlobalIds = (hlong *) calloc(meshPatch->Nelements*meshPatch->Np,sizeof(hlong));
+      memcpy(maskedRingGlobalIds, elliptic.maskedGlobalIds, mesh.Nelements*mesh.Np*sizeof(hlong));
+      mesh.ringHalo->Exchange(maskedRingGlobalIds, mesh.Np, ogs_hlong);
+
+      //mask ring
+      for (dlong n=0;n<ellipticPatch->Nmasked;n++)
+        maskedRingGlobalIds[ellipticPatch->maskIds[n]] = 0;
+
+      //use the masked ids to make another gs handle
+      int verbose = 0;
+      ogsMaskedRing = ogs_t::Setup(meshPatch->Nelements*meshPatch->Np, maskedRingGlobalIds,
+                                   mesh.comm, verbose, elliptic.platform);
+      free(maskedRingGlobalIds);
+
+      //determine overlap of each node with masked ogs
+      ogsMaskedRing->GatherScatter(patchWeight, ogs_dfloat, ogs_add, ogs_sym);
+
+    } else {
+      //determine overlap by combining halos
+      mesh.ringHalo->Combine(patchWeight, mesh.Np, ogs_dfloat);
+    }
+
+    //invert
+    for (int i=0;i<meshPatch->Nelements*meshPatch->Np;i++)
+      patchWeight[i] = (patchWeight[i] > 0.0) ? 1.0/patchWeight[i] : 0.0;
+
+    o_patchWeight = elliptic.platform.malloc(meshPatch->Nelements*meshPatch->Np*sizeof(dfloat), patchWeight);
   }
 
   //build the coarse precon
@@ -124,75 +184,26 @@ OASPrecon::OASPrecon(elliptic_t& _elliptic):
   parAlmond.AMGSetup(A, ellipticC.allNeumann, null,ellipticC.allNeumannPenalty);
 
   if (mesh.N>1) {
-    level = new MGLevel(elliptic, Nc, NpCoarse);
-
+    //make an MG level to get prologation and coarsener
+    dlong Nrows, Ncols;
     if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
-      //tell the pMG level to gather after coarsening
-      level->gatherLevel = true;
-      level->ogsMasked = ellipticC.ogsMasked;
-
-      dfloat *dummy = (dfloat *) calloc(meshC.Np*(mesh.Nelements+mesh.totalRingElements),sizeof(dfloat));
-      level->o_SX = elliptic.platform.malloc(meshC.Np*(mesh.Nelements+mesh.totalRingElements)*sizeof(dfloat), dummy);
-      level->o_GX = elliptic.platform.malloc(meshC.Np*(mesh.Nelements+mesh.totalRingElements)*sizeof(dfloat), dummy);
-      free(dummy);
-
-      //share masking data with MG level
-      level->Nmasked = ellipticC.Nmasked;
-      level->o_maskIds = ellipticC.o_maskIds;
-      level->ogsMasked = ellipticC.ogsMasked;
+      Nrows = elliptic.ogsMasked->Ngather;
+      Ncols = Nrows + elliptic.ogsMasked->NgatherHalo;
+    } else {
+      Nrows = mesh.Nelements*mesh.Np;
+      Ncols = Nrows + mesh.totalHaloPairs*mesh.Np;
     }
 
-    rPatch = (dfloat*) calloc(mesh.Np*(mesh.Nelements+mesh.totalRingElements),sizeof(dfloat));
-    zPatch = (dfloat*) calloc(mesh.Np*(mesh.Nelements+mesh.totalRingElements),sizeof(dfloat));
+    level = new MGLevel(elliptic, Nrows, Ncols, Nc, NpCoarse);
+    level->meshC = &meshC;
+    level->ogsMaskedC = ellipticC.ogsMasked;
 
-    dlong Ncols = parAlmond.getNumCols(0);
+    //coarse buffers
+    Ncols = parAlmond.getNumCols(0);
     rC = (dfloat*) calloc(Ncols,sizeof(dfloat));
     zC = (dfloat*) calloc(Ncols,sizeof(dfloat));
-
-    o_rPatch = elliptic.platform.malloc(mesh.Np*(mesh.Nelements+mesh.totalRingElements)*sizeof(dfloat), rPatch);
-    o_zPatch = elliptic.platform.malloc(mesh.Np*(mesh.Nelements+mesh.totalRingElements)*sizeof(dfloat), zPatch);
-
     o_rC = elliptic.platform.malloc(Ncols*sizeof(dfloat), rC);
     o_zC = elliptic.platform.malloc(Ncols*sizeof(dfloat), zC);
-
-    //compute patch overlap weighting
-    patchWeight = (dfloat*) malloc(meshPatch->Nelements*meshPatch->Np*sizeof(dfloat));
-    for (int i=0;i<meshPatch->Nelements*meshPatch->Np;i++)
-      patchWeight[i] = 1.0;
-
-    if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
-      //share the masked version of the global id numbering
-      hlong *maskedRingGlobalIds = (hlong *) calloc(meshPatch->Nelements*meshPatch->Np,sizeof(hlong));
-      memcpy(maskedRingGlobalIds, elliptic.maskedGlobalIds, mesh.Nelements*mesh.Np*sizeof(hlong));
-      mesh.ringHalo->Exchange(maskedRingGlobalIds, mesh.Np, ogs_hlong);
-
-      //use the masked ids to make another gs handle
-      int verbose = 0;
-      ogsMaskedRing = ogs_t::Setup(meshPatch->Nelements*meshPatch->Np, maskedRingGlobalIds,
-                                   mesh.comm, verbose, elliptic.platform);
-      free(maskedRingGlobalIds);
-
-      //determine overlap of each node with masked ogs
-      ogsMaskedRing->GatherScatter(patchWeight, ogs_dfloat, ogs_add, ogs_sym);
-    } else {
-      //determine overlap by combining halos
-      mesh.ringHalo->Combine(patchWeight, mesh.Np, ogs_dfloat);
-    }
-
-    //invert
-    for (int i=0;i<meshPatch->Nelements*meshPatch->Np;i++)
-      patchWeight[i] = (patchWeight[i] > 0.0) ? 1.0/patchWeight[i] : 0.0;
-
-    o_patchWeight = elliptic.platform.malloc(meshPatch->Nelements*meshPatch->Np*sizeof(dfloat), patchWeight);
-  } else {
-    if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
-      //make buffers to gather this level before passing to parAlmond
-      ogsMasked = ellipticC.ogsMasked;
-
-      dlong Ncols = parAlmond.getNumCols(0);
-      o_rhsG = elliptic.platform.malloc(Ncols*sizeof(dfloat));
-      o_xG   = elliptic.platform.malloc(Ncols*sizeof(dfloat));
-    }
   }
 
   //report

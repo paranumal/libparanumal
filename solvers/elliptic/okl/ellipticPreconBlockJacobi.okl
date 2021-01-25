@@ -80,6 +80,7 @@ SOFTWARE.
 
 @kernel void partialBlockJacobi(const dlong Nelements,
                                 @restrict const  dlong  *  elements,
+                                @restrict const  dlong  *  GlobalToLocal,
                                 const dfloat invLambda,
                                 @restrict const  dfloat *  vgeo,
                                 @restrict const  dfloat *  B,
@@ -100,8 +101,9 @@ SOFTWARE.
         if(e<Nelements){
           const dlong element = elements[e];
           // prefetch q
-          const dlong id = element*p_Np+n;
-          s_q[es][n] = q[id];
+          const dlong base = n + element*p_Np;
+          const dlong id = GlobalToLocal[base];
+          s_q[es][n] = (id!=-1) ? q[id] : 0.0;
 
           if (n==0)
             s_scale[es] = invLambda/vgeo[element*p_Nvgeo+p_JID];

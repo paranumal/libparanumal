@@ -24,16 +24,16 @@
 
 */
 
- 
+
 @kernel void ellipticAxTri3D(const dlong Nelements,
-			     @restrict const  dfloat *  ggeo,
-			     @restrict const  dfloat *  Dmatrices,
-			     @restrict const  dfloat *  Smatrices,
-			     @restrict const  dfloat *  MM,
-			     const dfloat lambda,
-			     @restrict const  dfloat  *  q,
-			     @restrict dfloat  *  Aq){
-  
+                             @restrict const  dfloat *  ggeo,
+                             @restrict const  dfloat *  Dmatrices,
+                             @restrict const  dfloat *  Smatrices,
+                             @restrict const  dfloat *  MM,
+                             const dfloat lambda,
+                             @restrict const  dfloat  *  q,
+                             @restrict dfloat  *  Aq){
+
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
 
     @shared dfloat s_q[p_NblockV][p_Np];
@@ -68,13 +68,13 @@
           dfloat qM = 0.;
 
 #pragma unroll p_Np
-	  for (int k=0;k<p_Np;k++) {
-	    dfloat qn = s_q[es][k];
-	    qrr += Smatrices[n+k*p_Np+0*p_Np*p_Np]*qn;
-	    qrs += Smatrices[n+k*p_Np+1*p_Np*p_Np]*qn;
-	    qss += Smatrices[n+k*p_Np+2*p_Np*p_Np]*qn;
-	    qM  += MM[n+k*p_Np]*s_q[es][k];
-	  }
+          for (int k=0;k<p_Np;k++) {
+            dfloat qn = s_q[es][k];
+            qrr += Smatrices[n+k*p_Np+0*p_Np*p_Np]*qn;
+            qrs += Smatrices[n+k*p_Np+1*p_Np*p_Np]*qn;
+            qss += Smatrices[n+k*p_Np+2*p_Np*p_Np]*qn;
+            qM  += MM[n+k*p_Np]*s_q[es][k];
+          }
 
 
           const dlong id = n + e*p_Np;
@@ -95,15 +95,16 @@
 
 
 @kernel void ellipticPartialAxTri3D(const dlong Nelements,
-				    @restrict const  dlong   *  elementList,
-				    @restrict const  dfloat *  ggeo,
-				    @restrict const  dfloat *  Dmatrices,
-				    @restrict const  dfloat *  Smatrices,
-				    @restrict const  dfloat *  MM,
-				    const dfloat lambda,
-				    @restrict const  dfloat  *  q,
-				    @restrict dfloat  *  Aq){
-  
+                                    @restrict const  dlong   *  elementList,
+                                    @restrict const  dlong   *  GlobalToLocal,
+                                    @restrict const  dfloat *  ggeo,
+                                    @restrict const  dfloat *  Dmatrices,
+                                    @restrict const  dfloat *  Smatrices,
+                                    @restrict const  dfloat *  MM,
+                                    const dfloat lambda,
+                                    @restrict const  dfloat  *  q,
+                                    @restrict dfloat  *  Aq){
+
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
 
     @shared dfloat s_q[p_NblockV][p_Np];
@@ -113,8 +114,9 @@
         if (e<Nelements) {
           //prefetch q
           const dlong element = elementList[e];
-          const dlong id = n + element*p_Np;
-          s_q[e-eo][n] = q[id];
+          const dlong base = n + element*p_Np;
+          const dlong id = GlobalToLocal[base];
+          s_q[e-eo][n] = (id!=-1) ? q[id] : 0.0;
         }
       }
     }
@@ -140,14 +142,14 @@
           dfloat qM = 0.;
 
 #pragma unroll p_Np
-	  for (int k=0;k<p_Np;k++) {
-	    dfloat qn = s_q[es][k];
-	    qrr += Smatrices[n+k*p_Np+0*p_Np*p_Np]*qn;
-	    qrs += Smatrices[n+k*p_Np+1*p_Np*p_Np]*qn;
-	    qss += Smatrices[n+k*p_Np+2*p_Np*p_Np]*qn;
-	    qM  += MM[n+k*p_Np]*s_q[es][k];
-	  }
-            
+          for (int k=0;k<p_Np;k++) {
+            dfloat qn = s_q[es][k];
+            qrr += Smatrices[n+k*p_Np+0*p_Np*p_Np]*qn;
+            qrs += Smatrices[n+k*p_Np+1*p_Np*p_Np]*qn;
+            qss += Smatrices[n+k*p_Np+2*p_Np*p_Np]*qn;
+            qM  += MM[n+k*p_Np]*s_q[es][k];
+          }
+
           const dlong id = n + element*p_Np;
 
           Aq[id] = Grr*qrr+Grs*qrs+Gss*qss + J*lambda*qM;

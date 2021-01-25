@@ -123,6 +123,10 @@ public:
   occa::memory o_rhsU, o_rhsV, o_rhsW;
   occa::memory o_rhsP, o_PI;
 
+  occa::memory o_GUH, o_GVH, o_GWH;
+  occa::memory o_GrhsU, o_GrhsV, o_GrhsW;
+  occa::memory o_GrhsP, o_GP, o_GPI;
+
   int *mapB; //node-wise boundary flag
   occa::memory o_mapB;
 

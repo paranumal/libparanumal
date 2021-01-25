@@ -54,23 +54,11 @@ void amgLevel::Operator(occa::memory& o_X, occa::memory& o_Ax){
 }
 
 void amgLevel::coarsen   (occa::memory& o_r, occa::memory& o_Rr){
-  if (gatherLevel) {
-    ogs->Gather(o_Gx, o_r, ogs_dfloat, ogs_add, ogs_notrans);
-    // vectorDotStar(ogs->Ngather, o_gatherWeight, o_Gx);
-    R->SpMV(1.0, o_Gx, 0.0, o_Rr);
-  } else {
-    R->SpMV(1.0, o_r, 0.0, o_Rr);
-  }
+  R->SpMV(1.0, o_r, 0.0, o_Rr);
 }
 
 void amgLevel::prolongate(occa::memory& o_X, occa::memory& o_Px){
-  if (gatherLevel) {
-    P->SpMV(1.0, o_X, 0.0, o_Gx);
-    ogs->Scatter(o_Sx, o_Gx, ogs_dfloat, ogs_add, ogs_notrans);
-    platform.linAlg.axpy(ogs->N, 1.0, o_Sx, 1.0, o_Px);
-  } else {
-    P->SpMV(1.0, o_X, 1.0, o_Px);
-  }
+  P->SpMV(1.0, o_X, 1.0, o_Px);
 }
 
 void amgLevel::residual  (occa::memory& o_RHS, occa::memory& o_X,

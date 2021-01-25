@@ -82,3 +82,67 @@ SOFTWARE.
     }
   }
 }
+
+@kernel void ellipticPartialPreconProlongateQuad2D(const dlong Nelements,
+                                           @restrict const  dlong   *  elementList,
+                                           @restrict const  dlong   *  GlobalToLocal,
+                                           @restrict const  dfloat *  P,
+                                           @restrict const  dfloat *  qc,
+                                                 @restrict dfloat *  qN){
+
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    @shared dfloat s_qcf[p_NqCoarse][p_NqFine];
+    @shared dfloat s_qcc[p_NqCoarse][p_NqCoarse];
+    @shared dfloat s_P[p_NqFine][p_NqCoarse];
+
+    // prefetch to @shared
+    for(int j=0;j<p_NqFine;++j;@inner(1)){
+      for(int i=0;i<p_NqFine;++i;@inner(0)){
+        if(j<p_NqCoarse && i<p_NqCoarse){
+          const dlong element = elementList[e];
+          const dlong base = i+j*p_NqCoarse + element*p_NpCoarse;
+          const dlong id = GlobalToLocal[base];
+          s_qcc[j][i] = (id!=-1) ? qc[id] : 0.0;
+        }
+
+        if(i<p_NqCoarse){
+          s_P[j][i] = P[i + j*p_NqCoarse];
+        }
+      }
+    }
+
+    @barrier("local");
+
+    // prolongate in i index
+    for(int j=0;j<p_NqFine;++j;@inner(1)){
+      for(int i=0;i<p_NqFine;++i;@inner(0)){
+        if(j<p_NqCoarse){
+          dfloat res = 0;
+          #pragma unroll p_NqCoarse
+            for(int m=0;m<p_NqCoarse;++m) {
+              res += s_P[i][m]*s_qcc[j][m];
+            }
+          s_qcf[j][i] = res;
+        }
+      }
+    }
+
+    @barrier("local");
+
+    // coarsen in i index
+    for(int j=0;j<p_NqFine;++j;@inner(1)){
+      for(int i=0;i<p_NqFine;++i;@inner(0)){
+        dfloat res = 0;
+        #pragma unroll p_NqCoarse
+          for(int m=0;m<p_NqCoarse;++m) {
+            res += s_P[j][m]*s_qcf[m][i];
+          }
+
+        const dlong element = elementList[e];
+        const dlong id = i+j*p_NqFine+element*p_NpFine;
+        qN[id] = res;
+      }
+    }
+  }
+}

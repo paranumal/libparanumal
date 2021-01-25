@@ -28,8 +28,6 @@
 
 @kernel void update1NBPCG(const dlong N,
                           const dlong Nblocks,
-                          const int weighted,
-                          @restrict const dfloat *weight,
                           @restrict const dfloat *z,
                           @restrict const dfloat *Z,
                           const dfloat beta,
@@ -54,9 +52,7 @@
         pn = zn + beta*pn;
         sn = Zn + beta*sn;
 
-        const dfloat wn = (weighted) ? weight[n] : 1.0;
-
-        sum += wn*pn*sn;
+        sum += pn*sn;
 
         p[n] = pn;
         s[n] = sn;
@@ -103,8 +99,6 @@
 
 @kernel void update2NBPCG(const dlong N,
                           const dlong Nblocks,
-                          const int weighted,
-                          @restrict const dfloat *weight,
                           @restrict const dfloat *s,
                           @restrict const dfloat *S,
                           const dfloat alpha,
@@ -131,11 +125,9 @@
         rn = rn - alpha*sn;
         zn = zn - alpha*Sn;
 
-        const dfloat wn = (weighted) ? weight[n] : 1.0;
-
-        sumrdotz += wn*rn*zn;
-        sumzdotz += wn*zn*zn;
-        sumrdotr += wn*rn*rn;
+        sumrdotz += rn*zn;
+        sumzdotz += zn*zn;
+        sumrdotr += rn*rn;
 
         r[n] = rn;
         z[n] = zn;

@@ -31,33 +31,26 @@ void SEMFEMPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
 
   if (mesh.elementType==TRIANGLES) {
 
-    dlong Ntotal = mesh.Np*mesh.Nelements;
-
     // Mr = invDegree.*r
-    elliptic.linAlg.amxpy(Ntotal, 1.0, elliptic.o_weight, o_r, 0.0, o_Mr);
+    elliptic.linAlg.amxpy(elliptic.Ndofs, 1.0, elliptic.o_weightG, o_r, 0.0, o_Mr);
 
-    SEMFEMInterpKernel(mesh.Nelements,mesh.o_SEMFEMAnterp,o_Mr,o_rFEM);
+    elliptic.ogsMasked->Scatter(o_MrL, o_Mr, ogs_dfloat, ogs_add, ogs_notrans);
+    SEMFEMInterpKernel(mesh.Nelements, mesh.o_SEMFEMAnterp, o_MrL, o_rFEM);
     FEMogs->Gather(o_GrFEM, o_rFEM, ogs_dfloat, ogs_add, ogs_trans);
 
     parAlmond.Operator(o_GrFEM, o_GzFEM);
 
     FEMogs->Scatter(o_zFEM, o_GzFEM, ogs_dfloat, ogs_add, ogs_notrans);
-    SEMFEMAnterpKernel(mesh.Nelements,mesh.o_SEMFEMAnterp,o_zFEM,o_Mr);
+    SEMFEMAnterpKernel(mesh.Nelements, mesh.o_SEMFEMAnterp, o_zFEM, o_MrL);
+    elliptic.ogsMasked->Gather(o_Mr, o_MrL, ogs_dfloat, ogs_add, ogs_trans);
 
     // Mr = invDegree.*Mr
-    elliptic.linAlg.amx(Ntotal, 1.0, elliptic.o_weight, o_Mr);
-
-    elliptic.ogsMasked->GatherScatter(o_Mr, ogs_dfloat, ogs_add, ogs_sym);
+    elliptic.linAlg.amx(elliptic.Ndofs, 1.0, elliptic.o_weightG, o_Mr);
 
   } else {
-
-    FEMogs->Gather(o_rhsG, o_r, ogs_dfloat, ogs_add, ogs_notrans);
-    parAlmond.Operator(o_rhsG, o_xG);
-    FEMogs->Scatter(o_Mr, o_xG, ogs_dfloat, ogs_add, ogs_notrans);
+    //pass to parAlmond
+    parAlmond.Operator(o_r, o_Mr);
   }
-
-  if (elliptic.Nmasked)
-      elliptic.maskKernel(elliptic.Nmasked, elliptic.o_maskIds, o_Mr);
 
   // zero mean of RHS
   if(elliptic.allNeumann) elliptic.ZeroMean(o_Mr);
@@ -250,6 +243,8 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
     o_GzFEM = elliptic.platform.malloc(Ncols*sizeof(dfloat),dummy);
     free(dummy);
 
+    o_MrL = elliptic.platform.malloc(mesh.Np*mesh.Nelements*sizeof(dfloat));
+
     //build kernels
     occa::properties kernelInfo = mesh.props;
 
@@ -264,14 +259,6 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
 
     SEMFEMAnterpKernel = elliptic.platform.buildKernel(DELLIPTIC "/okl/ellipticSEMFEMAnterp.okl",
                                      "ellipticSEMFEMAnterp", kernelInfo);
-  } else {
-    dlong Ncols = parAlmond.getNumCols(0);
-    // rhsG = (dfloat*) calloc(Ncols,sizeof(dfloat));
-    // xG   = (dfloat*) calloc(Ncols,sizeof(dfloat));
-    dfloat *dummy = (dfloat*) calloc(Ncols,sizeof(dfloat));
-    o_rhsG = elliptic.platform.malloc(Ncols*sizeof(dfloat),dummy);
-    o_xG   = elliptic.platform.malloc(Ncols*sizeof(dfloat),dummy);
-    free(dummy);
   }
 }
 

@@ -29,13 +29,14 @@ SOFTWARE.
 void elliptic_t::Run(){
 
   //setup linear solver
-  int weighted = settings.compareSetting("DISCRETIZATION", "CONTINUOUS") ? 1 : 0;
-
-  dlong Nlocal = mesh.Nelements*mesh.Np*Nfields;
-  dlong Nhalo  = mesh.totalHaloPairs*mesh.Np*Nfields;
-  linearSolver_t *linearSolver = linearSolver_t::Setup(Nlocal, Nhalo,
-                                                       platform, settings, mesh.comm,
-                                                       weighted, o_weight);
+  hlong NglobalDofs;
+  if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
+    NglobalDofs = ogsMasked->NgatherGlobal*Nfields;
+  } else {
+    NglobalDofs = mesh.NelementsGlobal*mesh.Np*Nfields;
+  }
+  linearSolver_t *linearSolver = linearSolver_t::Setup(Ndofs, Nhalo,
+                                                       platform, settings, mesh.comm);
 
   occa::properties kernelInfo = mesh.props; //copy base occa properties
 
@@ -102,13 +103,25 @@ void elliptic_t::Run(){
 
   //create occa buffers
   dlong Nall = mesh.Np*(mesh.Nelements+mesh.totalHaloPairs);
-  dfloat *r = (dfloat*) calloc(Nall, sizeof(dfloat));
-  dfloat *x = (dfloat*) calloc(Nall, sizeof(dfloat));
-  occa::memory o_r = platform.malloc(Nall*sizeof(dfloat), r);
-  occa::memory o_x = platform.malloc(Nall*sizeof(dfloat), x);
+  dfloat *rL = (dfloat*) calloc(Nall, sizeof(dfloat));
+  dfloat *xL = (dfloat*) calloc(Nall, sizeof(dfloat));
+  occa::memory o_rL = platform.malloc(Nall*sizeof(dfloat), rL);
+  occa::memory o_xL = platform.malloc(Nall*sizeof(dfloat), xL);
+
+  occa::memory o_r, o_x;
+  if (settings.compareSetting("DISCRETIZATION","IPDG")) {
+    o_r = o_rL;
+    o_x = o_xL;
+  } else {
+    dlong Ng = ogsMasked->Ngather;
+    dlong Nghalo = ogsMasked->NgatherHalo;
+    dlong Ngall = Ng + Nghalo;
+    o_r = platform.malloc(Ngall*sizeof(dfloat));
+    o_x = platform.malloc(Ngall*sizeof(dfloat));
+  }
 
   //storage for M*q during reporting
-  occa::memory o_Mx = platform.malloc(Nall*sizeof(dfloat), x);
+  occa::memory o_MxL = platform.malloc(Nall*sizeof(dfloat), xL);
   mesh.MassMatrixKernelSetup(Nfields); // mass matrix operator
 
   //populate rhs forcing
@@ -119,7 +132,7 @@ void elliptic_t::Run(){
                 mesh.o_y,
                 mesh.o_z,
                 lambda,
-                o_r);
+                o_rL);
 
   //add boundary condition contribution to rhs
   if (settings.compareSetting("DISCRETIZATION","IPDG")) {
@@ -135,7 +148,7 @@ void elliptic_t::Run(){
                 mesh.o_D,
                 mesh.o_LIFT,
                 mesh.o_MM,
-                o_r);
+                o_rL);
   } else if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
     rhsBCKernel(mesh.Nelements,
                 mesh.o_ggeo,
@@ -150,13 +163,13 @@ void elliptic_t::Run(){
                 mesh.o_y,
                 mesh.o_z,
                 o_mapB,
-                o_r);
+                o_rL);
   }
 
-  // gather-scatter and mask rhs if c0
+  // gather rhs to globalDofs if c0
   if(settings.compareSetting("DISCRETIZATION","CONTINUOUS")){
-    mesh.ogs->GatherScatter(o_r, ogs_dfloat, ogs_add, ogs_sym);
-    if (Nmasked) maskKernel(Nmasked, o_maskIds, o_r);
+    ogsMasked->Gather(o_r, o_rL, ogs_dfloat, ogs_add, ogs_trans);
+    ogsMasked->Gather(o_x, o_xL, ogs_dfloat, ogs_add, ogs_notrans);
   }
 
   int maxIter = 5000;
@@ -169,14 +182,18 @@ void elliptic_t::Run(){
   dfloat tol = 1e-8;
   int iter = Solve(*linearSolver, o_x, o_r, tol, maxIter, verbose);
 
+
   //add the boundary data to the masked nodes
   if(settings.compareSetting("DISCRETIZATION","CONTINUOUS")){
+    // scatter x to LocalDofs if c0
+    ogsMasked->Scatter(o_xL, o_x, ogs_dfloat, ogs_add, ogs_notrans);
+    //fill masked nodes with BC data
     addBCKernel(mesh.Nelements,
                 mesh.o_x,
                 mesh.o_y,
                 mesh.o_z,
                 o_mapB,
-                o_x);
+                o_xL);
   }
 
   MPI_Barrier(mesh.comm);
@@ -186,18 +203,18 @@ void elliptic_t::Run(){
   if ((mesh.rank==0) && verbose){
     printf("%d, " hlongFormat ", %g, %d, %g, %g; global: N, dofs, elapsed, iterations, time per node, nodes*iterations/time %s\n",
            mesh.N,
-           mesh.NelementsGlobal*mesh.Np,
+           NglobalDofs,
            elapsedTime,
            iter,
-           elapsedTime/(mesh.Np*mesh.NelementsGlobal),
-           mesh.NelementsGlobal*((dfloat)iter*mesh.Np/elapsedTime),
+           elapsedTime/(NglobalDofs),
+           NglobalDofs*((dfloat)iter/elapsedTime),
            (char*) settings.getSetting("PRECONDITIONER").c_str());
   }
 
   if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
 
     // copy data back to host
-    o_x.copyTo(x);
+    o_xL.copyTo(xL);
 
     // output field files
     string name;
@@ -205,23 +222,24 @@ void elliptic_t::Run(){
     char fname[BUFSIZ];
     sprintf(fname, "%s_%04d.vtu", name.c_str(), mesh.rank);
 
-    PlotFields(x, fname);
+    PlotFields(xL, fname);
   }
 
   // output norm of final solution
   {
     //compute q.M*q
-    mesh.MassMatrixApply(o_x, o_Mx);
+    mesh.MassMatrixApply(o_xL, o_MxL);
 
     dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
-    dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_x, o_Mx, mesh.comm));
+    dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_xL, o_MxL, mesh.comm));
 
     if(mesh.rank==0)
       printf("Solution norm = %17.15lg\n", norm2);
   }
 
-  free(r); free(x);
+  free(rL); free(xL);
+  o_rL.free(); o_xL.free();
   o_r.free(); o_x.free();
-  o_Mx.free();
+  o_MxL.free();
   delete linearSolver;
 }

@@ -35,34 +35,69 @@ void MGLevel::residual(occa::memory &o_RHS, occa::memory &o_X, occa::memory &o_R
   elliptic.Operator(o_X,o_RES);
 
   // subtract res = rhs - A*x
-  linAlg.axpy(mesh.Np*mesh.Nelements, 1.f, o_RHS, -1.f, o_RES);
+  linAlg.axpy(elliptic.Ndofs, 1.f, o_RHS, -1.f, o_RES);
 }
 
 void MGLevel::coarsen(occa::memory &o_X, occa::memory &o_Rx) {
-  occa::memory &o_sctch = o_smootherResidual;
 
   if (elliptic.disc_c0) {
-    //pre-weight
-    linAlg.amxpy(mesh.Nelements*mesh.Np, 1.0, elliptic.o_weight, o_X, 0.0, o_sctch);
+    //scratch spaces
+    occa::memory &o_wx = o_smootherResidual;
+    occa::memory &o_RxL = o_transferScratch;
 
-    if (gatherLevel==true) {
-      coarsenKernel(mesh.Nelements, o_P, o_sctch, o_GX);
-      ogsMasked->Gather(o_Rx, o_GX, ogs_dfloat, ogs_add, ogs_trans);
-    } else {
-      coarsenKernel(mesh.Nelements, o_P, o_sctch, o_Rx);
-      ogsMasked->GatherScatter(o_Rx, ogs_dfloat, ogs_add, ogs_sym);
-      if (Nmasked)
-        elliptic.maskKernel(Nmasked, o_maskIds, o_Rx);
-    }
+    //pre-weight
+    linAlg.amxpy(elliptic.Ndofs, 1.0, elliptic.o_weightG, o_X, 0.0, o_wx);
+
+    elliptic.ogsMasked->GatheredHaloExchangeStart(o_wx, 1, ogs_dfloat);
+
+    if(mesh.NlocalGatherElements)
+      partialCoarsenKernel(mesh.NlocalGatherElements,
+                           mesh.o_localGatherElementList,
+                           elliptic.ogsMasked->o_GlobalToLocal,
+                           o_P, o_wx, o_RxL);
+
+    elliptic.ogsMasked->GatheredHaloExchangeFinish(o_wx, 1, ogs_dfloat);
+
+    if(mesh.NglobalGatherElements)
+      partialCoarsenKernel(mesh.NglobalGatherElements,
+                           mesh.o_globalGatherElementList,
+                           elliptic.ogsMasked->o_GlobalToLocal,
+                           o_P, o_wx, o_RxL);
+
+    ogsMaskedC->Gather(o_Rx, o_RxL, ogs_dfloat, ogs_add, ogs_trans);
+
   } else {
     coarsenKernel(mesh.Nelements, o_P, o_X, o_Rx);
   }
 }
 
 void MGLevel::prolongate(occa::memory &o_X, occa::memory &o_Px) {
-  if (gatherLevel==true) {
-    ogsMasked->Scatter(o_SX, o_X, ogs_dfloat, ogs_add, ogs_notrans);
-    prolongateKernel(mesh.Nelements, o_P, o_SX, o_Px);
+  if (elliptic.disc_c0) {
+    //scratch spaces
+    occa::memory &o_PxG = o_smootherResidual;
+    occa::memory &o_PxL = o_transferScratch;
+
+    ogsMaskedC->GatheredHaloExchangeStart(o_X, 1, ogs_dfloat);
+
+    if(mesh.NlocalGatherElements)
+      partialProlongateKernel(meshC->NlocalGatherElements,
+                              meshC->o_localGatherElementList,
+                              ogsMaskedC->o_GlobalToLocal,
+                              o_P, o_X, o_PxL);
+
+    ogsMaskedC->GatheredHaloExchangeFinish(o_X, 1, ogs_dfloat);
+
+    if(mesh.NglobalGatherElements)
+      partialProlongateKernel(meshC->NglobalGatherElements,
+                              meshC->o_globalGatherElementList,
+                              ogsMaskedC->o_GlobalToLocal,
+                              o_P, o_X, o_PxL);
+
+    //ogs_notrans -> no summation at repeated nodes, just one value
+    elliptic.ogsMasked->Gather(o_PxG, o_PxL, ogs_dfloat, ogs_add, ogs_notrans);
+
+    linAlg.axpy(elliptic.Ndofs, 1.f, o_PxG, 1.f, o_Px);
+
   } else {
     prolongateKernel(mesh.Nelements, o_P, o_X, o_Px);
   }
@@ -78,20 +113,19 @@ void MGLevel::smooth(occa::memory &o_RHS, occa::memory &o_X, bool x_is_zero) {
 
 void MGLevel::smoothJacobi(occa::memory &o_r, occa::memory &o_X, bool xIsZero) {
 
-  dlong Ntotal = mesh.Np*mesh.Nelements;
   occa::memory &o_RES = o_smootherResidual;
 
   if (xIsZero) {
-    linAlg.amxpy(Ntotal, 1.0, o_invDiagA, o_r, 0.0, o_X);
+    linAlg.amxpy(elliptic.Ndofs, 1.0, o_invDiagA, o_r, 0.0, o_X);
     return;
   }
 
   //res = r-Ax
   Operator(o_X,o_RES);
-  linAlg.axpy(Ntotal, 1.f, o_r, -1.f, o_RES);
+  linAlg.axpy(elliptic.Ndofs, 1.f, o_r, -1.f, o_RES);
 
   //smooth the fine problem x = x + S(r-Ax)
-  linAlg.amxpy(Ntotal, 1.0, o_invDiagA, o_RES, 1.0, o_X);
+  linAlg.amxpy(elliptic.Ndofs, 1.0, o_invDiagA, o_RES, 1.0, o_X);
 }
 
 void MGLevel::smoothChebyshev (occa::memory &o_r, occa::memory &o_X, bool xIsZero) {
@@ -103,48 +137,47 @@ void MGLevel::smoothChebyshev (occa::memory &o_r, occa::memory &o_X, bool xIsZer
   dfloat rho_n = 1./sigma;
   dfloat rho_np1;
 
-  dlong Ntotal = mesh.Np*mesh.Nelements;
   occa::memory &o_RES = o_smootherResidual;
   occa::memory &o_Ad  = o_smootherResidual2;
   occa::memory &o_d   = o_smootherUpdate;
 
   if(xIsZero){ //skip the Ax if x is zero
     //res = S*r
-    linAlg.amxpy(Ntotal, 1.0, o_invDiagA, o_r, 0.f, o_RES);
+    linAlg.amxpy(elliptic.Ndofs, 1.0, o_invDiagA, o_r, 0.f, o_RES);
 
     //d = invTheta*res
-    linAlg.axpy(Ntotal, invTheta, o_RES, 0.f, o_d);
+    linAlg.axpy(elliptic.Ndofs, invTheta, o_RES, 0.f, o_d);
   } else {
     //res = S*(r-Ax)
     Operator(o_X,o_RES);
-    linAlg.axpy(Ntotal, 1.f, o_r, -1.f, o_RES);
-    linAlg.amx(Ntotal, 1.f, o_invDiagA, o_RES);
+    linAlg.axpy(elliptic.Ndofs, 1.f, o_r, -1.f, o_RES);
+    linAlg.amx(elliptic.Ndofs, 1.f, o_invDiagA, o_RES);
 
     //d = invTheta*res
-    linAlg.axpy(Ntotal, invTheta, o_RES, 0.f, o_d);
+    linAlg.axpy(elliptic.Ndofs, invTheta, o_RES, 0.f, o_d);
   }
 
   for (int k=0;k<ChebyshevIterations;k++) {
     //x_k+1 = x_k + d_k
     if (xIsZero&&(k==0))
-      linAlg.axpy(Ntotal, 1.f, o_d, 0.f, o_X);
+      linAlg.axpy(elliptic.Ndofs, 1.f, o_d, 0.f, o_X);
     else
-      linAlg.axpy(Ntotal, 1.f, o_d, 1.f, o_X);
+      linAlg.axpy(elliptic.Ndofs, 1.f, o_d, 1.f, o_X);
 
     //r_k+1 = r_k - SAd_k
     Operator(o_d,o_Ad);
-    linAlg.amxpy(Ntotal, -1.f, o_invDiagA, o_Ad, 1.f, o_RES);
+    linAlg.amxpy(elliptic.Ndofs, -1.f, o_invDiagA, o_Ad, 1.f, o_RES);
 
     rho_np1 = 1.0/(2.*sigma-rho_n);
     dfloat rhoDivDelta = 2.0*rho_np1/delta;
 
     //d_k+1 = rho_k+1*rho_k*d_k  + 2*rho_k+1*r_k+1/delta
-    linAlg.axpy(Ntotal, rhoDivDelta, o_RES, rho_np1*rho_n, o_d);
+    linAlg.axpy(elliptic.Ndofs, rhoDivDelta, o_RES, rho_np1*rho_n, o_d);
 
     rho_n = rho_np1;
   }
   //x_k+1 = x_k + d_k
-  linAlg.axpy(Ntotal, 1.f, o_d, 1.0, o_X);
+  linAlg.axpy(elliptic.Ndofs, 1.f, o_d, 1.0, o_X);
 }
 
 
@@ -154,28 +187,23 @@ void MGLevel::smoothChebyshev (occa::memory &o_r, occa::memory &o_X, bool xIsZer
 *
 *******************************************/
 
-size_t  MGLevel::smootherResidualBytes;
-dfloat* MGLevel::smootherResidual;
+size_t  MGLevel::smootherResidualBytes=0;
+size_t  MGLevel::scratchBytes=0;
+dfloat* MGLevel::smootherResidual=nullptr;
 occa::memory MGLevel::o_smootherResidual;
 occa::memory MGLevel::o_smootherResidual2;
 occa::memory MGLevel::o_smootherUpdate;
+occa::memory MGLevel::o_transferScratch;
 
 //build a level and connect it to the next one
-MGLevel::MGLevel(elliptic_t& _elliptic, int Nc, int NpCoarse):
-  multigridLevel(_elliptic.mesh.Nelements*_elliptic.mesh.Np,
-                (_elliptic.mesh.Nelements+_elliptic.mesh.totalHaloPairs)*_elliptic.mesh.Np,
+MGLevel::MGLevel(elliptic_t& _elliptic,
+                 dlong _Nrows, dlong _Ncols,
+                 int Nc, int NpCoarse):
+  multigridLevel(_Nrows, _Ncols,
                  _elliptic.platform, _elliptic.settings),
   elliptic(_elliptic),
   mesh(_elliptic.mesh),
   linAlg(_elliptic.linAlg) {
-
-  weighted = false;
-
-  //check for weighted inner products
-  if (elliptic.settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
-    weighted = true;
-    o_weight = elliptic.o_weight;
-  }
 
   SetupSmoother();
   AllocateStorage();
@@ -224,13 +252,23 @@ MGLevel::MGLevel(elliptic_t& _elliptic, int Nc, int NpCoarse):
   kernelInfo["defines/" "p_NblockVFine"]= NblockVFine;
   kernelInfo["defines/" "p_NblockVCoarse"]= NblockVCoarse;
 
-  sprintf(fileName, DELLIPTIC "/okl/ellipticPreconCoarsen%s.okl", suffix);
-  sprintf(kernelName, "ellipticPreconCoarsen%s", suffix);
-  coarsenKernel = elliptic.platform.buildKernel(fileName, kernelName, kernelInfo);
+  if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
+    sprintf(fileName, DELLIPTIC "/okl/ellipticPreconCoarsen%s.okl", suffix);
+    sprintf(kernelName, "ellipticPartialPreconCoarsen%s", suffix);
+    partialCoarsenKernel = elliptic.platform.buildKernel(fileName, kernelName, kernelInfo);
 
-  sprintf(fileName, DELLIPTIC "/okl/ellipticPreconProlongate%s.okl", suffix);
-  sprintf(kernelName, "ellipticPreconProlongate%s", suffix);
-  prolongateKernel = elliptic.platform.buildKernel(fileName, kernelName, kernelInfo);
+    sprintf(fileName, DELLIPTIC "/okl/ellipticPreconProlongate%s.okl", suffix);
+    sprintf(kernelName, "ellipticPartialPreconProlongate%s", suffix);
+    partialProlongateKernel = elliptic.platform.buildKernel(fileName, kernelName, kernelInfo);
+  } else { //IPDG
+    sprintf(fileName, DELLIPTIC "/okl/ellipticPreconCoarsen%s.okl", suffix);
+    sprintf(kernelName, "ellipticPreconCoarsen%s", suffix);
+    coarsenKernel = elliptic.platform.buildKernel(fileName, kernelName, kernelInfo);
+
+    sprintf(fileName, DELLIPTIC "/okl/ellipticPreconProlongate%s.okl", suffix);
+    sprintf(kernelName, "ellipticPreconProlongate%s", suffix);
+    prolongateKernel = elliptic.platform.buildKernel(fileName, kernelName, kernelInfo);
+  }
 }
 
 void MGLevel::AllocateStorage() {
@@ -249,6 +287,17 @@ void MGLevel::AllocateStorage() {
     o_smootherResidual2 = elliptic.platform.malloc(Nbytes,smootherResidual);
     o_smootherUpdate = elliptic.platform.malloc(Nbytes,smootherResidual);
     smootherResidualBytes = Nbytes;
+  }
+
+  Nbytes = mesh.Nelements*mesh.Np*sizeof(dfloat);
+  if (scratchBytes < Nbytes) {
+    if (o_transferScratch.size()) {
+      o_transferScratch.free();
+    }
+    dfloat *dummy = (dfloat *) calloc(mesh.Nelements*mesh.Np,sizeof(dfloat));
+    o_transferScratch = elliptic.platform.malloc(Nbytes, dummy);
+    free(dummy);
+    scratchBytes = Nbytes;
   }
 }
 
@@ -284,20 +333,22 @@ void MGLevel::Report() {
 
 MGLevel::~MGLevel() {
   coarsenKernel.free();
+  partialCoarsenKernel.free();
   prolongateKernel.free();
+  partialProlongateKernel.free();
 }
 
 void MGLevel::SetupSmoother() {
 
   //set up the fine problem smoothing
-  dfloat *diagA    = (dfloat*) calloc(mesh.Np*mesh.Nelements, sizeof(dfloat));
-  dfloat *invDiagA = (dfloat*) calloc(mesh.Np*mesh.Nelements, sizeof(dfloat));
+  dfloat *diagA    = (dfloat*) calloc(Nrows, sizeof(dfloat));
+  dfloat *invDiagA = (dfloat*) calloc(Nrows, sizeof(dfloat));
   elliptic.BuildOperatorDiagonal(diagA);
 
-  for (dlong n=0;n<mesh.Nelements*mesh.Np;n++)
+  for (dlong n=0;n<Nrows;n++)
     invDiagA[n] = 1.0/diagA[n];
 
-  o_invDiagA = elliptic.platform.malloc(mesh.Np*mesh.Nelements*sizeof(dfloat), invDiagA);
+  o_invDiagA = elliptic.platform.malloc(Nrows*sizeof(dfloat), invDiagA);
 
   if (elliptic.settings.compareSetting("MULTIGRID SMOOTHER","CHEBYSHEV")) {
     stype = CHEBYSHEV;
@@ -319,7 +370,7 @@ void MGLevel::SetupSmoother() {
     //set the stabilty weight (jacobi-type interation)
     lambda0 = (4./3.)/rho;
 
-    for (dlong n=0;n<mesh.Np*mesh.Nelements;n++)
+    for (dlong n=0;n<Nrows;n++)
       invDiagA[n] *= lambda0;
 
     //update diagonal with weight
@@ -367,19 +418,9 @@ dfloat MGLevel::maxEigSmoothAx(){
   // generate a random vector for initial basis vector
   for (dlong i=0;i<N;i++) Vx[i] = (dfloat) drand48();
 
-  //gather-scatter
-  if (weighted) {
-    elliptic.ogsMasked->GatherScatter(Vx, ogs_dfloat, ogs_add, ogs_sym);
-    for (dlong i=0;i<elliptic.Nmasked;i++) Vx[elliptic.maskIds[i]] = 0.;
-  }
-
   o_Vx.copyFrom(Vx); //copy to device
 
-  dfloat norm_vo;
-  if (weighted)
-    norm_vo =  linAlg.weightedNorm2(N, o_weight, o_Vx, mesh.comm);
-  else
-    norm_vo =  linAlg.norm2(N, o_Vx, mesh.comm);
+  dfloat norm_vo =  linAlg.norm2(N, o_Vx, mesh.comm);
 
   linAlg.axpy(N, 1./norm_vo, o_Vx, 0.f, o_V[0]);
 
@@ -391,11 +432,7 @@ dfloat MGLevel::maxEigSmoothAx(){
     // modified Gram-Schmidth
     for(int i=0; i<=j; i++){
       // H(i,j) = v[i]'*A*v[j]
-      dfloat hij;
-      if (weighted)
-        hij =  linAlg.weightedInnerProd(N, o_weight, o_V[i], o_V[j+1], mesh.comm);
-      else
-        hij =  linAlg.innerProd(N, o_V[i], o_V[j+1], mesh.comm);
+      dfloat hij =  linAlg.innerProd(N, o_V[i], o_V[j+1], mesh.comm);
 
       // v[j+1] = v[j+1] - hij*v[i]
       linAlg.axpy(N, -hij, o_V[i], 1.f, o_V[j+1]);
@@ -405,11 +442,7 @@ dfloat MGLevel::maxEigSmoothAx(){
 
     if(j+1 < k){
       // v[j+1] = v[j+1]/||v[j+1]||
-      dfloat norm_vj;
-      if (weighted)
-        norm_vj =  linAlg.weightedNorm2(N, o_weight, o_V[j+1], mesh.comm);
-      else
-        norm_vj =  linAlg.norm2(N, o_V[j+1], mesh.comm);
+      dfloat norm_vj =  linAlg.norm2(N, o_V[j+1], mesh.comm);
       linAlg.scale(N, 1.0/norm_vj, o_V[j+1]);
 
       H[j+1+ j*k] = (double) norm_vj;

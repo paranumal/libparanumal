@@ -29,14 +29,8 @@ SOFTWARE.
 //AMG preconditioner via parAlmond
 void ParAlmondPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
 
-  if (elliptic.disc_c0) {
-    elliptic.ogsMasked->Gather(o_rhsG, o_r, ogs_dfloat, ogs_add, ogs_notrans);
-    parAlmond.Operator(o_rhsG, o_xG);
-    elliptic.ogsMasked->Scatter(o_Mr, o_xG, ogs_dfloat, ogs_add, ogs_notrans);
-  } else {
-    //IPDG
-    parAlmond.Operator(o_r, o_Mr);
-  }
+  //hand off to parAlmond
+  parAlmond.Operator(o_r, o_Mr);
 
   // zero mean of RHS
   if(elliptic.allNeumann) elliptic.ZeroMean(o_Mr);
@@ -67,18 +61,12 @@ ParAlmondPrecon::ParAlmondPrecon(elliptic_t& _elliptic):
 
   parAlmond.Report();
 
-  if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
-    //make buffers to gather this level before passing to parAlmond
-    dlong Ncols = parAlmond.getNumCols(0);
-
-    rhsG = (dfloat*) calloc(Ncols,sizeof(dfloat));
-    xG   = (dfloat*) calloc(Ncols,sizeof(dfloat));
-    o_rhsG = elliptic.platform.malloc(Ncols*sizeof(dfloat));
-    o_xG   = elliptic.platform.malloc(Ncols*sizeof(dfloat));
-  }
+  //The csr matrix at the top level of parAlmond may have a larger
+  // halo region than the matrix free kernel. Adjust if necessary
+  dlong parAlmondNrows = parAlmond.getNumRows(0);
+  dlong parAlmondNcols = parAlmond.getNumCols(0);
+  dlong parAlmondNhalo = parAlmondNcols - parAlmondNrows;
+  elliptic.Nhalo = mymax(elliptic.Nhalo, parAlmondNhalo);
 }
 
-ParAlmondPrecon::~ParAlmondPrecon() {
-  if (rhsG) free(rhsG);
-  if (xG) free(xG);
-}
+ParAlmondPrecon::~ParAlmondPrecon() {}
