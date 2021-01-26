@@ -43,12 +43,13 @@ def ellipticSettings(rcformat="2.0", data_file=ellipticData3D,
                      degree=4, thread_model=device, platform_number=0, device_number=0,
                      Lambda=0.0,
                      discretization="CONTINUOUS",
-                     discretization_quadrature="GLL",
+                     discretization_quadrature="CUBATURE",
                      linear_solver="PCG",
                      precon="SEMFEM",
                      multigrid_smoother="CHEBYSHEV",
                      multigrid_cheby_degree=1,
                      multigrid_coarsening="HALFDEGREES",
+                     paralmond_device_matrix_type="double",
                      paralmond_cycle="VCYCLE",
                      paralmond_strength="RUGESTUBEN",
                      paralmond_aggregation="SMOOTHED",
@@ -83,6 +84,7 @@ def ellipticSettings(rcformat="2.0", data_file=ellipticData3D,
           setting_t("MULTIGRID SMOOTHER", multigrid_smoother),
           setting_t("MULTIGRID COARSENING", multigrid_coarsening),
           setting_t("MULTIGRID CHEBYSHEV DEGREE", multigrid_cheby_degree),
+          setting_t("PARALMOND DEVICE MATRIX TYPE", paralmond_device_matrix_type),
           setting_t("PARALMOND CYCLE", paralmond_cycle),
           setting_t("PARALMOND STRENGTH", paralmond_strength),
           setting_t("PARALMOND AGGREGATION", paralmond_aggregation),
@@ -100,8 +102,8 @@ def main():
 
   mapFile1 = ellipticDir + "/data/kershaw.okl"
 
-  for degree in range(1,9): 
-    for epsy in np.arange(0.1,1.1,0.1):
+  for degree in range(2,9): 
+    for epsy in np.arange(0.3,1.1,0.7):
       for model in range(1,4,1):
         maxNx = math.floor( (6.e6/( (degree+1)**3 ))**(0.333));
         maxNx = max(25,min(40,max(maxNx,6)));
@@ -119,6 +121,7 @@ def main():
                                                            dim=3,
                                                            precon="SEMFEM",
                                                            multigrid_coarsening="HALFDEGREES",
+                                                           paralmond_device_matrix_type="float",
                                                            map_file=mapFile1,
                                                            map_model=model,
                                                            map_param_y=epsy),

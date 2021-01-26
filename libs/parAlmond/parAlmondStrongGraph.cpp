@@ -56,8 +56,6 @@ static strongGraph_t* RugeStubenStrength(parCSR *A, dfloat theta) {
 
   dfloat *diagA = A->diagA;
 
-  //  theta = 0.12;
-  
   //find maxOD
   // #pragma omp parallel for
   for(dlong i=0; i<N; i++){
@@ -156,8 +154,6 @@ static strongGraph_t* SymmetricStrength(parCSR *A, dfloat theta) {
 
   dfloat *diagA = A->diagA;
 
-  //  theta = 0.12;
-  
   // #pragma omp parallel for
   for(dlong i=0; i<N; i++){
     int strong_per_row = 1; // diagonal entry
