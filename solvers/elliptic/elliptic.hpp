@@ -129,13 +129,23 @@ public:
   void BuildOperatorMatrixIpdg(parAlmond::parCOO& A);
   void BuildOperatorMatrixContinuous(parAlmond::parCOO& A);
 
+#if 0
   void BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO& A);
   void BuildOperatorMatrixContinuousTri3D(parAlmond::parCOO& A);
   void BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO& A);
   void BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO& A);
   void BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO& A);
   void BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO& A);
+#else
+  void BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO::nonZero_t * A);  
+  void BuildOperatorMatrixContinuousTri3D(parAlmond::parCOO::nonZero_t * A);  
+  void BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO::nonZero_t * A); 
+  void BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO::nonZero_t * A); 
+  void BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO::nonZero_t * A);  
+  void BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO::nonZero_t * A);  
 
+#endif
+  
   void BuildOperatorMatrixIpdgTri2D(parAlmond::parCOO& A);
   void BuildOperatorMatrixIpdgTri3D(parAlmond::parCOO& A);
   void BuildOperatorMatrixIpdgQuad2D(parAlmond::parCOO& A);

@@ -266,7 +266,7 @@ parCSR *smoothProlongator(parCSR *A, parCSR *T){
   free(ToffdRowOffsets);
   free(ToffdRows);
 
-
+    printf("sorting nnzTotal=%d\n", nnzTotal);
   //sort entries by the row and col
   std::sort(Ptmp, Ptmp+nnzTotal,
             [](const parCOO::nonZero_t& a, const parCOO::nonZero_t& b) {

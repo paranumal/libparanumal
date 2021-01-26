@@ -79,7 +79,6 @@ void parCSR::smoothChebyshev(occa::memory& o_b, occa::memory& o_x,
   occa::memory o_d = o_scratch + 0*Ncols*sizeof(dfloat);
   occa::memory o_r = o_scratch + 1*Ncols*sizeof(dfloat);
 
-
   if(x_is_zero){ //skip the Ax if x is zero
     //r = D^{-1}b
     //d = invTheta*r

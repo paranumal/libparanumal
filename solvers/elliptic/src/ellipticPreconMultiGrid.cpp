@@ -185,9 +185,8 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
 
     elliptic_t &ellipticF = elliptic.SetupNewDegree(meshF);
 
-    void plotGeometry(elliptic_t &elliptic, int num);
-    plotGeometry(ellipticF, Nc);
-
+    //    void plotGeometry(elliptic_t &elliptic, int num);
+    //    plotGeometry(ellipticF, Nc);
     
     //share masking data with previous MG level
     if (prevLevel) {
