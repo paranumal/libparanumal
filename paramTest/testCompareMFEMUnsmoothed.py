@@ -107,10 +107,7 @@ def main():
   for degree in [4]:
     for epsy in [0.3]:
       for model in [1]:
-        for theta in np.arange(0.12,0.9,0.1):
-          maxNx = math.floor( (6.e6/( (degree+1)**3 ))**(0.333));
-          maxNx = max(25,min(40,max(maxNx,6)));
-          print("degree=", degree, "maxNx=", maxNx);
+        for theta in [0.5]: #np.arange(0.12,0.9,0.1):
           for nx in [24]: #range(6,maxNx,6):
             failCount += testHex3D(name="testEllipticHex_C0",
                                    cmd=ellipticBin,
