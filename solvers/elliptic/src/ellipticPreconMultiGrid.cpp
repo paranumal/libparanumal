@@ -91,7 +91,14 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
     if(Nf<mesh.N){ //
       meshF.gfloatString = dfloatString;
       settings.getSetting("MULTIGRID GEOFAC TYPE", meshF.gfloatString);
-      occaConvertType(meshF.platform, meshF.Nelements*meshF.Np*meshF.Nggeo, meshF.o_ggeo, meshF.gfloatString);
+
+      dlong M = 0;
+      if(meshF.elementType==TRIANGLES || meshF.elementType==TETRAHEDRA)
+	M = meshF.Nelements*meshF.Nggeo;
+      else
+	M = meshF.Nelements*meshF.Np*meshF.Nggeo;
+
+      occaConvertType(meshF.platform, M, meshF.o_ggeo, meshF.gfloatString);
     }
     
     elliptic_t &ellipticF = elliptic.SetupNewDegree(meshF);
