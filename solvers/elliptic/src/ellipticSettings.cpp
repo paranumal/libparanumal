@@ -91,6 +91,11 @@ void ellipticAddSettings(settings_t& settings,
                       "2",
                       "Smoothing iterations in Chebyshev smoother");
 
+  settings.newSetting(prefix+"MULTIGRID GEOFAC TYPE",
+		      "double",
+		      "Precision of geometric factors to use for p coarsened p-multigrid levels",
+		      {"float", "double"});
+  
   settings.newSetting(prefix+"VERBOSE",
                       "FALSE",
                       "Enable verbose output",
@@ -116,6 +121,7 @@ void ellipticSettings_t::report() {
       reportSetting("MULTIGRID SMOOTHER");
       if (compareSetting("MULTIGRID SMOOTHER","CHEBYSHEV"))
         reportSetting("MULTIGRID CHEBYSHEV DEGREE");
+      reportSetting("MULTIGRID GEOFAC TYPE");
     }
 
     if (compareSetting("PRECONDITIONER","MULTIGRID")

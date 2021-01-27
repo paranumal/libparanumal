@@ -26,7 +26,7 @@ SOFTWARE.
 
 
 @kernel void ellipticAxHex3D(const dlong Nelements,
-                             @restrict const  dfloat *  ggeo,
+                             @restrict const  gfloat *  ggeo,
                              @restrict const  dfloat *  DT,
                              @restrict const  dfloat *  S,
                              @restrict const  dfloat *  MM,
@@ -163,7 +163,7 @@ SOFTWARE.
 @kernel void ellipticPartialAxHex3D_v0(const dlong Nelements,
                                     @restrict const  dlong  *  elementList,
                                     @restrict const  dlong  *  GlobalToLocal,
-                                    @restrict const  dfloat *  ggeo,
+                                    @restrict const  gfloat *  ggeo,
                                     @restrict const  dfloat *  DT,
                                     @restrict const  dfloat *  S,
                                     @restrict const  dfloat *  MM,
@@ -308,7 +308,7 @@ SOFTWARE.
 
 @kernel void ellipticPartialAxHex3D_v1(const dlong Nelements,
                                    @restrict const  dlong  *  elementList,
-                                   @restrict const  dfloat *  ggeo,
+                                   @restrict const  gfloat *  ggeo,
                                    @restrict const  dfloat *  DT,
                                    @restrict const  dfloat *  S,
                                    @restrict const  dfloat *  MM,
@@ -1066,7 +1066,7 @@ SOFTWARE.
 // SPAM KERNELS
 @kernel void ellipticPartialAxHex3D_v2(const dlong Nelements,
                                        @restrict const  dlong  *  elementList,
-                                       @restrict const  dfloat *  ggeo,
+                                       @restrict const  gfloat *  ggeo,
                                        @restrict const  dfloat *  DT,
                                        @restrict const  dfloat *  S,
                                        @restrict const  dfloat *  MM,
@@ -1144,7 +1144,7 @@ SOFTWARE.
 
 @kernel void ellipticPartialAxHex3D_v3(const dlong Nelements,
                                        @restrict const  dlong  *  elementList,
-                                       @restrict const  dfloat *  ggeo,
+                                       @restrict const  gfloat *  ggeo,
                                        @restrict const  dfloat *  DT,
                                        @restrict const  dfloat *  S,
                                        @restrict const  dfloat *  MM,
@@ -1364,7 +1364,7 @@ SOFTWARE.
 #if 0
 @kernel void ellipticPartialAxHex3D_v4(const dlong Nelements,
                                        @restrict const  dlong  *  elementList,
-                                       @restrict const  dfloat *  ggeo,
+                                       @restrict const  gfloat *  ggeo,
                                        @restrict const  dfloat *  DT,
                                        @restrict const  dfloat *  S,
                                        @restrict const  dfloat *  MM,
@@ -1589,7 +1589,7 @@ SOFTWARE.
 
 @kernel void ellipticPartialAxHex3D_v5(const dlong Nelements,
                                        @restrict const  dlong  *  elementList,
-                                       @restrict const  dfloat *  ggeo,
+                                       @restrict const  gfloat *  ggeo,
                                        @restrict const  dfloat *  DT,
                                        @restrict const  dfloat *  S,
                                        @restrict const  dfloat *  MM,
@@ -1735,7 +1735,7 @@ SOFTWARE.
 
 @kernel void ellipticPartialAxHex3D_v6(const dlong Nelements,
                                        @restrict const  dlong  *  elementList,
-                                       @restrict const  dfloat *  ggeo,
+                                       @restrict const  gfloat *  ggeo,
                                        @restrict const  dfloat *  DT,
                                        @restrict const  dfloat *  S,
                                        @restrict const  dfloat *  MM,

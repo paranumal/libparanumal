@@ -37,6 +37,8 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
 
     ogsMasked->GatheredHaloExchangeStart(o_q, 1, ogs_dfloat);
 
+    //    printf("ellipticOperator using precision gfloatString=%s \n", mesh.gfloatString.c_str());
+    
     if(mesh.NlocalGatherElements){
       // if(integrationType==0) { // GLL or non-hex
         // if(mapType==0)

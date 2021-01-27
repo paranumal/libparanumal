@@ -38,7 +38,7 @@ ISOPARAMETRIC
 1
 
 [POLYNOMIAL DEGREE]
-4
+6
 
 [THREAD MODEL]
 CUDA
@@ -68,7 +68,8 @@ MULTIGRID
 
 # can be ALLDEGREES, HALFDEGREES, HALFDOFS
 [MULTIGRID COARSENING]
-HALFDEGREES
+ALLDEGREES
+#HALFDEGREES
 
 # can be LOCALPATCH, or DAMPEDJACOBI
 # LOCALPATCH smoother can include EXACT
@@ -79,6 +80,12 @@ CHEBYSHEV
 # can be any integer >0
 [MULTIGRID CHEBYSHEV DEGREE]
 2
+
+# precision of geofacs for p-coarsened multigrid levels
+# can be float or double
+[MULTIGRID GEOFAC TYPE]
+float
+#double
 
 ###########################################
 
@@ -104,7 +111,7 @@ CHEBYSHEV
 ###########################################
 
 [OUTPUT TO FILE]
-TRUE
+FALSE
 
 [OUTPUT FILE NAME]
 elliptic

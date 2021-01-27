@@ -113,7 +113,8 @@ elliptic_t& elliptic_t::Setup(platform_t& platform, mesh_t& mesh,
 
   int NblockV = mymax(1,blockMax/mesh.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;
-
+  kernelInfo["defines/" "gfloat"] = mesh.gfloatString;
+  
   // Ax kernel
   if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
     sprintf(fileName,  DELLIPTIC "/okl/ellipticAx%s.okl", suffix);

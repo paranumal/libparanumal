@@ -72,6 +72,7 @@ void meshTet3D::OccaSetup(){
   o_vgeo = platform.malloc((Nelements+totalHaloPairs)*Nvgeo*sizeof(dfloat), vgeo);
   o_sgeo = platform.malloc(Nelements*Nfaces*Nsgeo*sizeof(dfloat), sgeo);
   o_ggeo = platform.malloc(Nelements*Nggeo*sizeof(dfloat), ggeo);
+  gfloatString = dfloatString; // define type of ggeo
 
   free(DT);
   free(LIFTT);

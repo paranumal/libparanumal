@@ -41,4 +41,5 @@ void meshQuad2D::OccaSetup(){
   o_vgeo = platform.malloc((Nelements+totalHaloPairs)*Nvgeo*Np*sizeof(dfloat), vgeo);
   o_sgeo = platform.malloc(Nelements*Nfaces*Nfp*Nsgeo*sizeof(dfloat), sgeo);
   o_ggeo = platform.malloc(Nelements*Np*Nggeo*sizeof(dfloat), ggeo);
+  gfloatString = dfloatString; // define type of ggeo
 }

@@ -107,6 +107,7 @@ elliptic_t& elliptic_t::SetupNewDegree(mesh_t& meshC){
 
   int NblockV = mymax(1,blockMax/meshC.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;
+  kernelInfo["defines/" "gfloat"] = meshC.gfloatString;
 
   // Ax kernel
   if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
