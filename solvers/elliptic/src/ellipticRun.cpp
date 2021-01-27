@@ -223,9 +223,11 @@ void elliptic_t::Run(){
     mesh.settings.getSetting("BOX COORDINATE MAP PARAMETER Y", epsy);
     int mapModel = 1;
     mesh.settings.getSetting("BOX COORDINATE MAP MODEL", mapModel);
-
+    dfloat rugestubenCutoff = 0.5;
+    settings.getSetting("PARALMOND RUGESTUBEN STRENGTH THRESHOLD", rugestubenCutoff);
+    
     dlong NGlobal = ogsMasked->NgatherGlobal;
-    printf("%d, " hlongFormat ", %g, %d, %g, %g, %g, %d; global (dofs) N, dofs, elapsed, iterations, time per node, nodes*iterations/time, epsy, map model, %s\n",
+    printf("%d, " hlongFormat ", %g, %d, %g, %g, %g, %d, %g; global (dofs) N, dofs, elapsed, iterations, time per node, nodes*iterations/time, epsy, map model, Ruge-Stuben cutoff%s\n",
            mesh.N,
 	   NGlobal,
            elapsedTime,
@@ -234,6 +236,7 @@ void elliptic_t::Run(){
 	   NGlobal*((dfloat)iter/elapsedTime),
 	   epsy,
 	   mapModel,
+	   rugestubenCutoff,
            (char*) settings.getSetting("PRECONDITIONER").c_str());
 
 

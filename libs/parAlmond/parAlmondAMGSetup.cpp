@@ -79,7 +79,10 @@ void parAlmond_t::AMGSetup(parCOO& cooA,
   dfloat theta=0.0;
   if (multigrid->strtype==RUGESTUBEN) {
     //    theta=0.14; //default for 3D problems
-    theta=0.12; //default for 3D problems
+    //    theta=0.12; //default for 3D problems
+    theta = 0.5;
+    settings.getSetting("PARALMOND RUGESTUBEN STRENGTH THRESHOLD", theta);
+    printf("theta = %f\n", theta);
     //See: A GPU accelerated aggregation algebraic multigrid method, R. Gandham, K. Esler, Y. Zhang.
   } else { // (type==SYMMETRIC)
     theta=0.08;

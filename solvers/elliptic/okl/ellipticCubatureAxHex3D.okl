@@ -487,8 +487,6 @@ SOFTWARE.
 	  const int base = r_element*p_Nggeo*p_cubNp + k*p_cubNq*p_cubNq + j*p_cubNq + i;
 	  
 	  //geofactors for j i thread
-	  const dfloat r_GwJ = cubggeo[base+p_GWJID*p_cubNp];
-	  
 	  const dfloat r_G00 = cubggeo[base+p_G00ID*p_cubNp];
 	  const dfloat r_G01 = cubggeo[base+p_G01ID*p_cubNp];
 	  const dfloat r_G11 = cubggeo[base+p_G11ID*p_cubNp];
@@ -521,8 +519,12 @@ SOFTWARE.
 	  s_qr[k][j][i] = r_G00*dr + r_G01*ds + r_G02*dt;
 	  s_qs[k][j][i] = r_G01*dr + r_G11*ds + r_G12*dt;
 	  s_qt[k][j][i] = r_G02*dr + r_G12*ds + r_G22*dt;
-	  
-	  r_Aq = lambda*r_GwJ*s_q1[k][j][i];
+
+	  r_Aq = 0;
+	  if(lambda!=0){
+	    const dfloat r_GwJ = cubggeo[base+p_GWJID*p_cubNp];
+	    r_Aq = lambda*r_GwJ*s_q1[k][j][i];
+	  }
 	}
       }
     }

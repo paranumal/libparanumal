@@ -51,10 +51,10 @@ export LIBP_MPICC = mpicc
 export LIBP_MPICXX= mpic++
 export LIBP_LD    = mpic++
 
-export LIBP_CFLAGS=-O2 -fopenmp -g -Wall -Wshadow -Wno-unused-function
+export LIBP_CFLAGS= -fopenmp -O3 -Wall -Wshadow -Wno-unused-function
 export LIBP_MPICFLAGS=$(LIBP_CFLAGS)
 
-export LIBP_CXXFLAGS=-O2 -fopenmp -g -Wall -Wshadow -Wno-unused-function -std=c++11
+export LIBP_CXXFLAGS= -fopenmp -O3 -Wall -Wshadow -Wno-unused-function -std=c++11
 export LIBP_MPICXXFLAGS=$(LIBP_CXXFLAGS)
 
 ifeq (1,${LIBP_COVERAGE})

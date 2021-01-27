@@ -46,6 +46,11 @@ void AddSettings(settings_t& settings,
                       "Type of Alegraic Stength-of-Connection Measure",
                       {"RUGESTUBEN", "SYMMETRIC"});
 
+  settings.newSetting(prefix+"PARALMOND RUGESTUBEN STRENGTH THRESHOLD",
+                      "0.5",
+                      "Parameter used to determine strength cutoff");
+
+  
   settings.newSetting(prefix+"PARALMOND AGGREGATION",
                       "SMOOTHED",
                       "Type of Prologation Operator",
