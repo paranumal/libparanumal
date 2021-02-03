@@ -206,10 +206,10 @@ SOFTWARE.
         rhsV[id] = J*Mv + r_rhsV;
         rhsW[id] = J*Mw + r_rhsW;
 
-        const int iid = n + e*p_Np*p_NVfields;
-        UH[id] = U[iid+0*p_Np];
-        VH[id] = U[iid+1*p_Np];
-        WH[id] = U[iid+2*p_Np];
+        // const int iid = n + e*p_Np*p_NVfields;
+        // UH[id] = U[iid+0*p_Np];
+        // VH[id] = U[iid+1*p_Np];
+        // WH[id] = U[iid+2*p_Np];
       }
     }
   }

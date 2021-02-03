@@ -173,9 +173,9 @@ SOFTWARE.
         rhsU[id] = J*Mu + r_rhsU;
         rhsV[id] = J*Mv + r_rhsV;
 
-        const int iid = n + e*p_Np*p_NVfields;
-        UH[id] = U[iid+0*p_Np];
-        VH[id] = U[iid+1*p_Np];
+        // const int iid = n + e*p_Np*p_NVfields;
+        // UH[id] = U[iid+0*p_Np];
+        // VH[id] = U[iid+1*p_Np];
       }
     }
   }

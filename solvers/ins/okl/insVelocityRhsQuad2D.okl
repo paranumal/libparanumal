@@ -212,8 +212,8 @@ SOFTWARE.
         rhsU[id] = JW*RHS[iid+0*p_Np]/nu - (r_Au[j] + s_ndu[j][i]);
         rhsV[id] = JW*RHS[iid+1*p_Np]/nu - (r_Av[j] + s_ndv[j][i]);
 
-        UH[id] = U[iid+0*p_Np];
-        VH[id] = U[iid+1*p_Np];
+        // UH[id] = U[iid+0*p_Np];
+        // VH[id] = U[iid+1*p_Np];
       }
     }
   }

@@ -69,9 +69,6 @@ void ins_t::VelocitySolve(occa::memory& o_U, occa::memory& o_RHS,
 
   //  Solve lambda*U - Laplacian*U = rhs
   if (vDisc_c0){
-    uSolver->ogsMasked->Gather(o_GUH, o_UH, ogs_dfloat, ogs_add, ogs_trans);
-    vSolver->ogsMasked->Gather(o_GVH, o_VH, ogs_dfloat, ogs_add, ogs_trans);
-
     // gather, solve, scatter
     uSolver->ogsMasked->Gather(o_GrhsU, o_rhsU, ogs_dfloat, ogs_add, ogs_trans);
     NiterU = uSolver->Solve(*uLinearSolver, o_GUH, o_GrhsU, velTOL, maxIter, verbose);

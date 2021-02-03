@@ -357,9 +357,9 @@ SOFTWARE.
           rhsV[id] = JW*RHS[iid+1*p_Np]/nu - r_rhsv[k];
           rhsW[id] = JW*RHS[iid+2*p_Np]/nu - r_rhsw[k];
 
-          UH[id] = U[iid+0*p_Np];
-          VH[id] = U[iid+1*p_Np];
-          WH[id] = U[iid+2*p_Np];
+          // UH[id] = U[iid+0*p_Np];
+          // VH[id] = U[iid+1*p_Np];
+          // WH[id] = U[iid+2*p_Np];
         }
       }
     }
