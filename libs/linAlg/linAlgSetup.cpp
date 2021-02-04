@@ -39,6 +39,14 @@ void linAlg_t<lafloat>::Setup(platform_t *_platform) {
   platform = _platform;
   kernelInfo = platform->props;
 
+  if(sizeof(lafloat)==sizeof(float)){
+    printf("build linAlg kernels with floats\n");
+    kernelInfo["defines/dfloat"] = "float";
+  }
+  if(sizeof(lafloat)==sizeof(double)){
+    kernelInfo["defines/dfloat"] = "double";
+  }
+  
   //add defines
   kernelInfo["defines/" "p_blockSize"] = (int)LINALG_BLOCKSIZE;
 

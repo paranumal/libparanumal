@@ -188,113 +188,130 @@ parCSR *SpMM(parCSR *A, parCSR *B){
   if(nnzTotal<0) printf("OVERFLOW in parAlmondSpMM: A->nnz=%d, B->nnz=%d\n",
 			A->diag.nnz, B->diag.nnz);
 
-  parCOO::nonZero_t *Ctmp = (parCOO::nonZero_t *)
-                            calloc(nnzTotal, sizeof(parCOO::nonZero_t));
-
   //  dlong maxrowCount = 100000;
   parCOO::nonZero_t *rowCtmp = (parCOO::nonZero_t *)
     calloc(maxrowCount, sizeof(parCOO::nonZero_t));
   
-  printf("sizeof(hlong)=%d\n", sizeof(hlong));
-  
-  // Fill the intermediate form of C
-  hlong cnt = 0;
-  for (hlong i=0;i<A->Nrows;i++) {
+  parCOO::nonZero_t *Ctmp = NULL;
+  nnzTotal = 0; // reset nnzTotal
 
-    dlong rowcnt = 0;
+  for(int bigloop=0;bigloop<2;++bigloop){
 
-    //local A entries
-    hlong start = A->diag.rowStarts[i];
-    hlong end   = A->diag.rowStarts[i+1];
-    for (hlong j=start;j<end;j++) {
-      const hlong col = A->diag.cols[j];
-      const pfloat Aval = A->diag.vals[j];
-      
-      if(col<0) printf("FOUND negative col %lld (1)\n", col);
-      
-      //local B entries
-      hlong Bstart = B->diag.rowStarts[col];
-      hlong Bend   = B->diag.rowStarts[col+1];
-      for (hlong jj=Bstart;jj<Bend;jj++) {
-	pfloat val = Aval*B->diag.vals[jj];
-	if(fabs(val)>TOL){
-	  rowCtmp[rowcnt].row = i + A->globalRowStarts[rank];
-	  rowCtmp[rowcnt].col = B->diag.cols[jj]+B->globalColStarts[rank]; //global id
-	  rowCtmp[rowcnt].val = val;
-	  rowcnt++;
-	}
-      }
-      //non-local B entries
-      Bstart = B->offd.rowStarts[col];
-      Bend   = B->offd.rowStarts[col+1];
-      for (hlong jj=Bstart;jj<Bend;jj++) {
-	pfloat val = Aval*B->offd.vals[jj];
-	if(fabs(val)>TOL){
-	  rowCtmp[rowcnt].row = i + A->globalRowStarts[rank];
-	  rowCtmp[rowcnt].col = B->colMap[B->offd.cols[jj]]; //global id
-	  rowCtmp[rowcnt].val = val;
-	  rowcnt++;
-	}
-      }
+    // initialize Ctmp when after first loop
+    if(bigloop==1){
+      printf("nnzTotal=%d\n", nnzTotal);
+      Ctmp = (parCOO::nonZero_t *)
+	calloc(nnzTotal, sizeof(parCOO::nonZero_t));
     }
-
-    if(rowcnt>maxrowCount) printf("WARNING rowcnt=%d, maxrowcnt=%d\n", rowcnt, maxrowCount);
     
-    //non-local A entries
-    start = A->offd.rowStarts[i];
-    end   = A->offd.rowStarts[i+1];
-    for (hlong j=start;j<end;j++) {
-      const hlong col = A->offd.cols[j]-A->NlocalCols;
-      const pfloat Aval = A->offd.vals[j];
-
-      if(col<0) printf("FOUND negative col %lld (2)\n", col);
-
-      // entries from recived rows of B
-      hlong Bstart = BoffdRowOffsets[col];
-      hlong Bend   = BoffdRowOffsets[col+1];
-      for (hlong jj=Bstart;jj<Bend;jj++) {
-	pfloat val = Aval*BoffdRows[jj].val;
-	if(fabs(val)>TOL){
-	  rowCtmp[rowcnt].row = i + A->globalRowStarts[rank];
-	  rowCtmp[rowcnt].col = BoffdRows[jj].col; //global id
-	  rowCtmp[rowcnt].val = val;
-	  rowcnt++;
+    // Fill the intermediate form of C
+    hlong cnt = 0;
+    for (hlong i=0;i<A->Nrows;i++) {
+      
+      dlong rowcnt = 0;
+      
+      //local A entries
+      hlong start = A->diag.rowStarts[i];
+      hlong end   = A->diag.rowStarts[i+1];
+      for (hlong j=start;j<end;j++) {
+	const hlong col = A->diag.cols[j];
+	const pfloat Aval = A->diag.vals[j];
+	
+	if(col<0) printf("FOUND negative col %lld (1)\n", col);
+	
+	//local B entries
+	hlong Bstart = B->diag.rowStarts[col];
+	hlong Bend   = B->diag.rowStarts[col+1];
+	for (hlong jj=Bstart;jj<Bend;jj++) {
+	  pfloat val = Aval*B->diag.vals[jj];
+	  if(fabs(val)>TOL){
+	    rowCtmp[rowcnt].row = i + A->globalRowStarts[rank];
+	    rowCtmp[rowcnt].col = B->diag.cols[jj]+B->globalColStarts[rank]; //global id
+	    rowCtmp[rowcnt].val = val;
+	    rowcnt++;
+	  }
+	}
+	//non-local B entries
+	Bstart = B->offd.rowStarts[col];
+	Bend   = B->offd.rowStarts[col+1];
+	for (hlong jj=Bstart;jj<Bend;jj++) {
+	  pfloat val = Aval*B->offd.vals[jj];
+	  if(fabs(val)>TOL){
+	    rowCtmp[rowcnt].row = i + A->globalRowStarts[rank];
+	    rowCtmp[rowcnt].col = B->colMap[B->offd.cols[jj]]; //global id
+	    rowCtmp[rowcnt].val = val;
+	    rowcnt++;
+	  }
 	}
       }
-
+      
       if(rowcnt>maxrowCount) printf("WARNING rowcnt=%d, maxrowcnt=%d\n", rowcnt, maxrowCount);
       
-    }
-
-    //sort entries by the row and col
-    std::sort(rowCtmp, rowCtmp+rowcnt,
-	      [](const parCOO::nonZero_t& a, const parCOO::nonZero_t& b) {
-		if (a.row < b.row) return true;
-		if (a.row > b.row) return false;
-		
-		return a.col < b.col;
-	      });
-
-    //count total number of nonzeros;
-    if (rowcnt) Ctmp[cnt++] = rowCtmp[0];
-    for (hlong j=1;j<rowcnt;j++) {
-      if ((rowCtmp[j].row!=rowCtmp[j-1].row)||
-	  (rowCtmp[j].col!=rowCtmp[j-1].col)) {
-	Ctmp[cnt++] = rowCtmp[j];
-      } else {
-	Ctmp[cnt-1].val += rowCtmp[j].val;
+      //non-local A entries
+      start = A->offd.rowStarts[i];
+      end   = A->offd.rowStarts[i+1];
+      for (hlong j=start;j<end;j++) {
+	const hlong col = A->offd.cols[j]-A->NlocalCols;
+	const pfloat Aval = A->offd.vals[j];
+	
+	if(col<0) printf("FOUND negative col %lld (2)\n", col);
+	
+	// entries from recived rows of B
+	hlong Bstart = BoffdRowOffsets[col];
+	hlong Bend   = BoffdRowOffsets[col+1];
+	for (hlong jj=Bstart;jj<Bend;jj++) {
+	  pfloat val = Aval*BoffdRows[jj].val;
+	  if(fabs(val)>TOL){
+	    rowCtmp[rowcnt].row = i + A->globalRowStarts[rank];
+	    rowCtmp[rowcnt].col = BoffdRows[jj].col; //global id
+	    rowCtmp[rowcnt].val = val;
+	    rowcnt++;
+	  }
+	}
+	
+	if(rowcnt>maxrowCount) printf("WARNING rowcnt=%d, maxrowcnt=%d\n", rowcnt, maxrowCount);
+	
+      }
+      
+      //sort entries by the row and col
+      std::sort(rowCtmp, rowCtmp+rowcnt,
+		[](const parCOO::nonZero_t& a, const parCOO::nonZero_t& b) {
+		  if (a.row < b.row) return true;
+		  if (a.row > b.row) return false;
+		  
+		  return a.col < b.col;
+		});
+      
+      //count total number of nonzeros;
+      if (rowcnt){
+	if(bigloop==1){
+	  Ctmp[cnt] = rowCtmp[0];
+	}
+	++cnt;
+      }
+      for (hlong j=1;j<rowcnt;j++) {
+	if ((rowCtmp[j].row!=rowCtmp[j-1].row)||
+	    (rowCtmp[j].col!=rowCtmp[j-1].col)) {
+	  if(bigloop==1){
+	    Ctmp[cnt] = rowCtmp[j];
+	  }
+	  cnt++;
+	} else {
+	  if(bigloop==1)
+	    Ctmp[cnt-1].val += rowCtmp[j].val;
+	}
       }
     }
+    nnzTotal = cnt;
   }
 
   free(BoffdRowOffsets);
   free(BoffdRows);
   free(rowCtmp);
   
-  printf("Est nnzTotal=%lld, cnt=%lld\n", nnzTotal, cnt);
+  printf("Est nnzTotal=%lld\n", nnzTotal);
   
-  nnzTotal = cnt;
-  dlong nnz = cnt;
+  dlong nnz = nnzTotal;
   parCOO cooC(A->platform, A->comm);
 
   //copy global partition
@@ -321,7 +338,8 @@ parCSR *SpMM(parCSR *A, parCSR *B){
     }
   }
   //clean up
-  free(Ctmp);
+  if(Ctmp)
+    free(Ctmp);
 
   //update nnz count
   cooC.nnz = nnz;
