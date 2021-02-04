@@ -35,6 +35,9 @@ const int blockSize = 256;
 int NonzerosPerBlock = 2048; //should be a multiple of blockSize for good unrolling
 // int NonzerosPerBlock = 4096; //should be a multiple of blockSize for good unrolling
 
+  occa::kernel convertD2PKernel;
+  occa::kernel convertP2DKernel;
+  
 occa::kernel SpMVcsrKernel1;
 occa::kernel SpMVcsrKernel2;
 occa::kernel SpMVmcsrKernel;
@@ -59,7 +62,7 @@ void buildParAlmondKernels(platform_t& platform){
 
   // Make the MPI_NONZERO_T data type
   parCOO::nonZero_t NZ;
-  MPI_Datatype dtype[3] = {MPI_HLONG, MPI_HLONG, MPI_DFLOAT};
+  MPI_Datatype dtype[3] = {MPI_HLONG, MPI_HLONG, MPI_PFLOAT};
   int blength[3] = {1, 1, 1};
   MPI_Aint addr[3], displ[3];
   MPI_Get_address ( &(NZ.row), addr+0);
@@ -90,26 +93,38 @@ void buildParAlmondKernels(platform_t& platform){
     kernelInfo["defines/" "pfloat2"]="half2";
     kernelInfo["defines/" "pfloat4"]="half4";
     kernelInfo["defines/" "pfloat8"]="half8";
-    kernelInfo["defines/" "p2dfloat(a)"] = "__half2float(a)";
+    kernelInfo["defines/" "p2pfloat(a)"] = "__half2float(a)";
   }
 #endif
 
-  if(parAlmondDeviceMatrixType=="float"){
+  if(!strcmp(pfloatString, "float")){
     kernelInfo["defines/" "pfloat"]="float";
     kernelInfo["defines/" "pfloat2"]="float2";
     kernelInfo["defines/" "pfloat4"]="float4";
     kernelInfo["defines/" "pfloat8"]="float8";
-    kernelInfo["defines/" "p2dfloat(a)"] = "a";
+    kernelInfo["defines/" "p2pfloat(a)"] = "a";
   }
-  if(parAlmondDeviceMatrixType=="double"){
+  if(!strcmp(pfloatString, "double")){
     kernelInfo["defines/" "pfloat"]="double";
     kernelInfo["defines/" "pfloat2"]="double2";
     kernelInfo["defines/" "pfloat4"]="double4";
     kernelInfo["defines/" "pfloat8"]="double8";
-    kernelInfo["defines/" "p2dfloat(a)"] = "a";
+    kernelInfo["defines/" "p2pfloat(a)"] = "a";
   }
 
-
+  if(!strcmp(dfloatString, "double") && !strcmp(pfloatString, "float")){
+    convertD2PKernel = platform.buildKernel(PARALMOND_DIR"/okl/convert.okl", "convertD2F", kernelInfo);
+    convertP2DKernel = platform.buildKernel(PARALMOND_DIR"/okl/convert.okl", "convertF2D", kernelInfo);
+  }
+  if(!strcmp(dfloatString, "double") && !strcmp(pfloatString, "double")){
+    convertD2PKernel = platform.buildKernel(PARALMOND_DIR"/okl/convert.okl", "convertD2D", kernelInfo);
+    convertP2DKernel = platform.buildKernel(PARALMOND_DIR"/okl/convert.okl", "convertD2D", kernelInfo);
+  }
+  if(!strcmp(dfloatString, "float") && !strcmp(pfloatString, "float")){
+    convertD2PKernel = platform.buildKernel(PARALMOND_DIR"/okl/convert.okl", "convertF2F", kernelInfo);
+    convertP2DKernel = platform.buildKernel(PARALMOND_DIR"/okl/convert.okl", "convertF2F", kernelInfo);
+  }
+  
   SpMVcsrKernel1  = platform.buildKernel(PARALMOND_DIR"/okl/SpMVcsr.okl",  "SpMVcsr1",  kernelInfo);
   SpMVcsrKernel2  = platform.buildKernel(PARALMOND_DIR"/okl/SpMVcsr.okl",  "SpMVcsr2",  kernelInfo);
   SpMVmcsrKernel  = platform.buildKernel(PARALMOND_DIR"/okl/SpMVmcsr.okl", "SpMVmcsr1", kernelInfo);

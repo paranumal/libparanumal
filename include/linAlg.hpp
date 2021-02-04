@@ -35,6 +35,7 @@ using std::string;
 class platform_t;
 
 //launcher for basic linear algebra OCCA kernels
+template <class lafloat>
 class linAlg_t {
 public:
   platform_t *platform;
@@ -43,7 +44,7 @@ public:
   int blocksize;
 
   //scratch space for reductions
-  dfloat *scratch;
+  lafloat *scratch;
   occa::memory h_scratch;
   occa::memory o_scratch;
 
@@ -61,73 +62,73 @@ public:
   /*********************/
 
   // o_a[n] = alpha
-  void set(const dlong N, const dfloat alpha, occa::memory& o_a);
+  void set(const dlong N, const lafloat alpha, occa::memory& o_a);
 
   // o_a[n] *= alpha
-  void scale(const dlong N, const dfloat alpha, occa::memory& o_a);
+  void scale(const dlong N, const lafloat alpha, occa::memory& o_a);
 
   // o_a[n] += alpha
-  void add(const dlong N, const dfloat alpha, occa::memory& o_a);
+  void add(const dlong N, const lafloat alpha, occa::memory& o_a);
 
   // o_y[n] = beta*o_y[n] + alpha*o_x[n]
-  void axpy(const dlong N, const dfloat alpha, occa::memory& o_x,
-                           const dfloat beta,  occa::memory& o_y);
+  void axpy(const dlong N, const lafloat alpha, occa::memory& o_x,
+                           const lafloat beta,  occa::memory& o_y);
 
   // o_z[n] = beta*o_y[n] + alpha*o_x[n]
-  void zaxpy(const dlong N, const dfloat alpha, occa::memory& o_x,
-                            const dfloat beta,  occa::memory& o_y,
+  void zaxpy(const dlong N, const lafloat alpha, occa::memory& o_x,
+                            const lafloat beta,  occa::memory& o_y,
                             occa::memory& o_z);
 
   // o_x[n] = alpha*o_a[n]*o_x[n]
-  void amx(const dlong N, const dfloat alpha,
+  void amx(const dlong N, const lafloat alpha,
            occa::memory& o_a, occa::memory& o_x);
 
   // o_y[n] = alpha*o_a[n]*o_x[n] + beta*o_y[n]
-  void amxpy(const dlong N, const dfloat alpha,
+  void amxpy(const dlong N, const lafloat alpha,
              occa::memory& o_a, occa::memory& o_x,
-             const dfloat beta, occa::memory& o_y);
+             const lafloat beta, occa::memory& o_y);
 
   // o_z[n] = alpha*o_a[n]*o_x[n] + beta*o_y[n]
-  void zamxpy(const dlong N, const dfloat alpha,
+  void zamxpy(const dlong N, const lafloat alpha,
               occa::memory& o_a, occa::memory& o_x,
-              const dfloat beta, occa::memory& o_y, occa::memory& o_z);
+              const lafloat beta, occa::memory& o_y, occa::memory& o_z);
 
   // o_x[n] = alpha*o_x[n]/o_a[n]
-  void adx(const dlong N, const dfloat alpha,
+  void adx(const dlong N, const lafloat alpha,
            occa::memory& o_a, occa::memory& o_x);
 
   // o_y[n] = alpha*o_x[n]/o_a[n] + beta*o_y[n]
-  void adxpy(const dlong N, const dfloat alpha,
+  void adxpy(const dlong N, const lafloat alpha,
              occa::memory& o_a, occa::memory& o_x,
-             const dfloat beta, occa::memory& o_y);
+             const lafloat beta, occa::memory& o_y);
 
   // o_z[n] = alpha*o_x[n]/o_a[n] + beta*o_y[n]
-  void zadxpy(const dlong N, const dfloat alpha,
+  void zadxpy(const dlong N, const lafloat alpha,
               occa::memory& o_a, occa::memory& o_x,
-              const dfloat beta, occa::memory& o_y, occa::memory& o_z);
+              const lafloat beta, occa::memory& o_y, occa::memory& o_z);
 
   // \min o_a
-  dfloat min(const dlong N, occa::memory& o_a, MPI_Comm comm);
+  lafloat min(const dlong N, occa::memory& o_a, MPI_Comm comm);
 
   // \max o_a
-  dfloat max(const dlong N, occa::memory& o_a, MPI_Comm comm);
+  lafloat max(const dlong N, occa::memory& o_a, MPI_Comm comm);
 
   // \sum o_a
-  dfloat sum(const dlong N, occa::memory& o_a, MPI_Comm comm);
+  lafloat sum(const dlong N, occa::memory& o_a, MPI_Comm comm);
 
   // ||o_a||_2
-  dfloat norm2(const dlong N, occa::memory& o_a, MPI_Comm comm);
+  lafloat norm2(const dlong N, occa::memory& o_a, MPI_Comm comm);
 
   // o_x.o_y
-  dfloat innerProd(const dlong N, occa::memory& o_x, occa::memory& o_y,
+  lafloat innerProd(const dlong N, occa::memory& o_x, occa::memory& o_y,
                     MPI_Comm comm);
 
   // ||o_a||_w2
-  dfloat weightedNorm2(const dlong N, occa::memory& o_w, occa::memory& o_a,
+  lafloat weightedNorm2(const dlong N, occa::memory& o_w, occa::memory& o_a,
                        MPI_Comm comm);
 
   // o_w.o_x.o_y
-  dfloat weightedInnerProd(const dlong N, occa::memory& o_w, occa::memory& o_x,
+  lafloat weightedInnerProd(const dlong N, occa::memory& o_w, occa::memory& o_x,
                             occa::memory& o_y, MPI_Comm comm);
 
   occa::kernel setKernel;

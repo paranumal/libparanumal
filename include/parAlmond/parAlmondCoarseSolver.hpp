@@ -53,7 +53,7 @@ public:
   virtual int getTargetSize()=0;
 
   virtual void setup(parCSR *A, bool nullSpace,
-                     dfloat *nullVector, dfloat nullSpacePenalty)=0;
+                     pfloat *nullVector, pfloat nullSpacePenalty)=0;
 
   virtual void syncToDevice()=0;
 
@@ -77,10 +77,10 @@ public:
   int N;
   int offdTotal=0;
 
-  dfloat *diagInvAT=nullptr, *offdInvAT=nullptr;
+  pfloat *diagInvAT=nullptr, *offdInvAT=nullptr;
   occa::memory o_diagInvAT, o_offdInvAT;
 
-  dfloat *diagRhs=nullptr, *offdRhs=nullptr;
+  pfloat *diagRhs=nullptr, *offdRhs=nullptr;
   occa::memory o_offdRhs;
 
   exactSolver_t(platform_t& _platform, settings_t& _settings,
@@ -91,7 +91,7 @@ public:
   int getTargetSize();
 
   void setup(parCSR *A, bool nullSpace,
-             dfloat *nullVector, dfloat nullSpacePenalty);
+             pfloat *nullVector, pfloat nullSpacePenalty);
 
   void syncToDevice();
 
@@ -108,7 +108,7 @@ public:
   int N;
   int diagTotal=0, offdTotal=0;
 
-  dfloat *diagInvAT=nullptr, *offdInvAT=nullptr;
+  pfloat *diagInvAT=nullptr, *offdInvAT=nullptr;
   occa::memory o_diagInvAT, o_offdInvAT;
 
   oasSolver_t(platform_t& _platform, settings_t& _settings,
@@ -119,7 +119,7 @@ public:
   int getTargetSize();
 
   void setup(parCSR *A, bool nullSpace,
-             dfloat *nullVector, dfloat nullSpacePenalty);
+             pfloat *nullVector, pfloat nullSpacePenalty);
 
   void syncToDevice();
 

@@ -32,22 +32,22 @@ namespace parAlmond {
 
 void oasSolver_t::solve(occa::memory& o_rhs, occa::memory& o_x) {
 
-  A->halo->ExchangeStart(o_rhs, 1, ogs_dfloat);
+  A->halo->ExchangeStart(o_rhs, 1, ogs_pfloat);
 
   //queue local part of gemv
-  const dfloat one=1.0;
-  const dfloat zero=0.0;
+  const pfloat one=1.0;
+  const pfloat zero=0.0;
   if (N)
     dGEMVKernel(N,diagTotal,one,o_diagInvAT,o_rhs, zero, o_x);
 
-  A->halo->ExchangeFinish(o_rhs, 1, ogs_dfloat);
+  A->halo->ExchangeFinish(o_rhs, 1, ogs_pfloat);
 
   //queue offd part of gemv
   if(offdTotal && N)
     dGEMVKernel(N,offdTotal, one, o_offdInvAT,
-                o_rhs+diagTotal*sizeof(dfloat), one, o_x);
+                o_rhs+diagTotal*sizeof(pfloat), one, o_x);
 
-  A->halo->Combine(o_x, 1, ogs_dfloat);
+  A->halo->Combine(o_x, 1, ogs_pfloat);
 }
 
 
@@ -57,7 +57,7 @@ int oasSolver_t::getTargetSize() {
 }
 
 void oasSolver_t::setup(parCSR *_A, bool nullSpace,
-                        dfloat *nullVector, dfloat nullSpacePenalty) {
+                        pfloat *nullVector, pfloat nullSpacePenalty) {
 
   A = _A;
 
@@ -195,7 +195,7 @@ void oasSolver_t::setup(parCSR *_A, bool nullSpace,
   }
 
   //assemble the full matrix
-  dfloat *coarseA = (dfloat *) calloc(N*N,sizeof(dfloat));
+  pfloat *coarseA = (pfloat *) calloc(N*N,sizeof(pfloat));
   for (int n=0;n<A->Nrows;n++) {
     const int start = (int) A->diag.rowStarts[n];
     const int end   = (int) A->diag.rowStarts[n+1];
@@ -224,9 +224,9 @@ void oasSolver_t::setup(parCSR *_A, bool nullSpace,
 
   if (nullSpace) { //A is dense due to nullspace augmentation
     //copy fine nullvector and populate halo
-    dfloat *null = (dfloat *) malloc(A->Ncols*sizeof(dfloat));
-    memcpy(null, nullVector, A->Nrows*sizeof(dfloat));
-    A->halo->Exchange(null, 1, ogs_dfloat);
+    pfloat *null = (pfloat *) malloc(A->Ncols*sizeof(pfloat));
+    memcpy(null, nullVector, A->Nrows*sizeof(pfloat));
+    A->halo->Exchange(null, 1, ogs_pfloat);
 
     for (int n=0;n<N;n++) {
       for (int m=0;m<N;m++) {
@@ -243,10 +243,10 @@ void oasSolver_t::setup(parCSR *_A, bool nullSpace,
   matrixInverse(N, coarseA);
 
   //determine the overlap weighting
-  dfloat *weight = (dfloat *) malloc(N*sizeof(dfloat));
+  pfloat *weight = (pfloat *) malloc(N*sizeof(pfloat));
   for (int n=0;n<N;n++) weight[n] = 1.0;
 
-  A->halo->Combine(weight, 1, ogs_dfloat);
+  A->halo->Combine(weight, 1, ogs_pfloat);
 
   for (int n=0;n<N;n++) {
     for (int m=0;m<N;m++) {
@@ -260,7 +260,7 @@ void oasSolver_t::setup(parCSR *_A, bool nullSpace,
   offdTotal = A->Ncols - A->Nrows;
 
   //diag piece of invA
-  diagInvAT = (dfloat *) calloc(N*diagTotal,sizeof(dfloat));
+  diagInvAT = (pfloat *) calloc(N*diagTotal,sizeof(pfloat));
   for (int n=0;n<N;n++) {
     for (int m=0;m<diagTotal;m++) {
       diagInvAT[n+m*N] = coarseA[n*N+m];
@@ -268,15 +268,15 @@ void oasSolver_t::setup(parCSR *_A, bool nullSpace,
   }
 
   //offd piece of invA
-  offdInvAT = (dfloat *) calloc(N*offdTotal,sizeof(dfloat));
+  offdInvAT = (pfloat *) calloc(N*offdTotal,sizeof(pfloat));
   for (int n=0;n<N;n++) {
     for (int m=0;m<offdTotal;m++) {
       offdInvAT[n+m*N] = coarseA[n*N + m+diagTotal];
     }
   }
 
-  o_diagInvAT = platform.malloc(N*diagTotal*sizeof(dfloat), diagInvAT);
-  o_offdInvAT = platform.malloc(N*offdTotal*sizeof(dfloat), offdInvAT);
+  o_diagInvAT = platform.malloc(N*diagTotal*sizeof(pfloat), diagInvAT);
+  o_offdInvAT = platform.malloc(N*offdTotal*sizeof(pfloat), offdInvAT);
 
   // if((rank==0)&&(settings.compareSetting("VERBOSE","TRUE"))) printf("done.\n");
 }
@@ -293,10 +293,10 @@ void oasSolver_t::Report(int lev) {
 
   dlong minNrows=0, maxNrows=0;
   hlong totalNrows=0;
-  dfloat avgNrows;
+  pfloat avgNrows;
   MPI_Allreduce(&N, &maxNrows, 1, MPI_DLONG, MPI_MAX, comm);
   MPI_Allreduce(&hNrows, &totalNrows, 1, MPI_HLONG, MPI_SUM, comm);
-  avgNrows = (dfloat) totalNrows/totalActive;
+  avgNrows = (pfloat) totalNrows/totalActive;
 
   if (N==0) N=maxNrows; //set this so it's ignored for the global min
   MPI_Allreduce(&N, &minNrows, 1, MPI_DLONG, MPI_MIN, comm);
@@ -311,14 +311,14 @@ void oasSolver_t::Report(int lev) {
   if (nnz==0) nnz = maxNnz; //set this so it's ignored for the global min
   MPI_Allreduce(&nnz, &minNnz, 1, MPI_LONG_LONG_INT, MPI_MIN, comm);
 
-  dfloat nnzPerRow = (Nrows==0) ? 0 : (dfloat) nnz/Nrows;
-  dfloat minNnzPerRow=0, maxNnzPerRow=0, avgNnzPerRow=0;
-  MPI_Allreduce(&nnzPerRow, &maxNnzPerRow, 1, MPI_DFLOAT, MPI_MAX, comm);
-  MPI_Allreduce(&nnzPerRow, &avgNnzPerRow, 1, MPI_DFLOAT, MPI_SUM, comm);
+  pfloat nnzPerRow = (Nrows==0) ? 0 : (pfloat) nnz/Nrows;
+  pfloat minNnzPerRow=0, maxNnzPerRow=0, avgNnzPerRow=0;
+  MPI_Allreduce(&nnzPerRow, &maxNnzPerRow, 1, MPI_PFLOAT, MPI_MAX, comm);
+  MPI_Allreduce(&nnzPerRow, &avgNnzPerRow, 1, MPI_PFLOAT, MPI_SUM, comm);
   avgNnzPerRow /= totalActive;
 
   if (Nrows==0) nnzPerRow = maxNnzPerRow;
-  MPI_Allreduce(&nnzPerRow, &minNnzPerRow, 1, MPI_DFLOAT, MPI_MIN, comm);
+  MPI_Allreduce(&nnzPerRow, &minNnzPerRow, 1, MPI_PFLOAT, MPI_MIN, comm);
 
   std::string name = "OAS             ";
 

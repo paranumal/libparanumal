@@ -108,10 +108,10 @@ void amgLevel::Report() {
 
   dlong minNrows=0, maxNrows=0;
   hlong totalNrows=0;
-  dfloat avgNrows;
+  pfloat avgNrows;
   MPI_Allreduce(&Nrows, &maxNrows, 1, MPI_DLONG, MPI_MAX, A->comm);
   MPI_Allreduce(&hNrows, &totalNrows, 1, MPI_HLONG, MPI_SUM, A->comm);
-  avgNrows = (dfloat) totalNrows/totalActive;
+  avgNrows = (pfloat) totalNrows/totalActive;
 
   if (Nrows==0) Nrows=maxNrows; //set this so it's ignored for the global min
   MPI_Allreduce(&Nrows, &minNrows, 1, MPI_DLONG, MPI_MIN, A->comm);
@@ -127,14 +127,14 @@ void amgLevel::Report() {
   if (nnz==0) nnz = maxNnz; //set this so it's ignored for the global min
   MPI_Allreduce(&nnz, &minNnz, 1, MPI_LONG_LONG_INT, MPI_MIN, A->comm);
 
-  dfloat nnzPerRow = (Nrows==0) ? 0 : (dfloat) nnz/Nrows;
-  dfloat minNnzPerRow=0, maxNnzPerRow=0, avgNnzPerRow=0;
-  MPI_Allreduce(&nnzPerRow, &maxNnzPerRow, 1, MPI_DFLOAT, MPI_MAX, A->comm);
-  MPI_Allreduce(&nnzPerRow, &avgNnzPerRow, 1, MPI_DFLOAT, MPI_SUM, A->comm);
+  pfloat nnzPerRow = (Nrows==0) ? 0 : (pfloat) nnz/Nrows;
+  pfloat minNnzPerRow=0, maxNnzPerRow=0, avgNnzPerRow=0;
+  MPI_Allreduce(&nnzPerRow, &maxNnzPerRow, 1, MPI_PFLOAT, MPI_MAX, A->comm);
+  MPI_Allreduce(&nnzPerRow, &avgNnzPerRow, 1, MPI_PFLOAT, MPI_SUM, A->comm);
   avgNnzPerRow /= totalActive;
 
   if (Nrows==0) nnzPerRow = maxNnzPerRow;
-  MPI_Allreduce(&nnzPerRow, &minNnzPerRow, 1, MPI_DFLOAT, MPI_MIN, A->comm);
+  MPI_Allreduce(&nnzPerRow, &minNnzPerRow, 1, MPI_PFLOAT, MPI_MIN, A->comm);
 
   char smootherString[BUFSIZ];
   if (stype==DAMPED_JACOBI)

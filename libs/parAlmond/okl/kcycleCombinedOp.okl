@@ -28,14 +28,14 @@ SOFTWARE.
 // a.b, a.c, b.b
 @kernel void kcycleCombinedOp1(const dlong Nblocks,
                                const dlong N,
-                               @restrict const dfloat * a,
-                               @restrict const dfloat * b,
-                               @restrict const dfloat * c,
-                               @restrict       dfloat * ips){
+                               @restrict const pfloat * a,
+                               @restrict const pfloat * b,
+                               @restrict const pfloat * c,
+                               @restrict       pfloat * ips){
 
   for(dlong n=0;n<Nblocks;++n;@outer(0)){
 
-    @shared volatile dfloat s_ip[3*p_BLOCKSIZE];
+    @shared volatile pfloat s_ip[3*p_BLOCKSIZE];
 
     for(int t=0;t<p_BLOCKSIZE;++t;@inner(0)){
       dlong id = t + n*p_BLOCKSIZE;
@@ -43,9 +43,9 @@ SOFTWARE.
       s_ip[1*p_BLOCKSIZE+t] = 0.0;
       s_ip[2*p_BLOCKSIZE+t] = 0.0;
       while (id<N) {
-        const dfloat ai =  a[id];
-        const dfloat bi =  b[id];
-        const dfloat ci =  c[id];
+        const pfloat ai =  a[id];
+        const pfloat bi =  b[id];
+        const pfloat ci =  c[id];
 
         s_ip[0*p_BLOCKSIZE+t] += ai*bi;
         s_ip[1*p_BLOCKSIZE+t] += ai*ci;
@@ -153,15 +153,15 @@ SOFTWARE.
 // a.b, a.c, b.b
 @kernel void kcycleCombinedOp2(const dlong Nblocks,
                                const dlong N,
-                               @restrict const dfloat * a,
-                               @restrict const dfloat * b,
-                               @restrict const dfloat * c,
-                               @restrict const dfloat * d,
-                               @restrict       dfloat * ips){
+                               @restrict const pfloat * a,
+                               @restrict const pfloat * b,
+                               @restrict const pfloat * c,
+                               @restrict const pfloat * d,
+                               @restrict       pfloat * ips){
 
   for(dlong n=0;n<Nblocks;++n;@outer(0)){
 
-    @shared volatile dfloat s_ip[3*p_BLOCKSIZE];
+    @shared volatile pfloat s_ip[3*p_BLOCKSIZE];
 
     for(int t=0;t<p_BLOCKSIZE;++t;@inner(0)){
       dlong id = t + n*p_BLOCKSIZE;
@@ -169,10 +169,10 @@ SOFTWARE.
       s_ip[1*p_BLOCKSIZE+t] = 0.0;
       s_ip[2*p_BLOCKSIZE+t] = 0.0;
       while (id<N) {
-        const dfloat ai =  a[id];
-        const dfloat bi =  b[id];
-        const dfloat ci =  c[id];
-        const dfloat di =  d[id];
+        const pfloat ai =  a[id];
+        const pfloat bi =  b[id];
+        const pfloat ci =  c[id];
+        const pfloat di =  d[id];
 
         s_ip[0*p_BLOCKSIZE+t] += ai*bi;
         s_ip[1*p_BLOCKSIZE+t] += ai*ci;
@@ -281,15 +281,15 @@ SOFTWARE.
 // w.a.b, w.a.c, w.b.b
 @kernel void kcycleWeightedCombinedOp1(const dlong Nblocks,
                                        const dlong N,
-                                       @restrict const dfloat * a,
-                                       @restrict const dfloat * b,
-                                       @restrict const dfloat * c,
-                                       @restrict const dfloat * w,
-                                       @restrict       dfloat * ips){
+                                       @restrict const pfloat * a,
+                                       @restrict const pfloat * b,
+                                       @restrict const pfloat * c,
+                                       @restrict const pfloat * w,
+                                       @restrict       pfloat * ips){
 
   for(dlong n=0;n<Nblocks;++n;@outer(0)){
 
-    @shared volatile dfloat s_ip[3*p_BLOCKSIZE];
+    @shared volatile pfloat s_ip[3*p_BLOCKSIZE];
 
     for(int t=0;t<p_BLOCKSIZE;++t;@inner(0)){
       dlong id = t + n*p_BLOCKSIZE;
@@ -297,10 +297,10 @@ SOFTWARE.
       s_ip[1*p_BLOCKSIZE+t] = 0.0;
       s_ip[2*p_BLOCKSIZE+t] = 0.0;
       while (id<N) {
-        const dfloat ai =  a[id];
-        const dfloat bi =  b[id];
-        const dfloat ci =  c[id];
-        const dfloat wi =  w[id];
+        const pfloat ai =  a[id];
+        const pfloat bi =  b[id];
+        const pfloat ci =  c[id];
+        const pfloat wi =  w[id];
 
         s_ip[0*p_BLOCKSIZE+t] += wi*ai*bi;
         s_ip[1*p_BLOCKSIZE+t] += wi*ai*ci;
@@ -408,16 +408,16 @@ SOFTWARE.
 // w.a.b, w.a.c, w.b.b
 @kernel void kcycleWeightedCombinedOp2(const dlong Nblocks,
                                        const dlong N,
-                                       @restrict const dfloat * a,
-                                       @restrict const dfloat * b,
-                                       @restrict const dfloat * c,
-                                       @restrict const dfloat * d,
-                                       @restrict const dfloat * w,
-                                       @restrict       dfloat * ips){
+                                       @restrict const pfloat * a,
+                                       @restrict const pfloat * b,
+                                       @restrict const pfloat * c,
+                                       @restrict const pfloat * d,
+                                       @restrict const pfloat * w,
+                                       @restrict       pfloat * ips){
 
   for(dlong n=0;n<Nblocks;++n;@outer(0)){
 
-    @shared volatile dfloat s_ip[3*p_BLOCKSIZE];
+    @shared volatile pfloat s_ip[3*p_BLOCKSIZE];
 
     for(int t=0;t<p_BLOCKSIZE;++t;@inner(0)){
       dlong id = t + n*p_BLOCKSIZE;
@@ -425,11 +425,11 @@ SOFTWARE.
       s_ip[1*p_BLOCKSIZE+t] = 0.0;
       s_ip[2*p_BLOCKSIZE+t] = 0.0;
       while (id<N) {
-        const dfloat ai =  a[id];
-        const dfloat bi =  b[id];
-        const dfloat ci =  c[id];
-        const dfloat di =  d[id];
-        const dfloat wi =  w[id];
+        const pfloat ai =  a[id];
+        const pfloat bi =  b[id];
+        const pfloat ci =  c[id];
+        const pfloat di =  d[id];
+        const pfloat wi =  w[id];
 
         s_ip[0*p_BLOCKSIZE+t] += wi*ai*bi;
         s_ip[1*p_BLOCKSIZE+t] += wi*ai*ci;

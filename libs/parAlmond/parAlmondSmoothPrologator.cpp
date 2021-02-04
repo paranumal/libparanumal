@@ -49,7 +49,7 @@ parCSR *smoothProlongator(parCSR *A, parCSR *T){
   // the offd colIds
 
   //Jacobi weight
-  const dfloat omega = (4./3.)/A->rho;
+  const pfloat omega = (4./3.)/A->rho;
 
   hlong *recvRows = (hlong *) calloc(A->Ncols-A->NlocalCols, sizeof(hlong));
   dlong *sendCounts = (dlong*) calloc(size, sizeof(dlong));
@@ -220,11 +220,11 @@ parCSR *smoothProlongator(parCSR *A, parCSR *T){
     dlong start = A->diag.rowStarts[i];
     dlong end   = A->diag.rowStarts[i+1];
 
-    const dfloat invDi = 1.0/A->diagA[i];
+    const pfloat invDi = 1.0/A->diagA[i];
 
     for (dlong j=start;j<end;j++) {
       const dlong col = A->diag.cols[j];
-      const dfloat Aval = -omega*invDi*A->diag.vals[j];
+      const pfloat Aval = -omega*invDi*A->diag.vals[j];
 
       //local T entries
       dlong Tstart = T->diag.rowStarts[col];
@@ -250,7 +250,7 @@ parCSR *smoothProlongator(parCSR *A, parCSR *T){
     end   = A->offd.rowStarts[i+1];
     for (dlong j=start;j<end;j++) {
       const dlong col = A->offd.cols[j]-A->NlocalCols;
-      const dfloat Aval = -omega*invDi*A->offd.vals[j];
+      const pfloat Aval = -omega*invDi*A->offd.vals[j];
 
       // entries from recived rows of T
       dlong Tstart = ToffdRowOffsets[col];

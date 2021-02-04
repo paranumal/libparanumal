@@ -32,7 +32,7 @@ void AddSettings(settings_t& settings,
 		 const string prefix) {
 
   settings.newSetting(prefix+"PARALMOND DEVICE MATRIX TYPE",
-                      dfloatString,
+                      pfloatString,
                       "Type of entries of offloaded matrices",
                       {"double", "float", "half"});
 

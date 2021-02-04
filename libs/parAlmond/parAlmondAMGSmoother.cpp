@@ -32,18 +32,18 @@ SOFTWARE.
 namespace parAlmond {
 
 void parCSR::smoothDampedJacobi(occa::memory& o_r, occa::memory& o_x,
-                                const dfloat lambda, bool x_is_zero,
+                                const pfloat lambda, bool x_is_zero,
                                 occa::memory& o_scratch){
 
   if(x_is_zero){
     // x = lambda*inv(D)*r
-    platform.linAlg.amxpy(Nrows, lambda, o_diagInv, o_r, 0.0, o_x);
+    platform.pLinAlg.amxpy(Nrows, lambda, o_diagInv, o_r, (pfloat)0.0, o_x);
     return;
   }
 
   occa::memory o_d = o_scratch;
 
-  halo->ExchangeStart(o_x, 1, ogs_dfloat);
+  halo->ExchangeStart(o_x, 1, ogs_pfloat);
 
   // d = lambda*inv(D)*(r-A*x)
   if (diag.NrowBlocks)
@@ -53,7 +53,7 @@ void parCSR::smoothDampedJacobi(occa::memory& o_r, occa::memory& o_x,
                    lambda, o_diagInv,
                    o_r, o_x, o_d);
 
-  halo->ExchangeFinish(o_x, 1, ogs_dfloat);
+  halo->ExchangeFinish(o_x, 1, ogs_pfloat);
 
   if (offd.NrowBlocks)
     SmoothJacobiMCSRKernel(offd.NrowBlocks,
@@ -61,23 +61,23 @@ void parCSR::smoothDampedJacobi(occa::memory& o_r, occa::memory& o_x,
                    offd.o_rows, offd.o_cols, offd.o_vals,
                    lambda, o_diagInv, o_x, o_d);
 
-  platform.linAlg.axpy(Nrows, 1.0, o_d, 1.0, o_x);
+  platform.pLinAlg.axpy(Nrows, (pfloat)1.0, o_d, (pfloat)1.0, o_x);
 }
 
 void parCSR::smoothChebyshev(occa::memory& o_b, occa::memory& o_x,
-                             const dfloat lambda0, const dfloat lambda1,
+                             const pfloat lambda0, const pfloat lambda1,
                              bool x_is_zero, occa::memory& o_scratch,
                              const int ChebyshevIterations) {
 
-  const dfloat theta = 0.5*(lambda1+lambda0);
-  const dfloat delta = 0.5*(lambda1-lambda0);
-  const dfloat invTheta = 1.0/theta;
-  const dfloat sigma = theta/delta;
-  dfloat rho_n = 1./sigma;
-  dfloat rho_np1;
+  const pfloat theta = 0.5*(lambda1+lambda0);
+  const pfloat delta = 0.5*(lambda1-lambda0);
+  const pfloat invTheta = 1.0/theta;
+  const pfloat sigma = theta/delta;
+  pfloat rho_n = 1./sigma;
+  pfloat rho_np1;
 
-  occa::memory o_d = o_scratch + 0*Ncols*sizeof(dfloat);
-  occa::memory o_r = o_scratch + 1*Ncols*sizeof(dfloat);
+  occa::memory o_d = o_scratch + 0*Ncols*sizeof(pfloat);
+  occa::memory o_r = o_scratch + 1*Ncols*sizeof(pfloat);
 
   if(x_is_zero){ //skip the Ax if x is zero
     //r = D^{-1}b
@@ -88,10 +88,10 @@ void parCSR::smoothChebyshev(occa::memory& o_b, occa::memory& o_x,
                                  o_b, o_r, o_d, o_x);
   } else {
     //r = D^{-1}(b-A*x)
-    halo->ExchangeStart(o_x, 1, ogs_dfloat);
+    halo->ExchangeStart(o_x, 1, ogs_pfloat);
 
-    const dfloat alpha = 0.0;
-    const dfloat beta = 1.0;
+    const pfloat alpha = 0.0;
+    const pfloat beta = 1.0;
 
     if (diag.NrowBlocks)
       SmoothChebyshevCSRKernel(diag.NrowBlocks,
@@ -100,7 +100,7 @@ void parCSR::smoothChebyshev(occa::memory& o_b, occa::memory& o_x,
                      alpha, beta, o_diagInv,
                      o_b, o_x, o_r);
 
-    halo->ExchangeFinish(o_x, 1, ogs_dfloat);
+    halo->ExchangeFinish(o_x, 1, ogs_pfloat);
 
     if (offd.NrowBlocks)
       SmoothChebyshevMCSRKernel(offd.NrowBlocks,
@@ -119,11 +119,11 @@ void parCSR::smoothChebyshev(occa::memory& o_b, occa::memory& o_x,
 
   for (int k=0;k<ChebyshevIterations;k++) {
 
-    const dfloat alpha = 1.0;
-    const dfloat beta = 0.0;
+    const pfloat alpha = 1.0;
+    const pfloat beta = 0.0;
 
     //r_k+1 = r_k - D^{-1}Ad_k
-    halo->ExchangeStart(o_d, 1, ogs_dfloat);
+    halo->ExchangeStart(o_d, 1, ogs_pfloat);
 
     if (diag.NrowBlocks)
       SmoothChebyshevCSRKernel(diag.NrowBlocks,
@@ -132,7 +132,7 @@ void parCSR::smoothChebyshev(occa::memory& o_b, occa::memory& o_x,
                      alpha, beta, o_diagInv,
                      o_b, o_d, o_r);
 
-    halo->ExchangeFinish(o_d, 1, ogs_dfloat);
+    halo->ExchangeFinish(o_d, 1, ogs_pfloat);
 
     if (offd.NrowBlocks)
       SmoothChebyshevMCSRKernel(offd.NrowBlocks,
@@ -150,7 +150,7 @@ void parCSR::smoothChebyshev(occa::memory& o_b, occa::memory& o_x,
     if (Nrows)
       SmoothChebyshevUpdateKernel(Nrows,
                                   rho_np1*rho_n,
-                                  2.0*rho_np1/delta,
+                                  (pfloat)(2.0*rho_np1/delta),
                                   last_it,
                                   o_r, o_d, o_x);
 

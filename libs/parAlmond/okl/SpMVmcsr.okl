@@ -25,20 +25,20 @@ SOFTWARE.
 */
 
 @kernel void SpMVmcsr1(const dlong   Nblocks,
-                       const dfloat  alpha,
-                       const dfloat  beta,
+                       const pfloat  alpha,
+                       const pfloat  beta,
                        @restrict const  dlong  * blockStarts,
                        @restrict const  dlong  * rowStarts,
                        @restrict const  dlong  * rows,
                        @restrict const  dlong  * cols,
                        @restrict const  pfloat * vals,
-                       @restrict const  dfloat * x,
-                       @restrict        dfloat * y){
+                       @restrict const  pfloat * x,
+                       @restrict        pfloat * y){
 
   // y = alpha * A * x + beta * y
   for(dlong b=0;b<Nblocks;++b;@outer){
     @exclusive dlong blockStart, blockEnd, start;
-    @shared dfloat temp[p_NonzerosPerBlock];
+    @shared pfloat temp[p_NonzerosPerBlock];
 
     for(dlong n=0;n<p_BLOCKSIZE;++n;@inner){
       blockStart = blockStarts[b];
@@ -54,12 +54,12 @@ SOFTWARE.
       for (dlong row=blockStart+n;row<blockEnd;row+=p_BLOCKSIZE) {
 
         const dlong m = rows[row];
-        const dfloat betay = (beta==0.) ? 0. : beta*y[m];
+        const pfloat betay = (beta==0.) ? 0. : beta*y[m];
 
         const dlong colStart = rowStarts[row]  -start;
         const dlong colEnd   = rowStarts[row+1]-start;
 
-        dfloat result = 0.;
+        pfloat result = 0.;
         for (int i=colStart;i<colEnd;i++) {
           result += temp[i];
         }
@@ -71,21 +71,21 @@ SOFTWARE.
 }
 
 @kernel void SpMVmcsr2(const dlong  Nblocks,
-                       const dfloat alpha,
-                       const dfloat beta,
+                       const pfloat alpha,
+                       const pfloat beta,
                        @restrict const  dlong  * blockStarts,
                        @restrict const  dlong  * rowStarts,
                        @restrict const  dlong  * rows,
                        @restrict const  dlong  * cols,
                        @restrict const  pfloat * vals,
-                       @restrict const  dfloat * x,
-                       @restrict const  dfloat * y,
-                       @restrict        dfloat * z){
+                       @restrict const  pfloat * x,
+                       @restrict const  pfloat * y,
+                       @restrict        pfloat * z){
 
   // z = alpha * A * x + beta * y
   for(dlong b=0;b<Nblocks;++b;@outer){
     @exclusive dlong blockStart, blockEnd, start;
-    @shared dfloat temp[p_NonzerosPerBlock];
+    @shared pfloat temp[p_NonzerosPerBlock];
 
     for(dlong n=0;n<p_BLOCKSIZE;++n;@inner){
       blockStart = blockStarts[b];
@@ -105,7 +105,7 @@ SOFTWARE.
         const dlong colStart = rowStarts[row]  -start;
         const dlong colEnd   = rowStarts[row+1]-start;
 
-        dfloat result = 0.;
+        pfloat result = 0.;
         for (int i=colStart;i<colEnd;i++) {
           result += temp[i];
         }

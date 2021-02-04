@@ -53,7 +53,7 @@ void ellipticAddSettings(settings_t& settings,
 class elliptic_t: public solver_t {
 public:
   mesh_t &mesh;
-  linAlg_t &linAlg;
+  linAlg_t<dfloat> &linAlg;
 
   dlong Ndofs, Nhalo;
   int Nfields;

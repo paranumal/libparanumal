@@ -27,6 +27,19 @@ SOFTWARE.
 #ifndef TYPES_HPP
 #define TYPES_HPP
 
+#if 1
+#define pfloat float
+#define ogs_pfloat ogs_float
+#define MPI_PFLOAT MPI_FLOAT
+#define pfloatFormat "%f"
+#define pfloatString "float"
+#else
+#define pfloat double
+#define ogs_pfloat ogs_double
+#define MPI_PFLOAT MPI_DOUBLE
+#define pfloatFormat "%lf"
+#define pfloatString "double"
+#endif
 //float data type
 #if 0
 #define dfloat float

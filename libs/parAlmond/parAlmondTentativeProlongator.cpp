@@ -30,7 +30,7 @@ SOFTWARE.
 namespace parAlmond {
 
 parCSR *tentativeProlongator(parCSR *A, hlong *FineToCoarse,
-                            hlong *globalAggStarts, dfloat *null){
+                            hlong *globalAggStarts, pfloat *null){
 
   int rank, size;
   MPI_Comm_rank(A->comm, &rank);
@@ -78,13 +78,13 @@ parCSR *tentativeProlongator(parCSR *A, hlong *FineToCoarse,
     null[P->offd.cols[i]] += P->offd.vals[i] * P->offd.vals[i];
 
   //add the halo values to their origins
-  P->halo->Combine(null, 1, ogs_dfloat);
+  P->halo->Combine(null, 1, ogs_pfloat);
 
   for(dlong i=0; i<NCoarse; i++)
     null[i] = sqrt(null[i]);
 
   //share the results
-  P->halo->Exchange(null, 1, ogs_dfloat);
+  P->halo->Exchange(null, 1, ogs_pfloat);
 
   for(dlong i=0; i<P->diag.nnz; i++)
     P->diag.vals[i] /= null[P->diag.cols[i]];

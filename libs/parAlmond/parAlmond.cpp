@@ -35,7 +35,7 @@ std::string parAlmondDeviceMatrixType = "float";
 parAlmond_t::parAlmond_t(platform_t& _platform, settings_t& _settings, MPI_Comm comm):
   platform(_platform), settings(_settings) {
 
-  platform.linAlg.InitKernels({"set", "add", "sum", "scale",
+  platform.pLinAlg.InitKernels({"set", "add", "sum", "scale",
                                 "axpy", "zaxpy",
                                 "amx", "amxpy", "zamxpy",
                                 "adx", "adxpy", "zadxpy",
@@ -48,6 +48,7 @@ parAlmond_t::parAlmond_t(platform_t& _platform, settings_t& _settings, MPI_Comm 
   //build parAlmond kernels on first construction
   if (Nrefs==0) buildParAlmondKernels(platform);
   Nrefs++;
+
 }
 
 void parAlmond_t::Operator(occa::memory& o_rhs, occa::memory& o_x) {
@@ -55,11 +56,21 @@ void parAlmond_t::Operator(occa::memory& o_rhs, occa::memory& o_x) {
   if (multigrid->exact){ //call the linear solver
     int maxIter = 500;
     int verbose = settings.compareSetting("VERBOSE", "TRUE") ? 1 : 0;
-    dfloat tol = 1e-8;
+    pfloat tol = 1e-8;
     solver_t &A = *(multigrid->levels[0]);
     (void) multigrid->linearSolver->Solve(A, *multigrid, o_x, o_rhs, tol, maxIter, verbose);
   } else { //apply a multigrid cycle
-    multigrid->Operator(o_rhs, o_x);
+    // TW: FIX THIS
+    // just for testing
+
+    dlong tmpN  = multigrid->levels[0]->Nrows;
+    if(sizeof(pfloat) !=sizeof(dfloat)){
+      parAlmond::convertD2PKernel(tmpN, o_rhs, o_prhs);
+      multigrid->Operator(o_prhs, o_px);
+      parAlmond::convertP2DKernel(tmpN, o_px, o_x);
+    }
+    else
+      multigrid->Operator(o_rhs, o_x);
   }
 }
 

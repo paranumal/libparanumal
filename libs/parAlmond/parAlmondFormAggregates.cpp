@@ -29,7 +29,7 @@ SOFTWARE.
 
 namespace parAlmond {
 
-static bool customLess(int smax, dfloat rmax, hlong imax, int s, dfloat r, hlong i){
+static bool customLess(int smax, pfloat rmax, hlong imax, int s, pfloat r, hlong i){
 
   if(s > smax) return true;
   if(smax > s) return false;
@@ -61,17 +61,17 @@ void formAggregates(parCSR *A, strongGraph_t *C,
   const dlong M   = C->Ncols;
   const dlong nnz = C->nnz;
 
-  dfloat *rands = (dfloat *) calloc(M, sizeof(dfloat));
+  pfloat *rands = (pfloat *) calloc(M, sizeof(pfloat));
   int   *states = (int *)    calloc(M, sizeof(int));
   hlong *colMap = A->colMap; //mapping from local column ids to global ids
 
-  dfloat *Tr = (dfloat *) calloc(M, sizeof(dfloat));
+  pfloat *Tr = (pfloat *) calloc(M, sizeof(pfloat));
   int    *Ts = (int *)    calloc(M, sizeof(int));
   hlong  *Ti = (hlong *)  calloc(M, sizeof(hlong));
   hlong  *Tc = (hlong *)  calloc(M, sizeof(hlong));
 
   for(dlong i=0; i<N; i++)
-    rands[i] = (dfloat) drand48();
+    rands[i] = (pfloat) drand48();
 
   // add the number of non-zeros in each column
   int *colCnt = (int *) calloc(M,sizeof(int));
@@ -88,7 +88,7 @@ void formAggregates(parCSR *A, strongGraph_t *C,
   free(colCnt);
 
   //gs to fill halo region
-  A->halo->Exchange(rands, 1, ogs_dfloat);
+  A->halo->Exchange(rands, 1, ogs_pfloat);
 
   hlong done = 0;
   while(!done){
@@ -96,7 +96,7 @@ void formAggregates(parCSR *A, strongGraph_t *C,
     // #pragma omp parallel for
     for(dlong i=0; i<N; i++){
       int    smax = states[i];
-      dfloat rmax = rands[i];
+      pfloat rmax = rands[i];
       hlong  imax = colMap[i];
 
       if(smax != 1){
@@ -116,7 +116,7 @@ void formAggregates(parCSR *A, strongGraph_t *C,
     }
 
     //share results
-    A->halo->Exchange(Tr, 1, ogs_dfloat);
+    A->halo->Exchange(Tr, 1, ogs_pfloat);
     A->halo->Exchange(Ts, 1, ogs_int);
     A->halo->Exchange(Ti, 1, ogs_hlong);
 
@@ -124,7 +124,7 @@ void formAggregates(parCSR *A, strongGraph_t *C,
     // #pragma omp parallel for
     for(dlong i=0; i<N; i++){
       int    smax = Ts[i];
-      dfloat rmax = Tr[i];
+      pfloat rmax = Tr[i];
       hlong  imax = Ti[i];
 
       for(dlong jj=C->rowStarts[i];jj<C->rowStarts[i+1];jj++){
@@ -190,7 +190,7 @@ void formAggregates(parCSR *A, strongGraph_t *C,
   // #pragma omp parallel for
   for(dlong i=0; i<N; i++){
     int   smax  = states[i];
-    dfloat rmax = rands[i];
+    pfloat rmax = rands[i];
     hlong  imax = colMap[i];
     hlong  cmax = FineToCoarse[i];
 
@@ -217,7 +217,7 @@ void formAggregates(parCSR *A, strongGraph_t *C,
 
   //share results
   A->halo->Exchange(FineToCoarse, 1, ogs_hlong);
-  A->halo->Exchange(Tr,     1, ogs_dfloat);
+  A->halo->Exchange(Tr,     1, ogs_pfloat);
   A->halo->Exchange(Ts,     1, ogs_int);
   A->halo->Exchange(Ti,     1, ogs_hlong);
   A->halo->Exchange(Tc,     1, ogs_hlong);
@@ -226,7 +226,7 @@ void formAggregates(parCSR *A, strongGraph_t *C,
   // #pragma omp parallel for
   for(dlong i=0; i<N; i++){
     int    smax = Ts[i];
-    dfloat rmax = Tr[i];
+    pfloat rmax = Tr[i];
     hlong  imax = Ti[i];
     hlong  cmax = Tc[i];
 

@@ -164,7 +164,7 @@ class MGLevel: public parAlmond::multigridLevel {
 public:
   elliptic_t& elliptic;
   mesh_t& mesh;
-  linAlg_t& linAlg;
+  linAlg_t<dfloat>& linAlg;
 
   //prologation
   dfloat *P;

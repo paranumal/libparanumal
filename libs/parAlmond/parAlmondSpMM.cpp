@@ -29,7 +29,7 @@ SOFTWARE.
 
 namespace parAlmond {
 
-  dfloat TOL = 1e-8;
+  pfloat TOL = 1e-8;
   
 parCSR *SpMM(parCSR *A, parCSR *B){
 
@@ -208,7 +208,7 @@ parCSR *SpMM(parCSR *A, parCSR *B){
     hlong end   = A->diag.rowStarts[i+1];
     for (hlong j=start;j<end;j++) {
       const hlong col = A->diag.cols[j];
-      const dfloat Aval = A->diag.vals[j];
+      const pfloat Aval = A->diag.vals[j];
       
       if(col<0) printf("FOUND negative col %lld (1)\n", col);
       
@@ -216,7 +216,7 @@ parCSR *SpMM(parCSR *A, parCSR *B){
       hlong Bstart = B->diag.rowStarts[col];
       hlong Bend   = B->diag.rowStarts[col+1];
       for (hlong jj=Bstart;jj<Bend;jj++) {
-	dfloat val = Aval*B->diag.vals[jj];
+	pfloat val = Aval*B->diag.vals[jj];
 	if(fabs(val)>TOL){
 	  rowCtmp[rowcnt].row = i + A->globalRowStarts[rank];
 	  rowCtmp[rowcnt].col = B->diag.cols[jj]+B->globalColStarts[rank]; //global id
@@ -228,7 +228,7 @@ parCSR *SpMM(parCSR *A, parCSR *B){
       Bstart = B->offd.rowStarts[col];
       Bend   = B->offd.rowStarts[col+1];
       for (hlong jj=Bstart;jj<Bend;jj++) {
-	dfloat val = Aval*B->offd.vals[jj];
+	pfloat val = Aval*B->offd.vals[jj];
 	if(fabs(val)>TOL){
 	  rowCtmp[rowcnt].row = i + A->globalRowStarts[rank];
 	  rowCtmp[rowcnt].col = B->colMap[B->offd.cols[jj]]; //global id
@@ -245,7 +245,7 @@ parCSR *SpMM(parCSR *A, parCSR *B){
     end   = A->offd.rowStarts[i+1];
     for (hlong j=start;j<end;j++) {
       const hlong col = A->offd.cols[j]-A->NlocalCols;
-      const dfloat Aval = A->offd.vals[j];
+      const pfloat Aval = A->offd.vals[j];
 
       if(col<0) printf("FOUND negative col %lld (2)\n", col);
 
@@ -253,7 +253,7 @@ parCSR *SpMM(parCSR *A, parCSR *B){
       hlong Bstart = BoffdRowOffsets[col];
       hlong Bend   = BoffdRowOffsets[col+1];
       for (hlong jj=Bstart;jj<Bend;jj++) {
-	dfloat val = Aval*BoffdRows[jj].val;
+	pfloat val = Aval*BoffdRows[jj].val;
 	if(fabs(val)>TOL){
 	  rowCtmp[rowcnt].row = i + A->globalRowStarts[rank];
 	  rowCtmp[rowcnt].col = BoffdRows[jj].col; //global id

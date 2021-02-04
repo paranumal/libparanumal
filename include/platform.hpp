@@ -50,7 +50,8 @@ public:
   occa::properties props;
 
   occa::device device;
-  linAlg_t linAlg;
+  linAlg_t<dfloat> linAlg;
+  linAlg_t<pfloat> pLinAlg;
 
   int rank, size;
 
@@ -81,6 +82,7 @@ public:
     DeviceProperties();
 
     linAlg.Setup(this);
+    pLinAlg.Setup(this);
   }
 
   ~platform_t(){}

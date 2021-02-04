@@ -29,26 +29,26 @@ SOFTWARE.
 // ip = y.y
 @kernel void vectorAddInnerProd(const dlong Nblocks,
                                 const dlong N,
-                                const dfloat alpha,
-                                const dfloat beta,
-                                @restrict const dfloat * x,
-                                @restrict       dfloat * y,
-                                @restrict       dfloat * ip){
+                                const pfloat alpha,
+                                const pfloat beta,
+                                @restrict const pfloat * x,
+                                @restrict       pfloat * y,
+                                @restrict       pfloat * ip){
 
   for(dlong b=0;b<Nblocks;++b;@outer(0)){
 
-    @shared volatile dfloat s_ip[p_BLOCKSIZE];
+    @shared volatile pfloat s_ip[p_BLOCKSIZE];
 
     for(int t=0;t<p_BLOCKSIZE;++t;@inner(0)){
       dlong id = t + b*p_BLOCKSIZE;
 
       s_ip[t] = 0.0;
       while (id<N) {
-        dfloat yi;
+        pfloat yi;
         if (beta) yi = y[id];
         else      yi = 0.0;
 
-        const dfloat r = beta*yi + alpha*x[id];
+        const pfloat r = beta*yi + alpha*x[id];
 
         y[id] = r;
 
@@ -97,27 +97,27 @@ SOFTWARE.
 // ip = w.y.y
 @kernel void vectorAddWeightedInnerProd(const dlong Nblocks,
                                         const dlong N,
-                                        const dfloat alpha,
-                                        const dfloat beta,
-                                        @restrict const dfloat * x,
-                                        @restrict       dfloat * y,
-                                        @restrict const dfloat * w,
-                                        @restrict       dfloat * ip){
+                                        const pfloat alpha,
+                                        const pfloat beta,
+                                        @restrict const pfloat * x,
+                                        @restrict       pfloat * y,
+                                        @restrict const pfloat * w,
+                                        @restrict       pfloat * ip){
 
   for(dlong b=0;b<Nblocks;++b;@outer(0)){
 
-    @shared volatile dfloat s_ip[p_BLOCKSIZE];
+    @shared volatile pfloat s_ip[p_BLOCKSIZE];
 
     for(int t=0;t<p_BLOCKSIZE;++t;@inner(0)){
       dlong id = t + b*p_BLOCKSIZE;
 
       s_ip[t] = 0.0;
       while (id<N) {
-        dfloat yi;
+        pfloat yi;
         if (beta) yi = y[id];
         else      yi = 0.0;
 
-        const dfloat r = beta*yi + alpha*x[id];
+        const pfloat r = beta*yi + alpha*x[id];
 
         y[id] = r;
 

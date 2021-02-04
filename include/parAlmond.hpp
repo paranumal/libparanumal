@@ -37,6 +37,7 @@ SOFTWARE.
 
 namespace parAlmond {
 
+  
 void AddSettings(settings_t& settings, const string prefix="");
 void ReportSettings(settings_t& settings);
 
@@ -44,7 +45,7 @@ extern MPI_Datatype MPI_NONZERO_T;
 
 extern string parAlmondDeviceMatrixType;
 
-constexpr dfloat dropTolerance=1e-8;
+constexpr pfloat dropTolerance=1e-8;
 
 //distributed matrix class passed to AMG setup
 class parCOO {
@@ -60,7 +61,7 @@ public:
   struct nonZero_t {
     hlong row;
     hlong col;
-    dfloat val;
+    pfloat val;
   };
   nonZero_t *entries=nullptr;
 
@@ -100,6 +101,7 @@ class multigrid_t;
 
 class parAlmond_t: public precon_t {
 public:
+
   parAlmond_t(platform_t& _platform, settings_t& settings_, MPI_Comm comm);
   ~parAlmond_t();
 
@@ -110,7 +112,7 @@ public:
   //-- Local A matrix data must be globally indexed & row sorted
   void AMGSetup(parCOO& A,
                bool nullSpace,
-               dfloat *nullVector,
+		dfloat *nullVector,
                dfloat nullSpacePenalty);
 
   void Operator(occa::memory& o_rhs, occa::memory& o_x);
@@ -119,6 +121,9 @@ public:
 
   dlong getNumCols(int k);
   dlong getNumRows(int k);
+
+  occa::memory o_px, o_prhs;
+  
 private:
   platform_t& platform;
   settings_t& settings;

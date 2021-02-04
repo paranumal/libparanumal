@@ -107,8 +107,8 @@ void multigrid_t::AddLevel(multigridLevel* level){
   if (ctype==KCYCLE) {
     //first level
     if (reductionScratchBytes==0) {
-      reductionScratchBytes = 3*PARALMOND_NBLOCKS*sizeof(dfloat);
-      dfloat *dummy = (dfloat *) calloc(3*PARALMOND_NBLOCKS,sizeof(dfloat));
+      reductionScratchBytes = 3*PARALMOND_NBLOCKS*sizeof(pfloat);
+      pfloat *dummy = (pfloat *) calloc(3*PARALMOND_NBLOCKS,sizeof(pfloat));
       o_reductionScratch = platform.malloc(reductionScratchBytes, dummy);
       reductionScratch = platform.hostMalloc(reductionScratchBytes, NULL, h_reductionScratch);
       free(dummy);
@@ -116,27 +116,27 @@ void multigrid_t::AddLevel(multigridLevel* level){
 
     //extra stroage for kcycle vectors
     if (numLevels>0 && numLevels<NUMKCYCLES+1) {
-      dfloat *dummy = (dfloat *) calloc(level->Ncols,sizeof(dfloat));
-      o_ck[numLevels] = platform.malloc(level->Ncols*sizeof(dfloat),dummy);
-      o_vk[numLevels] = platform.malloc(level->Nrows*sizeof(dfloat),dummy);
-      o_wk[numLevels] = platform.malloc(level->Nrows*sizeof(dfloat),dummy);
+      pfloat *dummy = (pfloat *) calloc(level->Ncols,sizeof(pfloat));
+      o_ck[numLevels] = platform.malloc(level->Ncols*sizeof(pfloat),dummy);
+      o_vk[numLevels] = platform.malloc(level->Nrows*sizeof(pfloat),dummy);
+      o_wk[numLevels] = platform.malloc(level->Nrows*sizeof(pfloat),dummy);
       free(dummy);
     }
   }
 
   //allocate space for coarse rhs and x
   if (numLevels>0) {
-    dfloat *dummy = (dfloat *) calloc(level->Ncols,sizeof(dfloat));
-    o_x[numLevels]   = platform.malloc(level->Ncols*sizeof(dfloat),dummy);
-    o_rhs[numLevels] = platform.malloc(level->Ncols*sizeof(dfloat),dummy);
+    pfloat *dummy = (pfloat *) calloc(level->Ncols,sizeof(pfloat));
+    o_x[numLevels]   = platform.malloc(level->Ncols*sizeof(pfloat),dummy);
+    o_rhs[numLevels] = platform.malloc(level->Ncols*sizeof(pfloat),dummy);
     free(dummy);
   }
 
   //scratch space includes space for residual and 2 vectors used in Chebyshev smoothing
-  size_t requiredBytes = 2*level->Ncols*sizeof(dfloat);
+  size_t requiredBytes = 2*level->Ncols*sizeof(pfloat);
   if (requiredBytes>scratchSpaceBytes) {
     scratchSpaceBytes = requiredBytes;
-    dfloat *dummy = (dfloat *) calloc(2*level->Ncols,sizeof(dfloat));
+    pfloat *dummy = (pfloat *) calloc(2*level->Ncols,sizeof(pfloat));
     o_scratch = platform.malloc(requiredBytes, dummy);
     free(dummy);
   }

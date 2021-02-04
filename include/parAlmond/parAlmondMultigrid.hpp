@@ -100,22 +100,22 @@ private:
   void kcycleOp1(multigridLevel* level,
                  occa::memory& o_X,  occa::memory& o_RHS,
                  occa::memory& o_CK, occa::memory& o_VK,
-                 dfloat *alpha1, dfloat *rho1,
-                 dfloat *norm_rhs, dfloat *norm_rhstilde);
+                 pfloat *alpha1, pfloat *rho1,
+                 pfloat *norm_rhs, pfloat *norm_rhstilde);
 
   void kcycleOp2(multigridLevel* level,
                 occa::memory& o_X,  occa::memory& o_RHS,
                 occa::memory& o_CK, occa::memory& o_VK, occa::memory& o_WK,
-                const dfloat alpha1, const dfloat rho1);
+                const pfloat alpha1, const pfloat rho1);
 
-  void kcycleCombinedOp1(multigridLevel* level, dfloat *aDotbc, occa::memory& o_a,
+  void kcycleCombinedOp1(multigridLevel* level, pfloat *aDotbc, occa::memory& o_a,
                        occa::memory& o_b, occa::memory& o_c);
-  void kcycleCombinedOp2(multigridLevel* level, dfloat *aDotbcd,
+  void kcycleCombinedOp2(multigridLevel* level, pfloat *aDotbcd,
                         occa::memory& o_a, occa::memory& o_b,
                         occa::memory& o_c, occa::memory& o_d);
-  dfloat vectorAddInnerProd(multigridLevel* level,
-                          const dfloat alpha, occa::memory& o_x,
-                          const dfloat beta,  occa::memory& o_y);
+  pfloat vectorAddInnerProd(multigridLevel* level,
+                          const pfloat alpha, occa::memory& o_x,
+                          const pfloat beta,  occa::memory& o_y);
 };
 
 }

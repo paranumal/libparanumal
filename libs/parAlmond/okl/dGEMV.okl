@@ -31,20 +31,20 @@ SOFTWARE.
 // Assumes A is column major and LDA is M.
 @kernel void dGEMV(const dlong   M, //rows
                    const dlong   N, //cols
-                   const dfloat alpha,
-                   @restrict const  dfloat * A,
-                   @restrict const  dfloat * x,
-                   const dfloat beta,
-                   @restrict        dfloat * y){
+                   const pfloat alpha,
+                   @restrict const  pfloat * A,
+                   @restrict const  pfloat * x,
+                   const pfloat beta,
+                   @restrict        pfloat * y){
 
   for(dlong b=0;b<M;b+=DIM_X * 4;@outer(0)){
 
-    @shared dfloat s_data[DIM_X * 4 * DIM_Y];
+    @shared pfloat s_data[DIM_X * 4 * DIM_Y];
 
     for(int ty=0;ty<DIM_Y;++ty;@inner(1)){
       for(int tx=0;tx<DIM_X;++tx;@inner(0)){
-        dfloat r_A[4]; // micro tile is 4 * 4
-        dfloat r_x[4];
+        pfloat r_A[4]; // micro tile is 4 * 4
+        pfloat r_x[4];
 
         //zero accumualtion
         r_A[0] = 0.0;
@@ -142,7 +142,7 @@ SOFTWARE.
         const dlong ind = b + tid;
         if(tid < DIM_X * 4) {
           //compress row result
-          dfloat Ax = 0.0;
+          pfloat Ax = 0.0;
           for(int i = 0; i < DIM_Y; i++) {
             Ax += s_data[tid + DIM_X * 4 * i];
           }

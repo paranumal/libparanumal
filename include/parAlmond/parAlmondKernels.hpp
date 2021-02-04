@@ -38,6 +38,9 @@ namespace parAlmond {
   extern const int blockSize;
   extern const int NonzerosPerBlock;
 
+  extern occa::kernel convertD2PKernel;
+  extern occa::kernel convertP2DKernel;
+  
   extern occa::kernel SpMVcsrKernel1;
   extern occa::kernel SpMVcsrKernel2;
   extern occa::kernel SpMVmcsrKernel;

@@ -30,8 +30,8 @@ SOFTWARE.
 namespace parAlmond {
 
 //create coarsened problem
-amgLevel *coarsenAmgLevel(amgLevel *level, dfloat *null,
-                          StrengthType strtype, dfloat theta,
+amgLevel *coarsenAmgLevel(amgLevel *level, pfloat *null,
+                          StrengthType strtype, pfloat theta,
                           AggType aggtype){
 
   int size;

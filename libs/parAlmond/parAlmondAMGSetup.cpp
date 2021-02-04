@@ -45,9 +45,17 @@ void parAlmond_t::AMGSetup(parCOO& cooA,
   parCSR *A = new parCSR(cooA);
   A->diagSetup();
 
+  o_px = platform.device.malloc(A->Nrows*sizeof(pfloat));
+  o_prhs = platform.device.malloc(A->Nrows*sizeof(pfloat));
+  
+
+  
   //copy fine nullvector
-  dfloat *null = (dfloat *) malloc(A->Nrows*sizeof(dfloat));
-  memcpy(null, nullVector, A->Nrows*sizeof(dfloat));
+  pfloat *null = (pfloat *) malloc(A->Nrows*sizeof(pfloat));
+  for(int n=0;n<A->Nrows;++n){
+    null[n] = nullVector[n];
+  }
+  //  memcpy(null, nullVector, A->Nrows*sizeof(pfloat));
 
   // find target N at coarsest level
   const int gCoarseSize = multigrid->coarseSolver->getTargetSize();
@@ -76,7 +84,7 @@ void parAlmond_t::AMGSetup(parCOO& cooA,
 
   //TODO: make the coarsen threasholds user-provided inputs
   // For now, let default to some sensible threasholds
-  dfloat theta=0.0;
+  pfloat theta=0.0;
   if (multigrid->strtype==RUGESTUBEN) {
     //    theta=0.14; //default for 3D problems
     //    theta=0.12; //default for 3D problems

@@ -45,7 +45,7 @@ public:
     dlong  *blockRowStarts=nullptr;
     dlong  *rowStarts=nullptr;
     dlong  *cols=nullptr;
-    dfloat *vals=nullptr;
+    pfloat *vals=nullptr;
 
     occa::memory o_blockRowStarts;
     occa::memory o_rowStarts;
@@ -65,7 +65,7 @@ public:
     dlong  *mRowStarts=nullptr; //compressed version of rowStarts
     dlong  *rows=nullptr;
     dlong  *cols=nullptr;
-    dfloat *vals=nullptr;
+    pfloat *vals=nullptr;
 
     occa::memory o_blockRowStarts;
     occa::memory o_mRowStarts;
@@ -75,8 +75,8 @@ public:
   };
   MCSR offd;
 
-  dfloat *diagA=nullptr;
-  dfloat *diagInv=nullptr;
+  pfloat *diagA=nullptr;
+  pfloat *diagInv=nullptr;
 
   occa::memory o_diagA;
   occa::memory o_diagInv;
@@ -90,7 +90,7 @@ public:
   dlong NlocalCols = 0;
 
   //rho ~= cond(invD * A)
-  dfloat rho=0.0;
+  pfloat rho=0.0;
 
   parCSR(dlong N, dlong M, platform_t& _platform, MPI_Comm _comm):
     platform(_platform), comm(_comm), Nrows(N), Ncols(M) {}
@@ -104,26 +104,26 @@ public:
 
   void diagSetup();
 
-  dfloat rhoDinvA();
+  pfloat rhoDinvA();
 
   void syncToDevice();
 
-  void SpMV(const dfloat alpha, dfloat *x,
-            const dfloat beta, dfloat *y);
-  void SpMV(const dfloat alpha, dfloat *x,
-            const dfloat beta, const dfloat *y, dfloat *z);
+  void SpMV(const pfloat alpha, pfloat *x,
+            const pfloat beta, pfloat *y);
+  void SpMV(const pfloat alpha, pfloat *x,
+            const pfloat beta, const pfloat *y, pfloat *z);
 
-  void SpMV(const dfloat alpha, occa::memory& o_x, const dfloat beta,
+  void SpMV(const pfloat alpha, occa::memory& o_x, const pfloat beta,
             occa::memory& o_y);
-  void SpMV(const dfloat alpha, occa::memory& o_x, const dfloat beta,
+  void SpMV(const pfloat alpha, occa::memory& o_x, const pfloat beta,
             occa::memory& o_y, occa::memory& o_z);
 
   void smoothDampedJacobi(occa::memory& o_r, occa::memory& o_x,
-                          const dfloat lambda, bool x_is_zero,
+                          const pfloat lambda, bool x_is_zero,
                           occa::memory& o_scratch);
 
   void smoothChebyshev(occa::memory& o_b, occa::memory& o_x,
-                       const dfloat lambda0, const dfloat lambda1,
+                       const pfloat lambda0, const pfloat lambda1,
                        bool x_is_zero, occa::memory& o_scratch,
                        const int ChebyshevIterations);
 };

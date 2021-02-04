@@ -36,13 +36,13 @@ namespace parAlmond {
 //
 //------------------------------------------------------------------------
 
-void parCSR::SpMV(const dfloat alpha, dfloat *x,
-                  const dfloat beta, dfloat *y) {
+void parCSR::SpMV(const pfloat alpha, pfloat *x,
+                  const pfloat beta, pfloat *y) {
 
   // z[i] = beta*y[i] + alpha* (sum_{ij} Aij*x[j])
   // #pragma omp parallel for
   for(dlong i=0; i<Nrows; i++){ //local
-    dfloat result = 0.0;
+    pfloat result = 0.0;
     for(dlong jj=diag.rowStarts[i]; jj<diag.rowStarts[i+1]; jj++)
       result += diag.vals[jj]*x[diag.cols[jj]];
 
@@ -52,12 +52,12 @@ void parCSR::SpMV(const dfloat alpha, dfloat *x,
       y[i] = alpha*result;
   }
 
-  halo->Exchange(x, 1, ogs_dfloat);
+  halo->Exchange(x, 1, ogs_pfloat);
 
   // #pragma omp parallel for
   for(dlong i=0; i<offd.nzRows; i++){ //local
     const dlong row = offd.rows[i];
-    dfloat result = 0.0;
+    pfloat result = 0.0;
     for(dlong jj=offd.mRowStarts[i]; jj<offd.mRowStarts[i+1]; jj++)
       result += offd.vals[jj]*x[offd.cols[jj]];
 
@@ -65,24 +65,24 @@ void parCSR::SpMV(const dfloat alpha, dfloat *x,
   }
 }
 
-void parCSR::SpMV(const dfloat alpha, dfloat *x,
-                  const dfloat beta, const dfloat *y, dfloat *z) {
+void parCSR::SpMV(const pfloat alpha, pfloat *x,
+                  const pfloat beta, const pfloat *y, pfloat *z) {
 
   // z[i] = beta*y[i] + alpha* (sum_{ij} Aij*x[j])
   // #pragma omp parallel for
   for(dlong i=0; i<Nrows; i++){ //local
-    dfloat result = 0.0;
+    pfloat result = 0.0;
     for(dlong jj=diag.rowStarts[i]; jj<diag.rowStarts[i+1]; jj++)
       result += diag.vals[jj]*x[diag.cols[jj]];
 
     z[i] = alpha*result + beta*y[i];
   }
 
-  halo->Exchange(x, 1, ogs_dfloat);
+  halo->Exchange(x, 1, ogs_pfloat);
 
   for(dlong i=0; i<offd.nzRows; i++){ //local
     const dlong row = offd.rows[i];
-    dfloat result = 0.0;
+    pfloat result = 0.0;
     for(dlong jj=offd.mRowStarts[i]; jj<offd.mRowStarts[i+1]; jj++)
       result += offd.vals[jj]*x[offd.cols[jj]];
 
@@ -90,10 +90,10 @@ void parCSR::SpMV(const dfloat alpha, dfloat *x,
   }
 }
 
-void parCSR::SpMV(const dfloat alpha, occa::memory& o_x, const dfloat beta,
+void parCSR::SpMV(const pfloat alpha, occa::memory& o_x, const pfloat beta,
                   occa::memory& o_y) {
 
-  halo->ExchangeStart(o_x, 1, ogs_dfloat);
+  halo->ExchangeStart(o_x, 1, ogs_pfloat);
 
   // z[i] = beta*y[i] + alpha* (sum_{ij} Aij*x[j])
   if (diag.NrowBlocks)
@@ -102,9 +102,9 @@ void parCSR::SpMV(const dfloat alpha, occa::memory& o_x, const dfloat beta,
                    diag.o_cols, diag.o_vals,
                    o_x, o_y);
 
-  halo->ExchangeFinish(o_x, 1, ogs_dfloat);
+  halo->ExchangeFinish(o_x, 1, ogs_pfloat);
 
-  const dfloat one = 1.0;
+  const pfloat one = 1.0;
   if (offd.NrowBlocks)
     SpMVmcsrKernel(offd.NrowBlocks, alpha, one,
                    offd.o_blockRowStarts, offd.o_mRowStarts,
@@ -112,10 +112,10 @@ void parCSR::SpMV(const dfloat alpha, occa::memory& o_x, const dfloat beta,
                    o_x, o_y);
 }
 
-void parCSR::SpMV(const dfloat alpha, occa::memory& o_x, const dfloat beta,
+void parCSR::SpMV(const pfloat alpha, occa::memory& o_x, const pfloat beta,
                   occa::memory& o_y, occa::memory& o_z) {
 
-  halo->ExchangeStart(o_x, 1, ogs_dfloat);
+  halo->ExchangeStart(o_x, 1, ogs_pfloat);
 
   // z[i] = beta*y[i] + alpha* (sum_{ij} Aij*x[j])
   if (diag.NrowBlocks)
@@ -124,9 +124,9 @@ void parCSR::SpMV(const dfloat alpha, occa::memory& o_x, const dfloat beta,
                    diag.o_cols, diag.o_vals,
                    o_x, o_y, o_z);
 
-  halo->ExchangeFinish(o_x, 1, ogs_dfloat);
+  halo->ExchangeFinish(o_x, 1, ogs_pfloat);
 
-  const dfloat one = 1.0;
+  const pfloat one = 1.0;
   if (offd.NrowBlocks)
     SpMVmcsrKernel(offd.NrowBlocks, alpha, one,
                    offd.o_blockRowStarts, offd.o_mRowStarts,
@@ -212,8 +212,8 @@ parCSR::parCSR(parCOO& A):       // number of nonzeros on this rank
   //fill the CSR matrices
   diag.cols = (dlong *)  calloc(diag.nnz, sizeof(dlong));
   offd.cols = (dlong *)  calloc(offd.nnz, sizeof(dlong));
-  diag.vals = (dfloat *) calloc(diag.nnz, sizeof(dfloat));
-  offd.vals = (dfloat *) calloc(offd.nnz, sizeof(dfloat));
+  diag.vals = (pfloat *) calloc(diag.nnz, sizeof(pfloat));
+  offd.vals = (pfloat *) calloc(offd.nnz, sizeof(pfloat));
   dlong diagCnt = 0;
   dlong offdCnt = 0;
   for (dlong n=0;n<A.nnz;n++) {
@@ -330,8 +330,8 @@ void parCSR::haloSetup(hlong *colIds) {
 
 void parCSR::diagSetup() {
   //fill the CSR matrices
-  diagA   = (dfloat *) calloc(Ncols, sizeof(dfloat));
-  diagInv = (dfloat *) calloc(Ncols, sizeof(dfloat));
+  diagA   = (pfloat *) calloc(Ncols, sizeof(pfloat));
+  diagInv = (pfloat *) calloc(Ncols, sizeof(pfloat));
 
   for (dlong i=0;i<Nrows;i++) {
     const dlong start = diag.rowStarts[i];
@@ -345,7 +345,7 @@ void parCSR::diagSetup() {
   }
 
   //fill the halo region
-  halo->Exchange(diagA, 1, ogs_dfloat);
+  halo->Exchange(diagA, 1, ogs_pfloat);
 
   //compute the inverse diagonal
   for (dlong n=0;n<Nrows;n++)
@@ -387,7 +387,7 @@ parCSR::~parCSR() {
 //
 //------------------------------------------------------------------------
 
-dfloat parCSR::rhoDinvA(){
+pfloat parCSR::rhoDinvA(){
 
   int size;
   MPI_Comm_size(comm, &size);
@@ -403,30 +403,30 @@ dfloat parCSR::rhoDinvA(){
   double *H = (double *) calloc(k*k,sizeof(double));
 
   // allocate memory for basis
-  dfloat **V = (dfloat **) calloc(k+1, sizeof(dfloat *));
-  dfloat *Vx = (dfloat *) calloc(Ncols, sizeof(dfloat));
+  pfloat **V = (pfloat **) calloc(k+1, sizeof(pfloat *));
+  pfloat *Vx = (pfloat *) calloc(Ncols, sizeof(pfloat));
 
   for(int i=0; i<=k; i++)
-    V[i] = (dfloat *) calloc(Nrows, sizeof(dfloat));
+    V[i] = (pfloat *) calloc(Nrows, sizeof(pfloat));
 
   // generate a random vector for initial basis vector
-  for(dlong n=0; n<Nrows; n++) Vx[n] = (dfloat) drand48();
+  for(dlong n=0; n<Nrows; n++) Vx[n] = (pfloat) drand48();
 
-  // dfloat norm_vo = vectorNorm(Nrows,Vx, comm);
-  dfloat norm_vo=0.0, gnorm_vo=0.0;
+  // pfloat norm_vo = vectorNorm(Nrows,Vx, comm);
+  pfloat norm_vo=0.0, gnorm_vo=0.0;
   for(dlong n=0; n<Nrows; n++) norm_vo += Vx[n]*Vx[n];
-  MPI_Allreduce(&norm_vo, &gnorm_vo, 1, MPI_DFLOAT, MPI_SUM, comm);
+  MPI_Allreduce(&norm_vo, &gnorm_vo, 1, MPI_PFLOAT, MPI_SUM, comm);
   norm_vo = sqrt(gnorm_vo);
 
   // vectorScale(Nrows, 1.0/norm_vo, Vx);
   for(dlong n=0; n<Nrows; n++) Vx[n] *= (1.0/norm_vo);
 
   //V[0] = Vx
-  memcpy(V[0], Vx, Nrows*sizeof(dfloat));
+  memcpy(V[0], Vx, Nrows*sizeof(pfloat));
 
   for(int j=0; j<k; j++){
     //Vx = V[j]
-    memcpy(Vx, V[j], Nrows*sizeof(dfloat));
+    memcpy(Vx, V[j], Nrows*sizeof(pfloat));
 
     // v[j+1] = invD*(A*v[j])
     SpMV(1.0, Vx, 0., V[j+1]);
@@ -436,10 +436,10 @@ dfloat parCSR::rhoDinvA(){
     // modified Gram-Schmidth
     for(int i=0; i<=j; i++){
       // H(i,j) = v[i]'*A*v[j]
-      // dfloat hij = vectorInnerProd(Nrows, V[i], V[j+1],comm);
-      dfloat local_hij=0.0, hij=0.0;
+      // pfloat hij = vectorInnerProd(Nrows, V[i], V[j+1],comm);
+      pfloat local_hij=0.0, hij=0.0;
       for(dlong n=0; n<Nrows; n++) local_hij += V[i][n]*V[j+1][n];
-      MPI_Allreduce(&local_hij, &hij, 1, MPI_DFLOAT, MPI_SUM, comm);
+      MPI_Allreduce(&local_hij, &hij, 1, MPI_PFLOAT, MPI_SUM, comm);
 
       // v[j+1] = v[j+1] - hij*v[i]
       // vectorAdd(Nrows,-hij, V[i], 1.0, V[j+1]);
@@ -450,10 +450,10 @@ dfloat parCSR::rhoDinvA(){
 
     if(j+1 < k){
 
-      // dfloat norm_vj = vectorNorm(Nrows,V[j+1],comm);
-      dfloat norm_vj=0.0, gnorm_vj=0.0;
+      // pfloat norm_vj = vectorNorm(Nrows,V[j+1],comm);
+      pfloat norm_vj=0.0, gnorm_vj=0.0;
       for(dlong n=0; n<Nrows; n++) norm_vj += V[j+1][n]*V[j+1][n];
-      MPI_Allreduce(&norm_vj, &gnorm_vj, 1, MPI_DFLOAT, MPI_SUM, comm);
+      MPI_Allreduce(&norm_vj, &gnorm_vj, 1, MPI_PFLOAT, MPI_SUM, comm);
       norm_vj = sqrt(gnorm_vj);
 
       H[j+1+ j*k] = (double) norm_vj;
@@ -540,7 +540,7 @@ void parCSR::syncToDevice() {
 
       //transfer matrix data
       diag.o_cols = platform.malloc(diag.nnz*sizeof(dlong),   diag.cols);
-      diag.o_vals = platform.mallocConvert(diag.nnz, diag.vals, parAlmondDeviceMatrixType.c_str());
+      diag.o_vals = platform.malloc(diag.nnz*sizeof(pfloat), diag.vals);
     }
 
     if (offd.nnz) {
@@ -587,12 +587,12 @@ void parCSR::syncToDevice() {
       offd.o_mRowStarts = platform.malloc((offd.nzRows+1)*sizeof(dlong), offd.mRowStarts);
 
       offd.o_cols = platform.malloc(offd.nnz*sizeof(dlong),   offd.cols);
-      offd.o_vals = platform.mallocConvert(offd.nnz, offd.vals, parAlmondDeviceMatrixType.c_str());
+      offd.o_vals = platform.malloc(offd.nnz*sizeof(pfloat), offd.vals);
     }
 
     if (diagA) {
-      o_diagA = platform.malloc(Nrows*sizeof(dfloat), diagA);
-      o_diagInv = platform.malloc(Nrows*sizeof(dfloat), diagInv);
+      o_diagA = platform.malloc(Nrows*sizeof(pfloat), diagA);
+      o_diagInv = platform.malloc(Nrows*sizeof(pfloat), diagInv);
     }
   }
 }
