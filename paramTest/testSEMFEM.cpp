@@ -117,7 +117,7 @@ void printSetup(const char *device, int degree, int nx, int ny, int nz, double e
 int main(int argc, char **argv){
 
   for(int degree=1;degree<9;++degree){
-    for(double epsy=0.3;epsy<0.8;epsy+=0.7){
+    for(double epsy=0.3;epsy<1.1;epsy+=0.7){
       for(int model=1;model<2;++model){
 	int maxNx = floor(pow( 6.e6/( pow(degree+1,3)),0.333));
 	maxNx = (maxNx>40) ? 40:maxNx;
