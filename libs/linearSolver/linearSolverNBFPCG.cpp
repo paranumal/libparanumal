@@ -73,7 +73,7 @@ int nbfpcg::Solve(solver_t& solver, precon_t& precon,
 
   int rank;
   MPI_Comm_rank(comm, &rank);
-  linAlg_t &linAlg = platform.linAlg;
+  linAlg_t<dfloat> &linAlg = platform.linAlg;
 
   // register scalars
   dfloat alpha0 = 0;

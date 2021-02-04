@@ -31,81 +31,93 @@ SOFTWARE.
 /*********************/
 
 // o_a[n] = alpha
-void linAlg_t::set(const dlong N, const dfloat alpha, occa::memory& o_a) {
+template <class lafloat>
+void linAlg_t<lafloat>::set(const dlong N, const lafloat alpha, occa::memory& o_a) {
   setKernel(N, alpha, o_a);
 }
 
 // o_a[n] += alpha
-void linAlg_t::add(const dlong N, const dfloat alpha, occa::memory& o_a) {
+template <class lafloat>
+void linAlg_t<lafloat>::add(const dlong N, const lafloat alpha, occa::memory& o_a) {
   addKernel(N, alpha, o_a);
 }
 
 // o_a[n] *= alpha
-void linAlg_t::scale(const dlong N, const dfloat alpha, occa::memory& o_a)  {
+template <class lafloat>
+void linAlg_t<lafloat>::scale(const dlong N, const lafloat alpha, occa::memory& o_a)  {
   scaleKernel(N, alpha, o_a);
 }
 
 // o_y[n] = beta*o_y[n] + alpha*o_x[n]
-void linAlg_t::axpy(const dlong N, const dfloat alpha, occa::memory& o_x,
-                    const dfloat beta,  occa::memory& o_y) {
+template <class lafloat>
+void linAlg_t<lafloat>::axpy(const dlong N, const lafloat alpha, occa::memory& o_x,
+                    const lafloat beta,  occa::memory& o_y) {
   axpyKernel(N, alpha, o_x, beta, o_y);
 }
 
 // o_z[n] = beta*o_y[n] + alpha*o_x[n]
-void linAlg_t::zaxpy(const dlong N, const dfloat alpha, occa::memory& o_x,
-                     const dfloat beta, occa::memory& o_y, occa::memory& o_z) {
+template <class lafloat>
+void linAlg_t<lafloat>::zaxpy(const dlong N, const lafloat alpha, occa::memory& o_x,
+                     const lafloat beta, occa::memory& o_y, occa::memory& o_z) {
   zaxpyKernel(N, alpha, o_x, beta, o_y, o_z);
 }
 
 // o_x[n] = alpha*o_a[n]*o_x[n]
-void linAlg_t::amx(const dlong N, const dfloat alpha,
+template <class lafloat>
+void linAlg_t<lafloat>::amx(const dlong N, const lafloat alpha,
                    occa::memory& o_a, occa::memory& o_x) {
   amxKernel(N, alpha, o_a, o_x);
 }
 
 // o_y[n] = alpha*o_a[n]*o_x[n] + beta*o_y[n]
-void linAlg_t::amxpy(const dlong N, const dfloat alpha,
+template <class lafloat>
+void linAlg_t<lafloat>::amxpy(const dlong N, const lafloat alpha,
                      occa::memory& o_a, occa::memory& o_x,
-                     const dfloat beta, occa::memory& o_y) {
+                     const lafloat beta, occa::memory& o_y) {
   amxpyKernel(N, alpha, o_a, o_x, beta, o_y);
 }
 
 // o_z[n] = alpha*o_a[n]*o_x[n] + beta*o_y[n]
-void linAlg_t::zamxpy(const dlong N, const dfloat alpha,
+template <class lafloat>
+void linAlg_t<lafloat>::zamxpy(const dlong N, const lafloat alpha,
                       occa::memory& o_a, occa::memory& o_x,
-                      const dfloat beta, occa::memory& o_y, occa::memory& o_z) {
+                      const lafloat beta, occa::memory& o_y, occa::memory& o_z) {
   zamxpyKernel(N, alpha, o_a, o_x, beta, o_y, o_z);
 }
 
 // o_x[n] = alpha*o_x[n]/o_a[n]
-void linAlg_t::adx(const dlong N, const dfloat alpha,
+template <class lafloat>
+void linAlg_t<lafloat>::adx(const dlong N, const lafloat alpha,
                    occa::memory& o_a, occa::memory& o_x) {
   adxKernel(N, alpha, o_a, o_x);
 }
 
 // o_y[n] = alpha*o_x[n]/o_a[n] + beta*o_y[n]
-void linAlg_t::adxpy(const dlong N, const dfloat alpha,
+template <class lafloat>
+void linAlg_t<lafloat>::adxpy(const dlong N, const lafloat alpha,
                      occa::memory& o_a, occa::memory& o_x,
-                     const dfloat beta, occa::memory& o_y) {
+                     const lafloat beta, occa::memory& o_y) {
   adxpyKernel(N, alpha, o_a, o_x, beta, o_y);
 }
 
 // o_z[n] = alpha*o_x[n]/o_a[n] + beta*o_y[n]
-void linAlg_t::zadxpy(const dlong N, const dfloat alpha,
+template <class lafloat>
+void linAlg_t<lafloat>::zadxpy(const dlong N, const lafloat alpha,
                       occa::memory& o_a, occa::memory& o_x,
-                      const dfloat beta, occa::memory& o_y, occa::memory& o_z) {
+                      const lafloat beta, occa::memory& o_y, occa::memory& o_z) {
   zadxpyKernel(N, alpha, o_a, o_x, beta, o_y, o_z);
 }
 
 // \min o_a
-dfloat linAlg_t::min(const dlong N, occa::memory& o_a, MPI_Comm comm) {
+template <class lafloat>
+lafloat linAlg_t<lafloat>::min(const dlong N, occa::memory& o_a, MPI_Comm comm) {
   //TODO, maybe complete reduction on device with second kernel?
   int Nblock = (N+blocksize-1)/blocksize;
   Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
 
   minKernel(Nblock, N, o_a, o_scratch);
 
-  o_scratch.copyTo(scratch, Nblock*sizeof(dfloat));
+  o_scratch.copyTo(scratch, Nblock*sizeof(lafloat));
 
   dfloat min = std::numeric_limits<dfloat>::max();
   for(dlong n=0;n<Nblock;++n){
@@ -119,14 +131,15 @@ dfloat linAlg_t::min(const dlong N, occa::memory& o_a, MPI_Comm comm) {
 }
 
 // \max o_a
-dfloat linAlg_t::max(const dlong N, occa::memory& o_a, MPI_Comm comm) {
+template <class lafloat>
+lafloat linAlg_t<lafloat>::max(const dlong N, occa::memory& o_a, MPI_Comm comm) {
   //TODO, maybe complete reduction on device with second kernel?
   int Nblock = (N+blocksize-1)/blocksize;
   Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
 
   maxKernel(Nblock, N, o_a, o_scratch);
 
-  o_scratch.copyTo(scratch, Nblock*sizeof(dfloat));
+  o_scratch.copyTo(scratch, Nblock*sizeof(lafloat));
 
   dfloat max = -std::numeric_limits<dfloat>::max();
   for(dlong n=0;n<Nblock;++n){
@@ -140,14 +153,15 @@ dfloat linAlg_t::max(const dlong N, occa::memory& o_a, MPI_Comm comm) {
 }
 
 // \sum o_a
-dfloat linAlg_t::sum(const dlong N, occa::memory& o_a, MPI_Comm comm) {
+template <class lafloat>
+lafloat linAlg_t<lafloat>::sum(const dlong N, occa::memory& o_a, MPI_Comm comm) {
   //TODO, maybe complete reduction on device with second kernel?
   int Nblock = (N+blocksize-1)/blocksize;
   Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
 
   sumKernel(Nblock, N, o_a, o_scratch);
 
-  o_scratch.copyTo(scratch, Nblock*sizeof(dfloat));
+  o_scratch.copyTo(scratch, Nblock*sizeof(lafloat));
 
   dfloat sum = 0;
   for(dlong n=0;n<Nblock;++n){
@@ -161,14 +175,15 @@ dfloat linAlg_t::sum(const dlong N, occa::memory& o_a, MPI_Comm comm) {
 }
 
 // ||o_a||_2
-dfloat linAlg_t::norm2(const dlong N, occa::memory& o_a, MPI_Comm comm) {
+template <class lafloat>
+lafloat linAlg_t<lafloat>::norm2(const dlong N, occa::memory& o_a, MPI_Comm comm) {
   //TODO, maybe complete reduction on device with second kernel?
   int Nblock = (N+blocksize-1)/blocksize;
   Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
 
   norm2Kernel(Nblock, N, o_a, o_scratch);
 
-  o_scratch.copyTo(scratch, Nblock*sizeof(dfloat));
+  o_scratch.copyTo(scratch, Nblock*sizeof(lafloat));
 
   dfloat norm = 0;
   for(dlong n=0;n<Nblock;++n){
@@ -182,7 +197,8 @@ dfloat linAlg_t::norm2(const dlong N, occa::memory& o_a, MPI_Comm comm) {
 }
 
 // o_x.o_y
-dfloat linAlg_t::innerProd(const dlong N, occa::memory& o_x, occa::memory& o_y,
+template <class lafloat>
+lafloat linAlg_t<lafloat>::innerProd(const dlong N, occa::memory& o_x, occa::memory& o_y,
                            MPI_Comm comm) {
   //TODO, maybe complete reduction on device with second kernel?
   int Nblock = (N+blocksize-1)/blocksize;
@@ -190,7 +206,7 @@ dfloat linAlg_t::innerProd(const dlong N, occa::memory& o_x, occa::memory& o_y,
 
   innerProdKernel(Nblock, N, o_x, o_y, o_scratch);
 
-  o_scratch.copyTo(scratch, Nblock*sizeof(dfloat));
+  o_scratch.copyTo(scratch, Nblock*sizeof(lafloat));
 
   dfloat dot = 0;
   for(dlong n=0;n<Nblock;++n){
@@ -204,7 +220,8 @@ dfloat linAlg_t::innerProd(const dlong N, occa::memory& o_x, occa::memory& o_y,
 }
 
 // o_w.o_x.o_y
-dfloat linAlg_t::weightedInnerProd(const dlong N, occa::memory& o_w,
+template <class lafloat>
+lafloat linAlg_t<lafloat>::weightedInnerProd(const dlong N, occa::memory& o_w,
                                    occa::memory& o_x, occa::memory& o_y,
                                    MPI_Comm comm) {
   //TODO, maybe complete reduction on device with second kernel?
@@ -213,7 +230,7 @@ dfloat linAlg_t::weightedInnerProd(const dlong N, occa::memory& o_w,
 
   weightedInnerProdKernel(Nblock, N, o_w, o_x, o_y, o_scratch);
 
-  o_scratch.copyTo(scratch, Nblock*sizeof(dfloat));
+  o_scratch.copyTo(scratch, Nblock*sizeof(lafloat));
 
   dfloat dot = 0;
   for(dlong n=0;n<Nblock;++n){
@@ -227,7 +244,8 @@ dfloat linAlg_t::weightedInnerProd(const dlong N, occa::memory& o_w,
 }
 
 // ||o_a||_w2
-dfloat linAlg_t::weightedNorm2(const dlong N, occa::memory& o_w,
+template <class lafloat>
+lafloat linAlg_t<lafloat>::weightedNorm2(const dlong N, occa::memory& o_w,
                                occa::memory& o_a, MPI_Comm comm) {
   //TODO, maybe complete reduction on device with second kernel?
   int Nblock = (N+blocksize-1)/blocksize;
@@ -235,7 +253,7 @@ dfloat linAlg_t::weightedNorm2(const dlong N, occa::memory& o_w,
 
   weightedNorm2Kernel(Nblock, N, o_w, o_a, o_scratch);
 
-  o_scratch.copyTo(scratch, Nblock*sizeof(dfloat));
+  o_scratch.copyTo(scratch, Nblock*sizeof(lafloat));
 
   dfloat norm = 0;
   for(dlong n=0;n<Nblock;++n){
@@ -247,3 +265,6 @@ dfloat linAlg_t::weightedNorm2(const dlong N, occa::memory& o_w,
 
   return sqrt(globalnorm);
 }
+
+template class linAlg_t<float>;
+template class linAlg_t<double>;

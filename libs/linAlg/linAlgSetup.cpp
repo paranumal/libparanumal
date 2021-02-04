@@ -30,9 +30,11 @@ SOFTWARE.
 
 #define LINALG_BLOCKSIZE 512
 
-linAlg_t::linAlg_t(): blocksize(LINALG_BLOCKSIZE) {};
+template <class lafloat>
+linAlg_t<lafloat>::linAlg_t(): blocksize(LINALG_BLOCKSIZE) {};
 
-void linAlg_t::Setup(platform_t *_platform) {
+template <class lafloat>
+void linAlg_t<lafloat>::Setup(platform_t *_platform) {
 
   platform = _platform;
   kernelInfo = platform->props;
@@ -44,13 +46,14 @@ void linAlg_t::Setup(platform_t *_platform) {
   kernelInfo["defines/init_dfloat_max"] = -std::numeric_limits<dfloat>::max();
 
   //pinned scratch buffer
-  scratch = (dfloat*) platform->hostMalloc(LINALG_BLOCKSIZE*sizeof(dfloat),
+  scratch = (lafloat*) platform->hostMalloc(LINALG_BLOCKSIZE*sizeof(lafloat),
                                            NULL, h_scratch);
-  o_scratch = platform->malloc(LINALG_BLOCKSIZE*sizeof(dfloat));
+  o_scratch = platform->malloc(LINALG_BLOCKSIZE*sizeof(lafloat));
 }
 
 //initialize list of kernels
-void linAlg_t::InitKernels(vector<string> kernels) {
+template <class lafloat>
+void linAlg_t<lafloat>::InitKernels(vector<string> kernels) {
 
   for (size_t i=0;i<kernels.size();i++) {
     string name = kernels[i];
@@ -170,7 +173,8 @@ void linAlg_t::InitKernels(vector<string> kernels) {
   }
 }
 
-linAlg_t::~linAlg_t() {
+template <class lafloat>
+linAlg_t<lafloat>::~linAlg_t() {
   setKernel.free();
   addKernel.free();
   scaleKernel.free();
@@ -190,3 +194,9 @@ linAlg_t::~linAlg_t() {
   innerProdKernel.free();
   weightedInnerProdKernel.free();
 }
+
+template class linAlg_t<float>;
+template class linAlg_t<double>;
+
+//template class void linAlg_t<float>::Setup(platform_t *_platform);
+//template class void linAlg_t<double>::Setup(platform_t *_platform);

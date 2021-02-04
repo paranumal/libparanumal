@@ -65,7 +65,7 @@ int pminres::Solve(solver_t& solver, precon_t& precon,
   dfloat TOL;
 
   MPI_Comm_rank(comm, &rank);
-  linAlg_t &linAlg = platform.linAlg;
+  linAlg_t<dfloat> &linAlg = platform.linAlg;
 
   solver.Operator(o_x, o_r);            // r = b - A*x
   linAlg.axpy(N, 1.0, o_b, -1.0, o_r);
