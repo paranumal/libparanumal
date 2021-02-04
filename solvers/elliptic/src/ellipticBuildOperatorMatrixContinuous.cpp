@@ -46,9 +46,9 @@ int parallelCompareRowColumn(const void *a, const void *b){
 }
 
 void compressMatrix(mesh_t &mesh, ogs_t *ogsMasked,
-		    parAlmond::parCOO::nonZero_t *AL,
-		    dlong cnt,
-		    parAlmond::parCOO& A){
+                    parAlmond::parCOO::nonZero_t *AL,
+                    dlong cnt,
+                    parAlmond::parCOO& A){
 
   // number of degrees of freedom on this rank (after gathering)
   hlong Ngather = ogsMasked->Ngather;
@@ -61,12 +61,12 @@ void compressMatrix(mesh_t &mesh, ogs_t *ogsMasked,
     A.globalRowStarts[r+1] = A.globalRowStarts[r]+A.globalRowStarts[r+1];
     A.globalColStarts[r+1] = A.globalRowStarts[r+1];
   }
-  
+
   int *AsendCounts  = (int*) calloc(mesh.size, sizeof(int));
   int *ArecvCounts  = (int*) calloc(mesh.size, sizeof(int));
   int *AsendOffsets = (int*) calloc(mesh.size+1, sizeof(int));
   int *ArecvOffsets = (int*) calloc(mesh.size+1, sizeof(int));
-  
+
   // sort by row ordering
   qsort(AL, cnt, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
 
@@ -93,8 +93,8 @@ void compressMatrix(mesh_t &mesh, ogs_t *ogsMasked,
 
   // determine number to receive
   MPI_Alltoallv(AL, AsendCounts, AsendOffsets, parAlmond::MPI_NONZERO_T,
-		A.entries, ArecvCounts, ArecvOffsets, parAlmond::MPI_NONZERO_T,
-		mesh.comm);
+                A.entries, ArecvCounts, ArecvOffsets, parAlmond::MPI_NONZERO_T,
+                mesh.comm);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
   qsort((A.entries), A.nnz, sizeof(parAlmond::parCOO::nonZero_t), parallelCompareRowColumn);
@@ -107,10 +107,9 @@ void compressMatrix(mesh_t &mesh, ogs_t *ogsMasked,
       A.entries[cnt].val += A.entries[n].val;
     }
     else{
-      double tol =  0;
-      if(fabs(A.entries[n].val)>tol){
-	++cnt;
-	A.entries[cnt] = A.entries[n];
+      if(fabs(A.entries[n].val)>parAlmond::dropTolerance){
+        ++cnt;
+        A.entries[cnt] = A.entries[n];
       }
     }
   }
@@ -149,9 +148,9 @@ void elliptic_t::BuildOperatorMatrixContinuous(parAlmond::parCOO& A) {
   case QUADRILATERALS:
     {
       if(mesh.dim==2)
-	BuildOperatorMatrixContinuousQuad2D(AL);
+        BuildOperatorMatrixContinuousQuad2D(AL);
       else
-	BuildOperatorMatrixContinuousQuad3D(AL);
+        BuildOperatorMatrixContinuousQuad3D(AL);
 
       break;
     }
@@ -166,18 +165,18 @@ void elliptic_t::BuildOperatorMatrixContinuous(parAlmond::parCOO& A) {
   for(dlong e=0;e<mesh.Nelements;++e){
     for(int n=0;n<mesh.Np;++n){
       for(int m=0;m<mesh.Np;++m){
-	dlong cnt = e*mesh.Np*mesh.Np + n*mesh.Np + m;
-	if(e==10){
-	  printf("(%lld,%lld,%g) ", AL[cnt].row, AL[cnt].col, AL[cnt].val);
-	}
+        dlong cnt = e*mesh.Np*mesh.Np + n*mesh.Np + m;
+        if(e==10){
+          printf("(%lld,%lld,%g) ", AL[cnt].row, AL[cnt].col, AL[cnt].val);
+        }
       }
       if(e==10){
-	printf("\n");
+        printf("\n");
       }
     }
   }
 #endif
-  
+
   compressMatrix(mesh, ogsMasked, AL, nnzLocal, A);
 
 #if 0
@@ -185,16 +184,16 @@ void elliptic_t::BuildOperatorMatrixContinuous(parAlmond::parCOO& A) {
   printf("A.nnz=%d\n", A.nnz);
   for(int n=0;n<10;++n){
     printf("A[%d] = (%lld,%lld,%g)\n",
-	   n,
-	   A.entries[n].row,
-	   A.entries[n].col,
-	   A.entries[n].val);
+           n,
+           A.entries[n].row,
+           A.entries[n].col,
+           A.entries[n].val);
   }
 #endif
-  
+
   double tic1 = MPI_Wtime();
   printf("Local matrices took %g secs on HOST found %d nnz\n", tic1-tic0, A.nnz);
-  
+
 
 }
 
@@ -226,11 +225,11 @@ void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO::nonZero_t
         val += Gss*Sss[m+n*mesh.Np];
         val += J*lambda*MM[m+n*mesh.Np];
 
-	// pack non-zero
-	dlong cnt = e*mesh.Np*mesh.Np + n*mesh.Np + m;
-	AL[cnt].val = val;
-	AL[cnt].row = maskedGlobalNumbering[e*mesh.Np + n];
-	AL[cnt].col = maskedGlobalNumbering[e*mesh.Np + m];
+        // pack non-zero
+        dlong cnt = e*mesh.Np*mesh.Np + n*mesh.Np + m;
+        AL[cnt].val = val;
+        AL[cnt].row = maskedGlobalNumbering[e*mesh.Np + n];
+        AL[cnt].col = maskedGlobalNumbering[e*mesh.Np + m];
       }
     }
   }
@@ -289,11 +288,11 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO::nonZero_
               val += JW*lambda;
             }
 
-	    // pack non-zero
-	    dlong cnt = e*mesh.Np*mesh.Np + (nx+ny*mesh.Nq)*mesh.Np + mx+my*mesh.Nq;
-	    AL[cnt].val = val;
-	    AL[cnt].row = maskedGlobalNumbering[e*mesh.Np + nx+ny*mesh.Nq];
-	    AL[cnt].col = maskedGlobalNumbering[e*mesh.Np + mx+my*mesh.Nq];
+            // pack non-zero
+            dlong cnt = e*mesh.Np*mesh.Np + (nx+ny*mesh.Nq)*mesh.Np + mx+my*mesh.Nq;
+            AL[cnt].val = val;
+            AL[cnt].row = maskedGlobalNumbering[e*mesh.Np + nx+ny*mesh.Nq];
+            AL[cnt].col = maskedGlobalNumbering[e*mesh.Np + mx+my*mesh.Nq];
           }
         }
       }
@@ -350,11 +349,11 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO::nonZero_
               val += JW*lambda;
             }
 
-	    // pack non-zero
-	    dlong cnt = e*mesh.Np*mesh.Np + (nx+ny*mesh.Nq)*mesh.Np + mx+my*mesh.Nq;
-	    AL[cnt].val = val;
-	    AL[cnt].row = maskedGlobalNumbering[e*mesh.Np + nx+ny*mesh.Nq];
-	    AL[cnt].col = maskedGlobalNumbering[e*mesh.Np + mx+my*mesh.Nq];
+            // pack non-zero
+            dlong cnt = e*mesh.Np*mesh.Np + (nx+ny*mesh.Nq)*mesh.Np + mx+my*mesh.Nq;
+            AL[cnt].val = val;
+            AL[cnt].row = maskedGlobalNumbering[e*mesh.Np + nx+ny*mesh.Nq];
+            AL[cnt].col = maskedGlobalNumbering[e*mesh.Np + mx+my*mesh.Nq];
           }
         }
       }
@@ -388,11 +387,11 @@ void elliptic_t::BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO::nonZero_t
         val += Gtt*mesh.Stt[m+n*mesh.Np];
         val += J*lambda*mesh.MM[m+n*mesh.Np];
 
-	// pack non-zero
-	dlong cnt = e*mesh.Np*mesh.Np + n*mesh.Np + m;
-	AL[cnt].val = val;
-	AL[cnt].row = maskedGlobalNumbering[e*mesh.Np + n];
-	AL[cnt].col = maskedGlobalNumbering[e*mesh.Np + m];
+        // pack non-zero
+        dlong cnt = e*mesh.Np*mesh.Np + n*mesh.Np + m;
+        AL[cnt].val = val;
+        AL[cnt].row = maskedGlobalNumbering[e*mesh.Np + n];
+        AL[cnt].col = maskedGlobalNumbering[e*mesh.Np + m];
       }
     }
   }
@@ -403,93 +402,93 @@ void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO::nonZero_t
   for (dlong e=0;e<mesh.Nelements;e++) {
     for (int nz=0;nz<mesh.Nq;nz++) {
       for (int ny=0;ny<mesh.Nq;ny++) {
-	for (int nx=0;nx<mesh.Nq;nx++) {
-	  int idn = nx+ny*mesh.Nq+nz*mesh.Nq*mesh.Nq;
-	  if (maskedGlobalNumbering[e*mesh.Np + idn]<0) continue; //skip masked nodes
-	
-	  for (int mz=0;mz<mesh.Nq;mz++) {
-	    for (int my=0;my<mesh.Nq;my++) {
-	      for (int mx=0;mx<mesh.Nq;mx++) {
-		int idm = mx+my*mesh.Nq+mz*mesh.Nq*mesh.Nq;
-		if (maskedGlobalNumbering[e*mesh.Np + idm]<0) continue; //skip masked nodes
-	      
-		int id;
-		dfloat val = 0.;
-	      
-		if ((ny==my)&&(nz==mz)) {
-		  for (int k=0;k<mesh.Nq;k++) {
-		    id = k+ny*mesh.Nq+nz*mesh.Nq*mesh.Nq;
-		    dfloat Grr = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G00ID*mesh.Np];
-		  
-		    val += Grr*mesh.D[nx+k*mesh.Nq]*mesh.D[mx+k*mesh.Nq];
-		  }
-		}
-	      
-		if (nz==mz) {
-		  id = mx+ny*mesh.Nq+nz*mesh.Nq*mesh.Nq;
-		  dfloat Grs = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G01ID*mesh.Np];
-		  val += Grs*mesh.D[nx+mx*mesh.Nq]*mesh.D[my+ny*mesh.Nq];
-		
-		  id = nx+my*mesh.Nq+nz*mesh.Nq*mesh.Nq;
-		  dfloat Gsr = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G01ID*mesh.Np];
-		  val += Gsr*mesh.D[mx+nx*mesh.Nq]*mesh.D[ny+my*mesh.Nq];
-		}
-	      
-		if (ny==my) {
-		  id = mx+ny*mesh.Nq+nz*mesh.Nq*mesh.Nq;
-		  dfloat Grt = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G02ID*mesh.Np];
-		  val += Grt*mesh.D[nx+mx*mesh.Nq]*mesh.D[mz+nz*mesh.Nq];
-		
-		  id = nx+ny*mesh.Nq+mz*mesh.Nq*mesh.Nq;
-		  dfloat Gst = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G02ID*mesh.Np];
-		  val += Gst*mesh.D[mx+nx*mesh.Nq]*mesh.D[nz+mz*mesh.Nq];
-		}
-	      
-		if ((nx==mx)&&(nz==mz)) {
-		  for (int k=0;k<mesh.Nq;k++) {
-		    id = nx+k*mesh.Nq+nz*mesh.Nq*mesh.Nq;
-		    dfloat Gss = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G11ID*mesh.Np];
-		  
-		    val += Gss*mesh.D[ny+k*mesh.Nq]*mesh.D[my+k*mesh.Nq];
-		  }
-		}
-	      
-		if (nx==mx) {
-		  id = nx+my*mesh.Nq+nz*mesh.Nq*mesh.Nq;
-		  dfloat Gst = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G12ID*mesh.Np];
-		  val += Gst*mesh.D[ny+my*mesh.Nq]*mesh.D[mz+nz*mesh.Nq];
-		
-		  id = nx+ny*mesh.Nq+mz*mesh.Nq*mesh.Nq;
-		  dfloat Gts = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G12ID*mesh.Np];
-		  val += Gts*mesh.D[my+ny*mesh.Nq]*mesh.D[nz+mz*mesh.Nq];
-		}
+        for (int nx=0;nx<mesh.Nq;nx++) {
+          int idn = nx+ny*mesh.Nq+nz*mesh.Nq*mesh.Nq;
+          if (maskedGlobalNumbering[e*mesh.Np + idn]<0) continue; //skip masked nodes
 
-		if ((nx==mx)&&(ny==my)) {
-		  for (int k=0;k<mesh.Nq;k++) {
-		    id = nx+ny*mesh.Nq+k*mesh.Nq*mesh.Nq;
-		    dfloat Gtt = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G22ID*mesh.Np];
+          for (int mz=0;mz<mesh.Nq;mz++) {
+            for (int my=0;my<mesh.Nq;my++) {
+              for (int mx=0;mx<mesh.Nq;mx++) {
+                int idm = mx+my*mesh.Nq+mz*mesh.Nq*mesh.Nq;
+                if (maskedGlobalNumbering[e*mesh.Np + idm]<0) continue; //skip masked nodes
 
-		    val += Gtt*mesh.D[nz+k*mesh.Nq]*mesh.D[mz+k*mesh.Nq];
-		  }
-		}
+                int id;
+                dfloat val = 0.;
 
-		if ((nx==mx)&&(ny==my)&&(nz==mz)) {
-		  id = nx + ny*mesh.Nq+nz*mesh.Nq*mesh.Nq;
-		  dfloat JW = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + GWJID*mesh.Np];
-		  val += JW*lambda;
-		}
+                if ((ny==my)&&(nz==mz)) {
+                  for (int k=0;k<mesh.Nq;k++) {
+                    id = k+ny*mesh.Nq+nz*mesh.Nq*mesh.Nq;
+                    dfloat Grr = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G00ID*mesh.Np];
 
-		dlong cnt = e*mesh.Np*mesh.Np +
-		  idn*mesh.Np +
-		  idm;
+                    val += Grr*mesh.D[nx+k*mesh.Nq]*mesh.D[mx+k*mesh.Nq];
+                  }
+                }
 
-		AL[cnt].val = val;
-		AL[cnt].row = maskedGlobalNumbering[e*mesh.Np + idn];
-		AL[cnt].col = maskedGlobalNumbering[e*mesh.Np + idm];
-	      }
-	    }
-	  }
-	}
+                if (nz==mz) {
+                  id = mx+ny*mesh.Nq+nz*mesh.Nq*mesh.Nq;
+                  dfloat Grs = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G01ID*mesh.Np];
+                  val += Grs*mesh.D[nx+mx*mesh.Nq]*mesh.D[my+ny*mesh.Nq];
+
+                  id = nx+my*mesh.Nq+nz*mesh.Nq*mesh.Nq;
+                  dfloat Gsr = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G01ID*mesh.Np];
+                  val += Gsr*mesh.D[mx+nx*mesh.Nq]*mesh.D[ny+my*mesh.Nq];
+                }
+
+                if (ny==my) {
+                  id = mx+ny*mesh.Nq+nz*mesh.Nq*mesh.Nq;
+                  dfloat Grt = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G02ID*mesh.Np];
+                  val += Grt*mesh.D[nx+mx*mesh.Nq]*mesh.D[mz+nz*mesh.Nq];
+
+                  id = nx+ny*mesh.Nq+mz*mesh.Nq*mesh.Nq;
+                  dfloat Gst = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G02ID*mesh.Np];
+                  val += Gst*mesh.D[mx+nx*mesh.Nq]*mesh.D[nz+mz*mesh.Nq];
+                }
+
+                if ((nx==mx)&&(nz==mz)) {
+                  for (int k=0;k<mesh.Nq;k++) {
+                    id = nx+k*mesh.Nq+nz*mesh.Nq*mesh.Nq;
+                    dfloat Gss = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G11ID*mesh.Np];
+
+                    val += Gss*mesh.D[ny+k*mesh.Nq]*mesh.D[my+k*mesh.Nq];
+                  }
+                }
+
+                if (nx==mx) {
+                  id = nx+my*mesh.Nq+nz*mesh.Nq*mesh.Nq;
+                  dfloat Gst = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G12ID*mesh.Np];
+                  val += Gst*mesh.D[ny+my*mesh.Nq]*mesh.D[mz+nz*mesh.Nq];
+
+                  id = nx+ny*mesh.Nq+mz*mesh.Nq*mesh.Nq;
+                  dfloat Gts = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G12ID*mesh.Np];
+                  val += Gts*mesh.D[my+ny*mesh.Nq]*mesh.D[nz+mz*mesh.Nq];
+                }
+
+                if ((nx==mx)&&(ny==my)) {
+                  for (int k=0;k<mesh.Nq;k++) {
+                    id = nx+ny*mesh.Nq+k*mesh.Nq*mesh.Nq;
+                    dfloat Gtt = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G22ID*mesh.Np];
+
+                    val += Gtt*mesh.D[nz+k*mesh.Nq]*mesh.D[mz+k*mesh.Nq];
+                  }
+                }
+
+                if ((nx==mx)&&(ny==my)&&(nz==mz)) {
+                  id = nx + ny*mesh.Nq+nz*mesh.Nq*mesh.Nq;
+                  dfloat JW = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + GWJID*mesh.Np];
+                  val += JW*lambda;
+                }
+
+                dlong cnt = e*mesh.Np*mesh.Np +
+                  idn*mesh.Np +
+                  idm;
+
+                AL[cnt].val = val;
+                AL[cnt].row = maskedGlobalNumbering[e*mesh.Np + idn];
+                AL[cnt].col = maskedGlobalNumbering[e*mesh.Np + idm];
+              }
+            }
+          }
+        }
       }
     }
   }

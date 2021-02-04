@@ -32,8 +32,8 @@ int Nrefs = 0;
 
 //NC: Hard code these for now. Should be sufficient for GPU devices, but needs attention for CPU
 const int blockSize = 256;
-  //int NonzerosPerBlock = 2048; //should be a multiple of blockSize for good unrolling
-int NonzerosPerBlock = 4096; //should be a multiple of blockSize for good unrolling
+int NonzerosPerBlock = 2048; //should be a multiple of blockSize for good unrolling
+// int NonzerosPerBlock = 4096; //should be a multiple of blockSize for good unrolling
 
 occa::kernel SpMVcsrKernel1;
 occa::kernel SpMVcsrKernel2;
@@ -93,7 +93,7 @@ void buildParAlmondKernels(platform_t& platform){
     kernelInfo["defines/" "p2dfloat(a)"] = "__half2float(a)";
   }
 #endif
-  
+
   if(parAlmondDeviceMatrixType=="float"){
     kernelInfo["defines/" "pfloat"]="float";
     kernelInfo["defines/" "pfloat2"]="float2";
@@ -109,7 +109,7 @@ void buildParAlmondKernels(platform_t& platform){
     kernelInfo["defines/" "p2dfloat(a)"] = "a";
   }
 
-  
+
   SpMVcsrKernel1  = platform.buildKernel(PARALMOND_DIR"/okl/SpMVcsr.okl",  "SpMVcsr1",  kernelInfo);
   SpMVcsrKernel2  = platform.buildKernel(PARALMOND_DIR"/okl/SpMVcsr.okl",  "SpMVcsr2",  kernelInfo);
   SpMVmcsrKernel  = platform.buildKernel(PARALMOND_DIR"/okl/SpMVmcsr.okl", "SpMVmcsr1", kernelInfo);

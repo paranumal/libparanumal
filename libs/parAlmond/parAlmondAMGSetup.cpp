@@ -103,6 +103,9 @@ void parAlmond_t::AMGSetup(parCOO& cooA,
     //See: Algebraic Multigrid On Unstructured Meshes, P Vanek, J. Mandel, M. Brezina.
     if (multigrid->strtype==SYMMETRIC)
       theta=theta/2;
+    //experimental
+    // else if (multigrid->strtype==RUGESTUBEN)
+    //   theta=theta*1.2;
 
     hlong globalCoarseSize;
     if (multigrid->coarsetype==COARSEEXACT) {

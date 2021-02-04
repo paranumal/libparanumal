@@ -188,12 +188,21 @@ parCSR *galerkinProd(parCSR *A, parCSR *P){
   if (recvNtotal) PTAP.entries[nnz++] = recvPTAP[0];
   for (dlong i=1;i<recvNtotal;i++) {
     if ((recvPTAP[i].row!=recvPTAP[i-1].row)||
-        (recvPTAP[i].col!=recvPTAP[i-1].col)) {
-      PTAP.entries[nnz++] = recvPTAP[i];
+        (recvPTAP[i].col!=recvPTAP[i-1].col)) { //new nonzero entry
+      //increment non-zero count if current entry is above tolerance
+      if (fabs(PTAP.entries[nnz-1].val)>parAlmond::dropTolerance) nnz++;
+
+      PTAP.entries[nnz-1] = recvPTAP[i];
     } else {
       PTAP.entries[nnz-1].val += recvPTAP[i].val;
     }
   }
+
+  //update nnz count
+  PTAP.nnz = nnz;
+  PTAP.entries = (parCOO::nonZero_t *)
+                    realloc(PTAP.entries,
+                            PTAP.nnz*sizeof(parCOO::nonZero_t));
 
   //clean up
   MPI_Barrier(A->comm);

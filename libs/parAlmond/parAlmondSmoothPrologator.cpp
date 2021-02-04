@@ -52,13 +52,13 @@ parCSR *smoothProlongator(parCSR *A, parCSR *T){
   const dfloat omega = (4./3.)/A->rho;
 
   hlong *recvRows = (hlong *) calloc(A->Ncols-A->NlocalCols, sizeof(hlong));
-  int *sendCounts = (int*) calloc(size, sizeof(int));
-  int *recvCounts = (int*) calloc(size, sizeof(int));
-  int *sendOffsets = (int*) calloc(size+1, sizeof(int));
-  int *recvOffsets = (int*) calloc(size+1, sizeof(int));
+  dlong *sendCounts = (dlong*) calloc(size, sizeof(dlong));
+  dlong *recvCounts = (dlong*) calloc(size, sizeof(dlong));
+  dlong *sendOffsets = (dlong*) calloc(size+1, sizeof(dlong));
+  dlong *recvOffsets = (dlong*) calloc(size+1, sizeof(dlong));
 
   //use the colMap of A to list the needed rows of T
-  int r=0;
+  dlong r=0;
   for (dlong n=A->NlocalCols;n<A->Ncols;n++) {
     const hlong id = A->colMap[n];
     while (id>=T->globalRowStarts[r+1]) r++; //assumes the halo is sorted
@@ -67,15 +67,15 @@ parCSR *smoothProlongator(parCSR *A, parCSR *T){
   }
 
   //share the counts
-  MPI_Alltoall(recvCounts, 1, MPI_INT,
-               sendCounts, 1, MPI_INT, A->comm);
+  MPI_Alltoall(recvCounts, 1, MPI_DLONG,
+               sendCounts, 1, MPI_DLONG, A->comm);
 
   for (r=0;r<size;r++) {
     sendOffsets[r+1] = sendOffsets[r]+sendCounts[r];
     recvOffsets[r+1] = recvOffsets[r]+recvCounts[r];
   }
 
-  int sendTotal = sendOffsets[size];
+  dlong sendTotal = sendOffsets[size];
   hlong *sendRows = (hlong *) calloc(sendTotal, sizeof(hlong));
 
   //share the rowIds
@@ -87,7 +87,7 @@ parCSR *smoothProlongator(parCSR *A, parCSR *T){
   dlong nnzTotal=0;
   for (r=0;r<size;r++) {
     sendCounts[r] =0; //reset
-    for (int n=sendOffsets[r];n<sendOffsets[r+1];n++) {
+    for (dlong n=sendOffsets[r];n<sendOffsets[r+1];n++) {
       dlong i = (dlong) (sendRows[n]-T->globalRowStarts[rank]); //local row id
       sendCounts[r]+= T->diag.rowStarts[i+1]-T->diag.rowStarts[i]; //count entries in this row
       sendCounts[r]+= T->offd.rowStarts[i+1]-T->offd.rowStarts[i]; //count entries in this row
@@ -99,7 +99,7 @@ parCSR *smoothProlongator(parCSR *A, parCSR *T){
 
   nnzTotal=0; //reset
   for (r=0;r<size;r++) {
-    for (int n=sendOffsets[r];n<sendOffsets[r+1];n++) {
+    for (dlong n=sendOffsets[r];n<sendOffsets[r+1];n++) {
       dlong i = (dlong) (sendRows[n] - T->globalRowStarts[rank]); //local row id
       for (dlong jj=T->diag.rowStarts[i]; jj<T->diag.rowStarts[i+1];jj++){
         sendNonZeros[nnzTotal].row = sendRows[n];
@@ -116,8 +116,8 @@ parCSR *smoothProlongator(parCSR *A, parCSR *T){
     }
   }
 
-  MPI_Alltoall(sendCounts, 1, MPI_INT,
-               recvCounts, 1, MPI_INT, A->comm);
+  MPI_Alltoall(sendCounts, 1, MPI_DLONG,
+               recvCounts, 1, MPI_DLONG, A->comm);
 
   for (r=0;r<size;r++) {
     sendOffsets[r+1] = sendOffsets[r]+sendCounts[r];
@@ -173,7 +173,7 @@ parCSR *smoothProlongator(parCSR *A, parCSR *T){
     dlong end   = A->diag.rowStarts[i+1];
     for (dlong j=start;j<end;j++) {
       const dlong col = A->diag.cols[j];
-      const int nnzBj =  T->diag.rowStarts[col+1]-T->diag.rowStarts[col]
+      const dlong nnzBj =  T->diag.rowStarts[col+1]-T->diag.rowStarts[col]
                         +T->offd.rowStarts[col+1]-T->offd.rowStarts[col];
       nnzTotal += nnzBj;
     }
@@ -182,7 +182,7 @@ parCSR *smoothProlongator(parCSR *A, parCSR *T){
     end   = A->offd.rowStarts[i+1];
     for (dlong j=start;j<end;j++) {
       const dlong col = A->offd.cols[j]-A->NlocalCols;
-      const int nnzBj = ToffdRowOffsets[col+1] - ToffdRowOffsets[col];
+      const dlong nnzBj = ToffdRowOffsets[col+1] - ToffdRowOffsets[col];
       nnzTotal += nnzBj;
     }
   }
@@ -266,8 +266,6 @@ parCSR *smoothProlongator(parCSR *A, parCSR *T){
   free(ToffdRowOffsets);
   free(ToffdRows);
 
-  printf("nrows=%d, sorting nnzTotal=%d\n", A->Nrows, nnzTotal);
-  
   //sort entries by the row and col
   std::sort(Ptmp, Ptmp+nnzTotal,
             [](const parCOO::nonZero_t& a, const parCOO::nonZero_t& b) {
@@ -301,7 +299,10 @@ parCSR *smoothProlongator(parCSR *A, parCSR *T){
   for (dlong i=1;i<nnzTotal;i++) {
     if ((Ptmp[i].row!=Ptmp[i-1].row)||
         (Ptmp[i].col!=Ptmp[i-1].col)) {
-      cooP.entries[nnz++] = Ptmp[i];
+      //increment non-zero count if current entry is above tolerance
+      if (fabs(cooP.entries[nnz-1].val)>parAlmond::dropTolerance) nnz++;
+
+      cooP.entries[nnz-1] = Ptmp[i];
     } else {
       cooP.entries[nnz-1].val += Ptmp[i].val;
     }
@@ -309,6 +310,14 @@ parCSR *smoothProlongator(parCSR *A, parCSR *T){
   //clean up
   free(Ptmp);
 
+  //update nnz count
+  cooP.nnz = nnz;
+  cooP.entries = (parCOO::nonZero_t *)
+                    realloc(cooP.entries,
+                            cooP.nnz*sizeof(parCOO::nonZero_t));
+
+  printf("Smooth prolongator: nnz=%d\n", cooP.nnz);
+  
   //build P from coo matrix
   return new parCSR(cooP);
 }

@@ -99,9 +99,6 @@ void elliptic_t::BuildOperatorMatrixIpdgTri2D(parAlmond::parCOO& A){
 
   dlong nnzLocalBound = Np*Np*(1+Nfaces)*Nelements;
 
-  // drop tolerance for entries in sparse storage
-  dfloat tol = 1e-8;
-
   // surface mass matrices MS = MM*LIFT
   dfloat *MS = (dfloat *) calloc(Nfaces*Nfp*Nfp,sizeof(dfloat));
   for (int f=0;f<Nfaces;f++) {
@@ -264,7 +261,7 @@ void elliptic_t::BuildOperatorMatrixIpdgTri2D(parAlmond::parCOO& A){
       for(int n=0;n<Np;++n){
         for(int m=0;m<Np;++m){
           dfloat val = SP[n*Np+m];
-          if(fabs(val)>tol){
+          if(fabs(val)>parAlmond::dropTolerance){
             A.entries[nnz].row = globalIds[eM*Np + n];
             A.entries[nnz].col = globalIds[eP*Np + m];
             A.entries[nnz].val = val;
@@ -277,7 +274,7 @@ void elliptic_t::BuildOperatorMatrixIpdgTri2D(parAlmond::parCOO& A){
     for(int n=0;n<Np;++n){
       for(int m=0;m<Np;++m){
         dfloat val = SM[n*Np+m];
-        if(fabs(val)>tol){
+        if(fabs(val)>parAlmond::dropTolerance){
           A.entries[nnz].row = globalIds[eM*Np + n];
           A.entries[nnz].col = globalIds[eM*Np + m];
           A.entries[nnz].val = val;
@@ -370,9 +367,6 @@ void elliptic_t::BuildOperatorMatrixIpdgTri3D(parAlmond::parCOO& A){
   mesh.halo->Exchange(globalIds, Np, ogs_hlong);
 
   dlong nnzLocalBound = Np*Np*(1+Nfaces)*Nelements;
-
-  // drop tolerance for entries in sparse storage
-  dfloat tol = 1e-8;
 
   // surface mass matrices MS = MM*LIFT
   dfloat *MS = (dfloat *) calloc(Nfaces*Nfp*Nfp,sizeof(dfloat));
@@ -553,7 +547,7 @@ void elliptic_t::BuildOperatorMatrixIpdgTri3D(parAlmond::parCOO& A){
       for(int n=0;n<Np;++n){
         for(int m=0;m<Np;++m){
           dfloat val = SP[n*Np+m];
-          if(fabs(val)>tol){
+          if(fabs(val)>parAlmond::dropTolerance){
             A.entries[nnz].row = globalIds[eM*Np + n];
             A.entries[nnz].col = globalIds[eP*Np + m];
             A.entries[nnz].val = val;
@@ -566,7 +560,7 @@ void elliptic_t::BuildOperatorMatrixIpdgTri3D(parAlmond::parCOO& A){
     for(int n=0;n<Np;++n){
       for(int m=0;m<Np;++m){
         dfloat val = SM[n*Np+m];
-        if(fabs(val)>tol){
+        if(fabs(val)>parAlmond::dropTolerance){
           A.entries[nnz].row = globalIds[eM*Np + n];
           A.entries[nnz].col = globalIds[eM*Np + m];
           A.entries[nnz].val = val;
@@ -642,9 +636,6 @@ void elliptic_t::BuildOperatorMatrixIpdgQuad2D(parAlmond::parCOO& A){
   mesh.halo->Exchange(globalIds, Np, ogs_hlong);
 
   dlong nnzLocalBound = Np*Np*(1+Nfaces)*Nelements;
-
-  // drop tolerance for entries in sparse storage
-  dfloat tol = 1e-8;
 
   // build some monolithic basis arrays (use Dr,Ds,Dt and insert MM instead of weights for tet version)
   dfloat *B  = (dfloat*) calloc(mesh.Np*mesh.Np, sizeof(dfloat));
@@ -791,7 +782,7 @@ void elliptic_t::BuildOperatorMatrixIpdgQuad2D(parAlmond::parCOO& A){
               AnmP += -0.5*wsJ*penalty*lnM*lmP; // -((tau/h)*ln^-,lm^+)
             }
           }
-          if(fabs(AnmP)>tol){
+          if(fabs(AnmP)>parAlmond::dropTolerance){
             // remote info
             dlong eP    = mesh.EToE[eM*mesh.Nfaces+fM];
             A.entries[nnz].row = globalIds[eM*mesh.Np + n];
@@ -800,7 +791,7 @@ void elliptic_t::BuildOperatorMatrixIpdgQuad2D(parAlmond::parCOO& A){
             ++nnz;
           }
         }
-        if(fabs(Anm)>tol){
+        if(fabs(Anm)>parAlmond::dropTolerance){
           // local block
           A.entries[nnz].row = globalIds[eM*mesh.Np+n];
           A.entries[nnz].col = globalIds[eM*mesh.Np+m];
@@ -872,9 +863,6 @@ void elliptic_t::BuildOperatorMatrixIpdgQuad3D(parAlmond::parCOO& A){
   mesh.halo->Exchange(globalIds, Np, ogs_hlong);
 
   dlong nnzLocalBound = Np*Np*(1+Nfaces)*Nelements;
-
-  // drop tolerance for entries in sparse storage
-  dfloat tol = 1e-8;
 
   // build some monolithic basis arrays (use Dr,Ds,Dt and insert MM instead of weights for tet version)
   dfloat *B  = (dfloat*) calloc(mesh.Np*mesh.Np, sizeof(dfloat));
@@ -1029,7 +1017,7 @@ void elliptic_t::BuildOperatorMatrixIpdgQuad3D(parAlmond::parCOO& A){
             AnmP += +0.5*wsJ*ndotgradlnM*lmP;  // +(N.grad ln^-, lm^+)
             AnmP += -0.5*wsJ*penalty*lnM*lmP; // -((tau/h)*ln^-,lm^+)
           }
-          if(fabs(AnmP)>tol){
+          if(fabs(AnmP)>parAlmond::dropTolerance){
             // remote info
             dlong eP    = mesh.EToE[eM*mesh.Nfaces+fM];
             A.entries[nnz].row = globalIds[eM*mesh.Np + n];
@@ -1039,7 +1027,7 @@ void elliptic_t::BuildOperatorMatrixIpdgQuad3D(parAlmond::parCOO& A){
           }
         }
 
-        if(fabs(Anm)>tol){
+        if(fabs(Anm)>parAlmond::dropTolerance){
           // local block
           A.entries[nnz].row = globalIds[eM*mesh.Np+n];
           A.entries[nnz].col = globalIds[eM*mesh.Np+m];
@@ -1126,9 +1114,6 @@ void elliptic_t::BuildOperatorMatrixIpdgTet3D(parAlmond::parCOO& A){
   mesh.halo->Exchange(globalIds, mesh.Np, ogs_hlong);
 
   dlong nnzLocalBound = mesh.Np*mesh.Np*(1+mesh.Nfaces)*mesh.Nelements;
-
-  // drop tolerance for entries in sparse storage
-  dfloat tol = 1e-8;
 
   // surface mass matrices MS = MM*LIFT
   dfloat *MS = (dfloat *) calloc(mesh.Nfaces*mesh.Np*mesh.Nfp,sizeof(dfloat));
@@ -1307,7 +1292,7 @@ void elliptic_t::BuildOperatorMatrixIpdgTet3D(parAlmond::parCOO& A){
             }
           }
 
-          if(fabs(AnmP)>tol){
+          if(fabs(AnmP)>parAlmond::dropTolerance){
             //#pragma omp critical
             {
               // remote info
@@ -1325,7 +1310,7 @@ void elliptic_t::BuildOperatorMatrixIpdgTet3D(parAlmond::parCOO& A){
       for (int m=0;m<mesh.Np;m++) {
         dfloat Anm = BM[m+n*mesh.Np];
 
-        if(fabs(Anm)>tol){
+        if(fabs(Anm)>parAlmond::dropTolerance){
           //#pragma omp critical
           {
             A.entries[nnz].row = globalIds[eM*mesh.Np+n];
@@ -1405,9 +1390,6 @@ void elliptic_t::BuildOperatorMatrixIpdgHex3D(parAlmond::parCOO& A){
   mesh.halo->Exchange(globalIds, Np, ogs_hlong);
 
   dlong nnzLocalBound = Np*Np*(1+Nfaces)*Nelements;
-
-  // drop tolerance for entries in sparse storage
-  dfloat tol = 1e-8;
 
   // build some monolithic basis arrays (use Dr,Ds,Dt and insert MM instead of weights for tet version)
   dfloat *B  = (dfloat*) calloc(mesh.Np*mesh.Np, sizeof(dfloat));
@@ -1583,7 +1565,7 @@ void elliptic_t::BuildOperatorMatrixIpdgHex3D(parAlmond::parCOO& A){
               AnmP += -0.5*wsJ*penalty*lnM*lmP; // -((tau/h)*ln^-,lm^+)
             }
           }
-          if(fabs(AnmP)>tol){
+          if(fabs(AnmP)>parAlmond::dropTolerance){
             //#pragma omp critical
             {
               // remote info
@@ -1595,7 +1577,7 @@ void elliptic_t::BuildOperatorMatrixIpdgHex3D(parAlmond::parCOO& A){
             }
           }
         }
-        if(fabs(Anm)>tol){
+        if(fabs(Anm)>parAlmond::dropTolerance){
           //#pragma omp critical
           {
             // local block

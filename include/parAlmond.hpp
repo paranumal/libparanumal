@@ -43,8 +43,10 @@ void ReportSettings(settings_t& settings);
 extern MPI_Datatype MPI_NONZERO_T;
 
 extern string parAlmondDeviceMatrixType;
-  
-  //distributed matrix class passed to AMG setup
+
+constexpr dfloat dropTolerance=1e-8;
+
+//distributed matrix class passed to AMG setup
 class parCOO {
 public:
   platform_t &platform;
