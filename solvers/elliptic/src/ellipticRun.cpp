@@ -223,11 +223,14 @@ void elliptic_t::Run(){
     mesh.settings.getSetting("BOX COORDINATE MAP PARAMETER Y", epsy);
     int mapModel = 1;
     mesh.settings.getSetting("BOX COORDINATE MAP MODEL", mapModel);
+    int chebyDegree = 1;
+    settings.getSetting("PARALMOND CHEBYSHEV DEGREE", chebyDegree);
     dfloat rugestubenCutoff = 0.5;
     settings.getSetting("PARALMOND RUGESTUBEN STRENGTH THRESHOLD", rugestubenCutoff);
-    
+    int useCubature = settings.compareSetting("ELLIPTIC INTEGRATION", "CUBATURE");
+
     dlong NGlobal = ogsMasked->NgatherGlobal;
-    printf("%d, " hlongFormat ", %g, %d, %g, %g, %g, %d, %g; global (dofs) N, dofs, elapsed, iterations, time per node, nodes*iterations/time, epsy, map model, Ruge-Stuben cutoff%s\n",
+    printf("%d, " hlongFormat ", %g, %d, %g, %g, %g, %d, %d, %g, %d; global (dofs) N, dofs, elapsed, iterations, time per node, nodes*iterations/time, epsy, amg chebyshev degree, map model, Ruge-Stuben cutoff, useCubature, %s\n",
            mesh.N,
 	   NGlobal,
            elapsedTime,
@@ -235,8 +238,10 @@ void elliptic_t::Run(){
            elapsedTime/(NGlobal),
 	   NGlobal*((dfloat)iter/elapsedTime),
 	   epsy,
+	   chebyDegree,
 	   mapModel,
 	   rugestubenCutoff,
+	   useCubature,
            (char*) settings.getSetting("PRECONDITIONER").c_str());
 
 

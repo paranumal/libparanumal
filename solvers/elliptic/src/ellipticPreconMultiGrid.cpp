@@ -257,7 +257,7 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
       //    interpolatePhysicalNodes(mesh, meshF);
       meshF.CubatureSetup(meshF.N, "GLL"); // was N
     }else{
-      meshF.CubatureSetup(mesh.cubN, "GLL"); // was N
+      meshF.CubatureSetup(mesh.N, "GLL"); // was N
     }
   }
 

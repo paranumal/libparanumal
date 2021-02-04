@@ -123,8 +123,10 @@ int main(int argc, char **argv){
 	maxNx = (maxNx>40) ? 40:maxNx;
 	maxNx = (maxNx<25) ? 25:maxNx;
 	for(int nx=6;nx<maxNx;nx+=6){
-	  for(int chebyDegree=1;chebyDegree<3;++chebyDegree){
-	    for(int useCubature=0;useCubature<2;++useCubature){
+	  //	  for(int chebyDegree=1;chebyDegree<3;++chebyDegree){
+	    //	    for(int useCubature=0;useCubature<2;++useCubature){
+	  for(int chebyDegree=1;chebyDegree<2;++chebyDegree){
+	    for(int useCubature=1;useCubature<2;++useCubature){
 	      printSetup("CUDA", degree, nx, nx, nx, epsy, chebyDegree, useCubature);
 	      system("../solvers/elliptic/ellipticMain setupHex3D.rc");
 	    }
