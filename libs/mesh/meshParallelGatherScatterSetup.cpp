@@ -28,29 +28,64 @@ SOFTWARE.
 
 void mesh_t::ParallelGatherScatterSetup() {
 
-  dlong Ntotal = Np*Nelements;
+  dlong Ntotal = Nverts*(Nelements+totalHaloPairs);
 
-  int verbose = 0;
-  ogs = ogs_t::Setup(Ntotal, globalIds, comm, verbose, platform);
+  int *minRank = (int *) malloc(Ntotal*sizeof(int));
+  int *maxRank = (int *) malloc(Ntotal*sizeof(int));
 
-  //use the gs to find what nodes are local to this rank
-  int *minRank = (int *) calloc(Ntotal,sizeof(int));
-  int *maxRank = (int *) calloc(Ntotal,sizeof(int));
   for (dlong i=0;i<Ntotal;i++) {
     minRank[i] = rank;
     maxRank[i] = rank;
   }
 
-  ogs->GatherScatter(minRank, ogs_int, ogs_min, ogs_sym); //minRank[n] contains the smallest rank taking part in the gather of node n
-  ogs->GatherScatter(maxRank, ogs_int, ogs_max, ogs_sym); //maxRank[n] contains the largest rank taking part in the gather of node n
+  hlong localChange = 0, gatherChange = 1;
+
+  // keep comparing numbers on positive and negative traces until convergence
+  while(gatherChange>0){
+
+    // reset change counter
+    localChange = 0;
+
+    // send halo data and recv into extension of buffer
+    halo->Exchange(minRank, Nverts, ogs_int);
+    halo->Exchange(maxRank, Nverts, ogs_int);
+
+    // compare trace vertices
+    for(dlong e=0;e<Nelements;++e){
+      for(int n=0;n<Nfaces*NfaceVertices;++n){
+        dlong id  = e*Nfaces*NfaceVertices + n;
+        dlong idM = VmapM[id];
+        dlong idP = VmapP[id];
+
+        int minRankM = minRank[idM];
+        int minRankP = minRank[idP];
+
+        int maxRankM = maxRank[idM];
+        int maxRankP = maxRank[idP];
+
+        if(minRankP<minRankM){
+          localChange=1;
+          minRank[idM] = minRankP;
+        }
+
+        if(maxRankP>maxRankM){
+          localChange=1;
+          maxRank[idM] = maxRankP;
+        }
+      }
+    }
+
+    // sum up changes
+    MPI_Allreduce(&localChange, &gatherChange, 1, MPI_HLONG, MPI_MAX, comm);
+  }
 
   // count elements that contribute to global C0 gather-scatter
   dlong globalCount = 0;
   dlong localCount = 0;
   for(dlong e=0;e<Nelements;++e){
     int isHalo = 0;
-    for(int n=0;n<Np;++n){
-      dlong id = e*Np+n;
+    for(int n=0;n<Nverts;++n){
+      dlong id = e*Nverts+n;
       if ((minRank[id]!=rank)||(maxRank[id]!=rank)) {
         isHalo = 1;
         break;
@@ -68,8 +103,8 @@ void mesh_t::ParallelGatherScatterSetup() {
 
   for(dlong e=0;e<Nelements;++e){
     int isHalo = 0;
-    for(int n=0;n<Np;++n){
-      dlong id = e*Np+n;
+    for(int n=0;n<Nverts;++n){
+      dlong id = e*Nverts+n;
       if ((minRank[id]!=rank)||(maxRank[id]!=rank)) {
         isHalo = 1;
         break;
@@ -85,4 +120,7 @@ void mesh_t::ParallelGatherScatterSetup() {
 
   NglobalGatherElements = globalCount;
   NlocalGatherElements = localCount;
+
+  free(minRank);
+  free(maxRank);
 }

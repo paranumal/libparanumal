@@ -195,6 +195,9 @@ mesh_t* mesh_t::SetupRingPatch(){
   //Halo
   mesh->HaloSetup();
 
+  // connect face vertices
+  mesh->ConnectFaceVertices();
+
   // compute physical (x,y) locations of the element nodes
   mesh->PhysicalNodes();
 

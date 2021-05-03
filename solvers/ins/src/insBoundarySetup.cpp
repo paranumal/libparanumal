@@ -29,7 +29,7 @@ SOFTWARE.
 void ins_t::BoundarySetup(){
 
   //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
-  mapB = (int *) calloc(mesh.Nelements*mesh.Np,sizeof(int));
+  mapB = (int *) calloc((mesh.Nelements+mesh.totalHaloPairs)*mesh.Np,sizeof(int));
   const int largeNumber = 1<<20;
   for (dlong e=0;e<mesh.Nelements;e++) {
     for (int n=0;n<mesh.Np;n++) mapB[n+e*mesh.Np] = largeNumber;
@@ -43,11 +43,42 @@ void ins_t::BoundarySetup(){
       }
     }
   }
-  mesh.ogs->GatherScatter(mapB, ogs_int, ogs_min, ogs_sym);
+
+  hlong localChange = 0, gatherChange = 1;
+
+  // keep comparing numbers on positive and negative traces until convergence
+  while(gatherChange>0){
+
+    // reset change counter
+    localChange = 0;
+
+    // send halo data and recv into extension of buffer
+    mesh.halo->Exchange(mapB, mesh.Np, ogs_int);
+
+    // compare trace vertices
+    for(dlong e=0;e<mesh.Nelements;++e){
+      for(int n=0;n<mesh.Nfaces*mesh.Nfp;++n){
+        dlong id  = e*mesh.Nfaces*mesh.Nfp + n;
+        dlong idM = mesh.vmapM[id];
+        dlong idP = mesh.vmapP[id];
+
+        int mapBM = mapB[idM];
+        int mapBP = mapB[idP];
+
+        if(mapBP<mapBM){
+          localChange=1;
+          mapB[idM] = mapBP;
+        }
+      }
+    }
+
+    // sum up changes
+    MPI_Allreduce(&localChange, &gatherChange, 1, MPI_HLONG, MPI_MAX, mesh.comm);
+  }
 
   for (dlong n=0;n<mesh.Nelements*mesh.Np;n++) {
     if (mapB[n] == largeNumber) {//no boundary
-      mapB[n] = 0.;
+      mapB[n] = 0;
     }
   }
 

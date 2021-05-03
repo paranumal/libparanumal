@@ -30,15 +30,6 @@ void elliptic_t::BoundarySetup(){
 
   //check all the bounaries for a Dirichlet
   int localAllNeumann = (lambda==0) ? 1 : 0; //if lambda>0 we don't care about all Neumann problem
-  allNeumannPenalty = 1.;
-
-  //setup normalization constant
-  if (settings.compareSetting("DISCRETIZATION","IPDG")) {
-    allNeumannScale = 1./sqrt((dfloat)mesh.Np*mesh.NelementsGlobal);
-  } else {
-    //note that we can use the mesh ogs, since there are no masked nodes
-    allNeumannScale = 1./sqrt((dfloat)mesh.ogs->NgatherGlobal);
-  }
 
   //setup a custom element-to-boundaryflag mapping
   EToB = (int *) calloc(mesh.Nelements*mesh.Nfaces,sizeof(int));
@@ -58,8 +49,8 @@ void elliptic_t::BoundarySetup(){
   MPI_Allreduce(&localAllNeumann, &allNeumann, 1, MPI_INT, MPI_MIN, mesh.comm);
 
 
-  //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
-  mapB = (int *) calloc(mesh.Nelements*mesh.Np,sizeof(int));
+  //make a node-wise bc flag (prioritize Dirichlet boundaries over Neumann)
+  mapB = (int *) calloc((mesh.Nelements+mesh.totalHaloPairs)*mesh.Np,sizeof(int));
   const int largeNumber = 1<<20;
   for (dlong e=0;e<mesh.Nelements;e++) {
     for (int n=0;n<mesh.Np;n++) mapB[n+e*mesh.Np] = largeNumber;
@@ -73,13 +64,44 @@ void elliptic_t::BoundarySetup(){
       }
     }
   }
-  mesh.ogs->GatherScatter(mapB, ogs_int, ogs_min, ogs_sym);
+
+  hlong localChange = 0, gatherChange = 1;
+
+  // keep comparing numbers on positive and negative traces until convergence
+  while(gatherChange>0){
+
+    // reset change counter
+    localChange = 0;
+
+    // send halo data and recv into extension of buffer
+    mesh.halo->Exchange(mapB, mesh.Np, ogs_int);
+
+    // compare trace vertices
+    for(dlong e=0;e<mesh.Nelements;++e){
+      for(int n=0;n<mesh.Nfaces*mesh.Nfp;++n){
+        dlong id  = e*mesh.Nfaces*mesh.Nfp + n;
+        dlong idM = mesh.vmapM[id];
+        dlong idP = mesh.vmapP[id];
+
+        int mapBM = mapB[idM];
+        int mapBP = mapB[idP];
+
+        if(mapBP<mapBM){
+          localChange=1;
+          mapB[idM] = mapBP;
+        }
+      }
+    }
+
+    // sum up changes
+    MPI_Allreduce(&localChange, &gatherChange, 1, MPI_HLONG, MPI_MAX, mesh.comm);
+  }
 
   //use the bc flags to find masked ids
   Nmasked = 0;
   for (dlong n=0;n<mesh.Nelements*mesh.Np;n++) {
     if (mapB[n] == largeNumber) {//no boundary
-      mapB[n] = 0.;
+      mapB[n] = 0;
     } else if (mapB[n] == 1) {   //Dirichlet boundary
       Nmasked++;
     }
@@ -109,6 +131,15 @@ void elliptic_t::BoundarySetup(){
   /* use the masked gs handle to define a global ordering */
   dlong Ntotal  = mesh.Np*mesh.Nelements; // number of degrees of freedom on this rank (before gathering)
   hlong Ngather = ogsMasked->Ngather;     // number of degrees of freedom on this rank (after gathering)
+
+  //setup normalization constant
+  allNeumannPenalty = 1.;
+  if (settings.compareSetting("DISCRETIZATION","IPDG")) {
+    allNeumannScale = 1./sqrt((dfloat)mesh.Np*mesh.NelementsGlobal);
+  } else {
+    //note that we can use the mesh ogs, since there are no masked nodes
+    allNeumannScale = 1./sqrt((dfloat)ogsMasked->NgatherGlobal);
+  }
 
   // build inverse degree vectors
   // used for the weight in linear solvers (used in C0)

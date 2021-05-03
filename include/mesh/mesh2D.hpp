@@ -36,9 +36,6 @@ public:
   // repartition elements in parallel
   void GeometricPartition();
 
-  // serial face-node to face-node connection
-  void ConnectFaceNodes();
-
   // setup occa buffers
   virtual void OccaSetup();
 
@@ -56,6 +53,7 @@ public:
   void PhysicalNodes();
   void GeometricFactors();
   void SurfaceGeometricFactors();
+  void ConnectFaceNodes();
   void OccaSetup();
 
   void CubatureSetup();
@@ -78,6 +76,7 @@ public:
   void PhysicalNodes();
   void GeometricFactors();
   void SurfaceGeometricFactors();
+  void ConnectFaceNodes();
   void OccaSetup();
 
   void CubatureSetup();

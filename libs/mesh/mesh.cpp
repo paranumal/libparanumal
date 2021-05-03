@@ -63,5 +63,4 @@ meshHex3D::meshHex3D(platform_t& _platform, meshSettings_t& _settings, MPI_Comm 
 mesh_t::~mesh_t() {
   if (halo) halo->Free();
   if (ringHalo) ringHalo->Free();
-  if (ogs) ogs->Free();
 }

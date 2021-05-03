@@ -39,7 +39,7 @@ void meshTet3D::ParallelReader(const char *fileName){
   Nfaces = 4;
 
   // vertices on each face
-  int faceVertices_[4][3] = {{0,1,2},{0,1,3},{1,2,3},{2,0,3}};
+  int faceVertices_[4][3] = {{0,1,2},{0,3,1},{1,3,2},{0,2,3}};
 
   NfaceVertices = 3;
   faceVertices =

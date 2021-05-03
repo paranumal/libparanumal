@@ -80,6 +80,9 @@ mesh_t& mesh_t::SetupNewDegree(int Nf){
 
   mesh->elementInfo = elementInfo;
 
+  mesh->VmapM = VmapM;
+  mesh->VmapP = VmapP;
+
   mesh->NboundaryFaces = NboundaryFaces;
   mesh->boundaryInfo = boundaryInfo;
 
@@ -92,7 +95,6 @@ mesh_t& mesh_t::SetupNewDegree(int Nf){
   mesh->o_internalElementIds = o_internalElementIds;
   mesh->o_haloElementIds     = o_haloElementIds;
 
-  mesh->ogs = ogs;
   mesh->globalIds = globalIds;
 
   mesh->NglobalGatherElements = NglobalGatherElements;
@@ -121,7 +123,7 @@ mesh_t& mesh_t::SetupNewDegree(int Nf){
   // make a global indexing
   mesh->ParallelConnectNodes();
 
-  // make an ogs operator and label local/global gather elements
+  // label local/global gather elements
   mesh->ParallelGatherScatterSetup();
 
   mesh->OccaSetup();

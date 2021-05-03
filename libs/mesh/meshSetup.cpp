@@ -94,6 +94,9 @@ mesh_t& mesh_t::Setup(platform_t& platform, meshSettings_t& settings,
   // set up halo exchange info for MPI (do before connect face nodes)
   mesh->HaloSetup();
 
+  // connect face vertices
+  mesh->ConnectFaceVertices();
+
   // compute physical (x,y) locations of the element nodes
   mesh->PhysicalNodes();
 
@@ -109,7 +112,7 @@ mesh_t& mesh_t::Setup(platform_t& platform, meshSettings_t& settings,
   // make a global indexing
   mesh->ParallelConnectNodes();
 
-  // make an ogs operator and label local/global gather elements
+  // label local/global gather elements
   mesh->ParallelGatherScatterSetup();
 
   mesh->OccaSetup();

@@ -79,6 +79,9 @@ public:
   hlong NboundaryFaces=0; // number of boundary faces
   hlong *boundaryInfo; // list of boundary faces (type, vertex-1, vertex-2, vertex-3)
 
+  dlong *VmapM;  // list of vertices on each face
+  dlong *VmapP;  // list of vertices that are paired with face vertices
+
   // MPI halo exchange info
   halo_t *halo;            // halo exchange pointer
   halo_t *ringHalo;        // ring halo exchange pointer
@@ -92,7 +95,6 @@ public:
   occa::memory o_haloElementIds;      // list of elements to be sent in halo exchange
 
   // CG gather-scatter info
-  ogs_t *ogs;              //occa gs pointer
   hlong *globalIds;
 
   // list of elements that are needed for global gather-scatter
@@ -302,6 +304,9 @@ public:
 
   // serial face-node to face-node connection
   virtual void ConnectFaceNodes() = 0;
+
+  // serial face-vertex to face-vertex connection
+  void ConnectFaceVertices();
 
   // setup halo region
   void HaloSetup();

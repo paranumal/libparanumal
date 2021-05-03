@@ -35,7 +35,7 @@ void meshTet3D::SetupBox(){
   NfaceVertices = 3;
 
   // vertices on each face
-  int faceVertices_[4][3] = {{0,1,2},{0,1,3},{1,2,3},{2,0,3}};
+  int faceVertices_[4][3] = {{0,1,2},{0,3,1},{1,3,2},{0,2,3}};
 
   faceVertices = (int*) calloc(NfaceVertices*Nfaces, sizeof(int));
   memcpy(faceVertices, faceVertices_[0], 12*sizeof(int));

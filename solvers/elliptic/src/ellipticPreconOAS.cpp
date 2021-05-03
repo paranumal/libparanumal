@@ -217,7 +217,6 @@ OASPrecon::~OASPrecon() {
     if (mesh.size>1) delete meshPatch;
 
     delete &(level->elliptic);
-    if (level->mesh.ogs) level->mesh.ogs->Free();
     delete level;
   }
 }

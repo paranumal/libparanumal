@@ -50,16 +50,54 @@ void mesh_t::HaloRingSetup(){
     globalOffsets[rr+1] = globalOffsets[rr]+globalOffsets[rr+1];
 
   //use the gs to find what nodes are local to this rank
-  dlong Ntotal = Np*Nelements;
-  int *minRank = (int *) calloc(Ntotal,sizeof(int));
-  int *maxRank = (int *) calloc(Ntotal,sizeof(int));
+  dlong Ntotal = Nverts*(Nelements+totalHaloPairs);
+  int *minRank = (int *) malloc(Ntotal*sizeof(int));
+  int *maxRank = (int *) malloc(Ntotal*sizeof(int));
   for (dlong i=0;i<Ntotal;i++) {
     minRank[i] = rank;
     maxRank[i] = rank;
   }
 
-  ogs->GatherScatter(minRank, ogs_int, ogs_min, ogs_sym); //minRank[n] contains the smallest rank taking part in the gather of node n
-  ogs->GatherScatter(maxRank, ogs_int, ogs_max, ogs_sym); //maxRank[n] contains the largest rank taking part in the gather of node n
+  hlong localChange = 0, gatherChange = 1;
+
+  // keep comparing numbers on positive and negative traces until convergence
+  while(gatherChange>0){
+
+    // reset change counter
+    localChange = 0;
+
+    // send halo data and recv into extension of buffer
+    halo->Exchange(minRank, Nverts, ogs_int);
+    halo->Exchange(maxRank, Nverts, ogs_int);
+
+    // compare trace vertices
+    for(dlong e=0;e<Nelements;++e){
+      for(int n=0;n<Nfaces*NfaceVertices;++n){
+        dlong id  = e*Nfaces*NfaceVertices + n;
+        dlong idM = VmapM[id];
+        dlong idP = VmapP[id];
+
+        int minRankM = minRank[idM];
+        int minRankP = minRank[idP];
+
+        int maxRankM = maxRank[idM];
+        int maxRankP = maxRank[idP];
+
+        if(minRankP<minRankM){
+          localChange=1;
+          minRank[idM] = minRankP;
+        }
+
+        if(maxRankP>maxRankM){
+          localChange=1;
+          maxRank[idM] = maxRankP;
+        }
+      }
+    }
+
+    // sum up changes
+    MPI_Allreduce(&localChange, &gatherChange, 1, MPI_HLONG, MPI_MAX, comm);
+  }
 
   //We already made a list of the globally connected element in ParallelGatherScatterSetup
   // NglobalGatherElements and globalGatherElementList contain the count and list
@@ -69,7 +107,7 @@ void mesh_t::HaloRingSetup(){
   dlong NsendVerts=0;
   for (int e=0;e<NglobalGatherElements;e++) { //for all global elements
     for (int v=0;v<Nverts;v++) {
-      dlong n = vertexNodes[v] + globalGatherElementList[e]*Np; //Id of a vertex in a global element
+      dlong n = v + globalGatherElementList[e]*Nverts; //Id of a vertex in a global element
       if ((minRank[n]!=rank)||(maxRank[n]!=rank)) { //vertex is shared
         NsendVerts++;
       }
@@ -102,12 +140,12 @@ void mesh_t::HaloRingSetup(){
   NsendVerts=0;
   for (int e=0;e<NglobalGatherElements;e++) { //for all global elements
     for (int v=0;v<Nverts;v++) {
-      dlong n = vertexNodes[v] + globalGatherElementList[e]*Np; //Id of a vertex in a global element
+      dlong n = v + globalGatherElementList[e]*Nverts; //Id of a vertex in a global element
       if ((minRank[n]!=rank)||(maxRank[n]!=rank)) { //vertex is shared
-        vertexSendList[NsendVerts].gid = globalIds[n]; //global node index
+        vertexSendList[NsendVerts].gid = EToV[n]; //global vertex index
         vertexSendList[NsendVerts].element = globalGatherElementList[e]; //local element index
         vertexSendList[NsendVerts].rank = rank;
-        vertexSendList[NsendVerts].dest = globalIds[n]%size; //destination rank for sorting
+        vertexSendList[NsendVerts].dest = EToV[n]%size; //destination rank for sorting
 
         vertexSendCounts[vertexSendList[NsendVerts].dest]++; //count outgoing
 
@@ -143,7 +181,7 @@ void mesh_t::HaloRingSetup(){
                 vertexRecvList, vertexRecvCounts, vertexRecvOffsets, MPI_VERTEX_T,
                 comm);
 
-  // sort based on globalId to find matches
+  // sort based on vertex ID to find matches
   std::sort(vertexRecvList, vertexRecvList+NrecvVerts,
             [](const vertex_t& a, const vertex_t& b)
               {return a.gid < b.gid;});
