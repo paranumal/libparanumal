@@ -108,29 +108,38 @@ def test(name, cmd, settings, referenceNorm, ranks=1):
   run = subprocess.run(["mpirun", "-np", str(ranks), cmd, inputRC],
                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-  #collect last line of output
-  output = run.stdout.decode().splitlines()[-1]
-
-  #check last line's syntax
-  failed=0;
-  if "Solution norm = " in output:
-    norm = float(output.split()[3])
-    if abs(norm - referenceNorm) < TOL:
-      print(bcolors.PASS + "PASS" + bcolors.ENDC)
-    else:
-      #failed residual check
-      print(bcolors.FAIL + "FAIL" + bcolors.ENDC)
-      print(bcolors.WARNING + "Expected Result: " + str(referenceNorm) + bcolors.ENDC)
-      print(bcolors.WARNING + "Observed Result: " + str(norm) + bcolors.ENDC)
-      failed = 1
-  else:
-    #this failure is worse, so dump the whole output for debug
+  if len(run.stdout.decode().splitlines())==0:
+    #this failure is bad, dump the whole output for debug
     print(bcolors.FAIL + "FAIL" + bcolors.ENDC)
     print(bcolors.WARNING + name + " stdout:" + bcolors.ENDC)
     print(run.stdout.decode())
     print(bcolors.WARNING + name + " stderr:" + bcolors.ENDC)
     print(run.stderr.decode())
     failed = 1
+  else:
+    #collect last line of output
+    output = run.stdout.decode().splitlines()[-1]
+
+    #check last line's syntax
+    failed=0;
+    if "Solution norm = " in output:
+      norm = float(output.split()[3])
+      if abs(norm - referenceNorm) < TOL:
+        print(bcolors.PASS + "PASS" + bcolors.ENDC)
+      else:
+        #failed residual check
+        print(bcolors.FAIL + "FAIL" + bcolors.ENDC)
+        print(bcolors.WARNING + "Expected Result: " + str(referenceNorm) + bcolors.ENDC)
+        print(bcolors.WARNING + "Observed Result: " + str(norm) + bcolors.ENDC)
+        failed = 1
+    else:
+      #this failure is worse, so dump the whole output for debug
+      print(bcolors.FAIL + "FAIL" + bcolors.ENDC)
+      print(bcolors.WARNING + name + " stdout:" + bcolors.ENDC)
+      print(run.stdout.decode())
+      print(bcolors.WARNING + name + " stderr:" + bcolors.ENDC)
+      print(run.stderr.decode())
+      failed = 1
 
   #clean up
   os.remove(inputRC)
