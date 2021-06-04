@@ -105,7 +105,7 @@ def test(name, cmd, settings, referenceNorm, ranks=1):
   print(bcolors.TEST + f"{name:.<{alignWidth}}" + bcolors.ENDC, end="", flush=True)
 
   #run test
-  run = subprocess.run(["mpirun --oversubscribe", "-np", str(ranks), cmd, inputRC],
+  run = subprocess.run(["mpirun", "--oversubscribe", "-np", str(ranks), cmd, inputRC],
                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
   if len(run.stdout.decode().splitlines())==0:
