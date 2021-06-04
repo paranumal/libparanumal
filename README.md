@@ -186,6 +186,8 @@ Low-order preconditioning of triangular elements (elliptic precon): [publisher](
 
 ### 11. Technical Reports
 
+CEED MS36: [link](https://doi.org/10.5281/zenodo.4672664): `Kolev, T., Fischer, P., Austin, A.P., Barker, A.T., Beams, N.,   Brown, J., Camier, J.-S., Chalmers, N.,   Dobrev, V., Dudouit, Y.,  Ghaffari, L., Kerkemeier, S.,  Lan, Y.-H., Merzari, E.,  Min, M.,   Pazner, W., Ratnayaka, T., Shephard, M. S., Siboni, M.H.,   Smith, C.W.,   Thompson, J.L.,   Tomov, S., Warburton, T., 2021. ECP Milestone Report: High-order algorithmic developments and optimizations for large-scale GPU-accelerated simulations, WBS 2.2.6.06, Milestone CEED-MS36.`
+
 CEED MS35: [link](https://doi.org/10.5281/zenodo.4146400): `Kolev, T., Fischer, P.,  Abdelfattah, A.,  Barra, V.,  Beams, N.,  Brown, J., Camier, J.S., Chalmers, N.,  Dobrev, V., Kerkemeier, S., Lan, Y.H., Merzari, E.,  Min, M., Phillips, M., Ratnayaka, T., Rowe, K.,  Thompson, J., Tomboulides, A.,  Tomov, S., Tomov, V,. and Warburton, T., 2020. ECP Milestone Report: Support CEED-enabled ECP applications in their preparation for Aurora/Frontier, WBS 2.2.6.06, Milestone CEED-MS35.`
 
 CEED MS34: [link](https://doi.org/10.5281/zenodo.3860803): `Kolev, T., Fischer, P.,  Abdelfattah, A., Ananthan, S.,  Barra, V.,  Beams, N., Bleile, R.,  Brown, J., Carson, R,. Camier, J.S., Churchfield, M.,  Dobrev, V., Dongarra, J., Dudouit, Y., Karakus, A., Kerkemeier, S., Lan, Y., Medina, D., Merzari, E., Min, M., Parker, S., Ratnayaka, T.,  Smith, C., Sprague, M., Stitt, T.,  Thompson, J., Tomboulides, A.,  Tomov, S., Tomov, V., Vargas, A., Warburton, T., and Weiss, K., 2020. ECP Milestone Report: Improve performance and capabilities of CEED-enabled ECP applications on Summit/Sierra, WBS 2.2.6.06, Milestone CEED-MS34.`
