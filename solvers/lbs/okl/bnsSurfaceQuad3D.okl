@@ -1,0 +1,235 @@
+/*
+
+  The MIT License (MIT)
+
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+*/
+
+void flux(const dfloat nx,
+    const dfloat ny,
+    const dfloat nz,
+    const dfloat alpha,
+    const dfloat beta,
+    const dfloat * dq,
+    dfloat * fluxq){
+
+  fluxq[0] = alpha*dq[0] - beta*p_sqrtRT*(nx*dq[1] + ny*dq[2] + nz*dq[3]);
+
+  fluxq[1] = alpha*dq[1] - beta*p_sqrtRT*(nx*dq[0] + nx*p_sqrt2*dq[4] + ny*dq[7] + nz*dq[8]);
+  fluxq[2] = alpha*dq[2] - beta*p_sqrtRT*(ny*dq[0] + ny*p_sqrt2*dq[5] + nx*dq[7] + nz*dq[9]);
+  fluxq[3] = alpha*dq[3] - beta*p_sqrtRT*(nz*dq[0] + nz*p_sqrt2*dq[6] + nx*dq[8] + ny*dq[9]);
+
+  fluxq[4] = alpha*dq[4] - beta*p_sqrtRT*(p_sqrt2*nx*dq[1]);
+  fluxq[5] = alpha*dq[5] - beta*p_sqrtRT*(p_sqrt2*ny*dq[2]);
+  fluxq[6] = alpha*dq[6] - beta*p_sqrtRT*(p_sqrt2*nz*dq[3]);
+
+  fluxq[7] = alpha*dq[7] - beta*p_sqrtRT*(nx*dq[2]+ny*dq[1]);
+  fluxq[8] = alpha*dq[8] - beta*p_sqrtRT*(nx*dq[3]+nz*dq[1]);
+  fluxq[9] = alpha*dq[9] - beta*p_sqrtRT*(ny*dq[3]+nz*dq[2]);
+}
+
+// This @kernel uses Upwind flux 
+@kernel void bnsSurfaceQuad3D(const dlong Nelements,
+            @restrict const  dlong *  elementIds,
+            const dfloat time,
+            const dfloat intfx,
+            const dfloat intfy,
+            const dfloat intfz,
+            @restrict const  dfloat *  sgeo,
+            @restrict const  dfloat *  LIFTT,
+            @restrict const  dlong   *  vmapM,
+            @restrict const  dlong   *  vmapP,
+            @restrict const  int   *  EToB,
+            @restrict const  dfloat *  x,
+            @restrict const  dfloat *  y,
+            @restrict const  dfloat *  z,
+            @restrict const  dfloat *  q,
+            @restrict dfloat *  rhsq){
+
+  
+#define p_LIFT (0.5f*(p_Nq-1)*p_Nq)
+  
+  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
+    
+    // for all faces (global barrier at end of body of this loop)
+    for(dlong face=0;face<p_Nfaces;++face){      
+      
+      for(dlong es=0;es<p_NblockS;++es;@inner(1)){
+  for(dlong i=0;i<p_Nq;++i;@inner(0)){ 
+    
+    const dlong et = eo + es;
+    
+    if(et<Nelements){
+
+      const dlong   eM = elementIds[et];
+      
+      // load surface geofactors for this face
+      const dlong sid = p_Nsgeo*(eM*p_Nq*p_Nfaces + face*p_Nq + i); 
+      const dfloat nx = sgeo[sid+p_NXID];
+      const dfloat ny = sgeo[sid+p_NYID];
+      const dfloat nz = sgeo[sid+p_NZID];
+      const dfloat sJ = sgeo[sid+p_SJID];
+      const dfloat invJ = sgeo[sid+p_IJID];
+
+      // indices of negative and positive traces of face node
+      const dlong id  = eM*p_Nq*p_Nfaces + face*p_Nq + i;
+      const int idM = vmapM[id];
+      const int idP = vmapP[id];
+      const int eP = idP/p_Np;
+      
+      const dlong vidM = eM*p_Np*p_Nfields + (idM%p_Np);
+      const dlong vidP = eP*p_Np*p_Nfields + (idP%p_Np);
+      
+      dfloat dq[p_Nfields], fluxq[p_Nfields];
+      
+#pragma unroll p_Nfields
+      for(int fld=0;fld<p_Nfields;++fld){
+        const dfloat qM = q[vidM+fld*p_Np];
+        dfloat qP = q[vidP+fld*p_Np]; // assumes chunks of p_Np*p_Nfields per element
+        dq[fld] = qP-qM;
+      }
+      
+      
+      // D = nx*A + ny*B + nz*C
+        // compute 0.5*[q] + 0.5*D*[q]/sqrt(RT)
+      const dfloat alpha = 0.5, beta = 0.5*p_isqrtRT;
+      
+      flux(nx, ny, nz, alpha, beta, dq, fluxq);
+      
+      const dfloat one = 1.0, zero = 0.0;
+      
+      // compute D*(0.5*[q] + 0.5*D*[q])
+      flux(nx, ny, nz, zero, one, fluxq, dq);
+      
+      // evaluate "flux" terms: (sJ/J)*(D+sigma*D*D)*(q^* - q^-)
+      const dfloat sc = invJ*sJ*p_LIFT;
+      
+#pragma unroll p_Nfields
+      for(int fld=0;fld<p_Nfields;++fld){
+        rhsq[vidM+fld*p_Np] += sc*dq[fld]; // TW dq[fld];
+      }
+    }
+  }
+      }
+      
+      // wait for all global memory writes of the previous inner loop to complete
+      @barrier("global");
+      
+    }
+  }
+}
+
+
+// This @kernel uses Upwind flux 
+@kernel void bnsMRSurfaceQuad3D(const dlong Nelements,
+                                @restrict const  dlong *  elementIds,
+                                          const dlong offset,
+                                          const int shift,
+                                          const dfloat time,
+                                          const dfloat intfx,
+                                          const dfloat intfy,
+                                          const dfloat intfz,
+                                @restrict const  dfloat *  sgeo,
+                                @restrict const  dfloat *  LIFTT,
+                                @restrict const  dlong   *  vmapM, // not in use for this kernel
+                                @restrict const  dlong   *  mapP,
+                                @restrict const  int   *  EToB,   // not in use
+                                @restrict const  dfloat *  x,
+                                @restrict const  dfloat *  y,
+                                @restrict const  dfloat *  z,
+                                @restrict const  dfloat *  q,
+                                @restrict const  dfloat *  fQM,
+                                @restrict dfloat *  rhsq){
+#define p_LIFT (0.5f*(p_Nq-1)*p_Nq)
+  
+  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){  
+    // for all faces (global barrier at end of body of this loop)
+    for(dlong face=0;face<p_Nfaces;++face){      
+      
+      for(dlong es=0;es<p_NblockS;++es;@inner(1)){
+        for(dlong i=0;i<p_Nq;++i;@inner(0)){ 
+    
+          const dlong et = eo + es;
+    
+          if(et<Nelements){
+
+          const dlong   eM = elementIds[et];
+      
+          // load surface geofactors for this face
+          const dlong sid = p_Nsgeo*(eM*p_Nq*p_Nfaces + face*p_Nq + i); 
+          const dfloat nx = sgeo[sid+p_NXID];
+          const dfloat ny = sgeo[sid+p_NYID];
+          const dfloat nz = sgeo[sid+p_NZID];
+          const dfloat sJ = sgeo[sid+p_SJID];
+          const dfloat invJ = sgeo[sid+p_IJID];
+
+          // indices of negative and positive traces of face node
+          const dlong idM  = eM*p_Nq*p_Nfaces + face*p_Nq + i;
+          const dlong idP  = mapP[idM];
+          const dlong eP   = idP/(p_Nq*p_Nfaces);
+
+                
+          const dlong qidM = eM*p_Nfp*p_Nfaces*p_Nfields + idM%(p_Nq*p_Nfaces);                
+          const dlong qidP = eP*p_Nfp*p_Nfaces*p_Nfields + idP%(p_Nq*p_Nfaces);      
+
+          dfloat dq[p_Nfields], fluxq[p_Nfields];
+      
+          #pragma unroll p_Nfields
+          for(int fld=0;fld<p_Nfields;++fld){
+            const dfloat qM = fQM[qidM+fld*p_Nq*p_Nfaces];
+                  dfloat qP = fQM[qidP+fld*p_Nq*p_Nfaces]; // assumes chunks of p_Np*p_Nfields per element
+                  dq[fld]   = qP-qM;
+          }
+  
+      
+        // D = nx*A + ny*B + nz*C
+        // compute 0.5*[q] + 0.5*D*[q]/sqrt(RT)
+        const dfloat alpha = 0.5, beta = 0.5*p_isqrtRT;
+
+        flux(nx, ny, nz, alpha, beta, dq, fluxq);
+
+        const dfloat one = 1.0, zero = 0.0;
+
+        // compute D*(0.5*[q] + 0.5*D*[q])
+        flux(nx, ny, nz, zero, one, fluxq, dq);
+
+        // evaluate "flux" terms: (sJ/J)*(D+sigma*D*D)*(q^* - q^-)
+        const dfloat sc = invJ*sJ*p_LIFT;
+        
+        const dlong vidM = eM*p_Np*p_Nfields + (vmapM[idM]%p_Np) + shift*offset; 
+
+        #pragma unroll p_Nfields
+        for(int fld=0;fld<p_Nfields;++fld){
+          rhsq[vidM+fld*p_Np] += sc*dq[fld]; // TW dq[fld];
+          }
+        }
+      }
+    }
+      // wait for all global memory writes of the previous inner loop to complete
+      @barrier("global");
+      
+    }
+  }
+}
+
