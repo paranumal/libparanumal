@@ -34,13 +34,14 @@ lbsSettings_t::lbsSettings_t(MPI_Comm& _comm):
              "data/lbsTalorVortex2D.h",
              "Boundary and Initial conditions header");
 
-  newSetting("SPEED OF SOUND",
-             "1.0",
-             "Speed of sound in fluid");
+  newSetting("VELOCITY MODEL",
+             "D2Q9",
+             "Microscopic Discrete Velocity Model",
+             {"D2Q9", "SAAB3"});
 
   newSetting("VISCOSITY",
              "1.0",
-             "Fluid viscosity");
+             "Fluid dynamic viscosity i.e. 1/Re");
 
   newSetting("PML PROFILE ORDER",
              "4",
@@ -101,7 +102,7 @@ void lbsSettings_t::report() {
   if (rank==0) {
     std::cout << "LBS Settings:\n\n";
     reportSetting("DATA FILE");
-    reportSetting("SPEED OF SOUND");
+    // reportSetting("SPEED OF SOUND");
     reportSetting("VISCOSITY");
     reportSetting("PML PROFILE ORDER");
     reportSetting("PML SIGMAX MAX");

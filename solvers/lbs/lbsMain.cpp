@@ -52,7 +52,6 @@ int main(int argc, char **argv){
   platformSettings.report();
   meshSettings.report();
   lbsSettings.report();
-#if 0
 
   // set up mesh
   mesh_t& mesh = mesh_t::Setup(platform, meshSettings, comm);
@@ -62,7 +61,6 @@ int main(int argc, char **argv){
 
   // run
   lbs.Run();
-#endif
   // close down MPI
   MPI_Finalize();
   return LIBP_SUCCESS;

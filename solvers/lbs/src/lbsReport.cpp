@@ -27,16 +27,19 @@ SOFTWARE.
 #include "lbs.hpp"
 
 void lbs_t::Report(dfloat time, int tstep){
+  #if 1
 
   static int frame=0;
+  // Compute velocity and density
+  momentsKernel(mesh.Nelements, o_LBM, o_q, o_U); 
 
   //compute vorticity
-  vorticityKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_D, o_q, c, o_Vort);
+  vorticityKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_D, o_U, o_Vort);
 
   //compute q.M*q
-  mesh.MassMatrixApply(o_q, o_Mq);
+  mesh.MassMatrixApply(o_U, o_Mq);
 
-  dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
+  dlong Nentries = mesh.Nelements*mesh.Np*Nmacro;
   dfloat norm2 = sqrt(platform.linAlg.innerProd(Nentries, o_q, o_Mq, mesh.comm));
 
   if(mesh.rank==0)
@@ -45,7 +48,8 @@ void lbs_t::Report(dfloat time, int tstep){
   if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
 
     // copy data back to host
-    o_q.copyTo(q);
+    // o_q.copyTo(q);
+    o_U.copyTo(U);
     o_Vort.copyTo(Vort);
 
     // output field files
@@ -54,8 +58,10 @@ void lbs_t::Report(dfloat time, int tstep){
     char fname[BUFSIZ];
     sprintf(fname, "%s_%04d_%04d.vtu", name.c_str(), mesh.rank, frame++);
 
-    PlotFields(q, Vort, fname);
+    // PlotFields(o_q, Vort, fname);
+    PlotFields(U, Vort, fname);
   }
+  #endif
 
   /*
   if(lbs->dim==3){

@@ -25,18 +25,17 @@ SOFTWARE.
 */
 
 // Initial conditions
-#define lbsInitialConditions2D(c, nu, t, x, y, r, u, v, s11, s12, s22) \
+#define lbsInitialConditions2D(nu, t, x, y, r, u, v) \
 {                                         \
   *(r) = 1 + exp(-3*(x*x+y*y));           \
   *(u) = exp(-3*(x*x+y*y));               \
   *(v) = exp(-3*(x*x+y*y));               \
-  *(s11) = 0.0;                           \
-  *(s12) = 0.0;                           \
-  *(s22) = 0.0;                           \
 }
 
+
+
 // Body force
-#define lbsBodyForce2D(c, nu, t, x, y, r, u, v, fx, fy) \
+#define lbsBodyForce2D(nu, t, x, y, r, u, v, fx, fy) \
 {                                                   \
   *(fx) = 0.0;                                      \
   *(fy) = 0.0;                                      \
@@ -44,38 +43,26 @@ SOFTWARE.
 
 // Boundary conditions
 /* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5 */
-#define lbsBoundaryConditions2D(bc, c, nu, \
+#define lbsBoundaryConditions2D(bc, nu, \
                                 t, x, y, nx, ny, \
-                                rM, uM, vM, s11M, s12M, s22M, \
-                                rB, uB, vB, s11B, s12B, s22B) \
+                                rM, uM, vM, \
+                                rB, uB, vB) \
 {                                      \
   if(bc==1){                           \
     *(rB) = rM;                        \
     *(uB) = 0.0;                       \
     *(vB) = 0.0;                       \
-    *(s11B) = 0.0;                     \
-    *(s12B) = 0.0;                     \
-    *(s22B) = 0.0;                     \
   } else if(bc==2){                    \
     *(rB) = 1.0;                       \
     *(uB) = 0.0;                       \
     *(vB) = 0.0;                       \
-    *(s11B) = 0.0;                     \
-    *(s12B) = 0.0;                     \
-    *(s22B) = 0.0;                     \
   } else if(bc==3){                    \
     *(rB) = 1.0;                       \
     *(uB) = uM;                        \
     *(vB) = vM;                        \
-    *(s11B) = s11M;                    \
-    *(s12B) = s12M;                    \
-    *(s22B) = s22M;                    \
   } else if(bc==4||bc==5){             \
     *(rB) = rM;                        \
     *(uB) = uM - (nx*uM+ny*vM)*nx;     \
     *(vB) = vM - (nx*uM+ny*vM)*ny;     \
-    *(s11B) = s11M;                    \
-    *(s12B) = s12M;                    \
-    *(s22B) = s22M;                    \
   }                                    \
 }

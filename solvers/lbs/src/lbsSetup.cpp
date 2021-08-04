@@ -25,23 +25,19 @@ SOFTWARE.
 */
 
 #include "lbs.hpp"
+#define D2Q9 1
+#define D3Q15 2
+
 
 lbs_t& lbs_t::Setup(platform_t& platform, mesh_t& mesh,
                     lbsSettings_t& settings){
 
   lbs_t* lbs = new lbs_t(platform, mesh, settings);
 
-  //get physical paramters
-  settings.getSetting("SPEED OF SOUND", lbs->c);
-  settings.getSetting("VISCOSITY", lbs->nu);
-  lbs->RT     = lbs->c*lbs->c;
-  lbs->tauInv = lbs->RT/lbs->nu;
-
-  lbs->Nfields    = (mesh.dim==3) ? 10:6;
+  // Set reference lattice-Boltzmann data  
+  lbs->latticeSetup();
+  
   lbs->Npmlfields = mesh.dim*lbs->Nfields;
-
-  //setup cubature
-  mesh.CubatureSetup();
 
   //Setup PML
   lbs->PmlSetup();
@@ -150,11 +146,29 @@ lbs_t& lbs_t::Setup(platform_t& platform, mesh_t& mesh,
   lbs->o_Vort = platform.malloc((mesh.dim*mesh.Nelements*mesh.Np)*sizeof(dfloat),
                                               lbs->Vort);
 
-  //storage for M*q during reporting
-  lbs->o_Mq = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), lbs->q);
-  mesh.MassMatrixKernelSetup(lbs->Nfields); // mass matrix operator
+  // Hold macro quantites i.e. density + velocities
+  lbs->U = (dfloat*) calloc((mesh.Nelements+mesh.totalHaloPairs)*mesh.Np*lbs->Nmacro, sizeof(dfloat));
+  lbs->o_U = platform.malloc((mesh.Nelements+mesh.totalHaloPairs)*mesh.Np*lbs->Nmacro*sizeof(dfloat), lbs->U);
+  
+  // Lattice-Boltzmann Model
+  lbs->o_LBM = platform.malloc(lbs->Nfields*lbs->Nmacro*sizeof(dfloat), lbs->LBM);
+  lbs->o_LMAP = platform.malloc(lbs->Nfields*sizeof(int), lbs->LMAP);
 
-  // OCCA build stuff
+
+  #if 0
+
+  lbs->o_LBM.copyTo(lbs->LBM);
+  
+  printf("%.4e\n", lbs->c);
+  for(int i=0; i<lbs->Nfields; i++)
+  printf("%.4e %.4e %4e \n", lbs->LBM[i+ 0*lbs->Nfields], lbs->LBM[i+ 1*lbs->Nfields],lbs->LBM[i+ 2*lbs->Nfields]);  
+  #endif 
+
+  //storage for M*q during reporting
+  lbs->o_Mq = platform.malloc((mesh.Nelements+mesh.totalHaloPairs)*mesh.Np*lbs->Nmacro*sizeof(dfloat), lbs->U);
+  mesh.MassMatrixKernelSetup(lbs->Nmacro); // mass matrix operator
+
+  // // OCCA build stuff
   occa::properties kernelInfo = mesh.props; //copy base occa properties
 
   //add boundary data to kernel info
@@ -164,6 +178,11 @@ lbs_t& lbs_t::Setup(platform_t& platform, mesh_t& mesh,
 
   kernelInfo["defines/" "p_Nfields"]= lbs->Nfields;
   kernelInfo["defines/" "p_Npmlfields"]= lbs->Npmlfields;
+  kernelInfo["defines/" "p_Nmacro"] = lbs->Nmacro;  
+
+  kernelInfo["defines/" "p_c"] = lbs->c;  
+  kernelInfo["defines/" "p_ic2"] = 1.0/ pow(lbs->c,2);  
+  kernelInfo["defines/" "p_ic4"] = 1.0/ pow(lbs->c,4);   
 
   int maxNodes = mymax(mesh.Np, (mesh.Nfp*mesh.Nfaces));
   kernelInfo["defines/" "p_maxNodes"]= maxNodes;
@@ -177,8 +196,8 @@ lbs_t& lbs_t::Setup(platform_t& platform, mesh_t& mesh,
   int NblockS = mymax(1, blockMax/maxNodes);
   kernelInfo["defines/" "p_NblockS"]= NblockS;
 
-  int NblockCub = mymax(1, blockMax/mesh.cubNp);
-  kernelInfo["defines/" "p_NblockCub"]= NblockCub;
+  // int NblockCub = mymax(1, blockMax/mesh.cubNp);
+  // kernelInfo["defines/" "p_NblockCub"]= NblockCub;
 
   kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
 
@@ -195,57 +214,81 @@ lbs_t& lbs_t::Setup(platform_t& platform, mesh_t& mesh,
 
   char fileName[BUFSIZ], kernelName[BUFSIZ];
 
+  if (mesh.dim==2) {
+    sprintf(fileName, DLBS "/okl/lbsInitialCondition2D.okl");
+    sprintf(kernelName, "lbsInitialCondition2D");
+  } else {
+    sprintf(fileName, DLBS "/okl/lbsInitialCondition3D.okl");
+    sprintf(kernelName, "lbsInitialCondition3D");
+  }
+  lbs->initialConditionKernel = platform.buildKernel(fileName, kernelName,
+                                            kernelInfo);
+  
+
+  
+  // kernels from volume file
+  sprintf(fileName, DLBS "/okl/lbsCollision%s.okl", suffix);  
+  sprintf(kernelName, "lbsCollision%s", suffix);
+  lbs->collisionKernel =  platform.buildKernel(fileName, kernelName,
+                                         kernelInfo);
+  sprintf(kernelName, "lbsMoments%s", suffix);
+  lbs->momentsKernel =  platform.buildKernel(fileName, kernelName,
+                                         kernelInfo);
+  sprintf(kernelName, "lbsPhaseField%s", suffix);
+  lbs->phaseFieldKernel =  platform.buildKernel(fileName, kernelName,
+                                         kernelInfo);
+
   // kernels from volume file
   sprintf(fileName, DLBS "/okl/lbsVolume%s.okl", suffix);
   sprintf(kernelName, "lbsVolume%s", suffix);
   lbs->volumeKernel =  platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
 
-  if (lbs->pmlcubature) {
-    sprintf(kernelName, "lbsPmlVolumeCub%s", suffix);
-    lbs->pmlVolumeKernel =  platform.buildKernel(fileName, kernelName,
-                                         kernelInfo);
-  } else {
-    sprintf(kernelName, "lbsPmlVolume%s", suffix);
-    lbs->pmlVolumeKernel =  platform.buildKernel(fileName, kernelName,
-                                         kernelInfo);
-  }
+  // if (lbs->pmlcubature) {
+  //   sprintf(kernelName, "lbsPmlVolumeCub%s", suffix);
+  //   lbs->pmlVolumeKernel =  platform.buildKernel(fileName, kernelName,
+  //                                        kernelInfo);
+  // } else {
+  //   sprintf(kernelName, "lbsPmlVolume%s", suffix);
+  //   lbs->pmlVolumeKernel =  platform.buildKernel(fileName, kernelName,
+  //                                        kernelInfo);
+  // }
 
-  // kernels from relaxation file
-  sprintf(fileName, DLBS "/okl/lbsRelaxation%s.okl", suffix);
-  sprintf(kernelName, "lbsRelaxation%s", suffix);
-  lbs->relaxationKernel = platform.buildKernel(fileName, kernelName,
-                                         kernelInfo);
-  if (lbs->pmlcubature) {
-    sprintf(kernelName, "lbsPmlRelaxationCub%s", suffix);
-    lbs->pmlRelaxationKernel = platform.buildKernel(fileName, kernelName,
-                                           kernelInfo);
-  } else {
-    lbs->pmlRelaxationKernel = platform.buildKernel(fileName, kernelName,
-                                           kernelInfo);
-  }
+  // // kernels from relaxation file
+  // sprintf(fileName, DLBS "/okl/lbsRelaxation%s.okl", suffix);
+  // sprintf(kernelName, "lbsRelaxation%s", suffix);
+  // lbs->relaxationKernel = platform.buildKernel(fileName, kernelName,
+  //                                        kernelInfo);
+  // if (lbs->pmlcubature) {
+  //   sprintf(kernelName, "lbsPmlRelaxationCub%s", suffix);
+  //   lbs->pmlRelaxationKernel = platform.buildKernel(fileName, kernelName,
+  //                                          kernelInfo);
+  // } else {
+  //   lbs->pmlRelaxationKernel = platform.buildKernel(fileName, kernelName,
+  //                                          kernelInfo);
+  // }
 
 
   // kernels from surface file
   sprintf(fileName, DLBS "/okl/lbsSurface%s.okl", suffix);
-  if (settings.compareSetting("TIME INTEGRATOR","MRAB3") ||
-      settings.compareSetting("TIME INTEGRATOR","MRSAAB3")) {
-    sprintf(kernelName, "lbsMRSurface%s", suffix);
-    lbs->surfaceKernel = platform.buildKernel(fileName, kernelName,
-                                           kernelInfo);
+  // if (settings.compareSetting("TIME INTEGRATOR","MRAB3") ||
+  //     settings.compareSetting("TIME INTEGRATOR","MRSAAB3")) {
+  //   sprintf(kernelName, "lbsMRSurface%s", suffix);
+  //   lbs->surfaceKernel = platform.buildKernel(fileName, kernelName,
+  //                                          kernelInfo);
 
-    sprintf(kernelName, "lbsMRPmlSurface%s", suffix);
-    lbs->pmlSurfaceKernel = platform.buildKernel(fileName, kernelName,
-                                           kernelInfo);
-  } else {
+  //   sprintf(kernelName, "lbsMRPmlSurface%s", suffix);
+  //   lbs->pmlSurfaceKernel = platform.buildKernel(fileName, kernelName,
+  //                                          kernelInfo);
+  // } else {
     sprintf(kernelName, "lbsSurface%s", suffix);
     lbs->surfaceKernel = platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
 
-    sprintf(kernelName, "lbsPmlSurface%s", suffix);
-    lbs->pmlSurfaceKernel = platform.buildKernel(fileName, kernelName,
-                                           kernelInfo);
-  }
+    // sprintf(kernelName, "lbsPmlSurface%s", suffix);
+    // lbs->pmlSurfaceKernel = platform.buildKernel(fileName, kernelName,
+    //                                        kernelInfo);
+  // }
 
   // vorticity calculation
   sprintf(fileName, DLBS "/okl/lbsVorticity%s.okl", suffix);
@@ -254,16 +297,7 @@ lbs_t& lbs_t::Setup(platform_t& platform, mesh_t& mesh,
   lbs->vorticityKernel = platform.buildKernel(fileName, kernelName,
                                      kernelInfo);
 
-  if (mesh.dim==2) {
-    sprintf(fileName, DLBS "/okl/lbsInitialCondition2D.okl");
-    sprintf(kernelName, "lbsInitialCondition2D");
-  } else {
-    sprintf(fileName, DLBS "/okl/lbsInitialCondition3D.okl");
-    sprintf(kernelName, "lbsInitialCondition3D");
-  }
 
-  lbs->initialConditionKernel = platform.buildKernel(fileName, kernelName,
-                                            kernelInfo);
 
   return *lbs;
 }

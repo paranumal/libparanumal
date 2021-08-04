@@ -50,14 +50,17 @@ public:
   mesh_t& mesh;
 
   int Nfields;
+  int Nmacro;
   int Npmlfields;
+  int velModel;
 
   TimeStepper::timeStepper_t* timeStepper;
 
   halo_t* traceHalo;
   halo_t** multirateTraceHalo;
 
-  dfloat RT, c, tauInv, Ma, Re, nu; // Flow parameters
+  // dfloat RT, c, tauInv, Ma, Re, nu; // Flow parameters
+  dfloat RT, c, tauInv, Re, nu, alpha; // Flow parameters
 
   // Pml
   int pmlOrder;
@@ -73,6 +76,16 @@ public:
 
   dfloat *q;
   occa::memory o_q;
+  
+  // Macro quantities i.e. density + velocity
+  dfloat *U; 
+  occa::memory o_U; 
+
+  dfloat *LBM; 
+  occa::memory o_LBM;
+
+  int *LMAP; 
+  occa::memory o_LMAP; 
 
   occa::memory o_Mq;
 
@@ -80,6 +93,10 @@ public:
   occa::memory o_Vort, o_VortMag;
 
   occa::memory o_pmlSigma;
+
+  occa::kernel collisionKernel; 
+  occa::kernel momentsKernel; 
+  occa::kernel phaseFieldKernel; 
 
   occa::kernel volumeKernel;
   occa::kernel surfaceKernel;
@@ -117,33 +134,35 @@ public:
   void rhsf_pml(occa::memory& o_Q, occa::memory& o_pmlQ,
                 occa::memory& o_RHS, occa::memory& o_pmlRHS, const dfloat T);
 
-  void rhsf_MR_pml(occa::memory& o_Q, occa::memory& o_pmlQ,
-                   occa::memory& o_RHS, occa::memory& o_pmlRHS,
-                   occa::memory& o_fQM, const dfloat T, const int lev);
+  // void rhsf_MR_pml(occa::memory& o_Q, occa::memory& o_pmlQ,
+  //                  occa::memory& o_RHS, occa::memory& o_pmlRHS,
+  //                  occa::memory& o_fQM, const dfloat T, const int lev);
 
   //seperate components of rhs evaluation
   void rhsVolume(dlong N, occa::memory& o_ids,
                  occa::memory& o_Q, occa::memory& o_RHS, const dfloat T);
-  void rhsPmlVolume(dlong N, occa::memory& o_ids, occa::memory& o_pmlids,
-                    occa::memory& o_Q, occa::memory& o_pmlQ,
-                    occa::memory& o_RHS, occa::memory& o_pmlRHS, const dfloat T);
-  void rhsRelaxation(dlong N, occa::memory& o_ids,
-                     occa::memory& o_Q, occa::memory& o_RHS);
-  void rhsPmlRelaxation(dlong N, occa::memory& o_ids, occa::memory& o_pmlids,
-                        occa::memory& o_Q, occa::memory& o_pmlQ,
-                        occa::memory& o_RHS, occa::memory& o_pmlRHS);
+  // void rhsPmlVolume(dlong N, occa::memory& o_ids, occa::memory& o_pmlids,
+                    // occa::memory& o_Q, occa::memory& o_pmlQ,
+                    // occa::memory& o_RHS, occa::memory& o_pmlRHS, const dfloat T);
+  // void rhsRelaxation(dlong N, occa::memory& o_ids,
+                     // occa::memory& o_Q, occa::memory& o_RHS);
+  // void rhsPmlRelaxation(dlong N, occa::memory& o_ids, occa::memory& o_pmlids,
+                        // occa::memory& o_Q, occa::memory& o_pmlQ,
+                        // occa::memory& o_RHS, occa::memory& o_pmlRHS);
   void rhsSurface(dlong N, occa::memory& o_ids,
                   occa::memory& o_Q, occa::memory& o_RHS, const dfloat T);
-  void rhsPmlSurface(dlong N, occa::memory& o_ids, occa::memory& o_pmlids,
-                     occa::memory& o_Q, occa::memory& o_pmlQ,
-                     occa::memory& o_RHS, occa::memory& o_pmlRHS, const dfloat T);
-  void rhsSurfaceMR(dlong N, occa::memory& o_ids,
-                    occa::memory& o_Q, occa::memory& o_RHS,
-                    occa::memory& o_fQM, const dfloat T);
-  void rhsPmlSurfaceMR(dlong N, occa::memory& o_ids, occa::memory& o_pmlids,
-                       occa::memory& o_Q, occa::memory& o_pmlQ,
-                       occa::memory& o_RHS, occa::memory& o_pmlRHS,
-                       occa::memory& o_fQM, const dfloat T);
+  // void rhsPmlSurface(dlong N, occa::memory& o_ids, occa::memory& o_pmlids,
+  //                    occa::memory& o_Q, occa::memory& o_pmlQ,
+  //                    occa::memory& o_RHS, occa::memory& o_pmlRHS, const dfloat T);
+  // void rhsSurfaceMR(dlong N, occa::memory& o_ids,
+  //                   occa::memory& o_Q, occa::memory& o_RHS,
+  //                   occa::memory& o_fQM, const dfloat T);
+  // void rhsPmlSurfaceMR(dlong N, occa::memory& o_ids, occa::memory& o_pmlids,
+  //                      occa::memory& o_Q, occa::memory& o_pmlQ,
+  //                      occa::memory& o_RHS, occa::memory& o_pmlRHS,
+  //                      occa::memory& o_fQM, const dfloat T);
+
+  void latticeSetup(); 
 };
 #endif
 

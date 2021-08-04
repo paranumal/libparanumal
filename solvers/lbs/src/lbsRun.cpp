@@ -33,25 +33,34 @@ void lbs_t::Run(){
   settings.getSetting("FINAL TIME", finalTime);
 
   initialConditionKernel(mesh.Nelements,
-                         c,
                          nu,
                          startTime,
                          mesh.o_x,
                          mesh.o_y,
                          mesh.o_z,
+                         o_U);
+
+  phaseFieldKernel(mesh.Nelements,
+                         o_LBM,
+                         o_U, 
                          o_q);
+
+
 
   dfloat cfl=1.0;
   settings.getSetting("CFL NUMBER", cfl);
 
   // set time step
   dfloat hmin = mesh.MinCharacteristicLength();
-  dfloat vmax = MaxWaveSpeed();
+  // dfloat vmax = MaxWaveSpeed();
+  dfloat vmax = c;
 
   dfloat dtAdv  = hmin/(vmax*(mesh.N+1.)*(mesh.N+1.));
-  dfloat dtVisc = 1.0/tauInv;
+  // dfloat dtVisc = 1.0/tauInv;
+  // dfloat dt = (semiAnalytic) ? cfl*dtAdv : cfl*mymin(dtAdv, dtVisc);
 
-  dfloat dt = (semiAnalytic) ? cfl*dtAdv : cfl*mymin(dtAdv, dtVisc);
+  dfloat dt = cfl*dtAdv;
+
   /*
     Artificial warping of time step size for multirate testing
     */
@@ -64,17 +73,18 @@ void lbs_t::Run(){
 
   timeStepper->Run(o_q, startTime, finalTime);
 
-  // output norm of final solution
-  {
-    //compute q.M*q
-    mesh.MassMatrixApply(o_q, o_Mq);
 
-    dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
-    dfloat norm2 = sqrt(platform.linAlg.innerProd(Nentries, o_q, o_Mq, mesh.comm));
+  // // output norm of final solution
+  // {
+  //   //compute q.M*q
+  //   mesh.MassMatrixApply(o_q, o_Mq);
 
-    if(mesh.rank==0)
-      printf("Solution norm = %17.15lg\n", norm2);
-  }
+  //   dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
+  //   dfloat norm2 = sqrt(platform.linAlg.innerProd(Nentries, o_q, o_Mq, mesh.comm));
+
+  //   if(mesh.rank==0)
+  //     printf("Solution norm = %17.15lg\n", norm2);
+  // }
 }
 
 

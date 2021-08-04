@@ -67,44 +67,20 @@ void lbs_t::PlotFields(dfloat* Q, dfloat *V, char *fileName){
 
   free(Ix); free(Iy); free(Iz);
 
-  dfloat* u = (dfloat *) malloc(mesh.Np*sizeof(dfloat));
-  dfloat* v = (dfloat *) malloc(mesh.Np*sizeof(dfloat));
-  dfloat* w = (dfloat *) malloc(mesh.Np*sizeof(dfloat));
-
-  dfloat* Ip = (dfloat *) malloc(mesh.plotNp*sizeof(dfloat));
+  dfloat* Ir = (dfloat *) malloc(mesh.plotNp*sizeof(dfloat));
   dfloat* Iu = (dfloat *) malloc(mesh.plotNp*sizeof(dfloat));
   dfloat* Iv = (dfloat *) malloc(mesh.plotNp*sizeof(dfloat));
   dfloat* Iw = (dfloat *) malloc(mesh.plotNp*sizeof(dfloat));
 
-  if (Q!=NULL) {
-    // write out density
-    fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
-    fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Density\" Format=\"ascii\">\n");
-    for(dlong e=0;e<mesh.Nelements;++e){
-      mesh.PlotInterp(Q + e*mesh.Np*Nfields, Ip, scratch);
-
-      for(int n=0;n<mesh.plotNp;++n){
-        fprintf(fp, "       ");
-        fprintf(fp, "%g\n", Ip[n]);
-      }
-    }
-    fprintf(fp, "       </DataArray>\n");
-
+  fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
+  if (U!=nullptr) {
     // write out velocity
     fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Velocity\" NumberOfComponents=\"%d\" Format=\"ascii\">\n", mesh.dim);
     for(dlong e=0;e<mesh.Nelements;++e){
-      for(int n=0;n<mesh.Np;++n){
-        const dfloat rm = Q[e*mesh.Np*Nfields+n];
-        u[n] = c*Q[e*mesh.Np*Nfields+n+mesh.Np*1]/rm;
-        v[n] = c*Q[e*mesh.Np*Nfields+n+mesh.Np*2]/rm;
-        if(mesh.dim==3)
-          w[n] = c*Q[e*mesh.Np*Nfields+n+mesh.Np*3]/rm;
-      }
-
-      mesh.PlotInterp(u, Iu, scratch);
-      mesh.PlotInterp(v, Iv, scratch);
+      mesh.PlotInterp(U + 1*mesh.Np + e*mesh.Np*Nmacro, Iu, scratch);
+      mesh.PlotInterp(U + 2*mesh.Np + e*mesh.Np*Nmacro, Iv, scratch);
       if(mesh.dim==3)
-        mesh.PlotInterp(w, Iw, scratch);
+        mesh.PlotInterp(U + 3*mesh.Np + e*mesh.Np*Nmacro, Iw, scratch);
 
       for(int n=0;n<mesh.plotNp;++n){
         fprintf(fp, "       ");
@@ -116,30 +92,32 @@ void lbs_t::PlotFields(dfloat* Q, dfloat *V, char *fileName){
       }
     }
     fprintf(fp, "       </DataArray>\n");
+  }
 
+  if (U!=nullptr) {
     // write out pressure
-    fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Pressure\" Format=\"ascii\">\n");
+    fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Density\" Format=\"ascii\">\n");
     for(dlong e=0;e<mesh.Nelements;++e){
-      mesh.PlotInterp(Q + e*mesh.Np*Nfields, Ip, scratch);
+      mesh.PlotInterp(U + 0*mesh.Np + e*mesh.Np*Nmacro, Ir, scratch);
 
       for(int n=0;n<mesh.plotNp;++n){
         fprintf(fp, "       ");
-        fprintf(fp, "%g\n", RT*Ip[n]);
+        fprintf(fp, "%g\n", Ir[n]);
       }
     }
     fprintf(fp, "       </DataArray>\n");
   }
 
-  if (V!=NULL) {
+  if (V!=nullptr) {
     // write out vorticity
     if(mesh.dim==2){
       fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticity\" Format=\"ascii\">\n");
       for(dlong e=0;e<mesh.Nelements;++e){
-        mesh.PlotInterp(V + e*mesh.Np, Ip, scratch);
+        mesh.PlotInterp(V + e*mesh.Np, Ir, scratch);
 
         for(int n=0;n<mesh.plotNp;++n){
           fprintf(fp, "       ");
-          fprintf(fp, "%g\n", Ip[n]);
+          fprintf(fp, "%g\n", Ir[n]);
         }
       }
     } else {
@@ -160,8 +138,7 @@ void lbs_t::PlotFields(dfloat* Q, dfloat *V, char *fileName){
   }
   fprintf(fp, "     </PointData>\n");
 
-  free(u); free(v); free(w);
-  free(Ip); free(Iu); free(Iv); free(Iw);
+  free(Ir); free(Iu); free(Iv); free(Iw);
 
   fprintf(fp, "    <Cells>\n");
   fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");
