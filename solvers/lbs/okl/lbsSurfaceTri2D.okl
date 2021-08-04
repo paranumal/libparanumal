@@ -24,23 +24,20 @@ SOFTWARE.
 
 */
 
-// #define p_isq12 (1.f/sqrt(12.f))
-// #define p_isq6 (1.f/sqrt(6.f))
+void applyBC2D(const int bc, const int fldm, const int fldp, 
+               const dfloat en, const dfloat nx, const dfloat ny, 
+               const dfloat w,  const dfloat ex, const dfloat ey,
+               const dfloat rb, const dfloat ub, const dfloat vb,
+               const dfloat *qm, dfloat *qp){
 
-// void applyBC2D(const int bc, const int fldm, const int fldp, 
-//                const dfloat en, const dflat nx, const dfloat ny, const dfloat w, const dfloat ex, const dfloat ey,
-//                const dfloat en, const dflat nx, const dfloat ny, const dfloat w, const dfloat ex, const dfloat ey,
-//                const dfloat rb, const dfloat ub, const dfloat vb,
-//                const dfloat *qm, const dfloat *qp){
+// wall: could be with velocity though 
+if (bc==1 || bc==2 || bc==4 || bc==5){
+  qp[fldm] = en < 0 ?  (qm[fldp] + 2.f*w*rb*(ex*ub + ey*vb)*p_ic2) : qm[fldm];  
+}else if(bc==3){ // Outflow outgoing particles only i.e. e.n
+  qp[fldm] = en > 0 ?  qm[fldm] : qp[fldm]; 
+}
 
-// // wall:could be with velociy 
-// if (bc==1){
-//   qp[fld] = en < 0 ?  (qm[idr] + 2.f*w*rb*(ex*ub + ey*vb)*p_ic2) : qm[fld];  
-// }else if(bc==2){ //Inflow
-//   qp[fld] = en < 0 ?  (qm[idr] + 2.f*w*rb*(ex*ub + ey*vb)*p_ic2) : qm[fld]; 
-// }
-
-// } 
+} 
              
 
 
@@ -108,14 +105,14 @@ SOFTWARE.
             dfloat rm, um, vm, rb, ub, vb; 
 
             if(bc>0){
-            const dlong uidM = eM*p_Np*p_Nmacro + vidM; 
-            rm   = U[uidM+ 0*p_Np];  
-            um   = U[uidM+ 1*p_Np];  
-            vm   = U[uidM+ 2*p_Np];  
+              const dlong uidM = eM*p_Np*p_Nmacro + vidM; 
+              rm   = U[uidM+ 0*p_Np];  
+              um   = U[uidM+ 1*p_Np];  
+              vm   = U[uidM+ 2*p_Np];  
 
-           lbsBoundaryConditions2D(bc, nu, time, x[idM], y[idM], nx, ny, 
-                                   rm, um, vm,
-                                   &rb, &ub, &vb); 
+             lbsBoundaryConditions2D(bc, nu, time, x[idM], y[idM], nx, ny, 
+                                     rm, um, vm, 
+                                     &rb, &ub, &vb); 
             }
 
 
@@ -136,15 +133,12 @@ SOFTWARE.
               const dfloat en = ex*nx + ey*ny; // need to modify for bc
 
               if(bc>0){
-              const dfloat w    =  LBM[fld + 0*p_Nfields];
-              const int   idr   =  LMAP[fld];
-              // applyBC2D(bc, fld, idr, en, nx, ny, w, ex, ey, rb, ub, vb, qm, qp); 
-
-               qp[fld] = en < 0 ? (qm[idr] + 2.f*w*rb*(ex*ub + ey*vb)*p_ic2) : qm[fld];  
+                const dfloat w    =  LBM[fld + 0*p_Nfields];
+                const int   idr   =  LMAP[fld];
+                applyBC2D(bc, fld, idr, en, nx, ny, w, ex, ey,rb, ub, vb, qm, qp); 
               }
              
               s_fluxq[es][fld][n] = 0.5f*sc*(en -fabs(en))*(qm[fld] - qp[fld]);
-
             }
           }
         }
@@ -163,40 +157,29 @@ SOFTWARE.
             // const int id = nrhs*p_Nfields*(p_Np*e + n) + p_Nfields*shift;
             const dlong id = e*p_Nfields*p_Np + n ;
 
-            dfloat rhsq1 = rhsq[id+0*p_Np];
-            dfloat rhsq2 = rhsq[id+1*p_Np];
-            dfloat rhsq3 = rhsq[id+2*p_Np];
-            dfloat rhsq4 = rhsq[id+3*p_Np];
-            dfloat rhsq5 = rhsq[id+4*p_Np];
-            dfloat rhsq6 = rhsq[id+5*p_Np];
-            dfloat rhsq7 = rhsq[id+6*p_Np];
-            dfloat rhsq8 = rhsq[id+7*p_Np];
-            dfloat rhsq9 = rhsq[id+8*p_Np];
+            dfloat rhsf[p_Nfields]; 
+            #pragma unroll p_Nfields
+            for(int f=0; f<p_Nfields; ++f){
+              rhsf[f] = rhsq[id+f*p_Np];
+            }
 
             // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
             #pragma unroll p_NfacesNfp
               for(int m=0;m<p_NfacesNfp;++m){
                 dfloat L = LIFT[n+m*p_Np];
-                rhsq1 += L*s_fluxq[es][0][m];
-                rhsq2 += L*s_fluxq[es][1][m];
-                rhsq3 += L*s_fluxq[es][2][m];
-                rhsq4 += L*s_fluxq[es][3][m];
-                rhsq5 += L*s_fluxq[es][4][m];
-                rhsq6 += L*s_fluxq[es][5][m];
-                rhsq7 += L*s_fluxq[es][6][m];
-                rhsq8 += L*s_fluxq[es][7][m];
-                rhsq9 += L*s_fluxq[es][8][m];
+
+                #pragma unroll p_Nfields
+                for(int f=0; f<p_Nfields; ++f){
+                 rhsf[f] += L*s_fluxq[es][f][m];
+                }
+                
               }
 
-            rhsq[id+0*p_Np] = rhsq1;
-            rhsq[id+1*p_Np] = rhsq2;
-            rhsq[id+2*p_Np] = rhsq3;
-            rhsq[id+3*p_Np] = rhsq4;
-            rhsq[id+4*p_Np] = rhsq5;
-            rhsq[id+5*p_Np] = rhsq6;
-            rhsq[id+6*p_Np] = rhsq7;
-            rhsq[id+7*p_Np] = rhsq8;
-            rhsq[id+8*p_Np] = rhsq9;
+            #pragma unroll p_Nfields
+            for(int f=0; f<p_Nfields; ++f){
+             rhsq[id+f*p_Np]= rhsf[f];
+            }
+
           }
         }
       }
