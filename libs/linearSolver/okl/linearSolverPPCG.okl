@@ -1,0 +1,155 @@
+/*
+
+  The MIT License (MIT)
+
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+*/
+
+// WARNING: p_blockSize must be a power of 2
+#define p_Nred 7
+
+@kernel void reductionsPPCG(const dlong N,
+			    const dlong Nblocks,
+			    @restrict const dfloat *invM,
+			    @restrict const dfloat *r,
+			    @restrict const dfloat *p,
+			    @restrict const dfloat *v,
+			    @restrict dfloat *tmpreductions){
+  
+  for(dlong b=0;b<Nblocks;++b;@outer(0)){
+    
+    @shared volatile dfloat s_a[p_blockSize];
+    @shared volatile dfloat s_b[p_blockSize];
+    @shared volatile dfloat s_c[p_blockSize];
+    @shared volatile dfloat s_d[p_blockSize];
+    @shared volatile dfloat s_e[p_blockSize];
+    @shared volatile dfloat s_f[p_blockSize];
+    @shared volatile dfloat s_g[p_blockSize];
+    
+    for(int t=0;t<p_blockSize;++t;@inner(0)){
+      dlong id = t + b*p_blockSize;
+
+      dfloat tmpa = 0, tmpb = 0, tmpc = 0;
+      dfloat tmpd = 0, tmpe = 0, tmpf = 0;
+      dfloat tmpg = 0;
+      
+      while (id<N) {
+	dfloat pn = p[id];
+	dfloat rn = r[id];
+	dfloat vn = v[id];
+	dfloat invMn = invM[id];
+
+	tmpa += pn*vn;
+	tmpb += rn*vn;
+	tmpc += vn*vn;
+	tmpd += rn*invMn*rn;
+	tmpe += rn*invMn*vn;
+	tmpf += vn*invMn*vn;
+	tmpg += rn*rn;
+
+        id += p_blockSize*Nblocks;
+      }
+
+      s_a[t] = tmpa; s_b[t] = tmpb; s_c[t] = tmpc;
+      s_d[t] = tmpd; s_e[t] = tmpe; s_f[t] = tmpf;
+      s_g[t] = tmpg; 
+    }
+    @barrier("local");
+
+#define inc(NT) for(int t=0;t<p_blockSize;++t;@inner(0))  if(t<NT && t+NT<p_blockSize){ s_a[t] += s_a[t+NT]; s_b[t] += s_b[t+NT]; s_c[t] += s_c[t+NT]; s_d[t] += s_d[t+NT]; s_e[t] += s_e[t+NT]; s_f[t] += s_f[t+NT]; s_g[t] += s_g[t+NT]; }
+    
+#if p_blockSize>512
+    inc(512);
+    @barrier("local");
+#endif
+
+#if p_blockSize>256
+    inc(256);
+    @barrier("local");
+#endif
+
+    inc(128);
+    @barrier("local");
+
+    inc(64);
+    @barrier("local");
+
+    inc(32);
+    @barrier("local");
+
+    inc(16);
+    inc(8);
+    inc(4);
+    inc(2);
+    inc(1);
+    
+    for(int t=0;t<p_blockSize;++t;@inner(0)){
+
+      if(t==1) s_a[1] = s_b[0];
+      if(t==2) s_a[2] = s_c[0];
+      if(t==3) s_a[3] = s_d[0];
+      if(t==4) s_a[4] = s_e[0];
+      if(t==5) s_a[5] = s_f[0];
+      if(t==6) s_a[6] = s_g[0];
+      // implicit barrier
+      if(t<p_Nred){
+	tmpreductions[b*p_Nred + t] = s_a[t];
+      }
+    }
+  }
+  
+
+}
+
+
+@kernel void updatePPCG(const dlong N,
+			const int updatex,
+			const dfloat alpha,
+			const dfloat beta,
+			const dfloat lambda, // alpha_old/beta_old
+			@restrict const dfloat *invM,
+			@restrict dfloat *p,
+			@restrict dfloat *r,
+			@restrict dfloat *v,
+			@restrict dfloat *x){
+
+  for(dlong n=0;n<N;++n;@tile(256, @outer, @inner)){
+    if(n<N){ // might not be necessary
+      dfloat pn = p[n];
+      dfloat rn = r[n];
+      dfloat xn = x[n];
+      dfloat vn = v[n];
+      dfloat invMn = invM[n];
+      if(updatex){
+	xn += alpha*pn;
+	xn += (alpha+lambda)*pn;
+	xn -= lambda*invMn*rn;
+	x[n] = xn;
+      }
+      rn -= alpha*vn;
+      pn *= beta;
+      pn += invMn*rn;
+      p[n] = pn;
+      r[n] = rn;
+    }
+  }
+}
