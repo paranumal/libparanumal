@@ -1,0 +1,203 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+// Equilibrium Distribution
+void equiDist2D(const dfloat w,  const dfloat ex, const dfloat ey,
+                const dfloat r,  const dfloat u,  const dfloat v, dfloat *feq){
+  
+  const dfloat un = (ex*u + ey*v); 
+  *feq = r*w*(1.0f + p_ic2*un + 0.5f*p_ic4*un*un - 0.5f*p_ic2*(u*u + v*v)); 
+}
+
+
+
+// Compute collision step and update velocity field
+@kernel void lbsCollisionTri2D(const dlong Nelements,
+                            @restrict const  dlong  *  elementIds,
+                            const dfloat t,
+                            const dfloat gamma, // lambda/dt
+                            @restrict const dfloat * LBM, 
+                            @restrict dfloat *  q,
+                            @restrict dfloat *  U){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
+
+    @exclusive dfloat r_q[p_Nfields]; 
+    @exclusive dlong e; 
+    @exclusive dfloat r_u, r_v,r_r; 
+
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+        const dlong et = eo+es; // element in block
+        if(et<Nelements){
+          e = elementIds[et];
+          const dlong idf = e*p_Nfields*p_Np + n;
+
+          #pragma unroll p_Nfields
+          for(int fld=0; fld<p_Nfields;++fld){
+            r_q[fld] = 0.f;
+          }
+
+          r_r =0.f, r_u=0.f, r_v=0.f; 
+
+          #pragma unroll p_Nfields
+          for(int fld=0; fld<p_Nfields;++fld){
+            const dfloat q_n = q[idf+fld*p_Np]; 
+            r_r += q_n; // density
+            r_u += LBM[fld + 1*p_Nfields]*q_n; 
+            r_v += LBM[fld + 2*p_Nfields]*q_n; 
+            r_q[fld] = q_n;  
+          }
+          r_u = r_u/r_r; //x-velocity
+          r_v = r_v/r_r; //y velocity
+        }
+      }
+    }
+
+    // make sure all node data is loaded into @shared
+    @barrier("local");
+
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+        const dlong et = eo+es; // element in block
+        if(et<Nelements){
+          
+          const dlong idf = e*p_Nfields*p_Np + n;
+          const dlong idn = e*p_Nmacro*p_Np  + n;
+
+          #pragma unroll p_Nfields
+          for(int fld=0; fld<p_Nfields;++fld){
+            const dfloat w  = LBM[fld + 0*p_Nfields]; 
+            const dfloat ex = LBM[fld + 1*p_Nfields]; 
+            const dfloat ey = LBM[fld + 2*p_Nfields]; 
+
+            dfloat qeq = 0.f; 
+            dfloat qn  = r_q[fld]; 
+
+            equiDist2D(w, ex, ey, r_r, r_u, r_v, &qeq); 
+
+            q[idf + fld*p_Np]  = qn - 1.f/(gamma + 0.5f)*(qn - qeq); 
+            // q[idf + fld*p_Np]  = qn; 
+
+          }
+          
+          U[idn + 0*p_Np] = r_r; 
+          U[idn + 1*p_Np] = r_u; 
+          U[idn + 2*p_Np] = r_v; 
+        }
+      }
+    }
+  }   
+}
+
+
+
+// Compute collision step and update velocity field
+@kernel void lbsMomentsTri2D(const dlong Nelements,
+                                    // @restrict const  dlong  *  elementIds,
+                                    @restrict const dfloat * LBM, 
+                                    @restrict const dfloat *  q,
+                                    @restrict dfloat *  U){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
+
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+        const dlong et = eo+es; // element in block
+        if(et<Nelements){
+          // const dlong e = elementIds[et];
+          const dlong e = et;
+          const dlong id = e*p_Nfields*p_Np + n;
+
+          dfloat rn = 0.f; 
+          dfloat un = 0.f; 
+          dfloat vn = 0.f; 
+
+          #pragma unroll p_Nfields
+          for(int fld=0; fld<p_Nfields;++fld){
+            const dfloat qn = q[id+fld*p_Np]; 
+            rn  += qn; // density
+            un  += LBM[fld + 1*p_Nfields]*qn; 
+            vn  += LBM[fld + 2*p_Nfields]*qn; 
+          }
+          un = un/rn; //x-velocity
+          vn = vn/rn; //y-velocity
+
+          const dlong idn = e*p_Nmacro*p_Np + n;
+
+          U[idn + 0*p_Np] = rn; 
+          U[idn + 1*p_Np] = un; 
+          U[idn + 2*p_Np] = vn; 
+
+        }
+      }
+    }
+  }
+}
+
+
+
+// Compute phase field from mocaro field
+@kernel void lbsPhaseFieldTri2D(const dlong Nelements,
+                            // @restrict const  dlong  *  elementIds,
+                            @restrict const dfloat * LBM, 
+                            @restrict const dfloat *  U,
+                            @restrict dfloat *  q){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
+
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+        const dlong et = eo+es; // element in block
+        if(et<Nelements){
+         // const dlong e = elementIds[et];
+         const dlong e = et;
+
+         const dlong idf = e*p_Nfields*p_Np + n;
+         const dlong idn = e*p_Nmacro*p_Np + n;
+
+          const dfloat rn = U[idn + 0*p_Np]; 
+          const dfloat un = U[idn + 1*p_Np]; 
+          const dfloat vn = U[idn + 2*p_Np]; 
+
+         #pragma unroll p_Nfields
+          for(int fld=0; fld<p_Nfields;++fld){
+            const dfloat w  = LBM[fld + 0*p_Nfields]; 
+            const dfloat ex = LBM[fld + 1*p_Nfields]; 
+            const dfloat ey = LBM[fld + 2*p_Nfields]; 
+
+            dfloat qeq = 0.f;  
+            equiDist2D(w,ex,ey, rn, un, vn, &qeq); 
+
+            q[idf + fld*p_Np]  = qeq;
+
+          }
+
+        }
+      }
+    }
+  }
+}
