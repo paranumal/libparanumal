@@ -129,7 +129,8 @@ int ppcg::Solve(solver_t& solver, precon_t& precon,
        
        r <= r - alpha*v;
        p <= M\r + beta*p;
-       
+
+       [ needs alpha and beta at first iteration (assuming k is odd at start) ]
     */
     
     updatePPCGKernel(N, (int)updatex, alpha, beta, (dfloat)(alpha_old/beta_old), o_invM, o_p, o_r, o_v, o_x);
