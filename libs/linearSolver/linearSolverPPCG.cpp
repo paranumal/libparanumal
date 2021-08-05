@@ -27,18 +27,19 @@ SOFTWARE.
 #include "linearSolver.hpp"
 
 #define PPCG_BLOCKSIZE 256
-#define PPCG_NRED 7
+#define PPCG_NREDUCTIONS 7
 
 ppcg::ppcg(dlong _N, dlong _Nhalo,
          platform_t& _platform, settings_t& _settings, terminator_t &_terminator, MPI_Comm _comm):
   linearSolver_t(_N, _Nhalo, _platform, _settings, _terminator, _comm) {
 
-  dlong Ntotal = N + Nhalo;
+  dlong Ntotal = N;
 
-  flexible = settings.compareSetting("LINEAR SOLVER", "FPPCG");
+  Nblocks = (_N+PPCG_BLOCKSIZE-1)/PPCG_BLOCKSIZE;
 
   /*aux variables */
   dfloat *dummy = (dfloat *) calloc(Ntotal,sizeof(dfloat)); //need this to avoid uninitialized memory warnings
+
   o_p  = platform.malloc(Ntotal*sizeof(dfloat),dummy);
   o_r  = platform.malloc(Ntotal*sizeof(dfloat),dummy);
   o_v  = platform.malloc(Ntotal*sizeof(dfloat),dummy);
@@ -46,10 +47,13 @@ ppcg::ppcg(dlong _N, dlong _Nhalo,
   free(dummy);
 
   //pinned tmp buffer for reductions
-  tmpreductions = (dfloat*) platform.hostMalloc(PPCG_NRED*PPCG_BLOCKSIZE*sizeof(dfloat),
-					       NULL, h_tmpreductions);
-  o_tmpreductions = platform.malloc(PPCG_BLOCKSIZE*sizeof(dfloat));
+  reductionTmps = (dfloat*) platform.hostMalloc(PPCG_NREDUCTIONS*PPCG_BLOCKSIZE*sizeof(dfloat),
+					       NULL, h_reductionTmps);
+  o_reductionTmps = platform.malloc(PPCG_NREDUCTIONS*PPCG_BLOCKSIZE*sizeof(dfloat));
 
+  globalTmps = (dfloat*) calloc(PPCG_NREDUCTIONS, sizeof(dfloat));
+  localTmps = (dfloat*) calloc(PPCG_NREDUCTIONS, sizeof(dfloat));
+  
   /* build kernels */
   occa::properties kernelInfo = platform.props; //copy base properties
 
@@ -154,7 +158,7 @@ int ppcg::Solve(solver_t& solver, precon_t& precon,
 
     */
 
-    ReductionPPCG(N, o_invM, o_r, o_p, o_v, &a, &b, &c, &d, &e, &f, &g);
+    reductionsPPCG(N, o_invM, o_r, o_p, o_v, &a, &b, &c, &d, &e, &f, &g);
 
     alpha_old = alpha;
     alpha = d/a;
@@ -179,25 +183,53 @@ int ppcg::Solve(solver_t& solver, precon_t& precon,
   return iter;
 }
 
-dfloat ppcg::UpdatePPCG(const dfloat alpha, occa::memory &o_x, occa::memory &o_r){
+/*
+ Kronbichler merged reduction kernel calling:
 
-  // x <= x + alpha*p
-  // r <= r - alpha*A*p
-  // dot(r,r)
-  int Nblocks = (N+PPCG_BLOCKSIZE-1)/PPCG_BLOCKSIZE;
-  Nblocks = (Nblocks>PPCG_BLOCKSIZE) ? PPCG_BLOCKSIZE : Nblocks; //limit to PPCG_BLOCKSIZE entries
+       a = p.v;
+       b = r.v;
+       c = v.v;
+       d = r.(M\r);
+       e = r.(M\v);
+       f = v.(M\v);
+       g = r.r;
 
-  updatePPCGKernel(N, Nblocks, o_p, o_Ap, alpha, o_x, o_r, o_tmprdotr);
+*/
 
-  o_tmprdotr.copyTo(tmprdotr, Nblocks*sizeof(dfloat));
+void ppcg::ReductionsPPCG(const dlong N,
+			  occa::memory &o_invM,
+			  occa::memory &o_r,
+			  occa::memory &o_p,
+			  occa::memory &o_v,
+			  dfloat *a, dfloat *b, dfloat *c,
+			  dfloat *d, dfloat *e, dfloat *f,
+			  dfloat *g){
+  
+  reductionsPPCGKernel(N, Nblocks, o_invM, o_r, o_p, o_v, o_reductionTmps);
+  
+  o_reductionTmps.copyTo(reductionTmps, PPCG_NREDUCTIONS*Nblocks*sizeof(dfloat));
 
-  dfloat rdotr1 = 0;
-  for(int n=0;n<Nblocks;++n)
-    rdotr1 += tmprdotr[n];
+  dlong id = 0;
+  for(int fld=0;fld<PPCG_NREDUCTIONS;++fld){
+    localTmps[fld] = 0;
+  }
+  
+  for(int n=0;n<Nblocks;++n){
+    for(int fld=0;fld<PPCG_NREDUCTIONS;++fld){  // matches PPCG_NREDUCTIONS
+      localTmps[fld] += reductionTmps[id++];
+    }
+  }
+  
+  MPI_Allreduce(localTmps, globalTmps, PPCG_NREDUCTIONS, MPI_DFLOAT, MPI_SUM, comm);
+  
+  *a = globalTmps[0];
+  *b = globalTmps[1];
+  *c = globalTmps[2];
+  *d = globalTmps[3];
+  *e = globalTmps[4];
+  *f = globalTmps[5];
+  *g = globalTmps[6];
 
-  dfloat globalrdotr1 = 0;
-  MPI_Allreduce(&rdotr1, &globalrdotr1, 1, MPI_DFLOAT, MPI_SUM, comm);
-  return globalrdotr1;
 }
 
 ppcg::~ppcg() {
