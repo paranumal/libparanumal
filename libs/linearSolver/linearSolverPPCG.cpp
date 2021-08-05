@@ -105,7 +105,7 @@ int ppcg::Solve(solver_t& solver, precon_t& precon,
   // 1. alpha = (r.(M\r))/(r.r);
   // 2. beta = ?
   // 3. check  if(fabs(g-2.*alpha*b+alpha*alpha*c)<TOL){ .. } 
-  
+  // 4. need to initialize p, v
   
   int iter;
   for(iter=0;iter<MAXIT;++iter){
