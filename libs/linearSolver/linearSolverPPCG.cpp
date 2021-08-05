@@ -30,19 +30,16 @@ SOFTWARE.
 #define PPCG_NREDUCTIONS 7
 
 ppcg::ppcg(dlong _N, dlong _Nhalo,
-         platform_t& _platform, settings_t& _settings, terminator_t &_terminator, MPI_Comm _comm):
-  linearSolver_t(_N, _Nhalo, _platform, _settings, _terminator, _comm) {
+         platform_t& _platform, settings_t& _settings, MPI_Comm _comm):
+  linearSolver_t(_N, _Nhalo, _platform, _settings,  _comm) {
 
-  dlong Ntotal = N;
-
-  Nblocks = (_N+PPCG_BLOCKSIZE-1)/PPCG_BLOCKSIZE;
+  Nblocks = (N+PPCG_BLOCKSIZE-1)/PPCG_BLOCKSIZE;
 
   /*aux variables */
-  dfloat *dummy = (dfloat *) calloc(Ntotal,sizeof(dfloat)); //need this to avoid uninitialized memory warnings
+  dfloat *dummy = (dfloat *) calloc(N,sizeof(dfloat)); //need this to avoid uninitialized memory warnings
 
-  o_p  = platform.malloc(Ntotal*sizeof(dfloat),dummy);
-  o_r  = platform.malloc(Ntotal*sizeof(dfloat),dummy);
-  o_v  = platform.malloc(Ntotal*sizeof(dfloat),dummy);
+  o_p  = platform.malloc(N*sizeof(dfloat),dummy);
+  o_v  = platform.malloc(N*sizeof(dfloat),dummy);
   
   free(dummy);
 
@@ -50,7 +47,7 @@ ppcg::ppcg(dlong _N, dlong _Nhalo,
   reductionTmps = (dfloat*) platform.hostMalloc(PPCG_NREDUCTIONS*PPCG_BLOCKSIZE*sizeof(dfloat),
 					       NULL, h_reductionTmps);
   o_reductionTmps = platform.malloc(PPCG_NREDUCTIONS*PPCG_BLOCKSIZE*sizeof(dfloat));
-
+  
   globalTmps = (dfloat*) calloc(PPCG_NREDUCTIONS, sizeof(dfloat));
   localTmps = (dfloat*) calloc(PPCG_NREDUCTIONS, sizeof(dfloat));
   
@@ -74,7 +71,7 @@ int ppcg::Solve(solver_t& solver, precon_t& precon,
 
   int rank;
   MPI_Comm_rank(comm, &rank);
-  linAlg_t<dfloat> &linAlg = platform.linAlg;
+  linAlg_t &linAlg = platform.linAlg;
 
   // register scalars
   dfloat a, b, c, d, e, f, g;
@@ -94,30 +91,30 @@ int ppcg::Solve(solver_t& solver, precon_t& precon,
   // subtract r = r - A*x
   linAlg.axpy(N, -1.f, o_Ax, 1.f, o_r);
 
-  rdotr = linAlg.norm2(N, o_r, comm);
-  rdotr = rdotr*rdotr;
+  g = linAlg.norm2(N, o_r, comm);
+  g = g*g;
 
   if (settings.compareSetting("LINEAR SOLVER STOPPING CRITERION", "ABS/REL-INITRESID")) {
-    TOL = mymax(tol*tol*rdotr,tol*tol);
+    TOL = mymax(tol*tol*g,tol*tol);
   }
 
   if (verbose&&(rank==0))
-    printf("PPCG: initial res norm %12.12f \n", sqrt(rdotr));
+    printf("PPCG: initial res norm %12.12f \n", sqrt(g));
 
-  // reset terminator state for new solve
-  terminator.reset();
+  // TW TO DO -
+  // 1. alpha = (r.(M\r))/(r.r);
+  // 2. beta = ?
+  // 3. check  if(fabs(g-2.*alpha*b+alpha*alpha*c)<TOL){ .. } 
+  
   
   int iter;
   for(iter=0;iter<MAXIT;++iter){
 
     // Exit if tolerance is reached, taking at least one step.
-    if ((iter == 0) && (g == 0.0)) break;
-
-    if(iter>0)
-      if(terminator.stopTest(o_x, g, TOL)){
-	// need to check if iter is odd (or is that even)
-	break;
-      }
+    if (((iter == 0) && (g == 0.0)) ||
+        ((iter > 0) && (g <= TOL))) {
+      break;
+    }
 
     int updatex = !(iter%2);
 
@@ -158,27 +155,32 @@ int ppcg::Solve(solver_t& solver, precon_t& precon,
 
     */
 
-    reductionsPPCG(N, o_invM, o_r, o_p, o_v, &a, &b, &c, &d, &e, &f, &g);
+    ReductionsPPCG(o_r, &a, &b, &c, &d, &e, &f, &g);
 
+    // TW: check this?
     alpha_old = alpha;
-    alpha = d/a;
-
+    if(a!=0){
+      alpha = d/a;
+    }else{
+      printf("ppcg::Solve a=zero\n");
+      exit(-1);
+    }
 
     if(fabs(g-2.*alpha*b+alpha*alpha*c)<TOL){ // notice comparing square
       linAlg.axpy(N, alpha, o_p, 1., o_x);
     }
+
+    // TW check this
     beta_old = beta;
-    beta = (d-2.*alpha*e+alpha*apha*f)/d;
+    beta = (d-2.*alpha*e+alpha*alpha*f)/d;
 
     if (verbose&&(rank==0)) {
-      if(rdotr<0)
-        printf("WARNING CG: rdotr = %17.15lf\n", rdotr);
+      if(g<0)
+        printf("WARNING CG: rdotr = %17.15lf\n", g);
       
       printf("CG: it %d, r norm %12.12le, alpha = %le \n", iter+1, sqrt(g), alpha);
     }
   }
-
-
 
   return iter;
 }
@@ -196,30 +198,31 @@ int ppcg::Solve(solver_t& solver, precon_t& precon,
 
 */
 
-void ppcg::ReductionsPPCG(const dlong N,
-			  occa::memory &o_invM,
-			  occa::memory &o_r,
-			  occa::memory &o_p,
-			  occa::memory &o_v,
+void ppcg::ReductionsPPCG(occa::memory &o_r,
 			  dfloat *a, dfloat *b, dfloat *c,
 			  dfloat *d, dfloat *e, dfloat *f,
 			  dfloat *g){
-  
+
+  // invoke reductions kernel
   reductionsPPCGKernel(N, Nblocks, o_invM, o_r, o_p, o_v, o_reductionTmps);
-  
+
+  // copy partial sums to HOST
   o_reductionTmps.copyTo(reductionTmps, PPCG_NREDUCTIONS*Nblocks*sizeof(dfloat));
 
+  // initialize accumulators
   dlong id = 0;
   for(int fld=0;fld<PPCG_NREDUCTIONS;++fld){
     localTmps[fld] = 0;
   }
-  
+
+  // finalize local accumulations
   for(int n=0;n<Nblocks;++n){
     for(int fld=0;fld<PPCG_NREDUCTIONS;++fld){  // matches PPCG_NREDUCTIONS
       localTmps[fld] += reductionTmps[id++];
     }
   }
-  
+
+  // globalize accumulations
   MPI_Allreduce(localTmps, globalTmps, PPCG_NREDUCTIONS, MPI_DFLOAT, MPI_SUM, comm);
   
   *a = globalTmps[0];
@@ -234,4 +237,12 @@ void ppcg::ReductionsPPCG(const dlong N,
 
 ppcg::~ppcg() {
   updatePPCGKernel.free();
+  reductionsPPCGKernel.free();
+  o_p.free();
+  o_v.free();
+  o_reductionTmps.free();
+  h_reductionTmps.free();
+  free(reductionTmps);
+  free(localTmps);
+  free(globalTmps);
 }

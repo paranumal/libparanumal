@@ -86,28 +86,29 @@ public:
 class ppcg: public linearSolver_t {
 private:
 
+  dlong N;
+  dlong Nblocks;
+  
   occa::memory o_invM;
-  occa::memory o_p, o_r, o_v;
-  occa::memory o_tmpReductions;
+  occa::memory o_p, o_v, o_Ax;
+  occa::memory o_reductionTmps;
+  occa::memory h_reductionTmps;
 
   dfloat *localTmps, *globalTmps, *reductionTmps;
+
 
   occa::kernel updatePPCGKernel;
   occa::kernel reductionsPPCGKernel;
 
-  void ReductionsPPCG(const dlong N,
-		      occa::memory &o_invM,
-		      occa::memory &o_r,
-		      occa::memory &o_p,
-		      occa::memory &o_v,
+  void ReductionsPPCG(occa::memory &o_r,
 		      dfloat *a, dfloat *b, dfloat *c,
 		      dfloat *d, dfloat *e, dfloat *f,
 		      dfloat *g);
   
 public:
-  pcg(dlong _N, dlong _Nhalo,
+  ppcg(dlong _N, dlong _Nhalo,
        platform_t& _platform, settings_t& _settings, MPI_Comm _comm);
-  ~pcg();
+  ~ppcg();
 
   int Solve(solver_t& solver, precon_t& precon,
             occa::memory& o_x, occa::memory& o_rhs,
