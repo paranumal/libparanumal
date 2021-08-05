@@ -36,6 +36,8 @@ linearSolver_t* linearSolver_t::Setup(dlong N, dlong Nhalo,
     linearSolver = new nbpcg(N, Nhalo, platform, settings, comm);
   } else if (settings.compareSetting("LINEAR SOLVER","NBFPCG")){
     linearSolver = new nbfpcg(N, Nhalo, platform, settings, comm);
+  } else if (settings.compareSetting("LINEAR SOLVER","PPCG")){
+    linearSolver = new ppcg(N, Nhalo, platform, settings, comm);
   } else if (settings.compareSetting("LINEAR SOLVER","PCG")){
     linearSolver = new pcg(N, Nhalo, platform, settings, comm);
   } else if (settings.compareSetting("LINEAR SOLVER","PGMRES")){
