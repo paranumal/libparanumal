@@ -108,6 +108,8 @@ public:
        platform_t& _platform, settings_t& _settings, MPI_Comm _comm);
   ~ppcg();
 
+  void SetupPreconditioner(occa::memory &_o_invM);
+
   int Solve(solver_t& solver, precon_t& precon,
             occa::memory& o_x, occa::memory& o_rhs,
             const dfloat tol, const int MAXIT, const int verbose);

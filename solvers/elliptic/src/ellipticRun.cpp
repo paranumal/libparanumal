@@ -25,6 +25,7 @@ SOFTWARE.
 */
 
 #include "elliptic.hpp"
+#include "ellipticPrecon.hpp"
 
 void elliptic_t::Run(){
 
@@ -38,6 +39,23 @@ void elliptic_t::Run(){
   linearSolver_t *linearSolver = linearSolver_t::Setup(Ndofs, Nhalo,
                                                        platform, settings, mesh.comm);
 
+  if (settings.compareSetting("LINEAR SOLVER", "PPCG")) {
+    // JacobiPrecon copy here - because it is private 
+
+    dfloat *diagA    = (dfloat*) calloc(Ndofs, sizeof(dfloat));
+    dfloat *invDiagA = (dfloat*) calloc(Ndofs, sizeof(dfloat));
+    BuildOperatorDiagonal(diagA);
+    for (dlong n=0;n<Ndofs;n++)
+      invDiagA[n] = 1.0/diagA[n];
+    
+    occa::memory o_invDiagA = platform.malloc(Ndofs*sizeof(dfloat), invDiagA);
+    
+    ((ppcg*)linearSolver)->SetupPreconditioner(o_invDiagA);
+    
+    free(diagA);
+    free(invDiagA);
+  }
+  
   occa::properties kernelInfo = mesh.props; //copy base occa properties
 
   string dataFileName;
@@ -172,7 +190,7 @@ void elliptic_t::Run(){
     ogsMasked->Gather(o_x, o_xL, ogs_dfloat, ogs_add, ogs_notrans);
   }
 
-  int maxIter = 78;
+  int maxIter = 80;
   int verbose = settings.compareSetting("VERBOSE", "TRUE") ? 1 : 0;
 
   MPI_Barrier(mesh.comm);

@@ -51,11 +51,7 @@ ppcg::ppcg(dlong _N, dlong _Nhalo,
   o_p  = platform.malloc(N*sizeof(dfloat),dummy);
   o_v  = platform.malloc(N*sizeof(dfloat),dummy);
   o_z  = platform.malloc(N*sizeof(dfloat),dummy);
-  
-  // placeholder for diagonal
   o_invM  = platform.malloc(N*sizeof(dfloat),dummy);
-  
-  linAlg.set(Ntotal, 1.0, o_invM);
   
   free(dummy);
 
@@ -78,6 +74,10 @@ ppcg::ppcg(dlong _N, dlong _Nhalo,
   // combined update kernel
   updatePPCGKernel = platform.buildKernel(LINEARSOLVER_DIR "/okl/linearSolverPPCG.okl",
 					  "updatePPCG", kernelInfo);
+}
+
+void ppcg::SetupPreconditioner(occa::memory &_o_invM) {
+  o_invM.copyFrom(_o_invM);
 }
 
 int ppcg::Solve(solver_t& solver, precon_t& precon,
