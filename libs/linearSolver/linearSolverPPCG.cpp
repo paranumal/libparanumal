@@ -41,8 +41,6 @@ ppcg::ppcg(dlong _N, dlong _Nhalo,
   platform.linAlg.InitKernels({"axpy", "amxpy",
 	"innerProd", "norm2", "set"});
 
-  linAlg_t &linAlg = platform.linAlg;
-  
   Nblocks = (Ntotal+PPCG_BLOCKSIZE-1)/PPCG_BLOCKSIZE;
 
   /*aux variables */
@@ -160,16 +158,11 @@ int ppcg::Solve(solver_t& solver, precon_t& precon,
   // do PPCG iterations (start with iter 2)
   for(;iter<MAXIT;++iter){
 
-    // some diagnostics
-    printf("CG: it %d, r norm %12.12le, alpha = %le \n", iter, sqrt(g), alpha);
-    
-    // Exit if tolerance is reached, taking at least one step.
-    if(g<=TOL){
-      break;
+    if (verbose&&(rank==0)) {
+      // some diagnostics
+      printf("CG: it %d, r norm %12.12le, alpha = %le \n", iter, sqrt(g), alpha);
     }
-
-    int updatex = (iter%2);
-
+    
     /* 
        M. Kronbichler  - "efficient matrix-free methods with deal.ii" CEED Annual Meeting 5, 2021
 
@@ -184,7 +177,8 @@ int ppcg::Solve(solver_t& solver, precon_t& precon,
 
        [ needs alpha and beta at first iteration (assuming k is odd at start) ]
     */
-    
+
+    int updatex = (iter%2);
     updatePPCGKernel(N, (int)updatex, alpha, beta, (dfloat)(alpha_old/beta_old), o_invM, o_p, o_r, o_v, o_x);
     
     /* 
@@ -219,19 +213,19 @@ int ppcg::Solve(solver_t& solver, precon_t& precon,
       exit(-1);
     }
 
-    if(fabs(g-2.*alpha*b+alpha*alpha*c)<TOL){ // notice comparing square
-      linAlg.axpy(N, alpha, o_p, 1., o_x); // x += alpha*p
-    }
-
     // TW check this
     beta_old = beta;
     beta = (d-2.*alpha*e+alpha*alpha*f)/d;
 
+    if(fabs(g-2.*alpha*b+alpha*alpha*c)<TOL){ // notice comparing square
+      printf("incrementing x in ppcg solve\n");
+      linAlg.axpy(N, alpha, o_p, 1., o_x); // x += alpha*p
+      break;
+    }
+
     if (verbose&&(rank==0)) {
       if(g<0)
         printf("WARNING CG: rdotr = %17.15lf\n", g);
-      
-      printf("CG: it %d, r norm %12.12le, alpha = %le \n", iter+1, sqrt(g), alpha);
     }
   }
 
@@ -263,12 +257,12 @@ void ppcg::ReductionsPPCG(occa::memory &o_r,
   o_reductionTmps.copyTo(reductionTmps);
 
   // initialize accumulators
-  dlong id = 0;
   for(int fld=0;fld<PPCG_NREDUCTIONS;++fld){
     localTmps[fld] = 0;
   }
 
   // finalize local accumulations
+  dlong id = 0;
   for(int n=0;n<Nblocks;++n){
     for(int fld=0;fld<PPCG_NREDUCTIONS;++fld){  // matches PPCG_NREDUCTIONS
       localTmps[fld] += reductionTmps[id++];

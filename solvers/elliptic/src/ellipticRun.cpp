@@ -44,10 +44,13 @@ void elliptic_t::Run(){
 
     dfloat *diagA    = (dfloat*) calloc(Ndofs, sizeof(dfloat));
     dfloat *invDiagA = (dfloat*) calloc(Ndofs, sizeof(dfloat));
+
     BuildOperatorDiagonal(diagA);
-    for (dlong n=0;n<Ndofs;n++)
+
+    for (dlong n=0;n<Ndofs;n++){
       invDiagA[n] = 1.0/diagA[n];
-    
+    }
+
     occa::memory o_invDiagA = platform.malloc(Ndofs*sizeof(dfloat), invDiagA);
     
     ((ppcg*)linearSolver)->SetupPreconditioner(o_invDiagA);
@@ -190,7 +193,7 @@ void elliptic_t::Run(){
     ogsMasked->Gather(o_x, o_xL, ogs_dfloat, ogs_add, ogs_notrans);
   }
 
-  int maxIter = 80;
+  int maxIter = 1000;
   int verbose = settings.compareSetting("VERBOSE", "TRUE") ? 1 : 0;
 
   MPI_Barrier(mesh.comm);

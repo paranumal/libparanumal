@@ -75,7 +75,18 @@
     }
     @barrier("local");
 
-#define inc(NT) for(int t=0;t<p_blockSize;++t;@inner(0))  if(t<NT && t+NT<p_blockSize){ s_a[t] += s_a[t+NT]; s_b[t] += s_b[t+NT]; s_c[t] += s_c[t+NT]; s_d[t] += s_d[t+NT]; s_e[t] += s_e[t+NT]; s_f[t] += s_f[t+NT]; s_g[t] += s_g[t+NT]; }
+#define inc(NT)								\
+    for(int t=0;t<p_blockSize;++t;@inner(0)) {				\
+      if(t<NT && t+NT<p_blockSize){					\
+	s_a[t] += s_a[t+NT];						\
+	s_b[t] += s_b[t+NT];						\
+	s_c[t] += s_c[t+NT];						\
+	s_d[t] += s_d[t+NT];						\
+	s_e[t] += s_e[t+NT];						\
+	s_f[t] += s_f[t+NT];						\
+	s_g[t] += s_g[t+NT];						\
+      }									\
+    }
     
 #if p_blockSize>512
     inc(512);
