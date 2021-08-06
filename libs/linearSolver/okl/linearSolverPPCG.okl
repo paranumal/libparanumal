@@ -150,8 +150,7 @@
       dfloat invMn = invM[n];
       if(updatex){
 	xn += alpha*pn;
-	xn += lambda*pn;
-	xn -= lambda*invMn*rn;
+	xn += lambda*(pn-invMn*rn);
 	x[n] = xn;
       }
       rn -= alpha*vn;

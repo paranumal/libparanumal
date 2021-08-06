@@ -202,8 +202,7 @@ void elliptic_t::Run(){
   //call the solver
   dfloat tol = 1e-10;
   int iter = Solve(*linearSolver, o_x, o_r, tol, maxIter, verbose);
-
-
+  
   //add the boundary data to the masked nodes
   if(settings.compareSetting("DISCRETIZATION","CONTINUOUS")){
     // scatter x to LocalDofs if c0

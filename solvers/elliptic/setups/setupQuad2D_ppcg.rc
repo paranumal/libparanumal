@@ -47,7 +47,7 @@ CUDA
 0
 
 [LAMBDA]
-1
+10
 
 # can be IPDG, or CONTINUOUS
 [DISCRETIZATION]
@@ -65,7 +65,7 @@ JACOBI
 ###########################################
 
 [OUTPUT TO FILE]
-FALSE
+TRUE
 
 [OUTPUT FILE NAME]
 elliptic

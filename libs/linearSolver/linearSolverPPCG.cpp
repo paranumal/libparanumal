@@ -26,7 +26,7 @@ SOFTWARE.
 
 #include "linearSolver.hpp"
 
-#define PPCG_BLOCKSIZE 512
+#define PPCG_BLOCKSIZE 256
 #define PPCG_NREDUCTIONS 7
 
 ppcg::ppcg(dlong _N, dlong _Nhalo,
@@ -49,6 +49,7 @@ ppcg::ppcg(dlong _N, dlong _Nhalo,
   o_p  = platform.malloc(N*sizeof(dfloat),dummy);
   o_v  = platform.malloc(N*sizeof(dfloat),dummy);
   o_z  = platform.malloc(N*sizeof(dfloat),dummy);
+  o_Ax = platform.malloc(Ntotal*sizeof(dfloat),dummy);
   o_invM  = platform.malloc(N*sizeof(dfloat),dummy);
   
   free(dummy);
@@ -131,7 +132,7 @@ int ppcg::Solve(solver_t& solver, precon_t& precon,
 
   e = linAlg.innerProd(N, o_r, o_z, comm); // e = r.z
 
-  for(iter=0;iter<2;++iter){
+  for(iter=0;iter<3;++iter){
   
     solver.Operator(o_p, o_v); // v = A*p
     
@@ -142,6 +143,9 @@ int ppcg::Solve(solver_t& solver, precon_t& precon,
     
     linAlg.axpy(N,  alpha, o_p, 1.0, o_x); // x <= x + alpha*p
     linAlg.axpy(N, -alpha, o_v, 1.0, o_r); // r <= r - alpha*v
+
+    // need to break here to avoid updating beta,beta_old
+    if(iter==2) break;
     
     g = linAlg.norm2(N, o_r, comm);
     g = g*g;
@@ -175,7 +179,7 @@ int ppcg::Solve(solver_t& solver, precon_t& precon,
        [ needs alpha and beta at first iteration (assuming k is odd at start) ]
     */
 
-    int updatex = !(iter%2);
+    int updatex = (iter%2);
     updatePPCGKernel(N, (int)updatex, alpha, beta, (dfloat)(alpha_old/beta_old), o_invM, o_p, o_r, o_v, o_x);
     
     /* 
