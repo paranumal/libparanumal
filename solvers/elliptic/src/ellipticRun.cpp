@@ -172,7 +172,7 @@ void elliptic_t::Run(){
     ogsMasked->Gather(o_x, o_xL, ogs_dfloat, ogs_add, ogs_notrans);
   }
 
-  int maxIter = 5000;
+  int maxIter = 78;
   int verbose = settings.compareSetting("VERBOSE", "TRUE") ? 1 : 0;
 
   MPI_Barrier(mesh.comm);

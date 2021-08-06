@@ -26,27 +26,42 @@ SOFTWARE.
 
 #include "linearSolver.hpp"
 
-#define PPCG_BLOCKSIZE 256
+#define PPCG_BLOCKSIZE 512
 #define PPCG_NREDUCTIONS 7
 
 ppcg::ppcg(dlong _N, dlong _Nhalo,
          platform_t& _platform, settings_t& _settings, MPI_Comm _comm):
   linearSolver_t(_N, _Nhalo, _platform, _settings,  _comm) {
 
-  Nblocks = (N+PPCG_BLOCKSIZE-1)/PPCG_BLOCKSIZE;
+  dlong Ntotal = N+Nhalo;
+
+  printf("ppcg::ppcg N=%d\n", Ntotal);
+  
+  // Make sure LinAlg has the necessary kernels
+  platform.linAlg.InitKernels({"axpy", "amxpy",
+	"innerProd", "norm2", "set"});
+
+  linAlg_t &linAlg = platform.linAlg;
+  
+  Nblocks = (Ntotal+PPCG_BLOCKSIZE-1)/PPCG_BLOCKSIZE;
 
   /*aux variables */
-  dfloat *dummy = (dfloat *) calloc(N,sizeof(dfloat)); //need this to avoid uninitialized memory warnings
+  dfloat *dummy = (dfloat *) calloc(Ntotal,sizeof(dfloat)); //need this to avoid uninitialized memory warnings
 
   o_p  = platform.malloc(N*sizeof(dfloat),dummy);
   o_v  = platform.malloc(N*sizeof(dfloat),dummy);
+  o_z  = platform.malloc(N*sizeof(dfloat),dummy);
+  
+  // placeholder for diagonal
+  o_invM  = platform.malloc(N*sizeof(dfloat),dummy);
+  
+  linAlg.set(Ntotal, 1.0, o_invM);
   
   free(dummy);
 
   //pinned tmp buffer for reductions
-  reductionTmps = (dfloat*) platform.hostMalloc(PPCG_NREDUCTIONS*PPCG_BLOCKSIZE*sizeof(dfloat),
-					       NULL, h_reductionTmps);
-  o_reductionTmps = platform.malloc(PPCG_NREDUCTIONS*PPCG_BLOCKSIZE*sizeof(dfloat));
+  reductionTmps = (dfloat*) platform.hostMalloc(PPCG_NREDUCTIONS*Nblocks*sizeof(dfloat), NULL, h_reductionTmps);
+  o_reductionTmps = platform.malloc(PPCG_NREDUCTIONS*Nblocks*sizeof(dfloat));
   
   globalTmps = (dfloat*) calloc(PPCG_NREDUCTIONS, sizeof(dfloat));
   localTmps = (dfloat*) calloc(PPCG_NREDUCTIONS, sizeof(dfloat));
@@ -107,16 +122,53 @@ int ppcg::Solve(solver_t& solver, precon_t& precon,
   // 3. check  if(fabs(g-2.*alpha*b+alpha*alpha*c)<TOL){ .. } 
   // 4. need to initialize p, v
   
-  int iter;
-  for(iter=0;iter<MAXIT;++iter){
+  int iter = 0;
 
+  // do a warm start PCG iterations =====>
+  linAlg.amxpy(N, 1.0, o_invM, o_r, 0.0, o_z); // z = M\r ( a bit lazy )
+
+  o_z.copyTo(o_p, N*sizeof(dfloat)); // p = z
+
+  e = linAlg.innerProd(N, o_r, o_z, comm); // e = r.z
+
+  for(iter=0;iter<2;++iter){
+  
+    solver.Operator(o_p, o_v); // v = A*p
+    
+    a = linAlg.innerProd(N, o_p, o_v, comm); // e = r.z
+
+    alpha_old = alpha;
+    alpha = e/a; // alpha = r.z/p.v
+    
+    linAlg.axpy(N,  alpha, o_p, 1.0, o_x); // x <= x + alpha*p
+    linAlg.axpy(N, -alpha, o_v, 1.0, o_r); // r <= r - alpha*v
+    
+    g = linAlg.norm2(N, o_r, comm);
+    g = g*g;
+    
+    linAlg.amxpy(N, 1.0, o_invM, o_r, 0.0, o_z); // z <= M\r ( a bit lazy )
+    
+    dfloat enew = linAlg.innerProd(N, o_r, o_z, comm); // enw = r.z
+    beta_old = beta;
+    beta  = enew/e; // beta = r1.z1/r0.z0
+    e = enew; // e = r1.z1
+    
+    linAlg.axpy(N, 1.0, o_z, beta, o_p); // p <= z + beta*p
+  }
+  // <==== end PCG iteration here
+  
+  // do PPCG iterations (start with iter 2)
+  for(;iter<MAXIT;++iter){
+
+    // some diagnostics
+    printf("CG: it %d, r norm %12.12le, alpha = %le \n", iter, sqrt(g), alpha);
+    
     // Exit if tolerance is reached, taking at least one step.
-    if (((iter == 0) && (g == 0.0)) ||
-        ((iter > 0) && (g <= TOL))) {
+    if(g<=TOL){
       break;
     }
 
-    int updatex = !(iter%2);
+    int updatex = (iter%2);
 
     /* 
        M. Kronbichler  - "efficient matrix-free methods with deal.ii" CEED Annual Meeting 5, 2021
@@ -208,7 +260,7 @@ void ppcg::ReductionsPPCG(occa::memory &o_r,
   reductionsPPCGKernel(N, Nblocks, o_invM, o_r, o_p, o_v, o_reductionTmps);
 
   // copy partial sums to HOST
-  o_reductionTmps.copyTo(reductionTmps, PPCG_NREDUCTIONS*Nblocks*sizeof(dfloat));
+  o_reductionTmps.copyTo(reductionTmps);
 
   // initialize accumulators
   dlong id = 0;
@@ -237,13 +289,15 @@ void ppcg::ReductionsPPCG(occa::memory &o_r,
 }
 
 ppcg::~ppcg() {
-  updatePPCGKernel.free();
-  reductionsPPCGKernel.free();
+  //  updatePPCGKernel.free();
+  //  reductionsPPCGKernel.free();
   o_p.free();
   o_v.free();
+  o_z.free();
+  o_Ax.free();
   o_reductionTmps.free();
   h_reductionTmps.free();
-  free(reductionTmps);
+
   free(localTmps);
   free(globalTmps);
 }
