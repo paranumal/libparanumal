@@ -86,10 +86,12 @@ int ppcg::Solve(solver_t& solver, precon_t& precon,
   MPI_Comm_rank(comm, &rank);
   linAlg_t &linAlg = platform.linAlg;
 
+  printf("N=%d\n", N);
+  
   // register scalars
   dfloat a, b, c, d, e, f, g;
-  dfloat alpha, alpha_old;
-  dfloat beta, beta_old;
+  dfloat alpha=0, alpha_old=0;
+  dfloat beta =0, beta_old =0;
   dfloat TOL = 0.0;
 
   // Comput norm of RHS (for stopping tolerance).
@@ -147,7 +149,7 @@ int ppcg::Solve(solver_t& solver, precon_t& precon,
     linAlg.amxpy(N, 1.0, o_invM, o_r, 0.0, o_z); // z <= M\r ( a bit lazy )
     
     dfloat enew = linAlg.innerProd(N, o_r, o_z, comm); // enw = r.z
-    beta_old = beta;
+    beta_old = beta; 
     beta  = enew/e; // beta = r1.z1/r0.z0
     e = enew; // e = r1.z1
     
@@ -158,11 +160,6 @@ int ppcg::Solve(solver_t& solver, precon_t& precon,
   // do PPCG iterations (start with iter 2)
   for(;iter<MAXIT;++iter){
 
-    if (verbose&&(rank==0)) {
-      // some diagnostics
-      printf("CG: it %d, r norm %12.12le, alpha = %le \n", iter, sqrt(g), alpha);
-    }
-    
     /* 
        M. Kronbichler  - "efficient matrix-free methods with deal.ii" CEED Annual Meeting 5, 2021
 
@@ -178,7 +175,7 @@ int ppcg::Solve(solver_t& solver, precon_t& precon,
        [ needs alpha and beta at first iteration (assuming k is odd at start) ]
     */
 
-    int updatex = (iter%2);
+    int updatex = !(iter%2);
     updatePPCGKernel(N, (int)updatex, alpha, beta, (dfloat)(alpha_old/beta_old), o_invM, o_p, o_r, o_v, o_x);
     
     /* 
@@ -204,8 +201,11 @@ int ppcg::Solve(solver_t& solver, precon_t& precon,
 
     ReductionsPPCG(o_r, &a, &b, &c, &d, &e, &f, &g);
 
-    // TW: check this?
+    // save old alpha,beta
     alpha_old = alpha;
+    beta_old = beta;
+    
+    // TW: check this?
     if(a!=0){
       alpha = d/a;
     }else{
@@ -214,7 +214,6 @@ int ppcg::Solve(solver_t& solver, precon_t& precon,
     }
 
     // TW check this
-    beta_old = beta;
     beta = (d-2.*alpha*e+alpha*alpha*f)/d;
 
     if(fabs(g-2.*alpha*b+alpha*alpha*c)<TOL){ // notice comparing square
@@ -224,6 +223,10 @@ int ppcg::Solve(solver_t& solver, precon_t& precon,
     }
 
     if (verbose&&(rank==0)) {
+
+      // some diagnostics
+      printf("CG: it %d, r norm %12.12le, alpha = %le \n", iter, sqrt(g), alpha);
+      
       if(g<0)
         printf("WARNING CG: rdotr = %17.15lf\n", g);
     }

@@ -200,7 +200,7 @@ void elliptic_t::Run(){
   double startTime = MPI_Wtime();
 
   //call the solver
-  dfloat tol = 1e-8;
+  dfloat tol = 1e-10;
   int iter = Solve(*linearSolver, o_x, o_r, tol, maxIter, verbose);
 
 
