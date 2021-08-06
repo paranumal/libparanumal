@@ -33,7 +33,7 @@
 			    @restrict const dfloat *r,
 			    @restrict const dfloat *p,
 			    @restrict const dfloat *v,
-			    @restrict dfloat *tmpreductions){
+			    @restrict dfloat *reductionTmps){
   
   for(dlong b=0;b<Nblocks;++b;@outer(0)){
     
@@ -112,12 +112,10 @@
       if(t==6) s_a[6] = s_g[0];
       // implicit barrier
       if(t<p_Nred){
-	tmpreductions[b*p_Nred + t] = s_a[t];
+	reductionTmps[b*p_Nred + t] = s_a[t];
       }
     }
   }
-  
-
 }
 
 
@@ -129,9 +127,9 @@
 			@restrict const dfloat *invM,
 			@restrict dfloat *p,
 			@restrict dfloat *r,
-			@restrict dfloat *v,
+			@restrict const dfloat *v,
 			@restrict dfloat *x){
-
+  
   for(dlong n=0;n<N;++n;@tile(256, @outer, @inner)){
     if(n<N){ // might not be necessary
       dfloat pn = p[n];

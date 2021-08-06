@@ -220,7 +220,7 @@ int ppcg::Solve(solver_t& solver, precon_t& precon,
     }
 
     if(fabs(g-2.*alpha*b+alpha*alpha*c)<TOL){ // notice comparing square
-      linAlg.axpy(N, alpha, o_p, 1., o_x);
+      linAlg.axpy(N, alpha, o_p, 1., o_x); // x += alpha*p
     }
 
     // TW check this
