@@ -33,13 +33,16 @@ void equiDist2D(const dfloat w,  const dfloat ex, const dfloat ey,
 }
 
 
-
 // Compute collision step and update velocity field
 @kernel void lbsCollisionTri2D(const dlong Nelements,
                             @restrict const  dlong  *  elementIds,
                             const dfloat t,
                             const dfloat gamma, // lambda/dt
+                            const dfloat nu, // 1/Re
                             @restrict const dfloat * LBM, 
+                            @restrict const dfloat * x, 
+                            @restrict const dfloat * y, 
+                            @restrict const dfloat * z, 
                             @restrict dfloat *  q,
                             @restrict dfloat *  U){
 
@@ -88,6 +91,9 @@ void equiDist2D(const dfloat w,  const dfloat ex, const dfloat ey,
           const dlong idf = e*p_Nfields*p_Np + n;
           const dlong idn = e*p_Nmacro*p_Np  + n;
 
+          const dfloat xn = x[e*p_Np +n]; 
+          const dfloat yn = y[e*p_Np +n]; 
+
           #pragma unroll p_Nfields
           for(int fld=0; fld<p_Nfields;++fld){
             const dfloat w  = LBM[fld + 0*p_Nfields]; 
@@ -99,8 +105,11 @@ void equiDist2D(const dfloat w,  const dfloat ex, const dfloat ey,
 
             equiDist2D(w, ex, ey, r_r, r_u, r_v, &qeq); 
 
-            q[idf + fld*p_Np]  = qn - 1.f/(gamma + 0.5f)*(qn - qeq); 
-            // q[idf + fld*p_Np]  = qn; 
+            dfloat fx = 0.f, fy = 0.f;
+            lbsBodyForce2D(nu, t, xn, yn, r_r, r_u, r_v, &fx, &fy);  
+            const dfloat qext =  (1.f - 1.f/(2.f*gamma))*1.f/r_r*p_ic2*((ex-r_u)*fx + (ey-r_v)*fy)*qeq; 
+
+            q[idf + fld*p_Np]  = qn - 1.f/(gamma + 0.5f)*(qn - qeq) + qext; 
 
           }
           

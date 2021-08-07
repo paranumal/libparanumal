@@ -34,7 +34,9 @@ void applyBC2D(const int bc, const int fldm, const int fldp,
 if (bc==1 || bc==2 || bc==4 || bc==5){
   qp[fldm] = en < 0 ?  (qm[fldp] + 2.f*w*rb*(ex*ub + ey*vb)*p_ic2) : qm[fldm];  
 }else if(bc==3){ // Outflow outgoing particles only i.e. e.n
-  qp[fldm] = en > 0 ?  qm[fldm] : qp[fldm]; 
+  // qp[fldm] = en > 0 ?  qm[fldm] : -qm[fldm]; 
+  // qp[fldm] = en > 0 ?  qm[fldm] : qp[fldm]; 
+  // qp[fldm] = en > 0 ?  (qm[fldp] + 2.f*w*rb*(ex*ub + ey*vb)*p_ic2) : qm[fldm];  
 }
 
 } 

@@ -24,19 +24,23 @@ SOFTWARE.
 
 */
 
+//mean flow
+#define RBAR 1.0
+#define UBAR 0.1
+#define VBAR 0.0
+
 // Initial conditions
 #define lbsInitialConditions2D(nu, t, x, y, r, u, v) \
 {                                         \
-  *(r) = 1 + exp(-3*(x*x+y*y));           \
-  *(u) = 0.1*exp(-3*(x*x+y*y))/sqrt(3.0);  \
-  *(v) = 0.1*exp(-3*(x*x+y*y))/sqrt(3.0);   \
+  *(r) = RBAR;                            \
+  *(u) = UBAR*0.0;                        \
+  *(v) = VBAR;                            \
 }
-
 
 // Body force
 #define lbsBodyForce2D(nu, t, x, y, r, u, v, fx, fy) \
 {                                                   \
-  *(fx) = 0.0;                                      \
+  *(fx) = 0.0;                                     \
   *(fy) = 0.0;                                      \
 }
 
@@ -48,15 +52,15 @@ SOFTWARE.
                                 rB, uB, vB) \
 {                                      \
   if(bc==1){                           \
-    *(rB) = 1.0;                        \
+    *(rB) = RBAR;                        \
     *(uB) = 0.0;                       \
     *(vB) = 0.0;                       \
   } else if(bc==2){                    \
-    *(rB) = 1.0;                       \
-    *(uB) = 0.0;                       \
-    *(vB) = 0.0;                       \
+    *(rB) = RBAR;                      \
+    *(uB) = UBAR*1.0/sqrt(3.0);                      \
+    *(vB) = VBAR;                      \
   } else if(bc==3){                    \
-    *(rB) = 1.0;                       \
+    *(rB) = rM;                      \
     *(uB) = uM;                        \
     *(vB) = vM;                        \
   } else if(bc==4||bc==5){             \

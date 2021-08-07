@@ -2,11 +2,13 @@
 2.0
 
 [DATA FILE]
-data/lbsUniform2D.h
+#data/lbsUniform2D.h
 #data/lbsGaussian2D.h
+data/lbsPoiseuille2D.h
 
 [MESH FILE]
-../../meshes/lbsLidDrivenTri2D.msh
+#../../meshes/lbsLidDrivenTri2D.msh
+../../meshes/lbsChannel2D.msh
 #BOX
 #PMLBOX
 
@@ -40,7 +42,8 @@ CUDA
 0
 
 [VISCOSITY]
-0.0002
+0.01
+#0.0002
 
 [VELOCITY MODEL]
 D2Q9
@@ -61,13 +64,14 @@ COLLOCATION
 LSERK4
 
 [CFL NUMBER]
-0.25
+0.1
 
 [START TIME]
 0
 
 [FINAL TIME]
-600.0
+10.0
+#600.0
 
 [OUTPUT INTERVAL]
 1
@@ -76,4 +80,4 @@ LSERK4
 TRUE
 
 [OUTPUT FILE NAME]
-lbs
+lbs_poiseuille

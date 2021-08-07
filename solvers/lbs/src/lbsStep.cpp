@@ -108,7 +108,11 @@ collisionKernel(N,
                  o_ids,
                  T,
                  gamma,
+                 nu,
                  o_LBM,
+                 mesh.o_x,
+                 mesh.o_y,
+                 mesh.o_z,
                  o_Q,
                  o_U);
 
