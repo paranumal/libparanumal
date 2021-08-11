@@ -2,15 +2,16 @@
 2.0
 
 [DATA FILE]
-#data/lbsUniform2D.h
+data/lbsUniform2D.h
 #data/lbsGaussian2D.h
-data/lbsPoiseuille2D.h
+#data/lbsPoiseuille2D.h
 
 [MESH FILE]
-#../../meshes/lbsLidDrivenTri2D.msh
-../../meshes/lbsChannel2D.msh
-#BOX
-#PMLBOX
+#../../meshes/lbsSquareCylinder2D.msh
+../../meshes/lbsLidDrivenTri2D.msh
+#../../meshes/lbsChannel2D.msh
+# BOX
+# PMLBOX
 
 [MESH DIMENSION]
 2
@@ -24,9 +25,14 @@ data/lbsPoiseuille2D.h
 [BOX NY]
 20
 
+[BOX DIMX]
+4
+
+[BOX DIMY]
+4
 
 [BOX BOUNDARY FLAG]
--1
+1
 
 [POLYNOMIAL DEGREE]
 4
@@ -41,9 +47,10 @@ CUDA
 [DEVICE NUMBER]
 0
 
+#Re=10, for Ma=0.1 and L = 2
 [VISCOSITY]
-0.01
-#0.0002
+#0.00005774
+0.001
 
 [VELOCITY MODEL]
 D2Q9
@@ -70,7 +77,7 @@ LSERK4
 0
 
 [FINAL TIME]
-10.0
+100.0
 #600.0
 
 [OUTPUT INTERVAL]
@@ -81,3 +88,5 @@ TRUE
 
 [OUTPUT FILE NAME]
 lbs_poiseuille
+#lbs_cylinder
+#lbs_gauss

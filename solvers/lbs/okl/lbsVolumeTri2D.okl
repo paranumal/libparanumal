@@ -24,6 +24,16 @@ SOFTWARE.
 
 */
 
+// Equilibrium Distribution
+void equiDist2D(const dfloat w,  const dfloat ex, const dfloat ey,
+                const dfloat r,  const dfloat u,  const dfloat v, dfloat *feq){
+  
+  const dfloat un = (ex*u + ey*v); 
+  *feq = r*w*(1.0f + p_ic2*un + 0.5f*p_ic4*un*un - 0.5f*p_ic2*(u*u + v*v)); 
+}
+
+
+
 @kernel void lbsVolumeTri2D(const dlong Nelements,
                             @restrict const  dlong  *  elementIds,
                             @restrict const  dfloat *  vgeo,
@@ -33,8 +43,10 @@ SOFTWARE.
                             @restrict const  dfloat * z,
                             const dfloat t,
                             const dfloat nu,
+                            const dfloat gamma,
                             @restrict const  dfloat *  LBM,
                             @restrict const  dfloat *  q,
+                            @restrict const  dfloat *  U,
                             @restrict dfloat *  rhsq){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
@@ -42,28 +54,41 @@ SOFTWARE.
     @shared dfloat s_q[p_NblockV][p_Nfields][p_Np];
     @exclusive dlong e;
 
-    // @exclusive dfloat fx[p_NblockV], fy[p_NblockV];
+    // @exclusive dfloat fg[p_NblockV][p_Nfields]; 
 
     for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
       for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
         const dlong et = eo+es; // element in block
         if(et<Nelements){
           e = elementIds[et];
-          const dlong id = e*p_Nfields*p_Np + n;
+          const dlong idf = e*p_Nfields*p_Np + n;
+          
+          // const dlong idn = e*p_Nmacro*p_Np  + n;
+          // const dfloat rn = U[idn + 0*p_Np]; 
+          // const dfloat un = U[idn + 1*p_Np]; 
+          // const dfloat vn = U[idn + 2*p_Np]; 
+
 
           #pragma unroll p_Nfields
           for(int fld=0; fld<p_Nfields;++fld){
-            s_q[es][fld][n] = q[id+fld*p_Np];
+            s_q[es][fld][n] = q[idf+fld*p_Np];
+            // fg[p_NblockV][p_Nfields] = 0.f; 
           }
 
-          // const dfloat r =   s_q[es][0][n];
-          // const dfloat u = c*s_q[es][1][n]/r;
-          // const dfloat v = c*s_q[es][2][n]/r;
 
-          // //Body force contribution
-          // fx[es] = 0.0; fy[es] = 0.0;
-          // lbsBodyForce2D(c, nu, t, x[e*p_Np+n], y[e*p_Np+n], r, u, v,
-          //                &(fx[es]), &(fy[es]));
+          // #pragma unroll p_Nfields
+          // for(int fld=0; fld<p_Nfields; ++fld){
+          //   const dfloat w  = LBM[fld + 0*p_Nfields]; 
+          //   const dfloat ex = LBM[fld + 1*p_Nfields]; 
+          //   const dfloat ey = LBM[fld + 2*p_Nfields]; 
+          //   dfloat qeq = 0.f; 
+          //   equiDist2D(w, ex, ey, rn, un, vn, &qeq); 
+
+          //   dfloat fxn = 0.f, fyn = 0.f;
+          //   lbsBodyForce2D(nu, t, xn, yn, rn, un, vn, &fxn, &fyn);  
+          //   fg[es][fld] = (1.f - 1.f/(2.f*gamma))*1.f/rn*p_ic2*((ex-un)*fxn + (ey-vn)*fyn)*qeq; 
+
+          // }
         }
       }
     }
@@ -111,28 +136,14 @@ SOFTWARE.
               r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
             }
 
-          // // transport operator
-          // r_rhsq[0] = -c*(r_dqdx[1] + r_dqdy[2]);
-          // r_rhsq[1] = -c*(r_dqdx[0] + sqrt(2.0)*r_dqdx[4] + r_dqdy[3]);
-          // r_rhsq[2] = -c*(r_dqdx[3] + r_dqdy[0] + sqrt(2.0)*r_dqdy[5]);
-          // r_rhsq[3] = -c*(r_dqdx[2] + r_dqdy[1]);
-          // r_rhsq[4] = -c*sqrt(2.0)*r_dqdx[1];
-          // r_rhsq[5] = -c*sqrt(2.0)*r_dqdy[2];
-
-          // // add body forcing
-          // r_rhsq[1] += fx[es]*s_q[es][0][n]/c;
-          // r_rhsq[2] += fy[es]*s_q[es][0][n]/c;
-          // r_rhsq[3] += fx[es]*s_q[es][2][n]/c + fy[es]*s_q[es][1][n]/c;
-          // r_rhsq[4] += fx[es]*sqrt(2.0)*s_q[es][1][n]/c;
-          // r_rhsq[5] += fy[es]*sqrt(2.0)*s_q[es][2][n]/c;
-
           // Update
-          const dlong id = e*p_Nfields*p_Np + n;
+          const dlong idf = e*p_Nfields*p_Np + n;
 
           for(int fld=0; fld<p_Nfields;++fld){
             const dfloat ex = LBM[fld + 1*p_Nfields]; 
             const dfloat ey = LBM[fld + 2*p_Nfields]; 
-            rhsq[id + fld*p_Np] = -(ex*r_dqdx[fld] + ey*r_dqdy[fld]);
+            rhsq[idf + fld*p_Np] = -(ex*r_dqdx[fld] + ey*r_dqdy[fld]);
+            // rhsq[idf + fld*p_Np] = -(ex*r_dqdx[fld] + ey*r_dqdy[fld]) + fg[es][fld];
           }
         }
       }

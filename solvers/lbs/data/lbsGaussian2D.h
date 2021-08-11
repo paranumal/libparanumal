@@ -28,8 +28,8 @@ SOFTWARE.
 #define lbsInitialConditions2D(nu, t, x, y, r, u, v) \
 {                                         \
   *(r) = 1 + exp(-3*(x*x+y*y));           \
-  *(u) = 0.1*exp(-3*(x*x+y*y))/sqrt(3.0);  \
-  *(v) = 0.1*exp(-3*(x*x+y*y))/sqrt(3.0);   \
+  *(u) = 0.1*exp(-3*(x*x+y*y));  \
+  *(v) = 0.1*exp(-3*(x*x+y*y));   \
 }
 
 

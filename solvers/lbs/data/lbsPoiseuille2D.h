@@ -26,22 +26,30 @@ SOFTWARE.
 
 //mean flow
 #define RBAR 1.0
-#define UBAR 0.1
+#define UBAR 0.1*1.0/sqrt(3.0)
 #define VBAR 0.0
+
+// // Initial conditions
+// #define lbsInitialConditions2D(nu, t, x, y, r, u, v) \
+// {                                         \
+//   *(r) = RBAR;                            \
+//   *(u) = UBAR*1.0;                        \
+//   *(v) = VBAR;                            \
+// }
 
 // Initial conditions
 #define lbsInitialConditions2D(nu, t, x, y, r, u, v) \
 {                                         \
-  *(r) = RBAR;                            \
-  *(u) = UBAR*0.0;                        \
-  *(v) = VBAR;                            \
+  *(r) = 1 + exp(-3*(x*x+y*y));           \
+  *(u) = 0.01*exp(-3*(x*x+y*y));  \
+  *(v) = 0.01*exp(-3*(x*x+y*y));   \
 }
 
 // Body force
 #define lbsBodyForce2D(nu, t, x, y, r, u, v, fx, fy) \
 {                                                   \
-  *(fx) = 0.0;                                     \
-  *(fy) = 0.0;                                      \
+  *(fx) = -r*0.00;                                      \
+  *(fy) = -r*0.01;                                      \
 }
 
 // Boundary conditions
@@ -57,15 +65,15 @@ SOFTWARE.
     *(vB) = 0.0;                       \
   } else if(bc==2){                    \
     *(rB) = RBAR;                      \
-    *(uB) = UBAR*1.0/sqrt(3.0);                      \
+    *(uB) = UBAR*0.f;                  \
     *(vB) = VBAR;                      \
   } else if(bc==3){                    \
-    *(rB) = rM;                      \
+    *(rB) = RBAR;                      \
     *(uB) = uM;                        \
     *(vB) = vM;                        \
   } else if(bc==4||bc==5){             \
     *(rB) = rM;                        \
     *(uB) = uM - (nx*uM+ny*vM)*nx;     \
     *(vB) = vM - (nx*uM+ny*vM)*ny;     \
-  }                                    \
+  }\
 }

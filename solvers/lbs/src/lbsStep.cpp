@@ -92,6 +92,7 @@ void lbs_t::rhsVolume(dlong N, occa::memory& o_ids,
   if (N){
     // printf("I am here\n");
 
+const dfloat dt    = timeStepper->GetTimeStep();
 const dfloat gamma = alpha/timeStepper->GetTimeStep();
    //  // printf("%.4e  %.4e %.4e\n",alpha, gamma, timeStepper->GetTimeStep());
    // collisionKernel(N,
@@ -107,6 +108,7 @@ const dfloat gamma = alpha/timeStepper->GetTimeStep();
 collisionKernel(N,
                  o_ids,
                  T,
+                 dt, 
                  gamma,
                  nu,
                  o_LBM,
@@ -125,8 +127,10 @@ collisionKernel(N,
                  mesh.o_z,
                  T,
                  nu,
+                 gamma,
                  o_LBM,
                  o_Q,
+                 o_U,
                  o_RHS);
   }
 }

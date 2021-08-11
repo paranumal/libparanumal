@@ -37,6 +37,7 @@ void equiDist2D(const dfloat w,  const dfloat ex, const dfloat ey,
 @kernel void lbsCollisionTri2D(const dlong Nelements,
                             @restrict const  dlong  *  elementIds,
                             const dfloat t,
+                            const dfloat dt,
                             const dfloat gamma, // lambda/dt
                             const dfloat nu, // 1/Re
                             @restrict const dfloat * LBM, 
@@ -74,8 +75,8 @@ void equiDist2D(const dfloat w,  const dfloat ex, const dfloat ey,
             r_v += LBM[fld + 2*p_Nfields]*q_n; 
             r_q[fld] = q_n;  
           }
-          r_u = r_u/r_r; //x-velocity
-          r_v = r_v/r_r; //y velocity
+          r_u = r_u/r_r; //x-velocity ????? divide rho.....
+          r_v = r_v/r_r; //y velocity ?????
         }
       }
     }
@@ -94,22 +95,29 @@ void equiDist2D(const dfloat w,  const dfloat ex, const dfloat ey,
           const dfloat xn = x[e*p_Np +n]; 
           const dfloat yn = y[e*p_Np +n]; 
 
+          dfloat fx = 0.f, fy = 0.f;
+          lbsBodyForce2D(nu, t, xn, yn, r_r, r_u, r_v, &fx, &fy); 
+
+          r_u +=  0.5*fx*dt/r_r;
+          r_v +=  0.5*fy*dt/r_r; 
+
           #pragma unroll p_Nfields
           for(int fld=0; fld<p_Nfields;++fld){
             const dfloat w  = LBM[fld + 0*p_Nfields]; 
             const dfloat ex = LBM[fld + 1*p_Nfields]; 
             const dfloat ey = LBM[fld + 2*p_Nfields]; 
+            
 
             dfloat qeq = 0.f; 
-            dfloat qn  = r_q[fld]; 
-
             equiDist2D(w, ex, ey, r_r, r_u, r_v, &qeq); 
+            const dfloat qext =  1.f/r_r*p_ic2*( (ex-r_u)*fx + (ey-r_v)*fy )*qeq; 
+            // const dfloat qext =  (1.f - 1.f/(2.f*gamma))*1.f/r_r*p_ic2*((ex-r_u)*fx + (ey-r_v)*fy)*qeq; 
 
-            dfloat fx = 0.f, fy = 0.f;
-            lbsBodyForce2D(nu, t, xn, yn, r_r, r_u, r_v, &fx, &fy);  
-            const dfloat qext =  (1.f - 1.f/(2.f*gamma))*1.f/r_r*p_ic2*((ex-r_u)*fx + (ey-r_v)*fy)*qeq; 
+            const dfloat qn  = r_q[fld]; 
 
-            q[idf + fld*p_Np]  = qn - 1.f/(gamma + 0.5f)*(qn - qeq) + qext; 
+            // Second order integration leads to 1/(gamma + 0.5)*(f-feq) + alpha*qext/(gamma+0.5); alpha=gamma*0.5
+            q[idf + fld*p_Np]  = qn - 1.f/(gamma + 0.5f)*(qn - qeq - qext*gamma*dt); 
+            // q[idf + fld*p_Np]  = qn - 1.f/(gamma + 0.5f)*(qn - qeq) + qext; 
 
           }
           

@@ -24,19 +24,47 @@ SOFTWARE.
 
 */
 
+// void applyBC2D(const int bc, const int fldm, const int fldp, 
+//                const dfloat en, const dfloat nx, const dfloat ny, 
+//                const dfloat w,  const dfloat ex, const dfloat ey,
+//                const dfloat rb, const dfloat ub, const dfloat vb,
+//                const dfloat *qm, dfloat *qp){
+
+// // wall: could be with velocity though Bounce backonly nonequilibrium portion
+// if (bc==1 || bc==2 || bc==4 || bc==5){
+//   qp[fldm] = en < 0 ?  (qm[fldp] + 2.f*w*rb*(ex*ub + ey*vb)*p_ic2) : qm[fldm];  
+// }else if(bc==3){ // Outflow outgoing particles only i.e. e.n
+//   // qp[fldm] = en > 0 ?  qm[fldm] : -qm[fldm]; 
+//   // qp[fldm] = en > 0 ?  2.0*qm[fldp] : qm[fldm]; 
+//   qp[fldm] = en > 0 ?  (qm[fldp] - 2.f*w*rb*(ex*ub + ey*vb)*p_ic2) : qm[fldm];
+//   // if(fldm==5){
+//   //   qp[fldm] = en > 0 ?  qm[fldm]: qm[fldm];
+//   //   // qp[fldm] = en > 0 ?  (qm[fldm] - 2.f*w*rb*(ex*ub + ey*vb)*p_ic2) : qm[fldm];
+//   // }
+//   // else{
+//   //   qp[fldm] = en > 0 ?  qm[fldp] : qm[fldm];
+//   //   // qp[fldm] = en > 0 ?  (qm[fldp] - 2.f*w*rb*(ex*ub + ey*vb)*p_ic2) : qm[fldm];
+//   // }
+// }
+
+// } 
+
+
+
+
 void applyBC2D(const int bc, const int fldm, const int fldp, 
                const dfloat en, const dfloat nx, const dfloat ny, 
                const dfloat w,  const dfloat ex, const dfloat ey,
                const dfloat rb, const dfloat ub, const dfloat vb,
                const dfloat *qm, dfloat *qp){
 
-// wall: could be with velocity though 
-if (bc==1 || bc==2 || bc==4 || bc==5){
+// wall: could be with velocity though Bounce backonly nonequilibrium portion
+if (bc==2 || bc==4 || bc==5){
   qp[fldm] = en < 0 ?  (qm[fldp] + 2.f*w*rb*(ex*ub + ey*vb)*p_ic2) : qm[fldm];  
-}else if(bc==3){ // Outflow outgoing particles only i.e. e.n
-  // qp[fldm] = en > 0 ?  qm[fldm] : -qm[fldm]; 
-  // qp[fldm] = en > 0 ?  qm[fldm] : qp[fldm]; 
-  // qp[fldm] = en > 0 ?  (qm[fldp] + 2.f*w*rb*(ex*ub + ey*vb)*p_ic2) : qm[fldm];  
+}else if(bc==3 || bc==1){ 
+  const dfloat un = (ex*ub + ey*vb); 
+  const dfloat feq = rb*w*(1.0f + p_ic2*un + 0.5f*p_ic4*un*un - 0.5f*p_ic2*(ub*ub + vb*vb));
+   qp[fldm] = en < 0 ?  feq : qm[fldm];  
 }
 
 } 
@@ -106,7 +134,7 @@ if (bc==1 || bc==2 || bc==4 || bc==5){
             
             dfloat rm, um, vm, rb, ub, vb; 
 
-            if(bc>0){
+            if(bc>0 || bc==-1){
               const dlong uidM = eM*p_Np*p_Nmacro + vidM; 
               rm   = U[uidM+ 0*p_Np];  
               um   = U[uidM+ 1*p_Np];  
