@@ -46,88 +46,40 @@ lbs_t& lbs_t::Setup(platform_t& platform, mesh_t& mesh,
   dlong Nlocal = mesh.Nelements*mesh.Np*lbs->Nfields;
   dlong Nhalo  = mesh.totalHaloPairs*mesh.Np*lbs->Nfields;
 
-  lbs->semiAnalytic = 0;
-  if (settings.compareSetting("TIME INTEGRATOR","SARK4")
-    ||settings.compareSetting("TIME INTEGRATOR","SARK5")
-    ||settings.compareSetting("TIME INTEGRATOR","SAAB3")
-    ||settings.compareSetting("TIME INTEGRATOR","MRSAAB3"))
-    lbs->semiAnalytic = 1;
-
-  //semi-analytic exponential coefficients
-  dfloat lambda[lbs->Nfields];
-  for (int i=0;i<mesh.dim+1;i++) lambda[i] = 0.0;
-  for (int i=mesh.dim+1;i<lbs->Nfields;i++) lambda[i] = -lbs->tauInv;
-
   //make array of time step estimates for each element
   dfloat *EtoDT = (dfloat *) calloc(mesh.Nelements,sizeof(dfloat));
   dfloat vmax = lbs->MaxWaveSpeed();
   for(dlong e=0;e<mesh.Nelements;++e){
     dfloat h = mesh.ElementCharacteristicLength(e);
     dfloat dtAdv  = h/(vmax*(mesh.N+1.)*(mesh.N+1.));
-    dfloat dtVisc = 1.0/lbs->tauInv;
 
-    if (lbs->semiAnalytic)
-      EtoDT[e] = dtAdv;
-    else
-      EtoDT[e] = mymin(dtAdv, dtVisc);
-
-    /*
-    Artificial warping of time step size for multirate testing
-    */
-#if 0
-    dfloat x=0., y=0, z=0;
-    for (int v=0;v<mesh.Nverts;v++){
-      x += mesh.EX[e*mesh.Nverts+v];
-      y += mesh.EY[e*mesh.Nverts+v];
-      if (mesh.dim==3)
-        z += mesh.EZ[e*mesh.Nverts+v];
-    }
-    x /=mesh.Nverts;
-    y /=mesh.Nverts;
-    z /=mesh.Nverts;
-
-    dfloat c = mymin(fabs(x),fabs(y));
-    if (mesh.dim==3)
-      c = mymin(c,fabs(z));
-
-    c = mymax(0.5, c);
-    EtoDT[e] *= c;
-#endif
+    EtoDT[e] = dtAdv;
   }
 
+
   mesh.mrNlevels=0;
-  if (settings.compareSetting("TIME INTEGRATOR","MRAB3") ||
-      settings.compareSetting("TIME INTEGRATOR","MRSAAB3")) {
+  if (settings.compareSetting("TIME INTEGRATOR","MRAB3")) {
     mesh.MultiRateSetup(EtoDT);
     mesh.MultiRatePmlSetup();
     lbs->multirateTraceHalo = mesh.MultiRateHaloTraceSetup(lbs->Nfields);
   }
 
+  
   if (settings.compareSetting("TIME INTEGRATOR","MRAB3")){
     lbs->timeStepper = new TimeStepper::mrab3_pml(mesh.Nelements, mesh.NpmlElements, mesh.totalHaloPairs,
                                               mesh.Np, lbs->Nfields, lbs->Npmlfields, *lbs, mesh);
-  } else if (settings.compareSetting("TIME INTEGRATOR","MRSAAB3")){
-    lbs->timeStepper = new TimeStepper::mrsaab3_pml(mesh.Nelements, mesh.NpmlElements, mesh.totalHaloPairs,
-                                              mesh.Np, lbs->Nfields, lbs->Npmlfields, lambda, *lbs, mesh);
-  } else if (settings.compareSetting("TIME INTEGRATOR","SAAB3")) {
-    lbs->timeStepper = new TimeStepper::saab3_pml(mesh.Nelements, mesh.NpmlElements, mesh.totalHaloPairs,
-                                              mesh.Np, lbs->Nfields, lbs->Npmlfields, lambda, *lbs);
   } else if (settings.compareSetting("TIME INTEGRATOR","AB3")){
     lbs->timeStepper = new TimeStepper::ab3_pml(mesh.Nelements, mesh.NpmlElements, mesh.totalHaloPairs,
                                               mesh.Np, lbs->Nfields, lbs->Npmlfields, *lbs);
-  } else if (settings.compareSetting("TIME INTEGRATOR","LSERK4")){
+  }
+   // else if (settings.compareSetting("TIME INTEGRATOR","DOPRI5")){
+   //  lbs->timeStepper = new TimeStepper::dopri5_pml(mesh.Nelements, mesh.NpmlElements, mesh.totalHaloPairs,
+   //                                            mesh.Np, lbs->Nfields, lbs->Npmlfields, *lbs, mesh.comm);
+  // } 
+  else if (settings.compareSetting("TIME INTEGRATOR","LSERK4")){
     lbs->timeStepper = new TimeStepper::lserk4_pml(mesh.Nelements, mesh.NpmlElements, mesh.totalHaloPairs,
                                               mesh.Np, lbs->Nfields, lbs->Npmlfields, *lbs);
-  } else if (settings.compareSetting("TIME INTEGRATOR","DOPRI5")){
-    lbs->timeStepper = new TimeStepper::dopri5_pml(mesh.Nelements, mesh.NpmlElements, mesh.totalHaloPairs,
-                                              mesh.Np, lbs->Nfields, lbs->Npmlfields, *lbs, mesh.comm);
-  } else if (settings.compareSetting("TIME INTEGRATOR","SARK4")) {
-    lbs->timeStepper = new TimeStepper::sark4_pml(mesh.Nelements, mesh.NpmlElements, mesh.totalHaloPairs,
-                                              mesh.Np, lbs->Nfields, lbs->Npmlfields, lambda, *lbs, mesh.comm);
-  } else if (settings.compareSetting("TIME INTEGRATOR","SARK5")) {
-    lbs->timeStepper = new TimeStepper::sark5_pml(mesh.Nelements, mesh.NpmlElements, mesh.totalHaloPairs,
-                                              mesh.Np, lbs->Nfields, lbs->Npmlfields, lambda, *lbs, mesh.comm);
-  } else {
+  }else {
     LIBP_ABORT(string("Requested TIME INTEGRATOR not found."));
   }
   free(EtoDT);
@@ -141,6 +93,10 @@ lbs_t& lbs_t::Setup(platform_t& platform, mesh_t& mesh,
   // compute samples of q at interpolation nodes
   lbs->q = (dfloat*) calloc(Nlocal+Nhalo, sizeof(dfloat));
   lbs->o_q = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), lbs->q);
+
+  lbs->F = (dfloat*) calloc(Nlocal+Nhalo, sizeof(dfloat));
+  lbs->o_F = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), lbs->F);
+
 
   lbs->Vort = (dfloat*) calloc(mesh.dim*mesh.Nelements*mesh.Np, sizeof(dfloat));
   lbs->o_Vort = platform.malloc((mesh.dim*mesh.Nelements*mesh.Np)*sizeof(dfloat),
@@ -228,12 +184,19 @@ lbs_t& lbs_t::Setup(platform_t& platform, mesh_t& mesh,
   
   // kernels from volume file
   sprintf(fileName, DLBS "/okl/lbsCollision%s.okl", suffix);  
+
   sprintf(kernelName, "lbsCollision%s", suffix);
   lbs->collisionKernel =  platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
+
+  sprintf(kernelName, "lbsForcing%s", suffix);
+  lbs->forcingKernel =  platform.buildKernel(fileName, kernelName,
+                                         kernelInfo);
+
   sprintf(kernelName, "lbsMoments%s", suffix);
   lbs->momentsKernel =  platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
+
   sprintf(kernelName, "lbsPhaseField%s", suffix);
   lbs->phaseFieldKernel =  platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
@@ -271,24 +234,23 @@ lbs_t& lbs_t::Setup(platform_t& platform, mesh_t& mesh,
 
   // kernels from surface file
   sprintf(fileName, DLBS "/okl/lbsSurface%s.okl", suffix);
-  // if (settings.compareSetting("TIME INTEGRATOR","MRAB3") ||
-  //     settings.compareSetting("TIME INTEGRATOR","MRSAAB3")) {
-  //   sprintf(kernelName, "lbsMRSurface%s", suffix);
-  //   lbs->surfaceKernel = platform.buildKernel(fileName, kernelName,
-  //                                          kernelInfo);
+  if (settings.compareSetting("TIME INTEGRATOR","MRAB3")) {
+    sprintf(kernelName, "lbsMRSurface%s", suffix);
+    lbs->surfaceKernel = platform.buildKernel(fileName, kernelName,
+                                           kernelInfo);
 
-  //   sprintf(kernelName, "lbsMRPmlSurface%s", suffix);
-  //   lbs->pmlSurfaceKernel = platform.buildKernel(fileName, kernelName,
-  //                                          kernelInfo);
-  // } else {
+    // sprintf(kernelName, "lbsMRPmlSurface%s", suffix);
+    // lbs->pmlSurfaceKernel = platform.buildKernel(fileName, kernelName,
+    //                                        kernelInfo);
+  } else {
     sprintf(kernelName, "lbsSurface%s", suffix);
     lbs->surfaceKernel = platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
 
     // sprintf(kernelName, "lbsPmlSurface%s", suffix);
     // lbs->pmlSurfaceKernel = platform.buildKernel(fileName, kernelName,
-    //                                        kernelInfo);
-  // }
+                                           // kernelInfo);
+  }
 
   // vorticity calculation
   sprintf(fileName, DLBS "/okl/lbsVorticity%s.okl", suffix);

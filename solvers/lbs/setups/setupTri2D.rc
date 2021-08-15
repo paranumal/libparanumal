@@ -2,14 +2,15 @@
 2.0
 
 [DATA FILE]
-data/lbsUniform2D.h
+data/lbsCouette2D.h
+#data/lbsUniform2D.h
 #data/lbsGaussian2D.h
 #data/lbsPoiseuille2D.h
 
 [MESH FILE]
+../../meshes/lbsChannel2D_0.msh
 #../../meshes/lbsSquareCylinder2D.msh
-../../meshes/lbsLidDrivenTri2D.msh
-#../../meshes/lbsChannel2D.msh
+#../../meshes/lbsLidDrivenTri2D.msh
 # BOX
 # PMLBOX
 
@@ -20,22 +21,23 @@ data/lbsUniform2D.h
 3
 
 [BOX NX]
-20
+11
 
 [BOX NY]
-20
+11
 
 [BOX DIMX]
-4
-
-[BOX DIMY]
-4
-
-[BOX BOUNDARY FLAG]
 1
 
+[BOX DIMY]
+1
+
+[BOX BOUNDARY FLAG]
+-1
+
+
 [POLYNOMIAL DEGREE]
-4
+5
 
 [THREAD MODEL]
 #Serial
@@ -47,10 +49,8 @@ CUDA
 [DEVICE NUMBER]
 0
 
-#Re=10, for Ma=0.1 and L = 2
 [VISCOSITY]
-#0.00005774
-0.001
+0.1
 
 [VELOCITY MODEL]
 D2Q9
@@ -68,7 +68,9 @@ D2Q9
 COLLOCATION
 
 [TIME INTEGRATOR]
-LSERK4
+#MRAB3
+#LSERK4
+AB3
 
 [CFL NUMBER]
 0.1
@@ -77,8 +79,7 @@ LSERK4
 0
 
 [FINAL TIME]
-100.0
-#600.0
+20.0
 
 [OUTPUT INTERVAL]
 1
@@ -87,6 +88,6 @@ LSERK4
 TRUE
 
 [OUTPUT FILE NAME]
-lbs_poiseuille
+lbs_couette
 #lbs_cylinder
 #lbs_gauss

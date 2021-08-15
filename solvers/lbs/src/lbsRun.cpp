@@ -40,26 +40,32 @@ void lbs_t::Run(){
                          mesh.o_z,
                          o_U);
 
-  phaseFieldKernel(mesh.Nelements,
-                         o_LBM,
-                         o_U, 
-                         o_q);
-
-
-
+  
   dfloat cfl=1.0;
   settings.getSetting("CFL NUMBER", cfl);
 
   // set time step
   dfloat hmin = mesh.MinCharacteristicLength();
-  // dfloat vmax = MaxWaveSpeed();
-  dfloat vmax = c;
-
+  dfloat vmax = MaxWaveSpeed();
   dfloat dtAdv  = hmin/(vmax*(mesh.N+1.)*(mesh.N+1.));
   // dfloat dtVisc = 1.0/tauInv;
   // dfloat dt = (semiAnalytic) ? cfl*dtAdv : cfl*mymin(dtAdv, dtVisc);
 
   dfloat dt = cfl*dtAdv;
+
+
+  const dfloat gamma = alpha/dt; 
+  phaseFieldKernel(mesh.Nelements,
+                   startTime,
+                   dt, 
+                   gamma,
+                   nu,
+                   o_LBM,
+                   mesh.o_x,
+                   mesh.o_y,
+                   mesh.o_z,
+                  o_U, 
+                  o_q);
 
   /*
     Artificial warping of time step size for multirate testing

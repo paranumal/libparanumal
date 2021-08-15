@@ -52,18 +52,19 @@ SOFTWARE.
 
 
 
-void applyBC2D(const int bc, const int fldm, const int fldp, 
+void applyBC2D(const int bc, const int fldm, const int fldp, const dfloat dt, 
                const dfloat en, const dfloat nx, const dfloat ny, 
                const dfloat w,  const dfloat ex, const dfloat ey,
                const dfloat rb, const dfloat ub, const dfloat vb,
-               const dfloat *qm, dfloat *qp){
+               const dfloat fn, const dfloat *qm, dfloat *qp){
 
 // wall: could be with velocity though Bounce backonly nonequilibrium portion
 if (bc==2 || bc==4 || bc==5){
   qp[fldm] = en < 0 ?  (qm[fldp] + 2.f*w*rb*(ex*ub + ey*vb)*p_ic2) : qm[fldm];  
 }else if(bc==3 || bc==1){ 
   const dfloat un = (ex*ub + ey*vb); 
-  const dfloat feq = rb*w*(1.0f + p_ic2*un + 0.5f*p_ic4*un*un - 0.5f*p_ic2*(ub*ub + vb*vb));
+  dfloat feq = rb*w*(1.0f + p_ic2*un + 0.5f*p_ic4*un*un - 0.5f*p_ic2*(ub*ub + vb*vb));
+  feq = feq*(1.f - 0.5f*dt*fn);
    qp[fldm] = en < 0 ?  feq : qm[fldm];  
 }
 
@@ -81,10 +82,12 @@ if (bc==2 || bc==4 || bc==5){
                             @restrict const  dfloat *  x,
                             @restrict const  dfloat *  y,
                             @restrict const  dfloat *  z,
+                            const dfloat dt,
                             const dfloat time,
                             const dfloat nu,
                             @restrict const  int *  LMAP,
                             @restrict const  dfloat *  LBM,
+                            @restrict const  dfloat *  F,
                             @restrict const  dfloat *  U,
                             @restrict const  dfloat *  q,
                             @restrict dfloat *  rhsq){
@@ -158,6 +161,7 @@ if (bc==2 || bc==4 || bc==5){
 
             #pragma unroll p_Nfields
             for(int fld=0; fld<p_Nfields;++fld){
+              const dfloat fn = F[qidM + fld*p_Np]; 
               const dfloat ex = LBM[fld + 1*p_Nfields]; 
               const dfloat ey = LBM[fld + 2*p_Nfields]; 
               const dfloat en = ex*nx + ey*ny; // need to modify for bc
@@ -165,7 +169,7 @@ if (bc==2 || bc==4 || bc==5){
               if(bc>0){
                 const dfloat w    =  LBM[fld + 0*p_Nfields];
                 const int   idr   =  LMAP[fld];
-                applyBC2D(bc, fld, idr, en, nx, ny, w, ex, ey,rb, ub, vb, qm, qp); 
+                applyBC2D(bc, fld, idr, dt, en, nx, ny, w, ex, ey,rb, ub, vb, fn, qm, qp); 
               }
              
               s_fluxq[es][fld][n] = 0.5f*sc*(en -fabs(en))*(qm[fld] - qp[fld]);
@@ -208,6 +212,159 @@ if (bc==2 || bc==4 || bc==5){
             #pragma unroll p_Nfields
             for(int f=0; f<p_Nfields; ++f){
              rhsq[id+f*p_Np]= rhsf[f];
+            }
+
+          }
+        }
+      }
+    }
+  }
+}
+
+
+@kernel void lbsMRSurfaceTri2D(const dlong Nelements,
+                            @restrict const  dlong  *  elementIds,
+                            @restrict const  dfloat *  sgeo,
+                            @restrict const  dfloat *  LIFT,
+                            @restrict const  dlong  *  vmapM,
+                            @restrict const  dlong  *  mapP,
+                            @restrict const  int    *  EToB,
+                            @restrict const  dfloat *  x,
+                            @restrict const  dfloat *  y,
+                            @restrict const  dfloat *  z,
+                            const dfloat dt,
+                            const dfloat time,
+                            const dfloat nu,
+                            @restrict const  int *  LMAP,
+                            @restrict const  dfloat *  LBM,
+                            @restrict const  dfloat *  F,
+                            @restrict const  dfloat *  U,
+                            @restrict const  dfloat *  q,
+                            @restrict const  dfloat *  fQM,
+                            @restrict dfloat *  rhsq){
+
+  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
+
+    // @shared storage for flux terms
+    @shared dfloat s_fluxq[p_NblockS][p_Nfields][p_Nfp*p_Nfaces];
+
+    @exclusive dlong e;
+
+    // for all face nodes of all elements
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
+        const dlong et = eo + es;
+        if(et<Nelements){
+          e = elementIds[et];
+          if(n<p_Nfp*p_Nfaces){
+            // find face that owns this node
+            const int face = n/p_Nfp;
+
+            // load surface geofactors for this face
+            const dlong sid   = p_Nsgeo*(e*p_Nfaces+face);
+            const dfloat nx   = sgeo[sid+p_NXID];
+            const dfloat ny   = sgeo[sid+p_NYID];
+            const dfloat sJ   = sgeo[sid+p_SJID];
+            const dfloat invJ = sgeo[sid+p_IJID];
+
+            const dfloat sc = sJ*invJ;
+
+            const dlong id  = e*p_Nfp*p_Nfaces + n;
+            const dlong idM = e*p_Nfp*p_Nfaces*p_Nfields + n;
+
+            // extract + side index
+            const dlong qidP = mapP[id];
+            const dlong eP   = qidP/(p_Nfp*p_Nfaces);
+            const int fidP   = qidP%(p_Nfp*p_Nfaces);
+            const dlong idP  = eP*p_Nfp*p_Nfaces*p_Nfields + fidP;
+
+
+
+            const dlong vidM = vmapM[id];
+            const int vidMl  = vidM%p_Np;
+            
+            // apply boundary condition
+            const int bc = EToB[face+p_Nfaces*e];
+            
+            dfloat rm, um, vm, rb, ub, vb; 
+
+            if(bc>0 || bc==-1){
+              const dlong uidM = e*p_Np*p_Nmacro + vidMl; 
+              rm   = U[uidM+ 0*p_Np];  
+              um   = U[uidM+ 1*p_Np];  
+              vm   = U[uidM+ 2*p_Np];  
+
+             lbsBoundaryConditions2D(bc, nu, time, x[vidM], y[vidM], nx, ny, 
+                                     rm, um, vm, 
+                                     &rb, &ub, &vb); 
+            }
+
+
+            dfloat qm[p_Nfields]; 
+            dfloat qp[p_Nfields]; 
+
+            #pragma unroll p_Nfields
+            for(int fld=0; fld<p_Nfields;++fld){
+              qm[fld] = fQM[idM + fld*p_Nfp*p_Nfaces];
+              qp[fld] = fQM[idP + fld*p_Nfp*p_Nfaces];
+            }
+
+
+            #pragma unroll p_Nfields
+            for(int fld=0; fld<p_Nfields;++fld){
+              const dlong fidM = e*p_Np*p_Nfields + vidMl; 
+              const dfloat fn = F[fidM + fld*p_Np]; 
+              const dfloat ex = LBM[fld + 1*p_Nfields]; 
+              const dfloat ey = LBM[fld + 2*p_Nfields]; 
+              const dfloat en = ex*nx + ey*ny; // need to modify for bc
+
+              if(bc>0){
+                const dfloat w    =  LBM[fld + 0*p_Nfields];
+                const int   idr   =  LMAP[fld];
+                applyBC2D(bc, fld, idr, dt, en, nx, ny, w, ex, ey,rb, ub, vb, fn, qm, qp); 
+              }
+             
+              s_fluxq[es][fld][n] = 0.5f*sc*(en -fabs(en))*(qm[fld] - qp[fld]);
+            }
+          }
+        }
+      }
+    }
+
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
+
+    // for each node in the element
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
+        const dlong et = eo + es;
+        if(et<Nelements){
+          if(n<p_Np){
+            // const int id = nrhs*p_Nfields*(p_Np*e + n) + p_Nfields*shift;
+            const dlong id = e*p_Nfields*p_Np + n ;
+
+            dfloat rhsf[p_Nfields]; 
+            #pragma unroll p_Nfields
+            for(int fld=0; fld<p_Nfields; ++fld){
+              rhsf[fld] = rhsq[id+fld*p_Np];
+            }
+
+            // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
+            #pragma unroll p_NfacesNfp
+              for(int m=0;m<p_NfacesNfp;++m){
+                dfloat L = LIFT[n+m*p_Np];
+
+                #pragma unroll p_Nfields
+                for(int fld=0; fld<p_Nfields; ++fld){
+                 rhsf[fld] += L*s_fluxq[es][fld][m];
+                }
+                
+              }
+
+            #pragma unroll p_Nfields
+            for(int fld=0; fld<p_Nfields; ++fld){
+             rhsq[id+fld*p_Np]= rhsf[fld];
             }
 
           }

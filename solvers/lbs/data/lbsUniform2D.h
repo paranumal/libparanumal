@@ -25,15 +25,16 @@ SOFTWARE.
 */
 
 //mean flow
+#define CS 1.0/sqrt(3.0)
+#define MA 0.1
 #define RBAR 1.0
-#define UBAR 0.1*1.0/sqrt(3.0)
 #define VBAR 0.0
 
 // Initial conditions
 #define lbsInitialConditions2D(nu, t, x, y, r, u, v) \
 {                                         \
   *(r) = RBAR;                            \
-  *(u) = UBAR*1.0;                        \
+  *(u) = MA*1.0/sqrt(3.0);                           \
   *(v) = VBAR;                            \
 }
 
@@ -52,12 +53,12 @@ SOFTWARE.
                                 rB, uB, vB) \
 {                                      \
   if(bc==1){                           \
-    *(rB) = RBAR;                        \
+    *(rB) = RBAR;                      \
     *(uB) = 0.0;                       \
     *(vB) = 0.0;                       \
   } else if(bc==2){                    \
     *(rB) = RBAR;                      \
-    *(uB) = UBAR;        \
+    *(uB) = MA*1.0/sqrt(3.0);                     \
     *(vB) = VBAR;                      \
   } else if(bc==3){                    \
     *(rB) = RBAR;                      \

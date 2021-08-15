@@ -25,31 +25,33 @@ SOFTWARE.
 */
 
 //mean flow
+#define CS 1.0/sqrt(3.0)
+#define MA 0.1
 #define RBAR 1.0
-#define UBAR 0.1*1.0/sqrt(3.0)
 #define VBAR 0.0
 
-// // Initial conditions
-// #define lbsInitialConditions2D(nu, t, x, y, r, u, v) \
-// {                                         \
-//   *(r) = RBAR;                            \
-//   *(u) = UBAR*1.0;                        \
-//   *(v) = VBAR;                            \
-// }
+// const dfloat L = 1.f; \
+//   const dfloat U = MA*1.0/sqrt(3.0); \
+//   dfloat un = U*y/L; \
+//   for(int n=1; n<1000; ++n){ \
+//     const dfloat lambda = n*M_PI/L; \
+//     const dfloat sone = (n%2)==0 ? 1.f:-1.f; \
+//     un += 2.f*U*sone/(lambda*L)*exp(-nu*lambda*lambda*t)*sin(lambda*y);\
+//   }\
 
 // Initial conditions
 #define lbsInitialConditions2D(nu, t, x, y, r, u, v) \
 {                                         \
-  *(r) = 1 + exp(-3*(x*x+y*y));           \
-  *(u) = 0.01*exp(-3*(x*x+y*y));  \
-  *(v) = 0.01*exp(-3*(x*x+y*y));   \
+  *(r) = RBAR;                            \
+  *(u) = 0.f*MA*1.f/sqrt(3.f)*y;              \
+  *(v) = VBAR;                            \
 }
 
 // Body force
 #define lbsBodyForce2D(nu, t, x, y, r, u, v, fx, fy) \
 {                                                   \
-  *(fx) = -r*0.00;                                      \
-  *(fy) = -r*0.01;                                      \
+  *(fx) = 0.0;                                      \
+  *(fy) = 0.0;                                      \
 }
 
 // Boundary conditions
@@ -60,12 +62,12 @@ SOFTWARE.
                                 rB, uB, vB) \
 {                                      \
   if(bc==1){                           \
-    *(rB) = RBAR;                        \
-    *(uB) = 0.0;                       \
-    *(vB) = 0.0;                       \
+    *(rB) = RBAR;                      \
+    *(uB) = 0.0;                     \
+    *(vB) = 0.0;                     \
   } else if(bc==2){                    \
     *(rB) = RBAR;                      \
-    *(uB) = UBAR*0.f;                  \
+    *(uB) = MA*1.f/sqrt(3.f)*y;        \
     *(vB) = VBAR;                      \
   } else if(bc==3){                    \
     *(rB) = RBAR;                      \
@@ -75,5 +77,5 @@ SOFTWARE.
     *(rB) = rM;                        \
     *(uB) = uM - (nx*uM+ny*vM)*nx;     \
     *(vB) = vM - (nx*uM+ny*vM)*ny;     \
-  }\
+  }                                    \
 }

@@ -1,4 +1,4 @@
-r = DefineNumber[ 0.05];
+r = DefineNumber[ 0.025];
 xmin = DefineNumber[ 0.0];
 xmax = DefineNumber[ 1.0];
 ymin = DefineNumber[ 0.0];

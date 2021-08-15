@@ -1,7 +1,7 @@
 r = DefineNumber[ 0.25];
 xmin = DefineNumber[ 0.0];
-xmax = DefineNumber[ 20.0];
-ymin = DefineNumber[-1.0];
+xmax = DefineNumber[ 5.0];
+ymin = DefineNumber[ 0.0];
 ymax = DefineNumber[ 1.0];
 
 Point(1) = {xmin, ymin, 0.0, r};
@@ -19,7 +19,7 @@ Line Loop(5) = {1, 2, 3, 4};
 Plane Surface(6) = {5};
 Physical Surface("Domain", 9) = {6};
 //+
-Physical Line("Wall", 1) = {1,3};
-Physical Line("Inflow", 2) = {4};
+Physical Line("Wall", 1) = {1};
+Physical Line("Inflow", 2) = {3,4};
 Physical Line("Outflow", 3) = {2};
 //+

@@ -27,7 +27,7 @@ SOFTWARE.
 #include "lbs.hpp"
 
 dfloat lbs_t::MaxWaveSpeed(){
-  const dfloat vmax = sqrt(3.0)*c;
+  const dfloat vmax = sqrt(2.0f)*1.f/sqrt(3.f);
   return vmax;
 }
 
@@ -40,13 +40,10 @@ void lbs_t::rhsf_pml(occa::memory& o_Q, occa::memory& o_pmlQ,
 
   // compute volume contribution to lbs RHS
   rhsVolume(mesh.NnonPmlElements, mesh.o_nonPmlElements, o_Q, o_RHS, T);
+
   // rhsPmlVolume(mesh.NpmlElements, mesh.o_pmlElements, mesh.o_pmlIds,
   //              o_Q, o_pmlQ, o_RHS, o_pmlRHS, T);
 
-  // // compute relaxation terms
-  // rhsRelaxation(mesh.NnonPmlElements, mesh.o_nonPmlElements, o_Q, o_RHS);
-  // rhsPmlRelaxation(mesh.NpmlElements, mesh.o_pmlElements, mesh.o_pmlIds,
-  //                  o_Q, o_pmlQ, o_RHS, o_pmlRHS);
 
   // complete trace halo exchange
   traceHalo->ExchangeFinish(o_Q, 1, ogs_dfloat);
@@ -58,54 +55,37 @@ void lbs_t::rhsf_pml(occa::memory& o_Q, occa::memory& o_pmlQ,
 }
 
 
-// //evaluate ODE rhs = f(q,t)
-// void lbs_t::rhsf_MR_pml(occa::memory& o_Q, occa::memory& o_pmlQ,
-//                         occa::memory& o_RHS, occa::memory& o_pmlRHS,
-//                         occa::memory& o_fQM, const dfloat T, const int lev){
+//evaluate ODE rhs = f(q,t)
+void lbs_t::rhsf_MR_pml(occa::memory& o_Q, occa::memory& o_pmlQ,
+                        occa::memory& o_RHS, occa::memory& o_pmlRHS,
+                        occa::memory& o_fQM, const dfloat T, const int lev){
 
-//   // extract q trace halo and start exchange
-//   multirateTraceHalo[lev]->ExchangeStart(o_fQM, 1, ogs_dfloat);
+  // extract q trace halo and start exchange
+  multirateTraceHalo[lev]->ExchangeStart(o_fQM, 1, ogs_dfloat);
 
-//   // compute volume contribution to lbs RHS
-//   rhsVolume(mesh.mrNnonPmlElements[lev], mesh.o_mrNonPmlElements[lev], o_Q, o_RHS, T);
-//   rhsPmlVolume(mesh.mrNpmlElements[lev], mesh.o_mrPmlElements[lev], mesh.o_mrPmlIds[lev],
-//                o_Q, o_pmlQ, o_RHS, o_pmlRHS, T);
+  // compute volume contribution to lbs RHS
+  rhsVolume(mesh.mrNnonPmlElements[lev], mesh.o_mrNonPmlElements[lev], o_Q, o_RHS, T);
+  // rhsPmlVolume(mesh.mrNpmlElements[lev], mesh.o_mrPmlElements[lev], mesh.o_mrPmlIds[lev],
+  //              o_Q, o_pmlQ, o_RHS, o_pmlRHS, T);
 
-//   // compute relaxation terms
-//   rhsRelaxation(mesh.mrNnonPmlElements[lev], mesh.o_mrNonPmlElements[lev], o_Q, o_RHS);
-//   rhsPmlRelaxation(mesh.mrNpmlElements[lev], mesh.o_mrPmlElements[lev], mesh.o_mrPmlIds[lev],
-//                    o_Q, o_pmlQ, o_RHS, o_pmlRHS);
+  // complete trace halo exchange
+  multirateTraceHalo[lev]->ExchangeFinish(o_fQM, 1, ogs_dfloat);
 
-//   // complete trace halo exchange
-//   multirateTraceHalo[lev]->ExchangeFinish(o_fQM, 1, ogs_dfloat);
-
-//   // compute surface contribution to lbs RHS
-//   rhsSurfaceMR(mesh.mrNnonPmlElements[lev], mesh.o_mrNonPmlElements[lev], o_Q, o_RHS, o_fQM, T);
-//   rhsPmlSurfaceMR(mesh.mrNpmlElements[lev], mesh.o_mrPmlElements[lev], mesh.o_mrPmlIds[lev],
-//                   o_Q, o_pmlQ, o_RHS, o_pmlRHS, o_fQM, T);
-// }
+  // compute surface contribution to lbs RHS
+  rhsSurfaceMR(mesh.mrNnonPmlElements[lev], mesh.o_mrNonPmlElements[lev], o_Q, o_RHS, o_fQM, T);
+  // rhsPmlSurfaceMR(mesh.mrNpmlElements[lev], mesh.o_mrPmlElements[lev], mesh.o_mrPmlIds[lev],
+  //                 o_Q, o_pmlQ, o_RHS, o_pmlRHS, o_fQM, T);
+}
 
 void lbs_t::rhsVolume(dlong N, occa::memory& o_ids,
                       occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
 
   // compute volume contribution to lbs RHS
   if (N){
-    // printf("I am here\n");
+    const dfloat dt    = timeStepper->GetTimeStep();
+    const dfloat gamma = alpha/timeStepper->GetTimeStep();
 
-const dfloat dt    = timeStepper->GetTimeStep();
-const dfloat gamma = alpha/timeStepper->GetTimeStep();
-   //  // printf("%.4e  %.4e %.4e\n",alpha, gamma, timeStepper->GetTimeStep());
-   // collisionKernel(N,
-   //               o_ids,
-   //               T,
-   //               gamma,
-   //               o_LBM,
-   //               o_Q,
-   //               o_U);
-
-   // momentsKernel(N, o_LBM, o_Q, o_U); 
-
-collisionKernel(N,
+    forcingKernel(N,
                  o_ids,
                  T,
                  dt, 
@@ -116,7 +96,22 @@ collisionKernel(N,
                  mesh.o_y,
                  mesh.o_z,
                  o_Q,
+                 o_F,
                  o_U);
+
+    collisionKernel(N,
+                 o_ids,
+                 T,
+                 dt, 
+                 gamma,
+                 nu,
+                 o_LBM,
+                 mesh.o_x,
+                 mesh.o_y,
+                 mesh.o_z,
+                 o_F,
+                 o_U,
+                 o_Q);
 
     volumeKernel(N,
                  o_ids,
@@ -138,7 +133,8 @@ collisionKernel(N,
 
 void lbs_t::rhsSurface(dlong N, occa::memory& o_ids,
                       occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
-
+  
+  const dfloat dt    = timeStepper->GetTimeStep();
   // compute volume contribution to lbs RHS
   if (N)
     surfaceKernel(N,
@@ -151,12 +147,43 @@ void lbs_t::rhsSurface(dlong N, occa::memory& o_ids,
                   mesh.o_x,
                   mesh.o_y,
                   mesh.o_z,
+                  dt,
                   T,
                   nu,
                   o_LMAP, 
                   o_LBM,
+                  o_F, 
                   o_U,
                   o_Q,
+                  o_RHS);
+}
+
+
+void lbs_t::rhsSurfaceMR(dlong N, occa::memory& o_ids,
+                         occa::memory& o_Q, occa::memory& o_RHS,
+                         occa::memory& o_fQM, const dfloat T){
+  const dfloat dt    = timeStepper->GetTimeStep();
+  // compute volume contribution to lbs RHS
+  if (N)
+    surfaceKernel(N,
+                  o_ids,
+                  mesh.o_sgeo,
+                  mesh.o_LIFT,
+                  mesh.o_vmapM,
+                  mesh.o_mapP,
+                  mesh.o_EToB,
+                  mesh.o_x,
+                  mesh.o_y,
+                  mesh.o_z,
+                  dt,
+                  T,
+                  nu,
+                  o_LMAP, 
+                  o_LBM,
+                  o_F, 
+                  o_U,
+                  o_Q,
+                  o_fQM,
                   o_RHS);
 }
 
