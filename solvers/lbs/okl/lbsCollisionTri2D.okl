@@ -35,7 +35,7 @@ void equiDist2D(const dfloat w,  const dfloat ex, const dfloat ey,
 
 // Compute collision step, physical velocity and scaled external forcing
 @kernel void lbsCollisionTri2D(const dlong Nelements,
-                            @restrict const  dlong  *  elementIds,
+                            // @restrict const  dlong  *  elementIds,
                             const dfloat t,
                             const dfloat dt,
                             const dfloat gamma, // lambda/dt
@@ -55,7 +55,8 @@ void equiDist2D(const dfloat w,  const dfloat ex, const dfloat ey,
       for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
         const dlong et = eo+es; // element in block
         if(et<Nelements){
-          const dlong e    = elementIds[et];
+          // const dlong e    = elementIds[et];
+          const dlong e    = et;
           const dlong idf  = e*p_Nfields*p_Np + n;
           const dlong idn  = e*p_Nmacro*p_Np  + n;
 
@@ -97,7 +98,7 @@ void equiDist2D(const dfloat w,  const dfloat ex, const dfloat ey,
 // (v-u)\dot G /(rho\timesc^2)
 
 @kernel void lbsForcingTri2D(const dlong Nelements,
-                            @restrict const  dlong  *  elementIds,
+                            // @restrict const  dlong  *  elementIds,
                             const dfloat t,
                             const dfloat dt,
                             const dfloat gamma, // lambda/dt
@@ -120,7 +121,8 @@ void equiDist2D(const dfloat w,  const dfloat ex, const dfloat ey,
       for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
         const dlong et = eo+es; // element in block
         if(et<Nelements){
-          const dlong e   = elementIds[et];
+          // const dlong e   = elementIds[et];
+          const dlong e   = et;
           const dlong idf = e*p_Nfields*p_Np + n;
           const dlong idn = e*p_Nmacro*p_Np  + n;
 

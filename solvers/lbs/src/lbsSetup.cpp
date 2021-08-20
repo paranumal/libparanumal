@@ -39,8 +39,8 @@ lbs_t& lbs_t::Setup(platform_t& platform, mesh_t& mesh,
   
   lbs->Npmlfields = mesh.dim*lbs->Nfields;
 
-  //Setup PML
-  lbs->PmlSetup();
+  // AK: not in use yet ... Setup PML
+  // lbs->PmlSetup();
 
   //setup timeStepper
   dlong Nlocal = mesh.Nelements*mesh.Np*lbs->Nfields;
@@ -52,38 +52,19 @@ lbs_t& lbs_t::Setup(platform_t& platform, mesh_t& mesh,
   for(dlong e=0;e<mesh.Nelements;++e){
     dfloat h = mesh.ElementCharacteristicLength(e);
     dfloat dtAdv  = h/(vmax*(mesh.N+1.)*(mesh.N+1.));
-
     EtoDT[e] = dtAdv;
   }
 
 
-  mesh.mrNlevels=0;
-  if (settings.compareSetting("TIME INTEGRATOR","MRAB3")) {
-    mesh.MultiRateSetup(EtoDT);
-    mesh.MultiRatePmlSetup();
-    lbs->multirateTraceHalo = mesh.MultiRateHaloTraceSetup(lbs->Nfields);
-  }
 
-  
-  if (settings.compareSetting("TIME INTEGRATOR","MRAB3")){
-    lbs->timeStepper = new TimeStepper::mrab3_pml(mesh.Nelements, mesh.NpmlElements, mesh.totalHaloPairs,
-                                              mesh.Np, lbs->Nfields, lbs->Npmlfields, *lbs, mesh);
-  } else if (settings.compareSetting("TIME INTEGRATOR","AB3")){
-    lbs->timeStepper = new TimeStepper::ab3_pml(mesh.Nelements, mesh.NpmlElements, mesh.totalHaloPairs,
-                                              mesh.Np, lbs->Nfields, lbs->Npmlfields, *lbs);
-  }
-   // else if (settings.compareSetting("TIME INTEGRATOR","DOPRI5")){
-   //  lbs->timeStepper = new TimeStepper::dopri5_pml(mesh.Nelements, mesh.NpmlElements, mesh.totalHaloPairs,
-   //                                            mesh.Np, lbs->Nfields, lbs->Npmlfields, *lbs, mesh.comm);
-  // } 
-  else if (settings.compareSetting("TIME INTEGRATOR","LSERK4")){
-    lbs->timeStepper = new TimeStepper::lserk4_pml(mesh.Nelements, mesh.NpmlElements, mesh.totalHaloPairs,
-                                              mesh.Np, lbs->Nfields, lbs->Npmlfields, *lbs);
+  if (settings.compareSetting("TIME INTEGRATOR","LSERK4")){
+    lbs->timeStepper = new TimeStepper::lserk4(mesh.Nelements, mesh.totalHaloPairs,
+                                              mesh.Np, lbs->Nfields, *lbs);
   }else {
     LIBP_ABORT(string("Requested TIME INTEGRATOR not found."));
   }
-  free(EtoDT);
 
+  
   //setup linear algebra module
   platform.linAlg.InitKernels({"innerProd"});
 
@@ -111,15 +92,7 @@ lbs_t& lbs_t::Setup(platform_t& platform, mesh_t& mesh,
   lbs->o_LMAP = platform.malloc(lbs->Nfields*sizeof(int), lbs->LMAP);
 
 
-  #if 0
-
-  lbs->o_LBM.copyTo(lbs->LBM);
   
-  printf("%.4e\n", lbs->c);
-  for(int i=0; i<lbs->Nfields; i++)
-  printf("%.4e %.4e %4e \n", lbs->LBM[i+ 0*lbs->Nfields], lbs->LBM[i+ 1*lbs->Nfields],lbs->LBM[i+ 2*lbs->Nfields]);  
-  #endif 
-
   //storage for M*q during reporting
   lbs->o_Mq = platform.malloc((mesh.Nelements+mesh.totalHaloPairs)*mesh.Np*lbs->Nmacro*sizeof(dfloat), lbs->U);
   mesh.MassMatrixKernelSetup(lbs->Nmacro); // mass matrix operator
@@ -133,7 +106,7 @@ lbs_t& lbs_t::Setup(platform_t& platform, mesh_t& mesh,
   kernelInfo["includes"] += dataFileName;
 
   kernelInfo["defines/" "p_Nfields"]= lbs->Nfields;
-  kernelInfo["defines/" "p_Npmlfields"]= lbs->Npmlfields;
+  // kernelInfo["defines/" "p_Npmlfields"]= lbs->Npmlfields;
   kernelInfo["defines/" "p_Nmacro"] = lbs->Nmacro;  
 
   kernelInfo["defines/" "p_c"] = lbs->c;  
@@ -151,9 +124,6 @@ lbs_t& lbs_t::Setup(platform_t& platform, mesh_t& mesh,
 
   int NblockS = mymax(1, blockMax/maxNodes);
   kernelInfo["defines/" "p_NblockS"]= NblockS;
-
-  // int NblockCub = mymax(1, blockMax/mesh.cubNp);
-  // kernelInfo["defines/" "p_NblockCub"]= NblockCub;
 
   kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
 
@@ -180,8 +150,6 @@ lbs_t& lbs_t::Setup(platform_t& platform, mesh_t& mesh,
   lbs->initialConditionKernel = platform.buildKernel(fileName, kernelName,
                                             kernelInfo);
   
-
-  
   // kernels from volume file
   sprintf(fileName, DLBS "/okl/lbsCollision%s.okl", suffix);  
 
@@ -207,50 +175,12 @@ lbs_t& lbs_t::Setup(platform_t& platform, mesh_t& mesh,
   lbs->volumeKernel =  platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
 
-  // if (lbs->pmlcubature) {
-  //   sprintf(kernelName, "lbsPmlVolumeCub%s", suffix);
-  //   lbs->pmlVolumeKernel =  platform.buildKernel(fileName, kernelName,
-  //                                        kernelInfo);
-  // } else {
-  //   sprintf(kernelName, "lbsPmlVolume%s", suffix);
-  //   lbs->pmlVolumeKernel =  platform.buildKernel(fileName, kernelName,
-  //                                        kernelInfo);
-  // }
-
-  // // kernels from relaxation file
-  // sprintf(fileName, DLBS "/okl/lbsRelaxation%s.okl", suffix);
-  // sprintf(kernelName, "lbsRelaxation%s", suffix);
-  // lbs->relaxationKernel = platform.buildKernel(fileName, kernelName,
-  //                                        kernelInfo);
-  // if (lbs->pmlcubature) {
-  //   sprintf(kernelName, "lbsPmlRelaxationCub%s", suffix);
-  //   lbs->pmlRelaxationKernel = platform.buildKernel(fileName, kernelName,
-  //                                          kernelInfo);
-  // } else {
-  //   lbs->pmlRelaxationKernel = platform.buildKernel(fileName, kernelName,
-  //                                          kernelInfo);
-  // }
-
-
   // kernels from surface file
   sprintf(fileName, DLBS "/okl/lbsSurface%s.okl", suffix);
-  if (settings.compareSetting("TIME INTEGRATOR","MRAB3")) {
-    sprintf(kernelName, "lbsMRSurface%s", suffix);
-    lbs->surfaceKernel = platform.buildKernel(fileName, kernelName,
+  
+  sprintf(kernelName, "lbsSurface%s", suffix);
+  lbs->surfaceKernel = platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
-
-    // sprintf(kernelName, "lbsMRPmlSurface%s", suffix);
-    // lbs->pmlSurfaceKernel = platform.buildKernel(fileName, kernelName,
-    //                                        kernelInfo);
-  } else {
-    sprintf(kernelName, "lbsSurface%s", suffix);
-    lbs->surfaceKernel = platform.buildKernel(fileName, kernelName,
-                                           kernelInfo);
-
-    // sprintf(kernelName, "lbsPmlSurface%s", suffix);
-    // lbs->pmlSurfaceKernel = platform.buildKernel(fileName, kernelName,
-                                           // kernelInfo);
-  }
 
   // vorticity calculation
   sprintf(fileName, DLBS "/okl/lbsVorticity%s.okl", suffix);

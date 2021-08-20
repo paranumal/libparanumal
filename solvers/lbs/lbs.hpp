@@ -137,34 +137,11 @@ public:
   dfloat MaxWaveSpeed();
 
 
-  void rhsf_pml(occa::memory& o_Q, occa::memory& o_pmlQ,
-                occa::memory& o_RHS, occa::memory& o_pmlRHS, const dfloat T);
+  void rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T);
 
+  void rhsVolume(dlong N, occa::memory& o_Q, occa::memory& o_RHS, const dfloat T);
 
-
-  void rhsf_MR_pml(occa::memory& o_Q, occa::memory& o_pmlQ,
-                   occa::memory& o_RHS, occa::memory& o_pmlRHS,
-                   occa::memory& o_fQM, const dfloat T, const int lev);
-
-
-  //seperate components of rhs evaluation
-  void rhsVolume(dlong N, occa::memory& o_ids,
-                 occa::memory& o_Q, occa::memory& o_RHS, const dfloat T);
-  // void rhsPmlVolume(dlong N, occa::memory& o_ids, occa::memory& o_pmlids,
-                    // occa::memory& o_Q, occa::memory& o_pmlQ,
-                    // occa::memory& o_RHS, occa::memory& o_pmlRHS, const dfloat T);
-  void rhsSurface(dlong N, occa::memory& o_ids,
-                  occa::memory& o_Q, occa::memory& o_RHS, const dfloat T);
-  // void rhsPmlSurface(dlong N, occa::memory& o_ids, occa::memory& o_pmlids,
-  //                    occa::memory& o_Q, occa::memory& o_pmlQ,
-  //                    occa::memory& o_RHS, occa::memory& o_pmlRHS, const dfloat T);
-  void rhsSurfaceMR(dlong N, occa::memory& o_ids,
-                    occa::memory& o_Q, occa::memory& o_RHS,
-                    occa::memory& o_fQM, const dfloat T);
-  // void rhsPmlSurfaceMR(dlong N, occa::memory& o_ids, occa::memory& o_pmlids,
-  //                      occa::memory& o_Q, occa::memory& o_pmlQ,
-  //                      occa::memory& o_RHS, occa::memory& o_pmlRHS,
-  //                      occa::memory& o_fQM, const dfloat T);
+  void rhsSurface(dlong N, occa::memory& o_Q, occa::memory& o_RHS, const dfloat T);
 
   void latticeSetup(); 
 };

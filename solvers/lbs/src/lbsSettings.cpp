@@ -65,9 +65,9 @@ lbsSettings_t::lbsSettings_t(MPI_Comm& _comm):
              {"COLLOCATION", "CUBATURE"});
 
   newSetting("TIME INTEGRATOR",
-             "DOPRI5",
+             "LSERK4",
              "Time integration method",
-             {"AB3", "SAAB3", "DOPRI5", "LSERK4", "SARK4", "SARK5", "MRAB3", "MRSAAB3"});
+             {"LSERK4"});
 
   newSetting("CFL NUMBER",
              "1.0",

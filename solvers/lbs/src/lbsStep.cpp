@@ -32,53 +32,22 @@ dfloat lbs_t::MaxWaveSpeed(){
 }
 
 //evaluate ODE rhs = f(q,t)
-void lbs_t::rhsf_pml(occa::memory& o_Q, occa::memory& o_pmlQ,
-                     occa::memory& o_RHS, occa::memory& o_pmlRHS, const dfloat T){
+void lbs_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
 
   // extract q trace halo and start exchange
   traceHalo->ExchangeStart(o_Q, 1, ogs_dfloat);
 
   // compute volume contribution to lbs RHS
-  rhsVolume(mesh.NnonPmlElements, mesh.o_nonPmlElements, o_Q, o_RHS, T);
-
-  // rhsPmlVolume(mesh.NpmlElements, mesh.o_pmlElements, mesh.o_pmlIds,
-  //              o_Q, o_pmlQ, o_RHS, o_pmlRHS, T);
-
+  rhsVolume(mesh.Nelements, o_Q, o_RHS, T);
 
   // complete trace halo exchange
   traceHalo->ExchangeFinish(o_Q, 1, ogs_dfloat);
 
   // compute surface contribution to lbs RHS
-   rhsSurface(mesh.NnonPmlElements, mesh.o_nonPmlElements, o_Q, o_RHS, T);
-  // rhsPmlSurface(mesh.NpmlElements, mesh.o_pmlElements, mesh.o_pmlIds,
-  //               o_Q, o_pmlQ, o_RHS, o_pmlRHS, T);
+   rhsSurface(mesh.Nelements, o_Q, o_RHS, T);
 }
 
-
-//evaluate ODE rhs = f(q,t)
-void lbs_t::rhsf_MR_pml(occa::memory& o_Q, occa::memory& o_pmlQ,
-                        occa::memory& o_RHS, occa::memory& o_pmlRHS,
-                        occa::memory& o_fQM, const dfloat T, const int lev){
-
-  // extract q trace halo and start exchange
-  multirateTraceHalo[lev]->ExchangeStart(o_fQM, 1, ogs_dfloat);
-
-  // compute volume contribution to lbs RHS
-  rhsVolume(mesh.mrNnonPmlElements[lev], mesh.o_mrNonPmlElements[lev], o_Q, o_RHS, T);
-  // rhsPmlVolume(mesh.mrNpmlElements[lev], mesh.o_mrPmlElements[lev], mesh.o_mrPmlIds[lev],
-  //              o_Q, o_pmlQ, o_RHS, o_pmlRHS, T);
-
-  // complete trace halo exchange
-  multirateTraceHalo[lev]->ExchangeFinish(o_fQM, 1, ogs_dfloat);
-
-  // compute surface contribution to lbs RHS
-  rhsSurfaceMR(mesh.mrNnonPmlElements[lev], mesh.o_mrNonPmlElements[lev], o_Q, o_RHS, o_fQM, T);
-  // rhsPmlSurfaceMR(mesh.mrNpmlElements[lev], mesh.o_mrPmlElements[lev], mesh.o_mrPmlIds[lev],
-  //                 o_Q, o_pmlQ, o_RHS, o_pmlRHS, o_fQM, T);
-}
-
-void lbs_t::rhsVolume(dlong N, occa::memory& o_ids,
-                      occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
+void lbs_t::rhsVolume(dlong N, occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
 
   // compute volume contribution to lbs RHS
   if (N){
@@ -86,7 +55,6 @@ void lbs_t::rhsVolume(dlong N, occa::memory& o_ids,
     const dfloat gamma = alpha/timeStepper->GetTimeStep();
 
     forcingKernel(N,
-                 o_ids,
                  T,
                  dt, 
                  gamma,
@@ -100,7 +68,6 @@ void lbs_t::rhsVolume(dlong N, occa::memory& o_ids,
                  o_U);
 
     collisionKernel(N,
-                 o_ids,
                  T,
                  dt, 
                  gamma,
@@ -114,7 +81,6 @@ void lbs_t::rhsVolume(dlong N, occa::memory& o_ids,
                  o_Q);
 
     volumeKernel(N,
-                 o_ids,
                  mesh.o_vgeo,
                  mesh.o_D,
                  mesh.o_x,
@@ -131,14 +97,12 @@ void lbs_t::rhsVolume(dlong N, occa::memory& o_ids,
 }
 
 
-void lbs_t::rhsSurface(dlong N, occa::memory& o_ids,
-                      occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
+void lbs_t::rhsSurface(dlong N, occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
   
   const dfloat dt    = timeStepper->GetTimeStep();
   // compute volume contribution to lbs RHS
   if (N)
     surfaceKernel(N,
-                  o_ids,
                   mesh.o_sgeo,
                   mesh.o_LIFT,
                   mesh.o_vmapM,
@@ -157,205 +121,3 @@ void lbs_t::rhsSurface(dlong N, occa::memory& o_ids,
                   o_Q,
                   o_RHS);
 }
-
-
-void lbs_t::rhsSurfaceMR(dlong N, occa::memory& o_ids,
-                         occa::memory& o_Q, occa::memory& o_RHS,
-                         occa::memory& o_fQM, const dfloat T){
-  const dfloat dt    = timeStepper->GetTimeStep();
-  // compute volume contribution to lbs RHS
-  if (N)
-    surfaceKernel(N,
-                  o_ids,
-                  mesh.o_sgeo,
-                  mesh.o_LIFT,
-                  mesh.o_vmapM,
-                  mesh.o_mapP,
-                  mesh.o_EToB,
-                  mesh.o_x,
-                  mesh.o_y,
-                  mesh.o_z,
-                  dt,
-                  T,
-                  nu,
-                  o_LMAP, 
-                  o_LBM,
-                  o_F, 
-                  o_U,
-                  o_Q,
-                  o_fQM,
-                  o_RHS);
-}
-
-
-// void lbs_t::rhsPmlVolume(dlong N, occa::memory& o_ids, occa::memory& o_pmlids,
-//                          occa::memory& o_Q, occa::memory& o_pmlQ,
-//                          occa::memory& o_RHS, occa::memory& o_pmlRHS, const dfloat T){
-
-//   // compute volume contribution to lbs RHS
-//   if (N) {
-//     if (pmlcubature)
-//       pmlVolumeKernel(N,
-//                      o_ids,
-//                      o_pmlids,
-//                      mesh.o_vgeo,
-//                      mesh.o_D,
-//                      mesh.o_x,
-//                      mesh.o_y,
-//                      mesh.o_z,
-//                      T,
-//                      c,
-//                      nu,
-//                      o_Q,
-//                      o_RHS,
-//                      o_pmlRHS);
-//     else
-//       pmlVolumeKernel(N,
-//                      o_ids,
-//                      o_pmlids,
-//                      mesh.o_vgeo,
-//                      mesh.o_D,
-//                      mesh.o_x,
-//                      mesh.o_y,
-//                      mesh.o_z,
-//                      o_pmlSigma,
-//                      pmlAlpha,
-//                      T,
-//                      c,
-//                      nu,
-//                      o_Q,
-//                      o_pmlQ,
-//                      o_RHS,
-//                      o_pmlRHS);
-//   }
-// }
-
-// void lbs_t::rhsRelaxation(dlong N, occa::memory& o_ids,
-//                           occa::memory& o_Q, occa::memory& o_RHS){
-
-//   // compute volume contribution to lbs RHS
-//   if (N)
-//     relaxationKernel(N,
-//                      o_ids,
-//                      mesh.o_vgeo,
-//                      mesh.o_cubvgeo,
-//                      mesh.o_cubInterp,
-//                      mesh.o_cubProject,
-//                      semiAnalytic,
-//                      tauInv,
-//                      o_Q,
-//                      o_RHS);
-// }
-
-// void lbs_t::rhsPmlRelaxation(dlong N, occa::memory& o_ids, occa::memory& o_pmlids,
-//                              occa::memory& o_Q, occa::memory& o_pmlQ,
-//                              occa::memory& o_RHS, occa::memory& o_pmlRHS){
-
-//   // compute volume contribution to lbs RHS
-//   if (N) {
-//     if (pmlcubature)
-//       pmlRelaxationKernel(N,
-//                          o_ids,
-//                          o_pmlids,
-//                          mesh.o_vgeo,
-//                          mesh.o_cubvgeo,
-//                          mesh.o_cubInterp,
-//                          mesh.o_cubProject,
-//                          o_pmlSigma,
-//                          pmlAlpha,
-//                          semiAnalytic,
-//                          tauInv,
-//                          o_Q,
-//                          o_pmlQ,
-//                          o_RHS,
-//                          o_pmlRHS);
-//     else
-//       pmlRelaxationKernel(N,
-//                          o_ids,
-//                          mesh.o_vgeo,
-//                          mesh.o_cubvgeo,
-//                          mesh.o_cubInterp,
-//                          mesh.o_cubProject,
-//                          semiAnalytic,
-//                          tauInv,
-//                          o_Q,
-//                          o_RHS);
-//   }
-// }
-
-
-// void lbs_t::rhsPmlSurface(dlong N, occa::memory& o_ids, occa::memory& o_pmlids,
-//                          occa::memory& o_Q, occa::memory& o_pmlQ,
-//                          occa::memory& o_RHS, occa::memory& o_pmlRHS, const dfloat T){
-
-//   // compute volume contribution to lbs RHS
-//   if (N)
-//     pmlSurfaceKernel(N,
-//                     o_ids,
-//                     o_pmlids,
-//                     mesh.o_sgeo,
-//                     mesh.o_LIFT,
-//                     mesh.o_vmapM,
-//                     mesh.o_vmapP,
-//                     mesh.o_EToB,
-//                     mesh.o_x,
-//                     mesh.o_y,
-//                     mesh.o_z,
-//                     T,
-//                     c,
-//                     nu,
-//                     o_Q,
-//                     o_RHS,
-//                     o_pmlRHS);
-// }
-
-// void lbs_t::rhsSurfaceMR(dlong N, occa::memory& o_ids,
-//                          occa::memory& o_Q, occa::memory& o_RHS,
-//                          occa::memory& o_fQM, const dfloat T){
-
-//   // compute volume contribution to lbs RHS
-//   if (N)
-//     surfaceKernel(N,
-//                   o_ids,
-//                   mesh.o_sgeo,
-//                   mesh.o_LIFT,
-//                   mesh.o_vmapM,
-//                   mesh.o_mapP,
-//                   mesh.o_EToB,
-//                   mesh.o_x,
-//                   mesh.o_y,
-//                   mesh.o_z,
-//                   T,
-//                   c,
-//                   nu,
-//                   o_Q,
-//                   o_fQM,
-//                   o_RHS);
-// }
-
-// void lbs_t::rhsPmlSurfaceMR(dlong N, occa::memory& o_ids, occa::memory& o_pmlids,
-//                          occa::memory& o_Q, occa::memory& o_pmlQ,
-//                          occa::memory& o_RHS, occa::memory& o_pmlRHS,
-//                          occa::memory& o_fQM, const dfloat T){
-
-//   // compute volume contribution to lbs RHS
-//   if (N)
-//     pmlSurfaceKernel(N,
-//                     o_ids,
-//                     o_pmlids,
-//                     mesh.o_sgeo,
-//                     mesh.o_LIFT,
-//                     mesh.o_vmapM,
-//                     mesh.o_mapP,
-//                     mesh.o_EToB,
-//                     mesh.o_x,
-//                     mesh.o_y,
-//                     mesh.o_z,
-//                     T,
-//                     c,
-//                     nu,
-//                     o_Q,
-//                     o_fQM,
-//                     o_RHS,
-//                     o_pmlRHS);
-// }

@@ -35,7 +35,7 @@ void equiDist2D(const dfloat w,  const dfloat ex, const dfloat ey,
 
 
 @kernel void lbsVolumeTri2D(const dlong Nelements,
-                            @restrict const  dlong  *  elementIds,
+                            // @restrict const  dlong  *  elementIds,
                             @restrict const  dfloat *  vgeo,
                             @restrict const  dfloat *  D,
                             @restrict const  dfloat * x,
@@ -60,7 +60,8 @@ void equiDist2D(const dfloat w,  const dfloat ex, const dfloat ey,
       for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
         const dlong et = eo+es; // element in block
         if(et<Nelements){
-          e = elementIds[et];
+          // e = elementIds[et];
+          e = et;
           const dlong idf = e*p_Nfields*p_Np + n;
           
           // const dlong idn = e*p_Nmacro*p_Np  + n;
