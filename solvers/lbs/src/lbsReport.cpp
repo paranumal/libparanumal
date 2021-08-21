@@ -33,8 +33,8 @@ void lbs_t::Report(dfloat time, int tstep){
   // Compute velocity and density
   momentsKernel(mesh.Nelements, o_LBM, o_q, o_U); 
 
-  //compute vorticity
-  vorticityKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_D, o_U, o_Vort);
+  // //compute vorticity
+  // vorticityKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_D, o_U, o_Vort);
 
   //compute q.M*q
   mesh.MassMatrixApply(o_U, o_Mq);

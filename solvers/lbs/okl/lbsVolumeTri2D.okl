@@ -24,15 +24,6 @@ SOFTWARE.
 
 */
 
-// Equilibrium Distribution
-void equiDist2D(const dfloat w,  const dfloat ex, const dfloat ey,
-                const dfloat r,  const dfloat u,  const dfloat v, dfloat *feq){
-  
-  const dfloat un = (ex*u + ey*v); 
-  *feq = r*w*(1.0f + p_ic2*un + 0.5f*p_ic4*un*un - 0.5f*p_ic2*(u*u + v*v)); 
-}
-
-
 
 @kernel void lbsVolumeTri2D(const dlong Nelements,
                             // @restrict const  dlong  *  elementIds,
@@ -64,32 +55,11 @@ void equiDist2D(const dfloat w,  const dfloat ex, const dfloat ey,
           e = et;
           const dlong idf = e*p_Nfields*p_Np + n;
           
-          // const dlong idn = e*p_Nmacro*p_Np  + n;
-          // const dfloat rn = U[idn + 0*p_Np]; 
-          // const dfloat un = U[idn + 1*p_Np]; 
-          // const dfloat vn = U[idn + 2*p_Np]; 
-
-
           #pragma unroll p_Nfields
           for(int fld=0; fld<p_Nfields;++fld){
             s_q[es][fld][n] = q[idf+fld*p_Np];
             // fg[p_NblockV][p_Nfields] = 0.f; 
           }
-
-
-          // #pragma unroll p_Nfields
-          // for(int fld=0; fld<p_Nfields; ++fld){
-          //   const dfloat w  = LBM[fld + 0*p_Nfields]; 
-          //   const dfloat ex = LBM[fld + 1*p_Nfields]; 
-          //   const dfloat ey = LBM[fld + 2*p_Nfields]; 
-          //   dfloat qeq = 0.f; 
-          //   equiDist2D(w, ex, ey, rn, un, vn, &qeq); 
-
-          //   dfloat fxn = 0.f, fyn = 0.f;
-          //   lbsBodyForce2D(nu, t, xn, yn, rn, un, vn, &fxn, &fyn);  
-          //   fg[es][fld] = (1.f - 1.f/(2.f*gamma))*1.f/rn*p_ic2*((ex-un)*fxn + (ey-vn)*fyn)*qeq; 
-
-          // }
         }
       }
     }

@@ -31,7 +31,7 @@ lbsSettings_t::lbsSettings_t(MPI_Comm& _comm):
   settings_t(_comm) {
 
   newSetting("DATA FILE",
-             "data/lbsTalorVortex2D.h",
+             "data/lbsTaylorVortex2D.h",
              "Boundary and Initial conditions header");
 
   newSetting("VELOCITY MODEL",

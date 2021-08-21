@@ -100,7 +100,7 @@ void lbs_t::rhsVolume(dlong N, occa::memory& o_Q, occa::memory& o_RHS, const dfl
 void lbs_t::rhsSurface(dlong N, occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
   
   const dfloat dt    = timeStepper->GetTimeStep();
-  // compute volume contribution to lbs RHS
+  // // compute volume contribution to lbs RHS
   if (N)
     surfaceKernel(N,
                   mesh.o_sgeo,

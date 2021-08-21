@@ -182,12 +182,12 @@ lbs_t& lbs_t::Setup(platform_t& platform, mesh_t& mesh,
   lbs->surfaceKernel = platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
 
-  // vorticity calculation
-  sprintf(fileName, DLBS "/okl/lbsVorticity%s.okl", suffix);
-  sprintf(kernelName, "lbsVorticity%s", suffix);
+  // // vorticity calculation
+  // sprintf(fileName, DLBS "/okl/lbsVorticity%s.okl", suffix);
+  // sprintf(kernelName, "lbsVorticity%s", suffix);
 
-  lbs->vorticityKernel = platform.buildKernel(fileName, kernelName,
-                                     kernelInfo);
+  // lbs->vorticityKernel = platform.buildKernel(fileName, kernelName,
+  //                                    kernelInfo);
 
 
 
