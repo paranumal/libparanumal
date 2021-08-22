@@ -25,7 +25,6 @@ SOFTWARE.
 */
 
 @kernel void lbsInitialCondition3D(const dlong Nelements,
-                                   const dfloat c,
                                    const dfloat nu,
                                    const dfloat time,
                                    @restrict const  dfloat *  x,
@@ -42,7 +41,7 @@ SOFTWARE.
       dfloat v = 0.0;
       dfloat w = 0.0;
 
-      lbsInitialConditions3D(c, nu, time, x[id], y[id], z[id], &r, &u, &v,&w);
+      lbsInitialConditions3D(nu, time, x[id], y[id], z[id], &r, &u, &v,&w);
 
       const dlong ubase = e*p_Np*p_Nmacro + n;
       U[ubase+0*p_Np] = r;

@@ -27,14 +27,12 @@ SOFTWARE.
 #include "lbs.hpp"
 
 void lbs_t::Report(dfloat time, int tstep){
-  #if 1
-
   static int frame=0;
   // Compute velocity and density
   momentsKernel(mesh.Nelements, o_LBM, o_q, o_U); 
 
-  // //compute vorticity
-  // vorticityKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_D, o_U, o_Vort);
+  //compute vorticity
+  vorticityKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_D, o_U, o_Vort);
 
   //compute q.M*q
   mesh.MassMatrixApply(o_U, o_Mq);
@@ -61,68 +59,4 @@ void lbs_t::Report(dfloat time, int tstep){
     // PlotFields(o_q, Vort, fname);
     PlotFields(U, Vort, fname);
   }
-  #endif
-
-  /*
-  if(lbs->dim==3){
-    if(options.compareArgs("OUTPUT FILE FORMAT","ISO")){
-
-      for (int gr=0; gr<lbs->isoGNgroups; gr++){
-
-        lbs->isoNtris[0] = 0;
-        lbs->o_isoNtris.copyFrom(lbs->isoNtris);
-        if(mesh->nonPmlNelements){
-        lbs->isoSurfaceKernel(mesh->nonPmlNelements,    // Numner of elements
-                              mesh->o_nonPmlElementIds,    // Element Ids
-                              lbs->isoField,               // which field to use for isosurfacing
-                              lbs->isoColorField,          // which field to use for isosurfacing
-                              lbs->isoGNlevels[gr],        // number of isosurface levels
-                              lbs->o_isoGLvalues[gr],      // array of isosurface levels
-                              lbs->isoMaxNtris,            // maximum number of generated triangles
-                              mesh->o_x,
-                              mesh->o_y,
-                              mesh->o_z,
-                              lbs->o_q,
-                              lbs->o_Vort,
-                              lbs->o_VortMag,
-                              lbs->o_plotInterp,
-                              lbs->o_plotEToV,
-                              lbs->o_isoNtris,             // output: number of generated triangles
-                              lbs->o_isoq);                // output: (p_dim+p_Nfields)*3*isoNtris[0] values (x,y,z,q0,q1..)
-
-      }
-        // find number of generated triangles
-        lbs->o_isoNtris.copyTo(lbs->isoNtris);
-        lbs->isoNtris[0] = mymin(lbs->isoNtris[0], lbs->isoMaxNtris);
-
-        //
-        printf("Rank:%2d Group:%2d Triangles:%8d\n", mesh->rank, lbs->isoNtris[0], gr);
-        //
-        int offset = 0;
-        lbs->o_isoq.copyTo(lbs->isoq, lbs->isoNtris[0]*(mesh->dim+lbs->isoNfields)*3*sizeof(dfloat), offset);
-
-        char fname[BUFSIZ];
-        string outName;
-        options.getArgs("OUTPUT FILE NAME", outName);
-
-
-        if(options.compareArgs("OUTPUT FILE FORMAT", "WELD"))
-        {
-          int Ntris1 = lbs->isoNtris[0];
-          int Ntris2 = lbsWeldTriVerts(lbs, Ntris1, lbs->isoq);
-
-          printf("Welding triangles:%8d to:%8d\n", Ntris1, Ntris2);
-          sprintf(fname, "%s_%d_%d_ %04d_%04d.vtu",(char*)outName.c_str(), lbs->isoField, gr, mesh->rank, lbs->frame);
-          lbsIsoWeldPlotVTU(lbs,  fname);
-        }
-        else
-        {
-          sprintf(fname, "%s_%d_%d_ %04d_%04d.vtu",(char*)outName.c_str(), lbs->isoField, gr, mesh->rank, lbs->frame);
-          lbsIsoPlotVTU(lbs, lbs->isoNtris[0], lbs->isoq, fname);
-        }
-      }
-      lbs->frame++;
-    }
-  }
-  */
 }

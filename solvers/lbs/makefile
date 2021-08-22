@@ -28,42 +28,42 @@ define LBS_HELP_MSG
 
 DG Lattice Boltzmann solver makefile targets:
 
-   make lbsMain (default)
-   make lib
-   make clean
-   make clean-libs
-   make clean-kernels
-   make realclean
-   make info
-   make help
-   make test
+make lbsMain (default)
+make lib
+make clean
+make clean-libs
+make clean-kernels
+make realclean
+make info
+make help
+make test
 
 Usage:
 
 make lbsMain
-   Build lbsMain executable.
+Build lbsMain executable.
 make lib
-   Build liblbs.a solver library.
+Build liblbs.a solver library.
 make clean
-   Clean the lbsMain executable, library, and object files.
+Clean the lbsMain executable, library, and object files.
 make clean-libs
-   In addition to "make clean", also clean needed libraries.
+In addition to "make clean", also clean needed libraries.
 make clean-kernels
-   In addition to "make clean-libs", also cleans the cached OCCA kernels.
+In addition to "make clean-libs", also cleans the cached OCCA kernels.
 make realclean
-   In addition to "make clean-kernels", also clean 3rd party libraries.
+In addition to "make clean-kernels", also clean 3rd party libraries.
 make info
-   List directories and compiler flags in use.
+List directories and compiler flags in use.
 make help
-   Display this help message.
+Display this help message.
 make test
-   Run tests.
+Run tests.
 Can use "make verbose=true" for verbose output.
 
 endef
 
 ifeq (,$(filter lbsMain lib clean clean-libs clean-kernels \
-                realclean info help test,$(MAKECMDGOALS)))
+realclean info help test,$(MAKECMDGOALS)))
 ifneq (,$(MAKECMDGOALS))
 $(error ${LBS_HELP_MSG})
 endif
@@ -85,33 +85,33 @@ LBS_LIBP_LIBS=timeStepper mesh ogs linAlg core
 
 #includes
 INCLUDES=${LIBP_INCLUDES} \
-				 -I.
+	-I.
 #defines
 DEFINES =${LIBP_DEFINES} \
-         -DLIBP_DIR='"${LIBP_DIR}"'
+	-DLIBP_DIR='"${LIBP_DIR}"'
 
 #.cpp compilation flags
 LBS_CXXFLAGS=${LIBP_MPICXXFLAGS} ${DEFINES} ${INCLUDES}
 
 #link libraries
 LIBS=-L${LIBP_LIBS_DIR} $(addprefix -l,$(LBS_LIBP_LIBS)) \
-     -L$(GS_DIR)/lib -lgs \
-     ${LIBP_LIBS}
+	-L$(GS_DIR)/lib -lgs \
+	${LIBP_LIBS}
 
 #link flags
 LFLAGS=${LBS_CXXFLAGS} ${LIBS}
 
 #object dependancies
 DEPS=$(wildcard *.hpp) \
-     $(wildcard $(LIBP_INCLUDE_DIR)/*.h) \
-     $(wildcard $(LIBP_INCLUDE_DIR)/*.hpp)
+	$(wildcard $(LIBP_INCLUDE_DIR)/*.h) \
+	$(wildcard $(LIBP_INCLUDE_DIR)/*.hpp)
 
 SRC =$(wildcard src/*.cpp)
 
 OBJS=$(SRC:.cpp=.o)
 
 .PHONY: all lib libp_libs clean clean-libs \
-		clean-kernels realclean help info
+clean-kernels realclean help info
 
 all: lbsMain
 

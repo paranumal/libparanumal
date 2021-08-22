@@ -1,26 +1,26 @@
 /*
 
-The MIT License (MIT)
+  The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 
 */
 
@@ -59,7 +59,7 @@ lbs_t& lbs_t::Setup(platform_t& platform, mesh_t& mesh,
 
   if (settings.compareSetting("TIME INTEGRATOR","LSERK4")){
     lbs->timeStepper = new TimeStepper::lserk4(mesh.Nelements, mesh.totalHaloPairs,
-                                              mesh.Np, lbs->Nfields, *lbs);
+					       mesh.Np, lbs->Nfields, *lbs);
   }else {
     LIBP_ABORT(string("Requested TIME INTEGRATOR not found."));
   }
@@ -81,7 +81,7 @@ lbs_t& lbs_t::Setup(platform_t& platform, mesh_t& mesh,
 
   lbs->Vort = (dfloat*) calloc(mesh.dim*mesh.Nelements*mesh.Np, sizeof(dfloat));
   lbs->o_Vort = platform.malloc((mesh.dim*mesh.Nelements*mesh.Np)*sizeof(dfloat),
-                                              lbs->Vort);
+				lbs->Vort);
 
   // Hold macro quantites i.e. density + velocities
   lbs->U = (dfloat*) calloc((mesh.Nelements+mesh.totalHaloPairs)*mesh.Np*lbs->Nmacro, sizeof(dfloat));
@@ -148,46 +148,46 @@ lbs_t& lbs_t::Setup(platform_t& platform, mesh_t& mesh,
     sprintf(kernelName, "lbsInitialCondition3D");
   }
   lbs->initialConditionKernel = platform.buildKernel(fileName, kernelName,
-                                            kernelInfo);
+						     kernelInfo);
   
   // kernels from volume file
   sprintf(fileName, DLBS "/okl/lbsCollision%s.okl", suffix);  
 
   sprintf(kernelName, "lbsCollision%s", suffix);
   lbs->collisionKernel =  platform.buildKernel(fileName, kernelName,
-                                         kernelInfo);
+					       kernelInfo);
 
   sprintf(kernelName, "lbsForcing%s", suffix);
   lbs->forcingKernel =  platform.buildKernel(fileName, kernelName,
-                                         kernelInfo);
+					     kernelInfo);
 
   sprintf(kernelName, "lbsMoments%s", suffix);
   lbs->momentsKernel =  platform.buildKernel(fileName, kernelName,
-                                         kernelInfo);
+					     kernelInfo);
 
   sprintf(kernelName, "lbsPhaseField%s", suffix);
   lbs->phaseFieldKernel =  platform.buildKernel(fileName, kernelName,
-                                         kernelInfo);
+						kernelInfo);
 
   // kernels from volume file
   sprintf(fileName, DLBS "/okl/lbsVolume%s.okl", suffix);
   sprintf(kernelName, "lbsVolume%s", suffix);
   lbs->volumeKernel =  platform.buildKernel(fileName, kernelName,
-                                         kernelInfo);
+					    kernelInfo);
 
   // kernels from surface file
   sprintf(fileName, DLBS "/okl/lbsSurface%s.okl", suffix);
   
   sprintf(kernelName, "lbsSurface%s", suffix);
   lbs->surfaceKernel = platform.buildKernel(fileName, kernelName,
-                                           kernelInfo);
+					    kernelInfo);
 
-  // // vorticity calculation
-  // sprintf(fileName, DLBS "/okl/lbsVorticity%s.okl", suffix);
-  // sprintf(kernelName, "lbsVorticity%s", suffix);
+  // vorticity calculation
+  sprintf(fileName, DLBS "/okl/lbsVorticity%s.okl", suffix);
+  sprintf(kernelName, "lbsVorticity%s", suffix);
 
-  // lbs->vorticityKernel = platform.buildKernel(fileName, kernelName,
-  //                                    kernelInfo);
+  lbs->vorticityKernel = platform.buildKernel(fileName, kernelName,
+					      kernelInfo);
 
 
 

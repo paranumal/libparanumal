@@ -37,7 +37,7 @@ lbsSettings_t::lbsSettings_t(MPI_Comm& _comm):
   newSetting("VELOCITY MODEL",
              "D2Q9",
              "Microscopic Discrete Velocity Model",
-             {"D2Q9", "SAAB3"});
+             {"D2Q9", "D3Q15", "D3Q19"});
 
   newSetting("VISCOSITY",
              "1.0",
