@@ -45,6 +45,7 @@ ellipticDir      = solverDir + "/elliptic"
 fokkerPlanckDir  = solverDir + "/fokkerPlanck"
 cnsDir           = solverDir + "/cns"
 bnsDir           = solverDir + "/bns"
+lbsDir           = solverDir + "/lbs"
 insDir           = solverDir + "/ins"
 
 gradientBin  = gradientDir      + "/gradientMain"
@@ -54,6 +55,7 @@ ellipticBin  = ellipticDir      + "/ellipticMain"
 fpeBin       = fokkerPlanckDir  + "/fpeMain"
 cnsBin       = cnsDir           + "/cnsMain"
 bnsBin       = bnsDir           + "/bnsMain"
+lbsBin       = lbsDir           + "/lbsMain"
 insBin       = insDir           + "/insMain"
 
 inputRC = testDir + "/setup.rc"
@@ -155,6 +157,7 @@ if __name__ == "__main__":
   import testFokkerPlanck
   import testCns
   import testBns
+  import testLbs
   import testIns
   import testTimeStepper
   import testLinearSolver
@@ -170,6 +173,7 @@ if __name__ == "__main__":
   failCount+=testFokkerPlanck.main()
   failCount+=testCns.main()
   failCount+=testBns.main()
+  failCount+=testLbs.main()
   failCount+=testIns.main()
   failCount+=testInitialGuess.main()
   failCount+=testTimeStepper.main()

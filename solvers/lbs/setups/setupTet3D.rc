@@ -2,11 +2,10 @@
 2.0
 
 [DATA FILE]
-#data/bnsGaussian3D.h
-data/lbsCouette3D.h
+data/lbsGaussian3D.h
 
 [MESH FILE]
-../../meshes/lbsChannelTet3D.msh
+BOX
 
 [MESH DIMENSION]
 3
@@ -15,19 +14,19 @@ data/lbsCouette3D.h
 6
 
 [BOX NX]
-8
+10
 
 [BOX NY]
-8
+10
 
 [BOX NZ]
-8
+10
 
 [BOX BOUNDARY FLAG]
 1
 
 [POLYNOMIAL DEGREE]
-4
+2
 
 [THREAD MODEL]
 CUDA
@@ -39,25 +38,10 @@ CUDA
 0
 
 [VISCOSITY]
-0.1
+0.01
 
 [VELOCITY MODEL]
 D3Q15
-
-# [PML PROFILE ORDER]
-# 4
-# 
-# [PML SIGMAX MAX]
-# 50
-# 
-# [PML SIGMAY MAX]
-# 50
-# 
-# [PML SIGMAZ MAX]
-# 50
-
-# [PML INTEGRATION]
-# COLLOCATION
 
 [TIME INTEGRATOR]
 LSERK4
@@ -69,7 +53,7 @@ LSERK4
 0
 
 [FINAL TIME]
-20
+0.1
 
 [OUTPUT INTERVAL]
 1
@@ -78,4 +62,4 @@ LSERK4
 TRUE
 
 [OUTPUT FILE NAME]
-lbs_couette_3D
+lbs_gauss_3D

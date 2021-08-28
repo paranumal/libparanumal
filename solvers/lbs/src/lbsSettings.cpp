@@ -43,26 +43,26 @@ lbsSettings_t::lbsSettings_t(MPI_Comm& _comm):
              "1.0",
              "Fluid dynamic viscosity i.e. 1/Re");
 
-  newSetting("PML PROFILE ORDER",
-             "4",
-             "Polynomial degree of PML damping");
+  // newSetting("PML PROFILE ORDER",
+  //            "4",
+  //            "Polynomial degree of PML damping");
 
-  newSetting("PML SIGMAX MAX",
-             "100",
-             "Coefficent of polynomial PML damping in x direction");
+  // newSetting("PML SIGMAX MAX",
+  //            "100",
+  //            "Coefficent of polynomial PML damping in x direction");
 
-  newSetting("PML SIGMAY MAX",
-             "100",
-             "Coefficent of polynomial PML damping in y direction");
+  // newSetting("PML SIGMAY MAX",
+  //            "100",
+  //            "Coefficent of polynomial PML damping in y direction");
 
-  newSetting("PML SIGMAZ MAX",
-             "100",
-             "Coefficent of polynomial PML damping in z direction");
+  // newSetting("PML SIGMAZ MAX",
+  //            "100",
+  //            "Coefficent of polynomial PML damping in z direction");
 
-  newSetting("PML INTEGRATION",
-             "COLLOCATION",
-             "Type of integration rule to PML damping profile",
-             {"COLLOCATION", "CUBATURE"});
+  // newSetting("PML INTEGRATION",
+  //            "COLLOCATION",
+  //            "Type of integration rule to PML damping profile",
+  //            {"COLLOCATION", "CUBATURE"});
 
   newSetting("TIME INTEGRATOR",
              "LSERK4",
@@ -104,11 +104,11 @@ void lbsSettings_t::report() {
     reportSetting("DATA FILE");
     // reportSetting("SPEED OF SOUND");
     reportSetting("VISCOSITY");
-    reportSetting("PML PROFILE ORDER");
-    reportSetting("PML SIGMAX MAX");
-    reportSetting("PML SIGMAY MAX");
-    reportSetting("PML SIGMAZ MAX");
-    reportSetting("PML INTEGRATION");
+    // reportSetting("PML PROFILE ORDER");
+    // reportSetting("PML SIGMAX MAX");
+    // reportSetting("PML SIGMAY MAX");
+    // reportSetting("PML SIGMAZ MAX");
+    // reportSetting("PML INTEGRATION");
     reportSetting("TIME INTEGRATOR");
     reportSetting("START TIME");
     reportSetting("FINAL TIME");

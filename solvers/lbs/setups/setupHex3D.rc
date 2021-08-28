@@ -2,11 +2,10 @@
 2.0
 
 [DATA FILE]
-#data/bnsGaussian3D.h
-data/lbsCouette3D.h
+data/lbsGaussian3D.h
 
 [MESH FILE]
-../../meshes/lbsChannelHex3D.msh
+BOX
 
 [MESH DIMENSION]
 3
@@ -15,13 +14,13 @@ data/lbsCouette3D.h
 12
 
 [BOX NX]
-8
+4
 
 [BOX NY]
-8
+4
 
 [BOX NZ]
-8
+4
 
 [BOX BOUNDARY FLAG]
 1
@@ -44,21 +43,6 @@ CUDA
 [VELOCITY MODEL]
 D3Q15
 
-# [PML PROFILE ORDER]
-# 4
-# 
-# [PML SIGMAX MAX]
-# 50
-# 
-# [PML SIGMAY MAX]
-# 50
-# 
-# [PML SIGMAZ MAX]
-# 50
-
-# [PML INTEGRATION]
-# COLLOCATION
-
 [TIME INTEGRATOR]
 LSERK4
 
@@ -69,7 +53,7 @@ LSERK4
 0
 
 [FINAL TIME]
-20
+10
 
 [OUTPUT INTERVAL]
 1.0
@@ -78,4 +62,4 @@ LSERK4
 TRUE
 
 [OUTPUT FILE NAME]
-lbs_couette_Hex_3D
+lbs_gauss_Hex_3D

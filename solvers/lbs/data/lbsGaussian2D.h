@@ -27,7 +27,7 @@ SOFTWARE.
 // Initial conditions
 #define lbsInitialConditions2D(nu, t, x, y, r, u, v) \
 {                                         \
-  *(r) = 1 + exp(-3*(x*x+y*y));           \
+  *(r) = 0.1*(1 + exp(-3*(x*x+y*y)));           \
   *(u) = 0.1*exp(-3*(x*x+y*y));  \
   *(v) = 0.1*exp(-3*(x*x+y*y));   \
 }
@@ -48,7 +48,7 @@ SOFTWARE.
                                 rB, uB, vB) \
 {                                      \
   if(bc==1){                           \
-    *(rB) = 1.0;                        \
+    *(rB) = rM;                        \
     *(uB) = 0.0;                       \
     *(vB) = 0.0;                       \
   } else if(bc==2){                    \

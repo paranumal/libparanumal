@@ -116,6 +116,9 @@ test-cns:
 test-bns:
 	@./testBns.py
 
+test-lbs:
+	@./testLbs.py
+
 test-ins:
 	@./testIns.py
 

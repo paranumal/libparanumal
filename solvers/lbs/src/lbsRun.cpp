@@ -80,17 +80,19 @@ void lbs_t::Run(){
   timeStepper->Run(o_q, startTime, finalTime);
 
 
-  // // output norm of final solution
-  // {
-  //   //compute q.M*q
-  //   mesh.MassMatrixApply(o_q, o_Mq);
+  // output norm of final solution
+  {
+     // Compute velocity and density
+    momentsKernel(mesh.Nelements, o_LBM, o_q, o_U); 
+    //compute q.M*q
+    mesh.MassMatrixApply(o_U, o_Mq);
 
-  //   dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
-  //   dfloat norm2 = sqrt(platform.linAlg.innerProd(Nentries, o_q, o_Mq, mesh.comm));
+    dlong Nentries = mesh.Nelements*mesh.Np*Nmacro;
+    dfloat norm2 = sqrt(platform.linAlg.innerProd(Nentries, o_q, o_Mq, mesh.comm));
 
-  //   if(mesh.rank==0)
-  //     printf("Solution norm = %17.15lg\n", norm2);
-  // }
+    if(mesh.rank==0)
+      printf("Solution norm = %17.15lg\n", norm2);
+  }
 }
 
 
