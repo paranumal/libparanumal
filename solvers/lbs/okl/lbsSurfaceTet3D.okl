@@ -9,9 +9,9 @@ void applyBC3D(const int bc, const int fldm, const int fldp, const dfloat dt,
                const dfloat fn, const dfloat *qm, dfloat *qp){
 
 // wall: could be with velocity though Bounce backonly nonequilibrium portion
-if (bc==2 || bc==4 || bc==5){
+if (bc==1 || bc==2 || bc==4 || bc==5){
   qp[fldm] = en < 0 ?  (qm[fldp] + 2.f*ew*rb*(ex*ub + ey*vb + ez*wb)*p_ic2) : qm[fldm];  
-}else if(bc==3 || bc==1){ 
+}else if(bc==3){ 
   const dfloat un = (ex*ub + ey*vb + ez*wb); 
   dfloat feq = rb*ew*(1.0f + p_ic2*un + 0.5f*p_ic4*un*un - 0.5f*p_ic2*(ub*ub + vb*vb + wb*wb));
   feq = feq*(1.f - 0.5f*dt*fn);
