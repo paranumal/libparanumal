@@ -175,7 +175,7 @@ else
 endif
 
 #cleanup
-clean: clean-acoustics clean-advection clean-bns clean-cns \
+clean: clean-acoustics clean-advection clean-bns clean-lbs clean-cns \
 	   clean-elliptic clean-fokkerPlanck clean-gradient clean-ins \
 	   clean-libs
 
