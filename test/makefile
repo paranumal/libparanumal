@@ -46,7 +46,7 @@ Can use "make verbose=true" for verbose output.
 endef
 
 ifeq (,$(filter info help test test-mesh test-gradient test-advection test-acoustics \
-				test-elliptic test-fpe test-cns test-bns test-ins test-initial-guess test-core,$(MAKECMDGOALS)))
+				test-elliptic test-fpe test-cns test-bns test-lbs test-ins test-initial-guess test-core,$(MAKECMDGOALS)))
 ifneq (,$(MAKECMDGOALS))
 $(error ${TEST_HELP_MSG})
 endif
