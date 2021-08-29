@@ -86,10 +86,10 @@ def main():
                     settings=lbsSettings(element=12,data_file=lbsData3D,dim=3, degree=2,velmodel="D3Q15"),
                     referenceNorm=0.819295187696179)
 
-    failCount += test(name="testlbsTri_MPI", ranks=4,
-                    cmd=lbsBin,
-                    settings=lbsSettings(element=3,data_file=lbsData2D,dim=2,velmodel="D2Q9"),
-                    referenceNorm=0.445981586347159)
+  failCount += test(name="testlbsTri_MPI", ranks=4,
+                  cmd=lbsBin,
+                  settings=lbsSettings(element=3,data_file=lbsData2D,dim=2,velmodel="D2Q9"),
+                  referenceNorm=0.450933753267979)
 
   #clean up
   for file_name in os.listdir(testDir):
