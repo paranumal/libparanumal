@@ -13,6 +13,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: true
     - name: Install Dependencies
       run: |
           sudo apt install -y libopenmpi-dev openmpi-bin libblas-dev liblapack-dev
