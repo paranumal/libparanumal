@@ -74,22 +74,22 @@ def main():
   failCount += test(name="testLbsQuad",
                     cmd=lbsBin,
                     settings=lbsSettings(element=4,data_file=lbsData2D,dim=2,velmodel="D2Q9"),
-                    referenceNorm=0.448381033926805)
+                    referenceNorm=0.446677648467864)
 
   failCount += test(name="testLbsTet",
                     cmd=lbsBin,
                     settings=lbsSettings(element=6,data_file=lbsData3D,dim=3, degree=2,velmodel="D3Q15"),
-                    referenceNorm=0.817819748916965)
+                    referenceNorm=0.816131769809708)
 
   failCount += test(name="testLbsHex",
                     cmd=lbsBin,
                     settings=lbsSettings(element=12,data_file=lbsData3D,dim=3, degree=2,velmodel="D3Q15"),
-                    referenceNorm=0.819295187696179)
+                    referenceNorm=0.825001880260788)
 
   failCount += test(name="testLbsTri_MPI", ranks=4,
                   cmd=lbsBin,
                   settings=lbsSettings(element=3,data_file=lbsData2D,dim=2,velmodel="D2Q9"),
-                  referenceNorm=0.450933753267979)
+                  referenceNorm=0.44497547998273)
 
   #clean up
   for file_name in os.listdir(testDir):
