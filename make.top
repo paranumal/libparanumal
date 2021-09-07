@@ -42,9 +42,7 @@ export LIBP_BLAS_LIB  =-L${LIBP_BLAS_DIR} -lblas
 export LIBP_LAPACK_LIB=-L${LIBP_LAPACK_DIR} -llapack
 
 #include OCCA
-ifndef OCCA_DIR
-  $(error environment variable [OCCA_DIR] is not set)
-endif
+export OCCA_DIR=${LIBP_DIR}/occa
 
 #compilers to use for C/C++
 export LIBP_MPICC = mpicc
