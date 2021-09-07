@@ -50,15 +50,14 @@ export LIBP_MPICXX= mpic++
 export LIBP_LD    = mpic++
 
 export LIBP_CFLAGS=-O2 -fopenmp -g -Wall -Wshadow -Wno-unused-function
-export LIBP_MPICFLAGS=$(LIBP_CFLAGS)
-
 export LIBP_CXXFLAGS=-O2 -fopenmp -g -Wall -Wshadow -Wno-unused-function -std=c++11
-export LIBP_MPICXXFLAGS=$(LIBP_CXXFLAGS)
 
 ifeq (1,${LIBP_COVERAGE})
-export LIBP_CXXFLAGS+=--coverage
-export LIBP_MPICXXFLAGS+=--coverage
+export LIBP_CXXFLAGS+= --coverage -fprofile-abs-path
 endif
+
+export LIBP_MPICFLAGS=$(LIBP_CFLAGS)
+export LIBP_MPICXXFLAGS=$(LIBP_CXXFLAGS)
 
 export LIBP_LIBS=${LIBP_BLAS_LIB} \
                  ${LIBP_LAPACK_LIB} \
