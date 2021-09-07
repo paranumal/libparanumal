@@ -88,12 +88,12 @@ LIBP_CORE_LIBS=timeStepper linearSolver parAlmond mesh ogs linAlg core
 SOLVER_DIR   =${LIBP_DIR}/solvers
 
 .PHONY: all solvers libp_libs \
-			acoustics advection bns cns elliptic fokkerPlanck gradient ins \
+			acoustics advection bns lbs cns elliptic fokkerPlanck gradient ins \
 			clean clean-libs realclean help info
 
 all: solvers
 
-solvers: acoustics advection bns cns elliptic fokkerPlanck gradient ins
+solvers: acoustics advection bns lbs cns elliptic fokkerPlanck gradient ins
 
 libp_libs:
 ifneq (,${verbose})
@@ -119,6 +119,14 @@ else
 endif
 
 bns: libp_libs
+ifneq (,${verbose})
+	${MAKE} -C ${SOLVER_DIR}/$(@F) verbose=${verbose}
+else
+	@printf "%b" "$(SOL_COLOR)Building $(@F) solver$(NO_COLOR)\n";
+	@${MAKE} -C ${SOLVER_DIR}/$(@F) --no-print-directory
+endif
+
+lbs: libp_libs
 ifneq (,${verbose})
 	${MAKE} -C ${SOLVER_DIR}/$(@F) verbose=${verbose}
 else
@@ -167,7 +175,7 @@ else
 endif
 
 #cleanup
-clean: clean-acoustics clean-advection clean-bns clean-cns \
+clean: clean-acoustics clean-advection clean-bns clean-lbs clean-cns \
 	   clean-elliptic clean-fokkerPlanck clean-gradient clean-ins \
 	   clean-libs
 
@@ -179,6 +187,9 @@ clean-advection:
 
 clean-bns:
 	${MAKE} -C ${SOLVER_DIR}/bns clean
+
+clean-lbs:
+	${MAKE} -C ${SOLVER_DIR}/lbs clean
 
 clean-cns:
 	${MAKE} -C ${SOLVER_DIR}/cns clean

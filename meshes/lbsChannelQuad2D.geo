@@ -22,4 +22,6 @@ Physical Surface("Domain", 9) = {6};
 Physical Line("Wall", 1) = {1};
 Physical Line("Inflow", 2) = {3,4};
 Physical Line("Outflow", 3) = {2};
+
+Recombine Surface {6};
 //+
