@@ -231,8 +231,11 @@ silentUpdate-parAlmond:
 silentUpdate-timeStepper:
 	@true
 
+${OCCA_DIR}/lib/libocca.so:
+	${MAKE} -C ${OCCA_DIR}
+
 # rule for .cpp files
-core/%.o: core/%.cpp $(LIB_DEPS)
+core/%.o: core/%.cpp $(LIB_DEPS) ${OCCA_DIR}/lib/libocca.so
 ifneq (,${verbose})
 	$(LIBP_MPICXX) -o $@ -c $< ${LIBCORE_DEFINES} $(LIB_CXXFLAGS)
 else
