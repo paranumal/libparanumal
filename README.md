@@ -93,13 +93,9 @@ G. Dependencies:
 
 ---
 ### 5. OCCA dependency
-`git clone https://github.com/libocca/occa`
-
-#### 5-1. Build OCCA
-`cd occa`
-`export OCCA_DIR=${PWD}`
-```make -j `nproc` ```
-`cd ../  `
+OCCA is held as a git submodule inside libParanumal. If you did not clone with `--recursive` then run the following command before building.
+`git submodule init`
+`git submodule update`
 
 ---
 ### 6. Required Libraries
@@ -127,7 +123,7 @@ Each solver resides in its respective sub-directory in `solvers/`. Each solver s
 #### 8-1. Build libParanumal elliptic solver
 
 `cd libparanumal/solvers/elliptic`
-`make -j  `
+```make -j `nproc` ```
 
 #### 8-2. Run elliptic example with provided quadrilateral set up file on a single device:
 
