@@ -13,26 +13,18 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: true
     - name: Install Dependencies
       run: |
           sudo apt install -y libopenmpi-dev openmpi-bin libblas-dev liblapack-dev
-          git clone https://github.com/libocca/occa
-          cd occa
-          make -j `nproc`
-          cd ..
     - name: Build
       run: make -j `nproc` verbose=true
       env:
-        OCCA_DIR: /home/runner/work/libparanumal/libparanumal/occa/
-        LD_LIBRARY_PATH: /home/runner/work/libparanumal/libparanumal/occa/lib
         LIBP_COVERAGE: 1
     - name: Test
       run: |
-        echo ${LD_LIBRARY_PATH}
-        ls ${OCCA_DIR}/lib
-        make test  LIBP_COVERAGE=1
+        make test
         bash <(curl --no-buffer -s https://codecov.io/bash) -x gcov
       env:
-        OCCA_DIR: /home/runner/work/libparanumal/libparanumal/occa/
-        LD_LIBRARY_PATH: /home/runner/work/libparanumal/libparanumal/occa/lib
         LIBP_COVERAGE: 1
