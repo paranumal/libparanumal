@@ -34,7 +34,7 @@ lbsData3D = lbsDir + "/data/lbsGaussian3D.h"
 def lbsSettings(rcformat="2.0", data_file=lbsData2D,
                mesh="BOX", dim=2, element=4, nx=10, ny=10, nz=10, boundary_flag=1,
                degree=4, thread_model=device, platform_number=0, device_number=0,
-               viscosity=0.01, velmodel="D2Q9", time_integrator="LSERK4", cfl=0.5, start_time=0.0, final_time=0.1,
+               viscosity=0.01, velmodel="D2Q9", time_integrator="LSERK4", cfl=0.5, start_time=0.0, final_time=10.0,
                output_to_file="FALSE"):
   return [setting_t("FORMAT", rcformat),
           setting_t("DATA FILE", data_file),
@@ -69,7 +69,7 @@ def main():
   failCount += test(name="testLbsTri",
                     cmd=lbsBin,
                     settings=lbsSettings(element=3,data_file=lbsData2D,dim=2,velmodel="D2Q9"),
-                    referenceNorm=0.445981586347159)
+                    referenceNorm=0.444607812999762)
 
   failCount += test(name="testLbsQuad",
                     cmd=lbsBin,

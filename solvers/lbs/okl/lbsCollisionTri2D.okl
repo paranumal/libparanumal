@@ -113,10 +113,6 @@ void equiDist2D(const dfloat w,  const dfloat ex, const dfloat ey,
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    // @exclusive dfloat r_q[p_Nfields]; 
-    // @exclusive dlong e; 
-    // @exclusive dfloat r_u, r_v,r_r; 
-
     for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
       for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
         const dlong et = eo+es; // element in block

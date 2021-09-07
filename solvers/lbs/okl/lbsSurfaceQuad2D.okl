@@ -116,9 +116,9 @@ void surfaceTerms(const int e,
     const dfloat en = ex*nx + ey*ny;
 
     if(bc>0){
-      const dfloat w    =  LBM[fld + 0*p_Nfields];
+      const dfloat ew   =  LBM[fld + 0*p_Nfields];
       const int   idr   =  LMAP[fld];
-      applyBC2D(bc, fld, idr, dt, en, nx, ny, w, ex, ey,rb, ub, vb, fn, qm, qp); 
+      applyBC2D(bc, fld, idr, dt, en, nx, ny, ew, ex, ey,rb, ub, vb, fn, qm, qp); 
     }
     s_fluxq[es][fld][j][i] += 0.5f*sc*(en -fabs(en))*(qm[fld] - qp[fld]);
   }

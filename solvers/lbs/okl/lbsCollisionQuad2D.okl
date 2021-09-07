@@ -59,9 +59,9 @@ void equiDist2D(const dfloat w,  const dfloat ex, const dfloat ey,
 	    const dlong idf  = i + j*p_Nq + p_Nfields*p_Np*e;
 	    const dlong idn  = i + j*p_Nq + p_Nmacro*p_Np*e;
 
-	    const dfloat rn = U[idn +0*p_Np]; 
-	    const dfloat un = U[idn +1*p_Np]; 
-	    const dfloat vn = U[idn +2*p_Np]; 
+	    const dfloat rn = U[idn + 0*p_Np]; 
+	    const dfloat un = U[idn + 1*p_Np]; 
+	    const dfloat vn = U[idn + 2*p_Np]; 
 
 #pragma unroll p_Nfields
 	    for(int fld=0; fld<p_Nfields;++fld){
@@ -111,7 +111,7 @@ void equiDist2D(const dfloat w,  const dfloat ex, const dfloat ey,
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+    for(int es=0;es<p_NblockV;++es;@inner(2)){// for all elements in block
       for(int j=0;j<p_Nq;++j;@inner(1)){
 	for(int i=0;i<p_Nq;++i;@inner(0)){
 	  const dlong et = eo+es; // element in block
@@ -178,7 +178,7 @@ void equiDist2D(const dfloat w,  const dfloat ex, const dfloat ey,
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
-    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+    for(int es=0;es<p_NblockV;++es;@inner(2)){// for all elements in block
       for(int j=0;j<p_Nq;++j;@inner(1)){
 	for(int i=0;i<p_Nq;++i;@inner(0)){
 	  const dlong et = eo+es; // element in block
@@ -231,7 +231,7 @@ void equiDist2D(const dfloat w,  const dfloat ex, const dfloat ey,
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
     // @exclusive dlong e; 
-    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+    for(int es=0;es<p_NblockV;++es;@inner(2)){// for all elements in block
       for(int j=0;j<p_Nq;++j;@inner(1)){
 	for(int i=0;i<p_Nq;++i;@inner(0)){
 	  const dlong et = eo+es; // element in block
@@ -255,12 +255,12 @@ void equiDist2D(const dfloat w,  const dfloat ex, const dfloat ey,
 
 #pragma unroll p_Nfields
 	    for(int fld=0; fld<p_Nfields;++fld){
-	      const dfloat wn = LBM[fld + 0*p_Nfields]; 
+	      const dfloat ew = LBM[fld + 0*p_Nfields]; 
 	      const dfloat ex = LBM[fld + 1*p_Nfields]; 
 	      const dfloat ey = LBM[fld + 2*p_Nfields]; 
 
 	      dfloat qeq = 0.f; 
-	      equiDist2D(wn, ex, ey, rn, un, vn, &qeq); 
+	      equiDist2D(ew, ex, ey, rn, un, vn, &qeq); 
 	      const dfloat qext =  1.f/rn*p_ic2*((ex-un)*fx + (ey-vn)*fy); 
 
 	      q[idf + fld*p_Np]  = qeq*(1.f- 0.5f*dt*qext);
