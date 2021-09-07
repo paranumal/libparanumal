@@ -84,7 +84,7 @@ def main():
   failCount += test(name="testLbsHex",
                     cmd=lbsBin,
                     settings=lbsSettings(element=12,data_file=lbsData3D,dim=3, degree=2,velmodel="D3Q15"),
-                    referenceNorm=0.825001880260788)
+                    referenceNorm=0.818015892660822)
 
   failCount += test(name="testLbsTri_MPI", ranks=4,
                   cmd=lbsBin,
