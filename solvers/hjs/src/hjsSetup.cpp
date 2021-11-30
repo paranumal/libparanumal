@@ -138,11 +138,6 @@ hjs_t& hjs_t::Setup(platform_t& platform, mesh_t& mesh,
 
   hjs->initialConditionKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 
-  // sprintf(fileName, DADVECTION "/okl/advectionMaxWaveSpeed%s.okl", suffix);
-  // sprintf(kernelName, "advectionMaxWaveSpeed%s", suffix);
-
-  // advection->maxWaveSpeedKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
-
   return *hjs;
 }
 
