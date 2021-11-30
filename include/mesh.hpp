@@ -123,6 +123,10 @@ public:
   dfloat *D;            // packed collocation differentiation matrices,
                         //  or 1D derivative for quads and hexes
 
+  dfloat *DWr, *DWs, *DWt;// collocation differentiation matrices in weak form
+  dfloat *DW;             // packed weak collocation differentiation matrices,
+                          //  or 1D derivative for quads and hexes
+
   dfloat *Srr,*Srs, *Srt; //element stiffness matrices
   dfloat *Sss,*Sst, *Stt;
   dfloat *S;              // packed element stiffness matrices
@@ -215,6 +219,7 @@ public:
 
   occa::memory o_MM;  // Mass matrix
   occa::memory o_D;   // packed differentiation matricies (contains the transpose 1d D matrix for quads/hexes)
+  occa::memory o_DW;  // packed weak differentiation matricies (contains the transpose 1d D matrix for quads/hexes)
   occa::memory o_S;   // packed stiffness matricies
   occa::memory o_LIFT;// Surface lift matrix
   occa::memory o_sM;  // Surface mass
@@ -402,6 +407,8 @@ public:
   static void invMassMatrixTri2D(int _Np, dfloat *V, dfloat *_invMM);
   static void DmatrixTri2D(int _N, int Npoints, dfloat *_r, dfloat *_s,
                            dfloat *_Dr, dfloat *_Ds);
+  static void DWmatrixTri2D(int _N, int Npoints, dfloat *_r, dfloat *_s, dfloat *_MM, 
+                                          dfloat *_Dr, dfloat *_Ds);
   static void LIFTmatrixTri2D(int _N, int *_faceNodes,
                               dfloat *_r, dfloat *_s, dfloat *_LIFT);
   static void SurfaceMassMatrixTri2D(int _N, dfloat *_MM, dfloat *_LIFT, dfloat *_sM);

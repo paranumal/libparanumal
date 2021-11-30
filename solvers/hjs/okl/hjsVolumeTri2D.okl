@@ -1,0 +1,115 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+// compute NU  = -div(uxu) in collocation way
+@kernel void hjsVolumeTri2D(const dlong Nelements,
+                            @restrict const  dfloat *  vgeo,
+                            @restrict const  dfloat *  DW,
+                            const dfloat time, 
+                            @restrict const  dfloat *  x,
+                            @restrict const  dfloat *  y,
+                            @restrict const  dfloat *  z,
+                            @restrict const  dfloat *  q,
+                            @restrict dfloat *  gradq){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
+    // Hold Flux Vector on Shared
+    @shared dfloat s_q[p_NblockV][p_Np];
+
+    for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
+      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+        const dlong e = eo+es; // element in block
+        if(e<Nelements){
+      const dlong id = e*p_Np + n;
+       s_q[es][n]     = q[id];
+        }
+      }
+    }
+    // Make sure all node data is loaded into @shared
+    @barrier("local");
+
+    for(int es=0;es<p_NblockV;++es;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
+        const dlong e = eo+es;
+        if(e<Nelements){
+          // prefetch geometric factors (constant on triangle)
+          const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+          const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+          const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+          const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+          // compute 'r' and 's' derivatives of (q_m) at node n
+          dfloat dqdr = 0.f, dqds = 0.f;
+
+          #pragma unroll p_Np
+            for(int i=0;i<p_Np;++i){
+              const dfloat Drni = DW[n+i*p_Np+0*p_Np*p_Np];
+              const dfloat Dsni = DW[n+i*p_Np+1*p_Np*p_Np];
+
+              const dfloat qn  = s_q[es][i];
+
+              dqdr += Drni*qn;
+              dqds += Dsni*qn;
+            }
+
+          const dfloat dqdx = drdx*dqdr + dsdx*dqds;
+          const dfloat dqdy = drdy*dqdr + dsdy*dqds;
+
+          const dlong id = e*p_Np*(2*p_dim) + n;
+          gradq[id + 0*p_Np] = -dqdx;
+          gradq[id + 1*p_Np] = -dqdx;
+          gradq[id + 2*p_Np] = -dqdy;
+          gradq[id + 3*p_Np] = -dqdy;
+        }
+      }
+    }
+  }
+}

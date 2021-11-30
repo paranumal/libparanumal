@@ -38,6 +38,13 @@ void meshTri2D::OccaSetup(){
   matrixTranspose(Np, Np, Dr, Np, DrT, Np);
   matrixTranspose(Np, Np, Ds, Np, DsT, Np);
 
+  // build transposes (we hold matrices as column major on device)
+  dfloat *DWT = (dfloat*) calloc(2*Np*Np, sizeof(dfloat));
+  dfloat *DWrT = DWT + 0*Np*Np;
+  dfloat *DWsT = DWT + 1*Np*Np;
+  matrixTranspose(Np, Np, DWr, Np, DWrT, Np);
+  matrixTranspose(Np, Np, DWs, Np, DWsT, Np);
+
   dfloat *LIFTT = (dfloat*) calloc(Np*Nfaces*Nfp, sizeof(dfloat));
   matrixTranspose(Np, Nfp*Nfaces, LIFT, Nfp*Nfaces, LIFTT, Np);
 
@@ -52,7 +59,8 @@ void meshTri2D::OccaSetup(){
   matrixTranspose(Np, Np, Srs, Np, SrsT, Np);
   matrixTranspose(Np, Np, Sss, Np, SssT, Np);
 
-  o_D = platform.malloc(2*Np*Np*sizeof(dfloat), DT);
+  o_D  = platform.malloc(2*Np*Np*sizeof(dfloat), DT);
+  o_DW = platform.malloc(2*Np*Np*sizeof(dfloat), DWT);
   o_MM = platform.malloc(Np*Np*sizeof(dfloat), MM); //MM is symmetric
 
   o_sM = platform.malloc(Np*Nfaces*Nfp*sizeof(dfloat), sMT);
@@ -66,6 +74,7 @@ void meshTri2D::OccaSetup(){
   o_ggeo = platform.malloc(Nelements*Nggeo*sizeof(dfloat), ggeo);
 
   free(DT);
+  free(DWT);
   free(LIFTT);
   free(sMT);
   free(ST);

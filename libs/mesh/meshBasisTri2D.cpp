@@ -416,6 +416,49 @@ void mesh_t::DmatrixTri2D(int _N, int Npoints, dfloat *_r, dfloat *_s,
   free(V); free(Vr); free(Vs);
 }
 
+
+void mesh_t::DWmatrixTri2D(int _N, int Npoints, dfloat *_r, dfloat *_s, dfloat *_MM, 
+                                                dfloat *_DWr, dfloat *_DWs){
+
+  int _Np = (_N+1)*(_N+2)/2;
+
+  dfloat *V  = (dfloat *) calloc(Npoints*_Np, sizeof(dfloat));
+  dfloat *Vr = (dfloat *) calloc(Npoints*_Np, sizeof(dfloat));
+  dfloat *Vs = (dfloat *) calloc(Npoints*_Np, sizeof(dfloat));
+
+  VandermondeTri2D(_N, Npoints, _r, _s, V);
+  GradVandermondeTri2D(_N, Npoints, _r, _s, Vr, Vs);
+
+  //DWr = V*Vr' / (V*V') = V*Vr'*MM
+  //DWs = V*Vs' / (V*V') = V*Vs'*MM  
+  dfloat *tmpr = (dfloat *) calloc(_Np, sizeof(dfloat)); 
+  dfloat *tmps = (dfloat *) calloc(_Np, sizeof(dfloat)); 
+  for(int n=0;n<_Np;++n){
+    for(int m=0;m<_Np;++m){
+      dfloat resr = 0, ress = 0;
+      for(int i=0;i<_Np;++i){
+        resr += V[n*_Np+i]*Vr[m*_Np+i];
+        ress += V[n*_Np+i]*Vs[m*_Np+i];
+      }
+      tmpr[m] = resr; tmps[m] = ress;
+    }
+    // multiply with MM
+     for(int m=0;m<_Np;++m){
+      dfloat resr = 0, ress = 0;
+      for(int i=0;i<_Np;++i){
+        resr += tmpr[i]*_MM[i*_Np+m];
+        ress += tmps[i]*_MM[i*_Np+m];
+      }
+      _DWr[n*_Np + m] = resr; _DWs[n*_Np + m] = ress;
+    }
+  }
+
+
+  free(V); free(Vr); free(Vs); free(tmpr); free(tmps);
+
+}
+
+
 void mesh_t::LIFTmatrixTri2D(int _N, int *_faceNodes,
                              dfloat *_r, dfloat *_s, dfloat *_LIFT){
 

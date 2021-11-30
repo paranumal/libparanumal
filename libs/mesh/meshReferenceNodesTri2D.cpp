@@ -67,6 +67,12 @@ void meshTri2D::ReferenceNodes(int N_){
   Ds = D + 1*Np*Np;
   DmatrixTri2D(N, Np, r, s, Dr, Ds);
 
+  //packed D matrices
+  DW  = (dfloat *) malloc(2*Np*Np*sizeof(dfloat));
+  DWr = DW + 0*Np*Np;
+  DWs = DW + 1*Np*Np;
+  DWmatrixTri2D(N, Np, r, s, MM, DWr, DWs);
+
   LIFT = (dfloat *) malloc(Np*Nfaces*Nfp*sizeof(dfloat));
   LIFTmatrixTri2D(N, faceNodes, r, s, LIFT);
 
