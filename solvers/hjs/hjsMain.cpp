@@ -54,10 +54,10 @@ int main(int argc, char **argv){
   // set up mesh
   mesh_t& mesh = mesh_t::Setup(platform, meshSettings, comm);
 
-  // set up level set solver
+  // set up Hamilton-Jacobi solver
   hjs_t& hjs = hjs_t::Setup(platform, mesh, hjsSettings);
 
-  // // run
+  // run
   hjs.Run();
 
   // close down MPI

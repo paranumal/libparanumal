@@ -378,6 +378,7 @@ public:
 
   static void MassMatrix1D(int _Np, dfloat *V, dfloat *MM);
   static void Dmatrix1D(int _N, int NpointsIn, dfloat *_rIn, int NpointsOut, dfloat *_rOut, dfloat *_Dr);
+  // static void DWmatrix1D(int _N, int NpointsIn, dfloat *_rIn, int NpointsOut, dfloat *_rOut, dfloat *_Dr);
   static void InterpolationMatrix1D(int _N,int NpointsIn, dfloat *rIn, int NpointsOut, dfloat *rOut, dfloat *I);
   static void CubatureWeakDmatrix1D(int _Nq, int _cubNq, dfloat *_cubProject, dfloat *_cubD, dfloat *_cubPDT);
 
@@ -406,9 +407,9 @@ public:
   static void MassMatrixTri2D(int _Np, dfloat *V, dfloat *_MM);
   static void invMassMatrixTri2D(int _Np, dfloat *V, dfloat *_invMM);
   static void DmatrixTri2D(int _N, int Npoints, dfloat *_r, dfloat *_s,
-                           dfloat *_Dr, dfloat *_Ds);
-  static void DWmatrixTri2D(int _N, int Npoints, dfloat *_r, dfloat *_s, dfloat *_MM, 
-                                          dfloat *_Dr, dfloat *_Ds);
+                           dfloat *_Dr, dfloat *_Ds);  
+  static void DWmatrixTri2D(int _N, int Npoints, dfloat *_r, dfloat *_s, dfloat *_MM,
+                           dfloat *_Dr, dfloat *_Ds);  
   static void LIFTmatrixTri2D(int _N, int *_faceNodes,
                               dfloat *_r, dfloat *_s, dfloat *_LIFT);
   static void SurfaceMassMatrixTri2D(int _N, dfloat *_MM, dfloat *_LIFT, dfloat *_sM);

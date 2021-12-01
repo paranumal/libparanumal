@@ -32,7 +32,7 @@ void hjs_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
 
    volumeKernel(mesh.Nelements,
                mesh.o_vgeo,
-               mesh.o_DW,
+               mesh.o_DW, 
                T,
                mesh.o_x,
                mesh.o_y,

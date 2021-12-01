@@ -67,6 +67,10 @@ void meshQuad2D::ReferenceNodes(int N_){
   D = (dfloat *) malloc(Nq*Nq*sizeof(dfloat));
   Dmatrix1D(N, Nq, gllz, Nq, gllz, D);
 
+  // DW = (dfloat *) malloc(Nq*Nq*sizeof(dfloat));
+  // DWmatrix1D(N, Nq, gllz, Nq, gllz, DW);
+
+
   /* Plotting data */
   plotN = N_ + 3; //enriched interpolation space for plotting
   plotNq = plotN + 1;

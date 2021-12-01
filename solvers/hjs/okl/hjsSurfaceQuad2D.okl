@@ -1,0 +1,185 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+
+void surfaceTerms(dlong e, int es,
+                  int sk, int face,
+                  int i, int j,
+                  dfloat time,
+                  const dfloat *x,
+                  const dfloat *y,
+                  const dfloat *sgeo,
+                  const dlong *vmapM,
+                  const dlong *vmapP,
+                  const dlong *EToB,
+                  const dfloat *q,
+                  @shared dfloat s_p1[p_NblockS][p_Nq][p_Nq],
+                  @shared dfloat s_p2[p_NblockS][p_Nq][p_Nq],
+                  @shared dfloat s_q1[p_NblockS][p_Nq][p_Nq],
+                  @shared dfloat s_q2[p_NblockS][p_Nq][p_Nq]){
+  const dlong  idM = vmapM[sk];
+  const dlong  idP = vmapP[sk];
+
+  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
+  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
+  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];
+  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];
+
+  const dlong eM = e;
+  const dlong eP = idP/p_Np;
+  const int vidM = idM%p_Np;
+  const int vidP = idP%p_Np;
+
+  const dlong qbaseM = eM*p_Np*p_Nfields + vidM;
+  const dlong qbaseP = eP*p_Np*p_Nfields + vidP;
+
+  const dfloat qM = q[qbaseM+0*p_Np]; 
+        dfloat qP = q[qbaseP+0*p_Np];
+
+  // const int bc = EToB[face+p_Nfaces*e];
+  // if(bc>0) {
+  //   insVelocityDirichletConditions2D(bc, nu, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);
+  // }
+
+  // simple upwind
+  dfloat unx = 0.0, dnx = 1.0; 
+  dfloat uny = 0.0, dny = 1.0; 
+  if(nx>= 0){unx = 1.0, dnx = 0.0;}
+  if(ny>= 0){uny = 1.0, dny = 0.0;}
+
+  const dfloat sc = invWJ * sJ;
+  s_p1[es][j][i] += sc*nx*( (dnx*qM  + unx*qP));
+  s_p2[es][j][i] += sc*nx*( (unx*qM  + dnx*qP));
+  s_q1[es][j][i] += sc*ny*( (dny*qM  + uny*qP));
+  s_q2[es][j][i] += sc*ny*( (uny*qM  + dny*qP));
+}
+
+
+
+
+
+// batch process elements
+@kernel void hjsSurfaceQuad2D(const dlong Nelements,
+                                  @restrict const  dfloat *  sgeo,
+                                  @restrict const  dfloat *  LIFTT,
+                                  @restrict const  dlong  *  vmapM,
+                                  @restrict const  dlong  *  vmapP,
+                                  @restrict const  int    *  EToB,
+                                            const  dfloat time,
+                                  @restrict const  dfloat *  x,
+                                  @restrict const  dfloat *  y,
+                                  @restrict const  dfloat *  z,
+                                  @restrict const  dfloat *  q,
+                                  @restrict dfloat *  gradq){
+
+  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
+
+    // @shared storage for flux terms
+    @shared dfloat s_p1[p_NblockS][p_Nq][p_Nq];
+    @shared dfloat s_p2[p_NblockS][p_Nq][p_Nq];
+    @shared dfloat s_q1[p_NblockS][p_Nq][p_Nq];
+    @shared dfloat s_q2[p_NblockS][p_Nq][p_Nq];
+
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        #pragma unroll p_Nq
+        for(int j=0;j<p_Nq;++j){
+          s_p1[es][j][i] = 0.;
+          s_p2[es][j][i] = 0.;
+          s_q1[es][j][i] = 0.;
+          s_q2[es][j][i] = 0.;
+
+        }
+      }
+    }
+
+    @barrier("local");
+
+     // for all face nodes of all elements
+    // face 0 & 2
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        const dlong e = eo + es;
+        if(e<Nelements){
+          const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i;
+          const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + i;
+
+          // surfaceTerms(sk0,0,i,0     );
+          surfaceTerms(e, es, sk0, 0, i, 0,
+                       time, x, y, sgeo, vmapM, vmapP, EToB, q, s_p1, s_p2, s_q1, s_q2);
+
+          // surfaceTerms(sk2,2,i,p_Nq-1);
+          surfaceTerms(e, es, sk2, 2, i, p_Nq-1,
+                       time, x, y, sgeo, vmapM, vmapP, EToB, q, s_p1, s_p2, s_q1, s_q2);
+        }
+      }
+    }
+
+
+    @barrier("local");
+
+     // for all face nodes of all elements
+    // face 0 & 2
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int j=0;j<p_Nq;++j;@inner(0)){
+        const dlong e = eo + es;
+        if(e<Nelements){
+         const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + j;
+         const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + j;
+
+
+          // surfaceTerms(sk0,0,i,0     );
+          surfaceTerms(e, es, sk1, 1, p_Nq-1, j,
+                       time, x, y, sgeo, vmapM, vmapP, EToB, q, s_p1, s_p2, s_q1, s_q2);
+
+          // surfaceTerms(sk2,2,i,p_Nq-1);
+          surfaceTerms(e, es, sk3, 3, 0, j,
+                       time, x, y, sgeo, vmapM, vmapP, EToB, q, s_p1, s_p2, s_q1, s_q2);
+        }
+      }
+    }
+
+@barrier("local");
+
+    // for each node in the element
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        const dlong e = eo + es;
+        if(e<Nelements){
+          #pragma unroll p_Nq
+          for(int j=0;j<p_Nq;++j){
+            const dlong id = e*p_Np*p_Nfields*(2*p_dim) + j*p_Nq + i;
+            gradq[id + 0*p_Np] += s_p1[es][j][i]; 
+            gradq[id + 1*p_Np] += s_p2[es][j][i]; 
+            gradq[id + 2*p_Np] += s_q1[es][j][i]; 
+            gradq[id + 3*p_Np] += s_q2[es][j][i];            
+          }
+        }
+      }
+    }
+  }
+}

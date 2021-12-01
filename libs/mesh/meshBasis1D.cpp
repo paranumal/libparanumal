@@ -118,6 +118,56 @@ void mesh_t::Dmatrix1D(int _N, int NpointsIn, dfloat *_rIn,
   free(Vr);
 }
 
+
+// void mesh_t::DWmatrix1D(int _N, int NpointsIn, dfloat *_rIn,
+//                                int NpointsOut, dfloat *_rOut, dfloat *_DWr){
+
+//   // need NpointsIn = (_N+1)
+//   if (NpointsIn != _N+1)
+//     LIBP_ABORT(string("Invalid Differentiation operator requested."))
+
+//   int _Np = _N+1;
+//   int _Nq = _N+1; 
+
+//    //GLL quadrature
+//   dfloat *_Dr  = (dfloat *) calloc(NpointsIn*_Np, sizeof(dfloat));
+//   Dmatrix1D(_N, _Nq, _rIn, _Nq, _rOut, _Dr);
+
+//   dfloat *V  = (dfloat *) calloc(NpointsIn*_Np, sizeof(dfloat));
+//   Vandermonde1D(_N, NpointsIn, _rIn, V);
+
+//   dfloat *_MM  = (dfloat *) calloc(NpointsIn*_Np, sizeof(dfloat));
+//   MassMatrix1D(_Np, V, _MM);
+    
+//   dfloat *_S  = (dfloat *) calloc(NpointsIn*_Np, sizeof(dfloat));
+
+//   // S' = (M*Dr)'
+//   for(int m=0;m<_Np;++m){
+//     for(int n=0;n<_Np;++n){
+//       _S[n*_Np+ m] = 0.0;
+//       for(int k=0;k<_Np;++k){
+//         _S[n*_Np+m] += _MM[m*_Np+k]*_Dr[k*_Nq+n];
+//       }
+//     }
+//   }
+
+
+//   // Drw = invM * S
+//    matrixInverse(_Np, _MM);
+
+//   for(int m=0;m<_Np;++m){
+//     for(int n=0;n<_Np;++n){
+//       _DWr[m*_Np+ n] = 0.0;
+//       for(int k=0;k<_Np;++k){
+//         _DWr[m*_Np+n] += _MM[m*_Np+k]*_S[k*_Nq+n];
+//       }
+//       printf("%.4e ", _DWr[m*_Np+n]);
+//     }
+//     printf("\n");
+//   }
+//   free(_MM);free(_S);free(_Dr); free(V);
+// }
+
 void mesh_t::InterpolationMatrix1D(int _N,
                                int NpointsIn, dfloat *rIn,
                                int NpointsOut, dfloat *rOut,
