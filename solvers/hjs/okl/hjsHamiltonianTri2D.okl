@@ -38,7 +38,7 @@ SOFTWARE.
    // Hold Flux Vector on Shared
     @shared dfloat s_alpha[p_NblockV][p_Np];
     @shared dfloat s_beta[p_NblockV][p_Np];   
-    @exclusive dfloat p1, p2, q1, q2, ham;
+    @exclusive dfloat p1, p2, q1, q2, ham;  // alpha, beta;
     @exclusive dfloat r_alpha[p_NblockV];  
     @exclusive dfloat r_beta[p_NblockV]; 
 
@@ -84,14 +84,35 @@ SOFTWARE.
       }
     }
 
-@barrier("local");
+//     // Very ugly, revisit later!!!!!!!!!!!
+//     @barrier("local");
+
+//     for(int es=0;es<p_NblockV;++es;@inner(1)){
+//       for(int n=0;n<p_Np;++n;@inner(0)){
+//         const dlong e = eo+es;
+//         if(e<Nelements){
+//           if(n==0){
+//             alpha = s_alpha[es][0]; 
+//             beta  = s_beta[es][0]; 
+//             for(int i=1; i<p_Np; i++){
+//              alpha =  alpha >s_alpha[es][i] ? alpha:s_alpha[es][i]; 
+//              beta  =  beta  >s_beta[es][i] ? beta:s_beta[es][i];  
+//             }
+//           }          
+//         }
+//       }
+//     }
+
+// @barrier("local");
 
 for(int es=0;es<p_NblockV;++es;@inner(1)){
       for(int n=0;n<p_Np;++n;@inner(0)){
         const dlong e = eo+es;
         if(e<Nelements){
          const dlong id = e*p_Np+ n;
-         rhs[id] = -( ham - 0.5*r_alpha[es]*(p1-p2)-0.5*r_beta[es]*(q1-q2)); 
+         // rhs[id] = -( ham - 0.5*alpha*(p1-p2)-0.5*beta*(q1-q2)); 
+         // rhs[id] = -( ham - 0.5*r_alpha[es]*(p1-p2)-0.5*r_beta[es]*(q1-q2)); 
+         rhs[id] = -( ham - 0.5*(p1-p2)-0.5*(q1-q2)); 
         }
       }
     }

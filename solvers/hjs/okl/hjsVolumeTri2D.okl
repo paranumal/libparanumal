@@ -103,11 +103,9 @@ SOFTWARE.
           const dfloat dqdx = drdx*dqdr + dsdx*dqds;
           const dfloat dqdy = drdy*dqdr + dsdy*dqds;
 
-          const dlong id = e*p_Np*(2*p_dim) + n;
+          const dlong id = e*p_Np*p_dim + n;
           gradq[id + 0*p_Np] = -dqdx;
-          gradq[id + 1*p_Np] = -dqdx;
-          gradq[id + 2*p_Np] = -dqdy;
-          gradq[id + 3*p_Np] = -dqdy;
+          gradq[id + 1*p_Np] = -dqdy;
         }
       }
     }

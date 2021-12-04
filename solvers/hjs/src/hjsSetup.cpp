@@ -55,16 +55,10 @@ hjs_t& hjs_t::Setup(platform_t& platform, mesh_t& mesh,
   // compute samples of q at interpolation nodes
   hjs->q = (dfloat*) calloc(Nlocal+Nhalo, sizeof(dfloat));
   hjs->o_q = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), hjs->q);
-
-  // // storage for the pi, qi 
-  // hjs->gradq = (dfloat*) calloc((Nlocal+Nhalo)*mesh.dim, sizeof(dfloat));
-  // hjs->o_gradq = platform.malloc((Nlocal+Nhalo)*mesh.dim*sizeof(dfloat), hjs->gradq);
-
+  
   // storage for the pi, qi 
-  hjs->gradq = (dfloat*) calloc(2*Nlocal*mesh.dim, sizeof(dfloat));
-  hjs->o_gradq = platform.malloc(2*Nlocal*mesh.dim*sizeof(dfloat), hjs->gradq);
-
-
+  hjs->gradq = (dfloat*) calloc(Nlocal*mesh.dim, sizeof(dfloat));
+  hjs->o_gradq = platform.malloc(Nlocal*mesh.dim*sizeof(dfloat), hjs->gradq);
 
   //storage for M*q during reporting
   hjs->o_Mq = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), hjs->q);
@@ -86,10 +80,7 @@ hjs_t& hjs_t::Setup(platform_t& platform, mesh_t& mesh,
   int blockMax = 256;
   if (platform.device.mode() == "CUDA") blockMax = 512;
 
-  // int NblockV = mymax(1, blockMax/mesh.Np);
-  // kernelInfo["defines/" "p_NblockV"]= NblockV;
-
-  int NblockV = 1;
+  int NblockV = mymax(1, blockMax/mesh.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;
 
   int NblockS = mymax(1, blockMax/maxNodes);
@@ -122,11 +113,10 @@ hjs_t& hjs_t::Setup(platform_t& platform, mesh_t& mesh,
   hjs->surfaceKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 
 
-  // kernels from surface file
-  sprintf(fileName, DHJS "/okl/hjsHamiltonian%s.okl", suffix);
-  sprintf(kernelName, "hjsHamiltonian%s", suffix);
-
-  hjs->hamiltonianKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
+  // // kernels from surface file
+  // sprintf(fileName, DHJS "/okl/hjsHamiltonian%s.okl", suffix);
+  // sprintf(kernelName, "hjsHamiltonian%s", suffix);
+  // hjs->hamiltonianKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 
   if (mesh.dim==2) {
     sprintf(fileName, DHJS "/okl/hjsInitialCondition2D.okl");

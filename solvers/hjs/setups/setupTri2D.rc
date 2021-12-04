@@ -2,10 +2,9 @@
 2.0
 
 [DATA FILE]
-data/hjsNonlinear2D.h
 #data/hjsBurgers2D.h
 #data/hjsNonconvex2D.h
-#data/hjsExact2D.h
+data/hjsNonlinear2D.h
 
 
 [MESH FILE]
@@ -24,20 +23,18 @@ BOX
 20
 
 [BOX DIMX]
-#2
-6.283185307179586
 #4
+6.283185307179586
 
 [BOX DIMY]
-#2
-6.283185307179586
 #4
+6.283185307179586
 
 [BOX BOUNDARY FLAG]
 -1
 
 [POLYNOMIAL DEGREE]
-2
+5
 
 [THREAD MODEL]
 #Serial
@@ -75,7 +72,6 @@ WARPBLEND
 0
 
 [FINAL TIME]
-#1.0
 #0.05
 1.0
 

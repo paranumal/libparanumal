@@ -22,6 +22,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
+// 
+Burgers equation in 2D : 
+phi_t + 0.5*(phi_x^2 +phi_y2 + 1) = 0
+in [-2, 2] x [-2, 2] with periodic boundaries
+Solution is smooth at t = 0.5/pi^2 
+Discontinous derivatives at t = 1.5/pi^2
+
 */
 
 
@@ -35,7 +42,10 @@ SOFTWARE.
 #define hjsComputeHamiltonian2D(t,x,y,p1,p2,q1,q2,ham, dhdp, dhdq){\
   const dfloat p = 0.5*(p1+p2);\
   const dfloat q = 0.5*(q1+q2);\
-  (*dhdp) = 2.f*fabs(p + q + 1.f); \
-  (*dhdq) = 2.f*fabs(p + q + 1.f); \
+  (*dhdp) = 1.0f; \
+  (*dhdq) = 1.0f; \
   (*ham)  = 0.5f*(p+q+1.f)*(p+q+1.f); \
 } 
+
+// (*dhdp) = 2.f*fabs(p + q + 1.f); 
+// (*dhdq) = 2.f*fabs(p + q + 1.f); 

@@ -93,7 +93,9 @@ void surfaceTerms(dlong e, int es,
                                   @restrict const  dfloat *  y,
                                   @restrict const  dfloat *  z,
                                   @restrict const  dfloat *  q,
-                                  @restrict dfloat *  gradq){
+                                  @restrict const  dfloat *  gradq,
+                                  @restrict        dfloat *  rhsq,
+                                  ){
 
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
@@ -172,11 +174,19 @@ void surfaceTerms(dlong e, int es,
         if(e<Nelements){
           #pragma unroll p_Nq
           for(int j=0;j<p_Nq;++j){
-            const dlong id = e*p_Np*p_Nfields*(2*p_dim) + j*p_Nq + i;
-            gradq[id + 0*p_Np] += s_p1[es][j][i]; 
-            gradq[id + 1*p_Np] += s_p2[es][j][i]; 
-            gradq[id + 2*p_Np] += s_q1[es][j][i]; 
-            gradq[id + 3*p_Np] += s_q2[es][j][i];            
+            const dlong  idg  = e*p_Np*p_dim + j*p_Nq + i;
+            const dfloat dqdx = gradq[idg + 0*p_Np];
+            const dfloat dqdy = gradq[idg + 1*p_Np];
+            dfloat p1 =  s_p1[es][j][i] + dqdx; 
+            dfloat p2 =  s_p2[es][j][i] + dqdx; 
+            dfloat q1 =  s_q1[es][j][i] + dqdy; 
+            dfloat q2 =  s_q2[es][j][i] + dqdy; 
+
+            const dlong id = e*p_Np + j*p_Nq + i; 
+
+             dfloat ham =0.f, dhdp = 0.f, dhdq = 0.f;  
+            hjsComputeHamiltonian2D(time, x[id], y[id], p1, p2, q1, q2, &ham, &dhdp,&dhdq);                        
+            rhsq[id] = -( ham - 0.5*dhdp*(p1-p2)-0.5*dhdq*(q1-q2));                    
           }
         }
       }

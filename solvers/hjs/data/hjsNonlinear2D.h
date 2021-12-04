@@ -22,6 +22,12 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
+//
+A 2D nonlinear equation: 
+phi_t + phi_x*phi_y = 0 ; phi_0 = sin(x) + cons(y)
+in [-pi, pi] x [-pi, pi] with periodic boundaries
+Solution is smooth at t = 0.8
+Discontinous derivatives at t = 1.5
 */
 
 // Level-Set function
@@ -30,11 +36,18 @@ SOFTWARE.
   (*q) = sin(x) + cos(y);\
 }
 
- 
 #define hjsComputeHamiltonian2D(t,x,y,p1,p2,q1,q2,ham, dhdp, dhdq){\
   const dfloat p = 0.5*(p1+p2);\
   const dfloat q = 0.5*(q1+q2);\
-  (*dhdp) = fabs(q); \
-  (*dhdq) = fabs(p); \
+  (*dhdp) = 1.0f; \
+  (*dhdq) = 1.0f; \
   (*ham)  = p*q; \
 } 
+ 
+// #define hjsComputeHamiltonian2D(t,x,y,p1,p2,q1,q2,ham, dhdp, dhdq){\
+//   const dfloat p = 0.5*(p1+p2);\
+//   const dfloat q = 0.5*(q1+q2);\
+//   (*dhdp) = fabs(q); \
+//   (*dhdq) = fabs(p); \
+//   (*ham)  = p*q; \
+// } 

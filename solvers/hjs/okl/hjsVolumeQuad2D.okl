@@ -122,11 +122,9 @@ SOFTWARE.
                      +Ds*s_qsy[es][n][i];
             }
 
-          const dlong id = e*p_Np*(2*p_dim) + j*p_Nq + i;
+          const dlong id = e*p_Np*p_dim + j*p_Nq + i;
           gradq[id + 0*p_Np] = -invJW*dqdx;
-          gradq[id + 1*p_Np] = -invJW*dqdx;
-          gradq[id + 2*p_Np] = -invJW*dqdy;
-          gradq[id + 3*p_Np] = -invJW*dqdy;
+          gradq[id + 1*p_Np] = -invJW*dqdy;
         }
       }
       }
