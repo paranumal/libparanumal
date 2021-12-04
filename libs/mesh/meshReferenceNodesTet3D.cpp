@@ -62,6 +62,13 @@ void meshTet3D::ReferenceNodes(int N_){
   Dt = D + 2*Np*Np;
   DmatrixTet3D(N, Np, r, s, t, Dr, Ds, Dt);
 
+  //packed D matrices
+  DW  = (dfloat *) malloc(3*Np*Np*sizeof(dfloat));
+  DWr = DW + 0*Np*Np;
+  DWs = DW + 1*Np*Np;
+  DWt = DW + 2*Np*Np;
+  DWmatrixTet3D(N, Np, r, s, t, MM, DWr, DWs, DWt);
+
   LIFT = (dfloat *) malloc(Np*Nfaces*Nfp*sizeof(dfloat));
   LIFTmatrixTet3D(N, faceNodes, r, s, t, LIFT);
 

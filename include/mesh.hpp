@@ -473,6 +473,8 @@ public:
   static void invMassMatrixTet3D(int _Np, dfloat *V, dfloat *_invMM);
   static void DmatrixTet3D(int _N, int Npoints, dfloat *_r, dfloat *_s, dfloat *_t,
                            dfloat *_Dr, dfloat *_Ds, dfloat *_Dt);
+  static void DWmatrixTet3D(int _N, int Npoints, dfloat *_r, dfloat *_s, dfloat *_t, dfloat *_MM,
+                           dfloat *_Dr, dfloat *_Ds, dfloat *_Dt);
   static void LIFTmatrixTet3D(int _N, int *_faceNodes,
                               dfloat *_r, dfloat *_s, dfloat *_t, dfloat *_LIFT);
   static void SurfaceMassMatrixTet3D(int _N, dfloat *_MM, dfloat *_LIFT, dfloat *_sM);

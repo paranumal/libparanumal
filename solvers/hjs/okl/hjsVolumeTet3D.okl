@@ -25,7 +25,7 @@ SOFTWARE.
 */
 
 // compute NU  = -div(uxu) in collocation way
-@kernel void hjsVolumeTri2D(const dlong Nelements,
+@kernel void hjsVolumeTet3D(const dlong Nelements,
                             @restrict const  dfloat *  vgeo,
                             @restrict const  dfloat *  DW,
                             const dfloat time, 
@@ -58,28 +58,37 @@ SOFTWARE.
           // prefetch geometric factors (constant on triangle)
           const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
           const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+          const dfloat drdz = vgeo[e*p_Nvgeo + p_RZID];
           const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
           const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+          const dfloat dsdz = vgeo[e*p_Nvgeo + p_SZID];
+          const dfloat dtdx = vgeo[e*p_Nvgeo + p_TXID];
+          const dfloat dtdy = vgeo[e*p_Nvgeo + p_TYID];
+          const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
           // compute 'r' and 's' derivatives of (q_m) at node n
-          dfloat dqdr = 0.f, dqds = 0.f;
+          dfloat dqdr = 0.f, dqds = 0.f, dqdt = 0.f;
 
           #pragma unroll p_Np
             for(int i=0;i<p_Np;++i){
               const dfloat Drni = DW[n+i*p_Np+0*p_Np*p_Np];
               const dfloat Dsni = DW[n+i*p_Np+1*p_Np*p_Np];
+              const dfloat Dtni = DW[n+i*p_Np+2*p_Np*p_Np];
 
               const dfloat qn  = s_q[es][i];
 
               dqdr += Drni*qn;
               dqds += Dsni*qn;
+              dqdt += Dtni*qn;
             }
 
-          const dfloat dqdx = drdx*dqdr + dsdx*dqds;
-          const dfloat dqdy = drdy*dqdr + dsdy*dqds;
+          const dfloat dqdx = drdx*dqdr + dsdx*dqds + dtdx*dqdt;
+          const dfloat dqdy = drdy*dqdr + dsdy*dqds + dtdy*dqdt;
+          const dfloat dqdz = drdz*dqdr + dsdz*dqds + dtdz*dqdt;
 
           const dlong id = e*p_Np*p_dim + n;
           gradq[id + 0*p_Np] = -dqdx;
           gradq[id + 1*p_Np] = -dqdy;
+          gradq[id + 2*p_Np] = -dqdz;
         }
       }
     }

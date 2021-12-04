@@ -40,6 +40,15 @@ void meshTet3D::OccaSetup(){
   matrixTranspose(Np, Np, Ds, Np, DsT, Np);
   matrixTranspose(Np, Np, Dt, Np, DtT, Np);
 
+  // build transposes (we hold matrices as column major on device)
+  dfloat *DWT = (dfloat*) calloc(3*Np*Np, sizeof(dfloat));
+  dfloat *DWrT = DWT + 0*Np*Np;
+  dfloat *DWsT = DWT + 1*Np*Np;
+  dfloat *DWtT = DWT + 2*Np*Np;
+  matrixTranspose(Np, Np, DWr, Np, DWrT, Np);
+  matrixTranspose(Np, Np, DWs, Np, DWsT, Np);
+  matrixTranspose(Np, Np, DWt, Np, DWtT, Np);
+
   dfloat *LIFTT = (dfloat*) calloc(Np*Nfaces*Nfp, sizeof(dfloat));
   matrixTranspose(Np, Nfp*Nfaces, LIFT, Nfp*Nfaces, LIFTT, Np);
 
@@ -60,7 +69,8 @@ void meshTet3D::OccaSetup(){
   matrixTranspose(Np, Np, Sst, Np, SstT, Np);
   matrixTranspose(Np, Np, Stt, Np, SttT, Np);
 
-  o_D = platform.malloc(3*Np*Np*sizeof(dfloat), DT);
+  o_D  = platform.malloc(3*Np*Np*sizeof(dfloat), DT);
+  o_DW = platform.malloc(3*Np*Np*sizeof(dfloat), DWT);
   o_MM = platform.malloc(Np*Np*sizeof(dfloat), MM); //MM is symmetric
 
   o_sM = platform.malloc(Np*Nfaces*Nfp*sizeof(dfloat), sMT);

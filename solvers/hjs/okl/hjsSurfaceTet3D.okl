@@ -1,0 +1,160 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+// batch process elements
+@kernel void hjsSurfaceTet3D(const dlong Nelements,
+                                  @restrict const  dfloat *  sgeo,
+                                  @restrict const  dfloat *  LIFTT,
+                                  @restrict const  dlong  *  vmapM,
+                                  @restrict const  dlong  *  vmapP,
+                                  @restrict const  int    *  EToB,
+                                            const  dfloat time,
+                                  @restrict const  dfloat *  x,
+                                  @restrict const  dfloat *  y,
+                                  @restrict const  dfloat *  z,
+                                  @restrict const  dfloat *  q,
+                                  @restrict const  dfloat *  gradq, 
+                                  @restrict        dfloat *  rhsq){
+
+  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
+
+    // @shared storage for flux terms
+    @shared dfloat s_p1[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_p2[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_q1[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_q2[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_m1[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_m2[p_NblockS][p_NfacesNfp];
+
+
+    // for all face nodes of all elements
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
+        const dlong e = eo + es;
+        if(e<Nelements){
+          if(n<p_NfacesNfp){
+            // find face that owns this node
+            const int face = n/p_Nfp;
+
+           // load surface geofactors for this face
+            const dlong sid    = p_Nsgeo*(e*p_Nfaces+face);
+            const dfloat nx   = sgeo[sid+p_NXID];
+            const dfloat ny   = sgeo[sid+p_NYID];
+            const dfloat nz   = sgeo[sid+p_NZID];
+            const dfloat sJ   = sgeo[sid+p_SJID];
+            const dfloat invJ = sgeo[sid+p_IJID];
+
+            // indices of negative and positive traces of face node
+            const dlong id  = e*p_Nfp*p_Nfaces + n;
+            const dlong idM = vmapM[id];
+            const dlong idP = vmapP[id];
+
+             // Load Velocity Traces
+            const dlong eM = e;
+            const dlong eP = idP/p_Np;
+            const int vidM = idM%p_Np;
+            const int vidP = idP%p_Np;
+
+            const dlong qbaseM = eM*p_Np*p_Nfields + vidM;
+            const dlong qbaseP = eP*p_Np*p_Nfields + vidP;
+
+            // load traces
+            const dfloat qM = q[qbaseM + 0*p_Np];  
+                  dfloat qP = q[qbaseP + 0*p_Np];
+
+            // apply boundary condition
+            const int bc = EToB[face+p_Nfaces*e];
+            // Change this later AK !!!!!!!!!
+            // if(bc>0){
+            //   qpP = qpM; qmP = qmM; 
+            //   // lssDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, qpM, &qpP);
+            // }
+            
+            const dfloat sc = invJ*sJ; 
+            // simple upwind
+            dfloat unx = 0.0, dnx = 1.0; 
+            dfloat uny = 0.0, dny = 1.0; 
+            dfloat unz = 0.0, dnz = 1.0; 
+            if(nx>= 0){unx = 1.0, dnx = 0.0;}
+            if(ny>= 0){uny = 1.0, dny = 0.0;}
+            if(nz>= 0){unz = 1.0, dnz = 0.0;}
+
+            s_p1[es][n]= sc*nx*( (dnx*qM  + unx*qP));
+            s_p2[es][n]= sc*nx*( (unx*qM  + dnx*qP));
+            s_q1[es][n]= sc*ny*( (dny*qM  + uny*qP));
+            s_q2[es][n]= sc*ny*( (uny*qM  + dny*qP));
+            s_m1[es][n]= sc*nz*( (dnz*qM  + unz*qP));
+            s_m2[es][n]= sc*nz*( (unz*qM  + dnz*qP));
+          }
+        }
+      }
+    }
+
+    // wait for all @shared memory writes of the previous inner loop to complete
+    @barrier("local");
+
+    // for each node in the element
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
+        const dlong e = eo + es;
+        if(e<Nelements){
+          if(n<p_Np){
+
+            dfloat p1 = 0.f, p2 = 0.f; 
+            dfloat q1 = 0.f, q2 = 0.f;   
+            dfloat m1 = 0.f, m2 = 0.f;   
+
+            #pragma unroll p_NfacesNfp
+              for(int m=0;m<p_NfacesNfp;++m){
+                const dfloat L = LIFTT[n+m*p_Np];
+                p1 += L*s_p1[es][m];
+                p2 += L*s_p2[es][m];
+                q1 += L*s_q1[es][m];
+                q2 += L*s_q2[es][m];
+                m1 += L*s_m1[es][m];
+                m2 += L*s_m2[es][m];
+              }            
+            const dlong idg = e*p_Np*p_dim + n;
+            const dfloat dqdx = gradq[idg + 0*p_Np];
+            const dfloat dqdy = gradq[idg + 1*p_Np];
+            const dfloat dqdz = gradq[idg + 2*p_Np];
+            p1 +=  dqdx; p2 +=  dqdx; 
+            q1 +=  dqdy; q2 +=  dqdy;
+            m1 +=  dqdz; m2 +=  dqdz;
+
+            const dlong id = e*p_Np + n;
+            dfloat ham =0.f, dhdp = 0.f, dhdq = 0.f, dhdm = 0.f;  
+            hjsComputeHamiltonian3D(time, x[id], y[id], z[id], p1, p2, q1, q2, m1, m2,&ham, &dhdp, &dhdq,&dhdm);            
+            
+            // LLF (global) Numerical Hamiltonian
+            rhsq[id] = -( ham - 0.5*dhdp*(p1-p2)-0.5*dhdq*(q1-q2) -0.5*dhdm*(m1-m2)); 
+          }
+        }
+      }
+    }
+  }
+}
+

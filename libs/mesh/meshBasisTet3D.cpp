@@ -335,6 +335,56 @@ void mesh_t::DmatrixTet3D(int _N, int Npoints, dfloat *_r, dfloat *_s, dfloat *_
   free(V); free(Vr); free(Vs); free(Vt);
 }
 
+
+
+void mesh_t::DWmatrixTet3D(int _N, int Npoints, dfloat *_r, dfloat *_s, dfloat *_t, dfloat *_MM, 
+                                                dfloat *_DWr, dfloat *_DWs, dfloat *_DWt){
+
+  int _Np = (_N+1)*(_N+2)*(_N+3)/6;
+
+  dfloat *V  = (dfloat *) calloc(Npoints*_Np, sizeof(dfloat));
+  dfloat *Vr = (dfloat *) calloc(Npoints*_Np, sizeof(dfloat));
+  dfloat *Vs = (dfloat *) calloc(Npoints*_Np, sizeof(dfloat));
+  dfloat *Vt = (dfloat *) calloc(Npoints*_Np, sizeof(dfloat));
+
+  VandermondeTet3D(_N, Npoints, _r, _s, _t, V);
+  GradVandermondeTet3D(_N, Npoints, _r, _s, _t, Vr, Vs, Vt);
+
+  //DWr = V*Vr' / (V*V') = V*Vr'*MM
+  dfloat *tmpr = (dfloat *) calloc(_Np, sizeof(dfloat)); 
+  dfloat *tmps = (dfloat *) calloc(_Np, sizeof(dfloat)); 
+  dfloat *tmpt = (dfloat *) calloc(_Np, sizeof(dfloat)); 
+  for(int n=0;n<_Np;++n){
+    for(int m=0;m<_Np;++m){
+      dfloat resr = 0, ress = 0, rest = 0;
+      for(int i=0;i<_Np;++i){
+        resr += V[n*_Np+i]*Vr[m*_Np+i];
+        ress += V[n*_Np+i]*Vs[m*_Np+i];
+        rest += V[n*_Np+i]*Vt[m*_Np+i];
+      }
+      tmpr[m] = resr; 
+      tmps[m] = ress; 
+      tmpt[m] = rest;
+    }
+    // multiply with MM
+     for(int m=0;m<_Np;++m){
+      dfloat resr = 0, ress = 0, rest = 0;
+      for(int i=0;i<_Np;++i){
+        resr += tmpr[i]*_MM[i*_Np+m];
+        ress += tmps[i]*_MM[i*_Np+m];
+        rest += tmpt[i]*_MM[i*_Np+m];
+      }
+      _DWr[n*_Np + m] = resr; 
+      _DWs[n*_Np + m] = ress;
+      _DWt[n*_Np + m] = rest;
+    }
+  }
+  free(V); 
+  free(Vr); free(Vs); free(Vt); 
+  free(tmpr); free(tmps); free(tmpt);
+
+}
+
 void mesh_t::LIFTmatrixTet3D(int _N, int *_faceNodes,
                              dfloat *_r, dfloat *_s, dfloat *_t, dfloat *_LIFT){
 
