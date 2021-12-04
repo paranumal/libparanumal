@@ -31,7 +31,8 @@ void meshHex3D::OccaSetup(){
 
   this->mesh3D::OccaSetup();
 
-  o_D = platform.malloc(Nq*Nq*sizeof(dfloat), D);
+  o_D  = platform.malloc(Nq*Nq*sizeof(dfloat), D);
+  o_DW = platform.malloc(Nq*Nq*sizeof(dfloat), D);
 
   o_S    = o_D; //dummy
   o_MM   = o_D; //dummy

@@ -1,0 +1,260 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+#define surfaceTerms(sk,face,m, i, j)                                   \
+{                                                                       \
+  const dlong  idM = vmapM[sk];                                         \
+  const dlong  idP = vmapP[sk];                                         \
+                                                                        \
+  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
+  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
+  const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];                            \
+  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];                            \
+  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];                        \
+                                                                        \
+  const dlong eM = e;                                                   \
+  const dlong eP = idP/p_Np;                                            \
+  const int vidM = idM%p_Np;                                            \
+  const int vidP = idP%p_Np;                                            \
+                                                                        \
+  const dlong qbaseM = eM*p_Np + vidM;                                  \
+  const dlong qbaseP = eP*p_Np + vidP;                                  \
+                                                                        \
+  const dfloat qM = q[qbaseM+0*p_Np];                                   \
+        dfloat qP = q[qbaseP+0*p_Np];                                   \
+                                                                        \
+                                                                        \
+  dfloat unx = 0.0, dnx = 1.0;                                          \
+  dfloat uny = 0.0, dny = 1.0;                                          \
+  dfloat unz = 0.0, dnz = 1.0;                                          \
+  if(nx>= 0){unx = 1.0, dnx = 0.0;};                                    \
+  if(ny>= 0){uny = 1.0, dny = 0.0;};                                    \
+  if(nz>= 0){unz = 1.0, dnz = 0.0;};                                    \
+                                                                        \
+  const dfloat sc = invWJ * sJ;                                         \
+  s_p1[m][j][i] = sc*nx*( (dnx*qM  + unx*qP));                         \
+  s_p2[m][j][i] = sc*nx*( (unx*qM  + dnx*qP));                         \
+  s_q1[m][j][i] = sc*ny*( (dny*qM  + uny*qP));                         \
+  s_q2[m][j][i] = sc*ny*( (uny*qM  + dny*qP));                         \
+  s_m1[m][j][i] = sc*nz*( (dnz*qM  + unz*qP));                         \
+  s_m2[m][j][i] = sc*nz*( (unz*qM  + dnz*qP));                         \
+}
+
+
+ // const int bc = EToB[face+p_Nfaces*e];                                 \
+ //  if(bc>0) {                                                            \
+ //    insVelocityDirichletConditions3D(bc, nu, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP); \
+ //  }                                                                     \
+  
+ 
+ 
+// batch process elements
+@kernel void hjsSurfaceHex3D(const dlong Nelements,
+                                  @restrict const  dfloat *  sgeo,
+                                  @restrict const  dfloat *  LIFTT,
+                                  @restrict const  dlong  *  vmapM,
+                                  @restrict const  dlong  *  vmapP,
+                                  @restrict const  int    *  EToB,
+                                            const  dfloat time,
+                                  @restrict const  dfloat *  x,
+                                  @restrict const  dfloat *  y,
+                                  @restrict const  dfloat *  z,
+                                  @restrict const  dfloat *  q,
+                                  @restrict const  dfloat *  gradq,
+                                  @restrict        dfloat *  rhsq,
+                                  ){
+
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+    // @shared storage for flux terms
+    @shared dfloat s_p1[2][p_Nq][p_Nq];
+    @shared dfloat s_p2[2][p_Nq][p_Nq];
+    @shared dfloat s_q1[2][p_Nq][p_Nq];
+    @shared dfloat s_q2[2][p_Nq][p_Nq];
+    @shared dfloat s_m1[2][p_Nq][p_Nq];
+    @shared dfloat s_m2[2][p_Nq][p_Nq];
+
+    @exclusive dfloat r_p1[p_Nq], r_p2[p_Nq]; 
+    @exclusive dfloat r_q1[p_Nq], r_q2[p_Nq]; 
+    @exclusive dfloat r_m1[p_Nq], r_m2[p_Nq]; 
+
+    // for all face nodes of all elements
+    // face 0 & 5
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        #pragma unroll p_Nq
+        for(int k=0;k<p_Nq;++k){
+          r_p1[k] = 0.; r_p2[k] = 0.;
+          r_q1[k] = 0.; r_q2[k] = 0.;
+          r_m1[k] = 0.; r_m2[k] = 0.;
+        }
+
+        const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i + j*p_Nq;
+        const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + i + j*p_Nq;
+
+        surfaceTerms(sk0,0,0,i,j);
+        surfaceTerms(sk5,5,1,i,j);
+      }
+    }
+
+    @barrier("local");
+
+    // face 0 & 5
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        //face 0
+        r_p1[0] += s_p1[0][j][i];
+        r_p2[0] += s_p2[0][j][i];
+        r_q1[0] += s_q1[0][j][i];
+        r_q2[0] += s_q2[0][j][i];
+        r_m1[0] += s_m1[0][j][i];
+        r_m2[0] += s_m2[0][j][i];
+
+        //face 5
+        r_p1[p_Nq-1] += s_p1[1][j][i];
+        r_p2[p_Nq-1] += s_p2[1][j][i];
+        r_q1[p_Nq-1] += s_q1[1][j][i];
+        r_q2[p_Nq-1] += s_q2[1][j][i];
+        r_m1[p_Nq-1] += s_m1[1][j][i];
+        r_m2[p_Nq-1] += s_m2[1][j][i];
+      }
+    }
+
+    // face 1 & 3
+    for(int k=0;k<p_Nq;++k;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + i + k*p_Nq;
+        const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + i + k*p_Nq;
+
+        surfaceTerms(sk1,1,0,i,k);
+        surfaceTerms(sk3,3,1,i,k);
+      }
+    }
+
+    @barrier("local");
+
+// face 1 & 3
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        if (j==0) {//face 1
+          #pragma unroll p_Nq
+          for (int n=0;n<p_Nq;n++) {
+            r_p1[n] += s_p1[0][n][i];
+            r_p2[n] += s_p2[0][n][i];
+            r_q1[n] += s_q1[0][n][i];
+            r_q2[n] += s_q2[0][n][i];
+            r_m1[n] += s_m1[0][n][i];
+            r_m2[n] += s_m2[0][n][i];
+          }
+        }
+        if (j==p_Nq-1) {//face 3
+          #pragma unroll p_Nq
+          for (int n=0;n<p_Nq;n++) {
+            r_p1[n] += s_p1[1][n][i];
+            r_p2[n] += s_p2[1][n][i];
+            r_q1[n] += s_q1[1][n][i];
+            r_q2[n] += s_q2[1][n][i];
+            r_m1[n] += s_m1[1][n][i];
+            r_m2[n] += s_m2[1][n][i];
+          }
+        }
+      }
+    }
+
+    @barrier("local");
+
+    // face 2 & 4
+    for(int k=0;k<p_Nq;++k;@inner(1)){
+      for(int j=0;j<p_Nq;++j;@inner(0)){
+        const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + j + k*p_Nq;
+        const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + j + k*p_Nq;
+
+        surfaceTerms(sk2,2,0,j,k);
+        surfaceTerms(sk4,4,1,j,k);
+      }
+    }
+
+    @barrier("local");
+
+    // face 2 & 4
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        if (i==p_Nq-1) {//face 2
+          #pragma unroll p_Nq
+          for (int n=0;n<p_Nq;n++) {
+            r_p1[n] += s_p1[0][n][j];
+            r_p2[n] += s_p2[0][n][j];
+            r_q1[n] += s_q1[0][n][j];
+            r_q2[n] += s_q2[0][n][j];
+            r_m1[n] += s_m1[0][n][j];
+            r_m2[n] += s_m2[0][n][j];
+          }
+        }
+        if (i==0) {//face 4
+          #pragma unroll p_Nq
+          for (int n=0;n<p_Nq;n++) {
+            r_p1[n] += s_p1[1][n][j];
+            r_p2[n] += s_p2[1][n][j];
+            r_q1[n] += s_q1[1][n][j];
+            r_q2[n] += s_q2[1][n][j];
+            r_m1[n] += s_m1[1][n][j];
+            r_m2[n] += s_m2[1][n][j];
+          }
+        }
+      }
+    }
+
+   @barrier("local");
+
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        #pragma unroll p_Nq
+        for(int k=0;k<p_Nq;++k){
+
+            const dlong idg = e*p_Np*p_dim + k*p_Nq*p_Nq + j*p_Nq + i;
+            const dfloat dqdx = gradq[idg + 0*p_Np];
+            const dfloat dqdy = gradq[idg + 1*p_Np];
+            const dfloat dqdz = gradq[idg + 2*p_Np];
+
+            dfloat p1 =  r_p1[k] + dqdx; 
+            dfloat p2 =  r_p2[k] + dqdx; 
+            dfloat q1 =  r_q1[k] + dqdy; 
+            dfloat q2 =  r_q2[k] + dqdy; 
+            dfloat m1 =  r_m1[k] + dqdz; 
+            dfloat m2 =  r_m2[k] + dqdz; 
+
+           const dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+
+            dfloat ham =0.f, dhdp = 0.f, dhdq = 0.f, dhdm = 0.f;  
+            hjsComputeHamiltonian3D(time, x[id], y[id], z[id], p1, p2, q1, q2, m1, m2,&ham, &dhdp, &dhdq,&dhdm);            
+            
+            // LLF (global) Numerical Hamiltonian
+            rhsq[id] = -( ham - 0.5*dhdp*(p1-p2)-0.5*dhdq*(q1-q2) -0.5*dhdm*(m1-m2)); 
+        }
+      }
+    }
+  }
+}
+#undef surfaceTerms
