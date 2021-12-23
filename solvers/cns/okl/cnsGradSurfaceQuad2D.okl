@@ -88,7 +88,7 @@ void surfaceTerms(const int e,
                             &rP, &uP, &vP, &pP, &dudx, &dudy, &dvdx, &dvdy);
   }
 
-  const dfloat sc = invWJ * sJ;
+  const dfloat sc = 0.5f*invWJ * sJ;
   s_uxflux[es][j][i] += sc*nx*(uP-uM);
   s_uyflux[es][j][i] += sc*ny*(uP-uM);
   s_vxflux[es][j][i] += sc*nx*(vP-vM);

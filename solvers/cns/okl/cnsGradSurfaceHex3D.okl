@@ -93,7 +93,7 @@ void surfaceTerms(const int e,
                             &dudx, &dudy, &dudz, &dvdx, &dvdy, &dvdz, &dwdx, &dwdy, &dwdz);
   }
 
-  const dfloat sc = invWJ * sJ;
+  const dfloat sc = 0.5f*invWJ * sJ;
   const dlong base = e*p_Np*p_Ngrads+k*p_Nq*p_Nq+j*p_Nq+i;
   gradq[base+0*p_Np] += sc*nx*(uP-uM);
   gradq[base+1*p_Np] += sc*ny*(uP-uM);

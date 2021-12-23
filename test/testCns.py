@@ -67,86 +67,86 @@ def main():
   failCount += test(name="testCnsTri",
                     cmd=cnsBin,
                     settings=cnsSettings(element=3,data_file=cnsData2D,dim=2),
-                    referenceNorm=27.4586683221406)
+                    referenceNorm=27.4583308011963)
 
   failCount += test(name="testCnsQuad",
                     cmd=cnsBin,
                     settings=cnsSettings(element=4,data_file=cnsData2D,dim=2),
-                    referenceNorm=27.4598265040507)
+                    referenceNorm=27.4595638641015)
 
   failCount += test(name="testCnsTet",
                     cmd=cnsBin,
                     settings=cnsSettings(element=6,data_file=cnsData3D,dim=3, degree=2),
-                    referenceNorm=85.2381012916957)
+                    referenceNorm=85.2379630054725)
 
   failCount += test(name="testCnsHex",
                     cmd=cnsBin,
                     settings=cnsSettings(element=12,data_file=cnsData3D,dim=3, degree=2),
-                    referenceNorm=85.2655372370673)
+                    referenceNorm=85.2656652300985)
 
   failCount += test(name="testCnsTri_cub",
                     cmd=cnsBin,
                     settings=cnsSettings(element=3,data_file=cnsData2D,dim=2,
                                          advection_type="CUBATURE"),
-                    referenceNorm=27.458656841783)
+                    referenceNorm=27.4584573000865)
 
   failCount += test(name="testCnsQuad_cub",
                     cmd=cnsBin,
                     settings=cnsSettings(element=4,data_file=cnsData2D,dim=2,
                                          advection_type="CUBATURE"),
-                    referenceNorm=27.4589632969659)
+                    referenceNorm=27.4586844667892)
 
   failCount += test(name="testCnsTet_cub",
                     cmd=cnsBin,
                     settings=cnsSettings(element=6,data_file=cnsData3D,dim=3, degree=2,
                                          advection_type="CUBATURE"),
-                    referenceNorm=85.25499794991)
+                    referenceNorm=85.2549800928041)
 
   failCount += test(name="testCnsHex_cub",
                     cmd=cnsBin,
                     settings=cnsSettings(element=12,data_file=cnsData3D,dim=3, degree=2,
                                          advection_type="CUBATURE"),
-                    referenceNorm=85.2651118652474)
+                    referenceNorm=85.2652515937174)
 
   failCount += test(name="testCnsTri_Isothermal",
                     cmd=cnsBin,
                     settings=cnsSettings(element=3,data_file=cnsData2D,dim=2,
                                          isothermal="TRUE"),
-                    referenceNorm=10.2202500049447)
+                    referenceNorm=10.2200732624953)
 
   failCount += test(name="testCnsQuad_Isothermal",
                     cmd=cnsBin,
                     settings=cnsSettings(element=4,data_file=cnsData2D,dim=2,
                                          isothermal="TRUE"),
-                    referenceNorm=10.2202543282054)
+                    referenceNorm=10.2201442207598)
 
   failCount += test(name="testCnsTet_Isothermal",
                     cmd=cnsBin,
                     settings=cnsSettings(element=6,data_file=cnsData3D,dim=3,
                                          isothermal="TRUE",
-                                         nx=6, ny=6, nz=6, degree=2),
-                    referenceNorm=31.649984593962)
+                                         nx=6, ny=6, nz=6, degree=3),
+                    referenceNorm=31.6748226159438)
 
   failCount += test(name="testCnsHex_Isothermal",
                     cmd=cnsBin,
                     settings=cnsSettings(element=12,data_file=cnsData3D,dim=3,
                                          isothermal="TRUE",
                                          nx=8, ny=8, nz=8, degree=2),
-                    referenceNorm=31.661686876588)
+                    referenceNorm=31.6617290760014)
 
   failCount += test(name="testCnsTri_Isothermal_cub",
                     cmd=cnsBin,
                     settings=cnsSettings(element=3,data_file=cnsData2D,dim=2,
                                          isothermal="TRUE",
                                          advection_type="CUBATURE"),
-                    referenceNorm=10.2198591595802)
+                    referenceNorm=10.2197628476831)
 
   failCount += test(name="testCnsQuad_Isothermal_cub",
                     cmd=cnsBin,
                     settings=cnsSettings(element=4,data_file=cnsData2D,dim=2,
                                          isothermal="TRUE",
                                          advection_type="CUBATURE"),
-                    referenceNorm=10.2198492835052)
+                    referenceNorm=10.2197250517919)
 
   failCount += test(name="testCnsTet_Isothermal_cub",
                     cmd=cnsBin,
@@ -154,7 +154,7 @@ def main():
                                          isothermal="TRUE",
                                          advection_type="CUBATURE",
                                          nx=6, ny=6, nz=6, degree=2),
-                    referenceNorm=31.6385359664938)
+                    referenceNorm=31.6390441400446)
 
   failCount += test(name="testCnsHex_Isothermal_cub",
                     cmd=cnsBin,
@@ -162,12 +162,12 @@ def main():
                                          isothermal="TRUE",
                                          advection_type="CUBATURE",
                                          nx=8, ny=8, nz=8, degree=2),
-                    referenceNorm=31.6604814034179)
+                    referenceNorm=31.6605632403763)
 
   failCount += test(name="testCnsTri_MPI", ranks=4,
                     cmd=cnsBin,
                     settings=cnsSettings(element=3,data_file=cnsData2D,dim=2, output_to_file="TRUE"),
-                    referenceNorm=27.4601137743012)
+                    referenceNorm=27.4600335839337)
 
   #clean up
   for file_name in os.listdir(testDir):
