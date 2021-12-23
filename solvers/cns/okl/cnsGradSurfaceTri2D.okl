@@ -102,7 +102,7 @@ SOFTWARE.
                                       &rP, &uP, &vP, &pP, &dudx, &dudy, &dvdx, &dvdy);
             }
 
-            const dfloat sc = invJ*sJ;
+            const dfloat sc = 0.5f*invJ*sJ;
             s_gradflux[es][0][n] = sc*nx*(uP-uM);
             s_gradflux[es][1][n] = sc*ny*(uP-uM);
             s_gradflux[es][2][n] = sc*nx*(vP-vM);
