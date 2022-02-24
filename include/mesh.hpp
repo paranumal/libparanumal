@@ -220,6 +220,7 @@ public:
   occa::memory o_sM;  // Surface mass
 
   // volume, surface, and second order geometric factors
+  string gfloatString;
   occa::memory o_vgeo, o_sgeo, o_ggeo;
 
   //face node mappings

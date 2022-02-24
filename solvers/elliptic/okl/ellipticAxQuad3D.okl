@@ -33,7 +33,7 @@
 
 // square thread version
 @kernel void ellipticAxQuad3D(const dlong   Nelements,
-			      @restrict const  dfloat *  ggeo,
+			      @restrict const  gfloat *  ggeo,
 			      @restrict const  dfloat *  D,
 			      @restrict const  dfloat *  S,
 			      @restrict const  dfloat *  MM,
@@ -146,7 +146,7 @@
 @kernel void ellipticPartialAxQuad3D(const dlong Nelements,
 				     @restrict const  dlong   *  elementList,
              @restrict const  dlong   *  GlobalToLocal,
-				     @restrict const  dfloat *  ggeo,
+				     @restrict const  gfloat *  ggeo,
 				     @restrict const  dfloat *  D,
 				     @restrict const  dfloat *  S,
 				     @restrict const  dfloat *  MM,

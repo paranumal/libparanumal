@@ -37,6 +37,40 @@ void MultiGridPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
   if(elliptic.allNeumann) elliptic.ZeroMean(o_Mr);
 }
 
+void occaConvertType(platform_t &platform, dlong N, occa::memory &o_x, string &gfloatString){
+
+
+  if(gfloatString==dfloatString) return;
+
+  // bring o_x data back to host
+  dfloat *h_x = (dfloat*) calloc(N, sizeof(dfloat));
+  o_x.copyTo(h_x);
+
+  // free device storage
+  o_x.free();
+
+  // type convert on host and copy back to device
+  if(gfloatString=="float"){
+    float *x = (float*) calloc(N, sizeof(float));
+    for(int n=0;n<N;++n){
+      x[n] = (float)h_x[n];
+    }
+    o_x = platform.device.malloc(N*sizeof(float), x);
+    free(x);
+  }
+
+  if(gfloatString=="double"){
+    double *x = (double*) calloc(N, sizeof(double));
+    for(int n=0;n<N;++n){
+      x[n] = (double)h_x[n];
+    }
+    o_x = platform.device.malloc(N*sizeof(double), x);
+    free(x);
+  }
+
+  free(h_x);
+}
+
 MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   elliptic(_elliptic), mesh(_elliptic.mesh), settings(_elliptic.settings),
   parAlmond(elliptic.platform, settings, mesh.comm) {
@@ -52,6 +86,21 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   while(Nc>1) {
     //build mesh and elliptic objects for this degree
     mesh_t &meshF = mesh.SetupNewDegree(Nf);
+
+    // TW: rewrite o_ggeo here ? and set a variable o_ggeoType in mesh ?
+    if(Nf<mesh.N){ //
+      meshF.gfloatString = dfloatString;
+      settings.getSetting("MULTIGRID GEOFAC TYPE", meshF.gfloatString);
+
+      dlong M = 0;
+      if(meshF.elementType==TRIANGLES || meshF.elementType==TETRAHEDRA)
+	M = meshF.Nelements*meshF.Nggeo;
+      else
+	M = meshF.Nelements*meshF.Np*meshF.Nggeo;
+
+      occaConvertType(meshF.platform, M, meshF.o_ggeo, meshF.gfloatString);
+    }
+    
     elliptic_t &ellipticF = elliptic.SetupNewDegree(meshF);
 
     //share masking data with previous MG level
