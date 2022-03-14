@@ -24,7 +24,7 @@ SOFTWARE.
 
 */
 
-#include "core.hpp"
+#include "linAlg.hpp"
 
 extern "C" {
   void dgetrf_(int* M, int *N, double* A, int* lda, int* IPIV, int* INFO);
@@ -39,8 +39,11 @@ extern "C" {
                 float *RCOND, float *WORK, int *IWORK, int *INFO );
 }
 
-double matrixConditionNumber(int N, double *A) {
+namespace libp {
 
+double linAlg_t::matrixConditionNumber(const int N, const memory<double> A) {
+
+  int n = N;
   int lwork = 4*N;
   int info;
 
@@ -49,47 +52,35 @@ double matrixConditionNumber(int N, double *A) {
   double Acond;
   double Anorm;
 
-  double *tmpLU = (double*) calloc(N*N, sizeof(double));
+  memory<double> tmpLU(N*N);
 
-  int *ipiv = (int*) calloc(N, sizeof(int));
-  double *work = (double*) calloc(lwork, sizeof(double));
-  int  *iwork = (int*) calloc(N, sizeof(int));
+  memory<int> ipiv(N);
+  memory<double> work(lwork);
+  memory<int> iwork(N);
 
-  for(int n=0;n<N*N;++n){
-    tmpLU[n] = (double) A[n];
-  }
+  tmpLU.copyFrom(A, N*N);
 
   //get the matrix norm of A
-  Anorm = dlange_(&norm, &N, &N, tmpLU, &N, work);
+  Anorm = dlange_(&norm, &n, &n, tmpLU.ptr(), &n, work.ptr());
 
   //compute LU factorization
-  dgetrf_ (&N, &N, tmpLU, &N, ipiv, &info);
+  dgetrf_ (&n, &n, tmpLU.ptr(), &n, ipiv.ptr(), &info);
 
-  if(info) {
-    std::stringstream ss;
-    ss << "dgetrf reports info = " << info << " when computing condition number";
-    LIBP_ABORT(ss.str());
-  }
+  LIBP_ABORT("dgetrf reports info = " << info << " when computing condition number",
+             info);
 
   //compute inverse condition number
-  dgecon_(&norm, &N, tmpLU, &N, &Anorm, &Acond, work, iwork, &info);
+  dgecon_(&norm, &n, tmpLU.ptr(), &n, &Anorm, &Acond, work.ptr(), iwork.ptr(), &info);
 
-  if(info) {
-    std::stringstream ss;
-    ss << "dgecon reports info = " << info << " when computing condition number";
-    LIBP_ABORT(ss.str());
-  }
+  LIBP_ABORT("dgecon reports info = " << info << " when computing condition number",
+             info);
 
-  free(work);
-  free(iwork);
-  free(ipiv);
-  free(tmpLU);
-
-  return (double) 1.0/Acond;
+  return 1.0/Acond;
 }
 
-float matrixConditionNumber(int N, float *A) {
+float linAlg_t::matrixConditionNumber(const int N, const memory<float> A) {
 
+  int n = N;
   int lwork = 4*N;
   int info;
 
@@ -98,41 +89,30 @@ float matrixConditionNumber(int N, float *A) {
   float Acond;
   float Anorm;
 
-  float *tmpLU = (float*) calloc(N*N, sizeof(float));
+  memory<float> tmpLU(N*N);
 
-  int *ipiv = (int*) calloc(N, sizeof(int));
-  float *work = (float*) calloc(lwork, sizeof(float));
-  int  *iwork = (int*) calloc(N, sizeof(int));
+  memory<int> ipiv(N);
+  memory<float> work(lwork);
+  memory<int> iwork(N);
 
-  for(int n=0;n<N*N;++n){
-    tmpLU[n] = (float) A[n];
-  }
+  tmpLU.copyFrom(A, N*N);
 
   //get the matrix norm of A
-  Anorm = slange_(&norm, &N, &N, tmpLU, &N, work);
+  Anorm = slange_(&norm, &n, &n, tmpLU.ptr(), &n, work.ptr());
 
   //compute LU factorization
-  sgetrf_ (&N, &N, tmpLU, &N, ipiv, &info);
+  sgetrf_ (&n, &n, tmpLU.ptr(), &n, ipiv.ptr(), &info);
 
-  if(info) {
-    std::stringstream ss;
-    ss << "sgetrf reports info = " << info << " when computing condition number";
-    LIBP_ABORT(ss.str());
-  }
+  LIBP_ABORT("sgetrf reports info = " << info << " when computing condition number",
+             info);
 
   //compute inverse condition number
-  sgecon_(&norm, &N, tmpLU, &N, &Anorm, &Acond, work, iwork, &info);
+  sgecon_(&norm, &n, tmpLU.ptr(), &n, &Anorm, &Acond, work.ptr(), iwork.ptr(), &info);
 
-  if(info) {
-    std::stringstream ss;
-    ss << "sgecon reports info = " << info << " when computing condition number";
-    LIBP_ABORT(ss.str());
-  }
+  LIBP_ABORT("sgecon reports info = " << info << " when computing condition number",
+             info);
 
-  free(work);
-  free(iwork);
-  free(ipiv);
-  free(tmpLU);
-
-  return (float) 1.0/Acond;
+  return 1.0/Acond;
 }
+
+} //namespace libp

@@ -24,7 +24,7 @@ SOFTWARE.
 
 */
 
-#include "core.hpp"
+#include "linAlg.hpp"
 
 extern "C" {
   void dgesv_ ( int     *N, int     *NRHS, double  *A,
@@ -90,9 +90,13 @@ extern "C" {
                 int    *LDB);
 }
 
+namespace libp {
+
 // C = A/B  = trans(trans(B)\trans(A))
 // assume row major
-void matrixRightSolve(int NrowsA, int NcolsA, double *A, int NrowsB, int NcolsB, double *B, double *C){
+void linAlg_t::matrixRightSolve(const int NrowsA, const int NcolsA, const memory<double> A,
+                                const int NrowsB, const int NcolsB, const memory<double> B,
+                                memory<double> C){
 
   int info;
 
@@ -105,41 +109,23 @@ void matrixRightSolve(int NrowsA, int NcolsA, double *A, int NrowsB, int NcolsB,
   int lwork = NrowsX*NcolsX;
 
   // compute inverse mass matrix
-  double *tmpX = (double*) calloc(NrowsX*NcolsX, sizeof(double));
-  double *tmpY = (double*) calloc(NrowsY*NcolsY, sizeof(double));
+  memory<double> tmpX(NrowsX*NcolsX);
+  memory<int>    ipiv(NrowsX);
+  memory<double> work(lwork);
 
-  int    *ipiv = (int*) calloc(NrowsX, sizeof(int));
-  double *work = (double*) calloc(lwork, sizeof(double));
+  tmpX.copyFrom(B, NrowsX*NcolsX);
+  C.copyFrom(A, NrowsY*NcolsY);
 
-  for(int n=0;n<NrowsX*NcolsX;++n){
-    tmpX[n] = B[n];
-  }
+  dgesv_(&NrowsX, &NcolsY, tmpX.ptr(), &NrowsX, ipiv.ptr(), C.ptr(), &NrowsY, &info);
 
-  for(int n=0;n<NrowsY*NcolsY;++n){
-    tmpY[n] =A[n];
-  }
-
-  dgesv_(&NrowsX, &NcolsY, tmpX, &NrowsX, ipiv, tmpY, &NrowsY, &info); // ?
-
-  if(info) {
-    std::stringstream ss;
-    ss << "dgesv_ reports info = " << info;
-    LIBP_ABORT(ss.str());
-  }
-
-  for(int n=0;n<NrowsY*NcolsY;++n){
-    C[n] = tmpY[n];
-  }
-
-  free(work);
-  free(ipiv);
-  free(tmpX);
-  free(tmpY);
+  LIBP_ABORT("dgesv_ reports info = " << info, info);
 }
 
 // C = A/B  = trans(trans(B)\trans(A))
 // assume row major
-void matrixRightSolve(int NrowsA, int NcolsA, float *A, int NrowsB, int NcolsB, float *B, float *C){
+void linAlg_t::matrixRightSolve(const int NrowsA, const int NcolsA, const memory<float> A,
+                                const int NrowsB, const int NcolsB, const memory<float> B,
+                                memory<float> C){
 
   int info;
 
@@ -152,75 +138,45 @@ void matrixRightSolve(int NrowsA, int NcolsA, float *A, int NrowsB, int NcolsB, 
   int lwork = NrowsX*NcolsX;
 
   // compute inverse mass matrix
-  float *tmpX = (float*) calloc(NrowsX*NcolsX, sizeof(float));
-  float *tmpY = (float*) calloc(NrowsY*NcolsY, sizeof(float));
+  memory<float> tmpX(NrowsX*NcolsX);
+  memory<int>   ipiv(NrowsX);
+  memory<float> work(lwork);
 
-  int    *ipiv = (int*) calloc(NrowsX, sizeof(int));
-  float *work = (float*) calloc(lwork, sizeof(float));
+  tmpX.copyFrom(B, NrowsX*NcolsX);
+  C.copyFrom(A, NrowsY*NcolsY);
 
-  for(int n=0;n<NrowsX*NcolsX;++n){
-    tmpX[n] = B[n];
-  }
+  sgesv_(&NrowsX, &NcolsY, tmpX.ptr(), &NrowsX, ipiv.ptr(), C.ptr(), &NrowsY, &info); // ?
 
-  for(int n=0;n<NrowsY*NcolsY;++n){
-    tmpY[n] =A[n];
-  }
-
-  sgesv_(&NrowsX, &NcolsY, tmpX, &NrowsX, ipiv, tmpY, &NrowsY, &info); // ?
-
-  if(info) {
-    std::stringstream ss;
-    ss << "sgesv_ reports info = " << info;
-    LIBP_ABORT(ss.str());
-  }
-
-  for(int n=0;n<NrowsY*NcolsY;++n){
-    C[n] = tmpY[n];
-  }
-
-  free(work);
-  free(ipiv);
-  free(tmpX);
-  free(tmpY);
+  LIBP_ABORT("sgesv_ reports info = " << info, info);
 }
 
 // Find minimum-norm solution to xA = b with NrowsA > NcolsA (underdetermined).
 //
 // NB:  A must be stored ROW MAJOR.
-void matrixUnderdeterminedRightSolveMinNorm(int NrowsA, int NcolsA, dfloat *A, dfloat *b, dfloat *x)
-{
-  int     LWORK, INFO = 0;
-  dfloat* WORK;
-
-  dfloat* tmpA = new dfloat[NrowsA*NcolsA]();
-  for (int i = 0; i < NrowsA*NcolsA; i++)
-    tmpA[i] = A[i];
-
-  dfloat* tmpb = new dfloat[NrowsA]();
-  for (int i = 0; i < NcolsA; i++)
-    tmpb[i] = b[i];
-
+void linAlg_t::matrixUnderdeterminedRightSolveMinNorm(const int NrowsA, const int NcolsA,
+                                                      const memory<dfloat> A, const memory<dfloat> b,
+                                                      memory<dfloat> x) {
   // Solve A^T x^T = b^T.  Note TRANS = 'N', since A is row major.
+  int  INFO  = 0;
   char TRANS = 'N';
-  int  NRHS = 1;
+  int  NRHS  = 1;
+  int  LWORK = 2*NrowsA*NcolsA;
+  int  Nrows = NrowsA;
+  int  Ncols = NcolsA;
 
-  LWORK = 2*NrowsA*NcolsA;
-  WORK = new dfloat[LWORK]();
-  dgels_(&TRANS, &NcolsA, &NrowsA, &NRHS, tmpA, &NcolsA, tmpb, &NrowsA, WORK, &LWORK, &INFO);
+  memory<dfloat> WORK(LWORK);
+  memory<dfloat> tmpA(NrowsA*NcolsA);
+  memory<dfloat> tmpb(NrowsA);
 
-  if (INFO != 0) {
-    std::stringstream ss;
-    ss << "dgels_ returned INFO = " << INFO;
-    LIBP_ABORT(ss.str());
-  }
+  tmpA.copyFrom(A, NrowsA*NcolsA);
+  tmpb.copyFrom(b, NcolsA);
+
+  dgels_(&TRANS, &Ncols, &Nrows, &NRHS, tmpA.ptr(), &Ncols, tmpb.ptr(), &Nrows, WORK.ptr(), &LWORK, &INFO);
+
+  LIBP_ABORT("dgels_ returned INFO = " << INFO, INFO);
 
   // Copy to output.
-  for (int i = 0; i < NrowsA; i++)
-    x[i] = tmpb[i];
-
-  delete[] WORK;
-  delete[] tmpA;
-  delete[] tmpb;
+  x.copyFrom(tmpb, NrowsA);
 }
 
 // Solve xA = b with NrowsA > NcolsA (underdetermined) using column-pivoted QR.
@@ -233,34 +189,29 @@ void matrixUnderdeterminedRightSolveMinNorm(int NrowsA, int NcolsA, dfloat *A, d
 //   4.  Apply permutation.          -->  x^T = P R1^{-1} Q^T b^T
 //
 // NB:  A must be stored ROW MAJOR.
-void matrixUnderdeterminedRightSolveCPQR(int NrowsA, int NcolsA, dfloat *A, dfloat *b, dfloat *x)
-{
-  int     LWORK, INFO = 0;
-  dfloat* WORK;
+void linAlg_t::matrixUnderdeterminedRightSolveCPQR(const int NrowsA, const int NcolsA,
+                                                   const memory<dfloat> A, const memory<dfloat> b,
+                                                   memory<dfloat> x) {
+  int INFO  = 0;
+  int LWORK = 3*NrowsA + 1;
+  int Nrows = NrowsA;
+  int Ncols = NcolsA;
 
-  dfloat* tmpA = new dfloat[NrowsA*NcolsA]();
-  for (int i = 0; i < NrowsA*NcolsA; i++)
-    tmpA[i] = A[i];
+  memory<int>    JPVT(NrowsA);
+  memory<dfloat> TAU(std::min(NrowsA, NcolsA));
 
-  dfloat* tmpb = new dfloat[NrowsA]();
-  for (int i = 0; i < NcolsA; i++)
-    tmpb[i] = b[i];
+  memory<dfloat> WORK;
+  memory<dfloat> tmpA(NrowsA*NcolsA);
+  memory<dfloat> tmpb(NrowsA);
+
+  WORK.malloc(LWORK);
+  tmpA.copyFrom(A, NrowsA*NcolsA);
+  tmpb.copyFrom(b, NcolsA);
 
   // Compute A^T * P = Q * R.
-  int*    JPVT = new int[NrowsA]();
-  dfloat* TAU = new dfloat[mymin(NrowsA, NcolsA)]();
+  dgeqp3_(&Ncols, &Nrows, tmpA.ptr(), &Ncols, JPVT.ptr(), TAU.ptr(), WORK.ptr(), &LWORK, &INFO);
 
-  LWORK = 3*NrowsA + 1;
-  WORK  = new dfloat[LWORK]();
-  dgeqp3_(&NcolsA, &NrowsA, tmpA, &NcolsA, JPVT, TAU, WORK, &LWORK, &INFO);
-
-  if (INFO != 0) {
-    std::stringstream ss;
-    ss << "dgeqp3_ returned INFO = " << INFO;
-    LIBP_ABORT(ss.str());
-  }
-
-  delete[] WORK;
+  LIBP_ABORT("dgeqp3_ returned INFO = " << INFO, INFO);
 
   // Compute Q^T * b^T.
   char SIDE = 'L';
@@ -269,16 +220,10 @@ void matrixUnderdeterminedRightSolveCPQR(int NrowsA, int NcolsA, dfloat *A, dflo
   int  NREFLS = NcolsA;
 
   LWORK = 1;
-  WORK  = new dfloat[LWORK]();
-  dormqr_(&SIDE, &TRANS, &NcolsA, &NRHS, &NREFLS, tmpA, &NcolsA, TAU, tmpb, &NcolsA, WORK, &LWORK, &INFO);
+  WORK.malloc(LWORK);
+  dormqr_(&SIDE, &TRANS, &Ncols, &NRHS, &NREFLS, tmpA.ptr(), &Ncols, TAU.ptr(), tmpb.ptr(), &Ncols, WORK.ptr(), &LWORK, &INFO);
 
-  if (INFO != 0) {
-    std::stringstream ss;
-    ss << "dormqr_ returned INFO = " << INFO;
-    LIBP_ABORT(ss.str());
-  }
-
-  delete[] WORK;
+  LIBP_ABORT("dormqr_ returned INFO = " << INFO, INFO);
 
   // Compute R1^{-1} * Q^T * b^T
   SIDE = 'L';
@@ -288,14 +233,11 @@ void matrixUnderdeterminedRightSolveCPQR(int NrowsA, int NcolsA, dfloat *A, dflo
   NRHS = 1;
   dfloat ALPHA = 1.0;
 
-  dtrsm_(&SIDE, &UPLO, &TRANSA, &DIAG, &NcolsA, &NRHS, &ALPHA, tmpA, &NcolsA, tmpb, &NcolsA);
+  dtrsm_(&SIDE, &UPLO, &TRANSA, &DIAG, &Ncols, &NRHS, &ALPHA, tmpA.ptr(), &Ncols, tmpb.ptr(), &Ncols);
 
   // Apply the permutation.
   for (int i = 0; i < NrowsA; i++)
     x[JPVT[i] - 1] = tmpb[i];
-
-  delete[] JPVT;
-  delete[] TAU;
-  delete[] tmpA;
-  delete[] tmpb;
 }
+
+} //namespace libp

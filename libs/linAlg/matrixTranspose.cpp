@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,13 +24,15 @@ SOFTWARE.
 
 */
 
-#include "core.hpp"
+#include "linAlg.hpp"
+
+namespace libp {
 
 template<typename T>
-inline
+static inline
 void matrixTranspose_t(const int M, const int N,
-                       const T  *A, const int LDA,
-                             T *AT, const int LDAT){
+                       const memory<T>  A, const int LDA,
+                             memory<T> AT, const int LDAT){
 
   //A & A^T - Row major ordering
   //M = number of rows of A, columns of A^T
@@ -42,10 +44,8 @@ void matrixTranspose_t(const int M, const int N,
   if (N<1 || M<1) return;
 
   //check for weird input
-  if (LDA<N || LDAT<M) {
-    printf("Bad input to matrixTranspose\n");
-    return;
-  }
+  LIBP_ABORT("Bad input to matrixTranspose\n",
+             LDA<N || LDAT<M);
 
   for (int n=0;n<N;n++) { //for all cols of A^T
     for (int m=0;m<M;m++) { //for all rows of A^T
@@ -54,26 +54,28 @@ void matrixTranspose_t(const int M, const int N,
   }
 }
 
-void matrixTranspose(const int M, const int N,
-                     const float  *A, const int LDA,
-                           float *AT, const int LDAT) {
+void linAlg_t::matrixTranspose(const int M, const int N,
+                     const memory<float>  A, const int LDA,
+                           memory<float> AT, const int LDAT) {
   matrixTranspose_t(M, N, A, LDA, AT, LDAT);
 }
 
-void matrixTranspose(const int M, const int N,
-                     const double  *A, const int LDA,
-                           double *AT, const int LDAT) {
+void linAlg_t::matrixTranspose(const int M, const int N,
+                     const memory<double>  A, const int LDA,
+                           memory<double> AT, const int LDAT) {
   matrixTranspose_t(M, N, A, LDA, AT, LDAT);
 }
 
-void matrixTranspose(const int M, const int N,
-                     const int  *A, const int LDA,
-                           int *AT, const int LDAT) {
+void linAlg_t::matrixTranspose(const int M, const int N,
+                     const memory<int>  A, const int LDA,
+                           memory<int> AT, const int LDAT) {
   matrixTranspose_t(M, N, A, LDA, AT, LDAT);
 }
 
-void matrixTranspose(const int M, const int N,
-                     const long long int  *A, const int LDA,
-                           long long int *AT, const int LDAT) {
+void linAlg_t::matrixTranspose(const int M, const int N,
+                     const memory<long long int>  A, const int LDA,
+                           memory<long long int> AT, const int LDAT) {
   matrixTranspose_t(M, N, A, LDA, AT, LDAT);
 }
+
+} //namespace libp

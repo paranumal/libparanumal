@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2020 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@ SOFTWARE.
 
 */
 
-#include "core.hpp"
+#include "linAlg.hpp"
 
 extern "C" {
   void sgeev_(char *JOBVL, char *JOBVR, int *N, float *A, int *LDA, float *WR, float *WI,
@@ -33,9 +33,15 @@ extern "C" {
               double *VL, int *LDVL, double *VR, int *LDVR, double *WORK, int *LWORK, int *INFO );
 }
 
-// compute right eigenvectors
-void matrixEigenVectors(int N, double *A, double *VR, double *WR, double *WI){
+namespace libp {
 
+// compute right eigenvectors
+void linAlg_t::matrixEigenVectors(const int N, const memory<double> A,
+                                  memory<double> VR,
+                                  memory<double> WR,
+                                  memory<double> WI){
+
+  int n = N;
   char JOBVL = 'N';
   char JOBVR = 'V';
   int LDA = N;
@@ -43,43 +49,31 @@ void matrixEigenVectors(int N, double *A, double *VR, double *WR, double *WI){
   int LDVR = N;
   int LWORK = 8*N;
 
-  double *VL = NULL;
-  double *WORK  = (double*) calloc(LWORK,sizeof(double));
+  memory<double> WORK(LWORK);
+  memory<double> tmpA(N*LDA);
+  memory<double> tmpVR(N*LDVR);
 
-  double *tmpA  = (double*) calloc(N*N,sizeof(double));
-  double *tmpVR = (double*) calloc(N*N,sizeof(double));
-
-  for(int n=0;n<N;++n){
-    for(int m=0;m<N;++m){
-      tmpA[n+m*N] = A[n*N+m];
-    }
-  }
+  //tmpA = A^T (row major to column-major)
+  linAlg_t::matrixTranspose(N, N, A, LDA, tmpA, LDA);
 
   int INFO = -999;
 
-  dgeev_ (&JOBVL, &JOBVR, &N, tmpA, &LDA, WR, WI,
-          VL, &LDVL, tmpVR, &LDVR, WORK, &LWORK, &INFO);
+  dgeev_ (&JOBVL, &JOBVR, &n, tmpA.ptr(), &LDA, WR.ptr(), WI.ptr(),
+          nullptr, &LDVL, tmpVR.ptr(), &LDVR, WORK.ptr(), &LWORK, &INFO);
 
-  if(INFO) {
-    std::stringstream ss;
-    ss << "dgeev_ reports info = " << INFO;
-    LIBP_ABORT(ss.str());
-  }
+  LIBP_ABORT("dgeev_ reports info = " << INFO, INFO);
 
-  for(int n=0;n<N;++n){
-    for(int m=0;m<N;++m){
-      VR[n+m*N] = tmpVR[n*N+m];
-    }
-  }
-
-  free(tmpVR);
-  free(tmpA);
-  free(WORK);
+  //VR = tmpVR^T (column major to row major)
+  linAlg_t::matrixTranspose(N, N, tmpVR, LDVR, VR, LDVR);
 }
 
 // compute right eigenvectors
-void matrixEigenVectors(int N, float *A, float *VR, float *WR, float *WI){
+void linAlg_t::matrixEigenVectors(const int N, const memory<float> A,
+                                  memory<float> VR,
+                                  memory<float> WR,
+                                  memory<float> WI){
 
+  int n = N;
   char JOBVL = 'N';
   char JOBVR = 'V';
   int LDA = N;
@@ -87,43 +81,30 @@ void matrixEigenVectors(int N, float *A, float *VR, float *WR, float *WI){
   int LDVR = N;
   int LWORK = 8*N;
 
-  float *VL = NULL;
-  float *WORK  = (float*) calloc(LWORK,sizeof(float));
+  memory<float> WORK(LWORK);
+  memory<float> tmpA(N*LDA);
+  memory<float> tmpVR(N*LDVR);
 
-  float *tmpA  = (float*) calloc(N*N,sizeof(float));
-  float *tmpVR = (float*) calloc(N*N,sizeof(float));
-
-  for(int n=0;n<N;++n){
-    for(int m=0;m<N;++m){
-      tmpA[n+m*N] = A[n*N+m];
-    }
-  }
+  //tmpA = A^T (row major to column-major)
+  linAlg_t::matrixTranspose(N, N, A, LDA, tmpA, LDA);
 
   int INFO = -999;
 
-  sgeev_ (&JOBVL, &JOBVR, &N, tmpA, &LDA, WR, WI,
-          VL, &LDVL, tmpVR, &LDVR, WORK, &LWORK, &INFO);
+  sgeev_ (&JOBVL, &JOBVR, &n, tmpA.ptr(), &LDA, WR.ptr(), WI.ptr(),
+          nullptr, &LDVL, tmpVR.ptr(), &LDVR, WORK.ptr(), &LWORK, &INFO);
 
-  if(INFO) {
-    std::stringstream ss;
-    ss << "sgeev_ reports info = " << INFO;
-    LIBP_ABORT(ss.str());
-  }
+  LIBP_ABORT("sgeev_ reports info = " << INFO, INFO);
 
-  for(int n=0;n<N;++n){
-    for(int m=0;m<N;++m){
-      VR[n+m*N] = tmpVR[n*N+m];
-    }
-  }
-
-  free(tmpVR);
-  free(tmpA);
-  free(WORK);
+  //VR = tmpVR^T (column major to row major)
+  linAlg_t::matrixTranspose(N, N, tmpVR, LDVR, VR, LDVR);
 }
 
 // compute eigenvalues
-void matrixEigenValues(int N, double *A, double *WR, double *WI){
+void linAlg_t::matrixEigenValues(const int N, const memory<double> A,
+                                 memory<double> WR,
+                                 memory<double> WI){
 
+  int n = N;
   char JOBVL  = 'N';
   char JOBVR  = 'N';
   int LDA = N;
@@ -131,27 +112,24 @@ void matrixEigenValues(int N, double *A, double *WR, double *WI){
   int LDVR = N;
   int LWORK = 8*N;
 
-  double *VR = nullptr;
-  double *VL = nullptr;
-  double *WORK  = (double*) calloc(LWORK,sizeof(double));
+  double* Aptr = const_cast<double*>(A.ptr());
+
+  memory<double> WORK(LWORK);
 
   int INFO = -999;
 
-  dgeev_ (&JOBVL, &JOBVR, &N, A, &LDA, WR, WI,
-          VL, &LDVL, VR, &LDVR, WORK, &LWORK, &INFO);
+  dgeev_ (&JOBVL, &JOBVR, &n, Aptr, &LDA, WR.ptr(), WI.ptr(),
+          nullptr, &LDVL, nullptr, &LDVR, WORK.ptr(), &LWORK, &INFO);
 
-  if(INFO) {
-    std::stringstream ss;
-    ss << "dgeev_ reports info = " << INFO;
-    LIBP_ABORT(ss.str());
-  }
-
-  free(WORK);
+  LIBP_ABORT("dgeev_ reports info = " << INFO, INFO);
 }
 
 // compute eigenvalues
-void matrixEigenValues(int N, float *A, float *WR, float *WI){
+void linAlg_t::matrixEigenValues(const int N, const memory<float> A,
+                                 memory<float> WR,
+                                 memory<float> WI){
 
+  int n = N;
   char JOBVL  = 'N';
   char JOBVR  = 'N';
   int LDA = N;
@@ -159,20 +137,16 @@ void matrixEigenValues(int N, float *A, float *WR, float *WI){
   int LDVR = N;
   int LWORK = 8*N;
 
-  float *VR = nullptr;
-  float *VL = nullptr;
-  float *WORK  = (float*) calloc(LWORK,sizeof(float));
+  float* Aptr = const_cast<float*>(A.ptr());
+
+  memory<float> WORK(LWORK);
 
   int INFO = -999;
 
-  sgeev_ (&JOBVL, &JOBVR, &N, A, &LDA, WR, WI,
-          VL, &LDVL, VR, &LDVR, WORK, &LWORK, &INFO);
+  sgeev_ (&JOBVL, &JOBVR, &n, Aptr, &LDA, WR.ptr(), WI.ptr(),
+          nullptr, &LDVL, nullptr, &LDVR, WORK.ptr(), &LWORK, &INFO);
 
-  if(INFO) {
-    std::stringstream ss;
-    ss << "sgeev_ reports info = " << INFO;
-    LIBP_ABORT(ss.str());
-  }
-
-  free(WORK);
+  LIBP_ABORT("sgeev_ reports info = " << INFO, INFO);
 }
+
+} //namespace libp

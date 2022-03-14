@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@ SOFTWARE.
 
 */
 
-#include "core.hpp"
+#include "linAlg.hpp"
 
 extern "C" {
   void dgetrf_(int* M, int *N, double* A, int* lda, int* IPIV, int* INFO);
@@ -34,58 +34,42 @@ extern "C" {
   void sgetri_(int* N, float* A, int* lda, int* IPIV, float* WORK, int* lwork, int* INFO);
 }
 
-void matrixInverse(int N, double *A){
+namespace libp {
+
+void linAlg_t::matrixInverse(const int N, memory<double> A){
+  int n = N;
   int lwork = N*N;
   int info;
 
-  // compute inverse mass matrix
-  int *ipiv = (int*) calloc(N, sizeof(int));
-  double *work = (double*) calloc(lwork, sizeof(double));
+  // compute inverse matrix in-place
+  memory<int> ipiv(N);
+  memory<double> work(lwork);
 
-  dgetrf_ (&N, &N, A, &N, ipiv, &info);
+  dgetrf_ (&n, &n, A.ptr(), &n, ipiv.ptr(), &info);
 
-  if(info) {
-    std::stringstream ss;
-    ss << "dgetrf_ reports info = " << info;
-    LIBP_ABORT(ss.str());
-  }
+  LIBP_ABORT("dgetrf_ reports info = " << info, info);
 
-  dgetri_ (&N, A, &N, ipiv, work, &lwork, &info);
+  dgetri_ (&n, A.ptr(), &n, ipiv.ptr(), work.ptr(), &lwork, &info);
 
-  if(info) {
-    std::stringstream ss;
-    ss << "dgetri_ reports info = " << info;
-    LIBP_ABORT(ss.str());
-  }
-
-  free(work);
-  free(ipiv);
+  LIBP_ABORT("dgetri_ reports info = " << info, info);
 }
 
-void matrixInverse(int N, float *A){
+void linAlg_t::matrixInverse(const int N, memory<float> A){
+  int n = N;
   int lwork = N*N;
   int info;
 
-  // compute inverse mass matrix
-  int *ipiv = (int*) calloc(N, sizeof(int));
-  float *work = (float*) calloc(lwork, sizeof(float));
+  // compute inverse matrix in-place
+  memory<int> ipiv(N);
+  memory<float> work(lwork);
 
-  sgetrf_ (&N, &N, A, &N, ipiv, &info);
+  sgetrf_ (&n, &n, A.ptr(), &n, ipiv.ptr(), &info);
 
-  if(info) {
-    std::stringstream ss;
-    ss << "sgetrf_ reports info = " << info;
-    LIBP_ABORT(ss.str());
-  }
+  LIBP_ABORT("sgetrf_ reports info = " << info, info);
 
-  sgetri_ (&N, A, &N, ipiv, work, &lwork, &info);
+  sgetri_ (&n, A.ptr(), &n, ipiv.ptr(), work.ptr(), &lwork, &info);
 
-  if(info) {
-    std::stringstream ss;
-    ss << "sgetri_ reports info = " << info;
-    LIBP_ABORT(ss.str());
-  }
-
-  free(work);
-  free(ipiv);
+  LIBP_ABORT("sgetri_ reports info = " << info, info);
 }
+
+} //namespace libp
