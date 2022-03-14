@@ -382,13 +382,6 @@ class comm_t {
     MPI_Scan(&snd, &rcv, 1, type, op, comm());
     mpiType<T>::freeMpiType(type);
   }
-  template <typename T>
-  void Scan(T& snd,
-            const op_t op = Sum) const {
-    T rcv=snd;
-    Scan(snd, rcv, op);
-    snd = rcv;
-  }
 
   /*libp::memory gather*/
   template <template<typename> class mem, typename T>
