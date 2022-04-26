@@ -90,6 +90,10 @@ class memory {
     *this = memory<T>(lngth_);
   }
 
+  void malloc(const size_t lngth_, const T val) {
+    *this = memory<T>(lngth_, val);
+  }
+
   void calloc(const size_t lngth_) {
     *this = memory<T>(lngth_, T{0});
   }
@@ -508,6 +512,32 @@ class pinnedMemory: public occa::memory {
     return *this;
   }
 
+  /*Copy from raw pointer*/
+  void copyFrom(const T* src,
+                const ptrdiff_t count = -1,
+                const ptrdiff_t offset = 0,
+                const properties_t &props = properties_t()) {
+    const ptrdiff_t cnt = (count==-1) ? length() : count;
+
+    if (cnt==0) return;
+
+    occa::memory::copyFrom(src,
+                           cnt*sizeof(T),
+                           offset*sizeof(T),
+                           props);
+  }
+
+  void copyFrom(const T* src,
+                const properties_t &props) {
+
+    if (length()==0) return;
+
+    occa::memory::copyFrom(src,
+                           length()*sizeof(T),
+                           0,
+                           props);
+  }
+
   /*Copy from libp::memory*/
   void copyFrom(const libp::memory<T> src,
                 const ptrdiff_t count = -1,
@@ -596,6 +626,32 @@ class pinnedMemory: public occa::memory {
                            0,
                            0,
                            props);
+  }
+
+  /*Copy to raw pointer*/
+  void copyTo(T* dest,
+              const ptrdiff_t count = -1,
+              const ptrdiff_t offset = 0,
+              const properties_t &props = properties_t()) const {
+    const ptrdiff_t cnt = (count==-1) ? length() : count;
+
+    if (cnt==0) return;
+
+    occa::memory::copyTo(dest,
+                         cnt*sizeof(T),
+                         offset*sizeof(T),
+                         props);
+  }
+
+  void copyTo(T* dest,
+              const properties_t &props) const {
+
+    if (length()==0) return;
+
+    occa::memory::copyTo(dest,
+                         length()*sizeof(T),
+                         0,
+                         props);
   }
 
   /*Copy to libp::memory*/

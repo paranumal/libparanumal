@@ -321,7 +321,6 @@ class comm_t {
   /*libp::memory non-blocking in-place allreduce*/
   template <template<typename> class mem, typename T>
   void Iallreduce(mem<T> m,
-                  const int root,
                   const op_t op,
                   const int count,
                   request_t &request) const {

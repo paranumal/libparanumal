@@ -182,6 +182,14 @@ public:
     device.finish();
   }
 
+  stream_t getStream() {
+    return device.getStream();
+  }
+
+  void setStream(stream_t stream) {
+    device.setStream(stream);
+  }
+
   const int rank() const {
     return comm.rank();
   }

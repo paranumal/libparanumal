@@ -100,6 +100,7 @@ void platform_t::DeviceConfig(){
     mode += ", device_id: " + std::to_string(device_id) + "}";
   }
 
+#if !defined(LIBP_DEBUG)
   /*set number of omp threads to use*/
   /*Use lscpu to determine core and socket counts */
   FILE *pipeCores   = popen("lscpu | grep \"Core(s) per socket\" | awk '{print $4}'", "r");
@@ -125,7 +126,6 @@ void platform_t::DeviceConfig(){
   int NcoresPerNode = Ncores*Nsockets;
   int Nthreads=0;
 
-#if !defined(LIBP_DEBUG)
   /*Check OMP_NUM_THREADS env variable*/
   std::string ompNumThreads;
   char * ompEnvVar = std::getenv("OMP_NUM_THREADS");

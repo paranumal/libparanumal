@@ -24,48 +24,19 @@ SOFTWARE.
 
 */
 
-#ifndef PRECON_HPP
-#define PRECON_HPP
+#ifndef OPERATOR_HPP
+#define OPERATOR_HPP
 
 #include "core.hpp"
-#include "operator.hpp"
 
 namespace libp {
 
-/*Abstracted Preconditioner Object*/
-class precon_t: public operator_t {
- public:
-  void Operator(deviceMemory<dfloat> &o_r, deviceMemory<dfloat> &o_Mr) {
-    assertInitialized();
-    precon->Operator(o_r, o_Mr);
-  }
-
-  /*Generic setup. Create a Precon object and wrap it in a shared_ptr*/
-  template<class Precon, class... Args>
-  void Setup(Args&& ... args) {
-    precon = std::make_shared<Precon>(args...);
-  }
-
- private:
-  std::shared_ptr<operator_t> precon=nullptr;
-
-  void assertInitialized() {
-    LIBP_ABORT("Precon not initialized",
-               precon==nullptr);
-  }
-};
-
-//Identity operator
-class IdentityPrecon: public operator_t {
-private:
-  dlong N;
-
+//basic operator
+class operator_t {
 public:
-  IdentityPrecon(dlong _N): N(_N) {}
-
-  void Operator(deviceMemory<dfloat> &o_r, deviceMemory<dfloat> &o_Mr){
-    o_Mr.copyFrom(o_r, N); //identity
-  }
+  virtual void Operator(deviceMemory<dfloat> &o_r, deviceMemory<dfloat> &o_Mr) {
+    LIBP_FORCE_ABORT("Operator not implemented in this object");
+  };
 };
 
 } //namespace libp
