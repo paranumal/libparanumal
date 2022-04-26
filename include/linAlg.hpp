@@ -166,7 +166,7 @@ class linAlg_t {
 
  private:
   platform_t *platform;
-  occa::properties kernelInfo;
+  properties_t kernelInfo;
 
   static constexpr int blocksize = 256;
 
@@ -174,31 +174,31 @@ class linAlg_t {
   deviceMemory<dfloat> o_scratch;
   pinnedMemory<dfloat> h_scratch;
 
-  occa::kernel setKernel;
-  occa::kernel addKernel;
-  occa::kernel scaleKernel;
-  occa::kernel axpyKernel;
-  occa::kernel zaxpyKernel;
-  occa::kernel amxKernel;
-  occa::kernel amxpyKernel;
-  occa::kernel zamxpyKernel;
-  occa::kernel adxKernel;
-  occa::kernel adxpyKernel;
-  occa::kernel zadxpyKernel;
-  occa::kernel minKernel1;
-  occa::kernel minKernel2;
-  occa::kernel maxKernel1;
-  occa::kernel maxKernel2;
-  occa::kernel sumKernel1;
-  occa::kernel sumKernel2;
-  occa::kernel norm2Kernel1;
-  occa::kernel norm2Kernel2;
-  occa::kernel weightedNorm2Kernel1;
-  occa::kernel weightedNorm2Kernel2;
-  occa::kernel innerProdKernel1;
-  occa::kernel innerProdKernel2;
-  occa::kernel weightedInnerProdKernel1;
-  occa::kernel weightedInnerProdKernel2;
+  kernel_t setKernel;
+  kernel_t addKernel;
+  kernel_t scaleKernel;
+  kernel_t axpyKernel;
+  kernel_t zaxpyKernel;
+  kernel_t amxKernel;
+  kernel_t amxpyKernel;
+  kernel_t zamxpyKernel;
+  kernel_t adxKernel;
+  kernel_t adxpyKernel;
+  kernel_t zadxpyKernel;
+  kernel_t minKernel1;
+  kernel_t minKernel2;
+  kernel_t maxKernel1;
+  kernel_t maxKernel2;
+  kernel_t sumKernel1;
+  kernel_t sumKernel2;
+  kernel_t norm2Kernel1;
+  kernel_t norm2Kernel2;
+  kernel_t weightedNorm2Kernel1;
+  kernel_t weightedNorm2Kernel2;
+  kernel_t innerProdKernel1;
+  kernel_t innerProdKernel2;
+  kernel_t weightedInnerProdKernel1;
+  kernel_t weightedInnerProdKernel2;
 };
 
 } //namespace libp
