@@ -33,10 +33,10 @@ dfloat acoustics_t::MaxWaveSpeed(){
 }
 
 //evaluate ODE rhs = f(q,t)
-void acoustics_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
+void acoustics_t::rhsf(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T){
 
   // extract q halo on DEVICE
-  traceHalo->ExchangeStart(o_Q, 1, ogs_dfloat);
+  traceHalo.ExchangeStart(o_Q, 1);
 
   volumeKernel(mesh.Nelements,
                mesh.o_vgeo,
@@ -44,7 +44,7 @@ void acoustics_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
                o_Q,
                o_RHS);
 
-  traceHalo->ExchangeFinish(o_Q, 1, ogs_dfloat);
+  traceHalo.ExchangeFinish(o_Q, 1);
 
   surfaceKernel(mesh.Nelements,
                 mesh.o_sgeo,

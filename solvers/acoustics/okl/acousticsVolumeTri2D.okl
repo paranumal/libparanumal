@@ -72,8 +72,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
-
     for(int n=0;n<p_Np;++n;@inner(0)){
 
       dfloat rhsq0 = 0, rhsq1 = 0, rhsq2 = 0;

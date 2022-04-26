@@ -103,8 +103,6 @@ SOFTWARE.
 
     }
 
-    @barrier("local");
-
     for(int n=0;n<p_Np;++n;@inner(0)){
 
       dfloat rhsq0 = 0, rhsq1 = 0, rhsq2 = 0, rhsq3 = 0;
@@ -154,8 +152,6 @@ SOFTWARE.
       s_v[n] = q[qbase+2*p_Np];
       s_w[n] = q[qbase+3*p_Np];
     }
-
-    @barrier("local");
 
     for(int n=0;n<p_Np;++n;@inner(0)){
 
@@ -245,8 +241,6 @@ SOFTWARE.
           }
         }
     }
-
-    @barrier("local");
 
     for(int n=0;n<p_Np;++n;@inner(0)){
 
@@ -371,8 +365,6 @@ SOFTWARE.
           }
       }
     }
-
-    @barrier("local");
 
     for(int et=0;et<p_NblockV;++et;@inner(1)){
       for(int n=0;n<p_Np;++n;@inner(0)){

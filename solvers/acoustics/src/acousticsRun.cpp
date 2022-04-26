@@ -47,9 +47,9 @@ void acoustics_t::Run(){
   dfloat vmax = MaxWaveSpeed();
 
   dfloat dt = cfl*hmin/(vmax*(mesh.N+1.)*(mesh.N+1.));
-  timeStepper->SetTimeStep(dt);
+  timeStepper.SetTimeStep(dt);
 
-  timeStepper->Run(o_q, startTime, finalTime);
+  timeStepper.Run(*this, o_q, startTime, finalTime);
 
   // output norm of final solution
   {
@@ -57,7 +57,7 @@ void acoustics_t::Run(){
     mesh.MassMatrixApply(o_q, o_Mq);
 
     dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
-    dfloat norm2 = sqrt(platform.linAlg.innerProd(Nentries, o_q, o_Mq, mesh.comm));
+    dfloat norm2 = sqrt(platform.linAlg().innerProd(Nentries, o_q, o_Mq, mesh.comm));
 
     if(mesh.rank==0)
       printf("Solution norm = %17.15lg\n", norm2);
