@@ -26,50 +26,51 @@ SOFTWARE.
 
 #include "gradient.hpp"
 
-gradient_t& gradient_t::Setup(platform_t& platform, mesh_t& mesh,
-                              gradientSettings_t& settings){
+void gradient_t::Setup(platform_t& _platform, mesh_t& _mesh,
+                       gradientSettings_t& _settings){
 
-  gradient_t* gradient = new gradient_t(platform, mesh, settings);
+  platform = _platform;
+  mesh = _mesh;
+  comm = mesh.comm;
+  settings = _settings;
 
-  gradient->Nfields = mesh.dim;
+  Nfields = mesh.dim;
 
   dlong Nlocal = mesh.Nelements*mesh.Np;
 
   //setup linear algebra module
-  platform.linAlg.InitKernels({"innerProd"});
+  platform.linAlg().InitKernels({"innerProd"});
 
   // compute samples of q at interpolation nodes
-  gradient->q = (dfloat*) calloc(Nlocal, sizeof(dfloat));
-  gradient->o_q = platform.malloc(Nlocal*sizeof(dfloat), gradient->q);
+  q.malloc(Nlocal);
+  o_q = platform.malloc<dfloat>(q);
 
-  gradient->gradq = (dfloat*) calloc(Nlocal*mesh.dim, sizeof(dfloat));
-  gradient->o_gradq = platform.malloc(Nlocal*mesh.dim*sizeof(dfloat), gradient->gradq);
+  gradq.malloc(Nlocal*mesh.dim);
+  o_gradq = platform.malloc<dfloat>(gradq);
 
   //storage for M*gradq during reporting
-  gradient->o_Mgradq = platform.malloc(Nlocal*mesh.dim*sizeof(dfloat), gradient->gradq);
-  mesh.MassMatrixKernelSetup(gradient->Nfields); // mass matrix operator
+  o_Mgradq = platform.malloc<dfloat>(gradq);
+  mesh.MassMatrixKernelSetup(Nfields); // mass matrix operator
 
   // OCCA build stuff
-  occa::properties kernelInfo = mesh.props; //copy base occa properties
+  properties_t kernelInfo = mesh.props; //copy base occa properties
 
   //add boundary data to kernel info
-  string dataFileName;
+  std::string dataFileName;
   settings.getSetting("DATA FILE", dataFileName);
   kernelInfo["includes"] += dataFileName;
 
-  kernelInfo["defines/" "p_Nfields"]= gradient->Nfields;
-
-  kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
+  kernelInfo["defines/" "p_Nfields"]= Nfields;
 
   // set kernel name suffix
   char *suffix;
-  if(mesh.elementType==TRIANGLES)
+  if(mesh.elementType==mesh_t::TRIANGLES)
     suffix = strdup("Tri2D");
-  if(mesh.elementType==QUADRILATERALS)
+  if(mesh.elementType==mesh_t::QUADRILATERALS)
     suffix = strdup("Quad2D");
-  if(mesh.elementType==TETRAHEDRA)
+  if(mesh.elementType==mesh_t::TETRAHEDRA)
     suffix = strdup("Tet3D");
-  if(mesh.elementType==HEXAHEDRA)
+  if(mesh.elementType==mesh_t::HEXAHEDRA)
     suffix = strdup("Hex3D");
 
   char fileName[BUFSIZ], kernelName[BUFSIZ];
@@ -78,7 +79,7 @@ gradient_t& gradient_t::Setup(platform_t& platform, mesh_t& mesh,
   sprintf(fileName, DGRADIENT "/okl/gradientVolume%s.okl", suffix);
   sprintf(kernelName, "gradientVolume%s", suffix);
 
-  gradient->volumeKernel =  platform.buildKernel(fileName, kernelName,
+  volumeKernel =  platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
 
   if (mesh.dim==2) {
@@ -89,13 +90,7 @@ gradient_t& gradient_t::Setup(platform_t& platform, mesh_t& mesh,
     sprintf(kernelName, "gradientInitialCondition3D");
   }
 
-  gradient->initialConditionKernel = platform.buildKernel(fileName, kernelName,
+  initialConditionKernel = platform.buildKernel(fileName, kernelName,
                                                   kernelInfo);
 
-  return *gradient;
-}
-
-gradient_t::~gradient_t() {
-  volumeKernel.free();
-  initialConditionKernel.free();
 }

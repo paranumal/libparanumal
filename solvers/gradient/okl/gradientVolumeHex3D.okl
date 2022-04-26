@@ -36,24 +36,18 @@ for(dlong e=0;e<Nelements;++e;@outer(0)){
     @shared dfloat s_DT[p_Nq][p_Nq];
     @shared dfloat s_q[p_Nq][p_Nq][p_Nq];
 
-    // prefetch DT
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
+        // prefetch DT
         s_DT[j][i] = DT[i + p_Nq*j];
-      }
-    }
 
-    // prefetch q
-    for(int k=0;k<p_Nq;++k){
-      for(int j=0;j<p_Nq;++j;@inner(1)){
-        for(int i=0;i<p_Nq;++i;@inner(0)){
+        // prefetch q
+        for(int k=0;k<p_Nq;++k){
           const dlong id = e*p_Np+k*p_Nq*p_Nq+j*p_Nq+i;
           s_q[k][j][i] = q[id];
         }
       }
     }
-
-    @barrier("local");
 
     // loop over slabs
     for(int k=0;k<p_Nq;++k){
