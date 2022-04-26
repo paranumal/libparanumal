@@ -26,10 +26,12 @@ SOFTWARE.
 
 #include "parAlmond.hpp"
 
+namespace libp {
+
 namespace parAlmond {
 
 void AddSettings(settings_t& settings,
-                          const string prefix) {
+                 const std::string prefix) {
 
   settings.newSetting(prefix+"PARALMOND CYCLE",
                       "VCYCLE",
@@ -68,3 +70,5 @@ void ReportSettings(settings_t& settings) {
 }
 
 } //namespace parAlmond
+
+} //namespace libp

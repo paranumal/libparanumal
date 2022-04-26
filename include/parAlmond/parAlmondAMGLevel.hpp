@@ -30,30 +30,31 @@ SOFTWARE.
 #include "parAlmond.hpp"
 #include "parAlmond/parAlmondparCSR.hpp"
 
+namespace libp {
 
 namespace parAlmond {
 
 class amgLevel: public multigridLevel {
 
 public:
-  parCSR *A=nullptr, *P=nullptr, *R=nullptr;
+  parCSR A, P, R;
 
   SmoothType stype;
   dfloat lambda, lambda1, lambda0; //smoothing params
 
   int ChebyshevIterations=2;
 
-  amgLevel(parCSR *AA, settings_t& _settings);
-  ~amgLevel();
+  amgLevel() = default;
+  amgLevel(parCSR& AA, settings_t& _settings);
 
-  void Operator(occa::memory& o_x, occa::memory& o_Ax);
-  void residual(occa::memory& o_rhs, occa::memory& o_x, occa::memory& o_res);
-  void coarsen(occa::memory& o_x, occa::memory& o_Cx);
-  void prolongate(occa::memory& o_x, occa::memory& o_Px);
+  void Operator(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_Ax);
+  void residual(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_res);
+  void coarsen(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_Cx);
+  void prolongate(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_Px);
 
-  void smooth(occa::memory& o_rhs, occa::memory& o_x, bool x_is_zero);
-  void smoothDampedJacobi(occa::memory& o_r, occa::memory& o_x, bool x_is_zero);
-  void smoothChebyshev(occa::memory& o_r, occa::memory& o_x, bool x_is_zero);
+  void smooth(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x, bool x_is_zero);
+  void smoothDampedJacobi(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_x, bool x_is_zero);
+  void smoothChebyshev(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_x, bool x_is_zero);
 
   void Report();
 
@@ -62,6 +63,8 @@ public:
   void syncToDevice();
 };
 
-}
+} //namespace parAlmond
+
+} //namespace libp
 
 #endif

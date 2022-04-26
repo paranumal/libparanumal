@@ -28,52 +28,50 @@ SOFTWARE.
 #define PARALMOND_AMGSETUP_HPP
 
 #include "parAlmond.hpp"
-#include "parAlmond/parAlmondMultigrid.hpp"
 #include "parAlmond/parAlmondAMGLevel.hpp"
 
+namespace libp {
 
 namespace parAlmond {
 
 class strongGraph_t {
 public:
-  platform_t& platform;
-  MPI_Comm comm;
+  platform_t platform;
+  comm_t comm;
   dlong Nrows=0;
   dlong Ncols=0;
   dlong nnz=0;
 
-  dlong  *rowStarts=nullptr;
-  dlong  *cols=nullptr;
+  memory<dlong> rowStarts;
+  memory<dlong> cols;
 
-  strongGraph_t(dlong N, dlong M, platform_t& _platform, MPI_Comm _comm):
+  strongGraph_t(dlong N, dlong M, platform_t& _platform, comm_t _comm):
     platform(_platform), comm(_comm), Nrows(N), Ncols(M) {}
-  ~strongGraph_t() {
-    if (rowStarts) free(rowStarts);
-    if (cols) free(cols);
-  }
 };
 
-amgLevel *coarsenAmgLevel(amgLevel *level, dfloat *null,
-                          StrengthType strtype, dfloat theta,
-                          AggType aggtype);
+amgLevel coarsenAmgLevel(amgLevel& level, memory<dfloat>& null,
+                         StrengthType strtype, dfloat theta,
+                         AggType aggtype);
 
-strongGraph_t* strongGraph(parCSR *A, StrengthType type, dfloat theta);
+strongGraph_t strongGraph(parCSR& A, StrengthType type, dfloat theta);
 
-void formAggregates(parCSR *A, strongGraph_t *C,
-                     hlong* FineToCoarse,
-                     hlong* globalAggStarts);
+void formAggregates(parCSR& A, strongGraph_t& C,
+                    memory<hlong> FineToCoarse,
+                    memory<hlong> globalAggStarts);
 
-parCSR *tentativeProlongator(parCSR *A, hlong *FineToCoarse,
-                            hlong *globalAggStarts, dfloat *null);
+parCSR tentativeProlongator(parCSR& A, memory<hlong> FineToCoarse,
+                            memory<hlong> globalAggStarts, memory<dfloat> null);
 
-parCSR *smoothProlongator(parCSR *A, parCSR *T);
+parCSR smoothProlongator(parCSR& A, parCSR& T);
 
-parCSR *transpose(parCSR *A);
+parCSR transpose(parCSR& A);
 
-parCSR *SpMM(parCSR *A, parCSR *B);
+parCSR SpMM(parCSR& A, parCSR& B);
 
-parCSR *galerkinProd(parCSR *A, parCSR *P);
+parCSR galerkinProd(parCSR& A, parCSR& P);
 
-}
+} //namespace parAlmond
+
+} //namespace libp
 
 #endif
