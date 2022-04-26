@@ -72,9 +72,6 @@ SOFTWARE.
       }
     }
 
-    // make sure all node data is loaded into @shared
-    @barrier("local");
-
     for(int n=0;n<p_maxNodes;++n;@inner(0)){
 
       // Update q
@@ -148,9 +145,6 @@ SOFTWARE.
         }
       }
     }
-
-    // make sure all node data is loaded into @shared
-    @barrier("local");
 
     for(int n=0;n<p_maxNodes;++n;@inner(0)){
 
