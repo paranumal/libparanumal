@@ -48,7 +48,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     // coarsen in j index
     for(int j=0;j<p_NqFine;++j;@inner(1)){
@@ -64,7 +63,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     // coarsen in i index
     for(int j=0;j<p_NqFine;++j;@inner(1)){
@@ -112,7 +110,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     // coarsen in j index
     for(int j=0;j<p_NqFine;++j;@inner(1)){
@@ -128,7 +125,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     // coarsen in i index
     for(int j=0;j<p_NqFine;++j;@inner(1)){

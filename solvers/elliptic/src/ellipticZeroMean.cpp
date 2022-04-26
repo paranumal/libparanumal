@@ -26,13 +26,13 @@
 
 #include "elliptic.hpp"
 
-void elliptic_t::ZeroMean(occa::memory &o_q){
+void elliptic_t::ZeroMean(deviceMemory<dfloat> &o_q){
 
-  dfloat qmean = linAlg.sum(Ndofs, o_q, mesh.comm);
+  dfloat qmean = platform.linAlg().sum(Ndofs, o_q, mesh.comm);
 
   // normalize
   qmean *= allNeumannScale*allNeumannScale;
 
   // q[n] = q[n] - qmean
-  platform.linAlg.add(Ndofs, -qmean, o_q);
+  platform.linAlg().add(Ndofs, -qmean, o_q);
 }

@@ -27,97 +27,101 @@ SOFTWARE.
 #include "elliptic.hpp"
 #include "ellipticPrecon.hpp"
 
-elliptic_t& elliptic_t::Setup(platform_t& platform, mesh_t& mesh,
-                              ellipticSettings_t& settings, dfloat lambda,
-                              const int NBCTypes, const int *BCType){
+void elliptic_t::Setup(platform_t& _platform, mesh_t& _mesh,
+                       settings_t& _settings, dfloat _lambda,
+                       const int _NBCTypes, const memory<int> _BCType){
 
-  elliptic_t* elliptic = new elliptic_t(platform, mesh, settings, lambda);
+  platform = _platform;
+  mesh = _mesh;
+  comm = _mesh.comm;
+  settings = _settings;
+  lambda = _lambda;
 
-  elliptic->Nfields = 1;
+  Nfields = 1;
 
-  elliptic->disc_ipdg = settings.compareSetting("DISCRETIZATION","IPDG");
-  elliptic->disc_c0   = settings.compareSetting("DISCRETIZATION","CONTINUOUS");
+  disc_ipdg = settings.compareSetting("DISCRETIZATION","IPDG");
+  disc_c0   = settings.compareSetting("DISCRETIZATION","CONTINUOUS");
 
   //setup linear algebra module
-  platform.linAlg.InitKernels({"add", "sum", "scale",
+  platform.linAlg().InitKernels({"add", "sum", "scale",
                                 "axpy", "zaxpy",
                                 "amx", "amxpy", "zamxpy",
                                 "adx", "adxpy", "zadxpy",
-                                "innerProd", "weightedInnerProd",
-                                "norm2", "weightedNorm2"});
+                                "innerProd", "norm2"});
 
   /*setup trace halo exchange */
-  elliptic->traceHalo = mesh.HaloTraceSetup(elliptic->Nfields);
+  traceHalo = mesh.HaloTraceSetup(Nfields);
 
   // Boundary Type translation. Just defaults.
-  elliptic->BCType = (int*) calloc(NBCTypes,sizeof(int));
-  memcpy(elliptic->BCType,BCType,NBCTypes*sizeof(int));
+  NBCTypes = _NBCTypes;
+  BCType.malloc(NBCTypes);
+  BCType.copyFrom(_BCType);
 
   //setup boundary flags and make mask and masked ogs
-  elliptic->BoundarySetup();
+  BoundarySetup();
 
   if (settings.compareSetting("DISCRETIZATION","IPDG")) {
     //tau (penalty term in IPDG)
-    if (mesh.elementType==TRIANGLES ||
-        mesh.elementType==QUADRILATERALS){
-      elliptic->tau = 2.0*(mesh.N+1)*(mesh.N+2)/2.0;
+    if (mesh.elementType==mesh_t::TRIANGLES ||
+        mesh.elementType==mesh_t::QUADRILATERALS){
+      tau = 2.0*(mesh.N+1)*(mesh.N+2)/2.0;
       if(mesh.dim==3)
-        elliptic->tau *= 1.5;
+        tau *= 1.5;
     } else
-      elliptic->tau = 2.0*(mesh.N+1)*(mesh.N+3);
+      tau = 2.0*(mesh.N+1)*(mesh.N+3);
 
     //buffer for gradient
     dlong Ntotal = mesh.Np*(mesh.Nelements+mesh.totalHaloPairs);
-    elliptic->grad = (dfloat*) calloc(Ntotal*4, sizeof(dfloat));
-    elliptic->o_grad  = platform.malloc(Ntotal*4*sizeof(dfloat), elliptic->grad);
+    grad.malloc(Ntotal*4);
+    o_grad = platform.malloc<dfloat>(grad);
   } else {
-    elliptic->tau = 0.0;
+    tau = 0.0;
 
     //buffer for local Ax
     dlong Ntotal = mesh.Np*mesh.Nelements;
-    elliptic->o_AqL  = platform.malloc(Ntotal*sizeof(dfloat));
+    o_AqL = platform.malloc<dfloat>(Ntotal);
   }
 
   // OCCA build stuff
-  occa::properties kernelInfo = mesh.props; //copy base occa properties
+  properties_t kernelInfo = mesh.props; //copy base occa properties
 
   // set kernel name suffix
   char *suffix;
-  if(mesh.elementType==TRIANGLES){
+  if(mesh.elementType==mesh_t::TRIANGLES){
     if(mesh.dim==2)
       suffix = strdup("Tri2D");
     else
       suffix = strdup("Tri3D");
-  } else if(mesh.elementType==QUADRILATERALS){
+  } else if(mesh.elementType==mesh_t::QUADRILATERALS){
     if(mesh.dim==2)
       suffix = strdup("Quad2D");
     else
       suffix = strdup("Quad3D");
-  } else if(mesh.elementType==TETRAHEDRA)
+  } else if(mesh.elementType==mesh_t::TETRAHEDRA)
     suffix = strdup("Tet3D");
-  else if(mesh.elementType==HEXAHEDRA)
+  else if(mesh.elementType==mesh_t::HEXAHEDRA)
     suffix = strdup("Hex3D");
 
   char fileName[BUFSIZ], kernelName[BUFSIZ];
 
   //add standard boundary functions
-  char *boundaryHeaderFileName;
+  std::string boundaryHeaderFileName;
   if (mesh.dim==2)
-    boundaryHeaderFileName = strdup(DELLIPTIC "/data/ellipticBoundary2D.h");
+    boundaryHeaderFileName = DELLIPTIC + std::string("/data/ellipticBoundary2D.h");
   else if (mesh.dim==3)
-    boundaryHeaderFileName = strdup(DELLIPTIC "/data/ellipticBoundary3D.h");
+    boundaryHeaderFileName = DELLIPTIC + std::string("/data/ellipticBoundary3D.h");
   kernelInfo["includes"] += boundaryHeaderFileName;
 
   int blockMax = 256;
   if (platform.device.mode() == "CUDA") blockMax = 512;
 
-  int NblockV = mymax(1,blockMax/mesh.Np);
+  int NblockV = std::max(1,blockMax/mesh.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;
 
   // Ax kernel
   if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
     sprintf(fileName,  DELLIPTIC "/okl/ellipticAx%s.okl", suffix);
-    if(mesh.elementType==HEXAHEDRA){
+    if(mesh.elementType==mesh_t::HEXAHEDRA){
       if(mesh.settings.compareSetting("ELEMENT MAP", "TRILINEAR"))
         sprintf(kernelName, "ellipticPartialAxTrilinear%s", suffix);
       else
@@ -126,58 +130,45 @@ elliptic_t& elliptic_t::Setup(platform_t& platform, mesh_t& mesh,
       sprintf(kernelName, "ellipticPartialAx%s", suffix);
     }
 
-    elliptic->partialAxKernel = platform.buildKernel(fileName, kernelName,
-                                     kernelInfo);
+    partialAxKernel = platform.buildKernel(fileName, kernelName,
+                                           kernelInfo);
 
   } else if (settings.compareSetting("DISCRETIZATION","IPDG")) {
-    int Nmax = mymax(mesh.Np, mesh.Nfaces*mesh.Nfp);
+    int Nmax = std::max(mesh.Np, mesh.Nfaces*mesh.Nfp);
     kernelInfo["defines/" "p_Nmax"]= Nmax;
 
     sprintf(fileName, DELLIPTIC "/okl/ellipticGradient%s.okl", suffix);
     sprintf(kernelName, "ellipticPartialGradient%s", suffix);
-    elliptic->partialGradientKernel = platform.buildKernel(fileName, kernelName,
+    partialGradientKernel = platform.buildKernel(fileName, kernelName,
                                                   kernelInfo);
 
     sprintf(fileName, DELLIPTIC "/okl/ellipticAxIpdg%s.okl", suffix);
     sprintf(kernelName, "ellipticPartialAxIpdg%s", suffix);
-    elliptic->partialIpdgKernel = platform.buildKernel(fileName, kernelName,
+    partialIpdgKernel = platform.buildKernel(fileName, kernelName,
                                               kernelInfo);
   }
 
   /* Preconditioner Setup */
   if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
-    elliptic->Ndofs = elliptic->ogsMasked->Ngather*elliptic->Nfields;
-    elliptic->Nhalo = elliptic->ogsMasked->NgatherHalo*elliptic->Nfields;
+    Ndofs = ogsMasked.Ngather*Nfields;
+    Nhalo = gHalo.Nhalo*Nfields;
   } else {
-    elliptic->Ndofs = mesh.Nelements*mesh.Np*elliptic->Nfields;
-    elliptic->Nhalo = mesh.totalHaloPairs*mesh.Np*elliptic->Nfields;
+    Ndofs = mesh.Nelements*mesh.Np*Nfields;
+    Nhalo = mesh.totalHaloPairs*mesh.Np*Nfields;
   }
 
   if       (settings.compareSetting("PRECONDITIONER", "JACOBI"))
-    elliptic->precon = new JacobiPrecon(*elliptic);
+    precon.Setup<JacobiPrecon>(*this);
   else if(settings.compareSetting("PRECONDITIONER", "MASSMATRIX"))
-    elliptic->precon = new MassMatrixPrecon(*elliptic);
+    precon.Setup<MassMatrixPrecon>(*this);
   else if(settings.compareSetting("PRECONDITIONER", "PARALMOND"))
-    elliptic->precon = new ParAlmondPrecon(*elliptic);
+    precon.Setup<ParAlmondPrecon>(*this);
   else if(settings.compareSetting("PRECONDITIONER", "MULTIGRID"))
-    elliptic->precon = new MultiGridPrecon(*elliptic);
+    precon.Setup<MultiGridPrecon>(*this);
   else if(settings.compareSetting("PRECONDITIONER", "SEMFEM"))
-    elliptic->precon = new SEMFEMPrecon(*elliptic);
+    precon.Setup<SEMFEMPrecon>(*this);
   else if(settings.compareSetting("PRECONDITIONER", "OAS"))
-    elliptic->precon = new OASPrecon(*elliptic);
+    precon.Setup<OASPrecon>(*this);
   else if(settings.compareSetting("PRECONDITIONER", "NONE"))
-    elliptic->precon = new IdentityPrecon(elliptic->Ndofs);
-
-  return *elliptic;
-}
-
-elliptic_t::~elliptic_t() {
-  maskKernel.free();
-  partialAxKernel.free();
-  partialGradientKernel.free();
-  partialIpdgKernel.free();
-
-  if (traceHalo) traceHalo->Free();
-  if (ogsMasked) ogsMasked->Free();
-  if (precon) delete precon;
+    precon.Setup<IdentityPrecon>(Ndofs);
 }

@@ -25,22 +25,34 @@ SOFTWARE.
 */
 
 #include "elliptic.hpp"
+#include "timer.hpp"
 
 void elliptic_t::Run(){
 
   //setup linear solver
   hlong NglobalDofs;
   if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
-    NglobalDofs = ogsMasked->NgatherGlobal*Nfields;
+    NglobalDofs = ogsMasked.NgatherGlobal*Nfields;
   } else {
     NglobalDofs = mesh.NelementsGlobal*mesh.Np*Nfields;
   }
-  linearSolver_t *linearSolver = linearSolver_t::Setup(Ndofs, Nhalo,
-                                                       platform, settings, mesh.comm);
 
-  occa::properties kernelInfo = mesh.props; //copy base occa properties
+  linearSolver_t linearSolver;
+  if (settings.compareSetting("LINEAR SOLVER","NBPCG")){
+    linearSolver.Setup<LinearSolver::nbpcg>(Ndofs, Nhalo, platform, settings, comm);
+  } else if (settings.compareSetting("LINEAR SOLVER","NBFPCG")){
+    linearSolver.Setup<LinearSolver::nbfpcg>(Ndofs, Nhalo, platform, settings, comm);
+  } else if (settings.compareSetting("LINEAR SOLVER","PCG")){
+    linearSolver.Setup<LinearSolver::pcg>(Ndofs, Nhalo, platform, settings, comm);
+  } else if (settings.compareSetting("LINEAR SOLVER","PGMRES")){
+    linearSolver.Setup<LinearSolver::pgmres>(Ndofs, Nhalo, platform, settings, comm);
+  } else if (settings.compareSetting("LINEAR SOLVER","PMINRES")){
+    linearSolver.Setup<LinearSolver::pminres>(Ndofs, Nhalo, platform, settings, comm);
+  }
 
-  string dataFileName;
+  properties_t kernelInfo = mesh.props; //copy base occa properties
+
+  std::string dataFileName;
   settings.getSetting("DATA FILE", dataFileName);
   kernelInfo["includes"] += dataFileName;
 
@@ -52,38 +64,34 @@ void elliptic_t::Run(){
     boundaryHeaderFileName = strdup(DELLIPTIC "/data/ellipticBoundary3D.h");
   kernelInfo["includes"] += boundaryHeaderFileName;
 
-  int Nmax = mymax(mesh.Np, mesh.Nfaces*mesh.Nfp);
+  int Nmax = std::max(mesh.Np, mesh.Nfaces*mesh.Nfp);
   kernelInfo["defines/" "p_Nmax"]= Nmax;
 
   kernelInfo["defines/" "p_Nfields"]= Nfields;
 
   // set kernel name suffix
   char *suffix;
-  if(mesh.elementType==TRIANGLES)
+  if(mesh.elementType==mesh_t::TRIANGLES) {
     suffix = strdup("Tri2D");
-  if(mesh.elementType==QUADRILATERALS)
-    suffix = strdup("Quad2D");
-
-  if(mesh.elementType==TETRAHEDRA)
-    suffix = strdup("Tet3D");
-  if(mesh.elementType==HEXAHEDRA)
-    suffix = strdup("Hex3D");
-
-  char fileName[BUFSIZ], kernelName[BUFSIZ];
-
-  if(mesh.elementType==QUADRILATERALS){
+  } else if(mesh.elementType==mesh_t::QUADRILATERALS) {
     if(mesh.dim==2)
       suffix = strdup("Quad2D");
     else
       suffix = strdup("Quad3D");
+  } else if(mesh.elementType==mesh_t::TETRAHEDRA) {
+    suffix = strdup("Tet3D");
+  } else { //mesh.elementType==mesh_t::HEXAHEDRA)
+    suffix = strdup("Hex3D");
   }
+
+  char fileName[BUFSIZ], kernelName[BUFSIZ];
 
   sprintf(fileName, DELLIPTIC "/okl/ellipticRhs%s.okl", suffix);
   sprintf(kernelName, "ellipticRhs%s", suffix);
-  occa::kernel forcingKernel = platform.buildKernel(fileName, kernelName,
+  kernel_t forcingKernel = platform.buildKernel(fileName, kernelName,
                                                     kernelInfo);
 
-  occa::kernel rhsBCKernel, addBCKernel;
+  kernel_t rhsBCKernel, addBCKernel;
   if (settings.compareSetting("DISCRETIZATION","IPDG")) {
     sprintf(fileName, DELLIPTIC "/okl/ellipticRhsBCIpdg%s.okl", suffix);
     sprintf(kernelName, "ellipticRhsBCIpdg%s", suffix);
@@ -103,30 +111,30 @@ void elliptic_t::Run(){
 
   //create occa buffers
   dlong Nall = mesh.Np*(mesh.Nelements+mesh.totalHaloPairs);
-  dfloat *rL = (dfloat*) calloc(Nall, sizeof(dfloat));
-  dfloat *xL = (dfloat*) calloc(Nall, sizeof(dfloat));
-  occa::memory o_rL = platform.malloc(Nall*sizeof(dfloat), rL);
-  occa::memory o_xL = platform.malloc(Nall*sizeof(dfloat), xL);
+  memory<dfloat> rL(Nall, 0.0);
+  memory<dfloat> xL(Nall, 0.0);
+  deviceMemory<dfloat> o_rL = platform.malloc<dfloat>(rL);
+  deviceMemory<dfloat> o_xL = platform.malloc<dfloat>(xL);
 
-  occa::memory o_r, o_x;
+  deviceMemory<dfloat> o_r, o_x;
   if (settings.compareSetting("DISCRETIZATION","IPDG")) {
     o_r = o_rL;
     o_x = o_xL;
   } else {
-    dlong Ng = ogsMasked->Ngather;
-    dlong Nghalo = ogsMasked->NgatherHalo;
+    dlong Ng = ogsMasked.Ngather;
+    dlong Nghalo = gHalo.Nhalo;
     dlong Ngall = Ng + Nghalo;
-    o_r = platform.malloc(Ngall*sizeof(dfloat));
-    o_x = platform.malloc(Ngall*sizeof(dfloat));
+    o_r = platform.malloc<dfloat>(Ngall*sizeof(dfloat));
+    o_x = platform.malloc<dfloat>(Ngall*sizeof(dfloat));
   }
 
   //storage for M*q during reporting
-  occa::memory o_MxL = platform.malloc(Nall*sizeof(dfloat), xL);
+  deviceMemory<dfloat> o_MxL = platform.malloc<dfloat>(xL);
   mesh.MassMatrixKernelSetup(Nfields); // mass matrix operator
 
   //populate rhs forcing
   forcingKernel(mesh.Nelements,
-                mesh.o_ggeo,
+                mesh.o_wJ,
                 mesh.o_MM,
                 mesh.o_x,
                 mesh.o_y,
@@ -151,6 +159,7 @@ void elliptic_t::Run(){
                 o_rL);
   } else if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
     rhsBCKernel(mesh.Nelements,
+                mesh.o_wJ,
                 mesh.o_ggeo,
                 mesh.o_sgeo,
                 mesh.o_D,
@@ -168,25 +177,23 @@ void elliptic_t::Run(){
 
   // gather rhs to globalDofs if c0
   if(settings.compareSetting("DISCRETIZATION","CONTINUOUS")){
-    ogsMasked->Gather(o_r, o_rL, ogs_dfloat, ogs_add, ogs_trans);
-    ogsMasked->Gather(o_x, o_xL, ogs_dfloat, ogs_add, ogs_notrans);
+    ogsMasked.Gather(o_r, o_rL, 1, ogs::Add, ogs::Trans);
+    ogsMasked.Gather(o_x, o_xL, 1, ogs::Add, ogs::NoTrans);
   }
 
   int maxIter = 5000;
   int verbose = settings.compareSetting("VERBOSE", "TRUE") ? 1 : 0;
 
-  MPI_Barrier(mesh.comm);
-  double startTime = MPI_Wtime();
+  timePoint_t start = GlobalPlatformTime(platform);
 
   //call the solver
   dfloat tol = 1e-8;
-  int iter = Solve(*linearSolver, o_x, o_r, tol, maxIter, verbose);
-
+  int iter = Solve(linearSolver, o_x, o_r, tol, maxIter, verbose);
 
   //add the boundary data to the masked nodes
   if(settings.compareSetting("DISCRETIZATION","CONTINUOUS")){
     // scatter x to LocalDofs if c0
-    ogsMasked->Scatter(o_xL, o_x, ogs_dfloat, ogs_add, ogs_notrans);
+    ogsMasked.Scatter(o_xL, o_x, 1, ogs::NoTrans);
     //fill masked nodes with BC data
     addBCKernel(mesh.Nelements,
                 mesh.o_x,
@@ -196,9 +203,8 @@ void elliptic_t::Run(){
                 o_xL);
   }
 
-  MPI_Barrier(mesh.comm);
-  double endTime = MPI_Wtime();
-  double elapsedTime = endTime - startTime;
+  timePoint_t end = GlobalPlatformTime(platform);
+  double elapsedTime = ElapsedTime(start, end);
 
   if ((mesh.rank==0) && verbose){
     printf("%d, " hlongFormat ", %g, %d, %g, %g; global: N, dofs, elapsed, iterations, time per node, nodes*iterations/time %s\n",
@@ -217,7 +223,7 @@ void elliptic_t::Run(){
     o_xL.copyTo(xL);
 
     // output field files
-    string name;
+    std::string name;
     settings.getSetting("OUTPUT FILE NAME", name);
     char fname[BUFSIZ];
     sprintf(fname, "%s_%04d.vtu", name.c_str(), mesh.rank);
@@ -231,15 +237,9 @@ void elliptic_t::Run(){
     mesh.MassMatrixApply(o_xL, o_MxL);
 
     dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
-    dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_xL, o_MxL, mesh.comm));
+    dfloat norm2 = sqrt(platform.linAlg().innerProd(Nentries, o_xL, o_MxL, mesh.comm));
 
     if(mesh.rank==0)
       printf("Solution norm = %17.15lg\n", norm2);
   }
-
-  free(rL); free(xL);
-  o_rL.free(); o_xL.free();
-  o_r.free(); o_x.free();
-  o_MxL.free();
-  delete linearSolver;
 }
