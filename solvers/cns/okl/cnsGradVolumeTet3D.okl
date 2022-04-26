@@ -48,7 +48,6 @@ SOFTWARE.
       s_w[n] = rw/r;
     }
 
-    @barrier("local");
 
     for(int n=0;n<p_Np;++n;@inner(0)){
       // prefetch geometric factors (constant on tetrahedra)

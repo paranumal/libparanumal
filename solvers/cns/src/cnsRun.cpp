@@ -51,10 +51,10 @@ void cns_t::Run(){
   dfloat dtAdv  = cfl/(vmax*(mesh.N+1.)*(mesh.N+1.));
   dfloat dtVisc = cfl*pow(hmin, 2)/(pow(mesh.N+1,4)*mu);
 
-  dfloat dt = mymin(dtAdv, dtVisc);
-  timeStepper->SetTimeStep(dt);
+  dfloat dt = std::min(dtAdv, dtVisc);
+  timeStepper.SetTimeStep(dt);
 
-  timeStepper->Run(o_q, startTime, finalTime);
+  timeStepper.Run(*this, o_q, startTime, finalTime);
 
   // output norm of final solution
   {
@@ -62,7 +62,7 @@ void cns_t::Run(){
     mesh.MassMatrixApply(o_q, o_Mq);
 
     dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
-    dfloat norm2 = sqrt(platform.linAlg.innerProd(Nentries, o_q, o_Mq, mesh.comm));
+    dfloat norm2 = sqrt(platform.linAlg().innerProd(Nentries, o_q, o_Mq, mesh.comm));
 
     if(mesh.rank==0)
       printf("Solution norm = %17.15lg\n", norm2);

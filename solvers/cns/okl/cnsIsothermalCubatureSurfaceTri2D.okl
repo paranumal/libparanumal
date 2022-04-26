@@ -151,7 +151,6 @@ void upwindRoeAveraged(const dfloat nx,
       }
     }
 
-    @barrier("local");
 
     // interpolate to surface integration nodes
     for(int n=0;n<p_cubMaxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
@@ -235,7 +234,6 @@ void upwindRoeAveraged(const dfloat nx,
     }
 
     // wait for all @shared memory writes of the previous inner loop to complete
-    @barrier("local");
 
     // for each node in the element
     for(int n=0;n<p_cubMaxNodes;++n;@inner(0)){

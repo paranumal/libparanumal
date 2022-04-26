@@ -93,7 +93,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     for(int n=0;n<p_cubNp;++n;@inner(0)){
       //interpolate to cubature
@@ -196,7 +195,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     for(int n=0;n<p_cubNp;++n;@inner(0)){
       if (n<p_Np) {

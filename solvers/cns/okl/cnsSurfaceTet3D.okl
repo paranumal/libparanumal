@@ -254,7 +254,6 @@ void upwindRoeAveraged(const dfloat nx,
     }
 
     // wait for all @shared memory writes of the previous inner loop to complete
-    @barrier("local");
 
     // for each node in the element
     for(int n=0;n<p_maxNodes;++n;@inner(0)){

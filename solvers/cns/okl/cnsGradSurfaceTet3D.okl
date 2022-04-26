@@ -125,7 +125,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     // for each node in the element
     for(int es=0;es<p_NblockS;++es;@inner(1)){
