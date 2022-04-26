@@ -66,8 +66,6 @@ for(dlong e=0;e<Nelements;++e;@outer(0)){
       s_H[n] = dtdx*cx + dtdy*cy + dtdz*cz;
     }
 
-    @barrier("local");
-
     for(int n=0;n<p_Np;++n;@inner(0)){
 
       dfloat rhsqn = 0;

@@ -57,8 +57,6 @@ SOFTWARE.
       s_G[n] = dsdx*cx + dsdy*cy;
     }
 
-    @barrier("local");
-
     for(int n=0;n<p_Np;++n;@inner(0)){
 
       dfloat rhsqn=0;
