@@ -26,33 +26,34 @@ SOFTWARE.
 
 #include "linearSolver.hpp"
 
+namespace libp {
+
+namespace LinearSolver {
+
 #define NBPCG_BLOCKSIZE 512
 
 nbpcg::nbpcg(dlong _N, dlong _Nhalo,
-         platform_t& _platform, settings_t& _settings, MPI_Comm _comm):
-  linearSolver_t(_N, _Nhalo, _platform, _settings, _comm) {
+         platform_t& _platform, settings_t& _settings, comm_t _comm):
+  linearSolverBase_t(_N, _Nhalo, _platform, _settings, _comm) {
+
+  platform.linAlg().InitKernels({"axpy"});
 
   dlong Ntotal = N + Nhalo;
 
   /*aux variables */
-  o_p  = platform.malloc(Ntotal*sizeof(dfloat));
-  o_s  = platform.malloc(Ntotal*sizeof(dfloat));
-  o_S  = platform.malloc(Ntotal*sizeof(dfloat));
-  o_z  = platform.malloc(Ntotal*sizeof(dfloat));
-  o_Z  = platform.malloc(Ntotal*sizeof(dfloat));
-  o_Ax = platform.malloc(Ntotal*sizeof(dfloat));
-
-  localdots  = (dfloat*) calloc(3, sizeof(dfloat));
-  globaldots = (dfloat*) calloc(3, sizeof(dfloat));
+  o_p  = platform.malloc<dfloat>(Ntotal);
+  o_s  = platform.malloc<dfloat>(Ntotal);
+  o_S  = platform.malloc<dfloat>(Ntotal);
+  o_z  = platform.malloc<dfloat>(Ntotal);
+  o_Z  = platform.malloc<dfloat>(Ntotal);
+  o_Ax = platform.malloc<dfloat>(Ntotal);
 
   //pinned tmp buffer for reductions
-  tmpdots = (dfloat*) platform.hostMalloc(3*NBPCG_BLOCKSIZE*sizeof(dfloat),
-                                          NULL, h_tmpdots);
-
-  o_tmpdots = platform.malloc(3*NBPCG_BLOCKSIZE*sizeof(dfloat));
+  dots = platform.hostMalloc<dfloat>(3*NBPCG_BLOCKSIZE);
+  o_dots = platform.malloc<dfloat>(3*NBPCG_BLOCKSIZE);
 
   /* build kernels */
-  occa::properties kernelInfo = platform.props; //copy base properties
+  properties_t kernelInfo = platform.props(); //copy base properties
 
   //add defines
   kernelInfo["defines/" "p_blockSize"] = (int)NBPCG_BLOCKSIZE;
@@ -64,13 +65,12 @@ nbpcg::nbpcg(dlong _N, dlong _Nhalo,
                                 "update2NBPCG", kernelInfo);
 }
 
-int nbpcg::Solve(solver_t& solver, precon_t& precon,
-                 occa::memory &o_x, occa::memory &o_r,
+int nbpcg::Solve(operator_t& linearOperator, operator_t& precon,
+                 deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_r,
                  const dfloat tol, const int MAXIT, const int verbose) {
 
-  int rank;
-  MPI_Comm_rank(comm, &rank);
-  linAlg_t &linAlg = platform.linAlg;
+  int rank = comm.rank();
+  linAlg_t &linAlg = platform.linAlg();
 
   // register scalars
   dfloat zdotz0 = 0;
@@ -84,7 +84,7 @@ int nbpcg::Solve(solver_t& solver, precon_t& precon,
   dfloat gamma1 = 0; // history gamma
 
   // compute A*x
-  solver.Operator(o_x, o_Ax);
+  linearOperator.Operator(o_x, o_Ax);
 
   // subtract r = r - A*x
   linAlg.axpy(N, -1.f, o_Ax, 1.f, o_r);
@@ -97,14 +97,14 @@ int nbpcg::Solve(solver_t& solver, precon_t& precon,
   alpha0 = 0;
   Update2NBPCG(alpha0, o_r);
 
-  solver.Operator(o_z, o_Z);
+  linearOperator.Operator(o_z, o_Z);
 
-  MPI_Wait(&request, &status);
-  gamma0 = globaldots[0]; // rdotz
-  zdotz0 = globaldots[1];
-  rdotr0 = globaldots[2];
+  comm.Wait(request);
+  gamma0 = dots[0]; // rdotz
+  zdotz0 = dots[1];
+  rdotr0 = dots[2];
 
-  dfloat TOL = mymax(tol*tol*rdotr0,tol*tol);
+  dfloat TOL = std::max(tol*tol*rdotr0,tol*tol);
 
   if (verbose&&(rank==0))
     printf("NBPCG: initial res norm %12.12f \n", sqrt(rdotr0));
@@ -125,8 +125,8 @@ int nbpcg::Solve(solver_t& solver, precon_t& precon,
     precon.Operator(o_s, o_S);
 
     // block for delta
-    MPI_Wait(&request, &status);
-    delta0 = globaldots[0];
+    comm.Wait(request);
+    delta0 = dots[0];
 
     // alpha = gamma/delta
     alpha0 = gamma0/delta0;
@@ -142,14 +142,14 @@ int nbpcg::Solve(solver_t& solver, precon_t& precon,
     linAlg.axpy(N, alpha0, o_p, 1.0, o_x);
 
     // Z = A*z
-    solver.Operator(o_z, o_Z);
+    linearOperator.Operator(o_z, o_Z);
 
     // block for delta
-    MPI_Wait(&request, &status);
+    comm.Wait(request);
     gamma1 = gamma0;
-    gamma0 = globaldots[0]; // gamma = r.z
-    zdotz0 = globaldots[1]; //
-    rdotr0 = globaldots[2]; //
+    gamma0 = dots[0]; // gamma = r.z
+    zdotz0 = dots[1]; //
+    rdotr0 = dots[2]; //
 
     beta0 = gamma0/gamma1;
 
@@ -171,21 +171,23 @@ void nbpcg::Update1NBPCG(const dfloat beta){
   // s <= Z + beta*s
   // dot(p,s)
   int Nblocks = (N+NBPCG_BLOCKSIZE-1)/NBPCG_BLOCKSIZE;
-  Nblocks = (Nblocks>NBPCG_BLOCKSIZE) ? NBPCG_BLOCKSIZE : Nblocks; //limit to NBPCG_BLOCKSIZE entries
+  Nblocks = std::min(Nblocks,NBPCG_BLOCKSIZE); //limit to NBPCG_BLOCKSIZE entries
 
-  update1NBPCGKernel(N, Nblocks, o_z, o_Z, beta, o_p, o_s, o_tmpdots);
+  update1NBPCGKernel(N, Nblocks, o_z, o_Z, beta, o_p, o_s, o_dots);
 
-  o_tmpdots.copyTo(tmpdots, Nblocks*sizeof(dfloat));
+  if (Nblocks>0) {
+    dots.copyFrom(o_dots, Nblocks);
+  } else {
+    dots[0] = 0.0;
+  }
 
-  localdots[0] = 0;
-  for(int n=0;n<Nblocks;++n)
-    localdots[0] += tmpdots[n];
+  for(int n=1;n<Nblocks;++n)
+    dots[0] += dots[n];
 
-  globaldots[0] = 0;
-  MPI_Iallreduce(localdots, globaldots, 1, MPI_DFLOAT, MPI_SUM, comm, &request);
+  comm.Iallreduce(dots, comm_t::Sum, 1, request);
 }
 
-void nbpcg::Update2NBPCG(const dfloat alpha, occa::memory &o_r){
+void nbpcg::Update2NBPCG(const dfloat alpha, deviceMemory<dfloat>& o_r){
 
   // r <= r - alpha*s
   // z <= z - alpha*S
@@ -195,26 +197,24 @@ void nbpcg::Update2NBPCG(const dfloat alpha, occa::memory &o_r){
   int Nblocks = (N+NBPCG_BLOCKSIZE-1)/NBPCG_BLOCKSIZE;
   Nblocks = (Nblocks>NBPCG_BLOCKSIZE) ? NBPCG_BLOCKSIZE : Nblocks; //limit to NBPCG_BLOCKSIZE entries
 
-  update2NBPCGKernel(N, Nblocks, o_s, o_S, alpha, o_r, o_z, o_tmpdots);
+  update2NBPCGKernel(N, Nblocks, o_s, o_S, alpha, o_r, o_z, o_dots);
 
-  o_tmpdots.copyTo(tmpdots, 3*Nblocks*sizeof(dfloat));
-
-  localdots[0] = 0;
-  localdots[1] = 0;
-  localdots[2] = 0;
-  for(int n=0;n<Nblocks;++n) {
-    localdots[0] += tmpdots[0+3*n];
-    localdots[1] += tmpdots[1+3*n];
-    localdots[2] += tmpdots[2+3*n];
+  if (Nblocks>0) {
+    dots.copyFrom(o_dots, 3*Nblocks);
+  } else {
+    dots[0] = 0.0;
+    dots[1] = 0.0;
+    dots[2] = 0.0;
   }
 
-  globaldots[0] = 0;
-  globaldots[1] = 0;
-  globaldots[2] = 0;
-  MPI_Iallreduce(localdots, globaldots, 3, MPI_DFLOAT, MPI_SUM, comm, &request);
+  for(int n=1;n<Nblocks;++n) {
+    dots[0] += dots[0+3*n];
+    dots[1] += dots[1+3*n];
+    dots[2] += dots[2+3*n];
+  }
+  comm.Iallreduce(dots, comm_t::Sum, 3, request);
 }
 
-nbpcg::~nbpcg() {
-  update1NBPCGKernel.free();
-  update2NBPCGKernel.free();
-}
+} //namespace LinearSolver
+
+} //namespace libp
