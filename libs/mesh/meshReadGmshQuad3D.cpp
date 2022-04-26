@@ -25,97 +25,70 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh3D.hpp"
+
+namespace libp {
 
 /*
    purpose: read gmsh quadrilateral mesh
 */
-void meshQuad3D::ParallelReader(const char *fileName){
+void mesh_t::ReadGmshQuad3D(const std::string fileName){
 
-  FILE *fp = fopen(fileName, "r");
-
-  dim = 3;
-  Nverts = 4; // number of vertices per element
-  Nfaces = 4;
-  NfaceVertices = 2;
-
-  int faceVertices_[4][2] = {{0,1},{1,2},{2,3},{3,0}};
-
-  faceVertices =
-    (int*) calloc(NfaceVertices*Nfaces, sizeof(int));
-
-  memcpy(faceVertices, faceVertices_[0], NfaceVertices*Nfaces*sizeof(int));
-
-  if(fp==NULL){
-    stringstream ss;
-    ss << "Cannot open file: " << fileName;
-    LIBP_ABORT(ss.str())
-  }
+  FILE *fp = fopen(fileName.c_str(), "r");
+  LIBP_ABORT("Cannot open file: " << fileName,
+             fp==NULL);
 
   char buf[BUFSIZ];
   do{
-    if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
-      stringstream ss;
-      ss << "Error reading mesh file: " << fileName;
-      LIBP_ABORT(ss.str())
-    }
+    //read to end of line
+    LIBP_ABORT("Error reading mesh file: " << fileName,
+               !fgets(buf, BUFSIZ, fp));
   }while(!strstr(buf, "$Nodes"));
 
   /* read number of nodes in mesh */
-  if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
-    stringstream ss;
-    ss << "Error reading mesh file: " << fileName;
-    LIBP_ABORT(ss.str())
-  }
+  //read to end of line
+  LIBP_ABORT("Error reading mesh file: " << fileName,
+             !fgets(buf, BUFSIZ, fp));
   sscanf(buf, hlongFormat, &(Nnodes));
 
   /* allocate space for node coordinates */
-  dfloat *VX = (dfloat*) calloc(Nnodes, sizeof(dfloat));
-  dfloat *VY = (dfloat*) calloc(Nnodes, sizeof(dfloat));
-  dfloat *VZ = (dfloat*) calloc(Nnodes, sizeof(dfloat));
+  memory<dfloat> VX(Nnodes);
+  memory<dfloat> VY(Nnodes);
+  memory<dfloat> VZ(Nnodes);
 
   /* load nodes */
   for(int n=0;n<Nnodes;++n){
-    if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
-      stringstream ss;
-      ss << "Error reading mesh file: " << fileName;
-      LIBP_ABORT(ss.str())
-    }
+    //read to end of line
+    LIBP_ABORT("Error reading mesh file: " << fileName,
+               !fgets(buf, BUFSIZ, fp));
     sscanf(buf, "%*d" dfloatFormat dfloatFormat dfloatFormat,
-	   VX+n, VY+n, VZ+n);
+           VX.ptr()+n, VY.ptr()+n, VZ.ptr()+n);
   }
 
   /* look for section with Element node data */
   do{
-    if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
-      stringstream ss;
-      ss << "Error reading mesh file: " << fileName;
-      LIBP_ABORT(ss.str())
-    }
+    //read to end of line
+    LIBP_ABORT("Error reading mesh file: " << fileName,
+               !fgets(buf, BUFSIZ, fp));
   }while(!strstr(buf, "$Elements"));
 
   /* read number of nodes in mesh */
   hlong gNelements;
-  if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
-    stringstream ss;
-    ss << "Error reading mesh file: " << fileName;
-    LIBP_ABORT(ss.str())
-  }
-  sscanf(buf, hlongFormat, &(gNelements));
+  //read to end of line
+  LIBP_ABORT("Error reading mesh file: " << fileName,
+             !fgets(buf, BUFSIZ, fp));
+  sscanf(buf, hlongFormat, &gNelements);
 
   /* find # of quadrilaterals */
   fpos_t fpos;
   fgetpos(fp, &fpos);
   hlong Nquadrilaterals = 0;
-
   hlong gNboundaryFaces = 0;
-  for(int n=0;n<gNelements;++n){
+
+  for(hlong n=0;n<gNelements;++n){
     int ElementType;
-    if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
-      stringstream ss;
-      ss << "Error reading mesh file: " << fileName;
-      LIBP_ABORT(ss.str())
-    }
+    //read to end of line
+    LIBP_ABORT("Error reading mesh file: " << fileName,
+               !fgets(buf, BUFSIZ, fp));
     sscanf(buf, "%*d%d", &ElementType);
     if(ElementType==1) ++gNboundaryFaces;
     if(ElementType==3) ++Nquadrilaterals;
@@ -123,42 +96,35 @@ void meshQuad3D::ParallelReader(const char *fileName){
   // rewind to start of elements
   fsetpos(fp, &fpos);
 
-  int chunk = Nquadrilaterals/size;
-  int remainder = Nquadrilaterals - chunk*size;
+  hlong chunk = (hlong) Nquadrilaterals/size;
+  int remainder = (int) (Nquadrilaterals - chunk*size);
 
-  int NquadrilateralsLocal = chunk + (rank<remainder);
+  hlong NquadrilateralsLocal = chunk + (rank<remainder);
 
   /* where do these elements start ? */
-  int start = rank*chunk + mymin(rank, remainder);
-  int end = start + NquadrilateralsLocal-1;
+  hlong start = rank*chunk + std::min(rank, remainder);
+  hlong end = start + NquadrilateralsLocal-1;
 
   /* allocate space for Element node index data */
-
-  EToV
-    = (hlong*) calloc(NquadrilateralsLocal*Nverts,
-		     sizeof(hlong));
-
-  elementInfo
-    = (hlong*) calloc(NquadrilateralsLocal,sizeof(hlong));
+  EToV.malloc(NquadrilateralsLocal*Nverts);
+  elementInfo.malloc(NquadrilateralsLocal);
 
   /* scan through file looking for quadrilateral elements */
-  int cnt=0, bcnt=0;
+  hlong cnt=0, bcnt=0;
   Nquadrilaterals = 0;
 
-  boundaryInfo = (hlong*) calloc(gNboundaryFaces*3, sizeof(hlong));
-  for(int n=0;n<gNelements;++n){
+  boundaryInfo.malloc(gNboundaryFaces*3);
+  for(hlong n=0;n<gNelements;++n){
     int ElementType;
     hlong v1, v2, v3, v4;
-    if (!fgets(buf, BUFSIZ, fp)) { //read to end of line
-      stringstream ss;
-      ss << "Error reading mesh file: " << fileName;
-      LIBP_ABORT(ss.str())
-    }
+    //read to end of line
+    LIBP_ABORT("Error reading mesh file: " << fileName,
+               !fgets(buf, BUFSIZ, fp));
     sscanf(buf, "%*d%d", &ElementType);
 
     if(ElementType==1){ // boundary face
-      sscanf(buf, "%*d%*d %*d" hlongFormat "%*d " hlongFormat hlongFormat,
-	     boundaryInfo+bcnt*3, &v1, &v2);
+      sscanf(buf, "%*d%*d %*d" hlongFormat "%*d" hlongFormat hlongFormat,
+             boundaryInfo.ptr()+bcnt*3, &v1, &v2);
       boundaryInfo[bcnt*3+1] = v1-1;
       boundaryInfo[bcnt*3+2] = v2-1;
       ++bcnt;
@@ -167,27 +133,27 @@ void meshQuad3D::ParallelReader(const char *fileName){
     if(ElementType==3){  // quadrilateral
       if(start<=Nquadrilaterals && Nquadrilaterals<=end){
         sscanf(buf, "%*d%*d%*d " hlongFormat " %*d" hlongFormat hlongFormat hlongFormat hlongFormat,
-               elementInfo+cnt, &v1, &v2, &v3, &v4);
+               elementInfo.ptr()+cnt, &v1, &v2, &v3, &v4);
 
 #if 0
-	// check orientation
-	dfloat xe1 = VX[v1-1], xe2 = VX[v2-1], xe4 = VX[v4-1];
-	dfloat ye1 = VY[v1-1], ye2 = VY[v2-1], ye4 = VY[v4-1];
-	dfloat J = 0.25*((xe2-xe1)*(ye4-ye1) - (xe4-xe1)*(ye2-ye1));
-	if(J<0){
-	  int v4tmp = v4;
-	  v4 = v2;
-	  v2 = v4tmp;
-	  printf("unwarping element\n");
-	}
+        // check orientation
+        dfloat xe1 = VX[v1-1], xe2 = VX[v2-1], xe4 = VX[v4-1];
+        dfloat ye1 = VY[v1-1], ye2 = VY[v2-1], ye4 = VY[v4-1];
+        dfloat J = 0.25*((xe2-xe1)*(ye4-ye1) - (xe4-xe1)*(ye2-ye1));
+        if(J<0){
+          int v4tmp = v4;
+          v4 = v2;
+          v2 = v4tmp;
+          printf("unwarping element\n");
+        }
 #endif
 
-	/* read vertex triplet for trianngle */
-	EToV[cnt*Nverts+0] = v1-1;
-	EToV[cnt*Nverts+1] = v2-1;
-	EToV[cnt*Nverts+2] = v3-1;
-	EToV[cnt*Nverts+3] = v4-1;
-	++cnt;
+        /* read vertex triplet for trianngle */
+        EToV[cnt*Nverts+0] = v1-1;
+        EToV[cnt*Nverts+1] = v2-1;
+        EToV[cnt*Nverts+2] = v3-1;
+        EToV[cnt*Nverts+3] = v4-1;
+        ++cnt;
       }
       ++Nquadrilaterals;
     }
@@ -201,9 +167,9 @@ void meshQuad3D::ParallelReader(const char *fileName){
   Nelements = NquadrilateralsLocal;
 
   /* collect vertices for each element */
-  EX = (dfloat*) calloc(Nverts*Nelements, sizeof(dfloat));
-  EY = (dfloat*) calloc(Nverts*Nelements, sizeof(dfloat));
-  EZ = (dfloat*) calloc(Nverts*Nelements, sizeof(dfloat));
+  EX.malloc(Nverts*Nelements);
+  EY.malloc(Nverts*Nelements);
+  EZ.malloc(Nverts*Nelements);
   for(int e=0;e<Nelements;++e){
     for(int n=0;n<Nverts;++n){
       EX[e*Nverts+n] = VX[EToV[e*Nverts+n]];
@@ -211,17 +177,13 @@ void meshQuad3D::ParallelReader(const char *fileName){
       EZ[e*Nverts+n] = VZ[EToV[e*Nverts+n]];
 #if 0
       printf("e %d v %d %g %g %g\n",
-	     e, n,
-	     EX[e*Nverts+n],
-	     EY[e*Nverts+n],
-	     EZ[e*Nverts+n]);
+             e, n,
+             EX[e*Nverts+n],
+             EY[e*Nverts+n],
+             EZ[e*Nverts+n]);
 #endif
     }
   }
-
-  /* release VX and VY (these are too big to keep) */
-  free(VX);
-  free(VY);
-  free(VZ);
 }
 
+} //namespace libp

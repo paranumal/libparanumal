@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,54 +25,27 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh3D.hpp"
+#include "parAdogs.hpp"
 
-//interpolate field to plotting nodes
-void meshQuad3D::PlotInterp(const dfloat* q, dfloat* Iq, dfloat* scratch){
+namespace libp {
 
-  dfloat *IQ;
+void mesh_t::Partition(){
 
-  bool alloc_scratch=false;
-  if (scratch==nullptr) {
-    //if not provided with a scratch space, alloc our own
-    alloc_scratch=true;
-    IQ  = (dfloat *) malloc(plotNq*Nq*sizeof(dfloat));
-  } else {
-    IQ  = scratch;
-  }
-
-  //interpolate in r
-  for(int j=0;j<Nq;++j){
-    for(int i=0;i<plotNq;++i){
-      dfloat qn = 0;
-
-      for(int m=0;m<Nq;++m){
-        const int qid = m + j*Nq;
-        qn += plotInterp[i*Nq+m]*q[qid];
-      }
-
-      const int id = i + j*plotNq;
-      IQ[id] = qn;
-    }
-  }
-
-  //interpolate in s
-  for(int j=0;j<plotNq;++j){
-    for(int i=0;i<plotNq;++i){
-      dfloat qn = 0;
-
-      for(int m=0;m<Nq;++m){
-        const int qid = i + m*plotNq;
-        qn += plotInterp[j*Nq+m]*IQ[qid];
-      }
-
-      const int id = i + j*plotNq;
-      Iq[id] = qn;
-    }
-  }
-
-  //clean up
-  if (alloc_scratch) {
-    free(IQ);
-  }
+  paradogs::MeshPartition(platform,
+                          settings,
+                          Nelements,
+                          dim,
+                          Nverts,
+                          Nfaces,
+                          NfaceVertices,
+                          faceVertices,
+                          EToV,
+                          EToE,
+                          EToF,
+                          EX,
+                          EY,
+                          EZ,
+                          comm);
 }
+
+} //namespace libp

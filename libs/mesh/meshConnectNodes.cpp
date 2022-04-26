@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,85 +26,92 @@ SOFTWARE.
 
 #include "mesh.hpp"
 
+namespace libp {
 
 // uniquely label each node with a global index, used for gatherScatter
-void mesh_t::ParallelConnectNodes(){
+void mesh_t::ConnectNodes(){
 
-  hlong localNodeCount = Np*Nelements;
-  hlong *allLocalNodeCounts = (hlong*) calloc(size, sizeof(hlong));
+  hlong localNnodes = Np*Nelements;
+  hlong gatherNodeStart = localNnodes;
+  comm.Scan(localNnodes, gatherNodeStart);
+  gatherNodeStart -= localNnodes;
 
-  MPI_Allgather(&localNodeCount,    1, MPI_HLONG,
-                allLocalNodeCounts, 1, MPI_HLONG,
-                comm);
+  // form global node numbering
+  globalIds.malloc((totalHaloPairs+Nelements)*Np);
 
-  hlong gatherNodeStart = 0;
-  for(int rr=0;rr<rank;++rr)
-    gatherNodeStart += allLocalNodeCounts[rr];
+  // initialize with local numbering
+  #pragma omp parallel for
+  for(dlong n=0;n<Nelements*Np;++n){
+    globalIds[n] = 1 + n + gatherNodeStart;
+  }
 
-  free(allLocalNodeCounts);
+  //make a node-wise bc flag by looking at all neighbors
+  mapB.malloc((Nelements+totalHaloPairs)*Np, 0);
 
-  // form continuous node numbering (local=>virtual gather)
-  int *baseRank = (int *) malloc((totalHaloPairs+Nelements)*Np*sizeof(int));
-  globalIds = (hlong *) malloc((totalHaloPairs+Nelements)*Np*sizeof(hlong));
-
-  // use local numbering
-  for(dlong e=0;e<Nelements;++e){
-    for(int n=0;n<Np;++n){
-      dlong id = e*Np+n;
-
-      baseRank[id] = rank;
-      globalIds[id] = 1 + id + Nnodes + gatherNodeStart;
-    }
-
-    // use vertex ids for vertex nodes to reduce iterations
-    for(int v=0;v<Nverts;++v){
-      hlong id = e*Np + vertexNodes[v];
-      hlong gid = EToV[e*Nverts+v] + 1;
-      globalIds[id] = gid;
+  #pragma omp parallel for
+  for (dlong e=0;e<Nelements;e++) {
+    for (int f=0;f<Nfaces;f++) {
+      int bc = EToB[f+e*Nfaces];
+      if (bc>0) {
+        for (int n=0;n<Nfp;n++) {
+          const int fid = faceNodes[n+f*Nfp];
+          int bcn = mapB[fid+e*Np];
+          if (bcn == 0) { //if theres no bc here yet, write it
+            mapB[fid+e*Np] = bc;
+          } else { //if theres a bc, take the min
+            mapB[fid+e*Np] = std::min(bc,bcn);
+          }
+        }
+      }
     }
   }
 
-  hlong localChange = 0, gatherChange = 1;
+  hlong gatherChange = 1;
 
   // keep comparing numbers on positive and negative traces until convergence
   while(gatherChange>0){
 
     // reset change counter
-    localChange = 0;
+    gatherChange = 0;
 
     // send halo data and recv into extension of buffer
-    halo->Exchange(baseRank, Np, ogs_int);
-    halo->Exchange(globalIds, Np, ogs_hlong);
+    halo.Exchange(globalIds, Np);
+    halo.Exchange(mapB, Np);
 
     // compare trace nodes
+    // #pragma omp parallel for
     for(dlong e=0;e<Nelements;++e){
+
       for(int n=0;n<Nfp*Nfaces;++n){
         dlong id  = e*Nfp*Nfaces + n;
         dlong idM = vmapM[id];
         dlong idP = vmapP[id];
         hlong gidM = globalIds[idM];
         hlong gidP = globalIds[idP];
+        int bcM = mapB[idM];
+        int bcP = mapB[idP];
 
-        int baseRankM = baseRank[idM];
-        int baseRankP = baseRank[idP];
-
-        if(gidM<gidP || (gidP==gidM && baseRankM<baseRankP)){
-          ++localChange;
-          baseRank[idP]  = baseRank[idM];
-          globalIds[idP] = globalIds[idM];
+        if(gidP<gidM){
+          ++gatherChange;
+          globalIds[idM] = gidP;
         }
 
-        if(gidP<gidM || (gidP==gidM && baseRankP<baseRankM)){
-          ++localChange;
-          baseRank[idM]  = baseRank[idP];
-          globalIds[idM] = globalIds[idP];
+        if (bcP > 0) {
+          if (bcM == 0) {
+            //if theres no bc here yet, write it
+            mapB[idM] = bcP;
+            ++gatherChange;
+          } else if (bcP<bcM) {
+            mapB[idM] = bcP;
+            ++gatherChange;
+          }
         }
       }
     }
 
     // sum up changes
-    MPI_Allreduce(&localChange, &gatherChange, 1, MPI_HLONG, MPI_MAX, comm);
+    comm.Allreduce(gatherChange);
   }
-
-  free(baseRank);
 }
+
+} //namespace libp

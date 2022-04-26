@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,33 +24,72 @@ SOFTWARE.
 
 */
 
+
 #include "mesh.hpp"
 
-void mesh_t::ParallelGatherScatterSetup() {
+namespace libp {
 
-  dlong Ntotal = Np*Nelements;
+void mesh_t::GatherScatterSetup() {
 
-  int verbose = 0;
-  ogs = ogs_t::Setup(Ntotal, globalIds, comm, verbose, platform);
+  dlong Ntotal = Nverts*(Nelements+totalHaloPairs);
 
-  //use the gs to find what nodes are local to this rank
-  int *minRank = (int *) calloc(Ntotal,sizeof(int));
-  int *maxRank = (int *) calloc(Ntotal,sizeof(int));
+  memory<int> minRank(Ntotal);
+  memory<int> maxRank(Ntotal);
+
   for (dlong i=0;i<Ntotal;i++) {
     minRank[i] = rank;
     maxRank[i] = rank;
   }
 
-  ogs->GatherScatter(minRank, ogs_int, ogs_min, ogs_sym); //minRank[n] contains the smallest rank taking part in the gather of node n
-  ogs->GatherScatter(maxRank, ogs_int, ogs_max, ogs_sym); //maxRank[n] contains the largest rank taking part in the gather of node n
+  hlong gatherChange = 1;
+
+  // keep comparing numbers on positive and negative traces until convergence
+  while(gatherChange>0){
+
+    // reset change counter
+    gatherChange = 0;
+
+    // send halo data and recv into extension of buffer
+    halo.Exchange(minRank, Nverts);
+    halo.Exchange(maxRank, Nverts);
+
+    // compare trace vertices
+    #pragma omp parallel for collapse(2)
+    for(dlong e=0;e<Nelements;++e){
+      for(int n=0;n<Nfaces*NfaceVertices;++n){
+        dlong id  = e*Nfaces*NfaceVertices + n;
+        dlong idM = VmapM[id];
+        dlong idP = VmapP[id];
+
+        int minRankM = minRank[idM];
+        int minRankP = minRank[idP];
+
+        int maxRankM = maxRank[idM];
+        int maxRankP = maxRank[idP];
+
+        if(minRankP<minRankM){
+          gatherChange=1;
+          minRank[idM] = minRankP;
+        }
+
+        if(maxRankP>maxRankM){
+          gatherChange=1;
+          maxRank[idM] = maxRankP;
+        }
+      }
+    }
+
+    // sum up changes
+    comm.Allreduce(gatherChange);
+  }
 
   // count elements that contribute to global C0 gather-scatter
   dlong globalCount = 0;
   dlong localCount = 0;
   for(dlong e=0;e<Nelements;++e){
     int isHalo = 0;
-    for(int n=0;n<Np;++n){
-      dlong id = e*Np+n;
+    for(int n=0;n<Nverts;++n){
+      dlong id = e*Nverts+n;
       if ((minRank[id]!=rank)||(maxRank[id]!=rank)) {
         isHalo = 1;
         break;
@@ -60,16 +99,16 @@ void mesh_t::ParallelGatherScatterSetup() {
     localCount += 1-isHalo;
   }
 
-  globalGatherElementList = (dlong*) calloc(globalCount, sizeof(dlong));
-  localGatherElementList  = (dlong*) calloc(localCount, sizeof(dlong));
+  globalGatherElementList.malloc(globalCount);
+  localGatherElementList.malloc(localCount);
 
   globalCount = 0;
   localCount = 0;
 
   for(dlong e=0;e<Nelements;++e){
     int isHalo = 0;
-    for(int n=0;n<Np;++n){
-      dlong id = e*Np+n;
+    for(int n=0;n<Nverts;++n){
+      dlong id = e*Nverts+n;
       if ((minRank[id]!=rank)||(maxRank[id]!=rank)) {
         isHalo = 1;
         break;
@@ -81,8 +120,13 @@ void mesh_t::ParallelGatherScatterSetup() {
       localGatherElementList[localCount++] = e;
     }
   }
-  //printf("local = %d, global = %d\n", localCount, globalCount);
 
   NglobalGatherElements = globalCount;
   NlocalGatherElements = localCount;
+
+  // send to device
+  o_globalGatherElementList = platform.malloc<dlong>(globalGatherElementList);
+  o_localGatherElementList = platform.malloc<dlong>(localGatherElementList);
 }
+
+} //namespace libp

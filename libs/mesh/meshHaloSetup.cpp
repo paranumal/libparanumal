@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,15 +26,17 @@ SOFTWARE.
 
 #include "mesh.hpp"
 
+namespace libp {
+
 // set up halo infomation for inter-processor MPI
 // exchange of elements or trace nodes
 void mesh_t::HaloSetup(){
 
-  hlong *globalOffset = (hlong *) calloc(size+1,sizeof(hlong));
-  hlong localNelements = (hlong) Nelements;
+  memory<hlong> globalOffset(size+1, 0);
 
   //gather number of elements on each rank
-  MPI_Allgather(&localNelements, 1, MPI_HLONG, globalOffset+1, 1, MPI_HLONG, comm);
+  hlong localNelements = Nelements;
+  comm.Allgather(localNelements, globalOffset+1);
 
   for(int rr=0;rr<size;++rr)
     globalOffset[rr+1] = globalOffset[rr]+globalOffset[rr+1];
@@ -64,8 +66,8 @@ void mesh_t::HaloSetup(){
   NinternalElements = Nelements - NhaloElements;
 
   //record the halo and non-halo element ids
-  internalElementIds = (dlong*) malloc(NinternalElements*sizeof(dlong));
-  haloElementIds     = (dlong*) malloc(NhaloElements*sizeof(dlong));
+  internalElementIds.malloc(NinternalElements);
+  haloElementIds.malloc(NhaloElements);
 
   NhaloElements = 0, NinternalElements = 0;
   for(dlong e=0;e<Nelements;++e){
@@ -82,8 +84,12 @@ void mesh_t::HaloSetup(){
       internalElementIds[NinternalElements++] = e;
   }
 
+  // Send to device
+  o_internalElementIds = platform.malloc<dlong>(internalElementIds);
+  o_haloElementIds = platform.malloc<dlong>(haloElementIds);
+
   //make a list of global element ids taking part in the halo exchange
-  hlong *globalElementId = (hlong *) malloc((Nelements+totalHaloPairs)*sizeof(hlong));
+  memory<hlong> globalElementId(Nelements+totalHaloPairs);
 
   //outgoing elements
   for(int e=0;e<Nelements;++e)
@@ -106,22 +112,12 @@ void mesh_t::HaloSetup(){
   }
 
   //make a halo exchange op
-  int verbose = 0;
-  halo = halo_t::Setup(Nelements+totalHaloPairs, globalElementId, comm,
-                       verbose, platform);
+  bool verbose = false;
+  halo.Setup(Nelements+totalHaloPairs,
+             globalElementId, comm,
+             ogs::Pairwise, verbose, platform);
 
-  free(globalElementId);
-  free(globalOffset);
-
-  // grab EX,EY,EZ from halo
-  EX = (dfloat*) realloc(EX, (Nelements+totalHaloPairs)*Nverts*sizeof(dfloat));
-  EY = (dfloat*) realloc(EY, (Nelements+totalHaloPairs)*Nverts*sizeof(dfloat));
-  if (dim==3)
-    EZ = (dfloat*) realloc(EZ, (Nelements+totalHaloPairs)*Nverts*sizeof(dfloat));
-
-  // send halo data and recv into extended part of arrays
-  halo->Exchange(EX, Nverts, ogs_dfloat);
-  halo->Exchange(EY, Nverts, ogs_dfloat);
-  if(dim==3)
-    halo->Exchange(EZ, Nverts, ogs_dfloat);
 }
+
+} //namespace libp
+

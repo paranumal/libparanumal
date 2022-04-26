@@ -25,10 +25,11 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh2D.hpp"
+
+namespace libp {
 
 //interpolate field to plotting nodes
-void meshTri2D::PlotInterp(const dfloat* q, dfloat* Iq, dfloat* scratch){
+void mesh_t::PlotInterpTri2D(const memory<dfloat> q, memory<dfloat> Iq, memory<dfloat> scratch){
 
   //interpolate
   for(int n=0;n<plotNp;++n){
@@ -40,3 +41,5 @@ void meshTri2D::PlotInterp(const dfloat* q, dfloat* Iq, dfloat* scratch){
     Iq[n] = qn;
   }
 }
+
+} //namespace libp

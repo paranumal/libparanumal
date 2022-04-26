@@ -25,15 +25,15 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh2D.hpp"
 
-void meshTri2D::PhysicalNodes(){
+namespace libp {
 
-  x = (dfloat*) calloc((Nelements+totalHaloPairs)*Np,sizeof(dfloat));
-  y = (dfloat*) calloc((Nelements+totalHaloPairs)*Np,sizeof(dfloat));
-  z = (dfloat*) calloc((Nelements+totalHaloPairs)*Np,sizeof(dfloat)); // dummy
+void mesh_t::PhysicalNodesTri2D(){
 
-  dlong cnt = 0;
+  x.malloc(Nelements*Np);
+  y.malloc(Nelements*Np);
+
+  #pragma omp parallel for
   for(dlong e=0;e<Nelements;++e){ /* for each element */
 
     dlong id = e*Nverts+0;
@@ -53,12 +53,13 @@ void meshTri2D::PhysicalNodes(){
       dfloat sn = s[n];
 
       /* physical coordinate of interpolation node */
-      x[cnt] = -0.5*(rn+sn)*xe1 + 0.5*(1+rn)*xe2 + 0.5*(1+sn)*xe3;
-      y[cnt] = -0.5*(rn+sn)*ye1 + 0.5*(1+rn)*ye2 + 0.5*(1+sn)*ye3;
-      ++cnt;
+      x[e*Np+n] = -0.5*(rn+sn)*xe1 + 0.5*(1+rn)*xe2 + 0.5*(1+sn)*xe3;
+      y[e*Np+n] = -0.5*(rn+sn)*ye1 + 0.5*(1+rn)*ye2 + 0.5*(1+sn)*ye3;
     }
   }
 
-  halo->Exchange(x, Np, ogs_dfloat);
-  halo->Exchange(y, Np, ogs_dfloat);
+  o_x = platform.malloc<dfloat>(x);
+  o_y = platform.malloc<dfloat>(y);
 }
+
+} //namespace libp
