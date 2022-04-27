@@ -42,6 +42,7 @@ using namespace libp;
 
 class ellipticSettings_t: public settings_t {
 public:
+  ellipticSettings_t() = default;
   ellipticSettings_t(const comm_t& _comm);
   void report();
   void parseFromFile(platformSettings_t& platformSettings,

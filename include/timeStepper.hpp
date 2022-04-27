@@ -54,6 +54,8 @@ class timeStepper_t {
 
   dfloat GetTimeStep();
 
+  dfloat GetGamma();
+
  private:
   std::shared_ptr<TimeStepper::timeStepperBase_t> ts=nullptr;
 
@@ -86,6 +88,11 @@ public:
   void SetTimeStep(dfloat dt_) {dt = dt_;};
 
   dfloat GetTimeStep() {return dt;};
+
+  virtual dfloat GetGamma() {
+    LIBP_FORCE_ABORT("GetGamma() not available in this Timestepper");
+    return 0.0;
+  }
 };
 
 /* Adams Bashforth, order 3 */
@@ -376,7 +383,7 @@ public:
       int Np, int Nfields,
       platform_t& _platform, comm_t _comm);
 
-  dfloat getGamma();
+  dfloat GetGamma();
 
   void Run(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat start, dfloat end);
 };
@@ -403,7 +410,7 @@ public:
       int Np, int Nfields,
       platform_t& _platform, comm_t _comm);
 
-  dfloat getGamma();
+  dfloat GetGamma();
 
   void Run(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat start, dfloat end);
 };

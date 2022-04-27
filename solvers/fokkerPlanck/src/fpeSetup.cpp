@@ -26,19 +26,22 @@ SOFTWARE.
 
 #include "fpe.hpp"
 
-fpe_t& fpe_t::Setup(platform_t& platform, mesh_t& mesh,
-                    fpeSettings_t& settings){
+void fpe_t::Setup(platform_t& _platform, mesh_t& _mesh,
+                  fpeSettings_t& _settings){
 
-  fpe_t* fpe = new fpe_t(platform, mesh, settings);
+  platform = _platform;
+  mesh = _mesh;
+  comm = _mesh.comm;
+  settings = _settings;
 
-  settings.getSetting("VISCOSITY", fpe->mu);
+  settings.getSetting("VISCOSITY", mu);
 
-  fpe->cubature = (settings.compareSetting("ADVECTION TYPE", "CUBATURE")) ? 1:0;
+  cubature = (settings.compareSetting("ADVECTION TYPE", "CUBATURE")) ? 1:0;
 
   //setup cubature
-  if (fpe->cubature) {
+  if (cubature) {
     mesh.CubatureSetup();
-    mesh.CubatureNodes();
+    mesh.CubaturePhysicalNodes();
   }
 
   dlong Nlocal = mesh.Nelements*mesh.Np;
@@ -47,145 +50,168 @@ fpe_t& fpe_t::Setup(platform_t& platform, mesh_t& mesh,
   //setup timeStepper
   dfloat gamma = 0.0;
   if (settings.compareSetting("TIME INTEGRATOR","AB3")){
-    fpe->timeStepper = new TimeStepper::ab3(mesh.Nelements, mesh.totalHaloPairs,
-                                              mesh.Np, 1, *fpe);
+    timeStepper.Setup<TimeStepper::ab3>(mesh.Nelements,
+                                        mesh.totalHaloPairs,
+                                        mesh.Np, 1, platform, comm);
   } else if (settings.compareSetting("TIME INTEGRATOR","LSERK4")){
-    fpe->timeStepper = new TimeStepper::lserk4(mesh.Nelements, mesh.totalHaloPairs,
-                                              mesh.Np, 1, *fpe);
+    timeStepper.Setup<TimeStepper::lserk4>(mesh.Nelements,
+                                           mesh.totalHaloPairs,
+                                           mesh.Np, 1, platform, comm);
   } else if (settings.compareSetting("TIME INTEGRATOR","DOPRI5")){
-    fpe->timeStepper = new TimeStepper::dopri5(mesh.Nelements, mesh.totalHaloPairs,
-                                              mesh.Np, 1, *fpe, mesh.comm);
+    timeStepper.Setup<TimeStepper::dopri5>(mesh.Nelements,
+                                           mesh.totalHaloPairs,
+                                           mesh.Np, 1, platform, comm);
   } else if (settings.compareSetting("TIME INTEGRATOR","EXTBDF3")){
-    fpe->timeStepper = new TimeStepper::extbdf3(mesh.Nelements, mesh.totalHaloPairs,
-                                              mesh.Np, 1, *fpe);
-    gamma = ((TimeStepper::extbdf3*) fpe->timeStepper)->getGamma();
+    timeStepper.Setup<TimeStepper::extbdf3>(mesh.Nelements,
+                                            mesh.totalHaloPairs,
+                                            mesh.Np, 1, platform, comm);
+    gamma = timeStepper.GetGamma();
   } else if (settings.compareSetting("TIME INTEGRATOR","SSBDF3")){
-    fpe->timeStepper = new TimeStepper::ssbdf3(mesh.Nelements, mesh.totalHaloPairs,
-                                              mesh.Np, 1, *fpe);
-    gamma = ((TimeStepper::ssbdf3*) fpe->timeStepper)->getGamma();
+    timeStepper.Setup<TimeStepper::ssbdf3>(mesh.Nelements,
+                                           mesh.totalHaloPairs,
+                                           mesh.Np, 1, platform, comm);
+    gamma = timeStepper.GetGamma();
   }
 
-  fpe->Nsubcycles=1;
+  Nsubcycles=1;
   if (settings.compareSetting("TIME INTEGRATOR","SSBDF3"))
-    settings.getSetting("NUMBER OF SUBCYCLES", fpe->Nsubcycles);
+    settings.getSetting("NUMBER OF SUBCYCLES", Nsubcycles);
 
   //Setup Elliptic solver
-  fpe->elliptic=NULL;
-  fpe->linearSolver=NULL;
   if (settings.compareSetting("TIME INTEGRATOR","EXTBDF3")
     ||settings.compareSetting("TIME INTEGRATOR","SSBDF3")){
 
     int NBCTypes = 7;
-    int BCType[NBCTypes] = {0,1,1,2,1,1,1}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
+    memory<int> BCType(NBCTypes);
+    // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
+    BCType[0] = 0;
+    BCType[1] = 1;
+    BCType[2] = 1;
+    BCType[3] = 2;
+    BCType[4] = 1;
+    BCType[5] = 1;
+    BCType[6] = 1;
 
-    fpe->ellipticSettings = settings.extractEllipticSettings();
+    ellipticSettings = _settings.extractEllipticSettings();
 
     //make a guess at dt for the lambda value
     //TODO: we should allow preconditioners to be re-setup if lambda is updated
     dfloat hmin = mesh.MinCharacteristicLength();
-    dfloat dtAdvc = fpe->Nsubcycles*hmin/((mesh.N+1.)*(mesh.N+1.));
-    dfloat lambda = gamma/(dtAdvc*fpe->mu);
+    dfloat dtAdvc = Nsubcycles*hmin/((mesh.N+1.)*(mesh.N+1.));
+    dfloat lambda = gamma/(dtAdvc*mu);
 
-    fpe->elliptic = &(elliptic_t::Setup(platform, mesh, *(fpe->ellipticSettings),
-                                             lambda, NBCTypes, BCType));
-    fpe->tau = fpe->elliptic->tau;
+    elliptic.Setup(platform, mesh, ellipticSettings,
+                   lambda, NBCTypes, BCType);
+    tau = elliptic.tau;
 
-    fpe->linearSolver = linearSolver_t::Setup(fpe->elliptic->Ndofs, fpe->elliptic->Nhalo,
-                                              platform, *(fpe->ellipticSettings), mesh.comm);
+    if (ellipticSettings.compareSetting("LINEAR SOLVER","NBPCG")){
+      linearSolver.Setup<LinearSolver::nbpcg>(elliptic.Ndofs, elliptic.Nhalo,
+                                              platform, ellipticSettings, comm);
+    } else if (ellipticSettings.compareSetting("LINEAR SOLVER","NBFPCG")){
+      linearSolver.Setup<LinearSolver::nbfpcg>(elliptic.Ndofs, elliptic.Nhalo,
+                                              platform, ellipticSettings, comm);
+    } else if (ellipticSettings.compareSetting("LINEAR SOLVER","PCG")){
+      linearSolver.Setup<LinearSolver::pcg>(elliptic.Ndofs, elliptic.Nhalo,
+                                              platform, ellipticSettings, comm);
+    } else if (ellipticSettings.compareSetting("LINEAR SOLVER","PGMRES")){
+      linearSolver.Setup<LinearSolver::pgmres>(elliptic.Ndofs, elliptic.Nhalo,
+                                              platform, ellipticSettings, comm);
+    } else if (ellipticSettings.compareSetting("LINEAR SOLVER","PMINRES")){
+      linearSolver.Setup<LinearSolver::pminres>(elliptic.Ndofs, elliptic.Nhalo,
+                                              platform, ellipticSettings, comm);
+    }
   } else {
     //set penalty
-    if (mesh.elementType==TRIANGLES ||
-        mesh.elementType==QUADRILATERALS){
-      fpe->tau = 2.0*(mesh.N+1)*(mesh.N+2)/2.0;
+    if (mesh.elementType==mesh_t::TRIANGLES ||
+        mesh.elementType==mesh_t::QUADRILATERALS){
+      tau = 2.0*(mesh.N+1)*(mesh.N+2)/2.0;
       if(mesh.dim==3)
-        fpe->tau *= 1.5;
+        tau *= 1.5;
     } else
-      fpe->tau = 2.0*(mesh.N+1)*(mesh.N+3);
+      tau = 2.0*(mesh.N+1)*(mesh.N+3);
   }
 
   //setup linear algebra module
-  platform.linAlg.InitKernels({"innerProd", "axpy", "max"});
+  platform.linAlg().InitKernels({"innerProd", "axpy", "max"});
 
   /*setup trace halo exchange */
-  fpe->traceHalo = mesh.HaloTraceSetup(1); //one field
+  traceHalo = mesh.HaloTraceSetup(1); //one field
 
   // compute samples of q at interpolation nodes
-  fpe->q = (dfloat*) calloc(Nlocal+Nhalo, sizeof(dfloat));
-  fpe->o_q = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), fpe->q);
+  q.malloc(Nlocal+Nhalo, 0.0);
+  o_q = platform.malloc<dfloat>(q);
 
   //storage for M*q during reporting
-  fpe->o_Mq = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), fpe->q);
+  o_Mq = platform.malloc<dfloat>(q);
   mesh.MassMatrixKernelSetup(1); // mass matrix operator
 
-  fpe->grad = (dfloat*) calloc((Nlocal+Nhalo)*4, sizeof(dfloat));
-  fpe->o_grad  = platform.malloc((Nlocal+Nhalo)*4*sizeof(dfloat), fpe->grad);
+  grad.malloc((Nlocal+Nhalo)*4, 0.0);
+  o_grad  = platform.malloc<dfloat>(grad);
 
   // OCCA build stuff
-  occa::properties kernelInfo = mesh.props; //copy base occa properties
+  properties_t kernelInfo = mesh.props; //copy base occa properties
 
   //add boundary data to kernel info
-  string dataFileName;
+  std::string dataFileName;
   settings.getSetting("DATA FILE", dataFileName);
   kernelInfo["includes"] += dataFileName;
 
   kernelInfo["defines/" "p_Nfields"]= 1;
 
-  int maxNodes = mymax(mesh.Np, (mesh.Nfp*mesh.Nfaces));
+  int maxNodes = std::max(mesh.Np, (mesh.Nfp*mesh.Nfaces));
   kernelInfo["defines/" "p_maxNodes"]= maxNodes;
 
   int blockMax = 256;
   if (platform.device.mode() == "CUDA") blockMax = 512;
 
-  int NblockV = mymax(1, blockMax/mesh.Np);
+  int NblockV = std::max(1, blockMax/mesh.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;
 
-  int NblockS = mymax(1, blockMax/maxNodes);
+  int NblockS = std::max(1, blockMax/maxNodes);
   kernelInfo["defines/" "p_NblockS"]= NblockS;
 
-  if (fpe->cubature) {
-    int cubMaxNodes = mymax(mesh.Np, (mesh.intNfp*mesh.Nfaces));
+  if (cubature) {
+    int cubMaxNodes = std::max(mesh.Np, (mesh.intNfp*mesh.Nfaces));
     kernelInfo["defines/" "p_cubMaxNodes"]= cubMaxNodes;
-    int cubMaxNodes1 = mymax(mesh.Np, (mesh.intNfp));
+    int cubMaxNodes1 = std::max(mesh.Np, (mesh.intNfp));
     kernelInfo["defines/" "p_cubMaxNodes1"]= cubMaxNodes1;
 
-    int cubNblockV = mymax(1, blockMax/mesh.cubNp);
+    int cubNblockV = std::max(1, blockMax/mesh.cubNp);
     kernelInfo["defines/" "p_cubNblockV"]= cubNblockV;
 
-    int cubNblockS = mymax(1, blockMax/cubMaxNodes);
+    int cubNblockS = std::max(1, blockMax/cubMaxNodes);
     kernelInfo["defines/" "p_cubNblockS"]= cubNblockS;
   }
 
-  kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
-
   // set kernel name suffix
   char *suffix;
-  if(mesh.elementType==TRIANGLES)
+  if(mesh.elementType==mesh_t::TRIANGLES)
     suffix = strdup("Tri2D");
-  if(mesh.elementType==QUADRILATERALS)
+  if(mesh.elementType==mesh_t::QUADRILATERALS)
     suffix = strdup("Quad2D");
-  if(mesh.elementType==TETRAHEDRA)
+  if(mesh.elementType==mesh_t::TETRAHEDRA)
     suffix = strdup("Tet3D");
-  if(mesh.elementType==HEXAHEDRA)
+  if(mesh.elementType==mesh_t::HEXAHEDRA)
     suffix = strdup("Hex3D");
 
   char fileName[BUFSIZ], kernelName[BUFSIZ];
 
   // advection kernels
-  if (fpe->cubature) {
+  if (cubature) {
     sprintf(fileName, DFPE "/okl/fpeCubatureAdvection%s.okl", suffix);
     sprintf(kernelName, "fpeAdvectionCubatureVolume%s", suffix);
-    fpe->advectionVolumeKernel =  platform.buildKernel(fileName, kernelName,
+    advectionVolumeKernel =  platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
     sprintf(kernelName, "fpeAdvectionCubatureSurface%s", suffix);
-    fpe->advectionSurfaceKernel = platform.buildKernel(fileName, kernelName,
+    advectionSurfaceKernel = platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
   } else {
     sprintf(fileName, DFPE "/okl/fpeAdvection%s.okl", suffix);
     sprintf(kernelName, "fpeAdvectionVolume%s", suffix);
-    fpe->advectionVolumeKernel =  platform.buildKernel(fileName, kernelName,
+    advectionVolumeKernel =  platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
     sprintf(kernelName, "fpeAdvectionSurface%s", suffix);
-    fpe->advectionSurfaceKernel = platform.buildKernel(fileName, kernelName,
+    advectionSurfaceKernel = platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
   }
 
@@ -195,18 +221,18 @@ fpe_t& fpe_t::Setup(platform_t& platform, mesh_t& mesh,
     ||settings.compareSetting("TIME INTEGRATOR","SSBDF3")) {
     sprintf(fileName, DFPE "/okl/fpeDiffusionRhs%s.okl", suffix);
     sprintf(kernelName, "fpeDiffusionRhs%s", suffix);
-    fpe->diffusionRhsKernel =  platform.buildKernel(fileName, kernelName,
+    diffusionRhsKernel =  platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
   } else {
     // gradient kernel
     sprintf(fileName, DFPE "/okl/fpeGradient%s.okl", suffix);
     sprintf(kernelName, "fpeGradient%s", suffix);
-    fpe->gradientKernel =  platform.buildKernel(fileName, kernelName,
+    gradientKernel =  platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
 
     sprintf(fileName, DFPE "/okl/fpeDiffusion%s.okl", suffix);
     sprintf(kernelName, "fpeDiffusion%s", suffix);
-    fpe->diffusionKernel =  platform.buildKernel(fileName, kernelName,
+    diffusionKernel =  platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
   }
 
@@ -218,47 +244,38 @@ fpe_t& fpe_t::Setup(platform_t& platform, mesh_t& mesh,
     sprintf(kernelName, "fpeInitialCondition3D");
   }
 
-  fpe->initialConditionKernel = platform.buildKernel(fileName, kernelName,
+  initialConditionKernel = platform.buildKernel(fileName, kernelName,
                                                   kernelInfo);
 
   sprintf(fileName, DFPE "/okl/fpeMaxWaveSpeed%s.okl", suffix);
   sprintf(kernelName, "fpeMaxWaveSpeed%s", suffix);
 
-  fpe->maxWaveSpeedKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
+  maxWaveSpeedKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 
   //build subcycler
-  fpe->subcycler=NULL;
-  fpe->subStepper=NULL;
   if (settings.compareSetting("TIME INTEGRATOR","SSBDF3")) {
-    fpe->subcycler  = new subcycler_t(*fpe);
+    subcycler.platform = platform;
+    subcycler.mesh = mesh;
+    subcycler.comm = comm;
+    subcycler.settings = settings;
+
+    subcycler.cubature = cubature;
+    subcycler.traceHalo = traceHalo;
+    subcycler.advectionVolumeKernel = advectionVolumeKernel;
+    subcycler.advectionSurfaceKernel = advectionSurfaceKernel;
+
     if (settings.compareSetting("SUBCYCLING TIME INTEGRATOR","AB3")){
-      fpe->subStepper = new TimeStepper::ab3(mesh.Nelements, mesh.totalHaloPairs,
-                                                mesh.Np, 1, *(fpe->subcycler));
+      subStepper.Setup<TimeStepper::ab3>(mesh.Nelements,
+                                         mesh.totalHaloPairs,
+                                         mesh.Np, 1, platform, comm);
     } else if (settings.compareSetting("SUBCYCLING TIME INTEGRATOR","LSERK4")){
-      fpe->subStepper = new TimeStepper::lserk4(mesh.Nelements, mesh.totalHaloPairs,
-                                                mesh.Np, 1, *(fpe->subcycler));
+      subStepper.Setup<TimeStepper::lserk4>(mesh.Nelements,
+                                            mesh.totalHaloPairs,
+                                            mesh.Np, 1, platform, comm);
     } else if (settings.compareSetting("SUBCYCLING TIME INTEGRATOR","DOPRI5")){
-      fpe->subStepper = new TimeStepper::dopri5(mesh.Nelements, mesh.totalHaloPairs,
-                                                mesh.Np, 1, *(fpe->subcycler), mesh.comm);
+      subStepper.Setup<TimeStepper::dopri5>(mesh.Nelements,
+                                            mesh.totalHaloPairs,
+                                            mesh.Np, 1, platform, comm);
     }
   }
-
-  return *fpe;
-}
-
-fpe_t::~fpe_t() {
-  advectionVolumeKernel.free();
-  advectionSurfaceKernel.free();
-  gradientKernel.free();
-  diffusionKernel.free();
-  diffusionRhsKernel.free();
-  initialConditionKernel.free();
-  maxWaveSpeedKernel.free();
-
-  if (elliptic) delete elliptic;
-  if (timeStepper) delete timeStepper;
-  if (linearSolver) delete linearSolver;
-  if (subStepper) delete subStepper;
-  if (subcycler) delete subcycler;
-  if (traceHalo) traceHalo->Free();
 }

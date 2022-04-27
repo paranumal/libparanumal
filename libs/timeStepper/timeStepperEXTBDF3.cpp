@@ -80,7 +80,7 @@ extbdf3::extbdf3(dlong Nelements, dlong NhaloElements,
   o_extbdf_b = platform.malloc<dfloat>(extbdf_b);
 }
 
-dfloat extbdf3::getGamma() {
+dfloat extbdf3::GetGamma() {
   return extbdf_b[(Nstages-1)*(Nstages+1)]; //first entry of last row of B
 }
 

@@ -28,40 +28,41 @@ SOFTWARE.
 int main(int argc, char **argv){
 
   // start up MPI
-  MPI_Init(&argc, &argv);
+  comm_t::Init(argc, argv);
 
-  MPI_Comm comm = MPI_COMM_WORLD;
+  LIBP_ABORT("Usage: ./fpeMain setupfile", argc!=2);
 
-  if(argc!=2)
-    LIBP_ABORT(string("Usage: ./fpeMain setupfile"));
+  { /*Scope so everything is destructed before MPI_Finalize */
+    comm_t comm(comm_t::world().Dup());
 
-  //create default settings
-  platformSettings_t platformSettings(comm);
-  meshSettings_t meshSettings(comm);
-  fpeSettings_t fpeSettings(comm);
+    //create default settings
+    platformSettings_t platformSettings(comm);
+    meshSettings_t meshSettings(comm);
+    fpeSettings_t fpeSettings(comm);
 
-  //load settings from file
-  fpeSettings.parseFromFile(platformSettings, meshSettings,
-                            argv[1]);
+    //load settings from file
+    fpeSettings.parseFromFile(platformSettings, meshSettings,
+                              argv[1]);
 
-  // set up platform
-  platform_t platform(platformSettings);
+    // set up platform
+    platform_t platform(platformSettings);
 
-  platformSettings.report();
-  meshSettings.report();
-  fpeSettings.report();
+    platformSettings.report();
+    meshSettings.report();
+    fpeSettings.report();
 
-  // set up mesh
-  mesh_t& mesh = mesh_t::Setup(platform, meshSettings, comm);
+    // set up mesh
+    mesh_t mesh(platform, meshSettings, comm);
 
-  // set up fpe solver
-  fpe_t& fpe = fpe_t::Setup(platform, mesh, fpeSettings);
+    // set up fpe solver
+    fpe_t fpe(platform, mesh, fpeSettings);
 
-  // run
-  fpe.Run();
+    // run
+    fpe.Run();
+  }
 
   // close down MPI
-  MPI_Finalize();
+  comm_t::Finalize();
   return LIBP_SUCCESS;
 }
 

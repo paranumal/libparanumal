@@ -69,7 +69,7 @@ ssbdf3::ssbdf3(dlong Nelements, dlong NhaloElements,
   o_ssbdf_b = platform.malloc<dfloat>(ssbdf_b);
 }
 
-dfloat ssbdf3::getGamma() {
+dfloat ssbdf3::GetGamma() {
   return ssbdf_b[(Nstages-1)*(Nstages+1)]; //first entry of last row of B
 }
 
