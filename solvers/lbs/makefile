@@ -77,9 +77,6 @@ include ../../make.top
 endif
 endif
 
-#gslib
-GS_DIR=${LIBP_TPL_DIR}/gslib
-
 #libraries
 LBS_LIBP_LIBS=timeStepper mesh parAdogs ogs linAlg core
 
