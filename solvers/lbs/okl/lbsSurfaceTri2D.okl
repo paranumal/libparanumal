@@ -154,8 +154,6 @@ if (bc==1 || bc==2 || bc==4 || bc==5){
       }
     }
 
-    // wait for all @shared memory writes of the previous inner loop to complete
-    @barrier("local");
 
     // for each node in the element
     for(int es=0;es<p_NblockS;++es;@inner(1)){

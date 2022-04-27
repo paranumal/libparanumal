@@ -35,21 +35,21 @@ void equiDist3D(const dfloat ew,  const dfloat ex, const dfloat ey, const dfloat
 
 // Compute collision step, physical velocity and scaled external forcing
 @kernel void lbsCollisionTet3D(const dlong Nelements,
-			       // @restrict const  dlong  *  elementIds,
-			       const dfloat t,
-			       const dfloat dt,
-			       const dfloat gamma, // lambda/dt
-			       const dfloat nu, // 1/Re
-			       @restrict const dfloat * LBM, 
-			       @restrict const dfloat * x, 
-			       @restrict const dfloat * y, 
-			       @restrict const dfloat * z, 
-			       @restrict const dfloat *  F,
-			       @restrict const dfloat *  U, 
-			       @restrict dfloat *  q){
+                               // @restrict const  dlong  *  elementIds,
+                               const dfloat t,
+                               const dfloat dt,
+                               const dfloat gamma, // lambda/dt
+                               const dfloat nu, // 1/Re
+                               @restrict const dfloat * LBM,
+                               @restrict const dfloat * x,
+                               @restrict const dfloat * y,
+                               @restrict const dfloat * z,
+                               @restrict const dfloat *  F,
+                               @restrict const dfloat *  U,
+                               @restrict dfloat *  q){
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
-    // @exclusive dlong e; 
-    // @exclusive dfloat r_u, r_v,r_r; 
+    // @exclusive dlong e;
+    // @exclusive dfloat r_u, r_v,r_r;
 
     for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
       for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
@@ -60,58 +60,58 @@ void equiDist3D(const dfloat ew,  const dfloat ex, const dfloat ey, const dfloat
           const dlong idf  = e*p_Nfields*p_Np + n;
           const dlong idn  = e*p_Nmacro*p_Np  + n;
 
-          const dfloat rn = U[idn +0*p_Np]; 
-          const dfloat un = U[idn +1*p_Np]; 
-          const dfloat vn = U[idn +2*p_Np]; 
-          const dfloat wn = U[idn +3*p_Np]; 
+          const dfloat rn = U[idn +0*p_Np];
+          const dfloat un = U[idn +1*p_Np];
+          const dfloat vn = U[idn +2*p_Np];
+          const dfloat wn = U[idn +3*p_Np];
 
 #pragma unroll p_Nfields
           for(int fld=0; fld<p_Nfields;++fld){
-            const dfloat ew = LBM[fld + 0*p_Nfields]; 
-            const dfloat ex = LBM[fld + 1*p_Nfields]; 
-            const dfloat ey = LBM[fld + 2*p_Nfields]; 
-            const dfloat ez = LBM[fld + 3*p_Nfields]; 
+            const dfloat ew = LBM[fld + 0*p_Nfields];
+            const dfloat ex = LBM[fld + 1*p_Nfields];
+            const dfloat ey = LBM[fld + 2*p_Nfields];
+            const dfloat ez = LBM[fld + 3*p_Nfields];
             //
-            const dfloat fn = F[idf+fld*p_Np]; // external forcing 
-            const dfloat qn = q[idf+fld*p_Np]; 
-            
-            dfloat qeq = 0.f; 
+            const dfloat fn = F[idf+fld*p_Np]; // external forcing
+            const dfloat qn = q[idf+fld*p_Np];
+
+            dfloat qeq = 0.f;
             equiDist3D(ew, ex, ey, ez, rn, un, vn, wn, &qeq);
-            
+
             // Compute forcing term using unmodified equilibrium distribution
-            const dfloat qext = fn*qeq*dt;  
-            
+            const dfloat qext = fn*qeq*dt;
+
             // modify equilibrium forcing here
-            qeq -= 0.5*dt*fn; 
-            
-            // collision 
-            q[idf+fld*p_Np] += (qext - 1.f/(gamma + 0.5f)*( qn - qeq)); 
+            qeq -= 0.5*dt*fn;
+
+            // collision
+            q[idf+fld*p_Np] += (qext - 1.f/(gamma + 0.5f)*( qn - qeq));
           }
         }
       }
     }
-  }   
+  }
 }
 
 
 
-// Compute physical velocity and 
-// scaled external forcing i.e. 
+// Compute physical velocity and
+// scaled external forcing i.e.
 // (v-u)\dot G /(rho\timesc^2)
 
 @kernel void lbsForcingTet3D(const dlong Nelements,
-			     // @restrict const  dlong  *  elementIds,
-			     const dfloat t,
-			     const dfloat dt,
-			     const dfloat gamma, // lambda/dt
-			     const dfloat nu, // 1/Re
-			     @restrict const dfloat * LBM, 
-			     @restrict const dfloat * x, 
-			     @restrict const dfloat * y, 
-			     @restrict const dfloat * z, 
-			     @restrict const dfloat * q, 
-			     @restrict dfloat *  F,
-			     @restrict dfloat *  U){
+                             // @restrict const  dlong  *  elementIds,
+                             const dfloat t,
+                             const dfloat dt,
+                             const dfloat gamma, // lambda/dt
+                             const dfloat nu, // 1/Re
+                             @restrict const dfloat * LBM,
+                             @restrict const dfloat * x,
+                             @restrict const dfloat * y,
+                             @restrict const dfloat * z,
+                             @restrict const dfloat * q,
+                             @restrict dfloat *  F,
+                             @restrict dfloat *  U){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
@@ -124,69 +124,69 @@ void equiDist3D(const dfloat ew,  const dfloat ex, const dfloat ey, const dfloat
           const dlong idf = e*p_Nfields*p_Np + n;
           const dlong idn = e*p_Nmacro*p_Np  + n;
 
-          const dfloat xn = x[e*p_Np + n]; 
-          const dfloat yn = y[e*p_Np + n]; 
-          const dfloat zn = z[e*p_Np + n]; 
+          const dfloat xn = x[e*p_Np + n];
+          const dfloat yn = y[e*p_Np + n];
+          const dfloat zn = z[e*p_Np + n];
 
           // old velocities
-          dfloat rn =  U[idn + 0*p_Np]; 
-          dfloat un =  U[idn + 1*p_Np]; 
-          dfloat vn =  U[idn + 2*p_Np]; 
-          dfloat wn =  U[idn + 3*p_Np]; 
+          dfloat rn =  U[idn + 0*p_Np];
+          dfloat un =  U[idn + 1*p_Np];
+          dfloat vn =  U[idn + 2*p_Np];
+          dfloat wn =  U[idn + 3*p_Np];
 
           // Compute force here!!!!
           // !!! This is currenlty only force, can be modified
-          dfloat fx = 0.f, fy = 0.f, fz = 0.f; // Use previous rn un vn to compute fx, fy 
-          lbsBodyForce3D(nu, t, xn, yn, zn, rn, un, vn, wn, &fx, &fy, &fz); 
-          
-          // Now update velocity 
-          rn =0.f, un =0.f, vn =0.f, wn=0.f; 
+          dfloat fx = 0.f, fy = 0.f, fz = 0.f; // Use previous rn un vn to compute fx, fy
+          lbsBodyForce3D(nu, t, xn, yn, zn, rn, un, vn, wn, &fx, &fy, &fz);
+
+          // Now update velocity
+          rn =0.f, un =0.f, vn =0.f, wn=0.f;
 #pragma unroll p_Nfields
           for(int fld=0; fld<p_Nfields;++fld){
-            // const dfloat ew = LBM[fld + 0*p_Nfields]; 
-            const dfloat ex = LBM[fld + 1*p_Nfields]; 
-            const dfloat ey = LBM[fld + 2*p_Nfields]; 
-            const dfloat ez = LBM[fld + 3*p_Nfields]; 
-            
-            const dfloat qn = q[idf+fld*p_Np]; 
+            // const dfloat ew = LBM[fld + 0*p_Nfields];
+            const dfloat ex = LBM[fld + 1*p_Nfields];
+            const dfloat ey = LBM[fld + 2*p_Nfields];
+            const dfloat ez = LBM[fld + 3*p_Nfields];
+
+            const dfloat qn = q[idf+fld*p_Np];
             rn  += qn; // density
-            un  += ex*qn; 
-            vn  += ey*qn; 
-            wn  += ez*qn; 
+            un  += ex*qn;
+            vn  += ey*qn;
+            wn  += ez*qn;
           }
 
           // This is currenlty only force, can be modified
           un  = (un + 0.5*fx*dt)/rn;
           vn  = (vn + 0.5*fy*dt)/rn;
           wn  = (wn + 0.5*fz*dt)/rn;
-          
 
-          for(int fld=0; fld<p_Nfields;++fld){         
-            const dfloat ex = LBM[fld + 1*p_Nfields]; 
-            const dfloat ey = LBM[fld + 2*p_Nfields]; 
-            const dfloat ez = LBM[fld + 3*p_Nfields]; 
-            F[idf +fld*p_Np] =  1.f/rn*p_ic2*( (ex-un)*fx + (ey-vn)*fy + (ez-wn)*fz ); 
+
+          for(int fld=0; fld<p_Nfields;++fld){
+            const dfloat ex = LBM[fld + 1*p_Nfields];
+            const dfloat ey = LBM[fld + 2*p_Nfields];
+            const dfloat ez = LBM[fld + 3*p_Nfields];
+            F[idf +fld*p_Np] =  1.f/rn*p_ic2*( (ex-un)*fx + (ey-vn)*fy + (ez-wn)*fz );
           }
 
-          U[idn + 0*p_Np] = rn; 
-          U[idn + 1*p_Np] = un; 
-          U[idn + 2*p_Np] = vn; 
-          U[idn + 3*p_Np] = wn; 
+          U[idn + 0*p_Np] = rn;
+          U[idn + 1*p_Np] = un;
+          U[idn + 2*p_Np] = vn;
+          U[idn + 3*p_Np] = wn;
 
         }
       }
     }
-  }   
+  }
 }
 
 
 
 // Compute collision step and update velocity field
 @kernel void lbsMomentsTet3D(const dlong Nelements,
-			     // @restrict const  dlong  *  elementIds,
-			     @restrict const dfloat * LBM, 
-			     @restrict const dfloat *  q,
-			     @restrict dfloat *  U){
+                             // @restrict const  dlong  *  elementIds,
+                             @restrict const dfloat * LBM,
+                             @restrict const dfloat *  q,
+                             @restrict dfloat *  U){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
@@ -198,18 +198,18 @@ void equiDist3D(const dfloat ew,  const dfloat ex, const dfloat ey, const dfloat
           const dlong e = et;
           const dlong id = e*p_Nfields*p_Np + n;
 
-          dfloat rn = 0.f; 
-          dfloat un = 0.f; 
-          dfloat vn = 0.f; 
-          dfloat wn = 0.f; 
+          dfloat rn = 0.f;
+          dfloat un = 0.f;
+          dfloat vn = 0.f;
+          dfloat wn = 0.f;
 
 #pragma unroll p_Nfields
           for(int fld=0; fld<p_Nfields;++fld){
-            const dfloat qn = q[id+fld*p_Np]; 
+            const dfloat qn = q[id+fld*p_Np];
             rn  += qn; // density
-            un  += LBM[fld + 1*p_Nfields]*qn; 
-            vn  += LBM[fld + 2*p_Nfields]*qn; 
-            wn  += LBM[fld + 3*p_Nfields]*qn; 
+            un  += LBM[fld + 1*p_Nfields]*qn;
+            vn  += LBM[fld + 2*p_Nfields]*qn;
+            wn  += LBM[fld + 3*p_Nfields]*qn;
           }
           un = un/rn; //x-velocity
           vn = vn/rn; //y-velocity
@@ -217,10 +217,10 @@ void equiDist3D(const dfloat ew,  const dfloat ex, const dfloat ey, const dfloat
 
           const dlong idn = e*p_Nmacro*p_Np + n;
 
-          U[idn + 0*p_Np] = rn; 
-          U[idn + 1*p_Np] = un; 
-          U[idn + 2*p_Np] = vn; 
-          U[idn + 3*p_Np] = wn; 
+          U[idn + 0*p_Np] = rn;
+          U[idn + 1*p_Np] = un;
+          U[idn + 2*p_Np] = vn;
+          U[idn + 3*p_Np] = wn;
         }
       }
     }
@@ -231,40 +231,40 @@ void equiDist3D(const dfloat ew,  const dfloat ex, const dfloat ey, const dfloat
 
 // Compute phase field from mocaro field
 @kernel void lbsPhaseFieldTet3D(const dlong Nelements,
-				// @restrict const  dlong  *  elementIds,
-				const dfloat t,
-				const dfloat dt,
-				const dfloat gamma, // lambda/dt
-				const dfloat nu, // 1/Re
-				@restrict const dfloat * LBM, 
-				@restrict const dfloat * x, 
-				@restrict const dfloat * y, 
-				@restrict const dfloat * z, 
-				@restrict const dfloat *  U,
-				@restrict dfloat *  q){
+                                // @restrict const  dlong  *  elementIds,
+                                const dfloat t,
+                                const dfloat dt,
+                                const dfloat gamma, // lambda/dt
+                                const dfloat nu, // 1/Re
+                                @restrict const dfloat * LBM,
+                                @restrict const dfloat * x,
+                                @restrict const dfloat * y,
+                                @restrict const dfloat * z,
+                                @restrict const dfloat *  U,
+                                @restrict dfloat *  q){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
-    // @exclusive dlong e; 
+    // @exclusive dlong e;
     for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
       for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
         const dlong et = eo+es; // element in block
         if(et<Nelements){
-	  // const dlong e = elementIds[et];
-	  const dlong e = et;
+          // const dlong e = elementIds[et];
+          const dlong e = et;
 
-	  const dlong idf = e*p_Nfields*p_Np + n;
-	  const dlong idn = e*p_Nmacro*p_Np + n;
+          const dlong idf = e*p_Nfields*p_Np + n;
+          const dlong idn = e*p_Nmacro*p_Np + n;
 
-          const dfloat xn = x[n + e*p_Np]; 
-          const dfloat yn = y[n + e*p_Np]; 
-          const dfloat zn = z[n + e*p_Np]; 
+          const dfloat xn = x[n + e*p_Np];
+          const dfloat yn = y[n + e*p_Np];
+          const dfloat zn = z[n + e*p_Np];
 
-          const dfloat rn = U[idn + 0*p_Np]; 
-          const dfloat un = U[idn + 1*p_Np]; 
-          const dfloat vn = U[idn + 2*p_Np]; 
-          const dfloat wn = U[idn + 3*p_Np]; 
+          const dfloat rn = U[idn + 0*p_Np];
+          const dfloat un = U[idn + 1*p_Np];
+          const dfloat vn = U[idn + 2*p_Np];
+          const dfloat wn = U[idn + 3*p_Np];
 
-	  dfloat fx = 0.f, fy = 0.f, fz =0.f;
+          dfloat fx = 0.f, fy = 0.f, fz =0.f;
           lbsBodyForce3D(nu, t, xn, yn, zn, rn, un, vn, wn, &fx, &fy, &fz); 
 
 

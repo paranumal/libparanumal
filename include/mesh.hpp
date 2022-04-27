@@ -385,6 +385,21 @@ class mesh_t {
     }
   }
 
+  dfloat ElementCharacteristicLength(dlong e) {
+    switch (elementType) {
+      case TRIANGLES:
+        return ElementCharacteristicLengthTri2D(e);
+      case QUADRILATERALS:
+        return ElementCharacteristicLengthQuad2D(e);
+      case TETRAHEDRA:
+        return ElementCharacteristicLengthTet3D(e);
+      case HEXAHEDRA:
+        return ElementCharacteristicLengthHex3D(e);
+      default:
+        return 0.0;
+    }
+  }
+
   //create a new mesh object with the same geometry, but different degree
   mesh_t SetupNewDegree(int Nf);
 
@@ -642,21 +657,6 @@ class mesh_t {
   void MassMatrixKernelSetupTet3D(int Nfields);
   void MassMatrixKernelSetupHex3D(int Nfields);
 
-
-  dfloat ElementCharacteristicLength(dlong e) {
-    switch (elementType) {
-      case TRIANGLES:
-        return ElementCharacteristicLengthTri2D(e);
-      case QUADRILATERALS:
-        return ElementCharacteristicLengthQuad2D(e);
-      case TETRAHEDRA:
-        return ElementCharacteristicLengthTet3D(e);
-      case HEXAHEDRA:
-        return ElementCharacteristicLengthHex3D(e);
-      default:
-        return 0.0;
-    }
-  }
   dfloat ElementCharacteristicLengthTri2D(dlong e);
   dfloat ElementCharacteristicLengthQuad2D(dlong e);
   dfloat ElementCharacteristicLengthTet3D(dlong e);

@@ -64,8 +64,6 @@ SOFTWARE.
       }
     }
 
-    // make sure all node data is loaded into @shared
-    @barrier("local");
 
     for(int es=0;es<p_NblockV;++es;@inner(1)){// for all elements in block
       for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element

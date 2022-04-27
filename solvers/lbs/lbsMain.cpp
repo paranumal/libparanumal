@@ -29,39 +29,40 @@ SOFTWARE.
 int main(int argc, char **argv){
 
   // start up MPI
-  MPI_Init(&argc, &argv);
+  comm_t::Init(argc, argv);
 
-  MPI_Comm comm = MPI_COMM_WORLD;
+  LIBP_ABORT("Usage: ./lbsMain setupfile", argc!=2);
 
-  if(argc!=2)
-    LIBP_ABORT(string("Usage: ./lbsMain setupfile"));
+  { /*Scope so everything is destructed before MPI_Finalize */
+    comm_t comm(comm_t::world().Dup());
 
-  //create default settings
-  platformSettings_t platformSettings(comm);
-  meshSettings_t meshSettings(comm);
-  lbsSettings_t lbsSettings(comm);
+    //create default settings
+    platformSettings_t platformSettings(comm);
+    meshSettings_t meshSettings(comm);
+    lbsSettings_t lbsSettings(comm);
 
+    //load settings from file
+    lbsSettings.parseFromFile(platformSettings, meshSettings,
+                              argv[1]);
 
-  //load settings from file
-  lbsSettings.parseFromFile(platformSettings, meshSettings,
-                            argv[1]);
+    // set up platform
+    platform_t platform(platformSettings);
 
-  // set up platform
-  platform_t platform(platformSettings);
+    platformSettings.report();
+    meshSettings.report();
+    lbsSettings.report();
 
-  platformSettings.report();
-  meshSettings.report();
-  lbsSettings.report();
+    // set up mesh
+    mesh_t mesh(platform, meshSettings, comm);
 
-  // set up mesh
-  mesh_t& mesh = mesh_t::Setup(platform, meshSettings, comm);
+    // set up lbs solver
+    lbs_t lbs(platform, mesh, lbsSettings);
 
-  // set up lbs solver
-  lbs_t& lbs = lbs_t::Setup(platform, mesh, lbsSettings);
+    // run
+    lbs.Run();
+  }
 
-  // run
-  lbs.Run();
   // close down MPI
-  MPI_Finalize();
+  comm_t::Finalize();
   return LIBP_SUCCESS;
 }
