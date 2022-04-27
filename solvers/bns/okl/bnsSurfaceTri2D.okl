@@ -164,7 +164,6 @@ void upwind(const dfloat nx, const dfloat ny, const dfloat c,
     }
 
     // wait for all @shared memory writes of the previous inner loop to complete
-    @barrier("local");
 
     // for each node in the element
     for(int es=0;es<p_NblockS;++es;@inner(1)){
@@ -319,7 +318,6 @@ void upwind(const dfloat nx, const dfloat ny, const dfloat c,
     }
 
     // wait for all @shared memory writes of the previous inner loop to complete
-    @barrier("local");
 
     // for each node in the element
     for(int es=0;es<p_NblockS;++es;@inner(1)){
@@ -513,7 +511,6 @@ void upwind_split(const dfloat nx, const dfloat ny, const dfloat c,
     }
 
     // wait for all @shared memory writes of the previous inner loop to complete
-    @barrier("local");
 
     // for each node in the element
     for(int es=0;es<p_NblockS;++es;@inner(1)){
@@ -697,7 +694,6 @@ void upwind_split(const dfloat nx, const dfloat ny, const dfloat c,
     }
 
     // wait for all @shared memory writes of the previous inner loop to complete
-    @barrier("local");
 
     // for each node in the element
     for(int es=0;es<p_NblockS;++es;@inner(1)){
