@@ -54,10 +54,11 @@ void mesh_t::MultiRateSetup(memory<dfloat> EToDT) {
   //compute the level of each element
   mrLevel.malloc(Nelements+totalHaloPairs);
   for(int lev=0; lev<mrNlevels; lev++){
-    dfloat dtlev = dtmin*(2<<lev);
+    dfloat dtlev = dtmin*(1<<lev);
     for(dlong e=0;e<Nelements;++e){
-      if(EToDT[e] >=dtlev)
+      if(EToDT[e] >=dtlev) {
         mrLevel[e] = lev;
+      }
     }
   }
 
