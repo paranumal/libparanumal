@@ -416,6 +416,7 @@ void surfaceMRTerms(const int e,
     const dfloat s22M = -c*c*(sqrt(2.0)*q9M  - q3M*q3M/q1M);
     const dfloat s33M = -c*c*(sqrt(2.0)*q10M - q4M*q4M/q1M);
 
+    const dlong  idM = vmapM[sk];
     dfloat rP, uP, vP, wP, s11P, s12P, s13P, s22P, s23P, s33P;
     bnsBoundaryConditions3D(bc, c, nu, time,
                             x[idM], y[idM], z[idM], nx, ny, nz,
@@ -534,6 +535,7 @@ void surfaceMRTerms_split(const int e,
     const dfloat s22M = -c*c*(sqrt(2.0)*q9M  - q3M*q3M/q1M);
     const dfloat s33M = -c*c*(sqrt(2.0)*q10M - q4M*q4M/q1M);
 
+    const dlong  idM = vmapM[sk];
     dfloat rP, uP, vP, wP, s11P, s12P, s13P, s22P, s23P, s33P;
     bnsBoundaryConditions3D(bc, c, nu, time,
                             x[idM], y[idM], z[idM], nx, ny, nz,

@@ -284,8 +284,9 @@ void upwind(const dfloat nx, const dfloat ny, const dfloat c,
               const dfloat s11M = -c*c*(sqrt(2.0)*q5M - q2M*q2M/q1M);
               const dfloat s22M = -c*c*(sqrt(2.0)*q6M - q3M*q3M/q1M);
 
+              const dlong  vidM = vmapM[id];
               dfloat rP, uP, vP, s11P, s12P, s22P;
-              bnsBoundaryConditions2D(bc, c, nu, time, x[idM], y[idM], nx, ny,
+              bnsBoundaryConditions2D(bc, c, nu, time, x[vidM], y[vidM], nx, ny,
                                       rM, uM, vM, s11M, s12M, s22M,
                                       &rP, &uP, &vP, &s11P, &s12P, &s22P);
 
@@ -654,8 +655,9 @@ void upwind_split(const dfloat nx, const dfloat ny, const dfloat c,
               const dfloat s11M = -c*c*(sqrt(2.0)*q5M - q2M*q2M/q1M);
               const dfloat s22M = -c*c*(sqrt(2.0)*q6M - q3M*q3M/q1M);
 
+              const dlong  vidM = vmapM[id];
               dfloat rP, uP, vP, s11P, s12P, s22P;
-              bnsBoundaryConditions2D(bc, c, nu, time, x[idM], y[idM], nx, ny,
+              bnsBoundaryConditions2D(bc, c, nu, time, x[vidM], y[vidM], nx, ny,
                                       rM, uM, vM, s11M, s12M, s22M,
                                       &rP, &uP, &vP, &s11P, &s12P, &s22P);
 
