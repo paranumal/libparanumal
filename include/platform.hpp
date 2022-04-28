@@ -28,10 +28,10 @@ SOFTWARE.
 #define PLATFORM_HPP
 
 #define LIBP_MAJOR_VERSION 0
-#define LIBP_MINOR_VERSION 4
+#define LIBP_MINOR_VERSION 5
 #define LIBP_PATCH_VERSION 0
-#define LIBP_VERSION       00400
-#define LIBP_VERSION_STR   "0.4.0"
+#define LIBP_VERSION       00500
+#define LIBP_VERSION_STR   "0.5.0"
 
 #include "core.hpp"
 #include "memory.hpp"
