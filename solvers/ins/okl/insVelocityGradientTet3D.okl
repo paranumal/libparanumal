@@ -48,7 +48,6 @@ SOFTWARE.
         }
       }
 
-      @barrier("local");
 
       for(dlong e=eo;e<eo+p_NblockV;++e;@inner(1)){
         for(int n=0;n<p_Np;++n;@inner(0)){

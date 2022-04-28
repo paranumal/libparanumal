@@ -27,11 +27,11 @@ SOFTWARE.
 #include "ins.hpp"
 
 // compute RHS = beta*RHS + alpha*grad P
-void ins_t::Gradient(const dfloat alpha, occa::memory& o_P,
-                     const dfloat beta,  occa::memory& o_RHS,
+void ins_t::Gradient(const dfloat alpha, deviceMemory<dfloat>& o_P,
+                     const dfloat beta,  deviceMemory<dfloat>& o_RHS,
                      const dfloat T){
 
-  pTraceHalo->ExchangeStart(o_P, 1, ogs_dfloat);
+  pTraceHalo.ExchangeStart(o_P, 1);
 
   // Compute Volume Contribution
   gradientVolumeKernel(mesh.Nelements,
@@ -42,7 +42,7 @@ void ins_t::Gradient(const dfloat alpha, occa::memory& o_P,
                       o_P,
                       o_RHS);
 
-  pTraceHalo->ExchangeFinish(o_P, 1, ogs_dfloat);
+  pTraceHalo.ExchangeFinish(o_P, 1);
 
   // Compute Surface Conribution
   gradientSurfaceKernel(mesh.Nelements,

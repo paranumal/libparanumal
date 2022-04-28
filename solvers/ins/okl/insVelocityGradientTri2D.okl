@@ -103,7 +103,6 @@ SOFTWARE.
         }
       }
 
-      @barrier("local");
 
       for(int es=0;es<p_NbV; ++es; @inner(1)){
         for(int n=0;n<p_Np;++n;@inner(0)){

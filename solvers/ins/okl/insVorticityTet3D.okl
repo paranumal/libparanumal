@@ -48,7 +48,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     for(int e=eo;e<eo+p_NblockV;++e;@inner(1)){
       for(int n=0;n<p_Np;++n;@inner(0)){
@@ -174,7 +173,6 @@ void eigenValue(const dfloat a11, const dfloat a12, const dfloat a13, const dflo
       }
     }
 
-    @barrier("local");
 
     for(int e=eo;e<eo+p_NblockV;++e;@inner(1)){
       for(int n=0;n<p_Np;++n;@inner(0)){
