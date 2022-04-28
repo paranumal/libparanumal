@@ -118,7 +118,7 @@ def test(name, cmd, settings, referenceNorm, ranks=1):
     print(bcolors.WARNING + name + " stderr:" + bcolors.ENDC)
     print(run.stderr.decode())
     #save the setup for reproducibility
-    # writeSetup(name,settings)
+    writeSetup(name,settings)
     failed = 1
   else:
     #collect last line of output
@@ -174,10 +174,12 @@ if __name__ == "__main__":
   import testTimeStepper
   import testLinearSolver
   import testParAlmond
+  import testParAdogs
   import testInitialGuess
 
   failCount=0;
   failCount+=testMesh.main()
+  failCount+=testParAdogs.main()
   failCount+=testGradient.main()
   failCount+=testAdvection.main()
   failCount+=testAcoustics.main()
