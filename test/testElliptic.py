@@ -266,7 +266,7 @@ def main():
                     cmd=ellipticBin,
                     settings=ellipticSettings(element=6,data_file=ellipticData3D,dim=3,
                                               precon="NONE", discretization="IPDG"),
-                    referenceNorm=0.353420307742754)
+                    referenceNorm=0.353553400119087)
 
   failCount += test(name="testEllipticHex_Ipdg",
                     cmd=ellipticBin,
