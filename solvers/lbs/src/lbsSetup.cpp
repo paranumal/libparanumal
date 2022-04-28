@@ -121,63 +121,65 @@ void lbs_t::Setup(platform_t& _platform, mesh_t& _mesh,
   kernelInfo["defines/" "p_NblockS"]= NblockS;
 
   // set kernel name suffix
-  char *suffix;
+  std::string suffix;
   if(mesh.elementType==mesh_t::TRIANGLES)
-    suffix = strdup("Tri2D");
+    suffix = "Tri2D";
   if(mesh.elementType==mesh_t::QUADRILATERALS)
-    suffix = strdup("Quad2D");
+    suffix = "Quad2D";
   if(mesh.elementType==mesh_t::TETRAHEDRA)
-    suffix = strdup("Tet3D");
+    suffix = "Tet3D";
   if(mesh.elementType==mesh_t::HEXAHEDRA)
-    suffix = strdup("Hex3D");
+    suffix = "Hex3D";
 
-  char fileName[BUFSIZ], kernelName[BUFSIZ];
+  std::string oklFilePrefix = DLBS "/okl/";
+  std::string oklFileSuffix = ".okl";
+
+  std::string fileName, kernelName;
 
   if (mesh.dim==2) {
-    sprintf(fileName, DLBS "/okl/lbsInitialCondition2D.okl");
-    sprintf(kernelName, "lbsInitialCondition2D");
+    fileName   = oklFilePrefix + "lbsInitialCondition2D" + oklFileSuffix;
+    kernelName = "lbsInitialCondition2D";
   } else {
-    sprintf(fileName, DLBS "/okl/lbsInitialCondition3D.okl");
-    sprintf(kernelName, "lbsInitialCondition3D");
+    fileName   = oklFilePrefix + "lbsInitialCondition3D" + oklFileSuffix;
+    kernelName = "lbsInitialCondition3D";
   }
   initialConditionKernel = platform.buildKernel(fileName, kernelName,
 						     kernelInfo);
   
   // kernels from volume file
-  sprintf(fileName, DLBS "/okl/lbsCollision%s.okl", suffix);  
+  fileName   = oklFilePrefix + "lbsCollision" + suffix + oklFileSuffix;
 
-  sprintf(kernelName, "lbsCollision%s", suffix);
+  kernelName = "lbsCollision" + suffix;
   collisionKernel =  platform.buildKernel(fileName, kernelName,
 					       kernelInfo);
 
-  sprintf(kernelName, "lbsForcing%s", suffix);
+  kernelName = "lbsForcing" + suffix;
   forcingKernel =  platform.buildKernel(fileName, kernelName,
 					     kernelInfo);
 
-  sprintf(kernelName, "lbsMoments%s", suffix);
+  kernelName = "lbsMoments" + suffix;
   momentsKernel =  platform.buildKernel(fileName, kernelName,
 					     kernelInfo);
 
-  sprintf(kernelName, "lbsPhaseField%s", suffix);
+  kernelName = "lbsPhaseField" + suffix;
   phaseFieldKernel =  platform.buildKernel(fileName, kernelName,
 						kernelInfo);
 
   // kernels from volume file
-  sprintf(fileName, DLBS "/okl/lbsVolume%s.okl", suffix);
-  sprintf(kernelName, "lbsVolume%s", suffix);
+  fileName   = oklFilePrefix + "lbsVolume" + suffix + oklFileSuffix;
+  kernelName = "lbsVolume" + suffix;
   volumeKernel =  platform.buildKernel(fileName, kernelName,
 					    kernelInfo);
 
   // kernels from surface file
-  sprintf(fileName, DLBS "/okl/lbsSurface%s.okl", suffix);
-  
-  sprintf(kernelName, "lbsSurface%s", suffix);
+  fileName   = oklFilePrefix + "lbsSurface" + suffix + oklFileSuffix;
+  kernelName = "lbsSurface" + suffix;
   surfaceKernel = platform.buildKernel(fileName, kernelName,
 					    kernelInfo);
 
   // vorticity calculation
-  sprintf(fileName, DLBS "/okl/lbsVorticity%s.okl", suffix);
-  sprintf(kernelName, "lbsVorticity%s", suffix);
+  fileName   = oklFilePrefix + "lbsVorticity" + suffix + oklFileSuffix;
+  kernelName = "lbsVorticity" + suffix;
 
   vorticityKernel = platform.buildKernel(fileName, kernelName,
 					      kernelInfo);

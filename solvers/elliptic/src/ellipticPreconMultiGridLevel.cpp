@@ -248,17 +248,20 @@ MGLevel::MGLevel(elliptic_t& _elliptic,
   properties_t kernelInfo = elliptic.platform.props();
 
   // set kernel name suffix
-  char *suffix;
+  std::string suffix;
   if(mesh.elementType==mesh_t::TRIANGLES)
-    suffix = strdup("Tri2D");
+    suffix = "Tri2D";
   else if(mesh.elementType==mesh_t::QUADRILATERALS)
-    suffix = strdup("Quad2D");
+    suffix = "Quad2D";
   else if(mesh.elementType==mesh_t::TETRAHEDRA)
-    suffix = strdup("Tet3D");
+    suffix = "Tet3D";
   else if(mesh.elementType==mesh_t::HEXAHEDRA)
-    suffix = strdup("Hex3D");
+    suffix = "Hex3D";
 
-  char fileName[BUFSIZ], kernelName[BUFSIZ];
+  std::string oklFilePrefix = DELLIPTIC "/okl/";
+  std::string oklFileSuffix = ".okl";
+
+  std::string fileName, kernelName;
 
   kernelInfo["defines/" "p_NqFine"]= mesh.N+1;
   kernelInfo["defines/" "p_NqCoarse"]= Nc+1;
@@ -275,20 +278,20 @@ MGLevel::MGLevel(elliptic_t& _elliptic,
   kernelInfo["defines/" "p_NblockVCoarse"]= NblockVCoarse;
 
   if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
-    sprintf(fileName, DELLIPTIC "/okl/ellipticPreconCoarsen%s.okl", suffix);
-    sprintf(kernelName, "ellipticPartialPreconCoarsen%s", suffix);
+    fileName   = oklFilePrefix + "ellipticPreconCoarsen" + suffix + oklFileSuffix;
+    kernelName = "ellipticPartialPreconCoarsen" + suffix;
     partialCoarsenKernel = elliptic.platform.buildKernel(fileName, kernelName, kernelInfo);
 
-    sprintf(fileName, DELLIPTIC "/okl/ellipticPreconProlongate%s.okl", suffix);
-    sprintf(kernelName, "ellipticPartialPreconProlongate%s", suffix);
+    fileName   = oklFilePrefix + "ellipticPreconProlongate" + suffix + oklFileSuffix;
+    kernelName = "ellipticPartialPreconProlongate" + suffix;
     partialProlongateKernel = elliptic.platform.buildKernel(fileName, kernelName, kernelInfo);
   } else { //IPDG
-    sprintf(fileName, DELLIPTIC "/okl/ellipticPreconCoarsen%s.okl", suffix);
-    sprintf(kernelName, "ellipticPreconCoarsen%s", suffix);
+    fileName   = oklFilePrefix + "ellipticPreconCoarsen" + suffix + oklFileSuffix;
+    kernelName = "ellipticPreconCoarsen" + suffix;
     coarsenKernel = elliptic.platform.buildKernel(fileName, kernelName, kernelInfo);
 
-    sprintf(fileName, DELLIPTIC "/okl/ellipticPreconProlongate%s.okl", suffix);
-    sprintf(kernelName, "ellipticPreconProlongate%s", suffix);
+    fileName   = oklFilePrefix + "ellipticPreconProlongate" + suffix + oklFileSuffix;
+    kernelName = "ellipticPreconProlongate" + suffix;
     prolongateKernel = elliptic.platform.buildKernel(fileName, kernelName, kernelInfo);
   }
 }

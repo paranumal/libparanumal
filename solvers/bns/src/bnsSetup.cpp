@@ -198,41 +198,44 @@ void bns_t::Setup(platform_t& _platform, mesh_t& _mesh,
   kernelInfo["defines/" "p_NblockCub"]= NblockCub;
 
   // set kernel name suffix
-  char *suffix;
+  std::string suffix;
   if(mesh.elementType==mesh_t::TRIANGLES)
-    suffix = strdup("Tri2D");
+    suffix = "Tri2D";
   if(mesh.elementType==mesh_t::QUADRILATERALS)
-    suffix = strdup("Quad2D");
+    suffix = "Quad2D";
   if(mesh.elementType==mesh_t::TETRAHEDRA)
-    suffix = strdup("Tet3D");
+    suffix = "Tet3D";
   if(mesh.elementType==mesh_t::HEXAHEDRA)
-    suffix = strdup("Hex3D");
+    suffix = "Hex3D";
 
-  char fileName[BUFSIZ], kernelName[BUFSIZ];
+  std::string oklFilePrefix = DBNS "/okl/";
+  std::string oklFileSuffix = ".okl";
+
+  std::string fileName, kernelName;
 
   // kernels from volume file
-  sprintf(fileName, DBNS "/okl/bnsVolume%s.okl", suffix);
-  sprintf(kernelName, "bnsVolume%s", suffix);
+  fileName   = oklFilePrefix + "bnsVolume" + suffix + oklFileSuffix;
+  kernelName = "bnsVolume" + suffix;
   volumeKernel =  platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
 
   if (pmlcubature) {
-    sprintf(kernelName, "bnsPmlVolumeCub%s", suffix);
+    kernelName = "bnsPmlVolumeCub" + suffix;
     pmlVolumeKernel =  platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
   } else {
-    sprintf(kernelName, "bnsPmlVolume%s", suffix);
+    kernelName = "bnsPmlVolume" + suffix;
     pmlVolumeKernel =  platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
   }
 
   // kernels from relaxation file
-  sprintf(fileName, DBNS "/okl/bnsRelaxation%s.okl", suffix);
-  sprintf(kernelName, "bnsRelaxation%s", suffix);
+  fileName   = oklFilePrefix + "bnsRelaxation" + suffix + oklFileSuffix;
+  kernelName = "bnsRelaxation" + suffix;
   relaxationKernel = platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
   if (pmlcubature) {
-    sprintf(kernelName, "bnsPmlRelaxationCub%s", suffix);
+    kernelName = "bnsPmlRelaxationCub" + suffix;
     pmlRelaxationKernel = platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
   } else {
@@ -242,39 +245,39 @@ void bns_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
 
   // kernels from surface file
-  sprintf(fileName, DBNS "/okl/bnsSurface%s.okl", suffix);
+  fileName   = oklFilePrefix + "bnsSurface" + suffix + oklFileSuffix;
   if (settings.compareSetting("TIME INTEGRATOR","MRAB3") ||
       settings.compareSetting("TIME INTEGRATOR","MRSAAB3")) {
-    sprintf(kernelName, "bnsMRSurface%s", suffix);
+    kernelName = "bnsMRSurface" + suffix;
     surfaceKernel = platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
 
-    sprintf(kernelName, "bnsMRPmlSurface%s", suffix);
+    kernelName = "bnsMRPmlSurface" + suffix;
     pmlSurfaceKernel = platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
   } else {
-    sprintf(kernelName, "bnsSurface%s", suffix);
+    kernelName = "bnsSurface" + suffix;
     surfaceKernel = platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
 
-    sprintf(kernelName, "bnsPmlSurface%s", suffix);
+    kernelName = "bnsPmlSurface" + suffix;
     pmlSurfaceKernel = platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
   }
 
   // vorticity calculation
-  sprintf(fileName, DBNS "/okl/bnsVorticity%s.okl", suffix);
-  sprintf(kernelName, "bnsVorticity%s", suffix);
+  fileName   = oklFilePrefix + "bnsVorticity" + suffix + oklFileSuffix;
+  kernelName = "bnsVorticity" + suffix;
 
   vorticityKernel = platform.buildKernel(fileName, kernelName,
                                      kernelInfo);
 
   if (mesh.dim==2) {
-    sprintf(fileName, DBNS "/okl/bnsInitialCondition2D.okl");
-    sprintf(kernelName, "bnsInitialCondition2D");
+    fileName   = oklFilePrefix + "bnsInitialCondition2D" + oklFileSuffix;
+    kernelName = "bnsInitialCondition2D";
   } else {
-    sprintf(fileName, DBNS "/okl/bnsInitialCondition3D.okl");
-    sprintf(kernelName, "bnsInitialCondition3D");
+    fileName   = oklFilePrefix + "bnsInitialCondition3D" + oklFileSuffix;
+    kernelName = "bnsInitialCondition3D";
   }
 
   initialConditionKernel = platform.buildKernel(fileName, kernelName,

@@ -130,42 +130,45 @@ void cns_t::Setup(platform_t& _platform, mesh_t& _mesh,
   }
 
   // set kernel name suffix
-  char *suffix;
+  std::string suffix;
   if(mesh.elementType==mesh_t::TRIANGLES)
-    suffix = strdup("Tri2D");
+    suffix = "Tri2D";
   if(mesh.elementType==mesh_t::QUADRILATERALS)
-    suffix = strdup("Quad2D");
+    suffix = "Quad2D";
   if(mesh.elementType==mesh_t::TETRAHEDRA)
-    suffix = strdup("Tet3D");
+    suffix = "Tet3D";
   if(mesh.elementType==mesh_t::HEXAHEDRA)
-    suffix = strdup("Hex3D");
+    suffix = "Hex3D";
 
-  char fileName[BUFSIZ], kernelName[BUFSIZ];
+  std::string oklFilePrefix = DCNS "/okl/";
+  std::string oklFileSuffix = ".okl";
+
+  std::string fileName, kernelName;
 
   if (isothermal) {
     if (cubature) {
       // kernels from volume file
-      sprintf(fileName, DCNS "/okl/cnsIsothermalCubatureVolume%s.okl", suffix);
-      sprintf(kernelName, "cnsIsothermalCubatureVolume%s", suffix);
+      fileName   = oklFilePrefix + "cnsIsothermalCubatureVolume" + suffix + oklFileSuffix;
+      kernelName = "cnsIsothermalCubatureVolume" + suffix;
 
       cubatureVolumeKernel =  platform.buildKernel(fileName, kernelName,
                                                kernelInfo);
       // kernels from surface file
-      sprintf(fileName, DCNS "/okl/cnsIsothermalCubatureSurface%s.okl", suffix);
-      sprintf(kernelName, "cnsIsothermalCubatureSurface%s", suffix);
+      fileName   = oklFilePrefix + "cnsIsothermalCubatureSurface" + suffix + oklFileSuffix;
+      kernelName = "cnsIsothermalCubatureSurface" + suffix;
 
       cubatureSurfaceKernel = platform.buildKernel(fileName, kernelName,
                                                kernelInfo);
     } else {
       // kernels from volume file
-      sprintf(fileName, DCNS "/okl/cnsIsothermalVolume%s.okl", suffix);
-      sprintf(kernelName, "cnsIsothermalVolume%s", suffix);
+      fileName   = oklFilePrefix + "cnsIsothermalVolume" + suffix + oklFileSuffix;
+      kernelName = "cnsIsothermalVolume" + suffix;
 
       volumeKernel =  platform.buildKernel(fileName, kernelName,
                                              kernelInfo);
       // kernels from surface file
-      sprintf(fileName, DCNS "/okl/cnsIsothermalSurface%s.okl", suffix);
-      sprintf(kernelName, "cnsIsothermalSurface%s", suffix);
+      fileName   = oklFilePrefix + "cnsIsothermalSurface" + suffix + oklFileSuffix;
+      kernelName = "cnsIsothermalSurface" + suffix;
 
       surfaceKernel = platform.buildKernel(fileName, kernelName,
                                              kernelInfo);
@@ -173,27 +176,27 @@ void cns_t::Setup(platform_t& _platform, mesh_t& _mesh,
   } else {
     if (cubature) {
       // kernels from volume file
-      sprintf(fileName, DCNS "/okl/cnsCubatureVolume%s.okl", suffix);
-      sprintf(kernelName, "cnsCubatureVolume%s", suffix);
+      fileName   = oklFilePrefix + "cnsCubatureVolume" + suffix + oklFileSuffix;
+      kernelName = "cnsCubatureVolume" + suffix;
 
       cubatureVolumeKernel =  platform.buildKernel(fileName, kernelName,
                                                kernelInfo);
       // kernels from surface file
-      sprintf(fileName, DCNS "/okl/cnsCubatureSurface%s.okl", suffix);
-      sprintf(kernelName, "cnsCubatureSurface%s", suffix);
+      fileName   = oklFilePrefix + "cnsCubatureSurface" + suffix + oklFileSuffix;
+      kernelName = "cnsCubatureSurface" + suffix;
 
       cubatureSurfaceKernel = platform.buildKernel(fileName, kernelName,
                                                kernelInfo);
     } else {
       // kernels from volume file
-      sprintf(fileName, DCNS "/okl/cnsVolume%s.okl", suffix);
-      sprintf(kernelName, "cnsVolume%s", suffix);
+      fileName   = oklFilePrefix + "cnsVolume" + suffix + oklFileSuffix;
+      kernelName = "cnsVolume" + suffix;
 
       volumeKernel =  platform.buildKernel(fileName, kernelName,
                                              kernelInfo);
       // kernels from surface file
-      sprintf(fileName, DCNS "/okl/cnsSurface%s.okl", suffix);
-      sprintf(kernelName, "cnsSurface%s", suffix);
+      fileName   = oklFilePrefix + "cnsSurface" + suffix + oklFileSuffix;
+      kernelName = "cnsSurface" + suffix;
 
       surfaceKernel = platform.buildKernel(fileName, kernelName,
                                              kernelInfo);
@@ -201,48 +204,47 @@ void cns_t::Setup(platform_t& _platform, mesh_t& _mesh,
   }
 
   // kernels from volume file
-  sprintf(fileName, DCNS "/okl/cnsGradVolume%s.okl", suffix);
-  sprintf(kernelName, "cnsGradVolume%s", suffix);
+  fileName   = oklFilePrefix + "cnsGradVolume" + suffix + oklFileSuffix;
+  kernelName = "cnsGradVolume" + suffix;
 
   gradVolumeKernel =  platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
   // kernels from surface file
-  sprintf(fileName, DCNS "/okl/cnsGradSurface%s.okl", suffix);
-  sprintf(kernelName, "cnsGradSurface%s", suffix);
+  fileName   = oklFilePrefix + "cnsGradSurface" + suffix + oklFileSuffix;
+  kernelName = "cnsGradSurface" + suffix;
 
   gradSurfaceKernel = platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
 
   // vorticity calculation
-  sprintf(fileName, DCNS "/okl/cnsVorticity%s.okl", suffix);
-  sprintf(kernelName, "cnsVorticity%s", suffix);
+  fileName   = oklFilePrefix + "cnsVorticity" + suffix + oklFileSuffix;
+  kernelName = "cnsVorticity" + suffix;
 
   vorticityKernel = platform.buildKernel(fileName, kernelName,
                                      kernelInfo);
 
   if (mesh.dim==2) {
-    sprintf(fileName, DCNS "/okl/cnsInitialCondition2D.okl");
+    fileName   = oklFilePrefix + "cnsInitialCondition2D" + oklFileSuffix;
     if (isothermal)
-      sprintf(kernelName, "cnsIsothermalInitialCondition2D");
+      kernelName = "cnsIsothermalInitialCondition2D";
     else
-      sprintf(kernelName, "cnsInitialCondition2D");
+      kernelName = "cnsInitialCondition2D";
   } else {
-    sprintf(fileName, DCNS "/okl/cnsInitialCondition3D.okl");
+    fileName   = oklFilePrefix + "cnsInitialCondition3D" + oklFileSuffix;
     if (isothermal)
-      sprintf(kernelName, "cnsIsothermalInitialCondition3D");
+      kernelName = "cnsIsothermalInitialCondition3D";
     else
-      sprintf(kernelName, "cnsInitialCondition3D");
+      kernelName = "cnsInitialCondition3D";
   }
-
 
   initialConditionKernel = platform.buildKernel(fileName, kernelName,
                                             kernelInfo);
 
-  sprintf(fileName, DCNS "/okl/cnsMaxWaveSpeed%s.okl", suffix);
+  fileName   = oklFilePrefix + "cnsMaxWaveSpeed" + suffix + oklFileSuffix;
   if (isothermal) {
-    sprintf(kernelName, "cnsIsothermalMaxWaveSpeed%s", suffix);
+    kernelName = "cnsIsothermalMaxWaveSpeed" + suffix;
   } else {
-    sprintf(kernelName, "cnsMaxWaveSpeed%s", suffix);
+    kernelName = "cnsMaxWaveSpeed" + suffix;
   }
 
   maxWaveSpeedKernel = platform.buildKernel(fileName, kernelName,

@@ -57,11 +57,11 @@ void elliptic_t::Run(){
   kernelInfo["includes"] += dataFileName;
 
   //add standard boundary functions
-  char *boundaryHeaderFileName;
+  std::string boundaryHeaderFileName;
   if (mesh.dim==2)
-    boundaryHeaderFileName = strdup(DELLIPTIC "/data/ellipticBoundary2D.h");
+    boundaryHeaderFileName = std::string(DELLIPTIC "/data/ellipticBoundary2D.h");
   else if (mesh.dim==3)
-    boundaryHeaderFileName = strdup(DELLIPTIC "/data/ellipticBoundary3D.h");
+    boundaryHeaderFileName = std::string(DELLIPTIC "/data/ellipticBoundary3D.h");
   kernelInfo["includes"] += boundaryHeaderFileName;
 
   int Nmax = std::max(mesh.Np, mesh.Nfaces*mesh.Nfp);
@@ -70,41 +70,44 @@ void elliptic_t::Run(){
   kernelInfo["defines/" "p_Nfields"]= Nfields;
 
   // set kernel name suffix
-  char *suffix;
+  std::string suffix;
   if(mesh.elementType==mesh_t::TRIANGLES) {
-    suffix = strdup("Tri2D");
+    suffix = "Tri2D";
   } else if(mesh.elementType==mesh_t::QUADRILATERALS) {
     if(mesh.dim==2)
-      suffix = strdup("Quad2D");
+      suffix = "Quad2D";
     else
-      suffix = strdup("Quad3D");
+      suffix = "Quad3D";
   } else if(mesh.elementType==mesh_t::TETRAHEDRA) {
-    suffix = strdup("Tet3D");
+    suffix = "Tet3D";
   } else { //mesh.elementType==mesh_t::HEXAHEDRA)
-    suffix = strdup("Hex3D");
+    suffix = "Hex3D";
   }
 
-  char fileName[BUFSIZ], kernelName[BUFSIZ];
+  std::string oklFilePrefix = DELLIPTIC "/okl/";
+  std::string oklFileSuffix = ".okl";
 
-  sprintf(fileName, DELLIPTIC "/okl/ellipticRhs%s.okl", suffix);
-  sprintf(kernelName, "ellipticRhs%s", suffix);
+  std::string fileName, kernelName;
+
+  fileName   = oklFilePrefix + "ellipticRhs" + suffix + oklFileSuffix;
+  kernelName = "ellipticRhs" + suffix;
   kernel_t forcingKernel = platform.buildKernel(fileName, kernelName,
                                                     kernelInfo);
 
   kernel_t rhsBCKernel, addBCKernel;
   if (settings.compareSetting("DISCRETIZATION","IPDG")) {
-    sprintf(fileName, DELLIPTIC "/okl/ellipticRhsBCIpdg%s.okl", suffix);
-    sprintf(kernelName, "ellipticRhsBCIpdg%s", suffix);
+    fileName   = oklFilePrefix + "ellipticRhsBCIpdg" + suffix + oklFileSuffix;
+    kernelName = "ellipticRhsBCIpdg" + suffix;
 
     rhsBCKernel = platform.buildKernel(fileName,kernelName, kernelInfo);
   } else if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
-    sprintf(fileName, DELLIPTIC "/okl/ellipticRhsBC%s.okl", suffix);
-    sprintf(kernelName, "ellipticRhsBC%s", suffix);
+    fileName   = oklFilePrefix + "ellipticRhsBC" + suffix + oklFileSuffix;
+    kernelName = "ellipticRhsBC" + suffix;
 
     rhsBCKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 
-    sprintf(fileName, DELLIPTIC "/okl/ellipticAddBC%s.okl", suffix);
-    sprintf(kernelName, "ellipticAddBC%s", suffix);
+    fileName   = oklFilePrefix + "ellipticAddBC" + suffix + oklFileSuffix;
+    kernelName = "ellipticAddBC" + suffix;
 
     addBCKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
   }

@@ -90,42 +90,45 @@ void advection_t::Setup(platform_t& _platform, mesh_t& _mesh,
   kernelInfo["defines/" "p_NblockS"]= NblockS;
 
   // set kernel name suffix
-  char *suffix;
+  std::string suffix;
   if(mesh.elementType==mesh_t::TRIANGLES)
-    suffix = strdup("Tri2D");
+    suffix = "Tri2D";
   if(mesh.elementType==mesh_t::QUADRILATERALS)
-    suffix = strdup("Quad2D");
+    suffix = "Quad2D";
   if(mesh.elementType==mesh_t::TETRAHEDRA)
-    suffix = strdup("Tet3D");
+    suffix = "Tet3D";
   if(mesh.elementType==mesh_t::HEXAHEDRA)
-    suffix = strdup("Hex3D");
+    suffix = "Hex3D";
 
-  char fileName[BUFSIZ], kernelName[BUFSIZ];
+  std::string oklFilePrefix = DADVECTION "/okl/";
+  std::string oklFileSuffix = ".okl";
+
+  std::string fileName, kernelName;
 
   // kernels from volume file
-  sprintf(fileName, DADVECTION "/okl/advectionVolume%s.okl", suffix);
-  sprintf(kernelName, "advectionVolume%s", suffix);
+  fileName   = oklFilePrefix + "advectionVolume" + suffix + oklFileSuffix;
+  kernelName = "advectionVolume" + suffix;
 
   volumeKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
 
   // kernels from surface file
-  sprintf(fileName, DADVECTION "/okl/advectionSurface%s.okl", suffix);
-  sprintf(kernelName, "advectionSurface%s", suffix);
+  fileName   = oklFilePrefix + "advectionSurface" + suffix + oklFileSuffix;
+  kernelName = "advectionSurface" + suffix;
 
   surfaceKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 
   if (mesh.dim==2) {
-    sprintf(fileName, DADVECTION "/okl/advectionInitialCondition2D.okl");
-    sprintf(kernelName, "advectionInitialCondition2D");
+    fileName   = oklFilePrefix + "advectionInitialCondition2D" + oklFileSuffix;
+    kernelName = "advectionInitialCondition2D";
   } else {
-    sprintf(fileName, DADVECTION "/okl/advectionInitialCondition3D.okl");
-    sprintf(kernelName, "advectionInitialCondition3D");
+    fileName   = oklFilePrefix + "advectionInitialCondition3D" + oklFileSuffix;
+    kernelName = "advectionInitialCondition3D";
   }
 
   initialConditionKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 
-  sprintf(fileName, DADVECTION "/okl/advectionMaxWaveSpeed%s.okl", suffix);
-  sprintf(kernelName, "advectionMaxWaveSpeed%s", suffix);
+  fileName   = oklFilePrefix + "advectionMaxWaveSpeed" + suffix + oklFileSuffix;
+  kernelName = "advectionMaxWaveSpeed" + suffix;
 
   maxWaveSpeedKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 }

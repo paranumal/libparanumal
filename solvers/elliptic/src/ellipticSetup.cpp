@@ -86,30 +86,33 @@ void elliptic_t::Setup(platform_t& _platform, mesh_t& _mesh,
   properties_t kernelInfo = mesh.props; //copy base occa properties
 
   // set kernel name suffix
-  char *suffix;
+  std::string suffix;
   if(mesh.elementType==mesh_t::TRIANGLES){
     if(mesh.dim==2)
-      suffix = strdup("Tri2D");
+      suffix = "Tri2D";
     else
-      suffix = strdup("Tri3D");
+      suffix = "Tri3D";
   } else if(mesh.elementType==mesh_t::QUADRILATERALS){
     if(mesh.dim==2)
-      suffix = strdup("Quad2D");
+      suffix = "Quad2D";
     else
-      suffix = strdup("Quad3D");
+      suffix = "Quad3D";
   } else if(mesh.elementType==mesh_t::TETRAHEDRA)
-    suffix = strdup("Tet3D");
+    suffix = "Tet3D";
   else if(mesh.elementType==mesh_t::HEXAHEDRA)
-    suffix = strdup("Hex3D");
+    suffix = "Hex3D";
 
-  char fileName[BUFSIZ], kernelName[BUFSIZ];
+  std::string oklFilePrefix = DELLIPTIC "/okl/";
+  std::string oklFileSuffix = ".okl";
+
+  std::string fileName, kernelName;
 
   //add standard boundary functions
   std::string boundaryHeaderFileName;
   if (mesh.dim==2)
-    boundaryHeaderFileName = DELLIPTIC + std::string("/data/ellipticBoundary2D.h");
+    boundaryHeaderFileName = std::string(DELLIPTIC "/data/ellipticBoundary2D.h");
   else if (mesh.dim==3)
-    boundaryHeaderFileName = DELLIPTIC + std::string("/data/ellipticBoundary3D.h");
+    boundaryHeaderFileName = std::string(DELLIPTIC "/data/ellipticBoundary3D.h");
   kernelInfo["includes"] += boundaryHeaderFileName;
 
   int blockMax = 256;
@@ -120,14 +123,14 @@ void elliptic_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
   // Ax kernel
   if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
-    sprintf(fileName,  DELLIPTIC "/okl/ellipticAx%s.okl", suffix);
+    fileName   = oklFilePrefix + "ellipticAx" + suffix + oklFileSuffix;
     if(mesh.elementType==mesh_t::HEXAHEDRA){
       if(mesh.settings.compareSetting("ELEMENT MAP", "TRILINEAR"))
-        sprintf(kernelName, "ellipticPartialAxTrilinear%s", suffix);
+        kernelName = "ellipticPartialAxTrilinear" + suffix;
       else
-        sprintf(kernelName, "ellipticPartialAx%s", suffix);
+        kernelName = "ellipticPartialAx" + suffix;
     } else{
-      sprintf(kernelName, "ellipticPartialAx%s", suffix);
+      kernelName = "ellipticPartialAx" + suffix;
     }
 
     partialAxKernel = platform.buildKernel(fileName, kernelName,
@@ -137,13 +140,13 @@ void elliptic_t::Setup(platform_t& _platform, mesh_t& _mesh,
     int Nmax = std::max(mesh.Np, mesh.Nfaces*mesh.Nfp);
     kernelInfo["defines/" "p_Nmax"]= Nmax;
 
-    sprintf(fileName, DELLIPTIC "/okl/ellipticGradient%s.okl", suffix);
-    sprintf(kernelName, "ellipticPartialGradient%s", suffix);
+    fileName   = oklFilePrefix + "ellipticGradient" + suffix + oklFileSuffix;
+    kernelName = "ellipticPartialGradient" + suffix;
     partialGradientKernel = platform.buildKernel(fileName, kernelName,
                                                   kernelInfo);
 
-    sprintf(fileName, DELLIPTIC "/okl/ellipticAxIpdg%s.okl", suffix);
-    sprintf(kernelName, "ellipticPartialAxIpdg%s", suffix);
+    fileName   = oklFilePrefix + "ellipticAxIpdg" + suffix + oklFileSuffix;
+    kernelName = "ellipticPartialAxIpdg" + suffix;
     partialIpdgKernel = platform.buildKernel(fileName, kernelName,
                                               kernelInfo);
   }

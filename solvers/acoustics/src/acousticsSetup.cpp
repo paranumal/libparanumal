@@ -102,37 +102,40 @@ void acoustics_t::Setup(platform_t& _platform, mesh_t& _mesh,
   kernelInfo["defines/" "p_Lambda2"]= Lambda2;
 
   // set kernel name suffix
-  char *suffix;
+  std::string suffix;
   if(mesh.elementType==mesh_t::TRIANGLES)
-    suffix = strdup("Tri2D");
+    suffix = "Tri2D";
   if(mesh.elementType==mesh_t::QUADRILATERALS)
-    suffix = strdup("Quad2D");
+    suffix = "Quad2D";
   if(mesh.elementType==mesh_t::TETRAHEDRA)
-    suffix = strdup("Tet3D");
+    suffix = "Tet3D";
   if(mesh.elementType==mesh_t::HEXAHEDRA)
-    suffix = strdup("Hex3D");
+    suffix = "Hex3D";
 
-  char fileName[BUFSIZ], kernelName[BUFSIZ];
+  std::string oklFilePrefix = DACOUSTICS "/okl/";
+  std::string oklFileSuffix = ".okl";
+
+  std::string fileName, kernelName;
 
   // kernels from volume file
-  sprintf(fileName, DACOUSTICS "/okl/acousticsVolume%s.okl", suffix);
-  sprintf(kernelName, "acousticsVolume%s", suffix);
+  fileName   = oklFilePrefix + "acousticsVolume" + suffix + oklFileSuffix;
+  kernelName = "acousticsVolume" + suffix;
 
   volumeKernel =  platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
   // kernels from surface file
-  sprintf(fileName, DACOUSTICS "/okl/acousticsSurface%s.okl", suffix);
-  sprintf(kernelName, "acousticsSurface%s", suffix);
+  fileName   = oklFilePrefix + "acousticsSurface" + suffix + oklFileSuffix;
+  kernelName = "acousticsSurface" + suffix;
 
   surfaceKernel = platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
 
   if (mesh.dim==2) {
-    sprintf(fileName, DACOUSTICS "/okl/acousticsInitialCondition2D.okl");
-    sprintf(kernelName, "acousticsInitialCondition2D");
+    fileName   = oklFilePrefix + "acousticsInitialCondition2D" + oklFileSuffix;
+    kernelName = "acousticsInitialCondition2D";
   } else {
-    sprintf(fileName, DACOUSTICS "/okl/acousticsInitialCondition3D.okl");
-    sprintf(kernelName, "acousticsInitialCondition3D");
+    fileName   = oklFilePrefix + "acousticsInitialCondition3D" + oklFileSuffix;
+    kernelName = "acousticsInitialCondition3D";
   }
 
   initialConditionKernel = platform.buildKernel(fileName, kernelName,

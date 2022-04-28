@@ -184,33 +184,36 @@ void fpe_t::Setup(platform_t& _platform, mesh_t& _mesh,
   }
 
   // set kernel name suffix
-  char *suffix;
+  std::string suffix;
   if(mesh.elementType==mesh_t::TRIANGLES)
-    suffix = strdup("Tri2D");
+    suffix = "Tri2D";
   if(mesh.elementType==mesh_t::QUADRILATERALS)
-    suffix = strdup("Quad2D");
+    suffix = "Quad2D";
   if(mesh.elementType==mesh_t::TETRAHEDRA)
-    suffix = strdup("Tet3D");
+    suffix = "Tet3D";
   if(mesh.elementType==mesh_t::HEXAHEDRA)
-    suffix = strdup("Hex3D");
+    suffix = "Hex3D";
 
-  char fileName[BUFSIZ], kernelName[BUFSIZ];
+  std::string oklFilePrefix = DFPE "/okl/";
+  std::string oklFileSuffix = ".okl";
+
+  std::string fileName, kernelName;
 
   // advection kernels
   if (cubature) {
-    sprintf(fileName, DFPE "/okl/fpeCubatureAdvection%s.okl", suffix);
-    sprintf(kernelName, "fpeAdvectionCubatureVolume%s", suffix);
+    fileName   = oklFilePrefix + "fpeCubatureAdvection" + suffix + oklFileSuffix;
+    kernelName = "fpeAdvectionCubatureVolume" + suffix;
     advectionVolumeKernel =  platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
-    sprintf(kernelName, "fpeAdvectionCubatureSurface%s", suffix);
+    kernelName = "fpeAdvectionCubatureSurface" + suffix;
     advectionSurfaceKernel = platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
   } else {
-    sprintf(fileName, DFPE "/okl/fpeAdvection%s.okl", suffix);
-    sprintf(kernelName, "fpeAdvectionVolume%s", suffix);
+    fileName   = oklFilePrefix + "fpeAdvection" + suffix + oklFileSuffix;
+    kernelName = "fpeAdvectionVolume" + suffix;
     advectionVolumeKernel =  platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
-    sprintf(kernelName, "fpeAdvectionSurface%s", suffix);
+    kernelName = "fpeAdvectionSurface" + suffix;
     advectionSurfaceKernel = platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
   }
@@ -219,36 +222,36 @@ void fpe_t::Setup(platform_t& _platform, mesh_t& _mesh,
   // diffusion kernels
   if (settings.compareSetting("TIME INTEGRATOR","EXTBDF3")
     ||settings.compareSetting("TIME INTEGRATOR","SSBDF3")) {
-    sprintf(fileName, DFPE "/okl/fpeDiffusionRhs%s.okl", suffix);
-    sprintf(kernelName, "fpeDiffusionRhs%s", suffix);
+    fileName   = oklFilePrefix + "fpeDiffusionRhs" + suffix + oklFileSuffix;
+    kernelName = "fpeDiffusionRhs" + suffix;
     diffusionRhsKernel =  platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
   } else {
     // gradient kernel
-    sprintf(fileName, DFPE "/okl/fpeGradient%s.okl", suffix);
-    sprintf(kernelName, "fpeGradient%s", suffix);
+    fileName   = oklFilePrefix + "fpeGradient" + suffix + oklFileSuffix;
+    kernelName = "fpeGradient" + suffix;
     gradientKernel =  platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
 
-    sprintf(fileName, DFPE "/okl/fpeDiffusion%s.okl", suffix);
-    sprintf(kernelName, "fpeDiffusion%s", suffix);
+    fileName   = oklFilePrefix + "fpeDiffusion" + suffix + oklFileSuffix;
+    kernelName = "fpeDiffusion" + suffix;
     diffusionKernel =  platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
   }
 
   if (mesh.dim==2) {
-    sprintf(fileName, DFPE "/okl/fpeInitialCondition2D.okl");
-    sprintf(kernelName, "fpeInitialCondition2D");
+    fileName   = oklFilePrefix + "fpeInitialCondition2D" + oklFileSuffix;
+    kernelName = "fpeInitialCondition2D";
   } else {
-    sprintf(fileName, DFPE "/okl/fpeInitialCondition3D.okl");
-    sprintf(kernelName, "fpeInitialCondition3D");
+    fileName   = oklFilePrefix + "fpeInitialCondition3D" + oklFileSuffix;
+    kernelName = "fpeInitialCondition3D";
   }
 
   initialConditionKernel = platform.buildKernel(fileName, kernelName,
                                                   kernelInfo);
 
-  sprintf(fileName, DFPE "/okl/fpeMaxWaveSpeed%s.okl", suffix);
-  sprintf(kernelName, "fpeMaxWaveSpeed%s", suffix);
+  fileName   = oklFilePrefix + "fpeMaxWaveSpeed" + suffix + oklFileSuffix;
+  kernelName = "fpeMaxWaveSpeed" + suffix;
 
   maxWaveSpeedKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 

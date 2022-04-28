@@ -63,31 +63,34 @@ void gradient_t::Setup(platform_t& _platform, mesh_t& _mesh,
   kernelInfo["defines/" "p_Nfields"]= Nfields;
 
   // set kernel name suffix
-  char *suffix;
+  std::string suffix;
   if(mesh.elementType==mesh_t::TRIANGLES)
-    suffix = strdup("Tri2D");
+    suffix = "Tri2D";
   if(mesh.elementType==mesh_t::QUADRILATERALS)
-    suffix = strdup("Quad2D");
+    suffix = "Quad2D";
   if(mesh.elementType==mesh_t::TETRAHEDRA)
-    suffix = strdup("Tet3D");
+    suffix = "Tet3D";
   if(mesh.elementType==mesh_t::HEXAHEDRA)
-    suffix = strdup("Hex3D");
+    suffix = "Hex3D";
 
-  char fileName[BUFSIZ], kernelName[BUFSIZ];
+  std::string oklFilePrefix = DGRADIENT "/okl/";
+  std::string oklFileSuffix = ".okl";
+
+  std::string fileName, kernelName;
 
   // kernels from volume file
-  sprintf(fileName, DGRADIENT "/okl/gradientVolume%s.okl", suffix);
-  sprintf(kernelName, "gradientVolume%s", suffix);
+  fileName   = oklFilePrefix + "gradientVolume" + suffix + oklFileSuffix;
+  kernelName = "gradientVolume" + suffix;
 
   volumeKernel =  platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
 
   if (mesh.dim==2) {
-    sprintf(fileName, DGRADIENT "/okl/gradientInitialCondition2D.okl");
-    sprintf(kernelName, "gradientInitialCondition2D");
+    fileName   = oklFilePrefix + "gradientInitialCondition2D" + oklFileSuffix;
+    kernelName = "gradientInitialCondition2D";
   } else {
-    sprintf(fileName, DGRADIENT "/okl/gradientInitialCondition3D.okl");
-    sprintf(kernelName, "gradientInitialCondition3D");
+    fileName   = oklFilePrefix + "gradientInitialCondition3D" + oklFileSuffix;
+    kernelName = "gradientInitialCondition3D";
   }
 
   initialConditionKernel = platform.buildKernel(fileName, kernelName,

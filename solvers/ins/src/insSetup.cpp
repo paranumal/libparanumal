@@ -389,35 +389,38 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
   }
 
   // set kernel name suffix
-  char *suffix;
+  std::string suffix;
   if(mesh.elementType==mesh_t::TRIANGLES)
-    suffix = strdup("Tri2D");
+    suffix = "Tri2D";
   if(mesh.elementType==mesh_t::QUADRILATERALS)
-    suffix = strdup("Quad2D");
+    suffix = "Quad2D";
   if(mesh.elementType==mesh_t::TETRAHEDRA)
-    suffix = strdup("Tet3D");
+    suffix = "Tet3D";
   if(mesh.elementType==mesh_t::HEXAHEDRA)
-    suffix = strdup("Hex3D");
+    suffix = "Hex3D";
 
-  char fileName[BUFSIZ], kernelName[BUFSIZ];
+  std::string oklFilePrefix = DINS "/okl/";
+  std::string oklFileSuffix = ".okl";
+
+  std::string fileName, kernelName;
 
   // advection kernels
   if (settings.compareSetting("TIME INTEGRATOR","SSBDF3")) {
     //subcycle kernels
     if (cubature) {
-      sprintf(fileName, DINS "/okl/insSubcycleCubatureAdvection%s.okl", suffix);
-      sprintf(kernelName, "insSubcycleAdvectionCubatureVolume%s", suffix);
+      fileName   = oklFilePrefix + "insSubcycleCubatureAdvection" + suffix + oklFileSuffix;
+      kernelName = "insSubcycleAdvectionCubatureVolume" + suffix;
       advectionVolumeKernel =  platform.buildKernel(fileName, kernelName,
                                              kernelInfo);
-      sprintf(kernelName, "insSubcycleAdvectionCubatureSurface%s", suffix);
+      kernelName = "insSubcycleAdvectionCubatureSurface" + suffix;
       advectionSurfaceKernel = platform.buildKernel(fileName, kernelName,
                                              kernelInfo);
     } else {
-      sprintf(fileName, DINS "/okl/insSubcycleAdvection%s.okl", suffix);
-      sprintf(kernelName, "insSubcycleAdvectionVolume%s", suffix);
+      fileName   = oklFilePrefix + "insSubcycleAdvection" + suffix + oklFileSuffix;
+      kernelName = "insSubcycleAdvectionVolume" + suffix;
       advectionVolumeKernel =  platform.buildKernel(fileName, kernelName,
                                              kernelInfo);
-      sprintf(kernelName, "insSubcycleAdvectionSurface%s", suffix);
+      kernelName = "insSubcycleAdvectionSurface" + suffix;
       advectionSurfaceKernel = platform.buildKernel(fileName, kernelName,
                                              kernelInfo);
     }
@@ -449,8 +452,8 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
                                             mesh.Np, NVfields, platform, comm);
     }
 
-    sprintf(fileName, DINS "/okl/insSubcycleAdvection.okl");
-    sprintf(kernelName, "insSubcycleAdvectionKernel");
+    fileName   = oklFilePrefix + "insSubcycleAdvection" + oklFileSuffix;
+    kernelName = "insSubcycleAdvectionKernel";
     subcycler.subCycleAdvectionKernel = platform.buildKernel(fileName, kernelName,
                                              kernelInfo);
 
@@ -459,19 +462,19 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
   } else {
     //regular advection kernels
     if (cubature) {
-      sprintf(fileName, DINS "/okl/insCubatureAdvection%s.okl", suffix);
-      sprintf(kernelName, "insAdvectionCubatureVolume%s", suffix);
+      fileName   = oklFilePrefix + "insCubatureAdvection" + suffix + oklFileSuffix;
+      kernelName = "insAdvectionCubatureVolume" + suffix;
       advectionVolumeKernel =  platform.buildKernel(fileName, kernelName,
                                              kernelInfo);
-      sprintf(kernelName, "insAdvectionCubatureSurface%s", suffix);
+      kernelName = "insAdvectionCubatureSurface" + suffix;
       advectionSurfaceKernel = platform.buildKernel(fileName, kernelName,
                                              kernelInfo);
     } else {
-      sprintf(fileName, DINS "/okl/insAdvection%s.okl", suffix);
-      sprintf(kernelName, "insAdvectionVolume%s", suffix);
+      fileName   = oklFilePrefix + "insAdvection" + suffix + oklFileSuffix;
+      kernelName = "insAdvectionVolume" + suffix;
       advectionVolumeKernel =  platform.buildKernel(fileName, kernelName,
                                              kernelInfo);
-      sprintf(kernelName, "insAdvectionSurface%s", suffix);
+      kernelName = "insAdvectionSurface" + suffix;
       advectionSurfaceKernel = platform.buildKernel(fileName, kernelName,
                                              kernelInfo);
     }
@@ -480,95 +483,95 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
   // diffusion kernels
   if (settings.compareSetting("TIME INTEGRATOR","EXTBDF3")
     ||settings.compareSetting("TIME INTEGRATOR","SSBDF3")) {
-    sprintf(fileName, DINS "/okl/insVelocityRhs%s.okl", suffix);
+    fileName   = oklFilePrefix + "insVelocityRhs" + suffix + oklFileSuffix;
 
     if (vDisc_c0)
-      sprintf(kernelName, "insVelocityRhs%s", suffix);
+      kernelName = "insVelocityRhs" + suffix;
     else
-      sprintf(kernelName, "insVelocityIpdgRhs%s", suffix);
+      kernelName = "insVelocityIpdgRhs" + suffix;
     velocityRhsKernel =  platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
 
-    sprintf(kernelName, "insVelocityBC%s", suffix);
+    kernelName = "insVelocityBC" + suffix;
     velocityBCKernel =  platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
   } else {
     // gradient kernel
-    sprintf(fileName, DINS "/okl/insVelocityGradient%s.okl", suffix);
-    sprintf(kernelName, "insVelocityGradient%s", suffix);
+    fileName   = oklFilePrefix + "insVelocityGradient" + suffix + oklFileSuffix;
+    kernelName = "insVelocityGradient" + suffix;
     velocityGradientKernel =  platform.buildKernel(fileName, kernelName,
                                                kernelInfo);
 
-    sprintf(fileName, DINS "/okl/insDiffusion%s.okl", suffix);
-    sprintf(kernelName, "insDiffusion%s", suffix);
+    fileName   = oklFilePrefix + "insDiffusion" + suffix + oklFileSuffix;
+    kernelName = "insDiffusion" + suffix;
     diffusionKernel =  platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
   }
 
   //pressure gradient kernels
-  sprintf(fileName, DINS "/okl/insGradient%s.okl", suffix);
-  sprintf(kernelName, "insGradientVolume%s", suffix);
+  fileName   = oklFilePrefix + "insGradient" + suffix + oklFileSuffix;
+  kernelName = "insGradientVolume" + suffix;
   gradientVolumeKernel =  platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
-  sprintf(kernelName, "insGradientSurface%s", suffix);
+  kernelName = "insGradientSurface" + suffix;
   gradientSurfaceKernel = platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
 
   //velocity divergence kernels
-  sprintf(fileName, DINS "/okl/insDivergence%s.okl", suffix);
-  sprintf(kernelName, "insDivergenceVolume%s", suffix);
+  fileName   = oklFilePrefix + "insDivergence" + suffix + oklFileSuffix;
+  kernelName = "insDivergenceVolume" + suffix;
   divergenceVolumeKernel =  platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
-  sprintf(kernelName, "insDivergenceSurface%s", suffix);
+  kernelName = "insDivergenceSurface" + suffix;
   divergenceSurfaceKernel = platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
 
   //pressure solver kernels
   if (pressureIncrement) {
-    sprintf(fileName, DINS "/okl/insPressureIncrementRhs%s.okl", suffix);
+    fileName   = oklFilePrefix + "insPressureIncrementRhs" + suffix + oklFileSuffix;
 
     if (pDisc_c0)
-      sprintf(kernelName, "insPressureIncrementRhs%s", suffix);
+      kernelName = "insPressureIncrementRhs" + suffix;
     else
-      sprintf(kernelName, "insPressureIncrementIpdgRhs%s", suffix);
+      kernelName = "insPressureIncrementIpdgRhs" + suffix;
     pressureIncrementRhsKernel =  platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
 
-    sprintf(kernelName, "insPressureIncrementBC%s", suffix);
+    kernelName = "insPressureIncrementBC" + suffix;
     pressureIncrementBCKernel =  platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
   } else {
-    sprintf(fileName, DINS "/okl/insPressureRhs%s.okl", suffix);
+    fileName   = oklFilePrefix + "insPressureRhs" + suffix + oklFileSuffix;
     if (pDisc_c0)
-      sprintf(kernelName, "insPressureRhs%s", suffix);
+      kernelName = "insPressureRhs" + suffix;
     else
-      sprintf(kernelName, "insPressureIpdgRhs%s", suffix);
+      kernelName = "insPressureIpdgRhs" + suffix;
     pressureRhsKernel =  platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
 
-    sprintf(kernelName, "insPressureBC%s", suffix);
+    kernelName = "insPressureBC" + suffix;
     pressureBCKernel =  platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
   }
 
-  sprintf(fileName, DINS "/okl/insVorticity%s.okl", suffix);
-  sprintf(kernelName, "insVorticity%s", suffix);
+  fileName   = oklFilePrefix + "insVorticity" + suffix + oklFileSuffix;
+  kernelName = "insVorticity" + suffix;
   vorticityKernel =  platform.buildKernel(fileName, kernelName,
                                             kernelInfo);
 
   if (mesh.dim==2) {
-    sprintf(fileName, DINS "/okl/insInitialCondition2D.okl");
-    sprintf(kernelName, "insInitialCondition2D");
+    fileName   = oklFilePrefix + "insInitialCondition2D" + oklFileSuffix;
+    kernelName = "insInitialCondition2D";
   } else {
-    sprintf(fileName, DINS "/okl/insInitialCondition3D.okl");
-    sprintf(kernelName, "insInitialCondition3D");
+    fileName   = oklFilePrefix + "insInitialCondition3D" + oklFileSuffix;
+    kernelName = "insInitialCondition3D";
   }
 
   initialConditionKernel = platform.buildKernel(fileName, kernelName,
                                                   kernelInfo);
 
-  sprintf(fileName, DINS "/okl/insMaxWaveSpeed%s.okl", suffix);
-  sprintf(kernelName, "insMaxWaveSpeed%s", suffix);
+  fileName   = oklFilePrefix + "insMaxWaveSpeed" + suffix + oklFileSuffix;
+  kernelName = "insMaxWaveSpeed" + suffix;
 
   maxWaveSpeedKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 }
