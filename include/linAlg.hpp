@@ -126,13 +126,21 @@ class linAlg_t {
                                const int NrowsB, const int NcolsB, const memory<float> B,
                                memory<float> C);
   static void matrixUnderdeterminedRightSolveMinNorm(const int NrowsA, const int NcolsA,
-                                                     const memory<dfloat> A,
-                                                     const memory<dfloat> b,
-                                                     memory<dfloat> x);
+                                                     const memory<double> A,
+                                                     const memory<double> b,
+                                                     memory<double> x);
+  static void matrixUnderdeterminedRightSolveMinNorm(const int NrowsA, const int NcolsA,
+                                                     const memory<float> A,
+                                                     const memory<float> b,
+                                                     memory<float> x);
   static void matrixUnderdeterminedRightSolveCPQR(const int NrowsA, const int NcolsA,
-                                                  const memory<dfloat> A,
-                                                  const memory<dfloat> b,
-                                                  memory<dfloat> x);
+                                                  const memory<double> A,
+                                                  const memory<double> b,
+                                                  memory<double> x);
+  static void matrixUnderdeterminedRightSolveCPQR(const int NrowsA, const int NcolsA,
+                                                  const memory<float> A,
+                                                  const memory<float> b,
+                                                  memory<float> x);
 
   static void matrixEigenVectors(const int N, const memory<double> A,
                                  memory<double> VR, memory<double> WR, memory<double> WI);

@@ -140,7 +140,7 @@ dfloat linAlg_t::sum(const dlong N, deviceMemory<dfloat> o_a, comm_t comm) {
   Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
 
   sumKernel1(Nblock, N, o_a, o_scratch);
-  sumKernel2(Nblock, N, o_a, o_scratch);
+  sumKernel2(Nblock, o_scratch);
 
   h_scratch.copyFrom(o_scratch, 1, 0, "async: true");
   platform->finish();
