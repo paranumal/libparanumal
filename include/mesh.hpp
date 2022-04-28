@@ -75,6 +75,7 @@ class mesh_t {
   deviceMemory<int> o_EToB;
 
   memory<int>   mapB;      // node-to-boundary condition type
+  deviceMemory<int> o_mapB;
 
   memory<hlong> elementInfo; //type of element
 
