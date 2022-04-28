@@ -81,9 +81,9 @@ multigrid_t::multigrid_t(platform_t& _platform, settings_t& _settings,
   coarsetype=COARSEEXACT;
 
   if (coarsetype==COARSEEXACT) {
-    coarseSolver = std::make_unique<exactSolver_t>(_platform, _settings, _comm);
+    coarseSolver = std::make_shared<exactSolver_t>(_platform, _settings, _comm);
   } else {
-    coarseSolver = std::make_unique<oasSolver_t>(_platform, _settings, _comm);
+    coarseSolver = std::make_shared<oasSolver_t>(_platform, _settings, _comm);
   }
 }
 

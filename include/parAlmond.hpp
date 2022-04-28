@@ -117,12 +117,12 @@ public:
   int numLevels=0;
   int baseLevel=0;
   static constexpr int PARALMOND_MAX_LEVELS=100;
-  std::unique_ptr<multigridLevel> levels[PARALMOND_MAX_LEVELS];
+  std::shared_ptr<multigridLevel> levels[PARALMOND_MAX_LEVELS];
 
   deviceMemory<dfloat> o_rhs[PARALMOND_MAX_LEVELS];
   deviceMemory<dfloat> o_x[PARALMOND_MAX_LEVELS];
 
-  std::unique_ptr<coarseSolver_t> coarseSolver;
+  std::shared_ptr<coarseSolver_t> coarseSolver;
 
   //scratch space for smoothing and temporary residual vector
   size_t NscratchSpace=0;
@@ -145,7 +145,7 @@ public:
 
   template<class Level, class... Args>
   Level& AddLevel(Args&& ... args) {
-    levels[numLevels++] = std::make_unique<Level>(args...);
+    levels[numLevels++] = std::make_shared<Level>(args...);
     AllocateLevelWorkSpace(numLevels-1);
     return dynamic_cast<Level&>(*levels[numLevels-1]);
   }
