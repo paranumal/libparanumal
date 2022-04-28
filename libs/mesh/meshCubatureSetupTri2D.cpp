@@ -104,7 +104,7 @@ void mesh_t::CubatureSetupTri2D(){
   o_cubInterp  = platform.malloc<dfloat>(Np*cubNp, cubInterpT);
   o_cubProject = platform.malloc<dfloat>(Np*cubNp, cubProjectT);
 
-  o_cubPDT = platform.malloc<dfloat>(2*cubNp*Np*sizeof(dfloat), cubPDTT);
+  o_cubPDT = platform.malloc<dfloat>(2*cubNp*Np, cubPDTT);
 
   o_intInterp = platform.malloc<dfloat>(Nfp*Nfaces*intNfp, intInterpT);
   o_intLIFT   = platform.malloc<dfloat>(Np*Nfaces*intNfp, intLIFTT);
