@@ -43,7 +43,6 @@ SOFTWARE.
         s_alphas[t] = (t<igNhist) ? beta*alphas[t] : 0;
     }
 
-    @barrier("local");
 
     for(int t=0;t<p_blockSize;++t;@inner(0)){
 

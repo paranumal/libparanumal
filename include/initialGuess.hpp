@@ -143,7 +143,7 @@ private:
   kernel_t igExtrapSparseKernel;
 
   int Nsparse;
-  deviceMemory<dfloat> o_sparseIds;
+  deviceMemory<int> o_sparseIds;
   deviceMemory<dfloat> o_sparseCoeffs;
 
   void extrapCoeffs(int m, int M, memory<dfloat> c);

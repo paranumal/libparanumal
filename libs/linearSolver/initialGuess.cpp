@@ -418,7 +418,7 @@ void Extrap::FormInitialGuess(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o
     }
 
     o_coeffs = platform.malloc<dfloat>(d);
-    o_sparseIds = platform.malloc<dfloat>(sparseIds);
+    o_sparseIds = platform.malloc<int>(sparseIds);
     o_sparseCoeffs = platform.malloc<dfloat>(sparseCoeffs);
 
     ++entry;
