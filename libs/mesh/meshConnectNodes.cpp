@@ -46,7 +46,7 @@ void mesh_t::ConnectNodes(){
   }
 
   //make a node-wise bc flag by looking at all neighbors
-  mapB.malloc((Nelements+totalHaloPairs)*Np, 0);
+  mapB.malloc((Nelements+totalHaloPairs)*Np, -1);
 
   #pragma omp parallel for
   for (dlong e=0;e<Nelements;e++) {
@@ -56,7 +56,7 @@ void mesh_t::ConnectNodes(){
         for (int n=0;n<Nfp;n++) {
           const int fid = faceNodes[n+f*Nfp];
           int bcn = mapB[fid+e*Np];
-          if (bcn == 0) { //if theres no bc here yet, write it
+          if (bcn == -1) { //if theres no bc here yet, write it
             mapB[fid+e*Np] = bc;
           } else { //if theres a bc, take the min
             mapB[fid+e*Np] = std::min(bc,bcn);
@@ -97,7 +97,7 @@ void mesh_t::ConnectNodes(){
         }
 
         if (bcP > 0) {
-          if (bcM == 0) {
+          if (bcM == -1) {
             //if theres no bc here yet, write it
             mapB[idM] = bcP;
             ++gatherChange;
@@ -112,6 +112,8 @@ void mesh_t::ConnectNodes(){
     // sum up changes
     comm.Allreduce(gatherChange);
   }
+
+  o_mapB = platform.malloc<int>(mapB);
 }
 
 } //namespace libp
