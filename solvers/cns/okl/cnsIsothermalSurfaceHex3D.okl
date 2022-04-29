@@ -254,6 +254,8 @@ void surfaceTerms(const int e,
       }
     }
 
+    /*Need barriers because surfaceTerms writes to global*/
+    @barrier();
 
     // face 1 & 3
     for(int es=0;es<p_NblockS;++es;@inner(2)){
@@ -276,6 +278,7 @@ void surfaceTerms(const int e,
       }
     }
 
+    @barrier();
 
     // face 2 & 4
     for(int es=0;es<p_NblockS;++es;@inner(2)){

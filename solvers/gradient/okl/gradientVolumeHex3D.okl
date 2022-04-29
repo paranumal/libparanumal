@@ -50,9 +50,9 @@ for(dlong e=0;e<Nelements;++e;@outer(0)){
     }
 
     // loop over slabs
-    for(int k=0;k<p_Nq;++k){
-      for(int j=0;j<p_Nq;++j;@inner(1)){
-        for(int i=0;i<p_Nq;++i;@inner(0)){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        for(int k=0;k<p_Nq;++k){
 
           const dlong gid = i + j*p_Nq + k*p_Nq*p_Nq + e*p_Np*p_Nvgeo;
 
