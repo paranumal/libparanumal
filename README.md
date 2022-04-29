@@ -139,7 +139,7 @@ Each solver resides in its respective sub-directory in `solvers/`. Each solver s
 
 The MIT License (MIT)
 
-Copyright (c) 2017-2021 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
