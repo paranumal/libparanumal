@@ -39,6 +39,9 @@ void elliptic_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
   Nfields = 1;
 
+  //Trigger JIT kernel builds
+  ogs::InitializeKernels(platform, ogs::Dfloat, ogs::Add);
+
   disc_ipdg = settings.compareSetting("DISCRETIZATION","IPDG");
   disc_c0   = settings.compareSetting("DISCRETIZATION","CONTINUOUS");
 

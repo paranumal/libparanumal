@@ -34,6 +34,9 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
   comm = _mesh.comm;
   settings = _settings;
 
+  //Trigger JIT kernel builds
+  ogs::InitializeKernels(platform, ogs::Dfloat, ogs::Add);
+
   NVfields = (mesh.dim==3) ? 3:2; // Total Number of Velocity Fields
   NTfields = (mesh.dim==3) ? 4:3; // Total Velocity + Pressure
 

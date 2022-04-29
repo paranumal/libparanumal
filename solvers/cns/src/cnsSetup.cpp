@@ -34,6 +34,9 @@ void cns_t::Setup(platform_t& _platform, mesh_t& _mesh,
   comm = _mesh.comm;
   settings = _settings;
 
+  //Trigger JIT kernel builds
+  ogs::InitializeKernels(platform, ogs::Dfloat, ogs::Add);
+
   //get physical paramters
   settings.getSetting("VISCOSITY", mu);
   settings.getSetting("GAMMA", gamma);

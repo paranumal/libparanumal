@@ -36,6 +36,9 @@ void lbs_t::Setup(platform_t& _platform, mesh_t& _mesh,
   comm = _mesh.comm;
   settings = _settings;
 
+  //Trigger JIT kernel builds
+  ogs::InitializeKernels(platform, ogs::Dfloat, ogs::Add);
+
   // Set reference lattice-Boltzmann data  
   latticeSetup();
   

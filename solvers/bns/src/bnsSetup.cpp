@@ -43,6 +43,9 @@ void bns_t::Setup(platform_t& _platform, mesh_t& _mesh,
   Nfields    = (mesh.dim==3) ? 10:6;
   Npmlfields = mesh.dim*Nfields;
 
+  //Trigger JIT kernel builds
+  ogs::InitializeKernels(platform, ogs::Dfloat, ogs::Add);
+
   //setup cubature
   mesh.CubatureSetup();
 
