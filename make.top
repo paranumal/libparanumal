@@ -70,6 +70,9 @@ else
   endif
 endif
 
+ifeq (1,${LIBP_COVERAGE})
+  export LIBP_CXXFLAGS+= --coverage -fprofile-abs-path
+endif
 
 export OBJ_COLOR = \033[0;36m
 export LIB_COLOR = \033[0;34m
