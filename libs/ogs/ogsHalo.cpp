@@ -142,6 +142,14 @@ void halo_t::ExchangeFinish(deviceMemory<T> o_v, const int k){
   }
 }
 
+template void halo_t::ExchangeStart(deviceMemory<float> o_v, const int k);
+template void halo_t::ExchangeStart(deviceMemory<double> o_v, const int k);
+template void halo_t::ExchangeStart(deviceMemory<int> o_v, const int k);
+template void halo_t::ExchangeStart(deviceMemory<long long int> o_v, const int k);
+template void halo_t::ExchangeFinish(deviceMemory<float> o_v, const int k);
+template void halo_t::ExchangeFinish(deviceMemory<double> o_v, const int k);
+template void halo_t::ExchangeFinish(deviceMemory<int> o_v, const int k);
+template void halo_t::ExchangeFinish(deviceMemory<long long int> o_v, const int k);
 template void halo_t::Exchange(deviceMemory<float> o_v, const int k);
 template void halo_t::Exchange(deviceMemory<double> o_v, const int k);
 template void halo_t::Exchange(deviceMemory<int> o_v, const int k);
@@ -191,6 +199,14 @@ void halo_t::ExchangeFinish(memory<T> v, const int k) {
   }
 }
 
+template void halo_t::ExchangeStart(memory<float> v, const int k);
+template void halo_t::ExchangeStart(memory<double> v, const int k);
+template void halo_t::ExchangeStart(memory<int> v, const int k);
+template void halo_t::ExchangeStart(memory<long long int> v, const int k);
+template void halo_t::ExchangeFinish(memory<float> v, const int k);
+template void halo_t::ExchangeFinish(memory<double> v, const int k);
+template void halo_t::ExchangeFinish(memory<int> v, const int k);
+template void halo_t::ExchangeFinish(memory<long long int> v, const int k);
 template void halo_t::Exchange(memory<float> v, const int k);
 template void halo_t::Exchange(memory<double> v, const int k);
 template void halo_t::Exchange(memory<int> v, const int k);
@@ -305,6 +321,14 @@ void halo_t::CombineFinish(deviceMemory<T> o_v, const int k){
   }
 }
 
+template void halo_t::CombineStart(deviceMemory<float> o_v, const int k);
+template void halo_t::CombineStart(deviceMemory<double> o_v, const int k);
+template void halo_t::CombineStart(deviceMemory<int> o_v, const int k);
+template void halo_t::CombineStart(deviceMemory<long long int> o_v, const int k);
+template void halo_t::CombineFinish(deviceMemory<float> o_v, const int k);
+template void halo_t::CombineFinish(deviceMemory<double> o_v, const int k);
+template void halo_t::CombineFinish(deviceMemory<int> o_v, const int k);
+template void halo_t::CombineFinish(deviceMemory<long long int> o_v, const int k);
 template void halo_t::Combine(deviceMemory<float> o_v, const int k);
 template void halo_t::Combine(deviceMemory<double> o_v, const int k);
 template void halo_t::Combine(deviceMemory<int> o_v, const int k);
@@ -353,6 +377,14 @@ void halo_t::CombineFinish(memory<T> v, const int k) {
   }
 }
 
+template void halo_t::CombineStart(memory<float> v, const int k);
+template void halo_t::CombineStart(memory<double> v, const int k);
+template void halo_t::CombineStart(memory<int> v, const int k);
+template void halo_t::CombineStart(memory<long long int> v, const int k);
+template void halo_t::CombineFinish(memory<float> v, const int k);
+template void halo_t::CombineFinish(memory<double> v, const int k);
+template void halo_t::CombineFinish(memory<int> v, const int k);
+template void halo_t::CombineFinish(memory<long long int> v, const int k);
 template void halo_t::Combine(memory<float> v, const int k);
 template void halo_t::Combine(memory<double> v, const int k);
 template void halo_t::Combine(memory<int> v, const int k);
