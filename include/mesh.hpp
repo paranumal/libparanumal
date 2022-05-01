@@ -41,6 +41,16 @@ public:
   void report();
 };
 
+namespace Mesh {
+  /*Element types*/
+  enum ElementType {
+    TRIANGLES     =3,
+    QUADRILATERALS=4,
+    TETRAHEDRA    =6,
+    HEXAHEDRA     =12
+  };
+} //namespace Mesh
+
 class mesh_t {
  public:
   platform_t platform;
@@ -55,7 +65,7 @@ class mesh_t {
   /*************************/
   int dim;
   int Nverts, Nfaces, NfaceVertices;
-  int elementType;
+  Mesh::ElementType elementType;
 
   // indices of vertex nodes
   memory<int> vertexNodes;
@@ -310,16 +320,16 @@ class mesh_t {
   // Setup cubature
   void CubatureSetup() {
     switch (elementType) {
-      case TRIANGLES:
+      case Mesh::TRIANGLES:
         CubatureSetupTri2D();
         break;
-      case QUADRILATERALS:
+      case Mesh::QUADRILATERALS:
         CubatureSetupQuad2D();
         break;
-      case TETRAHEDRA:
+      case Mesh::TETRAHEDRA:
         CubatureSetupTet3D();
         break;
-      case HEXAHEDRA:
+      case Mesh::HEXAHEDRA:
         CubatureSetupHex3D();
         break;
     }
@@ -328,22 +338,22 @@ class mesh_t {
   // Setup cubature physical nodes
   void CubaturePhysicalNodes() {
     switch (elementType) {
-      case TRIANGLES:
+      case Mesh::TRIANGLES:
         if (dim==2)
           CubaturePhysicalNodesTri2D();
         else
           CubaturePhysicalNodesTri3D();
         break;
-      case QUADRILATERALS:
+      case Mesh::QUADRILATERALS:
         if (dim==2)
           CubaturePhysicalNodesQuad2D();
         else
           CubaturePhysicalNodesQuad3D();
         break;
-      case TETRAHEDRA:
+      case Mesh::TETRAHEDRA:
         CubaturePhysicalNodesTet3D();
         break;
-      case HEXAHEDRA:
+      case Mesh::HEXAHEDRA:
         CubaturePhysicalNodesHex3D();
         break;
     }
@@ -353,16 +363,16 @@ class mesh_t {
 
   void PlotInterp(const memory<dfloat> q, memory<dfloat> Iq, memory<dfloat> scratch=memory<dfloat>()) {
     switch (elementType) {
-      case TRIANGLES:
+      case Mesh::TRIANGLES:
         PlotInterpTri2D(q, Iq, scratch);
         break;
-      case QUADRILATERALS:
+      case Mesh::QUADRILATERALS:
         PlotInterpQuad2D(q, Iq, scratch);
         break;
-      case TETRAHEDRA:
+      case Mesh::TETRAHEDRA:
         PlotInterpTet3D(q, Iq, scratch);
         break;
-      case HEXAHEDRA:
+      case Mesh::HEXAHEDRA:
         PlotInterpHex3D(q, Iq, scratch);
         break;
     }
@@ -371,16 +381,16 @@ class mesh_t {
   void MassMatrixApply(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_Mq);
   void MassMatrixKernelSetup(int Nfields) {
     switch (elementType) {
-      case TRIANGLES:
+      case Mesh::TRIANGLES:
         MassMatrixKernelSetupTri2D(Nfields);
         break;
-      case QUADRILATERALS:
+      case Mesh::QUADRILATERALS:
         MassMatrixKernelSetupQuad2D(Nfields);
         break;
-      case TETRAHEDRA:
+      case Mesh::TETRAHEDRA:
         MassMatrixKernelSetupTet3D(Nfields);
         break;
-      case HEXAHEDRA:
+      case Mesh::HEXAHEDRA:
         MassMatrixKernelSetupHex3D(Nfields);
         break;
     }
@@ -388,13 +398,13 @@ class mesh_t {
 
   dfloat ElementCharacteristicLength(dlong e) {
     switch (elementType) {
-      case TRIANGLES:
+      case Mesh::TRIANGLES:
         return ElementCharacteristicLengthTri2D(e);
-      case QUADRILATERALS:
+      case Mesh::QUADRILATERALS:
         return ElementCharacteristicLengthQuad2D(e);
-      case TETRAHEDRA:
+      case Mesh::TETRAHEDRA:
         return ElementCharacteristicLengthTet3D(e);
-      case HEXAHEDRA:
+      case Mesh::HEXAHEDRA:
         return ElementCharacteristicLengthHex3D(e);
       default:
         return 0.0;
@@ -408,12 +418,6 @@ class mesh_t {
 
   mesh_t SetupSEMFEM(memory<hlong>& globalIds, memory<int>& mapB);
 
-  /*Element types*/
-  static constexpr int TRIANGLES     =3;
-  static constexpr int QUADRILATERALS=4;
-  static constexpr int TETRAHEDRA    =6;
-  static constexpr int HEXAHEDRA     =12;
-
   int RXID, RYID, RZID;
   int SXID, SYID, SZID;
   int TXID, TYID, TZID;
@@ -425,21 +429,21 @@ class mesh_t {
 
  private:
   /*Set the type of mesh*/
-  void SetElementType(const int eType);
+  void SetElementType(const Mesh::ElementType eType);
 
   // box mesh
   void SetupBox() {
     switch (elementType) {
-      case TRIANGLES:
+      case Mesh::TRIANGLES:
         SetupBoxTri2D();
         break;
-      case QUADRILATERALS:
+      case Mesh::QUADRILATERALS:
         SetupBoxQuad2D();
         break;
-      case TETRAHEDRA:
+      case Mesh::TETRAHEDRA:
         SetupBoxTet3D();
         break;
-      case HEXAHEDRA:
+      case Mesh::HEXAHEDRA:
         SetupBoxHex3D();
         break;
     }
@@ -452,16 +456,16 @@ class mesh_t {
   // pml box mesh
   void SetupPmlBox() {
     switch (elementType) {
-      case TRIANGLES:
+      case Mesh::TRIANGLES:
         SetupPmlBoxTri2D();
         break;
-      case QUADRILATERALS:
+      case Mesh::QUADRILATERALS:
         SetupPmlBoxQuad2D();
         break;
-      case TETRAHEDRA:
+      case Mesh::TETRAHEDRA:
         SetupPmlBoxTet3D();
         break;
-      case HEXAHEDRA:
+      case Mesh::HEXAHEDRA:
         SetupPmlBoxHex3D();
         break;
     }
@@ -474,22 +478,22 @@ class mesh_t {
   // mesh reader
   void ReadGmsh(const std::string fileName) {
     switch (elementType) {
-      case TRIANGLES:
+      case Mesh::TRIANGLES:
         if(dim==2)
           ReadGmshTri2D(fileName);
         else
           ReadGmshTri3D(fileName);
         break;
-      case QUADRILATERALS:
+      case Mesh::QUADRILATERALS:
         if(dim==2)
           ReadGmshQuad2D(fileName);
         else
           ReadGmshQuad3D(fileName);
         break;
-      case TETRAHEDRA:
+      case Mesh::TETRAHEDRA:
         ReadGmshTet3D(fileName);
         break;
-      case HEXAHEDRA:
+      case Mesh::HEXAHEDRA:
         ReadGmshHex3D(fileName);
         break;
     }
@@ -504,16 +508,16 @@ class mesh_t {
   // reference nodes and operators
   void ReferenceNodes() {
     switch (elementType) {
-      case TRIANGLES:
+      case Mesh::TRIANGLES:
         ReferenceNodesTri2D();
         break;
-      case QUADRILATERALS:
+      case Mesh::QUADRILATERALS:
         ReferenceNodesQuad2D();
         break;
-      case TETRAHEDRA:
+      case Mesh::TETRAHEDRA:
         ReferenceNodesTet3D();
         break;
-      case HEXAHEDRA:
+      case Mesh::HEXAHEDRA:
         ReferenceNodesHex3D();
         break;
     }
@@ -550,22 +554,22 @@ class mesh_t {
   /* compute x,y,z coordinates of each node */
   void PhysicalNodes() {
     switch (elementType) {
-      case TRIANGLES:
+      case Mesh::TRIANGLES:
         if(dim==2)
           PhysicalNodesTri2D();
         else
           PhysicalNodesTri3D();
         break;
-      case QUADRILATERALS:
+      case Mesh::QUADRILATERALS:
         if(dim==2)
           PhysicalNodesQuad2D();
         else
           PhysicalNodesQuad3D();
         break;
-      case TETRAHEDRA:
+      case Mesh::TETRAHEDRA:
         PhysicalNodesTet3D();
         break;
-      case HEXAHEDRA:
+      case Mesh::HEXAHEDRA:
         PhysicalNodesHex3D();
         break;
     }
@@ -580,22 +584,22 @@ class mesh_t {
   // compute geometric factors for local to physical map
   void GeometricFactors() {
     switch (elementType) {
-      case TRIANGLES:
+      case Mesh::TRIANGLES:
         if(dim==2)
           GeometricFactorsTri2D();
         else
           GeometricFactorsTri3D();
         break;
-      case QUADRILATERALS:
+      case Mesh::QUADRILATERALS:
         if(dim==2)
           GeometricFactorsQuad2D();
         else
           GeometricFactorsQuad3D();
         break;
-      case TETRAHEDRA:
+      case Mesh::TETRAHEDRA:
         GeometricFactorsTet3D();
         break;
-      case HEXAHEDRA:
+      case Mesh::HEXAHEDRA:
         GeometricFactorsHex3D();
         break;
     }
@@ -609,22 +613,22 @@ class mesh_t {
 
   void SurfaceGeometricFactors() {
     switch (elementType) {
-      case TRIANGLES:
+      case Mesh::TRIANGLES:
         if(dim==2)
           SurfaceGeometricFactorsTri2D();
         else
           SurfaceGeometricFactorsTri3D();
         break;
-      case QUADRILATERALS:
+      case Mesh::QUADRILATERALS:
         if(dim==2)
           SurfaceGeometricFactorsQuad2D();
         else
           SurfaceGeometricFactorsQuad3D();
         break;
-      case TETRAHEDRA:
+      case Mesh::TETRAHEDRA:
         SurfaceGeometricFactorsTet3D();
         break;
-      case HEXAHEDRA:
+      case Mesh::HEXAHEDRA:
         SurfaceGeometricFactorsHex3D();
         break;
     }

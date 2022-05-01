@@ -31,7 +31,7 @@ void SEMFEMPrecon::Operator(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_M
 
   linAlg_t& linAlg = elliptic.platform.linAlg();
 
-  if (mesh.elementType==mesh_t::TRIANGLES) {
+  if (mesh.elementType==Mesh::TRIANGLES) {
 
     // Mr = invDegree.*r
     linAlg.amxpy(elliptic.Ndofs, 1.0, elliptic.o_weightG, o_r, 0.0, o_Mr);
@@ -76,7 +76,7 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
   memory<hlong> maskedGlobalIds(Ntotal);
   maskedGlobalIds.copyFrom(globalIds, Ntotal);
 
-  if (mesh.elementType==mesh_t::TRIANGLES) { //build a new mask for NpFEM>Np node sets
+  if (mesh.elementType==Mesh::TRIANGLES) { //build a new mask for NpFEM>Np node sets
     //translate the node-wise bc flag
     for (int n=0;n<Ntotal;n++) {
       int bc = mapB[n];
@@ -112,24 +112,24 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
 
       dlong femId = e*mesh.NelFEM*femMesh.Nverts+n*mesh.Nverts;
       switch(mesh.elementType){
-      case mesh_t::TRIANGLES:
+      case Mesh::TRIANGLES:
         localIds[femId+0] = id[0];
         localIds[femId+1] = id[1];
         localIds[femId+2] = id[2];
         break;
-      case mesh_t::QUADRILATERALS:
+      case Mesh::QUADRILATERALS:
         localIds[femId+0] = id[0];
         localIds[femId+1] = id[1];
         localIds[femId+2] = id[3];  //need to swap this as the Np nodes are ordered [0,1,3,2] in a degree 1 element
         localIds[femId+3] = id[2];
         break;
-      case mesh_t::TETRAHEDRA:
+      case Mesh::TETRAHEDRA:
         localIds[femId+0] = id[0];
         localIds[femId+1] = id[1];
         localIds[femId+2] = id[2];
         localIds[femId+3] = id[3];
         break;
-      case mesh_t::HEXAHEDRA:
+      case Mesh::HEXAHEDRA:
         localIds[femId+0] = id[0];
         localIds[femId+1] = id[1];
         localIds[femId+2] = id[3];  //need to swap this as the Np nodes are ordered [0,1,3,2,4,5,7,6] in a degree 1 element
@@ -206,7 +206,7 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
 
   parAlmond.Report();
 
-  if (mesh.elementType==mesh_t::TRIANGLES) {
+  if (mesh.elementType==Mesh::TRIANGLES) {
     // build interp and anterp
     memory<dfloat> SEMFEMAnterp(mesh.NpFEM*mesh.Np);
     for(int n=0;n<mesh.NpFEM;++n){

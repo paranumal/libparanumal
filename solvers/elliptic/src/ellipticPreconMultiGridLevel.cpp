@@ -234,12 +234,12 @@ MGLevel::MGLevel(elliptic_t& _elliptic,
   SetupSmoother();
   AllocateStorage();
 
-  if (   mesh.elementType==mesh_t::QUADRILATERALS
-      || mesh.elementType==mesh_t::HEXAHEDRA) {
+  if (   mesh.elementType==Mesh::QUADRILATERALS
+      || mesh.elementType==Mesh::HEXAHEDRA) {
     mesh.DegreeRaiseMatrix1D(Nc, mesh.N, P);
-  } else if (mesh.elementType==mesh_t::TRIANGLES) {
+  } else if (mesh.elementType==Mesh::TRIANGLES) {
     mesh.DegreeRaiseMatrixTri2D(Nc, mesh.N, P);
-  } else { //mesh_t::TETRAHEDRA
+  } else { //Mesh::TETRAHEDRA
     mesh.DegreeRaiseMatrixTet3D(Nc, mesh.N, P);
   }
   o_P = elliptic.platform.malloc<dfloat>(P);
@@ -249,13 +249,13 @@ MGLevel::MGLevel(elliptic_t& _elliptic,
 
   // set kernel name suffix
   std::string suffix;
-  if(mesh.elementType==mesh_t::TRIANGLES)
+  if(mesh.elementType==Mesh::TRIANGLES)
     suffix = "Tri2D";
-  else if(mesh.elementType==mesh_t::QUADRILATERALS)
+  else if(mesh.elementType==Mesh::QUADRILATERALS)
     suffix = "Quad2D";
-  else if(mesh.elementType==mesh_t::TETRAHEDRA)
+  else if(mesh.elementType==Mesh::TETRAHEDRA)
     suffix = "Tet3D";
-  else if(mesh.elementType==mesh_t::HEXAHEDRA)
+  else if(mesh.elementType==Mesh::HEXAHEDRA)
     suffix = "Hex3D";
 
   std::string oklFilePrefix = DELLIPTIC "/okl/";

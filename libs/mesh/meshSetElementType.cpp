@@ -28,10 +28,10 @@ SOFTWARE.
 
 namespace libp {
 
-void mesh_t::SetElementType(const int eType) {
+void mesh_t::SetElementType(const Mesh::ElementType eType) {
 
-  if (eType==TRIANGLES) {
-    elementType = TRIANGLES;
+  if (eType==Mesh::TRIANGLES) {
+    elementType = Mesh::TRIANGLES;
 
     Nverts = 3;        // number of vertices per element
     Nfaces = 3;        // number of faces per element
@@ -43,8 +43,8 @@ void mesh_t::SetElementType(const int eType) {
     faceVertices.malloc(NfaceVertices*Nfaces);
     faceVertices.copyFrom(_faceVertices[0]);
 
-  } else if (eType==QUADRILATERALS) {
-    elementType = QUADRILATERALS;
+  } else if (eType==Mesh::QUADRILATERALS) {
+    elementType = Mesh::QUADRILATERALS;
 
     Nverts = 4;        // number of vertices per element
     Nfaces = 4;        // number of faces per element
@@ -56,8 +56,8 @@ void mesh_t::SetElementType(const int eType) {
     faceVertices.malloc(NfaceVertices*Nfaces);
     faceVertices.copyFrom(_faceVertices[0]);
 
-  } else if (eType==TETRAHEDRA) {
-    elementType = TETRAHEDRA;
+  } else if (eType==Mesh::TETRAHEDRA) {
+    elementType = Mesh::TETRAHEDRA;
 
     Nverts = 4;        // number of vertices per element
     Nfaces = 4;        // number of faces per element
@@ -69,8 +69,8 @@ void mesh_t::SetElementType(const int eType) {
     faceVertices.malloc(NfaceVertices*Nfaces);
     faceVertices.copyFrom(_faceVertices[0]);
 
-  } else if (eType==HEXAHEDRA) {
-    elementType = HEXAHEDRA;
+  } else if (eType==Mesh::HEXAHEDRA) {
+    elementType = Mesh::HEXAHEDRA;
 
     Nverts = 8;        // number of vertices per element
     Nfaces = 6;        // number of faces per element

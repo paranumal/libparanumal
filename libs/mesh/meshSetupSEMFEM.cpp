@@ -35,7 +35,7 @@ mesh_t mesh_t::SetupSEMFEM(memory<hlong>& globalIds_,
   mesh_t pmesh=*this;
 
   //setup the intermediate mesh for tris and tets
-  if (elementType==TRIANGLES) {
+  if (elementType==Mesh::TRIANGLES) {
     /* SEMFEM data */
     SEMFEMNodesTri2D(N, NpFEM, rFEM, sFEM);
     SEMFEMEToVTri2D(N, NelFEM, FEMEToV);
@@ -83,15 +83,15 @@ mesh_t mesh_t::SetupSEMFEM(memory<hlong>& globalIds_,
     pmesh.ConnectNodes();
     //pmesh.globalIds is now populated
     //pmesh.mapB is now populated
-  } else if (elementType==QUADRILATERALS) {
+  } else if (elementType==Mesh::QUADRILATERALS) {
     NpFEM = Np;
     NelFEM = N*N;
     SEMFEMEToVQuad2D(N, FEMEToV);
-  } else if (elementType==TETRAHEDRA){
+  } else if (elementType==Mesh::TETRAHEDRA){
     NpFEM = Np;
     NelFEM = N*N*N;
     SEMFEMEToVTet3D(N, FEMEToV);
-  } else { //HEXAHEDRA
+  } else { //Mesh::HEXAHEDRA
     NpFEM = Np;
     NelFEM = N*N*N;
     SEMFEMEToVHex3D(N, FEMEToV);

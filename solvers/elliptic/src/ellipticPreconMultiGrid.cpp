@@ -71,13 +71,13 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
       while (NpCoarse > NpFine/2 && Nc>1) {
         Nc--;
         switch(mesh.elementType){
-          case mesh_t::TRIANGLES:
+          case Mesh::TRIANGLES:
             NpCoarse = ((Nc+1)*(Nc+2))/2; break;
-          case mesh_t::QUADRILATERALS:
+          case Mesh::QUADRILATERALS:
             NpCoarse = (Nc+1)*(Nc+1); break;
-          case mesh_t::TETRAHEDRA:
+          case Mesh::TETRAHEDRA:
             NpCoarse = ((Nc+1)*(Nc+2)*(Nc+3))/6; break;
-          case mesh_t::HEXAHEDRA:
+          case Mesh::HEXAHEDRA:
             NpCoarse = (Nc+1)*(Nc+1)*(Nc+1); break;
         }
       }
@@ -85,13 +85,13 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
 
     //set Npcoarse
     switch(mesh.elementType){
-      case mesh_t::TRIANGLES:
+      case Mesh::TRIANGLES:
         NpCoarse = ((Nc+1)*(Nc+2))/2; break;
-      case mesh_t::QUADRILATERALS:
+      case Mesh::QUADRILATERALS:
         NpCoarse = (Nc+1)*(Nc+1); break;
-      case mesh_t::TETRAHEDRA:
+      case Mesh::TETRAHEDRA:
         NpCoarse = ((Nc+1)*(Nc+2)*(Nc+3))/6; break;
-      case mesh_t::HEXAHEDRA:
+      case Mesh::HEXAHEDRA:
         NpCoarse = (Nc+1)*(Nc+1)*(Nc+1); break;
     }
 

@@ -32,7 +32,7 @@ MassMatrixPrecon::MassMatrixPrecon(elliptic_t& _elliptic):
 
   //sanity checking
   LIBP_ABORT("MASSMATRIX preconditioner is only available for triangle and tetrhedra elements. Use JACOBI instead.",
-             mesh.elementType!=mesh_t::TRIANGLES && mesh.elementType!=mesh_t::TETRAHEDRA);
+             mesh.elementType!=Mesh::TRIANGLES && mesh.elementType!=Mesh::TETRAHEDRA);
 
   LIBP_ABORT("MASSMATRIX preconditioner is unavailble when lambda=0.",
              elliptic.lambda==0);

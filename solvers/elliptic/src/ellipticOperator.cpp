@@ -29,10 +29,10 @@
 void elliptic_t::Operator(deviceMemory<dfloat> &o_q, deviceMemory<dfloat> &o_Aq){
 
   if(disc_c0){
-    // int mapType = (mesh.elementType==HEXAHEDRA &&
+    // int mapType = (mesh.elementType==Mesh::HEXAHEDRA &&
     //                mesh.settings.compareSetting("ELEMENT MAP", "TRILINEAR")) ? 1:0;
 
-    // int integrationType = (mesh.elementType==HEXAHEDRA &&
+    // int integrationType = (mesh.elementType==Mesh::HEXAHEDRA &&
     //                        settings.compareSetting("ELLIPTIC INTEGRATION", "CUBATURE")) ? 1:0;
 
     gHalo.ExchangeStart(o_q, 1);

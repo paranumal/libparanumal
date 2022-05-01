@@ -71,16 +71,16 @@ void elliptic_t::Run(){
 
   // set kernel name suffix
   std::string suffix;
-  if(mesh.elementType==mesh_t::TRIANGLES) {
+  if(mesh.elementType==Mesh::TRIANGLES) {
     suffix = "Tri2D";
-  } else if(mesh.elementType==mesh_t::QUADRILATERALS) {
+  } else if(mesh.elementType==Mesh::QUADRILATERALS) {
     if(mesh.dim==2)
       suffix = "Quad2D";
     else
       suffix = "Quad3D";
-  } else if(mesh.elementType==mesh_t::TETRAHEDRA) {
+  } else if(mesh.elementType==Mesh::TETRAHEDRA) {
     suffix = "Tet3D";
-  } else { //mesh.elementType==mesh_t::HEXAHEDRA)
+  } else { //mesh.elementType==Mesh::HEXAHEDRA)
     suffix = "Hex3D";
   }
 

@@ -135,13 +135,13 @@ void bns_t::PmlSetup(){
       for(int n=0;n<pmlNp;++n){ /* for each node */
         dfloat x  = 0, y  = 0, z  = 0;
         dfloat rn = 0, sn = 0, tn = 0;
-        if(mesh.elementType==mesh_t::TRIANGLES){
+        if(mesh.elementType==Mesh::TRIANGLES){
           rn = pmlr[n];
           sn = pmls[n];
 
           x = -0.5*(rn+sn)*xe[0] + 0.5*(1+rn)*xe[1] + 0.5*(1+sn)*xe[2];
           y = -0.5*(rn+sn)*ye[0] + 0.5*(1+rn)*ye[1] + 0.5*(1+sn)*ye[2];
-        } else if(mesh.elementType==mesh_t::QUADRILATERALS){
+        } else if(mesh.elementType==Mesh::QUADRILATERALS){
           const int i = n%pmlNq;
           const int j = n/pmlNq;
           rn = pmlr[i];
@@ -149,7 +149,7 @@ void bns_t::PmlSetup(){
 
           x =  0.25*( (1.0-rn)*(1-sn)*xe[0]+(1.0-rn)*(1+sn)*xe[1]+(1.0+rn)*(1+sn)*xe[2]+(1.0+rn)*(1-sn)*xe[3]);
           y =  0.25*( (1.0-rn)*(1-sn)*ye[0]+(1.0-rn)*(1+sn)*ye[1]+(1.0+rn)*(1+sn)*ye[2]+(1.0+rn)*(1-sn)*ye[3]);
-        } else if(mesh.elementType==mesh_t::TETRAHEDRA){
+        } else if(mesh.elementType==Mesh::TETRAHEDRA){
           rn = pmlr[n];
           sn = pmls[n];
           tn = pmlt[n];
@@ -157,7 +157,7 @@ void bns_t::PmlSetup(){
           x = -0.5*(rn+sn+tn+1)*xe[0] + 0.5*(1+rn)*xe[1] + 0.5*(1+sn)*xe[2] + 0.5*(tn+1)*xe[3];
           y = -0.5*(rn+sn+tn+1)*ye[0] + 0.5*(1+rn)*ye[1] + 0.5*(1+sn)*ye[2] + 0.5*(tn+1)*ye[3];
           z = -0.5*(rn+sn+tn+1)*ze[0] + 0.5*(1+rn)*ze[1] + 0.5*(1+sn)*ze[2] + 0.5*(tn+1)*ze[3];
-        } else if(mesh.elementType==mesh_t::HEXAHEDRA){
+        } else if(mesh.elementType==Mesh::HEXAHEDRA){
           const int i = n%pmlNq;
           const int j = (n/pmlNq)%pmlNq;
           const int k = (n/pmlNq)/pmlNq;

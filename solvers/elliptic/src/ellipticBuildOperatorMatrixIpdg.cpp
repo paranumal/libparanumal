@@ -36,7 +36,7 @@ using std::sort;
 void elliptic_t::BuildOperatorMatrixIpdg(parAlmond::parCOO& A){
 
   switch(mesh.elementType){
-  case mesh_t::TRIANGLES:
+  case Mesh::TRIANGLES:
   {
     if(mesh.dim==2)
       BuildOperatorMatrixIpdgTri2D(A);
@@ -44,16 +44,16 @@ void elliptic_t::BuildOperatorMatrixIpdg(parAlmond::parCOO& A){
       BuildOperatorMatrixIpdgTri3D(A);
     break;
   }
-  case mesh_t::QUADRILATERALS:{
+  case Mesh::QUADRILATERALS:{
     if(mesh.dim==2)
       BuildOperatorMatrixIpdgQuad2D(A);
     else
       BuildOperatorMatrixIpdgQuad3D(A);
     break;
   }
-  case mesh_t::TETRAHEDRA:
+  case Mesh::TETRAHEDRA:
     BuildOperatorMatrixIpdgTet3D(A); break;
-  case mesh_t::HEXAHEDRA:
+  case Mesh::HEXAHEDRA:
     BuildOperatorMatrixIpdgHex3D(A); break;
   }
 }

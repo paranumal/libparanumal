@@ -134,13 +134,13 @@ void cns_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
   // set kernel name suffix
   std::string suffix;
-  if(mesh.elementType==mesh_t::TRIANGLES)
+  if(mesh.elementType==Mesh::TRIANGLES)
     suffix = "Tri2D";
-  if(mesh.elementType==mesh_t::QUADRILATERALS)
+  if(mesh.elementType==Mesh::QUADRILATERALS)
     suffix = "Quad2D";
-  if(mesh.elementType==mesh_t::TETRAHEDRA)
+  if(mesh.elementType==Mesh::TETRAHEDRA)
     suffix = "Tet3D";
-  if(mesh.elementType==mesh_t::HEXAHEDRA)
+  if(mesh.elementType==Mesh::HEXAHEDRA)
     suffix = "Hex3D";
 
   std::string oklFilePrefix = DCNS "/okl/";

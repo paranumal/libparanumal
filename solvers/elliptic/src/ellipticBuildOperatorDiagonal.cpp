@@ -32,7 +32,7 @@ void elliptic_t::BuildOperatorDiagonal(memory<dfloat>& diagA){
 
   if (settings.compareSetting("DISCRETIZATION","IPDG")) {
     switch(mesh.elementType){
-      case mesh_t::TRIANGLES:
+      case Mesh::TRIANGLES:
       {
         if(mesh.dim==2)
           BuildOperatorDiagonalIpdgTri2D(diagA);
@@ -40,13 +40,13 @@ void elliptic_t::BuildOperatorDiagonal(memory<dfloat>& diagA){
           BuildOperatorDiagonalIpdgTri3D(diagA);
         break;
       }
-      case mesh_t::QUADRILATERALS:
+      case Mesh::QUADRILATERALS:
         BuildOperatorDiagonalIpdgQuad2D(diagA);
         break;
-      case mesh_t::TETRAHEDRA:
+      case Mesh::TETRAHEDRA:
         BuildOperatorDiagonalIpdgTet3D(diagA);
         break;
-      case mesh_t::HEXAHEDRA:
+      case Mesh::HEXAHEDRA:
         BuildOperatorDiagonalIpdgHex3D(diagA);
         break;
     }
@@ -54,10 +54,10 @@ void elliptic_t::BuildOperatorDiagonal(memory<dfloat>& diagA){
     memory<dfloat> diagAL(mesh.Np*mesh.Nelements);
 
     switch(mesh.elementType){
-      case mesh_t::TRIANGLES:
+      case Mesh::TRIANGLES:
         BuildOperatorDiagonalContinuousTri2D(diagAL);
         break;
-      case mesh_t::QUADRILATERALS:
+      case Mesh::QUADRILATERALS:
       {
         if(mesh.dim==2)
           BuildOperatorDiagonalContinuousQuad2D(diagAL);
@@ -65,10 +65,10 @@ void elliptic_t::BuildOperatorDiagonal(memory<dfloat>& diagA){
           BuildOperatorDiagonalContinuousQuad3D(diagAL);
         break;
       }
-      case mesh_t::TETRAHEDRA:
+      case Mesh::TETRAHEDRA:
         BuildOperatorDiagonalContinuousTet3D(diagAL);
         break;
-      case mesh_t::HEXAHEDRA:
+      case Mesh::HEXAHEDRA:
         BuildOperatorDiagonalContinuousHex3D(diagAL);
         break;
     }

@@ -39,11 +39,12 @@ void mesh_t::Setup(platform_t& _platform, meshSettings_t& _settings,
   rank = comm.rank();
   size = comm.size();
 
-  settings.getSetting("ELEMENT TYPE", elementType);
+  int eType=0;
+  settings.getSetting("ELEMENT TYPE", eType);
   settings.getSetting("MESH DIMENSION", dim);
 
 
-  SetElementType(elementType);
+  SetElementType(Mesh::ElementType(eType));
 
   props["defines/" "p_dim"]= dim;
   props["defines/" "p_Nfaces"]= Nfaces;

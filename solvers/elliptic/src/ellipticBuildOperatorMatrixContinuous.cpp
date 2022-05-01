@@ -36,9 +36,9 @@ using std::sort;
 void elliptic_t::BuildOperatorMatrixContinuous(parAlmond::parCOO& A) {
 
   switch(mesh.elementType){
-  case mesh_t::TRIANGLES:
+  case Mesh::TRIANGLES:
     BuildOperatorMatrixContinuousTri2D(A); break;
-  case mesh_t::QUADRILATERALS:
+  case Mesh::QUADRILATERALS:
   {
     if(mesh.dim==2)
       BuildOperatorMatrixContinuousQuad2D(A);
@@ -47,9 +47,9 @@ void elliptic_t::BuildOperatorMatrixContinuous(parAlmond::parCOO& A) {
 
     break;
   }
-  case mesh_t::TETRAHEDRA:
+  case Mesh::TETRAHEDRA:
     BuildOperatorMatrixContinuousTet3D(A); break;
-  case mesh_t::HEXAHEDRA:
+  case Mesh::HEXAHEDRA:
     BuildOperatorMatrixContinuousHex3D(A); break;
   }
 }

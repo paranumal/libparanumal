@@ -35,16 +35,16 @@ void mesh_t::ConnectFaceNodes(){
   memory<int> R;
 
   switch (elementType) {
-    case TRIANGLES:
+    case Mesh::TRIANGLES:
       FaceNodeMatchingTri2D(r, s, faceNodes, faceVertices, R);
       break;
-    case QUADRILATERALS:
+    case Mesh::QUADRILATERALS:
       FaceNodeMatchingQuad2D(r, s, faceNodes, faceVertices, R);
       break;
-    case TETRAHEDRA:
+    case Mesh::TETRAHEDRA:
       FaceNodeMatchingTet3D(r, s, t, faceNodes, faceVertices, R);
       break;
-    case HEXAHEDRA:
+    case Mesh::HEXAHEDRA:
       FaceNodeMatchingHex3D(r, s, t, faceNodes, faceVertices, R);
       break;
   }

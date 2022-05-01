@@ -45,8 +45,8 @@ elliptic_t elliptic_t::SetupNewDegree(mesh_t& meshC){
 
   //tau (penalty term in IPDG)
   if (settings.compareSetting("DISCRETIZATION","IPDG")) {
-    if (meshC.elementType==mesh_t::TRIANGLES ||
-        meshC.elementType==mesh_t::QUADRILATERALS){
+    if (meshC.elementType==Mesh::TRIANGLES ||
+        meshC.elementType==Mesh::QUADRILATERALS){
       elliptic.tau = 2.0*(meshC.N+1)*(meshC.N+2)/2.0;
       if(meshC.dim==3)
         elliptic.tau *= 1.5;
@@ -64,19 +64,19 @@ elliptic_t elliptic_t::SetupNewDegree(mesh_t& meshC){
 
   // set kernel name suffix
   std::string suffix;
-  if(meshC.elementType==mesh_t::TRIANGLES){
+  if(meshC.elementType==Mesh::TRIANGLES){
     if(meshC.dim==2)
       suffix = "Tri2D";
     else
       suffix = "Tri3D";
-  } else if(meshC.elementType==mesh_t::QUADRILATERALS){
+  } else if(meshC.elementType==Mesh::QUADRILATERALS){
     if(meshC.dim==2)
       suffix = "Quad2D";
     else
       suffix = "Quad3D";
-  } else if(meshC.elementType==mesh_t::TETRAHEDRA)
+  } else if(meshC.elementType==Mesh::TETRAHEDRA)
     suffix = "Tet3D";
-  else if(meshC.elementType==mesh_t::HEXAHEDRA)
+  else if(meshC.elementType==Mesh::HEXAHEDRA)
     suffix = "Hex3D";
 
   std::string oklFilePrefix = DELLIPTIC "/okl/";
@@ -101,7 +101,7 @@ elliptic_t elliptic_t::SetupNewDegree(mesh_t& meshC){
   // Ax kernel
   if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
     fileName   = oklFilePrefix + "ellipticAx" + suffix + oklFileSuffix;
-    if(meshC.elementType==mesh_t::HEXAHEDRA){
+    if(meshC.elementType==Mesh::HEXAHEDRA){
       if(mesh.settings.compareSetting("ELEMENT MAP", "TRILINEAR"))
         kernelName = "ellipticPartialAxTrilinear" + suffix;
       else
