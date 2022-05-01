@@ -96,7 +96,7 @@ OASPrecon::OASPrecon(elliptic_t& _elliptic):
 
   //build the one ring mesh
   if (mesh.N>1) {
-    if (comm_t::world().rank()==0){
+    if (Comm::World().rank()==0){
       printf("-----------------------------Multigrid Degree %2d Patch--------------------------------------\n", mesh.N);
     }
     meshPatch = mesh.SetupRingPatch();
@@ -173,7 +173,7 @@ OASPrecon::OASPrecon(elliptic_t& _elliptic):
   elliptic_t ellipticC = elliptic.SetupNewDegree(meshC);
 
   //build full A matrix and pass to parAlmond
-  if (comm_t::world().rank()==0){
+  if (Comm::World().rank()==0){
     printf("-----------------------------Multigrid AMG Setup--------------------------------------------\n");
   }
   parAlmond::parCOO A(elliptic.platform, meshC.comm);

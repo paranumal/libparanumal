@@ -47,7 +47,7 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   int NpCoarse = mesh.Np;
 
   while(Nc>1) {
-    if (comm_t::world().rank()==0){
+    if (Comm::World().rank()==0){
       printf("-----------------------------Multigrid pMG Degree %2d----------------------------------------\n", Nc);
     }
     //build mesh and elliptic objects for this degree
@@ -112,7 +112,7 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   }
 
   //build matrix at degree 1
-  if (comm_t::world().rank()==0){
+  if (Comm::World().rank()==0){
     printf("-----------------------------Multigrid pMG Degree  1----------------------------------------\n");
   }
   mesh_t meshF = mesh.SetupNewDegree(1);
@@ -126,7 +126,7 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   }
 
   //build full A matrix and pass to parAlmond
-  if (comm_t::world().rank()==0){
+  if (Comm::World().rank()==0){
     printf("-----------------------------Multigrid AMG Setup--------------------------------------------\n");
   }
   parAlmond::parCOO A(elliptic.platform, mesh.comm);

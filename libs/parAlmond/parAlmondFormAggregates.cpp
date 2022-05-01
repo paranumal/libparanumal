@@ -153,7 +153,7 @@ void formAggregates(parCSR& A, strongGraph_t& C,
     // if number of undecided nodes = 0, algorithm terminates
     for (dlong n=0;n<N;n++) if (states[n]==0) done++;
 
-    A.comm.Allreduce(done, comm_t::Sum);
+    A.comm.Allreduce(done, Comm::Sum);
     done = (done == 0) ? 1 : 0;
   }
 

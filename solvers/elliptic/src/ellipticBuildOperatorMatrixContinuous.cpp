@@ -82,7 +82,7 @@ void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO& A) {
   memory<dfloat> Sss = mesh.Sss;
   memory<dfloat> MM  = mesh.MM ;
 
-  if(comm_t::world().rank()==0) {printf("Building full FEM matrix...");fflush(stdout);}
+  if(Comm::World().rank()==0) {printf("Building full FEM matrix...");fflush(stdout);}
 
   //Build unassembed non-zeros
   dlong cnt =0;
@@ -178,7 +178,7 @@ void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO& A) {
   if (A.nnz) cnt++;
   A.nnz = cnt;
 
-  if(comm_t::world().rank()==0) printf("done.\n");
+  if(Comm::World().rank()==0) printf("done.\n");
 }
 
 
@@ -204,7 +204,7 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO& A) {
   memory<int> AsendOffsets(mesh.size+1);
   memory<int> ArecvOffsets(mesh.size+1);
 
-  if(comm_t::world().rank()==0) {printf("Building full FEM matrix...");fflush(stdout);}
+  if(Comm::World().rank()==0) {printf("Building full FEM matrix...");fflush(stdout);}
 
 #if 0
   hlong NTf = mesh.Nelements*mesh.Np * mesh.Nelements*mesh.Np ;
@@ -395,7 +395,7 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO& A) {
  fclose(fp);
 #endif
 
-  if(comm_t::world().rank()==0) printf("done.\n");
+  if(Comm::World().rank()==0) printf("done.\n");
 }
 
 
@@ -421,7 +421,7 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO& A) {
   memory<int> AsendOffsets(mesh.size+1);
   memory<int> ArecvOffsets(mesh.size+1);
 
-  if(comm_t::world().rank()==0) {printf("Building full FEM matrix...");fflush(stdout);}
+  if(Comm::World().rank()==0) {printf("Building full FEM matrix...");fflush(stdout);}
 
   //Build unassembed non-zeros
   dlong cnt =0;
@@ -559,7 +559,7 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO& A) {
  fclose(fp);
 #endif
 
-  if(comm_t::world().rank()==0) printf("done.\n");
+  if(Comm::World().rank()==0) printf("done.\n");
 }
 
 void elliptic_t::BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO& A) {
@@ -586,7 +586,7 @@ void elliptic_t::BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO& A) {
   memory<int> ArecvOffsets(mesh.size+1);
 
   //Build unassembed non-zeros
-  if(comm_t::world().rank()==0) {printf("Building full FEM matrix...");fflush(stdout);}
+  if(Comm::World().rank()==0) {printf("Building full FEM matrix...");fflush(stdout);}
 
   dlong cnt =0;
   //#pragma omp parallel for
@@ -691,7 +691,7 @@ void elliptic_t::BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO& A) {
   if (A.nnz) cnt++;
   A.nnz = cnt;
 
-  if(comm_t::world().rank()==0) printf("done.\n");
+  if(Comm::World().rank()==0) printf("done.\n");
 }
 
 void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO& A) {
@@ -716,7 +716,7 @@ void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO& A) {
   memory<int> AsendOffsets(mesh.size+1);
   memory<int> ArecvOffsets(mesh.size+1);
 
-  if(comm_t::world().rank()==0) {printf("Building full FEM matrix...");fflush(stdout);}
+  if(Comm::World().rank()==0) {printf("Building full FEM matrix...");fflush(stdout);}
 
   dlong cnt =0;
   for (dlong e=0;e<mesh.Nelements;e++) {
@@ -876,5 +876,5 @@ void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO& A) {
   if (A.nnz) cnt++;
   A.nnz = cnt;
 
-  if(comm_t::world().rank()==0) printf("done.\n");
+  if(Comm::World().rank()==0) printf("done.\n");
 }

@@ -180,7 +180,7 @@ void multigrid_t::kcycleCombinedOp1(multigridLevel& level,
     reductionScratch[1] += reductionScratch[3*i+1];
     reductionScratch[2] += reductionScratch[3*i+2];
   }
-  comm.Allreduce(reductionScratch, comm_t::Sum, 3);
+  comm.Allreduce(reductionScratch, Comm::Sum, 3);
   aDotb = reductionScratch[0];
   aDotc = reductionScratch[1];
   bDotb = reductionScratch[2];
@@ -214,7 +214,7 @@ void multigrid_t::kcycleCombinedOp2(multigridLevel& level,
     reductionScratch[1] += reductionScratch[3*i+1];
     reductionScratch[2] += reductionScratch[3*i+2];
   }
-  comm.Allreduce(reductionScratch, comm_t::Sum, 3);
+  comm.Allreduce(reductionScratch, Comm::Sum, 3);
   aDotb = reductionScratch[0];
   aDotc = reductionScratch[1];
   aDotd = reductionScratch[2];
@@ -240,7 +240,7 @@ dfloat multigrid_t::vectorAddInnerProd(multigridLevel& level,
   for (dlong i=1; i<numBlocks; i++) {
     reductionScratch[0] += reductionScratch[i];
   }
-  comm.Allreduce(reductionScratch, comm_t::Sum, 1);
+  comm.Allreduce(reductionScratch, Comm::Sum, 1);
   return reductionScratch[0];
 }
 

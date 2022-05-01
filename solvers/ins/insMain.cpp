@@ -28,12 +28,12 @@ SOFTWARE.
 int main(int argc, char **argv){
 
   // start up MPI
-  comm_t::Init(argc, argv);
+  Comm::Init(argc, argv);
 
   LIBP_ABORT("Usage: ./insMain setupfile", argc!=2);
 
   { /*Scope so everything is destructed before MPI_Finalize */
-    comm_t comm(comm_t::world().Dup());
+    comm_t comm(Comm::World().Dup());
 
     //create default settings
     platformSettings_t platformSettings(comm);
@@ -62,7 +62,7 @@ int main(int argc, char **argv){
   }
 
   // close down MPI
-  comm_t::Finalize();
+  Comm::Finalize();
   return LIBP_SUCCESS;
 }
 

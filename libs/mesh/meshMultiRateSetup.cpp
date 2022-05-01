@@ -39,8 +39,8 @@ void mesh_t::MultiRateSetup(memory<dfloat> EToDT) {
     dtmin = std::min(dtmin,EToDT[e]);
     dtmax = std::max(dtmax,EToDT[e]);
   }
-  comm.Allreduce(dtmin, comm_t::Min);
-  comm.Allreduce(dtmax, comm_t::Max);
+  comm.Allreduce(dtmin, Comm::Min);
+  comm.Allreduce(dtmax, Comm::Max);
 
   if (rank==0) {
     printf("--------------- MultiRate Timestepping Setup ----------------\n");
@@ -85,7 +85,7 @@ void mesh_t::MultiRateSetup(memory<dfloat> EToDT) {
     mrNlevels = std::max(mrLevel[e],mrNlevels);
   mrNlevels++;
 
-  comm.Allreduce(mrNlevels, comm_t::Max);
+  comm.Allreduce(mrNlevels, Comm::Max);
 
   //construct element and halo lists
   // mrElements[lev] - list of all elements with multirate level <= lev

@@ -210,7 +210,7 @@ void nbfpcg::Update0NBFPCG(deviceMemory<dfloat>& o_r){
     dots[1] += dots[1+3*n];
     dots[2] += dots[2+3*n];
   }
-  comm.Iallreduce(dots, comm_t::Sum, 3, request);
+  comm.Iallreduce(dots, Comm::Sum, 3, request);
 }
 
 void nbfpcg::Update1NBFPCG(const dfloat alpha, deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_r){
@@ -238,7 +238,7 @@ void nbfpcg::Update1NBFPCG(const dfloat alpha, deviceMemory<dfloat>& o_x, device
     dots[2] += dots[2+4*n];
     dots[3] += dots[3+4*n];
   }
-  comm.Iallreduce(dots, comm_t::Sum, 4, request);
+  comm.Iallreduce(dots, Comm::Sum, 4, request);
 }
 
 } //namespace LinearSolver

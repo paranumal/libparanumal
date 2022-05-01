@@ -126,7 +126,7 @@ void elliptic_t::BuildOperatorMatrixIpdgTri2D(parAlmond::parCOO& A){
   memory<dfloat> SM(Np*Np);
   memory<dfloat> SP(Np*Np);
 
-  if(comm_t::world().rank()==0) {printf("Building full IPDG matrix...");fflush(stdout);}
+  if(Comm::World().rank()==0) {printf("Building full IPDG matrix...");fflush(stdout);}
 
   // loop over all elements
   for(dlong eM=0;eM<Nelements;++eM){
@@ -299,7 +299,7 @@ void elliptic_t::BuildOperatorMatrixIpdgTri2D(parAlmond::parCOO& A){
   //*A = (parAlmond::parCOO::nonZero_t*) realloc(*A, nnz*sizeof(parAlmond::parCOO::nonZero_t));
   A.nnz = nnz;
 
-  if(comm_t::world().rank()==0) printf("done.\n");
+  if(Comm::World().rank()==0) printf("done.\n");
 
 #if 0
   dfloat* Ap = (dfloat *) calloc(Np*Np*Nelements*Nelements,sizeof(dfloat));
@@ -387,7 +387,7 @@ void elliptic_t::BuildOperatorMatrixIpdgTri3D(parAlmond::parCOO& A){
   memory<dfloat> SM(Np*Np);
   memory<dfloat> SP(Np*Np);
 
-  if(comm_t::world().rank()==0) {printf("Building full IPDG matrix...");fflush(stdout);}
+  if(Comm::World().rank()==0) {printf("Building full IPDG matrix...");fflush(stdout);}
 
   // loop over all elements
   for(dlong eM=0;eM<Nelements;++eM){
@@ -577,7 +577,7 @@ void elliptic_t::BuildOperatorMatrixIpdgTri3D(parAlmond::parCOO& A){
   //*A = (parAlmond::parCOO::nonZero_t*) realloc(*A, nnz*sizeof(parAlmond::parCOO::nonZero_t));
   A.nnz = nnz;
 
-  if(comm_t::world().rank()==0) printf("done.\n");
+  if(Comm::World().rank()==0) printf("done.\n");
 }
 
 
@@ -653,7 +653,7 @@ void elliptic_t::BuildOperatorMatrixIpdgQuad2D(parAlmond::parCOO& A){
 
   A.entries.malloc(nnzLocalBound);
 
-  if(comm_t::world().rank()==0) {printf("Building full IPDG matrix...");fflush(stdout);}
+  if(Comm::World().rank()==0) {printf("Building full IPDG matrix...");fflush(stdout);}
 
   // reset non-zero counter
   dlong nnz = 0;
@@ -800,7 +800,7 @@ void elliptic_t::BuildOperatorMatrixIpdgQuad2D(parAlmond::parCOO& A){
   //*A = (parAlmond::parCOO::nonZero_t*) realloc(*A, nnz*sizeof(parAlmond::parCOO::nonZero_t));
   A.nnz = nnz;
 
-  if(comm_t::world().rank()==0) printf("done.\n");
+  if(Comm::World().rank()==0) printf("done.\n");
 }
 
 
@@ -875,7 +875,7 @@ void elliptic_t::BuildOperatorMatrixIpdgQuad3D(parAlmond::parCOO& A){
 
   A.entries.malloc(nnzLocalBound);
 
-  if(comm_t::world().rank()==0) {printf("Building full IPDG matrix...");fflush(stdout);}
+  if(Comm::World().rank()==0) {printf("Building full IPDG matrix...");fflush(stdout);}
 
   // reset non-zero counter
   dlong nnz = 0;
@@ -1031,7 +1031,7 @@ void elliptic_t::BuildOperatorMatrixIpdgQuad3D(parAlmond::parCOO& A){
   //*A = (parAlmond::parCOO::nonZero_t*) realloc(*A, nnz*sizeof(parAlmond::parCOO::nonZero_t));
   A.nnz = nnz;
 
-  if(comm_t::world().rank()==0) printf("done.\n");
+  if(Comm::World().rank()==0) printf("done.\n");
 
 #if 0
   {
@@ -1130,7 +1130,7 @@ void elliptic_t::BuildOperatorMatrixIpdgTet3D(parAlmond::parCOO& A){
   // reset non-zero counter
   dlong nnz = 0;
 
-  if(comm_t::world().rank()==0) {printf("Building full IPDG matrix...");fflush(stdout);}
+  if(Comm::World().rank()==0) {printf("Building full IPDG matrix...");fflush(stdout);}
 
   // loop over all elements
   //#pragma omp parallel
@@ -1310,7 +1310,7 @@ void elliptic_t::BuildOperatorMatrixIpdgTet3D(parAlmond::parCOO& A){
   //*A = (parAlmond::parCOO::nonZero_t*) realloc(*A, nnz*sizeof(parAlmond::parCOO::nonZero_t));
   A.nnz = nnz;
 
-  if(comm_t::world().rank()==0) printf("done.\n");
+  if(Comm::World().rank()==0) printf("done.\n");
 }
 
 void elliptic_t::BuildOperatorMatrixIpdgHex3D(parAlmond::parCOO& A){
@@ -1391,7 +1391,7 @@ void elliptic_t::BuildOperatorMatrixIpdgHex3D(parAlmond::parCOO& A){
 
   A.entries.malloc(nnzLocalBound);
 
-  if(comm_t::world().rank()==0) {printf("Building full IPDG matrix...");fflush(stdout);}
+  if(Comm::World().rank()==0) {printf("Building full IPDG matrix...");fflush(stdout);}
 
   // reset non-zero counter
   dlong nnz = 0;
@@ -1566,5 +1566,5 @@ void elliptic_t::BuildOperatorMatrixIpdgHex3D(parAlmond::parCOO& A){
   //*A = (parAlmond::parCOO::nonZero_t*) realloc(*A, nnz*sizeof(parAlmond::parCOO::nonZero_t));
   A.nnz = nnz;
 
-  if(comm_t::world().rank()==0) printf("done.\n");
+  if(Comm::World().rank()==0) printf("done.\n");
 }

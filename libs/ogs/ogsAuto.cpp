@@ -96,9 +96,9 @@ static void DeviceExchangeTest(ogsExchange_t* exchange, double time[3]) {
   timePoint_t end = Time();
 
   localTime = ElapsedTime(start,end)/Nhot;
-  comm.Allreduce(localTime, sumTime, comm_t::Sum);
-  comm.Allreduce(localTime, maxTime, comm_t::Max);
-  comm.Allreduce(localTime, minTime, comm_t::Min);
+  comm.Allreduce(localTime, sumTime, Comm::Sum);
+  comm.Allreduce(localTime, maxTime, Comm::Max);
+  comm.Allreduce(localTime, minTime, Comm::Min);
 
   time[0] = sumTime/size; //avg
   time[1] = minTime;      //min
@@ -130,9 +130,9 @@ static void HostExchangeTest(ogsExchange_t* exchange, double time[3]) {
   timePoint_t end = Time();
 
   localTime = ElapsedTime(start,end)/Nhot;
-  comm.Allreduce(localTime, sumTime, comm_t::Sum);
-  comm.Allreduce(localTime, maxTime, comm_t::Max);
-  comm.Allreduce(localTime, minTime, comm_t::Min);
+  comm.Allreduce(localTime, sumTime, Comm::Sum);
+  comm.Allreduce(localTime, maxTime, Comm::Max);
+  comm.Allreduce(localTime, minTime, Comm::Min);
 
   time[0] = sumTime/size; //avg
   time[1] = minTime;      //min

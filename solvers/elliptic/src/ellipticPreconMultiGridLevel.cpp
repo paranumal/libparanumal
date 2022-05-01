@@ -320,12 +320,12 @@ void MGLevel::Report() {
 
   dlong minNrows=Nrows, maxNrows=Nrows;
   hlong totalNrows=Nrows;
-  mesh.comm.Allreduce(maxNrows, comm_t::Max);
-  mesh.comm.Allreduce(totalNrows, comm_t::Sum);
+  mesh.comm.Allreduce(maxNrows, Comm::Max);
+  mesh.comm.Allreduce(totalNrows, Comm::Sum);
   dfloat avgNrows = static_cast<dfloat>(totalNrows)/totalActive;
 
   if (Nrows==0) Nrows=maxNrows; //set this so it's ignored for the global min
-  mesh.comm.Allreduce(minNrows, comm_t::Min);
+  mesh.comm.Allreduce(minNrows, Comm::Min);
 
   char smootherString[BUFSIZ];
   if (stype==JACOBI)

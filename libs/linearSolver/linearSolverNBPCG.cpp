@@ -184,7 +184,7 @@ void nbpcg::Update1NBPCG(const dfloat beta){
   for(int n=1;n<Nblocks;++n)
     dots[0] += dots[n];
 
-  comm.Iallreduce(dots, comm_t::Sum, 1, request);
+  comm.Iallreduce(dots, Comm::Sum, 1, request);
 }
 
 void nbpcg::Update2NBPCG(const dfloat alpha, deviceMemory<dfloat>& o_r){
@@ -212,7 +212,7 @@ void nbpcg::Update2NBPCG(const dfloat alpha, deviceMemory<dfloat>& o_r){
     dots[1] += dots[1+3*n];
     dots[2] += dots[2+3*n];
   }
-  comm.Iallreduce(dots, comm_t::Sum, 3, request);
+  comm.Iallreduce(dots, Comm::Sum, 3, request);
 }
 
 } //namespace LinearSolver

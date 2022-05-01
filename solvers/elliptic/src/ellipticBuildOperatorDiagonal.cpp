@@ -28,7 +28,7 @@ SOFTWARE.
 
 void elliptic_t::BuildOperatorDiagonal(memory<dfloat>& diagA){
 
-  if(comm_t::world().rank()==0) {printf("Building diagonal...");fflush(stdout);}
+  if(Comm::World().rank()==0) {printf("Building diagonal...");fflush(stdout);}
 
   if (settings.compareSetting("DISCRETIZATION","IPDG")) {
     switch(mesh.elementType){
@@ -76,7 +76,7 @@ void elliptic_t::BuildOperatorDiagonal(memory<dfloat>& diagA){
     //gather the diagonal to assemble it
     ogsMasked.Gather(diagA, diagAL, 1, ogs::Add, ogs::Trans);
   }
-  if(comm_t::world().rank()==0) printf("done.\n");
+  if(Comm::World().rank()==0) printf("done.\n");
 }
 
 void elliptic_t::BuildOperatorDiagonalIpdgTri2D(memory<dfloat>& A) {

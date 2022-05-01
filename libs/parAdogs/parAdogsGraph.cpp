@@ -326,8 +326,8 @@ void graph_t::Report() {
 
   dlong minNverts=Nverts;
   dlong maxNverts=Nverts;
-  gcomm.Allreduce(minNverts, comm_t::Min);
-  gcomm.Allreduce(maxNverts, comm_t::Max);
+  gcomm.Allreduce(minNverts, Comm::Min);
+  gcomm.Allreduce(maxNverts, Comm::Max);
 
 
   dlong cut=0.0;
@@ -348,8 +348,8 @@ void graph_t::Report() {
 
   dlong minCut=cut;
   dlong maxCut=cut;
-  gcomm.Allreduce(minCut, comm_t::Min);
-  gcomm.Allreduce(maxCut, comm_t::Max);
+  gcomm.Allreduce(minCut, Comm::Min);
+  gcomm.Allreduce(maxCut, Comm::Max);
 
   if(grank==0) {
     printf("--------------------------------------ParAdogs Report------------------------------------------\n");

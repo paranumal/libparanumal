@@ -38,7 +38,7 @@ dfloat mesh_t::MinCharacteristicLength(){
   }
 
   // MPI_Allreduce to get global minimum h
-  comm.Allreduce(hmin, comm_t::Min);
+  comm.Allreduce(hmin, Comm::Min);
   return hmin;
 }
 

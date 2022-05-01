@@ -98,29 +98,29 @@ void amgLevel::Report() {
 
   dlong minNrows=Nrows, maxNrows=Nrows;
   hlong totalNrows=Nrows;
-  A.comm.Allreduce(maxNrows, comm_t::Max);
-  A.comm.Allreduce(totalNrows, comm_t::Sum);
+  A.comm.Allreduce(maxNrows, Comm::Max);
+  A.comm.Allreduce(totalNrows, Comm::Sum);
   dfloat avgNrows = (dfloat) totalNrows/totalActive;
 
   if (Nrows==0) minNrows=maxNrows; //set this so it's ignored for the global min
-  A.comm.Allreduce(minNrows, comm_t::Min);
+  A.comm.Allreduce(minNrows, Comm::Min);
 
   long long int nnz = A.diag.nnz+A.offd.nnz;
   long long int minNnz=nnz, maxNnz=nnz, totalNnz=nnz;
-  A.comm.Allreduce(maxNnz, comm_t::Max);
-  A.comm.Allreduce(totalNnz, comm_t::Sum);
+  A.comm.Allreduce(maxNnz, Comm::Max);
+  A.comm.Allreduce(totalNnz, Comm::Sum);
 
   if (nnz==0) minNnz = maxNnz; //set this so it's ignored for the global min
-  A.comm.Allreduce(minNnz, comm_t::Min);
+  A.comm.Allreduce(minNnz, Comm::Min);
 
   dfloat nnzPerRow = (Nrows==0) ? 0 : (dfloat) nnz/Nrows;
   dfloat minNnzPerRow=nnzPerRow, maxNnzPerRow=nnzPerRow, avgNnzPerRow=nnzPerRow;
-  A.comm.Allreduce(maxNnzPerRow, comm_t::Max);
-  A.comm.Allreduce(avgNnzPerRow, comm_t::Sum);
+  A.comm.Allreduce(maxNnzPerRow, Comm::Max);
+  A.comm.Allreduce(avgNnzPerRow, Comm::Sum);
   avgNnzPerRow /= totalActive;
 
   if (Nrows==0) minNnzPerRow = maxNnzPerRow;
-  A.comm.Allreduce(minNnzPerRow, comm_t::Min);
+  A.comm.Allreduce(minNnzPerRow, Comm::Min);
 
   char smootherString[BUFSIZ];
   if (stype==DAMPED_JACOBI)

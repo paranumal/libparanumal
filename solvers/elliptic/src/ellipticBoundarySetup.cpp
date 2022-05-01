@@ -48,7 +48,7 @@ void elliptic_t::BoundarySetup(){
   o_EToB = platform.malloc<int>(EToB);
 
   //collect the allNeumann flags from other ranks
-  mesh.comm.Allreduce(allNeumann, comm_t::Min);
+  mesh.comm.Allreduce(allNeumann, Comm::Min);
 
   //translate the mesh's node-wise bc flag
   Nmasked = 0;

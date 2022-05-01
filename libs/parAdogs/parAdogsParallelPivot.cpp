@@ -90,8 +90,8 @@ dfloat ParallelPivot(const dlong N, memory<dfloat>& F,
     globalMax = std::max(A[n], globalMax);
     globalMin = std::min(A[n], globalMin);
   }
-  comm.Allreduce(globalMin, comm_t::Min);
-  comm.Allreduce(globalMax, comm_t::Max);
+  comm.Allreduce(globalMin, Comm::Min);
+  comm.Allreduce(globalMax, Comm::Max);
 
   /*Find pivot point via binary search*/
   dfloat pivot = Pivot(A, 0, N, k, globalMin, globalMax, comm);

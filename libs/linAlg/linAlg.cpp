@@ -112,7 +112,7 @@ dfloat linAlg_t::min(const dlong N, deviceMemory<dfloat> o_a, comm_t comm) {
   platform->finish();
 
   dfloat globalmin = h_scratch[0];
-  comm.Allreduce(globalmin, comm_t::Min);
+  comm.Allreduce(globalmin, Comm::Min);
 
   return globalmin;
 }
@@ -129,7 +129,7 @@ dfloat linAlg_t::max(const dlong N, deviceMemory<dfloat> o_a, comm_t comm) {
   platform->finish();
 
   dfloat globalmax = h_scratch[0];
-  comm.Allreduce(globalmax, comm_t::Max);
+  comm.Allreduce(globalmax, Comm::Max);
 
   return globalmax;
 }
@@ -146,7 +146,7 @@ dfloat linAlg_t::sum(const dlong N, deviceMemory<dfloat> o_a, comm_t comm) {
   platform->finish();
 
   dfloat globalsum = h_scratch[0];
-  comm.Allreduce(globalsum, comm_t::Sum);
+  comm.Allreduce(globalsum, Comm::Sum);
 
   return globalsum;
 }
@@ -163,7 +163,7 @@ dfloat linAlg_t::norm2(const dlong N, deviceMemory<dfloat> o_a, comm_t comm) {
   platform->finish();
 
   dfloat globalnorm = h_scratch[0];
-  comm.Allreduce(globalnorm, comm_t::Sum);
+  comm.Allreduce(globalnorm, Comm::Sum);
 
   return sqrt(globalnorm);
 }
@@ -181,7 +181,7 @@ dfloat linAlg_t::innerProd(const dlong N, deviceMemory<dfloat> o_x, deviceMemory
   platform->finish();
 
   dfloat globaldot = h_scratch[0];
-  comm.Allreduce(globaldot, comm_t::Sum);
+  comm.Allreduce(globaldot, Comm::Sum);
 
   return globaldot;
 }
@@ -200,7 +200,7 @@ dfloat linAlg_t::weightedInnerProd(const dlong N, deviceMemory<dfloat> o_w,
   platform->finish();
 
   dfloat globaldot = h_scratch[0];
-  comm.Allreduce(globaldot, comm_t::Sum);
+  comm.Allreduce(globaldot, Comm::Sum);
 
   return globaldot;
 }
@@ -218,7 +218,7 @@ dfloat linAlg_t::weightedNorm2(const dlong N, deviceMemory<dfloat> o_w,
   platform->finish();
 
   dfloat globalnorm = h_scratch[0];
-  comm.Allreduce(globalnorm, comm_t::Sum);
+  comm.Allreduce(globalnorm, Comm::Sum);
 
   return sqrt(globalnorm);
 }

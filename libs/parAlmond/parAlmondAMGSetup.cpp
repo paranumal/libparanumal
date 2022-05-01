@@ -40,7 +40,7 @@ void parAlmond_t::AMGSetup(parCOO& cooA,
   int rank = cooA.comm.rank();
   int size = cooA.comm.size();
 
-  if(comm_t::world().rank()==0) {printf("Setting up AMG...");fflush(stdout);}
+  if(Comm::World().rank()==0) {printf("Setting up AMG...");fflush(stdout);}
 
   /*Get multigrid solver*/
   multigrid_t& mg = *multigrid;
@@ -140,7 +140,7 @@ void parAlmond_t::AMGSetup(parCOO& cooA,
     globalSize = globalCoarseSize;
   }
 
-  if(comm_t::world().rank()==0) printf("done.\n");
+  if(Comm::World().rank()==0) printf("done.\n");
 }
 
 } //namespace parAlmond

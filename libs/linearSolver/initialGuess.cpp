@@ -136,7 +136,7 @@ void Projection::igBasisInnerProducts(deviceMemory<dfloat>& o_x, deviceMemory<df
     }
   }
 
-  comm.Allreduce(c, comm_t::Sum, curDim);
+  comm.Allreduce(c, Comm::Sum, curDim);
   c.copyTo(o_c, curDim);
 }
 

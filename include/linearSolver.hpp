@@ -174,7 +174,7 @@ private:
   kernel_t update1NBPCGKernel;
   kernel_t update2NBPCGKernel;
 
-  comm_t::request_t request;
+  Comm::request_t request;
 
   void Update1NBPCG(const dfloat beta);
   void Update2NBPCG(const dfloat alpha, deviceMemory<dfloat>& o_r);
@@ -199,7 +199,7 @@ private:
   kernel_t update0NBFPCGKernel;
   kernel_t update1NBFPCGKernel;
 
-  comm_t::request_t request;
+  Comm::request_t request;
 
   void Update0NBFPCG(deviceMemory<dfloat>& o_r);
   void Update1NBFPCG(const dfloat alpha, deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_r);

@@ -41,7 +41,7 @@ ParAlmondPrecon::ParAlmondPrecon(elliptic_t& _elliptic):
   parAlmond(elliptic.platform, settings, elliptic.mesh.comm) {
 
   //build full A matrix and pass to parAlmond
-  if (comm_t::world().rank()==0){
+  if (Comm::World().rank()==0){
     printf("-----------------------------Multigrid AMG Setup--------------------------------------------\n");
   }
   parAlmond::parCOO A(elliptic.platform, elliptic.mesh.comm);

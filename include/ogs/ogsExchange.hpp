@@ -112,7 +112,7 @@ private:
   memory<int> sendOffsets;
   memory<int> recvOffsets;
 
-  comm_t::request_t request;
+  Comm::request_t request;
 
 public:
   ogsAllToAll_t(dlong Nshared,
@@ -192,7 +192,7 @@ private:
   memory<int> sendOffsetsT;
   memory<int> recvOffsetsN;
   memory<int> recvOffsetsT;
-  memory<comm_t::request_t> requests;
+  memory<Comm::request_t> requests;
 
 public:
   ogsPairwise_t(dlong Nshared,
@@ -268,7 +268,7 @@ private:
   pinnedMemory<char> h_work[2];
   deviceMemory<char> o_work[2];
 
-  memory<comm_t::request_t> request;
+  memory<Comm::request_t> request;
 
   int Nlevels=0;
   memory<crLevel> levelsN;

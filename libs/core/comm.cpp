@@ -28,12 +28,14 @@ SOFTWARE.
 
 namespace libp {
 
+namespace Comm {
+
 /*Static MPI_Init and MPI_Finalize*/
-void comm_t::Init(int &argc, char** &argv) { MPI_Init(&argc, &argv); }
-void comm_t::Finalize() { MPI_Finalize(); }
+void Init(int &argc, char** &argv) { MPI_Init(&argc, &argv); }
+void Finalize() { MPI_Finalize(); }
 
 /*Static handle to MPI_COMM_WORLD*/
-comm_t comm_t::world() {
+comm_t World() {
   comm_t c;
   c.comm_ptr = std::make_shared<MPI_Comm>();
   *(c.comm_ptr) = MPI_COMM_WORLD;
@@ -41,6 +43,12 @@ comm_t comm_t::world() {
   MPI_Comm_size(c.comm(), &(c._size));
   return c;
 }
+
+void GetProcessorName(char* name, int &namelen) {
+  MPI_Get_processor_name(name,&namelen);
+}
+
+} //namespace Comm
 
 /*MPI_Comm_dup and free*/
 comm_t comm_t::Dup() const {
@@ -95,11 +103,11 @@ MPI_Comm comm_t::comm() const {
   }
 }
 
-void comm_t::Wait(request_t &request) const {
+void comm_t::Wait(Comm::request_t &request) const {
   MPI_Wait(&request, MPI_STATUS_IGNORE);
 }
 
-void comm_t::Waitall(const int count, memory<request_t> &requests) const {
+void comm_t::Waitall(const int count, memory<Comm::request_t> &requests) const {
   MPI_Waitall(count, requests.ptr(), MPI_STATUSES_IGNORE);
 }
 
