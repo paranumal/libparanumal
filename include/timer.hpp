@@ -48,6 +48,9 @@ timePoint_t PlatformTime(platform_t &platform);
 /* Host time after platform sync*/
 timePoint_t GlobalPlatformTime(platform_t &platform);
 
+/* Host time after platform sync*/
+timePoint_t GlobalPlatformTime(platform_t &platform, comm_t comm);
+
 /*Time between time points, in seconds*/
 double ElapsedTime(const timePoint_t start, const timePoint_t end);
 

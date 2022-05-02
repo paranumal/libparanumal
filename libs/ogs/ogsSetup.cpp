@@ -181,7 +181,7 @@ void ogsBase_t::Setup(const dlong _N,
                             platform, verbose));
   }
 
-  timePoint_t end = GlobalPlatformTime(platform);
+  timePoint_t end = GlobalPlatformTime(platform, comm);
   double elapsedTime = ElapsedTime(start, end);
 
   if (!rank && verbose) {

@@ -52,6 +52,13 @@ timePoint_t GlobalPlatformTime(platform_t &platform) {
   return Time();
 }
 
+/* Host time after platform sync*/
+timePoint_t GlobalPlatformTime(platform_t &platform, comm_t comm) {
+  platform.finish();
+  comm.Barrier();
+  return Time();
+}
+
 /*Time between time points, in seconds*/
 double ElapsedTime(const timePoint_t start, const timePoint_t end) {
   return std::chrono::duration_cast<std::chrono::microseconds>(end-start).count()/(1.0e6);
