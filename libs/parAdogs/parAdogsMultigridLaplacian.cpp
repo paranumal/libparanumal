@@ -121,7 +121,7 @@ void graph_t::CreateLaplacian() {
   A.offd.nnz=0;
   for (dlong e=0;e<Nverts;++e) {
     A.diag.cols[A.diag.nnz] = e;
-    dfloat& Ann = A.diag.vals[A.diag.nnz];
+    pfloat& Ann = A.diag.vals[A.diag.nnz];
     A.diag.nnz++;
 
     Ann = 0.0;

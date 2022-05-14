@@ -284,8 +284,13 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
   }
 
   //Solver tolerances
-  presTOL = 1E-8;
-  velTOL  = 1E-8;
+  if (sizeof(dfloat)==sizeof(double)) {
+    presTOL = 1.0E-8;
+    velTOL  = 1.0E-8;
+  } else {
+    presTOL = 1.0E-5;
+    velTOL  = 1.0E-5;
+  }
 
   //setup linear algebra module
   platform.linAlg().InitKernels({"innerProd", "axpy", "max"});

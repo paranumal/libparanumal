@@ -196,7 +196,8 @@ void dopri5::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dflo
       time += dt;
       while (time>outputTime) outputTime+= outputInterval; //catch up next output in case dt>outputInterval
 
-      facold = std::max(err,1E-4); // hard coded factor ?
+      constexpr dfloat errMax = 1.0e-4;  // hard coded factor ?
+      facold = std::max(err,errMax);
 
       // if (!rank)
       //   printf("\r time = %g (%d), dt = %g accepted                      ", time, allStep,  dt);

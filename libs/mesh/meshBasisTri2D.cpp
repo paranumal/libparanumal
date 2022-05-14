@@ -48,11 +48,7 @@ void mesh_t::FaceNodesTri2D(const int _N,
   int cnt[3];
   for (int i=0;i<3;i++) cnt[i]=0;
 
-  dfloat deps = 1.;
-  while((1.+deps)>1.)
-    deps *= 0.5;
-
-  const dfloat NODETOL = 1000.*deps;
+  const dfloat NODETOL = 1.0e-5;
 
   _faceNodes.malloc(3*_Nfp);
   for (int n=0;n<_Np;n++) {

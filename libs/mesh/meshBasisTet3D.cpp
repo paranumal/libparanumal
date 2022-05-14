@@ -50,11 +50,7 @@ void mesh_t::FaceNodesTet3D(const int _N,
   int cnt[4];
   for (int i=0;i<4;i++) cnt[i]=0;
 
-  dfloat deps = 1.;
-  while((1.+deps)>1.)
-    deps *= 0.5;
-
-  const dfloat NODETOL = 1000.*deps;
+  const dfloat NODETOL = 1.0e-5;
 
   _faceNodes.malloc(4*_Nfp);
   for (int n=0;n<_Np;n++) {

@@ -164,8 +164,8 @@ void ClassicProjection::Update(operator_t &linearOperator, deviceMemory<dfloat>&
     normbtilde = platform.linAlg().norm2(Ntotal, o_btilde, comm);
 
     if (normbtilde > 0) {
-      igScaleKernel(Ntotal, 1.0/normbtilde, o_btilde, o_Btilde);
-      igScaleKernel(Ntotal, 1.0/normbtilde, o_x,      o_Xtilde);
+      igScaleKernel(Ntotal, dfloat(1.0)/normbtilde, o_btilde, o_Btilde);
+      igScaleKernel(Ntotal, dfloat(1.0)/normbtilde, o_x,      o_Xtilde);
 
       curDim = 1;
     }
@@ -178,8 +178,8 @@ void ClassicProjection::Update(operator_t &linearOperator, deviceMemory<dfloat>&
     // Orthogonalize new RHS against previous ones.
     for (int n = 0; n < Nreorth; n++) {
       igBasisInnerProducts(o_btilde, o_Btilde, o_alphas, alphas);
-      igReconstruct(o_btilde, (dfloat)(-1.0), o_alphas, o_Btilde, o_btilde);
-      igReconstruct(o_xtilde, (dfloat)(-1.0), o_alphas, o_Xtilde, o_xtilde);
+      igReconstruct(o_btilde, -1.0, o_alphas, o_Btilde, o_btilde);
+      igReconstruct(o_xtilde, -1.0, o_alphas, o_Xtilde, o_xtilde);
     }
 
     // Normalize.

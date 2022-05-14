@@ -190,7 +190,7 @@ void saab3::UpdateCoefficients() {
       dfloat aa32=real(a32)/ (double) Nr;
       dfloat aa33=real(a33)/ (double) Nr;
 
-      dfloat _saab_X[1]  = { exp(alpha) };
+      dfloat _saab_X[1]  = { std::exp(alpha) };
       dfloat _saab_A[Nstages*Nstages]
                       ={   aa11,   0.0,   0.0,
                            aa21,  aa22,   0.0,

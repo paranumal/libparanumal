@@ -121,7 +121,7 @@ void bns_t::PmlSetup(){
 
     // printf("Setting PML Coefficient \n");
     //set up damping parameter
-    pmlSigma.malloc(mesh.dim*mesh.NpmlElements*pmlNp);
+    pmlSigma.malloc(mesh.dim*mesh.NpmlElements*pmlNp, 0.0);
 
     for (dlong m=0;m<mesh.NpmlElements;m++){
       dlong e     = mesh.pmlElements[m];

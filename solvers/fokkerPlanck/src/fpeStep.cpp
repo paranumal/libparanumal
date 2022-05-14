@@ -90,7 +90,7 @@ void fpe_t::rhs_imex_invg(deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_Q
   int verbose =0;
 
   //call the solver to solve -Laplacian*q + lambda*q = rhs
-  dfloat tol = 1e-8;
+  dfloat tol = (sizeof(dfloat)==sizeof(double)) ? 1.0e-8 : 1.0e-5;
   elliptic.lambda = gamma/mu;
   int iter = elliptic.Solve(linearSolver, o_Q, o_RHS, tol, maxIter, verbose);
 

@@ -302,7 +302,7 @@ void mrsaab3::UpdateCoefficients() {
         dfloat bb32=real(b32)/ (double) Nr;
         dfloat bb33=real(b33)/ (double) Nr;
 
-        dfloat _saab_X[1]  = { exp(alpha) };
+        dfloat _saab_X[1]  = { std::exp(alpha) };
         dfloat _saab_A[Nstages*Nstages]
                         ={   aa11,   0.0,   0.0,
                              aa21,  aa22,   0.0,

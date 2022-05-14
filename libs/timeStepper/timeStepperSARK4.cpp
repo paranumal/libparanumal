@@ -214,7 +214,8 @@ void sark4::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloa
       time += dt;
       while (time>outputTime) outputTime+= outputInterval; //catch up next output in case dt>outputInterval
 
-      facold = std::max(err,1E-4); // hard coded factor ?
+      constexpr dfloat errMax = 1.0e-4;  // hard coded factor ?
+      facold = std::max(err,errMax);
 
       // if (!rank)
       //   printf("\r time = %g (%d), dt = %g accepted                      ", time, allStep,  dt);
@@ -395,7 +396,11 @@ void sark4::UpdateCoefficients() {
       dfloat a54=real(ca54)/ (double) Nr;
 
       // first set non-semianalytic part of the integrator
-      dfloat _rkX[Nrk]  = {1.0, exp(0.5*alpha), exp(0.5*alpha), exp(alpha), exp(alpha) };
+      dfloat _rkX[Nrk]  = {1.0,
+                           std::exp(dfloat(0.5)*alpha),
+                           std::exp(dfloat(0.5)*alpha),
+                           std::exp(alpha),
+                           std::exp(alpha) };
       dfloat _rkA[Nrk*Nrk]
                       ={   0.0,  0.0,  0.0,   0.0,  0.0,
                            a21,  0.0,  0.0,   0.0,  0.0,

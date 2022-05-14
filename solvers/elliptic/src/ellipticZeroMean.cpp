@@ -32,7 +32,6 @@ void elliptic_t::ZeroMean(deviceMemory<dfloat> &o_q){
 
   // normalize
   qmean *= allNeumannScale*allNeumannScale;
-
   // q[n] = q[n] - qmean
   platform.linAlg().add(Ndofs, -qmean, o_q);
 }

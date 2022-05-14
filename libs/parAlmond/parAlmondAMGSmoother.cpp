@@ -142,7 +142,6 @@ void parCSR::smoothChebyshev(deviceMemory<dfloat>& o_b, deviceMemory<dfloat>& o_
                                offd.o_rows, offd.o_cols, offd.o_vals,
                                o_diagInv, o_d, o_r);
 
-
     const int last_it = (k==ChebyshevIterations-1) ? 1 : 0;
 
     rho_np1 = 1.0/(2.*sigma-rho_n);
@@ -152,7 +151,7 @@ void parCSR::smoothChebyshev(deviceMemory<dfloat>& o_b, deviceMemory<dfloat>& o_
     if (Nrows)
       SmoothChebyshevUpdateKernel(Nrows,
                                   rho_np1*rho_n,
-                                  2.0*rho_np1/delta,
+                                  dfloat(2.0)*rho_np1/delta,
                                   last_it,
                                   o_r, o_d, o_x);
 
