@@ -91,11 +91,11 @@ H. Dependencies:
 
 ---
 ### 4. Code block diagram
-<img src="http://intranet.math.vt.edu/people/tcew/libPdiagramCropV2.jpg" width="512" >
+![libParnumal Code Diagram](./.github/CodeDiagram.png)
 
 ---
 ### 5. OCCA dependency
-OCCA is held as a git submodule inside libParanumal. If you did not clone with `--recursive` then run the following command before building.
+OCCA is held as a git submodule inside libParanumal. If you did not clone with `--recursive` then run the following commands before building.
 ```
 git submodule init
 git submodule update
