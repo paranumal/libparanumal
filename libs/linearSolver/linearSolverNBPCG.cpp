@@ -40,10 +40,12 @@ nbpcg::nbpcg(dlong _N, dlong _Nhalo,
 
   dlong Ntotal = N + Nhalo;
 
+  memory<dfloat> dummy(Ntotal, 0.0);
+
   /*aux variables */
-  o_p  = platform.malloc<dfloat>(Ntotal);
-  o_s  = platform.malloc<dfloat>(Ntotal);
-  o_S  = platform.malloc<dfloat>(Ntotal);
+  o_p  = platform.malloc<dfloat>(Ntotal, dummy);
+  o_s  = platform.malloc<dfloat>(Ntotal, dummy);
+  o_S  = platform.malloc<dfloat>(Ntotal, dummy);
   o_z  = platform.malloc<dfloat>(Ntotal);
   o_Z  = platform.malloc<dfloat>(Ntotal);
   o_Ax = platform.malloc<dfloat>(Ntotal);
