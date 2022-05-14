@@ -293,8 +293,13 @@ class deviceMemory: public occa::memory {
   deviceMemory(occa::memory m):
     occa::memory(m)
   {
-    if (isInitialized())
-      occa::memory::setDtype(occa::dtype::get<T>());
+    if (isInitialized()) {
+      if (occa::dtype::get<T>() == occa::dtype::none) {
+        occa::memory::setDtype(occa::dtype::byte);
+      } else {
+        occa::memory::setDtype(occa::dtype::get<T>());
+      }
+    }
   }
 
   /*Conversion constructor*/
@@ -302,8 +307,13 @@ class deviceMemory: public occa::memory {
   deviceMemory(const deviceMemory<U> &m):
     occa::memory(m)
   {
-    if (isInitialized())
-      occa::memory::setDtype(occa::dtype::get<T>());
+    if (isInitialized()) {
+      if (occa::dtype::get<T>() == occa::dtype::none) {
+        occa::memory::setDtype(occa::dtype::byte);
+      } else {
+        occa::memory::setDtype(occa::dtype::get<T>());
+      }
+    }
   }
 
   deviceMemory<T>& operator = (const deviceMemory<T> &m)=default;
@@ -314,6 +324,10 @@ class deviceMemory: public occa::memory {
   }
   const T* ptr() const {
     return static_cast<const T*>(occa::memory::ptr());
+  }
+
+  size_t length() const {
+    return size()/sizeof(T);
   }
 
   T& operator[](const ptrdiff_t idx) {
@@ -473,8 +487,13 @@ class pinnedMemory: public occa::memory {
   pinnedMemory(occa::memory m):
     occa::memory(m)
   {
-    if (isInitialized())
-      occa::memory::setDtype(occa::dtype::get<T>());
+    if (isInitialized()) {
+      if (occa::dtype::get<T>() == occa::dtype::none) {
+        occa::memory::setDtype(occa::dtype::byte);
+      } else {
+        occa::memory::setDtype(occa::dtype::get<T>());
+      }
+    }
   };
 
   /*Conversion constructor*/
@@ -482,8 +501,13 @@ class pinnedMemory: public occa::memory {
   pinnedMemory(const pinnedMemory<U> &m):
     occa::memory(m)
   {
-    if (isInitialized())
-      occa::memory::setDtype(occa::dtype::get<T>());
+    if (isInitialized()) {
+      if (occa::dtype::get<T>() == occa::dtype::none) {
+        occa::memory::setDtype(occa::dtype::byte);
+      } else {
+        occa::memory::setDtype(occa::dtype::get<T>());
+      }
+    }
   }
 
   pinnedMemory<T>& operator = (const pinnedMemory<T> &m)=default;
@@ -494,6 +518,10 @@ class pinnedMemory: public occa::memory {
   }
   const T* ptr() const {
     return static_cast<const T*>(occa::memory::ptr());
+  }
+
+  size_t length() const {
+    return size()/sizeof(T);
   }
 
   T& operator[](const ptrdiff_t idx) {
