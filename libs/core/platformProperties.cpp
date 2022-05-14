@@ -79,11 +79,6 @@ void platform_t::DeviceProperties(){
   if(device.mode()=="Serial") {
     Props["compiler_flags"] += "-O3 ";
     Props["compiler_flags"] += "-g "; //debugging
-  }
-
-  if(device.mode()=="Serial") {
-    Props["compiler_flags"] += "-O3 ";
-    Props["compiler_flags"] += "-g "; //debugging
     Props["defines/OCCA_USE_SERIAL"] = 1;
   }
 
