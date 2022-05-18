@@ -52,7 +52,8 @@ static dfloat Pivot(memory<dfloat>& A,
   const dfloat pivot = (min+max)/2.0;
 
   /*Bail out if we're looking at a tiny window*/
-  if (max-min < 1.0E-13) return pivot;
+  constexpr TOL = (sizeof(dfloat)==8) ? 1.0e-13 : 1.0E-5;
+  if (max-min < TOL) return pivot;
 
   dfloat* Am = partition(A.ptr()+left, A.ptr()+right, [pivot](const dfloat& a){ return a <= pivot; });
 
