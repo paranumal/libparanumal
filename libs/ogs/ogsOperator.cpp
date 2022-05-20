@@ -67,7 +67,7 @@ void ogsOperator_t::Gather(U<T> gv,
                            const Transpose trans) {
 
   dlong Nrows;
-  dlong *rowStarts, *colIds;
+  dlong *__restrict__ rowStarts, *__restrict__ colIds;
   if (trans==NoTrans) {
     Nrows = NrowsN;
     rowStarts = rowStartsN.ptr();
@@ -78,8 +78,8 @@ void ogsOperator_t::Gather(U<T> gv,
     colIds = colIdsT.ptr();
   }
 
-  const T* v_ptr  = v.ptr();
-  T* gv_ptr = gv.ptr();
+  const T*__restrict__ v_ptr  = v.ptr();
+  T*__restrict__ gv_ptr = gv.ptr();
 
   #pragma omp parallel for
   for(dlong n=0;n<Nrows;++n){
@@ -210,7 +210,7 @@ void ogsOperator_t::Scatter(U<T> v, const V<T> gv,
                             const int K, const Transpose trans) {
 
   dlong Nrows;
-  dlong *rowStarts, *colIds;
+  dlong *__restrict__ rowStarts, *__restrict__ colIds;
   if (trans==Trans) {
     Nrows = NrowsN;
     rowStarts = rowStartsN.ptr();
@@ -221,8 +221,8 @@ void ogsOperator_t::Scatter(U<T> v, const V<T> gv,
     colIds = colIdsT.ptr();
   }
 
-  T* v_ptr  = v.ptr();
-  const T* gv_ptr = gv.ptr();
+  T*__restrict__ v_ptr  = v.ptr();
+  const T*__restrict__ gv_ptr = gv.ptr();
 
   #pragma omp parallel for
   for(dlong n=0;n<Nrows;++n){
@@ -315,8 +315,8 @@ void ogsOperator_t::GatherScatter(U<T> v, const int K,
                                   const Transpose trans) {
 
   dlong Nrows;
-  dlong *gRowStarts, *gColIds;
-  dlong *sRowStarts, *sColIds;
+  dlong *__restrict__ gRowStarts, *__restrict__ gColIds;
+  dlong *__restrict__ sRowStarts, *__restrict__ sColIds;
 
   if (trans==Trans) {
     Nrows = NrowsN;
@@ -338,7 +338,7 @@ void ogsOperator_t::GatherScatter(U<T> v, const int K,
     sColIds    = colIdsT.ptr();
   }
 
-  T* v_ptr = v.ptr();
+  T*__restrict__ v_ptr = v.ptr();
 
   #pragma omp parallel for
   for(dlong n=0;n<Nrows;++n){
@@ -546,8 +546,8 @@ void extract(const dlong N,
              const U<T> q,
              V<T> gatherq) {
 
-  const T* q_ptr = q.ptr();
-  T* gatherq_ptr = gatherq.ptr();
+  const T*__restrict__ q_ptr = q.ptr();
+  T*__restrict__ gatherq_ptr = gatherq.ptr();
 
   for(dlong n=0;n<N;++n){
     const dlong gid = ids[n];
