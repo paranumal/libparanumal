@@ -131,12 +131,18 @@ void platform_t::DeviceConfig(){
   char * ompEnvVar = std::getenv("OMP_NUM_THREADS");
   if (ompEnvVar == nullptr) { // Environment variable is not set
     Nthreads = std::max(NcoresPerNode/localSize, 1); //Evenly divide number of cores
+
+    // If omp max threads is lower than this (due to binding), go with omp
+    Nthreads = std::min(Nthreads, omp_get_max_threads());
   } else {
     ompNumThreads = ompEnvVar;
     // Environmet variable is set, but could be empty string
     if (ompNumThreads.size() == 0) {
       // Environment variable is set but equal to empty string
       Nthreads = std::max(NcoresPerNode/localSize, 1); //Evenly divide number of cores;
+
+      // If omp max threads is lower than this (due to binding), go with omp
+      Nthreads = std::min(Nthreads, omp_get_max_threads());
     } else {
       Nthreads = std::stoi(ompNumThreads);
     }
@@ -146,9 +152,8 @@ void platform_t::DeviceConfig(){
   omp_set_num_threads(Nthreads);
   // omp_set_num_threads(1);
 
-  // if (settings.compareSetting("VERBOSE","TRUE"))
-  //   printf("Rank %d: Nsockets = %d, NcoresPerSocket = %d, Nthreads = %d, device_id = %d \n",
-  //          rank, Nsockets, Ncores, Nthreads, device_id);
+  // printf("Rank %d: Nsockets = %d, NcoresPerSocket = %d, Nthreads = %d, device_id = %d \n",
+  //        rank(), Nsockets, Ncores, Nthreads, device_id);
 #endif
 
   device.setup(mode);
