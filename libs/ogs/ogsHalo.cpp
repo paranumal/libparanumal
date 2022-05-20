@@ -52,7 +52,7 @@ void halo_t::ExchangeStart(deviceMemory<T> o_v, const int k){
     if (gathered_halo) {
       //if this halo was build from a gathered ogs the halo nodes are at the end
       o_haloBuf.copyFrom(o_v + k*NlocalT, k*NhaloP,
-                         0, "async: true");
+                         0, properties_t("async", true));
     } else {
       //collect halo buffer
       gatherHalo->Gather(o_haloBuf, o_v, k, Add, NoTrans);
@@ -76,7 +76,7 @@ void halo_t::ExchangeStart(deviceMemory<T> o_v, const int k){
       //queue copy to host
       device.setStream(dataStream);
       haloBuf.copyFrom(o_v + k*NlocalT, NhaloP*k,
-                       0, "async: true");
+                       0, properties_t("async", true));
       device.setStream(currentStream);
     } else {
       //collect halo buffer
@@ -88,7 +88,7 @@ void halo_t::ExchangeStart(deviceMemory<T> o_v, const int k){
       //queue copy to host
       device.setStream(dataStream);
       haloBuf.copyFrom(o_haloBuf, NhaloP*k,
-                       0, "async: true");
+                       0, properties_t("async", true));
       device.setStream(currentStream);
     }
   }
@@ -106,7 +106,7 @@ void halo_t::ExchangeFinish(deviceMemory<T> o_v, const int k){
 
     if (gathered_halo) {
       o_haloBuf.copyTo(o_v + k*(NlocalT+NhaloP), k*Nhalo,
-                       k*NhaloP, "async: true");
+                       k*NhaloP, properties_t("async", true));
     } else {
       gatherHalo->Scatter(o_v, o_haloBuf, k, NoTrans);
     }
@@ -128,12 +128,12 @@ void halo_t::ExchangeFinish(deviceMemory<T> o_v, const int k){
     // copy recv back to device
     if (gathered_halo) {
       haloBuf.copyTo(o_v + k*(NlocalT+NhaloP), k*Nhalo,
-                     k*NhaloP, "async: true");
+                     k*NhaloP, properties_t("async", true));
       device.finish(); //wait for transfer to finish
       device.setStream(currentStream);
     } else {
       haloBuf.copyTo(o_haloBuf+k*NhaloP, k*Nhalo,
-                     k*NhaloP, "async: true");
+                     k*NhaloP, properties_t("async", true));
       device.finish(); //wait for transfer to finish
       device.setStream(currentStream);
 
@@ -231,7 +231,7 @@ void halo_t::CombineStart(deviceMemory<T> o_v, const int k){
     if (gathered_halo) {
       //if this halo was build from a gathered ogs the halo nodes are at the end
       o_haloBuf.copyFrom(o_v + k*NlocalT, k*NhaloT,
-                         0, "async: true");
+                         0, properties_t("async", true));
     } else {
       //collect halo buffer
       gatherHalo->Gather(o_haloBuf, o_v, k, Add, Trans);
@@ -254,7 +254,7 @@ void halo_t::CombineStart(deviceMemory<T> o_v, const int k){
       //queue copy to host
       device.setStream(dataStream);
       haloBuf.copyFrom(o_v + k*NlocalT, NhaloT*k,
-                       0, "async: true");
+                       0, properties_t("async", true));
       device.setStream(currentStream);
     } else {
       //collect halo buffer
@@ -266,7 +266,7 @@ void halo_t::CombineStart(deviceMemory<T> o_v, const int k){
       //queue copy to host
       device.setStream(dataStream);
       haloBuf.copyFrom(o_haloBuf, NhaloT*k,
-                       0, "async: true");
+                       0, properties_t("async", true));
       device.setStream(currentStream);
     }
   }
@@ -285,7 +285,7 @@ void halo_t::CombineFinish(deviceMemory<T> o_v, const int k){
     if (gathered_halo) {
       //if this halo was build from a gathered ogs the halo nodes are at the end
       o_haloBuf.copyTo(o_v + k*NlocalT, k*NhaloP,
-                       0, "async: true");
+                       0, properties_t("async", true));
     } else {
       gatherHalo->Scatter(o_v, o_haloBuf, k, Trans);
     }
@@ -307,12 +307,12 @@ void halo_t::CombineFinish(deviceMemory<T> o_v, const int k){
     if (gathered_halo) {
       // copy recv back to device
       haloBuf.copyTo(o_v + k*NlocalT, NhaloP*k,
-                     0, "async: true");
+                     0, properties_t("async", true));
       device.finish(); //wait for transfer to finish
       device.setStream(currentStream);
     } else {
       haloBuf.copyTo(o_haloBuf, NhaloP*k,
-                     0, "async: true");
+                     0, properties_t("async", true));
       device.finish(); //wait for transfer to finish
       device.setStream(currentStream);
 

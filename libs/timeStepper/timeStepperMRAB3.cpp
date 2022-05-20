@@ -204,7 +204,7 @@ void mrab3::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloa
                         o_q,
                         o_fQM);
 
-    // o_shiftIndex.copyFrom(h_shiftIndex, "async: true");
+    // o_shiftIndex.copyFrom(h_shiftIndex, properties_t("async", true));
     h_shiftIndex.copyTo(o_shiftIndex); //Required to keep the update kernel overlapping the transfer,
                                        // but why does that happen?
   }
@@ -323,7 +323,7 @@ void mrab3_pml::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, d
                         o_q,
                         o_fQM);
 
-    // o_shiftIndex.copyFrom(h_shiftIndex, "async: true");
+    // o_shiftIndex.copyFrom(h_shiftIndex, properties_t("async", true));
     h_shiftIndex.copyTo(o_shiftIndex); //Required to keep the update kernel overlapping the transfer,
                                        // but why does that happen?
   }

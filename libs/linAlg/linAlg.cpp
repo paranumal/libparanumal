@@ -108,7 +108,7 @@ dfloat linAlg_t::min(const dlong N, deviceMemory<dfloat> o_a, comm_t comm) {
   minKernel1(Nblock, N, o_a, o_scratch);
   minKernel2(Nblock, o_scratch);
 
-  h_scratch.copyFrom(o_scratch, 1, 0, "async: true");
+  h_scratch.copyFrom(o_scratch, 1, 0, properties_t("async", true));
   platform->finish();
 
   dfloat globalmin = h_scratch[0];
@@ -125,7 +125,7 @@ dfloat linAlg_t::max(const dlong N, deviceMemory<dfloat> o_a, comm_t comm) {
   maxKernel1(Nblock, N, o_a, o_scratch);
   maxKernel2(Nblock, o_scratch);
 
-  h_scratch.copyFrom(o_scratch, 1, 0, "async: true");
+  h_scratch.copyFrom(o_scratch, 1, 0, properties_t("async", true));
   platform->finish();
 
   dfloat globalmax = h_scratch[0];
@@ -142,7 +142,7 @@ dfloat linAlg_t::sum(const dlong N, deviceMemory<dfloat> o_a, comm_t comm) {
   sumKernel1(Nblock, N, o_a, o_scratch);
   sumKernel2(Nblock, o_scratch);
 
-  h_scratch.copyFrom(o_scratch, 1, 0, "async: true");
+  h_scratch.copyFrom(o_scratch, 1, 0, properties_t("async", true));
   platform->finish();
 
   dfloat globalsum = h_scratch[0];
@@ -159,7 +159,7 @@ dfloat linAlg_t::norm2(const dlong N, deviceMemory<dfloat> o_a, comm_t comm) {
   norm2Kernel1(Nblock, N, o_a, o_scratch);
   norm2Kernel2(Nblock, o_scratch);
 
-  h_scratch.copyFrom(o_scratch, 1, 0, "async: true");
+  h_scratch.copyFrom(o_scratch, 1, 0, properties_t("async", true));
   platform->finish();
 
   dfloat globalnorm = h_scratch[0];
@@ -177,7 +177,7 @@ dfloat linAlg_t::innerProd(const dlong N, deviceMemory<dfloat> o_x, deviceMemory
   innerProdKernel1(Nblock, N, o_x, o_y, o_scratch);
   innerProdKernel2(Nblock, o_scratch);
 
-  h_scratch.copyFrom(o_scratch, 1, 0, "async: true");
+  h_scratch.copyFrom(o_scratch, 1, 0, properties_t("async", true));
   platform->finish();
 
   dfloat globaldot = h_scratch[0];
@@ -196,7 +196,7 @@ dfloat linAlg_t::weightedInnerProd(const dlong N, deviceMemory<dfloat> o_w,
   weightedInnerProdKernel1(Nblock, N, o_w, o_x, o_y, o_scratch);
   weightedInnerProdKernel2(Nblock, o_scratch);
 
-  h_scratch.copyFrom(o_scratch, 1, 0, "async: true");
+  h_scratch.copyFrom(o_scratch, 1, 0, properties_t("async", true));
   platform->finish();
 
   dfloat globaldot = h_scratch[0];
@@ -214,7 +214,7 @@ dfloat linAlg_t::weightedNorm2(const dlong N, deviceMemory<dfloat> o_w,
   weightedNorm2Kernel1(Nblock, N, o_w, o_a, o_scratch);
   weightedNorm2Kernel2(Nblock, o_scratch);
 
-  h_scratch.copyFrom(o_scratch, 1, 0, "async: true");
+  h_scratch.copyFrom(o_scratch, 1, 0, properties_t("async", true));
   platform->finish();
 
   dfloat globalnorm = h_scratch[0];

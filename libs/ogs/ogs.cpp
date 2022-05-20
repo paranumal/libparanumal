@@ -76,7 +76,7 @@ void ogs_t::GatherScatterStart(deviceMemory<T> o_v,
     //queue copy to host
     device.setStream(dataStream);
     haloBuf.copyFrom(o_haloBuf, Nhalo*k,
-                     0, "async: true");
+                     0, properties_t("async", true));
     device.setStream(currentStream);
   }
 }
@@ -113,7 +113,7 @@ void ogs_t::GatherScatterFinish(deviceMemory<T> o_v,
     // copy recv back to device
     const dlong Nhalo = (trans == Trans) ? NhaloP : NhaloT;
     haloBuf.copyTo(o_haloBuf, Nhalo*k,
-                   0, "async: true");
+                   0, properties_t("async", true));
     device.finish(); //wait for transfer to finish
     device.setStream(currentStream);
   }
@@ -242,7 +242,7 @@ void ogs_t::GatherStart(deviceMemory<T> o_gv,
       //queue copy to host
       device.setStream(dataStream);
       haloBuf.copyFrom(o_haloBuf, NhaloT*k,
-                       0, "async: true");
+                       0, properties_t("async", true));
       device.setStream(currentStream);
     }
   } else {
@@ -271,7 +271,7 @@ void ogs_t::GatherFinish(deviceMemory<T> o_gv,
 
       //put the result at the end of o_gv
       o_haloBuf.copyTo(o_gv + k*NlocalT,
-                       k*NhaloP, 0, "async: true");
+                       k*NhaloP, 0, properties_t("async", true));
     } else {
       pinnedMemory<T> haloBuf = exchange->h_workspace;
 
@@ -290,7 +290,7 @@ void ogs_t::GatherFinish(deviceMemory<T> o_gv,
       // copy recv back to device
       //put the result at the end of o_gv
       haloBuf.copyTo(o_gv + k*NlocalT, k*NhaloP,
-                     0, "async: true");
+                     0, properties_t("async", true));
       device.finish(); //wait for transfer to finish
       device.setStream(currentStream);
     }
@@ -415,7 +415,7 @@ void ogs_t::ScatterStart(deviceMemory<T> o_v,
     if (exchange->gpu_aware) {
       //collect halo buffer
       o_haloBuf.copyFrom(o_gv + k*NlocalT,
-                         k*NhaloP, 0, "async: true");
+                         k*NhaloP, 0, properties_t("async", true));
 
       //wait for o_haloBuf to be ready
       device.finish();
@@ -435,7 +435,7 @@ void ogs_t::ScatterStart(deviceMemory<T> o_v,
       //queue copy to host
       device.setStream(dataStream);
       haloBuf.copyFrom(o_gv + k*NlocalT, NhaloP*k,
-                       0, "async: true");
+                       0, properties_t("async", true));
       device.setStream(currentStream);
     }
   }
@@ -474,7 +474,7 @@ void ogs_t::ScatterFinish(deviceMemory<T> o_v,
 
       // copy recv back to device
       haloBuf.copyTo(o_haloBuf, NhaloT*k,
-                     0, "async: true");
+                     0, properties_t("async", true));
       device.finish(); //wait for transfer to finish
       device.setStream(currentStream);
     }

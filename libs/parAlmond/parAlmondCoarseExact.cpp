@@ -40,7 +40,7 @@ void exactSolver_t::solve(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x
   if(N) {
     platform.finish();
     platform.setStream(ogs::ogsBase_t::dataStream);
-    o_rhs.copyTo(diagRhs, N, 0, "async: true");
+    o_rhs.copyTo(diagRhs, N, 0, properties_t("async", true));
     platform.setStream(currentStream);
   }
 
@@ -61,7 +61,7 @@ void exactSolver_t::solve(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x
                    offdRhs, coarseCounts, coarseOffsets);
 
     //queue transfering coarse vector to device
-    o_offdRhs.copyFrom(offdRhs, offdTotal, 0, "async: true");
+    o_offdRhs.copyFrom(offdRhs, offdTotal, 0, properties_t("async", true));
     platform.finish(); //wait for transfer to complete
 
     platform.setStream(currentStream);

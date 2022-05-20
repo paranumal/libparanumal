@@ -415,9 +415,9 @@ void sark4::UpdateCoefficients() {
     }
 
     // move data to platform
-    // o_rkX.copyFrom(rkX, "async: true");
-    // o_rkA.copyFrom(rkA, "async: true");
-    // o_rkE.copyFrom(rkE, "async: true");
+    // o_rkX.copyFrom(rkX, properties_t("async", true));
+    // o_rkA.copyFrom(rkA, properties_t("async", true));
+    // o_rkE.copyFrom(rkE, properties_t("async", true));
     h_rkX.copyTo(o_rkX);
     h_rkA.copyTo(o_rkA);
     h_rkE.copyTo(o_rkE);

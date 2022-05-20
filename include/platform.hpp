@@ -153,8 +153,7 @@ public:
   template <typename T>
   pinnedMemory<T> hostMalloc(const size_t count){
     assertInitialized();
-    properties_t hostProp;
-    hostProp["host"] = true;
+    properties_t hostProp("host", true);
     if (occa::dtype::get<T>() == occa::dtype::none) {
       return pinnedMemory<T>(device.malloc(count*sizeof(T), occa::dtype::byte, nullptr, hostProp));
     } else {
@@ -166,8 +165,7 @@ public:
   pinnedMemory<T> hostMalloc(const size_t count,
                              const memory<T> src){
     assertInitialized();
-    properties_t hostProp;
-    hostProp["host"] = true;
+    properties_t hostProp("host", true);
     if (occa::dtype::get<T>() == occa::dtype::none) {
       return pinnedMemory<T>(device.malloc(count*sizeof(T), occa::dtype::byte, src.ptr(), hostProp));
     } else {
@@ -178,8 +176,7 @@ public:
   template <typename T>
   pinnedMemory<T> hostMalloc(const memory<T> src){
     assertInitialized();
-    properties_t hostProp;
-    hostProp["host"] = true;
+    properties_t hostProp("host", true);
     if (occa::dtype::get<T>() == occa::dtype::none) {
       return pinnedMemory<T>(device.malloc(src.size(), occa::dtype::byte, src.ptr(), hostProp));
     } else {
