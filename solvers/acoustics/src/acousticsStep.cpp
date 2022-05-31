@@ -44,18 +44,35 @@ void acoustics_t::rhsf(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, c
                o_Q,
                o_RHS);
 
+  if (mesh.NinternalElements)
+    surfaceKernel(mesh.NinternalElements,
+                  mesh.o_internalElementIds,
+                  mesh.o_sgeo,
+                  mesh.o_LIFT,
+                  mesh.o_vmapM,
+                  mesh.o_vmapP,
+                  mesh.o_EToB,
+                  T,
+                  mesh.o_x,
+                  mesh.o_y,
+                  mesh.o_z,
+                  o_Q,
+                  o_RHS);
+
   traceHalo.ExchangeFinish(o_Q, 1);
 
-  surfaceKernel(mesh.Nelements,
-                mesh.o_sgeo,
-                mesh.o_LIFT,
-                mesh.o_vmapM,
-                mesh.o_vmapP,
-                mesh.o_EToB,
-                T,
-                mesh.o_x,
-                mesh.o_y,
-                mesh.o_z,
-                o_Q,
-                o_RHS);
+  if (mesh.NhaloElements)
+    surfaceKernel(mesh.NhaloElements,
+                  mesh.o_haloElementIds,
+                  mesh.o_sgeo,
+                  mesh.o_LIFT,
+                  mesh.o_vmapM,
+                  mesh.o_vmapP,
+                  mesh.o_EToB,
+                  T,
+                  mesh.o_x,
+                  mesh.o_y,
+                  mesh.o_z,
+                  o_Q,
+                  o_RHS);
 }

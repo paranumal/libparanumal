@@ -136,15 +136,23 @@ make -j `nproc`
 
 #### 8-2. Run elliptic example with provided quadrilateral set up file on a single device:
 
+libParanumal will make use of extra CPU cores if available. It is therefore beneficial to bind the MPI process to several CPU cores, if possible. For example, running the libParanumal elliptic solver with OpenMPI on a system with 16 CPU cores can be done via
+
 ```
-./ellipticMain setups/setupQuad2D.rc
+mpiexec -np 1 --map-by slot:PE=16 ./ellipticMain setups/setupQuad2D.rc
 ```
+
+The number of CPU cores used can also be controlled with the `OMP_NUM_THREADS` environment variable. libParanumal will not use more threads then there are physical CPU cores on the system, however, even in the presence of this environment variable.
 
 #### 8-3. Run the same example with four devices:
 
+As the number of MPI processes per system increases, it is advisable to reduce the number of CPU cores per process to avoid oversubscribing the CPU cores. Using the same example above of the libParanumal elliptic solver with OpenMPI on a system with 16 CPU cores, a four rank run could be done via
+
 ```
-mpiexec -n 4 ./ellipticMain setups/setupQuad2D.rc
+mpiexec -np 4 --map-by slot:PE=4 ./ellipticMain setups/setupQuad2D.rc
 ```
+
+i.e. each process binds to four of the 16 CPU cores available.
 
 ---
 

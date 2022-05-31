@@ -35,23 +35,23 @@ namespace ogs {
 
 template<typename T>
 struct Op_Add {
-  inline const T init(){ return T{0}; }
-  inline void operator()(T& gv, const T v) { gv += v; }
+  inline const T init() const { return T{0}; }
+  inline void operator()(T& gv, const T v) const { gv += v; }
 };
 template<typename T>
 struct Op_Mul {
-  inline const T init(){ return T{1}; }
-  inline void operator()(T& gv, const T v) { gv *= v; }
+  inline const T init() const { return T{1}; }
+  inline void operator()(T& gv, const T v) const { gv *= v; }
 };
 template<typename T>
 struct Op_Max {
-  inline const T init(){ return -std::numeric_limits<T>::max(); }
-  inline void operator()(T& gv, const T v) { gv = (v>gv) ? v : gv; }
+  inline const T init() const { return -std::numeric_limits<T>::max(); }
+  inline void operator()(T& gv, const T v) const { gv = (v>gv) ? v : gv; }
 };
 template<typename T>
 struct Op_Min {
-  inline const T init() {return  std::numeric_limits<T>::max(); }
-  inline void operator()(T& gv, const T v) { gv = (v<gv) ? v : gv; }
+  inline const T init() const {return  std::numeric_limits<T>::max(); }
+  inline void operator()(T& gv, const T v) const { gv = (v<gv) ? v : gv; }
 };
 
 /********************************
@@ -81,17 +81,33 @@ void ogsOperator_t::Gather(U<T> gv,
   const T*__restrict__ v_ptr  = v.ptr();
   T*__restrict__ gv_ptr = gv.ptr();
 
-  #pragma omp parallel for
-  for(dlong n=0;n<Nrows;++n){
-    const dlong start = rowStarts[n];
-    const dlong end   = rowStarts[n+1];
+  const Op<T> op;
 
-    for (int k=0;k<K;++k) {
-      T val = Op<T>().init();
+  if (K==1) {
+    #pragma omp parallel for
+    for(dlong n=0;n<Nrows;++n){
+      const dlong start = rowStarts[n];
+      const dlong end   = rowStarts[n+1];
+
+      T val = op.init();
       for(dlong g=start;g<end;++g){
-        Op<T>()(val, v_ptr[k+colIds[g]*K]);
+        op(val, v_ptr[colIds[g]]);
       }
-      gv_ptr[k+n*K] = val;
+      gv_ptr[n] = val;
+    }
+  } else {
+    #pragma omp parallel for
+    for(dlong n=0;n<Nrows;++n){
+      const dlong start = rowStarts[n];
+      const dlong end   = rowStarts[n+1];
+
+      for (int k=0;k<K;++k) {
+        T val = op.init();
+        for(dlong g=start;g<end;++g){
+          op(val, v_ptr[k+colIds[g]*K]);
+        }
+        gv_ptr[k+n*K] = val;
+      }
     }
   }
 }
@@ -224,14 +240,26 @@ void ogsOperator_t::Scatter(U<T> v, const V<T> gv,
   T*__restrict__ v_ptr  = v.ptr();
   const T*__restrict__ gv_ptr = gv.ptr();
 
-  #pragma omp parallel for
-  for(dlong n=0;n<Nrows;++n){
-    const dlong start = rowStarts[n];
-    const dlong end   = rowStarts[n+1];
+  if (K==1) {
+    #pragma omp parallel for
+    for(dlong n=0;n<Nrows;++n){
+      const dlong start = rowStarts[n];
+      const dlong end   = rowStarts[n+1];
 
-    for(dlong g=start;g<end;++g){
-      for (int k=0;k<K;++k) {
-        v_ptr[k+colIds[g]*K] = gv_ptr[k+n*K];
+      for(dlong g=start;g<end;++g){
+        v_ptr[colIds[g]] = gv_ptr[n];
+      }
+    }
+  } else {
+    #pragma omp parallel for
+    for(dlong n=0;n<Nrows;++n){
+      const dlong start = rowStarts[n];
+      const dlong end   = rowStarts[n+1];
+
+      for(dlong g=start;g<end;++g){
+        for (int k=0;k<K;++k) {
+          v_ptr[k+colIds[g]*K] = gv_ptr[k+n*K];
+        }
       }
     }
   }
@@ -340,20 +368,40 @@ void ogsOperator_t::GatherScatter(U<T> v, const int K,
 
   T*__restrict__ v_ptr = v.ptr();
 
-  #pragma omp parallel for
-  for(dlong n=0;n<Nrows;++n){
-    const dlong gstart = gRowStarts[n];
-    const dlong gend   = gRowStarts[n+1];
-    const dlong sstart = sRowStarts[n];
-    const dlong send   = sRowStarts[n+1];
+  const Op<T> op;
 
-    for (int k=0;k<K;++k) {
-      T val = Op<T>().init();
+  if (K==1) {
+    #pragma omp parallel for
+    for(dlong n=0;n<Nrows;++n){
+      const dlong gstart = gRowStarts[n];
+      const dlong gend   = gRowStarts[n+1];
+      const dlong sstart = sRowStarts[n];
+      const dlong send   = sRowStarts[n+1];
+
+      T val = op.init();
       for(dlong g=gstart;g<gend;++g){
-        Op<T>()(val, v_ptr[k+gColIds[g]*K]);
+        op(val, v_ptr[gColIds[g]]);
       }
       for(dlong s=sstart;s<send;++s){
-        v_ptr[k+sColIds[s]*K] = val;
+        v_ptr[sColIds[s]] = val;
+      }
+    }
+  } else {
+    #pragma omp parallel for
+    for(dlong n=0;n<Nrows;++n){
+      const dlong gstart = gRowStarts[n];
+      const dlong gend   = gRowStarts[n+1];
+      const dlong sstart = sRowStarts[n];
+      const dlong send   = sRowStarts[n+1];
+
+      for (int k=0;k<K;++k) {
+        T val = op.init();
+        for(dlong g=gstart;g<gend;++g){
+          op(val, v_ptr[k+gColIds[g]*K]);
+        }
+        for(dlong s=sstart;s<send;++s){
+          v_ptr[k+sColIds[s]*K] = val;
+        }
       }
     }
   }
@@ -549,11 +597,17 @@ void extract(const dlong N,
   const T*__restrict__ q_ptr = q.ptr();
   T*__restrict__ gatherq_ptr = gatherq.ptr();
 
-  for(dlong n=0;n<N;++n){
-    const dlong gid = ids[n];
-
-    for (int k=0;k<K;++k) {
-      gatherq_ptr[k+n*K] = q_ptr[k+gid*K];
+  if (K==1) {
+    for(dlong n=0;n<N;++n){
+      const dlong gid = ids[n];
+      gatherq_ptr[n] = q_ptr[gid];
+    }
+  } else {
+    for(dlong n=0;n<N;++n){
+      const dlong gid = ids[n];
+      for (int k=0;k<K;++k) {
+        gatherq_ptr[k+n*K] = q_ptr[k+gid*K];
+      }
     }
   }
 }
