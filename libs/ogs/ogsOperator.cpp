@@ -504,7 +504,7 @@ void ogsOperator_t::setupRowBlocks() {
       blockSumT+=rowSizeT; //add this row to the block
     }
   }
-  blockRowStartsN[NrowBlocksN] = NrowsT;
+  blockRowStartsN[NrowBlocksN] = NrowsN;
   blockRowStartsT[NrowBlocksT] = NrowsT;
 
   o_blockRowStartsN = platform.malloc(blockRowStartsN);
