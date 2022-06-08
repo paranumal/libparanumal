@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,13 +26,13 @@ SOFTWARE.
 
 #include "advection.hpp"
 
-dfloat advection_t::MaxWaveSpeed(occa::memory& o_Q, const dfloat T){
+dfloat advection_t::MaxWaveSpeed(deviceMemory<dfloat>& o_Q, const dfloat T){
 
   //Note: if this is on the critical path in the future, we should pre-allocate this
-  occa::memory o_maxSpeed = platform.malloc(mesh.Nelements*sizeof(dfloat));
+  deviceMemory<dfloat> o_maxSpeed = platform.malloc<dfloat>(mesh.Nelements);
 
   maxWaveSpeedKernel(mesh.Nelements,
-                     mesh.o_vgeo,
+                     mesh.o_wJ,
                      mesh.o_sgeo,
                      mesh.o_vmapM,
                      mesh.o_EToB,
@@ -43,17 +43,16 @@ dfloat advection_t::MaxWaveSpeed(occa::memory& o_Q, const dfloat T){
                      o_Q,
                      o_maxSpeed);
 
-  const dfloat vmax = platform.linAlg.max(mesh.Nelements, o_maxSpeed, mesh.comm);
+  const dfloat vmax = platform.linAlg().max(mesh.Nelements, o_maxSpeed, mesh.comm);
 
-  o_maxSpeed.free();
   return vmax;
 }
 
 //evaluate ODE rhs = f(q,t)
-void advection_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
+void advection_t::rhsf(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T){
 
   // extract q halo on DEVICE
-  traceHalo->ExchangeStart(o_Q, 1, ogs_dfloat);
+  traceHalo.ExchangeStart(o_Q, 1);
 
   volumeKernel(mesh.Nelements,
                mesh.o_vgeo,
@@ -65,7 +64,7 @@ void advection_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
                o_Q,
                o_RHS);
 
-  traceHalo->ExchangeFinish(o_Q, 1, ogs_dfloat);
+  traceHalo.ExchangeFinish(o_Q, 1);
 
   surfaceKernel(mesh.Nelements,
                 mesh.o_sgeo,

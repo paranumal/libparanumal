@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,23 +25,24 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh2D.hpp"
 
-void meshQuad2D::CubatureNodes(){
+namespace libp {
 
-  cubx = (dfloat*) calloc(Nelements*cubNp,sizeof(dfloat));
-  cuby = (dfloat*) calloc(Nelements*cubNp,sizeof(dfloat));
+void mesh_t::CubaturePhysicalNodesQuad2D(){
+
+  cubx.malloc(Nelements*cubNp);
+  cuby.malloc(Nelements*cubNp);
 
   //temp arrays
-  dfloat *Ix1 = (dfloat*) calloc(Nq*cubNq, sizeof(dfloat));
-  dfloat *Iy1 = (dfloat*) calloc(Nq*cubNq, sizeof(dfloat));
+  memory<dfloat> Ix1(Nq*cubNq);
+  memory<dfloat> Iy1(Nq*cubNq);
 
   for(dlong e=0;e<Nelements;++e){ /* for each element */
 
-    dfloat *xe = x + e*Np;
-    dfloat *ye = y + e*Np;
-    dfloat *cubxe = cubx + e*cubNp;
-    dfloat *cubye = cuby + e*cubNp;
+    dfloat *xe = x.ptr() + e*Np;
+    dfloat *ye = y.ptr() + e*Np;
+    dfloat *cubxe = cubx.ptr() + e*cubNp;
+    dfloat *cubye = cuby.ptr() + e*cubNp;
 
     //interpolate physical coordinates to cubature
     for(int j=0;j<Nq;++j){
@@ -67,16 +68,12 @@ void meshQuad2D::CubatureNodes(){
     }
   }
 
-  free(Ix1);
-  free(Iy1);
-
-  o_cubx = platform.malloc(Nelements*cubNp*sizeof(dfloat), cubx);
-  o_cuby = platform.malloc(Nelements*cubNp*sizeof(dfloat), cuby);
-  o_cubz = o_cuby; // dummy to align with 3d
+  o_cubx = platform.malloc<dfloat>(Nelements*cubNp, cubx);
+  o_cuby = platform.malloc<dfloat>(Nelements*cubNp, cuby);
 
   //Face cubature
-  intx = (dfloat*) calloc(Nelements*Nfaces*cubNq, sizeof(dfloat));
-  inty = (dfloat*) calloc(Nelements*Nfaces*cubNq, sizeof(dfloat));
+  intx.malloc(Nelements*Nfaces*cubNq);
+  inty.malloc(Nelements*Nfaces*cubNq);
   for(dlong e=0;e<Nelements;++e){
     for(int f=0;f<Nfaces;++f){
       for(int n=0;n<cubNq;++n){
@@ -97,7 +94,8 @@ void meshQuad2D::CubatureNodes(){
     }
   }
 
-  o_intx = platform.malloc(Nelements*Nfaces*cubNq*sizeof(dfloat), intx);
-  o_inty = platform.malloc(Nelements*Nfaces*cubNq*sizeof(dfloat), inty);
-  o_intz = o_inty; // dummy to align with 3d
+  o_intx = platform.malloc<dfloat>(Nelements*Nfaces*cubNq, intx);
+  o_inty = platform.malloc<dfloat>(Nelements*Nfaces*cubNq, inty);
 }
+
+} //namespace libp

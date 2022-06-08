@@ -2,7 +2,7 @@
 
   The MIT License (MIT)
 
-  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -26,19 +26,19 @@
 
 
 @kernel void lbsVolumeHex3D(const dlong Nelements,
-			     // @restrict const  dlong  *  elementIds,
-			     @restrict const  dfloat *  vgeo,
-			     @restrict const  dfloat *  DT,
-			     @restrict const  dfloat * x,
-			     @restrict const  dfloat * y,
-			     @restrict const  dfloat * z,
-			     const dfloat t,
-			     const dfloat nu,
-			     const dfloat gamma,
-			     @restrict const  dfloat *  LBM,
-			     @restrict const  dfloat *  q,
-			     @restrict const  dfloat *  U,
-			     @restrict dfloat *  rhsq){
+                             // @restrict const  dlong  *  elementIds,
+                             @restrict const  dfloat *  vgeo,
+                             @restrict const  dfloat *  DT,
+                             @restrict const  dfloat * x,
+                             @restrict const  dfloat * y,
+                             @restrict const  dfloat * z,
+                             const dfloat t,
+                             const dfloat nu,
+                             const dfloat gamma,
+                             @restrict const  dfloat *  LBM,
+                             @restrict const  dfloat *  q,
+                             @restrict const  dfloat *  U,
+                             @restrict dfloat *  rhsq){
 
   for(dlong et=0;et<Nelements;++et;@outer(0)){  // for all elements
 
@@ -51,28 +51,26 @@
         for(int i=0;i<p_Nq;++i;@inner(0)){
           // e = elementIds[et];
           e = et;
-	    		const dlong idf = i + j*p_Nq + k*p_Nq*p_Nq + p_Nfields*p_Np*e;
+          const dlong idf = i + j*p_Nq + k*p_Nq*p_Nq + p_Nfields*p_Np*e;
 
-					#pragma unroll p_Nfields
-	    		for(int fld=0; fld<p_Nfields;++fld){
-	      		s_q[fld][k][j][i] = q[idf+fld*p_Np];
-	    		}
+#pragma unroll p_Nfields
+          for(int fld=0; fld<p_Nfields;++fld){
+            s_q[fld][k][j][i] = q[idf+fld*p_Np];
+          }
 
-	  			if(k==0)
+          if(k==0)
             s_DT[j][i] = DT[j*p_Nq+i];
-				}
+        }
       }
     }
 
-   // make sure all node data is loaded into @shared
-    @barrier("local");
 
     for(int k=0;k<p_Nq;++k;@inner(2)){
       for(int j=0;j<p_Nq;++j;@inner(1)){
         for(int i=0;i<p_Nq;++i;@inner(0)){
           const dlong gid   = e*p_Np*p_Nvgeo + k*p_Nq*p_Nq + j*p_Nq +i;
 
-	   			const dfloat drdx = vgeo[gid + p_RXID*p_Np];
+          const dfloat drdx = vgeo[gid + p_RXID*p_Np];
           const dfloat drdy = vgeo[gid + p_RYID*p_Np];
           const dfloat drdz = vgeo[gid + p_RZID*p_Np];
 
@@ -84,9 +82,9 @@
           const dfloat dtdy = vgeo[gid + p_TYID*p_Np];
           const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
 
-	      // compute 'r' and 's' derivatives of (q_m) at node n
-      	dfloat r_dqdr[p_Nfields], r_dqds[p_Nfields], r_dqdt[p_Nfields];
-      	dfloat r_dqdx[p_Nfields], r_dqdy[p_Nfields], r_dqdz[p_Nfields];
+          // compute 'r' and 's' derivatives of (q_m) at node n
+          dfloat r_dqdr[p_Nfields], r_dqds[p_Nfields], r_dqdt[p_Nfields];
+          dfloat r_dqdx[p_Nfields], r_dqdy[p_Nfields], r_dqdz[p_Nfields];
 
           #pragma unroll p_Nfields
             for(int fld=0; fld<p_Nfields;++fld){
@@ -94,7 +92,7 @@
               r_dqdx[fld] = 0.f, r_dqdy[fld] = 0.f, r_dqdz[fld] = 0.f;
             }
 
-					#pragma unroll p_Nq
+          #pragma unroll p_Nq
           for(int m=0;m<p_Nq;++m){
             const dfloat Dim = s_DT[i][m];
             const dfloat Djm = s_DT[j][m];
@@ -126,14 +124,14 @@
 
           const dlong idf = i + j*p_Nq + k*p_Nq*p_Nq + p_Nfields*p_Np*e;
 
-	    for(int fld=0; fld<p_Nfields;++fld){
-            const dfloat ex = LBM[fld + 1*p_Nfields]; 
-            const dfloat ey = LBM[fld + 2*p_Nfields]; 
-            const dfloat ez = LBM[fld + 3*p_Nfields]; 
+          for(int fld=0; fld<p_Nfields;++fld){
+            const dfloat ex = LBM[fld + 1*p_Nfields];
+            const dfloat ey = LBM[fld + 2*p_Nfields];
+            const dfloat ez = LBM[fld + 3*p_Nfields];
             rhsq[idf + fld*p_Np] = -(ex*r_dqdx[fld] + ey*r_dqdy[fld] + ez*r_dqdz[fld]);
           }
-	     }
-	    }
+        }
+      }
     }
   }
- }
+}

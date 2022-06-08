@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -33,6 +33,7 @@ SOFTWARE.
 
 // square thread version
 @kernel void ellipticAxQuad2D(const dlong   Nelements,
+                               @restrict const  dfloat *  wJ,
                                @restrict const  dfloat *  ggeo,
                                @restrict const  dfloat *  DT,
                                @restrict const  dfloat *  S,
@@ -59,13 +60,12 @@ SOFTWARE.
       s_DT[j][i] = DT[j*p_Nq+i];
     }
 
-    @barrier("local");
 
     squareThreads{
       const dlong base = e*p_Nggeo*p_Np + j*p_Nq + i;
 
       // assumes w*J built into G entries
-      r_GwJ = ggeo[base+p_GWJID*p_Np];
+      r_GwJ = wJ[e*p_Np + j*p_Nq + i];
 
       r_G00 = ggeo[base+p_G00ID*p_Np];
       r_G01 = ggeo[base+p_G01ID*p_Np];
@@ -86,13 +86,11 @@ SOFTWARE.
     }
 
     // r term ----->
-    @barrier("local");
 
     squareThreads{
       s_q[j][i] = r_G00*r_qr + r_G01*r_qs;
     }
 
-    @barrier("local");
 
     squareThreads{
       dfloat tmp = 0.f;
@@ -105,13 +103,11 @@ SOFTWARE.
     }
 
     // s term ---->
-    @barrier("local");
 
     squareThreads{
       s_q[j][i] = r_G01*r_qr + r_G11*r_qs;
     }
 
-    @barrier("local");
 
     squareThreads{
       dfloat tmp = 0.f;
@@ -133,6 +129,7 @@ SOFTWARE.
 @kernel void ellipticPartialAxQuad2D(const dlong Nelements,
                                    @restrict const  dlong   *  elementList,
                                    @restrict const  dlong   *  GlobalToLocal,
+                                   @restrict const  dfloat *  wJ,
                                    @restrict const  dfloat *  ggeo,
                                    @restrict const  dfloat *  DT,
                                    @restrict const  dfloat *  S,
@@ -161,14 +158,13 @@ SOFTWARE.
       s_DT[j][i] = DT[j*p_Nq+i];
     }
 
-    @barrier("local");
 
     squareThreads{
 
       const dlong base = element*p_Nggeo*p_Np + j*p_Nq + i;
 
       // assumes w*J built into G entries
-      r_GwJ = ggeo[base+p_GWJID*p_Np];
+      r_GwJ = wJ[element*p_Np + j*p_Nq + i];
 
       r_G00 = ggeo[base+p_G00ID*p_Np];
       r_G01 = ggeo[base+p_G01ID*p_Np];
@@ -189,13 +185,11 @@ SOFTWARE.
     }
 
     // r term ----->
-    @barrier("local");
 
     squareThreads{
       s_q[j][i] = r_G00*r_qr + r_G01*r_qs;
     }
 
-    @barrier("local");
 
     squareThreads{
       dfloat tmp = 0.f;
@@ -208,13 +202,11 @@ SOFTWARE.
     }
 
     // s term ---->
-    @barrier("local");
 
     squareThreads{
       s_q[j][i] = r_G01*r_qr + r_G11*r_qs;
     }
 
-    @barrier("local");
 
     squareThreads{
       dfloat tmp = 0.f;

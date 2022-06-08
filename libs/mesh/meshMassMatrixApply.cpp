@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,16 +25,16 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh2D.hpp"
-#include "mesh/mesh3D.hpp"
 
-void mesh_t::MassMatrixApply(occa::memory& o_q, occa::memory& o_Mq) {
+namespace libp {
+
+void mesh_t::MassMatrixApply(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_Mq) {
   //compute Mq = M*q
-  MassMatrixKernel(Nelements, o_ggeo, o_MM, o_q, o_Mq);
+  MassMatrixKernel(Nelements, o_wJ, o_MM, o_q, o_Mq);
 }
 
-void meshTri2D::MassMatrixKernelSetup(int Nfields) {
-  occa::properties kernelInfo = props; //copy base occa properties
+void mesh_t::MassMatrixKernelSetupTri2D(int Nfields) {
+  properties_t kernelInfo = props; //copy base occa properties
   kernelInfo["defines/" "p_Nfields"]= Nfields;
 
   MassMatrixKernel = platform.buildKernel(MESH_DIR "/okl/MassMatrixOperatorTri2D.okl",
@@ -42,8 +42,8 @@ void meshTri2D::MassMatrixKernelSetup(int Nfields) {
                                           kernelInfo);
 }
 
-void meshQuad2D::MassMatrixKernelSetup(int Nfields) {
-  occa::properties kernelInfo = props; //copy base occa properties
+void mesh_t::MassMatrixKernelSetupQuad2D(int Nfields) {
+  properties_t kernelInfo = props; //copy base occa properties
   kernelInfo["defines/" "p_Nfields"]= Nfields;
 
   MassMatrixKernel = platform.buildKernel(MESH_DIR "/okl/MassMatrixOperatorQuad2D.okl",
@@ -51,8 +51,8 @@ void meshQuad2D::MassMatrixKernelSetup(int Nfields) {
                                           kernelInfo);
 }
 
-void meshTet3D::MassMatrixKernelSetup(int Nfields) {
-  occa::properties kernelInfo = props; //copy base occa properties
+void mesh_t::MassMatrixKernelSetupTet3D(int Nfields) {
+  properties_t kernelInfo = props; //copy base occa properties
   kernelInfo["defines/" "p_Nfields"]= Nfields;
 
   MassMatrixKernel = platform.buildKernel(MESH_DIR "/okl/MassMatrixOperatorTet3D.okl",
@@ -60,8 +60,8 @@ void meshTet3D::MassMatrixKernelSetup(int Nfields) {
                                           kernelInfo);
 }
 
-void meshHex3D::MassMatrixKernelSetup(int Nfields) {
-  occa::properties kernelInfo = props; //copy base occa properties
+void mesh_t::MassMatrixKernelSetupHex3D(int Nfields) {
+  properties_t kernelInfo = props; //copy base occa properties
   kernelInfo["defines/" "p_Nfields"]= Nfields;
 
   MassMatrixKernel = platform.buildKernel(MESH_DIR "/okl/MassMatrixOperatorHex3D.okl",
@@ -69,15 +69,4 @@ void meshHex3D::MassMatrixKernelSetup(int Nfields) {
                                           kernelInfo);
 }
 
-void meshTri3D::MassMatrixKernelSetup(int Nfields) {
-  LIBP_ABORT("MassMatrixOperatorTri3D not implemented yet.")
-}
-
-void meshQuad3D::MassMatrixKernelSetup(int Nfields) {
-  occa::properties kernelInfo = props; //copy base occa properties
-  kernelInfo["defines/" "p_Nfields"]= Nfields;
-
-  MassMatrixKernel = platform.buildKernel(MESH_DIR "/okl/MassMatrixOperatorQuad2D.okl",
-                                          "MassMatrixOperatorQuad2D",
-                                          kernelInfo);
-}
+} //namespace libp

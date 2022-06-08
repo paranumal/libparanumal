@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -58,8 +58,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
-
     #pragma unroll p_Nq
     for(int k=0;k<p_Nq;++k){
 
@@ -90,8 +88,6 @@ SOFTWARE.
         }
       }
 
-      @barrier("local");
-
       for(int j=0;j<p_Nq;++j;@inner(1)){
         for(int i=0;i<p_Nq;++i;@inner(0)){
           #pragma unroll p_Nq
@@ -105,8 +101,7 @@ SOFTWARE.
           }
         }
       }
-      @barrier("local");
-    } //k loop
+    }
 
     //write out
     for(int j=0;j<p_Nq;++j;@inner(1)){
@@ -205,8 +200,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
-
     // face 0 & 5
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -217,8 +210,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
-
     // face 1 & 3
     for(int k=0;k<p_Nq;++k;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -228,8 +219,6 @@ SOFTWARE.
         surfaceTerms(sk3,3,1,i,k);
       }
     }
-
-    @barrier("local");
 
     // face 1 & 3
     for(int j=0;j<p_Nq;++j;@inner(1)){
@@ -249,8 +238,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
-
     // face 2 & 4
     for(int k=0;k<p_Nq;++k;@inner(1)){
       for(int j=0;j<p_Nq;++j;@inner(0)){
@@ -260,8 +247,6 @@ SOFTWARE.
         surfaceTerms(sk4,4,1,j,k);
       }
     }
-
-    @barrier("local");
 
     // face 2 & 4
     for(int j=0;j<p_Nq;++j;@inner(1)){
@@ -280,8 +265,6 @@ SOFTWARE.
         }
       }
     }
-
-    @barrier("local");
 
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){

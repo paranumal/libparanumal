@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Rajesh Gandham
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Rajesh Gandham
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,96 +25,69 @@ SOFTWARE.
 */
 
 #include "parAlmond.hpp"
+#include "parAlmond/parAlmondKernels.hpp"
+
+namespace libp {
 
 namespace parAlmond {
 
-int Nrefs = 0;
+kernel_t SpMVcsrKernel1;
+kernel_t SpMVcsrKernel2;
+kernel_t SpMVmcsrKernel;
 
-//NC: Hard code these for now. Should be sufficient for GPU devices, but needs attention for CPU
-const int blockSize = 256;
-int NonzerosPerBlock = 2048; //should be a multiple of blockSize for good unrolling
+kernel_t SmoothJacobiCSRKernel;
+kernel_t SmoothJacobiMCSRKernel;
 
-occa::kernel SpMVcsrKernel1;
-occa::kernel SpMVcsrKernel2;
-occa::kernel SpMVmcsrKernel;
+kernel_t SmoothChebyshevStartKernel;
+kernel_t SmoothChebyshevCSRKernel;
+kernel_t SmoothChebyshevMCSRKernel;
+kernel_t SmoothChebyshevUpdateKernel;
 
-occa::kernel SmoothJacobiCSRKernel;
-occa::kernel SmoothJacobiMCSRKernel;
+kernel_t kcycleCombinedOp1Kernel;
+kernel_t kcycleCombinedOp2Kernel;
+kernel_t vectorAddInnerProdKernel;
 
-occa::kernel SmoothChebyshevStartKernel;
-occa::kernel SmoothChebyshevCSRKernel;
-occa::kernel SmoothChebyshevMCSRKernel;
-occa::kernel SmoothChebyshevUpdateKernel;
-
-occa::kernel kcycleCombinedOp1Kernel;
-occa::kernel kcycleCombinedOp2Kernel;
-occa::kernel vectorAddInnerProdKernel;
-
-occa::kernel dGEMVKernel;
-
-MPI_Datatype MPI_NONZERO_T;
+kernel_t dGEMVKernel;
 
 void buildParAlmondKernels(platform_t& platform){
 
-  // Make the MPI_NONZERO_T data type
-  parCOO::nonZero_t NZ;
-  MPI_Datatype dtype[3] = {MPI_HLONG, MPI_HLONG, MPI_DFLOAT};
-  int blength[3] = {1, 1, 1};
-  MPI_Aint addr[3], displ[3];
-  MPI_Get_address ( &(NZ.row), addr+0);
-  MPI_Get_address ( &(NZ.col), addr+1);
-  MPI_Get_address ( &(NZ.val), addr+2);
-  displ[0] = 0;
-  displ[1] = addr[1] - addr[0];
-  displ[2] = addr[2] - addr[0];
-  MPI_Type_create_struct (3, blength, displ, dtype, &MPI_NONZERO_T);
-  MPI_Type_commit (&MPI_NONZERO_T);
+  if (SpMVcsrKernel1.isInitialized()==false) {
+    //seed rng
+    int rank=platform.rank();
+    double seed = (double) rank;
+    srand48(seed);
 
-  //seed rng
-  int rank=platform.rank;
-  double seed = (double) rank;
-  srand48(seed);
+    //build kernels
+    properties_t kernelInfo = platform.props();
 
-  //build kernels
-  occa::properties kernelInfo = platform.props;
+    kernelInfo["defines/" "p_BLOCKSIZE"]= blockSize;
+    kernelInfo["defines/" "p_NonzerosPerBlock"]= NonzerosPerBlock;
 
-  kernelInfo["defines/" "p_BLOCKSIZE"]= blockSize;
-  kernelInfo["defines/" "p_NonzerosPerBlock"]= NonzerosPerBlock;
+    if (rank==0) {printf("Compiling parALMOND Kernels...");fflush(stdout);}
 
-  if (rank==0) {printf("Compiling parALMOND Kernels...");fflush(stdout);}
+    SpMVcsrKernel1  = platform.buildKernel(PARALMOND_DIR"/okl/SpMVcsr.okl",  "SpMVcsr1",  kernelInfo);
+    SpMVcsrKernel2  = platform.buildKernel(PARALMOND_DIR"/okl/SpMVcsr.okl",  "SpMVcsr2",  kernelInfo);
+    SpMVmcsrKernel  = platform.buildKernel(PARALMOND_DIR"/okl/SpMVmcsr.okl", "SpMVmcsr1", kernelInfo);
 
-  SpMVcsrKernel1  = platform.buildKernel(PARALMOND_DIR"/okl/SpMVcsr.okl",  "SpMVcsr1",  kernelInfo);
-  SpMVcsrKernel2  = platform.buildKernel(PARALMOND_DIR"/okl/SpMVcsr.okl",  "SpMVcsr2",  kernelInfo);
-  SpMVmcsrKernel  = platform.buildKernel(PARALMOND_DIR"/okl/SpMVmcsr.okl", "SpMVmcsr1", kernelInfo);
+    SmoothJacobiCSRKernel  = platform.buildKernel(PARALMOND_DIR"/okl/SmoothJacobi.okl", "SmoothJacobiCSR", kernelInfo);
+    SmoothJacobiMCSRKernel = platform.buildKernel(PARALMOND_DIR"/okl/SmoothJacobi.okl", "SmoothJacobiMCSR", kernelInfo);
 
-  SmoothJacobiCSRKernel  = platform.buildKernel(PARALMOND_DIR"/okl/SmoothJacobi.okl", "SmoothJacobiCSR", kernelInfo);
-  SmoothJacobiMCSRKernel = platform.buildKernel(PARALMOND_DIR"/okl/SmoothJacobi.okl", "SmoothJacobiMCSR", kernelInfo);
+    SmoothChebyshevStartKernel = platform.buildKernel(PARALMOND_DIR"/okl/SmoothChebyshev.okl", "SmoothChebyshevStart", kernelInfo);
+    SmoothChebyshevCSRKernel  = platform.buildKernel(PARALMOND_DIR"/okl/SmoothChebyshev.okl", "SmoothChebyshevCSR", kernelInfo);
+    SmoothChebyshevMCSRKernel = platform.buildKernel(PARALMOND_DIR"/okl/SmoothChebyshev.okl", "SmoothChebyshevMCSR", kernelInfo);
+    SmoothChebyshevUpdateKernel = platform.buildKernel(PARALMOND_DIR"/okl/SmoothChebyshev.okl", "SmoothChebyshevUpdate", kernelInfo);
 
-  SmoothChebyshevStartKernel = platform.buildKernel(PARALMOND_DIR"/okl/SmoothChebyshev.okl", "SmoothChebyshevStart", kernelInfo);
-  SmoothChebyshevCSRKernel  = platform.buildKernel(PARALMOND_DIR"/okl/SmoothChebyshev.okl", "SmoothChebyshevCSR", kernelInfo);
-  SmoothChebyshevMCSRKernel = platform.buildKernel(PARALMOND_DIR"/okl/SmoothChebyshev.okl", "SmoothChebyshevMCSR", kernelInfo);
-  SmoothChebyshevUpdateKernel = platform.buildKernel(PARALMOND_DIR"/okl/SmoothChebyshev.okl", "SmoothChebyshevUpdate", kernelInfo);
+    vectorAddInnerProdKernel = platform.buildKernel(PARALMOND_DIR"/okl/vectorAddInnerProd.okl", "vectorAddInnerProd", kernelInfo);
 
-  vectorAddInnerProdKernel = platform.buildKernel(PARALMOND_DIR"/okl/vectorAddInnerProd.okl", "vectorAddInnerProd", kernelInfo);
+    kcycleCombinedOp1Kernel = platform.buildKernel(PARALMOND_DIR"/okl/kcycleCombinedOp.okl", "kcycleCombinedOp1", kernelInfo);
+    kcycleCombinedOp2Kernel = platform.buildKernel(PARALMOND_DIR"/okl/kcycleCombinedOp.okl", "kcycleCombinedOp2", kernelInfo);
 
-  kcycleCombinedOp1Kernel = platform.buildKernel(PARALMOND_DIR"/okl/kcycleCombinedOp.okl", "kcycleCombinedOp1", kernelInfo);
-  kcycleCombinedOp2Kernel = platform.buildKernel(PARALMOND_DIR"/okl/kcycleCombinedOp.okl", "kcycleCombinedOp2", kernelInfo);
+    dGEMVKernel = platform.buildKernel(PARALMOND_DIR"/okl/dGEMV.okl", "dGEMV", kernelInfo);
 
-  dGEMVKernel = platform.buildKernel(PARALMOND_DIR"/okl/dGEMV.okl", "dGEMV", kernelInfo);
-
-  if(rank==0) printf("done.\n");
+    if(rank==0) printf("done.\n");
+  }
 }
-
-void freeParAlmondKernels() {
-
-  SpMVcsrKernel1.free();
-  SpMVcsrKernel2.free();
-  SpMVmcsrKernel.free();
-
-  kcycleCombinedOp1Kernel.free();
-  kcycleCombinedOp2Kernel.free();
-  vectorAddInnerProdKernel.free();
-}
-
 
 } //namespace parAlmond
+
+} //namespace libp

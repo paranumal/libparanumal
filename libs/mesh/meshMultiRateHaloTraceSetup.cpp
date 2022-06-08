@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,29 +26,23 @@ SOFTWARE.
 
 #include "mesh.hpp"
 
+namespace libp {
+
 /* Set up trace halo infomation for inter-processor MPI
    exchange of trace nodes */
 
 // Setup assumes field to be exchanged is Nelements*Nfields**Nfaces*Nfp in size
 // with Nfp being the fastest running index (hence each field entry is strided
 // Nfaces*Nfp apart)
-halo_t** mesh_t::MultiRateHaloTraceSetup(int Nfields){
+memory<ogs::halo_t> mesh_t::MultiRateHaloTraceSetup(int Nfields){
 
-  hlong *globalOffsets = (hlong *) calloc(size+1,sizeof(hlong));
-  hlong localNelements = (hlong) Nelements;
-
-  //gather number of elements on each rank
-  MPI_Allgather(&localNelements, 1, MPI_HLONG, globalOffsets+1, 1, MPI_HLONG, comm);
-
-  for(int rr=0;rr<size;++rr)
-    globalOffsets[rr+1] = globalOffsets[rr]+globalOffsets[rr+1];
-
-  hlong globalOffset = globalOffsets[rank];
-  free(globalOffsets);
+  hlong localNelements = Nelements;
+  hlong globalOffset = Nelements;
+  comm.Scan(localNelements, globalOffset);
+  globalOffset -= localNelements;
 
   //populate a global numbering system which has the Nfields stride
-  hlong *globalids = (hlong *) calloc((Nelements+totalHaloPairs)
-                                       *Np*Nfields,sizeof(hlong));
+  memory<hlong> globalids((Nelements+totalHaloPairs)*Np*Nfields);
   for (dlong e=0;e<Nelements;e++) {
     for (int k=0;k<Nfields;k++) {
       for (int n=0;n<Np;n++) {
@@ -59,9 +53,8 @@ halo_t** mesh_t::MultiRateHaloTraceSetup(int Nfields){
   }
 
   //make a trace array populated with the global ids
-  hlong *traceIds = (hlong *) calloc((Nelements+totalHaloPairs)
-                                       *Nfp*Nfaces*Nfields,sizeof(hlong));
-
+  memory<hlong> traceIds((Nelements+totalHaloPairs)
+                         *Nfp*Nfaces*Nfields);
   for (dlong e=0;e<Nelements;e++) {
     for (int n=0;n<Nfp*Nfaces;n++) {
       const dlong vid = e*Nfp*Nfaces + n;
@@ -80,7 +73,7 @@ halo_t** mesh_t::MultiRateHaloTraceSetup(int Nfields){
   }
 
   //exchange full Nfp*Nfaces*Nfields per element global trace ids
-  halo->Exchange(traceIds, Nfp*Nfaces*Nfields, ogs_hlong);
+  halo.Exchange(traceIds, Nfp*Nfaces*Nfields);
 
   //the halo region is filled, but there are duplicate IDs in the local section
   // bad news for the halo exchange, so remove them
@@ -104,12 +97,17 @@ halo_t** mesh_t::MultiRateHaloTraceSetup(int Nfields){
   }
 
   //make array of halo exchangers
-  halo_t** mrTraceHalo = (halo_t **) malloc(mrNlevels*sizeof(halo_t*));
+  memory<ogs::halo_t> mrTraceHalo(mrNlevels);
 
   //make a global trace id array to be used for exchange on each multirate level
-  hlong *mrTraceIds = (hlong *) calloc((Nelements+totalHaloPairs)
-                                       *Nfp*Nfaces*Nfields,sizeof(hlong));
-  memcpy(mrTraceIds, traceIds, Nelements*Nfp*Nfaces*Nfields*sizeof(hlong)); //copy local part
+  memory<hlong> mrTraceIds((Nelements+totalHaloPairs)
+                           *Nfp*Nfaces*Nfields);
+  mrTraceIds.copyFrom(traceIds, Nelements*Nfp*Nfaces*Nfields); //copy local part
+
+  /*Zero halo region*/
+  for (dlong n=0;n<totalHaloPairs*Nfp*Nfaces*Nfields;n++) {
+    mrTraceIds[n+Nelements*Nfp*Nfaces*Nfields] = 0;
+  }
 
   //for each multirate level
   for (int lev=0;lev<mrNlevels;lev++) {
@@ -137,16 +135,15 @@ halo_t** mesh_t::MultiRateHaloTraceSetup(int Nfields){
     }
 
     int verbose = 0;
-    mrTraceHalo[lev] = halo_t::Setup((Nelements+totalHaloPairs)*Nfp*Nfaces*Nfields,
-                                      mrTraceIds, comm, verbose, platform);
+    mrTraceHalo[lev].Setup((Nelements+totalHaloPairs)*Nfp*Nfaces*Nfields,
+                            mrTraceIds, comm,
+                            ogs::Pairwise, verbose, platform);
 
     //no need to zero out mrTraceIds for next multirate level
     // the next level set includes the lower level elements
   }
 
-  free(globalids);
-  free(traceIds);
-  free(mrTraceIds);
-
   return mrTraceHalo;
 }
+
+} //namespace libp

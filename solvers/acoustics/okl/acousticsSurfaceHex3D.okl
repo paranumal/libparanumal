@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -116,6 +116,7 @@ void surfaceTerms(const int e,
 
 // batch process elements
 @kernel void acousticsSurfaceHex3D(const dlong Nelements,
+                                  @restrict const  dlong  *  elementIds,
                                   @restrict const  dfloat *  sgeo,
                                   @restrict const  dfloat *  LIFT,
                                   @restrict const  dlong  *  vmapM,
@@ -131,63 +132,66 @@ void surfaceTerms(const int e,
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
 
+    @exclusive dlong r_e, element;
+
     // for all face nodes of all elements
     // face 0 & 5
     for(int es=0;es<p_NblockS;++es;@inner(2)){
       for(int j=0;j<p_Nq;++j;@inner(1)){
         for(int i=0;i<p_Nq;++i;@inner(0)){
-          const dlong e = eo + es;
-          if(e<Nelements){
-            const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + j*p_Nq + i;
-            const dlong sk5 = e*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i;
+          r_e = eo + es;
+          if(r_e<Nelements){
+            element = elementIds[r_e];
+
+            const dlong sk0 = element*p_Nfp*p_Nfaces + 0*p_Nfp + j*p_Nq + i;
+            const dlong sk5 = element*p_Nfp*p_Nfaces + 5*p_Nfp + j*p_Nq + i;
 
             //      surfaceTerms(sk0,0,i,j,0     );
-            surfaceTerms(e,sk0,0,i,j,0, sgeo, x, y, z, vmapM, vmapP, EToB, q, rhsq);
+            surfaceTerms(element,sk0,0,i,j,0, sgeo, x, y, z, vmapM, vmapP, EToB, q, rhsq);
 
             //surfaceTerms(sk5,5,i,j,(p_Nq-1));
-            surfaceTerms(e,sk5,5,i,j,(p_Nq-1), sgeo, x, y, z, vmapM, vmapP, EToB, q, rhsq);
+            surfaceTerms(element,sk5,5,i,j,(p_Nq-1), sgeo, x, y, z, vmapM, vmapP, EToB, q, rhsq);
           }
         }
       }
     }
 
-    @barrier("global");
+    /*Need barriers because surfaceTerms writes to global*/
+    @barrier();
 
     // face 1 & 3
     for(int es=0;es<p_NblockS;++es;@inner(2)){
       for(int k=0;k<p_Nq;++k;@inner(1)){
         for(int i=0;i<p_Nq;++i;@inner(0)){
-          const dlong e = eo + es;
-          if(e<Nelements){
-            const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + k*p_Nq + i;
-            const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + k*p_Nq + i;
+          if(r_e<Nelements){
+            const dlong sk1 = element*p_Nfp*p_Nfaces + 1*p_Nfp + k*p_Nq + i;
+            const dlong sk3 = element*p_Nfp*p_Nfaces + 3*p_Nfp + k*p_Nq + i;
 
             //      surfaceTerms(sk1,1,i,0     ,k);
-            surfaceTerms(e,sk1,1,i,0,k, sgeo, x, y, z, vmapM, vmapP, EToB, q, rhsq);
+            surfaceTerms(element,sk1,1,i,0,k, sgeo, x, y, z, vmapM, vmapP, EToB, q, rhsq);
 
             //      surfaceTerms(sk3,3,i,(p_Nq-1),k);
-            surfaceTerms(e,sk3,3,i,(p_Nq-1),k, sgeo, x, y, z, vmapM, vmapP, EToB, q, rhsq);
+            surfaceTerms(element,sk3,3,i,(p_Nq-1),k, sgeo, x, y, z, vmapM, vmapP, EToB, q, rhsq);
           }
         }
       }
     }
 
-    @barrier("global");
+    @barrier();
 
     // face 2 & 4
     for(int es=0;es<p_NblockS;++es;@inner(2)){
       for(int k=0;k<p_Nq;++k;@inner(1)){
         for(int j=0;j<p_Nq;++j;@inner(0)){
-          const dlong e = eo + es;
-          if(e<Nelements){
-            const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + k*p_Nq + j;
-            const dlong sk4 = e*p_Nfp*p_Nfaces + 4*p_Nfp + k*p_Nq + j;
+          if(r_e<Nelements){
+            const dlong sk2 = element*p_Nfp*p_Nfaces + 2*p_Nfp + k*p_Nq + j;
+            const dlong sk4 = element*p_Nfp*p_Nfaces + 4*p_Nfp + k*p_Nq + j;
 
             //      surfaceTerms(sk2,2,(p_Nq-1),j,k);
-            surfaceTerms(e,sk2,2,(p_Nq-1),j,k, sgeo, x, y, z, vmapM, vmapP, EToB, q, rhsq);
+            surfaceTerms(element,sk2,2,(p_Nq-1),j,k, sgeo, x, y, z, vmapM, vmapP, EToB, q, rhsq);
 
             //surfaceTerms(sk4,4,0     ,j,k);
-            surfaceTerms(e,sk4,4,0,j,k, sgeo, x, y, z, vmapM, vmapP, EToB, q, rhsq);
+            surfaceTerms(element,sk4,4,0,j,k, sgeo, x, y, z, vmapM, vmapP, EToB, q, rhsq);
           }
         }
       }

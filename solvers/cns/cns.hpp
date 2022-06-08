@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -36,18 +36,20 @@ SOFTWARE.
 
 #define DCNS LIBP_DIR"/solvers/cns/"
 
+using namespace libp;
+
 class cnsSettings_t: public settings_t {
 public:
-  cnsSettings_t(MPI_Comm& _comm);
+  cnsSettings_t(comm_t _comm);
   void report();
   void parseFromFile(platformSettings_t& platformSettings,
                      meshSettings_t& meshSettings,
-                     const string filename);
+                     const std::string filename);
 };
 
 class cns_t: public solver_t {
 public:
-  mesh_t &mesh;
+  mesh_t mesh;
 
   int Nfields;
   int Ngrads;
@@ -58,57 +60,56 @@ public:
   int cubature;
   int isothermal;
 
-  TimeStepper::timeStepper_t* timeStepper;
+  timeStepper_t timeStepper;
 
-  halo_t* fieldTraceHalo;
-  halo_t* gradTraceHalo;
+  ogs::halo_t fieldTraceHalo;
+  ogs::halo_t gradTraceHalo;
 
-  dfloat *q;
-  occa::memory o_q;
+  memory<dfloat> q;
+  deviceMemory<dfloat> o_q;
 
-  dfloat *gradq;
-  occa::memory o_gradq;
+  memory<dfloat> gradq;
+  deviceMemory<dfloat> o_gradq;
 
-  dfloat *Vort;
-  occa::memory o_Vort;
+  memory<dfloat> Vort;
+  deviceMemory<dfloat> o_Vort;
 
-  occa::memory o_Mq;
+  deviceMemory<dfloat> o_Mq;
 
-  occa::kernel volumeKernel;
-  occa::kernel surfaceKernel;
-  occa::kernel cubatureVolumeKernel;
-  occa::kernel cubatureSurfaceKernel;
+  kernel_t volumeKernel;
+  kernel_t surfaceKernel;
+  kernel_t cubatureVolumeKernel;
+  kernel_t cubatureSurfaceKernel;
 
-  occa::kernel gradVolumeKernel;
-  occa::kernel gradSurfaceKernel;
+  kernel_t gradVolumeKernel;
+  kernel_t gradSurfaceKernel;
 
-  occa::kernel vorticityKernel;
+  kernel_t vorticityKernel;
 
-  occa::kernel constrainKernel;
+  kernel_t constrainKernel;
 
-  occa::kernel initialConditionKernel;
-  occa::kernel maxWaveSpeedKernel;
+  kernel_t initialConditionKernel;
+  kernel_t maxWaveSpeedKernel;
 
-  cns_t() = delete;
+  cns_t() = default;
   cns_t(platform_t &_platform, mesh_t &_mesh,
-              cnsSettings_t& _settings):
-    solver_t(_platform, _settings), mesh(_mesh) {}
-
-  ~cns_t();
+              cnsSettings_t& _settings) {
+    Setup(_platform, _mesh, _settings);
+  }
 
   //setup
-  static cns_t& Setup(platform_t& platform, mesh_t& mesh,
-                      cnsSettings_t& settings);
+  void Setup(platform_t& _platform, mesh_t& _mesh,
+             cnsSettings_t& _settings);
 
   void Run();
 
-  void Report(dfloat time, int tstep);
+  void Report(dfloat time, int tstep) override;
 
-  void PlotFields(dfloat* Q, dfloat *V, char *fileName);
+  void PlotFields(memory<dfloat> Q, memory<dfloat> V, std::string fileName);
 
-  void rhsf(occa::memory& o_q, occa::memory& o_rhs, const dfloat time);
+  void rhsf(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
 
-  dfloat MaxWaveSpeed(occa::memory& o_Q, const dfloat T);
+  dfloat MaxWaveSpeed(deviceMemory<dfloat>& o_Q, const dfloat T);
 };
 
 #endif

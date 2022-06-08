@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,15 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
+
+#ifdef GLIBCXX_PARALLEL
+#include <parallel/algorithm>
+using __gnu_parallel::sort;
+#else
+using std::sort;
+#endif
+
+namespace libp {
 
 // structure used to encode vertices that make
 // each face, the element/face indices, and
@@ -59,8 +68,7 @@ void mesh_t::ConnectBoundary(){
 #endif
 
   /* build list of boundary faces */
-  boundaryFace_t *boundaryFaces = (boundaryFace_t*) calloc(bcnt+NboundaryFaces,
-                                                           sizeof(boundaryFace_t));
+  memory<boundaryFace_t> boundaryFaces(bcnt+NboundaryFaces);
 
   bcnt = 0; // reset counter
   for(dlong e=0;e<Nelements;++e){
@@ -113,26 +121,28 @@ void mesh_t::ConnectBoundary(){
 #endif
 
   /* sort boundaryFaces by their vertex number pairs */
-  std::sort(boundaryFaces, boundaryFaces+bcnt,
-            [&](const boundaryFace_t& a, const boundaryFace_t& b) {
-              return std::lexicographical_compare(a.v, a.v+NfaceVertices,
-                                                  b.v, b.v+NfaceVertices);
-            });
+  sort(boundaryFaces.ptr(), boundaryFaces.ptr()+bcnt,
+      [&](const boundaryFace_t& a, const boundaryFace_t& b) {
+        return std::lexicographical_compare(a.v, a.v+NfaceVertices,
+                                            b.v, b.v+NfaceVertices);
+      });
 
   /* scan through sorted face lists looking for element-boundary matches */
-  EToB = (int*) calloc(Nelements*Nfaces, sizeof(int));
-  for(dlong n=0;n<Nelements*Nfaces;++n) EToB[n] = -1;
+  EToB.malloc(Nelements*Nfaces, -1);
 
+  #pragma omp parallel for
   for(hlong cnt=0;cnt<bcnt-1;++cnt){
     if(std::equal(boundaryFaces[cnt].v, boundaryFaces[cnt].v+NfaceVertices,
                   boundaryFaces[cnt+1].v)){
-      dlong e = mymax(boundaryFaces[cnt].element, boundaryFaces[cnt+1].element);
-      int f   = mymax(boundaryFaces[cnt].face,    boundaryFaces[cnt+1].face);
+      dlong e = std::max(boundaryFaces[cnt].element, boundaryFaces[cnt+1].element);
+      int f   = std::max(boundaryFaces[cnt].face,    boundaryFaces[cnt+1].face);
 
       EToB[e*Nfaces+f] =
-        mymax(boundaryFaces[cnt].bctype, boundaryFaces[cnt+1].bctype);
+        std::max(boundaryFaces[cnt].bctype, boundaryFaces[cnt+1].bctype);
     }
   }
+
+  o_EToB = platform.malloc<int>(EToB);
 
 #if 0
   int cnt = 0;
@@ -143,7 +153,6 @@ void mesh_t::ConnectBoundary(){
     }
   }
 #endif
-
-  free(boundaryFaces);
 }
 
+} //namespace libp

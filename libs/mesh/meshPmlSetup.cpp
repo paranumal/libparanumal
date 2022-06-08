@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,8 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
+
+namespace libp {
 
 void mesh_t::PmlSetup(){
 
@@ -51,9 +53,9 @@ void mesh_t::PmlSetup(){
       NnonPmlElements++;
   }
 
-  nonPmlElements = (dlong *) malloc(NnonPmlElements*sizeof(dlong));
-  pmlElements    = (dlong *) malloc(NpmlElements*sizeof(dlong));
-  pmlIds         = (dlong *) malloc(NpmlElements*sizeof(dlong*));
+  nonPmlElements.malloc(NnonPmlElements);
+  pmlElements.malloc(NpmlElements);
+  pmlIds.malloc(NpmlElements);
 
   NnonPmlElements=0;
   NpmlElements=0;
@@ -70,20 +72,16 @@ void mesh_t::PmlSetup(){
       nonPmlElements[NnonPmlElements++] = e;
   }
 
-  if (NpmlElements) {
-    o_pmlElements = platform.malloc(NpmlElements*sizeof(dlong), pmlElements);
-    o_pmlIds = platform.malloc(NpmlElements*sizeof(dlong), pmlIds);
-  }
-
-  if (NnonPmlElements)
-    o_nonPmlElements = platform.malloc(NnonPmlElements*sizeof(dlong), nonPmlElements);
+  o_pmlElements = platform.malloc<dlong>(pmlElements);
+  o_pmlIds = platform.malloc<dlong>(pmlIds);
+  o_nonPmlElements = platform.malloc<dlong>(nonPmlElements);
 }
 
 
 void mesh_t::MultiRatePmlSetup(){
 
-  mrNnonPmlElements = (dlong *) calloc(mrNlevels,sizeof(dlong));
-  mrNpmlElements    = (dlong *) calloc(mrNlevels,sizeof(dlong));
+  mrNnonPmlElements.malloc(mrNlevels, 0);
+  mrNpmlElements.malloc(mrNlevels, 0);
 
   //count PML elements
   for (dlong e=0;e<Nelements;e++) {
@@ -106,13 +104,13 @@ void mesh_t::MultiRatePmlSetup(){
       for (int l=lev;l<mrNlevels;l++) mrNnonPmlElements[l]++;
   }
 
-  mrNonPmlElements = (dlong **) malloc(mrNlevels*sizeof(dlong*));
-  mrPmlElements    = (dlong **) malloc(mrNlevels*sizeof(dlong*));
-  mrPmlIds         = (dlong **) malloc(mrNlevels*sizeof(dlong*));
+  mrNonPmlElements.malloc(mrNlevels);
+  mrPmlElements.malloc(mrNlevels);
+  mrPmlIds.malloc(mrNlevels);
   for (int lev=0;lev<mrNlevels;lev++) {
-    mrNonPmlElements[lev] = (dlong *) malloc(mrNnonPmlElements[lev]*sizeof(dlong));
-    mrPmlElements[lev]    = (dlong *) malloc(mrNpmlElements[lev]*sizeof(dlong));
-    mrPmlIds[lev]         = (dlong *) malloc(mrNpmlElements[lev]*sizeof(dlong));
+    mrNonPmlElements[lev].malloc(mrNnonPmlElements[lev]);
+    mrPmlElements[lev].malloc(mrNpmlElements[lev]);
+    mrPmlIds[lev].malloc(mrNpmlElements[lev]);
 
     //reset
     mrNpmlElements[lev] = 0;
@@ -137,16 +135,15 @@ void mesh_t::MultiRatePmlSetup(){
         mrNonPmlElements[l][mrNnonPmlElements[l]++] = e;
   }
 
-  o_mrNonPmlElements = new occa::memory[mrNlevels];
-  o_mrPmlElements    = new occa::memory[mrNlevels];
-  o_mrPmlIds         = new occa::memory[mrNlevels];
+  o_mrNonPmlElements.malloc(mrNlevels);
+  o_mrPmlElements.malloc(mrNlevels);
+  o_mrPmlIds.malloc(mrNlevels);
 
   for (int lev=0;lev<mrNlevels;lev++){
-    if (mrNpmlElements[lev]) {
-      o_mrPmlElements[lev]   = platform.malloc(mrNpmlElements[lev]*sizeof(dlong), mrPmlElements[lev]);
-      o_mrPmlIds[lev] = platform.malloc(mrNpmlElements[lev]*sizeof(dlong), mrPmlIds[lev]);
-    }
-    if (mrNnonPmlElements[lev])
-      o_mrNonPmlElements[lev] = platform.malloc(mrNnonPmlElements[lev]*sizeof(dlong), mrNonPmlElements[lev]);
+    o_mrPmlElements[lev]   = platform.malloc<dlong>(mrPmlElements[lev]);
+    o_mrPmlIds[lev] = platform.malloc<dlong>(mrPmlIds[lev]);
+    o_mrNonPmlElements[lev] = platform.malloc<dlong>(mrNonPmlElements[lev]);
   }
 }
+
+} //namespace libp

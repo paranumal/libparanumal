@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,239 +25,284 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh3D.hpp"
+
+namespace libp {
 
 // custom geometric factors specialized for 3D quad on sphere
 
-void meshQuad3D::GeometricFactors(){
+void mesh_t::GeometricFactorsQuad3D(){
+
+  /*Set offsets*/
+  Nvgeo = 12;
+
+  RXID  = 0;
+  RYID  = 1;
+  RZID  = 2;
+  SXID  = 3;
+  SYID  = 4;
+  SZID  = 5;
+  TXID  = 6;
+  TYID  = 7;
+  TZID  = 8;
+  JID   = 9;
+  JWID  = 10;
+  IJWID = 11;
+
+  props["defines/" "p_Nvgeo"]= Nvgeo;
+  props["defines/" "p_RXID"]= RXID;
+  props["defines/" "p_SXID"]= SXID;
+  props["defines/" "p_TXID"]= TXID;
+
+  props["defines/" "p_RYID"]= RYID;
+  props["defines/" "p_SYID"]= SYID;
+  props["defines/" "p_TYID"]= TYID;
+
+  props["defines/" "p_RZID"]= RZID;
+  props["defines/" "p_SZID"]= SZID;
+  props["defines/" "p_TZID"]= TZID;
+
+  props["defines/" "p_JID"]= JID;
+  props["defines/" "p_JWID"]= JWID;
+  props["defines/" "p_IJWID"]= IJWID;
 
   /* unified storage array for geometric factors */
-  Nvgeo = 12; //
-
   /* note that we have volume geometric factors for each node */
-  vgeo = (dfloat*) calloc((Nelements+totalHaloPairs)*Nvgeo*Np, sizeof(dfloat));
+  vgeo.malloc((Nelements+totalHaloPairs)*Nvgeo*Np);
 
-  cubvgeo = (dfloat*) calloc(Nelements*Nvgeo*cubNp, sizeof(dfloat));
+  Nggeo = 6;
 
-  // Can be computed on the fly
-  Nggeo = 7;
-  ggeo  = (dfloat *) calloc(Nelements*Np*Nggeo, sizeof(dfloat));
+  G00ID=0;
+  G01ID=1;
+  G02ID=2;
+  G11ID=3;
+  G12ID=4;
+  G22ID=5;
 
-  dfloat *cxr = (dfloat*) calloc(cubNq*cubNq, sizeof(dfloat));
-  dfloat *cxs = (dfloat*) calloc(cubNq*cubNq, sizeof(dfloat));
-  dfloat *cyr = (dfloat*) calloc(cubNq*cubNq, sizeof(dfloat));
-  dfloat *cys = (dfloat*) calloc(cubNq*cubNq, sizeof(dfloat));
-  dfloat *czr = (dfloat*) calloc(cubNq*cubNq, sizeof(dfloat));
-  dfloat *czs = (dfloat*) calloc(cubNq*cubNq, sizeof(dfloat));
-  dfloat *cx  = (dfloat*) calloc(cubNq*cubNq, sizeof(dfloat));
-  dfloat *cy  = (dfloat*) calloc(cubNq*cubNq, sizeof(dfloat));
-  dfloat *cz  = (dfloat*) calloc(cubNq*cubNq, sizeof(dfloat));
+  props["defines/" "p_Nggeo"]= Nggeo;
+  props["defines/" "p_G00ID"]= G00ID;
+  props["defines/" "p_G01ID"]= G01ID;
+  props["defines/" "p_G02ID"]= G02ID;
+  props["defines/" "p_G11ID"]= G11ID;
+  props["defines/" "p_G12ID"]= G12ID;
+  props["defines/" "p_G22ID"]= G22ID;
+
+  /* number of second order geometric factors */
+  ggeo.malloc(Nelements*Nggeo*Np);
+
+  wJ.malloc(Nelements*Np);
+
+  // dfloat *cxr = (dfloat*) calloc(cubNq*cubNq, sizeof(dfloat));
+  // dfloat *cxs = (dfloat*) calloc(cubNq*cubNq, sizeof(dfloat));
+  // dfloat *cyr = (dfloat*) calloc(cubNq*cubNq, sizeof(dfloat));
+  // dfloat *cys = (dfloat*) calloc(cubNq*cubNq, sizeof(dfloat));
+  // dfloat *czr = (dfloat*) calloc(cubNq*cubNq, sizeof(dfloat));
+  // dfloat *czs = (dfloat*) calloc(cubNq*cubNq, sizeof(dfloat));
+  // dfloat *cx  = (dfloat*) calloc(cubNq*cubNq, sizeof(dfloat));
+  // dfloat *cy  = (dfloat*) calloc(cubNq*cubNq, sizeof(dfloat));
+  // dfloat *cz  = (dfloat*) calloc(cubNq*cubNq, sizeof(dfloat));
 
   for(int e=0;e<Nelements;++e){ /* for each element */
 
-    for(int n=0;n<cubNq*cubNq;++n){
-      cxr[n] = 0; cyr[n] = 0; czr[n] = 0;
-      cxs[n] = 0; cys[n] = 0; czs[n] = 0;
-      cx[n] = 0;  cy[n] = 0;  cz[n] = 0;
-    }
+    // for(int n=0;n<cubNq*cubNq;++n){
+    //   cxr[n] = 0; cyr[n] = 0; czr[n] = 0;
+    //   cxs[n] = 0; cys[n] = 0; czs[n] = 0;
+    //   cx[n] = 0;  cy[n] = 0;  cz[n] = 0;
+    // }
 
 
-  for(int j=0;j<Nq;++j){
-    for(int i=0;i<Nq;++i){
+    for(int j=0;j<Nq;++j){
+      for(int i=0;i<Nq;++i){
 
-      dfloat xij = x[i+j*Nq+e*Np];
-      dfloat yij = y[i+j*Nq+e*Np];
-      dfloat zij = z[i+j*Nq+e*Np];
+        dfloat xij = x[i+j*Nq+e*Np];
+        dfloat yij = y[i+j*Nq+e*Np];
+        dfloat zij = z[i+j*Nq+e*Np];
 
-      dfloat xr = 0, yr = 0, zr = 0;
-      dfloat xs = 0, ys = 0, zs = 0;
+        dfloat xr = 0, yr = 0, zr = 0;
+        dfloat xs = 0, ys = 0, zs = 0;
 
-      for(int n=0;n<Nq;++n){
+        for(int n=0;n<Nq;++n){
 
-	dfloat Din = D[i*Nq+n];
-	dfloat Djn = D[j*Nq+n];
+          dfloat Din = D[i*Nq+n];
+          dfloat Djn = D[j*Nq+n];
 
-	xr += Din*x[n+j*Nq+e*Np];
-	yr += Din*y[n+j*Nq+e*Np];
-	zr += Din*z[n+j*Nq+e*Np];
+          xr += Din*x[n+j*Nq+e*Np];
+          yr += Din*y[n+j*Nq+e*Np];
+          zr += Din*z[n+j*Nq+e*Np];
 
-	xs += Djn*x[i+n*Nq+e*Np];
-	ys += Djn*y[i+n*Nq+e*Np];
-	zs += Djn*z[i+n*Nq+e*Np];
+          xs += Djn*x[i+n*Nq+e*Np];
+          ys += Djn*y[i+n*Nq+e*Np];
+          zs += Djn*z[i+n*Nq+e*Np];
+        }
 
-      }
+        {
+          dfloat rx = ys*zij - zs*yij; // dXds x X
+          dfloat ry = zs*xij - xs*zij;
+          dfloat rz = xs*yij - ys*xij;
 
-      {
-	dfloat rx = ys*zij - zs*yij; // dXds x X
-	dfloat ry = zs*xij - xs*zij;
-	dfloat rz = xs*yij - ys*xij;
+          dfloat sx = zr*yij - yr*zij; // -dXdr x X
+          dfloat sy = xr*zij - zr*xij;
+          dfloat sz = yr*xij - xr*yij;
 
-	dfloat sx = zr*yij - yr*zij; // -dXdr x X
-	dfloat sy = xr*zij - zr*xij;
-	dfloat sz = yr*xij - xr*yij;
+          dfloat tx = yr*zs - zr*ys; // dXdr x dXds ~ X*|dXdr x dXds|/|X|
+          dfloat ty = zr*xs - xr*zs;
+          dfloat tz = xr*ys - yr*xs;
 
-	dfloat tx = yr*zs - zr*ys; // dXdr x dXds ~ X*|dXdr x dXds|/|X|
-	dfloat ty = zr*xs - xr*zs;
-	dfloat tz = xr*ys - yr*xs;
+          dfloat Gx = tx, Gy = ty, Gz = tz;
 
-	dfloat Gx = tx, Gy = ty, Gz = tz;
+          dfloat J = xij*tx + yij*ty + zij*tz;
 
-	dfloat J = xij*tx + yij*ty + zij*tz;
+          LIBP_ABORT("Negative J found at element " << e << "x=" << xij << " y=" << yij << " z=" << zij,
+                     J<1e-8);
 
-	if(J<1e-8) {
-	  stringstream ss;
-	  ss << "Negative J found at element " << e << "x=" << xij << " y=" << yij << " z=" << zij << "\n";
-	  LIBP_ABORT(ss.str())
-	    }
+          rx /= J;      sx /= J;      tx /= J;
+          ry /= J;      sy /= J;      ty /= J;
+          rz /= J;      sz /= J;      tz /= J;
 
-	rx /= J;      sx /= J;      tx /= J;
-	ry /= J;      sy /= J;      ty /= J;
-	rz /= J;      sz /= J;      tz /= J;
+          // use this for "volume" Jacobian
+          dfloat Jnew = sqrt(Gx*Gx+Gy*Gy+Gz*Gz);  //(difference between actual Jacobian and sphere Jac)
+          J = Jnew;
 
-	// use this for "volume" Jacobian
-	dfloat Jnew = sqrt(Gx*Gx+Gy*Gy+Gz*Gz);  //(difference between actual Jacobian and sphere Jac)
-	J = Jnew;
+          LIBP_ABORT("Negative J found at element " << e << "x=" << xij << " y=" << yij << " z=" << zij,
+                     J<1e-8);
+          //    printf("before: grad r = %g,%g,%g\n", rx, ry, rz);
+        }
 
-	if(J<1e-8) {
-	  stringstream ss;
-	  ss << "Negative J found at element " << e << "x=" << xij << " y=" << yij << " z=" << zij << "\n";
-	  ss << "Negative J found at element " << e << "\n";
-	  LIBP_ABORT(ss.str())
-	    }
-	//    printf("before: grad r = %g,%g,%g\n", rx, ry, rz);
-      }
+        dfloat GG00 = xr*xr+yr*yr+zr*zr;
+        dfloat GG11 = xs*xs+ys*ys+zs*zs;
+        dfloat GG01 = xr*xs+yr*ys+zr*zs;
+        dfloat detGG = GG00*GG11 - GG01*GG01;
 
-      dfloat GG00 = xr*xr+yr*yr+zr*zr;
-  dfloat GG11 = xs*xs+ys*ys+zs*zs;
-  dfloat GG01 = xr*xs+yr*ys+zr*zs;
-  dfloat detGG = GG00*GG11 - GG01*GG01;
+        // are these tangential
+        dfloat rx = (xr*GG11-xs*GG01)/detGG;
+        dfloat ry = (yr*GG11-ys*GG01)/detGG;
+        dfloat rz = (zr*GG11-zs*GG01)/detGG;
 
-  // are these tangential
-  dfloat rx = (xr*GG11-xs*GG01)/detGG;
-  dfloat ry = (yr*GG11-ys*GG01)/detGG;
-  dfloat rz = (zr*GG11-zs*GG01)/detGG;
+        dfloat sx = (-xr*GG01+xs*GG00)/detGG;
+        dfloat sy = (-yr*GG01+ys*GG00)/detGG;
+        dfloat sz = (-zr*GG01+zs*GG00)/detGG;
 
-  dfloat sx = (-xr*GG01+xs*GG00)/detGG;
-  dfloat sy = (-yr*GG01+ys*GG00)/detGG;
-  dfloat sz = (-zr*GG01+zs*GG00)/detGG;
+        dfloat tx = yr*zs - zr*ys; // dXdr x dXds ~ X*|dXdr x dXds|/|X|
+        dfloat ty = zr*xs - xr*zs;
+        dfloat tz = xr*ys - yr*xs;
 
-  dfloat tx = yr*zs - zr*ys; // dXdr x dXds ~ X*|dXdr x dXds|/|X|
-  dfloat ty = zr*xs - xr*zs;
-  dfloat tz = xr*ys - yr*xs;
+        // use this for "volume" Jacobian
+        dfloat J = sqrt(tx*tx+ty*ty+tz*tz); // (difference between actual Jacobian and sphere Jac)
 
-  // use this for "volume" Jacobian
-  dfloat J = sqrt(tx*tx+ty*ty+tz*tz); // (difference between actual Jacobian and sphere Jac)
+        //  printf("after: grad r = %g,%g,%g\n", rx, ry, rz);
 
-  //  printf("after: grad r = %g,%g,%g\n", rx, ry, rz);
+        dfloat JW = J*gllw[i]*gllw[j];
 
-  dfloat JW = J*w[i]*w[j];
+        /* store geometric factors */
+        int base = Nvgeo*Np*e + j*Nq + i;
 
-  /* store geometric factors */
-  int base = Nvgeo*Np*e + j*Nq + i;
+        vgeo[base + Np*RXID] = rx;
+        vgeo[base + Np*RYID] = ry;
+        vgeo[base + Np*RZID] = rz;
+        vgeo[base + Np*SXID] = sx;
+        vgeo[base + Np*SYID] = sy;
+        vgeo[base + Np*SZID] = sz;
+        vgeo[base + Np*TXID] = tx;
+        vgeo[base + Np*TYID] = ty;
+        vgeo[base + Np*TZID] = tz;
+        vgeo[base + Np*JID]  = J;
+        vgeo[base + Np*JWID] = JW;
+        vgeo[base + Np*IJWID] = 1./JW;
 
-  vgeo[base + Np*RXID] = rx;
-  vgeo[base + Np*RYID] = ry;
-  vgeo[base + Np*RZID] = rz;
-  vgeo[base + Np*SXID] = sx;
-  vgeo[base + Np*SYID] = sy;
-  vgeo[base + Np*SZID] = sz;
-  vgeo[base + Np*TXID] = tx;
-  vgeo[base + Np*TYID] = ty;
-  vgeo[base + Np*TZID] = tz;
-  vgeo[base + Np*JID]  = J;
-  vgeo[base + Np*JWID] = JW;
-  vgeo[base + Np*IJWID] = 1./JW;
+        /* store second order geometric factors (can be computed on the fly, later!!!)*/
+        int gbase = Nggeo*Np*e + j*Nq + i;
+        ggeo[gbase + Np*G00ID] = JW*(rx*rx + ry*ry + rz*rz);
+        ggeo[gbase + Np*G01ID] = JW*(rx*sx + ry*sy + rz*sz);
+        ggeo[gbase + Np*G02ID] = JW*(rx*tx + ry*ty + rz*tz);
+        ggeo[gbase + Np*G11ID] = JW*(sx*sx + sy*sy + sz*sz);
+        ggeo[gbase + Np*G12ID] = JW*(sx*tx + sy*ty + sz*tz);
+        ggeo[gbase + Np*G22ID] = JW*(tx*tx + ty*ty + tz*tz);
 
-  /* store second order geometric factors (can be computed on the fly, later!!!)*/
-  int gbase = Nggeo*Np*e + j*Nq + i;
-  ggeo[gbase + Np*G00ID] = JW*(rx*rx + ry*ry + rz*rz);
-  ggeo[gbase + Np*G01ID] = JW*(rx*sx + ry*sy + rz*sz);
-  ggeo[gbase + Np*G02ID] = JW*(rx*tx + ry*ty + rz*tz);
+        wJ[Np*e + j*Nq + i] = JW;
 
-  ggeo[gbase + Np*G11ID] = JW*(sx*sx + sy*sy + sz*sz);
-  ggeo[gbase + Np*G12ID] = JW*(sx*tx + sy*ty + sz*tz);
-
-  ggeo[gbase + Np*G22ID] = JW*(tx*tx + ty*ty + tz*tz);
-  ggeo[gbase + Np*GWJID] = JW;
-
-  // now do for cubvgeo
-  // 1. interpolate Jacobian matrix to cubature nodes
-  for(int m=0;m<cubNq;++m){
-    for(int n=0;n<cubNq;++n){
-      dfloat cIni = cubInterp[n*Nq+i];
-      dfloat cImj = cubInterp[m*Nq+j];
-      cxr[n+m*cubNq] += cIni*cImj*xr;
-      cxs[n+m*cubNq] += cIni*cImj*xs;
-      cyr[n+m*cubNq] += cIni*cImj*yr;
-      cys[n+m*cubNq] += cIni*cImj*ys;
-      czr[n+m*cubNq] += cIni*cImj*zr;
-      czs[n+m*cubNq] += cIni*cImj*zs;
-      cx[n+m*cubNq] += cIni*cImj*xij;
-      cy[n+m*cubNq] += cIni*cImj*yij;
-      cz[n+m*cubNq] += cIni*cImj*zij;
-    }
-  }
+        // now do for cubvgeo
+        // 1. interpolate Jacobian matrix to cubature nodes
+        // for(int m=0;m<cubNq;++m){
+        //   for(int n=0;n<cubNq;++n){
+        //     dfloat cIni = cubInterp[n*Nq+i];
+        //     dfloat cImj = cubInterp[m*Nq+j];
+        //     cxr[n+m*cubNq] += cIni*cImj*xr;
+        //     cxs[n+m*cubNq] += cIni*cImj*xs;
+        //     cyr[n+m*cubNq] += cIni*cImj*yr;
+        //     cys[n+m*cubNq] += cIni*cImj*ys;
+        //     czr[n+m*cubNq] += cIni*cImj*zr;
+        //     czs[n+m*cubNq] += cIni*cImj*zs;
+        //     cx[n+m*cubNq] += cIni*cImj*xij;
+        //     cy[n+m*cubNq] += cIni*cImj*yij;
+        //     cz[n+m*cubNq] += cIni*cImj*zij;
+        //   }
+        // }
       }
     }
 
-    for(int n=0;n<cubNq*cubNq;++n){
+    // for(int n=0;n<cubNq*cubNq;++n){
 
-      dfloat rx = cys[n]*cz[n] - czs[n]*cy[n]; // dXds x X
-      dfloat ry = czs[n]*cx[n] - cxs[n]*cz[n];
-      dfloat rz = cxs[n]*cy[n] - cys[n]*cx[n];
+    //   dfloat rx = cys[n]*cz[n] - czs[n]*cy[n]; // dXds x X
+    //   dfloat ry = czs[n]*cx[n] - cxs[n]*cz[n];
+    //   dfloat rz = cxs[n]*cy[n] - cys[n]*cx[n];
 
-      dfloat sx = czr[n]*cy[n] - cyr[n]*cz[n]; // -dXdr x X
-      dfloat sy = cxr[n]*cz[n] - czr[n]*cx[n];
-      dfloat sz = cyr[n]*cx[n] - cxr[n]*cy[n];
+    //   dfloat sx = czr[n]*cy[n] - cyr[n]*cz[n]; // -dXdr x X
+    //   dfloat sy = cxr[n]*cz[n] - czr[n]*cx[n];
+    //   dfloat sz = cyr[n]*cx[n] - cxr[n]*cy[n];
 
-      dfloat tx = cyr[n]*czs[n] - czr[n]*cys[n]; // dXdr x dXds ~ X*|dXdr x dXds|/|X|
-      dfloat ty = czr[n]*cxs[n] - cxr[n]*czs[n];
-      dfloat tz = cxr[n]*cys[n] - cyr[n]*cxs[n];
+    //   dfloat tx = cyr[n]*czs[n] - czr[n]*cys[n]; // dXdr x dXds ~ X*|dXdr x dXds|/|X|
+    //   dfloat ty = czr[n]*cxs[n] - cxr[n]*czs[n];
+    //   dfloat tz = cxr[n]*cys[n] - cyr[n]*cxs[n];
 
-      dfloat Gx = tx, Gy = ty, Gz = tz;
+    //   dfloat Gx = tx, Gy = ty, Gz = tz;
 
-      dfloat J = cx[n]*tx + cy[n]*ty + cz[n]*tz;
+    //   dfloat J = cx[n]*tx + cy[n]*ty + cz[n]*tz;
 
-      if(J<1e-8) {
-        stringstream ss;
-        ss << "Negative J found at element " << e << "\n";
-	//	ss << "Negative J found at element " << e << "x=" << xij << " y=" << yij << " z=" << zij << "\n";
-        LIBP_ABORT(ss.str())
-      }
+    //   if(J<1e-8) {
+    //     stringstream ss;
+    //     ss << "Negative J found at element " << e << "\n";
+    //     //      ss << "Negative J found at element " << e << "x=" << xij << " y=" << yij << " z=" << zij << "\n";
+    //     LIBP_ABORT(ss.str())
+    //   }
 
-      rx /= J;      sx /= J;      tx /= J;
-      ry /= J;      sy /= J;      ty /= J;
-      rz /= J;      sz /= J;      tz /= J;
+    //   rx /= J;      sx /= J;      tx /= J;
+    //   ry /= J;      sy /= J;      ty /= J;
+    //   rz /= J;      sz /= J;      tz /= J;
 
-      // use this for "volume" Jacobian
-      J = sqrt(Gx*Gx+Gy*Gy+Gz*Gz);
+    //   // use this for "volume" Jacobian
+    //   J = sqrt(Gx*Gx+Gy*Gy+Gz*Gz);
 
-      if(J<1e-8) {
-        stringstream ss;
-        ss << "Negative J found at element " << e << "\n";
-	//	ss << "Negative J found at element " << e << "x=" << xij << " y=" << yij << " z=" << zij << "\n";
-        LIBP_ABORT(ss.str())
-      }
+    //   if(J<1e-8) {
+    //     stringstream ss;
+    //     ss << "Negative J found at element " << e << "\n";
+    //     //      ss << "Negative J found at element " << e << "x=" << xij << " y=" << yij << " z=" << zij << "\n";
+    //     LIBP_ABORT(ss.str())
+    //   }
 
-      dfloat JW = J*cubw[n%cubNq]*cubw[n/cubNq];
+    //   dfloat JW = J*cubw[n%cubNq]*cubw[n/cubNq];
 
-      /* store geometric factors */
-      int base = Nvgeo*cubNp*e + n;
+    //   /* store geometric factors */
+    //   int base = Nvgeo*cubNp*e + n;
 
-      cubvgeo[base + cubNp*RXID] = rx;
-      cubvgeo[base + cubNp*RYID] = ry;
-      cubvgeo[base + cubNp*RZID] = rz;
-      cubvgeo[base + cubNp*SXID] = sx;
-      cubvgeo[base + cubNp*SYID] = sy;
-      cubvgeo[base + cubNp*SZID] = sz;
-      cubvgeo[base + cubNp*TXID] = tx;
-      cubvgeo[base + cubNp*TYID] = ty;
-      cubvgeo[base + cubNp*TZID] = tz;
-      cubvgeo[base + cubNp*JID]  = J;
-      cubvgeo[base + cubNp*JWID] = JW;
-      cubvgeo[base + cubNp*IJWID] = 1./JW;
-    }
+    //   cubvgeo[base + cubNp*RXID] = rx;
+    //   cubvgeo[base + cubNp*RYID] = ry;
+    //   cubvgeo[base + cubNp*RZID] = rz;
+    //   cubvgeo[base + cubNp*SXID] = sx;
+    //   cubvgeo[base + cubNp*SYID] = sy;
+    //   cubvgeo[base + cubNp*SZID] = sz;
+    //   cubvgeo[base + cubNp*TXID] = tx;
+    //   cubvgeo[base + cubNp*TYID] = ty;
+    //   cubvgeo[base + cubNp*TZID] = tz;
+    //   cubvgeo[base + cubNp*JID]  = J;
+    //   cubvgeo[base + cubNp*JWID] = JW;
+    //   cubvgeo[base + cubNp*IJWID] = 1./JW;
+    // }
   }
 
-  halo->Exchange(vgeo, Nvgeo*Np, ogs_dfloat);
+  halo.Exchange(vgeo, Nvgeo*Np);
+
+  o_wJ   = platform.malloc<dfloat>(wJ);
+  o_vgeo = platform.malloc<dfloat>(vgeo);
+  o_ggeo = platform.malloc<dfloat>(ggeo);
 }
+
+} //namespace libp

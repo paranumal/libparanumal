@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,36 +27,38 @@ SOFTWARE.
 #include "core.hpp"
 #include "timeStepper.hpp"
 
+namespace libp {
+
 namespace TimeStepper {
 
 dopri5::dopri5(dlong Nelements, dlong NhaloElements,
-               int Np, int Nfields, solver_t& _solver, MPI_Comm _comm):
-  timeStepper_t(Nelements, NhaloElements, Np, Nfields, _solver), comm(_comm) {
-
-  platform_t &platform = solver.platform;
+               int Np, int Nfields,
+               platform_t& _platform, comm_t _comm):
+  timeStepperBase_t(Nelements, NhaloElements,
+                    Np, Nfields, _platform, _comm) {
 
   Nrk = 7;
 
-  o_rhsq   = platform.malloc(N*sizeof(dfloat));
-  o_rkq    = platform.malloc((N+Nhalo)*sizeof(dfloat));
-  o_rkrhsq = platform.malloc(Nrk*N*sizeof(dfloat));
-  o_rkerr  = platform.malloc(N*sizeof(dfloat));
+  o_rhsq   = platform.malloc<dfloat>(N);
+  o_rkq    = platform.malloc<dfloat>(N+Nhalo);
+  o_rkrhsq = platform.malloc<dfloat>(Nrk*N);
+  o_rkerr  = platform.malloc<dfloat>(N);
 
-  o_saveq  = platform.malloc(N*sizeof(dfloat));
+  o_saveq  = platform.malloc<dfloat>(N);
 
-  Nblock = (N+BLOCKSIZE-1)/BLOCKSIZE;
-  errtmp = (dfloat*) platform.hostMalloc(Nblock*sizeof(dfloat),
-                                          NULL, h_errtmp);
-  o_errtmp = platform.malloc(Nblock*sizeof(dfloat));
+  const int blocksize = 256;
 
-  hlong Nlocal = N;
-  hlong Ntotal;
-  MPI_Allreduce(&Nlocal, &Ntotal, 1, MPI_HLONG, MPI_SUM, comm);
+  Nblock = (N+blocksize-1)/blocksize;
+  h_errtmp = platform.hostMalloc<dfloat>(Nblock);
+  o_errtmp = platform.malloc<dfloat>(Nblock);
 
-  occa::properties kernelInfo = platform.props; //copy base occa properties from solver
+  hlong Ntotal = N;
+  comm.Allreduce(Ntotal);
+
+  properties_t kernelInfo = platform.props(); //copy base occa properties from solver
 
   //add defines
-  kernelInfo["defines/" "p_blockSize"] = (int)BLOCKSIZE;
+  kernelInfo["defines/" "p_blockSize"] = (int)blocksize;
 
   rkUpdateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
                                     "timeStepperDOPRI5.okl",
@@ -84,16 +86,16 @@ dopri5::dopri5(dlong Nelements, dlong NhaloElements,
                           35.0/384.0,             0.0,   500.0/1113.0,  125.0/192.0,  -2187.0/6784.0, 11.0/84.0, 0.0 };
   dfloat _rkE[7] = {71.0/57600.0,  0.0, -71.0/16695.0, 71.0/1920.0, -17253.0/339200.0, 22.0/525.0, -1.0/40.0 };
 
-  rkC = (dfloat*) calloc(Nrk, sizeof(dfloat));
-  rkE = (dfloat*) calloc(Nrk, sizeof(dfloat));
-  rkA = (dfloat*) calloc(Nrk*Nrk, sizeof(dfloat));
+  rkC.malloc(Nrk);
+  rkE.malloc(Nrk);
+  rkA.malloc(Nrk*Nrk);
 
-  memcpy(rkC, _rkC, Nrk*sizeof(dfloat));
-  memcpy(rkE, _rkE, Nrk*sizeof(dfloat));
-  memcpy(rkA, _rkA, Nrk*Nrk*sizeof(dfloat));
+  rkC.copyFrom(_rkC);
+  rkE.copyFrom(_rkE);
+  rkA.copyFrom(_rkA);
 
-  o_rkA = platform.malloc(Nrk*Nrk*sizeof(dfloat), rkA);
-  o_rkE = platform.malloc(Nrk*sizeof(dfloat), rkE);
+  o_rkA = platform.malloc<dfloat>(rkA);
+  o_rkE = platform.malloc<dfloat>(rkE);
 
   dtMIN = 1E-9; //minumum allowed timestep
   ATOL = 1E-6;  //absolute error tolerance
@@ -112,16 +114,16 @@ dopri5::dopri5(dlong Nelements, dlong NhaloElements,
   sqrtinvNtotal = 1.0/sqrt(Ntotal);
 }
 
-void dopri5::Run(occa::memory &o_q, dfloat start, dfloat end) {
+void dopri5::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloat end) {
 
   dfloat time = start;
 
   // int rank;
-  // MPI_Comm_rank(comm, &rank);
+  // comm_rank_t(comm, &rank);
 
   solver.Report(time,0);
 
-  dfloat outputInterval;
+  dfloat outputInterval=0.0;
   solver.settings.getSetting("OUTPUT INTERVAL", outputInterval);
 
   dfloat outputTime = time + outputInterval;
@@ -130,23 +132,17 @@ void dopri5::Run(occa::memory &o_q, dfloat start, dfloat end) {
 
   while (time < end) {
 
-    if (dt<dtMIN){
-      stringstream ss;
-      ss << "Time step became too small at time step = " << tstep;
-      LIBP_ABORT(ss.str());
-    }
-    if (std::isnan(dt)) {
-      stringstream ss;
-      ss << "Solution became unstable at time step = " << tstep;
-      LIBP_ABORT(ss.str());
-    }
+    LIBP_ABORT("Time step became too small at time step = " << tstep,
+               dt<dtMIN);
+    LIBP_ABORT("Solution became unstable at time step = " << tstep,
+               std::isnan(dt));
 
     //check for final timestep
     if (time+dt > end){
       dt = end-time;
     }
 
-    Step(o_q, time, dt);
+    Step(solver, o_q, time, dt);
 
     // compute Dopri estimator
     dfloat err = Estimater(o_q);
@@ -155,7 +151,7 @@ void dopri5::Run(occa::memory &o_q, dfloat start, dfloat end) {
     dfloat fac1 = pow(err,exp1);
     dfloat fac = fac1/pow(facold,beta);
 
-    fac = mymax(invfactor2, mymin(invfactor1,fac/safe));
+    fac = std::max(invfactor2, std::min(invfactor1,fac/safe));
     dfloat dtnew = dt/fac;
 
     if (err<1.0) { //dt is accepted
@@ -174,7 +170,7 @@ void dopri5::Run(occa::memory &o_q, dfloat start, dfloat end) {
         //   printf("Taking output mini step: %g\n", dt);
 
         // time step to output
-        Step(o_q, time, dt);
+        Step(solver, o_q, time, dt);
 
         // shift for output
         o_rkq.copyTo(o_q);
@@ -200,14 +196,15 @@ void dopri5::Run(occa::memory &o_q, dfloat start, dfloat end) {
       time += dt;
       while (time>outputTime) outputTime+= outputInterval; //catch up next output in case dt>outputInterval
 
-      facold = mymax(err,1E-4); // hard coded factor ?
+      constexpr dfloat errMax = 1.0e-4;  // hard coded factor ?
+      facold = std::max(err,errMax);
 
       // if (!rank)
       //   printf("\r time = %g (%d), dt = %g accepted                      ", time, allStep,  dt);
 
       tstep++;
     } else {
-      dtnew = dt/(mymax(invfactor1,fac1/safe));
+      dtnew = dt/(std::max(invfactor1,fac1/safe));
 
       // if (!rank)
       //   printf("\r time = %g (%d), dt = %g rejected, trying %g", time, allStep, dt, dtnew);
@@ -222,19 +219,19 @@ void dopri5::Run(occa::memory &o_q, dfloat start, dfloat end) {
   //   printf("%d accepted steps and %d total steps\n", tstep, allStep);
 }
 
-void dopri5::Backup(occa::memory &o_Q) {
-  o_saveq.copyFrom(o_Q, N*sizeof(dfloat));
+void dopri5::Backup(deviceMemory<dfloat> &o_Q) {
+  o_saveq.copyFrom(o_Q, N);
 }
 
-void dopri5::Restore(occa::memory &o_Q) {
-  o_saveq.copyTo(o_Q, N*sizeof(dfloat));
+void dopri5::Restore(deviceMemory<dfloat> &o_Q) {
+  o_saveq.copyTo(o_Q, N);
 }
 
-void dopri5::AcceptStep(occa::memory &o_q, occa::memory &o_rq) {
-  o_q.copyFrom(o_rq, N*sizeof(dfloat));
+void dopri5::AcceptStep(deviceMemory<dfloat> &o_q, deviceMemory<dfloat> &o_rq) {
+  o_q.copyFrom(o_rq, N);
 }
 
-void dopri5::Step(occa::memory &o_q, dfloat time, dfloat _dt) {
+void dopri5::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloat _dt) {
 
   //RK step
   for(int rk=0;rk<Nrk;++rk){
@@ -273,7 +270,7 @@ void dopri5::Step(occa::memory &o_q, dfloat time, dfloat _dt) {
   }
 }
 
-dfloat dopri5::Estimater(occa::memory& o_q){
+dfloat dopri5::Estimater(deviceMemory<dfloat>& o_q){
 
   //Error estimation
   //E. HAIRER, S.P. NORSETT AND G. WANNER, SOLVING ORDINARY
@@ -286,34 +283,16 @@ dfloat dopri5::Estimater(occa::memory& o_q){
                         o_rkerr,
                         o_errtmp);
 
-  o_errtmp.copyTo(errtmp);
-  dfloat localerr = 0;
+  h_errtmp.copyFrom(o_errtmp);
   dfloat err = 0;
   for(dlong n=0;n<Nblock;++n){
-    localerr += errtmp[n];
+    err += h_errtmp[n];
   }
-  MPI_Allreduce(&localerr, &err, 1, MPI_DFLOAT, MPI_SUM, comm);
+  comm.Allreduce(err);
 
   err = sqrt(err)*sqrtinvNtotal;
 
   return err;
-}
-
-dopri5::~dopri5() {
-  if (o_rkq.size()) o_rkq.free();
-  if (o_rkrhsq.size()) o_rkrhsq.free();
-  if (o_rkerr.size()) o_rkerr.free();
-  if (o_errtmp.size()) o_errtmp.free();
-  if (o_rkA.size()) o_rkA.free();
-  if (o_rkE.size()) o_rkE.free();
-
-  if (rkC) free(rkC);
-  if (rkA) free(rkA);
-  if (rkE) free(rkE);
-
-  rkUpdateKernel.free();
-  rkStageKernel.free();
-  rkErrorEstimateKernel.free();
 }
 
 /**************************************************/
@@ -322,27 +301,26 @@ dopri5::~dopri5() {
 
 dopri5_pml::dopri5_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
                       int Np, int Nfields, int Npmlfields,
-                      solver_t& _solver, MPI_Comm _comm):
-  dopri5(Nelements, NhaloElements, Np, Nfields, _solver, _comm),
+                      platform_t& _platform, comm_t _comm):
+  dopri5(Nelements, NhaloElements, Np, Nfields, _platform, _comm),
   Npml(Npmlfields*Np*NpmlElements) {
 
   if (Npml) {
-    platform_t &platform = solver.platform;
+    memory<dfloat> pmlq(Npml,0.0);
+    o_pmlq = platform.malloc<dfloat>(pmlq);
 
-    dfloat *pmlq = (dfloat *) calloc(Npml,sizeof(dfloat));
-    o_pmlq   = platform.malloc(Npml*sizeof(dfloat), pmlq);
-    free(pmlq);
+    o_rhspmlq   = platform.malloc<dfloat>(Npml);
+    o_rkpmlq    = platform.malloc<dfloat>(Npml);
+    o_rkrhspmlq = platform.malloc<dfloat>(Nrk*Npml);
 
-    o_rhspmlq   = platform.malloc(Npml*sizeof(dfloat));
-    o_rkpmlq    = platform.malloc(Npml*sizeof(dfloat));
-    o_rkrhspmlq = platform.malloc(Nrk*Npml*sizeof(dfloat));
+    o_savepmlq  = platform.malloc<dfloat>(Npml);
 
-    o_savepmlq  = platform.malloc(Npml*sizeof(dfloat));
+    properties_t kernelInfo = platform.props(); //copy base occa properties from solver
 
-    occa::properties kernelInfo = platform.props; //copy base occa properties from solver
+    const int blocksize = 256;
 
     //add defines
-    kernelInfo["defines/" "p_blockSize"] = (int)BLOCKSIZE;
+    kernelInfo["defines/" "p_blockSize"] = (int)blocksize;
 
     rkPmlUpdateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
                                       "timeStepperDOPRI5.okl",
@@ -351,25 +329,25 @@ dopri5_pml::dopri5_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
   }
 }
 
-void dopri5_pml::Backup(occa::memory &o_Q) {
-  o_saveq.copyFrom(o_Q, N*sizeof(dfloat));
+void dopri5_pml::Backup(deviceMemory<dfloat> &o_Q) {
+  o_saveq.copyFrom(o_Q, N);
   if (Npml)
-    o_savepmlq.copyFrom(o_rkpmlq, Npml*sizeof(dfloat));
+    o_savepmlq.copyFrom(o_rkpmlq, Npml);
 }
 
-void dopri5_pml::Restore(occa::memory &o_Q) {
-  o_saveq.copyTo(o_Q, N*sizeof(dfloat));
+void dopri5_pml::Restore(deviceMemory<dfloat> &o_Q) {
+  o_saveq.copyTo(o_Q, N);
   if (Npml)
-    o_savepmlq.copyTo(o_rkpmlq, Npml*sizeof(dfloat));
+    o_savepmlq.copyTo(o_rkpmlq, Npml);
 }
 
-void dopri5_pml::AcceptStep(occa::memory &o_q, occa::memory &o_rq) {
-  o_q.copyFrom(o_rq, N*sizeof(dfloat));
+void dopri5_pml::AcceptStep(deviceMemory<dfloat> &o_q, deviceMemory<dfloat> &o_rq) {
+  o_q.copyFrom(o_rq, N);
   if (Npml)
-    o_pmlq.copyFrom(o_rkpmlq, Npml*sizeof(dfloat));
+    o_pmlq.copyFrom(o_rkpmlq, Npml);
 }
 
-void dopri5_pml::Step(occa::memory &o_q, dfloat time, dfloat _dt) {
+void dopri5_pml::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloat _dt) {
 
   //RK step
   for(int rk=0;rk<Nrk;++rk){
@@ -425,12 +403,6 @@ void dopri5_pml::Step(occa::memory &o_q, dfloat time, dfloat _dt) {
   }
 }
 
-dopri5_pml::~dopri5_pml() {
-  if (o_pmlq.size()) o_pmlq.free();
-  if (o_rkpmlq.size()) o_rkpmlq.free();
-  if (o_rhspmlq.size()) o_rhspmlq.free();
-  if (o_rkrhspmlq.size()) o_rkrhspmlq.free();
-  if (o_savepmlq.size()) o_savepmlq.free();
-}
-
 } //namespace TimeStepper
+
+} //namespace libp

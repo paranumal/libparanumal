@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,36 +25,26 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh3D.hpp"
+
+namespace libp {
 
 static void addTets(hlong i0, hlong j0, hlong k0, hlong NnX, hlong NnY, hlong NnZ,
                     dfloat x0, dfloat y0, dfloat z0, dfloat dx, dfloat dy, dfloat dz,
-                    hlong *EToV, dfloat *EX, dfloat *EY, dfloat *EZ,
-                    hlong *elementInfo, int type, dlong &e);
+                    memory<hlong> EToV, memory<dfloat> EX, memory<dfloat> EY, memory<dfloat> EZ,
+                    memory<hlong> elementInfo, int type, dlong &e);
 
-void meshTet3D::SetupPmlBox(){
-
-  dim = 3;
-  Nverts = 4; // number of vertices per element
-  Nfaces = 4;
-  NfaceVertices = 3;
-
-  // vertices on each face
-  int faceVertices_[4][3] = {{0,1,2},{0,1,3},{1,2,3},{2,0,3}};
-
-  faceVertices = (int*) calloc(NfaceVertices*Nfaces, sizeof(int));
-  memcpy(faceVertices, faceVertices_[0], 12*sizeof(int));
+void mesh_t::SetupPmlBoxTet3D(){
 
   // find a factorization size = size_x*size_y*size_z such that
   //  size_x>=size_y>=size_z are all 'close' to one another
   int size_x, size_y, size_z;
-  factor3(size, size_x, size_y, size_z);
+  Factor3(size, size_x, size_y, size_z);
 
-  //find our coordinates in the MPI grid such that
-  // rank = rank_x + rank_y*size_x + rank_z*size_x*size_y
-  int rank_z = rank/(size_x*size_y);
-  int rank_y = (rank-rank_z*size_x*size_y)/size_x;
-  int rank_x = rank % size_x;
+  //determine (x,y,z) rank coordinates for this processes
+  int rank_x=-1, rank_y=-1, rank_z=-1;
+  RankDecomp3(size_x, size_y, size_z,
+              rank_x, rank_y, rank_z,
+              rank);
 
   //get global size from settings
   dlong NX, NY, NZ;
@@ -87,8 +77,8 @@ void meshTet3D::SetupPmlBox(){
   settings.getSetting("BOX BOUNDARY FLAG", boundaryFlag);
 
   const int periodicFlag = (boundaryFlag == -1) ? 1 : 0;
-  if (periodicFlag)
-    LIBP_ABORT(string("Periodic boundary unsupported for PMLBOX mesh."))
+  LIBP_ABORT("Periodic boundary unsupported for PMLBOX mesh.",
+             periodicFlag);
 
   //local grid physical sizes
   dfloat DIMX, DIMY, DIMZ;
@@ -104,9 +94,9 @@ void meshTet3D::SetupPmlBox(){
   dfloat dy = DIMY/NY;
   dfloat dz = DIMZ/NZ;
 
-  dlong offset_x = rank_x*(NX/size_x) + mymin(rank_x, (NX % size_x));
-  dlong offset_y = rank_y*(NY/size_y) + mymin(rank_y, (NY % size_y));
-  dlong offset_z = rank_z*(NZ/size_z) + mymin(rank_z, (NZ % size_z));
+  dlong offset_x = rank_x*(NX/size_x) + std::min(rank_x, (NX % size_x));
+  dlong offset_y = rank_y*(NY/size_y) + std::min(rank_y, (NY % size_y));
+  dlong offset_z = rank_z*(NZ/size_z) + std::min(rank_z, (NZ % size_z));
 
   //local grid physical sizes
   dfloat dimx = nx*dx;
@@ -180,12 +170,12 @@ void meshTet3D::SetupPmlBox(){
   if (rank_x==0        && rank_y==size_y-1 && rank_z==size_z-1) Nelements+=6*pmlNx*pmlNy*pmlNz;
   if (rank_x==size_x-1 && rank_y==size_y-1 && rank_z==size_z-1) Nelements+=6*pmlNx*pmlNy*pmlNz;
 
-  EToV = (hlong*) calloc(Nelements*Nverts, sizeof(hlong));
-  EX = (dfloat*) calloc(Nelements*Nverts, sizeof(dfloat));
-  EY = (dfloat*) calloc(Nelements*Nverts, sizeof(dfloat));
-  EZ = (dfloat*) calloc(Nelements*Nverts, sizeof(dfloat));
+  EToV.malloc(Nelements*Nverts);
+  EX.malloc(Nelements*Nverts);
+  EY.malloc(Nelements*Nverts);
+  EZ.malloc(Nelements*Nverts);
 
-  elementInfo = (hlong*) calloc(Nelements, sizeof(hlong));
+  elementInfo.malloc(Nelements);
 
   dlong e = 0;
   for(int k=0;k<nz;++k){
@@ -846,7 +836,7 @@ void meshTet3D::SetupPmlBox(){
 
   if (boundaryFlag != -1) { //-1 reserved for periodic case
     NboundaryFaces = 4*NX*NY + 4*NX*NZ + 4*NY*NZ;
-    boundaryInfo = (hlong*) calloc(NboundaryFaces*(NfaceVertices+1), sizeof(hlong));
+    boundaryInfo.malloc(NboundaryFaces*(NfaceVertices+1));
 
     hlong bcnt = 0;
 
@@ -939,15 +929,14 @@ void meshTet3D::SetupPmlBox(){
     }
 
   } else {
-    NboundaryFaces = 0;
-    boundaryInfo = NULL; // no boundaries
+    NboundaryFaces = 0; // no boundaries
   }
 }
 
 static void addTets(hlong i0, hlong j0, hlong k0, hlong NnX, hlong NnY, hlong NnZ,
                     dfloat x0, dfloat y0, dfloat z0, dfloat dx, dfloat dy, dfloat dz,
-                    hlong *EToV, dfloat *EX, dfloat *EY, dfloat *EZ,
-                    hlong *elementInfo, int type, dlong &e) {
+                    memory<hlong> EToV, memory<dfloat> EX, memory<dfloat> EY, memory<dfloat> EZ,
+                    memory<hlong> elementInfo, int type, dlong &e) {
 
   const hlong i1 = (i0+1)%NnX;
   const hlong j1 = (j0+1)%NnY;
@@ -1039,3 +1028,5 @@ static void addTets(hlong i0, hlong j0, hlong k0, hlong NnX, hlong NnY, hlong Nn
   elementInfo[e] = type;
   e++;
 }
+
+} //namespace libp

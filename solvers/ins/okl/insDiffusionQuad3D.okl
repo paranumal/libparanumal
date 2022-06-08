@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,50 +25,50 @@ SOFTWARE.
 */
 
 
-#define surfaceTerms(sk,face,i, j)					\
+#define surfaceTerms(sk,face,i, j)                                      \
   {                                                                     \
-    const dlong  idM = vmapM[sk];					\
-    const dlong  idP = vmapP[sk];					\
+    const dlong  idM = vmapM[sk];                                       \
+    const dlong  idP = vmapP[sk];                                       \
                                                                         \
-    const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				\
-    const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				\
-    const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];				\
-    const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];			\
-    const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];				\
+    const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                          \
+    const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                          \
+    const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];                          \
+    const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];                        \
+    const dfloat hinv= sgeo[sk*p_Nsgeo+p_IHID];                         \
                                                                         \
-    const dfloat4 gradqM = GU[idM+fld*fieldOffset];			\
-    dfloat4 gradqP = GU[idP+fld*fieldOffset];				\
+    const dfloat4 gradqM = GU[idM+fld*fieldOffset];                     \
+    dfloat4 gradqP = GU[idP+fld*fieldOffset];                           \
                                                                         \
-    dfloat dq = gradqP.w - gradqM.w;					\
+    dfloat dq = gradqP.w - gradqM.w;                                    \
                                                                         \
-    s_dqdx[j][i] += 0.5f*WsJ*nx*dq;					\
-    s_dqdy[j][i] += 0.5f*WsJ*ny*dq;					\
-    s_dqdz[j][i] += 0.5f*WsJ*nz*dq;					\
+    s_dqdx[j][i] += 0.5f*WsJ*nx*dq;                                     \
+    s_dqdy[j][i] += 0.5f*WsJ*ny*dq;                                     \
+    s_dqdz[j][i] += 0.5f*WsJ*nz*dq;                                     \
                                                                         \
     s_Lq[j][i] -= 0.5f*WsJ*(nx*(gradqP.x+gradqM.x) +                    \
                             ny*(gradqP.y+gradqM.y) +                    \
-			    nz*(gradqP.z+gradqM.z) +                    \
+                            nz*(gradqP.z+gradqM.z) +                    \
                             tau*dq*hinv);                               \
   }
 
 @kernel void insDiffusionIpdgQuad2D(const dlong Nelements,
-				    @restrict const  dlong *  elementList,
-				    @restrict const  dlong *  vmapM,
-				    @restrict const  dlong *  vmapP,
-				    const dfloat nu,
-				    const dfloat tau,
-				    @restrict const  dfloat *  vgeo,
-				    @restrict const  dfloat *  sgeo,
-				    @restrict const  int   *  EToB,
-				    const dfloat time,
-				    @restrict const  dfloat *  x,
-				    @restrict const  dfloat *  y,
-				    @restrict const  dfloat *  z,
-				    const dlong fieldOffset,
-				    @restrict const  dfloat *  D,
-				    @restrict const  dfloat *  LIFTT,
-				    @restrict const  dfloat4 *  GU,
-				    @restrict dfloat  *  LU){
+                                    @restrict const  dlong *  elementList,
+                                    @restrict const  dlong *  vmapM,
+                                    @restrict const  dlong *  vmapP,
+                                    const dfloat nu,
+                                    const dfloat tau,
+                                    @restrict const  dfloat *  vgeo,
+                                    @restrict const  dfloat *  sgeo,
+                                    @restrict const  int   *  EToB,
+                                    const dfloat time,
+                                    @restrict const  dfloat *  x,
+                                    @restrict const  dfloat *  y,
+                                    @restrict const  dfloat *  z,
+                                    const dlong fieldOffset,
+                                    @restrict const  dfloat *  D,
+                                    @restrict const  dfloat *  LIFTT,
+                                    @restrict const  dfloat4 *  GU,
+                                    @restrict dfloat  *  LU){
 
   for(dlong e=0;e<Nelements;++e;@outer(0)){
 
@@ -83,7 +83,6 @@ SOFTWARE.
 #pragma unroll p_NVfields
     for (int fld=0; fld<p_NVfields; fld++) {
 
-      @barrier("local");
 
       // loop over slabs
       for(int j=0;j<p_Nq;++j){
@@ -98,14 +97,13 @@ SOFTWARE.
 
           s_dqdx[j][i] = JW*gradqn.x;
           s_dqdy[j][i] = JW*gradqn.y;
-	        s_dqdz[j][i] = JW*gradqn.z;
+                s_dqdz[j][i] = JW*gradqn.z;
           s_Lq[j][i] = 0.0;
 
           s_D[j][i] = D[j*p_Nq+i];
         }
       }
 
-      @barrier("local");
 
       // loop over faces to add pseudo-gradient
 
@@ -118,7 +116,6 @@ SOFTWARE.
         surfaceTerms(sk2,2,i,p_Nq-1);
       }
 
-      @barrier("local");
 
       // face 1 & 3
       for(int j=0;j<p_Nq;++j;@inner(0)){
@@ -129,7 +126,6 @@ SOFTWARE.
         surfaceTerms(sk3,3,0,j);
       }
 
-      @barrier("local");
 
       // prescale by geofacs
       for(int j=0;j<p_Nq;++j){
@@ -154,11 +150,10 @@ SOFTWARE.
 
           s_dqdx[j][i] = (drdx*dqdx + drdy*dqdy + drdz*dqdz);
           s_dqdy[j][i] = (dsdx*dqdx + dsdy*dqdy + dsdz*dqdz);
-	        s_dqdz[j][i] = (dtdx*dqdx + dtdy*dqdy + dtdz*dqdz);
+                s_dqdz[j][i] = (dtdx*dqdx + dtdy*dqdy + dtdz*dqdz);
         }
       }
 
-      @barrier("local");
 
       // loop over slabs
       for(int j=0;j<p_Nq;++j){

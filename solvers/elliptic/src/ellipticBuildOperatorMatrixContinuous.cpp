@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,15 +25,20 @@ SOFTWARE.
 */
 
 #include "elliptic.hpp"
-#include "mesh/meshDefines2D.h"
-#include "mesh/meshDefines3D.h"
+
+#ifdef GLIBCXX_PARALLEL
+#include <parallel/algorithm>
+using __gnu_parallel::sort;
+#else
+using std::sort;
+#endif
 
 void elliptic_t::BuildOperatorMatrixContinuous(parAlmond::parCOO& A) {
 
   switch(mesh.elementType){
-  case TRIANGLES:
+  case Mesh::TRIANGLES:
     BuildOperatorMatrixContinuousTri2D(A); break;
-  case QUADRILATERALS:
+  case Mesh::QUADRILATERALS:
   {
     if(mesh.dim==2)
       BuildOperatorMatrixContinuousQuad2D(A);
@@ -42,9 +47,9 @@ void elliptic_t::BuildOperatorMatrixContinuous(parAlmond::parCOO& A) {
 
     break;
   }
-  case TETRAHEDRA:
+  case Mesh::TETRAHEDRA:
     BuildOperatorMatrixContinuousTet3D(A); break;
-  case HEXAHEDRA:
+  case Mesh::HEXAHEDRA:
     BuildOperatorMatrixContinuousHex3D(A); break;
   }
 }
@@ -52,12 +57,12 @@ void elliptic_t::BuildOperatorMatrixContinuous(parAlmond::parCOO& A) {
 void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO& A) {
 
   // number of degrees of freedom on this rank (after gathering)
-  hlong Ngather = ogsMasked->Ngather;
+  hlong Ngather = ogsMasked.Ngather;
 
   // every gathered degree of freedom has its own global id
-  A.globalRowStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
-  A.globalColStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
-  MPI_Allgather(&Ngather, 1, MPI_HLONG, A.globalRowStarts+1, 1, MPI_HLONG, mesh.comm);
+  A.globalRowStarts.malloc(mesh.size+1, 0);
+  A.globalColStarts.malloc(mesh.size+1, 0);
+  mesh.comm.Allgather(Ngather, A.globalRowStarts+1);
   for(int r=0;r<mesh.size;++r) {
     A.globalRowStarts[r+1] = A.globalRowStarts[r]+A.globalRowStarts[r+1];
     A.globalColStarts[r+1] = A.globalRowStarts[r+1];
@@ -66,26 +71,26 @@ void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO& A) {
   // Build non-zeros of stiffness matrix (unassembled)
   dlong nnzLocal = mesh.Np*mesh.Np*mesh.Nelements;
 
-  parAlmond::parCOO::nonZero_t *sendNonZeros = (parAlmond::parCOO::nonZero_t*) calloc(nnzLocal, sizeof(parAlmond::parCOO::nonZero_t));
-  int *AsendCounts  = (int*) calloc(mesh.size, sizeof(int));
-  int *ArecvCounts  = (int*) calloc(mesh.size, sizeof(int));
-  int *AsendOffsets = (int*) calloc(mesh.size+1, sizeof(int));
-  int *ArecvOffsets = (int*) calloc(mesh.size+1, sizeof(int));
+  memory<parAlmond::parCOO::nonZero_t> sendNonZeros(nnzLocal);
+  memory<int> AsendCounts (mesh.size, 0);
+  memory<int> ArecvCounts (mesh.size);
+  memory<int> AsendOffsets(mesh.size+1);
+  memory<int> ArecvOffsets(mesh.size+1);
 
-  dfloat *Srr = mesh.Srr;
-  dfloat *Srs = mesh.Srs;
-  dfloat *Sss = mesh.Sss;
-  dfloat *MM  = mesh.MM ;
+  memory<dfloat> Srr = mesh.Srr;
+  memory<dfloat> Srs = mesh.Srs;
+  memory<dfloat> Sss = mesh.Sss;
+  memory<dfloat> MM  = mesh.MM ;
 
-  if(mesh.rank==0) {printf("Building full FEM matrix...");fflush(stdout);}
+  if(Comm::World().rank()==0) {printf("Building full FEM matrix...");fflush(stdout);}
 
   //Build unassembed non-zeros
   dlong cnt =0;
   for (dlong e=0;e<mesh.Nelements;e++) {
-    dfloat Grr = mesh.ggeo[e*mesh.Nggeo + G00ID];
-    dfloat Grs = mesh.ggeo[e*mesh.Nggeo + G01ID];
-    dfloat Gss = mesh.ggeo[e*mesh.Nggeo + G11ID];
-    dfloat J   = mesh.ggeo[e*mesh.Nggeo + GWJID];
+    dfloat Grr = mesh.ggeo[e*mesh.Nggeo + mesh.G00ID];
+    dfloat Grs = mesh.ggeo[e*mesh.Nggeo + mesh.G01ID];
+    dfloat Gss = mesh.ggeo[e*mesh.Nggeo + mesh.G11ID];
+    dfloat J   = mesh.wJ[e];
 
     for (int n=0;n<mesh.Np;n++) {
       if (maskedGlobalNumbering[e*mesh.Np + n]<0) continue; //skip masked nodes
@@ -112,14 +117,14 @@ void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO& A) {
   }
 
   // sort by row ordering
-  std::sort(sendNonZeros, sendNonZeros+cnt,
-            [](const parAlmond::parCOO::nonZero_t& a,
-               const parAlmond::parCOO::nonZero_t& b) {
-              if (a.row < b.row) return true;
-              if (a.row > b.row) return false;
+  sort(sendNonZeros.ptr(), sendNonZeros.ptr()+cnt,
+       [](const parAlmond::parCOO::nonZero_t& a,
+          const parAlmond::parCOO::nonZero_t& b) {
+         if (a.row < b.row) return true;
+         if (a.row > b.row) return false;
 
-              return a.col < b.col;
-            });
+         return a.col < b.col;
+        });
 
   // count how many non-zeros to send to each process
   int rr=0;
@@ -130,32 +135,33 @@ void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO& A) {
   }
 
   // find how many nodes to expect (should use sparse version)
-  MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, mesh.comm);
+  mesh.comm.Alltoall(AsendCounts, ArecvCounts);
 
   // find send and recv offsets for gather
   A.nnz = 0;
+  AsendOffsets[0] = 0;
+  ArecvOffsets[0] = 0;
   for(int r=0;r<mesh.size;++r){
     AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
     ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
     A.nnz += ArecvCounts[r];
   }
 
-  A.entries = (parAlmond::parCOO::nonZero_t*) calloc(A.nnz, sizeof(parAlmond::parCOO::nonZero_t));
+  A.entries.malloc(A.nnz);
 
   // determine number to receive
-  MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, parAlmond::MPI_NONZERO_T,
-                   A.entries, ArecvCounts, ArecvOffsets, parAlmond::MPI_NONZERO_T,
-                   mesh.comm);
+  mesh.comm.Alltoallv(sendNonZeros, AsendCounts, AsendOffsets,
+                      A.entries,    ArecvCounts, ArecvOffsets);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
-  std::sort(A.entries, A.entries+A.nnz,
-            [](const parAlmond::parCOO::nonZero_t& a,
-               const parAlmond::parCOO::nonZero_t& b) {
-              if (a.row < b.row) return true;
-              if (a.row > b.row) return false;
+  sort(A.entries.ptr(), A.entries.ptr()+A.nnz,
+       [](const parAlmond::parCOO::nonZero_t& a,
+          const parAlmond::parCOO::nonZero_t& b) {
+         if (a.row < b.row) return true;
+         if (a.row > b.row) return false;
 
-              return a.col < b.col;
-            });
+         return a.col < b.col;
+       });
 
   // compress duplicates
   cnt = 0;
@@ -172,26 +178,19 @@ void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO& A) {
   if (A.nnz) cnt++;
   A.nnz = cnt;
 
-  if(mesh.rank==0) printf("done.\n");
-
-  MPI_Barrier(mesh.comm);
-  free(sendNonZeros);
-  free(AsendCounts);
-  free(ArecvCounts);
-  free(AsendOffsets);
-  free(ArecvOffsets);
+  if(Comm::World().rank()==0) printf("done.\n");
 }
 
 
 void elliptic_t::BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO& A) {
 
   // number of degrees of freedom on this rank (after gathering)
-  hlong Ngather = ogsMasked->Ngather;
+  hlong Ngather = ogsMasked.Ngather;
 
   // every gathered degree of freedom has its own global id
-  A.globalRowStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
-  A.globalColStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
-  MPI_Allgather(&Ngather, 1, MPI_HLONG, A.globalRowStarts+1, 1, MPI_HLONG, mesh.comm);
+  A.globalRowStarts.malloc(mesh.size+1, 0);
+  A.globalColStarts.malloc(mesh.size+1, 0);
+  mesh.comm.Allgather(Ngather, A.globalRowStarts+1);
   for(int r=0;r<mesh.size;++r) {
     A.globalRowStarts[r+1] = A.globalRowStarts[r]+A.globalRowStarts[r+1];
     A.globalColStarts[r+1] = A.globalRowStarts[r+1];
@@ -199,13 +198,13 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO& A) {
 
   // 2. Build non-zeros of stiffness matrix (unassembled)
   dlong nnzLocal = mesh.Np*mesh.Np*mesh.Nelements;
-  parAlmond::parCOO::nonZero_t *sendNonZeros = (parAlmond::parCOO::nonZero_t*) calloc(nnzLocal, sizeof(parAlmond::parCOO::nonZero_t));
-  int *AsendCounts  = (int*) calloc(mesh.size, sizeof(int));
-  int *ArecvCounts  = (int*) calloc(mesh.size, sizeof(int));
-  int *AsendOffsets = (int*) calloc(mesh.size+1, sizeof(int));
-  int *ArecvOffsets = (int*) calloc(mesh.size+1, sizeof(int));
+  memory<parAlmond::parCOO::nonZero_t> sendNonZeros(nnzLocal);
+  memory<int> AsendCounts (mesh.size, 0);
+  memory<int> ArecvCounts (mesh.size);
+  memory<int> AsendOffsets(mesh.size+1);
+  memory<int> ArecvOffsets(mesh.size+1);
 
-  if(mesh.rank==0) {printf("Building full FEM matrix...");fflush(stdout);}
+  if(Comm::World().rank()==0) {printf("Building full FEM matrix...");fflush(stdout);}
 
 #if 0
   hlong NTf = mesh.Nelements*mesh.Np * mesh.Nelements*mesh.Np ;
@@ -228,34 +227,34 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO& A) {
             if (ny==my) {
               for (int k=0;k<mesh.Nq;k++) {
                 id = k+ny*mesh.Nq;
-                dfloat Grr = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G00ID*mesh.Np];
+                dfloat Grr = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + mesh.G00ID*mesh.Np];
 
                 val += Grr*mesh.D[nx+k*mesh.Nq]*mesh.D[mx+k*mesh.Nq];
               }
             }
 
             id = mx+ny*mesh.Nq;
-            dfloat Grs = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G01ID*mesh.Np];
+            dfloat Grs = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + mesh.G01ID*mesh.Np];
             val += Grs*mesh.D[nx+mx*mesh.Nq]*mesh.D[my+ny*mesh.Nq];
 
             id = nx+my*mesh.Nq;
-            dfloat Gsr = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G01ID*mesh.Np];
+            dfloat Gsr = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + mesh.G01ID*mesh.Np];
             val += Gsr*mesh.D[mx+nx*mesh.Nq]*mesh.D[ny+my*mesh.Nq];
 
 
             // id = mx+ny*mesh.Nq;
-            // dfloat Grt = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G02ID*mesh.Np];
+            // dfloat Grt = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + mesh.G02ID*mesh.Np];
             // val += Grt*mesh.D[nx+mx*mesh.Nq];
 
             // id = nx+my*mesh.Nq;
-            // dfloat Gtr = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G02ID*mesh.Np];
+            // dfloat Gtr = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + mesh.G02ID*mesh.Np];
             // val += Gtr*mesh.D[mx+nx*mesh.Nq];
 
 
             if (nx==mx) {
               for (int k=0;k<mesh.Nq;k++) {
                 id = nx+k*mesh.Nq;
-                dfloat Gss = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G11ID*mesh.Np];
+                dfloat Gss = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + mesh.G11ID*mesh.Np];
 
                 val += Gss*mesh.D[ny+k*mesh.Nq]*mesh.D[my+k*mesh.Nq];
               }
@@ -263,21 +262,21 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO& A) {
 
             // double check following two: AK
             // id = nx+my*mesh.Nq;
-            // dfloat Gst = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G12ID*mesh.Np];
+            // dfloat Gst = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + mesh.G12ID*mesh.Np];
             // val += Gst*mesh.D[ny+my*mesh.Nq];
 
             // id = mx+ny*mesh.Nq;
-            // dfloat Gts = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G12ID*mesh.Np];
+            // dfloat Gts = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + mesh.G12ID*mesh.Np];
             // val += Gts*mesh.D[my+ny*mesh.Nq];
 
 
             if ((nx==mx)&&(ny==my)) {
               id = nx + ny*mesh.Nq;
 
-              // dfloat Gtt = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G22ID*mesh.Np];
+              // dfloat Gtt = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + mesh.G22ID*mesh.Np];
               // val += Gtt;
 
-              dfloat JW = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + GWJID*mesh.Np];
+              dfloat JW = mesh.wJ[e*mesh.Np + id];
               val += JW*lambda;
             }
 
@@ -321,14 +320,14 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO& A) {
 #endif
 
   // sort by row ordering
-  std::sort(sendNonZeros, sendNonZeros+cnt,
-            [](const parAlmond::parCOO::nonZero_t& a,
-               const parAlmond::parCOO::nonZero_t& b) {
-              if (a.row < b.row) return true;
-              if (a.row > b.row) return false;
+  sort(sendNonZeros.ptr(), sendNonZeros.ptr()+cnt,
+        [](const parAlmond::parCOO::nonZero_t& a,
+           const parAlmond::parCOO::nonZero_t& b) {
+          if (a.row < b.row) return true;
+          if (a.row > b.row) return false;
 
-              return a.col < b.col;
-            });
+          return a.col < b.col;
+        });
 
   // count how many non-zeros to send to each process
   int rr=0;
@@ -339,32 +338,33 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO& A) {
   }
 
   // find how many nodes to expect (should use sparse version)
-  MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, mesh.comm);
+  mesh.comm.Alltoall(AsendCounts, ArecvCounts);
 
   // find send and recv offsets for gather
   A.nnz = 0;
+  AsendOffsets[0] = 0;
+  ArecvOffsets[0] = 0;
   for(int r=0;r<mesh.size;++r){
     AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
     ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
     A.nnz += ArecvCounts[r];
   }
 
-  A.entries = (parAlmond::parCOO::nonZero_t*) calloc(A.nnz, sizeof(parAlmond::parCOO::nonZero_t));
+  A.entries.malloc(A.nnz);
 
   // determine number to receive
-  MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, parAlmond::MPI_NONZERO_T,
-                   A.entries, ArecvCounts, ArecvOffsets, parAlmond::MPI_NONZERO_T,
-                   mesh.comm);
+  mesh.comm.Alltoallv(sendNonZeros, AsendCounts, AsendOffsets,
+                      A.entries,    ArecvCounts, ArecvOffsets);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
-  std::sort(A.entries, A.entries+A.nnz,
-            [](const parAlmond::parCOO::nonZero_t& a,
-               const parAlmond::parCOO::nonZero_t& b) {
-              if (a.row < b.row) return true;
-              if (a.row > b.row) return false;
+  sort(A.entries.ptr(), A.entries.ptr()+A.nnz,
+        [](const parAlmond::parCOO::nonZero_t& a,
+           const parAlmond::parCOO::nonZero_t& b) {
+          if (a.row < b.row) return true;
+          if (a.row > b.row) return false;
 
-              return a.col < b.col;
-            });
+          return a.col < b.col;
+        });
 
   // compress duplicates
   cnt = 0;
@@ -395,26 +395,19 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO& A) {
  fclose(fp);
 #endif
 
-  if(mesh.rank==0) printf("done.\n");
-
-  MPI_Barrier(mesh.comm);
-  free(sendNonZeros);
-  free(AsendCounts);
-  free(ArecvCounts);
-  free(AsendOffsets);
-  free(ArecvOffsets);
+  if(Comm::World().rank()==0) printf("done.\n");
 }
 
 
 void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO& A) {
 
   // number of degrees of freedom on this rank (after gathering)
-  hlong Ngather = ogsMasked->Ngather;
+  hlong Ngather = ogsMasked.Ngather;
 
   // every gathered degree of freedom has its own global id
-  A.globalRowStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
-  A.globalColStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
-  MPI_Allgather(&Ngather, 1, MPI_HLONG, A.globalRowStarts+1, 1, MPI_HLONG, mesh.comm);
+  A.globalRowStarts.malloc(mesh.size+1,0);
+  A.globalColStarts.malloc(mesh.size+1,0);
+  mesh.comm.Allgather(Ngather, A.globalRowStarts+1);
   for(int r=0;r<mesh.size;++r) {
     A.globalRowStarts[r+1] = A.globalRowStarts[r]+A.globalRowStarts[r+1];
     A.globalColStarts[r+1] = A.globalRowStarts[r+1];
@@ -422,13 +415,13 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO& A) {
 
   // 2. Build non-zeros of stiffness matrix (unassembled)
   dlong nnzLocal = mesh.Np*mesh.Np*mesh.Nelements;
-  parAlmond::parCOO::nonZero_t *sendNonZeros = (parAlmond::parCOO::nonZero_t*) calloc(nnzLocal, sizeof(parAlmond::parCOO::nonZero_t));
-  int *AsendCounts  = (int*) calloc(mesh.size, sizeof(int));
-  int *ArecvCounts  = (int*) calloc(mesh.size, sizeof(int));
-  int *AsendOffsets = (int*) calloc(mesh.size+1, sizeof(int));
-  int *ArecvOffsets = (int*) calloc(mesh.size+1, sizeof(int));
+  memory<parAlmond::parCOO::nonZero_t> sendNonZeros(nnzLocal);
+  memory<int> AsendCounts (mesh.size, 0);
+  memory<int> ArecvCounts (mesh.size);
+  memory<int> AsendOffsets(mesh.size+1);
+  memory<int> ArecvOffsets(mesh.size+1);
 
-  if(mesh.rank==0) {printf("Building full FEM matrix...");fflush(stdout);}
+  if(Comm::World().rank()==0) {printf("Building full FEM matrix...");fflush(stdout);}
 
   //Build unassembed non-zeros
   dlong cnt =0;
@@ -446,25 +439,25 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO& A) {
             if (ny==my) {
               for (int k=0;k<mesh.Nq;k++) {
                 id = k+ny*mesh.Nq;
-                dfloat Grr = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G00ID*mesh.Np];
+                dfloat Grr = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + mesh.G00ID*mesh.Np];
 
                 val += Grr*mesh.D[nx+k*mesh.Nq]*mesh.D[mx+k*mesh.Nq];
               }
             }
 
             id = mx+ny*mesh.Nq;
-            dfloat Grs = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G01ID*mesh.Np];
+            dfloat Grs = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + mesh.G01ID*mesh.Np];
             val += Grs*mesh.D[nx+mx*mesh.Nq]*mesh.D[my+ny*mesh.Nq];
 
 
             id = nx+my*mesh.Nq;
-            dfloat Gsr = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G01ID*mesh.Np];
+            dfloat Gsr = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + mesh.G01ID*mesh.Np];
             val += Gsr*mesh.D[mx+nx*mesh.Nq]*mesh.D[ny+my*mesh.Nq];
 
             if (nx==mx) {
               for (int k=0;k<mesh.Nq;k++) {
                 id = nx+k*mesh.Nq;
-                dfloat Gss = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G11ID*mesh.Np];
+                dfloat Gss = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + mesh.G11ID*mesh.Np];
 
                 val += Gss*mesh.D[ny+k*mesh.Nq]*mesh.D[my+k*mesh.Nq];
               }
@@ -472,7 +465,7 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO& A) {
 
             if ((nx==mx)&&(ny==my)) {
               id = nx + ny*mesh.Nq;
-              dfloat JW = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + GWJID*mesh.Np];
+              dfloat JW = mesh.wJ[e*mesh.Np + id];
               val += JW*lambda;
             }
 
@@ -491,14 +484,14 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO& A) {
   }
 
   // sort by row ordering
-  std::sort(sendNonZeros, sendNonZeros+cnt,
-            [](const parAlmond::parCOO::nonZero_t& a,
-               const parAlmond::parCOO::nonZero_t& b) {
-              if (a.row < b.row) return true;
-              if (a.row > b.row) return false;
+  sort(sendNonZeros.ptr(), sendNonZeros.ptr()+cnt,
+      [](const parAlmond::parCOO::nonZero_t& a,
+         const parAlmond::parCOO::nonZero_t& b) {
+        if (a.row < b.row) return true;
+        if (a.row > b.row) return false;
 
-              return a.col < b.col;
-            });
+        return a.col < b.col;
+      });
 
   // count how many non-zeros to send to each process
   int rr=0;
@@ -509,32 +502,33 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO& A) {
   }
 
   // find how many nodes to expect (should use sparse version)
-  MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, mesh.comm);
+  mesh.comm.Alltoall(AsendCounts, ArecvCounts);
 
   // find send and recv offsets for gather
   A.nnz = 0;
+  AsendOffsets[0] = 0;
+  ArecvOffsets[0] = 0;
   for(int r=0;r<mesh.size;++r){
     AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
     ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
     A.nnz += ArecvCounts[r];
   }
 
-  A.entries = (parAlmond::parCOO::nonZero_t*) calloc(A.nnz, sizeof(parAlmond::parCOO::nonZero_t));
+  A.entries.malloc(A.nnz);
 
   // determine number to receive
-  MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, parAlmond::MPI_NONZERO_T,
-                   A.entries, ArecvCounts, ArecvOffsets, parAlmond::MPI_NONZERO_T,
-                   mesh.comm);
+  mesh.comm.Alltoallv(sendNonZeros, AsendCounts, AsendOffsets,
+                      A.entries,    ArecvCounts, ArecvOffsets);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
-  std::sort(A.entries, A.entries+A.nnz,
-            [](const parAlmond::parCOO::nonZero_t& a,
-               const parAlmond::parCOO::nonZero_t& b) {
-              if (a.row < b.row) return true;
-              if (a.row > b.row) return false;
+  sort(A.entries.ptr(), A.entries.ptr()+A.nnz,
+      [](const parAlmond::parCOO::nonZero_t& a,
+         const parAlmond::parCOO::nonZero_t& b) {
+        if (a.row < b.row) return true;
+        if (a.row > b.row) return false;
 
-              return a.col < b.col;
-            });
+        return a.col < b.col;
+      });
 
   // compress duplicates
   cnt = 0;
@@ -565,25 +559,18 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO& A) {
  fclose(fp);
 #endif
 
-  if(mesh.rank==0) printf("done.\n");
-
-  MPI_Barrier(mesh.comm);
-  free(sendNonZeros);
-  free(AsendCounts);
-  free(ArecvCounts);
-  free(AsendOffsets);
-  free(ArecvOffsets);
+  if(Comm::World().rank()==0) printf("done.\n");
 }
 
 void elliptic_t::BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO& A) {
 
   // number of degrees of freedom on this rank (after gathering)
-  hlong Ngather = ogsMasked->Ngather;
+  hlong Ngather = ogsMasked.Ngather;
 
   // every gathered degree of freedom has its own global id
-  A.globalRowStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
-  A.globalColStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
-  MPI_Allgather(&Ngather, 1, MPI_HLONG, A.globalRowStarts+1, 1, MPI_HLONG, mesh.comm);
+  A.globalRowStarts.malloc(mesh.size+1,0);
+  A.globalColStarts.malloc(mesh.size+1,0);
+  mesh.comm.Allgather(Ngather, A.globalRowStarts+1);
   for(int r=0;r<mesh.size;++r) {
     A.globalRowStarts[r+1] = A.globalRowStarts[r]+A.globalRowStarts[r+1];
     A.globalColStarts[r+1] = A.globalRowStarts[r+1];
@@ -592,26 +579,26 @@ void elliptic_t::BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO& A) {
   // Build non-zeros of stiffness matrix (unassembled)
   dlong nnzLocal = mesh.Np*mesh.Np*mesh.Nelements;
 
-  parAlmond::parCOO::nonZero_t *sendNonZeros = (parAlmond::parCOO::nonZero_t*) calloc(nnzLocal, sizeof(parAlmond::parCOO::nonZero_t));
-  int *AsendCounts  = (int*) calloc(mesh.size, sizeof(int));
-  int *ArecvCounts  = (int*) calloc(mesh.size, sizeof(int));
-  int *AsendOffsets = (int*) calloc(mesh.size+1, sizeof(int));
-  int *ArecvOffsets = (int*) calloc(mesh.size+1, sizeof(int));
+  memory<parAlmond::parCOO::nonZero_t> sendNonZeros(nnzLocal);
+  memory<int> AsendCounts (mesh.size, 0);
+  memory<int> ArecvCounts (mesh.size);
+  memory<int> AsendOffsets(mesh.size+1);
+  memory<int> ArecvOffsets(mesh.size+1);
 
   //Build unassembed non-zeros
-  if(mesh.rank==0) {printf("Building full FEM matrix...");fflush(stdout);}
+  if(Comm::World().rank()==0) {printf("Building full FEM matrix...");fflush(stdout);}
 
   dlong cnt =0;
   //#pragma omp parallel for
   for (dlong e=0;e<mesh.Nelements;e++) {
 
-    dfloat Grr = mesh.ggeo[e*mesh.Nggeo + G00ID];
-    dfloat Grs = mesh.ggeo[e*mesh.Nggeo + G01ID];
-    dfloat Grt = mesh.ggeo[e*mesh.Nggeo + G02ID];
-    dfloat Gss = mesh.ggeo[e*mesh.Nggeo + G11ID];
-    dfloat Gst = mesh.ggeo[e*mesh.Nggeo + G12ID];
-    dfloat Gtt = mesh.ggeo[e*mesh.Nggeo + G22ID];
-    dfloat J   = mesh.ggeo[e*mesh.Nggeo + GWJID];
+    dfloat Grr = mesh.ggeo[e*mesh.Nggeo + mesh.G00ID];
+    dfloat Grs = mesh.ggeo[e*mesh.Nggeo + mesh.G01ID];
+    dfloat Grt = mesh.ggeo[e*mesh.Nggeo + mesh.G02ID];
+    dfloat Gss = mesh.ggeo[e*mesh.Nggeo + mesh.G11ID];
+    dfloat Gst = mesh.ggeo[e*mesh.Nggeo + mesh.G12ID];
+    dfloat Gtt = mesh.ggeo[e*mesh.Nggeo + mesh.G22ID];
+    dfloat J   = mesh.wJ[e];
 
     for (int n=0;n<mesh.Np;n++) {
       if (maskedGlobalNumbering[e*mesh.Np + n]<0) continue; //skip masked nodes
@@ -643,14 +630,14 @@ void elliptic_t::BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO& A) {
   }
 
   // sort by row ordering
-  std::sort(sendNonZeros, sendNonZeros+cnt,
-            [](const parAlmond::parCOO::nonZero_t& a,
-               const parAlmond::parCOO::nonZero_t& b) {
-              if (a.row < b.row) return true;
-              if (a.row > b.row) return false;
+  sort(sendNonZeros.ptr(), sendNonZeros.ptr()+cnt,
+      [](const parAlmond::parCOO::nonZero_t& a,
+         const parAlmond::parCOO::nonZero_t& b) {
+        if (a.row < b.row) return true;
+        if (a.row > b.row) return false;
 
-              return a.col < b.col;
-            });
+        return a.col < b.col;
+      });
 
   // count how many non-zeros to send to each process
   int rr=0;
@@ -661,32 +648,33 @@ void elliptic_t::BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO& A) {
   }
 
   // find how many nodes to expect (should use sparse version)
-  MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, mesh.comm);
+  mesh.comm.Alltoall(AsendCounts, ArecvCounts);
 
   // find send and recv offsets for gather
   A.nnz = 0;
+  AsendOffsets[0] = 0;
+  ArecvOffsets[0] = 0;
   for(int r=0;r<mesh.size;++r){
     AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
     ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
     A.nnz += ArecvCounts[r];
   }
 
-  A.entries = (parAlmond::parCOO::nonZero_t*) calloc(A.nnz, sizeof(parAlmond::parCOO::nonZero_t));
+  A.entries.malloc(A.nnz);
 
   // determine number to receive
-  MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, parAlmond::MPI_NONZERO_T,
-                   A.entries, ArecvCounts, ArecvOffsets, parAlmond::MPI_NONZERO_T,
-                   mesh.comm);
+  mesh.comm.Alltoallv(sendNonZeros, AsendCounts, AsendOffsets,
+                      A.entries,    ArecvCounts, ArecvOffsets);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
-  std::sort(A.entries, A.entries+A.nnz,
-            [](const parAlmond::parCOO::nonZero_t& a,
-               const parAlmond::parCOO::nonZero_t& b) {
-              if (a.row < b.row) return true;
-              if (a.row > b.row) return false;
+  sort(A.entries.ptr(), A.entries.ptr()+A.nnz,
+      [](const parAlmond::parCOO::nonZero_t& a,
+         const parAlmond::parCOO::nonZero_t& b) {
+        if (a.row < b.row) return true;
+        if (a.row > b.row) return false;
 
-              return a.col < b.col;
-            });
+        return a.col < b.col;
+      });
 
   // compress duplicates
   cnt = 0;
@@ -703,25 +691,18 @@ void elliptic_t::BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO& A) {
   if (A.nnz) cnt++;
   A.nnz = cnt;
 
-  if(mesh.rank==0) printf("done.\n");
-
-  MPI_Barrier(mesh.comm);
-  free(sendNonZeros);
-  free(AsendCounts);
-  free(ArecvCounts);
-  free(AsendOffsets);
-  free(ArecvOffsets);
+  if(Comm::World().rank()==0) printf("done.\n");
 }
 
 void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO& A) {
 
   // number of degrees of freedom on this rank (after gathering)
-  hlong Ngather = ogsMasked->Ngather;
+  hlong Ngather = ogsMasked.Ngather;
 
   // every gathered degree of freedom has its own global id
-  A.globalRowStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
-  A.globalColStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
-  MPI_Allgather(&Ngather, 1, MPI_HLONG, A.globalRowStarts+1, 1, MPI_HLONG, mesh.comm);
+  A.globalRowStarts.malloc(mesh.size+1,0);
+  A.globalColStarts.malloc(mesh.size+1,0);
+  mesh.comm.Allgather(Ngather, A.globalRowStarts+1);
   for(int r=0;r<mesh.size;++r) {
     A.globalRowStarts[r+1] = A.globalRowStarts[r]+A.globalRowStarts[r+1];
     A.globalColStarts[r+1] = A.globalRowStarts[r+1];
@@ -729,13 +710,13 @@ void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO& A) {
 
   // 2. Build non-zeros of stiffness matrix (unassembled)
   dlong nnzLocal = mesh.Np*mesh.Np*mesh.Nelements;
-  parAlmond::parCOO::nonZero_t *sendNonZeros = (parAlmond::parCOO::nonZero_t*) calloc(nnzLocal, sizeof(parAlmond::parCOO::nonZero_t));
-  int *AsendCounts  = (int*) calloc(mesh.size, sizeof(int));
-  int *ArecvCounts  = (int*) calloc(mesh.size, sizeof(int));
-  int *AsendOffsets = (int*) calloc(mesh.size+1, sizeof(int));
-  int *ArecvOffsets = (int*) calloc(mesh.size+1, sizeof(int));
+  memory<parAlmond::parCOO::nonZero_t> sendNonZeros(nnzLocal);
+  memory<int> AsendCounts (mesh.size, 0);
+  memory<int> ArecvCounts (mesh.size);
+  memory<int> AsendOffsets(mesh.size+1);
+  memory<int> ArecvOffsets(mesh.size+1);
 
-  if(mesh.rank==0) {printf("Building full FEM matrix...");fflush(stdout);}
+  if(Comm::World().rank()==0) {printf("Building full FEM matrix...");fflush(stdout);}
 
   dlong cnt =0;
   for (dlong e=0;e<mesh.Nelements;e++) {
@@ -757,7 +738,7 @@ void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO& A) {
             if ((ny==my)&&(nz==mz)) {
               for (int k=0;k<mesh.Nq;k++) {
                 id = k+ny*mesh.Nq+nz*mesh.Nq*mesh.Nq;
-                dfloat Grr = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G00ID*mesh.Np];
+                dfloat Grr = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + mesh.G00ID*mesh.Np];
 
                 val += Grr*mesh.D[nx+k*mesh.Nq]*mesh.D[mx+k*mesh.Nq];
               }
@@ -765,28 +746,28 @@ void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO& A) {
 
             if (nz==mz) {
               id = mx+ny*mesh.Nq+nz*mesh.Nq*mesh.Nq;
-              dfloat Grs = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G01ID*mesh.Np];
+              dfloat Grs = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + mesh.G01ID*mesh.Np];
               val += Grs*mesh.D[nx+mx*mesh.Nq]*mesh.D[my+ny*mesh.Nq];
 
               id = nx+my*mesh.Nq+nz*mesh.Nq*mesh.Nq;
-              dfloat Gsr = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G01ID*mesh.Np];
+              dfloat Gsr = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + mesh.G01ID*mesh.Np];
               val += Gsr*mesh.D[mx+nx*mesh.Nq]*mesh.D[ny+my*mesh.Nq];
             }
 
             if (ny==my) {
               id = mx+ny*mesh.Nq+nz*mesh.Nq*mesh.Nq;
-              dfloat Grt = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G02ID*mesh.Np];
+              dfloat Grt = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + mesh.G02ID*mesh.Np];
               val += Grt*mesh.D[nx+mx*mesh.Nq]*mesh.D[mz+nz*mesh.Nq];
 
               id = nx+ny*mesh.Nq+mz*mesh.Nq*mesh.Nq;
-              dfloat Gst = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G02ID*mesh.Np];
+              dfloat Gst = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + mesh.G02ID*mesh.Np];
               val += Gst*mesh.D[mx+nx*mesh.Nq]*mesh.D[nz+mz*mesh.Nq];
             }
 
             if ((nx==mx)&&(nz==mz)) {
               for (int k=0;k<mesh.Nq;k++) {
                 id = nx+k*mesh.Nq+nz*mesh.Nq*mesh.Nq;
-                dfloat Gss = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G11ID*mesh.Np];
+                dfloat Gss = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + mesh.G11ID*mesh.Np];
 
                 val += Gss*mesh.D[ny+k*mesh.Nq]*mesh.D[my+k*mesh.Nq];
               }
@@ -794,18 +775,18 @@ void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO& A) {
 
             if (nx==mx) {
               id = nx+my*mesh.Nq+nz*mesh.Nq*mesh.Nq;
-              dfloat Gst = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G12ID*mesh.Np];
+              dfloat Gst = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + mesh.G12ID*mesh.Np];
               val += Gst*mesh.D[ny+my*mesh.Nq]*mesh.D[mz+nz*mesh.Nq];
 
               id = nx+ny*mesh.Nq+mz*mesh.Nq*mesh.Nq;
-              dfloat Gts = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G12ID*mesh.Np];
+              dfloat Gts = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + mesh.G12ID*mesh.Np];
               val += Gts*mesh.D[my+ny*mesh.Nq]*mesh.D[nz+mz*mesh.Nq];
             }
 
             if ((nx==mx)&&(ny==my)) {
               for (int k=0;k<mesh.Nq;k++) {
                 id = nx+ny*mesh.Nq+k*mesh.Nq*mesh.Nq;
-                dfloat Gtt = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + G22ID*mesh.Np];
+                dfloat Gtt = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + mesh.G22ID*mesh.Np];
 
                 val += Gtt*mesh.D[nz+k*mesh.Nq]*mesh.D[mz+k*mesh.Nq];
               }
@@ -813,7 +794,7 @@ void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO& A) {
 
             if ((nx==mx)&&(ny==my)&&(nz==mz)) {
               id = nx + ny*mesh.Nq+nz*mesh.Nq*mesh.Nq;
-              dfloat JW = mesh.ggeo[e*mesh.Np*mesh.Nggeo + id + GWJID*mesh.Np];
+              dfloat JW = mesh.wJ[e*mesh.Np + id];
               val += JW*lambda;
             }
 
@@ -834,14 +815,14 @@ void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO& A) {
   }
 
   // sort by row ordering
-  std::sort(sendNonZeros, sendNonZeros+cnt,
-            [](const parAlmond::parCOO::nonZero_t& a,
-               const parAlmond::parCOO::nonZero_t& b) {
-              if (a.row < b.row) return true;
-              if (a.row > b.row) return false;
+  sort(sendNonZeros.ptr(), sendNonZeros.ptr()+cnt,
+      [](const parAlmond::parCOO::nonZero_t& a,
+         const parAlmond::parCOO::nonZero_t& b) {
+        if (a.row < b.row) return true;
+        if (a.row > b.row) return false;
 
-              return a.col < b.col;
-            });
+        return a.col < b.col;
+      });
 
   // count how many non-zeros to send to each process
   int rr=0;
@@ -852,32 +833,33 @@ void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO& A) {
   }
 
   // find how many nodes to expect (should use sparse version)
-  MPI_Alltoall(AsendCounts, 1, MPI_INT, ArecvCounts, 1, MPI_INT, mesh.comm);
+  mesh.comm.Alltoall(AsendCounts, ArecvCounts);
 
   // find send and recv offsets for gather
   A.nnz = 0;
+  AsendOffsets[0] = 0;
+  ArecvOffsets[0] = 0;
   for(int r=0;r<mesh.size;++r){
     AsendOffsets[r+1] = AsendOffsets[r] + AsendCounts[r];
     ArecvOffsets[r+1] = ArecvOffsets[r] + ArecvCounts[r];
     A.nnz += ArecvCounts[r];
   }
 
-  A.entries = (parAlmond::parCOO::nonZero_t*) calloc(A.nnz, sizeof(parAlmond::parCOO::nonZero_t));
+  A.entries.malloc(A.nnz);
 
   // determine number to receive
-  MPI_Alltoallv(sendNonZeros, AsendCounts, AsendOffsets, parAlmond::MPI_NONZERO_T,
-                   A.entries, ArecvCounts, ArecvOffsets, parAlmond::MPI_NONZERO_T,
-                   mesh.comm);
+  mesh.comm.Alltoallv(sendNonZeros, AsendCounts, AsendOffsets,
+                      A.entries,    ArecvCounts, ArecvOffsets);
 
   // sort received non-zero entries by row block (may need to switch compareRowColumn tests)
-  std::sort(A.entries, A.entries+A.nnz,
-            [](const parAlmond::parCOO::nonZero_t& a,
-               const parAlmond::parCOO::nonZero_t& b) {
-              if (a.row < b.row) return true;
-              if (a.row > b.row) return false;
+  sort(A.entries.ptr(), A.entries.ptr()+A.nnz,
+      [](const parAlmond::parCOO::nonZero_t& a,
+         const parAlmond::parCOO::nonZero_t& b) {
+        if (a.row < b.row) return true;
+        if (a.row > b.row) return false;
 
-              return a.col < b.col;
-            });
+        return a.col < b.col;
+      });
 
   // compress duplicates
   cnt = 0;
@@ -894,12 +876,5 @@ void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO& A) {
   if (A.nnz) cnt++;
   A.nnz = cnt;
 
-  if(mesh.rank==0) printf("done.\n");
-
-  MPI_Barrier(mesh.comm);
-  free(sendNonZeros);
-  free(AsendCounts);
-  free(ArecvCounts);
-  free(AsendOffsets);
-  free(ArecvOffsets);
+  if(Comm::World().rank()==0) printf("done.\n");
 }

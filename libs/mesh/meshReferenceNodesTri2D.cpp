@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,75 +25,83 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh2D.hpp"
-#include "mesh/mesh3D.hpp"
 
-void meshTri3D::ReferenceNodes(int N_){
-  mesh_t *mesh_p = (mesh_t*) this;
-  meshTri2D* trimesh = (meshTri2D*) mesh_p;
-  trimesh->meshTri2D::ReferenceNodes(N);
-}
+namespace libp {
 
-void meshTri2D::ReferenceNodes(int N_){
+void mesh_t::ReferenceNodesTri2D(){
 
-  N = N_;
   Nfp = N+1;
   Np = (N+1)*(N+2)/2;
 
   /* Nodal Data */
-  r = (dfloat *) malloc(Np*sizeof(dfloat));
-  s = (dfloat *) malloc(Np*sizeof(dfloat));
   NodesTri2D(N, r, s);
-
-  faceNodes = (int *) malloc(Nfaces*Nfp*sizeof(int));
   FaceNodesTri2D(N, r, s, faceNodes);
-
-  vertexNodes = (int*) calloc(Nverts, sizeof(int));
   VertexNodesTri2D(N, r, s, vertexNodes);
 
-  dfloat *V = (dfloat *) malloc(Np*Np*sizeof(dfloat));
-  VandermondeTri2D(N, Np, r, s, V);
+  memory<dfloat> V;
+  VandermondeTri2D(N, r, s, V);
 
   //Mass matrix
-  MM    = (dfloat *) malloc(Np*Np*sizeof(dfloat));
-  invMM = (dfloat *) malloc(Np*Np*sizeof(dfloat));
   MassMatrixTri2D(Np, V, MM);
   invMassMatrixTri2D(Np, V, invMM);
-  free(V);
+  o_MM = platform.malloc<dfloat>(MM); //MM is symmetric
 
   //packed D matrices
-  D  = (dfloat *) malloc(2*Np*Np*sizeof(dfloat));
+  DmatrixTri2D(N, r, s, D);
   Dr = D + 0*Np*Np;
   Ds = D + 1*Np*Np;
-  DmatrixTri2D(N, Np, r, s, Dr, Ds);
 
-  LIFT = (dfloat *) malloc(Np*Nfaces*Nfp*sizeof(dfloat));
+  memory<dfloat> DT(2*Np*Np);
+  memory<dfloat> DrT = DT + 0*Np*Np;
+  memory<dfloat> DsT = DT + 1*Np*Np;
+  linAlg_t::matrixTranspose(Np, Np, Dr, Np, DrT, Np);
+  linAlg_t::matrixTranspose(Np, Np, Ds, Np, DsT, Np);
+  o_D = platform.malloc<dfloat>(DT);
+
   LIFTmatrixTri2D(N, faceNodes, r, s, LIFT);
-
-  sM = (dfloat *) calloc(Np*Nfaces*Nfp,sizeof(dfloat));
   SurfaceMassMatrixTri2D(N, MM, LIFT, sM);
 
+  memory<dfloat> LIFTT(Np*Nfaces*Nfp);
+  linAlg_t::matrixTranspose(Np, Nfp*Nfaces, LIFT, Nfp*Nfaces, LIFTT, Np);
+
+  memory<dfloat> sMT(Np*Nfaces*Nfp);
+  linAlg_t::matrixTranspose(Np, Nfp*Nfaces, sM, Nfp*Nfaces, sMT, Np);
+
+  o_sM = platform.malloc<dfloat>(sMT);
+  o_LIFT = platform.malloc<dfloat>(LIFTT);
+
   //packed stiffness matrices
-  S = (dfloat*) calloc(3*Np*Np, sizeof(dfloat));
+  SmatrixTri2D(N, Dr, Ds, MM, S);
   Srr = S + 0*Np*Np;
   Srs = S + 1*Np*Np;
   Sss = S + 2*Np*Np;
-  SmatrixTri2D(N, Dr, Ds, MM, Srr, Srs, Sss);
+
+  memory<dfloat> ST(3*Np*Np);
+  memory<dfloat> SrrT = ST + 0*Np*Np;
+  memory<dfloat> SrsT = ST + 1*Np*Np;
+  memory<dfloat> SssT = ST + 2*Np*Np;
+  linAlg_t::matrixTranspose(Np, Np, Srr, Np, SrrT, Np);
+  linAlg_t::matrixTranspose(Np, Np, Srs, Np, SrsT, Np);
+  linAlg_t::matrixTranspose(Np, Np, Sss, Np, SssT, Np);
+
+  o_S = platform.malloc<dfloat>(ST);
 
   /* Plotting data */
   plotN = N + 3; //enriched interpolation space for plotting
   plotNp = (plotN+1)*(plotN+2)/2;
 
   /* Plotting nodes */
-  plotR = (dfloat *) malloc(plotNp*sizeof(dfloat));
-  plotS = (dfloat *) malloc(plotNp*sizeof(dfloat));
   EquispacedNodesTri2D(plotN, plotR, plotS);
 
   plotNelements = plotN*plotN;
   plotNverts = 3;
-  plotEToV = (int*) malloc(plotNelements*plotNverts*sizeof(int));
   EquispacedEToVTri2D(plotN, plotEToV);
+  InterpolationMatrixTri2D(N, r, s, plotR, plotS, plotInterp);
 
-  plotInterp = (dfloat *) malloc(Np*plotNp*sizeof(dfloat));
-  InterpolationMatrixTri2D(N, Np, r, s, plotNp, plotR, plotS, plotInterp);
+  props["defines/" "p_N"]= N;
+  props["defines/" "p_Np"]= Np;
+  props["defines/" "p_Nfp"]= Nfp;
+  props["defines/" "p_NfacesNfp"]= Nfp*Nfaces;
 }
+
+} //namespace libp

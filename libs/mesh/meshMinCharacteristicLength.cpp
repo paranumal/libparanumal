@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,8 +25,8 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh2D.hpp"
-#include "mesh/mesh3D.hpp"
+
+namespace libp {
 
 dfloat mesh_t::MinCharacteristicLength(){
 
@@ -34,17 +34,15 @@ dfloat mesh_t::MinCharacteristicLength(){
   for(dlong e=0;e<Nelements;++e){
     dfloat h = ElementCharacteristicLength(e);
 
-    hmin = mymin(hmin, h);
+    hmin = std::min(hmin, h);
   }
 
   // MPI_Allreduce to get global minimum h
-  dfloat ghmin = 0.0;
-  MPI_Allreduce(&hmin, &ghmin, 1, MPI_DFLOAT, MPI_MIN, comm);
-
-  return ghmin;
+  comm.Allreduce(hmin, Comm::Min);
+  return hmin;
 }
 
-dfloat meshTri2D::ElementCharacteristicLength(dlong e) {
+dfloat mesh_t::ElementCharacteristicLengthTri2D(dlong e) {
 
   dfloat h = std::numeric_limits<dfloat>::max();
   for(int f=0;f<Nfaces;++f){
@@ -56,12 +54,12 @@ dfloat meshTri2D::ElementCharacteristicLength(dlong e) {
     // h = 2/(sJ/J)
     dfloat hest = 2.0/(sJ*invJ);
 
-    h = mymin(h, hest);
+    h = std::min(h, hest);
   }
   return h;
 }
 
-dfloat meshQuad2D::ElementCharacteristicLength(dlong e) {
+dfloat mesh_t::ElementCharacteristicLengthQuad2D(dlong e) {
 
   dfloat h = std::numeric_limits<dfloat>::max();
 
@@ -80,53 +78,12 @@ dfloat meshQuad2D::ElementCharacteristicLength(dlong e) {
     // h = 1/(sJ/J)
     dfloat hest = J/sJ;
 
-    h = mymin(h, hest);
+    h = std::min(h, hest);
   }
   return h;
 }
 
-dfloat meshTri3D::ElementCharacteristicLength(dlong e) {
-
-  dfloat h = std::numeric_limits<dfloat>::max();
-  for(int f=0;f<Nfaces;++f){
-    dlong sid = Nsgeo*(Nfaces*e + f);
-    dfloat sJ   = sgeo[sid + SJID];
-    dfloat invJ = sgeo[sid + IJID];
-
-    // sJ = L/2, J = A/2,   sJ/J = L/A = L/(0.5*h*L) = 2/h
-    // h = 2/(sJ/J)
-    dfloat hest = 2.0/(sJ*invJ);
-
-    h = mymin(h, hest);
-  }
-  return h;
-}
-
-dfloat meshQuad3D::ElementCharacteristicLength(dlong e) {
-
-  dfloat h = std::numeric_limits<dfloat>::max();
-
-  //sum weighted Jacobians to integrate over the element
-  dfloat J = 0.0;
-  for (int n=0;n<Np;n++)
-    J += vgeo[Nvgeo*Np*e + n + Np*JWID];
-
-  for(int f=0;f<Nfaces;++f){
-    //sum weighted surface Jacobians to integrate over face
-    dfloat sJ = 0.0;
-    for (int i=0;i<Nfp;i++)
-      sJ += sgeo[Nsgeo*(Nfaces*Nfp*e + Nfp*f + i) + WSJID];
-
-    // sJ = L, J = A,   sJ/J = L/A = L/(h*L) = 1/h
-    // h = 1/(sJ/J)
-    dfloat hest = J/sJ;
-
-    h = mymin(h, hest);
-  }
-  return h;
-}
-
-dfloat meshTet3D::ElementCharacteristicLength(dlong e) {
+dfloat mesh_t::ElementCharacteristicLengthTet3D(dlong e) {
 
   dfloat h = std::numeric_limits<dfloat>::max();
   for(int f=0;f<Nfaces;++f){
@@ -138,12 +95,12 @@ dfloat meshTet3D::ElementCharacteristicLength(dlong e) {
     // h = 2/(sJ/J)
     dfloat hest = 2.0/(sJ*invJ);
 
-    h = mymin(h, hest);
+    h = std::min(h, hest);
   }
   return h;
 }
 
-dfloat meshHex3D::ElementCharacteristicLength(dlong e) {
+dfloat mesh_t::ElementCharacteristicLengthHex3D(dlong e) {
 
   dfloat h = std::numeric_limits<dfloat>::max();
 
@@ -162,7 +119,9 @@ dfloat meshHex3D::ElementCharacteristicLength(dlong e) {
     // h = 1/(sJ/J)
     dfloat hest = J/sJ;
 
-    h = mymin(h, hest);
+    h = std::min(h, hest);
   }
   return h;
 }
+
+} //namespace libp

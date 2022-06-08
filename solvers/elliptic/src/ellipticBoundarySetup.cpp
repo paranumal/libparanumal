@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,126 +25,116 @@ SOFTWARE.
 */
 
 #include "elliptic.hpp"
+#include <limits>
 
 void elliptic_t::BoundarySetup(){
 
   //check all the bounaries for a Dirichlet
-  int localAllNeumann = (lambda==0) ? 1 : 0; //if lambda>0 we don't care about all Neumann problem
+  allNeumann = (lambda==0) ? 1 : 0; //if lambda>0 we don't care about all Neumann problem
   allNeumannPenalty = 1.;
+
+  //translate the mesh's element-to-boundaryflag mapping
+  EToB.malloc(mesh.Nelements*mesh.Nfaces, 0);
+  for (dlong e=0;e<mesh.Nelements;e++) {
+    for (int f=0;f<mesh.Nfaces;f++) {
+      int bc = mesh.EToB[e*mesh.Nfaces+f];
+      if (bc>0) {
+        int BC = BCType[bc];         //translate mesh's boundary flag
+        EToB[e*mesh.Nfaces+f] = BC;  //record it
+        if (BC!=2) allNeumann = 0;   //check if its a Dirchlet
+      }
+    }
+  }
+  o_EToB = platform.malloc<int>(EToB);
+
+  //collect the allNeumann flags from other ranks
+  mesh.comm.Allreduce(allNeumann, Comm::Min);
+
+  //translate the mesh's node-wise bc flag
+  Nmasked = 0;
+  mapB.malloc((mesh.Nelements+mesh.totalHaloPairs)*mesh.Np, 0);
+  for (int n=0;n<mesh.Nelements*mesh.Np;n++) {
+    int bc = mesh.mapB[n];
+    if (bc>0) {
+      int BC = BCType[bc];     //translate mesh's boundary flag
+      mapB[n] = BC;  //record it
+
+      if (mapB[n] == 1) Nmasked++;   //Dirichlet boundary
+    }
+  }
+  o_mapB = platform.malloc<int>(mapB);
+
+  maskIds.malloc(Nmasked);
+  Nmasked =0; //reset
+  for (dlong n=0;n<mesh.Nelements*mesh.Np;n++) {
+    if (mapB[n] == 1) maskIds[Nmasked++] = n;
+  }
+  o_maskIds = platform.malloc<int>(maskIds);
+
+  //make a masked version of the global id numbering
+  maskedGlobalIds.malloc(mesh.Nelements*mesh.Np);
+  maskedGlobalIds.copyFrom(mesh.globalIds);
+  for (dlong n=0;n<Nmasked;n++) {
+    maskedGlobalIds[maskIds[n]] = 0;
+  }
+
+  //use the masked ids to make another gs handle (signed so the gather is defined)
+  bool verbose = settings.compareSetting("VERBOSE", "TRUE") ? true : false;
+  bool unique = true; //flag a unique node in every gather node
+  ogsMasked.Setup(mesh.Nelements*mesh.Np, maskedGlobalIds,
+                  mesh.comm, ogs::Signed, ogs::Auto,
+                  unique, verbose, platform);
 
   //setup normalization constant
   if (settings.compareSetting("DISCRETIZATION","IPDG")) {
     allNeumannScale = 1./sqrt((dfloat)mesh.Np*mesh.NelementsGlobal);
   } else {
     //note that we can use the mesh ogs, since there are no masked nodes
-    allNeumannScale = 1./sqrt((dfloat)mesh.ogs->NgatherGlobal);
+    allNeumannScale = 1./sqrt((dfloat)ogsMasked.NgatherGlobal);
   }
-
-  //setup a custom element-to-boundaryflag mapping
-  EToB = (int *) calloc(mesh.Nelements*mesh.Nfaces,sizeof(int));
-  for (dlong e=0;e<mesh.Nelements;e++) {
-    for (int f=0;f<mesh.Nfaces;f++) {
-      int bc = mesh.EToB[e*mesh.Nfaces+f];
-      if (bc>0) {
-        int BC = BCType[bc];  //translate mesh's boundary flag
-        EToB[e*mesh.Nfaces+f] = BC;    //record it
-        if (BC!=2) localAllNeumann = 0;     //check if its a Dirchlet
-      }
-    }
-  }
-  o_EToB = platform.malloc(mesh.Nelements*mesh.Nfaces*sizeof(int), EToB);
-
-  //collect the allNeumann flags from other ranks
-  MPI_Allreduce(&localAllNeumann, &allNeumann, 1, MPI_INT, MPI_MIN, mesh.comm);
-
-
-  //make a node-wise bc flag using the gsop (prioritize Dirichlet boundaries over Neumann)
-  mapB = (int *) calloc(mesh.Nelements*mesh.Np,sizeof(int));
-  const int largeNumber = 1<<20;
-  for (dlong e=0;e<mesh.Nelements;e++) {
-    for (int n=0;n<mesh.Np;n++) mapB[n+e*mesh.Np] = largeNumber;
-    for (int f=0;f<mesh.Nfaces;f++) {
-      int bc = EToB[f+e*mesh.Nfaces];
-      if (bc>0) {
-        for (int n=0;n<mesh.Nfp;n++) {
-          int fid = mesh.faceNodes[n+f*mesh.Nfp];
-          mapB[fid+e*mesh.Np] = mymin(bc,mapB[fid+e*mesh.Np]);
-        }
-      }
-    }
-  }
-  mesh.ogs->GatherScatter(mapB, ogs_int, ogs_min, ogs_sym);
-
-  //use the bc flags to find masked ids
-  Nmasked = 0;
-  for (dlong n=0;n<mesh.Nelements*mesh.Np;n++) {
-    if (mapB[n] == largeNumber) {//no boundary
-      mapB[n] = 0.;
-    } else if (mapB[n] == 1) {   //Dirichlet boundary
-      Nmasked++;
-    }
-  }
-  o_mapB = platform.malloc(mesh.Nelements*mesh.Np*sizeof(int), mapB);
-
-
-  maskIds = (dlong *) calloc(Nmasked, sizeof(dlong));
-  Nmasked =0; //reset
-  for (dlong n=0;n<mesh.Nelements*mesh.Np;n++)
-    if (mapB[n] == 1) maskIds[Nmasked++] = n;
-
-  if (Nmasked) o_maskIds = platform.malloc(Nmasked*sizeof(dlong), maskIds);
-
-  //make a masked version of the global id numbering
-  maskedGlobalIds = (hlong *) calloc(mesh.Nelements*mesh.Np,sizeof(hlong));
-  memcpy(maskedGlobalIds, mesh.globalIds, mesh.Nelements*mesh.Np*sizeof(hlong));
-  for (dlong n=0;n<Nmasked;n++)
-    maskedGlobalIds[maskIds[n]] = 0;
-
-  //use the masked ids to make another gs handle (signed so the gather is defined)
-  int verbose = 0;
-  ogs_t::Unique(maskedGlobalIds, mesh.Nelements*mesh.Np, mesh.comm);     //flag a unique node in every gather node
-  ogsMasked = ogs_t::Setup(mesh.Nelements*mesh.Np, maskedGlobalIds,
-                           mesh.comm, verbose, platform);
 
   /* use the masked gs handle to define a global ordering */
   dlong Ntotal  = mesh.Np*mesh.Nelements; // number of degrees of freedom on this rank (before gathering)
-  hlong Ngather = ogsMasked->Ngather;     // number of degrees of freedom on this rank (after gathering)
+  hlong Ngather = ogsMasked.Ngather;     // number of degrees of freedom on this rank (after gathering)
 
   // build inverse degree vectors
   // used for the weight in linear solvers (used in C0)
-  weight  = (dfloat*) calloc(Ntotal, sizeof(dfloat));
-  weightG = (dfloat*) calloc(ogsMasked->Ngather, sizeof(dfloat));
-  for(dlong n=0;n<Ntotal;++n) weight[n] = 1.0;
+  weight.malloc(Ntotal, 1.0);
 
-  ogsMasked->Gather(weightG, weight, ogs_dfloat, ogs_add, ogs_trans);
-  for(dlong n=0;n<ogsMasked->Ngather;++n)
-    if (weightG[n]) weightG[n] = 1./weightG[n];
+  weightG.malloc(Ngather);
+  ogsMasked.Gather(weightG, weight, 1, ogs::Add, ogs::Trans);
 
-  ogsMasked->Scatter(weight, weightG, ogs_dfloat, ogs_add, ogs_notrans);
+  for(dlong n=0;n<ogsMasked.Ngather;++n) {
+    if (weightG[n]>0.0) weightG[n] = 1./weightG[n];
+  }
 
-  o_weight  = platform.malloc(Ntotal*sizeof(dfloat), weight);
-  o_weightG = platform.malloc(ogsMasked->Ngather*sizeof(dfloat), weightG);
+  ogsMasked.Scatter(weight, weightG, 1, ogs::NoTrans);
+
+  o_weight  = platform.malloc<dfloat>(weight);
+  o_weightG = platform.malloc<dfloat>(weightG);
 
   // create a global numbering system
-  hlong *globalIds = (hlong *) calloc(Ngather,sizeof(hlong));
+  memory<hlong> globalIds(Ngather);
 
   // every gathered degree of freedom has its own global id
-  hlong *globalStarts = (hlong*) calloc(mesh.size+1,sizeof(hlong));
-  MPI_Allgather(&Ngather, 1, MPI_HLONG, globalStarts+1, 1, MPI_HLONG, mesh.comm);
-  for(int r=0;r<mesh.size;++r)
-    globalStarts[r+1] = globalStarts[r] + globalStarts[r+1];
+  hlong globalOffset=static_cast<hlong>(Ngather);
+  comm.Scan(Ngather, globalOffset);
+  globalOffset = globalOffset-Ngather;
 
   //use the offsets to set a consecutive global numbering
-  for (dlong n =0;n<ogsMasked->Ngather;n++) {
-    globalIds[n] = n + globalStarts[mesh.rank];
+  for (dlong n =0;n<ogsMasked.Ngather;n++) {
+    globalIds[n] = n + globalOffset;
   }
 
   //scatter this numbering to the original nodes
-  maskedGlobalNumbering = (hlong *) calloc(Ntotal,sizeof(hlong));
-  for (dlong n=0;n<Ntotal;n++) maskedGlobalNumbering[n] = -1;
-  ogsMasked->Scatter(maskedGlobalNumbering, globalIds, ogs_hlong, ogs_add, ogs_notrans);
-  free(globalIds);
+  maskedGlobalNumbering.malloc(Ntotal, -1);
+  ogsMasked.Scatter(maskedGlobalNumbering, globalIds, 1, ogs::NoTrans);
 
   /* Build halo exchange for gathered ordering */
-  ogsMasked->GatheredHaloExchangeSetup();
+  gHalo.SetupFromGather(ogsMasked);
+
+  GlobalToLocal.malloc(mesh.Nelements*mesh.Np);
+  ogsMasked.SetupGlobalToLocalMapping(GlobalToLocal);
+
+  o_GlobalToLocal = platform.malloc<dlong>(GlobalToLocal);
 }

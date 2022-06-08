@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,19 +25,47 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh2D.hpp"
 
-void meshTri2D::GeometricFactors(){
+namespace libp {
+
+void mesh_t::GeometricFactorsTri2D(){
+
+  /*Set offsets*/
+  Nvgeo = 5;
+
+  RXID  = 0;
+  RYID  = 1;
+  SXID  = 2;
+  SYID  = 3;
+  JID   = 4;
+
+  props["defines/" "p_Nvgeo"]= Nvgeo;
+  props["defines/" "p_RXID"]= RXID;
+  props["defines/" "p_SXID"]= SXID;
+  props["defines/" "p_RYID"]= RYID;
+  props["defines/" "p_SYID"]= SYID;
+  props["defines/" "p_JID"]= JID;
 
   /* unified storage array for geometric factors */
-  Nvgeo = 5;
-  vgeo = (dfloat*) calloc((Nelements+totalHaloPairs)*Nvgeo, sizeof(dfloat));
+  vgeo.malloc((Nelements+totalHaloPairs)*Nvgeo);
+
+  Nggeo = 3;
+
+  G00ID=0;
+  G01ID=1;
+  G11ID=2;
+
+  props["defines/" "p_Nggeo"]= Nggeo;
+  props["defines/" "p_G00ID"]= G00ID;
+  props["defines/" "p_G01ID"]= G01ID;
+  props["defines/" "p_G11ID"]= G11ID;
 
   /* number of second order geometric factors */
-  Nggeo = 4;
-  ggeo = (dfloat*) calloc(Nelements*Nggeo, sizeof(dfloat));
+  ggeo.malloc(Nelements*Nggeo);
 
+  wJ.malloc(Nelements);
 
+  #pragma omp parallel for
   for(dlong e=0;e<Nelements;++e){ /* for each element */
 
     /* find vertex indices and physical coordinates */
@@ -54,11 +82,8 @@ void meshTri2D::GeometricFactors(){
     /* compute geometric factors for affine coordinate transform*/
     dfloat J = 0.25*((xe2-xe1)*(ye3-ye1) - (xe3-xe1)*(ye2-ye1));
 
-    if(J<0) {
-      stringstream ss;
-      ss << "Negative J found at element " << e << "\n";
-      LIBP_ABORT(ss.str())
-    }
+    LIBP_ABORT("Negative J found at element " << e, J<0);
+
     dfloat rx =  (0.5/J)*(ye3-ye1);
     dfloat ry = -(0.5/J)*(xe3-xe1);
     dfloat sx = -(0.5/J)*(ye2-ye1);
@@ -75,8 +100,15 @@ void meshTri2D::GeometricFactors(){
     ggeo[Nggeo*e + G00ID] = J*(rx*rx + ry*ry);
     ggeo[Nggeo*e + G01ID] = J*(rx*sx + ry*sy);
     ggeo[Nggeo*e + G11ID] = J*(sx*sx + sy*sy);
-    ggeo[Nggeo*e + GWJID]  = J;
+
+    wJ[e]  = J;
   }
 
-  halo->Exchange(vgeo, Nvgeo, ogs_dfloat);
+  halo.Exchange(vgeo, Nvgeo);
+
+  o_wJ   = platform.malloc<dfloat>(wJ);
+  o_vgeo = platform.malloc<dfloat>(vgeo);
+  o_ggeo = platform.malloc<dfloat>(ggeo);
 }
+
+} //namespace libp

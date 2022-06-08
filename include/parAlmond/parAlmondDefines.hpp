@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Rajesh Gandham
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Rajesh Gandham
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,8 +27,16 @@ SOFTWARE.
 #ifndef PARALMOND_DEFINES_HPP
 #define PARALMOND_DEFINES_HPP
 
-#define PARALMOND_NBLOCKS 128
-#define NUMKCYCLES 3
-#define KCYCLETOL 0.2
+namespace libp {
+
+namespace parAlmond {
+
+constexpr int PARALMOND_NBLOCKS=128;
+constexpr int NUMKCYCLES=3;
+constexpr dfloat KCYCLETOL=0.2;
+
+} //namespace parAlmond
+
+} //namespace libp
 
 #endif

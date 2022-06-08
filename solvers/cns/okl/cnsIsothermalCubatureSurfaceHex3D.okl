@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -116,7 +116,6 @@ void upwindRoeAveraged(const dfloat nx,
       }                                                                 \
     }                                                                   \
                                                                         \
-    @barrier("local");                                                  \
                                                                         \
     for(int j=0;j<p_cubNq;++j;@inner(1)){                               \
       for(int i=0;i<p_cubNq;++i;@inner(0)){                             \
@@ -145,7 +144,6 @@ void upwindRoeAveraged(const dfloat nx,
       }                                                                 \
     }                                                                   \
                                                                         \
-    @barrier("local");                                                  \
                                                                         \
     for(int j=0;j<p_cubNq;++j;@inner(1)){                               \
       for(int i=0;i<p_cubNq;++i;@inner(0)){                             \
@@ -162,7 +160,6 @@ void upwindRoeAveraged(const dfloat nx,
       }                                                                 \
     }                                                                   \
                                                                         \
-    @barrier("local");                                                  \
                                                                         \
     for(int j=0;j<p_cubNq;++j;@inner(1)){                               \
       for(int i=0;i<p_cubNq;++i;@inner(0)){                             \
@@ -188,7 +185,6 @@ void upwindRoeAveraged(const dfloat nx,
       }                                                                 \
     }                                                                   \
                                                                         \
-    @barrier("local");                                                  \
                                                                         \
     for(int j=0;j<p_cubNq;++j;@inner(1)){                               \
       for(int i=0;i<p_cubNq;++i;@inner(0)){                             \
@@ -275,7 +271,6 @@ void upwindRoeAveraged(const dfloat nx,
       }                                                                 \
     }                                                                   \
                                                                         \
-    @barrier("local");                                                  \
                                                                         \
     for(int j=0;j<p_cubNq;++j;@inner(1)){                               \
       for(int i=0;i<p_cubNq;++i;@inner(0)){                             \
@@ -293,7 +288,6 @@ void upwindRoeAveraged(const dfloat nx,
       }                                                                 \
     }                                                                   \
                                                                         \
-    @barrier("local");                                                  \
                                                                         \
     for(int j=0;j<p_cubNq;++j;@inner(1)){                               \
       for(int i=0;i<p_cubNq;++i;@inner(0)){                             \
@@ -304,7 +298,6 @@ void upwindRoeAveraged(const dfloat nx,
         }                                                               \
       }                                                                 \
     }                                                                   \
-    @barrier("local");                                                  \
                                                                         \
     for(int j=0;j<p_cubNq;++j;@inner(1)){                               \
       for(int i=0;i<p_cubNq;++i;@inner(0)){                             \
@@ -322,7 +315,6 @@ void upwindRoeAveraged(const dfloat nx,
       }                                                                 \
     }                                                                   \
                                                                         \
-    @barrier("local");                                                  \
                                                                         \
     for(int j=0;j<p_cubNq;++j;@inner(1)){                               \
       for(int i=0;i<p_cubNq;++i;@inner(0)){                             \
@@ -395,11 +387,9 @@ void upwindRoeAveraged(const dfloat nx,
       }
     }
 
-    @barrier("local");
 
     quadSurfaceTerms(0) //face 0
 
-    @barrier("local");
 
     //accumulate in register pencil
     for(int j=0;j<p_cubNq;++j;@inner(1)){
@@ -412,11 +402,9 @@ void upwindRoeAveraged(const dfloat nx,
       }
     }
 
-    @barrier("local");
 
     quadSurfaceTerms(5) //face 5
 
-    @barrier("local");
 
     //accumulate in register pencil
     for(int j=0;j<p_cubNq;++j;@inner(1)){
@@ -429,11 +417,9 @@ void upwindRoeAveraged(const dfloat nx,
       }
     }
 
-    @barrier("local");
 
     quadSurfaceTerms(1) //face 1
 
-    @barrier("local");
 
     //accumulate in register pencil
     for(int j=0;j<p_cubNq;++j;@inner(1)){
@@ -449,11 +435,9 @@ void upwindRoeAveraged(const dfloat nx,
       }
     }
 
-    @barrier("local");
 
     quadSurfaceTerms(3) //face 3
 
-    @barrier("local");
 
     //accumulate in register pencil
     for(int j=0;j<p_cubNq;++j;@inner(1)){
@@ -469,11 +453,9 @@ void upwindRoeAveraged(const dfloat nx,
       }
     }
 
-    @barrier("local");
 
     quadSurfaceTerms(2) //face 2
 
-    @barrier("local");
 
     //accumulate in register pencil
     for(int j=0;j<p_cubNq;++j;@inner(1)){
@@ -489,11 +471,9 @@ void upwindRoeAveraged(const dfloat nx,
       }
     }
 
-    @barrier("local");
 
     quadSurfaceTerms(4) //face 4
 
-    @barrier("local");
 
     //accumulate in register pencil
     for(int j=0;j<p_cubNq;++j;@inner(1)){
@@ -509,7 +489,6 @@ void upwindRoeAveraged(const dfloat nx,
       }
     }
 
-    @barrier("local");
 
     for(int j=0;j<p_cubNq;++j;@inner(1)){
       for(int i=0;i<p_cubNq;++i;@inner(0)){

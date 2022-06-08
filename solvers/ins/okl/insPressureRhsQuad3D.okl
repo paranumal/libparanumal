@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,7 @@ SOFTWARE.
 
 // Computes volume contribution of div(UI)
 @kernel void insPressureRhsQuad3D(const dlong Nelements,
-                                   @restrict const  dfloat *  vgeo,
+                                   @restrict const  dfloat *  wJ,
                                    @restrict const  dfloat *  MM,
                                    const dfloat idt,
                                     @restrict dfloat *  rhs){
@@ -37,11 +37,10 @@ SOFTWARE.
       for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
         const dlong e = eo+es; // element in block
         if(e<Nelements){
-	  const dlong id = e*p_Np+n;
-	  const dfloat rhsid = rhs[id];
-	  
-          const dlong gid = n + e*p_Np*p_Nvgeo;
-          const dfloat JW = vgeo[gid + p_JWID*p_Np];
+          const dlong id = e*p_Np+n;
+          const dfloat rhsid = rhs[id];
+
+          const dfloat JW = wJ[n + e*p_Np];
 
           rhs[id] = -JW*rhsid*idt;
         }

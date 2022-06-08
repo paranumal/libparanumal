@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,16 +25,10 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh2D.hpp"
-#include "mesh/mesh3D.hpp"
 
-void meshQuad3D::CubatureSetup(){
-  mesh_t *mesh_p = (mesh_t*) this;
-  meshQuad2D* trimesh = (meshQuad2D*) mesh_p;
-  trimesh->meshQuad2D::CubatureSetup();
-}
+namespace libp {
 
-void meshQuad2D::CubatureSetup(){
+void mesh_t::CubatureSetupQuad2D(){
 
   /* Quadrature data */
   cubN = N+1;
@@ -44,24 +38,19 @@ void meshQuad2D::CubatureSetup(){
   intNfp = cubNq;
 
   // cubN+1 point Gauss-Legendre quadrature
-  cubr = (dfloat *) malloc(cubNq*sizeof(dfloat));
-  cubw = (dfloat *) malloc(cubNq*sizeof(dfloat));
   JacobiGQ(0, 0, cubN, cubr, cubw);
 
   // GLL to GL interpolation matrix
-  cubInterp = (dfloat *) malloc(Nq*cubNq*sizeof(dfloat));
-  InterpolationMatrix1D(N, Nq, r, cubNq, cubr, cubInterp); //uses the fact that r = gllz for 1:Nq
+  InterpolationMatrix1D(N, gllz, cubr, cubInterp);
 
   //cubature project cubProject = cubInterp^T
-  cubProject = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
-  matrixTranspose(cubNq, Nq, cubInterp, Nq, cubProject, cubNq);
+  cubProject.malloc(cubNq*Nq);
+  linAlg_t::matrixTranspose(cubNq, Nq, cubInterp, Nq, cubProject, cubNq);
 
   //cubature derivates matrix, cubD: differentiate on cubature nodes
-  cubD = (dfloat *) malloc(cubNq*cubNq*sizeof(dfloat));
-  Dmatrix1D(cubN, cubNq, cubr, cubNq, cubr, cubD);
+  Dmatrix1D(cubN, cubr, cubr, cubD);
 
   // weak cubature derivative cubPDT = cubProject * cubD^T
-  cubPDT  = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
   CubatureWeakDmatrix1D(Nq, cubNq, cubProject, cubD, cubPDT);
 
   // add compile time constants to kernels
@@ -72,42 +61,38 @@ void meshQuad2D::CubatureSetup(){
   props["defines/" "p_cubNfp"]= cubNfp;
 
   // build transposes (we hold matrices as column major on device)
-  dfloat *cubProjectT = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
-  dfloat *cubInterpT   = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
-  matrixTranspose(cubNq, Nq, cubInterp, Nq, cubInterpT, cubNq);
-  matrixTranspose(Nq, cubNq, cubProject, cubNq, cubProjectT, Nq);
+  memory<dfloat> cubProjectT(cubNq*Nq);
+  memory<dfloat> cubInterpT(cubNq*Nq);
+  linAlg_t::matrixTranspose(cubNq, Nq, cubInterp, Nq, cubInterpT, cubNq);
+  linAlg_t::matrixTranspose(Nq, cubNq, cubProject, cubNq, cubProjectT, Nq);
 
-  dfloat *cubPDTT     = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
-  matrixTranspose(Nq, cubNq, cubPDT, cubNq, cubPDTT, Nq);
+  memory<dfloat> cubPDTT(cubNq*Nq);
+  linAlg_t::matrixTranspose(Nq, cubNq, cubPDT, cubNq, cubPDTT, Nq);
 
-  o_cubInterp   = platform.malloc(Nq*cubNq*sizeof(dfloat), cubInterpT);
-  o_cubProject = platform.malloc(Nq*cubNq*sizeof(dfloat), cubProjectT);
+  o_cubInterp  = platform.malloc<dfloat>(Nq*cubNq, cubInterpT);
+  o_cubProject = platform.malloc<dfloat>(Nq*cubNq, cubProjectT);
 
-  o_cubPDT = platform.malloc(Nq*cubNq*sizeof(dfloat), cubPDTT);
-  o_cubD = platform.malloc(cubNq*cubNq*sizeof(dfloat), cubD);
+  o_cubPDT = platform.malloc<dfloat>(Nq*cubNq, cubPDTT);
+  o_cubD   = platform.malloc<dfloat>(cubNq*cubNq, cubD);
 
   o_intInterp = o_cubInterp;
   o_intLIFT = o_cubProject;
 
-  free(cubPDTT);
-  free(cubProjectT);
-  free(cubInterpT);
-
-  cubvgeo = (dfloat*) calloc(Nelements*Nvgeo*cubNp, sizeof(dfloat));
-  cubggeo = (dfloat*) calloc(Nelements*Nggeo*cubNp, sizeof(dfloat));
-
-  cubsgeo = (dfloat*) calloc(Nelements*Nsgeo*cubNq*Nfaces, sizeof(dfloat));
+  cubwJ.malloc(Nelements*cubNp);
+  cubvgeo.malloc(Nelements*Nvgeo*cubNp);
+  cubggeo.malloc(Nelements*Nggeo*cubNp);
+  cubsgeo.malloc(Nelements*Nsgeo*cubNq*Nfaces);
 
   //temp arrays
-  dfloat *xre = (dfloat*) calloc(Np, sizeof(dfloat));
-  dfloat *xse = (dfloat*) calloc(Np, sizeof(dfloat));
-  dfloat *yre = (dfloat*) calloc(Np, sizeof(dfloat));
-  dfloat *yse = (dfloat*) calloc(Np, sizeof(dfloat));
+  memory<dfloat> xre(Np);
+  memory<dfloat> xse(Np);
+  memory<dfloat> yre(Np);
+  memory<dfloat> yse(Np);
 
-  dfloat *xre1 = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
-  dfloat *xse1 = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
-  dfloat *yre1 = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
-  dfloat *yse1 = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
+  memory<dfloat> xre1(cubNq*Nq);
+  memory<dfloat> xse1(cubNq*Nq);
+  memory<dfloat> yre1(cubNq*Nq);
+  memory<dfloat> yse1(cubNq*Nq);
 
   //geometric data for quadrature
   for(dlong e=0;e<Nelements;++e){ /* for each element */
@@ -158,11 +143,8 @@ void meshQuad2D::CubatureSetup(){
         /* compute geometric factors for affine coordinate transform*/
         dfloat J = xr*ys - xs*yr;
 
-        if(J<1e-8) {
-          stringstream ss;
-          ss << "Negative J found at element " << e << "\n";
-          LIBP_ABORT(ss.str())
-        }
+        LIBP_ABORT("Negative J found at element " << e, J<1e-8);
+
         dfloat rx =  ys/J;
         dfloat ry = -xs/J;
         dfloat sx = -yr/J;
@@ -185,7 +167,8 @@ void meshQuad2D::CubatureSetup(){
         cubggeo[base + cubNp*G00ID] = JW*(rx*rx + ry*ry);
         cubggeo[base + cubNp*G01ID] = JW*(rx*sx + ry*sy);
         cubggeo[base + cubNp*G11ID] = JW*(sx*sx + sy*sy);
-        cubggeo[base + cubNp*GWJID] = JW;
+
+        cubwJ[cubNp*e + i + j*cubNq] = JW;
       }
     }
 
@@ -239,10 +222,10 @@ void meshQuad2D::CubatureSetup(){
     }
   }
 
-  o_cubvgeo = platform.malloc(Nelements*Nvgeo*cubNp*sizeof(dfloat), cubvgeo);
-  o_cubggeo = platform.malloc(Nelements*Nggeo*cubNp*sizeof(dfloat), cubggeo);
-  o_cubsgeo = platform.malloc(Nelements*Nfaces*cubNq*Nsgeo*sizeof(dfloat), cubsgeo);
-
-  free(xre); free(xse); free(yre); free(yse);
-  free(xre1); free(xse1); free(yre1); free(yse1);
+  o_cubwJ   = platform.malloc<dfloat>(Nelements*cubNp, cubwJ);
+  o_cubvgeo = platform.malloc<dfloat>(Nelements*Nvgeo*cubNp, cubvgeo);
+  o_cubggeo = platform.malloc<dfloat>(Nelements*Nggeo*cubNp, cubggeo);
+  o_cubsgeo = platform.malloc<dfloat>(Nelements*Nfaces*cubNq*Nsgeo, cubsgeo);
 }
+
+} //namespace libp

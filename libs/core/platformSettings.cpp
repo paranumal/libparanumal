@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,9 @@ SOFTWARE.
 
 #include "platform.hpp"
 
-platformSettings_t::platformSettings_t(MPI_Comm _comm):
+namespace libp {
+
+platformSettings_t::platformSettings_t(comm_t _comm):
   settings_t(_comm) {
 
   //settings format
@@ -55,10 +57,7 @@ platformSettings_t::platformSettings_t(MPI_Comm _comm):
 
 void platformSettings_t::report() {
 
-  int rank;
-  MPI_Comm_rank(comm, &rank);
-
-  if (rank==0) {
+  if (comm.rank()==0) {
     std::cout << "OCCA Settings:\n\n";
 
     reportSetting("THREAD MODEL");
@@ -66,12 +65,12 @@ void platformSettings_t::report() {
     if (compareSetting("THREAD MODEL","OpenCL"))
       reportSetting("PLATFORM NUMBER");
 
-    int size;
-    MPI_Comm_size(comm, &size);
-    if ((size==1)
+    if ((comm.size()==1)
         &&(compareSetting("THREAD MODEL","CUDA")
         ||compareSetting("THREAD MODEL","HIP")
         ||compareSetting("THREAD MODEL","OpenCL") ))
       reportSetting("DEVICE NUMBER");
   }
 }
+
+} //namespace libp

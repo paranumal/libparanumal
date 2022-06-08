@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -65,8 +65,6 @@ for(dlong e=0;e<Nelements;++e;@outer(0)){
       s_G[n] = dsdx*cx + dsdy*cy + dsdz*cz;
       s_H[n] = dtdx*cx + dtdy*cy + dtdz*cz;
     }
-
-    @barrier("local");
 
     for(int n=0;n<p_Np;++n;@inner(0)){
 

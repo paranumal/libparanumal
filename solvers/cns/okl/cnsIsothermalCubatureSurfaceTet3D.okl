@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -183,7 +183,6 @@ void upwindRoeAveraged(const dfloat nx,
           }
         }
 
-        @barrier("local");
 
         // interpolate to surface integration nodes
         for(int n=0;n<p_cubMaxNodes1;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
@@ -300,7 +299,6 @@ void upwindRoeAveraged(const dfloat nx,
         }
 
         // wait for all @shared memory writes of the previous inner loop to complete
-        @barrier("local");
 
         // for each node in the element
         for(int n=0;n<p_cubMaxNodes1;++n;@inner(0)){
@@ -317,10 +315,8 @@ void upwindRoeAveraged(const dfloat nx,
           }
         }
 
-        @barrier("local");
       }
 
-    @barrier("local");
 
     // for each node in the element
     for(int n=0;n<p_cubMaxNodes1;++n;@inner(0)){
@@ -420,7 +416,6 @@ void upwindRoeAveraged(const dfloat nx,
       }
     }
 
-    @barrier("local");
 
     // interpolate to surface integration nodes
     for(int n=0;n<p_cubMaxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
@@ -539,7 +534,6 @@ void upwindRoeAveraged(const dfloat nx,
     }
 
     // wait for all @shared memory writes of the previous inner loop to complete
-    @barrier("local");
 
     // for each node in the element
     for(int n=0;n<p_cubMaxNodes;++n;@inner(0)){

@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,13 +27,13 @@ SOFTWARE.
 #include "elliptic.hpp"
 
 int elliptic_t::Solve(linearSolver_t& linearSolver,
-                      occa::memory &o_x, occa::memory &o_r,
+                      deviceMemory<dfloat> &o_x, deviceMemory<dfloat> &o_r,
                       const dfloat tol, const int MAXIT, const int verbose){
 
   // if there is a nullspace, remove the constant vector from r
   if(allNeumann) ZeroMean(o_r);
 
-  int Niter = linearSolver.Solve(*this, *precon, o_x, o_r, tol, MAXIT, verbose);
+  int Niter = linearSolver.Solve(*this, precon, o_x, o_r, tol, MAXIT, verbose);
 
   return Niter;
 }

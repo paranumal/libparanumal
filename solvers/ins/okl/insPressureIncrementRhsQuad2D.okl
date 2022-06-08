@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -88,7 +88,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     // face 0 & 2
     for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -99,7 +98,6 @@ SOFTWARE.
       surfaceTerms(sk2,2,i,p_Nq-1);
     }
 
-    @barrier("local");
 
     // face 1 & 3
     for(int j=0;j<p_Nq;++j;@inner(0)){
@@ -110,7 +108,6 @@ SOFTWARE.
       surfaceTerms(sk3,3,0     ,j);
     }
 
-    @barrier("local");
 
     // loop over slabs
     for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -133,7 +130,6 @@ SOFTWARE.
     }
 
     // r term ----->
-    @barrier("local");
 
     for(int i=0;i<p_Nq;++i;@inner(0)){
       for(int j=0;j<p_Nq;++j){
@@ -141,7 +137,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     for(int i=0;i<p_Nq;++i;@inner(0)){
       for(int j=0;j<p_Nq;++j){
@@ -156,7 +151,6 @@ SOFTWARE.
     }
 
     // s term ---->
-    @barrier("local");
 
     for(int i=0;i<p_Nq;++i;@inner(0)){
       for(int j=0;j<p_Nq;++j){
@@ -164,7 +158,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     for(int i=0;i<p_Nq;++i;@inner(0)){
       for(int j=0;j<p_Nq;++j){
@@ -256,7 +249,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     // loop over faces to add pseudo-gradient
 
@@ -269,7 +261,6 @@ SOFTWARE.
       surfaceTerms(sk2,2,i,p_Nq-1);
     }
 
-    @barrier("local");
 
     // face 1 & 3
     for(int j=0;j<p_Nq;++j;@inner(0)){
@@ -280,7 +271,6 @@ SOFTWARE.
       surfaceTerms(sk3,3,0     ,j);
     }
 
-    @barrier("local");
 
     // prescale by geofacs
     for(int j=0;j<p_Nq;++j){
@@ -301,7 +291,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     // loop over slabs
     for(int j=0;j<p_Nq;++j){
@@ -365,7 +354,6 @@ SOFTWARE.
     }
 
     if (pDisc_c0) { //fill masked boundary points if C0
-      @barrier("local");
       // face 0 & 2
       for(int i=0;i<p_Nq;++i;@inner(0)){
         const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i;
@@ -375,7 +363,6 @@ SOFTWARE.
         surfaceTerms(sk2,2,i,p_Nq-1);
       }
 
-      @barrier("local");
 
       // face 1 & 3
       for(int j=0;j<p_Nq;++j;@inner(0)){

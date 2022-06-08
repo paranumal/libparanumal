@@ -2,7 +2,7 @@
 
   The MIT License (MIT)
 
-  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -27,19 +27,20 @@
 
 // hex @kernel for screened coulomb potential mat-vec
 #define squareThreads                           \
-  for(int j=0; j<p_Nq; ++j; @inner(1))		\
+  for(int j=0; j<p_Nq; ++j; @inner(1))          \
     for(int i=0; i<p_Nq; ++i; @inner(0))
 
 
 // square thread version
 @kernel void ellipticAxQuad3D(const dlong   Nelements,
-			      @restrict const  dfloat *  ggeo,
-			      @restrict const  dfloat *  D,
-			      @restrict const  dfloat *  S,
-			      @restrict const  dfloat *  MM,
-			      const dfloat   lambda,
-			      @restrict const  dfloat *  q,
-			      @restrict dfloat *  Aq){
+                              @restrict const  dfloat *  wJ,
+                              @restrict const  dfloat *  ggeo,
+                              @restrict const  dfloat *  D,
+                              @restrict const  dfloat *  S,
+                              @restrict const  dfloat *  MM,
+                              const dfloat   lambda,
+                              @restrict const  dfloat *  q,
+                              @restrict dfloat *  Aq){
 
   for(dlong e=0;e<Nelements;++e;@outer(0)){
 
@@ -62,13 +63,12 @@
       s_D[j][i] = D[j*p_Nq+i];
     }
 
-    @barrier("local");
 
     squareThreads{
       const dlong base = e*p_Nggeo*p_Np + j*p_Nq + i;
 
       // assumes w*J built into G entries
-      r_GwJ = ggeo[base+p_GWJID*p_Np];
+      r_GwJ = wJ[e*p_Np + j*p_Nq + i];
 
       r_G00 = ggeo[base+p_G00ID*p_Np];
       r_G01 = ggeo[base+p_G01ID*p_Np];
@@ -81,8 +81,8 @@
 
 #pragma unroll p_Nq
       for(int n=0; n<p_Nq; ++n){
-	qr += s_D[i][n]*s_q[j][n];
-	qs += s_D[j][n]*s_q[n][i];
+        qr += s_D[i][n]*s_q[j][n];
+        qs += s_D[j][n]*s_q[n][i];
       }
 
       r_qr = qr; r_qs = qs; r_q = s_q[j][i];
@@ -91,20 +91,18 @@
     }
 
     // r term ----->
-    @barrier("local");
 
     squareThreads{
       // s_q[j][i] = r_G00*r_qr + r_G01*r_qs + r_G02*r_q;
       s_q[j][i] = r_G00*r_qr + r_G01*r_qs;
     }
 
-    @barrier("local");
 
     squareThreads{
       dfloat tmp = 0.f;
 #pragma unroll p_Nq
       for(int n=0;n<p_Nq;++n) {
-	       tmp += s_D[n][i]*s_q[j][n];
+               tmp += s_D[n][i]*s_q[j][n];
       }
       r_Aq += tmp;
     }
@@ -116,14 +114,12 @@
     // }
 
     // s term ---->
-    @barrier("local");
 
     squareThreads{
       // s_q[j][i] = r_G01*r_qr + r_G11*r_qs + 0.f*r_G12*r_q;
       s_q[j][i] = r_G01*r_qr + r_G11*r_qs;
     }
 
-    @barrier("local");
 
     squareThreads{
       // dfloat tmp = r_G22*r_q;
@@ -131,7 +127,7 @@
 
 #pragma unroll p_Nq
       for(int n=0;n<p_Nq;++n) {
-	     tmp += s_D[n][j]*s_q[n][i];
+             tmp += s_D[n][j]*s_q[n][i];
       }
 
       r_Aq += tmp;
@@ -144,15 +140,16 @@
 
 // square thread version
 @kernel void ellipticPartialAxQuad3D(const dlong Nelements,
-				     @restrict const  dlong   *  elementList,
-             @restrict const  dlong   *  GlobalToLocal,
-				     @restrict const  dfloat *  ggeo,
-				     @restrict const  dfloat *  D,
-				     @restrict const  dfloat *  S,
-				     @restrict const  dfloat *  MM,
-				     const dfloat   lambda,
-				     @restrict const  dfloat *  q,
-				     @restrict dfloat *  Aq){
+                                     @restrict const  dlong   *  elementList,
+                                     @restrict const  dlong   *  GlobalToLocal,
+                                     @restrict const  dfloat *  wJ,
+                                     @restrict const  dfloat *  ggeo,
+                                     @restrict const  dfloat *  D,
+                                     @restrict const  dfloat *  S,
+                                     @restrict const  dfloat *  MM,
+                                     const dfloat   lambda,
+                                     @restrict const  dfloat *  q,
+                                     @restrict dfloat *  Aq){
 
   for(dlong e=0;e<Nelements;++e;@outer(0)){
 
@@ -175,13 +172,12 @@
       s_D[j][i] = D[j*p_Nq+i];
     }
 
-    @barrier("local");
 
     squareThreads{
 
       const dlong base = element*p_Nggeo*p_Np + j*p_Nq + i;
       // assumes w*J built into G entries
-      r_GwJ = ggeo[base+p_GWJID*p_Np];
+      r_GwJ = wJ[element*p_Np + j*p_Nq + i];
       r_G00 = ggeo[base+p_G00ID*p_Np];
       r_G01 = ggeo[base+p_G01ID*p_Np];
       r_G02 = ggeo[base+p_G02ID*p_Np];
@@ -193,8 +189,8 @@
 
 #pragma unroll p_Nq
       for(int n=0; n<p_Nq; ++n){
-	qr += s_D[i][n]*s_q[j][n];
-	qs += s_D[j][n]*s_q[n][i];
+        qr += s_D[i][n]*s_q[j][n];
+        qs += s_D[j][n]*s_q[n][i];
       }
 
       r_qr = qr; r_qs = qs; r_q = s_q[j][i];
@@ -203,20 +199,18 @@
     }
 
     // r term ----->
-    @barrier("local");
 
     squareThreads{
       // s_q[j][i] =  r_G00*r_qr + r_G01*r_qs + r_G02*r_q;
       s_q[j][i] =  r_G00*r_qr + r_G01*r_qs;
     }
 
-    @barrier("local");
 
     squareThreads{
       dfloat tmp = 0.f;
 #pragma unroll p_Nq
       for(int n=0;n<p_Nq;++n) {
-	tmp += s_D[n][i]*s_q[j][n];
+        tmp += s_D[n][i]*s_q[j][n];
       }
 
       r_Aq += tmp;
@@ -229,14 +223,12 @@
     // }
 
     // s term ---->
-    @barrier("local");
 
     squareThreads{
       // s_q[j][i] = r_G01*r_qr + r_G11*r_qs + r_G12*r_q;
       s_q[j][i] = r_G01*r_qr + r_G11*r_qs;
     }
 
-    @barrier("local");
 
     squareThreads{
       // dfloat tmp = r_G22*r_q;
@@ -244,7 +236,7 @@
 
 #pragma unroll p_Nq
       for(int n=0;n<p_Nq;++n){
-	       tmp += s_D[n][j]*s_q[n][i];
+               tmp += s_D[n][j]*s_q[n][i];
       }
 
       r_Aq += tmp;

@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Rajesh Gandham
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Rajesh Gandham
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,29 +27,28 @@ SOFTWARE.
 #include "parAlmond.hpp"
 #include "parAlmond/parAlmondAMGSetup.hpp"
 
+namespace libp {
+
 namespace parAlmond {
 
-parCSR *tentativeProlongator(parCSR *A, hlong *FineToCoarse,
-                            hlong *globalAggStarts, dfloat *null){
+parCSR tentativeProlongator(parCSR& A, memory<hlong> FineToCoarse,
+                            memory<hlong> globalAggStarts, memory<dfloat> null){
 
-  int rank, size;
-  MPI_Comm_rank(A->comm, &rank);
-  MPI_Comm_size(A->comm, &size);
+  int rank = A.comm.rank();
+  // int size = A.comm.size();
 
-  const dlong NCoarse = (dlong) (globalAggStarts[rank+1]-globalAggStarts[rank]); //local num agg
+  const dlong NCoarse = static_cast<dlong>(globalAggStarts[rank+1]-globalAggStarts[rank]); //local num agg
 
-  parCOO cooP(A->platform, A->comm);
+  parCOO cooP(A.platform, A.comm);
 
   //copy global partition
-  cooP.globalRowStarts = (hlong *) calloc(size+1,sizeof(hlong));
-  cooP.globalColStarts = (hlong *) calloc(size+1,sizeof(hlong));
-  memcpy(cooP.globalRowStarts, A->globalRowStarts, (size+1)*sizeof(hlong));
-  memcpy(cooP.globalColStarts, globalAggStarts,   (size+1)*sizeof(hlong));
+  cooP.globalRowStarts = A.globalRowStarts;
+  cooP.globalColStarts = globalAggStarts;
 
-  const hlong globalRowOffset = A->globalRowStarts[rank];
+  const hlong globalRowOffset = A.globalRowStarts[rank];
 
-  cooP.nnz = A->Nrows;
-  cooP.entries = (parCOO::nonZero_t *) malloc(cooP.nnz*sizeof(parCOO::nonZero_t));
+  cooP.nnz = A.Nrows;
+  cooP.entries.malloc(cooP.nnz);
 
   for(dlong n=0; n<cooP.nnz; n++) {
     cooP.entries[n].row = n + globalRowOffset;
@@ -58,40 +57,42 @@ parCSR *tentativeProlongator(parCSR *A, hlong *FineToCoarse,
   }
 
   //build P from coo matrix
-  parCSR* P = new parCSR(cooP);
+  parCSR P(cooP);
 
   // normalize the columns of P and fill null with coarse null vector
 
   //check size. If this ever triggers, we'll have to implement a re-alloc of null
-  if (P->Ncols > A->Ncols)
-    LIBP_ABORT(string("Size of Coarse nullvector is too large, need to re-alloc"))
+  LIBP_ABORT("Size of Coarse nullvector is too large, need to re-alloc",
+             P.Ncols > A.Ncols);
 
   //set coarse null to 0
-  for(dlong i=0; i<P->Ncols; i++) null[i] = 0.0;
+  for(dlong i=0; i<P.Ncols; i++) null[i] = 0.0;
 
   //add local nonzeros
-  for(dlong i=0; i<P->diag.nnz; i++)
-    null[P->diag.cols[i]] += P->diag.vals[i] * P->diag.vals[i];
+  for(dlong i=0; i<P.diag.nnz; i++)
+    null[P.diag.cols[i]] += P.diag.vals[i] * P.diag.vals[i];
 
   //add nonlocal nonzeros
-  for(dlong i=0; i<P->offd.nnz; i++)
-    null[P->offd.cols[i]] += P->offd.vals[i] * P->offd.vals[i];
+  for(dlong i=0; i<P.offd.nnz; i++)
+    null[P.offd.cols[i]] += P.offd.vals[i] * P.offd.vals[i];
 
   //add the halo values to their origins
-  P->halo->Combine(null, 1, ogs_dfloat);
+  P.halo.Combine(null, 1);
 
   for(dlong i=0; i<NCoarse; i++)
     null[i] = sqrt(null[i]);
 
   //share the results
-  P->halo->Exchange(null, 1, ogs_dfloat);
+  P.halo.Exchange(null, 1);
 
-  for(dlong i=0; i<P->diag.nnz; i++)
-    P->diag.vals[i] /= null[P->diag.cols[i]];
-  for(dlong i=0; i<P->offd.nnz; i++)
-    P->offd.vals[i] /= null[P->offd.cols[i]];
+  for(dlong i=0; i<P.diag.nnz; i++)
+    P.diag.vals[i] /= null[P.diag.cols[i]];
+  for(dlong i=0; i<P.offd.nnz; i++)
+    P.offd.vals[i] /= null[P.offd.cols[i]];
 
   return P;
 }
 
 } //namespace parAlmond
+
+} //namespace libp

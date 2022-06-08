@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,70 +25,52 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh2D.hpp"
-#include "mesh/mesh3D.hpp"
 
-void meshQuad3D::ReferenceNodes(int N_){
-  mesh_t *mesh_p = (mesh_t*) this;
-  meshQuad2D* quadmesh = (meshQuad2D*) mesh_p;
-  quadmesh->meshQuad2D::ReferenceNodes(N_);
-}
+namespace libp {
 
-void meshQuad2D::ReferenceNodes(int N_){
+void mesh_t::ReferenceNodesQuad2D(){
 
-  N = N_;
-  Nfp = N+1;
   Nq = (N+1);
+  Nfp = N+1;
   Np = (N+1)*(N+1);
 
   /* Nodal Data */
-  r = (dfloat *) malloc(Np*sizeof(dfloat));
-  s = (dfloat *) malloc(Np*sizeof(dfloat));
   NodesQuad2D(N, r, s);
-
-  faceNodes = (int *) malloc(Nfaces*Nfp*sizeof(int));
   FaceNodesQuad2D(N, r, s, faceNodes);
-
-  vertexNodes = (int*) calloc(Nverts, sizeof(int));
   VertexNodesQuad2D(N, r, s, vertexNodes);
 
   //GLL quadrature
-  dfloat *gllz = (dfloat *) malloc((N+1)*sizeof(dfloat));
-  w = (dfloat *) malloc((N+1)*sizeof(dfloat));
-  JacobiGLL(N, gllz, w);
+  JacobiGLL(N, gllz, gllw);
 
   //Lumped Mass matrix
-  MM    = (dfloat *) malloc(Np*Np*sizeof(dfloat));
-  invMM = (dfloat *) malloc(Np*Np*sizeof(dfloat));
-  LumpedMassMatrixQuad2D(N, w, MM);
-  invLumpedMassMatrixQuad2D(N, w, invMM);
+  LumpedMassMatrixQuad2D(N, gllw, MM);
+  invLumpedMassMatrixQuad2D(N, gllw, invMM);
 
   // D matrix
-  D = (dfloat *) malloc(Nq*Nq*sizeof(dfloat));
-  Dmatrix1D(N, Nq, gllz, Nq, gllz, D);
+  Dmatrix1D(N, gllz, gllz, D);
+  o_D = platform.malloc<dfloat>(D);
 
   /* Plotting data */
-  plotN = N_ + 3; //enriched interpolation space for plotting
+  plotN = N + 3; //enriched interpolation space for plotting
   plotNq = plotN + 1;
   plotNp = plotNq*plotNq;
 
   /* Plotting nodes */
-  plotR = (dfloat *) malloc(plotNp*sizeof(dfloat));
-  plotS = (dfloat *) malloc(plotNp*sizeof(dfloat));
   EquispacedNodesQuad2D(plotN, plotR, plotS);
 
   plotNelements = 2*plotN*plotN;
   plotNverts = 3;
-  plotEToV = (int*) malloc(plotNelements*plotNverts*sizeof(int));
   EquispacedEToVQuad2D(plotN, plotEToV);
 
-  dfloat *plot1D = (dfloat *) malloc(plotNq*sizeof(dfloat));
+  memory<dfloat> plot1D;
   EquispacedNodes1D(plotN, plot1D);
+  InterpolationMatrix1D(N, gllz, plot1D, plotInterp);
 
-  plotInterp = (dfloat *) malloc(Nq*plotNq*sizeof(dfloat));
-  InterpolationMatrix1D(N, Nq, gllz, plotNq, plot1D, plotInterp);
-
-  free(gllz);
-  free(plot1D);
+  props["defines/" "p_N"]= N;
+  props["defines/" "p_Nq"]= Nq;
+  props["defines/" "p_Np"]= Np;
+  props["defines/" "p_Nfp"]= Nfp;
+  props["defines/" "p_NfacesNfp"]= Nfp*Nfaces;
 }
 
+}//namespace libp

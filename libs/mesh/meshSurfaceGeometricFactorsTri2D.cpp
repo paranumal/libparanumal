@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,17 +25,32 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh2D.hpp"
 
-void meshTri2D::SurfaceGeometricFactors(){
+namespace libp {
+
+void mesh_t::SurfaceGeometricFactorsTri2D(){
 
   /* unified storage array for geometric factors */
-  Nsgeo = 6;
-  sgeo = (dfloat*) calloc((Nelements+totalHaloPairs)*
-				Nsgeo*Nfaces,
-				sizeof(dfloat));
+  Nsgeo = 5;
 
-  for(dlong e=0;e<Nelements+totalHaloPairs;++e){ /* for each element */
+  NXID  = 0;
+  NYID  = 1;
+  SJID  = 2;
+  IJID  = 3;
+  IHID  = 4;
+
+  props["defines/" "p_Nsgeo"]= Nsgeo;
+  props["defines/" "p_NXID"]= NXID;
+  props["defines/" "p_NYID"]= NYID;
+  props["defines/" "p_SJID"]= SJID;
+  props["defines/" "p_IJID"]= IJID;
+  props["defines/" "p_IHID"]= IHID;
+
+  sgeo.malloc(Nelements*Nsgeo*Nfaces);
+
+  memory<dfloat> hinv((Nelements+totalHaloPairs)*Nfaces);
+
+  for(dlong e=0;e<Nelements;++e){ /* for each element */
 
     /* find vertex indices and physical coordinates */
     dlong id = e*Nverts;
@@ -50,11 +65,9 @@ void meshTri2D::SurfaceGeometricFactors(){
 
     /* compute geometric factors for affine coordinate transform*/
     dfloat J = 0.25*((xe2-xe1)*(ye3-ye1) - (xe3-xe1)*(ye2-ye1));
-    if(J<0) {
-      stringstream ss;
-      ss << "Negative J found at element " << e << "\n";
-      LIBP_ABORT(ss.str())
-    }
+
+    LIBP_ABORT("Negative J found at element " << e,
+               J<0);
 
     /* face 1 */
     dlong base = Nsgeo*Nfaces*e;
@@ -67,6 +80,8 @@ void meshTri2D::SurfaceGeometricFactors(){
     sgeo[base+SJID] = d1/2.;
     sgeo[base+IJID] = 1./J;
 
+    hinv[Nfaces*e+0] = 0.25*d1/J;
+
     /* face 2 */
     base += Nsgeo;
     dfloat nx2 = ye3-ye2;
@@ -78,6 +93,8 @@ void meshTri2D::SurfaceGeometricFactors(){
     sgeo[base+SJID] = d2/2.; // TW fixed bug d1=>d2
     sgeo[base+IJID] = 1./J;
 
+    hinv[Nfaces*e+1] = 0.25*d2/J;
+
     /* face 3 */
     base += Nsgeo;
     dfloat nx3 = ye1-ye3;
@@ -88,46 +105,45 @@ void meshTri2D::SurfaceGeometricFactors(){
     sgeo[base+NYID] = ny3/d3;
     sgeo[base+SJID] = d3/2.;
     sgeo[base+IJID] = 1./J;
+
+    hinv[Nfaces*e+2] = 0.25*d3/J;
   }
 
+  halo.Exchange(hinv, Nfaces);
 
-  dfloat href = 0.;
-  dfloat tol  = 1.;
-  for(dlong e=0;e<Nelements;++e){ /* for each non-halo element */
-    for(int f=0;f<Nfaces;++f){
-      dlong baseM = e*Nfaces + f;
+  // dfloat href = 0.;
+  // dfloat tol  = 1.;
+  // for(dlong e=0;e<Nelements;++e){ /* for each non-halo element */
+  //   for(int f=0;f<Nfaces;++f){
+  //     dlong baseM = e*Nfaces + f;
 
-      // rescaling - missing factor of 2 ? (only impacts penalty and thus stiffness)  A = L*h/2 => (J*2) = (sJ*2)*h/2 => h  = 2*J/sJ
-      dfloat hinvM = sgeo[baseM*Nsgeo + SJID]*sgeo[baseM*Nsgeo + IJID];
+  //     // rescaling - missing factor of 2 ? (only impacts penalty and thus stiffness)  A = L*h/2 => (J*2) = (sJ*2)*h/2 => h  = 2*J/sJ
+  //     dfloat hinvM = sgeo[baseM*Nsgeo + SJID]*sgeo[baseM*Nsgeo + IJID];
 
-      href = mymax(hinvM,href);
-    }
-  }
+  //     href = mymax(hinvM,href);
+  //   }
+  // }
 
-  for(dlong e=0;e<Nelements;++e){ /* for each non-halo element */
-    for(int f=0;f<Nfaces;++f){
-      dlong baseM = e*Nfaces + f;
+  for(dlong eM=0;eM<Nelements;++eM){ /* for each non-halo element */
+    for(int fM=0;fM<Nfaces;++fM){
+      dlong eP = EToE[eM*Nfaces+fM];
 
-      // awkward: (need to find eP,fP relative to bulk+halo)
-      dlong idP = vmapP[e*Nfp*Nfaces+f*Nfp+0];
-      dlong eP = (idP>=0) ? (idP/Np):e;
+      if (eP<0) eP = eM;
 
-      int fP = EToF[baseM];
-      fP = (fP==-1) ? f:fP;
+      int fP = EToF[eM*Nfaces+fM];
+      if (fP<0) fP = fM;
 
+      dlong baseM = eM*Nfaces + fM;
       dlong baseP = eP*Nfaces + fP;
 
       // rescaling - A = L*h/2 => (J*2) = (sJ*2)*h/2 => h  = 2*J/sJ
-      dfloat hinvM = 0.5*sgeo[baseM*Nsgeo + SJID]*sgeo[baseM*Nsgeo + IJID];
-      dfloat hinvP = 0.5*sgeo[baseP*Nsgeo + SJID]*sgeo[baseP*Nsgeo + IJID];
+      dfloat hinvM = hinv[baseM];
+      dfloat hinvP = hinv[baseP];
+      sgeo[baseM*Nsgeo+IHID] = std::max(hinvM,hinvP);
 
-      sgeo[baseM*Nsgeo+IHID] = mymax(hinvM,hinvP);
-      sgeo[baseP*Nsgeo+IHID] = mymax(hinvM,hinvP);
-
-      if (EToB[f+e*Nfaces] > 0) { //enforce a stronger penalty on boundaries
-        sgeo[baseM*Nsgeo+IHID] = mymax(sgeo[baseM*Nsgeo+IHID],tol*href);
-        sgeo[baseP*Nsgeo+IHID] = mymax(sgeo[baseP*Nsgeo+IHID],tol*href);
-      }
+      // if (EToB[fM+eM*Nfaces] > 0) { //enforce a stronger penalty on boundaries
+      //   sgeo[baseM*Nsgeo+IHID] *= 2;
+      // }
 #if 0
       printf("e=%d f=%d (eP=%d,fP=%d) nx=%5.4f, ny=%5.4f, sJ=%5.4f, invJ=%5.4f, hinv=%f\n"
 	     ,e,f,eP,fP,
@@ -140,4 +156,7 @@ void meshTri2D::SurfaceGeometricFactors(){
     }
   }
 
+  o_sgeo = platform.malloc<dfloat>(sgeo);
 }
+
+} //namespace libp

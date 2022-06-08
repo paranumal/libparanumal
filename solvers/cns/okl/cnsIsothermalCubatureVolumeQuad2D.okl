@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -99,7 +99,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     //interpolate in i, store in register
     for(int j=0;j<p_cubNq;++j;@inner(1)){
@@ -124,7 +123,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     //write register back to @shared
     for(int j=0;j<p_cubNq;++j;@inner(1)){
@@ -141,7 +139,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     //interpolate in j and store flux in register
     for(int j=0;j<p_cubNq;++j;@inner(1)){
@@ -164,7 +161,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     for(int j=0;j<p_cubNq;++j;@inner(1)){
       for(int i=0;i<p_cubNq;++i;@inner(0)){
@@ -220,7 +216,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     //project/differentiate in j
     for(int j=0;j<p_cubNq;++j;@inner(1)){
@@ -244,7 +239,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     //write register back to @shared
     for(int j=0;j<p_cubNq;++j;@inner(1)){
@@ -260,7 +254,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     //project/differentiate in i and write back
     for(int j=0;j<p_cubNq;++j;@inner(1)){

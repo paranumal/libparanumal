@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -139,7 +139,6 @@ SOFTWARE.
     //#pragma unroll
     for(int io=0;io<p_cubNp;io+=p_Np){ // block the cubature nodes
 
-      @barrier("local");
 
       for(int es=0;es<p_NbV;++es;@inner(1)){// for all elements in block
         for(int ns=0;ns<p_Np;++ns;@inner(0)){     // for all nodes in this element
@@ -181,7 +180,6 @@ SOFTWARE.
       }
 
       // Make sure all node data is loaded into @shared
-      @barrier("local");
 
       for(int es=0;es<p_NbV;++es;@inner(1)){
         for(int n=0;n<p_Np;++n;@inner(0)){
@@ -346,7 +344,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     // interpolate to surface integration nodes
     for(int es=0;es<p_NblockS4;++es;@inner(1)){
@@ -375,7 +372,6 @@ SOFTWARE.
         }
       }
     }
-    @barrier("local");
 
     // for all face nodes of all elements
     for(int es=0;es<p_NblockS4;++es;@inner(1)){
@@ -394,7 +390,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     // interpolate to surface integration nodes
     for(int es=0;es<p_NblockS4;++es;@inner(1)){
@@ -421,7 +416,6 @@ SOFTWARE.
         }
       }
     }
-    @barrier("local");
 
       // Loop for positive traces
     // for all face nodes of all elements
@@ -441,7 +435,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     // interpolate to surface integration nodes
     for(int es=0;es<p_NblockS4;++es;@inner(1)){
@@ -468,7 +461,6 @@ SOFTWARE.
         }
       }
     }
-    @barrier("local");
 
     // for all face nodes of all elements
     for(int es=0;es<p_NblockS4;++es;@inner(1)){
@@ -487,7 +479,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     // interpolate to surface integration nodes
     for(int es=0;es<p_NblockS4;++es;@inner(1)){
@@ -514,7 +505,6 @@ SOFTWARE.
         }
       }
     }
-    @barrier("local");
 
     // Use traces to compuite and store flux
     for(int es=0;es<p_NblockS4;++es;@inner(1)){
@@ -555,7 +545,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     // lift from surface integration to volume nodes
     for(int es=0;es<p_NblockS4;++es;@inner(1)){

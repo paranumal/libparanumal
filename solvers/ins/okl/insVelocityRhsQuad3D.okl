@@ -2,7 +2,7 @@
 
   The MIT License (MIT)
 
-  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -26,28 +26,28 @@
 
 // Compute RHS Forcing i.e. 1/nu*(-grad(Pr) + sum(a_i x u_i)^(n-i) -sum(b_i x N(u)^(n-i))
 @kernel void insVelocityRhsARKQuad3D(const dlong Nelements,
-				     const int stage,  
-				     @restrict const  dfloat *  vgeo,
-				     @restrict const  dfloat *  MM,
-				     const dfloat idt,
-				     const dfloat inu,
-				     @restrict const  dfloat *  erkA,
-				     @restrict const  dfloat *  irkA,
-				     @restrict const  dfloat *  prkA,
-				     @restrict const  dfloat *  prkB,
-				     const dlong fieldOffset,
-				     @restrict const  dfloat *  U,
-				     @restrict const  dfloat *  NU,
-				     @restrict const  dfloat *  LU,
-				     @restrict const  dfloat *  GP,
-				     @restrict dfloat *  rhsU,
-				     @restrict dfloat *  rhsV,
-				     @restrict dfloat *  rhsW){
+                                     const int stage,
+                                     @restrict const  dfloat *  vgeo,
+                                     @restrict const  dfloat *  MM,
+                                     const dfloat idt,
+                                     const dfloat inu,
+                                     @restrict const  dfloat *  erkA,
+                                     @restrict const  dfloat *  irkA,
+                                     @restrict const  dfloat *  prkA,
+                                     @restrict const  dfloat *  prkB,
+                                     const dlong fieldOffset,
+                                     @restrict const  dfloat *  U,
+                                     @restrict const  dfloat *  NU,
+                                     @restrict const  dfloat *  LU,
+                                     @restrict const  dfloat *  GP,
+                                     @restrict dfloat *  rhsU,
+                                     @restrict dfloat *  rhsV,
+                                     @restrict dfloat *  rhsW){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
 
     for(int es=0;es<p_NblockV;++es;@inner(2)){// for all elements in block
-      for(int j=0;j<p_Nq;++j;@inner(1)){ 
+      for(int j=0;j<p_Nq;++j;@inner(1)){
         for(int i=0;i<p_Nq;++i;@inner(0)){
           const dlong e = eo+es; // element in block
           if(e<Nelements){
@@ -91,20 +91,20 @@
 
 // rhsU^s = MM*(U^n - \sum^s-1 ea_si N(U^i) + \sum^s-1 ia_si LU^i - \sum^s-1 pa_si GP^i)/ia_ss nu dt
 @kernel void insVelocityRhsEXTBDFQuad3D(const dlong Nelements,
-					@restrict const  dfloat *  vgeo,
-					@restrict const  dfloat *  MM,
-					const dfloat idt,
-					const dfloat inu,
-					@restrict const  dfloat *  extbdfA,
-					@restrict const  dfloat *  extbdfB,
-					@restrict const  dfloat *  extbdfC,
-					const dlong fieldOffset,
-					@restrict const  dfloat *  U,
-					@restrict const  dfloat *  NU,
-					@restrict const  dfloat *  GP,
-					@restrict dfloat *  rhsU,
-					@restrict dfloat *  rhsV,
-					@restrict dfloat *  rhsW){
+                                        @restrict const  dfloat *  vgeo,
+                                        @restrict const  dfloat *  MM,
+                                        const dfloat idt,
+                                        const dfloat inu,
+                                        @restrict const  dfloat *  extbdfA,
+                                        @restrict const  dfloat *  extbdfB,
+                                        @restrict const  dfloat *  extbdfC,
+                                        const dlong fieldOffset,
+                                        @restrict const  dfloat *  U,
+                                        @restrict const  dfloat *  NU,
+                                        @restrict const  dfloat *  GP,
+                                        @restrict dfloat *  rhsU,
+                                        @restrict dfloat *  rhsV,
+                                        @restrict dfloat *  rhsW){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
 

@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,59 +27,41 @@ SOFTWARE.
 #include "elliptic.hpp"
 #include "ellipticPrecon.hpp"
 
-elliptic_t* elliptic_t::SetupRingPatch(mesh_t& meshPatch){
+elliptic_t elliptic_t::SetupRingPatch(mesh_t& meshPatch){
 
   //just reuse the current solver if there are no neighbors
-  if (mesh.size == 1) return this;
-
-  elliptic_t* elliptic = new elliptic_t(platform, meshPatch, settings, lambda);
+  if (mesh.size == 1) return *this;
 
   //shallow copy
-  elliptic->Nfields = Nfields;
-  elliptic->lambda = lambda;
+  elliptic_t elliptic = *this;
 
-  elliptic->disc_ipdg = disc_ipdg;
-  elliptic->disc_c0 = disc_c0;
+  elliptic.mesh = meshPatch;
+  elliptic.comm = meshPatch.comm;
 
   //buffer for gradient
   if (settings.compareSetting("DISCRETIZATION","IPDG")) {
     dlong Ntotal = meshPatch.Np*meshPatch.Nelements;
-    elliptic->grad = (dfloat*) calloc(Ntotal*4, sizeof(dfloat));
-    elliptic->o_grad  = platform.malloc(Ntotal*4*sizeof(dfloat), elliptic->grad);
+    elliptic.grad.malloc(Ntotal*4, 0.0);
+    elliptic.o_grad = platform.malloc<dfloat>(elliptic.grad);
   } else {
     //buffer for local Ax
     dlong Ntotal = meshPatch.Np*meshPatch.Nelements;
-    elliptic->o_AqL  = platform.malloc(Ntotal*sizeof(dfloat));
+    elliptic.o_AqL = platform.malloc<dfloat>(Ntotal);
   }
-  //tau (penalty term in IPDG)
-  elliptic->tau = tau;
 
   /*setup trace halo exchange */
-  elliptic->traceHalo = meshPatch.HaloTraceSetup(elliptic->Nfields);
-
-  elliptic->BCType = BCType;
-
-  elliptic->maskKernel = maskKernel;
+  elliptic.traceHalo = meshPatch.HaloTraceSetup(Nfields);
 
   //setup boundary flags and make mask and masked ogs
-  elliptic->BoundarySetup();
-
-
-  // Ax kernel
-  if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
-    elliptic->partialAxKernel = partialAxKernel;
-  } else if (settings.compareSetting("DISCRETIZATION","IPDG")) {
-    elliptic->partialGradientKernel = partialGradientKernel;
-    elliptic->partialIpdgKernel = partialIpdgKernel;
-  }
+  elliptic.BoundarySetup();
 
   if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
-    elliptic->Ndofs = elliptic->ogsMasked->Ngather*elliptic->Nfields;
+    elliptic.Ndofs = elliptic.ogsMasked.Ngather*Nfields;
   } else {
-    elliptic->Ndofs = meshPatch.Nelements*meshPatch.Np*elliptic->Nfields;
+    elliptic.Ndofs = meshPatch.Nelements*meshPatch.Np*Nfields;
   }
 
-  elliptic->precon = NULL;
+  elliptic.precon = precon_t();
 
   return elliptic;
 }

@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,76 +25,95 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh3D.hpp"
 
-void meshTet3D::ReferenceNodes(int N_){
+namespace libp {
 
-  N = N_;
+void mesh_t::ReferenceNodesTet3D(){
+
   Nfp = ((N+1)*(N+2))/2;
   Np = ((N+1)*(N+2)*(N+3))/6;
 
   /* Nodal Data */
-  r = (dfloat *) malloc(Np*sizeof(dfloat));
-  s = (dfloat *) malloc(Np*sizeof(dfloat));
-  t = (dfloat *) malloc(Np*sizeof(dfloat));
   NodesTet3D(N, r, s, t);
-
-  faceNodes = (int *) malloc(Nfaces*Nfp*sizeof(int));
   FaceNodesTet3D(N, r, s, t, faceNodes);
-
-  vertexNodes = (int*) calloc(Nverts, sizeof(int));
   VertexNodesTet3D(N, r, s, t, vertexNodes);
 
-  dfloat *V = (dfloat *) malloc(Np*Np*sizeof(dfloat));
-  VandermondeTet3D(N, Np, r, s, t, V);
+  memory<dfloat> V;
+  VandermondeTet3D(N, r, s, t, V);
 
   //Mass matrix
-  MM = (dfloat *) malloc(Np*Np*sizeof(dfloat));
-  invMM = (dfloat *) malloc(Np*Np*sizeof(dfloat));
   MassMatrixTet3D(Np, V, MM);
   invMassMatrixTet3D(Np, V, invMM);
-  free(V);
+  o_MM = platform.malloc<dfloat>(MM); //MM is symmetric
 
   //packed D matrices
-  D  = (dfloat *) malloc(3*Np*Np*sizeof(dfloat));
+  DmatrixTet3D(N, r, s, t, D);
   Dr = D + 0*Np*Np;
   Ds = D + 1*Np*Np;
   Dt = D + 2*Np*Np;
-  DmatrixTet3D(N, Np, r, s, t, Dr, Ds, Dt);
 
-  LIFT = (dfloat *) malloc(Np*Nfaces*Nfp*sizeof(dfloat));
+  memory<dfloat> DT(3*Np*Np);
+  memory<dfloat> DrT = DT + 0*Np*Np;
+  memory<dfloat> DsT = DT + 1*Np*Np;
+  memory<dfloat> DtT = DT + 2*Np*Np;
+  linAlg_t::matrixTranspose(Np, Np, Dr, Np, DrT, Np);
+  linAlg_t::matrixTranspose(Np, Np, Ds, Np, DsT, Np);
+  linAlg_t::matrixTranspose(Np, Np, Dt, Np, DtT, Np);
+  o_D = platform.malloc<dfloat>(DT);
+
   LIFTmatrixTet3D(N, faceNodes, r, s, t, LIFT);
-
-  sM = (dfloat *) calloc(Np*Nfaces*Nfp,sizeof(dfloat));
   SurfaceMassMatrixTet3D(N, MM, LIFT, sM);
 
+  memory<dfloat> LIFTT(Np*Nfaces*Nfp);
+  linAlg_t::matrixTranspose(Np, Nfp*Nfaces, LIFT, Nfp*Nfaces, LIFTT, Np);
+
+  memory<dfloat> sMT(Np*Nfaces*Nfp);
+  linAlg_t::matrixTranspose(Np, Nfp*Nfaces, sM, Nfp*Nfaces, sMT, Np);
+
+  o_sM = platform.malloc<dfloat>(sMT);
+  o_LIFT = platform.malloc<dfloat>(LIFTT);
+
   //packed stiffness matrices
-  S = (dfloat*) calloc(6*Np*Np, sizeof(dfloat));
+  SmatrixTet3D(N, Dr, Ds, Dt, MM, S);
   Srr = S + 0*Np*Np;
   Srs = S + 1*Np*Np;
   Srt = S + 2*Np*Np;
   Sss = S + 3*Np*Np;
   Sst = S + 4*Np*Np;
   Stt = S + 5*Np*Np;
-  SmatrixTet3D(N, Dr, Ds, Dt, MM, Srr, Srs, Srt, Sss, Sst, Stt);
+
+  memory<dfloat> ST(6*Np*Np);
+  memory<dfloat> SrrT = ST + 0*Np*Np;
+  memory<dfloat> SrsT = ST + 1*Np*Np;
+  memory<dfloat> SrtT = ST + 2*Np*Np;
+  memory<dfloat> SssT = ST + 3*Np*Np;
+  memory<dfloat> SstT = ST + 4*Np*Np;
+  memory<dfloat> SttT = ST + 5*Np*Np;
+  linAlg_t::matrixTranspose(Np, Np, Srr, Np, SrrT, Np);
+  linAlg_t::matrixTranspose(Np, Np, Srs, Np, SrsT, Np);
+  linAlg_t::matrixTranspose(Np, Np, Srt, Np, SrtT, Np);
+  linAlg_t::matrixTranspose(Np, Np, Sss, Np, SssT, Np);
+  linAlg_t::matrixTranspose(Np, Np, Sst, Np, SstT, Np);
+  linAlg_t::matrixTranspose(Np, Np, Stt, Np, SttT, Np);
+
+  o_S = platform.malloc<dfloat>(ST);
 
   /* Plotting data */
   plotN = N + 3; //enriched interpolation space for plotting
   plotNp = (plotN+1)*(plotN+2)*(plotN+3)/6;
 
   /* Plotting nodes */
-  plotR = (dfloat *) malloc(plotNp*sizeof(dfloat));
-  plotS = (dfloat *) malloc(plotNp*sizeof(dfloat));
-  plotT = (dfloat *) malloc(plotNp*sizeof(dfloat));
   EquispacedNodesTet3D(plotN, plotR, plotS, plotT);
 
   plotNelements = plotN*plotN*plotN;
   plotNverts = 4;
-  plotEToV = (int*) malloc(plotNelements*plotNverts*sizeof(int));
   EquispacedEToVTet3D(plotN, plotEToV);
+  InterpolationMatrixTet3D(N, r, s, t, plotR, plotS, plotT, plotInterp);
 
-  plotInterp = (dfloat *) malloc(Np*plotNp*sizeof(dfloat));
-  InterpolationMatrixTet3D(N, Np, r, s, t, plotNp, plotR, plotS, plotT, plotInterp);
+  props["defines/" "p_N"]= N;
+  props["defines/" "p_Np"]= Np;
+  props["defines/" "p_Nfp"]= Nfp;
+  props["defines/" "p_NfacesNfp"]= Nfp*Nfaces;
 }
 
-
+} //namespace libp

@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2020 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim WarburtonTim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,32 +25,32 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh2D.hpp"
+
+namespace libp {
 
 // ------------------------------------------------------------------------
 // TRI 2D NODES
 // ------------------------------------------------------------------------
-void mesh_t::NodesTri2D(int _N, dfloat *_r, dfloat *_s){
-
-  int _Np = (_N+1)*(_N+2)/2;
-
+void mesh_t::NodesTri2D(const int _N,
+                        memory<dfloat>& _r,
+                        memory<dfloat>& _s){
   EquispacedNodesTri2D(_N, _r, _s); //make equispaced nodes on reference triangle
-  WarpBlendTransformTri2D(_N, _Np, _r, _s); //apply warp&blend transform
+  WarpBlendTransformTri2D(_N, _r, _s); //apply warp&blend transform
 }
 
-void mesh_t::FaceNodesTri2D(int _N, dfloat *_r, dfloat *_s, int *_faceNodes){
-  int _Nfp = _N+1;
-  int _Np = (_N+1)*(_N+2)/2;
+void mesh_t::FaceNodesTri2D(const int _N,
+                            const memory<dfloat> _r,
+                            const memory<dfloat> _s,
+                            memory<int>& _faceNodes){
+  const int _Nfp = _N+1;
+  const int _Np = (_N+1)*(_N+2)/2;
 
   int cnt[3];
   for (int i=0;i<3;i++) cnt[i]=0;
 
-  dfloat deps = 1.;
-  while((1.+deps)>1.)
-    deps *= 0.5;
+  const dfloat NODETOL = 1.0e-5;
 
-  const dfloat NODETOL = 1000.*deps;
-
+  _faceNodes.malloc(3*_Nfp);
   for (int n=0;n<_Np;n++) {
     if(fabs(_s[n]+1)<NODETOL)
       _faceNodes[0*_Nfp+(cnt[0]++)] = n;
@@ -61,8 +61,11 @@ void mesh_t::FaceNodesTri2D(int _N, dfloat *_r, dfloat *_s, int *_faceNodes){
   }
 }
 
-void mesh_t::VertexNodesTri2D(int _N, dfloat *_r, dfloat *_s, int *_vertexNodes){
-  int _Np = (_N+1)*(_N+2)/2;
+void mesh_t::VertexNodesTri2D(const int _N,
+                              const memory<dfloat> _r,
+                              const memory<dfloat> _s,
+                              memory<int>& _vertexNodes){
+  const int _Np = (_N+1)*(_N+2)/2;
 
   dfloat deps = 1.;
   while((1.+deps)>1.)
@@ -70,6 +73,7 @@ void mesh_t::VertexNodesTri2D(int _N, dfloat *_r, dfloat *_s, int *_vertexNodes)
 
   const dfloat NODETOL = 1000.*deps;
 
+  _vertexNodes.malloc(3);
   for(int n=0;n<_Np;++n){
     if( (_r[n]+1)*(_r[n]+1)+(_s[n]+1)*(_s[n]+1)<NODETOL)
       _vertexNodes[0] = n;
@@ -80,8 +84,127 @@ void mesh_t::VertexNodesTri2D(int _N, dfloat *_r, dfloat *_s, int *_vertexNodes)
   }
 }
 
+/*Find a matching array between nodes on matching faces */
+void mesh_t::FaceNodeMatchingTri2D(const memory<dfloat> _r,
+                                   const memory<dfloat> _s,
+                                   const memory<int> _faceNodes,
+                                   const memory<int> _faceVertices,
+                                   memory<int>& R){
+
+  const int _Nfaces = 3;
+  const int _Nverts = 3;
+  const int _NfaceVertices = 2;
+
+  const int _Nfp = _faceNodes.length()/_Nfaces;
+
+  const dfloat NODETOL = 1.0e-5;
+
+  dfloat V[2] = {-1.0, 1.0};
+
+  dfloat EX0[_Nverts];
+  dfloat EX1[_Nverts];
+
+  memory<dfloat> x0(_Nfp);
+  memory<dfloat> x1(_Nfp);
+
+  R.malloc(_Nfaces*_Nfaces*_NfaceVertices*_Nfp);
+
+  for (int fM=0;fM<_Nfaces;fM++) {
+
+    for (int v=0;v<_Nverts;v++) {
+      EX0[v] = 0.0;
+    }
+    //setup top element with face fM on the bottom
+    for (int v=0;v<_NfaceVertices;v++) {
+      int fv = _faceVertices[fM*_NfaceVertices + v];
+      EX0[fv] = V[v];
+    }
+
+    for(int n=0;n<_Nfp;++n){ /* for each face node */
+      const int fn = _faceNodes[fM*_Nfp+n];
+
+      /* (r,s) coordinates of interpolation nodes*/
+      dfloat rn = _r[fn];
+      dfloat sn = _s[fn];
+
+      /* physical coordinate of interpolation node */
+      x0[n] = -0.5*(rn+sn)*EX0[0]
+             + 0.5*(1+rn)*EX0[1]
+             + 0.5*(1+sn)*EX0[2];
+    }
+
+    for (int fP=0;fP<_Nfaces;fP++) { /*For each neighbor face */
+      for (int rot=0;rot<_NfaceVertices;rot++) { /* For each face rotation */
+        // Zero vertices
+        for (int v=0;v<_Nverts;v++) {
+          EX1[v] = 0.0;
+        }
+        //setup bottom element with face fP on the top
+        for (int v=0;v<_NfaceVertices;v++) {
+          int fv = _faceVertices[fP*_NfaceVertices + ((v+rot)%_NfaceVertices)];
+          EX1[fv] = V[v];
+        }
+
+        for(int n=0;n<_Nfp;++n){ /* for each node */
+          const int fn = _faceNodes[fP*_Nfp+n];
+
+          /* (r,s,t) coordinates of interpolation nodes*/
+          dfloat rn = _r[fn];
+          dfloat sn = _s[fn];
+
+          /* physical coordinate of interpolation node */
+          x1[n] = -0.5*(rn+sn)*EX1[0]
+                 + 0.5*(1+rn)*EX1[1]
+                 + 0.5*(1+sn)*EX1[2];
+        }
+
+        /* for each node on this face find the neighbor node */
+        for(int n=0;n<_Nfp;++n){
+          const dfloat xM = x0[n];
+
+          int m=0;
+          for(;m<_Nfp;++m){ /* for each neighbor node */
+            const dfloat xP = x1[m];
+
+            /* distance between target and neighbor node */
+            const dfloat dist = pow(xM-xP,2);
+
+            /* if neighbor node is close to target, match */
+            if(dist<NODETOL){
+              R[fM*_Nfaces*_NfaceVertices*_Nfp
+                + fP*_NfaceVertices*_Nfp
+                + rot*_Nfp + n] = m;
+              break;
+            }
+          }
+
+          /*Check*/
+          const dfloat xP = x1[m];
+
+          /* distance between target and neighbor node */
+          const dfloat dist = pow(xM-xP,2);
+          //This shouldn't happen
+          LIBP_ABORT("Unable to match face node, face: " << fM
+                     << ", matching face: " << fP
+                     << ", rotation: " << rot
+                     << ", node: " << n
+                     << ". Is the reference node set not symmetric?",
+                     dist>NODETOL);
+        }
+      }
+    }
+  }
+}
+
 // Create equidistributed nodes on reference triangle
-void mesh_t::EquispacedNodesTri2D(int _N, dfloat *_r, dfloat *_s){
+void mesh_t::EquispacedNodesTri2D(const int _N,
+                                  memory<dfloat>& _r,
+                                  memory<dfloat>& _s){
+
+  const int _Np = (_N+1)*(_N+2)/2;
+
+  _r.malloc(_Np);
+  _s.malloc(_Np);
 
   int sk = 0;
   for (int n=0;n<_N+1;n++) {
@@ -93,8 +216,11 @@ void mesh_t::EquispacedNodesTri2D(int _N, dfloat *_r, dfloat *_s){
   }
 }
 
-void mesh_t::EquispacedEToVTri2D(int _N, int *_EToV){
-  int _Nverts = 3;
+void mesh_t::EquispacedEToVTri2D(const int _N, memory<int>& _EToV){
+  const int _Nverts = 3;
+  const int _Nelements = _N*_N;
+
+  _EToV.malloc(_Nelements*_Nverts);
 
   int cnt=0;
   int sk=0;
@@ -120,7 +246,10 @@ void mesh_t::EquispacedEToVTri2D(int _N, int *_EToV){
   }
 }
 
-void mesh_t::SEMFEMNodesTri2D(int _N, int *_Np, dfloat **_r, dfloat **_s){
+void mesh_t::SEMFEMNodesTri2D(const int _N,
+                              int& _Np,
+                              memory<dfloat>& _r,
+                              memory<dfloat>& _s){
 
   const dfloat alpopt[12] = {0.0000, 5.0000, 3.0000, 2.2073, 2.5259, 2.7113,
                              2.4368, 2.4564, 2.3948, 2.4346, 2.4653, 2.4691};
@@ -138,10 +267,9 @@ void mesh_t::SEMFEMNodesTri2D(int _N, int *_Np, dfloat **_r, dfloat **_s){
 
   const dfloat NODETOL = 1000.*deps;
 
-  *_Np = (_N+1)*(_N+6)/2;
-
-  *_r = (dfloat *) malloc((*_Np)*sizeof(dfloat));
-  *_s = (dfloat *) malloc((*_Np)*sizeof(dfloat));
+  _Np = (_N+1)*(_N+6)/2;
+  _r.malloc(_Np);
+  _s.malloc(_Np);
 
   int sk=0;
   //Order N+1 boundary
@@ -151,8 +279,8 @@ void mesh_t::SEMFEMNodesTri2D(int _N, int *_Np, dfloat **_r, dfloat **_s){
       dfloat ss = -1.0 + 2.0*n/(_N+1);
       if((fabs(ss+1)<NODETOL) || (fabs(rr+ss)<NODETOL)
          || (fabs(rr+1)<NODETOL)) {
-        (*_r)[sk] = rr;
-        (*_s)[sk] = ss;
+        _r[sk] = rr;
+        _s[sk] = ss;
         sk++;
       }
     }
@@ -161,67 +289,69 @@ void mesh_t::SEMFEMNodesTri2D(int _N, int *_Np, dfloat **_r, dfloat **_s){
   //Order N+2 interior
   for (int n=1;n<_N+3-1;n++) {
     for (int m=1;m<_N+3-n-1;m++) {
-      (*_r)[sk] = -1.0 + 2.0*m/(_N+2);
-      (*_s)[sk] = -1.0 + 2.0*n/(_N+2);
+      _r[sk] = -1.0 + 2.0*m/(_N+2);
+      _s[sk] = -1.0 + 2.0*n/(_N+2);
       sk++;
     }
   }
-  WarpBlendTransformTri2D(_N+1, *_Np, *_r, *_s, alpha); //apply warp&blend transform
+  WarpBlendTransformTri2D(_N+1, _r, _s, alpha); //apply warp&blend transform
 }
 
-void mesh_t::SEMFEMEToVTri2D(int _N, int *_NelFEM, int **_EToV){
-  int _Nverts = 3;
+void mesh_t::SEMFEMEToVTri2D(const int _N,
+                             int& _NelFEM,
+                             memory<int>& _EToV){
+  const int _Nverts = 3;
 
-  *_NelFEM = 6+6*(_N-1)+(_N-1)*(_N-1);
-  *_EToV = (int*) malloc((*_NelFEM)*_Nverts*sizeof(int));
+  _NelFEM = 6+6*(_N-1)+(_N-1)*(_N-1);
+  _EToV.malloc(_NelFEM*_Nverts);
 
   //start with corner quads
   int cnt=0;
   int corner = 3*(_N+1); //first interior point
-  (*_EToV)[cnt*_Nverts+0] = 0;
-  (*_EToV)[cnt*_Nverts+1] = 1;
-  (*_EToV)[cnt*_Nverts+2] = _N+2;
+  _EToV[cnt*_Nverts+0] = 0;
+  _EToV[cnt*_Nverts+1] = 1;
+  _EToV[cnt*_Nverts+2] = _N+2;
   cnt++;
 
-  (*_EToV)[cnt*_Nverts+0] = 1;
-  (*_EToV)[cnt*_Nverts+1] = corner;
-  (*_EToV)[cnt*_Nverts+2] = _N+2;
+  _EToV[cnt*_Nverts+0] = 1;
+  _EToV[cnt*_Nverts+1] = corner;
+  _EToV[cnt*_Nverts+2] = _N+2;
   cnt++;
 
   corner += _N-1; //bottom right interior point
-  (*_EToV)[cnt*_Nverts+0] = _N;
-  (*_EToV)[cnt*_Nverts+1] = _N+1;
-  (*_EToV)[cnt*_Nverts+2] = _N+3;
+  _EToV[cnt*_Nverts+0] = _N;
+  _EToV[cnt*_Nverts+1] = _N+1;
+  _EToV[cnt*_Nverts+2] = _N+3;
   cnt++;
 
-  (*_EToV)[cnt*_Nverts+0] = _N;
-  (*_EToV)[cnt*_Nverts+1] = _N+3;
-  (*_EToV)[cnt*_Nverts+2] = corner;
+  _EToV[cnt*_Nverts+0] = _N;
+  _EToV[cnt*_Nverts+1] = _N+3;
+  _EToV[cnt*_Nverts+2] = corner;
   cnt++;
 
   corner = (_N+1)*(_N+6)/2-1; //top interior point
-  (*_EToV)[cnt*_Nverts+0] = 3*_N;
-  (*_EToV)[cnt*_Nverts+1] = 3*_N+1;
-  (*_EToV)[cnt*_Nverts+2] = 3*_N+2;
+  _EToV[cnt*_Nverts+0] = 3*_N;
+  _EToV[cnt*_Nverts+1] = 3*_N+1;
+  _EToV[cnt*_Nverts+2] = 3*_N+2;
   cnt++;
 
-  (*_EToV)[cnt*_Nverts+0] = 3*_N;
-  (*_EToV)[cnt*_Nverts+1] = corner;
-  (*_EToV)[cnt*_Nverts+2] = 3*_N+1;
+  _EToV[cnt*_Nverts+0] = 3*_N;
+  _EToV[cnt*_Nverts+1] = corner;
+  _EToV[cnt*_Nverts+2] = 3*_N+1;
   cnt++;
 
   //next the edges
   corner = 3*(_N+1); //first interior point
   int inc = 1; // increment to next interior point along this edge
   for (int i=0;i<_N-1;i++) {
-    (*_EToV)[cnt*_Nverts+0] = i+1;
-    (*_EToV)[cnt*_Nverts+1] = i+2;
-    (*_EToV)[cnt*_Nverts+2] = corner;
+    _EToV[cnt*_Nverts+0] = i+1;
+    _EToV[cnt*_Nverts+1] = i+2;
+    _EToV[cnt*_Nverts+2] = corner;
     cnt++;
 
-    (*_EToV)[cnt*_Nverts+0] = i+2;
-    (*_EToV)[cnt*_Nverts+1] = corner+inc;
-    (*_EToV)[cnt*_Nverts+2] = corner;
+    _EToV[cnt*_Nverts+0] = i+2;
+    _EToV[cnt*_Nverts+1] = corner+inc;
+    _EToV[cnt*_Nverts+2] = corner;
     cnt++;
     corner += inc;
   }
@@ -229,14 +359,14 @@ void mesh_t::SEMFEMEToVTri2D(int _N, int *_NelFEM, int **_EToV){
   corner = 3*(_N+1); //first interior point
   inc = _N; // increment to next interior point along this edge
   for (int i=0;i<_N-1;i++) {
-    (*_EToV)[cnt*_Nverts+0] = _N+2+2*i;
-    (*_EToV)[cnt*_Nverts+1] = corner;
-    (*_EToV)[cnt*_Nverts+2] = _N+4+2*i;
+    _EToV[cnt*_Nverts+0] = _N+2+2*i;
+    _EToV[cnt*_Nverts+1] = corner;
+    _EToV[cnt*_Nverts+2] = _N+4+2*i;
     cnt++;
 
-    (*_EToV)[cnt*_Nverts+0] = corner;
-    (*_EToV)[cnt*_Nverts+1] = corner+inc;
-    (*_EToV)[cnt*_Nverts+2] = _N+4+2*i;
+    _EToV[cnt*_Nverts+0] = corner;
+    _EToV[cnt*_Nverts+1] = corner+inc;
+    _EToV[cnt*_Nverts+2] = _N+4+2*i;
     cnt++;
     corner += inc;
     inc--;
@@ -245,14 +375,14 @@ void mesh_t::SEMFEMEToVTri2D(int _N, int *_NelFEM, int **_EToV){
   corner = 3*(_N+1)+_N-1; //bottom right interior point
   inc = _N-1; // increment to next interior point along this edge
   for (int i=0;i<_N-1;i++) {
-    (*_EToV)[cnt*_Nverts+0] = corner;
-    (*_EToV)[cnt*_Nverts+1] = _N+3+2*i;
-    (*_EToV)[cnt*_Nverts+2] = _N+5+2*i;
+    _EToV[cnt*_Nverts+0] = corner;
+    _EToV[cnt*_Nverts+1] = _N+3+2*i;
+    _EToV[cnt*_Nverts+2] = _N+5+2*i;
     cnt++;
 
-    (*_EToV)[cnt*_Nverts+0] = corner;
-    (*_EToV)[cnt*_Nverts+1] = _N+5+2*i;
-    (*_EToV)[cnt*_Nverts+2] = corner+inc;
+    _EToV[cnt*_Nverts+0] = corner;
+    _EToV[cnt*_Nverts+1] = _N+5+2*i;
+    _EToV[cnt*_Nverts+2] = corner+inc;
     cnt++;
     corner += inc;
     inc--;
@@ -265,15 +395,15 @@ void mesh_t::SEMFEMEToVTri2D(int _N, int *_NelFEM, int **_EToV){
     int shift = _N-j; //number of nodes in this row
 
     for (int i=0;i<_N-j-1;i++) {
-      (*_EToV)[cnt*_Nverts+0] = sk  ;
-      (*_EToV)[cnt*_Nverts+1] = sk+1;
-      (*_EToV)[cnt*_Nverts+2] = sk+shift;
+      _EToV[cnt*_Nverts+0] = sk  ;
+      _EToV[cnt*_Nverts+1] = sk+1;
+      _EToV[cnt*_Nverts+2] = sk+shift;
       cnt++;
 
       if (i!=_N-j-2) {
-        (*_EToV)[cnt*_Nverts+0] = sk+1;
-        (*_EToV)[cnt*_Nverts+1] = sk+shift+1;
-        (*_EToV)[cnt*_Nverts+2] = sk+shift;
+        _EToV[cnt*_Nverts+0] = sk+1;
+        _EToV[cnt*_Nverts+1] = sk+shift+1;
+        _EToV[cnt*_Nverts+2] = sk+shift;
         cnt++;
       }
       sk++;
@@ -285,7 +415,9 @@ void mesh_t::SEMFEMEToVTri2D(int _N, int *_NelFEM, int **_EToV){
 // ------------------------------------------------------------------------
 // ORTHONORMAL BASIS POLYNOMIALS
 // ------------------------------------------------------------------------
-void mesh_t::OrthonormalBasisTri2D(dfloat _r, dfloat _s, int i, int j, dfloat *P){
+void mesh_t::OrthonormalBasisTri2D(const dfloat _r, const dfloat _s,
+                                   const int i, const int j,
+                                   dfloat& P){
   dfloat a,b;
   if(_s != 1.)
     a = 2.*(1.+_r)/(1.-_s)-1.;
@@ -293,10 +425,12 @@ void mesh_t::OrthonormalBasisTri2D(dfloat _r, dfloat _s, int i, int j, dfloat *P
     a = -1.;
   b=_s;
 
-  *P = sqrt(2.0)*JacobiP(a,0,0,i)*JacobiP(b,2*i+1,0,j)*pow(1.-b,i);
+  P = sqrt(2.0)*JacobiP(a,0,0,i)*JacobiP(b,2*i+1,0,j)*pow(1.-b,i);
 }
 
-void mesh_t::GradOrthonormalBasisTri2D(dfloat _r, dfloat _s, int i, int j, dfloat *Pr, dfloat *Ps){
+void mesh_t::GradOrthonormalBasisTri2D(const dfloat _r, const dfloat _s,
+                                       const int i, const int j,
+                                       dfloat& Pr, dfloat& Ps){
   dfloat a,b;
   if(_s != 1.)
     a = 2.*(1.+_r)/(1.-_s)-1.;
@@ -309,56 +443,68 @@ void mesh_t::GradOrthonormalBasisTri2D(dfloat _r, dfloat _s, int i, int j, dfloa
 
   // r-derivative
   // d/dr = da/dr d/da + db/dr d/db = (2/(1-s)) d/da = (2/(1-b)) d/da
-  (*Pr) = dfa*gb;
+  Pr = dfa*gb;
   if(i>0)
-    (*Pr) = (*Pr)*pow(0.5*(1-b),i-1);
+    Pr = Pr*pow(0.5*(1-b),i-1);
 
   // s-derivative
   // d/ds = ((1+a)/2)/((1-b)/2) d/da + d/db
-  (*Ps) = dfa*(gb*(0.5*(1+a)));
+  Ps = dfa*(gb*(0.5*(1+a)));
   if(i>0)
-   (*Ps) = (*Ps)*pow(0.5*(1-b),i-1);
+   Ps = Ps*pow(0.5*(1-b),i-1);
 
   dfloat tmp = dgb*pow(0.5*(1-b),i);
   if(i>0)
     tmp = tmp-0.5*i*gb*pow(0.5*(1-b),i-1);
 
-  (*Ps) = (*Ps)+fa*tmp;
+  Ps = Ps+fa*tmp;
 
   // Normalize
-  (*Pr) *= pow(2,i+0.5); (*Ps) *= pow(2,i+0.5);
+  Pr *= pow(2,i+0.5); Ps *= pow(2,i+0.5);
 }
 
 // ------------------------------------------------------------------------
 // 2D VANDERMONDE MATRICES
 // ------------------------------------------------------------------------
 
-void mesh_t::VandermondeTri2D(int _N, int Npoints, dfloat *_r, dfloat *_s, dfloat *V){
+void mesh_t::VandermondeTri2D(const int _N,
+                              const memory<dfloat> _r,
+                              const memory<dfloat> _s,
+                              memory<dfloat>& V){
 
-  int _Np = (_N+1)*(_N+2)/2;
+  const int _Np = (_N+1)*(_N+2)/2;
+  const int Npoints = _r.length();
 
+  V.malloc(Npoints*_Np);
   for(int n=0; n<Npoints; n++){
     int sk=0;
     for(int i=0; i<_N+1; i++){
       for(int j=0; j<_N+1-i; j++){
         int id = n*_Np+sk;
-        OrthonormalBasisTri2D(_r[n], _s[n], i, j, V+id);
+        OrthonormalBasisTri2D(_r[n], _s[n], i, j, V[id]);
         sk++;
       }
     }
   }
 }
 
-void mesh_t::GradVandermondeTri2D(int _N, int Npoints, dfloat *_r, dfloat *_s, dfloat *Vr, dfloat *Vs){
+void mesh_t::GradVandermondeTri2D(const int _N,
+                                  const memory<dfloat> _r,
+                                  const memory<dfloat> _s,
+                                  memory<dfloat>& Vr,
+                                  memory<dfloat>& Vs){
 
-  int _Np = (_N+1)*(_N+2)/2;
+  const int _Np = (_N+1)*(_N+2)/2;
+  const int Npoints = _r.length();
 
+  Vr.malloc(Npoints*_Np);
+  Vs.malloc(Npoints*_Np);
   for(int n=0; n<Npoints; n++){
     int sk=0;
     for(int i=0; i<_N+1; i++){
       for(int j=0; j<_N+1-i; j++){
         int id = n*_Np+sk;
-        GradOrthonormalBasisTri2D(_r[n], _s[n], i, j, Vr+id, Vs+id);
+        GradOrthonormalBasisTri2D(_r[n], _s[n], i, j, Vr[id], Vs[id]);
         sk++;
       }
     }
@@ -368,9 +514,12 @@ void mesh_t::GradVandermondeTri2D(int _N, int Npoints, dfloat *_r, dfloat *_s, d
 // ------------------------------------------------------------------------
 // 2D OPERATOR MATRICES
 // ------------------------------------------------------------------------
-void mesh_t::MassMatrixTri2D(int _Np, dfloat *V, dfloat *_MM){
+void mesh_t::MassMatrixTri2D(const int _Np,
+                             const memory<dfloat> V,
+                             memory<dfloat>& _MM){
 
   // massMatrix = inv(V')*inv(V) = inv(V*V')
+  _MM.malloc(_Np*_Np);
   for(int n=0;n<_Np;++n){
     for(int m=0;m<_Np;++m){
       dfloat res = 0;
@@ -380,12 +529,15 @@ void mesh_t::MassMatrixTri2D(int _Np, dfloat *V, dfloat *_MM){
       _MM[n*_Np + m] = res;
     }
   }
-  matrixInverse(_Np, _MM);
+  linAlg_t::matrixInverse(_Np, _MM);
 }
 
-void mesh_t::invMassMatrixTri2D(int _Np, dfloat *V, dfloat *_invMM){
+void mesh_t::invMassMatrixTri2D(const int _Np,
+                                const memory<dfloat> V,
+                                memory<dfloat>& _invMM){
 
   // massMatrix^{-1} = V*V'
+  _invMM.malloc(_Np*_Np);
   for(int n=0;n<_Np;++n){
     for(int m=0;m<_Np;++m){
       dfloat res = 0;
@@ -397,40 +549,41 @@ void mesh_t::invMassMatrixTri2D(int _Np, dfloat *V, dfloat *_invMM){
   }
 }
 
-void mesh_t::DmatrixTri2D(int _N, int Npoints, dfloat *_r, dfloat *_s,
-                                                dfloat *_Dr, dfloat *_Ds){
+void mesh_t::DmatrixTri2D(const int _N,
+                          const memory<dfloat> _r,
+                          const memory<dfloat> _s,
+                          memory<dfloat>& _D){
 
-  int _Np = (_N+1)*(_N+2)/2;
+  const int _Np = (_N+1)*(_N+2)/2;
 
-  dfloat *V  = (dfloat *) calloc(Npoints*_Np, sizeof(dfloat));
-  dfloat *Vr = (dfloat *) calloc(Npoints*_Np, sizeof(dfloat));
-  dfloat *Vs = (dfloat *) calloc(Npoints*_Np, sizeof(dfloat));
-
-  VandermondeTri2D(_N, Npoints, _r, _s, V);
-  GradVandermondeTri2D(_N, Npoints, _r, _s, Vr, Vs);
+  memory<dfloat> V, Vr, Vs;
+  VandermondeTri2D(_N, _r, _s, V);
+  GradVandermondeTri2D(_N, _r, _s, Vr, Vs);
 
   //Dr = Vr/V, Ds = Vs/V
-  matrixRightSolve(_Np, _Np, Vr, _Np, _Np, V, _Dr);
-  matrixRightSolve(_Np, _Np, Vs, _Np, _Np, V, _Ds);
-
-  free(V); free(Vr); free(Vs);
+  _D.malloc(2*_Np*_Np);
+  memory<dfloat> _Dr = _D + 0*_Np*_Np;
+  memory<dfloat> _Ds = _D + 1*_Np*_Np;
+  linAlg_t::matrixRightSolve(_Np, _Np, Vr, _Np, _Np, V, _Dr);
+  linAlg_t::matrixRightSolve(_Np, _Np, Vs, _Np, _Np, V, _Ds);
 }
 
-void mesh_t::LIFTmatrixTri2D(int _N, int *_faceNodes,
-                             dfloat *_r, dfloat *_s, dfloat *_LIFT){
+void mesh_t::LIFTmatrixTri2D(const int _N,
+                             const memory<int> _faceNodes,
+                             const memory<dfloat> _r,
+                             const memory<dfloat> _s,
+                             memory<dfloat>& _LIFT){
 
-  int _Nfp = (_N+1);
-  int _Np = (_N+1)*(_N+2)/2;
-  int _Nfaces = 3;
+  const int _Nfp = (_N+1);
+  const int _Np = (_N+1)*(_N+2)/2;
+  const int _Nfaces = 3;
 
-  dfloat *E = (dfloat *) calloc(_Np*_Nfaces*_Nfp, sizeof(dfloat));
+  memory<dfloat> E(_Np*_Nfaces*_Nfp, 0);
 
-  dfloat *r1D = (dfloat *) malloc(_Nfp*sizeof(dfloat));
-  dfloat *V1D = (dfloat *) malloc(_Nfp*_Nfp*sizeof(dfloat));
-  dfloat *MM1D = (dfloat *) malloc(_Nfp*_Nfp*sizeof(dfloat));
+  memory<dfloat> r1D(_Nfp);
 
   for (int f=0;f<_Nfaces;f++) {
-    dfloat *rFace;
+    memory<dfloat> rFace;
     if (f==0) rFace = _r;
     if (f==1) rFace = _r;
     if (f==2) rFace = _s;
@@ -438,7 +591,8 @@ void mesh_t::LIFTmatrixTri2D(int _N, int *_faceNodes,
     for (int i=0;i<_Nfp;i++)
       r1D[i] = rFace[_faceNodes[f*_Nfp+i]];
 
-    Vandermonde1D(_N, _Nfp, r1D, V1D);
+    memory<dfloat> V1D, MM1D;
+    Vandermonde1D(_N, r1D, V1D);
     MassMatrix1D(_Nfp, V1D, MM1D);
 
     for (int j=0;j<_Nfp;j++) {
@@ -449,9 +603,10 @@ void mesh_t::LIFTmatrixTri2D(int _N, int *_faceNodes,
     }
   }
 
-  dfloat *V = (dfloat *) malloc(_Np*_Np*sizeof(dfloat));
-  VandermondeTri2D(_N, _Np, _r, _s, V);
+  memory<dfloat> V;
+  VandermondeTri2D(_N, _r, _s, V);
 
+  _LIFT.malloc(_Np*_Nfaces*_Nfp);
   for (int n=0;n<_Np;n++) {
     for (int m=0;m<_Nfaces*_Nfp;m++) {
 
@@ -465,16 +620,18 @@ void mesh_t::LIFTmatrixTri2D(int _N, int *_faceNodes,
       }
     }
   }
-
-  free(V); free(r1D); free(V1D); free(MM1D); free(E);
 }
 
-void mesh_t::SurfaceMassMatrixTri2D(int _N, dfloat *_MM, dfloat *_LIFT, dfloat *_sM){
+void mesh_t::SurfaceMassMatrixTri2D(const int _N,
+                                    const memory<dfloat> _MM,
+                                    const memory<dfloat> _LIFT,
+                                    memory<dfloat>& _sM){
 
-  int _Nfp = (_N+1);
-  int _Np = (_N+1)*(_N+2)/2;
-  int _Nfaces = 3;
+  const int _Nfp = (_N+1);
+  const int _Np = (_N+1)*(_N+2)/2;
+  const int _Nfaces = 3;
 
+  _sM.malloc(_Np*_Nfaces*_Nfp);
   for (int n=0;n<_Np;n++) {
     for (int m=0;m<_Nfp*_Nfaces;m++) {
       _sM[m+n*_Nfp*_Nfaces] = 0;
@@ -485,11 +642,18 @@ void mesh_t::SurfaceMassMatrixTri2D(int _N, dfloat *_MM, dfloat *_LIFT, dfloat *
   }
 }
 
-void mesh_t::SmatrixTri2D(int _N, dfloat *_Dr, dfloat *_Ds, dfloat *_MM,
-                          dfloat *_Srr, dfloat *_Srs, dfloat *_Sss){
+void mesh_t::SmatrixTri2D(const int _N,
+                          const memory<dfloat> _Dr,
+                          const memory<dfloat> _Ds,
+                          const memory<dfloat> _MM,
+                          memory<dfloat>& _S){
 
-  int _Np = (_N+1)*(_N+2)/2;
+  const int _Np = (_N+1)*(_N+2)/2;
 
+  _S.malloc(3*_Np*_Np, 0.0);
+  memory<dfloat> _Srr = _S + 0*_Np*_Np;
+  memory<dfloat> _Srs = _S + 1*_Np*_Np;
+  memory<dfloat> _Sss = _S + 2*_Np*_Np;
   for (int n=0;n<_Np;n++) {
     for (int m=0;m<_Np;m++) {
       for (int k=0;k<_Np;k++) {
@@ -504,56 +668,61 @@ void mesh_t::SmatrixTri2D(int _N, dfloat *_Dr, dfloat *_Ds, dfloat *_MM,
   }
 }
 
-void mesh_t::InterpolationMatrixTri2D(int _N,
-                               int NpointsIn, dfloat *rIn, dfloat *sIn,
-                               int NpointsOut, dfloat *rOut, dfloat *sOut,
-                               dfloat *I){
+void mesh_t::InterpolationMatrixTri2D(const int _N,
+                                      const memory<dfloat> rIn,
+                                      const memory<dfloat> sIn,
+                                      const memory<dfloat> rOut,
+                                      const memory<dfloat> sOut,
+                                      memory<dfloat>& I){
 
-  int _Np = (_N+1)*(_N+2)/2;
+  const int _Np = (_N+1)*(_N+2)/2;
+
+  const int NpointsIn  = rIn.length();
+  const int NpointsOut = rOut.length();
 
   // need NpointsIn = _Np
-  if (NpointsIn != _Np)
-    LIBP_ABORT(string("Invalid Interplation operator requested."))
+  LIBP_ABORT("Invalid Interplation operator requested.",
+             NpointsIn != _Np);
 
-  dfloat *VIn = (dfloat*) malloc(NpointsIn*_Np*sizeof(dfloat));
-  dfloat *VOut= (dfloat*) malloc(NpointsOut*_Np*sizeof(dfloat));
+  memory<dfloat> VIn;
+  memory<dfloat> VOut;
+  VandermondeTri2D(_N, rIn, sIn, VIn);
+  VandermondeTri2D(_N, rOut, sOut, VOut);
 
-  VandermondeTri2D(_N, NpointsIn,   rIn, sIn, VIn);
-  VandermondeTri2D(_N, NpointsOut, rOut, sOut, VOut);
-
-  matrixRightSolve(NpointsOut, _Np, VOut, NpointsIn, _Np, VIn, I);
-
-  free(VIn); free(VOut);
+  I.malloc(NpointsIn*NpointsOut);
+  linAlg_t::matrixRightSolve(NpointsOut, _Np, VOut,
+                             NpointsIn, _Np, VIn, I);
 }
 
-void mesh_t::DegreeRaiseMatrixTri2D(int Nc, int Nf, dfloat *P){
+void mesh_t::DegreeRaiseMatrixTri2D(const int Nc, const int Nf,
+                                    memory<dfloat>& P){
 
-  int Npc = (Nc+1)*(Nc+2)/2;
-  int Npf = (Nf+1)*(Nf+2)/2;
-
-  dfloat *rc = (dfloat *) malloc(Npc*sizeof(dfloat));
-  dfloat *sc = (dfloat *) malloc(Npc*sizeof(dfloat));
-  dfloat *rf = (dfloat *) malloc(Npf*sizeof(dfloat));
-  dfloat *sf = (dfloat *) malloc(Npf*sizeof(dfloat));
-
+  memory<dfloat> rc, sc;
+  memory<dfloat> rf, sf;
   NodesTri2D(Nc, rc, sc);
   NodesTri2D(Nf, rf, sf);
 
-  InterpolationMatrixTri2D(Nc, Npc, rc, sc, Npf, rf, sf, P);
-
-  free(rc); free(sc); free(rf); free(sf);
+  InterpolationMatrixTri2D(Nc, rc, sc, rf, sf, P);
 }
 
-void mesh_t::CubaturePmatrixTri2D(int _N, int _Np, dfloat *_r, dfloat *_s,
-                                  int _cubNp, dfloat *_cubr, dfloat *_cubs, dfloat *_cubProject){
+void mesh_t::CubaturePmatrixTri2D(const int _N,
+                                  const memory<dfloat> _r,
+                                  const memory<dfloat> _s,
+                                  const memory<dfloat> _cubr,
+                                  const memory<dfloat> _cubs,
+                                  memory<dfloat>& _cubProject){
 
-  dfloat *V = (dfloat*) malloc(_Np*_Np*sizeof(dfloat));
-  VandermondeTri2D(_N, _Np, _r, _s, V);
+  const int _Np = (_N+1)*(_N+2)/2;
+  const int _cubNp = _cubr.length();
 
-  dfloat *cubV  = (dfloat*) malloc(_cubNp*_Np*sizeof(dfloat));
-  VandermondeTri2D(_N, _cubNp, _cubr, _cubs, cubV);
+  memory<dfloat> V;
+  VandermondeTri2D(_N, _r, _s, V);
+
+  memory<dfloat> cubV;
+  VandermondeTri2D(_N, _cubr, _cubs, cubV);
 
   // cubProject = V*cV' %% relies on (transpose(cV)*diag(cubw)*cV being the identity)
+  _cubProject.malloc(_Np*_cubNp);
   for(int n=0;n<_Np;++n){
     for(int m=0;m<_cubNp;++m){
       dfloat resP = 0;
@@ -563,24 +732,30 @@ void mesh_t::CubaturePmatrixTri2D(int _N, int _Np, dfloat *_r, dfloat *_s,
       _cubProject[n*_cubNp+m] = resP;
     }
   }
-  free(V); free(cubV);
 }
 
-void mesh_t::CubatureWeakDmatricesTri2D(int _N, int _Np, dfloat *_r, dfloat *_s,
-                                        int _cubNp, dfloat *_cubr, dfloat *_cubs,
-                                        dfloat *_cubPDrT, dfloat *_cubPDsT){
+void mesh_t::CubatureWeakDmatricesTri2D(const int _N,
+                                        const memory<dfloat> _r,
+                                        const memory<dfloat> _s,
+                                        const memory<dfloat> _cubr,
+                                        const memory<dfloat> _cubs,
+                                        memory<dfloat>& _cubPDT){
 
-  dfloat *V = (dfloat*) malloc(_Np*_Np*sizeof(dfloat));
-  VandermondeTri2D(_N, _Np, _r, _s, V);
+  const int _Np = (_N+1)*(_N+2)/2;
+  const int _cubNp = _cubr.length();
 
-  dfloat *cubV  = (dfloat*) malloc(_cubNp*_Np*sizeof(dfloat));
-  dfloat *cubVr = (dfloat*) malloc(_cubNp*_Np*sizeof(dfloat));
-  dfloat *cubVs = (dfloat*) malloc(_cubNp*_Np*sizeof(dfloat));
-  VandermondeTri2D(_N, _cubNp, _cubr, _cubs, cubV);
-  GradVandermondeTri2D(_N, _cubNp, _cubr, _cubs, cubVr, cubVs);
+  memory<dfloat> V;
+  VandermondeTri2D(_N, _r, _s, V);
+
+  memory<dfloat> cubV, cubVr, cubVs;
+  VandermondeTri2D(_N, _cubr, _cubs, cubV);
+  GradVandermondeTri2D(_N, _cubr, _cubs, cubVr, cubVs);
 
   // cubPDrT = V*transpose(cVr);
   // cubPDsT = V*transpose(cVs);
+  _cubPDT.malloc(2*_Np*_cubNp);
+  memory<dfloat> _cubPDrT = _cubPDT + 0*_Np*_cubNp;
+  memory<dfloat> _cubPDsT = _cubPDT + 1*_Np*_cubNp;
   for(int n=0;n<_Np;++n){
     for(int m=0;m<_cubNp;++m){
       dfloat resPDrT = 0, resPDsT = 0;
@@ -593,22 +768,28 @@ void mesh_t::CubatureWeakDmatricesTri2D(int _N, int _Np, dfloat *_r, dfloat *_s,
       _cubPDsT[n*_cubNp+m] = resPDsT;
     }
   }
-  free(V); free(cubV); free(cubVr); free(cubVs);
 }
 
-void mesh_t::CubatureSurfaceMatricesTri2D(int _N, int _Np, dfloat *_r, dfloat *_s, int *_faceNodes,
-                                    int _intNfp, dfloat *_intr, dfloat *_intw,
-                                    dfloat *_intInterp, dfloat *_intLIFT){
+void mesh_t::CubatureSurfaceMatricesTri2D(const int _N,
+                                          const memory<dfloat> _r,
+                                          const memory<dfloat> _s,
+                                          const memory<int> _faceNodes,
+                                          const memory<dfloat> _intr,
+                                          const memory<dfloat> _intw,
+                                          memory<dfloat>& _intInterp,
+                                          memory<dfloat>& _intLIFT){
 
-  int _Nfaces = 3;
-  int _Nfp = _N+1;
+  const int _Np = (_N+1)*(_N+2)/2;
+  const int _Nfaces = 3;
+  const int _Nfp = _N+1;
+  const int _intNfp = _intr.length();
 
-  dfloat *V = (dfloat*) malloc(_Np*_Np*sizeof(dfloat));
-  VandermondeTri2D(_N, _Np, _r, _s, V);
+  memory<dfloat> V;
+  VandermondeTri2D(_N, _r, _s, V);
 
-  dfloat *ir = (dfloat*) calloc(_intNfp*_Nfaces, sizeof(dfloat));
-  dfloat *is = (dfloat*) calloc(_intNfp*_Nfaces, sizeof(dfloat));
-  dfloat *iw = (dfloat*) calloc(_intNfp*_Nfaces, sizeof(dfloat));
+  memory<dfloat> ir(_intNfp*_Nfaces);
+  memory<dfloat> is(_intNfp*_Nfaces);
+  memory<dfloat> iw(_intNfp*_Nfaces);
 
   for(int n=0;n<_intNfp;++n){
     ir[0*_intNfp + n] =  _intr[n];
@@ -624,9 +805,10 @@ void mesh_t::CubatureSurfaceMatricesTri2D(int _N, int _Np, dfloat *_r, dfloat *_
     iw[2*_intNfp + n] =  _intw[n];
   }
 
-  dfloat *sInterp = (dfloat*) malloc(_intNfp*_Nfaces*_Np*sizeof(dfloat));
-  InterpolationMatrixTri2D(_N, _Np, _r, _s, _Nfaces*_intNfp, ir, is, sInterp);
+  memory<dfloat> sInterp;
+  InterpolationMatrixTri2D(_N, _r, _s, ir, is, sInterp);
 
+  _intInterp.malloc(_Nfaces*_intNfp*_Nfp);
   for(int n=0;n<_intNfp;++n){
     for(int m=0;m<_Nfp;++m){
       _intInterp[0*_intNfp*_Nfp + n*_Nfp + m] = sInterp[(n+0*_intNfp)*_Np+_faceNodes[0*_Nfp+m]];
@@ -637,6 +819,7 @@ void mesh_t::CubatureSurfaceMatricesTri2D(int _N, int _Np, dfloat *_r, dfloat *_
 
   // integration node lift matrix
   //iLIFT = V*V'*sInterp'*diag(iw(:));
+  _intLIFT.malloc(_Nfaces*_intNfp*_Np);
   for(int n=0;n<_Nfaces*_intNfp;++n){
     for(int m=0;m<_Np;++m){
       _intLIFT[m*_Nfaces*_intNfp+n] = 0.0;
@@ -647,19 +830,22 @@ void mesh_t::CubatureSurfaceMatricesTri2D(int _N, int _Np, dfloat *_r, dfloat *_
       }
     }
   }
-
-  free(V); free(ir);  free(is);  free(iw);  free(sInterp);
 }
 
-void mesh_t::SEMFEMInterpMatrixTri2D(int _N,
-                                    int _Np, dfloat *_r, dfloat *_s,
-                                    int _NpFEM, dfloat *_rFEM, dfloat *_sFEM,
-                                    dfloat *I){
+void mesh_t::SEMFEMInterpMatrixTri2D(const int _N,
+                                     const memory<dfloat> _r,
+                                     const memory<dfloat> _s,
+                                     const memory<dfloat> _rFEM,
+                                     const memory<dfloat> _sFEM,
+                                     memory<dfloat>& I){
 
-  dfloat *IQN = (dfloat*) malloc(_NpFEM*_Np*sizeof(dfloat));
-  InterpolationMatrixTri2D(_N, _Np, _r, _s, _NpFEM, _rFEM, _sFEM, IQN);
+  const int _Np = (_N+1)*(_N+2)/2;
+  const int _NpFEM = _rFEM.length();
 
-  dfloat *IQTIQ = (dfloat*) malloc(_Np*_Np*sizeof(dfloat));
+  memory<dfloat> IQN;
+  InterpolationMatrixTri2D(_N, _r, _s, _rFEM, _sFEM, IQN);
+
+  memory<dfloat> IQTIQ(_Np*_Np);
   // IQTIQ = IQN'*IQN
   for(int n=0;n<_Np;++n){
     for(int m=0;m<_Np;++m){
@@ -671,9 +857,8 @@ void mesh_t::SEMFEMInterpMatrixTri2D(int _N,
   }
 
   // I = IQN/(IQN'*IQN)  - pseudo inverse
-  matrixRightSolve(_NpFEM, _Np, IQN, _Np, _Np, IQTIQ, I);
-
-  free(IQN); free(IQTIQ);
+  I.malloc(_NpFEM*_Np);
+  linAlg_t::matrixRightSolve(_NpFEM, _Np, IQN, _Np, _Np, IQTIQ, I);
 }
 
 // ------------------------------------------------------------------------
@@ -682,19 +867,22 @@ void mesh_t::SEMFEMInterpMatrixTri2D(int _N,
 //                       Journal of engineering mathematics, 56(3), 247-262.
 // ------------------------------------------------------------------------
 
-void mesh_t::Warpfactor(int _N, int Npoints, dfloat *_r, dfloat *warp) {
+void mesh_t::Warpfactor(const int _N,
+                        const memory<dfloat> _r,
+                        memory<dfloat> warp) {
   // Compute scaled warp function at order N
   // based on rout interpolation nodes
+  const int Npoints = _r.length();
 
   // Compute GLL and equidistant node distribution
-  dfloat *GLLr = (dfloat *) malloc((_N+1)*sizeof(dfloat));
-  dfloat *req  = (dfloat *) malloc((_N+1)*sizeof(dfloat));
+  memory<dfloat> GLLr;
+  memory<dfloat> req;
   JacobiGLL(_N, GLLr);
   EquispacedNodes1D(_N, req);
 
   // Make interpolation from req to r
-  dfloat *I = (dfloat*) malloc((_N+1)*Npoints*sizeof(dfloat));
-  InterpolationMatrix1D(_N, _N+1, req, Npoints, _r, I);
+  memory<dfloat> I;
+  InterpolationMatrix1D(_N, req, _r, I);
 
   // Compute warp factor
   for (int n=0;n<Npoints;n++) {
@@ -705,28 +893,36 @@ void mesh_t::Warpfactor(int _N, int Npoints, dfloat *_r, dfloat *warp) {
     }
 
     // Scale factor
-    dfloat zerof = (abs(_r[n])<1.0-1.0e-10) ? 1 : 0;
+    dfloat zerof = (std::abs(_r[n])<1.0-1.0e-10) ? 1 : 0;
     dfloat sf = 1.0 - (zerof*_r[n])*(zerof*_r[n]);
     warp[n] = warp[n]/sf + warp[n]*(zerof-1);
   }
-
-  free(GLLr); free(req);
 }
 
-static void xytors(int Npoints, dfloat *x, dfloat *y, dfloat *r, dfloat *s) {
+static void xytors(const memory<dfloat> x,
+                   const memory<dfloat> y,
+                   memory<dfloat> r,
+                   memory<dfloat> s) {
+  const int Npoints = x.length();
+
   for (int n=0;n<Npoints;n++) {
-    dfloat L1 = (sqrt(3.0)*y[n]+1.0)/3.0;
-    dfloat L2 = (-3.0*x[n] - sqrt(3.0)*y[n] + 2.0)/6.0;
-    dfloat L3 = ( 3.0*x[n] - sqrt(3.0)*y[n] + 2.0)/6.0;
+    const dfloat L1 = (sqrt(3.0)*y[n]+1.0)/3.0;
+    const dfloat L2 = (-3.0*x[n] - sqrt(3.0)*y[n] + 2.0)/6.0;
+    const dfloat L3 = ( 3.0*x[n] - sqrt(3.0)*y[n] + 2.0)/6.0;
 
     r[n] = -L2 + L3 - L1; s[n] = -L2 - L3 + L1;
   }
 }
 
-void mesh_t::WarpBlendTransformTri2D(int _N, int _Npoints, dfloat *_r, dfloat *_s, dfloat alphaIn){
+void mesh_t::WarpBlendTransformTri2D(const int _N,
+                                     memory<dfloat> _r,
+                                     memory<dfloat> _s,
+                                     const dfloat alphaIn){
 
   const dfloat alpopt[15] = {0.0000, 0.0000, 1.4152, 0.1001, 0.2751, 0.9800, 1.0999,
                              1.2832, 1.3648, 1.4773, 1.4959, 1.5743, 1.5770, 1.6223, 1.6258};
+
+  const int _Npoints = _r.length();
 
   dfloat alpha;
   if (alphaIn==-1) {
@@ -740,16 +936,16 @@ void mesh_t::WarpBlendTransformTri2D(int _N, int _Npoints, dfloat *_r, dfloat *_
   }
 
   // Convert r s coordinates to points in equilateral triangle
-  dfloat *L1 = (dfloat*) malloc(_Npoints*sizeof(dfloat));
-  dfloat *L2 = (dfloat*) malloc(_Npoints*sizeof(dfloat));
-  dfloat *L3 = (dfloat*) malloc(_Npoints*sizeof(dfloat));
+  memory<dfloat> L1(_Npoints);
+  memory<dfloat> L2(_Npoints);
+  memory<dfloat> L3(_Npoints);
 
-  dfloat *dL32 = (dfloat*) malloc(_Npoints*sizeof(dfloat));
-  dfloat *dL13 = (dfloat*) malloc(_Npoints*sizeof(dfloat));
-  dfloat *dL21 = (dfloat*) malloc(_Npoints*sizeof(dfloat));
+  memory<dfloat> dL32(_Npoints);
+  memory<dfloat> dL13(_Npoints);
+  memory<dfloat> dL21(_Npoints);
 
-  dfloat *_x = (dfloat*) malloc(_Npoints*sizeof(dfloat));
-  dfloat *_y = (dfloat*) malloc(_Npoints*sizeof(dfloat));
+  memory<dfloat> _x(_Npoints);
+  memory<dfloat> _y(_Npoints);
 
   for (int n=0;n<_Npoints;n++) {
     L1[n] =  0.5*(1.+_s[n]);
@@ -763,13 +959,13 @@ void mesh_t::WarpBlendTransformTri2D(int _N, int _Npoints, dfloat *_r, dfloat *_
     _x[n] = -L2[n]+L3[n]; _y[n] = (-L2[n]-L3[n]+2.*L1[n])/sqrt(3.0);
   }
 
-  dfloat *warpf1 = (dfloat*) malloc(_Npoints*sizeof(dfloat));
-  dfloat *warpf2 = (dfloat*) malloc(_Npoints*sizeof(dfloat));
-  dfloat *warpf3 = (dfloat*) malloc(_Npoints*sizeof(dfloat));
+  memory<dfloat> warpf1(_Npoints);
+  memory<dfloat> warpf2(_Npoints);
+  memory<dfloat> warpf3(_Npoints);
 
-  Warpfactor(_N, _Npoints, dL32, warpf1);
-  Warpfactor(_N, _Npoints, dL13, warpf2);
-  Warpfactor(_N, _Npoints, dL21, warpf3);
+  Warpfactor(_N, dL32, warpf1);
+  Warpfactor(_N, dL13, warpf2);
+  Warpfactor(_N, dL21, warpf3);
 
   for (int n=0;n<_Npoints;n++) {
     dfloat blend1 = 4.0*L2[n]*L3[n];
@@ -784,12 +980,7 @@ void mesh_t::WarpBlendTransformTri2D(int _N, int _Npoints, dfloat *_r, dfloat *_
     _y[n] += 0.*warp1 + sin(2.*M_PI/3.)*warp2 + sin(4.*M_PI/3.)*warp3;
   }
 
-  xytors(_Npoints, _x, _y, _r, _s);
-
-  free(L1); free(L2); free(L3);
-  free(dL32); free(dL21); free(dL13);
-  free(warpf1); free(warpf2); free(warpf3);
-  free(_x); free(_y);
+  xytors(_x, _y, _r, _s);
 }
 
 // ------------------------------------------------------------------------
@@ -998,18 +1189,20 @@ static const dfloat cubTriR50[453] = {-4.872882732304178e-01,-2.542345353916386e
 static const dfloat cubTriS50[453] = {-4.872882732304183e-01,-4.872882732304183e-01,-2.542345353916348e-02,-9.981550877878594e-01,-1.133538262833160e-01, 1.115089140711756e-01,-9.981550877878594e-01, 1.115089140711755e-01,-1.133538262833150e-01,-9.551240174753737e-01,-9.481262122484194e-01, 9.032502297237955e-01,-9.551240174753737e-01, 9.032502297237955e-01,-9.481262122484182e-01,-5.544185434125337e-01,-5.197117894734606e-01, 7.413033288599558e-02,-5.544185434125337e-01, 7.413033288599546e-02,-5.197117894734606e-01,-9.537595720595068e-01,-7.308947639467150e-01, 6.846543360062232e-01,-9.537595720595068e-01, 6.846543360062232e-01,-7.308947639467139e-01,-9.982864404099823e-01,-9.099288550653375e-01, 9.082152954753198e-01,-9.982864404099823e-01, 9.082152954753198e-01,-9.099288550653363e-01,-9.903827246782556e-01,-1.825708668644565e-01, 1.729535915427133e-01,-9.903827246782556e-01, 1.729535915427121e-01,-1.825708668644553e-01,-9.530139752811234e-01,-6.570730845200339e-01, 6.100870598011572e-01,-9.530139752811234e-01, 6.100870598011572e-01,-6.570730845200325e-01,-9.967388437157084e-01,-9.967388437157074e-01, 9.934776874314213e-01,-8.132067057412727e-01,-5.797881505899334e-01, 3.929948563312072e-01,-8.132067057412727e-01, 3.929948563312072e-01,-5.797881505899334e-01,-9.164067266977042e-01,-7.214063597628300e-01, 6.378130864605343e-01,-9.164067266977042e-01, 6.378130864605343e-01,-7.214063597628289e-01,-9.012853762142768e-01,-8.592358921744816e-01, 7.605212683887597e-01,-9.012853762142771e-01, 7.605212683887597e-01,-8.592358921744805e-01,-9.613074769938050e-01,-1.934626150309704e-02,-1.934626150309704e-02,-6.943717859756775e-01,-2.547870236870117e-01,-5.084119033730944e-02,-6.943717859756775e-01,-5.084119033730944e-02,-2.547870236870114e-01,-8.697691401387569e-01,-7.041685654447123e-01, 5.739377055834691e-01,-8.697691401387569e-01, 5.739377055834691e-01,-7.041685654447112e-01,-9.530757136479578e-01,-5.719507128367128e-01, 5.250264264846709e-01,-9.530757136479578e-01, 5.250264264846709e-01,-5.719507128367118e-01,-8.959354435311784e-01,-3.394651938837119e-01, 2.354006374148909e-01,-8.959354435311784e-01, 2.354006374148909e-01,-3.394651938837116e-01,-9.970109617889348e-01,-2.600302729111919e-01, 2.570412347001281e-01,-9.970109617889348e-01, 2.570412347001280e-01,-2.600302729111914e-01,-9.759125061304149e-01,-8.649768619133283e-01, 8.408893680437466e-01,-9.759125061304149e-01, 8.408893680437466e-01,-8.649768619133272e-01,-8.866304289130773e-01,-1.258023176398068e-01, 1.243274655288423e-02,-8.866304289130773e-01, 1.243274655288418e-02,-1.258023176398056e-01,-6.903486740300824e-01,-1.548256629849583e-01,-1.548256629849583e-01,-7.702797159103688e-01,-1.709755576844286e-01,-5.874472640520140e-02,-7.702797159103689e-01,-5.874472640520140e-02,-1.709755576844287e-01,-9.374703276265821e-01,-2.752389754621450e-01, 2.127093030887279e-01,-9.374703276265821e-01, 2.127093030887279e-01,-2.752389754621447e-01,-7.955067197089168e-01,-3.754974289775928e-01, 1.710041486865101e-01,-7.955067197089168e-01, 1.710041486865101e-01,-3.754974289775926e-01,-9.223027057361204e-01,-3.884864713193931e-02,-3.884864713193931e-02,-9.033013962538536e-01,-2.146213565926236e-01, 1.179227528464785e-01,-9.033013962538536e-01, 1.179227528464785e-01,-2.146213565926236e-01,-9.800408461407152e-01,-9.478722916754247e-01, 9.279131378161389e-01,-9.800408461407152e-01, 9.279131378161389e-01,-9.478722916754235e-01,-8.321741184601432e-01,-2.032180083100886e-01, 3.539212677023307e-02,-8.321741184601432e-01, 3.539212677023307e-02,-2.032180083100886e-01,-9.865437365974319e-01,-9.082392173581701e-01, 8.947829539556066e-01,-9.865437365974319e-01, 8.947829539556066e-01,-9.082392173581691e-01,-6.453839503352626e-01,-4.978033842696664e-01, 1.431873346049300e-01,-6.453839503352626e-01, 1.431873346049300e-01,-4.978033842696664e-01,-9.146318245298287e-01,-6.337261321307773e-01, 5.483579566606072e-01,-9.146318245298287e-01, 5.483579566606072e-01,-6.337261321307773e-01,-8.512144639199243e-01,-2.919073934432752e-01, 1.431218573632000e-01,-8.512144639199243e-01, 1.431218573632000e-01,-2.919073934432750e-01,-5.128621044059271e-01,-4.015780257796654e-01,-8.555986981440711e-02,-5.128621044059271e-01,-8.555986981440711e-02,-4.015780257796653e-01,-8.472168605080239e-01,-4.183215340291764e-01, 2.655383945372011e-01,-8.472168605080239e-01, 2.655383945372011e-01,-4.183215340291763e-01,-7.515508206622273e-01,-6.277077362933863e-01, 3.792585569556139e-01,-7.515508206622273e-01, 3.792585569556139e-01,-6.277077362933852e-01,-9.804419832588688e-01,-7.327456500575513e-01, 7.131876333164204e-01,-9.804419832588688e-01, 7.131876333164204e-01,-7.327456500575501e-01,-9.441135959036719e-01,-8.620473297035763e-01, 8.061609256072495e-01,-9.441135959036719e-01, 8.061609256072495e-01,-8.620473297035763e-01,-9.503834629782960e-01,-4.770179614603841e-01, 4.274014244386812e-01,-9.503834629782960e-01, 4.274014244386800e-01,-4.770179614603829e-01,-9.577479991442321e-01,-9.120410878817669e-01, 8.697890870259968e-01,-9.577479991442321e-01, 8.697890870259968e-01,-9.120410878817656e-01,-8.637002594919088e-01,-5.060855365853788e-01, 3.697857960772886e-01,-8.637002594919088e-01, 3.697857960772886e-01,-5.060855365853777e-01,-8.624093861991303e-01,-6.167853940403172e-01, 4.791947802394489e-01,-8.624093861991303e-01, 4.791947802394489e-01,-6.167853940403172e-01,-6.872930457599575e-01,-3.652080353829373e-01, 5.250108114289476e-02,-6.872930457599575e-01, 5.250108114289476e-02,-3.652080353829372e-01,-9.684224577286503e-01,-2.123213874003148e-01, 1.807438451289652e-01,-9.684224577286503e-01, 1.807438451289652e-01,-2.123213874003138e-01,-9.531071840655393e-01,-3.637106635744283e-01, 3.168178476399691e-01,-9.531071840655393e-01, 3.168178476399681e-01,-3.637106635744282e-01,-7.281403730572283e-01,-4.392710248840062e-01, 1.674113979412348e-01,-7.281403730572283e-01, 1.674113979412347e-01,-4.392710248840059e-01,-9.106088059739158e-01,-5.400485398316867e-01, 4.506573458056035e-01,-9.106088059739158e-01, 4.506573458056035e-01,-5.400485398316867e-01,-5.078874986216810e-01,-3.010237499257296e-01,-1.910887514525894e-01,-5.078874986216810e-01,-1.910887514525894e-01,-3.010237499257296e-01,-9.784730545245666e-01,-8.071832841875552e-01, 7.856563387121220e-01,-9.784730545245666e-01, 7.856563387121220e-01,-8.071832841875541e-01,-9.464044605480616e-01,-7.993239840668014e-01, 7.457284446148619e-01,-9.464044605480616e-01, 7.457284446148619e-01,-7.993239840668002e-01,-6.001966867209210e-01,-4.211243138320420e-01, 2.132100055296415e-02,-6.001966867209210e-01, 2.132100055296426e-02,-4.211243138320419e-01,-8.383470872976471e-01,-8.082645635117647e-02,-8.082645635117519e-02,-9.806804143047906e-01,-6.427670920898165e-01, 6.234475063946073e-01,-9.806804143047906e-01, 6.234475063946073e-01,-6.427670920898154e-01,-7.733335317298518e-01,-7.733335317298506e-01, 5.466670634597035e-01,-9.127674219487553e-01,-4.276921547374961e-01, 3.404595766862517e-01,-9.127674219487553e-01, 3.404595766862516e-01,-4.276921547374953e-01,-9.807324089004609e-01,-5.413422080782049e-01, 5.220746169786655e-01,-9.807324089004609e-01, 5.220746169786655e-01,-5.413422080782035e-01,-7.670859956964946e-01,-2.915742076670567e-01, 5.866020336355282e-02,-7.670859956964946e-01, 5.866020336355166e-02,-2.915742076670563e-01,-9.810462457017906e-01,-3.101110169100291e-01, 2.911572626118211e-01,-9.810462457017906e-01, 2.911572626118211e-01,-3.101110169100285e-01,-9.440667674080058e-01,-1.366535383528923e-01, 8.072030576089800e-02,-9.440667674080058e-01, 8.072030576089800e-02,-1.366535383528912e-01,-7.054683116064060e-01,-5.584055524963210e-01, 2.638738641027268e-01,-7.054683116064060e-01, 2.638738641027268e-01,-5.584055524963196e-01,-9.781219738706742e-01,-9.781219738706731e-01, 9.562439477413485e-01,-9.962588661779311e-01,-6.936543298046310e-01, 6.899131959825635e-01,-9.962588661779311e-01, 6.899131959825635e-01,-6.936543298046310e-01,-8.427072760972010e-01,-8.427072760971998e-01, 6.854145521944008e-01,-9.958657196429472e-01,-9.816027664683789e-01, 9.774684861113283e-01,-9.958657196429472e-01, 9.774684861113283e-01,-9.816027664683776e-01,-9.959872383159527e-01,-9.529095314851794e-01, 9.488967698011345e-01,-9.959872383159527e-01, 9.488967698011345e-01,-9.529095314851782e-01,-6.068160154409350e-01,-3.085430405630674e-01,-8.464094399599648e-02,-6.068160154409350e-01,-8.464094399599648e-02,-3.085430405630671e-01,-7.850422677955388e-01,-4.996613823756856e-01, 2.847036501712243e-01,-7.850422677955388e-01, 2.847036501712243e-01,-4.996613823756844e-01,-9.962763812934690e-01,-4.889002747967343e-01, 4.851766560902033e-01,-9.962763812934691e-01, 4.851766560902033e-01,-4.889002747967332e-01,-8.995854148168808e-01,-7.934131294747505e-01, 6.929985442916313e-01,-8.995854148168808e-01, 6.929985442916313e-01,-7.934131294747493e-01,-6.594822352717378e-01,-6.594822352717367e-01, 3.189644705434744e-01,-8.418024664862509e-01,-7.730344416189197e-01, 6.148369081051707e-01,-8.418024664862509e-01, 6.148369081051707e-01,-7.730344416189197e-01,-9.963422606399693e-01,-5.959969617208548e-01, 5.923392223608240e-01,-9.963422606399693e-01, 5.923392223608240e-01,-5.959969617208537e-01,-6.007330813263658e-01,-6.007330813263658e-01, 2.014661626527315e-01,-8.050030786501207e-01,-6.891854133166682e-01, 4.941884919667888e-01,-8.050030786501207e-01, 4.941884919667888e-01,-6.891854133166671e-01,-9.794579145241266e-01,-4.325337483001823e-01, 4.119916628243097e-01,-9.794579145241266e-01, 4.119916628243097e-01,-4.325337483001819e-01,-6.026757301953206e-01,-1.986621349023401e-01,-1.986621349023392e-01,-7.187722518872315e-01,-7.187722518872315e-01, 4.375445037744630e-01,-9.961098664509530e-01,-7.797247785760779e-01, 7.758346450270308e-01,-9.961098664509530e-01, 7.758346450270308e-01,-7.797247785760768e-01,-4.047614577816621e-01,-2.976192711091686e-01,-2.976192711091686e-01,-9.154992749697238e-01,-9.154992749697237e-01, 8.309985499394521e-01,-9.959745701414753e-01,-3.767460272074153e-01, 3.727205973488916e-01,-9.959745701414753e-01, 3.727205973488916e-01,-3.767460272074148e-01,-9.947355932482315e-01,-2.632203375884212e-03,-2.632203375883158e-03,-9.802403515707592e-01,-8.786874490008606e-02, 6.810909647084645e-02,-9.802403515707592e-01, 6.810909647084645e-02,-8.786874490008606e-02,-4.070402649740579e-01,-4.070402649740577e-01,-1.859194700518831e-01,-9.955476949059794e-01,-8.518818506402979e-01, 8.474295455462760e-01,-9.955476949059794e-01, 8.474295455462760e-01,-8.518818506402979e-01};
 static const dfloat cubTriW50[453] = { 6.657390349426455e-03, 6.657390349426455e-03, 6.657390349426455e-03, 6.946563189849545e-04, 6.946563189849545e-04, 6.946563189849545e-04, 6.946563189849545e-04, 6.946563189849545e-04, 6.946563189849545e-04, 6.001002038198160e-04, 6.001002038198160e-04, 6.001002038198160e-04, 6.001002038198160e-04, 6.001002038198160e-04, 6.001002038198160e-04, 5.460804118459578e-03, 5.460804118459578e-03, 5.460804118459578e-03, 5.460804118459578e-03, 5.460804118459578e-03, 5.460804118459578e-03, 2.265942903569247e-03, 2.265942903569247e-03, 2.265942903569247e-03, 2.265942903569247e-03, 2.265942903569247e-03, 2.265942903569247e-03, 2.730436819934103e-04, 2.730436819934103e-04, 2.730436819934103e-04, 2.730436819934103e-04, 2.730436819934103e-04, 2.730436819934103e-04, 1.538752133568642e-03, 1.538752133568642e-03, 1.538752133568642e-03, 1.538752133568642e-03, 1.538752133568642e-03, 1.538752133568642e-03, 2.593946389224276e-03, 2.593946389224276e-03, 2.593946389224276e-03, 2.593946389224276e-03, 2.593946389224276e-03, 2.593946389224276e-03, 7.318644849273957e-05, 7.318644849273957e-05, 7.318644849273957e-05, 5.611710324220868e-03, 5.611710324220868e-03, 5.611710324220868e-03, 5.611710324220868e-03, 5.611710324220868e-03, 5.611710324220868e-03, 3.417648445986814e-03, 3.417648445986814e-03, 3.417648445986814e-03, 3.417648445986814e-03, 3.417648445986814e-03, 3.417648445986814e-03, 2.967053886437357e-03, 2.967053886437357e-03, 2.967053886437357e-03, 2.967053886437357e-03, 2.967053886437357e-03, 2.967053886437357e-03, 3.302792714558273e-03, 3.302792714558273e-03, 3.302792714558273e-03, 8.508388866481208e-03, 8.508388866481208e-03, 8.508388866481208e-03, 8.508388866481208e-03, 8.508388866481208e-03, 8.508388866481208e-03, 4.395599173436755e-03, 4.395599173436755e-03, 4.395599173436755e-03, 4.395599173436755e-03, 4.395599173436755e-03, 4.395599173436755e-03, 3.097163895783280e-03, 3.097163895783280e-03, 3.097163895783280e-03, 3.097163895783280e-03, 3.097163895783280e-03, 3.097163895783280e-03, 5.206561060307146e-03, 5.206561060307146e-03, 5.206561060307146e-03, 5.206561060307146e-03, 5.206561060307146e-03, 5.206561060307146e-03, 9.323405282065094e-04, 9.323405282065094e-04, 9.323405282065094e-04, 9.323405282065094e-04, 9.323405282065094e-04, 9.323405282065094e-04, 1.315154312747027e-03, 1.315154312747027e-03, 1.315154312747027e-03, 1.315154312747027e-03, 1.315154312747027e-03, 1.315154312747027e-03, 5.572930818998745e-03, 5.572930818998745e-03, 5.572930818998745e-03, 5.572930818998745e-03, 5.572930818998745e-03, 5.572930818998745e-03, 8.518193356382943e-03, 8.518193356382943e-03, 8.518193356382943e-03, 8.259313906283377e-03, 8.259313906283377e-03, 8.259313906283377e-03, 8.259313906283377e-03, 8.259313906283377e-03, 8.259313906283377e-03, 4.308565834654927e-03, 4.308565834654927e-03, 4.308565834654927e-03, 4.308565834654927e-03, 4.308565834654927e-03, 4.308565834654927e-03, 6.951904403342183e-03, 6.951904403342183e-03, 6.951904403342183e-03, 6.951904403342183e-03, 6.951904403342183e-03, 6.951904403342183e-03, 4.848559914819788e-03, 4.848559914819788e-03, 4.848559914819788e-03, 5.413228508794187e-03, 5.413228508794187e-03, 5.413228508794187e-03, 5.413228508794187e-03, 5.413228508794187e-03, 5.413228508794187e-03, 7.715585739642544e-04, 7.715585739642544e-04, 7.715585739642544e-04, 7.715585739642544e-04, 7.715585739642544e-04, 7.715585739642544e-04, 6.879332858451239e-03, 6.879332858451239e-03, 6.879332858451239e-03, 6.879332858451239e-03, 6.879332858451239e-03, 6.879332858451239e-03, 8.760538741807422e-04, 8.760538741807422e-04, 8.760538741807422e-04, 8.760538741807422e-04, 8.760538741807422e-04, 8.760538741807422e-04, 8.812029055620537e-03, 8.812029055620537e-03, 8.812029055620537e-03, 8.812029055620537e-03, 8.812029055620537e-03, 8.812029055620537e-03, 4.035001616910756e-03, 4.035001616910756e-03, 4.035001616910756e-03, 4.035001616910756e-03, 4.035001616910756e-03, 4.035001616910756e-03, 6.476557209099314e-03, 6.476557209099314e-03, 6.476557209099314e-03, 6.476557209099314e-03, 6.476557209099314e-03, 6.476557209099314e-03, 9.332421598387951e-03, 9.332421598387951e-03, 9.332421598387951e-03, 9.332421598387951e-03, 9.332421598387951e-03, 9.332421598387951e-03, 6.318451635509753e-03, 6.318451635509753e-03, 6.318451635509753e-03, 6.318451635509753e-03, 6.318451635509753e-03, 6.318451635509753e-03, 6.947169036892493e-03, 6.947169036892493e-03, 6.947169036892493e-03, 6.947169036892493e-03, 6.947169036892493e-03, 6.947169036892493e-03, 1.790785760819592e-03, 1.790785760819592e-03, 1.790785760819592e-03, 1.790785760819592e-03, 1.790785760819592e-03, 1.790785760819592e-03, 2.160956967250754e-03, 2.160956967250754e-03, 2.160956967250754e-03, 2.160956967250754e-03, 2.160956967250754e-03, 2.160956967250754e-03, 3.625948898219889e-03, 3.625948898219889e-03, 3.625948898219889e-03, 3.625948898219889e-03, 3.625948898219889e-03, 3.625948898219889e-03, 1.530314260972668e-03, 1.530314260972668e-03, 1.530314260972668e-03, 1.530314260972668e-03, 1.530314260972668e-03, 1.530314260972668e-03, 5.715363408558084e-03, 5.715363408558084e-03, 5.715363408558084e-03, 5.715363408558084e-03, 5.715363408558084e-03, 5.715363408558084e-03, 5.311624181103388e-03, 5.311624181103388e-03, 5.311624181103388e-03, 5.311624181103388e-03, 5.311624181103388e-03, 5.311624181103388e-03, 8.954875242212912e-03, 8.954875242212912e-03, 8.954875242212912e-03, 8.954875242212912e-03, 8.954875242212912e-03, 8.954875242212912e-03, 3.307034522546869e-03, 3.307034522546869e-03, 3.307034522546869e-03, 3.307034522546869e-03, 3.307034522546869e-03, 3.307034522546869e-03, 3.889979271429086e-03, 3.889979271429086e-03, 3.889979271429086e-03, 3.889979271429086e-03, 3.889979271429086e-03, 3.889979271429086e-03, 8.109035161435074e-03, 8.109035161435074e-03, 8.109035161435074e-03, 8.109035161435074e-03, 8.109035161435074e-03, 8.109035161435074e-03, 4.694394019735870e-03, 4.694394019735870e-03, 4.694394019735870e-03, 4.694394019735870e-03, 4.694394019735870e-03, 4.694394019735870e-03, 1.083959336378307e-02, 1.083959336378307e-02, 1.083959336378307e-02, 1.083959336378307e-02, 1.083959336378307e-02, 1.083959336378307e-02, 1.642838231112343e-03, 1.642838231112343e-03, 1.642838231112343e-03, 1.642838231112343e-03, 1.642838231112343e-03, 1.642838231112343e-03, 2.666246149563934e-03, 2.666246149563934e-03, 2.666246149563934e-03, 2.666246149563934e-03, 2.666246149563934e-03, 2.666246149563934e-03, 9.345204607681365e-03, 9.345204607681365e-03, 9.345204607681365e-03, 9.345204607681365e-03, 9.345204607681365e-03, 9.345204607681365e-03, 7.165422422124212e-03, 7.165422422124212e-03, 7.165422422124212e-03, 2.094698488702054e-03, 2.094698488702054e-03, 2.094698488702054e-03, 2.094698488702054e-03, 2.094698488702054e-03, 2.094698488702054e-03, 5.559197600889325e-03, 5.559197600889325e-03, 5.559197600889325e-03, 5.114025641788271e-03, 5.114025641788271e-03, 5.114025641788271e-03, 5.114025641788271e-03, 5.114025641788271e-03, 5.114025641788271e-03, 2.307531856262896e-03, 2.307531856262896e-03, 2.307531856262896e-03, 2.307531856262896e-03, 2.307531856262896e-03, 2.307531856262896e-03, 8.447515166178116e-03, 8.447515166178116e-03, 8.447515166178116e-03, 8.447515166178116e-03, 8.447515166178116e-03, 8.447515166178116e-03, 2.674835029006195e-03, 2.674835029006195e-03, 2.674835029006195e-03, 2.674835029006195e-03, 2.674835029006195e-03, 2.674835029006195e-03, 4.762846609148414e-03, 4.762846609148414e-03, 4.762846609148414e-03, 4.762846609148414e-03, 4.762846609148414e-03, 4.762846609148414e-03, 8.565704904038088e-03, 8.565704904038088e-03, 8.565704904038088e-03, 8.565704904038088e-03, 8.565704904038088e-03, 8.565704904038088e-03, 5.999043738296138e-04, 5.999043738296138e-04, 5.999043738296138e-04, 8.813879170752840e-04, 8.813879170752840e-04, 8.813879170752840e-04, 8.813879170752840e-04, 8.813879170752840e-04, 8.813879170752840e-04, 4.135743334159545e-03, 4.135743334159545e-03, 4.135743334159545e-03, 2.312905155015999e-04, 2.312905155015999e-04, 2.312905155015999e-04, 2.312905155015999e-04, 2.312905155015999e-04, 2.312905155015999e-04, 3.648502036079644e-04, 3.648502036079644e-04, 3.648502036079644e-04, 3.648502036079644e-04, 3.648502036079644e-04, 3.648502036079644e-04, 1.027023169453754e-02, 1.027023169453754e-02, 1.027023169453754e-02, 1.027023169453754e-02, 1.027023169453754e-02, 1.027023169453754e-02, 7.810111420309305e-03, 7.810111420309305e-03, 7.810111420309305e-03, 7.810111420309305e-03, 7.810111420309305e-03, 7.810111420309305e-03, 1.056435119667814e-03, 1.056435119667814e-03, 1.056435119667814e-03, 1.056435119667814e-03, 1.056435119667814e-03, 1.056435119667814e-03, 3.798126951694121e-03, 3.798126951694121e-03, 3.798126951694121e-03, 3.798126951694121e-03, 3.798126951694121e-03, 3.798126951694121e-03, 8.055421977036622e-03, 8.055421977036622e-03, 8.055421977036622e-03, 4.668118624327395e-03, 4.668118624327395e-03, 4.668118624327395e-03, 4.668118624327395e-03, 4.668118624327395e-03, 4.668118624327395e-03, 9.653413559593795e-04, 9.653413559593795e-04, 9.653413559593795e-04, 9.653413559593795e-04, 9.653413559593795e-04, 9.653413559593795e-04, 9.141347778252359e-03, 9.141347778252359e-03, 9.141347778252359e-03, 6.498038898642801e-03, 6.498038898642801e-03, 6.498038898642801e-03, 6.498038898642801e-03, 6.498038898642801e-03, 6.498038898642801e-03, 2.639533833535306e-03, 2.639533833535306e-03, 2.639533833535306e-03, 2.639533833535306e-03, 2.639533833535306e-03, 2.639533833535306e-03, 1.033071185490775e-02, 1.033071185490775e-02, 1.033071185490775e-02, 6.970526706905318e-03, 6.970526706905318e-03, 6.970526706905318e-03, 7.934585220888267e-04, 7.934585220888267e-04, 7.934585220888267e-04, 7.934585220888267e-04, 7.934585220888267e-04, 7.934585220888267e-04, 1.171362890783687e-02, 1.171362890783687e-02, 1.171362890783687e-02, 2.397897567676900e-03, 2.397897567676900e-03, 2.397897567676900e-03, 1.171186882042265e-03, 1.171186882042265e-03, 1.171186882042265e-03, 1.171186882042265e-03, 1.171186882042265e-03, 1.171186882042265e-03, 1.498644108210421e-03, 1.498644108210421e-03, 1.498644108210421e-03, 2.801549769502369e-03, 2.801549769502369e-03, 2.801549769502369e-03, 2.801549769502369e-03, 2.801549769502369e-03, 2.801549769502369e-03, 1.154727780718457e-02, 1.154727780718457e-02, 1.154727780718457e-02, 7.410110976283445e-04, 7.410110976283445e-04, 7.410110976283445e-04, 7.410110976283445e-04, 7.410110976283445e-04, 7.410110976283445e-04};
 
-void mesh_t::CubatureNodesTri2D(int cubTriN, int *_cubNp, dfloat **cubTrir, dfloat **cubTris, dfloat **cubTriw){
+void mesh_t::CubatureNodesTri2D(const int cubTriN,
+                                int& _cubNp,
+                                memory<dfloat>& cubTrir,
+                                memory<dfloat>& cubTris,
+                                memory<dfloat>& cubTriw){
 
-  if (cubTriN>50)
-    LIBP_ABORT(string("Requested Cubature order unavailable."))
+  LIBP_ABORT("Requested Cubature order unavailable.",
+             cubTriN>50);
 
-  int cubTriNp = cubTriNps[cubTriN-1];
+  _cubNp = cubTriNps[cubTriN-1];
 
-  *_cubNp = cubTriNp;
-
-  *cubTrir = (dfloat*) calloc(cubTriNp, sizeof(dfloat));
-  *cubTris = (dfloat*) calloc(cubTriNp, sizeof(dfloat));
-  *cubTriw = (dfloat*) calloc(cubTriNp, sizeof(dfloat));
+  cubTrir.malloc(_cubNp);
+  cubTris.malloc(_cubNp);
+  cubTriw.malloc(_cubNp);
 
   const dfloat *cubTriR, *cubTriS, *cubTriW;
   switch(cubTriN){
@@ -1064,12 +1257,14 @@ void mesh_t::CubatureNodesTri2D(int cubTriN, int *_cubNp, dfloat **cubTrir, dflo
     case 49: cubTriR = cubTriR49; cubTriS = cubTriS49; cubTriW = cubTriW49; break;
     case 50: cubTriR = cubTriR50; cubTriS = cubTriS50; cubTriW = cubTriW50; break;
     default:
-      LIBP_ABORT(string("Requested Cubature order unavailable."))
+      LIBP_FORCE_ABORT("Requested Cubature order unavailable.");
   }
 
-  for(int n=0;n<cubTriNp;++n){
-    cubTrir[0][n] = cubTriR[n];
-    cubTris[0][n] = cubTriS[n];
-    cubTriw[0][n] = cubTriW[n];
+  for(int n=0;n<_cubNp;++n){
+    cubTrir[n] = cubTriR[n];
+    cubTris[n] = cubTriS[n];
+    cubTriw[n] = cubTriW[n];
   }
 }
+
+} //namespace libp

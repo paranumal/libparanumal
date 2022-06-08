@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -35,22 +35,22 @@ SOFTWARE.
 #include "precon.hpp"
 #include "linearSolver.hpp"
 
+namespace libp {
+
 namespace parAlmond {
 
-void AddSettings(settings_t& settings, const string prefix="");
+void AddSettings(settings_t& settings, const std::string prefix="");
 void ReportSettings(settings_t& settings);
-
-extern MPI_Datatype MPI_NONZERO_T;
 
 //distributed matrix class passed to AMG setup
 class parCOO {
 public:
-  platform_t &platform;
-  MPI_Comm comm;
+  platform_t platform;
+  comm_t comm;
 
   dlong nnz=0;
-  hlong *globalRowStarts=nullptr;
-  hlong *globalColStarts=nullptr;
+  memory<hlong> globalRowStarts;
+  memory<hlong> globalColStarts;
 
   //non-zero matrix entries
   struct nonZero_t {
@@ -58,70 +58,183 @@ public:
     hlong col;
     dfloat val;
   };
-  nonZero_t *entries=nullptr;
+  memory<nonZero_t> entries;
 
-  parCOO(platform_t &_platform, MPI_Comm _comm):
+  parCOO() = default;
+  parCOO(platform_t &_platform, comm_t _comm):
     platform(_platform), comm(_comm) {};
-
-  ~parCOO() {
-    if(entries) free(entries);
-    if(globalRowStarts) free(globalRowStarts);
-    if(globalColStarts) free(globalColStarts);
-  }
 };
 
 //abstract multigrid level
 // Class is derived from solver, and must have Operator defined
-class multigridLevel: public solver_t  {
+class multigridLevel: public operator_t  {
 public:
+  platform_t platform;
+  settings_t settings;
+  comm_t comm;
+
   dlong Nrows=0, Ncols=0;
 
-  occa::memory o_scratch;
+  deviceMemory<dfloat> o_scratch;
 
+  multigridLevel() = default;
   multigridLevel(dlong N, dlong M, platform_t& _platform,
-                 settings_t& _settings):
-    solver_t(_platform, _settings), Nrows(N), Ncols(M) {}
-  virtual ~multigridLevel() {};
+                 settings_t& _settings, comm_t _comm):
+    platform(_platform), settings(_settings),
+    comm(_comm), Nrows(N), Ncols(M) {}
 
-  virtual void smooth(occa::memory& o_rhs, occa::memory& o_x, bool x_is_zero)=0;
-  virtual void residual(occa::memory& o_rhs, occa::memory& o_x, occa::memory& o_res)=0;
-  virtual void coarsen(occa::memory& o_x, occa::memory& o_Cx)=0;
-  virtual void prolongate(occa::memory& o_x, occa::memory& o_Px)=0;
+  virtual void smooth(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x, bool x_is_zero)=0;
+  virtual void residual(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_res)=0;
+  virtual void coarsen(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_Cx)=0;
+  virtual void prolongate(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_Px)=0;
   virtual void Report()=0;
 };
 
-//forward declaration
+typedef enum {VCYCLE=0,KCYCLE=1,EXACT=3} CycleType;
+typedef enum {SMOOTHED=0,UNSMOOTHED=1} AggType;
+typedef enum {PCG=0,GMRES=1} KrylovType;
+typedef enum {DAMPED_JACOBI=0,CHEBYSHEV=1} SmoothType;
+typedef enum {RUGESTUBEN=0,SYMMETRIC=1} StrengthType;
+typedef enum {COARSEEXACT=0,COARSEOAS=1} CoarseType;
+
+class coarseSolver_t;
+
 //multigrid preconditioner
-class multigrid_t;
-
-class parAlmond_t: public precon_t {
+class multigrid_t: public operator_t {
 public:
-  parAlmond_t(platform_t& _platform, settings_t& settings_, MPI_Comm comm);
-  ~parAlmond_t();
+  platform_t platform;
+  settings_t settings;
+  comm_t comm;
 
-  //Add level to multigrid heirarchy
-  void AddLevel(multigridLevel* level);
+  bool exact=false;
+  linearSolver_t linearSolver;
+
+  CycleType ctype;
+  AggType aggtype;
+  StrengthType strtype;
+  CoarseType coarsetype;
+
+  int numLevels=0;
+  int baseLevel=0;
+  static constexpr int PARALMOND_MAX_LEVELS=100;
+  std::shared_ptr<multigridLevel> levels[PARALMOND_MAX_LEVELS];
+
+  deviceMemory<dfloat> o_rhs[PARALMOND_MAX_LEVELS];
+  deviceMemory<dfloat> o_x[PARALMOND_MAX_LEVELS];
+
+  std::shared_ptr<coarseSolver_t> coarseSolver;
+
+  //scratch space for smoothing and temporary residual vector
+  size_t NscratchSpace=0;
+  deviceMemory<dfloat> o_scratch;
+
+  KrylovType ktype;
+
+  deviceMemory<dfloat> o_ck[PARALMOND_MAX_LEVELS];
+  deviceMemory<dfloat> o_vk[PARALMOND_MAX_LEVELS];
+  deviceMemory<dfloat> o_wk[PARALMOND_MAX_LEVELS];
+
+  //scratch space
+  size_t NreductionScratch=0;
+  pinnedMemory<dfloat> reductionScratch;
+  deviceMemory<dfloat> o_reductionScratch;
+
+  multigrid_t() = default;
+  multigrid_t(platform_t& _platform, settings_t& _settings,
+              comm_t _comm);
+
+  template<class Level, class... Args>
+  Level& AddLevel(Args&& ... args) {
+    levels[numLevels++] = std::make_shared<Level>(args...);
+    AllocateLevelWorkSpace(numLevels-1);
+    return dynamic_cast<Level&>(*levels[numLevels-1]);
+  }
+  template<class Level>
+  Level& GetLevel(const int l) {
+    return dynamic_cast<Level&>(*levels[l]);
+  }
+
+  void AllocateLevelWorkSpace(const int k);
+
+  void Operator(deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_X);
+
+  void vcycle(const int k, deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_X);
+  void kcycle(const int k, deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_X);
+
+private:
+  void kcycleOp1(multigridLevel& level,
+                 deviceMemory<dfloat>& o_X,  deviceMemory<dfloat>& o_RHS,
+                 deviceMemory<dfloat>& o_CK, deviceMemory<dfloat>& o_VK,
+                 dfloat& alpha1, dfloat& rho1,
+                 dfloat& norm_rhs, dfloat& norm_rhstilde);
+
+  void kcycleOp2(multigridLevel& level,
+                deviceMemory<dfloat>& o_X,  deviceMemory<dfloat>& o_RHS,
+                deviceMemory<dfloat>& o_CK, deviceMemory<dfloat>& o_VK, deviceMemory<dfloat>& o_WK,
+                const dfloat alpha1, const dfloat rho1);
+
+  void kcycleCombinedOp1(multigridLevel& level,
+                        deviceMemory<dfloat>& o_a,
+                        deviceMemory<dfloat>& o_b,
+                        deviceMemory<dfloat>& o_c,
+                        dfloat& aDotb,
+                        dfloat& aDotc,
+                        dfloat& bDotb);
+  void kcycleCombinedOp2(multigridLevel& level,
+                        deviceMemory<dfloat>& o_a,
+                        deviceMemory<dfloat>& o_b,
+                        deviceMemory<dfloat>& o_c,
+                        deviceMemory<dfloat>& o_d,
+                        dfloat& aDotb,
+                        dfloat& aDotc,
+                        dfloat& aDotd);
+  dfloat vectorAddInnerProd(multigridLevel& level,
+                          const dfloat alpha, deviceMemory<dfloat>& o_x,
+                          const dfloat beta,  deviceMemory<dfloat>& o_y);
+};
+
+class parAlmond_t: public operator_t {
+public:
+  parAlmond_t() = default;
+  parAlmond_t(platform_t& _platform, settings_t& _settings, comm_t _comm) {
+    Setup(_platform, _settings, _comm);
+  }
+
+  void Setup(platform_t& _platform, settings_t& _settings, comm_t _comm);
+
+  template<class Level, class... Args>
+  Level& AddLevel(Args&& ... args) {
+    return multigrid->AddLevel<Level, Args...>(args...);
+  }
+  template<class Level>
+  Level& GetLevel(const int l) {
+    return multigrid->GetLevel<Level>(l);
+  }
+
+  int NumLevels();
 
   // Setup AMG
   //-- Local A matrix data must be globally indexed & row sorted
   void AMGSetup(parCOO& A,
                bool nullSpace,
-               dfloat *nullVector,
+               memory<dfloat> nullVector,
                dfloat nullSpacePenalty);
 
-  void Operator(occa::memory& o_rhs, occa::memory& o_x);
+  void Operator(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x);
 
   void Report();
 
   dlong getNumCols(int k);
   dlong getNumRows(int k);
 private:
-  platform_t& platform;
-  settings_t& settings;
+  platform_t platform;
+  settings_t settings;
 
-  multigrid_t *multigrid=nullptr;
+  std::shared_ptr<multigrid_t> multigrid=nullptr;
 };
 
 } //namespace parAlmond
+
+} //namespace libp
 
 #endif

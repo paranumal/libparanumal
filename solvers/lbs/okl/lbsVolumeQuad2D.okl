@@ -2,7 +2,7 @@
 
   The MIT License (MIT)
 
-  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -26,19 +26,19 @@
 
 
 @kernel void lbsVolumeQuad2D(const dlong Nelements,
-			     // @restrict const  dlong  *  elementIds,
-			     @restrict const  dfloat *  vgeo,
-			     @restrict const  dfloat *  DT,
-			     @restrict const  dfloat * x,
-			     @restrict const  dfloat * y,
-			     @restrict const  dfloat * z,
-			     const dfloat t,
-			     const dfloat nu,
-			     const dfloat gamma,
-			     @restrict const  dfloat *  LBM,
-			     @restrict const  dfloat *  q,
-			     @restrict const  dfloat *  U,
-			     @restrict dfloat *  rhsq){
+                             // @restrict const  dlong  *  elementIds,
+                             @restrict const  dfloat *  vgeo,
+                             @restrict const  dfloat *  DT,
+                             @restrict const  dfloat * x,
+                             @restrict const  dfloat * y,
+                             @restrict const  dfloat * z,
+                             const dfloat t,
+                             const dfloat nu,
+                             const dfloat gamma,
+                             @restrict const  dfloat *  LBM,
+                             @restrict const  dfloat *  q,
+                             @restrict const  dfloat *  U,
+                             @restrict dfloat *  rhsq){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
@@ -46,46 +46,44 @@
     @shared dfloat s_DT[p_Nq][p_Nq];
     @exclusive dlong e;
 
-    // @exclusive dfloat fg[p_NblockV][p_Nfields]; 
+    // @exclusive dfloat fg[p_NblockV][p_Nfields];
 
     for(int es=0;es<p_NblockV;++es;@inner(2)){
       for(int j=0;j<p_Nq;++j;@inner(1)){
         for(int i=0;i<p_Nq;++i;@inner(0)){
-	  const dlong et = eo+es; // element in block
-	  if(et<Nelements){
-	    // e = elementIds[et];
-	    e = et;
-	    const dlong idf = i + j*p_Nq + e*p_Nfields*p_Np;
+          const dlong et = eo+es; // element in block
+          if(et<Nelements){
+            // e = elementIds[et];
+            e = et;
+            const dlong idf = i + j*p_Nq + e*p_Nfields*p_Np;
 
 #pragma unroll p_Nfields
-	    for(int fld=0; fld<p_Nfields;++fld){
-	      s_q[es][fld][j][i] = q[idf+fld*p_Np];
-	    }
-	  }
+            for(int fld=0; fld<p_Nfields;++fld){
+              s_q[es][fld][j][i] = q[idf+fld*p_Np];
+            }
+          }
 
-	  if(es==0)
+          if(es==0)
             s_DT[j][i] = DT[j*p_Nq+i];
-	}
+        }
       }
     }
 
-    // make sure all node data is loaded into @shared
-    @barrier("local");
     for(int es=0;es<p_NblockV;++es;@inner(2)){
       for(int j=0;j<p_Nq;++j;@inner(1)){
         for(int i=0;i<p_Nq;++i;@inner(0)){
-	  			const dlong et = eo+es; // element in block
-	  if(et<Nelements){
-	    // prefetch geometric factors (constant on triangle)
-	    const dlong gid   = e*p_Np*p_Nvgeo+ j*p_Nq +i;
-	    const dfloat drdx = vgeo[gid + p_RXID*p_Np];
-	    const dfloat drdy = vgeo[gid + p_RYID*p_Np];
-	    const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
-	    const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
+                                const dlong et = eo+es; // element in block
+          if(et<Nelements){
+            // prefetch geometric factors (constant on triangle)
+            const dlong gid   = e*p_Np*p_Nvgeo+ j*p_Nq +i;
+            const dfloat drdx = vgeo[gid + p_RXID*p_Np];
+            const dfloat drdy = vgeo[gid + p_RYID*p_Np];
+            const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
+            const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
 
-	    // compute 'r' and 's' derivatives of (q_m) at node n
-	    dfloat r_dqdr[p_Nfields], r_dqds[p_Nfields];
-	    dfloat r_dqdx[p_Nfields], r_dqdy[p_Nfields];
+            // compute 'r' and 's' derivatives of (q_m) at node n
+            dfloat r_dqdr[p_Nfields], r_dqds[p_Nfields];
+            dfloat r_dqdx[p_Nfields], r_dqdy[p_Nfields];
 
 #pragma unroll p_Nfields
             for(int fld=0; fld<p_Nfields;++fld){
@@ -109,23 +107,23 @@
                 r_dqds[fld] += Djm*s_q[es][fld][m][i];
             }
 
-	    // Compute derivatives in physical coordinates
+            // Compute derivatives in physical coordinates
 #pragma unroll p_Nfields
             for(int fld=0; fld<p_Nfields;++fld){
               r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld];
               r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld];
             }
 
-	    // Update
-	    const dlong idf = i + j*p_Nq + e*p_Nfields*p_Np;
+            // Update
+            const dlong idf = i + j*p_Nq + e*p_Nfields*p_Np;
 
-	    for(int fld=0; fld<p_Nfields;++fld){
-	      const dfloat ex = LBM[fld + 1*p_Nfields]; 
-	      const dfloat ey = LBM[fld + 2*p_Nfields]; 
-	      rhsq[idf + fld*p_Np] = -(ex*r_dqdx[fld] + ey*r_dqdy[fld]);
-	    }
-	  }
-	}
+            for(int fld=0; fld<p_Nfields;++fld){
+              const dfloat ex = LBM[fld + 1*p_Nfields];
+              const dfloat ey = LBM[fld + 2*p_Nfields];
+              rhsq[idf + fld*p_Np] = -(ex*r_dqdx[fld] + ey*r_dqdy[fld]);
+            }
+          }
+        }
       }
     }
   }

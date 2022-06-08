@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,11 +27,11 @@ SOFTWARE.
 #include "ins.hpp"
 
 // compute RHS = beta*RHS + alpha*div U
-void ins_t::Divergence(const dfloat alpha, occa::memory& o_U,
-                       const dfloat beta,  occa::memory& o_RHS,
+void ins_t::Divergence(const dfloat alpha, deviceMemory<dfloat>& o_U,
+                       const dfloat beta,  deviceMemory<dfloat>& o_RHS,
                        const dfloat T){
 
-  vTraceHalo->ExchangeStart(o_U, 1, ogs_dfloat);
+  vTraceHalo.ExchangeStart(o_U, 1);
 
   // computes div u^(n+1) volume term
   divergenceVolumeKernel(mesh.Nelements,
@@ -42,7 +42,7 @@ void ins_t::Divergence(const dfloat alpha, occa::memory& o_U,
                          o_U,
                          o_RHS);
 
-  vTraceHalo->ExchangeFinish(o_U, 1, ogs_dfloat);
+  vTraceHalo.ExchangeFinish(o_U, 1);
 
   divergenceSurfaceKernel(mesh.Nelements,
                            mesh.o_sgeo,

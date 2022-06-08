@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -28,28 +28,46 @@ SOFTWARE.
 #define PRECON_HPP
 
 #include "core.hpp"
+#include "operator.hpp"
 
-//base preconditioner
-class precon_t {
-public:
-  precon_t() {};
+namespace libp {
 
-  virtual void Operator(occa::memory &o_r, occa::memory &o_Mr)=0;
+/*Abstracted Preconditioner Object*/
+class precon_t: public operator_t {
+ public:
+  void Operator(deviceMemory<dfloat> &o_r, deviceMemory<dfloat> &o_Mr) {
+    assertInitialized();
+    precon->Operator(o_r, o_Mr);
+  }
 
-  virtual ~precon_t() {}
+  /*Generic setup. Create a Precon object and wrap it in a shared_ptr*/
+  template<class Precon, class... Args>
+  void Setup(Args&& ... args) {
+    precon = std::make_shared<Precon>(args...);
+  }
+
+ private:
+  std::shared_ptr<operator_t> precon=nullptr;
+
+  void assertInitialized() {
+    LIBP_ABORT("Precon not initialized",
+               precon==nullptr);
+  }
 };
 
 //Identity operator
-class IdentityPrecon: public precon_t {
+class IdentityPrecon: public operator_t {
 private:
   dlong N;
 
 public:
   IdentityPrecon(dlong _N): N(_N) {}
 
-  void Operator(occa::memory &o_r, occa::memory &o_Mr){
-    o_Mr.copyFrom(o_r, N*sizeof(dfloat)); //identity
+  void Operator(deviceMemory<dfloat> &o_r, deviceMemory<dfloat> &o_Mr){
+    o_Mr.copyFrom(o_r, N); //identity
   }
 };
+
+} //namespace libp
 
 #endif

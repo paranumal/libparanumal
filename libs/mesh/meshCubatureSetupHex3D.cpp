@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,9 +25,10 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh3D.hpp"
 
-void meshHex3D::CubatureSetup(){
+namespace libp {
+
+void mesh_t::CubatureSetupHex3D(){
 
   /* Quadrature data */
   cubN = N+1;
@@ -37,24 +38,19 @@ void meshHex3D::CubatureSetup(){
   intNfp = cubNq*cubNq;
 
   // cubN+1 point Gauss-Legendre quadrature
-  cubr = (dfloat *) malloc(cubNq*sizeof(dfloat));
-  cubw = (dfloat *) malloc(cubNq*sizeof(dfloat));
   JacobiGQ(0, 0, cubN, cubr, cubw);
 
   // GLL to GL interpolation matrix
-  cubInterp = (dfloat *) malloc(Nq*cubNq*sizeof(dfloat));
-  InterpolationMatrix1D(N, Nq, r, cubNq, cubr, cubInterp); //uses the fact that r = gllz for 1:Nq
+  InterpolationMatrix1D(N, gllz, cubr, cubInterp);
 
   //cubature project cubProject = cubInterp^T
-  cubProject = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
-  matrixTranspose(cubNq, Nq, cubInterp, Nq, cubProject, cubNq);
+  cubProject.malloc(cubNq*Nq);
+  linAlg_t::matrixTranspose(cubNq, Nq, cubInterp, Nq, cubProject, cubNq);
 
   //cubature derivates matrix, cubD: differentiate on cubature nodes
-  cubD = (dfloat *) malloc(cubNq*cubNq*sizeof(dfloat));
-  Dmatrix1D(cubN, cubNq, cubr, cubNq, cubr, cubD);
+  Dmatrix1D(cubN, cubr, cubr, cubD);
 
   // weak cubature derivative cubPDT = cubProject * cubD^T
-  cubPDT  = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
   CubatureWeakDmatrix1D(Nq, cubNq, cubProject, cubD, cubPDT);
 
   // add compile time constants to kernels
@@ -65,73 +61,69 @@ void meshHex3D::CubatureSetup(){
   props["defines/" "p_cubNfp"]= cubNfp;
 
   // build transposes (we hold matrices as column major on device)
-  dfloat *cubProjectT = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
-  dfloat *cubInterpT   = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
-  matrixTranspose(cubNq, Nq, cubInterp, Nq, cubInterpT, cubNq);
-  matrixTranspose(Nq, cubNq, cubProject, cubNq, cubProjectT, Nq);
+  memory<dfloat> cubProjectT(cubNq*Nq);
+  memory<dfloat> cubInterpT(cubNq*Nq);
+  linAlg_t::matrixTranspose(cubNq, Nq, cubInterp, Nq, cubInterpT, cubNq);
+  linAlg_t::matrixTranspose(Nq, cubNq, cubProject, cubNq, cubProjectT, Nq);
 
-  dfloat *cubPDTT     = (dfloat*) calloc(cubNq*Nq, sizeof(dfloat));
-  matrixTranspose(Nq, cubNq, cubPDT, cubNq, cubPDTT, Nq);
+  memory<dfloat> cubPDTT(cubNq*Nq);
+  linAlg_t::matrixTranspose(Nq, cubNq, cubPDT, cubNq, cubPDTT, Nq);
 
-  o_cubInterp   = platform.malloc(Nq*cubNq*sizeof(dfloat), cubInterpT);
-  o_cubProject = platform.malloc(Nq*cubNq*sizeof(dfloat), cubProjectT);
+  o_cubInterp  = platform.malloc<dfloat>(Nq*cubNq, cubInterpT);
+  o_cubProject = platform.malloc<dfloat>(Nq*cubNq, cubProjectT);
 
-  o_cubPDT = platform.malloc(Nq*cubNq*sizeof(dfloat), cubPDTT);
-  o_cubD = platform.malloc(cubNq*cubNq*sizeof(dfloat), cubD);
+  o_cubPDT = platform.malloc<dfloat>(Nq*cubNq, cubPDTT);
+  o_cubD   = platform.malloc<dfloat>(cubNq*cubNq, cubD);
 
   o_intInterp = o_cubInterp;
   o_intLIFT = o_cubProject;
 
-  free(cubPDTT);
-  free(cubProjectT);
-  free(cubInterpT);
-
-  cubvgeo = (dfloat*) calloc(Nelements*Nvgeo*cubNp, sizeof(dfloat));
-  cubggeo = (dfloat*) calloc(Nelements*Nggeo*cubNp, sizeof(dfloat));
-
-  cubsgeo = (dfloat*) calloc(Nelements*Nsgeo*cubNq*cubNq*Nfaces, sizeof(dfloat));
+  cubwJ.malloc(Nelements*cubNp);
+  cubvgeo.malloc(Nelements*Nvgeo*cubNp);
+  cubggeo.malloc(Nelements*Nggeo*cubNp);
+  cubsgeo.malloc(Nelements*Nsgeo*cubNq*cubNq*Nfaces);
 
   //temp arrays
-  dfloat *xre = (dfloat*) calloc(Np, sizeof(dfloat));
-  dfloat *xse = (dfloat*) calloc(Np, sizeof(dfloat));
-  dfloat *xte = (dfloat*) calloc(Np, sizeof(dfloat));
-  dfloat *yre = (dfloat*) calloc(Np, sizeof(dfloat));
-  dfloat *yse = (dfloat*) calloc(Np, sizeof(dfloat));
-  dfloat *yte = (dfloat*) calloc(Np, sizeof(dfloat));
-  dfloat *zre = (dfloat*) calloc(Np, sizeof(dfloat));
-  dfloat *zse = (dfloat*) calloc(Np, sizeof(dfloat));
-  dfloat *zte = (dfloat*) calloc(Np, sizeof(dfloat));
+  memory<dfloat> xre(Np);
+  memory<dfloat> xse(Np);
+  memory<dfloat> xte(Np);
+  memory<dfloat> yre(Np);
+  memory<dfloat> yse(Np);
+  memory<dfloat> yte(Np);
+  memory<dfloat> zre(Np);
+  memory<dfloat> zse(Np);
+  memory<dfloat> zte(Np);
 
-  dfloat *xre1 = (dfloat*) calloc(Nq*Nq*cubNq, sizeof(dfloat));
-  dfloat *xse1 = (dfloat*) calloc(Nq*Nq*cubNq, sizeof(dfloat));
-  dfloat *xte1 = (dfloat*) calloc(Nq*Nq*cubNq, sizeof(dfloat));
-  dfloat *yre1 = (dfloat*) calloc(Nq*Nq*cubNq, sizeof(dfloat));
-  dfloat *yse1 = (dfloat*) calloc(Nq*Nq*cubNq, sizeof(dfloat));
-  dfloat *yte1 = (dfloat*) calloc(Nq*Nq*cubNq, sizeof(dfloat));
-  dfloat *zre1 = (dfloat*) calloc(Nq*Nq*cubNq, sizeof(dfloat));
-  dfloat *zse1 = (dfloat*) calloc(Nq*Nq*cubNq, sizeof(dfloat));
-  dfloat *zte1 = (dfloat*) calloc(Nq*Nq*cubNq, sizeof(dfloat));
+  memory<dfloat> xre1(Nq*Nq*cubNq);
+  memory<dfloat> xse1(Nq*Nq*cubNq);
+  memory<dfloat> xte1(Nq*Nq*cubNq);
+  memory<dfloat> yre1(Nq*Nq*cubNq);
+  memory<dfloat> yse1(Nq*Nq*cubNq);
+  memory<dfloat> yte1(Nq*Nq*cubNq);
+  memory<dfloat> zre1(Nq*Nq*cubNq);
+  memory<dfloat> zse1(Nq*Nq*cubNq);
+  memory<dfloat> zte1(Nq*Nq*cubNq);
 
-  dfloat *xre2 = (dfloat*) calloc(Nq*cubNq*cubNq, sizeof(dfloat));
-  dfloat *xse2 = (dfloat*) calloc(Nq*cubNq*cubNq, sizeof(dfloat));
-  dfloat *xte2 = (dfloat*) calloc(Nq*cubNq*cubNq, sizeof(dfloat));
-  dfloat *yre2 = (dfloat*) calloc(Nq*cubNq*cubNq, sizeof(dfloat));
-  dfloat *yse2 = (dfloat*) calloc(Nq*cubNq*cubNq, sizeof(dfloat));
-  dfloat *yte2 = (dfloat*) calloc(Nq*cubNq*cubNq, sizeof(dfloat));
-  dfloat *zre2 = (dfloat*) calloc(Nq*cubNq*cubNq, sizeof(dfloat));
-  dfloat *zse2 = (dfloat*) calloc(Nq*cubNq*cubNq, sizeof(dfloat));
-  dfloat *zte2 = (dfloat*) calloc(Nq*cubNq*cubNq, sizeof(dfloat));
+  memory<dfloat> xre2(Nq*cubNq*cubNq);
+  memory<dfloat> xse2(Nq*cubNq*cubNq);
+  memory<dfloat> xte2(Nq*cubNq*cubNq);
+  memory<dfloat> yre2(Nq*cubNq*cubNq);
+  memory<dfloat> yse2(Nq*cubNq*cubNq);
+  memory<dfloat> yte2(Nq*cubNq*cubNq);
+  memory<dfloat> zre2(Nq*cubNq*cubNq);
+  memory<dfloat> zse2(Nq*cubNq*cubNq);
+  memory<dfloat> zte2(Nq*cubNq*cubNq);
 
   //surface temp arrays
-  dfloat *xr1 = (dfloat*) calloc(Nq*cubNq, sizeof(dfloat));
-  dfloat *xs1 = (dfloat*) calloc(Nq*cubNq, sizeof(dfloat));
-  dfloat *xt1 = (dfloat*) calloc(Nq*cubNq, sizeof(dfloat));
-  dfloat *yr1 = (dfloat*) calloc(Nq*cubNq, sizeof(dfloat));
-  dfloat *ys1 = (dfloat*) calloc(Nq*cubNq, sizeof(dfloat));
-  dfloat *yt1 = (dfloat*) calloc(Nq*cubNq, sizeof(dfloat));
-  dfloat *zr1 = (dfloat*) calloc(Nq*cubNq, sizeof(dfloat));
-  dfloat *zs1 = (dfloat*) calloc(Nq*cubNq, sizeof(dfloat));
-  dfloat *zt1 = (dfloat*) calloc(Nq*cubNq, sizeof(dfloat));
+  memory<dfloat> xr1(Nq*cubNq);
+  memory<dfloat> xs1(Nq*cubNq);
+  memory<dfloat> xt1(Nq*cubNq);
+  memory<dfloat> yr1(Nq*cubNq);
+  memory<dfloat> ys1(Nq*cubNq);
+  memory<dfloat> yt1(Nq*cubNq);
+  memory<dfloat> zr1(Nq*cubNq);
+  memory<dfloat> zs1(Nq*cubNq);
+  memory<dfloat> zt1(Nq*cubNq);
 
   //geometric data for quadrature
   for(dlong e=0;e<Nelements;++e){ /* for each element */
@@ -232,11 +224,7 @@ void meshHex3D::CubatureSetup(){
           /* compute geometric factors for affine coordinate transform*/
           dfloat J = xr*(ys*zt-zs*yt) - yr*(xs*zt-zs*xt) + zr*(xs*yt-ys*xt);
 
-          if(J<1e-8) {
-            stringstream ss;
-            ss << "Negative J found at element " << e << "\n";
-            LIBP_ABORT(ss.str())
-          }
+          LIBP_ABORT("Negative J found at element " << e, J<1e-8);
 
           dfloat rx =  (ys*zt - zs*yt)/J, ry = -(xs*zt - zs*xt)/J, rz =  (xs*yt - ys*xt)/J;
           dfloat sx = -(yr*zt - zr*yt)/J, sy =  (xr*zt - zr*xt)/J, sz = -(xr*yt - yr*xt)/J;
@@ -270,7 +258,9 @@ void meshHex3D::CubatureSetup(){
           cubggeo[base + cubNp*G11ID] = JW*(sx*sx + sy*sy + sz*sz);
           cubggeo[base + cubNp*G12ID] = JW*(sx*tx + sy*ty + sz*tz);
           cubggeo[base + cubNp*G22ID] = JW*(tx*tx + ty*ty + tz*tz);
-          cubggeo[base + cubNp*GWJID] = JW;
+
+          base = cubNp*e + i + j*cubNq + k*cubNq*cubNq;
+          cubwJ[base] = JW;
         }
       }
     }
@@ -360,29 +350,10 @@ void meshHex3D::CubatureSetup(){
   }
 
 
-  o_cubvgeo =
-    platform.malloc(Nelements*Nvgeo*cubNp*sizeof(dfloat),
-        cubvgeo);
-
-  o_cubsgeo =
-    platform.malloc(Nelements*Nfaces*cubNq*cubNq*Nsgeo*sizeof(dfloat),
-        cubsgeo);
-
-  o_cubggeo =
-    platform.malloc(Nelements*Nggeo*cubNp*sizeof(dfloat),
-        cubggeo);
-
-  free(xre); free(xse); free(xte);
-  free(yre); free(yse); free(yte);
-  free(zre); free(zse); free(zte);
-  free(xre1); free(xse1); free(xte1);
-  free(yre1); free(yse1); free(yte1);
-  free(zre1); free(zse1); free(zte1);
-  free(xre2); free(xse2); free(xte2);
-  free(yre2); free(yse2); free(yte2);
-  free(zre2); free(zse2); free(zte2);
-
-  free(xr1); free(xs1); free(xt1);
-  free(yr1); free(ys1); free(yt1);
-  free(zr1); free(zs1); free(zt1);
+  o_cubwJ = platform.malloc<dfloat>(Nelements*cubNp, cubwJ);
+  o_cubvgeo = platform.malloc<dfloat>(Nelements*Nvgeo*cubNp, cubvgeo);
+  o_cubsgeo = platform.malloc<dfloat>(Nelements*Nfaces*cubNq*cubNq*Nsgeo, cubsgeo);
+  o_cubggeo = platform.malloc<dfloat>(Nelements*Nggeo*cubNp, cubggeo);
 }
+
+} //namespace libp

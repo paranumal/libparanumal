@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,50 +25,40 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh2D.hpp"
-#include "mesh/mesh3D.hpp"
 
-void meshTri3D::CubatureSetup(){
-  mesh_t *mesh_p = (mesh_t*) this;
-  meshTri2D* trimesh = (meshTri2D*) mesh_p;
-  trimesh->meshTri2D::CubatureSetup();
-}
+namespace libp {
 
-void meshTri2D::CubatureSetup(){
+void mesh_t::CubatureSetupTri2D(){
 
   /* Cubature data */
   cubN = 2*N; //cubature order
-  CubatureNodesTri2D(cubN, &cubNp, &cubr, &cubs, &cubw);
+  CubatureNodesTri2D(cubN, cubNp, cubr, cubs, cubw);
 
-  cubInterp = (dfloat *) malloc(Np*cubNp*sizeof(dfloat));
-  InterpolationMatrixTri2D(N, Np, r, s, cubNp, cubr, cubs, cubInterp);
+  InterpolationMatrixTri2D(N, r, s, cubr, cubs, cubInterp);
 
   //cubature project cubProject = M^{-1} * cubInterp^T
   // Defined such that cubProject * cubW * cubInterp = Identity
-  cubProject = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
-  CubaturePmatrixTri2D(N, Np, r, s, cubNp, cubr, cubs, cubProject);
+  CubaturePmatrixTri2D(N, r, s, cubr, cubs, cubProject);
 
   //cubature derivates matrices, cubD: differentiate on cubature nodes
   // we dont use cubD on Tris/Tets  so skip computing
 
   // Instead, it's cheaper to:
   // make weak cubature derivatives cubPDT = cubProject * cubD^T
-  cubPDT  = (dfloat*) calloc(2*cubNp*Np, sizeof(dfloat));
+  CubatureWeakDmatricesTri2D(N, r, s,
+                             cubr, cubs,
+                             cubPDT);
   cubPDrT = cubPDT + 0*cubNp*Np;
   cubPDsT = cubPDT + 1*cubNp*Np;
-  CubatureWeakDmatricesTri2D(N, Np, r, s, cubNp, cubr, cubs, cubPDrT, cubPDsT);
 
   // cubN+1 point Gauss-Legendre quadrature for surface integrals
   cubNq  = cubN+1;
   cubNfp = cubN+1;
   intNfp = cubN+1;
-  intr = (dfloat *) malloc(cubNfp*sizeof(dfloat));
-  intw = (dfloat *) malloc(cubNfp*sizeof(dfloat));
   JacobiGQ(0, 0, cubN, intr, intw);
 
-  intInterp = (dfloat*) calloc(intNfp*Nfaces*Nfp, sizeof(dfloat));
-  intLIFT = (dfloat*) calloc(Nfaces*intNfp*Np, sizeof(dfloat));
-  CubatureSurfaceMatricesTri2D(N, Np, r, s, faceNodes, intNfp, intr, intw,
+  CubatureSurfaceMatricesTri2D(N, r, s, faceNodes,
+                               intr, intw,
                                intInterp, intLIFT);
 
   // add compile time constants to kernels
@@ -79,10 +69,10 @@ void meshTri2D::CubatureSetup(){
   props["defines/" "p_cubNfp"]= cubNfp;
 
   // build transposes (we hold matrices as column major on device)
-  dfloat *cubProjectT = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
-  dfloat *cubInterpT   = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
-  matrixTranspose(cubNp, Np, cubInterp, Np, cubInterpT, cubNp);
-  matrixTranspose(Np, cubNp, cubProject, cubNp, cubProjectT, Np);
+  memory<dfloat> cubProjectT(cubNp*Np);
+  memory<dfloat> cubInterpT(cubNp*Np);
+  linAlg_t::matrixTranspose(cubNp, Np, cubInterp, Np, cubInterpT, cubNp);
+  linAlg_t::matrixTranspose(Np, cubNp, cubProject, cubNp, cubProjectT, Np);
 
   //pre-multiply cubProject by W on device
   for(int n=0;n<cubNp;++n){
@@ -91,11 +81,11 @@ void meshTri2D::CubatureSetup(){
     }
   }
 
-  dfloat *cubPDTT = (dfloat*) calloc(2*cubNp*Np, sizeof(dfloat));
-  dfloat *cubPDrTT = cubPDTT + 0*cubNp*Np;
-  dfloat *cubPDsTT = cubPDTT + 1*cubNp*Np;
-  matrixTranspose(Np, cubNp, cubPDrT, cubNp, cubPDrTT, Np);
-  matrixTranspose(Np, cubNp, cubPDsT, cubNp, cubPDsTT, Np);
+  memory<dfloat> cubPDTT(2*cubNp*Np);
+  memory<dfloat> cubPDrTT = cubPDTT + 0*cubNp*Np;
+  memory<dfloat> cubPDsTT = cubPDTT + 1*cubNp*Np;
+  linAlg_t::matrixTranspose(Np, cubNp, cubPDrT, cubNp, cubPDrTT, Np);
+  linAlg_t::matrixTranspose(Np, cubNp, cubPDsT, cubNp, cubPDsTT, Np);
 
   //pre-multiply cubPDT by W on device
   for(int n=0;n<cubNp;++n){
@@ -106,26 +96,23 @@ void meshTri2D::CubatureSetup(){
   }
 
   // build surface integration matrix transposes
-  dfloat *intLIFTT = (dfloat*) calloc(Np*Nfaces*intNfp, sizeof(dfloat));
-  dfloat *intInterpT = (dfloat*) calloc(Nfp*Nfaces*intNfp, sizeof(dfloat));
-  matrixTranspose(Np, Nfaces*intNfp, intLIFT, Nfaces*intNfp, intLIFTT, Np);
-  matrixTranspose(Nfaces*intNfp, Nfp, intInterp, Nfp, intInterpT, Nfaces*intNfp);
+  memory<dfloat> intLIFTT(Np*Nfaces*intNfp);
+  memory<dfloat> intInterpT(Nfp*Nfaces*intNfp);
+  linAlg_t::matrixTranspose(Np, Nfaces*intNfp, intLIFT, Nfaces*intNfp, intLIFTT, Np);
+  linAlg_t::matrixTranspose(Nfaces*intNfp, Nfp, intInterp, Nfp, intInterpT, Nfaces*intNfp);
 
-  o_cubvgeo = o_vgeo;// dummy
-  o_cubsgeo = o_sgeo; //dummy cubature geo factors
+  o_cubInterp  = platform.malloc<dfloat>(Np*cubNp, cubInterpT);
+  o_cubProject = platform.malloc<dfloat>(Np*cubNp, cubProjectT);
 
-  o_cubInterp   = platform.malloc(Np*cubNp*sizeof(dfloat), cubInterpT);
-  o_cubProject = platform.malloc(Np*cubNp*sizeof(dfloat), cubProjectT);
+  o_cubPDT = platform.malloc<dfloat>(2*cubNp*Np, cubPDTT);
 
-  o_cubPDT = platform.malloc(2*cubNp*Np*sizeof(dfloat), cubPDTT);
-  o_cubD = o_cubPDT; //dummy
+  o_intInterp = platform.malloc<dfloat>(Nfp*Nfaces*intNfp, intInterpT);
+  o_intLIFT   = platform.malloc<dfloat>(Np*Nfaces*intNfp, intLIFTT);
 
-  o_intInterp = platform.malloc(Nfp*Nfaces*intNfp*sizeof(dfloat), intInterpT);
-  o_intLIFT = platform.malloc(Np*Nfaces*intNfp*sizeof(dfloat), intLIFTT);
-
-  free(cubPDTT);
-  free(cubProjectT);
-  free(cubInterpT);
-  free(intLIFTT);
-  free(intInterpT);
+  o_cubwJ = o_wJ;
+  o_cubvgeo = o_vgeo;
+  o_cubggeo = o_ggeo;
+  o_cubsgeo = o_sgeo;
 }
+
+} //namespace libp

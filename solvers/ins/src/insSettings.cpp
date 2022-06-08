@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,7 +27,7 @@ SOFTWARE.
 #include "ins.hpp"
 
 //settings for ins solver
-insSettings_t::insSettings_t(MPI_Comm& _comm):
+insSettings_t::insSettings_t(comm_t& _comm):
   settings_t(_comm) {
 
   newSetting("DATA FILE",
@@ -88,19 +88,16 @@ insSettings_t::insSettings_t(MPI_Comm& _comm):
 
   ellipticAddSettings(*this, "VELOCITY ");
   parAlmond::AddSettings(*this, "VELOCITY ");
-  initialGuessAddSettings(*this, "VELOCITY ");
+  InitialGuess::AddSettings(*this, "VELOCITY ");
 
   ellipticAddSettings(*this, "PRESSURE ");
   parAlmond::AddSettings(*this, "PRESSURE ");
-  initialGuessAddSettings(*this, "PRESSURE ");
+  InitialGuess::AddSettings(*this, "PRESSURE ");
 }
 
 void insSettings_t::report() {
 
-  int rank;
-  MPI_Comm_rank(comm, &rank);
-
-  if (rank==0) {
+  if (comm.rank()==0) {
     std::cout << "INS Settings:\n\n";
     reportSetting("DATA FILE");
     reportSetting("VISCOSITY");
@@ -167,15 +164,15 @@ void insSettings_t::report() {
 
 void insSettings_t::parseFromFile(platformSettings_t& platformSettings,
                                   meshSettings_t& meshSettings,
-                                  const string filename) {
+                                  const std::string filename) {
   //read all settings from file
   settings_t s(comm);
   s.readSettingsFromFile(filename);
 
   for(auto it = s.settings.begin(); it != s.settings.end(); ++it) {
-    setting_t* set = it->second;
-    const string name = set->getName();
-    const string val = set->getVal<string>();
+    setting_t& set = it->second;
+    const std::string name = set.getName();
+    const std::string val = set.getVal<std::string>();
     if (platformSettings.hasSetting(name))
       platformSettings.changeSetting(name, val);
     else if (meshSettings.hasSetting(name))
@@ -183,46 +180,44 @@ void insSettings_t::parseFromFile(platformSettings_t& platformSettings,
     else if (hasSetting(name)) //self
       changeSetting(name, val);
     else  {
-      stringstream ss;
-      ss << "Unknown setting: [" << name << "] requested";
-      LIBP_ABORT(ss.str());
+      LIBP_FORCE_ABORT("Unknown setting: [" << name << "] requested");
     }
   }
 }
 
-ellipticSettings_t* insSettings_t::extractVelocitySettings() {
+ellipticSettings_t insSettings_t::extractVelocitySettings() {
 
-  ellipticSettings_t* velocitySettings = new ellipticSettings_t(comm);
+  ellipticSettings_t velocitySettings(comm);
 
-  initialGuessAddSettings(*velocitySettings);
+  InitialGuess::AddSettings(velocitySettings);
 
-  for(auto it = velocitySettings->settings.begin(); it != velocitySettings->settings.end(); ++it) {
-    setting_t* set = it->second;
-    const string name = set->getName();
+  for(auto it = velocitySettings.settings.begin(); it != velocitySettings.settings.end(); ++it) {
+    setting_t& set = it->second;
+    const std::string name = set.getName();
 
-    string val;
+    std::string val;
     getSetting("VELOCITY "+name, val);
 
-    set->updateVal(val);
+    set.updateVal(val);
   }
 
   return velocitySettings;
 }
 
-ellipticSettings_t* insSettings_t::extractPressureSettings() {
+ellipticSettings_t insSettings_t::extractPressureSettings() {
 
-  ellipticSettings_t* pressureSettings = new ellipticSettings_t(comm);
+  ellipticSettings_t pressureSettings(comm);
 
-  initialGuessAddSettings(*pressureSettings);
+  InitialGuess::AddSettings(pressureSettings);
 
-  for(auto it = pressureSettings->settings.begin(); it != pressureSettings->settings.end(); ++it) {
-    setting_t* set = it->second;
-    const string name = set->getName();
+  for(auto it = pressureSettings.settings.begin(); it != pressureSettings.settings.end(); ++it) {
+    setting_t& set = it->second;
+    const std::string name = set.getName();
 
-    string val;
+    std::string val;
     getSetting("PRESSURE "+name, val);
 
-    set->updateVal(val);
+    set.updateVal(val);
   }
 
   return pressureSettings;

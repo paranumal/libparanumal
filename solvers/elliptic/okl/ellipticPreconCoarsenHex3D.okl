@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -51,7 +51,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     // coarsen in k index
     for(int k=0;k<p_NqFine;++k;@inner(2)){
@@ -69,7 +68,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     // coarsen in j index
     for(int k=0;k<p_NqFine;++k;@inner(2)){
@@ -87,7 +85,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     // coarsen in i index
     for(int k=0;k<p_NqFine;++k;@inner(2)){
@@ -134,7 +131,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     for(int j=0;j<p_NqFine;++j;@inner(1)){
       for(int i=0;i<p_NqFine;++i;@inner(0)){
@@ -157,7 +153,6 @@ SOFTWARE.
 
     for(int k=0;k<p_NqCoarse;++k){
 
-      @barrier("local");
 
       for(int j=0;j<p_NqFine;++j;@inner(1)){
         for(int i=0;i<p_NqFine;++i;@inner(0)){
@@ -166,7 +161,6 @@ SOFTWARE.
         }
       }
 
-      @barrier("local");
 
       for(int j=0;j<p_NqFine;++j;@inner(1)){
         for(int i=0;i<p_NqFine;++i;@inner(0)){
@@ -185,7 +179,6 @@ SOFTWARE.
         }
       }
 
-      @barrier("local");
 
       for(int j=0;j<p_NqFine;++j;@inner(1)){
         for(int i=0;i<p_NqFine;++i;@inner(0)){
@@ -244,7 +237,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     // coarsen in k index
     for(int k=0;k<p_NqFine;++k;@inner(2)){
@@ -262,7 +254,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     // coarsen in j index
     for(int k=0;k<p_NqFine;++k;@inner(2)){
@@ -280,7 +271,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     // coarsen in i index
     for(int k=0;k<p_NqFine;++k;@inner(2)){

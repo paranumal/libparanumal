@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -32,11 +32,11 @@ dfloat bns_t::MaxWaveSpeed(){
 }
 
 //evaluate ODE rhs = f(q,t)
-void bns_t::rhsf_pml(occa::memory& o_Q, occa::memory& o_pmlQ,
-                     occa::memory& o_RHS, occa::memory& o_pmlRHS, const dfloat T){
+void bns_t::rhsf_pml(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_pmlQ,
+                     deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_pmlRHS, const dfloat T){
 
   // extract q trace halo and start exchange
-  traceHalo->ExchangeStart(o_Q, 1, ogs_dfloat);
+  traceHalo.ExchangeStart(o_Q, 1);
 
   // compute volume contribution to bns RHS
   rhsVolume(mesh.NnonPmlElements, mesh.o_nonPmlElements, o_Q, o_RHS, T);
@@ -49,7 +49,7 @@ void bns_t::rhsf_pml(occa::memory& o_Q, occa::memory& o_pmlQ,
                    o_Q, o_pmlQ, o_RHS, o_pmlRHS);
 
   // complete trace halo exchange
-  traceHalo->ExchangeFinish(o_Q, 1, ogs_dfloat);
+  traceHalo.ExchangeFinish(o_Q, 1);
 
   // compute surface contribution to bns RHS
   rhsSurface(mesh.NnonPmlElements, mesh.o_nonPmlElements, o_Q, o_RHS, T);
@@ -59,12 +59,12 @@ void bns_t::rhsf_pml(occa::memory& o_Q, occa::memory& o_pmlQ,
 
 
 //evaluate ODE rhs = f(q,t)
-void bns_t::rhsf_MR_pml(occa::memory& o_Q, occa::memory& o_pmlQ,
-                        occa::memory& o_RHS, occa::memory& o_pmlRHS,
-                        occa::memory& o_fQM, const dfloat T, const int lev){
+void bns_t::rhsf_MR_pml(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_pmlQ,
+                        deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_pmlRHS,
+                        deviceMemory<dfloat>& o_fQM, const dfloat T, const int lev){
 
   // extract q trace halo and start exchange
-  multirateTraceHalo[lev]->ExchangeStart(o_fQM, 1, ogs_dfloat);
+  multirateTraceHalo[lev].ExchangeStart(o_fQM, 1);
 
   // compute volume contribution to bns RHS
   rhsVolume(mesh.mrNnonPmlElements[lev], mesh.o_mrNonPmlElements[lev], o_Q, o_RHS, T);
@@ -77,7 +77,7 @@ void bns_t::rhsf_MR_pml(occa::memory& o_Q, occa::memory& o_pmlQ,
                    o_Q, o_pmlQ, o_RHS, o_pmlRHS);
 
   // complete trace halo exchange
-  multirateTraceHalo[lev]->ExchangeFinish(o_fQM, 1, ogs_dfloat);
+  multirateTraceHalo[lev].ExchangeFinish(o_fQM, 1);
 
   // compute surface contribution to bns RHS
   rhsSurfaceMR(mesh.mrNnonPmlElements[lev], mesh.o_mrNonPmlElements[lev], o_Q, o_RHS, o_fQM, T);
@@ -85,8 +85,8 @@ void bns_t::rhsf_MR_pml(occa::memory& o_Q, occa::memory& o_pmlQ,
                   o_Q, o_pmlQ, o_RHS, o_pmlRHS, o_fQM, T);
 }
 
-void bns_t::rhsVolume(dlong N, occa::memory& o_ids,
-                      occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
+void bns_t::rhsVolume(dlong N, deviceMemory<dlong>& o_ids,
+                      deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T){
 
   // compute volume contribution to bns RHS
   if (N)
@@ -104,9 +104,9 @@ void bns_t::rhsVolume(dlong N, occa::memory& o_ids,
                  o_RHS);
 }
 
-void bns_t::rhsPmlVolume(dlong N, occa::memory& o_ids, occa::memory& o_pmlids,
-                         occa::memory& o_Q, occa::memory& o_pmlQ,
-                         occa::memory& o_RHS, occa::memory& o_pmlRHS, const dfloat T){
+void bns_t::rhsPmlVolume(dlong N, deviceMemory<dlong>& o_ids, deviceMemory<dlong>& o_pmlids,
+                         deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_pmlQ,
+                         deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_pmlRHS, const dfloat T){
 
   // compute volume contribution to bns RHS
   if (N) {
@@ -146,8 +146,8 @@ void bns_t::rhsPmlVolume(dlong N, occa::memory& o_ids, occa::memory& o_pmlids,
   }
 }
 
-void bns_t::rhsRelaxation(dlong N, occa::memory& o_ids,
-                          occa::memory& o_Q, occa::memory& o_RHS){
+void bns_t::rhsRelaxation(dlong N, deviceMemory<dlong>& o_ids,
+                          deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS){
 
   // compute volume contribution to bns RHS
   if (N)
@@ -163,9 +163,9 @@ void bns_t::rhsRelaxation(dlong N, occa::memory& o_ids,
                      o_RHS);
 }
 
-void bns_t::rhsPmlRelaxation(dlong N, occa::memory& o_ids, occa::memory& o_pmlids,
-                             occa::memory& o_Q, occa::memory& o_pmlQ,
-                             occa::memory& o_RHS, occa::memory& o_pmlRHS){
+void bns_t::rhsPmlRelaxation(dlong N, deviceMemory<dlong>& o_ids, deviceMemory<dlong>& o_pmlids,
+                             deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_pmlQ,
+                             deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_pmlRHS){
 
   // compute volume contribution to bns RHS
   if (N) {
@@ -199,8 +199,8 @@ void bns_t::rhsPmlRelaxation(dlong N, occa::memory& o_ids, occa::memory& o_pmlid
   }
 }
 
-void bns_t::rhsSurface(dlong N, occa::memory& o_ids,
-                      occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
+void bns_t::rhsSurface(dlong N, deviceMemory<dlong>& o_ids,
+                      deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T){
 
   // compute volume contribution to bns RHS
   if (N)
@@ -221,9 +221,9 @@ void bns_t::rhsSurface(dlong N, occa::memory& o_ids,
                   o_RHS);
 }
 
-void bns_t::rhsPmlSurface(dlong N, occa::memory& o_ids, occa::memory& o_pmlids,
-                         occa::memory& o_Q, occa::memory& o_pmlQ,
-                         occa::memory& o_RHS, occa::memory& o_pmlRHS, const dfloat T){
+void bns_t::rhsPmlSurface(dlong N, deviceMemory<dlong>& o_ids, deviceMemory<dlong>& o_pmlids,
+                         deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_pmlQ,
+                         deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_pmlRHS, const dfloat T){
 
   // compute volume contribution to bns RHS
   if (N)
@@ -246,9 +246,9 @@ void bns_t::rhsPmlSurface(dlong N, occa::memory& o_ids, occa::memory& o_pmlids,
                     o_pmlRHS);
 }
 
-void bns_t::rhsSurfaceMR(dlong N, occa::memory& o_ids,
-                         occa::memory& o_Q, occa::memory& o_RHS,
-                         occa::memory& o_fQM, const dfloat T){
+void bns_t::rhsSurfaceMR(dlong N, deviceMemory<dlong>& o_ids,
+                         deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS,
+                         deviceMemory<dfloat>& o_fQM, const dfloat T){
 
   // compute volume contribution to bns RHS
   if (N)
@@ -270,10 +270,10 @@ void bns_t::rhsSurfaceMR(dlong N, occa::memory& o_ids,
                   o_RHS);
 }
 
-void bns_t::rhsPmlSurfaceMR(dlong N, occa::memory& o_ids, occa::memory& o_pmlids,
-                         occa::memory& o_Q, occa::memory& o_pmlQ,
-                         occa::memory& o_RHS, occa::memory& o_pmlRHS,
-                         occa::memory& o_fQM, const dfloat T){
+void bns_t::rhsPmlSurfaceMR(dlong N, deviceMemory<dlong>& o_ids, deviceMemory<dlong>& o_pmlids,
+                         deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_pmlQ,
+                         deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_pmlRHS,
+                         deviceMemory<dfloat>& o_fQM, const dfloat T){
 
   // compute volume contribution to bns RHS
   if (N)

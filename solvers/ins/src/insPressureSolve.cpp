@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,11 +27,12 @@ SOFTWARE.
 #include "ins.hpp"
 
 //  Solves -gamma*Laplacian*P = rhs
-void ins_t::PressureSolve(occa::memory& o_P, occa::memory& o_RHS,
+void ins_t::PressureSolve(deviceMemory<dfloat>& o_P, deviceMemory<dfloat>& o_RHS,
                           const dfloat gamma, const dfloat T){
 
   // compute RHS = MM*RHS/gamma + BCdata
   pressureRhsKernel(mesh.Nelements,
+                    mesh.o_wJ,
                     mesh.o_vgeo,
                     mesh.o_sgeo,
                     mesh.o_ggeo,
@@ -42,7 +43,7 @@ void ins_t::PressureSolve(occa::memory& o_P, occa::memory& o_RHS,
                     mesh.o_sM,
                     mesh.o_vmapM,
                     mesh.o_EToB,
-                    o_mapB,
+                    mesh.o_mapB,
                     pTau,
                     T,
                     mesh.o_x,
@@ -58,15 +59,15 @@ void ins_t::PressureSolve(occa::memory& o_P, occa::memory& o_RHS,
 
   if(pDisc_c0) {
     // gather, solve, scatter
-    pSolver->ogsMasked->Gather(o_GrhsP, o_RHS, ogs_dfloat, ogs_add, ogs_trans);
-    NiterP = pSolver->Solve(*pLinearSolver, o_GP, o_GrhsP, presTOL, maxIter, verbose);
-    pSolver->ogsMasked->Scatter(o_P, o_GP, ogs_dfloat, ogs_add, ogs_notrans);
+    pSolver.ogsMasked.Gather(o_GrhsP, o_RHS, 1, ogs::Add, ogs::Trans);
+    NiterP = pSolver.Solve(pLinearSolver, o_GP, o_GrhsP, presTOL, maxIter, verbose);
+    pSolver.ogsMasked.Scatter(o_P, o_GP, 1, ogs::NoTrans);
 
     // enter BCs if C0
     pressureBCKernel(mesh.Nelements,
                      mesh.o_sgeo,
                      mesh.o_vmapM,
-                     o_mapB,
+                     mesh.o_mapB,
                      T,
                      mesh.o_x,
                      mesh.o_y,
@@ -74,6 +75,6 @@ void ins_t::PressureSolve(occa::memory& o_P, occa::memory& o_RHS,
                      nu,
                      o_P);
   } else {
-    NiterP = pSolver->Solve(*pLinearSolver, o_P, o_RHS, presTOL, maxIter, verbose);
+    NiterP = pSolver.Solve(pLinearSolver, o_P, o_RHS, presTOL, maxIter, verbose);
   }
 }

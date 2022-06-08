@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,7 +27,7 @@ SOFTWARE.
 #include "elliptic.hpp"
 
 //settings for elliptic solver
-ellipticSettings_t::ellipticSettings_t(const MPI_Comm& _comm):
+ellipticSettings_t::ellipticSettings_t(const comm_t& _comm):
   settings_t(_comm) {
 
   //common settings used when the elliptic solver
@@ -55,7 +55,7 @@ void ellipticAddRunSettings(settings_t& settings) {
 }
 
 void ellipticAddSettings(settings_t& settings,
-                         const string prefix) {
+                         const std::string prefix) {
   settings.newSetting(prefix+"DISCRETIZATION",
                       "CONTINUOUS",
                       "Type of Finite Element Discretization",
@@ -99,10 +99,7 @@ void ellipticAddSettings(settings_t& settings,
 
 void ellipticSettings_t::report() {
 
-  int rank;
-  MPI_Comm_rank(comm, &rank);
-
-  if (rank==0) {
+  if (comm.rank()==0) {
     std::cout << "Elliptic Settings:\n\n";
     reportSetting("DATA FILE");
 
@@ -129,15 +126,15 @@ void ellipticSettings_t::report() {
 
 void ellipticSettings_t::parseFromFile(platformSettings_t& platformSettings,
                                        meshSettings_t& meshSettings,
-                                       const string filename) {
+                                       const std::string filename) {
   //read all settings from file
   settings_t s(comm);
   s.readSettingsFromFile(filename);
 
   for(auto it = s.settings.begin(); it != s.settings.end(); ++it) {
-    setting_t* set = it->second;
-    const string name = set->getName();
-    const string val = set->getVal<string>();
+    setting_t& set = it->second;
+    const std::string name = set.getName();
+    const std::string val = set.getVal<std::string>();
     if (platformSettings.hasSetting(name))
       platformSettings.changeSetting(name, val);
     else if (meshSettings.hasSetting(name))
@@ -145,9 +142,7 @@ void ellipticSettings_t::parseFromFile(platformSettings_t& platformSettings,
     else if (hasSetting(name)) //self
       changeSetting(name, val);
     else  {
-      stringstream ss;
-      ss << "Unknown setting: [" << name << "] requested";
-      LIBP_ABORT(ss.str());
+      LIBP_FORCE_ABORT("Unknown setting: [" << name << "] requested");
     }
   }
 }

@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,39 +27,41 @@ SOFTWARE.
 #include "core.hpp"
 #include "timeStepper.hpp"
 
+namespace libp {
+
 namespace TimeStepper {
 
 mrab3::mrab3(dlong Nelements, dlong NhaloElements,
-               int Np, int _Nfields, solver_t& _solver, mesh_t& _mesh):
-  timeStepper_t(Nelements, NhaloElements, Np, _Nfields, _solver),
+               int Np, int _Nfields,
+               platform_t& _platform, mesh_t& _mesh):
+  timeStepperBase_t(Nelements, NhaloElements,
+                    Np, _Nfields, _platform, _mesh.comm),
   mesh(_mesh),
   Nlevels(mesh.mrNlevels),
   Nfields(_Nfields) {
 
-  platform_t &platform = solver.platform;
-
   Nstages = 3;
 
-  dfloat *rhsq0 = (dfloat*) calloc(N, sizeof(dfloat));
-  o_rhsq0 = platform.malloc(N*sizeof(dfloat), rhsq0);
-  free(rhsq0);
+  memory<dfloat> rhsq0(N, 0.0);
+  o_rhsq0 = platform.malloc<dfloat>(rhsq0);
 
-  dfloat *rhsq = (dfloat*) calloc((Nstages-1)*N, sizeof(dfloat));
-  o_rhsq = platform.malloc((Nstages-1)*N*sizeof(dfloat), rhsq);
-  free(rhsq);
+  memory<dfloat> rhsq((Nstages-1)*N, 0.0);
+  o_rhsq = platform.malloc<dfloat>(rhsq);
 
-  o_fQM = platform.malloc((mesh.Nelements+mesh.totalHaloPairs)*mesh.Nfp
-                          *mesh.Nfaces*Nfields*sizeof(dfloat));
+  o_fQM = platform.malloc<dfloat>((mesh.Nelements+mesh.totalHaloPairs)*mesh.Nfp
+                                  *mesh.Nfaces*Nfields);
 
-  occa::properties kernelInfo = platform.props; //copy base occa properties from solver
+  properties_t kernelInfo = platform.props(); //copy base occa properties from solver
 
-  kernelInfo["defines/" "p_blockSize"] = BLOCKSIZE;
+  const int blocksize=256;
+
+  kernelInfo["defines/" "p_blockSize"] = blocksize;
   kernelInfo["defines/" "p_Nstages"] = Nstages;
   kernelInfo["defines/" "p_Np"] = mesh.Np;
   kernelInfo["defines/" "p_Nfp"] = mesh.Nfp;
   kernelInfo["defines/" "p_Nfaces"] = mesh.Nfaces;
   kernelInfo["defines/" "p_Nfields"] = Nfields;
-  int maxNodes = mymax(mesh.Np, mesh.Nfp*mesh.Nfaces);
+  int maxNodes = std::max(mesh.Np, mesh.Nfp*mesh.Nfaces);
   kernelInfo["defines/" "p_maxNodes"] = maxNodes;
 
   updateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
@@ -81,37 +83,36 @@ mrab3::mrab3(dlong Nelements, dlong NhaloElements,
                          5./8.,   -1./8.,    0.0,
                        17./24.,  -7./24., 2./24.};
 
-  ab_a = (dfloat*) calloc(Nstages*Nstages, sizeof(dfloat));
-  ab_b = (dfloat*) calloc(Nstages*Nstages, sizeof(dfloat));
-  memcpy(ab_a, _ab_a, Nstages*Nstages*sizeof(dfloat));
-  memcpy(ab_b, _ab_b, Nstages*Nstages*sizeof(dfloat));
+  ab_a.malloc(Nstages*Nstages);
+  ab_b.malloc(Nstages*Nstages);
+  ab_a.copyFrom(_ab_a);
+  ab_b.copyFrom(_ab_b);
 
-  shiftIndex = (int*) platform.hostMalloc(Nlevels*sizeof(int),
-                                          NULL, h_shiftIndex);
-  o_shiftIndex = platform.malloc(Nlevels*sizeof(int));
+  h_shiftIndex = platform.hostMalloc<int>(Nlevels);
+  o_shiftIndex = platform.malloc<int>(Nlevels);
 
-  mrdt = (dfloat*) calloc(Nlevels, sizeof(dfloat));
-  o_mrdt = platform.malloc(Nlevels*sizeof(dfloat), mrdt);
+  mrdt.malloc(Nlevels, 0.0);
+  o_mrdt = platform.malloc<dfloat>(mrdt);
 
-  o_ab_a = platform.malloc(Nstages*Nstages*sizeof(dfloat), ab_a);
-  o_ab_b = platform.malloc(Nstages*Nstages*sizeof(dfloat), ab_b);
+  o_ab_a = platform.malloc<dfloat>(ab_a);
+  o_ab_b = platform.malloc<dfloat>(ab_b);
 }
 
-void mrab3::Run(occa::memory &o_q, dfloat start, dfloat end) {
+void mrab3::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloat end) {
 
   dfloat time = start;
 
   //set timesteps and shifting index
   for (int lev=0;lev<Nlevels;lev++) {
     mrdt[lev] = dt*(1 << lev);
-    shiftIndex[lev] = 0;
+    h_shiftIndex[lev] = 0;
   }
   o_mrdt.copyFrom(mrdt);
-  o_shiftIndex.copyFrom(shiftIndex);
+  h_shiftIndex.copyTo(o_shiftIndex);
 
   solver.Report(time,0);
 
-  dfloat outputInterval;
+  dfloat outputInterval=0.0;
   solver.settings.getSetting("OUTPUT INTERVAL", outputInterval);
 
   dfloat outputTime = time + outputInterval;
@@ -135,7 +136,7 @@ void mrab3::Run(occa::memory &o_q, dfloat start, dfloat end) {
   int tstep=0;
   int order=0;
   while (time < end) {
-    Step(o_q, time, dt, order);
+    Step(solver, o_q, time, dt, order);
     time += DT;
     tstep++;
     if (order<Nstages-1) order++;
@@ -148,10 +149,10 @@ void mrab3::Run(occa::memory &o_q, dfloat start, dfloat end) {
   }
 }
 
-void mrab3::Step(occa::memory &o_q, dfloat time, dfloat _dt, int order) {
+void mrab3::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloat _dt, int order) {
 
-  occa::memory o_A = o_ab_a+order*Nstages*sizeof(dfloat);
-  occa::memory o_B = o_ab_b+order*Nstages*sizeof(dfloat);
+  deviceMemory<dfloat> o_A = o_ab_a+order*Nstages;
+  deviceMemory<dfloat> o_B = o_ab_b+order*Nstages;
 
   for (int Ntick=0; Ntick < (1 << (Nlevels-1));Ntick++) {
 
@@ -186,7 +187,7 @@ void mrab3::Step(occa::memory &o_q, dfloat time, dfloat _dt, int order) {
     //rotate index
     if (Nstages>2)
       for (int l=0; l<=lev; l++)
-        shiftIndex[l] = (shiftIndex[l]+Nstages-2)%(Nstages-1);
+        h_shiftIndex[l] = (h_shiftIndex[l]+Nstages-2)%(Nstages-1);
 
     //compute intermediate trace values on lev+1 / lev interface
     if (lev+1<Nlevels && mesh.mrInterfaceNelements[lev+1])
@@ -203,21 +204,10 @@ void mrab3::Step(occa::memory &o_q, dfloat time, dfloat _dt, int order) {
                         o_q,
                         o_fQM);
 
-    // o_shiftIndex.copyFrom(shiftIndex, "async: true");
-    o_shiftIndex.copyFrom(shiftIndex); //Required to keep the update kernel overlapping the transfer,
+    // o_shiftIndex.copyFrom(h_shiftIndex, properties_t("async", true));
+    h_shiftIndex.copyTo(o_shiftIndex); //Required to keep the update kernel overlapping the transfer,
                                        // but why does that happen?
   }
-}
-
-mrab3::~mrab3() {
-  if (o_rhsq.size()) o_rhsq.free();
-  if (o_fQM.size()) o_fQM.free();
-
-  if (ab_a) free(ab_a);
-  if (ab_b) free(ab_b);
-
-  updateKernel.free();
-  traceUpdateKernel.free();
 }
 
 /**************************************************/
@@ -225,35 +215,34 @@ mrab3::~mrab3() {
 /**************************************************/
 
 mrab3_pml::mrab3_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
-               int Np, int _Nfields, int _Npmlfields, solver_t& _solver, mesh_t& _mesh):
-  mrab3(Nelements, NhaloElements, Np, _Nfields, _solver, _mesh),
+                     int Np, int _Nfields, int _Npmlfields,
+                     platform_t& _platform, mesh_t& _mesh):
+  mrab3(Nelements, NhaloElements,
+        Np, _Nfields, _platform, _mesh),
   Npml(NpmlElements*Np*_Npmlfields),
   Npmlfields(_Npmlfields) {
 
   if (Npml) {
-    platform_t &platform = solver.platform;
+    memory<dfloat> pmlq(Npml, 0.0);
+    o_pmlq = platform.malloc<dfloat>(pmlq);
 
-    dfloat *pmlq = (dfloat*) calloc(Npml, sizeof(dfloat));
-    o_pmlq = platform.malloc(Npml*sizeof(dfloat), pmlq);
-    free(pmlq);
+    memory<dfloat> rhspmlq0(Npml, 0.0);
+    o_rhspmlq0 = platform.malloc<dfloat>(rhspmlq0);
 
-    dfloat *rhspmlq0 = (dfloat*) calloc(Npml, sizeof(dfloat));
-    o_rhspmlq0 = platform.malloc(Npml*sizeof(dfloat), rhspmlq0);
-    free(rhspmlq0);
+    memory<dfloat> rhspmlq((Nstages-1)*Npml, 0.0);
+    o_rhspmlq = platform.malloc<dfloat>(rhspmlq);
 
-    dfloat *rhspmlq = (dfloat*) calloc((Nstages-1)*Npml, sizeof(dfloat));
-    o_rhspmlq = platform.malloc((Nstages-1)*Npml*sizeof(dfloat), rhspmlq);
-    free(rhspmlq);
+    properties_t kernelInfo = platform.props(); //copy base occa properties from solver
 
-    occa::properties kernelInfo = platform.props; //copy base occa properties from solver
+    const int blocksize=256;
 
-    kernelInfo["defines/" "p_blockSize"] = BLOCKSIZE;
+    kernelInfo["defines/" "p_blockSize"] = blocksize;
     kernelInfo["defines/" "p_Nstages"] = Nstages;
     kernelInfo["defines/" "p_Np"] = mesh.Np;
     kernelInfo["defines/" "p_Nfp"] = mesh.Nfp;
     kernelInfo["defines/" "p_Nfaces"] = mesh.Nfaces;
     kernelInfo["defines/" "p_Nfields"] = Nfields;
-    int maxNodes = mymax(mesh.Np, mesh.Nfp*mesh.Nfaces);
+    int maxNodes = std::max(mesh.Np, mesh.Nfp*mesh.Nfaces);
     kernelInfo["defines/" "p_maxNodes"] = maxNodes;
 
     pmlUpdateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
@@ -263,10 +252,10 @@ mrab3_pml::mrab3_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
   }
 }
 
-void mrab3_pml::Step(occa::memory &o_q, dfloat time, dfloat _dt, int order) {
+void mrab3_pml::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloat _dt, int order) {
 
-  occa::memory o_A = o_ab_a+order*Nstages*sizeof(dfloat);
-  occa::memory o_B = o_ab_b+order*Nstages*sizeof(dfloat);
+  deviceMemory<dfloat> o_A = o_ab_a+order*Nstages;
+  deviceMemory<dfloat> o_B = o_ab_b+order*Nstages;
 
   for (int Ntick=0; Ntick < (1 << (Nlevels-1));Ntick++) {
 
@@ -317,7 +306,7 @@ void mrab3_pml::Step(occa::memory &o_q, dfloat time, dfloat _dt, int order) {
     //rotate index
     if (Nstages>2)
       for (int l=0; l<=lev; l++)
-        shiftIndex[l] = (shiftIndex[l]+Nstages-2)%(Nstages-1);
+        h_shiftIndex[l] = (h_shiftIndex[l]+Nstages-2)%(Nstages-1);
 
     //compute intermediate trace values on lev+1 / lev interface
     if (lev+1<Nlevels && mesh.mrInterfaceNelements[lev+1])
@@ -334,18 +323,12 @@ void mrab3_pml::Step(occa::memory &o_q, dfloat time, dfloat _dt, int order) {
                         o_q,
                         o_fQM);
 
-    // o_shiftIndex.copyFrom(shiftIndex, "async: true");
-    o_shiftIndex.copyFrom(shiftIndex); //Required to keep the update kernel overlapping the transfer,
+    // o_shiftIndex.copyFrom(h_shiftIndex, properties_t("async", true));
+    h_shiftIndex.copyTo(o_shiftIndex); //Required to keep the update kernel overlapping the transfer,
                                        // but why does that happen?
   }
 }
 
-mrab3_pml::~mrab3_pml() {
-  if (o_pmlq.size()) o_pmlq.free();
-  if (o_rhspmlq0.size()) o_rhspmlq0.free();
-  if (o_rhspmlq.size()) o_rhspmlq.free();
-
-  pmlUpdateKernel.free();
-}
-
 } //namespace TimeStepper
+
+} //namespace libp

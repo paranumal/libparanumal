@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,11 +27,11 @@ SOFTWARE.
 #include "ins.hpp"
 
 // compute RHS = beta*RHS + alpha*grad P
-void ins_t::Gradient(const dfloat alpha, occa::memory& o_P,
-                     const dfloat beta,  occa::memory& o_RHS,
+void ins_t::Gradient(const dfloat alpha, deviceMemory<dfloat>& o_P,
+                     const dfloat beta,  deviceMemory<dfloat>& o_RHS,
                      const dfloat T){
 
-  pTraceHalo->ExchangeStart(o_P, 1, ogs_dfloat);
+  pTraceHalo.ExchangeStart(o_P, 1);
 
   // Compute Volume Contribution
   gradientVolumeKernel(mesh.Nelements,
@@ -42,7 +42,7 @@ void ins_t::Gradient(const dfloat alpha, occa::memory& o_P,
                       o_P,
                       o_RHS);
 
-  pTraceHalo->ExchangeFinish(o_P, 1, ogs_dfloat);
+  pTraceHalo.ExchangeFinish(o_P, 1);
 
   // Compute Surface Conribution
   gradientSurfaceKernel(mesh.Nelements,

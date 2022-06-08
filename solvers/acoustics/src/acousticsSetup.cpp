@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,120 +26,118 @@ SOFTWARE.
 
 #include "acoustics.hpp"
 
-acoustics_t& acoustics_t::Setup(platform_t& platform, mesh_t& mesh,
-                                acousticsSettings_t& settings){
+void acoustics_t::Setup(platform_t& _platform, mesh_t& _mesh,
+                        acousticsSettings_t& _settings){
 
-  acoustics_t* acoustics = new acoustics_t(platform, mesh, settings);
+  platform = _platform;
+  mesh = _mesh;
+  comm = _mesh.comm;
+  settings = _settings;
 
-  acoustics->Nfields = (mesh.dim==3) ? 4:3;
+  Nfields = (mesh.dim==3) ? 4:3;
 
-  dlong Nlocal = mesh.Nelements*mesh.Np*acoustics->Nfields;
-  dlong Nhalo  = mesh.totalHaloPairs*mesh.Np*acoustics->Nfields;
+  dlong Nlocal = mesh.Nelements*mesh.Np*Nfields;
+  dlong Nhalo  = mesh.totalHaloPairs*mesh.Np*Nfields;
+
+  //Trigger JIT kernel builds
+  ogs::InitializeKernels(platform, ogs::Dfloat, ogs::Add);
+
+  //setup linear algebra module
+  platform.linAlg().InitKernels({"innerProd"});
+
+  /*setup trace halo exchange */
+  traceHalo = mesh.HaloTraceSetup(Nfields);
 
   //setup timeStepper
   if (settings.compareSetting("TIME INTEGRATOR","AB3")){
-    acoustics->timeStepper = new TimeStepper::ab3(mesh.Nelements, mesh.totalHaloPairs,
-                                              mesh.Np, acoustics->Nfields, *acoustics);
+    timeStepper.Setup<TimeStepper::ab3>(mesh.Nelements,
+                                        mesh.totalHaloPairs,
+                                        mesh.Np, Nfields, platform, comm);
   } else if (settings.compareSetting("TIME INTEGRATOR","LSERK4")){
-    acoustics->timeStepper = new TimeStepper::lserk4(mesh.Nelements, mesh.totalHaloPairs,
-                                              mesh.Np, acoustics->Nfields, *acoustics);
+    timeStepper.Setup<TimeStepper::lserk4>(mesh.Nelements,
+                                           mesh.totalHaloPairs,
+                                           mesh.Np, Nfields, platform, comm);
   } else if (settings.compareSetting("TIME INTEGRATOR","DOPRI5")){
-    acoustics->timeStepper = new TimeStepper::dopri5(mesh.Nelements, mesh.totalHaloPairs,
-                                              mesh.Np, acoustics->Nfields, *acoustics, mesh.comm);
+    timeStepper.Setup<TimeStepper::dopri5>(mesh.Nelements,
+                                           mesh.totalHaloPairs,
+                                           mesh.Np, Nfields, platform, comm);
   }
-
-  //setup linear algebra module
-  platform.linAlg.InitKernels({"innerProd"});
 
   // set penalty parameter
   dfloat Lambda2 = 0.5;
 
-  /*setup trace halo exchange */
-  acoustics->traceHalo = mesh.HaloTraceSetup(acoustics->Nfields);
-
   // compute samples of q at interpolation nodes
-  acoustics->q = (dfloat*) calloc(Nlocal+Nhalo, sizeof(dfloat));
-  acoustics->o_q = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), acoustics->q);
+  q.malloc(Nlocal+Nhalo);
+  o_q = platform.malloc<dfloat>(q);
 
   //storage for M*q during reporting
-  acoustics->o_Mq = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), acoustics->q);
-  mesh.MassMatrixKernelSetup(acoustics->Nfields); // mass matrix operator
+  o_Mq = platform.malloc<dfloat>(q);
+  mesh.MassMatrixKernelSetup(Nfields); // mass matrix operator
 
   // OCCA build stuff
-  occa::properties kernelInfo = mesh.props; //copy base occa properties
+  properties_t kernelInfo = mesh.props; //copy base occa properties
 
   //add boundary data to kernel info
-  string dataFileName;
+  std::string dataFileName;
   settings.getSetting("DATA FILE", dataFileName);
   kernelInfo["includes"] += dataFileName;
 
-
-  kernelInfo["defines/" "p_Nfields"]= acoustics->Nfields;
+  kernelInfo["defines/" "p_Nfields"]= Nfields;
 
   const dfloat p_half = 1./2.;
   kernelInfo["defines/" "p_half"]= p_half;
 
-  int maxNodes = mymax(mesh.Np, (mesh.Nfp*mesh.Nfaces));
+  int maxNodes = std::max(mesh.Np, (mesh.Nfp*mesh.Nfaces));
   kernelInfo["defines/" "p_maxNodes"]= maxNodes;
 
   int blockMax = 256;
   if (platform.device.mode() == "CUDA") blockMax = 512;
 
-  int NblockV = mymax(1, blockMax/mesh.Np);
+  int NblockV = std::max(1, blockMax/mesh.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;
 
-  int NblockS = mymax(1, blockMax/maxNodes);
+  int NblockS = std::max(1, blockMax/maxNodes);
   kernelInfo["defines/" "p_NblockS"]= NblockS;
 
   kernelInfo["defines/" "p_Lambda2"]= Lambda2;
 
-  kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
-
   // set kernel name suffix
-  char *suffix;
-  if(mesh.elementType==TRIANGLES)
-    suffix = strdup("Tri2D");
-  if(mesh.elementType==QUADRILATERALS)
-    suffix = strdup("Quad2D");
-  if(mesh.elementType==TETRAHEDRA)
-    suffix = strdup("Tet3D");
-  if(mesh.elementType==HEXAHEDRA)
-    suffix = strdup("Hex3D");
+  std::string suffix;
+  if(mesh.elementType==Mesh::TRIANGLES)
+    suffix = "Tri2D";
+  if(mesh.elementType==Mesh::QUADRILATERALS)
+    suffix = "Quad2D";
+  if(mesh.elementType==Mesh::TETRAHEDRA)
+    suffix = "Tet3D";
+  if(mesh.elementType==Mesh::HEXAHEDRA)
+    suffix = "Hex3D";
 
-  char fileName[BUFSIZ], kernelName[BUFSIZ];
+  std::string oklFilePrefix = DACOUSTICS "/okl/";
+  std::string oklFileSuffix = ".okl";
+
+  std::string fileName, kernelName;
 
   // kernels from volume file
-  sprintf(fileName, DACOUSTICS "/okl/acousticsVolume%s.okl", suffix);
-  sprintf(kernelName, "acousticsVolume%s", suffix);
+  fileName   = oklFilePrefix + "acousticsVolume" + suffix + oklFileSuffix;
+  kernelName = "acousticsVolume" + suffix;
 
-  acoustics->volumeKernel =  platform.buildKernel(fileName, kernelName,
+  volumeKernel =  platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
   // kernels from surface file
-  sprintf(fileName, DACOUSTICS "/okl/acousticsSurface%s.okl", suffix);
-  sprintf(kernelName, "acousticsSurface%s", suffix);
+  fileName   = oklFilePrefix + "acousticsSurface" + suffix + oklFileSuffix;
+  kernelName = "acousticsSurface" + suffix;
 
-  acoustics->surfaceKernel = platform.buildKernel(fileName, kernelName,
+  surfaceKernel = platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
 
   if (mesh.dim==2) {
-    sprintf(fileName, DACOUSTICS "/okl/acousticsInitialCondition2D.okl");
-    sprintf(kernelName, "acousticsInitialCondition2D");
+    fileName   = oklFilePrefix + "acousticsInitialCondition2D" + oklFileSuffix;
+    kernelName = "acousticsInitialCondition2D";
   } else {
-    sprintf(fileName, DACOUSTICS "/okl/acousticsInitialCondition3D.okl");
-    sprintf(kernelName, "acousticsInitialCondition3D");
+    fileName   = oklFilePrefix + "acousticsInitialCondition3D" + oklFileSuffix;
+    kernelName = "acousticsInitialCondition3D";
   }
 
-  acoustics->initialConditionKernel = platform.buildKernel(fileName, kernelName,
+  initialConditionKernel = platform.buildKernel(fileName, kernelName,
                                                   kernelInfo);
-
-  return *acoustics;
-}
-
-acoustics_t::~acoustics_t() {
-  volumeKernel.free();
-  surfaceKernel.free();
-  initialConditionKernel.free();
-
-  if (timeStepper) delete timeStepper;
-  if (traceHalo) traceHalo->Free();
 }

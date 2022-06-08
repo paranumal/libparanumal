@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,25 +27,29 @@ SOFTWARE.
 #include "core.hpp"
 #include "timeStepper.hpp"
 
+namespace libp {
+
 namespace TimeStepper {
 
 /* Backward Difference Formula, order 3, with subcycling */
 ssbdf3::ssbdf3(dlong Nelements, dlong NhaloElements,
-                 int Np, int Nfields, solver_t& _solver):
-  timeStepper_t(Nelements, NhaloElements, Np, Nfields, _solver) {
-
-  platform_t &platform = solver.platform;
+                 int Np, int Nfields,
+                 platform_t& _platform, comm_t _comm):
+  timeStepperBase_t(Nelements, NhaloElements, Np, Nfields,
+                    _platform, _comm) {
 
   Nstages = 3;
   shiftIndex = 0;
 
-  o_qn   = platform.malloc(Nstages*N*sizeof(dfloat)); //q history
-  o_qhat = platform.malloc(Nstages*N*sizeof(dfloat)); //F(q) history (explicit part)
-  o_rhs  = platform.malloc(N*sizeof(dfloat)); //rhs storage
+  o_qn   = platform.malloc<dfloat>(Nstages*N); //q history
+  o_qhat = platform.malloc<dfloat>(Nstages*N); //F(q) history (explicit part)
+  o_rhs  = platform.malloc<dfloat>(N); //rhs storage
 
-  occa::properties kernelInfo = platform.props; //copy base occa properties from solver
+  properties_t kernelInfo = platform.props(); //copy base occa properties from solver
 
-  kernelInfo["defines/" "p_blockSize"] = BLOCKSIZE;
+  const int blocksize=256;
+
+  kernelInfo["defines/" "p_blockSize"] = blocksize;
   kernelInfo["defines/" "p_Nstages"] = Nstages;
 
   rhsKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
@@ -59,23 +63,23 @@ ssbdf3::ssbdf3(dlong Nelements, dlong NhaloElements,
                          3./2.,    2., -1./2.,    0.,
                         11./6.,    3., -3./2., 1./3.};
 
-  ssbdf_b = (dfloat*) calloc(Nstages*(Nstages+1), sizeof(dfloat));
-  memcpy(ssbdf_b, _b, Nstages*(Nstages+1)*sizeof(dfloat));
+  ssbdf_b.malloc(Nstages*(Nstages+1));
+  ssbdf_b.copyFrom(_b);
 
-  o_ssbdf_b = platform.malloc(Nstages*(Nstages+1)*sizeof(dfloat), ssbdf_b);
+  o_ssbdf_b = platform.malloc<dfloat>(ssbdf_b);
 }
 
-dfloat ssbdf3::getGamma() {
-  return *(ssbdf_b + (Nstages-1)*(Nstages+1)); //first entry of last row of B
+dfloat ssbdf3::GetGamma() {
+  return ssbdf_b[(Nstages-1)*(Nstages+1)]; //first entry of last row of B
 }
 
-void ssbdf3::Run(occa::memory &o_q, dfloat start, dfloat end) {
+void ssbdf3::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloat end) {
 
   dfloat time = start;
 
   solver.Report(time,0);
 
-  dfloat outputInterval;
+  dfloat outputInterval=0.0;
   solver.settings.getSetting("OUTPUT INTERVAL", outputInterval);
 
   dfloat outputTime = time + outputInterval;
@@ -83,7 +87,7 @@ void ssbdf3::Run(occa::memory &o_q, dfloat start, dfloat end) {
   int tstep=0;
   int order=0;
   while (time < end) {
-    Step(o_q, time, dt, order);
+    Step(solver, o_q, time, dt, order);
     time += dt;
     tstep++;
     if (order<Nstages-1) order++;
@@ -96,15 +100,15 @@ void ssbdf3::Run(occa::memory &o_q, dfloat start, dfloat end) {
   }
 }
 
-void ssbdf3::Step(occa::memory &o_q, dfloat time, dfloat _dt, int order) {
+void ssbdf3::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloat _dt, int order) {
 
   //BDF coefficients at current order
-  occa::memory o_B = o_ssbdf_b + order*(Nstages+1)*sizeof(dfloat);
-  dfloat *B = ssbdf_b + order*(Nstages+1);
+  deviceMemory<dfloat> o_B = o_ssbdf_b + order*(Nstages+1);
+  memory<dfloat> B = ssbdf_b + order*(Nstages+1);
 
   //put current q into history
-  occa::memory o_qn0 = o_qn + shiftIndex*N*sizeof(dfloat);
-  o_qn0.copyFrom(o_q, N*sizeof(dfloat));
+  deviceMemory<dfloat> o_qn0 = o_qn + shiftIndex*N;
+  o_qn0.copyFrom(o_q, N);
 
   // Compute qhat = sum_i=1^s B_i qhat(t_n+1-i) by
   // where qhat(t) is the Lagrangian state of q
@@ -129,15 +133,6 @@ void ssbdf3::Step(occa::memory &o_q, dfloat time, dfloat _dt, int order) {
   shiftIndex = (shiftIndex+Nstages-1)%Nstages;
 }
 
-ssbdf3::~ssbdf3() {
-  if (o_rhs.size()) o_rhs.free();
-  if (o_qn.size()) o_qn.free();
-  if (o_qhat.size()) o_qhat.free();
-  if (o_ssbdf_b.size()) o_ssbdf_b.free();
-
-  if (ssbdf_b) free(ssbdf_b);
-
-  rhsKernel.free();
-}
-
 } //namespace TimeStepper
+
+} //namespace libp

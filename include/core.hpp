@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,58 +27,28 @@ SOFTWARE.
 #ifndef CORE_HPP
 #define CORE_HPP
 
-#include <mpi.h>
-#include <occa.hpp>
-#include <cstring>
-#include <string>
-#include <cmath>
-#include <algorithm>
 #include "utils.hpp"
+#include "memory.hpp"
+#include "comm.hpp"
 
-// sort entries in an array in parallel
-void parallelSort(int size, int rank, MPI_Comm comm,
-      int N, void *vv, size_t sz,
-      int (*compare)(const void *, const void *),
-      void (*match)(void *, void *)
-      );
+namespace libp {
 
 // find a factorization n = nx*ny such that
 //  nx>=ny are 'close' to one another
-void factor2(const int n, int &nx, int &ny);
+void Factor2(const int n, int &nx, int &ny);
+
+void RankDecomp2(int  size_x, int  size_y,
+                 int &rank_x, int &rank_y,
+                 const int rank);
 
 // find a factorization n = nx*ny*nz such that
 //  nx>=ny>=nz are all 'close' to one another
-void factor3(const int n, int &nx, int &ny, int &nz);
+void Factor3(const int n, int &nx, int &ny, int &nz);
 
-void matrixRightSolve(int NrowsA, int NcolsA, double *A, int NrowsB, int NcolsB, double *B, double *C);
-void matrixRightSolve(int NrowsA, int NcolsA, float *A, int NrowsB, int NcolsB, float *B, float *C);
-void matrixUnderdeterminedRightSolveMinNorm(int NrowsA, int NcolsA, dfloat *A, dfloat *b, dfloat *x);
-void matrixUnderdeterminedRightSolveCPQR(int NrowsA, int NcolsA, dfloat *A, dfloat *b, dfloat *x);
+void RankDecomp3(int  size_x, int  size_y, int  size_z,
+                 int &rank_x, int &rank_y, int &rank_z,
+                 const int rank);
 
-void matrixEigenVectors(int N, double *A, double *VR, double *WR, double *WI);
-void matrixEigenVectors(int N, float *A, float *VR, float *WR, float *WI);
-
-void matrixEigenValues(int N, double *A, double *WR, double *WI);
-void matrixEigenValues(int N, float *A, float *WR, float *WI);
-
-void matrixInverse(int N, double *A);
-void matrixInverse(int N, float *A);
-
-double matrixConditionNumber(int N, double *A);
-float  matrixConditionNumber(int N, float *A);
-
-void matrixTranspose(const int M, const int N,
-                     const double  *A, const int LDA,
-                           double *AT, const int LDAT);
-void matrixTranspose(const int M, const int N,
-                     const float  *A, const int LDA,
-                           float *AT, const int LDAT);
-
-void matrixTranspose(const int M, const int N,
-                     const int  *A, const int LDA,
-                           int *AT, const int LDAT);
-void matrixTranspose(const int M, const int N,
-                     const long long int  *A, const int LDA,
-                           long long int *AT, const int LDAT);
+} //namespace libp
 
 #endif

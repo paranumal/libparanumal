@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,7 @@ SOFTWARE.
 
 
 @kernel void ellipticAxTet3D(const dlong Nelements,
+                            @restrict const  dfloat *  wJ,
                             @restrict const  dfloat *  ggeo,
                             @restrict const  dfloat *  D,
                             @restrict const  dfloat *  S,
@@ -44,7 +45,6 @@ SOFTWARE.
       s_q[n] = q[id];
     }
 
-    @barrier("local");
 
     for(int n=0;n<p_Np;++n;@inner(0)){
       const dlong gid = e*p_Nggeo;
@@ -55,7 +55,7 @@ SOFTWARE.
       const dfloat Gss = ggeo[gid + p_G11ID];
       const dfloat Gst = ggeo[gid + p_G12ID];
       const dfloat Gtt = ggeo[gid + p_G22ID];
-      const dfloat J   = ggeo[gid + p_GWJID];
+      const dfloat J   = wJ[e];
 
       dfloat qrr = 0.;
       dfloat qrs = 0.;
@@ -89,6 +89,7 @@ SOFTWARE.
 
 @kernel void ellipticPartialAxTet3D_v0(const dlong Nelements,
                                   @restrict const  dlong   *  elementList,
+                                  @restrict const  dfloat *  wJ,
                                   @restrict const  dfloat *  ggeo,
                                   @restrict const  dfloat *  D,
                                   @restrict const  dfloat *  S,
@@ -108,7 +109,6 @@ SOFTWARE.
       s_q[n] = q[id];
     }
 
-    @barrier("local");
 
     for(int n=0;n<p_Np;++n;@inner(0)){
       const dlong element = elementList[e];
@@ -120,7 +120,7 @@ SOFTWARE.
       const dfloat Gss = ggeo[gid + p_G11ID];
       const dfloat Gst = ggeo[gid + p_G12ID];
       const dfloat Gtt = ggeo[gid + p_G22ID];
-      const dfloat J   = ggeo[gid + p_GWJID];
+      const dfloat J   = wJ[element];
 
       dfloat qrr = 0.;
       dfloat qrs = 0.;
@@ -187,6 +187,7 @@ SOFTWARE.
 @kernel void ellipticPartialAxTet3D(const dlong Nelements,
                                   @restrict const  dlong   *  elementList,
                                   @restrict const  dlong   *  GlobalToLocal,
+                                  @restrict const  dfloat *  wJ,
                                   @restrict const  dfloat *  ggeo,
                                   @restrict const  dfloat *  D,
                                   @restrict const  dfloat *  S,
@@ -202,6 +203,7 @@ SOFTWARE.
 
     @shared dfloat s_q[p_Ne][p_Nb][p_Np];
     @shared dfloat s_ggeo[p_Ne][p_Nb][p_Nggeo];
+    @shared dfloat s_wJ[p_Ne][p_Nb];
 
     @exclusive dlong element[p_Ne];
 
@@ -224,12 +226,12 @@ SOFTWARE.
               s_ggeo[et][b][m] = ggeo[element[et]*p_Nggeo+m];
               m += p_Np;
             }
+            s_wJ[et][b] = wJ[element[et]];
           }
         }
       }
     }
 
-    @barrier("local");
 
     for(int b=0;b<p_Nb;++b;@inner(1)){
       for(int n=0;n<p_Np;++n;@inner(0)){
@@ -280,7 +282,7 @@ SOFTWARE.
             const dfloat Gss = s_ggeo[et][b][p_G11ID];
             const dfloat Gst = s_ggeo[et][b][p_G12ID];
             const dfloat Gtt = s_ggeo[et][b][p_G22ID];
-            const dfloat J   = s_ggeo[et][b][p_GWJID];
+            const dfloat J   = s_wJ[et][b];
 
             const dlong id = n + element[et]*p_Np;
 

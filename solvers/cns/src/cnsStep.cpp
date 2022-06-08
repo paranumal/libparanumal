@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,10 +26,10 @@ SOFTWARE.
 
 #include "cns.hpp"
 
-dfloat cns_t::MaxWaveSpeed(occa::memory& o_Q, const dfloat T){
+dfloat cns_t::MaxWaveSpeed(deviceMemory<dfloat>& o_Q, const dfloat T){
 
   //Note: if this is on the critical path in the future, we should pre-allocate this
-  occa::memory o_maxSpeed = platform.malloc(mesh.Nelements*sizeof(dfloat));
+  deviceMemory<dfloat> o_maxSpeed = platform.malloc<dfloat>(mesh.Nelements);
 
   maxWaveSpeedKernel(mesh.Nelements,
                      mesh.o_vgeo,
@@ -45,17 +45,16 @@ dfloat cns_t::MaxWaveSpeed(occa::memory& o_Q, const dfloat T){
                      o_Q,
                      o_maxSpeed);
 
-  const dfloat vmax = platform.linAlg.max(mesh.Nelements, o_maxSpeed, mesh.comm);
+  const dfloat vmax = platform.linAlg().max(mesh.Nelements, o_maxSpeed, mesh.comm);
 
-  o_maxSpeed.free();
   return vmax;
 }
 
 //evaluate ODE rhs = f(q,t)
-void cns_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
+void cns_t::rhsf(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T){
 
   // extract q trace halo and start exchange
-  fieldTraceHalo->ExchangeStart(o_Q, 1, ogs_dfloat);
+  fieldTraceHalo.ExchangeStart(o_Q, 1);
 
   // compute volume contributions to gradients
   gradVolumeKernel(mesh.Nelements,
@@ -65,7 +64,7 @@ void cns_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
                    o_gradq);
 
   // complete trace halo exchange
-  fieldTraceHalo->ExchangeFinish(o_Q, 1, ogs_dfloat);
+  fieldTraceHalo.ExchangeFinish(o_Q, 1);
 
   // compute surface contributions to gradients
   gradSurfaceKernel(mesh.Nelements,
@@ -84,7 +83,7 @@ void cns_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
                     o_gradq);
 
   // extract viscousStresses trace halo and start exchange
-  gradTraceHalo->ExchangeStart(o_gradq, 1, ogs_dfloat);
+  gradTraceHalo.ExchangeStart(o_gradq, 1);
 
   // compute volume contribution to cns RHS
   if (cubature) {
@@ -120,7 +119,7 @@ void cns_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
   }
 
   // complete trace halo exchange
-  gradTraceHalo->ExchangeFinish(o_gradq, 1, ogs_dfloat);
+  gradTraceHalo.ExchangeFinish(o_gradq, 1);
 
   if (cubature) {
       cubatureSurfaceKernel(mesh.Nelements,

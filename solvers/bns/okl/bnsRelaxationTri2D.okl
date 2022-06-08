@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -68,7 +68,6 @@ SOFTWARE.
     }
 
     // make sure all node data is loaded into @shared
-    @barrier("local");
 
     // interpolate q to cubature
     for(int es=0;es<p_NblockCub;++es;@inner(1)){
@@ -100,7 +99,6 @@ SOFTWARE.
     }
 
     //make sure all cubature node data is loaded into @shared
-    @barrier("local");
 
     // partial projection to nodes from cubature-sub-group
     for(int es=0;es<p_NblockCub;++es;@inner(1)){
@@ -194,7 +192,6 @@ SOFTWARE.
     }
 
     // make sure all node data is loaded into @shared
-    @barrier("local");
 
     // interpolate q to cubature
     for(int n=0;n<p_cubNp;++n;@inner(0)){
@@ -250,7 +247,6 @@ SOFTWARE.
     }
 
     // make sure all cubature node data is loaded into @shared
-    @barrier("local");
 
     // partial projection to nodes from cubature-sub-group
     for(int n=0;n<p_cubNp;++n;@inner(0)){

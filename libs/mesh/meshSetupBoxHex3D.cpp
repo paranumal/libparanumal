@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,34 +25,21 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh3D.hpp"
 
-void meshHex3D::SetupBox(){
+namespace libp {
 
-  dim = 3;
-  Nverts = 8; // number of vertices per element
-  Nfaces = 6;
-  NfaceVertices = 4;
-
-  // vertices on each face
-  int _faceVertices[6][4] =
-    {{0,1,2,3},{0,1,5,4},{1,2,6,5},{2,3,7,6},{3,0,4,7},{4,5,6,7}};
-
-  faceVertices =
-    (int*) calloc(NfaceVertices*Nfaces, sizeof(int));
-
-  memcpy(faceVertices, _faceVertices[0], NfaceVertices*Nfaces*sizeof(int));
+void mesh_t::SetupBoxHex3D(){
 
   // find a factorization size = size_x*size_y*size_z such that
   //  size_x>=size_y>=size_z are all 'close' to one another
   int size_x, size_y, size_z;
-  factor3(size, size_x, size_y, size_z);
+  Factor3(size, size_x, size_y, size_z);
 
-  //find our coordinates in the MPI grid such that
-  // rank = rank_x + rank_y*size_x + rank_z*size_x*size_y
-  int rank_z = rank/(size_x*size_y);
-  int rank_y = (rank-rank_z*size_x*size_y)/size_x;
-  int rank_x = rank % size_x;
+  //determine (x,y,z) rank coordinates for this processes
+  int rank_x=-1, rank_y=-1, rank_z=-1;
+  RankDecomp3(size_x, size_y, size_z,
+              rank_x, rank_y, rank_z,
+              rank);
 
   //get global size from settings
   dlong NX, NY, NZ;
@@ -97,9 +84,9 @@ void meshHex3D::SetupBox(){
   dfloat dy = DIMY/NY;
   dfloat dz = DIMZ/NZ;
 
-  dlong offset_x = rank_x*(NX/size_x) + mymin(rank_x, (NX % size_x));
-  dlong offset_y = rank_y*(NY/size_y) + mymin(rank_y, (NY % size_y));
-  dlong offset_z = rank_z*(NZ/size_z) + mymin(rank_z, (NZ % size_z));
+  dlong offset_x = rank_x*(NX/size_x) + std::min(rank_x, (NX % size_x));
+  dlong offset_y = rank_y*(NY/size_y) + std::min(rank_y, (NY % size_y));
+  dlong offset_z = rank_z*(NZ/size_z) + std::min(rank_z, (NZ % size_z));
 
   //bottom corner of physical domain
   dfloat X0 = -DIMX/2.0 + offset_x*dx;
@@ -115,17 +102,19 @@ void meshHex3D::SetupBox(){
   Nnodes = NnX*NnY*NnZ; //global node count
   Nelements = nx*ny*nz; //local
 
-  EToV = (hlong*) calloc(Nelements*Nverts, sizeof(hlong));
-  EX = (dfloat*) calloc(Nelements*Nverts, sizeof(dfloat));
-  EY = (dfloat*) calloc(Nelements*Nverts, sizeof(dfloat));
-  EZ = (dfloat*) calloc(Nelements*Nverts, sizeof(dfloat));
+  EToV.malloc(Nelements*Nverts);
+  EX.malloc(Nelements*Nverts);
+  EY.malloc(Nelements*Nverts);
+  EZ.malloc(Nelements*Nverts);
 
-  elementInfo = (hlong*) calloc(Nelements, sizeof(hlong));
+  elementInfo.malloc(Nelements);
 
-  dlong e = 0;
+  #pragma omp parallel for collapse(3)
   for(int k=0;k<nz;++k){
     for(int j=0;j<ny;++j){
       for(int i=0;i<nx;++i){
+
+        const dlong e = i + j*nx + k*nx*ny;
 
         const hlong i0 = i+offset_x;
         const hlong i1 = (i+1+offset_x)%NnX;
@@ -148,9 +137,9 @@ void meshHex3D::SetupBox(){
         dfloat y0 = Y0 + dy*j;
         dfloat z0 = Z0 + dz*k;
 
-        dfloat *ex = EX+e*Nverts;
-        dfloat *ey = EY+e*Nverts;
-        dfloat *ez = EZ+e*Nverts;
+        dfloat *ex = EX.ptr()+e*Nverts;
+        dfloat *ey = EY.ptr()+e*Nverts;
+        dfloat *ez = EZ.ptr()+e*Nverts;
 
         ex[0] = x0;    ey[0] = y0;    ez[0] = z0;
         ex[1] = x0+dx; ey[1] = y0;    ez[1] = z0;
@@ -163,16 +152,13 @@ void meshHex3D::SetupBox(){
         ex[7] = x0;    ey[7] = y0+dy; ez[7] = z0+dz;
 
         elementInfo[e] = 1; // domain
-        e++;
       }
     }
   }
 
-
-
   if (boundaryFlag != -1) { //-1 reserved for periodic case
     NboundaryFaces = 2*NX*NY + 2*NX*NZ + 2*NY*NZ;
-    boundaryInfo = (hlong*) calloc(NboundaryFaces*(NfaceVertices+1), sizeof(hlong));
+    boundaryInfo.malloc(NboundaryFaces*(NfaceVertices+1));
 
     hlong bcnt = 0;
 
@@ -241,7 +227,8 @@ void meshHex3D::SetupBox(){
     }
 
   } else {
-    NboundaryFaces = 0;
-    boundaryInfo = NULL; // no boundaries
+    NboundaryFaces = 0; // no boundaries
   }
 }
+
+} //namespace libp

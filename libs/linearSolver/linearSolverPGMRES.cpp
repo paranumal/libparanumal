@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,16 +26,19 @@ SOFTWARE.
 
 #include "linearSolver.hpp"
 
+namespace libp {
+
+namespace LinearSolver {
+
 #define PGMRES_RESTART 20
 
 pgmres::pgmres(dlong _N, dlong _Nhalo,
-         platform_t& _platform, settings_t& _settings, MPI_Comm _comm):
-  linearSolver_t(_N, _Nhalo, _platform, _settings, _comm) {
+         platform_t& _platform, settings_t& _settings, comm_t _comm):
+  linearSolverBase_t(_N, _Nhalo, _platform, _settings, _comm) {
 
   // Make sure LinAlg has the necessary kernels
-  platform.linAlg.InitKernels({"axpy", "zaxpy",
-                               "innerProd", "weightedInnerProd",
-                               "norm2", "weightedNorm2"});
+  platform.linAlg().InitKernels({"axpy", "zaxpy",
+                               "innerProd", "norm2"});
 
   dlong Ntotal = N + Nhalo;
 
@@ -43,36 +46,34 @@ pgmres::pgmres(dlong _N, dlong _Nhalo,
   //TODO make this modifyable via settings
   restart=PGMRES_RESTART;
 
-  dfloat *dummy = (dfloat *) calloc(Ntotal,sizeof(dfloat)); //need this to avoid uninitialized memory warnings
+  memory<dfloat> dummy(Ntotal, 0.0); //need this to avoid uninitialized memory warnings
 
-  o_V = new occa::memory[restart];
+  o_V.malloc(restart);
   for(int i=0; i<restart; ++i){
-    o_V[i] = platform.malloc(Ntotal*sizeof(dfloat), dummy);
+    o_V[i] = platform.malloc<dfloat>(dummy);
   }
 
-  H  = (dfloat *) calloc((restart+1)*(restart+1), sizeof(dfloat));
-  sn = (dfloat *) calloc(restart, sizeof(dfloat));
-  cs = (dfloat *) calloc(restart, sizeof(dfloat));
-  s = (dfloat *) calloc(restart+1, sizeof(dfloat));
-  y = (dfloat *) calloc(restart, sizeof(dfloat));
+  H .malloc((restart+1)*(restart+1), 0.0);
+  sn.malloc(restart);
+  cs.malloc(restart);
+  s.malloc(restart+1);
+  y.malloc(restart);
 
   /*aux variables */
-  o_Ax = platform.malloc(Ntotal*sizeof(dfloat), dummy);
-  o_z  = platform.malloc(Ntotal*sizeof(dfloat), dummy);
-  o_r  = platform.malloc(Ntotal*sizeof(dfloat), dummy);
-  free(dummy);
+  o_Ax = platform.malloc<dfloat>(dummy);
+  o_z  = platform.malloc<dfloat>(dummy);
+  o_r  = platform.malloc<dfloat>(dummy);
 }
 
-int pgmres::Solve(solver_t& solver, precon_t& precon,
-               occa::memory &o_x, occa::memory &o_b,
+int pgmres::Solve(operator_t& linearOperator, operator_t& precon,
+               deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_b,
                const dfloat tol, const int MAXIT, const int verbose) {
 
-  int rank;
-  MPI_Comm_rank(comm, &rank);
-  linAlg_t &linAlg = platform.linAlg;
+  int rank = comm.rank();
+  linAlg_t &linAlg = platform.linAlg();
 
   // compute A*x
-  solver.Operator(o_x, o_Ax);
+  linearOperator.Operator(o_x, o_Ax);
 
   // subtract z = b - A*x
   linAlg.zaxpy(N, -1.f, o_Ax, 1.f, o_b, o_z);
@@ -83,7 +84,7 @@ int pgmres::Solve(solver_t& solver, precon_t& precon,
   dfloat nr = linAlg.norm2(N, o_r, comm);
 
   dfloat error = nr;
-  const dfloat TOL = mymax(tol*nr,tol);
+  const dfloat TOL = std::max(tol*nr,tol);
 
   if (verbose&&(rank==0))
     printf("PGMRES: initial res norm %12.12f \n", nr);
@@ -104,7 +105,7 @@ int pgmres::Solve(solver_t& solver, precon_t& precon,
     //Construct orthonormal basis via Gram-Schmidt
     for(int i=0;i<restart;++i){
       // compute z = A*V(:,i)
-      solver.Operator(o_V[i], o_z);
+      linearOperator.Operator(o_V[i], o_z);
 
       // r = Precon^{-1} z
       precon.Operator(o_z, o_r);
@@ -150,7 +151,7 @@ int pgmres::Solve(solver_t& solver, precon_t& precon,
       s[i]   =  cs[i]*s[i];
 
       iter++;
-      error = fabs(s[i+1]);
+      error = std::abs(s[i+1]);
 
       if (verbose&&(rank==0)) {
         printf("GMRES: it %d, approx residual norm %12.12le \n", iter, error);
@@ -170,7 +171,7 @@ int pgmres::Solve(solver_t& solver, precon_t& precon,
     UpdateGMRES(o_x, restart);
 
     // compute A*x
-    solver.Operator(o_x, o_Ax);
+    linearOperator.Operator(o_x, o_Ax);
 
     // subtract z = b - A*x
     linAlg.zaxpy(N, -1.f, o_Ax, 1.f, o_b, o_z);
@@ -188,7 +189,7 @@ int pgmres::Solve(solver_t& solver, precon_t& precon,
   return iter;
 }
 
-void pgmres::UpdateGMRES(occa::memory& o_x, const int I){
+void pgmres::UpdateGMRES(deviceMemory<dfloat>& o_x, const int I){
 
   for(int k=I-1; k>=0; --k){
     y[k] = s[k];
@@ -201,16 +202,10 @@ void pgmres::UpdateGMRES(occa::memory& o_x, const int I){
 
   //TODO this is really a GEMM, should write it that way
   for(int j=0; j<I; ++j){
-    platform.linAlg.axpy(N, y[j], o_V[j], 1.0, o_x);
+    platform.linAlg().axpy(N, y[j], o_V[j], 1.0, o_x);
   }
 }
 
-pgmres::~pgmres() {
-  if(H) free(H);
-  if(sn) free(sn);
-  if(cs) free(cs);
-  if(s) free(s);
-  if(y) free(y);
+} //namespace LinearSolver
 
-  if (o_V) delete[] o_V;
-}
+} //namespace libp

@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -82,7 +82,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     // loop over faces to add pseudo-gradient
 
@@ -95,7 +94,6 @@ SOFTWARE.
       surfaceTerms(sk2,2,i,p_Nq-1);
     }
 
-    @barrier("local");
 
     // face 1 & 3
     for(int j=0;j<p_Nq;++j;@inner(0)){
@@ -106,7 +104,6 @@ SOFTWARE.
       surfaceTerms(sk3,3,0     ,j);
     }
 
-    @barrier("local");
 
     // prescale by geofacs
     for(int j=0;j<p_Nq;++j){
@@ -127,7 +124,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     // loop over slabs
     for(int j=0;j<p_Nq;++j){
@@ -209,7 +205,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     // face 0 & 2
     for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -220,7 +215,6 @@ SOFTWARE.
       surfaceTerms(sk2,2,i,p_Nq-1);
     }
 
-    @barrier("local");
 
     // face 1 & 3
     for(int j=0;j<p_Nq;++j;@inner(0)){
@@ -231,7 +225,6 @@ SOFTWARE.
       surfaceTerms(sk3,3,0     ,j);
     }
 
-    @barrier("local");
 
     // loop over slabs
     for(int j=0;j<p_Nq;++j){
@@ -258,7 +251,6 @@ SOFTWARE.
     }
 
     // r term ----->
-    @barrier("local");
 
     for(int j=0;j<p_Nq;++j){
       for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -266,7 +258,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     for(int j=0;j<p_Nq;++j){
       for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -281,7 +272,6 @@ SOFTWARE.
     }
 
     // s term ---->
-    @barrier("local");
 
     for(int j=0;j<p_Nq;++j){
       for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -289,7 +279,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     for(int j=0;j<p_Nq;++j){
       for(int i=0;i<p_Nq;++i;@inner(0)){

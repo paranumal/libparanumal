@@ -2,7 +2,7 @@
 
   The MIT License (MIT)
 
-  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -26,51 +26,50 @@
 
 // Compute Gradient in Strong Form
 @kernel void insGradientVolumeQuad3D(const dlong Nelements,
-				     @restrict const  dfloat *  vgeo,
-				     @restrict const  dfloat *  D,
-				     const dlong fieldOffset,
-				     @restrict const  dfloat *  P,
-				     @restrict dfloat *  GP){
+                                     @restrict const  dfloat *  vgeo,
+                                     @restrict const  dfloat *  D,
+                                     const dlong fieldOffset,
+                                     @restrict const  dfloat *  P,
+                                     @restrict dfloat *  GP){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
     @shared dfloat s_P[p_NblockV][p_Nq][p_Nq];
     @shared dfloat s_D[p_Nq][p_Nq];
 
-    for(int es=0;es<p_NblockV;++es;@inner(2)){   
-      for(int j=0;j<p_Nq;++j;@inner(1)){ 
-        for(int i=0;i<p_Nq;++i;@inner(0)){    
+    for(int es=0;es<p_NblockV;++es;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           const dlong e = eo+es; // element in block
-          if(e<Nelements){ 
+          if(e<Nelements){
             const dlong id = e*p_Np + j*p_Nq+i;
 
             s_P[es][j][i]  = P[id];
-	  }
-	  if (es==0){
-	    s_D[j][i] = D[j*p_Nq+i];
-	  }
+          }
+          if (es==0){
+            s_D[j][i] = D[j*p_Nq+i];
+          }
         }
       }
     }
 
     // Make sure all node data is loaded into @shared
-    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;@inner(2)){ 
-      for(int j=0;j<p_Nq;++j;@inner(1)){ 
-        for(int i=0;i<p_Nq;++i;@inner(0)){  
-          const dlong e = eo+es; 
-          if(e<Nelements){ 
+    for(int es=0;es<p_NblockV;++es;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
+          const dlong e = eo+es;
+          if(e<Nelements){
             const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
-            
+
             const dfloat drdx = vgeo[gid + p_RXID*p_Np];
             const dfloat drdy = vgeo[gid + p_RYID*p_Np];
             const dfloat drdz = vgeo[gid + p_RZID*p_Np];
-            
+
             const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
             const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
             const dfloat dsdz = vgeo[gid + p_SZID*p_Np];
-            
+
             // const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
             // const dfloat dtdy = vgeo[gid + p_TYID*p_Np];
             // const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
@@ -97,109 +96,106 @@
         }
       }
     }
-  }  
+  }
 }
 
 
-#define surfaceTerms(sk,face,i, j)			\
-  {							\
-    const dlong idM = vmapM[sk];			\
-    const dlong idP = vmapP[sk];			\
-    							\
-    const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];		\
-    const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];		\
-    const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];		\
-    const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];		\
-    const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];	\
-							\
-    const dfloat  PM = P[idM];				\
-    dfloat  PP = P[idP];				\
-							\
-    const dfloat sc = invWJ * sJ;			\
-    s_fluxPx[es][j][i] += sc*(.5f*nx*(PP-PM));		\
-    s_fluxPy[es][j][i] += sc*(.5f*ny*(PP-PM));		\
-    s_fluxPz[es][j][i] += sc*(.5f*nz*(PP-PM));		\
+#define surfaceTerms(sk,face,i, j)                      \
+  {                                                     \
+    const dlong idM = vmapM[sk];                        \
+    const dlong idP = vmapP[sk];                        \
+                                                        \
+    const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];          \
+    const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];          \
+    const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];          \
+    const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];          \
+    const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];      \
+                                                        \
+    const dfloat  PM = P[idM];                          \
+    dfloat  PP = P[idP];                                \
+                                                        \
+    const dfloat sc = invWJ * sJ;                       \
+    s_fluxPx[es][j][i] += sc*(.5f*nx*(PP-PM));          \
+    s_fluxPy[es][j][i] += sc*(.5f*ny*(PP-PM));          \
+    s_fluxPz[es][j][i] += sc*(.5f*nz*(PP-PM));          \
   }
 
 @kernel void insGradientSurfaceQuad3D(const dlong Nelements,
-				      @restrict const  dfloat *  sgeo,
-				      @restrict const  dfloat *  LIFTT,
-				      @restrict const  dlong  *  vmapM,
-				      @restrict const  dlong  *  vmapP,
-				      @restrict const  int   *  EToB,
-				      @restrict const  dfloat *  x,
-				      @restrict const  dfloat *  y,
-				      @restrict const  dfloat *  z,
-				      const dfloat time,
-				      const dlong fieldOffset,
-				      @restrict const  dfloat *  P,
-				      @restrict dfloat *  GP){
-  
+                                      @restrict const  dfloat *  sgeo,
+                                      @restrict const  dfloat *  LIFTT,
+                                      @restrict const  dlong  *  vmapM,
+                                      @restrict const  dlong  *  vmapP,
+                                      @restrict const  int   *  EToB,
+                                      @restrict const  dfloat *  x,
+                                      @restrict const  dfloat *  y,
+                                      @restrict const  dfloat *  z,
+                                      const dfloat time,
+                                      const dlong fieldOffset,
+                                      @restrict const  dfloat *  P,
+                                      @restrict dfloat *  GP){
+
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
     // @shared storage for flux terms
     @shared dfloat s_fluxPx[p_NblockS][p_Nq][p_Nq];
     @shared dfloat s_fluxPy[p_NblockS][p_Nq][p_Nq];
     @shared dfloat s_fluxPz[p_NblockS][p_Nq][p_Nq];
-    
+
     for(int j=0;j<p_Nq;++j){
       for(int es=0;es<p_NblockS;++es;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
-	  s_fluxPx[es][j][i] = 0.f;
-	  s_fluxPy[es][j][i] = 0.f;
-	  s_fluxPz[es][j][i] = 0.f;
-	}
+        for(int i=0;i<p_Nq;++i;@inner(0)){
+          s_fluxPx[es][j][i] = 0.f;
+          s_fluxPy[es][j][i] = 0.f;
+          s_fluxPz[es][j][i] = 0.f;
+        }
       }
     }
-    
-    @barrier("local");
-    
+
+
     // for all face nodes of all elements
     // face 0 & 2
     for(int es=0;es<p_NblockS;++es;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
-	const dlong e = eo + es;
-	if(e<Nelements){
-	  dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i;
-	  dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + i;
-	  
-	  surfaceTerms(sk0,0,i,0     );
-	  surfaceTerms(sk2,2,i,p_Nq-1);
-	}
+        const dlong e = eo + es;
+        if(e<Nelements){
+          dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i;
+          dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + i;
+
+          surfaceTerms(sk0,0,i,0     );
+          surfaceTerms(sk2,2,i,p_Nq-1);
+        }
       }
     }
-    
-    @barrier("local");
-    
+
+
     // face 1 & 3
     for(int es=0;es<p_NblockS;++es;@inner(1)){
       for(int j=0;j<p_Nq;++j;@inner(0)){
-	const dlong e = eo + es;
-	if(e<Nelements){
-	  dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + j;
-	  dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + j;
-	  
-	  surfaceTerms(sk1,1,p_Nq-1,j);
-	  surfaceTerms(sk3,3,0     ,j);
-	}
+        const dlong e = eo + es;
+        if(e<Nelements){
+          dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + j;
+          dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + j;
+
+          surfaceTerms(sk1,1,p_Nq-1,j);
+          surfaceTerms(sk3,3,0     ,j);
+        }
       }
     }
-    
-    @barrier("local");
-    
+
+
     // for each node in the element
     for(int j=0;j<p_Nq;++j){
       for(int es=0;es<p_NblockS;++es;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
-	  const dlong e = eo + es;
-	  if(e<Nelements){
-	    const dlong id = e*p_Np + j*p_Nq + i;
-	    
-	    GP[id+0*fieldOffset] += s_fluxPx[es][j][i];
-	    GP[id+1*fieldOffset] += s_fluxPy[es][j][i];
-	    GP[id+2*fieldOffset] += s_fluxPz[es][j][i];
-	  }
-	}
+        for(int i=0;i<p_Nq;++i;@inner(0)){
+          const dlong e = eo + es;
+          if(e<Nelements){
+            const dlong id = e*p_Np + j*p_Nq + i;
+
+            GP[id+0*fieldOffset] += s_fluxPx[es][j][i];
+            GP[id+1*fieldOffset] += s_fluxPy[es][j][i];
+            GP[id+2*fieldOffset] += s_fluxPz[es][j][i];
+          }
+        }
       }
     }
   }

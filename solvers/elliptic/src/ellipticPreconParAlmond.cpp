@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,7 +27,7 @@ SOFTWARE.
 #include "ellipticPrecon.hpp"
 
 //AMG preconditioner via parAlmond
-void ParAlmondPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
+void ParAlmondPrecon::Operator(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_Mr) {
 
   //hand off to parAlmond
   parAlmond.Operator(o_r, o_Mr);
@@ -41,6 +41,9 @@ ParAlmondPrecon::ParAlmondPrecon(elliptic_t& _elliptic):
   parAlmond(elliptic.platform, settings, elliptic.mesh.comm) {
 
   //build full A matrix and pass to parAlmond
+  if (Comm::World().rank()==0){
+    printf("-----------------------------Multigrid AMG Setup--------------------------------------------\n");
+  }
   parAlmond::parCOO A(elliptic.platform, elliptic.mesh.comm);
   if (settings.compareSetting("DISCRETIZATION", "IPDG")) {
     elliptic.BuildOperatorMatrixIpdg(A);
@@ -52,12 +55,13 @@ ParAlmondPrecon::ParAlmondPrecon(elliptic_t& _elliptic):
   int rank = elliptic.mesh.rank;
   int size = elliptic.mesh.size;
   hlong TotalRows = A.globalRowStarts[size];
-  dlong numLocalRows = (dlong) (A.globalRowStarts[rank+1]-A.globalRowStarts[rank]);
-  dfloat *null = (dfloat *) malloc(numLocalRows*sizeof(dfloat));
-  for (dlong i=0;i<numLocalRows;i++) null[i] = 1.0/sqrt(TotalRows);
+  dlong numLocalRows = static_cast<dlong>(A.globalRowStarts[rank+1]-A.globalRowStarts[rank]);
+  memory<dfloat> null(numLocalRows);
+  for (dlong i=0;i<numLocalRows;i++) {
+    null[i] = 1.0/sqrt(TotalRows);
+  }
 
   parAlmond.AMGSetup(A, elliptic.allNeumann, null, elliptic.allNeumannPenalty);
-  free(null);
 
   parAlmond.Report();
 
@@ -66,7 +70,5 @@ ParAlmondPrecon::ParAlmondPrecon(elliptic_t& _elliptic):
   dlong parAlmondNrows = parAlmond.getNumRows(0);
   dlong parAlmondNcols = parAlmond.getNumCols(0);
   dlong parAlmondNhalo = parAlmondNcols - parAlmondNrows;
-  elliptic.Nhalo = mymax(elliptic.Nhalo, parAlmondNhalo);
+  _elliptic.Nhalo = std::max(_elliptic.Nhalo, parAlmondNhalo);
 }
-
-ParAlmondPrecon::~ParAlmondPrecon() {}

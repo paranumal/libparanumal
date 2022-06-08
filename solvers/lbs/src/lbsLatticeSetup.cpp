@@ -2,7 +2,7 @@
 
   The MIT License (MIT)
 
-  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -36,8 +36,8 @@ void lbs_t::latticeSetup(){
     Nfields  = 9; 
     Nmacro = mesh.dim + 1;
     
-    LBM   = (dfloat *) calloc(Nfields*Nmacro,sizeof(dfloat)); 
-    LMAP  = (int *) calloc(Nfields,sizeof(int)); 
+    LBM.malloc(Nfields*Nmacro);
+    LMAP.malloc(Nfields);
 
     LBM[0 + 0*Nfields] = 4.0/9.0; 
     LBM[0 + 1*Nfields] = 0.0; 
@@ -64,8 +64,8 @@ void lbs_t::latticeSetup(){
     Nfields  = 15; 
     Nmacro   = mesh.dim + 1;
 
-    LBM   = (dfloat *) calloc(Nfields*Nmacro,sizeof(dfloat)); 
-    LMAP  = (int *) calloc(Nfields,sizeof(int)); 
+    LBM.malloc(Nfields*Nmacro);
+    LMAP.malloc(Nfields);
     // Weights
     LBM[0  + 0*Nfields] = 2.0/ 9.0; LMAP[0 ] = 0; 
 
@@ -109,8 +109,8 @@ void lbs_t::latticeSetup(){
     Nfields  = 19; 
     Nmacro   = mesh.dim + 1;
 
-    LBM   = (dfloat *) calloc(Nfields*Nmacro,sizeof(dfloat)); 
-    LMAP  = (int *) calloc(Nfields,sizeof(int)); 
+    LBM.malloc(Nfields*Nmacro);
+    LMAP.malloc(Nfields);
     // Weights
     LBM[0  + 0*Nfields] = 1.0/ 3.0; LMAP[0 ] = 0; 
 
@@ -160,10 +160,14 @@ void lbs_t::latticeSetup(){
     LBM[18  + 1*Nfields] =  0.0; LBM[18  + 2*Nfields] =  1.0; LBM[18  + 3*Nfields] = -1.0;
 
   }else {
-    LIBP_ABORT(string("Requested VELOCIY MODEL not found."));
+    LIBP_FORCE_ABORT("Requested VELOCIY MODEL not found.");
   }
 
   alpha    = nu/(c*c); // Relaxation parameter 
   tauInv   = 1.0/alpha; // need to check that....
   RT       = c*c; // remove this later, no need!!!!!
+
+  // Lattice-Boltzmann Model
+  o_LBM = platform.malloc<dfloat>(LBM);
+  o_LMAP = platform.malloc<dfloat>(LMAP);
 }

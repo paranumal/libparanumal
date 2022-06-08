@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -44,26 +44,25 @@ SOFTWARE.
         for(int i=0;i<p_Nq;++i;@inner(0)){
           const dlong e = eo+es; // element in block
           if(e<Nelements){
-	    for(int k=0;k<p_Nq;++k){
-	      const dlong qbase = e*p_Nfields*p_Np + k*p_Nq*p_Nq + j*p_Nq +i;
-	      const dfloat r  = q[qbase + 0*p_Np];
-	      const dfloat ru = q[qbase + 1*p_Np];
-	      const dfloat rv = q[qbase + 2*p_Np];
-	      const dfloat rw = q[qbase + 3*p_Np];
+            for(int k=0;k<p_Nq;++k){
+              const dlong qbase = e*p_Nfields*p_Np + k*p_Nq*p_Nq + j*p_Nq +i;
+              const dfloat r  = q[qbase + 0*p_Np];
+              const dfloat ru = q[qbase + 1*p_Np];
+              const dfloat rv = q[qbase + 2*p_Np];
+              const dfloat rw = q[qbase + 3*p_Np];
 
-	      s_u[es][k][j][i] = ru/r;
-	      s_v[es][k][j][i] = rv/r;
-	      s_w[es][k][j][i] = rw/r;
-	    }
-	  }
+              s_u[es][k][j][i] = ru/r;
+              s_v[es][k][j][i] = rv/r;
+              s_w[es][k][j][i] = rw/r;
+            }
+          }
 
-	  if (es==0)
-	    s_DT[j][i] = DT[j*p_Nq+i];
+          if (es==0)
+            s_DT[j][i] = DT[j*p_Nq+i];
         }
       }
     }
 
-    @barrier("local");
 
     for(int es=0;es<p_NblockV;++es;@inner(2)){
       for(int j=0;j<p_Nq;++j;@inner(1)){
@@ -71,58 +70,58 @@ SOFTWARE.
           const dlong e = eo+es; // element in block
           if(e<Nelements){
 
-	    for(int k=0;k<p_Nq;++k){
+            for(int k=0;k<p_Nq;++k){
 
-	      const dlong gid = e*p_Np*p_Nvgeo+ k*p_Nq*p_Nq + j*p_Nq +i;
+              const dlong gid = e*p_Np*p_Nvgeo+ k*p_Nq*p_Nq + j*p_Nq +i;
 
-	      const dfloat drdx = vgeo[gid + p_RXID*p_Np];
-	      const dfloat drdy = vgeo[gid + p_RYID*p_Np];
-	      const dfloat drdz = vgeo[gid + p_RZID*p_Np];
-	      const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
-	      const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
-	      const dfloat dsdz = vgeo[gid + p_SZID*p_Np];
-	      const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
-	      const dfloat dtdy = vgeo[gid + p_TYID*p_Np];
-	      const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
+              const dfloat drdx = vgeo[gid + p_RXID*p_Np];
+              const dfloat drdy = vgeo[gid + p_RYID*p_Np];
+              const dfloat drdz = vgeo[gid + p_RZID*p_Np];
+              const dfloat dsdx = vgeo[gid + p_SXID*p_Np];
+              const dfloat dsdy = vgeo[gid + p_SYID*p_Np];
+              const dfloat dsdz = vgeo[gid + p_SZID*p_Np];
+              const dfloat dtdx = vgeo[gid + p_TXID*p_Np];
+              const dfloat dtdy = vgeo[gid + p_TYID*p_Np];
+              const dfloat dtdz = vgeo[gid + p_TZID*p_Np];
 
-	      // compute 1D derivatives
-	      dfloat ur = 0, vr = 0, wr = 0;
-	      dfloat us = 0, vs = 0, ws = 0;
-	      dfloat ut = 0, vt = 0, wt = 0;
+              // compute 1D derivatives
+              dfloat ur = 0, vr = 0, wr = 0;
+              dfloat us = 0, vs = 0, ws = 0;
+              dfloat ut = 0, vt = 0, wt = 0;
 
-	      #pragma unroll p_Nq
-		for(int n=0;n<p_Nq;++n) {
-		  const dfloat Dr = s_DT[i][n];
-		  const dfloat Ds = s_DT[j][n];
-		  const dfloat Dt = s_DT[k][n];
-		  ur += Dr*s_u[es][k][j][n];
-		  us += Ds*s_u[es][k][n][i];
-		  ut += Dt*s_u[es][n][j][i];
-		  vr += Dr*s_v[es][k][j][n];
-		  vs += Ds*s_v[es][k][n][i];
-		  vt += Dt*s_v[es][n][j][i];
-		  wr += Dr*s_w[es][k][j][n];
-		  ws += Ds*s_w[es][k][n][i];
-		  wt += Dt*s_w[es][n][j][i];
-		}
+              #pragma unroll p_Nq
+                for(int n=0;n<p_Nq;++n) {
+                  const dfloat Dr = s_DT[i][n];
+                  const dfloat Ds = s_DT[j][n];
+                  const dfloat Dt = s_DT[k][n];
+                  ur += Dr*s_u[es][k][j][n];
+                  us += Ds*s_u[es][k][n][i];
+                  ut += Dt*s_u[es][n][j][i];
+                  vr += Dr*s_v[es][k][j][n];
+                  vs += Ds*s_v[es][k][n][i];
+                  vt += Dt*s_v[es][n][j][i];
+                  wr += Dr*s_w[es][k][j][n];
+                  ws += Ds*s_w[es][k][n][i];
+                  wt += Dt*s_w[es][n][j][i];
+                }
 
-	      const dfloat uy = drdy*ur + dsdy*us + dtdy*ut;
-	      const dfloat uz = drdz*ur + dsdz*us + dtdz*ut;
+              const dfloat uy = drdy*ur + dsdy*us + dtdy*ut;
+              const dfloat uz = drdz*ur + dsdz*us + dtdz*ut;
 
-	      const dfloat vx = drdx*vr + dsdx*vs + dtdx*vt;
-	      const dfloat vz = drdz*vr + dsdz*vs + dtdz*vt;
+              const dfloat vx = drdx*vr + dsdx*vs + dtdx*vt;
+              const dfloat vz = drdz*vr + dsdz*vs + dtdz*vt;
 
-	      const dfloat wx = drdx*wr + dsdx*ws + dtdx*wt;
-	      const dfloat wy = drdy*wr + dsdy*ws + dtdy*wt;
+              const dfloat wx = drdx*wr + dsdx*ws + dtdx*wt;
+              const dfloat wy = drdy*wr + dsdy*ws + dtdy*wt;
 
-	      const dlong id = 3*e*p_Np+k*p_Nq*p_Nq + j*p_Nq+i;
+              const dlong id = 3*e*p_Np+k*p_Nq*p_Nq + j*p_Nq+i;
 
-	      Vort[id+0*p_Np] = wy-vz;
-	      Vort[id+1*p_Np] = uz-wx;
-	      Vort[id+2*p_Np] = vx-uy;
-	    }
-	  }
-	}
+              Vort[id+0*p_Np] = wy-vz;
+              Vort[id+1*p_Np] = uz-wx;
+              Vort[id+2*p_Np] = vx-uy;
+            }
+          }
+        }
       }
     }
   }

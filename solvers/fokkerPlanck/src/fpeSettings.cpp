@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,7 +27,7 @@ SOFTWARE.
 #include "fpe.hpp"
 
 //settings for fpe solver
-fpeSettings_t::fpeSettings_t(MPI_Comm& _comm):
+fpeSettings_t::fpeSettings_t(comm_t& _comm):
   settings_t(_comm) {
 
   newSetting("DATA FILE",
@@ -87,10 +87,7 @@ fpeSettings_t::fpeSettings_t(MPI_Comm& _comm):
 
 void fpeSettings_t::report() {
 
-  int rank;
-  MPI_Comm_rank(comm, &rank);
-
-  if (rank==0) {
+  if (comm.rank()==0) {
     std::cout << "Fokker Planck Settings:\n\n";
     reportSetting("DATA FILE");
     reportSetting("VISCOSITY");
@@ -132,15 +129,15 @@ void fpeSettings_t::report() {
 
 void fpeSettings_t::parseFromFile(platformSettings_t& platformSettings,
                                   meshSettings_t& meshSettings,
-                                  const string filename) {
+                                  const std::string filename) {
   //read all settings from file
   settings_t s(comm);
   s.readSettingsFromFile(filename);
 
   for(auto it = s.settings.begin(); it != s.settings.end(); ++it) {
-    setting_t* set = it->second;
-    const string name = set->getName();
-    const string val = set->getVal<string>();
+    setting_t& set = it->second;
+    const std::string name = set.getName();
+    const std::string val = set.getVal<std::string>();
     if (platformSettings.hasSetting(name))
       platformSettings.changeSetting(name, val);
     else if (meshSettings.hasSetting(name))
@@ -148,25 +145,23 @@ void fpeSettings_t::parseFromFile(platformSettings_t& platformSettings,
     else if (hasSetting(name)) //self
       changeSetting(name, val);
     else  {
-      stringstream ss;
-      ss << "Unknown setting: [" << name << "] requested";
-      LIBP_ABORT(ss.str());
+      LIBP_FORCE_ABORT("Unknown setting: [" << name << "] requested");
     }
   }
 }
 
-ellipticSettings_t* fpeSettings_t::extractEllipticSettings() {
+ellipticSettings_t fpeSettings_t::extractEllipticSettings() {
 
-  ellipticSettings_t* ellipticSettings = new ellipticSettings_t(comm);
+  ellipticSettings_t ellipticSettings(comm);
 
-  for(auto it = ellipticSettings->settings.begin(); it != ellipticSettings->settings.end(); ++it) {
-    setting_t* set = it->second;
-    const string name = set->getName();
+  for(auto it = ellipticSettings.settings.begin(); it != ellipticSettings.settings.end(); ++it) {
+    setting_t& set = it->second;
+    const std::string name = set.getName();
 
-    string val;
+    std::string val;
     getSetting("ELLIPTIC "+name, val);
 
-    set->updateVal(val);
+    set.updateVal(val);
   }
 
   return ellipticSettings;

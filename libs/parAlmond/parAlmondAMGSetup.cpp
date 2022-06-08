@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Rajesh Gandham
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Rajesh Gandham
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,58 +26,65 @@ SOFTWARE.
 
 #include "parAlmond.hpp"
 #include "parAlmond/parAlmondAMGSetup.hpp"
+#include "parAlmond/parAlmondCoarseSolver.hpp"
+
+namespace libp {
 
 namespace parAlmond {
 
 void parAlmond_t::AMGSetup(parCOO& cooA,
                          bool nullSpace,
-                         dfloat *nullVector,
+                         memory<dfloat> nullVector,
                          dfloat nullSpacePenalty){
 
-  int rank;
-  int size;
-  MPI_Comm_rank(cooA.comm, &rank);
-  MPI_Comm_size(cooA.comm, &size);
+  int rank = cooA.comm.rank();
+  int size = cooA.comm.size();
 
-  if(rank==0) {printf("Setting up AMG...");fflush(stdout);}
+  if(Comm::World().rank()==0) {printf("Setting up AMG...");fflush(stdout);}
+
+  /*Get multigrid solver*/
+  multigrid_t& mg = *multigrid;
+
+  /*Get coarse solver*/
+  coarseSolver_t& coarse = *(mg.coarseSolver);
 
   //make csr matrix from coo input
-  parCSR *A = new parCSR(cooA);
-  A->diagSetup();
+  parCSR A(cooA);
+  A.diagSetup();
 
   //copy fine nullvector
-  dfloat *null = (dfloat *) malloc(A->Nrows*sizeof(dfloat));
-  memcpy(null, nullVector, A->Nrows*sizeof(dfloat));
+  memory<dfloat> null(A.Nrows);
+  null.copyFrom(nullVector, A.Nrows);
 
   // find target N at coarsest level
-  const int gCoarseSize = multigrid->coarseSolver->getTargetSize();
-
-  amgLevel *L = new amgLevel(A, settings);
+  const int gCoarseSize = coarse.getTargetSize();
 
   hlong globalSize;
-  if (multigrid->coarsetype==COARSEEXACT) {
-    globalSize = L->A->globalRowStarts[size];
+  if (mg.coarsetype==COARSEEXACT) {
+    globalSize = A.globalRowStarts[size];
   } else { //COARSEOAS
     //OAS cares about Ncols for size
-    hlong localSize = A->Ncols;
-    MPI_Allreduce(&localSize,&globalSize,1,MPI_HLONG,MPI_SUM,A->comm);
+    globalSize = A.Ncols;
+    A.comm.Allreduce(globalSize);
   }
+
+  amgLevel& Lbase = mg.AddLevel<amgLevel>(A, settings);
 
   //if the system if already small, dont create MG levels
   bool done = false;
   if(globalSize <= gCoarseSize){
-    multigrid->AddLevel(L);
-    multigrid->coarseSolver->setup(A, nullSpace, null, nullSpacePenalty);
-    multigrid->coarseSolver->syncToDevice();
-    multigrid->baseLevel = multigrid->numLevels-1;
-    L->syncToDevice();
+    mg.AllocateLevelWorkSpace(mg.numLevels-1);
+    coarse.setup(A, nullSpace, null, nullSpacePenalty);
+    coarse.syncToDevice();
+    mg.baseLevel = mg.numLevels-1;
+    Lbase.syncToDevice();
     done = true;
   }
 
   //TODO: make the coarsen threasholds user-provided inputs
-  // For now, let default to some sensible threasholds
+  // For now, let default to some sensible thresholds
   dfloat theta=0.0;
-  if (multigrid->strtype==RUGESTUBEN) {
+  if (mg.strtype==RUGESTUBEN) {
     theta=0.5; //default for 3D problems
     //See: A GPU accelerated aggregation algebraic multigrid method, R. Gandham, K. Esler, Y. Zhang.
   } else { // (type==SYMMETRIC)
@@ -86,49 +93,56 @@ void parAlmond_t::AMGSetup(parCOO& cooA,
   }
 
   while(!done){
-    L->setupSmoother();
+    /*Get current coarsest level*/
+    amgLevel& L = mg.GetLevel<amgLevel>(mg.numLevels-1);
 
-    // Create coarse level via AMG. Coarsen null vector
-    amgLevel* Lcoarse = coarsenAmgLevel(L, null,
-                                        multigrid->strtype, theta,
-                                        multigrid->aggtype);
-    multigrid->AddLevel(L);
-    L->syncToDevice();
+    /*Build smoother*/
+    L.setupSmoother();
+
+    /*Create new level*/
+    amgLevel& Lcoarse = mg.AddLevel<amgLevel>();
+
+    /* Coarsen level via AMG. Coarsen null vector */
+    Lcoarse = coarsenAmgLevel(L, null,
+                              mg.strtype, theta,
+                              mg.aggtype);
+
+    mg.AllocateLevelWorkSpace(mg.numLevels-2);
+    L.syncToDevice();
+
+    parCSR& Acoarse = Lcoarse.A;
 
     // Increase coarsening rate as we add levels.
     //See: Algebraic Multigrid On Unstructured Meshes, P Vanek, J. Mandel, M. Brezina.
-    if (multigrid->strtype==SYMMETRIC)
+    if (mg.strtype==SYMMETRIC)
       theta=theta/2;
 
     hlong globalCoarseSize;
-    if (multigrid->coarsetype==COARSEEXACT) {
-      globalCoarseSize = Lcoarse->A->globalRowStarts[size];;
+    if (mg.coarsetype==COARSEEXACT) {
+      globalCoarseSize = Acoarse.globalRowStarts[size];;
     } else { //COARSEOAS
       //OAS cares about Ncols for size
-      hlong localSize = Lcoarse->A->Ncols;
-      MPI_Allreduce(&localSize,&globalCoarseSize,1,MPI_HLONG,MPI_SUM,Lcoarse->A->comm);
+      globalCoarseSize = Acoarse.Ncols;
+      Acoarse.comm.Allreduce(globalCoarseSize);
     }
 
     if(globalCoarseSize <= gCoarseSize || globalSize < 2*globalCoarseSize){
-      if (globalSize < 2*globalCoarseSize && rank==0) {
-        stringstream ss;
-        ss << "AMG coarsening stalling, attemping coarse solver setup with dimension N=" << globalCoarseSize;
-        LIBP_WARNING(ss.str());
-      }
-      multigrid->AddLevel(Lcoarse);
-      Lcoarse->syncToDevice();
-      multigrid->coarseSolver->setup(Lcoarse->A, nullSpace, null, nullSpacePenalty);
-      multigrid->coarseSolver->syncToDevice();
-      multigrid->baseLevel = multigrid->numLevels-1;
+      LIBP_WARNING("AMG coarsening stalling, attemping coarse solver setup with dimension N=" << globalCoarseSize,
+                   globalSize < 2*globalCoarseSize && rank==0);
+
+      mg.AllocateLevelWorkSpace(mg.numLevels-1);
+      Lcoarse.syncToDevice();
+      coarse.setup(Acoarse, nullSpace, null, nullSpacePenalty);
+      coarse.syncToDevice();
+      mg.baseLevel = mg.numLevels-1;
       break;
     }
     globalSize = globalCoarseSize;
-    L = Lcoarse;
   }
 
-  free(null);
-
-  if(rank==0) printf("done.\n");
+  if(Comm::World().rank()==0) printf("done.\n");
 }
 
 } //namespace parAlmond
+
+} //namespace libp

@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,15 +25,16 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh3D.hpp"
 
-void meshHex3D::PhysicalNodes(){
+namespace libp {
 
-  x = (dfloat*) calloc((Nelements+totalHaloPairs)*Np,sizeof(dfloat));
-  y = (dfloat*) calloc((Nelements+totalHaloPairs)*Np,sizeof(dfloat));
-  z = (dfloat*) calloc((Nelements+totalHaloPairs)*Np,sizeof(dfloat));
+void mesh_t::PhysicalNodesHex3D(){
 
-  dlong cnt = 0;
+  x.malloc(Nelements*Np);
+  y.malloc(Nelements*Np);
+  z.malloc(Nelements*Np);
+
+  #pragma omp parallel for
   for(dlong e=0;e<Nelements;++e){ /* for each element */
 
     dlong id = e*Nverts;
@@ -73,7 +74,7 @@ void meshHex3D::PhysicalNodes(){
       dfloat tn = t[n];
 
       /* physical coordinate of interpolation node */
-      x[cnt] =
+      x[e*Np + n] =
         +0.125*(1-rn)*(1-sn)*(1-tn)*xe1
         +0.125*(1+rn)*(1-sn)*(1-tn)*xe2
         +0.125*(1+rn)*(1+sn)*(1-tn)*xe3
@@ -83,7 +84,7 @@ void meshHex3D::PhysicalNodes(){
         +0.125*(1+rn)*(1+sn)*(1+tn)*xe7
         +0.125*(1-rn)*(1+sn)*(1+tn)*xe8;
 
-      y[cnt] =
+      y[e*Np + n] =
         +0.125*(1-rn)*(1-sn)*(1-tn)*ye1
         +0.125*(1+rn)*(1-sn)*(1-tn)*ye2
         +0.125*(1+rn)*(1+sn)*(1-tn)*ye3
@@ -93,7 +94,7 @@ void meshHex3D::PhysicalNodes(){
         +0.125*(1+rn)*(1+sn)*(1+tn)*ye7
         +0.125*(1-rn)*(1+sn)*(1+tn)*ye8;
 
-      z[cnt] =
+      z[e*Np + n] =
         +0.125*(1-rn)*(1-sn)*(1-tn)*ze1
         +0.125*(1+rn)*(1-sn)*(1-tn)*ze2
         +0.125*(1+rn)*(1+sn)*(1-tn)*ze3
@@ -102,12 +103,12 @@ void meshHex3D::PhysicalNodes(){
         +0.125*(1+rn)*(1-sn)*(1+tn)*ze6
         +0.125*(1+rn)*(1+sn)*(1+tn)*ze7
         +0.125*(1-rn)*(1+sn)*(1+tn)*ze8;
-
-      ++cnt;
     }
   }
 
-  halo->Exchange(x, Np, ogs_dfloat);
-  halo->Exchange(y, Np, ogs_dfloat);
-  halo->Exchange(z, Np, ogs_dfloat);
+  o_x = platform.malloc<dfloat>(x);
+  o_y = platform.malloc<dfloat>(y);
+  o_z = platform.malloc<dfloat>(z);
 }
+
+} //namespace libp

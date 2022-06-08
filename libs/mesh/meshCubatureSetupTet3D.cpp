@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,41 +25,39 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh3D.hpp"
 
-void meshTet3D::CubatureSetup(){
+namespace libp {
+
+void mesh_t::CubatureSetupTet3D(){
 
   /* Cubature data */
   cubN = 2*N; //cubature order
-  CubatureNodesTet3D(cubN, &cubNp, &cubr, &cubs, &cubt, &cubw);
+  CubatureNodesTet3D(cubN, cubNp, cubr, cubs, cubt, cubw);
 
-  cubInterp = (dfloat *) malloc(Np*cubNp*sizeof(dfloat));
-  InterpolationMatrixTet3D(N, Np, r, s, t, cubNp, cubr, cubs, cubt, cubInterp);
+  InterpolationMatrixTet3D(N, r, s, t, cubr, cubs, cubt, cubInterp);
 
   //cubature project cubProject = M^{-1} * cubInterp^T
   // Defined such that cubProject * cubW * cubInterp = Identity
-  cubProject = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
-  CubaturePmatrixTet3D(N, Np, r, s, t, cubNp, cubr, cubs, cubt, cubProject);
+  CubaturePmatrixTet3D(N, r, s, t, cubr, cubs, cubt, cubProject);
 
   //cubature derivates matrices, cubD: differentiate on cubature nodes
   // we dont use cubD on Tris/Tets  so skip computing
 
   // Instead, it's cheaper to:
   // make weak cubature derivatives cubPDT = cubProject * cubD^T
-  cubPDT  = (dfloat*) calloc(3*cubNp*Np, sizeof(dfloat));
+  CubatureWeakDmatricesTet3D(N, r, s, t,
+                             cubr, cubs, cubt,
+                             cubPDT);
   cubPDrT = cubPDT + 0*cubNp*Np;
   cubPDsT = cubPDT + 1*cubNp*Np;
   cubPDtT = cubPDT + 2*cubNp*Np;
-  CubatureWeakDmatricesTet3D(N, Np, r, s, t, cubNp, cubr, cubs, cubt,
-                             cubPDrT, cubPDsT, cubPDtT);
 
   // Surface cubature nodes
-  CubatureNodesTri2D(cubN, &intNfp, &intr, &ints, &intw);
+  CubatureNodesTri2D(cubN, intNfp, intr, ints, intw);
   cubNfp = intNfp;
 
-  intInterp = (dfloat*) calloc(intNfp*Nfaces*Nfp, sizeof(dfloat));
-  intLIFT = (dfloat*) calloc(Nfaces*intNfp*Np, sizeof(dfloat));
-  CubatureSurfaceMatricesTet3D(N, Np, r, s, t, faceNodes, intNfp, intr, ints, intw,
+  CubatureSurfaceMatricesTet3D(N, r, s, t, faceNodes,
+                               intr, ints, intw,
                                intInterp, intLIFT);
 
   // add compile time constants to kernels
@@ -70,10 +68,10 @@ void meshTet3D::CubatureSetup(){
   props["defines/" "p_cubNfp"]= cubNfp;
 
   // build transposes (we hold matrices as column major on device)
-  dfloat *cubProjectT = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
-  dfloat *cubInterpT   = (dfloat*) calloc(cubNp*Np, sizeof(dfloat));
-  matrixTranspose(cubNp, Np, cubInterp, Np, cubInterpT, cubNp);
-  matrixTranspose(Np, cubNp, cubProject, cubNp, cubProjectT, Np);
+  memory<dfloat> cubProjectT(cubNp*Np);
+  memory<dfloat> cubInterpT(cubNp*Np);
+  linAlg_t::matrixTranspose(cubNp, Np, cubInterp, Np, cubInterpT, cubNp);
+  linAlg_t::matrixTranspose(Np, cubNp, cubProject, cubNp, cubProjectT, Np);
 
   //pre-multiply cubProject by W on device
   for(int n=0;n<cubNp;++n){
@@ -82,13 +80,13 @@ void meshTet3D::CubatureSetup(){
     }
   }
 
-  dfloat *cubPDTT = (dfloat*) calloc(3*cubNp*Np, sizeof(dfloat));
-  dfloat *cubPDrTT = cubPDTT + 0*cubNp*Np;
-  dfloat *cubPDsTT = cubPDTT + 1*cubNp*Np;
-  dfloat *cubPDtTT = cubPDTT + 2*cubNp*Np;
-  matrixTranspose(Np, cubNp, cubPDrT, cubNp, cubPDrTT, Np);
-  matrixTranspose(Np, cubNp, cubPDsT, cubNp, cubPDsTT, Np);
-  matrixTranspose(Np, cubNp, cubPDtT, cubNp, cubPDtTT, Np);
+  memory<dfloat> cubPDTT(3*cubNp*Np);
+  memory<dfloat> cubPDrTT = cubPDTT + 0*cubNp*Np;
+  memory<dfloat> cubPDsTT = cubPDTT + 1*cubNp*Np;
+  memory<dfloat> cubPDtTT = cubPDTT + 2*cubNp*Np;
+  linAlg_t::matrixTranspose(Np, cubNp, cubPDrT, cubNp, cubPDrTT, Np);
+  linAlg_t::matrixTranspose(Np, cubNp, cubPDsT, cubNp, cubPDsTT, Np);
+  linAlg_t::matrixTranspose(Np, cubNp, cubPDtT, cubNp, cubPDtTT, Np);
 
   //pre-multiply cubPDT by W on device
   for(int n=0;n<cubNp;++n){
@@ -100,27 +98,23 @@ void meshTet3D::CubatureSetup(){
   }
 
   // build surface integration matrix transposes
-  dfloat *intLIFTT = (dfloat*) calloc(Np*Nfaces*intNfp, sizeof(dfloat));
-  dfloat *intInterpT = (dfloat*) calloc(Nfp*Nfaces*intNfp, sizeof(dfloat));
-  matrixTranspose(Np, Nfaces*intNfp, intLIFT, Nfaces*intNfp, intLIFTT, Np);
-  matrixTranspose(Nfaces*intNfp, Nfp, intInterp, Nfp, intInterpT, Nfaces*intNfp);
+  memory<dfloat> intLIFTT(Np*Nfaces*intNfp);
+  memory<dfloat> intInterpT(Nfp*Nfaces*intNfp);
+  linAlg_t::matrixTranspose(Np, Nfaces*intNfp, intLIFT, Nfaces*intNfp, intLIFTT, Np);
+  linAlg_t::matrixTranspose(Nfaces*intNfp, Nfp, intInterp, Nfp, intInterpT, Nfaces*intNfp);
 
+  o_cubInterp  = platform.malloc<dfloat>(Np*cubNp, cubInterpT);
+  o_cubProject = platform.malloc<dfloat>(Np*cubNp, cubProjectT);
 
-  o_cubvgeo = o_vgeo;// dummy
-  o_cubsgeo = o_sgeo; //dummy cubature geo factors
+  o_cubPDT = platform.malloc<dfloat>(3*Np*cubNp, cubPDTT);
 
-  o_cubInterp = platform.malloc(Np*cubNp*sizeof(dfloat), cubInterpT);
-  o_cubProject = platform.malloc(Np*cubNp*sizeof(dfloat), cubProjectT);
+  o_intInterp = platform.malloc<dfloat>(Nfp*Nfaces*intNfp, intInterpT);
+  o_intLIFT   = platform.malloc<dfloat>(Np*Nfaces*intNfp, intLIFTT);
 
-  o_cubPDT = platform.malloc(3*Np*cubNp*sizeof(dfloat), cubPDTT);
-  o_cubD = o_cubPDT; //dummy
-
-  o_intInterp = platform.malloc(Nfp*Nfaces*intNfp*sizeof(dfloat), intInterpT);
-  o_intLIFT = platform.malloc(Np*Nfaces*intNfp*sizeof(dfloat), intLIFTT);
-
-  free(cubPDTT);
-  free(cubProjectT);
-  free(cubInterpT);
-  free(intLIFTT);
-  free(intInterpT);
+  o_cubwJ = o_wJ;
+  o_cubvgeo = o_vgeo;
+  o_cubggeo = o_ggeo;
+  o_cubsgeo = o_sgeo;
 }
+
+} //namespace libp

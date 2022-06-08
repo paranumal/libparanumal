@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -29,39 +29,40 @@ SOFTWARE.
 int main(int argc, char **argv){
 
   // start up MPI
-  MPI_Init(&argc, &argv);
+  Comm::Init(argc, argv);
 
-  MPI_Comm comm = MPI_COMM_WORLD;
+  LIBP_ABORT("Usage: ./cnsMain setupfile", argc!=2);
 
-  if(argc!=2)
-    LIBP_ABORT(string("Usage: ./cnsMain setupfile"));
+  { /*Scope so everything is destructed before MPI_Finalize */
+    comm_t comm(Comm::World().Dup());
 
-  //create default settings
-  platformSettings_t platformSettings(comm);
-  meshSettings_t meshSettings(comm);
-  cnsSettings_t cnsSettings(comm);
+    //create default settings
+    platformSettings_t platformSettings(comm);
+    meshSettings_t meshSettings(comm);
+    cnsSettings_t cnsSettings(comm);
 
-  //load settings from file
-  cnsSettings.parseFromFile(platformSettings, meshSettings,
-                            argv[1]);
+    //load settings from file
+    cnsSettings.parseFromFile(platformSettings, meshSettings,
+                              argv[1]);
 
-  // set up platform
-  platform_t platform(platformSettings);
+    // set up platform
+    platform_t platform(platformSettings);
 
-  platformSettings.report();
-  meshSettings.report();
-  cnsSettings.report();
+    platformSettings.report();
+    meshSettings.report();
+    cnsSettings.report();
 
-  // set up mesh
-  mesh_t& mesh = mesh_t::Setup(platform, meshSettings, comm);
+    // set up mesh
+    mesh_t mesh(platform, meshSettings, comm);
 
-  // set up cns solver
-  cns_t& cns = cns_t::Setup(platform, mesh, cnsSettings);
+    // set up cns solver
+    cns_t cns(platform, mesh, cnsSettings);
 
-  // run
-  cns.Run();
+    // run
+    cns.Run();
+  }
 
   // close down MPI
-  MPI_Finalize();
+  Comm::Finalize();
   return LIBP_SUCCESS;
 }

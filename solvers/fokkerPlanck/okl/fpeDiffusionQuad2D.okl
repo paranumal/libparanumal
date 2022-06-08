@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -113,8 +113,6 @@ void surfaceTerms(const int element,
       }
     }
 
-    @barrier("local");
-
     // loop over faces to add pseudo-gradient
 
     // face 0 & 2
@@ -129,8 +127,6 @@ void surfaceTerms(const int element,
       surfaceTerms(element, sk2, 2, i, p_Nq-1, tau, sgeo, vmapM, vmapP, EToB, gradq, s_dqdx, s_dqdy, s_rhsq);
     }
 
-    @barrier("local");
-
     // face 1 & 3
     for(int j=0;j<p_Nq;++j;@inner(0)){
       dlong sk1 = element*p_Nfp*p_Nfaces + 1*p_Nfp + j;
@@ -142,8 +138,6 @@ void surfaceTerms(const int element,
       //      surfaceTerms(sk3,3,0,j);
       surfaceTerms(element, sk3, 3, 0, j, tau, sgeo, vmapM, vmapP, EToB, gradq, s_dqdx, s_dqdy, s_rhsq);
     }
-
-    @barrier("local");
 
     // prescale by geofacs
     for(int j=0;j<p_Nq;++j){
@@ -164,8 +158,6 @@ void surfaceTerms(const int element,
         s_dqdy[j][i] = (dsdx*dqdx + dsdy*dqdy);
       }
     }
-
-    @barrier("local");
 
     // loop over slabs
     for(int j=0;j<p_Nq;++j){

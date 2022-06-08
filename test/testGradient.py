@@ -4,7 +4,7 @@
 #
 #The MIT License (MIT)
 #
-#Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+#Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 #
 #Permission is hereby granted, free of charge, to any person obtaining a copy
 #of this software and associated documentation files (the "Software"), to deal
@@ -34,6 +34,7 @@ gradientData3D = gradientDir + "/data/gradientCos3D.h"
 def gradientSettings(rcformat="2.0", data_file=gradientData2D,
                      mesh="BOX", dim=2, element=4, nx=10, ny=10, nz=10, boundary_flag=1,
                      degree=4, thread_model=device, platform_number=0, device_number=0,
+                     paradogs_partitioning="NONE",
                      output_to_file="FALSE"):
   return [setting_t("FORMAT", rcformat),
           setting_t("DATA FILE", data_file),
@@ -48,6 +49,7 @@ def gradientSettings(rcformat="2.0", data_file=gradientData2D,
           setting_t("THREAD MODEL", thread_model),
           setting_t("PLATFORM NUMBER", platform_number),
           setting_t("DEVICE NUMBER", device_number),
+          setting_t("PARADOGS PARTITIONING", paradogs_partitioning),
           setting_t("OUTPUT TO FILE", output_to_file)]
 
 def main():

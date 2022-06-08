@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,43 +25,62 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh3D.hpp"
+
+namespace libp {
 
 /* compute outwards facing normals, surface Jacobian, and volume Jacobian for all face nodes */
-void meshQuad3D::SurfaceGeometricFactors(){
+void mesh_t::SurfaceGeometricFactorsQuad3D(){
 
   /* unified storage array for geometric factors */
-  Nsgeo = 14; // fix later
-  sgeo = (dfloat*) calloc((Nelements+totalHaloPairs)*
-                                Nsgeo*Nfp*Nfaces,
-                                sizeof(dfloat));
+  Nsgeo = 8;
 
-  cubsgeo = (dfloat*) calloc((Nelements+totalHaloPairs)*
-                                Nsgeo*cubNq*Nfaces,
-                                sizeof(dfloat));
+  NXID  = 0;
+  NYID  = 1;
+  NZID  = 2;
+  SJID  = 3;
+  IJID  = 4;
+  IHID  = 5;
+  WSJID = 6;
+  WIJID = 7;
 
-  dfloat *_cubx = (dfloat*) calloc((Nelements+totalHaloPairs)*
-                                  cubNq*Nfaces, sizeof(dfloat));
+  props["defines/" "p_Nsgeo"]= Nsgeo;
+  props["defines/" "p_NXID"]= NXID;
+  props["defines/" "p_NYID"]= NYID;
+  props["defines/" "p_NZID"]= NZID;
+  props["defines/" "p_SJID"]= SJID;
+  props["defines/" "p_IJID"]= IJID;
+  props["defines/" "p_IHID"]= IHID;
+  props["defines/" "p_WSJID"]= WSJID;
+  props["defines/" "p_WIJID"]= WIJID;
 
-  dfloat *_cuby = (dfloat*) calloc((Nelements+totalHaloPairs)*
-                                  cubNq*Nfaces, sizeof(dfloat));
+  sgeo.malloc(Nelements*Nsgeo*Nfp*Nfaces);
 
-  dfloat *_cubz = (dfloat*) calloc((Nelements+totalHaloPairs)*
-                                  cubNq*Nfaces, sizeof(dfloat));
+  memory<dfloat> hinv((Nelements+totalHaloPairs)*Nfp*Nfaces);
+
+  // cubsgeo.malloc(Nelements*Nsgeo*cubNfp*Nfaces);
+
+  // dfloat *_cubx = (dfloat*) calloc((Nelements+totalHaloPairs)*
+  //                                 cubNq*Nfaces, sizeof(dfloat));
+
+  // dfloat *_cuby = (dfloat*) calloc((Nelements+totalHaloPairs)*
+  //                                 cubNq*Nfaces, sizeof(dfloat));
+
+  // dfloat *_cubz = (dfloat*) calloc((Nelements+totalHaloPairs)*
+  //                                 cubNq*Nfaces, sizeof(dfloat));
 
 
 
-  dfloat *xr = (dfloat*) calloc(Np, sizeof(dfloat));
-  dfloat *yr = (dfloat*) calloc(Np, sizeof(dfloat));
-  dfloat *zr = (dfloat*) calloc(Np, sizeof(dfloat));
+  memory<dfloat> xr(Np);
+  memory<dfloat> yr(Np);
+  memory<dfloat> zr(Np);
 
-  dfloat *xs = (dfloat*) calloc(Np, sizeof(dfloat));
-  dfloat *ys = (dfloat*) calloc(Np, sizeof(dfloat));
-  dfloat *zs = (dfloat*) calloc(Np, sizeof(dfloat));
+  memory<dfloat> xs(Np);
+  memory<dfloat> ys(Np);
+  memory<dfloat> zs(Np);
 
-  dfloat *J  = (dfloat*) calloc(Np, sizeof(dfloat));
+  memory<dfloat> J(Np);
 
-  for(int e=0;e<Nelements+totalHaloPairs;++e){ /* for each element */
+  for(int e=0;e<Nelements;++e){ /* for each element */
 
     for(int j=0;j<Nq;++j){
       for(int i=0;i<Nq;++i){
@@ -155,11 +174,8 @@ void meshQuad3D::SurfaceGeometricFactors(){
         ny /= sJ;
         nz /= sJ;
 
-        if(sJ<1e-8) {
-                stringstream ss;
-                ss << "Negative J found at element " << e << "\n";
-                LIBP_ABORT(ss.str())
-        }
+        LIBP_ABORT("Negative J found at element " << e,
+                   sJ<1e-8);
 
         int base = Nsgeo*(e*Nq*Nfaces + n + f*Nq);
 
@@ -170,96 +186,98 @@ void meshQuad3D::SurfaceGeometricFactors(){
 
         sgeo[base+IJID] = 1./Jid;
 
-        sgeo[base+WIJID] = 1./(Jid*w[0]);
-        sgeo[base+WSJID] = sJ*w[n];
+        sgeo[base+WIJID] = 1./(Jid*gllw[0]);
+        sgeo[base+WSJID] = sJ*gllw[n];
+
+        hinv[e*Nq*Nfaces + n + f*Nq] = sJ/Jid;
       }
     }
 
-    // interpolate geofacs to surface quadrature
-    for(int f=0;f<Nfaces;++f){
+    // // interpolate geofacs to surface quadrature
+    // for(int f=0;f<Nfaces;++f){
 
-      for(int n=0;n<cubNq;++n){
-        dfloat cxr = 0, cxs = 0, cx = 0;
-        dfloat cyr = 0, cys = 0, cy = 0;
-        dfloat czr = 0, czs = 0, cz = 0;
+    //   for(int n=0;n<cubNq;++n){
+    //     dfloat cxr = 0, cxs = 0, cx = 0;
+    //     dfloat cyr = 0, cys = 0, cy = 0;
+    //     dfloat czr = 0, czs = 0, cz = 0;
 
-        for(int i=0;i<Nq;++i){
-          int id = faceNodes[i+f*Nq];
-          dfloat cIni = cubInterp[n*Nq+i];
-          cxr += cIni*xr[id];
-          cxs += cIni*xs[id];
-          cyr += cIni*yr[id];
-          cys += cIni*ys[id];
-          czr += cIni*zr[id];
-          czs += cIni*zs[id];
-          cx  += cIni*x[id+e*Np];
-          cy  += cIni*y[id+e*Np];
-          cz  += cIni*z[id+e*Np];
-        }
+    //     for(int i=0;i<Nq;++i){
+    //       int id = faceNodes[i+f*Nq];
+    //       dfloat cIni = cubInterp[n*Nq+i];
+    //       cxr += cIni*xr[id];
+    //       cxs += cIni*xs[id];
+    //       cyr += cIni*yr[id];
+    //       cys += cIni*ys[id];
+    //       czr += cIni*zr[id];
+    //       czs += cIni*zs[id];
+    //       cx  += cIni*x[id+e*Np];
+    //       cy  += cIni*y[id+e*Np];
+    //       cz  += cIni*z[id+e*Np];
+    //     }
 
-        _cubx[e*cubNq*Nfaces+f*cubNq + n] = cx;
-        _cuby[e*cubNq*Nfaces+f*cubNq + n] = cy;
-        _cubz[e*cubNq*Nfaces+f*cubNq + n] = cz;
+    //     _cubx[e*cubNq*Nfaces+f*cubNq + n] = cx;
+    //     _cuby[e*cubNq*Nfaces+f*cubNq + n] = cy;
+    //     _cubz[e*cubNq*Nfaces+f*cubNq + n] = cz;
 
-        dfloat Gx = cyr*czs - czr*cys;
-        dfloat Gy = czr*cxs - cxr*czs;
-        dfloat Gz = cxr*cys - cyr*cxs;
-        // dfloat cJ = sqrt(Gx*Gx+Gy*Gy+Gz*Gz);
-        dfloat volJ = cx*Gx + cy*Gy + cz*Gz; // xij*tx + yij*ty + zij*tz;
-        dfloat nx=0.0, ny=0.0, nz=0.0;
+    //     dfloat Gx = cyr*czs - czr*cys;
+    //     dfloat Gy = czr*cxs - cxr*czs;
+    //     dfloat Gz = cxr*cys - cyr*cxs;
+    //     // dfloat cJ = sqrt(Gx*Gx+Gy*Gy+Gz*Gz);
+    //     dfloat volJ = cx*Gx + cy*Gy + cz*Gz; // xij*tx + yij*ty + zij*tz;
+    //     dfloat nx=0.0, ny=0.0, nz=0.0;
 
-        if(f==0){
-          nx = cyr*cz - czr*cy;
-          ny = czr*cx - cxr*cz;
-          nz = cxr*cy - cyr*cx;
-        }
+    //     if(f==0){
+    //       nx = cyr*cz - czr*cy;
+    //       ny = czr*cx - cxr*cz;
+    //       nz = cxr*cy - cyr*cx;
+    //     }
 
-        if(f==1){
-          nx = cys*cz - czs*cy;
-          ny = czs*cx - cxs*cz;
-          nz = cxs*cy - cys*cx;
-        }
+    //     if(f==1){
+    //       nx = cys*cz - czs*cy;
+    //       ny = czs*cx - cxs*cz;
+    //       nz = cxs*cy - cys*cx;
+    //     }
 
-        if(f==2){
-          nx = -cyr*cz + czr*cy;
-          ny = -czr*cx + cxr*cz;
-          nz = -cxr*cy + cyr*cx;
-        }
+    //     if(f==2){
+    //       nx = -cyr*cz + czr*cy;
+    //       ny = -czr*cx + cxr*cz;
+    //       nz = -cxr*cy + cyr*cx;
+    //     }
 
-        if(f==3){
-          nx = -cys*cz + czs*cy;
-          ny = -czs*cx + cxs*cz;
-          nz = -cxs*cy + cys*cx;
-        }
+    //     if(f==3){
+    //       nx = -cys*cz + czs*cy;
+    //       ny = -czs*cx + cxs*cz;
+    //       nz = -cxs*cy + cys*cx;
+    //     }
 
-        dfloat R = sqrt(cx*cx+cy*cy+cz*cz);
+    //     dfloat R = sqrt(cx*cx+cy*cy+cz*cz);
 
-        nx /= R;
-        ny /= R;
-        nz /= R;
+    //     nx /= R;
+    //     ny /= R;
+    //     nz /= R;
 
-        dfloat sJ = sqrt(nx*nx+ny*ny+nz*nz);
+    //     dfloat sJ = sqrt(nx*nx+ny*ny+nz*nz);
 
-        nx /= sJ;
-        ny /= sJ;
-        nz /= sJ;
+    //     nx /= sJ;
+    //     ny /= sJ;
+    //     nz /= sJ;
 
-        if(sJ<1e-8) {
-                stringstream ss;
-                ss << "Negative J found at element " << e << "\n";
-                LIBP_ABORT(ss.str())
-        }
+    //     if(sJ<1e-8) {
+    //             stringstream ss;
+    //             ss << "Negative J found at element " << e << "\n";
+    //             LIBP_ABORT(ss.str())
+    //     }
 
-        int base = Nsgeo*(e*cubNq*Nfaces + n + f*cubNq);
+    //     int base = Nsgeo*(e*cubNq*Nfaces + n + f*cubNq);
 
-        cubsgeo[base+NXID] = nx;
-        cubsgeo[base+NYID] = ny;
-        cubsgeo[base+NZID] = nz;
-        cubsgeo[base+SJID] = sJ;
-        cubsgeo[base+IHID] = sJ/volJ;
-        //      cubsgeo[base+WSJID] = sJ*cubw[n];
-      }
-    }
+    //     cubsgeo[base+NXID] = nx;
+    //     cubsgeo[base+NYID] = ny;
+    //     cubsgeo[base+NZID] = nz;
+    //     cubsgeo[base+SJID] = sJ;
+    //     cubsgeo[base+IHID] = sJ/volJ;
+    //     //      cubsgeo[base+WSJID] = sJ*cubw[n];
+    //   }
+    // }
   }
 
 
@@ -289,6 +307,8 @@ void meshQuad3D::SurfaceGeometricFactors(){
 #endif
   // TW: omit 1/min(h) calculation
 
+  halo.Exchange(hinv, Nfp*Nfaces);
+
   for(dlong e=0;e<Nelements;++e){ /* for each non-halo element */
     for(int n=0;n<Nfp*Nfaces;++n){
       dlong baseM = e*Nfp*Nfaces + n;
@@ -296,61 +316,59 @@ void meshQuad3D::SurfaceGeometricFactors(){
       if(baseP<0) baseP = baseM;
 
       // rescaling - missing factor of 2 ? (only impacts penalty and thus stiffness)
-      dfloat hinvM = sgeo[baseM*Nsgeo + SJID]*sgeo[baseM*Nsgeo + IJID];
-      dfloat hinvP = sgeo[baseP*Nsgeo + SJID]*sgeo[baseP*Nsgeo + IJID];
-
-      //      printf("hinvM/P = %g,%g\n", hinvM, hinvP);
-
-      sgeo[baseM*Nsgeo+IHID] = mymax(hinvM,hinvP);
-      sgeo[baseP*Nsgeo+IHID] = mymax(hinvM,hinvP);
+      dfloat hinvM = hinv[baseM];
+      dfloat hinvP = hinv[baseP];
+      sgeo[baseM*Nsgeo+IHID] = std::max(hinvM,hinvP);
     }
   }
 
-  for(dlong e=0;e<Nelements;++e){ /* for each non-halo element */
-    for(int f=0;f<Nfaces;++f){
-      dlong eP = EToE[e*Nfaces+f];
-      dlong fP = EToF[e*Nfaces+f];
+  // for(dlong e=0;e<Nelements;++e){ /* for each non-halo element */
+  //   for(int f=0;f<Nfaces;++f){
+  //     dlong eP = EToE[e*Nfaces+f];
+  //     dlong fP = EToF[e*Nfaces+f];
 
-      // dfloat maxhinv  = 0;
-      for(int n=0;n<cubNq;++n){
-        dlong idM = e*cubNq*Nfaces+f*cubNq+n;
-        dfloat cxM = _cubx[idM];
-        dfloat cyM = _cuby[idM];
-        dfloat czM = _cubz[idM];
+  //     // dfloat maxhinv  = 0;
+  //     for(int n=0;n<cubNq;++n){
+  //       dlong idM = e*cubNq*Nfaces+f*cubNq+n;
+  //       dfloat cxM = _cubx[idM];
+  //       dfloat cyM = _cuby[idM];
+  //       dfloat czM = _cubz[idM];
 
-        dfloat mindist2;
-        int minidP = 0;
-        // jump through hoops to find neighbor cubature node
-        // [ not needed elsewhere since we interpolate consistently ]
-        dlong idP;
-        for(int m=0;m<cubNq;++m){
-          idP = eP*cubNq*Nfaces+fP*cubNq+m;
+  //       dfloat mindist2;
+  //       int minidP = 0;
+  //       // jump through hoops to find neighbor cubature node
+  //       // [ not needed elsewhere since we interpolate consistently ]
+  //       dlong idP;
+  //       for(int m=0;m<cubNq;++m){
+  //         idP = eP*cubNq*Nfaces+fP*cubNq+m;
 
-          dfloat cxP = _cubx[idP];
-          dfloat cyP = _cuby[idP];
-          dfloat czP = _cubz[idP];
+  //         dfloat cxP = _cubx[idP];
+  //         dfloat cyP = _cuby[idP];
+  //         dfloat czP = _cubz[idP];
 
-          dfloat dist2 = pow(cxP-cxM,2)+pow(cyP-cyM,2)+pow(czP-czM,2);
+  //         dfloat dist2 = pow(cxP-cxM,2)+pow(cyP-cyM,2)+pow(czP-czM,2);
 
-          if(m==0 || dist2<mindist2){
-            mindist2 = dist2;
-            minidP = m;
-          }
-        }
+  //         if(m==0 || dist2<mindist2){
+  //           mindist2 = dist2;
+  //           minidP = m;
+  //         }
+  //       }
 
-        if(mindist2>1e-12)
-        printf("mindist2 = %g\n", mindist2);
+  //       if(mindist2>1e-12)
+  //       printf("mindist2 = %g\n", mindist2);
 
-        idM = Nsgeo*( e*cubNq*Nfaces+ f*cubNq+n)+IHID;
-        idP = Nsgeo*(eP*cubNq*Nfaces+fP*cubNq+minidP)+IHID;
+  //       idM = Nsgeo*( e*cubNq*Nfaces+ f*cubNq+n)+IHID;
+  //       idP = Nsgeo*(eP*cubNq*Nfaces+fP*cubNq+minidP)+IHID;
 
-        dfloat hinv = mymax(cubsgeo[idM],cubsgeo[idP]);
-        cubsgeo[idM] = hinv;
-        cubsgeo[idP] = hinv;
+  //       dfloat hinv = mymax(cubsgeo[idM],cubsgeo[idP]);
+  //       cubsgeo[idM] = hinv;
+  //       cubsgeo[idP] = hinv;
 
-      }
-    }
-  }
+  //     }
+  //   }
+  // }
 
-
+  o_sgeo = platform.malloc<dfloat>(sgeo);
 }
+
+} //namespace libp

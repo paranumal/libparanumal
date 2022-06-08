@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,10 +26,12 @@ SOFTWARE.
 
 #include "parAlmond.hpp"
 
+namespace libp {
+
 namespace parAlmond {
 
 void AddSettings(settings_t& settings,
-                          const string prefix) {
+                 const std::string prefix) {
 
   settings.newSetting(prefix+"PARALMOND CYCLE",
                       "VCYCLE",
@@ -68,3 +70,5 @@ void ReportSettings(settings_t& settings) {
 }
 
 } //namespace parAlmond
+
+} //namespace libp

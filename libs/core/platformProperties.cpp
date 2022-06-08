@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,79 +26,89 @@ SOFTWARE.
 
 #include "platform.hpp"
 
+namespace libp {
+
 //initialize occa::properties with common props
 void platform_t::DeviceProperties(){
 
-  props["defines"].asObject();
-  props["includes"].asArray();
-  props["header"].asArray();
-  props["flags"].asObject();
+  properties_t& Props = props();
 
-  props["device"].asObject();
-  props["kernel"].asObject();
-  props["memory"].asObject();
+  Props["defines"].asObject();
+  Props["includes"].asArray();
+  Props["header"].asArray();
+  Props["flags"].asObject();
+
+  Props["device"].asObject();
+  Props["kernel"].asObject();
+  Props["memory"].asObject();
 
   if(sizeof(dfloat)==4){
-    props["defines/" "dfloat"]="float";
-    props["defines/" "dfloat2"]="float2";
-    props["defines/" "dfloat4"]="float4";
-    props["defines/" "dfloat8"]="float8";
+    Props["defines/" "dfloat"]="float";
+    Props["defines/" "dfloat2"]="float2";
+    Props["defines/" "dfloat4"]="float4";
+    Props["defines/" "dfloat8"]="float8";
   }
   if(sizeof(dfloat)==8){
-    props["defines/" "dfloat"]="double";
-    props["defines/" "dfloat2"]="double2";
-    props["defines/" "dfloat4"]="double4";
-    props["defines/" "dfloat8"]="double8";
+    Props["defines/" "dfloat"]="double";
+    Props["defines/" "dfloat2"]="double2";
+    Props["defines/" "dfloat4"]="double4";
+    Props["defines/" "dfloat8"]="double8";
   }
 
   if(sizeof(pfloat)==4){
-    props["defines/" "pfloat"]="float";
-    props["defines/" "pfloat2"]="float2";
-    props["defines/" "pfloat4"]="float4";
-    props["defines/" "pfloat8"]="float8";
+    Props["defines/" "pfloat"]="float";
+    Props["defines/" "pfloat2"]="float2";
+    Props["defines/" "pfloat4"]="float4";
+    Props["defines/" "pfloat8"]="float8";
   }
   if(sizeof(pfloat)==8){
-    props["defines/" "pfloat"]="double";
-    props["defines/" "pfloat2"]="double2";
-    props["defines/" "pfloat4"]="double4";
-    props["defines/" "pfloat8"]="double8";
+    Props["defines/" "pfloat"]="double";
+    Props["defines/" "pfloat2"]="double2";
+    Props["defines/" "pfloat4"]="double4";
+    Props["defines/" "pfloat8"]="double8";
   }
 
   
   if(sizeof(dlong)==4){
-    props["defines/" "dlong"]="int";
+    Props["defines/" "dlong"]="int";
   }
   if(sizeof(dlong)==8){
-    props["defines/" "dlong"]="long long int";
+    Props["defines/" "dlong"]="long long int";
   }
 
   if(device.mode()=="Serial") {
-    props["compiler_flags"] += "-O3 ";
-    props["compiler_flags"] += "-g "; //debugging
+    Props["compiler_flags"] += "-O3 ";
+    Props["compiler_flags"] += "-g "; //debugging
+    Props["defines/OCCA_USE_SERIAL"] = 1;
   }
 
   if(device.mode()=="CUDA"){ // add backend compiler optimization for CUDA
-    props["compiler_flags"] += "--ftz=true ";
-    props["compiler_flags"] += "--prec-div=false ";
-    props["compiler_flags"] += "--prec-sqrt=false ";
-    props["compiler_flags"] += "--use_fast_math ";
-    props["compiler_flags"] += "--fmad=true "; // compiler option for cuda
-    props["compiler_flags"] += "-Xptxas -dlcm=ca";
+    Props["compiler_flags"] += "--ftz=true ";
+    Props["compiler_flags"] += "--prec-div=false ";
+    Props["compiler_flags"] += "--prec-sqrt=false ";
+    Props["compiler_flags"] += "--use_fast_math ";
+    Props["compiler_flags"] += "--fmad=true "; // compiler option for cuda
+    Props["compiler_flags"] += "-Xptxas -dlcm=ca";
+    Props["defines/OCCA_USE_CUDA"] = 1;
   }
 
   if(device.mode()=="OpenCL"){ // add backend compiler optimization for OPENCL
-    props["compiler_flags"] += " -cl-std=CL2.0 ";
-    props["compiler_flags"] += " -cl-strict-aliasing ";
-    props["compiler_flags"] += " -cl-mad-enable ";
-    props["compiler_flags"] += " -cl-no-signed-zeros ";
-    props["compiler_flags"] += " -cl-unsafe-math-optimizations ";
-    props["compiler_flags"] += " -cl-fast-relaxed-math ";
+    Props["compiler_flags"] += " -cl-std=CL2.0 ";
+    Props["compiler_flags"] += " -cl-strict-aliasing ";
+    Props["compiler_flags"] += " -cl-mad-enable ";
+    Props["compiler_flags"] += " -cl-no-signed-zeros ";
+    Props["compiler_flags"] += " -cl-unsafe-math-optimizations ";
+    Props["compiler_flags"] += " -cl-fast-relaxed-math ";
+    Props["defines/OCCA_USE_OPENCL"] = 1;
   }
 
   if(device.mode()=="HIP"){ // add backend compiler optimization for HIP
-    props["compiler_flags"] += " -O3 ";
-    props["compiler_flags"] += " -ffp-contract=fast ";
-    // props["compiler_flags"] += " -funsafe-math-optimizations ";
-    // props["compiler_flags"] += " -ffast-math ";
+    Props["compiler_flags"] += " -O3 ";
+    Props["compiler_flags"] += " -ffp-contract=fast ";
+    Props["compiler_flags"] += " -funsafe-math-optimizations ";
+    Props["compiler_flags"] += " -ffast-math ";
+    Props["defines/OCCA_USE_HIP"] = 1;
   }
 }
+
+} //namespace libp

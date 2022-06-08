@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -28,32 +28,36 @@ SOFTWARE.
 #include "timeStepper.hpp"
 #include <complex>
 
+namespace libp {
+
 namespace TimeStepper {
 
 using std::complex;
 
 saab3::saab3(dlong _Nelements, dlong _NhaloElements,
              int _Np, int _Nfields,
-             dfloat *_lambda, solver_t& _solver):
-  timeStepper_t(_Nelements, _NhaloElements, _Np, _Nfields, _solver),
+             memory<dfloat> _lambda,
+             platform_t& _platform, comm_t _comm):
+  timeStepperBase_t(_Nelements, _NhaloElements,
+                    _Np, _Nfields, _platform, _comm),
   Np(_Np),
   Nfields(_Nfields),
   Nelements(_Nelements),
   NhaloElements(_NhaloElements) {
 
-  platform_t &platform = solver.platform;
-
-  lambda = (dfloat *) malloc(Nfields*sizeof(dfloat));
-  memcpy(lambda, _lambda, Nfields*sizeof(dfloat));
+  lambda.malloc(Nfields);
+  lambda.copyFrom(_lambda);
 
   Nstages = 3;
   shiftIndex = 0;
 
-  o_rhsq = platform.malloc(Nstages*N*sizeof(dfloat));
+  o_rhsq = platform.malloc<dfloat>(Nstages*N);
 
-  occa::properties kernelInfo = platform.props; //copy base occa properties from solver
+  const int blocksize=256;
 
-  kernelInfo["defines/" "p_blockSize"] = BLOCKSIZE;
+  properties_t kernelInfo = platform.props(); //copy base occa properties from solver
+
+  kernelInfo["defines/" "p_blockSize"] = blocksize;
   kernelInfo["defines/" "p_Nstages"] = Nstages;
   kernelInfo["defines/" "p_Np"]      = (int)Np;
   kernelInfo["defines/" "p_Nfields"] = (int)Nfields;
@@ -63,20 +67,20 @@ saab3::saab3(dlong _Nelements, dlong _NhaloElements,
                                     "saabUpdate",
                                     kernelInfo);
 
-  saab_x = (dfloat*) malloc(Nfields*sizeof(dfloat));
-  o_saab_x = platform.malloc(Nfields*sizeof(dfloat));
+  h_saab_x = platform.hostMalloc<dfloat>(Nfields);
+  o_saab_x = platform.malloc<dfloat>(Nfields);
 
-  saab_a = (dfloat*) malloc(Nfields*Nstages*Nstages*sizeof(dfloat));
-  o_saab_a =  platform.malloc(Nfields*Nstages*Nstages*sizeof(dfloat));
+  h_saab_a = platform.hostMalloc<dfloat>(Nfields*Nstages*Nstages);
+  o_saab_a = platform.malloc<dfloat>(Nfields*Nstages*Nstages);
 }
 
-void saab3::Run(occa::memory &o_q, dfloat start, dfloat end) {
+void saab3::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloat end) {
 
   dfloat time = start;
 
   solver.Report(time,0);
 
-  dfloat outputInterval;
+  dfloat outputInterval=0.0;
   solver.settings.getSetting("OUTPUT INTERVAL", outputInterval);
 
   dfloat outputTime = time + outputInterval;
@@ -87,7 +91,7 @@ void saab3::Run(occa::memory &o_q, dfloat start, dfloat end) {
   int tstep=0;
   int order=0;
   while (time < end) {
-    Step(o_q, time, dt, order);
+    Step(solver, o_q, time, dt, order);
     time += dt;
     tstep++;
     if (order<Nstages-1) order++;
@@ -100,14 +104,14 @@ void saab3::Run(occa::memory &o_q, dfloat start, dfloat end) {
   }
 }
 
-void saab3::Step(occa::memory &o_q, dfloat time, dfloat _dt, int order) {
+void saab3::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloat _dt, int order) {
 
   //rhs at current index
-  occa::memory o_rhsq0 = o_rhsq + shiftIndex*N*sizeof(dfloat);
+  deviceMemory<dfloat> o_rhsq0 = o_rhsq + shiftIndex*N;
 
   //coefficients at current order
-  occa::memory o_X = o_saab_x;
-  occa::memory o_A = o_saab_a + order*Nstages*sizeof(dfloat);
+  deviceMemory<dfloat> o_X = o_saab_x;
+  deviceMemory<dfloat> o_A = o_saab_a + order*Nstages;
 
   //evaluate ODE rhs = f(q,t)
   solver.rhsf(o_q, o_rhsq0, time);
@@ -147,8 +151,8 @@ void saab3::UpdateCoefficients() {
                          3./2.,   -1./2.,    0.0,
                        23./12., -16./12., 5./12.};
 
-      memcpy(saab_x+n                ,_saab_X,    1*sizeof(dfloat));
-      memcpy(saab_a+n*Nstages*Nstages,_saab_A,Nstages*Nstages*sizeof(dfloat));
+      h_saab_x.copyFrom(_saab_X,               1, n                );
+      h_saab_a.copyFrom(_saab_A, Nstages*Nstages, n*Nstages*Nstages);
 
     } else {
 
@@ -186,28 +190,20 @@ void saab3::UpdateCoefficients() {
       dfloat aa32=real(a32)/ (double) Nr;
       dfloat aa33=real(a33)/ (double) Nr;
 
-      dfloat _saab_X[1]  = { exp(alpha) };
+      dfloat _saab_X[1]  = { std::exp(alpha) };
       dfloat _saab_A[Nstages*Nstages]
                       ={   aa11,   0.0,   0.0,
                            aa21,  aa22,   0.0,
                            aa31,  aa32,  aa33 };
 
-      memcpy(saab_x+n                ,_saab_X,    1*sizeof(dfloat));
-      memcpy(saab_a+n*Nstages*Nstages,_saab_A,Nstages*Nstages*sizeof(dfloat));
+      h_saab_x.copyFrom(_saab_X,               1, n                );
+      h_saab_a.copyFrom(_saab_A, Nstages*Nstages, n*Nstages*Nstages);
     }
 
     // move data to platform
-    o_saab_x.copyFrom(saab_x);
-    o_saab_a.copyFrom(saab_a);
+    h_saab_x.copyTo(o_saab_x);
+    h_saab_a.copyTo(o_saab_a);
   }
-}
-
-saab3::~saab3() {
-  if (o_rhsq.size()) o_rhsq.free();
-  if (o_saab_x.size()) o_saab_x.free();
-  if (o_saab_a.size()) o_saab_a.free();
-
-  updateKernel.free();
 }
 
 
@@ -217,22 +213,22 @@ saab3::~saab3() {
 
 saab3_pml::saab3_pml(dlong _Nelements, dlong _NpmlElements, dlong _NhaloElements,
                      int _Np, int _Nfields, int Npmlfields,
-                     dfloat *_lambda, solver_t& _solver):
-  saab3(_Nelements, _NhaloElements, _Np, _Nfields, _lambda, _solver),
+                     memory<dfloat> _lambda,
+                     platform_t& _platform, comm_t _comm):
+  saab3(_Nelements, _NhaloElements, _Np, _Nfields, _lambda, _platform, _comm),
   Npml(Npmlfields*_Np*_NpmlElements) {
 
   if (Npml) {
-    platform_t &platform = solver.platform;
+    memory<dfloat> pmlq(Npml,0.0);
+    o_pmlq   = platform.malloc<dfloat>(pmlq);
 
-    dfloat *pmlq = (dfloat *) calloc(Npml,sizeof(dfloat));
-    o_pmlq   = platform.malloc(Npml*sizeof(dfloat), pmlq);
-    free(pmlq);
+    o_rhspmlq = platform.malloc<dfloat>(Nstages*Npml);
 
-    o_rhspmlq = platform.malloc(Nstages*Npml*sizeof(dfloat));
+    properties_t kernelInfo = platform.props(); //copy base occa properties from solver
 
-    occa::properties kernelInfo = platform.props; //copy base occa properties from solver
+    const int blocksize=256;
 
-    kernelInfo["defines/" "p_blockSize"] = BLOCKSIZE;
+    kernelInfo["defines/" "p_blockSize"] = blocksize;
     kernelInfo["defines/" "p_Nstages"] = Nstages;
     kernelInfo["defines/" "p_Np"]      = (int)Np;
     kernelInfo["defines/" "p_Nfields"] = (int)Nfields;
@@ -248,29 +244,29 @@ saab3_pml::saab3_pml(dlong _Nelements, dlong _NpmlElements, dlong _NhaloElements
                            3./2.,   -1./2.,    0.0,
                          23./12., -16./12., 5./12.};
 
-    pmlsaab_a = (dfloat*) calloc(Nstages*Nstages, sizeof(dfloat));
-    memcpy(pmlsaab_a, _ab_a, Nstages*Nstages*sizeof(dfloat));
+    pmlsaab_a.malloc(Nstages*Nstages);
+    pmlsaab_a.copyFrom(_ab_a);
 
-    o_pmlsaab_a = platform.malloc(Nstages*Nstages*sizeof(dfloat), pmlsaab_a);
+    o_pmlsaab_a = platform.malloc<dfloat>(pmlsaab_a);
   }
 }
 
 
-void saab3_pml::Step(occa::memory &o_q, dfloat time, dfloat _dt, int order) {
+void saab3_pml::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloat _dt, int order) {
 
   //rhs at current index
-  occa::memory o_rhsq0    = o_rhsq + shiftIndex*N*sizeof(dfloat);
-  occa::memory o_rhspmlq0;
+  deviceMemory<dfloat> o_rhsq0    = o_rhsq + shiftIndex*N;
+  deviceMemory<dfloat> o_rhspmlq0;
 
 
   //coefficients at current order
-  occa::memory o_X = o_saab_x;
-  occa::memory o_A = o_saab_a + order*Nstages*sizeof(dfloat);
-  occa::memory o_pmlA;
+  deviceMemory<dfloat> o_X = o_saab_x;
+  deviceMemory<dfloat> o_A = o_saab_a + order*Nstages;
+  deviceMemory<dfloat> o_pmlA;
 
   if (Npml) {
-    o_rhspmlq0 = o_rhspmlq + shiftIndex*Npml*sizeof(dfloat);
-    o_pmlA = o_pmlsaab_a + order*Nstages*sizeof(dfloat);
+    o_rhspmlq0 = o_rhspmlq + shiftIndex*Npml;
+    o_pmlA = o_pmlsaab_a + order*Nstages;
   }
 
   //evaluate ODE rhs = f(q,t)
@@ -297,12 +293,6 @@ void saab3_pml::Step(occa::memory &o_q, dfloat time, dfloat _dt, int order) {
   shiftIndex = (shiftIndex+Nstages-1)%Nstages;
 }
 
-saab3_pml::~saab3_pml() {
-  if (o_pmlq.size()) o_pmlq.free();
-  if (o_rhspmlq.size()) o_rhspmlq.free();
-  if (o_pmlsaab_a.size()) o_pmlsaab_a.free();
-
-  pmlUpdateKernel.free();
-}
-
 } //namespace TimeStepper
+
+} //namespace libp

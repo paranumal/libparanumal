@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Rajesh Gandham
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Rajesh Gandham
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -28,23 +28,20 @@ SOFTWARE.
 #include "parAlmond/parAlmondCoarseSolver.hpp"
 #include "parAlmond/parAlmondKernels.hpp"
 
-//link in the data stream from ogs
-namespace ogs {
-  extern occa::stream dataStream;
-}
+namespace libp {
 
 namespace parAlmond {
 
-void exactSolver_t::solve(occa::memory& o_rhs, occa::memory& o_x) {
+void exactSolver_t::solve(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x) {
 
-  occa::stream currentStream = platform.device.getStream();
+  stream_t currentStream = platform.getStream();
 
   //queue transfering coarse vector to host for Allgather
   if(N) {
-    platform.device.finish();
-    platform.device.setStream(ogs::dataStream);
-    o_rhs.copyTo(diagRhs, N*sizeof(dfloat), 0, "async: true");
-    platform.device.setStream(currentStream);
+    platform.finish();
+    platform.setStream(ogs::ogsBase_t::dataStream);
+    o_rhs.copyTo(diagRhs, N, 0, properties_t("async", true));
+    platform.setStream(currentStream);
   }
 
   //queue local part of gemv
@@ -55,19 +52,19 @@ void exactSolver_t::solve(occa::memory& o_rhs, occa::memory& o_x) {
 
   if(offdTotal) {
     //wait for data to arrive on host
-    platform.device.setStream(ogs::dataStream);
-    platform.device.finish();
+    platform.setStream(ogs::ogsBase_t::dataStream);
+    platform.finish();
 
 
     //gather the offd rhs entries
-    MPI_Alltoallv(diagRhs,   sendCounts,   sendOffsets, MPI_DFLOAT,
-                  offdRhs, coarseCounts, coarseOffsets, MPI_DFLOAT, comm);
+    comm.Alltoallv(diagRhs,   sendCounts,   sendOffsets,
+                   offdRhs, coarseCounts, coarseOffsets);
 
     //queue transfering coarse vector to device
-    o_offdRhs.copyFrom(offdRhs, offdTotal*sizeof(dfloat), 0, "async: true");
-    platform.device.finish(); //wait for transfer to complete
+    o_offdRhs.copyFrom(offdRhs, offdTotal, 0, properties_t("async", true));
+    platform.finish(); //wait for transfer to complete
 
-    platform.device.setStream(currentStream);
+    platform.setStream(currentStream);
 
     //queue offd part of gemv
     if (N)
@@ -80,65 +77,66 @@ int exactSolver_t::getTargetSize() {
   return 1000;
 }
 
-void exactSolver_t::setup(parCSR *_A, bool nullSpace,
-                           dfloat *nullVector, dfloat nullSpacePenalty) {
+void exactSolver_t::setup(parCSR& _A, bool nullSpace,
+                          memory<dfloat> nullVector, dfloat nullSpacePenalty) {
 
   A = _A;
 
-  comm = A->comm;
-  MPI_Comm_rank(comm, &rank);
-  MPI_Comm_size(comm, &size);
+  comm = A.comm;
+  rank = comm.rank();
+  size = comm.size();
 
   //copy the global coarse partition as ints
-  coarseOffsets = (int* ) calloc(size+1,sizeof(int));
-  for (int r=0;r<size+1;r++) coarseOffsets[r] = (int) A->globalRowStarts[r];
+  coarseOffsets.malloc(size+1);
+  for (int r=0;r<size+1;r++) {
+    coarseOffsets[r] = static_cast<int>(A.globalRowStarts[r]);
+  }
 
   coarseTotal   = coarseOffsets[size];
   coarseOffset  = coarseOffsets[rank];
 
-  N = (int) A->Nrows;
-  Nrows = A->Nrows;
-  Ncols = A->Ncols;
+  N = static_cast<int>(A.Nrows);
+  Nrows = A.Nrows;
+  Ncols = A.Ncols;
 
-  coarseCounts = (int*) calloc(size,sizeof(int));
+  coarseCounts.malloc(size,0);
 
-  int sendNNZ = (int) (A->diag.nnz+A->offd.nnz);
+  int sendNNZ = static_cast<int>(A.diag.nnz+A.offd.nnz);
 
   // if((rank==0)&&(settings.compareSetting("VERBOSE","TRUE")))
   //   {printf("Setting up coarse solver...");fflush(stdout);}
 
-  parCOO::nonZero_t *sendNonZeros = (parCOO::nonZero_t *) calloc(sendNNZ, sizeof(parCOO::nonZero_t));
+  memory<parCOO::nonZero_t> sendNonZeros(sendNNZ);
 
   //populate matrix
   int cnt = 0;
   for (int n=0;n<N;n++) {
-    const int start = (int) A->diag.rowStarts[n];
-    const int end   = (int) A->diag.rowStarts[n+1];
+    const int start = static_cast<int>(A.diag.rowStarts[n]);
+    const int end   = static_cast<int>(A.diag.rowStarts[n+1]);
     for (int m=start;m<end;m++) {
       sendNonZeros[cnt].row = n + coarseOffset;
-      sendNonZeros[cnt].col = A->diag.cols[m] + coarseOffset;
-      sendNonZeros[cnt].val = A->diag.vals[m];
+      sendNonZeros[cnt].col = A.diag.cols[m] + coarseOffset;
+      sendNonZeros[cnt].val = A.diag.vals[m];
       cnt++;
     }
   }
 
-  for (int n=0;n<A->offd.nzRows;n++) {
-    const int row   = (int) A->offd.rows[n];
-    const int start = (int) A->offd.mRowStarts[n];
-    const int end   = (int) A->offd.mRowStarts[n+1];
+  for (int n=0;n<A.offd.nzRows;n++) {
+    const int row   = static_cast<int>(A.offd.rows[n]);
+    const int start = static_cast<int>(A.offd.mRowStarts[n]);
+    const int end   = static_cast<int>(A.offd.mRowStarts[n+1]);
     for (int m=start;m<end;m++) {
       sendNonZeros[cnt].row = row + coarseOffset;
-      sendNonZeros[cnt].col = A->colMap[A->offd.cols[m]];
-      sendNonZeros[cnt].val = A->offd.vals[m];
+      sendNonZeros[cnt].col = A.colMap[A.offd.cols[m]];
+      sendNonZeros[cnt].val = A.offd.vals[m];
       cnt++;
     }
   }
 
   //get the nonzero counts from all ranks
-  int *recvNNZ    = (int*) calloc(size,sizeof(int));
-  int *NNZoffsets = (int*) calloc(size+1,sizeof(int));
-  MPI_Allgather(&sendNNZ, 1, MPI_INT,
-                 recvNNZ, 1, MPI_INT, comm);
+  memory<int> recvNNZ(size);
+  memory<int> NNZoffsets(size+1,0);
+  comm.Allgather(sendNNZ, recvNNZ);
 
   int totalNNZ = 0;
   for (int r=0;r<size;r++) {
@@ -146,29 +144,23 @@ void exactSolver_t::setup(parCSR *_A, bool nullSpace,
     NNZoffsets[r+1] = NNZoffsets[r] + recvNNZ[r];
   }
 
-  parCOO::nonZero_t *recvNonZeros = (parCOO::nonZero_t *) calloc(totalNNZ, sizeof(parCOO::nonZero_t));
+  memory<parCOO::nonZero_t> recvNonZeros(totalNNZ);
 
-  MPI_Allgatherv(sendNonZeros, sendNNZ,             MPI_NONZERO_T,
-                 recvNonZeros, recvNNZ, NNZoffsets, MPI_NONZERO_T, comm);
+  comm.Allgatherv(sendNonZeros, sendNNZ,
+                  recvNonZeros, recvNNZ, NNZoffsets);
 
   //gather null vector
-  dfloat *nullTotal = (dfloat*) calloc(coarseTotal,sizeof(dfloat));
+  memory<dfloat> nullTotal(coarseTotal);
 
-  for (int r=0;r<size;r++)
+  for (int r=0;r<size;r++) {
     coarseCounts[r] = coarseOffsets[r+1]-coarseOffsets[r];
+  }
 
-  MPI_Allgatherv(nullVector,            N,                MPI_DFLOAT,
-                  nullTotal, coarseCounts, coarseOffsets, MPI_DFLOAT,
-                 comm);
-
-  //clean up
-  MPI_Barrier(comm);
-  free(sendNonZeros);
-  free(NNZoffsets);
-  free(recvNNZ);
+  comm.Allgatherv(nullVector, N,
+                  nullTotal, coarseCounts, coarseOffsets);
 
   //assemble the full matrix
-  dfloat *coarseA = (dfloat *) calloc(coarseTotal*coarseTotal,sizeof(dfloat));
+  memory<dfloat> coarseA(coarseTotal*coarseTotal, 0.0);
   for (int i=0;i<totalNNZ;i++) {
     int n = recvNonZeros[i].row;
     int m = recvNonZeros[i].col;
@@ -183,10 +175,7 @@ void exactSolver_t::setup(parCSR *_A, bool nullSpace,
     }
   }
 
-  free(recvNonZeros);
-  free(nullTotal);
-
-  matrixInverse(coarseTotal, coarseA);
+  linAlg_t::matrixInverse(coarseTotal, coarseA);
 
   //determine size of offd piece
   offdTotal = coarseTotal - N;
@@ -199,8 +188,8 @@ void exactSolver_t::setup(parCSR *_A, bool nullSpace,
   coarseCounts[rank]=0;
 
   //counts for all-to-all
-  sendCounts = (int* ) calloc(size,sizeof(int));
-  sendOffsets = (int* ) calloc(size,sizeof(int));
+  sendCounts.malloc(size);
+  sendOffsets.malloc(size);
   for (int r=0;r<size;r++) {
     sendCounts[r] = N;
     sendOffsets[r] = 0;
@@ -208,7 +197,7 @@ void exactSolver_t::setup(parCSR *_A, bool nullSpace,
   sendCounts[rank] = 0;
 
   //diag piece of invA
-  diagInvAT = (dfloat *) calloc(N*N,sizeof(dfloat));
+  diagInvAT.malloc(N*N);
   for (int n=0;n<N;n++) {
     for (int m=0;m<N;m++) {
       diagInvAT[n+m*N] = coarseA[(n+coarseOffset)*coarseTotal+(m+coarseOffset)];
@@ -216,7 +205,7 @@ void exactSolver_t::setup(parCSR *_A, bool nullSpace,
   }
 
   //offd piece of invA
-  offdInvAT = (dfloat *) calloc(N*offdTotal,sizeof(dfloat));
+  offdInvAT.malloc(N*offdTotal);
   for (int n=0;n<N;n++) {
     for (int m=0;m<coarseOffset;m++) {
       offdInvAT[n+m*N] = coarseA[(n+coarseOffset)*coarseTotal+m];
@@ -226,13 +215,13 @@ void exactSolver_t::setup(parCSR *_A, bool nullSpace,
     }
   }
 
-  o_diagInvAT = platform.malloc(N*N*sizeof(dfloat), diagInvAT);
-  o_offdInvAT = platform.malloc(N*offdTotal*sizeof(dfloat), offdInvAT);
+  o_diagInvAT = platform.malloc<dfloat>(diagInvAT);
+  o_offdInvAT = platform.malloc<dfloat>(offdInvAT);
 
-  diagRhs = (dfloat*) calloc(N,sizeof(dfloat));
-  offdRhs = (dfloat*) calloc(offdTotal,sizeof(dfloat));
+  diagRhs.malloc(N);
+  offdRhs.malloc(offdTotal);
 
-  o_offdRhs = platform.malloc(offdTotal*sizeof(dfloat));
+  o_offdRhs = platform.malloc<dfloat>(offdTotal);
 
   // if((rank==0)&&(settings.compareSetting("VERBOSE","TRUE"))) printf("done.\n");
 }
@@ -241,40 +230,36 @@ void exactSolver_t::syncToDevice() {}
 
 void exactSolver_t::Report(int lev) {
 
-  hlong hNrows = (hlong) N;
+  int totalActive = (N>0) ? 1:0;
+  comm.Allreduce(totalActive, Comm::Sum);
 
-  int active = (N>0) ? 1:0;
-  int totalActive=0;
-  MPI_Allreduce(&active, &totalActive, 1, MPI_INT, MPI_SUM, comm);
+  dlong minNrows=N, maxNrows=N;
+  hlong totalNrows=N;
+  comm.Allreduce(maxNrows, Comm::Max);
+  comm.Allreduce(totalNrows, Comm::Sum);
+  dfloat avgNrows = (dfloat) totalNrows/totalActive;
 
-  dlong minNrows=0, maxNrows=0;
-  hlong totalNrows=0;
-  dfloat avgNrows;
-  MPI_Allreduce(&N, &maxNrows, 1, MPI_DLONG, MPI_MAX, comm);
-  MPI_Allreduce(&hNrows, &totalNrows, 1, MPI_HLONG, MPI_SUM, comm);
-  avgNrows = (dfloat) totalNrows/totalActive;
-
-  if (N==0) N=maxNrows; //set this so it's ignored for the global min
-  MPI_Allreduce(&N, &minNrows, 1, MPI_DLONG, MPI_MIN, comm);
+  if (N==0) minNrows=maxNrows; //set this so it's ignored for the global min
+  comm.Allreduce(minNrows, Comm::Min);
 
   long long int nnz;
-  nnz = A->diag.nnz+A->offd.nnz;
+  nnz = A.diag.nnz+A.offd.nnz;
 
-  long long int minNnz=0, maxNnz=0, totalNnz=0;
-  MPI_Allreduce(&nnz, &maxNnz,   1, MPI_LONG_LONG_INT, MPI_MAX, A->comm);
-  MPI_Allreduce(&nnz, &totalNnz, 1, MPI_LONG_LONG_INT, MPI_SUM, A->comm);
+  long long int minNnz=nnz, maxNnz=nnz, totalNnz=nnz;
+  comm.Allreduce(maxNnz,   Comm::Max);
+  comm.Allreduce(totalNnz, Comm::Sum);
 
-  if (nnz==0) nnz = maxNnz; //set this so it's ignored for the global min
-  MPI_Allreduce(&nnz, &minNnz, 1, MPI_LONG_LONG_INT, MPI_MIN, A->comm);
+  if (nnz==0) minNnz = maxNnz; //set this so it's ignored for the global min
+  comm.Allreduce(minNnz, Comm::Min);
 
   dfloat nnzPerRow = (Nrows==0) ? 0 : (dfloat) nnz/Nrows;
-  dfloat minNnzPerRow=0, maxNnzPerRow=0, avgNnzPerRow=0;
-  MPI_Allreduce(&nnzPerRow, &maxNnzPerRow, 1, MPI_DFLOAT, MPI_MAX, A->comm);
-  MPI_Allreduce(&nnzPerRow, &avgNnzPerRow, 1, MPI_DFLOAT, MPI_SUM, A->comm);
+  dfloat minNnzPerRow=nnzPerRow, maxNnzPerRow=nnzPerRow, avgNnzPerRow=nnzPerRow;
+  comm.Allreduce(maxNnzPerRow, Comm::Max);
+  comm.Allreduce(avgNnzPerRow, Comm::Sum);
   avgNnzPerRow /= totalActive;
 
-  if (Nrows==0) nnzPerRow = maxNnzPerRow;
-  MPI_Allreduce(&nnzPerRow, &minNnzPerRow, 1, MPI_DFLOAT, MPI_MIN, A->comm);
+  if (Nrows==0) minNnzPerRow = maxNnzPerRow;
+  comm.Allreduce(minNnzPerRow, Comm::Min);
 
   std::string name = "Exact Solve     ";
 
@@ -285,13 +270,6 @@ void exactSolver_t::Report(int lev) {
   }
 }
 
-exactSolver_t::~exactSolver_t() {
-  if (coarseOffsets) free(coarseOffsets);
-  if (coarseCounts) free(coarseCounts);
-  if (diagInvAT) free(diagInvAT);
-  if (offdInvAT) free(offdInvAT);
-  if (diagRhs) free(diagRhs);
-  if (offdRhs) free(offdRhs);
-}
-
 } //namespace parAlmond
+
+} //namespace libp

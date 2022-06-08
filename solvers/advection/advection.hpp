@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -36,53 +36,54 @@ SOFTWARE.
 
 #define DADVECTION LIBP_DIR"/solvers/advection/"
 
+using namespace libp;
+
 class advectionSettings_t: public settings_t {
 public:
-  advectionSettings_t(MPI_Comm& _comm);
+  advectionSettings_t(comm_t _comm);
   void report();
   void parseFromFile(platformSettings_t& platformSettings,
                      meshSettings_t& meshSettings,
-                     const string filename);
+                     const std::string filename);
 };
 
 class advection_t: public solver_t {
 public:
-  mesh_t &mesh;
-  TimeStepper::timeStepper_t* timeStepper;
+  mesh_t mesh;
+  timeStepper_t timeStepper;
 
-  halo_t* traceHalo;
+  ogs::halo_t traceHalo;
 
-  dfloat *q;
-  occa::memory o_q;
+  memory<dfloat> q;
+  deviceMemory<dfloat> o_q;
 
-  occa::memory o_Mq;
+  deviceMemory<dfloat> o_Mq;
 
-  occa::kernel volumeKernel;
-  occa::kernel surfaceKernel;
+  kernel_t volumeKernel;
+  kernel_t surfaceKernel;
 
-  occa::kernel initialConditionKernel;
-  occa::kernel maxWaveSpeedKernel;
+  kernel_t initialConditionKernel;
+  kernel_t maxWaveSpeedKernel;
 
-  advection_t() = delete;
+  advection_t() = default;
   advection_t(platform_t &_platform, mesh_t &_mesh,
-              advectionSettings_t& _settings):
-    solver_t(_platform, _settings), mesh(_mesh) {}
-
-  ~advection_t();
+              advectionSettings_t& _settings) {
+    Setup(_platform, _mesh, _settings);
+  }
 
   //setup
-  static advection_t& Setup(platform_t& platform, mesh_t& mesh,
-                            advectionSettings_t& settings);
+  void Setup(platform_t& platform, mesh_t& mesh,
+             advectionSettings_t& settings);
 
   void Run();
 
   void Report(dfloat time, int tstep);
 
-  void PlotFields(dfloat* Q, char *fileName);
+  void PlotFields(memory<dfloat> Q, const std::string fileName);
 
-  void rhsf(occa::memory& o_q, occa::memory& o_rhs, const dfloat time);
+  void rhsf(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
 
-  dfloat MaxWaveSpeed(occa::memory& o_Q, const dfloat T);
+  dfloat MaxWaveSpeed(deviceMemory<dfloat>& o_Q, const dfloat T);
 };
 
 #endif

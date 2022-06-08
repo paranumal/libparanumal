@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,7 @@ SOFTWARE.
 
 // compute RHS = MM*RHS/gamma + BCdata
 @kernel void insPressureIncrementRhsTet3D(const dlong Nelements,
+                               @restrict const  dfloat *  wJ,
                                @restrict const  dfloat *  vgeo,
                                @restrict const  dfloat *  sgeo,
                                @restrict const  dfloat *  ggeo,
@@ -62,7 +63,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_NfacesNfp){
@@ -99,7 +99,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_Np){
@@ -141,7 +140,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_Np){
@@ -151,12 +149,10 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_Np){
-        const int gid = e*p_Nggeo;
-        const dfloat J = ggeo[gid + p_GWJID];
+        const dfloat J = wJ[e];
 
         dfloat Mp=0.0;
 
@@ -174,6 +170,7 @@ SOFTWARE.
 
 // compute RHS = MM*RHS/gamma + BCdata
 @kernel void insPressureIncrementIpdgRhsTet3D(const dlong Nelements,
+                               @restrict const  dfloat *  wJ,
                                @restrict const  dfloat *  vgeo,
                                @restrict const  dfloat *  sgeo,
                                @restrict const  dfloat *  ggeo,
@@ -253,7 +250,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     // dpdx += LIFT*(sJ/J)*nx*dp
     for(int n=0;n<p_maxNodes;++n;@inner(0)){
@@ -297,7 +293,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_NfacesNfp){
@@ -323,7 +318,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_Np){
@@ -339,7 +333,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     for(int n=0;n<p_maxNodes;++n;@inner(0)){
       if(n<p_Np){
@@ -384,7 +377,6 @@ SOFTWARE.
     }
 
     if (pDisc_c0) { //fill masked boundary points if C0
-      @barrier("local");
 
       for(int n=0;n<p_maxNodes;++n;@inner(0)){
         if(n<p_NfacesNfp){

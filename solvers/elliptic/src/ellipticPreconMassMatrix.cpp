@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -31,67 +31,80 @@ MassMatrixPrecon::MassMatrixPrecon(elliptic_t& _elliptic):
   elliptic(_elliptic), mesh(_elliptic.mesh), settings(_elliptic.settings) {
 
   //sanity checking
-  if (mesh.elementType!=TRIANGLES && mesh.elementType!=TETRAHEDRA )
-    LIBP_ABORT(string("MASSMATRIX preconditioner is only available for triangle and tetrhedra elements. Use JACOBI instead."));
+  LIBP_ABORT("MASSMATRIX preconditioner is only available for triangle and tetrhedra elements. Use JACOBI instead.",
+             mesh.elementType!=Mesh::TRIANGLES && mesh.elementType!=Mesh::TETRAHEDRA);
 
-  if (elliptic.lambda==0)
-    LIBP_ABORT(string("MASSMATRIX preconditioner is unavailble when lambda=0."));
+  LIBP_ABORT("MASSMATRIX preconditioner is unavailble when lambda=0.",
+             elliptic.lambda==0);
 
-  o_invMM = elliptic.platform.malloc(mesh.Np*mesh.Np*sizeof(dfloat), mesh.invMM);
+  o_invMM = elliptic.platform.malloc<dfloat>(mesh.invMM);
 
   // OCCA build stuff
-  occa::properties kernelInfo = elliptic.mesh.props; //copy base occa properties
+  properties_t kernelInfo = mesh.props; //copy base occa properties
 
   int blockMax = 256;
   if (elliptic.platform.device.mode() == "CUDA") blockMax = 512;
 
-  int NblockV = mymax(1,blockMax/mesh.Np);
+  int NblockV = std::max(1,blockMax/mesh.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;
 
   if (settings.compareSetting("DISCRETIZATION", "IPDG")) {
     blockJacobiKernel = elliptic.platform.buildKernel(DELLIPTIC "/okl/ellipticPreconBlockJacobi.okl",
                                      "blockJacobi", kernelInfo);
   } else if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
-    dlong Ntotal = elliptic.ogsMasked->Ngather + elliptic.ogsMasked->NgatherHalo;
-    o_rtmp = elliptic.platform.malloc(Ntotal*sizeof(dfloat));
-    o_MrL  = elliptic.platform.malloc(mesh.Np*mesh.Nelements*sizeof(dfloat));
+    dlong Ntotal = elliptic.ogsMasked.Ngather + elliptic.gHalo.Nhalo;
+    o_rtmp = elliptic.platform.malloc<dfloat>(Ntotal);
+    o_MrL  = elliptic.platform.malloc<dfloat>(mesh.Np*mesh.Nelements);
 
     partialBlockJacobiKernel = elliptic.platform.buildKernel(DELLIPTIC "/okl/ellipticPreconBlockJacobi.okl",
                                      "partialBlockJacobi", kernelInfo);
   }
 }
 
-void MassMatrixPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
+void MassMatrixPrecon::Operator(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_Mr) {
   dfloat invLambda = 1./elliptic.lambda;
+
+  linAlg_t& linAlg = elliptic.platform.linAlg();
 
   if (elliptic.disc_c0) {//C0
 
     // rtmp = invDegree.*r
-    elliptic.linAlg.amxpy(elliptic.Ndofs, 1.0, elliptic.o_weightG, o_r, 0.0, o_rtmp);
+    linAlg.amxpy(elliptic.Ndofs, 1.0, elliptic.o_weightG, o_r, 0.0, o_rtmp);
 
-    elliptic.ogsMasked->GatheredHaloExchangeStart(o_rtmp, 1, ogs_dfloat);
+    elliptic.gHalo.ExchangeStart(o_rtmp, 1);
 
-    if(mesh.NlocalGatherElements)
-      partialBlockJacobiKernel(mesh.NlocalGatherElements,
+    if(mesh.NlocalGatherElements/2)
+      partialBlockJacobiKernel(mesh.NlocalGatherElements/2,
                                mesh.o_localGatherElementList,
-                               elliptic.ogsMasked->o_GlobalToLocal,
+                               elliptic.o_GlobalToLocal,
                                invLambda, mesh.o_vgeo, o_invMM,
                                o_rtmp, o_MrL);
 
-    elliptic.ogsMasked->GatheredHaloExchangeFinish(o_rtmp, 1, ogs_dfloat);
+    // finalize halo exchange
+    elliptic.gHalo.ExchangeFinish(o_rtmp, 1);
 
     if(mesh.NglobalGatherElements)
       partialBlockJacobiKernel(mesh.NglobalGatherElements,
                                mesh.o_globalGatherElementList,
-                               elliptic.ogsMasked->o_GlobalToLocal,
+                               elliptic.o_GlobalToLocal,
                                invLambda, mesh.o_vgeo, o_invMM,
                                o_rtmp, o_MrL);
 
     //gather result to Aq
-    elliptic.ogsMasked->Gather(o_Mr, o_MrL, ogs_dfloat, ogs_add, ogs_trans);
+    elliptic.ogsMasked.GatherStart(o_Mr, o_MrL, 1, ogs::Add, ogs::Trans);
+
+    if((mesh.NlocalGatherElements+1)/2){
+      partialBlockJacobiKernel((mesh.NlocalGatherElements+1)/2,
+                               mesh.o_localGatherElementList+mesh.NlocalGatherElements/2,
+                               elliptic.o_GlobalToLocal,
+                               invLambda, mesh.o_vgeo, o_invMM,
+                               o_rtmp, o_MrL);
+    }
+
+    elliptic.ogsMasked.GatherFinish(o_Mr, o_MrL, 1, ogs::Add, ogs::Trans);
 
     // Mr = invDegree.*Mr
-    elliptic.linAlg.amx(elliptic.Ndofs, 1.0, elliptic.o_weightG, o_Mr);
+    linAlg.amx(elliptic.Ndofs, 1.0, elliptic.o_weightG, o_Mr);
 
   } else {
     //IPDG
@@ -100,9 +113,4 @@ void MassMatrixPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
 
   // zero mean of RHS
   if(elliptic.allNeumann) elliptic.ZeroMean(o_Mr);
-}
-
-MassMatrixPrecon::~MassMatrixPrecon(){
-  blockJacobiKernel.free();
-  partialBlockJacobiKernel.free();
 }

@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,20 +25,69 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh3D.hpp"
 
-void meshTet3D::GeometricFactors(){
+namespace libp {
+
+void mesh_t::GeometricFactorsTet3D(){
+
+  /*Set offsets*/
+  Nvgeo = 10;
+
+  RXID  = 0;
+  RYID  = 1;
+  RZID  = 2;
+  SXID  = 3;
+  SYID  = 4;
+  SZID  = 5;
+  TXID  = 6;
+  TYID  = 7;
+  TZID  = 8;
+  JID   = 9;
+
+  props["defines/" "p_Nvgeo"]= Nvgeo;
+  props["defines/" "p_RXID"]= RXID;
+  props["defines/" "p_SXID"]= SXID;
+  props["defines/" "p_TXID"]= TXID;
+
+  props["defines/" "p_RYID"]= RYID;
+  props["defines/" "p_SYID"]= SYID;
+  props["defines/" "p_TYID"]= TYID;
+
+  props["defines/" "p_RZID"]= RZID;
+  props["defines/" "p_SZID"]= SZID;
+  props["defines/" "p_TZID"]= TZID;
+
+  props["defines/" "p_JID"]= JID;
 
   /* unified storage array for geometric factors */
-  Nvgeo = 12;
-  vgeo = (dfloat*) calloc((Nelements+totalHaloPairs)*Nvgeo, sizeof(dfloat));
+  vgeo.malloc((Nelements+totalHaloPairs)*Nvgeo);
+
+  Nggeo = 6;
+
+  G00ID=0;
+  G01ID=1;
+  G02ID=2;
+  G11ID=3;
+  G12ID=4;
+  G22ID=5;
+
+  props["defines/" "p_Nggeo"]= Nggeo;
+  props["defines/" "p_G00ID"]= G00ID;
+  props["defines/" "p_G01ID"]= G01ID;
+  props["defines/" "p_G02ID"]= G02ID;
+  props["defines/" "p_G11ID"]= G11ID;
+  props["defines/" "p_G12ID"]= G12ID;
+  props["defines/" "p_G22ID"]= G22ID;
 
   /* number of second order geometric factors */
-  Nggeo = 7;
-  ggeo = (dfloat*) calloc(Nelements*Nggeo, sizeof(dfloat));
+  ggeo.malloc(Nelements*Nggeo);
+
+  wJ.malloc(Nelements);
 
 
-  dfloat minJ = 1e9, maxJ = -1e9;
+  // dfloat minJ = 1e9, maxJ = -1e9;
+
+  #pragma omp parallel for
   for(dlong e=0;e<Nelements;++e){ /* for each element */
 
     /* find vertex indices and physical coordinates */
@@ -62,13 +111,10 @@ void meshTet3D::GeometricFactors(){
     dfloat sx = -(yr*zt - zr*yt)/J, sy =  (xr*zt - zr*xt)/J, sz = -(xr*yt - yr*xt)/J;
     dfloat tx =  (yr*zs - zr*ys)/J, ty = -(xr*zs - zr*xs)/J, tz =  (xr*ys - yr*xs)/J;
 
-    if(J<0) {
-      stringstream ss;
-      ss << "Negative J found at element " << e << "\n";
-      LIBP_ABORT(ss.str())
-    }
-    minJ = mymin(minJ,J);
-    maxJ = mymax(maxJ,J);
+    LIBP_ABORT("Negative J found at element " << e, J<0);
+
+    // minJ = mymin(minJ,J);
+    // maxJ = mymax(maxJ,J);
 
     /* store geometric factors */
     vgeo[Nvgeo*e + RXID] = rx;
@@ -91,9 +137,16 @@ void meshTet3D::GeometricFactors(){
     ggeo[Nggeo*e + G11ID] = J*(sx*sx + sy*sy + sz*sz);
     ggeo[Nggeo*e + G12ID] = J*(sx*tx + sy*ty + sz*tz);
     ggeo[Nggeo*e + G22ID] = J*(tx*tx + ty*ty + tz*tz);
-    ggeo[Nggeo*e + GWJID] = J;
-  }
 
+    wJ[e] = J;
+  }
   //printf("minJ = %g, maxJ = %g\n", minJ, maxJ);
-  halo->Exchange(vgeo, Nvgeo, ogs_dfloat);
+
+  halo.Exchange(vgeo, Nvgeo);
+
+  o_wJ   = platform.malloc<dfloat>(wJ);
+  o_vgeo = platform.malloc<dfloat>(vgeo);
+  o_ggeo = platform.malloc<dfloat>(ggeo);
 }
+
+} //namespace libp

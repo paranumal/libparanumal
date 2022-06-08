@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,22 +26,29 @@ SOFTWARE.
 
 #include "platform.hpp"
 
-occa::kernel platform_t::buildKernel(std::string fileName, std::string kernelName,
-                                     occa::properties& kernelInfo){
+namespace libp {
 
-  occa::kernel kernel;
+kernel_t platform_t::buildKernel(std::string fileName,
+                                 std::string kernelName,
+                                 properties_t& kernelInfo){
+
+  assertInitialized();
+
+  kernel_t kernel;
 
   //build on root first
-  if (!rank)
+  if (!rank())
     kernel = device.buildKernel(fileName, kernelName, kernelInfo);
 
-  MPI_Barrier(comm);
+  comm.Barrier();
 
   //remaining ranks find the cached version (ideally)
-  if (rank)
+  if (rank())
     kernel = device.buildKernel(fileName, kernelName, kernelInfo);
 
-  MPI_Barrier(comm);
+  comm.Barrier();
 
   return kernel;
 }
+
+} //namespace libp

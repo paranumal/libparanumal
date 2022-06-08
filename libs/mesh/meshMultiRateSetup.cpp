@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,23 +26,21 @@ SOFTWARE.
 
 #include "mesh.hpp"
 
-void mesh_t::MultiRateSetup(dfloat *EToDT) {
+namespace libp {
+
+void mesh_t::MultiRateSetup(memory<dfloat> EToDT) {
 
   const int maxLevels = 100;
 
   //find global min and max dt
-  dfloat dtmin=1.e9, dtmax=0.0;
-  if (Nelements) {
-    dtmin = EToDT[0];
-    dtmax = EToDT[0];
+  dfloat dtmin = std::numeric_limits<dfloat>::max();
+  dfloat dtmax = std::numeric_limits<dfloat>::min();
+  for (dlong e=0;e<Nelements;e++) {
+    dtmin = std::min(dtmin,EToDT[e]);
+    dtmax = std::max(dtmax,EToDT[e]);
   }
-  for (dlong e=1;e<Nelements;e++) {
-    dtmin = mymin(dtmin,EToDT[e]);
-    dtmax = mymax(dtmax,EToDT[e]);
-  }
-  dfloat dtGmin, dtGmax;
-  MPI_Allreduce(&dtmin, &dtGmin, 1, MPI_DFLOAT, MPI_MIN, comm);
-  MPI_Allreduce(&dtmax, &dtGmax, 1, MPI_DFLOAT, MPI_MIN, comm);
+  comm.Allreduce(dtmin, Comm::Min);
+  comm.Allreduce(dtmax, Comm::Max);
 
   if (rank==0) {
     printf("--------------- MultiRate Timestepping Setup ----------------\n");
@@ -50,22 +48,24 @@ void mesh_t::MultiRateSetup(dfloat *EToDT) {
   }
 
   //number of levels
-  mrNlevels = mymin(floor(log2(dtGmax/dtGmin))+1,maxLevels);
+  mrNlevels = std::min(static_cast <int>(std::floor(std::log2(dtmax/dtmin)))+1,
+                                         maxLevels);
 
   //compute the level of each element
-  mrLevel = (int *) calloc(Nelements+totalHaloPairs,sizeof(int));
+  mrLevel.malloc(Nelements+totalHaloPairs);
   for(int lev=0; lev<mrNlevels; lev++){
-    dfloat dtlev = dtGmin*(2<<lev);
+    dfloat dtlev = dtmin*(1<<lev);
     for(dlong e=0;e<Nelements;++e){
-      if(EToDT[e] >=dtlev)
+      if(EToDT[e] >=dtlev) {
         mrLevel[e] = lev;
+      }
     }
   }
 
   //enforce one level difference between neighbours
   for (int lev=0; lev < mrNlevels; lev++){
 
-    halo->Exchange(mrLevel, 1, ogs_int);
+    halo.Exchange(mrLevel, 1);
 
     for (dlong e=0; e<Nelements;e++) {
       if (mrLevel[e] > lev+1) { //find elements at least 2 levels higher than lev
@@ -82,21 +82,20 @@ void mesh_t::MultiRateSetup(dfloat *EToDT) {
   //this could change the number of levels there are, so find the new max level
   mrNlevels = 0;
   for (dlong e=0;e<Nelements;e++)
-    mrNlevels = (mrLevel[e]>mrNlevels) ? mrLevel[e] : mrNlevels;
+    mrNlevels = std::max(mrLevel[e],mrNlevels);
   mrNlevels++;
 
-  int localNlevels = mrNlevels;
-  MPI_Allreduce(&localNlevels, &mrNlevels, 1, MPI_INT, MPI_MAX, comm);
+  comm.Allreduce(mrNlevels, Comm::Max);
 
   //construct element and halo lists
   // mrElements[lev] - list of all elements with multirate level <= lev
   // mrInterfaceElements[lev] - list of all elements with multirate level = lev,
   //                                with a neighbor of level lev-1
-  mrNelements          = (dlong *) calloc(mrNlevels,sizeof(dlong));
-  mrInterfaceNelements = (dlong *) calloc(mrNlevels,sizeof(dlong));
+  mrNelements.malloc(mrNlevels, 0);
+  mrInterfaceNelements.malloc(mrNlevels, 0);
 
-  mrElements          = (dlong **) calloc(mrNlevels,sizeof(dlong*));
-  mrInterfaceElements = (dlong **) calloc(mrNlevels,sizeof(dlong*));
+  mrElements.malloc(mrNlevels);
+  mrInterfaceElements.malloc(mrNlevels);
 
   for (dlong e=0;e<Nelements;e++) {
     int lev = mrLevel[e];
@@ -116,12 +115,12 @@ void mesh_t::MultiRateSetup(dfloat *EToDT) {
 
   //allocate space
   for (int lev =0;lev<mrNlevels;lev++){
-    mrElements[lev]          = (dlong *) calloc(mrNelements[lev],sizeof(dlong));
-    mrInterfaceElements[lev] = (dlong *) calloc(mrInterfaceNelements[lev],sizeof(dlong));
+    mrElements[lev].malloc(mrNelements[lev]);
+    mrInterfaceElements[lev].malloc(mrInterfaceNelements[lev]);
   }
 
-  int *cnt  = (int *) calloc(mrNlevels,sizeof(int));
-  int *cnt2 = (int *) calloc(mrNlevels,sizeof(int));
+  memory<int> cnt(mrNlevels, 0);
+  memory<int> cnt2(mrNlevels, 0);
 
   //fill element lists
   for (dlong e=0;e<Nelements;e++){
@@ -139,20 +138,19 @@ void mesh_t::MultiRateSetup(dfloat *EToDT) {
       }
     }
   }
-  free(cnt); free(cnt2);
 
-  o_mrLevel = platform.malloc(Nelements*sizeof(int), mrLevel);
-  o_mrNelements = platform.malloc(mrNlevels*sizeof(dlong), mrNelements);
-  o_mrInterfaceNelements = platform.malloc(mrNlevels*sizeof(dlong), mrInterfaceNelements);
+  o_mrLevel = platform.malloc<int>(Nelements, mrLevel);
+  o_mrNelements = platform.malloc<dlong>(mrNlevels, mrNelements);
+  o_mrInterfaceNelements = platform.malloc<dlong>(mrNlevels, mrInterfaceNelements);
 
-  o_mrElements          = new occa::memory[mrNlevels];
-  o_mrInterfaceElements = new occa::memory[mrNlevels];
+  o_mrElements.malloc(mrNlevels);
+  o_mrInterfaceElements.malloc(mrNlevels);
 
   for (int lev =0;lev<mrNlevels;lev++){
     if (mrNelements[lev])
-      o_mrElements[lev]          = platform.malloc(mrNelements[lev]*sizeof(dlong), mrElements[lev]);
+      o_mrElements[lev]          = platform.malloc<dlong>(mrNelements[lev], mrElements[lev]);
     if (mrInterfaceNelements[lev])
-      o_mrInterfaceElements[lev] = platform.malloc(mrInterfaceNelements[lev]*sizeof(dlong), mrInterfaceElements[lev]);
+      o_mrInterfaceElements[lev] = platform.malloc<dlong>(mrInterfaceNelements[lev], mrInterfaceElements[lev]);
   }
 
   if (rank==0){
@@ -163,15 +161,13 @@ void mesh_t::MultiRateSetup(dfloat *EToDT) {
   hlong Ntotal=0;
   for (int lev=0; lev<mrNlevels; lev++) {
 
-    hlong levNelementsLocal = mrNelements[lev];
-    hlong levNelements=0;
-    MPI_Allreduce(&levNelementsLocal, &levNelements, 1, MPI_HLONG, MPI_SUM, comm);
+    hlong levNelements = mrNelements[lev];
+    comm.Allreduce(levNelements);
     levNelements -= Ntotal;
     Ntotal += levNelements;
 
-    dlong levInterfaceNelementsLocal = mrInterfaceNelements[lev];
-    dlong levInterfaceNelements=0;
-    MPI_Allreduce(&levInterfaceNelementsLocal, &levInterfaceNelements, 1, MPI_DLONG, MPI_SUM, comm);
+    dlong levInterfaceNelements = mrInterfaceNelements[lev];
+    comm.Allreduce(levInterfaceNelements);
 
     if (rank==0)
       printf("|   %3d |      %12lu |                 %12lu  |\n", lev, (size_t)levNelements, (size_t)levInterfaceNelements);
@@ -179,3 +175,5 @@ void mesh_t::MultiRateSetup(dfloat *EToDT) {
   if (rank==0)
     printf("-------------------------------------------------------------\n");
 }
+
+} //namespace libp

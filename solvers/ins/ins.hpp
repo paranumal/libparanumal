@@ -2,7 +2,7 @@
 
   The MIT License (MIT)
 
-  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -38,64 +38,62 @@
 
 #define DINS LIBP_DIR"/solvers/ins/"
 
+using namespace libp;
+
 class insSettings_t: public settings_t {
 public:
-  insSettings_t(MPI_Comm& _comm);
+  insSettings_t(comm_t& _comm);
   void report();
   void parseFromFile(platformSettings_t& platformSettings,
                      meshSettings_t& meshSettings,
-                     const string filename);
+                     const std::string filename);
 
-  ellipticSettings_t* extractVelocitySettings();
-  ellipticSettings_t* extractPressureSettings();
+  ellipticSettings_t extractVelocitySettings();
+  ellipticSettings_t extractPressureSettings();
 };
 
 class ins_t;
 
 class subcycler_t: public solver_t {
 public:
-  mesh_t& mesh;
+  mesh_t mesh;
 
   int cubature;
-  halo_t* vTraceHalo;
-  occa::kernel advectionVolumeKernel;
-  occa::kernel advectionSurfaceKernel;
+  ogs::halo_t vTraceHalo;
+  kernel_t advectionVolumeKernel;
+  kernel_t advectionSurfaceKernel;
 
-  occa::kernel subCycleAdvectionKernel;
+  kernel_t subCycleAdvectionKernel;
 
   int NVfields;
   int order, maxOrder, shiftIndex;
   dfloat nu, T0, dt;
 
-  occa::memory o_Ue, o_Uh;
+  deviceMemory<dfloat> o_Ue, o_Uh;
 
-  subcycler_t() = delete;
-  subcycler_t(ins_t& ins);
-
-  ~subcycler_t(){};
+  subcycler_t() = default;
 
   void Report(dfloat time, int tstep){};
 
-  void rhsf(occa::memory& o_q, occa::memory& o_rhs, const dfloat time);
+  void rhsf(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
 };
 
 class ins_t: public solver_t {
 public:
-  mesh_t& mesh;
-  linAlg_t& linAlg;
-  TimeStepper::timeStepper_t* timeStepper;
+  mesh_t mesh;
+  timeStepper_t timeStepper;
 
-  halo_t* vTraceHalo;
-  halo_t* pTraceHalo;
+  ogs::halo_t vTraceHalo;
+  ogs::halo_t pTraceHalo;
 
-  ellipticSettings_t *vSettings, *pSettings;
-  elliptic_t *uSolver, *vSolver, *wSolver;
-  elliptic_t *pSolver;
+  ellipticSettings_t vSettings, pSettings;
+  elliptic_t uSolver, vSolver, wSolver;
+  elliptic_t pSolver;
 
-  linearSolver_t *uLinearSolver;
-  linearSolver_t *vLinearSolver;
-  linearSolver_t *wLinearSolver;
-  linearSolver_t *pLinearSolver;
+  linearSolver_t uLinearSolver;
+  linearSolver_t vLinearSolver;
+  linearSolver_t wLinearSolver;
+  linearSolver_t pLinearSolver;
 
   int NVfields, NTfields;
 
@@ -108,109 +106,103 @@ public:
   dfloat nu;
   dfloat vTau, pTau;
 
-  dfloat *u, *p;
-  occa::memory o_u, o_p;
+  memory<dfloat> u, p;
+  deviceMemory<dfloat> o_u, o_p;
 
-  occa::memory o_GU;
+  deviceMemory<dfloat> o_GU;
 
-  occa::memory o_MU;
+  deviceMemory<dfloat> o_MU;
 
-  dfloat *Vort;
-  occa::memory o_Vort;
+  memory<dfloat> Vort;
+  deviceMemory<dfloat> o_Vort;
 
   //extra buffers for solvers
-  occa::memory o_UH, o_VH, o_WH;
-  occa::memory o_rhsU, o_rhsV, o_rhsW;
-  occa::memory o_rhsP, o_PI;
+  deviceMemory<dfloat> o_UH, o_VH, o_WH;
+  deviceMemory<dfloat> o_rhsU, o_rhsV, o_rhsW;
+  deviceMemory<dfloat> o_rhsP, o_PI;
 
-  occa::memory o_GUH, o_GVH, o_GWH;
-  occa::memory o_GrhsU, o_GrhsV, o_GrhsW;
-  occa::memory o_GrhsP, o_GP, o_GPI;
-
-  int *mapB; //node-wise boundary flag
-  occa::memory o_mapB;
+  deviceMemory<dfloat> o_GUH, o_GVH, o_GWH;
+  deviceMemory<dfloat> o_GrhsU, o_GrhsV, o_GrhsW;
+  deviceMemory<dfloat> o_GrhsP, o_GP, o_GPI;
 
   //subcycling
   int Nsubcycles;
-  TimeStepper::timeStepper_t* subStepper;
-  subcycler_t *subcycler;
+  timeStepper_t subStepper;
+  subcycler_t subcycler;
 
-  occa::kernel advectionVolumeKernel;
-  occa::kernel advectionSurfaceKernel;
+  kernel_t advectionVolumeKernel;
+  kernel_t advectionSurfaceKernel;
 
-  occa::kernel divergenceVolumeKernel;
-  occa::kernel divergenceSurfaceKernel;
+  kernel_t divergenceVolumeKernel;
+  kernel_t divergenceSurfaceKernel;
 
-  occa::kernel gradientVolumeKernel;
-  occa::kernel gradientSurfaceKernel;
+  kernel_t gradientVolumeKernel;
+  kernel_t gradientSurfaceKernel;
 
-  occa::kernel velocityGradientKernel;
-  occa::kernel diffusionKernel;
+  kernel_t velocityGradientKernel;
+  kernel_t diffusionKernel;
 
-  occa::kernel velocityRhsKernel;
-  occa::kernel velocityBCKernel;
+  kernel_t velocityRhsKernel;
+  kernel_t velocityBCKernel;
 
-  occa::kernel pressureRhsKernel;
-  occa::kernel pressureBCKernel;
+  kernel_t pressureRhsKernel;
+  kernel_t pressureBCKernel;
 
-  occa::kernel pressureIncrementRhsKernel;
-  occa::kernel pressureIncrementBCKernel;
+  kernel_t pressureIncrementRhsKernel;
+  kernel_t pressureIncrementBCKernel;
 
-  occa::kernel vorticityKernel;
+  kernel_t vorticityKernel;
 
-  occa::kernel initialConditionKernel;
-  occa::kernel maxWaveSpeedKernel;
+  kernel_t initialConditionKernel;
+  kernel_t maxWaveSpeedKernel;
 
-  ins_t() = delete;
+  ins_t() = default;
   ins_t(platform_t &_platform, mesh_t &_mesh,
-              insSettings_t& _settings):
-    solver_t(_platform, _settings), mesh(_mesh), linAlg(platform.linAlg) {}
-
-  ~ins_t();
+        insSettings_t& _settings) {
+    Setup(_platform, _mesh, _settings);
+  }
 
   //setup
-  static ins_t& Setup(platform_t& platform, mesh_t& mesh,
-                      insSettings_t& settings);
-
-  void BoundarySetup();
+  void Setup(platform_t& _platform, mesh_t& _mesh,
+             insSettings_t& _settings);
 
   void Run();
 
   void Report(dfloat time, int tstep);
 
-  void PlotFields(dfloat* U, dfloat* P, dfloat *V, char *fileName);
+  void PlotFields(memory<dfloat>& U, memory<dfloat>& P, memory<dfloat>& V, std::string fileName);
 
-  dfloat MaxWaveSpeed(occa::memory& o_U, const dfloat T);
+  dfloat MaxWaveSpeed(deviceMemory<dfloat>& o_U, const dfloat T);
 
-  // void rhsf(occa::memory& o_q, occa::memory& o_rhs, const dfloat time);
+  // void rhsf(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
 
-  void rhs_imex_f(occa::memory& o_q, occa::memory& o_rhs, const dfloat time);
-  // void rhs_imex_g(occa::memory& o_q, occa::memory& o_rhs, const dfloat time);
+  void rhs_imex_f(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
+  // void rhs_imex_g(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
 
-  void rhs_imex_invg(occa::memory& o_q, occa::memory& o_rhs, const dfloat gamma, const dfloat time);
+  void rhs_imex_invg(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat gamma, const dfloat time);
 
-  void rhs_subcycle_f(occa::memory& o_Q, occa::memory& o_QHAT,
-                           const dfloat T, const dfloat dt, const dfloat* B,
-                           const int order, const int shiftIndex, const int maxOrder);
+  void rhs_subcycle_f(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_QHAT,
+                      const dfloat T, const dfloat dt, const memory<dfloat> B,
+                      const int order, const int shiftIndex, const int maxOrder);
 
-  void Advection(const dfloat alpha, occa::memory& o_U,
-                 const dfloat beta,  occa::memory& o_RHS,
+  void Advection(const dfloat alpha, deviceMemory<dfloat>& o_U,
+                 const dfloat beta,  deviceMemory<dfloat>& o_RHS,
                  const dfloat T);
-  void Diffusion(const dfloat alpha, occa::memory& o_U,
-                 const dfloat beta,  occa::memory& o_RHS,
+  void Diffusion(const dfloat alpha, deviceMemory<dfloat>& o_U,
+                 const dfloat beta,  deviceMemory<dfloat>& o_RHS,
                  const dfloat T);
-  void Divergence(const dfloat alpha, occa::memory& o_U,
-                 const dfloat beta,  occa::memory& o_RHS,
+  void Divergence(const dfloat alpha, deviceMemory<dfloat>& o_U,
+                 const dfloat beta,  deviceMemory<dfloat>& o_RHS,
                  const dfloat T);
-  void Gradient(const dfloat alpha, occa::memory& o_P,
-                 const dfloat beta,  occa::memory& o_RHS,
+  void Gradient(const dfloat alpha, deviceMemory<dfloat>& o_P,
+                 const dfloat beta,  deviceMemory<dfloat>& o_RHS,
                  const dfloat T);
 
-  void VelocitySolve(occa::memory& o_U, occa::memory& o_RHS,
+  void VelocitySolve(deviceMemory<dfloat>& o_U, deviceMemory<dfloat>& o_RHS,
                      const dfloat gamma, const dfloat T);
-  void PressureSolve(occa::memory& o_P, occa::memory& o_RHS,
+  void PressureSolve(deviceMemory<dfloat>& o_P, deviceMemory<dfloat>& o_RHS,
                      const dfloat gamma, const dfloat T);
-  void PressureIncrementSolve(occa::memory& o_P, occa::memory& o_RHS,
+  void PressureIncrementSolve(deviceMemory<dfloat>& o_P, deviceMemory<dfloat>& o_RHS,
                      const dfloat gamma, const dfloat T, const dfloat dt);
 };
 

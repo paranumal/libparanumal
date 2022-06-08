@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,7 @@ SOFTWARE.
 
 //spectral mass matrix
 @kernel void MassMatrixOperatorQuad2D(const dlong Nelements,
-                                      @restrict const dfloat* ggeo,
+                                      @restrict const dfloat* wJ,
                                       @restrict const dfloat* MM,
                                       @restrict const dfloat* q,
                                       @restrict       dfloat* Mq){
@@ -36,10 +36,9 @@ SOFTWARE.
     for(int n=0;n<p_Np;++n;@inner(0)){
 
       const dlong qbase = e*p_Np*p_Nfields + n;
-      const dlong gbase = e*p_Nggeo*p_Np + n;
+      const dlong gbase = e*p_Np + n;
 
-      // assumes w*J built into G entries
-      const dfloat r_GwJ = ggeo[gbase+p_GWJID*p_Np];
+      const dfloat r_GwJ = wJ[gbase];
 
       #pragma unroll p_Nfields
       for (int f=0;f<p_Nfields;f++) {

@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,34 +26,34 @@ SOFTWARE.
 
 
 @kernel void bnsConstrainQuad3D(const dlong Nelements,
-				@restrict const  dfloat *  x,
-				@restrict const  dfloat *  y,
-				@restrict const  dfloat *  z,
-				@restrict dfloat *  rhsq){
+                                @restrict const  dfloat *  x,
+                                @restrict const  dfloat *  y,
+                                @restrict const  dfloat *  z,
+                                @restrict dfloat *  rhsq){
 
   for(dlong e=0;e<Nelements;++e;@outer(0)){
 
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
-	
+
         const dlong  base = e*p_Np*p_Nfields + j*p_Nq + i;
 
-	const dfloat xij = x[i+j*p_Nq+e*p_Np];
-	const dfloat yij = y[i+j*p_Nq+e*p_Np];
-	const dfloat zij = z[i+j*p_Nq+e*p_Np];
+        const dfloat xij = x[i+j*p_Nq+e*p_Np];
+        const dfloat yij = y[i+j*p_Nq+e*p_Np];
+        const dfloat zij = z[i+j*p_Nq+e*p_Np];
 
-	dfloat rhsq1 = rhsq[base+1*p_Np];
-	dfloat rhsq2 = rhsq[base+2*p_Np];
-	dfloat rhsq3 = rhsq[base+3*p_Np];
-	
-	const dfloat xdotrhsq = (rhsq1*xij + rhsq2*yij + rhsq3*zij)*p_invRadiusSq;
-	rhsq1 -= xij*xdotrhsq;
-	rhsq2 -= yij*xdotrhsq;
-	rhsq3 -= zij*xdotrhsq;
-	
-	rhsq[base+1*p_Np] = rhsq1;
-	rhsq[base+2*p_Np] = rhsq2;
-	rhsq[base+3*p_Np] = rhsq3;
+        dfloat rhsq1 = rhsq[base+1*p_Np];
+        dfloat rhsq2 = rhsq[base+2*p_Np];
+        dfloat rhsq3 = rhsq[base+3*p_Np];
+
+        const dfloat xdotrhsq = (rhsq1*xij + rhsq2*yij + rhsq3*zij)*p_invRadiusSq;
+        rhsq1 -= xij*xdotrhsq;
+        rhsq2 -= yij*xdotrhsq;
+        rhsq3 -= zij*xdotrhsq;
+
+        rhsq[base+1*p_Np] = rhsq1;
+        rhsq[base+2*p_Np] = rhsq2;
+        rhsq[base+3*p_Np] = rhsq3;
       }
     }
   }

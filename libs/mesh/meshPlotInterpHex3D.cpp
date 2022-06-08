@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,23 +25,19 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh3D.hpp"
+
+namespace libp {
 
 //interpolate field to plotting nodes
-void meshHex3D::PlotInterp(const dfloat* q, dfloat* Iq, dfloat* scratch){
+void mesh_t::PlotInterpHex3D(const memory<dfloat> q, memory<dfloat> Iq, memory<dfloat> scratch){
 
-  dfloat *IQ, *IIQ;
-
-  bool alloc_scratch=false;
-  if (scratch==nullptr) {
-    //if not provided with a scratch space, alloc our own
-    alloc_scratch=true;
-    IQ  = (dfloat *) malloc(plotNq*Nq*Nq*sizeof(dfloat));
-    IIQ = (dfloat *) malloc(plotNq*plotNq*Nq*sizeof(dfloat));
-  } else {
-    IQ  = scratch;
-    IIQ = scratch + plotNq*Nq*Nq;
+  if (scratch.length()< static_cast<size_t>(plotNq*Nq*Nq + plotNq*plotNq*Nq)) {
+    //if not provided with enough scratch space, alloc our own
+    scratch.malloc(plotNq*Nq*Nq + plotNq*plotNq*Nq);
   }
+
+  memory<dfloat> IQ  = scratch;
+  memory<dfloat> IIQ = scratch + plotNq*Nq*Nq;
 
   //interpolate in r
   for(int k=0;k<Nq;++k){
@@ -93,9 +89,6 @@ void meshHex3D::PlotInterp(const dfloat* q, dfloat* Iq, dfloat* scratch){
       }
     }
   }
-
-  //clean up
-  if (alloc_scratch) {
-    free(IQ); free(IIQ);
-  }
 }
+
+} //namespace libp

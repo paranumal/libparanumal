@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,53 +25,34 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh3D.hpp"
 
-static void computeFrameTet3D(dfloat nx, dfloat ny, dfloat nz,
-		  dfloat &tanx, dfloat &tany, dfloat &tanz,
-		  dfloat &binx, dfloat &biny, dfloat &binz){
+namespace libp {
 
-  dfloat ranx = drand48();
-  dfloat rany = drand48();
-  dfloat ranz = drand48();
-
-  dfloat magran = sqrt(ranx*ranx+rany*rany+ranz*ranz);
-
-  ranx /= magran;
-  rany /= magran;
-  ranz /= magran;
-
-  tanx = ny*ranz - nz*rany;
-  tany = nz*ranx - nx*ranz;
-  tanz = nx*rany - ny*ranx;
-
-  dfloat magtan = sqrt(tanx*tanx+tany*tany+tanz*tanz);
-
-  tanx /= magtan;
-  tany /= magtan;
-  tanz /= magtan;
-
-  binx = ny*tanz - nz*tany;
-  biny = nz*tanx - nx*tanz;
-  binz = nx*tany - ny*tanx;
-
-  dfloat magbin = sqrt(binx*binx+biny*biny+binz*binz);
-
-  binx /= magbin;
-  biny /= magbin;
-  binz /= magbin;
-
-  //  printf("nor = %g,%g,%g; tan = %g,%g,%g; bin = %g,%g,%g\n", nx, ny, nz, tanx, tany, tanz, binx, biny, binz);
-}
-
-void meshTet3D::SurfaceGeometricFactors(){
+void mesh_t::SurfaceGeometricFactorsTet3D(){
 
   /* unified storage array for geometric factors */
-  Nsgeo = 14;
-  sgeo = (dfloat*) calloc((Nelements+totalHaloPairs)*
-                            Nsgeo*Nfaces, sizeof(dfloat));
+  Nsgeo = 6;
 
-  for(dlong e=0;e<Nelements+totalHaloPairs;++e){ /* for each element */
+  NXID  = 0;
+  NYID  = 1;
+  NZID  = 2;
+  SJID  = 3;
+  IJID  = 4;
+  IHID  = 5;
+
+  props["defines/" "p_Nsgeo"]= Nsgeo;
+  props["defines/" "p_NXID"]= NXID;
+  props["defines/" "p_NYID"]= NYID;
+  props["defines/" "p_NZID"]= NZID;
+  props["defines/" "p_SJID"]= SJID;
+  props["defines/" "p_IJID"]= IJID;
+  props["defines/" "p_IHID"]= IHID;
+
+  sgeo.malloc(Nelements*Nsgeo*Nfaces);
+
+  memory<dfloat> hinv((Nelements+totalHaloPairs)*Nfaces);
+
+  for(dlong e=0;e<Nelements;++e){ /* for each element */
 
     /* find vertex indices and physical coordinates */
     dlong id = e*Nverts;
@@ -91,11 +72,8 @@ void meshTet3D::SurfaceGeometricFactors(){
     dfloat sx = -(yr*zt - zr*yt)/J, sy =  (xr*zt - zr*xt)/J, sz = -(xr*yt - yr*xt)/J;
     dfloat tx =  (yr*zs - zr*ys)/J, ty = -(xr*zs - zr*xs)/J, tz =  (xr*ys - yr*xs)/J;
 
-    if(J<0) {
-      stringstream ss;
-      ss << "Negative J found at element " << e << "\n";
-      LIBP_ABORT(ss.str())
-    }
+    LIBP_ABORT("Negative J found at element " << e,
+               J<0);
 
     /* face 1 */
     dlong base = Nsgeo*Nfaces*e;
@@ -110,10 +88,7 @@ void meshTet3D::SurfaceGeometricFactors(){
     sgeo[base+SJID] = sJ1*J;
     sgeo[base+IJID] = 1./J;
 
-    // generate local tangent and binormal using random vector
-    computeFrameTet3D(nx1/sJ1, ny1/sJ1, nz1/sJ1,
-		 sgeo[base+STXID], sgeo[base+STYID], sgeo[base+STZID],
-		 sgeo[base+SBXID], sgeo[base+SBYID], sgeo[base+SBZID]);
+    hinv[Nfaces*e+0] = 0.5*sJ1;
 
     /* face 2 */
     base += Nsgeo;
@@ -128,10 +103,7 @@ void meshTet3D::SurfaceGeometricFactors(){
     sgeo[base+SJID] = sJ2*J;
     sgeo[base+IJID] = 1./J;
 
-    // generate local tangent and binormal using random vector
-    computeFrameTet3D(nx2/sJ2, ny2/sJ2, nz2/sJ2,
-		 sgeo[base+STXID], sgeo[base+STYID], sgeo[base+STZID],
-		 sgeo[base+SBXID], sgeo[base+SBYID], sgeo[base+SBZID]);
+    hinv[Nfaces*e+1] = 0.5*sJ2;
 
     /* face 3 */
     base += Nsgeo;
@@ -146,10 +118,7 @@ void meshTet3D::SurfaceGeometricFactors(){
     sgeo[base+SJID] = sJ3*J;
     sgeo[base+IJID] = 1./J;
 
-    // generate local tangent and binormal using random vector
-    computeFrameTet3D(nx3/sJ3, ny3/sJ3, nz3/sJ3,
-		 sgeo[base+STXID], sgeo[base+STYID], sgeo[base+STZID],
-		 sgeo[base+SBXID], sgeo[base+SBYID], sgeo[base+SBZID]);
+    hinv[Nfaces*e+2] = 0.5*sJ3;
 
     /* face 4 */
     base += Nsgeo;
@@ -164,10 +133,7 @@ void meshTet3D::SurfaceGeometricFactors(){
     sgeo[base+SJID] = sJ4*J;
     sgeo[base+IJID] = 1./J;
 
-    // generate local tangent and binormal using random vector
-    computeFrameTet3D(nx4/sJ4, ny4/sJ4, nz4/sJ4,
-		 sgeo[base+STXID], sgeo[base+STYID], sgeo[base+STZID],
-		 sgeo[base+SBXID], sgeo[base+SBYID], sgeo[base+SBZID]);
+    hinv[Nfaces*e+3] = 0.5*sJ4;
 
 #if 0
     printf("N1=(%g,%g,%g),sJ1=%g\n", nx1/sJ1,ny1/sJ1,nz1/sJ1,sJ1*J);
@@ -177,25 +143,32 @@ void meshTet3D::SurfaceGeometricFactors(){
 #endif
   }
 
-  for(dlong e=0;e<Nelements;++e){ /* for each non-halo element */
-    for(int f=0;f<Nfaces;++f){
-      dlong baseM = e*Nfaces + f;
+  halo.Exchange(hinv, Nfaces);
 
-      // awkward: (need to find eP,fP relative to bulk+halo)
-      dlong idP = vmapP[e*Nfp*Nfaces+f*Nfp+0];
-      dlong eP = (idP>=0) ? (idP/Np):e;
+  for(dlong eM=0;eM<Nelements;++eM){ /* for each non-halo element */
+    for(int fM=0;fM<Nfaces;++fM){
+      dlong eP = EToE[eM*Nfaces+fM];
 
-      int fP = EToF[baseM];
-      fP = (fP==-1) ? f:fP;
+      if (eP<0) eP = eM;
 
+      int fP = EToF[eM*Nfaces+fM];
+      if (fP<0) fP = fM;
+
+      dlong baseM = eM*Nfaces + fM;
       dlong baseP = eP*Nfaces + fP;
 
-      // rescaling,  V = A*h/3 => (J*4/3) = (sJ*2)*h/3 => h  = 2*J/sJ
-      dfloat hinvM = 0.5*sgeo[baseM*Nsgeo + SJID]*sgeo[baseM*Nsgeo + IJID];
-      dfloat hinvP = 0.5*sgeo[baseP*Nsgeo + SJID]*sgeo[baseP*Nsgeo + IJID];
+      // rescaling - A = L*h/2 => (J*2) = (sJ*2)*h/2 => h  = 2*J/sJ
+      dfloat hinvM = hinv[baseM];
+      dfloat hinvP = hinv[baseP];
+      sgeo[baseM*Nsgeo+IHID] = std::max(hinvM,hinvP);
 
-      sgeo[baseM*Nsgeo+IHID] = mymax(hinvM,hinvP);
-      sgeo[baseP*Nsgeo+IHID] = mymax(hinvM,hinvP);
+      // if (EToB[fM+eM*Nfaces] > 0) { //enforce a stronger penalty on boundaries
+      //   sgeo[baseM*Nsgeo+IHID] *= 2;
+      // }
     }
   }
+
+  o_sgeo = platform.malloc<dfloat>(sgeo);
 }
+
+} //namespace libp

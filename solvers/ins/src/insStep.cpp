@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,10 +26,10 @@ SOFTWARE.
 
 #include "ins.hpp"
 
-dfloat ins_t::MaxWaveSpeed(occa::memory& o_U, const dfloat T){
+dfloat ins_t::MaxWaveSpeed(deviceMemory<dfloat>& o_U, const dfloat T){
 
   //Note: if this is on the critical path in the future, we should pre-allocate this
-  occa::memory o_maxSpeed = platform.malloc(mesh.Nelements*sizeof(dfloat));
+  deviceMemory<dfloat> o_maxSpeed = platform.malloc<dfloat>(mesh.Nelements);
 
   maxWaveSpeedKernel(mesh.Nelements,
                      mesh.o_vgeo,
@@ -44,18 +44,17 @@ dfloat ins_t::MaxWaveSpeed(occa::memory& o_U, const dfloat T){
                      o_U,
                      o_maxSpeed);
 
-  const dfloat vmax = platform.linAlg.max(mesh.Nelements, o_maxSpeed, mesh.comm);
+  const dfloat vmax = platform.linAlg().max(mesh.Nelements, o_maxSpeed, mesh.comm);
 
-  o_maxSpeed.free();
   return vmax;
 }
 
 // Inversion of diffusion operator
 //  Solves gamma*U - mu*Laplacian*U = rhs
 //  Afterwards, imposes incompressiblity via pressure problem
-void ins_t::rhs_imex_invg(occa::memory& o_RHS, occa::memory& o_U, const dfloat gamma, const dfloat T){
+void ins_t::rhs_imex_invg(deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_U, const dfloat gamma, const dfloat T){
 
-  const dfloat dt = timeStepper->GetTimeStep();
+  const dfloat dt = timeStepper.GetTimeStep();
 
   if (pressureIncrement) {
     //use current pressure in velocity RHS
@@ -108,28 +107,27 @@ void ins_t::rhs_imex_invg(occa::memory& o_RHS, occa::memory& o_U, const dfloat g
 }
 
 // Evaluation of rhs f function
-void ins_t::rhs_imex_f(occa::memory& o_U, occa::memory& o_RHS, const dfloat T){
+void ins_t::rhs_imex_f(deviceMemory<dfloat>& o_U, deviceMemory<dfloat>& o_RHS, const dfloat T){
   // RHS = N(U)
   Advection(1.0, o_U, 0.0, o_RHS, T);
 }
 
 // Evolve rhs f function via a sub-timestepper
-void ins_t::rhs_subcycle_f(occa::memory& o_U, occa::memory& o_UHAT,
-                           const dfloat T, const dfloat dt, const dfloat* B,
+void ins_t::rhs_subcycle_f(deviceMemory<dfloat>& o_U, deviceMemory<dfloat>& o_UHAT,
+                           const dfloat T, const dfloat dt, const memory<dfloat> B,
                            const int order, const int shiftIndex, const int maxOrder) {
 
   //subcycle each Lagrangian state qhat by stepping dqhat/dt = F(qhat,t)
+  LIBP_ABORT("Subcycling supports only order 3 interpolation for now.",
+             order>=3);
 
-  if (order>=3)
-    LIBP_ABORT("Subcycling supports only order 3 interpolation for now.")
+  subcycler.order = order;
+  subcycler.maxOrder = maxOrder;
+  subcycler.shiftIndex = shiftIndex;
+  subcycler.T0 = T;
+  subcycler.dt = dt;
 
-  subcycler->order = order;
-  subcycler->maxOrder = maxOrder;
-  subcycler->shiftIndex = shiftIndex;
-  subcycler->T0 = T;
-  subcycler->dt = dt;
-
-  subcycler->o_Uh = o_U; //history
+  subcycler.o_Uh = o_U; //history
 
   //At each iteration of n, we step the partial sum
   // sum_i=n^order B[i]*U(t-i*dt) from t-n*dt to t-(n-1)*dt
@@ -142,13 +140,13 @@ void ins_t::rhs_subcycle_f(occa::memory& o_U, occa::memory& o_UHAT,
   for (int n=order;n>=0;n--) { //for each history state, starting with oldest
 
     //q at t-n*dt
-    occa::memory o_Un = o_U + ((shiftIndex+n)%maxOrder)*N*sizeof(dfloat);
+    deviceMemory<dfloat> o_Un = o_U + ((shiftIndex+n)%maxOrder)*N;
 
     //next scaled partial sum
-    linAlg.axpy(N, B[n+1]/(B[n+1]+bSum), o_Un,
-                   bSum/(B[n+1]+bSum), o_UHAT);
+    platform.linAlg().axpy(N, B[n+1]/(B[n+1]+bSum), o_Un,
+                              bSum/(B[n+1]+bSum), o_UHAT);
     bSum += B[n+1];
 
-    subStepper->Run(o_UHAT, T-n*dt, T-(n-1)*dt);
+    subStepper.Run(subcycler, o_UHAT, T-n*dt, T-(n-1)*dt);
   }
 }

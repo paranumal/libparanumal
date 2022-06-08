@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,15 +25,15 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh2D.hpp"
 
-void meshQuad2D::PhysicalNodes(){
+namespace libp {
 
-  x = (dfloat*) calloc((Nelements+totalHaloPairs)*Np,sizeof(dfloat));
-  y = (dfloat*) calloc((Nelements+totalHaloPairs)*Np,sizeof(dfloat));
-  z = (dfloat*) calloc((Nelements+totalHaloPairs)*Np,sizeof(dfloat));
+void mesh_t::PhysicalNodesQuad2D(){
 
-  dlong cnt = 0;
+  x.malloc(Nelements*Np);
+  y.malloc(Nelements*Np);
+
+  #pragma omp parallel for
   for(dlong e=0;e<Nelements;++e){ /* for each element */
 
     dlong id = e*Nverts;
@@ -55,22 +55,22 @@ void meshQuad2D::PhysicalNodes(){
       dfloat sn = s[n];
 
       /* physical coordinate of interpolation node */
-      x[cnt] =
+      x[e*Np + n] =
         +0.25*(1-rn)*(1-sn)*xe1
         +0.25*(1+rn)*(1-sn)*xe2
         +0.25*(1+rn)*(1+sn)*xe3
         +0.25*(1-rn)*(1+sn)*xe4;
 
-      y[cnt] =
+      y[e*Np + n] =
         +0.25*(1-rn)*(1-sn)*ye1
         +0.25*(1+rn)*(1-sn)*ye2
         +0.25*(1+rn)*(1+sn)*ye3
         +0.25*(1-rn)*(1+sn)*ye4;
-
-      ++cnt;
     }
   }
 
-  halo->Exchange(x, Np, ogs_dfloat);
-  halo->Exchange(y, Np, ogs_dfloat);
+  o_x = platform.malloc<dfloat>(x);
+  o_y = platform.malloc<dfloat>(y);
 }
+
+} //namespace libp

@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -45,22 +45,20 @@ SOFTWARE.
     @shared dfloat s_q[p_Nfields][p_Np];
     @exclusive dlong e;
 
-      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
-          // e = elementIds[et];
-          e = et;
-          const dlong idf = e*p_Nfields*p_Np + n;
-          
-          #pragma unroll p_Nfields
-          for(int fld=0; fld<p_Nfields;++fld){
-            s_q[fld][n] = q[idf+fld*p_Np];
-          }
-        }
-    // make sure all node data is loaded into @shared
-    @barrier("local");
+    for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+      // e = elementIds[et];
+      e = et;
+      const dlong idf = e*p_Nfields*p_Np + n;
 
-      for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
-        if(et<Nelements){
-           // prefetch geometric factors (constant on triangle)
+      #pragma unroll p_Nfields
+      for(int fld=0; fld<p_Nfields;++fld){
+        s_q[fld][n] = q[idf+fld*p_Np];
+      }
+    }
+
+    for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+      if(et<Nelements){
+        // prefetch geometric factors (constant on triangle)
         const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
         const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
         const dfloat drdz = vgeo[e*p_Nvgeo + p_RZID];
@@ -71,47 +69,47 @@ SOFTWARE.
         const dfloat dtdy = vgeo[e*p_Nvgeo + p_TYID];
         const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
 
-                // compute 'r' and 's' derivatives of (q_m) at node n
-      dfloat r_dqdr[p_Nfields], r_dqds[p_Nfields], r_dqdt[p_Nfields];
-      dfloat r_dqdx[p_Nfields], r_dqdy[p_Nfields], r_dqdz[p_Nfields];
+        // compute 'r' and 's' derivatives of (q_m) at node n
+        dfloat r_dqdr[p_Nfields], r_dqds[p_Nfields], r_dqdt[p_Nfields];
+        dfloat r_dqdx[p_Nfields], r_dqdy[p_Nfields], r_dqdz[p_Nfields];
 
-          #pragma unroll p_Nfields
-            for(int fld=0; fld<p_Nfields;++fld){
-              r_dqdr[fld] = 0.f, r_dqds[fld] = 0.f, r_dqdt[fld] = 0.f;
-              r_dqdx[fld] = 0.f, r_dqdy[fld] = 0.f, r_dqdz[fld] = 0.f;
-            }
-
-          #pragma unroll p_Np
-            for(int i=0;i<p_Np;++i){
-              const dfloat Drni = D[n+i*p_Np+0*p_Np*p_Np];
-              const dfloat Dsni = D[n+i*p_Np+1*p_Np*p_Np];
-              const dfloat Dtni = D[n+i*p_Np+2*p_Np*p_Np];
-              #pragma unroll p_Nfields
-              for(int fld=0; fld<p_Nfields;++fld){
-                r_dqdr[fld] += Drni*s_q[fld][i];
-                r_dqds[fld] += Dsni*s_q[fld][i];
-                r_dqdt[fld] += Dtni*s_q[fld][i];
-              }
-            }
-
-          // Compute derivatives in physical coordinates
-          #pragma unroll p_Nfields
-            for(int fld=0; fld<p_Nfields;++fld){
-              r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld] + dtdx*r_dqdt[fld];
-              r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld] + dtdy*r_dqdt[fld];
-              r_dqdz[fld] = drdz*r_dqdr[fld] + dsdz*r_dqds[fld] + dtdz*r_dqdt[fld];
-            }
-
-          // Update
-          const dlong idf = e*p_Nfields*p_Np + n;
-
+        #pragma unroll p_Nfields
           for(int fld=0; fld<p_Nfields;++fld){
-            const dfloat ex = LBM[fld + 1*p_Nfields]; 
-            const dfloat ey = LBM[fld + 2*p_Nfields]; 
-            const dfloat ez = LBM[fld + 3*p_Nfields]; 
-            rhsq[idf + fld*p_Np] = -(ex*r_dqdx[fld] + ey*r_dqdy[fld] + ez*r_dqdz[fld]);
+            r_dqdr[fld] = 0.f, r_dqds[fld] = 0.f, r_dqdt[fld] = 0.f;
+            r_dqdx[fld] = 0.f, r_dqdy[fld] = 0.f, r_dqdz[fld] = 0.f;
           }
+
+        #pragma unroll p_Np
+          for(int i=0;i<p_Np;++i){
+            const dfloat Drni = D[n+i*p_Np+0*p_Np*p_Np];
+            const dfloat Dsni = D[n+i*p_Np+1*p_Np*p_Np];
+            const dfloat Dtni = D[n+i*p_Np+2*p_Np*p_Np];
+            #pragma unroll p_Nfields
+            for(int fld=0; fld<p_Nfields;++fld){
+              r_dqdr[fld] += Drni*s_q[fld][i];
+              r_dqds[fld] += Dsni*s_q[fld][i];
+              r_dqdt[fld] += Dtni*s_q[fld][i];
+            }
+          }
+
+        // Compute derivatives in physical coordinates
+        #pragma unroll p_Nfields
+          for(int fld=0; fld<p_Nfields;++fld){
+            r_dqdx[fld] = drdx*r_dqdr[fld] + dsdx*r_dqds[fld] + dtdx*r_dqdt[fld];
+            r_dqdy[fld] = drdy*r_dqdr[fld] + dsdy*r_dqds[fld] + dtdy*r_dqdt[fld];
+            r_dqdz[fld] = drdz*r_dqdr[fld] + dsdz*r_dqds[fld] + dtdz*r_dqdt[fld];
+          }
+
+        // Update
+        const dlong idf = e*p_Nfields*p_Np + n;
+
+        for(int fld=0; fld<p_Nfields;++fld){
+          const dfloat ex = LBM[fld + 1*p_Nfields];
+          const dfloat ey = LBM[fld + 2*p_Nfields];
+          const dfloat ez = LBM[fld + 3*p_Nfields];
+          rhsq[idf + fld*p_Np] = -(ex*r_dqdx[fld] + ey*r_dqdy[fld] + ez*r_dqdz[fld]);
         }
       }
     }
   }
+}

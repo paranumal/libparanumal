@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,31 +27,33 @@ SOFTWARE.
 #include "core.hpp"
 #include "timeStepper.hpp"
 
+namespace libp {
+
 namespace TimeStepper {
 
 /* Backward Difference Formula, order 3, with extrapolation */
 extbdf3::extbdf3(dlong Nelements, dlong NhaloElements,
-                 int Np, int Nfields, solver_t& _solver):
-  timeStepper_t(Nelements, NhaloElements, Np, Nfields, _solver) {
-
-  platform_t &platform = solver.platform;
+                 int Np, int Nfields,
+                 platform_t& _platform, comm_t _comm):
+  timeStepperBase_t(Nelements, NhaloElements, Np, Nfields,
+                    _platform, _comm) {
 
   Nstages = 3;
   shiftIndex = 0;
 
-  dfloat *qn = (dfloat *) calloc(Nstages*N,sizeof(dfloat));
-  o_qn = platform.malloc(Nstages*N*sizeof(dfloat),qn); //q history
+  memory<dfloat> qn(Nstages*N, 0.0);
+  o_qn = platform.malloc<dfloat>(qn); //q history
 
-  dfloat *rhs = (dfloat *) calloc(N,sizeof(dfloat));
-  o_rhs = platform.malloc(N*sizeof(dfloat), rhs); //rhs storage
-  free(rhs);
+  memory<dfloat> rhs(N,0.0);
+  o_rhs = platform.malloc<dfloat>(rhs); //rhs storage
 
-  o_F  = platform.malloc(Nstages*N*sizeof(dfloat), qn); //F(q) history (explicit part)
-  free(qn);
+  o_F  = platform.malloc<dfloat>(qn); //F(q) history (explicit part)
 
-  occa::properties kernelInfo = platform.props; //copy base occa properties from solver
+  properties_t kernelInfo = platform.props(); //copy base occa properties from solver
 
-  kernelInfo["defines/" "p_blockSize"] = BLOCKSIZE;
+  const int blocksize=256;
+
+  kernelInfo["defines/" "p_blockSize"] = blocksize;
   kernelInfo["defines/" "p_Nstages"] = Nstages;
 
   rhsKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
@@ -69,26 +71,26 @@ extbdf3::extbdf3(dlong Nelements, dlong NhaloElements,
                          3./2.,    2., -1./2.,    0.,
                         11./6.,    3., -3./2., 1./3.};
 
-  extbdf_a = (dfloat*) calloc(Nstages*Nstages, sizeof(dfloat));
-  extbdf_b = (dfloat*) calloc(Nstages*(Nstages+1), sizeof(dfloat));
-  memcpy(extbdf_a, _a, Nstages*Nstages*sizeof(dfloat));
-  memcpy(extbdf_b, _b, Nstages*(Nstages+1)*sizeof(dfloat));
+  extbdf_a.malloc(Nstages*Nstages);
+  extbdf_b.malloc(Nstages*(Nstages+1));
+  extbdf_a.copyFrom(_a);
+  extbdf_b.copyFrom(_b);
 
-  o_extbdf_a = platform.malloc(Nstages*Nstages*sizeof(dfloat), extbdf_a);
-  o_extbdf_b = platform.malloc(Nstages*(Nstages+1)*sizeof(dfloat), extbdf_b);
+  o_extbdf_a = platform.malloc<dfloat>(extbdf_a);
+  o_extbdf_b = platform.malloc<dfloat>(extbdf_b);
 }
 
-dfloat extbdf3::getGamma() {
-  return *(extbdf_b + (Nstages-1)*(Nstages+1)); //first entry of last row of B
+dfloat extbdf3::GetGamma() {
+  return extbdf_b[(Nstages-1)*(Nstages+1)]; //first entry of last row of B
 }
 
-void extbdf3::Run(occa::memory &o_q, dfloat start, dfloat end) {
+void extbdf3::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloat end) {
 
   dfloat time = start;
 
   solver.Report(time,0);
 
-  dfloat outputInterval;
+  dfloat outputInterval=0.0;
   solver.settings.getSetting("OUTPUT INTERVAL", outputInterval);
 
   dfloat outputTime = time + outputInterval;
@@ -96,7 +98,7 @@ void extbdf3::Run(occa::memory &o_q, dfloat start, dfloat end) {
   int tstep=0;
   int order=0;
   while (time < end) {
-    Step(o_q, time, dt, order);
+    Step(solver, o_q, time, dt, order);
     time += dt;
     tstep++;
     if (order<Nstages-1) order++;
@@ -109,15 +111,15 @@ void extbdf3::Run(occa::memory &o_q, dfloat start, dfloat end) {
   }
 }
 
-void extbdf3::Step(occa::memory &o_q, dfloat time, dfloat _dt, int order) {
+void extbdf3::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloat _dt, int order) {
 
   //F(q) at current index
-  occa::memory o_F0 = o_F + shiftIndex*N*sizeof(dfloat);
+  deviceMemory<dfloat> o_F0 = o_F + shiftIndex*N;
 
   //coefficients at current order
-  occa::memory o_A = o_extbdf_a + order*Nstages*sizeof(dfloat);
-  occa::memory o_B = o_extbdf_b + order*(Nstages+1)*sizeof(dfloat);
-  dfloat *B = extbdf_b + order*(Nstages+1);
+  deviceMemory<dfloat> o_A = o_extbdf_a + order*Nstages;
+  deviceMemory<dfloat> o_B = o_extbdf_b + order*(Nstages+1);
+  memory<dfloat> B = extbdf_b + order*(Nstages+1);
 
   //evaluate explicit part of rhs: F(q,t)
   solver.rhs_imex_f(o_q, o_F0, time);
@@ -143,17 +145,6 @@ void extbdf3::Step(occa::memory &o_q, dfloat time, dfloat _dt, int order) {
   shiftIndex = (shiftIndex+Nstages-1)%Nstages;
 }
 
-extbdf3::~extbdf3() {
-  if (o_rhs.size()) o_rhs.free();
-  if (o_qn.size()) o_qn.free();
-  if (o_F.size()) o_F.free();
-  if (o_extbdf_a.size()) o_extbdf_a.free();
-  if (o_extbdf_b.size()) o_extbdf_b.free();
-
-  if (extbdf_a) free(extbdf_a);
-  if (extbdf_b) free(extbdf_b);
-
-  rhsKernel.free();
-}
-
 } //namespace TimeStepper
+
+} //namespace libp

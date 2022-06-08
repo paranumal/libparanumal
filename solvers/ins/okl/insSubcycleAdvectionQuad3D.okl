@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -90,7 +90,6 @@ SOFTWARE.
     }
 
     // Make sure all node data is loaded into @shared
-    @barrier("local");
 
     for(int es=0;es<p_NblockV;++es;@inner(2)){ 
       for(int j=0;j<p_Nq;++j;@inner(1)){ 
@@ -198,7 +197,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     // for all face nodes of all elements
     // face 0 & 2
@@ -215,7 +213,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     // face 1 & 3
     for(int es=0;es<p_NblockS;++es;@inner(1)){
@@ -231,7 +228,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     // for each node in the element
     for(int es=0;es<p_NblockS;++es;@inner(1)){
@@ -323,7 +319,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     //interpolate in i, store in register
     for(int es=0;es<p_NblockV;++es;@inner(2)){   
@@ -348,7 +343,6 @@ SOFTWARE.
       }
     }
     
-    @barrier("local");
     
     //write register back to @shared
     for(int es=0;es<p_NblockV;++es;@inner(2)){   
@@ -366,7 +360,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     //interpolate in j and store flux in register
     for(int es=0;es<p_NblockV;++es;@inner(2)){   
@@ -389,7 +382,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     for(int es=0;es<p_NblockV;++es;@inner(2)){   
       for(int j=0;j<p_cubNq;++j;@inner(1)){ 
@@ -419,7 +411,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     //project/differentiate in j
     for(int es=0;es<p_NblockV;++es;@inner(2)){   
@@ -446,7 +437,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     //write register back to @shared
     for(int es=0;es<p_NblockV;++es;@inner(2)){   
@@ -464,7 +454,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");    
 
     //project/differentiate in i and write back 
     for(int es=0;es<p_NblockV;++es;@inner(2)){ 
@@ -575,7 +564,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     //interpolate in i, store in register
     for(int es=0;es<p_NblockV;++es;@inner(2)){   
@@ -618,7 +606,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     //interpolate in j and store flux in register
     for(int es=0;es<p_NblockV;++es;@inner(2)){   
@@ -675,7 +662,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     //project/differentiate in j
     for(int es=0;es<p_NblockV;++es;@inner(2)){   
@@ -720,7 +706,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");    
 
     //project/differentiate in i and write back 
     for(int es=0;es<p_NblockV;++es;@inner(2)){ 
@@ -893,7 +878,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     //interpolate traces, store flux in register
     for(int es=0;es<p_NblockS;++es;@inner(1)){   
@@ -932,7 +916,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local"); //need a barrier since s_fluxNU and s_fluxNV are aliased
 
     //write fluxes to @shared
     for(int es=0;es<p_NblockS;++es;@inner(1)){   
@@ -974,7 +957,6 @@ SOFTWARE.
       }
     }
     
-    @barrier("local");
     
     // for all face nodes of all elements
     // face 0 & 2
@@ -987,7 +969,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     // face 1 & 3
     for(int es=0;es<p_NblockS;++es;@inner(1)){
@@ -999,7 +980,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     // for each node in the element
     for(int es=0;es<p_NblockS;++es;@inner(1)){

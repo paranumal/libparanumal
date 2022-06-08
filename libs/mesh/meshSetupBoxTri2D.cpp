@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,35 +25,21 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh2D.hpp"
-#include "mesh/mesh3D.hpp"
 
-void meshTri3D::SetupBox(){
-  LIBP_ABORT(string("BOX mesh not currently supprted for Tri3D meshes."))
-}
+namespace libp {
 
-void meshTri2D::SetupBox(){
-
-  dim = 2;
-  Nverts = 3; // number of vertices per element
-  Nfaces = 3;
-  NfaceVertices = 2;
-
-  // vertices on each face
-  int faceVertices_[4][2] = {{0,1},{1,2},{2,0}};
-
-  faceVertices = (int*) calloc(NfaceVertices*Nfaces, sizeof(int));
-  memcpy(faceVertices, faceVertices_[0], NfaceVertices*Nfaces*sizeof(int));
+void mesh_t::SetupBoxTri2D(){
 
   // find a factorization size = size_x*size_y such that
   //  size_x>=size_y and are 'close' to one another
   int size_x, size_y;
-  factor2(size, size_x, size_y);
+  Factor2(size, size_x, size_y);
 
-  //find our coordinates in the MPI grid such that
-  // rank = rank_x + rank_y*size_x
-  int rank_y = rank / size_x;
-  int rank_x = rank % size_x;
+  //determine (x,y) rank coordinates for this processes
+  int rank_x=-1, rank_y=-1;
+  RankDecomp2(size_x, size_y,
+              rank_x, rank_y,
+              rank);
 
   //get global size from settings
   dlong NX, NY;
@@ -91,8 +77,8 @@ void meshTri2D::SetupBox(){
   dfloat dx = DIMX/NX;
   dfloat dy = DIMY/NY;
 
-  dlong offset_x = rank_x*(NX/size_x) + mymin(rank_x, (NX % size_x));
-  dlong offset_y = rank_y*(NY/size_y) + mymin(rank_y, (NY % size_y));
+  dlong offset_x = rank_x*(NX/size_x) + std::min(rank_x, (NX % size_x));
+  dlong offset_y = rank_y*(NY/size_y) + std::min(rank_y, (NY % size_y));
 
   //bottom corner of physical domain
   dfloat X0 = -DIMX/2.0 + offset_x*dx;
@@ -106,15 +92,17 @@ void meshTri2D::SetupBox(){
   Nnodes = NnX*NnY; //global node count
   Nelements = 2*nx*ny; //local
 
-  EToV = (hlong*) calloc(Nelements*Nverts, sizeof(hlong));
-  EX = (dfloat*) calloc(Nelements*Nverts, sizeof(dfloat));
-  EY = (dfloat*) calloc(Nelements*Nverts, sizeof(dfloat));
+  EToV.malloc(Nelements*Nverts);
+  EX.malloc(Nelements*Nverts);
+  EY.malloc(Nelements*Nverts);
 
-  elementInfo = (hlong*) calloc(Nelements, sizeof(hlong));
+  elementInfo.malloc(Nelements);
 
-  dlong e = 0;
+  #pragma omp parallel for collapse(2)
   for(int j=0;j<ny;++j){
     for(int i=0;i<nx;++i){
+
+      dlong e = 2*(i + j*nx);
 
       const hlong i0 = i+offset_x;
       const hlong i1 = (i+1+offset_x)%NnX;
@@ -151,7 +139,7 @@ void meshTri2D::SetupBox(){
 
   if (boundaryFlag != -1) { //-1 reserved for periodic case
     NboundaryFaces = 2*NX + 2*NY;
-    boundaryInfo = (hlong*) calloc(NboundaryFaces*(NfaceVertices+1), sizeof(hlong));
+    boundaryInfo.malloc(NboundaryFaces*(NfaceVertices+1));
 
     hlong bcnt = 0;
 
@@ -188,7 +176,8 @@ void meshTri2D::SetupBox(){
     }
 
   } else {
-    NboundaryFaces = 0;
-    boundaryInfo = NULL; // no boundaries
+    NboundaryFaces = 0; // no boundaries
   }
 }
+
+} //namespace libp

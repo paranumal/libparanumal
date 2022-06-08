@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,65 +25,52 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh3D.hpp"
 
-void meshHex3D::ReferenceNodes(int N_){
+namespace libp {
 
-  N = N_;
+void mesh_t::ReferenceNodesHex3D(){
+
   Nq = N+1;
   Nfp = Nq*Nq;
   Np = Nq*Nq*Nq;
 
   /* Nodal Data */
-  r = (dfloat *) malloc(Np*sizeof(dfloat));
-  s = (dfloat *) malloc(Np*sizeof(dfloat));
-  t = (dfloat *) malloc(Np*sizeof(dfloat));
   NodesHex3D(N, r, s, t);
-
-  faceNodes = (int *) malloc(Nfaces*Nfp*sizeof(int));
   FaceNodesHex3D(N, r, s, t, faceNodes);
-
-  vertexNodes = (int*) calloc(Nverts, sizeof(int));
   VertexNodesHex3D(N, r, s, t, vertexNodes);
 
   //GLL quadrature
-  dfloat *gllz = (dfloat *) malloc((N+1)*sizeof(dfloat));
-  w = (dfloat *) malloc((N+1)*sizeof(dfloat));
-  JacobiGLL(N, gllz, w);
+  JacobiGLL(N, gllz, gllw);
 
   //Lumped Mass matrix
-  MM    = (dfloat *) malloc(Np*Np*sizeof(dfloat));
-  invMM = (dfloat *) malloc(Np*Np*sizeof(dfloat));
-  LumpedMassMatrixHex3D(N, w, MM);
-  invLumpedMassMatrixHex3D(N, w, invMM);
+  LumpedMassMatrixHex3D(N, gllw, MM);
+  invLumpedMassMatrixHex3D(N, gllw, invMM);
 
   // D matrix
-  D = (dfloat *) malloc(Nq*Nq*sizeof(dfloat));
-  Dmatrix1D(N, Nq, gllz, Nq, gllz, D);
+  Dmatrix1D(N, gllz, gllz, D);
+  o_D = platform.malloc<dfloat>(D);
 
   /* Plotting data */
-  plotN = N_ + 3; //enriched interpolation space for plotting
+  plotN = N + 3; //enriched interpolation space for plotting
   plotNq = plotN + 1;
   plotNp = plotNq*plotNq*plotNq;
 
   /* Plotting nodes */
-  plotR = (dfloat *) malloc(plotNp*sizeof(dfloat));
-  plotS = (dfloat *) malloc(plotNp*sizeof(dfloat));
-  plotT = (dfloat *) malloc(plotNp*sizeof(dfloat));
   EquispacedNodesHex3D(plotN, plotR, plotS, plotT);
 
   plotNelements = 6*plotN*plotN*plotN;
   plotNverts = 4;
-  plotEToV = (int*) malloc(plotNelements*plotNverts*sizeof(int));
   EquispacedEToVHex3D(plotN, plotEToV);
 
-  dfloat *plot1D = (dfloat *) malloc(plotNq*sizeof(dfloat));
+  memory<dfloat> plot1D;
   EquispacedNodes1D(plotN, plot1D);
+  InterpolationMatrix1D(N, gllz, plot1D, plotInterp);
 
-  plotInterp = (dfloat *) malloc(Nq*plotNq*sizeof(dfloat));
-  InterpolationMatrix1D(N, Nq, gllz, plotNq, plot1D, plotInterp);
-
-  free(gllz);
-  free(plot1D);
+  props["defines/" "p_N"]= N;
+  props["defines/" "p_Nq"]= Nq;
+  props["defines/" "p_Np"]= Np;
+  props["defines/" "p_Nfp"]= Nfp;
+  props["defines/" "p_NfacesNfp"]= Nfp*Nfaces;
 }
 
+} //namespace libp

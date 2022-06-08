@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Rajesh Gandham
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Rajesh Gandham
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,11 +25,13 @@ SOFTWARE.
 */
 
 #include "parAlmond.hpp"
-#include "parAlmond/parAlmondMultigrid.hpp"
+#include "parAlmond/parAlmondCoarseSolver.hpp"
+
+namespace libp {
 
 namespace parAlmond {
 
-void multigrid_t::vcycle(const int k, occa::memory& o_RHS, occa::memory& o_X){
+void multigrid_t::vcycle(const int k, deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_X){
 
   //check for base level
   if(k==baseLevel) {
@@ -37,24 +39,26 @@ void multigrid_t::vcycle(const int k, occa::memory& o_RHS, occa::memory& o_X){
     return;
   }
 
-  multigridLevel *level  = levels[k];
-  occa::memory& o_RHSC = o_rhs[k+1];
-  occa::memory& o_XC   = o_x[k+1];
-  occa::memory& o_RES   = o_scratch;
+  multigridLevel& level = *levels[k];
+  deviceMemory<dfloat>& o_RHSC = o_rhs[k+1];
+  deviceMemory<dfloat>& o_XC   = o_x[k+1];
+  deviceMemory<dfloat>& o_RES  = o_scratch;
 
   //apply smoother to x and then compute res = rhs-Ax
-  level->smooth(o_RHS, o_X, true);
-  level->residual(o_RHS, o_X, o_RES);
+  level.smooth(o_RHS, o_X, true);
+  level.residual(o_RHS, o_X, o_RES);
 
   // rhsC = P^T res
-  level->coarsen(o_RES, o_RHSC);
+  level.coarsen(o_RES, o_RHSC);
 
   vcycle(k+1, o_RHSC, o_XC);
 
   // x = x + P xC
-  level->prolongate(o_XC, o_X);
+  level.prolongate(o_XC, o_X);
 
-  level->smooth(o_RHS, o_X, false);
+  level.smooth(o_RHS, o_X, false);
 }
 
 } //namespace parAlmond
+
+} //namespace libp

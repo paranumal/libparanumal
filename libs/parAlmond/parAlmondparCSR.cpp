@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Rajesh Gandham
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Rajesh Gandham
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -28,6 +28,8 @@ SOFTWARE.
 #include "parAlmond/parAlmondparCSR.hpp"
 #include "parAlmond/parAlmondKernels.hpp"
 
+namespace libp {
+
 namespace parAlmond {
 
 //------------------------------------------------------------------------
@@ -36,8 +38,10 @@ namespace parAlmond {
 //
 //------------------------------------------------------------------------
 
-void parCSR::SpMV(const dfloat alpha, dfloat *x,
-                  const dfloat beta, dfloat *y) {
+void parCSR::SpMV(const dfloat alpha, memory<dfloat>& x,
+                  const dfloat beta, memory<dfloat>& y) {
+
+  halo.ExchangeStart(x, 1);
 
   // z[i] = beta*y[i] + alpha* (sum_{ij} Aij*x[j])
   // #pragma omp parallel for
@@ -52,7 +56,7 @@ void parCSR::SpMV(const dfloat alpha, dfloat *x,
       y[i] = alpha*result;
   }
 
-  halo->Exchange(x, 1, ogs_dfloat);
+  halo.ExchangeFinish(x, 1);
 
   // #pragma omp parallel for
   for(dlong i=0; i<offd.nzRows; i++){ //local
@@ -65,8 +69,10 @@ void parCSR::SpMV(const dfloat alpha, dfloat *x,
   }
 }
 
-void parCSR::SpMV(const dfloat alpha, dfloat *x,
-                  const dfloat beta, const dfloat *y, dfloat *z) {
+void parCSR::SpMV(const dfloat alpha, memory<dfloat>& x,
+                  const dfloat beta, const memory<dfloat>& y, memory<dfloat>& z) {
+
+  halo.ExchangeStart(x, 1);
 
   // z[i] = beta*y[i] + alpha* (sum_{ij} Aij*x[j])
   // #pragma omp parallel for
@@ -78,7 +84,7 @@ void parCSR::SpMV(const dfloat alpha, dfloat *x,
     z[i] = alpha*result + beta*y[i];
   }
 
-  halo->Exchange(x, 1, ogs_dfloat);
+  halo.ExchangeFinish(x, 1);
 
   for(dlong i=0; i<offd.nzRows; i++){ //local
     const dlong row = offd.rows[i];
@@ -90,10 +96,10 @@ void parCSR::SpMV(const dfloat alpha, dfloat *x,
   }
 }
 
-void parCSR::SpMV(const dfloat alpha, occa::memory& o_x, const dfloat beta,
-                  occa::memory& o_y) {
+void parCSR::SpMV(const dfloat alpha, deviceMemory<dfloat>& o_x, const dfloat beta,
+                  deviceMemory<dfloat>& o_y) {
 
-  halo->ExchangeStart(o_x, 1, ogs_dfloat);
+  halo.ExchangeStart(o_x, 1);
 
   // z[i] = beta*y[i] + alpha* (sum_{ij} Aij*x[j])
   if (diag.NrowBlocks)
@@ -102,7 +108,7 @@ void parCSR::SpMV(const dfloat alpha, occa::memory& o_x, const dfloat beta,
                    diag.o_cols, diag.o_vals,
                    o_x, o_y);
 
-  halo->ExchangeFinish(o_x, 1, ogs_dfloat);
+  halo.ExchangeFinish(o_x, 1);
 
   const dfloat one = 1.0;
   if (offd.NrowBlocks)
@@ -112,10 +118,10 @@ void parCSR::SpMV(const dfloat alpha, occa::memory& o_x, const dfloat beta,
                    o_x, o_y);
 }
 
-void parCSR::SpMV(const dfloat alpha, occa::memory& o_x, const dfloat beta,
-                  occa::memory& o_y, occa::memory& o_z) {
+void parCSR::SpMV(const dfloat alpha, deviceMemory<dfloat>& o_x, const dfloat beta,
+                  deviceMemory<dfloat>& o_y, deviceMemory<dfloat>& o_z) {
 
-  halo->ExchangeStart(o_x, 1, ogs_dfloat);
+  halo.ExchangeStart(o_x, 1);
 
   // z[i] = beta*y[i] + alpha* (sum_{ij} Aij*x[j])
   if (diag.NrowBlocks)
@@ -124,7 +130,7 @@ void parCSR::SpMV(const dfloat alpha, occa::memory& o_x, const dfloat beta,
                    diag.o_cols, diag.o_vals,
                    o_x, o_y, o_z);
 
-  halo->ExchangeFinish(o_x, 1, ogs_dfloat);
+  halo.ExchangeFinish(o_x, 1);
 
   const dfloat one = 1.0;
   if (offd.NrowBlocks)
@@ -146,25 +152,21 @@ parCSR::parCSR(parCOO& A):       // number of nonzeros on this rank
   platform(A.platform),
   comm(A.comm) {
 
-  int rank;
-  int size;
-  MPI_Comm_rank(comm, &rank);
-  MPI_Comm_size(comm, &size);
+  int rank = comm.rank();
+  // int size = comm.size();
 
   //copy global partition
-  globalRowStarts = (hlong *) calloc(size+1,sizeof(hlong));
-  globalColStarts = (hlong *) calloc(size+1,sizeof(hlong));
-  memcpy(globalRowStarts, A.globalRowStarts, (size+1)*sizeof(hlong));
-  memcpy(globalColStarts, A.globalColStarts, (size+1)*sizeof(hlong));
+  globalRowStarts = A.globalRowStarts;
+  globalColStarts = A.globalColStarts;
 
   const hlong globalRowOffset = globalRowStarts[rank];
   const hlong globalColOffset = globalColStarts[rank];
 
-  Nrows = (dlong)(globalRowStarts[rank+1]-globalRowStarts[rank]);
-  Ncols = (dlong)(globalColStarts[rank+1]-globalColStarts[rank]);
+  Nrows = static_cast<dlong>(globalRowStarts[rank+1]-globalRowStarts[rank]);
+  Ncols = static_cast<dlong>(globalColStarts[rank+1]-globalColStarts[rank]);
 
-  diag.rowStarts = (dlong *) calloc(Nrows+1, sizeof(dlong));
-  offd.rowStarts = (dlong *) calloc(Nrows+1, sizeof(dlong));
+  diag.rowStarts.malloc(Nrows+1, 0);
+  offd.rowStarts.malloc(Nrows+1, 0);
 
   //count the entries in each row
   for (dlong n=0;n<A.nnz;n++) {
@@ -182,11 +184,12 @@ parCSR::parCSR(parCOO& A):       // number of nonzeros on this rank
   for(dlong i=0; i<Nrows; i++)
     if (offd.rowStarts[i+1]>0) offd.nzRows++;
 
-  offd.rows       = (dlong *) calloc(offd.nzRows, sizeof(dlong));
-  offd.mRowStarts = (dlong *) calloc(offd.nzRows+1, sizeof(dlong));
+  offd.rows.malloc(offd.nzRows);
+  offd.mRowStarts.malloc(offd.nzRows+1);
 
   // cumulative sum
   dlong cnt=0;
+  offd.mRowStarts[0] = 0;
   for(dlong i=0; i<Nrows; i++) {
     if (offd.rowStarts[i+1]>0) {
       offd.rows[cnt] = i; //record row id
@@ -201,7 +204,7 @@ parCSR::parCSR(parCOO& A):       // number of nonzeros on this rank
 
   // Halo setup
   cnt=0;
-  hlong *colIds = (hlong *) malloc(offd.nnz*sizeof(hlong));
+  memory<hlong> colIds(offd.nnz);
   for (dlong n=0;n<A.nnz;n++) {
     if ( (A.entries[n].col < globalColOffset)
       || (A.entries[n].col > globalColOffset+Ncols-1))
@@ -210,10 +213,10 @@ parCSR::parCSR(parCOO& A):       // number of nonzeros on this rank
   haloSetup(colIds); //setup halo, and transform colIds to a local indexing
 
   //fill the CSR matrices
-  diag.cols = (dlong *)  calloc(diag.nnz, sizeof(dlong));
-  offd.cols = (dlong *)  calloc(offd.nnz, sizeof(dlong));
-  diag.vals = (pfloat *) calloc(diag.nnz, sizeof(pfloat));
-  offd.vals = (pfloat *) calloc(offd.nnz, sizeof(pfloat));
+  diag.cols.malloc(diag.nnz);
+  offd.cols.malloc(offd.nnz);
+  diag.vals.malloc(diag.nnz);
+  offd.vals.malloc(offd.nnz);
   dlong diagCnt = 0;
   dlong offdCnt = 0;
   for (dlong n=0;n<A.nnz;n++) {
@@ -223,12 +226,11 @@ parCSR::parCSR(parCOO& A):       // number of nonzeros on this rank
       offd.vals[offdCnt] = A.entries[n].val;
       offdCnt++;
     } else {
-      diag.cols[diagCnt] = (dlong) (A.entries[n].col - globalColOffset);
+      diag.cols[diagCnt] = static_cast<dlong>(A.entries[n].col - globalColOffset);
       diag.vals[diagCnt] = A.entries[n].val;
       diagCnt++;
     }
   }
-  free(colIds);
 }
 
 //------------------------------------------------------------------------
@@ -247,15 +249,14 @@ typedef struct {
 } parallelId_t;
 
 
-void parCSR::haloSetup(hlong *colIds) {
+void parCSR::haloSetup(memory<hlong> colIds) {
 
-  int rank;
-  MPI_Comm_rank(comm, &rank);
+  int rank = comm.rank();
 
   const hlong globalOffset = globalColStarts[rank];
 
   //collect the unique nonlocal column ids
-  parallelId_t*  parIds = (parallelId_t*) malloc(offd.nnz*sizeof(parallelId_t));
+  memory<parallelId_t> parIds(offd.nnz);
 
   for (dlong n=0;n<offd.nnz;n++) {
     parIds[n].localId  = n;
@@ -263,7 +264,7 @@ void parCSR::haloSetup(hlong *colIds) {
   }
 
   //sort by global index
-  std::sort(parIds, parIds+offd.nnz,
+  std::sort(parIds.ptr(), parIds.ptr()+offd.nnz,
             [](const parallelId_t& a, const parallelId_t& b) {
               if(a.globalId < b.globalId) return true;
               if(a.globalId > b.globalId) return false;
@@ -283,7 +284,7 @@ void parCSR::haloSetup(hlong *colIds) {
   if(offd.nnz) Noffdcols++;
 
   //record the global ids of the unique columns
-  hlong *offdcols = (hlong *) malloc(Noffdcols*sizeof(hlong));
+  memory<hlong> offdcols(Noffdcols);
   Noffdcols = 0;
   if(offd.nnz) offdcols[Noffdcols++] = parIds[0].globalId;
   for (dlong n=1;n<offd.nnz;n++)
@@ -291,7 +292,7 @@ void parCSR::haloSetup(hlong *colIds) {
       offdcols[Noffdcols++] = parIds[n].globalId;
 
   //sort back to local order
-  std::sort(parIds, parIds+offd.nnz,
+  std::sort(parIds.ptr(), parIds.ptr()+offd.nnz,
             [](const parallelId_t& a, const parallelId_t& b) {
               if(a.localId < b.localId) return true;
               if(a.localId > b.localId) return false;
@@ -304,22 +305,20 @@ void parCSR::haloSetup(hlong *colIds) {
   Ncols += Noffdcols;
 
   //make an array of all the column ids required on this rank (local first)
-  colMap = (hlong*) malloc(Ncols*sizeof(hlong));
+  colMap.malloc(Ncols);
   for (dlong n=0; n<NlocalCols; n++)      colMap[n] = n+globalOffset+1; //local rows
   for (dlong n=NlocalCols; n<Ncols; n++)  colMap[n] = -(offdcols[n-NlocalCols]+1);    //nonlocal rows
 
   //make a halo exchange to share column entries and an ogs for gsops accross columns
   int verbose = 0;
-  halo = halo_t::Setup(Ncols, colMap, comm, verbose, platform);
+  halo.Setup(Ncols, colMap, comm, ogs::Auto, verbose, platform);
 
   //shift back to 0-indexed
-  for (dlong n=0; n<Ncols; n++) colMap[n]=abs(colMap[n])-1;
+  for (dlong n=0; n<Ncols; n++) colMap[n]=std::abs(colMap[n])-1;
 
   //update column numbering
   for (dlong n=0;n<offd.nnz;n++)
     colIds[n] = NlocalCols + parIds[n].newId;
-
-  free(parIds);
 }
 
 //------------------------------------------------------------------------
@@ -330,8 +329,8 @@ void parCSR::haloSetup(hlong *colIds) {
 
 void parCSR::diagSetup() {
   //fill the CSR matrices
-  diagA   = (dfloat *) calloc(Ncols, sizeof(dfloat));
-  diagInv = (dfloat *) calloc(Ncols, sizeof(dfloat));
+  diagA.malloc(Ncols);
+  diagInv.malloc(Ncols);
 
   for (dlong i=0;i<Nrows;i++) {
     const dlong start = diag.rowStarts[i];
@@ -345,7 +344,7 @@ void parCSR::diagSetup() {
   }
 
   //fill the halo region
-  halo->Exchange(diagA, 1, ogs_dfloat);
+  halo.Exchange(diagA, 1);
 
   //compute the inverse diagonal
   for (dlong n=0;n<Nrows;n++)
@@ -355,31 +354,6 @@ void parCSR::diagSetup() {
   rho = rhoDinvA();
 }
 
-parCSR::~parCSR() {
-  if (diag.blockRowStarts) free(diag.blockRowStarts);
-  if (diag.rowStarts) free(diag.rowStarts);
-  if (diag.cols) free(diag.cols);
-  if (diag.vals) free(diag.vals);
-
-  if (offd.blockRowStarts) free(offd.blockRowStarts);
-  if (offd.rowStarts) free(offd.rowStarts);
-  if (offd.mRowStarts) free(offd.mRowStarts);
-  if (offd.rows) free(offd.rows);
-  if (offd.cols) free(offd.cols);
-  if (offd.vals) free(offd.vals);
-
-  if (diagA) free(diagA);
-  if (diagInv) free(diagInv);
-
-  if (o_diagA.size()) o_diagA.free();
-  if (o_diagInv.size()) o_diagInv.free();
-
-  if (globalRowStarts) free(globalRowStarts);
-  if (globalColStarts) free(globalColStarts);
-  if (colMap) free(colMap);
-
-  if (halo)   halo->Free();
-}
 
 //------------------------------------------------------------------------
 //
@@ -389,44 +363,44 @@ parCSR::~parCSR() {
 
 dfloat parCSR::rhoDinvA(){
 
-  int size;
-  MPI_Comm_size(comm, &size);
+  int size = comm.size();
 
   int k = 10;
 
   hlong Ntotal = globalRowStarts[size];
-  if(k > Ntotal) k = (int) Ntotal;
+  if(k > Ntotal) k = static_cast<int>(Ntotal);
 
   // do an arnoldi
 
   // allocate memory for Hessenberg matrix
-  double *H = (double *) calloc(k*k,sizeof(double));
+  memory<double> H(k*k, 0.0);
 
   // allocate memory for basis
-  dfloat **V = (dfloat **) calloc(k+1, sizeof(dfloat *));
-  dfloat *Vx = (dfloat *) calloc(Ncols, sizeof(dfloat));
+  memory<memory<dfloat>> V(k+1);
+  memory<dfloat> Vx(Ncols);
 
-  for(int i=0; i<=k; i++)
-    V[i] = (dfloat *) calloc(Nrows, sizeof(dfloat));
+  for(int i=0; i<=k; i++) {
+    V[i].malloc(Nrows);
+  }
 
   // generate a random vector for initial basis vector
   for(dlong n=0; n<Nrows; n++) Vx[n] = (dfloat) drand48();
 
   // dfloat norm_vo = vectorNorm(Nrows,Vx, comm);
-  dfloat norm_vo=0.0, gnorm_vo=0.0;
+  dfloat norm_vo=0.0;
   for(dlong n=0; n<Nrows; n++) norm_vo += Vx[n]*Vx[n];
-  MPI_Allreduce(&norm_vo, &gnorm_vo, 1, MPI_DFLOAT, MPI_SUM, comm);
-  norm_vo = sqrt(gnorm_vo);
+  comm.Allreduce(norm_vo);
+  norm_vo = sqrt(norm_vo);
 
   // vectorScale(Nrows, 1.0/norm_vo, Vx);
   for(dlong n=0; n<Nrows; n++) Vx[n] *= (1.0/norm_vo);
 
   //V[0] = Vx
-  memcpy(V[0], Vx, Nrows*sizeof(dfloat));
+  V[0].copyFrom(Vx, Nrows);
 
   for(int j=0; j<k; j++){
     //Vx = V[j]
-    memcpy(Vx, V[j], Nrows*sizeof(dfloat));
+    Vx.copyFrom(V[j], Nrows);
 
     // v[j+1] = invD*(A*v[j])
     SpMV(1.0, Vx, 0., V[j+1]);
@@ -437,36 +411,36 @@ dfloat parCSR::rhoDinvA(){
     for(int i=0; i<=j; i++){
       // H(i,j) = v[i]'*A*v[j]
       // dfloat hij = vectorInnerProd(Nrows, V[i], V[j+1],comm);
-      dfloat local_hij=0.0, hij=0.0;
-      for(dlong n=0; n<Nrows; n++) local_hij += V[i][n]*V[j+1][n];
-      MPI_Allreduce(&local_hij, &hij, 1, MPI_DFLOAT, MPI_SUM, comm);
+      dfloat hij=0.0;
+      for(dlong n=0; n<Nrows; n++) hij += V[i][n]*V[j+1][n];
+      comm.Allreduce(hij);
 
       // v[j+1] = v[j+1] - hij*v[i]
       // vectorAdd(Nrows,-hij, V[i], 1.0, V[j+1]);
       for(dlong n=0; n<Nrows; n++) V[j+1][n] += -hij*V[i][n];
 
-      H[i + j*k] = (double) hij;
+      H[i + j*k] = static_cast<double>(hij);
     }
 
     if(j+1 < k){
 
       // dfloat norm_vj = vectorNorm(Nrows,V[j+1],comm);
-      dfloat norm_vj=0.0, gnorm_vj=0.0;
+      dfloat norm_vj=0.0;
       for(dlong n=0; n<Nrows; n++) norm_vj += V[j+1][n]*V[j+1][n];
-      MPI_Allreduce(&norm_vj, &gnorm_vj, 1, MPI_DFLOAT, MPI_SUM, comm);
-      norm_vj = sqrt(gnorm_vj);
+      comm.Allreduce(norm_vj);
+      norm_vj = sqrt(norm_vj);
 
-      H[j+1+ j*k] = (double) norm_vj;
+      H[j+1+ j*k] = static_cast<double>(norm_vj);
 
       // vectorScale(Nrows, 1./H[j+1 + j*k], V[j+1]);
       for(dlong n=0; n<Nrows; n++) V[j+1][n] *= (1./H[j+1 + j*k]);
     }
   }
 
-  double *WR = (double *) calloc(k,sizeof(double));
-  double *WI = (double *) calloc(k,sizeof(double));
+  memory<double> WR(k);
+  memory<double> WI(k);
 
-  matrixEigenValues(k, H, WR, WI);
+  linAlg_t::matrixEigenValues(k, H, WR, WI);
 
   double RHO = 0.;
 
@@ -478,15 +452,6 @@ dfloat parCSR::rhoDinvA(){
     }
   }
 
-  free(H);
-  free(WR);
-  free(WI);
-
-  // free memory
-  for(int i=0; i<=k; i++) free(V[i]);
-  free(Vx);
-  free(V);
-
   // printf("weight = %g \n", RHO);
 
   return RHO;
@@ -496,7 +461,7 @@ void parCSR::syncToDevice() {
 
   if (Nrows) {
     //transfer matrix data
-    diag.o_rowStarts = platform.malloc((Nrows+1)*sizeof(dlong), diag.rowStarts);
+    diag.o_rowStarts = platform.malloc<dlong>(diag.rowStarts);
 
     diag.NrowBlocks=0;
     if (diag.nnz) {
@@ -506,12 +471,9 @@ void parCSR::syncToDevice() {
       for (dlong i=0;i<Nrows;i++) {
         dlong rowSize = diag.rowStarts[i+1]-diag.rowStarts[i];
 
-        if (rowSize > parAlmond::NonzerosPerBlock) {
-          //this row is pathalogically big. We can't currently run this
-          stringstream ss;
-          ss << "Multiplicity of row: " << i << " is " << rowSize << " in parAlmond::parCSR setup and is too large.";
-          LIBP_ABORT(ss.str())
-        }
+        //this may be pathalogically big. We can't currently run this
+        LIBP_ABORT("Multiplicity of row: " << i << " is " << rowSize << " in parAlmond::parCSR setup and is too large.",
+                   rowSize > parAlmond::NonzerosPerBlock);
 
         if (blockSum+rowSize > parAlmond::NonzerosPerBlock) { //adding this row will exceed the nnz per block
           diag.NrowBlocks++; //count the previous block
@@ -521,7 +483,7 @@ void parCSR::syncToDevice() {
         }
       }
 
-      diag.blockRowStarts  = (dlong*) calloc(diag.NrowBlocks+1,sizeof(dlong));
+      diag.blockRowStarts.malloc(diag.NrowBlocks+1, 0);
 
       blockSum=0;
       diag.NrowBlocks=1;
@@ -536,11 +498,11 @@ void parCSR::syncToDevice() {
         }
       }
       diag.blockRowStarts[diag.NrowBlocks] = Nrows;
-      diag.o_blockRowStarts = platform.malloc((diag.NrowBlocks+1)*sizeof(dlong), diag.blockRowStarts);
+      diag.o_blockRowStarts = platform.malloc<dlong>(diag.blockRowStarts);
 
       //transfer matrix data
-      diag.o_cols = platform.malloc(diag.nnz*sizeof(dlong),   diag.cols);
-      diag.o_vals = platform.malloc(diag.nnz*sizeof(pfloat),  diag.vals);
+      diag.o_cols = platform.malloc<dlong>(diag.cols);
+      diag.o_vals = platform.malloc<pfloat>(diag.vals);
     }
 
     if (offd.nnz) {
@@ -550,12 +512,9 @@ void parCSR::syncToDevice() {
       for (dlong i=0;i<offd.nzRows;i++) {
         dlong rowSize = offd.mRowStarts[i+1]-offd.mRowStarts[i];
 
-        if (rowSize > parAlmond::NonzerosPerBlock) {
-          //this row is pathalogically big. We can't currently run this
-          stringstream ss;
-          ss << "Multiplicity of row: " << i << " is " << rowSize << " in parAlmond::parCSR setup and is too large.";
-          LIBP_ABORT(ss.str())
-        }
+        //this row may be pathalogically big. We can't currently run this
+        LIBP_ABORT("Multiplicity of row: " << i << " is " << rowSize << " in parAlmond::parCSR setup and is too large.",
+                   rowSize > parAlmond::NonzerosPerBlock);
 
         if (blockSum+rowSize > parAlmond::NonzerosPerBlock) { //adding this row will exceed the nnz per block
           offd.NrowBlocks++; //count the previous block
@@ -565,7 +524,7 @@ void parCSR::syncToDevice() {
         }
       }
 
-      offd.blockRowStarts  = (dlong*) calloc(offd.NrowBlocks+1,sizeof(dlong));
+      offd.blockRowStarts.malloc(offd.NrowBlocks+1, 0);
 
       blockSum=0;
       offd.NrowBlocks=1;
@@ -580,21 +539,23 @@ void parCSR::syncToDevice() {
         }
       }
       offd.blockRowStarts[offd.NrowBlocks] = offd.nzRows;
-      offd.o_blockRowStarts = platform.malloc((offd.NrowBlocks+1)*sizeof(dlong), offd.blockRowStarts);
+      offd.o_blockRowStarts = platform.malloc<dlong>(offd.blockRowStarts);
 
       //transfer matrix data
-      offd.o_rows       = platform.malloc(offd.nzRows*sizeof(dlong), offd.rows);
-      offd.o_mRowStarts = platform.malloc((offd.nzRows+1)*sizeof(dlong), offd.mRowStarts);
+      offd.o_rows       = platform.malloc<dlong>(offd.rows);
+      offd.o_mRowStarts = platform.malloc<dlong>(offd.mRowStarts);
 
-      offd.o_cols = platform.malloc(offd.nnz*sizeof(dlong),   offd.cols);
-      offd.o_vals = platform.malloc(offd.nnz*sizeof(pfloat),  offd.vals);
+      offd.o_cols = platform.malloc<dlong>(offd.cols);
+      offd.o_vals = platform.malloc<pfloat>(offd.vals);
     }
 
-    if (diagA) {
-      o_diagA = platform.malloc(Nrows*sizeof(dfloat), diagA);
-      o_diagInv = platform.malloc(Nrows*sizeof(dfloat), diagInv);
+    if (diagA.size()) {
+      o_diagA = platform.malloc<dfloat>(diagA);
+      o_diagInv = platform.malloc<dfloat>(diagInv);
     }
   }
 }
 
 } //namespace parAlmond
+
+} //namespace libp

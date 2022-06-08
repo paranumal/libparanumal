@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Anthony Austin
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -74,7 +74,6 @@ void givensRotation(dfloat a, dfloat b, dfloat *c, dfloat *s)
 
     for (int i = 0; i < p_igNhist - 1; ++i) {
 
-      @barrier("local");
 
       // thread 0 computes the Given's rotation and updates R
       for (dlong t = 0; t < p_NT; ++t; @inner(0)) {
@@ -102,7 +101,6 @@ void givensRotation(dfloat a, dfloat b, dfloat *c, dfloat *s)
         }
       }
 
-      @barrier("local");
 
       // all threads perform Givens rotations at a node
       for (dlong t = 0; t < p_NT; ++t; @inner(0)) {
@@ -128,8 +126,6 @@ void givensRotation(dfloat a, dfloat b, dfloat *c, dfloat *s)
         }
       }
     }
-
-    @barrier("global");
 
     for (dlong t = 0; t < p_NT; ++t; @inner(0)) {
       const dlong n = b*p_NT + t;

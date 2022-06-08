@@ -18,7 +18,7 @@ jobs:
         submodules: true
     - name: Install Dependencies
       run: |
-          sudo apt install -y libopenmpi-dev openmpi-bin libblas-dev liblapack-dev
+          sudo apt install -y libopenmpi-dev openmpi-bin libopenblas-serial-dev
     - name: Build
       run: make -j `nproc` verbose=true
       env:

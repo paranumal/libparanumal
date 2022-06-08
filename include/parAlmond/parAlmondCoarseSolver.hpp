@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Rajesh Gandham
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Rajesh Gandham
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -34,100 +34,105 @@ SOFTWARE.
 #include "parAlmond/parAlmondDefines.hpp"
 #include "parAlmond/parAlmondparCSR.hpp"
 
+namespace libp {
+
 namespace parAlmond {
 
-class coarseSolver_t: public solver_t {
+class coarseSolver_t: public operator_t {
 
 public:
+  platform_t platform;
+  settings_t settings;
+  comm_t comm;
+
   int Nrows;
   int Ncols;
 
-  MPI_Comm comm;
   int rank, size;
 
   coarseSolver_t(platform_t& _platform, settings_t& _settings,
-                 MPI_Comm _comm):
-    solver_t(_platform, _settings), comm(_comm) {}
-  virtual ~coarseSolver_t() {}
+                 comm_t _comm):
+    platform(_platform), settings(_settings),
+    comm(_comm) {}
 
   virtual int getTargetSize()=0;
 
-  virtual void setup(parCSR *A, bool nullSpace,
-                     dfloat *nullVector, dfloat nullSpacePenalty)=0;
+  virtual void setup(parCSR& A, bool nullSpace,
+                     memory<dfloat> nullVector, dfloat nullSpacePenalty)=0;
 
   virtual void syncToDevice()=0;
 
   virtual void Report(int lev)=0;
 
-  virtual void solve(occa::memory& o_rhs, occa::memory& o_x)=0;
+  virtual void solve(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x)=0;
 };
 
 class exactSolver_t: public coarseSolver_t {
 
 public:
-  parCSR *A=nullptr;
+  parCSR A;
 
   int coarseTotal;
   int coarseOffset;
-  int *coarseOffsets=nullptr;
-  int *coarseCounts=nullptr;
-  int *sendOffsets=nullptr;
-  int *sendCounts=nullptr;
+  memory<int> coarseOffsets;
+  memory<int> coarseCounts;
+  memory<int> sendOffsets;
+  memory<int> sendCounts;
 
   int N;
   int offdTotal=0;
 
-  dfloat *diagInvAT=nullptr, *offdInvAT=nullptr;
-  occa::memory o_diagInvAT, o_offdInvAT;
+  memory<dfloat> diagInvAT, offdInvAT;
+  deviceMemory<dfloat> o_diagInvAT, o_offdInvAT;
 
-  dfloat *diagRhs=nullptr, *offdRhs=nullptr;
-  occa::memory o_offdRhs;
+  memory<dfloat> diagRhs, offdRhs;
+  deviceMemory<dfloat> o_offdRhs;
 
   exactSolver_t(platform_t& _platform, settings_t& _settings,
-                MPI_Comm _comm):
+                comm_t _comm):
     coarseSolver_t(_platform, _settings, _comm) {}
-  ~exactSolver_t();
 
   int getTargetSize();
 
-  void setup(parCSR *A, bool nullSpace,
-             dfloat *nullVector, dfloat nullSpacePenalty);
+  void setup(parCSR& A, bool nullSpace,
+             memory<dfloat> nullVector, dfloat nullSpacePenalty);
 
   void syncToDevice();
 
   void Report(int lev);
 
-  void solve(occa::memory& o_rhs, occa::memory& o_x);
+  void solve(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x);
 };
 
 class oasSolver_t: public coarseSolver_t {
 
 public:
-  parCSR* A;
+  parCSR A;
 
   int N;
   int diagTotal=0, offdTotal=0;
 
-  dfloat *diagInvAT=nullptr, *offdInvAT=nullptr;
-  occa::memory o_diagInvAT, o_offdInvAT;
+  memory<dfloat> diagInvAT, offdInvAT;
+  deviceMemory<dfloat> o_diagInvAT, o_offdInvAT;
 
   oasSolver_t(platform_t& _platform, settings_t& _settings,
-              MPI_Comm _comm):
+              comm_t _comm):
     coarseSolver_t(_platform, _settings, _comm) {}
-  ~oasSolver_t();
 
   int getTargetSize();
 
-  void setup(parCSR *A, bool nullSpace,
-             dfloat *nullVector, dfloat nullSpacePenalty);
+  void setup(parCSR& A, bool nullSpace,
+             memory<dfloat> nullVector, dfloat nullSpacePenalty);
 
   void syncToDevice();
 
   void Report(int lev);
 
-  void solve(occa::memory& o_rhs, occa::memory& o_x);
+  void solve(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x);
 };
 
-}
+} //namespace parAlmond
+
+} //namespace libp
 
 #endif

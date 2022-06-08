@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,15 +25,16 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh3D.hpp"
 
-void meshTri3D::PhysicalNodes(){
+namespace libp {
 
-  x = (dfloat*) calloc((Nelements+totalHaloPairs)*Np,sizeof(dfloat));
-  y = (dfloat*) calloc((Nelements+totalHaloPairs)*Np,sizeof(dfloat));
-  z = (dfloat*) calloc((Nelements+totalHaloPairs)*Np,sizeof(dfloat));
+void mesh_t::PhysicalNodesTri3D(){
 
-  int cnt = 0;
+  x.malloc(Nelements*Np);
+  y.malloc(Nelements*Np);
+  z.malloc(Nelements*Np);
+
+  #pragma omp parallel for
   for(int e=0;e<Nelements;++e){ /* for each element */
 
     int id = e*Nverts+0;
@@ -63,17 +64,17 @@ void meshTri3D::PhysicalNodes(){
 
       // project to sphere
       dfloat rlin = sqrt(xlin*xlin+ylin*ylin+zlin*zlin);
-      x[cnt] = xlin/rlin;
-      y[cnt] = ylin/rlin;
-      z[cnt] = zlin/rlin;
+      x[e*Np+n] = xlin/rlin;
+      y[e*Np+n] = ylin/rlin;
+      z[e*Np+n] = zlin/rlin;
 
       //      printf("x,y,z,rlin=%g,%g,%g,%g\n", xlin/rlin, ylin/rlin, zlin/rlin, rlin);
-      ++cnt;
-
     }
   }
 
-  halo->Exchange(x, Np, ogs_dfloat);
-  halo->Exchange(y, Np, ogs_dfloat);
-  halo->Exchange(z, Np, ogs_dfloat);
+  o_x = platform.malloc<dfloat>(x);
+  o_y = platform.malloc<dfloat>(y);
+  o_z = platform.malloc<dfloat>(z);
 }
+
+} //namespace libp

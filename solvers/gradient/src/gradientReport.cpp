@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -32,7 +32,7 @@ void gradient_t::Report(){
   mesh.MassMatrixApply(o_gradq, o_Mgradq);
 
   dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
-  dfloat norm2 = sqrt(platform.linAlg.innerProd(Nentries, o_gradq, o_Mgradq, mesh.comm));
+  dfloat norm2 = sqrt(platform.linAlg().innerProd(Nentries, o_gradq, o_Mgradq, mesh.comm));
 
   if(mesh.rank==0)
     printf("%5.2f (norm)\n", norm2);

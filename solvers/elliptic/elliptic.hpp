@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -38,22 +38,24 @@ SOFTWARE.
 
 #define DELLIPTIC LIBP_DIR"/solvers/elliptic/"
 
+using namespace libp;
+
 class ellipticSettings_t: public settings_t {
 public:
-  ellipticSettings_t(const MPI_Comm& _comm);
+  ellipticSettings_t() = default;
+  ellipticSettings_t(const comm_t& _comm);
   void report();
   void parseFromFile(platformSettings_t& platformSettings,
                      meshSettings_t& meshSettings,
-                     const string filename);
+                     const std::string filename);
 };
 void ellipticAddRunSettings(settings_t& settings);
 void ellipticAddSettings(settings_t& settings,
-                         const string prefix="");
+                         const std::string prefix="");
 
 class elliptic_t: public solver_t {
 public:
-  mesh_t &mesh;
-  linAlg_t &linAlg;
+  mesh_t mesh;
 
   dlong Ndofs, Nhalo;
   int Nfields;
@@ -63,66 +65,69 @@ public:
 
   int disc_ipdg, disc_c0;
 
-  occa::memory o_AqL;
+  deviceMemory<dfloat> o_AqL;
 
-  halo_t* traceHalo;
+  ogs::halo_t traceHalo;
 
-  precon_t* precon;
+  precon_t precon;
 
-  dfloat *grad;
-  occa::memory o_grad;
+  memory<dfloat> grad;
+  deviceMemory<dfloat> o_grad;
 
-  dfloat *weight, *weightG;
-  occa::memory o_weight, o_weightG;
+  memory<dfloat> weight, weightG;
+  deviceMemory<dfloat> o_weight, o_weightG;
 
   //C0-FEM mask data
-  ogs_t *ogsMasked;
-  int *mapB;      // boundary flag of face nodes
+  ogs::ogs_t ogsMasked;
+  ogs::halo_t gHalo;
+  memory<int> mapB;      // boundary flag of face nodes
+  deviceMemory<int> o_mapB;
 
   dlong Nmasked;
-  dlong *maskIds;
-  hlong *maskedGlobalIds;
-  hlong *maskedGlobalNumbering;
+  memory<dlong> maskIds;
+  memory<hlong> maskedGlobalIds;
+  memory<hlong> maskedGlobalNumbering;
+  memory<dlong> GlobalToLocal;
 
-  occa::memory o_maskIds;
-  occa::memory o_mapB;
+  deviceMemory<dlong> o_maskIds;
+  deviceMemory<dlong> o_GlobalToLocal;
 
-  int *BCType;
-  int *EToB;
-  occa::memory o_EToB;
+  int NBCTypes;
+  memory<int> BCType;
+  memory<int> EToB;
+  deviceMemory<int> o_EToB;
 
   int allNeumann;
   dfloat allNeumannPenalty;
   dfloat allNeumannScale;
 
-  occa::kernel maskKernel;
-  occa::kernel partialAxKernel;
-  occa::kernel partialGradientKernel;
-  occa::kernel partialIpdgKernel;
+  kernel_t maskKernel;
+  kernel_t partialAxKernel;
+  kernel_t partialGradientKernel;
+  kernel_t partialIpdgKernel;
 
-  elliptic_t() = delete;
+  elliptic_t() = default;
   elliptic_t(platform_t &_platform, mesh_t &_mesh,
-              settings_t& _settings, dfloat _lambda):
-    solver_t(_platform, _settings), mesh(_mesh),
-    linAlg(_platform.linAlg), lambda(_lambda) {}
-
-  ~elliptic_t();
+              settings_t& _settings, dfloat _lambda,
+              const int _NBCTypes, const memory<int> _BCType) {
+    Setup(_platform, _mesh, _settings, _lambda, _NBCTypes, _BCType);
+  }
 
   //setup
-  static elliptic_t& Setup(platform_t& platform, mesh_t& mesh,
-                           ellipticSettings_t& settings, dfloat lambda,
-                           const int NBCTypes, const int *BCType);
+  void Setup(platform_t& _platform, mesh_t& _mesh,
+             settings_t& _settings, dfloat _lambda,
+             const int _NBCTypes, const memory<int> _BCType);
 
   void BoundarySetup();
 
   void Run();
 
-  int Solve(linearSolver_t& linearSolver, occa::memory &o_x, occa::memory &o_r,
+  int Solve(linearSolver_t& linearSolver, deviceMemory<dfloat> &o_x, deviceMemory<dfloat> &o_r,
             const dfloat tol, const int MAXIT, const int verbose);
 
-  void PlotFields(dfloat* Q, char *fileName);
+  void PlotFields(memory<dfloat>& Q, std::string fileName);
 
-  void Operator(occa::memory& o_q, occa::memory& o_Aq);
+  void Operator(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_Aq);
 
   void BuildOperatorMatrixIpdg(parAlmond::parCOO& A);
   void BuildOperatorMatrixContinuous(parAlmond::parCOO& A);
@@ -141,27 +146,27 @@ public:
   void BuildOperatorMatrixIpdgTet3D(parAlmond::parCOO& A);
   void BuildOperatorMatrixIpdgHex3D(parAlmond::parCOO& A);
 
-  void BuildOperatorDiagonal(dfloat *diagA);
+  void BuildOperatorDiagonal(memory<dfloat>& diagA);
 
-  void BuildOperatorDiagonalContinuousTri2D(dfloat *diagA);
-  void BuildOperatorDiagonalContinuousTri3D(dfloat *diagA);
-  void BuildOperatorDiagonalContinuousQuad2D(dfloat *diagA);
-  void BuildOperatorDiagonalContinuousQuad3D(dfloat *diagA);
-  void BuildOperatorDiagonalContinuousTet3D(dfloat *diagA);
-  void BuildOperatorDiagonalContinuousHex3D(dfloat *diagA);
+  void BuildOperatorDiagonalContinuousTri2D(memory<dfloat>& diagA);
+  void BuildOperatorDiagonalContinuousTri3D(memory<dfloat>& diagA);
+  void BuildOperatorDiagonalContinuousQuad2D(memory<dfloat>& diagA);
+  void BuildOperatorDiagonalContinuousQuad3D(memory<dfloat>& diagA);
+  void BuildOperatorDiagonalContinuousTet3D(memory<dfloat>& diagA);
+  void BuildOperatorDiagonalContinuousHex3D(memory<dfloat>& diagA);
 
-  void BuildOperatorDiagonalIpdgTri2D(dfloat *diagA);
-  void BuildOperatorDiagonalIpdgTri3D(dfloat *diagA);
-  void BuildOperatorDiagonalIpdgQuad2D(dfloat *diagA);
-  void BuildOperatorDiagonalIpdgQuad3D(dfloat *diagA);
-  void BuildOperatorDiagonalIpdgTet3D(dfloat *diagA);
-  void BuildOperatorDiagonalIpdgHex3D(dfloat *diagA);
+  void BuildOperatorDiagonalIpdgTri2D(memory<dfloat>& diagA);
+  void BuildOperatorDiagonalIpdgTri3D(memory<dfloat>& diagA);
+  void BuildOperatorDiagonalIpdgQuad2D(memory<dfloat>& diagA);
+  void BuildOperatorDiagonalIpdgQuad3D(memory<dfloat>& diagA);
+  void BuildOperatorDiagonalIpdgTet3D(memory<dfloat>& diagA);
+  void BuildOperatorDiagonalIpdgHex3D(memory<dfloat>& diagA);
 
-  elliptic_t& SetupNewDegree(mesh_t& meshF);
+  elliptic_t SetupNewDegree(mesh_t& meshF);
 
-  elliptic_t* SetupRingPatch(mesh_t& meshPatch);
+  elliptic_t SetupRingPatch(mesh_t& meshPatch);
 
-  void ZeroMean(occa::memory &o_q);
+  void ZeroMean(deviceMemory<dfloat> &o_q);
 };
 
 

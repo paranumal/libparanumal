@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -36,53 +36,54 @@ SOFTWARE.
 
 #define DACOUSTICS LIBP_DIR"/solvers/acoustics/"
 
+using namespace libp;
+
 class acousticsSettings_t: public settings_t {
 public:
-  acousticsSettings_t(MPI_Comm& _comm);
+  acousticsSettings_t(comm_t _comm);
   void report();
   void parseFromFile(platformSettings_t& platformSettings,
                      meshSettings_t& meshSettings,
-                     const string filename);
+                     const std::string filename);
 };
 
 class acoustics_t: public solver_t {
 public:
-  mesh_t &mesh;
+  mesh_t mesh;
 
   int Nfields;
 
-  TimeStepper::timeStepper_t* timeStepper;
+  timeStepper_t timeStepper;
 
-  halo_t* traceHalo;
+  ogs::halo_t traceHalo;
 
-  dfloat *q;
-  occa::memory o_q;
+  memory<dfloat> q;
+  deviceMemory<dfloat> o_q;
 
-  occa::memory o_Mq;
+  deviceMemory<dfloat> o_Mq;
 
-  occa::kernel volumeKernel;
-  occa::kernel surfaceKernel;
+  kernel_t volumeKernel;
+  kernel_t surfaceKernel;
 
-  occa::kernel initialConditionKernel;
+  kernel_t initialConditionKernel;
 
-  acoustics_t() = delete;
+  acoustics_t() = default;
   acoustics_t(platform_t &_platform, mesh_t &_mesh,
-              acousticsSettings_t& _settings):
-    solver_t(_platform, _settings), mesh(_mesh) {}
-
-  ~acoustics_t();
+              acousticsSettings_t& _settings) {
+    Setup(_platform, _mesh, _settings);
+  }
 
   //setup
-  static acoustics_t& Setup(platform_t& platform, mesh_t& mesh,
-                            acousticsSettings_t& settings);
+  void Setup(platform_t& _platform, mesh_t& _mesh,
+             acousticsSettings_t& _settings);
 
   void Run();
 
   void Report(dfloat time, int tstep);
 
-  void PlotFields(dfloat* Q, char *fileName);
+  void PlotFields(memory<dfloat> Q, const std::string fileName);
 
-  void rhsf(occa::memory& o_q, occa::memory& o_rhs, const dfloat time);
+  void rhsf(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
 
   dfloat MaxWaveSpeed();
 };

@@ -2,7 +2,7 @@
 
   The MIT License (MIT)
 
-  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -108,7 +108,7 @@ void lbs_t::PmlSetup(){
     int pmlNp = (pmlcubature) ? mesh.cubNp : mesh.Np;
     int pmlNq = (pmlcubature) ? mesh.cubNq : mesh.Nq;
 
-    dfloat *pmlr, *pmls, *pmlt;
+    memory<dfloat> pmlr, pmls, pmlt;
     if(pmlcubature){
       pmlr = mesh.cubr;
       pmls = mesh.cubs;
@@ -121,27 +121,27 @@ void lbs_t::PmlSetup(){
 
     // printf("Setting PML Coefficient \n");
     //set up damping parameter
-    pmlSigma = (dfloat *) calloc(mesh.dim*mesh.NpmlElements*pmlNp,sizeof(dfloat));
+    pmlSigma.malloc(mesh.dim*mesh.NpmlElements*pmlNp);
 
     for (dlong m=0;m<mesh.NpmlElements;m++){
       dlong e     = mesh.pmlElements[m];
       hlong type  = mesh.elementInfo[e];
 
       //element vertices
-      const dfloat *xe = mesh.EX + e*mesh.Nverts;
-      const dfloat *ye = mesh.EY + e*mesh.Nverts;
-      const dfloat *ze = mesh.EZ + e*mesh.Nverts;
+      memory<dfloat> xe = mesh.EX + e*mesh.Nverts;
+      memory<dfloat> ye = mesh.EY + e*mesh.Nverts;
+      memory<dfloat> ze = mesh.EZ + e*mesh.Nverts;
 
       for(int n=0;n<pmlNp;++n){ /* for each node */
         dfloat x  = 0, y  = 0, z  = 0;
         dfloat rn = 0, sn = 0, tn = 0;
-        if(mesh.elementType==TRIANGLES){
+        if(mesh.elementType==Mesh::TRIANGLES){
           rn = pmlr[n];
           sn = pmls[n];
 
           x = -0.5*(rn+sn)*xe[0] + 0.5*(1+rn)*xe[1] + 0.5*(1+sn)*xe[2];
           y = -0.5*(rn+sn)*ye[0] + 0.5*(1+rn)*ye[1] + 0.5*(1+sn)*ye[2];
-        } else if(mesh.elementType==QUADRILATERALS){
+        } else if(mesh.elementType==Mesh::QUADRILATERALS){
           const int i = n%pmlNq;
           const int j = n/pmlNq;
           rn = pmlr[i];
@@ -149,7 +149,7 @@ void lbs_t::PmlSetup(){
 
           x =  0.25*( (1.0-rn)*(1-sn)*xe[0]+(1.0-rn)*(1+sn)*xe[1]+(1.0+rn)*(1+sn)*xe[2]+(1.0+rn)*(1-sn)*xe[3]);
           y =  0.25*( (1.0-rn)*(1-sn)*ye[0]+(1.0-rn)*(1+sn)*ye[1]+(1.0+rn)*(1+sn)*ye[2]+(1.0+rn)*(1-sn)*ye[3]);
-        } else if(mesh.elementType==TETRAHEDRA){
+        } else if(mesh.elementType==Mesh::TETRAHEDRA){
           rn = pmlr[n];
           sn = pmls[n];
           tn = pmlt[n];
@@ -157,7 +157,7 @@ void lbs_t::PmlSetup(){
           x = -0.5*(rn+sn+tn+1)*xe[0] + 0.5*(1+rn)*xe[1] + 0.5*(1+sn)*xe[2] + 0.5*(tn+1)*xe[3];
           y = -0.5*(rn+sn+tn+1)*ye[0] + 0.5*(1+rn)*ye[1] + 0.5*(1+sn)*ye[2] + 0.5*(tn+1)*ye[3];
           z = -0.5*(rn+sn+tn+1)*ze[0] + 0.5*(1+rn)*ze[1] + 0.5*(1+sn)*ze[2] + 0.5*(tn+1)*ze[3];
-        } else if(mesh.elementType==HEXAHEDRA){
+        } else if(mesh.elementType==Mesh::HEXAHEDRA){
           const int i = n%pmlNq;
           const int j = (n/pmlNq)%pmlNq;
           const int k = (n/pmlNq)/pmlNq;
@@ -237,6 +237,6 @@ void lbs_t::PmlSetup(){
 
     // printf("# of PML elements: %d and # of Non-PML elements: %d \n",mesh.NpmlElements, mesh.Nelements-mesh.NpmlElements);
     if (mesh.NpmlElements)
-      o_pmlSigma = platform.malloc(mesh.dim*mesh.NpmlElements*pmlNp*sizeof(dfloat),pmlSigma);
+      o_pmlSigma = platform.malloc<dfloat>(pmlSigma);
   }
 }

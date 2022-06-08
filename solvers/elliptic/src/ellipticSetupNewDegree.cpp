@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,44 +27,31 @@ SOFTWARE.
 #include "elliptic.hpp"
 #include "ellipticPrecon.hpp"
 
-elliptic_t& elliptic_t::SetupNewDegree(mesh_t& meshC){
+elliptic_t elliptic_t::SetupNewDegree(mesh_t& meshC){
 
   //if asking for the same degree, return the original solver
   if (meshC.N == mesh.N) return *this;
 
-  elliptic_t* elliptic = new elliptic_t(platform, meshC, settings, lambda);
-
   //shallow copy
-  elliptic->Nfields = Nfields;
-  elliptic->lambda = lambda;
+  elliptic_t elliptic = *this;
 
-  elliptic->disc_ipdg = disc_ipdg;
-  elliptic->disc_c0 = disc_c0;
-
-  elliptic->grad = grad;
-  elliptic->o_grad = o_grad;
-
-  elliptic->o_AqL = o_AqL;
-
-  elliptic->BCType = BCType;
-
-  elliptic->maskKernel = maskKernel;
+  elliptic.mesh = meshC;
 
   /*setup trace halo exchange */
-  elliptic->traceHalo = meshC.HaloTraceSetup(elliptic->Nfields);
+  elliptic.traceHalo = meshC.HaloTraceSetup(Nfields);
 
   //setup boundary flags and make mask and masked ogs
-  elliptic->BoundarySetup();
+  elliptic.BoundarySetup();
 
   //tau (penalty term in IPDG)
   if (settings.compareSetting("DISCRETIZATION","IPDG")) {
-    if (meshC.elementType==TRIANGLES ||
-        meshC.elementType==QUADRILATERALS){
-      elliptic->tau = 2.0*(meshC.N+1)*(meshC.N+2)/2.0;
+    if (meshC.elementType==Mesh::TRIANGLES ||
+        meshC.elementType==Mesh::QUADRILATERALS){
+      elliptic.tau = 2.0*(meshC.N+1)*(meshC.N+2)/2.0;
       if(meshC.dim==3)
-        elliptic->tau *= 1.5;
+        elliptic.tau *= 1.5;
     } else
-      elliptic->tau = 2.0*(meshC.N+1)*(meshC.N+3);
+      elliptic.tau = 2.0*(meshC.N+1)*(meshC.N+3);
 
     //buffer for gradient (Reuse the original buffer)
     // dlong Ntotal = meshC.Np*(meshC.Nelements+meshC.totalHaloPairs);
@@ -73,78 +60,83 @@ elliptic_t& elliptic_t::SetupNewDegree(mesh_t& meshC){
   }
 
   // OCCA build stuff
-  occa::properties kernelInfo = meshC.props; //copy base occa properties
+  properties_t kernelInfo = meshC.props; //copy base occa properties
 
   // set kernel name suffix
-  char *suffix;
-  if(meshC.elementType==TRIANGLES){
+  std::string suffix;
+  if(meshC.elementType==Mesh::TRIANGLES){
     if(meshC.dim==2)
-      suffix = strdup("Tri2D");
+      suffix = "Tri2D";
     else
-      suffix = strdup("Tri3D");
-  } else if(meshC.elementType==QUADRILATERALS){
+      suffix = "Tri3D";
+  } else if(meshC.elementType==Mesh::QUADRILATERALS){
     if(meshC.dim==2)
-      suffix = strdup("Quad2D");
+      suffix = "Quad2D";
     else
-      suffix = strdup("Quad3D");
-  } else if(meshC.elementType==TETRAHEDRA)
-    suffix = strdup("Tet3D");
-  else if(meshC.elementType==HEXAHEDRA)
-    suffix = strdup("Hex3D");
+      suffix = "Quad3D";
+  } else if(meshC.elementType==Mesh::TETRAHEDRA)
+    suffix = "Tet3D";
+  else if(meshC.elementType==Mesh::HEXAHEDRA)
+    suffix = "Hex3D";
 
-  char fileName[BUFSIZ], kernelName[BUFSIZ];
+  std::string oklFilePrefix = DELLIPTIC "/okl/";
+  std::string oklFileSuffix = ".okl";
+
+  std::string fileName, kernelName;
 
   //add standard boundary functions
-  char *boundaryHeaderFileName;
+  std::string boundaryHeaderFileName;
   if (meshC.dim==2)
-    boundaryHeaderFileName = strdup(DELLIPTIC "/data/ellipticBoundary2D.h");
+    boundaryHeaderFileName = std::string(DELLIPTIC "/data/ellipticBoundary2D.h");
   else if (meshC.dim==3)
-    boundaryHeaderFileName = strdup(DELLIPTIC "/data/ellipticBoundary3D.h");
+    boundaryHeaderFileName = std::string(DELLIPTIC "/data/ellipticBoundary3D.h");
   kernelInfo["includes"] += boundaryHeaderFileName;
 
   int blockMax = 256;
   if (platform.device.mode() == "CUDA") blockMax = 512;
 
-  int NblockV = mymax(1,blockMax/meshC.Np);
+  int NblockV = std::max(1,blockMax/meshC.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;
 
   // Ax kernel
   if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
-    sprintf(fileName,  DELLIPTIC "/okl/ellipticAx%s.okl", suffix);
-    if(meshC.elementType==HEXAHEDRA){
+    fileName   = oklFilePrefix + "ellipticAx" + suffix + oklFileSuffix;
+    if(meshC.elementType==Mesh::HEXAHEDRA){
       if(mesh.settings.compareSetting("ELEMENT MAP", "TRILINEAR"))
-        sprintf(kernelName, "ellipticPartialAxTrilinear%s", suffix);
+        kernelName = "ellipticPartialAxTrilinear" + suffix;
       else
-        sprintf(kernelName, "ellipticPartialAx%s", suffix);
+        kernelName = "ellipticPartialAx" + suffix;
     } else{
-      sprintf(kernelName, "ellipticPartialAx%s", suffix);
+      kernelName = "ellipticPartialAx" + suffix;
     }
 
-    elliptic->partialAxKernel = platform.buildKernel(fileName, kernelName,
+    elliptic.partialAxKernel = platform.buildKernel(fileName, kernelName,
                                             kernelInfo);
 
   } else if (settings.compareSetting("DISCRETIZATION","IPDG")) {
-    int Nmax = mymax(meshC.Np, meshC.Nfaces*meshC.Nfp);
+    int Nmax = std::max(meshC.Np, meshC.Nfaces*meshC.Nfp);
     kernelInfo["defines/" "p_Nmax"]= Nmax;
 
-    sprintf(fileName, DELLIPTIC "/okl/ellipticGradient%s.okl", suffix);
-    sprintf(kernelName, "ellipticPartialGradient%s", suffix);
-    elliptic->partialGradientKernel = platform.buildKernel(fileName, kernelName,
+    fileName   = oklFilePrefix + "ellipticGradient" + suffix + oklFileSuffix;
+    kernelName = "ellipticPartialGradient" + suffix;
+    elliptic.partialGradientKernel = platform.buildKernel(fileName, kernelName,
                                                   kernelInfo);
 
-    sprintf(fileName, DELLIPTIC "/okl/ellipticAxIpdg%s.okl", suffix);
-    sprintf(kernelName, "ellipticPartialAxIpdg%s", suffix);
-    elliptic->partialIpdgKernel = platform.buildKernel(fileName, kernelName,
+    fileName   = oklFilePrefix + "ellipticAxIpdg" + suffix + oklFileSuffix;
+    kernelName = "ellipticPartialAxIpdg" + suffix;
+    elliptic.partialIpdgKernel = platform.buildKernel(fileName, kernelName,
                                               kernelInfo);
   }
 
   if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
-    elliptic->Ndofs = elliptic->ogsMasked->Ngather*elliptic->Nfields;
+    elliptic.Ndofs = elliptic.ogsMasked.Ngather*Nfields;
+    elliptic.Nhalo = elliptic.gHalo.Nhalo*Nfields;
   } else {
-    elliptic->Ndofs = meshC.Nelements*meshC.Np*elliptic->Nfields;
+    elliptic.Ndofs = meshC.Nelements*meshC.Np*Nfields;
+    elliptic.Nhalo = meshC.totalHaloPairs*meshC.Np*Nfields;
   }
 
-  elliptic->precon = NULL;
+  elliptic.precon = precon_t();
 
-  return *elliptic;
+  return elliptic;
 }

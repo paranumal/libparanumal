@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Anthony Austin
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,25 +26,33 @@ SOFTWARE.
 
 #include "linearSolver.hpp"
 
-//virtual base linear solver class
-linearSolver_t* linearSolver_t::Setup(dlong N, dlong Nhalo,
-                               platform_t& platform, settings_t& settings, MPI_Comm comm) {
+namespace libp {
 
-  linearSolver_t *linearSolver=NULL;
+int linearSolver_t::Solve(operator_t& linearOperator,
+                          operator_t& precon,
+                          deviceMemory<dfloat>& o_x,
+                          deviceMemory<dfloat>& o_rhs,
+                          const dfloat tol,
+                          const int MAXIT,
+                          const int verbose) {
+  assertInitialized();
+  ig->FormInitialGuess(o_x, o_rhs);
+  int iters = ls->Solve(linearOperator, precon, o_x, o_rhs, tol, MAXIT, verbose);
+  ig->Update(linearOperator, o_x, o_rhs);
 
-  if (settings.compareSetting("LINEAR SOLVER","NBPCG")){
-    linearSolver = new nbpcg(N, Nhalo, platform, settings, comm);
-  } else if (settings.compareSetting("LINEAR SOLVER","NBFPCG")){
-    linearSolver = new nbfpcg(N, Nhalo, platform, settings, comm);
-  } else if (settings.compareSetting("LINEAR SOLVER","PCG")){
-    linearSolver = new pcg(N, Nhalo, platform, settings, comm);
-  } else if (settings.compareSetting("LINEAR SOLVER","PGMRES")){
-    linearSolver = new pgmres(N, Nhalo, platform, settings, comm);
-  } else if (settings.compareSetting("LINEAR SOLVER","PMINRES")){
-    linearSolver = new pminres(N, Nhalo, platform, settings, comm);
-  } else {
-    LIBP_ABORT(string("Requested LINEAR SOLVER not found."));
-  }
-
-  return linearSolver;
+  return iters;
 }
+
+void linearSolver_t::MakeDefaultInitialGuessStrategy() {
+  ig = std::make_shared<InitialGuess::Default>(ls->N, ls->platform,
+                                               ls->settings, ls->comm);
+}
+
+void linearSolver_t::assertInitialized() {
+  LIBP_ABORT("LinearSolver not initialized",
+             ls==nullptr);
+  LIBP_ABORT("InitialGuess not initialized",
+             ig==nullptr);
+}
+
+} //namespace libp

@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -28,7 +28,7 @@ SOFTWARE.
 
 
 // Matrix-free p-Multigrid levels followed by AMG
-void MultiGridPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
+void MultiGridPrecon::Operator(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_Mr) {
 
   //just pass to parAlmond
   parAlmond.Operator(o_r, o_Mr);
@@ -46,37 +46,38 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   int NpFine   = mesh.Np;
   int NpCoarse = mesh.Np;
 
-  MGLevel* prevLevel=nullptr;
-  MGLevel* currLevel=nullptr;
-
   while(Nc>1) {
+    if (Comm::World().rank()==0){
+      printf("-----------------------------Multigrid pMG Degree %2d----------------------------------------\n", Nc);
+    }
     //build mesh and elliptic objects for this degree
-    mesh_t &meshF = mesh.SetupNewDegree(Nf);
-    elliptic_t &ellipticF = elliptic.SetupNewDegree(meshF);
+    mesh_t meshF = mesh.SetupNewDegree(Nf);
+    elliptic_t ellipticF = elliptic.SetupNewDegree(meshF);
 
     //share masking data with previous MG level
-    if (prevLevel) {
-      prevLevel->meshC = &meshF;
-      prevLevel->ogsMaskedC = ellipticF.ogsMasked;
+    if (parAlmond.NumLevels()>0) {
+      MGLevel& prevLevel = parAlmond.GetLevel<MGLevel>(parAlmond.NumLevels()-1);
+      prevLevel.meshC = meshF;
+      prevLevel.ellipticC = ellipticF;
     }
 
     //find the degree of the next level
     if (settings.compareSetting("MULTIGRID COARSENING","ALLDEGREES")) {
       Nc = Nf-1;
     } else if (settings.compareSetting("MULTIGRID COARSENING","HALFDEGREES")) {
-      Nc = mymax(1,(Nf+1)/2);
+      Nc = std::max(1,(Nf+1)/2);
     } else { //default "HALFDOFS"
       // pick the degrees so the dofs of each level halfs (roughly)
       while (NpCoarse > NpFine/2 && Nc>1) {
         Nc--;
         switch(mesh.elementType){
-          case TRIANGLES:
+          case Mesh::TRIANGLES:
             NpCoarse = ((Nc+1)*(Nc+2))/2; break;
-          case QUADRILATERALS:
+          case Mesh::QUADRILATERALS:
             NpCoarse = (Nc+1)*(Nc+1); break;
-          case TETRAHEDRA:
+          case Mesh::TETRAHEDRA:
             NpCoarse = ((Nc+1)*(Nc+2)*(Nc+3))/6; break;
-          case HEXAHEDRA:
+          case Mesh::HEXAHEDRA:
             NpCoarse = (Nc+1)*(Nc+1)*(Nc+1); break;
         }
       }
@@ -84,45 +85,50 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
 
     //set Npcoarse
     switch(mesh.elementType){
-      case TRIANGLES:
+      case Mesh::TRIANGLES:
         NpCoarse = ((Nc+1)*(Nc+2))/2; break;
-      case QUADRILATERALS:
+      case Mesh::QUADRILATERALS:
         NpCoarse = (Nc+1)*(Nc+1); break;
-      case TETRAHEDRA:
+      case Mesh::TETRAHEDRA:
         NpCoarse = ((Nc+1)*(Nc+2)*(Nc+3))/6; break;
-      case HEXAHEDRA:
+      case Mesh::HEXAHEDRA:
         NpCoarse = (Nc+1)*(Nc+1)*(Nc+1); break;
     }
 
     dlong Nrows, Ncols;
     if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
-      Nrows = ellipticF.ogsMasked->Ngather;
-      Ncols = Nrows + ellipticF.ogsMasked->NgatherHalo;
+      Nrows = ellipticF.ogsMasked.Ngather;
+      Ncols = Nrows + ellipticF.gHalo.Nhalo;
     } else {
       Nrows = meshF.Nelements*meshF.Np;
       Ncols = Nrows + meshF.totalHaloPairs*mesh.Np;
     }
 
-    //make a multigrid level
-    currLevel = new MGLevel(ellipticF, Nrows, Ncols, Nc, NpCoarse);
-    parAlmond.AddLevel(currLevel);
+    //Add a multigrid level
+    parAlmond.AddLevel<MGLevel>(ellipticF, Nrows, Ncols, Nc, NpCoarse);
 
     Nf = Nc;
     NpFine = NpCoarse;
-    prevLevel = currLevel;
   }
 
   //build matrix at degree 1
-  mesh_t &meshF = mesh.SetupNewDegree(1);
-  elliptic_t &ellipticF = elliptic.SetupNewDegree(meshF);
+  if (Comm::World().rank()==0){
+    printf("-----------------------------Multigrid pMG Degree  1----------------------------------------\n");
+  }
+  mesh_t meshF = mesh.SetupNewDegree(1);
+  elliptic_t ellipticF = elliptic.SetupNewDegree(meshF);
 
   //share masking data with previous MG level
-  if (prevLevel) {
-    prevLevel->meshC = &meshF;
-    prevLevel->ogsMaskedC = ellipticF.ogsMasked;
+  if (parAlmond.NumLevels()>0) {
+    MGLevel& prevLevel = parAlmond.GetLevel<MGLevel>(parAlmond.NumLevels()-1);
+    prevLevel.meshC = meshF;
+    prevLevel.ellipticC = ellipticF;
   }
 
   //build full A matrix and pass to parAlmond
+  if (Comm::World().rank()==0){
+    printf("-----------------------------Multigrid AMG Setup--------------------------------------------\n");
+  }
   parAlmond::parCOO A(elliptic.platform, mesh.comm);
   if (settings.compareSetting("DISCRETIZATION", "IPDG"))
     ellipticF.BuildOperatorMatrixIpdg(A);
@@ -133,13 +139,15 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   int rank = mesh.rank;
   int size = mesh.size;
   hlong TotalRows = A.globalRowStarts[size];
-  dlong numLocalRows = (dlong) (A.globalRowStarts[rank+1]-A.globalRowStarts[rank]);
-  dfloat *null = (dfloat *) malloc(numLocalRows*sizeof(dfloat));
-  for (dlong i=0;i<numLocalRows;i++) null[i] = 1.0/sqrt(TotalRows);
+  dlong numLocalRows = static_cast<dlong>(A.globalRowStarts[rank+1]-A.globalRowStarts[rank]);
+
+  memory<dfloat> null(numLocalRows);
+  for (dlong i=0;i<numLocalRows;i++) {
+    null[i] = 1.0/sqrt(TotalRows);
+  }
 
   //set up AMG levels (treating the N=1 level as a matrix level)
   parAlmond.AMGSetup(A, elliptic.allNeumann, null, elliptic.allNeumannPenalty);
-  free(null);
 
   //report
   parAlmond.Report();

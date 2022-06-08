@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +25,7 @@ SOFTWARE.
 */
 
 @kernel void advectionMaxWaveSpeedQuad2D(const dlong Nelements,
-                                  @restrict const  dfloat *  vgeo,
+                                  @restrict const  dfloat *  wJ,
                                   @restrict const  dfloat *  sgeo,
                                   @restrict const  dlong  *  vmapM,
                                   @restrict const  int    *  EToB,
@@ -52,7 +52,7 @@ SOFTWARE.
       #pragma unroll p_Nq
       for(int j=0;j<p_Nq;++j){
         //sum jacobians to find element volume
-        s_J[i] += vgeo[p_Nvgeo*p_Np*e + j*p_Nq+i + p_Np*p_JWID];
+        s_J[i] += wJ[p_Np*e + j*p_Nq+i];
 
         //find max wavespeed
         const dlong id = e*p_Np+j*p_Nq+i;

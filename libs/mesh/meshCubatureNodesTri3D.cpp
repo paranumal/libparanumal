@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,13 +25,14 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh3D.hpp"
 
-void meshTri3D::CubatureNodes(){
+namespace libp {
 
-  cubx = (dfloat*) calloc(Nelements*cubNp,sizeof(dfloat));
-  cuby = (dfloat*) calloc(Nelements*cubNp,sizeof(dfloat));
-  cubz = (dfloat*) calloc(Nelements*cubNp,sizeof(dfloat));
+void mesh_t::CubaturePhysicalNodesTri3D(){
+
+  cubx.malloc(Nelements*cubNp);
+  cuby.malloc(Nelements*cubNp);
+  cubz.malloc(Nelements*cubNp);
 
   dlong cnt = 0;
   for(dlong e=0;e<Nelements;++e){ /* for each element */
@@ -70,14 +71,14 @@ void meshTri3D::CubatureNodes(){
     }
   }
 
-  o_cubx = platform.malloc(Nelements*cubNp*sizeof(dfloat), cubx);
-  o_cuby = platform.malloc(Nelements*cubNp*sizeof(dfloat), cuby);
-  o_cubz = platform.malloc(Nelements*cubNp*sizeof(dfloat), cubz);
+  o_cubx = platform.malloc<dfloat>(Nelements*cubNp, cubx);
+  o_cuby = platform.malloc<dfloat>(Nelements*cubNp, cuby);
+  o_cubz = platform.malloc<dfloat>(Nelements*cubNp, cubz);
 
   //Face cubature
-  intx = (dfloat*) calloc(Nelements*Nfaces*intNfp, sizeof(dfloat));
-  inty = (dfloat*) calloc(Nelements*Nfaces*intNfp, sizeof(dfloat));
-  intz = (dfloat*) calloc(Nelements*Nfaces*intNfp, sizeof(dfloat));
+  intx.malloc(Nelements*Nfaces*intNfp);
+  inty.malloc(Nelements*Nfaces*intNfp);
+  intz.malloc(Nelements*Nfaces*intNfp);
   for(dlong e=0;e<Nelements;++e){
     for(int f=0;f<Nfaces;++f){
       for(int n=0;n<intNfp;++n){
@@ -102,7 +103,9 @@ void meshTri3D::CubatureNodes(){
     }
   }
 
-  o_intx = platform.malloc(Nelements*Nfaces*intNfp*sizeof(dfloat), intx);
-  o_inty = platform.malloc(Nelements*Nfaces*intNfp*sizeof(dfloat), inty);
-  o_intz = platform.malloc(Nelements*Nfaces*intNfp*sizeof(dfloat), intz);
+  o_intx = platform.malloc<dfloat>(Nelements*Nfaces*intNfp, intx);
+  o_inty = platform.malloc<dfloat>(Nelements*Nfaces*intNfp, inty);
+  o_intz = platform.malloc<dfloat>(Nelements*Nfaces*intNfp, intz);
 }
+
+} //namespace libp

@@ -2,7 +2,7 @@
 
   The MIT License (MIT)
 
-  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -26,11 +26,11 @@
 
 // Compute Gradient in Strong Form
 @kernel void insDivergenceVolumeQuad3D(const dlong Nelements,
-				       @restrict const  dfloat *  vgeo,
-				       @restrict const  dfloat *  D,
-				       const dlong offset,
-				       @restrict const  dfloat *  U,
-				       @restrict dfloat *  divU){
+                                       @restrict const  dfloat *  vgeo,
+                                       @restrict const  dfloat *  D,
+                                       const dlong offset,
+                                       @restrict const  dfloat *  U,
+                                       @restrict dfloat *  divU){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
@@ -39,31 +39,30 @@
     @shared dfloat s_W[p_NblockV][p_Nq][p_Nq];
     @shared dfloat s_D[p_Nq][p_Nq];
 
-    for(int es=0;es<p_NblockV;++es;@inner(2)){   
-      for(int j=0;j<p_Nq;++j;@inner(1)){ 
-        for(int i=0;i<p_Nq;++i;@inner(0)){    
+    for(int es=0;es<p_NblockV;++es;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
           const dlong e = eo+es; // element in block
-          if(e<Nelements){ 
+          if(e<Nelements){
             const dlong id = e*p_Np + j*p_Nq+i;
-            
+
             s_U[es][j][i] = U[id+0*offset];
             s_V[es][j][i] = U[id+1*offset];
             s_W[es][j][i] = U[id+2*offset];
-	  }
-	  if (es==0)
-	    s_D[j][i] = D[j*p_Nq+i];
+          }
+          if (es==0)
+            s_D[j][i] = D[j*p_Nq+i];
         }
       }
     }
 
     // Make sure all node data is loaded into @shared
-    @barrier("local");
 
-    for(int es=0;es<p_NblockV;++es;@inner(2)){ 
-      for(int j=0;j<p_Nq;++j;@inner(1)){ 
-        for(int i=0;i<p_Nq;++i;@inner(0)){  
-          const dlong e = eo+es; 
-          if(e<Nelements){ 
+    for(int es=0;es<p_NblockV;++es;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
+          const dlong e = eo+es;
+          if(e<Nelements){
             const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
 
             const dfloat drdx = vgeo[gid + p_RXID*p_Np];
@@ -81,16 +80,16 @@
             dfloat dWdr  = 0.f, dWds  = 0.f;
 
 #pragma unroll p_Nq
-	    for(int n=0;n<p_Nq;++n){
-	      const dfloat Dr = s_D[i][n];
-	      const dfloat Ds = s_D[j][n];
-	      dUdr += Dr*s_U[es][j][n];
-	      dUds += Ds*s_U[es][n][i];
-	      dVdr += Dr*s_V[es][j][n];
-	      dVds += Ds*s_V[es][n][i];
-	      dWdr += Dr*s_W[es][j][n];
-	      dWds += Ds*s_W[es][n][i];
-	    }
+            for(int n=0;n<p_Nq;++n){
+              const dfloat Dr = s_D[i][n];
+              const dfloat Ds = s_D[j][n];
+              dUdr += Dr*s_U[es][j][n];
+              dUds += Ds*s_U[es][n][i];
+              dVdr += Dr*s_V[es][j][n];
+              dVds += Ds*s_V[es][n][i];
+              dWdr += Dr*s_W[es][j][n];
+              dWds += Ds*s_W[es][n][i];
+            }
 
             const dlong id = e*p_Np + j*p_Nq + i;
             // const dfloat dUdx = drdx*dUdr + dsdx*dUds + dtdx*s_U[es][j][i];
@@ -105,41 +104,41 @@
         }
       }
     }
-  }  
+  }
 }
 
 
 #define surfaceTerms(sk,face,i, j)                                      \
   {                                                                     \
-    const dlong idM = vmapM[sk];					\
-    const dlong idP = vmapP[sk];					\
+    const dlong idM = vmapM[sk];                                        \
+    const dlong idP = vmapP[sk];                                        \
                                                                         \
-    const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				\
-    const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				\
-    const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];				\
-    const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];				\
-    const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];			\
-    									\
+    const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                          \
+    const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                          \
+    const dfloat nz = sgeo[sk*p_Nsgeo+p_NZID];                          \
+    const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];                          \
+    const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];                      \
+                                                                        \
     const dfloat uM = U[idM+0*offset], vM = U[idM+1*offset], wM = U[idM+2*offset]; \
     dfloat uP = U[idP+0*offset], vP = U[idP+1*offset], wP = U[idP+2*offset]; \
-    									\
-    const dfloat sc = invWJ * sJ;					\
-    s_fluxU[es][j][i] += 0.5f*sc*(nx*(uP-uM) + ny*(vP-vM) + nz*(wP-wM));	\
+                                                                        \
+    const dfloat sc = invWJ * sJ;                                       \
+    s_fluxU[es][j][i] += 0.5f*sc*(nx*(uP-uM) + ny*(vP-vM) + nz*(wP-wM));        \
   }
 
 @kernel void insDivergenceSurfaceQuad3D(const dlong Nelements,
-					@restrict const  dfloat *  sgeo,
-					@restrict const  dfloat *  LIFTT,
-					@restrict const  dlong  *  vmapM,
-					@restrict const  dlong  *  vmapP,
-					@restrict const  int    *  EToB,
-					const dfloat time,
-					@restrict const  dfloat *  x,
-					@restrict const  dfloat *  y,
-					@restrict const  dfloat *  z,
-					const dlong offset,
-					@restrict const  dfloat *  U,
-					@restrict dfloat *  divU){
+                                        @restrict const  dfloat *  sgeo,
+                                        @restrict const  dfloat *  LIFTT,
+                                        @restrict const  dlong  *  vmapM,
+                                        @restrict const  dlong  *  vmapP,
+                                        @restrict const  int    *  EToB,
+                                        const dfloat time,
+                                        @restrict const  dfloat *  x,
+                                        @restrict const  dfloat *  y,
+                                        @restrict const  dfloat *  z,
+                                        const dlong offset,
+                                        @restrict const  dfloat *  U,
+                                        @restrict dfloat *  divU){
 
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
@@ -154,7 +153,6 @@
       }
     }
 
-    @barrier("local");
 
     // for all face nodes of all elements
     // face 0 & 2
@@ -171,7 +169,6 @@
       }
     }
 
-    @barrier("local");
 
     // face 1 & 3
     for(int es=0;es<p_NblockS;++es;@inner(1)){
@@ -187,7 +184,6 @@
       }
     }
 
-    @barrier("local");
 
     // for each node in the element
     for(int j=0;j<p_Nq;++j){

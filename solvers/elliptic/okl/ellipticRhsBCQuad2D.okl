@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,7 @@ SOFTWARE.
 */
 
 @kernel void ellipticRhsBCQuad2D(const dlong Nelements,
+                              @restrict const  dfloat *  wJ,
                               @restrict const  dfloat *  ggeo,
                               @restrict const  dfloat *  sgeo,
                               @restrict const  dfloat *  DT,
@@ -57,7 +58,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     // face 0 & 2
     for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -99,7 +99,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     // face 1 & 3
     for(int j=0;j<p_Nq;++j;@inner(0)){
@@ -141,15 +140,13 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     // loop over slabs
     for(int j=0;j<p_Nq;++j){
       for(int i=0;i<p_Nq;++i;@inner(0)){
         const dlong base = e*p_Nggeo*p_Np + j*p_Nq + i;
 
-        // assumes w*J built into G entries
-        r_GwJ[j] = ggeo[base+p_GWJID*p_Np];
+        r_GwJ[j] = wJ[e*p_Np + j*p_Nq + i];
 
         r_G00[j] = ggeo[base+p_G00ID*p_Np];
         r_G01[j] = ggeo[base+p_G01ID*p_Np];
@@ -171,7 +168,6 @@ SOFTWARE.
     }
 
     // r term ----->
-    @barrier("local");
 
     for(int j=0;j<p_Nq;++j){
       for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -179,7 +175,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     for(int j=0;j<p_Nq;++j){
       for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -194,7 +189,6 @@ SOFTWARE.
     }
 
     // s term ---->
-    @barrier("local");
 
     for(int j=0;j<p_Nq;++j){
       for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -202,7 +196,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     for(int j=0;j<p_Nq;++j){
       for(int i=0;i<p_Nq;++i;@inner(0)){

@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2020 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim WarburtonTim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,32 +25,34 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh3D.hpp"
+
+namespace libp {
 
 // ------------------------------------------------------------------------
 // TET 3D NODES
 // ------------------------------------------------------------------------
-void mesh_t::NodesTet3D(int _N, dfloat *_r, dfloat *_s, dfloat *_t){
-
-  int _Np = (_N+1)*(_N+2)*(_N+3)/6;
-
+void mesh_t::NodesTet3D(const int _N,
+                        memory<dfloat>& _r,
+                        memory<dfloat>& _s,
+                        memory<dfloat>& _t){
   EquispacedNodesTet3D(_N, _r, _s, _t); //make equispaced nodes on reference tet
-  WarpBlendTransformTet3D(_N, _Np, _r, _s, _t); //apply warp&blend transform
+  WarpBlendTransformTet3D(_N, _r, _s, _t); //apply warp&blend transform
 }
 
-void mesh_t::FaceNodesTet3D(int _N, dfloat *_r, dfloat *_s, dfloat *_t, int *_faceNodes){
-  int _Nfp = (_N+1)*(_N+2)/2;
-  int _Np = (_N+1)*(_N+2)*(_N+3)/6;
+void mesh_t::FaceNodesTet3D(const int _N,
+                            const memory<dfloat> _r,
+                            const memory<dfloat> _s,
+                            const memory<dfloat> _t,
+                            memory<int>& _faceNodes){
+  const int _Nfp = (_N+1)*(_N+2)/2;
+  const int _Np = (_N+1)*(_N+2)*(_N+3)/6;
 
   int cnt[4];
   for (int i=0;i<4;i++) cnt[i]=0;
 
-  dfloat deps = 1.;
-  while((1.+deps)>1.)
-    deps *= 0.5;
+  const dfloat NODETOL = 1.0e-5;
 
-  const dfloat NODETOL = 1000.*deps;
-
+  _faceNodes.malloc(4*_Nfp);
   for (int n=0;n<_Np;n++) {
     if(fabs(_t[n]+1)<NODETOL)
       _faceNodes[0*_Nfp+(cnt[0]++)] = n;
@@ -63,8 +65,12 @@ void mesh_t::FaceNodesTet3D(int _N, dfloat *_r, dfloat *_s, dfloat *_t, int *_fa
   }
 }
 
-void mesh_t::VertexNodesTet3D(int _N, dfloat *_r, dfloat *_s, dfloat *_t, int *_vertexNodes){
-  int _Np = (_N+1)*(_N+2)*(_N+3)/6;
+void mesh_t::VertexNodesTet3D(const int _N,
+                              const memory<dfloat> _r,
+                              const memory<dfloat> _s,
+                              const memory<dfloat> _t,
+                              memory<int>& _vertexNodes){
+  const int _Np = (_N+1)*(_N+2)*(_N+3)/6;
 
   dfloat deps = 1.;
   while((1.+deps)>1.)
@@ -72,6 +78,7 @@ void mesh_t::VertexNodesTet3D(int _N, dfloat *_r, dfloat *_s, dfloat *_t, int *_
 
   const dfloat NODETOL = 1000.*deps;
 
+  _vertexNodes.malloc(4);
   for(int n=0;n<_Np;++n){
     if( (_r[n]+1)*(_r[n]+1)+(_s[n]+1)*(_s[n]+1)+(_t[n]+1)*(_t[n]+1)<NODETOL)
       _vertexNodes[0] = n;
@@ -84,8 +91,148 @@ void mesh_t::VertexNodesTet3D(int _N, dfloat *_r, dfloat *_s, dfloat *_t, int *_
   }
 }
 
+/*Find a matching array between nodes on matching faces */
+void mesh_t::FaceNodeMatchingTet3D(const memory<dfloat> _r,
+                                   const memory<dfloat> _s,
+                                   const memory<dfloat> _t,
+                                   const memory<int> _faceNodes,
+                                   const memory<int> _faceVertices,
+                                   memory<int>& R){
+
+  const int _Nfaces = 4;
+  const int _Nverts = 4;
+  const int _NfaceVertices = 3;
+
+  const int _Nfp = _faceNodes.length()/_Nfaces;
+
+  const dfloat NODETOL = 1.0e-5;
+
+  dfloat V0[3][2] = {{-1.0,-1.0},{ 1.0,-1.0},{-1.0, 1.0}};
+  dfloat V1[3][2] = {{-1.0,-1.0},{-1.0, 1.0},{ 1.0,-1.0}};
+
+  dfloat EX0[_Nverts], EY0[_Nverts];
+  dfloat EX1[_Nverts], EY1[_Nverts];
+
+  memory<dfloat> x0(_Nfp);
+  memory<dfloat> y0(_Nfp);
+
+  memory<dfloat> x1(_Nfp);
+  memory<dfloat> y1(_Nfp);
+
+  R.malloc(_Nfaces*_Nfaces*_NfaceVertices*_Nfp);
+
+  for (int fM=0;fM<_Nfaces;fM++) {
+
+    for (int v=0;v<_Nverts;v++) {
+      EX0[v] = 0.0; EY0[v] = 0.0;
+    }
+    //setup top element with face fM on the bottom
+    for (int v=0;v<_NfaceVertices;v++) {
+      int fv = _faceVertices[fM*_NfaceVertices + v];
+      EX0[fv] = V0[v][0]; EY0[fv] = V0[v][1];
+    }
+
+    for(int n=0;n<_Nfp;++n){ /* for each face node */
+      const int fn = _faceNodes[fM*_Nfp+n];
+
+      /* (r,s,t) coordinates of interpolation nodes*/
+      dfloat rn = _r[fn];
+      dfloat sn = _s[fn];
+      dfloat tn = _t[fn];
+
+      /* physical coordinate of interpolation node */
+      x0[n] = -0.5*(1+rn+sn+tn)*EX0[0]
+             + 0.5*(1+rn)*EX0[1]
+             + 0.5*(1+sn)*EX0[2]
+             + 0.5*(1+tn)*EX0[3];
+      y0[n] = -0.5*(1+rn+sn+tn)*EY0[0]
+             + 0.5*(1+rn)*EY0[1]
+             + 0.5*(1+sn)*EY0[2]
+             + 0.5*(1+tn)*EY0[3];
+    }
+
+    for (int fP=0;fP<_Nfaces;fP++) { /*For each neighbor face */
+      for (int rot=0;rot<_NfaceVertices;rot++) { /* For each face rotation */
+        // Zero vertices
+        for (int v=0;v<_Nverts;v++) {
+          EX1[v] = 0.0; EY1[v] = 0.0;
+        }
+        //setup bottom element with face fP on the top
+        for (int v=0;v<_NfaceVertices;v++) {
+          int fv = _faceVertices[fP*_NfaceVertices + ((v+rot)%_NfaceVertices)];
+          EX1[fv] = V1[v][0]; EY1[fv] = V1[v][1];
+        }
+
+        for(int n=0;n<_Nfp;++n){ /* for each node */
+          const int fn = _faceNodes[fP*_Nfp+n];
+
+          /* (r,s,t) coordinates of interpolation nodes*/
+          dfloat rn = _r[fn];
+          dfloat sn = _s[fn];
+          dfloat tn = _t[fn];
+
+          /* physical coordinate of interpolation node */
+          x1[n] = -0.5*(1+rn+sn+tn)*EX1[0]
+                 + 0.5*(1+rn)*EX1[1]
+                 + 0.5*(1+sn)*EX1[2]
+                 + 0.5*(1+tn)*EX1[3];
+          y1[n] = -0.5*(1+rn+sn+tn)*EY1[0]
+                 + 0.5*(1+rn)*EY1[1]
+                 + 0.5*(1+sn)*EY1[2]
+                 + 0.5*(1+tn)*EY1[3];
+        }
+
+        /* for each node on this face find the neighbor node */
+        for(int n=0;n<_Nfp;++n){
+          const dfloat xM = x0[n];
+          const dfloat yM = y0[n];
+
+          int m=0;
+          for(;m<_Nfp;++m){ /* for each neighbor node */
+            const dfloat xP = x1[m];
+            const dfloat yP = y1[m];
+
+            /* distance between target and neighbor node */
+            const dfloat dist = pow(xM-xP,2) + pow(yM-yP,2);
+
+            /* if neighbor node is close to target, match */
+            if(dist<NODETOL){
+              R[fM*_Nfaces*_NfaceVertices*_Nfp
+                + fP*_NfaceVertices*_Nfp
+                + rot*_Nfp + n] = m;
+              break;
+            }
+          }
+
+          /*Check*/
+          const dfloat xP = x1[m];
+          const dfloat yP = y1[m];
+
+          /* distance between target and neighbor node */
+          const dfloat dist = pow(xM-xP,2) + pow(yM-yP,2);
+          //This shouldn't happen
+          LIBP_ABORT("Unable to match face node, face: " << fM
+                     << ", matching face: " << fP
+                     << ", rotation: " << rot
+                     << ", node: " << n
+                     << ". Is the reference node set not symmetric?",
+                     dist>NODETOL);
+        }
+      }
+    }
+  }
+}
+
 // Create equidistributed nodes on reference tet
-void mesh_t::EquispacedNodesTet3D(int _N, dfloat *_r, dfloat *_s, dfloat *_t){
+void mesh_t::EquispacedNodesTet3D(const int _N,
+                                  memory<dfloat>& _r,
+                                  memory<dfloat>& _s,
+                                  memory<dfloat>& _t){
+  const int _Np = (_N+1)*(_N+2)*(_N+3)/6;
+
+  _r.malloc(_Np);
+  _s.malloc(_Np);
+  _t.malloc(_Np);
 
   int sk = 0;
   for (int k=0;k<_N+1;k++) {
@@ -100,8 +247,11 @@ void mesh_t::EquispacedNodesTet3D(int _N, dfloat *_r, dfloat *_s, dfloat *_t){
   }
 }
 
-void mesh_t::EquispacedEToVTet3D(int _N, int *_EToV){
-  int _Nverts = 4;
+void mesh_t::EquispacedEToVTet3D(const int _N, memory<int>& _EToV){
+  const int _Nverts = 4;
+  const int _Nelements = _N*_N*_N;
+
+  _EToV.malloc(_Nelements*_Nverts);
 
   int cnt=0;
   int sk=0;
@@ -161,14 +311,16 @@ void mesh_t::EquispacedEToVTet3D(int _N, int *_EToV){
   }
 }
 
-void mesh_t::SEMFEMEToVTet3D(int _N, int *_EToV){
+void mesh_t::SEMFEMEToVTet3D(const int _N, memory<int>& _EToV){
   EquispacedEToVTet3D(_N, _EToV);
 }
 
 // ------------------------------------------------------------------------
 // ORTHONORMAL BASIS POLYNOMIALS
 // ------------------------------------------------------------------------
-void mesh_t::OrthonormalBasisTet3D(dfloat _r, dfloat _s, dfloat _t, int i, int j, int k, dfloat *P){
+void mesh_t::OrthonormalBasisTet3D(const dfloat _r, const dfloat _s, const dfloat _t,
+                                   const int i, const int j, const int k,
+                                   dfloat& P){
   // First convert to abc coordinates
   dfloat a, b, c;
   if(fabs(_s+_t)>1e-8)
@@ -187,11 +339,12 @@ void mesh_t::OrthonormalBasisTet3D(dfloat _r, dfloat _s, dfloat _t, int i, int j
   dfloat p2 = JacobiP(b,2*i+1,0,j);
   dfloat p3 = JacobiP(c,2*(i+j)+2,0,k);
 
-  *P = 2.*sqrt(2.0)*p1*p2*p3*pow(1.0-b,i)*pow(1.0-c,i+j);
+  P = 2.*sqrt(2.0)*p1*p2*p3*pow(1.0-b,i)*pow(1.0-c,i+j);
 }
 
-void mesh_t::GradOrthonormalBasisTet3D(dfloat _r, dfloat _s, dfloat _t,
-                                       int i, int j, int k, dfloat *Pr, dfloat *Ps, dfloat *Pt){
+void mesh_t::GradOrthonormalBasisTet3D(const dfloat _r, const dfloat _s, const dfloat _t,
+                                       const int i, const int j, const int k,
+                                       dfloat& Pr, dfloat& Ps, dfloat& Pt){
   // First convert to abc coordinates
   dfloat a, b, c;
   if(fabs(_s+_t)>1e-8)
@@ -214,48 +367,54 @@ void mesh_t::GradOrthonormalBasisTet3D(dfloat _r, dfloat _s, dfloat _t,
   dfloat p2b = GradJacobiP(b,2*i+1,0,j);
   dfloat p3c = GradJacobiP(c,2*(i+j)+2,0,k);
 
-  *Pr = p1a*p2*p3;
+  Pr = p1a*p2*p3;
   if(i>0)
-    *Pr *= pow(0.5*(1.0-b), i-1);
+    Pr *= pow(0.5*(1.0-b), i-1);
   if(i+j>0)
-    *Pr *= pow(0.5*(1.0-c), i+j-1);
+    Pr *= pow(0.5*(1.0-c), i+j-1);
 
-  *Ps = 0.5*(1.0+a)*(*Pr);
+  Ps = 0.5*(1.0+a)*(Pr);
   dfloat tmp = p2b*pow(0.5*(1.0-b), i);
   if(i>0)
     tmp += -0.5*i*p2*pow(0.5*(1.0-b), i-1);
   if(i+j>0)
     tmp *= pow(0.5*(1.0-c), i+j-1);
   tmp *= p1*p3;
-  *Ps += tmp;
+  Ps += tmp;
 
-  *Pt = 0.5*(1.0+a)*(*Pr) + 0.5*(1.0+b)*tmp;
+  Pt = 0.5*(1.0+a)*(Pr) + 0.5*(1.0+b)*tmp;
   tmp = p3c*pow(0.5*(1-c), i+j);
   if(i+j>0)
     tmp -= 0.5*(i+j)*(p3*pow(0.5*(1.0-c), i+j-1));
   tmp *= p1*p2*pow(0.5*(1-b), i);
-  *Pt += tmp;
+  Pt += tmp;
 
-  *Pr *= pow(2, 2*i+j+1.5);
-  *Ps *= pow(2, 2*i+j+1.5);
-  *Pt *= pow(2, 2*i+j+1.5);
+  Pr *= pow(2, 2*i+j+1.5);
+  Ps *= pow(2, 2*i+j+1.5);
+  Pt *= pow(2, 2*i+j+1.5);
 }
 
 // ------------------------------------------------------------------------
 // 3D VANDERMONDE MATRICES
 // ------------------------------------------------------------------------
 
-void mesh_t::VandermondeTet3D(int _N, int Npoints, dfloat *_r, dfloat *_s, dfloat *_t, dfloat *V){
+void mesh_t::VandermondeTet3D(const int _N,
+                              const memory<dfloat> _r,
+                              const memory<dfloat> _s,
+                              const memory<dfloat> _t,
+                              memory<dfloat>& V){
 
-  int _Np = (_N+1)*(_N+2)*(_N+3)/6;
+  const int _Np = (_N+1)*(_N+2)*(_N+3)/6;
+  const int Npoints = _r.length();
 
+  V.malloc(Npoints*_Np);
   for(int n=0; n<Npoints; n++){
     int sk=0;
     for(int i=0; i<_N+1; i++){
       for(int j=0; j<_N+1-i; j++){
         for(int k=0; k<_N+1-i-j; k++){
           int id = n*_Np+sk;
-          OrthonormalBasisTet3D(_r[n], _s[n], _t[n], i, j, k, V+id);
+          OrthonormalBasisTet3D(_r[n], _s[n], _t[n], i, j, k, V[id]);
           sk++;
         }
       }
@@ -263,18 +422,27 @@ void mesh_t::VandermondeTet3D(int _N, int Npoints, dfloat *_r, dfloat *_s, dfloa
   }
 }
 
-void mesh_t::GradVandermondeTet3D(int _N, int Npoints, dfloat *_r, dfloat *_s, dfloat *_t,
-                                  dfloat *Vr, dfloat *Vs, dfloat *Vt){
+void mesh_t::GradVandermondeTet3D(const int _N,
+                                  const memory<dfloat> _r,
+                                  const memory<dfloat> _s,
+                                  const memory<dfloat> _t,
+                                  memory<dfloat>& Vr,
+                                  memory<dfloat>& Vs,
+                                  memory<dfloat>& Vt){
 
-  int _Np = (_N+1)*(_N+2)*(_N+3)/6;
+  const int _Np = (_N+1)*(_N+2)*(_N+3)/6;
+  const int Npoints = _r.length();
 
+  Vr.malloc(Npoints*_Np);
+  Vs.malloc(Npoints*_Np);
+  Vt.malloc(Npoints*_Np);
   for(int n=0; n<Npoints; n++){
     int sk=0;
     for(int i=0; i<_N+1; i++){
       for(int j=0; j<_N+1-i; j++){
         for(int k=0; k<_N+1-i-j; k++){
           int id = n*_Np+sk;
-          GradOrthonormalBasisTet3D(_r[n], _s[n], _t[n], i, j, k, Vr+id, Vs+id, Vt+id);
+          GradOrthonormalBasisTet3D(_r[n], _s[n], _t[n], i, j, k, Vr[id], Vs[id], Vt[id]);
           sk++;
         }
       }
@@ -285,9 +453,12 @@ void mesh_t::GradVandermondeTet3D(int _N, int Npoints, dfloat *_r, dfloat *_s, d
 // ------------------------------------------------------------------------
 // 3D OPERATOR MATRICES
 // ------------------------------------------------------------------------
-void mesh_t::MassMatrixTet3D(int _Np, dfloat *V, dfloat *_MM){
+void mesh_t::MassMatrixTet3D(const int _Np,
+                             const memory<dfloat> V,
+                             memory<dfloat>& _MM){
 
   // massMatrix = inv(V')*inv(V) = inv(V*V')
+  _MM.malloc(_Np*_Np);
   for(int n=0;n<_Np;++n){
     for(int m=0;m<_Np;++m){
       dfloat res = 0;
@@ -297,12 +468,15 @@ void mesh_t::MassMatrixTet3D(int _Np, dfloat *V, dfloat *_MM){
       _MM[n*_Np + m] = res;
     }
   }
-  matrixInverse(_Np, _MM);
+  linAlg_t::matrixInverse(_Np, _MM);
 }
 
-void mesh_t::invMassMatrixTet3D(int _Np, dfloat *V, dfloat *_invMM){
+void mesh_t::invMassMatrixTet3D(const int _Np,
+                                const memory<dfloat> V,
+                                memory<dfloat>& _invMM){
 
   // massMatrix^{-1} = V*V'
+  _invMM.malloc(_Np*_Np);
   for(int n=0;n<_Np;++n){
     for(int m=0;m<_Np;++m){
       dfloat res = 0;
@@ -314,43 +488,46 @@ void mesh_t::invMassMatrixTet3D(int _Np, dfloat *V, dfloat *_invMM){
   }
 }
 
-void mesh_t::DmatrixTet3D(int _N, int Npoints, dfloat *_r, dfloat *_s, dfloat *_t,
-                                               dfloat *_Dr, dfloat *_Ds, dfloat *_Dt){
+void mesh_t::DmatrixTet3D(const int _N,
+                          const memory<dfloat> _r,
+                          const memory<dfloat> _s,
+                          const memory<dfloat> _t,
+                          memory<dfloat>& _D){
 
-  int _Np = (_N+1)*(_N+2)*(_N+3)/6;
+  const int _Np = (_N+1)*(_N+2)*(_N+3)/6;
 
-  dfloat *V  = (dfloat *) calloc(Npoints*_Np, sizeof(dfloat));
-  dfloat *Vr = (dfloat *) calloc(Npoints*_Np, sizeof(dfloat));
-  dfloat *Vs = (dfloat *) calloc(Npoints*_Np, sizeof(dfloat));
-  dfloat *Vt = (dfloat *) calloc(Npoints*_Np, sizeof(dfloat));
-
-  VandermondeTet3D(_N, Npoints, _r, _s, _t, V);
-  GradVandermondeTet3D(_N, Npoints, _r, _s, _t, Vr, Vs, Vt);
+  memory<dfloat> V, Vr, Vs, Vt;
+  VandermondeTet3D(_N, _r, _s, _t, V);
+  GradVandermondeTet3D(_N, _r, _s, _t, Vr, Vs, Vt);
 
   //Dr = Vr/V, Ds = Vs/V
-  matrixRightSolve(_Np, _Np, Vr, _Np, _Np, V, _Dr);
-  matrixRightSolve(_Np, _Np, Vs, _Np, _Np, V, _Ds);
-  matrixRightSolve(_Np, _Np, Vt, _Np, _Np, V, _Dt);
-
-  free(V); free(Vr); free(Vs); free(Vt);
+  _D.malloc(3*_Np*_Np);
+  memory<dfloat> _Dr = _D + 0*_Np*_Np;
+  memory<dfloat> _Ds = _D + 1*_Np*_Np;
+  memory<dfloat> _Dt = _D + 2*_Np*_Np;
+  linAlg_t::matrixRightSolve(_Np, _Np, Vr, _Np, _Np, V, _Dr);
+  linAlg_t::matrixRightSolve(_Np, _Np, Vs, _Np, _Np, V, _Ds);
+  linAlg_t::matrixRightSolve(_Np, _Np, Vt, _Np, _Np, V, _Dt);
 }
 
-void mesh_t::LIFTmatrixTet3D(int _N, int *_faceNodes,
-                             dfloat *_r, dfloat *_s, dfloat *_t, dfloat *_LIFT){
+void mesh_t::LIFTmatrixTet3D(const int _N,
+                             const memory<int> _faceNodes,
+                             const memory<dfloat> _r,
+                             const memory<dfloat> _s,
+                             const memory<dfloat> _t,
+                             memory<dfloat>& _LIFT){
 
-  int _Nfp = (_N+1)*(_N+2)/2;
-  int _Np = (_N+1)*(_N+2)*(_N+3)/6;
-  int _Nfaces = 4;
+  const int _Nfp = (_N+1)*(_N+2)/2;
+  const int _Np = (_N+1)*(_N+2)*(_N+3)/6;
+  const int _Nfaces = 4;
 
-  dfloat *E = (dfloat *) calloc(_Np*_Nfaces*_Nfp, sizeof(dfloat));
+  memory<dfloat> E(_Np*_Nfaces*_Nfp, 0);
 
-  dfloat *r2D = (dfloat *) malloc(_Nfp*sizeof(dfloat));
-  dfloat *s2D = (dfloat *) malloc(_Nfp*sizeof(dfloat));
-  dfloat *V2D = (dfloat *) malloc(_Nfp*_Nfp*sizeof(dfloat));
-  dfloat *MM2D = (dfloat *) malloc(_Nfp*_Nfp*sizeof(dfloat));
+  memory<dfloat> r2D(_Nfp);
+  memory<dfloat> s2D(_Nfp);
 
   for (int f=0;f<_Nfaces;f++) {
-    dfloat *rFace, *sFace;
+    memory<dfloat> rFace, sFace;
     if (f==0) {rFace = _r; sFace = _s;}
     if (f==1) {rFace = _r; sFace = _t;}
     if (f==2) {rFace = _s; sFace = _t;}
@@ -361,7 +538,8 @@ void mesh_t::LIFTmatrixTet3D(int _N, int *_faceNodes,
       s2D[i] = sFace[_faceNodes[f*_Nfp+i]];
     }
 
-    VandermondeTri2D(_N, _Nfp, r2D, s2D, V2D);
+    memory<dfloat> V2D, MM2D;
+    VandermondeTri2D(_N, r2D, s2D, V2D);
     MassMatrixTri2D(_Nfp, V2D, MM2D);
 
     for (int j=0;j<_Nfp;j++) {
@@ -372,9 +550,10 @@ void mesh_t::LIFTmatrixTet3D(int _N, int *_faceNodes,
     }
   }
 
-  dfloat *V = (dfloat *) malloc(_Np*_Np*sizeof(dfloat));
-  VandermondeTet3D(_N, _Np, _r, _s, _t, V);
+  memory<dfloat> V;
+  VandermondeTet3D(_N, _r, _s, _t, V);
 
+  _LIFT.malloc(_Np*_Nfaces*_Nfp);
   for (int n=0;n<_Np;n++) {
     for (int m=0;m<_Nfaces*_Nfp;m++) {
 
@@ -388,16 +567,18 @@ void mesh_t::LIFTmatrixTet3D(int _N, int *_faceNodes,
       }
     }
   }
-
-  free(V); free(r2D); free(s2D); free(V2D); free(MM2D); free(E);
 }
 
-void mesh_t::SurfaceMassMatrixTet3D(int _N, dfloat *_MM, dfloat *_LIFT, dfloat *_sM){
+void mesh_t::SurfaceMassMatrixTet3D(const int _N,
+                                    const memory<dfloat> _MM,
+                                    const memory<dfloat> _LIFT,
+                                    memory<dfloat>& _sM){
 
-  int _Nfp = (_N+1)*(_N+2)/2;
-  int _Np = (_N+1)*(_N+2)*(_N+3)/6;
-  int _Nfaces = 4;
+  const int _Nfp = (_N+1)*(_N+2)/2;
+  const int _Np = (_N+1)*(_N+2)*(_N+3)/6;
+  const int _Nfaces = 4;
 
+  _sM.malloc(_Np*_Nfaces*_Nfp);
   for (int n=0;n<_Np;n++) {
     for (int m=0;m<_Nfp*_Nfaces;m++) {
       _sM[m+n*_Nfp*_Nfaces] = 0;
@@ -408,12 +589,22 @@ void mesh_t::SurfaceMassMatrixTet3D(int _N, dfloat *_MM, dfloat *_LIFT, dfloat *
   }
 }
 
-void mesh_t::SmatrixTet3D(int _N, dfloat *_Dr, dfloat *_Ds, dfloat *_Dt, dfloat *_MM,
-                          dfloat *_Srr, dfloat *_Srs, dfloat *_Srt,
-                          dfloat *_Sss, dfloat *_Sst, dfloat *_Stt){
+void mesh_t::SmatrixTet3D(const int _N,
+                          const memory<dfloat> _Dr,
+                          const memory<dfloat> _Ds,
+                          const memory<dfloat> _Dt,
+                          const memory<dfloat> _MM,
+                          memory<dfloat>& _S){
 
-  int _Np = (_N+1)*(_N+2)*(_N+3)/6;
+  const int _Np = (_N+1)*(_N+2)*(_N+3)/6;
 
+  _S.malloc(6*_Np*_Np, 0.0);
+  memory<dfloat> _Srr = _S + 0*_Np*_Np;
+  memory<dfloat> _Srs = _S + 1*_Np*_Np;
+  memory<dfloat> _Srt = _S + 2*_Np*_Np;
+  memory<dfloat> _Sss = _S + 3*_Np*_Np;
+  memory<dfloat> _Sst = _S + 4*_Np*_Np;
+  memory<dfloat> _Stt = _S + 5*_Np*_Np;
   for (int n=0;n<_Np;n++) {
     for (int m=0;m<_Np;m++) {
       for (int k=0;k<_Np;k++) {
@@ -433,59 +624,65 @@ void mesh_t::SmatrixTet3D(int _N, dfloat *_Dr, dfloat *_Ds, dfloat *_Dt, dfloat 
   }
 }
 
-void mesh_t::InterpolationMatrixTet3D(int _N,
-                               int NpointsIn, dfloat *rIn, dfloat *sIn, dfloat *tIn,
-                               int NpointsOut, dfloat *rOut, dfloat *sOut, dfloat *tOut,
-                               dfloat *I){
+void mesh_t::InterpolationMatrixTet3D(const int _N,
+                                      const memory<dfloat> rIn,
+                                      const memory<dfloat> sIn,
+                                      const memory<dfloat> tIn,
+                                      const memory<dfloat> rOut,
+                                      const memory<dfloat> sOut,
+                                      const memory<dfloat> tOut,
+                                      memory<dfloat>& I){
 
-  int _Np = (_N+1)*(_N+2)*(_N+3)/6;
+  const int _Np = (_N+1)*(_N+2)*(_N+3)/6;
+
+  const int NpointsIn  = rIn.length();
+  const int NpointsOut = rOut.length();
 
   // need NpointsIn = _Np
-  if (NpointsIn != _Np)
-    LIBP_ABORT(string("Invalid Interplation operator requested."))
+  LIBP_ABORT("Invalid Interplation operator requested.",
+             NpointsIn != _Np);
 
-  dfloat *VIn = (dfloat*) malloc(NpointsIn*_Np*sizeof(dfloat));
-  dfloat *VOut= (dfloat*) malloc(NpointsOut*_Np*sizeof(dfloat));
+  memory<dfloat> VIn;
+  memory<dfloat> VOut;
+  VandermondeTet3D(_N, rIn, sIn, tIn, VIn);
+  VandermondeTet3D(_N, rOut, sOut, tOut, VOut);
 
-  VandermondeTet3D(_N, NpointsIn,   rIn, sIn, tIn, VIn);
-  VandermondeTet3D(_N, NpointsOut, rOut, sOut, tOut, VOut);
-
-  matrixRightSolve(NpointsOut, _Np, VOut, NpointsIn, _Np, VIn, I);
-
-  free(VIn); free(VOut);
+  I.malloc(NpointsIn*NpointsOut);
+  linAlg_t::matrixRightSolve(NpointsOut, _Np, VOut,
+                             NpointsIn, _Np, VIn, I);
 }
 
-void mesh_t::DegreeRaiseMatrixTet3D(int Nc, int Nf, dfloat *P){
+void mesh_t::DegreeRaiseMatrixTet3D(const int Nc, const int Nf,
+                                    memory<dfloat>& P){
 
-  int Npc = (Nc+1)*(Nc+2)*(Nc+3)/6;
-  int Npf = (Nf+1)*(Nf+2)*(Nf+3)/6;
-
-  dfloat *rc = (dfloat *) malloc(Npc*sizeof(dfloat));
-  dfloat *sc = (dfloat *) malloc(Npc*sizeof(dfloat));
-  dfloat *tc = (dfloat *) malloc(Npc*sizeof(dfloat));
-  dfloat *rf = (dfloat *) malloc(Npf*sizeof(dfloat));
-  dfloat *sf = (dfloat *) malloc(Npf*sizeof(dfloat));
-  dfloat *tf = (dfloat *) malloc(Npf*sizeof(dfloat));
-
+  memory<dfloat> rc, sc, tc;
+  memory<dfloat> rf, sf, tf;
   NodesTet3D(Nc, rc, sc, tc);
   NodesTet3D(Nf, rf, sf, tf);
 
-  InterpolationMatrixTet3D(Nc, Npc, rc, sc, tc, Npf, rf, sf, tf, P);
-
-  free(rc); free(sc); free(tc); free(rf); free(sf); free(tf);
+  InterpolationMatrixTet3D(Nc, rc, sc, tc, rf, sf, tf, P);
 }
 
-void mesh_t::CubaturePmatrixTet3D(int _N, int _Np, dfloat *_r, dfloat *_s, dfloat *_t,
-                                  int _cubNp, dfloat *_cubr, dfloat *_cubs, dfloat *_cubt,
-                                  dfloat *_cubProject){
+void mesh_t::CubaturePmatrixTet3D(const int _N,
+                                  const memory<dfloat> _r,
+                                  const memory<dfloat> _s,
+                                  const memory<dfloat> _t,
+                                  const memory<dfloat> _cubr,
+                                  const memory<dfloat> _cubs,
+                                  const memory<dfloat> _cubt,
+                                  memory<dfloat>& _cubProject){
 
-  dfloat *V = (dfloat*) malloc(_Np*_Np*sizeof(dfloat));
-  VandermondeTet3D(_N, _Np, _r, _s, _t, V);
+  const int _Np = (_N+1)*(_N+2)*(_N+3)/6;
+  const int _cubNp = _cubr.length();
 
-  dfloat *cubV  = (dfloat*) malloc(_cubNp*_Np*sizeof(dfloat));
-  VandermondeTet3D(_N, _cubNp, _cubr, _cubs, _cubt, cubV);
+  memory<dfloat> V;
+  VandermondeTet3D(_N, _r, _s, _t, V);
+
+  memory<dfloat> cubV;
+  VandermondeTet3D(_N, _cubr, _cubs, _cubt, cubV);
 
   // cubProject = V*cV' %% relies on (transpose(cV)*diag(cubw)*cV being the identity)
+  _cubProject.malloc(_Np*_cubNp);
   for(int n=0;n<_Np;++n){
     for(int m=0;m<_cubNp;++m){
       dfloat resP = 0;
@@ -495,26 +692,34 @@ void mesh_t::CubaturePmatrixTet3D(int _N, int _Np, dfloat *_r, dfloat *_s, dfloa
      _cubProject[n*_cubNp+m] = resP;
     }
   }
-  free(V); free(cubV);
 }
 
-void mesh_t::CubatureWeakDmatricesTet3D(int _N, int _Np, dfloat *_r, dfloat *_s, dfloat *_t,
-                                        int _cubNp, dfloat *_cubr, dfloat *_cubs, dfloat *_cubt,
-                                        dfloat *_cubPDrT, dfloat *_cubPDsT, dfloat *_cubPDtT){
+void mesh_t::CubatureWeakDmatricesTet3D(const int _N,
+                                        const memory<dfloat> _r,
+                                        const memory<dfloat> _s,
+                                        const memory<dfloat> _t,
+                                        const memory<dfloat> _cubr,
+                                        const memory<dfloat> _cubs,
+                                        const memory<dfloat> _cubt,
+                                        memory<dfloat>& _cubPDT){
 
-  dfloat *V = (dfloat*) malloc(_Np*_Np*sizeof(dfloat));
-  VandermondeTet3D(_N, _Np, _r, _s, _t, V);
+  const int _Np = (_N+1)*(_N+2)*(_N+3)/6;
+  const int _cubNp = _cubr.length();
 
-  dfloat *cubV  = (dfloat*) malloc(_cubNp*_Np*sizeof(dfloat));
-  dfloat *cubVr = (dfloat*) malloc(_cubNp*_Np*sizeof(dfloat));
-  dfloat *cubVs = (dfloat*) malloc(_cubNp*_Np*sizeof(dfloat));
-  dfloat *cubVt = (dfloat*) malloc(_cubNp*_Np*sizeof(dfloat));
-  VandermondeTet3D(_N, _cubNp, _cubr, _cubs, _cubt, cubV);
-  GradVandermondeTet3D(_N, _cubNp, _cubr, _cubs, _cubt, cubVr, cubVs, cubVt);
+  memory<dfloat> V;
+  VandermondeTet3D(_N, _r, _s, _t, V);
+
+  memory<dfloat> cubV, cubVr, cubVs, cubVt;
+  VandermondeTet3D(_N, _cubr, _cubs, _cubt, cubV);
+  GradVandermondeTet3D(_N, _cubr, _cubs, _cubt, cubVr, cubVs, cubVt);
 
   // cubPDrT = V*transpose(cVr);
   // cubPDsT = V*transpose(cVs);
   // cubPDtT = V*transpose(cVt);
+  _cubPDT.malloc(3*_Np*_cubNp);
+  memory<dfloat> _cubPDrT = _cubPDT + 0*_Np*_cubNp;
+  memory<dfloat> _cubPDsT = _cubPDT + 1*_Np*_cubNp;
+  memory<dfloat> _cubPDtT = _cubPDT + 2*_Np*_cubNp;
   for(int n=0;n<_Np;++n){
     for(int m=0;m<_cubNp;++m){
       dfloat resPDrT = 0, resPDsT = 0, resPDtT = 0;
@@ -531,23 +736,31 @@ void mesh_t::CubatureWeakDmatricesTet3D(int _N, int _Np, dfloat *_r, dfloat *_s,
       _cubPDtT[n*_cubNp+m] = resPDtT;
     }
   }
-  free(V); free(cubV); free(cubVr); free(cubVs); free(cubVt);
 }
 
-void mesh_t::CubatureSurfaceMatricesTet3D(int _N, int _Np, dfloat *_r, dfloat *_s, dfloat *_t, int *_faceNodes,
-                                    int _intNfp, dfloat *_intr, dfloat *_ints, dfloat *_intw,
-                                    dfloat *_intInterp, dfloat *_intLIFT){
+void mesh_t::CubatureSurfaceMatricesTet3D(const int _N,
+                                          const memory<dfloat> _r,
+                                          const memory<dfloat> _s,
+                                          const memory<dfloat> _t,
+                                          const memory<int> _faceNodes,
+                                          const memory<dfloat> _intr,
+                                          const memory<dfloat> _ints,
+                                          const memory<dfloat> _intw,
+                                          memory<dfloat>& _intInterp,
+                                          memory<dfloat>& _intLIFT){
 
-  int _Nfaces = 4;
-  int _Nfp = (_N+1)*(_N+2)/2;
+  const int _Np = (_N+1)*(_N+2)*(_N+3)/6;
+  const int _Nfp = (_N+1)*(_N+2)/2;
+  const int _Nfaces = 4;
+  const int _intNfp = _intr.length();
 
-  dfloat *V = (dfloat*) malloc(_Np*_Np*sizeof(dfloat));
-  VandermondeTet3D(_N, _Np, _r, _s, _t, V);
+  memory<dfloat> V;
+  VandermondeTet3D(_N, _r, _s, _t, V);
 
-  dfloat *ir = (dfloat*) calloc(_intNfp*_Nfaces, sizeof(dfloat));
-  dfloat *is = (dfloat*) calloc(_intNfp*_Nfaces, sizeof(dfloat));
-  dfloat *it = (dfloat*) calloc(_intNfp*_Nfaces, sizeof(dfloat));
-  dfloat *iw = (dfloat*) calloc(_intNfp*_Nfaces, sizeof(dfloat));
+  memory<dfloat> ir(_intNfp*_Nfaces);
+  memory<dfloat> is(_intNfp*_Nfaces);
+  memory<dfloat> it(_intNfp*_Nfaces);
+  memory<dfloat> iw(_intNfp*_Nfaces);
 
   for(int n=0;n<_intNfp;++n){
     ir[0*_intNfp + n] =  _intr[n];
@@ -571,9 +784,10 @@ void mesh_t::CubatureSurfaceMatricesTet3D(int _N, int _Np, dfloat *_r, dfloat *_
     iw[3*_intNfp + n] =  _intw[n];
   }
 
-  dfloat *sInterp = (dfloat*) malloc(_intNfp*_Nfaces*_Np*sizeof(dfloat));
-  InterpolationMatrixTet3D(_N, _Np, _r, _s, _t, _Nfaces*_intNfp, ir, is, it, sInterp);
+  memory<dfloat> sInterp;
+  InterpolationMatrixTet3D(_N, _r, _s, _t, ir, is, it, sInterp);
 
+  _intInterp.malloc(_Nfaces*_intNfp*_Nfp);
   for(int n=0;n<_intNfp;++n){
     for(int m=0;m<_Nfp;++m){
       _intInterp[0*_intNfp*_Nfp + n*_Nfp + m] = sInterp[(n+0*_intNfp)*_Np+_faceNodes[0*_Nfp+m]];
@@ -585,6 +799,7 @@ void mesh_t::CubatureSurfaceMatricesTet3D(int _N, int _Np, dfloat *_r, dfloat *_
 
   // integration node lift matrix
   //iLIFT = V*V'*sInterp'*diag(iw(:));
+  _intLIFT.malloc(_Nfaces*_intNfp*_Np);
   for(int n=0;n<_Nfaces*_intNfp;++n){
     for(int m=0;m<_Np;++m){
       _intLIFT[m*_Nfaces*_intNfp+n] = 0.0;
@@ -595,19 +810,24 @@ void mesh_t::CubatureSurfaceMatricesTet3D(int _N, int _Np, dfloat *_r, dfloat *_
       }
     }
   }
-
-  free(V); free(ir);  free(is); free(it); free(iw);  free(sInterp);
 }
 
-void mesh_t::SEMFEMInterpMatrixTet3D(int _N,
-                                    int _Np, dfloat *_r, dfloat *_s, dfloat *_t,
-                                    int _NpFEM, dfloat *_rFEM, dfloat *_sFEM, dfloat *_tFEM,
-                                    dfloat *I){
+void mesh_t::SEMFEMInterpMatrixTet3D(const int _N,
+                                     const memory<dfloat> _r,
+                                     const memory<dfloat> _s,
+                                     const memory<dfloat> _t,
+                                     const memory<dfloat> _rFEM,
+                                     const memory<dfloat> _sFEM,
+                                     const memory<dfloat> _tFEM,
+                                     memory<dfloat>& I){
 
-  dfloat *IQN = (dfloat*) malloc(_NpFEM*_Np*sizeof(dfloat));
-  InterpolationMatrixTet3D(_N, _Np, _r, _s, _t, _NpFEM, _rFEM, _sFEM, _tFEM, IQN);
+  const int _Np = (_N+1)*(_N+2)*(_N+3)/6;
+  const int _NpFEM = _rFEM.length();
 
-  dfloat *IQTIQ = (dfloat*) malloc(_Np*_Np*sizeof(dfloat));
+  memory<dfloat> IQN;
+  InterpolationMatrixTet3D(_N, _r, _s, _t, _rFEM, _sFEM, _tFEM, IQN);
+
+  memory<dfloat> IQTIQ(_Np*_Np);
   // IQTIQ = IQN'*IQN
   for(int n=0;n<_Np;++n){
     for(int m=0;m<_Np;++m){
@@ -619,9 +839,7 @@ void mesh_t::SEMFEMInterpMatrixTet3D(int _N,
   }
 
   // I = IQN/(IQN'*IQN)  - pseudo inverse
-  matrixRightSolve(_NpFEM, _Np, IQN, _Np, _Np, IQTIQ, I);
-
-  free(IQN); free(IQTIQ);
+  linAlg_t::matrixRightSolve(_NpFEM, _Np, IQN, _Np, _Np, IQTIQ, I);
 }
 
 // ------------------------------------------------------------------------
@@ -630,16 +848,24 @@ void mesh_t::SEMFEMInterpMatrixTet3D(int _N,
 //                       Journal of engineering mathematics, 56(3), 247-262.
 // ------------------------------------------------------------------------
 
-static void xyztorst(int Npoints, dfloat *x, dfloat *y, dfloat *z, dfloat *r, dfloat *s, dfloat *t) {
+static void xyztorst(const memory<dfloat> x,
+                     const memory<dfloat> y,
+                     const memory<dfloat> z,
+                     memory<dfloat> r,
+                     memory<dfloat> s,
+                     memory<dfloat> t) {
+
+  const int Npoints = x.length();
+
   // vertices of tetrahedron
   dfloat v1[3] = {-1.0, -1./sqrt(3.), -1./sqrt(6.)};
   dfloat v2[3] = { 1.0, -1./sqrt(3.), -1./sqrt(6.)};
   dfloat v3[3] = { 0.0,  2./sqrt(3.), -1./sqrt(6.)};
   dfloat v4[3] = { 0.0,  0.,           3./sqrt(6.)};
 
-  dfloat *XYZ = (dfloat *) malloc(3*Npoints*sizeof(dfloat));
-  dfloat *RST = (dfloat *) malloc(3*Npoints*sizeof(dfloat));
-  dfloat *A = (dfloat *) malloc(3*3*sizeof(dfloat));
+  memory<dfloat> XYZ(3*Npoints);
+  memory<dfloat> RST(3*Npoints);
+  memory<dfloat> A(3*3);
 
   for (int i=0;i<3;i++) {
     A[0*3+i] = 0.5*(v2[i]-v1[i]);
@@ -653,30 +879,33 @@ static void xyztorst(int Npoints, dfloat *x, dfloat *y, dfloat *z, dfloat *r, df
     XYZ[3*n+2] = z[n]-0.5*(v2[2]+v3[2]+v4[2]-v1[2]);
   }
 
-  matrixRightSolve(Npoints, 3, XYZ, 3, 3, A, RST);
+  linAlg_t::matrixRightSolve(Npoints, 3, XYZ, 3, 3, A, RST);
 
   for (int n=0;n<Npoints;n++) {
     r[n] = RST[3*n+0];
     s[n] = RST[3*n+1];
     t[n] = RST[3*n+2];
   }
-
-  free(XYZ); free(RST); free(A);
 }
 
-void mesh_t::WarpShiftFace3D(int _N, int Npoints, dfloat alpha,
-                             dfloat *L1, dfloat *L2, dfloat *L3,
-                             dfloat *w1, dfloat *w2) {
+void mesh_t::WarpShiftFace3D(const int _N, const dfloat alpha,
+                             const memory<dfloat> L1,
+                             const memory<dfloat> L2,
+                             const memory<dfloat> L3,
+                             memory<dfloat> w1,
+                             memory<dfloat> w2) {
   // Compute scaled warp function at order N
   // based on rout interpolation nodes
 
-  dfloat *dL32 = (dfloat*) malloc(Npoints*sizeof(dfloat));
-  dfloat *dL13 = (dfloat*) malloc(Npoints*sizeof(dfloat));
-  dfloat *dL21 = (dfloat*) malloc(Npoints*sizeof(dfloat));
+  const int Npoints = L1.length();
 
-  dfloat *warpf1 = (dfloat*) malloc(Npoints*sizeof(dfloat));
-  dfloat *warpf2 = (dfloat*) malloc(Npoints*sizeof(dfloat));
-  dfloat *warpf3 = (dfloat*) malloc(Npoints*sizeof(dfloat));
+  memory<dfloat> dL32(Npoints);
+  memory<dfloat> dL13(Npoints);
+  memory<dfloat> dL21(Npoints);
+
+  memory<dfloat> warpf1(Npoints);
+  memory<dfloat> warpf2(Npoints);
+  memory<dfloat> warpf3(Npoints);
 
   for (int n=0;n<Npoints;n++) {
     dL32[n] = L3[n]-L2[n];
@@ -684,31 +913,34 @@ void mesh_t::WarpShiftFace3D(int _N, int Npoints, dfloat alpha,
     dL21[n] = L2[n]-L1[n];
   }
 
-  Warpfactor(_N, Npoints, dL32, warpf1);
-  Warpfactor(_N, Npoints, dL13, warpf2);
-  Warpfactor(_N, Npoints, dL21, warpf3);
+  Warpfactor(_N, dL32, warpf1);
+  Warpfactor(_N, dL13, warpf2);
+  Warpfactor(_N, dL21, warpf3);
 
   for (int n=0;n<Npoints;n++) {
-    dfloat blend1 = 4.0*L2[n]*L3[n];
-    dfloat blend2 = 4.0*L3[n]*L1[n];
-    dfloat blend3 = 4.0*L1[n]*L2[n];
+    const dfloat blend1 = 4.0*L2[n]*L3[n];
+    const dfloat blend2 = 4.0*L3[n]*L1[n];
+    const dfloat blend3 = 4.0*L1[n]*L2[n];
 
-    dfloat warp1 = blend1*warpf1[n]*(1.0+alpha*alpha*L1[n]*L1[n]);
-    dfloat warp2 = blend2*warpf2[n]*(1.0+alpha*alpha*L2[n]*L2[n]);
-    dfloat warp3 = blend3*warpf3[n]*(1.0+alpha*alpha*L3[n]*L3[n]);
+    const dfloat warp1 = blend1*warpf1[n]*(1.0+alpha*alpha*L1[n]*L1[n]);
+    const dfloat warp2 = blend2*warpf2[n]*(1.0+alpha*alpha*L2[n]*L2[n]);
+    const dfloat warp3 = blend3*warpf3[n]*(1.0+alpha*alpha*L3[n]*L3[n]);
 
     w1[n] = 1.*warp1 + cos(2.*M_PI/3.)*warp2 + cos(4.*M_PI/3.)*warp3;
     w2[n] = 0.*warp1 + sin(2.*M_PI/3.)*warp2 + sin(4.*M_PI/3.)*warp3;
   }
-
-  free(dL32); free(dL21); free(dL13);
-  free(warpf1); free(warpf2); free(warpf3);
 }
 
-void mesh_t::WarpBlendTransformTet3D(int _N, int _Npoints, dfloat *_r, dfloat *_s, dfloat *_t, dfloat alphaIn){
+void mesh_t::WarpBlendTransformTet3D(const int _N,
+                                     memory<dfloat> _r,
+                                     memory<dfloat> _s,
+                                     memory<dfloat> _t,
+                                     const dfloat alphaIn){
 
   const dfloat alpopt[15] = {0.0000,0.0000,0.00000,0.1002,1.1332,1.5608,1.3413,
                              1.2577,1.1603,1.10153,0.6080,0.4523,0.8856,0.8717,0.9655};
+
+  const int _Npoints = _r.length();
 
   dfloat alpha;
   if (alphaIn==-1) {
@@ -746,18 +978,18 @@ void mesh_t::WarpBlendTransformTet3D(int _N, int _Npoints, dfloat *_r, dfloat *_
   }
 
   // Convert r s coordinates to points in equilateral triangle
-  dfloat *L1 = (dfloat*) malloc(_Npoints*sizeof(dfloat));
-  dfloat *L2 = (dfloat*) malloc(_Npoints*sizeof(dfloat));
-  dfloat *L3 = (dfloat*) malloc(_Npoints*sizeof(dfloat));
-  dfloat *L4 = (dfloat*) malloc(_Npoints*sizeof(dfloat));
+  memory<dfloat> L1(_Npoints);
+  memory<dfloat> L2(_Npoints);
+  memory<dfloat> L3(_Npoints);
+  memory<dfloat> L4(_Npoints);
 
-  dfloat *_x = (dfloat*) malloc(_Npoints*sizeof(dfloat));
-  dfloat *_y = (dfloat*) malloc(_Npoints*sizeof(dfloat));
-  dfloat *_z = (dfloat*) malloc(_Npoints*sizeof(dfloat));
+  memory<dfloat> _x(_Npoints);
+  memory<dfloat> _y(_Npoints);
+  memory<dfloat> _z(_Npoints);
 
-  dfloat *shiftx = (dfloat*) calloc(_Npoints,sizeof(dfloat));
-  dfloat *shifty = (dfloat*) calloc(_Npoints,sizeof(dfloat));
-  dfloat *shiftz = (dfloat*) calloc(_Npoints,sizeof(dfloat));
+  memory<dfloat> shiftx(_Npoints,0.0);
+  memory<dfloat> shifty(_Npoints,0.0);
+  memory<dfloat> shiftz(_Npoints,0.0);
 
   for (int n=0;n<_Npoints;n++) {
     L1[n] =  0.5*(1.+_t[n]);
@@ -770,18 +1002,18 @@ void mesh_t::WarpBlendTransformTet3D(int _N, int _Npoints, dfloat *_r, dfloat *_
     _z[n] =  L3[n]*v1[2]+L4[n]*v2[2]+L2[n]*v3[2]+L1[n]*v4[2];
   }
 
-  dfloat *warp1 = (dfloat*) calloc(_Npoints,sizeof(dfloat));
-  dfloat *warp2 = (dfloat*) calloc(_Npoints,sizeof(dfloat));
+  memory<dfloat> warp1(_Npoints);
+  memory<dfloat> warp2(_Npoints);
 
   for (int f=0;f<4;f++) {
-    dfloat *La, *Lb, *Lc, *Ld;
+    memory<dfloat> La, Lb, Lc, Ld;
     if(f==0) {La = L1; Lb = L2; Lc = L3; Ld = L4;}
     if(f==1) {La = L2; Lb = L1; Lc = L3; Ld = L4;}
     if(f==2) {La = L3; Lb = L1; Lc = L4; Ld = L2;}
     if(f==3) {La = L4; Lb = L1; Lc = L3; Ld = L2;}
 
     // compute warp tangential to face
-    WarpShiftFace3D(_N, _Npoints, alpha, Lb, Lc, Ld, warp1, warp2);
+    WarpShiftFace3D(_N, alpha, Lb, Lc, Ld, warp1, warp2);
 
     for (int n=0;n<_Npoints;n++) {
       dfloat blend = Lb[n]*Lc[n]*Ld[n];
@@ -811,12 +1043,7 @@ void mesh_t::WarpBlendTransformTet3D(int _N, int _Npoints, dfloat *_r, dfloat *_
     _z[n] += shiftz[n];
   }
 
-  xyztorst(_Npoints, _x, _y, _z, _r, _s, _t);
-
-  free(L1); free(L2); free(L3); free(L4);
-  free(warp1); free(warp2);
-  free(shiftx); free(shifty); free(shiftz);
-  free(_x); free(_y); free(_z);
+  xyztorst(_x, _y, _z, _r, _s, _t);
 }
 
 // ------------------------------------------------------------------------
@@ -901,19 +1128,22 @@ static const dfloat cubT15[214] = {-3.592259421353274e-01,-3.592259421353629e-01
 static const dfloat cubW15[214] = { 3.522723551354820e-03, 3.522723551352486e-03, 3.522723551352938e-03, 9.232955535331875e-03, 9.232955535327506e-03, 9.232955535330659e-03, 4.237026901463632e-03, 4.237026901464212e-03, 4.237026901463377e-03, 6.106499343749692e-03, 6.106499343748844e-03, 6.106499343750059e-03, 1.627360858046573e-03, 1.627360858046587e-03, 1.627360858046813e-03, 1.148548912222280e-03, 1.148548912221887e-03, 1.148548912221821e-03, 2.564399625003663e-03, 2.564399625004229e-03, 2.564399625002914e-03, 5.856076670044469e-03, 5.856076670043464e-03, 5.856076670043295e-03, 1.423643710751563e-03, 1.423643710751888e-03, 1.423643710751167e-03, 3.978120910726397e-03, 3.978120910728038e-03, 3.978120910727048e-03, 1.363809538497426e-03, 1.363809538497801e-03, 1.363809538497208e-03, 4.075959956903368e-04, 4.075959956909096e-04, 4.075959956900526e-04, 2.860089500953389e-03, 2.860089500953686e-03, 2.860089500953841e-03, 4.850559515934299e-03, 4.850559515933083e-03, 4.850559515932247e-03, 1.352971840215884e-02, 1.352971840216170e-02, 1.352971840215909e-02, 6.132094336152466e-03, 6.132094336152919e-03, 6.132094336153004e-03, 1.461675478856591e-02, 1.461675478855672e-02, 1.461675478856139e-02, 5.990023547122631e-03, 5.990023547123226e-03, 5.990023547122334e-03, 9.631452064974138e-03, 9.631452064972767e-03, 9.631452064974280e-03, 5.614990995964819e-03, 5.614990995964790e-03, 5.614990995963984e-03, 1.144090371383849e-03, 1.144090371383791e-03, 1.144090371383924e-03, 7.816866183700298e-03, 7.816866183699294e-03, 7.816866183700680e-03, 1.639566856148552e-02, 1.639566856149825e-02, 1.639566856148552e-02, 6.721523996645333e-03, 6.721523996646124e-03, 6.721523996646986e-03, 6.261479412226208e-03, 6.261479412226463e-03, 6.261479412227057e-03, 1.527689367197913e-02, 1.527689367198168e-02, 1.527689367197715e-02, 4.042885330071795e-03, 4.042885330072389e-03, 4.042885330072658e-03, 1.229463521022889e-02, 1.229463521022621e-02, 1.229463521022872e-02, 5.427737795462986e-03, 5.427737795463169e-03, 5.427737795462180e-03, 1.976199256754921e-03, 1.976199256754936e-03, 1.976199256754398e-03, 6.919752984901465e-03, 6.919752984901423e-03, 6.919752984901507e-03, 1.046027736959284e-02, 1.046027736959218e-02, 1.046027736959269e-02, 1.447481953654798e-02, 1.447481953654770e-02, 1.447481953654855e-02, 2.391550565412188e-03, 2.391550565412258e-03, 2.391550565412131e-03, 1.511375252393240e-02, 1.511375252392830e-02, 1.511375252393155e-02, 9.511095825311733e-03, 9.511095825312935e-03, 9.511095825312142e-03, 4.036967691998535e-03, 4.036967691999214e-03, 4.036967691998252e-03, 1.508260348095485e-03, 1.508260348095230e-03, 1.508260348095372e-03, 3.937346811175521e-03, 3.937346811175041e-03, 3.937346811175210e-03, 3.608140871956763e-03, 3.608140871956792e-03, 3.608140871956891e-03, 3.365526474882623e-03, 3.365526474883641e-03, 3.365526474884108e-03, 5.192349870771271e-03, 5.192349870771441e-03, 5.192349870772318e-03, 1.334407891882406e-02, 1.334407891882760e-02, 1.334407891882411e-02, 8.025809123555732e-03, 8.025809123554318e-03, 8.025809123554217e-03, 1.070887983557521e-02, 1.070887983557467e-02, 1.070887983557649e-02, 1.309736406162602e-02, 1.309736406162684e-02, 1.309736406162661e-02, 8.885655025694786e-03, 8.885655025694404e-03, 8.885655025693740e-03, 1.344113214741205e-02, 1.344113214741205e-02, 1.344113214741270e-02, 5.698568685004529e-03, 5.698568685005180e-03, 5.698568685005053e-03, 3.847402885188293e-03, 3.847402885188307e-03, 3.847402885188477e-03, 4.769112898361405e-03, 4.769112898361265e-03, 4.769112898362141e-03, 1.118686556204748e-02, 1.118686556204881e-02, 1.118686556204810e-02, 5.635998890136026e-03, 5.635998890136154e-03, 5.635998890136069e-03, 5.044085510105154e-03, 5.044085510104333e-03, 5.044085510104730e-03, 1.014203848072567e-02, 1.014203848072546e-02, 1.014203848072654e-02, 2.681590717335358e-03, 2.681590717334821e-03, 2.681590717335202e-03, 4.059907280598535e-03, 4.059907280598903e-03, 4.059907280598535e-03, 3.336448036565914e-03, 3.336448036565589e-03, 3.336448036566042e-03, 1.076375181138509e-02, 1.076375181138425e-02, 1.076375181138517e-02, 6.573170212491274e-03, 6.573170212491260e-03, 6.573170212491358e-03, 8.877430748418416e-04, 8.877430748418500e-04, 8.877430748417468e-04, 1.503300080640668e-03, 1.503300080640583e-03, 1.503300080640908e-03, 5.744672404119040e-03, 5.744672404119181e-03, 5.744672404119252e-03, 1.906496203051725e-03, 1.906496203050283e-03, 1.906496203049802e-03, 2.124665847459818e-03, 2.124665847459747e-03, 2.124665847459747e-03, 7.203086774524117e-04, 7.203086774524287e-04, 7.203086774520808e-04, 6.473262420273394e-04, 6.473262420272856e-04, 6.473262420267072e-04, 2.381499975344257e-03, 2.381499975344469e-03, 2.381499975345459e-03, 3.013274913110685e-03, 3.013274913110755e-03, 3.013274913111859e-03, 2.067897521108355e-03, 2.067897521107776e-03, 2.067897521108949e-03, 1.499773420159665e-02, 1.925991642486046e-02, 1.254797412755794e-02, 1.209377740627947e-02};
 
 
-void mesh_t::CubatureNodesTet3D(int cubTetN, int *_cubNp, dfloat **_cubr, dfloat **_cubs, dfloat **_cubt, dfloat **_cubw){
+void mesh_t::CubatureNodesTet3D(const int cubTetN,
+                                int& _cubNp,
+                                memory<dfloat>& _cubr,
+                                memory<dfloat>& _cubs,
+                                memory<dfloat>& _cubt,
+                                memory<dfloat>& _cubw){
 
-  if (cubTetN>15)
-    LIBP_ABORT(string("Requested Cubature order unavailable."))
+  LIBP_ABORT("Requested Cubature order unavailable.",
+             cubTetN>15);
 
-  int cubTetNp = cubTetNps[cubTetN-1];
+  _cubNp = cubTetNps[cubTetN-1];
 
-  *_cubNp = cubTetNp;
-
-  *_cubr = (dfloat*) calloc(cubTetNp, sizeof(dfloat));
-  *_cubs = (dfloat*) calloc(cubTetNp, sizeof(dfloat));
-  *_cubt = (dfloat*) calloc(cubTetNp, sizeof(dfloat));
-  *_cubw = (dfloat*) calloc(cubTetNp, sizeof(dfloat));
+  _cubr.malloc(_cubNp);
+  _cubs.malloc(_cubNp);
+  _cubt.malloc(_cubNp);
+  _cubw.malloc(_cubNp);
 
   const dfloat *cubTetR=NULL, *cubTetS=NULL, *cubTetT=NULL, *cubTetW=NULL;
   switch(cubTetN){
@@ -933,13 +1163,15 @@ void mesh_t::CubatureNodesTet3D(int cubTetN, int *_cubNp, dfloat **_cubr, dfloat
     case 14: cubTetR = cubR14; cubTetS = cubS14; cubTetT = cubT14; cubTetW = cubW14; break;
     case 15: cubTetR = cubR15; cubTetS = cubS15; cubTetT = cubT15; cubTetW = cubW15; break;
     default:
-      LIBP_ABORT(string("Requested Cubature order unavailable."))
+      LIBP_FORCE_ABORT("Requested Cubature order unavailable.");
   }
 
-  for(int n=0;n<cubTetNp;++n){
-    _cubr[0][n] = cubTetR[n];
-    _cubs[0][n] = cubTetS[n];
-    _cubt[0][n] = cubTetT[n];
-    _cubw[0][n] = cubTetW[n];
+  for(int n=0;n<_cubNp;++n){
+    _cubr[n] = cubTetR[n];
+    _cubs[n] = cubTetS[n];
+    _cubt[n] = cubTetT[n];
+    _cubw[n] = cubTetW[n];
   }
 }
+
+} //namespace libp

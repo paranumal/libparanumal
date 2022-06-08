@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Rajesh Gandham
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Rajesh Gandham
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,30 +27,30 @@ SOFTWARE.
 #include "parAlmond.hpp"
 #include "parAlmond/parAlmondAMGSetup.hpp"
 
+namespace libp {
+
 namespace parAlmond {
 
-parCSR *transpose(parCSR *A){
+parCSR transpose(parCSR& A){
 
   // MPI info
-  int rank, size;
-  MPI_Comm_rank(A->comm, &rank);
-  MPI_Comm_size(A->comm, &size);
+  int rank = A.comm.rank();
+  int size = A.comm.size();
 
   // copy data from nonlocal entries into send buffer
-  parCOO::nonZero_t *sendNonZeros = (parCOO::nonZero_t *)
-                                    calloc(A->offd.nnz, sizeof(parCOO::nonZero_t));
-  for(dlong i=0;i<A->offd.nzRows;++i){
-    const hlong row = A->offd.rows[i] + A->globalRowStarts[rank]; //global ids
-    for (dlong j=A->offd.mRowStarts[i];j<A->offd.mRowStarts[i+1];j++) {
-      const hlong col =  A->colMap[A->offd.cols[j]]; //global ids
+  memory<parCOO::nonZero_t> sendNonZeros(A.offd.nnz);
+  for(dlong i=0;i<A.offd.nzRows;++i){
+    const hlong row = A.offd.rows[i] + A.globalRowStarts[rank]; //global ids
+    for (dlong j=A.offd.mRowStarts[i];j<A.offd.mRowStarts[i+1];j++) {
+      const hlong col =  A.colMap[A.offd.cols[j]]; //global ids
       sendNonZeros[j].row = col;
       sendNonZeros[j].col = row;
-      sendNonZeros[j].val = A->offd.vals[j];
+      sendNonZeros[j].val = A.offd.vals[j];
     }
   }
 
   //sort by destination row
-  std::sort(sendNonZeros, sendNonZeros+A->offd.nnz,
+  std::sort(sendNonZeros.ptr(), sendNonZeros.ptr()+A.offd.nnz,
             [](const parCOO::nonZero_t& a, const parCOO::nonZero_t& b) {
               if (a.row < b.row) return true;
               if (a.row > b.row) return false;
@@ -59,21 +59,22 @@ parCSR *transpose(parCSR *A){
             });
 
   //count number of non-zeros we're sending
-  int *sendCounts = (int*) calloc(size, sizeof(int));
-  int *recvCounts = (int*) calloc(size, sizeof(int));
-  int *sendOffsets = (int*) calloc(size+1, sizeof(int));
-  int *recvOffsets = (int*) calloc(size+1, sizeof(int));
+  memory<int> sendCounts(size, 0);
+  memory<int> recvCounts(size);
+  memory<int> sendOffsets(size+1);
+  memory<int> recvOffsets(size+1);
 
   int r=0;
-  for (dlong n=0;n<A->offd.nnz;n++) {
+  for (dlong n=0;n<A.offd.nnz;n++) {
     dlong row = sendNonZeros[n].row;
-    while(row>=A->globalColStarts[r+1]) r++;
+    while(row>=A.globalColStarts[r+1]) r++;
     sendCounts[r]++;
   }
 
-  MPI_Alltoall(sendCounts, 1, MPI_INT,
-               recvCounts, 1, MPI_INT, A->comm);
+  A.comm.Alltoall(sendCounts, recvCounts);
 
+  sendOffsets[0] = 0;
+  recvOffsets[0] = 0;
   for (r=0;r<size;r++) {
     sendOffsets[r+1] = sendOffsets[r]+sendCounts[r];
     recvOffsets[r+1] = recvOffsets[r]+recvCounts[r];
@@ -81,44 +82,33 @@ parCSR *transpose(parCSR *A){
   dlong offdnnz = recvOffsets[size]; //total offd nonzeros
 
 
-  parCOO cooAt(A->platform, A->comm);
+  parCOO cooAt(A.platform, A.comm);
 
   //copy global partition
-  cooAt.globalRowStarts = (hlong *) calloc(size+1,sizeof(hlong));
-  cooAt.globalColStarts = (hlong *) calloc(size+1,sizeof(hlong));
-  memcpy(cooAt.globalRowStarts, A->globalColStarts, (size+1)*sizeof(hlong));
-  memcpy(cooAt.globalColStarts, A->globalRowStarts, (size+1)*sizeof(hlong));
+  cooAt.globalRowStarts = A.globalColStarts;
+  cooAt.globalColStarts = A.globalRowStarts;
 
-  cooAt.nnz = A->diag.nnz+offdnnz;
-  cooAt.entries = (parCOO::nonZero_t *) calloc(cooAt.nnz, sizeof(parCOO::nonZero_t));
+  cooAt.nnz = A.diag.nnz+offdnnz;
+  cooAt.entries.malloc(cooAt.nnz);
 
   //fill local nonzeros
-  for(dlong i=0; i<A->Nrows; i++){
-    const dlong Jstart = A->diag.rowStarts[i];
-    const dlong Jend   = A->diag.rowStarts[i+1];
+  for(dlong i=0; i<A.Nrows; i++){
+    const dlong Jstart = A.diag.rowStarts[i];
+    const dlong Jend   = A.diag.rowStarts[i+1];
 
     for(dlong jj=Jstart; jj<Jend; jj++){
-      cooAt.entries[jj].row = A->diag.cols[jj] + A->globalColStarts[rank];
-      cooAt.entries[jj].col = i + A->globalRowStarts[rank];
-      cooAt.entries[jj].val = A->diag.vals[jj];
+      cooAt.entries[jj].row = A.diag.cols[jj] + A.globalColStarts[rank];
+      cooAt.entries[jj].col = i + A.globalRowStarts[rank];
+      cooAt.entries[jj].val = A.diag.vals[jj];
     }
   }
 
   // receive non-local nonzeros
-  MPI_Alltoallv(sendNonZeros,              sendCounts, sendOffsets, MPI_NONZERO_T,
-                cooAt.entries+A->diag.nnz, recvCounts, recvOffsets, MPI_NONZERO_T,
-                A->comm);
-
-  //clean up
-  MPI_Barrier(A->comm);
-  free(sendNonZeros);
-  free(sendCounts);
-  free(recvCounts);
-  free(sendOffsets);
-  free(recvOffsets);
+  A.comm.Alltoallv(sendNonZeros,             sendCounts, sendOffsets,
+                   cooAt.entries+A.diag.nnz, recvCounts, recvOffsets);
 
   //sort by row
-  std::sort(cooAt.entries, cooAt.entries+cooAt.nnz,
+  std::sort(cooAt.entries.ptr(), cooAt.entries.ptr()+cooAt.nnz,
             [](const parCOO::nonZero_t& a, const parCOO::nonZero_t& b) {
               if (a.row < b.row) return true;
               if (a.row > b.row) return false;
@@ -126,7 +116,9 @@ parCSR *transpose(parCSR *A){
               return a.col < b.col;
             });
 
-  return new parCSR(cooAt);
+  return parCSR(cooAt);
 }
 
 } //namespace parAlmond
+
+} //namespace libp

@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,23 +26,29 @@ SOFTWARE.
 
 #include "ins.hpp"
 
-ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
-                    insSettings_t& settings){
+void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
+                  insSettings_t& _settings){
 
-  ins_t* ins = new ins_t(platform, mesh, settings);
+  platform = _platform;
+  mesh = _mesh;
+  comm = _mesh.comm;
+  settings = _settings;
 
-  ins->NVfields = (mesh.dim==3) ? 3:2; // Total Number of Velocity Fields
-  ins->NTfields = (mesh.dim==3) ? 4:3; // Total Velocity + Pressure
+  //Trigger JIT kernel builds
+  ogs::InitializeKernels(platform, ogs::Dfloat, ogs::Add);
 
-  settings.getSetting("VISCOSITY", ins->nu);
+  NVfields = (mesh.dim==3) ? 3:2; // Total Number of Velocity Fields
+  NTfields = (mesh.dim==3) ? 4:3; // Total Velocity + Pressure
 
-  ins->cubature = (settings.compareSetting("ADVECTION TYPE", "CUBATURE")) ? 1:0;
-  ins->pressureIncrement = (settings.compareSetting("PRESSURE INCREMENT", "TRUE")) ? 1:0;
+  settings.getSetting("VISCOSITY", nu);
+
+  cubature = (settings.compareSetting("ADVECTION TYPE", "CUBATURE")) ? 1:0;
+  pressureIncrement = (settings.compareSetting("PRESSURE INCREMENT", "TRUE")) ? 1:0;
 
   //setup cubature
-  if (ins->cubature) {
+  if (cubature) {
     mesh.CubatureSetup();
-    mesh.CubatureNodes();
+    mesh.CubaturePhysicalNodes();
   }
 
   dlong Nlocal = mesh.Nelements*mesh.Np;
@@ -51,27 +57,22 @@ ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
   //setup timeStepper
   dfloat gamma = 0.0;
   if (settings.compareSetting("TIME INTEGRATOR","EXTBDF3")){
-    ins->timeStepper = new TimeStepper::extbdf3(mesh.Nelements, mesh.totalHaloPairs,
-                                              mesh.Np, ins->NVfields, *ins);
-    gamma = ((TimeStepper::extbdf3*) ins->timeStepper)->getGamma();
+    timeStepper.Setup<TimeStepper::extbdf3>(mesh.Nelements,
+                                            mesh.totalHaloPairs,
+                                            mesh.Np, NVfields, platform, comm);
+    gamma = timeStepper.GetGamma();
   } else if (settings.compareSetting("TIME INTEGRATOR","SSBDF3")){
-    ins->timeStepper = new TimeStepper::ssbdf3(mesh.Nelements, mesh.totalHaloPairs,
-                                              mesh.Np, ins->NVfields, *ins);
-    gamma = ((TimeStepper::ssbdf3*) ins->timeStepper)->getGamma();
+    timeStepper.Setup<TimeStepper::ssbdf3>(mesh.Nelements,
+                                           mesh.totalHaloPairs,
+                                           mesh.Np, NVfields, platform, comm);
+    gamma = timeStepper.GetGamma();
   }
 
-  ins->Nsubcycles=1;
+  Nsubcycles=1;
   if (settings.compareSetting("TIME INTEGRATOR","SSBDF3"))
-    settings.getSetting("NUMBER OF SUBCYCLES", ins->Nsubcycles);
+    settings.getSetting("NUMBER OF SUBCYCLES", Nsubcycles);
 
   //Setup velocity Elliptic solvers
-  ins->uSolver=NULL;
-  ins->vSolver=NULL;
-  ins->wSolver=NULL;
-  ins->uLinearSolver=NULL;
-  ins->vLinearSolver=NULL;
-  ins->wLinearSolver=NULL;
-
   dlong uNlocal=0, vNlocal=0, wNlocal=0;
   dlong uNhalo=0, vNhalo=0, wNhalo=0;
   if (settings.compareSetting("TIME INTEGRATOR","EXTBDF3")
@@ -85,273 +86,404 @@ ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
     // bc = 5 -> y-aligned slip
     // bc = 6 -> z-aligned slip
     int NBCTypes = 7;
-    int uBCType[NBCTypes] = {0,1,1,2,1,2,2}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
-    int vBCType[NBCTypes] = {0,1,1,2,2,1,2}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
-    int wBCType[NBCTypes] = {0,1,1,2,2,2,1}; // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
+    memory<int> uBCType(NBCTypes);
+    // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
+    uBCType[0] = 0;
+    uBCType[1] = 1;
+    uBCType[2] = 1;
+    uBCType[3] = 2;
+    uBCType[4] = 1;
+    uBCType[5] = 2;
+    uBCType[6] = 2;
 
-    ins->vSettings = settings.extractVelocitySettings();
+    memory<int> vBCType(NBCTypes);
+    // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
+    vBCType[0] = 0;
+    vBCType[1] = 1;
+    vBCType[2] = 1;
+    vBCType[3] = 2;
+    vBCType[4] = 2;
+    vBCType[5] = 1;
+    vBCType[6] = 2;
+
+    memory<int> wBCType(NBCTypes);
+    // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
+    wBCType[0] = 0;
+    wBCType[1] = 1;
+    wBCType[2] = 1;
+    wBCType[3] = 2;
+    wBCType[4] = 2;
+    wBCType[5] = 2;
+    wBCType[6] = 1;
+
+    vSettings = _settings.extractVelocitySettings();
 
     //make a guess at dt for the lambda value
     //TODO: we should allow preconditioners to be re-setup if lambda is updated
     dfloat hmin = mesh.MinCharacteristicLength();
-    dfloat dtAdvc = ins->Nsubcycles*hmin/((mesh.N+1.)*(mesh.N+1.));
-    dfloat lambda = gamma/(dtAdvc*ins->nu);
-    ins->uSolver = &(elliptic_t::Setup(platform, mesh, *(ins->vSettings),
-                                             lambda, NBCTypes, uBCType));
-    ins->vSolver = &(elliptic_t::Setup(platform, mesh, *(ins->vSettings),
-                                             lambda, NBCTypes, vBCType));
-    ins->wSolver = &(elliptic_t::Setup(platform, mesh, *(ins->vSettings),
-                                             lambda, NBCTypes, wBCType));
-    ins->vTau = ins->uSolver->tau;
+    dfloat dtAdvc = Nsubcycles*hmin/((mesh.N+1.)*(mesh.N+1.));
+    dfloat lambda = gamma/(dtAdvc*nu);
+    uSolver.Setup(platform, mesh, vSettings,
+                  lambda, NBCTypes, uBCType);
+    vSolver.Setup(platform, mesh, vSettings,
+                  lambda, NBCTypes, vBCType);
+    if (mesh.dim == 3)
+      wSolver.Setup(platform, mesh, vSettings,
+                    lambda, NBCTypes, wBCType);
 
-    ins->vDisc_c0 = settings.compareSetting("VELOCITY DISCRETIZATION", "CONTINUOUS") ? 1 : 0;
+    vTau = uSolver.tau;
 
-    uNlocal = ins->uSolver->Ndofs;
-    vNlocal = ins->vSolver->Ndofs;
-    if (mesh.dim == 3) wNlocal = ins->wSolver->Ndofs;
+    vDisc_c0 = settings.compareSetting("VELOCITY DISCRETIZATION", "CONTINUOUS") ? 1 : 0;
 
-    uNhalo = ins->uSolver->Nhalo;
-    vNhalo = ins->vSolver->Nhalo;
-    if (mesh.dim == 3) wNhalo = ins->wSolver->Nhalo;
+    uNlocal = uSolver.Ndofs;
+    vNlocal = vSolver.Ndofs;
+    if (mesh.dim == 3) wNlocal = wSolver.Ndofs;
 
-    ins->uLinearSolver = initialGuessSolver_t::Setup(uNlocal, uNhalo,
-                                                    platform, *(ins->vSettings), mesh.comm);
+    uNhalo = uSolver.Nhalo;
+    vNhalo = vSolver.Nhalo;
+    if (mesh.dim == 3) wNhalo = wSolver.Nhalo;
 
-    ins->vLinearSolver = initialGuessSolver_t::Setup(vNlocal, vNhalo,
-                                                    platform, *(ins->vSettings), mesh.comm);
-    if (mesh.dim == 3) {
-      ins->wLinearSolver = initialGuessSolver_t::Setup(wNlocal, wNhalo,
-                                                       platform, *(ins->vSettings), mesh.comm);
+    if (vSettings.compareSetting("LINEAR SOLVER","NBPCG")){
+
+      uLinearSolver.Setup<LinearSolver::nbpcg>(uNlocal, uNhalo, platform, vSettings, comm);
+      vLinearSolver.Setup<LinearSolver::nbpcg>(vNlocal, vNhalo, platform, vSettings, comm);
+      if (mesh.dim==3)
+        wLinearSolver.Setup<LinearSolver::nbpcg>(wNlocal, wNhalo, platform, vSettings, comm);
+
+    } else if (vSettings.compareSetting("LINEAR SOLVER","NBFPCG")){
+
+      uLinearSolver.Setup<LinearSolver::nbfpcg>(uNlocal, uNhalo, platform, vSettings, comm);
+      vLinearSolver.Setup<LinearSolver::nbfpcg>(vNlocal, vNhalo, platform, vSettings, comm);
+      if (mesh.dim==3)
+        wLinearSolver.Setup<LinearSolver::nbfpcg>(wNlocal, wNhalo, platform, vSettings, comm);
+
+    } else if (vSettings.compareSetting("LINEAR SOLVER","PCG")){
+
+      uLinearSolver.Setup<LinearSolver::pcg>(uNlocal, uNhalo, platform, vSettings, comm);
+      vLinearSolver.Setup<LinearSolver::pcg>(vNlocal, vNhalo, platform, vSettings, comm);
+      if (mesh.dim==3)
+        wLinearSolver.Setup<LinearSolver::pcg>(wNlocal, wNhalo, platform, vSettings, comm);
+
+    } else if (vSettings.compareSetting("LINEAR SOLVER","PGMRES")){
+
+      uLinearSolver.Setup<LinearSolver::pgmres>(uNlocal, uNhalo, platform, vSettings, comm);
+      vLinearSolver.Setup<LinearSolver::pgmres>(vNlocal, vNhalo, platform, vSettings, comm);
+      if (mesh.dim==3)
+        wLinearSolver.Setup<LinearSolver::pgmres>(wNlocal, wNhalo, platform, vSettings, comm);
+
+    } else if (vSettings.compareSetting("LINEAR SOLVER","PMINRES")){
+
+      uLinearSolver.Setup<LinearSolver::pminres>(uNlocal, uNhalo, platform, vSettings, comm);
+      vLinearSolver.Setup<LinearSolver::pminres>(vNlocal, vNhalo, platform, vSettings, comm);
+      if (mesh.dim==3)
+        wLinearSolver.Setup<LinearSolver::pminres>(wNlocal, wNhalo, platform, vSettings, comm);
+    }
+
+    if (vSettings.compareSetting("INITIAL GUESS STRATEGY", "NONE")) {
+
+      uLinearSolver.SetupInitialGuess<InitialGuess::Default>(uNlocal, platform, vSettings, comm);
+      vLinearSolver.SetupInitialGuess<InitialGuess::Default>(vNlocal, platform, vSettings, comm);
+      if (mesh.dim==3)
+        wLinearSolver.SetupInitialGuess<InitialGuess::Default>(wNlocal, platform, vSettings, comm);
+
+    } else if (vSettings.compareSetting("INITIAL GUESS STRATEGY", "ZERO")) {
+
+      uLinearSolver.SetupInitialGuess<InitialGuess::Zero>(uNlocal, platform, vSettings, comm);
+      vLinearSolver.SetupInitialGuess<InitialGuess::Zero>(vNlocal, platform, vSettings, comm);
+      if (mesh.dim==3)
+        wLinearSolver.SetupInitialGuess<InitialGuess::Zero>(wNlocal, platform, vSettings, comm);
+
+    } else if (vSettings.compareSetting("INITIAL GUESS STRATEGY", "CLASSIC")) {
+
+      uLinearSolver.SetupInitialGuess<InitialGuess::ClassicProjection>(uNlocal, platform, vSettings, comm);
+      vLinearSolver.SetupInitialGuess<InitialGuess::ClassicProjection>(vNlocal, platform, vSettings, comm);
+      if (mesh.dim==3)
+        wLinearSolver.SetupInitialGuess<InitialGuess::ClassicProjection>(wNlocal, platform, vSettings, comm);
+
+    } else if (vSettings.compareSetting("INITIAL GUESS STRATEGY", "QR")) {
+
+      uLinearSolver.SetupInitialGuess<InitialGuess::RollingQRProjection>(uNlocal, platform, vSettings, comm);
+      vLinearSolver.SetupInitialGuess<InitialGuess::RollingQRProjection>(vNlocal, platform, vSettings, comm);
+      if (mesh.dim==3)
+        wLinearSolver.SetupInitialGuess<InitialGuess::RollingQRProjection>(wNlocal, platform, vSettings, comm);
+
+    } else if (vSettings.compareSetting("INITIAL GUESS STRATEGY", "EXTRAP")) {
+
+      uLinearSolver.SetupInitialGuess<InitialGuess::Extrap>(uNlocal, platform, vSettings, comm);
+      vLinearSolver.SetupInitialGuess<InitialGuess::Extrap>(vNlocal, platform, vSettings, comm);
+      if (mesh.dim==3)
+        wLinearSolver.SetupInitialGuess<InitialGuess::Extrap>(wNlocal, platform, vSettings, comm);
+
     }
 
   } else {
-    ins->vDisc_c0 = 0;
+    vDisc_c0 = 0;
 
     //set penalty
-    if (mesh.elementType==TRIANGLES ||
-        mesh.elementType==QUADRILATERALS){
-      ins->vTau = 2.0*(mesh.N+1)*(mesh.N+2)/2.0;
+    if (mesh.elementType==Mesh::TRIANGLES ||
+        mesh.elementType==Mesh::QUADRILATERALS){
+      vTau = 2.0*(mesh.N+1)*(mesh.N+2)/2.0;
       if(mesh.dim==3)
-        ins->vTau *= 1.5;
+        vTau *= 1.5;
     } else
-      ins->vTau = 2.0*(mesh.N+1)*(mesh.N+3);
+      vTau = 2.0*(mesh.N+1)*(mesh.N+3);
   }
 
   //Setup pressure Elliptic solver
   dlong pNlocal=0, pNhalo=0;
   {
     int NBCTypes = 7;
-    int pBCType[NBCTypes] = {0,2,2,1,2,2,2}; // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
+    memory<int> pBCType(NBCTypes);
+    // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
+    pBCType[0] = 0;
+    pBCType[1] = 2;
+    pBCType[2] = 2;
+    pBCType[3] = 1;
+    pBCType[4] = 2;
+    pBCType[5] = 2;
+    pBCType[6] = 2;
 
-    ins->pSettings = settings.extractPressureSettings();
-    ins->pSolver = &(elliptic_t::Setup(platform, mesh, *(ins->pSettings),
-                                             0.0, NBCTypes, pBCType));
-    ins->pTau = ins->pSolver->tau;
+    pSettings = _settings.extractPressureSettings();
+    pSolver.Setup(platform, mesh, pSettings,
+                  0.0, NBCTypes, pBCType);
+    pTau = pSolver.tau;
 
-    ins->pDisc_c0 = settings.compareSetting("PRESSURE DISCRETIZATION", "CONTINUOUS") ? 1 : 0;
+    pDisc_c0 = settings.compareSetting("PRESSURE DISCRETIZATION", "CONTINUOUS") ? 1 : 0;
 
-    if (ins->pDisc_c0) {
-      pNlocal = ins->pSolver->ogsMasked->Ngather;
-      pNhalo  = ins->pSolver->ogsMasked->NgatherHalo;
+    if (pDisc_c0) {
+      pNlocal = pSolver.ogsMasked.Ngather;
+      pNhalo  = pSolver.gHalo.Nhalo;
     } else {
       pNlocal = mesh.Nelements*mesh.Np;
       pNhalo  = mesh.totalHaloPairs*mesh.Np;
     }
 
-    ins->pLinearSolver = initialGuessSolver_t::Setup(pNlocal, pNhalo,
-                                                     platform, *(ins->pSettings), mesh.comm);
+    if (vSettings.compareSetting("LINEAR SOLVER","NBPCG")){
+      pLinearSolver.Setup<LinearSolver::nbpcg>(pNlocal, pNhalo, platform, pSettings, comm);
+    } else if (pSettings.compareSetting("LINEAR SOLVER","NBFPCG")){
+      pLinearSolver.Setup<LinearSolver::nbfpcg>(pNlocal, pNhalo, platform, pSettings, comm);
+    } else if (pSettings.compareSetting("LINEAR SOLVER","PCG")){
+      pLinearSolver.Setup<LinearSolver::pcg>(pNlocal, pNhalo, platform, pSettings, comm);
+    } else if (pSettings.compareSetting("LINEAR SOLVER","PGMRES")){
+      pLinearSolver.Setup<LinearSolver::pgmres>(pNlocal, pNhalo, platform, pSettings, comm);
+    } else if (pSettings.compareSetting("LINEAR SOLVER","PMINRES")){
+      pLinearSolver.Setup<LinearSolver::pminres>(pNlocal, pNhalo, platform, pSettings, comm);
+    }
+
+    if (pSettings.compareSetting("INITIAL GUESS STRATEGY", "NONE")) {
+      pLinearSolver.SetupInitialGuess<InitialGuess::Default>(pNlocal, platform, pSettings, comm);
+    } else if (pSettings.compareSetting("INITIAL GUESS STRATEGY", "ZERO")) {
+      pLinearSolver.SetupInitialGuess<InitialGuess::Zero>(pNlocal, platform, pSettings, comm);
+    } else if (pSettings.compareSetting("INITIAL GUESS STRATEGY", "CLASSIC")) {
+      pLinearSolver.SetupInitialGuess<InitialGuess::ClassicProjection>(pNlocal, platform, pSettings, comm);
+    } else if (pSettings.compareSetting("INITIAL GUESS STRATEGY", "QR")) {
+      pLinearSolver.SetupInitialGuess<InitialGuess::RollingQRProjection>(pNlocal, platform, pSettings, comm);
+    } else if (pSettings.compareSetting("INITIAL GUESS STRATEGY", "EXTRAP")) {
+      pLinearSolver.SetupInitialGuess<InitialGuess::Extrap>(pNlocal, platform, pSettings, comm);
+    }
   }
 
   //Solver tolerances
-  ins->presTOL = 1E-8;
-  ins->velTOL  = 1E-8;
-
-  //build node-wise boundary flag
-  ins->BoundarySetup();
+  if (sizeof(dfloat)==sizeof(double)) {
+    presTOL = 1.0E-8;
+    velTOL  = 1.0E-8;
+  } else {
+    presTOL = 1.0E-5;
+    velTOL  = 1.0E-5;
+  }
 
   //setup linear algebra module
-  platform.linAlg.InitKernels({"innerProd", "axpy", "max"});
+  platform.linAlg().InitKernels({"innerProd", "axpy", "max"});
 
   /*setup trace halo exchange */
-  ins->pTraceHalo = mesh.HaloTraceSetup(1); //one field
-  ins->vTraceHalo = mesh.HaloTraceSetup(ins->NVfields); //one field
+  pTraceHalo = mesh.HaloTraceSetup(1); //one field
+  vTraceHalo = mesh.HaloTraceSetup(NVfields); //one field
 
   // u and p at interpolation nodes
-  ins->u = (dfloat*) calloc((Nlocal+Nhalo)*ins->NVfields, sizeof(dfloat));
-  ins->o_u = platform.malloc((Nlocal+Nhalo)*ins->NVfields*sizeof(dfloat), ins->u);
+  u.malloc((Nlocal+Nhalo)*NVfields, 0.0);
+  o_u = platform.malloc<dfloat>(u);
 
-  ins->p = (dfloat*) calloc(Nlocal+Nhalo, sizeof(dfloat));
-  ins->o_p = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), ins->p);
+  p.malloc(Nlocal+Nhalo, 0.0);
+  o_p = platform.malloc<dfloat>(p);
 
   //storage for velocity gradient
   if ( !settings.compareSetting("TIME INTEGRATOR","EXTBDF3")
     && !settings.compareSetting("TIME INTEGRATOR","SSBDF3"))
-    ins->o_GU = platform.malloc((Nlocal+Nhalo)*4*sizeof(dfloat));
+    o_GU = platform.malloc<dfloat>((Nlocal+Nhalo)*4);
 
   //extra buffers for solvers
   if (settings.compareSetting("TIME INTEGRATOR","EXTBDF3")
     ||settings.compareSetting("TIME INTEGRATOR","SSBDF3")) {
-    ins->o_UH = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat));
-    ins->o_VH = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat));
+    o_UH = platform.malloc<dfloat>(Nlocal+Nhalo, u);
+    o_VH = platform.malloc<dfloat>(Nlocal+Nhalo, u);
     if (mesh.dim==3)
-      ins->o_WH = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat));
-    else
-      ins->o_WH = platform.malloc((1)*sizeof(dfloat));
+      o_WH = platform.malloc<dfloat>(Nlocal+Nhalo, u);
 
-    ins->o_rhsU = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat));
-    ins->o_rhsV = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat));
+    o_rhsU = platform.malloc<dfloat>(Nlocal+Nhalo, u);
+    o_rhsV = platform.malloc<dfloat>(Nlocal+Nhalo, u);
     if (mesh.dim==3)
-      ins->o_rhsW = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat));
-    else
-      ins->o_rhsW = platform.malloc((1)*sizeof(dfloat));
+      o_rhsW = platform.malloc<dfloat>(Nlocal+Nhalo, u);
 
-    if (ins->vDisc_c0) {
-      ins->o_GUH = platform.malloc((uNlocal+uNhalo)*sizeof(dfloat), ins->u);
-      ins->o_GVH = platform.malloc((vNlocal+vNhalo)*sizeof(dfloat), ins->u);
+    if (vDisc_c0) {
+      o_GUH = platform.malloc<dfloat>(uNlocal+uNhalo, u);
+      o_GVH = platform.malloc<dfloat>(vNlocal+vNhalo, u);
       if (mesh.dim==3)
-        ins->o_GWH = platform.malloc((wNlocal+wNhalo)*sizeof(dfloat), ins->u);
+        o_GWH = platform.malloc<dfloat>(wNlocal+wNhalo, u);
 
-      ins->o_GrhsU = platform.malloc((uNlocal+uNhalo)*sizeof(dfloat));
-      ins->o_GrhsV = platform.malloc((vNlocal+vNhalo)*sizeof(dfloat));
+      o_GrhsU = platform.malloc<dfloat>(uNlocal+uNhalo, u);
+      o_GrhsV = platform.malloc<dfloat>(vNlocal+vNhalo, u);
       if (mesh.dim==3)
-        ins->o_GrhsW = platform.malloc((wNlocal+wNhalo)*sizeof(dfloat));
+        o_GrhsW = platform.malloc<dfloat>(wNlocal+wNhalo, u);
     }
   }
 
-  if (ins->pressureIncrement) {
-    ins->o_PI = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), ins->p);
-    ins->o_GPI = platform.malloc((pNlocal+pNhalo)*sizeof(dfloat), ins->p);
+  if (pressureIncrement) {
+    o_PI  = platform.malloc<dfloat>(p);
+    o_GPI = platform.malloc<dfloat>(p);
   }
 
-  ins->o_rhsP = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat));
-  if (ins->pDisc_c0) {
-    ins->o_GP    = platform.malloc((pNlocal+pNhalo)*sizeof(dfloat), ins->p);
-    ins->o_GrhsP = platform.malloc((pNlocal+pNhalo)*sizeof(dfloat));
+  o_rhsP = platform.malloc<dfloat>(p);
+  if (pDisc_c0) {
+    o_GP    = platform.malloc<dfloat>(p);
+    o_GrhsP = platform.malloc<dfloat>(p);
   }
 
   //storage for M*u during reporting
-  ins->o_MU = platform.malloc((Nlocal+Nhalo)*ins->NVfields*sizeof(dfloat), ins->u);
-  mesh.MassMatrixKernelSetup(ins->NVfields); // mass matrix operator
+  o_MU = platform.malloc<dfloat>(u);
+  mesh.MassMatrixKernelSetup(NVfields); // mass matrix operator
 
   if (mesh.dim==2) {
-    ins->Vort = (dfloat*) calloc((Nlocal+Nhalo), sizeof(dfloat));
-    ins->o_Vort = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), ins->Vort);
+    Vort.malloc(Nlocal+Nhalo, 0.0);
+    o_Vort = platform.malloc<dfloat>(Vort);
   } else {
-    ins->Vort = (dfloat*) calloc((Nlocal+Nhalo)*ins->NVfields, sizeof(dfloat));
-    ins->o_Vort = platform.malloc((Nlocal+Nhalo)*ins->NVfields*sizeof(dfloat), ins->Vort);
+    Vort.malloc((Nlocal+Nhalo)*NVfields, 0.0);
+    o_Vort = platform.malloc<dfloat>(Vort);
   }
 
   // OCCA build stuff
-  occa::properties kernelInfo = mesh.props; //copy base occa properties
+  properties_t kernelInfo = mesh.props; //copy base occa properties
 
   //add boundary data to kernel info
-  string dataFileName;
+  std::string dataFileName;
   settings.getSetting("DATA FILE", dataFileName);
   kernelInfo["includes"] += dataFileName;
 
-  kernelInfo["defines/" "p_Nfields"] = ins->NVfields;
-  kernelInfo["defines/" "p_NVfields"]= ins->NVfields;
-  kernelInfo["defines/" "p_NTfields"]= ins->NTfields;
+  kernelInfo["defines/" "p_Nfields"] = NVfields;
+  kernelInfo["defines/" "p_NVfields"]= NVfields;
+  kernelInfo["defines/" "p_NTfields"]= NTfields;
 
-  int maxNodes = mymax(mesh.Np, (mesh.Nfp*mesh.Nfaces));
+  int maxNodes = std::max(mesh.Np, (mesh.Nfp*mesh.Nfaces));
   kernelInfo["defines/" "p_maxNodes"]= maxNodes;
 
   int blockMax = 256;
 
-  int NblockV = mymax(1,blockMax/mesh.Np);
+  int NblockV = std::max(1,blockMax/mesh.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;
 
-  int NblockS = mymax(1,blockMax/maxNodes);
+  int NblockS = std::max(1,blockMax/maxNodes);
   kernelInfo["defines/" "p_NblockS"]= NblockS;
 
-  if (ins->cubature) {
-    int cubMaxNodes = mymax(mesh.Np, (mesh.intNfp*mesh.Nfaces));
+  if (cubature) {
+    int cubMaxNodes = std::max(mesh.Np, (mesh.intNfp*mesh.Nfaces));
     kernelInfo["defines/" "p_cubMaxNodes"]= cubMaxNodes;
-    int cubMaxNodes1 = mymax(mesh.Np, (mesh.intNfp));
+    int cubMaxNodes1 = std::max(mesh.Np, (mesh.intNfp));
     kernelInfo["defines/" "p_cubMaxNodes1"]= cubMaxNodes1;
 
-    int cubNblockV = mymax(1,blockMax/mesh.cubNp);
+    int cubNblockV = std::max(1,blockMax/mesh.cubNp);
     kernelInfo["defines/" "p_cubNblockV"]= cubNblockV;
 
-    int cubNblockS = mymax(1,blockMax/cubMaxNodes);
+    int cubNblockS = std::max(1,blockMax/cubMaxNodes);
     kernelInfo["defines/" "p_cubNblockS"]= cubNblockS;
   }
 
-  kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
-
   // set kernel name suffix
-  char *suffix;
-  if(mesh.elementType==TRIANGLES)
-    suffix = strdup("Tri2D");
-  if(mesh.elementType==QUADRILATERALS)
-    suffix = strdup("Quad2D");
-  if(mesh.elementType==TETRAHEDRA)
-    suffix = strdup("Tet3D");
-  if(mesh.elementType==HEXAHEDRA)
-    suffix = strdup("Hex3D");
+  std::string suffix;
+  if(mesh.elementType==Mesh::TRIANGLES)
+    suffix = "Tri2D";
+  if(mesh.elementType==Mesh::QUADRILATERALS)
+    suffix = "Quad2D";
+  if(mesh.elementType==Mesh::TETRAHEDRA)
+    suffix = "Tet3D";
+  if(mesh.elementType==Mesh::HEXAHEDRA)
+    suffix = "Hex3D";
 
-  char fileName[BUFSIZ], kernelName[BUFSIZ];
+  std::string oklFilePrefix = DINS "/okl/";
+  std::string oklFileSuffix = ".okl";
+
+  std::string fileName, kernelName;
 
   // advection kernels
-  ins->subcycler=NULL;
-  ins->subStepper=NULL;
   if (settings.compareSetting("TIME INTEGRATOR","SSBDF3")) {
     //subcycle kernels
-    if (ins->cubature) {
-      sprintf(fileName, DINS "/okl/insSubcycleCubatureAdvection%s.okl", suffix);
-      sprintf(kernelName, "insSubcycleAdvectionCubatureVolume%s", suffix);
-      ins->advectionVolumeKernel =  platform.buildKernel(fileName, kernelName,
+    if (cubature) {
+      fileName   = oklFilePrefix + "insSubcycleCubatureAdvection" + suffix + oklFileSuffix;
+      kernelName = "insSubcycleAdvectionCubatureVolume" + suffix;
+      advectionVolumeKernel =  platform.buildKernel(fileName, kernelName,
                                              kernelInfo);
-      sprintf(kernelName, "insSubcycleAdvectionCubatureSurface%s", suffix);
-      ins->advectionSurfaceKernel = platform.buildKernel(fileName, kernelName,
+      kernelName = "insSubcycleAdvectionCubatureSurface" + suffix;
+      advectionSurfaceKernel = platform.buildKernel(fileName, kernelName,
                                              kernelInfo);
     } else {
-      sprintf(fileName, DINS "/okl/insSubcycleAdvection%s.okl", suffix);
-      sprintf(kernelName, "insSubcycleAdvectionVolume%s", suffix);
-      ins->advectionVolumeKernel =  platform.buildKernel(fileName, kernelName,
+      fileName   = oklFilePrefix + "insSubcycleAdvection" + suffix + oklFileSuffix;
+      kernelName = "insSubcycleAdvectionVolume" + suffix;
+      advectionVolumeKernel =  platform.buildKernel(fileName, kernelName,
                                              kernelInfo);
-      sprintf(kernelName, "insSubcycleAdvectionSurface%s", suffix);
-      ins->advectionSurfaceKernel = platform.buildKernel(fileName, kernelName,
+      kernelName = "insSubcycleAdvectionSurface" + suffix;
+      advectionSurfaceKernel = platform.buildKernel(fileName, kernelName,
                                              kernelInfo);
     }
 
     //build subcycler
-    ins->subcycler  = new subcycler_t(*ins);
+    subcycler.platform = platform;
+    subcycler.mesh = mesh;
+    subcycler.comm = comm;
+    subcycler.settings = settings;
+
+    subcycler.NVfields = NVfields;
+    subcycler.nu = nu;
+    subcycler.cubature = cubature;
+    subcycler.vTraceHalo = vTraceHalo;
+    subcycler.advectionVolumeKernel = advectionVolumeKernel;
+    subcycler.advectionSurfaceKernel = advectionSurfaceKernel;
+
     if (settings.compareSetting("SUBCYCLING TIME INTEGRATOR","AB3")){
-      ins->subStepper = new TimeStepper::ab3(mesh.Nelements, mesh.totalHaloPairs,
-                                                mesh.Np, ins->NVfields, *(ins->subcycler));
+      subStepper.Setup<TimeStepper::ab3>(mesh.Nelements,
+                                         mesh.totalHaloPairs,
+                                         mesh.Np, NVfields, platform, comm);
     } else if (settings.compareSetting("SUBCYCLING TIME INTEGRATOR","LSERK4")){
-      ins->subStepper = new TimeStepper::lserk4(mesh.Nelements, mesh.totalHaloPairs,
-                                                mesh.Np, ins->NVfields, *(ins->subcycler));
+      subStepper.Setup<TimeStepper::lserk4>(mesh.Nelements,
+                                            mesh.totalHaloPairs,
+                                            mesh.Np, NVfields, platform, comm);
     } else if (settings.compareSetting("SUBCYCLING TIME INTEGRATOR","DOPRI5")){
-      ins->subStepper = new TimeStepper::dopri5(mesh.Nelements, mesh.totalHaloPairs,
-                                                mesh.Np, ins->NVfields, *(ins->subcycler), mesh.comm);
+      subStepper.Setup<TimeStepper::dopri5>(mesh.Nelements,
+                                            mesh.totalHaloPairs,
+                                            mesh.Np, NVfields, platform, comm);
     }
 
-    sprintf(fileName, DINS "/okl/insSubcycleAdvection.okl");
-    sprintf(kernelName, "insSubcycleAdvectionKernel");
-    ins->subcycler->subCycleAdvectionKernel = platform.buildKernel(fileName, kernelName,
+    fileName   = oklFilePrefix + "insSubcycleAdvection" + oklFileSuffix;
+    kernelName = "insSubcycleAdvectionKernel";
+    subcycler.subCycleAdvectionKernel = platform.buildKernel(fileName, kernelName,
                                              kernelInfo);
 
-    ins->subcycler->o_Ue = platform.malloc((Nlocal+Nhalo)*ins->NVfields*sizeof(dfloat), ins->u);
+    subcycler.o_Ue = platform.malloc<dfloat>(u);
 
   } else {
     //regular advection kernels
-    if (ins->cubature) {
-      sprintf(fileName, DINS "/okl/insCubatureAdvection%s.okl", suffix);
-      sprintf(kernelName, "insAdvectionCubatureVolume%s", suffix);
-      ins->advectionVolumeKernel =  platform.buildKernel(fileName, kernelName,
+    if (cubature) {
+      fileName   = oklFilePrefix + "insCubatureAdvection" + suffix + oklFileSuffix;
+      kernelName = "insAdvectionCubatureVolume" + suffix;
+      advectionVolumeKernel =  platform.buildKernel(fileName, kernelName,
                                              kernelInfo);
-      sprintf(kernelName, "insAdvectionCubatureSurface%s", suffix);
-      ins->advectionSurfaceKernel = platform.buildKernel(fileName, kernelName,
+      kernelName = "insAdvectionCubatureSurface" + suffix;
+      advectionSurfaceKernel = platform.buildKernel(fileName, kernelName,
                                              kernelInfo);
     } else {
-      sprintf(fileName, DINS "/okl/insAdvection%s.okl", suffix);
-      sprintf(kernelName, "insAdvectionVolume%s", suffix);
-      ins->advectionVolumeKernel =  platform.buildKernel(fileName, kernelName,
+      fileName   = oklFilePrefix + "insAdvection" + suffix + oklFileSuffix;
+      kernelName = "insAdvectionVolume" + suffix;
+      advectionVolumeKernel =  platform.buildKernel(fileName, kernelName,
                                              kernelInfo);
-      sprintf(kernelName, "insAdvectionSurface%s", suffix);
-      ins->advectionSurfaceKernel = platform.buildKernel(fileName, kernelName,
+      kernelName = "insAdvectionSurface" + suffix;
+      advectionSurfaceKernel = platform.buildKernel(fileName, kernelName,
                                              kernelInfo);
     }
   }
@@ -359,133 +491,95 @@ ins_t& ins_t::Setup(platform_t& platform, mesh_t& mesh,
   // diffusion kernels
   if (settings.compareSetting("TIME INTEGRATOR","EXTBDF3")
     ||settings.compareSetting("TIME INTEGRATOR","SSBDF3")) {
-    sprintf(fileName, DINS "/okl/insVelocityRhs%s.okl", suffix);
+    fileName   = oklFilePrefix + "insVelocityRhs" + suffix + oklFileSuffix;
 
-    if (ins->vDisc_c0)
-      sprintf(kernelName, "insVelocityRhs%s", suffix);
+    if (vDisc_c0)
+      kernelName = "insVelocityRhs" + suffix;
     else
-      sprintf(kernelName, "insVelocityIpdgRhs%s", suffix);
-    ins->velocityRhsKernel =  platform.buildKernel(fileName, kernelName,
+      kernelName = "insVelocityIpdgRhs" + suffix;
+    velocityRhsKernel =  platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
 
-    sprintf(kernelName, "insVelocityBC%s", suffix);
-    ins->velocityBCKernel =  platform.buildKernel(fileName, kernelName,
+    kernelName = "insVelocityBC" + suffix;
+    velocityBCKernel =  platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
   } else {
     // gradient kernel
-    sprintf(fileName, DINS "/okl/insVelocityGradient%s.okl", suffix);
-    sprintf(kernelName, "insVelocityGradient%s", suffix);
-    ins->velocityGradientKernel =  platform.buildKernel(fileName, kernelName,
+    fileName   = oklFilePrefix + "insVelocityGradient" + suffix + oklFileSuffix;
+    kernelName = "insVelocityGradient" + suffix;
+    velocityGradientKernel =  platform.buildKernel(fileName, kernelName,
                                                kernelInfo);
 
-    sprintf(fileName, DINS "/okl/insDiffusion%s.okl", suffix);
-    sprintf(kernelName, "insDiffusion%s", suffix);
-    ins->diffusionKernel =  platform.buildKernel(fileName, kernelName,
+    fileName   = oklFilePrefix + "insDiffusion" + suffix + oklFileSuffix;
+    kernelName = "insDiffusion" + suffix;
+    diffusionKernel =  platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
   }
 
   //pressure gradient kernels
-  sprintf(fileName, DINS "/okl/insGradient%s.okl", suffix);
-  sprintf(kernelName, "insGradientVolume%s", suffix);
-  ins->gradientVolumeKernel =  platform.buildKernel(fileName, kernelName,
+  fileName   = oklFilePrefix + "insGradient" + suffix + oklFileSuffix;
+  kernelName = "insGradientVolume" + suffix;
+  gradientVolumeKernel =  platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
-  sprintf(kernelName, "insGradientSurface%s", suffix);
-  ins->gradientSurfaceKernel = platform.buildKernel(fileName, kernelName,
+  kernelName = "insGradientSurface" + suffix;
+  gradientSurfaceKernel = platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
 
   //velocity divergence kernels
-  sprintf(fileName, DINS "/okl/insDivergence%s.okl", suffix);
-  sprintf(kernelName, "insDivergenceVolume%s", suffix);
-  ins->divergenceVolumeKernel =  platform.buildKernel(fileName, kernelName,
+  fileName   = oklFilePrefix + "insDivergence" + suffix + oklFileSuffix;
+  kernelName = "insDivergenceVolume" + suffix;
+  divergenceVolumeKernel =  platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
-  sprintf(kernelName, "insDivergenceSurface%s", suffix);
-  ins->divergenceSurfaceKernel = platform.buildKernel(fileName, kernelName,
+  kernelName = "insDivergenceSurface" + suffix;
+  divergenceSurfaceKernel = platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
 
   //pressure solver kernels
-  if (ins->pressureIncrement) {
-    sprintf(fileName, DINS "/okl/insPressureIncrementRhs%s.okl", suffix);
+  if (pressureIncrement) {
+    fileName   = oklFilePrefix + "insPressureIncrementRhs" + suffix + oklFileSuffix;
 
-    if (ins->pDisc_c0)
-      sprintf(kernelName, "insPressureIncrementRhs%s", suffix);
+    if (pDisc_c0)
+      kernelName = "insPressureIncrementRhs" + suffix;
     else
-      sprintf(kernelName, "insPressureIncrementIpdgRhs%s", suffix);
-    ins->pressureIncrementRhsKernel =  platform.buildKernel(fileName, kernelName,
+      kernelName = "insPressureIncrementIpdgRhs" + suffix;
+    pressureIncrementRhsKernel =  platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
 
-    sprintf(kernelName, "insPressureIncrementBC%s", suffix);
-    ins->pressureIncrementBCKernel =  platform.buildKernel(fileName, kernelName,
+    kernelName = "insPressureIncrementBC" + suffix;
+    pressureIncrementBCKernel =  platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
   } else {
-    sprintf(fileName, DINS "/okl/insPressureRhs%s.okl", suffix);
-    if (ins->pDisc_c0)
-      sprintf(kernelName, "insPressureRhs%s", suffix);
+    fileName   = oklFilePrefix + "insPressureRhs" + suffix + oklFileSuffix;
+    if (pDisc_c0)
+      kernelName = "insPressureRhs" + suffix;
     else
-      sprintf(kernelName, "insPressureIpdgRhs%s", suffix);
-    ins->pressureRhsKernel =  platform.buildKernel(fileName, kernelName,
+      kernelName = "insPressureIpdgRhs" + suffix;
+    pressureRhsKernel =  platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
 
-    sprintf(kernelName, "insPressureBC%s", suffix);
-    ins->pressureBCKernel =  platform.buildKernel(fileName, kernelName,
+    kernelName = "insPressureBC" + suffix;
+    pressureBCKernel =  platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
   }
 
-  sprintf(fileName, DINS "/okl/insVorticity%s.okl", suffix);
-  sprintf(kernelName, "insVorticity%s", suffix);
-  ins->vorticityKernel =  platform.buildKernel(fileName, kernelName,
+  fileName   = oklFilePrefix + "insVorticity" + suffix + oklFileSuffix;
+  kernelName = "insVorticity" + suffix;
+  vorticityKernel =  platform.buildKernel(fileName, kernelName,
                                             kernelInfo);
 
   if (mesh.dim==2) {
-    sprintf(fileName, DINS "/okl/insInitialCondition2D.okl");
-    sprintf(kernelName, "insInitialCondition2D");
+    fileName   = oklFilePrefix + "insInitialCondition2D" + oklFileSuffix;
+    kernelName = "insInitialCondition2D";
   } else {
-    sprintf(fileName, DINS "/okl/insInitialCondition3D.okl");
-    sprintf(kernelName, "insInitialCondition3D");
+    fileName   = oklFilePrefix + "insInitialCondition3D" + oklFileSuffix;
+    kernelName = "insInitialCondition3D";
   }
 
-  ins->initialConditionKernel = platform.buildKernel(fileName, kernelName,
+  initialConditionKernel = platform.buildKernel(fileName, kernelName,
                                                   kernelInfo);
 
-  sprintf(fileName, DINS "/okl/insMaxWaveSpeed%s.okl", suffix);
-  sprintf(kernelName, "insMaxWaveSpeed%s", suffix);
+  fileName   = oklFilePrefix + "insMaxWaveSpeed" + suffix + oklFileSuffix;
+  kernelName = "insMaxWaveSpeed" + suffix;
 
-  ins->maxWaveSpeedKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
-
-  return *ins;
-}
-
-ins_t::~ins_t() {
-  advectionVolumeKernel.free();
-  advectionSurfaceKernel.free();
-  divergenceVolumeKernel.free();
-  divergenceSurfaceKernel.free();
-  gradientVolumeKernel.free();
-  gradientSurfaceKernel.free();
-  velocityGradientKernel.free();
-  diffusionKernel.free();
-  velocityRhsKernel.free();
-  velocityBCKernel.free();
-  pressureRhsKernel.free();
-  pressureBCKernel.free();
-  vorticityKernel.free();
-  initialConditionKernel.free();
-  maxWaveSpeedKernel.free();
-
-  if (pSolver) delete pSolver;
-  if (uSolver) delete uSolver;
-  if (vSolver) delete vSolver;
-  if (wSolver) delete wSolver;
-  if (timeStepper) delete timeStepper;
-  if (pLinearSolver) delete pLinearSolver;
-  if (uLinearSolver) delete uLinearSolver;
-  if (vLinearSolver) delete vLinearSolver;
-  if (wLinearSolver) delete wLinearSolver;
-  if (subStepper) delete subStepper;
-  if (subcycler) {
-    subcycler->subCycleAdvectionKernel.free();
-    delete subcycler;
-  }
-
-  if (vTraceHalo) vTraceHalo->Free();
-  if (pTraceHalo) pTraceHalo->Free();
+  maxWaveSpeedKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 }

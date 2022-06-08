@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,54 +26,60 @@ SOFTWARE.
 
 #include "bns.hpp"
 
-bns_t& bns_t::Setup(platform_t& platform, mesh_t& mesh,
-                    bnsSettings_t& settings){
+void bns_t::Setup(platform_t& _platform, mesh_t& _mesh,
+                  bnsSettings_t& _settings){
 
-  bns_t* bns = new bns_t(platform, mesh, settings);
+  platform = _platform;
+  mesh = _mesh;
+  comm = _mesh.comm;
+  settings = _settings;
 
   //get physical paramters
-  settings.getSetting("SPEED OF SOUND", bns->c);
-  settings.getSetting("VISCOSITY", bns->nu);
-  bns->RT     = bns->c*bns->c;
-  bns->tauInv = bns->RT/bns->nu;
+  settings.getSetting("SPEED OF SOUND", c);
+  settings.getSetting("VISCOSITY", nu);
+  RT     = c*c;
+  tauInv = RT/nu;
 
-  bns->Nfields    = (mesh.dim==3) ? 10:6;
-  bns->Npmlfields = mesh.dim*bns->Nfields;
+  Nfields    = (mesh.dim==3) ? 10:6;
+  Npmlfields = mesh.dim*Nfields;
+
+  //Trigger JIT kernel builds
+  ogs::InitializeKernels(platform, ogs::Dfloat, ogs::Add);
 
   //setup cubature
   mesh.CubatureSetup();
 
   //Setup PML
-  bns->PmlSetup();
+  PmlSetup();
 
   //setup timeStepper
-  dlong Nlocal = mesh.Nelements*mesh.Np*bns->Nfields;
-  dlong Nhalo  = mesh.totalHaloPairs*mesh.Np*bns->Nfields;
+  dlong Nlocal = mesh.Nelements*mesh.Np*Nfields;
+  dlong Nhalo  = mesh.totalHaloPairs*mesh.Np*Nfields;
 
-  bns->semiAnalytic = 0;
+  semiAnalytic = 0;
   if (settings.compareSetting("TIME INTEGRATOR","SARK4")
     ||settings.compareSetting("TIME INTEGRATOR","SARK5")
     ||settings.compareSetting("TIME INTEGRATOR","SAAB3")
     ||settings.compareSetting("TIME INTEGRATOR","MRSAAB3"))
-    bns->semiAnalytic = 1;
+    semiAnalytic = 1;
 
   //semi-analytic exponential coefficients
-  dfloat lambda[bns->Nfields];
+  memory<dfloat> lambda(Nfields);
   for (int i=0;i<mesh.dim+1;i++) lambda[i] = 0.0;
-  for (int i=mesh.dim+1;i<bns->Nfields;i++) lambda[i] = -bns->tauInv;
+  for (int i=mesh.dim+1;i<Nfields;i++) lambda[i] = -tauInv;
 
   //make array of time step estimates for each element
-  dfloat *EtoDT = (dfloat *) calloc(mesh.Nelements,sizeof(dfloat));
-  dfloat vmax = bns->MaxWaveSpeed();
+  memory<dfloat> EtoDT(mesh.Nelements);
+  dfloat vmax = MaxWaveSpeed();
   for(dlong e=0;e<mesh.Nelements;++e){
     dfloat h = mesh.ElementCharacteristicLength(e);
     dfloat dtAdv  = h/(vmax*(mesh.N+1.)*(mesh.N+1.));
-    dfloat dtVisc = 1.0/bns->tauInv;
+    dfloat dtVisc = 1.0/tauInv;
 
-    if (bns->semiAnalytic)
+    if (semiAnalytic)
       EtoDT[e] = dtAdv;
     else
-      EtoDT[e] = mymin(dtAdv, dtVisc);
+      EtoDT[e] = std::min(dtAdv, dtVisc);
 
     /*
     Artificial warping of time step size for multirate testing
@@ -94,7 +100,7 @@ bns_t& bns_t::Setup(platform_t& platform, mesh_t& mesh,
     if (mesh.dim==3)
       c = mymin(c,fabs(z));
 
-    c = mymax(0.5, c);
+    c = std::max(0.5, c);
     EtoDT[e] *= c;
 #endif
   }
@@ -104,183 +110,179 @@ bns_t& bns_t::Setup(platform_t& platform, mesh_t& mesh,
       settings.compareSetting("TIME INTEGRATOR","MRSAAB3")) {
     mesh.MultiRateSetup(EtoDT);
     mesh.MultiRatePmlSetup();
-    bns->multirateTraceHalo = mesh.MultiRateHaloTraceSetup(bns->Nfields);
+    multirateTraceHalo = mesh.MultiRateHaloTraceSetup(Nfields);
   }
 
   if (settings.compareSetting("TIME INTEGRATOR","MRAB3")){
-    bns->timeStepper = new TimeStepper::mrab3_pml(mesh.Nelements, mesh.NpmlElements, mesh.totalHaloPairs,
-                                              mesh.Np, bns->Nfields, bns->Npmlfields, *bns, mesh);
+    timeStepper.Setup<TimeStepper::mrab3_pml>(mesh.Nelements, mesh.NpmlElements,
+                                              mesh.totalHaloPairs,
+                                              mesh.Np, Nfields, Npmlfields,
+                                              platform, mesh);
   } else if (settings.compareSetting("TIME INTEGRATOR","MRSAAB3")){
-    bns->timeStepper = new TimeStepper::mrsaab3_pml(mesh.Nelements, mesh.NpmlElements, mesh.totalHaloPairs,
-                                              mesh.Np, bns->Nfields, bns->Npmlfields, lambda, *bns, mesh);
+    timeStepper.Setup<TimeStepper::mrsaab3_pml>(mesh.Nelements, mesh.NpmlElements,
+                                                mesh.totalHaloPairs,
+                                                mesh.Np, Nfields, Npmlfields,
+                                                lambda, platform, mesh);
   } else if (settings.compareSetting("TIME INTEGRATOR","SAAB3")) {
-    bns->timeStepper = new TimeStepper::saab3_pml(mesh.Nelements, mesh.NpmlElements, mesh.totalHaloPairs,
-                                              mesh.Np, bns->Nfields, bns->Npmlfields, lambda, *bns);
+    timeStepper.Setup<TimeStepper::saab3_pml>(mesh.Nelements, mesh.NpmlElements,
+                                              mesh.totalHaloPairs,
+                                              mesh.Np, Nfields, Npmlfields,
+                                              lambda, platform, comm);
   } else if (settings.compareSetting("TIME INTEGRATOR","AB3")){
-    bns->timeStepper = new TimeStepper::ab3_pml(mesh.Nelements, mesh.NpmlElements, mesh.totalHaloPairs,
-                                              mesh.Np, bns->Nfields, bns->Npmlfields, *bns);
+    timeStepper.Setup<TimeStepper::ab3_pml>(mesh.Nelements, mesh.NpmlElements,
+                                            mesh.totalHaloPairs,
+                                            mesh.Np, Nfields, Npmlfields,
+                                            platform, comm);
   } else if (settings.compareSetting("TIME INTEGRATOR","LSERK4")){
-    bns->timeStepper = new TimeStepper::lserk4_pml(mesh.Nelements, mesh.NpmlElements, mesh.totalHaloPairs,
-                                              mesh.Np, bns->Nfields, bns->Npmlfields, *bns);
+    timeStepper.Setup<TimeStepper::lserk4_pml>(mesh.Nelements, mesh.NpmlElements,
+                                               mesh.totalHaloPairs,
+                                               mesh.Np, Nfields, Npmlfields,
+                                               platform, comm);
   } else if (settings.compareSetting("TIME INTEGRATOR","DOPRI5")){
-    bns->timeStepper = new TimeStepper::dopri5_pml(mesh.Nelements, mesh.NpmlElements, mesh.totalHaloPairs,
-                                              mesh.Np, bns->Nfields, bns->Npmlfields, *bns, mesh.comm);
+    timeStepper.Setup<TimeStepper::dopri5_pml>(mesh.Nelements, mesh.NpmlElements,
+                                               mesh.totalHaloPairs,
+                                               mesh.Np, Nfields, Npmlfields,
+                                               platform, comm);
   } else if (settings.compareSetting("TIME INTEGRATOR","SARK4")) {
-    bns->timeStepper = new TimeStepper::sark4_pml(mesh.Nelements, mesh.NpmlElements, mesh.totalHaloPairs,
-                                              mesh.Np, bns->Nfields, bns->Npmlfields, lambda, *bns, mesh.comm);
+    timeStepper.Setup<TimeStepper::sark4_pml>(mesh.Nelements, mesh.NpmlElements,
+                                              mesh.totalHaloPairs,
+                                              mesh.Np, Nfields, Npmlfields,
+                                              lambda, platform, comm);
   } else if (settings.compareSetting("TIME INTEGRATOR","SARK5")) {
-    bns->timeStepper = new TimeStepper::sark5_pml(mesh.Nelements, mesh.NpmlElements, mesh.totalHaloPairs,
-                                              mesh.Np, bns->Nfields, bns->Npmlfields, lambda, *bns, mesh.comm);
+    timeStepper.Setup<TimeStepper::sark5_pml>(mesh.Nelements, mesh.NpmlElements,
+                                              mesh.totalHaloPairs,
+                                              mesh.Np, Nfields, Npmlfields,
+                                              lambda, platform, comm);
   } else {
-    LIBP_ABORT(string("Requested TIME INTEGRATOR not found."));
+    LIBP_FORCE_ABORT("Requested TIME INTEGRATOR not found.");
   }
-  free(EtoDT);
 
   //setup linear algebra module
-  platform.linAlg.InitKernels({"innerProd"});
+  platform.linAlg().InitKernels({"innerProd"});
 
   /*setup trace halo exchange */
-  bns->traceHalo = mesh.HaloTraceSetup(bns->Nfields);
+  traceHalo = mesh.HaloTraceSetup(Nfields);
 
   // compute samples of q at interpolation nodes
-  bns->q = (dfloat*) calloc(Nlocal+Nhalo, sizeof(dfloat));
-  bns->o_q = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), bns->q);
+  q.malloc(Nlocal+Nhalo, 0.0);
+  o_q = platform.malloc<dfloat>(q);
 
-  bns->Vort = (dfloat*) calloc(mesh.dim*mesh.Nelements*mesh.Np, sizeof(dfloat));
-  bns->o_Vort = platform.malloc((mesh.dim*mesh.Nelements*mesh.Np)*sizeof(dfloat),
-                                              bns->Vort);
+  Vort.malloc(mesh.dim*mesh.Nelements*mesh.Np, 0.0);
+  o_Vort = platform.malloc<dfloat>(Vort);
 
   //storage for M*q during reporting
-  bns->o_Mq = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), bns->q);
-  mesh.MassMatrixKernelSetup(bns->Nfields); // mass matrix operator
+  o_Mq = platform.malloc<dfloat>(q);
+  mesh.MassMatrixKernelSetup(Nfields); // mass matrix operator
 
   // OCCA build stuff
-  occa::properties kernelInfo = mesh.props; //copy base occa properties
+  properties_t kernelInfo = mesh.props; //copy base occa properties
 
   //add boundary data to kernel info
-  string dataFileName;
+  std::string dataFileName;
   settings.getSetting("DATA FILE", dataFileName);
   kernelInfo["includes"] += dataFileName;
 
-  kernelInfo["defines/" "p_Nfields"]= bns->Nfields;
-  kernelInfo["defines/" "p_Npmlfields"]= bns->Npmlfields;
+  kernelInfo["defines/" "p_Nfields"]= Nfields;
+  kernelInfo["defines/" "p_Npmlfields"]= Npmlfields;
 
-  int maxNodes = mymax(mesh.Np, (mesh.Nfp*mesh.Nfaces));
+  int maxNodes = std::max(mesh.Np, (mesh.Nfp*mesh.Nfaces));
   kernelInfo["defines/" "p_maxNodes"]= maxNodes;
 
   int blockMax = 256;
   if (platform.device.mode()=="CUDA") blockMax = 512;
 
-  int NblockV = mymax(1, blockMax/mesh.Np);
+  int NblockV = std::max(1, blockMax/mesh.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;
 
-  int NblockS = mymax(1, blockMax/maxNodes);
+  int NblockS = std::max(1, blockMax/maxNodes);
   kernelInfo["defines/" "p_NblockS"]= NblockS;
 
-  int NblockCub = mymax(1, blockMax/mesh.cubNp);
+  int NblockCub = std::max(1, blockMax/mesh.cubNp);
   kernelInfo["defines/" "p_NblockCub"]= NblockCub;
 
-  kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
-
   // set kernel name suffix
-  char *suffix;
-  if(mesh.elementType==TRIANGLES)
-    suffix = strdup("Tri2D");
-  if(mesh.elementType==QUADRILATERALS)
-    suffix = strdup("Quad2D");
-  if(mesh.elementType==TETRAHEDRA)
-    suffix = strdup("Tet3D");
-  if(mesh.elementType==HEXAHEDRA)
-    suffix = strdup("Hex3D");
+  std::string suffix;
+  if(mesh.elementType==Mesh::TRIANGLES)
+    suffix = "Tri2D";
+  if(mesh.elementType==Mesh::QUADRILATERALS)
+    suffix = "Quad2D";
+  if(mesh.elementType==Mesh::TETRAHEDRA)
+    suffix = "Tet3D";
+  if(mesh.elementType==Mesh::HEXAHEDRA)
+    suffix = "Hex3D";
 
-  char fileName[BUFSIZ], kernelName[BUFSIZ];
+  std::string oklFilePrefix = DBNS "/okl/";
+  std::string oklFileSuffix = ".okl";
+
+  std::string fileName, kernelName;
 
   // kernels from volume file
-  sprintf(fileName, DBNS "/okl/bnsVolume%s.okl", suffix);
-  sprintf(kernelName, "bnsVolume%s", suffix);
-  bns->volumeKernel =  platform.buildKernel(fileName, kernelName,
+  fileName   = oklFilePrefix + "bnsVolume" + suffix + oklFileSuffix;
+  kernelName = "bnsVolume" + suffix;
+  volumeKernel =  platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
 
-  if (bns->pmlcubature) {
-    sprintf(kernelName, "bnsPmlVolumeCub%s", suffix);
-    bns->pmlVolumeKernel =  platform.buildKernel(fileName, kernelName,
+  if (pmlcubature) {
+    kernelName = "bnsPmlVolumeCub" + suffix;
+    pmlVolumeKernel =  platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
   } else {
-    sprintf(kernelName, "bnsPmlVolume%s", suffix);
-    bns->pmlVolumeKernel =  platform.buildKernel(fileName, kernelName,
+    kernelName = "bnsPmlVolume" + suffix;
+    pmlVolumeKernel =  platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
   }
 
   // kernels from relaxation file
-  sprintf(fileName, DBNS "/okl/bnsRelaxation%s.okl", suffix);
-  sprintf(kernelName, "bnsRelaxation%s", suffix);
-  bns->relaxationKernel = platform.buildKernel(fileName, kernelName,
+  fileName   = oklFilePrefix + "bnsRelaxation" + suffix + oklFileSuffix;
+  kernelName = "bnsRelaxation" + suffix;
+  relaxationKernel = platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
-  if (bns->pmlcubature) {
-    sprintf(kernelName, "bnsPmlRelaxationCub%s", suffix);
-    bns->pmlRelaxationKernel = platform.buildKernel(fileName, kernelName,
+  if (pmlcubature) {
+    kernelName = "bnsPmlRelaxationCub" + suffix;
+    pmlRelaxationKernel = platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
   } else {
-    bns->pmlRelaxationKernel = platform.buildKernel(fileName, kernelName,
+    pmlRelaxationKernel = platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
   }
 
 
   // kernels from surface file
-  sprintf(fileName, DBNS "/okl/bnsSurface%s.okl", suffix);
+  fileName   = oklFilePrefix + "bnsSurface" + suffix + oklFileSuffix;
   if (settings.compareSetting("TIME INTEGRATOR","MRAB3") ||
       settings.compareSetting("TIME INTEGRATOR","MRSAAB3")) {
-    sprintf(kernelName, "bnsMRSurface%s", suffix);
-    bns->surfaceKernel = platform.buildKernel(fileName, kernelName,
+    kernelName = "bnsMRSurface" + suffix;
+    surfaceKernel = platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
 
-    sprintf(kernelName, "bnsMRPmlSurface%s", suffix);
-    bns->pmlSurfaceKernel = platform.buildKernel(fileName, kernelName,
+    kernelName = "bnsMRPmlSurface" + suffix;
+    pmlSurfaceKernel = platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
   } else {
-    sprintf(kernelName, "bnsSurface%s", suffix);
-    bns->surfaceKernel = platform.buildKernel(fileName, kernelName,
+    kernelName = "bnsSurface" + suffix;
+    surfaceKernel = platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
 
-    sprintf(kernelName, "bnsPmlSurface%s", suffix);
-    bns->pmlSurfaceKernel = platform.buildKernel(fileName, kernelName,
+    kernelName = "bnsPmlSurface" + suffix;
+    pmlSurfaceKernel = platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
   }
 
   // vorticity calculation
-  sprintf(fileName, DBNS "/okl/bnsVorticity%s.okl", suffix);
-  sprintf(kernelName, "bnsVorticity%s", suffix);
+  fileName   = oklFilePrefix + "bnsVorticity" + suffix + oklFileSuffix;
+  kernelName = "bnsVorticity" + suffix;
 
-  bns->vorticityKernel = platform.buildKernel(fileName, kernelName,
+  vorticityKernel = platform.buildKernel(fileName, kernelName,
                                      kernelInfo);
 
   if (mesh.dim==2) {
-    sprintf(fileName, DBNS "/okl/bnsInitialCondition2D.okl");
-    sprintf(kernelName, "bnsInitialCondition2D");
+    fileName   = oklFilePrefix + "bnsInitialCondition2D" + oklFileSuffix;
+    kernelName = "bnsInitialCondition2D";
   } else {
-    sprintf(fileName, DBNS "/okl/bnsInitialCondition3D.okl");
-    sprintf(kernelName, "bnsInitialCondition3D");
+    fileName   = oklFilePrefix + "bnsInitialCondition3D" + oklFileSuffix;
+    kernelName = "bnsInitialCondition3D";
   }
 
-  bns->initialConditionKernel = platform.buildKernel(fileName, kernelName,
+  initialConditionKernel = platform.buildKernel(fileName, kernelName,
                                             kernelInfo);
-
-  return *bns;
-}
-
-bns_t::~bns_t() {
-  volumeKernel.free();
-  surfaceKernel.free();
-  relaxationKernel.free();
-  pmlVolumeKernel.free();
-  pmlSurfaceKernel.free();
-  pmlRelaxationKernel.free();
-  vorticityKernel.free();
-  initialConditionKernel.free();
-
-  if (timeStepper) delete timeStepper;
-  if (traceHalo) traceHalo->Free();
-
-  for (int lev=0;lev<mesh.mrNlevels;lev++)
-    if (multirateTraceHalo[lev]) multirateTraceHalo[lev]->Free();
 }

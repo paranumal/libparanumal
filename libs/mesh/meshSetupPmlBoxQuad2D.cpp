@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,35 +25,21 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh2D.hpp"
-#include "mesh/mesh3D.hpp"
 
-void meshQuad3D::SetupPmlBox(){
-  LIBP_ABORT(string("PMLBOX mesh not currently supprted for Quad3D meshes."))
-}
+namespace libp {
 
-void meshQuad2D::SetupPmlBox(){
-
-  dim = 2;
-  Nverts = 4; // number of vertices per element
-  Nfaces = 4;
-  NfaceVertices = 2;
-
-  // vertices on each face
-  int faceVertices_[4][2] = {{0,1},{1,2},{2,3},{3,0}};
-
-  faceVertices = (int*) calloc(NfaceVertices*Nfaces, sizeof(int));
-  memcpy(faceVertices, faceVertices_[0], NfaceVertices*Nfaces*sizeof(int));
+void mesh_t::SetupPmlBoxQuad2D(){
 
   // find a factorization size = size_x*size_y such that
-  //  size_x>=size_y and are all 'close' to one another
+  //  size_x>=size_y and are 'close' to one another
   int size_x, size_y;
-  factor2(size, size_x, size_y);
+  Factor2(size, size_x, size_y);
 
-  //find our coordinates in the MPI grid such that
-  // rank = rank_x + rank_y*size_x
-  int rank_y = rank / size_x;
-  int rank_x = rank % size_x;
+  //determine (x,y) rank coordinates for this processes
+  int rank_x=-1, rank_y=-1;
+  RankDecomp2(size_x, size_y,
+              rank_x, rank_y,
+              rank);
 
   //get global size from settings
   dlong NX, NY;
@@ -81,8 +67,8 @@ void meshQuad2D::SetupPmlBox(){
   settings.getSetting("BOX BOUNDARY FLAG", boundaryFlag);
 
   const int periodicFlag = (boundaryFlag == -1) ? 1 : 0;
-  if (periodicFlag)
-    LIBP_ABORT(string("Periodic boundary unsupported for PMLBOX mesh."))
+  LIBP_ABORT("Periodic boundary unsupported for PMLBOX mesh.",
+             periodicFlag);
 
   //local grid physical sizes
   dfloat DIMX, DIMY;
@@ -96,8 +82,8 @@ void meshQuad2D::SetupPmlBox(){
   dfloat dx = DIMX/NX;
   dfloat dy = DIMY/NY;
 
-  dlong offset_x = rank_x*(NX/size_x) + mymin(rank_x, (NX % size_x));
-  dlong offset_y = rank_y*(NY/size_y) + mymin(rank_y, (NY % size_y));
+  dlong offset_x = rank_x*(NX/size_x) + std::min(rank_x, (NX % size_x));
+  dlong offset_y = rank_y*(NY/size_y) + std::min(rank_y, (NY % size_y));
 
   //local grid physical sizes
   dfloat dimx = nx*dx;
@@ -143,11 +129,11 @@ void meshQuad2D::SetupPmlBox(){
   if (rank_x==0        && rank_y==size_y-1) Nelements+=pmlNx*pmlNy;
   if (rank_x==size_x-1 && rank_y==size_y-1) Nelements+=pmlNx*pmlNy;
 
-  EToV = (hlong*) calloc(Nelements*Nverts, sizeof(hlong));
-  EX = (dfloat*) calloc(Nelements*Nverts, sizeof(dfloat));
-  EY = (dfloat*) calloc(Nelements*Nverts, sizeof(dfloat));
+  EToV.malloc(Nelements*Nverts);
+  EX.malloc(Nelements*Nverts);
+  EY.malloc(Nelements*Nverts);
 
-  elementInfo = (hlong*) calloc(Nelements, sizeof(hlong));
+  elementInfo.malloc(Nelements);
 
   dlong e = 0;
 
@@ -168,8 +154,8 @@ void meshQuad2D::SetupPmlBox(){
       dfloat x0 = X0 + dx*i;
       dfloat y0 = Y0 + dy*j;
 
-      dfloat *ex = EX+e*Nverts;
-      dfloat *ey = EY+e*Nverts;
+      dfloat *ex = EX.ptr()+e*Nverts;
+      dfloat *ey = EY.ptr()+e*Nverts;
 
       ex[0] = x0;    ey[0] = y0;
       ex[1] = x0+dx; ey[1] = y0;
@@ -199,8 +185,8 @@ void meshQuad2D::SetupPmlBox(){
         dfloat x0 = X0-pmlWidthx + pmldx*i;
         dfloat y0 = Y0 + dy*j;
 
-        dfloat *ex = EX+e*Nverts;
-        dfloat *ey = EY+e*Nverts;
+        dfloat *ex = EX.ptr()+e*Nverts;
+        dfloat *ey = EY.ptr()+e*Nverts;
 
         ex[0] = x0;       ey[0] = y0;
         ex[1] = x0+pmldx; ey[1] = y0;
@@ -231,8 +217,8 @@ void meshQuad2D::SetupPmlBox(){
         dfloat x0 = X0 + dimx + pmldx*i;
         dfloat y0 = Y0 + dy*j;
 
-        dfloat *ex = EX+e*Nverts;
-        dfloat *ey = EY+e*Nverts;
+        dfloat *ex = EX.ptr()+e*Nverts;
+        dfloat *ey = EY.ptr()+e*Nverts;
 
         ex[0] = x0;       ey[0] = y0;
         ex[1] = x0+pmldx; ey[1] = y0;
@@ -263,8 +249,8 @@ void meshQuad2D::SetupPmlBox(){
         dfloat x0 = X0 + dx*i;
         dfloat y0 = Y0-pmlWidthy + pmldy*j;
 
-        dfloat *ex = EX+e*Nverts;
-        dfloat *ey = EY+e*Nverts;
+        dfloat *ex = EX.ptr()+e*Nverts;
+        dfloat *ey = EY.ptr()+e*Nverts;
 
         ex[0] = x0;    ey[0] = y0;
         ex[1] = x0+dx; ey[1] = y0;
@@ -295,8 +281,8 @@ void meshQuad2D::SetupPmlBox(){
         dfloat x0 = X0 + dx*i;
         dfloat y0 = Y0 + dimy + pmldy*j;
 
-        dfloat *ex = EX+e*Nverts;
-        dfloat *ey = EY+e*Nverts;
+        dfloat *ex = EX.ptr()+e*Nverts;
+        dfloat *ey = EY.ptr()+e*Nverts;
 
         ex[0] = x0;    ey[0] = y0;
         ex[1] = x0+dx; ey[1] = y0;
@@ -327,8 +313,8 @@ void meshQuad2D::SetupPmlBox(){
         dfloat x0 = X0-pmlWidthx + pmldx*i;
         dfloat y0 = Y0-pmlWidthy + pmldy*j;
 
-        dfloat *ex = EX+e*Nverts;
-        dfloat *ey = EY+e*Nverts;
+        dfloat *ex = EX.ptr()+e*Nverts;
+        dfloat *ey = EY.ptr()+e*Nverts;
 
         ex[0] = x0;       ey[0] = y0;
         ex[1] = x0+pmldx; ey[1] = y0;
@@ -359,8 +345,8 @@ void meshQuad2D::SetupPmlBox(){
         dfloat x0 = X0+dimx      + pmldx*i;
         dfloat y0 = Y0-pmlWidthy + pmldy*j;
 
-        dfloat *ex = EX+e*Nverts;
-        dfloat *ey = EY+e*Nverts;
+        dfloat *ex = EX.ptr()+e*Nverts;
+        dfloat *ey = EY.ptr()+e*Nverts;
 
         ex[0] = x0;       ey[0] = y0;
         ex[1] = x0+pmldx; ey[1] = y0;
@@ -391,8 +377,8 @@ void meshQuad2D::SetupPmlBox(){
         dfloat x0 = X0-pmlWidthx + pmldx*i;
         dfloat y0 = Y0+dimy      + pmldy*j;
 
-        dfloat *ex = EX+e*Nverts;
-        dfloat *ey = EY+e*Nverts;
+        dfloat *ex = EX.ptr()+e*Nverts;
+        dfloat *ey = EY.ptr()+e*Nverts;
 
         ex[0] = x0;       ey[0] = y0;
         ex[1] = x0+pmldx; ey[1] = y0;
@@ -423,8 +409,8 @@ void meshQuad2D::SetupPmlBox(){
         dfloat x0 = X0+dimx      + pmldx*i;
         dfloat y0 = Y0+dimy      + pmldy*j;
 
-        dfloat *ex = EX+e*Nverts;
-        dfloat *ey = EY+e*Nverts;
+        dfloat *ex = EX.ptr()+e*Nverts;
+        dfloat *ey = EY.ptr()+e*Nverts;
 
         ex[0] = x0;       ey[0] = y0;
         ex[1] = x0+pmldx; ey[1] = y0;
@@ -439,7 +425,7 @@ void meshQuad2D::SetupPmlBox(){
 
   if (boundaryFlag != -1) { //-1 reserved for periodic case
     NboundaryFaces = 2*NX + 2*NY;
-    boundaryInfo = (hlong*) calloc(NboundaryFaces*(NfaceVertices+1), sizeof(hlong));
+    boundaryInfo.malloc(NboundaryFaces*(NfaceVertices+1));
 
     hlong bcnt = 0;
 
@@ -476,7 +462,8 @@ void meshQuad2D::SetupPmlBox(){
     }
 
   } else {
-    NboundaryFaces = 0;
-    boundaryInfo = NULL; // no boundaries
+    NboundaryFaces = 0; // no boundaries
   }
 }
+
+} //namespace libp

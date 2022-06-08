@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,23 +25,42 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh2D.hpp"
+
+namespace libp {
 
 /* compute outwards facing normals, surface Jacobian, and volume Jacobian for all face nodes */
-void meshQuad2D::SurfaceGeometricFactors(){
+void mesh_t::SurfaceGeometricFactorsQuad2D(){
 
   /* unified storage array for geometric factors */
   Nsgeo = 7;
-  sgeo = (dfloat*) calloc((Nelements+totalHaloPairs)*
-                                Nsgeo*Nfp*Nfaces,
-                                sizeof(dfloat));
 
-  dfloat *xre = (dfloat*) calloc(Np, sizeof(dfloat));
-  dfloat *xse = (dfloat*) calloc(Np, sizeof(dfloat));
-  dfloat *yre = (dfloat*) calloc(Np, sizeof(dfloat));
-  dfloat *yse = (dfloat*) calloc(Np, sizeof(dfloat));
+  NXID  = 0;
+  NYID  = 1;
+  SJID  = 2;
+  IJID  = 3;
+  IHID  = 4;
+  WSJID = 5;
+  WIJID = 6;
 
-  for(dlong e=0;e<Nelements+totalHaloPairs;++e){ /* for each element */
+  props["defines/" "p_Nsgeo"]= Nsgeo;
+  props["defines/" "p_NXID"]= NXID;
+  props["defines/" "p_NYID"]= NYID;
+  props["defines/" "p_SJID"]= SJID;
+  props["defines/" "p_IJID"]= IJID;
+  props["defines/" "p_IHID"]= IHID;
+  props["defines/" "p_WSJID"]= WSJID;
+  props["defines/" "p_WIJID"]= WIJID;
+
+  sgeo.malloc(Nelements*Nsgeo*Nfp*Nfaces);
+
+  memory<dfloat> hinv((Nelements+totalHaloPairs)*Nfp*Nfaces);
+
+  memory<dfloat> xre(Np);
+  memory<dfloat> xse(Np);
+  memory<dfloat> yre(Np);
+  memory<dfloat> yse(Np);
+
+  for(dlong e=0;e<Nelements;++e){ /* for each element */
 
     for(int j=0;j<Nq;++j){
       for(int i=0;i<Nq;++i){
@@ -98,24 +117,36 @@ void meshQuad2D::SurfaceGeometricFactors(){
         sgeo[base+SJID] = sJ;
         sgeo[base+IJID] = 1./J;
 
-        sgeo[base+WIJID] = 1./(J*w[0]);
-        sgeo[base+WSJID] = sJ*w[i];
+        sgeo[base+WIJID] = 1./(J*gllw[0]);
+        sgeo[base+WSJID] = sJ*gllw[i];
+
+        hinv[Nfaces*Nfp*e + Nfp*f + i] = sJ/J;
       }
     }
   }
 
+  halo.Exchange(hinv, Nfp*Nfaces);
+
   for(dlong e=0;e<Nelements;++e){ /* for each non-halo element */
-    for(int n=0;n<Nfp*Nfaces;++n){
-      dlong baseM = e*Nfp*Nfaces + n;
-      dlong baseP = mapP[baseM];
-      if(baseP<0) baseP = baseM;
+    for(int f=0;f<Nfaces;++f){
+      for(int n=0;n<Nfp;++n){
+        dlong baseM = e*Nfp*Nfaces + f*Nfp + n;
+        dlong baseP = mapP[baseM];
+        if(baseP<0) baseP = baseM;
 
-      // rescaling - missing factor of 2 ? (only impacts penalty and thus stiffness)
-      dfloat hinvM = sgeo[baseM*Nsgeo + SJID]*sgeo[baseM*Nsgeo + IJID];
-      dfloat hinvP = sgeo[baseP*Nsgeo + SJID]*sgeo[baseP*Nsgeo + IJID];
+        // rescaling - missing factor of 2 ? (only impacts penalty and thus stiffness)
+        dfloat hinvM = hinv[baseM];
+        dfloat hinvP = hinv[baseP];
+        sgeo[baseM*Nsgeo+IHID] = std::max(hinvM,hinvP);
 
-      sgeo[baseM*Nsgeo+IHID] = mymax(hinvM,hinvP);
-      sgeo[baseP*Nsgeo+IHID] = mymax(hinvM,hinvP);
+        // if (EToB[f+e*Nfaces] > 0) { //enforce a stronger penalty on boundaries
+        //   sgeo[baseM*Nsgeo+IHID] *= 2;
+        // }
+      }
     }
   }
+
+  o_sgeo = platform.malloc<dfloat>(sgeo);
 }
+
+} //namespace libp

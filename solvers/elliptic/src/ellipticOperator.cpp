@@ -2,7 +2,7 @@
 
   The MIT License (MIT)
 
-  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -26,24 +26,25 @@
 
 #include "elliptic.hpp"
 
-void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
+void elliptic_t::Operator(deviceMemory<dfloat> &o_q, deviceMemory<dfloat> &o_Aq){
 
   if(disc_c0){
-    // int mapType = (mesh.elementType==HEXAHEDRA &&
+    // int mapType = (mesh.elementType==Mesh::HEXAHEDRA &&
     //                mesh.settings.compareSetting("ELEMENT MAP", "TRILINEAR")) ? 1:0;
 
-    // int integrationType = (mesh.elementType==HEXAHEDRA &&
+    // int integrationType = (mesh.elementType==Mesh::HEXAHEDRA &&
     //                        settings.compareSetting("ELLIPTIC INTEGRATION", "CUBATURE")) ? 1:0;
 
-    ogsMasked->GatheredHaloExchangeStart(o_q, 1, ogs_dfloat);
+    gHalo.ExchangeStart(o_q, 1);
 
-    if(mesh.NlocalGatherElements){
+    if(mesh.NlocalGatherElements/2){
       // if(integrationType==0) { // GLL or non-hex
         // if(mapType==0)
-          partialAxKernel(mesh.NlocalGatherElements,
+          partialAxKernel(mesh.NlocalGatherElements/2,
                           mesh.o_localGatherElementList,
-                          ogsMasked->o_GlobalToLocal,
-                          mesh.o_ggeo, mesh.o_D, mesh.o_S,
+                          o_GlobalToLocal,
+                          mesh.o_wJ, mesh.o_ggeo,
+                          mesh.o_D, mesh.o_S,
                           mesh.o_MM, lambda, o_q, o_AqL);
         /* NC: disabling until we re-add treatment of affine elements
         else
@@ -63,7 +64,7 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
     }
 
     // finalize halo exchange
-    ogsMasked->GatheredHaloExchangeFinish(o_q, 1, ogs_dfloat);
+    gHalo.ExchangeFinish(o_q, 1);
 
     if(mesh.NglobalGatherElements) {
 
@@ -71,8 +72,9 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
         // if(mapType==0)
           partialAxKernel(mesh.NglobalGatherElements,
                           mesh.o_globalGatherElementList,
-                          ogsMasked->o_GlobalToLocal,
-                          mesh.o_ggeo, mesh.o_D, mesh.o_S,
+                          o_GlobalToLocal,
+                          mesh.o_wJ, mesh.o_ggeo,
+                          mesh.o_D, mesh.o_S,
                           mesh.o_MM, lambda, o_q, o_AqL);
         /* NC: disabling until we re-add treatment of affine elements
         else
@@ -90,7 +92,18 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
     }
 
     //gather result to Aq
-    ogsMasked->Gather(o_Aq, o_AqL, ogs_dfloat, ogs_add, ogs_trans);
+    ogsMasked.GatherStart(o_Aq, o_AqL, 1, ogs::Add, ogs::Trans);
+
+    if((mesh.NlocalGatherElements+1)/2){
+      partialAxKernel((mesh.NlocalGatherElements+1)/2,
+                      mesh.o_localGatherElementList+(mesh.NlocalGatherElements/2),
+                      o_GlobalToLocal,
+                      mesh.o_wJ, mesh.o_ggeo,
+                      mesh.o_D, mesh.o_S,
+                      mesh.o_MM, lambda, o_q, o_AqL);
+    }
+
+    ogsMasked.GatherFinish(o_Aq, o_AqL, 1, ogs::Add, ogs::Trans);
 
   } else if(disc_ipdg) {
 
@@ -105,7 +118,7 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
     }
 
     // dfloat4 storage -> 4 entries
-    traceHalo->ExchangeStart(o_grad, 4, ogs_dfloat);
+    traceHalo.ExchangeStart(o_grad, 4);
 
     if(mesh.NinternalElements)
       partialIpdgKernel(mesh.NinternalElements,
@@ -123,7 +136,7 @@ void elliptic_t::Operator(occa::memory &o_q, occa::memory &o_Aq){
                         o_grad,
                         o_Aq);
 
-    traceHalo->ExchangeFinish(o_grad, 4, ogs_dfloat);
+    traceHalo.ExchangeFinish(o_grad, 4);
 
     if(mesh.NhaloElements) {
       partialIpdgKernel(mesh.NhaloElements,

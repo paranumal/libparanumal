@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -33,10 +33,10 @@ dfloat acoustics_t::MaxWaveSpeed(){
 }
 
 //evaluate ODE rhs = f(q,t)
-void acoustics_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
+void acoustics_t::rhsf(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T){
 
   // extract q halo on DEVICE
-  traceHalo->ExchangeStart(o_Q, 1, ogs_dfloat);
+  traceHalo.ExchangeStart(o_Q, 1);
 
   volumeKernel(mesh.Nelements,
                mesh.o_vgeo,
@@ -44,18 +44,35 @@ void acoustics_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
                o_Q,
                o_RHS);
 
-  traceHalo->ExchangeFinish(o_Q, 1, ogs_dfloat);
+  if (mesh.NinternalElements)
+    surfaceKernel(mesh.NinternalElements,
+                  mesh.o_internalElementIds,
+                  mesh.o_sgeo,
+                  mesh.o_LIFT,
+                  mesh.o_vmapM,
+                  mesh.o_vmapP,
+                  mesh.o_EToB,
+                  T,
+                  mesh.o_x,
+                  mesh.o_y,
+                  mesh.o_z,
+                  o_Q,
+                  o_RHS);
 
-  surfaceKernel(mesh.Nelements,
-                mesh.o_sgeo,
-                mesh.o_LIFT,
-                mesh.o_vmapM,
-                mesh.o_vmapP,
-                mesh.o_EToB,
-                T,
-                mesh.o_x,
-                mesh.o_y,
-                mesh.o_z,
-                o_Q,
-                o_RHS);
+  traceHalo.ExchangeFinish(o_Q, 1);
+
+  if (mesh.NhaloElements)
+    surfaceKernel(mesh.NhaloElements,
+                  mesh.o_haloElementIds,
+                  mesh.o_sgeo,
+                  mesh.o_LIFT,
+                  mesh.o_vmapM,
+                  mesh.o_vmapP,
+                  mesh.o_EToB,
+                  T,
+                  mesh.o_x,
+                  mesh.o_y,
+                  mesh.o_z,
+                  o_Q,
+                  o_RHS);
 }

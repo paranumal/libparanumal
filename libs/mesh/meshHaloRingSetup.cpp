@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,15 @@ SOFTWARE.
 
 #include "mesh.hpp"
 
+#ifdef GLIBCXX_PARALLEL
+#include <parallel/algorithm>
+using __gnu_parallel::sort;
+#else
+using std::sort;
+#endif
+
+namespace libp {
+
 typedef struct{
 
   hlong gid;
@@ -39,75 +48,96 @@ typedef struct{
 // exchange of trace nodes
 void mesh_t::HaloRingSetup(){
 
-  //make a global indexing of element Ids
-  hlong *globalOffsets = (hlong *) calloc(size+1,sizeof(hlong));
-  hlong localNelements = (hlong) Nelements;
+  memory<hlong> globalOffset(size+1, 0);
 
   //gather number of elements on each rank
-  MPI_Allgather(&localNelements, 1, MPI_HLONG, globalOffsets+1, 1, MPI_HLONG, comm);
+  hlong localNelements = Nelements;
+  comm.Allgather(localNelements, globalOffset+1);
 
   for(int rr=0;rr<size;++rr)
-    globalOffsets[rr+1] = globalOffsets[rr]+globalOffsets[rr+1];
+    globalOffset[rr+1] = globalOffset[rr]+globalOffset[rr+1];
 
-  //use the gs to find what nodes are local to this rank
-  dlong Ntotal = Np*Nelements;
-  int *minRank = (int *) calloc(Ntotal,sizeof(int));
-  int *maxRank = (int *) calloc(Ntotal,sizeof(int));
+
+  dlong Ntotal = Nverts*(Nelements+totalHaloPairs);
+
+  memory<int> minRank(Ntotal);
+  memory<int> maxRank(Ntotal);
+
   for (dlong i=0;i<Ntotal;i++) {
     minRank[i] = rank;
     maxRank[i] = rank;
   }
 
-  ogs->GatherScatter(minRank, ogs_int, ogs_min, ogs_sym); //minRank[n] contains the smallest rank taking part in the gather of node n
-  ogs->GatherScatter(maxRank, ogs_int, ogs_max, ogs_sym); //maxRank[n] contains the largest rank taking part in the gather of node n
+  hlong gatherChange = 1;
 
-  //We already made a list of the globally connected element in ParallelGatherScatterSetup
-  // NglobalGatherElements and globalGatherElementList contain the count and list
+  // keep comparing numbers on positive and negative traces until convergence
+  while(gatherChange>0){
+
+    // reset change counter
+    gatherChange = 0;
+
+    // send halo data and recv into extension of buffer
+    halo.Exchange(minRank, Nverts);
+    halo.Exchange(maxRank, Nverts);
+
+    // compare trace vertices
+    #pragma omp parallel for collapse(2)
+    for(dlong e=0;e<Nelements;++e){
+      for(int n=0;n<Nfaces*NfaceVertices;++n){
+        dlong id  = e*Nfaces*NfaceVertices + n;
+        dlong idM = VmapM[id];
+        dlong idP = VmapP[id];
+
+        int minRankM = minRank[idM];
+        int minRankP = minRank[idP];
+
+        int maxRankM = maxRank[idM];
+        int maxRankP = maxRank[idP];
+
+        if(minRankP<minRankM){
+          gatherChange=1;
+          minRank[idM] = minRankP;
+        }
+
+        if(maxRankP>maxRankM){
+          gatherChange=1;
+          maxRank[idM] = maxRankP;
+        }
+      }
+    }
+
+    // sum up changes
+    comm.Allreduce(gatherChange);
+  }
 
   //Make a list of the elements participating in the ring exchange
   //Count the number of shared vertices in the local mesh
   dlong NsendVerts=0;
-  for (int e=0;e<NglobalGatherElements;e++) { //for all global elements
+  for (int e=0;e<Nelements;e++) { //for all global elements
     for (int v=0;v<Nverts;v++) {
-      dlong n = vertexNodes[v] + globalGatherElementList[e]*Np; //Id of a vertex in a global element
-      if ((minRank[n]!=rank)||(maxRank[n]!=rank)) { //vertex is shared
+      dlong id = e*Nverts + v; //Id of a vertex in a global element
+      if ((minRank[id]!=rank)||(maxRank[id]!=rank)) { //vertex is shared
         NsendVerts++;
       }
     }
   }
 
-  vertex_t *vertexSendList = (vertex_t*) malloc(NsendVerts*sizeof(vertex_t));
+  memory<vertex_t> vertexSendList(NsendVerts);
 
-  int *vertexSendCounts = (int*) calloc(size, sizeof(int));
-  int *vertexRecvCounts = (int*) calloc(size, sizeof(int));
-  int *vertexSendOffsets = (int*) calloc(size+1, sizeof(int));
-  int *vertexRecvOffsets = (int*) calloc(size+1, sizeof(int));
-
-  // Make the MPI_VERTEX_T data type
-  MPI_Datatype MPI_VERTEX_T;
-  MPI_Datatype dtype[4] = {MPI_HLONG, MPI_DLONG, MPI_DLONG, MPI_DLONG};
-  int blength[4] = {1, 1, 1, 1};
-  MPI_Aint addr[4], displ[4];
-  MPI_Get_address ( &(vertexSendList[0]        ), addr+0);
-  MPI_Get_address ( &(vertexSendList[0].element), addr+1);
-  MPI_Get_address ( &(vertexSendList[0].rank   ), addr+2);
-  MPI_Get_address ( &(vertexSendList[0].dest   ), addr+3);
-  displ[0] = 0;
-  displ[1] = addr[1] - addr[0];
-  displ[2] = addr[2] - addr[0];
-  displ[3] = addr[3] - addr[0];
-  MPI_Type_create_struct (4, blength, displ, dtype, &MPI_VERTEX_T);
-  MPI_Type_commit (&MPI_VERTEX_T);
+  memory<int> vertexSendCounts(size, 0);
+  memory<int> vertexRecvCounts(size);
+  memory<int> vertexSendOffsets(size+1);
+  memory<int> vertexRecvOffsets(size+1);
 
   NsendVerts=0;
-  for (int e=0;e<NglobalGatherElements;e++) { //for all global elements
+  for (int e=0;e<Nelements;e++) { //for all elements
     for (int v=0;v<Nverts;v++) {
-      dlong n = vertexNodes[v] + globalGatherElementList[e]*Np; //Id of a vertex in a global element
-      if ((minRank[n]!=rank)||(maxRank[n]!=rank)) { //vertex is shared
-        vertexSendList[NsendVerts].gid = globalIds[n]; //global node index
-        vertexSendList[NsendVerts].element = globalGatherElementList[e]; //local element index
+      dlong id = e*Nverts + v;
+      if ((minRank[id]!=rank)||(maxRank[id]!=rank)) { //vertex is shared
+        vertexSendList[NsendVerts].gid = EToV[id]; //global vertex index
+        vertexSendList[NsendVerts].element = e; //local element index
         vertexSendList[NsendVerts].rank = rank;
-        vertexSendList[NsendVerts].dest = globalIds[n]%size; //destination rank for sorting
+        vertexSendList[NsendVerts].dest = EToV[id]%size; //destination rank for sorting
 
         vertexSendCounts[vertexSendList[NsendVerts].dest]++; //count outgoing
 
@@ -116,19 +146,17 @@ void mesh_t::HaloRingSetup(){
     }
   }
 
-  free(minRank); free(maxRank);
-
   // sort based on destination (=gid%size)
-  std::sort(vertexSendList, vertexSendList+NsendVerts,
+  sort(vertexSendList.ptr(), vertexSendList.ptr()+NsendVerts,
             [](const vertex_t& a, const vertex_t& b)
               {return a.dest < b.dest;});
 
   // share counts
-  MPI_Alltoall(vertexSendCounts, 1, MPI_INT,
-               vertexRecvCounts, 1, MPI_INT,
-               comm);
+  comm.Alltoall(vertexSendCounts, vertexRecvCounts);
 
   dlong NrecvVerts = 0;
+  vertexSendOffsets[0] = 0;
+  vertexRecvOffsets[0] = 0;
   for(int rr=0;rr<size;++rr){
     NrecvVerts += vertexRecvCounts[rr];
 
@@ -136,15 +164,14 @@ void mesh_t::HaloRingSetup(){
     vertexRecvOffsets[rr+1] = vertexRecvOffsets[rr] + vertexRecvCounts[rr];
   }
 
-  vertex_t *vertexRecvList = (vertex_t*) malloc(NrecvVerts*sizeof(vertex_t));
+  memory<vertex_t> vertexRecvList(NrecvVerts);
 
   // exchange shared vertices
-  MPI_Alltoallv(vertexSendList, vertexSendCounts, vertexSendOffsets, MPI_VERTEX_T,
-                vertexRecvList, vertexRecvCounts, vertexRecvOffsets, MPI_VERTEX_T,
-                comm);
+  comm.Alltoallv(vertexSendList, vertexSendCounts, vertexSendOffsets,
+                 vertexRecvList, vertexRecvCounts, vertexRecvOffsets);
 
   // sort based on globalId to find matches
-  std::sort(vertexRecvList, vertexRecvList+NrecvVerts,
+  sort(vertexRecvList.ptr(), vertexRecvList.ptr()+NrecvVerts,
             [](const vertex_t& a, const vertex_t& b)
               {return a.gid < b.gid;});
 
@@ -157,8 +184,9 @@ void mesh_t::HaloRingSetup(){
   }
 
   //Build offsets to unique vertice starts
-  dlong *vertexOffsets = (dlong*) calloc(Nunique+1, sizeof(dlong));
+  memory<dlong> vertexOffsets(Nunique+1);
 
+  vertexOffsets[0] = 0;
   Nunique=(NrecvVerts) ? 1:0;
   for(dlong n=1;n<NrecvVerts;++n){
     if (vertexRecvList[n].gid != vertexRecvList[n-1].gid) { // new vertex
@@ -166,9 +194,6 @@ void mesh_t::HaloRingSetup(){
     }
   }
   vertexOffsets[Nunique] = NrecvVerts;
-
-  //make sure the AlltoAll is done everywhere so we can reuse vertexSend arrays
-  MPI_Barrier(comm);
 
   //reset counts
   NsendVerts = 0;
@@ -191,7 +216,7 @@ void mesh_t::HaloRingSetup(){
   }
 
   //resize send storage
-  vertexSendList = (vertex_t*) realloc(vertexSendList, NsendVerts*sizeof(vertex_t));
+  vertexSendList.malloc(NsendVerts);
 
   //build list of vertices to send out
   NsendVerts=0;
@@ -209,14 +234,12 @@ void mesh_t::HaloRingSetup(){
   }
 
   // sort based on destination
-  std::sort(vertexSendList, vertexSendList+NsendVerts,
+  sort(vertexSendList.ptr(), vertexSendList.ptr()+NsendVerts,
             [](const vertex_t& a, const vertex_t& b)
               {return a.dest < b.dest;});
 
   // share counts
-  MPI_Alltoall(vertexSendCounts, 1, MPI_INT,
-               vertexRecvCounts, 1, MPI_INT,
-               comm);
+  comm.Alltoall(vertexSendCounts, vertexRecvCounts);
 
   NrecvVerts = 0;
   for(int rr=0;rr<size;++rr){
@@ -227,15 +250,14 @@ void mesh_t::HaloRingSetup(){
   }
 
   //resize recv storage
-  vertexRecvList = (vertex_t*) realloc(vertexRecvList,NrecvVerts*sizeof(vertex_t));
+  vertexRecvList.malloc(NrecvVerts);
 
   // exchange shared vertices
-  MPI_Alltoallv(vertexSendList, vertexSendCounts, vertexSendOffsets, MPI_VERTEX_T,
-                vertexRecvList, vertexRecvCounts, vertexRecvOffsets, MPI_VERTEX_T,
-                comm);
+  comm.Alltoallv(vertexSendList, vertexSendCounts, vertexSendOffsets,
+                 vertexRecvList, vertexRecvCounts, vertexRecvOffsets);
 
   // sort based on rank then element id to find matches
-  std::sort(vertexRecvList, vertexRecvList+NrecvVerts,
+  sort(vertexRecvList.ptr(), vertexRecvList.ptr()+NrecvVerts,
             [](const vertex_t& a, const vertex_t& b) {
               if(a.rank < b.rank) return true;
               if(a.rank > b.rank) return false;
@@ -255,11 +277,11 @@ void mesh_t::HaloRingSetup(){
   }
 
   //make a list of global element ids taking part in the halo exchange
-  hlong *globalElementId = (hlong *) malloc((Nelements+totalRingElements)*sizeof(hlong));
+  memory<hlong> globalElementId(Nelements+totalRingElements);
 
   //outgoing elements
   for(int e=0;e<Nelements;++e)
-    globalElementId[e] = e + globalOffsets[rank] + 1;
+    globalElementId[e] = e + globalOffset[rank] + 1;
 
   //incoming elements
   totalRingElements=0;
@@ -269,7 +291,7 @@ void mesh_t::HaloRingSetup(){
     if (vertexRecvList[0].rank!=rank) {
       globalElementId[Nelements]
                        = -(vertexRecvList[0].element
-                          + globalOffsets[vertexRecvList[0].rank] + 1); //negative so doesnt contribute to sum in ogs
+                          + globalOffset[vertexRecvList[0].rank] + 1); //negative so doesnt contribute to sum in ogs
       totalRingElements++;
     }
   }
@@ -281,7 +303,7 @@ void mesh_t::HaloRingSetup(){
         ||(vertexRecvList[n].element!=vertexRecvList[n-1].element)) {
       globalElementId[Nelements+totalRingElements++]
                        = -(vertexRecvList[n].element
-                          + globalOffsets[vertexRecvList[n].rank] + 1); //negative so doesnt contribute to sum in ogs
+                          + globalOffset[vertexRecvList[n].rank] + 1); //negative so doesnt contribute to sum in ogs
     }
   }
 
@@ -290,19 +312,9 @@ void mesh_t::HaloRingSetup(){
 
   //make the halo exchange op
   int verbose = 0;
-  ringHalo = halo_t::Setup(Nelements+totalRingElements, globalElementId, comm,
-                           verbose, platform);
-
-  //clean up
-  free(globalElementId);
-  free(globalOffsets);
-
-  MPI_Barrier(comm);
-  MPI_Type_free(&MPI_VERTEX_T);
-  free(vertexSendList);
-  free(vertexRecvList);
-  free(vertexSendCounts);
-  free(vertexRecvCounts);
-  free(vertexSendOffsets);
-  free(vertexRecvOffsets);
+  ringHalo.Setup(Nelements+totalRingElements,
+                 globalElementId, comm,
+                 ogs::Auto, verbose, platform);
 }
+
+} //namespace libp

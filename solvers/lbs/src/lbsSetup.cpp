@@ -2,7 +2,7 @@
 
   The MIT License (MIT)
 
-  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -28,185 +28,162 @@
 #define D2Q9 1
 #define D3Q15 2
 
+void lbs_t::Setup(platform_t& _platform, mesh_t& _mesh,
+                  lbsSettings_t& _settings){
 
-lbs_t& lbs_t::Setup(platform_t& platform, mesh_t& mesh,
-                    lbsSettings_t& settings){
+  platform = _platform;
+  mesh = _mesh;
+  comm = _mesh.comm;
+  settings = _settings;
 
-  lbs_t* lbs = new lbs_t(platform, mesh, settings);
+  //Trigger JIT kernel builds
+  ogs::InitializeKernels(platform, ogs::Dfloat, ogs::Add);
 
   // Set reference lattice-Boltzmann data  
-  lbs->latticeSetup();
+  latticeSetup();
   
-  lbs->Npmlfields = mesh.dim*lbs->Nfields;
+  Npmlfields = mesh.dim*Nfields;
 
   // AK: not in use yet ... Setup PML
-  // lbs->PmlSetup();
+  // PmlSetup();
 
   //setup timeStepper
-  dlong Nlocal = mesh.Nelements*mesh.Np*lbs->Nfields;
-  dlong Nhalo  = mesh.totalHaloPairs*mesh.Np*lbs->Nfields;
+  dlong Nlocal = mesh.Nelements*mesh.Np*Nfields;
+  dlong Nhalo  = mesh.totalHaloPairs*mesh.Np*Nfields;
 
   //make array of time step estimates for each element
-  dfloat *EtoDT = (dfloat *) calloc(mesh.Nelements,sizeof(dfloat));
-  dfloat vmax = lbs->MaxWaveSpeed();
+  memory<dfloat> EtoDT(mesh.Nelements);
+  dfloat vmax = MaxWaveSpeed();
   for(dlong e=0;e<mesh.Nelements;++e){
     dfloat h = mesh.ElementCharacteristicLength(e);
     dfloat dtAdv  = h/(vmax*(mesh.N+1.)*(mesh.N+1.));
     EtoDT[e] = dtAdv;
   }
 
-
-
   if (settings.compareSetting("TIME INTEGRATOR","LSERK4")){
-    lbs->timeStepper = new TimeStepper::lserk4(mesh.Nelements, mesh.totalHaloPairs,
-					       mesh.Np, lbs->Nfields, *lbs);
+    timeStepper.Setup<TimeStepper::lserk4>(mesh.Nelements,
+                                           mesh.totalHaloPairs,
+                                           mesh.Np, Nfields,
+                                           platform, comm);
   }else {
-    LIBP_ABORT(string("Requested TIME INTEGRATOR not found."));
+    LIBP_FORCE_ABORT("Requested TIME INTEGRATOR not found.");
   }
 
   
   //setup linear algebra module
-  platform.linAlg.InitKernels({"innerProd"});
+  platform.linAlg().InitKernels({"innerProd"});
 
   /*setup trace halo exchange */
-  lbs->traceHalo = mesh.HaloTraceSetup(lbs->Nfields);
+  traceHalo = mesh.HaloTraceSetup(Nfields);
 
   // compute samples of q at interpolation nodes
-  lbs->q = (dfloat*) calloc(Nlocal+Nhalo, sizeof(dfloat));
-  lbs->o_q = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), lbs->q);
+  q.malloc(Nlocal+Nhalo, 0.0);
+  o_q = platform.malloc<dfloat>(q);
 
-  lbs->F = (dfloat*) calloc(Nlocal+Nhalo, sizeof(dfloat));
-  lbs->o_F = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), lbs->F);
+  F.malloc(Nlocal+Nhalo, 0.0);
+  o_F = platform.malloc<dfloat>(F);
 
 
-  lbs->Vort = (dfloat*) calloc(mesh.dim*mesh.Nelements*mesh.Np, sizeof(dfloat));
-  lbs->o_Vort = platform.malloc((mesh.dim*mesh.Nelements*mesh.Np)*sizeof(dfloat),
-				lbs->Vort);
+  Vort.malloc(mesh.dim*mesh.Nelements*mesh.Np, 0.0);
+  o_Vort = platform.malloc<dfloat>(Vort);
 
   // Hold macro quantites i.e. density + velocities
-  lbs->U = (dfloat*) calloc((mesh.Nelements+mesh.totalHaloPairs)*mesh.Np*lbs->Nmacro, sizeof(dfloat));
-  lbs->o_U = platform.malloc((mesh.Nelements+mesh.totalHaloPairs)*mesh.Np*lbs->Nmacro*sizeof(dfloat), lbs->U);
-  
-  // Lattice-Boltzmann Model
-  lbs->o_LBM = platform.malloc(lbs->Nfields*lbs->Nmacro*sizeof(dfloat), lbs->LBM);
-  lbs->o_LMAP = platform.malloc(lbs->Nfields*sizeof(int), lbs->LMAP);
+  U.malloc((mesh.Nelements+mesh.totalHaloPairs)*mesh.Np*Nmacro, 0.0);
+  o_U = platform.malloc<dfloat>(U);
 
-
-  
   //storage for M*q during reporting
-  lbs->o_Mq = platform.malloc((mesh.Nelements+mesh.totalHaloPairs)*mesh.Np*lbs->Nmacro*sizeof(dfloat), lbs->U);
-  mesh.MassMatrixKernelSetup(lbs->Nmacro); // mass matrix operator
+  o_Mq = platform.malloc<dfloat>(U);
+  mesh.MassMatrixKernelSetup(Nmacro); // mass matrix operator
 
   // // OCCA build stuff
-  occa::properties kernelInfo = mesh.props; //copy base occa properties
+  properties_t kernelInfo = mesh.props; //copy base occa properties
 
   //add boundary data to kernel info
-  string dataFileName;
+  std::string dataFileName;
   settings.getSetting("DATA FILE", dataFileName);
   kernelInfo["includes"] += dataFileName;
 
-  kernelInfo["defines/" "p_Nfields"]= lbs->Nfields;
-  // kernelInfo["defines/" "p_Npmlfields"]= lbs->Npmlfields;
-  kernelInfo["defines/" "p_Nmacro"] = lbs->Nmacro;  
+  kernelInfo["defines/" "p_Nfields"]= Nfields;
+  // kernelInfo["defines/" "p_Npmlfields"]= Npmlfields;
+  kernelInfo["defines/" "p_Nmacro"] = Nmacro;
 
-  kernelInfo["defines/" "p_c"] = lbs->c;  
-  kernelInfo["defines/" "p_ic2"] = 1.0/ pow(lbs->c,2);  
-  kernelInfo["defines/" "p_ic4"] = 1.0/ pow(lbs->c,4);   
+  kernelInfo["defines/" "p_c"] = c;
+  kernelInfo["defines/" "p_ic2"] = 1.0/ pow(c,2);
+  kernelInfo["defines/" "p_ic4"] = 1.0/ pow(c,4);
 
-  int maxNodes = mymax(mesh.Np, (mesh.Nfp*mesh.Nfaces));
+  int maxNodes = std::max(mesh.Np, (mesh.Nfp*mesh.Nfaces));
   kernelInfo["defines/" "p_maxNodes"]= maxNodes;
 
   int blockMax = 256;
   if (platform.device.mode()=="CUDA") blockMax = 512;
 
-  int NblockV = mymax(1, blockMax/mesh.Np);
+  int NblockV = std::max(1, blockMax/mesh.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;
 
-  int NblockS = mymax(1, blockMax/maxNodes);
+  int NblockS = std::max(1, blockMax/maxNodes);
   kernelInfo["defines/" "p_NblockS"]= NblockS;
 
-  kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
-
   // set kernel name suffix
-  char *suffix;
-  if(mesh.elementType==TRIANGLES)
-    suffix = strdup("Tri2D");
-  if(mesh.elementType==QUADRILATERALS)
-    suffix = strdup("Quad2D");
-  if(mesh.elementType==TETRAHEDRA)
-    suffix = strdup("Tet3D");
-  if(mesh.elementType==HEXAHEDRA)
-    suffix = strdup("Hex3D");
+  std::string suffix;
+  if(mesh.elementType==Mesh::TRIANGLES)
+    suffix = "Tri2D";
+  if(mesh.elementType==Mesh::QUADRILATERALS)
+    suffix = "Quad2D";
+  if(mesh.elementType==Mesh::TETRAHEDRA)
+    suffix = "Tet3D";
+  if(mesh.elementType==Mesh::HEXAHEDRA)
+    suffix = "Hex3D";
 
-  char fileName[BUFSIZ], kernelName[BUFSIZ];
+  std::string oklFilePrefix = DLBS "/okl/";
+  std::string oklFileSuffix = ".okl";
+
+  std::string fileName, kernelName;
 
   if (mesh.dim==2) {
-    sprintf(fileName, DLBS "/okl/lbsInitialCondition2D.okl");
-    sprintf(kernelName, "lbsInitialCondition2D");
+    fileName   = oklFilePrefix + "lbsInitialCondition2D" + oklFileSuffix;
+    kernelName = "lbsInitialCondition2D";
   } else {
-    sprintf(fileName, DLBS "/okl/lbsInitialCondition3D.okl");
-    sprintf(kernelName, "lbsInitialCondition3D");
+    fileName   = oklFilePrefix + "lbsInitialCondition3D" + oklFileSuffix;
+    kernelName = "lbsInitialCondition3D";
   }
-  lbs->initialConditionKernel = platform.buildKernel(fileName, kernelName,
+  initialConditionKernel = platform.buildKernel(fileName, kernelName,
 						     kernelInfo);
   
   // kernels from volume file
-  sprintf(fileName, DLBS "/okl/lbsCollision%s.okl", suffix);  
+  fileName   = oklFilePrefix + "lbsCollision" + suffix + oklFileSuffix;
 
-  sprintf(kernelName, "lbsCollision%s", suffix);
-  lbs->collisionKernel =  platform.buildKernel(fileName, kernelName,
+  kernelName = "lbsCollision" + suffix;
+  collisionKernel =  platform.buildKernel(fileName, kernelName,
 					       kernelInfo);
 
-  sprintf(kernelName, "lbsForcing%s", suffix);
-  lbs->forcingKernel =  platform.buildKernel(fileName, kernelName,
+  kernelName = "lbsForcing" + suffix;
+  forcingKernel =  platform.buildKernel(fileName, kernelName,
 					     kernelInfo);
 
-  sprintf(kernelName, "lbsMoments%s", suffix);
-  lbs->momentsKernel =  platform.buildKernel(fileName, kernelName,
+  kernelName = "lbsMoments" + suffix;
+  momentsKernel =  platform.buildKernel(fileName, kernelName,
 					     kernelInfo);
 
-  sprintf(kernelName, "lbsPhaseField%s", suffix);
-  lbs->phaseFieldKernel =  platform.buildKernel(fileName, kernelName,
+  kernelName = "lbsPhaseField" + suffix;
+  phaseFieldKernel =  platform.buildKernel(fileName, kernelName,
 						kernelInfo);
 
   // kernels from volume file
-  sprintf(fileName, DLBS "/okl/lbsVolume%s.okl", suffix);
-  sprintf(kernelName, "lbsVolume%s", suffix);
-  lbs->volumeKernel =  platform.buildKernel(fileName, kernelName,
+  fileName   = oklFilePrefix + "lbsVolume" + suffix + oklFileSuffix;
+  kernelName = "lbsVolume" + suffix;
+  volumeKernel =  platform.buildKernel(fileName, kernelName,
 					    kernelInfo);
 
   // kernels from surface file
-  sprintf(fileName, DLBS "/okl/lbsSurface%s.okl", suffix);
-  
-  sprintf(kernelName, "lbsSurface%s", suffix);
-  lbs->surfaceKernel = platform.buildKernel(fileName, kernelName,
+  fileName   = oklFilePrefix + "lbsSurface" + suffix + oklFileSuffix;
+  kernelName = "lbsSurface" + suffix;
+  surfaceKernel = platform.buildKernel(fileName, kernelName,
 					    kernelInfo);
 
   // vorticity calculation
-  sprintf(fileName, DLBS "/okl/lbsVorticity%s.okl", suffix);
-  sprintf(kernelName, "lbsVorticity%s", suffix);
+  fileName   = oklFilePrefix + "lbsVorticity" + suffix + oklFileSuffix;
+  kernelName = "lbsVorticity" + suffix;
 
-  lbs->vorticityKernel = platform.buildKernel(fileName, kernelName,
+  vorticityKernel = platform.buildKernel(fileName, kernelName,
 					      kernelInfo);
-
-
-
-  return *lbs;
-}
-
-lbs_t::~lbs_t() {
-  volumeKernel.free();
-  surfaceKernel.free();
-  relaxationKernel.free();
-  pmlVolumeKernel.free();
-  pmlSurfaceKernel.free();
-  pmlRelaxationKernel.free();
-  vorticityKernel.free();
-  initialConditionKernel.free();
-
-  if (timeStepper) delete timeStepper;
-  if (traceHalo) traceHalo->Free();
-
-  for (int lev=0;lev<mesh.mrNlevels;lev++)
-    if (multirateTraceHalo[lev]) multirateTraceHalo[lev]->Free();
 }

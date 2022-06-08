@@ -2,7 +2,7 @@
 
   The MIT License (MIT)
 
-  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,7 @@
 
 
 @kernel void ellipticAxTri3D(const dlong Nelements,
+                             @restrict const  dfloat *  wJ,
                              @restrict const  dfloat *  ggeo,
                              @restrict const  dfloat *  Dmatrices,
                              @restrict const  dfloat *  Smatrices,
@@ -48,7 +49,6 @@
       }
     }
 
-    @barrier("local");
 
 
     for(dlong e=eo;e<eo+p_NblockV;++e;@inner(1)){
@@ -60,7 +60,7 @@
           const dfloat Grr = ggeo[gid + p_G00ID];
           const dfloat Grs = ggeo[gid + p_G01ID];
           const dfloat Gss = ggeo[gid + p_G11ID];
-          const dfloat J   = ggeo[gid + p_GWJID];
+          const dfloat J   = wJ[e];
 
           dfloat qrr = 0.;
           dfloat qrs = 0.;
@@ -97,6 +97,7 @@
 @kernel void ellipticPartialAxTri3D(const dlong Nelements,
                                     @restrict const  dlong   *  elementList,
                                     @restrict const  dlong   *  GlobalToLocal,
+                                    @restrict const  dfloat *  wJ,
                                     @restrict const  dfloat *  ggeo,
                                     @restrict const  dfloat *  Dmatrices,
                                     @restrict const  dfloat *  Smatrices,
@@ -121,7 +122,6 @@
       }
     }
 
-    @barrier("local");
 
 
     for(dlong e=eo;e<eo+p_NblockV;++e;@inner(1)){
@@ -134,7 +134,7 @@
           const dfloat Grr = ggeo[gid + p_G00ID];
           const dfloat Grs = ggeo[gid + p_G01ID];
           const dfloat Gss = ggeo[gid + p_G11ID];
-          const dfloat J   = ggeo[gid + p_GWJID];
+          const dfloat J   = wJ[element];
 
           dfloat qrr = 0.;
           dfloat qrs = 0.;

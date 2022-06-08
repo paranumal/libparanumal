@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Rajesh Gandham
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Rajesh Gandham
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -28,11 +28,13 @@ SOFTWARE.
 #include "parAlmond/parAlmondCoarseSolver.hpp"
 #include "parAlmond/parAlmondKernels.hpp"
 
+namespace libp {
+
 namespace parAlmond {
 
-void oasSolver_t::solve(occa::memory& o_rhs, occa::memory& o_x) {
+void oasSolver_t::solve(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x) {
 
-  A->halo->ExchangeStart(o_rhs, 1, ogs_dfloat);
+  A.halo.ExchangeStart(o_rhs, 1);
 
   //queue local part of gemv
   const dfloat one=1.0;
@@ -40,34 +42,33 @@ void oasSolver_t::solve(occa::memory& o_rhs, occa::memory& o_x) {
   if (N)
     dGEMVKernel(N,diagTotal,one,o_diagInvAT,o_rhs, zero, o_x);
 
-  A->halo->ExchangeFinish(o_rhs, 1, ogs_dfloat);
+  A.halo.ExchangeFinish(o_rhs, 1);
 
   //queue offd part of gemv
   if(offdTotal && N)
     dGEMVKernel(N,offdTotal, one, o_offdInvAT,
-                o_rhs+diagTotal*sizeof(dfloat), one, o_x);
+                o_rhs+diagTotal, one, o_x);
 
-  A->halo->Combine(o_x, 1, ogs_dfloat);
+  A.halo.Combine(o_x, 1);
 }
 
 
 int oasSolver_t::getTargetSize() {
-  MPI_Comm_size(comm, &size);
-  return 1000*size;
+  return 1000*comm.size();
 }
 
-void oasSolver_t::setup(parCSR *_A, bool nullSpace,
-                        dfloat *nullVector, dfloat nullSpacePenalty) {
+void oasSolver_t::setup(parCSR& _A, bool nullSpace,
+                        memory<dfloat> nullVector, dfloat nullSpacePenalty) {
 
   A = _A;
 
-  comm = A->comm;
-  MPI_Comm_rank(comm, &rank);
-  MPI_Comm_size(comm, &size);
+  comm = A.comm;
+  rank = comm.rank();
+  size = comm.size();
 
-  N = (int) A->Ncols;
-  Nrows = A->Nrows;
-  Ncols = A->Ncols;
+  N = static_cast<int>(A.Ncols);
+  Nrows = A.Nrows;
+  Ncols = A.Ncols;
 
   // if((rank==0)&&(settings.compareSetting("VERBOSE","TRUE")))
   //   {printf("Setting up coarse solver...");fflush(stdout);}
@@ -76,25 +77,24 @@ void oasSolver_t::setup(parCSR *_A, bool nullSpace,
   // corresponding the offd columns
 
   //need to find where to send local rows
-  hlong *recvRows = (hlong *) calloc(A->Ncols-A->Nrows, sizeof(hlong));
+  memory<hlong> recvRows(A.Ncols-A.Nrows);
 
-  int *sendCounts = (int*) calloc(size, sizeof(int));
-  int *recvCounts = (int*) calloc(size, sizeof(int));
-  int *sendOffsets = (int*) calloc(size+1, sizeof(int));
-  int *recvOffsets = (int*) calloc(size+1, sizeof(int));
+  memory<int> sendCounts(size);
+  memory<int> recvCounts(size, 0);
+  memory<int> sendOffsets(size+1, 0);
+  memory<int> recvOffsets(size+1, 0);
 
   //use the colMap to fill the recv sizes
   int r=0;
-  for (int n=A->Nrows;n<A->Ncols;n++) {
-    hlong id = A->colMap[n];
-    while (id>=A->globalRowStarts[r+1]) r++; //assumes the halo is sorted
+  for (int n=A.Nrows;n<A.Ncols;n++) {
+    hlong id = A.colMap[n];
+    while (id>=A.globalRowStarts[r+1]) r++; //assumes the halo is sorted
     recvCounts[r]++;
-    recvRows[n-A->Nrows] = id; //record the row to recv
+    recvRows[n-A.Nrows] = id; //record the row to recv
   }
 
   //share the counts
-  MPI_Alltoall(recvCounts, 1, MPI_INT,
-               sendCounts, 1, MPI_INT, comm);
+  comm.Alltoall(recvCounts, sendCounts);
 
   for (r=0;r<size;r++) {
     sendOffsets[r+1] = sendOffsets[r]+sendCounts[r];
@@ -102,48 +102,46 @@ void oasSolver_t::setup(parCSR *_A, bool nullSpace,
   }
 
   int sendTotal = sendOffsets[size];
-  hlong *sendRows = (hlong *) calloc(sendTotal, sizeof(hlong));
+  memory<hlong> sendRows(sendTotal);
 
   //share the rowIds
-  MPI_Alltoallv(recvRows, recvCounts, recvOffsets, MPI_HLONG,
-                sendRows, sendCounts, sendOffsets, MPI_HLONG,
-                comm);
+  comm.Alltoallv(recvRows, recvCounts, recvOffsets,
+                 sendRows, sendCounts, sendOffsets);
 
   //we now have a list of rows to send, count the nnz to send
   dlong nnzTotal=0;
   for (r=0;r<size;r++) {
     sendCounts[r] =0; //reset
     for (int n=sendOffsets[r];n<sendOffsets[r+1];n++) {
-      dlong i = (dlong) (sendRows[n]-A->globalRowStarts[rank]); //local row id
-      sendCounts[r]+= A->diag.rowStarts[i+1]-A->diag.rowStarts[i]; //count entries in this row
-      sendCounts[r]+= A->offd.rowStarts[i+1]-A->offd.rowStarts[i]; //count entries in this row
+      dlong i = static_cast<dlong>(sendRows[n]-A.globalRowStarts[rank]); //local row id
+      sendCounts[r]+= A.diag.rowStarts[i+1]-A.diag.rowStarts[i]; //count entries in this row
+      sendCounts[r]+= A.offd.rowStarts[i+1]-A.offd.rowStarts[i]; //count entries in this row
     }
     nnzTotal += sendCounts[r]; //tally the total
   }
 
-  parCOO::nonZero_t *sendNonZeros = (parCOO::nonZero_t *) calloc(nnzTotal, sizeof(parCOO::nonZero_t));
+  memory<parCOO::nonZero_t> sendNonZeros(nnzTotal);
 
   nnzTotal=0; //reset
   for (r=0;r<size;r++) {
     for (int n=sendOffsets[r];n<sendOffsets[r+1];n++) {
-      dlong i = (dlong) (sendRows[n] - A->globalRowStarts[rank]); //local row id
-      for (dlong jj=A->diag.rowStarts[i]; jj<A->diag.rowStarts[i+1];jj++){
+      dlong i = static_cast<dlong>(sendRows[n] - A.globalRowStarts[rank]); //local row id
+      for (dlong jj=A.diag.rowStarts[i]; jj<A.diag.rowStarts[i+1];jj++){
         sendNonZeros[nnzTotal].row = sendRows[n];
-        sendNonZeros[nnzTotal].col = A->diag.cols[jj] + A->globalRowStarts[rank];
-        sendNonZeros[nnzTotal].val = A->diag.vals[jj];
+        sendNonZeros[nnzTotal].col = A.diag.cols[jj] + A.globalRowStarts[rank];
+        sendNonZeros[nnzTotal].val = A.diag.vals[jj];
         nnzTotal++;
       }
-      for (dlong jj=A->offd.rowStarts[i]; jj<A->offd.rowStarts[i+1];jj++){
+      for (dlong jj=A.offd.rowStarts[i]; jj<A.offd.rowStarts[i+1];jj++){
         sendNonZeros[nnzTotal].row = sendRows[n];
-        sendNonZeros[nnzTotal].col = A->colMap[A->offd.cols[jj]];
-        sendNonZeros[nnzTotal].val = A->offd.vals[jj];
+        sendNonZeros[nnzTotal].col = A.colMap[A.offd.cols[jj]];
+        sendNonZeros[nnzTotal].val = A.offd.vals[jj];
         nnzTotal++;
       }
     }
   }
 
-  MPI_Alltoall(sendCounts, 1, MPI_INT,
-               recvCounts, 1, MPI_INT, comm);
+  comm.Alltoall(sendCounts, recvCounts);
 
   for (r=0;r<size;r++) {
     sendOffsets[r+1] = sendOffsets[r]+sendCounts[r];
@@ -152,39 +150,30 @@ void oasSolver_t::setup(parCSR *_A, bool nullSpace,
 
   nnzTotal = recvOffsets[size]; //total nonzeros
 
-  parCOO::nonZero_t *recvNonZeros = (parCOO::nonZero_t *) calloc(nnzTotal, sizeof(parCOO::nonZero_t));
+  memory<parCOO::nonZero_t> recvNonZeros(nnzTotal);
 
-  MPI_Alltoallv(sendNonZeros, sendCounts, sendOffsets, MPI_NONZERO_T,
-                recvNonZeros, recvCounts, recvOffsets, MPI_NONZERO_T,
-                comm);
-
-  //clean up
-  MPI_Barrier(comm);
-  free(sendNonZeros);
-  free(sendCounts);
-  free(recvCounts);
-  free(sendOffsets);
-  free(recvOffsets);
+  comm.Alltoallv(sendNonZeros, sendCounts, sendOffsets,
+                 recvNonZeros, recvCounts, recvOffsets);
 
   //we now have all the nonlocal rows (should also be sorted)
 
   //first re-index the column indices
-  dlong id=A->Nrows;
+  dlong id=A.Nrows;
   for (dlong n=0;n<nnzTotal;n++) {
     const hlong row = recvNonZeros[n].row;
 
-    while(A->colMap[id]!=row) id++; //shift along list of recieved columns
+    while(A.colMap[id]!=row) id++; //shift along list of recieved columns
 
     recvNonZeros[n].row = id; //overwrite with new local row id
 
     //now check the column index
     hlong col = recvNonZeros[n].col;
-    if (col >= A->globalRowStarts[rank] && col < A->globalRowStarts[rank+1]) {//local column
-      recvNonZeros[n].col = col - A->globalRowStarts[rank];//overwrite with local col id
+    if (col >= A.globalRowStarts[rank] && col < A.globalRowStarts[rank+1]) {//local column
+      recvNonZeros[n].col = col - A.globalRowStarts[rank];//overwrite with local col id
     } else {
       int flag = 0;
-      for (dlong jj=A->Nrows;jj<A->Ncols;jj++) { //look for the right id in the halo
-        if (A->colMap[jj]==col) {
+      for (dlong jj=A.Nrows;jj<A.Ncols;jj++) { //look for the right id in the halo
+        if (A.colMap[jj]==col) {
           recvNonZeros[n].col = jj;//overwrite with local col id
           flag = 1;
           break;
@@ -195,23 +184,23 @@ void oasSolver_t::setup(parCSR *_A, bool nullSpace,
   }
 
   //assemble the full matrix
-  dfloat *coarseA = (dfloat *) calloc(N*N,sizeof(dfloat));
-  for (int n=0;n<A->Nrows;n++) {
-    const int start = (int) A->diag.rowStarts[n];
-    const int end   = (int) A->diag.rowStarts[n+1];
+  memory<dfloat> coarseA(N*N);
+  for (int n=0;n<A.Nrows;n++) {
+    const int start = static_cast<int>(A.diag.rowStarts[n]);
+    const int end   = static_cast<int>(A.diag.rowStarts[n+1]);
     for (int m=start;m<end;m++) {
-      int col = (int) A->diag.cols[m];
-      coarseA[n*N+col] = A->diag.vals[m];
+      int col = static_cast<int>(A.diag.cols[m]);
+      coarseA[n*N+col] = A.diag.vals[m];
     }
   }
 
-  for (int n=0;n<A->offd.nzRows;n++) {
-    const int row   = (int) A->offd.rows[n];
-    const int start = (int) A->offd.mRowStarts[n];
-    const int end   = (int) A->offd.mRowStarts[n+1];
+  for (int n=0;n<A.offd.nzRows;n++) {
+    const int row   = static_cast<int>(A.offd.rows[n]);
+    const int start = static_cast<int>(A.offd.mRowStarts[n]);
+    const int end   = static_cast<int>(A.offd.mRowStarts[n+1]);
     for (int m=start;m<end;m++) {
-      int col = (int) A->offd.cols[m];
-      coarseA[row*N+col] = A->offd.vals[m];
+      int col = static_cast<int>(A.offd.cols[m]);
+      coarseA[row*N+col] = A.offd.vals[m];
     }
   }
 
@@ -224,43 +213,36 @@ void oasSolver_t::setup(parCSR *_A, bool nullSpace,
 
   if (nullSpace) { //A is dense due to nullspace augmentation
     //copy fine nullvector and populate halo
-    dfloat *null = (dfloat *) malloc(A->Ncols*sizeof(dfloat));
-    memcpy(null, nullVector, A->Nrows*sizeof(dfloat));
-    A->halo->Exchange(null, 1, ogs_dfloat);
+    memory<dfloat> null(A.Ncols);
+    null.copyFrom(nullVector, A.Nrows);
+    A.halo.Exchange(null, 1);
 
     for (int n=0;n<N;n++) {
       for (int m=0;m<N;m++) {
         coarseA[n*N+m] += nullSpacePenalty*null[n]*null[m];
       }
     }
-
-    free(null);
   }
 
-  MPI_Barrier(comm);
-  free(recvNonZeros);
-
-  matrixInverse(N, coarseA);
+  linAlg_t::matrixInverse(N, coarseA);
 
   //determine the overlap weighting
-  dfloat *weight = (dfloat *) malloc(N*sizeof(dfloat));
-  for (int n=0;n<N;n++) weight[n] = 1.0;
+  memory<dfloat> weight(N, 1.0);
 
-  A->halo->Combine(weight, 1, ogs_dfloat);
+  A.halo.Combine(weight, 1);
 
   for (int n=0;n<N;n++) {
     for (int m=0;m<N;m++) {
       coarseA[n*N+m] *= 1.0/sqrt(weight[n]*weight[m]);
     }
   }
-  free(weight);
 
   //determine size of offd piece
-  diagTotal = A->Nrows;
-  offdTotal = A->Ncols - A->Nrows;
+  diagTotal = A.Nrows;
+  offdTotal = A.Ncols - A.Nrows;
 
   //diag piece of invA
-  diagInvAT = (dfloat *) calloc(N*diagTotal,sizeof(dfloat));
+  diagInvAT.malloc(N*diagTotal);
   for (int n=0;n<N;n++) {
     for (int m=0;m<diagTotal;m++) {
       diagInvAT[n+m*N] = coarseA[n*N+m];
@@ -268,15 +250,15 @@ void oasSolver_t::setup(parCSR *_A, bool nullSpace,
   }
 
   //offd piece of invA
-  offdInvAT = (dfloat *) calloc(N*offdTotal,sizeof(dfloat));
+  offdInvAT.malloc(N*offdTotal);
   for (int n=0;n<N;n++) {
     for (int m=0;m<offdTotal;m++) {
       offdInvAT[n+m*N] = coarseA[n*N + m+diagTotal];
     }
   }
 
-  o_diagInvAT = platform.malloc(N*diagTotal*sizeof(dfloat), diagInvAT);
-  o_offdInvAT = platform.malloc(N*offdTotal*sizeof(dfloat), offdInvAT);
+  o_diagInvAT = platform.malloc<dfloat>(diagInvAT);
+  o_offdInvAT = platform.malloc<dfloat>(offdInvAT);
 
   // if((rank==0)&&(settings.compareSetting("VERBOSE","TRUE"))) printf("done.\n");
 }
@@ -285,40 +267,36 @@ void oasSolver_t::syncToDevice() {}
 
 void oasSolver_t::Report(int lev) {
 
-  hlong hNrows = (hlong) N;
+  int totalActive = (N>0) ? 1:0;
+  comm.Allreduce(totalActive, Comm::Sum);
 
-  int active = (N>0) ? 1:0;
-  int totalActive=0;
-  MPI_Allreduce(&active, &totalActive, 1, MPI_INT, MPI_SUM, comm);
+  dlong minNrows=N, maxNrows=N;
+  hlong totalNrows=N;
+  comm.Allreduce(maxNrows, Comm::Max);
+  comm.Allreduce(totalNrows, Comm::Sum);
+  dfloat avgNrows = static_cast<dfloat>(totalNrows)/totalActive;
 
-  dlong minNrows=0, maxNrows=0;
-  hlong totalNrows=0;
-  dfloat avgNrows;
-  MPI_Allreduce(&N, &maxNrows, 1, MPI_DLONG, MPI_MAX, comm);
-  MPI_Allreduce(&hNrows, &totalNrows, 1, MPI_HLONG, MPI_SUM, comm);
-  avgNrows = (dfloat) totalNrows/totalActive;
-
-  if (N==0) N=maxNrows; //set this so it's ignored for the global min
-  MPI_Allreduce(&N, &minNrows, 1, MPI_DLONG, MPI_MIN, comm);
+  if (N==0) minNrows=maxNrows; //set this so it's ignored for the global min
+  comm.Allreduce(minNrows, Comm::Min);
 
   long long int nnz;
-  nnz = A->diag.nnz+A->offd.nnz;
+  nnz = A.diag.nnz+A.offd.nnz;
 
-  long long int minNnz=0, maxNnz=0, totalNnz=0;
-  MPI_Allreduce(&nnz, &maxNnz,   1, MPI_LONG_LONG_INT, MPI_MAX, comm);
-  MPI_Allreduce(&nnz, &totalNnz, 1, MPI_LONG_LONG_INT, MPI_SUM, comm);
+  long long int minNnz=nnz, maxNnz=nnz, totalNnz=nnz;
+  comm.Allreduce(maxNnz, Comm::Max);
+  comm.Allreduce(totalNnz, Comm::Sum);
 
-  if (nnz==0) nnz = maxNnz; //set this so it's ignored for the global min
-  MPI_Allreduce(&nnz, &minNnz, 1, MPI_LONG_LONG_INT, MPI_MIN, comm);
+  if (nnz==0) minNnz = maxNnz; //set this so it's ignored for the global min
+  comm.Allreduce(minNnz, Comm::Min);
 
-  dfloat nnzPerRow = (Nrows==0) ? 0 : (dfloat) nnz/Nrows;
-  dfloat minNnzPerRow=0, maxNnzPerRow=0, avgNnzPerRow=0;
-  MPI_Allreduce(&nnzPerRow, &maxNnzPerRow, 1, MPI_DFLOAT, MPI_MAX, comm);
-  MPI_Allreduce(&nnzPerRow, &avgNnzPerRow, 1, MPI_DFLOAT, MPI_SUM, comm);
+  dfloat nnzPerRow = (Nrows==0) ? 0 : static_cast<dfloat>(nnz)/Nrows;
+  dfloat minNnzPerRow=nnzPerRow, maxNnzPerRow=nnzPerRow, avgNnzPerRow=nnzPerRow;
+  comm.Allreduce(maxNnzPerRow, Comm::Max);
+  comm.Allreduce(avgNnzPerRow, Comm::Sum);
   avgNnzPerRow /= totalActive;
 
-  if (Nrows==0) nnzPerRow = maxNnzPerRow;
-  MPI_Allreduce(&nnzPerRow, &minNnzPerRow, 1, MPI_DFLOAT, MPI_MIN, comm);
+  if (Nrows==0) minNnzPerRow = maxNnzPerRow;
+  comm.Allreduce(minNnzPerRow, Comm::Min);
 
   std::string name = "OAS             ";
 
@@ -329,9 +307,6 @@ void oasSolver_t::Report(int lev) {
   }
 }
 
-oasSolver_t::~oasSolver_t() {
-  if (diagInvAT) free(diagInvAT);
-  if (offdInvAT) free(offdInvAT);
-}
-
 } //namespace parAlmond
+
+} //namespace libp

@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,243 +26,230 @@ SOFTWARE.
 
 #include "cns.hpp"
 
-cns_t& cns_t::Setup(platform_t& platform, mesh_t& mesh,
-                    cnsSettings_t& settings){
+void cns_t::Setup(platform_t& _platform, mesh_t& _mesh,
+                  cnsSettings_t& _settings){
 
-  cns_t* cns = new cns_t(platform, mesh, settings);
+  platform = _platform;
+  mesh = _mesh;
+  comm = _mesh.comm;
+  settings = _settings;
+
+  //Trigger JIT kernel builds
+  ogs::InitializeKernels(platform, ogs::Dfloat, ogs::Add);
 
   //get physical paramters
-  settings.getSetting("VISCOSITY", cns->mu);
-  settings.getSetting("GAMMA", cns->gamma);
+  settings.getSetting("VISCOSITY", mu);
+  settings.getSetting("GAMMA", gamma);
 
-  cns->cubature   = (settings.compareSetting("ADVECTION TYPE", "CUBATURE")) ? 1:0;
-  cns->isothermal = (settings.compareSetting("ISOTHERMAL", "TRUE")) ? 1:0;
+  cubature   = (settings.compareSetting("ADVECTION TYPE", "CUBATURE")) ? 1:0;
+  isothermal = (settings.compareSetting("ISOTHERMAL", "TRUE")) ? 1:0;
 
   //setup cubature
-  if (cns->cubature) {
+  if (cubature) {
     mesh.CubatureSetup();
-    mesh.CubatureNodes();
+    mesh.CubaturePhysicalNodes();
   }
 
-  cns->Nfields   = (mesh.dim==3) ? 4:3;
-  cns->Ngrads = mesh.dim*mesh.dim;
+  Nfields   = (mesh.dim==3) ? 4:3;
+  Ngrads = mesh.dim*mesh.dim;
 
-  if (!cns->isothermal) cns->Nfields++; //include energy equation
+  if (!isothermal) Nfields++; //include energy equation
 
-  dlong NlocalFields = mesh.Nelements*mesh.Np*cns->Nfields;
-  dlong NhaloFields  = mesh.totalHaloPairs*mesh.Np*cns->Nfields;
-  dlong NlocalGrads = mesh.Nelements*mesh.Np*cns->Ngrads;
-  dlong NhaloGrads  = mesh.totalHaloPairs*mesh.Np*cns->Ngrads;
+  dlong NlocalFields = mesh.Nelements*mesh.Np*Nfields;
+  dlong NhaloFields  = mesh.totalHaloPairs*mesh.Np*Nfields;
+  dlong NlocalGrads = mesh.Nelements*mesh.Np*Ngrads;
+  dlong NhaloGrads  = mesh.totalHaloPairs*mesh.Np*Ngrads;
 
   //setup timeStepper
   if (settings.compareSetting("TIME INTEGRATOR","AB3")){
-    cns->timeStepper = new TimeStepper::ab3(mesh.Nelements, mesh.totalHaloPairs,
-                                              mesh.Np, cns->Nfields, *cns);
+    timeStepper.Setup<TimeStepper::ab3>(mesh.Nelements,
+                                        mesh.totalHaloPairs,
+                                        mesh.Np, Nfields, platform, comm);
   } else if (settings.compareSetting("TIME INTEGRATOR","LSERK4")){
-    cns->timeStepper = new TimeStepper::lserk4(mesh.Nelements, mesh.totalHaloPairs,
-                                              mesh.Np, cns->Nfields, *cns);
+    timeStepper.Setup<TimeStepper::lserk4>(mesh.Nelements,
+                                           mesh.totalHaloPairs,
+                                           mesh.Np, Nfields, platform, comm);
   } else if (settings.compareSetting("TIME INTEGRATOR","DOPRI5")){
-    cns->timeStepper = new TimeStepper::dopri5(mesh.Nelements, mesh.totalHaloPairs,
-                                              mesh.Np, cns->Nfields, *cns, mesh.comm);
+    timeStepper.Setup<TimeStepper::dopri5>(mesh.Nelements,
+                                           mesh.totalHaloPairs,
+                                           mesh.Np, Nfields, platform, comm);
   }
 
   //setup linear algebra module
-  platform.linAlg.InitKernels({"innerProd", "max"});
+  platform.linAlg().InitKernels({"innerProd", "max"});
 
   /*setup trace halo exchange */
-  cns->fieldTraceHalo = mesh.HaloTraceSetup(cns->Nfields);
-  cns->gradTraceHalo  = mesh.HaloTraceSetup(cns->Ngrads);
+  fieldTraceHalo = mesh.HaloTraceSetup(Nfields);
+  gradTraceHalo  = mesh.HaloTraceSetup(Ngrads);
 
   // compute samples of q at interpolation nodes
-  cns->q = (dfloat*) calloc(NlocalFields+NhaloFields, sizeof(dfloat));
-  cns->o_q = platform.malloc((NlocalFields+NhaloFields)*sizeof(dfloat),
-                                              cns->q);
+  q.malloc(NlocalFields+NhaloFields);
+  o_q = platform.malloc<dfloat>(q);
 
-  cns->gradq = (dfloat*) calloc(NlocalGrads+NhaloGrads, sizeof(dfloat));
-  cns->o_gradq = platform.malloc((NlocalGrads+NhaloGrads)*sizeof(dfloat),
-                                              cns->gradq);
+  gradq.malloc(NlocalGrads+NhaloGrads);
+  o_gradq = platform.malloc<dfloat>(gradq);
 
-  cns->Vort = (dfloat*) calloc(mesh.dim*mesh.Nelements*mesh.Np, sizeof(dfloat));
-  cns->o_Vort = platform.malloc((mesh.dim*mesh.Nelements*mesh.Np)*sizeof(dfloat),
-                                              cns->Vort);
+  Vort.malloc(mesh.dim*mesh.Nelements*mesh.Np);
+  o_Vort = platform.malloc<dfloat>(Vort);
 
   //storage for M*q during reporting
-  cns->o_Mq = platform.malloc((NlocalFields+NhaloFields)*sizeof(dfloat), cns->q);
-  mesh.MassMatrixKernelSetup(cns->Nfields); // mass matrix operator
+  o_Mq = platform.malloc<dfloat>(q);
+  mesh.MassMatrixKernelSetup(Nfields); // mass matrix operator
 
   // OCCA build stuff
-  occa::properties kernelInfo = mesh.props; //copy base occa properties
+  properties_t kernelInfo = mesh.props; //copy base occa properties
 
   //add boundary data to kernel info
-  string dataFileName;
+  std::string dataFileName;
   settings.getSetting("DATA FILE", dataFileName);
   kernelInfo["includes"] += dataFileName;
 
-  kernelInfo["defines/" "p_Nfields"]= cns->Nfields;
-  kernelInfo["defines/" "p_Ngrads"]= cns->Ngrads;
+  kernelInfo["defines/" "p_Nfields"]= Nfields;
+  kernelInfo["defines/" "p_Ngrads"]= Ngrads;
 
-  int maxNodes = mymax(mesh.Np, (mesh.Nfp*mesh.Nfaces));
+  int maxNodes = std::max(mesh.Np, (mesh.Nfp*mesh.Nfaces));
   kernelInfo["defines/" "p_maxNodes"]= maxNodes;
 
   int blockMax = 256;
   if (platform.device.mode() == "CUDA") blockMax = 512;
 
-  int NblockV = mymax(1, blockMax/mesh.Np);
+  int NblockV = std::max(1, blockMax/mesh.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;
 
-  int NblockS = mymax(1, blockMax/maxNodes);
+  int NblockS = std::max(1, blockMax/maxNodes);
   kernelInfo["defines/" "p_NblockS"]= NblockS;
 
-  if (cns->cubature) {
-    int cubMaxNodes = mymax(mesh.Np, (mesh.intNfp*mesh.Nfaces));
+  if (cubature) {
+    int cubMaxNodes = std::max(mesh.Np, (mesh.intNfp*mesh.Nfaces));
     kernelInfo["defines/" "p_cubMaxNodes"]= cubMaxNodes;
-    int cubMaxNodes1 = mymax(mesh.Np, (mesh.intNfp));
+    int cubMaxNodes1 = std::max(mesh.Np, (mesh.intNfp));
     kernelInfo["defines/" "p_cubMaxNodes1"]= cubMaxNodes1;
 
-    int cubNblockV = mymax(1, blockMax/mesh.cubNp);
+    int cubNblockV = std::max(1, blockMax/mesh.cubNp);
     kernelInfo["defines/" "p_cubNblockV"]= cubNblockV;
 
-    int cubNblockS = mymax(1, blockMax/cubMaxNodes);
+    int cubNblockS = std::max(1, blockMax/cubMaxNodes);
     kernelInfo["defines/" "p_cubNblockS"]= cubNblockS;
   }
 
-  kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
-
   // set kernel name suffix
-  char *suffix;
-  if(mesh.elementType==TRIANGLES)
-    suffix = strdup("Tri2D");
-  if(mesh.elementType==QUADRILATERALS)
-    suffix = strdup("Quad2D");
-  if(mesh.elementType==TETRAHEDRA)
-    suffix = strdup("Tet3D");
-  if(mesh.elementType==HEXAHEDRA)
-    suffix = strdup("Hex3D");
+  std::string suffix;
+  if(mesh.elementType==Mesh::TRIANGLES)
+    suffix = "Tri2D";
+  if(mesh.elementType==Mesh::QUADRILATERALS)
+    suffix = "Quad2D";
+  if(mesh.elementType==Mesh::TETRAHEDRA)
+    suffix = "Tet3D";
+  if(mesh.elementType==Mesh::HEXAHEDRA)
+    suffix = "Hex3D";
 
-  char fileName[BUFSIZ], kernelName[BUFSIZ];
+  std::string oklFilePrefix = DCNS "/okl/";
+  std::string oklFileSuffix = ".okl";
 
-  if (cns->isothermal) {
-    if (cns->cubature) {
+  std::string fileName, kernelName;
+
+  if (isothermal) {
+    if (cubature) {
       // kernels from volume file
-      sprintf(fileName, DCNS "/okl/cnsIsothermalCubatureVolume%s.okl", suffix);
-      sprintf(kernelName, "cnsIsothermalCubatureVolume%s", suffix);
+      fileName   = oklFilePrefix + "cnsIsothermalCubatureVolume" + suffix + oklFileSuffix;
+      kernelName = "cnsIsothermalCubatureVolume" + suffix;
 
-      cns->cubatureVolumeKernel =  platform.buildKernel(fileName, kernelName,
+      cubatureVolumeKernel =  platform.buildKernel(fileName, kernelName,
                                                kernelInfo);
       // kernels from surface file
-      sprintf(fileName, DCNS "/okl/cnsIsothermalCubatureSurface%s.okl", suffix);
-      sprintf(kernelName, "cnsIsothermalCubatureSurface%s", suffix);
+      fileName   = oklFilePrefix + "cnsIsothermalCubatureSurface" + suffix + oklFileSuffix;
+      kernelName = "cnsIsothermalCubatureSurface" + suffix;
 
-      cns->cubatureSurfaceKernel = platform.buildKernel(fileName, kernelName,
+      cubatureSurfaceKernel = platform.buildKernel(fileName, kernelName,
                                                kernelInfo);
     } else {
       // kernels from volume file
-      sprintf(fileName, DCNS "/okl/cnsIsothermalVolume%s.okl", suffix);
-      sprintf(kernelName, "cnsIsothermalVolume%s", suffix);
+      fileName   = oklFilePrefix + "cnsIsothermalVolume" + suffix + oklFileSuffix;
+      kernelName = "cnsIsothermalVolume" + suffix;
 
-      cns->volumeKernel =  platform.buildKernel(fileName, kernelName,
+      volumeKernel =  platform.buildKernel(fileName, kernelName,
                                              kernelInfo);
       // kernels from surface file
-      sprintf(fileName, DCNS "/okl/cnsIsothermalSurface%s.okl", suffix);
-      sprintf(kernelName, "cnsIsothermalSurface%s", suffix);
+      fileName   = oklFilePrefix + "cnsIsothermalSurface" + suffix + oklFileSuffix;
+      kernelName = "cnsIsothermalSurface" + suffix;
 
-      cns->surfaceKernel = platform.buildKernel(fileName, kernelName,
+      surfaceKernel = platform.buildKernel(fileName, kernelName,
                                              kernelInfo);
     }
   } else {
-    if (cns->cubature) {
+    if (cubature) {
       // kernels from volume file
-      sprintf(fileName, DCNS "/okl/cnsCubatureVolume%s.okl", suffix);
-      sprintf(kernelName, "cnsCubatureVolume%s", suffix);
+      fileName   = oklFilePrefix + "cnsCubatureVolume" + suffix + oklFileSuffix;
+      kernelName = "cnsCubatureVolume" + suffix;
 
-      cns->cubatureVolumeKernel =  platform.buildKernel(fileName, kernelName,
+      cubatureVolumeKernel =  platform.buildKernel(fileName, kernelName,
                                                kernelInfo);
       // kernels from surface file
-      sprintf(fileName, DCNS "/okl/cnsCubatureSurface%s.okl", suffix);
-      sprintf(kernelName, "cnsCubatureSurface%s", suffix);
+      fileName   = oklFilePrefix + "cnsCubatureSurface" + suffix + oklFileSuffix;
+      kernelName = "cnsCubatureSurface" + suffix;
 
-      cns->cubatureSurfaceKernel = platform.buildKernel(fileName, kernelName,
+      cubatureSurfaceKernel = platform.buildKernel(fileName, kernelName,
                                                kernelInfo);
     } else {
       // kernels from volume file
-      sprintf(fileName, DCNS "/okl/cnsVolume%s.okl", suffix);
-      sprintf(kernelName, "cnsVolume%s", suffix);
+      fileName   = oklFilePrefix + "cnsVolume" + suffix + oklFileSuffix;
+      kernelName = "cnsVolume" + suffix;
 
-      cns->volumeKernel =  platform.buildKernel(fileName, kernelName,
+      volumeKernel =  platform.buildKernel(fileName, kernelName,
                                              kernelInfo);
       // kernels from surface file
-      sprintf(fileName, DCNS "/okl/cnsSurface%s.okl", suffix);
-      sprintf(kernelName, "cnsSurface%s", suffix);
+      fileName   = oklFilePrefix + "cnsSurface" + suffix + oklFileSuffix;
+      kernelName = "cnsSurface" + suffix;
 
-      cns->surfaceKernel = platform.buildKernel(fileName, kernelName,
+      surfaceKernel = platform.buildKernel(fileName, kernelName,
                                              kernelInfo);
     }
   }
 
   // kernels from volume file
-  sprintf(fileName, DCNS "/okl/cnsGradVolume%s.okl", suffix);
-  sprintf(kernelName, "cnsGradVolume%s", suffix);
+  fileName   = oklFilePrefix + "cnsGradVolume" + suffix + oklFileSuffix;
+  kernelName = "cnsGradVolume" + suffix;
 
-  cns->gradVolumeKernel =  platform.buildKernel(fileName, kernelName,
+  gradVolumeKernel =  platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
   // kernels from surface file
-  sprintf(fileName, DCNS "/okl/cnsGradSurface%s.okl", suffix);
-  sprintf(kernelName, "cnsGradSurface%s", suffix);
+  fileName   = oklFilePrefix + "cnsGradSurface" + suffix + oklFileSuffix;
+  kernelName = "cnsGradSurface" + suffix;
 
-  cns->gradSurfaceKernel = platform.buildKernel(fileName, kernelName,
+  gradSurfaceKernel = platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
 
   // vorticity calculation
-  sprintf(fileName, DCNS "/okl/cnsVorticity%s.okl", suffix);
-  sprintf(kernelName, "cnsVorticity%s", suffix);
+  fileName   = oklFilePrefix + "cnsVorticity" + suffix + oklFileSuffix;
+  kernelName = "cnsVorticity" + suffix;
 
-  cns->vorticityKernel = platform.buildKernel(fileName, kernelName,
+  vorticityKernel = platform.buildKernel(fileName, kernelName,
                                      kernelInfo);
 
   if (mesh.dim==2) {
-    sprintf(fileName, DCNS "/okl/cnsInitialCondition2D.okl");
-    if (cns->isothermal)
-      sprintf(kernelName, "cnsIsothermalInitialCondition2D");
+    fileName   = oklFilePrefix + "cnsInitialCondition2D" + oklFileSuffix;
+    if (isothermal)
+      kernelName = "cnsIsothermalInitialCondition2D";
     else
-      sprintf(kernelName, "cnsInitialCondition2D");
+      kernelName = "cnsInitialCondition2D";
   } else {
-    sprintf(fileName, DCNS "/okl/cnsInitialCondition3D.okl");
-    if (cns->isothermal)
-      sprintf(kernelName, "cnsIsothermalInitialCondition3D");
+    fileName   = oklFilePrefix + "cnsInitialCondition3D" + oklFileSuffix;
+    if (isothermal)
+      kernelName = "cnsIsothermalInitialCondition3D";
     else
-      sprintf(kernelName, "cnsInitialCondition3D");
+      kernelName = "cnsInitialCondition3D";
   }
 
-
-  cns->initialConditionKernel = platform.buildKernel(fileName, kernelName,
+  initialConditionKernel = platform.buildKernel(fileName, kernelName,
                                             kernelInfo);
 
-  sprintf(fileName, DCNS "/okl/cnsMaxWaveSpeed%s.okl", suffix);
-  if (cns->isothermal) {
-    sprintf(kernelName, "cnsIsothermalMaxWaveSpeed%s", suffix);
+  fileName   = oklFilePrefix + "cnsMaxWaveSpeed" + suffix + oklFileSuffix;
+  if (isothermal) {
+    kernelName = "cnsIsothermalMaxWaveSpeed" + suffix;
   } else {
-    sprintf(kernelName, "cnsMaxWaveSpeed%s", suffix);
+    kernelName = "cnsMaxWaveSpeed" + suffix;
   }
 
-  cns->maxWaveSpeedKernel = platform.buildKernel(fileName, kernelName,
+  maxWaveSpeedKernel = platform.buildKernel(fileName, kernelName,
                                             kernelInfo);
-
-  return *cns;
-}
-
-cns_t::~cns_t() {
-  volumeKernel.free();
-  surfaceKernel.free();
-  cubatureVolumeKernel.free();
-  cubatureSurfaceKernel.free();
-  gradVolumeKernel.free();
-  gradSurfaceKernel.free();
-  vorticityKernel.free();
-  constrainKernel.free();
-  initialConditionKernel.free();
-  maxWaveSpeedKernel.free();
-
-  if (timeStepper) delete timeStepper;
-  if (fieldTraceHalo) fieldTraceHalo->Free();
-  if (gradTraceHalo) gradTraceHalo->Free();
 }

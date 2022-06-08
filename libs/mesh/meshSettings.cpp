@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,8 +25,11 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
+#include "parAdogs.hpp"
 
-meshSettings_t::meshSettings_t(MPI_Comm& _comm):
+namespace libp {
+
+meshSettings_t::meshSettings_t(comm_t _comm):
   settings_t(_comm) {
 
   newSetting("MESH FILE",
@@ -83,14 +86,13 @@ meshSettings_t::meshSettings_t(MPI_Comm& _comm):
              "4",
              "Degree of polynomial finite element space",
              {"1","2","3","4","5","6","7","8","9","10","11","12","13","14","15"});
+
+  paradogs::AddSettings(*this);
 }
 
 void meshSettings_t::report() {
 
-  int rank;
-  MPI_Comm_rank(comm, &rank);
-
-  if (rank==0) {
+  if (comm.rank()==0) {
     std::cout << "Mesh Settings:\n\n";
     if (!compareSetting("MESH FILE","BOX"))
       reportSetting("MESH FILE");
@@ -127,5 +129,11 @@ void meshSettings_t::report() {
     }
 
     reportSetting("POLYNOMIAL DEGREE");
+
+    if (!compareSetting("MESH FILE","BOX")) {
+      paradogs::ReportSettings(*this);
+    }
   }
 }
+
+} //namespace libp

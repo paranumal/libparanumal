@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Anthony Austin
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,60 +26,54 @@ SOFTWARE.
 
 #include "linearSolver.hpp"
 
+namespace libp {
+
+namespace LinearSolver {
+
 pminres::pminres(dlong _N, dlong _Nhalo,
-                 platform_t& _platform, settings_t& _settings, MPI_Comm _comm):
-  linearSolver_t(_N, _Nhalo, _platform, _settings, _comm)
+                 platform_t& _platform, settings_t& _settings, comm_t _comm):
+  linearSolverBase_t(_N, _Nhalo, _platform, _settings, _comm)
 {
-  platform.linAlg.InitKernels({"axpy", "zaxpy", "scale", "set",
-                               "innerProd", "weightedInnerProd",
-                               "norm2", "weightedNorm2"});
+  platform.linAlg().InitKernels({"axpy", "scale", "innerProd"});
 
   dlong Ntotal = N + Nhalo;
 
-  dfloat *dummy = new dfloat[Ntotal]();
-  o_p     = platform.malloc(Ntotal*sizeof(dfloat), dummy);
-  o_z     = platform.malloc(Ntotal*sizeof(dfloat), dummy);
-  o_r     = platform.malloc(Ntotal*sizeof(dfloat), dummy);
-  o_r_old = platform.malloc(Ntotal*sizeof(dfloat), dummy);
-  o_q     = platform.malloc(Ntotal*sizeof(dfloat), dummy);
-  o_q_old = platform.malloc(Ntotal*sizeof(dfloat), dummy);
-  delete[] dummy;
+  memory<dfloat> dummy(Ntotal, 0.0);
+  o_p     = platform.malloc<dfloat>(dummy);
+  o_z     = platform.malloc<dfloat>(dummy);
+  o_r     = platform.malloc<dfloat>(dummy);
+  o_r_old = platform.malloc<dfloat>(dummy);
+  o_q     = platform.malloc<dfloat>(dummy);
+  o_q_old = platform.malloc<dfloat>(dummy);
 
-  occa::properties kernelInfo = platform.props;
+  properties_t kernelInfo = platform.props();
   updateMINRESKernel = platform.buildKernel(LINEARSOLVER_DIR "/okl/linearSolverUpdateMINRES.okl", "updateMINRES", kernelInfo);
-
-  return;
 }
 
-pminres::~pminres()
-{
-  return;
-}
-
-int pminres::Solve(solver_t& solver, precon_t& precon,
-                   occa::memory &o_x, occa::memory &o_b,
+int pminres::Solve(operator_t& linearOperator, operator_t& precon,
+                   deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_b,
                    const dfloat tol, const int MAXIT, const int verbose)
 {
-  int    rank, iter;
+  int iter;
   dfloat a0, a1, a2, a3, del, gam, gamp, c, cp, s, sp, eta;
   dfloat TOL;
 
-  MPI_Comm_rank(comm, &rank);
-  linAlg_t &linAlg = platform.linAlg;
+  int rank = comm.rank();
+  linAlg_t &linAlg = platform.linAlg();
 
-  solver.Operator(o_x, o_r);            // r = b - A*x
+  linearOperator.Operator(o_x, o_r);            // r = b - A*x
   linAlg.axpy(N, 1.0, o_b, -1.0, o_r);
   precon.Operator(o_r, o_z);            // z = M\r
 
   gamp = 0.0;
-  gam  = sqrt(innerProd(o_z, o_r));     // gam = sqrt(z . r);
+  gam  = sqrt(linAlg.innerProd(N, o_z, o_r, comm)); // gam = sqrt(z . r);
   eta  = gam;
   sp   = 0.0;
   s    = 0.0;
   cp   = 1.0;
   c    = 1.0;
 
-  TOL = mymax(tol*fabs(eta), tol);
+  TOL = std::max(tol*std::abs(eta), tol);
   if (verbose && (rank == 0)) {
     printf("PMINRES:  initial eta = % .15e, target %.15e\n", eta, tol);
   }
@@ -91,7 +85,7 @@ int pminres::Solve(solver_t& solver, precon_t& precon,
       printf("PMINRES:  it %3d  eta = % .15e, gamma = %.15e\n", iter, eta, gam);
     }
 
-    if ((fabs(eta) < TOL) && (iter >= 1)) {
+    if ((std::abs(eta) < TOL) && (iter >= 1)) {
       if (verbose && (rank == 0)) {
         printf("PMINRES converged in %d iterations (eta = % .15e).\n", iter, eta);
       }
@@ -99,8 +93,8 @@ int pminres::Solve(solver_t& solver, precon_t& precon,
     }
 
     linAlg.scale(N, 1.0/gam, o_z);                    // z = z/gam
-    solver.Operator(o_z, o_p);                        // p = A*z
-    del = innerProd(o_p, o_z);                        // del = p . z
+    linearOperator.Operator(o_z, o_p);                        // p = A*z
+    del = linAlg.innerProd(N, o_p, o_z, comm);        // del = p . z
     a0 = c*del - cp*s*gam;
     a2 = s*del + cp*c*gam;
     a3 = sp*gam;
@@ -122,7 +116,7 @@ int pminres::Solve(solver_t& solver, precon_t& precon,
 #endif
     precon.Operator(o_r, o_z);                        // z = M\r
     gamp = gam;
-    gam  = sqrt(innerProd(o_z, o_r));                 // gam = sqrt(z . r)
+    gam  = sqrt(linAlg.innerProd(N, o_z, o_r, comm)); // gam = sqrt(z . r)
     a1   = sqrt(a0*a0 + gam*gam);
     cp   = c;
     c    = a0/a1;
@@ -138,12 +132,11 @@ int pminres::Solve(solver_t& solver, precon_t& precon,
   return iter;
 }
 
-dfloat pminres::innerProd(occa::memory& o_x, occa::memory& o_y)
-{
-  return platform.linAlg.innerProd(N, o_x, o_y, comm);
-}
-
 void pminres::UpdateMINRES(const dfloat ma2, const dfloat ma3, const dfloat alpha, const dfloat beta)
 {
   updateMINRESKernel(N, ma2, ma3, alpha, beta, o_z, o_q_old, o_q, o_r_old, o_r, o_p);
 }
+
+} //namespace LinearSolver
+
+} //namespace libp

@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -56,14 +56,14 @@ void ins_t::Run(){
     dt = dtAdvc;
   } else if (settings.compareSetting("TIME INTEGRATOR","SSBDF3")) {
     dt = Nsubcycles*dtAdvc;
-    subStepper->SetTimeStep(dtAdvc);
+    subStepper.SetTimeStep(dtAdvc);
   } else {
-    dt = mymin(dtAdvc, dtDiff);
+    dt = std::min(dtAdvc, dtDiff);
   }
 
-  timeStepper->SetTimeStep(dt);
+  timeStepper.SetTimeStep(dt);
 
-  timeStepper->Run(o_u, startTime, finalTime);
+  timeStepper.Run(*this, o_u, startTime, finalTime);
 
   // output norm of final solution
   {
@@ -71,7 +71,7 @@ void ins_t::Run(){
     mesh.MassMatrixApply(o_u, o_MU);
 
     dlong Nentries = mesh.Nelements*mesh.Np*NVfields;
-    dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_u, o_MU, mesh.comm));
+    dfloat norm2 = sqrt(platform.linAlg().innerProd(Nentries, o_u, o_MU, mesh.comm));
 
     if(mesh.rank==0)
       printf("Solution norm = %17.15lg\n", norm2);

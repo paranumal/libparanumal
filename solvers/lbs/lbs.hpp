@@ -2,7 +2,7 @@
 
   The MIT License (MIT)
 
-  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -36,28 +36,30 @@
 
 #define DLBS LIBP_DIR"/solvers/lbs/"
 
+using namespace libp;
+
 class lbsSettings_t: public settings_t {
 public:
-  lbsSettings_t(MPI_Comm& _comm);
+  lbsSettings_t(comm_t& _comm);
   void report();
   void parseFromFile(platformSettings_t& platformSettings,
                      meshSettings_t& meshSettings,
-                     const string filename);
+                     const std::string filename);
 };
 
 class lbs_t: public solver_t {
 public:
-  mesh_t& mesh;
+  mesh_t mesh;
 
   int Nfields;
   int Nmacro;
   int Npmlfields;
   int velModel;
 
-  TimeStepper::timeStepper_t* timeStepper;
+  timeStepper_t timeStepper;
 
-  halo_t* traceHalo;
-  halo_t** multirateTraceHalo;
+  ogs::halo_t traceHalo;
+  memory<ogs::halo_t> multirateTraceHalo;
 
   // dfloat RT, c, tauInv, Ma, Re, nu; // Flow parameters
   dfloat RT, c, tauInv, Re, nu, alpha; // Flow parameters
@@ -65,7 +67,7 @@ public:
   // Pml
   int pmlOrder;
   dfloat  sigmaXmax, sigmaYmax, sigmaZmax;
-  dfloat *pmlSigma;
+  memory<dfloat> pmlSigma;
   dfloat pmlAlpha;
 
   // Flag for using cubature integration for sigma terms in pml
@@ -74,57 +76,56 @@ public:
   // Flag for semi-analytic timestepping
   int semiAnalytic;
 
-  dfloat *q;
-  occa::memory o_q;
-  
+  memory<dfloat> q;
+  deviceMemory<dfloat> o_q;
+
   // external forcing in velocity space
-  dfloat *F; 
-  occa::memory o_F; 
-  
+  memory<dfloat> F;
+  deviceMemory<dfloat> o_F;
+
   // Macro quantities i.e. density + velocity
-  dfloat *U; 
-  occa::memory o_U; 
+  memory<dfloat> U;
+  deviceMemory<dfloat> o_U;
 
-  dfloat *LBM; 
-  occa::memory o_LBM;
+  memory<dfloat> LBM;
+  deviceMemory<dfloat> o_LBM;
 
-  int *LMAP; 
-  occa::memory o_LMAP; 
+  memory<int> LMAP;
+  deviceMemory<int> o_LMAP;
 
-  occa::memory o_Mq;
+  deviceMemory<dfloat> o_Mq;
 
-  dfloat *Vort, *VortMag;
-  occa::memory o_Vort, o_VortMag;
+  memory<dfloat> Vort, VortMag;
+  deviceMemory<dfloat> o_Vort, o_VortMag;
 
-  occa::memory o_pmlSigma;
+  deviceMemory<dfloat> o_pmlSigma;
 
-  occa::kernel collisionKernel; 
-  occa::kernel forcingKernel; 
-  occa::kernel momentsKernel; 
-  occa::kernel phaseFieldKernel; 
+  kernel_t collisionKernel;
+  kernel_t forcingKernel;
+  kernel_t momentsKernel;
+  kernel_t phaseFieldKernel;
 
-  occa::kernel volumeKernel;
-  occa::kernel surfaceKernel;
-  occa::kernel relaxationKernel;
+  kernel_t volumeKernel;
+  kernel_t surfaceKernel;
+  kernel_t relaxationKernel;
 
-  occa::kernel pmlVolumeKernel;
-  occa::kernel pmlSurfaceKernel;
-  occa::kernel pmlRelaxationKernel;
+  kernel_t pmlVolumeKernel;
+  kernel_t pmlSurfaceKernel;
+  kernel_t pmlRelaxationKernel;
 
-  occa::kernel vorticityKernel;
+  kernel_t vorticityKernel;
 
-  occa::kernel initialConditionKernel;
+  kernel_t initialConditionKernel;
 
-  lbs_t() = delete;
+  lbs_t() = default;
   lbs_t(platform_t &_platform, mesh_t &_mesh,
-	lbsSettings_t& _settings):
-    solver_t(_platform, _settings), mesh(_mesh) {}
-
-  ~lbs_t();
+        lbsSettings_t& _settings) {
+    Setup(_platform, _mesh, _settings);
+  }
 
   //setup
-  static lbs_t& Setup(platform_t& platform, mesh_t& mesh,
-                      lbsSettings_t& settings);
+  void Setup(platform_t& _platform, mesh_t& _mesh,
+             lbsSettings_t& _settings);
 
   void PmlSetup();
 
@@ -132,16 +133,15 @@ public:
 
   void Report(dfloat time, int tstep);
 
-  void PlotFields(dfloat* Q, dfloat* V, char *fileName);
+  void PlotFields(memory<dfloat>& Q, memory<dfloat>& V, std::string fileName);
 
   dfloat MaxWaveSpeed();
 
+  void rhsf(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T);
 
-  void rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T);
+  void rhsVolume(dlong N, deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T);
 
-  void rhsVolume(dlong N, occa::memory& o_Q, occa::memory& o_RHS, const dfloat T);
-
-  void rhsSurface(dlong N, occa::memory& o_Q, occa::memory& o_RHS, const dfloat T);
+  void rhsSurface(dlong N, deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T);
 
   void latticeSetup(); 
 };

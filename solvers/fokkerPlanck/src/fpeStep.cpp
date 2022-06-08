@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,10 +26,10 @@ SOFTWARE.
 
 #include "fpe.hpp"
 
-dfloat fpe_t::MaxWaveSpeed(occa::memory& o_Q, const dfloat T){
+dfloat fpe_t::MaxWaveSpeed(deviceMemory<dfloat>& o_Q, const dfloat T){
 
   //Note: if this is on the critical path in the future, we should pre-allocate this
-  occa::memory o_maxSpeed = platform.malloc(mesh.Nelements*sizeof(dfloat));
+  deviceMemory<dfloat> o_maxSpeed = platform.malloc<dfloat>(mesh.Nelements);
 
   maxWaveSpeedKernel(mesh.Nelements,
                      mesh.o_vgeo,
@@ -43,31 +43,30 @@ dfloat fpe_t::MaxWaveSpeed(occa::memory& o_Q, const dfloat T){
                      o_Q,
                      o_maxSpeed);
 
-  const dfloat vmax = platform.linAlg.max(mesh.Nelements, o_maxSpeed, mesh.comm);
+  const dfloat vmax = platform.linAlg().max(mesh.Nelements, o_maxSpeed, mesh.comm);
 
-  o_maxSpeed.free();
   return vmax;
 }
 
 //evaluate ODE rhs = f(q,t)
-void fpe_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
+void fpe_t::rhsf(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T){
   Advection(o_Q, o_RHS, T);
   Diffusion(o_Q, o_RHS, T);
 }
 
 // Evaluation of rhs f function
-void fpe_t::rhs_imex_f(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
+void fpe_t::rhs_imex_f(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T){
   Advection(o_Q, o_RHS, T);
 }
 
 // Evaluation of rhs g function
-void fpe_t::rhs_imex_g(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
+void fpe_t::rhs_imex_g(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T){
   Diffusion(o_Q, o_RHS, T);
 }
 
 // Inversion of diffusion operator
 //  Solves gamma*q - mu*Laplacian*q = rhs
-void fpe_t::rhs_imex_invg(occa::memory& o_RHS, occa::memory& o_Q, const dfloat gamma, const dfloat T){
+void fpe_t::rhs_imex_invg(deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_Q, const dfloat gamma, const dfloat T){
 
   // rhs = MM*rhs/mu
   diffusionRhsKernel(mesh.Nelements,
@@ -91,9 +90,9 @@ void fpe_t::rhs_imex_invg(occa::memory& o_RHS, occa::memory& o_Q, const dfloat g
   int verbose =0;
 
   //call the solver to solve -Laplacian*q + lambda*q = rhs
-  dfloat tol = 1e-8;
-  elliptic->lambda = gamma/mu;
-  int iter = elliptic->Solve(*linearSolver, o_Q, o_RHS, tol, maxIter, verbose);
+  dfloat tol = (sizeof(dfloat)==sizeof(double)) ? 1.0e-8 : 1.0e-5;
+  elliptic.lambda = gamma/mu;
+  int iter = elliptic.Solve(linearSolver, o_Q, o_RHS, tol, maxIter, verbose);
 
   if (mesh.rank==0){
     printf("\rSolver iterations: %3d.  ", iter); fflush(stdout);
@@ -101,8 +100,8 @@ void fpe_t::rhs_imex_invg(occa::memory& o_RHS, occa::memory& o_Q, const dfloat g
 }
 
 // Evolve rhs f function via a sub-timestepper
-void fpe_t::rhs_subcycle_f(occa::memory& o_Q, occa::memory& o_QHAT,
-                           const dfloat T, const dfloat dt, const dfloat* B,
+void fpe_t::rhs_subcycle_f(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_QHAT,
+                           const dfloat T, const dfloat dt, const memory<dfloat> B,
                            const int order, const int shiftIndex, const int maxOrder) {
 
   //subcycle each Lagrangian state qhat by stepping dqhat/dt = F(qhat,t)
@@ -118,21 +117,21 @@ void fpe_t::rhs_subcycle_f(occa::memory& o_Q, occa::memory& o_QHAT,
   for (int n=order;n>=0;n--) { //for each history state, starting with oldest
 
     //q at t-n*dt
-    occa::memory o_Qn = o_Q + ((shiftIndex+n)%maxOrder)*N*sizeof(dfloat);
+    deviceMemory<dfloat> o_Qn = o_Q + ((shiftIndex+n)%maxOrder)*N;
 
     //next scaled partial sum
-    platform.linAlg.axpy(N, B[n+1]/(B[n+1]+bSum), o_Qn,
-                            bSum/(B[n+1]+bSum), o_QHAT);
+    platform.linAlg().axpy(N, B[n+1]/(B[n+1]+bSum), o_Qn,
+                              bSum/(B[n+1]+bSum), o_QHAT);
     bSum += B[n+1];
 
-    subStepper->Run(o_QHAT, T-n*dt, T-(n-1)*dt);
+    subStepper.Run(subcycler, o_QHAT, T-n*dt, T-(n-1)*dt);
   }
 }
 
-void fpe_t::Advection(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T) {
+void fpe_t::Advection(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T) {
 
   // extract q halo on DEVICE
-  traceHalo->ExchangeStart(o_Q, 1, ogs_dfloat);
+  traceHalo.ExchangeStart(o_Q, 1);
 
   if (cubature)
     advectionVolumeKernel(mesh.Nelements,
@@ -159,7 +158,7 @@ void fpe_t::Advection(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T) {
                          o_Q,
                          o_RHS);
 
-  traceHalo->ExchangeFinish(o_Q, 1, ogs_dfloat);
+  traceHalo.ExchangeFinish(o_Q, 1);
 
   if (cubature)
     advectionSurfaceKernel(mesh.Nelements,
@@ -191,7 +190,7 @@ void fpe_t::Advection(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T) {
                           o_RHS);
 }
 
-void fpe_t::Diffusion(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T) {
+void fpe_t::Diffusion(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T) {
 
   //compute gradq and pack with q
   gradientKernel(mesh.Nelements,
@@ -200,7 +199,7 @@ void fpe_t::Diffusion(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T) {
                   o_Q,
                   o_grad);
 
-  traceHalo->ExchangeStart(o_grad, 4, ogs_dfloat);
+  traceHalo.ExchangeStart(o_grad, 4);
 
   if(mesh.NinternalElements)
     diffusionKernel(mesh.NinternalElements,
@@ -221,7 +220,7 @@ void fpe_t::Diffusion(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T) {
                     o_grad,
                     o_RHS);
 
-  traceHalo->ExchangeFinish(o_grad, 4, ogs_dfloat);
+  traceHalo.ExchangeFinish(o_grad, 4);
 
   if(mesh.NhaloElements)
     diffusionKernel(mesh.NhaloElements,

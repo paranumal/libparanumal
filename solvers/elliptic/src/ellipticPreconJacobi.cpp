@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -30,22 +30,21 @@ SOFTWARE.
 JacobiPrecon::JacobiPrecon(elliptic_t& _elliptic):
   elliptic(_elliptic) {
 
-  dfloat *diagA    = (dfloat*) calloc(elliptic.Ndofs, sizeof(dfloat));
-  dfloat *invDiagA = (dfloat*) calloc(elliptic.Ndofs, sizeof(dfloat));
+  memory<dfloat> diagA   (elliptic.Ndofs);
+  memory<dfloat> invDiagA(elliptic.Ndofs);
   elliptic.BuildOperatorDiagonal(diagA);
   for (dlong n=0;n<elliptic.Ndofs;n++)
     invDiagA[n] = 1.0/diagA[n];
 
-  o_invDiagA = elliptic.platform.malloc(elliptic.Ndofs*sizeof(dfloat), invDiagA);
-
-  free(diagA);
-  free(invDiagA);
+  o_invDiagA = elliptic.platform.malloc<dfloat>(invDiagA);
 }
 
-void JacobiPrecon::Operator(occa::memory& o_r, occa::memory& o_Mr) {
+void JacobiPrecon::Operator(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_Mr) {
+
+  linAlg_t& linAlg = elliptic.platform.linAlg();
 
   // Mr = invDiag.*r
-  elliptic.linAlg.amxpy(elliptic.Ndofs, 1.0, o_invDiagA, o_r, 0.0, o_Mr);
+  linAlg.amxpy(elliptic.Ndofs, 1.0, o_invDiagA, o_r, 0.0, o_Mr);
 
   // zero mean of RHS
   if(elliptic.allNeumann) elliptic.ZeroMean(o_Mr);

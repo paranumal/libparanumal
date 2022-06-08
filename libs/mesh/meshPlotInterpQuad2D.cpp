@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,21 +25,17 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh2D.hpp"
+
+namespace libp {
 
 //interpolate field to plotting nodes
-void meshQuad2D::PlotInterp(const dfloat* q, dfloat* Iq, dfloat* scratch){
+void mesh_t::PlotInterpQuad2D(const memory<dfloat> q, memory<dfloat> Iq, memory<dfloat> scratch){
 
-  dfloat *IQ;
-
-  bool alloc_scratch=false;
-  if (scratch==nullptr) {
-    //if not provided with a scratch space, alloc our own
-    alloc_scratch=true;
-    IQ  = (dfloat *) malloc(plotNq*Nq*sizeof(dfloat));
-  } else {
-    IQ  = scratch;
+  if (scratch.length()< static_cast<size_t>(plotNq*Nq)) {
+    //if not provided with enough scratch space, alloc our own
+    scratch.malloc(plotNq*Nq);
   }
+  memory<dfloat> IQ  = scratch;
 
   //interpolate in r
   for(int j=0;j<Nq;++j){
@@ -70,9 +66,6 @@ void meshQuad2D::PlotInterp(const dfloat* q, dfloat* Iq, dfloat* scratch){
       Iq[id] = qn;
     }
   }
-
-  //clean up
-  if (alloc_scratch) {
-    free(IQ);
-  }
 }
+
+} //namespace libp

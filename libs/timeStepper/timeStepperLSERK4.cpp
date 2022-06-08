@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,22 +27,28 @@ SOFTWARE.
 #include "core.hpp"
 #include "timeStepper.hpp"
 
+namespace libp {
+
 namespace TimeStepper {
 
 lserk4::lserk4(dlong Nelements, dlong NhaloElements,
-               int Np, int Nfields, solver_t& _solver):
-  timeStepper_t(Nelements, NhaloElements, Np, Nfields, _solver) {
-
-  platform_t &platform = solver.platform;
+               int Np, int Nfields,
+               platform_t& _platform, comm_t _comm):
+  timeStepperBase_t(Nelements, NhaloElements, Np, Nfields,
+                    _platform, _comm) {
 
   Nrk = 5;
 
-  o_resq = platform.malloc(N*sizeof(dfloat));
-  o_rhsq = platform.malloc(N*sizeof(dfloat));
+  o_resq = platform.malloc<dfloat>(N);
+  o_rhsq = platform.malloc<dfloat>(N);
 
-  occa::properties kernelInfo = platform.props; //copy base occa properties from solver
+  o_saveq = platform.malloc<dfloat>(N);
 
-  kernelInfo["defines/" "p_blockSize"] = BLOCKSIZE;
+  properties_t kernelInfo = platform.props(); //copy base occa properties from solver
+
+  const int blocksize=256;
+
+  kernelInfo["defines/" "p_blockSize"] = blocksize;
 
   updateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
                                     "timeStepperLSERK4.okl",
@@ -68,23 +74,21 @@ lserk4::lserk4(dlong Nelements, dlong NhaloElements,
        2802321613138.0/2924317926251.0 ,
        1.0};
 
-  rka = (dfloat*) calloc(Nrk, sizeof(dfloat));
-  rkb = (dfloat*) calloc(Nrk, sizeof(dfloat));
-  rkc = (dfloat*) calloc(Nrk+1, sizeof(dfloat));
-  memcpy(rka, _rka, Nrk*sizeof(dfloat));
-  memcpy(rkb, _rkb, Nrk*sizeof(dfloat));
-  memcpy(rkc, _rkc, (Nrk+1)*sizeof(dfloat));
+  rka.malloc(Nrk);
+  rkb.malloc(Nrk);
+  rkc.malloc(Nrk+1);
+  rka.copyFrom(_rka);
+  rkb.copyFrom(_rkb);
+  rkc.copyFrom(_rkc);
 }
 
-void lserk4::Run(occa::memory &o_q, dfloat start, dfloat end) {
-
-  platform_t &platform = solver.platform;
+void lserk4::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloat end) {
 
   dfloat time = start;
 
   solver.Report(time,0);
 
-  dfloat outputInterval;
+  dfloat outputInterval=0.0;
   solver.settings.getSetting("OUTPUT INTERVAL", outputInterval);
 
   dfloat outputTime = time + outputInterval;
@@ -96,20 +100,18 @@ void lserk4::Run(occa::memory &o_q, dfloat start, dfloat end) {
     if (time<outputTime && time+dt>=outputTime) {
 
       //save current state
-      occa::memory o_saveq = platform.malloc(N*sizeof(dfloat));
-      o_saveq.copyFrom(o_q, N*sizeof(dfloat));
+      o_saveq.copyFrom(o_q, N);
 
       stepdt = outputTime-time;
 
       //take small time step
-      Step(o_q, time, stepdt);
+      Step(solver, o_q, time, stepdt);
 
       //report state
       solver.Report(outputTime,tstep);
 
       //restore previous state
-      o_q.copyFrom(o_saveq, N*sizeof(dfloat));
-      o_saveq.free();
+      o_q.copyFrom(o_saveq, N);
 
       outputTime += outputInterval;
     }
@@ -121,13 +123,13 @@ void lserk4::Run(occa::memory &o_q, dfloat start, dfloat end) {
       stepdt = dt;
     }
 
-    Step(o_q, time, stepdt);
+    Step(solver, o_q, time, stepdt);
     time += stepdt;
     tstep++;
   }
 }
 
-void lserk4::Step(occa::memory &o_q, dfloat time, dfloat _dt) {
+void lserk4::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloat _dt) {
 
   // Low storage explicit Runge Kutta (5 stages, 4th order)
   for(int rk=0;rk<Nrk;++rk){
@@ -143,16 +145,6 @@ void lserk4::Step(occa::memory &o_q, dfloat time, dfloat _dt) {
   }
 }
 
-lserk4::~lserk4() {
-  if (o_rhsq.size()) o_rhsq.free();
-  if (o_resq.size()) o_resq.free();
-
-  if (rka) free(rka);
-  if (rkb) free(rkb);
-  if (rkc) free(rkc);
-
-  updateKernel.free();
-}
 
 /**************************************************/
 /* PML version                                    */
@@ -160,23 +152,20 @@ lserk4::~lserk4() {
 
 lserk4_pml::lserk4_pml(dlong _Nelements, dlong _NpmlElements, dlong _NhaloElements,
                       int _Np, int _Nfields, int _Npmlfields,
-                      solver_t& _solver):
-  lserk4(_Nelements, _NhaloElements, _Np, _Nfields, _solver),
+                      platform_t& _platform, comm_t _comm):
+  lserk4(_Nelements, _NhaloElements, _Np, _Nfields, _platform, _comm),
   Npml(_Npmlfields*_Np*_NpmlElements) {
 
   if (Npml) {
-    platform_t &platform = solver.platform;
+    memory<dfloat> pmlq(Npml,0.0);
+    o_pmlq = platform.malloc<dfloat>(pmlq);
 
-    dfloat *pmlq = (dfloat *) calloc(Npml,sizeof(dfloat));
-    o_pmlq   = platform.malloc(Npml*sizeof(dfloat), pmlq);
-    free(pmlq);
-
-    o_respmlq = platform.malloc(Npml*sizeof(dfloat));
-    o_rhspmlq = platform.malloc(Npml*sizeof(dfloat));
+    o_respmlq = platform.malloc<dfloat>(Npml);
+    o_rhspmlq = platform.malloc<dfloat>(Npml);
   }
 }
 
-void lserk4_pml::Step(occa::memory &o_q, dfloat time, dfloat _dt) {
+void lserk4_pml::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloat _dt) {
 
   // Low storage explicit Runge Kutta (5 stages, 4th order)
   for(int rk=0;rk<Nrk;++rk){
@@ -195,10 +184,6 @@ void lserk4_pml::Step(occa::memory &o_q, dfloat time, dfloat _dt) {
   }
 }
 
-lserk4_pml::~lserk4_pml() {
-  if (o_pmlq.size()) o_pmlq.free();
-  if (o_rhspmlq.size()) o_rhspmlq.free();
-  if (o_respmlq.size()) o_respmlq.free();
-}
-
 } //namespace TimeStepper
+
+} //namespace libp

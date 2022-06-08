@@ -2,7 +2,7 @@
 #
 #The MIT License (MIT)
 #
-#Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+#Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 #
 #Permission is hereby granted, free of charge, to any person obtaining a copy
 #of this software and associated documentation files (the "Software"), to deal
@@ -39,7 +39,7 @@ Libraries makefile targets:
 Usage:
 
 make all
-	 Build core, ogs, mesh, linAlg, timeStepper, linearSovler, and parAlmond libraries.
+	 Build core, ogs, parAdogs, mesh, linAlg, timeStepper, linearSovler, and parAlmond libraries.
 make {lib}
 	 Build only {lib} library.
 make clean
@@ -57,7 +57,7 @@ Can use "make verbose=true" for verbose output.
 
 endef
 
-ifeq (,$(filter core linAlg linearSolver mesh ogs parAlmond timeStepper \
+ifeq (,$(filter core linAlg linearSolver parAdogs mesh ogs parAlmond timeStepper \
 								clean clean-libs clean-kernels realclean info help, $(MAKECMDGOALS)))
 ifneq (,$(MAKECMDGOALS))
 $(error ${LIB_HELP_MSG})
@@ -72,13 +72,11 @@ include ../make.top
 endif
 endif
 
-#third party
-GS_DIR=${LIBP_TPL_DIR}/gslib
-
 #libraries
 LIBCORE_DIR=${LIBP_LIBS_DIR}/core
 LIBLINALG_DIR=${LIBP_LIBS_DIR}/linAlg
 LIBLINEARSOLVER_DIR=${LIBP_LIBS_DIR}/linearSolver
+LIBPARADOGS_DIR=${LIBP_LIBS_DIR}/parAdogs
 LIBMESH_DIR=${LIBP_LIBS_DIR}/mesh
 LIBOGS_DIR=${LIBP_LIBS_DIR}/ogs
 LIBPARALMOND_DIR=${LIBP_LIBS_DIR}/parAlmond
@@ -91,13 +89,18 @@ INCLUDES=${LIBP_INCLUDES}
 LIBCORE_DEFINES=-DLIBP_DIR='"${LIBP_DIR}"'
 LIBLINALG_DEFINES=-DLINALG_DIR='"${LIBLINALG_DIR}"'
 LIBLINEARSOLVER_DEFINES=-DLINEARSOLVER_DIR='"${LIBLINEARSOLVER_DIR}"'
+LIBPARADOGS_DEFINES=-DPARADOGS_DIR='"${PARADOGS_DIR}"'
 LIBMESH_DEFINES=-DMESH_DIR='"${LIBMESH_DIR}"'
 LIBOGS_DEFINES=-DLIBP_DIR='"${LIBP_DIR}"'  -DOGS_DIR='"${LIBOGS_DIR}"'
 LIBPARALMOND_DEFINES=-DPARALMOND_DIR='"${LIBPARALMOND_DIR}"'
 LIBTIMESTEPPER_DEFINES=-DTIMESTEPPER_DIR='"${LIBTIMESTEPPER_DIR}"'
 
+ifeq (true,${gpu-aware-mpi})
+  LIBOGS_DEFINES+= -DGPU_AWARE_MPI
+endif
+
 #.cpp compilation flags
-LIB_CXXFLAGS=${LIBP_DEFINES} ${LIBP_MPICXXFLAGS} ${INCLUDES}
+LIB_CXXFLAGS=${LIBP_DEFINES} ${LIBP_CXXFLAGS} ${INCLUDES}
 
 #object dependancies
 LIB_DEPS=$(wildcard $(LIBP_INCLUDE_DIR)/*.h)  \
@@ -111,6 +114,9 @@ LIBOGS_DEPS=$(wildcard ${LIBP_INCLUDE_DIR}/ogs/*.h)   \
 						$(wildcard ${LIBP_INCLUDE_DIR}/ogs/*.hpp) \
 						${LIB_DEPS}
 
+LIBPARADOGS_DEPS=$(wildcard ${LIBP_INCLUDE_DIR}/parAdogs/*.hpp) \
+								 ${LIB_DEPS}
+
 LIBPARALMOND_DEPS=$(wildcard ${LIBP_INCLUDE_DIR}/parAlmond/*.h)   \
 				  				$(wildcard ${LIBP_INCLUDE_DIR}/parAlmond/*.hpp) \
 								  ${LIB_DEPS}
@@ -118,6 +124,7 @@ LIBPARALMOND_DEPS=$(wildcard ${LIBP_INCLUDE_DIR}/parAlmond/*.h)   \
 LIBCORE_SRC =$(wildcard core/*.cpp)
 LIBLINALG_SRC =$(wildcard linAlg/*.cpp)
 LIBLINEARSOLVER_SRC =$(wildcard linearSolver/*.cpp)
+LIBPARADOGS_SRC =$(wildcard parAdogs/*.cpp)
 LIBMESH_SRC =$(wildcard mesh/*.cpp)
 LIBOGS_SRC =$(wildcard ogs/*.cpp)
 LIBPARALMOND_SRC =$(wildcard parAlmond/*.cpp)
@@ -126,24 +133,27 @@ LIBTIMESTEPPER_SRC =$(wildcard timeStepper/*.cpp)
 LIBCORE_OBJS=$(LIBCORE_SRC:.cpp=.o)
 LIBLINALG_OBJS=$(LIBLINALG_SRC:.cpp=.o)
 LIBLINEARSOLVER_OBJS=$(LIBLINEARSOLVER_SRC:.cpp=.o)
+LIBPARADOGS_OBJS=$(LIBPARADOGS_SRC:.cpp=.o)
 LIBMESH_OBJS=$(LIBMESH_SRC:.cpp=.o)
 LIBOGS_OBJS=$(LIBOGS_SRC:.cpp=.o)
 LIBPARALMOND_OBJS=$(LIBPARALMOND_SRC:.cpp=.o)
 LIBTIMESTEPPER_OBJS=$(LIBTIMESTEPPER_SRC:.cpp=.o)
 
-.PHONY: all core linAlg linearSolver mesh ogs parAlmond timeStepper \
+.PHONY: all core linAlg linearSolver mesh ogs parAdogs parAlmond timeStepper \
 				clean realclean silentUpdate-core             \
 				silentUpdate-linAlg silentUpdate-linearSolver \
 				silentUpdate-ogs silentUpdate-mesh            \
+				silentUpdate-parAdogs                         \
 				silentUpdate-parAlmond silentUpdate-timeStepper
 
-all: core linAlg linearSolver mesh ogs parAlmond timeStepper
+all: core linAlg linearSolver parAdogs mesh ogs parAlmond timeStepper
 
 core: libcore.a silentUpdate-core
 linAlg: liblinAlg.a silentUpdate-linAlg
 linearSolver: liblinearSolver.a silentUpdate-linearSolver
 mesh: libmesh.a silentUpdate-mesh
 ogs: libogs.a silentUpdate-ogs
+parAdogs: libparAdogs.a silentUpdate-parAdogs
 parAlmond: libparAlmond.a silentUpdate-parAlmond
 timeStepper: libtimeStepper.a silentUpdate-timeStepper
 
@@ -155,14 +165,7 @@ else
 	@ar -cr libcore.a $(LIBCORE_OBJS)
 endif
 
-libgs: | libcore.a
-ifneq (,${verbose})
-	${MAKE} -C $(GS_DIR) install verbose=${verbose}
-else
-	@${MAKE} -C $(GS_DIR) install --no-print-directory
-endif
-
-libogs.a: $(LIBOGS_OBJS) | libgs
+libogs.a: $(LIBOGS_OBJS) | libcore.a
 ifneq (,${verbose})
 	ar -cr libogs.a $(LIBOGS_OBJS)
 else
@@ -170,7 +173,7 @@ else
 	@ar -cr libogs.a $(LIBOGS_OBJS)
 endif
 
-liblinAlg.a: $(LIBLINALG_OBJS)
+liblinAlg.a: $(LIBLINALG_OBJS) | libcore.a
 ifneq (,${verbose})
 	ar -cr liblinAlg.a $(LIBLINALG_OBJS)
 else
@@ -178,7 +181,15 @@ else
 	@ar -cr liblinAlg.a $(LIBLINALG_OBJS)
 endif
 
-libmesh.a: $(LIBMESH_OBJS) | liblinAlg.a libogs.a
+libparAdogs.a: $(LIBPARADOGS_OBJS) | liblinAlg.a libogs.a
+ifneq (,${verbose})
+	ar -cr libparAdogs.a $(LIBPARADOGS_OBJS)
+else
+	@printf "%b" "$(LIB_COLOR)Building library $(@F)$(NO_COLOR)\n";
+	@ar -cr libparAdogs.a $(LIBPARADOGS_OBJS)
+endif
+
+libmesh.a: $(LIBMESH_OBJS) | libparAdogs.a
 ifneq (,${verbose})
 	ar -cr libmesh.a $(LIBMESH_OBJS)
 else
@@ -225,6 +236,9 @@ silentUpdate-ogs:
 silentUpdate-mesh:
 	@true
 
+silentUpdate-parAdogs:
+	@true
+
 silentUpdate-parAlmond:
 	@true
 
@@ -237,70 +251,77 @@ ${OCCA_DIR}/lib/libocca.so:
 # rule for .cpp files
 core/%.o: core/%.cpp $(LIB_DEPS) ${OCCA_DIR}/lib/libocca.so
 ifneq (,${verbose})
-	$(LIBP_MPICXX) -o $@ -c $< ${LIBCORE_DEFINES} $(LIB_CXXFLAGS)
+	$(LIBP_CXX) -o $@ -c $< ${LIBCORE_DEFINES} $(LIB_CXXFLAGS)
 else
 	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
-	@$(LIBP_MPICXX) -o $@ -c $< ${LIBCORE_DEFINES} $(LIB_CXXFLAGS)
+	@$(LIBP_CXX) -o $@ -c $< ${LIBCORE_DEFINES} $(LIB_CXXFLAGS)
 endif
 
 linAlg/%.o: linAlg/%.cpp $(LIB_DEPS) | libcore.a
 ifneq (,${verbose})
-	$(LIBP_MPICXX) -o $@ -c $< ${LIBLINALG_DEFINES} $(LIB_CXXFLAGS)
+	$(LIBP_CXX) -o $@ -c $< ${LIBLINALG_DEFINES} $(LIB_CXXFLAGS)
 else
 	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
-	@$(LIBP_MPICXX) -o $@ -c $< ${LIBLINALG_DEFINES} $(LIB_CXXFLAGS)
+	@$(LIBP_CXX) -o $@ -c $< ${LIBLINALG_DEFINES} $(LIB_CXXFLAGS)
+endif
+
+parAdogs/%.o: parAdogs/%.cpp $(LIB_DEPS) | libogs.a
+ifneq (,${verbose})
+	$(LIBP_CXX) -o $@ -c $< ${LIBPARADOGS_DEFINES} $(LIB_CXXFLAGS)
+else
+	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
+	@$(LIBP_CXX) -o $@ -c $< ${LIBPARADOGS_DEFINES} $(LIB_CXXFLAGS)
 endif
 
 linearSolver/%.o: linearSolver/%.cpp $(LIB_DEPS) | libcore.a
 ifneq (,${verbose})
-	$(LIBP_MPICXX) -o $@ -c $< ${LIBLINEARSOLVER_DEFINES} $(LIB_CXXFLAGS)
+	$(LIBP_CXX) -o $@ -c $< ${LIBLINEARSOLVER_DEFINES} $(LIB_CXXFLAGS)
 else
 	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
-	@$(LIBP_MPICXX) -o $@ -c $< ${LIBLINEARSOLVER_DEFINES} $(LIB_CXXFLAGS)
+	@$(LIBP_CXX) -o $@ -c $< ${LIBLINEARSOLVER_DEFINES} $(LIB_CXXFLAGS)
 endif
 
-mesh/%.o: mesh/%.cpp $(LIBMESH_DEPS) | libogs.a
+mesh/%.o: mesh/%.cpp $(LIBMESH_DEPS) | libparAdogs.a
 ifneq (,${verbose})
-	$(LIBP_MPICXX) -o $@ -c $< ${LIBMESH_DEFINES} $(LIB_CXXFLAGS)
+	$(LIBP_CXX) -o $@ -c $< ${LIBMESH_DEFINES} $(LIB_CXXFLAGS)
 else
 	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
-	@$(LIBP_MPICXX) -o $@ -c $< ${LIBMESH_DEFINES} $(LIB_CXXFLAGS)
+	@$(LIBP_CXX) -o $@ -c $< ${LIBMESH_DEFINES} $(LIB_CXXFLAGS)
 endif
 
-ogs/%.o: ogs/%.cpp $(LIBOGS_DEPS) | libgs
+ogs/%.o: ogs/%.cpp $(LIBOGS_DEPS) | liblinAlg.a
 ifneq (,${verbose})
-	$(LIBP_MPICXX) -o $@ -c $< ${LIBOGS_DEFINES} -I${GS_DIR}/src $(LIB_CXXFLAGS)
+	$(LIBP_CXX) -o $@ -c $< ${LIBOGS_DEFINES} -I${GS_DIR}/src $(LIB_CXXFLAGS)
 else
 	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
-	@$(LIBP_MPICXX) -o $@ -c $< ${LIBOGS_DEFINES} -I${GS_DIR}/src $(LIB_CXXFLAGS)
+	@$(LIBP_CXX) -o $@ -c $< ${LIBOGS_DEFINES} -I${GS_DIR}/src $(LIB_CXXFLAGS)
 endif
 
 parAlmond/%.o: parAlmond/%.cpp $(LIBPARALMOND_DEPS) | liblinearSolver.a
 ifneq (,${verbose})
-	$(LIBP_MPICXX) -o $@ -c $< ${LIBPARALMOND_DEFINES} $(LIB_CXXFLAGS)
+	$(LIBP_CXX) -o $@ -c $< ${LIBPARALMOND_DEFINES} $(LIB_CXXFLAGS)
 else
 	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
-	@$(LIBP_MPICXX) -o $@ -c $< ${LIBPARALMOND_DEFINES} $(LIB_CXXFLAGS)
+	@$(LIBP_CXX) -o $@ -c $< ${LIBPARALMOND_DEFINES} $(LIB_CXXFLAGS)
 endif
 
 timeStepper/%.o: timeStepper/%.cpp $(LIB_DEPS) | libmesh.a
 ifneq (,${verbose})
-	$(LIBP_MPICXX) -o $@ -c $< ${LIBTIMESTEPPER_DEFINES} $(LIB_CXXFLAGS)
+	$(LIBP_CXX) -o $@ -c $< ${LIBTIMESTEPPER_DEFINES} $(LIB_CXXFLAGS)
 else
 	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
-	@$(LIBP_MPICXX) -o $@ -c $< ${LIBTIMESTEPPER_DEFINES} $(LIB_CXXFLAGS)
+	@$(LIBP_CXX) -o $@ -c $< ${LIBTIMESTEPPER_DEFINES} $(LIB_CXXFLAGS)
 endif
 
 #cleanup
 clean:
-	rm -f core/*.o linAlg/*.o linearSolver/*.o mesh/*.o ogs/*.o parAlmond/*.o timeStepper/*.o *.a
+	rm -f core/*.o linAlg/*.o linearSolver/*.o mesh/*.o ogs/*.o parAdogs/*.o parAlmond/*.o timeStepper/*.o *.a
 
 clean-kernels: clean
-#   $(shell ${OCCA_DIR}/bin/occa clear all -y)
-	rm -rf ~/.occa/
+	rm -rf ${LIBP_DIR}/.occa/
 
 realclean: clean
-	${MAKE} -C ${GS_DIR} clean
+	${MAKE} -C ${OCCA_DIR} clean
 
 help:
 	$(info $(value LIB_HELP_MSG))

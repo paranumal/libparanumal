@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -105,6 +105,7 @@ void surfaceTerms(const int e,
 
 // batch process elements
 @kernel void acousticsSurfaceQuad2D(const dlong Nelements,
+                                   @restrict const  dlong  *  elementIds,
                                    @restrict const  dfloat *  sgeo,
                                    @restrict const  dfloat *  LIFT,
                                    @restrict const  dlong  *  vmapM,
@@ -125,6 +126,8 @@ void surfaceTerms(const int e,
     @shared dfloat s_uflux[p_NblockS][p_Nq][p_Nq];
     @shared dfloat s_vflux[p_NblockS][p_Nq][p_Nq];
 
+    @exclusive dlong r_e, element;
+
     for(int es=0;es<p_NblockS;++es;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
         #pragma unroll p_Nq
@@ -136,59 +139,53 @@ void surfaceTerms(const int e,
       }
     }
 
-    @barrier("local");
-
     // for all face nodes of all elements
     // face 0 & 2
     for(int es=0;es<p_NblockS;++es;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
-        const dlong e = eo + es;
-        if(e<Nelements){
-          const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i;
-          const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + i;
+        r_e = eo + es;
+        if(r_e<Nelements){
+          element = elementIds[r_e];
+
+          const dlong sk0 = element*p_Nfp*p_Nfaces + 0*p_Nfp + i;
+          const dlong sk2 = element*p_Nfp*p_Nfaces + 2*p_Nfp + i;
 
           //          surfaceTerms(sk0,0,i,0     );
-          surfaceTerms(e, es, sk0, 0, i, 0,
+          surfaceTerms(element, es, sk0, 0, i, 0,
                        sgeo, x, y, vmapM, vmapP, EToB, q, s_rflux, s_uflux, s_vflux);
 
           //      surfaceTerms(sk2,2,i,p_Nq-1);
-          surfaceTerms(e, es, sk2, 2, i, p_Nq-1,
+          surfaceTerms(element, es, sk2, 2, i, p_Nq-1,
                        sgeo, x, y, vmapM, vmapP, EToB, q, s_rflux, s_uflux, s_vflux);
         }
       }
     }
-
-    @barrier("local");
 
     // face 1 & 3
     for(int es=0;es<p_NblockS;++es;@inner(1)){
       for(int j=0;j<p_Nq;++j;@inner(0)){
-        const dlong e = eo + es;
-        if(e<Nelements){
-          const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + j;
-          const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + j;
+        if(r_e<Nelements){
+          const dlong sk1 = element*p_Nfp*p_Nfaces + 1*p_Nfp + j;
+          const dlong sk3 = element*p_Nfp*p_Nfaces + 3*p_Nfp + j;
 
           //          surfaceTerms(sk1,1,p_Nq-1,j);
-          surfaceTerms(e, es, sk1, 1, p_Nq-1, j,
+          surfaceTerms(element, es, sk1, 1, p_Nq-1, j,
                        sgeo, x, y, vmapM, vmapP, EToB, q, s_rflux, s_uflux, s_vflux);
 
           //surfaceTerms(sk3,3,0     ,j);
-          surfaceTerms(e, es, sk3, 3, 0, j,
+          surfaceTerms(element, es, sk3, 3, 0, j,
                        sgeo, x, y, vmapM, vmapP, EToB, q, s_rflux, s_uflux, s_vflux);
         }
       }
     }
 
-    @barrier("local");
-
     // for each node in the element
     for(int es=0;es<p_NblockS;++es;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
-        const dlong e = eo + es;
-        if(e<Nelements){
+        if(r_e<Nelements){
           #pragma unroll p_Nq
             for(int j=0;j<p_Nq;++j){
-              const dlong base = e*p_Np*p_Nfields+j*p_Nq+i;
+              const dlong base = element*p_Np*p_Nfields+j*p_Nq+i;
               rhsq[base+0*p_Np] += s_rflux[es][j][i];
               rhsq[base+1*p_Np] += s_uflux[es][j][i];
               rhsq[base+2*p_Np] += s_vflux[es][j][i];

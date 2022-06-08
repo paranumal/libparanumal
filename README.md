@@ -16,11 +16,10 @@ If you use any part of libParanumal in your research project including variants 
 @MISC{ChalmersKarakusAustinSwirydowiczWarburton2020,
       author = "Chalmers, N. and Karakus, A. and Austin, A. P. and Swirydowicz, K. and Warburton, T.",
       title = "{libParanumal}: a performance portable high-order finite element library",
-      year = "2020",
+      year = "2022",
       url = "https://github.com/paranumal/libparanumal",
       doi = "10.5281/zenodo.4004744",
-      note = "Release 0.4.0"
-      }
+      note = "Release 0.5.0"}
 </pre>
 
 see the [references](#10-references) section below for additional papers to reference about various aspects of the library.
@@ -42,7 +41,9 @@ A. Supported elements:
 
 B. Mesh wrangling:
   - Gmsh format file loaders.
-  - Load balanced geometric partitioning using space filling curves (Hilbert or Morton ordering).
+  - Load balanced inertial partitioning.
+  - Load balanced multi-level spectral partitioning.
+  - Cuthill-Mckee local ordering
 
 C. Time integrators:
   - Adaptive rate Dormand-Prince order 5 Runge-Kutta.
@@ -59,7 +60,7 @@ D. Iterative linear solvers:
 E. Elliptic solver:
   - Linear Poisson and screened Poisson potential solvers.
   - GPU-optimized matrix-vector products.
-  - p-type multigrid, algebraic multigrid, low-order SEMFEM, Overlapping Additive Schwarz, and Jacobi preconditioning.
+  - p-type multigrid, algebraic multigrid (smoothed and unsmoothed aggregation), low-order SEMFEM, Overlapping Additive Schwarz, and Jacobi preconditioning.
   - Matrix-free p-multigrid for fine levels of multigrid hierarchy.
 
 F. Heterogeneous accelerated flow solvers:
@@ -75,45 +76,51 @@ F. Heterogeneous accelerated flow solvers:
      * Extrapolation-BDF integration in time.
      * Sub-cycling (Operator Integration Factor Splitting) for advection.
 
-G. Dependencies:
+G. Portability:
+  - Ships with the Open Concurrent Compute Abstraction (OCCA)
+  - At build time, OCCA will try to detect if any of these execution models are installed: OpenMP, CUDA, OpenCL, HIP, and/or SYCL.
+  - Execution model can be selected at runtime. 
+    - If OCCA does not detect a chosen mode of execution it will default to Serial execution.
+    - You will need to adjust the libParnumal setup input files to choose the execution model and compute device appropriate for your system.
+      
+H. Dependencies:
    - Message Passing Interface (MPI v3.0 or higher).
       * The libParanumal makefiles assume that mpic++ is installed and visible in your path.
-   - Open Concurrent Compute Abstraction (OCCA)
-      * OCCA must be installed.
-      * OCCA will try to detect if any of these execution models are installed: OpenMP, CUDA, OpenCL, and/or HIP.
-      * By default, if OCCA does not detect a chosen mode of execution it will default to Serial execution.
-      * You will need to adjust the libParnumal setup input files to choose the execution model and compute device appropriate for your system.
-      * The OCCA github repo is [here](https://github.com/libocca/occa)
-      * The OCCA webpage is [here](http://libocca.org)
+   
 
 
 ---
 ### 4. Code block diagram
-<img src="http://intranet.math.vt.edu/people/tcew/libPdiagramCropV2.jpg" width="512" >
+![libParnumal Code Diagram](./.github/CodeDiagram.png)
 
 ---
 ### 5. OCCA dependency
-OCCA is held as a git submodule inside libParanumal. If you did not clone with `--recursive` then run the following command before building.
-`git submodule init`
-`git submodule update`
+OCCA is held as a git submodule inside libParanumal. If you did not clone with `--recursive` then run the following commands before building.
+```
+git submodule init
+git submodule update
+```
 
 ---
 ### 6. Required Libraries
-libParanumal requires installed BLAS and LAPACK libraries. By default, the build system will look for `libblas` and `liblapack` in your default library search paths. The library paths can also be manually specified in `make.top` with the `LIBP_BLAS_DIR` and `LIBP_LAPACK_DIR` variables.
+libParanumal requires installed BLAS and LAPACK libraries. By default, the build system will look for a serial (i.e. non-threaded) OpenBLAS in your default library search paths. The BLAS and LAPACK library paths can also be manually specified in `make.top` with the `LIBP_BLAS_DIR` and `LIBP_BLAS_LIB` variables.
 
-Some Linux distributions will package BLAS and LAPACK libraries. For example, on Ubuntu systems these libraries can be installed via
-```sudo apt install libblas-dev liblapack-dev```
-
-
-libParanumal also depends on the [gslib](https://github.com/Nek5000/gslib) library for gather-scatter operations. For more information on gslib see [Henry Tufo's thesis](https://dl.acm.org/doi/book/10.5555/926758) and a more recent reference [Fischer et al.](https://iopscience.iop.org/article/10.1088/1742-6596/125/1/012076/meta). The source code for gslib is included in this repository.
+Some Linux distributions will package a serial OpenBLAS library. For example, on Ubuntu systems this libraries can be installed via
+```
+sudo apt install libopenblas-serial-dev
+```
 
 ---
 ### 7. Clone: libParanumal
-`git clone https://github.com/paranumal/libparanumal`
+```
+git clone --recursive https://github.com/paranumal/libparanumal
+```
 
 #### 7-1. Build all libParanumal solvers
-`cd libparanumal`
-```make -j `nproc` ```
+```
+cd libparanumal
+make -j `nproc`
+```
 
 ---
 ### 8. Running the codes:
@@ -122,16 +129,30 @@ Each solver resides in its respective sub-directory in `solvers/`. Each solver s
 
 #### 8-1. Build libParanumal elliptic solver
 
-`cd libparanumal/solvers/elliptic`
-```make -j `nproc` ```
+```
+cd libparanumal/solvers/elliptic
+make -j `nproc` 
+```
 
 #### 8-2. Run elliptic example with provided quadrilateral set up file on a single device:
 
-`./ellipticMain setups/setupQuad2D.rc`
+libParanumal will make use of extra CPU cores if available. It is therefore beneficial to bind the MPI process to several CPU cores, if possible. For example, running the libParanumal elliptic solver with OpenMPI on a system with 16 CPU cores can be done via
+
+```
+mpiexec -np 1 --map-by slot:PE=16 ./ellipticMain setups/setupQuad2D.rc
+```
+
+The number of CPU cores used can also be controlled with the `OMP_NUM_THREADS` environment variable. libParanumal will not use more threads then there are physical CPU cores on the system, however, even in the presence of this environment variable.
 
 #### 8-3. Run the same example with four devices:
 
-`mpiexec -n 4 ./ellipticMain setups/setupQuad2D.rc`
+As the number of MPI processes per system increases, it is advisable to reduce the number of CPU cores per process to avoid oversubscribing the CPU cores. Using the same example above of the libParanumal elliptic solver with OpenMPI on a system with 16 CPU cores, a four rank run could be done via
+
+```
+mpiexec -np 4 --map-by slot:PE=4 ./ellipticMain setups/setupQuad2D.rc
+```
+
+i.e. each process binds to four of the 16 CPU cores available.
 
 ---
 
@@ -139,7 +160,7 @@ Each solver resides in its respective sub-directory in `solvers/`. Each solver s
 
 The MIT License (MIT)
 
-Copyright (c) 2017-2021 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -181,6 +202,10 @@ Optimization of elliptic mat-vec operations for (elliptic) solver on hexes: [pub
 Low-order preconditioning of triangular elements (elliptic precon): [publisher](https://epubs.siam.org/doi/abs/10.1137/17M1149444): `Chalmers, N. and Warburton, T. 2018. Low-order preconditioning of high-order triangular finite elements, SIAM Journal on Scientific Computing, Vol 40, Issue 6, Pages A4040-A4059`
 
 ### 11. Technical Reports
+
+CEED MS38: [link](https://doi.org/10.5281/zenodo.6475857): `Kolev, T., Fischer, P., Abdelfattah, A.,  Beams, N.,  Brown, J.,  Camier, J.-S., Carson, R., Chalmers, N.,  Dobrev, V.,  Dudouit, Y.,  Ghaffari, L., Joshi, A. Y., Kerkemeier, S., Lan, Y.-H., McDougall, D., Medina, D.,  Min, M., Mishra, A.,  Pazner, W., Phillips, M.,  Ratnayaka, T., Shephard, M. S., Siboni, M. H.,  Smith, C. W.,  Thompson, J. L., Tomboulides, A.,  Tomov, S., Tomov, V., Warburton, T., 2022. ECP Milestone Report: High-order algorithmic developments and optimizations for more robust exascale applications, WBS 2.2.6.06, Milestone CEED-MS38.`
+
+CEED MS37: [link](https://doi.org/10.5281/zenodo.5542244): `Kolev, T., Fischer, P.,  Beams, N.,  Brown, J.,  Camier, J.-S., Chalmers, N.,  Dobrev, V.,  Dudouit, Y., Kerkemeier, S., Lan, Y.-H., Lin, Y., Lindquist, N., McDougall, D., Medina, D., Merzari, E.,  Min, M., Moe, S.,  Pazner, W., Phillips, M.,  Ratnayaka, T., Rowe, K., Shephard, M. S.,  Smith, C. W.,  Tomov, S., Warburton, T., 2022. CEED ECP Milestone Report: Port and optimize the CEED software stack to Aurora / Frontier EA Systems, WBS 2.2.6.06, Milestone CEED-MS37.`
 
 CEED MS36: [link](https://doi.org/10.5281/zenodo.4672664): `Kolev, T., Fischer, P., Austin, A.P., Barker, A.T., Beams, N.,   Brown, J., Camier, J.-S., Chalmers, N.,   Dobrev, V., Dudouit, Y.,  Ghaffari, L., Kerkemeier, S.,  Lan, Y.-H., Merzari, E.,  Min, M.,   Pazner, W., Ratnayaka, T., Shephard, M. S., Siboni, M.H.,   Smith, C.W.,   Thompson, J.L.,   Tomov, S., Warburton, T., 2021. ECP Milestone Report: High-order algorithmic developments and optimizations for large-scale GPU-accelerated simulations, WBS 2.2.6.06, Milestone CEED-MS36.`
 

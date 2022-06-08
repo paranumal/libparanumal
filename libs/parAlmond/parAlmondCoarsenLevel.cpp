@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Rajesh Gandham
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Rajesh Gandham
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,62 +27,61 @@ SOFTWARE.
 #include "parAlmond.hpp"
 #include "parAlmond/parAlmondAMGSetup.hpp"
 
+namespace libp {
+
 namespace parAlmond {
 
 //create coarsened problem
-amgLevel *coarsenAmgLevel(amgLevel *level, dfloat *null,
-                          StrengthType strtype, dfloat theta,
-                          AggType aggtype){
+amgLevel coarsenAmgLevel(amgLevel& level, memory<dfloat>& null,
+                         StrengthType strtype, dfloat theta,
+                         AggType aggtype){
 
-  int size;
-  MPI_Comm_size(level->A->comm, &size);
+  parCSR& A = level.A;
 
-  strongGraph_t *C = strongGraph(level->A, strtype, theta);
+  int size = A.comm.size();
 
-  hlong *FineToCoarse = (hlong *) malloc(level->A->Ncols*sizeof(hlong));
-  hlong *globalAggStarts = (hlong *) calloc(size+1,sizeof(hlong));
+  strongGraph_t C = strongGraph(A, strtype, theta);
 
-  formAggregates(level->A, C, FineToCoarse, globalAggStarts);
-  delete C;
+  memory<hlong> FineToCoarse(A.Ncols);
+  memory<hlong> globalAggStarts(size+1);
+
+  formAggregates(A, C, FineToCoarse, globalAggStarts);
 
   // adjustPartition(FineToCoarse, settings);
 
-  parCSR *P;
-  parCSR *T = tentativeProlongator(level->A, FineToCoarse, globalAggStarts, null);
+  parCSR P;
+  parCSR T = tentativeProlongator(A, FineToCoarse, globalAggStarts, null);
   if (aggtype == SMOOTHED) {
-    P = smoothProlongator(level->A, T);
-    delete T;
+    P = smoothProlongator(A, T);
   } else {
     P = T;
   }
 
   // R = P^T
-  parCSR *R = transpose(P);
+  parCSR R = transpose(P);
 
-  level->P = P;
-  level->R = R;
+  level.P = P;
+  level.R = R;
 
-  parCSR *Acoarse;
+  parCSR Acoarse;
   if (aggtype == SMOOTHED) {
-    parCSR *AP = SpMM(level->A, P);
+    parCSR AP = SpMM(A, P);
     Acoarse = SpMM(R, AP);
-    delete AP;
   } else {
-    Acoarse = galerkinProd(level->A, P); //specialize for unsmoothed aggregation
+    Acoarse = galerkinProd(A, P); //specialize for unsmoothed aggregation
   }
 
-  Acoarse->diagSetup();
+  Acoarse.diagSetup();
 
-  amgLevel *coarseLevel = new amgLevel(Acoarse,level->settings);
+  amgLevel coarseLevel(Acoarse,level.settings);
 
   //update the number of columns required for this level
-  level->Ncols = (level->Ncols > R->Ncols) ? level->Ncols : R->Ncols;
+  level.Ncols = std::max(level.Ncols, std::max(A.Ncols, R.Ncols));
   // coarseLevel->Ncols = (coarseLevel->Ncols > P->Ncols) ? coarseLevel->Ncols : P->Ncols;
-
-  free(FineToCoarse);
-  free(globalAggStarts);
 
   return coarseLevel;
 }
 
 } //namespace parAlmond
+
+} //namespace libp

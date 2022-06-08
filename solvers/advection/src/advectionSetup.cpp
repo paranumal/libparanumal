@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,112 +26,109 @@ SOFTWARE.
 
 #include "advection.hpp"
 
-advection_t& advection_t::Setup(platform_t& platform, mesh_t& mesh,
-                                 advectionSettings_t& settings){
+void advection_t::Setup(platform_t& _platform, mesh_t& _mesh,
+                         advectionSettings_t& _settings){
 
-  advection_t* advection = new advection_t(platform, mesh, settings);
+  platform = _platform;
+  mesh = _mesh;
+  comm = mesh.comm;
+  settings = _settings;
 
   dlong Nlocal = mesh.Nelements*mesh.Np;
   dlong Nhalo  = mesh.totalHaloPairs*mesh.Np;
 
-  //setup timeStepper
-  if (settings.compareSetting("TIME INTEGRATOR","AB3")){
-    advection->timeStepper = new TimeStepper::ab3(mesh.Nelements, mesh.totalHaloPairs,
-                                              mesh.Np, 1, *advection);
-  } else if (settings.compareSetting("TIME INTEGRATOR","LSERK4")){
-    advection->timeStepper = new TimeStepper::lserk4(mesh.Nelements, mesh.totalHaloPairs,
-                                              mesh.Np, 1, *advection);
-  } else if (settings.compareSetting("TIME INTEGRATOR","DOPRI5")){
-    advection->timeStepper = new TimeStepper::dopri5(mesh.Nelements, mesh.totalHaloPairs,
-                                              mesh.Np, 1, *advection, mesh.comm);
-  }
+  //Trigger JIT kernel builds
+  ogs::InitializeKernels(platform, ogs::Dfloat, ogs::Add);
 
   //setup linear algebra module
-  platform.linAlg.InitKernels({"innerProd", "max"});
+  platform.linAlg().InitKernels({"innerProd", "max"});
 
   /*setup trace halo exchange */
-  advection->traceHalo = mesh.HaloTraceSetup(1); //one field
+  traceHalo = mesh.HaloTraceSetup(1); //one field
+
+  //setup timeStepper
+  if (settings.compareSetting("TIME INTEGRATOR","AB3")){
+    timeStepper.Setup<TimeStepper::ab3>(mesh.Nelements,
+                                        mesh.totalHaloPairs,
+                                        mesh.Np, 1, platform, comm);
+  } else if (settings.compareSetting("TIME INTEGRATOR","LSERK4")){
+    timeStepper.Setup<TimeStepper::lserk4>(mesh.Nelements,
+                                           mesh.totalHaloPairs,
+                                           mesh.Np, 1, platform, comm);
+  } else if (settings.compareSetting("TIME INTEGRATOR","DOPRI5")){
+    timeStepper.Setup<TimeStepper::dopri5>(mesh.Nelements,
+                                           mesh.totalHaloPairs,
+                                           mesh.Np, 1, platform, comm);
+  }
 
   // compute samples of q at interpolation nodes
-  advection->q = (dfloat*) calloc(Nlocal+Nhalo, sizeof(dfloat));
-  advection->o_q = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), advection->q);
+  q.malloc(Nlocal+Nhalo);
+  o_q = platform.malloc<dfloat>(q);
 
   //storage for M*q during reporting
-  advection->o_Mq = platform.malloc((Nlocal+Nhalo)*sizeof(dfloat), advection->q);
+  o_Mq = platform.malloc<dfloat>(q);
   mesh.MassMatrixKernelSetup(1); // mass matrix operator
 
   // OCCA build stuff
-  occa::properties kernelInfo = mesh.props; //copy base occa properties
+  properties_t kernelInfo = mesh.props; //copy base occa properties
 
   //add boundary data to kernel info
-  string dataFileName;
+  std::string dataFileName;
   settings.getSetting("DATA FILE", dataFileName);
   kernelInfo["includes"] += dataFileName;
 
-  kernelInfo["defines/" "p_Nfields"]= 1;
-
-  int maxNodes = mymax(mesh.Np, (mesh.Nfp*mesh.Nfaces));
+  int maxNodes = std::max(mesh.Np, (mesh.Nfp*mesh.Nfaces));
   kernelInfo["defines/" "p_maxNodes"]= maxNodes;
 
   int blockMax = 256;
   if (platform.device.mode() == "CUDA") blockMax = 512;
 
-  int NblockV = mymax(1, blockMax/mesh.Np);
+  int NblockV = std::max(1, blockMax/mesh.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;
 
-  int NblockS = mymax(1, blockMax/maxNodes);
+  int NblockS = std::max(1, blockMax/maxNodes);
   kernelInfo["defines/" "p_NblockS"]= NblockS;
 
-  kernelInfo["parser/" "automate-add-barriers"] =  "disabled";
-
   // set kernel name suffix
-  char *suffix;
-  if(mesh.elementType==TRIANGLES)
-    suffix = strdup("Tri2D");
-  if(mesh.elementType==QUADRILATERALS)
-    suffix = strdup("Quad2D");
-  if(mesh.elementType==TETRAHEDRA)
-    suffix = strdup("Tet3D");
-  if(mesh.elementType==HEXAHEDRA)
-    suffix = strdup("Hex3D");
+  std::string suffix;
+  if(mesh.elementType==Mesh::TRIANGLES)
+    suffix = "Tri2D";
+  if(mesh.elementType==Mesh::QUADRILATERALS)
+    suffix = "Quad2D";
+  if(mesh.elementType==Mesh::TETRAHEDRA)
+    suffix = "Tet3D";
+  if(mesh.elementType==Mesh::HEXAHEDRA)
+    suffix = "Hex3D";
 
-  char fileName[BUFSIZ], kernelName[BUFSIZ];
+  std::string oklFilePrefix = DADVECTION "/okl/";
+  std::string oklFileSuffix = ".okl";
+
+  std::string fileName, kernelName;
 
   // kernels from volume file
-  sprintf(fileName, DADVECTION "/okl/advectionVolume%s.okl", suffix);
-  sprintf(kernelName, "advectionVolume%s", suffix);
+  fileName   = oklFilePrefix + "advectionVolume" + suffix + oklFileSuffix;
+  kernelName = "advectionVolume" + suffix;
 
-  advection->volumeKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
+  volumeKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
+
   // kernels from surface file
-  sprintf(fileName, DADVECTION "/okl/advectionSurface%s.okl", suffix);
-  sprintf(kernelName, "advectionSurface%s", suffix);
+  fileName   = oklFilePrefix + "advectionSurface" + suffix + oklFileSuffix;
+  kernelName = "advectionSurface" + suffix;
 
-  advection->surfaceKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
+  surfaceKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 
   if (mesh.dim==2) {
-    sprintf(fileName, DADVECTION "/okl/advectionInitialCondition2D.okl");
-    sprintf(kernelName, "advectionInitialCondition2D");
+    fileName   = oklFilePrefix + "advectionInitialCondition2D" + oklFileSuffix;
+    kernelName = "advectionInitialCondition2D";
   } else {
-    sprintf(fileName, DADVECTION "/okl/advectionInitialCondition3D.okl");
-    sprintf(kernelName, "advectionInitialCondition3D");
+    fileName   = oklFilePrefix + "advectionInitialCondition3D" + oklFileSuffix;
+    kernelName = "advectionInitialCondition3D";
   }
 
-  advection->initialConditionKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
+  initialConditionKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 
-  sprintf(fileName, DADVECTION "/okl/advectionMaxWaveSpeed%s.okl", suffix);
-  sprintf(kernelName, "advectionMaxWaveSpeed%s", suffix);
+  fileName   = oklFilePrefix + "advectionMaxWaveSpeed" + suffix + oklFileSuffix;
+  kernelName = "advectionMaxWaveSpeed" + suffix;
 
-  advection->maxWaveSpeedKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
-
-  return *advection;
-}
-
-advection_t::~advection_t() {
-  volumeKernel.free();
-  surfaceKernel.free();
-  initialConditionKernel.free();
-  maxWaveSpeedKernel.free();
-
-  if (timeStepper) delete timeStepper;
-  if (traceHalo) traceHalo->Free();
+  maxWaveSpeedKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 }

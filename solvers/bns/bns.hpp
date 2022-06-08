@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -36,33 +36,35 @@ SOFTWARE.
 
 #define DBNS LIBP_DIR"/solvers/bns/"
 
+using namespace libp;
+
 class bnsSettings_t: public settings_t {
 public:
-  bnsSettings_t(MPI_Comm& _comm);
+  bnsSettings_t(comm_t& _comm);
   void report();
   void parseFromFile(platformSettings_t& platformSettings,
                      meshSettings_t& meshSettings,
-                     const string filename);
+                     const std::string filename);
 };
 
 class bns_t: public solver_t {
 public:
-  mesh_t& mesh;
+  mesh_t mesh;
 
   int Nfields;
   int Npmlfields;
 
-  TimeStepper::timeStepper_t* timeStepper;
+  timeStepper_t timeStepper;
 
-  halo_t* traceHalo;
-  halo_t** multirateTraceHalo;
+  ogs::halo_t traceHalo;
+  memory<ogs::halo_t> multirateTraceHalo;
 
   dfloat RT, c, tauInv, Ma, Re, nu; // Flow parameters
 
   // Pml
   int pmlOrder;
   dfloat  sigmaXmax, sigmaYmax, sigmaZmax;
-  dfloat *pmlSigma;
+  memory<dfloat> pmlSigma;
   dfloat pmlAlpha;
 
   // Flag for using cubature integration for sigma terms in pml
@@ -71,38 +73,37 @@ public:
   // Flag for semi-analytic timestepping
   int semiAnalytic;
 
-  dfloat *q;
-  occa::memory o_q;
+  memory<dfloat> q;
+  deviceMemory<dfloat> o_q;
 
-  occa::memory o_Mq;
+  deviceMemory<dfloat> o_Mq;
 
-  dfloat *Vort, *VortMag;
-  occa::memory o_Vort, o_VortMag;
+  memory<dfloat> Vort, VortMag;
+  deviceMemory<dfloat> o_Vort, o_VortMag;
 
-  occa::memory o_pmlSigma;
+  deviceMemory<dfloat> o_pmlSigma;
 
-  occa::kernel volumeKernel;
-  occa::kernel surfaceKernel;
-  occa::kernel relaxationKernel;
+  kernel_t volumeKernel;
+  kernel_t surfaceKernel;
+  kernel_t relaxationKernel;
 
-  occa::kernel pmlVolumeKernel;
-  occa::kernel pmlSurfaceKernel;
-  occa::kernel pmlRelaxationKernel;
+  kernel_t pmlVolumeKernel;
+  kernel_t pmlSurfaceKernel;
+  kernel_t pmlRelaxationKernel;
 
-  occa::kernel vorticityKernel;
+  kernel_t vorticityKernel;
 
-  occa::kernel initialConditionKernel;
+  kernel_t initialConditionKernel;
 
-  bns_t() = delete;
+  bns_t() = default;
   bns_t(platform_t &_platform, mesh_t &_mesh,
-              bnsSettings_t& _settings):
-    solver_t(_platform, _settings), mesh(_mesh) {}
-
-  ~bns_t();
+              bnsSettings_t& _settings) {
+    Setup(_platform, _mesh, _settings);
+  }
 
   //setup
-  static bns_t& Setup(platform_t& platform, mesh_t& mesh,
-                      bnsSettings_t& settings);
+  void Setup(platform_t& _platform, mesh_t& _mesh,
+             bnsSettings_t& _settings);
 
   void PmlSetup();
 
@@ -110,40 +111,40 @@ public:
 
   void Report(dfloat time, int tstep);
 
-  void PlotFields(dfloat* Q, dfloat* V, char *fileName);
+  void PlotFields(memory<dfloat>& Q, memory<dfloat>& V, std::string fileName);
 
   dfloat MaxWaveSpeed();
 
-  void rhsf_pml(occa::memory& o_Q, occa::memory& o_pmlQ,
-                occa::memory& o_RHS, occa::memory& o_pmlRHS, const dfloat T);
+  void rhsf_pml(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_pmlQ,
+                deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_pmlRHS, const dfloat T);
 
-  void rhsf_MR_pml(occa::memory& o_Q, occa::memory& o_pmlQ,
-                   occa::memory& o_RHS, occa::memory& o_pmlRHS,
-                   occa::memory& o_fQM, const dfloat T, const int lev);
+  void rhsf_MR_pml(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_pmlQ,
+                   deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_pmlRHS,
+                   deviceMemory<dfloat>& o_fQM, const dfloat T, const int lev);
 
   //seperate components of rhs evaluation
-  void rhsVolume(dlong N, occa::memory& o_ids,
-                 occa::memory& o_Q, occa::memory& o_RHS, const dfloat T);
-  void rhsPmlVolume(dlong N, occa::memory& o_ids, occa::memory& o_pmlids,
-                    occa::memory& o_Q, occa::memory& o_pmlQ,
-                    occa::memory& o_RHS, occa::memory& o_pmlRHS, const dfloat T);
-  void rhsRelaxation(dlong N, occa::memory& o_ids,
-                     occa::memory& o_Q, occa::memory& o_RHS);
-  void rhsPmlRelaxation(dlong N, occa::memory& o_ids, occa::memory& o_pmlids,
-                        occa::memory& o_Q, occa::memory& o_pmlQ,
-                        occa::memory& o_RHS, occa::memory& o_pmlRHS);
-  void rhsSurface(dlong N, occa::memory& o_ids,
-                  occa::memory& o_Q, occa::memory& o_RHS, const dfloat T);
-  void rhsPmlSurface(dlong N, occa::memory& o_ids, occa::memory& o_pmlids,
-                     occa::memory& o_Q, occa::memory& o_pmlQ,
-                     occa::memory& o_RHS, occa::memory& o_pmlRHS, const dfloat T);
-  void rhsSurfaceMR(dlong N, occa::memory& o_ids,
-                    occa::memory& o_Q, occa::memory& o_RHS,
-                    occa::memory& o_fQM, const dfloat T);
-  void rhsPmlSurfaceMR(dlong N, occa::memory& o_ids, occa::memory& o_pmlids,
-                       occa::memory& o_Q, occa::memory& o_pmlQ,
-                       occa::memory& o_RHS, occa::memory& o_pmlRHS,
-                       occa::memory& o_fQM, const dfloat T);
+  void rhsVolume(dlong N, deviceMemory<dlong>& o_ids,
+                 deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T);
+  void rhsPmlVolume(dlong N, deviceMemory<dlong>& o_ids, deviceMemory<dlong>& o_pmlids,
+                    deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_pmlQ,
+                    deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_pmlRHS, const dfloat T);
+  void rhsRelaxation(dlong N, deviceMemory<dlong>& o_ids,
+                     deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS);
+  void rhsPmlRelaxation(dlong N, deviceMemory<dlong>& o_ids, deviceMemory<dlong>& o_pmlids,
+                        deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_pmlQ,
+                        deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_pmlRHS);
+  void rhsSurface(dlong N, deviceMemory<dlong>& o_ids,
+                  deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T);
+  void rhsPmlSurface(dlong N, deviceMemory<dlong>& o_ids, deviceMemory<dlong>& o_pmlids,
+                     deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_pmlQ,
+                     deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_pmlRHS, const dfloat T);
+  void rhsSurfaceMR(dlong N, deviceMemory<dlong>& o_ids,
+                    deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS,
+                    deviceMemory<dfloat>& o_fQM, const dfloat T);
+  void rhsPmlSurfaceMR(dlong N, deviceMemory<dlong>& o_ids, deviceMemory<dlong>& o_pmlids,
+                       deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_pmlQ,
+                       deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_pmlRHS,
+                       deviceMemory<dfloat>& o_fQM, const dfloat T);
 };
 #endif
 
@@ -154,7 +155,7 @@ public:
   dfloat isoMinVal, isoMaxVal, *isoLevels, *isoq;
   size_t isoMax;
 
-  occa::memory o_isoLevels, o_isoq, o_isoNtris;
+  deviceMemory<dfloat> o_isoLevels, o_isoq, o_isoNtris;
 
   // MRSAAB Coefficients
   dfloat *MRSAAB_A, *MRSAAB_B, *MRSAAB_C, *MRAB_A, *MRAB_B, *MRAB_C;
@@ -164,7 +165,7 @@ public:
   int *isoGNlevels, isoGNgroups;
   dfloat **isoGLvalues;
 
-  occa::memory *o_isoGLvalues;
+  deviceMemory<dfloat> *o_isoGLvalues;
 
   // NBN: add storage for compacted isosurf data for gmsh write
   std::vector<dfloat> iso_nodes;

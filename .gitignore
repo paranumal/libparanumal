@@ -27,6 +27,7 @@
 *.m~
 *.nvprof
 test/__pycache__
+test/*.rc
 
 !test/squareTri.msh
 !test/squareQuad.msh

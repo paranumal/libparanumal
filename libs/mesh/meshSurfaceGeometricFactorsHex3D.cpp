@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,72 +25,49 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh3D.hpp"
 
-/*
-static void computeFrame(dfloat nx, dfloat ny, dfloat nz,
-                  dfloat &tanx, dfloat &tany, dfloat &tanz,
-                  dfloat &binx, dfloat &biny, dfloat &binz){
-
-  dfloat rdotn, ranx, rany, ranz;
-  do{
-    ranx = drand48();
-    rany = drand48();
-    ranz = drand48();
-
-    dfloat magran = sqrt(ranx*ranx+rany*rany+ranz*ranz);
-
-    ranx /= magran;
-    rany /= magran;
-    ranz /= magran;
-
-    rdotn = nx*ranx+ny*rany+nz*ranz;
-  }while(fabs(rdotn)<1e-4);
-
-  tanx = ny*ranz - nz*rany;
-  tany = nz*ranx - nx*ranz;
-  tanz = nx*rany - ny*ranx;
-
-  dfloat magtan = sqrt(tanx*tanx+tany*tany+tanz*tanz);
-
-  tanx /= magtan;
-  tany /= magtan;
-  tanz /= magtan;
-
-  binx = ny*tanz - nz*tany;
-  biny = nz*tanx - nx*tanz;
-  binz = nx*tany - ny*tanx;
-
-  dfloat magbin = sqrt(binx*binx+biny*biny+binz*binz);
-
-  binx /= magbin;
-  biny /= magbin;
-  binz /= magbin;
-
-  //  printf("nor = %g,%g,%g; tan = %g,%g,%g; bin = %g,%g,%g\n", nx, ny, nz, tanx, tany, tanz, binx, biny, binz);
-}
-*/
+namespace libp {
 
 /* compute outwards facing normals, surface Jacobian, and volume Jacobian for all face nodes */
-void meshHex3D::SurfaceGeometricFactors(){
+void mesh_t::SurfaceGeometricFactorsHex3D(){
 
   /* unified storage array for geometric factors */
-  Nsgeo = 8; //17; (old)
-  sgeo = (dfloat*) calloc((Nelements+totalHaloPairs)*
-                                Nsgeo*Nfp*Nfaces,
-                                sizeof(dfloat));
+  Nsgeo = 8;
 
-  dfloat *xre = (dfloat*) calloc(Np, sizeof(dfloat));
-  dfloat *xse = (dfloat*) calloc(Np, sizeof(dfloat));
-  dfloat *xte = (dfloat*) calloc(Np, sizeof(dfloat));
-  dfloat *yre = (dfloat*) calloc(Np, sizeof(dfloat));
-  dfloat *yse = (dfloat*) calloc(Np, sizeof(dfloat));
-  dfloat *yte = (dfloat*) calloc(Np, sizeof(dfloat));
-  dfloat *zre = (dfloat*) calloc(Np, sizeof(dfloat));
-  dfloat *zse = (dfloat*) calloc(Np, sizeof(dfloat));
-  dfloat *zte = (dfloat*) calloc(Np, sizeof(dfloat));
+  NXID  = 0;
+  NYID  = 1;
+  NZID  = 2;
+  SJID  = 3;
+  IJID  = 4;
+  IHID  = 5;
+  WSJID = 6;
+  WIJID = 7;
 
-  for(dlong e=0;e<Nelements+totalHaloPairs;++e){ /* for each element */
+  props["defines/" "p_Nsgeo"]= Nsgeo;
+  props["defines/" "p_NXID"]= NXID;
+  props["defines/" "p_NYID"]= NYID;
+  props["defines/" "p_NZID"]= NZID;
+  props["defines/" "p_SJID"]= SJID;
+  props["defines/" "p_IJID"]= IJID;
+  props["defines/" "p_IHID"]= IHID;
+  props["defines/" "p_WSJID"]= WSJID;
+  props["defines/" "p_WIJID"]= WIJID;
+
+  sgeo.malloc(Nelements*Nsgeo*Nfp*Nfaces);
+
+  memory<dfloat> h((Nelements+totalHaloPairs)*Nfp*Nfaces);
+
+  memory<dfloat> xre(Np);
+  memory<dfloat> xse(Np);
+  memory<dfloat> xte(Np);
+  memory<dfloat> yre(Np);
+  memory<dfloat> yse(Np);
+  memory<dfloat> yte(Np);
+  memory<dfloat> zre(Np);
+  memory<dfloat> zse(Np);
+  memory<dfloat> zte(Np);
+
+  for(dlong e=0;e<Nelements;++e){ /* for each element */
 
     for(int k=0;k<Nq;++k){
       for(int j=0;j<Nq;++j){
@@ -162,8 +139,10 @@ void meshHex3D::SurfaceGeometricFactors(){
         sgeo[base+SJID] = sJ;
         sgeo[base+IJID] = 1./J;
 
-        sgeo[base+WIJID] = 1./(J*w[0]);
-        sgeo[base+WSJID] = sJ*w[i%Nq]*w[i/Nq];
+        sgeo[base+WIJID] = 1./(J*gllw[0]);
+        sgeo[base+WSJID] = sJ*gllw[i%Nq]*gllw[i/Nq];
+
+        h[Nfaces*Nfp*e + Nfp*f + i] = sJ/J;
 
         // computeFrame(nx, ny, nz,
         //              sgeo[base+STXID], sgeo[base+STYID], sgeo[base+STZID],
@@ -172,19 +151,28 @@ void meshHex3D::SurfaceGeometricFactors(){
     }
   }
 
+  halo.Exchange(h, Nfp*Nfaces);
+
   for(dlong e=0;e<Nelements;++e){ /* for each non-halo element */
-    for(int n=0;n<Nfp*Nfaces;++n){
-      dlong baseM = e*Nfp*Nfaces + n;
-      dlong baseP = mapP[baseM];
-      // rescaling - missing factor of 2 ? (only impacts penalty and thus stiffness)
-      dfloat hinvM = sgeo[baseM*Nsgeo + SJID]*sgeo[baseM*Nsgeo + IJID];
-      dfloat hinvP = sgeo[baseP*Nsgeo + SJID]*sgeo[baseP*Nsgeo + IJID];
-      sgeo[baseM*Nsgeo+IHID] = mymax(hinvM,hinvP);
-      sgeo[baseP*Nsgeo+IHID] = mymax(hinvM,hinvP);
+    for(int f=0;f<Nfaces;++f){
+      for(int n=0;n<Nfp;++n){
+        dlong baseM = e*Nfp*Nfaces + f*Nfp + n;
+        dlong baseP = mapP[baseM];
+        if(baseP<0) baseP = baseM;
+
+        // rescaling - missing factor of 2 ? (only impacts penalty and thus stiffness)
+        dfloat hinvM = h[baseM];
+        dfloat hinvP = h[baseP];
+        sgeo[baseM*Nsgeo+IHID] = std::max(hinvM,hinvP);
+
+        // if (EToB[f+e*Nfaces] > 0) { //enforce a stronger penalty on boundaries
+        //   sgeo[baseM*Nsgeo+IHID] *= 2;
+        // }
+      }
     }
   }
 
-  free(xre); free(xse); free(xte);
-  free(yre); free(yse); free(yte);
-  free(zre); free(zse); free(zte);
+  o_sgeo = platform.malloc<dfloat>(sgeo);
 }
+
+} //namespace libp

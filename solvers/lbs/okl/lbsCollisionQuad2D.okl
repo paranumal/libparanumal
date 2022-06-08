@@ -2,7 +2,7 @@
 
   The MIT License (MIT)
 
-  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -26,144 +26,144 @@
 
 // Equilibrium Distribution unmodified!!!!
 void equiDist2D(const dfloat w,  const dfloat ex, const dfloat ey,
-		const dfloat r,  const dfloat u,  const dfloat v, dfloat *feq){
+                const dfloat r,  const dfloat u,  const dfloat v, dfloat *feq){
 
-  const dfloat un = (ex*u + ey*v); 
-  *feq = r*w*(1.0f + p_ic2*un + 0.5f*p_ic4*un*un - 0.5f*p_ic2*(u*u + v*v)); 
+  const dfloat un = (ex*u + ey*v);
+  *feq = r*w*(1.0f + p_ic2*un + 0.5f*p_ic4*un*un - 0.5f*p_ic2*(u*u + v*v));
 }
 
 
 // Compute collision step, physical velocity and scaled external forcing
 @kernel void lbsCollisionQuad2D(const dlong Nelements,
-				// @restrict const  dlong  *  elementIds,
-				const dfloat t,
-				const dfloat dt,
-				const dfloat gamma, // lambda/dt
-				const dfloat nu, // 1/Re
-				@restrict const dfloat * LBM, 
-				@restrict const dfloat * x, 
-				@restrict const dfloat * y, 
-				@restrict const dfloat * z, 
-				@restrict const dfloat *  F,
-				@restrict const dfloat *  U, 
-				@restrict dfloat *  q){
+                                // @restrict const  dlong  *  elementIds,
+                                const dfloat t,
+                                const dfloat dt,
+                                const dfloat gamma, // lambda/dt
+                                const dfloat nu, // 1/Re
+                                @restrict const dfloat * LBM,
+                                @restrict const dfloat * x,
+                                @restrict const dfloat * y,
+                                @restrict const dfloat * z,
+                                @restrict const dfloat *  F,
+                                @restrict const dfloat *  U,
+                                @restrict dfloat *  q){
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
     for(int es=0;es<p_NblockV;++es;@inner(2)){
       for(int j=0;j<p_Nq;++j;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
-	  const dlong et = eo+es; // element in block
-	  if(et<Nelements){
-	    // const dlong e    = elementIds[et];
-	    const dlong e    = et;
-	    const dlong idf  = i + j*p_Nq + p_Nfields*p_Np*e;
-	    const dlong idn  = i + j*p_Nq + p_Nmacro*p_Np*e;
+        for(int i=0;i<p_Nq;++i;@inner(0)){
+          const dlong et = eo+es; // element in block
+          if(et<Nelements){
+            // const dlong e    = elementIds[et];
+            const dlong e    = et;
+            const dlong idf  = i + j*p_Nq + p_Nfields*p_Np*e;
+            const dlong idn  = i + j*p_Nq + p_Nmacro*p_Np*e;
 
-	    const dfloat rn = U[idn + 0*p_Np]; 
-	    const dfloat un = U[idn + 1*p_Np]; 
-	    const dfloat vn = U[idn + 2*p_Np]; 
+            const dfloat rn = U[idn + 0*p_Np];
+            const dfloat un = U[idn + 1*p_Np];
+            const dfloat vn = U[idn + 2*p_Np];
 
 #pragma unroll p_Nfields
-	    for(int fld=0; fld<p_Nfields;++fld){
-	      const dfloat ew = LBM[fld + 0*p_Nfields]; 
-	      const dfloat ex = LBM[fld + 1*p_Nfields]; 
-	      const dfloat ey = LBM[fld + 2*p_Nfields]; 
-	      //
-	      const dfloat fn = F[idf+fld*p_Np]; // external forcing 
-	      const dfloat qn = q[idf+fld*p_Np]; 
+            for(int fld=0; fld<p_Nfields;++fld){
+              const dfloat ew = LBM[fld + 0*p_Nfields];
+              const dfloat ex = LBM[fld + 1*p_Nfields];
+              const dfloat ey = LBM[fld + 2*p_Nfields];
+              //
+              const dfloat fn = F[idf+fld*p_Np]; // external forcing
+              const dfloat qn = q[idf+fld*p_Np];
 
-	      dfloat qeq = 0.f; 
-	      equiDist2D(ew, ex, ey, rn, un, vn, &qeq);
+              dfloat qeq = 0.f;
+              equiDist2D(ew, ex, ey, rn, un, vn, &qeq);
 
-	      // Compute forcing term using unmodified equilibrium distribution
-	      const dfloat qext = fn*qeq*dt;  
-	      // modify equilibrium forcing here
-	      qeq -= 0.5*dt*fn;   
-	      // collision 
-	      q[idf+fld*p_Np] += (qext - 1.f/(gamma + 0.5f)*( qn - qeq)); 
-	    }
-	  }
-	}
+              // Compute forcing term using unmodified equilibrium distribution
+              const dfloat qext = fn*qeq*dt;
+              // modify equilibrium forcing here
+              qeq -= 0.5*dt*fn;
+              // collision
+              q[idf+fld*p_Np] += (qext - 1.f/(gamma + 0.5f)*( qn - qeq));
+            }
+          }
+        }
       }
-    }   
+    }
   }
 }
 
 
 
-// Compute physical velocity and 
-// scaled external forcing i.e. 
+// Compute physical velocity and
+// scaled external forcing i.e.
 // (v-u)\dot G /(rho\timesc^2)
 
 @kernel void lbsForcingQuad2D(const dlong Nelements,
-			     // @restrict const  dlong  *  elementIds,
-			     const dfloat t,
-			     const dfloat dt,
-			     const dfloat gamma, // lambda/dt
-			     const dfloat nu, // 1/Re
-			     @restrict const dfloat * LBM, 
-			     @restrict const dfloat * x, 
-			     @restrict const dfloat * y, 
-			     @restrict const dfloat * z, 
-			     @restrict const dfloat * q, 
-			     @restrict dfloat *  F,
-			     @restrict dfloat *  U){
+                             // @restrict const  dlong  *  elementIds,
+                             const dfloat t,
+                             const dfloat dt,
+                             const dfloat gamma, // lambda/dt
+                             const dfloat nu, // 1/Re
+                             @restrict const dfloat * LBM,
+                             @restrict const dfloat * x,
+                             @restrict const dfloat * y,
+                             @restrict const dfloat * z,
+                             @restrict const dfloat * q,
+                             @restrict dfloat *  F,
+                             @restrict dfloat *  U){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
     for(int es=0;es<p_NblockV;++es;@inner(2)){// for all elements in block
       for(int j=0;j<p_Nq;++j;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
-	  const dlong et = eo+es; // element in block
-	  if(et<Nelements){
-	    // const dlong e   = elementIds[et];
-	    const dlong e    = et;
-	    const dlong idf  = i + j*p_Nq + p_Nfields*p_Np*e;
-	    const dlong idn  = i + j*p_Nq + p_Nmacro*p_Np*e;
+        for(int i=0;i<p_Nq;++i;@inner(0)){
+          const dlong et = eo+es; // element in block
+          if(et<Nelements){
+            // const dlong e   = elementIds[et];
+            const dlong e    = et;
+            const dlong idf  = i + j*p_Nq + p_Nfields*p_Np*e;
+            const dlong idn  = i + j*p_Nq + p_Nmacro*p_Np*e;
 
-	    const dfloat xn = x[i + j*p_Nq + e*p_Np]; 
-	    const dfloat yn = y[i + j*p_Nq + e*p_Np]; 
+            const dfloat xn = x[i + j*p_Nq + e*p_Np];
+            const dfloat yn = y[i + j*p_Nq + e*p_Np];
 
-	    // old velocities
-	    dfloat rn =  U[idn + 0*p_Np]; 
-	    dfloat un =  U[idn + 1*p_Np]; 
-	    dfloat vn =  U[idn + 2*p_Np]; 
+            // old velocities
+            dfloat rn =  U[idn + 0*p_Np];
+            dfloat un =  U[idn + 1*p_Np];
+            dfloat vn =  U[idn + 2*p_Np];
 
-	    // !!! This is currenlty only force, can be modified
-	    dfloat fx = 0.f, fy = 0.f; // Use previous rn un vn to compute fx, fy 
-	    lbsBodyForce2D(nu, t, xn, yn, rn, un, vn, &fx, &fy); 
+            // !!! This is currenlty only force, can be modified
+            dfloat fx = 0.f, fy = 0.f; // Use previous rn un vn to compute fx, fy
+            lbsBodyForce2D(nu, t, xn, yn, rn, un, vn, &fx, &fy);
 
-	    // Now update velocity 
-	    rn =0.f, un =0.f, vn =0.f; 
+            // Now update velocity
+            rn =0.f, un =0.f, vn =0.f;
 #pragma unroll p_Nfields
-	    for(int fld=0; fld<p_Nfields;++fld){
-	      const dfloat ex = LBM[fld + 1*p_Nfields]; 
-	      const dfloat ey = LBM[fld + 2*p_Nfields]; 
-	      const dfloat qn = q[idf+fld*p_Np]; 
-	      rn  += qn; // density
-	      un  += ex*qn; 
-	      vn  += ey*qn; 
-	    }
+            for(int fld=0; fld<p_Nfields;++fld){
+              const dfloat ex = LBM[fld + 1*p_Nfields];
+              const dfloat ey = LBM[fld + 2*p_Nfields];
+              const dfloat qn = q[idf+fld*p_Np];
+              rn  += qn; // density
+              un  += ex*qn;
+              vn  += ey*qn;
+            }
 
-	    // !!! This is currenlty only body force, can be modified
-	    un  = (un + 0.5*fx*dt)/rn;
-	    vn  = (vn + 0.5*fy*dt)/rn;
+            // !!! This is currenlty only body force, can be modified
+            un  = (un + 0.5*fx*dt)/rn;
+            vn  = (vn + 0.5*fy*dt)/rn;
 
 
-	    for(int fld=0; fld<p_Nfields;++fld){         
-	      const dfloat ex = LBM[fld + 1*p_Nfields]; 
-	      const dfloat ey = LBM[fld + 2*p_Nfields]; 
-	      F[idf +fld*p_Np] =  1.f/rn*p_ic2*( (ex-un)*fx + (ey-vn)*fy ); 
-	    }
+            for(int fld=0; fld<p_Nfields;++fld){
+              const dfloat ex = LBM[fld + 1*p_Nfields];
+              const dfloat ey = LBM[fld + 2*p_Nfields];
+              F[idf +fld*p_Np] =  1.f/rn*p_ic2*( (ex-un)*fx + (ey-vn)*fy );
+            }
 
-	    U[idn + 0*p_Np] = rn; 
-	    U[idn + 1*p_Np] = un; 
-	    U[idn + 2*p_Np] = vn; 
+            U[idn + 0*p_Np] = rn;
+            U[idn + 1*p_Np] = un;
+            U[idn + 2*p_Np] = vn;
 
-	  }
-	}
+          }
+        }
       }
-    }   
+    }
   }
 }
 
@@ -171,43 +171,43 @@ void equiDist2D(const dfloat w,  const dfloat ex, const dfloat ey,
 
 // Compute collision step and update velocity field
 @kernel void lbsMomentsQuad2D(const dlong Nelements,
-			     // @restrict const  dlong  *  elementIds,
-			     @restrict const dfloat * LBM, 
-			     @restrict const dfloat *  q,
-			     @restrict dfloat *  U){
+                             // @restrict const  dlong  *  elementIds,
+                             @restrict const dfloat * LBM,
+                             @restrict const dfloat *  q,
+                             @restrict dfloat *  U){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
 
     for(int es=0;es<p_NblockV;++es;@inner(2)){// for all elements in block
       for(int j=0;j<p_Nq;++j;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
-	  const dlong et = eo+es; // element in block
-	  if(et<Nelements){
-	    // const dlong e = elementIds[et];
-	    const dlong e    = et;
-	    const dlong idf  = i + j*p_Nq + p_Nfields*p_Np*e;
-	    const dlong idn  = i + j*p_Nq + p_Nmacro*p_Np*e;
+        for(int i=0;i<p_Nq;++i;@inner(0)){
+          const dlong et = eo+es; // element in block
+          if(et<Nelements){
+            // const dlong e = elementIds[et];
+            const dlong e    = et;
+            const dlong idf  = i + j*p_Nq + p_Nfields*p_Np*e;
+            const dlong idn  = i + j*p_Nq + p_Nmacro*p_Np*e;
 
-	    dfloat rn = 0.f; 
-	    dfloat un = 0.f; 
-	    dfloat vn = 0.f; 
+            dfloat rn = 0.f;
+            dfloat un = 0.f;
+            dfloat vn = 0.f;
 
 #pragma unroll p_Nfields
-	    for(int fld=0; fld<p_Nfields;++fld){
-	      const dfloat qn = q[idf+fld*p_Np]; 
-	      rn  += qn; // density
-	      un  += LBM[fld + 1*p_Nfields]*qn; 
-	      vn  += LBM[fld + 2*p_Nfields]*qn; 
-	    }
-	    un = un/rn; //x-velocity
-	    vn = vn/rn; //y-velocity
+            for(int fld=0; fld<p_Nfields;++fld){
+              const dfloat qn = q[idf+fld*p_Np];
+              rn  += qn; // density
+              un  += LBM[fld + 1*p_Nfields]*qn;
+              vn  += LBM[fld + 2*p_Nfields]*qn;
+            }
+            un = un/rn; //x-velocity
+            vn = vn/rn; //y-velocity
 
-	    U[idn + 0*p_Np] = rn; 
-	    U[idn + 1*p_Np] = un; 
-	    U[idn + 2*p_Np] = vn; 
+            U[idn + 0*p_Np] = rn;
+            U[idn + 1*p_Np] = un;
+            U[idn + 2*p_Np] = vn;
 
-	  }
-	}
+          }
+        }
       }
     }
   }
@@ -217,58 +217,58 @@ void equiDist2D(const dfloat w,  const dfloat ex, const dfloat ey,
 
 // Compute phase field from mocaro field
 @kernel void lbsPhaseFieldQuad2D(const dlong Nelements,
-				// @restrict const  dlong  *  elementIds,
-				const dfloat t,
-				const dfloat dt,
-				const dfloat gamma, // lambda/dt
-				const dfloat nu, // 1/Re
-				@restrict const dfloat * LBM, 
-				@restrict const dfloat * x, 
-				@restrict const dfloat * y, 
-				@restrict const dfloat * z, 
-				@restrict const dfloat *  U,
-				@restrict dfloat *  q){
+                                // @restrict const  dlong  *  elementIds,
+                                const dfloat t,
+                                const dfloat dt,
+                                const dfloat gamma, // lambda/dt
+                                const dfloat nu, // 1/Re
+                                @restrict const dfloat * LBM,
+                                @restrict const dfloat * x,
+                                @restrict const dfloat * y,
+                                @restrict const dfloat * z,
+                                @restrict const dfloat *  U,
+                                @restrict dfloat *  q){
 
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
-    // @exclusive dlong e; 
+    // @exclusive dlong e;
     for(int es=0;es<p_NblockV;++es;@inner(2)){// for all elements in block
       for(int j=0;j<p_Nq;++j;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
-	  const dlong et = eo+es; // element in block
-	  if(et<Nelements){
-	    // const dlong e = elementIds[et];
-	    const dlong e    = et;
-	    const dlong idf  = i + j*p_Nq + p_Nfields*p_Np*e;
-	    const dlong idn  = i + j*p_Nq + p_Nmacro*p_Np*e;
+        for(int i=0;i<p_Nq;++i;@inner(0)){
+          const dlong et = eo+es; // element in block
+          if(et<Nelements){
+            // const dlong e = elementIds[et];
+            const dlong e    = et;
+            const dlong idf  = i + j*p_Nq + p_Nfields*p_Np*e;
+            const dlong idn  = i + j*p_Nq + p_Nmacro*p_Np*e;
 
 
-	    const dfloat rn = U[idn + 0*p_Np]; 
-	    const dfloat un = U[idn + 1*p_Np]; 
-	    const dfloat vn = U[idn + 2*p_Np]; 
+            const dfloat rn = U[idn + 0*p_Np];
+            const dfloat un = U[idn + 1*p_Np];
+            const dfloat vn = U[idn + 2*p_Np];
 
-	    const dfloat xn = x[i + j*p_Nq + e*p_Np]; 
-	    const dfloat yn = y[i + j*p_Nq + e*p_Np]; 
+            const dfloat xn = x[i + j*p_Nq + e*p_Np];
+            const dfloat yn = y[i + j*p_Nq + e*p_Np];
 
-	    dfloat fx = 0.f, fy = 0.f;
-	    lbsBodyForce2D(nu, t, xn, yn, rn, un, vn, &fx, &fy); 
+            dfloat fx = 0.f, fy = 0.f;
+            lbsBodyForce2D(nu, t, xn, yn, rn, un, vn, &fx, &fy);
 
 
 #pragma unroll p_Nfields
-	    for(int fld=0; fld<p_Nfields;++fld){
-	      const dfloat ew = LBM[fld + 0*p_Nfields]; 
-	      const dfloat ex = LBM[fld + 1*p_Nfields]; 
-	      const dfloat ey = LBM[fld + 2*p_Nfields]; 
+            for(int fld=0; fld<p_Nfields;++fld){
+              const dfloat ew = LBM[fld + 0*p_Nfields];
+              const dfloat ex = LBM[fld + 1*p_Nfields];
+              const dfloat ey = LBM[fld + 2*p_Nfields];
 
-	      dfloat qeq = 0.f; 
-	      equiDist2D(ew, ex, ey, rn, un, vn, &qeq); 
-	      const dfloat qext =  1.f/rn*p_ic2*((ex-un)*fx + (ey-vn)*fy); 
+              dfloat qeq = 0.f;
+              equiDist2D(ew, ex, ey, rn, un, vn, &qeq);
+              const dfloat qext =  1.f/rn*p_ic2*((ex-un)*fx + (ey-vn)*fy);
 
-	      q[idf + fld*p_Np]  = qeq*(1.f- 0.5f*dt*qext);
+              q[idf + fld*p_Np]  = qeq*(1.f- 0.5f*dt*qext);
 
-	    }
+            }
 
-	  }
-	}
+          }
+        }
       }
     }
   }

@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,7 @@ SOFTWARE.
 
 
 @kernel void ellipticAxHex3D(const dlong Nelements,
+                             @restrict const  dfloat *  wJ,
                              @restrict const  dfloat *  ggeo,
                              @restrict const  dfloat *  DT,
                              @restrict const  dfloat *  S,
@@ -81,11 +82,9 @@ SOFTWARE.
             r_G12 = ggeo[gbase+p_G12ID*p_Np];
             r_G22 = ggeo[gbase+p_G22ID*p_Np];
 
-            r_GwJ = ggeo[gbase+p_GWJID*p_Np];
+            r_GwJ = wJ[e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i];
           }
         }
-
-        @barrier("local");
 
         for(int j=0;j<p_Nq;++j;@inner(1)){
           for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -101,8 +100,6 @@ SOFTWARE.
               }
           }
         }
-
-        @barrier("local");
 
         for(int j=0;j<p_Nq;++j;@inner(1)){
           for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -124,8 +121,6 @@ SOFTWARE.
             r_Auk = r_GwJ*lambda*r_q[k];
           }
         }
-
-        @barrier("local");
 
         for(int j=0;j<p_Nq;++j;@inner(1)){
           for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -163,6 +158,7 @@ SOFTWARE.
 @kernel void ellipticPartialAxHex3D_v0(const dlong Nelements,
                                     @restrict const  dlong  *  elementList,
                                     @restrict const  dlong  *  GlobalToLocal,
+                                    @restrict const  dfloat *  wJ,
                                     @restrict const  dfloat *  ggeo,
                                     @restrict const  dfloat *  DT,
                                     @restrict const  dfloat *  S,
@@ -226,11 +222,10 @@ SOFTWARE.
             r_G12 = ggeo[gbase+p_G12ID*p_Np];
             r_G22 = ggeo[gbase+p_G22ID*p_Np];
 
-            r_GwJ = ggeo[gbase+p_GWJID*p_Np];
+            r_GwJ = wJ[element*p_Np + k*p_Nq*p_Nq + j*p_Nq + i];
           }
         }
 
-        @barrier("local");
 
         for(int j=0;j<p_Nq;++j;@inner(1)){
           for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -247,7 +242,6 @@ SOFTWARE.
           }
         }
 
-        @barrier("local");
 
         for(int j=0;j<p_Nq;++j;@inner(1)){
           for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -270,7 +264,6 @@ SOFTWARE.
           }
         }
 
-        @barrier("local");
 
         for(int j=0;j<p_Nq;++j;@inner(1)){
           for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -373,7 +366,6 @@ SOFTWARE.
             }
           }
 
-          @barrier("local");
 
           for(int j=0;j<p_Nq;++j;@inner(1)){
             for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -390,7 +382,6 @@ SOFTWARE.
             }
           }
 
-          @barrier("local");
 
           for(int j=0;j<p_Nq;++j;@inner(1)){
             for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -416,7 +407,6 @@ SOFTWARE.
             }
           }
 
-          @barrier("local");
 
           for(int j=0;j<p_Nq;++j;@inner(1)){
             for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -516,7 +506,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     // Layer by layer
 //    #pragma unroll p_Nq
@@ -568,7 +557,6 @@ SOFTWARE.
           }
         }
 
-        @barrier("local");
 
         for(int j=0;j<p_Nq;++j;@inner(1)){
           for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -585,7 +573,6 @@ SOFTWARE.
           }
         }
 
-        @barrier("local");
 
         for(int j=0;j<p_Nq;++j;@inner(1)){
           for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -608,7 +595,6 @@ SOFTWARE.
           }
         }
 
-        @barrier("local");
 
         for(int j=0;j<p_Nq;++j;@inner(1)){
           for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -703,7 +689,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -764,7 +749,6 @@ SOFTWARE.
           }
         }
 
-        @barrier("local");
 
         for(int j=0;j<p_Nq;++j;@inner(1)){
           for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -781,7 +765,6 @@ SOFTWARE.
           }
         }
 
-        @barrier("local");
 
         for(int j=0;j<p_Nq;++j;@inner(1)){
           for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -804,7 +787,6 @@ SOFTWARE.
           }
         }
 
-        @barrier("local");
 
         for(int j=0;j<p_Nq;++j;@inner(1)){
           for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -915,7 +897,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -932,7 +913,6 @@ SOFTWARE.
 //    #pragma unroll p_Nq
       for(int k = 0;k < p_Nq; k++){
 
-        @barrier("local");
 
         for(int j=0;j<p_Nq;++j;@inner(1)){
           for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -953,7 +933,6 @@ SOFTWARE.
           }
         }
 
-        @barrier("local");
 
         for(int j=0;j<p_Nq;++j;@inner(1)){
           for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -1021,7 +1000,6 @@ SOFTWARE.
           }
         }
 
-        @barrier("local");
 
         for(int j=0;j<p_Nq;++j;@inner(1)){
           for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -1203,7 +1181,6 @@ SOFTWARE.
         }
       }
 
-      @barrier("local");
 
       for(int j=0;j<p_Nq;++j;@inner(1)){
         for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -1271,7 +1248,6 @@ SOFTWARE.
         }
       }
 
-      @barrier("local");
 
       for(int k=0;k<p_Nq;++k;@inner(1)){
         for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -1339,7 +1315,6 @@ SOFTWARE.
         }
       }
 
-      @barrier("local");
 
       for(int k=0;k<p_Nq;++k;@inner(1)){
         for(int j=0;j<p_Nq;++j;@inner(0)){
@@ -1423,7 +1398,6 @@ SOFTWARE.
         }
       }
 
-      @barrier("local");
 
       for(int j=0;j<p_Nq;++j;@inner(1)){
         for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -1491,7 +1465,6 @@ SOFTWARE.
         }
       }
 
-      @barrier("local");
 
       for(int k=0;k<p_Nq;++k;@inner(1)){
         for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -1564,7 +1537,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
 
     for(int k=0;k<p_Nq;++k;@inner(2)){

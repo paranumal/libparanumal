@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Anthony Austin
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -35,7 +35,7 @@ SOFTWARE.
 {
   for (dlong b = 0; b < Nblocks; ++b; @outer(0)) {
 
-    @shared volatile dfloat s_wxy[p_blockSize];
+    @shared dfloat s_wxy[p_blockSize];
 
     // load x to register
     // block over igNhist
@@ -52,7 +52,6 @@ SOFTWARE.
 
     for (int fld = 0; fld < dim; ++fld) {
 
-      @barrier("local");
 
       for (int t = 0; t < p_blockSize; ++t; @inner(0)) {
         dlong id = t + p_blockSize*b;
@@ -68,7 +67,6 @@ SOFTWARE.
         s_wxy[t] = res;
       }
 
-      @barrier("local");
 
 #if p_blockSize>512
       for(int t=0;t<p_blockSize;++t;@inner(0))
@@ -76,7 +74,6 @@ SOFTWARE.
           s_wxy[t] += s_wxy[t+512];
         }
 
-      @barrier("local");
 #endif
 
 #if p_blockSize>256
@@ -85,7 +82,6 @@ SOFTWARE.
           s_wxy[t] += s_wxy[t+256];
         }
 
-      @barrier("local");
 #endif
 
       for(int t=0;t<p_blockSize;++t;@inner(0))
@@ -93,14 +89,12 @@ SOFTWARE.
           s_wxy[t] += s_wxy[t+128];
         }
 
-      @barrier("local");
 
       for(int t=0;t<p_blockSize;++t;@inner(0))
         if(t< 64){
           s_wxy[t] += s_wxy[t+64];
         }
 
-      @barrier("local");
 
       for(int t=0;t<p_blockSize;++t;@inner(0))
         if(t< 32){
@@ -127,7 +121,6 @@ SOFTWARE.
           s_wxy[t] += s_wxy[t+2];
         }
 
-      @barrier("local");
 
       // assumes igNhist < p_blockSize
       for(int t=0;t<p_blockSize;++t;@inner(0)){

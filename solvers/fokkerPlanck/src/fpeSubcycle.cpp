@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,19 +26,10 @@ SOFTWARE.
 
 #include "fpe.hpp"
 
-subcycler_t::subcycler_t(fpe_t& fpe):
-  solver_t(fpe.platform, fpe.settings), mesh(fpe.mesh) {
-
-  cubature = fpe.cubature;
-  traceHalo = fpe.traceHalo;
-  advectionVolumeKernel = fpe.advectionVolumeKernel;
-  advectionSurfaceKernel = fpe.advectionSurfaceKernel;
-}
-
 //evaluate ODE rhs = f(q,t)
-void subcycler_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
+void subcycler_t::rhsf(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T){
   // extract q halo on DEVICE
-  traceHalo->ExchangeStart(o_Q, 1, ogs_dfloat);
+  traceHalo.ExchangeStart(o_Q, 1);
 
   if (cubature)
     advectionVolumeKernel(mesh.Nelements,
@@ -65,7 +56,7 @@ void subcycler_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
                          o_Q,
                          o_RHS);
 
-  traceHalo->ExchangeFinish(o_Q, 1, ogs_dfloat);
+  traceHalo.ExchangeFinish(o_Q, 1);
 
   if (cubature)
     advectionSurfaceKernel(mesh.Nelements,

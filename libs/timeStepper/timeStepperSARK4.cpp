@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -29,24 +29,25 @@ SOFTWARE.
 #include "timeStepper.hpp"
 #include <complex>
 
+namespace libp {
+
 namespace TimeStepper {
 
 using std::complex;
 
 sark4::sark4(dlong _Nelements, dlong _NhaloElements,
              int _Np, int _Nfields,
-             dfloat *_lambda, solver_t& _solver, MPI_Comm _comm):
-  timeStepper_t(_Nelements, _NhaloElements, _Np, _Nfields, _solver),
-  comm(_comm),
+             memory<dfloat> _lambda,
+             platform_t& _platform, comm_t _comm):
+  timeStepperBase_t(_Nelements, _NhaloElements, _Np, _Nfields,
+                    _platform, _comm),
   Np(_Np),
   Nfields(_Nfields),
   Nelements(_Nelements),
   NhaloElements(_NhaloElements) {
 
-  platform_t &platform = solver.platform;
-
-  lambda = (dfloat *) malloc(Nfields*sizeof(dfloat));
-  memcpy(lambda, _lambda, Nfields*sizeof(dfloat));
+  lambda.malloc(Nfields);
+  lambda.copyFrom(_lambda);
 
   Nrk = 5;
   order = 4;
@@ -55,26 +56,27 @@ sark4::sark4(dlong _Nelements, dlong _NhaloElements,
   dlong Nlocal = Nelements*Np*Nfields;
   dlong Ntotal = (Nelements+NhaloElements)*Np*Nfields;
 
-  o_rkq    = platform.malloc(Ntotal*sizeof(dfloat));
-  o_rhsq   = platform.malloc(Nlocal*sizeof(dfloat));
-  o_rkrhsq = platform.malloc(Nlocal*Nrk*sizeof(dfloat));
-  o_rkerr  = platform.malloc(Nlocal*sizeof(dfloat));
+  o_rkq    = platform.malloc<dfloat>(Ntotal);
+  o_rhsq   = platform.malloc<dfloat>(Nlocal);
+  o_rkrhsq = platform.malloc<dfloat>(Nlocal*Nrk);
+  o_rkerr  = platform.malloc<dfloat>(Nlocal);
 
-  o_saveq  = platform.malloc(Nlocal*sizeof(dfloat));
+  o_saveq  = platform.malloc<dfloat>(Nlocal);
 
-  Nblock = (N+BLOCKSIZE-1)/BLOCKSIZE;
-  errtmp = (dfloat*) calloc(Nblock, sizeof(dfloat));
-  o_errtmp = platform.malloc(Nblock*sizeof(dfloat));
+  const int blocksize=256;
 
-  hlong gNlocal = Nlocal;
-  hlong gNtotal;
-  MPI_Allreduce(&gNlocal, &gNtotal, 1, MPI_HLONG, MPI_SUM, comm);
+  Nblock = (N+blocksize-1)/blocksize;
+  h_errtmp = platform.hostMalloc<dfloat>(Nblock);
+  o_errtmp = platform.malloc<dfloat>(Nblock);
+
+  hlong gNtotal = Nlocal;
+  comm.Allreduce(gNtotal);
 
   //copy base occa properties from platform
-  occa::properties kernelInfo = solver.platform.props;
+  properties_t kernelInfo = platform.props();
 
   //add defines
-  kernelInfo["defines/" "p_blockSize"] = (int)BLOCKSIZE;
+  kernelInfo["defines/" "p_blockSize"] = (int)blocksize;
   kernelInfo["defines/" "p_Nrk"]     = (int)Nrk;
   kernelInfo["defines/" "p_Np"]      = (int)Np;
   kernelInfo["defines/" "p_Nfields"] = (int)Nfields;
@@ -96,16 +98,16 @@ sark4::sark4(dlong _Nelements, dlong _NhaloElements,
 
   // Semi-Analytic Runge Kutta - order (3) 4 with PID timestep control
   dfloat _rkC[Nrk] = {0.0, 0.5, 0.5, 1.0, 1.0};
-  rkC = (dfloat*) calloc(Nrk, sizeof(dfloat));
-  memcpy(rkC, _rkC, Nrk*sizeof(dfloat));
+  rkC.malloc(Nrk);
+  rkC.copyFrom(_rkC);
 
-  rkX = (dfloat*) platform.hostMalloc(Nfields*Nrk*    sizeof(dfloat), NULL, h_rkX);
-  rkA = (dfloat*) platform.hostMalloc(Nfields*Nrk*Nrk*sizeof(dfloat), NULL, h_rkA);
-  rkE = (dfloat*) platform.hostMalloc(Nfields*Nrk*    sizeof(dfloat), NULL, h_rkE);
+  h_rkX = platform.hostMalloc<dfloat>(Nfields*Nrk);
+  h_rkA = platform.hostMalloc<dfloat>(Nfields*Nrk*Nrk);
+  h_rkE = platform.hostMalloc<dfloat>(Nfields*Nrk);
 
-  o_rkX = platform.malloc(Nfields*Nrk*    sizeof(dfloat));
-  o_rkA = platform.malloc(Nfields*Nrk*Nrk*sizeof(dfloat));
-  o_rkE = platform.malloc(Nfields*Nrk*    sizeof(dfloat));
+  o_rkX = platform.malloc<dfloat>(Nfields*Nrk);
+  o_rkA = platform.malloc<dfloat>(Nfields*Nrk*Nrk);
+  o_rkE = platform.malloc<dfloat>(Nfields*Nrk);
 
   dtMIN = 1E-9; //minumum allowed timestep
   ATOL = 1E-5;  //absolute error tolerance
@@ -124,16 +126,15 @@ sark4::sark4(dlong _Nelements, dlong _NhaloElements,
   sqrtinvNtotal = 1.0/sqrt(gNtotal);
 }
 
-void sark4::Run(occa::memory &o_q, dfloat start, dfloat end) {
+void sark4::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloat end) {
 
   dfloat time = start;
 
-  int rank;
-  MPI_Comm_rank(comm, &rank);
+  int rank = comm.rank();
 
   solver.Report(time,0);
 
-  dfloat outputInterval;
+  dfloat outputInterval=0.0;
   solver.settings.getSetting("OUTPUT INTERVAL", outputInterval);
 
   dfloat outputTime = time + outputInterval;
@@ -145,23 +146,17 @@ void sark4::Run(occa::memory &o_q, dfloat start, dfloat end) {
 
   while (time < end) {
 
-    if (dt<dtMIN){
-      stringstream ss;
-      ss << "Time step became too small at time step = " << tstep;
-      LIBP_ABORT(ss.str());
-    }
-    if (std::isnan(dt)) {
-      stringstream ss;
-      ss << "Solution became unstable at time step = " << tstep;
-      LIBP_ABORT(ss.str());
-    }
+    LIBP_ABORT("Time step became too small at time step = " << tstep,
+               dt<dtMIN);
+    LIBP_ABORT("Solution became unstable at time step = " << tstep,
+               std::isnan(dt));
 
     //check for final timestep
     if (time+dt > end){
       dt = end-time;
     }
 
-    Step(o_q, time, dt);
+    Step(solver, o_q, time, dt);
 
     // compute Dopri estimator
     dfloat err = Estimater(o_q);
@@ -170,7 +165,7 @@ void sark4::Run(occa::memory &o_q, dfloat start, dfloat end) {
     dfloat fac1 = pow(err,exp1);
     dfloat fac = fac1/pow(facold,beta);
 
-    fac = mymax(invfactor2, mymin(invfactor1,fac/safe));
+    fac = std::max(invfactor2, std::min(invfactor1,fac/safe));
     dfloat dtnew = dt/fac;
 
     if (err<1.0) { //dt is accepted
@@ -192,7 +187,7 @@ void sark4::Run(occa::memory &o_q, dfloat start, dfloat end) {
         UpdateCoefficients();
 
         // time step to output
-        Step(o_q, time, dt);
+        Step(solver, o_q, time, dt);
 
         // shift for output
         o_rkq.copyTo(o_q);
@@ -219,14 +214,15 @@ void sark4::Run(occa::memory &o_q, dfloat start, dfloat end) {
       time += dt;
       while (time>outputTime) outputTime+= outputInterval; //catch up next output in case dt>outputInterval
 
-      facold = mymax(err,1E-4); // hard coded factor ?
+      constexpr dfloat errMax = 1.0e-4;  // hard coded factor ?
+      facold = std::max(err,errMax);
 
       // if (!rank)
       //   printf("\r time = %g (%d), dt = %g accepted                      ", time, allStep,  dt);
 
       tstep++;
     } else {
-      dtnew = dt/(mymax(invfactor1,fac1/safe));
+      dtnew = dt/(std::max(invfactor1,fac1/safe));
 
       // if (!rank)
       //   printf("\r time = %g (%d), dt = %g rejected, trying %g", time, allStep, dt, dtnew);
@@ -245,19 +241,19 @@ void sark4::Run(occa::memory &o_q, dfloat start, dfloat end) {
     printf("%d accepted steps and %d total steps\n", tstep, allStep);
 }
 
-void sark4::Backup(occa::memory &o_Q) {
-  o_saveq.copyFrom(o_Q, N*sizeof(dfloat));
+void sark4::Backup(deviceMemory<dfloat> &o_Q) {
+  o_saveq.copyFrom(o_Q, N);
 }
 
-void sark4::Restore(occa::memory &o_Q) {
-  o_saveq.copyTo(o_Q, N*sizeof(dfloat));
+void sark4::Restore(deviceMemory<dfloat> &o_Q) {
+  o_saveq.copyTo(o_Q, N);
 }
 
-void sark4::AcceptStep(occa::memory &o_q, occa::memory &o_rq) {
-  o_q.copyFrom(o_rq, N*sizeof(dfloat));
+void sark4::AcceptStep(deviceMemory<dfloat> &o_q, deviceMemory<dfloat> &o_rq) {
+  o_q.copyFrom(o_rq, N);
 }
 
-void sark4::Step(occa::memory &o_q, dfloat time, dfloat _dt) {
+void sark4::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloat _dt) {
 
   //RK step
   for(int rk=0;rk<Nrk;++rk){
@@ -298,7 +294,7 @@ void sark4::Step(occa::memory &o_q, dfloat time, dfloat _dt) {
   }
 }
 
-dfloat sark4::Estimater(occa::memory& o_q){
+dfloat sark4::Estimater(deviceMemory<dfloat>& o_q){
 
   //Error estimation
   //E. HAIRER, S.P. NORSETT AND G. WANNER, SOLVING ORDINARY
@@ -311,13 +307,12 @@ dfloat sark4::Estimater(occa::memory& o_q){
                         o_rkerr,
                         o_errtmp);
 
-  o_errtmp.copyTo(errtmp);
-  dfloat localerr = 0;
+  h_errtmp.copyFrom(o_errtmp);
   dfloat err = 0;
   for(dlong n=0;n<Nblock;++n){
-    localerr += errtmp[n];
+    err += h_errtmp[n];
   }
-  MPI_Allreduce(&localerr, &err, 1, MPI_DFLOAT, MPI_SUM, comm);
+  comm.Allreduce(err);
 
   err = sqrt(err)*sqrtinvNtotal;
 
@@ -349,9 +344,9 @@ void sark4::UpdateCoefficients() {
                          1.0/6.0,  1.0/3.0,   1.0/3.0,   1.0/6.0,      0.0};
       dfloat _rkE[Nrk]= {    0.0,      0.0,       0.0,  -1.0/6.0,  1.0/6.0};
 
-      memcpy(rkX+n*Nrk    ,_rkX,    Nrk*sizeof(dfloat));
-      memcpy(rkA+n*Nrk*Nrk,_rkA,Nrk*Nrk*sizeof(dfloat));
-      memcpy(rkE+n*Nrk    ,_rkE,    Nrk*sizeof(dfloat));
+      h_rkX.copyFrom(_rkX,    Nrk,n*Nrk    );
+      h_rkA.copyFrom(_rkA,Nrk*Nrk,n*Nrk*Nrk);
+      h_rkE.copyFrom(_rkE,    Nrk,n*Nrk    );
 
     } else {
 
@@ -401,7 +396,11 @@ void sark4::UpdateCoefficients() {
       dfloat a54=real(ca54)/ (double) Nr;
 
       // first set non-semianalytic part of the integrator
-      dfloat _rkX[Nrk]  = {1.0, exp(0.5*alpha), exp(0.5*alpha), exp(alpha), exp(alpha) };
+      dfloat _rkX[Nrk]  = {1.0,
+                           std::exp(dfloat(0.5)*alpha),
+                           std::exp(dfloat(0.5)*alpha),
+                           std::exp(alpha),
+                           std::exp(alpha) };
       dfloat _rkA[Nrk*Nrk]
                       ={   0.0,  0.0,  0.0,   0.0,  0.0,
                            a21,  0.0,  0.0,   0.0,  0.0,
@@ -410,42 +409,21 @@ void sark4::UpdateCoefficients() {
                            a51,  a52,  a53,   a54,  0.0};
       dfloat _rkE[Nrk]= {  0.0,  0.0,  0.0,  -a54,  a54};
 
-      memcpy(rkX+n*Nrk    ,_rkX,    Nrk*sizeof(dfloat));
-      memcpy(rkA+n*Nrk*Nrk,_rkA,Nrk*Nrk*sizeof(dfloat));
-      memcpy(rkE+n*Nrk    ,_rkE,    Nrk*sizeof(dfloat));
+      h_rkX.copyFrom(_rkX,    Nrk,n*Nrk    );
+      h_rkA.copyFrom(_rkA,Nrk*Nrk,n*Nrk*Nrk);
+      h_rkE.copyFrom(_rkE,    Nrk,n*Nrk    );
     }
 
     // move data to platform
-    // o_rkX.copyFrom(rkX, "async: true");
-    // o_rkA.copyFrom(rkA, "async: true");
-    // o_rkE.copyFrom(rkE, "async: true");
-    o_rkX.copyFrom(rkX);
-    o_rkA.copyFrom(rkA);
-    o_rkE.copyFrom(rkE);
+    // o_rkX.copyFrom(rkX, properties_t("async", true));
+    // o_rkA.copyFrom(rkA, properties_t("async", true));
+    // o_rkE.copyFrom(rkE, properties_t("async", true));
+    h_rkX.copyTo(o_rkX);
+    h_rkA.copyTo(o_rkA);
+    h_rkE.copyTo(o_rkE);
   }
 }
 
-sark4::~sark4() {
-  if (o_rkq.size()) o_rkq.free();
-  if (o_rkrhsq.size()) o_rkrhsq.free();
-  if (o_rkerr.size()) o_rkerr.free();
-  if (o_errtmp.size()) o_errtmp.free();
-  if (o_rkX.size()) o_rkX.free();
-  if (o_rkA.size()) o_rkA.free();
-  if (o_rkE.size()) o_rkE.free();
-
-  if (errtmp) free(errtmp);
-  if (lambda) free(lambda);
-  if (rkC) free(rkC);
-
-  if (h_rkX.size()) h_rkX.free();
-  if (h_rkA.size()) h_rkA.free();
-  if (h_rkE.size()) h_rkE.free();
-
-  rkUpdateKernel.free();
-  rkStageKernel.free();
-  rkErrorEstimateKernel.free();
-}
 
 /**************************************************/
 /* PML version                                    */
@@ -453,28 +431,28 @@ sark4::~sark4() {
 
 sark4_pml::sark4_pml(dlong _Nelements, dlong _NpmlElements, dlong _NhaloElements,
             int _Np, int _Nfields, int _Npmlfields,
-            dfloat *_lambda, solver_t& _solver, MPI_Comm _comm):
-  sark4(_Nelements, _NhaloElements, _Np, _Nfields, _lambda, _solver, _comm),
+            memory<dfloat> _lambda,
+            platform_t& _platform, comm_t _comm):
+  sark4(_Nelements, _NhaloElements, _Np, _Nfields, _lambda, _platform, _comm),
   Npml(_Npmlfields*_Np*_NpmlElements) {
 
   if (Npml) {
-    platform_t &platform = solver.platform;
+    memory<dfloat> pmlq(Npml,0.0);
+    o_pmlq = platform.malloc<dfloat>(pmlq);
 
-    dfloat *pmlq = (dfloat *) calloc(Npml,sizeof(dfloat));
-    o_pmlq   = platform.malloc(Npml*sizeof(dfloat), pmlq);
-    free(pmlq);
+    o_rkpmlq    = platform.malloc<dfloat>(Npml);
+    o_rhspmlq   = platform.malloc<dfloat>(Npml);
+    o_rkrhspmlq = platform.malloc<dfloat>(Npml*Nrk);
 
-    o_rkpmlq    = platform.malloc(Npml*sizeof(dfloat));
-    o_rhspmlq   = platform.malloc(Npml*sizeof(dfloat));
-    o_rkrhspmlq = platform.malloc(Npml*Nrk*sizeof(dfloat));
-
-    o_savepmlq   = platform.malloc(Npml*sizeof(dfloat));
+    o_savepmlq   = platform.malloc<dfloat>(Npml);
 
     //copy base occa properties from solver
-    occa::properties kernelInfo = platform.props;
+    properties_t kernelInfo = platform.props();
+
+    const int blocksize=256;
 
     //add defines
-    kernelInfo["defines/" "p_blockSize"] = (int)BLOCKSIZE;
+    kernelInfo["defines/" "p_blockSize"] = (int)blocksize;
     kernelInfo["defines/" "p_Nrk"]     = (int)Nrk;
     kernelInfo["defines/" "p_Np"]      = (int)Np;
     kernelInfo["defines/" "p_Nfields"] = (int)Nfields;
@@ -490,7 +468,7 @@ sark4_pml::sark4_pml(dlong _Nelements, dlong _NpmlElements, dlong _NhaloElements
                                       kernelInfo);
 
     // Semi-Analytic Runge Kutta - order (3) 4 with PID timestep control
-    pmlrkA = (dfloat*) malloc(Nrk*Nrk*sizeof(dfloat));
+    pmlrkA.malloc(Nrk*Nrk);
 
     dfloat _pmlrkA[Nrk*Nrk]
                     = {      0.0,      0.0,       0.0,      0.0,       0.0,
@@ -498,31 +476,31 @@ sark4_pml::sark4_pml(dlong _Nelements, dlong _NpmlElements, dlong _NhaloElements
                              0.0,      0.5,       0.0,      0.0,       0.0,
                              0.0,      0.0,       1.0,      0.0,       0.0,
                          1.0/6.0,  1.0/3.0,   1.0/3.0,   1.0/6.0,      0.0};
-    memcpy(pmlrkA, _pmlrkA, Nrk*Nrk*sizeof(dfloat));
+    pmlrkA.copyFrom(_pmlrkA);
 
-    o_pmlrkA = platform.malloc(Nrk*Nrk*sizeof(dfloat), pmlrkA);
+    o_pmlrkA = platform.malloc<dfloat>(pmlrkA);
   }
 }
 
-void sark4_pml::Backup(occa::memory &o_Q) {
-  o_saveq.copyFrom(o_Q, N*sizeof(dfloat));
+void sark4_pml::Backup(deviceMemory<dfloat> &o_Q) {
+  o_saveq.copyFrom(o_Q, N);
   if (Npml)
-    o_savepmlq.copyFrom(o_rkpmlq, Npml*sizeof(dfloat));
+    o_savepmlq.copyFrom(o_rkpmlq, Npml);
 }
 
-void sark4_pml::Restore(occa::memory &o_Q) {
-  o_saveq.copyTo(o_Q, N*sizeof(dfloat));
+void sark4_pml::Restore(deviceMemory<dfloat> &o_Q) {
+  o_saveq.copyTo(o_Q, N);
   if (Npml)
-    o_savepmlq.copyTo(o_rkpmlq, Npml*sizeof(dfloat));
+    o_savepmlq.copyTo(o_rkpmlq, Npml);
 }
 
-void sark4_pml::AcceptStep(occa::memory &o_q, occa::memory &o_rq) {
-  o_q.copyFrom(o_rq, N*sizeof(dfloat));
+void sark4_pml::AcceptStep(deviceMemory<dfloat> &o_q, deviceMemory<dfloat> &o_rq) {
+  o_q.copyFrom(o_rq, N);
   if (Npml)
-    o_pmlq.copyFrom(o_rkpmlq, Npml*sizeof(dfloat));
+    o_pmlq.copyFrom(o_rkpmlq, Npml);
 }
 
-void sark4_pml::Step(occa::memory &o_q, dfloat time, dfloat _dt) {
+void sark4_pml::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloat _dt) {
 
   //RK step
   for(int rk=0;rk<Nrk;++rk){
@@ -581,17 +559,6 @@ void sark4_pml::Step(occa::memory &o_q, dfloat time, dfloat _dt) {
   }
 }
 
-sark4_pml::~sark4_pml() {
-  if (o_pmlq.size()) o_pmlq.free();
-  if (o_rkpmlq.size()) o_rkpmlq.free();
-  if (o_rhspmlq.size()) o_rhspmlq.free();
-  if (o_rkrhspmlq.size()) o_rkrhspmlq.free();
-  if (o_pmlrkA.size()) o_pmlrkA.free();
-
-  if (o_savepmlq.size()) o_savepmlq.free();
-
-  rkPmlUpdateKernel.free();
-  rkPmlStageKernel.free();
-}
-
 } //namespace TimeStepper
+
+} //namespace libp

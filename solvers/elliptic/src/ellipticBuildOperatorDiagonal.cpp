@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,16 +25,14 @@ SOFTWARE.
 */
 
 #include "elliptic.hpp"
-#include "mesh/meshDefines2D.h"
-#include "mesh/meshDefines3D.h"
 
-void elliptic_t::BuildOperatorDiagonal(dfloat *diagA){
+void elliptic_t::BuildOperatorDiagonal(memory<dfloat>& diagA){
 
-  if(mesh.rank==0) {printf("Building diagonal...");fflush(stdout);}
+  if(Comm::World().rank()==0) {printf("Building diagonal...");fflush(stdout);}
 
   if (settings.compareSetting("DISCRETIZATION","IPDG")) {
     switch(mesh.elementType){
-      case TRIANGLES:
+      case Mesh::TRIANGLES:
       {
         if(mesh.dim==2)
           BuildOperatorDiagonalIpdgTri2D(diagA);
@@ -42,24 +40,24 @@ void elliptic_t::BuildOperatorDiagonal(dfloat *diagA){
           BuildOperatorDiagonalIpdgTri3D(diagA);
         break;
       }
-      case QUADRILATERALS:
+      case Mesh::QUADRILATERALS:
         BuildOperatorDiagonalIpdgQuad2D(diagA);
         break;
-      case TETRAHEDRA:
+      case Mesh::TETRAHEDRA:
         BuildOperatorDiagonalIpdgTet3D(diagA);
         break;
-      case HEXAHEDRA:
+      case Mesh::HEXAHEDRA:
         BuildOperatorDiagonalIpdgHex3D(diagA);
         break;
     }
   } else if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
-    dfloat* diagAL = (dfloat*) malloc(mesh.Np*mesh.Nelements*sizeof(dfloat));
+    memory<dfloat> diagAL(mesh.Np*mesh.Nelements);
 
     switch(mesh.elementType){
-      case TRIANGLES:
+      case Mesh::TRIANGLES:
         BuildOperatorDiagonalContinuousTri2D(diagAL);
         break;
-      case QUADRILATERALS:
+      case Mesh::QUADRILATERALS:
       {
         if(mesh.dim==2)
           BuildOperatorDiagonalContinuousQuad2D(diagAL);
@@ -67,25 +65,24 @@ void elliptic_t::BuildOperatorDiagonal(dfloat *diagA){
           BuildOperatorDiagonalContinuousQuad3D(diagAL);
         break;
       }
-      case TETRAHEDRA:
+      case Mesh::TETRAHEDRA:
         BuildOperatorDiagonalContinuousTet3D(diagAL);
         break;
-      case HEXAHEDRA:
+      case Mesh::HEXAHEDRA:
         BuildOperatorDiagonalContinuousHex3D(diagAL);
         break;
     }
 
     //gather the diagonal to assemble it
-    ogsMasked->Gather(diagA, diagAL, ogs_dfloat, ogs_add, ogs_trans);
-    free(diagAL);
+    ogsMasked.Gather(diagA, diagAL, 1, ogs::Add, ogs::Trans);
   }
-  if(mesh.rank==0) printf("done.\n");
+  if(Comm::World().rank()==0) printf("done.\n");
 }
 
-void elliptic_t::BuildOperatorDiagonalIpdgTri2D(dfloat *A) {
+void elliptic_t::BuildOperatorDiagonalIpdgTri2D(memory<dfloat>& A) {
 
   // surface mass matrices MS = MM*LIFT
-  dfloat *MS = (dfloat *) calloc(mesh.Nfaces*mesh.Nfp*mesh.Nfp,sizeof(dfloat));
+  memory<dfloat> MS(mesh.Nfaces*mesh.Nfp*mesh.Nfp);
   for (int f=0;f<mesh.Nfaces;f++) {
     for (int n=0;n<mesh.Nfp;n++) {
       int fn = mesh.faceNodes[f*mesh.Nfp+n];
@@ -104,11 +101,11 @@ void elliptic_t::BuildOperatorDiagonalIpdgTri2D(dfloat *A) {
 
   for(dlong eM=0;eM<mesh.Nelements;++eM){
     dlong vbase = eM*mesh.Nvgeo;
-    dfloat drdx = mesh.vgeo[vbase+RXID];
-    dfloat drdy = mesh.vgeo[vbase+RYID];
-    dfloat dsdx = mesh.vgeo[vbase+SXID];
-    dfloat dsdy = mesh.vgeo[vbase+SYID];
-    dfloat J = mesh.vgeo[vbase+JID];
+    dfloat drdx = mesh.vgeo[vbase+mesh.RXID];
+    dfloat drdy = mesh.vgeo[vbase+mesh.RYID];
+    dfloat dsdx = mesh.vgeo[vbase+mesh.SXID];
+    dfloat dsdy = mesh.vgeo[vbase+mesh.SYID];
+    dfloat J = mesh.wJ[eM];
 
     /* start with stiffness matrix  */
     for(int n=0;n<mesh.Np;++n){
@@ -131,10 +128,10 @@ void elliptic_t::BuildOperatorDiagonalIpdgTri2D(dfloat *A) {
     for (int fM=0;fM<mesh.Nfaces;fM++) {
       // load surface geofactors for this face
       dlong sid = mesh.Nsgeo*(eM*mesh.Nfaces+fM);
-      dfloat nx = mesh.sgeo[sid+NXID];
-      dfloat ny = mesh.sgeo[sid+NYID];
-      dfloat sJ = mesh.sgeo[sid+SJID];
-      dfloat hinv = mesh.sgeo[sid+IHID];
+      dfloat nx = mesh.sgeo[sid+mesh.NXID];
+      dfloat ny = mesh.sgeo[sid+mesh.NYID];
+      dfloat sJ = mesh.sgeo[sid+mesh.SJID];
+      dfloat hinv = mesh.sgeo[sid+mesh.IHID];
 
       int bc = mesh.EToB[fM+mesh.Nfaces*eM]; //raw boundary flag
 
@@ -155,7 +152,7 @@ void elliptic_t::BuildOperatorDiagonalIpdgTri2D(dfloat *A) {
       }
 
       // mass matrix for this face
-      dfloat *MSf = MS+fM*mesh.Nfp*mesh.Nfp;
+      memory<dfloat> MSf = MS+fM*mesh.Nfp*mesh.Nfp;
 
       // penalty term just involves face nodes
       for(int n=0;n<mesh.Nfp;++n){
@@ -211,14 +208,12 @@ void elliptic_t::BuildOperatorDiagonalIpdgTri2D(dfloat *A) {
       }
     }
   }
-
-  free(MS);
 }
 
-void elliptic_t::BuildOperatorDiagonalIpdgTri3D(dfloat *A) {
+void elliptic_t::BuildOperatorDiagonalIpdgTri3D(memory<dfloat>& A) {
 
   // surface mass matrices MS = MM*LIFT
-  dfloat *MS = (dfloat *) calloc(mesh.Nfaces*mesh.Nfp*mesh.Nfp,sizeof(dfloat));
+  memory<dfloat> MS(mesh.Nfaces*mesh.Nfp*mesh.Nfp);
   for (int f=0;f<mesh.Nfaces;f++) {
     for (int n=0;n<mesh.Nfp;n++) {
       int fn = mesh.faceNodes[f*mesh.Nfp+n];
@@ -237,13 +232,13 @@ void elliptic_t::BuildOperatorDiagonalIpdgTri3D(dfloat *A) {
 
   for(dlong eM=0;eM<mesh.Nelements;++eM){
     dlong vbase = eM*mesh.Nvgeo;
-    dfloat drdx = mesh.vgeo[vbase+RXID];
-    dfloat drdy = mesh.vgeo[vbase+RYID];
-    dfloat drdz = mesh.vgeo[vbase+RZID];
-    dfloat dsdx = mesh.vgeo[vbase+SXID];
-    dfloat dsdy = mesh.vgeo[vbase+SYID];
-    dfloat dsdz = mesh.vgeo[vbase+SZID];
-    dfloat J = mesh.vgeo[vbase+JID];
+    dfloat drdx = mesh.vgeo[vbase+mesh.RXID];
+    dfloat drdy = mesh.vgeo[vbase+mesh.RYID];
+    dfloat drdz = mesh.vgeo[vbase+mesh.RZID];
+    dfloat dsdx = mesh.vgeo[vbase+mesh.SXID];
+    dfloat dsdy = mesh.vgeo[vbase+mesh.SYID];
+    dfloat dsdz = mesh.vgeo[vbase+mesh.SZID];
+    dfloat J = mesh.wJ[eM];
 
     /* start with stiffness matrix  */
     for(int n=0;n<mesh.Np;++n){
@@ -269,11 +264,11 @@ void elliptic_t::BuildOperatorDiagonalIpdgTri3D(dfloat *A) {
     for (int fM=0;fM<mesh.Nfaces;fM++) {
       // load surface geofactors for this face
       dlong sid = mesh.Nsgeo*(eM*mesh.Nfaces+fM);
-      dfloat nx = mesh.sgeo[sid+NXID];
-      dfloat ny = mesh.sgeo[sid+NYID];
-      dfloat nz = mesh.sgeo[sid+NZID];
-      dfloat sJ = mesh.sgeo[sid+SJID];
-      dfloat hinv = mesh.sgeo[sid+IHID];
+      dfloat nx = mesh.sgeo[sid+mesh.NXID];
+      dfloat ny = mesh.sgeo[sid+mesh.NYID];
+      dfloat nz = mesh.sgeo[sid+mesh.NZID];
+      dfloat sJ = mesh.sgeo[sid+mesh.SJID];
+      dfloat hinv = mesh.sgeo[sid+mesh.IHID];
 
       int bc = mesh.EToB[fM+mesh.Nfaces*eM]; //raw boundary flag
 
@@ -294,7 +289,7 @@ void elliptic_t::BuildOperatorDiagonalIpdgTri3D(dfloat *A) {
       }
 
       // mass matrix for this face
-      dfloat *MSf = MS+fM*mesh.Nfp*mesh.Nfp;
+      memory<dfloat> MSf = MS+fM*mesh.Nfp*mesh.Nfp;
 
       // penalty term just involves face nodes
       for(int n=0;n<mesh.Nfp;++n){
@@ -354,18 +349,16 @@ void elliptic_t::BuildOperatorDiagonalIpdgTri3D(dfloat *A) {
       }
     }
   }
-
-  free(MS);
 }
 
-void elliptic_t::BuildOperatorDiagonalContinuousTri2D(dfloat *A) {
+void elliptic_t::BuildOperatorDiagonalContinuousTri2D(memory<dfloat>& A) {
 
   for(dlong eM=0;eM<mesh.Nelements;++eM){
     dlong gbase = eM*mesh.Nggeo;
-    dfloat Grr = mesh.ggeo[gbase + G00ID];
-    dfloat Grs = mesh.ggeo[gbase + G01ID];
-    dfloat Gss = mesh.ggeo[gbase + G11ID];
-    dfloat J   = mesh.ggeo[gbase + GWJID];
+    dfloat Grr = mesh.ggeo[gbase + mesh.G00ID];
+    dfloat Grs = mesh.ggeo[gbase + mesh.G01ID];
+    dfloat Gss = mesh.ggeo[gbase + mesh.G11ID];
+    dfloat J   = mesh.wJ[eM];
 
     /* start with stiffness matrix  */
     for(int n=0;n<mesh.Np;++n){
@@ -390,12 +383,12 @@ void elliptic_t::BuildOperatorDiagonalContinuousTri2D(dfloat *A) {
   }
 }
 
-void elliptic_t::BuildOperatorDiagonalIpdgQuad2D(dfloat *A) {
+void elliptic_t::BuildOperatorDiagonalIpdgQuad2D(memory<dfloat>& A) {
 
   // build some monolithic basis arrays (for quads and hexes)
-  dfloat *B  = (dfloat*) calloc(mesh.Np*mesh.Np, sizeof(dfloat));
-  dfloat *Br = (dfloat*) calloc(mesh.Np*mesh.Np, sizeof(dfloat));
-  dfloat *Bs = (dfloat*) calloc(mesh.Np*mesh.Np, sizeof(dfloat));
+  memory<dfloat> B (mesh.Np*mesh.Np, 0.0);
+  memory<dfloat> Br(mesh.Np*mesh.Np, 0.0);
+  memory<dfloat> Bs(mesh.Np*mesh.Np, 0.0);
 
   int mode = 0;
   for(int nj=0;nj<mesh.N+1;++nj){
@@ -428,11 +421,11 @@ void elliptic_t::BuildOperatorDiagonalIpdgQuad2D(dfloat *A) {
       // (grad phi_n, grad phi_m)_{D^e}
       for(int i=0;i<mesh.Np;++i){
         dlong base = eM*mesh.Np*mesh.Nvgeo + i;
-        dfloat drdx = mesh.vgeo[base+mesh.Np*RXID];
-        dfloat drdy = mesh.vgeo[base+mesh.Np*RYID];
-        dfloat dsdx = mesh.vgeo[base+mesh.Np*SXID];
-        dfloat dsdy = mesh.vgeo[base+mesh.Np*SYID];
-        dfloat JW   = mesh.vgeo[base+mesh.Np*JWID];
+        dfloat drdx = mesh.vgeo[base+mesh.Np*mesh.RXID];
+        dfloat drdy = mesh.vgeo[base+mesh.Np*mesh.RYID];
+        dfloat dsdx = mesh.vgeo[base+mesh.Np*mesh.SXID];
+        dfloat dsdy = mesh.vgeo[base+mesh.Np*mesh.SYID];
+        dfloat JW   = mesh.wJ[eM*mesh.Np + i];
 
         int idn = n*mesh.Np+i;
         dfloat dlndx = drdx*Br[idn] + dsdx*Bs[idn];
@@ -448,17 +441,17 @@ void elliptic_t::BuildOperatorDiagonalIpdgQuad2D(dfloat *A) {
 
           // grab vol geofacs at surface nodes
           dlong baseM = eM*mesh.Np*mesh.Nvgeo + vidM;
-          dfloat drdxM = mesh.vgeo[baseM+mesh.Np*RXID];
-          dfloat drdyM = mesh.vgeo[baseM+mesh.Np*RYID];
-          dfloat dsdxM = mesh.vgeo[baseM+mesh.Np*SXID];
-          dfloat dsdyM = mesh.vgeo[baseM+mesh.Np*SYID];
+          dfloat drdxM = mesh.vgeo[baseM+mesh.Np*mesh.RXID];
+          dfloat drdyM = mesh.vgeo[baseM+mesh.Np*mesh.RYID];
+          dfloat dsdxM = mesh.vgeo[baseM+mesh.Np*mesh.SXID];
+          dfloat dsdyM = mesh.vgeo[baseM+mesh.Np*mesh.SYID];
 
           // grab surface geometric factors
           dlong base = mesh.Nsgeo*(eM*mesh.Nfp*mesh.Nfaces + fM*mesh.Nfp + i);
-          dfloat nx = mesh.sgeo[base+NXID];
-          dfloat ny = mesh.sgeo[base+NYID];
-          dfloat wsJ = mesh.sgeo[base+WSJID];
-          dfloat hinv = mesh.sgeo[base+IHID];
+          dfloat nx = mesh.sgeo[base+mesh.NXID];
+          dfloat ny = mesh.sgeo[base+mesh.NYID];
+          dfloat wsJ = mesh.sgeo[base+mesh.WSJID];
+          dfloat hinv = mesh.sgeo[base+mesh.IHID];
 
           // form negative trace terms in IPDG
           int idnM = n*mesh.Np+vidM;
@@ -492,11 +485,9 @@ void elliptic_t::BuildOperatorDiagonalIpdgQuad2D(dfloat *A) {
       }
     }
   }
-
-  free(B); free(Br); free(Bs);
 }
 
-void elliptic_t::BuildOperatorDiagonalContinuousQuad2D(dfloat *A) {
+void elliptic_t::BuildOperatorDiagonalContinuousQuad2D(memory<dfloat>& A) {
 
   for(dlong eM=0;eM<mesh.Nelements;++eM){
     for (int ny=0;ny<mesh.Nq;ny++) {
@@ -507,21 +498,21 @@ void elliptic_t::BuildOperatorDiagonalContinuousQuad2D(dfloat *A) {
 
           for (int k=0;k<mesh.Nq;k++) {
             int id = k+ny*mesh.Nq;
-            dfloat Grr = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + G00ID*mesh.Np];
+            dfloat Grr = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + mesh.G00ID*mesh.Np];
             A[eM*mesh.Np+iid] += Grr*mesh.D[nx+k*mesh.Nq]*mesh.D[nx+k*mesh.Nq];
           }
 
           for (int k=0;k<mesh.Nq;k++) {
             int id = nx+k*mesh.Nq;
-            dfloat Gss = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + G11ID*mesh.Np];
+            dfloat Gss = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + mesh.G11ID*mesh.Np];
             A[eM*mesh.Np+iid] += Gss*mesh.D[ny+k*mesh.Nq]*mesh.D[ny+k*mesh.Nq];
           }
 
           int id = nx+ny*mesh.Nq;
-          dfloat Grs = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + G01ID*mesh.Np];
+          dfloat Grs = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + mesh.G01ID*mesh.Np];
           A[eM*mesh.Np+iid] += 2*Grs*mesh.D[nx+nx*mesh.Nq]*mesh.D[ny+ny*mesh.Nq];
 
-          dfloat JW = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + GWJID*mesh.Np];
+          dfloat JW = mesh.wJ[eM*mesh.Np + iid];
           A[eM*mesh.Np+iid] += JW*lambda;
 
         } else {
@@ -542,12 +533,12 @@ void elliptic_t::BuildOperatorDiagonalContinuousQuad2D(dfloat *A) {
 }
 
 
-void elliptic_t::BuildOperatorDiagonalIpdgQuad3D(dfloat *A) {
+void elliptic_t::BuildOperatorDiagonalIpdgQuad3D(memory<dfloat>& A) {
 
   // build some monolithic basis arrays (for quads and hexes)
-  dfloat *B  = (dfloat*) calloc(mesh.Np*mesh.Np, sizeof(dfloat));
-  dfloat *Br = (dfloat*) calloc(mesh.Np*mesh.Np, sizeof(dfloat));
-  dfloat *Bs = (dfloat*) calloc(mesh.Np*mesh.Np, sizeof(dfloat));
+  memory<dfloat> B (mesh.Np*mesh.Np, 0.0);
+  memory<dfloat> Br(mesh.Np*mesh.Np, 0.0);
+  memory<dfloat> Bs(mesh.Np*mesh.Np, 0.0);
 
   int mode = 0;
   for(int nj=0;nj<mesh.N+1;++nj){
@@ -580,16 +571,16 @@ void elliptic_t::BuildOperatorDiagonalIpdgQuad3D(dfloat *A) {
       // (grad phi_n, grad phi_m)_{D^e}
       for(int i=0;i<mesh.Np;++i){
         dlong base = eM*mesh.Np*mesh.Nvgeo + i;
-        dfloat drdx = mesh.vgeo[base+mesh.Np*RXID];
-        dfloat drdy = mesh.vgeo[base+mesh.Np*RYID];
-        dfloat drdz = mesh.vgeo[base+mesh.Np*RZID];
-        dfloat dsdx = mesh.vgeo[base+mesh.Np*SXID];
-        dfloat dsdy = mesh.vgeo[base+mesh.Np*SYID];
-        dfloat dsdz = mesh.vgeo[base+mesh.Np*SZID];
-        dfloat dtdx = mesh.vgeo[base+mesh.Np*TXID];
-        dfloat dtdy = mesh.vgeo[base+mesh.Np*TYID];
-        dfloat dtdz = mesh.vgeo[base+mesh.Np*TZID];
-        dfloat JW   = mesh.vgeo[base+mesh.Np*JWID];
+        dfloat drdx = mesh.vgeo[base+mesh.Np*mesh.RXID];
+        dfloat drdy = mesh.vgeo[base+mesh.Np*mesh.RYID];
+        dfloat drdz = mesh.vgeo[base+mesh.Np*mesh.RZID];
+        dfloat dsdx = mesh.vgeo[base+mesh.Np*mesh.SXID];
+        dfloat dsdy = mesh.vgeo[base+mesh.Np*mesh.SYID];
+        dfloat dsdz = mesh.vgeo[base+mesh.Np*mesh.SZID];
+        dfloat dtdx = mesh.vgeo[base+mesh.Np*mesh.TXID];
+        dfloat dtdy = mesh.vgeo[base+mesh.Np*mesh.TYID];
+        dfloat dtdz = mesh.vgeo[base+mesh.Np*mesh.TZID];
+        dfloat JW   = mesh.wJ[eM*mesh.Np + i];
 
         int idn = n*mesh.Np+i;
         dfloat dlndx = drdx*Br[idn] + dsdx*Bs[idn] + dtdx;
@@ -606,25 +597,25 @@ void elliptic_t::BuildOperatorDiagonalIpdgQuad3D(dfloat *A) {
 
           // grab vol geofacs at surface nodes
           dlong baseM = eM*mesh.Np*mesh.Nvgeo + vidM;
-          dfloat drdxM = mesh.vgeo[baseM+mesh.Np*RXID];
-          dfloat drdyM = mesh.vgeo[baseM+mesh.Np*RYID];
-          dfloat drdzM = mesh.vgeo[baseM+mesh.Np*RZID];
+          dfloat drdxM = mesh.vgeo[baseM+mesh.Np*mesh.RXID];
+          dfloat drdyM = mesh.vgeo[baseM+mesh.Np*mesh.RYID];
+          dfloat drdzM = mesh.vgeo[baseM+mesh.Np*mesh.RZID];
 
-          dfloat dsdxM = mesh.vgeo[baseM+mesh.Np*SXID];
-          dfloat dsdyM = mesh.vgeo[baseM+mesh.Np*SYID];
-          dfloat dsdzM = mesh.vgeo[baseM+mesh.Np*SZID];
+          dfloat dsdxM = mesh.vgeo[baseM+mesh.Np*mesh.SXID];
+          dfloat dsdyM = mesh.vgeo[baseM+mesh.Np*mesh.SYID];
+          dfloat dsdzM = mesh.vgeo[baseM+mesh.Np*mesh.SZID];
 
-          dfloat dtdxM = mesh.vgeo[baseM+mesh.Np*TXID];
-          dfloat dtdyM = mesh.vgeo[baseM+mesh.Np*TYID];
-          dfloat dtdzM = mesh.vgeo[baseM+mesh.Np*TZID];
+          dfloat dtdxM = mesh.vgeo[baseM+mesh.Np*mesh.TXID];
+          dfloat dtdyM = mesh.vgeo[baseM+mesh.Np*mesh.TYID];
+          dfloat dtdzM = mesh.vgeo[baseM+mesh.Np*mesh.TZID];
 
           // grab surface geometric factors
           dlong base = mesh.Nsgeo*(eM*mesh.Nfp*mesh.Nfaces + fM*mesh.Nfp + i);
-          dfloat nx = mesh.sgeo[base+NXID];
-          dfloat ny = mesh.sgeo[base+NYID];
-          dfloat nz = mesh.sgeo[base+NZID];
-          dfloat wsJ = mesh.sgeo[base+WSJID];
-          dfloat hinv = mesh.sgeo[base+IHID];
+          dfloat nx = mesh.sgeo[base+mesh.NXID];
+          dfloat ny = mesh.sgeo[base+mesh.NYID];
+          dfloat nz = mesh.sgeo[base+mesh.NZID];
+          dfloat wsJ = mesh.sgeo[base+mesh.WSJID];
+          dfloat hinv = mesh.sgeo[base+mesh.IHID];
 
           // form negative trace terms in IPDG
           int idnM = n*mesh.Np+vidM;
@@ -644,11 +635,9 @@ void elliptic_t::BuildOperatorDiagonalIpdgQuad3D(dfloat *A) {
       }
     }
   }
-
-  free(B); free(Br); free(Bs);
 }
 
-void elliptic_t::BuildOperatorDiagonalContinuousQuad3D(dfloat *A) {
+void elliptic_t::BuildOperatorDiagonalContinuousQuad3D(memory<dfloat>& A) {
 
   for(dlong eM=0;eM<mesh.Nelements;++eM){
     for (int ny=0;ny<mesh.Nq;ny++) {
@@ -658,34 +647,34 @@ void elliptic_t::BuildOperatorDiagonalContinuousQuad3D(dfloat *A) {
 
         for (int k=0;k<mesh.Nq;k++) {
           int id = k+ny*mesh.Nq;
-          dfloat Grr = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + G00ID*mesh.Np];
+          dfloat Grr = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + mesh.G00ID*mesh.Np];
           A[eM*mesh.Np+iid] += Grr*mesh.D[nx+k*mesh.Nq]*mesh.D[nx+k*mesh.Nq];
         }
 
         for (int k=0;k<mesh.Nq;k++) {
           int id = nx+k*mesh.Nq;
-          dfloat Gss = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + G11ID*mesh.Np];
+          dfloat Gss = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + mesh.G11ID*mesh.Np];
           A[eM*mesh.Np+iid] += Gss*mesh.D[ny+k*mesh.Nq]*mesh.D[ny+k*mesh.Nq];
         }
 
         int id = nx+ny*mesh.Nq;
-        dfloat Grs = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + G01ID*mesh.Np];
+        dfloat Grs = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + mesh.G01ID*mesh.Np];
         A[eM*mesh.Np+iid] += 2*Grs*mesh.D[nx+nx*mesh.Nq]*mesh.D[ny+ny*mesh.Nq];
 
         // id = nx+ny*mesh.Nq;
-        // dfloat Grt = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + G02ID*mesh.Np];
+        // dfloat Grt = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + mesh.G02ID*mesh.Np];
         // A[eM*mesh.Np+iid] += 2*Grt*mesh.D[nx+nx*mesh.Nq];
 
         // id = nx+ny*mesh.Nq;
-        // dfloat Gst = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + G12ID*mesh.Np];
+        // dfloat Gst = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + mesh.G12ID*mesh.Np];
         // A[eM*mesh.Np+iid] += 2*Gst*mesh.D[ny+ny*mesh.Nq];
 
-        // dfloat Gtt = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + G22ID*mesh.Np];
+        // dfloat Gtt = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + mesh.G22ID*mesh.Np];
         // A[eM*mesh.Np+iid] += Gtt;
 
 
 
-        dfloat JW  = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + GWJID*mesh.Np];
+        dfloat JW  = mesh.wJ[eM*mesh.Np + iid];
         A[eM*mesh.Np+iid] += JW*lambda;
       }
     }
@@ -694,10 +683,10 @@ void elliptic_t::BuildOperatorDiagonalContinuousQuad3D(dfloat *A) {
 
 
 
-void elliptic_t::BuildOperatorDiagonalIpdgTet3D(dfloat *A) {
+void elliptic_t::BuildOperatorDiagonalIpdgTet3D(memory<dfloat>& A) {
 
   // surface mass matrices MS = MM*LIFT
-  dfloat *MS = (dfloat *) calloc(mesh.Nfaces*mesh.Nfp*mesh.Nfp,sizeof(dfloat));
+  memory<dfloat> MS(mesh.Nfaces*mesh.Nfp*mesh.Nfp);
   for (int f=0;f<mesh.Nfaces;f++) {
     for (int n=0;n<mesh.Nfp;n++) {
       int fn = mesh.faceNodes[f*mesh.Nfp+n];
@@ -716,16 +705,16 @@ void elliptic_t::BuildOperatorDiagonalIpdgTet3D(dfloat *A) {
 
   for(dlong eM=0;eM<mesh.Nelements;++eM){
     dlong vbase = eM*mesh.Nvgeo;
-    dfloat drdx = mesh.vgeo[vbase+RXID];
-    dfloat drdy = mesh.vgeo[vbase+RYID];
-    dfloat drdz = mesh.vgeo[vbase+RZID];
-    dfloat dsdx = mesh.vgeo[vbase+SXID];
-    dfloat dsdy = mesh.vgeo[vbase+SYID];
-    dfloat dsdz = mesh.vgeo[vbase+SZID];
-    dfloat dtdx = mesh.vgeo[vbase+TXID];
-    dfloat dtdy = mesh.vgeo[vbase+TYID];
-    dfloat dtdz = mesh.vgeo[vbase+TZID];
-    dfloat J = mesh.vgeo[vbase+JID];
+    dfloat drdx = mesh.vgeo[vbase+mesh.RXID];
+    dfloat drdy = mesh.vgeo[vbase+mesh.RYID];
+    dfloat drdz = mesh.vgeo[vbase+mesh.RZID];
+    dfloat dsdx = mesh.vgeo[vbase+mesh.SXID];
+    dfloat dsdy = mesh.vgeo[vbase+mesh.SYID];
+    dfloat dsdz = mesh.vgeo[vbase+mesh.SZID];
+    dfloat dtdx = mesh.vgeo[vbase+mesh.TXID];
+    dfloat dtdy = mesh.vgeo[vbase+mesh.TYID];
+    dfloat dtdz = mesh.vgeo[vbase+mesh.TZID];
+    dfloat J = mesh.wJ[eM];
 
     dfloat G00 = drdx*drdx + drdy*drdy + drdz*drdz;
     dfloat G01 = drdx*dsdx + drdy*dsdy + drdz*dsdz;
@@ -757,11 +746,11 @@ void elliptic_t::BuildOperatorDiagonalIpdgTet3D(dfloat *A) {
     for (int fM=0;fM<mesh.Nfaces;fM++) {
       // load surface geofactors for this face
       dlong sid = mesh.Nsgeo*(eM*mesh.Nfaces+fM);
-      dfloat nx = mesh.sgeo[sid+NXID];
-      dfloat ny = mesh.sgeo[sid+NYID];
-      dfloat nz = mesh.sgeo[sid+NZID];
-      dfloat sJ = mesh.sgeo[sid+SJID];
-      dfloat hinv = mesh.sgeo[sid+IHID];
+      dfloat nx = mesh.sgeo[sid+mesh.NXID];
+      dfloat ny = mesh.sgeo[sid+mesh.NYID];
+      dfloat nz = mesh.sgeo[sid+mesh.NZID];
+      dfloat sJ = mesh.sgeo[sid+mesh.SJID];
+      dfloat hinv = mesh.sgeo[sid+mesh.IHID];
 
       int bc = mesh.EToB[fM+mesh.Nfaces*eM]; //raw boundary flag
 
@@ -782,7 +771,7 @@ void elliptic_t::BuildOperatorDiagonalIpdgTet3D(dfloat *A) {
       }
 
       // mass matrix for this face
-      dfloat *MSf = MS+fM*mesh.Nfp*mesh.Nfp;
+      memory<dfloat> MSf = MS+fM*mesh.Nfp*mesh.Nfp;
 
       // penalty term just involves face nodes
       for(int n=0;n<mesh.Nfp;++n){
@@ -842,21 +831,19 @@ void elliptic_t::BuildOperatorDiagonalIpdgTet3D(dfloat *A) {
       }
     }
   }
-
-  free(MS);
 }
 
-void elliptic_t::BuildOperatorDiagonalContinuousTet3D(dfloat *A) {
+void elliptic_t::BuildOperatorDiagonalContinuousTet3D(memory<dfloat>& A) {
 
   for(dlong eM=0;eM<mesh.Nelements;++eM){
     dlong gbase = eM*mesh.Nggeo;
-    dfloat Grr = mesh.ggeo[gbase + G00ID];
-    dfloat Grs = mesh.ggeo[gbase + G01ID];
-    dfloat Grt = mesh.ggeo[gbase + G02ID];
-    dfloat Gss = mesh.ggeo[gbase + G11ID];
-    dfloat Gst = mesh.ggeo[gbase + G12ID];
-    dfloat Gtt = mesh.ggeo[gbase + G22ID];
-    dfloat J   = mesh.ggeo[gbase + GWJID];
+    dfloat Grr = mesh.ggeo[gbase + mesh.G00ID];
+    dfloat Grs = mesh.ggeo[gbase + mesh.G01ID];
+    dfloat Grt = mesh.ggeo[gbase + mesh.G02ID];
+    dfloat Gss = mesh.ggeo[gbase + mesh.G11ID];
+    dfloat Gst = mesh.ggeo[gbase + mesh.G12ID];
+    dfloat Gtt = mesh.ggeo[gbase + mesh.G22ID];
+    dfloat J   = mesh.wJ[eM];
 
     /* start with stiffness matrix  */
     for(int n=0;n<mesh.Np;++n){
@@ -884,13 +871,13 @@ void elliptic_t::BuildOperatorDiagonalContinuousTet3D(dfloat *A) {
   }
 }
 
-void elliptic_t::BuildOperatorDiagonalIpdgHex3D(dfloat *A) {
+void elliptic_t::BuildOperatorDiagonalIpdgHex3D(memory<dfloat>& A) {
 
   // build some monolithic basis arrays (for quads and hexes)
-  dfloat *B  = (dfloat*) calloc(mesh.Np*mesh.Np, sizeof(dfloat));
-  dfloat *Br = (dfloat*) calloc(mesh.Np*mesh.Np, sizeof(dfloat));
-  dfloat *Bs = (dfloat*) calloc(mesh.Np*mesh.Np, sizeof(dfloat));
-  dfloat *Bt = (dfloat*) calloc(mesh.Np*mesh.Np, sizeof(dfloat));
+  memory<dfloat> B (mesh.Np*mesh.Np, 0.0);
+  memory<dfloat> Br(mesh.Np*mesh.Np, 0.0);
+  memory<dfloat> Bs(mesh.Np*mesh.Np, 0.0);
+  memory<dfloat> Bt(mesh.Np*mesh.Np, 0.0);
 
   int mode = 0;
   for(int nk=0;nk<mesh.N+1;++nk){
@@ -930,16 +917,16 @@ void elliptic_t::BuildOperatorDiagonalIpdgHex3D(dfloat *A) {
       // (grad phi_n, grad phi_m)_{D^e}
       for(int i=0;i<mesh.Np;++i){
         dlong base = eM*mesh.Np*mesh.Nvgeo + i;
-        dfloat drdx = mesh.vgeo[base+mesh.Np*RXID];
-        dfloat drdy = mesh.vgeo[base+mesh.Np*RYID];
-        dfloat drdz = mesh.vgeo[base+mesh.Np*RZID];
-        dfloat dsdx = mesh.vgeo[base+mesh.Np*SXID];
-        dfloat dsdy = mesh.vgeo[base+mesh.Np*SYID];
-        dfloat dsdz = mesh.vgeo[base+mesh.Np*SZID];
-        dfloat dtdx = mesh.vgeo[base+mesh.Np*TXID];
-        dfloat dtdy = mesh.vgeo[base+mesh.Np*TYID];
-        dfloat dtdz = mesh.vgeo[base+mesh.Np*TZID];
-        dfloat JW   = mesh.vgeo[base+mesh.Np*JWID];
+        dfloat drdx = mesh.vgeo[base+mesh.Np*mesh.RXID];
+        dfloat drdy = mesh.vgeo[base+mesh.Np*mesh.RYID];
+        dfloat drdz = mesh.vgeo[base+mesh.Np*mesh.RZID];
+        dfloat dsdx = mesh.vgeo[base+mesh.Np*mesh.SXID];
+        dfloat dsdy = mesh.vgeo[base+mesh.Np*mesh.SYID];
+        dfloat dsdz = mesh.vgeo[base+mesh.Np*mesh.SZID];
+        dfloat dtdx = mesh.vgeo[base+mesh.Np*mesh.TXID];
+        dfloat dtdy = mesh.vgeo[base+mesh.Np*mesh.TYID];
+        dfloat dtdz = mesh.vgeo[base+mesh.Np*mesh.TZID];
+        dfloat JW   = mesh.wJ[eM*mesh.Np + i];
 
         int idn = n*mesh.Np+i;
         dfloat dlndx = drdx*Br[idn] + dsdx*Bs[idn] + dtdx*Bt[idn];
@@ -956,23 +943,23 @@ void elliptic_t::BuildOperatorDiagonalIpdgHex3D(dfloat *A) {
 
           // grab vol geofacs at surface nodes
           dlong baseM = eM*mesh.Np*mesh.Nvgeo + vidM;
-          dfloat drdxM = mesh.vgeo[baseM+mesh.Np*RXID];
-          dfloat drdyM = mesh.vgeo[baseM+mesh.Np*RYID];
-          dfloat drdzM = mesh.vgeo[baseM+mesh.Np*RZID];
-          dfloat dsdxM = mesh.vgeo[baseM+mesh.Np*SXID];
-          dfloat dsdyM = mesh.vgeo[baseM+mesh.Np*SYID];
-          dfloat dsdzM = mesh.vgeo[baseM+mesh.Np*SZID];
-          dfloat dtdxM = mesh.vgeo[baseM+mesh.Np*TXID];
-          dfloat dtdyM = mesh.vgeo[baseM+mesh.Np*TYID];
-          dfloat dtdzM = mesh.vgeo[baseM+mesh.Np*TZID];
+          dfloat drdxM = mesh.vgeo[baseM+mesh.Np*mesh.RXID];
+          dfloat drdyM = mesh.vgeo[baseM+mesh.Np*mesh.RYID];
+          dfloat drdzM = mesh.vgeo[baseM+mesh.Np*mesh.RZID];
+          dfloat dsdxM = mesh.vgeo[baseM+mesh.Np*mesh.SXID];
+          dfloat dsdyM = mesh.vgeo[baseM+mesh.Np*mesh.SYID];
+          dfloat dsdzM = mesh.vgeo[baseM+mesh.Np*mesh.SZID];
+          dfloat dtdxM = mesh.vgeo[baseM+mesh.Np*mesh.TXID];
+          dfloat dtdyM = mesh.vgeo[baseM+mesh.Np*mesh.TYID];
+          dfloat dtdzM = mesh.vgeo[baseM+mesh.Np*mesh.TZID];
 
           // grab surface geometric factors
           dlong base = mesh.Nsgeo*(eM*mesh.Nfp*mesh.Nfaces + fM*mesh.Nfp + i);
-          dfloat nx = mesh.sgeo[base+NXID];
-          dfloat ny = mesh.sgeo[base+NYID];
-          dfloat nz = mesh.sgeo[base+NZID];
-          dfloat wsJ = mesh.sgeo[base+WSJID];
-          dfloat hinv = mesh.sgeo[base+IHID];
+          dfloat nx = mesh.sgeo[base+mesh.NXID];
+          dfloat ny = mesh.sgeo[base+mesh.NYID];
+          dfloat nz = mesh.sgeo[base+mesh.NZID];
+          dfloat wsJ = mesh.sgeo[base+mesh.WSJID];
+          dfloat hinv = mesh.sgeo[base+mesh.IHID];
 
           // form negative trace terms in IPDG
           int idnM = n*mesh.Np+vidM;
@@ -1006,11 +993,9 @@ void elliptic_t::BuildOperatorDiagonalIpdgHex3D(dfloat *A) {
       }
     }
   }
-
-  free(B); free(Br); free(Bs); free(Bt);
 }
 
-void elliptic_t::BuildOperatorDiagonalContinuousHex3D(dfloat *A) {
+void elliptic_t::BuildOperatorDiagonalContinuousHex3D(memory<dfloat>& A) {
 
   for(dlong eM=0;eM<mesh.Nelements;++eM){
     for (int nz=0;nz<mesh.Nq;nz++) {
@@ -1024,34 +1009,34 @@ void elliptic_t::BuildOperatorDiagonalContinuousHex3D(dfloat *A) {
         dlong base = eM*mesh.Np*mesh.Nggeo;
 
 
-        dfloat Grs = mesh.ggeo[base + id + G01ID*mesh.Np];
+        dfloat Grs = mesh.ggeo[base + id + mesh.G01ID*mesh.Np];
         A[eM*mesh.Np+idn] += 2*Grs*mesh.D[nx+nx*mesh.Nq]*mesh.D[ny+ny*mesh.Nq];
 
-        dfloat Grt = mesh.ggeo[base + id + G02ID*mesh.Np];
+        dfloat Grt = mesh.ggeo[base + id + mesh.G02ID*mesh.Np];
         A[eM*mesh.Np+idn] += 2*Grt*mesh.D[nx+nx*mesh.Nq]*mesh.D[nz+nz*mesh.Nq];
 
-        dfloat Gst = mesh.ggeo[base + id + G12ID*mesh.Np];
+        dfloat Gst = mesh.ggeo[base + id + mesh.G12ID*mesh.Np];
         A[eM*mesh.Np+idn] += 2*Gst*mesh.D[ny+ny*mesh.Nq]*mesh.D[nz+nz*mesh.Nq];
 
         for (int k=0;k<mesh.Nq;k++) {
           int iid = k+ny*mesh.Nq+nz*mesh.Nq*mesh.Nq;
-          dfloat Grr = mesh.ggeo[base + iid + G00ID*mesh.Np];
+          dfloat Grr = mesh.ggeo[base + iid + mesh.G00ID*mesh.Np];
           A[eM*mesh.Np+idn] += Grr*mesh.D[nx+k*mesh.Nq]*mesh.D[nx+k*mesh.Nq];
         }
 
         for (int k=0;k<mesh.Nq;k++) {
           int iid = nx+k*mesh.Nq+nz*mesh.Nq*mesh.Nq;
-          dfloat Gss = mesh.ggeo[base + iid + G11ID*mesh.Np];
+          dfloat Gss = mesh.ggeo[base + iid + mesh.G11ID*mesh.Np];
           A[eM*mesh.Np+idn] += Gss*mesh.D[ny+k*mesh.Nq]*mesh.D[ny+k*mesh.Nq];
         }
 
         for (int k=0;k<mesh.Nq;k++) {
           int iid = nx+ny*mesh.Nq+k*mesh.Nq*mesh.Nq;
-          dfloat Gtt = mesh.ggeo[base + iid + G22ID*mesh.Np];
+          dfloat Gtt = mesh.ggeo[base + iid + mesh.G22ID*mesh.Np];
           A[eM*mesh.Np+idn] += Gtt*mesh.D[nz+k*mesh.Nq]*mesh.D[nz+k*mesh.Nq];
         }
 
-        dfloat JW = mesh.ggeo[base + id + GWJID*mesh.Np];
+        dfloat JW = mesh.wJ[eM*mesh.Np + idn];
         A[eM*mesh.Np+idn] += JW*lambda;
       } else {
         A[eM*mesh.Np+idn] = 1; //just put a 1 so A is invertable

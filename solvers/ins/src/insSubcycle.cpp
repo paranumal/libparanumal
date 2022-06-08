@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,19 +26,8 @@ SOFTWARE.
 
 #include "ins.hpp"
 
-subcycler_t::subcycler_t(ins_t& ins):
-  solver_t(ins.platform, ins.settings), mesh(ins.mesh) {
-
-  NVfields = ins.NVfields;
-  nu = ins.nu;
-  cubature = ins.cubature;
-  vTraceHalo = ins.vTraceHalo;
-  advectionVolumeKernel = ins.advectionVolumeKernel;
-  advectionSurfaceKernel = ins.advectionSurfaceKernel;
-}
-
 //evaluate ODE rhs = f(q,t)
-void subcycler_t::rhsf(occa::memory& o_U, occa::memory& o_RHS, const dfloat T){
+void subcycler_t::rhsf(deviceMemory<dfloat>& o_U, deviceMemory<dfloat>& o_RHS, const dfloat T){
 
   //interpolate velocity history for advective field (halo elements first)
   if(mesh.NhaloElements)
@@ -55,7 +44,7 @@ void subcycler_t::rhsf(occa::memory& o_U, occa::memory& o_RHS, const dfloat T){
                            o_Ue);
 
   // extract Ue halo
-  vTraceHalo->ExchangeStart(o_Ue, 1, ogs_dfloat);
+  vTraceHalo.ExchangeStart(o_Ue, 1);
 
   if(mesh.NinternalElements)
     subCycleAdvectionKernel(mesh.NinternalElements,
@@ -71,10 +60,10 @@ void subcycler_t::rhsf(occa::memory& o_U, occa::memory& o_RHS, const dfloat T){
                            o_Ue);
 
   // finish exchange of Ue
-  vTraceHalo->ExchangeFinish(o_Ue, 1, ogs_dfloat);
+  vTraceHalo.ExchangeFinish(o_Ue, 1);
 
   // extract u halo on DEVICE
-  vTraceHalo->ExchangeStart(o_U, 1, ogs_dfloat);
+  vTraceHalo.ExchangeStart(o_U, 1);
 
   if (cubature)
     advectionVolumeKernel(mesh.Nelements,
@@ -95,7 +84,7 @@ void subcycler_t::rhsf(occa::memory& o_U, occa::memory& o_RHS, const dfloat T){
                          o_U,
                          o_RHS);
 
-  vTraceHalo->ExchangeFinish(o_U, 1, ogs_dfloat);
+  vTraceHalo.ExchangeFinish(o_U, 1);
 
   if (cubature)
     advectionSurfaceKernel(mesh.Nelements,

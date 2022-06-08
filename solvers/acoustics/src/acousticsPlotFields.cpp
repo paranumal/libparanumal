@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,11 +27,11 @@ SOFTWARE.
 #include "acoustics.hpp"
 
 // interpolate data to plot nodes and save to file (one per process
-void acoustics_t::PlotFields(dfloat* Q, char *fileName){
+void acoustics_t::PlotFields(memory<dfloat> Q, const std::string fileName){
 
   FILE *fp;
 
-  fp = fopen(fileName, "w");
+  fp = fopen(fileName.c_str(), "w");
 
   fprintf(fp, "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"BigEndian\">\n");
   fprintf(fp, "  <UnstructuredGrid>\n");
@@ -44,33 +44,39 @@ void acoustics_t::PlotFields(dfloat* Q, char *fileName){
   fprintf(fp, "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
 
   //scratch space for interpolation
-  size_t NscratchBytes = mymax(mesh.Np, mesh.plotNp)*sizeof(dfloat);
-  dfloat* scratch = (dfloat *) malloc(2*NscratchBytes);
+  size_t Nscratch = std::max(mesh.Np, mesh.plotNp);
+  memory<dfloat> scratch(2*Nscratch);
 
-  dfloat* Ix = (dfloat *) malloc(mesh.plotNp*sizeof(dfloat));
-  dfloat* Iy = (dfloat *) malloc(mesh.plotNp*sizeof(dfloat));
-  dfloat* Iz = (dfloat *) malloc(mesh.plotNp*sizeof(dfloat));
+  memory<dfloat> Ix(mesh.plotNp);
+  memory<dfloat> Iy(mesh.plotNp);
+  memory<dfloat> Iz(mesh.plotNp);
 
   // compute plot node coordinates on the fly
   for(dlong e=0;e<mesh.Nelements;++e){
     mesh.PlotInterp(mesh.x + e*mesh.Np, Ix, scratch);
     mesh.PlotInterp(mesh.y + e*mesh.Np, Iy, scratch);
-    mesh.PlotInterp(mesh.z + e*mesh.Np, Iz, scratch);
+    if(mesh.dim==3)
+      mesh.PlotInterp(mesh.z + e*mesh.Np, Iz, scratch);
 
-    for(int n=0;n<mesh.plotNp;++n){
-      fprintf(fp, "       ");
-      fprintf(fp, "%g %g %g\n", Ix[n],Iy[n],Iz[n]);
+    if (mesh.dim==2) {
+      for(int n=0;n<mesh.plotNp;++n){
+        fprintf(fp, "       ");
+        fprintf(fp, "%g %g %g\n", Ix[n],Iy[n],0.0);
+      }
+    } else {
+      for(int n=0;n<mesh.plotNp;++n){
+        fprintf(fp, "       ");
+        fprintf(fp, "%g %g %g\n", Ix[n],Iy[n],Iz[n]);
+      }
     }
   }
   fprintf(fp, "        </DataArray>\n");
   fprintf(fp, "      </Points>\n");
 
-  free(Ix); free(Iy); free(Iz);
-
-  dfloat* Ip = (dfloat *) malloc(mesh.plotNp*sizeof(dfloat));
-  dfloat* Iu = (dfloat *) malloc(mesh.plotNp*sizeof(dfloat));
-  dfloat* Iv = (dfloat *) malloc(mesh.plotNp*sizeof(dfloat));
-  dfloat* Iw = (dfloat *) malloc(mesh.plotNp*sizeof(dfloat));
+  memory<dfloat> Ip(mesh.plotNp);
+  memory<dfloat> Iu(mesh.plotNp);
+  memory<dfloat> Iv(mesh.plotNp);
+  memory<dfloat> Iw(mesh.plotNp);
 
   // write out density
   fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
@@ -104,8 +110,6 @@ void acoustics_t::PlotFields(dfloat* Q, char *fileName){
   }
   fprintf(fp, "       </DataArray>\n");
   fprintf(fp, "     </PointData>\n");
-
-  free(Ip); free(Iu); free(Iv); free(Iw);
 
   fprintf(fp, "    <Cells>\n");
   fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");
@@ -147,6 +151,4 @@ void acoustics_t::PlotFields(dfloat* Q, char *fileName){
   fprintf(fp, "  </UnstructuredGrid>\n");
   fprintf(fp, "</VTKFile>\n");
   fclose(fp);
-
-  free(scratch);
 }

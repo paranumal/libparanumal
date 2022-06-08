@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Rajesh Gandham
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Rajesh Gandham
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,14 +27,15 @@ SOFTWARE.
 #include "parAlmond.hpp"
 #include "parAlmond/parAlmondAMGSetup.hpp"
 
+namespace libp {
+
 namespace parAlmond {
 
-parCSR *smoothProlongator(parCSR *A, parCSR *T){
+parCSR smoothProlongator(parCSR& A, parCSR& T){
 
   // MPI info
-  int rank, size;
-  MPI_Comm_rank(A->comm, &rank);
-  MPI_Comm_size(A->comm, &size);
+  int rank = A.comm.rank();
+  int size = A.comm.size();
 
   // This function computes a smoothed prologation operator
   // via a single weighted Jacobi iteration on the tentative
@@ -44,81 +45,82 @@ parCSR *smoothProlongator(parCSR *A, parCSR *T){
   //
   // To compute D^{-1}*A*T we need all the rows T(j,:) for which
   // j is a column index for the nonzeros of A on this rank.
-  // For all local column indices in A->diag, we will already
+  // For all local column indices in A.diag, we will already
   // have the row of T on this rank, so we just need to gather
   // the offd colIds
 
   //Jacobi weight
-  const dfloat omega = (4./3.)/A->rho;
+  const dfloat omega = (4./3.)/A.rho;
 
-  hlong *recvRows = (hlong *) calloc(A->Ncols-A->NlocalCols, sizeof(hlong));
-  int *sendCounts = (int*) calloc(size, sizeof(int));
-  int *recvCounts = (int*) calloc(size, sizeof(int));
-  int *sendOffsets = (int*) calloc(size+1, sizeof(int));
-  int *recvOffsets = (int*) calloc(size+1, sizeof(int));
+  memory<hlong> recvRows(A.Ncols-A.NlocalCols);
+  memory<int> sendCounts(size);
+  memory<int> recvCounts(size, 0);
+  memory<int> sendOffsets(size+1);
+  memory<int> recvOffsets(size+1);
 
   //use the colMap of A to list the needed rows of T
   int r=0;
-  for (dlong n=A->NlocalCols;n<A->Ncols;n++) {
-    const hlong id = A->colMap[n];
-    while (id>=T->globalRowStarts[r+1]) r++; //assumes the halo is sorted
+  for (dlong n=A.NlocalCols;n<A.Ncols;n++) {
+    const hlong id = A.colMap[n];
+    while (id>=T.globalRowStarts[r+1]) r++; //assumes the halo is sorted
     recvCounts[r]++;
-    recvRows[n-A->NlocalCols] = id; //record the row to recv
+    recvRows[n-A.NlocalCols] = id; //record the row to recv
   }
 
   //share the counts
-  MPI_Alltoall(recvCounts, 1, MPI_INT,
-               sendCounts, 1, MPI_INT, A->comm);
+  A.comm.Alltoall(recvCounts, sendCounts);
 
+  sendOffsets[0] = 0;
+  recvOffsets[0] = 0;
   for (r=0;r<size;r++) {
     sendOffsets[r+1] = sendOffsets[r]+sendCounts[r];
     recvOffsets[r+1] = recvOffsets[r]+recvCounts[r];
   }
 
   int sendTotal = sendOffsets[size];
-  hlong *sendRows = (hlong *) calloc(sendTotal, sizeof(hlong));
+  memory<hlong> sendRows(sendTotal);
 
   //share the rowIds
-  MPI_Alltoallv(recvRows, recvCounts, recvOffsets, MPI_HLONG,
-                sendRows, sendCounts, sendOffsets, MPI_HLONG,
-                T->comm);
+  T.comm.Alltoallv(recvRows, recvCounts, recvOffsets,
+                   sendRows, sendCounts, sendOffsets);
 
   //we now have a list of rows to send, count the nnz to send
   dlong nnzTotal=0;
   for (r=0;r<size;r++) {
     sendCounts[r] =0; //reset
     for (int n=sendOffsets[r];n<sendOffsets[r+1];n++) {
-      dlong i = (dlong) (sendRows[n]-T->globalRowStarts[rank]); //local row id
-      sendCounts[r]+= T->diag.rowStarts[i+1]-T->diag.rowStarts[i]; //count entries in this row
-      sendCounts[r]+= T->offd.rowStarts[i+1]-T->offd.rowStarts[i]; //count entries in this row
+      dlong i = (dlong) (sendRows[n]-T.globalRowStarts[rank]); //local row id
+      sendCounts[r]+= T.diag.rowStarts[i+1]-T.diag.rowStarts[i]; //count entries in this row
+      sendCounts[r]+= T.offd.rowStarts[i+1]-T.offd.rowStarts[i]; //count entries in this row
     }
     nnzTotal += sendCounts[r]; //tally the total
   }
 
-  parCOO::nonZero_t *sendNonZeros = (parCOO::nonZero_t *) calloc(nnzTotal, sizeof(parCOO::nonZero_t));
+  memory<parCOO::nonZero_t> sendNonZeros(nnzTotal);
 
   nnzTotal=0; //reset
   for (r=0;r<size;r++) {
     for (int n=sendOffsets[r];n<sendOffsets[r+1];n++) {
-      dlong i = (dlong) (sendRows[n] - T->globalRowStarts[rank]); //local row id
-      for (dlong jj=T->diag.rowStarts[i]; jj<T->diag.rowStarts[i+1];jj++){
+      dlong i = (dlong) (sendRows[n] - T.globalRowStarts[rank]); //local row id
+      for (dlong jj=T.diag.rowStarts[i]; jj<T.diag.rowStarts[i+1];jj++){
         sendNonZeros[nnzTotal].row = sendRows[n];
-        sendNonZeros[nnzTotal].col = T->diag.cols[jj] + T->globalColStarts[rank];
-        sendNonZeros[nnzTotal].val = T->diag.vals[jj];
+        sendNonZeros[nnzTotal].col = T.diag.cols[jj] + T.globalColStarts[rank];
+        sendNonZeros[nnzTotal].val = T.diag.vals[jj];
         nnzTotal++;
       }
-      for (dlong jj=T->offd.rowStarts[i]; jj<T->offd.rowStarts[i+1];jj++){
+      for (dlong jj=T.offd.rowStarts[i]; jj<T.offd.rowStarts[i+1];jj++){
         sendNonZeros[nnzTotal].row = sendRows[n];
-        sendNonZeros[nnzTotal].col = T->colMap[T->offd.cols[jj]];
-        sendNonZeros[nnzTotal].val = T->offd.vals[jj];
+        sendNonZeros[nnzTotal].col = T.colMap[T.offd.cols[jj]];
+        sendNonZeros[nnzTotal].val = T.offd.vals[jj];
         nnzTotal++;
       }
     }
   }
 
-  MPI_Alltoall(sendCounts, 1, MPI_INT,
-               recvCounts, 1, MPI_INT, A->comm);
+  A.comm.Alltoall(sendCounts, recvCounts);
 
+  sendOffsets[0] = 0;
+  recvOffsets[0] = 0;
   for (r=0;r<size;r++) {
     sendOffsets[r+1] = sendOffsets[r]+sendCounts[r];
     recvOffsets[r+1] = recvOffsets[r]+recvCounts[r];
@@ -126,37 +128,27 @@ parCSR *smoothProlongator(parCSR *A, parCSR *T){
 
 
   dlong Toffdnnz = recvOffsets[size]; //total nonzeros
-  parCOO::nonZero_t *ToffdRows = (parCOO::nonZero_t *)
-                                 calloc(Toffdnnz, sizeof(parCOO::nonZero_t));
+  memory<parCOO::nonZero_t> ToffdRows(Toffdnnz);
 
-  MPI_Alltoallv(sendNonZeros, sendCounts, sendOffsets, MPI_NONZERO_T,
-                ToffdRows, recvCounts, recvOffsets, MPI_NONZERO_T,
-                T->comm);
-
-  //clean up
-  MPI_Barrier(T->comm);
-  free(sendNonZeros);
-  free(sendCounts);
-  free(recvCounts);
-  free(sendOffsets);
-  free(recvOffsets);
+  T.comm.Alltoallv(sendNonZeros, sendCounts, sendOffsets,
+                   ToffdRows, recvCounts, recvOffsets);
 
   //we now have all the needed nonlocal rows (should also be sorted by row then col)
 
   //make an array of row offsets so we know how large each row is
-  dlong *ToffdRowOffsets = (dlong *) calloc(A->Ncols-A->NlocalCols+1, sizeof(dlong));
+  memory<dlong> ToffdRowOffsets(A.Ncols-A.NlocalCols+1, 0);
 
   dlong id=0;
   for (dlong n=0;n<Toffdnnz;n++) {
     hlong row = ToffdRows[n].row;
 
-    while(A->colMap[id+A->NlocalCols]!=row) id++;
+    while(A.colMap[id+A.NlocalCols]!=row) id++;
 
     ToffdRowOffsets[id+1]++; //count entry in row
   }
 
   //cumulative sum
-  for (dlong n=0;n<A->Ncols-A->NlocalCols;n++)
+  for (dlong n=0;n<A.Ncols-A.NlocalCols;n++)
     ToffdRowOffsets[n+1] += ToffdRowOffsets[n];
 
 
@@ -165,110 +157,106 @@ parCSR *smoothProlongator(parCSR *A, parCSR *T){
   // the entries
 
   // Find how big the intermediate form is
-  nnzTotal = T->diag.nnz+T->offd.nnz; //start with T populated
+  nnzTotal = T.diag.nnz+T.offd.nnz; //start with T populated
 
-  for (dlong i=0;i<A->Nrows;i++) {
+  for (dlong i=0;i<A.Nrows;i++) {
     //local entries
-    dlong start = A->diag.rowStarts[i];
-    dlong end   = A->diag.rowStarts[i+1];
+    dlong start = A.diag.rowStarts[i];
+    dlong end   = A.diag.rowStarts[i+1];
     for (dlong j=start;j<end;j++) {
-      const dlong col = A->diag.cols[j];
-      const int nnzBj =  T->diag.rowStarts[col+1]-T->diag.rowStarts[col]
-                        +T->offd.rowStarts[col+1]-T->offd.rowStarts[col];
+      const dlong col = A.diag.cols[j];
+      const int nnzBj =  T.diag.rowStarts[col+1]-T.diag.rowStarts[col]
+                        +T.offd.rowStarts[col+1]-T.offd.rowStarts[col];
       nnzTotal += nnzBj;
     }
     //non-local entries
-    start = A->offd.rowStarts[i];
-    end   = A->offd.rowStarts[i+1];
+    start = A.offd.rowStarts[i];
+    end   = A.offd.rowStarts[i+1];
     for (dlong j=start;j<end;j++) {
-      const dlong col = A->offd.cols[j]-A->NlocalCols;
+      const dlong col = A.offd.cols[j]-A.NlocalCols;
       const int nnzBj = ToffdRowOffsets[col+1] - ToffdRowOffsets[col];
       nnzTotal += nnzBj;
     }
   }
 
-  parCOO::nonZero_t *Ptmp = (parCOO::nonZero_t *)
-                            calloc(nnzTotal, sizeof(parCOO::nonZero_t));
+  memory<parCOO::nonZero_t> Ptmp(nnzTotal);
 
   // Fill the intermediate form of P
   dlong cnt = 0;
   //First P = T
-  for (dlong i=0;i<T->Nrows;i++) {
+  for (dlong i=0;i<T.Nrows;i++) {
     //local T entries
-    dlong start = T->diag.rowStarts[i];
-    dlong end   = T->diag.rowStarts[i+1];
+    dlong start = T.diag.rowStarts[i];
+    dlong end   = T.diag.rowStarts[i+1];
     for (dlong j=start;j<end;j++) {
-      Ptmp[cnt].row = i + T->globalRowStarts[rank];
-      Ptmp[cnt].col = T->diag.cols[j]+T->globalColStarts[rank]; //global id
-      Ptmp[cnt].val = T->diag.vals[j];
+      Ptmp[cnt].row = i + T.globalRowStarts[rank];
+      Ptmp[cnt].col = T.diag.cols[j]+T.globalColStarts[rank]; //global id
+      Ptmp[cnt].val = T.diag.vals[j];
       cnt++;
     }
     //non-local T entries
-    start = T->offd.rowStarts[i];
-    end   = T->offd.rowStarts[i+1];
+    start = T.offd.rowStarts[i];
+    end   = T.offd.rowStarts[i+1];
     for (dlong j=start;j<end;j++) {
-      Ptmp[cnt].row = i + T->globalRowStarts[rank];
-      Ptmp[cnt].col = T->colMap[T->offd.cols[j]];
-      Ptmp[cnt].val = T->offd.vals[j];
+      Ptmp[cnt].row = i + T.globalRowStarts[rank];
+      Ptmp[cnt].col = T.colMap[T.offd.cols[j]];
+      Ptmp[cnt].val = T.offd.vals[j];
       cnt++;
     }
   }
 
   //Then P -= omega*invD*A*T
-  for (dlong i=0;i<A->Nrows;i++) {
+  for (dlong i=0;i<A.Nrows;i++) {
     //local A entries
-    dlong start = A->diag.rowStarts[i];
-    dlong end   = A->diag.rowStarts[i+1];
+    dlong start = A.diag.rowStarts[i];
+    dlong end   = A.diag.rowStarts[i+1];
 
-    const dfloat invDi = 1.0/A->diagA[i];
+    const dfloat invDi = 1.0/A.diagA[i];
 
     for (dlong j=start;j<end;j++) {
-      const dlong col = A->diag.cols[j];
-      const dfloat Aval = -omega*invDi*A->diag.vals[j];
+      const dlong col = A.diag.cols[j];
+      const dfloat Aval = -omega*invDi*A.diag.vals[j];
 
       //local T entries
-      dlong Tstart = T->diag.rowStarts[col];
-      dlong Tend   = T->diag.rowStarts[col+1];
+      dlong Tstart = T.diag.rowStarts[col];
+      dlong Tend   = T.diag.rowStarts[col+1];
       for (dlong jj=Tstart;jj<Tend;jj++) {
-        Ptmp[cnt].row = i + A->globalRowStarts[rank];
-        Ptmp[cnt].col = T->diag.cols[jj]+T->globalColStarts[rank]; //global id
-        Ptmp[cnt].val = Aval*T->diag.vals[jj];
+        Ptmp[cnt].row = i + A.globalRowStarts[rank];
+        Ptmp[cnt].col = T.diag.cols[jj]+T.globalColStarts[rank]; //global id
+        Ptmp[cnt].val = Aval*T.diag.vals[jj];
         cnt++;
       }
       //non-local T entries
-      Tstart = T->offd.rowStarts[col];
-      Tend   = T->offd.rowStarts[col+1];
+      Tstart = T.offd.rowStarts[col];
+      Tend   = T.offd.rowStarts[col+1];
       for (dlong jj=Tstart;jj<Tend;jj++) {
-        Ptmp[cnt].row = i + A->globalRowStarts[rank];
-        Ptmp[cnt].col = T->colMap[T->offd.cols[jj]]; //global id
-        Ptmp[cnt].val = Aval*T->offd.vals[jj];
+        Ptmp[cnt].row = i + A.globalRowStarts[rank];
+        Ptmp[cnt].col = T.colMap[T.offd.cols[jj]]; //global id
+        Ptmp[cnt].val = Aval*T.offd.vals[jj];
         cnt++;
       }
     }
     //non-local A entries
-    start = A->offd.rowStarts[i];
-    end   = A->offd.rowStarts[i+1];
+    start = A.offd.rowStarts[i];
+    end   = A.offd.rowStarts[i+1];
     for (dlong j=start;j<end;j++) {
-      const dlong col = A->offd.cols[j]-A->NlocalCols;
-      const dfloat Aval = -omega*invDi*A->offd.vals[j];
+      const dlong col = A.offd.cols[j]-A.NlocalCols;
+      const dfloat Aval = -omega*invDi*A.offd.vals[j];
 
       // entries from recived rows of T
       dlong Tstart = ToffdRowOffsets[col];
       dlong Tend   = ToffdRowOffsets[col+1];
       for (dlong jj=Tstart;jj<Tend;jj++) {
-        Ptmp[cnt].row = i + A->globalRowStarts[rank];
+        Ptmp[cnt].row = i + A.globalRowStarts[rank];
         Ptmp[cnt].col = ToffdRows[jj].col; //global id
         Ptmp[cnt].val = Aval*ToffdRows[jj].val;
         cnt++;
       }
     }
   }
-  free(ToffdRowOffsets);
-  free(ToffdRows);
-
 
   //sort entries by the row and col
-  std::sort(Ptmp, Ptmp+nnzTotal,
+  std::sort(Ptmp.ptr(), Ptmp.ptr()+nnzTotal,
             [](const parCOO::nonZero_t& a, const parCOO::nonZero_t& b) {
               if (a.row < b.row) return true;
               if (a.row > b.row) return false;
@@ -283,16 +271,14 @@ parCSR *smoothProlongator(parCSR *A, parCSR *T){
     if ((Ptmp[i].row!=Ptmp[i-1].row)||
         (Ptmp[i].col!=Ptmp[i-1].col)) nnz++;
 
-  parCOO cooP(A->platform, A->comm);
+  parCOO cooP(A.platform, A.comm);
 
   //copy global partition
-  cooP.globalRowStarts = (hlong *) calloc(size+1,sizeof(hlong));
-  cooP.globalColStarts = (hlong *) calloc(size+1,sizeof(hlong));
-  memcpy(cooP.globalRowStarts, A->globalRowStarts, (size+1)*sizeof(hlong));
-  memcpy(cooP.globalColStarts, T->globalColStarts, (size+1)*sizeof(hlong));
+  cooP.globalRowStarts = A.globalRowStarts;
+  cooP.globalColStarts = T.globalColStarts;
 
   cooP.nnz = nnz;
-  cooP.entries = (parCOO::nonZero_t *) calloc(nnz,sizeof(parCOO::nonZero_t));
+  cooP.entries.malloc(nnz);
 
   //compress nonzeros
   nnz = 0;
@@ -305,11 +291,11 @@ parCSR *smoothProlongator(parCSR *A, parCSR *T){
       cooP.entries[nnz-1].val += Ptmp[i].val;
     }
   }
-  //clean up
-  free(Ptmp);
 
   //build P from coo matrix
-  return new parCSR(cooP);
+  return parCSR(cooP);
 }
 
 } //namespace parAlmond
+
+} //namespace libp

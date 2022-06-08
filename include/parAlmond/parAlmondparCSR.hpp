@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Rajesh Gandham
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Rajesh Gandham
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,30 +27,32 @@ SOFTWARE.
 #ifndef PARALMOND_PARCSR_HPP
 #define PARALMOND_PARCSR_HPP
 
+namespace libp {
+
 namespace parAlmond {
 
 class parCSR {
 public:
-  platform_t& platform;
-  MPI_Comm comm;
+  platform_t platform;
+  comm_t comm;
 
-  dlong Nrows;
-  dlong Ncols;
+  dlong Nrows=0;
+  dlong Ncols=0;
 
   //local sparse matrix
   struct CSR {
     dlong nnz=0;
     dlong NrowBlocks=0;
 
-    dlong  *blockRowStarts=nullptr;
-    dlong  *rowStarts=nullptr;
-    dlong  *cols=nullptr;
-    pfloat *vals=nullptr;
+    memory<dlong>  blockRowStarts;
+    memory<dlong>  rowStarts;
+    memory<dlong>  cols;
+    memory<pfloat> vals;
 
-    occa::memory o_blockRowStarts;
-    occa::memory o_rowStarts;
-    occa::memory o_cols;
-    occa::memory o_vals;
+    deviceMemory<dlong>  o_blockRowStarts;
+    deviceMemory<dlong>  o_rowStarts;
+    deviceMemory<dlong>  o_cols;
+    deviceMemory<pfloat> o_vals;
   };
   CSR diag;
 
@@ -60,47 +62,46 @@ public:
     dlong nzRows=0;
     dlong NrowBlocks=0;
 
-    dlong  *blockRowStarts=nullptr;
-    dlong  *rowStarts=nullptr;
-    dlong  *mRowStarts=nullptr; //compressed version of rowStarts
-    dlong  *rows=nullptr;
-    dlong  *cols=nullptr;
-    pfloat *vals=nullptr;
+    memory<dlong>  blockRowStarts;
+    memory<dlong>  rowStarts;
+    memory<dlong>  mRowStarts; //compressed version of rowStarts
+    memory<dlong>  rows;
+    memory<dlong>  cols;
+    memory<pfloat> vals;
 
-    occa::memory o_blockRowStarts;
-    occa::memory o_mRowStarts;
-    occa::memory o_rows;
-    occa::memory o_cols;
-    occa::memory o_vals;
+    deviceMemory<dlong>  o_blockRowStarts;
+    deviceMemory<dlong>  o_mRowStarts;
+    deviceMemory<dlong>  o_rows;
+    deviceMemory<dlong>  o_cols;
+    deviceMemory<pfloat> o_vals;
   };
   MCSR offd;
 
-  dfloat *diagA=nullptr;
-  dfloat *diagInv=nullptr;
+  memory<dfloat> diagA;
+  memory<dfloat> diagInv;
 
-  occa::memory o_diagA;
-  occa::memory o_diagInv;
+  deviceMemory<dfloat> o_diagA;
+  deviceMemory<dfloat> o_diagInv;
 
   //partition info
-  hlong *globalRowStarts=nullptr;
-  hlong *globalColStarts=nullptr;
-  hlong *colMap=nullptr;
+  memory<hlong> globalRowStarts;
+  memory<hlong> globalColStarts;
+  memory<hlong> colMap;
 
-  halo_t *halo = nullptr;
+  ogs::halo_t halo;
   dlong NlocalCols = 0;
 
   //rho ~= cond(invD * A)
   dfloat rho=0.0;
 
-  parCSR(dlong N, dlong M, platform_t& _platform, MPI_Comm _comm):
+  parCSR() = default;
+  parCSR(dlong N, dlong M, platform_t& _platform, comm_t _comm):
     platform(_platform), comm(_comm), Nrows(N), Ncols(M) {}
 
   //build a parCSR matrix from a distributed COO matrix
   parCSR(parCOO& A);
 
-  ~parCSR();
-
-  void haloSetup(hlong *colIds);
+  void haloSetup(memory<hlong> colIds);
 
   void diagSetup();
 
@@ -108,28 +109,28 @@ public:
 
   void syncToDevice();
 
-  void SpMV(const dfloat alpha, dfloat *x,
-            const dfloat beta, dfloat *y);
-  void SpMV(const dfloat alpha, dfloat *x,
-            const dfloat beta, const dfloat *y, dfloat *z);
+  void SpMV(const dfloat alpha, memory<dfloat>& x,
+            const dfloat beta, memory<dfloat>& y);
+  void SpMV(const dfloat alpha, memory<dfloat>& x,
+            const dfloat beta, const memory<dfloat>& y, memory<dfloat>& z);
 
-  void SpMV(const dfloat alpha, occa::memory& o_x, const dfloat beta,
-            occa::memory& o_y);
-  void SpMV(const dfloat alpha, occa::memory& o_x, const dfloat beta,
-            occa::memory& o_y, occa::memory& o_z);
+  void SpMV(const dfloat alpha, deviceMemory<dfloat>& o_x, const dfloat beta,
+            deviceMemory<dfloat>& o_y);
+  void SpMV(const dfloat alpha, deviceMemory<dfloat>& o_x, const dfloat beta,
+            deviceMemory<dfloat>& o_y, deviceMemory<dfloat>& o_z);
 
-  void smoothDampedJacobi(occa::memory& o_r, occa::memory& o_x,
+  void smoothDampedJacobi(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_x,
                           const dfloat lambda, bool x_is_zero,
-                          occa::memory& o_scratch);
+                          deviceMemory<dfloat>& o_scratch);
 
-  void smoothChebyshev(occa::memory& o_b, occa::memory& o_x,
+  void smoothChebyshev(deviceMemory<dfloat>& o_b, deviceMemory<dfloat>& o_x,
                        const dfloat lambda0, const dfloat lambda1,
-                       bool x_is_zero, occa::memory& o_scratch,
+                       bool x_is_zero, deviceMemory<dfloat>& o_scratch,
                        const int ChebyshevIterations);
 };
 
-
-
 } //namespace parAlmond
+
+} //namespace libp
 
 #endif

@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -32,101 +32,140 @@ SOFTWARE.
 #include "mesh.hpp"
 #include "solver.hpp"
 
+namespace libp {
+
+//forward declare
+namespace TimeStepper { class timeStepperBase_t; }
+
+/* General TimeStepper object*/
+class timeStepper_t {
+ public:
+  timeStepper_t() = default;
+
+  /*Generic setup. Create a Stepper object and wrap it in a shared_ptr*/
+  template<class Stepper, class... Args>
+  void Setup(Args&& ... args) {
+    ts = std::make_shared<Stepper>(args...);
+  }
+
+  void Run(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat start, dfloat end);
+
+  void SetTimeStep(dfloat dt_);
+
+  dfloat GetTimeStep();
+
+  dfloat GetGamma();
+
+ private:
+  std::shared_ptr<TimeStepper::timeStepperBase_t> ts=nullptr;
+
+  void assertInitialized();
+};
+
 namespace TimeStepper {
 
 //base time stepper class
-class timeStepper_t {
+class timeStepperBase_t {
 public:
+  platform_t platform;
+  comm_t comm;
+
   dlong N;
   dlong Nhalo;
 
-  solver_t& solver;
-
   dfloat dt;
 
-  timeStepper_t(dlong Nelements, dlong NhaloElements,
-                 int Np, int Nfields, solver_t& _solver):
+  timeStepperBase_t(dlong Nelements, dlong NhaloElements,
+                    int Np, int Nfields,
+                    platform_t& _platform, comm_t _comm):
+    platform(_platform),
+    comm(_comm),
     N(Nelements*Np*Nfields),
-    Nhalo(NhaloElements*Np*Nfields),
-    solver(_solver) {}
+    Nhalo(NhaloElements*Np*Nfields) {}
 
-  virtual ~timeStepper_t() {};
-  virtual void Run(occa::memory& o_q, dfloat start, dfloat end)=0;
+  virtual void Run(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat start, dfloat end)=0;
 
   void SetTimeStep(dfloat dt_) {dt = dt_;};
+
   dfloat GetTimeStep() {return dt;};
+
+  virtual dfloat GetGamma() {
+    LIBP_FORCE_ABORT("GetGamma() not available in this Timestepper");
+    return 0.0;
+  }
 };
 
 /* Adams Bashforth, order 3 */
-class ab3: public timeStepper_t {
+class ab3: public timeStepperBase_t {
 protected:
   int Nstages;
   int shiftIndex;
 
-  dfloat *ab_a;
-  occa::memory o_ab_a;
+  memory<dfloat> ab_a;
+  deviceMemory<dfloat> o_ab_a;
 
-  occa::memory o_rhsq;
+  deviceMemory<dfloat> o_rhsq;
 
-  occa::kernel updateKernel;
+  kernel_t updateKernel;
 
-  virtual void Step(occa::memory& o_q, dfloat time, dfloat dt, int order);
+  virtual void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt, int order);
 
 public:
   ab3(dlong Nelements, dlong NhaloElements,
-      int Np, int Nfields, solver_t& solver);
-  ~ab3();
+      int Np, int Nfields,
+      platform_t& _platform, comm_t _comm);
 
-  void Run(occa::memory& o_q, dfloat start, dfloat end);
+  void Run(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat start, dfloat end);
 };
 
 /* Low-Storage Explicit Runge-Kutta, order 4 */
-class lserk4: public timeStepper_t {
+class lserk4: public timeStepperBase_t {
 protected:
   int Nrk;
-  dfloat *rka, *rkb, *rkc;
+  memory<dfloat> rka, rkb, rkc;
 
-  occa::memory o_rhsq;
-  occa::memory o_resq;
+  deviceMemory<dfloat> o_rhsq;
+  deviceMemory<dfloat> o_resq;
 
-  occa::kernel updateKernel;
+  deviceMemory<dfloat> o_saveq;
 
-  virtual void Step(occa::memory& o_q, dfloat time, dfloat dt);
+  kernel_t updateKernel;
+
+  virtual void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt);
 
 public:
   lserk4(dlong Nelements, dlong NhaloElements,
-         int Np, int Nfields, solver_t& solver);
-  ~lserk4();
+         int Np, int Nfields,
+         platform_t& _platform, comm_t _comm);
 
-  void Run(occa::memory& o_q, dfloat start, dfloat end);
+  void Run(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat start, dfloat end);
 };
 
 /* Dormand-Prince method */
 /* Explict Runge-Kutta, order 5 with embedded order 4 and adaptive time-stepping */
-class dopri5: public timeStepper_t {
+class dopri5: public timeStepperBase_t {
 protected:
-  MPI_Comm comm;
   int Nrk;
 
   dlong Nblock;
 
-  dfloat *rkC, *rkA, *rkE;
-  occa::memory o_rkA, o_rkE;
+  memory<dfloat> rkC, rkA, rkE;
+  deviceMemory<dfloat> o_rkA, o_rkE;
 
-  dfloat *errtmp;
-  occa::memory o_errtmp, h_errtmp;
+  deviceMemory<dfloat> o_errtmp;
+  pinnedMemory<dfloat> h_errtmp;
 
-  occa::memory o_rhsq;
-  occa::memory o_rkq;
-  occa::memory o_rkrhsq;
-  occa::memory o_rkerr;
+  deviceMemory<dfloat> o_rhsq;
+  deviceMemory<dfloat> o_rkq;
+  deviceMemory<dfloat> o_rkrhsq;
+  deviceMemory<dfloat> o_rkerr;
 
-  occa::memory o_saveq;
+  deviceMemory<dfloat> o_saveq;
 
 
-  occa::kernel rkUpdateKernel;
-  occa::kernel rkStageKernel;
-  occa::kernel rkErrorEstimateKernel;
+  kernel_t rkUpdateKernel;
+  kernel_t rkStageKernel;
+  kernel_t rkErrorEstimateKernel;
 
   dfloat dtMIN; //minumum allowed timestep
   dfloat ATOL;  //absolute error tolerance
@@ -144,24 +183,24 @@ protected:
   dfloat facold;
   dfloat sqrtinvNtotal;
 
-  virtual void Backup(occa::memory &o_Q);
-  virtual void Restore(occa::memory &o_Q);
-  virtual void AcceptStep(occa::memory &o_q, occa::memory &o_rq);
+  virtual void Backup(deviceMemory<dfloat> &o_Q);
+  virtual void Restore(deviceMemory<dfloat> &o_Q);
+  virtual void AcceptStep(deviceMemory<dfloat> &o_q, deviceMemory<dfloat> &o_rq);
 
-  virtual void Step(occa::memory& o_q, dfloat time, dfloat dt);
+  virtual void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt);
 
-  virtual dfloat Estimater(occa::memory& o_q);
+  virtual dfloat Estimater(deviceMemory<dfloat>& o_q);
 
 public:
   dopri5(dlong Nelements, dlong NhaloElements,
-         int Np, int Nfields, solver_t& solver, MPI_Comm _comm);
-  ~dopri5();
+         int Np, int Nfields,
+         platform_t& _platform, comm_t _comm);
 
-  void Run(occa::memory& o_q, dfloat start, dfloat end);
+  void Run(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat start, dfloat end);
 };
 
 /* Semi-Analytic Adams-Bashforth, order 3 */
-class saab3: public timeStepper_t {
+class saab3: public timeStepperBase_t {
 protected:
   int Nstages;
   int shiftIndex;
@@ -169,59 +208,56 @@ protected:
   int Np, Nfields;
   dlong Nblock, Nelements, NhaloElements;
 
-  dfloat *lambda;
+  memory<dfloat> lambda;
 
-  dfloat *saab_x, *saab_a;
-  occa::memory o_saab_x, o_saab_a;
+  pinnedMemory<dfloat> h_saab_x, h_saab_a;
+  deviceMemory<dfloat> o_saab_x, o_saab_a;
 
-  occa::memory o_rhsq;
+  deviceMemory<dfloat> o_rhsq;
 
-  occa::kernel updateKernel;
+  kernel_t updateKernel;
 
-  virtual void Step(occa::memory& o_q, dfloat time, dfloat dt, int order);
+  virtual void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt, int order);
 
   virtual void UpdateCoefficients();
 
 public:
   saab3(dlong _Nelements, dlong _NhaloElements,
         int _Np, int _Nfields,
-        dfloat *_lambda,
-        solver_t& _solver);
-  ~saab3();
+        memory<dfloat> _lambda,
+        platform_t& _platform, comm_t _comm);
 
-  void Run(occa::memory& o_q, dfloat start, dfloat end);
+  void Run(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat start, dfloat end);
 };
 
 /* Semi-Analytic Explict Runge-Kutta, order 4 with embedded order 3 and adaptive time-stepping */
-class sark4: public timeStepper_t {
+class sark4: public timeStepperBase_t {
 protected:
-  MPI_Comm comm;
   int Nrk;
   int order, embeddedOrder;
 
   int Np, Nfields;
   dlong Nblock, Nelements, NhaloElements;
 
-  dfloat *lambda;
+  memory<dfloat> lambda;
 
-  dfloat *rkC, *rkX, *rkA, *rkE;
-  occa::memory h_rkX, h_rkA, h_rkE;
-  occa::memory o_rkX, o_rkA, o_rkE;
+  memory<dfloat> rkC;
+  deviceMemory<dfloat> o_rkX, o_rkA, o_rkE;
+  pinnedMemory<dfloat> h_rkX, h_rkA, h_rkE;
 
-  dfloat *errtmp;
+  deviceMemory<dfloat> o_rhsq;
+  deviceMemory<dfloat> o_rkq;
+  deviceMemory<dfloat> o_rkrhsq;
+  deviceMemory<dfloat> o_rkerr;
 
-  occa::memory o_rhsq;
-  occa::memory o_rkq;
-  occa::memory o_rkrhsq;
-  occa::memory o_rkerr;
+  deviceMemory<dfloat> o_saveq;
 
-  occa::memory o_saveq;
+  deviceMemory<dfloat> o_errtmp;
+  pinnedMemory<dfloat> h_errtmp;
 
-  occa::memory o_errtmp;
-
-  occa::kernel rkUpdateKernel;
-  occa::kernel rkStageKernel;
-  occa::kernel rkErrorEstimateKernel;
+  kernel_t rkUpdateKernel;
+  kernel_t rkStageKernel;
+  kernel_t rkErrorEstimateKernel;
 
   dfloat dtMIN; //minumum allowed timestep
   dfloat ATOL;  //absolute error tolerance
@@ -239,56 +275,54 @@ protected:
   dfloat facold;
   dfloat sqrtinvNtotal;
 
-  virtual void Backup(occa::memory &o_Q);
-  virtual void Restore(occa::memory &o_Q);
-  virtual void AcceptStep(occa::memory &o_q, occa::memory &o_rq);
+  virtual void Backup(deviceMemory<dfloat> &o_Q);
+  virtual void Restore(deviceMemory<dfloat> &o_Q);
+  virtual void AcceptStep(deviceMemory<dfloat> &o_q, deviceMemory<dfloat> &o_rq);
 
-  virtual void Step(occa::memory& o_q, dfloat time, dfloat dt);
+  virtual void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt);
 
-  dfloat Estimater(occa::memory& o_q);
+  dfloat Estimater(deviceMemory<dfloat>& o_q);
 
   void UpdateCoefficients();
 
 public:
   sark4(dlong _Nelements, dlong _NhaloElements,
         int _Np, int _Nfields,
-        dfloat *_lambda,
-        solver_t& _solver, MPI_Comm _comm);
-  ~sark4();
+        memory<dfloat> _lambda,
+        platform_t& _platform, comm_t _comm);
 
-  void Run(occa::memory& o_q, dfloat start, dfloat end);
+  void Run(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat start, dfloat end);
 };
 
 /* Semi-Analytic Explict Runge-Kutta, order 5 with embedded order 4 and adaptive time-stepping */
-class sark5: public timeStepper_t {
+class sark5: public timeStepperBase_t {
 protected:
-  MPI_Comm comm;
   int Nrk;
   int order, embeddedOrder;
 
   int Np, Nfields;
   dlong Nblock, Nelements, NhaloElements;
 
-  dfloat *lambda;
+  memory<dfloat> lambda;
 
-  dfloat *rkC, *rkX, *rkA, *rkE;
-  occa::memory h_rkX, h_rkA, h_rkE;
-  occa::memory o_rkX, o_rkA, o_rkE;
+  memory<dfloat> rkC;
+  deviceMemory<dfloat> o_rkX, o_rkA, o_rkE;
+  pinnedMemory<dfloat> h_rkX, h_rkA, h_rkE;
 
-  dfloat *errtmp;
 
-  occa::memory o_rhsq;
-  occa::memory o_rkq;
-  occa::memory o_rkrhsq;
-  occa::memory o_rkerr;
+  deviceMemory<dfloat> o_rhsq;
+  deviceMemory<dfloat> o_rkq;
+  deviceMemory<dfloat> o_rkrhsq;
+  deviceMemory<dfloat> o_rkerr;
 
-  occa::memory o_saveq;
+  deviceMemory<dfloat> o_saveq;
 
-  occa::memory o_errtmp;
+  deviceMemory<dfloat> o_errtmp;
+  pinnedMemory<dfloat> h_errtmp;
 
-  occa::kernel rkUpdateKernel;
-  occa::kernel rkStageKernel;
-  occa::kernel rkErrorEstimateKernel;
+  kernel_t rkUpdateKernel;
+  kernel_t rkStageKernel;
+  kernel_t rkErrorEstimateKernel;
 
   dfloat dtMIN; //minumum allowed timestep
   dfloat ATOL;  //absolute error tolerance
@@ -306,154 +340,151 @@ protected:
   dfloat facold;
   dfloat sqrtinvNtotal;
 
-  virtual void Backup(occa::memory &o_Q);
-  virtual void Restore(occa::memory &o_Q);
-  virtual void AcceptStep(occa::memory &o_q, occa::memory &o_rq);
+  virtual void Backup(deviceMemory<dfloat> &o_Q);
+  virtual void Restore(deviceMemory<dfloat> &o_Q);
+  virtual void AcceptStep(deviceMemory<dfloat> &o_q, deviceMemory<dfloat> &o_rq);
 
-  virtual void Step(occa::memory& o_q, dfloat time, dfloat dt);
+  virtual void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt);
 
-  dfloat Estimater(occa::memory& o_q);
+  dfloat Estimater(deviceMemory<dfloat>& o_q);
 
   void UpdateCoefficients();
 
 public:
   sark5(dlong _Nelements, dlong _NhaloElements,
         int _Np, int _Nfields,
-        dfloat *_lambda,
-        solver_t& _solver, MPI_Comm _comm);
-  ~sark5();
+        memory<dfloat> _lambda,
+        platform_t& _platform, comm_t _comm);
 
-  void Run(occa::memory& o_q, dfloat start, dfloat end);
+  void Run(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat start, dfloat end);
 };
 
 /* Backward Difference Formula, order 3, with extrapolation */
-class extbdf3: public timeStepper_t {
+class extbdf3: public timeStepperBase_t {
 protected:
   int Nstages;
   int shiftIndex;
 
-  dfloat *extbdf_a;
-  dfloat *extbdf_b;
-  occa::memory o_extbdf_a;
-  occa::memory o_extbdf_b;
+  memory<dfloat> extbdf_a;
+  memory<dfloat> extbdf_b;
+  deviceMemory<dfloat> o_extbdf_a;
+  deviceMemory<dfloat> o_extbdf_b;
 
-  occa::memory o_rhs;
-  occa::memory o_qn;
-  occa::memory o_F;
+  deviceMemory<dfloat> o_rhs;
+  deviceMemory<dfloat> o_qn;
+  deviceMemory<dfloat> o_F;
 
-  occa::kernel rhsKernel;
+  kernel_t rhsKernel;
 
-  virtual void Step(occa::memory& o_q, dfloat time, dfloat dt, int order);
+  virtual void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt, int order);
 
 public:
   extbdf3(dlong Nelements, dlong NhaloElements,
-      int Np, int Nfields, solver_t& solver);
-  ~extbdf3();
+      int Np, int Nfields,
+      platform_t& _platform, comm_t _comm);
 
-  dfloat getGamma();
+  dfloat GetGamma();
 
-  void Run(occa::memory& o_q, dfloat start, dfloat end);
+  void Run(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat start, dfloat end);
 };
 
 /* Backward Difference Formula, order 3, with subcycling */
-class ssbdf3: public timeStepper_t {
+class ssbdf3: public timeStepperBase_t {
 protected:
   int Nstages;
   int shiftIndex;
 
-  dfloat *ssbdf_b;
-  occa::memory o_ssbdf_b;
+  memory<dfloat> ssbdf_b;
+  deviceMemory<dfloat> o_ssbdf_b;
 
-  occa::memory o_rhs;
-  occa::memory o_qn;
-  occa::memory o_qhat;
+  deviceMemory<dfloat> o_rhs;
+  deviceMemory<dfloat> o_qn;
+  deviceMemory<dfloat> o_qhat;
 
-  occa::kernel rhsKernel;
+  kernel_t rhsKernel;
 
-  virtual void Step(occa::memory& o_q, dfloat time, dfloat dt, int order);
+  virtual void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt, int order);
 
 public:
   ssbdf3(dlong Nelements, dlong NhaloElements,
-      int Np, int Nfields, solver_t& solver);
-  ~ssbdf3();
+      int Np, int Nfields,
+      platform_t& _platform, comm_t _comm);
 
-  dfloat getGamma();
+  dfloat GetGamma();
 
-  void Run(occa::memory& o_q, dfloat start, dfloat end);
+  void Run(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat start, dfloat end);
 };
 
 /* Multi-rate Adams-Bashforth, order 3 */
-class mrab3: public timeStepper_t {
+class mrab3: public timeStepperBase_t {
 protected:
-  mesh_t &mesh;
+  mesh_t mesh;
 
   int Nstages;
   int Nlevels;
   int Nfields;
 
-  int* shiftIndex;
-  occa::memory o_shiftIndex, h_shiftIndex;
+  deviceMemory<int> o_shiftIndex;
+  deviceMemory<int> h_shiftIndex;
 
-  dfloat *mrdt;
-  occa::memory o_mrdt;
+  memory<dfloat> mrdt;
+  deviceMemory<dfloat> o_mrdt;
 
-  dfloat *ab_a, *ab_b;
-  occa::memory o_ab_a, o_ab_b;
+  memory<dfloat> ab_a, ab_b;
+  deviceMemory<dfloat> o_ab_a, o_ab_b;
 
-  occa::memory o_rhsq0, o_rhsq, o_fQM;
+  deviceMemory<dfloat> o_rhsq0, o_rhsq, o_fQM;
 
-  occa::kernel updateKernel;
-  occa::kernel traceUpdateKernel;
+  kernel_t updateKernel;
+  kernel_t traceUpdateKernel;
 
-  virtual void Step(occa::memory& o_q, dfloat time, dfloat dt, int order);
+  virtual void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt, int order);
 
 public:
   mrab3(dlong _Nelements, dlong _NhaloElements,
          int _Np, int _Nfields,
-         solver_t& _solver, mesh_t& _mesh);
-  ~mrab3();
+         platform_t& _platform, mesh_t& _mesh);
 
-  void Run(occa::memory& o_q, dfloat start, dfloat end);
+  void Run(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat start, dfloat end);
 };
 
 /* Multi-rate Semi-Analytic Adams-Bashforth, order 3 */
-class mrsaab3: public timeStepper_t {
+class mrsaab3: public timeStepperBase_t {
 protected:
-  mesh_t &mesh;
+  mesh_t mesh;
 
   int Nstages;
   int Nlevels;
   int Nfields;
 
-  dfloat *lambda;
+  memory<dfloat> lambda;
 
-  int* shiftIndex;
-  occa::memory o_shiftIndex, h_shiftIndex;
+  deviceMemory<int> o_shiftIndex;
+  pinnedMemory<int> h_shiftIndex;
 
-  dfloat *mrdt;
-  occa::memory o_mrdt;
+  memory<dfloat> mrdt;
+  deviceMemory<dfloat> o_mrdt;
 
-  dfloat *saab_x, *saab_a, *saab_b;
-  occa::memory o_saab_x, o_saab_a, o_saab_b;
+  memory<dfloat> saab_x, saab_a, saab_b;
+  deviceMemory<dfloat> o_saab_x, o_saab_a, o_saab_b;
 
-  occa::memory o_rhsq0, o_rhsq, o_fQM;
+  deviceMemory<dfloat> o_rhsq0, o_rhsq, o_fQM;
 
-  occa::kernel updateKernel;
-  occa::kernel traceUpdateKernel;
+  kernel_t updateKernel;
+  kernel_t traceUpdateKernel;
 
-  virtual void Step(occa::memory& o_q, dfloat time, dfloat dt, int order);
+  virtual void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt, int order);
 
   void UpdateCoefficients();
 
 public:
   mrsaab3(dlong _Nelements, dlong _NhaloElements,
          int _Np, int _Nfields,
-         dfloat *_lambda,
-         solver_t& _solver, mesh_t& _mesh);
-  ~mrsaab3();
+         memory<dfloat> _lambda,
+         platform_t& _platform, mesh_t& _mesh);
 
   void Init();
-  void Run(occa::memory& o_q, dfloat start, dfloat end);
+  void Run(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat start, dfloat end);
 };
 
 
@@ -466,15 +497,15 @@ class ab3_pml: public ab3 {
 private:
   dlong Npml;
 
-  occa::memory o_pmlq;
-  occa::memory o_rhspmlq;
+  deviceMemory<dfloat> o_pmlq;
+  deviceMemory<dfloat> o_rhspmlq;
 
-  void Step(occa::memory& o_q, dfloat time, dfloat dt, int order);
+  void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt, int order);
 
 public:
   ab3_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
-          int Np, int Nfields, int Npmlfields, solver_t& solver);
-  ~ab3_pml();
+          int Np, int Nfields, int Npmlfields,
+          platform_t& _platform, comm_t _comm);
 };
 
 /* Low-Storage Explicit Runge-Kutta, order 4 */
@@ -482,16 +513,16 @@ class lserk4_pml: public lserk4 {
 private:
   dlong Npml;
 
-  occa::memory o_pmlq;
-  occa::memory o_rhspmlq;
-  occa::memory o_respmlq;
+  deviceMemory<dfloat> o_pmlq;
+  deviceMemory<dfloat> o_rhspmlq;
+  deviceMemory<dfloat> o_respmlq;
 
-  void Step(occa::memory& o_q, dfloat time, dfloat dt);
+  void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt);
 
 public:
   lserk4_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
-            int Np, int Nfields, int Npmlfields, solver_t& solver);
-  ~lserk4_pml();
+            int Np, int Nfields, int Npmlfields,
+            platform_t& _platform, comm_t _comm);
 };
 
 /* Dormand-Prince method */
@@ -500,25 +531,25 @@ class dopri5_pml: public dopri5 {
 private:
   dlong Npml;
 
-  occa::memory o_pmlq;
-  occa::memory o_rhspmlq;
-  occa::memory o_rkpmlq;
-  occa::memory o_rkrhspmlq;
+  deviceMemory<dfloat> o_pmlq;
+  deviceMemory<dfloat> o_rhspmlq;
+  deviceMemory<dfloat> o_rkpmlq;
+  deviceMemory<dfloat> o_rkrhspmlq;
 
-  occa::memory o_savepmlq;
+  deviceMemory<dfloat> o_savepmlq;
 
-  occa::kernel rkPmlUpdateKernel;
+  kernel_t rkPmlUpdateKernel;
 
-  void Backup(occa::memory &o_Q);
-  void Restore(occa::memory &o_Q);
-  void AcceptStep(occa::memory &o_q, occa::memory &o_rq);
+  void Backup(deviceMemory<dfloat> &o_Q);
+  void Restore(deviceMemory<dfloat> &o_Q);
+  void AcceptStep(deviceMemory<dfloat> &o_q, deviceMemory<dfloat> &o_rq);
 
-  void Step(occa::memory& o_q, dfloat time, dfloat dt);
+  void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt);
 
 public:
   dopri5_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
-            int Np, int Nfields, int Npmlfields, solver_t& solver, MPI_Comm _comm);
-  ~dopri5_pml();
+            int Np, int Nfields, int Npmlfields,
+            platform_t& _platform, comm_t _comm);
 };
 
 /* Semi-Analytic Adams-Bashforth, order 3 */
@@ -527,21 +558,21 @@ class saab3_pml: public saab3 {
 private:
   dlong Npml;
 
-  dfloat *pmlsaab_x, *pmlsaab_a;
-  occa::memory o_pmlsaab_x, o_pmlsaab_a;
+  memory<dfloat> pmlsaab_x, pmlsaab_a;
+  deviceMemory<dfloat> o_pmlsaab_x, o_pmlsaab_a;
 
-  occa::memory o_pmlq;
-  occa::memory o_rhspmlq;
+  deviceMemory<dfloat> o_pmlq;
+  deviceMemory<dfloat> o_rhspmlq;
 
-  occa::kernel pmlUpdateKernel;
+  kernel_t pmlUpdateKernel;
 
-  void Step(occa::memory& o_q, dfloat time, dfloat dt, int order);
+  void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt, int order);
 
 public:
   saab3_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
             int Np, int Nfields, int _Npmlfields,
-            dfloat *_lambda, solver_t& solver);
-  ~saab3_pml();
+            memory<dfloat> _lambda,
+            platform_t& _platform, comm_t _comm);
 };
 
 /* Semi-Analytic Explict Runge-Kutta, order 4 with embedded order 3 and adaptive time-stepping */
@@ -550,30 +581,29 @@ class sark4_pml: public sark4 {
 private:
   dlong Npml;
 
-  dfloat *pmlrkA;
-  occa::memory o_pmlrkA;
+  memory<dfloat> pmlrkA;
+  deviceMemory<dfloat> o_pmlrkA;
 
-  occa::memory o_pmlq;
-  occa::memory o_rhspmlq;
-  occa::memory o_rkpmlq;
-  occa::memory o_rkrhspmlq;
+  deviceMemory<dfloat> o_pmlq;
+  deviceMemory<dfloat> o_rhspmlq;
+  deviceMemory<dfloat> o_rkpmlq;
+  deviceMemory<dfloat> o_rkrhspmlq;
 
-  occa::memory o_savepmlq;
+  deviceMemory<dfloat> o_savepmlq;
 
-  occa::kernel rkPmlUpdateKernel;
-  occa::kernel rkPmlStageKernel;
+  kernel_t rkPmlUpdateKernel;
+  kernel_t rkPmlStageKernel;
 
-  void Backup(occa::memory &o_Q);
-  void Restore(occa::memory &o_Q);
-  void AcceptStep(occa::memory &o_q, occa::memory &o_rq);
+  void Backup(deviceMemory<dfloat> &o_Q);
+  void Restore(deviceMemory<dfloat> &o_Q);
+  void AcceptStep(deviceMemory<dfloat> &o_q, deviceMemory<dfloat> &o_rq);
 
-  void Step(occa::memory& o_q, dfloat time, dfloat dt);
+  void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt);
 
 public:
   sark4_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
             int Np, int Nfields, int _Npmlfields,
-            dfloat *_lambda, solver_t& solver, MPI_Comm _comm);
-  ~sark4_pml();
+            memory<dfloat> _lambda, platform_t& _platform, comm_t _comm);
 };
 
 /* Semi-Analytic Explict Runge-Kutta, order 5 with embedded order 4 and adaptive time-stepping */
@@ -582,30 +612,29 @@ class sark5_pml: public sark5 {
 private:
   dlong Npml;
 
-  dfloat *pmlrkA;
-  occa::memory o_pmlrkA;
+  memory<dfloat> pmlrkA;
+  deviceMemory<dfloat> o_pmlrkA;
 
-  occa::memory o_pmlq;
-  occa::memory o_rhspmlq;
-  occa::memory o_rkpmlq;
-  occa::memory o_rkrhspmlq;
+  deviceMemory<dfloat> o_pmlq;
+  deviceMemory<dfloat> o_rhspmlq;
+  deviceMemory<dfloat> o_rkpmlq;
+  deviceMemory<dfloat> o_rkrhspmlq;
 
-  occa::memory o_savepmlq;
+  deviceMemory<dfloat> o_savepmlq;
 
-  occa::kernel rkPmlUpdateKernel;
-  occa::kernel rkPmlStageKernel;
+  kernel_t rkPmlUpdateKernel;
+  kernel_t rkPmlStageKernel;
 
-  void Backup(occa::memory &o_Q);
-  void Restore(occa::memory &o_Q);
-  void AcceptStep(occa::memory &o_q, occa::memory &o_rq);
+  void Backup(deviceMemory<dfloat> &o_Q);
+  void Restore(deviceMemory<dfloat> &o_Q);
+  void AcceptStep(deviceMemory<dfloat> &o_q, deviceMemory<dfloat> &o_rq);
 
-  void Step(occa::memory& o_q, dfloat time, dfloat dt);
+  void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt);
 
 public:
   sark5_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
             int Np, int Nfields, int _Npmlfields,
-            dfloat *_lambda, solver_t& solver, MPI_Comm _comm);
-  ~sark5_pml();
+            memory<dfloat> _lambda, platform_t& _platform, comm_t _comm);
 };
 
 
@@ -615,17 +644,16 @@ private:
   dlong Npml;
   int Npmlfields;
 
-  occa::memory o_pmlq;
-  occa::memory o_rhspmlq0, o_rhspmlq;
+  deviceMemory<dfloat> o_pmlq;
+  deviceMemory<dfloat> o_rhspmlq0, o_rhspmlq;
 
-  occa::kernel pmlUpdateKernel;
+  kernel_t pmlUpdateKernel;
 
-  void Step(occa::memory& o_q, dfloat time, dfloat dt, int order);
+  void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt, int order);
 
 public:
   mrab3_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
-            int Np, int Nfields, int _Npmlfields, solver_t& solver, mesh_t& _mesh);
-  ~mrab3_pml();
+            int Np, int Nfields, int _Npmlfields, platform_t& _platform, mesh_t& _mesh);
 };
 
 /* Multi-rate Semi-Analytic Adams-Bashforth, order 3 */
@@ -635,23 +663,25 @@ private:
   dlong Npml;
   int Npmlfields;
 
-  occa::memory o_pmlq;
-  dfloat *pmlsaab_a, *pmlsaab_b;
-  occa::memory o_pmlsaab_a, o_pmlsaab_b;
+  deviceMemory<dfloat> o_pmlq;
 
-  occa::memory o_rhspmlq0, o_rhspmlq;
+  memory<dfloat> pmlsaab_a, pmlsaab_b;
+  deviceMemory<dfloat> o_pmlsaab_a, o_pmlsaab_b;
 
-  occa::kernel pmlUpdateKernel;
+  deviceMemory<dfloat> o_rhspmlq0, o_rhspmlq;
 
-  void Step(occa::memory& o_q, dfloat time, dfloat dt, int order);
+  kernel_t pmlUpdateKernel;
+
+  void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt, int order);
 
 public:
   mrsaab3_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
             int Np, int Nfields, int _Npmlfields,
-            dfloat *_lambda, solver_t& solver, mesh_t& _mesh);
-  ~mrsaab3_pml();
+            memory<dfloat> _lambda, platform_t& _platform, mesh_t& _mesh);
 };
 
 } //namespace TimeStepper
+
+} //namespace libp
 
 #endif

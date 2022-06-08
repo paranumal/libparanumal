@@ -2,7 +2,7 @@
 
   The MIT License (MIT)
 
-  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -64,8 +64,8 @@ void lbs_t::Run(){
                    mesh.o_x,
                    mesh.o_y,
                    mesh.o_z,
-		   o_U, 
-		   o_q);
+                   o_U,
+                   o_q);
 
   /*
     Artificial warping of time step size for multirate testing
@@ -75,9 +75,9 @@ void lbs_t::Run(){
       settings.compareSetting("TIME INTEGRATOR","MRSAAB3"))
     dt /= (1<<(mesh.mrNlevels-1));
 #endif
-  timeStepper->SetTimeStep(dt);
+  timeStepper.SetTimeStep(dt);
 
-  timeStepper->Run(o_q, startTime, finalTime);
+  timeStepper.Run(*this, o_q, startTime, finalTime);
 
 
   // output norm of final solution
@@ -88,7 +88,7 @@ void lbs_t::Run(){
     mesh.MassMatrixApply(o_U, o_Mq);
 
     dlong Nentries = mesh.Nelements*mesh.Np*Nmacro;
-    dfloat norm2 = sqrt(platform.linAlg.innerProd(Nentries, o_q, o_Mq, mesh.comm));
+    dfloat norm2 = sqrt(platform.linAlg().innerProd(Nentries, o_q, o_Mq, mesh.comm));
 
     if(mesh.rank==0)
       printf("Solution norm = %17.15lg\n", norm2);

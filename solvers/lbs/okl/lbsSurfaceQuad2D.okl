@@ -2,7 +2,7 @@
 
   The MIT License (MIT)
 
-  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -95,58 +95,58 @@ void surfaceTerms(const int e,
     vm   = U[uidM+2*p_Np];  
 
     lbsBoundaryConditions2D(bc, nu, time, x[idM], y[idM], nx, ny, 
-			    rm, um, vm, 
-			    &rb, &ub, &vb); 
+                            rm, um, vm,
+                            &rb, &ub, &vb);
   }
 
-  dfloat qm[p_Nfields]; 
-  dfloat qp[p_Nfields]; 
+  dfloat qm[p_Nfields];
+  dfloat qp[p_Nfields];
 
 #pragma unroll p_Nfields
   for(int fld=0; fld<p_Nfields;++fld){
     qm[fld] = q[qidM + fld*p_Np];
     qp[fld] = q[qidP + fld*p_Np];
   }
-  
+
 #pragma unroll p_Nfields
   for(int fld=0; fld<p_Nfields;++fld){
-    const dfloat fn = F[qidM + fld*p_Np]; 
-    const dfloat ex = LBM[fld + 1*p_Nfields]; 
-    const dfloat ey = LBM[fld + 2*p_Nfields]; 
+    const dfloat fn = F[qidM + fld*p_Np];
+    const dfloat ex = LBM[fld + 1*p_Nfields];
+    const dfloat ey = LBM[fld + 2*p_Nfields];
     const dfloat en = ex*nx + ey*ny;
 
     if(bc>0){
       const dfloat ew   =  LBM[fld + 0*p_Nfields];
       const int   idr   =  LMAP[fld];
-      applyBC2D(bc, fld, idr, dt, en, nx, ny, ew, ex, ey,rb, ub, vb, fn, qm, qp); 
+      applyBC2D(bc, fld, idr, dt, en, nx, ny, ew, ex, ey,rb, ub, vb, fn, qm, qp);
     }
     s_fluxq[es][fld][j][i] += 0.5f*sc*(en -fabs(en))*(qm[fld] - qp[fld]);
   }
 }
- 
 
-             
+
+
 
 
 @kernel void lbsSurfaceQuad2D(const dlong Nelements,
-			      // @restrict const  dlong  *  elementIds,
-			      @restrict const  dfloat *  sgeo,
-			      @restrict const  dfloat *  LIFT,
-			      @restrict const  dlong  *  vmapM,
-			      @restrict const  dlong  *  vmapP,
-			      @restrict const  int    *  EToB,
-			      @restrict const  dfloat *  x,
-			      @restrict const  dfloat *  y,
-			      @restrict const  dfloat *  z,
-			      const dfloat dt,
-			      const dfloat time,
-			      const dfloat nu,
-			      @restrict const  int *  LMAP,
-			      @restrict const  dfloat *  LBM,
-			      @restrict const  dfloat *  F,
-			      @restrict const  dfloat *  U,
-			      @restrict const  dfloat *  q,
-			      @restrict dfloat *  rhsq){
+                              // @restrict const  dlong  *  elementIds,
+                              @restrict const  dfloat *  sgeo,
+                              @restrict const  dfloat *  LIFT,
+                              @restrict const  dlong  *  vmapM,
+                              @restrict const  dlong  *  vmapP,
+                              @restrict const  int    *  EToB,
+                              @restrict const  dfloat *  x,
+                              @restrict const  dfloat *  y,
+                              @restrict const  dfloat *  z,
+                              const dfloat dt,
+                              const dfloat time,
+                              const dfloat nu,
+                              @restrict const  int *  LMAP,
+                              @restrict const  dfloat *  LBM,
+                              @restrict const  dfloat *  F,
+                              @restrict const  dfloat *  U,
+                              @restrict const  dfloat *  q,
+                              @restrict dfloat *  rhsq){
 
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
@@ -159,15 +159,14 @@ void surfaceTerms(const int e,
     for(int es=0;es<p_NblockS;++es;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
 #pragma unroll p_Nq
-	for(int j=0;j<p_Nq;++j){
+        for(int j=0;j<p_Nq;++j){
 #pragma unroll p_Nfields
-	  for(int fld=0; fld<p_Nfields; fld++)
-	    s_fluxq[es][fld][j][i] = 0.f;
-	}
+          for(int fld=0; fld<p_Nfields; fld++)
+            s_fluxq[es][fld][j][i] = 0.f;
+        }
       }
     }
 
-    @barrier("local");
 
     // face 0 & 2
     for(int es=0;es<p_NblockS;++es;@inner(1)){
@@ -175,7 +174,7 @@ void surfaceTerms(const int e,
         const dlong et = eo + es;
         if(et<Nelements){
           // const dlong   e = elementIds[et];
-          const dlong   e = et; 
+          const dlong   e = et;
           const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i;
           const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + i;
 
@@ -188,7 +187,6 @@ void surfaceTerms(const int e,
       }
     }
 
-    @barrier("local");
 
     // face 1 & 3
     for(int es=0;es<p_NblockS;++es;@inner(1)){
@@ -196,35 +194,34 @@ void surfaceTerms(const int e,
         const dlong et = eo + es;
         if(et<Nelements){
           // const dlong   e = elementIds[et];
-          const dlong   e = et; 
+          const dlong   e = et;
           const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + j;
           const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + j;
 
           surfaceTerms(e, es, sk1, 1, p_Nq-1, j,
-		       sgeo, nu, time, dt, x, y, vmapM, vmapP, EToB, LMAP, LBM, F, U, q, s_fluxq);
+                       sgeo, nu, time, dt, x, y, vmapM, vmapP, EToB, LMAP, LBM, F, U, q, s_fluxq);
 
           surfaceTerms(e, es, sk3, 3, 0, j,
-		       sgeo, nu, time, dt, x, y, vmapM, vmapP, EToB, LMAP, LBM, F, U, q, s_fluxq);
+                       sgeo, nu, time, dt, x, y, vmapM, vmapP, EToB, LMAP, LBM, F, U, q, s_fluxq);
         }
       }
     }
 
 
-    @barrier("local");
 
     for(int es=0;es<p_NblockS;++es;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
         const dlong et = eo + es;
         if(et<Nelements){
 #pragma unroll p_Nq
-	  for(int j=0;j<p_Nq;++j){
-	    // const dlong   e   = elementIds[et];
-	    const dlong   e = et; 
-	    const dlong rhsId = e*p_Np*p_Nfields+j*p_Nq+i;
-	    for(int fld=0; fld<p_Nfields; fld++){
-	      rhsq[rhsId+fld*p_Np] += s_fluxq[es][fld][j][i];
-	    }
-	  }
+          for(int j=0;j<p_Nq;++j){
+            // const dlong   e   = elementIds[et];
+            const dlong   e = et;
+            const dlong rhsId = e*p_Np*p_Nfields+j*p_Nq+i;
+            for(int fld=0; fld<p_Nfields; fld++){
+              rhsq[rhsId+fld*p_Np] += s_fluxq[es][fld][j][i];
+            }
+          }
         }
       }
     }

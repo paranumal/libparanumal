@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -34,7 +34,7 @@ void ins_t::Report(dfloat time, int tstep){
   mesh.MassMatrixApply(o_u, o_MU);
 
   dlong Nentries = mesh.Nelements*mesh.Np*NVfields;
-  dfloat norm2 = sqrt(linAlg.innerProd(Nentries, o_u, o_MU, mesh.comm));
+  dfloat norm2 = sqrt(platform.linAlg().innerProd(Nentries, o_u, o_MU, mesh.comm));
 
   if(mesh.rank==0)
     printf("\n%5.2f (%d), %5.2f (time, timestep, norm)\n", time, tstep, norm2);
@@ -49,11 +49,11 @@ void ins_t::Report(dfloat time, int tstep){
     o_Vort.copyTo(Vort);
 
     // output field files
-    string name;
+    std::string name;
     settings.getSetting("OUTPUT FILE NAME", name);
     char fname[BUFSIZ];
     sprintf(fname, "%s_%04d_%04d.vtu", name.c_str(), mesh.rank, frame++);
 
-    PlotFields(u, p, Vort, fname);
+    PlotFields(u, p, Vort, std::string(fname));
   }
 }

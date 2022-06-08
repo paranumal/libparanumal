@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,10 +25,11 @@ SOFTWARE.
 */
 
 #include "mesh.hpp"
-#include "mesh/mesh3D.hpp"
+
+namespace libp {
 
 //interpolate field to plotting nodes
-void meshTet3D::PlotInterp(const dfloat* q, dfloat* Iq, dfloat* scratch){
+void mesh_t::PlotInterpTet3D(const memory<dfloat> q, memory<dfloat> Iq, memory<dfloat> scratch){
 
   //interpolate
   for(int n=0;n<plotNp;++n){
@@ -40,3 +41,5 @@ void meshTet3D::PlotInterp(const dfloat* q, dfloat* Iq, dfloat* scratch){
     Iq[n] = qn;
   }
 }
+
+} //namespace libp

@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -61,7 +61,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     for(int es=0;es<p_cubNblockV;++es;@inner(1)){// for all elements in block
       for(int n=0;n<p_cubNp;++n;@inner(0)){     // for all nodes in this element
@@ -101,7 +100,6 @@ SOFTWARE.
     }
 
     // Make sure all node data is loaded into @shared
-    @barrier("local");
 
     for(int es=0;es<p_cubNblockV;++es;@inner(1)){// for all elements in block
       for(int n=0;n<p_cubNp;++n;@inner(0)){     // for all nodes in this element
@@ -169,7 +167,6 @@ SOFTWARE.
       }
     }
 
-    @barrier("local");
 
     // interpolate to surface integration nodes
     for(int es=0;es<p_cubNblockS;++es;@inner(1)){
@@ -234,7 +231,6 @@ SOFTWARE.
     }
 
     // wait for all @shared memory writes of the previous inner loop to complete
-    @barrier("local");
 
     // lift from surface integration to volume nodes
     for(int es=0;es<p_cubNblockS;++es;@inner(1)){

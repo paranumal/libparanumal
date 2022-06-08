@@ -2,7 +2,7 @@
 #
 #The MIT License (MIT)
 #
-#Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+#Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 #
 #Permission is hereby granted, free of charge, to any person obtaining a copy
 #of this software and associated documentation files (the "Software"), to deal
@@ -78,29 +78,25 @@ include ../../make.top
 endif
 endif
 
-#gslib
-GS_DIR=${LIBP_TPL_DIR}/gslib
-
 #libraries
 ELLIPTIC_DIR =${LIBP_DIR}/solvers/elliptic
-FPE_LIBP_LIBS=timeStepper linearSolver parAlmond mesh ogs linAlg core
+FPE_LIBP_LIBS=timeStepper linearSolver parAlmond mesh parAdogs ogs linAlg core
 
 #includes
 INCLUDES=-I${ELLIPTIC_DIR} \
-					${LIBP_INCLUDES} \
-				 -I.
+			${LIBP_INCLUDES} \
+			-I.
 
 #defines
 DEFINES =${LIBP_DEFINES} \
          -DLIBP_DIR='"${LIBP_DIR}"'
 
 #.cpp compilation flags
-FPE_CXXFLAGS=${LIBP_MPICXXFLAGS} ${DEFINES} ${INCLUDES}
+FPE_CXXFLAGS=${LIBP_CXXFLAGS} ${DEFINES} ${INCLUDES}
 
 #link libraries
 LIBS=-L${ELLIPTIC_DIR} -lelliptic \
-		 -L${LIBP_LIBS_DIR} $(addprefix -l,$(FPE_LIBP_LIBS)) \
-     -L$(GS_DIR)/lib -lgs \
+	  -L${LIBP_LIBS_DIR} $(addprefix -l,$(FPE_LIBP_LIBS)) \
      ${LIBP_LIBS}
 
 #link flags
@@ -156,10 +152,10 @@ endif
 # rule for .cpp files
 %.o: %.cpp $(DEPS) | libelliptic
 ifneq (,${verbose})
-	$(LIBP_MPICXX) -o $*.o -c $*.cpp $(FPE_CXXFLAGS)
+	$(LIBP_CXX) -o $*.o -c $*.cpp $(FPE_CXXFLAGS)
 else
 	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
-	@$(LIBP_MPICXX) -o $*.o -c $*.cpp $(FPE_CXXFLAGS)
+	@$(LIBP_CXX) -o $*.o -c $*.cpp $(FPE_CXXFLAGS)
 endif
 
 #cleanup
@@ -171,8 +167,7 @@ clean-libs: clean
 	${MAKE} -C ${LIBP_LIBS_DIR} clean
 
 clean-kernels: clean-libs
-# 	$(shell ${OCCA_DIR}/bin/occa clear all -y)
-	rm -rf ~/.occa/
+	rm -rf ${LIBP_DIR}/.occa/
 
 realclean: clean
 	${MAKE} -C ${ELLIPTIC_DIR} clean

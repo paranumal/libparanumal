@@ -2,7 +2,7 @@
 #
 #The MIT License (MIT)
 #
-#Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+#Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 #
 #Permission is hereby granted, free of charge, to any person obtaining a copy
 #of this software and associated documentation files (the "Software"), to deal
@@ -77,26 +77,22 @@ include ../../make.top
 endif
 endif
 
-#gslib
-GS_DIR=${LIBP_TPL_DIR}/gslib
-
 #libraries
-LBS_LIBP_LIBS=timeStepper mesh ogs linAlg core
+LBS_LIBP_LIBS=timeStepper mesh parAdogs ogs linAlg core
 
 #includes
 INCLUDES=${LIBP_INCLUDES} \
-	-I.
+					-I.
 #defines
 DEFINES =${LIBP_DEFINES} \
-	-DLIBP_DIR='"${LIBP_DIR}"'
+					-DLIBP_DIR='"${LIBP_DIR}"'
 
 #.cpp compilation flags
-LBS_CXXFLAGS=${LIBP_MPICXXFLAGS} ${DEFINES} ${INCLUDES}
+LBS_CXXFLAGS=${LIBP_CXXFLAGS} ${DEFINES} ${INCLUDES}
 
 #link libraries
 LIBS=-L${LIBP_LIBS_DIR} $(addprefix -l,$(LBS_LIBP_LIBS)) \
-	-L$(GS_DIR)/lib -lgs \
-	${LIBP_LIBS}
+			${LIBP_LIBS}
 
 #link flags
 LFLAGS=${LBS_CXXFLAGS} ${LIBS}
@@ -111,7 +107,7 @@ SRC =$(wildcard src/*.cpp)
 OBJS=$(SRC:.cpp=.o)
 
 .PHONY: all lib libp_libs clean clean-libs \
-clean-kernels realclean help info
+				clean-kernels realclean help info
 
 all: lbsMain
 
@@ -143,10 +139,10 @@ endif
 # rule for .cpp files
 %.o: %.cpp $(DEPS) | libp_libs
 ifneq (,${verbose})
-	$(LIBP_MPICXX) -o $*.o -c $*.cpp $(LBS_CXXFLAGS)
+	$(LIBP_CXX) -o $*.o -c $*.cpp $(LBS_CXXFLAGS)
 else
 	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
-	@$(LIBP_MPICXX) -o $*.o -c $*.cpp $(LBS_CXXFLAGS)
+	@$(LIBP_CXX) -o $*.o -c $*.cpp $(LBS_CXXFLAGS)
 endif
 
 #cleanup
@@ -157,8 +153,7 @@ clean-libs: clean
 	${MAKE} -C ${LIBP_LIBS_DIR} clean
 
 clean-kernels: clean-libs
-# 	$(shell ${OCCA_DIR}/bin/occa clear all -y)
-	rm -rf ~/.occa/
+	rm -rf ${LIBP_DIR}/.occa/
 
 realclean: clean
 	${MAKE} -C ${LIBP_LIBS_DIR} realclean

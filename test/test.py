@@ -4,7 +4,7 @@
 #
 #The MIT License (MIT)
 #
-#Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+#Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 #
 #Permission is hereby granted, free of charge, to any person obtaining a copy
 #of this software and associated documentation files (the "Software"), to deal
@@ -88,20 +88,20 @@ class setting_t:
     self.name = name
     self.value = value
 
-def writeSetup(settings):
+def writeSetup(filename, settings):
   str_settings=""
   for setting in settings:
     str_settings += "[" + setting.name + "]\n"
     str_settings += str(setting.value) + "\n\n"
 
-  file = open("setup.rc", "w")
+  file = open(filename+".rc", "w")
   file.write(str_settings)
   file.close()
 
 def test(name, cmd, settings, referenceNorm, ranks=1):
 
   #create input file
-  writeSetup(settings)
+  writeSetup("setup",settings)
 
   #print test name
   print(bcolors.TEST + f"{name:.<{alignWidth}}" + bcolors.ENDC, end="", flush=True)
@@ -117,6 +117,8 @@ def test(name, cmd, settings, referenceNorm, ranks=1):
     print(run.stdout.decode())
     print(bcolors.WARNING + name + " stderr:" + bcolors.ENDC)
     print(run.stderr.decode())
+    #save the setup for reproducibility
+    writeSetup(name,settings)
     failed = 1
   else:
     #collect last line of output
@@ -133,6 +135,8 @@ def test(name, cmd, settings, referenceNorm, ranks=1):
         print(bcolors.FAIL + "FAIL" + bcolors.ENDC)
         print(bcolors.WARNING + "Expected Result: " + str(referenceNorm) + bcolors.ENDC)
         print(bcolors.WARNING + "Observed Result: " + str(norm) + bcolors.ENDC)
+        #save the setup for reproducibility
+        writeSetup(name,settings)
         failed = 1
     else:
       #this failure is worse, so dump the whole output for debug
@@ -141,7 +145,15 @@ def test(name, cmd, settings, referenceNorm, ranks=1):
       print(run.stdout.decode())
       print(bcolors.WARNING + name + " stderr:" + bcolors.ENDC)
       print(run.stderr.decode())
+      #save the setup for reproducibility
+      writeSetup(name,settings)
       failed = 1
+
+  # writeSetup(name,settings)
+  # print(bcolors.WARNING + name + " stdout:" + bcolors.ENDC)
+  # print(run.stdout.decode())
+  # print(bcolors.WARNING + name + " stderr:" + bcolors.ENDC)
+  # print(run.stderr.decode())
 
   #clean up
   os.remove(inputRC)
@@ -162,10 +174,12 @@ if __name__ == "__main__":
   import testTimeStepper
   import testLinearSolver
   import testParAlmond
+  import testParAdogs
   import testInitialGuess
 
   failCount=0;
   failCount+=testMesh.main()
+  failCount+=testParAdogs.main()
   failCount+=testGradient.main()
   failCount+=testAdvection.main()
   failCount+=testAcoustics.main()
