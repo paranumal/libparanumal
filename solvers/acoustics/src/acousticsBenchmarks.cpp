@@ -53,10 +53,6 @@ void acoustics_t::volumeBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfloat
   kernelInfo["defines/" "p_Nfields"]= Nfields;
   kernelInfo["defines/" "p_half"]= p_half;
 
-  int maxNodes = std::max(mesh.Np, (mesh.Nfp*mesh.Nfaces));
-  kernelInfo["defines/" "p_maxNodes"]= maxNodes;
-
-
   // set kernel name suffix
   std::string suffix;
   if(mesh.elementType==Mesh::TRIANGLES)
@@ -80,7 +76,7 @@ void acoustics_t::volumeBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfloat
   volumeKernelName = "acousticsVolume" + suffix;
 
   // set up flop counts for tets
-  long long int NFLOP = mesh.Nelements*mesh.Np*(4*3*2*(long long int)mesh.Np + 32);
+  long long int NFLOP = mesh.Nelements*mesh.Np*((4*3*2*(long long int)mesh.Np) + 32);
   long long int NBYTES   = mesh.Nelements*(mesh.Nvgeo + mesh.Np*(Nfields*2 + 0*mesh.dim*mesh.Np) )*sizeof(dfloat);
 
 int bestNvol = 0, bestNblockV = 0;
