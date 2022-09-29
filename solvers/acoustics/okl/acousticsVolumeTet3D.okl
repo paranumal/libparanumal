@@ -596,8 +596,6 @@ SOFTWARE.
                                  @restrict const  dfloat *  q,
                                  @restrict dfloat *  rhsq){
 
-
-
   for(dlong eo=0;eo<Nelements;eo+=(p_Nvol*p_NblockV);@outer(0)){
 
     @shared dfloat s_rho[p_Nvol][p_NblockV][p_Np];

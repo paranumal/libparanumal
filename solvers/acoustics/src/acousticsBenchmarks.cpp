@@ -78,9 +78,12 @@ void acoustics_t::volumeBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfloat
   volumeFileName   = oklFilePrefix + "acousticsVolume" + suffix + oklFileSuffix;
   volumeKernelName = "acousticsVolume" + suffix;
 
+  // set up flop counts for tets
   long long int NFLOP = mesh.Nelements*mesh.Np*(4*3*2*(long long int)mesh.Np + 32);
-  int bestNvol = 0, bestNblockV = 0;
-  double bestElapsed = 1e9;
+  long long int NBYTES   = mesh.Nelements*(mesh.Nvgeo + mesh.Np*(Nfields*2 + 0*mesh.dim*mesh.Np) )*sizeof(dfloat);
+
+int bestNvol = 0, bestNblockV = 0;
+  double bestElapsed = 1e9;;
   
   for(int Nvol=1;Nvol<=7;++Nvol){
     for(int NblockV=1;NblockV<=blockMax/mesh.Np;++NblockV){
@@ -126,9 +129,10 @@ void acoustics_t::volumeBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfloat
       elapsed /= Nrun;
       
       double GFLOPS = NFLOP/(1.e9*elapsed);
+      double GBS = NBYTES/(1.e9*elapsed);
       
-      printf("%02d, %02d, %5.4e. %5.4e %%%% Nvol, NblockV, elapsed, GFLOPS\n",
-	     Nvol, NblockV, elapsed, GFLOPS);
+      printf("%02d, %02d, %5.4e, %5.4e, %5.4e %%%% Nvol, NblockV, elapsed, GFLOPS, GB/s\n",
+	     Nvol, NblockV, elapsed, GFLOPS, GBS);
 
       if(elapsed<bestElapsed){
 	bestElapsed = elapsed;
@@ -139,9 +143,10 @@ void acoustics_t::volumeBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfloat
   }
   
   double bestGFLOPS = NFLOP/(1.e9*bestElapsed);
+  double bestGBS = NBYTES/(1.e9*bestElapsed);
   
-  printf("%02d, %02d, %5.4e. %5.4e %%%% BEST - Nvol, NblockV, elapsed, GFLOPS\n",
-	 bestNvol, bestNblockV, bestElapsed, bestGFLOPS);
+  printf("%02d, %02d, %5.4e, %5.4e, %5.4e %%%% BEST - Nvol, NblockV, elapsed, GFLOPS, GB/S\n",
+	 bestNvol, bestNblockV, bestElapsed, bestGFLOPS, bestGBS);
 
 }
 
