@@ -88,6 +88,7 @@ public:
   dfloat MaxWaveSpeed();
 
   void Benchmarks();
+  void volumeBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfloat> &o_RHS);  
 };
 
 #endif

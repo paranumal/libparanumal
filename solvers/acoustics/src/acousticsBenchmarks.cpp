@@ -31,6 +31,13 @@ void acoustics_t::Benchmarks(){
 
   deviceMemory<dfloat> o_Q   = platform.device.malloc(Nfields*mesh.Nelements*mesh.Np*sizeof(dfloat));
   deviceMemory<dfloat> o_RHS = platform.device.malloc(Nfields*mesh.Nelements*mesh.Np*sizeof(dfloat));
+
+  volumeBenchmark(o_Q, o_RHS);
+}
+
+
+void acoustics_t::volumeBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfloat> &o_RHS){
+
   
   // OCCA build stuff
   properties_t kernelInfo = mesh.props; //copy base occa properties
