@@ -36,8 +36,8 @@ void acoustics_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
   Nfields = (mesh.dim==3) ? 4:3;
 
-  dlong Nlocal = mesh.Nelements*mesh.Np*Nfields;
-  dlong Nhalo  = mesh.totalHaloPairs*mesh.Np*Nfields;
+  hlong Nlocal = mesh.Nelements*mesh.Np*Nfields;
+  hlong Nhalo  = mesh.totalHaloPairs*mesh.Np*Nfields;
 
   //Trigger JIT kernel builds
   ogs::InitializeKernels(platform, ogs::Dfloat, ogs::Add);

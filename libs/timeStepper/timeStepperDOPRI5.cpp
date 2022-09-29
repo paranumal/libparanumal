@@ -41,7 +41,7 @@ dopri5::dopri5(dlong Nelements, dlong NhaloElements,
 
   o_rhsq   = platform.malloc<dfloat>(N);
   o_rkq    = platform.malloc<dfloat>(N+Nhalo);
-  o_rkrhsq = platform.malloc<dfloat>(Nrk*N);
+  o_rkrhsq = platform.malloc<dfloat>(((hlong)Nrk)*N);
   o_rkerr  = platform.malloc<dfloat>(N);
 
   o_saveq  = platform.malloc<dfloat>(N);

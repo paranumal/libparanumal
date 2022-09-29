@@ -28,7 +28,7 @@ SOFTWARE.
 #define TYPES_HPP
 
 // precision of AMG storage
-#if 0
+#if 1
 #define pfloat float
 #else
 #define pfloat double
@@ -36,7 +36,7 @@ SOFTWARE.
 
 
 //float data type
-#if 0
+#if 1
 #define dfloat float
 #define dfloatFormat "%f"
 #define dfloatString "float"

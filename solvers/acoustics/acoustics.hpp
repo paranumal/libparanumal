@@ -86,6 +86,8 @@ public:
   void rhsf(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
 
   dfloat MaxWaveSpeed();
+
+  void Benchmarks();
 };
 
 #endif

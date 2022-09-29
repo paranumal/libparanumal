@@ -59,7 +59,12 @@ int main(int argc, char **argv){
     acoustics_t acoustics(platform, mesh, acousticsSettings);
 
     // run
-    acoustics.Run();
+    if(0){
+      acoustics.Run();
+    }
+    else{
+      acoustics.Benchmarks();
+    }
   }
 
   // close down MPI
