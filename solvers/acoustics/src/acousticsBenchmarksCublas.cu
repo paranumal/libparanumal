@@ -215,7 +215,9 @@ int main(int argc, char **argv){
 
   // warm up
   gpuBlasGemm(handle, d_D, d_q, d_Dq, p_dim*p_Np, p_Nfields*E,  p_Np, 0);
-
+  geofactorsKernelv1<<< E, p_Np >>> (E, d_vgeo, d_Dq, d_Aq);
+  cudaDeviceSynchronize();
+  
   // create events
   cudaEvent_t start, stop;
 
