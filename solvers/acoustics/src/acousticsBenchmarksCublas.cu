@@ -22,15 +22,6 @@
 
 #define p_Nvgeo 9
 
-#define p_G00ID 0
-#define p_G01ID 1
-#define p_G02ID 2
-#define p_G11ID 3
-#define p_G12ID 4
-#define p_G22ID 5
-#define p_GWJID 6
-
-
 void generateRandArray(int sz, dfloat * a){
   //  a = (dfloat*) calloc(sz, sizeof(dfloat)); 
   for (int n=0; n<sz;++n){
@@ -174,15 +165,19 @@ void gpuBlasGemm(cublasHandle_t &handle, const dfloat *A, const dfloat *B,
 int main(int argc, char **argv){
 
   size_t aux;
-  printf("size of size_t %lud \n", sizeof(aux));
-  int E = (argc>=2) ? atoi(argv[1]):512;
-  int p_N = (argc>=3) ? atoi(argv[2]):5;
-  //int option = (argc>=4) ? atoi(argv[3]):1;  
-  //int p_Ne = (argc>=5) ? atoi(argv[4]):1;
-  //int p_Nb = (argc>=6) ? atoi(argv[5]):1;
 
+  int NX = 20, NY = 20, NZ = 20, p_N = 4;
+
+  if(argc==5){
+    NX = atoi(argv[1]);
+    NY = atoi(argv[2]);
+    NZ = atoi(argv[3]);
+    p_N = atoi(argv[4]);
+  }
+
+  int E = NX*NY*NZ*6;
   int p_Np = ((p_N+1)*(p_N+2)*(p_N+3))/6;
-
+  
   printf("E= %d p_N = %d p_Np = %d \n", E, p_N, p_Np);
 
   // number of geometric factors
@@ -214,19 +209,12 @@ int main(int argc, char **argv){
 
   size_t free, total;
 
-  printf("\n");
-
-  cudaMemGetInfo(&free,&total); 
-
-  printf("before %17.18lu B free of total %17.18lu B\n",free,total);
-
-
-
-  //3) use cublasDgemm -> outputs 7k*p_NpxNel array
-
   // Create a handle for CUBLA
   cublasHandle_t handle;
   cublasCreate(&handle);
+
+  // warm up
+  gpuBlasGemm(handle, d_D, d_q, d_Dq, p_dim*p_Np, p_Nfields*E,  p_Np, 0);
 
   // create events
   cudaEvent_t start, stop;
@@ -256,20 +244,9 @@ int main(int argc, char **argv){
   printf("[ DDD %d  %17.15f %17.15f ]\n", p_Np*E,  gflops*E/(elapsedCublas*1.e9), p_Np*E/(elapsedCublas*1.e9)); 
 
   //full version
-  printf("TIME %5.4e flops = %llu  GFLOPS: %17.17f \n",elapsedCublas,gflops, (((dfloat)gflops*(dfloat)E/10e8)/elapsedCublas));
+  printf("TIME %5.4e flops = %llu  GFLOPS: %17.17f, NFLOP: %lld \n",elapsedCublas,gflops, (((dfloat)gflops*(dfloat)E/1.e9)/elapsedCublas), gflops*E);
 
   cudaMemcpy(h_Aq, d_Aq, p_Nfields*E*p_Np*sizeof(dfloat), cudaMemcpyDeviceToHost);
-  cudaMemGetInfo(&free,&total); 
-
-  printf(" after %17.18lu  B free of total %17.18lu B\n",free,total);
-
-  dfloat normAq = 0;
-
-  for(int n=0;n<E*p_Np*p_Nfields;++n)
-    normAq += (h_Aq[n]*h_Aq[n]);
-  normAq = sqrt(normAq);
-
-  printf("CUDA-CUBLAS: error Aq = %17.15lf\n", normAq);
 
   // Destroy the handle
   cublasDestroy(handle);
