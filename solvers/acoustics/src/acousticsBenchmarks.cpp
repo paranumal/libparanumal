@@ -131,7 +131,7 @@ void acoustics_t::volumeBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfloat
 	double GFLOPS = NFLOP/(1.e9*elapsed);
 	double GBS = NBYTES/(1.e9*elapsed);
 	
-	printf("%02d, %02d, %5.4e, %5.4e, %5.4e, %lld, %d %%%% VOL, Nvol, NblockV, elapsed, GFLOPS, GB/s, NFLOP, LDS usage\n",
+	printf("%02d, %02d, %5.4e, %5.4e, %5.4e, %lld, %d %%%% VOL, Nvol, NblockV, elapsed, GFLOP/s, GB/s, NFLOP, LDS usage\n",
 	       Nvol, NblockV, elapsed, GFLOPS, GBS, NFLOP, LDS);
 	
 	if(elapsed<bestElapsed){
@@ -146,7 +146,7 @@ void acoustics_t::volumeBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfloat
   double bestGFLOPS = NFLOP/(1.e9*bestElapsed);
   double bestGBS = NBYTES/(1.e9*bestElapsed);
   
-  printf("%02d, %02d, %5.4e, %5.4e, %5.4e %%%% VOL, BEST - Nvol, NblockV, elapsed, GFLOPS, GB/S\n",
+  printf("%02d, %02d, %5.4e, %5.4e, %5.4e %%%% VOL, BEST - Nvol, NblockV, elapsed, GFLOP/s, GB/s\n",
 	 bestNvol, bestNblockV, bestElapsed, bestGFLOPS, bestGBS);
 
 }
@@ -205,23 +205,26 @@ void acoustics_t::surfaceBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfloa
 					   + (mesh.Nfp*mesh.Nfaces*2*sizeof(dlong)));
 												       
   int bestNblockS = 0;
+  int bestNsur = 0;
   double bestElapsed = 1e9;;
   dfloat T = 0;
-  
-  for(int NblockS=1;NblockS<=blockMax/maxNodes;++NblockS){
-    properties_t surfaceKernelInfo = kernelInfo;
-    
-    surfaceKernelInfo["defines/" "p_NblockS"]= NblockS;
 
-    platform.device.finish();
-    
-    surfaceKernel =  platform.buildKernel(surfaceFileName, surfaceKernelName,
-					  surfaceKernelInfo);
-    
-
+  for(int Nsur=1;Nsur<=5;++Nsur){
+    for(int NblockS=1;NblockS<=blockMax/maxNodes;++NblockS){
+      properties_t surfaceKernelInfo = kernelInfo;
+      
+      surfaceKernelInfo["defines/" "p_NblockS"]= NblockS;
+      surfaceKernelInfo["defines/" "p_Nsur"]= Nsur;
+      
+      platform.device.finish();
+      
+      surfaceKernel =  platform.buildKernel(surfaceFileName, surfaceKernelName,
+					    surfaceKernelInfo);
+      
+      
       int Nwarm = 100;
       for(int w=0;w<Nwarm;++w){
-
+	
 	if (mesh.NinternalElements)
 	  surfaceKernel(mesh.NinternalElements,
 			mesh.o_internalElementIds,
@@ -236,14 +239,14 @@ void acoustics_t::surfaceBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfloa
 			mesh.o_z,
 			o_Q,
 			o_RHS);
-
+	
       }
-
+      
       platform.device.finish();
       
       start = platform.device.tagStream();
       
-
+      
       int Nrun = 10;
       for(int r=0;r<Nrun;++r){
 	if (mesh.NinternalElements)
@@ -272,21 +275,23 @@ void acoustics_t::surfaceBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfloa
       double GFLOPS = NFLOP/(1.e9*elapsed);
       double GBS = NBYTES/(1.e9*elapsed);
       
-    printf("%02d, %5.4e, %5.4e, %5.4e %%%% SURF, NblockS, elapsed, GFLOPS, GB/s\n",
-	    NblockS, elapsed, GFLOPS, GBS);
-
+      printf("%02d, %02d, %5.4e, %5.4e, %5.4e %%%% SURF, Nsur, NblockS, elapsed, GFLOP/s, GB/s\n",
+	     Nsur, NblockS, elapsed, GFLOPS, GBS);
+      
       if(elapsed<bestElapsed){
 	bestElapsed = elapsed;
 	bestNblockS = NblockS;
+	bestNsur = Nsur;
       }
+    }
   }
 
   
   double bestGFLOPS = NFLOP/(1.e9*bestElapsed);
   double bestGBS = NBYTES/(1.e9*bestElapsed);
   
-  printf("%02d, %5.4e, %5.4e, %5.4e %%%% SURF BEST - Nvol, NblockS, elapsed, GFLOPS, GB/S\n",
-	 bestNblockS, bestElapsed, bestGFLOPS, bestGBS);
-
+  printf("%02d, %02d, %5.4e, %5.4e, %5.4e %%%% SURF BEST - Nsur, NblockS, elapsed, GFLOP/s, GB/s\n",
+	 bestNsur, bestNblockS, bestElapsed, bestGFLOPS, bestGBS);
+  
 }
 
