@@ -44,7 +44,7 @@ void acoustics_t::volumeBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfloat
   properties_t kernelInfo = mesh.props; //copy base occa properties
 
   const dfloat p_half = 1./2.;
-  int blockMax = 512;
+  int blockMax = 768; // 512;
   
   //add boundary data to kernel info
   std::string dataFileName;
@@ -79,13 +79,14 @@ void acoustics_t::volumeBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfloat
   long long int NFLOP = mesh.Nelements*mesh.Np*((4*3*2*(long long int)mesh.Np) + 32);
   long long int NBYTES   = mesh.Nelements*(mesh.Nvgeo + mesh.Np*(Nfields*2 + 0*mesh.dim*mesh.Np) )*sizeof(dfloat);
 
-int bestNvol = 0, bestNblockV = 0;
+  int bestNvol = 0, bestNblockV = 0;
   double bestElapsed = 1e9;;
   
-  for(int Nvol=1;Nvol<=7;++Nvol){
+  for(int Nvol=5;Nvol<=8;++Nvol){
     for(int NblockV=1;NblockV<=blockMax/mesh.Np;++NblockV){
+      int LDS = (mesh.Np*Nvol*Nfields*NblockV+Nvol*mesh.Nvgeo*NblockV)*sizeof(dfloat);
       // limit case based on shared array storage
-      if(Nfields*Nvol*NblockV*mesh.Np*sizeof(dfloat)<48*1024){
+      if(LDS<48*1024){
 	properties_t volumeKernelInfo = kernelInfo;
 	
 	volumeKernelInfo["defines/" "p_NblockV"]= NblockV;
@@ -111,7 +112,7 @@ int bestNvol = 0, bestNblockV = 0;
 	start = platform.device.tagStream();
 	
 	
-	int Nrun = 10;
+	int Nrun = 20;
 	for(int r=0;r<Nrun;++r){
 	  volumeKernel(mesh.Nelements,
 		       mesh.o_vgeo,
@@ -130,8 +131,8 @@ int bestNvol = 0, bestNblockV = 0;
 	double GFLOPS = NFLOP/(1.e9*elapsed);
 	double GBS = NBYTES/(1.e9*elapsed);
 	
-	printf("%02d, %02d, %5.4e, %5.4e, %5.4e %%%% VOL, Nvol, NblockV, elapsed, GFLOPS, GB/s\n",
-	       Nvol, NblockV, elapsed, GFLOPS, GBS);
+	printf("%02d, %02d, %5.4e, %5.4e, %5.4e, %lld, %d %%%% VOL, Nvol, NblockV, elapsed, GFLOPS, GB/s, NFLOP, LDS usage\n",
+	       Nvol, NblockV, elapsed, GFLOPS, GBS, NFLOP, LDS);
 	
 	if(elapsed<bestElapsed){
 	  bestElapsed = elapsed;

@@ -177,6 +177,7 @@ int main(int argc, char **argv){
 
   int E = NX*NY*NZ*6;
   int p_Np = ((p_N+1)*(p_N+2)*(p_N+3))/6;
+  //  p_Np = 8*((p_Np+7)/8);
   
   printf("E= %d p_N = %d p_Np = %d \n", E, p_N, p_Np);
 
