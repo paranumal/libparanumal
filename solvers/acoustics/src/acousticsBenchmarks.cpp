@@ -295,3 +295,126 @@ void acoustics_t::surfaceBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfloa
   
 }
 
+
+#include "data3dN04.h"
+
+void acoustics_t::volumeBernsteinBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfloat> &o_RHS){
+
+  // load Bernstein stuff
+  deviceMemory<int4> o_D1_ids = platform.device.malloc(mesh.Np*sizeof(int4), p_D1_ids[0]);
+  deviceMemory<int4> o_D2_ids = platform.device.malloc(mesh.Np*sizeof(int4), p_D2_ids[0]);
+  deviceMemory<int4> o_D3_ids = platform.device.malloc(mesh.Np*sizeof(int4), p_D3_ids[0]);
+  deviceMemory<int4> o_D4_ids = platform.device.malloc(mesh.Np*sizeof(int4), p_D4_ids[0]);
+  deviceMemory<dfloat4> o_D_vals = platform.device.malloc(mesh.Np*sizeof(dfloat4), p_D_vals);
+  
+  // OCCA build stuff
+  properties_t kernelInfo = mesh.props; //copy base occa properties
+
+  const dfloat p_half = 1./2.;
+  int blockMax = 768; // 512;
+  
+  //add boundary data to kernel info
+  std::string dataFileName;
+  settings.getSetting("DATA FILE", dataFileName);
+  kernelInfo["includes"] += dataFileName;
+  kernelInfo["defines/" "p_Nfields"]= Nfields;
+  kernelInfo["defines/" "p_half"]= p_half;
+
+  // set kernel name suffix
+  std::string suffix;
+  if(mesh.elementType==Mesh::TRIANGLES)
+    suffix = "TriBB2D";
+  if(mesh.elementType==Mesh::QUADRILATERALS)
+    suffix = "QuadBB2D";
+  if(mesh.elementType==Mesh::TETRAHEDRA)
+    suffix = "TetBB3D";
+  if(mesh.elementType==Mesh::HEXAHEDRA)
+    suffix = "HexBB3D";
+
+  std::string oklFilePrefix = DACOUSTICS "/okl/";
+  std::string oklFileSuffix = ".okl";
+
+  std::string volumeFileName, volumeKernelName;
+
+  occa::streamTag start, stop;
+
+  // kernels from volume file
+  volumeFileName   = oklFilePrefix + "acousticsVolume" + suffix + oklFileSuffix;
+  volumeKernelName = "acousticsVolume" + suffix;
+
+  // set up flop counts for tets
+  long long int NFLOP = mesh.Nelements*mesh.Np*((4*3*2*(long long int)mesh.Np) + 32);
+  long long int NBYTES   = mesh.Nelements*(mesh.Nvgeo + mesh.Np*(Nfields*2 + 0*mesh.dim*mesh.Np) )*sizeof(dfloat);
+
+  int bestNvol = 0, bestNblockV = 0;
+  double bestElapsed = 1e9;;
+  
+  for(int Nvol=5;Nvol<=8;++Nvol){
+    for(int NblockV=1;NblockV<=blockMax/mesh.Np;++NblockV){
+      int LDS = (mesh.Np*Nvol*Nfields*NblockV+Nvol*mesh.Nvgeo*NblockV)*sizeof(dfloat);
+      // limit case based on shared array storage
+      if(LDS<48*1024){
+	properties_t volumeKernelInfo = kernelInfo;
+	
+	volumeKernelInfo["defines/" "p_NblockV"]= NblockV;
+	volumeKernelInfo["defines/" "p_Nvol"]= Nvol;
+	
+	platform.device.finish();
+	
+	volumeKernel =  platform.buildKernel(volumeFileName, volumeKernelName,
+					     volumeKernelInfo);
+	
+	
+	int Nwarm = 100;
+	for(int w=0;w<Nwarm;++w){
+	  volumeKernel(mesh.Nelements,
+		       mesh.o_vgeo,
+		       mesh.o_D,
+		       o_Q,
+		       o_RHS);
+	}
+	
+	platform.device.finish();
+	
+	start = platform.device.tagStream();
+	
+	
+	int Nrun = 20;
+	for(int r=0;r<Nrun;++r){
+	  volumeKernel(mesh.Nelements,
+		       mesh.o_vgeo,
+		       mesh.o_D,
+		       o_Q,		 
+		       o_RHS);
+	}
+	
+	stop = platform.device.tagStream();
+	
+	platform.device.finish();
+	
+	double elapsed = platform.device.timeBetween(start, stop);
+	elapsed /= Nrun;
+	
+	double GFLOPS = NFLOP/(1.e9*elapsed);
+	double GBS = NBYTES/(1.e9*elapsed);
+	
+	printf("%02d, %02d, %5.4e, %5.4e, %5.4e, %lld, %d %%%% VOL, Nvol, NblockV, elapsed, GFLOP/s, GB/s, NFLOP, LDS usage\n",
+	       Nvol, NblockV, elapsed, GFLOPS, GBS, NFLOP, LDS);
+	
+	if(elapsed<bestElapsed){
+	  bestElapsed = elapsed;
+	  bestNvol = Nvol;;
+	  bestNblockV = NblockV;
+	}
+      }
+    }
+  }  
+
+  double bestGFLOPS = NFLOP/(1.e9*bestElapsed);
+  double bestGBS = NBYTES/(1.e9*bestElapsed);
+  
+  printf("%02d, %02d, %5.4e, %5.4e, %5.4e %%%% VOL, BEST - Nvol, NblockV, elapsed, GFLOP/s, GB/s\n",
+	 bestNvol, bestNblockV, bestElapsed, bestGFLOPS, bestGBS);
+
+}
+
