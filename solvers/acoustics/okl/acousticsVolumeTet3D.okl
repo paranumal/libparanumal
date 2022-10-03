@@ -840,6 +840,7 @@ SOFTWARE.
 
 
 #if 1
+// BEST
 @kernel void acousticsVolumeTet3D(const dlong Nelements,
                                  @restrict const  dfloat *  vgeo,
                                  @restrict const  dfloat *  D,
@@ -896,7 +897,6 @@ SOFTWARE.
               const dfloat dtdy = s_vgeo[es][et][p_TYID];
               const dfloat dtdz = s_vgeo[es][et][p_TZID];
 
-
               const dlong  qbase = e*p_Np*p_Nfields + n;
 
 	      const dfloat rho = q[qbase+0*p_Np];
@@ -917,7 +917,7 @@ SOFTWARE.
 
         dfloat r_drhodr[p_Nvol], r_drhods[p_Nvol], r_drhodt[p_Nvol];
 	// separate accumulators
-#if 1
+#if 0
 	dfloat r_dudr[p_Nvol], r_dvds[p_Nvol], r_dwdt[p_Nvol];
 #else
 	dfloat r_divU[p_Nvol];
@@ -928,7 +928,7 @@ SOFTWARE.
             r_drhodr[es] = 0;
             r_drhods[es] = 0;
             r_drhodt[es] = 0;
-#if 1
+#if 0
 	    r_dudr[es] = 0;  r_dvds[es] = 0; r_dwdt[es] = 0;
 #else
             r_divU[es] = 0;
@@ -950,7 +950,7 @@ SOFTWARE.
                 const dfloat vm = s_v[es][et][m];
                 const dfloat wm = s_w[es][et][m];
 
-#if 0
+#if 1
                 r_drhodr[es] += Drnm*rhom;
 		r_divU[es] += Drnm*um;
 		
@@ -996,7 +996,7 @@ SOFTWARE.
               const dfloat drhodz = drdz*r_drhodr[es] + dsdz*r_drhods[es] + dtdz*r_drhodt[es];
 	      
               // move to rhs
-#if 1
+#if 0
 	      rhsq[base+0*p_Np] = -r_dudr[es]-r_dvds[es]-r_dwdt[es];
 #else
               rhsq[base+0*p_Np] = -r_divU[es];
@@ -1017,7 +1017,7 @@ SOFTWARE.
 #define p_Nwarp 32
 
 
-@kernel void acousticsVolumeTet3D_warp(const dlong Nelements,
+@kernel void acousticsVolumeTet3D_warpy(const dlong Nelements,
 				       @restrict const  dfloat *  vgeo,
 				       @restrict const  dfloat *  D,
 				       @restrict const  dfloat *  q,
@@ -1045,7 +1045,7 @@ SOFTWARE.
 	  m += p_Nwarp*p_NblockV;	  
 	}
 	
-#pragma unroll p_Nvol
+	//#pragma unroll p_Nvol
 	for(int es=0;es<p_Nvol;++es){
 	  
 	  const dlong e = es*p_NblockV + et + eo;
@@ -1102,13 +1102,15 @@ SOFTWARE.
 	  r_drhodt[es][1] = 0;
 	  r_divU[es][1] = 0;
 	}
+
+	#define mask 0xffffffff
 	
 #pragma unroll p_Np
 	for(int m=0;m<p_Np;++m){
 	  
 	  const dfloat Drnm1 = D[n+m*p_Np];
 	  const dfloat Dsnm1 = D[n+m*p_Np+1*p_Np*p_Np];
-	  const dfloat Dtnm2 = D[n+m*p_Np+2*p_Np*p_Np];
+	  const dfloat Dtnm1 = D[n+m*p_Np+2*p_Np*p_Np];
 	  
 	  const dfloat Drnm2 = (n+p_Nwarp<p_Np) ? D[n+p_Nwarp+m*p_Np]:0;
 	  const dfloat Dsnm2 = (n+p_Nwarp<p_Np) ? D[n+p_Nwarp+m*p_Np+1*p_Np*p_Np]:0;
@@ -1164,16 +1166,19 @@ SOFTWARE.
 	    const dfloat dtdz = s_vgeo[es][et][p_TZID];
 	    
 	    const dlong base = e*p_Np*p_Nfields + n;
-	    
-	    const dfloat drhodx1 = drdx*r_drhodr[es][0] + dsdx*r_drhods[es][0] + dtdx*r_drhodt[es][0];
-	    const dfloat drhody1 = drdy*r_drhodr[es][0] + dsdy*r_drhods[es][0] + dtdy*r_drhodt[es][0];
-	    const dfloat drhodz1 = drdz*r_drhodr[es][0] + dsdz*r_drhods[es][0] + dtdz*r_drhodt[es][0];
-	    
-	    // move to rhs
-	    rhsq[base+0*p_Np] = -r_divU[es][0];
-	    rhsq[base+1*p_Np] = -drhodx1;
-	    rhsq[base+2*p_Np] = -drhody1;
-	    rhsq[base+3*p_Np] = -drhodz1;
+
+	    {
+	      const dfloat drhodx1 = drdx*r_drhodr[es][0] + dsdx*r_drhods[es][0] + dtdx*r_drhodt[es][0];
+	      const dfloat drhody1 = drdy*r_drhodr[es][0] + dsdy*r_drhods[es][0] + dtdy*r_drhodt[es][0];
+	      const dfloat drhodz1 = drdz*r_drhodr[es][0] + dsdz*r_drhods[es][0] + dtdz*r_drhodt[es][0];
+	      
+	      // move to rhs
+	      rhsq[base+0*p_Np] = -r_divU[es][0];
+	      rhsq[base+1*p_Np] = -drhodx1;
+	      rhsq[base+2*p_Np] = -drhody1;
+	      rhsq[base+3*p_Np] = -drhodz1;
+	    }
+
 	    if(n+p_Nwarp<p_Np){
 	      const dfloat drhodx2 = drdx*r_drhodr[es][1] + dsdx*r_drhods[es][1] + dtdx*r_drhodt[es][1];
 	      const dfloat drhody2 = drdy*r_drhodr[es][1] + dsdy*r_drhods[es][1] + dtdy*r_drhodt[es][1];
