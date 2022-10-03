@@ -32,6 +32,7 @@ void acoustics_t::Benchmarks(){
   deviceMemory<dfloat> o_Q   = platform.device.malloc(Nfields*mesh.Nelements*mesh.Np*sizeof(dfloat));
   deviceMemory<dfloat> o_RHS = platform.device.malloc(Nfields*mesh.Nelements*mesh.Np*sizeof(dfloat));
 
+  volumeBernsteinBenchmark(o_Q, o_RHS);
   volumeBenchmark(o_Q, o_RHS);
   surfaceBenchmark(o_Q, o_RHS);
 }
@@ -82,7 +83,7 @@ void acoustics_t::volumeBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfloat
   int bestNvol = 0, bestNblockV = 0;
   double bestElapsed = 1e9;;
   
-  for(int Nvol=5;Nvol<=8;++Nvol){
+  for(int Nvol=1;Nvol<=8;++Nvol){
     for(int NblockV=1;NblockV<=blockMax/mesh.Np;++NblockV){
       int LDS = (mesh.Np*Nvol*Nfields*NblockV+Nvol*mesh.Nvgeo*NblockV)*sizeof(dfloat);
       // limit case based on shared array storage
@@ -296,16 +297,62 @@ void acoustics_t::surfaceBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfloa
 }
 
 
+#if 0
 #include "data3dN04.h"
+#include "data3dN05.h"
+#else
+#include "data3dN06.h"
+#endif
+
+typedef struct {
+  unsigned char x;
+  unsigned char y;
+  unsigned char z;
+  unsigned char w;
+}uchar4;
 
 void acoustics_t::volumeBernsteinBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfloat> &o_RHS){
 
   // load Bernstein stuff
-  deviceMemory<int4> o_D1_ids = platform.device.malloc(mesh.Np*sizeof(int4), p_D1_ids[0]);
-  deviceMemory<int4> o_D2_ids = platform.device.malloc(mesh.Np*sizeof(int4), p_D2_ids[0]);
-  deviceMemory<int4> o_D3_ids = platform.device.malloc(mesh.Np*sizeof(int4), p_D3_ids[0]);
-  deviceMemory<int4> o_D4_ids = platform.device.malloc(mesh.Np*sizeof(int4), p_D4_ids[0]);
-  deviceMemory<dfloat4> o_D_vals = platform.device.malloc(mesh.Np*sizeof(dfloat4), p_D_vals);
+  deviceMemory<int> o_D1_ids = platform.device.malloc(mesh.Np*sizeof(int)*4, p_D1_ids[0]);
+  deviceMemory<int> o_D2_ids = platform.device.malloc(mesh.Np*sizeof(int)*4, p_D2_ids[0]);
+  deviceMemory<int> o_D3_ids = platform.device.malloc(mesh.Np*sizeof(int)*4, p_D3_ids[0]);
+  deviceMemory<int> o_D4_ids = platform.device.malloc(mesh.Np*sizeof(int)*4, p_D4_ids[0]);
+  deviceMemory<dfloat> o_D_vals = platform.device.malloc(mesh.Np*sizeof(dfloat)*4, p_D_vals);
+
+
+  uchar4 *c_D1_ids = (uchar4*) calloc(mesh.Np, sizeof(uchar4));
+  uchar4 *c_D2_ids = (uchar4*) calloc(mesh.Np, sizeof(uchar4));
+  uchar4 *c_D3_ids = (uchar4*) calloc(mesh.Np, sizeof(uchar4));
+  uchar4 *c_D4_ids = (uchar4*) calloc(mesh.Np, sizeof(uchar4));
+
+  for(int n=0;n<mesh.Np;++n){
+    c_D1_ids[n].x = p_D1_ids[n][0];
+    c_D1_ids[n].y = p_D1_ids[n][1];
+    c_D1_ids[n].z = p_D1_ids[n][2];
+    c_D1_ids[n].w = p_D1_ids[n][3];
+
+    c_D2_ids[n].x = p_D2_ids[n][0];
+    c_D2_ids[n].y = p_D2_ids[n][1];
+    c_D2_ids[n].z = p_D2_ids[n][2];
+    c_D2_ids[n].w = p_D2_ids[n][3];
+   
+    c_D3_ids[n].x = p_D3_ids[n][0];
+    c_D3_ids[n].y = p_D3_ids[n][1];
+    c_D3_ids[n].z = p_D3_ids[n][2];
+    c_D3_ids[n].w = p_D3_ids[n][3];
+    
+    c_D4_ids[n].x = p_D4_ids[n][0];
+    c_D4_ids[n].y = p_D4_ids[n][1];
+    c_D4_ids[n].z = p_D4_ids[n][2];
+    c_D4_ids[n].w = p_D4_ids[n][3];
+  }
+  
+  deviceMemory<uchar4> o_cD1_ids = platform.device.malloc(mesh.Np*sizeof(uchar4), c_D1_ids);
+  deviceMemory<uchar4> o_cD2_ids = platform.device.malloc(mesh.Np*sizeof(uchar4), c_D2_ids);
+  deviceMemory<uchar4> o_cD3_ids = platform.device.malloc(mesh.Np*sizeof(uchar4), c_D3_ids);
+  deviceMemory<uchar4> o_cD4_ids = platform.device.malloc(mesh.Np*sizeof(uchar4), c_D4_ids);
+
   
   // OCCA build stuff
   properties_t kernelInfo = mesh.props; //copy base occa properties
@@ -349,7 +396,7 @@ void acoustics_t::volumeBernsteinBenchmark(deviceMemory<dfloat> &o_Q, deviceMemo
   int bestNvol = 0, bestNblockV = 0;
   double bestElapsed = 1e9;;
   
-  for(int Nvol=5;Nvol<=8;++Nvol){
+  for(int Nvol=1;Nvol<=8;++Nvol){
     for(int NblockV=1;NblockV<=blockMax/mesh.Np;++NblockV){
       int LDS = (mesh.Np*Nvol*Nfields*NblockV+Nvol*mesh.Nvgeo*NblockV)*sizeof(dfloat);
       // limit case based on shared array storage
@@ -369,7 +416,8 @@ void acoustics_t::volumeBernsteinBenchmark(deviceMemory<dfloat> &o_Q, deviceMemo
 	for(int w=0;w<Nwarm;++w){
 	  volumeKernel(mesh.Nelements,
 		       mesh.o_vgeo,
-		       mesh.o_D,
+		       o_cD1_ids, o_cD2_ids, o_cD3_ids, o_cD4_ids,
+		       o_D_vals,
 		       o_Q,
 		       o_RHS);
 	}
@@ -383,7 +431,8 @@ void acoustics_t::volumeBernsteinBenchmark(deviceMemory<dfloat> &o_Q, deviceMemo
 	for(int r=0;r<Nrun;++r){
 	  volumeKernel(mesh.Nelements,
 		       mesh.o_vgeo,
-		       mesh.o_D,
+		       o_cD1_ids, o_cD2_ids, o_cD3_ids, o_cD4_ids,
+		       o_D_vals,
 		       o_Q,		 
 		       o_RHS);
 	}
@@ -398,7 +447,7 @@ void acoustics_t::volumeBernsteinBenchmark(deviceMemory<dfloat> &o_Q, deviceMemo
 	double GFLOPS = NFLOP/(1.e9*elapsed);
 	double GBS = NBYTES/(1.e9*elapsed);
 	
-	printf("%02d, %02d, %5.4e, %5.4e, %5.4e, %lld, %d %%%% VOL, Nvol, NblockV, elapsed, GFLOP/s, GB/s, NFLOP, LDS usage\n",
+	printf("%02d, %02d, %5.4e, %5.4e, %5.4e, %lld, %d %%%% BB-VOL, Nvol, NblockV, elapsed, GFLOP/s, GB/s, NFLOP, LDS usage\n",
 	       Nvol, NblockV, elapsed, GFLOPS, GBS, NFLOP, LDS);
 	
 	if(elapsed<bestElapsed){
@@ -413,7 +462,7 @@ void acoustics_t::volumeBernsteinBenchmark(deviceMemory<dfloat> &o_Q, deviceMemo
   double bestGFLOPS = NFLOP/(1.e9*bestElapsed);
   double bestGBS = NBYTES/(1.e9*bestElapsed);
   
-  printf("%02d, %02d, %5.4e, %5.4e, %5.4e %%%% VOL, BEST - Nvol, NblockV, elapsed, GFLOP/s, GB/s\n",
+  printf("%02d, %02d, %5.4e, %5.4e, %5.4e %%%% BB-VOL, BEST - Nvol, NblockV, elapsed, GFLOP/s, GB/s\n",
 	 bestNvol, bestNblockV, bestElapsed, bestGFLOPS, bestGBS);
 
 }

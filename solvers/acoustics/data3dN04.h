@@ -1,5 +1,4 @@
 #ifndef DATA3dN04 
-
 #define DATA3dN04 1
 
 int p_D1_ids[35][4] = {{0 , 1 , 2 , 3 },

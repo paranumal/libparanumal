@@ -26,7 +26,7 @@ SOFTWARE.
 
 // https://github.com/tcew/BBDG
 
-@kernel void acousticsVolumeTetBB3D(const int Nelements,
+@kernel void acousticsVolumeTetBB3D_v0(const int Nelements,
 				      @restrict const dfloat *vgeo,
 				      @restrict const int4 *D1_ids,
 				      @restrict const int4 *D2_ids,
@@ -149,6 +149,324 @@ SOFTWARE.
           rhsQ[id] = -dpdy; id += p_Np;
           rhsQ[id] = -dpdz;
         }
+      }
+    }
+  }
+}
+
+
+
+@kernel void acousticsVolumeTetBB3D_v1(const int Nelements,
+				      @restrict const dfloat *vgeo,
+				      @restrict const int4 *D1_ids,
+				      @restrict const int4 *D2_ids,
+				      @restrict const int4 *D3_ids,
+				      @restrict const int4 *D4_ids,
+				      @restrict const dfloat4 *Dvals,
+				      @restrict const dfloat *Q,
+				      dfloat *rhsQ){
+  
+  // loop over elements
+  for(int eo=0; eo<Nelements; eo+=p_NblockV*p_Nvol; @outer(0)){
+    
+    // total shared memory amounts to approx. 4 dfloats per thread
+    @shared dfloat s_p[p_Nvol][p_NblockV][p_Np];
+    @shared dfloat s_u[p_Nvol][p_NblockV][p_Np];
+    @shared dfloat s_v[p_Nvol][p_NblockV][p_Np];
+    @shared dfloat s_w[p_Nvol][p_NblockV][p_Np];
+    @shared dfloat s_G[p_Nvol][p_NblockV][p_Nvgeo];
+    
+    // lapp has to survive multiple inner loops
+    for(int et = 0; et < p_NblockV; ++et; @inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
+	// load geometric factors into shared memory
+	int m = n + et*p_Np;
+	while(m<p_Nvgeo*p_NblockV*p_Nvol && p_Nvgeo*eo+m<Nelements*p_Nvgeo){
+	  s_G[0][0][m] = vgeo[m+p_Nvgeo*eo];
+	  m += p_Np*p_NblockV;
+	}
+      }
+    }
+
+#define rx s_G[es][et][0]
+#define ry s_G[es][et][1]
+#define rz s_G[es][et][2]
+#define sx s_G[es][et][3]
+#define sy s_G[es][et][4]
+#define sz s_G[es][et][5]
+#define tx s_G[es][et][6]
+#define ty s_G[es][et][7]
+#define tz s_G[es][et][8]
+
+    for(int et = 0; et < p_NblockV; ++et; @inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
+	for(int es=0;es<p_Nvol;++es){
+	  int element = eo + et + es*p_NblockV;
+	  if (element < Nelements){
+	    int offset = 0;
+	    const int id = n + element*p_Np*p_Nfields;
+	    s_p[es][et][n] = Q[id + offset]; offset += p_Np;
+	    
+	    const dfloat un = Q[id + offset]; offset += p_Np;
+	    const dfloat vn = Q[id + offset]; offset += p_Np;
+	    const dfloat wn = Q[id + offset]; 
+	    
+	    s_u[es][et][n] = un*rx + vn*ry + wn*rz;  // should store drdx*u + drdy*v +drdz*w
+	    s_v[es][et][n] = un*sx + vn*sy + wn*sz;  // should store dsdx*u + dsdy*v +dsdz*w
+	    s_w[es][et][n] = un*tx + vn*ty + wn*tz;  // should store dtdx*u + dtdy*v +dtdz*w
+	  }
+	}
+      }
+    }
+    
+    for(int et = 0; et < p_NblockV; ++et; @inner(1)){
+      // loop over nodes
+      for(int n=0;n<p_Np;++n;@inner(0)){
+	
+	// divU = Dr*u + Ds*v + Dt*w 
+	//     = .5*((u2-u1) + (v3-v1) + (w4-w1));
+	//     = .5*((u2 + v3 + w4) - (u1 + v1 + w1))
+	//     = .5*(dU1 - dU2)
+	
+	const dfloat4 Dvali = Dvals[n];
+	const int4 D1i = D1_ids[n];
+	const int4 D2i = D2_ids[n];
+	const int4 D3i = D3_ids[n];
+	const int4 D4i = D4_ids[n];
+
+#pragma unroll p_Nvol
+	for(int es=0;es<p_Nvol;++es){
+	  dfloat p1 = 0, p2 = 0, p3 = 0, p4 = 0;
+	  
+	  p1 += s_p[es][et][D1i.x]*Dvali.x;
+	  p2 += s_p[es][et][D1i.y]*Dvali.x;
+	  p3 += s_p[es][et][D1i.z]*Dvali.x;
+	  p4 += s_p[es][et][D1i.w]*Dvali.x;
+
+	  p1 += s_p[es][et][D2i.x]*Dvali.y;
+	  p2 += s_p[es][et][D2i.y]*Dvali.y;
+	  p3 += s_p[es][et][D2i.z]*Dvali.y;
+	  p4 += s_p[es][et][D2i.w]*Dvali.y;
+
+	  p1 += s_p[es][et][D3i.x]*Dvali.z;
+	  p2 += s_p[es][et][D3i.y]*Dvali.z;
+	  p3 += s_p[es][et][D3i.z]*Dvali.z;
+	  p4 += s_p[es][et][D3i.w]*Dvali.z;
+
+	  p1 += s_p[es][et][D4i.x]*Dvali.w;
+	  p2 += s_p[es][et][D4i.y]*Dvali.w;
+	  p3 += s_p[es][et][D4i.z]*Dvali.w;
+	  p4 += s_p[es][et][D4i.w]*Dvali.w;
+	  
+	  const dfloat dpdr = .5f*(p2-p1);
+	  const dfloat dpds = .5f*(p3-p1);
+	  const dfloat dpdt = .5f*(p4-p1);	  
+
+          // GFLOPS: 15 * p_Np
+          dfloat dpdx = rx*dpdr + sx*dpds + tx*dpdt;
+          dfloat dpdy = ry*dpdr + sy*dpds + ty*dpdt;
+          dfloat dpdz = rz*dpdr + sz*dpds + tz*dpdt;
+	  
+
+	  dfloat dU1 = 0, dU2 = 0;
+	  
+	  dU2 += Dvali.x*s_u[es][et][D1i.x];
+	  dU2 += Dvali.x*s_v[es][et][D1i.x]; 
+	  dU2 += Dvali.x*s_w[es][et][D1i.x];
+	  dU1 += Dvali.x*s_u[es][et][D1i.y]; 
+	  dU1 += Dvali.x*s_v[es][et][D1i.z];
+	  dU1 += Dvali.x*s_w[es][et][D1i.w]; 
+
+	  dU2 += Dvali.y*s_u[es][et][D2i.x];
+	  dU2 += Dvali.y*s_v[es][et][D2i.x]; 
+	  dU2 += Dvali.y*s_w[es][et][D2i.x];
+	  dU1 += Dvali.y*s_u[es][et][D2i.y];
+	  dU1 += Dvali.y*s_v[es][et][D2i.z];
+	  dU1 += Dvali.y*s_w[es][et][D2i.w];
+
+	  dU2 += Dvali.z*s_u[es][et][D3i.x];
+	  dU2 += Dvali.z*s_v[es][et][D3i.x]; 
+	  dU2 += Dvali.z*s_w[es][et][D3i.x];
+	  dU1 += Dvali.z*s_u[es][et][D3i.y]; 
+	  dU1 += Dvali.z*s_v[es][et][D3i.z];
+	  dU1 += Dvali.z*s_w[es][et][D3i.w]; 
+
+	  dU2 += Dvali.w*s_u[es][et][D4i.x];
+	  dU2 += Dvali.w*s_v[es][et][D4i.x];
+	  dU2 += Dvali.w*s_w[es][et][D4i.x];
+	  dU1 += Dvali.w*s_u[es][et][D4i.y];
+	  dU1 += Dvali.w*s_v[es][et][D4i.z];
+	  dU1 += Dvali.w*s_w[es][et][D4i.w];
+
+	  const dfloat divU = .5f*(dU1-dU2);
+
+	  const int element = eo + et + es*p_NblockV;
+	  if (element < Nelements){
+	    int id = n + element*p_Nfields*p_Np;
+	    rhsQ[id] = -divU; id += p_Np;
+	    rhsQ[id] = -dpdx; id += p_Np;
+	    rhsQ[id] = -dpdy; id += p_Np;
+	    rhsQ[id] = -dpdz;
+	  }
+	}
+      }
+    }
+  }
+}
+
+
+@kernel void acousticsVolumeTetBB3D(const int Nelements,
+				      @restrict const dfloat *vgeo,
+				      @restrict const uchar4 *D1_ids,
+				      @restrict const uchar4 *D2_ids,
+				      @restrict const uchar4 *D3_ids,
+				      @restrict const uchar4 *D4_ids,
+				      @restrict const dfloat4 *Dvals,
+				      @restrict const dfloat *Q,
+				      dfloat *rhsQ){
+  
+  // loop over elements
+  for(int eo=0; eo<Nelements; eo+=p_NblockV*p_Nvol; @outer(0)){
+    
+    // total shared memory amounts to approx. 4 dfloats per thread
+    @shared dfloat s_p[p_Nvol][p_NblockV][p_Np];
+    @shared dfloat s_u[p_Nvol][p_NblockV][p_Np];
+    @shared dfloat s_v[p_Nvol][p_NblockV][p_Np];
+    @shared dfloat s_w[p_Nvol][p_NblockV][p_Np];
+    @shared dfloat s_G[p_Nvol][p_NblockV][p_Nvgeo];
+    
+    // lapp has to survive multiple inner loops
+    for(int et = 0; et < p_NblockV; ++et; @inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
+	// load geometric factors into shared memory
+	int m = n + et*p_Np;
+	while(m<p_Nvgeo*p_NblockV*p_Nvol && p_Nvgeo*eo+m<Nelements*p_Nvgeo){
+	  s_G[0][0][m] = vgeo[m+p_Nvgeo*eo];
+	  m += p_Np*p_NblockV;
+	}
+      }
+    }
+
+#define rx s_G[es][et][0]
+#define ry s_G[es][et][1]
+#define rz s_G[es][et][2]
+#define sx s_G[es][et][3]
+#define sy s_G[es][et][4]
+#define sz s_G[es][et][5]
+#define tx s_G[es][et][6]
+#define ty s_G[es][et][7]
+#define tz s_G[es][et][8]
+
+    for(int et = 0; et < p_NblockV; ++et; @inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
+	for(int es=0;es<p_Nvol;++es){
+	  int element = eo + et + es*p_NblockV;
+	  if (element < Nelements){
+	    int offset = 0;
+	    const int id = n + element*p_Np*p_Nfields;
+	    s_p[es][et][n] = Q[id + offset]; offset += p_Np;
+	    
+	    const dfloat un = Q[id + offset]; offset += p_Np;
+	    const dfloat vn = Q[id + offset]; offset += p_Np;
+	    const dfloat wn = Q[id + offset]; 
+	    
+	    s_u[es][et][n] = un*rx + vn*ry + wn*rz;  // should store drdx*u + drdy*v +drdz*w
+	    s_v[es][et][n] = un*sx + vn*sy + wn*sz;  // should store dsdx*u + dsdy*v +dsdz*w
+	    s_w[es][et][n] = un*tx + vn*ty + wn*tz;  // should store dtdx*u + dtdy*v +dtdz*w
+	  }
+	}
+      }
+    }
+    
+    for(int et = 0; et < p_NblockV; ++et; @inner(1)){
+      // loop over nodes
+      for(int n=0;n<p_Np;++n;@inner(0)){
+	
+	// divU = Dr*u + Ds*v + Dt*w 
+	//     = .5*((u2-u1) + (v3-v1) + (w4-w1));
+	//     = .5*((u2 + v3 + w4) - (u1 + v1 + w1))
+	//     = .5*(dU1 - dU2)
+	
+	const dfloat4 Dvali = Dvals[n];
+	const uchar4 D1i = D1_ids[n];
+	const uchar4 D2i = D2_ids[n];
+	const uchar4 D3i = D3_ids[n];
+	const uchar4 D4i = D4_ids[n];
+
+#pragma unroll p_Nvol
+	for(int es=0;es<p_Nvol;++es){
+	  dfloat p1 = 0, p2 = 0, p3 = 0, p4 = 0;
+	  
+	  p1 += s_p[es][et][D1i.x]*Dvali.x;
+	  p2 += s_p[es][et][D1i.y]*Dvali.x;
+	  p3 += s_p[es][et][D1i.z]*Dvali.x;
+	  p4 += s_p[es][et][D1i.w]*Dvali.x;
+
+	  p1 += s_p[es][et][D2i.x]*Dvali.y;
+	  p2 += s_p[es][et][D2i.y]*Dvali.y;
+	  p3 += s_p[es][et][D2i.z]*Dvali.y;
+	  p4 += s_p[es][et][D2i.w]*Dvali.y;
+
+	  p1 += s_p[es][et][D3i.x]*Dvali.z;
+	  p2 += s_p[es][et][D3i.y]*Dvali.z;
+	  p3 += s_p[es][et][D3i.z]*Dvali.z;
+	  p4 += s_p[es][et][D3i.w]*Dvali.z;
+
+	  p1 += s_p[es][et][D4i.x]*Dvali.w;
+	  p2 += s_p[es][et][D4i.y]*Dvali.w;
+	  p3 += s_p[es][et][D4i.z]*Dvali.w;
+	  p4 += s_p[es][et][D4i.w]*Dvali.w;
+	  
+	  const dfloat dpdr = .5f*(p2-p1);
+	  const dfloat dpds = .5f*(p3-p1);
+	  const dfloat dpdt = .5f*(p4-p1);	  
+
+          // GFLOPS: 15 * p_Np
+          dfloat dpdx = rx*dpdr + sx*dpds + tx*dpdt;
+          dfloat dpdy = ry*dpdr + sy*dpds + ty*dpdt;
+          dfloat dpdz = rz*dpdr + sz*dpds + tz*dpdt;
+
+	  dfloat dU1 = 0, dU2 = 0;
+	  
+	  dU2 += Dvali.x*s_u[es][et][D1i.x];
+	  dU2 += Dvali.x*s_v[es][et][D1i.x]; 
+	  dU2 += Dvali.x*s_w[es][et][D1i.x];
+	  dU1 += Dvali.x*s_u[es][et][D1i.y]; 
+	  dU1 += Dvali.x*s_v[es][et][D1i.z];
+	  dU1 += Dvali.x*s_w[es][et][D1i.w]; 
+
+	  dU2 += Dvali.y*s_u[es][et][D2i.x];
+	  dU2 += Dvali.y*s_v[es][et][D2i.x]; 
+	  dU2 += Dvali.y*s_w[es][et][D2i.x];
+	  dU1 += Dvali.y*s_u[es][et][D2i.y];
+	  dU1 += Dvali.y*s_v[es][et][D2i.z];
+	  dU1 += Dvali.y*s_w[es][et][D2i.w];
+
+	  dU2 += Dvali.z*s_u[es][et][D3i.x];
+	  dU2 += Dvali.z*s_v[es][et][D3i.x]; 
+	  dU2 += Dvali.z*s_w[es][et][D3i.x];
+	  dU1 += Dvali.z*s_u[es][et][D3i.y]; 
+	  dU1 += Dvali.z*s_v[es][et][D3i.z];
+	  dU1 += Dvali.z*s_w[es][et][D3i.w]; 
+
+	  dU2 += Dvali.w*s_u[es][et][D4i.x];
+	  dU2 += Dvali.w*s_v[es][et][D4i.x];
+	  dU2 += Dvali.w*s_w[es][et][D4i.x];
+	  dU1 += Dvali.w*s_u[es][et][D4i.y];
+	  dU1 += Dvali.w*s_v[es][et][D4i.z];
+	  dU1 += Dvali.w*s_w[es][et][D4i.w];
+
+	  const dfloat divU = .5f*(dU1-dU2);
+
+	  const int element = eo + et + es*p_NblockV;
+	  if (element < Nelements){
+	    int id = n + element*p_Nfields*p_Np;
+	    rhsQ[id] = -divU; id += p_Np;
+	    rhsQ[id] = -dpdx; id += p_Np;
+	    rhsQ[id] = -dpdy; id += p_Np;
+	    rhsQ[id] = -dpdz;
+	  }
+	}
       }
     }
   }

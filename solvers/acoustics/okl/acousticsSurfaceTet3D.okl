@@ -192,7 +192,7 @@ void upwind(const dfloat nx,
                                   @restrict dfloat *  rhsq){
 
   // for all elements
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
+  for(dlong eo=0;eo<Nelements;eo+=(p_NblockS*p_Nsur);@outer(0)){
 
     // @shared storage for flux terms
     @shared dfloat s_rflux[p_Nsur][p_NblockS][p_NfacesNfp];
@@ -203,7 +203,9 @@ void upwind(const dfloat nx,
     // for all face nodes of all elements
     for(int et=0;et<p_NblockS;++et;@inner(1)){
       for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
-	for(iint es=0;es<p_Nsur;++es){
+
+	//#pragma unroll p_Nsur
+	for(int es=0;es<p_Nsur;++es){
 	  const dlong r_e = eo + et + es*p_NblockS;
 	  if(r_e<Nelements){
 	    const dlong element = elementIds[r_e];
@@ -257,7 +259,7 @@ void upwind(const dfloat nx,
 	      
 	      upwind(nx, ny, nz, rM, uM, vM, wM, rP, uP, vP, wP, &rflux, &uflux, &vflux, &wflux);
 	      
-	      s_rflux[es][et][n] = sc*(-rflux );
+	      s_rflux[es][et][n] = sc*(-rflux);
 	      s_uflux[es][et][n] = sc*(-uflux);
 	      s_vflux[es][et][n] = sc*(-vflux);
 	      s_wflux[es][et][n] = sc*(-wflux);
@@ -276,25 +278,28 @@ void upwind(const dfloat nx,
 	  dfloat Lrflux[p_Nsur], Luflux[p_Nsur], Lvflux[p_Nsur], Lwflux[p_Nsur];
 	  
 	  // load rhs data from volume fluxes
-	  for(iint es=0;es<p_Nsur;++es){	  
+	  //#pragma unroll p_Nsur
+	  for(int es=0;es<p_Nsur;++es){	  
 	    Lrflux[es] = 0; Luflux[es] = 0; Lvflux[es] = 0; Lwflux[es] = 0;
 	  }
 	  
 	  // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
-#pragma unroll p_NfacesNfp
+	  //#pragma unroll p_NfacesNfp
+	  //#pragma unroll p_Nfaces
 	  for(int m=0;m<p_NfacesNfp;++m){
 	    const dfloat L = LIFT[n+m*p_Np];
 	    
-#pragma unroll p_Nsur
-	    for(iint es=0;es<p_Nsur;++es){	  
+	    //#pragma unroll p_Nsur
+	    for(int es=0;es<p_Nsur;++es){	  
 	      Lrflux[es] += L*s_rflux[es][et][m];
 	      Luflux[es] += L*s_uflux[es][et][m];
 	      Lvflux[es] += L*s_vflux[es][et][m];
 	      Lwflux[es] += L*s_wflux[es][et][m];
 	    }
 	  }
-	  
-	  for(iint es=0;es<p_Nsur;++es){
+
+	  //#pragma unroll p_Nsur
+	  for(int es=0;es<p_Nsur;++es){
 	    
 	    dlong r_e = eo + et + es*p_NblockS;
 	    if(r_e<Nelements){
