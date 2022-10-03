@@ -1014,125 +1014,183 @@ SOFTWARE.
 #endif
 
 
-@kernel void acousticsVolumeTet3D_bad(const dlong Nelements,
-                                 @restrict const  dfloat *  vgeo,
-                                 @restrict const  dfloat *  D,
-                                 @restrict const  dfloat *  q,
-                                 @restrict dfloat *  rhsq){
+#define p_Nwarp 32
 
 
-
+@kernel void acousticsVolumeTet3D_warp(const dlong Nelements,
+				       @restrict const  dfloat *  vgeo,
+				       @restrict const  dfloat *  D,
+				       @restrict const  dfloat *  q,
+				       @restrict dfloat *  rhsq){
+  
   for(dlong eo=0;eo<Nelements;eo+=(p_Nvol*p_NblockV);@outer(0)){
 
-    @shared dfloat s_rho[p_Nvol][p_NblockV][p_Np];
-    @shared dfloat s_u[p_Nvol][p_NblockV][p_Np];
-    @shared dfloat s_v[p_Nvol][p_NblockV][p_Np];
-    @shared dfloat s_w[p_Nvol][p_NblockV][p_Np];
+    @shared dfloat s_vgeo[p_Nvol][p_NblockV][p_Nvgeo];
 
-    @shared dfloat s_G[p_Nvol][9];
-    
     for(int et=0;et<p_NblockV;++et;@inner(1)){
-      for(int n=0;n<p_Np;++n;@inner(0)){
+      for(int n=0;n<p_Nwarp;++n;@inner(0)){
 	
-#pragma unroll p_Nvol
-	for(int es=0;es<p_Nvol;++es){
+	dfloat r_p[p_Nvol][2], r_u[p_Nvol][2], r_v[p_Nvol][2], r_w[p_Nvol][2];
+	
+	int m = n + p_Nwarp*et;
+	
+	// prefetch ggeo
+	while(m<p_NblockV*p_Nvol*p_Nvgeo){
+	  dlong id = eo*p_Nvgeo + m;
 	  
-	  const dlong e = es*p_NblockV + et + eo;
-	  
-	  if(e<Nelements){
-	    
-	    const dlong  qbase = e*p_Np*p_Nfields + n;
-	    
-	    s_rho[es][et][n] = q[qbase+0*p_Np];
-	    s_u[es][et][n] = q[qbase+1*p_Np];
-              s_v[es][et][n] = q[qbase+2*p_Np];
-	      s_w[es][et][n] = q[qbase+3*p_Np];
+	  if(id<Nelements*p_Nvgeo){
+	    s_vgeo[0][0][m] = vgeo[id];
 	  }
+	  
+	  m += p_Nwarp*p_NblockV;	  
 	}
 	
-	
 #pragma unroll p_Nvol
 	for(int es=0;es<p_Nvol;++es){
 	  
 	  const dlong e = es*p_NblockV + et + eo;
 	  
 	  if(e<Nelements){
-	    if(n<9){
-	      s_G[es][n] = vgeo[e*p_Nvgeo+n];
+	    
+	    const dfloat drdx = s_vgeo[es][et][p_RXID];
+	    const dfloat drdy = s_vgeo[es][et][p_RYID];
+	    const dfloat drdz = s_vgeo[es][et][p_RZID];
+	    const dfloat dsdx = s_vgeo[es][et][p_SXID];
+	    const dfloat dsdy = s_vgeo[es][et][p_SYID];
+	    const dfloat dsdz = s_vgeo[es][et][p_SZID];
+	    const dfloat dtdx = s_vgeo[es][et][p_TXID];
+	    const dfloat dtdy = s_vgeo[es][et][p_TYID];
+	    const dfloat dtdz = s_vgeo[es][et][p_TZID];
+	    
+	    dlong  qbase = e*p_Np*p_Nfields + n;
+
+	    {
+	      dfloat rho = q[qbase+0*p_Np];
+	      dfloat u = q[qbase+1*p_Np];
+	      dfloat v = q[qbase+2*p_Np];
+	      dfloat w = q[qbase+3*p_Np];
+	      r_p[es][0] = rho;
+	      r_u[es][0] = drdx*u + drdy*v + drdz*w;
+	      r_v[es][0] = dsdx*u + dsdy*v + dsdz*w;
+	      r_w[es][0] = dtdx*u + dtdy*v + dtdz*w;
+	    }
+	    
+	    if(n+p_Nwarp<p_Np){
+	      dfloat rho = q[qbase+0*p_Np+p_Nwarp];
+	      dfloat u = q[qbase+1*p_Np+p_Nwarp];
+	      dfloat v = q[qbase+2*p_Np+p_Nwarp];
+	      dfloat w = q[qbase+3*p_Np+p_Nwarp];
+	      r_p[es][1] = rho;
+	      r_u[es][1] = drdx*u + drdy*v + drdz*w;
+	      r_v[es][1] = dsdx*u + dsdy*v + dsdz*w;
+	      r_w[es][1] = dtdx*u + dtdy*v + dtdz*w;
 	    }
 	  }
 	}
-      }
-    }
-    
-    for(int et=0;et<p_NblockV;++et;@inner(1)){
-      for(int n=0;n<p_Np;++n;@inner(0)){
-	
-	dfloat r_drhodx[p_Nvol], r_drhody[p_Nvol], r_drhodz[p_Nvol];
-	dfloat r_divU[p_Nvol];
+      
+        dfloat r_drhodr[p_Nvol][2], r_drhods[p_Nvol][2], r_drhodt[p_Nvol][2];
+	dfloat r_divU[p_Nvol][2];
 	
 #pragma unroll p_Nvol
 	for(int es=0;es<p_Nvol;++es){
-	  r_drhodx[es] = 0;
-	  r_drhody[es] = 0;
-	  r_drhodz[es] = 0;
-	  r_divU[es]   = 0;
+	  r_drhodr[es][0] = 0;
+	  r_drhods[es][0] = 0;
+	  r_drhodt[es][0] = 0;
+	  r_divU[es][0] = 0;
+	  r_drhodr[es][1] = 0;
+	  r_drhods[es][1] = 0;
+	  r_drhodt[es][1] = 0;
+	  r_divU[es][1] = 0;
 	}
-
+	
 #pragma unroll p_Np
 	for(int m=0;m<p_Np;++m){
 	  
+	  const dfloat Drnm1 = D[n+m*p_Np];
+	  const dfloat Dsnm1 = D[n+m*p_Np+1*p_Np*p_Np];
+	  const dfloat Dtnm2 = D[n+m*p_Np+2*p_Np*p_Np];
+	  
+	  const dfloat Drnm2 = (n+p_Nwarp<p_Np) ? D[n+p_Nwarp+m*p_Np]:0;
+	  const dfloat Dsnm2 = (n+p_Nwarp<p_Np) ? D[n+p_Nwarp+m*p_Np+1*p_Np*p_Np]:0;
+	  const dfloat Dtnm2 = (n+p_Nwarp<p_Np) ? D[n+p_Nwarp+m*p_Np+2*p_Np*p_Np]:0;
+	  
 #pragma unroll p_Nvol
 	  for(int es=0;es<p_Nvol;++es){
+	    dfloat rhom = 0, um = 0, vm = 0, wm = 0;
+	    int offset = (m<p_Nwarp) ? 0:1;
 	    
-	    dfloat rx = s_G[es][0], ry = s_G[es][1], rz = s_G[es][2];
-	    dfloat sx = s_G[es][3], sy = s_G[es][4], sz = s_G[es][5];
-	    dfloat tx = s_G[es][6], ty = s_G[es][7], tz = s_G[es][8];
+	    rhom = __shfl_sync(mask, r_p[es][offset], m%p_Nwarp);
+	    um   = __shfl_sync(mask, r_u[es][offset], m%p_Nwarp);
+	    vm   = __shfl_sync(mask, r_v[es][offset], m%p_Nwarp);
+	    wm   = __shfl_sync(mask, r_w[es][offset], m%p_Nwarp);
 	    
-	    const dfloat Drnm = D[n+m*p_Np];
-	    const dfloat Dsnm = D[n+m*p_Np+1*p_Np*p_Np];
-	    const dfloat Dtnm = D[n+m*p_Np+2*p_Np*p_Np];
-
-	    const dfloat Dx = rx*Drnm + sx*Dsnm + tx*Dtnm;
-	    const dfloat Dy = ry*Drnm + sy*Dsnm + ty*Dtnm;
-	    const dfloat Dz = rz*Drnm + sz*Dsnm + tz*Dtnm;
+	    r_drhodr[es][0] += Drnm1*rhom;
+	    r_divU[es][0] += Drnm1*um;
 	    
-	    const dfloat rhom = s_rho[es][et][m];
-	    const dfloat um = s_u[es][et][m];
-	    const dfloat vm = s_v[es][et][m];
-	    const dfloat wm = s_w[es][et][m];
+	    r_drhods[es][0] += Dsnm1*rhom;
+	    r_divU[es][0] += Dsnm1*vm;
 	    
-	    r_drhodx[es] += Dx*rhom;
-	    r_drhody[es] += Dy*rhom;
-	    r_drhodz[es] += Dz*rhom;
+	    r_drhodt[es][0] += Dtnm1*rhom;
+	    r_divU[es][0] += Dtnm1*wm;
 	    
-	    r_divU[es] += Dx*um;
-	    r_divU[es] += Dy*vm;
-	    r_divU[es] += Dz*wm;
+	    if(n+p_Nwarp<p_Np){
+	      r_drhodr[es][1] += Drnm2*rhom;
+	      r_divU[es][1] += Drnm2*um;
+	      
+	      r_drhods[es][1] += Dsnm2*rhom;
+	      r_divU[es][1] += Dsnm2*vm;
+	      
+	      r_drhodt[es][1] += Dtnm2*rhom;
+	      r_divU[es][1] += Dtnm2*wm;
+	    }
 	  }
 	}
 	
 #pragma unroll p_Nvol
 	for(int es=0;es<p_Nvol;++es){
-
+	  
 	  const dlong e = es*p_NblockV + et + eo;
 	  
 	  if(e<Nelements){
 	    
+	    const dfloat drdx = s_vgeo[es][et][p_RXID];
+	    const dfloat drdy = s_vgeo[es][et][p_RYID];
+	    const dfloat drdz = s_vgeo[es][et][p_RZID];
+	    const dfloat dsdx = s_vgeo[es][et][p_SXID];
+	    const dfloat dsdy = s_vgeo[es][et][p_SYID];
+	    const dfloat dsdz = s_vgeo[es][et][p_SZID];
+	    const dfloat dtdx = s_vgeo[es][et][p_TXID];
+	    const dfloat dtdy = s_vgeo[es][et][p_TYID];
+	    const dfloat dtdz = s_vgeo[es][et][p_TZID];
+	    
 	    const dlong base = e*p_Np*p_Nfields + n;
-	  
+	    
+	    const dfloat drhodx1 = drdx*r_drhodr[es][0] + dsdx*r_drhods[es][0] + dtdx*r_drhodt[es][0];
+	    const dfloat drhody1 = drdy*r_drhodr[es][0] + dsdy*r_drhods[es][0] + dtdy*r_drhodt[es][0];
+	    const dfloat drhodz1 = drdz*r_drhodr[es][0] + dsdz*r_drhods[es][0] + dtdz*r_drhodt[es][0];
+	    
 	    // move to rhs
-	    rhsq[base+0*p_Np] = -r_divU[es];
-	    rhsq[base+1*p_Np] = -r_drhodx[es];
-	    rhsq[base+2*p_Np] = -r_drhody[es];
-	    rhsq[base+3*p_Np] = -r_drhodz[es];
+	    rhsq[base+0*p_Np] = -r_divU[es][0];
+	    rhsq[base+1*p_Np] = -drhodx1;
+	    rhsq[base+2*p_Np] = -drhody1;
+	    rhsq[base+3*p_Np] = -drhodz1;
+	    if(n+p_Nwarp<p_Np){
+	      const dfloat drhodx2 = drdx*r_drhodr[es][1] + dsdx*r_drhods[es][1] + dtdx*r_drhodt[es][1];
+	      const dfloat drhody2 = drdy*r_drhodr[es][1] + dsdy*r_drhods[es][1] + dtdy*r_drhodt[es][1];
+	      const dfloat drhodz2 = drdz*r_drhodr[es][1] + dsdz*r_drhods[es][1] + dtdz*r_drhodt[es][1];
+	      
+	      // move to rhs
+	      rhsq[base+0*p_Np+p_Nwarp] = -r_divU[es][1];
+	      rhsq[base+1*p_Np+p_Nwarp] = -drhodx2;
+	      rhsq[base+2*p_Np+p_Nwarp] = -drhody2;
+	      rhsq[base+3*p_Np+p_Nwarp] = -drhodz2;
+	    }
 	  }
 	}
       }
     }
   }
 }
-
 
 
 
