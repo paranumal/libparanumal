@@ -88,9 +88,12 @@ public:
   dfloat MaxWaveSpeed();
 
   void Benchmarks();
+
   void volumeBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfloat> &o_RHS);
   void surfaceBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfloat> &o_RHS);
+
   void volumeBernsteinBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfloat> &o_RHS);
+  void surfaceBernsteinBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfloat> &o_RHS);
 };
 
 #endif

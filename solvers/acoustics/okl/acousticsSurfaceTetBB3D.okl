@@ -1,0 +1,379 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+@kernel void acousticsSurfaceTetBB3D_v0(const    int Nelements,
+				     @restrict const dfloat *sgeo,
+				     @restrict const  dlong *vmapM,
+				     @restrict const  dlong *vmapP,
+				     @restrict const  dlong *EEL_ids,
+				     @restrict const dfloat *EEL_vals,
+				     @restrict const  dlong *L0_ids,
+				     @restrict const dfloat *L0_vals,
+				     @restrict const dfloat *Q,
+				     @restrict       dfloat *rhsQ){
+  
+  // loop over elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
+
+    // total shared memory amounts to approx. 4 dfloats per thread
+    @shared dfloat s_pflux[p_NblockS][p_NfpNfaces];
+    @shared dfloat s_Uflux[p_NblockS][p_NfpNfaces];
+    @shared dfloat s_ptmp[p_NblockS][p_NfpNfaces];
+    @shared dfloat s_Utmp[p_NblockS][p_NfpNfaces];
+
+    @shared dfloat s_nxyz[p_NblockS][3*p_Nfaces];
+
+    for(int et = 0; et < p_NblockS; ++et; @inner(1)){
+      for(int n=0;n<p_Nfp;++n;@inner(0)){
+	
+	int element = eo + et;
+	
+	if (element < Nelements){
+	  
+	  // compute fluxes
+	  for (int m=n;m<p_NfpNfaces;m+=p_Nfp){
+	    
+            const int f = m/p_Nfp;
+
+	    // move this early - starts vmapP fetch early 
+	    int idM = vmapM[m + element*p_NfpNfaces];
+            int idP = vmapP[m + element*p_NfpNfaces];
+	    const int isBoundary = idM==idP;
+
+            int id = p_Nsgeo*(p_Nfaces*element + f);
+	    const dfloat nx = sgeo[id+p_NXID];
+	    const dfloat ny = sgeo[id+p_NYID]; 
+	    const dfloat nz = sgeo[id+p_NZID];
+	    const dfloat Fscale = sgeo[id+p_SJID]*sgeo[id+p_IJID];
+
+	    const dfloat pM = Q[idM]; idM += p_Np;
+	    const dfloat uM = Q[idM]; idM += p_Np;
+	    const dfloat vM = Q[idM]; idM += p_Np;
+	    const dfloat wM = Q[idM]; 
+
+	    const dfloat pP = Q[idP]; idP += p_Np;
+	    const dfloat uP = Q[idP]; idP += p_Np;
+	    const dfloat vP = Q[idP]; idP += p_Np;
+	    const dfloat wP = Q[idP]; 
+
+            dfloat pjump = pP-pM;
+            dfloat Unjump = (uP-uM)*nx + (vP-vM)*ny + (wP-wM)*nz;
+	    if (isBoundary){
+	      pjump = -2.f*pM;
+	      Unjump = 0.f;
+	    }
+	    s_pflux[et][m] = .5f*(pjump - Unjump)*Fscale;
+	    s_Uflux[et][m] = .5f*(Unjump - pjump)*Fscale;
+
+	    int foff = 3*f;
+	    s_nxyz[et][foff] = nx; foff++;
+	    s_nxyz[et][foff] = ny; foff++;
+	    s_nxyz[et][foff] = nz;
+
+          }
+
+        }
+      }
+    }
+
+    // apply L0 dense - loop over faces, reuse operator
+    for(int et = 0; et < p_NblockS; ++et; @inner(1)){
+      for(int n=0;n<p_Nfp;++n;@inner(0)){
+
+	int element = eo + et;
+	if (element < Nelements){
+
+	  //dfloat val1 = 0.f, val2 = 0.f;
+	  dfloat val1[p_Nfaces], val2[p_Nfaces];
+	  for (int f = 0; f < p_Nfaces; ++f){
+	    val1[f] = 0.f; val2[f] = 0.f;
+	  }
+	  
+	  // apply L0 * reshape(p,Nfp,Nfaces)
+
+#pragma unroll p_L0_nnz
+	  for(int j = 0; j < p_L0_nnz; ++j){
+	    
+	    const dfloat L0_j = L0_vals[n + j*p_Nfp];
+	    int id = L0_ids[n+j*p_Nfp];
+	    
+	    // manually unroll over faces
+	    val1[0] += L0_j*s_pflux[et][id];
+	    val2[0] += L0_j*s_Uflux[et][id];
+
+	    id += p_Nfp;
+	    val1[1] += L0_j*s_pflux[et][id];
+	    val2[1] += L0_j*s_Uflux[et][id];
+	    
+	    id += p_Nfp;
+	    val1[2] += L0_j*s_pflux[et][id];
+	    val2[2] += L0_j*s_Uflux[et][id];
+
+	    id += p_Nfp;
+	    val1[3] += L0_j*s_pflux[et][id];
+	    val2[3] += L0_j*s_Uflux[et][id];      
+
+	  }
+	  
+	  s_ptmp[et][n] = val1[0];
+	  s_Utmp[et][n] = val2[0];	
+
+	  s_ptmp[et][n + p_Nfp] = val1[1];
+	  s_Utmp[et][n + p_Nfp] = val2[1];
+
+	  s_ptmp[et][n + 2*p_Nfp] = val1[2];
+	  s_Utmp[et][n + 2*p_Nfp] = val2[2];	
+
+	  s_ptmp[et][n + 3*p_Nfp] = val1[3];
+	  s_Utmp[et][n + 3*p_Nfp] = val2[3];	
+
+	}
+      }
+    }
+
+    // apply sparse EEL matrix
+    for(int et = 0; et < p_NblockS; ++et; @inner(1)){
+      for(int n=0;n<p_Nfp;++n;@inner(0)){
+
+	int element = eo + et;
+	if (element < Nelements){
+	  
+	  int m = n;
+	  while(m < p_Np){
+	    dfloat val1 = 0.f, val2 = 0.f, val3 = 0.f, val4 = 0.f;
+
+#pragma unroll p_EEL_nnz
+	    for(int j = 0; j < p_EEL_nnz; ++j){
+	      
+	      const int col_id = EEL_ids[m + j*p_Np]; // buried in here: face id, index into (N+1)
+	      const dfloat EEL_val = EEL_vals[m + j*p_Np]; // row values of EEL at col indices	      
+	      
+	      const int fcol = col_id/p_Nfp;
+	      const dfloat Uf = s_Utmp[et][col_id];
+	      
+	      val1 += EEL_val*s_ptmp[et][col_id];
+	      val2 += EEL_val*Uf*s_nxyz[et][  3*fcol];
+	      val3 += EEL_val*Uf*s_nxyz[et][1+3*fcol];
+	      val4 += EEL_val*Uf*s_nxyz[et][2+3*fcol];
+	      
+	    }
+	    
+	    int id = m + element*p_Nfields*p_Np;
+	    rhsQ[id] += val1; id += p_Np;
+	    rhsQ[id] += val2; id += p_Np;
+	    rhsQ[id] += val3; id += p_Np;
+	    rhsQ[id] += val4;
+	    
+	    m += p_Nfp;
+	  }
+	}
+      }
+    }
+  }
+}
+
+
+@kernel void acousticsSurfaceTetBB3D(const    int Nelements,
+				     @restrict const dfloat *sgeo,
+				     @restrict const  dlong *vmapM,
+				     @restrict const  dlong *vmapP,
+				     @restrict const  dlong *EEL_ids,
+				     @restrict const dfloat *EEL_vals,
+				     @restrict const  dlong *L0_ids,
+				     @restrict const dfloat *L0_vals,
+				     @restrict const dfloat *Q,
+				     @restrict       dfloat *rhsQ){
+  
+  // loop over elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockS*p_Nsur;@outer(0)){
+
+    // total shared memory amounts to approx. 4 dfloats per thread
+    @shared dfloat s_pflux[p_Nsur][p_NblockS][p_NfpNfaces];
+    @shared dfloat s_Uflux[p_Nsur][p_NblockS][p_NfpNfaces];
+    @shared dfloat s_ptmp[p_Nsur][p_NblockS][p_NfpNfaces];
+    @shared dfloat s_Utmp[p_Nsur][p_NblockS][p_NfpNfaces];
+
+    @shared dfloat s_nxyz[p_Nsur][p_NblockS][3*p_Nfaces];
+
+    for(int et = 0; et < p_NblockS; ++et; @inner(1)){
+      for(int n=0;n<p_Nfp;++n;@inner(0)){
+
+	for(int es=0;es<p_Nsur;++es){
+	  int element = eo + et + es*p_NblockS;
+	  
+	  if (element < Nelements){
+	    
+	    // compute fluxes
+	    for (int m=n;m<p_NfpNfaces;m+=p_Nfp){
+	      
+	      const int f = m/p_Nfp;
+	      
+	      // move this early - starts vmapP fetch early 
+	      int idM = vmapM[m + element*p_NfpNfaces];
+	      int idP = vmapP[m + element*p_NfpNfaces];
+	      const int isBoundary = idM==idP;
+	      
+	      int id = p_Nsgeo*(p_Nfaces*element + f);
+	      const dfloat nx = sgeo[id+p_NXID];
+	      const dfloat ny = sgeo[id+p_NYID]; 
+	      const dfloat nz = sgeo[id+p_NZID];
+	      const dfloat Fscale = sgeo[id+p_SJID]*sgeo[id+p_IJID];
+	      
+	      const dfloat pM = Q[idM]; idM += p_Np;
+	      const dfloat uM = Q[idM]; idM += p_Np;
+	      const dfloat vM = Q[idM]; idM += p_Np;
+	      const dfloat wM = Q[idM]; 
+	      
+	      const dfloat pP = Q[idP]; idP += p_Np;
+	      const dfloat uP = Q[idP]; idP += p_Np;
+	      const dfloat vP = Q[idP]; idP += p_Np;
+	      const dfloat wP = Q[idP]; 
+	      
+	      dfloat pjump = pP-pM;
+	      dfloat Unjump = (uP-uM)*nx + (vP-vM)*ny + (wP-wM)*nz;
+	      if (isBoundary){
+		pjump = -2.f*pM;
+		Unjump = 0.f;
+	      }
+	      s_pflux[es][et][m] = .5f*(pjump - Unjump)*Fscale;
+	      s_Uflux[es][et][m] = .5f*(Unjump - pjump)*Fscale;
+	      
+	      int foff = 3*f;
+	      s_nxyz[es][et][foff] = nx; foff++;
+	      s_nxyz[es][et][foff] = ny; foff++;
+	      s_nxyz[es][et][foff] = nz;
+	      
+	    }
+	  }
+	}
+      }
+    }
+    
+    // apply L0 dense - loop over faces, reuse operator
+    for(int et = 0; et < p_NblockS; ++et; @inner(1)){
+      for(int n=0;n<p_Nfp;++n;@inner(0)){
+	
+	//dfloat val1 = 0.f, val2 = 0.f;
+	dfloat val1[p_Nsur][p_Nfaces], val2[p_Nsur][p_Nfaces];
+	for(int es=0;es<p_Nsur;++es){
+	  for (int f = 0; f < p_Nfaces; ++f){
+	    val1[es][f] = 0.f; val2[es][f] = 0.f;
+	  }
+	}
+	// apply L0 * reshape(p,Nfp,Nfaces)
+	
+#pragma unroll p_L0_nnz
+	for(int j = 0; j < p_L0_nnz; ++j){
+	  
+	  const dfloat L0_j = L0_vals[n + j*p_Nfp];
+	  int id = L0_ids[n+j*p_Nfp];
+
+#pragma unroll p_Nsur
+	  for(int es=0;es<p_Nsur;++es){
+	    // manually unroll over faces
+	    val1[es][0] += L0_j*s_pflux[es][et][id];
+	    val2[es][0] += L0_j*s_Uflux[es][et][id];
+	    
+	    id += p_Nfp;
+	    val1[es][1] += L0_j*s_pflux[es][et][id];
+	    val2[es][1] += L0_j*s_Uflux[es][et][id];
+	    
+	    id += p_Nfp;
+	    val1[es][2] += L0_j*s_pflux[es][et][id];
+	    val2[es][2] += L0_j*s_Uflux[es][et][id];
+	    
+	    id += p_Nfp;
+	    val1[es][3] += L0_j*s_pflux[es][et][id];
+	    val2[es][3] += L0_j*s_Uflux[es][et][id];      	    
+	  }
+	}
+
+	for(int es=0;es<p_Nsur;++es){
+	  s_ptmp[es][et][n] = val1[es][0];
+	  s_Utmp[es][et][n] = val2[es][0];	
+	  
+	  s_ptmp[es][et][n + p_Nfp] = val1[es][1];
+	  s_Utmp[es][et][n + p_Nfp] = val2[es][1];
+	  
+	  s_ptmp[es][et][n + 2*p_Nfp] = val1[es][2];
+	  s_Utmp[es][et][n + 2*p_Nfp] = val2[es][2];	
+
+	  s_ptmp[es][et][n + 3*p_Nfp] = val1[es][3];	  
+	  s_Utmp[es][et][n + 3*p_Nfp] = val2[es][3];	
+	}
+      }
+    }
+    
+    // apply sparse EEL matrix
+    for(int et = 0; et < p_NblockS; ++et; @inner(1)){
+      for(int n=0;n<p_Nfp;++n;@inner(0)){
+	
+	int m = n;
+	while(m < p_Np){
+	  dfloat val1[p_Nsur], val2[p_Nsur], val3[p_Nsur], val4[p_Nsur];
+	  for(int es=0;es<p_Nsur;++es){
+	    val1[es] = 0.f; val2[es] = 0.f;
+	    val3[es] = 0.f; val4[es] = 0.f;
+	  }
+	  
+#pragma unroll p_EEL_nnz
+	  for(int j = 0; j < p_EEL_nnz; ++j){
+	    
+	    const int col_id = EEL_ids[m + j*p_Np]; // buried in here: face id, index into (N+1)
+	    const dfloat EEL_val = EEL_vals[m + j*p_Np]; // row values of EEL at col indices	      
+	    
+	    const int fcol = col_id/p_Nfp;
+
+#pragma unroll p_Nsur
+	    for(int es=0;es<p_Nsur;++es){
+	      const dfloat Uf = s_Utmp[es][et][col_id];
+	      
+	      val1[es] += EEL_val*s_ptmp[es][et][col_id];
+	      val2[es] += EEL_val*Uf*s_nxyz[es][et][  3*fcol];
+	      val3[es] += EEL_val*Uf*s_nxyz[es][et][1+3*fcol];
+	      val4[es] += EEL_val*Uf*s_nxyz[es][et][2+3*fcol];
+	      
+	    }
+	  }
+
+#pragma unroll p_Nsur
+	  for(int es=0;es<p_Nsur;++es){
+	    int element = eo + et + es*p_NblockS;
+	    if (element < Nelements){
+	      int id = m + element*p_Nfields*p_Np;
+	      rhsQ[id] += val1[es]; id += p_Np;
+	      rhsQ[id] += val2[es]; id += p_Np;
+	      rhsQ[id] += val3[es]; id += p_Np;
+	      rhsQ[id] += val4[es];
+	    }
+	  }
+	  
+	  m += p_Nfp;
+	}
+      }
+    }
+  }
+}

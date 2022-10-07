@@ -32,8 +32,10 @@ void acoustics_t::Benchmarks(){
   deviceMemory<dfloat> o_Q   = platform.device.malloc(Nfields*mesh.Nelements*mesh.Np*sizeof(dfloat));
   deviceMemory<dfloat> o_RHS = platform.device.malloc(Nfields*mesh.Nelements*mesh.Np*sizeof(dfloat));
 
-  volumeBernsteinBenchmark(o_Q, o_RHS);
   volumeBenchmark(o_Q, o_RHS);
+  volumeBernsteinBenchmark(o_Q, o_RHS);
+
+  surfaceBernsteinBenchmark(o_Q, o_RHS);
   surfaceBenchmark(o_Q, o_RHS);
 }
 
@@ -80,7 +82,7 @@ void acoustics_t::volumeBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfloat
   long long int NFLOP = mesh.Nelements*mesh.Np*((4*3*2*(long long int)mesh.Np) + 32);
   long long int NBYTES   = mesh.Nelements*(mesh.Nvgeo + mesh.Np*(Nfields*2 + 0*mesh.dim*mesh.Np) )*sizeof(dfloat);
 
-  int bestNvol = 0, bestNblockV = 0;
+  int bestNvol = 0, bestNblockV = 0, bestKnl = 0;
   double bestElapsed = 1e9;;
   
   for(int Nvol=1;Nvol<=8;++Nvol){
@@ -88,67 +90,71 @@ void acoustics_t::volumeBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfloat
       int LDS = (mesh.Np*Nvol*Nfields*NblockV+Nvol*mesh.Nvgeo*NblockV)*sizeof(dfloat);
       // limit case based on shared array storage
       if(LDS<48*1024){
-	properties_t volumeKernelInfo = kernelInfo;
+	int Nkernels = 3;
+	for(int knl=0;knl<Nkernels;++knl){
+	  properties_t volumeKernelInfo = kernelInfo;
+	  
+	  volumeKernelInfo["defines/" "p_NblockV"]= NblockV;
+	  volumeKernelInfo["defines/" "p_Nvol"]= Nvol;
+	  volumeKernelInfo["defines/" "p_knl"]= knl;
+	  
+	  platform.device.finish();
 	
-	volumeKernelInfo["defines/" "p_NblockV"]= NblockV;
-	volumeKernelInfo["defines/" "p_Nvol"]= Nvol;
-	
-	platform.device.finish();
-	
-	volumeKernel =  platform.buildKernel(volumeFileName, volumeKernelName,
-					     volumeKernelInfo);
-	
-	
-	int Nwarm = 100;
-	for(int w=0;w<Nwarm;++w){
-	  volumeKernel(mesh.Nelements,
-		       mesh.o_vgeo,
-		       mesh.o_D,
-		       o_Q,
-		       o_RHS);
-	}
-	
-	platform.device.finish();
-	
-	start = platform.device.tagStream();
+	  volumeKernel =  platform.buildKernel(volumeFileName, volumeKernelName,
+					       volumeKernelInfo);
 	
 	
-	int Nrun = 20;
-	for(int r=0;r<Nrun;++r){
-	  volumeKernel(mesh.Nelements,
-		       mesh.o_vgeo,
-		       mesh.o_D,
-		       o_Q,		 
-		       o_RHS);
-	}
+	  int Nwarm = 20;
+	  for(int w=0;w<Nwarm;++w){
+	    volumeKernel(mesh.Nelements,
+			 mesh.o_vgeo,
+			 mesh.o_D,
+			 o_Q,
+			 o_RHS);
+	  }
 	
-	stop = platform.device.tagStream();
+	  platform.device.finish();
 	
-	platform.device.finish();
+	  start = platform.device.tagStream();
 	
-	double elapsed = platform.device.timeBetween(start, stop);
-	elapsed /= Nrun;
+	  int Nrun = 20;
+	  for(int r=0;r<Nrun;++r){
+	    volumeKernel(mesh.Nelements,
+			 mesh.o_vgeo,
+			 mesh.o_D,
+			 o_Q,		 
+			 o_RHS);
+	  }
 	
-	double GFLOPS = NFLOP/(1.e9*elapsed);
-	double GBS = NBYTES/(1.e9*elapsed);
+	  stop = platform.device.tagStream();
 	
-	printf("%02d, %02d, %5.4e, %5.4e, %5.4e, %lld, %d %%%% VOL, Nvol, NblockV, elapsed, GFLOP/s, GB/s, NFLOP, LDS usage\n",
-	       Nvol, NblockV, elapsed, GFLOPS, GBS, NFLOP, LDS);
+	  platform.device.finish();
 	
-	if(elapsed<bestElapsed){
-	  bestElapsed = elapsed;
-	  bestNvol = Nvol;;
-	  bestNblockV = NblockV;
+	  double elapsed = platform.device.timeBetween(start, stop);
+	  elapsed /= Nrun;
+	
+	  double GFLOPS = NFLOP/(1.e9*elapsed);
+	  double GBS = NBYTES/(1.e9*elapsed);
+	
+	  printf("%02d, %02d, %02d, %02d, %5.4e, %5.4e, %5.4e, %lld, %d %%%% VOL: N, Knl, Nvol, NblockV, elapsed, GFLOP/s, GB/s, NFLOP, LDS usage\n",
+		 mesh.N, knl, Nvol, NblockV, elapsed, GFLOPS, GBS, NFLOP, LDS);
+	
+	  if(elapsed<bestElapsed){
+	    bestElapsed = elapsed;
+	    bestNvol = Nvol;;
+	    bestNblockV = NblockV;
+	    bestKnl = knl;
+	  }
 	}
       }
-    }
-  }  
+    }  
+  }
 
   double bestGFLOPS = NFLOP/(1.e9*bestElapsed);
   double bestGBS = NBYTES/(1.e9*bestElapsed);
   
-  printf("%02d, %02d, %5.4e, %5.4e, %5.4e %%%% VOL, BEST - Nvol, NblockV, elapsed, GFLOP/s, GB/s\n",
-	 bestNvol, bestNblockV, bestElapsed, bestGFLOPS, bestGBS);
+  printf("%02d, %02d, %02d, %02d, %5.4e, %5.4e, %5.4e %%%% VOL, BEST: N, Knl, Nvol, NblockV, elapsed, GFLOP/s, GB/s\n",
+	 mesh.N, bestKnl, bestNvol, bestNblockV, bestElapsed, bestGFLOPS, bestGBS);
 
 }
 
@@ -297,11 +303,12 @@ void acoustics_t::surfaceBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfloa
 }
 
 
+// do something smarter here later
 #if 0
 #include "data3dN04.h"
 #include "data3dN05.h"
 #else
-#include "data3dN06.h"
+#include "data3dN04.h"
 #endif
 
 typedef struct {
@@ -393,7 +400,7 @@ void acoustics_t::volumeBernsteinBenchmark(deviceMemory<dfloat> &o_Q, deviceMemo
   long long int NFLOP = mesh.Nelements*mesh.Np*((4*3*2*(long long int)mesh.Np) + 32);
   long long int NBYTES   = mesh.Nelements*(mesh.Nvgeo + mesh.Np*(Nfields*2 + 0*mesh.dim*mesh.Np) )*sizeof(dfloat);
 
-  int bestNvol = 0, bestNblockV = 0;
+  int bestNvol = 0, bestNblockV = 0, bestKnl = 0;
   double bestElapsed = 1e9;;
   
   for(int Nvol=1;Nvol<=8;++Nvol){
@@ -401,69 +408,238 @@ void acoustics_t::volumeBernsteinBenchmark(deviceMemory<dfloat> &o_Q, deviceMemo
       int LDS = (mesh.Np*Nvol*Nfields*NblockV+Nvol*mesh.Nvgeo*NblockV)*sizeof(dfloat);
       // limit case based on shared array storage
       if(LDS<48*1024){
-	properties_t volumeKernelInfo = kernelInfo;
+
+	int Nkernels = 3;
+	for(int knl=2;knl<Nkernels;++knl){
+	  
+	  properties_t volumeKernelInfo = kernelInfo;
 	
-	volumeKernelInfo["defines/" "p_NblockV"]= NblockV;
-	volumeKernelInfo["defines/" "p_Nvol"]= Nvol;
+	  volumeKernelInfo["defines/" "p_NblockV"]= NblockV;
+	  volumeKernelInfo["defines/" "p_Nvol"]= Nvol;
+	  volumeKernelInfo["defines/" "p_knl"]= knl;
 	
-	platform.device.finish();
+	  platform.device.finish();
 	
-	volumeKernel =  platform.buildKernel(volumeFileName, volumeKernelName,
-					     volumeKernelInfo);
-	
-	
-	int Nwarm = 100;
-	for(int w=0;w<Nwarm;++w){
-	  volumeKernel(mesh.Nelements,
-		       mesh.o_vgeo,
-		       o_cD1_ids, o_cD2_ids, o_cD3_ids, o_cD4_ids,
-		       o_D_vals,
-		       o_Q,
-		       o_RHS);
-	}
-	
-	platform.device.finish();
-	
-	start = platform.device.tagStream();
+	  volumeKernel =  platform.buildKernel(volumeFileName, volumeKernelName,
+					       volumeKernelInfo);
 	
 	
-	int Nrun = 20;
-	for(int r=0;r<Nrun;++r){
-	  volumeKernel(mesh.Nelements,
-		       mesh.o_vgeo,
-		       o_cD1_ids, o_cD2_ids, o_cD3_ids, o_cD4_ids,
-		       o_D_vals,
-		       o_Q,		 
-		       o_RHS);
-	}
+	  int Nwarm = 20;
+	  for(int w=0;w<Nwarm;++w){
+	    volumeKernel(mesh.Nelements,
+			 mesh.o_vgeo,
+			 o_cD1_ids, o_cD2_ids, o_cD3_ids, o_cD4_ids,
+			 o_D_vals,
+			 o_Q,
+			 o_RHS);
+	  }
 	
-	stop = platform.device.tagStream();
+	  platform.device.finish();
 	
-	platform.device.finish();
+	  start = platform.device.tagStream();
 	
-	double elapsed = platform.device.timeBetween(start, stop);
-	elapsed /= Nrun;
 	
-	double GFLOPS = NFLOP/(1.e9*elapsed);
-	double GBS = NBYTES/(1.e9*elapsed);
+	  int Nrun = 20;
+	  for(int r=0;r<Nrun;++r){
+	    volumeKernel(mesh.Nelements,
+			 mesh.o_vgeo,
+			 o_cD1_ids, o_cD2_ids, o_cD3_ids, o_cD4_ids,
+			 o_D_vals,
+			 o_Q,		 
+			 o_RHS);
+	  }
 	
-	printf("%02d, %02d, %5.4e, %5.4e, %5.4e, %lld, %d %%%% BB-VOL, Nvol, NblockV, elapsed, GFLOP/s, GB/s, NFLOP, LDS usage\n",
-	       Nvol, NblockV, elapsed, GFLOPS, GBS, NFLOP, LDS);
+	  stop = platform.device.tagStream();
 	
-	if(elapsed<bestElapsed){
-	  bestElapsed = elapsed;
-	  bestNvol = Nvol;;
-	  bestNblockV = NblockV;
+	  platform.device.finish();
+	
+	  double elapsed = platform.device.timeBetween(start, stop);
+	  elapsed /= Nrun;
+	
+	  double GFLOPS = NFLOP/(1.e9*elapsed);
+	  double GBS = NBYTES/(1.e9*elapsed);
+	
+	  printf("%02d, %02d, %02d, %02d, %5.4e, %5.4e, %5.4e, %lld, %d %%%% BB-VOL, Nvol, NblockV, elapsed, GFLOP/s, GB/s, NFLOP, LDS usage\n",
+		 mesh.N, knl, Nvol, NblockV, elapsed, GFLOPS, GBS, NFLOP, LDS);
+	
+	  if(elapsed<bestElapsed){
+	    bestElapsed = elapsed;
+	    bestNvol = Nvol;;
+	    bestNblockV = NblockV;
+	    bestKnl = knl;
+	  }
 	}
       }
-    }
-  }  
-
+    }  
+  }
   double bestGFLOPS = NFLOP/(1.e9*bestElapsed);
   double bestGBS = NBYTES/(1.e9*bestElapsed);
   
-  printf("%02d, %02d, %5.4e, %5.4e, %5.4e %%%% BB-VOL, BEST - Nvol, NblockV, elapsed, GFLOP/s, GB/s\n",
-	 bestNvol, bestNblockV, bestElapsed, bestGFLOPS, bestGBS);
+  printf("%02d, %02d, %02d, %02d, %5.4e, %5.4e, %5.4e %%%% BB-VOL, BESTL N, Knl, Nvol, NblockV, elapsed, GFLOP/s, GB/s\n",
+	 mesh.N, bestKnl, bestNvol, bestNblockV, bestElapsed, bestGFLOPS, bestGBS);
 
+}
+
+
+void acoustics_t::surfaceBernsteinBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfloat> &o_RHS){
+
+  dfloat *tmp_EEL_vals = (dfloat*) calloc(mesh.Np*p_EEL_nnz, sizeof(dfloat));
+  int    *tmp_EEL_ids  = (int*)    calloc(mesh.Np*p_EEL_nnz, sizeof(int));
+  dfloat *tmp_L0_vals = (dfloat*) calloc(mesh.Nfp*7, sizeof(dfloat));
+  int    *tmp_L0_ids  = (int*)    calloc(mesh.Nfp*7, sizeof(int));
+
+  for(int n=0;n<mesh.Np;++n){
+    for(int m=0;m<p_EEL_nnz;++m){
+      tmp_EEL_vals[n+m*mesh.Np] = p_EEL_vals[n][m];
+      tmp_EEL_ids[n+m*mesh.Np] = p_EEL_ids[n][m];
+    }
+  }
+
+  for(int n=0;n<mesh.Nfp;++n){
+    for(int m=0;m<7;++m){
+      tmp_L0_vals[n+m*mesh.Nfp] = p_L0_vals[n][m];
+      tmp_L0_ids[n+m*mesh.Nfp] = p_L0_ids[n][m];
+    }
+  }
+  
+  // BB stuff
+  deviceMemory<dfloat> o_EEL_vals = platform.device.malloc(mesh.Np*p_EEL_nnz*sizeof(dfloat), tmp_EEL_vals);
+  deviceMemory<int>    o_EEL_ids  = platform.device.malloc(mesh.Np*p_EEL_nnz*sizeof(int),    tmp_EEL_ids);
+  deviceMemory<dfloat> o_L0_vals  = platform.device.malloc(mesh.Nfp*7*sizeof(dfloat),        tmp_L0_vals);
+  deviceMemory<int>    o_L0_ids   = platform.device.malloc(mesh.Nfp*7*sizeof(int),           tmp_L0_ids);
+
+  // OCCA build stuff
+  properties_t kernelInfo = mesh.props; //copy base occa properties
+  
+  const dfloat p_half = 1./2.;
+  int blockMax = 256;
+  
+  //add boundary data to kernel info
+  std::string dataFileName;
+  settings.getSetting("DATA FILE", dataFileName);
+  kernelInfo["includes"] += dataFileName;
+  kernelInfo["defines/" "p_Nfields"]= Nfields;
+  kernelInfo["defines/" "p_half"]= p_half;
+  kernelInfo["defines/" "p_NfacesNfp"]= mesh.Nfaces*mesh.Nfp;
+
+  int maxNodes = std::max(mesh.Np, (mesh.Nfp*mesh.Nfaces));
+  kernelInfo["defines/" "p_maxNodes"]= maxNodes;
+  
+  // set kernel name suffix
+  std::string suffix;
+  if(mesh.elementType==Mesh::TRIANGLES)
+    suffix = "TriBB2D";
+  if(mesh.elementType==Mesh::QUADRILATERALS)
+    suffix = "QuadBB2D";
+  if(mesh.elementType==Mesh::TETRAHEDRA)
+    suffix = "TetBB3D";
+  if(mesh.elementType==Mesh::HEXAHEDRA)
+    suffix = "HexBB3D";
+
+  std::string oklFilePrefix = DACOUSTICS "/okl/";
+  std::string oklFileSuffix = ".okl";
+
+  std::string surfaceFileName, surfaceKernelName;
+
+  occa::streamTag start, stop;
+
+  // kernels from surface file
+  surfaceFileName   = oklFilePrefix + "acousticsSurface" + suffix + oklFileSuffix;
+  surfaceKernelName = "acousticsSurface" + suffix;
+
+  // set up flop counts for tets
+  long long int NFLOP = ((long long int)mesh.Nelements)*(mesh.Nfp*mesh.Nfaces*(10 + 18 + 4) + mesh.Np*((1+mesh.Nfaces*mesh.Nfp)*Nfields*2));
+
+  long long int NBYTES   = mesh.Nelements*(
+					   (mesh.Nsgeo*mesh.Nfaces  +
+					    mesh.Nfp*mesh.Nfaces*Nfields*2 +
+					    mesh.Np*(Nfields*2) )*sizeof(dfloat)
+					   + (mesh.Nfp*mesh.Nfaces*2*sizeof(dlong)));
+												       
+  int bestNblockS = 0;
+  int bestNsur = 0;
+  double bestElapsed = 1e9;;
+  dfloat T = 0;
+
+  for(int Nsur=1;Nsur<=5;++Nsur){
+    for(int NblockS=1;NblockS<=blockMax/maxNodes;++NblockS){
+      properties_t surfaceKernelInfo = kernelInfo;
+      
+      surfaceKernelInfo["defines/" "p_NblockS"]= NblockS;
+      surfaceKernelInfo["defines/" "p_Nsur"]= Nsur;
+      surfaceKernelInfo["defines/" "p_NfpNfaces"]= mesh.Nfp*mesh.Nfaces;
+      surfaceKernelInfo["defines/" "p_L0_nnz"]= 7; // need to transpose data for L0
+      surfaceKernelInfo["defines/" "p_EEL_nnz"]= p_EEL_nnz; // need to transpose data for L0
+      
+      platform.device.finish();
+      
+      surfaceKernel =  platform.buildKernel(surfaceFileName, surfaceKernelName,
+					    surfaceKernelInfo);
+      
+      
+      int Nwarm = 100;
+      for(int w=0;w<Nwarm;++w){
+	
+	surfaceKernel(mesh.Nelements,
+		      mesh.o_sgeo,
+		      mesh.o_vmapM,
+		      mesh.o_vmapP,
+		      o_EEL_ids,
+		      o_EEL_vals,
+		      o_L0_ids,
+		      o_L0_vals,
+		      o_Q,
+		      o_RHS);
+	
+      }
+      
+      platform.device.finish();
+      
+      start = platform.device.tagStream();
+      
+      
+      int Nrun = 10;
+      for(int r=0;r<Nrun;++r){
+
+	surfaceKernel(mesh.Nelements,
+		      mesh.o_sgeo,
+		      mesh.o_vmapM,
+		      mesh.o_vmapP,
+		      o_EEL_ids,
+		      o_EEL_vals,
+		      o_L0_ids,
+		      o_L0_vals,
+		      o_Q,
+		      o_RHS);
+      }
+      
+      stop = platform.device.tagStream();
+      
+      platform.device.finish();
+      
+      double elapsed = platform.device.timeBetween(start, stop);
+      elapsed /= Nrun;
+      
+      double GFLOPS = NFLOP/(1.e9*elapsed);
+      double GBS = NBYTES/(1.e9*elapsed);
+      
+      printf("%02d, %02d, %5.4e, %5.4e, %5.4e %%%% SURF, Nsur, NblockS, elapsed, GFLOP/s, GB/s\n",
+	     Nsur, NblockS, elapsed, GFLOPS, GBS);
+      
+      if(elapsed<bestElapsed){
+	bestElapsed = elapsed;
+	bestNblockS = NblockS;
+	bestNsur = Nsur;
+      }
+    }
+  }
+
+  
+  double bestGFLOPS = NFLOP/(1.e9*bestElapsed);
+  double bestGBS = NBYTES/(1.e9*bestElapsed);
+  
+  printf("%02d, %02d, %5.4e, %5.4e, %5.4e %%%% BB SURF BEST - Nsur, NblockS, elapsed, GFLOP/s, GB/s\n",
+	 bestNsur, bestNblockS, bestElapsed, bestGFLOPS, bestGBS);
+  
 }
 

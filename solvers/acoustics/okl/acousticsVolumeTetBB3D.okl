@@ -26,6 +26,17 @@ SOFTWARE.
 
 // https://github.com/tcew/BBDG
 
+#if p_knl==0
+#define acousticsVolumeTetBB3D_v0 acousticsVolumeTetBB3D
+#elif p_knl==1
+#define acousticsVolumeTetBB3D_v1 acousticsVolumeTetBB3D
+#elif p_knl==2
+#define acousticsVolumeTetBB3D_v2 acousticsVolumeTetBB3D
+#else
+#define acousticsVolumeTetBB3D_v2 acousticsVolumeTetBB3D
+#endif
+
+
 @kernel void acousticsVolumeTetBB3D_v0(const int Nelements,
 				      @restrict const dfloat *vgeo,
 				      @restrict const int4 *D1_ids,
@@ -315,7 +326,7 @@ SOFTWARE.
 }
 
 
-@kernel void acousticsVolumeTetBB3D(const int Nelements,
+@kernel void acousticsVolumeTetBB3D_v2(const int Nelements,
 				      @restrict const dfloat *vgeo,
 				      @restrict const uchar4 *D1_ids,
 				      @restrict const uchar4 *D2_ids,
