@@ -38,7 +38,7 @@ ssbdf3::ssbdf3(dlong Nelements, dlong NhaloElements,
   timeStepperBase_t(Nelements, NhaloElements, Np, Nfields,
                     _platform, _comm) {
 
-  Nstages = 3;
+  //Nstages = 3;
   shiftIndex = 0;
 
   o_qn   = platform.malloc<dfloat>(Nstages*N); //q history

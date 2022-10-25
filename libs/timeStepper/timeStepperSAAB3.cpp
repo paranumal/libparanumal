@@ -48,7 +48,7 @@ saab3::saab3(dlong _Nelements, dlong _NhaloElements,
   lambda.malloc(Nfields);
   lambda.copyFrom(_lambda);
 
-  Nstages = 3;
+  //Nstages = 3;
   shiftIndex = 0;
 
   o_rhsq = platform.malloc<dfloat>(Nstages*N);

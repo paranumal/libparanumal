@@ -40,7 +40,7 @@ mrab3::mrab3(dlong Nelements, dlong NhaloElements,
   Nlevels(mesh.mrNlevels),
   Nfields(_Nfields) {
 
-  Nstages = 3;
+  //Nstages = 3;
 
   memory<dfloat> rhsq0(N, 0.0);
   o_rhsq0 = platform.malloc<dfloat>(rhsq0);
