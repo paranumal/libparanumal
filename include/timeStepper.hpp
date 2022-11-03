@@ -98,7 +98,7 @@ public:
 /* Adams Bashforth, order 3 */
 class ab3: public timeStepperBase_t {
 protected:
-  int Nstages;
+  static constexpr int Nstages{3};
   int shiftIndex;
 
   memory<dfloat> ab_a;
@@ -202,7 +202,7 @@ public:
 /* Semi-Analytic Adams-Bashforth, order 3 */
 class saab3: public timeStepperBase_t {
 protected:
-  int Nstages;
+  static constexpr int Nstages{3};
   int shiftIndex;
 
   int Np, Nfields;
@@ -233,7 +233,7 @@ public:
 /* Semi-Analytic Explict Runge-Kutta, order 4 with embedded order 3 and adaptive time-stepping */
 class sark4: public timeStepperBase_t {
 protected:
-  int Nrk;
+  static constexpr int Nrk{5};
   int order, embeddedOrder;
 
   int Np, Nfields;
@@ -297,7 +297,7 @@ public:
 /* Semi-Analytic Explict Runge-Kutta, order 5 with embedded order 4 and adaptive time-stepping */
 class sark5: public timeStepperBase_t {
 protected:
-  int Nrk;
+  static constexpr int Nrk{7};
   int order, embeddedOrder;
 
   int Np, Nfields;
@@ -362,7 +362,7 @@ public:
 /* Backward Difference Formula, order 3, with extrapolation */
 class extbdf3: public timeStepperBase_t {
 protected:
-  int Nstages;
+  static constexpr int Nstages{3};
   int shiftIndex;
 
   memory<dfloat> extbdf_a;
@@ -391,7 +391,7 @@ public:
 /* Backward Difference Formula, order 3, with subcycling */
 class ssbdf3: public timeStepperBase_t {
 protected:
-  int Nstages;
+  static constexpr int Nstages{3};
   int shiftIndex;
 
   memory<dfloat> ssbdf_b;
@@ -420,7 +420,7 @@ class mrab3: public timeStepperBase_t {
 protected:
   mesh_t mesh;
 
-  int Nstages;
+  static constexpr int Nstages{3};
   int Nlevels;
   int Nfields;
 
@@ -453,7 +453,7 @@ class mrsaab3: public timeStepperBase_t {
 protected:
   mesh_t mesh;
 
-  int Nstages;
+  static constexpr int Nstages{3};
   int Nlevels;
   int Nfields;
 

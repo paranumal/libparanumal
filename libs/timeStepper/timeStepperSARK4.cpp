@@ -49,7 +49,7 @@ sark4::sark4(dlong _Nelements, dlong _NhaloElements,
   lambda.malloc(Nfields);
   lambda.copyFrom(_lambda);
 
-  Nrk = 5;
+  //Nrk = 5;
   order = 4;
   embeddedOrder = 3;
 

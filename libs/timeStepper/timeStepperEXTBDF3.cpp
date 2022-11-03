@@ -38,7 +38,7 @@ extbdf3::extbdf3(dlong Nelements, dlong NhaloElements,
   timeStepperBase_t(Nelements, NhaloElements, Np, Nfields,
                     _platform, _comm) {
 
-  Nstages = 3;
+  //Nstages = 3;
   shiftIndex = 0;
 
   memory<dfloat> qn(Nstages*N, 0.0);

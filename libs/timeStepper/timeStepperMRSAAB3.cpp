@@ -47,7 +47,7 @@ mrsaab3::mrsaab3(dlong _Nelements, dlong _NhaloElements,
   lambda.malloc(Nfields);
   lambda.copyFrom(_lambda);
 
-  Nstages = 3;
+  //Nstages = 3;
 
   memory<dfloat> rhsq0(N, 0.0);
   o_rhsq0 = platform.malloc<dfloat>(rhsq0);
