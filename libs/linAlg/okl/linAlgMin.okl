@@ -40,7 +40,7 @@ SOFTWARE.
       dfloat r_min = init_dfloat_min;
       while (id<N) {
         r_min = (x[id]<r_min) ? x[id] : r_min;
-        id += p_blockSize;
+        id += p_blockSize*Nblocks;
       }
       s_min[t] = r_min;
     }

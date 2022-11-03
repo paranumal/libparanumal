@@ -40,7 +40,7 @@ SOFTWARE.
       dfloat r_max = init_dfloat_max;
       while (id<N) {
         r_max = (x[id]>r_max) ? x[id] : r_max;
-        id += p_blockSize;
+        id += p_blockSize*Nblocks;
       }
       s_max[t] = r_max;
     }
