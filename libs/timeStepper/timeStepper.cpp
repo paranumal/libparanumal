@@ -56,4 +56,32 @@ void timeStepper_t::assertInitialized() {
              ts==nullptr);
 }
 
+void pmlTimeStepper_t::Run(solver_t& solver,
+                           deviceMemory<dfloat>& o_q,
+                           deviceMemory<dfloat>& o_pmlq,
+                           dfloat start, dfloat end) {
+  assertInitialized();
+  ts->Run(solver, o_q, o_pmlq, start, end);
+}
+
+void pmlTimeStepper_t::SetTimeStep(dfloat dt_) {
+  assertInitialized();
+  ts->SetTimeStep(dt_);
+}
+
+dfloat pmlTimeStepper_t::GetTimeStep() {
+  assertInitialized();
+  return ts->dt;
+}
+
+dfloat pmlTimeStepper_t::GetGamma() {
+  assertInitialized();
+  return ts->GetGamma();
+}
+
+void pmlTimeStepper_t::assertInitialized() {
+  LIBP_ABORT("pmlTimeStepper_t not initialized",
+             ts==nullptr);
+}
+
 } //namespace libp

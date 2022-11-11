@@ -126,22 +126,82 @@ void ab3::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloat 
 ab3_pml::ab3_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
                 int Np, int Nfields, int Npmlfields,
                 platform_t& _platform, comm_t _comm):
-  ab3(Nelements, NhaloElements, Np, Nfields, _platform, _comm),
-  Npml(NpmlElements*Np*Npmlfields) {
+  pmlTimeStepperBase_t(Nelements, NpmlElements, NhaloElements,
+                       Np, Nfields, Npmlfields,
+                       _platform, _comm) {
 
-  if (Npml) {
-    memory<dfloat> pmlq(Npml,0.0);
-    o_pmlq   = platform.malloc<dfloat>(pmlq);
-    o_rhspmlq = platform.malloc<dfloat>(Nstages*Npml);
+  //Nstages = 3;
+  shiftIndex = 0;
+
+  memory<dfloat> rhsq(Nstages*N,0.0);
+  o_rhsq = platform.malloc<dfloat>(rhsq);
+
+  memory<dfloat> rhspmlq(Nstages*Npml,0.0);
+  o_rhspmlq = platform.malloc<dfloat>(rhspmlq);
+
+  properties_t kernelInfo = platform.props(); //copy base occa properties from solver
+
+  const int blocksize=256;
+
+  kernelInfo["defines/" "p_blockSize"] = blocksize;
+  kernelInfo["defines/" "p_Nstages"] = Nstages;
+
+  updateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
+                                    "timeStepperAB.okl",
+                                    "abUpdate",
+                                    kernelInfo);
+
+  // initialize AB time stepping coefficients
+  dfloat _ab_a[Nstages*Nstages] = {
+                           1.0,      0.0,    0.0,
+                         3./2.,   -1./2.,    0.0,
+                       23./12., -16./12., 5./12.};
+
+  ab_a.malloc(Nstages*Nstages);
+  ab_a.copyFrom(_ab_a);
+
+  o_ab_a = platform.malloc<dfloat>(ab_a);
+}
+
+void ab3_pml::Run(solver_t& solver,
+                  deviceMemory<dfloat> &o_q,
+                  deviceMemory<dfloat> &o_pmlq,
+                  dfloat start, dfloat end) {
+
+  dfloat time = start;
+
+  solver.Report(time,0);
+
+  dfloat outputInterval=0.0;
+  solver.settings.getSetting("OUTPUT INTERVAL", outputInterval);
+
+  dfloat outputTime = time + outputInterval;
+
+  int tstep=0;
+  int order=0;
+  while (time < end) {
+    Step(solver, o_q, o_pmlq, time, dt, order);
+    time += dt;
+    tstep++;
+    if (order<Nstages-1) order++;
+
+    if (time>outputTime) {
+      //report state
+      solver.Report(time,tstep);
+      outputTime += outputInterval;
+    }
   }
 }
 
-void ab3_pml::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloat _dt, int order) {
+void ab3_pml::Step(solver_t& solver,
+                   deviceMemory<dfloat> &o_q,
+                   deviceMemory<dfloat> &o_pmlq,
+                   dfloat time, dfloat _dt, int order) {
 
   //rhs at current index
   deviceMemory<dfloat> o_rhsq0 = o_rhsq + shiftIndex*N;
   deviceMemory<dfloat> o_rhspmlq0;
-  if (Npml)    o_rhspmlq0 = o_rhspmlq + shiftIndex*Npml;
+  if (Npml) o_rhspmlq0 = o_rhspmlq + shiftIndex*Npml;
 
   //A coefficients at current order
   deviceMemory<dfloat> o_A = o_ab_a + order*Nstages;
@@ -149,20 +209,20 @@ void ab3_pml::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfl
   //evaluate ODE rhs = f(q,t)
   solver.rhsf_pml(o_q, o_pmlq, o_rhsq0, o_rhspmlq0, time);
 
-  //update q & pmlq
+  //update q
   updateKernel(N,
                dt,
                shiftIndex,
                o_A,
                o_rhsq,
                o_q);
-  if (Npml)
-    updateKernel(Npml,
-                 dt,
-                 shiftIndex,
-                 o_A,
-                 o_rhspmlq,
-                 o_pmlq);
+  //update pmlq
+  updateKernel(Npml,
+               dt,
+               shiftIndex,
+               o_A,
+               o_rhspmlq,
+               o_pmlq);
 
   //rotate index
   shiftIndex = (shiftIndex+Nstages-1)%Nstages;

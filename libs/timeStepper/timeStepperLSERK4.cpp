@@ -150,22 +150,117 @@ void lserk4::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dflo
 /* PML version                                    */
 /**************************************************/
 
-lserk4_pml::lserk4_pml(dlong _Nelements, dlong _NpmlElements, dlong _NhaloElements,
-                      int _Np, int _Nfields, int _Npmlfields,
-                      platform_t& _platform, comm_t _comm):
-  lserk4(_Nelements, _NhaloElements, _Np, _Nfields, _platform, _comm),
-  Npml(_Npmlfields*_Np*_NpmlElements) {
+lserk4_pml::lserk4_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
+                       int Np, int Nfields, int Npmlfields,
+                       platform_t& _platform, comm_t _comm):
+  pmlTimeStepperBase_t(Nelements, NpmlElements, NhaloElements,
+                       Np, Nfields, Npmlfields,
+                       _platform, _comm) {
 
-  if (Npml) {
-    memory<dfloat> pmlq(Npml,0.0);
-    o_pmlq = platform.malloc<dfloat>(pmlq);
+  Nrk = 5;
 
-    o_respmlq = platform.malloc<dfloat>(Npml);
-    o_rhspmlq = platform.malloc<dfloat>(Npml);
+  o_resq = platform.malloc<dfloat>(N);
+  o_rhsq = platform.malloc<dfloat>(N);
+  o_respmlq = platform.malloc<dfloat>(Npml);
+  o_rhspmlq = platform.malloc<dfloat>(Npml);
+
+  o_saveq = platform.malloc<dfloat>(N);
+  o_savepmlq  = platform.malloc<dfloat>(Npml);
+
+  properties_t kernelInfo = platform.props(); //copy base occa properties from solver
+
+  const int blocksize=256;
+
+  kernelInfo["defines/" "p_blockSize"] = blocksize;
+
+  updateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
+                                    "timeStepperLSERK4.okl",
+                                    "lserk4Update",
+                                    kernelInfo);
+
+  // initialize LSERK4 time stepping coefficients
+  dfloat _rka[5] = {0.0,
+       -567301805773.0/1357537059087.0 ,
+       -2404267990393.0/2016746695238.0 ,
+       -3550918686646.0/2091501179385.0  ,
+       -1275806237668.0/842570457699.0};
+  dfloat _rkb[5] = { 1432997174477.0/9575080441755.0 ,
+        5161836677717.0/13612068292357.0 ,
+        1720146321549.0/2090206949498.0  ,
+        3134564353537.0/4481467310338.0  ,
+        2277821191437.0/14882151754819.0};
+  // added one more for advanced time step
+  dfloat _rkc[6] = {0.0  ,
+       1432997174477.0/9575080441755.0 ,
+       2526269341429.0/6820363962896.0 ,
+       2006345519317.0/3224310063776.0 ,
+       2802321613138.0/2924317926251.0 ,
+       1.0};
+
+  rka.malloc(Nrk);
+  rkb.malloc(Nrk);
+  rkc.malloc(Nrk+1);
+  rka.copyFrom(_rka);
+  rkb.copyFrom(_rkb);
+  rkc.copyFrom(_rkc);
+}
+
+void lserk4_pml::Run(solver_t& solver,
+                     deviceMemory<dfloat> &o_q,
+                     deviceMemory<dfloat> &o_pmlq,
+                     dfloat start, dfloat end) {
+
+  dfloat time = start;
+
+  solver.Report(time,0);
+
+  dfloat outputInterval=0.0;
+  solver.settings.getSetting("OUTPUT INTERVAL", outputInterval);
+
+  dfloat outputTime = time + outputInterval;
+
+  int tstep=0;
+  dfloat stepdt;
+  while (time < end) {
+
+    if (time<outputTime && time+dt>=outputTime) {
+
+      //save current state
+      o_saveq.copyFrom(o_q, N);
+      o_savepmlq.copyFrom(o_pmlq, Npml);
+
+      stepdt = outputTime-time;
+
+      //take small time step
+      Step(solver, o_q, o_pmlq, time, stepdt);
+
+      //report state
+      solver.Report(outputTime,tstep);
+
+      //restore previous state
+      o_q.copyFrom(o_saveq, N);
+      o_pmlq.copyFrom(o_savepmlq, Npml);
+
+      outputTime += outputInterval;
+    }
+
+    //check for final timestep
+    if (time+dt > end){
+      stepdt = end-time;
+    } else {
+      stepdt = dt;
+    }
+
+    Step(solver, o_q, o_pmlq, time, stepdt);
+    time += stepdt;
+    tstep++;
   }
 }
 
-void lserk4_pml::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloat _dt) {
+void lserk4_pml::Step(solver_t& solver,
+                      deviceMemory<dfloat> &o_q,
+                      deviceMemory<dfloat> &o_pmlq,
+                      dfloat time, dfloat _dt) {
 
   // Low storage explicit Runge Kutta (5 stages, 4th order)
   for(int rk=0;rk<Nrk;++rk){
@@ -178,9 +273,8 @@ void lserk4_pml::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, 
     // update solution using Runge-Kutta
     updateKernel(N, _dt, rka[rk], rkb[rk],
                  o_rhsq, o_resq, o_q);
-    if (Npml)
-      updateKernel(Npml, _dt, rka[rk], rkb[rk],
-                   o_rhspmlq, o_respmlq, o_pmlq);
+    updateKernel(Npml, _dt, rka[rk], rkb[rk],
+                 o_rhspmlq, o_respmlq, o_pmlq);
   }
 }
 
