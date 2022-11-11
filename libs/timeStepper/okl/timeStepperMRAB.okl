@@ -62,7 +62,7 @@ SOFTWARE.
           dfloat qn = q[id+f*p_Np];
 
           for (int i=0;i<p_Nstages;i++)
-            qn += dt[lev]*a[i]*rhsqi[i][id+f*p_Np];
+            if (a[i] != 0.0) qn += dt[lev]*a[i]*rhsqi[i][id+f*p_Np];
 
           s_q[n+f*p_Np] = qn;
 
@@ -139,7 +139,7 @@ SOFTWARE.
           dfloat qn = q[id+f*p_Np];
 
           for (int i=0;i<p_Nstages;i++)
-            qn += dt[lev]*b[i]*rhsqi[i][id+f*p_Np];
+            if (b[i] != 0.0) qn += dt[lev]*b[i]*rhsqi[i][id+f*p_Np];
 
           s_q[n+f*p_Np] = qn;
         }
@@ -198,7 +198,7 @@ SOFTWARE.
         dfloat qn = q[id+f*p_Np];
 
         for (int i=0;i<p_Nstages;i++)
-          qn += dt[lev]*a[i]*rhsqi[i][id+f*p_Np];
+          if (a[i] != 0.0) qn += dt[lev]*a[i]*rhsqi[i][id+f*p_Np];
 
         q[id+f*p_Np] = qn;
 

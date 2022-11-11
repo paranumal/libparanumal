@@ -454,6 +454,7 @@ protected:
 
   memory<dfloat> mrdt;
   deviceMemory<dfloat> o_mrdt;
+  deviceMemory<dfloat> o_zeros;
 
   memory<dfloat> ab_a, ab_b;
   deviceMemory<dfloat> o_ab_a, o_ab_b;
@@ -489,6 +490,7 @@ protected:
 
   memory<dfloat> mrdt;
   deviceMemory<dfloat> o_mrdt;
+  deviceMemory<dfloat> o_zeros;
 
   pinnedMemory<dfloat> h_saab_x, h_saab_a, h_saab_b;
   deviceMemory<dfloat> o_saab_x, o_saab_a, o_saab_b;
@@ -897,6 +899,7 @@ private:
 
   memory<dfloat> mrdt;
   deviceMemory<dfloat> o_mrdt;
+  deviceMemory<dfloat> o_zeros;
 
   memory<dfloat> ab_a, ab_b;
   deviceMemory<dfloat> o_ab_a, o_ab_b;
@@ -941,6 +944,7 @@ private:
 
   memory<dfloat> mrdt;
   deviceMemory<dfloat> o_mrdt;
+  deviceMemory<dfloat> o_zeros;
 
   pinnedMemory<dfloat> h_saab_x, h_saab_a, h_saab_b;
   deviceMemory<dfloat> o_saab_x, o_saab_a, o_saab_b;

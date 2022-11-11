@@ -57,11 +57,8 @@ mrsaab3::mrsaab3(dlong _Nelements, dlong _NhaloElements,
 
   //Nstages = 3;
 
-  memory<dfloat> rhsq0(N, 0.0);
-  o_rhsq0 = platform.malloc<dfloat>(rhsq0);
-
-  memory<dfloat> rhsq((Nstages-1)*N, 0.0);
-  o_rhsq = platform.malloc<dfloat>(rhsq);
+  o_rhsq0 = platform.malloc<dfloat>(N);
+  o_rhsq = platform.malloc<dfloat>((Nstages-1)*N);
 
   o_fQM = platform.malloc<dfloat>((mesh.Nelements+mesh.totalHaloPairs)*mesh.Nfp
                                   *mesh.Nfaces*Nfields);
@@ -101,6 +98,9 @@ mrsaab3::mrsaab3(dlong _Nelements, dlong _NhaloElements,
   o_saab_x = platform.malloc<dfloat>(Nlevels*Nfields);
   o_saab_a = platform.malloc<dfloat>(Nlevels*Nfields*Nstages*Nstages);
   o_saab_b = platform.malloc<dfloat>(Nlevels*Nfields*Nstages*Nstages);
+
+  memory<dfloat> zeros(Nlevels*Nfields*Nstages*Nstages, 0.0);
+  o_zeros = platform.malloc<dfloat>(zeros);
 }
 
 void mrsaab3::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloat end) {
@@ -139,7 +139,7 @@ void mrsaab3::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfl
                     o_shiftIndex,
                     o_mrdt,
                     o_saab_x,
-                    o_saab_b,
+                    o_zeros,
                     o_rhsq0,
                     o_rhsq,
                     o_q,
@@ -354,17 +354,11 @@ mrsaab3_pml::mrsaab3_pml(dlong _Nelements, dlong NpmlElements, dlong _NhaloEleme
 
   //Nstages = 3;
 
-  memory<dfloat> rhsq0(N, 0.0);
-  o_rhsq0 = platform.malloc<dfloat>(rhsq0);
+  o_rhsq0 = platform.malloc<dfloat>(N);
+  o_rhsq = platform.malloc<dfloat>((Nstages-1)*N);
 
-  memory<dfloat> rhsq((Nstages-1)*N, 0.0);
-  o_rhsq = platform.malloc<dfloat>(rhsq);
-
-  memory<dfloat> rhspmlq0(Npml, 0.0);
-  o_rhspmlq0 = platform.malloc<dfloat>(rhspmlq0);
-
-  memory<dfloat> rhspmlq((Nstages-1)*Npml, 0.0);
-  o_rhspmlq = platform.malloc<dfloat>(rhspmlq);
+  o_rhspmlq0 = platform.malloc<dfloat>(Npml);
+  o_rhspmlq = platform.malloc<dfloat>((Nstages-1)*Npml);
 
   o_fQM = platform.malloc<dfloat>((mesh.Nelements+mesh.totalHaloPairs)*mesh.Nfp
                                   *mesh.Nfaces*Nfields);
@@ -426,6 +420,9 @@ mrsaab3_pml::mrsaab3_pml(dlong _Nelements, dlong NpmlElements, dlong _NhaloEleme
 
   o_pmlsaab_a = platform.malloc<dfloat>(pmlsaab_a);
   o_pmlsaab_b = platform.malloc<dfloat>(pmlsaab_b);
+
+  memory<dfloat> zeros(Nlevels*Nfields*Nstages*Nstages, 0.0);
+  o_zeros = platform.malloc<dfloat>(zeros);
 }
 
 void mrsaab3_pml::Run(solver_t& solver,
@@ -467,7 +464,7 @@ void mrsaab3_pml::Run(solver_t& solver,
                     o_shiftIndex,
                     o_mrdt,
                     o_saab_x,
-                    o_saab_b,
+                    o_zeros,
                     o_rhsq0,
                     o_rhsq,
                     o_q,

@@ -41,8 +41,7 @@ ab3::ab3(dlong Nelements, dlong NhaloElements,
   //Nstages = 3;
   shiftIndex = 0;
 
-  memory<dfloat> rhsq(Nstages*N,0.0);
-  o_rhsq = platform.malloc<dfloat>(rhsq);
+  o_rhsq = platform.malloc<dfloat>(Nstages*N);
 
   properties_t kernelInfo = platform.props(); //copy base occa properties from solver
 
@@ -133,11 +132,8 @@ ab3_pml::ab3_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
   //Nstages = 3;
   shiftIndex = 0;
 
-  memory<dfloat> rhsq(Nstages*N,0.0);
-  o_rhsq = platform.malloc<dfloat>(rhsq);
-
-  memory<dfloat> rhspmlq(Nstages*Npml,0.0);
-  o_rhspmlq = platform.malloc<dfloat>(rhspmlq);
+  o_rhsq = platform.malloc<dfloat>(Nstages*N);
+  o_rhspmlq = platform.malloc<dfloat>(Nstages*Npml);
 
   properties_t kernelInfo = platform.props(); //copy base occa properties from solver
 

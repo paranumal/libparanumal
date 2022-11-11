@@ -42,11 +42,8 @@ mrab3::mrab3(dlong Nelements, dlong NhaloElements,
 
   //Nstages = 3;
 
-  memory<dfloat> rhsq0(N, 0.0);
-  o_rhsq0 = platform.malloc<dfloat>(rhsq0);
-
-  memory<dfloat> rhsq((Nstages-1)*N, 0.0);
-  o_rhsq = platform.malloc<dfloat>(rhsq);
+  o_rhsq0 = platform.malloc<dfloat>(N);
+  o_rhsq = platform.malloc<dfloat>((Nstages-1)*N);
 
   o_fQM = platform.malloc<dfloat>((mesh.Nelements+mesh.totalHaloPairs)*mesh.Nfp
                                   *mesh.Nfaces*Nfields);
@@ -96,6 +93,9 @@ mrab3::mrab3(dlong Nelements, dlong NhaloElements,
 
   o_ab_a = platform.malloc<dfloat>(ab_a);
   o_ab_b = platform.malloc<dfloat>(ab_b);
+
+  memory<dfloat> zeros(Nstages, 0.0);
+  o_zeros = platform.malloc<dfloat>(zeros);
 }
 
 void mrab3::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloat end) {
@@ -125,7 +125,7 @@ void mrab3::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloa
                     N,
                     o_shiftIndex,
                     o_mrdt,
-                    o_ab_b,
+                    o_zeros,
                     o_rhsq0,
                     o_rhsq,
                     o_q,
@@ -225,17 +225,11 @@ mrab3_pml::mrab3_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
 
   //Nstages = 3;
 
-  memory<dfloat> rhsq0(N, 0.0);
-  o_rhsq0 = platform.malloc<dfloat>(rhsq0);
+  o_rhsq0 = platform.malloc<dfloat>(N);
+  o_rhsq = platform.malloc<dfloat>((Nstages-1)*N);
 
-  memory<dfloat> rhsq((Nstages-1)*N, 0.0);
-  o_rhsq = platform.malloc<dfloat>(rhsq);
-
-  memory<dfloat> rhspmlq0(Npml, 0.0);
-  o_rhspmlq0 = platform.malloc<dfloat>(rhspmlq0);
-
-  memory<dfloat> rhspmlq((Nstages-1)*Npml, 0.0);
-  o_rhspmlq = platform.malloc<dfloat>(rhspmlq);
+  o_rhspmlq0 = platform.malloc<dfloat>(Npml);
+  o_rhspmlq = platform.malloc<dfloat>((Nstages-1)*Npml);
 
   o_fQM = platform.malloc<dfloat>((mesh.Nelements+mesh.totalHaloPairs)*mesh.Nfp
                                   *mesh.Nfaces*Nfields);
@@ -271,7 +265,7 @@ mrab3_pml::mrab3_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
                            1.0,      0.0,    0.0,
                          3./2.,   -1./2.,    0.0,
                        23./12., -16./12., 5./12.};
-  dfloat _ab_b[Nstages*Nstages] = {
+  dfloat _ab_b[(Nstages+1)*Nstages] = {
                          1./2.,      0.0,    0.0,
                          5./8.,   -1./8.,    0.0,
                        17./24.,  -7./24., 2./24.};
@@ -289,6 +283,9 @@ mrab3_pml::mrab3_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
 
   o_ab_a = platform.malloc<dfloat>(ab_a);
   o_ab_b = platform.malloc<dfloat>(ab_b);
+
+  memory<dfloat> zeros(Nstages, 0.0);
+  o_zeros = platform.malloc<dfloat>(zeros);
 }
 
 void mrab3_pml::Run(solver_t& solver,
@@ -321,7 +318,7 @@ void mrab3_pml::Run(solver_t& solver,
                     N,
                     o_shiftIndex,
                     o_mrdt,
-                    o_ab_b,
+                    o_zeros,
                     o_rhsq0,
                     o_rhsq,
                     o_q,

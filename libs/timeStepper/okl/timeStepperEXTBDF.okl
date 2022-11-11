@@ -48,8 +48,10 @@ SOFTWARE.
     //compute rhs
     dfloat qn = q[n];
     dfloat rhsn = b[1]*qn + dt*a[0]*Fi[0][n]; //First q value comes from q, not history
-    for (int i=1;i<p_Nstages;i++)
-      rhsn += b[i+1]*qni[i][n] + dt*a[i]*Fi[i][n];
+    for (int i=1;i<p_Nstages;i++) {
+      if (b[i+1] != 0.0) rhsn += b[i+1]*qni[i][n];
+      if (a[i]   != 0.0) rhsn += dt*a[i]*Fi[i][n];
+    }
 
     rhs[n] = rhsn/dt; //write RHS
     qni[0][n] = qn; //write q into history

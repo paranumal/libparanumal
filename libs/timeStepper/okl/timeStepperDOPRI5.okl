@@ -38,7 +38,7 @@ SOFTWARE.
     dfloat r_q = q[n];
 
     for (int i=0;i<rk;i++)
-      r_q += dt*rkA[7*rk + i]*rkrhsq[n+i*N];
+      if (rkA[7*rk + i] != 0.0) r_q += dt*rkA[7*rk + i]*rkrhsq[n+i*N];
 
     rkq[n] = r_q;
   }
@@ -64,8 +64,8 @@ SOFTWARE.
       dfloat r_q = q[n];
       dfloat r_rkerr = 0.;
       for (int i=0;i<6;i++) {
-        r_q     += dt*rkA[7*rk + i]*rkrhsq[n+i*N];
-        r_rkerr += dt*rkE[       i]*rkrhsq[n+i*N];
+        if (rkA[7*rk + i] != 0.0) r_q     += dt*rkA[7*rk + i]*rkrhsq[n+i*N];
+        if (rkE[       i] != 0.0) r_rkerr += dt*rkE[       i]*rkrhsq[n+i*N];
       }
       r_q     += dt*rkA[7*rk + 6]*r_rhsq;
       r_rkerr += dt*rkE[       6]*r_rhsq;
@@ -95,9 +95,9 @@ SOFTWARE.
     if (rk==6) { //last stage
       dfloat r_q = q[n];
       for (int i=0;i<6;i++) {
-        r_q     += dt*rkA[7*rk + i]*rkrhsq[n+i*N];
+        if (rkA[7*rk + i] != 0.0) r_q += dt*rkA[7*rk + i]*rkrhsq[n+i*N];
       }
-      r_q     += dt*rkA[7*rk + 6]*r_rhsq;
+      r_q += dt*rkA[7*rk + 6]*r_rhsq;
 
       rkq[n] = r_q;
     }

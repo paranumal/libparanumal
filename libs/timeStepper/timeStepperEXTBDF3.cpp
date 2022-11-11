@@ -41,13 +41,10 @@ extbdf3::extbdf3(dlong Nelements, dlong NhaloElements,
   //Nstages = 3;
   shiftIndex = 0;
 
-  memory<dfloat> qn(Nstages*N, 0.0);
-  o_qn = platform.malloc<dfloat>(qn); //q history
+  o_qn = platform.malloc<dfloat>(Nstages*N); //q history
+  o_rhs = platform.malloc<dfloat>(N); //rhs storage
 
-  memory<dfloat> rhs(N,0.0);
-  o_rhs = platform.malloc<dfloat>(rhs); //rhs storage
-
-  o_F  = platform.malloc<dfloat>(qn); //F(q) history (explicit part)
+  o_F  = platform.malloc<dfloat>(Nstages*N); //F(q) history (explicit part)
 
   properties_t kernelInfo = platform.props(); //copy base occa properties from solver
 
