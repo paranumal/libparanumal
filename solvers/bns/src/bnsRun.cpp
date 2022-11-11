@@ -41,6 +41,16 @@ void bns_t::Run(){
                          mesh.o_z,
                          o_q);
 
+  if (mesh.NpmlElements)
+    pmlInitialConditionKernel(mesh.NpmlElements,
+                             c,
+                             nu,
+                             startTime,
+                             mesh.o_x,
+                             mesh.o_y,
+                             mesh.o_z,
+                             o_pmlq);
+
   dfloat cfl=1.0;
   settings.getSetting("CFL NUMBER", cfl);
 
@@ -62,7 +72,7 @@ void bns_t::Run(){
 #endif
   timeStepper.SetTimeStep(dt);
 
-  timeStepper.Run(*this, o_q, startTime, finalTime);
+  timeStepper.Run(*this, o_q, o_pmlq, startTime, finalTime);
 
   // output norm of final solution
   {

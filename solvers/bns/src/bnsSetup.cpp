@@ -96,12 +96,12 @@ void bns_t::Setup(platform_t& _platform, mesh_t& _mesh,
     y /=mesh.Nverts;
     z /=mesh.Nverts;
 
-    dfloat c = mymin(fabs(x),fabs(y));
+    dfloat f = std::min(fabs(x),fabs(y));
     if (mesh.dim==3)
-      c = mymin(c,fabs(z));
+      f = std::min(f,fabs(z));
 
-    c = std::max(0.5, c);
-    EtoDT[e] *= c;
+    f = std::max(0.5, f);
+    EtoDT[e] *= f;
 #endif
   }
 
@@ -166,6 +166,9 @@ void bns_t::Setup(platform_t& _platform, mesh_t& _mesh,
   // compute samples of q at interpolation nodes
   q.malloc(Nlocal+Nhalo, 0.0);
   o_q = platform.malloc<dfloat>(q);
+
+  pmlq.malloc(mesh.NpmlElements*mesh.Np*Npmlfields, 0.0);
+  o_pmlq = platform.malloc<dfloat>(pmlq);
 
   Vort.malloc(mesh.dim*mesh.Nelements*mesh.Np, 0.0);
   o_Vort = platform.malloc<dfloat>(Vort);
@@ -277,12 +280,19 @@ void bns_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
   if (mesh.dim==2) {
     fileName   = oklFilePrefix + "bnsInitialCondition2D" + oklFileSuffix;
-    kernelName = "bnsInitialCondition2D";
+    initialConditionKernel = platform.buildKernel(fileName,
+                                                  "bnsInitialCondition2D",
+                                                  kernelInfo);
+    pmlInitialConditionKernel = platform.buildKernel(fileName,
+                                                  "bnsPmlInitialCondition2D",
+                                                  kernelInfo);
   } else {
     fileName   = oklFilePrefix + "bnsInitialCondition3D" + oklFileSuffix;
-    kernelName = "bnsInitialCondition3D";
+    initialConditionKernel = platform.buildKernel(fileName,
+                                                  "bnsInitialCondition3D",
+                                                  kernelInfo);
+    pmlInitialConditionKernel = platform.buildKernel(fileName,
+                                                  "bnsPmlInitialCondition3D",
+                                                  kernelInfo);
   }
-
-  initialConditionKernel = platform.buildKernel(fileName, kernelName,
-                                            kernelInfo);
 }
