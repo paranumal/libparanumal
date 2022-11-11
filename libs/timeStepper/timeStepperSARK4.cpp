@@ -137,8 +137,6 @@ void sark4::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloa
 
   dfloat time = start;
 
-  int rank = comm.rank();
-
   solver.Report(time,0);
 
   dfloat outputInterval=0.0;
@@ -152,12 +150,9 @@ void sark4::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloa
   UpdateCoefficients(Nfields, lambda, dt, h_rkX, h_rkA, h_rkE);
 
   // move data to platform
-  // o_rkX.copyFrom(rkX, properties_t("async", true));
-  // o_rkA.copyFrom(rkA, properties_t("async", true));
-  // o_rkE.copyFrom(rkE, properties_t("async", true));
-  h_rkX.copyTo(o_rkX);
-  h_rkA.copyTo(o_rkA);
-  h_rkE.copyTo(o_rkE);
+  h_rkX.copyTo(o_rkX, properties_t("async", true));
+  h_rkA.copyTo(o_rkA, properties_t("async", true));
+  h_rkE.copyTo(o_rkE, properties_t("async", true));
 
   while (time < end) {
 
@@ -195,28 +190,21 @@ void sark4::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloa
         // change dt to match output
         dt = outputTime-time;
 
-        // if(!rank)
-        //   printf("Taking output mini step: %g\n", dt);
-
         //Compute Butcher Tableau
         UpdateCoefficients(Nfields, lambda, dt, h_rkX, h_rkA, h_rkE);
 
         // move data to platform
-        // o_rkX.copyFrom(rkX, properties_t("async", true));
-        // o_rkA.copyFrom(rkA, properties_t("async", true));
-        // o_rkE.copyFrom(rkE, properties_t("async", true));
-        h_rkX.copyTo(o_rkX);
-        h_rkA.copyTo(o_rkA);
-        h_rkE.copyTo(o_rkE);
+        h_rkX.copyTo(o_rkX, properties_t("async", true));
+        h_rkA.copyTo(o_rkA, properties_t("async", true));
+        h_rkE.copyTo(o_rkE, properties_t("async", true));
 
         // time step to output
         Step(solver, o_q, time, dt);
 
         // shift for output
-        o_rkq.copyTo(o_q);
+        o_rkq.copyTo(o_q, properties_t("async", true));
 
         // output  (print from rkq)
-        // if (!rank) printf("\n");
         solver.Report(outputTime,tstep);
 
         // restore time step
@@ -240,17 +228,9 @@ void sark4::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloa
       constexpr dfloat errMax = 1.0e-4;  // hard coded factor ?
       facold = std::max(err,errMax);
 
-      // if (!rank)
-      //   printf("\r time = %g (%d), dt = %g accepted                      ", time, allStep,  dt);
-
       tstep++;
     } else {
       dtnew = dt/(std::max(invfactor1,fac1/safe));
-
-      // if (!rank)
-      //   printf("\r time = %g (%d), dt = %g rejected, trying %g", time, allStep, dt, dtnew);
-      if (!rank)
-        printf("Repeating timestep %d. dt was %g, trying %g.\n", tstep, dt, dtnew);
     }
     dt = dtnew;
 
@@ -258,30 +238,24 @@ void sark4::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloa
     UpdateCoefficients(Nfields, lambda, dt, h_rkX, h_rkA, h_rkE);
 
     // move data to platform
-    // o_rkX.copyFrom(rkX, properties_t("async", true));
-    // o_rkA.copyFrom(rkA, properties_t("async", true));
-    // o_rkE.copyFrom(rkE, properties_t("async", true));
-    h_rkX.copyTo(o_rkX);
-    h_rkA.copyTo(o_rkA);
-    h_rkE.copyTo(o_rkE);
+    h_rkX.copyTo(o_rkX, properties_t("async", true));
+    h_rkA.copyTo(o_rkA, properties_t("async", true));
+    h_rkE.copyTo(o_rkE, properties_t("async", true));
 
     allStep++;
   }
-
-  if (!rank)
-    printf("%d accepted steps and %d total steps\n", tstep, allStep);
 }
 
 void sark4::Backup(deviceMemory<dfloat> &o_q) {
-  o_saveq.copyFrom(o_q, N);
+  o_saveq.copyFrom(o_q, N, properties_t("async", true));
 }
 
 void sark4::Restore(deviceMemory<dfloat> &o_q) {
-  o_saveq.copyTo(o_q, N);
+  o_saveq.copyTo(o_q, N, properties_t("async", true));
 }
 
 void sark4::AcceptStep(deviceMemory<dfloat> &o_q, deviceMemory<dfloat> &o_rq) {
-  o_q.copyFrom(o_rq, N);
+  o_q.copyFrom(o_rq, N, properties_t("async", true));
 }
 
 void sark4::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloat _dt) {
@@ -574,8 +548,6 @@ void sark4_pml::Run(solver_t& solver,
 
   dfloat time = start;
 
-  int rank = comm.rank();
-
   solver.Report(time,0);
 
   dfloat outputInterval=0.0;
@@ -589,12 +561,9 @@ void sark4_pml::Run(solver_t& solver,
   UpdateCoefficients(Nfields, lambda, dt, h_rkX, h_rkA, h_rkE);
 
   // move data to platform
-  // o_rkX.copyFrom(rkX, properties_t("async", true));
-  // o_rkA.copyFrom(rkA, properties_t("async", true));
-  // o_rkE.copyFrom(rkE, properties_t("async", true));
-  h_rkX.copyTo(o_rkX);
-  h_rkA.copyTo(o_rkA);
-  h_rkE.copyTo(o_rkE);
+  h_rkX.copyTo(o_rkX, properties_t("async", true));
+  h_rkA.copyTo(o_rkA, properties_t("async", true));
+  h_rkE.copyTo(o_rkE, properties_t("async", true));
 
   while (time < end) {
 
@@ -632,28 +601,21 @@ void sark4_pml::Run(solver_t& solver,
         // change dt to match output
         dt = outputTime-time;
 
-        // if(!rank)
-        //   printf("Taking output mini step: %g\n", dt);
-
         //Compute Butcher Tableau
         UpdateCoefficients(Nfields, lambda, dt, h_rkX, h_rkA, h_rkE);
 
         // move data to platform
-        // o_rkX.copyFrom(rkX, properties_t("async", true));
-        // o_rkA.copyFrom(rkA, properties_t("async", true));
-        // o_rkE.copyFrom(rkE, properties_t("async", true));
-        h_rkX.copyTo(o_rkX);
-        h_rkA.copyTo(o_rkA);
-        h_rkE.copyTo(o_rkE);
+        h_rkX.copyTo(o_rkX, properties_t("async", true));
+        h_rkA.copyTo(o_rkA, properties_t("async", true));
+        h_rkE.copyTo(o_rkE, properties_t("async", true));
 
         // time step to output
         Step(solver, o_q, o_pmlq, time, dt);
 
         // shift for output
-        o_rkq.copyTo(o_q);
+        o_rkq.copyTo(o_q, properties_t("async", true));
 
         // output  (print from rkq)
-        // if (!rank) printf("\n");
         solver.Report(outputTime,tstep);
 
         // restore time step
@@ -677,17 +639,9 @@ void sark4_pml::Run(solver_t& solver,
       constexpr dfloat errMax = 1.0e-4;  // hard coded factor ?
       facold = std::max(err,errMax);
 
-      // if (!rank)
-      //   printf("\r time = %g (%d), dt = %g accepted                      ", time, allStep,  dt);
-
       tstep++;
     } else {
       dtnew = dt/(std::max(invfactor1,fac1/safe));
-
-      // if (!rank)
-      //   printf("\r time = %g (%d), dt = %g rejected, trying %g", time, allStep, dt, dtnew);
-      if (!rank)
-        printf("Repeating timestep %d. dt was %g, trying %g.\n", tstep, dt, dtnew);
     }
     dt = dtnew;
 
@@ -695,34 +649,28 @@ void sark4_pml::Run(solver_t& solver,
     UpdateCoefficients(Nfields, lambda, dt, h_rkX, h_rkA, h_rkE);
 
     // move data to platform
-    // o_rkX.copyFrom(rkX, properties_t("async", true));
-    // o_rkA.copyFrom(rkA, properties_t("async", true));
-    // o_rkE.copyFrom(rkE, properties_t("async", true));
-    h_rkX.copyTo(o_rkX);
-    h_rkA.copyTo(o_rkA);
-    h_rkE.copyTo(o_rkE);
+    h_rkX.copyTo(o_rkX, properties_t("async", true));
+    h_rkA.copyTo(o_rkA, properties_t("async", true));
+    h_rkE.copyTo(o_rkE, properties_t("async", true));
 
     allStep++;
   }
-
-  if (!rank)
-    printf("%d accepted steps and %d total steps\n", tstep, allStep);
 }
 
 void sark4_pml::Backup(deviceMemory<dfloat> &o_q, deviceMemory<dfloat> &o_pmlq) {
-  o_saveq.copyFrom(o_q, N);
-  o_savepmlq.copyFrom(o_rkpmlq, Npml);
+  o_saveq.copyFrom(o_q, N, properties_t("async", true));
+  o_savepmlq.copyFrom(o_rkpmlq, Npml, properties_t("async", true));
 }
 
 void sark4_pml::Restore(deviceMemory<dfloat> &o_q, deviceMemory<dfloat> &o_pmlq) {
-  o_saveq.copyTo(o_q, N);
-  o_savepmlq.copyTo(o_rkpmlq, Npml);
+  o_saveq.copyTo(o_q, N, properties_t("async", true));
+  o_savepmlq.copyTo(o_rkpmlq, Npml, properties_t("async", true));
 }
 
 void sark4_pml::AcceptStep(deviceMemory<dfloat> &o_q, deviceMemory<dfloat> &o_rq,
                            deviceMemory<dfloat> &o_pmlq, deviceMemory<dfloat> &o_rpmlq) {
-  o_q.copyFrom(o_rq, N);
-  o_pmlq.copyFrom(o_rpmlq, Npml);
+  o_q.copyFrom(o_rq, N, properties_t("async", true));
+  o_pmlq.copyFrom(o_rpmlq, Npml, properties_t("async", true));
 }
 
 void sark4_pml::Step(solver_t& solver,

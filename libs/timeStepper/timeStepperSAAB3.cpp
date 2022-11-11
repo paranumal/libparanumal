@@ -95,8 +95,8 @@ void saab3::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloa
   UpdateCoefficients(Nfields, lambda, dt, h_saab_x, h_saab_a);
 
   // move data to platform
-  h_saab_x.copyTo(o_saab_x);
-  h_saab_a.copyTo(o_saab_a);
+  h_saab_x.copyTo(o_saab_x, properties_t("async", true));
+  h_saab_a.copyTo(o_saab_a, properties_t("async", true));
 
   int tstep=0;
   int order=0;
@@ -290,8 +290,8 @@ void saab3_pml::Run(solver_t& solver,
   UpdateCoefficients(Nfields, lambda, dt, h_saab_x, h_saab_a);
 
   // move data to platform
-  h_saab_x.copyTo(o_saab_x);
-  h_saab_a.copyTo(o_saab_a);
+  h_saab_x.copyTo(o_saab_x, properties_t("async", true));
+  h_saab_a.copyTo(o_saab_a, properties_t("async", true));
 
   int tstep=0;
   int order=0;

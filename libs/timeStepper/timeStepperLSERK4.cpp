@@ -100,7 +100,7 @@ void lserk4::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dflo
     if (time<outputTime && time+dt>=outputTime) {
 
       //save current state
-      o_saveq.copyFrom(o_q, N);
+      o_saveq.copyFrom(o_q, N, properties_t("async", true));
 
       stepdt = outputTime-time;
 
@@ -111,7 +111,7 @@ void lserk4::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dflo
       solver.Report(outputTime,tstep);
 
       //restore previous state
-      o_q.copyFrom(o_saveq, N);
+      o_q.copyFrom(o_saveq, N, properties_t("async", true));
 
       outputTime += outputInterval;
     }
@@ -226,8 +226,8 @@ void lserk4_pml::Run(solver_t& solver,
     if (time<outputTime && time+dt>=outputTime) {
 
       //save current state
-      o_saveq.copyFrom(o_q, N);
-      o_savepmlq.copyFrom(o_pmlq, Npml);
+      o_saveq.copyFrom(o_q, N, properties_t("async", true));
+      o_savepmlq.copyFrom(o_pmlq, Npml, properties_t("async", true));
 
       stepdt = outputTime-time;
 
@@ -238,8 +238,8 @@ void lserk4_pml::Run(solver_t& solver,
       solver.Report(outputTime,tstep);
 
       //restore previous state
-      o_q.copyFrom(o_saveq, N);
-      o_pmlq.copyFrom(o_savepmlq, Npml);
+      o_q.copyFrom(o_saveq, N, properties_t("async", true));
+      o_pmlq.copyFrom(o_savepmlq, Npml, properties_t("async", true));
 
       outputTime += outputInterval;
     }

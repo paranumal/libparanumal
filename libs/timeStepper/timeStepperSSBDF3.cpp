@@ -108,7 +108,7 @@ void ssbdf3::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dflo
 
   //put current q into history
   deviceMemory<dfloat> o_qn0 = o_qn + shiftIndex*N;
-  o_qn0.copyFrom(o_q, N);
+  o_qn0.copyFrom(o_q, N, properties_t("async", true));
 
   // Compute qhat = sum_i=1^s B_i qhat(t_n+1-i) by
   // where qhat(t) is the Lagrangian state of q
