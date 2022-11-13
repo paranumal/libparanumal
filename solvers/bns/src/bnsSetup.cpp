@@ -114,45 +114,45 @@ void bns_t::Setup(platform_t& _platform, mesh_t& _mesh,
   }
 
   if (settings.compareSetting("TIME INTEGRATOR","MRAB3")){
-    timeStepper.Setup<TimeStepper::mrab3_pml>(mesh.Nelements, mesh.NpmlElements,
-                                              mesh.totalHaloPairs,
-                                              mesh.Np, Nfields, Npmlfields,
-                                              platform, mesh);
+    timeStepper.Setup<TimeStepper::mrab3>(mesh.Nelements, mesh.NpmlElements,
+                                          mesh.totalHaloPairs,
+                                          mesh.Np, Nfields, Npmlfields,
+                                          platform, mesh);
   } else if (settings.compareSetting("TIME INTEGRATOR","MRSAAB3")){
-    timeStepper.Setup<TimeStepper::mrsaab3_pml>(mesh.Nelements, mesh.NpmlElements,
-                                                mesh.totalHaloPairs,
-                                                mesh.Np, Nfields, Npmlfields,
-                                                lambda, platform, mesh);
-  } else if (settings.compareSetting("TIME INTEGRATOR","SAAB3")) {
-    timeStepper.Setup<TimeStepper::saab3_pml>(mesh.Nelements, mesh.NpmlElements,
-                                              mesh.totalHaloPairs,
-                                              mesh.Np, Nfields, Npmlfields,
-                                              lambda, platform, comm);
-  } else if (settings.compareSetting("TIME INTEGRATOR","AB3")){
-    timeStepper.Setup<TimeStepper::ab3_pml>(mesh.Nelements, mesh.NpmlElements,
+    timeStepper.Setup<TimeStepper::mrsaab3>(mesh.Nelements, mesh.NpmlElements,
                                             mesh.totalHaloPairs,
                                             mesh.Np, Nfields, Npmlfields,
-                                            platform, comm);
+                                            lambda, platform, mesh);
+  } else if (settings.compareSetting("TIME INTEGRATOR","SAAB3")) {
+    timeStepper.Setup<TimeStepper::saab3>(mesh.Nelements, mesh.NpmlElements,
+                                          mesh.totalHaloPairs,
+                                          mesh.Np, Nfields, Npmlfields,
+                                          lambda, platform, comm);
+  } else if (settings.compareSetting("TIME INTEGRATOR","AB3")){
+    timeStepper.Setup<TimeStepper::ab3>(mesh.Nelements, mesh.NpmlElements,
+                                        mesh.totalHaloPairs,
+                                        mesh.Np, Nfields, Npmlfields,
+                                        platform, comm);
   } else if (settings.compareSetting("TIME INTEGRATOR","LSERK4")){
-    timeStepper.Setup<TimeStepper::lserk4_pml>(mesh.Nelements, mesh.NpmlElements,
-                                               mesh.totalHaloPairs,
-                                               mesh.Np, Nfields, Npmlfields,
-                                               platform, comm);
+    timeStepper.Setup<TimeStepper::lserk4>(mesh.Nelements, mesh.NpmlElements,
+                                           mesh.totalHaloPairs,
+                                           mesh.Np, Nfields, Npmlfields,
+                                           platform, comm);
   } else if (settings.compareSetting("TIME INTEGRATOR","DOPRI5")){
-    timeStepper.Setup<TimeStepper::dopri5_pml>(mesh.Nelements, mesh.NpmlElements,
-                                               mesh.totalHaloPairs,
-                                               mesh.Np, Nfields, Npmlfields,
-                                               platform, comm);
+    timeStepper.Setup<TimeStepper::dopri5>(mesh.Nelements, mesh.NpmlElements,
+                                           mesh.totalHaloPairs,
+                                           mesh.Np, Nfields, Npmlfields,
+                                           platform, comm);
   } else if (settings.compareSetting("TIME INTEGRATOR","SARK4")) {
-    timeStepper.Setup<TimeStepper::sark4_pml>(mesh.Nelements, mesh.NpmlElements,
-                                              mesh.totalHaloPairs,
-                                              mesh.Np, Nfields, Npmlfields,
-                                              lambda, platform, comm);
+    timeStepper.Setup<TimeStepper::sark4>(mesh.Nelements, mesh.NpmlElements,
+                                          mesh.totalHaloPairs,
+                                          mesh.Np, Nfields, Npmlfields,
+                                          lambda, platform, comm);
   } else if (settings.compareSetting("TIME INTEGRATOR","SARK5")) {
-    timeStepper.Setup<TimeStepper::sark5_pml>(mesh.Nelements, mesh.NpmlElements,
-                                              mesh.totalHaloPairs,
-                                              mesh.Np, Nfields, Npmlfields,
-                                              lambda, platform, comm);
+    timeStepper.Setup<TimeStepper::sark5>(mesh.Nelements, mesh.NpmlElements,
+                                          mesh.totalHaloPairs,
+                                          mesh.Np, Nfields, Npmlfields,
+                                          lambda, platform, comm);
   } else {
     LIBP_FORCE_ABORT("Requested TIME INTEGRATOR not found.");
   }

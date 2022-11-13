@@ -54,7 +54,7 @@ public:
   int Nfields;
   int Npmlfields;
 
-  pmlTimeStepper_t timeStepper;
+  timeStepper_t timeStepper;
 
   ogs::halo_t traceHalo;
   memory<ogs::halo_t> multirateTraceHalo;

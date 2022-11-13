@@ -35,7 +35,8 @@ namespace TimeStepper {
 ssbdf3::ssbdf3(dlong Nelements, dlong NhaloElements,
                  int Np, int Nfields,
                  platform_t& _platform, comm_t _comm):
-  timeStepperBase_t(Nelements, NhaloElements, Np, Nfields,
+  timeStepperBase_t(Nelements, 0, NhaloElements,
+                    Np, Nfields, 0,
                     _platform, _comm) {
 
   //Nstages = 3;
@@ -73,7 +74,13 @@ dfloat ssbdf3::GetGamma() {
   return ssbdf_b[(Nstages-1)*(Nstages+1)]; //first entry of last row of B
 }
 
-void ssbdf3::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloat end) {
+void ssbdf3::Run(solver_t& solver,
+                 deviceMemory<dfloat> o_q,
+                 std::optional<deviceMemory<dfloat>> o_pmlq,
+                 dfloat start, dfloat end) {
+
+  LIBP_ABORT("ssbdf3 timeStepper does not support PMLs",
+             o_pmlq.has_value());
 
   dfloat time = start;
 
@@ -100,7 +107,9 @@ void ssbdf3::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dflo
   }
 }
 
-void ssbdf3::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloat _dt, int order) {
+void ssbdf3::Step(solver_t& solver,
+                  deviceMemory<dfloat> o_q,
+                  dfloat time, dfloat _dt, int order) {
 
   //BDF coefficients at current order
   deviceMemory<dfloat> o_B = o_ssbdf_b + order*(Nstages+1);

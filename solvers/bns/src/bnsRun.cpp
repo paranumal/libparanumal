@@ -72,7 +72,7 @@ void bns_t::Run(){
 #endif
   timeStepper.SetTimeStep(dt);
 
-  timeStepper.Run(*this, o_q, o_pmlq, startTime, finalTime);
+  timeStepper.RunWithPml(*this, o_q, o_pmlq, startTime, finalTime);
 
   // output norm of final solution
   {

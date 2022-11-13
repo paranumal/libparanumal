@@ -32,192 +32,18 @@ namespace libp {
 namespace TimeStepper {
 
 mrab3::mrab3(dlong Nelements, dlong NhaloElements,
-               int Np, int _Nfields,
-               platform_t& _platform, mesh_t& _mesh):
-  timeStepperBase_t(Nelements, NhaloElements,
-                    Np, _Nfields, _platform, _mesh.comm),
-  mesh(_mesh),
-  Nlevels(mesh.mrNlevels),
-  Nfields(_Nfields) {
+             int _Np, int _Nfields,
+             platform_t& _platform, mesh_t& _mesh):
+  mrab3(Nelements, 0, NhaloElements,
+        _Np, _Nfields, 0,
+        _platform, _mesh) {}
 
-  //Nstages = 3;
-
-  o_rhsq0 = platform.malloc<dfloat>(N);
-  o_rhsq = platform.malloc<dfloat>((Nstages-1)*N);
-
-  o_fQM = platform.malloc<dfloat>((mesh.Nelements+mesh.totalHaloPairs)*mesh.Nfp
-                                  *mesh.Nfaces*Nfields);
-
-  properties_t kernelInfo = platform.props(); //copy base occa properties from solver
-
-  const int blocksize=256;
-
-  kernelInfo["defines/" "p_blockSize"] = blocksize;
-  kernelInfo["defines/" "p_Nstages"] = Nstages;
-  kernelInfo["defines/" "p_Np"] = mesh.Np;
-  kernelInfo["defines/" "p_Nfp"] = mesh.Nfp;
-  kernelInfo["defines/" "p_Nfaces"] = mesh.Nfaces;
-  kernelInfo["defines/" "p_Nfields"] = Nfields;
-  int maxNodes = std::max(mesh.Np, mesh.Nfp*mesh.Nfaces);
-  kernelInfo["defines/" "p_maxNodes"] = maxNodes;
-
-  updateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
-                                    "timeStepperMRAB.okl",
-                                    "mrabUpdate",
-                                    kernelInfo);
-  traceUpdateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
-                                    "timeStepperMRAB.okl",
-                                    "mrabTraceUpdate",
-                                    kernelInfo);
-
-  // initialize AB time stepping coefficients
-  dfloat _ab_a[Nstages*Nstages] = {
-                           1.0,      0.0,    0.0,
-                         3./2.,   -1./2.,    0.0,
-                       23./12., -16./12., 5./12.};
-  dfloat _ab_b[Nstages*Nstages] = {
-                         1./2.,      0.0,    0.0,
-                         5./8.,   -1./8.,    0.0,
-                       17./24.,  -7./24., 2./24.};
-
-  ab_a.malloc(Nstages*Nstages);
-  ab_b.malloc(Nstages*Nstages);
-  ab_a.copyFrom(_ab_a);
-  ab_b.copyFrom(_ab_b);
-
-  h_shiftIndex = platform.hostMalloc<int>(Nlevels);
-  o_shiftIndex = platform.malloc<int>(Nlevels);
-
-  mrdt.malloc(Nlevels, 0.0);
-  o_mrdt = platform.malloc<dfloat>(mrdt);
-
-  o_ab_a = platform.malloc<dfloat>(ab_a);
-  o_ab_b = platform.malloc<dfloat>(ab_b);
-
-  memory<dfloat> zeros(Nstages, 0.0);
-  o_zeros = platform.malloc<dfloat>(zeros);
-}
-
-void mrab3::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloat end) {
-
-  dfloat time = start;
-
-  //set timesteps and shifting index
-  for (int lev=0;lev<Nlevels;lev++) {
-    mrdt[lev] = dt*(1 << lev);
-    h_shiftIndex[lev] = 0;
-  }
-  o_mrdt.copyFrom(mrdt);
-  h_shiftIndex.copyTo(o_shiftIndex);
-
-  solver.Report(time,0);
-
-  dfloat outputInterval=0.0;
-  solver.settings.getSetting("OUTPUT INTERVAL", outputInterval);
-
-  dfloat outputTime = time + outputInterval;
-
-  // Populate Trace Buffer
-  traceUpdateKernel(mesh.mrNelements[Nlevels-1],
-                    mesh.o_mrElements[Nlevels-1],
-                    mesh.o_mrLevel,
-                    mesh.o_vmapM,
-                    N,
-                    o_shiftIndex,
-                    o_mrdt,
-                    o_zeros,
-                    o_rhsq0,
-                    o_rhsq,
-                    o_q,
-                    o_fQM);
-
-  dfloat DT = dt*(1 << (Nlevels-1));
-
-  int tstep=0;
-  int order=0;
-  while (time < end) {
-    Step(solver, o_q, time, dt, order);
-    time += DT;
-    tstep++;
-    if (order<Nstages-1) order++;
-
-    if (time>outputTime) {
-      //report state
-      solver.Report(outputTime,tstep);
-      outputTime += outputInterval;
-    }
-  }
-}
-
-void mrab3::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloat _dt, int order) {
-
-  deviceMemory<dfloat> o_A = o_ab_a+order*Nstages;
-  deviceMemory<dfloat> o_B = o_ab_b+order*Nstages;
-
-  for (int Ntick=0; Ntick < (1 << (Nlevels-1));Ntick++) {
-
-    // intermediate stage time
-    dfloat currentTime = time + dt*Ntick;
-
-    int lev=0;
-    for (;lev<Nlevels-1;lev++)
-      if (Ntick % (1<<(lev+1)) != 0) break; //find the max lev to compute rhs
-
-    //evaluate ODE rhs = f(q,t)
-    solver.rhsf_MR(o_q, o_rhsq0, o_fQM, currentTime, lev);
-
-    for (lev=0;lev<Nlevels-1;lev++)
-      if ((Ntick+1) % (1<<(lev+1)) !=0) break; //find the max lev to update
-
-    // update all elements of level <= lev
-    if (mesh.mrNelements[lev])
-      updateKernel(mesh.mrNelements[lev],
-                   mesh.o_mrElements[lev],
-                   mesh.o_mrLevel,
-                   mesh.o_vmapM,
-                   N,
-                   o_shiftIndex,
-                   o_mrdt,
-                   o_A,
-                   o_rhsq0,
-                   o_rhsq,
-                   o_fQM,
-                   o_q);
-
-    //rotate index
-    if (Nstages>2)
-      for (int l=0; l<=lev; l++)
-        h_shiftIndex[l] = (h_shiftIndex[l]+Nstages-2)%(Nstages-1);
-
-    //compute intermediate trace values on lev+1 / lev interface
-    if (lev+1<Nlevels && mesh.mrInterfaceNelements[lev+1])
-      traceUpdateKernel(mesh.mrInterfaceNelements[lev+1],
-                        mesh.o_mrInterfaceElements[lev+1],
-                        mesh.o_mrLevel,
-                        mesh.o_vmapM,
-                        N,
-                        o_shiftIndex,
-                        o_mrdt,
-                        o_B,
-                        o_rhsq0,
-                        o_rhsq,
-                        o_q,
-                        o_fQM);
-
-    h_shiftIndex.copyTo(o_shiftIndex, properties_t("async", true));
-  }
-}
-
-/**************************************************/
-/* PML version                                    */
-/**************************************************/
-
-mrab3_pml::mrab3_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
-                     int _Np, int _Nfields, int _Npmlfields,
-                     platform_t& _platform, mesh_t& _mesh):
-  pmlTimeStepperBase_t(Nelements, NpmlElements, NhaloElements,
-                       _Np, _Nfields, _Npmlfields,
-                       _platform, _mesh.comm),
+mrab3::mrab3(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
+             int _Np, int _Nfields, int _Npmlfields,
+             platform_t& _platform, mesh_t& _mesh):
+  timeStepperBase_t(Nelements, NpmlElements, NhaloElements,
+                    _Np, _Nfields, _Npmlfields,
+                    _platform, _mesh.comm),
   mesh(_mesh),
   Nlevels(mesh.mrNlevels),
   Nfields(_Nfields),
@@ -288,10 +114,10 @@ mrab3_pml::mrab3_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
   o_zeros = platform.malloc<dfloat>(zeros);
 }
 
-void mrab3_pml::Run(solver_t& solver,
-                    deviceMemory<dfloat> &o_q,
-                    deviceMemory<dfloat> &o_pmlq,
-                    dfloat start, dfloat end) {
+void mrab3::Run(solver_t& solver,
+                deviceMemory<dfloat> o_q,
+                std::optional<deviceMemory<dfloat>> o_pmlq,
+                dfloat start, dfloat end) {
 
   dfloat time = start;
 
@@ -342,10 +168,10 @@ void mrab3_pml::Run(solver_t& solver,
   }
 }
 
-void mrab3_pml::Step(solver_t& solver,
-                     deviceMemory<dfloat> &o_q,
-                     deviceMemory<dfloat> &o_pmlq,
-                     dfloat time, dfloat _dt, int order) {
+void mrab3::Step(solver_t& solver,
+                 deviceMemory<dfloat> o_q,
+                 std::optional<deviceMemory<dfloat>> o_pmlq,
+                 dfloat time, dfloat _dt, int order) {
 
   deviceMemory<dfloat> o_A = o_ab_a+order*Nstages;
   deviceMemory<dfloat> o_B = o_ab_b+order*Nstages;
@@ -360,9 +186,13 @@ void mrab3_pml::Step(solver_t& solver,
       if (Ntick % (1<<(lev+1)) != 0) break; //find the max lev to compute rhs
 
     //evaluate ODE rhs = f(q,t)
-    solver.rhsf_MR_pml(o_q, o_pmlq,
-                       o_rhsq0, o_rhspmlq0,
-                       o_fQM, currentTime, lev);
+    if (o_pmlq.has_value()) {
+      solver.rhsf_MR_pml(o_q, o_pmlq.value(),
+                         o_rhsq0, o_rhspmlq0,
+                         o_fQM, currentTime, lev);
+    } else {
+      solver.rhsf_MR(o_q, o_rhsq0, o_fQM, currentTime, lev);
+    }
 
     for (lev=0;lev<Nlevels-1;lev++)
       if ((Ntick+1) % (1<<(lev+1)) !=0) break; //find the max lev to update
@@ -382,19 +212,21 @@ void mrab3_pml::Step(solver_t& solver,
                    o_fQM,
                    o_q);
 
-    if (mesh.mrNpmlElements[lev])
-      pmlUpdateKernel(mesh.mrNpmlElements[lev],
-                     mesh.o_mrPmlElements[lev],
-                     mesh.o_mrPmlIds[lev],
-                     mesh.o_mrLevel,
-                     Npml,
-                     Npmlfields,
-                     o_shiftIndex,
-                     o_mrdt,
-                     o_A,
-                     o_rhspmlq0,
-                     o_rhspmlq,
-                     o_pmlq);
+    if (o_pmlq.has_value()) {
+      if (mesh.mrNpmlElements[lev])
+        pmlUpdateKernel(mesh.mrNpmlElements[lev],
+                       mesh.o_mrPmlElements[lev],
+                       mesh.o_mrPmlIds[lev],
+                       mesh.o_mrLevel,
+                       Npml,
+                       Npmlfields,
+                       o_shiftIndex,
+                       o_mrdt,
+                       o_A,
+                       o_rhspmlq0,
+                       o_rhspmlq,
+                       o_pmlq.value());
+    }
 
     //rotate index
     if (Nstages>2)

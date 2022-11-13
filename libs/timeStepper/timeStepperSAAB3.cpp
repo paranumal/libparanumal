@@ -34,18 +34,21 @@ namespace TimeStepper {
 
 using std::complex;
 
-static void UpdateCoefficients(const int Nfields,
-                               const memory<dfloat> &lambda,
-                               const dfloat dt,
-                               pinnedMemory<dfloat> &h_saab_x,
-                               pinnedMemory<dfloat> &h_saab_a);
-
 saab3::saab3(dlong _Nelements, dlong _NhaloElements,
              int _Np, int _Nfields,
              memory<dfloat> _lambda,
              platform_t& _platform, comm_t _comm):
-  timeStepperBase_t(_Nelements, _NhaloElements,
-                    _Np, _Nfields, _platform, _comm),
+  saab3(_Nelements, 0, _NhaloElements,
+        _Np, _Nfields, 0,
+        _lambda, _platform, _comm) {}
+
+saab3::saab3(dlong _Nelements, dlong NpmlElements, dlong _NhaloElements,
+             int _Np, int _Nfields, int Npmlfields,
+             memory<dfloat> _lambda,
+             platform_t& _platform, comm_t _comm):
+  timeStepperBase_t(_Nelements, NpmlElements, _NhaloElements,
+                    _Np, _Nfields, Npmlfields,
+                    _platform, _comm),
   Np(_Np),
   Nfields(_Nfields),
   Nelements(_Nelements),
@@ -58,6 +61,7 @@ saab3::saab3(dlong _Nelements, dlong _NhaloElements,
   shiftIndex = 0;
 
   o_rhsq = platform.malloc<dfloat>(Nstages*N);
+  o_rhspmlq = platform.malloc<dfloat>(Nstages*Npml);
 
   const int blocksize=256;
 
@@ -72,15 +76,33 @@ saab3::saab3(dlong _Nelements, dlong _NhaloElements,
                                     "timeStepperSAAB.okl",
                                     "saabUpdate",
                                     kernelInfo);
+  pmlUpdateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
+                                      "timeStepperSAAB.okl",
+                                      "saabPmlUpdate",
+                                      kernelInfo);
 
   h_saab_x = platform.hostMalloc<dfloat>(Nfields);
   o_saab_x = platform.malloc<dfloat>(Nfields);
 
   h_saab_a = platform.hostMalloc<dfloat>(Nfields*Nstages*Nstages);
   o_saab_a = platform.malloc<dfloat>(Nfields*Nstages*Nstages);
+
+  // initialize AB time stepping coefficients
+  dfloat _ab_a[Nstages*Nstages] = {
+                           1.0,      0.0,    0.0,
+                         3./2.,   -1./2.,    0.0,
+                       23./12., -16./12., 5./12.};
+
+  pmlsaab_a.malloc(Nstages*Nstages);
+  pmlsaab_a.copyFrom(_ab_a);
+
+  o_pmlsaab_a = platform.malloc<dfloat>(pmlsaab_a);
 }
 
-void saab3::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloat end) {
+void saab3::Run(solver_t& solver,
+                deviceMemory<dfloat> o_q,
+                std::optional<deviceMemory<dfloat>> o_pmlq,
+                dfloat start, dfloat end) {
 
   dfloat time = start;
 
@@ -92,16 +114,12 @@ void saab3::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloa
   dfloat outputTime = time + outputInterval;
 
   //Compute SAAB coefficients
-  UpdateCoefficients(Nfields, lambda, dt, h_saab_x, h_saab_a);
-
-  // move data to platform
-  h_saab_x.copyTo(o_saab_x, properties_t("async", true));
-  h_saab_a.copyTo(o_saab_a, properties_t("async", true));
+  UpdateCoefficients();
 
   int tstep=0;
   int order=0;
   while (time < end) {
-    Step(solver, o_q, time, dt, order);
+    Step(solver, o_q, o_pmlq, time, dt, order);
     time += dt;
     tstep++;
     if (order<Nstages-1) order++;
@@ -114,7 +132,10 @@ void saab3::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloa
   }
 }
 
-void saab3::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloat _dt, int order) {
+void saab3::Step(solver_t& solver,
+                 deviceMemory<dfloat> o_q,
+                 std::optional<deviceMemory<dfloat>> o_pmlq,
+                 dfloat time, dfloat _dt, int order) {
 
   //rhs at current index
   deviceMemory<dfloat> o_rhsq0 = o_rhsq + shiftIndex*N;
@@ -123,8 +144,15 @@ void saab3::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloa
   deviceMemory<dfloat> o_X = o_saab_x;
   deviceMemory<dfloat> o_A = o_saab_a + order*Nstages;
 
+  deviceMemory<dfloat> o_rhspmlq0 = o_rhspmlq + shiftIndex*Npml;
+  deviceMemory<dfloat> o_pmlA = o_pmlsaab_a + order*Nstages;
+
   //evaluate ODE rhs = f(q,t)
-  solver.rhsf(o_q, o_rhsq0, time);
+  if (o_pmlq.has_value()) {
+    solver.rhsf_pml(o_q, o_pmlq.value(), o_rhsq0, o_rhspmlq0, time);
+  } else {
+    solver.rhsf(o_q, o_rhsq0, time);
+  }
 
   //update q
   updateKernel(Nelements,
@@ -134,16 +162,21 @@ void saab3::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloa
                o_A,
                o_rhsq,
                o_q);
+  //update pmlq
+  if (o_pmlq.has_value()) {
+    pmlUpdateKernel(Npml,
+                   dt,
+                   shiftIndex,
+                   o_pmlA,
+                   o_rhspmlq,
+                   o_pmlq.value());
+  }
 
   //rotate index
   shiftIndex = (shiftIndex+Nstages-1)%Nstages;
 }
 
-static void UpdateCoefficients(const int Nfields,
-                               const memory<dfloat> &lambda,
-                               const dfloat dt,
-                               pinnedMemory<dfloat> &h_saab_x,
-                               pinnedMemory<dfloat> &h_saab_a) {
+void saab3::UpdateCoefficients() {
 
   const int Nr = 32;
   complex<dfloat> R[Nr];
@@ -208,148 +241,10 @@ static void UpdateCoefficients(const int Nfields,
       A[0 + 2*3] = aa31; A[1 + 2*3] = aa32; A[2 + 2*3]= aa33;
     }
   }
-}
-
-
-/**************************************************/
-/* PML version                                    */
-/**************************************************/
-
-saab3_pml::saab3_pml(dlong _Nelements, dlong NpmlElements, dlong _NhaloElements,
-                     int _Np, int _Nfields, int Npmlfields,
-                     memory<dfloat> _lambda,
-                     platform_t& _platform, comm_t _comm):
-  pmlTimeStepperBase_t(_Nelements, NpmlElements, _NhaloElements,
-                       _Np, _Nfields, Npmlfields,
-                       _platform, _comm),
-  Np(_Np),
-  Nfields(_Nfields),
-  Nelements(_Nelements),
-  NhaloElements(_NhaloElements) {
-
-  lambda.malloc(Nfields);
-  lambda.copyFrom(_lambda);
-
-  //Nstages = 3;
-  shiftIndex = 0;
-
-  o_rhsq = platform.malloc<dfloat>(Nstages*N);
-  o_rhspmlq = platform.malloc<dfloat>(Nstages*Npml);
-
-  const int blocksize=256;
-
-  properties_t kernelInfo = platform.props(); //copy base occa properties from solver
-
-  kernelInfo["defines/" "p_blockSize"] = blocksize;
-  kernelInfo["defines/" "p_Nstages"] = Nstages;
-  kernelInfo["defines/" "p_Np"]      = (int)Np;
-  kernelInfo["defines/" "p_Nfields"] = (int)Nfields;
-
-  updateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
-                                    "timeStepperSAAB.okl",
-                                    "saabUpdate",
-                                    kernelInfo);
-  pmlUpdateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
-                                      "timeStepperSAAB.okl",
-                                      "saabPmlUpdate",
-                                      kernelInfo);
-
-  h_saab_x = platform.hostMalloc<dfloat>(Nfields);
-  o_saab_x = platform.malloc<dfloat>(Nfields);
-
-  h_saab_a = platform.hostMalloc<dfloat>(Nfields*Nstages*Nstages);
-  o_saab_a = platform.malloc<dfloat>(Nfields*Nstages*Nstages);
-
-  // initialize AB time stepping coefficients
-  dfloat _ab_a[Nstages*Nstages] = {
-                           1.0,      0.0,    0.0,
-                         3./2.,   -1./2.,    0.0,
-                       23./12., -16./12., 5./12.};
-
-  pmlsaab_a.malloc(Nstages*Nstages);
-  pmlsaab_a.copyFrom(_ab_a);
-
-  o_pmlsaab_a = platform.malloc<dfloat>(pmlsaab_a);
-}
-
-void saab3_pml::Run(solver_t& solver,
-                    deviceMemory<dfloat> &o_q,
-                    deviceMemory<dfloat> &o_pmlq,
-                    dfloat start, dfloat end) {
-
-  dfloat time = start;
-
-  solver.Report(time,0);
-
-  dfloat outputInterval=0.0;
-  solver.settings.getSetting("OUTPUT INTERVAL", outputInterval);
-
-  dfloat outputTime = time + outputInterval;
-
-  //Compute SAAB coefficients
-  UpdateCoefficients(Nfields, lambda, dt, h_saab_x, h_saab_a);
 
   // move data to platform
   h_saab_x.copyTo(o_saab_x, properties_t("async", true));
   h_saab_a.copyTo(o_saab_a, properties_t("async", true));
-
-  int tstep=0;
-  int order=0;
-  while (time < end) {
-    Step(solver, o_q, o_pmlq, time, dt, order);
-    time += dt;
-    tstep++;
-    if (order<Nstages-1) order++;
-
-    if (time>outputTime) {
-      //report state
-      solver.Report(time,tstep);
-      outputTime += outputInterval;
-    }
-  }
-}
-
-void saab3_pml::Step(solver_t& solver,
-                     deviceMemory<dfloat> &o_q,
-                     deviceMemory<dfloat> &o_pmlq,
-                     dfloat time, dfloat _dt, int order) {
-
-  //rhs at current index
-  deviceMemory<dfloat> o_rhsq0 = o_rhsq + shiftIndex*N;
-
-  //coefficients at current order
-  deviceMemory<dfloat> o_X = o_saab_x;
-  deviceMemory<dfloat> o_A = o_saab_a + order*Nstages;
-
-  deviceMemory<dfloat> o_rhspmlq0;
-  deviceMemory<dfloat> o_pmlA;
-  if (Npml) {
-    o_rhspmlq0 = o_rhspmlq + shiftIndex*Npml;
-    o_pmlA = o_pmlsaab_a + order*Nstages;
-  }
-
-  //evaluate ODE rhs = f(q,t)
-  solver.rhsf_pml(o_q, o_pmlq, o_rhsq0, o_rhspmlq0, time);
-
-  //update q
-  updateKernel(Nelements,
-               dt,
-               shiftIndex,
-               o_X,
-               o_A,
-               o_rhsq,
-               o_q);
-  //update pmlq
-  if (Npml)
-    pmlUpdateKernel(Npml,
-                   dt,
-                   shiftIndex,
-                   o_pmlA,
-                   o_rhspmlq,
-                   o_pmlq);
-
-  //rotate index
-  shiftIndex = (shiftIndex+Nstages-1)%Nstages;
 }
 
 } //namespace TimeStepper
