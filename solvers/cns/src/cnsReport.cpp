@@ -30,19 +30,24 @@ void cns_t::Report(dfloat time, int tstep){
 
   static int frame=0;
 
-  //compute vorticity
-  vorticityKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_D, o_q, o_Vort);
-
   //compute q.M*q
+  dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
+  deviceMemory<dfloat> o_Mq = platform.reserve<dfloat>(Nentries);
   mesh.MassMatrixApply(o_q, o_Mq);
 
-  dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
   dfloat norm2 = sqrt(platform.linAlg().innerProd(Nentries, o_q, o_Mq, mesh.comm));
+  o_Mq.free();
 
   if(mesh.rank==0)
     printf("%5.2f (%d), %5.2f (time, timestep, norm)\n", time, tstep, norm2);
 
   if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
+
+    //compute vorticity
+    deviceMemory<dfloat> o_Vort = platform.reserve<dfloat>(mesh.dim*mesh.Nelements*mesh.Np);
+    vorticityKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_D, o_q, o_Vort);
+
+    memory<dfloat> Vort(mesh.dim*mesh.Nelements*mesh.Np);
 
     // copy data back to host
     o_q.copyTo(q);

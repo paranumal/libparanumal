@@ -55,11 +55,6 @@ void cns_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
   if (!isothermal) Nfields++; //include energy equation
 
-  dlong NlocalFields = mesh.Nelements*mesh.Np*Nfields;
-  dlong NhaloFields  = mesh.totalHaloPairs*mesh.Np*Nfields;
-  dlong NlocalGrads = mesh.Nelements*mesh.Np*Ngrads;
-  dlong NhaloGrads  = mesh.totalHaloPairs*mesh.Np*Ngrads;
-
   //setup timeStepper
   if (settings.compareSetting("TIME INTEGRATOR","AB3")){
     timeStepper.Setup<TimeStepper::ab3>(mesh.Nelements,
@@ -82,18 +77,13 @@ void cns_t::Setup(platform_t& _platform, mesh_t& _mesh,
   fieldTraceHalo = mesh.HaloTraceSetup(Nfields);
   gradTraceHalo  = mesh.HaloTraceSetup(Ngrads);
 
+  dlong NlocalFields = mesh.Nelements*mesh.Np*Nfields;
+  dlong NhaloFields  = mesh.totalHaloPairs*mesh.Np*Nfields;
+
   // compute samples of q at interpolation nodes
   q.malloc(NlocalFields+NhaloFields);
-  o_q = platform.malloc<dfloat>(q);
+  o_q = platform.malloc<dfloat>(NlocalFields+NhaloFields);
 
-  gradq.malloc(NlocalGrads+NhaloGrads);
-  o_gradq = platform.malloc<dfloat>(gradq);
-
-  Vort.malloc(mesh.dim*mesh.Nelements*mesh.Np);
-  o_Vort = platform.malloc<dfloat>(Vort);
-
-  //storage for M*q during reporting
-  o_Mq = platform.malloc<dfloat>(q);
   mesh.MassMatrixKernelSetup(Nfields); // mass matrix operator
 
   // OCCA build stuff

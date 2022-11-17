@@ -68,14 +68,6 @@ public:
   memory<dfloat> q;
   deviceMemory<dfloat> o_q;
 
-  memory<dfloat> gradq;
-  deviceMemory<dfloat> o_gradq;
-
-  memory<dfloat> Vort;
-  deviceMemory<dfloat> o_Vort;
-
-  deviceMemory<dfloat> o_Mq;
-
   kernel_t volumeKernel;
   kernel_t surfaceKernel;
   kernel_t cubatureVolumeKernel;
