@@ -29,108 +29,74 @@ SOFTWARE.
 @kernel void igBasisInnerProducts(const dlong Ntotal,
                                   const dlong Nblocks,
                                   const dlong dim, // how many inner products
-                                  const dfloat *x, // one x
-                                  const dfloat *y, // multiple y
-                                  dfloat *wxy)
+                                  @restrict const dfloat *x, // one x
+                                  @restrict const dfloat *y, // multiple y
+                                  @restrict dfloat *scratch,
+                                  @restrict dfloat *wxy,)
 {
-  for (dlong b = 0; b < Nblocks; ++b; @outer(0)) {
+  for (dlong b = 0; b < Nblocks; ++b; @outer(1)) {
 
-    @shared dfloat s_wxy[p_blockSize];
+    for (int fld = 0; fld < dim; ++fld; @outer(0)) {
 
-    // load x to register
-    // block over igNhist
-
-    @exclusive dfloat r_wx;
-
-    for (int t = 0; t < p_blockSize; ++t; @inner(0)) {
-      const dlong id = t + p_blockSize*b;
-
-      if (id < Ntotal) {
-        r_wx = x[id];
-      }
-    }
-
-    for (int fld = 0; fld < dim; ++fld) {
-
+      @shared dfloat s_wxy[p_blockSize];
 
       for (int t = 0; t < p_blockSize; ++t; @inner(0)) {
         dlong id = t + p_blockSize*b;
 
         dfloat res = 0;
-
-        if (id < Ntotal) {
-          dlong vid = id + fld*Ntotal;
-
-          res += r_wx*y[vid]; // fmad
+        while (id < Ntotal) {
+          res += x[id]*y[id + fld*Ntotal]; // fmad
+          id += Nblocks*p_blockSize;
         }
-
         s_wxy[t] = res;
       }
 
+#if p_blockSize>512
+      for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<512) s_wxy[t] += s_wxy[t+512];
+#endif
+#if p_blockSize>256
+      for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<256) s_wxy[t] += s_wxy[t+256];
+#endif
+      for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<128) s_wxy[t] += s_wxy[t+128];
+      for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 64) s_wxy[t] += s_wxy[t+64];
+      for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 32) s_wxy[t] += s_wxy[t+32];
+      for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 16) s_wxy[t] += s_wxy[t+16];
+      for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  8) s_wxy[t] += s_wxy[t+8];
+      for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  4) s_wxy[t] += s_wxy[t+4];
+      for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  2) s_wxy[t] += s_wxy[t+2];
+      for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  1) scratch[b + Nblocks*fld] = s_wxy[0] + s_wxy[1];
+    }
+  }
+
+
+  for (int fld = 0; fld < dim; ++fld; @outer(0)) {
+
+    @shared dfloat s_wxy[p_blockSize];
+
+    for (int t = 0; t < p_blockSize; ++t; @inner(0)) {
+      dlong id = t;
+
+      dfloat res = 0;
+      while (id < Nblocks) {
+        res += scratch[id + fld*Nblocks]; // fmad
+        id += p_blockSize;
+      }
+      s_wxy[t] = res;
+    }
 
 #if p_blockSize>512
-      for(int t=0;t<p_blockSize;++t;@inner(0))
-        if(t<512){
-          s_wxy[t] += s_wxy[t+512];
-        }
-
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<512) s_wxy[t] += s_wxy[t+512];
 #endif
-
 #if p_blockSize>256
-      for(int t=0;t<p_blockSize;++t;@inner(0))
-        if(t<256){
-          s_wxy[t] += s_wxy[t+256];
-        }
-
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<256) s_wxy[t] += s_wxy[t+256];
 #endif
-
-      for(int t=0;t<p_blockSize;++t;@inner(0))
-        if(t<128){
-          s_wxy[t] += s_wxy[t+128];
-        }
-
-
-      for(int t=0;t<p_blockSize;++t;@inner(0))
-        if(t< 64){
-          s_wxy[t] += s_wxy[t+64];
-        }
-
-
-      for(int t=0;t<p_blockSize;++t;@inner(0))
-        if(t< 32){
-          s_wxy[t] += s_wxy[t+32];
-        }
-
-      for(int t=0;t<p_blockSize;++t;@inner(0))
-        if(t< 16){
-          s_wxy[t] += s_wxy[t+16];
-        }
-
-      for(int t=0;t<p_blockSize;++t;@inner(0))
-        if(t<  8){
-          s_wxy[t] += s_wxy[t+8];
-        }
-
-      for(int t=0;t<p_blockSize;++t;@inner(0))
-        if(t<  4){
-          s_wxy[t] += s_wxy[t+4];
-        }
-
-      for(int t=0;t<p_blockSize;++t;@inner(0))
-        if(t<  2){
-          s_wxy[t] += s_wxy[t+2];
-        }
-
-
-      // assumes igNhist < p_blockSize
-      for(int t=0;t<p_blockSize;++t;@inner(0)){
-        if(t==0){
-          dfloat res = s_wxy[0] + s_wxy[1];
-//          atomicAdd(wxy + fld, res); // note - assumes zerod accumulator
-          dlong id = b + Nblocks*fld;
-          wxy[id] = res;
-        }
-      }
-    }
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<128) s_wxy[t] += s_wxy[t+128];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 64) s_wxy[t] += s_wxy[t+64];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 32) s_wxy[t] += s_wxy[t+32];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 16) s_wxy[t] += s_wxy[t+16];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  8) s_wxy[t] += s_wxy[t+8];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  4) s_wxy[t] += s_wxy[t+4];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  2) s_wxy[t] += s_wxy[t+2];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  1) wxy[fld] = s_wxy[0] + s_wxy[1];
   }
 }

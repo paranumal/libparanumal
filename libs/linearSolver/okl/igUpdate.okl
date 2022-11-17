@@ -24,32 +24,22 @@ SOFTWARE.
 
 */
 
-#define blockSize 256
+#define p_blockSize 256
 
 @kernel void igUpdate(const dlong N,    /* Length of vectors */
                       const dlong curDim, /* field to update */
                       const dfloat scale, /* scale factor */
-                      @restrict dfloat *btilde,   /* new vector */
-                      const int bwrite,
+                      @restrict const dfloat *btilde,   /* new vector */
                       @restrict dfloat *Btilde,   /* initial guess history space */
-                      @restrict dfloat *xtilde,   /* new soln vector */
-                      const int xwrite,
+                      @restrict const dfloat *xtilde,   /* new soln vector */
                       @restrict dfloat *Xtilde)   /* initial guess history space */
 {
-  for (dlong n = 0; n < N; n += blockSize; @outer(0)) {
-    for (dlong i = n; i < (n + blockSize); i++; @inner(0)) {
-      if (i < N){
-        dlong id = curDim*N + i;
-        dfloat bt = scale*btilde[i];
-        dfloat xt = scale*xtilde[i];
-        Btilde[id] = bt;
-        Xtilde[id] = xt;
-        if(bwrite)
-          btilde[i]  = bt;
-        if(xwrite)
-          xtilde[i]  = xt;
-      }
-    }
+  for(dlong n=0;n<N;++n;@tile(p_blockSize,@outer(0),@inner(0))){
+    dlong id = curDim*N + n;
+    dfloat bt = scale*btilde[n];
+    dfloat xt = scale*xtilde[n];
+    Btilde[id] = bt;
+    Xtilde[id] = xt;
   }
 }
 
