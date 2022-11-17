@@ -31,9 +31,10 @@ void acoustics_t::Report(dfloat time, int tstep){
   static int frame=0;
 
   //compute q.M*q
+  dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
+  deviceMemory<dfloat> o_Mq = platform.reserve<dfloat>(Nentries);
   mesh.MassMatrixApply(o_q, o_Mq);
 
-  dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
   dfloat norm2 = sqrt(platform.linAlg().innerProd(Nentries, o_q, o_Mq, mesh.comm));
 
   if(mesh.rank==0)
