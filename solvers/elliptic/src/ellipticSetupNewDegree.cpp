@@ -48,15 +48,12 @@ elliptic_t elliptic_t::SetupNewDegree(mesh_t& meshC){
     if (meshC.elementType==Mesh::TRIANGLES ||
         meshC.elementType==Mesh::QUADRILATERALS){
       elliptic.tau = 2.0*(meshC.N+1)*(meshC.N+2)/2.0;
-      if(meshC.dim==3)
+      if(meshC.dim==3) {
         elliptic.tau *= 1.5;
-    } else
+      }
+    } else {
       elliptic.tau = 2.0*(meshC.N+1)*(meshC.N+3);
-
-    //buffer for gradient (Reuse the original buffer)
-    // dlong Ntotal = meshC.Np*(meshC.Nelements+meshC.totalHaloPairs);
-    // elliptic->grad = (dfloat*) calloc(Ntotal*4, sizeof(dfloat));
-    // elliptic->o_grad  = meshC.device.malloc(Ntotal*4*sizeof(dfloat), elliptic->grad);
+    }
   }
 
   // OCCA build stuff

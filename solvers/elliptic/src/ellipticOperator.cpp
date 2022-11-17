@@ -29,6 +29,9 @@
 void elliptic_t::Operator(deviceMemory<dfloat> &o_q, deviceMemory<dfloat> &o_Aq){
 
   if(disc_c0){
+    //buffer for local Ax
+    deviceMemory<dfloat> o_AqL = platform.reserve<dfloat>(mesh.Np*mesh.Nelements);
+
     // int mapType = (mesh.elementType==Mesh::HEXAHEDRA &&
     //                mesh.settings.compareSetting("ELEMENT MAP", "TRILINEAR")) ? 1:0;
 
@@ -106,6 +109,9 @@ void elliptic_t::Operator(deviceMemory<dfloat> &o_q, deviceMemory<dfloat> &o_Aq)
     ogsMasked.GatherFinish(o_Aq, o_AqL, 1, ogs::Add, ogs::Trans);
 
   } else if(disc_ipdg) {
+    //buffer for gradient
+    dlong Ntotal = mesh.Np*(mesh.Nelements+mesh.totalHaloPairs);
+    deviceMemory<dfloat> o_grad = platform.reserve<dfloat>(Ntotal*4);
 
     if(mesh.Nelements) {
       dlong offset = 0;

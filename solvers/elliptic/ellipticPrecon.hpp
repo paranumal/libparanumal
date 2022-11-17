@@ -50,7 +50,6 @@ private:
   mesh_t mesh;
   settings_t settings;
 
-  deviceMemory<dfloat> o_MrL, o_rtmp;
   deviceMemory<dfloat> o_invMM;
 
   kernel_t blockJacobiKernel;
@@ -69,9 +68,6 @@ private:
   settings_t settings;
 
   parAlmond::parAlmond_t parAlmond;
-
-  memory<dfloat> xG, rhsG;
-  deviceMemory<dfloat> o_xG, o_rhsG;
 
 public:
   ParAlmondPrecon() = default;
@@ -105,12 +101,11 @@ private:
   elliptic_t femElliptic;
   parAlmond::parAlmond_t parAlmond;
 
-  deviceMemory<dfloat> o_MrL;
-
-  deviceMemory<dfloat> o_zFEM, o_rFEM;
-  deviceMemory<dfloat> o_GzFEM, o_GrFEM;
-
   ogs::ogs_t FEMogs;
+  ogs::halo_t FEMgHalo;
+
+  memory<dlong> FEMGlobalToLocal;
+  deviceMemory<dlong> o_FEMGlobalToLocal;
 
   kernel_t SEMFEMInterpKernel;
   kernel_t SEMFEMAnterpKernel;
@@ -146,13 +141,6 @@ public:
   dfloat lambda1, lambda0;
   int ChebyshevIterations;
 
-  static dlong NsmootherResidual, Nscratch;
-  static memory<dfloat> smootherResidual;
-  static deviceMemory<dfloat> o_smootherResidual;
-  static deviceMemory<dfloat> o_smootherResidual2;
-  static deviceMemory<dfloat> o_smootherUpdate;
-  static deviceMemory<dfloat> o_transferScratch;
-
   //jacobi data
   deviceMemory<dfloat> o_invDiagA;
 
@@ -176,12 +164,12 @@ public:
   void smoothJacobi    (deviceMemory<dfloat> &o_r, deviceMemory<dfloat> &o_X, bool xIsZero);
   void smoothChebyshev (deviceMemory<dfloat> &o_r, deviceMemory<dfloat> &o_X, bool xIsZero);
 
+  size_t SmootherScratchSize();
+
   void Report();
 
   void SetupSmoother();
   dfloat maxEigSmoothAx();
-
-  void AllocateStorage();
 };
 
 // Overlapping additive Schwarz with patch problems consisting of the
@@ -205,14 +193,6 @@ private:
   //Coarse Precon
   ogs::ogs_t ogsMasked;
   parAlmond::parAlmond_t parAlmond;
-
-  memory<dfloat> rPatch, zPatch;
-  memory<dfloat> rPatchL, zPatchL;
-  deviceMemory<dfloat> o_rPatch, o_zPatch;
-  deviceMemory<dfloat> o_rPatchL, o_zPatchL;
-
-  memory<dfloat> rC, zC;
-  deviceMemory<dfloat> o_rC, o_zC;
 
   memory<dfloat> patchWeight;
   deviceMemory<dfloat> o_patchWeight;

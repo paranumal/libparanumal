@@ -52,10 +52,6 @@ MassMatrixPrecon::MassMatrixPrecon(elliptic_t& _elliptic):
     blockJacobiKernel = elliptic.platform.buildKernel(DELLIPTIC "/okl/ellipticPreconBlockJacobi.okl",
                                      "blockJacobi", kernelInfo);
   } else if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
-    dlong Ntotal = elliptic.ogsMasked.Ngather + elliptic.gHalo.Nhalo;
-    o_rtmp = elliptic.platform.malloc<dfloat>(Ntotal);
-    o_MrL  = elliptic.platform.malloc<dfloat>(mesh.Np*mesh.Nelements);
-
     partialBlockJacobiKernel = elliptic.platform.buildKernel(DELLIPTIC "/okl/ellipticPreconBlockJacobi.okl",
                                      "partialBlockJacobi", kernelInfo);
   }
@@ -67,6 +63,9 @@ void MassMatrixPrecon::Operator(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>&
   linAlg_t& linAlg = elliptic.platform.linAlg();
 
   if (elliptic.disc_c0) {//C0
+    dlong Ntotal = elliptic.ogsMasked.Ngather + elliptic.gHalo.Nhalo;
+    deviceMemory<dfloat> o_rtmp = elliptic.platform.reserve<dfloat>(Ntotal);
+    deviceMemory<dfloat> o_MrL  = elliptic.platform.reserve<dfloat>(mesh.Np*mesh.Nelements);
 
     // rtmp = invDegree.*r
     linAlg.amxpy(elliptic.Ndofs, 1.0, elliptic.o_weightG, o_r, 0.0, o_rtmp);

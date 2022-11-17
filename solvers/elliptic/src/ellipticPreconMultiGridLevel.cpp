@@ -27,28 +27,28 @@ SOFTWARE.
 #include "elliptic.hpp"
 #include "ellipticPrecon.hpp"
 
-void MGLevel::Operator(deviceMemory<dfloat>& o_X, deviceMemory<dfloat>& o_Ax) {
-  elliptic.Operator(o_X,o_Ax);
+void MGLevel::Operator(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_Ax) {
+  elliptic.Operator(o_x,o_Ax);
 }
 
-void MGLevel::residual(deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_X, deviceMemory<dfloat>& o_RES) {
-  elliptic.Operator(o_X,o_RES);
+void MGLevel::residual(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_res) {
+  elliptic.Operator(o_x,o_res);
 
   // subtract res = rhs - A*x
-  platform.linAlg().axpy(elliptic.Ndofs, 1.f, o_RHS, -1.f, o_RES);
+  platform.linAlg().axpy(elliptic.Ndofs, 1.f, o_rhs, -1.f, o_res);
 }
 
-void MGLevel::coarsen(deviceMemory<dfloat>& o_X, deviceMemory<dfloat>& o_Rx) {
+void MGLevel::coarsen(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_Rx) {
 
   linAlg_t& linAlg = platform.linAlg();
 
   if (elliptic.disc_c0) {
     //scratch spaces
-    deviceMemory<dfloat>& o_wx = o_smootherResidual;
-    deviceMemory<dfloat>& o_RxL = o_transferScratch;
+    deviceMemory<dfloat> o_wx  = platform.reserve<dfloat>(Ncols);
+    deviceMemory<dfloat> o_RxL = platform.reserve<dfloat>(mesh.Nelements*mesh.Np);
 
     //pre-weight
-    linAlg.amxpy(elliptic.Ndofs, 1.0, elliptic.o_weightG, o_X, 0.0, o_wx);
+    linAlg.amxpy(elliptic.Ndofs, 1.0, elliptic.o_weightG, o_x, 0.0, o_wx);
 
     elliptic.gHalo.ExchangeStart(o_wx, 1);
 
@@ -77,34 +77,34 @@ void MGLevel::coarsen(deviceMemory<dfloat>& o_X, deviceMemory<dfloat>& o_Rx) {
     ellipticC.ogsMasked.GatherFinish(o_Rx, o_RxL, 1, ogs::Add, ogs::Trans);
 
   } else {
-    coarsenKernel(mesh.Nelements, o_P, o_X, o_Rx);
+    coarsenKernel(mesh.Nelements, o_P, o_x, o_Rx);
   }
 }
 
-void MGLevel::prolongate(deviceMemory<dfloat>& o_X, deviceMemory<dfloat>& o_Px) {
+void MGLevel::prolongate(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_Px) {
 
   linAlg_t& linAlg = platform.linAlg();
 
   if (elliptic.disc_c0) {
     //scratch spaces
-    deviceMemory<dfloat>& o_PxG = o_smootherResidual;
-    deviceMemory<dfloat>& o_PxL = o_transferScratch;
+    deviceMemory<dfloat> o_PxG = platform.reserve<dfloat>(Ncols);
+    deviceMemory<dfloat> o_PxL = platform.reserve<dfloat>(mesh.Nelements*mesh.Np);
 
-    ellipticC.gHalo.ExchangeStart(o_X, 1);
+    ellipticC.gHalo.ExchangeStart(o_x, 1);
 
     if(meshC.NlocalGatherElements/2)
       partialProlongateKernel(meshC.NlocalGatherElements/2,
                               meshC.o_localGatherElementList,
                               ellipticC.o_GlobalToLocal,
-                              o_P, o_X, o_PxL);
+                              o_P, o_x, o_PxL);
 
-    ellipticC.gHalo.ExchangeFinish(o_X, 1);
+    ellipticC.gHalo.ExchangeFinish(o_x, 1);
 
     if(meshC.NglobalGatherElements)
       partialProlongateKernel(meshC.NglobalGatherElements,
                               meshC.o_globalGatherElementList,
                               ellipticC.o_GlobalToLocal,
-                              o_P, o_X, o_PxL);
+                              o_P, o_x, o_PxL);
 
     //ogs_notrans -> no summation at repeated nodes, just one value
     elliptic.ogsMasked.GatherStart(o_PxG, o_PxL, 1, ogs::Add, ogs::NoTrans);
@@ -113,45 +113,45 @@ void MGLevel::prolongate(deviceMemory<dfloat>& o_X, deviceMemory<dfloat>& o_Px) 
       partialProlongateKernel((meshC.NlocalGatherElements+1)/2,
                               meshC.o_localGatherElementList + meshC.NlocalGatherElements/2,
                               ellipticC.o_GlobalToLocal,
-                              o_P, o_X, o_PxL);
+                              o_P, o_x, o_PxL);
 
     elliptic.ogsMasked.GatherFinish(o_PxG, o_PxL, 1, ogs::Add, ogs::NoTrans);
 
     linAlg.axpy(elliptic.Ndofs, 1.f, o_PxG, 1.f, o_Px);
 
   } else {
-    prolongateKernel(mesh.Nelements, o_P, o_X, o_Px);
+    prolongateKernel(mesh.Nelements, o_P, o_x, o_Px);
   }
 }
 
-void MGLevel::smooth(deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_X, bool x_is_zero) {
+void MGLevel::smooth(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x, bool x_is_zero) {
   if (stype==JACOBI) {
-    smoothJacobi(o_RHS, o_X, x_is_zero);
+    smoothJacobi(o_rhs, o_x, x_is_zero);
   } else if (stype==CHEBYSHEV) {
-    smoothChebyshev(o_RHS, o_X, x_is_zero);
+    smoothChebyshev(o_rhs, o_x, x_is_zero);
   }
 }
 
-void MGLevel::smoothJacobi(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_X, bool xIsZero) {
+void MGLevel::smoothJacobi(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_x, bool xIsZero) {
 
   linAlg_t& linAlg = platform.linAlg();
 
-  deviceMemory<dfloat>& o_RES = o_smootherResidual;
+  deviceMemory<dfloat> o_res = platform.reserve<dfloat>(Ncols);
 
   if (xIsZero) {
-    linAlg.amxpy(elliptic.Ndofs, 1.0, o_invDiagA, o_r, 0.0, o_X);
+    linAlg.amxpy(elliptic.Ndofs, 1.0, o_invDiagA, o_r, 0.0, o_x);
     return;
   }
 
   //res = r-Ax
-  Operator(o_X,o_RES);
-  linAlg.axpy(elliptic.Ndofs, 1.f, o_r, -1.f, o_RES);
+  Operator(o_x,o_res);
+  linAlg.axpy(elliptic.Ndofs, 1.f, o_r, -1.f, o_res);
 
   //smooth the fine problem x = x + S(r-Ax)
-  linAlg.amxpy(elliptic.Ndofs, 1.0, o_invDiagA, o_RES, 1.0, o_X);
+  linAlg.amxpy(elliptic.Ndofs, 1.0, o_invDiagA, o_res, 1.0, o_x);
 }
 
-void MGLevel::smoothChebyshev (deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_X, bool xIsZero) {
+void MGLevel::smoothChebyshev (deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_x, bool xIsZero) {
 
   const dfloat theta = 0.5*(lambda1+lambda0);
   const dfloat delta = 0.5*(lambda1-lambda0);
@@ -160,49 +160,49 @@ void MGLevel::smoothChebyshev (deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& 
   dfloat rho_n = 1./sigma;
   dfloat rho_np1;
 
-  deviceMemory<dfloat>& o_RES = o_smootherResidual;
-  deviceMemory<dfloat>& o_Ad  = o_smootherResidual2;
-  deviceMemory<dfloat>& o_d   = o_smootherUpdate;
+  deviceMemory<dfloat> o_res = platform.reserve<dfloat>(Ncols);
+  deviceMemory<dfloat> o_Ad  = platform.reserve<dfloat>(Ncols);
+  deviceMemory<dfloat> o_d   = platform.reserve<dfloat>(Ncols);
 
   linAlg_t& linAlg = platform.linAlg();
 
   if(xIsZero){ //skip the Ax if x is zero
     //res = S*r
-    linAlg.amxpy(elliptic.Ndofs, 1.0, o_invDiagA, o_r, 0.f, o_RES);
+    linAlg.amxpy(elliptic.Ndofs, 1.0, o_invDiagA, o_r, 0.f, o_res);
 
     //d = invTheta*res
-    linAlg.axpy(elliptic.Ndofs, invTheta, o_RES, 0.f, o_d);
+    linAlg.axpy(elliptic.Ndofs, invTheta, o_res, 0.f, o_d);
   } else {
     //res = S*(r-Ax)
-    Operator(o_X,o_RES);
-    linAlg.axpy(elliptic.Ndofs, 1.f, o_r, -1.f, o_RES);
-    linAlg.amx(elliptic.Ndofs, 1.f, o_invDiagA, o_RES);
+    Operator(o_x,o_res);
+    linAlg.axpy(elliptic.Ndofs, 1.f, o_r, -1.f, o_res);
+    linAlg.amx(elliptic.Ndofs, 1.f, o_invDiagA, o_res);
 
     //d = invTheta*res
-    linAlg.axpy(elliptic.Ndofs, invTheta, o_RES, 0.f, o_d);
+    linAlg.axpy(elliptic.Ndofs, invTheta, o_res, 0.f, o_d);
   }
 
   for (int k=0;k<ChebyshevIterations;k++) {
     //x_k+1 = x_k + d_k
     if (xIsZero&&(k==0))
-      linAlg.axpy(elliptic.Ndofs, 1.f, o_d, 0.f, o_X);
+      linAlg.axpy(elliptic.Ndofs, 1.f, o_d, 0.f, o_x);
     else
-      linAlg.axpy(elliptic.Ndofs, 1.f, o_d, 1.f, o_X);
+      linAlg.axpy(elliptic.Ndofs, 1.f, o_d, 1.f, o_x);
 
     //r_k+1 = r_k - SAd_k
     Operator(o_d,o_Ad);
-    linAlg.amxpy(elliptic.Ndofs, -1.f, o_invDiagA, o_Ad, 1.f, o_RES);
+    linAlg.amxpy(elliptic.Ndofs, -1.f, o_invDiagA, o_Ad, 1.f, o_res);
 
     rho_np1 = 1.0/(2.*sigma-rho_n);
     dfloat rhoDivDelta = 2.0*rho_np1/delta;
 
     //d_k+1 = rho_k+1*rho_k*d_k  + 2*rho_k+1*r_k+1/delta
-    linAlg.axpy(elliptic.Ndofs, rhoDivDelta, o_RES, rho_np1*rho_n, o_d);
+    linAlg.axpy(elliptic.Ndofs, rhoDivDelta, o_res, rho_np1*rho_n, o_d);
 
     rho_n = rho_np1;
   }
   //x_k+1 = x_k + d_k
-  linAlg.axpy(elliptic.Ndofs, 1.f, o_d, 1.0, o_X);
+  linAlg.axpy(elliptic.Ndofs, 1.f, o_d, 1.0, o_x);
 }
 
 
@@ -211,14 +211,6 @@ void MGLevel::smoothChebyshev (deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& 
 * MG Level Setup
 *
 *******************************************/
-
-dlong  MGLevel::NsmootherResidual=0;
-dlong  MGLevel::Nscratch=0;
-memory<dfloat> MGLevel::smootherResidual;
-deviceMemory<dfloat> MGLevel::o_smootherResidual;
-deviceMemory<dfloat> MGLevel::o_smootherResidual2;
-deviceMemory<dfloat> MGLevel::o_smootherUpdate;
-deviceMemory<dfloat> MGLevel::o_transferScratch;
 
 //build a level and connect it to the next one
 MGLevel::MGLevel(elliptic_t& _elliptic,
@@ -232,7 +224,6 @@ MGLevel::MGLevel(elliptic_t& _elliptic,
   mesh(_elliptic.mesh) {
 
   SetupSmoother();
-  AllocateStorage();
 
   if (   mesh.elementType==Mesh::QUADRILATERALS
       || mesh.elementType==Mesh::HEXAHEDRA) {
@@ -296,21 +287,24 @@ MGLevel::MGLevel(elliptic_t& _elliptic,
   }
 }
 
-void MGLevel::AllocateStorage() {
-  // extra storage for smoothing op
-  if (NsmootherResidual < Ncols) {
-    smootherResidual.malloc(Ncols, 0);
-    o_smootherResidual  = elliptic.platform.malloc<dfloat>(smootherResidual);
-    o_smootherResidual2 = elliptic.platform.malloc<dfloat>(smootherResidual);
-    o_smootherUpdate    = elliptic.platform.malloc<dfloat>(smootherResidual);
-    NsmootherResidual = Ncols;
+size_t MGLevel::SmootherScratchSize() {
+  size_t Nentries = 0;
+  if (stype==JACOBI) {
+    //Need a single residual vector for Jacobi smoothing
+    Nentries += Ncols + platform.memPoolAlignment<dfloat>();
+  } else { //(stype==CHEBYSHEV)
+    //Need 3 vectors for Cheby smoothing
+    Nentries += 3*(Ncols + platform.memPoolAlignment<dfloat>());
   }
 
-  if (Nscratch < mesh.Nelements*mesh.Np) {
-    memory<dfloat> dummy(mesh.Nelements*mesh.Np,0);
-    o_transferScratch = elliptic.platform.malloc<dfloat>(dummy);
-    Nscratch = mesh.Nelements*mesh.Np;
+  // Add some space for scratch usage in elliptic operator
+  if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
+    Nentries += mesh.Np*mesh.Nelements + platform.memPoolAlignment<dfloat>();
+  } else { //IPDG
+    dlong Ntotal = mesh.Np*(mesh.Nelements+mesh.totalHaloPairs);
+    Nentries += 4*Ntotal + platform.memPoolAlignment<dfloat>();
   }
+  return Nentries;
 }
 
 void MGLevel::Report() {

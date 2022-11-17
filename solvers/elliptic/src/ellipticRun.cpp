@@ -114,10 +114,10 @@ void elliptic_t::Run(){
 
   //create occa buffers
   dlong Nall = mesh.Np*(mesh.Nelements+mesh.totalHaloPairs);
-  memory<dfloat> rL(Nall, 0.0);
-  memory<dfloat> xL(Nall, 0.0);
-  deviceMemory<dfloat> o_rL = platform.malloc<dfloat>(rL);
-  deviceMemory<dfloat> o_xL = platform.malloc<dfloat>(xL);
+  memory<dfloat> rL(Nall);
+  memory<dfloat> xL(Nall);
+  deviceMemory<dfloat> o_rL = platform.malloc<dfloat>(Nall);
+  deviceMemory<dfloat> o_xL = platform.malloc<dfloat>(Nall);
 
   deviceMemory<dfloat> o_r, o_x;
   if (settings.compareSetting("DISCRETIZATION","IPDG")) {
@@ -131,8 +131,6 @@ void elliptic_t::Run(){
     o_x = platform.malloc<dfloat>(Ngall);
   }
 
-  //storage for M*q during reporting
-  deviceMemory<dfloat> o_MxL = platform.malloc<dfloat>(xL);
   mesh.MassMatrixKernelSetup(Nfields); // mass matrix operator
 
   //populate rhs forcing
@@ -237,9 +235,10 @@ void elliptic_t::Run(){
   // output norm of final solution
   {
     //compute q.M*q
+    dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
+    deviceMemory<dfloat> o_MxL = platform.reserve<dfloat>(Nentries);
     mesh.MassMatrixApply(o_xL, o_MxL);
 
-    dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
     dfloat norm2 = sqrt(platform.linAlg().innerProd(Nentries, o_xL, o_MxL, mesh.comm));
 
     if(mesh.rank==0)

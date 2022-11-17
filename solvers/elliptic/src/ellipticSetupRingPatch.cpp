@@ -38,17 +38,6 @@ elliptic_t elliptic_t::SetupRingPatch(mesh_t& meshPatch){
   elliptic.mesh = meshPatch;
   elliptic.comm = meshPatch.comm;
 
-  //buffer for gradient
-  if (settings.compareSetting("DISCRETIZATION","IPDG")) {
-    dlong Ntotal = meshPatch.Np*meshPatch.Nelements;
-    elliptic.grad.malloc(Ntotal*4, 0.0);
-    elliptic.o_grad = platform.malloc<dfloat>(elliptic.grad);
-  } else {
-    //buffer for local Ax
-    dlong Ntotal = meshPatch.Np*meshPatch.Nelements;
-    elliptic.o_AqL = platform.malloc<dfloat>(Ntotal);
-  }
-
   /*setup trace halo exchange */
   elliptic.traceHalo = meshPatch.HaloTraceSetup(Nfields);
 

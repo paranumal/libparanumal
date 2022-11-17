@@ -68,21 +68,14 @@ void elliptic_t::Setup(platform_t& _platform, mesh_t& _mesh,
     if (mesh.elementType==Mesh::TRIANGLES ||
         mesh.elementType==Mesh::QUADRILATERALS){
       tau = 2.0*(mesh.N+1)*(mesh.N+2)/2.0;
-      if(mesh.dim==3)
+      if(mesh.dim==3) {
         tau *= 1.5;
-    } else
+      }
+    } else {
       tau = 2.0*(mesh.N+1)*(mesh.N+3);
-
-    //buffer for gradient
-    dlong Ntotal = mesh.Np*(mesh.Nelements+mesh.totalHaloPairs);
-    grad.malloc(Ntotal*4);
-    o_grad = platform.malloc<dfloat>(grad);
+    }
   } else {
     tau = 0.0;
-
-    //buffer for local Ax
-    dlong Ntotal = mesh.Np*mesh.Nelements;
-    o_AqL = platform.malloc<dfloat>(Ntotal);
   }
 
   // OCCA build stuff
