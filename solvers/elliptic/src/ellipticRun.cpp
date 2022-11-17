@@ -29,6 +29,9 @@ SOFTWARE.
 
 void elliptic_t::Run(){
 
+  //setup linear algebra module
+  platform.linAlg().InitKernels({"set"});
+
   //setup linear solver
   hlong NglobalDofs;
   if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
@@ -142,6 +145,9 @@ void elliptic_t::Run(){
                 mesh.o_z,
                 lambda,
                 o_rL);
+
+  //Set x to zero
+  platform.linAlg().set(mesh.Nelements*mesh.Np*Nfields, 0.0, o_xL);
 
   //add boundary condition contribution to rhs
   if (settings.compareSetting("DISCRETIZATION","IPDG")) {
