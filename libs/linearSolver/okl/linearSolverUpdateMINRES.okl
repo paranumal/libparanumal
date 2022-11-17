@@ -54,23 +54,16 @@ SOFTWARE.
       q_old[n] = qn;
 
       /* q = z                    */
-      qn = zn;
+      q[n] = zn;
 
-      /* z = r                    */
-      zn = rn;
+      /* r_old = r                */
+      r_old[n] = rn;
 
       /* r = p - (del/gam)*r      */
       rn = pn + alpha*rn;
 
       /* r = r - (gam/gamp)*r_old */
-      rn = rn + beta*r_oldn;
-
-      /* r_old = z                */
-      r_oldn = zn;
-
-      r_old[n] = r_oldn;
+      rn += beta*r_oldn;
       r[n] = rn;
-      z[n] = zn;
-      q[n] = qn;
   }
 }

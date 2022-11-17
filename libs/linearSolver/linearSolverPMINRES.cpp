@@ -36,16 +36,6 @@ pminres::pminres(dlong _N, dlong _Nhalo,
 {
   platform.linAlg().InitKernels({"axpy", "scale", "innerProd"});
 
-  dlong Ntotal = N + Nhalo;
-
-  memory<dfloat> dummy(Ntotal, 0.0);
-  o_p     = platform.malloc<dfloat>(dummy);
-  o_z     = platform.malloc<dfloat>(dummy);
-  o_r     = platform.malloc<dfloat>(dummy);
-  o_r_old = platform.malloc<dfloat>(dummy);
-  o_q     = platform.malloc<dfloat>(dummy);
-  o_q_old = platform.malloc<dfloat>(dummy);
-
   properties_t kernelInfo = platform.props();
   updateMINRESKernel = platform.buildKernel(LINEARSOLVER_DIR "/okl/linearSolverUpdateMINRES.okl", "updateMINRES", kernelInfo);
 }
@@ -60,6 +50,18 @@ int pminres::Solve(operator_t& linearOperator, operator_t& precon,
 
   int rank = comm.rank();
   linAlg_t &linAlg = platform.linAlg();
+
+  /*Pre-reserve memory pool space to avoid some unnecessary re-sizing*/
+  dlong Ntotal = N + Nhalo;
+  platform.reserve<dfloat>(6*Ntotal
+                           + 6 * platform.memPoolAlignment<dfloat>());
+
+  deviceMemory<dfloat> o_p     = platform.reserve<dfloat>(Ntotal);
+  deviceMemory<dfloat> o_z     = platform.reserve<dfloat>(Ntotal);
+  deviceMemory<dfloat> o_r     = platform.reserve<dfloat>(Ntotal);
+  deviceMemory<dfloat> o_r_old = platform.reserve<dfloat>(Ntotal);
+  deviceMemory<dfloat> o_q     = platform.reserve<dfloat>(Ntotal);
+  deviceMemory<dfloat> o_q_old = platform.reserve<dfloat>(Ntotal);
 
   linearOperator.Operator(o_x, o_r);            // r = b - A*x
   linAlg.axpy(N, 1.0, o_b, -1.0, o_r);
@@ -93,11 +95,26 @@ int pminres::Solve(operator_t& linearOperator, operator_t& precon,
     }
 
     linAlg.scale(N, 1.0/gam, o_z);                    // z = z/gam
-    linearOperator.Operator(o_z, o_p);                        // p = A*z
+    linearOperator.Operator(o_z, o_p);                // p = A*z
     del = linAlg.innerProd(N, o_p, o_z, comm);        // del = p . z
     a0 = c*del - cp*s*gam;
     a2 = s*del + cp*c*gam;
     a3 = sp*gam;
+
+    if (iter == 0) {
+      o_q.copyFrom(o_z, properties_t("async", true));     // q = z
+      o_r_old.copyFrom(o_r, properties_t("async", true)); // r_old = r
+      linAlg.axpy(N, 1.0, o_p, -(del/gam), o_r);          // r = p - (del/gam)*r
+    }
+    else if (iter == 1) {
+      o_q_old.copyFrom(o_q, properties_t("async", true)); // q_old = q
+      linAlg.axpy(N, 1.0, o_z, -a2, o_q);                 // q = z - a2*q
+      o_z.copyFrom(o_r);                                  // z = r (save r in z)
+      linAlg.axpy(N, 1.0, o_p, -(del/gam), o_r);          // r = p - (del/gam)*r
+      linAlg.axpy(N, -(gam/gamp), o_r_old, 1.0, o_r);     // r = r - (gam/gamp)*r_old
+      o_r_old.copyFrom(o_z, properties_t("async", true)); // r_old = z (i.e. r saved in z)
+    }
+    else {
 #if 0
     linAlg.axpy(N, -a2, o_q, 1.0, o_z);               // z = z - a2*q - a3*q_old
     linAlg.axpy(N, -a3, o_q_old, 1.0, o_z);
@@ -109,11 +126,11 @@ int pminres::Solve(operator_t& linearOperator, operator_t& precon,
       linAlg.axpy(N, -(gam/gamp), o_r_old, 1.0, o_r); // r = r - (gam/gamp)*r_old
     o_r_old.copyFrom(o_z);                            // r_old = z
 #else
-    if (iter == 0)
-      UpdateMINRES(-a2, -a3, -del/gam, 0.0);
-    else
-      UpdateMINRES(-a2, -a3, -del/gam, -gam/gamp);
+      UpdateMINRES(-a2, -a3, -del/gam, -gam/gamp,
+                   o_z, o_q_old, o_q, o_r_old, o_r, o_p);
 #endif
+    }
+
     precon.Operator(o_r, o_z);                        // z = M\r
     gamp = gam;
     gam  = sqrt(linAlg.innerProd(N, o_z, o_r, comm)); // gam = sqrt(z . r)
@@ -132,9 +149,19 @@ int pminres::Solve(operator_t& linearOperator, operator_t& precon,
   return iter;
 }
 
-void pminres::UpdateMINRES(const dfloat ma2, const dfloat ma3, const dfloat alpha, const dfloat beta)
+void pminres::UpdateMINRES(const dfloat ma2,
+                           const dfloat ma3,
+                           const dfloat alpha,
+                           const dfloat beta,
+                           deviceMemory<dfloat>& o_z,
+                           deviceMemory<dfloat>& o_q_old,
+                           deviceMemory<dfloat>& o_q,
+                           deviceMemory<dfloat>& o_r_old,
+                           deviceMemory<dfloat>& o_r,
+                           deviceMemory<dfloat>& o_p)
 {
-  updateMINRESKernel(N, ma2, ma3, alpha, beta, o_z, o_q_old, o_q, o_r_old, o_r, o_p);
+  updateMINRESKernel(N, ma2, ma3, alpha, beta,
+                     o_z, o_q_old, o_q, o_r_old, o_r, o_p);
 }
 
 } //namespace LinearSolver

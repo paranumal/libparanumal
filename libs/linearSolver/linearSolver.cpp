@@ -48,6 +48,10 @@ void linearSolver_t::MakeDefaultInitialGuessStrategy() {
                                                ls->settings, ls->comm);
 }
 
+bool linearSolver_t::isInitialized() {
+  return (ls!=nullptr && ig!=nullptr);
+}
+
 void linearSolver_t::assertInitialized() {
   LIBP_ABORT("LinearSolver not initialized",
              ls==nullptr);

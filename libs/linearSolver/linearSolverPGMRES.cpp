@@ -40,29 +40,15 @@ pgmres::pgmres(dlong _N, dlong _Nhalo,
   platform.linAlg().InitKernels({"axpy", "zaxpy",
                                "innerProd", "norm2"});
 
-  dlong Ntotal = N + Nhalo;
-
   //Number of iterations between restarts
   //TODO make this modifyable via settings
   restart=PGMRES_RESTART;
-
-  memory<dfloat> dummy(Ntotal, 0.0); //need this to avoid uninitialized memory warnings
-
-  o_V.malloc(restart);
-  for(int i=0; i<restart; ++i){
-    o_V[i] = platform.malloc<dfloat>(dummy);
-  }
 
   H .malloc((restart+1)*(restart+1), 0.0);
   sn.malloc(restart);
   cs.malloc(restart);
   s.malloc(restart+1);
   y.malloc(restart);
-
-  /*aux variables */
-  o_Ax = platform.malloc<dfloat>(dummy);
-  o_z  = platform.malloc<dfloat>(dummy);
-  o_r  = platform.malloc<dfloat>(dummy);
 }
 
 int pgmres::Solve(operator_t& linearOperator, operator_t& precon,
@@ -71,6 +57,21 @@ int pgmres::Solve(operator_t& linearOperator, operator_t& precon,
 
   int rank = comm.rank();
   linAlg_t &linAlg = platform.linAlg();
+
+  /*Pre-reserve memory pool space to avoid some unnecessary re-sizing*/
+  dlong Ntotal = N + Nhalo;
+  platform.reserve<dfloat>((restart+3)*Ntotal
+                          +(restart+3) * platform.memPoolAlignment<dfloat>());
+
+  /*aux variables */
+  deviceMemory<dfloat> o_Ax = platform.reserve<dfloat>(Ntotal);
+  deviceMemory<dfloat> o_z  = platform.reserve<dfloat>(Ntotal);
+  deviceMemory<dfloat> o_r  = platform.reserve<dfloat>(Ntotal);
+
+  memory<deviceMemory<dfloat>> o_V(restart);
+  for(int i=0; i<restart; ++i){
+    o_V[i] = platform.reserve<dfloat>(Ntotal);
+  }
 
   // compute A*x
   linearOperator.Operator(o_x, o_Ax);
@@ -159,7 +160,7 @@ int pgmres::Solve(operator_t& linearOperator, operator_t& precon,
 
       if(error < TOL || iter==MAXIT) {
         //update approximation
-        UpdateGMRES(o_x, i+1);
+        UpdateGMRES(o_V, o_x, i+1);
         break;
       }
     }
@@ -168,7 +169,7 @@ int pgmres::Solve(operator_t& linearOperator, operator_t& precon,
     if(error < TOL || iter==MAXIT) break;
 
     //update approximation
-    UpdateGMRES(o_x, restart);
+    UpdateGMRES(o_V, o_x, restart);
 
     // compute A*x
     linearOperator.Operator(o_x, o_Ax);
@@ -189,7 +190,9 @@ int pgmres::Solve(operator_t& linearOperator, operator_t& precon,
   return iter;
 }
 
-void pgmres::UpdateGMRES(deviceMemory<dfloat>& o_x, const int I){
+void pgmres::UpdateGMRES(memory<deviceMemory<dfloat>>& o_V,
+                         deviceMemory<dfloat>& o_x,
+                         const int I){
 
   for(int k=I-1; k>=0; --k){
     y[k] = s[k];

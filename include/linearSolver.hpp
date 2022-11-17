@@ -63,6 +63,8 @@ class linearSolver_t {
             deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs,
             const dfloat tol, const int MAXIT, const int verbose);
 
+  bool isInitialized();
+
  private:
   std::shared_ptr<LinearSolver::linearSolverBase_t> ls=nullptr;
   std::shared_ptr<InitialGuess::initialGuessStrategy_t> ig=nullptr;
@@ -98,16 +100,15 @@ public:
 //Preconditioned Conjugate Gradient
 class pcg: public linearSolverBase_t {
 private:
-  deviceMemory<dfloat> o_p, o_Ap, o_z, o_Ax;
-
-  pinnedMemory<dfloat> rdotr;
-  deviceMemory<dfloat> o_rdotr;
-
   int flexible;
 
   kernel_t updatePCGKernel;
 
-  dfloat UpdatePCG(const dfloat alpha, deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_r);
+  dfloat UpdatePCG(const dfloat alpha,
+                   deviceMemory<dfloat>& o_p,
+                   deviceMemory<dfloat>& o_Ap,
+                   deviceMemory<dfloat>& o_x,
+                   deviceMemory<dfloat>& o_r);
 
 public:
   pcg(dlong _N, dlong _Nhalo,
@@ -121,14 +122,13 @@ public:
 //Preconditioned GMRES
 class pgmres: public linearSolverBase_t {
 private:
-  deviceMemory<dfloat> o_Ax, o_z, o_r;
-  memory<deviceMemory<dfloat>> o_V;
-
   int restart;
 
   memory<dfloat> H, sn, cs, s, y;
 
-  void UpdateGMRES(deviceMemory<dfloat>& o_x, const int I);
+  void UpdateGMRES(memory<deviceMemory<dfloat>>& o_V,
+                   deviceMemory<dfloat>& o_x,
+                   const int I);
 
 public:
   pgmres(dlong _N, dlong _Nhalo,
@@ -142,17 +142,18 @@ public:
 // Preconditioned MINRES
 class pminres : public linearSolverBase_t {
 private:
-  deviceMemory<dfloat> o_p;
-  deviceMemory<dfloat> o_z;
-  deviceMemory<dfloat> o_r;
-  deviceMemory<dfloat> o_r_old;
-  deviceMemory<dfloat> o_q;
-  deviceMemory<dfloat> o_q_old;
-
   kernel_t updateMINRESKernel;
 
-  dfloat innerProd(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_y);
-  void UpdateMINRES(const dfloat ma2, const dfloat ma3, const dfloat alpha, const dfloat beta);
+  void UpdateMINRES(const dfloat ma2,
+                    const dfloat ma3,
+                    const dfloat alpha,
+                    const dfloat beta,
+                    deviceMemory<dfloat>& o_z,
+                    deviceMemory<dfloat>& o_q_old,
+                    deviceMemory<dfloat>& o_q,
+                    deviceMemory<dfloat>& o_r_old,
+                    deviceMemory<dfloat>& o_r,
+                    deviceMemory<dfloat>& o_p);
 
 public:
   pminres(dlong _N, dlong _Nhalo,
@@ -166,18 +167,23 @@ public:
 //Non-Blocking Preconditioned Conjugate Gradient
 class nbpcg: public linearSolverBase_t {
 private:
-  deviceMemory<dfloat> o_p, o_s, o_S, o_z, o_Z, o_Ax;
-
   pinnedMemory<dfloat> dots;
-  deviceMemory<dfloat> o_dots;
 
   kernel_t update1NBPCGKernel;
   kernel_t update2NBPCGKernel;
 
   Comm::request_t request;
 
-  void Update1NBPCG(const dfloat beta);
-  void Update2NBPCG(const dfloat alpha, deviceMemory<dfloat>& o_r);
+  void Update1NBPCG(const dfloat beta,
+                    deviceMemory<dfloat>& o_z,
+                    deviceMemory<dfloat>& o_Z,
+                    deviceMemory<dfloat>& o_p,
+                    deviceMemory<dfloat>& o_s);
+  void Update2NBPCG(const dfloat alpha,
+                    deviceMemory<dfloat>& o_s,
+                    deviceMemory<dfloat>& o_S,
+                    deviceMemory<dfloat>& o_r,
+                    deviceMemory<dfloat>& o_z);
 
 public:
   nbpcg(dlong _N, dlong _Nhalo,
@@ -191,18 +197,25 @@ public:
 //Non-Blocking Flexible Preconditioned Conjugate Gradient
 class nbfpcg: public linearSolverBase_t {
 private:
-  deviceMemory<dfloat> o_u, o_p, o_w, o_n, o_m, o_s, o_z, o_q, o_Ax;
-
   pinnedMemory<dfloat> dots;
-  deviceMemory<dfloat> o_dots;
 
   kernel_t update0NBFPCGKernel;
   kernel_t update1NBFPCGKernel;
 
   Comm::request_t request;
 
-  void Update0NBFPCG(deviceMemory<dfloat>& o_r);
-  void Update1NBFPCG(const dfloat alpha, deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_r);
+  void Update0NBFPCG(deviceMemory<dfloat>& o_u,
+                     deviceMemory<dfloat>& o_r,
+                     deviceMemory<dfloat>& o_w);
+  void Update1NBFPCG(const dfloat alpha,
+                     deviceMemory<dfloat>& o_p,
+                     deviceMemory<dfloat>& o_s,
+                     deviceMemory<dfloat>& o_q,
+                     deviceMemory<dfloat>& o_z,
+                     deviceMemory<dfloat>& o_x,
+                     deviceMemory<dfloat>& o_r,
+                     deviceMemory<dfloat>& o_u,
+                     deviceMemory<dfloat>& o_w);
 
 public:
   nbfpcg(dlong _N, dlong _Nhalo,
