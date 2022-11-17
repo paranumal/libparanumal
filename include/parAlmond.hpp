@@ -75,8 +75,6 @@ public:
 
   dlong Nrows=0, Ncols=0;
 
-  deviceMemory<dfloat> o_scratch;
-
   multigridLevel() = default;
   multigridLevel(dlong N, dlong M, platform_t& _platform,
                  settings_t& _settings, comm_t _comm):
@@ -88,6 +86,7 @@ public:
   virtual void coarsen(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_Cx)=0;
   virtual void prolongate(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_Px)=0;
   virtual void Report()=0;
+  virtual size_t SmootherScratchSize()=0;
 };
 
 typedef enum {VCYCLE=0,KCYCLE=1,EXACT=3} CycleType;
@@ -119,25 +118,11 @@ public:
   static constexpr int PARALMOND_MAX_LEVELS=100;
   std::shared_ptr<multigridLevel> levels[PARALMOND_MAX_LEVELS];
 
-  deviceMemory<dfloat> o_rhs[PARALMOND_MAX_LEVELS];
-  deviceMemory<dfloat> o_x[PARALMOND_MAX_LEVELS];
-
   std::shared_ptr<coarseSolver_t> coarseSolver;
 
-  //scratch space for smoothing and temporary residual vector
-  size_t NscratchSpace=0;
-  deviceMemory<dfloat> o_scratch;
+  size_t scratchEntries=0;
 
   KrylovType ktype;
-
-  deviceMemory<dfloat> o_ck[PARALMOND_MAX_LEVELS];
-  deviceMemory<dfloat> o_vk[PARALMOND_MAX_LEVELS];
-  deviceMemory<dfloat> o_wk[PARALMOND_MAX_LEVELS];
-
-  //scratch space
-  size_t NreductionScratch=0;
-  pinnedMemory<dfloat> reductionScratch;
-  deviceMemory<dfloat> o_reductionScratch;
 
   multigrid_t() = default;
   multigrid_t(platform_t& _platform, settings_t& _settings,
@@ -146,7 +131,6 @@ public:
   template<class Level, class... Args>
   Level& AddLevel(Args&& ... args) {
     levels[numLevels++] = std::make_shared<Level>(args...);
-    AllocateLevelWorkSpace(numLevels-1);
     return dynamic_cast<Level&>(*levels[numLevels-1]);
   }
   template<class Level>
@@ -154,23 +138,25 @@ public:
     return dynamic_cast<Level&>(*levels[l]);
   }
 
-  void AllocateLevelWorkSpace(const int k);
+  void EstimateScratchSpace();
+  size_t LevelScratchSpace(const int k);
 
-  void Operator(deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_X);
+  void Operator(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x);
 
-  void vcycle(const int k, deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_X);
-  void kcycle(const int k, deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_X);
+  void vcycle(const int k, deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x);
+  void kcycle(const int k, deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x);
 
 private:
   void kcycleOp1(multigridLevel& level,
-                 deviceMemory<dfloat>& o_X,  deviceMemory<dfloat>& o_RHS,
-                 deviceMemory<dfloat>& o_CK, deviceMemory<dfloat>& o_VK,
+                 deviceMemory<dfloat>& o_x,  deviceMemory<dfloat>& o_rhs,
+                 deviceMemory<dfloat>& o_ck, deviceMemory<dfloat>& o_vk,
                  dfloat& alpha1, dfloat& rho1,
                  dfloat& norm_rhs, dfloat& norm_rhstilde);
 
   void kcycleOp2(multigridLevel& level,
-                deviceMemory<dfloat>& o_X,  deviceMemory<dfloat>& o_RHS,
-                deviceMemory<dfloat>& o_CK, deviceMemory<dfloat>& o_VK, deviceMemory<dfloat>& o_WK,
+                deviceMemory<dfloat>& o_x,  deviceMemory<dfloat>& o_rhs,
+                deviceMemory<dfloat>& o_ck, deviceMemory<dfloat>& o_vk,
+                deviceMemory<dfloat>& o_wk,
                 const dfloat alpha1, const dfloat rho1);
 
   void kcycleCombinedOp1(multigridLevel& level,

@@ -120,13 +120,11 @@ public:
             deviceMemory<dfloat>& o_y, deviceMemory<dfloat>& o_z);
 
   void smoothDampedJacobi(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_x,
-                          const dfloat lambda, bool x_is_zero,
-                          deviceMemory<dfloat>& o_scratch);
+                          const dfloat lambda, bool x_is_zero);
 
   void smoothChebyshev(deviceMemory<dfloat>& o_b, deviceMemory<dfloat>& o_x,
                        const dfloat lambda0, const dfloat lambda1,
-                       bool x_is_zero, deviceMemory<dfloat>& o_scratch,
-                       const int ChebyshevIterations);
+                       bool x_is_zero, const int ChebyshevIterations);
 };
 
 } //namespace parAlmond

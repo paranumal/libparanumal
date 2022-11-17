@@ -56,6 +56,8 @@ public:
   void smoothDampedJacobi(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_x, bool x_is_zero);
   void smoothChebyshev(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_x, bool x_is_zero);
 
+  size_t SmootherScratchSize();
+
   void Report();
 
   /*   Setup routines */

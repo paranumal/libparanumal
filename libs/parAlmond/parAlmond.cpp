@@ -52,10 +52,24 @@ void parAlmond_t::Setup(platform_t& _platform, settings_t& _settings, comm_t com
 void parAlmond_t::Operator(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x) {
 
   if (multigrid->exact){ //call the linear solver
+    // On first call build the linear solver
+    if (!multigrid->linearSolver.isInitialized()) {
+      if (settings.compareSetting("PARALMOND CYCLE", "NONSYM"))
+        multigrid->linearSolver.Setup<LinearSolver::pgmres>(multigrid->levels[0]->Nrows,
+                                                            multigrid->levels[0]->Ncols
+                                                              - multigrid->levels[0]->Nrows,
+                                                            platform, settings, multigrid->comm);
+      else
+        multigrid->linearSolver.Setup<LinearSolver::pcg>(multigrid->levels[0]->Nrows,
+                                                         multigrid->levels[0]->Ncols
+                                                           - multigrid->levels[0]->Nrows,
+                                                         platform, settings, multigrid->comm);
+    }
+
     int maxIter = 500;
     int verbose = settings.compareSetting("VERBOSE", "TRUE") ? 1 : 0;
     dfloat tol = 1e-8;
-    solver_t &A = multigrid->GetLevel<solver_t>(0);
+    operator_t &A = multigrid->GetLevel<operator_t>(0);
     (void) multigrid->linearSolver.Solve(A, *multigrid, o_x, o_rhs, tol, maxIter, verbose);
   } else { //apply a multigrid cycle
     multigrid->Operator(o_rhs, o_x);

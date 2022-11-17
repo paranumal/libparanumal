@@ -64,12 +64,10 @@ void amgLevel::residual  (deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_X
 
 void amgLevel::smooth(deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_X, bool x_is_zero){
   if(stype == DAMPED_JACOBI){
-    A.smoothDampedJacobi(o_RHS, o_X, lambda,
-                          x_is_zero, o_scratch);
+    A.smoothDampedJacobi(o_RHS, o_X, lambda, x_is_zero);
   } else if(stype == CHEBYSHEV){
     A.smoothChebyshev(o_RHS, o_X, lambda0, lambda1,
-                       x_is_zero, o_scratch,
-                       ChebyshevIterations);
+                      x_is_zero, ChebyshevIterations);
   }
 }
 
@@ -80,6 +78,14 @@ void amgLevel::setupSmoother(){
   } else if (stype == CHEBYSHEV) {
     lambda1 = A.rho;
     lambda0 = A.rho/10.;
+  }
+}
+
+size_t amgLevel::SmootherScratchSize(){
+  if (stype == DAMPED_JACOBI) {
+    return Ncols + platform.memPoolAlignment<dfloat>();
+  } else { // (stype == CHEBYSHEV)
+    return 2*(Ncols + platform.memPoolAlignment<dfloat>());
   }
 }
 

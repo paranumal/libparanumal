@@ -32,11 +32,15 @@ namespace libp {
 
 namespace parAlmond {
 
-void multigrid_t::Operator(deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_X) {
+void multigrid_t::Operator(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x) {
+
+  /*Pre-reserve memory pool space to avoid some unnecessary re-sizing*/
+  platform.reserve<dfloat>(scratchEntries);
+
   if (ctype == KCYCLE) {
-    kcycle(0, o_RHS, o_X);
+    kcycle(0, o_rhs, o_x);
   } else {
-    vcycle(0, o_RHS, o_X);
+    vcycle(0, o_rhs, o_x);
   }
 }
 
@@ -87,56 +91,50 @@ multigrid_t::multigrid_t(platform_t& _platform, settings_t& _settings,
   }
 }
 
-void multigrid_t::AllocateLevelWorkSpace(const int k){
+void multigrid_t::EstimateScratchSpace() {
+  scratchEntries = LevelScratchSpace(0);
+}
 
+size_t multigrid_t::LevelScratchSpace(const int k) {
   multigridLevel& level = *levels[k];
 
-  //If using an exact solver and this is the first level, setup a linearSovler
-  if (exact && k==0) {
-    if (settings.compareSetting("PARALMOND CYCLE", "NONSYM"))
-      linearSolver.Setup<LinearSolver::pgmres>(level.Nrows,
-                                               level.Ncols - level.Nrows,
-                                               platform, settings, comm);
-    else
-      linearSolver.Setup<LinearSolver::pcg>(level.Nrows,
-                                            level.Ncols - level.Nrows,
-                                            platform, settings, comm);
-  }
-
-  if (ctype==KCYCLE) {
-    //first level
-    if (NreductionScratch==0) {
-      NreductionScratch = 3*PARALMOND_NBLOCKS;
-      memory<dfloat> dummy(3*PARALMOND_NBLOCKS, 0.0);
-      reductionScratch = platform.hostMalloc<dfloat>(NreductionScratch, dummy);
-      o_reductionScratch = platform.malloc<dfloat>(NreductionScratch, dummy);
-    }
-
-    //extra stroage for kcycle vectors
-    if (k>0 && k<NUMKCYCLES+1) {
-      memory<dfloat> dummy(level.Ncols,0.0);
-      o_ck[k] = platform.malloc<dfloat>(level.Ncols,dummy);
-      o_vk[k] = platform.malloc<dfloat>(level.Nrows,dummy);
-      o_wk[k] = platform.malloc<dfloat>(level.Nrows,dummy);
-    }
-  }
-
-  //allocate space for coarse rhs and x
+  // space for rhs and x
+  size_t baseEntries = 0;
   if (k>0) {
-    memory<dfloat> dummy(level.Ncols,0.0);
-    o_x[k]   = platform.malloc<dfloat>(level.Ncols,dummy);
-    o_rhs[k] = platform.malloc<dfloat>(level.Ncols,dummy);
+    baseEntries += 2*level.Ncols + 2 * platform.memPoolAlignment<dfloat>();
   }
 
-  //scratch space includes space for residual and 2 vectors used in Chebyshev smoothing
-  size_t Nrequired = 2*level.Ncols;
-  if (Nrequired>NscratchSpace) {
-    NscratchSpace = Nrequired;
-    memory<dfloat> dummy(2*level.Ncols,0.0);
-    o_scratch = platform.malloc<dfloat>(Nrequired, dummy);
+  // space for residual vector
+  size_t residualEntries = 0;
+  if (k<numLevels-1) {
+    residualEntries = level.Ncols + platform.memPoolAlignment<dfloat>();
   }
 
-  level.o_scratch = o_scratch;
+  //Scratch space needed for smoothing
+  size_t smootherEntries = 0;
+  if (k<numLevels-1) {
+    smootherEntries += level.SmootherScratchSize();
+  }
+
+  //residual can re-use space for smoothing
+  smootherEntries = std::max(smootherEntries, residualEntries);
+
+  size_t cycleEntries = 0;
+  //extra stroage for kcycle vectors ck, vk, wk and reduction scratch
+  if (ctype==KCYCLE && k>0 && k<NUMKCYCLES+1) {
+    cycleEntries += level.Ncols + 2*level.Nrows + 3 * PARALMOND_NBLOCKS
+                  + 4 * platform.memPoolAlignment<dfloat>();
+  }
+
+  if (k==numLevels-1) {
+    //base level
+    cycleEntries += coarseSolver->scratchSize();
+  } else {
+    //add usage from coarse levels
+    cycleEntries += LevelScratchSpace(k+1);
+  }
+
+  return baseEntries + std::max(smootherEntries, cycleEntries);
 }
 
 } //namespace parAlmond
