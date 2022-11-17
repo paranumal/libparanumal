@@ -62,15 +62,18 @@ public:
 } //namespace internal
 
 class platform_t {
-public:
-  private:
-  std::shared_ptr<internal::iplatform_t> iplatform;
-  std::shared_ptr<linAlg_t> ilinAlg;
-
  public:
   comm_t comm;
   device_t device;
 
+ private:
+  std::shared_ptr<internal::iplatform_t> iplatform;
+  std::shared_ptr<linAlg_t> ilinAlg;
+
+  memPool_t deviceMemPool;
+  memPool_t pinnedMemPool;
+
+public:
   platform_t()=default;
 
   platform_t(platformSettings_t& _settings) {
@@ -97,6 +100,16 @@ public:
 
     DeviceConfig();
     DeviceProperties();
+
+    properties_t props;
+#if defined(LIBP_DEBUG)
+    props["verbose"] = true;
+#endif
+
+    deviceMemPool = device.createMemoryPool(props);
+
+    props["host"] = true;
+    pinnedMemPool = device.createMemoryPool(props);
 
     ilinAlg = std::make_shared<linAlg_t>(this);
   }
@@ -182,6 +195,32 @@ public:
     } else {
       return pinnedMemory<T>(device.malloc<T>(src.length(), src.ptr(), hostProp));
     }
+  }
+
+  template <typename T>
+  deviceMemory<T> reserve(const size_t count) {
+    assertInitialized();
+    if (occa::dtype::get<T>() == occa::dtype::none) {
+      return deviceMemory<T>(deviceMemPool.reserve(count*sizeof(T), occa::dtype::byte));
+    } else {
+      return deviceMemory<T>(deviceMemPool.reserve<T>(count));
+    }
+  }
+
+  template <typename T>
+  pinnedMemory<T> hostReserve(const size_t count) {
+    assertInitialized();
+    if (occa::dtype::get<T>() == occa::dtype::none) {
+      return pinnedMemory<T>(pinnedMemPool.reserve(count*sizeof(T), occa::dtype::byte));
+    } else {
+      return pinnedMemory<T>(pinnedMemPool.reserve<T>(count));
+    }
+  }
+
+  /*Return the alignment of the memory pool as count of type Ts*/
+  template<typename T = std::byte>
+  size_t memPoolAlignment() {
+    return (deviceMemPool.alignment() + sizeof(T)-1)/sizeof(T);
   }
 
   linAlg_t& linAlg() {
