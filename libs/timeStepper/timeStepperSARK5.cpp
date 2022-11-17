@@ -35,6 +35,8 @@ namespace TimeStepper {
 
 using std::complex;
 
+constexpr int blocksize=256;
+
 sark5::sark5(dlong _Nelements, dlong _NhaloElements,
              int _Np, int _Nfields,
              memory<dfloat> _lambda,
@@ -62,28 +64,7 @@ sark5::sark5(dlong _Nelements, dlong NpmlElements, dlong _NhaloElements,
   order = 5;
   embeddedOrder = 4;
 
-  dlong Nlocal = Nelements*Np*Nfields;
-  dlong Ntotal = (Nelements+NhaloElements)*Np*Nfields;
-
-  o_rkq    = platform.malloc<dfloat>(Ntotal);
-  o_rhsq   = platform.malloc<dfloat>(Nlocal);
-  o_rkrhsq = platform.malloc<dfloat>(Nlocal*Nrk);
-  o_rkpmlq    = platform.malloc<dfloat>(Npml);
-  o_rhspmlq   = platform.malloc<dfloat>(Npml);
-  o_rkrhspmlq = platform.malloc<dfloat>(Npml*Nrk);
-
-  o_rkerr  = platform.malloc<dfloat>(Nlocal);
-
-  o_saveq  = platform.malloc<dfloat>(Nlocal);
-  o_savepmlq   = platform.malloc<dfloat>(Npml);
-
-  const int blocksize=256;
-
-  Nblock = (N+blocksize-1)/blocksize;
-  h_errtmp = platform.hostMalloc<dfloat>(Nblock);
-  o_errtmp = platform.malloc<dfloat>(Nblock);
-
-  hlong gNtotal = Nlocal;
+  hlong gNtotal = Nelements*Np*Nfields;
   comm.Allreduce(gNtotal);
 
   properties_t kernelInfo = platform.props(); //copy base occa properties from solver
@@ -164,6 +145,16 @@ void sark5::Run(solver_t& solver,
                 std::optional<deviceMemory<dfloat>> o_pmlq,
                 dfloat start, dfloat end) {
 
+  dlong Ntotal = (Nelements+NhaloElements)*Np*Nfields;
+
+  /*Pre-reserve memory pool space to avoid some unnecessary re-sizing*/
+  platform.reserve<dfloat>(Ntotal + (Nrk+2)*N + (Nrk+2)*Npml
+                           + 7 * platform.memPoolAlignment<dfloat>());
+
+  deviceMemory<dfloat> o_rkq    = platform.reserve<dfloat>(Ntotal);
+  deviceMemory<dfloat> o_rkpmlq = platform.reserve<dfloat>(Npml);
+  deviceMemory<dfloat> o_rkerr  = platform.reserve<dfloat>(N);
+
   dfloat time = start;
 
   solver.Report(time,0);
@@ -190,10 +181,12 @@ void sark5::Run(solver_t& solver,
       dt = end-time;
     }
 
-    Step(solver, o_q, o_pmlq, time, dt);
+    Step(solver, o_q, o_pmlq,
+         o_rkq, o_rkpmlq, o_rkerr,
+         time, dt);
 
     // compute Dopri estimator
-    dfloat err = Estimater(o_q);
+    dfloat err = Estimater(o_q, o_rkq, o_rkerr);
 
     // build controller
     dfloat fac1 = pow(err,exp1);
@@ -209,6 +202,8 @@ void sark5::Run(solver_t& solver,
         dfloat savedt = dt;
 
         // save rkq
+        deviceMemory<dfloat> o_saveq = platform.reserve<dfloat>(N);
+        deviceMemory<dfloat> o_savepmlq  = platform.reserve<dfloat>(Npml);
         o_saveq.copyFrom(o_rkq, N, properties_t("async", true));
         if (o_pmlq.has_value()) {
           o_savepmlq.copyFrom(o_rkpmlq, Npml, properties_t("async", true));
@@ -221,7 +216,9 @@ void sark5::Run(solver_t& solver,
         UpdateCoefficients();
 
         // time step to output
-        Step(solver, o_q, o_pmlq, time, dt);
+        Step(solver, o_q, o_pmlq,
+             o_rkq, o_rkpmlq, o_rkerr,
+             time, dt);
 
         // shift for output
         o_rkq.copyTo(o_q, properties_t("async", true));
@@ -273,7 +270,15 @@ void sark5::Run(solver_t& solver,
 void sark5::Step(solver_t& solver,
                  deviceMemory<dfloat> o_q,
                  std::optional<deviceMemory<dfloat>> o_pmlq,
+                 deviceMemory<dfloat> o_rkq,
+                 deviceMemory<dfloat> o_rkpmlq,
+                 deviceMemory<dfloat> o_rkerr,
                  dfloat time, dfloat _dt) {
+
+  deviceMemory<dfloat> o_rhsq   = platform.reserve<dfloat>(N);
+  deviceMemory<dfloat> o_rkrhsq = platform.reserve<dfloat>(Nrk*N);
+  deviceMemory<dfloat> o_rhspmlq   = platform.reserve<dfloat>(Npml);
+  deviceMemory<dfloat> o_rkrhspmlq = platform.reserve<dfloat>(Nrk*Npml);
 
   //RK step
   for(int rk=0;rk<Nrk;++rk){
@@ -337,12 +342,21 @@ void sark5::Step(solver_t& solver,
   }
 }
 
-dfloat sark5::Estimater(deviceMemory<dfloat>& o_q){
+dfloat sark5::Estimater(deviceMemory<dfloat>& o_q,
+                        deviceMemory<dfloat>& o_rkq,
+                        deviceMemory<dfloat>& o_rkerr){
+
+  int Nblock = (N+blocksize-1)/blocksize;
+  Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
+
+  pinnedMemory<dfloat> h_errtmp = platform.hostReserve<dfloat>(1);
+  deviceMemory<dfloat> o_errtmp = platform.reserve<dfloat>(blocksize);
 
   //Error estimation
   //E. HAIRER, S.P. NORSETT AND G. WANNER, SOLVING ORDINARY
   //      DIFFERENTIAL EQUATIONS I. NONSTIFF PROBLEMS. 2ND EDITION.
-  rkErrorEstimateKernel(Nelements*Np*Nfields,
+  rkErrorEstimateKernel(Nblock,
+                        Nelements*Np*Nfields,
                         ATOL,
                         RTOL,
                         o_q,
@@ -350,11 +364,15 @@ dfloat sark5::Estimater(deviceMemory<dfloat>& o_q){
                         o_rkerr,
                         o_errtmp);
 
-  h_errtmp.copyFrom(o_errtmp);
-  dfloat err = 0;
-  for(dlong n=0;n<Nblock;++n){
-    err += h_errtmp[n];
+  dfloat err;
+  if (Nblock>0) {
+    h_errtmp.copyFrom(o_errtmp, 1, 0, properties_t("async", true));
+    platform.finish();
+    err = h_errtmp[0];
+  } else {
+    err = 0.0;
   }
+
   comm.Allreduce(err);
 
   err = sqrt(err)*sqrtinvNtotal;

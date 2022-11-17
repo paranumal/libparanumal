@@ -47,14 +47,6 @@ lserk4::lserk4(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
 
   Nrk = 5;
 
-  o_resq = platform.malloc<dfloat>(N);
-  o_rhsq = platform.malloc<dfloat>(N);
-  o_respmlq = platform.malloc<dfloat>(Npml);
-  o_rhspmlq = platform.malloc<dfloat>(Npml);
-
-  o_saveq = platform.malloc<dfloat>(N);
-  o_savepmlq  = platform.malloc<dfloat>(Npml);
-
   properties_t kernelInfo = platform.props(); //copy base occa properties from solver
 
   const int blocksize=256;
@@ -98,6 +90,10 @@ void lserk4::Run(solver_t& solver,
                  std::optional<deviceMemory<dfloat>> o_pmlq,
                  dfloat start, dfloat end) {
 
+  /*Pre-reserve memory pool space to avoid some unnecessary re-sizing*/
+  platform.reserve<dfloat>(3 * N + 3 * Npml
+                           + 6 * platform.memPoolAlignment<dfloat>());
+
   dfloat time = start;
 
   solver.Report(time,0);
@@ -112,8 +108,9 @@ void lserk4::Run(solver_t& solver,
   while (time < end) {
 
     if (time<outputTime && time+dt>=outputTime) {
-
       //save current state
+      deviceMemory<dfloat> o_saveq = platform.reserve<dfloat>(N);
+      deviceMemory<dfloat> o_savepmlq  = platform.reserve<dfloat>(Npml);
       o_saveq.copyFrom(o_q, N, properties_t("async", true));
       if (o_pmlq.has_value()) {
         o_savepmlq.copyFrom(o_pmlq.value(), Npml, properties_t("async", true));
@@ -153,6 +150,11 @@ void lserk4::Step(solver_t& solver,
                   deviceMemory<dfloat> o_q,
                   std::optional<deviceMemory<dfloat>> o_pmlq,
                   dfloat time, dfloat _dt) {
+
+  deviceMemory<dfloat> o_resq = platform.reserve<dfloat>(N);
+  deviceMemory<dfloat> o_rhsq = platform.reserve<dfloat>(N);
+  deviceMemory<dfloat> o_respmlq = platform.reserve<dfloat>(Npml);
+  deviceMemory<dfloat> o_rhspmlq = platform.reserve<dfloat>(Npml);
 
   // Low storage explicit Runge Kutta (5 stages, 4th order)
   for(int rk=0;rk<Nrk;++rk){

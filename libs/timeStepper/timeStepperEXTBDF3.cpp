@@ -42,11 +42,6 @@ extbdf3::extbdf3(dlong Nelements, dlong NhaloElements,
   //Nstages = 3;
   shiftIndex = 0;
 
-  o_qn = platform.malloc<dfloat>(Nstages*N); //q history
-  o_rhs = platform.malloc<dfloat>(N); //rhs storage
-
-  o_F  = platform.malloc<dfloat>(Nstages*N); //F(q) history (explicit part)
-
   properties_t kernelInfo = platform.props(); //copy base occa properties from solver
 
   const int blocksize=256;
@@ -90,6 +85,13 @@ void extbdf3::Run(solver_t& solver,
   LIBP_ABORT("extbdf3 timeStepper does not support PMLs",
              o_pmlq.has_value());
 
+  /*Pre-reserve memory pool space to avoid some unnecessary re-sizing*/
+  platform.reserve<dfloat>(2*Nstages*N + N
+                           + 3 * platform.memPoolAlignment<dfloat>());
+
+  deviceMemory<dfloat> o_qn = platform.reserve<dfloat>(Nstages*N); //q history
+  deviceMemory<dfloat> o_F  = platform.reserve<dfloat>(Nstages*N); //F(q) history (explicit part)
+
   dfloat time = start;
 
   solver.Report(time,0);
@@ -102,7 +104,9 @@ void extbdf3::Run(solver_t& solver,
   int tstep=0;
   int order=0;
   while (time < end) {
-    Step(solver, o_q, time, dt, order);
+    Step(solver, o_q,
+         o_qn, o_F,
+         time, dt, order);
     time += dt;
     tstep++;
     if (order<Nstages-1) order++;
@@ -117,6 +121,8 @@ void extbdf3::Run(solver_t& solver,
 
 void extbdf3::Step(solver_t& solver,
                    deviceMemory<dfloat> o_q,
+                   deviceMemory<dfloat> o_qn,
+                   deviceMemory<dfloat> o_F,
                    dfloat time, dfloat _dt, int order) {
 
   //F(q) at current index
@@ -131,6 +137,7 @@ void extbdf3::Step(solver_t& solver,
   solver.rhs_imex_f(o_q, o_F0, time);
 
   //build rhs for implicit step and update history
+  deviceMemory<dfloat> o_rhs = platform.reserve<dfloat>(N); //rhs storage
   rhsKernel(N,
            _dt,
            shiftIndex,

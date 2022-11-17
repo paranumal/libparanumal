@@ -42,10 +42,6 @@ ssbdf3::ssbdf3(dlong Nelements, dlong NhaloElements,
   //Nstages = 3;
   shiftIndex = 0;
 
-  o_qn   = platform.malloc<dfloat>(Nstages*N); //q history
-  o_qhat = platform.malloc<dfloat>(Nstages*N); //F(q) history (explicit part)
-  o_rhs  = platform.malloc<dfloat>(N); //rhs storage
-
   properties_t kernelInfo = platform.props(); //copy base occa properties from solver
 
   const int blocksize=256;
@@ -82,6 +78,12 @@ void ssbdf3::Run(solver_t& solver,
   LIBP_ABORT("ssbdf3 timeStepper does not support PMLs",
              o_pmlq.has_value());
 
+  /*Pre-reserve memory pool space to avoid some unnecessary re-sizing*/
+  platform.reserve<dfloat>(Nstages*N + 2*N
+                           + 3 * platform.memPoolAlignment<dfloat>());
+
+  deviceMemory<dfloat> o_qn = platform.reserve<dfloat>(Nstages*N); //q history
+
   dfloat time = start;
 
   solver.Report(time,0);
@@ -94,7 +96,8 @@ void ssbdf3::Run(solver_t& solver,
   int tstep=0;
   int order=0;
   while (time < end) {
-    Step(solver, o_q, time, dt, order);
+    Step(solver, o_q,
+         o_qn, time, dt, order);
     time += dt;
     tstep++;
     if (order<Nstages-1) order++;
@@ -109,6 +112,7 @@ void ssbdf3::Run(solver_t& solver,
 
 void ssbdf3::Step(solver_t& solver,
                   deviceMemory<dfloat> o_q,
+                  deviceMemory<dfloat> o_qn,
                   dfloat time, dfloat _dt, int order) {
 
   //BDF coefficients at current order
@@ -122,9 +126,11 @@ void ssbdf3::Step(solver_t& solver,
   // Compute qhat = sum_i=1^s B_i qhat(t_n+1-i) by
   // where qhat(t) is the Lagrangian state of q
   // by subcycling each of the history states q(t_n-i)
+  deviceMemory<dfloat> o_qhat = platform.reserve<dfloat>(N); //F(q) history (explicit part)
   solver.rhs_subcycle_f(o_qn, o_qhat, time, _dt, B, order, shiftIndex, Nstages);
 
   //build rhs for implicit step and update history
+  deviceMemory<dfloat> o_rhs = platform.reserve<dfloat>(N); //rhs storage
   rhsKernel(N,
            _dt,
            shiftIndex,

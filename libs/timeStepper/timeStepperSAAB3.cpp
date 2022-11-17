@@ -60,9 +60,6 @@ saab3::saab3(dlong _Nelements, dlong NpmlElements, dlong _NhaloElements,
   //Nstages = 3;
   shiftIndex = 0;
 
-  o_rhsq = platform.malloc<dfloat>(Nstages*N);
-  o_rhspmlq = platform.malloc<dfloat>(Nstages*Npml);
-
   const int blocksize=256;
 
   properties_t kernelInfo = platform.props(); //copy base occa properties from solver
@@ -104,6 +101,13 @@ void saab3::Run(solver_t& solver,
                 std::optional<deviceMemory<dfloat>> o_pmlq,
                 dfloat start, dfloat end) {
 
+  /*Pre-reserve memory pool space to avoid some unnecessary re-sizing*/
+  platform.reserve<dfloat>(Nstages*N + Nstages*Npml
+                           + 2 * platform.memPoolAlignment<dfloat>());
+
+  deviceMemory<dfloat> o_rhsq = platform.reserve<dfloat>(Nstages*N);
+  deviceMemory<dfloat> o_rhspmlq = platform.reserve<dfloat>(Nstages*Npml);
+
   dfloat time = start;
 
   solver.Report(time,0);
@@ -119,7 +123,7 @@ void saab3::Run(solver_t& solver,
   int tstep=0;
   int order=0;
   while (time < end) {
-    Step(solver, o_q, o_pmlq, time, dt, order);
+    Step(solver, o_q, o_rhsq, o_pmlq, o_rhspmlq, time, dt, order);
     time += dt;
     tstep++;
     if (order<Nstages-1) order++;
@@ -134,17 +138,18 @@ void saab3::Run(solver_t& solver,
 
 void saab3::Step(solver_t& solver,
                  deviceMemory<dfloat> o_q,
+                 deviceMemory<dfloat> o_rhsq,
                  std::optional<deviceMemory<dfloat>> o_pmlq,
+                 deviceMemory<dfloat> o_rhspmlq,
                  dfloat time, dfloat _dt, int order) {
 
   //rhs at current index
   deviceMemory<dfloat> o_rhsq0 = o_rhsq + shiftIndex*N;
+  deviceMemory<dfloat> o_rhspmlq0 = o_rhspmlq + shiftIndex*Npml;
 
   //coefficients at current order
   deviceMemory<dfloat> o_X = o_saab_x;
   deviceMemory<dfloat> o_A = o_saab_a + order*Nstages;
-
-  deviceMemory<dfloat> o_rhspmlq0 = o_rhspmlq + shiftIndex*Npml;
   deviceMemory<dfloat> o_pmlA = o_pmlsaab_a + order*Nstages;
 
   //evaluate ODE rhs = f(q,t)
