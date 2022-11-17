@@ -24,7 +24,7 @@ SOFTWARE.
 
 */
 
-@kernel void norm2_1(const dlong Nblocks,
+@kernel void norm2(const dlong Nblocks,
                    const dlong N,
                   @restrict const  dfloat *x,
                   @restrict        dfloat *norm){
@@ -60,9 +60,7 @@ SOFTWARE.
     for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  2) s_norm[t] += s_norm[t+  2];
     for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  1) norm[b] = s_norm[0] + s_norm[1];
   }
-}
 
-@kernel void norm2_2(const dlong Nblocks, @restrict  dfloat *norm){
 
   for(dlong b=0;b<1;++b;@outer(0)){
 
