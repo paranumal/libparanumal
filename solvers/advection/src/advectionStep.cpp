@@ -28,8 +28,7 @@ SOFTWARE.
 
 dfloat advection_t::MaxWaveSpeed(deviceMemory<dfloat>& o_Q, const dfloat T){
 
-  //Note: if this is on the critical path in the future, we should pre-allocate this
-  deviceMemory<dfloat> o_maxSpeed = platform.malloc<dfloat>(mesh.Nelements);
+  deviceMemory<dfloat> o_maxSpeed = platform.reserve<dfloat>(mesh.Nelements);
 
   maxWaveSpeedKernel(mesh.Nelements,
                      mesh.o_wJ,
