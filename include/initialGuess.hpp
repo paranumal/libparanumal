@@ -76,29 +76,26 @@ public:
 // Initial guess strategies based on RHS projection.
 class Projection : public initialGuessStrategy_t {
 protected:
-  dlong curDim;           // Current dimension of the initial guess space
-  dlong maxDim;           // Maximum dimension of the initial guess space
+  int curDim;           // Current dimension of the initial guess space
+  int maxDim;           // Maximum dimension of the initial guess space
 
-  deviceMemory<dfloat> o_btilde;  //  vector (e.g., to be added to space)
-  deviceMemory<dfloat> o_xtilde;  // Solution vector corresponding to o_btilde
   deviceMemory<dfloat> o_Btilde;  //  space (orthogonalized)
   deviceMemory<dfloat> o_Xtilde;  // Solution space corresponding to  space
 
-  // temporary buffer for basis inner product output
-  dlong        ctmpNblocks;
-  pinnedMemory<dfloat> ctmp;
-  deviceMemory<dfloat> o_ctmp;
-
-  pinnedMemory<dfloat> alphas;    // Buffers for storing inner products.
-  deviceMemory<dfloat> o_alphas;
-
   kernel_t igBasisInnerProductsKernel;
   kernel_t igReconstructKernel;
-  kernel_t igScaleKernel;
   kernel_t igUpdateKernel;
 
-  void igBasisInnerProducts(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_c, pinnedMemory<dfloat>& c);
-  void igReconstruct(deviceMemory<dfloat>& o_u, dfloat a, deviceMemory<dfloat>& o_c, deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_unew);
+  void igBasisInnerProducts(deviceMemory<dfloat>& o_x,
+                            deviceMemory<dfloat>& o_Q,
+                            deviceMemory<dfloat>& o_alphas,
+                            pinnedMemory<dfloat>& alphas);
+  void igReconstruct(const dfloat a,
+                     deviceMemory<dfloat>& o_u,
+                     const dfloat b,
+                     deviceMemory<dfloat>& o_alphas,
+                     deviceMemory<dfloat>& o_Q,
+                     deviceMemory<dfloat>& o_unew);
 
 public:
   Projection(dlong _N, platform_t& _platform, settings_t& _settings, comm_t _comm);
@@ -118,12 +115,14 @@ public:
 // Rolling QR update for projection history space a la Christensen's thesis.
 class RollingQRProjection : public Projection {
 private:
-  pinnedMemory<dfloat>   R;   // R factor in QR decomposition (row major)
-  deviceMemory<dfloat> o_R;
+  memory<dfloat>   R;   // R factor in QR decomposition (row major)
+
+  pinnedMemory<dfloat> h_c, h_s;
+  deviceMemory<dfloat> o_c, o_s;
 
   kernel_t igDropQRFirstColumnKernel;
 
-	void givensRotation(dfloat a, dfloat b, dfloat& c, dfloat& s);
+  void givensRotation(dfloat a, dfloat b, dfloat& c, dfloat& s);
 
 public:
   RollingQRProjection(dlong _N, platform_t& _platform, settings_t& _settings, comm_t _comm);
@@ -135,16 +134,22 @@ public:
 class Extrap : public initialGuessStrategy_t {
 private:
   int Nhistory;
+  int ExtrapDegree;
   int shift;
   int entry;
   deviceMemory<dfloat> o_xh;
+
+  pinnedMemory<dfloat> h_coeffs;
   deviceMemory<dfloat> o_coeffs;
-  kernel_t igExtrapKernel;
-  kernel_t igExtrapSparseKernel;
 
   int Nsparse;
+  pinnedMemory<int> h_sparseIds;
   deviceMemory<int> o_sparseIds;
+  pinnedMemory<dfloat> h_sparseCoeffs;
   deviceMemory<dfloat> o_sparseCoeffs;
+
+  kernel_t igExtrapKernel;
+  kernel_t igExtrapSparseKernel;
 
   void extrapCoeffs(int m, int M, memory<dfloat> c);
 
