@@ -426,7 +426,7 @@ def main():
   failCount += test(name="testEllipticTri_C0_OAS_MPI", ranks=4,
                     cmd=ellipticBin,
                     settings=ellipticSettings(element=3,data_file=ellipticData2D,dim=2,
-                                              precon="OAS"),
+                                              precon="OAS", linear_solver="FPCG"),
                     referenceNorm=0.500000001211135)
 
   #clean up
