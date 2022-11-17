@@ -69,7 +69,7 @@ public:
   int order, maxOrder, shiftIndex;
   dfloat nu, T0, dt;
 
-  deviceMemory<dfloat> o_Ue, o_Uh;
+  deviceMemory<dfloat> o_Uh;
 
   subcycler_t() = default;
 
@@ -108,22 +108,6 @@ public:
 
   memory<dfloat> u, p;
   deviceMemory<dfloat> o_u, o_p;
-
-  deviceMemory<dfloat> o_GU;
-
-  deviceMemory<dfloat> o_MU;
-
-  memory<dfloat> Vort;
-  deviceMemory<dfloat> o_Vort;
-
-  //extra buffers for solvers
-  deviceMemory<dfloat> o_UH, o_VH, o_WH;
-  deviceMemory<dfloat> o_rhsU, o_rhsV, o_rhsW;
-  deviceMemory<dfloat> o_rhsP, o_PI;
-
-  deviceMemory<dfloat> o_GUH, o_GVH, o_GWH;
-  deviceMemory<dfloat> o_GrhsU, o_GrhsV, o_GrhsW;
-  deviceMemory<dfloat> o_GrhsP, o_GP, o_GPI;
 
   //subcycling
   int Nsubcycles;

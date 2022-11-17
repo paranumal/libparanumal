@@ -68,9 +68,10 @@ void ins_t::Run(){
   // output norm of final solution
   {
     //compute U.M*U
+    dlong Nentries = mesh.Nelements*mesh.Np*NVfields;
+    deviceMemory<dfloat> o_MU = platform.reserve<dfloat>(Nentries);
     mesh.MassMatrixApply(o_u, o_MU);
 
-    dlong Nentries = mesh.Nelements*mesh.Np*NVfields;
     dfloat norm2 = sqrt(platform.linAlg().innerProd(Nentries, o_u, o_MU, mesh.comm));
 
     if(mesh.rank==0)

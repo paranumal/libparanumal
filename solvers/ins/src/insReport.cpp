@@ -31,17 +31,23 @@ void ins_t::Report(dfloat time, int tstep){
   static int frame=0;
 
   //compute U.M*U
+  dlong Nentries = mesh.Nelements*mesh.Np*NVfields;
+  deviceMemory<dfloat> o_MU = platform.reserve<dfloat>(Nentries);
   mesh.MassMatrixApply(o_u, o_MU);
 
-  dlong Nentries = mesh.Nelements*mesh.Np*NVfields;
   dfloat norm2 = sqrt(platform.linAlg().innerProd(Nentries, o_u, o_MU, mesh.comm));
+  o_MU.free();
 
   if(mesh.rank==0)
     printf("\n%5.2f (%d), %5.2f (time, timestep, norm)\n", time, tstep, norm2);
 
   if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
+
     //compute vorticity
+    deviceMemory<dfloat> o_Vort = platform.reserve<dfloat>(mesh.dim*mesh.Nelements*mesh.Np);
     vorticityKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_D, o_u, o_Vort);
+
+    memory<dfloat> Vort(mesh.dim*mesh.Nelements*mesh.Np);
 
     // copy data back to host
     o_u.copyTo(u);

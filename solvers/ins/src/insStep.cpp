@@ -29,7 +29,7 @@ SOFTWARE.
 dfloat ins_t::MaxWaveSpeed(deviceMemory<dfloat>& o_U, const dfloat T){
 
   //Note: if this is on the critical path in the future, we should pre-allocate this
-  deviceMemory<dfloat> o_maxSpeed = platform.malloc<dfloat>(mesh.Nelements);
+  deviceMemory<dfloat> o_maxSpeed = platform.reserve<dfloat>(mesh.Nelements);
 
   maxWaveSpeedKernel(mesh.Nelements,
                      mesh.o_vgeo,
@@ -56,6 +56,8 @@ void ins_t::rhs_imex_invg(deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_U
 
   const dfloat dt = timeStepper.GetTimeStep();
 
+  dlong Ntotal = (mesh.Nelements+mesh.totalHaloPairs)*mesh.Np;
+
   if (pressureIncrement) {
     //use current pressure in velocity RHS
     // RHS = RHS - grad P
@@ -66,6 +68,7 @@ void ins_t::rhs_imex_invg(deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_U
     VelocitySolve(o_U, o_RHS, gamma, T);
 
     // rhsP = -Div U
+    deviceMemory<dfloat> o_rhsP = platform.reserve<dfloat>(Ntotal);
     Divergence(-1.0, o_U, 0.0, o_rhsP, T);
 
     //remove old pressure gradient from U
@@ -87,6 +90,7 @@ void ins_t::rhs_imex_invg(deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_U
     VelocitySolve(o_U, o_RHS, gamma, T);
 
     // rhsP = -Div U
+    deviceMemory<dfloat> o_rhsP = platform.reserve<dfloat>(Ntotal);
     Divergence(-1.0, o_U, 0.0, o_rhsP, T);
 
     //call pressure solver to solve

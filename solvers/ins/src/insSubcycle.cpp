@@ -29,6 +29,9 @@ SOFTWARE.
 //evaluate ODE rhs = f(q,t)
 void subcycler_t::rhsf(deviceMemory<dfloat>& o_U, deviceMemory<dfloat>& o_RHS, const dfloat T){
 
+  dlong Ntotal = (mesh.Nelements+mesh.totalHaloPairs)*mesh.Np*NVfields;
+  deviceMemory<dfloat> o_Ue = platform.reserve<dfloat>(Ntotal);
+
   //interpolate velocity history for advective field (halo elements first)
   if(mesh.NhaloElements)
     subCycleAdvectionKernel(mesh.NhaloElements,
