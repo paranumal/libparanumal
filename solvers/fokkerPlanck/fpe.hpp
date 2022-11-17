@@ -89,11 +89,6 @@ public:
   memory<dfloat> q;
   deviceMemory<dfloat> o_q;
 
-  deviceMemory<dfloat> o_Mq;
-
-  memory<dfloat> grad;
-  deviceMemory<dfloat> o_grad;
-
   //subcycling
   int Nsubcycles;
   timeStepper_t subStepper;
