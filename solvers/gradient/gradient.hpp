@@ -57,8 +57,6 @@ public:
   memory<dfloat> gradq;
   deviceMemory<dfloat> o_gradq;
 
-  deviceMemory<dfloat> o_Mgradq;
-
   kernel_t volumeKernel;
 
   kernel_t initialConditionKernel;

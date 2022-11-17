@@ -43,13 +43,11 @@ void gradient_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
   // compute samples of q at interpolation nodes
   q.malloc(Nlocal);
-  o_q = platform.malloc<dfloat>(q);
+  o_q = platform.malloc<dfloat>(Nlocal);
 
   gradq.malloc(Nlocal*mesh.dim);
-  o_gradq = platform.malloc<dfloat>(gradq);
+  o_gradq = platform.malloc<dfloat>(Nlocal*mesh.dim);
 
-  //storage for M*gradq during reporting
-  o_Mgradq = platform.malloc<dfloat>(gradq);
   mesh.MassMatrixKernelSetup(Nfields); // mass matrix operator
 
   // OCCA build stuff
