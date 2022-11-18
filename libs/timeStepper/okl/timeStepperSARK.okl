@@ -43,8 +43,10 @@ SOFTWARE.
       for (int f=0;f<p_Nfields;f++) {
         dfloat r_q = rkX[rk+f*p_Nrk]*q[id+f*p_Np];
 
-        for (int i=0;i<rk;i++)
-          r_q += dt*rkA[p_Nrk*rk + i + f*p_Nrk*p_Nrk]*rkrhsq[id+f*p_Np+i*Nelements*p_Np*p_Nfields];
+        for (int i=0;i<rk;i++) {
+          const dfloat ai = rkA[p_Nrk*rk + i + f*p_Nrk*p_Nrk];
+          if (ai != 0.0) r_q += dt*ai*rkrhsq[id+f*p_Np+i*Nelements*p_Np*p_Nfields];
+        }
 
         rkq[id+f*p_Np] = r_q;
       }
@@ -78,8 +80,10 @@ SOFTWARE.
           dfloat r_q = rkX[rk+f*p_Nrk]*q[id+f*p_Np];
           dfloat r_rkerr = 0.;
           for (int i=0;i<p_Nrk-1;i++) {
-            r_q     += dt*rkA[p_Nrk*rk + i + f*p_Nrk*p_Nrk]*rkrhsq[id+f*p_Np+i*Nelements*p_Np*p_Nfields];
-            r_rkerr += dt*rkE[           i + f*p_Nrk      ]*rkrhsq[id+f*p_Np+i*Nelements*p_Np*p_Nfields];
+            const dfloat ai = rkA[p_Nrk*rk + i + f*p_Nrk*p_Nrk];
+            const dfloat ei = rkE[           i + f*p_Nrk      ];
+            if (ai != 0.0) r_q     += dt*ai*rkrhsq[id+f*p_Np+i*Nelements*p_Np*p_Nfields];
+            if (ei != 0.0) r_rkerr += dt*ei*rkrhsq[id+f*p_Np+i*Nelements*p_Np*p_Nfields];
           }
           r_q     += dt*rkA[p_Nrk*rk + p_Nrk-1 + f*p_Nrk*p_Nrk]*r_rhsq;
           r_rkerr += dt*rkE[           p_Nrk-1 + f*p_Nrk      ]*r_rhsq;
@@ -151,8 +155,10 @@ SOFTWARE.
 
     dfloat r_q = q[n];
 
-    for (int i=0;i<rk;i++)
-      r_q += dt*rkA[p_Nrk*rk + i]*rkrhsq[n+i*N];
+    for (int i=0;i<rk;i++) {
+      const dfloat ai = rkA[p_Nrk*rk + i];
+      if (ai != 0.0) r_q += dt*ai*rkrhsq[n+i*N];
+    }
 
     rkq[n] = r_q;
   }
@@ -175,9 +181,10 @@ SOFTWARE.
     if (rk==p_Nrk-1) { //last stage
       dfloat r_q = q[n];
       for (int i=0;i<p_Nrk-1;i++) {
-        r_q     += dt*rkA[p_Nrk*rk + i]*rkrhsq[n+i*N];
+        const dfloat ai = rkA[p_Nrk*rk + i];
+        r_q += dt*rkA[p_Nrk*rk + i]*rkrhsq[n+i*N];
       }
-      r_q     += dt*rkA[p_Nrk*rk + p_Nrk-1]*r_rhsq;
+      r_q += dt*rkA[p_Nrk*rk + p_Nrk-1]*r_rhsq;
 
       rkq[n] = r_q;
     }

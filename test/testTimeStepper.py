@@ -68,49 +68,49 @@ def main():
                     cmd=bnsBin,
                     settings=bnsSettings(element=3,data_file=bnsData2D,dim=2,
                                          time_integrator="AB3", cfl=0.25),
-                    referenceNorm=14.2550696512202)
+                    referenceNorm=14.1736932675536)
 
   failCount += test(name="testTimeStepper_saab3_pml",
                     cmd=bnsBin,
                     settings=bnsSettings(element=3,data_file=bnsData2D,dim=2,
                                          time_integrator="SAAB3", cfl=0.25),
-                    referenceNorm=14.2550270959095)
+                    referenceNorm=14.1738323959046)
 
   failCount += test(name="testTimeStepper_dopri5_pml",
                     cmd=bnsBin,
                     settings=bnsSettings(element=3,data_file=bnsData2D,dim=2,
                                          time_integrator="DOPRI5"),
-                    referenceNorm=14.2550469661139)
+                    referenceNorm=14.1738198794709)
 
   failCount += test(name="testTimeStepper_lserk4_pml",
                     cmd=bnsBin,
                     settings=bnsSettings(element=3,data_file=bnsData2D,dim=2,
                                          time_integrator="LSERK4"),
-                    referenceNorm=14.2550469661139)
+                    referenceNorm=14.1738199354077)
 
   failCount += test(name="testTimeStepper_sark4_pml",
                     cmd=bnsBin,
                     settings=bnsSettings(element=3,data_file=bnsData2D,dim=2,
                                          time_integrator="SARK4"),
-                    referenceNorm=14.2114867833305)
+                    referenceNorm=14.1678650321147)
 
   failCount += test(name="testTimeStepper_sark5_pml",
                     cmd=bnsBin,
                     settings=bnsSettings(element=3,data_file=bnsData2D,dim=2,
                                          time_integrator="SARK5"),
-                    referenceNorm=14.2397306802799)
+                    referenceNorm=14.1732505506027)
 
   failCount += test(name="testTimeStepper_mrab3_pml",
                     cmd=bnsBin,
                     settings=bnsSettings(element=3,data_file=bnsData2D,dim=2,
                                          time_integrator="MRAB3", cfl=0.25),
-                    referenceNorm=14.2550696512202)
+                    referenceNorm=14.1736932675536)
 
   failCount += test(name="testTimeStepper_mrsaab3_pml",
                     cmd=bnsBin,
                     settings=bnsSettings(element=3,data_file=bnsData2D,dim=2,
                                          time_integrator="MRSAAB3", cfl=0.25),
-                    referenceNorm=14.2550270959095)
+                    referenceNorm=14.1738323959046)
 
   return failCount
 

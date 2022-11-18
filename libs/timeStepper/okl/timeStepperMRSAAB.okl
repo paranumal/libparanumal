@@ -62,10 +62,10 @@ SOFTWARE.
         for(int f=0; f<p_Nfields; ++f) {
           dfloat qn = x[f+lev*p_Nfields]*q[id+f*p_Np];
 
-          for (int i=0;i<p_Nstages;i++)
-            qn += dt[lev]*a[i+f*p_Nstages*p_Nstages+lev*p_Nfields*p_Nstages*p_Nstages]
-                         *rhsqi[i][id+f*p_Np];
-
+          for (int i=0;i<p_Nstages;i++) {
+            const dfloat ai = a[i+f*p_Nstages*p_Nstages+lev*p_Nfields*p_Nstages*p_Nstages];
+            if (ai != 0.0) qn += dt[lev]*ai*rhsqi[i][id+f*p_Np];
+          }
           s_q[n+f*p_Np] = qn;
 
           if (p_Nstages>1)
@@ -141,9 +141,10 @@ SOFTWARE.
         for(int f=0; f<p_Nfields; ++f) {
           dfloat qn = x[f+lev*p_Nfields]*q[id+f*p_Np];
 
-          for (int i=0;i<p_Nstages;i++)
-            qn += dt[lev]*b[i+f*p_Nstages*p_Nstages+lev*p_Nfields*p_Nstages*p_Nstages]
-                         *rhsqi[i][id+f*p_Np];
+          for (int i=0;i<p_Nstages;i++) {
+            const dfloat bi = b[i+f*p_Nstages*p_Nstages+lev*p_Nfields*p_Nstages*p_Nstages];
+            if (bi != 0.0) qn += dt[lev]*bi*rhsqi[i][id+f*p_Np];
+          }
 
           s_q[n+f*p_Np] = qn;
         }
@@ -202,7 +203,7 @@ SOFTWARE.
         dfloat qn = q[id+f*p_Np];
 
         for (int i=0;i<p_Nstages;i++)
-          qn += dt[lev]*a[i]*rhsqi[i][id+f*p_Np];
+          if (a[i] != 0.0) qn += dt[lev]*a[i]*rhsqi[i][id+f*p_Np];
 
         q[id+f*p_Np] = qn;
 

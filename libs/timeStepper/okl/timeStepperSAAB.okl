@@ -47,8 +47,10 @@ SOFTWARE.
       for (int f=0;f<p_Nfields;f++) {
         //compute update
         dfloat qn = x[f]*q[id + f*p_Np];
-        for (int i=0;i<p_Nstages;i++)
-          qn += dt*a[i+f*p_Nstages*p_Nstages]*rhsqi[i][id + f*p_Np];
+        for (int i=0;i<p_Nstages;i++) {
+          const dfloat ai = a[i+f*p_Nstages*p_Nstages];
+          if (ai != 0.0) qn += dt*ai*rhsqi[i][id + f*p_Np];
+        }
 
         q[id + f*p_Np] = qn;
       }
@@ -74,7 +76,7 @@ SOFTWARE.
     //compute update
     dfloat dq = 0.0;
     for (int i=0;i<p_Nstages;i++)
-      dq += a[i]*rhsqi[i][n];
+      if (a[i] != 0.0) dq += a[i]*rhsqi[i][n];
 
     q[n] += dt*dq;
   }

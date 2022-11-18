@@ -35,19 +35,17 @@ namespace TimeStepper {
 extbdf3::extbdf3(dlong Nelements, dlong NhaloElements,
                  int Np, int Nfields,
                  platform_t& _platform, comm_t _comm):
-  timeStepperBase_t(Nelements, NhaloElements, Np, Nfields,
+  timeStepperBase_t(Nelements, 0, NhaloElements,
+                    Np, Nfields, 0,
                     _platform, _comm) {
 
   //Nstages = 3;
   shiftIndex = 0;
 
-  memory<dfloat> qn(Nstages*N, 0.0);
-  o_qn = platform.malloc<dfloat>(qn); //q history
+  o_qn = platform.malloc<dfloat>(Nstages*N); //q history
+  o_rhs = platform.malloc<dfloat>(N); //rhs storage
 
-  memory<dfloat> rhs(N,0.0);
-  o_rhs = platform.malloc<dfloat>(rhs); //rhs storage
-
-  o_F  = platform.malloc<dfloat>(qn); //F(q) history (explicit part)
+  o_F  = platform.malloc<dfloat>(Nstages*N); //F(q) history (explicit part)
 
   properties_t kernelInfo = platform.props(); //copy base occa properties from solver
 
@@ -84,7 +82,13 @@ dfloat extbdf3::GetGamma() {
   return extbdf_b[(Nstages-1)*(Nstages+1)]; //first entry of last row of B
 }
 
-void extbdf3::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloat end) {
+void extbdf3::Run(solver_t& solver,
+                  deviceMemory<dfloat> o_q,
+                  std::optional<deviceMemory<dfloat>> o_pmlq,
+                  dfloat start, dfloat end) {
+
+  LIBP_ABORT("extbdf3 timeStepper does not support PMLs",
+             o_pmlq.has_value());
 
   dfloat time = start;
 
@@ -111,7 +115,9 @@ void extbdf3::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfl
   }
 }
 
-void extbdf3::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloat _dt, int order) {
+void extbdf3::Step(solver_t& solver,
+                   deviceMemory<dfloat> o_q,
+                   dfloat time, dfloat _dt, int order) {
 
   //F(q) at current index
   deviceMemory<dfloat> o_F0 = o_F + shiftIndex*N;

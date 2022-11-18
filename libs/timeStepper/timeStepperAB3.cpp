@@ -35,14 +35,23 @@ namespace TimeStepper {
 ab3::ab3(dlong Nelements, dlong NhaloElements,
          int Np, int Nfields,
          platform_t& _platform, comm_t _comm):
-  timeStepperBase_t(Nelements, NhaloElements, Np, Nfields,
+  ab3(Nelements, 0, NhaloElements,
+      Np, Nfields, 0,
+      _platform, _comm) {}
+
+/* Adams Bashforth, order 3 */
+ab3::ab3(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
+         int Np, int Nfields, int Npmlfields,
+         platform_t& _platform, comm_t _comm):
+  timeStepperBase_t(Nelements, NpmlElements, NhaloElements,
+                    Np, Nfields, Npmlfields,
                     _platform, _comm) {
 
   //Nstages = 3;
   shiftIndex = 0;
 
-  memory<dfloat> rhsq(Nstages*N,0.0);
-  o_rhsq = platform.malloc<dfloat>(rhsq);
+  o_rhsq = platform.malloc<dfloat>(Nstages*N);
+  o_rhspmlq = platform.malloc<dfloat>(Nstages*Npml);
 
   properties_t kernelInfo = platform.props(); //copy base occa properties from solver
 
@@ -68,7 +77,10 @@ ab3::ab3(dlong Nelements, dlong NhaloElements,
   o_ab_a = platform.malloc<dfloat>(ab_a);
 }
 
-void ab3::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloat end) {
+void ab3::Run(solver_t& solver,
+              deviceMemory<dfloat> o_q,
+              std::optional<deviceMemory<dfloat>> o_pmlq,
+              dfloat start, dfloat end) {
 
   dfloat time = start;
 
@@ -82,7 +94,7 @@ void ab3::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloat 
   int tstep=0;
   int order=0;
   while (time < end) {
-    Step(solver, o_q, time, dt, order);
+    Step(solver, o_q, o_pmlq, time, dt, order);
     time += dt;
     tstep++;
     if (order<Nstages-1) order++;
@@ -95,16 +107,24 @@ void ab3::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloat 
   }
 }
 
-void ab3::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloat _dt, int order) {
+void ab3::Step(solver_t& solver,
+               deviceMemory<dfloat> o_q,
+               std::optional<deviceMemory<dfloat>> o_pmlq,
+               dfloat time, dfloat _dt, int order) {
 
   //rhs at current index
   deviceMemory<dfloat> o_rhsq0 = o_rhsq + shiftIndex*N;
+  deviceMemory<dfloat> o_rhspmlq0 = o_rhspmlq + shiftIndex*Npml;
 
   //A coefficients at current order
   deviceMemory<dfloat> o_A = o_ab_a + order*Nstages;
 
   //evaluate ODE rhs = f(q,t)
-  solver.rhsf(o_q, o_rhsq0, time);
+  if (o_pmlq.has_value()) {
+    solver.rhsf_pml(o_q, o_pmlq.value(), o_rhsq0, o_rhspmlq0, time);
+  } else {
+    solver.rhsf(o_q, o_rhsq0, time);
+  }
 
   //update q
   updateKernel(N,
@@ -114,55 +134,15 @@ void ab3::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloat 
                o_rhsq,
                o_q);
 
-  //rotate index
-  shiftIndex = (shiftIndex+Nstages-1)%Nstages;
-}
-
-/**************************************************/
-/* PML version                                    */
-/**************************************************/
-
-/* Adams Bashforth, order 3 */
-ab3_pml::ab3_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
-                int Np, int Nfields, int Npmlfields,
-                platform_t& _platform, comm_t _comm):
-  ab3(Nelements, NhaloElements, Np, Nfields, _platform, _comm),
-  Npml(NpmlElements*Np*Npmlfields) {
-
-  if (Npml) {
-    memory<dfloat> pmlq(Npml,0.0);
-    o_pmlq   = platform.malloc<dfloat>(pmlq);
-    o_rhspmlq = platform.malloc<dfloat>(Nstages*Npml);
-  }
-}
-
-void ab3_pml::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloat _dt, int order) {
-
-  //rhs at current index
-  deviceMemory<dfloat> o_rhsq0 = o_rhsq + shiftIndex*N;
-  deviceMemory<dfloat> o_rhspmlq0;
-  if (Npml)    o_rhspmlq0 = o_rhspmlq + shiftIndex*Npml;
-
-  //A coefficients at current order
-  deviceMemory<dfloat> o_A = o_ab_a + order*Nstages;
-
-  //evaluate ODE rhs = f(q,t)
-  solver.rhsf_pml(o_q, o_pmlq, o_rhsq0, o_rhspmlq0, time);
-
-  //update q & pmlq
-  updateKernel(N,
-               dt,
-               shiftIndex,
-               o_A,
-               o_rhsq,
-               o_q);
-  if (Npml)
+  //update pmlq
+  if (o_pmlq.has_value()) {
     updateKernel(Npml,
                  dt,
                  shiftIndex,
                  o_A,
                  o_rhspmlq,
-                 o_pmlq);
+                 o_pmlq.value());
+  }
 
   //rotate index
   shiftIndex = (shiftIndex+Nstages-1)%Nstages;

@@ -33,7 +33,15 @@ void timeStepper_t::Run(solver_t& solver,
                         deviceMemory<dfloat>& o_q,
                         dfloat start, dfloat end) {
   assertInitialized();
-  ts->Run(solver, o_q, start, end);
+  ts->Run(solver, o_q, std::nullopt, start, end);
+}
+
+void timeStepper_t::RunWithPml(solver_t& solver,
+                               deviceMemory<dfloat>& o_q,
+                               deviceMemory<dfloat>& o_pmlq,
+                               dfloat start, dfloat end) {
+  assertInitialized();
+  ts->Run(solver, o_q, o_pmlq, start, end);
 }
 
 void timeStepper_t::SetTimeStep(dfloat dt_) {

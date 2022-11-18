@@ -34,15 +34,26 @@ namespace TimeStepper {
 lserk4::lserk4(dlong Nelements, dlong NhaloElements,
                int Np, int Nfields,
                platform_t& _platform, comm_t _comm):
-  timeStepperBase_t(Nelements, NhaloElements, Np, Nfields,
+  lserk4(Nelements, 0, NhaloElements,
+         Np, Nfields, 0,
+         _platform, _comm) {}
+
+lserk4::lserk4(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
+               int Np, int Nfields, int Npmlfields,
+               platform_t& _platform, comm_t _comm):
+  timeStepperBase_t(Nelements, NpmlElements, NhaloElements,
+                    Np, Nfields, Npmlfields,
                     _platform, _comm) {
 
   Nrk = 5;
 
   o_resq = platform.malloc<dfloat>(N);
   o_rhsq = platform.malloc<dfloat>(N);
+  o_respmlq = platform.malloc<dfloat>(Npml);
+  o_rhspmlq = platform.malloc<dfloat>(Npml);
 
   o_saveq = platform.malloc<dfloat>(N);
+  o_savepmlq  = platform.malloc<dfloat>(Npml);
 
   properties_t kernelInfo = platform.props(); //copy base occa properties from solver
 
@@ -82,7 +93,10 @@ lserk4::lserk4(dlong Nelements, dlong NhaloElements,
   rkc.copyFrom(_rkc);
 }
 
-void lserk4::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloat end) {
+void lserk4::Run(solver_t& solver,
+                 deviceMemory<dfloat> o_q,
+                 std::optional<deviceMemory<dfloat>> o_pmlq,
+                 dfloat start, dfloat end) {
 
   dfloat time = start;
 
@@ -100,18 +114,24 @@ void lserk4::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dflo
     if (time<outputTime && time+dt>=outputTime) {
 
       //save current state
-      o_saveq.copyFrom(o_q, N);
+      o_saveq.copyFrom(o_q, N, properties_t("async", true));
+      if (o_pmlq.has_value()) {
+        o_savepmlq.copyFrom(o_pmlq.value(), Npml, properties_t("async", true));
+      }
 
       stepdt = outputTime-time;
 
       //take small time step
-      Step(solver, o_q, time, stepdt);
+      Step(solver, o_q, o_pmlq, time, stepdt);
 
       //report state
       solver.Report(outputTime,tstep);
 
       //restore previous state
-      o_q.copyFrom(o_saveq, N);
+      o_q.copyFrom(o_saveq, N, properties_t("async", true));
+      if (o_pmlq.has_value()) {
+        o_pmlq.value().copyFrom(o_savepmlq, Npml, properties_t("async", true));
+      }
 
       outputTime += outputInterval;
     }
@@ -123,13 +143,16 @@ void lserk4::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dflo
       stepdt = dt;
     }
 
-    Step(solver, o_q, time, stepdt);
+    Step(solver, o_q, o_pmlq, time, stepdt);
     time += stepdt;
     tstep++;
   }
 }
 
-void lserk4::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloat _dt) {
+void lserk4::Step(solver_t& solver,
+                  deviceMemory<dfloat> o_q,
+                  std::optional<deviceMemory<dfloat>> o_pmlq,
+                  dfloat time, dfloat _dt) {
 
   // Low storage explicit Runge Kutta (5 stages, 4th order)
   for(int rk=0;rk<Nrk;++rk){
@@ -137,50 +160,19 @@ void lserk4::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dflo
     dfloat currentTime = time + rkc[rk]*_dt;
 
     //evaluate ODE rhs = f(q,t)
-    solver.rhsf(o_q, o_rhsq, currentTime);
+    if (o_pmlq.has_value()) {
+      solver.rhsf_pml(o_q, o_pmlq.value(), o_rhsq, o_rhspmlq, currentTime);
+    } else {
+      solver.rhsf(o_q, o_rhsq, currentTime);
+    }
 
     // update solution using Runge-Kutta
     updateKernel(N, _dt, rka[rk], rkb[rk],
                  o_rhsq, o_resq, o_q);
-  }
-}
-
-
-/**************************************************/
-/* PML version                                    */
-/**************************************************/
-
-lserk4_pml::lserk4_pml(dlong _Nelements, dlong _NpmlElements, dlong _NhaloElements,
-                      int _Np, int _Nfields, int _Npmlfields,
-                      platform_t& _platform, comm_t _comm):
-  lserk4(_Nelements, _NhaloElements, _Np, _Nfields, _platform, _comm),
-  Npml(_Npmlfields*_Np*_NpmlElements) {
-
-  if (Npml) {
-    memory<dfloat> pmlq(Npml,0.0);
-    o_pmlq = platform.malloc<dfloat>(pmlq);
-
-    o_respmlq = platform.malloc<dfloat>(Npml);
-    o_rhspmlq = platform.malloc<dfloat>(Npml);
-  }
-}
-
-void lserk4_pml::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloat _dt) {
-
-  // Low storage explicit Runge Kutta (5 stages, 4th order)
-  for(int rk=0;rk<Nrk;++rk){
-
-    dfloat currentTime = time + rkc[rk]*_dt;
-
-    //evaluate ODE rhs = f(q,t)
-    solver.rhsf_pml(o_q, o_pmlq, o_rhsq, o_rhspmlq, currentTime);
-
-    // update solution using Runge-Kutta
-    updateKernel(N, _dt, rka[rk], rkb[rk],
-                 o_rhsq, o_resq, o_q);
-    if (Npml)
+    if (o_pmlq.has_value()) {
       updateKernel(Npml, _dt, rka[rk], rkb[rk],
-                   o_rhspmlq, o_respmlq, o_pmlq);
+                   o_rhspmlq, o_respmlq, o_pmlq.value());
+    }
   }
 }
 

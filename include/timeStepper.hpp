@@ -27,6 +27,7 @@ SOFTWARE.
 #ifndef TIMESTEPPER_HPP
 #define TIMESTEPPER_HPP
 
+#include <optional>
 #include "core.hpp"
 #include "settings.hpp"
 #include "mesh.hpp"
@@ -35,7 +36,9 @@ SOFTWARE.
 namespace libp {
 
 //forward declare
-namespace TimeStepper { class timeStepperBase_t; }
+namespace TimeStepper {
+  class timeStepperBase_t;
+}
 
 /* General TimeStepper object*/
 class timeStepper_t {
@@ -48,7 +51,14 @@ class timeStepper_t {
     ts = std::make_shared<Stepper>(args...);
   }
 
-  void Run(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat start, dfloat end);
+  void Run(solver_t& solver,
+           deviceMemory<dfloat>& o_q,
+           dfloat start, dfloat end);
+
+  void RunWithPml(solver_t& solver,
+                  deviceMemory<dfloat>& o_q,
+                  deviceMemory<dfloat>& o_pmlq,
+                  dfloat start, dfloat end);
 
   void SetTimeStep(dfloat dt_);
 
@@ -72,18 +82,23 @@ public:
 
   dlong N;
   dlong Nhalo;
+  dlong Npml;
 
   dfloat dt;
 
-  timeStepperBase_t(dlong Nelements, dlong NhaloElements,
-                    int Np, int Nfields,
+  timeStepperBase_t(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
+                    int Np, int Nfields, int Npmlfields,
                     platform_t& _platform, comm_t _comm):
     platform(_platform),
     comm(_comm),
     N(Nelements*Np*Nfields),
-    Nhalo(NhaloElements*Np*Nfields) {}
+    Nhalo(NhaloElements*Np*Nfields),
+    Npml(NpmlElements*Np*Npmlfields) {}
 
-  virtual void Run(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat start, dfloat end)=0;
+  virtual void Run(solver_t& solver,
+                   deviceMemory<dfloat> o_q,
+                   std::optional<deviceMemory<dfloat>> o_pmlq,
+                   dfloat start, dfloat end)=0;
 
   void SetTimeStep(dfloat dt_) {dt = dt_;};
 
@@ -105,17 +120,27 @@ protected:
   deviceMemory<dfloat> o_ab_a;
 
   deviceMemory<dfloat> o_rhsq;
+  deviceMemory<dfloat> o_rhspmlq;
 
   kernel_t updateKernel;
 
-  virtual void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt, int order);
+  void Step(solver_t& solver,
+            deviceMemory<dfloat> o_q,
+            std::optional<deviceMemory<dfloat>> o_pmlq,
+            dfloat time, dfloat dt, int order);
 
 public:
   ab3(dlong Nelements, dlong NhaloElements,
       int Np, int Nfields,
       platform_t& _platform, comm_t _comm);
+  ab3(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
+      int Np, int Nfields, int Npmlfields,
+      platform_t& _platform, comm_t _comm);
 
-  void Run(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat start, dfloat end);
+  void Run(solver_t& solver,
+           deviceMemory<dfloat> o_q,
+           std::optional<deviceMemory<dfloat>> o_pmlq,
+           dfloat start, dfloat end);
 };
 
 /* Low-Storage Explicit Runge-Kutta, order 4 */
@@ -126,19 +151,31 @@ protected:
 
   deviceMemory<dfloat> o_rhsq;
   deviceMemory<dfloat> o_resq;
+  deviceMemory<dfloat> o_rhspmlq;
+  deviceMemory<dfloat> o_respmlq;
 
   deviceMemory<dfloat> o_saveq;
+  deviceMemory<dfloat> o_savepmlq;
 
   kernel_t updateKernel;
 
-  virtual void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt);
+  void Step(solver_t& solver,
+            deviceMemory<dfloat> o_q,
+            std::optional<deviceMemory<dfloat>> o_pmlq,
+            dfloat time, dfloat dt);
 
 public:
   lserk4(dlong Nelements, dlong NhaloElements,
          int Np, int Nfields,
          platform_t& _platform, comm_t _comm);
+  lserk4(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
+         int Np, int Nfields, int Npmlfields,
+         platform_t& _platform, comm_t _comm);
 
-  void Run(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat start, dfloat end);
+  void Run(solver_t& solver,
+           deviceMemory<dfloat> o_q,
+           std::optional<deviceMemory<dfloat>> o_pmlq,
+           dfloat start, dfloat end);
 };
 
 /* Dormand-Prince method */
@@ -158,12 +195,18 @@ protected:
   deviceMemory<dfloat> o_rhsq;
   deviceMemory<dfloat> o_rkq;
   deviceMemory<dfloat> o_rkrhsq;
+  deviceMemory<dfloat> o_rhspmlq;
+  deviceMemory<dfloat> o_rkpmlq;
+  deviceMemory<dfloat> o_rkrhspmlq;
+
   deviceMemory<dfloat> o_rkerr;
 
   deviceMemory<dfloat> o_saveq;
+  deviceMemory<dfloat> o_savepmlq;
 
 
   kernel_t rkUpdateKernel;
+  kernel_t rkPmlUpdateKernel;
   kernel_t rkStageKernel;
   kernel_t rkErrorEstimateKernel;
 
@@ -183,20 +226,25 @@ protected:
   dfloat facold;
   dfloat sqrtinvNtotal;
 
-  virtual void Backup(deviceMemory<dfloat> &o_Q);
-  virtual void Restore(deviceMemory<dfloat> &o_Q);
-  virtual void AcceptStep(deviceMemory<dfloat> &o_q, deviceMemory<dfloat> &o_rq);
+  void Step(solver_t& solver,
+            deviceMemory<dfloat> o_q,
+            std::optional<deviceMemory<dfloat>> o_pmlq,
+            dfloat time, dfloat dt);
 
-  virtual void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt);
-
-  virtual dfloat Estimater(deviceMemory<dfloat>& o_q);
+  dfloat Estimater(deviceMemory<dfloat>& o_q);
 
 public:
   dopri5(dlong Nelements, dlong NhaloElements,
          int Np, int Nfields,
          platform_t& _platform, comm_t _comm);
+  dopri5(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
+         int Np, int Nfields, int Npmlfields,
+         platform_t& _platform, comm_t _comm);
 
-  void Run(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat start, dfloat end);
+  void Run(solver_t& solver,
+           deviceMemory<dfloat> o_q,
+           std::optional<deviceMemory<dfloat>> o_pmlq,
+           dfloat start, dfloat end);
 };
 
 /* Semi-Analytic Adams-Bashforth, order 3 */
@@ -213,21 +261,36 @@ protected:
   pinnedMemory<dfloat> h_saab_x, h_saab_a;
   deviceMemory<dfloat> o_saab_x, o_saab_a;
 
+  memory<dfloat> pmlsaab_x, pmlsaab_a;
+  deviceMemory<dfloat> o_pmlsaab_x, o_pmlsaab_a;
+
   deviceMemory<dfloat> o_rhsq;
+  deviceMemory<dfloat> o_rhspmlq;
 
   kernel_t updateKernel;
+  kernel_t pmlUpdateKernel;
 
-  virtual void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt, int order);
+  void Step(solver_t& solver,
+            deviceMemory<dfloat> o_q,
+            std::optional<deviceMemory<dfloat>> o_pmlq,
+            dfloat time, dfloat dt, int order);
 
-  virtual void UpdateCoefficients();
+  void UpdateCoefficients();
 
 public:
   saab3(dlong _Nelements, dlong _NhaloElements,
         int _Np, int _Nfields,
         memory<dfloat> _lambda,
         platform_t& _platform, comm_t _comm);
+  saab3(dlong _Nelements, dlong NpmlElements, dlong _NhaloElements,
+        int _Np, int _Nfields, int Npmlfields,
+        memory<dfloat> _lambda,
+        platform_t& _platform, comm_t _comm);
 
-  void Run(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat start, dfloat end);
+  void Run(solver_t& solver,
+           deviceMemory<dfloat> o_q,
+           std::optional<deviceMemory<dfloat>> o_pmlq,
+           dfloat start, dfloat end);
 };
 
 /* Semi-Analytic Explict Runge-Kutta, order 4 with embedded order 3 and adaptive time-stepping */
@@ -244,19 +307,28 @@ protected:
   memory<dfloat> rkC;
   deviceMemory<dfloat> o_rkX, o_rkA, o_rkE;
   pinnedMemory<dfloat> h_rkX, h_rkA, h_rkE;
+  memory<dfloat> pmlrkA;
+  deviceMemory<dfloat> o_pmlrkA;
 
   deviceMemory<dfloat> o_rhsq;
   deviceMemory<dfloat> o_rkq;
   deviceMemory<dfloat> o_rkrhsq;
+  deviceMemory<dfloat> o_rhspmlq;
+  deviceMemory<dfloat> o_rkpmlq;
+  deviceMemory<dfloat> o_rkrhspmlq;
+
   deviceMemory<dfloat> o_rkerr;
 
   deviceMemory<dfloat> o_saveq;
+  deviceMemory<dfloat> o_savepmlq;
 
   deviceMemory<dfloat> o_errtmp;
   pinnedMemory<dfloat> h_errtmp;
 
   kernel_t rkUpdateKernel;
+  kernel_t rkPmlUpdateKernel;
   kernel_t rkStageKernel;
+  kernel_t rkPmlStageKernel;
   kernel_t rkErrorEstimateKernel;
 
   dfloat dtMIN; //minumum allowed timestep
@@ -275,23 +347,30 @@ protected:
   dfloat facold;
   dfloat sqrtinvNtotal;
 
-  virtual void Backup(deviceMemory<dfloat> &o_Q);
-  virtual void Restore(deviceMemory<dfloat> &o_Q);
-  virtual void AcceptStep(deviceMemory<dfloat> &o_q, deviceMemory<dfloat> &o_rq);
 
-  virtual void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt);
+  void Step(solver_t& solver,
+            deviceMemory<dfloat> o_q,
+            std::optional<deviceMemory<dfloat>> o_pmlq,
+            dfloat time, dfloat dt);
 
   dfloat Estimater(deviceMemory<dfloat>& o_q);
 
   void UpdateCoefficients();
 
 public:
-  sark4(dlong _Nelements, dlong _NhaloElements,
-        int _Np, int _Nfields,
+  sark4(dlong Nelements, dlong NhaloElements,
+        int Np, int Nfields,
+        memory<dfloat> _lambda,
+        platform_t& _platform, comm_t _comm);
+  sark4(dlong _Nelements, dlong NpmlElements, dlong _NhaloElements,
+        int _Np, int _Nfields, int _Npmlfields,
         memory<dfloat> _lambda,
         platform_t& _platform, comm_t _comm);
 
-  void Run(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat start, dfloat end);
+  void Run(solver_t& solver,
+           deviceMemory<dfloat> o_q,
+           std::optional<deviceMemory<dfloat>> o_pmlq,
+           dfloat start, dfloat end);
 };
 
 /* Semi-Analytic Explict Runge-Kutta, order 5 with embedded order 4 and adaptive time-stepping */
@@ -308,20 +387,29 @@ protected:
   memory<dfloat> rkC;
   deviceMemory<dfloat> o_rkX, o_rkA, o_rkE;
   pinnedMemory<dfloat> h_rkX, h_rkA, h_rkE;
+  memory<dfloat> pmlrkA;
+  deviceMemory<dfloat> o_pmlrkA;
 
 
   deviceMemory<dfloat> o_rhsq;
   deviceMemory<dfloat> o_rkq;
   deviceMemory<dfloat> o_rkrhsq;
+  deviceMemory<dfloat> o_rhspmlq;
+  deviceMemory<dfloat> o_rkpmlq;
+  deviceMemory<dfloat> o_rkrhspmlq;
+
   deviceMemory<dfloat> o_rkerr;
 
   deviceMemory<dfloat> o_saveq;
+  deviceMemory<dfloat> o_savepmlq;
 
   deviceMemory<dfloat> o_errtmp;
   pinnedMemory<dfloat> h_errtmp;
 
   kernel_t rkUpdateKernel;
+  kernel_t rkPmlUpdateKernel;
   kernel_t rkStageKernel;
+  kernel_t rkPmlStageKernel;
   kernel_t rkErrorEstimateKernel;
 
   dfloat dtMIN; //minumum allowed timestep
@@ -340,23 +428,29 @@ protected:
   dfloat facold;
   dfloat sqrtinvNtotal;
 
-  virtual void Backup(deviceMemory<dfloat> &o_Q);
-  virtual void Restore(deviceMemory<dfloat> &o_Q);
-  virtual void AcceptStep(deviceMemory<dfloat> &o_q, deviceMemory<dfloat> &o_rq);
-
-  virtual void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt);
+   void Step(solver_t& solver,
+            deviceMemory<dfloat> o_q,
+            std::optional<deviceMemory<dfloat>> o_pmlq,
+            dfloat time, dfloat dt);
 
   dfloat Estimater(deviceMemory<dfloat>& o_q);
 
   void UpdateCoefficients();
 
 public:
-  sark5(dlong _Nelements, dlong _NhaloElements,
-        int _Np, int _Nfields,
+  sark5(dlong Nelements, dlong NhaloElements,
+        int Np, int Nfields,
+        memory<dfloat> _lambda,
+        platform_t& _platform, comm_t _comm);
+  sark5(dlong _Nelements, dlong NpmlElements, dlong _NhaloElements,
+        int _Np, int _Nfields, int Npmlfields,
         memory<dfloat> _lambda,
         platform_t& _platform, comm_t _comm);
 
-  void Run(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat start, dfloat end);
+  void Run(solver_t& solver,
+           deviceMemory<dfloat> o_q,
+           std::optional<deviceMemory<dfloat>> o_pmlq,
+           dfloat start, dfloat end);
 };
 
 /* Backward Difference Formula, order 3, with extrapolation */
@@ -376,16 +470,21 @@ protected:
 
   kernel_t rhsKernel;
 
-  virtual void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt, int order);
+  void Step(solver_t& solver,
+            deviceMemory<dfloat> o_q,
+            dfloat time, dfloat dt, int order);
 
 public:
   extbdf3(dlong Nelements, dlong NhaloElements,
-      int Np, int Nfields,
-      platform_t& _platform, comm_t _comm);
+          int Np, int Nfields,
+          platform_t& _platform, comm_t _comm);
 
   dfloat GetGamma();
 
-  void Run(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat start, dfloat end);
+  void Run(solver_t& solver,
+           deviceMemory<dfloat> o_q,
+           std::optional<deviceMemory<dfloat>> o_pmlq,
+           dfloat start, dfloat end);
 };
 
 /* Backward Difference Formula, order 3, with subcycling */
@@ -403,7 +502,9 @@ protected:
 
   kernel_t rhsKernel;
 
-  virtual void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt, int order);
+  void Step(solver_t& solver,
+            deviceMemory<dfloat> o_q,
+            dfloat time, dfloat dt, int order);
 
 public:
   ssbdf3(dlong Nelements, dlong NhaloElements,
@@ -412,7 +513,10 @@ public:
 
   dfloat GetGamma();
 
-  void Run(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat start, dfloat end);
+  void Run(solver_t& solver,
+           deviceMemory<dfloat> o_q,
+           std::optional<deviceMemory<dfloat>> o_pmlq,
+           dfloat start, dfloat end);
 };
 
 /* Multi-rate Adams-Bashforth, order 3 */
@@ -423,29 +527,42 @@ protected:
   static constexpr int Nstages{3};
   int Nlevels;
   int Nfields;
+  int Npmlfields;
 
   deviceMemory<int> o_shiftIndex;
-  deviceMemory<int> h_shiftIndex;
+  pinnedMemory<int> h_shiftIndex;
 
   memory<dfloat> mrdt;
   deviceMemory<dfloat> o_mrdt;
+  deviceMemory<dfloat> o_zeros;
 
   memory<dfloat> ab_a, ab_b;
   deviceMemory<dfloat> o_ab_a, o_ab_b;
 
   deviceMemory<dfloat> o_rhsq0, o_rhsq, o_fQM;
+  deviceMemory<dfloat> o_rhspmlq0, o_rhspmlq;
 
   kernel_t updateKernel;
+  kernel_t pmlUpdateKernel;
   kernel_t traceUpdateKernel;
 
-  virtual void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt, int order);
+  void Step(solver_t& solver,
+            deviceMemory<dfloat> o_q,
+            std::optional<deviceMemory<dfloat>> o_pmlq,
+            dfloat time, dfloat dt, int order);
 
 public:
-  mrab3(dlong _Nelements, dlong _NhaloElements,
-         int _Np, int _Nfields,
-         platform_t& _platform, mesh_t& _mesh);
+  mrab3(dlong Nelements, dlong NhaloElements,
+        int _Np, int _Nfields,
+        platform_t& _platform, mesh_t& _mesh);
+  mrab3(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
+        int _Np, int _Nfields, int _Npmlfields,
+        platform_t& _platform, mesh_t& _mesh);
 
-  void Run(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat start, dfloat end);
+  void Run(solver_t& solver,
+           deviceMemory<dfloat> o_q,
+           std::optional<deviceMemory<dfloat>> o_pmlq,
+           dfloat start, dfloat end);
 };
 
 /* Multi-rate Semi-Analytic Adams-Bashforth, order 3 */
@@ -456,6 +573,7 @@ protected:
   static constexpr int Nstages{3};
   int Nlevels;
   int Nfields;
+  int Npmlfields;
 
   memory<dfloat> lambda;
 
@@ -464,220 +582,41 @@ protected:
 
   memory<dfloat> mrdt;
   deviceMemory<dfloat> o_mrdt;
+  deviceMemory<dfloat> o_zeros;
 
-  memory<dfloat> saab_x, saab_a, saab_b;
+  pinnedMemory<dfloat> h_saab_x, h_saab_a, h_saab_b;
   deviceMemory<dfloat> o_saab_x, o_saab_a, o_saab_b;
+  memory<dfloat> pmlsaab_a, pmlsaab_b;
+  deviceMemory<dfloat> o_pmlsaab_a, o_pmlsaab_b;
 
   deviceMemory<dfloat> o_rhsq0, o_rhsq, o_fQM;
+  deviceMemory<dfloat> o_rhspmlq0, o_rhspmlq;
 
   kernel_t updateKernel;
+  kernel_t pmlUpdateKernel;
   kernel_t traceUpdateKernel;
 
-  virtual void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt, int order);
+  void Step(solver_t& solver,
+            deviceMemory<dfloat> o_q,
+            std::optional<deviceMemory<dfloat>> o_pmlq,
+            dfloat time, dfloat dt, int order);
 
   void UpdateCoefficients();
 
 public:
   mrsaab3(dlong _Nelements, dlong _NhaloElements,
-         int _Np, int _Nfields,
-         memory<dfloat> _lambda,
-         platform_t& _platform, mesh_t& _mesh);
+          int _Np, int _Nfields,
+          memory<dfloat> _lambda,
+          platform_t& _platform, mesh_t& _mesh);
+  mrsaab3(dlong _Nelements, dlong NpmlElements, dlong _NhaloElements,
+          int _Np, int _Nfields, int _Npmlfields,
+          memory<dfloat> _lambda,
+          platform_t& _platform, mesh_t& _mesh);
 
-  void Init();
-  void Run(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat start, dfloat end);
-};
-
-
-/**************************************************/
-/* Derived Time Integrators which step PML fields */
-/**************************************************/
-
-/* Adams Bashforth, order 3 */
-class ab3_pml: public ab3 {
-private:
-  dlong Npml;
-
-  deviceMemory<dfloat> o_pmlq;
-  deviceMemory<dfloat> o_rhspmlq;
-
-  void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt, int order);
-
-public:
-  ab3_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
-          int Np, int Nfields, int Npmlfields,
-          platform_t& _platform, comm_t _comm);
-};
-
-/* Low-Storage Explicit Runge-Kutta, order 4 */
-class lserk4_pml: public lserk4 {
-private:
-  dlong Npml;
-
-  deviceMemory<dfloat> o_pmlq;
-  deviceMemory<dfloat> o_rhspmlq;
-  deviceMemory<dfloat> o_respmlq;
-
-  void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt);
-
-public:
-  lserk4_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
-            int Np, int Nfields, int Npmlfields,
-            platform_t& _platform, comm_t _comm);
-};
-
-/* Dormand-Prince method */
-/* Explict Runge-Kutta, order 5 with embedded order 4 and adaptive time-stepping */
-class dopri5_pml: public dopri5 {
-private:
-  dlong Npml;
-
-  deviceMemory<dfloat> o_pmlq;
-  deviceMemory<dfloat> o_rhspmlq;
-  deviceMemory<dfloat> o_rkpmlq;
-  deviceMemory<dfloat> o_rkrhspmlq;
-
-  deviceMemory<dfloat> o_savepmlq;
-
-  kernel_t rkPmlUpdateKernel;
-
-  void Backup(deviceMemory<dfloat> &o_Q);
-  void Restore(deviceMemory<dfloat> &o_Q);
-  void AcceptStep(deviceMemory<dfloat> &o_q, deviceMemory<dfloat> &o_rq);
-
-  void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt);
-
-public:
-  dopri5_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
-            int Np, int Nfields, int Npmlfields,
-            platform_t& _platform, comm_t _comm);
-};
-
-/* Semi-Analytic Adams-Bashforth, order 3 */
-// Note: PML fields are not stepped Semi-Analytically
-class saab3_pml: public saab3 {
-private:
-  dlong Npml;
-
-  memory<dfloat> pmlsaab_x, pmlsaab_a;
-  deviceMemory<dfloat> o_pmlsaab_x, o_pmlsaab_a;
-
-  deviceMemory<dfloat> o_pmlq;
-  deviceMemory<dfloat> o_rhspmlq;
-
-  kernel_t pmlUpdateKernel;
-
-  void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt, int order);
-
-public:
-  saab3_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
-            int Np, int Nfields, int _Npmlfields,
-            memory<dfloat> _lambda,
-            platform_t& _platform, comm_t _comm);
-};
-
-/* Semi-Analytic Explict Runge-Kutta, order 4 with embedded order 3 and adaptive time-stepping */
-// Note: PML fields are not stepped Semi-Analytically
-class sark4_pml: public sark4 {
-private:
-  dlong Npml;
-
-  memory<dfloat> pmlrkA;
-  deviceMemory<dfloat> o_pmlrkA;
-
-  deviceMemory<dfloat> o_pmlq;
-  deviceMemory<dfloat> o_rhspmlq;
-  deviceMemory<dfloat> o_rkpmlq;
-  deviceMemory<dfloat> o_rkrhspmlq;
-
-  deviceMemory<dfloat> o_savepmlq;
-
-  kernel_t rkPmlUpdateKernel;
-  kernel_t rkPmlStageKernel;
-
-  void Backup(deviceMemory<dfloat> &o_Q);
-  void Restore(deviceMemory<dfloat> &o_Q);
-  void AcceptStep(deviceMemory<dfloat> &o_q, deviceMemory<dfloat> &o_rq);
-
-  void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt);
-
-public:
-  sark4_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
-            int Np, int Nfields, int _Npmlfields,
-            memory<dfloat> _lambda, platform_t& _platform, comm_t _comm);
-};
-
-/* Semi-Analytic Explict Runge-Kutta, order 5 with embedded order 4 and adaptive time-stepping */
-// Note: PML fields are not stepped Semi-Analytically
-class sark5_pml: public sark5 {
-private:
-  dlong Npml;
-
-  memory<dfloat> pmlrkA;
-  deviceMemory<dfloat> o_pmlrkA;
-
-  deviceMemory<dfloat> o_pmlq;
-  deviceMemory<dfloat> o_rhspmlq;
-  deviceMemory<dfloat> o_rkpmlq;
-  deviceMemory<dfloat> o_rkrhspmlq;
-
-  deviceMemory<dfloat> o_savepmlq;
-
-  kernel_t rkPmlUpdateKernel;
-  kernel_t rkPmlStageKernel;
-
-  void Backup(deviceMemory<dfloat> &o_Q);
-  void Restore(deviceMemory<dfloat> &o_Q);
-  void AcceptStep(deviceMemory<dfloat> &o_q, deviceMemory<dfloat> &o_rq);
-
-  void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt);
-
-public:
-  sark5_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
-            int Np, int Nfields, int _Npmlfields,
-            memory<dfloat> _lambda, platform_t& _platform, comm_t _comm);
-};
-
-
-/* Multi-rate Adams-Bashforth, order 3 */
-class mrab3_pml: public mrab3 {
-private:
-  dlong Npml;
-  int Npmlfields;
-
-  deviceMemory<dfloat> o_pmlq;
-  deviceMemory<dfloat> o_rhspmlq0, o_rhspmlq;
-
-  kernel_t pmlUpdateKernel;
-
-  void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt, int order);
-
-public:
-  mrab3_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
-            int Np, int Nfields, int _Npmlfields, platform_t& _platform, mesh_t& _mesh);
-};
-
-/* Multi-rate Semi-Analytic Adams-Bashforth, order 3 */
-// Note: PML fields are not stepped Semi-Analytically
-class mrsaab3_pml: public mrsaab3 {
-private:
-  dlong Npml;
-  int Npmlfields;
-
-  deviceMemory<dfloat> o_pmlq;
-
-  memory<dfloat> pmlsaab_a, pmlsaab_b;
-  deviceMemory<dfloat> o_pmlsaab_a, o_pmlsaab_b;
-
-  deviceMemory<dfloat> o_rhspmlq0, o_rhspmlq;
-
-  kernel_t pmlUpdateKernel;
-
-  void Step(solver_t& solver, deviceMemory<dfloat>& o_q, dfloat time, dfloat dt, int order);
-
-public:
-  mrsaab3_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
-            int Np, int Nfields, int _Npmlfields,
-            memory<dfloat> _lambda, platform_t& _platform, mesh_t& _mesh);
+  void Run(solver_t& solver,
+           deviceMemory<dfloat> o_q,
+           std::optional<deviceMemory<dfloat>> o_pmlq,
+           dfloat start, dfloat end);
 };
 
 } //namespace TimeStepper

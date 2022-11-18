@@ -34,17 +34,30 @@ namespace TimeStepper {
 dopri5::dopri5(dlong Nelements, dlong NhaloElements,
                int Np, int Nfields,
                platform_t& _platform, comm_t _comm):
-  timeStepperBase_t(Nelements, NhaloElements,
-                    Np, Nfields, _platform, _comm) {
+  dopri5(Nelements, 0, NhaloElements,
+         Np, Nfields, 0,
+         _platform, _comm) {}
+
+dopri5::dopri5(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
+               int Np, int Nfields, int Npmlfields,
+               platform_t& _platform, comm_t _comm):
+  timeStepperBase_t(Nelements, NpmlElements, NhaloElements,
+                    Np, Nfields, Npmlfields,
+                    _platform, _comm) {
 
   Nrk = 7;
 
   o_rhsq   = platform.malloc<dfloat>(N);
   o_rkq    = platform.malloc<dfloat>(N+Nhalo);
   o_rkrhsq = platform.malloc<dfloat>(Nrk*N);
-  o_rkerr  = platform.malloc<dfloat>(N);
+  o_rhspmlq   = platform.malloc<dfloat>(Npml);
+  o_rkpmlq    = platform.malloc<dfloat>(Npml);
+  o_rkrhspmlq = platform.malloc<dfloat>(Nrk*Npml);
 
   o_saveq  = platform.malloc<dfloat>(N);
+  o_savepmlq  = platform.malloc<dfloat>(Npml);
+
+  o_rkerr  = platform.malloc<dfloat>(N);
 
   const int blocksize = 256;
 
@@ -64,6 +77,11 @@ dopri5::dopri5(dlong Nelements, dlong NhaloElements,
                                     "timeStepperDOPRI5.okl",
                                     "dopri5RkUpdate",
                                     kernelInfo);
+
+  rkPmlUpdateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
+                                      "timeStepperDOPRI5.okl",
+                                      "dopri5RkPmlUpdate",
+                                      kernelInfo);
 
   rkStageKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
                                     "timeStepperDOPRI5.okl",
@@ -114,12 +132,12 @@ dopri5::dopri5(dlong Nelements, dlong NhaloElements,
   sqrtinvNtotal = 1.0/sqrt(Ntotal);
 }
 
-void dopri5::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloat end) {
+void dopri5::Run(solver_t& solver,
+                 deviceMemory<dfloat> o_q,
+                 std::optional<deviceMemory<dfloat>> o_pmlq,
+                 dfloat start, dfloat end) {
 
   dfloat time = start;
-
-  // int rank;
-  // comm_rank_t(comm, &rank);
 
   solver.Report(time,0);
 
@@ -142,7 +160,7 @@ void dopri5::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dflo
       dt = end-time;
     }
 
-    Step(solver, o_q, time, dt);
+    Step(solver, o_q, o_pmlq, time, dt);
 
     // compute Dopri estimator
     dfloat err = Estimater(o_q);
@@ -161,22 +179,24 @@ void dopri5::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dflo
         dfloat savedt = dt;
 
         // save rkq
-        Backup(o_rkq);
+        o_saveq.copyFrom(o_rkq, N, properties_t("async", true));
+        if (o_pmlq.has_value()) {
+          o_savepmlq.copyFrom(o_rkpmlq, Npml, properties_t("async", true));
+        }
 
         // change dt to match output
         dt = outputTime-time;
 
-        // if(!rank)
-        //   printf("Taking output mini step: %g\n", dt);
-
         // time step to output
-        Step(solver, o_q, time, dt);
+        Step(solver, o_q, o_pmlq, time, dt);
 
         // shift for output
-        o_rkq.copyTo(o_q);
+        o_rkq.copyTo(o_q, properties_t("async", true));
+        if (o_pmlq.has_value()) {
+          o_rkpmlq.copyTo(o_pmlq.value(), properties_t("async", true));
+        }
 
         // output  (print from rkq)
-        // if (!rank) printf("\n");
         solver.Report(outputTime,tstep);
 
         // restore time step
@@ -186,11 +206,16 @@ void dopri5::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dflo
         outputTime += outputInterval;
 
         // accept saved rkq
-        Restore(o_rkq);
-        AcceptStep(o_q, o_rkq);
+        o_saveq.copyTo(o_q, N, properties_t("async", true));
+        if (o_pmlq.has_value()) {
+          o_savepmlq.copyTo(o_pmlq.value(), Npml, properties_t("async", true));
+        }
       } else {
         // accept rkq
-        AcceptStep(o_q, o_rkq);
+        o_q.copyFrom(o_rkq, N, properties_t("async", true));
+        if (o_pmlq.has_value()) {
+          o_pmlq.value().copyFrom(o_rkpmlq, Npml, properties_t("async", true));
+        }
       }
 
       time += dt;
@@ -199,39 +224,20 @@ void dopri5::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dflo
       constexpr dfloat errMax = 1.0e-4;  // hard coded factor ?
       facold = std::max(err,errMax);
 
-      // if (!rank)
-      //   printf("\r time = %g (%d), dt = %g accepted                      ", time, allStep,  dt);
-
       tstep++;
     } else {
       dtnew = dt/(std::max(invfactor1,fac1/safe));
-
-      // if (!rank)
-      //   printf("\r time = %g (%d), dt = %g rejected, trying %g", time, allStep, dt, dtnew);
-      // if (!rank)
-      //   printf("Repeating timestep %d. dt was %g, trying %g.\n", tstep, dt, dtnew);
     }
     dt = dtnew;
     allStep++;
   }
-
-  // if (!rank)
-  //   printf("%d accepted steps and %d total steps\n", tstep, allStep);
 }
 
-void dopri5::Backup(deviceMemory<dfloat> &o_Q) {
-  o_saveq.copyFrom(o_Q, N);
-}
 
-void dopri5::Restore(deviceMemory<dfloat> &o_Q) {
-  o_saveq.copyTo(o_Q, N);
-}
-
-void dopri5::AcceptStep(deviceMemory<dfloat> &o_q, deviceMemory<dfloat> &o_rq) {
-  o_q.copyFrom(o_rq, N);
-}
-
-void dopri5::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloat _dt) {
+void dopri5::Step(solver_t& solver,
+                  deviceMemory<dfloat> o_q,
+                  std::optional<deviceMemory<dfloat>> o_pmlq,
+                  dfloat time, dfloat _dt) {
 
   //RK step
   for(int rk=0;rk<Nrk;++rk){
@@ -248,9 +254,22 @@ void dopri5::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dflo
                   o_q,
                   o_rkrhsq,
                   o_rkq);
+    if (o_pmlq.has_value()) {
+      rkStageKernel(Npml,
+                    rk,
+                    _dt,
+                    o_rkA,
+                    o_pmlq.value(),
+                    o_rkrhspmlq,
+                    o_rkpmlq);
+    }
 
     //evaluate ODE rhs = f(q,t)
-    solver.rhsf(o_rkq, o_rhsq, currentTime);
+    if (o_pmlq.has_value()) {
+      solver.rhsf_pml(o_rkq, o_rkpmlq, o_rhsq, o_rhspmlq, currentTime);
+    } else {
+      solver.rhsf(o_rkq, o_rhsq, currentTime);
+    }
 
     // update solution using Runge-Kutta
     // rkrhsq_rk = rhsq
@@ -267,6 +286,16 @@ void dopri5::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dflo
                    o_rkrhsq,
                    o_rkq,
                    o_rkerr);
+    if (o_pmlq.has_value()) {
+      rkPmlUpdateKernel(Npml,
+                       rk,
+                       _dt,
+                       o_rkA,
+                       o_pmlq.value(),
+                       o_rhspmlq,
+                       o_rkrhspmlq,
+                       o_rkpmlq);
+    }
   }
 }
 
@@ -293,114 +322,6 @@ dfloat dopri5::Estimater(deviceMemory<dfloat>& o_q){
   err = sqrt(err)*sqrtinvNtotal;
 
   return err;
-}
-
-/**************************************************/
-/* PML version                                    */
-/**************************************************/
-
-dopri5_pml::dopri5_pml(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
-                      int Np, int Nfields, int Npmlfields,
-                      platform_t& _platform, comm_t _comm):
-  dopri5(Nelements, NhaloElements, Np, Nfields, _platform, _comm),
-  Npml(Npmlfields*Np*NpmlElements) {
-
-  if (Npml) {
-    memory<dfloat> pmlq(Npml,0.0);
-    o_pmlq = platform.malloc<dfloat>(pmlq);
-
-    o_rhspmlq   = platform.malloc<dfloat>(Npml);
-    o_rkpmlq    = platform.malloc<dfloat>(Npml);
-    o_rkrhspmlq = platform.malloc<dfloat>(Nrk*Npml);
-
-    o_savepmlq  = platform.malloc<dfloat>(Npml);
-
-    properties_t kernelInfo = platform.props(); //copy base occa properties from solver
-
-    const int blocksize = 256;
-
-    //add defines
-    kernelInfo["defines/" "p_blockSize"] = (int)blocksize;
-
-    rkPmlUpdateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
-                                      "timeStepperDOPRI5.okl",
-                                      "dopri5RkPmlUpdate",
-                                      kernelInfo);
-  }
-}
-
-void dopri5_pml::Backup(deviceMemory<dfloat> &o_Q) {
-  o_saveq.copyFrom(o_Q, N);
-  if (Npml)
-    o_savepmlq.copyFrom(o_rkpmlq, Npml);
-}
-
-void dopri5_pml::Restore(deviceMemory<dfloat> &o_Q) {
-  o_saveq.copyTo(o_Q, N);
-  if (Npml)
-    o_savepmlq.copyTo(o_rkpmlq, Npml);
-}
-
-void dopri5_pml::AcceptStep(deviceMemory<dfloat> &o_q, deviceMemory<dfloat> &o_rq) {
-  o_q.copyFrom(o_rq, N);
-  if (Npml)
-    o_pmlq.copyFrom(o_rkpmlq, Npml);
-}
-
-void dopri5_pml::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloat _dt) {
-
-  //RK step
-  for(int rk=0;rk<Nrk;++rk){
-
-    // t_rk = t + C_rk*_dt
-    dfloat currentTime = time + rkC[rk]*_dt;
-
-    //compute RK stage
-    // rkq = q + _dt sum_{i=0}^{rk-1} a_{rk,i}*rhsq_i
-    rkStageKernel(N,
-                  rk,
-                  _dt,
-                  o_rkA,
-                  o_q,
-                  o_rkrhsq,
-                  o_rkq);
-    if (Npml)
-      rkStageKernel(Npml,
-                    rk,
-                    _dt,
-                    o_rkA,
-                    o_pmlq,
-                    o_rkrhspmlq,
-                    o_rkpmlq);
-
-    //evaluate ODE rhs = f(q,t)
-    solver.rhsf_pml(o_rkq, o_rkpmlq, o_rhsq, o_rhspmlq, currentTime);
-
-    // update solution using Runge-Kutta
-    // rkrhsq_rk = rhsq
-    // if rk==6
-    //   q = q + _dt*sum_{i=0}^{rk} rkA_{rk,i}*rkrhs_i
-    //   rkerr = _dt*sum_{i=0}^{rk} rkE_{rk,i}*rkrhs_i
-    rkUpdateKernel(N,
-                   rk,
-                   _dt,
-                   o_rkA,
-                   o_rkE,
-                   o_q,
-                   o_rhsq,
-                   o_rkrhsq,
-                   o_rkq,
-                   o_rkerr);
-    if (Npml)
-      rkPmlUpdateKernel(Npml,
-                     rk,
-                     _dt,
-                     o_rkA,
-                     o_pmlq,
-                     o_rhspmlq,
-                     o_rkrhspmlq,
-                     o_rkpmlq);
-  }
 }
 
 } //namespace TimeStepper

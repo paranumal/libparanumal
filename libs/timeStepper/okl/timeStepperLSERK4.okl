@@ -34,14 +34,11 @@ SOFTWARE.
 
   // Low storage Runge Kutta time step update
   for(dlong n=0;n<N;++n;@tile(256,@outer,@inner)){
-    dfloat r_resq = resq[n];
-    dfloat r_rhsq = rhsq[n];
-    dfloat r_q    = q[n];
 
-    r_resq = rka*r_resq + dt*r_rhsq;
-    r_q   += rkb*r_resq;
+    dfloat r_resq = dt*rhsq[n];
+    if (rka != 0.0) r_resq += rka*resq[n];
 
     resq[n] = r_resq;
-    q[n]    = r_q;
+    q[n]    = q[n] + rkb*r_resq;
   }
 }

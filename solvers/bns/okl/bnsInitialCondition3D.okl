@@ -81,3 +81,23 @@ SOFTWARE.
     }
   }
 }
+
+@kernel void bnsPmlInitialCondition3D(const dlong pmlNelements,
+                                      const dfloat c,
+                                      const dfloat nu,
+                                      const dfloat time,
+                                      @restrict const  dfloat *  x,
+                                      @restrict const  dfloat *  y,
+                                      @restrict const  dfloat *  z,
+                                      @restrict        dfloat *  pmlq){
+
+  for(dlong e=0;e<pmlNelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      // Set pml fields to zero initially
+      const dlong pmlbase = e*p_Npmlfields*p_Np + n;
+      for(int fld = 0; fld<p_Npmlfields; fld++){
+        pmlq[pmlbase + fld*p_Np] = 0;
+      }
+    }
+  }
+}

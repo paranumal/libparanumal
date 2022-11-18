@@ -39,7 +39,16 @@ sark4::sark4(dlong _Nelements, dlong _NhaloElements,
              int _Np, int _Nfields,
              memory<dfloat> _lambda,
              platform_t& _platform, comm_t _comm):
-  timeStepperBase_t(_Nelements, _NhaloElements, _Np, _Nfields,
+  sark4(_Nelements, 0, _NhaloElements,
+        _Np, _Nfields, 0,
+        _lambda, _platform, _comm) {}
+
+sark4::sark4(dlong _Nelements, dlong NpmlElements, dlong _NhaloElements,
+             int _Np, int _Nfields, int _Npmlfields,
+             memory<dfloat> _lambda,
+             platform_t& _platform, comm_t _comm):
+  timeStepperBase_t(_Nelements, NpmlElements, _NhaloElements,
+                    _Np, _Nfields, _Npmlfields,
                     _platform, _comm),
   Np(_Np),
   Nfields(_Nfields),
@@ -59,9 +68,14 @@ sark4::sark4(dlong _Nelements, dlong _NhaloElements,
   o_rkq    = platform.malloc<dfloat>(Ntotal);
   o_rhsq   = platform.malloc<dfloat>(Nlocal);
   o_rkrhsq = platform.malloc<dfloat>(Nlocal*Nrk);
+  o_rkpmlq    = platform.malloc<dfloat>(Npml);
+  o_rhspmlq   = platform.malloc<dfloat>(Npml);
+  o_rkrhspmlq = platform.malloc<dfloat>(Npml*Nrk);
+
   o_rkerr  = platform.malloc<dfloat>(Nlocal);
 
   o_saveq  = platform.malloc<dfloat>(Nlocal);
+  o_savepmlq   = platform.malloc<dfloat>(Npml);
 
   const int blocksize=256;
 
@@ -85,12 +99,18 @@ sark4::sark4(dlong _Nelements, dlong _NhaloElements,
                                     "timeStepperSARK.okl",
                                     "sarkRkUpdate",
                                     kernelInfo);
-
+  rkPmlUpdateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
+                                      "timeStepperSARK.okl",
+                                      "sarkRkPmlUpdate",
+                                      kernelInfo);
   rkStageKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
                                     "timeStepperSARK.okl",
                                     "sarkRkStage",
                                     kernelInfo);
-
+  rkPmlStageKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
+                                      "timeStepperSARK.okl",
+                                      "sarkRkPmlStage",
+                                      kernelInfo);
   rkErrorEstimateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
                                     "timeStepperSARK.okl",
                                     "sarkErrorEstimate",
@@ -109,6 +129,18 @@ sark4::sark4(dlong _Nelements, dlong _NhaloElements,
   o_rkA = platform.malloc<dfloat>(Nfields*Nrk*Nrk);
   o_rkE = platform.malloc<dfloat>(Nfields*Nrk);
 
+  pmlrkA.malloc(Nrk*Nrk);
+
+  dfloat _pmlrkA[Nrk*Nrk]
+                  = {      0.0,      0.0,       0.0,      0.0,       0.0,
+                           0.5,      0.0,       0.0,      0.0,       0.0,
+                           0.0,      0.5,       0.0,      0.0,       0.0,
+                           0.0,      0.0,       1.0,      0.0,       0.0,
+                       1.0/6.0,  1.0/3.0,   1.0/3.0,   1.0/6.0,      0.0};
+  pmlrkA.copyFrom(_pmlrkA);
+
+  o_pmlrkA = platform.malloc<dfloat>(pmlrkA);
+
   dtMIN = 1E-9; //minumum allowed timestep
   ATOL = 1E-5;  //absolute error tolerance
   RTOL = 1E-4;  //relative error tolerance
@@ -126,11 +158,12 @@ sark4::sark4(dlong _Nelements, dlong _NhaloElements,
   sqrtinvNtotal = 1.0/sqrt(gNtotal);
 }
 
-void sark4::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloat end) {
+void sark4::Run(solver_t& solver,
+                deviceMemory<dfloat> o_q,
+                std::optional<deviceMemory<dfloat>> o_pmlq,
+                dfloat start, dfloat end) {
 
   dfloat time = start;
-
-  int rank = comm.rank();
 
   solver.Report(time,0);
 
@@ -156,7 +189,7 @@ void sark4::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloa
       dt = end-time;
     }
 
-    Step(solver, o_q, time, dt);
+    Step(solver, o_q, o_pmlq, time, dt);
 
     // compute Dopri estimator
     dfloat err = Estimater(o_q);
@@ -175,25 +208,27 @@ void sark4::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloa
         dfloat savedt = dt;
 
         // save rkq
-        Backup(o_rkq);
+        o_saveq.copyFrom(o_rkq, N, properties_t("async", true));
+        if (o_pmlq.has_value()) {
+          o_savepmlq.copyFrom(o_rkpmlq, Npml, properties_t("async", true));
+        }
 
         // change dt to match output
         dt = outputTime-time;
-
-        // if(!rank)
-        //   printf("Taking output mini step: %g\n", dt);
 
         //Compute Butcher Tableau
         UpdateCoefficients();
 
         // time step to output
-        Step(solver, o_q, time, dt);
+        Step(solver, o_q, o_pmlq, time, dt);
 
         // shift for output
-        o_rkq.copyTo(o_q);
+        o_rkq.copyTo(o_q, properties_t("async", true));
+        if (o_pmlq.has_value()) {
+          o_rkpmlq.copyTo(o_pmlq.value(), properties_t("async", true));
+        }
 
         // output  (print from rkq)
-        // if (!rank) printf("\n");
         solver.Report(outputTime,tstep);
 
         // restore time step
@@ -203,12 +238,16 @@ void sark4::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloa
         outputTime += outputInterval;
 
         // accept saved rkq
-        Restore(o_rkq);
-        AcceptStep(o_q, o_rkq);
-
+        o_saveq.copyTo(o_q, N, properties_t("async", true));
+        if (o_pmlq.has_value()) {
+          o_savepmlq.copyTo(o_pmlq.value(), Npml, properties_t("async", true));
+        }
       } else {
         // accept rkq
-        AcceptStep(o_q, o_rkq);
+        o_q.copyFrom(o_rkq, N, properties_t("async", true));
+        if (o_pmlq.has_value()) {
+          o_pmlq.value().copyFrom(o_rkpmlq, Npml, properties_t("async", true));
+        }
       }
 
       time += dt;
@@ -217,17 +256,9 @@ void sark4::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloa
       constexpr dfloat errMax = 1.0e-4;  // hard coded factor ?
       facold = std::max(err,errMax);
 
-      // if (!rank)
-      //   printf("\r time = %g (%d), dt = %g accepted                      ", time, allStep,  dt);
-
       tstep++;
     } else {
       dtnew = dt/(std::max(invfactor1,fac1/safe));
-
-      // if (!rank)
-      //   printf("\r time = %g (%d), dt = %g rejected, trying %g", time, allStep, dt, dtnew);
-      if (!rank)
-        printf("Repeating timestep %d. dt was %g, trying %g.\n", tstep, dt, dtnew);
     }
     dt = dtnew;
 
@@ -236,24 +267,12 @@ void sark4::Run(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat start, dfloa
 
     allStep++;
   }
-
-  if (!rank)
-    printf("%d accepted steps and %d total steps\n", tstep, allStep);
 }
 
-void sark4::Backup(deviceMemory<dfloat> &o_Q) {
-  o_saveq.copyFrom(o_Q, N);
-}
-
-void sark4::Restore(deviceMemory<dfloat> &o_Q) {
-  o_saveq.copyTo(o_Q, N);
-}
-
-void sark4::AcceptStep(deviceMemory<dfloat> &o_q, deviceMemory<dfloat> &o_rq) {
-  o_q.copyFrom(o_rq, N);
-}
-
-void sark4::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloat _dt) {
+void sark4::Step(solver_t& solver,
+                 deviceMemory<dfloat> o_q,
+                 std::optional<deviceMemory<dfloat>> o_pmlq,
+                 dfloat time, dfloat _dt) {
 
   //RK step
   for(int rk=0;rk<Nrk;++rk){
@@ -271,9 +290,22 @@ void sark4::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloa
                   o_q,
                   o_rkrhsq,
                   o_rkq);
+    if (o_pmlq.has_value()) {
+      rkPmlStageKernel(Npml,
+                      rk,
+                      _dt,
+                      o_pmlrkA,
+                      o_pmlq.value(),
+                      o_rkrhspmlq,
+                      o_rkpmlq);
+    }
 
     //evaluate ODE rhs = f(q,t)
-    solver.rhsf(o_rkq, o_rhsq, currentTime);
+    if (o_pmlq.has_value()) {
+      solver.rhsf_pml(o_rkq, o_rkpmlq, o_rhsq, o_rhspmlq, currentTime);
+    } else {
+      solver.rhsf(o_rkq, o_rhsq, currentTime);
+    }
 
     // update solution using Runge-Kutta
     // rkrhsq_rk = rhsq
@@ -291,6 +323,16 @@ void sark4::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloa
                    o_rkrhsq,
                    o_rkq,
                    o_rkerr);
+    if (o_pmlq.has_value()) {
+      rkPmlUpdateKernel(Npml,
+                         rk,
+                         _dt,
+                         o_pmlrkA,
+                         o_pmlq.value(),
+                         o_rhspmlq,
+                         o_rkrhspmlq,
+                         o_rkpmlq);
+    }
   }
 }
 
@@ -333,20 +375,21 @@ void sark4::UpdateCoefficients() {
 
   for (int n=0;n<Nfields;n++) {
 
+    dfloat* rkX = h_rkX.ptr() + n * Nrk;
+    dfloat* rkA = h_rkA.ptr() + n * Nrk * Nrk;
+    dfloat* rkE = h_rkE.ptr() + n * Nrk;
+
     if (lambda[n]==0) { //Zero exponential term, usual RK coefficients
 
-      dfloat _rkX[Nrk]  = {1.0, 1.0, 1.0, 1.0, 1.0 };
-      dfloat _rkA[Nrk*Nrk]
-                    = {      0.0,      0.0,       0.0,      0.0,       0.0,
-                             0.5,      0.0,       0.0,      0.0,       0.0,
-                             0.0,      0.5,       0.0,      0.0,       0.0,
-                             0.0,      0.0,       1.0,      0.0,       0.0,
-                         1.0/6.0,  1.0/3.0,   1.0/3.0,   1.0/6.0,      0.0};
-      dfloat _rkE[Nrk]= {    0.0,      0.0,       0.0,  -1.0/6.0,  1.0/6.0};
+      rkX[0] = 1.0; rkX[1] = 1.0; rkX[2] = 1.0; rkX[3] = 1.0; rkX[4] = 1.0;
 
-      h_rkX.copyFrom(_rkX,    Nrk,n*Nrk    );
-      h_rkA.copyFrom(_rkA,Nrk*Nrk,n*Nrk*Nrk);
-      h_rkE.copyFrom(_rkE,    Nrk,n*Nrk    );
+      rkA[0+0*Nrk] =     0.0; rkA[1+0*Nrk] =     0.0; rkA[2+0*Nrk] =     0.0; rkA[3+0*Nrk] =     0.0; rkA[4+0*Nrk] = 0.0;
+      rkA[0+1*Nrk] =     0.5; rkA[1+1*Nrk] =     0.0; rkA[2+1*Nrk] =     0.0; rkA[3+1*Nrk] =     0.0; rkA[4+1*Nrk] = 0.0;
+      rkA[0+2*Nrk] =     0.0; rkA[1+2*Nrk] =     0.5; rkA[2+2*Nrk] =     0.0; rkA[3+2*Nrk] =     0.0; rkA[4+2*Nrk] = 0.0;
+      rkA[0+3*Nrk] =     0.0; rkA[1+3*Nrk] =     0.0; rkA[2+3*Nrk] =     1.0; rkA[3+3*Nrk] =     0.0; rkA[4+3*Nrk] = 0.0;
+      rkA[0+4*Nrk] = 1.0/6.0; rkA[1+4*Nrk] = 1.0/3.0; rkA[2+4*Nrk] = 1.0/3.0; rkA[3+4*Nrk] = 1.0/6.0; rkA[4+4*Nrk] = 0.0;
+
+      rkE[0] = 0.0; rkE[1] = 0.0; rkE[2] = 0.0; rkE[3] = -1.0/6.0; rkE[4] = 1.0/6.0;
 
     } else {
 
@@ -396,168 +439,24 @@ void sark4::UpdateCoefficients() {
       dfloat a54=real(ca54)/ (double) Nr;
 
       // first set non-semianalytic part of the integrator
-      dfloat _rkX[Nrk]  = {1.0,
-                           std::exp(dfloat(0.5)*alpha),
-                           std::exp(dfloat(0.5)*alpha),
-                           std::exp(alpha),
-                           std::exp(alpha) };
-      dfloat _rkA[Nrk*Nrk]
-                      ={   0.0,  0.0,  0.0,   0.0,  0.0,
-                           a21,  0.0,  0.0,   0.0,  0.0,
-                           a31,  a32,  0.0,   0.0,  0.0,
-                           a41,  0.0,  a43,   0.0,  0.0,
-                           a51,  a52,  a53,   a54,  0.0};
-      dfloat _rkE[Nrk]= {  0.0,  0.0,  0.0,  -a54,  a54};
+      rkX[0] = 1.0; rkX[1] = std::exp(dfloat(0.5)*alpha); rkX[2] = std::exp(dfloat(0.5)*alpha); rkX[3] = std::exp(alpha); rkX[4] = std::exp(alpha);
 
-      h_rkX.copyFrom(_rkX,    Nrk,n*Nrk    );
-      h_rkA.copyFrom(_rkA,Nrk*Nrk,n*Nrk*Nrk);
-      h_rkE.copyFrom(_rkE,    Nrk,n*Nrk    );
+      rkA[0+0*Nrk] = 0.0; rkA[1+0*Nrk] = 0.0; rkA[2+0*Nrk] = 0.0; rkA[3+0*Nrk] = 0.0; rkA[4+0*Nrk] = 0.0;
+      rkA[0+1*Nrk] = a21; rkA[1+1*Nrk] = 0.0; rkA[2+1*Nrk] = 0.0; rkA[3+1*Nrk] = 0.0; rkA[4+1*Nrk] = 0.0;
+      rkA[0+2*Nrk] = a31; rkA[1+2*Nrk] = a32; rkA[2+2*Nrk] = 0.0; rkA[3+2*Nrk] = 0.0; rkA[4+2*Nrk] = 0.0;
+      rkA[0+3*Nrk] = a41; rkA[1+3*Nrk] = 0.0; rkA[2+3*Nrk] = a43; rkA[3+3*Nrk] = 0.0; rkA[4+3*Nrk] = 0.0;
+      rkA[0+4*Nrk] = a51; rkA[1+4*Nrk] = a52; rkA[2+4*Nrk] = a53; rkA[3+4*Nrk] = a54; rkA[4+4*Nrk] = 0.0;
+
+      rkE[0] = 0.0; rkE[1] = 0.0; rkE[2] = 0.0; rkE[3] = -a54; rkE[4] = a54;
     }
-
-    // move data to platform
-    // o_rkX.copyFrom(rkX, properties_t("async", true));
-    // o_rkA.copyFrom(rkA, properties_t("async", true));
-    // o_rkE.copyFrom(rkE, properties_t("async", true));
-    h_rkX.copyTo(o_rkX);
-    h_rkA.copyTo(o_rkA);
-    h_rkE.copyTo(o_rkE);
   }
+
+  // move data to platform
+  h_rkX.copyTo(o_rkX, properties_t("async", true));
+  h_rkA.copyTo(o_rkA, properties_t("async", true));
+  h_rkE.copyTo(o_rkE, properties_t("async", true));
 }
 
-
-/**************************************************/
-/* PML version                                    */
-/**************************************************/
-
-sark4_pml::sark4_pml(dlong _Nelements, dlong _NpmlElements, dlong _NhaloElements,
-            int _Np, int _Nfields, int _Npmlfields,
-            memory<dfloat> _lambda,
-            platform_t& _platform, comm_t _comm):
-  sark4(_Nelements, _NhaloElements, _Np, _Nfields, _lambda, _platform, _comm),
-  Npml(_Npmlfields*_Np*_NpmlElements) {
-
-  if (Npml) {
-    memory<dfloat> pmlq(Npml,0.0);
-    o_pmlq = platform.malloc<dfloat>(pmlq);
-
-    o_rkpmlq    = platform.malloc<dfloat>(Npml);
-    o_rhspmlq   = platform.malloc<dfloat>(Npml);
-    o_rkrhspmlq = platform.malloc<dfloat>(Npml*Nrk);
-
-    o_savepmlq   = platform.malloc<dfloat>(Npml);
-
-    //copy base occa properties from solver
-    properties_t kernelInfo = platform.props();
-
-    const int blocksize=256;
-
-    //add defines
-    kernelInfo["defines/" "p_blockSize"] = (int)blocksize;
-    kernelInfo["defines/" "p_Nrk"]     = (int)Nrk;
-    kernelInfo["defines/" "p_Np"]      = (int)Np;
-    kernelInfo["defines/" "p_Nfields"] = (int)Nfields;
-
-    rkPmlUpdateKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
-                                      "timeStepperSARK.okl",
-                                      "sarkRkPmlUpdate",
-                                      kernelInfo);
-
-    rkPmlStageKernel = platform.buildKernel(TIMESTEPPER_DIR "/okl/"
-                                      "timeStepperSARK.okl",
-                                      "sarkRkPmlStage",
-                                      kernelInfo);
-
-    // Semi-Analytic Runge Kutta - order (3) 4 with PID timestep control
-    pmlrkA.malloc(Nrk*Nrk);
-
-    dfloat _pmlrkA[Nrk*Nrk]
-                    = {      0.0,      0.0,       0.0,      0.0,       0.0,
-                             0.5,      0.0,       0.0,      0.0,       0.0,
-                             0.0,      0.5,       0.0,      0.0,       0.0,
-                             0.0,      0.0,       1.0,      0.0,       0.0,
-                         1.0/6.0,  1.0/3.0,   1.0/3.0,   1.0/6.0,      0.0};
-    pmlrkA.copyFrom(_pmlrkA);
-
-    o_pmlrkA = platform.malloc<dfloat>(pmlrkA);
-  }
-}
-
-void sark4_pml::Backup(deviceMemory<dfloat> &o_Q) {
-  o_saveq.copyFrom(o_Q, N);
-  if (Npml)
-    o_savepmlq.copyFrom(o_rkpmlq, Npml);
-}
-
-void sark4_pml::Restore(deviceMemory<dfloat> &o_Q) {
-  o_saveq.copyTo(o_Q, N);
-  if (Npml)
-    o_savepmlq.copyTo(o_rkpmlq, Npml);
-}
-
-void sark4_pml::AcceptStep(deviceMemory<dfloat> &o_q, deviceMemory<dfloat> &o_rq) {
-  o_q.copyFrom(o_rq, N);
-  if (Npml)
-    o_pmlq.copyFrom(o_rkpmlq, Npml);
-}
-
-void sark4_pml::Step(solver_t& solver, deviceMemory<dfloat> &o_q, dfloat time, dfloat _dt) {
-
-  //RK step
-  for(int rk=0;rk<Nrk;++rk){
-
-    // t_rk = t + C_rk*_dt
-    dfloat currentTime = time + rkC[rk]*_dt;
-
-    //compute RK stage
-    // rkq = x_{rk}*q + _dt sum_{i=0}^{rk-1} a_{rk,i}*rhsq_i
-    rkStageKernel(Nelements,
-                  rk,
-                  _dt,
-                  o_rkX,
-                  o_rkA,
-                  o_q,
-                  o_rkrhsq,
-                  o_rkq);
-
-    if (Npml)
-      rkPmlStageKernel(Npml,
-                      rk,
-                      _dt,
-                      o_pmlrkA,
-                      o_pmlq,
-                      o_rkrhspmlq,
-                      o_rkpmlq);
-
-    //evaluate ODE rhs = f(q,t)
-    solver.rhsf_pml(o_rkq, o_rkpmlq, o_rhsq, o_rhspmlq, currentTime);
-
-    // update solution using Runge-Kutta
-    // rkrhsq_rk = rhsq
-    // if rk==6
-    //   q = rkX_{rk}*q + _dt*sum_{i=0}^{rk} rkA_{rk,i}*rkrhs_i
-    //   rkerr = _dt*sum_{i=0}^{rk} rkE_{rk,i}*rkrhs_i
-    rkUpdateKernel(Nelements,
-                   rk,
-                   _dt,
-                   o_rkX,
-                   o_rkA,
-                   o_rkE,
-                   o_q,
-                   o_rhsq,
-                   o_rkrhsq,
-                   o_rkq,
-                   o_rkerr);
-    if (Npml)
-      rkPmlUpdateKernel(Npml,
-                         rk,
-                         _dt,
-                         o_pmlrkA,
-                         o_pmlq,
-                         o_rhspmlq,
-                         o_rkrhspmlq,
-                         o_rkpmlq);
-  }
-}
 
 } //namespace TimeStepper
 

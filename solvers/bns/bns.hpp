@@ -76,6 +76,9 @@ public:
   memory<dfloat> q;
   deviceMemory<dfloat> o_q;
 
+  memory<dfloat> pmlq;
+  deviceMemory<dfloat> o_pmlq;
+
   deviceMemory<dfloat> o_Mq;
 
   memory<dfloat> Vort, VortMag;
@@ -94,6 +97,7 @@ public:
   kernel_t vorticityKernel;
 
   kernel_t initialConditionKernel;
+  kernel_t pmlInitialConditionKernel;
 
   bns_t() = default;
   bns_t(platform_t &_platform, mesh_t &_mesh,
