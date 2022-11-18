@@ -1204,7 +1204,7 @@ void mesh_t::CubatureNodesTri2D(const int cubTriN,
   cubTris.malloc(_cubNp);
   cubTriw.malloc(_cubNp);
 
-  const dfloat *cubTriR, *cubTriS, *cubTriW;
+  const dfloat *cubTriR=nullptr, *cubTriS=nullptr, *cubTriW=nullptr;
   switch(cubTriN){
     case 1: cubTriR = cubTriR1; cubTriS = cubTriS1; cubTriW = cubTriW1; break;
     case 2: cubTriR = cubTriR2; cubTriS = cubTriS2; cubTriW = cubTriW2; break;
