@@ -204,9 +204,9 @@ void sark5::Run(solver_t& solver,
         // save rkq
         deviceMemory<dfloat> o_saveq = platform.reserve<dfloat>(N);
         deviceMemory<dfloat> o_savepmlq  = platform.reserve<dfloat>(Npml);
-        o_saveq.copyFrom(o_rkq, N, properties_t("async", true));
+        o_saveq.copyFrom(o_rkq, N, 0, properties_t("async", true));
         if (o_pmlq.has_value()) {
-          o_savepmlq.copyFrom(o_rkpmlq, Npml, properties_t("async", true));
+          o_savepmlq.copyFrom(o_rkpmlq, Npml, 0, properties_t("async", true));
         }
 
         // change dt to match output
@@ -221,9 +221,9 @@ void sark5::Run(solver_t& solver,
              time, dt);
 
         // shift for output
-        o_rkq.copyTo(o_q, properties_t("async", true));
+        o_rkq.copyTo(o_q, N, 0, properties_t("async", true));
         if (o_pmlq.has_value()) {
-          o_rkpmlq.copyTo(o_pmlq.value(), properties_t("async", true));
+          o_rkpmlq.copyTo(o_pmlq.value(), Npml, 0, properties_t("async", true));
         }
 
         // output  (print from rkq)
@@ -236,15 +236,15 @@ void sark5::Run(solver_t& solver,
         outputTime += outputInterval;
 
         // accept saved rkq
-        o_saveq.copyTo(o_q, N, properties_t("async", true));
+        o_saveq.copyTo(o_q, N, 0, properties_t("async", true));
         if (o_pmlq.has_value()) {
-          o_savepmlq.copyTo(o_pmlq.value(), Npml, properties_t("async", true));
+          o_savepmlq.copyTo(o_pmlq.value(), Npml, 0, properties_t("async", true));
         }
       } else {
         // accept rkq
-        o_q.copyFrom(o_rkq, N, properties_t("async", true));
+        o_q.copyFrom(o_rkq, N, 0, properties_t("async", true));
         if (o_pmlq.has_value()) {
-          o_pmlq.value().copyFrom(o_rkpmlq, Npml, properties_t("async", true));
+          o_pmlq.value().copyFrom(o_rkpmlq, Npml, 0, properties_t("async", true));
         }
       }
 

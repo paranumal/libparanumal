@@ -416,7 +416,7 @@ void Extrap::FormInitialGuess(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o
 void Extrap::Update(operator_t &linearOperator, deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs)
 {
   deviceMemory<dfloat> o_tmp = o_xh + Ntotal*shift;
-  o_x.copyTo(o_tmp, Ntotal, properties_t("async", true));
+  o_x.copyTo(o_tmp, Ntotal, 0, properties_t("async", true));
   shift = (shift + 1) % Nhistory;
   entry = std::min(Nhistory+1, entry+1);
 }

@@ -64,7 +64,7 @@ public:
   IdentityPrecon(dlong _N): N(_N) {}
 
   void Operator(deviceMemory<dfloat> &o_r, deviceMemory<dfloat> &o_Mr){
-    o_Mr.copyFrom(o_r, N); //identity
+    o_Mr.copyFrom(o_r, N, 0, properties_t("async", true)); //identity
   }
 };
 

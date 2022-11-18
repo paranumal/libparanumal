@@ -109,7 +109,7 @@ int pminres::Solve(operator_t& linearOperator, operator_t& precon,
     else if (iter == 1) {
       o_q_old.copyFrom(o_q, properties_t("async", true)); // q_old = q
       linAlg.axpy(N, 1.0, o_z, -a2, o_q);                 // q = z - a2*q
-      o_z.copyFrom(o_r);                                  // z = r (save r in z)
+      o_z.copyFrom(o_r, properties_t("async", true));     // z = r (save r in z)
       linAlg.axpy(N, 1.0, o_p, -(del/gam), o_r);          // r = p - (del/gam)*r
       linAlg.axpy(N, -(gam/gamp), o_r_old, 1.0, o_r);     // r = r - (gam/gamp)*r_old
       o_r_old.copyFrom(o_z, properties_t("async", true)); // r_old = z (i.e. r saved in z)

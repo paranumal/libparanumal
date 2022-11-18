@@ -50,7 +50,7 @@ void OASPrecon::Operator(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_Mr) 
       mesh.ringHalo.Exchange(o_rPatchL, mesh.Np);
       ellipticPatch.ogsMasked.Gather(o_rPatch, o_rPatchL, 1, ogs::Add, ogs::NoTrans);
     } else {
-      o_rPatch.copyFrom(o_r, elliptic.Ndofs, properties_t("async", true));
+      o_rPatch.copyFrom(o_r, elliptic.Ndofs, 0, properties_t("async", true));
       mesh.ringHalo.Exchange(o_rPatch, mesh.Np);
     }
 
