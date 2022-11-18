@@ -36,9 +36,9 @@ namespace InitialGuess {
 void AddSettings(settings_t& settings, const std::string prefix)
 {
   settings.newSetting(prefix + "INITIAL GUESS STRATEGY",
-                      "NONE",
+                      "LAST",
                       "Strategy for selecting initial guess for linear solver",
-                      {"NONE", "ZERO", "CLASSIC", "QR", "EXTRAP"});
+                      {"LAST", "ZERO", "CLASSIC", "QR", "EXTRAP"});
 
   settings.newSetting(prefix + "INITIAL GUESS HISTORY SPACE DIMENSION",
                       "-1",
@@ -56,15 +56,23 @@ void AddSettings(settings_t& settings, const std::string prefix)
 
 /*****************************************************************************/
 
-Default::Default(dlong _N, platform_t& _platform, settings_t& _settings, comm_t _comm):
+Last::Last(dlong _N, platform_t& _platform, settings_t& _settings, comm_t _comm):
   initialGuessStrategy_t(_N, _platform, _settings, _comm)
-{}
+{
+  platform.linAlg().InitKernels({"set"});
+  o_xLast = platform.malloc<dfloat>(Ntotal);
+  platform.linAlg().set(Ntotal, 0.0, o_xLast);
+}
 
-void Default::FormInitialGuess(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs)
-{}
+void Last::FormInitialGuess(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs)
+{
+  o_x.copyFrom(o_xLast, Ntotal, 0, properties_t("async", true));
+}
 
-void Default::Update(operator_t &linearOperator, deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs)
-{}
+void Last::Update(operator_t &linearOperator, deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs)
+{
+  o_xLast.copyFrom(o_x, Ntotal, 0, properties_t("async", true));
+}
 
 /*****************************************************************************/
 
@@ -94,7 +102,7 @@ Projection::Projection(dlong _N, platform_t& _platform, settings_t& _settings, c
   o_Xtilde = platform.malloc<dfloat>(Ntotal*maxDim);
 
   // Build kernels.
-  platform.linAlg().InitKernels({"axpy"});
+  platform.linAlg().InitKernels({"set", "axpy"});
 
   properties_t kernelInfo = platform.props();
   kernelInfo["defines/" "p_igNhist"] = maxDim;
@@ -112,6 +120,8 @@ void Projection::FormInitialGuess(deviceMemory<dfloat>& o_x,
     pinnedMemory<dfloat> h_alphas = platform.hostReserve<dfloat>(maxDim);
     igBasisInnerProducts(o_rhs, o_Btilde, o_alphas, h_alphas);
     igReconstruct(0.0, o_x, 1.0, o_alphas, o_Xtilde, o_x);
+  } else {
+    platform.linAlg().set(Ntotal, 0.0, o_x);
   }
 }
 
@@ -337,6 +347,8 @@ void RollingQRProjection::givensRotation(dfloat a, dfloat b, dfloat& c, dfloat& 
 Extrap::Extrap(dlong _N, platform_t& _platform, settings_t& _settings, comm_t _comm):
   initialGuessStrategy_t(_N, _platform, _settings, _comm)
 {
+  platform.linAlg().InitKernels({"set"});
+
   settings.getSetting("INITIAL GUESS HISTORY SPACE DIMENSION", Nhistory);
   settings.getSetting("INITIAL GUESS EXTRAP DEGREE", ExtrapDegree);
 
@@ -362,7 +374,10 @@ Extrap::Extrap(dlong _N, platform_t& _platform, settings_t& _settings, comm_t _c
 
 void Extrap::FormInitialGuess(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs)
 {
-  if (entry == 0) return;
+  if (entry == 0) {
+    platform.linAlg().set(Ntotal, 0.0, o_x);
+    return;
+  }
 
   if (entry <= Nhistory) {
     int M = entry;

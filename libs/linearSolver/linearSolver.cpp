@@ -44,8 +44,8 @@ int linearSolver_t::Solve(operator_t& linearOperator,
 }
 
 void linearSolver_t::MakeDefaultInitialGuessStrategy() {
-  ig = std::make_shared<InitialGuess::Default>(ls->N, ls->platform,
-                                               ls->settings, ls->comm);
+  ig = std::make_shared<InitialGuess::Last>(ls->N, ls->platform,
+                                            ls->settings, ls->comm);
 }
 
 bool linearSolver_t::isInitialized() {

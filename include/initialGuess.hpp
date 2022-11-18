@@ -55,10 +55,13 @@ class initialGuessStrategy_t {
   virtual void Update(operator_t& linearOperator, deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs) = 0;
 };
 
-// Default initial guess strategy:  use whatever the user gave us.
-class Default : public initialGuessStrategy_t {
+// Default initial guess strategy:  use whatever the last solution was (starting at the zero vector)
+class Last : public initialGuessStrategy_t {
+private:
+  deviceMemory<dfloat> o_xLast;
+
 public:
-  Default(dlong _N, platform_t& _platform, settings_t& _settings, comm_t _comm);
+  Last(dlong _N, platform_t& _platform, settings_t& _settings, comm_t _comm);
 
   void FormInitialGuess(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs);
   void Update(operator_t &linearOperator, deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs);

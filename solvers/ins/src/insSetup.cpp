@@ -179,12 +179,12 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
         wLinearSolver.Setup<LinearSolver::pminres>(wNlocal, wNhalo, platform, vSettings, comm);
     }
 
-    if (vSettings.compareSetting("INITIAL GUESS STRATEGY", "NONE")) {
+    if (vSettings.compareSetting("INITIAL GUESS STRATEGY", "LAST")) {
 
-      uLinearSolver.SetupInitialGuess<InitialGuess::Default>(uNlocal, platform, vSettings, comm);
-      vLinearSolver.SetupInitialGuess<InitialGuess::Default>(vNlocal, platform, vSettings, comm);
+      uLinearSolver.SetupInitialGuess<InitialGuess::Last>(uNlocal, platform, vSettings, comm);
+      vLinearSolver.SetupInitialGuess<InitialGuess::Last>(vNlocal, platform, vSettings, comm);
       if (mesh.dim==3)
-        wLinearSolver.SetupInitialGuess<InitialGuess::Default>(wNlocal, platform, vSettings, comm);
+        wLinearSolver.SetupInitialGuess<InitialGuess::Last>(wNlocal, platform, vSettings, comm);
 
     } else if (vSettings.compareSetting("INITIAL GUESS STRATEGY", "ZERO")) {
 
@@ -270,8 +270,8 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
       pLinearSolver.Setup<LinearSolver::pminres>(pNlocal, pNhalo, platform, pSettings, comm);
     }
 
-    if (pSettings.compareSetting("INITIAL GUESS STRATEGY", "NONE")) {
-      pLinearSolver.SetupInitialGuess<InitialGuess::Default>(pNlocal, platform, pSettings, comm);
+    if (pSettings.compareSetting("INITIAL GUESS STRATEGY", "LAST")) {
+      pLinearSolver.SetupInitialGuess<InitialGuess::Last>(pNlocal, platform, pSettings, comm);
     } else if (pSettings.compareSetting("INITIAL GUESS STRATEGY", "ZERO")) {
       pLinearSolver.SetupInitialGuess<InitialGuess::Zero>(pNlocal, platform, pSettings, comm);
     } else if (pSettings.compareSetting("INITIAL GUESS STRATEGY", "CLASSIC")) {
