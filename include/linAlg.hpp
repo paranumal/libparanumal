@@ -178,10 +178,6 @@ class linAlg_t {
 
   static constexpr int blocksize = 256;
 
-  //scratch space for reductions
-  deviceMemory<dfloat> o_scratch;
-  pinnedMemory<dfloat> h_scratch;
-
   kernel_t setKernel;
   kernel_t addKernel;
   kernel_t scaleKernel;
@@ -193,20 +189,13 @@ class linAlg_t {
   kernel_t adxKernel;
   kernel_t adxpyKernel;
   kernel_t zadxpyKernel;
-  kernel_t minKernel1;
-  kernel_t minKernel2;
-  kernel_t maxKernel1;
-  kernel_t maxKernel2;
-  kernel_t sumKernel1;
-  kernel_t sumKernel2;
-  kernel_t norm2Kernel1;
-  kernel_t norm2Kernel2;
-  kernel_t weightedNorm2Kernel1;
-  kernel_t weightedNorm2Kernel2;
-  kernel_t innerProdKernel1;
-  kernel_t innerProdKernel2;
-  kernel_t weightedInnerProdKernel1;
-  kernel_t weightedInnerProdKernel2;
+  kernel_t minKernel;
+  kernel_t maxKernel;
+  kernel_t sumKernel;
+  kernel_t norm2Kernel;
+  kernel_t weightedNorm2Kernel;
+  kernel_t innerProdKernel;
+  kernel_t weightedInnerProdKernel;
 };
 
 } //namespace libp

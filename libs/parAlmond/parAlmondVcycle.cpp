@@ -31,32 +31,37 @@ namespace libp {
 
 namespace parAlmond {
 
-void multigrid_t::vcycle(const int k, deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_X){
+void multigrid_t::vcycle(const int k, deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x){
 
   //check for base level
   if(k==baseLevel) {
-    coarseSolver->solve(o_RHS, o_X);
+    coarseSolver->solve(o_rhs, o_x);
     return;
   }
 
   multigridLevel& level = *levels[k];
-  deviceMemory<dfloat>& o_RHSC = o_rhs[k+1];
-  deviceMemory<dfloat>& o_XC   = o_x[k+1];
-  deviceMemory<dfloat>& o_RES  = o_scratch;
+  multigridLevel& levelC = *levels[k+1];
 
   //apply smoother to x and then compute res = rhs-Ax
-  level.smooth(o_RHS, o_X, true);
-  level.residual(o_RHS, o_X, o_RES);
+  level.smooth(o_rhs, o_x, true);
+
+  deviceMemory<dfloat> o_rhsC = platform.reserve<dfloat>(levelC.Ncols);
+  deviceMemory<dfloat> o_xC   = platform.reserve<dfloat>(levelC.Ncols);
+  deviceMemory<dfloat> o_res  = platform.reserve<dfloat>(level.Ncols);
+
+  level.residual(o_rhs, o_x, o_res);
 
   // rhsC = P^T res
-  level.coarsen(o_RES, o_RHSC);
+  level.coarsen(o_res, o_rhsC);
+  o_res.free();
 
-  vcycle(k+1, o_RHSC, o_XC);
+  vcycle(k+1, o_rhsC, o_xC);
 
   // x = x + P xC
-  level.prolongate(o_XC, o_X);
+  level.prolongate(o_xC, o_x);
+  o_xC.free(); o_rhsC.free();
 
-  level.smooth(o_RHS, o_X, false);
+  level.smooth(o_rhs, o_x, false);
 }
 
 } //namespace parAlmond

@@ -31,6 +31,8 @@ SOFTWARE.
 void ins_t::PressureIncrementSolve(deviceMemory<dfloat>& o_P, deviceMemory<dfloat>& o_RHS,
                                    const dfloat gamma, const dfloat T, const dfloat dt){
 
+  dlong Ntotal = (mesh.Nelements+mesh.totalHaloPairs)*mesh.Np;
+
   // compute RHS = MM*RHS/gamma + BCdata
   pressureIncrementRhsKernel(mesh.Nelements,
                     mesh.o_wJ,
@@ -58,12 +60,17 @@ void ins_t::PressureIncrementSolve(deviceMemory<dfloat>& o_P, deviceMemory<dfloa
   int maxIter = 5000;
   int verbose = 0;
 
+  deviceMemory<dfloat> o_PI = platform.reserve<dfloat>(Ntotal);
+
   //  Solve - Laplacian*PI = RHS
   if(pDisc_c0) {
     // gather, solve, scatter
+    deviceMemory<dfloat> o_GrhsP = platform.reserve<dfloat>(pSolver.Ndofs+pSolver.Nhalo);
+    deviceMemory<dfloat> o_GPI   = platform.reserve<dfloat>(pSolver.Ndofs+pSolver.Nhalo);
     pSolver.ogsMasked.Gather(o_GrhsP, o_RHS, 1, ogs::Add, ogs::Trans);
     NiterP = pSolver.Solve(pLinearSolver, o_GPI, o_GrhsP, presTOL, maxIter, verbose);
     pSolver.ogsMasked.Scatter(o_PI, o_GPI, 1, ogs::NoTrans);
+    o_GPI.free(); o_GrhsP.free();
   } else {
     NiterP = pSolver.Solve(pLinearSolver, o_PI, o_RHS, presTOL, maxIter, verbose);
   }

@@ -65,14 +65,9 @@ public:
 
   int disc_ipdg, disc_c0;
 
-  deviceMemory<dfloat> o_AqL;
-
   ogs::halo_t traceHalo;
 
   precon_t precon;
-
-  memory<dfloat> grad;
-  deviceMemory<dfloat> o_grad;
 
   memory<dfloat> weight, weightG;
   deviceMemory<dfloat> o_weight, o_weightG;

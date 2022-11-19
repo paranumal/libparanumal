@@ -60,6 +60,8 @@ public:
   virtual void setup(parCSR& A, bool nullSpace,
                      memory<dfloat> nullVector, dfloat nullSpacePenalty)=0;
 
+  virtual size_t scratchSize() { return 0; }
+
   virtual void syncToDevice()=0;
 
   virtual void Report(int lev)=0;
@@ -85,9 +87,6 @@ public:
   memory<dfloat> diagInvAT, offdInvAT;
   deviceMemory<dfloat> o_diagInvAT, o_offdInvAT;
 
-  memory<dfloat> diagRhs, offdRhs;
-  deviceMemory<dfloat> o_offdRhs;
-
   exactSolver_t(platform_t& _platform, settings_t& _settings,
                 comm_t _comm):
     coarseSolver_t(_platform, _settings, _comm) {}
@@ -96,6 +95,8 @@ public:
 
   void setup(parCSR& A, bool nullSpace,
              memory<dfloat> nullVector, dfloat nullSpacePenalty);
+
+  size_t scratchSize();
 
   void syncToDevice();
 

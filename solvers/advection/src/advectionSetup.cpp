@@ -63,10 +63,8 @@ void advection_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
   // compute samples of q at interpolation nodes
   q.malloc(Nlocal+Nhalo);
-  o_q = platform.malloc<dfloat>(q);
+  o_q = platform.malloc<dfloat>(Nlocal+Nhalo);
 
-  //storage for M*q during reporting
-  o_Mq = platform.malloc<dfloat>(q);
   mesh.MassMatrixKernelSetup(1); // mass matrix operator
 
   // OCCA build stuff

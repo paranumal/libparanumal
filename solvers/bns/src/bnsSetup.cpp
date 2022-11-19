@@ -164,17 +164,12 @@ void bns_t::Setup(platform_t& _platform, mesh_t& _mesh,
   traceHalo = mesh.HaloTraceSetup(Nfields);
 
   // compute samples of q at interpolation nodes
-  q.malloc(Nlocal+Nhalo, 0.0);
-  o_q = platform.malloc<dfloat>(q);
+  q.malloc(Nlocal+Nhalo);
+  o_q = platform.malloc<dfloat>(Nlocal+Nhalo);
 
-  pmlq.malloc(mesh.NpmlElements*mesh.Np*Npmlfields, 0.0);
-  o_pmlq = platform.malloc<dfloat>(pmlq);
+  pmlq.malloc(mesh.NpmlElements*mesh.Np*Npmlfields);
+  o_pmlq = platform.malloc<dfloat>(mesh.NpmlElements*mesh.Np*Npmlfields);
 
-  Vort.malloc(mesh.dim*mesh.Nelements*mesh.Np, 0.0);
-  o_Vort = platform.malloc<dfloat>(Vort);
-
-  //storage for M*q during reporting
-  o_Mq = platform.malloc<dfloat>(q);
   mesh.MassMatrixKernelSetup(Nfields); // mass matrix operator
 
   // OCCA build stuff

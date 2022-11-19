@@ -51,15 +51,6 @@ mrab3::mrab3(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
 
   //Nstages = 3;
 
-  o_rhsq0 = platform.malloc<dfloat>(N);
-  o_rhsq = platform.malloc<dfloat>((Nstages-1)*N);
-
-  o_rhspmlq0 = platform.malloc<dfloat>(Npml);
-  o_rhspmlq = platform.malloc<dfloat>((Nstages-1)*Npml);
-
-  o_fQM = platform.malloc<dfloat>((mesh.Nelements+mesh.totalHaloPairs)*mesh.Nfp
-                                  *mesh.Nfaces*Nfields);
-
   properties_t kernelInfo = platform.props(); //copy base occa properties from solver
 
   const int blocksize=256;
@@ -119,6 +110,21 @@ void mrab3::Run(solver_t& solver,
                 std::optional<deviceMemory<dfloat>> o_pmlq,
                 dfloat start, dfloat end) {
 
+  dlong Ntraces = (mesh.Nelements+mesh.totalHaloPairs)*mesh.Nfp
+                  *mesh.Nfaces*Nfields;
+
+  /*Pre-reserve memory pool space to avoid some unnecessary re-sizing*/
+  platform.reserve<dfloat>(Nstages * N + Nstages * Npml
+                           + 5 * platform.memPoolAlignment<dfloat>());
+
+  deviceMemory<dfloat> o_rhsq0 = platform.reserve<dfloat>(N);
+  deviceMemory<dfloat> o_rhsq = platform.reserve<dfloat>((Nstages-1)*N);
+
+  deviceMemory<dfloat> o_rhspmlq0 = platform.reserve<dfloat>(Npml);
+  deviceMemory<dfloat> o_rhspmlq = platform.reserve<dfloat>((Nstages-1)*Npml);
+
+  deviceMemory<dfloat> o_fQM = platform.reserve<dfloat>(Ntraces);
+
   dfloat time = start;
 
   //set timesteps and shifting index
@@ -155,7 +161,10 @@ void mrab3::Run(solver_t& solver,
   int tstep=0;
   int order=0;
   while (time < end) {
-    Step(solver, o_q, o_pmlq, time, dt, order);
+    Step(solver,
+         o_q, o_pmlq, o_rhsq0, o_rhsq,
+         o_rhspmlq0, o_rhspmlq, o_fQM,
+         time, dt, order);
     time += DT;
     tstep++;
     if (order<Nstages-1) order++;
@@ -171,6 +180,11 @@ void mrab3::Run(solver_t& solver,
 void mrab3::Step(solver_t& solver,
                  deviceMemory<dfloat> o_q,
                  std::optional<deviceMemory<dfloat>> o_pmlq,
+                 deviceMemory<dfloat> o_rhsq0,
+                 deviceMemory<dfloat> o_rhsq,
+                 deviceMemory<dfloat> o_rhspmlq0,
+                 deviceMemory<dfloat> o_rhspmlq,
+                 deviceMemory<dfloat> o_fQM,
                  dfloat time, dfloat _dt, int order) {
 
   deviceMemory<dfloat> o_A = o_ab_a+order*Nstages;

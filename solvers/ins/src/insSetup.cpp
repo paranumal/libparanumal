@@ -179,12 +179,12 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
         wLinearSolver.Setup<LinearSolver::pminres>(wNlocal, wNhalo, platform, vSettings, comm);
     }
 
-    if (vSettings.compareSetting("INITIAL GUESS STRATEGY", "NONE")) {
+    if (vSettings.compareSetting("INITIAL GUESS STRATEGY", "LAST")) {
 
-      uLinearSolver.SetupInitialGuess<InitialGuess::Default>(uNlocal, platform, vSettings, comm);
-      vLinearSolver.SetupInitialGuess<InitialGuess::Default>(vNlocal, platform, vSettings, comm);
+      uLinearSolver.SetupInitialGuess<InitialGuess::Last>(uNlocal, platform, vSettings, comm);
+      vLinearSolver.SetupInitialGuess<InitialGuess::Last>(vNlocal, platform, vSettings, comm);
       if (mesh.dim==3)
-        wLinearSolver.SetupInitialGuess<InitialGuess::Default>(wNlocal, platform, vSettings, comm);
+        wLinearSolver.SetupInitialGuess<InitialGuess::Last>(wNlocal, platform, vSettings, comm);
 
     } else if (vSettings.compareSetting("INITIAL GUESS STRATEGY", "ZERO")) {
 
@@ -270,8 +270,8 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
       pLinearSolver.Setup<LinearSolver::pminres>(pNlocal, pNhalo, platform, pSettings, comm);
     }
 
-    if (pSettings.compareSetting("INITIAL GUESS STRATEGY", "NONE")) {
-      pLinearSolver.SetupInitialGuess<InitialGuess::Default>(pNlocal, platform, pSettings, comm);
+    if (pSettings.compareSetting("INITIAL GUESS STRATEGY", "LAST")) {
+      pLinearSolver.SetupInitialGuess<InitialGuess::Last>(pNlocal, platform, pSettings, comm);
     } else if (pSettings.compareSetting("INITIAL GUESS STRATEGY", "ZERO")) {
       pLinearSolver.SetupInitialGuess<InitialGuess::Zero>(pNlocal, platform, pSettings, comm);
     } else if (pSettings.compareSetting("INITIAL GUESS STRATEGY", "CLASSIC")) {
@@ -300,65 +300,13 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
   vTraceHalo = mesh.HaloTraceSetup(NVfields); //one field
 
   // u and p at interpolation nodes
-  u.malloc((Nlocal+Nhalo)*NVfields, 0.0);
-  o_u = platform.malloc<dfloat>(u);
+  u.malloc((Nlocal+Nhalo)*NVfields);
+  o_u = platform.malloc<dfloat>((Nlocal+Nhalo)*NVfields);
 
-  p.malloc(Nlocal+Nhalo, 0.0);
-  o_p = platform.malloc<dfloat>(p);
+  p.malloc(Nlocal+Nhalo);
+  o_p = platform.malloc<dfloat>(Nlocal+Nhalo);
 
-  //storage for velocity gradient
-  if ( !settings.compareSetting("TIME INTEGRATOR","EXTBDF3")
-    && !settings.compareSetting("TIME INTEGRATOR","SSBDF3"))
-    o_GU = platform.malloc<dfloat>((Nlocal+Nhalo)*4);
-
-  //extra buffers for solvers
-  if (settings.compareSetting("TIME INTEGRATOR","EXTBDF3")
-    ||settings.compareSetting("TIME INTEGRATOR","SSBDF3")) {
-    o_UH = platform.malloc<dfloat>(Nlocal+Nhalo, u);
-    o_VH = platform.malloc<dfloat>(Nlocal+Nhalo, u);
-    if (mesh.dim==3)
-      o_WH = platform.malloc<dfloat>(Nlocal+Nhalo, u);
-
-    o_rhsU = platform.malloc<dfloat>(Nlocal+Nhalo, u);
-    o_rhsV = platform.malloc<dfloat>(Nlocal+Nhalo, u);
-    if (mesh.dim==3)
-      o_rhsW = platform.malloc<dfloat>(Nlocal+Nhalo, u);
-
-    if (vDisc_c0) {
-      o_GUH = platform.malloc<dfloat>(uNlocal+uNhalo, u);
-      o_GVH = platform.malloc<dfloat>(vNlocal+vNhalo, u);
-      if (mesh.dim==3)
-        o_GWH = platform.malloc<dfloat>(wNlocal+wNhalo, u);
-
-      o_GrhsU = platform.malloc<dfloat>(uNlocal+uNhalo, u);
-      o_GrhsV = platform.malloc<dfloat>(vNlocal+vNhalo, u);
-      if (mesh.dim==3)
-        o_GrhsW = platform.malloc<dfloat>(wNlocal+wNhalo, u);
-    }
-  }
-
-  if (pressureIncrement) {
-    o_PI  = platform.malloc<dfloat>(p);
-    o_GPI = platform.malloc<dfloat>(p);
-  }
-
-  o_rhsP = platform.malloc<dfloat>(p);
-  if (pDisc_c0) {
-    o_GP    = platform.malloc<dfloat>(p);
-    o_GrhsP = platform.malloc<dfloat>(p);
-  }
-
-  //storage for M*u during reporting
-  o_MU = platform.malloc<dfloat>(u);
   mesh.MassMatrixKernelSetup(NVfields); // mass matrix operator
-
-  if (mesh.dim==2) {
-    Vort.malloc(Nlocal+Nhalo, 0.0);
-    o_Vort = platform.malloc<dfloat>(Vort);
-  } else {
-    Vort.malloc((Nlocal+Nhalo)*NVfields, 0.0);
-    o_Vort = platform.malloc<dfloat>(Vort);
-  }
 
   // OCCA build stuff
   properties_t kernelInfo = mesh.props; //copy base occa properties
@@ -464,8 +412,6 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
     kernelName = "insSubcycleAdvectionKernel";
     subcycler.subCycleAdvectionKernel = platform.buildKernel(fileName, kernelName,
                                              kernelInfo);
-
-    subcycler.o_Ue = platform.malloc<dfloat>(u);
 
   } else {
     //regular advection kernels

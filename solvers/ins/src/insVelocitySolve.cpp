@@ -30,6 +30,21 @@ SOFTWARE.
 void ins_t::VelocitySolve(deviceMemory<dfloat>& o_U, deviceMemory<dfloat>& o_RHS,
                           const dfloat gamma, const dfloat T) {
 
+  dlong Ntotal = (mesh.Nelements+mesh.totalHaloPairs)*mesh.Np;
+
+  deviceMemory<dfloat> o_UH = platform.reserve<dfloat>(Ntotal);
+  deviceMemory<dfloat> o_VH = platform.reserve<dfloat>(Ntotal);
+  deviceMemory<dfloat> o_rhsU = platform.reserve<dfloat>(Ntotal);
+  deviceMemory<dfloat> o_rhsV = platform.reserve<dfloat>(Ntotal);
+
+  deviceMemory<dfloat> o_WH;
+  deviceMemory<dfloat> o_rhsW;
+  if (mesh.dim==3) {
+    o_WH   = platform.reserve<dfloat>(Ntotal);
+    o_rhsW = platform.reserve<dfloat>(Ntotal);
+  }
+
+
   // compute RHS = MM*RHS/nu + BCdata
   // and split fields to separate arrays
   velocityRhsKernel(mesh.Nelements,
@@ -71,18 +86,27 @@ void ins_t::VelocitySolve(deviceMemory<dfloat>& o_U, deviceMemory<dfloat>& o_RHS
   //  Solve lambda*U - Laplacian*U = rhs
   if (vDisc_c0){
     // gather, solve, scatter
+    deviceMemory<dfloat> o_GrhsU = platform.reserve<dfloat>(uSolver.Ndofs+uSolver.Nhalo);
+    deviceMemory<dfloat> o_GUH   = platform.reserve<dfloat>(uSolver.Ndofs+uSolver.Nhalo);
     uSolver.ogsMasked.Gather(o_GrhsU, o_rhsU, 1, ogs::Add, ogs::Trans);
     NiterU = uSolver.Solve(uLinearSolver, o_GUH, o_GrhsU, velTOL, maxIter, verbose);
     uSolver.ogsMasked.Scatter(o_UH, o_GUH, 1, ogs::NoTrans);
+    o_GUH.free(); o_GrhsU.free();
 
+    deviceMemory<dfloat> o_GrhsV = platform.reserve<dfloat>(vSolver.Ndofs+vSolver.Nhalo);
+    deviceMemory<dfloat> o_GVH   = platform.reserve<dfloat>(vSolver.Ndofs+vSolver.Nhalo);
     vSolver.ogsMasked.Gather(o_GrhsV, o_rhsV, 1, ogs::Add, ogs::Trans);
     NiterV = vSolver.Solve(vLinearSolver, o_GVH, o_GrhsV, velTOL, maxIter, verbose);
     vSolver.ogsMasked.Scatter(o_VH, o_GVH, 1, ogs::NoTrans);
+    o_GVH.free(); o_GrhsV.free();
 
     if (mesh.dim==3) {
+      deviceMemory<dfloat> o_GrhsW = platform.reserve<dfloat>(wSolver.Ndofs+wSolver.Nhalo);
+      deviceMemory<dfloat> o_GWH   = platform.reserve<dfloat>(wSolver.Ndofs+wSolver.Nhalo);
       wSolver.ogsMasked.Gather(o_GrhsW, o_rhsW, 1, ogs::Add, ogs::Trans);
       NiterW = wSolver.Solve(wLinearSolver, o_GWH, o_GrhsW, velTOL, maxIter, verbose);
       wSolver.ogsMasked.Scatter(o_WH, o_GWH, 1, ogs::NoTrans);
+      o_GWH.free(); o_GrhsW.free();
     }
 
   } else {

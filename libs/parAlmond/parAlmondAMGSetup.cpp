@@ -73,7 +73,6 @@ void parAlmond_t::AMGSetup(parCOO& cooA,
   //if the system if already small, dont create MG levels
   bool done = false;
   if(globalSize <= gCoarseSize){
-    mg.AllocateLevelWorkSpace(mg.numLevels-1);
     coarse.setup(A, nullSpace, null, nullSpacePenalty);
     coarse.syncToDevice();
     mg.baseLevel = mg.numLevels-1;
@@ -107,7 +106,6 @@ void parAlmond_t::AMGSetup(parCOO& cooA,
                               mg.strtype, theta,
                               mg.aggtype);
 
-    mg.AllocateLevelWorkSpace(mg.numLevels-2);
     L.syncToDevice();
 
     parCSR& Acoarse = Lcoarse.A;
@@ -130,7 +128,6 @@ void parAlmond_t::AMGSetup(parCOO& cooA,
       LIBP_WARNING("AMG coarsening stalling, attemping coarse solver setup with dimension N=" << globalCoarseSize,
                    globalSize < 2*globalCoarseSize && rank==0);
 
-      mg.AllocateLevelWorkSpace(mg.numLevels-1);
       Lcoarse.syncToDevice();
       coarse.setup(Acoarse, nullSpace, null, nullSpacePenalty);
       coarse.syncToDevice();
@@ -139,6 +136,8 @@ void parAlmond_t::AMGSetup(parCOO& cooA,
     }
     globalSize = globalCoarseSize;
   }
+
+  mg.EstimateScratchSpace();
 
   if(Comm::World().rank()==0) printf("done.\n");
 }

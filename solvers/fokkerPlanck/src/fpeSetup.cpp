@@ -141,15 +141,10 @@ void fpe_t::Setup(platform_t& _platform, mesh_t& _mesh,
   traceHalo = mesh.HaloTraceSetup(1); //one field
 
   // compute samples of q at interpolation nodes
-  q.malloc(Nlocal+Nhalo, 0.0);
-  o_q = platform.malloc<dfloat>(q);
+  q.malloc(Nlocal+Nhalo);
+  o_q = platform.malloc<dfloat>(Nlocal+Nhalo);
 
-  //storage for M*q during reporting
-  o_Mq = platform.malloc<dfloat>(q);
   mesh.MassMatrixKernelSetup(1); // mass matrix operator
-
-  grad.malloc((Nlocal+Nhalo)*4, 0.0);
-  o_grad  = platform.malloc<dfloat>(grad);
 
   // OCCA build stuff
   properties_t kernelInfo = mesh.props; //copy base occa properties

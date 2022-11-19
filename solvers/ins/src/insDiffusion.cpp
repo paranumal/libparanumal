@@ -31,6 +31,9 @@ void ins_t::Diffusion(const dfloat alpha, deviceMemory<dfloat>& o_U,
                       const dfloat beta,  deviceMemory<dfloat>& o_RHS,
                       const dfloat T) {
 
+  dlong Ntotal = (mesh.Nelements+mesh.totalHaloPairs)*mesh.Np;
+  deviceMemory<dfloat> o_GU = platform.reserve<dfloat>(4*Ntotal);
+
   //IPDG
   velocityGradientKernel(mesh.Nelements,
                         mesh.o_vgeo,

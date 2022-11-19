@@ -24,10 +24,10 @@ SOFTWARE.
 
 */
 
-@kernel void sum1(const dlong Nblocks,
-                  const dlong N,
-                  @restrict const  dfloat *x,
-                  @restrict        dfloat *sum){
+@kernel void sum(const dlong Nblocks,
+                 const dlong N,
+                 @restrict const  dfloat *x,
+                 @restrict        dfloat *sum){
 
 
   for(dlong b=0;b<Nblocks;++b;@outer(0)){
@@ -60,9 +60,7 @@ SOFTWARE.
     for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  2) s_sum[t] += s_sum[t+  2];
     for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  1) sum[b] = s_sum[0] + s_sum[1];
   }
-}
 
-@kernel void sum2(const dlong Nblocks, @restrict  dfloat *sum){
 
   for(dlong b=0;b<1;++b;@outer(0)){
 

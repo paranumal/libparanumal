@@ -33,7 +33,13 @@ SOFTWARE.
 void OASPrecon::Operator(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_Mr) {
 
   if (mesh.N>1) {
+    deviceMemory<dfloat> o_rPatch = elliptic.platform.reserve<dfloat>(ellipticPatch.Ndofs);
+
+    linAlg_t& linAlg = elliptic.platform.linAlg();
+
     if (elliptic.disc_c0) {
+      dlong Ntotal = mesh.Np*(mesh.Nelements+mesh.totalRingElements);
+      deviceMemory<dfloat> o_rPatchL = elliptic.platform.reserve<dfloat>(Ntotal);
       //Scatter to localDof ordering, exchange ring halo,
       // then compress the ring mesh to globalDofs order.
       // TODO: Technically, these steps couple be fused
@@ -44,30 +50,35 @@ void OASPrecon::Operator(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_Mr) 
       mesh.ringHalo.Exchange(o_rPatchL, mesh.Np);
       ellipticPatch.ogsMasked.Gather(o_rPatch, o_rPatchL, 1, ogs::Add, ogs::NoTrans);
     } else {
-      o_rPatch.copyFrom(o_r, elliptic.Ndofs);
+      o_rPatch.copyFrom(o_r, elliptic.Ndofs, 0, properties_t("async", true));
       mesh.ringHalo.Exchange(o_rPatch, mesh.Np);
     }
 
     //Apply local patch precon
-    preconPatch.Operator(o_rPatch, o_zPatch);
-
-    //Coarsen problem to N=1 and pass to parAlmond
     // TODO: This is blocking due to H<->D transfers.
     //       Should modify precons so size=1 is non-blocking
+    deviceMemory<dfloat> o_zPatch = elliptic.platform.reserve<dfloat>(ellipticPatch.Ndofs);
+    preconPatch.Operator(o_rPatch, o_zPatch);
+
+    dlong NcolsC = parAlmond.getNumCols(0);
+    deviceMemory<dfloat> o_rC = elliptic.platform.reserve<dfloat>(NcolsC);
+    deviceMemory<dfloat> o_zC = elliptic.platform.reserve<dfloat>(NcolsC);
+
+    //Coarsen problem to N=1 and pass to parAlmond
     level.coarsen(o_r, o_rC);
 
     parAlmond.Operator(o_rC, o_zC);
 
-    linAlg_t& linAlg = elliptic.platform.linAlg();
-
     //Add contributions from all patches together
     if (elliptic.disc_c0) {
-      dlong Ntotal=mesh.Nelements*mesh.Np;
+      dlong Ntotal = mesh.Np*(mesh.Nelements+mesh.totalRingElements);
+      deviceMemory<dfloat> o_zPatchL = elliptic.platform.reserve<dfloat>(Ntotal);
 
       ellipticPatch.ogsMasked.Scatter(o_zPatchL, o_zPatch, 1, ogs::NoTrans);
       ogsMaskedRing.GatherScatter(o_zPatchL, 1, ogs::Add, ogs::Sym);
 
       // Weight by overlap degree, zPatch = patchWeight*zPatch
+      Ntotal=mesh.Nelements*mesh.Np;
       linAlg.amx(Ntotal, 1.0, o_patchWeight, o_zPatchL);
 
       elliptic.ogsMasked.Gather(o_Mr, o_zPatchL, 1, ogs::Add, ogs::NoTrans);
@@ -102,19 +113,6 @@ OASPrecon::OASPrecon(elliptic_t& _elliptic):
     meshPatch = mesh.SetupRingPatch();
     ellipticPatch = elliptic.SetupRingPatch(meshPatch);
     preconPatch.Setup<MultiGridPrecon>(ellipticPatch);
-
-    if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
-      rPatchL.malloc(mesh.Np*(mesh.Nelements+mesh.totalRingElements),0.0);
-      zPatchL.malloc(mesh.Np*(mesh.Nelements+mesh.totalRingElements),0.0);
-
-      o_rPatchL = elliptic.platform.malloc<dfloat>(rPatchL);
-      o_zPatchL = elliptic.platform.malloc<dfloat>(zPatchL);
-    }
-
-    rPatch.malloc(ellipticPatch.Ndofs,0.0);
-    zPatch.malloc(ellipticPatch.Ndofs,0.0);
-    o_rPatch = elliptic.platform.malloc<dfloat>(rPatch);
-    o_zPatch = elliptic.platform.malloc<dfloat>(zPatch);
 
     //compute patch overlap weighting
     patchWeight.malloc(meshPatch.Nelements*meshPatch.Np);
@@ -209,13 +207,6 @@ OASPrecon::OASPrecon(elliptic_t& _elliptic):
     level = MGLevel(elliptic, Nrows, Ncols, Nc, NpCoarse);
     level.meshC = meshC;
     level.ellipticC = ellipticC;
-
-    //coarse buffers
-    Ncols = parAlmond.getNumCols(0);
-    rC.malloc(Ncols,0.0);
-    zC.malloc(Ncols,0.0);
-    o_rC = elliptic.platform.malloc<dfloat>(rC);
-    o_zC = elliptic.platform.malloc<dfloat>(zC);
   }
 
   //report

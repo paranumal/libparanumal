@@ -36,11 +36,15 @@ void exactSolver_t::solve(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x
 
   stream_t currentStream = platform.getStream();
 
+  pinnedMemory<dfloat> h_diagRhs = platform.hostReserve<dfloat>(N);
+  pinnedMemory<dfloat> h_offdRhs = platform.hostReserve<dfloat>(offdTotal);
+  deviceMemory<dfloat> o_offdRhs = platform.reserve<dfloat>(offdTotal);
+
   //queue transfering coarse vector to host for Allgather
   if(N) {
     platform.finish();
     platform.setStream(ogs::ogsBase_t::dataStream);
-    o_rhs.copyTo(diagRhs, N, 0, properties_t("async", true));
+    h_diagRhs.copyFrom(o_rhs, N, 0, properties_t("async", true));
     platform.setStream(currentStream);
   }
 
@@ -57,11 +61,11 @@ void exactSolver_t::solve(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x
 
 
     //gather the offd rhs entries
-    comm.Alltoallv(diagRhs,   sendCounts,   sendOffsets,
-                   offdRhs, coarseCounts, coarseOffsets);
+    comm.Alltoallv(h_diagRhs,   sendCounts,   sendOffsets,
+                   h_offdRhs, coarseCounts, coarseOffsets);
 
     //queue transfering coarse vector to device
-    o_offdRhs.copyFrom(offdRhs, offdTotal, 0, properties_t("async", true));
+    h_offdRhs.copyTo(o_offdRhs, offdTotal, 0, properties_t("async", true));
     platform.finish(); //wait for transfer to complete
 
     platform.setStream(currentStream);
@@ -218,13 +222,10 @@ void exactSolver_t::setup(parCSR& _A, bool nullSpace,
   o_diagInvAT = platform.malloc<dfloat>(diagInvAT);
   o_offdInvAT = platform.malloc<dfloat>(offdInvAT);
 
-  diagRhs.malloc(N);
-  offdRhs.malloc(offdTotal);
-
-  o_offdRhs = platform.malloc<dfloat>(offdTotal);
-
   // if((rank==0)&&(settings.compareSetting("VERBOSE","TRUE"))) printf("done.\n");
 }
+
+size_t exactSolver_t::scratchSize() { return offdTotal; }
 
 void exactSolver_t::syncToDevice() {}
 

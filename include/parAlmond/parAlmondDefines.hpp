@@ -31,7 +31,7 @@ namespace libp {
 
 namespace parAlmond {
 
-constexpr int PARALMOND_NBLOCKS=128;
+constexpr int PARALMOND_NBLOCKS=256;
 constexpr int NUMKCYCLES=3;
 constexpr dfloat KCYCLETOL=0.2;
 

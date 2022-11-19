@@ -36,9 +36,9 @@ namespace InitialGuess {
 void AddSettings(settings_t& settings, const std::string prefix)
 {
   settings.newSetting(prefix + "INITIAL GUESS STRATEGY",
-                      "NONE",
+                      "LAST",
                       "Strategy for selecting initial guess for linear solver",
-                      {"NONE", "ZERO", "CLASSIC", "QR", "EXTRAP"});
+                      {"LAST", "ZERO", "CLASSIC", "QR", "EXTRAP"});
 
   settings.newSetting(prefix + "INITIAL GUESS HISTORY SPACE DIMENSION",
                       "-1",
@@ -56,15 +56,23 @@ void AddSettings(settings_t& settings, const std::string prefix)
 
 /*****************************************************************************/
 
-Default::Default(dlong _N, platform_t& _platform, settings_t& _settings, comm_t _comm):
+Last::Last(dlong _N, platform_t& _platform, settings_t& _settings, comm_t _comm):
   initialGuessStrategy_t(_N, _platform, _settings, _comm)
-{}
+{
+  platform.linAlg().InitKernels({"set"});
+  o_xLast = platform.malloc<dfloat>(Ntotal);
+  platform.linAlg().set(Ntotal, 0.0, o_xLast);
+}
 
-void Default::FormInitialGuess(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs)
-{}
+void Last::FormInitialGuess(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs)
+{
+  o_x.copyFrom(o_xLast, Ntotal, 0, properties_t("async", true));
+}
 
-void Default::Update(operator_t &linearOperator, deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs)
-{}
+void Last::Update(operator_t &linearOperator, deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs)
+{
+  o_xLast.copyFrom(o_x, Ntotal, 0, properties_t("async", true));
+}
 
 /*****************************************************************************/
 
@@ -90,59 +98,67 @@ Projection::Projection(dlong _N, platform_t& _platform, settings_t& _settings, c
   curDim = 0;
   settings.getSetting("INITIAL GUESS HISTORY SPACE DIMENSION", maxDim);
 
-  o_btilde = platform.malloc<dfloat>(Ntotal);
-  o_xtilde = platform.malloc<dfloat>(Ntotal);
   o_Btilde = platform.malloc<dfloat>(Ntotal*maxDim);
   o_Xtilde = platform.malloc<dfloat>(Ntotal*maxDim);
 
-  alphas = platform.hostMalloc<dfloat>(maxDim);
-  o_alphas = platform.malloc<dfloat>(maxDim);
-
-  ctmpNblocks = (Ntotal + IG_BLOCKSIZE - 1)/IG_BLOCKSIZE;
-  ctmp = platform.hostMalloc<dfloat>(ctmpNblocks*maxDim);
-  o_ctmp = platform.malloc<dfloat>(ctmpNblocks*maxDim);
-
   // Build kernels.
-  platform.linAlg().InitKernels({"set"});
+  platform.linAlg().InitKernels({"set", "axpy"});
 
   properties_t kernelInfo = platform.props();
   kernelInfo["defines/" "p_igNhist"] = maxDim;
 
   igBasisInnerProductsKernel = platform.buildKernel(LINEARSOLVER_DIR "/okl/igBasisInnerProducts.okl", "igBasisInnerProducts", kernelInfo);
   igReconstructKernel        = platform.buildKernel(LINEARSOLVER_DIR "/okl/igReconstruct.okl",        "igReconstruct",        kernelInfo);
-  igScaleKernel              = platform.buildKernel(LINEARSOLVER_DIR "/okl/igScale.okl",              "igScale",              kernelInfo);
   igUpdateKernel             = platform.buildKernel(LINEARSOLVER_DIR "/okl/igUpdate.okl",             "igUpdate",             kernelInfo);
 }
 
-void Projection::FormInitialGuess(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs)
+void Projection::FormInitialGuess(deviceMemory<dfloat>& o_x,
+                                  deviceMemory<dfloat>& o_rhs)
 {
   if (curDim > 0) {
-    igBasisInnerProducts(o_rhs, o_Btilde, o_alphas, alphas);
+    deviceMemory<dfloat> o_alphas = platform.reserve<dfloat>(maxDim);
+    pinnedMemory<dfloat> h_alphas = platform.hostReserve<dfloat>(maxDim);
+    igBasisInnerProducts(o_rhs, o_Btilde, o_alphas, h_alphas);
+    igReconstruct(0.0, o_x, 1.0, o_alphas, o_Xtilde, o_x);
+  } else {
     platform.linAlg().set(Ntotal, 0.0, o_x);
-    igReconstruct(o_x, 1.0, o_alphas, o_Xtilde, o_x);
   }
 }
 
-void Projection::igBasisInnerProducts(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_c, pinnedMemory<dfloat>& c)
+void Projection::igBasisInnerProducts(deviceMemory<dfloat>& o_x,
+                                      deviceMemory<dfloat>& o_Q,
+                                      deviceMemory<dfloat>& o_alphas,
+                                      pinnedMemory<dfloat>& h_alphas)
 {
-  igBasisInnerProductsKernel(Ntotal, ctmpNblocks, curDim, o_x, o_Q, o_ctmp);
+  int Nblocks = (Ntotal+IG_BLOCKSIZE-1)/IG_BLOCKSIZE;
+  Nblocks = std::min(Nblocks, IG_BLOCKSIZE); //limit to IG_BLOCKSIZE entries
 
-  ctmp.copyFrom(o_ctmp, ctmpNblocks*curDim);
+  //pinned tmp buffer for reductions
+  deviceMemory<dfloat> o_scratch = platform.reserve<dfloat>(maxDim*IG_BLOCKSIZE);
 
-  for (int m = 0; m < curDim; ++m) {
-    c[m] = 0;
-    for (int n = 0; n < ctmpNblocks; ++n) {
-      c[m] += ctmp[m*ctmpNblocks + n];
+  igBasisInnerProductsKernel(Ntotal, Nblocks, curDim, o_x, o_Q, o_scratch, o_alphas);
+
+  if (Nblocks>0) {
+    h_alphas.copyFrom(o_alphas, curDim, 0, properties_t("async", true));
+    platform.finish();
+  } else {
+    for (int m = 0; m < curDim; ++m) {
+      h_alphas[m] = 0.0;
     }
   }
 
-  comm.Allreduce(c, Comm::Sum, curDim);
-  c.copyTo(o_c, curDim);
+  comm.Allreduce(h_alphas, Comm::Sum, curDim);
+  h_alphas.copyTo(o_alphas, curDim, 0, properties_t("async", true));
 }
 
-void Projection::igReconstruct(deviceMemory<dfloat>& o_u, dfloat a, deviceMemory<dfloat>& o_c, deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_unew)
+void Projection::igReconstruct(const dfloat a,
+                               deviceMemory<dfloat>& o_u,
+                               const dfloat b,
+                               deviceMemory<dfloat>& o_alphas,
+                               deviceMemory<dfloat>& o_Q,
+                               deviceMemory<dfloat>& o_unew)
 {
-  igReconstructKernel(Ntotal, curDim, o_u, a, o_c, o_Q, o_unew);
+  igReconstructKernel(Ntotal, curDim, a, o_u, b, o_alphas, o_Q, o_unew);
 }
 
 
@@ -155,47 +171,40 @@ ClassicProjection::ClassicProjection(dlong _N, platform_t& _platform, settings_t
 void ClassicProjection::Update(operator_t &linearOperator, deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs)
 {
   // Compute RHS corresponding to the approximate solution obtained.
+  deviceMemory<dfloat> o_btilde = platform.reserve<dfloat>(Ntotal);
   linearOperator.Operator(o_x, o_btilde);
 
   // Insert new solution into the initial guess space.
   if ((curDim >= maxDim) || (curDim == 0)) {
-    dfloat normbtilde = 0.0;
-
-    normbtilde = platform.linAlg().norm2(Ntotal, o_btilde, comm);
+    dfloat normbtilde = platform.linAlg().norm2(Ntotal, o_btilde, comm);
 
     if (normbtilde > 0) {
-      igScaleKernel(Ntotal, dfloat(1.0)/normbtilde, o_btilde, o_Btilde);
-      igScaleKernel(Ntotal, dfloat(1.0)/normbtilde, o_x,      o_Xtilde);
+      platform.linAlg().axpy(Ntotal, 1.0/normbtilde, o_btilde, 0.0, o_Btilde);
+      platform.linAlg().axpy(Ntotal, 1.0/normbtilde, o_x,      0.0, o_Xtilde);
 
       curDim = 1;
     }
   } else {
-    dfloat    invnormbtilde = 0.0;
     const int Nreorth = 2;
 
-    o_x.copyTo(o_xtilde, Ntotal);
+    deviceMemory<dfloat> o_xtilde = platform.reserve<dfloat>(Ntotal);
+    deviceMemory<dfloat> o_alphas = platform.reserve<dfloat>(maxDim);
+    pinnedMemory<dfloat> h_alphas = platform.hostReserve<dfloat>(maxDim);
 
     // Orthogonalize new RHS against previous ones.
-    for (int n = 0; n < Nreorth; n++) {
-      igBasisInnerProducts(o_btilde, o_Btilde, o_alphas, alphas);
-      igReconstruct(o_btilde, -1.0, o_alphas, o_Btilde, o_btilde);
-      igReconstruct(o_xtilde, -1.0, o_alphas, o_Xtilde, o_xtilde);
+    igBasisInnerProducts(o_btilde, o_Btilde, o_alphas, h_alphas);
+    igReconstruct(1.0, o_btilde, -1.0, o_alphas, o_Btilde, o_btilde);
+    igReconstruct(1.0,      o_x, -1.0, o_alphas, o_Xtilde, o_xtilde);
+
+    for (int n = 1; n < Nreorth; n++) {
+      igBasisInnerProducts(o_btilde, o_Btilde, o_alphas, h_alphas);
+      igReconstruct(1.0, o_btilde, -1.0, o_alphas, o_Btilde, o_btilde);
+      igReconstruct(1.0, o_xtilde, -1.0, o_alphas, o_Xtilde, o_xtilde);
     }
 
     // Normalize.
-    invnormbtilde = platform.linAlg().norm2(Ntotal, o_btilde, comm);
-    invnormbtilde = 1.0/invnormbtilde;
-
-#if 0
-    igScaleKernel(Ntotal, invnormbtilde, o_btilde, o_btilde);
-    igScaleKernel(Ntotal, invnormbtilde, o_xtilde, o_xtilde);
-
-    // Store.
-    o_btilde.copyTo(o_Btilde + curDim*Ntotal*sizeof(dfloat));
-    o_xtilde.copyTo(o_Xtilde + curDim*Ntotal*sizeof(dfloat));
-#else
-    igUpdateKernel(Ntotal, curDim, invnormbtilde, o_btilde, 1, o_Btilde, o_xtilde, 1, o_Xtilde);
-#endif
+    dfloat invnormbtilde = 1.0/platform.linAlg().norm2(Ntotal, o_btilde, comm);
+    igUpdateKernel(Ntotal, curDim, invnormbtilde, o_btilde, o_Btilde, o_xtilde, o_Xtilde);
 
     curDim++;
   }
@@ -206,8 +215,12 @@ void ClassicProjection::Update(operator_t &linearOperator, deviceMemory<dfloat>&
 RollingQRProjection::RollingQRProjection(dlong _N, platform_t& _platform, settings_t& _settings, comm_t _comm):
   Projection(_N, _platform, _settings, _comm)
 {
-  R = platform.hostMalloc<dfloat>(maxDim*maxDim);
-  o_R = platform.malloc<dfloat>(maxDim*maxDim);
+  R.malloc(maxDim*maxDim);
+
+  h_c = platform.hostMalloc<dfloat>(maxDim);
+  h_s = platform.hostMalloc<dfloat>(maxDim);
+  o_c = platform.malloc<dfloat>(maxDim);
+  o_s = platform.malloc<dfloat>(maxDim);
 
   properties_t kernelInfo = platform.props();
   kernelInfo["defines/" "p_igNhist"] = maxDim;
@@ -217,9 +230,6 @@ RollingQRProjection::RollingQRProjection(dlong _N, platform_t& _platform, settin
 
 void RollingQRProjection::Update(operator_t &linearOperator, deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs)
 {
-  // Compute RHS corresponding to the approximate solution obtained.
-  linearOperator.Operator(o_x, o_btilde);
-
   // Rotate the history space (QR update).
   if (curDim == maxDim) {
     // Drop the first column in the QR factorization:  R = R(:, 2:end).
@@ -229,108 +239,98 @@ void RollingQRProjection::Update(operator_t &linearOperator, deviceMemory<dfloat
       R[j*maxDim + (maxDim - 1)] = 0.0;
     }
 
-    R.copyTo(o_R);
-
-    // Update the RHS and solution spaces.
-		igDropQRFirstColumnKernel(Ntotal, o_Btilde, o_Xtilde, o_R);
-
     // Restore R to triangular form (overlapped with Q update).
     for (int j = 0; j < maxDim - 1 ; j++) {
-      dfloat c = 0.0, s = 0.0;
       dfloat Rjj   = R[j*maxDim + j];
       dfloat Rjp1j = R[(j + 1)*maxDim + j];
 
-      givensRotation(Rjj, Rjp1j, c, s);
+      h_c[j] = 0.0, h_s[j] = 0.0;
+      givensRotation(Rjj, Rjp1j, h_c[j], h_s[j]);
 
       for (int i = j; i < maxDim; i++) {
         dfloat Rji   = R[j*maxDim + i];
         dfloat Rjp1i = R[(j + 1)*maxDim + i];
 
-        R[j*maxDim + i]       =  c*Rji + s*Rjp1i;
-        R[(j + 1)*maxDim + i] = -s*Rji + c*Rjp1i;
+        R[j*maxDim + i]       =  h_c[j]*Rji + h_s[j]*Rjp1i;
+        R[(j + 1)*maxDim + i] = -h_s[j]*Rji + h_c[j]*Rjp1i;
       }
     }
 
-    // Copy the updated R back to the device.
-    platform.finish();
-    R.copyTo(o_R);
+    // Copy c and s to device
+    h_c.copyTo(o_c, maxDim, 0, properties_t("async", true));
+    h_s.copyTo(o_s, maxDim, 0, properties_t("async", true));
+
+    // Update the RHS and solution spaces.
+    igDropQRFirstColumnKernel(Ntotal, o_c, o_s, o_Btilde, o_Xtilde);
 
     curDim--;
   }
 
+  // Compute RHS corresponding to the approximate solution obtained.
+  deviceMemory<dfloat> o_btilde = platform.reserve<dfloat>(Ntotal);
+  linearOperator.Operator(o_x, o_btilde);
+
+  // Zero the column of R into which we want to write.
+  for (int i = 0; i < maxDim; i++)
+    R[i*maxDim + curDim] = 0.0;
+
+  // Compute the initial norm of the new vector.
+  dfloat normbtilde = platform.linAlg().norm2(Ntotal, o_btilde, comm);
+
   // Orthogonalize and tack on the new column.
   if (curDim == 0) {
-    dfloat normbtilde = 0.0;
-
-    normbtilde = platform.linAlg().norm2(Ntotal, o_btilde, comm);
-
     if (normbtilde > 0) {
-#if 0
-      igScaleKernel(Ntotal, 1.0/normbtilde, o_btilde, o_Btilde);
-      igScaleKernel(Ntotal, 1.0/normbtilde, o_x,      o_Xtilde);
-#else
       dfloat invnormbtilde = 1.0/normbtilde;
-      igUpdateKernel(Ntotal, 0, invnormbtilde, o_btilde, 0, o_Btilde, o_x, 0, o_Xtilde);
-#endif
+      igUpdateKernel(Ntotal, 0, invnormbtilde, o_btilde, o_Btilde, o_x, o_Xtilde);
 
       R[0] = normbtilde;
 
       curDim = 1;
     }
   } else {
-    dfloat    normbtilde = 0.0, normbtildeproj = 0.0;;
     const int Nreorth = 2;
 
-    o_x.copyTo(o_xtilde, Ntotal);
-
-    // Compute the initial norm of the new vector.
-    normbtilde = platform.linAlg().norm2(Ntotal, o_btilde, comm);
-
-    // Zero the entries above/on the diagonal of the column of R into which we want to write.
-    for (int i = 0; i < curDim; i++)
-      R[i*maxDim + curDim] = 0.0;
+    deviceMemory<dfloat> o_xtilde = platform.reserve<dfloat>(Ntotal);
+    deviceMemory<dfloat> o_alphas = platform.reserve<dfloat>(maxDim);
+    pinnedMemory<dfloat> h_alphas = platform.hostReserve<dfloat>(maxDim);
 
     // Orthogonalize new RHS against previous ones.
-    for (int n = 0; n < Nreorth; n++) {
-      igBasisInnerProducts(o_btilde, o_Btilde, o_alphas, alphas);
-      igReconstruct(o_btilde, (dfloat)(-1.0), o_alphas, o_Btilde, o_btilde);
-      igReconstruct(o_xtilde, (dfloat)(-1.0), o_alphas, o_Xtilde, o_xtilde);
+    igBasisInnerProducts(o_btilde, o_Btilde, o_alphas, h_alphas);
+    igReconstruct(1.0, o_btilde, -1.0, o_alphas, o_Btilde, o_btilde);
+    igReconstruct(1.0,      o_x, -1.0, o_alphas, o_Xtilde, o_xtilde);
+
+    for (int i = 0; i < curDim; i++)
+      R[i*maxDim + curDim] += h_alphas[i];
+
+    for (int n = 1; n < Nreorth; n++) {
+      igBasisInnerProducts(o_btilde, o_Btilde, o_alphas, h_alphas);
+      igReconstruct(1.0, o_btilde, -1.0, o_alphas, o_Btilde, o_btilde);
+      igReconstruct(1.0, o_xtilde, -1.0, o_alphas, o_Xtilde, o_xtilde);
 
       for (int i = 0; i < curDim; i++)
-        R[i*maxDim + curDim] += alphas[i];
+        R[i*maxDim + curDim] += h_alphas[i];
     }
 
     // Normalize.
-    normbtildeproj = platform.linAlg().norm2(Ntotal, o_btilde, comm);
+    dfloat normbtildeproj = platform.linAlg().norm2(Ntotal, o_btilde, comm);
 
     // Only add if the remainder after projection is large enough.
     //
     // TODO:  What is the appropriate criterion here?
     if (normbtildeproj/normbtilde > 1.0e-10) {
-#if 0
-      igScaleKernel(Ntotal, 1.0/normbtildeproj, o_btilde, o_btilde);
-      igScaleKernel(Ntotal, 1.0/normbtildeproj, o_xtilde, o_xtilde);
-
-      // Store.
-      o_btilde.copyTo(o_Btilde + curDim*Ntotal*sizeof(dfloat));
-      o_xtilde.copyTo(o_Xtilde + curDim*Ntotal*sizeof(dfloat));
-#else
       dfloat invnormbtildeproj = 1.0/normbtildeproj;
-      igUpdateKernel(Ntotal, curDim, invnormbtildeproj, o_btilde, 1, o_Btilde, o_xtilde, 1, o_Xtilde);
-#endif
+      igUpdateKernel(Ntotal, curDim, invnormbtildeproj, o_btilde, o_Btilde, o_xtilde, o_Xtilde);
 
       R[curDim*maxDim + curDim] = normbtildeproj;
 
       curDim++;
     }
   }
-
-  R.copyTo(o_R);
 }
 
 void RollingQRProjection::givensRotation(dfloat a, dfloat b, dfloat& c, dfloat& s)
 {
-	// Compute a Givens rotation that zeros the bottom component of [a ; b].
+  // Compute a Givens rotation that zeros the bottom component of [a ; b].
   if (b != 0) {
     dfloat h = hypot(a, b);
     dfloat d = 1.0/h;
@@ -347,81 +347,78 @@ void RollingQRProjection::givensRotation(dfloat a, dfloat b, dfloat& c, dfloat& 
 Extrap::Extrap(dlong _N, platform_t& _platform, settings_t& _settings, comm_t _comm):
   initialGuessStrategy_t(_N, _platform, _settings, _comm)
 {
-  int M, m;
-  settings.getSetting("INITIAL GUESS HISTORY SPACE DIMENSION", M);
-  settings.getSetting("INITIAL GUESS EXTRAP DEGREE", m);
+  platform.linAlg().InitKernels({"set"});
 
-  memory<dfloat> c(M);
-  extrapCoeffs(m, M, c);
-
-  Nhistory = M;
+  settings.getSetting("INITIAL GUESS HISTORY SPACE DIMENSION", Nhistory);
+  settings.getSetting("INITIAL GUESS EXTRAP DEGREE", ExtrapDegree);
 
   entry = 0;
-
-  o_coeffs = platform.malloc<dfloat>(Nhistory, c);
-
   shift = 0;
 
-  o_xh = platform.malloc<dfloat>(Nhistory*Ntotal);
+  h_coeffs = platform.hostMalloc<dfloat>(Nhistory);
+  h_sparseIds = platform.hostMalloc<int>(Nhistory);
+  h_sparseCoeffs = platform.hostMalloc<dfloat>(Nhistory);
 
-  platform.linAlg().InitKernels({"set"});
+  o_coeffs = platform.malloc<dfloat>(Nhistory);
+  o_sparseIds = platform.malloc<int>(Nhistory);
+  o_sparseCoeffs = platform.malloc<dfloat>(Nhistory);
+
+  o_xh = platform.malloc<dfloat>(Nhistory*Ntotal);
 
   properties_t kernelInfo = platform.props();
   kernelInfo["defines/" "p_igNhist"] = Nhistory;
 
   igExtrapKernel       = platform.buildKernel(LINEARSOLVER_DIR "/okl/igExtrap.okl",       "igExtrap",   kernelInfo);
   igExtrapSparseKernel = platform.buildKernel(LINEARSOLVER_DIR "/okl/igExtrap.okl", "igExtrapSparse",   kernelInfo);
-
-  platform.linAlg().set(Nhistory*Ntotal, 0.0, o_xh);
 }
 
 void Extrap::FormInitialGuess(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs)
 {
-  if (entry < Nhistory) {
-    int M, m;
-    if (entry == Nhistory - 1) {
-      settings.getSetting("INITIAL GUESS HISTORY SPACE DIMENSION", M);
-      settings.getSetting("INITIAL GUESS EXTRAP DEGREE", m);
+  if (entry == 0) {
+    platform.linAlg().set(Ntotal, 0.0, o_x);
+    return;
+  }
+
+  if (entry <= Nhistory) {
+    int M = entry;
+    int m;
+    if (entry == Nhistory) {
+      m = ExtrapDegree;
     } else {
-      M = std::max(1, entry + 1);
       m = sqrt(static_cast<double>(M));
     }
 
     // Construct the extrapolation coefficients.
-    memory<dfloat> c(Nhistory);
-    memory<dfloat> d(Nhistory);
-    memory<dfloat> sparseCoeffs(Nhistory);
     for (int n = 0; n < Nhistory; ++n) {
-      c[n] = 0;
-      d[n] = 0;
-      sparseCoeffs[n] = 0;
+      h_coeffs[n] = 0;
+      h_sparseIds[n] = 0;
+      h_sparseCoeffs[n] = 0;
     }
 
     if (M == 1) {
-      d[Nhistory - 1] = 1.0;
+      h_coeffs[Nhistory - 1] = 1.0;
     } else {
+      memory<dfloat> c(Nhistory);
       extrapCoeffs(m, M, c);
 
       // need d[0:M-1] = {0, 0, 0, .., c[0], c[1], .., c[M-1]}
       for (int i = 0; i < M; i++)
-        d[Nhistory - M + i] = c[i];
+        h_coeffs[Nhistory - M + i] = c[i];
     }
 
-    memory<int> sparseIds(Nhistory);
+
     Nsparse = 0;
     for (int n = 0; n < Nhistory; ++n) {
-      if (std::abs(d[n]) > 1e-14) { // hmm
-        sparseIds[Nsparse] = n;
-        sparseCoeffs[Nsparse] = d[n];
+      if (std::abs(h_coeffs[n]) > 1e-14) { // hmm
+        h_sparseIds[Nsparse] = n;
+        h_sparseCoeffs[Nsparse] = h_coeffs[n];
         ++Nsparse;
       }
     }
 
-    o_coeffs = platform.malloc<dfloat>(d);
-    o_sparseIds = platform.malloc<int>(sparseIds);
-    o_sparseCoeffs = platform.malloc<dfloat>(sparseCoeffs);
-
-    ++entry;
+    h_coeffs.copyTo(o_coeffs, properties_t("async", true));
+    h_sparseIds.copyTo(o_sparseIds, properties_t("async", true));
+    h_sparseCoeffs.copyTo(o_sparseCoeffs, properties_t("async", true));
   }
 
   if (settings.compareSetting("INITIAL GUESS EXTRAP COEFFS METHOD", "MINNORM"))
@@ -434,8 +431,9 @@ void Extrap::FormInitialGuess(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o
 void Extrap::Update(operator_t &linearOperator, deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs)
 {
   deviceMemory<dfloat> o_tmp = o_xh + Ntotal*shift;
-  o_x.copyTo(o_tmp, Ntotal);
+  o_x.copyTo(o_tmp, Ntotal, 0, properties_t("async", true));
   shift = (shift + 1) % Nhistory;
+  entry = std::min(Nhistory+1, entry+1);
 }
 
 void Extrap::extrapCoeffs(int m, int M, memory<dfloat> c)

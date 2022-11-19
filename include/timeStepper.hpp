@@ -119,15 +119,14 @@ protected:
   memory<dfloat> ab_a;
   deviceMemory<dfloat> o_ab_a;
 
-  deviceMemory<dfloat> o_rhsq;
-  deviceMemory<dfloat> o_rhspmlq;
-
   kernel_t updateKernel;
 
   void Step(solver_t& solver,
             deviceMemory<dfloat> o_q,
+            deviceMemory<dfloat> o_rhsq,
             std::optional<deviceMemory<dfloat>> o_pmlq,
-            dfloat time, dfloat dt, int order);
+            deviceMemory<dfloat> o_rhspmlq,
+            dfloat time, dfloat _dt, int order);
 
 public:
   ab3(dlong Nelements, dlong NhaloElements,
@@ -148,14 +147,6 @@ class lserk4: public timeStepperBase_t {
 protected:
   int Nrk;
   memory<dfloat> rka, rkb, rkc;
-
-  deviceMemory<dfloat> o_rhsq;
-  deviceMemory<dfloat> o_resq;
-  deviceMemory<dfloat> o_rhspmlq;
-  deviceMemory<dfloat> o_respmlq;
-
-  deviceMemory<dfloat> o_saveq;
-  deviceMemory<dfloat> o_savepmlq;
 
   kernel_t updateKernel;
 
@@ -184,26 +175,8 @@ class dopri5: public timeStepperBase_t {
 protected:
   int Nrk;
 
-  dlong Nblock;
-
   memory<dfloat> rkC, rkA, rkE;
   deviceMemory<dfloat> o_rkA, o_rkE;
-
-  deviceMemory<dfloat> o_errtmp;
-  pinnedMemory<dfloat> h_errtmp;
-
-  deviceMemory<dfloat> o_rhsq;
-  deviceMemory<dfloat> o_rkq;
-  deviceMemory<dfloat> o_rkrhsq;
-  deviceMemory<dfloat> o_rhspmlq;
-  deviceMemory<dfloat> o_rkpmlq;
-  deviceMemory<dfloat> o_rkrhspmlq;
-
-  deviceMemory<dfloat> o_rkerr;
-
-  deviceMemory<dfloat> o_saveq;
-  deviceMemory<dfloat> o_savepmlq;
-
 
   kernel_t rkUpdateKernel;
   kernel_t rkPmlUpdateKernel;
@@ -229,9 +202,14 @@ protected:
   void Step(solver_t& solver,
             deviceMemory<dfloat> o_q,
             std::optional<deviceMemory<dfloat>> o_pmlq,
-            dfloat time, dfloat dt);
+            deviceMemory<dfloat> o_rkq,
+            deviceMemory<dfloat> o_rkpmlq,
+            deviceMemory<dfloat> o_rkerr,
+            dfloat time, dfloat _dt);
 
-  dfloat Estimater(deviceMemory<dfloat>& o_q);
+  dfloat Estimater(deviceMemory<dfloat>& o_q,
+                   deviceMemory<dfloat>& o_rkq,
+                   deviceMemory<dfloat>& o_rkerr);
 
 public:
   dopri5(dlong Nelements, dlong NhaloElements,
@@ -254,7 +232,7 @@ protected:
   int shiftIndex;
 
   int Np, Nfields;
-  dlong Nblock, Nelements, NhaloElements;
+  dlong Nelements, NhaloElements;
 
   memory<dfloat> lambda;
 
@@ -264,16 +242,15 @@ protected:
   memory<dfloat> pmlsaab_x, pmlsaab_a;
   deviceMemory<dfloat> o_pmlsaab_x, o_pmlsaab_a;
 
-  deviceMemory<dfloat> o_rhsq;
-  deviceMemory<dfloat> o_rhspmlq;
-
   kernel_t updateKernel;
   kernel_t pmlUpdateKernel;
 
   void Step(solver_t& solver,
             deviceMemory<dfloat> o_q,
+            deviceMemory<dfloat> o_rhsq,
             std::optional<deviceMemory<dfloat>> o_pmlq,
-            dfloat time, dfloat dt, int order);
+            deviceMemory<dfloat> o_rhspmlq,
+            dfloat time, dfloat _dt, int order);
 
   void UpdateCoefficients();
 
@@ -300,7 +277,7 @@ protected:
   int order, embeddedOrder;
 
   int Np, Nfields;
-  dlong Nblock, Nelements, NhaloElements;
+  dlong Nelements, NhaloElements;
 
   memory<dfloat> lambda;
 
@@ -309,21 +286,6 @@ protected:
   pinnedMemory<dfloat> h_rkX, h_rkA, h_rkE;
   memory<dfloat> pmlrkA;
   deviceMemory<dfloat> o_pmlrkA;
-
-  deviceMemory<dfloat> o_rhsq;
-  deviceMemory<dfloat> o_rkq;
-  deviceMemory<dfloat> o_rkrhsq;
-  deviceMemory<dfloat> o_rhspmlq;
-  deviceMemory<dfloat> o_rkpmlq;
-  deviceMemory<dfloat> o_rkrhspmlq;
-
-  deviceMemory<dfloat> o_rkerr;
-
-  deviceMemory<dfloat> o_saveq;
-  deviceMemory<dfloat> o_savepmlq;
-
-  deviceMemory<dfloat> o_errtmp;
-  pinnedMemory<dfloat> h_errtmp;
 
   kernel_t rkUpdateKernel;
   kernel_t rkPmlUpdateKernel;
@@ -351,9 +313,14 @@ protected:
   void Step(solver_t& solver,
             deviceMemory<dfloat> o_q,
             std::optional<deviceMemory<dfloat>> o_pmlq,
-            dfloat time, dfloat dt);
+            deviceMemory<dfloat> o_rkq,
+            deviceMemory<dfloat> o_rkpmlq,
+            deviceMemory<dfloat> o_rkerr,
+            dfloat time, dfloat _dt);
 
-  dfloat Estimater(deviceMemory<dfloat>& o_q);
+  dfloat Estimater(deviceMemory<dfloat>& o_q,
+                   deviceMemory<dfloat>& o_rkq,
+                   deviceMemory<dfloat>& o_rkerr);
 
   void UpdateCoefficients();
 
@@ -380,7 +347,7 @@ protected:
   int order, embeddedOrder;
 
   int Np, Nfields;
-  dlong Nblock, Nelements, NhaloElements;
+  dlong Nelements, NhaloElements;
 
   memory<dfloat> lambda;
 
@@ -389,22 +356,6 @@ protected:
   pinnedMemory<dfloat> h_rkX, h_rkA, h_rkE;
   memory<dfloat> pmlrkA;
   deviceMemory<dfloat> o_pmlrkA;
-
-
-  deviceMemory<dfloat> o_rhsq;
-  deviceMemory<dfloat> o_rkq;
-  deviceMemory<dfloat> o_rkrhsq;
-  deviceMemory<dfloat> o_rhspmlq;
-  deviceMemory<dfloat> o_rkpmlq;
-  deviceMemory<dfloat> o_rkrhspmlq;
-
-  deviceMemory<dfloat> o_rkerr;
-
-  deviceMemory<dfloat> o_saveq;
-  deviceMemory<dfloat> o_savepmlq;
-
-  deviceMemory<dfloat> o_errtmp;
-  pinnedMemory<dfloat> h_errtmp;
 
   kernel_t rkUpdateKernel;
   kernel_t rkPmlUpdateKernel;
@@ -429,11 +380,16 @@ protected:
   dfloat sqrtinvNtotal;
 
    void Step(solver_t& solver,
-            deviceMemory<dfloat> o_q,
-            std::optional<deviceMemory<dfloat>> o_pmlq,
-            dfloat time, dfloat dt);
+             deviceMemory<dfloat> o_q,
+             std::optional<deviceMemory<dfloat>> o_pmlq,
+             deviceMemory<dfloat> o_rkq,
+             deviceMemory<dfloat> o_rkpmlq,
+             deviceMemory<dfloat> o_rkerr,
+             dfloat time, dfloat _dt);
 
-  dfloat Estimater(deviceMemory<dfloat>& o_q);
+  dfloat Estimater(deviceMemory<dfloat>& o_q,
+                   deviceMemory<dfloat>& o_rkq,
+                   deviceMemory<dfloat>& o_rkerr);
 
   void UpdateCoefficients();
 
@@ -464,15 +420,13 @@ protected:
   deviceMemory<dfloat> o_extbdf_a;
   deviceMemory<dfloat> o_extbdf_b;
 
-  deviceMemory<dfloat> o_rhs;
-  deviceMemory<dfloat> o_qn;
-  deviceMemory<dfloat> o_F;
-
   kernel_t rhsKernel;
 
   void Step(solver_t& solver,
             deviceMemory<dfloat> o_q,
-            dfloat time, dfloat dt, int order);
+            deviceMemory<dfloat> o_qn,
+            deviceMemory<dfloat> o_F,
+            dfloat time, dfloat _dt, int order);
 
 public:
   extbdf3(dlong Nelements, dlong NhaloElements,
@@ -496,15 +450,12 @@ protected:
   memory<dfloat> ssbdf_b;
   deviceMemory<dfloat> o_ssbdf_b;
 
-  deviceMemory<dfloat> o_rhs;
-  deviceMemory<dfloat> o_qn;
-  deviceMemory<dfloat> o_qhat;
-
   kernel_t rhsKernel;
 
   void Step(solver_t& solver,
             deviceMemory<dfloat> o_q,
-            dfloat time, dfloat dt, int order);
+            deviceMemory<dfloat> o_qn,
+            dfloat time, dfloat _dt, int order);
 
 public:
   ssbdf3(dlong Nelements, dlong NhaloElements,
@@ -539,9 +490,6 @@ protected:
   memory<dfloat> ab_a, ab_b;
   deviceMemory<dfloat> o_ab_a, o_ab_b;
 
-  deviceMemory<dfloat> o_rhsq0, o_rhsq, o_fQM;
-  deviceMemory<dfloat> o_rhspmlq0, o_rhspmlq;
-
   kernel_t updateKernel;
   kernel_t pmlUpdateKernel;
   kernel_t traceUpdateKernel;
@@ -549,7 +497,12 @@ protected:
   void Step(solver_t& solver,
             deviceMemory<dfloat> o_q,
             std::optional<deviceMemory<dfloat>> o_pmlq,
-            dfloat time, dfloat dt, int order);
+            deviceMemory<dfloat> o_rhsq0,
+            deviceMemory<dfloat> o_rhsq,
+            deviceMemory<dfloat> o_rhspmlq0,
+            deviceMemory<dfloat> o_rhspmlq,
+            deviceMemory<dfloat> o_fQM,
+            dfloat time, dfloat _dt, int order);
 
 public:
   mrab3(dlong Nelements, dlong NhaloElements,
@@ -589,9 +542,6 @@ protected:
   memory<dfloat> pmlsaab_a, pmlsaab_b;
   deviceMemory<dfloat> o_pmlsaab_a, o_pmlsaab_b;
 
-  deviceMemory<dfloat> o_rhsq0, o_rhsq, o_fQM;
-  deviceMemory<dfloat> o_rhspmlq0, o_rhspmlq;
-
   kernel_t updateKernel;
   kernel_t pmlUpdateKernel;
   kernel_t traceUpdateKernel;
@@ -599,7 +549,12 @@ protected:
   void Step(solver_t& solver,
             deviceMemory<dfloat> o_q,
             std::optional<deviceMemory<dfloat>> o_pmlq,
-            dfloat time, dfloat dt, int order);
+            deviceMemory<dfloat> o_rhsq0,
+            deviceMemory<dfloat> o_rhsq,
+            deviceMemory<dfloat> o_rhspmlq0,
+            deviceMemory<dfloat> o_rhspmlq,
+            deviceMemory<dfloat> o_fQM,
+            dfloat time, dfloat _dt, int order);
 
   void UpdateCoefficients();
 

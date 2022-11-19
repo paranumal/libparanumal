@@ -32,17 +32,15 @@ SOFTWARE.
                       @restrict dfloat *uex){
 
   for(dlong n=0;n<N;++n;@tile(256, @outer, @inner)){
-    if(n<N){
-      dfloat res = 0;
-      for(int i=0;i<Nhistory;++i){
-        dfloat ci = coeffs[i];
-        if(ci)
-          res += ci*uh[n + ((i+shift)%Nhistory)*N];
+    dfloat res = 0;
+    for(int i=0;i<Nhistory;++i){
+      dfloat ci = coeffs[i];
+      if(ci!=0.0) {
+        res += ci*uh[n + ((i+shift)%Nhistory)*N];
       }
-      uex[n] = res;
     }
+    uex[n] = res;
   }
-
 }
 
 
@@ -56,16 +54,15 @@ SOFTWARE.
                             @restrict dfloat *uex){
 
   for(dlong n=0;n<N;++n;@tile(256, @outer, @inner)){
-    if(n<N){
-      dfloat res = 0;
+    dfloat res = 0;
 
-      for(int i=0;i<Nsparse;++i){
-        dfloat ci = coeffs[i];
+    for(int i=0;i<Nsparse;++i){
+      dfloat ci = coeffs[i];
+      if (ci!=0.0) {
         int id = sparseIds[i];
         res += ci*uh[n + ((id+shift)%Nhistory)*N];
       }
-      uex[n] = res;
     }
+    uex[n] = res;
   }
-
 }

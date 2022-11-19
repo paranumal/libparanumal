@@ -32,19 +32,32 @@ void SEMFEMPrecon::Operator(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_M
   linAlg_t& linAlg = elliptic.platform.linAlg();
 
   if (mesh.elementType==Mesh::TRIANGLES) {
+    dlong Ncols = parAlmond.getNumCols(0);
+    deviceMemory<dfloat> o_GrFEM = elliptic.platform.reserve<dfloat>(Ncols);
+    deviceMemory<dfloat> o_GzFEM = elliptic.platform.reserve<dfloat>(Ncols);
 
     // Mr = invDegree.*r
     linAlg.amxpy(elliptic.Ndofs, 1.0, elliptic.o_weightG, o_r, 0.0, o_Mr);
 
-    elliptic.ogsMasked.Scatter(o_MrL, o_Mr, 1, ogs::NoTrans);
-    SEMFEMInterpKernel(mesh.Nelements, mesh.o_SEMFEMAnterp, o_MrL, o_rFEM);
+    deviceMemory<dfloat> o_rFEM = elliptic.platform.reserve<dfloat>(mesh.Nelements*mesh.NpFEM);
+    elliptic.gHalo.Exchange(o_Mr, 1);
+    SEMFEMInterpKernel(mesh.Nelements,
+                       elliptic.o_GlobalToLocal,
+                       mesh.o_SEMFEMAnterp,
+                       o_Mr, o_rFEM);
     FEMogs.Gather(o_GrFEM, o_rFEM, 1, ogs::Add, ogs::Trans);
+    o_rFEM.free();
 
     parAlmond.Operator(o_GrFEM, o_GzFEM);
 
-    FEMogs.Scatter(o_zFEM, o_GzFEM, 1, ogs::NoTrans);
-    SEMFEMAnterpKernel(mesh.Nelements, mesh.o_SEMFEMAnterp, o_zFEM, o_MrL);
+    deviceMemory<dfloat> o_MrL = elliptic.platform.reserve<dfloat>(mesh.Np*mesh.Nelements);
+    FEMgHalo.Exchange(o_GzFEM, 1);
+    SEMFEMAnterpKernel(mesh.Nelements,
+                       o_FEMGlobalToLocal,
+                       mesh.o_SEMFEMAnterp,
+                       o_GzFEM, o_MrL);
     elliptic.ogsMasked.Gather(o_Mr, o_MrL, 1, ogs::Add, ogs::Trans);
+    o_MrL.free();
 
     // Mr = invDegree.*Mr
     linAlg.amx(elliptic.Ndofs, 1.0, elliptic.o_weightG, o_Mr);
@@ -184,6 +197,14 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
     }
   }
 
+  /* Build halo exchange for gathered ordering */
+  FEMgHalo.SetupFromGather(FEMogs);
+
+  FEMGlobalToLocal.malloc(mesh.Nelements*mesh.NpFEM);
+  FEMogs.SetupGlobalToLocalMapping(FEMGlobalToLocal);
+
+  o_FEMGlobalToLocal = elliptic.platform.malloc<dlong>(FEMGlobalToLocal);
+
   //finally, build the fem matrix and pass to parAlmond
   if (mesh.rank==0){
     printf("-----------------------------Multigrid AMG Setup--------------------------------------------\n");
@@ -217,17 +238,6 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
 
     mesh.o_SEMFEMInterp = elliptic.platform.malloc<dfloat>(mesh.SEMFEMInterp);
     mesh.o_SEMFEMAnterp = elliptic.platform.malloc<dfloat>(SEMFEMAnterp);
-
-    memory<dfloat> dummy(mesh.Nelements*mesh.NpFEM,0.0); //need this to avoid uninitialized memory warnings
-    o_rFEM = elliptic.platform.malloc<dfloat>(dummy);
-    o_zFEM = elliptic.platform.malloc<dfloat>(dummy);
-
-    dlong Ncols = parAlmond.getNumCols(0);
-    dummy.malloc(Ncols,0.0);
-    o_GrFEM = elliptic.platform.malloc<dfloat>(dummy);
-    o_GzFEM = elliptic.platform.malloc<dfloat>(dummy);
-
-    o_MrL = elliptic.platform.malloc<dfloat>(mesh.Np*mesh.Nelements);
 
     //build kernels
     properties_t kernelInfo = mesh.props;

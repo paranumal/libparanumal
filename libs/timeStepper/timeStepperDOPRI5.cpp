@@ -31,6 +31,8 @@ namespace libp {
 
 namespace TimeStepper {
 
+constexpr int blocksize = 256;
+
 dopri5::dopri5(dlong Nelements, dlong NhaloElements,
                int Np, int Nfields,
                platform_t& _platform, comm_t _comm):
@@ -46,24 +48,6 @@ dopri5::dopri5(dlong Nelements, dlong NpmlElements, dlong NhaloElements,
                     _platform, _comm) {
 
   Nrk = 7;
-
-  o_rhsq   = platform.malloc<dfloat>(N);
-  o_rkq    = platform.malloc<dfloat>(N+Nhalo);
-  o_rkrhsq = platform.malloc<dfloat>(Nrk*N);
-  o_rhspmlq   = platform.malloc<dfloat>(Npml);
-  o_rkpmlq    = platform.malloc<dfloat>(Npml);
-  o_rkrhspmlq = platform.malloc<dfloat>(Nrk*Npml);
-
-  o_saveq  = platform.malloc<dfloat>(N);
-  o_savepmlq  = platform.malloc<dfloat>(Npml);
-
-  o_rkerr  = platform.malloc<dfloat>(N);
-
-  const int blocksize = 256;
-
-  Nblock = (N+blocksize-1)/blocksize;
-  h_errtmp = platform.hostMalloc<dfloat>(Nblock);
-  o_errtmp = platform.malloc<dfloat>(Nblock);
 
   hlong Ntotal = N;
   comm.Allreduce(Ntotal);
@@ -137,6 +121,14 @@ void dopri5::Run(solver_t& solver,
                  std::optional<deviceMemory<dfloat>> o_pmlq,
                  dfloat start, dfloat end) {
 
+  /*Pre-reserve memory pool space to avoid some unnecessary re-sizing*/
+  platform.reserve<dfloat>((N+Nhalo) + (Nrk+2)*N + (Nrk+2)*Npml
+                           + 7 * platform.memPoolAlignment<dfloat>());
+
+  deviceMemory<dfloat> o_rkq    = platform.reserve<dfloat>(N+Nhalo);
+  deviceMemory<dfloat> o_rkpmlq = platform.reserve<dfloat>(Npml);
+  deviceMemory<dfloat> o_rkerr  = platform.reserve<dfloat>(N);
+
   dfloat time = start;
 
   solver.Report(time,0);
@@ -160,10 +152,12 @@ void dopri5::Run(solver_t& solver,
       dt = end-time;
     }
 
-    Step(solver, o_q, o_pmlq, time, dt);
+    Step(solver, o_q, o_pmlq,
+         o_rkq, o_rkpmlq, o_rkerr,
+         time, dt);
 
     // compute Dopri estimator
-    dfloat err = Estimater(o_q);
+    dfloat err = Estimater(o_q, o_rkq, o_rkerr);
 
     // build controller
     dfloat fac1 = pow(err,exp1);
@@ -179,21 +173,25 @@ void dopri5::Run(solver_t& solver,
         dfloat savedt = dt;
 
         // save rkq
-        o_saveq.copyFrom(o_rkq, N, properties_t("async", true));
+        deviceMemory<dfloat> o_saveq = platform.reserve<dfloat>(N);
+        deviceMemory<dfloat> o_savepmlq  = platform.reserve<dfloat>(Npml);
+        o_saveq.copyFrom(o_rkq, N, 0, properties_t("async", true));
         if (o_pmlq.has_value()) {
-          o_savepmlq.copyFrom(o_rkpmlq, Npml, properties_t("async", true));
+          o_savepmlq.copyFrom(o_rkpmlq, Npml, 0, properties_t("async", true));
         }
 
         // change dt to match output
         dt = outputTime-time;
 
         // time step to output
-        Step(solver, o_q, o_pmlq, time, dt);
+        Step(solver, o_q, o_pmlq,
+             o_rkq, o_rkpmlq, o_rkerr,
+             time, dt);
 
         // shift for output
-        o_rkq.copyTo(o_q, properties_t("async", true));
+        o_rkq.copyTo(o_q, N, 0, properties_t("async", true));
         if (o_pmlq.has_value()) {
-          o_rkpmlq.copyTo(o_pmlq.value(), properties_t("async", true));
+          o_rkpmlq.copyTo(o_pmlq.value(), Npml, 0, properties_t("async", true));
         }
 
         // output  (print from rkq)
@@ -206,15 +204,15 @@ void dopri5::Run(solver_t& solver,
         outputTime += outputInterval;
 
         // accept saved rkq
-        o_saveq.copyTo(o_q, N, properties_t("async", true));
+        o_saveq.copyTo(o_q, N, 0, properties_t("async", true));
         if (o_pmlq.has_value()) {
-          o_savepmlq.copyTo(o_pmlq.value(), Npml, properties_t("async", true));
+          o_savepmlq.copyTo(o_pmlq.value(), Npml, 0, properties_t("async", true));
         }
       } else {
         // accept rkq
-        o_q.copyFrom(o_rkq, N, properties_t("async", true));
+        o_q.copyFrom(o_rkq, N, 0, properties_t("async", true));
         if (o_pmlq.has_value()) {
-          o_pmlq.value().copyFrom(o_rkpmlq, Npml, properties_t("async", true));
+          o_pmlq.value().copyFrom(o_rkpmlq, Npml, 0, properties_t("async", true));
         }
       }
 
@@ -237,7 +235,15 @@ void dopri5::Run(solver_t& solver,
 void dopri5::Step(solver_t& solver,
                   deviceMemory<dfloat> o_q,
                   std::optional<deviceMemory<dfloat>> o_pmlq,
+                  deviceMemory<dfloat> o_rkq,
+                  deviceMemory<dfloat> o_rkpmlq,
+                  deviceMemory<dfloat> o_rkerr,
                   dfloat time, dfloat _dt) {
+
+  deviceMemory<dfloat> o_rhsq   = platform.reserve<dfloat>(N);
+  deviceMemory<dfloat> o_rkrhsq = platform.reserve<dfloat>(Nrk*N);
+  deviceMemory<dfloat> o_rhspmlq   = platform.reserve<dfloat>(Npml);
+  deviceMemory<dfloat> o_rkrhspmlq = platform.reserve<dfloat>(Nrk*Npml);
 
   //RK step
   for(int rk=0;rk<Nrk;++rk){
@@ -299,12 +305,21 @@ void dopri5::Step(solver_t& solver,
   }
 }
 
-dfloat dopri5::Estimater(deviceMemory<dfloat>& o_q){
+dfloat dopri5::Estimater(deviceMemory<dfloat>& o_q,
+                         deviceMemory<dfloat>& o_rkq,
+                         deviceMemory<dfloat>& o_rkerr){
+
+  int Nblock = (N+blocksize-1)/blocksize;
+  Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
+
+  pinnedMemory<dfloat> h_errtmp = platform.hostReserve<dfloat>(1);
+  deviceMemory<dfloat> o_errtmp = platform.reserve<dfloat>(blocksize);
 
   //Error estimation
   //E. HAIRER, S.P. NORSETT AND G. WANNER, SOLVING ORDINARY
   //      DIFFERENTIAL EQUATIONS I. NONSTIFF PROBLEMS. 2ND EDITION.
-  rkErrorEstimateKernel(N,
+  rkErrorEstimateKernel(Nblock,
+                        N,
                         ATOL,
                         RTOL,
                         o_q,
@@ -312,11 +327,15 @@ dfloat dopri5::Estimater(deviceMemory<dfloat>& o_q){
                         o_rkerr,
                         o_errtmp);
 
-  h_errtmp.copyFrom(o_errtmp);
-  dfloat err = 0;
-  for(dlong n=0;n<Nblock;++n){
-    err += h_errtmp[n];
+  dfloat err;
+  if (Nblock>0) {
+    h_errtmp.copyFrom(o_errtmp, 1, 0, properties_t("async", true));
+    platform.finish();
+    err = h_errtmp[0];
+  } else {
+    err = 0.0;
   }
+
   comm.Allreduce(err);
 
   err = sqrt(err)*sqrtinvNtotal;

@@ -290,7 +290,7 @@ class deviceMemory: public occa::memory {
  public:
   deviceMemory() = default;
   deviceMemory(const deviceMemory<T> &m)=default;
-  deviceMemory(occa::memory m):
+  explicit deviceMemory(occa::memory m):
     occa::memory(m)
   {
     if (isInitialized()) {
@@ -484,7 +484,7 @@ class pinnedMemory: public occa::memory {
  public:
   pinnedMemory() = default;
   pinnedMemory(const pinnedMemory<T> &m)=default;
-  pinnedMemory(occa::memory m):
+  explicit pinnedMemory(occa::memory m):
     occa::memory(m)
   {
     if (isInitialized()) {

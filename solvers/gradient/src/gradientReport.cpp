@@ -29,9 +29,10 @@ SOFTWARE.
 void gradient_t::Report(){
 
   //compute q.M*q
+  dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
+  deviceMemory<dfloat> o_Mgradq = platform.reserve<dfloat>(Nentries);
   mesh.MassMatrixApply(o_gradq, o_Mgradq);
 
-  dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
   dfloat norm2 = sqrt(platform.linAlg().innerProd(Nentries, o_gradq, o_Mgradq, mesh.comm));
 
   if(mesh.rank==0)

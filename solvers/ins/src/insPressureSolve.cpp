@@ -59,9 +59,12 @@ void ins_t::PressureSolve(deviceMemory<dfloat>& o_P, deviceMemory<dfloat>& o_RHS
 
   if(pDisc_c0) {
     // gather, solve, scatter
+    deviceMemory<dfloat> o_GrhsP = platform.reserve<dfloat>(pSolver.Ndofs+pSolver.Nhalo);
+    deviceMemory<dfloat> o_GP    = platform.reserve<dfloat>(pSolver.Ndofs+pSolver.Nhalo);
     pSolver.ogsMasked.Gather(o_GrhsP, o_RHS, 1, ogs::Add, ogs::Trans);
     NiterP = pSolver.Solve(pLinearSolver, o_GP, o_GrhsP, presTOL, maxIter, verbose);
     pSolver.ogsMasked.Scatter(o_P, o_GP, 1, ogs::NoTrans);
+    o_GP.free(); o_GrhsP.free();
 
     // enter BCs if C0
     pressureBCKernel(mesh.Nelements,

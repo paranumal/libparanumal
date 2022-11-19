@@ -60,8 +60,6 @@ public:
   memory<dfloat> q;
   deviceMemory<dfloat> o_q;
 
-  deviceMemory<dfloat> o_Mq;
-
   kernel_t volumeKernel;
   kernel_t surfaceKernel;
 

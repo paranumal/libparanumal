@@ -26,6 +26,7 @@ SOFTWARE.
 
 
 @kernel void ellipticSEMFEMAnterp(const dlong Nelements,
+                                 @restrict const  dlong  *  GlobalToLocal,
                                  @restrict const  dfloat *  P,
                                  @restrict const  dfloat *  q,
                                  @restrict dfloat *  Pq){
@@ -39,7 +40,9 @@ SOFTWARE.
         const dlong e = eo + es;
         if(e<Nelements){
           for (int t=n;t<p_NpFEM;t+=p_Np) {
-            s_q[es][t] = q[e*p_NpFEM+t];
+            const dlong base = t + e*p_NpFEM;
+            const dlong id = GlobalToLocal[base];
+            s_q[es][t] = (id!=-1) ? q[id] : 0.0;
           }
         }
       }

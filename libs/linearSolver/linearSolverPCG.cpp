@@ -38,20 +38,7 @@ pcg::pcg(dlong _N, dlong _Nhalo,
 
   platform.linAlg().InitKernels({"axpy", "innerProd", "norm2"});
 
-  dlong Ntotal = N + Nhalo;
-
   flexible = settings.compareSetting("LINEAR SOLVER", "FPCG");
-
-  /*aux variables */
-  memory<dfloat> dummy(Ntotal, 0.0); //need this to avoid uninitialized memory warnings
-  o_p  = platform.malloc<dfloat>(dummy);
-  o_z  = platform.malloc<dfloat>(dummy);
-  o_Ax = platform.malloc<dfloat>(dummy);
-  o_Ap = platform.malloc<dfloat>(dummy);
-
-  //pinned tmp buffer for reductions
-  rdotr = platform.hostMalloc<dfloat>(PCG_BLOCKSIZE);
-  o_rdotr = platform.malloc<dfloat>(PCG_BLOCKSIZE);
 
   /* build kernels */
   properties_t kernelInfo = platform.props(); //copy base properties
@@ -78,6 +65,16 @@ int pcg::Solve(operator_t& linearOperator, operator_t& precon,
   dfloat rdotr0 = 0.0;
   dfloat TOL = 0.0;
 
+  /*Pre-reserve memory pool space to avoid some unnecessary re-sizing*/
+  dlong Ntotal = N + Nhalo;
+  platform.reserve<dfloat>(3*Ntotal + PCG_BLOCKSIZE
+                           + 4 * platform.memPoolAlignment<dfloat>());
+
+  /*aux variables */
+  deviceMemory<dfloat> o_p  = platform.reserve<dfloat>(Ntotal);
+  deviceMemory<dfloat> o_z  = platform.reserve<dfloat>(Ntotal);
+  deviceMemory<dfloat> o_Ap = platform.reserve<dfloat>(Ntotal);
+
   // Comput norm of RHS (for stopping tolerance).
   if (settings.compareSetting("LINEAR SOLVER STOPPING CRITERION", "ABS/REL-RHS-2NORM")) {
     dfloat normb = linAlg.norm2(N, o_r, comm);
@@ -85,10 +82,10 @@ int pcg::Solve(operator_t& linearOperator, operator_t& precon,
   }
 
   // compute A*x
-  linearOperator.Operator(o_x, o_Ax);
+  linearOperator.Operator(o_x, o_Ap);
 
   // subtract r = r - A*x
-  linAlg.axpy(N, -1.f, o_Ax, 1.f, o_r);
+  linAlg.axpy(N, -1.f, o_Ap, 1.f, o_r);
 
   rdotr0 = linAlg.norm2(N, o_r, comm);
   rdotr0 = rdotr0*rdotr0;
@@ -117,8 +114,12 @@ int pcg::Solve(operator_t& linearOperator, operator_t& precon,
     rdotz1 = linAlg.innerProd(N, o_r, o_z, comm);
 
     if(flexible){
-      dfloat zdotAp = linAlg.innerProd(N, o_z, o_Ap, comm);
-      beta = (iter==0) ? 0.0 : -alpha*zdotAp/rdotz2;
+      if (iter==0) {
+        beta = 0.0;
+      } else {
+        dfloat zdotAp = linAlg.innerProd(N, o_z, o_Ap, comm);
+        beta = -alpha*zdotAp/rdotz2;
+      }
     } else {
       beta = (iter==0) ? 0.0 : rdotz1/rdotz2;
     }
@@ -137,7 +138,7 @@ int pcg::Solve(operator_t& linearOperator, operator_t& precon,
     //  x <= x + alpha*p
     //  r <= r - alpha*A*p
     //  dot(r,r)
-    rdotr0 = UpdatePCG(alpha, o_x, o_r);
+    rdotr0 = UpdatePCG(alpha, o_p, o_Ap, o_x, o_r);
 
     if (verbose&&(rank==0)) {
       if(rdotr0<0)
@@ -150,7 +151,11 @@ int pcg::Solve(operator_t& linearOperator, operator_t& precon,
   return iter;
 }
 
-dfloat pcg::UpdatePCG(const dfloat alpha, deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_r){
+dfloat pcg::UpdatePCG(const dfloat alpha,
+                      deviceMemory<dfloat>& o_p,
+                      deviceMemory<dfloat>& o_Ap,
+                      deviceMemory<dfloat>& o_x,
+                      deviceMemory<dfloat>& o_r){
 
   // x <= x + alpha*p
   // r <= r - alpha*A*p
@@ -158,16 +163,27 @@ dfloat pcg::UpdatePCG(const dfloat alpha, deviceMemory<dfloat>& o_x, deviceMemor
   int Nblocks = (N+PCG_BLOCKSIZE-1)/PCG_BLOCKSIZE;
   Nblocks = std::min(Nblocks, PCG_BLOCKSIZE); //limit to PCG_BLOCKSIZE entries
 
-  updatePCGKernel(N, Nblocks, o_p, o_Ap, alpha, o_x, o_r, o_rdotr);
+  //pinned tmp buffer for reductions
+  pinnedMemory<dfloat> h_rdotr = platform.hostReserve<dfloat>(1);
+  deviceMemory<dfloat> o_rdotr = platform.reserve<dfloat>(PCG_BLOCKSIZE);
 
-  rdotr.copyFrom(o_rdotr, Nblocks);
+  updatePCGKernel(N, Nblocks, o_Ap, alpha, o_r, o_rdotr);
 
-  dfloat rdotr1 = 0;
-  for(int n=0;n<Nblocks;++n)
-    rdotr1 += rdotr[n];
+  dfloat rdotr;
+  if (Nblocks>0) {
+    h_rdotr.copyFrom(o_rdotr, 1, 0, properties_t("async", true));
+    platform.finish();
+    rdotr = h_rdotr[0];
+  } else {
+    rdotr = 0.0;
+  }
 
-  comm.Allreduce(rdotr1);
-  return rdotr1;
+  // x <= x + alpha*p
+  platform.linAlg().axpy(N, alpha, o_p, 1.0, o_x);
+
+  /*Compute allreduce while axpy is running*/
+  comm.Allreduce(rdotr);
+  return rdotr;
 }
 
 } //namespace LinearSolver

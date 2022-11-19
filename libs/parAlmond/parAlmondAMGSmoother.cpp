@@ -33,8 +33,7 @@ namespace libp {
 namespace parAlmond {
 
 void parCSR::smoothDampedJacobi(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_x,
-                                const dfloat lambda, bool x_is_zero,
-                                deviceMemory<dfloat>& o_scratch){
+                                const dfloat lambda, bool x_is_zero){
 
   if(x_is_zero){
     // x = lambda*inv(D)*r
@@ -42,7 +41,7 @@ void parCSR::smoothDampedJacobi(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>&
     return;
   }
 
-  deviceMemory<dfloat> o_d = o_scratch;
+  deviceMemory<dfloat> o_d = platform.reserve<dfloat>(Nrows);
 
   halo.ExchangeStart(o_x, 1);
 
@@ -67,8 +66,7 @@ void parCSR::smoothDampedJacobi(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>&
 
 void parCSR::smoothChebyshev(deviceMemory<dfloat>& o_b, deviceMemory<dfloat>& o_x,
                              const dfloat lambda0, const dfloat lambda1,
-                             bool x_is_zero, deviceMemory<dfloat>& o_scratch,
-                             const int ChebyshevIterations) {
+                             bool x_is_zero, const int ChebyshevIterations) {
 
   const dfloat theta = 0.5*(lambda1+lambda0);
   const dfloat delta = 0.5*(lambda1-lambda0);
@@ -77,9 +75,8 @@ void parCSR::smoothChebyshev(deviceMemory<dfloat>& o_b, deviceMemory<dfloat>& o_
   dfloat rho_n = 1./sigma;
   dfloat rho_np1;
 
-  deviceMemory<dfloat> o_d = o_scratch + 0*Ncols;
-  deviceMemory<dfloat> o_r = o_scratch + 1*Ncols;
-
+  deviceMemory<dfloat> o_d = platform.reserve<dfloat>(Ncols);
+  deviceMemory<dfloat> o_r = platform.reserve<dfloat>(Nrows);
 
   if(x_is_zero){ //skip the Ax if x is zero
     //r = D^{-1}b

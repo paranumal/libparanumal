@@ -55,7 +55,7 @@ static void DeviceExchangeTest(ogsExchange_t* exchange, double time[3]) {
       exchange->Finish(o_buf, 1, Add, Sym);
     } else {
       //if not using gpu-aware mpi move the halo buffer to the host
-      o_buf.copyTo(buf, exchange->Nhalo,
+      buf.copyFrom(o_buf, exchange->Nhalo,
                    0, properties_t("async", true));
       device.finish();
 
@@ -64,8 +64,8 @@ static void DeviceExchangeTest(ogsExchange_t* exchange, double time[3]) {
       exchange->Finish(buf, 1, Add, Sym);
 
       // copy recv back to device
-      o_buf.copyFrom(buf, exchange->Nhalo,
-                     0, properties_t("async", true));
+      buf.copyTo(o_buf, exchange->Nhalo,
+                 0, properties_t("async", true));
       device.finish(); //wait for transfer to finish
     }
   }
@@ -79,7 +79,7 @@ static void DeviceExchangeTest(ogsExchange_t* exchange, double time[3]) {
       exchange->Finish(o_buf, 1, Add, Sym);
     } else {
       //if not using gpu-aware mpi move the halo buffer to the host
-      o_buf.copyTo(buf, exchange->Nhalo,
+      buf.copyFrom(o_buf, exchange->Nhalo,
                    0, properties_t("async", true));
       device.finish();
 
@@ -88,8 +88,8 @@ static void DeviceExchangeTest(ogsExchange_t* exchange, double time[3]) {
       exchange->Finish(buf, 1, Add, Sym);
 
       // copy recv back to device
-      o_buf.copyFrom(buf, exchange->Nhalo,
-                     0, properties_t("async", true));
+      buf.copyTo(o_buf, exchange->Nhalo,
+                 0, properties_t("async", true));
       device.finish(); //wait for transfer to finish
     }
   }

@@ -65,6 +65,7 @@ public:
   int pmlOrder;
   dfloat  sigmaXmax, sigmaYmax, sigmaZmax;
   memory<dfloat> pmlSigma;
+  deviceMemory<dfloat> o_pmlSigma;
   dfloat pmlAlpha;
 
   // Flag for using cubature integration for sigma terms in pml
@@ -78,13 +79,6 @@ public:
 
   memory<dfloat> pmlq;
   deviceMemory<dfloat> o_pmlq;
-
-  deviceMemory<dfloat> o_Mq;
-
-  memory<dfloat> Vort, VortMag;
-  deviceMemory<dfloat> o_Vort, o_VortMag;
-
-  deviceMemory<dfloat> o_pmlSigma;
 
   kernel_t volumeKernel;
   kernel_t surfaceKernel;

@@ -28,8 +28,7 @@ SOFTWARE.
 
 dfloat cns_t::MaxWaveSpeed(deviceMemory<dfloat>& o_Q, const dfloat T){
 
-  //Note: if this is on the critical path in the future, we should pre-allocate this
-  deviceMemory<dfloat> o_maxSpeed = platform.malloc<dfloat>(mesh.Nelements);
+  deviceMemory<dfloat> o_maxSpeed = platform.reserve<dfloat>(mesh.Nelements);
 
   maxWaveSpeedKernel(mesh.Nelements,
                      mesh.o_vgeo,
@@ -52,6 +51,10 @@ dfloat cns_t::MaxWaveSpeed(deviceMemory<dfloat>& o_Q, const dfloat T){
 
 //evaluate ODE rhs = f(q,t)
 void cns_t::rhsf(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T){
+
+  dlong NlocalGrads = mesh.Nelements*mesh.Np*Ngrads;
+  dlong NhaloGrads  = mesh.totalHaloPairs*mesh.Np*Ngrads;
+  deviceMemory<dfloat> o_gradq = platform.reserve<dfloat>(NlocalGrads+NhaloGrads);
 
   // extract q trace halo and start exchange
   fieldTraceHalo.ExchangeStart(o_Q, 1);

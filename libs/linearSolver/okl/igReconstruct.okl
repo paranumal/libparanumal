@@ -26,37 +26,28 @@ SOFTWARE.
 
 #define p_blockSize 256
 
-@kernel void igReconstruct(const dlong Ndof,
+@kernel void igReconstruct(const dlong N,
                            const dlong igNhist, // how many inner products
-                           dfloat * b,
-                           const dfloat beta,
-                           const dfloat * alphas,
-                           const dfloat * Btilde,
-                           dfloat * btilde)
+                           const dfloat a,
+                           @restrict const dfloat * x,
+                           const dfloat b,
+                           @restrict const dfloat * alphas,
+                           @restrict const dfloat * Btilde,
+                           @restrict dfloat * xtilde)
 {
-  for(dlong blk=0;blk<(Ndof+p_blockSize-1)/p_blockSize;++blk;@outer(0)){
+  for(dlong n=0;n<N;++n;@tile(p_blockSize,@outer(0),@inner(0))){
 
-    @shared dfloat s_alphas[p_igNhist];
-
-    for(int t=0;t<p_blockSize;++t;@inner(0)){
-      if(t<p_igNhist)
-        s_alphas[t] = (t<igNhist) ? beta*alphas[t] : 0;
+    dfloat r_x;
+    if (a != 0.0) {
+      r_x = a*x[n];
+    } else {
+      r_x = 0.0;
     }
 
-
-    for(int t=0;t<p_blockSize;++t;@inner(0)){
-
-      const dlong id = t + p_blockSize*blk;
-
-      if(id<Ndof){
-        dfloat res = b[id];
-
-        for(int fld=0;fld<igNhist;++fld){
-          res += s_alphas[fld]*Btilde[fld*Ndof + id];
-        }
-
-        btilde[id] = res; // b - sum alpha_{fld}B_fld
-      }
+    for(int fld=0;fld<igNhist;++fld){
+      r_x += b*alphas[fld]*Btilde[fld*N + n];
     }
+
+    xtilde[n] = r_x; // x = a*x + sum b*alpha_{fld}B_fld
   }
 }

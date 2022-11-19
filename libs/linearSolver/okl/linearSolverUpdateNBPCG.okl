@@ -43,14 +43,13 @@
 
       dfloat sum = 0;
       for(int n=t+b*p_blockSize;n<N;n+=Nblocks*p_blockSize){
-        dfloat pn = p[n];
-        dfloat sn = s[n];
+        dfloat pn = z[n];
+        dfloat sn = Z[n];
 
-        const dfloat zn = z[n];
-        const dfloat Zn = Z[n];
-
-        pn = zn + beta*pn;
-        sn = Zn + beta*sn;
+        if (beta != 0.0) {
+          pn += beta*p[n];
+          sn += beta*s[n];
+        }
 
         sum += pn*sn;
 
@@ -60,30 +59,49 @@
       s_dot[t] = sum;
     }
 
+#if p_blockSize>512
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<512) s_dot[t] += s_dot[t+512];
+#endif
+#if p_blockSize>256
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<256) s_dot[t] += s_dot[t+256];
+#endif
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<128) s_dot[t] += s_dot[t+128];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 64) s_dot[t] += s_dot[t+ 64];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 32) s_dot[t] += s_dot[t+ 32];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 16) s_dot[t] += s_dot[t+ 16];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  8) s_dot[t] += s_dot[t+  8];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  4) s_dot[t] += s_dot[t+  4];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  2) s_dot[t] += s_dot[t+  2];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  1) pdots[b] = s_dot[0] + s_dot[1];
+  }
+
+  for(dlong b=0;b<1;++b;@outer(0)){
+
+    @shared dfloat s_dot[p_blockSize];
+
+    for(int t=0;t<p_blockSize;++t;@inner(0)){
+
+      dfloat sum = 0;
+      for(int n=t;n<Nblocks;n+=p_blockSize){
+        sum += pdots[n];
+      }
+      s_dot[t] = sum;
+    }
 
 #if p_blockSize>512
     for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<512) s_dot[t] += s_dot[t+512];
 #endif
-
 #if p_blockSize>256
     for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<256) s_dot[t] += s_dot[t+256];
 #endif
-
     for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<128) s_dot[t] += s_dot[t+128];
-
     for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 64) s_dot[t] += s_dot[t+ 64];
-
     for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 32) s_dot[t] += s_dot[t+ 32];
-
     for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 16) s_dot[t] += s_dot[t+ 16];
-
     for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  8) s_dot[t] += s_dot[t+  8];
-
     for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  4) s_dot[t] += s_dot[t+  4];
-
     for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  2) s_dot[t] += s_dot[t+  2];
-
-    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  1) pdots[b] = s_dot[0] + s_dot[1];
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  1) pdots[0] = s_dot[0] + s_dot[1];
   }
 }
 
@@ -109,18 +127,19 @@
         dfloat rn = r[n];
         dfloat zn = z[n];
 
-        const dfloat sn = s[n];
-        const dfloat Sn = S[n];
-
-        rn = rn - alpha*sn;
-        zn = zn - alpha*Sn;
+        if (alpha != 0.0) {
+          rn = rn - alpha*s[n];
+          zn = zn - alpha*S[n];
+        }
 
         sumrdotz += rn*zn;
         sumzdotz += zn*zn;
         sumrdotr += rn*rn;
 
-        r[n] = rn;
-        z[n] = zn;
+        if (alpha != 0.0) {
+          r[n] = rn;
+          z[n] = zn;
+        }
       }
 
       s_dot[0][t] = sumrdotz;
@@ -136,7 +155,6 @@
       s_dot[2][t] += s_dot[2][t+512];
     }
 #endif
-
 #if p_blockSize>256
     for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<256) {
       s_dot[0][t] += s_dot[0][t+256];
@@ -144,53 +162,120 @@
       s_dot[2][t] += s_dot[2][t+256];
     }
 #endif
-
     for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<128) {
       s_dot[0][t] += s_dot[0][t+128];
       s_dot[1][t] += s_dot[1][t+128];
       s_dot[2][t] += s_dot[2][t+128];
     }
-
     for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 64) {
       s_dot[0][t] += s_dot[0][t+ 64];
       s_dot[1][t] += s_dot[1][t+ 64];
       s_dot[2][t] += s_dot[2][t+ 64];
     }
-
     for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 32) {
       s_dot[0][t] += s_dot[0][t+ 32];
       s_dot[1][t] += s_dot[1][t+ 32];
       s_dot[2][t] += s_dot[2][t+ 32];
     }
-
     for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 16) {
       s_dot[0][t] += s_dot[0][t+ 16];
       s_dot[1][t] += s_dot[1][t+ 16];
       s_dot[2][t] += s_dot[2][t+ 16];
     }
-
     for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  8) {
       s_dot[0][t] += s_dot[0][t+  8];
       s_dot[1][t] += s_dot[1][t+  8];
       s_dot[2][t] += s_dot[2][t+  8];
     }
-
     for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  4) {
       s_dot[0][t] += s_dot[0][t+  4];
       s_dot[1][t] += s_dot[1][t+  4];
       s_dot[2][t] += s_dot[2][t+  4];
     }
-
     for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  2) {
       s_dot[0][t] += s_dot[0][t+  2];
       s_dot[1][t] += s_dot[1][t+  2];
       s_dot[2][t] += s_dot[2][t+  2];
     }
-
     for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  1) {
       dots[0+3*b] = s_dot[0][0] + s_dot[0][1];
       dots[1+3*b] = s_dot[1][0] + s_dot[1][1];
       dots[2+3*b] = s_dot[2][0] + s_dot[2][1];
+    }
+  }
+
+  for(dlong b=0;b<1;++b;@outer(0)){
+
+    @shared dfloat s_dot[3][p_blockSize];
+
+    for(int t=0;t<p_blockSize;++t;@inner(0)){
+
+      dfloat sumrdotz = 0;
+      dfloat sumzdotz = 0;
+      dfloat sumrdotr = 0;
+      for(int n=t;n<Nblocks;n+=p_blockSize){
+        sumrdotz += dots[0+3*n];
+        sumzdotz += dots[1+3*n];
+        sumrdotr += dots[2+3*n];
+      }
+      s_dot[0][t] = sumrdotz;
+      s_dot[1][t] = sumzdotz;
+      s_dot[2][t] = sumrdotr;
+    }
+
+#if p_blockSize>512
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<512) {
+      s_dot[0][t] += s_dot[0][t+512];
+      s_dot[1][t] += s_dot[1][t+512];
+      s_dot[2][t] += s_dot[2][t+512];
+    }
+#endif
+#if p_blockSize>256
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<256) {
+      s_dot[0][t] += s_dot[0][t+256];
+      s_dot[1][t] += s_dot[1][t+256];
+      s_dot[2][t] += s_dot[2][t+256];
+    }
+#endif
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<128) {
+      s_dot[0][t] += s_dot[0][t+128];
+      s_dot[1][t] += s_dot[1][t+128];
+      s_dot[2][t] += s_dot[2][t+128];
+    }
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 64) {
+      s_dot[0][t] += s_dot[0][t+ 64];
+      s_dot[1][t] += s_dot[1][t+ 64];
+      s_dot[2][t] += s_dot[2][t+ 64];
+    }
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 32) {
+      s_dot[0][t] += s_dot[0][t+ 32];
+      s_dot[1][t] += s_dot[1][t+ 32];
+      s_dot[2][t] += s_dot[2][t+ 32];
+    }
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t< 16) {
+      s_dot[0][t] += s_dot[0][t+ 16];
+      s_dot[1][t] += s_dot[1][t+ 16];
+      s_dot[2][t] += s_dot[2][t+ 16];
+    }
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  8) {
+      s_dot[0][t] += s_dot[0][t+  8];
+      s_dot[1][t] += s_dot[1][t+  8];
+      s_dot[2][t] += s_dot[2][t+  8];
+    }
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  4) {
+      s_dot[0][t] += s_dot[0][t+  4];
+      s_dot[1][t] += s_dot[1][t+  4];
+      s_dot[2][t] += s_dot[2][t+  4];
+    }
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  2) {
+      s_dot[0][t] += s_dot[0][t+  2];
+      s_dot[1][t] += s_dot[1][t+  2];
+      s_dot[2][t] += s_dot[2][t+  2];
+    }
+    for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  1) {
+      dots[0] = s_dot[0][0] + s_dot[0][1];
+      dots[1] = s_dot[1][0] + s_dot[1][1];
+      dots[2] = s_dot[2][0] + s_dot[2][1];
     }
   }
 }

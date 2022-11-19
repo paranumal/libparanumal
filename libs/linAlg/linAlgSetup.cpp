@@ -41,10 +41,6 @@ void linAlg_t::Setup(platform_t *_platform) {
   kernelInfo["defines/" "p_blockSize"] = blocksize;
   kernelInfo["defines/init_dfloat_min"] =  std::numeric_limits<dfloat>::max();
   kernelInfo["defines/init_dfloat_max"] = -std::numeric_limits<dfloat>::max();
-
-  //pinned scratch buffer
-  h_scratch = platform->hostMalloc<dfloat>(blocksize);
-  o_scratch = platform->malloc<dfloat>(blocksize);
 }
 
 //initialize list of kernels
@@ -119,80 +115,52 @@ void linAlg_t::InitKernels(std::vector<std::string> kernels) {
                                         "zadxpy",
                                         kernelInfo);
     } else if (name=="min") {
-      if (minKernel1.isInitialized()==false) {
-        minKernel1 = platform->buildKernel(LINALG_DIR "/okl/"
+      if (minKernel.isInitialized()==false) {
+        minKernel = platform->buildKernel(LINALG_DIR "/okl/"
                                         "linAlgMin.okl",
-                                        "min1",
-                                        kernelInfo);
-        minKernel2 = platform->buildKernel(LINALG_DIR "/okl/"
-                                        "linAlgMin.okl",
-                                        "min2",
+                                        "min",
                                         kernelInfo);
       }
     } else if (name=="max") {
-      if (maxKernel1.isInitialized()==false) {
-        maxKernel1 = platform->buildKernel(LINALG_DIR "/okl/"
+      if (maxKernel.isInitialized()==false) {
+        maxKernel = platform->buildKernel(LINALG_DIR "/okl/"
                                         "linAlgMax.okl",
-                                        "max1",
-                                        kernelInfo);
-        maxKernel2 = platform->buildKernel(LINALG_DIR "/okl/"
-                                        "linAlgMax.okl",
-                                        "max2",
+                                        "max",
                                         kernelInfo);
       }
     } else if (name=="sum") {
-      if (sumKernel1.isInitialized()==false) {
-        sumKernel1 = platform->buildKernel(LINALG_DIR "/okl/"
+      if (sumKernel.isInitialized()==false) {
+        sumKernel = platform->buildKernel(LINALG_DIR "/okl/"
                                         "linAlgSum.okl",
-                                        "sum1",
-                                        kernelInfo);
-        sumKernel2 = platform->buildKernel(LINALG_DIR "/okl/"
-                                        "linAlgSum.okl",
-                                        "sum2",
+                                        "sum",
                                         kernelInfo);
       }
     } else if (name=="norm2") {
-      if (norm2Kernel1.isInitialized()==false) {
-        norm2Kernel1 = platform->buildKernel(LINALG_DIR "/okl/"
+      if (norm2Kernel.isInitialized()==false) {
+        norm2Kernel = platform->buildKernel(LINALG_DIR "/okl/"
                                         "linAlgNorm2.okl",
-                                        "norm2_1",
-                                        kernelInfo);
-        norm2Kernel2 = platform->buildKernel(LINALG_DIR "/okl/"
-                                        "linAlgNorm2.okl",
-                                        "norm2_2",
+                                        "norm2",
                                         kernelInfo);
       }
     } else if (name=="weightedNorm2") {
-      if (weightedNorm2Kernel1.isInitialized()==false) {
-        weightedNorm2Kernel1 = platform->buildKernel(LINALG_DIR "/okl/"
+      if (weightedNorm2Kernel.isInitialized()==false) {
+        weightedNorm2Kernel = platform->buildKernel(LINALG_DIR "/okl/"
                                         "linAlgWeightedNorm2.okl",
-                                        "weightedNorm2_1",
-                                        kernelInfo);
-        weightedNorm2Kernel2 = platform->buildKernel(LINALG_DIR "/okl/"
-                                        "linAlgWeightedNorm2.okl",
-                                        "weightedNorm2_1",
+                                        "weightedNorm2",
                                         kernelInfo);
       }
     } else if (name=="innerProd") {
-      if (innerProdKernel1.isInitialized()==false) {
-        innerProdKernel1 = platform->buildKernel(LINALG_DIR "/okl/"
+      if (innerProdKernel.isInitialized()==false) {
+        innerProdKernel = platform->buildKernel(LINALG_DIR "/okl/"
                                         "linAlgInnerProd.okl",
-                                        "innerProd1",
-                                        kernelInfo);
-        innerProdKernel2 = platform->buildKernel(LINALG_DIR "/okl/"
-                                        "linAlgInnerProd.okl",
-                                        "innerProd2",
+                                        "innerProd",
                                         kernelInfo);
       }
     } else if (name=="weightedInnerProd") {
-      if (weightedInnerProdKernel1.isInitialized()==false) {
-        weightedInnerProdKernel1 = platform->buildKernel(LINALG_DIR "/okl/"
+      if (weightedInnerProdKernel.isInitialized()==false) {
+        weightedInnerProdKernel = platform->buildKernel(LINALG_DIR "/okl/"
                                         "linAlgWeightedInnerProd.okl",
-                                        "weightedInnerProd1",
-                                        kernelInfo);
-        weightedInnerProdKernel2 = platform->buildKernel(LINALG_DIR "/okl/"
-                                        "linAlgWeightedInnerProd.okl",
-                                        "weightedInnerProd2",
+                                        "weightedInnerProd",
                                         kernelInfo);
       }
     } else {

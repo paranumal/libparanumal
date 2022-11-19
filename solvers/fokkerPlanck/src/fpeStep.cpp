@@ -28,8 +28,7 @@ SOFTWARE.
 
 dfloat fpe_t::MaxWaveSpeed(deviceMemory<dfloat>& o_Q, const dfloat T){
 
-  //Note: if this is on the critical path in the future, we should pre-allocate this
-  deviceMemory<dfloat> o_maxSpeed = platform.malloc<dfloat>(mesh.Nelements);
+  deviceMemory<dfloat> o_maxSpeed = platform.reserve<dfloat>(mesh.Nelements);
 
   maxWaveSpeedKernel(mesh.Nelements,
                      mesh.o_vgeo,
@@ -191,6 +190,9 @@ void fpe_t::Advection(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, co
 }
 
 void fpe_t::Diffusion(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T) {
+
+  dlong Ntotal = (mesh.Nelements+mesh.totalHaloPairs)*mesh.Np;
+  deviceMemory<dfloat> o_grad = platform.reserve<dfloat>(4*Ntotal);
 
   //compute gradq and pack with q
   gradientKernel(mesh.Nelements,

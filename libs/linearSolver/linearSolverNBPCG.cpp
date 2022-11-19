@@ -38,21 +38,8 @@ nbpcg::nbpcg(dlong _N, dlong _Nhalo,
 
   platform.linAlg().InitKernels({"axpy"});
 
-  dlong Ntotal = N + Nhalo;
-
-  memory<dfloat> dummy(Ntotal, 0.0);
-
-  /*aux variables */
-  o_p  = platform.malloc<dfloat>(Ntotal, dummy);
-  o_s  = platform.malloc<dfloat>(Ntotal, dummy);
-  o_S  = platform.malloc<dfloat>(Ntotal, dummy);
-  o_z  = platform.malloc<dfloat>(Ntotal);
-  o_Z  = platform.malloc<dfloat>(Ntotal);
-  o_Ax = platform.malloc<dfloat>(Ntotal);
-
-  //pinned tmp buffer for reductions
-  dots = platform.hostMalloc<dfloat>(3*NBPCG_BLOCKSIZE);
-  o_dots = platform.malloc<dfloat>(3*NBPCG_BLOCKSIZE);
+  //pinned buffer for reductions
+  dots = platform.hostMalloc<dfloat>(3);
 
   /* build kernels */
   properties_t kernelInfo = platform.props(); //copy base properties
@@ -73,6 +60,19 @@ int nbpcg::Solve(operator_t& linearOperator, operator_t& precon,
 
   int rank = comm.rank();
   linAlg_t &linAlg = platform.linAlg();
+
+  /*Pre-reserve memory pool space to avoid some unnecessary re-sizing*/
+  dlong Ntotal = N + Nhalo;
+  platform.reserve<dfloat>(6*Ntotal + 3*NBPCG_BLOCKSIZE
+                           + 7 * platform.memPoolAlignment<dfloat>());
+
+  /*aux variables */
+  deviceMemory<dfloat> o_p  = platform.reserve<dfloat>(Ntotal);
+  deviceMemory<dfloat> o_s  = platform.reserve<dfloat>(Ntotal);
+  deviceMemory<dfloat> o_S  = platform.reserve<dfloat>(Ntotal);
+  deviceMemory<dfloat> o_z  = platform.reserve<dfloat>(Ntotal);
+  deviceMemory<dfloat> o_Z  = platform.reserve<dfloat>(Ntotal);
+  deviceMemory<dfloat> o_Ax = platform.reserve<dfloat>(Ntotal);
 
   // register scalars
   dfloat zdotz0 = 0;
@@ -97,7 +97,7 @@ int nbpcg::Solve(operator_t& linearOperator, operator_t& precon,
   // set alpha = 0 to get
   // r.z and z.z
   alpha0 = 0;
-  Update2NBPCG(alpha0, o_r);
+  Update2NBPCG(alpha0, o_s, o_S, o_r, o_z);
 
   linearOperator.Operator(o_z, o_Z);
 
@@ -121,7 +121,7 @@ int nbpcg::Solve(operator_t& linearOperator, operator_t& precon,
     // p <= z + beta*p
     // s <= Z + beta*s
     // delta <= pdots
-    Update1NBPCG(beta0);
+    Update1NBPCG(beta0, o_z, o_Z, o_p, o_s);
 
     // z = Precon^{-1} r
     precon.Operator(o_s, o_S);
@@ -138,7 +138,7 @@ int nbpcg::Solve(operator_t& linearOperator, operator_t& precon,
     // r.z
     // z.z
     // r.r
-    Update2NBPCG(alpha0, o_r);
+    Update2NBPCG(alpha0, o_s, o_S, o_r, o_z);
 
     // x <= x + alpha*p (delayed)
     linAlg.axpy(N, alpha0, o_p, 1.0, o_x);
@@ -167,7 +167,11 @@ int nbpcg::Solve(operator_t& linearOperator, operator_t& precon,
   return iter;
 }
 
-void nbpcg::Update1NBPCG(const dfloat beta){
+void nbpcg::Update1NBPCG(const dfloat beta,
+                         deviceMemory<dfloat>& o_z,
+                         deviceMemory<dfloat>& o_Z,
+                         deviceMemory<dfloat>& o_p,
+                         deviceMemory<dfloat>& o_s){
 
   // p <= z + beta*p
   // s <= Z + beta*s
@@ -175,21 +179,26 @@ void nbpcg::Update1NBPCG(const dfloat beta){
   int Nblocks = (N+NBPCG_BLOCKSIZE-1)/NBPCG_BLOCKSIZE;
   Nblocks = std::min(Nblocks,NBPCG_BLOCKSIZE); //limit to NBPCG_BLOCKSIZE entries
 
+  //buffer for reductions
+  deviceMemory<dfloat> o_dots = platform.reserve<dfloat>(NBPCG_BLOCKSIZE);
+
   update1NBPCGKernel(N, Nblocks, o_z, o_Z, beta, o_p, o_s, o_dots);
 
   if (Nblocks>0) {
-    dots.copyFrom(o_dots, Nblocks);
+    dots.copyFrom(o_dots, 1, 0, properties_t("async", true));
+    platform.finish();
   } else {
     dots[0] = 0.0;
   }
 
-  for(int n=1;n<Nblocks;++n)
-    dots[0] += dots[n];
-
   comm.Iallreduce(dots, Comm::Sum, 1, request);
 }
 
-void nbpcg::Update2NBPCG(const dfloat alpha, deviceMemory<dfloat>& o_r){
+void nbpcg::Update2NBPCG(const dfloat alpha,
+                         deviceMemory<dfloat>& o_s,
+                         deviceMemory<dfloat>& o_S,
+                         deviceMemory<dfloat>& o_r,
+                         deviceMemory<dfloat>& o_z){
 
   // r <= r - alpha*s
   // z <= z - alpha*S
@@ -199,21 +208,20 @@ void nbpcg::Update2NBPCG(const dfloat alpha, deviceMemory<dfloat>& o_r){
   int Nblocks = (N+NBPCG_BLOCKSIZE-1)/NBPCG_BLOCKSIZE;
   Nblocks = (Nblocks>NBPCG_BLOCKSIZE) ? NBPCG_BLOCKSIZE : Nblocks; //limit to NBPCG_BLOCKSIZE entries
 
+  //buffer for reductions
+  deviceMemory<dfloat> o_dots = platform.reserve<dfloat>(3*NBPCG_BLOCKSIZE);
+
   update2NBPCGKernel(N, Nblocks, o_s, o_S, alpha, o_r, o_z, o_dots);
 
   if (Nblocks>0) {
-    dots.copyFrom(o_dots, 3*Nblocks);
+    dots.copyFrom(o_dots, 3, 0, properties_t("async", true));
+    platform.finish();
   } else {
     dots[0] = 0.0;
     dots[1] = 0.0;
     dots[2] = 0.0;
   }
 
-  for(int n=1;n<Nblocks;++n) {
-    dots[0] += dots[0+3*n];
-    dots[1] += dots[1+3*n];
-    dots[2] += dots[2+3*n];
-  }
   comm.Iallreduce(dots, Comm::Sum, 3, request);
 }
 
