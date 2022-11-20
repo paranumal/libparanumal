@@ -106,20 +106,20 @@ public:
   deviceMemory<dfloat> o_smapP;    // indices of positive trace in surface cubature node list
   deviceMemory<dfloat> o_sQ;
   
-  occa::kernel cubatureSurfaceInterpolationKernel;
+  kernel_t cubatureSurfaceInterpolationKernel;
   
-  occa::kernel cubatureVolumeKernel;
-  occa::kernel cubatureSurfaceKernel;
-  occa::kernel cubatureInitialConditionKernel;
+  kernel_t cubatureVolumeKernel;
+  kernel_t cubatureSurfaceKernel;
+  kernel_t cubatureInitialConditionKernel;
   
-  occa::kernel vorticityKernel;
-  occa::kernel dgVorticityKernel;
+  kernel_t vorticityKernel;
+  kernel_t dgVorticityKernel;
 
-  occa::kernel initialConditionKernel;
+  kernel_t initialConditionKernel;
 
-  occa::kernel MassMatrixKernel;
-  occa::kernel filterKernel;
-  occa::kernel errorKernel;
+  kernel_t MassMatrixKernel;
+  kernel_t filterKernel;
+  kernel_t errorKernel;
 
   // =======>
   // entropy stable
@@ -167,7 +167,7 @@ public:
 
   deviceMemory<dfloat> o_esDQe;  // art diff P1 subcell
   
-  dfloat *entropyChange;
+  memory<dfloat> entropyChange;
   deviceMemory<dfloat> o_entropyChange;
 
   
@@ -184,29 +184,29 @@ public:
   deviceMemory<dlong> o_EToE;
   deviceMemory<dlong> o_EToB;
   
-  occa::memory o_esTotalEntropy;
-  dfloat *esTotalEntropy;
+  deviceMemory<dfloat> o_esTotalEntropy;
+  memory<dfloat> esTotalEntropy;
   
-  occa::kernel esInterpolateKernel;
-  occa::kernel esVolumeCubatureKernel;
-  occa::kernel esSurfaceCubatureKernel;
+  kernel_t esInterpolateKernel;
+  kernel_t esVolumeCubatureKernel;
+  kernel_t esSurfaceCubatureKernel;
 
-  occa::kernel esVolumeKernel;
-  occa::kernel esSurfaceKernel;
+  kernel_t esVolumeKernel;
+  kernel_t esSurfaceKernel;
 
-  occa::kernel esIntegrateEntropyChangeKernel;
-  occa::kernel esIntegrateEntropyKernel;
+  kernel_t esIntegrateEntropyChangeKernel;
+  kernel_t esIntegrateEntropyKernel;
 
-  occa::kernel esVolumeGradientKernel;
-  occa::kernel esSurfaceGradientKernel;
+  kernel_t esVolumeGradientKernel;
+  kernel_t esSurfaceGradientKernel;
 
-  occa::kernel esDiffusionFluxesKernel;
+  kernel_t esDiffusionFluxesKernel;
   
-  occa::kernel esVolumeDivergenceKernel;
-  occa::kernel esSurfaceDivergenceKernel;
+  kernel_t esVolumeDivergenceKernel;
+  kernel_t esSurfaceDivergenceKernel;
 
   
-  //  occa::kernel esProjectKernel;
+  //  kernel_t esProjectKernel;
   // <=======
   
 
@@ -229,14 +229,14 @@ public:
 
   void PlotFields(memory<dfloat> &Q, memory<dfloat> &V, char *fileName);
 
-  void rhsf(occa::memory& o_q, occa::memory& o_rhs, const dfloat time);
+  void rhsf(deviceMemory<dfloat> &o_q, deviceMemory<dfloat> &o_rhs, const dfloat time);
 
   void saveCheckpoint(memory<dfloat> &outq, dfloat time);
 
   void loadCheckpoint(memory<dfloat> &inq, dfloat &time);
 
-  dfloat integrateEntropy(occa::memory& o_Q);
-  dfloat integrateEntropyChange(occa::memory& o_Q, occa::memory& o_RHS);
+  dfloat integrateEntropy(deviceMemory<dfloat> &o_Q);
+  dfloat integrateEntropyChange(deviceMemory<dfloat> &o_Q, deviceMemory<dfloat>& o_RHS);
 };
 
 #endif

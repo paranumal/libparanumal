@@ -27,7 +27,7 @@
 #include "esdg.hpp"
 
 //evaluate ODE rhs = f(q,t)
-dfloat esdg_t::integrateEntropyChange(occa::memory& o_Q, occa::memory& o_RHS){
+dfloat esdg_t::integrateEntropyChange(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS){
 
   dfloat totalEntropy = 0;
   
@@ -53,7 +53,7 @@ dfloat esdg_t::integrateEntropyChange(occa::memory& o_Q, occa::memory& o_RHS){
 }
 
 
-dfloat esdg_t::integrateEntropy(occa::memory& o_Q){
+dfloat esdg_t::integrateEntropy(deviceMemory<dfloat>& o_Q){
   
   dfloat totalEntropy = 0;
   

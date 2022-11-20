@@ -27,7 +27,7 @@
 #include "esdg.hpp"
 
 //evaluate ODE rhs = f(q,t)
-void esdg_t::rhsf(occa::memory& o_Q, occa::memory& o_RHS, const dfloat T){
+void esdg_t::rhsf(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T){
 
   // modifications of based schemes
   dfloat lambda = 0, mu = 0;

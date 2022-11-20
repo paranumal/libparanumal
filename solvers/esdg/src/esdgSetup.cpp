@@ -167,7 +167,7 @@ void esdg_t::Setup(platform_t& _platform, mesh_t& _mesh, esdgSettings_t& _settin
   ir.malloc(mesh.intNfp*mesh.Nfaces);
   is.malloc(mesh.intNfp*mesh.Nfaces);
   it.malloc(mesh.intNfp*mesh.Nfaces);
-  iw.calloc(mesh.intNfp*mesh.Nfaces);
+  iw.malloc(mesh.intNfp*mesh.Nfaces);
 
   memory <dfloat> sInterp, sInterpT;
   sInterp.malloc(mesh.intNfp*mesh.Nfaces*mesh.Np);
@@ -695,10 +695,10 @@ void esdg_t::Setup(platform_t& _platform, mesh_t& _mesh, esdgSettings_t& _settin
   
   
   o_esTotalEntropy = platform.malloc<dfloat>(mesh.Nelements);
-  esTotalEntropy = (dfloat*) calloc(mesh.Nelements, sizeof(dfloat));
+  esTotalEntropy.malloc(mesh.Nelements);
 
   o_entropyChange = platform.malloc<dfloat>(mesh.Nelements);
-  entropyChange = (dfloat*) calloc(mesh.Nelements, sizeof(dfloat));
+  entropyChange.malloc(mesh.Nelements);
 
   dlong NlocalFields = mesh.Nelements*mesh.Np*Nfields;
   dlong NhaloFields  = mesh.totalHaloPairs*mesh.Np*Nfields;
