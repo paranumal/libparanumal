@@ -35,12 +35,14 @@ void esdg_t::Report(dfloat time, int tstep){
   //compute q.M*q
   MassMatrixKernel(mesh.Nelements, mesh.o_ggeo, mesh.o_MM, o_q, o_Mq);
 
+  // check o_LIFTT => o_LIFT substitution
+  // check o_Dmatrices => o_D
   // TW fix this later ?
   if(1) 
-    vorticityKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_Dmatrices,
+    vorticityKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_D,
 		    o_q, o_Vort);
   else
-    dgVorticityKernel(mesh.Nelements, mesh.o_vmapM, mesh.o_vmapP, mesh.o_vgeo, mesh.o_sgeo, mesh.o_Dmatrices, mesh.o_LIFTT, 
+    dgVorticityKernel(mesh.Nelements, mesh.o_vmapM, mesh.o_vmapP, mesh.o_vgeo, mesh.o_sgeo, mesh.o_D, mesh.o_LIFT, 
 		    o_q, o_Vort);
 
   dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
@@ -122,9 +124,10 @@ void esdg_t::Report(dfloat time, int tstep){
 
   if(1){
 
+    // TW - check contents of o_cubInterp (was o_cubInterpT)
     errorKernel(mesh.Nelements, gamma, time,
 		mesh.o_vgeo, o_cx, o_cy, o_cz,
-		mesh.o_cubx, mesh.o_cuby, mesh.o_cubz, mesh.o_cubInterpT,
+		mesh.o_cubx, mesh.o_cuby, mesh.o_cubz, mesh.o_cubInterp,
 		o_cubw, o_q, o_linfError, o_l2Error);
     
     o_linfError.copyTo(linfError);
