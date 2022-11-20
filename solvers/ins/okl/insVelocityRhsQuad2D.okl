@@ -409,9 +409,8 @@ SOFTWARE.
                                @restrict        dfloat *  WH,
                                @restrict        dfloat *  U){
 
-  for(dlong e=0;e<Nelements;e++;@outer(0)){
-
-    if (vDisc_c0) {//fill masked boundary points if C0
+  if (vDisc_c0) {//fill masked boundary points if C0
+    for(dlong e=0;e<Nelements;e++;@outer(0)){
       // face 0 & 2
       for(int i=0;i<p_Nq;++i;@inner(0)){
         const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i;
@@ -420,7 +419,6 @@ SOFTWARE.
         surfaceTerms(sk0);
         surfaceTerms(sk2);
       }
-
 
       // face 1 & 3
       for(int j=0;j<p_Nq;++j;@inner(0)){
@@ -431,10 +429,12 @@ SOFTWARE.
         surfaceTerms(sk3);
       }
     }
+  }
 
-    // loop over slabs
-    for(int i=0;i<p_Nq;++i;@inner(0)){
-      for(int j=0;j<p_Nq;++j){
+  // Second outer loop to ensure UH is written before reading again
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
         const dlong id = e*p_Np+j*p_Nq+i;
         const dlong iid = e*p_Np*p_NVfields+j*p_Nq+i;
         U[iid+0*p_Np] = UH[id];

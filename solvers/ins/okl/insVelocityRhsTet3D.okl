@@ -448,45 +448,43 @@ SOFTWARE.
                                @restrict        dfloat *  WH,
                                @restrict        dfloat *  U){
 
-  for(dlong e=0;e<Nelements;e++;@outer(0)){
+  if (vDisc_c0) { //fill masked boundary points if C0
+    for(dlong e=0;e<Nelements;e++;@outer(0)){
+      for(int n=0;n<p_NfacesNfp;++n;@inner(0)){
+        const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
+        const int bc = mapB[idM];
 
-    if (vDisc_c0) { //fill masked boundary points if C0
-      for(int n=0;n<p_maxNodes;++n;@inner(0)){
-        if(n<p_NfacesNfp){
-          const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
-          const int bc = mapB[idM];
+        if(bc>0) {
+          const dfloat uM = UH[idM];
+          const dfloat vM = VH[idM];
+          const dfloat wM = WH[idM];
 
-          if(bc>0) {
-            const dfloat uM = UH[idM];
-            const dfloat vM = VH[idM];
-            const dfloat wM = WH[idM];
+          const int face = n/p_Nfp;
+          const dlong sid = p_Nsgeo*(e*p_Nfaces+face);
+          const dfloat nx = sgeo[sid+p_NXID];
+          const dfloat ny = sgeo[sid+p_NYID];
+          const dfloat nz = sgeo[sid+p_NZID];
 
-            const int face = n/p_Nfp;
-            const dlong sid = p_Nsgeo*(e*p_Nfaces+face);
-            const dfloat nx = sgeo[sid+p_NXID];
-            const dfloat ny = sgeo[sid+p_NYID];
-            const dfloat nz = sgeo[sid+p_NZID];
-
-            dfloat uP = 0.f;
-            dfloat vP = 0.f;
-            dfloat wP = 0.f;
-            insVelocityDirichletConditions3D(bc, nu, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP);
-            UH[idM] = uP;
-            VH[idM] = vP;
-            WH[idM] = wP;
-          }
+          dfloat uP = 0.f;
+          dfloat vP = 0.f;
+          dfloat wP = 0.f;
+          insVelocityDirichletConditions3D(bc, nu, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP);
+          UH[idM] = uP;
+          VH[idM] = vP;
+          WH[idM] = wP;
         }
       }
     }
+  }
 
-    for(int n=0;n<p_maxNodes;++n;@inner(0)){
-      if(n<p_Np){
-        const dlong id = e*p_Np+n;
-        const dlong iid = e*p_Np*p_NVfields+n;
-        U[iid+0*p_Np] = UH[id];
-        U[iid+1*p_Np] = VH[id];
-        U[iid+2*p_Np] = WH[id];
-      }
+  // Second outer loop to ensure UH is written before reading again
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      const dlong id = e*p_Np+n;
+      const dlong iid = e*p_Np*p_NVfields+n;
+      U[iid+0*p_Np] = UH[id];
+      U[iid+1*p_Np] = VH[id];
+      U[iid+2*p_Np] = WH[id];
     }
   }
 }

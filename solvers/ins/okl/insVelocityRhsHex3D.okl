@@ -800,9 +800,8 @@ SOFTWARE.
                                @restrict        dfloat *  WH,
                                @restrict        dfloat *  U){
 
-  for(dlong e=0;e<Nelements;++e;@outer(0)){
-
-    if (vDisc_c0) {//fill masked boundary points if C0
+  if (vDisc_c0) {//fill masked boundary points if C0
+    for(dlong e=0;e<Nelements;++e;@outer(0)){
       for(int j=0;j<p_Nq;++j;@inner(1)){
         for(int i=0;i<p_Nq;++i;@inner(0)){
           // face 0 & 5
@@ -836,6 +835,10 @@ SOFTWARE.
         }
       }
     }
+  }
+
+  // Second outer loop to ensure UH is written before reading again
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
     // loop over slabs
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
