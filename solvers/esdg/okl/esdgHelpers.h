@@ -223,7 +223,7 @@ void entropy2primitive(dfloat gamma, dfloat *evar, dfloat *pvar){
   conserved2primitive(gamma, cvar, pvar);
 }
 
-void entropyStableTwoPointFlux(dfloat gamma, dfloat *evar1, dfloat *evar2,  dfloat *pvar1, dfloat *pvar2, dfloat *fx, dfloat *fy, dfloat lambda){
+void entropyStableTwoPointFlux(dfloat gamma, dfloat *evar1, dfloat *evar2,  dfloat *pvar1, dfloat *pvar2, dfloat *fx, dfloat *fy){
 
   // note the extra stack
   dfloat r1 = pvar1[0], u1 = pvar1[1], v1 = pvar1[2], p1 = pvar1[3], logr1 = pvar1[4], logbeta1 = pvar1[5], beta1 = pvar1[6];

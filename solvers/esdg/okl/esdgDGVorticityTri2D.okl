@@ -1,0 +1,164 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+@kernel void esdgDGVorticityTri2D(const dlong Nelements,
+				   @restrict const  dlong  * vmapM,
+				   @restrict const  dlong  * vmapP,
+				   @restrict const  dfloat * vgeo,
+				   @restrict const  dfloat * sgeo,
+				   @restrict const  dfloat * const DT,
+				   @restrict const  dfloat * const LIFTT,
+				   @restrict const  dfloat * q,
+				   @restrict dfloat *  Vort){  
+  
+  // block partition of elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
+    
+    @shared dfloat s_u[p_NblockV][p_Np];
+    @shared dfloat s_v[p_NblockV][p_Np];
+    @shared dfloat s_flux[p_NblockV][p_NfacesNfp];
+
+    @exclusive dfloat r_vort;
+    
+    for(int e=eo;e<eo+p_NblockV;++e;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
+        if (e<Nelements) {
+          const dlong qbase = e*p_Nfields*p_Np + n;
+          const dfloat r  = q[qbase + 0*p_Np];
+          const dfloat ru = q[qbase + 1*p_Np];
+          const dfloat rv = q[qbase + 2*p_Np];
+          
+          s_u[e-eo][n] = ru/r;
+          s_v[e-eo][n] = rv/r;        
+        }
+      }
+    }
+
+    @barrier();
+
+    for(dlong e=eo;e<eo+p_NblockV;++e;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
+        if(e<Nelements){
+          const int es = e-eo;
+          const dlong gid = e*p_Nvgeo;
+
+          const dfloat drdx = vgeo[gid + p_RXID];
+          const dfloat drdy = vgeo[gid + p_RYID];
+          const dfloat dsdx = vgeo[gid + p_SXID];
+          const dfloat dsdy = vgeo[gid + p_SYID];
+
+          // compute 1D derivatives
+          dfloat ur = 0, vr = 0;
+          dfloat us = 0, vs = 0;
+
+          #pragma unroll p_Np
+            for(int i=0;i<p_Np;++i) {
+              const dfloat Drn = DT[n + i*p_Np+0*p_Np*p_Np];
+              const dfloat Dsn = DT[n + i*p_Np+1*p_Np*p_Np];
+              ur += Drn*s_u[es][i];
+              us += Dsn*s_u[es][i];
+              vr += Drn*s_v[es][i];
+              vs += Dsn*s_v[es][i];
+            }
+
+          const dfloat uy = drdy*ur + dsdy*us;	  
+	  const dfloat vx = drdx*vr + dsdx*vs;
+
+	  r_vort = vx-uy;
+	}
+      }
+    }
+
+    @barrier();
+    
+    for(dlong e=eo;e<eo+p_NblockV;++e;@inner(1)){
+      for(int m=0;m<p_Np;++m;@inner(0)){
+	if(e<Nelements){
+	  int n = m;
+	  while(n<p_NfacesNfp){
+
+	    // indices of negative and positive traces of face node
+	    const dlong id  = e*p_NfacesNfp + n;
+	    const dlong idM = vmapM[id];
+	    const dlong idP = vmapP[id];
+	    
+	    const int face = n/p_Nfp;
+	    
+	    // load surface geofactors for this face
+	    const dlong sid   = p_Nsgeo*(e*p_Nfaces+face);
+	    const dfloat nx   = sgeo[sid+p_NXID];
+	    const dfloat ny   = sgeo[sid+p_NYID];
+	    const dfloat sJ   = sgeo[sid+p_SJID];
+	    const dfloat invJ = sgeo[sid+p_IJID];
+	    
+	    // load traces
+	    const dlong eM = e;
+	    const dlong eP = idP/p_Np;
+	    const int vidM = idM%p_Np;
+	    const int vidP = idP%p_Np;
+	    
+	    const dlong qbaseM = eM*p_Np*p_Nfields + vidM;
+	    const dlong qbaseP = eP*p_Np*p_Nfields + vidP;
+
+	    const dfloat  rM = q[qbaseM + 0*p_Np];
+	    const dfloat ruM = q[qbaseM + 1*p_Np];
+	    const dfloat rvM = q[qbaseM + 2*p_Np];
+
+	    const dfloat  rP = q[qbaseP + 0*p_Np];
+	    const dfloat ruP = q[qbaseP + 1*p_Np];
+	    const dfloat rvP = q[qbaseP + 2*p_Np];
+
+	    const dfloat uM = ruM/rM, vM = rvM/rM;
+	    const dfloat uP = ruP/rP, vP = rvP/rP;
+
+	    dfloat flux = 0.5*(nx*(vP-vM)-ny*(uP-uM));
+	    
+	    s_flux[e-eo][n] = flux*sJ*invJ;
+
+	    n+=p_Np;
+	  }
+	}
+      }
+    }
+
+    @barrier();
+
+
+    for(dlong e=eo;e<eo+p_NblockV;++e;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
+	if(e<Nelements){
+	  
+	  for(int m=0;m<p_NfacesNfp;++m){
+	    r_vort += LIFTT[n+m*p_Np]*s_flux[e-eo][m];
+	  }
+	  
+          const dlong id = e*p_Np+n; 
+          Vort[id] = r_vort;
+        }
+      }
+    }
+  }
+}

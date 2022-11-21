@@ -499,9 +499,10 @@ void esdg_t::Setup(platform_t& _platform, mesh_t& _mesh, esdgSettings_t& _settin
   //	    -Br*E zeros(length(wf))];
   //  QNs = .5*[Qs-Qs' E'*Bs;
   //	    -Bs*E zeros(length(wf))];
-  dfloat *esQNrT = (dfloat*) calloc(esNp*esNp, sizeof(dfloat));
-  dfloat *esQNsT = (dfloat*) calloc(esNp*esNp, sizeof(dfloat));
-
+  memory<dfloat> esQNrT, esQNsT;
+  esQNrT.malloc(esNp*esNp);
+  esQNsT.malloc(esNp*esNp);
+  
   // 0.5*(Qr-Qr')
   for(int n=0;n<esNq;++n){
     for(int m=0;m<esNq;++m){
@@ -526,8 +527,11 @@ void esdg_t::Setup(platform_t& _platform, mesh_t& _mesh, esdgSettings_t& _settin
     }
   }
 
-  dfloat *esDNrT = (dfloat*) calloc(esNp*esNp, sizeof(dfloat));
-  dfloat *esDNsT = (dfloat*) calloc(esNp*esNp, sizeof(dfloat));
+  memory<dfloat> esDNrT, esDNsT;
+  esDNrT.malloc(esNp*esNp);
+  esDNsT.malloc(esNp*esNp);
+  
+
   
   for(int n=0;n<esNp;++n){
     for(int m=0;m<esNp;++m){
@@ -539,7 +543,8 @@ void esdg_t::Setup(platform_t& _platform, mesh_t& _mesh, esdgSettings_t& _settin
   }
   
   // line up [Pq, Lf]
-  dfloat *esPqLfT = (dfloat*) calloc(mesh.Np*esNp, sizeof(dfloat));
+  memory<dfloat> esPqLfT;
+  esPqLfT.malloc(mesh.Np*esNp);
   for(int n=0;n<mesh.Np;++n){
     for(int m=0;m<esNq;++m){
       esPqLfT[n+m*mesh.Np] = esPq[n*esNq+m];
@@ -550,7 +555,9 @@ void esdg_t::Setup(platform_t& _platform, mesh_t& _mesh, esdgSettings_t& _settin
   }
 
   // interpolate nodes to combined quadrature
-  dfloat *esIqIfT = (dfloat*) calloc(esNp*mesh.Np, sizeof(dfloat));
+  memory<dfloat> esIqIfT;
+  esIqIfT.malloc(mesh.Np*esNp);
+  
   for(int n=0;n<esNp;++n){
     for(int m=0;m<mesh.Np;++m){
       if(n<esNq){
@@ -562,7 +569,10 @@ void esdg_t::Setup(platform_t& _platform, mesh_t& _mesh, esdgSettings_t& _settin
   }
   
   // Fq = Vq*Pq ( vol cubature to combined quadrature through PN )
-  dfloat *esFqT = (dfloat*) calloc(esNp*esNq, sizeof(dfloat));
+  //  dfloat *esFqT = (dfloat*) calloc(esNp*esNq, sizeof(dfloat));
+  memory<dfloat> esFqT;
+  esFqT.malloc(esNp*esNq);
+
   for(int n=0;n<esNp;++n){    
     for(int m=0;m<esNq;++m){
       dfloat resFq = 0;
@@ -572,12 +582,12 @@ void esdg_t::Setup(platform_t& _platform, mesh_t& _mesh, esdgSettings_t& _settin
       esFqT[n+esNp*m] = resFq;
     }
   }  
-
   
-  dfloat *esX = (dfloat*) calloc(mesh.Nelements*esNp, sizeof(dfloat));
-  dfloat *esY = (dfloat*) calloc(mesh.Nelements*esNp, sizeof(dfloat));
-  dfloat *esZ = (dfloat*) calloc(mesh.Nelements*esNp, sizeof(dfloat));
-
+  memory<dfloat> esX, esY, esZ;
+  esX.malloc(mesh.Nelements*esNp);
+  esY.malloc(mesh.Nelements*esNp);
+  esZ.malloc(mesh.Nelements*esNp);
+    
   int cnt = 0;
   for(dlong e=0;e<mesh.Nelements;++e){
 
@@ -606,8 +616,10 @@ void esdg_t::Setup(platform_t& _platform, mesh_t& _mesh, esdgSettings_t& _settin
   
   
   // hack in connect surface nodes here
-  dlong *esVmapM = (dlong*) calloc(mesh.Nelements*esNf,sizeof(dlong));
-  dlong *esVmapP = (dlong*) calloc(mesh.Nelements*esNf,sizeof(dlong));
+  memory<dlong> esVmapM, esVmapP;
+  esVmapM.malloc(mesh.Nelements*esNf);
+  esVmapP.malloc(mesh.Nelements*esNf);
+  
   for(dlong eM=0;eM<mesh.Nelements;++eM){
     for(int fM=0;fM<mesh.Nfaces;++fM){
       dlong eP = mesh.EToE[eM*mesh.Nfaces+fM];
@@ -639,7 +651,8 @@ void esdg_t::Setup(platform_t& _platform, mesh_t& _mesh, esdgSettings_t& _settin
     }
   }
 
-  dfloat *esMu = (dfloat*) calloc(esNp*mesh.Nelements,sizeof(dfloat));
+  memory<dfloat> esMu;
+  esMu.malloc(esNp*mesh.Nelements);
   for(dlong e=0;e<mesh.Nelements;++e){
     for(int n=0;n<esNp;++n){
       dlong id = e*esNp+n;
@@ -650,8 +663,6 @@ void esdg_t::Setup(platform_t& _platform, mesh_t& _mesh, esdgSettings_t& _settin
     }
   }
   o_esMu = platform.malloc<dfloat>(esNp*mesh.Nelements, esMu);
-  free(esMu);
-
 
   o_esSurfRHS = platform.malloc<dfloat>(Nfields*mesh.Nelements*esNp);
   
@@ -659,8 +670,8 @@ void esdg_t::Setup(platform_t& _platform, mesh_t& _mesh, esdgSettings_t& _settin
   o_esY = platform.malloc<dfloat>(mesh.Nelements*esNp, esY);
   o_esZ = platform.malloc<dfloat>(mesh.Nelements*esNp, esZ);
   
-  o_esVmapM = platform.malloc<dfloat>(mesh.Nelements*mesh.intNfp*mesh.Nfaces*sizeof(dlong), esVmapM);
-  o_esVmapP = platform.malloc<dfloat>(mesh.Nelements*mesh.intNfp*mesh.Nfaces*sizeof(dlong), esVmapP);
+  o_esVmapM = platform.malloc<dlong>(mesh.Nelements*mesh.intNfp*mesh.Nfaces, esVmapM);
+  o_esVmapP = platform.malloc<dlong>(mesh.Nelements*mesh.intNfp*mesh.Nfaces, esVmapP);
   
   o_esIqT   = platform.malloc<dfloat>(mesh.Np*esNq,            esIqT);
   o_esIqfT  = platform.malloc<dfloat>(mesh.Np*esNp,            esIqfT);
@@ -777,12 +788,6 @@ void esdg_t::Setup(platform_t& _platform, mesh_t& _mesh, esdgSettings_t& _settin
 
   kernelInfo["defines/" "p_fluxNp"]= fluxNp;
 
-  int primFirst = settings.compareSetting("PRIMITIVE TRANSFORM FIRST","TRUE");
-  kernelInfo["defines/" "PRIMITIVE_TRANSFORM_FIRST"]= primFirst;
-
-  int primFilter = settings.compareSetting("PRIMITIVE POST FILTER","TRUE");
-  kernelInfo["defines/" "PRIMITIVE_POST_FILTER"]= primFilter;
-  
   int maxNodes = mymax(mesh.Np, (mesh.Nfp*mesh.Nfaces));
   kernelInfo["defines/" "p_maxNodes"]= maxNodes;
 
@@ -835,6 +840,7 @@ void esdg_t::Setup(platform_t& _platform, mesh_t& _mesh, esdgSettings_t& _settin
 
   char fileName[BUFSIZ], kernelName[BUFSIZ];
 
+#if 0
   // kernels from volume file
   sprintf(fileName, DESDG "/okl/esdgCubatureVolume%s.okl", suffix);
   sprintf(kernelName, "esdgCubatureVolume%s", suffix);
@@ -861,7 +867,7 @@ void esdg_t::Setup(platform_t& _platform, mesh_t& _mesh, esdgSettings_t& _settin
   cubatureInitialConditionKernel = platform.buildKernel(fileName, kernelName,
 						      kernelInfo);
 
-  
+
   // cubature surface interpolation kernel
   sprintf(fileName, DESDG "/okl/esdgCubatureSurfaceInterpolation%s.okl", suffix);
   sprintf(kernelName, "esdgCubatureSurfaceInterpolation%s", suffix);
@@ -869,8 +875,9 @@ void esdg_t::Setup(platform_t& _platform, mesh_t& _mesh, esdgSettings_t& _settin
   cubatureSurfaceInterpolationKernel = platform.buildKernel(fileName, kernelName,
 							  kernelInfo);
 
+#endif
   // mass matrix operator
-  sprintf(fileName, LIBP_DIR "/core/okl/MassMatrixOperator%s.okl", suffix);
+  sprintf(fileName, LIBP_DIR "/libs/mesh/okl/MassMatrixOperator%s.okl", suffix);
   sprintf(kernelName, "MassMatrixOperator%s", suffix);
 
   MassMatrixKernel = platform.buildKernel(fileName, kernelName,
@@ -912,77 +919,63 @@ void esdg_t::Setup(platform_t& _platform, mesh_t& _mesh, esdgSettings_t& _settin
 					      kernelInfo);
 
   
-  sprintf(fileName, DESDG "/okl/esdgESDG%s.okl", suffix);
+  sprintf(fileName, DESDG "/okl/esdg%s.okl", suffix);
 
-  sprintf(kernelName, "esdgESDGInterpolate%s", suffix);
+  sprintf(kernelName, "esdgInterpolate%s", suffix);
 
   esInterpolateKernel =
     platform.buildKernel(fileName, kernelName, kernelInfo);
 
-  sprintf(kernelName, "esdgESDGIntegrateEntropyChange%s", suffix);
+  sprintf(kernelName, "esdgIntegrateEntropyChange%s", suffix);
 
   esIntegrateEntropyChangeKernel =
     platform.buildKernel(fileName, kernelName, kernelInfo);
 
 
-  sprintf(kernelName, "esdgESDGIntegrateEntropy%s", suffix);
+  sprintf(kernelName, "esdgIntegrateEntropy%s", suffix);
 
   esIntegrateEntropyKernel =
     platform.buildKernel(fileName, kernelName, kernelInfo);
 
   
-  sprintf(kernelName, "esdgESDGVolume%s", suffix);
+  sprintf(kernelName, "esdgVolume%s", suffix);
   
   esVolumeKernel =
     platform.buildKernel(fileName, kernelName, kernelInfo);
 
-  sprintf(kernelName, "esdgESDGSurface%s", suffix);
+  sprintf(kernelName, "esdgSurface%s", suffix);
   
   esSurfaceKernel =
     platform.buildKernel(fileName, kernelName, kernelInfo);
 
   
-  sprintf(kernelName, "esdgESDGVolumeGradient%s", suffix);
+  sprintf(kernelName, "esdgVolumeGradient%s", suffix);
   
   esVolumeGradientKernel =
     platform.buildKernel(fileName, kernelName, kernelInfo);
 
 
-  sprintf(kernelName, "esdgESDGSurfaceGradient%s", suffix);
+  sprintf(kernelName, "esdgSurfaceGradient%s", suffix);
   
   esSurfaceGradientKernel =
     platform.buildKernel(fileName, kernelName, kernelInfo);
 
 
-  sprintf(kernelName, "esdgESDGVolumeDivergence%s", suffix);
+  sprintf(kernelName, "esdgVolumeDivergence%s", suffix);
   
   esVolumeDivergenceKernel =
     platform.buildKernel(fileName, kernelName, kernelInfo);
 
 
-  sprintf(kernelName, "esdgESDGSurfaceDivergence%s", suffix);
+  sprintf(kernelName, "esdgSurfaceDivergence%s", suffix);
   
   esSurfaceDivergenceKernel =
     platform.buildKernel(fileName, kernelName, kernelInfo);
 
 
-  sprintf(kernelName, "esdgESDGDiffusionFluxes%s", suffix);
+  sprintf(kernelName, "esdgDiffusionFluxes%s", suffix);
   
   esDiffusionFluxesKernel =
-    platform.buildKernel(fileName, kernelName, kernelInfo);
-
-  // CUBDG --
-
-  sprintf(fileName, DESDG "/okl/esdgCUBDG%s.okl", suffix);
-
-  sprintf(kernelName, "esdgCUBDGVolume%s", suffix);
-  
-  esVolumeCubatureKernel =
-    platform.buildKernel(fileName, kernelName, kernelInfo);
-
-  sprintf(kernelName, "esdgCUBDGSurface%s", suffix);
-  
-  esSurfaceCubatureKernel =
     platform.buildKernel(fileName, kernelName, kernelInfo);
   
 }

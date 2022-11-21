@@ -1,0 +1,160 @@
+
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+@kernel void esdgErrorTri2D(const dlong Nelements,
+			     const dfloat gamma,
+			     const dfloat time,
+			     @restrict const  dfloat *  vgeo,
+			     @restrict const  dfloat *  cx,
+			     @restrict const  dfloat *  cy,
+			     @restrict const  dfloat *  cz,
+			     @restrict const  dfloat *  cubx,
+			     @restrict const  dfloat *  cuby,
+			     @restrict const  dfloat *  cubz,
+			     @restrict const  dfloat *  cubInterpT,
+			     @restrict const  dfloat *  cubW,
+			     @restrict const  dfloat *  q,
+			     @restrict        dfloat *  linfError,
+			     @restrict        dfloat *  l2Error){
+
+  // block partition of elements
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    
+    @shared dfloat s_q[p_Nfields][p_Np];
+
+    for(int n=0;n<p_cubNp;++n;@inner(0)){
+      const dlong qbase = e*p_Nfields*p_Np + n;
+      
+      if(n<p_Np){
+	for(int f=0;f<p_Nfields;++f){
+	  s_q[f][n] = q[qbase+f*p_Np];
+	}
+      }
+    }
+    
+    @barrier();
+    
+    @exclusive dfloat cubError[p_Nfields];      
+    
+    for(int n=0;n<p_cubNp;++n;@inner(0)){
+      dfloat cubq[p_Nfields];
+
+      for(int f=0;f<p_Nfields;++f){
+	cubq[f] = 0;
+      }
+      
+#pragma unroll p_Np
+      for(int m=0;m<p_Np;++m){
+	dfloat Inm = cubInterpT[n+m*p_cubNp];
+#pragma unroll p_Nfields
+	for(int f=0;f<p_Nfields;++f){
+	  cubq[f] += Inm*s_q[f][m];
+	}
+      }
+      
+      dfloat cubxn = cubx[n+p_cubNp*e];
+      dfloat cubyn = cuby[n+p_cubNp*e];
+      dfloat cubzn = cubz[n+p_cubNp*e];
+
+      dfloat cxe = cx[e], cye = cy[e];
+      
+      dfloat cubr, cubu, cubv, cubp;
+      esdgInitialConditions2D(gamma, time, cxe, cye, cubxn, cubyn, &cubr, &cubu, &cubv, &cubp);
+      cubError[0] = cubr;
+      cubError[1] = cubr*cubu;
+      cubError[2] = cubr*cubv;
+      cubError[3] = cubp/(gamma-1.0) + 0.5*cubr*(cubu*cubu+cubv*cubv);
+
+      cubError[0] -= cubq[0];
+      cubError[1] -= cubq[1];
+      cubError[2] -= cubq[2];
+      cubError[3] -= cubq[3];
+    }
+
+    @barrier();
+
+    @shared volatile dfloat s_linfError[p_Nfields][p_cubNp];
+    @shared volatile dfloat s_l2Error[p_Nfields][p_cubNp];
+    
+    for(int n=0;n<p_cubNp;++n;@inner(0)){
+      dfloat cubJW = vgeo[e*p_Nvgeo + p_JID]*cubW[n];
+
+#pragma unroll p_Nfields
+      for(int f=0;f<p_Nfields;++f){
+	s_linfError[f][n] = fabs(cubError[f]);
+	s_l2Error[f][n] = cubError[f]*cubError[f]*cubJW;
+      }
+    }
+
+    @barrier();
+
+#define mymax(a,b)  (((a)>(b)) ? (a) : (b))
+    
+#define cubThreadReduce(NT)						\
+    if(p_cubNp>NT){							\
+      @barrier();						\
+      for(int n=0;n<p_cubNp;++n;@inner(0))				\
+	if(n<NT && n+NT<p_cubNp)					\
+	  for(int f=0;f<p_Nfields;++f){					\
+	    s_linfError[f][n] = mymax(s_linfError[f][n], s_linfError[f][n+NT]); \
+	    s_l2Error[f][n] += s_l2Error[f][n+NT];			\
+	  }								\
+    }
+    
+    cubThreadReduce(512);
+    cubThreadReduce(256);
+    cubThreadReduce(128);
+    cubThreadReduce(64);
+    
+    @barrier();
+
+    // safe for SIMD 32
+    for(int n=0;n<p_cubNp;++n;@inner(0)){
+      for(int f=0;f<p_Nfields;++f){					
+
+	if(n<32 && n+32<p_cubNp) s_linfError[f][n] = mymax(s_linfError[f][n], s_linfError[f][n+32]);
+	if(n<16 && n+16<p_cubNp) s_linfError[f][n] = mymax(s_linfError[f][n], s_linfError[f][n+16]);
+	if(n< 8 && n+ 8<p_cubNp) s_linfError[f][n] = mymax(s_linfError[f][n], s_linfError[f][n+ 8]) ;
+	if(n< 4 && n+ 4<p_cubNp) s_linfError[f][n] = mymax(s_linfError[f][n], s_linfError[f][n+ 4]) ;
+	if(n< 2 && n+ 2<p_cubNp) s_linfError[f][n] = mymax(s_linfError[f][n], s_linfError[f][n+ 2]) ;
+	if(n< 1 && n+ 1<p_cubNp) s_linfError[f][n] = mymax(s_linfError[f][n], s_linfError[f][n+ 1]) ;
+	
+	if(n<32 && n+32<p_cubNp) s_l2Error[f][n] += s_l2Error[f][n+32];
+	if(n<16 && n+16<p_cubNp) s_l2Error[f][n] += s_l2Error[f][n+16];
+	if(n< 8 && n+ 8<p_cubNp) s_l2Error[f][n] += s_l2Error[f][n+ 8];
+	if(n< 4 && n+ 4<p_cubNp) s_l2Error[f][n] += s_l2Error[f][n+ 4];
+	if(n< 2 && n+ 2<p_cubNp) s_l2Error[f][n] += s_l2Error[f][n+ 2];
+	if(n< 1 && n+ 1<p_cubNp) s_l2Error[f][n] += s_l2Error[f][n+ 1];
+
+	if(n==0){
+	  linfError[e*p_Nfields+f] = s_linfError[f][0];
+	  l2Error[e*p_Nfields+f] = s_l2Error[f][0];
+	}
+      }
+    }
+  }
+}

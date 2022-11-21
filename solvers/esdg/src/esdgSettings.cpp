@@ -95,9 +95,6 @@ esdgSettings_t::esdgSettings_t(comm_t _comm):
   newSetting("OUTPUT FILE NAME",
              "esdg");
 
-  newSetting("SUPER NODAL DEGREE INCREMENT",
-             "0",
-             "Degree of super nodal point set over N");
 
   newSetting("FLUX DEGREE INCREMENT",
              "0",
@@ -107,26 +104,6 @@ esdgSettings_t::esdgSettings_t(comm_t _comm):
              "0",
              "Number of top nodes to filter");
 
-  newSetting("USE INTERIOR NODES",
-             "FALSE",
-             "Flag for using interpolation nodes that are interior to the element",
-             {"TRUE", "FALSE"});
-
-  newSetting("PRIMITIVE TRANSFORM FIRST",
-             "TRUE",
-             "Flag to specify if the conservative to primitive transform should happen before super nodal interpolation",
-             {"TRUE", "FALSE"});
-
-  newSetting("PRIMITIVE POST FILTER",
-             "FALSE",
-             "Flag to specify if the primitive variables are filtered after calculation at super nodes",
-             {"TRUE", "FALSE"});
-
-
-  newSetting("VARIATIONAL FORM",
-             "WEAK",
-             "Flag to specify if the DG is in weak or strong form (only used in CUBATURE)",
-             {"WEAK", "STRONG"});
 
   newSetting("LAME LAMBDA",
              "0.0",
@@ -148,30 +125,6 @@ esdgSettings_t::esdgSettings_t(comm_t _comm):
              "0.0",
              "X-coordinate of end of outflow viscosity ramp");
 
-  newSetting("USE ARTIFICIAL VISCOSITY",
-             "FALSE",
-             "Flag to specify if artificial viscosity should be used",
-             {"TRUE", "FALSE"});
-
-  newSetting("USE DODGES",
-             "FALSE",
-             "Flag to specify if entropy generation will be used to switch to 2-pt volume fluxes",
-             {"TRUE", "FALSE"});
-
-  newSetting("USE ABGRALL FIX",
-             "FALSE",
-             "Flag to specify if entropy generation neutralization via Abgrall should be used",
-             {"TRUE", "FALSE"});
-
-  newSetting("USE SUBCELL DIFFUSION",
-             "FALSE",
-             "Flag to specify if C0 P1 subcell block scalar entropy diffusion should be used",
-             {"TRUE", "FALSE"});
-
-  
-  newSetting("DIFFUSION PENALTY TAU",
-             "0.0",
-             "Diffusion penalty parameter");
 
   newSetting("CHECKPOINT SAVE",
              "FALSE",
@@ -235,24 +188,8 @@ void esdgSettings_t::report() {
     reportSetting("OUTPUT FILE NAME");
 
     // settings 
-    reportSetting("SUPER NODAL DEGREE INCREMENT");
     reportSetting("FLUX DEGREE INCREMENT");
     reportSetting("FILTER TOP MODES");
-    reportSetting("USE INTERIOR NODES");
-    reportSetting("PRIMITIVE TRANSFORM FIRST");
-    reportSetting("PRIMITIVE POST FILTER");
-    reportSetting("VARIATIONAL FORM");
-
-    // diffusion settings
-    reportSetting("DIFFUSION ONLY TIME");
-    reportSetting("DIFFUSION PENALTY TAU");
-
-    // nonlinear stability options
-    reportSetting("USE ARTIFICIAL VISCOSITY");
-    reportSetting("USE DODGES");
-    reportSetting("USE ABGRALL FIX");
-    reportSetting("USE SUBCELL DIFFUSION");
-    reportSetting("RELAXATION TIME");
 
     // checkpoint 
     reportSetting("CHECKPOINT SAVE");
