@@ -28,14 +28,13 @@ SOFTWARE.
 
 @kernel void esdgInitialCondition2D(const dlong Nelements,
                                    const dfloat gamma,
-                                   const dfloat time,
-				     @restrict const  dfloat *  cx,
-                                   @restrict const  dfloat *  cy,
+				    const dfloat time,
+				    @restrict const  dfloat *  x,
+				    @restrict const  dfloat *  y,
+				    @restrict const  dfloat *  z,
+				    @restrict const  dfloat *  cx,
+				    @restrict const  dfloat *  cy,
                                    @restrict const  dfloat *  cz,
-                                   @restrict const  dfloat *  x,
-                                   @restrict const  dfloat *  y,
-                                   @restrict const  dfloat *  z,
-				   @restrict const dfloat *snProjNT,
                                    @restrict        dfloat *  q){
 
 

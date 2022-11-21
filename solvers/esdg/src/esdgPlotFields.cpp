@@ -51,7 +51,8 @@ void esdg_t::PlotFields(memory<dfloat> &Q, memory<dfloat> &V, char *fileName){
       for(int m=0;m<mesh.Np;++m){
         plotxn += mesh.plotInterp[n*mesh.Np+m]*mesh.x[m+e*mesh.Np];
         plotyn += mesh.plotInterp[n*mesh.Np+m]*mesh.y[m+e*mesh.Np];
-        plotzn += mesh.plotInterp[n*mesh.Np+m]*mesh.z[m+e*mesh.Np];
+	if(mesh.dim==3)
+	  plotzn += mesh.plotInterp[n*mesh.Np+m]*mesh.z[m+e*mesh.Np];
       }
 
       fprintf(fp, "       ");
