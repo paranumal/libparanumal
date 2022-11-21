@@ -29,25 +29,18 @@
 //evaluate ODE rhs = f(q,t)
 void esdg_t::rhsf(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T){
 
-  // modifications of based schemes
-  dfloat lambda = 0, mu = 0;
-
-  settings.getSetting("LAME LAMBDA", lambda);
-  settings.getSetting("LAME MU", mu);
-
   // use this to determine cutoff parameter for entropy generation when using DODGES
   static int entropyStep=0;
-#if 0
-  if(timeStepper.rkStage==0){
-    if(entropyStep%100==0){
-
-      dfloat totalEntropy = integrateEntropy(o_Q);
-      
-      printf("%d %d %d %15.14lg % 15.14lg  %%%% N, Ncub, Nelements, Time, Total Entropy, cutoff\n",
-	     mesh.N, mesh.cubN, mesh.Nelements, T, totalEntropy);
-    }
-    ++entropyStep;
+#if 1
+  if(entropyStep%100==0){
+    
+    dfloat totalEntropy = integrateEntropy(o_Q);
+    
+    printf("%d %d %d %15.14lg % 15.14lg  %%%% N, Ncub, Nelements, Time, Total Entropy, cutoff\n",
+	   mesh.N, mesh.cubN, mesh.Nelements, T, totalEntropy);
   }
+  ++entropyStep;
+
 #endif
 
   // entropy stable
