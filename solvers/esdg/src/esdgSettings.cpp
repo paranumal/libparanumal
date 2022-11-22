@@ -95,11 +95,6 @@ esdgSettings_t::esdgSettings_t(comm_t _comm):
   newSetting("OUTPUT FILE NAME",
              "esdg");
 
-
-  newSetting("FLUX DEGREE INCREMENT",
-             "0",
-             "Degree of flux node set over N");
-
   newSetting("FILTER TOP MODES",
              "0",
              "Number of top nodes to filter");
@@ -188,7 +183,6 @@ void esdgSettings_t::report() {
     reportSetting("OUTPUT FILE NAME");
 
     // settings 
-    reportSetting("FLUX DEGREE INCREMENT");
     reportSetting("FILTER TOP MODES");
 
     // checkpoint 

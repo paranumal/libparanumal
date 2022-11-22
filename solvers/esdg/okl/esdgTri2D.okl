@@ -147,8 +147,6 @@
       dfloat r_qe_quadn[p_Nfields];
       dfloat r_qp_quadn[p_Nfields+3];
 
-      // bail early if this element not flagged
-      
 #pragma unroll p_Nfields
       for(int fld=0;fld<p_Nfields;++fld){
 	dlong id = e*p_Nfields*p_esNp + n + fld*p_esNp;
@@ -190,7 +188,7 @@
       
       // compute Hadamard product form divergence
       int Nstart = 0;
-      int Nend = (n<p_esNq) ? p_esNp:p_esNq;
+      int Nend = (n<p_esNq) ? p_esNp:p_esNq; // zero block
       
       for(int m=Nstart;m<Nend;++m){
 	dfloat Drnm = esQNrT[n+m*p_esNp];

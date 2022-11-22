@@ -90,28 +90,9 @@ public:
 
   // cell centers (needed for Riemann probem initialization)
   deviceMemory<dfloat> o_cx, o_cy, o_cz;
-
-  // flux nodes
-  int fluxN; // degree of flux nodes
-  int fluxNp; // number of flux nodes
-  deviceMemory<dfloat> o_fluxMeanWeights; // weights to compute mean of field on flux nodes
-  deviceMemory<dfloat> o_fluxIsolnT;  // interpolate from soln nodes to flux nodes 
-  deviceMemory<dfloat> o_fluxFfluxT;  // filter from flux nodes to flux nodes through super nodal space
-  deviceMemory<dfloat> o_fluxMMfluxT;  // mass matrix for flux nodes
   
   deviceMemory<dfloat> o_filterT;    // top mode filter on regular volume nodes
 
-  deviceMemory<dfloat> o_sInterpT; // surface cubature interpolation matrix
-  deviceMemory<dfloat> o_smapM;    // indices of negative trace in surface cubature node list
-  deviceMemory<dfloat> o_smapP;    // indices of positive trace in surface cubature node list
-  deviceMemory<dfloat> o_sQ;
-  
-  kernel_t cubatureSurfaceInterpolationKernel;
-  
-  kernel_t cubatureVolumeKernel;
-  kernel_t cubatureSurfaceKernel;
-  kernel_t cubatureInitialConditionKernel;
-  
   kernel_t vorticityKernel;
   kernel_t dgVorticityKernel;
 

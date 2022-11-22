@@ -40,7 +40,7 @@ void esdg_t::Run(){
   }
   
   std::cout << "Testing stability of (E=" << mesh.Nelements << ", N=" << mesh.N
-	    << ", Nhat=" << fluxN << ") integrating from T=" << startTime << " to "
+	    << " integrating from T=" << startTime << " to "
 	    << finalTime << std::endl;
   
   platform.device.finish();

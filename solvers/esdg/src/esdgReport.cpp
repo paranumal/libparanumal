@@ -59,7 +59,7 @@ void esdg_t::Report(dfloat time, int tstep){
     std::string name;
     settings.getSetting("OUTPUT FILE NAME", name);
     char fname[BUFSIZ];
-    sprintf(fname, "%s_E%06d_N%02d_Nhat%02d_%04d_%04d.vtu", name.c_str(), mesh.Nelements, mesh.N, fluxN, mesh.rank, frame++);
+    sprintf(fname, "%s_E%06d_N%02d_%04d_%04d.vtu", name.c_str(), mesh.Nelements, mesh.N, mesh.rank, frame++);
     
     PlotFields(q, Vort, fname);
   }
@@ -111,8 +111,8 @@ void esdg_t::Report(dfloat time, int tstep){
 
     int orderPlus = mesh.cubN;
 
-    printf("%d %d %d % 7.5E % 7.5E % 7.5E % 7.5E % 7.5E % 7.5E % 7.5E",
-	   mesh.N, orderPlus, fluxN, time,  minMach, maxMach, minDens, maxDens, minPres, maxPres);
+    printf("%d %d % 7.5E % 7.5E % 7.5E % 7.5E % 7.5E % 7.5E % 7.5E",
+	   mesh.N, orderPlus, time,  minMach, maxMach, minDens, maxDens, minPres, maxPres);
 
     if(cubature)
       printf("%%%% degree, cubatureN, filter recon degree, time, minMach, maxMach, minDens, maxDens, minPres, maxPres \n");
@@ -148,7 +148,7 @@ void esdg_t::Report(dfloat time, int tstep){
 
     int orderPlus =  mesh.cubN;
     
-    printf("%d %d %d %d %7.5E ", mesh.Nelements, mesh.N, orderPlus, fluxN, time);
+    printf("%d %d %d %7.5E ", mesh.Nelements, mesh.N, orderPlus, time);
 
     // print out LINF errors
     for(int f=0;f<Nfields;++f){

@@ -28,9 +28,6 @@
 
 void esdg_t::SetupTri2D(){
 
-  settings.getSetting("FLUX DEGREE INCREMENT", fluxN);
-  fluxN += mesh.N;
-  fluxNp = (mesh.dim==2) ? (fluxN+1)*(fluxN+2)/2 : (fluxN+1)*(fluxN+2)*(fluxN+3)/6; 
 
     // use this for outflow viscosity ramp
   dfloat outflowMu, outflowXmin, outflowXmax, meanMu;
@@ -39,71 +36,6 @@ void esdg_t::SetupTri2D(){
   
   settings.getSetting("OUTFLOW LAYER XMIN", outflowXmin);
   settings.getSetting("OUTFLOW LAYER XMAX", outflowXmax);
-
-
-
-  
-  memory<dfloat> fluxr, fluxs, fluxt, fluxVflux, fluxVsoln, fluxMMflux, fluxIsoln, fluxIsolnT, fluxFfluxT, fluxMeanWeights;
-
-  fluxr.malloc(fluxNp);
-  fluxs.malloc(fluxNp);
-  fluxt.malloc(fluxNp);
-
-  fluxVflux .malloc(fluxNp*fluxNp);
-  fluxVsoln .malloc(mesh.Np*fluxNp);
-
-  fluxMMflux.malloc(fluxNp*fluxNp);
-  fluxIsoln .malloc(fluxNp*mesh.Np);
-
-  fluxIsolnT.malloc(fluxNp*mesh.Np);
-  fluxFfluxT.malloc(fluxNp*fluxNp);
-
-  fluxMeanWeights.malloc(fluxNp);
-  
-  
-  //    mesh.ChebyshevNodesTri2D(fluxN, fluxr, fluxs);
-  mesh.NodesTri2D(fluxN, fluxr, fluxs);
-  
-  mesh.VandermondeTri2D(fluxN,  fluxr,    fluxs,    fluxVflux);
-  mesh.VandermondeTri2D(mesh.N,       fluxr,    fluxs,    fluxVsoln);
-  mesh.MassMatrixTri2D(fluxNp, fluxVflux, fluxMMflux);
-  
-  // interpolates from solution nodes to flux
-  mesh.InterpolationMatrixTri2D(mesh.N, mesh.r, mesh.s, fluxr, fluxs, fluxIsoln);
-
-  // compute weights used for computing mean  on flux nodes
-  for(int n=0;n<fluxNp;++n){
-    for(int m=0;m<fluxNp;++m){
-      fluxMeanWeights[n] += fluxMMflux[n*fluxNp+m];
-    }
-  }
-
-  // store soln to flux interpolation matrix
-  for(int n=0;n<fluxNp;++n){
-    for(int m=0;m<mesh.Np;++m){
-      fluxIsolnT[n + m*fluxNp] = fluxIsoln[n*mesh.Np+m];
-    }
-  }
-  
-  // built project from flux nodes to super nodes
-
-  // filter from flux to flux nodes thorough solution space
-  for(int n=0;n<fluxNp;++n){
-    for(int m=0;m<fluxNp;++m){
-      dfloat resFilt = 0;
-      for(int j=0;j<mesh.Np;++j){
-	for(int i=0;i<fluxNp;++i){
-	  resFilt += fluxVsoln[mesh.Np*n + j]*fluxVsoln[mesh.Np*i+j]*fluxMMflux[i*fluxNp+m];
-	}
-      }
-      fluxFfluxT[n+m*fluxNp] = resFilt;
-    }
-  }
-
-  o_fluxIsolnT = platform.malloc<dfloat>(fluxNp*mesh.Np, fluxIsolnT);
-  o_fluxFfluxT = platform.malloc<dfloat>(fluxNp*fluxNp, fluxFfluxT);
-  o_fluxMMfluxT = platform.malloc<dfloat>(fluxNp*fluxNp, fluxMMflux);
-  o_fluxMeanWeights = platform.malloc<dfloat>(fluxNp, fluxMeanWeights);
 
   // set up cubature grid
   cubature   = (settings.compareSetting("ADVECTION TYPE", "CUBATURE")) ? 1:0;
@@ -153,41 +85,21 @@ void esdg_t::SetupTri2D(){
   it.malloc(mesh.intNfp*mesh.Nfaces);
   iw.malloc(mesh.intNfp*mesh.Nfaces);
 
-  memory <dfloat> sInterp, sInterpT;
-  sInterp.malloc(mesh.intNfp*mesh.Nfaces*mesh.Np);
-  sInterpT.malloc(mesh.intNfp*mesh.Nfaces*mesh.Np);
-  
-  if(mesh.dim==2){
-    for(int n=0;n<mesh.intNfp;++n){
-      ir[0*mesh.intNfp + n] =  mesh.intr[n];
-      ir[1*mesh.intNfp + n] = -mesh.intr[n];
-      ir[2*mesh.intNfp + n] = -1.0;
-      
-      is[0*mesh.intNfp + n] = -1.0;
-      is[1*mesh.intNfp + n] =  mesh.intr[n];
-      is[2*mesh.intNfp + n] = -mesh.intr[n];
-      
-      iw[0*mesh.intNfp + n] =  mesh.intw[n];
-      iw[1*mesh.intNfp + n] =  mesh.intw[n];
-      iw[2*mesh.intNfp + n] =  mesh.intw[n];
-
-    }
-
-    mesh.InterpolationMatrixTri2D(mesh.N, mesh.r, mesh.s, ir, is, sInterp);
+  for(int n=0;n<mesh.intNfp;++n){
+    ir[0*mesh.intNfp + n] =  mesh.intr[n];
+    ir[1*mesh.intNfp + n] = -mesh.intr[n];
+    ir[2*mesh.intNfp + n] = -1.0;
+    
+    is[0*mesh.intNfp + n] = -1.0;
+    is[1*mesh.intNfp + n] =  mesh.intr[n];
+    is[2*mesh.intNfp + n] = -mesh.intr[n];
+    
+    iw[0*mesh.intNfp + n] =  mesh.intw[n];
+    iw[1*mesh.intNfp + n] =  mesh.intw[n];
+    iw[2*mesh.intNfp + n] =  mesh.intw[n];
+    
   }
   
-  for(int n=0;n<mesh.intNfp*mesh.Nfaces;++n){
-    for(int m=0;m<mesh.Np;++m){
-      sInterpT[n+m*mesh.intNfp*mesh.Nfaces] = sInterp[n*mesh.Np+m];
-    }
-  }
-  
-  o_sInterpT =
-    platform.malloc<dfloat>(mesh.Np*mesh.intNfp*mesh.Nfaces, sInterpT);
-  
-  o_sQ =
-    platform.malloc<dfloat>(mesh.Nelements*mesh.intNfp*mesh.Nfaces*Nfields);
-
   // ------------------------------------------------------------------------------------------------------------------------------------------
   // entropy stable infrastructure following On discretely entropy conservative and entropy stable discontinuous Galerkin methods, Jesse Chan
   
@@ -706,8 +618,6 @@ void esdg_t::SetupTri2D(){
   kernelInfo["defines/" "p_Nfields"]= Nfields;
   kernelInfo["defines/" "p_cubNp"]= mesh.cubNp;
 
-  kernelInfo["defines/" "p_fluxNp"]= fluxNp;
-
   int maxNodes = mymax(mesh.Np, (mesh.Nfp*mesh.Nfaces));
   kernelInfo["defines/" "p_maxNodes"]= maxNodes;
 
@@ -748,54 +658,10 @@ void esdg_t::SetupTri2D(){
   //  std::cout << kernelInfo << std::endl;
   
   // set kernel name suffix
-  char *suffix;
-  if(mesh.elementType==Mesh::TRIANGLES)
-    suffix = strdup("Tri2D");
-  if(mesh.elementType==Mesh::QUADRILATERALS)
-    suffix = strdup("Quad2D");
-  if(mesh.elementType==Mesh::TETRAHEDRA)
-    suffix = strdup("Tet3D");
-  if(mesh.elementType==Mesh::HEXAHEDRA)
-    suffix = strdup("Hex3D");
+  char *suffix = strdup("Tri2D");
 
   char fileName[BUFSIZ], kernelName[BUFSIZ];
 
-#if 0
-  // kernels from volume file
-  sprintf(fileName, DESDG "/okl/esdgCubatureVolume%s.okl", suffix);
-  sprintf(kernelName, "esdgCubatureVolume%s", suffix);
-  
-  cubatureVolumeKernel =  platform.buildKernel(fileName, kernelName,
-						     kernelInfo);
-  // kernels from surface file
-  sprintf(fileName, DESDG "/okl/esdgCubatureSurface%s.okl", suffix);
-  sprintf(kernelName, "esdgCubatureSurface%s", suffix);
-  
-  cubatureSurfaceKernel = platform.buildKernel(fileName, kernelName,
-					     kernelInfo);
-
-  if(mesh.dim==2){
-    sprintf(fileName, DESDG "/okl/esdgCubatureInitialCondition2D.okl");
-    sprintf(kernelName, "esdgCubatureInitialCondition2D");
-  }
-  
-  if(mesh.dim==3){
-    sprintf(fileName, DESDG "/okl/esdgCubatureInitialCondition3D.okl");
-    sprintf(kernelName, "esdgCubatureInitialCondition3D");
-  }
-
-  cubatureInitialConditionKernel = platform.buildKernel(fileName, kernelName,
-						      kernelInfo);
-
-
-  // cubature surface interpolation kernel
-  sprintf(fileName, DESDG "/okl/esdgCubatureSurfaceInterpolation%s.okl", suffix);
-  sprintf(kernelName, "esdgCubatureSurfaceInterpolation%s", suffix);
-  
-  cubatureSurfaceInterpolationKernel = platform.buildKernel(fileName, kernelName,
-							  kernelInfo);
-
-#endif
   // mass matrix operator
   sprintf(fileName, LIBP_DIR "/libs/mesh/okl/MassMatrixOperator%s.okl", suffix);
   sprintf(kernelName, "MassMatrixOperator%s", suffix);
@@ -818,22 +684,15 @@ void esdg_t::SetupTri2D(){
   vorticityKernel = platform.buildKernel(fileName, kernelName,
 				       kernelInfo);
 
-  if (mesh.dim==2) {
-
-    sprintf(fileName, DESDG "/okl/esdgDGVorticity%s.okl", suffix);
-    sprintf(kernelName, "esdgDGVorticity%s", suffix);
-    
-    dgVorticityKernel = platform.buildKernel(fileName, kernelName,
+  sprintf(fileName, DESDG "/okl/esdgDGVorticity%s.okl", suffix);
+  sprintf(kernelName, "esdgDGVorticity%s", suffix);
+  
+  dgVorticityKernel = platform.buildKernel(fileName, kernelName,
 					   kernelInfo);
-
-    printf("NODAL 2D INITIAL CONDITION\n");    
-    sprintf(fileName, DESDG "/okl/esdgInitialCondition2D.okl");
-    sprintf(kernelName, "esdgInitialCondition2D");
-  } else {
-    printf("NODAL 3D INITIAL CONDITION\n");
-    sprintf(fileName, DESDG "/okl/esdgInitialCondition3D.okl");
-    sprintf(kernelName, "esdgInitialCondition3D");
-  }
+  
+  printf("NODAL 2D INITIAL CONDITION\n");    
+  sprintf(fileName, DESDG "/okl/esdgInitialCondition2D.okl");
+  sprintf(kernelName, "esdgInitialCondition2D");
 
   initialConditionKernel = platform.buildKernel(fileName, kernelName,
 					      kernelInfo);
