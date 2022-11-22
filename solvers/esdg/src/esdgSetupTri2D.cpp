@@ -262,6 +262,7 @@ void esdg_t::SetupTri2D(){
     }
   }
 
+#if 0
   memory<dfloat>esIqfLfT;
   esIqfLfT.malloc(esNp*esNf);
 
@@ -278,8 +279,8 @@ void esdg_t::SetupTri2D(){
     //    printf("\n");
   }
 
-  o_esIqfLfT = platform.malloc<dfloat>(esNp*esNf, esIqfLfT);
-
+  //  o_esIqfLfT = platform.malloc<dfloat>(esNp*esNf, esIqfLfT);
+  
   memory<dfloat>esIqfDrPqT, esIqfDsPqT;
   esIqfDrPqT.malloc(esNp*esNq);
   esIqfDsPqT.malloc(esNp*esNq);
@@ -305,6 +306,7 @@ void esdg_t::SetupTri2D(){
 
   o_esIqfDrPqT = platform.malloc<dfloat>(esNp*esNq, esIqfDrPqT);
   o_esIqfDsPqT = platform.malloc<dfloat>(esNp*esNq, esIqfDsPqT);
+#endif
   
   // scaled reference normals
   // z = zeros(size(rq1D));
@@ -596,12 +598,11 @@ void esdg_t::SetupTri2D(){
   o_esWq = platform.malloc<dfloat>(esNq, esWq);
   o_esWf = platform.malloc<dfloat>(esNf, esWf);
 
+#if 0
   o_esdQedx = platform.malloc<dfloat>(esNp*Nfields*mesh.Nelements);
   o_esdQedy = platform.malloc<dfloat>(esNp*Nfields*mesh.Nelements);
   o_esdQedz = platform.malloc<dfloat>(esNp*Nfields*mesh.Nelements);
-
-  o_esDQe   = platform.malloc<dfloat>(mesh.Np*Nfields*mesh.Nelements);
-  
+#endif
   
   // OCCA build stuff
   properties_t kernelInfo = mesh.props; //copy base occa properties

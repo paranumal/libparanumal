@@ -58,9 +58,6 @@ void esdg_t::Setup(platform_t& _platform, mesh_t& _mesh, esdgSettings_t& _settin
   o_esTotalEntropy = platform.malloc<dfloat>(mesh.Nelements);
   esTotalEntropy.malloc(mesh.Nelements);
 
-  o_entropyChange = platform.malloc<dfloat>(mesh.Nelements);
-  entropyChange.malloc(mesh.Nelements);
-
   dlong NlocalFields = mesh.Nelements*mesh.Np*Nfields;
   dlong NhaloFields  = mesh.totalHaloPairs*mesh.Np*Nfields;
   //setup timeStepper

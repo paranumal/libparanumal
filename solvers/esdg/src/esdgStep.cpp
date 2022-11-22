@@ -33,6 +33,9 @@ void esdg_t::rhsf(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const 
   case Mesh::TRIANGLES:
     rhsfTri2D(o_Q, o_RHS, T);
     break;
+  case Mesh::QUADRILATERALS:
+    rhsfQuad2D(o_Q, o_RHS, T);
+    break;
   default:
     break;
   }
@@ -88,4 +91,30 @@ void esdg_t::rhsfTri2D(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, c
 
 void esdg_t::rhsfQuad2D(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T){
 
+#if 0
+  // fix elements with entropy violations using Hadamard product
+  esVolumeKernel(mesh.Nelements,
+		 mesh.o_esVgeo,
+		 o_esVfgeo,
+		 o_esFgeo,
+		 o_esD1D,
+		 o_esVf1D,
+		 o_esLf1D,
+		 o_esQ,
+		 o_esQf,
+		 o_RHS,
+		 o_RHSf);
+
+  // surface fluxes
+  esSurfaceernel(mesh.Nelements,
+		 mesh.o_esVgeo,
+		 o_esFgeo,
+		 o_esMapPq,
+		 o_esBcFlag,
+		 o_esLf1D,
+		 o_esQf,
+		 o_RHSf,
+		 o_RHS);
+  
+#endif
 }

@@ -115,28 +115,21 @@ public:
   deviceMemory<dfloat> o_esY; // y coordinates of vol and surf es nodes
   deviceMemory<dfloat> o_esZ; // z coordinates of vol and surf es nodes
 
-  deviceMemory<dfloat> o_esRelaxOpT; // relaxation filter terms for entropy vars
+  // START TRI ESDG STUFF
+
   deviceMemory<dfloat> o_esIqT; // interpolate to volume quadratures
   deviceMemory<dfloat> o_esIqfT; // interpolate to combined quadratures
+
   deviceMemory<dfloat> o_esQNrT;  // quadrature to quadrature 'r' derivative
   deviceMemory<dfloat> o_esQNsT;  // quadrature to quadrature 's' derivative
+
   deviceMemory<dfloat> o_esPqT;   // quadrature to PN nodes
   deviceMemory<dfloat> o_esFqT;   // quadrature to quadrature through PN
+
   deviceMemory<dfloat> o_esPqLfT; // project from volume quad and lift from surface quadrature to PN nodes
   deviceMemory<dfloat> o_esItMT; // interpolate and integrate
   deviceMemory<dfloat> o_esLfT;   // lift from surface to PN nodes
 
-  deviceMemory<dfloat> o_esSrrT;
-  deviceMemory<dfloat> o_esSrsT;
-  deviceMemory<dfloat> o_esSsrT;
-  deviceMemory<dfloat> o_esSssT;
-  deviceMemory<dfloat> o_esLumpedMassMatrixInv;
-  deviceMemory<dfloat> o_esLocalMassMatrixInv;
-  
-  deviceMemory<dfloat> o_esIqfDrPqT; // diffferentiate from vol quadrature to all quadrature via PN
-  deviceMemory<dfloat> o_esIqfDsPqT; // diffferentiate from vol quadrature to all quadrature via PN
-  deviceMemory<dfloat> o_esIqfLfT; // interpolate from surface quadrature to all quadature via PN
-  
   deviceMemory<dfloat> o_esQc;      // storage for conserved variables at combined quadrature
   deviceMemory<dfloat> o_esQe;      // storage for entropy variables at combined quadrature
   deviceMemory<dfloat> o_esQp;      // storage for primitive variables at combined quadrature
@@ -145,12 +138,6 @@ public:
   deviceMemory<dfloat> o_esdQedx;  // 'x' derivative of entropy variables at combined quadrature
   deviceMemory<dfloat> o_esdQedy;  // 'y' derivative of entropy variables at combined quadrature
   deviceMemory<dfloat> o_esdQedz;  // 'z' derivative of entropy variables at combined quadrature
-
-  deviceMemory<dfloat> o_esDQe;  // art diff P1 subcell
-  
-  memory<dfloat> entropyChange;
-  deviceMemory<dfloat> o_entropyChange;
-
   
   deviceMemory<dlong> o_esVmapM;
   deviceMemory<dlong> o_esVmapP;
@@ -162,6 +149,10 @@ public:
   deviceMemory<dfloat> o_esWq;
   deviceMemory<dfloat> o_esWf;
 
+  // END TRI ESDG STUFF
+  
+
+  
   deviceMemory<dlong> o_EToE;
   deviceMemory<dlong> o_EToB;
   

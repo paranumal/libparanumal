@@ -233,17 +233,17 @@ void euler2d_flux(dfloat rho_i, dfloat rho_j, dfloat u_i, dfloat u_j,
   }
 }
 
-@kernel void esdgVolumeQuad2(const int Nelements,
-			     const dfloat *  vgeo,
-			     const dfloat *  vfgeo,
-			     const dfloat *  fgeo,		    
-			     const dfloat *  D1D,
-			     const dfloat *  Vf1D,
-			     const dfloat *  Lf1D,		    
-			     const dfloat *  Q,
-			     dfloat *  Qf,
-			     dfloat *  rhs,
-			     dfloat *  rhsf){
+@kernel void esdgVolumeQuad2D(const int Nelements,
+			      const dfloat *  vgeo,
+			      const dfloat *  vfgeo,
+			      const dfloat *  fgeo,		    
+			      const dfloat *  D1D,
+			      const dfloat *  Vf1D,
+			      const dfloat *  Lf1D,		    
+			      const dfloat *  Q,
+			      dfloat *  Qf,
+			      dfloat *  rhs,
+			      dfloat *  rhsf){
   
   for (int e = 0; e < Nelements; ++e; @outer(0)){
     
