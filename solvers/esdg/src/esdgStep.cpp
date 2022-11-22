@@ -29,22 +29,20 @@
 //evaluate ODE rhs = f(q,t)
 void esdg_t::rhsf(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T){
 
-  // use this to determine cutoff parameter for entropy generation when using DODGES
-#if 0
-  static int entropyStep=0;
-
-  if(entropyStep%100==0){
-    
-    dfloat totalEntropy = integrateEntropy(o_Q);
-    
-    printf("%d %d %d %15.14lg % 15.14lg  %%%% N, Ncub, Nelements, Time, Total Entropy, cutoff\n",
-	   mesh.N, mesh.cubN, mesh.Nelements, T, totalEntropy);
+  switch(mesh.elementType){
+  case Mesh::TRIANGLES:
+    rhsfTri2D(o_Q, o_RHS, T);
+    break;
+  default:
+    break;
   }
-  ++entropyStep;
+  
+}
 
-#endif
+void esdg_t::rhsfTri2D(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T){
 
-  // entropy stable
+
+    // entropy stable
   esInterpolateKernel(mesh.Nelements,
 		      gamma,
 		      o_EToE,
@@ -52,7 +50,6 @@ void esdg_t::rhsf(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const 
 		      o_esIqfT,
 		      o_esFqT,
 		      mesh.o_vgeo,
-		      o_esWq,
 		      o_Q,
 		      o_esQc,
 		      o_esQe);
@@ -85,4 +82,10 @@ void esdg_t::rhsf(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const 
 		  o_esQcrecon,
 		  o_RHS);
   
+
+
+}
+
+void esdg_t::rhsfQuad2D(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T){
+
 }

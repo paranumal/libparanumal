@@ -32,7 +32,6 @@
 				       @restrict const dfloat *esIqfT, // interpolate solution to quadrature
 				       @restrict const dfloat *esFqT, // filter through P^N
 				       @restrict const dfloat *vgeo,
-				       @restrict const dfloat *esWq,
 				       @restrict const dfloat *q,  // conserved fields
 				       @restrict dfloat *qc,
 				       @restrict dfloat *qe){

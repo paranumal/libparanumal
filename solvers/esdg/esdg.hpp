@@ -215,6 +215,8 @@ public:
   void PlotFields(memory<dfloat> &Q, memory<dfloat> &V, char *fileName);
 
   void rhsf(deviceMemory<dfloat> &o_q, deviceMemory<dfloat> &o_rhs, const dfloat time);
+  void rhsfTri2D(deviceMemory<dfloat> &o_q, deviceMemory<dfloat> &o_rhs, const dfloat time);
+  void rhsfQuad2D(deviceMemory<dfloat> &o_q, deviceMemory<dfloat> &o_rhs, const dfloat time);
 
   void saveCheckpoint(memory<dfloat> &outq, dfloat time);
 
