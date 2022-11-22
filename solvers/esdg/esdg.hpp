@@ -223,6 +223,10 @@ public:
   void Setup(platform_t& _platform, mesh_t& _mesh, 
 	     esdgSettings_t& _settings);
 
+  void SetupTri2D();
+  void SetupQuad2D();
+
+  
   void Run();
 
   void Report(dfloat time, int tstep);

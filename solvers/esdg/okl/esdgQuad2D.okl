@@ -1,0 +1,758 @@
+// Code adapted from: https://github.com/jlchan/bbwadg/blob/master/esdg_quadhex_cpp/okl/Euler2D.okl
+// licences from that code: https://github.com/jlchan/bbwadg/blob/master/esdg_quadhex_cpp/license.midg
+
+#if dfloatSize==8
+#define dfloat double
+#define dfloat4 double4
+#define LOGDF log
+#define POWDF pow
+#define EXPDF exp
+#define HALF .5
+#define ONE 1.0
+#define TWO 2.0
+#define ZERO 0.0
+#define TOL 1.e-3
+#define C1 .333333333
+#define C2 .2
+#define C3 0.142857142857143
+#define C4 .1111111111111111
+#endif
+
+#if dfloatSize==4
+#define dfloat float
+#define dfloat4 float4
+#define LOGDF logf
+#define POWDF powf
+#define EXPDF expf
+#define HALF .5f
+#define ONE 1.f
+#define TWO 2.f
+#define ZERO 0.f;
+#define TOL 1.fe-3
+#define C1 .333333333f
+#define C2 .2f
+#define C3 0.142857142857143f
+#define C4 .1111111111111111f
+#endif
+
+// helpful functions
+#define avg(a, b) HALF * (a + b)
+#define pfun(rho, u, v, E) ((p_gamma - ONE) * (E - HALF * rho * (u * u + v * v)))
+#define beta(rho, u, v, E) (HALF * rho / pfun(rho, u, v, E)) // inverse temp
+
+// map conservation to entropy vars
+#define pfun(rho, u, v, E) ((p_gamma - ONE) * (E - HALF * rho * (u * u + v * v)))
+#define rhoeU(rho, rhou, rhov, E) (E - HALF * (rhou * rhou + rhov * rhov) / rho)
+#define sU(rho, rhou, rhov, E)						\
+  (LOGDF((p_gamma - ONE) * rhoeU(rho, rhou, rhov, E) / POWDF(rho, p_gamma)))
+
+// map entropy to conservation vars
+#define sV(V1, V2, V3, V4) (p_gamma - V1 + HALF*(V2 * V2 + V3 * V3) / V4)
+#define rhoeV(V1, V2, V3, V4)						\
+  (POWDF((p_gamma - ONE) / POWDF(-V4, p_gamma), ONE / (p_gamma - ONE)) * \
+   EXPDF(-sV(V1, V2, V3, V4) / (p_gamma - ONE)))
+
+#if p_Np>p_NfpNfaces
+#define p_T p_Np
+#else
+#define p_T p_NfpNfaces
+#endif
+
+
+
+// occa function
+dfloat logmean(dfloat aL, dfloat aR)
+{
+  const dfloat xi = aL / aR;
+  const dfloat f = (xi - ONE) / (xi + ONE);
+  const dfloat u = f * f;
+  const dfloat u2 = u * u;
+  //return xi;
+  
+  dfloat F = HALF * LOGDF(xi) / f;
+  if (fabs(u) < TOL)
+    {
+      F = ONE + u*C1 + u2*C2 + u2*u*C3 + u2*u2*C4;
+    }
+  return HALF * (aL + aR) / F;
+}
+
+void VU(dfloat rho, dfloat rhou, dfloat rhov, dfloat E, dfloat &V1, dfloat &V2,
+        dfloat &V3, dfloat &V4)
+{
+
+  const dfloat rhoe = rhoeU(rho, rhou, rhov, E);
+  const dfloat invrhoe = ONE/rhoe;
+  V1 = (-E + rhoe * (p_gamma + ONE - sU(rho, rhou, rhov, E))) * invrhoe;
+  V2 = rhou * invrhoe;
+  V3 = rhov * invrhoe;
+  V4 = (-rho) * invrhoe;
+}
+
+void UV(dfloat V1, dfloat V2, dfloat V3, dfloat V4, dfloat &rho, dfloat &rhou,
+        dfloat &rhov, dfloat &E)
+{
+
+  const dfloat rhoe = rhoeV(V1, V2, V3, V4);
+  rho = rhoe * (-V4);
+  rhou = rhoe * (V2);
+  rhov = rhoe * (V3);
+  E = rhoe * (ONE - (V2 * V2 + V3 * V3) / (TWO*V4));
+}
+
+void euler2d_flux(dfloat rho_i, dfloat rho_j, dfloat u_i, dfloat u_j,
+                  dfloat v_i, dfloat v_j, dfloat E_i, dfloat E_j, dfloat beta_i,
+                  dfloat beta_j, dfloat &FxS1, dfloat &FyS1, dfloat &FxS2,
+                  dfloat &FyS2, dfloat &FxS3, dfloat &FyS3, dfloat &FxS4,
+                  dfloat &FyS4)
+{
+
+
+#if 1
+  const dfloat rholog = logmean(rho_i, rho_j);
+  const dfloat rhoavg = avg(rho_i, rho_j);
+  const dfloat uavg = avg(u_i, u_j);
+  const dfloat vavg = avg(v_i, v_j);
+  const dfloat vnavg = TWO * (uavg * uavg + vavg * vavg) -
+    (avg(u_i * u_i, u_j * u_j) + avg(v_i * v_i, v_j * v_j));
+  const dfloat beta_avg = avg(beta_i, beta_j);
+
+  const dfloat pa = rhoavg / (TWO * beta_avg);
+  const dfloat f4aux =
+    rholog / (TWO * (p_gamma - ONE) * logmean(beta_i, beta_j)) + pa +
+    HALF * rholog * vnavg;
+
+  FxS1 = rholog * uavg;  
+  FyS1 = rholog * vavg;
+  FxS2 = FxS1 * uavg + pa;
+  FyS2 = FyS1 * uavg;
+  FxS3 = FyS2;
+  FyS3 = FyS1 * vavg + pa;
+  FxS4 = f4aux * uavg;
+  FyS4 = f4aux * vavg;
+#endif  
+}
+
+// initialize surface values from interior
+@kernel void esdgSurfaceQuad2D(const int Nelements,
+			       const dfloat * Vf1D,
+			       const dfloat * Q,
+			       dfloat * Qf){
+
+  for (int e = 0; e < Nelements; ++e; @outer(0)){
+
+    @shared dfloat s_Vf[p_Nq1]; // second col is symmetric
+    @shared dfloat s_V[p_Nfields][p_Nq1][p_Nq1]; // entropy vars
+    
+    for (int i = 0; i < p_T; ++i; @inner(0)){
+      if (i < p_Nq1){
+	s_Vf[i] = Vf1D[i];	
+      }
+      
+      if (i < p_Nq2){
+	// load vol values
+	const int jj = i % p_Nq1; // y-id
+	const int ii = i / p_Nq1; // x-id
+	
+	int id = i + p_Nq2 * p_Nfields * e;
+	const dfloat rho  = Q[id]; id += p_Nq2;
+	const dfloat rhou = Q[id]; id += p_Nq2;
+	const dfloat rhov = Q[id]; id += p_Nq2;
+	const dfloat E    = Q[id];
+	
+	// evaluate entropy vars at nodes
+	dfloat V1,V2,V3,V4;
+	VU(rho, rhou, rhov, E, V1, V2, V3, V4);
+
+	//if (e==0){
+	//  printf("V1-V4(%d) = %f, %f, %f, %f\n",i,V1,V2,V3,V4);
+	//}
+	s_V[0][ii][jj] = V1;
+	s_V[1][ii][jj] = V2;
+	s_V[2][ii][jj] = V3;
+	s_V[3][ii][jj] = V4;
+      }
+    }
+
+    @barrier();
+
+    for (int i = 0; i < p_T; ++i; @inner(0)){
+      if (i < p_NfpNfaces){
+
+	dfloat val[p_Nfields];
+	for (int fld = 0; fld < p_Nfields; ++fld){
+	  val[fld] = ZERO;
+	}
+	
+	const int f = i / p_Nfp;
+	const int fid = i % p_Nfp;
+
+	dfloat V1f = ZERO;
+	dfloat V2f = ZERO;
+	dfloat V3f = ZERO;
+	dfloat V4f = ZERO;	
+	for (int j = 0; j < p_Nq1; ++j){	  
+	  /*
+	    .    _f2_
+	    .   |    |
+	    . f3|    |f1
+	    .   |____|
+	    .     f0
+	  */   
+	  int Vfjid, idi, idj;
+	  if (f==0){
+	    Vfjid = j;  idi = fid;  idj = j; // traverse in j
+	  }else if (f==1){ 
+	    Vfjid = p_Nq1-j-1;  idi = j;  idj = fid; 
+	  }else if (f==2){ 
+	    Vfjid = p_Nq1-j-1;  idi = fid;  idj = j;
+	  }else if (f==3){
+	    Vfjid = j;  idi = j;  idj = fid;
+	  }
+
+	  // interp left/right in r direction
+	  const dfloat Vfj = s_Vf[Vfjid];
+	  V1f += Vfj * s_V[0][idi][idj]; 
+	  V2f += Vfj * s_V[1][idi][idj];
+	  V3f += Vfj * s_V[2][idi][idj];
+	  V4f += Vfj * s_V[3][idi][idj];
+	}
+
+	dfloat rhof, rhouf, rhovf, Ef;
+	UV(V1f,V2f,V3f,V4f, rhof, rhouf, rhovf, Ef); 
+
+	int id = i + e*p_NfpNfaces*p_Nfields;
+	Qf[id] = rhof;   id += p_NfpNfaces;
+	Qf[id] = rhouf;  id += p_NfpNfaces;
+	Qf[id] = rhovf;  id += p_NfpNfaces;
+	Qf[id] = Ef;	
+
+      }      
+    } // inner0
+
+  }
+}
+
+@kernel void esdgVolumeQuad2(const int Nelements,
+			     const dfloat *  vgeo,
+			     const dfloat *  vfgeo,
+			     const dfloat *  fgeo,		    
+			     const dfloat *  D1D,
+			     const dfloat *  Vf1D,
+			     const dfloat *  Lf1D,		    
+			     const dfloat *  Q,
+			     dfloat *  Qf,
+			     dfloat *  rhs,
+			     dfloat *  rhsf){
+  
+  for (int e = 0; e < Nelements; ++e; @outer(0)){
+    
+    @shared dfloat s_D[p_Nq1][p_Nq1];
+    @shared dfloat s_Lf[p_Nq1];
+    @shared dfloat s_Vf[p_Nq1];        
+
+    @shared dfloat s_Q[p_Nfields][p_Nq1][p_Nq1];
+    @shared dfloat s_Qf[p_Nfields][p_Nfaces][p_Nq1];
+
+    @shared dfloat s_G[p_Nvgeo][p_Nq1][p_Nq1];
+    @shared dfloat s_Gf[p_Nvgeo][p_Nfaces][p_Nfp];    
+
+    //@exclusive int ii,jj;
+    
+    for (int i = 0; i < p_T; ++i; @inner(0)){
+
+      if (i < p_Nq2){
+	//printf("running on thread %d \n",i);
+	
+	const int jj = i % p_Nq1;
+	const int ii = i / p_Nq1;
+	
+	// load ops
+	if (i < p_Nq2){
+	  s_D[jj][ii] = D1D[i]; // i < (N+1)^2 = size of D1D
+	}
+	
+	// load geofacs
+	int id = i + p_Nq2 * p_Nvgeo * e;
+	for (int geo = 0; geo < p_Nvgeo; ++geo){
+	  s_G[geo][ii][jj] = vgeo[id]; id += p_Nq2;
+	}
+
+	// load vol values
+	id = i + p_Nq2 * p_Nfields * e;
+	for (int fld = 0; fld < p_Nfields; ++fld){
+	  s_Q[fld][ii][jj] = Q[id];
+	  id += p_Nq2;
+	}
+      }
+
+      if (i < p_Nq1){
+	s_Lf[i] = Lf1D[i];
+	s_Vf[i] = Vf1D[i];
+      }     
+
+      // load surface geo
+      if (i < p_NfpNfaces){
+	const int f = i / p_Nfp;
+	const int fid = i % p_Nfp;
+	
+	int id = i + p_NfpNfaces * p_Nvgeo * e;
+	for (int geo = 0; geo < p_Nvgeo; ++geo){
+	  s_Gf[geo][f][fid] = vfgeo[id]; id += p_NfpNfaces;
+	}
+
+	int idf = i + p_NfpNfaces * p_Nfields * e;
+	for (int fld = 0; fld < p_Nfields; ++fld){
+	  s_Qf[fld][f][fid] = Qf[idf];
+	  idf += p_NfpNfaces;
+	}       
+      }      
+
+    }
+    @barrier();
+
+    // differentiate fluxes
+    for (int i = 0; i < p_T; ++i; @inner(0)){
+
+      if (i < p_Nq2){
+	
+	const int jj = i % p_Nq1; // y index
+	const int ii = i / p_Nq1; // x index
+
+	dfloat val[p_Nfields];
+	for (int fld = 0; fld < p_Nfields; ++fld){
+	  val[fld] = ZERO;
+	}
+
+	const dfloat rho_i = s_Q[0][ii][jj];
+	const dfloat inv_rho_i = ONE/rho_i;
+	const dfloat u_i = s_Q[1][ii][jj] * inv_rho_i;
+	const dfloat v_i = s_Q[2][ii][jj] * inv_rho_i;
+	const dfloat E_i = s_Q[3][ii][jj];
+	const dfloat beta_i = beta(rho_i,u_i,v_i,E_i);
+
+	// diff in r direction
+	const dfloat rxi = s_G[0][ii][jj];
+	const dfloat ryi = s_G[1][ii][jj];
+	for (int j = 0; j < p_Nq1; ++j){
+
+	  const dfloat rxj = s_G[0][j][jj];
+	  const dfloat ryj = s_G[1][j][jj];
+	
+	  const dfloat rho_j = s_Q[0][j][jj];
+	  const dfloat inv_rho_j = ONE/rho_j;
+	  const dfloat u_j = s_Q[1][j][jj] * inv_rho_j;
+	  const dfloat v_j = s_Q[2][j][jj] * inv_rho_j;
+	  const dfloat E_j = s_Q[3][j][jj];
+	  const dfloat beta_j = beta(rho_j,u_j,v_j,E_j);
+	  dfloat FxS1,FxS2,FxS3,FxS4,FyS1,FyS2,FyS3,FyS4;
+	  euler2d_flux(rho_i, rho_j, u_i, u_j, v_i, v_j, E_i, E_j, beta_i, beta_j,
+	  	       FxS1, FyS1, FxS2, FyS2, FxS3, FyS3, FxS4, FyS4);
+		
+	  const dfloat Dr = s_D[ii][j]; // ii,jj = which line of nodes
+
+	  const dfloat Dx = Dr * HALF*(rxi + rxj);
+	  const dfloat Dy = Dr * HALF*(ryi + ryj);
+	  
+	  val[0] += Dx * FxS1 + Dy * FyS1;
+	  val[1] += Dx * FxS2 + Dy * FyS2;
+	  val[2] += Dx * FxS3 + Dy * FyS3;
+	  val[3] += Dx * FxS4 + Dy * FyS4;
+	}
+
+	// diff in s direction
+	const dfloat sxi = s_G[2][ii][jj];
+	const dfloat syi = s_G[3][ii][jj];
+	for (int j = 0; j < p_Nq1; ++j){
+	
+	  const dfloat sxj = s_G[2][ii][j];
+	  const dfloat syj = s_G[3][ii][j];
+	
+	  const dfloat rho_j = s_Q[0][ii][j];
+	  const dfloat inv_rho_j = ONE/rho_j;
+	  const dfloat u_j = s_Q[1][ii][j] * inv_rho_j;
+	  const dfloat v_j = s_Q[2][ii][j] * inv_rho_j;
+	  const dfloat E_j = s_Q[3][ii][j];
+	  const dfloat beta_j = beta(rho_j,u_j,v_j,E_j);
+	  dfloat FxS1,FxS2,FxS3,FxS4,FyS1,FyS2,FyS3,FyS4;
+	  euler2d_flux(rho_i, rho_j, u_i, u_j, v_i, v_j, E_i, E_j, beta_i, beta_j,
+		       FxS1, FyS1, FxS2, FyS2, FxS3, FyS3, FxS4, FyS4);
+	  
+	  const dfloat Ds = s_D[jj][j]; // ii,jj = which line of nodes
+	  const dfloat Dx = Ds * HALF*(sxi + sxj);
+	  const dfloat Dy = Ds * HALF*(syi + syj);
+	
+	  val[0] += Dx * FxS1 + Dy * FyS1;
+	  val[1] += Dx * FxS2 + Dy * FyS2;
+	  val[2] += Dx * FxS3 + Dy * FyS3;
+	  val[3] += Dx * FxS4 + Dy * FyS4;	       
+	}
+
+	// lift fluxes: 4 face contribs per node (remember +/- of nhat)
+	dfloat FxS1LR[2],FxS2LR[2],FxS3LR[2],FxS4LR[2];
+	dfloat FyS1LR[2],FyS2LR[2],FyS3LR[2],FyS4LR[2];
+	int fLR[2], vol_id,surf_id;
+	
+	// ============ accum r = +/- 1 faces, nhat = -/+ 1     
+
+	fLR[0] = 3;  fLR[1] = 1;
+	vol_id = ii;  surf_id = jj; // "output" (vol) index, "input" (face) sweep
+	
+	for (int ff = 0; ff < 2; ++ff){
+	  const int f = fLR[ff];
+	  const dfloat rho_j = s_Qf[0][f][surf_id]; 
+	  const dfloat inv_rho_j = ONE/rho_j;
+	  const dfloat u_j = s_Qf[1][f][surf_id] * inv_rho_j;
+	  const dfloat v_j = s_Qf[2][f][surf_id] * inv_rho_j;
+	  const dfloat E_j = s_Qf[3][f][surf_id];
+	  const dfloat beta_j = beta(rho_j,u_j,v_j,E_j);
+	  euler2d_flux(rho_i, rho_j, u_i, u_j, v_i, v_j, E_i, E_j, beta_i, beta_j,
+		       FxS1LR[ff],FyS1LR[ff],FxS2LR[ff],FyS2LR[ff],
+		       FxS3LR[ff],FyS3LR[ff],FxS4LR[ff],FyS4LR[ff]);
+	}
+
+	// geometric terms      
+	dfloat GxL = HALF*(rxi + s_Gf[0][fLR[0]][surf_id]);
+	dfloat GxR = HALF*(rxi + s_Gf[0][fLR[1]][surf_id]);
+	dfloat GyL = HALF*(ryi + s_Gf[1][fLR[0]][surf_id]);
+	dfloat GyR = HALF*(ryi + s_Gf[1][fLR[1]][surf_id]);
+
+	dfloat LxL = -GxL * s_Lf[vol_id]; // output = nodes in r direction
+	dfloat LyL = -GyL * s_Lf[vol_id];      
+	dfloat LxR =  GxR * s_Lf[p_Nq1 - vol_id - 1];
+	dfloat LyR =  GyR * s_Lf[p_Nq1 - vol_id - 1];
+
+	val[0] +=  LxL * FxS1LR[0] + LyL * FyS1LR[0] + LxR * FxS1LR[1] + LyR * FyS1LR[1];
+	val[1] +=  LxL * FxS2LR[0] + LyL * FyS2LR[0] + LxR * FxS2LR[1] + LyR * FyS2LR[1];
+	val[2] +=  LxL * FxS3LR[0] + LyL * FyS3LR[0] + LxR * FxS3LR[1] + LyR * FyS3LR[1];
+	val[3] +=  LxL * FxS4LR[0] + LyL * FyS4LR[0] + LxR * FxS4LR[1] + LyR * FyS4LR[1];
+	
+	// ============ accum s = +/- 1 faces
+
+	fLR[0] = 0;  fLR[1] = 2;
+	vol_id = jj;  surf_id = ii; // "output" (vol) index, "input" (face) index       
+	for (int ff = 0; ff < 2; ++ff){
+	  const int f = fLR[ff];
+	  const dfloat rho_j = s_Qf[0][f][surf_id]; 
+	  const dfloat inv_rho_j = ONE/rho_j;
+	  const dfloat u_j = s_Qf[1][f][surf_id] * inv_rho_j;
+	  const dfloat v_j = s_Qf[2][f][surf_id] * inv_rho_j;
+	  const dfloat E_j = s_Qf[3][f][surf_id];
+	  const dfloat beta_j = beta(rho_j,u_j,v_j,E_j);
+	  euler2d_flux(rho_i, rho_j, u_i, u_j, v_i, v_j, E_i, E_j, beta_i, beta_j,
+		       FxS1LR[ff],FyS1LR[ff],FxS2LR[ff],FyS2LR[ff],
+		       FxS3LR[ff],FyS3LR[ff],FxS4LR[ff],FyS4LR[ff]);	
+	}
+
+	// geometric terms      
+	GxL = HALF*(sxi + s_Gf[2][fLR[0]][surf_id]);
+	GxR = HALF*(sxi + s_Gf[2][fLR[1]][surf_id]);
+	GyL = HALF*(syi + s_Gf[3][fLR[0]][surf_id]);      
+	GyR = HALF*(syi + s_Gf[3][fLR[1]][surf_id]);	
+	
+	LxL = -GxL * s_Lf[vol_id]; // output = nodes in r direction
+	LyL = -GyL * s_Lf[vol_id];      
+	LxR =  GxR * s_Lf[p_Nq1 - vol_id - 1];
+	LyR =  GyR * s_Lf[p_Nq1 - vol_id - 1];
+	val[0] +=  LxL * FxS1LR[0] + LyL * FyS1LR[0] + LxR * FxS1LR[1] + LyR * FyS1LR[1];
+	val[1] +=  LxL * FxS2LR[0] + LyL * FyS2LR[0] + LxR * FxS2LR[1] + LyR * FyS2LR[1];
+	val[2] +=  LxL * FxS3LR[0] + LyL * FyS3LR[0] + LxR * FxS3LR[1] + LyR * FyS3LR[1];
+	val[3] +=  LxL * FxS4LR[0] + LyL * FyS4LR[0] + LxR * FxS4LR[1] + LyR * FyS4LR[1];
+	//printf("rhs vol = %f, %f, %f, %f\n", val[0], val[1], val[2], val[3]);
+
+	int id = i + e*p_Nq2*p_Nfields;
+	rhs[id] = val[0]; id += p_Nq2;
+	rhs[id] = val[1]; id += p_Nq2;
+	rhs[id] = val[2]; id += p_Nq2;
+	rhs[id] = val[3];
+
+      }// i < Np
+
+      if (i < p_NfpNfaces){
+	const int fid = i % p_Nfp;
+	const int f = i / p_Nfp;
+
+	dfloat val[p_Nfields];
+	for (int fld = 0; fld < p_Nfields; ++fld){
+	  val[fld] = ZERO;
+	}
+
+	// compute (nhat*Vf).*FS contribution -> rhsf
+	const dfloat rho_i = s_Qf[0][f][fid];
+	const dfloat invrho_i = ONE/rho_i;
+	const dfloat u_i = s_Qf[1][f][fid] * invrho_i;
+	const dfloat v_i = s_Qf[2][f][fid] * invrho_i;
+	const dfloat E_i = s_Qf[3][f][fid];
+	const dfloat beta_i = beta(rho_i,u_i,v_i,E_i);	
+
+	for (int j = 0; j < p_Nq1; ++j){
+
+	  // interpolate to target node fid on face f
+	  
+	  int idi, idj;
+	  dfloat Vfx,Vfy;
+	  if (f==0){
+	    const dfloat Vfj = s_Vf[j];
+	    idi = fid; 
+	    idj = j; // pull line of s-nodes
+	    Vfx = -HALF * (s_Gf[2][f][fid] + s_G[2][idi][idj]) * Vfj; // sx
+	    Vfy = -HALF * (s_Gf[3][f][fid] + s_G[3][idi][idj]) * Vfj; // sy
+	  }else if (f==1){ 
+	    const dfloat Vfj = s_Vf[p_Nq1-j-1]; // 2nd row of Vf
+	    idi = j; // pull line of r-nodes
+	    idj = fid;
+	    Vfx = HALF * (s_Gf[0][f][fid] + s_G[0][idi][idj]) * Vfj; // rx
+	    Vfy = HALF * (s_Gf[1][f][fid] + s_G[1][idi][idj]) * Vfj; // ry
+	  }else if (f==2){ 
+	    const dfloat Vfj = s_Vf[p_Nq1-j-1];
+	    idi = fid;
+	    idj = j;
+	    Vfx = HALF * (s_Gf[2][f][fid] + s_G[2][idi][idj]) * Vfj; // sx
+	    Vfy = HALF * (s_Gf[3][f][fid] + s_G[3][idi][idj]) * Vfj; // sy
+	  }else if (f==3){
+	    const dfloat Vfj = s_Vf[j];
+	    idi = j;
+	    idj = fid;
+	    Vfx = -HALF * (s_Gf[0][f][fid] + s_G[0][idi][idj]) * Vfj; // rx
+	    Vfy = -HALF * (s_Gf[1][f][fid] + s_G[1][idi][idj]) * Vfj; // ry
+	  }
+
+	  const dfloat rho_j = s_Q[0][idi][idj];
+	  const dfloat invrho_j = ONE/rho_j;
+	  const dfloat u_j = s_Q[1][idi][idj] * invrho_j;
+	  const dfloat v_j = s_Q[2][idi][idj] * invrho_j;
+	  const dfloat E_j = s_Q[3][idi][idj];
+	  const dfloat beta_j = beta(rho_j,u_j,v_j,E_j);
+	  dfloat FxS1,FxS2,FxS3,FxS4,FyS1,FyS2,FyS3,FyS4;
+	  euler2d_flux(rho_i, rho_j, u_i, u_j, v_i, v_j, E_i, E_j, beta_i, beta_j,
+		       FxS1,FyS1,FxS2,FyS2,FxS3,FyS3,FxS4,FyS4);
+
+	  val[0] += Vfx * FxS1 + Vfy * FyS1;
+	  val[1] += Vfx * FxS2 + Vfy * FyS2;
+	  val[2] += Vfx * FxS3 + Vfy * FyS3;
+	  val[3] += Vfx * FxS4 + Vfy * FyS4; 	  	  
+	}
+
+	//printf("rhsf = %f, %f, %f, %f\n",val[0],val[1],val[2],val[3]);
+	
+	int id = i + e*p_NfpNfaces*p_Nfields;
+	rhsf[id] = -val[0]; id += p_NfpNfaces;
+	rhsf[id] = -val[1]; id += p_NfpNfaces;
+	rhsf[id] = -val[2]; id += p_NfpNfaces;
+	rhsf[id] = -val[3];
+
+      }
+
+    }// inner0
+
+
+  }
+}
+
+
+@kernel void esdgSurfaceQuad2D(const int Nelements,
+			       const dfloat * vgeo,
+			       const dfloat * fgeo,		     
+			       const int    * mapPq,
+			       const int    * bcFlag,
+			       const dfloat * Lf1D,
+			       const dfloat * Qf,
+			       const dfloat * rhsf,
+			       dfloat * rhs){
+
+  for (int e = 0; e < Nelements; ++e; @outer(0)){
+
+    @shared dfloat s_fnS[p_Nfields][p_Nfaces][p_Nfp];
+    @shared dfloat s_Lf[p_Nq1];
+    
+    for (int i = 0; i < p_T; ++i; @inner(0)){
+
+      if (i < p_Nq1){
+	s_Lf[i] = Lf1D[i];
+      }
+      
+      if (i < p_NfpNfaces){
+
+	int idM = i + e*p_Nfields*p_NfpNfaces;
+	int idP = mapPq[i + e*p_NfpNfaces];
+	//printf("idM = %d, idP = %d\n",idM,idP);
+
+	// load +/- values
+	const dfloat rhoM = Qf[idM];   idM += p_NfpNfaces;
+	const dfloat rhouM = Qf[idM];  idM += p_NfpNfaces;
+	const dfloat rhovM = Qf[idM];  idM += p_NfpNfaces;
+	const dfloat EM = Qf[idM];
+	
+	dfloat rhoP = Qf[idP];   idP += p_NfpNfaces;
+	dfloat rhouP = Qf[idP];  idP += p_NfpNfaces;
+	dfloat rhovP = Qf[idP];  idP += p_NfpNfaces;
+	dfloat EP = Qf[idP];
+
+	const dfloat invrhoM = ONE/rhoM;
+	const dfloat uM = rhouM*invrhoM;
+	const dfloat vM = rhovM*invrhoM;
+	const dfloat invrhoP = ONE/rhoP; 	
+	dfloat uP = rhouP*invrhoP;	
+	dfloat vP = rhovP*invrhoP;
+
+#if 1
+	// wall BCs on flag = 1
+	if (bcFlag[i + e*p_NfpNfaces]==1){
+	  vP = -vM;
+	  uP = uM;
+	  rhoP = rhoM;
+	  EP = EM;
+
+	  rhouP = rhoP*uP;
+	  rhovP = rhoP*vP;	  
+	}
+#endif
+	
+	const dfloat betaM = beta(rhoM,uM,vM,EM);
+	const dfloat betaP = beta(rhoP,uP,vP,EP);      
+
+	dfloat FxS1,FxS2,FxS3,FxS4,FyS1,FyS2,FyS3,FyS4;      
+	euler2d_flux(rhoM, rhoP, uM, uP, vM, vP, EM, EP, betaM, betaP,
+		     FxS1, FyS1, FxS2, FyS2, FxS3, FyS3, FxS4, FyS4);
+
+	const int idf = i + p_NfpNfaces*p_Nfgeo*e;
+	const dfloat nxJ = fgeo[idf];
+	const dfloat nyJ = fgeo[idf + p_NfpNfaces];
+	const dfloat sJ  = fgeo[idf + 2*p_NfpNfaces];
+
+	//	printf("fgeo = %f, %f, %f\n",nxJ,nyJ,sJ);
+	
+	const int f = i / p_Nfp;
+	const int fid = i % p_Nfp;	
+
+	idM = i + e*p_NfpNfaces*p_Nfields;
+
+#if 1
+	// use LF
+	const dfloat unormM = (uM*uM+vM*vM);
+	const dfloat unormP = (uP*uP+vP*vP);	
+	const dfloat pM = (p_gamma-ONE)*(EM - HALF*rhoM*unormM);
+	const dfloat pP = (p_gamma-ONE)*(EP - HALF*rhoP*unormP);	
+	const dfloat cvelM = sqrt(p_gamma*pM/rhoM);
+	const dfloat cvelP = sqrt(p_gamma*pP/rhoP);	
+	const dfloat LFc = fmax(sqrt(unormM) + cvelM, sqrt(unormP) + cvelP);	
+	const dfloat Lfscale = HALF*p_tau*LFc*sJ;
+
+	const dfloat dF1 = Lfscale*(rhoP-rhoM);
+	const dfloat dF2 = Lfscale*(rhoP*uP-rhoM*uM);
+	const dfloat dF3 = Lfscale*(rhoP*vP-rhoM*vM);
+	const dfloat dF4 = Lfscale*(EP-EM);
+#else
+	// matrix dissipation flux
+	dfloat V1M,V2M,V3M,V4M,   V1P,V2P,V3P,V4P;
+	VU(rhoM, rhouM, rhovM, EM, V1M, V2M, V3M, V4M);	
+	VU(rhoP, rhouP, rhovP, EP, V1P, V2P, V3P, V4P);	
+	const dfloat dv1 = V1P-V1M;
+	const dfloat dv2 = V2P-V2M;
+	const dfloat dv3 = V3P-V3M;
+	const dfloat dv4 = V4P-V4M;	
+
+	const dfloat u2avg = avg(uM*uM,uP*uP);
+	const dfloat v2avg = avg(vM*vM,vP*vP);
+	const dfloat uavg = avg(uM,uP);
+	const dfloat vavg = avg(vM,vP);
+	const dfloat betalog = logmean(betaM,betaP);
+	const dfloat pavg = avg(rhoM,rhoP)/(TWO*avg(betaM,betaP));
+	const dfloat rholog = logmean(rhoM,rhoP);
+
+	const dfloat ubar = TWO*(uavg*uavg+vavg*vavg)-(u2avg+v2avg);
+	const dfloat nx = nxJ/sJ;
+	const dfloat ny = nyJ/sJ;	
+	const dfloat un = (uavg*nx+vavg*ny);
+	const dfloat h = p_gamma/(TWO*betalog*(p_gamma-ONE)) + HALF*ubar;
+	const dfloat a = sqrt(p_gamma*pavg/rholog);
+
+	const dfloat R11 = ONE;
+	const dfloat R12 = ONE;
+	const dfloat R13 = ZERO;
+	const dfloat R14 = ONE;	
+
+	const dfloat R21 = uavg-a*nx;
+	const dfloat R22 = uavg;
+	const dfloat R23 = ny;
+	const dfloat R24 = uavg+a*nx;	
+
+	const dfloat R31 = vavg-a*ny;
+	const dfloat R32 = vavg;
+	const dfloat R33 = -nx;
+	const dfloat R34 = vavg+a*ny;
+
+	const dfloat R41 = h-a*un;
+	const dfloat R42 = HALF*ubar;
+	const dfloat R43 = uavg*ny - vavg*nx;
+	const dfloat R44 = h+a*un;
+
+	const dfloat D11 = fabs(un - a)*rholog/(TWO*p_gamma);
+	const dfloat D22 = fabs(un)*rholog*(p_gamma-ONE)/p_gamma;
+	const dfloat D33 = fabs(un)*pavg;
+	const dfloat D44 = fabs(un + a)*rholog/(TWO*p_gamma);
+
+	// R*D*R' * [[v]]
+	const dfloat r1 = D11*(R11*dv1 + R21*dv2 + R31*dv3 + R41*dv4);
+	const dfloat r2 = D22*(R12*dv1 + R22*dv2 + R32*dv3 + R42*dv4);
+	const dfloat r3 = D33*(R13*dv1 + R23*dv2 + R33*dv3 + R43*dv4);
+	const dfloat r4 = D44*(R14*dv1 + R24*dv2 + R34*dv3 + R44*dv4);	
+
+	const dfloat Lfscale = p_tau*sJ;	
+	const dfloat dF1 = Lfscale*(R11*r1 + R12*r2 + R13*r3 + R14*r4);
+	const dfloat dF2 = Lfscale*(R21*r1 + R22*r2 + R23*r3 + R24*r4);
+	const dfloat dF3 = Lfscale*(R31*r1 + R32*r2 + R33*r3 + R34*r4);
+	const dfloat dF4 = Lfscale*(R41*r1 + R42*r2 + R43*r3 + R44*r4);
+	
+#endif
+
+	const dfloat FnS1 = FxS1*nxJ + FyS1*nyJ - dF1;
+	const dfloat FnS2 = FxS2*nxJ + FyS2*nyJ - dF2;
+	const dfloat FnS3 = FxS3*nxJ + FyS3*nyJ - dF3;
+	const dfloat FnS4 = FxS4*nxJ + FyS4*nyJ - dF4;
+	s_fnS[0][f][fid] = FnS1 + rhsf[idM]; idM += p_NfpNfaces;
+	s_fnS[1][f][fid] = FnS2 + rhsf[idM]; idM += p_NfpNfaces;
+	s_fnS[2][f][fid] = FnS3 + rhsf[idM]; idM += p_NfpNfaces;
+	s_fnS[3][f][fid] = FnS4 + rhsf[idM];	
+
+      } // i < NfpNfaces      
+    }
+    @barrier();
+
+    // apply lift and inverse jacobian
+    for (int i = 0; i < p_T; ++i; @inner(0)){
+
+      if (i < p_Nq2){
+
+	const dfloat Ji = vgeo[i + 4*p_Nq2 + e*p_Nvgeo*p_Nq2];
+	const dfloat invJ = ONE/Ji;
+
+
+	const int jj = i % p_Nq1;
+	const int ii = i / p_Nq1;
+	
+	// accumulate value per node
+	int id = i + e*p_Nq2*p_Nfields;
+	for (int fld = 0; fld < p_Nfields; ++fld){
+	  dfloat val = ZERO;
+	  
+	  // s = (-/+) 1 face contribution
+	  val += s_Lf[jj]*s_fnS[fld][0][ii] + s_Lf[p_Nq1-jj-1]*s_fnS[fld][2][ii];
+
+	  // r = (-/+) 1 face contribution	  
+	  val += s_Lf[ii]*s_fnS[fld][3][jj] + s_Lf[p_Nq1-ii-1]*s_fnS[fld][1][jj];
+
+	  // maybe divide by J here?
+	  rhs[id] = -(rhs[id] + val)*invJ;
+
+	  id += p_Nq2;
+	}
+
+      }//if 
+    }//inner0
+
+    
+  }
+}
+
+

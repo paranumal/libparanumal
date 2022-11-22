@@ -30,8 +30,9 @@
 void esdg_t::rhsf(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T){
 
   // use this to determine cutoff parameter for entropy generation when using DODGES
+#if 0
   static int entropyStep=0;
-#if 1
+
   if(entropyStep%100==0){
     
     dfloat totalEntropy = integrateEntropy(o_Q);
