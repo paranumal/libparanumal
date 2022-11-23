@@ -91,19 +91,28 @@ void esdg_t::rhsfTri2D(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, c
 
 void esdg_t::rhsfQuad2D(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T){
 
-#if 0
+  // CHECK ORDER HERE
+  esInterpolateKernel(mesh.Nelements,
+		      o_esIqf1D,
+		      o_Q,
+		      o_esqf);
+  
   // fix elements with entropy violations using Hadamard product
   esVolumeKernel(mesh.Nelements,
-		 mesh.o_esVgeo,
+		 o_esVgeo,
 		 o_esVfgeo,
-		 o_esFgeo,
-		 o_esD1D,
-		 o_esVf1D,
-		 o_esLf1D,
-		 o_esQ,
-		 o_esQf,
+		 o_esSgeo,
+		 o_esDq1D_skew,
+		 o_esIqf1D,
+		 o_esLqf1D,
+		 o_Q,
+		 o_esqf,
 		 o_RHS,
-		 o_RHSf);
+		 o_esrhsf);
+		      
+#if 0
+
+
 
   // surface fluxes
   esSurfaceernel(mesh.Nelements,

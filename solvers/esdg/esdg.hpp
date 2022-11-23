@@ -75,6 +75,9 @@ public:
   deviceMemory<dfloat> o_q;
   deviceMemory<dfloat> o_qexact;
 
+  deviceMemory<dfloat> o_esqf;
+  deviceMemory<dfloat> o_esrhsf;
+  
   memory<dfloat> Vort;
   deviceMemory<dfloat> o_Vort;
 
@@ -151,7 +154,15 @@ public:
 
   // END TRI ESDG STUFF
   
-
+  // START QUAD ESDG STUFF
+  deviceMemory<dfloat> o_esDq1D_skew;
+  deviceMemory<dfloat> o_esLqf1D;
+  deviceMemory<dfloat> o_esIqf1D;
+  deviceMemory<dfloat> o_esVgeo; // J*vgeo at volume quadrature nodes
+  deviceMemory<dfloat> o_esSgeo; // normal and surface Jacobian at  surface quadrature nodes
+  deviceMemory<dfloat> o_esVfgeo; // J*vgeo interpolated to surface quadrature nodes
+  // END QUAD ESDG STUFF
+  
   
   deviceMemory<dlong> o_EToE;
   deviceMemory<dlong> o_EToB;
