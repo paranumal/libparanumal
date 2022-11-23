@@ -43,6 +43,7 @@ graph_t::graph_t(platform_t &_platform,
                  const memory<dfloat>& EX,
                  const memory<dfloat>& EY,
                  const memory<dfloat>& EZ,
+                 const memory<hlong>& elementInfo,
                  comm_t _comm):
   platform(_platform),
   Nverts(_Nelements),
@@ -91,6 +92,7 @@ graph_t::graph_t(platform_t &_platform,
         elements[e].E[f] = -1;
         elements[e].F[f] = -1;
       }
+      elements[e].elementInfo = elementInfo[e];
     }
   } else {
     for (dlong e=0;e<Nelements;++e) {
@@ -105,6 +107,7 @@ graph_t::graph_t(platform_t &_platform,
         elements[e].E[f] = -1;
         elements[e].F[f] = -1;
       }
+      elements[e].elementInfo = elementInfo[e];
     }
   }
 }
@@ -379,7 +382,8 @@ void graph_t::ExtractMesh(dlong &Nelements_,
                           memory<int>& EToF,
                           memory<dfloat>& EX,
                           memory<dfloat>& EY,
-                          memory<dfloat>& EZ) {
+                          memory<dfloat>& EZ,
+                          memory<hlong>& elementInfo) {
 
   /*Destroy any exiting mesh data and create new data from current graph*/
   Nelements_ = Nelements;
@@ -393,6 +397,8 @@ void graph_t::ExtractMesh(dlong &Nelements_,
   if (dim==3)
     EZ.malloc(Nelements*NelementVerts);
 
+  elementInfo.malloc(Nelements);
+
   if (dim==2) {
     for (dlong e=0;e<Nelements;++e) {
       for (int v=0;v<NelementVerts;++v) {
@@ -404,6 +410,7 @@ void graph_t::ExtractMesh(dlong &Nelements_,
         EToE[f+e*Nfaces] = elements[e].E[f];
         EToF[f+e*Nfaces] = elements[e].F[f];
       }
+      elementInfo[e] = elements[e].elementInfo;
     }
   } else {
     for (dlong e=0;e<Nelements;++e) {
@@ -417,6 +424,7 @@ void graph_t::ExtractMesh(dlong &Nelements_,
         EToE[f+e*Nfaces] = elements[e].E[f];
         EToF[f+e*Nfaces] = elements[e].F[f];
       }
+      elementInfo[e] = elements[e].elementInfo;
     }
   }
 }

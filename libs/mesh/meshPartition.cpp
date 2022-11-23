@@ -45,6 +45,7 @@ void mesh_t::Partition(){
                           EX,
                           EY,
                           EZ,
+                          elementInfo,
                           comm);
 }
 

@@ -49,6 +49,7 @@ void MeshPartition(platform_t &platform,
                    memory<dfloat>& EX,
                    memory<dfloat>& EY,
                    memory<dfloat>& EZ,
+                   memory<hlong>& elementInfo,
                    comm_t comm) {
 
   /* Create RNG*/
@@ -66,6 +67,7 @@ void MeshPartition(platform_t &platform,
                 EX,
                 EY,
                 EZ,
+                elementInfo,
                 comm);
 
   timePoint_t timeStart = GlobalTime(comm);
@@ -106,7 +108,8 @@ void MeshPartition(platform_t &platform,
                     EToF,
                     EX,
                     EY,
-                    EZ);
+                    EZ,
+                    elementInfo);
 }
 
 } //namespace paradogs

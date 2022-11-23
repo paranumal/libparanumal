@@ -52,6 +52,7 @@ void MeshPartition(platform_t &platform,
                    memory<dfloat>& EX,
                    memory<dfloat>& EY,
                    memory<dfloat>& EZ,
+                   memory<hlong>& elementInfo,
                    comm_t comm);
 
 } //namespace paradogs

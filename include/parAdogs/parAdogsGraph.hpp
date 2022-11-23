@@ -71,6 +71,8 @@ private:
 
     hlong E[MAX_NFACES];   //Global element ids of neighbors
     int F[MAX_NFACES];     //Face ids of neighbors
+
+    hlong elementInfo;
   };
   memory<element_t> elements;
 
@@ -97,6 +99,7 @@ public:
           const memory<dfloat>& EX,
           const memory<dfloat>& EY,
           const memory<dfloat>& EZ,
+          const memory<hlong>& elementInfo,
           comm_t _comm);
 
   void InertialPartition();
@@ -115,7 +118,8 @@ public:
                    memory<int>& EToF,
                    memory<dfloat>& EX,
                    memory<dfloat>& EY,
-                   memory<dfloat>& EZ);
+                   memory<dfloat>& EZ,
+                   memory<hlong>& elementInfo);
 
 private:
   void InertialBipartition(const dfloat targetFraction[2]);
