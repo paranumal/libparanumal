@@ -34,7 +34,8 @@ export LIBP_INCLUDE_DIR=${LIBP_DIR}/include
 export LIBP_LIBS_DIR=${LIBP_DIR}/libs
 export LIBP_TEST_DIR=${LIBP_DIR}/test
 
-export LIBP_BLAS_DIR?=/usr/lib/x86_64-linux-gnu/openblas-serial
+#export LIBP_BLAS_DIR?=/usr/lib/x86_64-linux-gnu/openblas-serial
+export LIBP_BLAS_DIR?=../../../OpenBLAS
 export LIBP_BLAS_LIB=-L${LIBP_BLAS_DIR} -lopenblas
 
 #include OCCA

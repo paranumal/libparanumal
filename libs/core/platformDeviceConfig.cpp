@@ -69,6 +69,9 @@ void platform_t::DeviceConfig(){
   else if(Settings.compareSetting("THREAD MODEL", "OpenCL")){
     mode = "{mode: 'OpenCL', platform_id : " + std::to_string(plat) +"}";
   }
+  else if(Settings.compareSetting("THREAD MODEL", "DPCPP")){
+    mode = "{mode: 'DPCPP', platform_id : " + std::to_string(plat) +"}";
+  }
   else if(Settings.compareSetting("THREAD MODEL", "OpenMP")){
     mode = "{mode: 'OpenMP'}";
   }
@@ -79,6 +82,7 @@ void platform_t::DeviceConfig(){
   //add a device_id number for some modes
   if (  Settings.compareSetting("THREAD MODEL", "CUDA")
       ||Settings.compareSetting("THREAD MODEL", "HIP")
+	||Settings.compareSetting("THREAD MODEL", "DPCPP")
       ||Settings.compareSetting("THREAD MODEL", "OpenCL")) {
     //for testing a single device, run with 1 rank and specify DEVICE NUMBER
     if (size()==1) {

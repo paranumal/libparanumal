@@ -1,0 +1,8 @@
+export OCCA_DPCPP_COMPILER=icpx
+export OCCA_INCLUDE_PATH=/glob/development-tools/versions/oneapi/2023.0/oneapi/compiler/2023.0.0/linux/include/:/glob/development-tools/versions/oneapi/2023.0/oneapi/compiler/2023.0.0/linux/include/sycl
+export SYCL_ROOT=/glob/development-tools/versions/oneapi/2023.0/oneapi/compiler/2023.0.0/linux/sycl
+export OCCA_DPCPP_ENABLED=1
+export OCCA_DPCPP_COMPILER=icpx
+make -j
+./ellipticMain setups/setupTri2D.rc 
+
