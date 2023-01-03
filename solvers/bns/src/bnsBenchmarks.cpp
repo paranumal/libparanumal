@@ -33,16 +33,19 @@ void bns_t::Benchmarks(){
   deviceMemory<dfloat> o_RHS = platform.device.malloc(Nfields*mesh.Nelements*mesh.Np*sizeof(dfloat));
 
 
+  printf("Starting volumeBernsteinBenchmark\n");
+  volumeBernsteinBenchmark(o_Q, o_RHS);
+
   printf("Starting volumBenchmark\n");
   volumeBenchmark(o_Q, o_RHS);
 
+
+
+  
 #if 0
   printf("Starting surfaceBernsteinBenchmark\n");
   surfaceBernsteinBenchmark(o_Q, o_RHS);
   
-  printf("Starting volumeBernsteinBenchmark\n");
-  volumeBernsteinBenchmark(o_Q, o_RHS);
-
   printf("Starting surfaceBenchmark\n");
   surfaceBenchmark(o_Q, o_RHS);
 #endif
@@ -343,7 +346,7 @@ void bns_t::surfaceBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfloat> &o_
 #else
 //#include "data2dN04.h"
 //#include "data2dN06.h"
-#include "data3dN04.h"
+#include "data3dN06.h"
 #endif
 
 typedef struct {
@@ -356,10 +359,10 @@ typedef struct {
 void bns_t::volumeBernsteinBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfloat> &o_RHS){
 
   // load Bernstein stuff
-  deviceMemory<int> o_D1_ids = platform.device.malloc(mesh.Np*sizeof(int)*4, p_D1_ids[0]);
-  deviceMemory<int> o_D2_ids = platform.device.malloc(mesh.Np*sizeof(int)*4, p_D2_ids[0]);
-  deviceMemory<int> o_D3_ids = platform.device.malloc(mesh.Np*sizeof(int)*4, p_D3_ids[0]);
-  deviceMemory<int> o_D4_ids = platform.device.malloc(mesh.Np*sizeof(int)*4, p_D4_ids[0]);
+  deviceMemory<uchar4> o_D1_ids = platform.device.malloc(mesh.Np*sizeof(uchar4)*4, p_D1_ids[0]);
+  deviceMemory<uchar4> o_D2_ids = platform.device.malloc(mesh.Np*sizeof(uchar4)*4, p_D2_ids[0]);
+  deviceMemory<uchar4> o_D3_ids = platform.device.malloc(mesh.Np*sizeof(uchar4)*4, p_D3_ids[0]);
+  deviceMemory<uchar4> o_D4_ids = platform.device.malloc(mesh.Np*sizeof(uchar4)*4, p_D4_ids[0]);
   deviceMemory<dfloat> o_D_vals = platform.device.malloc(mesh.Np*sizeof(dfloat)*4, p_D_vals);
 
   uchar4 *c_D1_ids = (uchar4*) calloc(mesh.Np, sizeof(uchar4));
@@ -407,7 +410,9 @@ void bns_t::volumeBernsteinBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfl
   kernelInfo["includes"] += dataFileName;
   kernelInfo["defines/" "p_Nfields"]= Nfields;
   kernelInfo["defines/" "p_half"]= p_half;
-
+  kernelInfo["defines/" "p_sqrt2"]= (dfloat)sqrt(2.0);
+  kernelInfo["defines/" "p_invSqrt2"]= (dfloat)(1./sqrt(2.0));
+  
   // set kernel name suffix
   std::string suffix;
   if(mesh.elementType==Mesh::TRIANGLES)
@@ -436,15 +441,19 @@ void bns_t::volumeBernsteinBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfl
 
   int bestNvol = 0, bestNblockV = 0, bestKnl = 0;
   double bestElapsed = 1e9;;
-  
-  for(int Nvol=1;Nvol<=8;++Nvol){
+
+  deviceMemory<dfloat> o_bbV = platform.device.malloc(mesh.Np*mesh.Np*sizeof(dfloat));
+  deviceMemory<dfloat> o_bbInvV = platform.device.malloc(mesh.Np*mesh.Np*sizeof(dfloat));
+
+  int maxNvol = 1;
+  for(int Nvol=1;Nvol<=maxNvol;++Nvol){
     for(int NblockV=1;NblockV<=blockMax/mesh.Np;++NblockV){
       int LDS = (mesh.Np*Nvol*Nfields*NblockV+Nvol*mesh.Nvgeo*NblockV)*sizeof(dfloat);
       // limit case based on shared array storage
       if(LDS<48*1024){
 
-	int Nkernels = 3;
-	for(int knl=2;knl<Nkernels;++knl){
+	int Nkernels = 2;
+	for(int knl=0;knl<Nkernels;++knl){
 	  
 	  properties_t volumeKernelInfo = kernelInfo;
 	
@@ -457,13 +466,19 @@ void bns_t::volumeBernsteinBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfl
 	  volumeKernel =  platform.buildKernel(volumeFileName, volumeKernelName,
 					       volumeKernelInfo);
 	
-	
 	  int Nwarm = 20;
 	  for(int w=0;w<Nwarm;++w){
-	    volumeKernel(mesh.Nelements,
+	    volumeKernel(mesh.NnonPmlElements,
+			 mesh.o_nonPmlElements,
 			 mesh.o_vgeo,
-			 o_cD1_ids, o_cD2_ids, o_cD3_ids, o_cD4_ids,
+			 o_cD1_ids,
+			 o_cD2_ids,
+			 o_cD3_ids,
+			 o_cD4_ids,
 			 o_D_vals,
+			 o_bbV,
+			 o_bbInvV,
+			 tauInv,
 			 o_Q,
 			 o_RHS);
 	  }
@@ -475,11 +490,18 @@ void bns_t::volumeBernsteinBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfl
 	
 	  int Nrun = 20;
 	  for(int r=0;r<Nrun;++r){
-	    volumeKernel(mesh.Nelements,
+	    volumeKernel(mesh.NnonPmlElements,
+			 mesh.o_nonPmlElements,
 			 mesh.o_vgeo,
-			 o_cD1_ids, o_cD2_ids, o_cD3_ids, o_cD4_ids,
+			 o_cD1_ids,
+			 o_cD2_ids,
+			 o_cD3_ids,
+			 o_cD4_ids,
 			 o_D_vals,
-			 o_Q,		 
+			 o_bbV,
+			 o_bbInvV,
+			 tauInv,
+			 o_Q,
 			 o_RHS);
 	  }
 	
@@ -493,7 +515,7 @@ void bns_t::volumeBernsteinBenchmark(deviceMemory<dfloat> &o_Q, deviceMemory<dfl
 	  double GFLOPS = NFLOP/(1.e9*elapsed);
 	  double GBS = NBYTES/(1.e9*elapsed);
 	
-	  printf("%02d, %02d, %02d, %02d, %5.4e, %5.4e, %5.4e, %lld, %d %%%% BB-VOL, Nvol, NblockV, elapsed, GFLOP/s, GB/s, NFLOP, LDS usage\n",
+	  printf("%02d, %02d, %02d, %02d, %5.4e, %5.4e, %5.4e, %lld, %d %%%% BB-VOL: N, knl, Nvol, NblockV, elapsed, GFLOP/s, GB/s, NFLOP, LDS usage\n",
 		 mesh.N, knl, Nvol, NblockV, elapsed, GFLOPS, GBS, NFLOP, LDS);
 	
 	  if(elapsed<bestElapsed){

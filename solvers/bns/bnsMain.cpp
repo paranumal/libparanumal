@@ -59,7 +59,11 @@ int main(int argc, char **argv){
     bns_t bns(platform, mesh, bnsSettings);
 
     // run
-    bns.Run();
+    if(0){
+      bns.Run();
+    }else{
+      bns.Benchmarks();
+    }
   }
 
   // close down MPI

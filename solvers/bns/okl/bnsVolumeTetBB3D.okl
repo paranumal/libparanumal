@@ -1,0 +1,784 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+#if p_knl==0
+#define bnsVolumeTetBB3D_v0 bnsVolumeTetBB3D
+#else
+#define bnsVolumeTetBB3D_v1 bnsVolumeTetBB3D
+#endif
+
+@kernel void bnsVolumeTetBB3D_v0(const int Nelements,
+				 @restrict const dlong  * elementIds,
+				 @restrict const dfloat * vgeo,
+				 @restrict const uchar4 * D1_ids,
+				 @restrict const uchar4 * D2_ids,
+				 @restrict const uchar4 * D3_ids,
+				 @restrict const uchar4 * D4_ids,
+				 @restrict const dfloat4 * Dvals,
+				 @restrict const dfloat  * V,
+				 @restrict const dfloat  * invV,
+				 const dfloat tauInv, 
+				 @restrict const dfloat  * Q,
+				 @restrict dfloat * rhsQ){
+  
+#define rx s_vgeo[0]
+#define ry s_vgeo[1]
+#define rz s_vgeo[2]
+  
+#define sx s_vgeo[3]
+#define sy s_vgeo[4]
+#define sz s_vgeo[5]
+
+#define tx s_vgeo[6]
+#define ty s_vgeo[7]
+#define tz s_vgeo[8]
+
+#define s_a1 s_q[0]
+#define s_a2 s_q[1]
+#define s_a3 s_q[2]
+#define s_a4 s_q[3]
+
+#define s_a5 s_q[0]
+#define s_a6 s_q[1]
+#define s_a7 s_q[2]
+#define s_a8 s_q[3]
+
+#define s_a9  s_q[0]
+#define s_a10 s_q[1]
+
+
+  for(dlong e=0; e < Nelements;++e;@outer(0)){
+
+    @exclusive dfloat r1, r2, r3, r4, r5, r6, r7, r8, r9, r10;
+
+    @exclusive dfloat4 Dvali;
+    @exclusive uchar4 D1i,D2i,D3i,D4i;
+    
+    @shared dfloat s_q[4][p_Np];
+    @shared dfloat s_nl[6][p_Np];
+    @shared dfloat s_vgeo[9];
+    
+    for(unsigned int n=0;n<p_Np;++n;@inner(0)){
+      unsigned int m = n;
+      while(m<9){
+	s_vgeo[m] = vgeo[m+9*e];
+	m+=p_Np;
+      }
+      unsigned int id = n+e*p_Np*p_Nfields;
+      s_a1[n] = Q[id+0*p_Np];
+      s_a2[n] = Q[id+1*p_Np];
+      s_a3[n] = Q[id+2*p_Np];
+      s_a4[n] = Q[id+3*p_Np];
+
+      Dvali = Dvals[n];
+    }
+  
+    @barrier();
+
+#if 1
+    for(dlong n=0;n<p_Np;++n;@inner(0)){
+
+      D1i = D1_ids[n];
+      D2i = D2_ids[n];
+      D3i = D3_ids[n];
+      D4i = D4_ids[n];
+
+      dfloat p1=0.f, p2=0.f, p3=0.f, p4 = 0.f;
+      p1 = s_a1[D1i.x]*Dvali.x + s_a1[D2i.x]*Dvali.y + s_a1[D3i.x]*Dvali.z + s_a1[D4i.x]*Dvali.w;
+      p2 = s_a1[D1i.y]*Dvali.x + s_a1[D2i.y]*Dvali.y + s_a1[D3i.y]*Dvali.z + s_a1[D4i.y]*Dvali.w;
+      p3 = s_a1[D1i.z]*Dvali.x + s_a1[D2i.z]*Dvali.y + s_a1[D3i.z]*Dvali.z + s_a1[D4i.z]*Dvali.w;
+      p4 = s_a1[D1i.w]*Dvali.x + s_a1[D2i.w]*Dvali.y + s_a1[D3i.w]*Dvali.z + s_a1[D4i.w]*Dvali.w;
+
+      const dfloat da1dr = .5f*(p2-p1);
+      const dfloat da1ds = .5f*(p3-p1);
+      const dfloat da1dt = .5f*(p4-p1);
+
+      p1 = s_a2[D1i.x]*Dvali.x + s_a2[D2i.x]*Dvali.y + s_a2[D3i.x]*Dvali.z + s_a2[D4i.x]*Dvali.w;
+      p2 = s_a2[D1i.y]*Dvali.x + s_a2[D2i.y]*Dvali.y + s_a2[D3i.y]*Dvali.z + s_a2[D4i.y]*Dvali.w;
+      p3 = s_a2[D1i.z]*Dvali.x + s_a2[D2i.z]*Dvali.y + s_a2[D3i.z]*Dvali.z + s_a2[D4i.z]*Dvali.w;
+      p4 = s_a2[D1i.w]*Dvali.x + s_a2[D2i.w]*Dvali.y + s_a2[D3i.w]*Dvali.z + s_a2[D4i.w]*Dvali.w;
+
+      const dfloat da2dr = .5f*(p2-p1);
+      const dfloat da2ds = .5f*(p3-p1);
+      const dfloat da2dt = .5f*(p4-p1);
+
+      p1 = s_a3[D1i.x]*Dvali.x + s_a3[D2i.x]*Dvali.y + s_a3[D3i.x]*Dvali.z + s_a3[D4i.x]*Dvali.w;
+      p2 = s_a3[D1i.y]*Dvali.x + s_a3[D2i.y]*Dvali.y + s_a3[D3i.y]*Dvali.z + s_a3[D4i.y]*Dvali.w;
+      p3 = s_a3[D1i.z]*Dvali.x + s_a3[D2i.z]*Dvali.y + s_a3[D3i.z]*Dvali.z + s_a3[D4i.z]*Dvali.w;
+      p4 = s_a3[D1i.w]*Dvali.x + s_a3[D2i.w]*Dvali.y + s_a3[D3i.w]*Dvali.z + s_a3[D4i.w]*Dvali.w;
+
+      const dfloat da3dr = .5f*(p2-p1);
+      const dfloat da3ds = .5f*(p3-p1);
+      const dfloat da3dt = .5f*(p4-p1);
+
+      p1 = s_a4[D1i.x]*Dvali.x + s_a4[D2i.x]*Dvali.y + s_a4[D3i.x]*Dvali.z + s_a4[D4i.x]*Dvali.w;
+      p2 = s_a4[D1i.y]*Dvali.x + s_a4[D2i.y]*Dvali.y + s_a4[D3i.y]*Dvali.z + s_a4[D4i.y]*Dvali.w;
+      p3 = s_a4[D1i.z]*Dvali.x + s_a4[D2i.z]*Dvali.y + s_a4[D3i.z]*Dvali.z + s_a4[D4i.z]*Dvali.w;
+      p4 = s_a4[D1i.w]*Dvali.x + s_a4[D2i.w]*Dvali.y + s_a4[D3i.w]*Dvali.z + s_a4[D4i.w]*Dvali.w;
+
+      const dfloat da4dr = .5f*(p2-p1);
+      const dfloat da4ds = .5f*(p3-p1);
+      const dfloat da4dt = .5f*(p4-p1);
+
+      // done computing reference derivs
+
+      const dfloat da1dx = rx*da1dr+sx*da1ds+tx*da1dt;
+      const dfloat da1dy = ry*da1dr+sy*da1ds+ty*da1dt;
+      const dfloat da1dz = rz*da1dr+sz*da1ds+tz*da1dt;
+
+      r2 = da1dx;
+      r3 = da1dy;
+      r4 = da1dz;
+
+      const dfloat da2dx = rx*da2dr+sx*da2ds+tx*da2dt;
+      const dfloat da2dy = ry*da2dr+sy*da2ds+ty*da2dt;
+      const dfloat da2dz = rz*da2dr+sz*da2ds+tz*da2dt;
+
+      r1 = da2dx;
+      r5 = da2dy;
+      r6 = da2dz;
+      r8 = p_sqrt2*da2dx;
+
+      const dfloat da3dx = rx*da3dr+sx*da3ds+tx*da3dt;
+      const dfloat da3dy = ry*da3dr+sy*da3ds+ty*da3dt;
+      const dfloat da3dz = rz*da3dr+sz*da3ds+tz*da3dt;
+
+      r1 += da3dy;
+      r5 += da3dx;
+      r7 = da3dz;
+      r9 = p_sqrt2*da3dy;
+
+      const dfloat da4dx = rx*da4dr+sx*da4ds+tx*da4dt;
+      const dfloat da4dy = ry*da4dr+sy*da4ds+ty*da4dt;
+      const dfloat da4dz = rz*da4dr+sz*da4ds+tz*da4dt;
+
+      r1 += da4dz;
+      r6 += da4dx;
+      r7 += da4dz;
+      r10 = p_sqrt2*da4dz;
+
+      // nonlinear terms
+      dfloat a1 = 0.f;
+      dfloat a2 = 0.f;
+      dfloat a3 = 0.f;
+      dfloat a4 = 0.f;
+      // interpolate to nodes
+#pragma unroll p_Np
+      for (int j = 0; j < p_Np; ++j){
+        const dfloat V_ij = V[n + j*p_Np];
+        a1 += V_ij * s_a1[n];
+        a2 += V_ij * s_a2[n];
+        a3 += V_ij * s_a3[n];
+        a4 += V_ij * s_a4[n];
+      }
+      const dfloat nl5  = a2*a3/a1;
+      const dfloat nl6  = a2*a4/a1;
+      const dfloat nl7  = a3*a4/a1;
+
+      const dfloat denom = 1.f/(p_invSqrt2*a1);
+      const dfloat nl8  = a2*a2*denom;
+      const dfloat nl9  = a3*a3*denom;
+      const dfloat nl10  = a4*a4*denom;
+
+      s_nl[0][n] = nl5;
+      s_nl[1][n] = nl6;
+      s_nl[2][n] = nl7;
+      s_nl[3][n] = nl8;
+      s_nl[4][n] = nl9;
+      s_nl[5][n] = nl10;
+
+    }
+
+    @barrier();
+
+    for(unsigned int n = 0; n < p_Np; ++n; @inner(0)){
+
+      dfloat nl1 = 0.f;
+      dfloat nl2 = 0.f;
+      dfloat nl3 = 0.f;
+      dfloat nl4 = 0.f;
+      dfloat nl5 = 0.f;
+      dfloat nl6 = 0.f;
+
+#pragma unroll p_Np
+      for (int j = 0; j < p_Np; ++j){
+        const dfloat V_ij = invV[n + j*p_Np];
+        nl1 += V_ij * s_nl[0][n];
+        nl2 += V_ij * s_nl[1][n];
+        nl3 += V_ij * s_nl[2][n];
+        nl4 += V_ij * s_nl[3][n];
+        nl5 += V_ij * s_nl[4][n];
+        nl6 += V_ij * s_nl[5][n];
+      }
+
+      r5 -= tauInv*nl1;
+      r6 -= tauInv*nl2;
+      r7 -= tauInv*nl3;
+
+      r8  -= tauInv*nl4;
+      r9  -= tauInv*nl5;
+      r10 -= tauInv*nl6;
+
+      //}
+      //
+      // fetch a5-a8
+      //    for(unsigned int n=0;n<p_Np;++n;@inner(0)){
+      unsigned int id = n+e*p_Np*p_Nfields;
+      s_a5[n] = Q[id+4*p_Np];
+      s_a6[n] = Q[id+5*p_Np];
+      s_a7[n] = Q[id+6*p_Np];
+      s_a8[n] = Q[id+7*p_Np];
+    }
+
+    @barrier();
+
+    for(unsigned int n=0;n<p_Np;++n;@inner(0)){
+      //const uchar4 D1i = D1_ids[n];
+      //const uchar4 D2i = D2_ids[n];
+      //const uchar4 D3i = D3_ids[n];
+      //const uchar4 D4i = D4_ids[n];
+
+      dfloat p1=0.f, p2=0.f, p3=0.f, p4 = 0.f;
+      p1 = s_a5[D1i.x]*Dvali.x + s_a5[D2i.x]*Dvali.y + s_a5[D3i.x]*Dvali.z + s_a5[D4i.x]*Dvali.w;
+      p2 = s_a5[D1i.y]*Dvali.x + s_a5[D2i.y]*Dvali.y + s_a5[D3i.y]*Dvali.z + s_a5[D4i.y]*Dvali.w;
+      p3 = s_a5[D1i.z]*Dvali.x + s_a5[D2i.z]*Dvali.y + s_a5[D3i.z]*Dvali.z + s_a5[D4i.z]*Dvali.w;
+      p4 = s_a5[D1i.w]*Dvali.x + s_a5[D2i.w]*Dvali.y + s_a5[D3i.w]*Dvali.z + s_a5[D4i.w]*Dvali.w;
+
+      const dfloat da5dr = .5f*(p2-p1);
+      const dfloat da5ds = .5f*(p3-p1);
+      const dfloat da5dt = .5f*(p4-p1);
+
+      p1 = s_a6[D1i.x]*Dvali.x + s_a6[D2i.x]*Dvali.y + s_a6[D3i.x]*Dvali.z + s_a6[D4i.x]*Dvali.w;
+      p2 = s_a6[D1i.y]*Dvali.x + s_a6[D2i.y]*Dvali.y + s_a6[D3i.y]*Dvali.z + s_a6[D4i.y]*Dvali.w;
+      p3 = s_a6[D1i.z]*Dvali.x + s_a6[D2i.z]*Dvali.y + s_a6[D3i.z]*Dvali.z + s_a6[D4i.z]*Dvali.w;
+      p4 = s_a6[D1i.w]*Dvali.x + s_a6[D2i.w]*Dvali.y + s_a6[D3i.w]*Dvali.z + s_a6[D4i.w]*Dvali.w;
+
+      const dfloat da6dr = .5f*(p2-p1);
+      const dfloat da6ds = .5f*(p3-p1);
+      const dfloat da6dt = .5f*(p4-p1);
+
+      p1 = s_a7[D1i.x]*Dvali.x + s_a7[D2i.x]*Dvali.y + s_a7[D3i.x]*Dvali.z + s_a7[D4i.x]*Dvali.w;
+      p2 = s_a7[D1i.y]*Dvali.x + s_a7[D2i.y]*Dvali.y + s_a7[D3i.y]*Dvali.z + s_a7[D4i.y]*Dvali.w;
+      p3 = s_a7[D1i.z]*Dvali.x + s_a7[D2i.z]*Dvali.y + s_a7[D3i.z]*Dvali.z + s_a7[D4i.z]*Dvali.w;
+      p4 = s_a7[D1i.w]*Dvali.x + s_a7[D2i.w]*Dvali.y + s_a7[D3i.w]*Dvali.z + s_a7[D4i.w]*Dvali.w;
+
+      const dfloat da7dr = .5f*(p2-p1);
+      const dfloat da7ds = .5f*(p3-p1);
+      const dfloat da7dt = .5f*(p4-p1);
+
+      p1 = s_a8[D1i.x]*Dvali.x + s_a8[D2i.x]*Dvali.y + s_a8[D3i.x]*Dvali.z + s_a8[D4i.x]*Dvali.w;
+      p2 = s_a8[D1i.y]*Dvali.x + s_a8[D2i.y]*Dvali.y + s_a8[D3i.y]*Dvali.z + s_a8[D4i.y]*Dvali.w;
+      p3 = s_a8[D1i.z]*Dvali.x + s_a8[D2i.z]*Dvali.y + s_a8[D3i.z]*Dvali.z + s_a8[D4i.z]*Dvali.w;
+      p4 = s_a8[D1i.w]*Dvali.x + s_a8[D2i.w]*Dvali.y + s_a8[D3i.w]*Dvali.z + s_a8[D4i.w]*Dvali.w;
+
+      const dfloat da8dr = .5f*(p2-p1);
+      const dfloat da8ds = .5f*(p3-p1);
+      const dfloat da8dt = .5f*(p4-p1);
+
+      // done computing reference derivs
+
+      const dfloat da5dx = rx*da5dr+sx*da5ds+tx*da5dt;
+      const dfloat da5dy = ry*da5dr+sy*da5ds+ty*da5dt;
+
+      r2 += da5dy;
+      r3 += da5dx;
+      r5 += tauInv*s_a5[n];
+
+      const dfloat da6dx = rx*da6dr+sx*da6ds+tx*da6dt;
+      const dfloat da6dz = rz*da6dr+sz*da6ds+tz*da6dt;
+
+      r2 += da6dz;
+      r4 += da6dx;
+      r6 += tauInv*s_a6[n];
+
+      const dfloat da7dy = ry*da7dr+sy*da7ds+ty*da7dt;
+      const dfloat da7dz = rz*da7dr+sz*da7ds+tz*da7dt;
+
+      r3 += da7dz;
+      r4 += da7dy;
+      r7 += tauInv*s_a7[n];
+
+      const dfloat da8dx = rx*da8dr+sx*da8ds+tx*da8dt;
+
+      r2 += p_sqrt2*da8dx;
+      r8 += tauInv*s_a8[n];
+
+    }
+
+
+    @barrier();
+
+    // fetch a9-a10
+    for(unsigned int n=0;n<p_Np;++n;@inner(0)){
+      const unsigned int id = n+e*p_Np*p_Nfields;
+      s_a9[n] = Q[id+8*p_Np];
+      s_a10[n] = Q[id+9*p_Np];
+    }
+
+    @barrier();
+
+    for(unsigned int n=0;n<p_Np;++n;@inner(0)){
+
+      //const uchar4 D1i = D1_ids[n];
+      //const uchar4 D2i = D2_ids[n];
+      //const uchar4 D3i = D3_ids[n];
+      //const uchar4 D4i = D4_ids[n];
+
+      dfloat p1=0.f, p2=0.f, p3=0.f, p4 = 0.f;
+      p1 = s_a9[D1i.x]*Dvali.x + s_a9[D2i.x]*Dvali.y + s_a9[D3i.x]*Dvali.z + s_a9[D4i.x]*Dvali.w;
+      p2 = s_a9[D1i.y]*Dvali.x + s_a9[D2i.y]*Dvali.y + s_a9[D3i.y]*Dvali.z + s_a9[D4i.y]*Dvali.w;
+      p3 = s_a9[D1i.z]*Dvali.x + s_a9[D2i.z]*Dvali.y + s_a9[D3i.z]*Dvali.z + s_a9[D4i.z]*Dvali.w;
+      p4 = s_a9[D1i.w]*Dvali.x + s_a9[D2i.w]*Dvali.y + s_a9[D3i.w]*Dvali.z + s_a9[D4i.w]*Dvali.w;
+
+      const dfloat da9dr = .5f*(p2-p1);
+      const dfloat da9ds = .5f*(p3-p1);
+      const dfloat da9dt = .5f*(p4-p1);
+
+      p1 = s_a10[D1i.x]*Dvali.x + s_a10[D2i.x]*Dvali.y + s_a10[D3i.x]*Dvali.z + s_a10[D4i.x]*Dvali.w;
+      p2 = s_a10[D1i.y]*Dvali.x + s_a10[D2i.y]*Dvali.y + s_a10[D3i.y]*Dvali.z + s_a10[D4i.y]*Dvali.w;
+      p3 = s_a10[D1i.z]*Dvali.x + s_a10[D2i.z]*Dvali.y + s_a10[D3i.z]*Dvali.z + s_a10[D4i.z]*Dvali.w;
+      p4 = s_a10[D1i.w]*Dvali.x + s_a10[D2i.w]*Dvali.y + s_a10[D3i.w]*Dvali.z + s_a10[D4i.w]*Dvali.w;
+
+      const dfloat da10dr = .5f*(p2-p1);
+      const dfloat da10ds = .5f*(p3-p1);
+      const dfloat da10dt = .5f*(p4-p1);
+
+      // done computing reference derivs
+
+      const dfloat da9dy = ry*da9dr+sy*da9ds+ty*da9dt;
+
+      r3 += p_sqrt2*da9dy;
+      r9 += tauInv*s_a9[n];
+
+      const dfloat da10dz = rz*da10dr+sz*da10ds+tz*da10dt;
+
+      r4 += p_sqrt2*da10dz;
+      r10 += tauInv*s_a10[n];
+
+      // store
+      const unsigned int id = n+e*p_Np*p_Nfields;
+      rhsQ[id+0*p_Np] = -r1;
+      rhsQ[id+1*p_Np] = -r2;
+      rhsQ[id+2*p_Np] = -r3;
+      rhsQ[id+3*p_Np] = -r4;
+      rhsQ[id+4*p_Np] = -r5;
+      rhsQ[id+5*p_Np] = -r6;
+      rhsQ[id+6*p_Np] = -r7;
+      rhsQ[id+7*p_Np] = -r8;
+      rhsQ[id+8*p_Np] = -r9;
+      rhsQ[id+9*p_Np] = -r10;
+
+    }
+#endif
+    
+  }
+}
+
+#ifndef p_NblockV
+#define p_NblockV 1
+#endif
+
+@kernel void bnsVolumeTetBB3D_v1(const int Nelements,
+				 @restrict const dlong  * elementIds,
+				 @restrict const dfloat * vgeo,
+				 @restrict const uchar4 * D1_ids,
+				 @restrict const uchar4 * D2_ids,
+				 @restrict const uchar4 * D3_ids,
+				 @restrict const uchar4 * D4_ids,
+				 @restrict const dfloat4 * Dvals,
+				 @restrict const dfloat  * V,
+				 @restrict const dfloat  * invV,
+				 const dfloat tauInv, 
+				 @restrict const dfloat  * Q,
+				 @restrict dfloat * rhsQ){
+  
+#define rx s_vgeo[et][0]
+#define ry s_vgeo[et][1]
+#define rz s_vgeo[et][2]
+  
+#define sx s_vgeo[et][3]
+#define sy s_vgeo[et][4]
+#define sz s_vgeo[et][5]
+
+#define tx s_vgeo[et][6]
+#define ty s_vgeo[et][7]
+#define tz s_vgeo[et][8]
+
+#define s_a1 s_q[0][et]
+#define s_a2 s_q[1][et]
+#define s_a3 s_q[2][et]
+#define s_a4 s_q[3][et]
+
+#define s_a5 s_q[0][et]
+#define s_a6 s_q[1][et]
+#define s_a7 s_q[2][et]
+#define s_a8 s_q[3][et]
+
+#define s_a9  s_q[0][et]
+#define s_a10 s_q[1][et]
+
+
+  for(dlong eo=0; eo < Nelements;eo+=p_NblockV;@outer(0)){
+
+    @exclusive dfloat r1, r2, r3, r4, r5, r6, r7, r8, r9, r10;
+
+    @exclusive dfloat4 Dvali;
+    @exclusive uchar4 D1i,D2i,D3i,D4i;
+    @exclusive dlong element;
+    @shared dfloat s_q[4][p_NblockV][p_Np];
+    @shared dfloat s_nl[6][p_NblockV][p_Np];
+    @shared dfloat s_vgeo[p_NblockV][p_Nvgeo];
+    
+    for(int et=0;et<p_NblockV;++et;@inner(1)){
+      for(dlong n=0;n<p_Np;++n;@inner(0)){
+
+	element = eo + et;
+	element = (element<Nelements) ? elementIds[element] : -1;
+	
+	if(element>=0){
+	  dlong m = n;
+	  while(m<p_Nvgeo){
+	    s_vgeo[et][m] = vgeo[m+p_Nvgeo*element];
+	    m+=p_Np;
+	  }
+	  
+	  dlong id = n+element*p_Np*p_Nfields;
+	  s_a1[n] = Q[id+0*p_Np];
+	  s_a2[n] = Q[id+1*p_Np];
+	  s_a3[n] = Q[id+2*p_Np];
+	  s_a4[n] = Q[id+3*p_Np];
+	}
+	
+	Dvali = Dvals[n];
+	D1i = D1_ids[n];
+	D2i = D2_ids[n];
+	D3i = D3_ids[n];
+	D4i = D4_ids[n];
+      }
+    }
+  
+    @barrier();
+
+    for(int et=0;et<p_NblockV;++et;@inner(1)){
+      for(dlong n=0;n<p_Np;++n;@inner(0)){
+	
+	dfloat p1=0.f, p2=0.f, p3=0.f, p4 = 0.f;
+
+	p1 = s_a1[D1i.x]*Dvali.x + s_a1[D2i.x]*Dvali.y + s_a1[D3i.x]*Dvali.z + s_a1[D4i.x]*Dvali.w;
+	p2 = s_a1[D1i.y]*Dvali.x + s_a1[D2i.y]*Dvali.y + s_a1[D3i.y]*Dvali.z + s_a1[D4i.y]*Dvali.w;
+	p3 = s_a1[D1i.z]*Dvali.x + s_a1[D2i.z]*Dvali.y + s_a1[D3i.z]*Dvali.z + s_a1[D4i.z]*Dvali.w;
+	p4 = s_a1[D1i.w]*Dvali.x + s_a1[D2i.w]*Dvali.y + s_a1[D3i.w]*Dvali.z + s_a1[D4i.w]*Dvali.w;
+
+	const dfloat da1dr = .5f*(p2-p1);
+	const dfloat da1ds = .5f*(p3-p1);
+	const dfloat da1dt = .5f*(p4-p1);
+	
+	p1 = s_a2[D1i.x]*Dvali.x + s_a2[D2i.x]*Dvali.y + s_a2[D3i.x]*Dvali.z + s_a2[D4i.x]*Dvali.w;
+	p2 = s_a2[D1i.y]*Dvali.x + s_a2[D2i.y]*Dvali.y + s_a2[D3i.y]*Dvali.z + s_a2[D4i.y]*Dvali.w;
+	p3 = s_a2[D1i.z]*Dvali.x + s_a2[D2i.z]*Dvali.y + s_a2[D3i.z]*Dvali.z + s_a2[D4i.z]*Dvali.w;
+	p4 = s_a2[D1i.w]*Dvali.x + s_a2[D2i.w]*Dvali.y + s_a2[D3i.w]*Dvali.z + s_a2[D4i.w]*Dvali.w;
+	
+	const dfloat da2dr = .5f*(p2-p1);
+	const dfloat da2ds = .5f*(p3-p1);
+	const dfloat da2dt = .5f*(p4-p1);
+	
+	p1 = s_a3[D1i.x]*Dvali.x + s_a3[D2i.x]*Dvali.y + s_a3[D3i.x]*Dvali.z + s_a3[D4i.x]*Dvali.w;
+	p2 = s_a3[D1i.y]*Dvali.x + s_a3[D2i.y]*Dvali.y + s_a3[D3i.y]*Dvali.z + s_a3[D4i.y]*Dvali.w;
+	p3 = s_a3[D1i.z]*Dvali.x + s_a3[D2i.z]*Dvali.y + s_a3[D3i.z]*Dvali.z + s_a3[D4i.z]*Dvali.w;
+	p4 = s_a3[D1i.w]*Dvali.x + s_a3[D2i.w]*Dvali.y + s_a3[D3i.w]*Dvali.z + s_a3[D4i.w]*Dvali.w;
+	
+	const dfloat da3dr = .5f*(p2-p1);
+	const dfloat da3ds = .5f*(p3-p1);
+	const dfloat da3dt = .5f*(p4-p1);
+
+	p1 = s_a4[D1i.x]*Dvali.x + s_a4[D2i.x]*Dvali.y + s_a4[D3i.x]*Dvali.z + s_a4[D4i.x]*Dvali.w;
+	p2 = s_a4[D1i.y]*Dvali.x + s_a4[D2i.y]*Dvali.y + s_a4[D3i.y]*Dvali.z + s_a4[D4i.y]*Dvali.w;
+	p3 = s_a4[D1i.z]*Dvali.x + s_a4[D2i.z]*Dvali.y + s_a4[D3i.z]*Dvali.z + s_a4[D4i.z]*Dvali.w;
+	p4 = s_a4[D1i.w]*Dvali.x + s_a4[D2i.w]*Dvali.y + s_a4[D3i.w]*Dvali.z + s_a4[D4i.w]*Dvali.w;
+	
+	const dfloat da4dr = .5f*(p2-p1);
+	const dfloat da4ds = .5f*(p3-p1);
+	const dfloat da4dt = .5f*(p4-p1);
+	
+	// done computing reference derivs
+	
+	const dfloat da1dx = rx*da1dr+sx*da1ds+tx*da1dt;
+	const dfloat da1dy = ry*da1dr+sy*da1ds+ty*da1dt;
+	const dfloat da1dz = rz*da1dr+sz*da1ds+tz*da1dt;
+	
+	r2 = da1dx;
+	r3 = da1dy;
+	r4 = da1dz;
+	
+	const dfloat da2dx = rx*da2dr+sx*da2ds+tx*da2dt;
+	const dfloat da2dy = ry*da2dr+sy*da2ds+ty*da2dt;
+	const dfloat da2dz = rz*da2dr+sz*da2ds+tz*da2dt;
+	
+	r1 = da2dx;
+	r5 = da2dy;
+	r6 = da2dz;
+	r8 = p_sqrt2*da2dx;
+	
+	const dfloat da3dx = rx*da3dr+sx*da3ds+tx*da3dt;
+	const dfloat da3dy = ry*da3dr+sy*da3ds+ty*da3dt;
+	const dfloat da3dz = rz*da3dr+sz*da3ds+tz*da3dt;
+	
+	r1 += da3dy;
+	r5 += da3dx;
+	r7 = da3dz;
+	r9 = p_sqrt2*da3dy;
+	
+	const dfloat da4dx = rx*da4dr+sx*da4ds+tx*da4dt;
+	const dfloat da4dy = ry*da4dr+sy*da4ds+ty*da4dt;
+	const dfloat da4dz = rz*da4dr+sz*da4ds+tz*da4dt;
+	
+	r1 += da4dz;
+	r6 += da4dx;
+	r7 += da4dz;
+	r10 = p_sqrt2*da4dz;
+	
+	// nonlinear terms
+	dfloat a1 = 0.f;
+	dfloat a2 = 0.f;
+	dfloat a3 = 0.f;
+	dfloat a4 = 0.f;
+#if 1
+	// interpolate to nodes
+	//#pragma unroll p_Np
+	for (int j = 0; j < p_Np; ++j){
+	  const dfloat V_ij = V[n + j*p_Np];
+	  a1 += V_ij * s_a1[n];
+	  a2 += V_ij * s_a2[n];
+	  a3 += V_ij * s_a3[n];
+	  a4 += V_ij * s_a4[n];
+	}
+#endif
+	
+	const dfloat nl5  = a2*a3/a1;
+	const dfloat nl6  = a2*a4/a1;
+	const dfloat nl7  = a3*a4/a1;
+	
+	const dfloat denom = 1.f/(p_invSqrt2*a1);
+	const dfloat nl8  = a2*a2*denom;
+	const dfloat nl9  = a3*a3*denom;
+	const dfloat nl10  = a4*a4*denom;
+
+	s_nl[0][et][n] = nl5;
+	s_nl[1][et][n] = nl6;
+	s_nl[2][et][n] = nl7;
+	s_nl[3][et][n] = nl8;
+	s_nl[4][et][n] = nl9;
+	s_nl[5][et][n] = nl10;
+      }
+    }
+
+    @barrier();
+
+    for(int et=0;et<p_NblockV;++et;@inner(1)){
+      for(dlong n = 0; n < p_Np; ++n; @inner(0)){
+	
+	dfloat nl1 = 0.f;
+	dfloat nl2 = 0.f;
+	dfloat nl3 = 0.f;
+	dfloat nl4 = 0.f;
+	dfloat nl5 = 0.f;
+	dfloat nl6 = 0.f;
+
+#if 1
+	//#pragma unroll p_Np
+	for (int j = 0; j < p_Np; ++j){
+	  const dfloat V_ij = invV[n + j*p_Np];
+	  nl1 += V_ij * s_nl[0][et][n];
+	  nl2 += V_ij * s_nl[1][et][n];
+	  nl3 += V_ij * s_nl[2][et][n];
+	  nl4 += V_ij * s_nl[3][et][n];
+	  nl5 += V_ij * s_nl[4][et][n];
+	  nl6 += V_ij * s_nl[5][et][n];
+	}
+#endif
+	
+	r5 -= tauInv*nl1;
+	r6 -= tauInv*nl2;
+	r7 -= tauInv*nl3;
+	
+	r8  -= tauInv*nl4;
+	r9  -= tauInv*nl5;
+	r10 -= tauInv*nl6;
+	
+	//}
+	//
+	// fetch a5-a8
+	//    for(dlong n=0;n<p_Np;++n;@inner(0)){
+	if(element>=0){
+	  dlong id = n+element*p_Np*p_Nfields;
+	  s_a5[n] = Q[id+4*p_Np];
+	  s_a6[n] = Q[id+5*p_Np];
+	  s_a7[n] = Q[id+6*p_Np];
+	  s_a8[n] = Q[id+7*p_Np];
+	}
+      }
+    }
+
+    @barrier();
+
+    for(int et=0;et<p_NblockV;++et;@inner(1)){
+      for(dlong n=0;n<p_Np;++n;@inner(0)){
+	
+	dfloat p1=0.f, p2=0.f, p3=0.f, p4 = 0.f;
+	p1 = s_a5[D1i.x]*Dvali.x + s_a5[D2i.x]*Dvali.y + s_a5[D3i.x]*Dvali.z + s_a5[D4i.x]*Dvali.w;
+	p2 = s_a5[D1i.y]*Dvali.x + s_a5[D2i.y]*Dvali.y + s_a5[D3i.y]*Dvali.z + s_a5[D4i.y]*Dvali.w;
+	p3 = s_a5[D1i.z]*Dvali.x + s_a5[D2i.z]*Dvali.y + s_a5[D3i.z]*Dvali.z + s_a5[D4i.z]*Dvali.w;
+	p4 = s_a5[D1i.w]*Dvali.x + s_a5[D2i.w]*Dvali.y + s_a5[D3i.w]*Dvali.z + s_a5[D4i.w]*Dvali.w;
+	
+	const dfloat da5dr = .5f*(p2-p1);
+	const dfloat da5ds = .5f*(p3-p1);
+	const dfloat da5dt = .5f*(p4-p1);
+	
+	p1 = s_a6[D1i.x]*Dvali.x + s_a6[D2i.x]*Dvali.y + s_a6[D3i.x]*Dvali.z + s_a6[D4i.x]*Dvali.w;
+	p2 = s_a6[D1i.y]*Dvali.x + s_a6[D2i.y]*Dvali.y + s_a6[D3i.y]*Dvali.z + s_a6[D4i.y]*Dvali.w;
+	p3 = s_a6[D1i.z]*Dvali.x + s_a6[D2i.z]*Dvali.y + s_a6[D3i.z]*Dvali.z + s_a6[D4i.z]*Dvali.w;
+	p4 = s_a6[D1i.w]*Dvali.x + s_a6[D2i.w]*Dvali.y + s_a6[D3i.w]*Dvali.z + s_a6[D4i.w]*Dvali.w;
+	
+	const dfloat da6dr = .5f*(p2-p1);
+	const dfloat da6ds = .5f*(p3-p1);
+	const dfloat da6dt = .5f*(p4-p1);
+	
+	p1 = s_a7[D1i.x]*Dvali.x + s_a7[D2i.x]*Dvali.y + s_a7[D3i.x]*Dvali.z + s_a7[D4i.x]*Dvali.w;
+	p2 = s_a7[D1i.y]*Dvali.x + s_a7[D2i.y]*Dvali.y + s_a7[D3i.y]*Dvali.z + s_a7[D4i.y]*Dvali.w;
+	p3 = s_a7[D1i.z]*Dvali.x + s_a7[D2i.z]*Dvali.y + s_a7[D3i.z]*Dvali.z + s_a7[D4i.z]*Dvali.w;
+	p4 = s_a7[D1i.w]*Dvali.x + s_a7[D2i.w]*Dvali.y + s_a7[D3i.w]*Dvali.z + s_a7[D4i.w]*Dvali.w;
+	
+	const dfloat da7dr = .5f*(p2-p1);
+	const dfloat da7ds = .5f*(p3-p1);
+	const dfloat da7dt = .5f*(p4-p1);
+	
+	p1 = s_a8[D1i.x]*Dvali.x + s_a8[D2i.x]*Dvali.y + s_a8[D3i.x]*Dvali.z + s_a8[D4i.x]*Dvali.w;
+	p2 = s_a8[D1i.y]*Dvali.x + s_a8[D2i.y]*Dvali.y + s_a8[D3i.y]*Dvali.z + s_a8[D4i.y]*Dvali.w;
+	p3 = s_a8[D1i.z]*Dvali.x + s_a8[D2i.z]*Dvali.y + s_a8[D3i.z]*Dvali.z + s_a8[D4i.z]*Dvali.w;
+	p4 = s_a8[D1i.w]*Dvali.x + s_a8[D2i.w]*Dvali.y + s_a8[D3i.w]*Dvali.z + s_a8[D4i.w]*Dvali.w;
+	
+	const dfloat da8dr = .5f*(p2-p1);
+	const dfloat da8ds = .5f*(p3-p1);
+	const dfloat da8dt = .5f*(p4-p1);
+	
+	// done computing reference derivs
+	
+	const dfloat da5dx = rx*da5dr+sx*da5ds+tx*da5dt;
+	const dfloat da5dy = ry*da5dr+sy*da5ds+ty*da5dt;
+	
+	r2 += da5dy;
+	r3 += da5dx;
+	r5 += tauInv*s_a5[n];
+	
+	const dfloat da6dx = rx*da6dr+sx*da6ds+tx*da6dt;
+	const dfloat da6dz = rz*da6dr+sz*da6ds+tz*da6dt;
+	
+	r2 += da6dz;
+	r4 += da6dx;
+	r6 += tauInv*s_a6[n];
+	
+	const dfloat da7dy = ry*da7dr+sy*da7ds+ty*da7dt;
+	const dfloat da7dz = rz*da7dr+sz*da7ds+tz*da7dt;
+	
+	r3 += da7dz;
+	r4 += da7dy;
+	r7 += tauInv*s_a7[n];
+	
+	const dfloat da8dx = rx*da8dr+sx*da8ds+tx*da8dt;
+	
+	r2 += p_sqrt2*da8dx;
+	r8 += tauInv*s_a8[n];
+	
+      }
+    }
+      
+    @barrier();
+
+    // fetch a9-a10
+    for(int et=0;et<p_NblockV;++et;@inner(1)){
+      for(dlong n=0;n<p_Np;++n;@inner(0)){
+	if(element>=0){
+	  const dlong id = n+element*p_Np*p_Nfields;
+	  s_a9[n] = Q[id+8*p_Np];
+	  s_a10[n] = Q[id+9*p_Np];
+	}
+      }
+    }
+    
+    @barrier();
+
+    for(int et=0;et<p_NblockV;++et;@inner(1)){
+      for(dlong n=0;n<p_Np;++n;@inner(0)){
+	
+	dfloat p1=0.f, p2=0.f, p3=0.f, p4 = 0.f;
+	p1 = s_a9[D1i.x]*Dvali.x + s_a9[D2i.x]*Dvali.y + s_a9[D3i.x]*Dvali.z + s_a9[D4i.x]*Dvali.w;
+	p2 = s_a9[D1i.y]*Dvali.x + s_a9[D2i.y]*Dvali.y + s_a9[D3i.y]*Dvali.z + s_a9[D4i.y]*Dvali.w;
+	p3 = s_a9[D1i.z]*Dvali.x + s_a9[D2i.z]*Dvali.y + s_a9[D3i.z]*Dvali.z + s_a9[D4i.z]*Dvali.w;
+	p4 = s_a9[D1i.w]*Dvali.x + s_a9[D2i.w]*Dvali.y + s_a9[D3i.w]*Dvali.z + s_a9[D4i.w]*Dvali.w;
+	
+	const dfloat da9dr = .5f*(p2-p1);
+	const dfloat da9ds = .5f*(p3-p1);
+	const dfloat da9dt = .5f*(p4-p1);
+	
+	p1 = s_a10[D1i.x]*Dvali.x + s_a10[D2i.x]*Dvali.y + s_a10[D3i.x]*Dvali.z + s_a10[D4i.x]*Dvali.w;
+	p2 = s_a10[D1i.y]*Dvali.x + s_a10[D2i.y]*Dvali.y + s_a10[D3i.y]*Dvali.z + s_a10[D4i.y]*Dvali.w;
+	p3 = s_a10[D1i.z]*Dvali.x + s_a10[D2i.z]*Dvali.y + s_a10[D3i.z]*Dvali.z + s_a10[D4i.z]*Dvali.w;
+	p4 = s_a10[D1i.w]*Dvali.x + s_a10[D2i.w]*Dvali.y + s_a10[D3i.w]*Dvali.z + s_a10[D4i.w]*Dvali.w;
+	
+	const dfloat da10dr = .5f*(p2-p1);
+	const dfloat da10ds = .5f*(p3-p1);
+	const dfloat da10dt = .5f*(p4-p1);
+	
+	// done computing reference derivs
+	
+	const dfloat da9dy = ry*da9dr+sy*da9ds+ty*da9dt;
+	
+	r3 += p_sqrt2*da9dy;
+	r9 += tauInv*s_a9[n];
+	
+	const dfloat da10dz = rz*da10dr+sz*da10ds+tz*da10dt;
+	
+	r4 += p_sqrt2*da10dz;
+	r10 += tauInv*s_a10[n];
+	
+	// store
+	if(element>=0){
+	  const dlong id = n+element*p_Np*p_Nfields;
+	  rhsQ[id+0*p_Np] = -r1;
+	  rhsQ[id+1*p_Np] = -r2;
+	  rhsQ[id+2*p_Np] = -r3;
+	  rhsQ[id+3*p_Np] = -r4;
+	  rhsQ[id+4*p_Np] = -r5;
+	  rhsQ[id+5*p_Np] = -r6;
+	  rhsQ[id+6*p_Np] = -r7;
+	  rhsQ[id+7*p_Np] = -r8;
+	  rhsQ[id+8*p_Np] = -r9;
+	  rhsQ[id+9*p_Np] = -r10;
+	}
+      }
+    }
+  }
+}
