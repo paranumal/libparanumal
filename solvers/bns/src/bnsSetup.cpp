@@ -182,6 +182,7 @@ void bns_t::Setup(platform_t& _platform, mesh_t& _mesh,
   settings.getSetting("DATA FILE", dataFileName);
   kernelInfo["includes"] += dataFileName;
 
+  kernelInfo["defines/" "p_sqrt2"]= (dfloat)sqrt(2.0);
   kernelInfo["defines/" "p_Nfields"]= Nfields;
   kernelInfo["defines/" "p_Npmlfields"]= Npmlfields;
 

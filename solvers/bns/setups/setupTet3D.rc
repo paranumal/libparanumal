@@ -5,7 +5,7 @@
 data/bnsGaussian3D.h
 
 [MESH FILE]
-PMLBOX
+BOX
 
 [MESH DIMENSION]
 3
@@ -14,13 +14,13 @@ PMLBOX
 6
 
 [BOX NX]
-8
+18
 
 [BOX NY]
-8
+18
 
 [BOX NZ]
-8
+18
 
 [BOX BOUNDARY FLAG]
 1
