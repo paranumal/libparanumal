@@ -60,22 +60,7 @@ elliptic_t elliptic_t::SetupNewDegree(mesh_t& meshC){
   properties_t kernelInfo = meshC.props; //copy base occa properties
 
   // set kernel name suffix
-  std::string suffix;
-  if(meshC.elementType==Mesh::TRIANGLES){
-    if(meshC.dim==2)
-      suffix = "Tri2D";
-    else
-      suffix = "Tri3D";
-  } else if(meshC.elementType==Mesh::QUADRILATERALS){
-    if(meshC.dim==2)
-      suffix = "Quad2D";
-    else
-      suffix = "Quad3D";
-  } else if(meshC.elementType==Mesh::TETRAHEDRA)
-    suffix = "Tet3D";
-  else if(meshC.elementType==Mesh::HEXAHEDRA)
-    suffix = "Hex3D";
-
+  std::string suffix = mesh.elementSuffix();
   std::string oklFilePrefix = DELLIPTIC "/okl/";
   std::string oklFileSuffix = ".okl";
 
