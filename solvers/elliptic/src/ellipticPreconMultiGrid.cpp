@@ -70,30 +70,12 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
       // pick the degrees so the dofs of each level halfs (roughly)
       while (NpCoarse > NpFine/2 && Nc>1) {
         Nc--;
-        switch(mesh.elementType){
-          case Mesh::TRIANGLES:
-            NpCoarse = ((Nc+1)*(Nc+2))/2; break;
-          case Mesh::QUADRILATERALS:
-            NpCoarse = (Nc+1)*(Nc+1); break;
-          case Mesh::TETRAHEDRA:
-            NpCoarse = ((Nc+1)*(Nc+2)*(Nc+3))/6; break;
-          case Mesh::HEXAHEDRA:
-            NpCoarse = (Nc+1)*(Nc+1)*(Nc+1); break;
-        }
+	NpCoarse = mesh.ElementNodeCount(Nc);
       }
     }
 
     //set Npcoarse
-    switch(mesh.elementType){
-      case Mesh::TRIANGLES:
-        NpCoarse = ((Nc+1)*(Nc+2))/2; break;
-      case Mesh::QUADRILATERALS:
-        NpCoarse = (Nc+1)*(Nc+1); break;
-      case Mesh::TETRAHEDRA:
-        NpCoarse = ((Nc+1)*(Nc+2)*(Nc+3))/6; break;
-      case Mesh::HEXAHEDRA:
-        NpCoarse = (Nc+1)*(Nc+1)*(Nc+1); break;
-    }
+    NpCoarse = mesh.ElementNodeCount(Nc);
 
     dlong Nrows, Ncols;
     if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
