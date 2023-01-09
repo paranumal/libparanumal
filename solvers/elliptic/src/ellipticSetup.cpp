@@ -82,21 +82,7 @@ void elliptic_t::Setup(platform_t& _platform, mesh_t& _mesh,
   properties_t kernelInfo = mesh.props; //copy base occa properties
 
   // set kernel name suffix
-  std::string suffix;
-  if(mesh.elementType==Mesh::TRIANGLES){
-    if(mesh.dim==2)
-      suffix = "Tri2D";
-    else
-      suffix = "Tri3D";
-  } else if(mesh.elementType==Mesh::QUADRILATERALS){
-    if(mesh.dim==2)
-      suffix = "Quad2D";
-    else
-      suffix = "Quad3D";
-  } else if(mesh.elementType==Mesh::TETRAHEDRA)
-    suffix = "Tet3D";
-  else if(mesh.elementType==Mesh::HEXAHEDRA)
-    suffix = "Hex3D";
+  std::string suffix = mesh.elementSuffix();
 
   std::string oklFilePrefix = DELLIPTIC "/okl/";
   std::string oklFileSuffix = ".okl";

@@ -73,20 +73,8 @@ void elliptic_t::Run(){
   kernelInfo["defines/" "p_Nfields"]= Nfields;
 
   // set kernel name suffix
-  std::string suffix;
-  if(mesh.elementType==Mesh::TRIANGLES) {
-    suffix = "Tri2D";
-  } else if(mesh.elementType==Mesh::QUADRILATERALS) {
-    if(mesh.dim==2)
-      suffix = "Quad2D";
-    else
-      suffix = "Quad3D";
-  } else if(mesh.elementType==Mesh::TETRAHEDRA) {
-    suffix = "Tet3D";
-  } else { //mesh.elementType==Mesh::HEXAHEDRA)
-    suffix = "Hex3D";
-  }
-
+  std::string suffix = mesh.elementSuffix();
+  
   std::string oklFilePrefix = DELLIPTIC "/okl/";
   std::string oklFileSuffix = ".okl";
 

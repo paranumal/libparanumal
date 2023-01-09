@@ -67,6 +67,35 @@ class mesh_t {
   int Nverts, Nfaces, NfaceVertices;
   Mesh::ElementType elementType;
 
+// return kernel name suffix based on dimension and element type                                                                  
+  std::string elementSuffix(){
+
+    std::string suffix("NOT DEFINED");
+
+    if(elementType==Mesh::TRIANGLES){
+      if(dim==2){
+        suffix = "Tri2D";
+      }
+      else{
+        suffix = "Tri3D";
+      }
+    } else if(elementType==Mesh::QUADRILATERALS){
+      if(dim==2){
+        suffix = "Quad2D";
+      }
+      else{
+        suffix = "Quad3D";
+      }
+    } else if(elementType==Mesh::TETRAHEDRA){
+      suffix = "Tet3D";
+    }
+    else if(elementType==Mesh::HEXAHEDRA){
+      suffix = "Hex3D";
+    }
+    return suffix;
+  }
+
+  
   // indices of vertex nodes
   memory<int> vertexNodes;
 
@@ -102,6 +131,23 @@ class mesh_t {
   int N=0, Np=0;             // N = Polynomial order and Np = Nodes per element
   memory<dfloat> r, s, t;    // coordinates of local nodes
 
+  // return number of nodes for this mesh type at a given polynomial degree
+  int ElementNodeCount(int _N){
+    int _Np = 0;
+    switch(elementType){
+    case Mesh::TRIANGLES:
+      _Np = ((_N+1)*(_N+2))/2; break;
+    case Mesh::QUADRILATERALS:
+      _Np = (_N+1)*(_N+1); break;
+    case Mesh::TETRAHEDRA:
+      _Np = ((_N+1)*(_N+2)*(_N+3))/6; break;
+    case Mesh::HEXAHEDRA:
+      _Np = (_N+1)*(_N+1)*(_N+1); break;
+    }
+    return _Np;
+  }
+
+  
   int Nq=0;                 // N = Polynomial order, Nq=N+1
   memory<dfloat> gllz;      // 1D GLL quadrature nodes
   memory<dfloat> gllw;      // 1D GLL quadrature weights
