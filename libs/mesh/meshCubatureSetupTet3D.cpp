@@ -70,8 +70,8 @@ void mesh_t::CubatureSetupTet3D(){
   // build transposes (we hold matrices as column major on device)
   memory<dfloat> cubProjectT(cubNp*Np);
   memory<dfloat> cubInterpT(cubNp*Np);
-  linAlg_t::matrixTranspose(cubNp, Np, cubInterp, Np, cubInterpT, cubNp);
-  linAlg_t::matrixTranspose(Np, cubNp, cubProject, cubNp, cubProjectT, Np);
+  linAlg_t<dfloat>::matrixTranspose(cubNp, Np, cubInterp, Np, cubInterpT, cubNp);
+  linAlg_t<dfloat>::matrixTranspose(Np, cubNp, cubProject, cubNp, cubProjectT, Np);
 
   //pre-multiply cubProject by W on device
   for(int n=0;n<cubNp;++n){
@@ -84,9 +84,9 @@ void mesh_t::CubatureSetupTet3D(){
   memory<dfloat> cubPDrTT = cubPDTT + 0*cubNp*Np;
   memory<dfloat> cubPDsTT = cubPDTT + 1*cubNp*Np;
   memory<dfloat> cubPDtTT = cubPDTT + 2*cubNp*Np;
-  linAlg_t::matrixTranspose(Np, cubNp, cubPDrT, cubNp, cubPDrTT, Np);
-  linAlg_t::matrixTranspose(Np, cubNp, cubPDsT, cubNp, cubPDsTT, Np);
-  linAlg_t::matrixTranspose(Np, cubNp, cubPDtT, cubNp, cubPDtTT, Np);
+  linAlg_t<dfloat>::matrixTranspose(Np, cubNp, cubPDrT, cubNp, cubPDrTT, Np);
+  linAlg_t<dfloat>::matrixTranspose(Np, cubNp, cubPDsT, cubNp, cubPDsTT, Np);
+  linAlg_t<dfloat>::matrixTranspose(Np, cubNp, cubPDtT, cubNp, cubPDtTT, Np);
 
   //pre-multiply cubPDT by W on device
   for(int n=0;n<cubNp;++n){
@@ -100,8 +100,8 @@ void mesh_t::CubatureSetupTet3D(){
   // build surface integration matrix transposes
   memory<dfloat> intLIFTT(Np*Nfaces*intNfp);
   memory<dfloat> intInterpT(Nfp*Nfaces*intNfp);
-  linAlg_t::matrixTranspose(Np, Nfaces*intNfp, intLIFT, Nfaces*intNfp, intLIFTT, Np);
-  linAlg_t::matrixTranspose(Nfaces*intNfp, Nfp, intInterp, Nfp, intInterpT, Nfaces*intNfp);
+  linAlg_t<dfloat>::matrixTranspose(Np, Nfaces*intNfp, intLIFT, Nfaces*intNfp, intLIFTT, Np);
+  linAlg_t<dfloat>::matrixTranspose(Nfaces*intNfp, Nfp, intInterp, Nfp, intInterpT, Nfaces*intNfp);
 
   o_cubInterp  = platform.malloc<dfloat>(Np*cubNp, cubInterpT);
   o_cubProject = platform.malloc<dfloat>(Np*cubNp, cubProjectT);

@@ -36,7 +36,7 @@ SOFTWARE.
 
 
 //float data type
-#if 0
+#if 1
 #define dfloat float
 #define dfloatFormat "%f"
 #define dfloatString "float"

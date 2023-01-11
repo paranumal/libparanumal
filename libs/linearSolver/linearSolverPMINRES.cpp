@@ -49,7 +49,7 @@ int pminres::Solve(operator_t& linearOperator, operator_t& precon,
   dfloat TOL;
 
   int rank = comm.rank();
-  linAlg_t &linAlg = platform.linAlg();
+  linAlg_t<dfloat> &linAlg = platform.linAlg();
 
   /*Pre-reserve memory pool space to avoid some unnecessary re-sizing*/
   dlong Ntotal = N + Nhalo;

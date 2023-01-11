@@ -224,7 +224,7 @@ void oasSolver_t::setup(parCSR& _A, bool nullSpace,
     }
   }
 
-  linAlg_t::matrixInverse(N, coarseA);
+  linAlg_t<dfloat>::matrixInverse(N, coarseA);
 
   //determine the overlap weighting
   memory<dfloat> weight(N, 1.0);

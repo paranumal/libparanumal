@@ -45,7 +45,7 @@ void mesh_t::CubatureSetupHex3D(){
 
   //cubature project cubProject = cubInterp^T
   cubProject.malloc(cubNq*Nq);
-  linAlg_t::matrixTranspose(cubNq, Nq, cubInterp, Nq, cubProject, cubNq);
+  linAlg_t<dfloat>::matrixTranspose(cubNq, Nq, cubInterp, Nq, cubProject, cubNq);
 
   //cubature derivates matrix, cubD: differentiate on cubature nodes
   Dmatrix1D(cubN, cubr, cubr, cubD);
@@ -63,11 +63,11 @@ void mesh_t::CubatureSetupHex3D(){
   // build transposes (we hold matrices as column major on device)
   memory<dfloat> cubProjectT(cubNq*Nq);
   memory<dfloat> cubInterpT(cubNq*Nq);
-  linAlg_t::matrixTranspose(cubNq, Nq, cubInterp, Nq, cubInterpT, cubNq);
-  linAlg_t::matrixTranspose(Nq, cubNq, cubProject, cubNq, cubProjectT, Nq);
+  linAlg_t<dfloat>::matrixTranspose(cubNq, Nq, cubInterp, Nq, cubInterpT, cubNq);
+  linAlg_t<dfloat>::matrixTranspose(Nq, cubNq, cubProject, cubNq, cubProjectT, Nq);
 
   memory<dfloat> cubPDTT(cubNq*Nq);
-  linAlg_t::matrixTranspose(Nq, cubNq, cubPDT, cubNq, cubPDTT, Nq);
+  linAlg_t<dfloat>::matrixTranspose(Nq, cubNq, cubPDT, cubNq, cubPDTT, Nq);
 
   o_cubInterp  = platform.malloc<dfloat>(Nq*cubNq, cubInterpT);
   o_cubProject = platform.malloc<dfloat>(Nq*cubNq, cubProjectT);

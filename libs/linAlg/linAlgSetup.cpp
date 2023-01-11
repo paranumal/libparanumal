@@ -30,21 +30,24 @@ SOFTWARE.
 
 namespace libp {
 
-linAlg_t::linAlg_t() {};
+  template <typename T>  
+linAlg_t<T>::linAlg_t() {};
 
-void linAlg_t::Setup(platform_t *_platform) {
+  template <typename T>  
+  void linAlg_t<T>::Setup(platform_t *_platform) {
 
   platform = _platform;
   kernelInfo = platform->props();
 
   //add defines
   kernelInfo["defines/" "p_blockSize"] = blocksize;
-  kernelInfo["defines/init_dfloat_min"] =  std::numeric_limits<dfloat>::max();
-  kernelInfo["defines/init_dfloat_max"] = -std::numeric_limits<dfloat>::max();
+  kernelInfo["defines/init_dfloat_min"] =  std::numeric_limits<T>::max();
+  kernelInfo["defines/init_dfloat_max"] = -std::numeric_limits<T>::max();
 }
 
 //initialize list of kernels
-void linAlg_t::InitKernels(std::vector<std::string> kernels) {
+  template <typename T>  
+void linAlg_t<T>::InitKernels(std::vector<std::string> kernels) {
 
   for (size_t i=0;i<kernels.size();i++) {
     std::string name = kernels[i];

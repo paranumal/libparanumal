@@ -108,7 +108,7 @@ void mesh_t::MassMatrix1D(const int _Np,
       _MM[n*_Np + m] = res;
     }
   }
-  linAlg_t::matrixInverse(_Np, _MM);
+  linAlg_t<dfloat>::matrixInverse(_Np, _MM);
 }
 
 void mesh_t::Dmatrix1D(const int _N,
@@ -132,7 +132,7 @@ void mesh_t::Dmatrix1D(const int _N,
 
   //D = Vr/V
   _Dr.malloc(NpointsOut*_Np);
-  linAlg_t::matrixRightSolve(NpointsOut, _Np, Vr, _Np, _Np, V, _Dr);
+  linAlg_t<dfloat>::matrixRightSolve(NpointsOut, _Np, Vr, _Np, _Np, V, _Dr);
 }
 
 void mesh_t::InterpolationMatrix1D(const int _N,
@@ -154,7 +154,7 @@ void mesh_t::InterpolationMatrix1D(const int _N,
   Vandermonde1D(_N, _rOut, VOut);
 
   I.malloc(NpointsIn*NpointsOut);
-  linAlg_t::matrixRightSolve(NpointsOut, _Np, VOut,
+  linAlg_t<dfloat>::matrixRightSolve(NpointsOut, _Np, VOut,
                              NpointsIn, _Np, VIn, I);
 }
 
@@ -343,7 +343,7 @@ void mesh_t::JacobiGQ(const dfloat alpha, const dfloat beta,
   memory<dfloat> VR((_N+1)*(_N+1));
 
   // _x = diag(D);
-  linAlg_t::matrixEigenVectors(_N+1, J, VR, _x, WI);
+  linAlg_t<dfloat>::matrixEigenVectors(_N+1, J, VR, _x, WI);
 
   //_w = (V(1,:)').^2*2^(alpha+beta+1)/(alpha+beta+1)*gamma(alpha+1)*.gamma(beta+1)/gamma(alpha+beta+1);
   for(int n=0;n<=_N;++n){

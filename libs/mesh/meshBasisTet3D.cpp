@@ -468,7 +468,7 @@ void mesh_t::MassMatrixTet3D(const int _Np,
       _MM[n*_Np + m] = res;
     }
   }
-  linAlg_t::matrixInverse(_Np, _MM);
+  linAlg_t<dfloat>::matrixInverse(_Np, _MM);
 }
 
 void mesh_t::invMassMatrixTet3D(const int _Np,
@@ -505,9 +505,9 @@ void mesh_t::DmatrixTet3D(const int _N,
   memory<dfloat> _Dr = _D + 0*_Np*_Np;
   memory<dfloat> _Ds = _D + 1*_Np*_Np;
   memory<dfloat> _Dt = _D + 2*_Np*_Np;
-  linAlg_t::matrixRightSolve(_Np, _Np, Vr, _Np, _Np, V, _Dr);
-  linAlg_t::matrixRightSolve(_Np, _Np, Vs, _Np, _Np, V, _Ds);
-  linAlg_t::matrixRightSolve(_Np, _Np, Vt, _Np, _Np, V, _Dt);
+  linAlg_t<dfloat>::matrixRightSolve(_Np, _Np, Vr, _Np, _Np, V, _Dr);
+  linAlg_t<dfloat>::matrixRightSolve(_Np, _Np, Vs, _Np, _Np, V, _Ds);
+  linAlg_t<dfloat>::matrixRightSolve(_Np, _Np, Vt, _Np, _Np, V, _Dt);
 }
 
 void mesh_t::LIFTmatrixTet3D(const int _N,
@@ -648,7 +648,7 @@ void mesh_t::InterpolationMatrixTet3D(const int _N,
   VandermondeTet3D(_N, rOut, sOut, tOut, VOut);
 
   I.malloc(NpointsIn*NpointsOut);
-  linAlg_t::matrixRightSolve(NpointsOut, _Np, VOut,
+  linAlg_t<dfloat>::matrixRightSolve(NpointsOut, _Np, VOut,
                              NpointsIn, _Np, VIn, I);
 }
 
@@ -839,7 +839,7 @@ void mesh_t::SEMFEMInterpMatrixTet3D(const int _N,
   }
 
   // I = IQN/(IQN'*IQN)  - pseudo inverse
-  linAlg_t::matrixRightSolve(_NpFEM, _Np, IQN, _Np, _Np, IQTIQ, I);
+  linAlg_t<dfloat>::matrixRightSolve(_NpFEM, _Np, IQN, _Np, _Np, IQTIQ, I);
 }
 
 // ------------------------------------------------------------------------
@@ -879,7 +879,7 @@ static void xyztorst(const memory<dfloat> x,
     XYZ[3*n+2] = z[n]-0.5*(v2[2]+v3[2]+v4[2]-v1[2]);
   }
 
-  linAlg_t::matrixRightSolve(Npoints, 3, XYZ, 3, 3, A, RST);
+  linAlg_t<dfloat>::matrixRightSolve(Npoints, 3, XYZ, 3, 3, A, RST);
 
   for (int n=0;n<Npoints;n++) {
     r[n] = RST[3*n+0];

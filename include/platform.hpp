@@ -68,7 +68,7 @@ class platform_t {
 
  private:
   std::shared_ptr<internal::iplatform_t> iplatform;
-  std::shared_ptr<linAlg_t> ilinAlg;
+  std::shared_ptr<linAlg_t<dfloat>> ilinAlg;
 
   memPool_t deviceMemPool;
   memPool_t pinnedMemPool;
@@ -111,7 +111,7 @@ public:
     props["host"] = true;
     pinnedMemPool = device.createMemoryPool(props);
 
-    ilinAlg = std::make_shared<linAlg_t>(this);
+    ilinAlg = std::make_shared<linAlg_t<dfloat>>(this);
   }
 
   platform_t(const platform_t &other)=default;
@@ -223,7 +223,7 @@ public:
     return (deviceMemPool.alignment() + sizeof(T)-1)/sizeof(T);
   }
 
-  linAlg_t& linAlg() {
+  linAlg_t<dfloat>& linAlg() {
     assertInitialized();
     return *ilinAlg;
   }

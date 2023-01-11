@@ -127,7 +127,7 @@ void coarseSolver_t::Setup(parCSR& A, memory<dfloat>& null) {
     coarseOffsets[r] /= coarseTotal;
   }
 
-  linAlg_t::matrixInverse(coarseTotal, gA);
+  linAlg_t<dfloat>::matrixInverse(coarseTotal, gA);
 
   //diag piece of invA
   invA.malloc(N*coarseTotal);

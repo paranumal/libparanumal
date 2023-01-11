@@ -35,6 +35,7 @@ namespace libp {
 class platform_t;
 
 //launcher for basic linear algebra OCCA kernels
+  template<typename T>
 class linAlg_t {
  public:
   linAlg_t();
@@ -50,74 +51,74 @@ class linAlg_t {
   /*********************/
 
   // o_a[n] = alpha
-  void set(const dlong N, const dfloat alpha, deviceMemory<dfloat> o_a);
+  void set(const dlong N, const T alpha, deviceMemory<T> o_a);
 
   // o_a[n] *= alpha
-  void scale(const dlong N, const dfloat alpha, deviceMemory<dfloat> o_a);
+  void scale(const dlong N, const T alpha, deviceMemory<T> o_a);
 
   // o_a[n] += alpha
-  void add(const dlong N, const dfloat alpha, deviceMemory<dfloat> o_a);
+  void add(const dlong N, const T alpha, deviceMemory<T> o_a);
 
   // o_y[n] = beta*o_y[n] + alpha*o_x[n]
-  void axpy(const dlong N, const dfloat alpha, deviceMemory<dfloat> o_x,
-                           const dfloat beta,  deviceMemory<dfloat> o_y);
+  void axpy(const dlong N, const T alpha, deviceMemory<T> o_x,
+                           const T beta,  deviceMemory<T> o_y);
 
   // o_z[n] = beta*o_y[n] + alpha*o_x[n]
-  void zaxpy(const dlong N, const dfloat alpha, deviceMemory<dfloat> o_x,
-                            const dfloat beta,  deviceMemory<dfloat> o_y,
-                            deviceMemory<dfloat> o_z);
+  void zaxpy(const dlong N, const T alpha, deviceMemory<T> o_x,
+                            const T beta,  deviceMemory<T> o_y,
+                            deviceMemory<T> o_z);
 
   // o_x[n] = alpha*o_a[n]*o_x[n]
-  void amx(const dlong N, const dfloat alpha,
-           deviceMemory<dfloat> o_a, deviceMemory<dfloat> o_x);
+  void amx(const dlong N, const T alpha,
+           deviceMemory<T> o_a, deviceMemory<T> o_x);
 
   // o_y[n] = alpha*o_a[n]*o_x[n] + beta*o_y[n]
-  void amxpy(const dlong N, const dfloat alpha,
-             deviceMemory<dfloat> o_a, deviceMemory<dfloat> o_x,
-             const dfloat beta, deviceMemory<dfloat> o_y);
+  void amxpy(const dlong N, const T alpha,
+             deviceMemory<T> o_a, deviceMemory<T> o_x,
+             const T beta, deviceMemory<T> o_y);
 
   // o_z[n] = alpha*o_a[n]*o_x[n] + beta*o_y[n]
-  void zamxpy(const dlong N, const dfloat alpha,
-              deviceMemory<dfloat> o_a, deviceMemory<dfloat> o_x,
-              const dfloat beta, deviceMemory<dfloat> o_y, deviceMemory<dfloat> o_z);
+  void zamxpy(const dlong N, const T alpha,
+              deviceMemory<T> o_a, deviceMemory<T> o_x,
+              const T beta, deviceMemory<T> o_y, deviceMemory<T> o_z);
 
   // o_x[n] = alpha*o_x[n]/o_a[n]
-  void adx(const dlong N, const dfloat alpha,
-           deviceMemory<dfloat> o_a, deviceMemory<dfloat> o_x);
+  void adx(const dlong N, const T alpha,
+           deviceMemory<T> o_a, deviceMemory<T> o_x);
 
   // o_y[n] = alpha*o_x[n]/o_a[n] + beta*o_y[n]
-  void adxpy(const dlong N, const dfloat alpha,
-             deviceMemory<dfloat> o_a, deviceMemory<dfloat> o_x,
-             const dfloat beta, deviceMemory<dfloat> o_y);
+  void adxpy(const dlong N, const T alpha,
+             deviceMemory<T> o_a, deviceMemory<T> o_x,
+             const T beta, deviceMemory<T> o_y);
 
   // o_z[n] = alpha*o_x[n]/o_a[n] + beta*o_y[n]
-  void zadxpy(const dlong N, const dfloat alpha,
-              deviceMemory<dfloat> o_a, deviceMemory<dfloat> o_x,
-              const dfloat beta, deviceMemory<dfloat> o_y, deviceMemory<dfloat> o_z);
+  void zadxpy(const dlong N, const T alpha,
+              deviceMemory<T> o_a, deviceMemory<T> o_x,
+              const T beta, deviceMemory<T> o_y, deviceMemory<T> o_z);
 
   // \min o_a
-  dfloat min(const dlong N, deviceMemory<dfloat> o_a, comm_t comm);
+  T min(const dlong N, deviceMemory<T> o_a, comm_t comm);
 
   // \max o_a
-  dfloat max(const dlong N, deviceMemory<dfloat> o_a, comm_t comm);
+  T max(const dlong N, deviceMemory<T> o_a, comm_t comm);
 
   // \sum o_a
-  dfloat sum(const dlong N, deviceMemory<dfloat> o_a, comm_t comm);
+  T sum(const dlong N, deviceMemory<T> o_a, comm_t comm);
 
   // ||o_a||_2
-  dfloat norm2(const dlong N, deviceMemory<dfloat> o_a, comm_t comm);
+  T norm2(const dlong N, deviceMemory<T> o_a, comm_t comm);
 
   // o_x.o_y
-  dfloat innerProd(const dlong N, deviceMemory<dfloat> o_x, deviceMemory<dfloat> o_y,
+  T innerProd(const dlong N, deviceMemory<T> o_x, deviceMemory<T> o_y,
                     comm_t comm);
 
   // ||o_a||_w2
-  dfloat weightedNorm2(const dlong N, deviceMemory<dfloat> o_w, deviceMemory<dfloat> o_a,
+  T weightedNorm2(const dlong N, deviceMemory<T> o_w, deviceMemory<T> o_a,
                        comm_t comm);
 
   // o_w.o_x.o_y
-  dfloat weightedInnerProd(const dlong N, deviceMemory<dfloat> o_w, deviceMemory<dfloat> o_x,
-                            deviceMemory<dfloat> o_y, comm_t comm);
+  T weightedInnerProd(const dlong N, deviceMemory<T> o_w, deviceMemory<T> o_x,
+                            deviceMemory<T> o_y, comm_t comm);
 
   static void matrixRightSolve(const int NrowsA, const int NcolsA, const memory<double> A,
                                const int NrowsB, const int NcolsB, const memory<double> B,
@@ -198,6 +199,11 @@ class linAlg_t {
   kernel_t weightedInnerProdKernel;
 };
 
+
+template class linAlg_t<float>;
+template class linAlg_t<double>;
+
+  
 } //namespace libp
 
 #endif

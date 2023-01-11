@@ -456,9 +456,9 @@ void Extrap::extrapCoeffs(int m, int M, memory<dfloat> c)
   mesh_t::Vandermonde1D(m, ro, b);
 
   if (settings.compareSetting("INITIAL GUESS EXTRAP COEFFS METHOD", "MINNORM")) {
-    linAlg_t::matrixUnderdeterminedRightSolveMinNorm(M, m + 1, V, b, c);
+    linAlg_t<dfloat>::matrixUnderdeterminedRightSolveMinNorm(M, m + 1, V, b, c);
   } else if (settings.compareSetting("INITIAL GUESS EXTRAP COEFFS METHOD", "CPQR")) {
-    linAlg_t::matrixUnderdeterminedRightSolveCPQR(M, m + 1, V, b, c);
+    linAlg_t<dfloat>::matrixUnderdeterminedRightSolveCPQR(M, m + 1, V, b, c);
   }
 }
 

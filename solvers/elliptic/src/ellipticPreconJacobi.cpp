@@ -41,7 +41,7 @@ JacobiPrecon::JacobiPrecon(elliptic_t& _elliptic):
 
 void JacobiPrecon::Operator(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_Mr) {
 
-  linAlg_t& linAlg = elliptic.platform.linAlg();
+  linAlg_t<dfloat>& linAlg = elliptic.platform.linAlg();
 
   // Mr = invDiag.*r
   linAlg.amxpy(elliptic.Ndofs, 1.0, o_invDiagA, o_r, 0.0, o_Mr);

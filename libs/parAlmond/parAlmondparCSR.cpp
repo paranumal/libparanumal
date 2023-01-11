@@ -440,7 +440,7 @@ dfloat parCSR::rhoDinvA(){
   memory<double> WR(k);
   memory<double> WI(k);
 
-  linAlg_t::matrixEigenValues(k, H, WR, WI);
+  linAlg_t<double>::matrixEigenValues(k, H, WR, WI);
 
   double RHO = 0.;
 

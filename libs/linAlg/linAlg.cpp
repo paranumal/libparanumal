@@ -34,90 +34,102 @@ namespace libp {
 /*********************/
 
 // o_a[n] = alpha
-void linAlg_t::set(const dlong N, const dfloat alpha, deviceMemory<dfloat> o_a) {
+template <typename T>  
+void linAlg_t<T>::set(const dlong N, const T alpha, deviceMemory<T> o_a) {
   setKernel(N, alpha, o_a);
 }
 
 // o_a[n] += alpha
-void linAlg_t::add(const dlong N, const dfloat alpha, deviceMemory<dfloat> o_a) {
+template <typename T>  
+void linAlg_t<T>::add(const dlong N, const T alpha, deviceMemory<T> o_a) {
   addKernel(N, alpha, o_a);
 }
 
 // o_a[n] *= alpha
-void linAlg_t::scale(const dlong N, const dfloat alpha, deviceMemory<dfloat> o_a)  {
+template <typename T>  
+void linAlg_t<T>::scale(const dlong N, const T alpha, deviceMemory<T> o_a)  {
   scaleKernel(N, alpha, o_a);
 }
 
 // o_y[n] = beta*o_y[n] + alpha*o_x[n]
-void linAlg_t::axpy(const dlong N, const dfloat alpha, deviceMemory<dfloat> o_x,
-                    const dfloat beta,  deviceMemory<dfloat> o_y) {
+template <typename T>    
+void linAlg_t<T>::axpy(const dlong N, const T alpha, deviceMemory<T> o_x,
+                    const T beta,  deviceMemory<T> o_y) {
   axpyKernel(N, alpha, o_x, beta, o_y);
 }
 
 // o_z[n] = beta*o_y[n] + alpha*o_x[n]
-void linAlg_t::zaxpy(const dlong N, const dfloat alpha, deviceMemory<dfloat> o_x,
-                     const dfloat beta, deviceMemory<dfloat> o_y, deviceMemory<dfloat> o_z) {
+template <typename T>    
+void linAlg_t<T>::zaxpy(const dlong N, const T alpha, deviceMemory<T> o_x,
+                     const T beta, deviceMemory<T> o_y, deviceMemory<T> o_z) {
   zaxpyKernel(N, alpha, o_x, beta, o_y, o_z);
 }
 
 // o_x[n] = alpha*o_a[n]*o_x[n]
-void linAlg_t::amx(const dlong N, const dfloat alpha,
-                   deviceMemory<dfloat> o_a, deviceMemory<dfloat> o_x) {
+template <typename T>    
+void linAlg_t<T>::amx(const dlong N, const T alpha,
+                   deviceMemory<T> o_a, deviceMemory<T> o_x) {
   amxKernel(N, alpha, o_a, o_x);
 }
 
 // o_y[n] = alpha*o_a[n]*o_x[n] + beta*o_y[n]
-void linAlg_t::amxpy(const dlong N, const dfloat alpha,
-                     deviceMemory<dfloat> o_a, deviceMemory<dfloat> o_x,
-                     const dfloat beta, deviceMemory<dfloat> o_y) {
+template <typename T>    
+void linAlg_t<T>::amxpy(const dlong N, const T alpha,
+                     deviceMemory<T> o_a, deviceMemory<T> o_x,
+                     const T beta, deviceMemory<T> o_y) {
   amxpyKernel(N, alpha, o_a, o_x, beta, o_y);
 }
 
 // o_z[n] = alpha*o_a[n]*o_x[n] + beta*o_y[n]
-void linAlg_t::zamxpy(const dlong N, const dfloat alpha,
-                      deviceMemory<dfloat> o_a, deviceMemory<dfloat> o_x,
-                      const dfloat beta, deviceMemory<dfloat> o_y, deviceMemory<dfloat> o_z) {
+template <typename T>    
+void linAlg_t<T>::zamxpy(const dlong N, const T alpha,
+                      deviceMemory<T> o_a, deviceMemory<T> o_x,
+                      const T beta, deviceMemory<T> o_y, deviceMemory<T> o_z) {
   zamxpyKernel(N, alpha, o_a, o_x, beta, o_y, o_z);
 }
 
 // o_x[n] = alpha*o_x[n]/o_a[n]
-void linAlg_t::adx(const dlong N, const dfloat alpha,
-                   deviceMemory<dfloat> o_a, deviceMemory<dfloat> o_x) {
+template <typename T>    
+void linAlg_t<T>::adx(const dlong N, const T alpha,
+                   deviceMemory<T> o_a, deviceMemory<T> o_x) {
   adxKernel(N, alpha, o_a, o_x);
 }
 
 // o_y[n] = alpha*o_x[n]/o_a[n] + beta*o_y[n]
-void linAlg_t::adxpy(const dlong N, const dfloat alpha,
-                     deviceMemory<dfloat> o_a, deviceMemory<dfloat> o_x,
-                     const dfloat beta, deviceMemory<dfloat> o_y) {
+template <typename T>    
+void linAlg_t<T>::adxpy(const dlong N, const T alpha,
+                     deviceMemory<T> o_a, deviceMemory<T> o_x,
+                     const T beta, deviceMemory<T> o_y) {
   adxpyKernel(N, alpha, o_a, o_x, beta, o_y);
 }
 
 // o_z[n] = alpha*o_x[n]/o_a[n] + beta*o_y[n]
-void linAlg_t::zadxpy(const dlong N, const dfloat alpha,
-                      deviceMemory<dfloat> o_a, deviceMemory<dfloat> o_x,
-                      const dfloat beta, deviceMemory<dfloat> o_y, deviceMemory<dfloat> o_z) {
+  template <typename T>  
+void linAlg_t<T>::zadxpy(const dlong N, const T alpha,
+                      deviceMemory<T> o_a, deviceMemory<T> o_x,
+                      const T beta, deviceMemory<T> o_y, deviceMemory<T> o_z) {
   zadxpyKernel(N, alpha, o_a, o_x, beta, o_y, o_z);
 }
 
 // \min o_a
-dfloat linAlg_t::min(const dlong N, deviceMemory<dfloat> o_a, comm_t comm) {
+template <typename T>    
+T linAlg_t<T>::min(const dlong N, deviceMemory<T> o_a, comm_t comm) {
   int Nblock = (N+blocksize-1)/blocksize;
   Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
 
   //pinned scratch buffer
-  pinnedMemory<dfloat> h_scratch = platform->hostReserve<dfloat>(1);
-  deviceMemory<dfloat> o_scratch = platform->reserve<dfloat>(blocksize);
+  pinnedMemory<T> h_scratch = platform->hostReserve<T>(1);
+  deviceMemory<T> o_scratch = platform->reserve<T>(blocksize);
 
   minKernel(Nblock, N, o_a, o_scratch);
 
-  dfloat globalmin;
+  T globalmin;
   if (Nblock>0) {
     h_scratch.copyFrom(o_scratch, 1, 0, properties_t("async", true));
     platform->finish();
     globalmin = h_scratch[0];
   } else {
-    globalmin = std::numeric_limits<dfloat>::max();
+    globalmin = std::numeric_limits<T>::max();
   }
 
   comm.Allreduce(globalmin, Comm::Min);
@@ -126,22 +138,23 @@ dfloat linAlg_t::min(const dlong N, deviceMemory<dfloat> o_a, comm_t comm) {
 }
 
 // \max o_a
-dfloat linAlg_t::max(const dlong N, deviceMemory<dfloat> o_a, comm_t comm) {
+template <typename T>    
+T linAlg_t<T>::max(const dlong N, deviceMemory<T> o_a, comm_t comm) {
   int Nblock = (N+blocksize-1)/blocksize;
   Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
 
-  pinnedMemory<dfloat> h_scratch = platform->hostReserve<dfloat>(1);
-  deviceMemory<dfloat> o_scratch = platform->reserve<dfloat>(blocksize);
+  pinnedMemory<T> h_scratch = platform->hostReserve<T>(1);
+  deviceMemory<T> o_scratch = platform->reserve<T>(blocksize);
 
   maxKernel(Nblock, N, o_a, o_scratch);
 
-  dfloat globalmax;
+  T globalmax;
   if (Nblock>0) {
     h_scratch.copyFrom(o_scratch, 1, 0, properties_t("async", true));
     platform->finish();
     globalmax = h_scratch[0];
   } else {
-    globalmax = -std::numeric_limits<dfloat>::max();
+    globalmax = -std::numeric_limits<T>::max();
   }
 
   comm.Allreduce(globalmax, Comm::Max);
@@ -150,16 +163,17 @@ dfloat linAlg_t::max(const dlong N, deviceMemory<dfloat> o_a, comm_t comm) {
 }
 
 // \sum o_a
-dfloat linAlg_t::sum(const dlong N, deviceMemory<dfloat> o_a, comm_t comm) {
+template <typename T>    
+T linAlg_t<T>::sum(const dlong N, deviceMemory<T> o_a, comm_t comm) {
   int Nblock = (N+blocksize-1)/blocksize;
   Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
 
-  pinnedMemory<dfloat> h_scratch = platform->hostReserve<dfloat>(1);
-  deviceMemory<dfloat> o_scratch = platform->reserve<dfloat>(blocksize);
+  pinnedMemory<T> h_scratch = platform->hostReserve<T>(1);
+  deviceMemory<T> o_scratch = platform->reserve<T>(blocksize);
 
   sumKernel(Nblock, N, o_a, o_scratch);
 
-  dfloat globalsum;
+  T globalsum;
   if (Nblock>0) {
     h_scratch.copyFrom(o_scratch, 1, 0, properties_t("async", true));
     platform->finish();
@@ -174,16 +188,17 @@ dfloat linAlg_t::sum(const dlong N, deviceMemory<dfloat> o_a, comm_t comm) {
 }
 
 // ||o_a||_2
-dfloat linAlg_t::norm2(const dlong N, deviceMemory<dfloat> o_a, comm_t comm) {
+template <typename T>    
+T linAlg_t<T>::norm2(const dlong N, deviceMemory<T> o_a, comm_t comm) {
   int Nblock = (N+blocksize-1)/blocksize;
   Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
 
-  pinnedMemory<dfloat> h_scratch = platform->hostReserve<dfloat>(1);
-  deviceMemory<dfloat> o_scratch = platform->reserve<dfloat>(blocksize);
+  pinnedMemory<T> h_scratch = platform->hostReserve<T>(1);
+  deviceMemory<T> o_scratch = platform->reserve<T>(blocksize);
 
   norm2Kernel(Nblock, N, o_a, o_scratch);
 
-  dfloat globalnorm;
+  T globalnorm;
   if (Nblock>0) {
     h_scratch.copyFrom(o_scratch, 1, 0, properties_t("async", true));
     platform->finish();
@@ -198,17 +213,18 @@ dfloat linAlg_t::norm2(const dlong N, deviceMemory<dfloat> o_a, comm_t comm) {
 }
 
 // o_x.o_y
-dfloat linAlg_t::innerProd(const dlong N, deviceMemory<dfloat> o_x, deviceMemory<dfloat> o_y,
+template <typename T>    
+T linAlg_t<T>::innerProd(const dlong N, deviceMemory<T> o_x, deviceMemory<T> o_y,
                            comm_t comm) {
   int Nblock = (N+blocksize-1)/blocksize;
   Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
 
-  pinnedMemory<dfloat> h_scratch = platform->hostReserve<dfloat>(1);
-  deviceMemory<dfloat> o_scratch = platform->reserve<dfloat>(blocksize);
+  pinnedMemory<T> h_scratch = platform->hostReserve<T>(1);
+  deviceMemory<T> o_scratch = platform->reserve<T>(blocksize);
 
   innerProdKernel(Nblock, N, o_x, o_y, o_scratch);
 
-  dfloat globaldot;
+  T globaldot;
   if (Nblock>0) {
     h_scratch.copyFrom(o_scratch, 1, 0, properties_t("async", true));
     platform->finish();
@@ -223,18 +239,19 @@ dfloat linAlg_t::innerProd(const dlong N, deviceMemory<dfloat> o_x, deviceMemory
 }
 
 // o_w.o_x.o_y
-dfloat linAlg_t::weightedInnerProd(const dlong N, deviceMemory<dfloat> o_w,
-                                   deviceMemory<dfloat> o_x, deviceMemory<dfloat> o_y,
+template <typename T>    
+T linAlg_t<T>::weightedInnerProd(const dlong N, deviceMemory<T> o_w,
+                                   deviceMemory<T> o_x, deviceMemory<T> o_y,
                                    comm_t comm) {
   int Nblock = (N+blocksize-1)/blocksize;
   Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
 
-  pinnedMemory<dfloat> h_scratch = platform->hostReserve<dfloat>(1);
-  deviceMemory<dfloat> o_scratch = platform->reserve<dfloat>(blocksize);
+  pinnedMemory<T> h_scratch = platform->hostReserve<T>(1);
+  deviceMemory<T> o_scratch = platform->reserve<T>(blocksize);
 
   weightedInnerProdKernel(Nblock, N, o_w, o_x, o_y, o_scratch);
 
-  dfloat globaldot;
+  T globaldot;
   if (Nblock>0) {
     h_scratch.copyFrom(o_scratch, 1, 0, properties_t("async", true));
     platform->finish();
@@ -249,17 +266,18 @@ dfloat linAlg_t::weightedInnerProd(const dlong N, deviceMemory<dfloat> o_w,
 }
 
 // ||o_a||_w2
-dfloat linAlg_t::weightedNorm2(const dlong N, deviceMemory<dfloat> o_w,
-                               deviceMemory<dfloat> o_a, comm_t comm) {
+template <typename T>    
+T linAlg_t<T>::weightedNorm2(const dlong N, deviceMemory<T> o_w,
+                               deviceMemory<T> o_a, comm_t comm) {
   int Nblock = (N+blocksize-1)/blocksize;
   Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
 
-  pinnedMemory<dfloat> h_scratch = platform->hostReserve<dfloat>(1);
-  deviceMemory<dfloat> o_scratch = platform->reserve<dfloat>(blocksize);
+  pinnedMemory<T> h_scratch = platform->hostReserve<T>(1);
+  deviceMemory<T> o_scratch = platform->reserve<T>(blocksize);
 
   weightedNorm2Kernel(Nblock, N, o_w, o_a, o_scratch);
 
-  dfloat globalnorm;
+  T globalnorm;
   if (Nblock>0) {
     h_scratch.copyFrom(o_scratch, 1, 0, properties_t("async", true));
     platform->finish();

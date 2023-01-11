@@ -40,7 +40,7 @@ void MGLevel::residual(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x, d
 
 void MGLevel::coarsen(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_Rx) {
 
-  linAlg_t& linAlg = platform.linAlg();
+  linAlg_t<dfloat>& linAlg = platform.linAlg();
 
   if (elliptic.disc_c0) {
     //scratch spaces
@@ -83,7 +83,7 @@ void MGLevel::coarsen(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_Rx) {
 
 void MGLevel::prolongate(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_Px) {
 
-  linAlg_t& linAlg = platform.linAlg();
+  linAlg_t<dfloat>& linAlg = platform.linAlg();
 
   if (elliptic.disc_c0) {
     //scratch spaces
@@ -134,7 +134,7 @@ void MGLevel::smooth(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x, boo
 
 void MGLevel::smoothJacobi(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_x, bool xIsZero) {
 
-  linAlg_t& linAlg = platform.linAlg();
+  linAlg_t<dfloat>& linAlg = platform.linAlg();
 
   deviceMemory<dfloat> o_res = platform.reserve<dfloat>(Ncols);
 
@@ -164,7 +164,7 @@ void MGLevel::smoothChebyshev (deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& 
   deviceMemory<dfloat> o_Ad  = platform.reserve<dfloat>(Ncols);
   deviceMemory<dfloat> o_d   = platform.reserve<dfloat>(Ncols);
 
-  linAlg_t& linAlg = platform.linAlg();
+  linAlg_t<dfloat>& linAlg = platform.linAlg();
 
   if(xIsZero){ //skip the Ax if x is zero
     //res = S*r
@@ -381,7 +381,7 @@ dfloat MGLevel::maxEigSmoothAx(){
   const dlong N = Nrows;
   const dlong M = Ncols;
 
-  linAlg_t& linAlg = platform.linAlg();
+  linAlg_t<dfloat>& linAlg = platform.linAlg();
 
   int k = 10;
 
@@ -441,7 +441,7 @@ dfloat MGLevel::maxEigSmoothAx(){
   memory<double> WR(k);
   memory<double> WI(k);
 
-  linAlg_t::matrixEigenValues(k, H, WR, WI);
+  linAlg_t<double>::matrixEigenValues(k, H, WR, WI);
 
   double rho = 0.;
 

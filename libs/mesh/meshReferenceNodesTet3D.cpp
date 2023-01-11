@@ -56,19 +56,19 @@ void mesh_t::ReferenceNodesTet3D(){
   memory<dfloat> DrT = DT + 0*Np*Np;
   memory<dfloat> DsT = DT + 1*Np*Np;
   memory<dfloat> DtT = DT + 2*Np*Np;
-  linAlg_t::matrixTranspose(Np, Np, Dr, Np, DrT, Np);
-  linAlg_t::matrixTranspose(Np, Np, Ds, Np, DsT, Np);
-  linAlg_t::matrixTranspose(Np, Np, Dt, Np, DtT, Np);
+  linAlg_t<dfloat>::matrixTranspose(Np, Np, Dr, Np, DrT, Np);
+  linAlg_t<dfloat>::matrixTranspose(Np, Np, Ds, Np, DsT, Np);
+  linAlg_t<dfloat>::matrixTranspose(Np, Np, Dt, Np, DtT, Np);
   o_D = platform.malloc<dfloat>(DT);
 
   LIFTmatrixTet3D(N, faceNodes, r, s, t, LIFT);
   SurfaceMassMatrixTet3D(N, MM, LIFT, sM);
 
   memory<dfloat> LIFTT(Np*Nfaces*Nfp);
-  linAlg_t::matrixTranspose(Np, Nfp*Nfaces, LIFT, Nfp*Nfaces, LIFTT, Np);
+  linAlg_t<dfloat>::matrixTranspose(Np, Nfp*Nfaces, LIFT, Nfp*Nfaces, LIFTT, Np);
 
   memory<dfloat> sMT(Np*Nfaces*Nfp);
-  linAlg_t::matrixTranspose(Np, Nfp*Nfaces, sM, Nfp*Nfaces, sMT, Np);
+  linAlg_t<dfloat>::matrixTranspose(Np, Nfp*Nfaces, sM, Nfp*Nfaces, sMT, Np);
 
   o_sM = platform.malloc<dfloat>(sMT);
   o_LIFT = platform.malloc<dfloat>(LIFTT);
@@ -89,12 +89,12 @@ void mesh_t::ReferenceNodesTet3D(){
   memory<dfloat> SssT = ST + 3*Np*Np;
   memory<dfloat> SstT = ST + 4*Np*Np;
   memory<dfloat> SttT = ST + 5*Np*Np;
-  linAlg_t::matrixTranspose(Np, Np, Srr, Np, SrrT, Np);
-  linAlg_t::matrixTranspose(Np, Np, Srs, Np, SrsT, Np);
-  linAlg_t::matrixTranspose(Np, Np, Srt, Np, SrtT, Np);
-  linAlg_t::matrixTranspose(Np, Np, Sss, Np, SssT, Np);
-  linAlg_t::matrixTranspose(Np, Np, Sst, Np, SstT, Np);
-  linAlg_t::matrixTranspose(Np, Np, Stt, Np, SttT, Np);
+  linAlg_t<dfloat>::matrixTranspose(Np, Np, Srr, Np, SrrT, Np);
+  linAlg_t<dfloat>::matrixTranspose(Np, Np, Srs, Np, SrsT, Np);
+  linAlg_t<dfloat>::matrixTranspose(Np, Np, Srt, Np, SrtT, Np);
+  linAlg_t<dfloat>::matrixTranspose(Np, Np, Sss, Np, SssT, Np);
+  linAlg_t<dfloat>::matrixTranspose(Np, Np, Sst, Np, SstT, Np);
+  linAlg_t<dfloat>::matrixTranspose(Np, Np, Stt, Np, SttT, Np);
 
   o_S = platform.malloc<dfloat>(ST);
 

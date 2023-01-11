@@ -179,7 +179,7 @@ void exactSolver_t::setup(parCSR& _A, bool nullSpace,
     }
   }
 
-  linAlg_t::matrixInverse(coarseTotal, coarseA);
+  linAlg_t<dfloat>::matrixInverse(coarseTotal, coarseA);
 
   //determine size of offd piece
   offdTotal = coarseTotal - N;

@@ -38,7 +38,7 @@ pgmres::pgmres(dlong _N, dlong _Nhalo,
 
   // Make sure LinAlg has the necessary kernels
   platform.linAlg().InitKernels({"axpy", "zaxpy",
-                               "innerProd", "norm2"});
+	"innerProd", "norm2"});
 
   //Number of iterations between restarts
   //TODO make this modifyable via settings
@@ -56,7 +56,7 @@ int pgmres::Solve(operator_t& linearOperator, operator_t& precon,
                const dfloat tol, const int MAXIT, const int verbose) {
 
   int rank = comm.rank();
-  linAlg_t &linAlg = platform.linAlg();
+  linAlg_t<dfloat> &linAlg = platform.linAlg();
 
   /*Pre-reserve memory pool space to avoid some unnecessary re-sizing*/
   dlong Ntotal = N + Nhalo;

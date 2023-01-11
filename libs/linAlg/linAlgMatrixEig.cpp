@@ -36,11 +36,12 @@ extern "C" {
 namespace libp {
 
 // compute right eigenvectors
-void linAlg_t::matrixEigenVectors(const int N, const memory<double> A,
-                                  memory<double> VR,
-                                  memory<double> WR,
-                                  memory<double> WI){
-
+  template <>
+  void linAlg_t<double>::matrixEigenVectors(const int N, const memory<double> A,
+				    memory<double> VR,
+				    memory<double> WR,
+				    memory<double> WI){
+    
   int n = N;
   char JOBVL = 'N';
   char JOBVR = 'V';
@@ -64,15 +65,16 @@ void linAlg_t::matrixEigenVectors(const int N, const memory<double> A,
   LIBP_ABORT("dgeev_ reports info = " << INFO, INFO);
 
   //VR = tmpVR^T (column major to row major)
-  linAlg_t::matrixTranspose(N, N, tmpVR, LDVR, VR, LDVR);
+  linAlg_t<double>::matrixTranspose(N, N, tmpVR, LDVR, VR, LDVR);
 }
 
 // compute right eigenvectors
-void linAlg_t::matrixEigenVectors(const int N, const memory<float> A,
-                                  memory<float> VR,
-                                  memory<float> WR,
-                                  memory<float> WI){
-
+  template <>
+  void linAlg_t<float>::matrixEigenVectors(const int N, const memory<float> A,
+					   memory<float> VR,
+					   memory<float> WR,
+					   memory<float> WI){
+    
   int n = N;
   char JOBVL = 'N';
   char JOBVR = 'V';
@@ -86,7 +88,7 @@ void linAlg_t::matrixEigenVectors(const int N, const memory<float> A,
   memory<float> tmpVR(N*LDVR);
 
   //tmpA = A^T (row major to column-major)
-  linAlg_t::matrixTranspose(N, N, A, LDA, tmpA, LDA);
+  linAlg_t<float>::matrixTranspose(N, N, A, LDA, tmpA, LDA);
 
   int INFO = -999;
 
@@ -100,7 +102,8 @@ void linAlg_t::matrixEigenVectors(const int N, const memory<float> A,
 }
 
 // compute eigenvalues
-void linAlg_t::matrixEigenValues(const int N, const memory<double> A,
+  template <>
+  void linAlg_t<double>::matrixEigenValues(const int N, const memory<double> A,
                                  memory<double> WR,
                                  memory<double> WI){
 
@@ -125,7 +128,8 @@ void linAlg_t::matrixEigenValues(const int N, const memory<double> A,
 }
 
 // compute eigenvalues
-void linAlg_t::matrixEigenValues(const int N, const memory<float> A,
+  template <>
+  void linAlg_t<float>::matrixEigenValues(const int N, const memory<float> A,
                                  memory<float> WR,
                                  memory<float> WI){
 

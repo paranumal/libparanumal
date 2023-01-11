@@ -478,7 +478,7 @@ void mesh_t::MassMatrixHex3D(const int _Np,
       _MM[n*_Np + m] = res;
     }
   }
-  linAlg_t::matrixInverse(_Np, _MM);
+  linAlg_t<dfloat>::matrixInverse(_Np, _MM);
 }
 
 void mesh_t::LumpedMassMatrixHex3D(const int _N,
@@ -537,9 +537,9 @@ void mesh_t::DmatrixHex3D(const int _N,
   memory<dfloat> _Dr = _D + 0*_Np*_Np;
   memory<dfloat> _Ds = _D + 1*_Np*_Np;
   memory<dfloat> _Dt = _D + 2*_Np*_Np;
-  linAlg_t::matrixRightSolve(_Np, _Np, Vr, _Np, _Np, V, _Dr);
-  linAlg_t::matrixRightSolve(_Np, _Np, Vs, _Np, _Np, V, _Ds);
-  linAlg_t::matrixRightSolve(_Np, _Np, Vt, _Np, _Np, V, _Dt);
+  linAlg_t<dfloat>::matrixRightSolve(_Np, _Np, Vr, _Np, _Np, V, _Dr);
+  linAlg_t<dfloat>::matrixRightSolve(_Np, _Np, Vs, _Np, _Np, V, _Ds);
+  linAlg_t<dfloat>::matrixRightSolve(_Np, _Np, Vt, _Np, _Np, V, _Dt);
 }
 
 void mesh_t::InterpolationMatrixHex3D(const int _N,
@@ -567,7 +567,7 @@ void mesh_t::InterpolationMatrixHex3D(const int _N,
   VandermondeHex3D(_N, rOut, sOut, tOut, VOut);
 
   I.malloc(NpointsIn*NpointsOut);
-  linAlg_t::matrixRightSolve(NpointsOut, _Np, VOut,
+  linAlg_t<dfloat>::matrixRightSolve(NpointsOut, _Np, VOut,
                              NpointsIn, _Np, VIn, I);
 }
 

@@ -35,7 +35,7 @@ void OASPrecon::Operator(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_Mr) 
   if (mesh.N>1) {
     deviceMemory<dfloat> o_rPatch = elliptic.platform.reserve<dfloat>(ellipticPatch.Ndofs);
 
-    linAlg_t& linAlg = elliptic.platform.linAlg();
+    linAlg_t<dfloat>& linAlg = elliptic.platform.linAlg();
 
     if (elliptic.disc_c0) {
       dlong Ntotal = mesh.Np*(mesh.Nelements+mesh.totalRingElements);

@@ -29,7 +29,7 @@ SOFTWARE.
 // Cast problem into spectrally-equivalent N=1 FEM space and precondition with AMG
 void SEMFEMPrecon::Operator(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_Mr) {
 
-  linAlg_t& linAlg = elliptic.platform.linAlg();
+  linAlg_t<dfloat>& linAlg = elliptic.platform.linAlg();
 
   if (mesh.elementType==Mesh::TRIANGLES) {
     dlong Ncols = parAlmond.getNumCols(0);
