@@ -179,7 +179,7 @@ dfloat pcg::UpdatePCG(const dfloat alpha,
   }
 
   // x <= x + alpha*p
-  platform.linAlg().axpy(N, alpha, o_p, 1.0, o_x);
+  platform.linAlg().axpy(N, alpha, o_p, (dfloat)1.0, o_x);
 
   /*Compute allreduce while axpy is running*/
   comm.Allreduce(rdotr);

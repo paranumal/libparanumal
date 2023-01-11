@@ -99,7 +99,7 @@ void elliptic_t::BoundarySetup(){
 
   // build inverse degree vectors
   // used for the weight in linear solvers (used in C0)
-  weight.malloc(Ntotal, 1.0);
+  weight.malloc(Ntotal, (pfloat)1.0);
 
   weightG.malloc(Ngather);
   ogsMasked.Gather(weightG, weight, 1, ogs::Add, ogs::Trans);

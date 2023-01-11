@@ -69,8 +69,9 @@ public:
 
   precon_t precon;
 
-  memory<dfloat> weight, weightG;
-  deviceMemory<dfloat> o_weight, o_weightG;
+  // NOTE pfloat
+  memory<pfloat> weight, weightG;
+  deviceMemory<pfloat> o_weight, o_weightG;
 
   //C0-FEM mask data
   ogs::ogs_t ogsMasked;

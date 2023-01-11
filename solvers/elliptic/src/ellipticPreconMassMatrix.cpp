@@ -58,6 +58,9 @@ MassMatrixPrecon::MassMatrixPrecon(elliptic_t& _elliptic):
 }
 
 void MassMatrixPrecon::Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_Mr) {
+
+  pfloat one = 1.0, zero = 0.0;
+
   pfloat invLambda = 1./elliptic.lambda;
 
   linAlg_t& linAlg = elliptic.platform.linAlg();
@@ -68,7 +71,7 @@ void MassMatrixPrecon::Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>&
     deviceMemory<pfloat> o_MrL  = elliptic.platform.reserve<pfloat>(mesh.Np*mesh.Nelements);
 
     // rtmp = invDegree.*r
-    linAlg.amxpy(elliptic.Ndofs, 1.0, elliptic.o_weightG, o_r, 0.0, o_rtmp);
+    linAlg.amxpy(elliptic.Ndofs, one, elliptic.o_weightG, o_r, zero, o_rtmp);
 
     elliptic.gHalo.ExchangeStart(o_rtmp, 1);
 
@@ -103,7 +106,7 @@ void MassMatrixPrecon::Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>&
     elliptic.ogsMasked.GatherFinish(o_Mr, o_MrL, 1, ogs::Add, ogs::Trans);
 
     // Mr = invDegree.*Mr
-    linAlg.amx(elliptic.Ndofs, 1.0, elliptic.o_weightG, o_Mr);
+    linAlg.amx(elliptic.Ndofs, one, elliptic.o_weightG, o_Mr);
 
   } else {
     //IPDG

@@ -32,6 +32,8 @@ SOFTWARE.
 //  problem, solved with parAlmond
 void OASPrecon::Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_Mr) {
 
+  pfloat one = 1., zero = 0;
+  
   if (mesh.N>1) {
     deviceMemory<pfloat> o_rPatch = elliptic.platform.reserve<pfloat>(ellipticPatch.Ndofs);
 
@@ -79,7 +81,7 @@ void OASPrecon::Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_Mr) 
 
       // Weight by overlap degree, zPatch = patchWeight*zPatch
       Ntotal=mesh.Nelements*mesh.Np;
-      linAlg.amx(Ntotal, 1.0, o_patchWeight, o_zPatchL);
+      linAlg.amx(Ntotal, one, o_patchWeight, o_zPatchL);
 
       elliptic.ogsMasked.Gather(o_Mr, o_zPatchL, 1, ogs::Add, ogs::NoTrans);
 
@@ -87,7 +89,7 @@ void OASPrecon::Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_Mr) 
       mesh.ringHalo.Combine(o_zPatch, mesh.Np);
 
       // Weight by overlap degree, Mr = patchWeight*zPatch
-      linAlg.amxpy(elliptic.Ndofs, 1.0, o_patchWeight, o_zPatch, 0.0, o_Mr);
+      linAlg.amxpy(elliptic.Ndofs, one, o_patchWeight, o_zPatch, zero, o_Mr);
     }
 
     // Add prologatated coarse solution

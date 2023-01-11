@@ -106,8 +106,10 @@ void multigrid_t::kcycleOp1(multigridLevel& level,
                            pfloat& alpha1, pfloat& rho1,
                            pfloat& norm_rhs, pfloat& norm_rhstilde) {
 
+  pfloat one = 1.0, zero = 0.0;
+  
   //ck = x
-  platform.linAlg().axpy(level.Nrows, 1.0, o_x, 0.0, o_ck);
+  platform.linAlg().axpy(level.Nrows, one, o_x, zero, o_ck);
 
   // vk = A*ck
   level.Operator(o_ck,o_vk);
@@ -123,7 +125,7 @@ void multigrid_t::kcycleOp1(multigridLevel& level,
 
   // rhs = rhs - (alpha1/rho1)*vk
   const pfloat a = -(alpha1)/(rho1);
-  norm_rhstilde = sqrt(vectorAddInnerProd(level, a, o_vk, 1.0, o_rhs));
+  norm_rhstilde = sqrt(vectorAddInnerProd(level, a, o_vk, one, o_rhs));
 }
 
 void multigrid_t::kcycleOp2(multigridLevel& level,

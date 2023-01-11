@@ -40,6 +40,8 @@ void MGLevel::residual(deviceMemory<pfloat>& o_rhs, deviceMemory<pfloat>& o_x, d
 
 void MGLevel::coarsen(deviceMemory<pfloat>& o_x, deviceMemory<pfloat>& o_Rx) {
 
+  pfloat one = 1.0, zero = 0.0;
+  
   linAlg_t& linAlg = platform.linAlg();
 
   if (elliptic.disc_c0) {
@@ -48,7 +50,7 @@ void MGLevel::coarsen(deviceMemory<pfloat>& o_x, deviceMemory<pfloat>& o_Rx) {
     deviceMemory<pfloat> o_RxL = platform.reserve<pfloat>(mesh.Nelements*mesh.Np);
 
     //pre-weight
-    linAlg.amxpy(elliptic.Ndofs, (pfloat)1.0, elliptic.o_weightG, o_x, 0.0, o_wx);
+    linAlg.amxpy(elliptic.Ndofs, one, elliptic.o_weightG, o_x, zero, o_wx);
 
     elliptic.gHalo.ExchangeStart(o_wx, 1);
 
@@ -134,21 +136,23 @@ void MGLevel::smooth(deviceMemory<pfloat>& o_rhs, deviceMemory<pfloat>& o_x, boo
 
 void MGLevel::smoothJacobi(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_x, bool xIsZero) {
 
+  pfloat one = 1.0, zero = 0.0;
+  
   linAlg_t& linAlg = platform.linAlg();
 
   deviceMemory<pfloat> o_res = platform.reserve<pfloat>(Ncols);
 
   if (xIsZero) {
-    linAlg.amxpy(elliptic.Ndofs, (pfloat)1.0, o_invDiagA, o_r, 0.0, o_x);
+    linAlg.amxpy(elliptic.Ndofs, one, o_invDiagA, o_r, zero, o_x);
     return;
   }
 
   //res = r-Ax
   Operator(o_x,o_res);
-  linAlg.axpy(elliptic.Ndofs, (pfloat)1.f, o_r, (pfloat)-1.f, o_res);
+  linAlg.axpy(elliptic.Ndofs, one, o_r, -one, o_res);
 
   //smooth the fine problem x = x + S(r-Ax)
-  linAlg.amxpy(elliptic.Ndofs, (pfloat)1.0, o_invDiagA, o_res, (pfloat)1.0, o_x);
+  linAlg.amxpy(elliptic.Ndofs, one, o_invDiagA, o_res, one, o_x);
 }
 
 void MGLevel::smoothChebyshev (deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_x, bool xIsZero) {
@@ -203,7 +207,7 @@ void MGLevel::smoothChebyshev (deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& 
     rho_n = rho_np1;
   }
   //x_k+1 = x_k + d_k
-  linAlg.axpy(elliptic.Ndofs, one, o_d, 1.0, o_x);
+  linAlg.axpy(elliptic.Ndofs, one, o_d, one, o_x);
 }
 
 
@@ -227,7 +231,7 @@ MGLevel::MGLevel(elliptic_t& _elliptic,
   SetupSmoother();
 
   memory<dfloat> P;
-  //  memory<pfloat> pfloatP;
+
   
   if (   mesh.elementType==Mesh::QUADRILATERALS
       || mesh.elementType==Mesh::HEXAHEDRA) {
@@ -237,8 +241,13 @@ MGLevel::MGLevel(elliptic_t& _elliptic,
   } else { //Mesh::TETRAHEDRA
     mesh.DegreeRaiseMatrixTet3D(Nc, mesh.N, P);
   }
-  o_P = elliptic.platform.malloc<pfloat>(P);
-  //  o_P = elliptic.platform.malloc<pfloat>(pfloatP);
+  //  o_P = elliptic.platform.malloc<pfloat>(P);
+  // TW4
+  memory<pfloat> pfloatP(P.length());
+  for(int n=0;n<P.length();++n){
+    pfloatP[n] = P[n];
+  }
+  o_P = elliptic.platform.malloc<pfloat>(pfloatP);
 
   //build kernels
   properties_t kernelInfo = elliptic.platform.props();
@@ -423,7 +432,7 @@ pfloat MGLevel::maxEigSmoothAx(){
   for(int j=0; j<k; j++){
     // v[j+1] = invD*(A*v[j])
     Operator(o_V[j],o_AVx);
-    linAlg.amxpy(N, 1.0, o_invDiagA, o_AVx, 0.0, o_V[j+1]);
+    linAlg.amxpy(N, one, o_invDiagA, o_AVx, zero, o_V[j+1]);
 
     // modified Gram-Schmidth
     for(int i=0; i<=j; i++){
@@ -439,7 +448,7 @@ pfloat MGLevel::maxEigSmoothAx(){
     if(j+1 < k){
       // v[j+1] = v[j+1]/||v[j+1]||
       pfloat norm_vj =  linAlg.norm2(N, o_V[j+1], mesh.comm);
-      linAlg.scale(N, 1.0/norm_vj, o_V[j+1]);
+      linAlg.scale(N, (pfloat)1.0/norm_vj, o_V[j+1]);
 
       H[j+1+ j*k] = static_cast<double>(norm_vj);
     }

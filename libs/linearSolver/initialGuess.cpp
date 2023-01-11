@@ -61,7 +61,7 @@ Last::Last(dlong _N, platform_t& _platform, settings_t& _settings, comm_t _comm)
 {
   platform.linAlg().InitKernels({"set"});
   o_xLast = platform.malloc<dfloat>(Ntotal);
-  platform.linAlg().set(Ntotal, 0.0, o_xLast);
+  platform.linAlg().set(Ntotal, (dfloat)0.0, o_xLast);
 }
 
 void Last::FormInitialGuess(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs)
@@ -84,7 +84,7 @@ Zero::Zero(dlong _N, platform_t& _platform, settings_t& _settings, comm_t _comm)
 
 void Zero::FormInitialGuess(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs)
 {
-  platform.linAlg().set(Ntotal, 0.0, o_x);
+  platform.linAlg().set(Ntotal, (dfloat)0.0, o_x);
 }
 
 void Zero::Update(operator_t &linearOperator, deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs)
@@ -121,7 +121,7 @@ void Projection::FormInitialGuess(deviceMemory<dfloat>& o_x,
     igBasisInnerProducts(o_rhs, o_Btilde, o_alphas, h_alphas);
     igReconstruct(0.0, o_x, 1.0, o_alphas, o_Xtilde, o_x);
   } else {
-    platform.linAlg().set(Ntotal, 0.0, o_x);
+    platform.linAlg().set(Ntotal, (dfloat)0.0, o_x);
   }
 }
 
@@ -179,8 +179,8 @@ void ClassicProjection::Update(operator_t &linearOperator, deviceMemory<dfloat>&
     dfloat normbtilde = platform.linAlg().norm2(Ntotal, o_btilde, comm);
 
     if (normbtilde > 0) {
-      platform.linAlg().axpy(Ntotal, 1.0/normbtilde, o_btilde, 0.0, o_Btilde);
-      platform.linAlg().axpy(Ntotal, 1.0/normbtilde, o_x,      0.0, o_Xtilde);
+      platform.linAlg().axpy(Ntotal, (dfloat)1.0/normbtilde, o_btilde, (dfloat)0.0, o_Btilde);
+      platform.linAlg().axpy(Ntotal, (dfloat)1.0/normbtilde, o_x,      (dfloat)0.0, o_Xtilde);
 
       curDim = 1;
     }
@@ -375,7 +375,7 @@ Extrap::Extrap(dlong _N, platform_t& _platform, settings_t& _settings, comm_t _c
 void Extrap::FormInitialGuess(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs)
 {
   if (entry == 0) {
-    platform.linAlg().set(Ntotal, 0.0, o_x);
+    platform.linAlg().set(Ntotal, (dfloat)0.0, o_x);
     return;
   }
 

@@ -101,7 +101,7 @@ int pgmres::Solve(operator_t& linearOperator, operator_t& precon,
     s[0] = nr;
 
     // V(:,0) = r/nr
-    linAlg.axpy(N, (dfloat)(1./nr), o_r, 0., o_V[0]);
+    linAlg.axpy(N, (dfloat)(1./nr), o_r, (dfloat) 0., o_V[0]);
 
     //Construct orthonormal basis via Gram-Schmidt
     for(int i=0;i<restart;++i){
@@ -126,7 +126,7 @@ int pgmres::Solve(operator_t& linearOperator, operator_t& precon,
 
       // V(:,i+1) = r/nw
       if (i<restart-1)
-        linAlg.axpy(N, (dfloat)(1./nw), o_r, 0., o_V[i+1]);
+        linAlg.axpy(N, (dfloat)(1./nw), o_r, (dfloat)0., o_V[i+1]);
 
       //apply Givens rotation
       for(int k=0; k<i; ++k){
@@ -205,7 +205,7 @@ void pgmres::UpdateGMRES(memory<deviceMemory<dfloat>>& o_V,
 
   //TODO this is really a GEMM, should write it that way
   for(int j=0; j<I; ++j){
-    platform.linAlg().axpy(N, y[j], o_V[j], 1.0, o_x);
+    platform.linAlg().axpy(N, y[j], o_V[j], (dfloat)1.0, o_x);
   }
 }
 

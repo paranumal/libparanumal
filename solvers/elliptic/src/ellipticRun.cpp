@@ -135,7 +135,7 @@ void elliptic_t::Run(){
                 o_rL);
 
   //Set x to zero
-  platform.linAlg().set(mesh.Nelements*mesh.Np*Nfields, 0.0, o_xL);
+  platform.linAlg().set(mesh.Nelements*mesh.Np*Nfields, (dfloat)0.0, o_xL);
 
   //add boundary condition contribution to rhs
   if (settings.compareSetting("DISCRETIZATION","IPDG")) {

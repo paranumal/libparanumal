@@ -157,17 +157,19 @@ int nbfpcg::Solve(operator_t& linearOperator, operator_t& precon,
     delta0 = dots[2];       //  u.w
     rdotr0 = dots[3];       // r.r
 
+    dfloat one = 1.0;
+    
     //  p <= u + beta*p
-    linAlg.axpy(N, 1.0, o_u, beta0, o_p);
+    linAlg.axpy(N, one, o_u, beta0, o_p);
 
     //  s <= w + beta*s
-    linAlg.axpy(N, 1.0, o_w, beta0, o_s);
+    linAlg.axpy(N, one, o_w, beta0, o_s);
 
     //  q <= m + beta*q
-    linAlg.axpy(N, 1.0, o_m, beta0, o_q);
+    linAlg.axpy(N, one, o_m, beta0, o_q);
 
     //  z <= n + beta*z
-    linAlg.axpy(N, 1.0, o_n, beta0, o_z);
+    linAlg.axpy(N, one, o_n, beta0, o_z);
 
     // eta = delta - beta^2*eta
     eta0 = delta0 - beta0*beta0*eta0;

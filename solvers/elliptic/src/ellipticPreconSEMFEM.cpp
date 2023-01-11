@@ -29,6 +29,8 @@ SOFTWARE.
 // Cast problem into spectrally-equivalent N=1 FEM space and precondition with AMG
 void SEMFEMPrecon::Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_Mr) {
 
+  pfloat zero = 0, one = 1;
+  
   linAlg_t& linAlg = elliptic.platform.linAlg();
 
   if (mesh.elementType==Mesh::TRIANGLES) {
@@ -37,7 +39,7 @@ void SEMFEMPrecon::Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_M
     deviceMemory<pfloat> o_GzFEM = elliptic.platform.reserve<pfloat>(Ncols);
 
     // Mr = invDegree.*r
-    linAlg.amxpy(elliptic.Ndofs, 1.0, elliptic.o_weightG, o_r, 0.0, o_Mr);
+    linAlg.amxpy(elliptic.Ndofs, one, elliptic.o_weightG, o_r, zero, o_Mr);
 
     deviceMemory<pfloat> o_rFEM = elliptic.platform.reserve<pfloat>(mesh.Nelements*mesh.NpFEM);
     elliptic.gHalo.Exchange(o_Mr, 1);
@@ -60,7 +62,7 @@ void SEMFEMPrecon::Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_M
     o_MrL.free();
 
     // Mr = invDegree.*Mr
-    linAlg.amx(elliptic.Ndofs, 1.0, elliptic.o_weightG, o_Mr);
+    linAlg.amx(elliptic.Ndofs, one, elliptic.o_weightG, o_Mr);
 
   } else {
     //pass to parAlmond

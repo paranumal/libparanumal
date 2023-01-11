@@ -35,9 +35,11 @@ namespace parAlmond {
 void parCSR::smoothDampedJacobi(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_x,
                                 const pfloat lambda, bool x_is_zero){
 
+  pfloat zero = 0, one = 1;
+  
   if(x_is_zero){
     // x = lambda*inv(D)*r
-    platform.linAlg().amxpy(Nrows, lambda, o_diagInv, o_r, 0.0, o_x);
+    platform.linAlg().amxpy(Nrows, lambda, o_diagInv, o_r, zero, o_x);
     return;
   }
 
@@ -61,7 +63,7 @@ void parCSR::smoothDampedJacobi(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>&
                            offd.o_rows, offd.o_cols, offd.o_vals,
                            lambda, o_diagInv, o_x, o_d);
 
-  platform.linAlg().axpy(Nrows, 1.0, o_d, 1.0, o_x);
+  platform.linAlg().axpy(Nrows, one, o_d, zero, o_x);
 }
 
 void parCSR::smoothChebyshev(deviceMemory<pfloat>& o_b, deviceMemory<pfloat>& o_x,

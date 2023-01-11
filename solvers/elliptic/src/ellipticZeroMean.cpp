@@ -40,11 +40,11 @@ void elliptic_t::ZeroMean(deviceMemory<dfloat> &o_q){
 
 void elliptic_t::ZeroMean(deviceMemory<pfloat> &o_q){
 
-  dfloat qmean = platform.linAlgPfloat().sum(Ndofs, o_q, mesh.comm);
+  pfloat qmean = platform.linAlg().sum(Ndofs, o_q, mesh.comm);
 
   // normalize
   qmean *= allNeumannScale*allNeumannScale;
   // q[n] = q[n] - qmean
-  platform.linAlgPfloat().add(Ndofs, -qmean, o_q);
+  platform.linAlg().add(Ndofs, -qmean, o_q);
 }
 #endif
