@@ -46,6 +46,18 @@ void mesh_t::ReferenceNodesTri2D(){
   invMassMatrixTri2D(Np, V, invMM);
   o_MM = platform.malloc<dfloat>(MM); //MM is symmetric
 
+  //  if(sizeof(pfloat)!=sizeof(dfloat)){
+  {
+    memory<pfloat> pfloat_MM(Np*Np);
+    pfloat_invMM.malloc(Np*Np);
+    for(int n=0;n<Np*Np;++n){
+      pfloat_MM[n] = MM[n];
+      pfloat_invMM[n] = invMM[n];
+    }
+    o_pfloat_MM = platform.malloc<pfloat>(pfloat_MM);
+  }
+
+  
   //packed D matrices
   DmatrixTri2D(N, r, s, D);
   Dr = D + 0*Np*Np;
@@ -58,6 +70,14 @@ void mesh_t::ReferenceNodesTri2D(){
   linAlg_t::matrixTranspose(Np, Np, Ds, Np, DsT, Np);
   o_D = platform.malloc<dfloat>(DT);
 
+  //  if(sizeof(pfloat)!=sizeof(dfloat)){
+  {
+    memory<pfloat> pfloat_DT(Np*Np*dim);
+    for(int n=0;n<Np*Np*dim;++n)
+      pfloat_DT[n] = DT[n];
+    o_pfloat_D = platform.malloc<pfloat>(pfloat_DT);  
+  }
+  
   LIFTmatrixTri2D(N, faceNodes, r, s, LIFT);
   SurfaceMassMatrixTri2D(N, MM, LIFT, sM);
 
@@ -85,6 +105,14 @@ void mesh_t::ReferenceNodesTri2D(){
   linAlg_t::matrixTranspose(Np, Np, Sss, Np, SssT, Np);
 
   o_S = platform.malloc<dfloat>(ST);
+
+  //  if(sizeof(pfloat)!=sizeof(dfloat)){
+  {
+    memory<pfloat> pfloat_ST(Np*Np*( (dim)*(dim+1)/2 ));
+    for(int n=0;n<(Np*Np*dim*(dim+1))/2;++n)
+      pfloat_ST[n] = ST[n];
+    o_pfloat_S = platform.malloc<pfloat>(pfloat_ST);
+  }
 
   /* Plotting data */
   plotN = N + 3; //enriched interpolation space for plotting

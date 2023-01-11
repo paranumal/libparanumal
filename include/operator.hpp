@@ -35,10 +35,10 @@ namespace libp {
 class operator_t {
 public:
   virtual void Operator(deviceMemory<double> &o_r, deviceMemory<double> &o_Mr) {
-    LIBP_FORCE_ABORT("Operator not implemented in this object");
+    LIBP_FORCE_ABORT("Operator not implemented in this object: double");
   };
   virtual void Operator(deviceMemory<float> &o_r, deviceMemory<float> &o_Mr) {
-    LIBP_FORCE_ABORT("Operator not implemented in this object");
+    LIBP_FORCE_ABORT("Operator not implemented in this object: float");
   };
 };
 

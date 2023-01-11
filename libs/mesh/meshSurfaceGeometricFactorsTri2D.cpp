@@ -157,6 +157,16 @@ void mesh_t::SurfaceGeometricFactorsTri2D(){
   }
 
   o_sgeo = platform.malloc<dfloat>(sgeo);
+  
+  //  if(sizeof(pfloat)!=sizeof(dfloat)){
+  {
+    memory<pfloat> pfloat_sgeo(Nelements*Nsgeo*Nfaces);
+    
+    for(int n=0;n<Nsgeo*Nelements*Nfaces;++n)
+      pfloat_sgeo[n] = sgeo[n];
+    
+    o_pfloat_sgeo = platform.malloc<pfloat>(pfloat_sgeo);
+  }
 }
 
 } //namespace libp

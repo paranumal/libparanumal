@@ -64,6 +64,7 @@ public:
   IdentityPrecon(dlong _N): N(_N) {}
 
   void Operator(deviceMemory<pfloat> &o_r, deviceMemory<pfloat> &o_Mr){
+    printf("In identity precon\n");
     o_Mr.copyFrom(o_r, N, 0, properties_t("async", true)); //identity
   }
 };

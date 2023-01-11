@@ -80,6 +80,9 @@ elliptic_t elliptic_t::SetupNewDegree(mesh_t& meshC){
   int NblockV = std::max(1,blockMax/meshC.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;
 
+  properties_t kernelInfoPfloat = kernelInfo;
+  kernelInfoPfloat["defines/dfloat"]= pfloatString;
+  
   // Ax kernel
   if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
     fileName   = oklFilePrefix + "ellipticAx" + suffix + oklFileSuffix;
@@ -94,7 +97,11 @@ elliptic_t elliptic_t::SetupNewDegree(mesh_t& meshC){
 
     elliptic.partialAxKernel = platform.buildKernel(fileName, kernelName,
                                             kernelInfo);
-
+    
+    elliptic.pfloatPartialAxKernel = platform.buildKernel(fileName, kernelName,
+							  kernelInfoPfloat);
+    
+    
   } else if (settings.compareSetting("DISCRETIZATION","IPDG")) {
     int Nmax = std::max(meshC.Np, meshC.Nfaces*meshC.Nfp);
     kernelInfo["defines/" "p_Nmax"]= Nmax;
@@ -103,11 +110,16 @@ elliptic_t elliptic_t::SetupNewDegree(mesh_t& meshC){
     kernelName = "ellipticPartialGradient" + suffix;
     elliptic.partialGradientKernel = platform.buildKernel(fileName, kernelName,
                                                   kernelInfo);
+    elliptic.pfloatPartialGradientKernel = platform.buildKernel(fileName, kernelName,
+								kernelInfoPfloat);
 
+    
     fileName   = oklFilePrefix + "ellipticAxIpdg" + suffix + oklFileSuffix;
     kernelName = "ellipticPartialAxIpdg" + suffix;
     elliptic.partialIpdgKernel = platform.buildKernel(fileName, kernelName,
                                               kernelInfo);
+    elliptic.pfloatPartialIpdgKernel = platform.buildKernel(fileName, kernelName,
+							    kernelInfoPfloat);
   }
 
   if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {

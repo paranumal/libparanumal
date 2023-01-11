@@ -37,7 +37,7 @@ MassMatrixPrecon::MassMatrixPrecon(elliptic_t& _elliptic):
   LIBP_ABORT("MASSMATRIX preconditioner is unavailble when lambda=0.",
              elliptic.lambda==0);
 
-  o_invMM = elliptic.platform.malloc<pfloat>(mesh.invMM);
+  o_pfloat_invMM = elliptic.platform.malloc<pfloat>(mesh.pfloat_invMM);
 
   // OCCA build stuff
   properties_t kernelInfo = mesh.props; //copy base occa properties
@@ -47,6 +47,7 @@ MassMatrixPrecon::MassMatrixPrecon(elliptic_t& _elliptic):
 
   int NblockV = std::max(1,blockMax/mesh.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;
+  kernelInfo["defines/" "dfloat"]= pfloatString;
 
   if (settings.compareSetting("DISCRETIZATION", "IPDG")) {
     blockJacobiKernel = elliptic.platform.buildKernel(DELLIPTIC "/okl/ellipticPreconBlockJacobi.okl",
@@ -62,7 +63,7 @@ void MassMatrixPrecon::Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>&
   pfloat one = 1.0, zero = 0.0;
 
   pfloat invLambda = 1./elliptic.lambda;
-
+  
   linAlg_t& linAlg = elliptic.platform.linAlg();
 
   if (elliptic.disc_c0) {//C0
@@ -79,7 +80,7 @@ void MassMatrixPrecon::Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>&
       partialBlockJacobiKernel(mesh.NlocalGatherElements/2,
                                mesh.o_localGatherElementList,
                                elliptic.o_GlobalToLocal,
-                               invLambda, mesh.o_vgeo, o_invMM,
+                               invLambda, mesh.o_pfloat_vgeo, o_pfloat_invMM,
                                o_rtmp, o_MrL);
 
     // finalize halo exchange
@@ -89,7 +90,7 @@ void MassMatrixPrecon::Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>&
       partialBlockJacobiKernel(mesh.NglobalGatherElements,
                                mesh.o_globalGatherElementList,
                                elliptic.o_GlobalToLocal,
-                               invLambda, mesh.o_vgeo, o_invMM,
+                               invLambda, mesh.o_pfloat_vgeo, o_pfloat_invMM,
                                o_rtmp, o_MrL);
 
     //gather result to Aq
@@ -99,7 +100,7 @@ void MassMatrixPrecon::Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>&
       partialBlockJacobiKernel((mesh.NlocalGatherElements+1)/2,
                                mesh.o_localGatherElementList+mesh.NlocalGatherElements/2,
                                elliptic.o_GlobalToLocal,
-                               invLambda, mesh.o_vgeo, o_invMM,
+                               invLambda, mesh.o_pfloat_vgeo, o_pfloat_invMM,
                                o_rtmp, o_MrL);
     }
 
@@ -110,7 +111,7 @@ void MassMatrixPrecon::Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>&
 
   } else {
     //IPDG
-    blockJacobiKernel(mesh.Nelements, invLambda, mesh.o_vgeo, o_invMM, o_r, o_Mr);
+    blockJacobiKernel(mesh.Nelements, invLambda, mesh.o_pfloat_vgeo, o_pfloat_invMM, o_r, o_Mr);
   }
 
   // zero mean of RHS

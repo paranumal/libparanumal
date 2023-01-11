@@ -36,7 +36,7 @@ pcg::pcg(dlong _N, dlong _Nhalo,
          platform_t& _platform, settings_t& _settings, comm_t _comm):
   linearSolverBase_t(_N, _Nhalo, _platform, _settings, _comm) {
 
-  platform.linAlg().InitKernels({"axpy", "innerProd", "norm2"});
+  platform.linAlg().InitKernels({"axpy", "innerProd", "norm2", "d2p", "p2d"});
 
   flexible = settings.compareSetting("LINEAR SOLVER", "FPCG");
 
@@ -48,7 +48,7 @@ pcg::pcg(dlong _N, dlong _Nhalo,
 
   // combined PCG update and r.r kernel
   updatePCGKernel = platform.buildKernel(LINEARSOLVER_DIR "/okl/linearSolverUpdatePCG.okl",
-                                "updatePCG", kernelInfo);
+					 "updatePCG", kernelInfo);
 }
 
 int pcg::Solve(operator_t& linearOperator, operator_t& precon,
@@ -67,14 +67,25 @@ int pcg::Solve(operator_t& linearOperator, operator_t& precon,
 
   /*Pre-reserve memory pool space to avoid some unnecessary re-sizing*/
   dlong Ntotal = N + Nhalo;
-  platform.reserve<dfloat>(3*Ntotal + PCG_BLOCKSIZE
+#if 1
+  // TW 3=>5
+  platform.reserve<dfloat>(5*Ntotal + PCG_BLOCKSIZE
                            + 4 * platform.memPoolAlignment<dfloat>());
-
   /*aux variables */
+
   deviceMemory<dfloat> o_p  = platform.reserve<dfloat>(Ntotal);
   deviceMemory<dfloat> o_z  = platform.reserve<dfloat>(Ntotal);
   deviceMemory<dfloat> o_Ap = platform.reserve<dfloat>(Ntotal);
+#else
+  deviceMemory<dfloat> o_p  = platform.malloc<dfloat>(Ntotal);
+  deviceMemory<dfloat> o_z  = platform.malloc<dfloat>(Ntotal);
+  deviceMemory<dfloat> o_Ap = platform.malloc<dfloat>(Ntotal);
+#endif
+  
+  deviceMemory<pfloat> o_pfloat_r  = platform.malloc<pfloat>(Ntotal);
+  deviceMemory<pfloat> o_pfloat_z  = platform.malloc<pfloat>(Ntotal);
 
+  
   // Comput norm of RHS (for stopping tolerance).
   if (settings.compareSetting("LINEAR SOLVER STOPPING CRITERION", "ABS/REL-RHS-2NORM")) {
     dfloat normb = linAlg.norm2(N, o_r, comm);
@@ -107,12 +118,22 @@ int pcg::Solve(operator_t& linearOperator, operator_t& precon,
     }
 
     // z = Precon^{-1} r
-    precon.Operator(o_r, o_z);
+#if 0
+    if(sizeof(pfloat)==sizeof(dfloat)){
+      precon.Operator(o_r, o_z);
+    }
+    else
+#endif
+      {
+	linAlg.d2p(N, o_r, o_pfloat_r);
+	precon.Operator(o_pfloat_r, o_pfloat_z);
+	linAlg.p2d(N, o_pfloat_z, o_z);
+      }
 
     // r.z
     rdotz2 = rdotz1;
     rdotz1 = linAlg.innerProd(N, o_r, o_z, comm);
-
+    
     if(flexible){
       if (iter==0) {
         beta = 0.0;
@@ -166,6 +187,7 @@ dfloat pcg::UpdatePCG(const dfloat alpha,
   //pinned tmp buffer for reductions
   pinnedMemory<dfloat> h_rdotr = platform.hostReserve<dfloat>(1);
   deviceMemory<dfloat> o_rdotr = platform.reserve<dfloat>(PCG_BLOCKSIZE);
+  //  deviceMemory<dfloat> o_rdotr = platform.malloc<dfloat>(PCG_BLOCKSIZE);
 
   updatePCGKernel(N, Nblocks, o_Ap, alpha, o_r, o_rdotr);
 

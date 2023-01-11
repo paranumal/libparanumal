@@ -509,4 +509,14 @@ namespace libp {
 
     return sqrt(globalnorm);
   }
+
+  void linAlg_t::p2d(const dlong N, deviceMemory<pfloat> o_p, deviceMemory<dfloat> o_d) {
+    p2dKernel(N, o_p, o_d);
+  }
+
+  void linAlg_t::d2p(const dlong N, deviceMemory<dfloat> o_d, deviceMemory<pfloat> o_p) {
+    d2pKernel(N, o_d, o_p);
+  }
+
+  
 } //namespace libp

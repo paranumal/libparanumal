@@ -47,5 +47,8 @@ void JacobiPrecon::Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_M
   linAlg.amxpy(elliptic.Ndofs, (pfloat)1.0, o_invDiagA, o_r, (pfloat)0.0, o_Mr);
 
   // zero mean of RHS
-  if(elliptic.allNeumann) elliptic.ZeroMean(o_Mr);
+  if(elliptic.allNeumann){
+    printf("elliptic zeroMean\n");
+    elliptic.ZeroMean(o_Mr);
+  }
 }

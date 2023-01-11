@@ -257,7 +257,29 @@ namespace libp {
 								"weightedInnerProd",
 								kernelInfoDouble);
 	}
-      } else {
+      } else if (name=="d2p" || name=="p2d"){
+	properties_t kernelInfoType = platform->props();
+	
+	//add defines
+	kernelInfoType["defines/" "p_blockSize"] = blocksize;
+	kernelInfoType["defines/dfloat"]  = dfloatString;
+	kernelInfoType["defines/pfloat"]  = pfloatString;
+
+	if(d2pKernel.isInitialized()==false){
+	  d2pKernel = platform->buildKernel(LINALG_DIR "/okl/"
+					    "linAlgTypeConvert.okl",
+					    "d2p",
+					    kernelInfoType);
+	}
+
+	if(p2dKernel.isInitialized()==false){
+	  p2dKernel = platform->buildKernel(LINALG_DIR "/okl/"
+					    "linAlgTypeConvert.okl",
+					    "p2d",
+					    kernelInfoType);
+	}
+      }else {
+	
 	LIBP_FORCE_ABORT("Requested linAlg routine \"" << name << "\" not found");
       }
     }

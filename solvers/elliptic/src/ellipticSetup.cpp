@@ -41,6 +41,7 @@ void elliptic_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
   //Trigger JIT kernel builds
   ogs::InitializeKernels(platform, ogs::Dfloat, ogs::Add);
+  // DO I NEED THIS FOR Pfloat ?
   ogs::InitializeKernels(platform, ogs::Pfloat, ogs::Add);
 
   disc_ipdg = settings.compareSetting("DISCRETIZATION","IPDG");
@@ -48,10 +49,10 @@ void elliptic_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
   //setup linear algebra module
   platform.linAlg().InitKernels({"add", "sum", "scale",
-                                "axpy", "zaxpy",
-                                "amx", "amxpy", "zamxpy",
-                                "adx", "adxpy", "zadxpy",
-                                "innerProd", "norm2"});
+	"axpy", "zaxpy",
+	"amx", "amxpy", "zamxpy",
+	"adx", "adxpy", "zadxpy",
+	"innerProd", "norm2", "d2p", "p2d"});
 
   
   /*setup trace halo exchange */
@@ -137,7 +138,7 @@ void elliptic_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
     pfloatPartialGradientKernel = platform.buildKernel(fileName, kernelName,
 						       kernelInfoPfloat);
-
+    
     
     fileName   = oklFilePrefix + "ellipticAxIpdg" + suffix + oklFileSuffix;
     kernelName = "ellipticPartialAxIpdg" + suffix;

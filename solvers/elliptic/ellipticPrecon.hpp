@@ -50,7 +50,7 @@ private:
   mesh_t mesh;
   settings_t settings;
 
-  deviceMemory<pfloat> o_invMM;
+  deviceMemory<pfloat> o_pfloat_invMM;
 
   kernel_t blockJacobiKernel;
   kernel_t partialBlockJacobiKernel;
