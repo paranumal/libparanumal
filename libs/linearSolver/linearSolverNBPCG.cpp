@@ -59,7 +59,7 @@ int nbpcg::Solve(operator_t& linearOperator, operator_t& precon,
                  const dfloat tol, const int MAXIT, const int verbose) {
 
   int rank = comm.rank();
-  linAlg_t<dfloat> &linAlg = platform.linAlg();
+  linAlg_t &linAlg = platform.linAlg();
 
   /*Pre-reserve memory pool space to avoid some unnecessary re-sizing*/
   dlong Ntotal = N + Nhalo;
@@ -89,7 +89,7 @@ int nbpcg::Solve(operator_t& linearOperator, operator_t& precon,
   linearOperator.Operator(o_x, o_Ax);
 
   // subtract r = r - A*x
-  linAlg.axpy(N, -1.f, o_Ax, 1.f, o_r);
+  linAlg.axpy(N, (dfloat) -1.f, o_Ax,  (dfloat) 1.f, o_r);
 
    // z = M*r [ Gropp notation ]
   precon.Operator(o_r, o_z);
@@ -141,7 +141,7 @@ int nbpcg::Solve(operator_t& linearOperator, operator_t& precon,
     Update2NBPCG(alpha0, o_s, o_S, o_r, o_z);
 
     // x <= x + alpha*p (delayed)
-    linAlg.axpy(N, alpha0, o_p, 1.0, o_x);
+    linAlg.axpy(N, alpha0, o_p,  (dfloat) 1.0, o_x);
 
     // Z = A*z
     linearOperator.Operator(o_z, o_Z);

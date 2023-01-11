@@ -27,19 +27,19 @@ SOFTWARE.
 #include "ellipticPrecon.hpp"
 
 // Cast problem into spectrally-equivalent N=1 FEM space and precondition with AMG
-void SEMFEMPrecon::Operator(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_Mr) {
+void SEMFEMPrecon::Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_Mr) {
 
-  linAlg_t<dfloat>& linAlg = elliptic.platform.linAlg();
+  linAlg_t& linAlg = elliptic.platform.linAlg();
 
   if (mesh.elementType==Mesh::TRIANGLES) {
     dlong Ncols = parAlmond.getNumCols(0);
-    deviceMemory<dfloat> o_GrFEM = elliptic.platform.reserve<dfloat>(Ncols);
-    deviceMemory<dfloat> o_GzFEM = elliptic.platform.reserve<dfloat>(Ncols);
+    deviceMemory<pfloat> o_GrFEM = elliptic.platform.reserve<pfloat>(Ncols);
+    deviceMemory<pfloat> o_GzFEM = elliptic.platform.reserve<pfloat>(Ncols);
 
     // Mr = invDegree.*r
     linAlg.amxpy(elliptic.Ndofs, 1.0, elliptic.o_weightG, o_r, 0.0, o_Mr);
 
-    deviceMemory<dfloat> o_rFEM = elliptic.platform.reserve<dfloat>(mesh.Nelements*mesh.NpFEM);
+    deviceMemory<pfloat> o_rFEM = elliptic.platform.reserve<pfloat>(mesh.Nelements*mesh.NpFEM);
     elliptic.gHalo.Exchange(o_Mr, 1);
     SEMFEMInterpKernel(mesh.Nelements,
                        elliptic.o_GlobalToLocal,
@@ -50,7 +50,7 @@ void SEMFEMPrecon::Operator(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_M
 
     parAlmond.Operator(o_GrFEM, o_GzFEM);
 
-    deviceMemory<dfloat> o_MrL = elliptic.platform.reserve<dfloat>(mesh.Np*mesh.Nelements);
+    deviceMemory<pfloat> o_MrL = elliptic.platform.reserve<pfloat>(mesh.Np*mesh.Nelements);
     FEMgHalo.Exchange(o_GzFEM, 1);
     SEMFEMAnterpKernel(mesh.Nelements,
                        o_FEMGlobalToLocal,
@@ -218,7 +218,7 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
   hlong TotalRows = A.globalRowStarts[size];
   dlong numLocalRows = static_cast<dlong>(A.globalRowStarts[rank+1]-A.globalRowStarts[rank]);
 
-  memory<dfloat> null(numLocalRows);
+  memory<pfloat> null(numLocalRows);
   for (dlong i=0;i<numLocalRows;i++) {
     null[i] = 1.0/sqrt(TotalRows);
   }
@@ -229,15 +229,15 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
 
   if (mesh.elementType==Mesh::TRIANGLES) {
     // build interp and anterp
-    memory<dfloat> SEMFEMAnterp(mesh.NpFEM*mesh.Np);
+    memory<pfloat> SEMFEMAnterp(mesh.NpFEM*mesh.Np);
     for(int n=0;n<mesh.NpFEM;++n){
       for(int m=0;m<mesh.Np;++m){
         SEMFEMAnterp[n+m*mesh.NpFEM] = mesh.SEMFEMInterp[n*mesh.Np+m];
       }
     }
 
-    mesh.o_SEMFEMInterp = elliptic.platform.malloc<dfloat>(mesh.SEMFEMInterp);
-    mesh.o_SEMFEMAnterp = elliptic.platform.malloc<dfloat>(SEMFEMAnterp);
+    mesh.o_SEMFEMInterp = elliptic.platform.malloc<pfloat>(mesh.SEMFEMInterp);
+    mesh.o_SEMFEMAnterp = elliptic.platform.malloc<pfloat>(SEMFEMAnterp);
 
     //build kernels
     properties_t kernelInfo = mesh.props;

@@ -35,12 +35,12 @@ class JacobiPrecon: public operator_t {
 private:
 	elliptic_t elliptic;
 
-  deviceMemory<dfloat> o_invDiagA;
+  deviceMemory<pfloat> o_invDiagA;
 
 public:
   JacobiPrecon() = default;
   JacobiPrecon(elliptic_t& elliptic);
-  void Operator(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_Mr);
+  void Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_Mr);
 };
 
 //Inverse Mass Matrix preconditioner
@@ -50,7 +50,7 @@ private:
   mesh_t mesh;
   settings_t settings;
 
-  deviceMemory<dfloat> o_invMM;
+  deviceMemory<pfloat> o_invMM;
 
   kernel_t blockJacobiKernel;
   kernel_t partialBlockJacobiKernel;
@@ -58,7 +58,7 @@ private:
 public:
   MassMatrixPrecon() = default;
   MassMatrixPrecon(elliptic_t& elliptic);
-  void Operator(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_Mr);
+  void Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_Mr);
 };
 
 //ParAlmond AMG preconditioner
@@ -72,7 +72,7 @@ private:
 public:
   ParAlmondPrecon() = default;
   ParAlmondPrecon(elliptic_t& elliptic);
-  void Operator(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_Mr);
+  void Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_Mr);
 };
 
 // Matrix-free p-Multigrid levels followed by AMG
@@ -85,9 +85,10 @@ private:
   parAlmond::parAlmond_t parAlmond;
 
 public:
+
   MultiGridPrecon() = default;
   MultiGridPrecon(elliptic_t& elliptic);
-  void Operator(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_Mr);
+  void Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_Mr);
 };
 
 // Cast problem into spectrally-equivalent N=1 FEM space and precondition with AMG
@@ -111,9 +112,10 @@ private:
   kernel_t SEMFEMAnterpKernel;
 
 public:
+
   SEMFEMPrecon() = default;
   SEMFEMPrecon(elliptic_t& elliptic);
-  void Operator(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_Mr);
+  void Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_Mr);
 };
 
 
@@ -123,8 +125,8 @@ public:
   mesh_t mesh;
 
   //prologation
-  memory<dfloat> P;
-  deviceMemory<dfloat> o_P;
+  //  memory<pfloat> P;
+  deviceMemory<pfloat> o_P;
 
   kernel_t coarsenKernel, partialCoarsenKernel;
   kernel_t prolongateKernel, partialProlongateKernel;
@@ -138,11 +140,11 @@ public:
                 CHEBYSHEV=2} SmootherType;
   SmootherType stype;
 
-  dfloat lambda1, lambda0;
+  pfloat lambda1, lambda0;
   int ChebyshevIterations;
 
   //jacobi data
-  deviceMemory<dfloat> o_invDiagA;
+  deviceMemory<pfloat> o_invDiagA;
 
   //build a p-multigrid level and connect it to the next one
   MGLevel() = default;
@@ -150,26 +152,26 @@ public:
           dlong _Nrows, dlong _Ncols,
           int Nc, int NpCoarse);
 
-  void Operator(deviceMemory<dfloat> &o_X, deviceMemory<dfloat> &o_Ax);
+  void Operator(deviceMemory<pfloat> &o_X, deviceMemory<pfloat> &o_Ax);
 
-  void residual(deviceMemory<dfloat> &o_RHS, deviceMemory<dfloat> &o_X, deviceMemory<dfloat> &o_RES);
+  void residual(deviceMemory<pfloat> &o_RHS, deviceMemory<pfloat> &o_X, deviceMemory<pfloat> &o_RES);
 
-  void coarsen(deviceMemory<dfloat> &o_X, deviceMemory<dfloat> &o_Cx);
+  void coarsen(deviceMemory<pfloat> &o_X, deviceMemory<pfloat> &o_Cx);
 
-  void prolongate(deviceMemory<dfloat> &o_X, deviceMemory<dfloat> &o_Px);
+  void prolongate(deviceMemory<pfloat> &o_X, deviceMemory<pfloat> &o_Px);
 
   //smoother ops
-  void smooth(deviceMemory<dfloat> &o_RHS, deviceMemory<dfloat> &o_X, bool x_is_zero);
+  void smooth(deviceMemory<pfloat> &o_RHS, deviceMemory<pfloat> &o_X, bool x_is_zero);
 
-  void smoothJacobi    (deviceMemory<dfloat> &o_r, deviceMemory<dfloat> &o_X, bool xIsZero);
-  void smoothChebyshev (deviceMemory<dfloat> &o_r, deviceMemory<dfloat> &o_X, bool xIsZero);
+  void smoothJacobi    (deviceMemory<pfloat> &o_r, deviceMemory<pfloat> &o_X, bool xIsZero);
+  void smoothChebyshev (deviceMemory<pfloat> &o_r, deviceMemory<pfloat> &o_X, bool xIsZero);
 
   size_t SmootherScratchSize();
 
   void Report();
 
   void SetupSmoother();
-  dfloat maxEigSmoothAx();
+  pfloat maxEigSmoothAx();
 };
 
 // Overlapping additive Schwarz with patch problems consisting of the
@@ -194,13 +196,14 @@ private:
   ogs::ogs_t ogsMasked;
   parAlmond::parAlmond_t parAlmond;
 
-  memory<dfloat> patchWeight;
-  deviceMemory<dfloat> o_patchWeight;
+  memory<pfloat> patchWeight;
+  deviceMemory<pfloat> o_patchWeight;
 
 public:
+
   OASPrecon() = default;
   OASPrecon(elliptic_t& elliptic);
-  void Operator(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_Mr);
+  void Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_Mr);
 };
 
 

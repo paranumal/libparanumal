@@ -28,13 +28,14 @@ SOFTWARE.
 
 
 // Matrix-free p-Multigrid levels followed by AMG
-void MultiGridPrecon::Operator(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_Mr) {
+void MultiGridPrecon::Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_Mr) {
 
   //just pass to parAlmond
   parAlmond.Operator(o_r, o_Mr);
-
+    
   // zero mean of RHS
   if(elliptic.allNeumann) elliptic.ZeroMean(o_Mr);
+
 }
 
 MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
@@ -123,7 +124,7 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
   hlong TotalRows = A.globalRowStarts[size];
   dlong numLocalRows = static_cast<dlong>(A.globalRowStarts[rank+1]-A.globalRowStarts[rank]);
 
-  memory<dfloat> null(numLocalRows);
+  memory<pfloat> null(numLocalRows);
   for (dlong i=0;i<numLocalRows;i++) {
     null[i] = 1.0/sqrt(TotalRows);
   }

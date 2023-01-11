@@ -367,7 +367,7 @@ void mesh_t::MassMatrixQuad2D(const int _Np,
       _MM[n*_Np + m] = res;
     }
   }
-  linAlg_t<dfloat>::matrixInverse(_Np, _MM);
+  linAlg_t::matrixInverse(_Np, _MM);
 }
 
 void mesh_t::LumpedMassMatrixQuad2D(const int _N,
@@ -420,8 +420,8 @@ void mesh_t::DmatrixQuad2D(const int _N,
   _D.malloc(2*_Np*_Np);
   memory<dfloat> _Dr = _D + 0*_Np*_Np;
   memory<dfloat> _Ds = _D + 1*_Np*_Np;
-  linAlg_t<dfloat>::matrixRightSolve(_Np, _Np, Vr, _Np, _Np, V, _Dr);
-  linAlg_t<dfloat>::matrixRightSolve(_Np, _Np, Vs, _Np, _Np, V, _Ds);
+  linAlg_t::matrixRightSolve(_Np, _Np, Vr, _Np, _Np, V, _Dr);
+  linAlg_t::matrixRightSolve(_Np, _Np, Vs, _Np, _Np, V, _Ds);
 }
 
 void mesh_t::InterpolationMatrixQuad2D(const int _N,
@@ -447,7 +447,7 @@ void mesh_t::InterpolationMatrixQuad2D(const int _N,
   VandermondeQuad2D(_N, rOut, sOut, VOut);
 
   I.malloc(NpointsIn*NpointsOut);
-  linAlg_t<dfloat>::matrixRightSolve(NpointsOut, _Np, VOut,
+  linAlg_t::matrixRightSolve(NpointsOut, _Np, VOut,
                              NpointsIn, _Np, VIn, I);
 }
 

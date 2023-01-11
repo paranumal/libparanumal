@@ -32,7 +32,7 @@ namespace libp {
 
 namespace parAlmond {
 
-void multigrid_t::kcycle(const int k, deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x){
+void multigrid_t::kcycle(const int k, deviceMemory<pfloat>& o_rhs, deviceMemory<pfloat>& o_x){
 
   //check for base level
   if(k==baseLevel) {
@@ -48,9 +48,9 @@ void multigrid_t::kcycle(const int k, deviceMemory<dfloat>& o_rhs, deviceMemory<
   //apply smoother to x and then compute res = rhs-Ax
   level.smooth(o_rhs, o_x, true);
 
-  deviceMemory<dfloat> o_rhsC = platform.reserve<dfloat>(levelC.Ncols);
-  deviceMemory<dfloat> o_xC   = platform.reserve<dfloat>(levelC.Ncols);
-  deviceMemory<dfloat> o_res  = platform.reserve<dfloat>(level.Ncols);
+  deviceMemory<pfloat> o_rhsC = platform.reserve<pfloat>(levelC.Ncols);
+  deviceMemory<pfloat> o_xC   = platform.reserve<pfloat>(levelC.Ncols);
+  deviceMemory<pfloat> o_res  = platform.reserve<pfloat>(level.Ncols);
 
   level.residual(o_rhs, o_x, o_res);
 
@@ -61,9 +61,9 @@ void multigrid_t::kcycle(const int k, deviceMemory<dfloat>& o_rhs, deviceMemory<
   if(k+1>NUMKCYCLES) {
     vcycle(k+1, o_rhsC, o_xC);
   } else{
-    deviceMemory<dfloat> o_ck = platform.reserve<dfloat>(levelC.Ncols);
-    deviceMemory<dfloat> o_vk = platform.reserve<dfloat>(levelC.Nrows);
-    deviceMemory<dfloat> o_wk = platform.reserve<dfloat>(levelC.Nrows);
+    deviceMemory<pfloat> o_ck = platform.reserve<pfloat>(levelC.Ncols);
+    deviceMemory<pfloat> o_vk = platform.reserve<pfloat>(levelC.Nrows);
+    deviceMemory<pfloat> o_wk = platform.reserve<pfloat>(levelC.Nrows);
 
     // first inner krylov iteration
     kcycle(k+1, o_rhsC, o_xC);
@@ -72,7 +72,7 @@ void multigrid_t::kcycle(const int k, deviceMemory<dfloat>& o_rhs, deviceMemory<
     // alpha1=ck*rhsC, rho1=ck*Ack, norm_rhs=sqrt(rhsC*rhsC)
     // rhsC = rhsC - (alpha1/rho1)*vkp1
     // norm_rtilde = sqrt(rhsC*rhsC)
-    dfloat rho1, alpha1, norm_rhs, norm_rhstilde;
+    pfloat rho1, alpha1, norm_rhs, norm_rhstilde;
     kcycleOp1(levelC, o_xC, o_rhsC, o_ck, o_vk,
               alpha1, rho1, norm_rhs, norm_rhstilde);
 
@@ -101,10 +101,10 @@ void multigrid_t::kcycle(const int k, deviceMemory<dfloat>& o_rhs, deviceMemory<
 
 
 void multigrid_t::kcycleOp1(multigridLevel& level,
-                           deviceMemory<dfloat>& o_x,  deviceMemory<dfloat>& o_rhs,
-                           deviceMemory<dfloat>& o_ck, deviceMemory<dfloat>& o_vk,
-                           dfloat& alpha1, dfloat& rho1,
-                           dfloat& norm_rhs, dfloat& norm_rhstilde) {
+                           deviceMemory<pfloat>& o_x,  deviceMemory<pfloat>& o_rhs,
+                           deviceMemory<pfloat>& o_ck, deviceMemory<pfloat>& o_vk,
+                           pfloat& alpha1, pfloat& rho1,
+                           pfloat& norm_rhs, pfloat& norm_rhstilde) {
 
   //ck = x
   platform.linAlg().axpy(level.Nrows, 1.0, o_x, 0.0, o_ck);
@@ -122,22 +122,22 @@ void multigrid_t::kcycleOp1(multigridLevel& level,
   norm_rhs = sqrt(norm_rhs);
 
   // rhs = rhs - (alpha1/rho1)*vk
-  const dfloat a = -(alpha1)/(rho1);
+  const pfloat a = -(alpha1)/(rho1);
   norm_rhstilde = sqrt(vectorAddInnerProd(level, a, o_vk, 1.0, o_rhs));
 }
 
 void multigrid_t::kcycleOp2(multigridLevel& level,
-                            deviceMemory<dfloat>& o_x,  deviceMemory<dfloat>& o_rhs,
-                            deviceMemory<dfloat>& o_ck, deviceMemory<dfloat>& o_vk,
-                            deviceMemory<dfloat>& o_wk,
-                            const dfloat alpha1, const dfloat rho1) {
+                            deviceMemory<pfloat>& o_x,  deviceMemory<pfloat>& o_rhs,
+                            deviceMemory<pfloat>& o_ck, deviceMemory<pfloat>& o_vk,
+                            deviceMemory<pfloat>& o_wk,
+                            const pfloat alpha1, const pfloat rho1) {
 
-  if(std::abs(rho1) > (dfloat) 1e-20){
+  if(std::abs(rho1) > (pfloat) 1e-20){
     // wk = A*x
     level.Operator(o_x,o_wk);
 
     // gamma=xC*Ack, beta=xC*AxC, alpha2=xC*rhsC
-    dfloat gamma, beta, alpha2;
+    pfloat gamma, beta, alpha2;
 
     if(ktype == PCG)
       kcycleCombinedOp2(level, o_x, o_vk, o_wk, o_rhs, gamma, beta, alpha2);
@@ -145,12 +145,12 @@ void multigrid_t::kcycleOp2(multigridLevel& level,
     if(ktype == GMRES)
       kcycleCombinedOp2(level, o_wk, o_vk, o_wk, o_rhs, gamma, beta, alpha2);
 
-    const dfloat rho2 = beta - gamma*gamma/rho1;
+    const pfloat rho2 = beta - gamma*gamma/rho1;
 
-    if(std::abs(rho2) > (dfloat) 1e-20){
+    if(std::abs(rho2) > (pfloat) 1e-20){
       // x = (alpha1/rho1 - (gam*alpha2)/(rho1*rho2))*ck + (alpha2/rho2)*x
-      const dfloat a = alpha1/rho1 - gamma*alpha2/(rho1*rho2);
-      const dfloat b = alpha2/rho2;
+      const pfloat a = alpha1/rho1 - gamma*alpha2/(rho1*rho2);
+      const pfloat b = alpha2/rho2;
 
       platform.linAlg().axpy(level.Nrows, a, o_ck, b, o_x);
     }
@@ -159,20 +159,20 @@ void multigrid_t::kcycleOp2(multigridLevel& level,
 
 // returns aDotbc[0] = a\dot b, aDotbc[1] = a\dot c, aDotbc[2] = b\dot b,
 void multigrid_t::kcycleCombinedOp1(multigridLevel& level,
-                                    deviceMemory<dfloat>& o_a,
-                                    deviceMemory<dfloat>& o_b,
-                                    deviceMemory<dfloat>& o_c,
-                                    dfloat& aDotb,
-                                    dfloat& aDotc,
-                                    dfloat& bDotb) {
+                                    deviceMemory<pfloat>& o_a,
+                                    deviceMemory<pfloat>& o_b,
+                                    deviceMemory<pfloat>& o_c,
+                                    pfloat& aDotb,
+                                    pfloat& aDotc,
+                                    pfloat& bDotb) {
 
   const dlong N = level.Nrows;
   dlong numBlocks = (N+blockSize-1)/blockSize;
   numBlocks = std::min(numBlocks, PARALMOND_NBLOCKS);
 
   //pinned scratch buffer
-  pinnedMemory<dfloat> h_scratch = platform.hostReserve<dfloat>(3);
-  deviceMemory<dfloat> o_scratch = platform.reserve<dfloat>(3*PARALMOND_NBLOCKS);
+  pinnedMemory<pfloat> h_scratch = platform.hostReserve<pfloat>(3);
+  deviceMemory<pfloat> o_scratch = platform.reserve<pfloat>(3*PARALMOND_NBLOCKS);
 
   kcycleCombinedOp1Kernel(numBlocks,N,o_a,o_b,o_c,o_scratch);
 
@@ -193,21 +193,21 @@ void multigrid_t::kcycleCombinedOp1(multigridLevel& level,
 
 // returns aDotbcd[0] = a\dot b, aDotbcd[1] = a\dot c, aDotbcd[2] = a\dot d,
 void multigrid_t::kcycleCombinedOp2(multigridLevel& level,
-                                    deviceMemory<dfloat>& o_a,
-                                    deviceMemory<dfloat>& o_b,
-                                    deviceMemory<dfloat>& o_c,
-                                    deviceMemory<dfloat>& o_d,
-                                    dfloat& aDotb,
-                                    dfloat& aDotc,
-                                    dfloat& aDotd) {
+                                    deviceMemory<pfloat>& o_a,
+                                    deviceMemory<pfloat>& o_b,
+                                    deviceMemory<pfloat>& o_c,
+                                    deviceMemory<pfloat>& o_d,
+                                    pfloat& aDotb,
+                                    pfloat& aDotc,
+                                    pfloat& aDotd) {
 
   const dlong N = level.Nrows;
   dlong numBlocks = (N+blockSize-1)/blockSize;
   numBlocks = std::min(numBlocks, PARALMOND_NBLOCKS);
 
   //pinned scratch buffer
-  pinnedMemory<dfloat> h_scratch = platform.hostReserve<dfloat>(3);
-  deviceMemory<dfloat> o_scratch = platform.reserve<dfloat>(3*PARALMOND_NBLOCKS);
+  pinnedMemory<pfloat> h_scratch = platform.hostReserve<pfloat>(3);
+  deviceMemory<pfloat> o_scratch = platform.reserve<pfloat>(3*PARALMOND_NBLOCKS);
 
   kcycleCombinedOp2Kernel(numBlocks,N,o_a,o_b,o_c,o_d,o_scratch);
 
@@ -227,17 +227,17 @@ void multigrid_t::kcycleCombinedOp2(multigridLevel& level,
 }
 
 // y = beta*y + alpha*x, and return y\dot y
-dfloat multigrid_t::vectorAddInnerProd(multigridLevel& level,
-                                      const dfloat alpha, deviceMemory<dfloat>& o_x,
-                                      const dfloat beta,  deviceMemory<dfloat>& o_Y){
+pfloat multigrid_t::vectorAddInnerProd(multigridLevel& level,
+                                      const pfloat alpha, deviceMemory<pfloat>& o_x,
+                                      const pfloat beta,  deviceMemory<pfloat>& o_Y){
 
   const dlong N = level.Nrows;
   dlong numBlocks = (N+blockSize-1)/blockSize;
   numBlocks = std::min(numBlocks, PARALMOND_NBLOCKS);
 
   //pinned scratch buffer
-  pinnedMemory<dfloat> h_scratch = platform.hostReserve<dfloat>(1);
-  deviceMemory<dfloat> o_scratch = platform.reserve<dfloat>(PARALMOND_NBLOCKS);
+  pinnedMemory<pfloat> h_scratch = platform.hostReserve<pfloat>(1);
+  deviceMemory<pfloat> o_scratch = platform.reserve<pfloat>(PARALMOND_NBLOCKS);
 
   vectorAddInnerProdKernel(numBlocks,N,alpha,beta,o_x,o_Y,o_scratch);
 

@@ -163,3 +163,142 @@ void elliptic_t::Operator(deviceMemory<dfloat> &o_q, deviceMemory<dfloat> &o_Aq)
   }
 }
 
+#if pfloatSize!=dfloatSize
+void elliptic_t::Operator(deviceMemory<pfloat> &o_q, deviceMemory<pfloat> &o_Aq){
+
+  if(disc_c0){
+    //buffer for local Ax
+    deviceMemory<pfloat> o_AqL = platform.reserve<pfloat>(mesh.Np*mesh.Nelements);
+
+    // int mapType = (mesh.elementType==Mesh::HEXAHEDRA &&
+    //                mesh.settings.compareSetting("ELEMENT MAP", "TRILINEAR")) ? 1:0;
+
+    // int integrationType = (mesh.elementType==Mesh::HEXAHEDRA &&
+    //                        settings.compareSetting("ELLIPTIC INTEGRATION", "CUBATURE")) ? 1:0;
+
+    gHalo.ExchangeStart(o_q, 1);
+
+    if(mesh.NlocalGatherElements/2){
+      // if(integrationType==0) { // GLL or non-hex
+        // if(mapType==0)
+      pfloatPartialAxKernel(mesh.NlocalGatherElements/2,
+                          mesh.o_localGatherElementList,
+                          o_GlobalToLocal,
+                          mesh.o_wJ, mesh.o_ggeo,
+                          mesh.o_D, mesh.o_S,
+                          mesh.o_MM, lambda, o_q, o_AqL);
+        /* NC: disabling until we re-add treatment of affine elements
+        else
+          partialAxKernel(mesh.NlocalGatherElements, mesh.o_localGatherElementList,
+                          mesh.o_EXYZ, mesh.o_gllzw, mesh.o_D, mesh.o_S, mesh.o_MM, lambda, o_q, o_Aq);
+        */
+      // } else {
+      //   partialCubatureAxKernel(mesh.NlocalGatherElements,
+      //                           mesh.o_localGatherElementList,
+      //                           mesh.o_cubggeo,
+      //                           mesh.o_cubD,
+      //                           mesh.o_cubInterpT,
+      //                           lambda,
+      //                           o_q,
+      //                           o_Aq);
+      // }
+    }
+
+    // finalize halo exchange
+    gHalo.ExchangeFinish(o_q, 1);
+
+    if(mesh.NglobalGatherElements) {
+
+      // if(integrationType==0) { // GLL or non-hex
+        // if(mapType==0)
+      pfloatPartialAxKernel(mesh.NglobalGatherElements,
+			    mesh.o_globalGatherElementList,
+			    o_GlobalToLocal,
+			    mesh.o_wJ, mesh.o_ggeo,
+			    mesh.o_D, mesh.o_S,
+			    mesh.o_MM, lambda, o_q, o_AqL);
+      /* NC: disabling until we re-add treatment of affine elements
+        else
+          partialAxKernel(mesh.NglobalGatherElements, mesh.o_globalGatherElementList,
+                          mesh.o_EXYZ, mesh.o_gllzw, mesh.o_D, mesh.o_S, mesh.o_MM, lambda, o_q, o_Aq);
+        */
+      // } else {
+      //   partialCubatureAxKernel(mesh.NglobalGatherElements,
+      //                           mesh.o_globalGatherElementList,
+      //                           mesh.o_cubggeo,
+      //                           mesh.o_cubD,
+      //                           mesh.o_cubInterpT,
+      //                           lambda, o_q, o_Aq);
+      // }
+    }
+
+    //gather result to Aq
+    ogsMasked.GatherStart(o_Aq, o_AqL, 1, ogs::Add, ogs::Trans);
+
+    if((mesh.NlocalGatherElements+1)/2){
+      pfloatPartialAxKernel((mesh.NlocalGatherElements+1)/2,
+                      mesh.o_localGatherElementList+(mesh.NlocalGatherElements/2),
+                      o_GlobalToLocal,
+                      mesh.o_wJ, mesh.o_ggeo,
+                      mesh.o_D, mesh.o_S,
+                      mesh.o_MM, lambda, o_q, o_AqL);
+    }
+
+    ogsMasked.GatherFinish(o_Aq, o_AqL, 1, ogs::Add, ogs::Trans);
+
+  } else if(disc_ipdg) {
+    //buffer for gradient
+    dlong Ntotal = mesh.Np*(mesh.Nelements+mesh.totalHaloPairs);
+    deviceMemory<pfloat> o_grad = platform.reserve<pfloat>(Ntotal*4);
+
+    if(mesh.Nelements) {
+      dlong offset = 0;
+      pfloatPartialGradientKernel(mesh.Nelements,
+                            offset,
+                            mesh.o_vgeo,
+                            mesh.o_D,
+                            o_q,
+                            o_grad);
+    }
+
+    // pfloat4 storage -> 4 entries
+    traceHalo.ExchangeStart(o_grad, 4);
+
+    if(mesh.NinternalElements)
+      pfloatPartialIpdgKernel(mesh.NinternalElements,
+                        mesh.o_internalElementIds,
+                        mesh.o_vmapM,
+                        mesh.o_vmapP,
+                        lambda,
+                        tau,
+                        mesh.o_vgeo,
+                        mesh.o_sgeo,
+                        o_EToB,
+                        mesh.o_D,
+                        mesh.o_LIFT,
+                        mesh.o_MM,
+                        o_grad,
+                        o_Aq);
+
+    traceHalo.ExchangeFinish(o_grad, 4);
+
+    if(mesh.NhaloElements) {
+      pfloatPartialIpdgKernel(mesh.NhaloElements,
+                        mesh.o_haloElementIds,
+                        mesh.o_vmapM,
+                        mesh.o_vmapP,
+                        lambda,
+                        tau,
+                        mesh.o_vgeo,
+                        mesh.o_sgeo,
+                        o_EToB,
+                        mesh.o_D,
+                        mesh.o_LIFT,
+                        mesh.o_MM,
+                        o_grad,
+                        o_Aq);
+    }
+  }
+}
+
+#endif

@@ -42,8 +42,7 @@ extern "C" {
 
 namespace libp {
 
-  template <>
-  double linAlg_t<double>::matrixConditionNumber(const int N, const memory<double> A) {
+  double linAlg_t::matrixConditionNumber(const int N, const memory<double> A) {
 
   int n = N;
   int lwork = 4*N;
@@ -80,8 +79,7 @@ namespace libp {
   return 1.0/Acond;
 }
 
-  template <>
-  float linAlg_t<float>::matrixConditionNumber(const int N, const memory<float> A) {
+  float linAlg_t::matrixConditionNumber(const int N, const memory<float> A) {
 
   int n = N;
   int lwork = 4*N;

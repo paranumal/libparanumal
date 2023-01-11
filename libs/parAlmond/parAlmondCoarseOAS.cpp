@@ -32,13 +32,13 @@ namespace libp {
 
 namespace parAlmond {
 
-void oasSolver_t::solve(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x) {
+void oasSolver_t::solve(deviceMemory<pfloat>& o_rhs, deviceMemory<pfloat>& o_x) {
 
   A.halo.ExchangeStart(o_rhs, 1);
 
   //queue local part of gemv
-  const dfloat one=1.0;
-  const dfloat zero=0.0;
+  const pfloat one=1.0;
+  const pfloat zero=0.0;
   if (N)
     dGEMVKernel(N,diagTotal,one,o_diagInvAT,o_rhs, zero, o_x);
 
@@ -58,7 +58,7 @@ int oasSolver_t::getTargetSize() {
 }
 
 void oasSolver_t::setup(parCSR& _A, bool nullSpace,
-                        memory<dfloat> nullVector, dfloat nullSpacePenalty) {
+                        memory<pfloat> nullVector, pfloat nullSpacePenalty) {
 
   A = _A;
 
@@ -184,7 +184,7 @@ void oasSolver_t::setup(parCSR& _A, bool nullSpace,
   }
 
   //assemble the full matrix
-  memory<dfloat> coarseA(N*N);
+  memory<pfloat> coarseA(N*N);
   for (int n=0;n<A.Nrows;n++) {
     const int start = static_cast<int>(A.diag.rowStarts[n]);
     const int end   = static_cast<int>(A.diag.rowStarts[n+1]);
@@ -213,7 +213,7 @@ void oasSolver_t::setup(parCSR& _A, bool nullSpace,
 
   if (nullSpace) { //A is dense due to nullspace augmentation
     //copy fine nullvector and populate halo
-    memory<dfloat> null(A.Ncols);
+    memory<pfloat> null(A.Ncols);
     null.copyFrom(nullVector, A.Nrows);
     A.halo.Exchange(null, 1);
 
@@ -224,10 +224,10 @@ void oasSolver_t::setup(parCSR& _A, bool nullSpace,
     }
   }
 
-  linAlg_t<dfloat>::matrixInverse(N, coarseA);
+  linAlg_t::matrixInverse(N, coarseA);
 
   //determine the overlap weighting
-  memory<dfloat> weight(N, 1.0);
+  memory<pfloat> weight(N, 1.0);
 
   A.halo.Combine(weight, 1);
 
@@ -257,8 +257,8 @@ void oasSolver_t::setup(parCSR& _A, bool nullSpace,
     }
   }
 
-  o_diagInvAT = platform.malloc<dfloat>(diagInvAT);
-  o_offdInvAT = platform.malloc<dfloat>(offdInvAT);
+  o_diagInvAT = platform.malloc<pfloat>(diagInvAT);
+  o_offdInvAT = platform.malloc<pfloat>(offdInvAT);
 
   // if((rank==0)&&(settings.compareSetting("VERBOSE","TRUE"))) printf("done.\n");
 }
@@ -274,7 +274,7 @@ void oasSolver_t::Report(int lev) {
   hlong totalNrows=N;
   comm.Allreduce(maxNrows, Comm::Max);
   comm.Allreduce(totalNrows, Comm::Sum);
-  dfloat avgNrows = static_cast<dfloat>(totalNrows)/totalActive;
+  pfloat avgNrows = static_cast<pfloat>(totalNrows)/totalActive;
 
   if (N==0) minNrows=maxNrows; //set this so it's ignored for the global min
   comm.Allreduce(minNrows, Comm::Min);
@@ -289,8 +289,8 @@ void oasSolver_t::Report(int lev) {
   if (nnz==0) minNnz = maxNnz; //set this so it's ignored for the global min
   comm.Allreduce(minNnz, Comm::Min);
 
-  dfloat nnzPerRow = (Nrows==0) ? 0 : static_cast<dfloat>(nnz)/Nrows;
-  dfloat minNnzPerRow=nnzPerRow, maxNnzPerRow=nnzPerRow, avgNnzPerRow=nnzPerRow;
+  pfloat nnzPerRow = (Nrows==0) ? 0 : static_cast<pfloat>(nnz)/Nrows;
+  pfloat minNnzPerRow=nnzPerRow, maxNnzPerRow=nnzPerRow, avgNnzPerRow=nnzPerRow;
   comm.Allreduce(maxNnzPerRow, Comm::Max);
   comm.Allreduce(avgNnzPerRow, Comm::Sum);
   avgNnzPerRow /= totalActive;

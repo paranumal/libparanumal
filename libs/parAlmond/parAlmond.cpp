@@ -49,9 +49,12 @@ void parAlmond_t::Setup(platform_t& _platform, settings_t& _settings, comm_t com
   buildParAlmondKernels(platform);
 }
 
-void parAlmond_t::Operator(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x) {
+void parAlmond_t::Operator(deviceMemory<pfloat>& o_rhs, deviceMemory<pfloat>& o_x) {
 
   if (multigrid->exact){ //call the linear solver
+#if 1
+    std::cout << "parAlmond_t::Operator - trying to use multigrid->exact in mixed precision" << std::endl;
+#else
     // On first call build the linear solver
     if (!multigrid->linearSolver.isInitialized()) {
       if (settings.compareSetting("PARALMOND CYCLE", "NONSYM"))
@@ -68,9 +71,11 @@ void parAlmond_t::Operator(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_
 
     int maxIter = 500;
     int verbose = settings.compareSetting("VERBOSE", "TRUE") ? 1 : 0;
-    dfloat tol = 1e-8;
+    pfloat tol = 1e-8;
     operator_t &A = multigrid->GetLevel<operator_t>(0);
     (void) multigrid->linearSolver.Solve(A, *multigrid, o_x, o_rhs, tol, maxIter, verbose);
+#endif
+    
   } else { //apply a multigrid cycle
     multigrid->Operator(o_rhs, o_x);
   }

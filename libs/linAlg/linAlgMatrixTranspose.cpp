@@ -54,32 +54,28 @@ void matrixTranspose_t(const int M, const int N,
   }
 }
 
-  template<>
-  void linAlg_t<float>::matrixTranspose(const int M, const int N,
-                     const memory<float>  A, const int LDA,
-                           memory<float> AT, const int LDAT) {
-  matrixTranspose_t(M, N, A, LDA, AT, LDAT);
-}
+  void linAlg_t::matrixTranspose(const int M, const int N,
+				 const memory<float>  A, const int LDA,
+				 memory<float> AT, const int LDAT) {
+    matrixTranspose_t(M, N, A, LDA, AT, LDAT);
+  }
+  
+  void linAlg_t::matrixTranspose(const int M, const int N,
+				 const memory<double>  A, const int LDA,
+				 memory<double> AT, const int LDAT) {
+    matrixTranspose_t(M, N, A, LDA, AT, LDAT);
+  }
 
-  template<>
-  void linAlg_t<double>::matrixTranspose(const int M, const int N,
-                     const memory<double>  A, const int LDA,
-                           memory<double> AT, const int LDAT) {
-  matrixTranspose_t(M, N, A, LDA, AT, LDAT);
-}
-
-  template<>
-  void linAlg_t<int>::matrixTranspose(const int M, const int N,
-                     const memory<int>  A, const int LDA,
-                           memory<int> AT, const int LDAT) {
-  matrixTranspose_t(M, N, A, LDA, AT, LDAT);
-}
-
-  template<>
-  void linAlg_t<long long int>::matrixTranspose(const int M, const int N,
-                     const memory<long long int>  A, const int LDA,
-                           memory<long long int> AT, const int LDAT) {
-  matrixTranspose_t(M, N, A, LDA, AT, LDAT);
-}
+  void linAlg_t::matrixTranspose(const int M, const int N,
+				 const memory<int>  A, const int LDA,
+				 memory<int> AT, const int LDAT) {
+    matrixTranspose_t(M, N, A, LDA, AT, LDAT);
+  }
+  
+  void linAlg_t::matrixTranspose(const int M, const int N,
+				 const memory<long long int>  A, const int LDA,
+				 memory<long long int> AT, const int LDAT) {
+    matrixTranspose_t(M, N, A, LDA, AT, LDAT);
+  }
 
 } //namespace libp

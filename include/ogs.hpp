@@ -180,6 +180,8 @@ typedef enum { Float, Double, Int32, Int64} Type;
 
 constexpr Type Dfloat = (std::is_same<double, dfloat>::value)
                           ? Double : Float;
+constexpr Type Pfloat = (std::is_same<double, pfloat>::value)
+                          ? Double : Float;
 // constexpr Type Pfloat = (std::is_same<double, pfloat>::value)
 //                           ? Double : Float;
 constexpr Type Dlong  = (std::is_same<int32_t, dlong>::value)

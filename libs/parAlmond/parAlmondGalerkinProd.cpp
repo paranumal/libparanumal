@@ -85,7 +85,7 @@ parCSR galerkinProd(parCSR& A, parCSR& P){
     const dlong end   = A.diag.rowStarts[i+1];
     for (dlong j=start;j<end;j++) {
       const dlong  col = A.diag.cols[j];
-      const dfloat val = A.diag.vals[j];
+      const pfloat val = A.diag.vals[j];
 
       sendPTAP[cnt].row = Pcols[i];
       sendPTAP[cnt].col = Pcols[col];
@@ -99,7 +99,7 @@ parCSR galerkinProd(parCSR& A, parCSR& P){
     const dlong end   = A.offd.mRowStarts[i+1];
     for (dlong j=start;j<end;j++) {
       const dlong  col = A.offd.cols[j];
-      const dfloat val = A.offd.vals[j];
+      const pfloat val = A.offd.vals[j];
 
       sendPTAP[cnt].row = Pcols[row];
       sendPTAP[cnt].col = Pcols[col];

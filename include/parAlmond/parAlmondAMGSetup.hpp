@@ -49,18 +49,18 @@ public:
     platform(_platform), comm(_comm), Nrows(N), Ncols(M) {}
 };
 
-amgLevel coarsenAmgLevel(amgLevel& level, memory<dfloat>& null,
-                         StrengthType strtype, dfloat theta,
+amgLevel coarsenAmgLevel(amgLevel& level, memory<pfloat>& null,
+                         StrengthType strtype, pfloat theta,
                          AggType aggtype);
 
-strongGraph_t strongGraph(parCSR& A, StrengthType type, dfloat theta);
+strongGraph_t strongGraph(parCSR& A, StrengthType type, pfloat theta);
 
 void formAggregates(parCSR& A, strongGraph_t& C,
                     memory<hlong> FineToCoarse,
                     memory<hlong> globalAggStarts);
 
 parCSR tentativeProlongator(parCSR& A, memory<hlong> FineToCoarse,
-                            memory<hlong> globalAggStarts, memory<dfloat> null);
+                            memory<hlong> globalAggStarts, memory<pfloat> null);
 
 parCSR smoothProlongator(parCSR& A, parCSR& T);
 

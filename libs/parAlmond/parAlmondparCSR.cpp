@@ -38,15 +38,15 @@ namespace parAlmond {
 //
 //------------------------------------------------------------------------
 
-void parCSR::SpMV(const dfloat alpha, memory<dfloat>& x,
-                  const dfloat beta, memory<dfloat>& y) {
+void parCSR::SpMV(const pfloat alpha, memory<pfloat>& x,
+                  const pfloat beta, memory<pfloat>& y) {
 
   halo.ExchangeStart(x, 1);
 
   // z[i] = beta*y[i] + alpha* (sum_{ij} Aij*x[j])
   // #pragma omp parallel for
   for(dlong i=0; i<Nrows; i++){ //local
-    dfloat result = 0.0;
+    pfloat result = 0.0;
     for(dlong jj=diag.rowStarts[i]; jj<diag.rowStarts[i+1]; jj++)
       result += diag.vals[jj]*x[diag.cols[jj]];
 
@@ -61,7 +61,7 @@ void parCSR::SpMV(const dfloat alpha, memory<dfloat>& x,
   // #pragma omp parallel for
   for(dlong i=0; i<offd.nzRows; i++){ //local
     const dlong row = offd.rows[i];
-    dfloat result = 0.0;
+    pfloat result = 0.0;
     for(dlong jj=offd.mRowStarts[i]; jj<offd.mRowStarts[i+1]; jj++)
       result += offd.vals[jj]*x[offd.cols[jj]];
 
@@ -69,15 +69,15 @@ void parCSR::SpMV(const dfloat alpha, memory<dfloat>& x,
   }
 }
 
-void parCSR::SpMV(const dfloat alpha, memory<dfloat>& x,
-                  const dfloat beta, const memory<dfloat>& y, memory<dfloat>& z) {
+void parCSR::SpMV(const pfloat alpha, memory<pfloat>& x,
+                  const pfloat beta, const memory<pfloat>& y, memory<pfloat>& z) {
 
   halo.ExchangeStart(x, 1);
 
   // z[i] = beta*y[i] + alpha* (sum_{ij} Aij*x[j])
   // #pragma omp parallel for
   for(dlong i=0; i<Nrows; i++){ //local
-    dfloat result = 0.0;
+    pfloat result = 0.0;
     for(dlong jj=diag.rowStarts[i]; jj<diag.rowStarts[i+1]; jj++)
       result += diag.vals[jj]*x[diag.cols[jj]];
 
@@ -88,7 +88,7 @@ void parCSR::SpMV(const dfloat alpha, memory<dfloat>& x,
 
   for(dlong i=0; i<offd.nzRows; i++){ //local
     const dlong row = offd.rows[i];
-    dfloat result = 0.0;
+    pfloat result = 0.0;
     for(dlong jj=offd.mRowStarts[i]; jj<offd.mRowStarts[i+1]; jj++)
       result += offd.vals[jj]*x[offd.cols[jj]];
 
@@ -96,8 +96,8 @@ void parCSR::SpMV(const dfloat alpha, memory<dfloat>& x,
   }
 }
 
-void parCSR::SpMV(const dfloat alpha, deviceMemory<dfloat>& o_x, const dfloat beta,
-                  deviceMemory<dfloat>& o_y) {
+void parCSR::SpMV(const pfloat alpha, deviceMemory<pfloat>& o_x, const pfloat beta,
+                  deviceMemory<pfloat>& o_y) {
 
   halo.ExchangeStart(o_x, 1);
 
@@ -110,7 +110,7 @@ void parCSR::SpMV(const dfloat alpha, deviceMemory<dfloat>& o_x, const dfloat be
 
   halo.ExchangeFinish(o_x, 1);
 
-  const dfloat one = 1.0;
+  const pfloat one = 1.0;
   if (offd.NrowBlocks)
     SpMVmcsrKernel(offd.NrowBlocks, alpha, one,
                    offd.o_blockRowStarts, offd.o_mRowStarts,
@@ -118,8 +118,8 @@ void parCSR::SpMV(const dfloat alpha, deviceMemory<dfloat>& o_x, const dfloat be
                    o_x, o_y);
 }
 
-void parCSR::SpMV(const dfloat alpha, deviceMemory<dfloat>& o_x, const dfloat beta,
-                  deviceMemory<dfloat>& o_y, deviceMemory<dfloat>& o_z) {
+void parCSR::SpMV(const pfloat alpha, deviceMemory<pfloat>& o_x, const pfloat beta,
+                  deviceMemory<pfloat>& o_y, deviceMemory<pfloat>& o_z) {
 
   halo.ExchangeStart(o_x, 1);
 
@@ -132,7 +132,7 @@ void parCSR::SpMV(const dfloat alpha, deviceMemory<dfloat>& o_x, const dfloat be
 
   halo.ExchangeFinish(o_x, 1);
 
-  const dfloat one = 1.0;
+  const pfloat one = 1.0;
   if (offd.NrowBlocks)
     SpMVmcsrKernel(offd.NrowBlocks, alpha, one,
                    offd.o_blockRowStarts, offd.o_mRowStarts,
@@ -361,7 +361,7 @@ void parCSR::diagSetup() {
 //
 //------------------------------------------------------------------------
 
-dfloat parCSR::rhoDinvA(){
+pfloat parCSR::rhoDinvA(){
 
   int size = comm.size();
 
@@ -376,18 +376,18 @@ dfloat parCSR::rhoDinvA(){
   memory<double> H(k*k, 0.0);
 
   // allocate memory for basis
-  memory<memory<dfloat>> V(k+1);
-  memory<dfloat> Vx(Ncols);
+  memory<memory<pfloat>> V(k+1);
+  memory<pfloat> Vx(Ncols);
 
   for(int i=0; i<=k; i++) {
     V[i].malloc(Nrows);
   }
 
   // generate a random vector for initial basis vector
-  for(dlong n=0; n<Nrows; n++) Vx[n] = (dfloat) drand48();
+  for(dlong n=0; n<Nrows; n++) Vx[n] = (pfloat) drand48();
 
-  // dfloat norm_vo = vectorNorm(Nrows,Vx, comm);
-  dfloat norm_vo=0.0;
+  // pfloat norm_vo = vectorNorm(Nrows,Vx, comm);
+  pfloat norm_vo=0.0;
   for(dlong n=0; n<Nrows; n++) norm_vo += Vx[n]*Vx[n];
   comm.Allreduce(norm_vo);
   norm_vo = sqrt(norm_vo);
@@ -410,8 +410,8 @@ dfloat parCSR::rhoDinvA(){
     // modified Gram-Schmidth
     for(int i=0; i<=j; i++){
       // H(i,j) = v[i]'*A*v[j]
-      // dfloat hij = vectorInnerProd(Nrows, V[i], V[j+1],comm);
-      dfloat hij=0.0;
+      // pfloat hij = vectorInnerProd(Nrows, V[i], V[j+1],comm);
+      pfloat hij=0.0;
       for(dlong n=0; n<Nrows; n++) hij += V[i][n]*V[j+1][n];
       comm.Allreduce(hij);
 
@@ -424,8 +424,8 @@ dfloat parCSR::rhoDinvA(){
 
     if(j+1 < k){
 
-      // dfloat norm_vj = vectorNorm(Nrows,V[j+1],comm);
-      dfloat norm_vj=0.0;
+      // pfloat norm_vj = vectorNorm(Nrows,V[j+1],comm);
+      pfloat norm_vj=0.0;
       for(dlong n=0; n<Nrows; n++) norm_vj += V[j+1][n]*V[j+1][n];
       comm.Allreduce(norm_vj);
       norm_vj = sqrt(norm_vj);
@@ -440,7 +440,7 @@ dfloat parCSR::rhoDinvA(){
   memory<double> WR(k);
   memory<double> WI(k);
 
-  linAlg_t<double>::matrixEigenValues(k, H, WR, WI);
+  linAlg_t::matrixEigenValues(k, H, WR, WI);
 
   double RHO = 0.;
 
@@ -550,8 +550,8 @@ void parCSR::syncToDevice() {
     }
 
     if (diagA.size()) {
-      o_diagA = platform.malloc<dfloat>(diagA);
-      o_diagInv = platform.malloc<dfloat>(diagInv);
+      o_diagA = platform.malloc<pfloat>(diagA);
+      o_diagInv = platform.malloc<pfloat>(diagInv);
     }
   }
 }

@@ -63,6 +63,11 @@ void buildParAlmondKernels(platform_t& platform){
     kernelInfo["defines/" "p_BLOCKSIZE"]= blockSize;
     kernelInfo["defines/" "p_NonzerosPerBlock"]= NonzerosPerBlock;
 
+    if(sizeof(pfloat)==4)
+      kernelInfo["defines/" "dfloat"]= "float";
+    else
+      kernelInfo["defines/" "dfloat"]= "double";
+    
     if (rank==0) {printf("Compiling parALMOND Kernels...");fflush(stdout);}
 
     SpMVcsrKernel1  = platform.buildKernel(PARALMOND_DIR"/okl/SpMVcsr.okl",  "SpMVcsr1",  kernelInfo);

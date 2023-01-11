@@ -34,8 +34,8 @@ namespace parAlmond {
 
 void parAlmond_t::AMGSetup(parCOO& cooA,
                          bool nullSpace,
-                         memory<dfloat> nullVector,
-                         dfloat nullSpacePenalty){
+                         memory<pfloat> nullVector,
+                         pfloat nullSpacePenalty){
 
   int rank = cooA.comm.rank();
   int size = cooA.comm.size();
@@ -53,7 +53,7 @@ void parAlmond_t::AMGSetup(parCOO& cooA,
   A.diagSetup();
 
   //copy fine nullvector
-  memory<dfloat> null(A.Nrows);
+  memory<pfloat> null(A.Nrows);
   null.copyFrom(nullVector, A.Nrows);
 
   // find target N at coarsest level
@@ -82,7 +82,7 @@ void parAlmond_t::AMGSetup(parCOO& cooA,
 
   //TODO: make the coarsen threasholds user-provided inputs
   // For now, let default to some sensible thresholds
-  dfloat theta=0.0;
+  pfloat theta=0.0;
   if (mg.strtype==RUGESTUBEN) {
     theta=0.5; //default for 3D problems
     //See: A GPU accelerated aggregation algebraic multigrid method, R. Gandham, K. Esler, Y. Zhang.

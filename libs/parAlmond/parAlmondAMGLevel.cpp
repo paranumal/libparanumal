@@ -45,24 +45,24 @@ amgLevel::amgLevel(parCSR& _A, settings_t& _settings):
   }
 }
 
-void amgLevel::Operator(deviceMemory<dfloat>& o_X, deviceMemory<dfloat>& o_Ax){
+void amgLevel::Operator(deviceMemory<pfloat>& o_X, deviceMemory<pfloat>& o_Ax){
   A.SpMV(1.0, o_X, 0.0, o_Ax);
 }
 
-void amgLevel::coarsen   (deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_Rr){
+void amgLevel::coarsen   (deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_Rr){
   R.SpMV(1.0, o_r, 0.0, o_Rr);
 }
 
-void amgLevel::prolongate(deviceMemory<dfloat>& o_X, deviceMemory<dfloat>& o_Px){
+void amgLevel::prolongate(deviceMemory<pfloat>& o_X, deviceMemory<pfloat>& o_Px){
   P.SpMV(1.0, o_X, 1.0, o_Px);
 }
 
-void amgLevel::residual  (deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_X,
-                          deviceMemory<dfloat>& o_RES) {
+void amgLevel::residual  (deviceMemory<pfloat>& o_RHS, deviceMemory<pfloat>& o_X,
+                          deviceMemory<pfloat>& o_RES) {
   A.SpMV(-1.0, o_X, 1.0, o_RHS, o_RES);
 }
 
-void amgLevel::smooth(deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_X, bool x_is_zero){
+void amgLevel::smooth(deviceMemory<pfloat>& o_RHS, deviceMemory<pfloat>& o_X, bool x_is_zero){
   if(stype == DAMPED_JACOBI){
     A.smoothDampedJacobi(o_RHS, o_X, lambda, x_is_zero);
   } else if(stype == CHEBYSHEV){
@@ -83,9 +83,9 @@ void amgLevel::setupSmoother(){
 
 size_t amgLevel::SmootherScratchSize(){
   if (stype == DAMPED_JACOBI) {
-    return Ncols + platform.memPoolAlignment<dfloat>();
+    return Ncols + platform.memPoolAlignment<pfloat>();
   } else { // (stype == CHEBYSHEV)
-    return 2*(Ncols + platform.memPoolAlignment<dfloat>());
+    return 2*(Ncols + platform.memPoolAlignment<pfloat>());
   }
 }
 
@@ -106,7 +106,7 @@ void amgLevel::Report() {
   hlong totalNrows=Nrows;
   A.comm.Allreduce(maxNrows, Comm::Max);
   A.comm.Allreduce(totalNrows, Comm::Sum);
-  dfloat avgNrows = (dfloat) totalNrows/totalActive;
+  pfloat avgNrows = (pfloat) totalNrows/totalActive;
 
   if (Nrows==0) minNrows=maxNrows; //set this so it's ignored for the global min
   A.comm.Allreduce(minNrows, Comm::Min);
@@ -119,8 +119,8 @@ void amgLevel::Report() {
   if (nnz==0) minNnz = maxNnz; //set this so it's ignored for the global min
   A.comm.Allreduce(minNnz, Comm::Min);
 
-  dfloat nnzPerRow = (Nrows==0) ? 0 : (dfloat) nnz/Nrows;
-  dfloat minNnzPerRow=nnzPerRow, maxNnzPerRow=nnzPerRow, avgNnzPerRow=nnzPerRow;
+  pfloat nnzPerRow = (Nrows==0) ? 0 : (pfloat) nnz/Nrows;
+  pfloat minNnzPerRow=nnzPerRow, maxNnzPerRow=nnzPerRow, avgNnzPerRow=nnzPerRow;
   A.comm.Allreduce(maxNnzPerRow, Comm::Max);
   A.comm.Allreduce(avgNnzPerRow, Comm::Sum);
   avgNnzPerRow /= totalActive;

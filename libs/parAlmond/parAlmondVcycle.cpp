@@ -31,7 +31,7 @@ namespace libp {
 
 namespace parAlmond {
 
-void multigrid_t::vcycle(const int k, deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x){
+void multigrid_t::vcycle(const int k, deviceMemory<pfloat>& o_rhs, deviceMemory<pfloat>& o_x){
 
   //check for base level
   if(k==baseLevel) {
@@ -45,9 +45,9 @@ void multigrid_t::vcycle(const int k, deviceMemory<dfloat>& o_rhs, deviceMemory<
   //apply smoother to x and then compute res = rhs-Ax
   level.smooth(o_rhs, o_x, true);
 
-  deviceMemory<dfloat> o_rhsC = platform.reserve<dfloat>(levelC.Ncols);
-  deviceMemory<dfloat> o_xC   = platform.reserve<dfloat>(levelC.Ncols);
-  deviceMemory<dfloat> o_res  = platform.reserve<dfloat>(level.Ncols);
+  deviceMemory<pfloat> o_rhsC = platform.reserve<pfloat>(levelC.Ncols);
+  deviceMemory<pfloat> o_xC   = platform.reserve<pfloat>(levelC.Ncols);
+  deviceMemory<pfloat> o_res  = platform.reserve<pfloat>(level.Ncols);
 
   level.residual(o_rhs, o_x, o_res);
 

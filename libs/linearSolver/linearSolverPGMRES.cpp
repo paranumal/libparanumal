@@ -56,7 +56,7 @@ int pgmres::Solve(operator_t& linearOperator, operator_t& precon,
                const dfloat tol, const int MAXIT, const int verbose) {
 
   int rank = comm.rank();
-  linAlg_t<dfloat> &linAlg = platform.linAlg();
+  linAlg_t &linAlg = platform.linAlg();
 
   /*Pre-reserve memory pool space to avoid some unnecessary re-sizing*/
   dlong Ntotal = N + Nhalo;
@@ -77,7 +77,7 @@ int pgmres::Solve(operator_t& linearOperator, operator_t& precon,
   linearOperator.Operator(o_x, o_Ax);
 
   // subtract z = b - A*x
-  linAlg.zaxpy(N, -1.f, o_Ax, 1.f, o_b, o_z);
+  linAlg.zaxpy(N, (dfloat)-1.f, o_Ax, (dfloat)1.f, o_b, o_z);
 
   // r = Precon^{-1} (r-A*x)
   precon.Operator(o_z, o_r);
@@ -101,7 +101,7 @@ int pgmres::Solve(operator_t& linearOperator, operator_t& precon,
     s[0] = nr;
 
     // V(:,0) = r/nr
-    linAlg.axpy(N, (1./nr), o_r, 0., o_V[0]);
+    linAlg.axpy(N, (dfloat)(1./nr), o_r, 0., o_V[0]);
 
     //Construct orthonormal basis via Gram-Schmidt
     for(int i=0;i<restart;++i){
@@ -115,7 +115,7 @@ int pgmres::Solve(operator_t& linearOperator, operator_t& precon,
         dfloat hki = linAlg.innerProd(N, o_r, o_V[k], comm);
 
         // r = r - hki*V[k]
-        linAlg.axpy(N, -hki, o_V[k], 1.0, o_r);
+        linAlg.axpy(N, -hki, o_V[k], (dfloat)1.0, o_r);
 
         // H(k,i) = hki
         H[k + i*(restart+1)] = hki;
@@ -126,7 +126,7 @@ int pgmres::Solve(operator_t& linearOperator, operator_t& precon,
 
       // V(:,i+1) = r/nw
       if (i<restart-1)
-        linAlg.axpy(N, (1./nw), o_r, 0., o_V[i+1]);
+        linAlg.axpy(N, (dfloat)(1./nw), o_r, 0., o_V[i+1]);
 
       //apply Givens rotation
       for(int k=0; k<i; ++k){
@@ -175,7 +175,7 @@ int pgmres::Solve(operator_t& linearOperator, operator_t& precon,
     linearOperator.Operator(o_x, o_Ax);
 
     // subtract z = b - A*x
-    linAlg.zaxpy(N, -1.f, o_Ax, 1.f, o_b, o_z);
+    linAlg.zaxpy(N, (dfloat)-1.f, o_Ax, (dfloat)1.f, o_b, o_z);
 
     // r = Precon^{-1} (r-A*x)
     precon.Operator(o_z, o_r);

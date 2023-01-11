@@ -56,7 +56,7 @@ int pcg::Solve(operator_t& linearOperator, operator_t& precon,
                const dfloat tol, const int MAXIT, const int verbose) {
 
   int rank = comm.rank();
-  linAlg_t<dfloat> &linAlg = platform.linAlg();
+  linAlg_t &linAlg = platform.linAlg();
 
   // register scalars
   dfloat rdotz1 = 0.0;
@@ -85,7 +85,7 @@ int pcg::Solve(operator_t& linearOperator, operator_t& precon,
   linearOperator.Operator(o_x, o_Ap);
 
   // subtract r = r - A*x
-  linAlg.axpy(N, -1.f, o_Ap, 1.f, o_r);
+  linAlg.axpy(N, (dfloat)-1.f, o_Ap, (dfloat)1.f, o_r);
 
   rdotr0 = linAlg.norm2(N, o_r, comm);
   rdotr0 = rdotr0*rdotr0;
@@ -125,7 +125,7 @@ int pcg::Solve(operator_t& linearOperator, operator_t& precon,
     }
 
     // p = z + beta*p
-    linAlg.axpy(N, 1.f, o_z, beta, o_p);
+    linAlg.axpy(N, (dfloat)1.f, o_z, beta, o_p);
 
     // A*p
     linearOperator.Operator(o_p, o_Ap);

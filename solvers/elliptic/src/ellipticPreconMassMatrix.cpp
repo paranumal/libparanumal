@@ -37,7 +37,7 @@ MassMatrixPrecon::MassMatrixPrecon(elliptic_t& _elliptic):
   LIBP_ABORT("MASSMATRIX preconditioner is unavailble when lambda=0.",
              elliptic.lambda==0);
 
-  o_invMM = elliptic.platform.malloc<dfloat>(mesh.invMM);
+  o_invMM = elliptic.platform.malloc<pfloat>(mesh.invMM);
 
   // OCCA build stuff
   properties_t kernelInfo = mesh.props; //copy base occa properties
@@ -57,15 +57,15 @@ MassMatrixPrecon::MassMatrixPrecon(elliptic_t& _elliptic):
   }
 }
 
-void MassMatrixPrecon::Operator(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_Mr) {
-  dfloat invLambda = 1./elliptic.lambda;
+void MassMatrixPrecon::Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_Mr) {
+  pfloat invLambda = 1./elliptic.lambda;
 
-  linAlg_t<dfloat>& linAlg = elliptic.platform.linAlg();
+  linAlg_t& linAlg = elliptic.platform.linAlg();
 
   if (elliptic.disc_c0) {//C0
     dlong Ntotal = elliptic.ogsMasked.Ngather + elliptic.gHalo.Nhalo;
-    deviceMemory<dfloat> o_rtmp = elliptic.platform.reserve<dfloat>(Ntotal);
-    deviceMemory<dfloat> o_MrL  = elliptic.platform.reserve<dfloat>(mesh.Np*mesh.Nelements);
+    deviceMemory<pfloat> o_rtmp = elliptic.platform.reserve<pfloat>(Ntotal);
+    deviceMemory<pfloat> o_MrL  = elliptic.platform.reserve<pfloat>(mesh.Np*mesh.Nelements);
 
     // rtmp = invDegree.*r
     linAlg.amxpy(elliptic.Ndofs, 1.0, elliptic.o_weightG, o_r, 0.0, o_rtmp);

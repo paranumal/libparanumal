@@ -77,11 +77,11 @@ public:
   };
   MCSR offd;
 
-  memory<dfloat> diagA;
-  memory<dfloat> diagInv;
+  memory<pfloat> diagA;
+  memory<pfloat> diagInv;
 
-  deviceMemory<dfloat> o_diagA;
-  deviceMemory<dfloat> o_diagInv;
+  deviceMemory<pfloat> o_diagA;
+  deviceMemory<pfloat> o_diagInv;
 
   //partition info
   memory<hlong> globalRowStarts;
@@ -92,7 +92,7 @@ public:
   dlong NlocalCols = 0;
 
   //rho ~= cond(invD * A)
-  dfloat rho=0.0;
+  pfloat rho=0.0;
 
   parCSR() = default;
   parCSR(dlong N, dlong M, platform_t& _platform, comm_t _comm):
@@ -105,25 +105,25 @@ public:
 
   void diagSetup();
 
-  dfloat rhoDinvA();
+  pfloat rhoDinvA();
 
   void syncToDevice();
 
-  void SpMV(const dfloat alpha, memory<dfloat>& x,
-            const dfloat beta, memory<dfloat>& y);
-  void SpMV(const dfloat alpha, memory<dfloat>& x,
-            const dfloat beta, const memory<dfloat>& y, memory<dfloat>& z);
+  void SpMV(const pfloat alpha, memory<pfloat>& x,
+            const pfloat beta, memory<pfloat>& y);
+  void SpMV(const pfloat alpha, memory<pfloat>& x,
+            const pfloat beta, const memory<pfloat>& y, memory<pfloat>& z);
 
-  void SpMV(const dfloat alpha, deviceMemory<dfloat>& o_x, const dfloat beta,
-            deviceMemory<dfloat>& o_y);
-  void SpMV(const dfloat alpha, deviceMemory<dfloat>& o_x, const dfloat beta,
-            deviceMemory<dfloat>& o_y, deviceMemory<dfloat>& o_z);
+  void SpMV(const pfloat alpha, deviceMemory<pfloat>& o_x, const pfloat beta,
+            deviceMemory<pfloat>& o_y);
+  void SpMV(const pfloat alpha, deviceMemory<pfloat>& o_x, const pfloat beta,
+            deviceMemory<pfloat>& o_y, deviceMemory<pfloat>& o_z);
 
-  void smoothDampedJacobi(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_x,
-                          const dfloat lambda, bool x_is_zero);
+  void smoothDampedJacobi(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_x,
+                          const pfloat lambda, bool x_is_zero);
 
-  void smoothChebyshev(deviceMemory<dfloat>& o_b, deviceMemory<dfloat>& o_x,
-                       const dfloat lambda0, const dfloat lambda1,
+  void smoothChebyshev(deviceMemory<pfloat>& o_b, deviceMemory<pfloat>& o_x,
+                       const pfloat lambda0, const pfloat lambda1,
                        bool x_is_zero, const int ChebyshevIterations);
 };
 

@@ -32,8 +32,8 @@ namespace libp {
 namespace parAlmond {
 
 //create coarsened problem
-amgLevel coarsenAmgLevel(amgLevel& level, memory<dfloat>& null,
-                         StrengthType strtype, dfloat theta,
+amgLevel coarsenAmgLevel(amgLevel& level, memory<pfloat>& null,
+                         StrengthType strtype, pfloat theta,
                          AggType aggtype){
 
   parCSR& A = level.A;
