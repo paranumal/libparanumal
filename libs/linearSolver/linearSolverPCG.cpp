@@ -74,25 +74,12 @@ int pcg::Solve(operator_t& linearOperator, operator_t& precon,
   platform.reserve<pfloat>(2*Ntotal +
                            + 4 * platform.memPoolAlignment<dfloat>());
   /*aux variables */
-#if 1
   deviceMemory<dfloat> o_p  = platform.reserve<dfloat>(Ntotal);
   deviceMemory<dfloat> o_z  = platform.reserve<dfloat>(Ntotal);  
   deviceMemory<dfloat> o_Ap = platform.reserve<dfloat>(Ntotal);
 
   deviceMemory<pfloat> o_pfloat_r  = platform.reserve<pfloat>(Ntotal);
   deviceMemory<pfloat> o_pfloat_z  = platform.reserve<pfloat>(Ntotal);
-
-#else
-  deviceMemory<dfloat> o_p  = platform.malloc<dfloat>(Ntotal);
-  deviceMemory<dfloat> o_z  = platform.malloc<dfloat>(Ntotal);
-  deviceMemory<dfloat> o_Ap = platform.malloc<dfloat>(Ntotal);
-
-  deviceMemory<pfloat> o_pfloat_r  = platform.malloc<pfloat>(Ntotal);
-  deviceMemory<pfloat> o_pfloat_z  = platform.malloc<pfloat>(Ntotal);
-
-#endif
-  
-
   
   // Comput norm of RHS (for stopping tolerance).
   if (settings.compareSetting("LINEAR SOLVER STOPPING CRITERION", "ABS/REL-RHS-2NORM")) {
@@ -126,17 +113,14 @@ int pcg::Solve(operator_t& linearOperator, operator_t& precon,
     }
 
     // z = Precon^{-1} r
-#if 0
     if(sizeof(pfloat)==sizeof(dfloat)){
       precon.Operator(o_r, o_z);
     }
-    else
-#endif
-      {
-	linAlg.d2p(N, o_r, o_pfloat_r);
-	precon.Operator(o_pfloat_r, o_pfloat_z);
-	linAlg.p2d(N, o_pfloat_z, o_z);
-      }
+    else{
+      linAlg.d2p(N, o_r, o_pfloat_r);
+      precon.Operator(o_pfloat_r, o_pfloat_z);
+      linAlg.p2d(N, o_pfloat_z, o_z);
+    }
 
     // r.z
     rdotz2 = rdotz1;

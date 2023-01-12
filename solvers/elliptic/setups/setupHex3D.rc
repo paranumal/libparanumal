@@ -17,13 +17,13 @@ BOX
 ISOPARAMETRIC
 
 [BOX NX]
-15
+30
 
 [BOX NY]
-15
+30
 
 [BOX NZ]
-15
+30
 
 [BOX DIMX]
 1
@@ -104,7 +104,7 @@ CHEBYSHEV
 ###########################################
 
 [OUTPUT TO FILE]
-TRUE
+FALSE
 
 [OUTPUT FILE NAME]
 elliptic

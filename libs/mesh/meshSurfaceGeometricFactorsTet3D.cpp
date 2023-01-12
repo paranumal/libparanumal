@@ -169,6 +169,15 @@ void mesh_t::SurfaceGeometricFactorsTet3D(){
   }
 
   o_sgeo = platform.malloc<dfloat>(sgeo);
+
+  {
+    memory<pfloat> pfloat_sgeo(Nelements*Nsgeo*Nfaces);
+    
+    for(int n=0;n<Nsgeo*Nelements*Nfaces;++n)
+      pfloat_sgeo[n] = sgeo[n];
+    
+    o_pfloat_sgeo = platform.malloc<pfloat>(pfloat_sgeo);
+  }
 }
 
 } //namespace libp

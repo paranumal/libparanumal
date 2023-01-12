@@ -46,6 +46,17 @@ void mesh_t::ReferenceNodesTet3D(){
   invMassMatrixTet3D(Np, V, invMM);
   o_MM = platform.malloc<dfloat>(MM); //MM is symmetric
 
+  {
+    memory<pfloat> pfloat_MM(Np*Np);
+    pfloat_invMM.malloc(Np*Np);
+    for(int n=0;n<Np*Np;++n){
+      pfloat_MM[n] = MM[n];
+      pfloat_invMM[n] = invMM[n];
+    }
+    o_pfloat_MM = platform.malloc<pfloat>(pfloat_MM);
+  }
+
+  
   //packed D matrices
   DmatrixTet3D(N, r, s, t, D);
   Dr = D + 0*Np*Np;
@@ -61,6 +72,14 @@ void mesh_t::ReferenceNodesTet3D(){
   linAlg_t::matrixTranspose(Np, Np, Dt, Np, DtT, Np);
   o_D = platform.malloc<dfloat>(DT);
 
+  {
+    memory<pfloat> pfloat_DT(Np*Np*dim);
+    for(int n=0;n<Np*Np*dim;++n)
+      pfloat_DT[n] = DT[n];
+    o_pfloat_D = platform.malloc<pfloat>(pfloat_DT);  
+  }
+
+  
   LIFTmatrixTet3D(N, faceNodes, r, s, t, LIFT);
   SurfaceMassMatrixTet3D(N, MM, LIFT, sM);
 
@@ -98,6 +117,14 @@ void mesh_t::ReferenceNodesTet3D(){
 
   o_S = platform.malloc<dfloat>(ST);
 
+  {
+    memory<pfloat> pfloat_ST(Np*Np*( (dim)*(dim+1)/2 ));
+    for(int n=0;n<(Np*Np*dim*(dim+1))/2;++n)
+      pfloat_ST[n] = ST[n];
+    o_pfloat_S = platform.malloc<pfloat>(pfloat_ST);
+  }
+
+  
   /* Plotting data */
   plotN = N + 3; //enriched interpolation space for plotting
   plotNp = (plotN+1)*(plotN+2)*(plotN+3)/6;
