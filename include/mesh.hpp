@@ -347,8 +347,9 @@ class mesh_t {
   memory<int> FEMEToV;
   memory<dfloat> rFEM, sFEM, tFEM;
   memory<dfloat> SEMFEMInterp;
-  deviceMemory<dfloat> o_SEMFEMInterp;
-  deviceMemory<dfloat> o_SEMFEMAnterp;
+  memory<dfloat> SEMFEMAnterp;
+  deviceMemory<pfloat> o_pfloat_SEMFEMInterp;
+  deviceMemory<pfloat> o_pfloat_SEMFEMAnterp;
 
   kernel_t MassMatrixKernel;
 

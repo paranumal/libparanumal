@@ -45,7 +45,7 @@ void SEMFEMPrecon::Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_M
     elliptic.gHalo.Exchange(o_Mr, 1);
     SEMFEMInterpKernel(mesh.Nelements,
                        elliptic.o_GlobalToLocal,
-                       mesh.o_SEMFEMAnterp,
+                       mesh.o_pfloat_SEMFEMAnterp,
                        o_Mr, o_rFEM);
     FEMogs.Gather(o_GrFEM, o_rFEM, 1, ogs::Add, ogs::Trans);
     o_rFEM.free();
@@ -56,7 +56,7 @@ void SEMFEMPrecon::Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_M
     FEMgHalo.Exchange(o_GzFEM, 1);
     SEMFEMAnterpKernel(mesh.Nelements,
                        o_FEMGlobalToLocal,
-                       mesh.o_SEMFEMAnterp,
+                       mesh.o_pfloat_SEMFEMAnterp,
                        o_GzFEM, o_MrL);
     elliptic.ogsMasked.Gather(o_Mr, o_MrL, 1, ogs::Add, ogs::Trans);
     o_MrL.free();
@@ -231,15 +231,17 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
 
   if (mesh.elementType==Mesh::TRIANGLES) {
     // build interp and anterp
-    memory<pfloat> SEMFEMAnterp(mesh.NpFEM*mesh.Np);
+    memory<pfloat> pfloat_SEMFEMAnterp(mesh.NpFEM*mesh.Np);
+    memory<pfloat> pfloat_SEMFEMInterp(mesh.NpFEM*mesh.Np);
     for(int n=0;n<mesh.NpFEM;++n){
       for(int m=0;m<mesh.Np;++m){
-        SEMFEMAnterp[n+m*mesh.NpFEM] = mesh.SEMFEMInterp[n*mesh.Np+m];
+        pfloat_SEMFEMAnterp[n+m*mesh.NpFEM] = mesh.SEMFEMInterp[n*mesh.Np+m];
+	pfloat_SEMFEMInterp[n+m*mesh.NpFEM] = mesh.SEMFEMInterp[n+m*mesh.NpFEM];
       }
     }
 
-    mesh.o_SEMFEMInterp = elliptic.platform.malloc<pfloat>(mesh.SEMFEMInterp);
-    mesh.o_SEMFEMAnterp = elliptic.platform.malloc<pfloat>(SEMFEMAnterp);
+    mesh.o_pfloat_SEMFEMInterp = elliptic.platform.malloc<pfloat>(pfloat_SEMFEMInterp);
+    mesh.o_pfloat_SEMFEMAnterp = elliptic.platform.malloc<pfloat>(pfloat_SEMFEMAnterp);
 
     //build kernels
     properties_t kernelInfo = mesh.props;
@@ -249,6 +251,8 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
 
     int NblockV = std::max(256/mesh.NpFEM, 1);
     kernelInfo["defines/" "p_NblockV"]= NblockV;
+
+    kernelInfo["defines/" "dfloat"]= pfloatString;
 
     SEMFEMInterpKernel = elliptic.platform.buildKernel(DELLIPTIC "/okl/ellipticSEMFEMInterp.okl",
                                      "ellipticSEMFEMInterp", kernelInfo);
