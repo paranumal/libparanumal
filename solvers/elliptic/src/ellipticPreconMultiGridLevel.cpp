@@ -36,6 +36,7 @@ void MGLevel::residual(deviceMemory<pfloat>& o_rhs, deviceMemory<pfloat>& o_x, d
 
   // subtract res = rhs - A*x
   platform.linAlg().axpy(elliptic.Ndofs, (pfloat)1.f, o_rhs, (pfloat)-1.f, o_res);
+
 }
 
 void MGLevel::coarsen(deviceMemory<pfloat>& o_x, deviceMemory<pfloat>& o_Rx) {
@@ -232,7 +233,6 @@ MGLevel::MGLevel(elliptic_t& _elliptic,
 
   memory<dfloat> P;
 
-  
   if (   mesh.elementType==Mesh::QUADRILATERALS
       || mesh.elementType==Mesh::HEXAHEDRA) {
     mesh.DegreeRaiseMatrix1D(Nc, mesh.N, P);
@@ -260,11 +260,14 @@ MGLevel::MGLevel(elliptic_t& _elliptic,
 
   std::string fileName, kernelName;
 
+  kernelInfo["defines/" "dfloat"]= pfloatString; // TW
+  
   kernelInfo["defines/" "p_NqFine"]= mesh.N+1;
   kernelInfo["defines/" "p_NqCoarse"]= Nc+1;
 
   kernelInfo["defines/" "p_NpFine"]= mesh.Np;
   kernelInfo["defines/" "p_NpCoarse"]= NpCoarse;
+
 
   int blockMax = 256;
   if (elliptic.platform.device.mode() == "CUDA") blockMax = 512;

@@ -67,23 +67,31 @@ int pcg::Solve(operator_t& linearOperator, operator_t& precon,
 
   /*Pre-reserve memory pool space to avoid some unnecessary re-sizing*/
   dlong Ntotal = N + Nhalo;
-#if 1
   // TW 3=>5
-  platform.reserve<dfloat>(5*Ntotal + PCG_BLOCKSIZE
+  platform.reserve<dfloat>(3*Ntotal + PCG_BLOCKSIZE
+                           + 4 * platform.memPoolAlignment<dfloat>());
+
+  platform.reserve<pfloat>(2*Ntotal +
                            + 4 * platform.memPoolAlignment<dfloat>());
   /*aux variables */
-
+#if 1
   deviceMemory<dfloat> o_p  = platform.reserve<dfloat>(Ntotal);
-  deviceMemory<dfloat> o_z  = platform.reserve<dfloat>(Ntotal);
+  deviceMemory<dfloat> o_z  = platform.reserve<dfloat>(Ntotal);  
   deviceMemory<dfloat> o_Ap = platform.reserve<dfloat>(Ntotal);
+
+  deviceMemory<pfloat> o_pfloat_r  = platform.reserve<pfloat>(Ntotal);
+  deviceMemory<pfloat> o_pfloat_z  = platform.reserve<pfloat>(Ntotal);
+
 #else
   deviceMemory<dfloat> o_p  = platform.malloc<dfloat>(Ntotal);
   deviceMemory<dfloat> o_z  = platform.malloc<dfloat>(Ntotal);
   deviceMemory<dfloat> o_Ap = platform.malloc<dfloat>(Ntotal);
-#endif
-  
+
   deviceMemory<pfloat> o_pfloat_r  = platform.malloc<pfloat>(Ntotal);
   deviceMemory<pfloat> o_pfloat_z  = platform.malloc<pfloat>(Ntotal);
+
+#endif
+  
 
   
   // Comput norm of RHS (for stopping tolerance).
@@ -187,7 +195,6 @@ dfloat pcg::UpdatePCG(const dfloat alpha,
   //pinned tmp buffer for reductions
   pinnedMemory<dfloat> h_rdotr = platform.hostReserve<dfloat>(1);
   deviceMemory<dfloat> o_rdotr = platform.reserve<dfloat>(PCG_BLOCKSIZE);
-  //  deviceMemory<dfloat> o_rdotr = platform.malloc<dfloat>(PCG_BLOCKSIZE);
 
   updatePCGKernel(N, Nblocks, o_Ap, alpha, o_r, o_rdotr);
 
