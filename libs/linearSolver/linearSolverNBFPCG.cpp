@@ -76,6 +76,13 @@ int nbfpcg::Solve(operator_t& linearOperator, operator_t& precon,
   deviceMemory<dfloat> o_z = platform.reserve<dfloat>(Ntotal);
   deviceMemory<dfloat> o_q = platform.reserve<dfloat>(Ntotal);
 
+  platform.reserve<pfloat>(2*Ntotal +
+                           + 4 * platform.memPoolAlignment<dfloat>());
+  
+  deviceMemory<pfloat> o_pfloat_tmp  = platform.reserve<pfloat>(Ntotal);
+  deviceMemory<pfloat> o_pfloat_Ptmp  = platform.reserve<pfloat>(Ntotal);
+
+  
   // register scalars
   dfloat alpha0 = 0;
   dfloat beta0  = 0;
@@ -91,7 +98,16 @@ int nbfpcg::Solve(operator_t& linearOperator, operator_t& precon,
   linAlg.axpy(N, (dfloat)-1.f, o_u, (dfloat)1.f, o_r);
 
   // u = M*r [ Sanan notation ]
-  precon.Operator(o_r, o_u);
+  //  precon.Operator(o_r, o_u);
+  if(sizeof(pfloat)==sizeof(dfloat)){
+    precon.Operator(o_r, o_u);
+  }
+  else{
+    linAlg.d2p(N, o_r, o_pfloat_tmp);
+    precon.Operator(o_pfloat_tmp, o_pfloat_Ptmp);
+    linAlg.p2d(N, o_pfloat_Ptmp, o_u);
+  }
+  
 
   // p = u
   o_p.copyFrom(o_u, properties_t("async", true));
@@ -103,7 +119,16 @@ int nbfpcg::Solve(operator_t& linearOperator, operator_t& precon,
   // delta = u.w
   Update0NBFPCG(o_u, o_r, o_w);
 
-  precon.Operator(o_w, o_m);
+  //  precon.Operator(o_w, o_m);
+  if(sizeof(pfloat)==sizeof(dfloat)){
+    precon.Operator(o_w, o_m);
+  }
+  else{
+    linAlg.d2p(N, o_w, o_pfloat_tmp);
+    precon.Operator(o_pfloat_tmp, o_pfloat_Ptmp);
+    linAlg.p2d(N, o_pfloat_Ptmp, o_m);
+  }
+
 
   linearOperator.Operator(o_m, o_n);
   o_s.copyFrom(o_w, properties_t("async", true));
@@ -142,7 +167,16 @@ int nbfpcg::Solve(operator_t& linearOperator, operator_t& precon,
     linAlg.zaxpy(N, (dfloat)1.0, o_w, (dfloat)-1.0, o_r, o_n);
 
     // m <= M*(w-r)
-    precon.Operator(o_n, o_m);
+    //    precon.Operator(o_n, o_m);
+    if(sizeof(pfloat)==sizeof(dfloat)){
+      precon.Operator(o_n, o_m);
+    }
+    else{
+      linAlg.d2p(N, o_n, o_pfloat_tmp);
+      precon.Operator(o_pfloat_tmp, o_pfloat_Ptmp);
+      linAlg.p2d(N, o_pfloat_Ptmp, o_m);
+    }
+    
 
     // m <= u + M*(w-r)
     linAlg.axpy(N, (dfloat)1.0, o_u, (dfloat)1.0, o_m);

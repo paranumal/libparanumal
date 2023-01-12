@@ -63,9 +63,27 @@ int pminres::Solve(operator_t& linearOperator, operator_t& precon,
   deviceMemory<dfloat> o_q     = platform.reserve<dfloat>(Ntotal);
   deviceMemory<dfloat> o_q_old = platform.reserve<dfloat>(Ntotal);
 
+  platform.reserve<pfloat>(2*Ntotal +
+                           + 4 * platform.memPoolAlignment<dfloat>());
+
+  deviceMemory<pfloat> o_pfloat_r  = platform.reserve<pfloat>(Ntotal);
+  deviceMemory<pfloat> o_pfloat_z  = platform.reserve<pfloat>(Ntotal);
+
+  
   linearOperator.Operator(o_x, o_r);            // r = b - A*x
   linAlg.axpy(N, (dfloat)1.0, o_b, (dfloat)-1.0, o_r);
-  precon.Operator(o_r, o_z);            // z = M\r
+
+  
+  //  precon.Operator(o_r, o_z);            // z = M\r
+  if(sizeof(pfloat)==sizeof(dfloat)){
+    precon.Operator(o_r, o_z);
+  }
+  else{
+    linAlg.d2p(N, o_r, o_pfloat_r);
+    precon.Operator(o_pfloat_r, o_pfloat_z);
+    linAlg.p2d(N, o_pfloat_z, o_z);
+  }
+
 
   gamp = 0.0;
   gam  = sqrt(linAlg.innerProd(N, o_z, o_r, comm)); // gam = sqrt(z . r);
@@ -131,7 +149,18 @@ int pminres::Solve(operator_t& linearOperator, operator_t& precon,
 #endif
     }
 
-    precon.Operator(o_r, o_z);                        // z = M\r
+    //    precon.Operator(o_r, o_z);                        // z = M\r
+    if(sizeof(pfloat)==sizeof(dfloat)){
+      precon.Operator(o_r, o_z);
+    }
+    else{
+      linAlg.d2p(N, o_r, o_pfloat_r);
+      precon.Operator(o_pfloat_r, o_pfloat_z);
+      linAlg.p2d(N, o_pfloat_z, o_z);
+    }
+    
+
+    
     gamp = gam;
     gam  = sqrt(linAlg.innerProd(N, o_z, o_r, comm)); // gam = sqrt(z . r)
     a1   = sqrt(a0*a0 + gam*gam);

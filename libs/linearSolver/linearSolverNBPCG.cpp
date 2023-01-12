@@ -74,6 +74,13 @@ int nbpcg::Solve(operator_t& linearOperator, operator_t& precon,
   deviceMemory<dfloat> o_Z  = platform.reserve<dfloat>(Ntotal);
   deviceMemory<dfloat> o_Ax = platform.reserve<dfloat>(Ntotal);
 
+  platform.reserve<pfloat>(2*Ntotal +
+                           + 4 * platform.memPoolAlignment<dfloat>());
+  
+  deviceMemory<pfloat> o_pfloat_s  = platform.reserve<pfloat>(Ntotal);
+  deviceMemory<pfloat> o_pfloat_S  = platform.reserve<pfloat>(Ntotal);
+
+  
   // register scalars
   dfloat zdotz0 = 0;
   dfloat rdotr0 = 0;
@@ -92,7 +99,16 @@ int nbpcg::Solve(operator_t& linearOperator, operator_t& precon,
   linAlg.axpy(N, (dfloat) -1.f, o_Ax,  (dfloat) 1.f, o_r);
 
    // z = M*r [ Gropp notation ]
-  precon.Operator(o_r, o_z);
+  //  precon.Operator(o_r, o_z);
+  if(sizeof(pfloat)==sizeof(dfloat)){
+    precon.Operator(o_r, o_z);
+  }
+  else{
+    linAlg.d2p(N, o_r, o_pfloat_s);
+    precon.Operator(o_pfloat_s, o_pfloat_S);
+    linAlg.p2d(N, o_pfloat_S, o_z);
+  }
+  
 
   // set alpha = 0 to get
   // r.z and z.z
@@ -124,7 +140,16 @@ int nbpcg::Solve(operator_t& linearOperator, operator_t& precon,
     Update1NBPCG(beta0, o_z, o_Z, o_p, o_s);
 
     // z = Precon^{-1} r
-    precon.Operator(o_s, o_S);
+    //    precon.Operator(o_s, o_S);
+    if(sizeof(pfloat)==sizeof(dfloat)){
+      precon.Operator(o_s, o_S);
+    }
+    else{
+      linAlg.d2p(N, o_s, o_pfloat_s);
+      precon.Operator(o_pfloat_s, o_pfloat_S);
+      linAlg.p2d(N, o_pfloat_S, o_S);
+    }
+
 
     // block for delta
     comm.Wait(request);

@@ -68,6 +68,13 @@ int pgmres::Solve(operator_t& linearOperator, operator_t& precon,
   deviceMemory<dfloat> o_z  = platform.reserve<dfloat>(Ntotal);
   deviceMemory<dfloat> o_r  = platform.reserve<dfloat>(Ntotal);
 
+  platform.reserve<pfloat>(2*Ntotal +
+                           + 4 * platform.memPoolAlignment<dfloat>());
+  
+  deviceMemory<pfloat> o_pfloat_r  = platform.reserve<pfloat>(Ntotal);
+  deviceMemory<pfloat> o_pfloat_z  = platform.reserve<pfloat>(Ntotal);
+
+  
   memory<deviceMemory<dfloat>> o_V(restart);
   for(int i=0; i<restart; ++i){
     o_V[i] = platform.reserve<dfloat>(Ntotal);
@@ -80,7 +87,16 @@ int pgmres::Solve(operator_t& linearOperator, operator_t& precon,
   linAlg.zaxpy(N, (dfloat)-1.f, o_Ax, (dfloat)1.f, o_b, o_z);
 
   // r = Precon^{-1} (r-A*x)
-  precon.Operator(o_z, o_r);
+  //  precon.Operator(o_z, o_r);
+  if(sizeof(pfloat)==sizeof(dfloat)){
+    precon.Operator(o_z, o_r);
+  }
+  else{
+    linAlg.d2p(N, o_z, o_pfloat_z);
+    precon.Operator(o_pfloat_z, o_pfloat_r);
+    linAlg.p2d(N, o_pfloat_r, o_r);
+  }
+
 
   dfloat nr = linAlg.norm2(N, o_r, comm);
 
@@ -109,7 +125,15 @@ int pgmres::Solve(operator_t& linearOperator, operator_t& precon,
       linearOperator.Operator(o_V[i], o_z);
 
       // r = Precon^{-1} z
-      precon.Operator(o_z, o_r);
+      //      precon.Operator(o_z, o_r);
+      if(sizeof(pfloat)==sizeof(dfloat)){
+	precon.Operator(o_z, o_r);
+      }
+      else{
+	linAlg.d2p(N, o_z, o_pfloat_z);
+	precon.Operator(o_pfloat_z, o_pfloat_r);
+	linAlg.p2d(N, o_pfloat_r, o_r);
+      }
 
       for(int k=0; k<=i; ++k){
         dfloat hki = linAlg.innerProd(N, o_r, o_V[k], comm);
@@ -177,8 +201,18 @@ int pgmres::Solve(operator_t& linearOperator, operator_t& precon,
     // subtract z = b - A*x
     linAlg.zaxpy(N, (dfloat)-1.f, o_Ax, (dfloat)1.f, o_b, o_z);
 
-    // r = Precon^{-1} (r-A*x)
-    precon.Operator(o_z, o_r);
+    // r = Precon^{-1} (r-A*x)    
+    //    precon.Operator(o_z, o_r);
+    // double check direction
+    if(sizeof(pfloat)==sizeof(dfloat)){
+      precon.Operator(o_z, o_r);
+    }
+    else{
+      linAlg.d2p(N, o_z, o_pfloat_z);
+      precon.Operator(o_pfloat_z, o_pfloat_r);
+      linAlg.p2d(N, o_pfloat_r, o_r);
+    }
+    
 
     nr = linAlg.norm2(N, o_r, comm);
 
