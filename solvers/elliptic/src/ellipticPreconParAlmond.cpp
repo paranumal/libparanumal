@@ -64,7 +64,7 @@ ParAlmondPrecon::ParAlmondPrecon(elliptic_t& _elliptic):
   parAlmond.AMGSetup(A, elliptic.allNeumann, null, elliptic.allNeumannPenalty);
 
   parAlmond.Report();
-
+  
   //The csr matrix at the top level of parAlmond may have a larger
   // halo region than the matrix free kernel. Adjust if necessary
   dlong parAlmondNrows = parAlmond.getNumRows(0);

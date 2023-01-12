@@ -63,10 +63,7 @@ void buildParAlmondKernels(platform_t& platform){
     kernelInfo["defines/" "p_BLOCKSIZE"]= blockSize;
     kernelInfo["defines/" "p_NonzerosPerBlock"]= NonzerosPerBlock;
 
-    if(sizeof(pfloat)==4)
-      kernelInfo["defines/" "dfloat"]= "float";
-    else
-      kernelInfo["defines/" "dfloat"]= "double";
+    kernelInfo["defines/" "dfloat"]= pfloatString;
     
     if (rank==0) {printf("Compiling parALMOND Kernels...");fflush(stdout);}
 

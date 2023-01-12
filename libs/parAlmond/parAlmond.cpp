@@ -54,6 +54,7 @@ void parAlmond_t::Operator(deviceMemory<pfloat>& o_rhs, deviceMemory<pfloat>& o_
   if (multigrid->exact){ //call the linear solver
 #if 1
     std::cout << "parAlmond_t::Operator - trying to use multigrid->exact in mixed precision" << std::endl;
+    exit(-1);
 #else
     // On first call build the linear solver
     if (!multigrid->linearSolver.isInitialized()) {
