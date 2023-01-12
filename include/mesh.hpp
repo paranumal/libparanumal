@@ -174,6 +174,8 @@ class mesh_t {
   
   memory<dfloat> LIFT;          // lift matrix
   deviceMemory<dfloat> o_LIFT;
+  deviceMemory<pfloat> o_pfloat_LIFT;
+  
   memory<dfloat> sM;            // surface mass (MM*LIFT)^T
   deviceMemory<dfloat> o_sM;
   memory<dfloat> Srr, Srs, Srt; //element stiffness matrices

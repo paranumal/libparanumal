@@ -82,7 +82,8 @@ elliptic_t elliptic_t::SetupNewDegree(mesh_t& meshC){
 
   properties_t kernelInfoPfloat = kernelInfo;
   kernelInfoPfloat["defines/dfloat"]= pfloatString;
-  
+  kernelInfoPfloat["defines/dfloat4"]= std::string(pfloatString) + std::string("4");
+
   // Ax kernel
   if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
     fileName   = oklFilePrefix + "ellipticAx" + suffix + oklFileSuffix;
@@ -105,11 +106,12 @@ elliptic_t elliptic_t::SetupNewDegree(mesh_t& meshC){
   } else if (settings.compareSetting("DISCRETIZATION","IPDG")) {
     int Nmax = std::max(meshC.Np, meshC.Nfaces*meshC.Nfp);
     kernelInfo["defines/" "p_Nmax"]= Nmax;
-
+    kernelInfoPfloat["defines/p_Nmax"]= Nmax;
     fileName   = oklFilePrefix + "ellipticGradient" + suffix + oklFileSuffix;
     kernelName = "ellipticPartialGradient" + suffix;
     elliptic.partialGradientKernel = platform.buildKernel(fileName, kernelName,
                                                   kernelInfo);
+
     elliptic.pfloatPartialGradientKernel = platform.buildKernel(fileName, kernelName,
 								kernelInfoPfloat);
 

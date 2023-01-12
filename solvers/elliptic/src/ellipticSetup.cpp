@@ -108,7 +108,8 @@ void elliptic_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
   properties_t kernelInfoPfloat = kernelInfo;
   kernelInfoPfloat["defines/dfloat"] = pfloatString;
-  
+  kernelInfoPfloat["defines/dfloat4"] = std::string(pfloatString)+"4";
+
   // Ax kernel
   if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
     fileName   = oklFilePrefix + "ellipticAx" + suffix + oklFileSuffix;
@@ -123,6 +124,7 @@ void elliptic_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
     partialAxKernel = platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
+
     pfloatPartialAxKernel = platform.buildKernel(fileName, kernelName,
 						 kernelInfoPfloat);
 	

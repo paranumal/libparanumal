@@ -90,6 +90,14 @@ void mesh_t::ReferenceNodesTri2D(){
   o_sM = platform.malloc<dfloat>(sMT);
   o_LIFT = platform.malloc<dfloat>(LIFTT);
 
+  {
+    memory<pfloat> pfloat_LIFTT(Np*Np*dim);
+    for(int n=0;n<Np*Nfaces*Nfp;++n)
+      pfloat_LIFTT[n] = LIFTT[n];
+    o_pfloat_LIFT = platform.malloc<pfloat>(pfloat_LIFTT);  
+  }
+
+  
   //packed stiffness matrices
   SmatrixTri2D(N, Dr, Ds, MM, S);
   Srr = S + 0*Np*Np;

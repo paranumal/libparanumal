@@ -28,6 +28,7 @@ SOFTWARE.
 #include "ellipticPrecon.hpp"
 
 void MGLevel::Operator(deviceMemory<pfloat>& o_x, deviceMemory<pfloat>& o_Ax) {
+
   elliptic.Operator(o_x,o_Ax);
 }
 
@@ -261,6 +262,7 @@ MGLevel::MGLevel(elliptic_t& _elliptic,
   std::string fileName, kernelName;
 
   kernelInfo["defines/" "dfloat"]= pfloatString; // TW
+  kernelInfo["defines/" "dfloat4"]= std::string(pfloatString) + std::string("4");
   
   kernelInfo["defines/" "p_NqFine"]= mesh.N+1;
   kernelInfo["defines/" "p_NqCoarse"]= Nc+1;

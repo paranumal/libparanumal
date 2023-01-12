@@ -226,13 +226,14 @@ void elliptic_t::Operator(deviceMemory<pfloat> &o_q, deviceMemory<pfloat> &o_Aq)
     deviceMemory<pfloat> o_grad = platform.reserve<pfloat>(Ntotal*4);
 
     if(mesh.Nelements) {
+
       dlong offset = 0;
       pfloatPartialGradientKernel(mesh.Nelements,
-                            offset,
-                            mesh.o_pfloat_vgeo,
-                            mesh.o_pfloat_D,
-                            o_q,
-                            o_grad);
+				  offset,
+				  mesh.o_pfloat_vgeo,
+				  mesh.o_pfloat_D,
+				  o_q,
+				  o_grad);
     }
 
     // pfloat4 storage -> 4 entries
@@ -249,7 +250,7 @@ void elliptic_t::Operator(deviceMemory<pfloat> &o_q, deviceMemory<pfloat> &o_Aq)
 			      mesh.o_pfloat_sgeo,
 			      o_EToB,
 			      mesh.o_pfloat_D,
-			      mesh.o_LIFT, // TW ARGGG
+			      mesh.o_pfloat_LIFT, 
 			      mesh.o_pfloat_MM,
 			      o_grad,
 			      o_Aq);
@@ -267,7 +268,7 @@ void elliptic_t::Operator(deviceMemory<pfloat> &o_q, deviceMemory<pfloat> &o_Aq)
 			      mesh.o_pfloat_sgeo,
 			      o_EToB,
 			      mesh.o_pfloat_D,
-			      mesh.o_LIFT, // TW ARGGG
+			      mesh.o_pfloat_LIFT, 
 			      mesh.o_pfloat_MM,
 			      o_grad,
 			      o_Aq);
