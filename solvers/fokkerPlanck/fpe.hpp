@@ -77,7 +77,7 @@ public:
 
   ellipticSettings_t ellipticSettings;
   elliptic_t elliptic;
-  linearSolver_t linearSolver;
+  linearSolver_t<dfloat> linearSolver;
 
   int Nfields;
 

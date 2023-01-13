@@ -108,19 +108,19 @@ void fpe_t::Setup(platform_t& _platform, mesh_t& _mesh,
     tau = elliptic.tau;
 
     if (ellipticSettings.compareSetting("LINEAR SOLVER","NBPCG")){
-      linearSolver.Setup<LinearSolver::nbpcg>(elliptic.Ndofs, elliptic.Nhalo,
+      linearSolver.Setup<LinearSolver::nbpcg<dfloat>>(elliptic.Ndofs, elliptic.Nhalo,
                                               platform, ellipticSettings, comm);
     } else if (ellipticSettings.compareSetting("LINEAR SOLVER","NBFPCG")){
-      linearSolver.Setup<LinearSolver::nbfpcg>(elliptic.Ndofs, elliptic.Nhalo,
+      linearSolver.Setup<LinearSolver::nbfpcg<dfloat>>(elliptic.Ndofs, elliptic.Nhalo,
                                               platform, ellipticSettings, comm);
     } else if (ellipticSettings.compareSetting("LINEAR SOLVER","PCG")){
-      linearSolver.Setup<LinearSolver::pcg>(elliptic.Ndofs, elliptic.Nhalo,
+      linearSolver.Setup<LinearSolver::pcg<dfloat>>(elliptic.Ndofs, elliptic.Nhalo,
                                               platform, ellipticSettings, comm);
     } else if (ellipticSettings.compareSetting("LINEAR SOLVER","PGMRES")){
-      linearSolver.Setup<LinearSolver::pgmres>(elliptic.Ndofs, elliptic.Nhalo,
+      linearSolver.Setup<LinearSolver::pgmres<dfloat>>(elliptic.Ndofs, elliptic.Nhalo,
                                               platform, ellipticSettings, comm);
     } else if (ellipticSettings.compareSetting("LINEAR SOLVER","PMINRES")){
-      linearSolver.Setup<LinearSolver::pminres>(elliptic.Ndofs, elliptic.Nhalo,
+      linearSolver.Setup<LinearSolver::pminres<dfloat>>(elliptic.Ndofs, elliptic.Nhalo,
                                               platform, ellipticSettings, comm);
     }
   } else {
