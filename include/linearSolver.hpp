@@ -92,11 +92,11 @@ public:
     platform(_platform), settings(_settings), comm(_comm),
     N(_N), Nhalo(_Nhalo) {}
 
-  int Solve(operator_t& linearOperator, operator_t& precon,
+  virtual int Solve(operator_t& linearOperator, operator_t& precon,
 	    deviceMemory<float>& o_x, deviceMemory<float>& o_rhs,
 	    const float tol, const int MAXIT, const int verbose){ printf("sjfosef\n"); return 0;}
 
-  int Solve(operator_t& linearOperator, operator_t& precon,
+  virtual int Solve(operator_t& linearOperator, operator_t& precon,
 	    deviceMemory<double>& o_x, deviceMemory<double>& o_rhs,
 	    const double tol, const int MAXIT, const int verbose){ printf("sjfosef\n"); return 0;}
 

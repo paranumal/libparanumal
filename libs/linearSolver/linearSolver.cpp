@@ -1,7 +1,7 @@
 /*
 
 The MIT License (MIT)
-
+ 
 Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Anthony Austin
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -44,6 +44,7 @@ int linearSolver_t::Solve(operator_t& linearOperator,
 }
 
 void linearSolver_t::MakeDefaultInitialGuessStrategy() {
+  // This is missing type 
   ig = std::make_shared<InitialGuess::Zero<dfloat> >(ls->N, ls->platform, ls->settings, ls->comm);
 }
 
