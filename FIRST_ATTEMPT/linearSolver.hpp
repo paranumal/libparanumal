@@ -35,9 +35,10 @@ SOFTWARE.
 
 namespace libp {
 
-namespace LinearSolver { class linearSolverBase_t; }
+  namespace LinearSolver { template <typename T> class linearSolverBase_t; }
 
 /* General LinearSolver object*/
+    template<typename T>
 class linearSolver_t {
  public:
   linearSolver_t() = default;
@@ -60,13 +61,13 @@ class linearSolver_t {
   }
 
   int Solve(operator_t& linearOperator, operator_t& precon,
-            deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs,
-            const dfloat tol, const int MAXIT, const int verbose);
+            deviceMemory<T>& o_x, deviceMemory<T>& o_rhs,
+            const T tol, const int MAXIT, const int verbose);
 
   bool isInitialized();
 
  private:
-  std::shared_ptr<LinearSolver::linearSolverBase_t> ls=nullptr;
+      std::shared_ptr<LinearSolver::linearSolverBase_t<T>> ls=nullptr;
   std::shared_ptr<InitialGuess::initialGuessStrategy_t> ig=nullptr;
 
   void MakeDefaultInitialGuessStrategy();
@@ -78,6 +79,7 @@ class linearSolver_t {
 namespace LinearSolver {
 
 //virtual base linear solver class
+template<typename T>
 class linearSolverBase_t {
 public:
   platform_t platform;
@@ -92,40 +94,15 @@ public:
     platform(_platform), settings(_settings), comm(_comm),
     N(_N), Nhalo(_Nhalo) {}
 
-  int Solve(operator_t& linearOperator, operator_t& precon,
-	    deviceMemory<float>& o_x, deviceMemory<float>& o_rhs,
-	    const float tol, const int MAXIT, const int verbose){ printf("sjfosef\n"); return 0;}
-
-  int Solve(operator_t& linearOperator, operator_t& precon,
-	    deviceMemory<double>& o_x, deviceMemory<double>& o_rhs,
-	    const double tol, const int MAXIT, const int verbose){ printf("sjfosef\n"); return 0;}
-
+  virtual int Solve(operator_t& linearOperator, operator_t& precon,
+                    deviceMemory<T>& o_x, deviceMemory<T>& o_rhs,
+                    const T tol, const int MAXIT, const int verbose)=0;
 };
 
-//Preconditioned Conjugate Gradient
-class pcg: public linearSolverBase_t {
-private:
-  int flexible;
-
-  kernel_t updatePCGKernel;
-
-  dfloat UpdatePCG(const dfloat alpha,
-                   deviceMemory<dfloat>& o_p,
-                   deviceMemory<dfloat>& o_Ap,
-                   deviceMemory<dfloat>& o_x,
-                   deviceMemory<dfloat>& o_r);
-
-public:
-  pcg(dlong _N, dlong _Nhalo,
-       platform_t& _platform, settings_t& _settings, comm_t _comm);
-
-  int Solve(operator_t& linearOperator, operator_t& precon,
-            deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs,
-            const dfloat tol, const int MAXIT, const int verbose);
-};
 
 //Preconditioned GMRES
-class pgmres: public linearSolverBase_t {
+    template<typename T>
+    class pgmres: public linearSolverBase_t<T> {
 private:
   int restart;
 
@@ -144,33 +121,11 @@ public:
             const dfloat tol, const int MAXIT, const int verbose);
 };
 
-// Preconditioned MINRES
-class pminres : public linearSolverBase_t {
-private:
-  kernel_t updateMINRESKernel;
-
-  void UpdateMINRES(const dfloat ma2,
-                    const dfloat ma3,
-                    const dfloat alpha,
-                    const dfloat beta,
-                    deviceMemory<dfloat>& o_z,
-                    deviceMemory<dfloat>& o_q_old,
-                    deviceMemory<dfloat>& o_q,
-                    deviceMemory<dfloat>& o_r_old,
-                    deviceMemory<dfloat>& o_r,
-                    deviceMemory<dfloat>& o_p);
-
-public:
-  pminres(dlong _N, dlong _Nhalo,
-         platform_t& _platform, settings_t& _settings, comm_t _comm);
-
-  int Solve(operator_t& linearOperator, operator_t& precon,
-            deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs,
-            const dfloat tol, const int MAXIT, const int verbose);
-};
-
+#include "linearSolverPMINRES.hpp"
+  
 //Non-Blocking Preconditioned Conjugate Gradient
-class nbpcg: public linearSolverBase_t {
+    template<typename T>
+    class nbpcg: public linearSolverBase_t<T> {
 private:
   pinnedMemory<dfloat> dots;
 
@@ -200,7 +155,8 @@ public:
 };
 
 //Non-Blocking Flexible Preconditioned Conjugate Gradient
-class nbfpcg: public linearSolverBase_t {
+  template<typename T>
+  class nbfpcg: public linearSolverBase_t<T> {
 private:
   pinnedMemory<dfloat> dots;
 

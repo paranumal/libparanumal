@@ -59,10 +59,11 @@ class linearSolver_t {
     ig = std::make_shared<InitialGuess>(args...);
   }
 
+  template <typename T>
   int Solve(operator_t& linearOperator, operator_t& precon,
-            deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs,
-            const dfloat tol, const int MAXIT, const int verbose);
-
+            deviceMemory<T>& o_x, deviceMemory<T>& o_rhs,
+            const T tol, const int MAXIT, const int verbose);
+  
   bool isInitialized();
 
  private:
@@ -94,12 +95,16 @@ public:
 
   int Solve(operator_t& linearOperator, operator_t& precon,
 	    deviceMemory<float>& o_x, deviceMemory<float>& o_rhs,
-	    const float tol, const int MAXIT, const int verbose){ printf("sjfosef\n"); return 0;}
-
+	    const float tol, const int MAXIT, const int verbose){
+    std::cout << "Calling Solve float version in linearSolverBase_t base" << std::endl;
+    exit(-1);
+  }
   int Solve(operator_t& linearOperator, operator_t& precon,
 	    deviceMemory<double>& o_x, deviceMemory<double>& o_rhs,
-	    const double tol, const int MAXIT, const int verbose){ printf("sjfosef\n"); return 0;}
-
+	    const double tol, const int MAXIT, const int verbose){
+    std::cout << "Calling Solve double version in linearSolverBase_t base" << std::endl;
+    exit(-1);
+  }
 };
 
 //Preconditioned Conjugate Gradient
@@ -109,19 +114,21 @@ private:
 
   kernel_t updatePCGKernel;
 
-  dfloat UpdatePCG(const dfloat alpha,
-                   deviceMemory<dfloat>& o_p,
-                   deviceMemory<dfloat>& o_Ap,
-                   deviceMemory<dfloat>& o_x,
-                   deviceMemory<dfloat>& o_r);
-
+  template <typename T>
+  T UpdatePCG(const T alpha,
+	      deviceMemory<T>& o_p,
+	      deviceMemory<T>& o_Ap,
+	      deviceMemory<T>& o_x,
+	      deviceMemory<T>& o_r);
+  
 public:
   pcg(dlong _N, dlong _Nhalo,
        platform_t& _platform, settings_t& _settings, comm_t _comm);
 
+  template <typename T>
   int Solve(operator_t& linearOperator, operator_t& precon,
-            deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs,
-            const dfloat tol, const int MAXIT, const int verbose);
+            deviceMemory<T>& o_x, deviceMemory<T>& o_rhs,
+            const T tol, const int MAXIT, const int verbose);
 };
 
 //Preconditioned GMRES

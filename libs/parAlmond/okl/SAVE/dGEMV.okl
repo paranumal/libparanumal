@@ -1,0 +1,166 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Rajesh Gandham
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+#define DIM_X 64
+#define DIM_Y 4
+
+//computes y = alpha*A*x + beta*y
+// Assumes A is column major and LDA is M.
+@kernel void dGEMV(const dlong   M, //rows
+                   const dlong   N, //cols
+                   const dfloat alpha,
+                   @restrict const  dfloat * A,
+                   @restrict const  dfloat * x,
+                   const dfloat beta,
+                   @restrict        dfloat * y){
+
+  for(dlong b=0;b<M;b+=DIM_X * 4;@outer(0)){
+
+    @shared dfloat s_data[DIM_X * 4 * DIM_Y];
+
+    for(int ty=0;ty<DIM_Y;++ty;@inner(1)){
+      for(int tx=0;tx<DIM_X;++tx;@inner(0)){
+#if 0   
+        dfloat r_A[4]; // micro tile is 4 * 4
+        dfloat r_x[4];
+#else
+        double r_A[4]; // micro tile is 4 * 4
+        double r_x[4];
+#endif
+        //zero accumualtion
+        r_A[0] = 0.0;
+        r_A[1] = 0.0;
+        r_A[2] = 0.0;
+        r_A[3] = 0.0;
+
+        const dlong ind = b + tx;
+
+        const int N_tail = N % (4 * DIM_Y);
+
+        dlong col=ty * 4;
+        for(; col < (N - N_tail); col += 4 * DIM_Y) {
+
+          r_x[0] = x[col + 0];
+          r_x[1] = x[col + 1];
+          r_x[2] = x[col + 2];
+          r_x[3] = x[col + 3];
+
+          if(ind + 0 * DIM_X < M) {
+            r_A[0] += A[ind + (col + 0) * M] * r_x[0];
+            r_A[0] += A[ind + (col + 1) * M] * r_x[1];
+            r_A[0] += A[ind + (col + 2) * M] * r_x[2];
+            r_A[0] += A[ind + (col + 3) * M] * r_x[3];
+          }
+
+          if(ind + 1 * DIM_X < M) {
+            r_A[1] += A[ind + DIM_X + (col + 0) * M] * r_x[0];
+            r_A[1] += A[ind + DIM_X + (col + 1) * M] * r_x[1];
+            r_A[1] += A[ind + DIM_X + (col + 2) * M] * r_x[2];
+            r_A[1] += A[ind + DIM_X + (col + 3) * M] * r_x[3];
+          }
+
+          if(ind + 2 * DIM_X < M) {
+            r_A[2] += A[ind + 2 * DIM_X + (col + 0) * M] * r_x[0];
+            r_A[2] += A[ind + 2 * DIM_X + (col + 1) * M] * r_x[1];
+            r_A[2] += A[ind + 2 * DIM_X + (col + 2) * M] * r_x[2];
+            r_A[2] += A[ind + 2 * DIM_X + (col + 3) * M] * r_x[3];
+          }
+
+          if(ind + 3 * DIM_X < M) {
+            r_A[3] += A[ind + 3 * DIM_X + (col + 0) * M] * r_x[0];
+            r_A[3] += A[ind + 3 * DIM_X + (col + 1) * M] * r_x[1];
+            r_A[3] += A[ind + 3 * DIM_X + (col + 2) * M] * r_x[2];
+            r_A[3] += A[ind + 3 * DIM_X + (col + 3) * M] * r_x[3];
+          }
+        }
+
+        // if N  is not multiple of (DIM_Y * 4)
+        if(N_tail > 0) {
+          r_x[0] = (col + 0 < N) ? x[col + 0] : 0.0;
+          r_x[1] = (col + 1 < N) ? x[col + 1] : 0.0;
+          r_x[2] = (col + 2 < N) ? x[col + 2] : 0.0;
+          r_x[3] = (col + 3 < N) ? x[col + 3] : 0.0;
+
+          if(ind < M) {
+            r_A[0] += A[ind + (col + 0) * M * (col + 0 < N)] * r_x[0];
+            r_A[0] += A[ind + (col + 1) * M * (col + 1 < N)] * r_x[1];
+            r_A[0] += A[ind + (col + 2) * M * (col + 2 < N)] * r_x[2];
+            r_A[0] += A[ind + (col + 3) * M * (col + 3 < N)] * r_x[3];
+          }
+
+          if(ind + DIM_X < M) {
+            r_A[1] += A[ind + DIM_X + (col + 0) * M * (col + 0 < N)] * r_x[0];
+            r_A[1] += A[ind + DIM_X + (col + 1) * M * (col + 1 < N)] * r_x[1];
+            r_A[1] += A[ind + DIM_X + (col + 2) * M * (col + 2 < N)] * r_x[2];
+            r_A[1] += A[ind + DIM_X + (col + 3) * M * (col + 3 < N)] * r_x[3];
+          }
+
+          if(ind + 2 * DIM_X < M) {
+            r_A[2] += A[ind + 2 * DIM_X + (col + 0) * M * (col + 0 < N)] * r_x[0];
+            r_A[2] += A[ind + 2 * DIM_X + (col + 1) * M * (col + 1 < N)] * r_x[1];
+            r_A[2] += A[ind + 2 * DIM_X + (col + 2) * M * (col + 2 < N)] * r_x[2];
+            r_A[2] += A[ind + 2 * DIM_X + (col + 3) * M * (col + 3 < N)] * r_x[3];
+          }
+
+          if(ind + 3 * DIM_X < M) {
+            r_A[3] += A[ind + 3 * DIM_X + (col + 0) * M * (col + 0 < N)] * r_x[0];
+            r_A[3] += A[ind + 3 * DIM_X + (col + 1) * M * (col + 1 < N)] * r_x[1];
+            r_A[3] += A[ind + 3 * DIM_X + (col + 2) * M * (col + 2 < N)] * r_x[2];
+            r_A[3] += A[ind + 3 * DIM_X + (col + 3) * M * (col + 3 < N)] * r_x[3];
+          }
+        }
+
+        s_data[tx +             ty * DIM_X * 4] = r_A[0];
+        s_data[tx +     DIM_X + ty * DIM_X * 4] = r_A[1];
+        s_data[tx + 2 * DIM_X + ty * DIM_X * 4] = r_A[2];
+        s_data[tx + 3 * DIM_X + ty * DIM_X * 4] = r_A[3];
+      }
+    }
+
+    for(int ty=0;ty<DIM_Y;++ty;@inner(1)){
+      for(int tx=0;tx<DIM_X;++tx;@inner(0)){
+        const dlong tid = ty * DIM_X + tx;
+        const dlong ind = b + tid;
+        if(tid < DIM_X * 4) {
+          //compress row result
+	  //          dfloat Ax = 0.0;
+	  double Ax = 0.0;
+          for(int i = 0; i < DIM_Y; i++) {
+            Ax += s_data[tid + DIM_X * 4 * i];
+          }
+
+          if(ind < M) {
+            if (beta!=0.0) {
+              y[ind] = alpha * Ax + beta * y[ind];
+            } else {
+              y[ind] = alpha * Ax;
+            }
+          }
+        }
+      }
+    }
+  }
+}

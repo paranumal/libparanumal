@@ -28,34 +28,8 @@ SOFTWARE.
 
 namespace libp {
 
-int linearSolver_t::Solve(operator_t& linearOperator,
-                          operator_t& precon,
-                          deviceMemory<dfloat>& o_x,
-                          deviceMemory<dfloat>& o_rhs,
-                          const dfloat tol,
-                          const int MAXIT,
-                          const int verbose) {
-  assertInitialized();
-  ig->FormInitialGuess(o_x, o_rhs);
-  int iters = ls->Solve(linearOperator, precon, o_x, o_rhs, tol, MAXIT, verbose);
-  ig->Update(linearOperator, o_x, o_rhs);
+namespace LinearSolver {
 
-  return iters;
-}
-
-void linearSolver_t::MakeDefaultInitialGuessStrategy() {
-  ig = std::make_shared<InitialGuess::Zero<dfloat> >(ls->N, ls->platform, ls->settings, ls->comm);
-}
-
-bool linearSolver_t::isInitialized() {
-  return (ls!=nullptr && ig!=nullptr);
-}
-
-void linearSolver_t::assertInitialized() {
-  LIBP_ABORT("LinearSolver not initialized",
-             ls==nullptr);
-  LIBP_ABORT("InitialGuess not initialized",
-             ig==nullptr);
-}
+} //namespace LinearSolver
 
 } //namespace libp

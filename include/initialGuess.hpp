@@ -37,7 +37,7 @@ namespace InitialGuess {
 
 
 void AddSettings(settings_t& settings, const std::string prefix = "");
-
+  
 // Abstract base class for different initial guess strategies.
 class initialGuessStrategy_t {
  protected:
@@ -47,35 +47,48 @@ class initialGuessStrategy_t {
 
   dlong Ntotal;     // Degrees of freedom
 
- public:
+public:
   initialGuessStrategy_t(dlong _N, platform_t& _platform, settings_t& _settings, comm_t _comm):
     platform(_platform), settings(_settings), comm(_comm), Ntotal(_N) {}
+  
+  void FormInitialGuess(deviceMemory<float>& o_x, deviceMemory<float>& o_rhs){ printf("AROEOHAER\n"); }
+  void Update(operator_t& linearOperator, deviceMemory<float>& o_x, deviceMemory<float>& o_rhs){ printf("AROEOHAER\n"); }
+  
+  void FormInitialGuess(deviceMemory<double>& o_x, deviceMemory<double>& o_rhs){ printf("AROEOHAER\n"); }
+  void Update(operator_t& linearOperator, deviceMemory<double>& o_x, deviceMemory<double>& o_rhs){ printf("AROEOHAER\n"); }
+};
+  
+  // Default initial guess strategy:  use whatever the last solution was (starting at the zero vector)
+  template <typename T>
+  class Last : public initialGuessStrategy_t {
+  private:
+    deviceMemory<T> o_xLast;
+    
+  public:
+    Last(dlong _N, platform_t& _platform, settings_t& _settings, comm_t _comm);
 
-  virtual void FormInitialGuess(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs) = 0;
-  virtual void Update(operator_t& linearOperator, deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs) = 0;
+    Last<T>& operator=(const Last<T> &m)=default;
+      
+    void FormInitialGuess(deviceMemory<T>& o_x, deviceMemory<T>& o_rhs);
+    void Update(operator_t &linearOperator, deviceMemory<T>& o_x, deviceMemory<T>& o_rhs);
+  };
+
+  
+  // Zero initial guess strategy:  use a zero initial guess.
+  template <typename T>  class Zero : public initialGuessStrategy_t {
+  public:
+    Zero(dlong _N, platform_t& _platform, settings_t& _settings, comm_t _comm);
+    
+    Zero& operator=(const Zero &m)=default;
+    
+    void FormInitialGuess(deviceMemory<T>& o_x, deviceMemory<T>& o_rhs);
+    void Update(operator_t &linearOperator, deviceMemory<T>& o_x, deviceMemory<T>& o_rhs);
 };
 
-// Default initial guess strategy:  use whatever the last solution was (starting at the zero vector)
-class Last : public initialGuessStrategy_t {
-private:
-  deviceMemory<dfloat> o_xLast;
+  class Zero<double>;
+  class Zero<float>;
 
-public:
-  Last(dlong _N, platform_t& _platform, settings_t& _settings, comm_t _comm);
-
-  void FormInitialGuess(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs);
-  void Update(operator_t &linearOperator, deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs);
-};
-
-// Zero initial guess strategy:  use a zero initial guess.
-class Zero : public initialGuessStrategy_t {
-public:
-  Zero(dlong _N, platform_t& _platform, settings_t& _settings, comm_t _comm);
-
-  void FormInitialGuess(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs);
-  void Update(operator_t &linearOperator, deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_rhs);
-};
-
+  
 // Initial guess strategies based on RHS projection.
 class Projection : public initialGuessStrategy_t {
 protected:

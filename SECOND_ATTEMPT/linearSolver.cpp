@@ -28,11 +28,12 @@ SOFTWARE.
 
 namespace libp {
 
+template <>
 int linearSolver_t::Solve(operator_t& linearOperator,
                           operator_t& precon,
-                          deviceMemory<dfloat>& o_x,
-                          deviceMemory<dfloat>& o_rhs,
-                          const dfloat tol,
+                          deviceMemory<double>& o_x,
+                          deviceMemory<double>& o_rhs,
+                          const double tol,
                           const int MAXIT,
                           const int verbose) {
   assertInitialized();
@@ -43,8 +44,28 @@ int linearSolver_t::Solve(operator_t& linearOperator,
   return iters;
 }
 
+
+template <>
+int linearSolver_t::Solve(operator_t& linearOperator,
+                          operator_t& precon,
+                          deviceMemory<float>& o_x,
+                          deviceMemory<float>& o_rhs,
+                          const float tol,
+                          const int MAXIT,
+                          const int verbose) {
+  assertInitialized();
+  ig->FormInitialGuess(o_x, o_rhs);
+  int iters = ls->Solve(linearOperator, precon, o_x, o_rhs, tol, MAXIT, verbose);
+  ig->Update(linearOperator, o_x, o_rhs);
+
+  return iters;
+}
+
+
+  
 void linearSolver_t::MakeDefaultInitialGuessStrategy() {
-  ig = std::make_shared<InitialGuess::Zero<dfloat> >(ls->N, ls->platform, ls->settings, ls->comm);
+  ig = std::make_shared<InitialGuess::Last>(ls->N, ls->platform,
+                                            ls->settings, ls->comm);
 }
 
 bool linearSolver_t::isInitialized() {
