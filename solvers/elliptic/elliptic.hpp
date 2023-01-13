@@ -123,7 +123,7 @@ public:
 
   void Run();
 
-  int Solve(linearSolver_t& linearSolver, deviceMemory<dfloat> &o_x, deviceMemory<dfloat> &o_r,
+  int Solve(linearSolver_t<dfloat>& linearSolver, deviceMemory<dfloat> &o_x, deviceMemory<dfloat> &o_r,
             const dfloat tol, const int MAXIT, const int verbose);
 
   void PlotFields(memory<dfloat>& Q, std::string fileName);

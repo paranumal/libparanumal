@@ -106,7 +106,7 @@ public:
   comm_t comm;
 
   bool exact=false;
-  linearSolver_t linearSolver;
+  linearSolver_t<pfloat> linearSolver;
 
   CycleType ctype;
   AggType aggtype;

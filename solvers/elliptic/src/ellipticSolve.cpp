@@ -26,8 +26,9 @@ SOFTWARE.
 
 #include "elliptic.hpp"
 
-int elliptic_t::Solve(linearSolver_t& linearSolver,
-                      deviceMemory<dfloat> &o_x, deviceMemory<dfloat> &o_r,
+int elliptic_t::Solve(linearSolver_t<dfloat>& linearSolver,
+                      deviceMemory<dfloat> &o_x,
+		      deviceMemory<dfloat> &o_r,
                       const dfloat tol, const int MAXIT, const int verbose){
 
   // if there is a nullspace, remove the constant vector from r
