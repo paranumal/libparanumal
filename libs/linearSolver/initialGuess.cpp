@@ -359,7 +359,6 @@ void RollingQRProjection<T>::givensRotation(T a, T b, T& c, T& s)
   }
 }
 
-#if 0
 /*****************************************************************************/
 template <typename T>
 Extrap<T>::Extrap(dlong _N, platform_t& _platform, settings_t& _settings, comm_t _comm):
@@ -462,27 +461,36 @@ void Extrap<T>::extrapCoeffs(int m, int M, memory<T> c)
   LIBP_ABORT("Extrapolation space dimension (" << M << ") too low for degree (" << m << ").",
              M < m + 1);
 
-  const T h = 2.0/(M - 1);
-  memory<T> r(M);
-  for (int i = 0; i < M; i++)
-    r[i] = -1.0 + i*h;
 
-  memory<T> ro(1);
+  const double h = 2.0/(M - 1);
+
+  memory<double> r(M);
+  memory<double> dc(M);
+  for (int i = 0; i < M; i++){
+    r[i] = -1.0 + i*h;
+    dc[i] = c[i];
+  }
+  memory<double> ro(1);
   ro[0] = 1.0 + h;  // Evaluation point.
 
-  memory<T> V;
+  memory<double> V;
   mesh_t::Vandermonde1D(m, r, V);
 
-  memory<T> b;
+  memory<double> b;
   mesh_t::Vandermonde1D(m, ro, b);
 
   if (settings.compareSetting("INITIAL GUESS EXTRAP COEFFS METHOD", "MINNORM")) {
-    linAlg_t::matrixUnderdeterminedRightSolveMinNorm(M, m + 1, V, b, c);
+    linAlg_t::matrixUnderdeterminedRightSolveMinNorm(M, m + 1, V, b, dc);
   } else if (settings.compareSetting("INITIAL GUESS EXTRAP COEFFS METHOD", "CPQR")) {
-    linAlg_t::matrixUnderdeterminedRightSolveCPQR(M, m + 1, V, b, c);
+    linAlg_t::matrixUnderdeterminedRightSolveCPQR(M, m + 1, V, b, dc);
   }
+  
+  for (int i = 0; i < M; i++){
+    c[i] = dc[i];
+  }
+
 }
-#endif
+
 } //namespace InitialGuess
 
 } //namespace libp

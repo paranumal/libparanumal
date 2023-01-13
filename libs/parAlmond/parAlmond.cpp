@@ -52,22 +52,22 @@ void parAlmond_t::Setup(platform_t& _platform, settings_t& _settings, comm_t com
 void parAlmond_t::Operator(deviceMemory<pfloat>& o_rhs, deviceMemory<pfloat>& o_x) {
 
   if (multigrid->exact){ //call the linear solver
-#if 1
+#if 0
     std::cout << "parAlmond_t::Operator - trying to use multigrid->exact in mixed precision" << std::endl;
     exit(-1);
 #else
     // On first call build the linear solver
     if (!multigrid->linearSolver.isInitialized()) {
       if (settings.compareSetting("PARALMOND CYCLE", "NONSYM"))
-        multigrid->linearSolver.Setup<LinearSolver::pgmres>(multigrid->levels[0]->Nrows,
-                                                            multigrid->levels[0]->Ncols
-                                                              - multigrid->levels[0]->Nrows,
-                                                            platform, settings, multigrid->comm);
+        multigrid->linearSolver.Setup<LinearSolver::pgmres<pfloat>>(multigrid->levels[0]->Nrows,
+								    multigrid->levels[0]->Ncols
+								    - multigrid->levels[0]->Nrows,
+								    platform, settings, multigrid->comm);
       else
-        multigrid->linearSolver.Setup<LinearSolver::pcg>(multigrid->levels[0]->Nrows,
-                                                         multigrid->levels[0]->Ncols
-                                                           - multigrid->levels[0]->Nrows,
-                                                         platform, settings, multigrid->comm);
+        multigrid->linearSolver.Setup<LinearSolver::pcg<pfloat>>(multigrid->levels[0]->Nrows,
+								 multigrid->levels[0]->Ncols
+								 - multigrid->levels[0]->Nrows,
+								 platform, settings, multigrid->comm);
     }
 
     int maxIter = 500;

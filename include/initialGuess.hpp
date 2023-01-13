@@ -184,7 +184,6 @@ namespace libp {
     template class RollingQRProjection<double>;
     template class RollingQRProjection<float>;
 
-#if 0
     // Extrapolation initial guess strategy.
     template <typename T>
     class Extrap : public initialGuessStrategy_t {
@@ -218,7 +217,6 @@ namespace libp {
 
     template class Extrap<double>;
     template class Extrap<float>;
-#endif
 
   } //namespace InitialGuess
 

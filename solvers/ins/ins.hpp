@@ -90,10 +90,10 @@ public:
   elliptic_t uSolver, vSolver, wSolver;
   elliptic_t pSolver;
 
-  linearSolver_t uLinearSolver;
-  linearSolver_t vLinearSolver;
-  linearSolver_t wLinearSolver;
-  linearSolver_t pLinearSolver;
+  linearSolver_t<dfloat>  uLinearSolver;
+  linearSolver_t<dfloat>  vLinearSolver;
+  linearSolver_t<dfloat>  wLinearSolver;
+  linearSolver_t<dfloat>  pLinearSolver;
 
   int NVfields, NTfields;
 
