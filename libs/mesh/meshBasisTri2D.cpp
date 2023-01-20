@@ -691,7 +691,7 @@ void mesh_t::InterpolationMatrixTri2D(const int _N,
 
   I.malloc(NpointsIn*NpointsOut);
   linAlg_t::matrixRightSolve(NpointsOut, _Np, VOut,
-				     NpointsIn, _Np, VIn, I);
+                             NpointsIn, _Np, VIn, I);
 }
 
 void mesh_t::DegreeRaiseMatrixTri2D(const int Nc, const int Nf,

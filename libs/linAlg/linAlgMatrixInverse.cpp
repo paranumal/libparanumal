@@ -36,8 +36,8 @@ extern "C" {
 
 namespace libp {
 
-  void linAlg_t::matrixInverse(const int N, memory<double> A){
-  int n  = N;
+void linAlg_t::matrixInverse(const int N, memory<double> A){
+  int n = N;
   int lwork = N*N;
   int info;
 
@@ -54,7 +54,7 @@ namespace libp {
   LIBP_ABORT("dgetri_ reports info = " << info, info);
 }
 
-  void linAlg_t::matrixInverse(const int N, memory<float> A){
+void linAlg_t::matrixInverse(const int N, memory<float> A){
   int n = N;
   int lwork = N*N;
   int info;

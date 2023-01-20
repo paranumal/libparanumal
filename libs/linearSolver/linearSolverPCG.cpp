@@ -52,10 +52,10 @@ pcg<T>::pcg(dlong _N, dlong _Nhalo,
 					 "updatePCG", kernelInfo);
 }
 
-  template <typename T>
-  int pcg<T>::Solve(operator_t& linearOperator, operator_t& precon,
-               deviceMemory<T>& o_x, deviceMemory<T>& o_r,
-               const T tol, const int MAXIT, const int verbose) {
+template <typename T>
+int pcg<T>::Solve(operator_t& linearOperator, operator_t& precon,
+                  deviceMemory<T>& o_x, deviceMemory<T>& o_r,
+                  const T tol, const int MAXIT, const int verbose) {
 
   int rank = comm.rank();
   linAlg_t &linAlg = platform.linAlg();
@@ -77,12 +77,12 @@ pcg<T>::pcg(dlong _N, dlong _Nhalo,
                            + 4 * platform.memPoolAlignment<T>());
   /*aux variables */
   deviceMemory<T> o_p  = platform.reserve<T>(Ntotal);
-  deviceMemory<T> o_z  = platform.reserve<T>(Ntotal);  
+  deviceMemory<T> o_z  = platform.reserve<T>(Ntotal);
   deviceMemory<T> o_Ap = platform.reserve<T>(Ntotal);
 
   deviceMemory<pfloat> o_pfloat_r  = platform.reserve<pfloat>(Ntotal);
   deviceMemory<pfloat> o_pfloat_z  = platform.reserve<pfloat>(Ntotal);
-  
+
   // Comput norm of RHS (for stopping tolerance).
   if (settings.compareSetting("LINEAR SOLVER STOPPING CRITERION", "ABS/REL-RHS-2NORM")) {
     T normb = linAlg.norm2(N, o_r, comm);
@@ -127,7 +127,7 @@ pcg<T>::pcg(dlong _N, dlong _Nhalo,
     // r.z
     rdotz2 = rdotz1;
     rdotz1 = linAlg.innerProd(N, o_r, o_z, comm);
-    
+
     if(flexible){
       if (iter==0) {
         beta = 0.0;
@@ -166,12 +166,12 @@ pcg<T>::pcg(dlong _N, dlong _Nhalo,
   return iter;
 }
 
-  template <typename T>
-  T pcg<T>::UpdatePCG(const T alpha,
-                      deviceMemory<T>& o_p,
-                      deviceMemory<T>& o_Ap,
-                      deviceMemory<T>& o_x,
-                      deviceMemory<T>& o_r){
+template <typename T>
+T pcg<T>::UpdatePCG(const T alpha,
+                    deviceMemory<T>& o_p,
+                    deviceMemory<T>& o_Ap,
+                    deviceMemory<T>& o_x,
+                    deviceMemory<T>& o_r){
 
   // x <= x + alpha*p
   // r <= r - alpha*A*p

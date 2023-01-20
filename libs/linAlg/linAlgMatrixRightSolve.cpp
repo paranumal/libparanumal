@@ -142,9 +142,9 @@ namespace libp {
 
 // C = A/B  = trans(trans(B)\trans(A))
 // assume row major
-  void linAlg_t::matrixRightSolve(const int NrowsA, const int NcolsA, const memory<double> A,
-				  const int NrowsB, const int NcolsB, const memory<double> B,
-				  memory<double> C){
+void linAlg_t::matrixRightSolve(const int NrowsA, const int NcolsA, const memory<double> A,
+                                const int NrowsB, const int NcolsB, const memory<double> B,
+                                memory<double> C){
 
   int info;
 
@@ -171,10 +171,10 @@ namespace libp {
 
 // C = A/B  = trans(trans(B)\trans(A))
 // assume row major
-  void linAlg_t::matrixRightSolve(const int NrowsA, const int NcolsA, const memory<float> A,
-				  const int NrowsB, const int NcolsB, const memory<float> B,
-				  memory<float> C){
-    
+void linAlg_t::matrixRightSolve(const int NrowsA, const int NcolsA, const memory<float> A,
+                                const int NrowsB, const int NcolsB, const memory<float> B,
+                                memory<float> C){
+
   int info;
 
   int NrowsX = NcolsB;
@@ -201,10 +201,10 @@ namespace libp {
 // Find minimum-norm solution to xA = b with NrowsA > NcolsA (underdetermined).
 //
 // NB:  A must be stored ROW MAJOR.
-  void linAlg_t::matrixUnderdeterminedRightSolveMinNorm(const int NrowsA, const int NcolsA,
-							const memory<double> A, const memory<double> b,
-							memory<double> x) {
-    // Solve A^T x^T = b^T.  Note TRANS = 'N', since A is row major.
+void linAlg_t::matrixUnderdeterminedRightSolveMinNorm(const int NrowsA, const int NcolsA,
+                                                      const memory<double> A, const memory<double> b,
+                                                      memory<double> x) {
+  // Solve A^T x^T = b^T.  Note TRANS = 'N', since A is row major.
   int  INFO  = 0;
   char TRANS = 'N';
   int  NRHS  = 1;
@@ -230,7 +230,7 @@ namespace libp {
 // Find minimum-norm solution to xA = b with NrowsA > NcolsA (underdetermined).
 //
 // NB:  A must be stored ROW MAJOR.
-  void linAlg_t::matrixUnderdeterminedRightSolveMinNorm(const int NrowsA, const int NcolsA,
+void linAlg_t::matrixUnderdeterminedRightSolveMinNorm(const int NrowsA, const int NcolsA,
                                                       const memory<float> A, const memory<float> b,
                                                       memory<float> x) {
   // Solve A^T x^T = b^T.  Note TRANS = 'N', since A is row major.
@@ -266,7 +266,7 @@ namespace libp {
 //   4.  Apply permutation.          -->  x^T = P R1^{-1} Q^T b^T
 //
 // NB:  A must be stored ROW MAJOR.
-  void linAlg_t::matrixUnderdeterminedRightSolveCPQR(const int NrowsA, const int NcolsA,
+void linAlg_t::matrixUnderdeterminedRightSolveCPQR(const int NrowsA, const int NcolsA,
                                                    const memory<double> A, const memory<double> b,
                                                    memory<double> x) {
   int INFO  = 0;
@@ -327,7 +327,7 @@ namespace libp {
 //   4.  Apply permutation.          -->  x^T = P R1^{-1} Q^T b^T
 //
 // NB:  A must be stored ROW MAJOR.
-  void linAlg_t::matrixUnderdeterminedRightSolveCPQR(const int NrowsA, const int NcolsA,
+void linAlg_t::matrixUnderdeterminedRightSolveCPQR(const int NrowsA, const int NcolsA,
                                                    const memory<float> A, const memory<float> b,
                                                    memory<float> x) {
   int INFO  = 0;

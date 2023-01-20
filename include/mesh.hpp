@@ -67,7 +67,7 @@ class mesh_t {
   int Nverts, Nfaces, NfaceVertices;
   Mesh::ElementType elementType;
 
-// return kernel name suffix based on dimension and element type                                                                  
+// return kernel name suffix based on dimension and element type
   std::string elementSuffix(){
 
     std::string suffix("NOT DEFINED");
@@ -95,7 +95,7 @@ class mesh_t {
     return suffix;
   }
 
-  
+
   // indices of vertex nodes
   memory<int> vertexNodes;
 
@@ -147,7 +147,7 @@ class mesh_t {
     return _Np;
   }
 
-  
+
   int Nq=0;                 // N = Polynomial order, Nq=N+1
   memory<dfloat> gllz;      // 1D GLL quadrature nodes
   memory<dfloat> gllw;      // 1D GLL quadrature weights
@@ -167,15 +167,15 @@ class mesh_t {
 
   memory<dfloat> invMM;
   memory<pfloat> pfloat_invMM;
-  
+
   memory<dfloat> MM;     // reference mass matrix
   deviceMemory<dfloat> o_MM;
   deviceMemory<pfloat> o_pfloat_MM;
-  
+
   memory<dfloat> LIFT;          // lift matrix
   deviceMemory<dfloat> o_LIFT;
   deviceMemory<pfloat> o_pfloat_LIFT;
-  
+
   memory<dfloat> sM;            // surface mass (MM*LIFT)^T
   deviceMemory<dfloat> o_sM;
   memory<dfloat> Srr, Srs, Srt; //element stiffness matrices
@@ -241,19 +241,19 @@ class mesh_t {
   memory<dfloat> wJ;
   deviceMemory<dfloat> o_wJ;
   deviceMemory<pfloat> o_pfloat_wJ;
-  
+
   // volumeGeometricFactors;
   dlong Nvgeo;
   memory<dfloat> vgeo;
   deviceMemory<dfloat> o_vgeo;
   deviceMemory<pfloat> o_pfloat_vgeo;
-  
+
   // surfaceGeometricFactors;
   dlong   Nsgeo;
   memory<dfloat> sgeo;
   deviceMemory<dfloat> o_sgeo;
   deviceMemory<pfloat> o_pfloat_sgeo;
-  
+
   // second order volume geometric factors
   dlong Nggeo;
   memory<dfloat> ggeo;

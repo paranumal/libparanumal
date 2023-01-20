@@ -78,7 +78,7 @@ class linearSolver_t {
   template class linearSolver_t<double>;
   template class linearSolver_t<float>;
 
-  
+
 namespace LinearSolver {
 
 //virtual base linear solver class
@@ -106,7 +106,7 @@ public:
 
 };
 
-  
+
 //Preconditioned Conjugate Gradient
 template<typename T>
 class pcg: public linearSolverBase_t {
@@ -133,7 +133,7 @@ public:
 template class pcg<float>;
 template class pcg<double>;
 
-  
+
 //Preconditioned GMRES
 template <typename T>
 class pgmres: public linearSolverBase_t {
@@ -158,10 +158,10 @@ public:
   template class pgmres<float>;
 template class pgmres<double>;
 
-  
+
 // Preconditioned MINRES
 template <typename T>
-class pminres : public linearSolverBase_t {  
+class pminres : public linearSolverBase_t {
 private:
   kernel_t updateMINRESKernel;
 
@@ -187,7 +187,7 @@ public:
 
 template class pminres<float>;
 template class pminres<double>;
-  
+
 //Non-Blocking Preconditioned Conjugate Gradient
 template <typename T>
 class nbpcg: public linearSolverBase_t {
@@ -221,7 +221,7 @@ public:
 
 template class nbpcg<float>;
 template class nbpcg<double>;
-  
+
 //Non-Blocking Flexible Preconditioned Conjugate Gradient
 template <typename T>
 class nbfpcg: public linearSolverBase_t {
@@ -257,7 +257,7 @@ public:
 
 template class nbfpcg<float>;
 template class nbfpcg<double>;
-  
+
 } //namespace LinearSolver
 
 } //namespace libp

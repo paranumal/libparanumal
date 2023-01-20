@@ -54,74 +54,73 @@ void AddSettings(settings_t& settings, const std::string prefix)
                       {"MINNORM", "CPQR"});
 }
 
-  /*****************************************************************************/
-  template <typename T>
-  Last<T>::Last(dlong _N, platform_t& _platform, settings_t& _settings, comm_t _comm):
-    initialGuessStrategy_t(_N, _platform, _settings, _comm)
-  {
-    this->platform.linAlg().InitKernels({"set"});
-    o_xLast = this->platform.malloc<T>(Ntotal);
-    this->platform.linAlg().set(Ntotal, (T)0.0, o_xLast);
-  }
-  
-  template<typename T>
-  void Last<T>::FormInitialGuess(deviceMemory<T>& o_x, deviceMemory<T>& o_rhs)
-  {
-    o_x.copyFrom(o_xLast, Ntotal, 0, properties_t("async", true));
-  }
-  
-  template<typename T>
-  void Last<T>::Update(operator_t &linearOperator, deviceMemory<T>& o_x, deviceMemory<T>& o_rhs)
-  {
-    o_xLast.copyFrom(o_x, Ntotal, 0, properties_t("async", true));
-  }
-  
-  /*****************************************************************************/
-#if 1
-  template<typename T>
-  Zero<T>::Zero(dlong _N, platform_t& _platform, settings_t& _settings, comm_t _comm):
-    initialGuessStrategy_t(_N, _platform, _settings, _comm)
-  {
-    platform.linAlg().InitKernels({"set"});
-  }
-  
-  template<typename T>
-  void Zero<T>::FormInitialGuess(deviceMemory<T>& o_x, deviceMemory<T>& o_rhs)
-  {
-    platform.linAlg().set(Ntotal, (T)0.0, o_x);
-  }
-  
-  template<typename T>
-  void Zero<T>::Update(operator_t &linearOperator, deviceMemory<T>& o_x, deviceMemory<T>& o_rhs)
-  {}
-#endif
+/*****************************************************************************/
+template <typename T>
+Last<T>::Last(dlong _N, platform_t& _platform, settings_t& _settings, comm_t _comm):
+  initialGuessStrategy_t(_N, _platform, _settings, _comm)
+{
+  this->platform.linAlg().InitKernels({"set"});
+  o_xLast = this->platform.malloc<T>(Ntotal);
+  this->platform.linAlg().set(Ntotal, (T)0.0, o_xLast);
+}
 
-  /*****************************************************************************/
-  
-  template<typename T>
-  Projection<T>::Projection(dlong _N, platform_t& _platform, settings_t& _settings, comm_t _comm):
-    initialGuessStrategy_t(_N, _platform, _settings, _comm)
-  {
-    curDim = 0;
-    settings.getSetting("INITIAL GUESS HISTORY SPACE DIMENSION", maxDim);
-    
-    o_Btilde = platform.malloc<T>(Ntotal*maxDim);
-    o_Xtilde = platform.malloc<T>(Ntotal*maxDim);
-    
-    // Build kernels.
-    platform.linAlg().InitKernels({"set", "axpy"});
-    
-    properties_t kernelInfo = platform.props();
-    kernelInfo["defines/" "p_igNhist"] = maxDim;
-    
-    igBasisInnerProductsKernel = platform.buildKernel(LINEARSOLVER_DIR "/okl/igBasisInnerProducts.okl", "igBasisInnerProducts", kernelInfo);
-    igReconstructKernel        = platform.buildKernel(LINEARSOLVER_DIR "/okl/igReconstruct.okl",        "igReconstruct",        kernelInfo);
-    igUpdateKernel             = platform.buildKernel(LINEARSOLVER_DIR "/okl/igUpdate.okl",             "igUpdate",             kernelInfo);
-  }
-  
-  template<typename T>
-  void Projection<T>::FormInitialGuess(deviceMemory<T>& o_x,
-                                  deviceMemory<T>& o_rhs)
+template<typename T>
+void Last<T>::FormInitialGuess(deviceMemory<T>& o_x, deviceMemory<T>& o_rhs)
+{
+  o_x.copyFrom(o_xLast, Ntotal, 0, properties_t("async", true));
+}
+
+template<typename T>
+void Last<T>::Update(operator_t &linearOperator, deviceMemory<T>& o_x, deviceMemory<T>& o_rhs)
+{
+  o_xLast.copyFrom(o_x, Ntotal, 0, properties_t("async", true));
+}
+
+/*****************************************************************************/
+
+template<typename T>
+Zero<T>::Zero(dlong _N, platform_t& _platform, settings_t& _settings, comm_t _comm):
+  initialGuessStrategy_t(_N, _platform, _settings, _comm)
+{
+  platform.linAlg().InitKernels({"set"});
+}
+
+template<typename T>
+void Zero<T>::FormInitialGuess(deviceMemory<T>& o_x, deviceMemory<T>& o_rhs)
+{
+  platform.linAlg().set(Ntotal, (T)0.0, o_x);
+}
+
+template<typename T>
+void Zero<T>::Update(operator_t &linearOperator, deviceMemory<T>& o_x, deviceMemory<T>& o_rhs)
+{}
+
+/*****************************************************************************/
+
+template<typename T>
+Projection<T>::Projection(dlong _N, platform_t& _platform, settings_t& _settings, comm_t _comm):
+  initialGuessStrategy_t(_N, _platform, _settings, _comm)
+{
+  curDim = 0;
+  settings.getSetting("INITIAL GUESS HISTORY SPACE DIMENSION", maxDim);
+
+  o_Btilde = platform.malloc<T>(Ntotal*maxDim);
+  o_Xtilde = platform.malloc<T>(Ntotal*maxDim);
+
+  // Build kernels.
+  platform.linAlg().InitKernels({"set", "axpy"});
+
+  properties_t kernelInfo = platform.props();
+  kernelInfo["defines/" "p_igNhist"] = maxDim;
+
+  igBasisInnerProductsKernel = platform.buildKernel(LINEARSOLVER_DIR "/okl/igBasisInnerProducts.okl", "igBasisInnerProducts", kernelInfo);
+  igReconstructKernel        = platform.buildKernel(LINEARSOLVER_DIR "/okl/igReconstruct.okl",        "igReconstruct",        kernelInfo);
+  igUpdateKernel             = platform.buildKernel(LINEARSOLVER_DIR "/okl/igUpdate.okl",             "igUpdate",             kernelInfo);
+}
+
+template<typename T>
+void Projection<T>::FormInitialGuess(deviceMemory<T>& o_x,
+                                deviceMemory<T>& o_rhs)
 {
   if (curDim > 0) {
     deviceMemory<T> o_alphas = platform.reserve<T>(maxDim);
@@ -133,11 +132,11 @@ void AddSettings(settings_t& settings, const std::string prefix)
   }
 }
 
-  template <typename T>
-  void Projection<T>::igBasisInnerProducts(deviceMemory<T>& o_x,
-                                      deviceMemory<T>& o_Q,
-                                      deviceMemory<T>& o_alphas,
-                                      pinnedMemory<T>& h_alphas)
+template <typename T>
+void Projection<T>::igBasisInnerProducts(deviceMemory<T>& o_x,
+                                    deviceMemory<T>& o_Q,
+                                    deviceMemory<T>& o_alphas,
+                                    pinnedMemory<T>& h_alphas)
 {
   int Nblocks = (Ntotal+IG_BLOCKSIZE-1)/IG_BLOCKSIZE;
   Nblocks = std::min(Nblocks, IG_BLOCKSIZE); //limit to IG_BLOCKSIZE entries
@@ -160,13 +159,13 @@ void AddSettings(settings_t& settings, const std::string prefix)
   h_alphas.copyTo(o_alphas, curDim, 0, properties_t("async", true));
 }
 
-  template <typename T>
-  void Projection<T>::igReconstruct(const T a,
-                               deviceMemory<T>& o_u,
-                               const T b,
-                               deviceMemory<T>& o_alphas,
-                               deviceMemory<T>& o_Q,
-                               deviceMemory<T>& o_unew)
+template <typename T>
+void Projection<T>::igReconstruct(const T a,
+                             deviceMemory<T>& o_u,
+                             const T b,
+                             deviceMemory<T>& o_alphas,
+                             deviceMemory<T>& o_Q,
+                             deviceMemory<T>& o_unew)
 {
   igReconstructKernel(Ntotal, curDim, a, o_u, b, o_alphas, o_Q, o_unew);
 }
@@ -183,7 +182,7 @@ template <typename T>
 void ClassicProjection<T>::Update(operator_t &linearOperator, deviceMemory<T>& o_x, deviceMemory<T>& o_rhs)
 {
   dlong Ntot = this->Ntotal;
-  
+
   // Compute RHS corresponding to the approximate solution obtained.
   deviceMemory<T> o_btilde = this->platform.template reserve<T>(Ntot);
   linearOperator.Operator(o_x, o_btilde);
@@ -484,7 +483,7 @@ void Extrap<T>::extrapCoeffs(int m, int M, memory<T> c)
   } else if (settings.compareSetting("INITIAL GUESS EXTRAP COEFFS METHOD", "CPQR")) {
     linAlg_t::matrixUnderdeterminedRightSolveCPQR(M, m + 1, V, b, dc);
   }
-  
+
   for (int i = 0; i < M; i++){
     c[i] = dc[i];
   }

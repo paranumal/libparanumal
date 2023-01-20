@@ -36,11 +36,11 @@ extern "C" {
 namespace libp {
 
 // compute right eigenvectors
-  void linAlg_t::matrixEigenVectors(const int N, const memory<double> A,
-				    memory<double> VR,
-				    memory<double> WR,
-				    memory<double> WI){
-    
+void linAlg_t::matrixEigenVectors(const int N, const memory<double> A,
+                                  memory<double> VR,
+                                  memory<double> WR,
+                                  memory<double> WI){
+
   int n = N;
   char JOBVL = 'N';
   char JOBVR = 'V';
@@ -68,11 +68,11 @@ namespace libp {
 }
 
 // compute right eigenvectors
-  void linAlg_t::matrixEigenVectors(const int N, const memory<float> A,
-				    memory<float> VR,
-				    memory<float> WR,
-				    memory<float> WI){
-    
+void linAlg_t::matrixEigenVectors(const int N, const memory<float> A,
+                                  memory<float> VR,
+                                  memory<float> WR,
+                                  memory<float> WI){
+
   int n = N;
   char JOBVL = 'N';
   char JOBVR = 'V';
@@ -100,10 +100,10 @@ namespace libp {
 }
 
 // compute eigenvalues
-  void linAlg_t::matrixEigenValues(const int N, const memory<double> A,
-				   memory<double> WR,
-				   memory<double> WI){
-    
+void linAlg_t::matrixEigenValues(const int N, const memory<double> A,
+                                 memory<double> WR,
+                                 memory<double> WI){
+
   int n = N;
   char JOBVL  = 'N';
   char JOBVR  = 'N';
@@ -125,9 +125,9 @@ namespace libp {
 }
 
 // compute eigenvalues
-  void linAlg_t::matrixEigenValues(const int N, const memory<float> A,
-				   memory<float> WR,
-				   memory<float> WI){
+void linAlg_t::matrixEigenValues(const int N, const memory<float> A,
+                                 memory<float> WR,
+                                 memory<float> WI){
 
   int n = N;
   char JOBVL  = 'N';

@@ -32,7 +32,8 @@ namespace LinearSolver {
 
 #define NBPCG_BLOCKSIZE 512
 
-template <typename T> nbpcg<T>::nbpcg(dlong _N, dlong _Nhalo,
+template <typename T>
+nbpcg<T>::nbpcg(dlong _N, dlong _Nhalo,
          platform_t& _platform, settings_t& _settings, comm_t _comm):
   linearSolverBase_t(_N, _Nhalo, _platform, _settings, _comm) {
 
@@ -54,10 +55,11 @@ template <typename T> nbpcg<T>::nbpcg(dlong _N, dlong _Nhalo,
                                 "update2NBPCG", kernelInfo);
 }
 
-template <typename T> int nbpcg<T>::Solve(operator_t& linearOperator, operator_t& precon,
-				       deviceMemory<T>& o_x, deviceMemory<T>& o_r,
-				       const T tol, const int MAXIT, const int verbose) {
-  
+template <typename T>
+int nbpcg<T>::Solve(operator_t& linearOperator, operator_t& precon,
+                    deviceMemory<T>& o_x, deviceMemory<T>& o_r,
+                    const T tol, const int MAXIT, const int verbose) {
+
   int rank = comm.rank();
   linAlg_t &linAlg = platform.linAlg();
 
@@ -76,11 +78,11 @@ template <typename T> int nbpcg<T>::Solve(operator_t& linearOperator, operator_t
 
   platform.reserve<pfloat>(2*Ntotal +
                            + 4 * platform.memPoolAlignment<T>());
-  
+
   deviceMemory<pfloat> o_pfloat_s  = platform.reserve<pfloat>(Ntotal);
   deviceMemory<pfloat> o_pfloat_S  = platform.reserve<pfloat>(Ntotal);
 
-  
+
   // register scalars
   T zdotz0 = 0;
   T rdotr0 = 0;
@@ -108,7 +110,7 @@ template <typename T> int nbpcg<T>::Solve(operator_t& linearOperator, operator_t
     precon.Operator(o_pfloat_s, o_pfloat_S);
     linAlg.p2d(N, o_pfloat_S, o_z);
   }
-  
+
 
   // set alpha = 0 to get
   // r.z and z.z
@@ -192,11 +194,12 @@ template <typename T> int nbpcg<T>::Solve(operator_t& linearOperator, operator_t
   return iter;
 }
 
-template <typename T> void nbpcg<T>::Update1NBPCG(const T beta,
-                         deviceMemory<T>& o_z,
-                         deviceMemory<T>& o_Z,
-                         deviceMemory<T>& o_p,
-                         deviceMemory<T>& o_s){
+template <typename T>
+void nbpcg<T>::Update1NBPCG(const T beta,
+                            deviceMemory<T>& o_z,
+                            deviceMemory<T>& o_Z,
+                            deviceMemory<T>& o_p,
+                            deviceMemory<T>& o_s){
 
   // p <= z + beta*p
   // s <= Z + beta*s
@@ -219,11 +222,12 @@ template <typename T> void nbpcg<T>::Update1NBPCG(const T beta,
   comm.Iallreduce(dots, Comm::Sum, 1, request);
 }
 
- template <typename T> void nbpcg<T>::Update2NBPCG(const T alpha,
-                         deviceMemory<T>& o_s,
-                         deviceMemory<T>& o_S,
-                         deviceMemory<T>& o_r,
-                         deviceMemory<T>& o_z){
+template <typename T>
+void nbpcg<T>::Update2NBPCG(const T alpha,
+                            deviceMemory<T>& o_s,
+                            deviceMemory<T>& o_S,
+                            deviceMemory<T>& o_r,
+                            deviceMemory<T>& o_z){
 
   // r <= r - alpha*s
   // z <= z - alpha*S

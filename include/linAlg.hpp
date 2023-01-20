@@ -140,7 +140,7 @@ class linAlg_t {
   // p=d
   void p2d(const dlong N, deviceMemory<pfloat> o_p, deviceMemory<dfloat> o_d);
   void d2p(const dlong N, deviceMemory<dfloat> o_d, deviceMemory<pfloat> o_p);
-  
+
   static void matrixRightSolve(const int NrowsA, const int NcolsA, const memory<double> A,
                                const int NrowsB, const int NcolsB, const memory<double> B,
                                memory<double> C);
@@ -219,7 +219,7 @@ class linAlg_t {
   kernel_t weightedNorm2KernelFloat;
   kernel_t innerProdKernelFloat;
   kernel_t weightedInnerProdKernelFloat;
-  
+
   kernel_t setKernelDouble;
   kernel_t addKernelDouble;
   kernel_t scaleKernelDouble;

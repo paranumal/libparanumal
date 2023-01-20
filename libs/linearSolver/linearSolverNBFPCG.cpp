@@ -55,7 +55,7 @@ nbfpcg<T>::nbfpcg(dlong _N, dlong _Nhalo,
                                 "update1NBFPCG", kernelInfo);
 }
 
-  template<typename T>
+template<typename T>
 int nbfpcg<T>::Solve(operator_t& linearOperator, operator_t& precon,
                   deviceMemory<T>& o_x, deviceMemory<T>& o_r,
                   const T tol, const int MAXIT, const int verbose) {
@@ -80,11 +80,11 @@ int nbfpcg<T>::Solve(operator_t& linearOperator, operator_t& precon,
 
   platform.reserve<pfloat>(2*Ntotal +
                            + 4 * platform.memPoolAlignment<T>());
-  
+
   deviceMemory<pfloat> o_pfloat_tmp  = platform.reserve<pfloat>(Ntotal);
   deviceMemory<pfloat> o_pfloat_Ptmp  = platform.reserve<pfloat>(Ntotal);
 
-  
+
   // register scalars
   T alpha0 = 0;
   T beta0  = 0;
@@ -109,7 +109,7 @@ int nbfpcg<T>::Solve(operator_t& linearOperator, operator_t& precon,
     precon.Operator(o_pfloat_tmp, o_pfloat_Ptmp);
     linAlg.p2d(N, o_pfloat_Ptmp, o_u);
   }
-  
+
 
   // p = u
   o_p.copyFrom(o_u, properties_t("async", true));
@@ -178,7 +178,7 @@ int nbfpcg<T>::Solve(operator_t& linearOperator, operator_t& precon,
       precon.Operator(o_pfloat_tmp, o_pfloat_Ptmp);
       linAlg.p2d(N, o_pfloat_Ptmp, o_m);
     }
-    
+
 
     // m <= u + M*(w-r)
     linAlg.axpy(N, (T)1.0, o_u, (T)1.0, o_m);
@@ -194,7 +194,7 @@ int nbfpcg<T>::Solve(operator_t& linearOperator, operator_t& precon,
     rdotr0 = dots[3];       // r.r
 
     T one = 1.0;
-    
+
     //  p <= u + beta*p
     linAlg.axpy(N, one, o_u, beta0, o_p);
 
@@ -226,7 +226,7 @@ int nbfpcg<T>::Solve(operator_t& linearOperator, operator_t& precon,
   return iter;
 }
 
-  template<typename T>
+template<typename T>
 void nbfpcg<T>::Update0NBFPCG(deviceMemory<T>& o_u,
                            deviceMemory<T>& o_r,
                            deviceMemory<T>& o_w){
@@ -253,7 +253,7 @@ void nbfpcg<T>::Update0NBFPCG(deviceMemory<T>& o_u,
   comm.Iallreduce(dots, Comm::Sum, 3, request);
 }
 
-  template<typename T>
+template<typename T>
 void nbfpcg<T>::Update1NBFPCG(const T alpha,
                            deviceMemory<T>& o_p,
                            deviceMemory<T>& o_s,

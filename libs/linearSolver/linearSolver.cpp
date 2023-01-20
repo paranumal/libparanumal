@@ -1,7 +1,7 @@
 /*
 
 The MIT License (MIT)
- 
+
 Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus, Anthony Austin
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -44,19 +44,19 @@ int linearSolver_t<T>::Solve(operator_t& linearOperator,
   return iters;
 }
 
-
-  template <typename T>
-  void linearSolver_t<T>::MakeDefaultInitialGuessStrategy() {
-  // This is missing type 
+template <typename T>
+void linearSolver_t<T>::MakeDefaultInitialGuessStrategy() {
+  // This is missing type
   ig = std::make_shared<InitialGuess::Zero<T> >(ls->N, ls->platform, ls->settings, ls->comm);
 }
 
-  template <typename T>
-  bool linearSolver_t<T>::isInitialized() {
+template <typename T>
+bool linearSolver_t<T>::isInitialized() {
   return (ls!=nullptr && ig!=nullptr);
 }
-  template <typename T>
-  void linearSolver_t<T>::assertInitialized() {
+
+template <typename T>
+void linearSolver_t<T>::assertInitialized() {
   LIBP_ABORT("LinearSolver not initialized",
              ls==nullptr);
   LIBP_ABORT("InitialGuess not initialized",
