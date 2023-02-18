@@ -43,7 +43,7 @@ void MGLevel::residual(deviceMemory<pfloat>& o_rhs, deviceMemory<pfloat>& o_x, d
 void MGLevel::coarsen(deviceMemory<pfloat>& o_x, deviceMemory<pfloat>& o_Rx) {
 
   pfloat one = 1.0, zero = 0.0;
-  
+
   linAlg_t& linAlg = platform.linAlg();
 
   if (elliptic.disc_c0) {
@@ -139,7 +139,7 @@ void MGLevel::smooth(deviceMemory<pfloat>& o_rhs, deviceMemory<pfloat>& o_x, boo
 void MGLevel::smoothJacobi(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_x, bool xIsZero) {
 
   pfloat one = 1.0, zero = 0.0;
-  
+
   linAlg_t& linAlg = platform.linAlg();
 
   deviceMemory<pfloat> o_res = platform.reserve<pfloat>(Ncols);
@@ -172,7 +172,7 @@ void MGLevel::smoothChebyshev (deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& 
 
   linAlg_t& linAlg = platform.linAlg();
   pfloat one = 1.0, zero = 0;
-  
+
   if(xIsZero){ //skip the Ax if x is zero
     //res = S*r
     linAlg.amxpy(elliptic.Ndofs, one, o_invDiagA, o_r, zero, o_res);
@@ -245,7 +245,7 @@ MGLevel::MGLevel(elliptic_t& _elliptic,
   //  o_P = elliptic.platform.malloc<pfloat>(P);
   // TW4
   memory<pfloat> pfloatP(P.length());
-  for(int n=0;n<P.length();++n){
+  for(size_t n=0;n<P.length();++n){
     pfloatP[n] = P[n];
   }
   o_P = elliptic.platform.malloc<pfloat>(pfloatP);
@@ -263,7 +263,7 @@ MGLevel::MGLevel(elliptic_t& _elliptic,
 
   kernelInfo["defines/" "dfloat"]= pfloatString; // TW
   kernelInfo["defines/" "dfloat4"]= std::string(pfloatString) + std::string("4");
-  
+
   kernelInfo["defines/" "p_NqFine"]= mesh.N+1;
   kernelInfo["defines/" "p_NqCoarse"]= Nc+1;
 
@@ -403,7 +403,7 @@ pfloat MGLevel::maxEigSmoothAx(){
   linAlg_t& linAlg = platform.linAlg();
 
   pfloat one = 1.0, zero = 0;
-  
+
   int k = 10;
 
   hlong Ntotal = Nrows;
