@@ -171,24 +171,28 @@ void linAlg_t::zadxpy(const dlong N, const double alpha,
 }
 
 // \min o_a
-template<>
-float linAlg_t::min(const dlong N, deviceMemory<float> o_a, comm_t comm) {
+template<typename T>
+T linAlg_t::min(const dlong N, deviceMemory<T> o_a, comm_t comm) {
   int Nblock = (N+blocksize-1)/blocksize;
   Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
 
   //pinned scratch buffer
-  pinnedMemory<float> h_scratch = platform->hostReserve<float>(1);
-  deviceMemory<float> o_scratch = platform->reserve<float>(blocksize);
+  pinnedMemory<T> h_scratch = platform->hostReserve<T>(1);
+  deviceMemory<T> o_scratch = platform->reserve<T>(blocksize);
 
-  minKernelFloat(Nblock, N, o_a, o_scratch);
+  if constexpr (std::is_same_v<T,float>) {
+    minKernelFloat(Nblock, N, o_a, o_scratch);
+  } else {
+    minKernelDouble(Nblock, N, o_a, o_scratch);
+  }
 
-  float globalmin;
+  T globalmin;
   if (Nblock>0) {
     h_scratch.copyFrom(o_scratch, 1, 0, properties_t("async", true));
     platform->finish();
     globalmin = h_scratch[0];
   } else {
-    globalmin = std::numeric_limits<float>::max();
+    globalmin = std::numeric_limits<T>::max();
   }
 
   comm.Allreduce(globalmin, Comm::Min);
@@ -196,50 +200,34 @@ float linAlg_t::min(const dlong N, deviceMemory<float> o_a, comm_t comm) {
   return globalmin;
 }
 
-template<>
-double linAlg_t::min(const dlong N, deviceMemory<double> o_a, comm_t comm) {
-  int Nblock = (N+blocksize-1)/blocksize;
-  Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
+template
+float linAlg_t::min(const dlong N, deviceMemory<float> o_a, comm_t comm);
 
-  //pinned scratch buffer
-  pinnedMemory<double> h_scratch = platform->hostReserve<double>(1);
-  deviceMemory<double> o_scratch = platform->reserve<double>(blocksize);
-
-  minKernelDouble(Nblock, N, o_a, o_scratch);
-
-  double globalmin;
-  if (Nblock>0) {
-    h_scratch.copyFrom(o_scratch, 1, 0, properties_t("async", true));
-    platform->finish();
-    globalmin = h_scratch[0];
-  } else {
-    globalmin = std::numeric_limits<double>::max();
-  }
-
-  comm.Allreduce(globalmin, Comm::Min);
-
-  return globalmin;
-}
-
+template
+double linAlg_t::min(const dlong N, deviceMemory<double> o_a, comm_t comm);
 
 // \max o_a
-template<>
-float linAlg_t::max(const dlong N, deviceMemory<float> o_a, comm_t comm) {
+template<typename T>
+T linAlg_t::max(const dlong N, deviceMemory<T> o_a, comm_t comm) {
   int Nblock = (N+blocksize-1)/blocksize;
   Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
 
-  pinnedMemory<float> h_scratch = platform->hostReserve<float>(1);
-  deviceMemory<float> o_scratch = platform->reserve<float>(blocksize);
+  pinnedMemory<T> h_scratch = platform->hostReserve<T>(1);
+  deviceMemory<T> o_scratch = platform->reserve<T>(blocksize);
 
-  maxKernelFloat(Nblock, N, o_a, o_scratch);
+  if constexpr (std::is_same_v<T,float>) {
+    maxKernelFloat(Nblock, N, o_a, o_scratch);
+  } else {
+    maxKernelDouble(Nblock, N, o_a, o_scratch);
+  }
 
-  float globalmax;
+  T globalmax;
   if (Nblock>0) {
     h_scratch.copyFrom(o_scratch, 1, 0, properties_t("async", true));
     platform->finish();
     globalmax = h_scratch[0];
   } else {
-    globalmax = -std::numeric_limits<float>::max();
+    globalmax = -std::numeric_limits<T>::max();
   }
 
   comm.Allreduce(globalmax, Comm::Max);
@@ -247,43 +235,29 @@ float linAlg_t::max(const dlong N, deviceMemory<float> o_a, comm_t comm) {
   return globalmax;
 }
 
-template<>
-double linAlg_t::max(const dlong N, deviceMemory<double> o_a, comm_t comm) {
-  int Nblock = (N+blocksize-1)/blocksize;
-  Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
+template
+float linAlg_t::max(const dlong N, deviceMemory<float> o_a, comm_t comm);
 
-  pinnedMemory<double> h_scratch = platform->hostReserve<double>(1);
-  deviceMemory<double> o_scratch = platform->reserve<double>(blocksize);
-
-  maxKernelDouble(Nblock, N, o_a, o_scratch);
-
-  double globalmax;
-  if (Nblock>0) {
-    h_scratch.copyFrom(o_scratch, 1, 0, properties_t("async", true));
-    platform->finish();
-    globalmax = h_scratch[0];
-  } else {
-    globalmax = -std::numeric_limits<double>::max();
-  }
-
-  comm.Allreduce(globalmax, Comm::Max);
-
-  return globalmax;
-}
+template
+double linAlg_t::max(const dlong N, deviceMemory<double> o_a, comm_t comm);
 
 
 // \sum o_a
-template<>
-float linAlg_t::sum(const dlong N, deviceMemory<float> o_a, comm_t comm) {
+template<typename T>
+T linAlg_t::sum(const dlong N, deviceMemory<T> o_a, comm_t comm) {
   int Nblock = (N+blocksize-1)/blocksize;
   Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
 
-  pinnedMemory<float> h_scratch = platform->hostReserve<float>(1);
-  deviceMemory<float> o_scratch = platform->reserve<float>(blocksize);
+  pinnedMemory<T> h_scratch = platform->hostReserve<T>(1);
+  deviceMemory<T> o_scratch = platform->reserve<T>(blocksize);
 
-  sumKernelFloat(Nblock, N, o_a, o_scratch);
+  if constexpr (std::is_same_v<T,float>) {
+    sumKernelFloat(Nblock, N, o_a, o_scratch);
+  } else {
+    sumKernelDouble(Nblock, N, o_a, o_scratch);
+  }
 
-  float globalsum;
+  T globalsum;
   if (Nblock>0) {
     h_scratch.copyFrom(o_scratch, 1, 0, properties_t("async", true));
     platform->finish();
@@ -297,42 +271,28 @@ float linAlg_t::sum(const dlong N, deviceMemory<float> o_a, comm_t comm) {
   return globalsum;
 }
 
-template<>
-double linAlg_t::sum(const dlong N, deviceMemory<double> o_a, comm_t comm) {
-  int Nblock = (N+blocksize-1)/blocksize;
-  Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
+template
+float linAlg_t::sum(const dlong N, deviceMemory<float> o_a, comm_t comm);
 
-  pinnedMemory<double> h_scratch = platform->hostReserve<double>(1);
-  deviceMemory<double> o_scratch = platform->reserve<double>(blocksize);
-
-  sumKernelDouble(Nblock, N, o_a, o_scratch);
-
-  double globalsum;
-  if (Nblock>0) {
-    h_scratch.copyFrom(o_scratch, 1, 0, properties_t("async", true));
-    platform->finish();
-    globalsum = h_scratch[0];
-  } else {
-    globalsum = 0.0;
-  }
-
-  comm.Allreduce(globalsum, Comm::Sum);
-
-  return globalsum;
-}
+template
+double linAlg_t::sum(const dlong N, deviceMemory<double> o_a, comm_t comm);
 
 // ||o_a||_2
-template<>
-float linAlg_t::norm2(const dlong N, deviceMemory<float> o_a, comm_t comm) {
+template<typename T>
+T linAlg_t::norm2(const dlong N, deviceMemory<T> o_a, comm_t comm) {
   int Nblock = (N+blocksize-1)/blocksize;
   Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
 
-  pinnedMemory<float> h_scratch = platform->hostReserve<float>(1);
-  deviceMemory<float> o_scratch = platform->reserve<float>(blocksize);
+  pinnedMemory<T> h_scratch = platform->hostReserve<T>(1);
+  deviceMemory<T> o_scratch = platform->reserve<T>(blocksize);
 
-  norm2KernelFloat(Nblock, N, o_a, o_scratch);
+  if constexpr (std::is_same_v<T,float>) {
+    norm2KernelFloat(Nblock, N, o_a, o_scratch);
+  } else {
+    norm2KernelDouble(Nblock, N, o_a, o_scratch);
+  }
 
-  float globalnorm;
+  T globalnorm;
   if (Nblock>0) {
     h_scratch.copyFrom(o_scratch, 1, 0, properties_t("async", true));
     platform->finish();
@@ -346,96 +306,68 @@ float linAlg_t::norm2(const dlong N, deviceMemory<float> o_a, comm_t comm) {
   return sqrt(globalnorm);
 }
 
-template<>
-double linAlg_t::norm2(const dlong N, deviceMemory<double> o_a, comm_t comm) {
-  int Nblock = (N+blocksize-1)/blocksize;
-  Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
+template
+float linAlg_t::norm2(const dlong N, deviceMemory<float> o_a, comm_t comm);
 
-  pinnedMemory<double> h_scratch = platform->hostReserve<double>(1);
-  deviceMemory<double> o_scratch = platform->reserve<double>(blocksize);
-
-  norm2KernelDouble(Nblock, N, o_a, o_scratch);
-
-  double globalnorm;
-  if (Nblock>0) {
-    h_scratch.copyFrom(o_scratch, 1, 0, properties_t("async", true));
-    platform->finish();
-    globalnorm = h_scratch[0];
-  } else {
-    globalnorm = 0.0;
-  }
-
-  comm.Allreduce(globalnorm, Comm::Sum);
-
-  return sqrt(globalnorm);
-}
+template
+double linAlg_t::norm2(const dlong N, deviceMemory<double> o_a, comm_t comm);
 
 // o_x.o_y
-template<>
+template<typename T>
+T linAlg_t::innerProd(const dlong N, deviceMemory<T> o_x, deviceMemory<T> o_y,
+                         comm_t comm) {
+  int Nblock = (N+blocksize-1)/blocksize;
+  Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
+
+  pinnedMemory<T> h_scratch = platform->hostReserve<T>(1);
+  deviceMemory<T> o_scratch = platform->reserve<T>(blocksize);
+
+  if constexpr (std::is_same_v<T,float>) {
+    innerProdKernelFloat(Nblock, N, o_x, o_y, o_scratch);
+  } else {
+    innerProdKernelDouble(Nblock, N, o_x, o_y, o_scratch);
+  }
+
+  T globaldot;
+  if (Nblock>0) {
+    h_scratch.copyFrom(o_scratch, 1, 0, properties_t("async", true));
+    platform->finish();
+    globaldot = h_scratch[0];
+  } else {
+    globaldot = 0.0;
+  }
+
+  comm.Allreduce(globaldot, Comm::Sum);
+
+  return globaldot;
+}
+
+template
 float linAlg_t::innerProd(const dlong N, deviceMemory<float> o_x, deviceMemory<float> o_y,
-                         comm_t comm) {
-  int Nblock = (N+blocksize-1)/blocksize;
-  Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
+                         comm_t comm);
 
-  pinnedMemory<float> h_scratch = platform->hostReserve<float>(1);
-  deviceMemory<float> o_scratch = platform->reserve<float>(blocksize);
-
-  innerProdKernelFloat(Nblock, N, o_x, o_y, o_scratch);
-
-  float globaldot;
-  if (Nblock>0) {
-    h_scratch.copyFrom(o_scratch, 1, 0, properties_t("async", true));
-    platform->finish();
-    globaldot = h_scratch[0];
-  } else {
-    globaldot = 0.0;
-  }
-
-  comm.Allreduce(globaldot, Comm::Sum);
-
-  return globaldot;
-}
-
-template<>
+template
 double linAlg_t::innerProd(const dlong N, deviceMemory<double> o_x, deviceMemory<double> o_y,
-                         comm_t comm) {
-  int Nblock = (N+blocksize-1)/blocksize;
-  Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
-
-  pinnedMemory<double> h_scratch = platform->hostReserve<double>(1);
-  deviceMemory<double> o_scratch = platform->reserve<double>(blocksize);
-
-  innerProdKernelDouble(Nblock, N, o_x, o_y, o_scratch);
-
-  double globaldot;
-  if (Nblock>0) {
-    h_scratch.copyFrom(o_scratch, 1, 0, properties_t("async", true));
-    platform->finish();
-    globaldot = h_scratch[0];
-  } else {
-    globaldot = 0.0;
-  }
-
-  comm.Allreduce(globaldot, Comm::Sum);
-
-  return globaldot;
-}
-
+                         comm_t comm);
 
 // o_w.o_x.o_y
-template<>
-float linAlg_t::weightedInnerProd(const dlong N, deviceMemory<float> o_w,
-                                  deviceMemory<float> o_x, deviceMemory<float> o_y,
+template<typename T>
+T linAlg_t::weightedInnerProd(const dlong N, deviceMemory<T> o_w,
+                                  deviceMemory<T> o_x, deviceMemory<T> o_y,
                                   comm_t comm) {
   int Nblock = (N+blocksize-1)/blocksize;
   Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
 
-  pinnedMemory<float> h_scratch = platform->hostReserve<float>(1);
-  deviceMemory<float> o_scratch = platform->reserve<float>(blocksize);
+  pinnedMemory<T> h_scratch = platform->hostReserve<T>(1);
+  deviceMemory<T> o_scratch = platform->reserve<T>(blocksize);
 
-  weightedInnerProdKernelFloat(Nblock, N, o_w, o_x, o_y, o_scratch);
+  if constexpr (std::is_same_v<T,float>) {
+    weightedInnerProdKernelFloat(Nblock, N, o_w, o_x, o_y, o_scratch);
+  } else {
+    weightedInnerProdKernelDouble(Nblock, N, o_w, o_x, o_y, o_scratch);
+  }
 
-  float globaldot;
+  T globaldot;
   if (Nblock>0) {
     h_scratch.copyFrom(o_scratch, 1, 0, properties_t("async", true));
     platform->finish();
@@ -449,84 +381,53 @@ float linAlg_t::weightedInnerProd(const dlong N, deviceMemory<float> o_w,
   return globaldot;
 }
 
-template<>
+template
+float linAlg_t::weightedInnerProd(const dlong N, deviceMemory<float> o_w,
+                                  deviceMemory<float> o_x, deviceMemory<float> o_y,
+                                  comm_t comm);
+
+template
 double linAlg_t::weightedInnerProd(const dlong N, deviceMemory<double> o_w,
-                                   deviceMemory<double> o_x, deviceMemory<double> o_y,
-                                   comm_t comm) {
-  int Nblock = (N+blocksize-1)/blocksize;
-  Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
-
-  pinnedMemory<double> h_scratch = platform->hostReserve<double>(1);
-  deviceMemory<double> o_scratch = platform->reserve<double>(blocksize);
-
-  weightedInnerProdKernelDouble(Nblock, N, o_w, o_x, o_y, o_scratch);
-
-  double globaldot;
-  if (Nblock>0) {
-    h_scratch.copyFrom(o_scratch, 1, 0, properties_t("async", true));
-    platform->finish();
-    globaldot = h_scratch[0];
-  } else {
-    globaldot = 0.0;
-  }
-
-  comm.Allreduce(globaldot, Comm::Sum);
-
-  return globaldot;
-}
-
-
+                                  deviceMemory<double> o_x, deviceMemory<double> o_y,
+                                  comm_t comm);
 
 // ||o_a||_w2
-template<>
+template<typename T>
+T linAlg_t::weightedNorm2(const dlong N, deviceMemory<T> o_w,
+                              deviceMemory<T> o_a, comm_t comm) {
+  int Nblock = (N+blocksize-1)/blocksize;
+  Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
+
+  pinnedMemory<T> h_scratch = platform->hostReserve<T>(1);
+  deviceMemory<T> o_scratch = platform->reserve<T>(blocksize);
+
+  if constexpr (std::is_same_v<T,float>) {
+    weightedNorm2KernelFloat(Nblock, N, o_w, o_a, o_scratch);
+  } else {
+    weightedNorm2KernelDouble(Nblock, N, o_w, o_a, o_scratch);
+  }
+
+  T globalnorm;
+  if (Nblock>0) {
+    h_scratch.copyFrom(o_scratch, 1, 0, properties_t("async", true));
+    platform->finish();
+    globalnorm = h_scratch[0];
+  } else {
+    globalnorm = 0.0;
+  }
+
+  comm.Allreduce(globalnorm, Comm::Sum);
+
+  return sqrt(globalnorm);
+}
+
+template
 float linAlg_t::weightedNorm2(const dlong N, deviceMemory<float> o_w,
-                              deviceMemory<float> o_a, comm_t comm) {
-  int Nblock = (N+blocksize-1)/blocksize;
-  Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
+                              deviceMemory<float> o_a, comm_t comm);
 
-  pinnedMemory<float> h_scratch = platform->hostReserve<float>(1);
-  deviceMemory<float> o_scratch = platform->reserve<float>(blocksize);
-
-  weightedNorm2KernelFloat(Nblock, N, o_w, o_a, o_scratch);
-
-  float globalnorm;
-  if (Nblock>0) {
-    h_scratch.copyFrom(o_scratch, 1, 0, properties_t("async", true));
-    platform->finish();
-    globalnorm = h_scratch[0];
-  } else {
-    globalnorm = 0.0;
-  }
-
-  comm.Allreduce(globalnorm, Comm::Sum);
-
-  return sqrt(globalnorm);
-}
-
-template<>
+template
 double linAlg_t::weightedNorm2(const dlong N, deviceMemory<double> o_w,
-                               deviceMemory<double> o_a, comm_t comm) {
-  int Nblock = (N+blocksize-1)/blocksize;
-  Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
-
-  pinnedMemory<double> h_scratch = platform->hostReserve<double>(1);
-  deviceMemory<double> o_scratch = platform->reserve<double>(blocksize);
-
-  weightedNorm2KernelDouble(Nblock, N, o_w, o_a, o_scratch);
-
-  double globalnorm;
-  if (Nblock>0) {
-    h_scratch.copyFrom(o_scratch, 1, 0, properties_t("async", true));
-    platform->finish();
-    globalnorm = h_scratch[0];
-  } else {
-    globalnorm = 0.0;
-  }
-
-  comm.Allreduce(globalnorm, Comm::Sum);
-
-  return sqrt(globalnorm);
-}
+                              deviceMemory<double> o_a, comm_t comm);
 
 void linAlg_t::p2d(const dlong N, deviceMemory<pfloat> o_p, deviceMemory<dfloat> o_d) {
   p2dKernel(N, o_p, o_d);
