@@ -242,8 +242,7 @@ MGLevel::MGLevel(elliptic_t& _elliptic,
   } else { //Mesh::TETRAHEDRA
     mesh.DegreeRaiseMatrixTet3D(Nc, mesh.N, P);
   }
-  //  o_P = elliptic.platform.malloc<pfloat>(P);
-  // TW4
+
   memory<pfloat> pfloatP(P.length());
   for(size_t n=0;n<P.length();++n){
     pfloatP[n] = P[n];
