@@ -48,6 +48,7 @@ void mesh_t::ReferenceNodesTri2D(){
 
   if constexpr (std::is_same_v<dfloat,pfloat>) {
     o_pfloat_MM = o_MM;
+    pfloat_invMM = invMM;
   } else {
     memory<pfloat> pfloat_MM(Np*Np);
     pfloat_invMM.malloc(Np*Np);
