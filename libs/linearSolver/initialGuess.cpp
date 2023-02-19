@@ -76,6 +76,9 @@ void Last<T>::Update(operator_t &linearOperator, deviceMemory<T>& o_x, deviceMem
   o_xLast.copyFrom(o_x, Ntotal, 0, properties_t("async", true));
 }
 
+template class Last<double>;
+template class Last<float>;
+
 /*****************************************************************************/
 
 template<typename T>
@@ -94,6 +97,9 @@ void Zero<T>::FormInitialGuess(deviceMemory<T>& o_x, deviceMemory<T>& o_rhs)
 template<typename T>
 void Zero<T>::Update(operator_t &linearOperator, deviceMemory<T>& o_x, deviceMemory<T>& o_rhs)
 {}
+
+template class Zero<double>;
+template class Zero<float>;
 
 /*****************************************************************************/
 
@@ -170,7 +176,6 @@ void Projection<T>::igReconstruct(const T a,
   igReconstructKernel(Ntotal, curDim, a, o_u, b, o_alphas, o_Q, o_unew);
 }
 
-
 /*****************************************************************************/
 
 template <typename T>
@@ -222,6 +227,9 @@ void ClassicProjection<T>::Update(operator_t &linearOperator, deviceMemory<T>& o
     curDim++;
   }
 }
+
+template class ClassicProjection<double>;
+template class ClassicProjection<float>;
 
 /*****************************************************************************/
 template <typename T>
@@ -358,6 +366,9 @@ void RollingQRProjection<T>::givensRotation(T a, T b, T& c, T& s)
   }
 }
 
+template class RollingQRProjection<double>;
+template class RollingQRProjection<float>;
+
 /*****************************************************************************/
 template <typename T>
 Extrap<T>::Extrap(dlong _N, platform_t& _platform, settings_t& _settings, comm_t _comm):
@@ -489,6 +500,9 @@ void Extrap<T>::extrapCoeffs(int m, int M, memory<T> c)
   }
 
 }
+
+template class Extrap<double>;
+template class Extrap<float>;
 
 } //namespace InitialGuess
 

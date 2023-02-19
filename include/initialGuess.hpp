@@ -50,11 +50,19 @@ class initialGuessStrategy_t {
   initialGuessStrategy_t(dlong _N, platform_t& _platform, settings_t& _settings, comm_t _comm):
                          platform(_platform), settings(_settings), comm(_comm), Ntotal(_N) {}
 
-  virtual void FormInitialGuess(deviceMemory<float>& o_x, deviceMemory<float>& o_rhs)  { printf("AROEOHAER\n"); }
-  virtual void Update(operator_t& linearOperator, deviceMemory<float>& o_x, deviceMemory<float>& o_rhs) { printf("AROEOHAER\n"); }
+  virtual void FormInitialGuess(deviceMemory<float>& o_x, deviceMemory<float>& o_rhs)  {
+    LIBP_FORCE_ABORT("Type mismatch in InitialGuess. Strategy was constructed for type: double");
+  }
+  virtual void Update(operator_t& linearOperator, deviceMemory<float>& o_x, deviceMemory<float>& o_rhs) {
+    LIBP_FORCE_ABORT("Type mismatch in InitialGuess. Strategy was constructed for type: double");
+  }
 
-  virtual void FormInitialGuess(deviceMemory<double>& o_x, deviceMemory<double>& o_rhs) { printf("AROEOHAER\n"); }
-  virtual void Update(operator_t& linearOperator, deviceMemory<double>& o_x, deviceMemory<double>& o_rhs) { printf("AROEOHAER\n"); }
+  virtual void FormInitialGuess(deviceMemory<double>& o_x, deviceMemory<double>& o_rhs) {
+    LIBP_FORCE_ABORT("Type mismatch in InitialGuess. Strategy was constructed for type: float");
+  }
+  virtual void Update(operator_t& linearOperator, deviceMemory<double>& o_x, deviceMemory<double>& o_rhs) {
+    LIBP_FORCE_ABORT("Type mismatch in InitialGuess. Strategy was constructed for type: float");
+  }
 };
 
 // Default initial guess strategy:  use whatever the last solution was (starting at the zero vector)
@@ -72,8 +80,8 @@ public:
   void Update(operator_t &linearOperator, deviceMemory<T>& o_x, deviceMemory<T>& o_rhs);
 };
 
-template class Last<double>;
-template class Last<float>;
+extern template class Last<double>;
+extern template class Last<float>;
 
 
 // Zero initial guess strategy:  use a zero initial guess.
@@ -84,8 +92,8 @@ public:
   void Update(operator_t& linearOperator, deviceMemory<T>& o_x, deviceMemory<T>& o_rhs);
 };
 
-template class Zero<double>;
-template class Zero<float>;
+extern template class Zero<double>;
+extern template class Zero<float>;
 
 // Initial guess strategies based on RHS projection.
 template<typename T>
@@ -123,12 +131,7 @@ public:
   Projection(dlong _N, platform_t& _platform, settings_t& _settings, comm_t _comm);
 
   void FormInitialGuess(deviceMemory<T>& o_x, deviceMemory<T>& o_rhs);
-  virtual void Update(operator_t& linearOperator, deviceMemory<float>& o_x, deviceMemory<float>& o_rhs) {printf("Update fail\n"); }
-  virtual void Update(operator_t& linearOperator, deviceMemory<double>& o_x, deviceMemory<double>& o_rhs) {printf("Update fail\n"); }
 };
-
-template class Projection<double>;
-template class Projection<float>;
 
 // "Classic" initial guess strategy from Fischer's 1998 paper.
 template <typename T>
@@ -145,9 +148,8 @@ public:
   void Update(operator_t &linearOperator, deviceMemory<T>& o_x, deviceMemory<T>& o_rhs);
 };
 
-
-template class ClassicProjection<double>;
-template class ClassicProjection<float>;
+extern template class ClassicProjection<double>;
+extern template class ClassicProjection<float>;
 
 
 // Rolling QR update for projection history space a la Christensen's thesis.
@@ -181,8 +183,8 @@ public:
   void Update(operator_t &linearOperator, deviceMemory<T>& o_x, deviceMemory<T>& o_rhs);
 };
 
-template class RollingQRProjection<double>;
-template class RollingQRProjection<float>;
+extern template class RollingQRProjection<double>;
+extern template class RollingQRProjection<float>;
 
 // Extrapolation initial guess strategy.
 template <typename T>
@@ -215,8 +217,8 @@ public:
   void Update(operator_t &linearOperator, deviceMemory<T>& o_x, deviceMemory<T>& o_rhs);
 };
 
-template class Extrap<double>;
-template class Extrap<float>;
+extern template class Extrap<double>;
+extern template class Extrap<float>;
 
 } //namespace InitialGuess
 
