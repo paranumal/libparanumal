@@ -182,8 +182,6 @@ constexpr Type Dfloat = (std::is_same<double, dfloat>::value)
                           ? Double : Float;
 constexpr Type Pfloat = (std::is_same<double, pfloat>::value)
                           ? Double : Float;
-// constexpr Type Pfloat = (std::is_same<double, pfloat>::value)
-//                           ? Double : Float;
 constexpr Type Dlong  = (std::is_same<int32_t, dlong>::value)
                           ? Int32 : Int64;
 constexpr Type Hlong  = (std::is_same<int32_t, hlong>::value)
