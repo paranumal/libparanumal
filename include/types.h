@@ -27,29 +27,24 @@ SOFTWARE.
 #ifndef TYPES_HPP
 #define TYPES_HPP
 
-// precision of AMG storage
-#if 1
-#define pfloat float
-#define pfloatString "float"
-#define pfloatSize 4
-#else
-#define pfloat double
-#define pfloatString "double"
-#define pfloatSize 8
-#endif
-
-
 //float data type
 #if 0
 #define dfloat float
 #define dfloatFormat "%f"
 #define dfloatString "float"
-#define dfloatSize 4
 #else
 #define dfloat double
 #define dfloatFormat "%lf"
 #define dfloatString "double"
-#define dfloatSize 8
+#endif
+
+// precision of preconditioners
+#if 1
+#define pfloat float
+#define pfloatString "float"
+#else
+#define pfloat double
+#define pfloatString "double"
 #endif
 
 //host index data type

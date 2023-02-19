@@ -49,12 +49,12 @@ void elliptic_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
   //setup linear algebra module
   platform.linAlg().InitKernels({"add", "sum", "scale",
-	"axpy", "zaxpy",
-	"amx", "amxpy", "zamxpy",
-	"adx", "adxpy", "zadxpy",
-	"innerProd", "norm2", "d2p", "p2d"});
+        "axpy", "zaxpy",
+        "amx", "amxpy", "zamxpy",
+        "adx", "adxpy", "zadxpy",
+        "innerProd", "norm2", "d2p", "p2d"});
 
-  
+
   /*setup trace halo exchange */
   traceHalo = mesh.HaloTraceSetup(Nfields);
 
@@ -106,9 +106,13 @@ void elliptic_t::Setup(platform_t& _platform, mesh_t& _mesh,
   int NblockV = std::max(1,blockMax/mesh.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;
 
-  properties_t kernelInfoPfloat = kernelInfo;
-  kernelInfoPfloat["defines/dfloat"] = pfloatString;
-  kernelInfoPfloat["defines/dfloat4"] = std::string(pfloatString)+"4";
+  properties_t kernelInfoDouble = kernelInfo;
+  kernelInfoDouble["defines/dfloat"] = "double";
+  kernelInfoDouble["defines/dfloat4"] = "double4";
+
+  properties_t kernelInfoFloat = kernelInfo;
+  kernelInfoFloat["defines/dfloat"] = "float";
+  kernelInfoFloat["defines/dfloat4"] = "float4";
 
   // Ax kernel
   if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
@@ -123,33 +127,33 @@ void elliptic_t::Setup(platform_t& _platform, mesh_t& _mesh,
     }
 
     partialAxKernel = platform.buildKernel(fileName, kernelName,
-                                           kernelInfo);
+                                           kernelInfoDouble);
 
-    pfloatPartialAxKernel = platform.buildKernel(fileName, kernelName,
-						 kernelInfoPfloat);
-	
+    floatPartialAxKernel = platform.buildKernel(fileName, kernelName,
+                                                kernelInfoFloat);
+
   } else if (settings.compareSetting("DISCRETIZATION","IPDG")) {
     int Nmax = std::max(mesh.Np, mesh.Nfaces*mesh.Nfp);
-    kernelInfo["defines/" "p_Nmax"]= Nmax;
-    kernelInfoPfloat["defines/" "p_Nmax"]= Nmax;
+    kernelInfoDouble["defines/" "p_Nmax"]= Nmax;
+    kernelInfoFloat["defines/" "p_Nmax"]= Nmax;
 
     fileName   = oklFilePrefix + "ellipticGradient" + suffix + oklFileSuffix;
     kernelName = "ellipticPartialGradient" + suffix;
     partialGradientKernel = platform.buildKernel(fileName, kernelName,
-                                                  kernelInfo);
+                                                  kernelInfoDouble);
 
-    pfloatPartialGradientKernel = platform.buildKernel(fileName, kernelName,
-						       kernelInfoPfloat);
-    
-    
+    floatPartialGradientKernel = platform.buildKernel(fileName, kernelName,
+                                                      kernelInfoFloat);
+
+
     fileName   = oklFilePrefix + "ellipticAxIpdg" + suffix + oklFileSuffix;
     kernelName = "ellipticPartialAxIpdg" + suffix;
 
     partialIpdgKernel = platform.buildKernel(fileName, kernelName,
-                                              kernelInfo);
+                                             kernelInfoDouble);
 
-    pfloatPartialIpdgKernel = platform.buildKernel(fileName, kernelName,
-						   kernelInfoPfloat);
+    floatPartialIpdgKernel = platform.buildKernel(fileName, kernelName,
+                                                  kernelInfoFloat);
   }
 
   /* Preconditioner Setup */

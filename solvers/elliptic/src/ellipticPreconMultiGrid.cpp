@@ -32,7 +32,7 @@ void MultiGridPrecon::Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& 
 
   //just pass to parAlmond
   parAlmond.Operator(o_r, o_Mr);
-    
+
   // zero mean of RHS
   if(elliptic.allNeumann) elliptic.ZeroMean(o_Mr);
 
@@ -71,7 +71,7 @@ MultiGridPrecon::MultiGridPrecon(elliptic_t& _elliptic):
       // pick the degrees so the dofs of each level halfs (roughly)
       while (NpCoarse > NpFine/2 && Nc>1) {
         Nc--;
-	NpCoarse = mesh.ElementNodeCount(Nc);
+        NpCoarse = mesh.ElementNodeCount(Nc);
       }
     }
 

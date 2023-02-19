@@ -121,7 +121,7 @@ void MGLevel::prolongate(deviceMemory<pfloat>& o_x, deviceMemory<pfloat>& o_Px) 
 
     elliptic.ogsMasked.GatherFinish(o_PxG, o_PxL, 1, ogs::Add, ogs::NoTrans);
 
-    linAlg.axpy(elliptic.Ndofs, (pfloat)1.f, o_PxG, (pfloat)1.f, o_Px);
+    linAlg.axpy(elliptic.Ndofs, static_cast<pfloat>(1.0), o_PxG, static_cast<pfloat>(1.0), o_Px);
 
   } else {
     prolongateKernel(mesh.Nelements, o_P, o_x, o_Px);

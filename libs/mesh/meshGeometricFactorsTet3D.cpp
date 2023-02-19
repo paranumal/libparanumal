@@ -148,11 +148,15 @@ void mesh_t::GeometricFactorsTet3D(){
   o_vgeo = platform.malloc<dfloat>(vgeo);
   o_ggeo = platform.malloc<dfloat>(ggeo);
 
-  {
+  if constexpr (std::is_same_v<dfloat,pfloat>) {
+    o_pfloat_ggeo = o_ggeo;
+    o_pfloat_vgeo = o_vgeo;
+    o_pfloat_wJ   = o_wJ;
+  } else {
     memory<pfloat> pfloat_wJ(Nelements);
     memory<pfloat> pfloat_ggeo(Nggeo*Nelements);
     memory<pfloat> pfloat_vgeo(Nvgeo*Nelements);
-    
+
     for(int n=0;n<Nggeo*Nelements;++n)
       pfloat_ggeo[n] = ggeo[n];
     for(int n=0;n<Nvgeo*Nelements;++n)
@@ -165,7 +169,7 @@ void mesh_t::GeometricFactorsTet3D(){
     o_pfloat_wJ   = platform.malloc<pfloat>(pfloat_wJ);
   }
 
-  
+
 }
 
 } //namespace libp

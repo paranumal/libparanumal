@@ -191,11 +191,15 @@ void mesh_t::GeometricFactorsHex3D(){
       printf("J in range [%g,%g] and max Skew = %g\n", globalMinJ, globalMaxJ, globalMaxSkew);
   #endif
 
-    {
+  if constexpr (std::is_same_v<dfloat,pfloat>) {
+    o_pfloat_ggeo = o_ggeo;
+    o_pfloat_vgeo = o_vgeo;
+    o_pfloat_wJ   = o_wJ;
+  } else {
     memory<pfloat> pfloat_wJ(Nelements*Np);
     memory<pfloat> pfloat_ggeo(Nggeo*Nelements*Np);
     memory<pfloat> pfloat_vgeo(Nvgeo*Nelements*Np);
-    
+
     for(int n=0;n<Nggeo*Nelements*Np;++n)
       pfloat_ggeo[n] = ggeo[n];
     for(int n=0;n<Nvgeo*Nelements*Np;++n)
@@ -207,7 +211,6 @@ void mesh_t::GeometricFactorsHex3D(){
     o_pfloat_vgeo = platform.malloc<pfloat>(pfloat_vgeo);
     o_pfloat_wJ   = platform.malloc<pfloat>(pfloat_wJ);
   }
-    
 }
 
 } //namespace libp

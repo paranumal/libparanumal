@@ -472,21 +472,21 @@ void Extrap<T>::extrapCoeffs(int m, int M, memory<T> c)
              M < m + 1);
 
 
-  const double h = 2.0/(M - 1);
+  const dfloat h = 2.0/(M - 1);
 
-  memory<double> r(M);
-  memory<double> dc(M);
+  memory<dfloat> r(M);
+  memory<dfloat> dc(M);
   for (int i = 0; i < M; i++){
     r[i] = -1.0 + i*h;
     dc[i] = c[i];
   }
-  memory<double> ro(1);
+  memory<dfloat> ro(1);
   ro[0] = 1.0 + h;  // Evaluation point.
 
-  memory<double> V;
+  memory<dfloat> V;
   mesh_t::Vandermonde1D(m, r, V);
 
-  memory<double> b;
+  memory<dfloat> b;
   mesh_t::Vandermonde1D(m, ro, b);
 
   if (settings.compareSetting("INITIAL GUESS EXTRAP COEFFS METHOD", "MINNORM")) {

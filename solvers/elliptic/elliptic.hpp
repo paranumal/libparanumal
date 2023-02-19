@@ -102,11 +102,11 @@ public:
   kernel_t partialGradientKernel;
   kernel_t partialIpdgKernel;
 
-  kernel_t pfloatPartialAxKernel;
-  kernel_t pfloatPartialGradientKernel;
-  kernel_t pfloatPartialIpdgKernel;
+  kernel_t floatPartialAxKernel;
+  kernel_t floatPartialGradientKernel;
+  kernel_t floatPartialIpdgKernel;
 
-  
+
   elliptic_t() = default;
   elliptic_t(platform_t &_platform, mesh_t &_mesh,
               settings_t& _settings, dfloat _lambda,
@@ -128,10 +128,8 @@ public:
 
   void PlotFields(memory<dfloat>& Q, std::string fileName);
 
-  void Operator(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_Aq);
-#if pfloatSize!=dfloatSize
-  void Operator(deviceMemory<pfloat>& o_q, deviceMemory<pfloat>& o_Aq);
-#endif
+  void Operator(deviceMemory<double>& o_q, deviceMemory<double>& o_Aq);
+  void Operator(deviceMemory<float>& o_q, deviceMemory<float>& o_Aq);
 
   void BuildOperatorMatrixIpdg(parAlmond::parCOO& A);
   void BuildOperatorMatrixContinuous(parAlmond::parCOO& A);
@@ -170,10 +168,8 @@ public:
 
   elliptic_t SetupRingPatch(mesh_t& meshPatch);
 
-  void ZeroMean(deviceMemory<dfloat> &o_q);
-#if pfloatSize!=dfloatSize
-  void ZeroMean(deviceMemory<pfloat> &o_q);
-#endif
+  void ZeroMean(deviceMemory<double> &o_q);
+  void ZeroMean(deviceMemory<float> &o_q);
 };
 
 
