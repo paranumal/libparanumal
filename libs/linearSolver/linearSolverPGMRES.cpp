@@ -32,13 +32,14 @@ namespace LinearSolver {
 
 #define PGMRES_RESTART 20
 
-pgmres::pgmres(dlong _N, dlong _Nhalo,
+template<typename T>
+pgmres<T>::pgmres(dlong _N, dlong _Nhalo,
          platform_t& _platform, settings_t& _settings, comm_t _comm):
   linearSolverBase_t(_N, _Nhalo, _platform, _settings, _comm) {
 
   // Make sure LinAlg has the necessary kernels
   platform.linAlg().InitKernels({"axpy", "zaxpy",
-                               "innerProd", "norm2"});
+        "innerProd", "norm2"});
 
   //Number of iterations between restarts
   //TODO make this modifyable via settings
@@ -51,41 +52,60 @@ pgmres::pgmres(dlong _N, dlong _Nhalo,
   y.malloc(restart);
 }
 
-int pgmres::Solve(operator_t& linearOperator, operator_t& precon,
-               deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_b,
-               const dfloat tol, const int MAXIT, const int verbose) {
+template<typename T>
+int pgmres<T>::Solve(operator_t& linearOperator, operator_t& precon,
+                     deviceMemory<T>& o_x, deviceMemory<T>& o_b,
+                     const T tol, const int MAXIT, const int verbose) {
 
   int rank = comm.rank();
   linAlg_t &linAlg = platform.linAlg();
 
+  deviceMemory<pfloat> o_pfloat_r;
+  deviceMemory<pfloat> o_pfloat_z;
+
   /*Pre-reserve memory pool space to avoid some unnecessary re-sizing*/
   dlong Ntotal = N + Nhalo;
-  platform.reserve<dfloat>((restart+3)*Ntotal
-                          +(restart+3) * platform.memPoolAlignment<dfloat>());
+  if constexpr (sizeof(pfloat)==sizeof(T)) {
+    platform.reserve<T>((restart+3)*Ntotal
+                          + (restart+3) * platform.memPoolAlignment<T>());
+  } else {
+    platform.reserve<std::byte>(sizeof(T) * ((restart+3)*Ntotal)
+                              + sizeof(pfloat) * 2 * Ntotal
+                              + (restart+5) * platform.memPoolAlignment());
+
+    o_pfloat_r  = platform.reserve<pfloat>(Ntotal);
+    o_pfloat_z  = platform.reserve<pfloat>(Ntotal);
+  }
 
   /*aux variables */
-  deviceMemory<dfloat> o_Ax = platform.reserve<dfloat>(Ntotal);
-  deviceMemory<dfloat> o_z  = platform.reserve<dfloat>(Ntotal);
-  deviceMemory<dfloat> o_r  = platform.reserve<dfloat>(Ntotal);
+  deviceMemory<T> o_Ax = platform.reserve<T>(Ntotal);
+  deviceMemory<T> o_z  = platform.reserve<T>(Ntotal);
+  deviceMemory<T> o_r  = platform.reserve<T>(Ntotal);
 
-  memory<deviceMemory<dfloat>> o_V(restart);
+  memory<deviceMemory<T>> o_V(restart);
   for(int i=0; i<restart; ++i){
-    o_V[i] = platform.reserve<dfloat>(Ntotal);
+    o_V[i] = platform.reserve<T>(Ntotal);
   }
 
   // compute A*x
   linearOperator.Operator(o_x, o_Ax);
 
   // subtract z = b - A*x
-  linAlg.zaxpy(N, -1.f, o_Ax, 1.f, o_b, o_z);
+  linAlg.zaxpy(N, (T)-1.f, o_Ax, (T)1.f, o_b, o_z);
 
   // r = Precon^{-1} (r-A*x)
-  precon.Operator(o_z, o_r);
+  if constexpr(sizeof(pfloat)==sizeof(T)){
+    precon.Operator(o_z, o_r);
+  } else {
+    linAlg.d2p(N, o_z, o_pfloat_z);
+    precon.Operator(o_pfloat_z, o_pfloat_r);
+    linAlg.p2d(N, o_pfloat_r, o_r);
+  }
 
-  dfloat nr = linAlg.norm2(N, o_r, comm);
+  T nr = linAlg.norm2(N, o_r, comm);
 
-  dfloat error = nr;
-  const dfloat TOL = std::max(tol*nr,tol);
+  T error = nr;
+  const T TOL = std::max(tol*nr,tol);
 
   if (verbose&&(rank==0))
     printf("PGMRES: initial res norm %12.12f \n", nr);
@@ -101,7 +121,7 @@ int pgmres::Solve(operator_t& linearOperator, operator_t& precon,
     s[0] = nr;
 
     // V(:,0) = r/nr
-    linAlg.axpy(N, (1./nr), o_r, 0., o_V[0]);
+    linAlg.axpy(N, (T)(1./nr), o_r, (T) 0., o_V[0]);
 
     //Construct orthonormal basis via Gram-Schmidt
     for(int i=0;i<restart;++i){
@@ -109,38 +129,44 @@ int pgmres::Solve(operator_t& linearOperator, operator_t& precon,
       linearOperator.Operator(o_V[i], o_z);
 
       // r = Precon^{-1} z
-      precon.Operator(o_z, o_r);
+      if constexpr(sizeof(pfloat)==sizeof(T)){
+        precon.Operator(o_z, o_r);
+      } else {
+        linAlg.d2p(N, o_z, o_pfloat_z);
+        precon.Operator(o_pfloat_z, o_pfloat_r);
+        linAlg.p2d(N, o_pfloat_r, o_r);
+      }
 
       for(int k=0; k<=i; ++k){
-        dfloat hki = linAlg.innerProd(N, o_r, o_V[k], comm);
+        T hki = linAlg.innerProd(N, o_r, o_V[k], comm);
 
         // r = r - hki*V[k]
-        linAlg.axpy(N, -hki, o_V[k], 1.0, o_r);
+        linAlg.axpy(N, -hki, o_V[k], (T)1.0, o_r);
 
         // H(k,i) = hki
         H[k + i*(restart+1)] = hki;
       }
 
-      dfloat nw = linAlg.norm2(N, o_r, comm);
+      T nw = linAlg.norm2(N, o_r, comm);
       H[i+1 + i*(restart+1)] = nw;
 
       // V(:,i+1) = r/nw
       if (i<restart-1)
-        linAlg.axpy(N, (1./nw), o_r, 0., o_V[i+1]);
+        linAlg.axpy(N, (T)(1./nw), o_r, (T)0., o_V[i+1]);
 
       //apply Givens rotation
       for(int k=0; k<i; ++k){
-        const dfloat h1 = H[k +     i*(restart+1)];
-        const dfloat h2 = H[k + 1 + i*(restart+1)];
+        const T h1 = H[k +     i*(restart+1)];
+        const T h2 = H[k + 1 + i*(restart+1)];
 
         H[k +     i*(restart+1)] =  cs[k]*h1 + sn[k]*h2;
         H[k + 1 + i*(restart+1)] = -sn[k]*h1 + cs[k]*h2;
       }
 
       // form i-th rotation matrix
-      const dfloat h1 = H[i+    i*(restart+1)];
-      const dfloat h2 = H[i+1 + i*(restart+1)];
-      const dfloat hr = sqrt(h1*h1 + h2*h2);
+      const T h1 = H[i+    i*(restart+1)];
+      const T h2 = H[i+1 + i*(restart+1)];
+      const T hr = sqrt(h1*h1 + h2*h2);
       cs[i] = h1/hr;
       sn[i] = h2/hr;
 
@@ -175,10 +201,16 @@ int pgmres::Solve(operator_t& linearOperator, operator_t& precon,
     linearOperator.Operator(o_x, o_Ax);
 
     // subtract z = b - A*x
-    linAlg.zaxpy(N, -1.f, o_Ax, 1.f, o_b, o_z);
+    linAlg.zaxpy(N, (T)-1.f, o_Ax, (T)1.f, o_b, o_z);
 
     // r = Precon^{-1} (r-A*x)
-    precon.Operator(o_z, o_r);
+    if constexpr(sizeof(pfloat)==sizeof(T)){
+      precon.Operator(o_z, o_r);
+    } else {
+      linAlg.d2p(N, o_z, o_pfloat_z);
+      precon.Operator(o_pfloat_z, o_pfloat_r);
+      linAlg.p2d(N, o_pfloat_r, o_r);
+    }
 
     nr = linAlg.norm2(N, o_r, comm);
 
@@ -190,9 +222,10 @@ int pgmres::Solve(operator_t& linearOperator, operator_t& precon,
   return iter;
 }
 
-void pgmres::UpdateGMRES(memory<deviceMemory<dfloat>>& o_V,
-                         deviceMemory<dfloat>& o_x,
-                         const int I){
+template<typename T>
+void pgmres<T>::UpdateGMRES(memory<deviceMemory<T>>& o_V,
+                            deviceMemory<T>& o_x,
+                            const int I){
 
   for(int k=I-1; k>=0; --k){
     y[k] = s[k];
@@ -205,9 +238,12 @@ void pgmres::UpdateGMRES(memory<deviceMemory<dfloat>>& o_V,
 
   //TODO this is really a GEMM, should write it that way
   for(int j=0; j<I; ++j){
-    platform.linAlg().axpy(N, y[j], o_V[j], 1.0, o_x);
+    platform.linAlg().axpy(N, y[j], o_V[j], (T)1.0, o_x);
   }
 }
+
+template class pgmres<float>;
+template class pgmres<double>;
 
 } //namespace LinearSolver
 

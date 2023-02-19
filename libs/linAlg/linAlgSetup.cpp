@@ -35,12 +35,18 @@ linAlg_t::linAlg_t() {};
 void linAlg_t::Setup(platform_t *_platform) {
 
   platform = _platform;
-  kernelInfo = platform->props();
+  kernelInfoFloat = platform->props();
 
   //add defines
-  kernelInfo["defines/" "p_blockSize"] = blocksize;
-  kernelInfo["defines/init_dfloat_min"] =  std::numeric_limits<dfloat>::max();
-  kernelInfo["defines/init_dfloat_max"] = -std::numeric_limits<dfloat>::max();
+  kernelInfoFloat["defines/" "p_blockSize"] = blocksize;
+  kernelInfoFloat["defines/init_dfloat_min"] =  std::numeric_limits<float>::max();
+  kernelInfoFloat["defines/init_dfloat_max"] = -std::numeric_limits<float>::max();
+  kernelInfoFloat["defines/dfloat"]  = "float";
+
+  kernelInfoDouble = kernelInfoFloat;
+  kernelInfoDouble["defines/init_dfloat_min"] =  std::numeric_limits<double>::max();
+  kernelInfoDouble["defines/init_dfloat_max"] = -std::numeric_limits<double>::max();
+  kernelInfoDouble["defines/dfloat"]  = "double";
 }
 
 //initialize list of kernels
@@ -49,119 +55,227 @@ void linAlg_t::InitKernels(std::vector<std::string> kernels) {
   for (size_t i=0;i<kernels.size();i++) {
     std::string name = kernels[i];
     if (name=="set") {
-      if (setKernel.isInitialized()==false)
-        setKernel = platform->buildKernel(LINALG_DIR "/okl/"
-                                        "linAlgSet.okl",
-                                        "set",
-                                        kernelInfo);
+      if (setKernelFloat.isInitialized()==false){
+        setKernelFloat = platform->buildKernel(LINALG_DIR "/okl/"
+                                               "linAlgSet.okl",
+                                               "set",
+                                               kernelInfoFloat);
+        setKernelDouble = platform->buildKernel(LINALG_DIR "/okl/"
+                                                "linAlgSet.okl",
+                                                "set",
+                                                kernelInfoDouble);
+
+      }
     } else if (name=="add") {
-      if (addKernel.isInitialized()==false)
-        addKernel = platform->buildKernel(LINALG_DIR "/okl/"
-                                        "linAlgAdd.okl",
-                                        "add",
-                                        kernelInfo);
+      if (addKernelFloat.isInitialized()==false){
+        addKernelFloat = platform->buildKernel(LINALG_DIR "/okl/"
+                                               "linAlgAdd.okl",
+                                               "add",
+                                               kernelInfoFloat);
+        addKernelDouble = platform->buildKernel(LINALG_DIR "/okl/"
+                                                "linAlgAdd.okl",
+                                                "add",
+                                                kernelInfoDouble);
+      }
     } else if (name=="scale") {
-      if (scaleKernel.isInitialized()==false)
-        scaleKernel = platform->buildKernel(LINALG_DIR "/okl/"
-                                        "linAlgScale.okl",
-                                        "scale",
-                                        kernelInfo);
+      if (scaleKernelFloat.isInitialized()==false){
+        scaleKernelFloat = platform->buildKernel(LINALG_DIR "/okl/"
+                                                 "linAlgScale.okl",
+                                                 "scale",
+                                                 kernelInfoFloat);
+        scaleKernelDouble = platform->buildKernel(LINALG_DIR "/okl/"
+                                                  "linAlgScale.okl",
+                                                  "scale",
+                                                  kernelInfoDouble);
+      }
+
     } else if (name=="axpy") {
-      if (axpyKernel.isInitialized()==false)
-        axpyKernel = platform->buildKernel(LINALG_DIR "/okl/"
-                                        "linAlgAXPY.okl",
-                                        "axpy",
-                                        kernelInfo);
+      if (axpyKernelFloat.isInitialized()==false){
+        axpyKernelFloat = platform->buildKernel(LINALG_DIR "/okl/"
+                                                "linAlgAXPY.okl",
+                                                "axpy",
+                                                kernelInfoFloat);
+        axpyKernelDouble = platform->buildKernel(LINALG_DIR "/okl/"
+                                                 "linAlgAXPY.okl",
+                                                 "axpy",
+                                                 kernelInfoDouble);
+      }
     } else if (name=="zaxpy") {
-      if (zaxpyKernel.isInitialized()==false)
-        zaxpyKernel = platform->buildKernel(LINALG_DIR "/okl/"
-                                        "linAlgAXPY.okl",
-                                        "zaxpy",
-                                        kernelInfo);
+      if (zaxpyKernelFloat.isInitialized()==false){
+        zaxpyKernelFloat = platform->buildKernel(LINALG_DIR "/okl/"
+                                                 "linAlgAXPY.okl",
+                                                 "zaxpy",
+                                                 kernelInfoFloat);
+        zaxpyKernelDouble = platform->buildKernel(LINALG_DIR "/okl/"
+                                                  "linAlgAXPY.okl",
+                                                  "zaxpy",
+                                                  kernelInfoDouble);
+      }
     } else if (name=="amx") {
-      if (amxKernel.isInitialized()==false)
-        amxKernel = platform->buildKernel(LINALG_DIR "/okl/"
-                                        "linAlgAMXPY.okl",
-                                        "amx",
-                                        kernelInfo);
+      if (amxKernelFloat.isInitialized()==false){
+        amxKernelFloat = platform->buildKernel(LINALG_DIR "/okl/"
+                                               "linAlgAMXPY.okl",
+                                               "amx",
+                                               kernelInfoFloat);
+
+        amxKernelDouble = platform->buildKernel(LINALG_DIR "/okl/"
+                                                "linAlgAMXPY.okl",
+                                                "amx",
+                                                kernelInfoDouble);
+      }
+
     } else if (name=="amxpy") {
-      if (amxpyKernel.isInitialized()==false)
-        amxpyKernel = platform->buildKernel(LINALG_DIR "/okl/"
-                                        "linAlgAMXPY.okl",
-                                        "amxpy",
-                                        kernelInfo);
+      if (amxpyKernelFloat.isInitialized()==false){
+        amxpyKernelFloat = platform->buildKernel(LINALG_DIR "/okl/"
+                                                 "linAlgAMXPY.okl",
+                                                 "amxpy",
+                                                 kernelInfoFloat);
+        amxpyKernelDouble = platform->buildKernel(LINALG_DIR "/okl/"
+                                                  "linAlgAMXPY.okl",
+                                                  "amxpy",
+                                                  kernelInfoDouble);
+      }
     } else if (name=="zamxpy") {
-      if (zamxpyKernel.isInitialized()==false)
-        zamxpyKernel = platform->buildKernel(LINALG_DIR "/okl/"
-                                        "linAlgAMXPY.okl",
-                                        "zamxpy",
-                                        kernelInfo);
+      if (zamxpyKernelFloat.isInitialized()==false){
+        zamxpyKernelFloat = platform->buildKernel(LINALG_DIR "/okl/"
+                                                  "linAlgAMXPY.okl",
+                                                  "zamxpy",
+                                                  kernelInfoFloat);
+        zamxpyKernelDouble = platform->buildKernel(LINALG_DIR "/okl/"
+                                                   "linAlgAMXPY.okl",
+                                                   "zamxpy",
+                                                   kernelInfoDouble);
+      }
     } else if (name=="adx") {
-      if (adxKernel.isInitialized()==false)
-        adxKernel = platform->buildKernel(LINALG_DIR "/okl/"
-                                        "linAlgADXPY.okl",
-                                        "adx",
-                                        kernelInfo);
+      if (adxKernelFloat.isInitialized()==false){
+        adxKernelFloat = platform->buildKernel(LINALG_DIR "/okl/"
+                                               "linAlgADXPY.okl",
+                                               "adx",
+                                               kernelInfoFloat);
+        adxKernelDouble = platform->buildKernel(LINALG_DIR "/okl/"
+                                                "linAlgADXPY.okl",
+                                                "adx",
+                                                kernelInfoDouble);
+      }
     } else if (name=="adxpy") {
-      if (adxpyKernel.isInitialized()==false)
-        adxpyKernel = platform->buildKernel(LINALG_DIR "/okl/"
-                                        "linAlgADXPY.okl",
-                                        "adxpy",
-                                        kernelInfo);
+      if (adxpyKernelFloat.isInitialized()==false){
+        adxpyKernelFloat = platform->buildKernel(LINALG_DIR "/okl/"
+                                                 "linAlgADXPY.okl",
+                                                 "adxpy",
+                                                 kernelInfoFloat);
+        adxpyKernelDouble = platform->buildKernel(LINALG_DIR "/okl/"
+                                                  "linAlgADXPY.okl",
+                                                  "adxpy",
+                                                  kernelInfoDouble);
+      }
     } else if (name=="zadxpy") {
-      if (zadxpyKernel.isInitialized()==false)
-        zadxpyKernel = platform->buildKernel(LINALG_DIR "/okl/"
-                                        "linAlgADXPY.okl",
-                                        "zadxpy",
-                                        kernelInfo);
+      if (zadxpyKernelFloat.isInitialized()==false){
+        zadxpyKernelFloat = platform->buildKernel(LINALG_DIR "/okl/"
+                                                  "linAlgADXPY.okl",
+                                                  "zadxpy",
+                                                  kernelInfoFloat);
+        zadxpyKernelDouble = platform->buildKernel(LINALG_DIR "/okl/"
+                                                   "linAlgADXPY.okl",
+                                                   "zadxpy",
+                                                   kernelInfoDouble);
+      }
     } else if (name=="min") {
-      if (minKernel.isInitialized()==false) {
-        minKernel = platform->buildKernel(LINALG_DIR "/okl/"
-                                        "linAlgMin.okl",
-                                        "min",
-                                        kernelInfo);
+      if (minKernelFloat.isInitialized()==false) {
+        minKernelFloat = platform->buildKernel(LINALG_DIR "/okl/"
+                                               "linAlgMin.okl",
+                                               "min",
+                                               kernelInfoFloat);
+        minKernelDouble = platform->buildKernel(LINALG_DIR "/okl/"
+                                                "linAlgMin.okl",
+                                                "min",
+                                                kernelInfoDouble);
       }
     } else if (name=="max") {
-      if (maxKernel.isInitialized()==false) {
-        maxKernel = platform->buildKernel(LINALG_DIR "/okl/"
-                                        "linAlgMax.okl",
-                                        "max",
-                                        kernelInfo);
+      if (maxKernelFloat.isInitialized()==false) {
+        maxKernelFloat = platform->buildKernel(LINALG_DIR "/okl/"
+                                               "linAlgMax.okl",
+                                               "max",
+                                               kernelInfoFloat);
+        maxKernelDouble = platform->buildKernel(LINALG_DIR "/okl/"
+                                                "linAlgMax.okl",
+                                                "max",
+                                                kernelInfoDouble);
       }
     } else if (name=="sum") {
-      if (sumKernel.isInitialized()==false) {
-        sumKernel = platform->buildKernel(LINALG_DIR "/okl/"
-                                        "linAlgSum.okl",
-                                        "sum",
-                                        kernelInfo);
+      if (sumKernelFloat.isInitialized()==false) {
+        sumKernelFloat = platform->buildKernel(LINALG_DIR "/okl/"
+                                               "linAlgSum.okl",
+                                               "sum",
+                                               kernelInfoFloat);
+        sumKernelDouble = platform->buildKernel(LINALG_DIR "/okl/"
+                                                "linAlgSum.okl",
+                                                "sum",
+                                                kernelInfoDouble);
       }
     } else if (name=="norm2") {
-      if (norm2Kernel.isInitialized()==false) {
-        norm2Kernel = platform->buildKernel(LINALG_DIR "/okl/"
-                                        "linAlgNorm2.okl",
-                                        "norm2",
-                                        kernelInfo);
+      if (norm2KernelFloat.isInitialized()==false) {
+        norm2KernelFloat = platform->buildKernel(LINALG_DIR "/okl/"
+                                                 "linAlgNorm2.okl",
+                                                 "norm2",
+                                                 kernelInfoFloat);
+        norm2KernelDouble = platform->buildKernel(LINALG_DIR "/okl/"
+                                                  "linAlgNorm2.okl",
+                                                  "norm2",
+                                                  kernelInfoDouble);
       }
     } else if (name=="weightedNorm2") {
-      if (weightedNorm2Kernel.isInitialized()==false) {
-        weightedNorm2Kernel = platform->buildKernel(LINALG_DIR "/okl/"
-                                        "linAlgWeightedNorm2.okl",
-                                        "weightedNorm2",
-                                        kernelInfo);
+      if (weightedNorm2KernelFloat.isInitialized()==false) {
+        weightedNorm2KernelFloat = platform->buildKernel(LINALG_DIR "/okl/"
+                                                         "linAlgWeightedNorm2.okl",
+                                                         "weightedNorm2",
+                                                         kernelInfoFloat);
+        weightedNorm2KernelDouble = platform->buildKernel(LINALG_DIR "/okl/"
+                                                          "linAlgWeightedNorm2.okl",
+                                                          "weightedNorm2",
+                                                          kernelInfoDouble);
       }
     } else if (name=="innerProd") {
-      if (innerProdKernel.isInitialized()==false) {
-        innerProdKernel = platform->buildKernel(LINALG_DIR "/okl/"
-                                        "linAlgInnerProd.okl",
-                                        "innerProd",
-                                        kernelInfo);
+      if (innerProdKernelFloat.isInitialized()==false) {
+        innerProdKernelFloat = platform->buildKernel(LINALG_DIR "/okl/"
+                                                     "linAlgInnerProd.okl",
+                                                     "innerProd",
+                                                     kernelInfoFloat);
+        innerProdKernelDouble = platform->buildKernel(LINALG_DIR "/okl/"
+                                                      "linAlgInnerProd.okl",
+                                                      "innerProd",
+                                                      kernelInfoDouble);
       }
     } else if (name=="weightedInnerProd") {
-      if (weightedInnerProdKernel.isInitialized()==false) {
-        weightedInnerProdKernel = platform->buildKernel(LINALG_DIR "/okl/"
-                                        "linAlgWeightedInnerProd.okl",
-                                        "weightedInnerProd",
-                                        kernelInfo);
+      if (weightedInnerProdKernelFloat.isInitialized()==false) {
+        weightedInnerProdKernelFloat = platform->buildKernel(LINALG_DIR "/okl/"
+                                                             "linAlgWeightedInnerProd.okl",
+                                                             "weightedInnerProd",
+                                                             kernelInfoFloat);
+        weightedInnerProdKernelDouble = platform->buildKernel(LINALG_DIR "/okl/"
+                                                              "linAlgWeightedInnerProd.okl",
+                                                              "weightedInnerProd",
+                                                              kernelInfoDouble);
+      }
+    } else if (name=="d2p" || name=="p2d"){
+      properties_t kernelInfoType = platform->props();
+
+      //add defines
+      kernelInfoType["defines/" "p_blockSize"] = blocksize;
+      kernelInfoType["defines/dfloat"]  = dfloatString;
+      kernelInfoType["defines/pfloat"]  = pfloatString;
+
+      if(d2pKernel.isInitialized()==false){
+        d2pKernel = platform->buildKernel(LINALG_DIR "/okl/"
+                                          "linAlgTypeConvert.okl",
+                                          "d2p",
+                                          kernelInfoType);
+      }
+
+      if(p2dKernel.isInitialized()==false){
+        p2dKernel = platform->buildKernel(LINALG_DIR "/okl/"
+                                          "linAlgTypeConvert.okl",
+                                          "p2d",
+                                          kernelInfoType);
       }
     } else {
       LIBP_FORCE_ABORT("Requested linAlg routine \"" << name << "\" not found");

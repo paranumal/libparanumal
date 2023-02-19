@@ -50,6 +50,16 @@ void mesh_t::ReferenceNodesHex3D(){
   Dmatrix1D(N, gllz, gllz, D);
   o_D = platform.malloc<dfloat>(D);
 
+  if constexpr (std::is_same_v<dfloat,pfloat>) {
+    o_pfloat_D = o_D;
+  } else {
+    memory<pfloat> pfloat_D(Nq*Nq);
+    for(int n=0;n<Nq*Nq;++n) {
+      pfloat_D[n] = D[n];
+    }
+    o_pfloat_D = platform.malloc<pfloat>(pfloat_D);
+  }
+
   /* Plotting data */
   plotN = N + 3; //enriched interpolation space for plotting
   plotNq = plotN + 1;

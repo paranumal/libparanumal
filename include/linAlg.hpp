@@ -50,74 +50,96 @@ class linAlg_t {
   /*********************/
 
   // o_a[n] = alpha
-  void set(const dlong N, const dfloat alpha, deviceMemory<dfloat> o_a);
+  template<typename T>
+  void set(const dlong N, const T alpha, deviceMemory<T> o_a);
 
   // o_a[n] *= alpha
-  void scale(const dlong N, const dfloat alpha, deviceMemory<dfloat> o_a);
+  template<typename T>
+  void scale(const dlong N, const T alpha, deviceMemory<T> o_a);
 
   // o_a[n] += alpha
-  void add(const dlong N, const dfloat alpha, deviceMemory<dfloat> o_a);
+  template<typename T>
+  void add(const dlong N, const T alpha, deviceMemory<T> o_a);
 
   // o_y[n] = beta*o_y[n] + alpha*o_x[n]
-  void axpy(const dlong N, const dfloat alpha, deviceMemory<dfloat> o_x,
-                           const dfloat beta,  deviceMemory<dfloat> o_y);
+  template<typename T>
+  void axpy(const dlong N, const T alpha, deviceMemory<T> o_x,
+                           const T beta,  deviceMemory<T> o_y);
 
   // o_z[n] = beta*o_y[n] + alpha*o_x[n]
-  void zaxpy(const dlong N, const dfloat alpha, deviceMemory<dfloat> o_x,
-                            const dfloat beta,  deviceMemory<dfloat> o_y,
-                            deviceMemory<dfloat> o_z);
+  template<typename T>
+  void zaxpy(const dlong N, const T alpha, deviceMemory<T> o_x,
+                            const T beta,  deviceMemory<T> o_y,
+                            deviceMemory<T> o_z);
 
   // o_x[n] = alpha*o_a[n]*o_x[n]
-  void amx(const dlong N, const dfloat alpha,
-           deviceMemory<dfloat> o_a, deviceMemory<dfloat> o_x);
+  template<typename T>
+  void amx(const dlong N, const T alpha,
+           deviceMemory<T> o_a, deviceMemory<T> o_x);
 
   // o_y[n] = alpha*o_a[n]*o_x[n] + beta*o_y[n]
-  void amxpy(const dlong N, const dfloat alpha,
-             deviceMemory<dfloat> o_a, deviceMemory<dfloat> o_x,
-             const dfloat beta, deviceMemory<dfloat> o_y);
+  template<typename T>
+  void amxpy(const dlong N, const T alpha,
+             deviceMemory<T> o_a, deviceMemory<T> o_x,
+             const T beta, deviceMemory<T> o_y);
 
   // o_z[n] = alpha*o_a[n]*o_x[n] + beta*o_y[n]
-  void zamxpy(const dlong N, const dfloat alpha,
-              deviceMemory<dfloat> o_a, deviceMemory<dfloat> o_x,
-              const dfloat beta, deviceMemory<dfloat> o_y, deviceMemory<dfloat> o_z);
+  template<typename T>
+  void zamxpy(const dlong N, const T alpha,
+              deviceMemory<T> o_a, deviceMemory<T> o_x,
+              const T beta, deviceMemory<T> o_y, deviceMemory<T> o_z);
 
   // o_x[n] = alpha*o_x[n]/o_a[n]
-  void adx(const dlong N, const dfloat alpha,
-           deviceMemory<dfloat> o_a, deviceMemory<dfloat> o_x);
+  template<typename T>
+  void adx(const dlong N, const T alpha,
+           deviceMemory<T> o_a, deviceMemory<T> o_x);
 
   // o_y[n] = alpha*o_x[n]/o_a[n] + beta*o_y[n]
-  void adxpy(const dlong N, const dfloat alpha,
-             deviceMemory<dfloat> o_a, deviceMemory<dfloat> o_x,
-             const dfloat beta, deviceMemory<dfloat> o_y);
+  template<typename T>
+  void adxpy(const dlong N, const T alpha,
+             deviceMemory<T> o_a, deviceMemory<T> o_x,
+             const T beta, deviceMemory<T> o_y);
 
   // o_z[n] = alpha*o_x[n]/o_a[n] + beta*o_y[n]
-  void zadxpy(const dlong N, const dfloat alpha,
-              deviceMemory<dfloat> o_a, deviceMemory<dfloat> o_x,
-              const dfloat beta, deviceMemory<dfloat> o_y, deviceMemory<dfloat> o_z);
+  template<typename T>
+  void zadxpy(const dlong N, const T alpha,
+              deviceMemory<T> o_a, deviceMemory<T> o_x,
+              const T beta, deviceMemory<T> o_y, deviceMemory<T> o_z);
 
   // \min o_a
-  dfloat min(const dlong N, deviceMemory<dfloat> o_a, comm_t comm);
+  template<typename T>
+  T min(const dlong N, deviceMemory<T> o_a, comm_t comm);
 
   // \max o_a
-  dfloat max(const dlong N, deviceMemory<dfloat> o_a, comm_t comm);
+  template<typename T>
+  T max(const dlong N, deviceMemory<T> o_a, comm_t comm);
 
   // \sum o_a
-  dfloat sum(const dlong N, deviceMemory<dfloat> o_a, comm_t comm);
+  template<typename T>
+  T sum(const dlong N, deviceMemory<T> o_a, comm_t comm);
 
   // ||o_a||_2
-  dfloat norm2(const dlong N, deviceMemory<dfloat> o_a, comm_t comm);
+  template<typename T>
+  T norm2(const dlong N, deviceMemory<T> o_a, comm_t comm);
 
   // o_x.o_y
-  dfloat innerProd(const dlong N, deviceMemory<dfloat> o_x, deviceMemory<dfloat> o_y,
+  template<typename T>
+  T innerProd(const dlong N, deviceMemory<T> o_x, deviceMemory<T> o_y,
                     comm_t comm);
 
   // ||o_a||_w2
-  dfloat weightedNorm2(const dlong N, deviceMemory<dfloat> o_w, deviceMemory<dfloat> o_a,
+  template<typename T>
+  T weightedNorm2(const dlong N, deviceMemory<T> o_w, deviceMemory<T> o_a,
                        comm_t comm);
 
   // o_w.o_x.o_y
-  dfloat weightedInnerProd(const dlong N, deviceMemory<dfloat> o_w, deviceMemory<dfloat> o_x,
-                            deviceMemory<dfloat> o_y, comm_t comm);
+  template<typename T>
+  T weightedInnerProd(const dlong N, deviceMemory<T> o_w, deviceMemory<T> o_x,
+                            deviceMemory<T> o_y, comm_t comm);
+
+  // p=d
+  void p2d(const dlong N, deviceMemory<pfloat> o_p, deviceMemory<dfloat> o_d);
+  void d2p(const dlong N, deviceMemory<dfloat> o_d, deviceMemory<pfloat> o_p);
 
   static void matrixRightSolve(const int NrowsA, const int NcolsA, const memory<double> A,
                                const int NrowsB, const int NcolsB, const memory<double> B,
@@ -174,29 +196,54 @@ class linAlg_t {
 
  private:
   platform_t *platform;
-  properties_t kernelInfo;
+  properties_t kernelInfoFloat;
+  properties_t kernelInfoDouble;
 
   static constexpr int blocksize = 256;
 
-  kernel_t setKernel;
-  kernel_t addKernel;
-  kernel_t scaleKernel;
-  kernel_t axpyKernel;
-  kernel_t zaxpyKernel;
-  kernel_t amxKernel;
-  kernel_t amxpyKernel;
-  kernel_t zamxpyKernel;
-  kernel_t adxKernel;
-  kernel_t adxpyKernel;
-  kernel_t zadxpyKernel;
-  kernel_t minKernel;
-  kernel_t maxKernel;
-  kernel_t sumKernel;
-  kernel_t norm2Kernel;
-  kernel_t weightedNorm2Kernel;
-  kernel_t innerProdKernel;
-  kernel_t weightedInnerProdKernel;
+  kernel_t setKernelFloat;
+  kernel_t addKernelFloat;
+  kernel_t scaleKernelFloat;
+  kernel_t axpyKernelFloat;
+  kernel_t zaxpyKernelFloat;
+  kernel_t amxKernelFloat;
+  kernel_t amxpyKernelFloat;
+  kernel_t zamxpyKernelFloat;
+  kernel_t adxKernelFloat;
+  kernel_t adxpyKernelFloat;
+  kernel_t zadxpyKernelFloat;
+  kernel_t minKernelFloat;
+  kernel_t maxKernelFloat;
+  kernel_t sumKernelFloat;
+  kernel_t norm2KernelFloat;
+  kernel_t weightedNorm2KernelFloat;
+  kernel_t innerProdKernelFloat;
+  kernel_t weightedInnerProdKernelFloat;
+
+  kernel_t setKernelDouble;
+  kernel_t addKernelDouble;
+  kernel_t scaleKernelDouble;
+  kernel_t axpyKernelDouble;
+  kernel_t zaxpyKernelDouble;
+  kernel_t amxKernelDouble;
+  kernel_t amxpyKernelDouble;
+  kernel_t zamxpyKernelDouble;
+  kernel_t adxKernelDouble;
+  kernel_t adxpyKernelDouble;
+  kernel_t zadxpyKernelDouble;
+  kernel_t minKernelDouble;
+  kernel_t maxKernelDouble;
+  kernel_t sumKernelDouble;
+  kernel_t norm2KernelDouble;
+  kernel_t weightedNorm2KernelDouble;
+  kernel_t innerProdKernelDouble;
+  kernel_t weightedInnerProdKernelDouble;
+
+  kernel_t p2dKernel;
+  kernel_t d2pKernel;
+
 };
+
 
 } //namespace libp
 

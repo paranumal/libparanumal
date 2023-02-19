@@ -24,49 +24,23 @@ SOFTWARE.
 
 */
 
-#ifndef TYPES_HPP
-#define TYPES_HPP
+// copy a dfloat array to pfloat
+@kernel void d2p(const dlong N,
+		 @restrict const dfloat *d,
+		 @restrict pfloat *p){
 
-//float data type
-#if 0
-#define dfloat float
-#define dfloatFormat "%f"
-#define dfloatString "float"
-#else
-#define dfloat double
-#define dfloatFormat "%lf"
-#define dfloatString "double"
-#endif
+  for(dlong n=0;n<N;++n;@tile(p_blockSize,@outer,@inner)){
+    p[n] = d[n];
+  }
+}
 
-// precision of preconditioners
-#if 1
-#define pfloat float
-#define pfloatString "float"
-#else
-#define pfloat double
-#define pfloatString "double"
-#endif
 
-//host index data type
-#if 0
-#define hlong int
-#define hlongFormat "%d"
-#define hlongString "int"
-#else
-#define hlong long long int
-#define hlongFormat "%lld"
-#define hlongString "long long int"
-#endif
+// copy a pfloat array to dfloat
+@kernel void p2d(const dlong N,
+		 @restrict const pfloat *p,
+		 @restrict dfloat *d){
 
-//device index data type
-#if 1
-#define dlong int
-#define dlongFormat "%d"
-#define dlongString "int"
-#else
-#define dlong long long int
-#define dlongFormat "%lld"
-#define dlongString "long long int"
-#endif
-
-#endif
+  for(dlong n=0;n<N;++n;@tile(p_blockSize,@outer,@inner)){
+    d[n] = p[n];
+  }
+}

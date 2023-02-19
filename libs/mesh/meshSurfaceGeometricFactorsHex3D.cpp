@@ -173,6 +173,17 @@ void mesh_t::SurfaceGeometricFactorsHex3D(){
   }
 
   o_sgeo = platform.malloc<dfloat>(sgeo);
+
+  if constexpr (std::is_same_v<dfloat,pfloat>) {
+    o_pfloat_sgeo = o_sgeo;
+  } else {
+    memory<pfloat> pfloat_sgeo(Nelements*Nsgeo*Nfaces*Nfp);
+
+    for(int n=0;n<Nsgeo*Nelements*Nfaces*Nfp;++n)
+      pfloat_sgeo[n] = sgeo[n];
+
+    o_pfloat_sgeo = platform.malloc<pfloat>(pfloat_sgeo);
+  }
 }
 
 } //namespace libp

@@ -99,7 +99,7 @@ void elliptic_t::BoundarySetup(){
 
   // build inverse degree vectors
   // used for the weight in linear solvers (used in C0)
-  weight.malloc(Ntotal, 1.0);
+  weight.malloc(Ntotal, (pfloat)1.0);
 
   weightG.malloc(Ngather);
   ogsMasked.Gather(weightG, weight, 1, ogs::Add, ogs::Trans);
@@ -110,8 +110,9 @@ void elliptic_t::BoundarySetup(){
 
   ogsMasked.Scatter(weight, weightG, 1, ogs::NoTrans);
 
-  o_weight  = platform.malloc<dfloat>(weight);
-  o_weightG = platform.malloc<dfloat>(weightG);
+  // TW
+  o_weight  = platform.malloc<pfloat>(weight);
+  o_weightG = platform.malloc<pfloat>(weightG);
 
   // create a global numbering system
   memory<hlong> globalIds(Ngather);

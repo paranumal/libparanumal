@@ -69,8 +69,9 @@ public:
 
   precon_t precon;
 
-  memory<dfloat> weight, weightG;
-  deviceMemory<dfloat> o_weight, o_weightG;
+  // NOTE pfloat
+  memory<pfloat> weight, weightG;
+  deviceMemory<pfloat> o_weight, o_weightG;
 
   //C0-FEM mask data
   ogs::ogs_t ogsMasked;
@@ -101,6 +102,11 @@ public:
   kernel_t partialGradientKernel;
   kernel_t partialIpdgKernel;
 
+  kernel_t floatPartialAxKernel;
+  kernel_t floatPartialGradientKernel;
+  kernel_t floatPartialIpdgKernel;
+
+
   elliptic_t() = default;
   elliptic_t(platform_t &_platform, mesh_t &_mesh,
               settings_t& _settings, dfloat _lambda,
@@ -117,12 +123,13 @@ public:
 
   void Run();
 
-  int Solve(linearSolver_t& linearSolver, deviceMemory<dfloat> &o_x, deviceMemory<dfloat> &o_r,
+  int Solve(linearSolver_t<dfloat>& linearSolver, deviceMemory<dfloat> &o_x, deviceMemory<dfloat> &o_r,
             const dfloat tol, const int MAXIT, const int verbose);
 
   void PlotFields(memory<dfloat>& Q, std::string fileName);
 
-  void Operator(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_Aq);
+  void Operator(deviceMemory<double>& o_q, deviceMemory<double>& o_Aq);
+  void Operator(deviceMemory<float>& o_q, deviceMemory<float>& o_Aq);
 
   void BuildOperatorMatrixIpdg(parAlmond::parCOO& A);
   void BuildOperatorMatrixContinuous(parAlmond::parCOO& A);
@@ -161,7 +168,8 @@ public:
 
   elliptic_t SetupRingPatch(mesh_t& meshPatch);
 
-  void ZeroMean(deviceMemory<dfloat> &o_q);
+  void ZeroMean(deviceMemory<double> &o_q);
+  void ZeroMean(deviceMemory<float> &o_q);
 };
 
 

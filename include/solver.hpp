@@ -100,8 +100,12 @@ public:
   }
 
   //Evaluation of solver as a operator in the form A(q)
-  virtual void Operator(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_Aq) {
+  virtual void Operator(deviceMemory<float>& o_q, deviceMemory<float>& o_Aq) {
     LIBP_FORCE_ABORT("Operator not implemented in this solver");
+  }
+  //Evaluation of solver as a operator in the form A(q)
+  virtual void Operator(deviceMemory<double>& o_q, deviceMemory<double>& o_Aq) {
+    LIBP_FORCE_ABORT("Operator not implemented in this solver (pfloat)");
   }
 };
 

@@ -32,10 +32,10 @@ namespace libp {
 
 namespace parAlmond {
 
-void multigrid_t::Operator(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x) {
+void multigrid_t::Operator(deviceMemory<pfloat>& o_rhs, deviceMemory<pfloat>& o_x) {
 
   /*Pre-reserve memory pool space to avoid some unnecessary re-sizing*/
-  platform.reserve<dfloat>(scratchEntries);
+  platform.reserve<pfloat>(scratchEntries);
 
   if (ctype == KCYCLE) {
     kcycle(0, o_rhs, o_x);
@@ -101,13 +101,13 @@ size_t multigrid_t::LevelScratchSpace(const int k) {
   // space for rhs and x
   size_t baseEntries = 0;
   if (k>0) {
-    baseEntries += 2*level.Ncols + 2 * platform.memPoolAlignment<dfloat>();
+    baseEntries += 2*level.Ncols + 2 * platform.memPoolAlignment<pfloat>();
   }
 
   // space for residual vector
   size_t residualEntries = 0;
   if (k<numLevels-1) {
-    residualEntries = level.Ncols + platform.memPoolAlignment<dfloat>();
+    residualEntries = level.Ncols + platform.memPoolAlignment<pfloat>();
   }
 
   //Scratch space needed for smoothing
@@ -123,7 +123,7 @@ size_t multigrid_t::LevelScratchSpace(const int k) {
   //extra stroage for kcycle vectors ck, vk, wk and reduction scratch
   if (ctype==KCYCLE && k>0 && k<NUMKCYCLES+1) {
     cycleEntries += level.Ncols + 2*level.Nrows + 3 * PARALMOND_NBLOCKS
-                  + 4 * platform.memPoolAlignment<dfloat>();
+                  + 4 * platform.memPoolAlignment<pfloat>();
   }
 
   if (k==numLevels-1) {

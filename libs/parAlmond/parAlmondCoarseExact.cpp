@@ -32,13 +32,13 @@ namespace libp {
 
 namespace parAlmond {
 
-void exactSolver_t::solve(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x) {
+void exactSolver_t::solve(deviceMemory<pfloat>& o_rhs, deviceMemory<pfloat>& o_x) {
 
   stream_t currentStream = platform.getStream();
 
-  pinnedMemory<dfloat> h_diagRhs = platform.hostReserve<dfloat>(N);
-  pinnedMemory<dfloat> h_offdRhs = platform.hostReserve<dfloat>(offdTotal);
-  deviceMemory<dfloat> o_offdRhs = platform.reserve<dfloat>(offdTotal);
+  pinnedMemory<pfloat> h_diagRhs = platform.hostReserve<pfloat>(N);
+  pinnedMemory<pfloat> h_offdRhs = platform.hostReserve<pfloat>(offdTotal);
+  deviceMemory<pfloat> o_offdRhs = platform.reserve<pfloat>(offdTotal);
 
   //queue transfering coarse vector to host for Allgather
   if(N) {
@@ -49,8 +49,8 @@ void exactSolver_t::solve(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x
   }
 
   //queue local part of gemv
-  const dfloat one=1.0;
-  const dfloat zero=0.0;
+  const pfloat one=1.0;
+  const pfloat zero=0.0;
   if (N)
     dGEMVKernel(N,N,one,o_diagInvAT,o_rhs, zero, o_x);
 
@@ -82,7 +82,7 @@ int exactSolver_t::getTargetSize() {
 }
 
 void exactSolver_t::setup(parCSR& _A, bool nullSpace,
-                          memory<dfloat> nullVector, dfloat nullSpacePenalty) {
+                          memory<pfloat> nullVector, pfloat nullSpacePenalty) {
 
   A = _A;
 
@@ -154,7 +154,7 @@ void exactSolver_t::setup(parCSR& _A, bool nullSpace,
                   recvNonZeros, recvNNZ, NNZoffsets);
 
   //gather null vector
-  memory<dfloat> nullTotal(coarseTotal);
+  memory<pfloat> nullTotal(coarseTotal);
 
   for (int r=0;r<size;r++) {
     coarseCounts[r] = coarseOffsets[r+1]-coarseOffsets[r];
@@ -164,7 +164,7 @@ void exactSolver_t::setup(parCSR& _A, bool nullSpace,
                   nullTotal, coarseCounts, coarseOffsets);
 
   //assemble the full matrix
-  memory<dfloat> coarseA(coarseTotal*coarseTotal, 0.0);
+  memory<pfloat> coarseA(coarseTotal*coarseTotal, 0.0);
   for (int i=0;i<totalNNZ;i++) {
     int n = recvNonZeros[i].row;
     int m = recvNonZeros[i].col;
@@ -219,8 +219,8 @@ void exactSolver_t::setup(parCSR& _A, bool nullSpace,
     }
   }
 
-  o_diagInvAT = platform.malloc<dfloat>(diagInvAT);
-  o_offdInvAT = platform.malloc<dfloat>(offdInvAT);
+  o_diagInvAT = platform.malloc<pfloat>(diagInvAT);
+  o_offdInvAT = platform.malloc<pfloat>(offdInvAT);
 
   // if((rank==0)&&(settings.compareSetting("VERBOSE","TRUE"))) printf("done.\n");
 }
@@ -238,7 +238,7 @@ void exactSolver_t::Report(int lev) {
   hlong totalNrows=N;
   comm.Allreduce(maxNrows, Comm::Max);
   comm.Allreduce(totalNrows, Comm::Sum);
-  dfloat avgNrows = (dfloat) totalNrows/totalActive;
+  pfloat avgNrows = (pfloat) totalNrows/totalActive;
 
   if (N==0) minNrows=maxNrows; //set this so it's ignored for the global min
   comm.Allreduce(minNrows, Comm::Min);
@@ -253,8 +253,8 @@ void exactSolver_t::Report(int lev) {
   if (nnz==0) minNnz = maxNnz; //set this so it's ignored for the global min
   comm.Allreduce(minNnz, Comm::Min);
 
-  dfloat nnzPerRow = (Nrows==0) ? 0 : (dfloat) nnz/Nrows;
-  dfloat minNnzPerRow=nnzPerRow, maxNnzPerRow=nnzPerRow, avgNnzPerRow=nnzPerRow;
+  pfloat nnzPerRow = (Nrows==0) ? 0 : (pfloat) nnz/Nrows;
+  pfloat minNnzPerRow=nnzPerRow, maxNnzPerRow=nnzPerRow, avgNnzPerRow=nnzPerRow;
   comm.Allreduce(maxNnzPerRow, Comm::Max);
   comm.Allreduce(avgNnzPerRow, Comm::Sum);
   avgNnzPerRow /= totalActive;

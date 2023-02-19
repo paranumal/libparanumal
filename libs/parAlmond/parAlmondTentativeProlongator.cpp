@@ -32,7 +32,7 @@ namespace libp {
 namespace parAlmond {
 
 parCSR tentativeProlongator(parCSR& A, memory<hlong> FineToCoarse,
-                            memory<hlong> globalAggStarts, memory<dfloat> null){
+                            memory<hlong> globalAggStarts, memory<pfloat> null){
 
   int rank = A.comm.rank();
   // int size = A.comm.size();

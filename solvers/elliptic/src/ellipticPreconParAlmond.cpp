@@ -27,7 +27,7 @@ SOFTWARE.
 #include "ellipticPrecon.hpp"
 
 //AMG preconditioner via parAlmond
-void ParAlmondPrecon::Operator(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_Mr) {
+void ParAlmondPrecon::Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_Mr) {
 
   //hand off to parAlmond
   parAlmond.Operator(o_r, o_Mr);
@@ -56,7 +56,7 @@ ParAlmondPrecon::ParAlmondPrecon(elliptic_t& _elliptic):
   int size = elliptic.mesh.size;
   hlong TotalRows = A.globalRowStarts[size];
   dlong numLocalRows = static_cast<dlong>(A.globalRowStarts[rank+1]-A.globalRowStarts[rank]);
-  memory<dfloat> null(numLocalRows);
+  memory<pfloat> null(numLocalRows);
   for (dlong i=0;i<numLocalRows;i++) {
     null[i] = 1.0/sqrt(TotalRows);
   }
@@ -64,7 +64,7 @@ ParAlmondPrecon::ParAlmondPrecon(elliptic_t& _elliptic):
   parAlmond.AMGSetup(A, elliptic.allNeumann, null, elliptic.allNeumannPenalty);
 
   parAlmond.Report();
-
+  
   //The csr matrix at the top level of parAlmond may have a larger
   // halo region than the matrix free kernel. Adjust if necessary
   dlong parAlmondNrows = parAlmond.getNumRows(0);

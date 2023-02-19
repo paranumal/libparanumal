@@ -58,7 +58,7 @@ public:
   virtual int getTargetSize()=0;
 
   virtual void setup(parCSR& A, bool nullSpace,
-                     memory<dfloat> nullVector, dfloat nullSpacePenalty)=0;
+                     memory<pfloat> nullVector, pfloat nullSpacePenalty)=0;
 
   virtual size_t scratchSize() { return 0; }
 
@@ -66,7 +66,7 @@ public:
 
   virtual void Report(int lev)=0;
 
-  virtual void solve(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x)=0;
+  virtual void solve(deviceMemory<pfloat>& o_rhs, deviceMemory<pfloat>& o_x)=0;
 };
 
 class exactSolver_t: public coarseSolver_t {
@@ -84,8 +84,8 @@ public:
   int N;
   int offdTotal=0;
 
-  memory<dfloat> diagInvAT, offdInvAT;
-  deviceMemory<dfloat> o_diagInvAT, o_offdInvAT;
+  memory<pfloat> diagInvAT, offdInvAT;
+  deviceMemory<pfloat> o_diagInvAT, o_offdInvAT;
 
   exactSolver_t(platform_t& _platform, settings_t& _settings,
                 comm_t _comm):
@@ -94,7 +94,7 @@ public:
   int getTargetSize();
 
   void setup(parCSR& A, bool nullSpace,
-             memory<dfloat> nullVector, dfloat nullSpacePenalty);
+             memory<pfloat> nullVector, pfloat nullSpacePenalty);
 
   size_t scratchSize();
 
@@ -102,7 +102,7 @@ public:
 
   void Report(int lev);
 
-  void solve(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x);
+  void solve(deviceMemory<pfloat>& o_rhs, deviceMemory<pfloat>& o_x);
 };
 
 class oasSolver_t: public coarseSolver_t {
@@ -113,8 +113,8 @@ public:
   int N;
   int diagTotal=0, offdTotal=0;
 
-  memory<dfloat> diagInvAT, offdInvAT;
-  deviceMemory<dfloat> o_diagInvAT, o_offdInvAT;
+  memory<pfloat> diagInvAT, offdInvAT;
+  deviceMemory<pfloat> o_diagInvAT, o_offdInvAT;
 
   oasSolver_t(platform_t& _platform, settings_t& _settings,
               comm_t _comm):
@@ -123,13 +123,13 @@ public:
   int getTargetSize();
 
   void setup(parCSR& A, bool nullSpace,
-             memory<dfloat> nullVector, dfloat nullSpacePenalty);
+             memory<pfloat> nullVector, pfloat nullSpacePenalty);
 
   void syncToDevice();
 
   void Report(int lev);
 
-  void solve(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x);
+  void solve(deviceMemory<pfloat>& o_rhs, deviceMemory<pfloat>& o_x);
 };
 
 } //namespace parAlmond

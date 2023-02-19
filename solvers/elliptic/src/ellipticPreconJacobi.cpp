@@ -31,21 +31,23 @@ JacobiPrecon::JacobiPrecon(elliptic_t& _elliptic):
   elliptic(_elliptic) {
 
   memory<dfloat> diagA   (elliptic.Ndofs);
-  memory<dfloat> invDiagA(elliptic.Ndofs);
+  memory<pfloat> invDiagA(elliptic.Ndofs);
   elliptic.BuildOperatorDiagonal(diagA);
   for (dlong n=0;n<elliptic.Ndofs;n++)
     invDiagA[n] = 1.0/diagA[n];
 
-  o_invDiagA = elliptic.platform.malloc<dfloat>(invDiagA);
+  o_invDiagA = elliptic.platform.malloc<pfloat>(invDiagA);
 }
 
-void JacobiPrecon::Operator(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_Mr) {
+void JacobiPrecon::Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_Mr) {
 
   linAlg_t& linAlg = elliptic.platform.linAlg();
 
   // Mr = invDiag.*r
-  linAlg.amxpy(elliptic.Ndofs, 1.0, o_invDiagA, o_r, 0.0, o_Mr);
+  linAlg.amxpy(elliptic.Ndofs, (pfloat)1.0, o_invDiagA, o_r, (pfloat)0.0, o_Mr);
 
   // zero mean of RHS
-  if(elliptic.allNeumann) elliptic.ZeroMean(o_Mr);
+  if(elliptic.allNeumann){
+    elliptic.ZeroMean(o_Mr);
+  }
 }

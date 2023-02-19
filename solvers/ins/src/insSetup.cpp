@@ -145,74 +145,74 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
     if (vSettings.compareSetting("LINEAR SOLVER","NBPCG")){
 
-      uLinearSolver.Setup<LinearSolver::nbpcg>(uNlocal, uNhalo, platform, vSettings, comm);
-      vLinearSolver.Setup<LinearSolver::nbpcg>(vNlocal, vNhalo, platform, vSettings, comm);
+      uLinearSolver.Setup<LinearSolver::nbpcg<dfloat>>(uNlocal, uNhalo, platform, vSettings, comm);
+      vLinearSolver.Setup<LinearSolver::nbpcg<dfloat>>(vNlocal, vNhalo, platform, vSettings, comm);
       if (mesh.dim==3)
-        wLinearSolver.Setup<LinearSolver::nbpcg>(wNlocal, wNhalo, platform, vSettings, comm);
+        wLinearSolver.Setup<LinearSolver::nbpcg<dfloat>>(wNlocal, wNhalo, platform, vSettings, comm);
 
     } else if (vSettings.compareSetting("LINEAR SOLVER","NBFPCG")){
 
-      uLinearSolver.Setup<LinearSolver::nbfpcg>(uNlocal, uNhalo, platform, vSettings, comm);
-      vLinearSolver.Setup<LinearSolver::nbfpcg>(vNlocal, vNhalo, platform, vSettings, comm);
+      uLinearSolver.Setup<LinearSolver::nbfpcg<dfloat>>(uNlocal, uNhalo, platform, vSettings, comm);
+      vLinearSolver.Setup<LinearSolver::nbfpcg<dfloat>>(vNlocal, vNhalo, platform, vSettings, comm);
       if (mesh.dim==3)
-        wLinearSolver.Setup<LinearSolver::nbfpcg>(wNlocal, wNhalo, platform, vSettings, comm);
+        wLinearSolver.Setup<LinearSolver::nbfpcg<dfloat>>(wNlocal, wNhalo, platform, vSettings, comm);
 
     } else if (vSettings.compareSetting("LINEAR SOLVER","PCG")){
 
-      uLinearSolver.Setup<LinearSolver::pcg>(uNlocal, uNhalo, platform, vSettings, comm);
-      vLinearSolver.Setup<LinearSolver::pcg>(vNlocal, vNhalo, platform, vSettings, comm);
+      uLinearSolver.Setup<LinearSolver::pcg<dfloat>>(uNlocal, uNhalo, platform, vSettings, comm);
+      vLinearSolver.Setup<LinearSolver::pcg<dfloat>>(vNlocal, vNhalo, platform, vSettings, comm);
       if (mesh.dim==3)
-        wLinearSolver.Setup<LinearSolver::pcg>(wNlocal, wNhalo, platform, vSettings, comm);
+        wLinearSolver.Setup<LinearSolver::pcg<dfloat>>(wNlocal, wNhalo, platform, vSettings, comm);
 
     } else if (vSettings.compareSetting("LINEAR SOLVER","PGMRES")){
 
-      uLinearSolver.Setup<LinearSolver::pgmres>(uNlocal, uNhalo, platform, vSettings, comm);
-      vLinearSolver.Setup<LinearSolver::pgmres>(vNlocal, vNhalo, platform, vSettings, comm);
+      uLinearSolver.Setup<LinearSolver::pgmres<dfloat>>(uNlocal, uNhalo, platform, vSettings, comm);
+      vLinearSolver.Setup<LinearSolver::pgmres<dfloat>>(vNlocal, vNhalo, platform, vSettings, comm);
       if (mesh.dim==3)
-        wLinearSolver.Setup<LinearSolver::pgmres>(wNlocal, wNhalo, platform, vSettings, comm);
+        wLinearSolver.Setup<LinearSolver::pgmres<dfloat>>(wNlocal, wNhalo, platform, vSettings, comm);
 
     } else if (vSettings.compareSetting("LINEAR SOLVER","PMINRES")){
 
-      uLinearSolver.Setup<LinearSolver::pminres>(uNlocal, uNhalo, platform, vSettings, comm);
-      vLinearSolver.Setup<LinearSolver::pminres>(vNlocal, vNhalo, platform, vSettings, comm);
+      uLinearSolver.Setup<LinearSolver::pminres<dfloat>>(uNlocal, uNhalo, platform, vSettings, comm);
+      vLinearSolver.Setup<LinearSolver::pminres<dfloat>>(vNlocal, vNhalo, platform, vSettings, comm);
       if (mesh.dim==3)
-        wLinearSolver.Setup<LinearSolver::pminres>(wNlocal, wNhalo, platform, vSettings, comm);
+        wLinearSolver.Setup<LinearSolver::pminres<dfloat>>(wNlocal, wNhalo, platform, vSettings, comm);
     }
 
     if (vSettings.compareSetting("INITIAL GUESS STRATEGY", "LAST")) {
 
-      uLinearSolver.SetupInitialGuess<InitialGuess::Last>(uNlocal, platform, vSettings, comm);
-      vLinearSolver.SetupInitialGuess<InitialGuess::Last>(vNlocal, platform, vSettings, comm);
+      uLinearSolver.SetupInitialGuess<InitialGuess::Last<dfloat>>(uNlocal, platform, vSettings, comm);
+      vLinearSolver.SetupInitialGuess<InitialGuess::Last<dfloat>>(vNlocal, platform, vSettings, comm);
       if (mesh.dim==3)
-        wLinearSolver.SetupInitialGuess<InitialGuess::Last>(wNlocal, platform, vSettings, comm);
+        wLinearSolver.SetupInitialGuess<InitialGuess::Last<dfloat>>(wNlocal, platform, vSettings, comm);
 
     } else if (vSettings.compareSetting("INITIAL GUESS STRATEGY", "ZERO")) {
 
-      uLinearSolver.SetupInitialGuess<InitialGuess::Zero>(uNlocal, platform, vSettings, comm);
-      vLinearSolver.SetupInitialGuess<InitialGuess::Zero>(vNlocal, platform, vSettings, comm);
+      uLinearSolver.SetupInitialGuess<InitialGuess::Zero<dfloat>>(uNlocal, platform, vSettings, comm);
+      vLinearSolver.SetupInitialGuess<InitialGuess::Zero<dfloat>>(vNlocal, platform, vSettings, comm);
       if (mesh.dim==3)
-        wLinearSolver.SetupInitialGuess<InitialGuess::Zero>(wNlocal, platform, vSettings, comm);
+        wLinearSolver.SetupInitialGuess<InitialGuess::Zero<dfloat>>(wNlocal, platform, vSettings, comm);
 
     } else if (vSettings.compareSetting("INITIAL GUESS STRATEGY", "CLASSIC")) {
 
-      uLinearSolver.SetupInitialGuess<InitialGuess::ClassicProjection>(uNlocal, platform, vSettings, comm);
-      vLinearSolver.SetupInitialGuess<InitialGuess::ClassicProjection>(vNlocal, platform, vSettings, comm);
+      uLinearSolver.SetupInitialGuess<InitialGuess::ClassicProjection<dfloat>>(uNlocal, platform, vSettings, comm);
+      vLinearSolver.SetupInitialGuess<InitialGuess::ClassicProjection<dfloat>>(vNlocal, platform, vSettings, comm);
       if (mesh.dim==3)
-        wLinearSolver.SetupInitialGuess<InitialGuess::ClassicProjection>(wNlocal, platform, vSettings, comm);
+        wLinearSolver.SetupInitialGuess<InitialGuess::ClassicProjection<dfloat>>(wNlocal, platform, vSettings, comm);
 
     } else if (vSettings.compareSetting("INITIAL GUESS STRATEGY", "QR")) {
 
-      uLinearSolver.SetupInitialGuess<InitialGuess::RollingQRProjection>(uNlocal, platform, vSettings, comm);
-      vLinearSolver.SetupInitialGuess<InitialGuess::RollingQRProjection>(vNlocal, platform, vSettings, comm);
+      uLinearSolver.SetupInitialGuess<InitialGuess::RollingQRProjection<dfloat>>(uNlocal, platform, vSettings, comm);
+      vLinearSolver.SetupInitialGuess<InitialGuess::RollingQRProjection<dfloat>>(vNlocal, platform, vSettings, comm);
       if (mesh.dim==3)
-        wLinearSolver.SetupInitialGuess<InitialGuess::RollingQRProjection>(wNlocal, platform, vSettings, comm);
+        wLinearSolver.SetupInitialGuess<InitialGuess::RollingQRProjection<dfloat>>(wNlocal, platform, vSettings, comm);
 
     } else if (vSettings.compareSetting("INITIAL GUESS STRATEGY", "EXTRAP")) {
 
-      uLinearSolver.SetupInitialGuess<InitialGuess::Extrap>(uNlocal, platform, vSettings, comm);
-      vLinearSolver.SetupInitialGuess<InitialGuess::Extrap>(vNlocal, platform, vSettings, comm);
+      uLinearSolver.SetupInitialGuess<InitialGuess::Extrap<dfloat>>(uNlocal, platform, vSettings, comm);
+      vLinearSolver.SetupInitialGuess<InitialGuess::Extrap<dfloat>>(vNlocal, platform, vSettings, comm);
       if (mesh.dim==3)
-        wLinearSolver.SetupInitialGuess<InitialGuess::Extrap>(wNlocal, platform, vSettings, comm);
+        wLinearSolver.SetupInitialGuess<InitialGuess::Extrap<dfloat>>(wNlocal, platform, vSettings, comm);
 
     }
 
@@ -259,27 +259,27 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
     }
 
     if (vSettings.compareSetting("LINEAR SOLVER","NBPCG")){
-      pLinearSolver.Setup<LinearSolver::nbpcg>(pNlocal, pNhalo, platform, pSettings, comm);
+      pLinearSolver.Setup<LinearSolver::nbpcg<dfloat>>(pNlocal, pNhalo, platform, pSettings, comm);
     } else if (pSettings.compareSetting("LINEAR SOLVER","NBFPCG")){
-      pLinearSolver.Setup<LinearSolver::nbfpcg>(pNlocal, pNhalo, platform, pSettings, comm);
+      pLinearSolver.Setup<LinearSolver::nbfpcg<dfloat>>(pNlocal, pNhalo, platform, pSettings, comm);
     } else if (pSettings.compareSetting("LINEAR SOLVER","PCG")){
-      pLinearSolver.Setup<LinearSolver::pcg>(pNlocal, pNhalo, platform, pSettings, comm);
+      pLinearSolver.Setup<LinearSolver::pcg<dfloat>>(pNlocal, pNhalo, platform, pSettings, comm);
     } else if (pSettings.compareSetting("LINEAR SOLVER","PGMRES")){
-      pLinearSolver.Setup<LinearSolver::pgmres>(pNlocal, pNhalo, platform, pSettings, comm);
+      pLinearSolver.Setup<LinearSolver::pgmres<dfloat>>(pNlocal, pNhalo, platform, pSettings, comm);
     } else if (pSettings.compareSetting("LINEAR SOLVER","PMINRES")){
-      pLinearSolver.Setup<LinearSolver::pminres>(pNlocal, pNhalo, platform, pSettings, comm);
+      pLinearSolver.Setup<LinearSolver::pminres<dfloat>>(pNlocal, pNhalo, platform, pSettings, comm);
     }
 
     if (pSettings.compareSetting("INITIAL GUESS STRATEGY", "LAST")) {
-      pLinearSolver.SetupInitialGuess<InitialGuess::Last>(pNlocal, platform, pSettings, comm);
+      pLinearSolver.SetupInitialGuess<InitialGuess::Last<dfloat>>(pNlocal, platform, pSettings, comm);
     } else if (pSettings.compareSetting("INITIAL GUESS STRATEGY", "ZERO")) {
-      pLinearSolver.SetupInitialGuess<InitialGuess::Zero>(pNlocal, platform, pSettings, comm);
+      pLinearSolver.SetupInitialGuess<InitialGuess::Zero<dfloat>>(pNlocal, platform, pSettings, comm);
     } else if (pSettings.compareSetting("INITIAL GUESS STRATEGY", "CLASSIC")) {
-      pLinearSolver.SetupInitialGuess<InitialGuess::ClassicProjection>(pNlocal, platform, pSettings, comm);
+      pLinearSolver.SetupInitialGuess<InitialGuess::ClassicProjection<dfloat>>(pNlocal, platform, pSettings, comm);
     } else if (pSettings.compareSetting("INITIAL GUESS STRATEGY", "QR")) {
-      pLinearSolver.SetupInitialGuess<InitialGuess::RollingQRProjection>(pNlocal, platform, pSettings, comm);
+      pLinearSolver.SetupInitialGuess<InitialGuess::RollingQRProjection<dfloat>>(pNlocal, platform, pSettings, comm);
     } else if (pSettings.compareSetting("INITIAL GUESS STRATEGY", "EXTRAP")) {
-      pLinearSolver.SetupInitialGuess<InitialGuess::Extrap>(pNlocal, platform, pSettings, comm);
+      pLinearSolver.SetupInitialGuess<InitialGuess::Extrap<dfloat>>(pNlocal, platform, pSettings, comm);
     }
   }
 

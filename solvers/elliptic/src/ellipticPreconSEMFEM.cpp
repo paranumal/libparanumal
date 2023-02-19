@@ -27,40 +27,42 @@ SOFTWARE.
 #include "ellipticPrecon.hpp"
 
 // Cast problem into spectrally-equivalent N=1 FEM space and precondition with AMG
-void SEMFEMPrecon::Operator(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_Mr) {
+void SEMFEMPrecon::Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_Mr) {
 
+  pfloat zero = 0, one = 1;
+  
   linAlg_t& linAlg = elliptic.platform.linAlg();
 
   if (mesh.elementType==Mesh::TRIANGLES) {
     dlong Ncols = parAlmond.getNumCols(0);
-    deviceMemory<dfloat> o_GrFEM = elliptic.platform.reserve<dfloat>(Ncols);
-    deviceMemory<dfloat> o_GzFEM = elliptic.platform.reserve<dfloat>(Ncols);
+    deviceMemory<pfloat> o_GrFEM = elliptic.platform.reserve<pfloat>(Ncols);
+    deviceMemory<pfloat> o_GzFEM = elliptic.platform.reserve<pfloat>(Ncols);
 
     // Mr = invDegree.*r
-    linAlg.amxpy(elliptic.Ndofs, 1.0, elliptic.o_weightG, o_r, 0.0, o_Mr);
+    linAlg.amxpy(elliptic.Ndofs, one, elliptic.o_weightG, o_r, zero, o_Mr);
 
-    deviceMemory<dfloat> o_rFEM = elliptic.platform.reserve<dfloat>(mesh.Nelements*mesh.NpFEM);
+    deviceMemory<pfloat> o_rFEM = elliptic.platform.reserve<pfloat>(mesh.Nelements*mesh.NpFEM);
     elliptic.gHalo.Exchange(o_Mr, 1);
     SEMFEMInterpKernel(mesh.Nelements,
                        elliptic.o_GlobalToLocal,
-                       mesh.o_SEMFEMAnterp,
+                       mesh.o_pfloat_SEMFEMAnterp,
                        o_Mr, o_rFEM);
     FEMogs.Gather(o_GrFEM, o_rFEM, 1, ogs::Add, ogs::Trans);
     o_rFEM.free();
 
     parAlmond.Operator(o_GrFEM, o_GzFEM);
 
-    deviceMemory<dfloat> o_MrL = elliptic.platform.reserve<dfloat>(mesh.Np*mesh.Nelements);
+    deviceMemory<pfloat> o_MrL = elliptic.platform.reserve<pfloat>(mesh.Np*mesh.Nelements);
     FEMgHalo.Exchange(o_GzFEM, 1);
     SEMFEMAnterpKernel(mesh.Nelements,
                        o_FEMGlobalToLocal,
-                       mesh.o_SEMFEMAnterp,
+                       mesh.o_pfloat_SEMFEMAnterp,
                        o_GzFEM, o_MrL);
     elliptic.ogsMasked.Gather(o_Mr, o_MrL, 1, ogs::Add, ogs::Trans);
     o_MrL.free();
 
     // Mr = invDegree.*Mr
-    linAlg.amx(elliptic.Ndofs, 1.0, elliptic.o_weightG, o_Mr);
+    linAlg.amx(elliptic.Ndofs, one, elliptic.o_weightG, o_Mr);
 
   } else {
     //pass to parAlmond
@@ -218,7 +220,7 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
   hlong TotalRows = A.globalRowStarts[size];
   dlong numLocalRows = static_cast<dlong>(A.globalRowStarts[rank+1]-A.globalRowStarts[rank]);
 
-  memory<dfloat> null(numLocalRows);
+  memory<pfloat> null(numLocalRows);
   for (dlong i=0;i<numLocalRows;i++) {
     null[i] = 1.0/sqrt(TotalRows);
   }
@@ -229,15 +231,17 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
 
   if (mesh.elementType==Mesh::TRIANGLES) {
     // build interp and anterp
-    memory<dfloat> SEMFEMAnterp(mesh.NpFEM*mesh.Np);
+    memory<pfloat> pfloat_SEMFEMAnterp(mesh.NpFEM*mesh.Np);
+    memory<pfloat> pfloat_SEMFEMInterp(mesh.NpFEM*mesh.Np);
     for(int n=0;n<mesh.NpFEM;++n){
       for(int m=0;m<mesh.Np;++m){
-        SEMFEMAnterp[n+m*mesh.NpFEM] = mesh.SEMFEMInterp[n*mesh.Np+m];
+        pfloat_SEMFEMAnterp[n+m*mesh.NpFEM] = mesh.SEMFEMInterp[n*mesh.Np+m];
+	pfloat_SEMFEMInterp[n+m*mesh.NpFEM] = mesh.SEMFEMInterp[n+m*mesh.NpFEM];
       }
     }
 
-    mesh.o_SEMFEMInterp = elliptic.platform.malloc<dfloat>(mesh.SEMFEMInterp);
-    mesh.o_SEMFEMAnterp = elliptic.platform.malloc<dfloat>(SEMFEMAnterp);
+    mesh.o_pfloat_SEMFEMInterp = elliptic.platform.malloc<pfloat>(pfloat_SEMFEMInterp);
+    mesh.o_pfloat_SEMFEMAnterp = elliptic.platform.malloc<pfloat>(pfloat_SEMFEMAnterp);
 
     //build kernels
     properties_t kernelInfo = mesh.props;
@@ -247,6 +251,8 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
 
     int NblockV = std::max(256/mesh.NpFEM, 1);
     kernelInfo["defines/" "p_NblockV"]= NblockV;
+
+    kernelInfo["defines/" "dfloat"]= pfloatString;
 
     SEMFEMInterpKernel = elliptic.platform.buildKernel(DELLIPTIC "/okl/ellipticSEMFEMInterp.okl",
                                      "ellipticSEMFEMInterp", kernelInfo);

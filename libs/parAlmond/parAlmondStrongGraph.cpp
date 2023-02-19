@@ -31,10 +31,10 @@ namespace libp {
 
 namespace parAlmond {
 
-static strongGraph_t RugeStubenStrength(parCSR& A, dfloat theta);
-static strongGraph_t SymmetricStrength(parCSR& A, dfloat theta);
+static strongGraph_t RugeStubenStrength(parCSR& A, pfloat theta);
+static strongGraph_t SymmetricStrength(parCSR& A, pfloat theta);
 
-strongGraph_t strongGraph(parCSR& A, StrengthType type, dfloat theta){
+strongGraph_t strongGraph(parCSR& A, StrengthType type, pfloat theta){
 
   if (type==RUGESTUBEN) {
     return RugeStubenStrength(A, theta);
@@ -44,7 +44,7 @@ strongGraph_t strongGraph(parCSR& A, StrengthType type, dfloat theta){
 
 }
 
-static strongGraph_t RugeStubenStrength(parCSR& A, dfloat theta) {
+static strongGraph_t RugeStubenStrength(parCSR& A, pfloat theta) {
 
   const dlong N = A.Nrows;
   const dlong M = A.Ncols;
@@ -53,9 +53,9 @@ static strongGraph_t RugeStubenStrength(parCSR& A, dfloat theta) {
 
   C.rowStarts.malloc(N+1);
 
-  memory<dfloat> maxOD(N,0.0);
+  memory<pfloat> maxOD(N,0.0);
 
-  memory<dfloat> diagA = A.diagA;
+  memory<pfloat> diagA = A.diagA;
 
   //find maxOD
   // #pragma omp parallel for
@@ -68,14 +68,14 @@ static strongGraph_t RugeStubenStrength(parCSR& A, dfloat theta) {
     for(dlong jj= Jstart; jj<Jend; jj++){
       const dlong col = A.diag.cols[jj];
       if (col==i) continue;
-      const dfloat OD = -sign*A.diag.vals[jj];
+      const pfloat OD = -sign*A.diag.vals[jj];
       if(OD > maxOD[i]) maxOD[i] = OD;
     }
     //non-local entries
     Jstart = A.offd.rowStarts[i];
     Jend   = A.offd.rowStarts[i+1];
     for(dlong jj= Jstart; jj<Jend; jj++){
-      dfloat OD = -sign*A.offd.vals[jj];
+      pfloat OD = -sign*A.offd.vals[jj];
       if(OD > maxOD[i]) maxOD[i] = OD;
     }
 
@@ -87,14 +87,14 @@ static strongGraph_t RugeStubenStrength(parCSR& A, dfloat theta) {
     for(dlong jj = Jstart; jj<Jend; jj++){
       const dlong col = A.diag.cols[jj];
       if (col==i) continue;
-      const dfloat OD = -sign*A.diag.vals[jj];
+      const pfloat OD = -sign*A.diag.vals[jj];
       if(OD > theta*maxOD[i]) strong_per_row++;
     }
     //non-local entries
     Jstart = A.offd.rowStarts[i];
     Jend   = A.offd.rowStarts[i+1];
     for(dlong jj= Jstart; jj<Jend; jj++){
-      const dfloat OD = -sign*A.offd.vals[jj];
+      const pfloat OD = -sign*A.offd.vals[jj];
       if(OD > theta*maxOD[i]) strong_per_row++;
     }
     C.rowStarts[i+1] = strong_per_row;
@@ -126,7 +126,7 @@ static strongGraph_t RugeStubenStrength(parCSR& A, dfloat theta) {
         continue;
       }
 
-      const dfloat OD = -sign*A.diag.vals[jj];
+      const pfloat OD = -sign*A.diag.vals[jj];
       if(OD > theta*maxOD[i])
         C.cols[counter++] = col;
     }
@@ -135,7 +135,7 @@ static strongGraph_t RugeStubenStrength(parCSR& A, dfloat theta) {
     Jend = A.offd.rowStarts[i+1];
     for(dlong jj = Jstart; jj<Jend; jj++){
       const dlong col = A.offd.cols[jj];
-      const dfloat OD = -sign*A.offd.vals[jj];
+      const pfloat OD = -sign*A.offd.vals[jj];
       if(OD > theta*maxOD[i])
         C.cols[counter++] = col;
     }
@@ -144,7 +144,7 @@ static strongGraph_t RugeStubenStrength(parCSR& A, dfloat theta) {
   return C;
 }
 
-static strongGraph_t SymmetricStrength(parCSR& A, dfloat theta) {
+static strongGraph_t SymmetricStrength(parCSR& A, pfloat theta) {
 
   const dlong N = A.Nrows;
   const dlong M = A.Ncols;
@@ -153,13 +153,13 @@ static strongGraph_t SymmetricStrength(parCSR& A, dfloat theta) {
 
   C.rowStarts.malloc(N+1);
 
-  memory<dfloat> diagA = A.diagA;
+  memory<pfloat> diagA = A.diagA;
 
   // #pragma omp parallel for
   for(dlong i=0; i<N; i++){
     int strong_per_row = 1; // diagonal entry
 
-    const dfloat Aii = std::abs(diagA[i]);
+    const pfloat Aii = std::abs(diagA[i]);
 
     //local entries
     dlong Jstart = A.diag.rowStarts[i];
@@ -168,7 +168,7 @@ static strongGraph_t SymmetricStrength(parCSR& A, dfloat theta) {
       const dlong col = A.diag.cols[jj];
       if (col==i) continue;
 
-      const dfloat Ajj = std::abs(diagA[col]);
+      const pfloat Ajj = std::abs(diagA[col]);
 
       if(std::abs(A.diag.vals[jj]) > theta*(sqrt(Aii*Ajj)))
         strong_per_row++;
@@ -178,7 +178,7 @@ static strongGraph_t SymmetricStrength(parCSR& A, dfloat theta) {
     Jend   = A.offd.rowStarts[i+1];
     for(dlong jj= Jstart; jj<Jend; jj++){
       const dlong col = A.offd.cols[jj];
-      const dfloat Ajj = std::abs(diagA[col]);
+      const pfloat Ajj = std::abs(diagA[col]);
 
       if(std::abs(A.offd.vals[jj]) > theta*(sqrt(Aii*Ajj)))
         strong_per_row++;
@@ -199,7 +199,7 @@ static strongGraph_t SymmetricStrength(parCSR& A, dfloat theta) {
   // fill in the columns for strong connections
   // #pragma omp parallel for
   for(dlong i=0; i<N; i++){
-    const dfloat Aii = std::abs(diagA[i]);
+    const pfloat Aii = std::abs(diagA[i]);
 
     dlong counter = C.rowStarts[i];
 
@@ -213,7 +213,7 @@ static strongGraph_t SymmetricStrength(parCSR& A, dfloat theta) {
         continue;
       }
 
-      const dfloat Ajj = std::abs(diagA[col]);
+      const pfloat Ajj = std::abs(diagA[col]);
 
       if(std::abs(A.diag.vals[jj]) > theta*(sqrt(Aii*Ajj)))
         C.cols[counter++] = col;
@@ -224,7 +224,7 @@ static strongGraph_t SymmetricStrength(parCSR& A, dfloat theta) {
     for(dlong jj= Jstart; jj<Jend; jj++){
       const dlong col = A.offd.cols[jj];
 
-      const dfloat Ajj = std::abs(diagA[col]);
+      const pfloat Ajj = std::abs(diagA[col]);
 
       if(std::abs(A.offd.vals[jj]) > theta*(sqrt(Aii*Ajj)))
         C.cols[counter++] = col;

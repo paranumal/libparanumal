@@ -32,16 +32,18 @@ namespace libp {
 
 namespace parAlmond {
 
-void parCSR::smoothDampedJacobi(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_x,
-                                const dfloat lambda, bool x_is_zero){
+void parCSR::smoothDampedJacobi(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_x,
+                                const pfloat lambda, bool x_is_zero){
 
+  pfloat zero = 0, one = 1;
+  
   if(x_is_zero){
     // x = lambda*inv(D)*r
-    platform.linAlg().amxpy(Nrows, lambda, o_diagInv, o_r, 0.0, o_x);
+    platform.linAlg().amxpy(Nrows, lambda, o_diagInv, o_r, zero, o_x);
     return;
   }
 
-  deviceMemory<dfloat> o_d = platform.reserve<dfloat>(Nrows);
+  deviceMemory<pfloat> o_d = platform.reserve<pfloat>(Nrows);
 
   halo.ExchangeStart(o_x, 1);
 
@@ -61,22 +63,22 @@ void parCSR::smoothDampedJacobi(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>&
                            offd.o_rows, offd.o_cols, offd.o_vals,
                            lambda, o_diagInv, o_x, o_d);
 
-  platform.linAlg().axpy(Nrows, 1.0, o_d, 1.0, o_x);
+  platform.linAlg().axpy(Nrows, one, o_d, one, o_x);
 }
 
-void parCSR::smoothChebyshev(deviceMemory<dfloat>& o_b, deviceMemory<dfloat>& o_x,
-                             const dfloat lambda0, const dfloat lambda1,
+void parCSR::smoothChebyshev(deviceMemory<pfloat>& o_b, deviceMemory<pfloat>& o_x,
+                             const pfloat lambda0, const pfloat lambda1,
                              bool x_is_zero, const int ChebyshevIterations) {
 
-  const dfloat theta = 0.5*(lambda1+lambda0);
-  const dfloat delta = 0.5*(lambda1-lambda0);
-  const dfloat invTheta = 1.0/theta;
-  const dfloat sigma = theta/delta;
-  dfloat rho_n = 1./sigma;
-  dfloat rho_np1;
+  const pfloat theta = 0.5*(lambda1+lambda0);
+  const pfloat delta = 0.5*(lambda1-lambda0);
+  const pfloat invTheta = 1.0/theta;
+  const pfloat sigma = theta/delta;
+  pfloat rho_n = 1./sigma;
+  pfloat rho_np1;
 
-  deviceMemory<dfloat> o_d = platform.reserve<dfloat>(Ncols);
-  deviceMemory<dfloat> o_r = platform.reserve<dfloat>(Nrows);
+  deviceMemory<pfloat> o_d = platform.reserve<pfloat>(Ncols);
+  deviceMemory<pfloat> o_r = platform.reserve<pfloat>(Nrows);
 
   if(x_is_zero){ //skip the Ax if x is zero
     //r = D^{-1}b
@@ -89,8 +91,8 @@ void parCSR::smoothChebyshev(deviceMemory<dfloat>& o_b, deviceMemory<dfloat>& o_
     //r = D^{-1}(b-A*x)
     halo.ExchangeStart(o_x, 1);
 
-    const dfloat alpha = 0.0;
-    const dfloat beta = 1.0;
+    const pfloat alpha = 0.0;
+    const pfloat beta = 1.0;
 
     if (diag.NrowBlocks)
       SmoothChebyshevCSRKernel(diag.NrowBlocks,
@@ -118,8 +120,8 @@ void parCSR::smoothChebyshev(deviceMemory<dfloat>& o_b, deviceMemory<dfloat>& o_
 
   for (int k=0;k<ChebyshevIterations;k++) {
 
-    const dfloat alpha = 1.0;
-    const dfloat beta = 0.0;
+    const pfloat alpha = 1.0;
+    const pfloat beta = 0.0;
 
     //r_k+1 = r_k - D^{-1}Ad_k
     halo.ExchangeStart(o_d, 1);
@@ -148,7 +150,7 @@ void parCSR::smoothChebyshev(deviceMemory<dfloat>& o_b, deviceMemory<dfloat>& o_
     if (Nrows)
       SmoothChebyshevUpdateKernel(Nrows,
                                   rho_np1*rho_n,
-                                  dfloat(2.0)*rho_np1/delta,
+                                  pfloat(2.0)*rho_np1/delta,
                                   last_it,
                                   o_r, o_d, o_x);
 

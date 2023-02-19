@@ -30,16 +30,18 @@ SOFTWARE.
 //  entire local mesh + 1 ring overlap, solved with a local multigrid
 //  precon and coarse problem consisting of the global degree 1
 //  problem, solved with parAlmond
-void OASPrecon::Operator(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_Mr) {
+void OASPrecon::Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_Mr) {
 
+  pfloat one = 1., zero = 0;
+  
   if (mesh.N>1) {
-    deviceMemory<dfloat> o_rPatch = elliptic.platform.reserve<dfloat>(ellipticPatch.Ndofs);
+    deviceMemory<pfloat> o_rPatch = elliptic.platform.reserve<pfloat>(ellipticPatch.Ndofs);
 
     linAlg_t& linAlg = elliptic.platform.linAlg();
 
     if (elliptic.disc_c0) {
       dlong Ntotal = mesh.Np*(mesh.Nelements+mesh.totalRingElements);
-      deviceMemory<dfloat> o_rPatchL = elliptic.platform.reserve<dfloat>(Ntotal);
+      deviceMemory<pfloat> o_rPatchL = elliptic.platform.reserve<pfloat>(Ntotal);
       //Scatter to localDof ordering, exchange ring halo,
       // then compress the ring mesh to globalDofs order.
       // TODO: Technically, these steps couple be fused
@@ -57,12 +59,12 @@ void OASPrecon::Operator(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_Mr) 
     //Apply local patch precon
     // TODO: This is blocking due to H<->D transfers.
     //       Should modify precons so size=1 is non-blocking
-    deviceMemory<dfloat> o_zPatch = elliptic.platform.reserve<dfloat>(ellipticPatch.Ndofs);
+    deviceMemory<pfloat> o_zPatch = elliptic.platform.reserve<pfloat>(ellipticPatch.Ndofs);
     preconPatch.Operator(o_rPatch, o_zPatch);
 
     dlong NcolsC = parAlmond.getNumCols(0);
-    deviceMemory<dfloat> o_rC = elliptic.platform.reserve<dfloat>(NcolsC);
-    deviceMemory<dfloat> o_zC = elliptic.platform.reserve<dfloat>(NcolsC);
+    deviceMemory<pfloat> o_rC = elliptic.platform.reserve<pfloat>(NcolsC);
+    deviceMemory<pfloat> o_zC = elliptic.platform.reserve<pfloat>(NcolsC);
 
     //Coarsen problem to N=1 and pass to parAlmond
     level.coarsen(o_r, o_rC);
@@ -72,14 +74,14 @@ void OASPrecon::Operator(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_Mr) 
     //Add contributions from all patches together
     if (elliptic.disc_c0) {
       dlong Ntotal = mesh.Np*(mesh.Nelements+mesh.totalRingElements);
-      deviceMemory<dfloat> o_zPatchL = elliptic.platform.reserve<dfloat>(Ntotal);
+      deviceMemory<pfloat> o_zPatchL = elliptic.platform.reserve<pfloat>(Ntotal);
 
       ellipticPatch.ogsMasked.Scatter(o_zPatchL, o_zPatch, 1, ogs::NoTrans);
       ogsMaskedRing.GatherScatter(o_zPatchL, 1, ogs::Add, ogs::Sym);
 
       // Weight by overlap degree, zPatch = patchWeight*zPatch
       Ntotal=mesh.Nelements*mesh.Np;
-      linAlg.amx(Ntotal, 1.0, o_patchWeight, o_zPatchL);
+      linAlg.amx(Ntotal, one, o_patchWeight, o_zPatchL);
 
       elliptic.ogsMasked.Gather(o_Mr, o_zPatchL, 1, ogs::Add, ogs::NoTrans);
 
@@ -87,7 +89,7 @@ void OASPrecon::Operator(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_Mr) 
       mesh.ringHalo.Combine(o_zPatch, mesh.Np);
 
       // Weight by overlap degree, Mr = patchWeight*zPatch
-      linAlg.amxpy(elliptic.Ndofs, 1.0, o_patchWeight, o_zPatch, 0.0, o_Mr);
+      linAlg.amxpy(elliptic.Ndofs, one, o_patchWeight, o_zPatch, zero, o_Mr);
     }
 
     // Add prologatated coarse solution
@@ -99,6 +101,7 @@ void OASPrecon::Operator(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_Mr) 
 
   // zero mean of RHS
   if(elliptic.allNeumann) elliptic.ZeroMean(o_Mr);
+
 }
 
 OASPrecon::OASPrecon(elliptic_t& _elliptic):
@@ -149,7 +152,7 @@ OASPrecon::OASPrecon(elliptic_t& _elliptic):
     for (int i=0;i<meshPatch.Nelements*meshPatch.Np;i++)
       patchWeight[i] = (patchWeight[i] > 0.0) ? 1.0/patchWeight[i] : 0.0;
 
-    o_patchWeight = elliptic.platform.malloc<dfloat>(patchWeight);
+    o_patchWeight = elliptic.platform.malloc<pfloat>(patchWeight);
   }
 
   //build the coarse precon
@@ -185,7 +188,7 @@ OASPrecon::OASPrecon(elliptic_t& _elliptic):
   int size = meshC.size;
   hlong TotalRows = A.globalRowStarts[size];
   dlong numLocalRows = (dlong) (A.globalRowStarts[rank+1]-A.globalRowStarts[rank]);
-  memory<dfloat> null(numLocalRows);
+  memory<pfloat> null(numLocalRows);
   for (dlong i=0;i<numLocalRows;i++) {
     null[i] = 1.0/sqrt(TotalRows);
   }

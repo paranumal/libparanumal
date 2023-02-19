@@ -41,16 +41,18 @@ void elliptic_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
   //Trigger JIT kernel builds
   ogs::InitializeKernels(platform, ogs::Dfloat, ogs::Add);
+  ogs::InitializeKernels(platform, ogs::Pfloat, ogs::Add);
 
   disc_ipdg = settings.compareSetting("DISCRETIZATION","IPDG");
   disc_c0   = settings.compareSetting("DISCRETIZATION","CONTINUOUS");
 
   //setup linear algebra module
   platform.linAlg().InitKernels({"add", "sum", "scale",
-                                "axpy", "zaxpy",
-                                "amx", "amxpy", "zamxpy",
-                                "adx", "adxpy", "zadxpy",
-                                "innerProd", "norm2"});
+        "axpy", "zaxpy",
+        "amx", "amxpy", "zamxpy",
+        "adx", "adxpy", "zadxpy",
+        "innerProd", "norm2", "d2p", "p2d"});
+
 
   /*setup trace halo exchange */
   traceHalo = mesh.HaloTraceSetup(Nfields);
@@ -103,6 +105,14 @@ void elliptic_t::Setup(platform_t& _platform, mesh_t& _mesh,
   int NblockV = std::max(1,blockMax/mesh.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;
 
+  properties_t kernelInfoDouble = kernelInfo;
+  kernelInfoDouble["defines/dfloat"] = "double";
+  kernelInfoDouble["defines/dfloat4"] = "double4";
+
+  properties_t kernelInfoFloat = kernelInfo;
+  kernelInfoFloat["defines/dfloat"] = "float";
+  kernelInfoFloat["defines/dfloat4"] = "float4";
+
   // Ax kernel
   if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
     fileName   = oklFilePrefix + "ellipticAx" + suffix + oklFileSuffix;
@@ -116,21 +126,33 @@ void elliptic_t::Setup(platform_t& _platform, mesh_t& _mesh,
     }
 
     partialAxKernel = platform.buildKernel(fileName, kernelName,
-                                           kernelInfo);
+                                           kernelInfoDouble);
+
+    floatPartialAxKernel = platform.buildKernel(fileName, kernelName,
+                                                kernelInfoFloat);
 
   } else if (settings.compareSetting("DISCRETIZATION","IPDG")) {
     int Nmax = std::max(mesh.Np, mesh.Nfaces*mesh.Nfp);
-    kernelInfo["defines/" "p_Nmax"]= Nmax;
+    kernelInfoDouble["defines/" "p_Nmax"]= Nmax;
+    kernelInfoFloat["defines/" "p_Nmax"]= Nmax;
 
     fileName   = oklFilePrefix + "ellipticGradient" + suffix + oklFileSuffix;
     kernelName = "ellipticPartialGradient" + suffix;
     partialGradientKernel = platform.buildKernel(fileName, kernelName,
-                                                  kernelInfo);
+                                                  kernelInfoDouble);
+
+    floatPartialGradientKernel = platform.buildKernel(fileName, kernelName,
+                                                      kernelInfoFloat);
+
 
     fileName   = oklFilePrefix + "ellipticAxIpdg" + suffix + oklFileSuffix;
     kernelName = "ellipticPartialAxIpdg" + suffix;
+
     partialIpdgKernel = platform.buildKernel(fileName, kernelName,
-                                              kernelInfo);
+                                             kernelInfoDouble);
+
+    floatPartialIpdgKernel = platform.buildKernel(fileName, kernelName,
+                                                  kernelInfoFloat);
   }
 
   /* Preconditioner Setup */
@@ -142,7 +164,7 @@ void elliptic_t::Setup(platform_t& _platform, mesh_t& _mesh,
     Nhalo = mesh.totalHaloPairs*mesh.Np*Nfields;
   }
 
-  if       (settings.compareSetting("PRECONDITIONER", "JACOBI"))
+  if (settings.compareSetting("PRECONDITIONER", "JACOBI"))
     precon.Setup<JacobiPrecon>(*this);
   else if(settings.compareSetting("PRECONDITIONER", "MASSMATRIX"))
     precon.Setup<MassMatrixPrecon>(*this);

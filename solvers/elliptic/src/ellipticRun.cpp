@@ -40,17 +40,17 @@ void elliptic_t::Run(){
     NglobalDofs = mesh.NelementsGlobal*mesh.Np*Nfields;
   }
 
-  linearSolver_t linearSolver;
+  linearSolver_t<dfloat> linearSolver;
   if (settings.compareSetting("LINEAR SOLVER","NBPCG")){
-    linearSolver.Setup<LinearSolver::nbpcg>(Ndofs, Nhalo, platform, settings, comm);
+    linearSolver.Setup<LinearSolver::nbpcg<dfloat> >(Ndofs, Nhalo, platform, settings, comm);
   } else if (settings.compareSetting("LINEAR SOLVER","NBFPCG")){
-    linearSolver.Setup<LinearSolver::nbfpcg>(Ndofs, Nhalo, platform, settings, comm);
+    linearSolver.Setup<LinearSolver::nbfpcg<dfloat> >(Ndofs, Nhalo, platform, settings, comm);
   } else if (settings.compareSetting("LINEAR SOLVER","PCG")){
-    linearSolver.Setup<LinearSolver::pcg>(Ndofs, Nhalo, platform, settings, comm);
+    linearSolver.Setup<LinearSolver::pcg<dfloat> >(Ndofs, Nhalo, platform, settings, comm);
   } else if (settings.compareSetting("LINEAR SOLVER","PGMRES")){
-    linearSolver.Setup<LinearSolver::pgmres>(Ndofs, Nhalo, platform, settings, comm);
+    linearSolver.Setup<LinearSolver::pgmres<dfloat> >(Ndofs, Nhalo, platform, settings, comm);
   } else if (settings.compareSetting("LINEAR SOLVER","PMINRES")){
-    linearSolver.Setup<LinearSolver::pminres>(Ndofs, Nhalo, platform, settings, comm);
+    linearSolver.Setup<LinearSolver::pminres<dfloat> >(Ndofs, Nhalo, platform, settings, comm);
   }
 
   properties_t kernelInfo = mesh.props; //copy base occa properties
@@ -135,7 +135,7 @@ void elliptic_t::Run(){
                 o_rL);
 
   //Set x to zero
-  platform.linAlg().set(mesh.Nelements*mesh.Np*Nfields, 0.0, o_xL);
+  platform.linAlg().set(mesh.Nelements*mesh.Np*Nfields, (dfloat)0.0, o_xL);
 
   //add boundary condition contribution to rhs
   if (settings.compareSetting("DISCRETIZATION","IPDG")) {

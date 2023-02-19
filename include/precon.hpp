@@ -35,7 +35,7 @@ namespace libp {
 /*Abstracted Preconditioner Object*/
 class precon_t: public operator_t {
  public:
-  void Operator(deviceMemory<dfloat> &o_r, deviceMemory<dfloat> &o_Mr) {
+  void Operator(deviceMemory<pfloat> &o_r, deviceMemory<pfloat> &o_Mr) {
     assertInitialized();
     precon->Operator(o_r, o_Mr);
   }
@@ -63,7 +63,7 @@ private:
 public:
   IdentityPrecon(dlong _N): N(_N) {}
 
-  void Operator(deviceMemory<dfloat> &o_r, deviceMemory<dfloat> &o_Mr){
+  void Operator(deviceMemory<pfloat> &o_r, deviceMemory<pfloat> &o_Mr){
     o_Mr.copyFrom(o_r, N, 0, properties_t("async", true)); //identity
   }
 };

@@ -80,6 +80,14 @@ elliptic_t elliptic_t::SetupNewDegree(mesh_t& meshC){
   int NblockV = std::max(1,blockMax/meshC.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;
 
+  properties_t kernelInfoDouble = kernelInfo;
+  kernelInfoDouble["defines/dfloat"]= "double";
+  kernelInfoDouble["defines/dfloat4"]= "double4";
+
+  properties_t kernelInfoFloat = kernelInfo;
+  kernelInfoFloat["defines/dfloat"]= "float";
+  kernelInfoFloat["defines/dfloat4"]= "float4";
+
   // Ax kernel
   if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
     fileName   = oklFilePrefix + "ellipticAx" + suffix + oklFileSuffix;
@@ -93,21 +101,31 @@ elliptic_t elliptic_t::SetupNewDegree(mesh_t& meshC){
     }
 
     elliptic.partialAxKernel = platform.buildKernel(fileName, kernelName,
-                                            kernelInfo);
+                                                    kernelInfoDouble);
+
+    elliptic.floatPartialAxKernel = platform.buildKernel(fileName, kernelName,
+                                                         kernelInfoFloat);
+
 
   } else if (settings.compareSetting("DISCRETIZATION","IPDG")) {
     int Nmax = std::max(meshC.Np, meshC.Nfaces*meshC.Nfp);
-    kernelInfo["defines/" "p_Nmax"]= Nmax;
-
+    kernelInfoDouble["defines/" "p_Nmax"]= Nmax;
+    kernelInfoFloat["defines/p_Nmax"]= Nmax;
     fileName   = oklFilePrefix + "ellipticGradient" + suffix + oklFileSuffix;
     kernelName = "ellipticPartialGradient" + suffix;
     elliptic.partialGradientKernel = platform.buildKernel(fileName, kernelName,
-                                                  kernelInfo);
+                                                          kernelInfoDouble);
+
+    elliptic.floatPartialGradientKernel = platform.buildKernel(fileName, kernelName,
+                                                               kernelInfoFloat);
+
 
     fileName   = oklFilePrefix + "ellipticAxIpdg" + suffix + oklFileSuffix;
     kernelName = "ellipticPartialAxIpdg" + suffix;
     elliptic.partialIpdgKernel = platform.buildKernel(fileName, kernelName,
-                                              kernelInfo);
+                                                      kernelInfoDouble);
+    elliptic.floatPartialIpdgKernel = platform.buildKernel(fileName, kernelName,
+                                                           kernelInfoFloat);
   }
 
   if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {

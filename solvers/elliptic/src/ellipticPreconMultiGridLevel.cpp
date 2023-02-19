@@ -27,28 +27,32 @@ SOFTWARE.
 #include "elliptic.hpp"
 #include "ellipticPrecon.hpp"
 
-void MGLevel::Operator(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_Ax) {
+void MGLevel::Operator(deviceMemory<pfloat>& o_x, deviceMemory<pfloat>& o_Ax) {
+
   elliptic.Operator(o_x,o_Ax);
 }
 
-void MGLevel::residual(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_res) {
+void MGLevel::residual(deviceMemory<pfloat>& o_rhs, deviceMemory<pfloat>& o_x, deviceMemory<pfloat>& o_res) {
   elliptic.Operator(o_x,o_res);
 
   // subtract res = rhs - A*x
-  platform.linAlg().axpy(elliptic.Ndofs, 1.f, o_rhs, -1.f, o_res);
+  platform.linAlg().axpy(elliptic.Ndofs, (pfloat)1.f, o_rhs, (pfloat)-1.f, o_res);
+
 }
 
-void MGLevel::coarsen(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_Rx) {
+void MGLevel::coarsen(deviceMemory<pfloat>& o_x, deviceMemory<pfloat>& o_Rx) {
+
+  pfloat one = 1.0, zero = 0.0;
 
   linAlg_t& linAlg = platform.linAlg();
 
   if (elliptic.disc_c0) {
     //scratch spaces
-    deviceMemory<dfloat> o_wx  = platform.reserve<dfloat>(Ncols);
-    deviceMemory<dfloat> o_RxL = platform.reserve<dfloat>(mesh.Nelements*mesh.Np);
+    deviceMemory<pfloat> o_wx  = platform.reserve<pfloat>(Ncols);
+    deviceMemory<pfloat> o_RxL = platform.reserve<pfloat>(mesh.Nelements*mesh.Np);
 
     //pre-weight
-    linAlg.amxpy(elliptic.Ndofs, 1.0, elliptic.o_weightG, o_x, 0.0, o_wx);
+    linAlg.amxpy(elliptic.Ndofs, one, elliptic.o_weightG, o_x, zero, o_wx);
 
     elliptic.gHalo.ExchangeStart(o_wx, 1);
 
@@ -81,14 +85,14 @@ void MGLevel::coarsen(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_Rx) {
   }
 }
 
-void MGLevel::prolongate(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_Px) {
+void MGLevel::prolongate(deviceMemory<pfloat>& o_x, deviceMemory<pfloat>& o_Px) {
 
   linAlg_t& linAlg = platform.linAlg();
 
   if (elliptic.disc_c0) {
     //scratch spaces
-    deviceMemory<dfloat> o_PxG = platform.reserve<dfloat>(Ncols);
-    deviceMemory<dfloat> o_PxL = platform.reserve<dfloat>(mesh.Nelements*mesh.Np);
+    deviceMemory<pfloat> o_PxG = platform.reserve<pfloat>(Ncols);
+    deviceMemory<pfloat> o_PxL = platform.reserve<pfloat>(mesh.Nelements*mesh.Np);
 
     ellipticC.gHalo.ExchangeStart(o_x, 1);
 
@@ -117,14 +121,14 @@ void MGLevel::prolongate(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_Px) 
 
     elliptic.ogsMasked.GatherFinish(o_PxG, o_PxL, 1, ogs::Add, ogs::NoTrans);
 
-    linAlg.axpy(elliptic.Ndofs, 1.f, o_PxG, 1.f, o_Px);
+    linAlg.axpy(elliptic.Ndofs, static_cast<pfloat>(1.0), o_PxG, static_cast<pfloat>(1.0), o_Px);
 
   } else {
     prolongateKernel(mesh.Nelements, o_P, o_x, o_Px);
   }
 }
 
-void MGLevel::smooth(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x, bool x_is_zero) {
+void MGLevel::smooth(deviceMemory<pfloat>& o_rhs, deviceMemory<pfloat>& o_x, bool x_is_zero) {
   if (stype==JACOBI) {
     smoothJacobi(o_rhs, o_x, x_is_zero);
   } else if (stype==CHEBYSHEV) {
@@ -132,69 +136,72 @@ void MGLevel::smooth(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x, boo
   }
 }
 
-void MGLevel::smoothJacobi(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_x, bool xIsZero) {
+void MGLevel::smoothJacobi(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_x, bool xIsZero) {
+
+  pfloat one = 1.0, zero = 0.0;
 
   linAlg_t& linAlg = platform.linAlg();
 
-  deviceMemory<dfloat> o_res = platform.reserve<dfloat>(Ncols);
+  deviceMemory<pfloat> o_res = platform.reserve<pfloat>(Ncols);
 
   if (xIsZero) {
-    linAlg.amxpy(elliptic.Ndofs, 1.0, o_invDiagA, o_r, 0.0, o_x);
+    linAlg.amxpy(elliptic.Ndofs, one, o_invDiagA, o_r, zero, o_x);
     return;
   }
 
   //res = r-Ax
   Operator(o_x,o_res);
-  linAlg.axpy(elliptic.Ndofs, 1.f, o_r, -1.f, o_res);
+  linAlg.axpy(elliptic.Ndofs, one, o_r, -one, o_res);
 
   //smooth the fine problem x = x + S(r-Ax)
-  linAlg.amxpy(elliptic.Ndofs, 1.0, o_invDiagA, o_res, 1.0, o_x);
+  linAlg.amxpy(elliptic.Ndofs, one, o_invDiagA, o_res, one, o_x);
 }
 
-void MGLevel::smoothChebyshev (deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_x, bool xIsZero) {
+void MGLevel::smoothChebyshev (deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_x, bool xIsZero) {
 
-  const dfloat theta = 0.5*(lambda1+lambda0);
-  const dfloat delta = 0.5*(lambda1-lambda0);
-  const dfloat invTheta = 1.0/theta;
-  const dfloat sigma = theta/delta;
-  dfloat rho_n = 1./sigma;
-  dfloat rho_np1;
+  const pfloat theta = 0.5*(lambda1+lambda0);
+  const pfloat delta = 0.5*(lambda1-lambda0);
+  const pfloat invTheta = 1.0/theta;
+  const pfloat sigma = theta/delta;
+  pfloat rho_n = 1./sigma;
+  pfloat rho_np1;
 
-  deviceMemory<dfloat> o_res = platform.reserve<dfloat>(Ncols);
-  deviceMemory<dfloat> o_Ad  = platform.reserve<dfloat>(Ncols);
-  deviceMemory<dfloat> o_d   = platform.reserve<dfloat>(Ncols);
+  deviceMemory<pfloat> o_res = platform.reserve<pfloat>(Ncols);
+  deviceMemory<pfloat> o_Ad  = platform.reserve<pfloat>(Ncols);
+  deviceMemory<pfloat> o_d   = platform.reserve<pfloat>(Ncols);
 
   linAlg_t& linAlg = platform.linAlg();
+  pfloat one = 1.0, zero = 0;
 
   if(xIsZero){ //skip the Ax if x is zero
     //res = S*r
-    linAlg.amxpy(elliptic.Ndofs, 1.0, o_invDiagA, o_r, 0.f, o_res);
+    linAlg.amxpy(elliptic.Ndofs, one, o_invDiagA, o_r, zero, o_res);
 
     //d = invTheta*res
-    linAlg.axpy(elliptic.Ndofs, invTheta, o_res, 0.f, o_d);
+    linAlg.axpy(elliptic.Ndofs, invTheta, o_res, zero, o_d);
   } else {
     //res = S*(r-Ax)
     Operator(o_x,o_res);
-    linAlg.axpy(elliptic.Ndofs, 1.f, o_r, -1.f, o_res);
-    linAlg.amx(elliptic.Ndofs, 1.f, o_invDiagA, o_res);
+    linAlg.axpy(elliptic.Ndofs, one, o_r, -one, o_res);
+    linAlg.amx(elliptic.Ndofs, one, o_invDiagA, o_res);
 
     //d = invTheta*res
-    linAlg.axpy(elliptic.Ndofs, invTheta, o_res, 0.f, o_d);
+    linAlg.axpy(elliptic.Ndofs, invTheta, o_res, zero, o_d);
   }
 
   for (int k=0;k<ChebyshevIterations;k++) {
     //x_k+1 = x_k + d_k
     if (xIsZero&&(k==0))
-      linAlg.axpy(elliptic.Ndofs, 1.f, o_d, 0.f, o_x);
+      linAlg.axpy(elliptic.Ndofs, one, o_d, zero, o_x);
     else
-      linAlg.axpy(elliptic.Ndofs, 1.f, o_d, 1.f, o_x);
+      linAlg.axpy(elliptic.Ndofs, one, o_d, one, o_x);
 
     //r_k+1 = r_k - SAd_k
     Operator(o_d,o_Ad);
-    linAlg.amxpy(elliptic.Ndofs, -1.f, o_invDiagA, o_Ad, 1.f, o_res);
+    linAlg.amxpy(elliptic.Ndofs, -one, o_invDiagA, o_Ad, one, o_res);
 
     rho_np1 = 1.0/(2.*sigma-rho_n);
-    dfloat rhoDivDelta = 2.0*rho_np1/delta;
+    pfloat rhoDivDelta = 2.0*rho_np1/delta;
 
     //d_k+1 = rho_k+1*rho_k*d_k  + 2*rho_k+1*r_k+1/delta
     linAlg.axpy(elliptic.Ndofs, rhoDivDelta, o_res, rho_np1*rho_n, o_d);
@@ -202,7 +209,7 @@ void MGLevel::smoothChebyshev (deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& 
     rho_n = rho_np1;
   }
   //x_k+1 = x_k + d_k
-  linAlg.axpy(elliptic.Ndofs, 1.f, o_d, 1.0, o_x);
+  linAlg.axpy(elliptic.Ndofs, one, o_d, one, o_x);
 }
 
 
@@ -225,6 +232,8 @@ MGLevel::MGLevel(elliptic_t& _elliptic,
 
   SetupSmoother();
 
+  memory<dfloat> P;
+
   if (   mesh.elementType==Mesh::QUADRILATERALS
       || mesh.elementType==Mesh::HEXAHEDRA) {
     mesh.DegreeRaiseMatrix1D(Nc, mesh.N, P);
@@ -233,7 +242,12 @@ MGLevel::MGLevel(elliptic_t& _elliptic,
   } else { //Mesh::TETRAHEDRA
     mesh.DegreeRaiseMatrixTet3D(Nc, mesh.N, P);
   }
-  o_P = elliptic.platform.malloc<dfloat>(P);
+
+  memory<pfloat> pfloatP(P.length());
+  for(size_t n=0;n<P.length();++n){
+    pfloatP[n] = P[n];
+  }
+  o_P = elliptic.platform.malloc<pfloat>(pfloatP);
 
   //build kernels
   properties_t kernelInfo = elliptic.platform.props();
@@ -246,11 +260,15 @@ MGLevel::MGLevel(elliptic_t& _elliptic,
 
   std::string fileName, kernelName;
 
+  kernelInfo["defines/" "dfloat"]= pfloatString; // TW
+  kernelInfo["defines/" "dfloat4"]= std::string(pfloatString) + std::string("4");
+
   kernelInfo["defines/" "p_NqFine"]= mesh.N+1;
   kernelInfo["defines/" "p_NqCoarse"]= Nc+1;
 
   kernelInfo["defines/" "p_NpFine"]= mesh.Np;
   kernelInfo["defines/" "p_NpCoarse"]= NpCoarse;
+
 
   int blockMax = 256;
   if (elliptic.platform.device.mode() == "CUDA") blockMax = 512;
@@ -283,18 +301,18 @@ size_t MGLevel::SmootherScratchSize() {
   size_t Nentries = 0;
   if (stype==JACOBI) {
     //Need a single residual vector for Jacobi smoothing
-    Nentries += Ncols + platform.memPoolAlignment<dfloat>();
+    Nentries += Ncols + platform.memPoolAlignment<pfloat>();
   } else { //(stype==CHEBYSHEV)
     //Need 3 vectors for Cheby smoothing
-    Nentries += 3*(Ncols + platform.memPoolAlignment<dfloat>());
+    Nentries += 3*(Ncols + platform.memPoolAlignment<pfloat>());
   }
 
   // Add some space for scratch usage in elliptic operator
   if (settings.compareSetting("DISCRETIZATION", "CONTINUOUS")) {
-    Nentries += mesh.Np*mesh.Nelements + platform.memPoolAlignment<dfloat>();
+    Nentries += mesh.Np*mesh.Nelements + platform.memPoolAlignment<pfloat>();
   } else { //IPDG
     dlong Ntotal = mesh.Np*(mesh.Nelements+mesh.totalHaloPairs);
-    Nentries += 4*Ntotal + platform.memPoolAlignment<dfloat>();
+    Nentries += 4*Ntotal + platform.memPoolAlignment<pfloat>();
   }
   return Nentries;
 }
@@ -308,7 +326,7 @@ void MGLevel::Report() {
   hlong totalNrows=Nrows;
   mesh.comm.Allreduce(maxNrows, Comm::Max);
   mesh.comm.Allreduce(totalNrows, Comm::Sum);
-  dfloat avgNrows = static_cast<dfloat>(totalNrows)/totalActive;
+  pfloat avgNrows = static_cast<pfloat>(totalNrows)/totalActive;
 
   if (Nrows==0) Nrows=maxNrows; //set this so it's ignored for the global min
   mesh.comm.Allreduce(minNrows, Comm::Min);
@@ -332,14 +350,14 @@ void MGLevel::SetupSmoother() {
 
   //set up the fine problem smoothing
   memory<dfloat> diagA   (Nrows);
-  memory<dfloat> invDiagA(Nrows);
+  memory<pfloat> invDiagA(Nrows);
   elliptic.BuildOperatorDiagonal(diagA);
 
   for (dlong n=0;n<Nrows;n++) {
     invDiagA[n] = 1.0/diagA[n];
   }
 
-  o_invDiagA = elliptic.platform.malloc<dfloat>(invDiagA);
+  o_invDiagA = elliptic.platform.malloc<pfloat>(invDiagA);
 
   if (elliptic.settings.compareSetting("MULTIGRID SMOOTHER","CHEBYSHEV")) {
     stype = CHEBYSHEV;
@@ -348,7 +366,7 @@ void MGLevel::SetupSmoother() {
     elliptic.settings.getSetting("MULTIGRID CHEBYSHEV DEGREE", ChebyshevIterations);
 
     //estimate the max eigenvalue of S*A
-    dfloat rho = maxEigSmoothAx();
+    pfloat rho = maxEigSmoothAx();
 
     lambda1 = rho;
     lambda0 = rho/10.;
@@ -356,7 +374,7 @@ void MGLevel::SetupSmoother() {
     stype = JACOBI;
 
     //estimate the max eigenvalue of S*A
-    dfloat rho = maxEigSmoothAx();
+    pfloat rho = maxEigSmoothAx();
 
     //set the stabilty weight (jacobi-type interation)
     lambda0 = (4./3.)/rho;
@@ -376,12 +394,14 @@ void MGLevel::SetupSmoother() {
 //
 //------------------------------------------------------------------------
 
-dfloat MGLevel::maxEigSmoothAx(){
+pfloat MGLevel::maxEigSmoothAx(){
 
   const dlong N = Nrows;
   const dlong M = Ncols;
 
   linAlg_t& linAlg = platform.linAlg();
+
+  pfloat one = 1.0, zero = 0;
 
   int k = 10;
 
@@ -395,44 +415,44 @@ dfloat MGLevel::maxEigSmoothAx(){
   memory<double> H(k*k,0.0);
 
   // allocate memory for basis
-  memory<dfloat> Vx(M);
-  memory<deviceMemory<dfloat>> o_V(k+1);
+  memory<pfloat> Vx(M);
+  memory<deviceMemory<pfloat>> o_V(k+1);
 
-  deviceMemory<dfloat> o_Vx  = elliptic.platform.malloc<dfloat>(Vx);
-  deviceMemory<dfloat> o_AVx = elliptic.platform.malloc<dfloat>(Vx);
+  deviceMemory<pfloat> o_Vx  = elliptic.platform.malloc<pfloat>(Vx);
+  deviceMemory<pfloat> o_AVx = elliptic.platform.malloc<pfloat>(Vx);
 
   for(int i=0; i<=k; i++)
-    o_V[i] = elliptic.platform.malloc<dfloat>(Vx);
+    o_V[i] = elliptic.platform.malloc<pfloat>(Vx);
 
   // generate a random vector for initial basis vector
-  for (dlong i=0;i<N;i++) Vx[i] = (dfloat) drand48();
+  for (dlong i=0;i<N;i++) Vx[i] = (pfloat) drand48();
 
   o_Vx.copyFrom(Vx); //copy to device
 
-  dfloat norm_vo =  linAlg.norm2(N, o_Vx, mesh.comm);
+  pfloat norm_vo =  linAlg.norm2(N, o_Vx, mesh.comm);
 
-  linAlg.axpy(N, 1./norm_vo, o_Vx, 0.f, o_V[0]);
+  linAlg.axpy(N, (pfloat)1./norm_vo, o_Vx, zero, o_V[0]);
 
   for(int j=0; j<k; j++){
     // v[j+1] = invD*(A*v[j])
     Operator(o_V[j],o_AVx);
-    linAlg.amxpy(N, 1.0, o_invDiagA, o_AVx, 0.0, o_V[j+1]);
+    linAlg.amxpy(N, one, o_invDiagA, o_AVx, zero, o_V[j+1]);
 
     // modified Gram-Schmidth
     for(int i=0; i<=j; i++){
       // H(i,j) = v[i]'*A*v[j]
-      dfloat hij =  linAlg.innerProd(N, o_V[i], o_V[j+1], mesh.comm);
+      pfloat hij =  linAlg.innerProd(N, o_V[i], o_V[j+1], mesh.comm);
 
       // v[j+1] = v[j+1] - hij*v[i]
-      linAlg.axpy(N, -hij, o_V[i], 1.f, o_V[j+1]);
+      linAlg.axpy(N, -hij, o_V[i], one, o_V[j+1]);
 
       H[i + j*k] = static_cast<double>(hij);
     }
 
     if(j+1 < k){
       // v[j+1] = v[j+1]/||v[j+1]||
-      dfloat norm_vj =  linAlg.norm2(N, o_V[j+1], mesh.comm);
-      linAlg.scale(N, 1.0/norm_vj, o_V[j+1]);
+      pfloat norm_vj =  linAlg.norm2(N, o_V[j+1], mesh.comm);
+      linAlg.scale(N, (pfloat)1.0/norm_vj, o_V[j+1]);
 
       H[j+1+ j*k] = static_cast<double>(norm_vj);
     }

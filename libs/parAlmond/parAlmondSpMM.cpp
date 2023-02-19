@@ -177,7 +177,7 @@ parCSR SpMM(parCSR& A, parCSR& B){
     dlong end   = A.diag.rowStarts[i+1];
     for (dlong j=start;j<end;j++) {
       const dlong col = A.diag.cols[j];
-      const dfloat Aval = A.diag.vals[j];
+      const pfloat Aval = A.diag.vals[j];
 
       //local B entries
       dlong Bstart = B.diag.rowStarts[col];
@@ -203,7 +203,7 @@ parCSR SpMM(parCSR& A, parCSR& B){
     end   = A.offd.rowStarts[i+1];
     for (dlong j=start;j<end;j++) {
       const dlong col = A.offd.cols[j]-A.NlocalCols;
-      const dfloat Aval = A.offd.vals[j];
+      const pfloat Aval = A.offd.vals[j];
 
       // entries from recived rows of B
       dlong Bstart = BoffdRowOffsets[col];

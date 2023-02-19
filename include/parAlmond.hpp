@@ -56,7 +56,7 @@ public:
   struct nonZero_t {
     hlong row;
     hlong col;
-    dfloat val;
+    pfloat val;
   };
   memory<nonZero_t> entries;
 
@@ -81,10 +81,10 @@ public:
     platform(_platform), settings(_settings),
     comm(_comm), Nrows(N), Ncols(M) {}
 
-  virtual void smooth(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x, bool x_is_zero)=0;
-  virtual void residual(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_res)=0;
-  virtual void coarsen(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_Cx)=0;
-  virtual void prolongate(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_Px)=0;
+  virtual void smooth(deviceMemory<pfloat>& o_rhs, deviceMemory<pfloat>& o_x, bool x_is_zero)=0;
+  virtual void residual(deviceMemory<pfloat>& o_rhs, deviceMemory<pfloat>& o_x, deviceMemory<pfloat>& o_res)=0;
+  virtual void coarsen(deviceMemory<pfloat>& o_x, deviceMemory<pfloat>& o_Cx)=0;
+  virtual void prolongate(deviceMemory<pfloat>& o_x, deviceMemory<pfloat>& o_Px)=0;
   virtual void Report()=0;
   virtual size_t SmootherScratchSize()=0;
 };
@@ -106,7 +106,7 @@ public:
   comm_t comm;
 
   bool exact=false;
-  linearSolver_t linearSolver;
+  linearSolver_t<pfloat> linearSolver;
 
   CycleType ctype;
   AggType aggtype;
@@ -141,42 +141,42 @@ public:
   void EstimateScratchSpace();
   size_t LevelScratchSpace(const int k);
 
-  void Operator(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x);
+  void Operator(deviceMemory<pfloat>& o_rhs, deviceMemory<pfloat>& o_x);
 
-  void vcycle(const int k, deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x);
-  void kcycle(const int k, deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x);
+  void vcycle(const int k, deviceMemory<pfloat>& o_rhs, deviceMemory<pfloat>& o_x);
+  void kcycle(const int k, deviceMemory<pfloat>& o_rhs, deviceMemory<pfloat>& o_x);
 
 private:
   void kcycleOp1(multigridLevel& level,
-                 deviceMemory<dfloat>& o_x,  deviceMemory<dfloat>& o_rhs,
-                 deviceMemory<dfloat>& o_ck, deviceMemory<dfloat>& o_vk,
-                 dfloat& alpha1, dfloat& rho1,
-                 dfloat& norm_rhs, dfloat& norm_rhstilde);
+                 deviceMemory<pfloat>& o_x,  deviceMemory<pfloat>& o_rhs,
+                 deviceMemory<pfloat>& o_ck, deviceMemory<pfloat>& o_vk,
+                 pfloat& alpha1, pfloat& rho1,
+                 pfloat& norm_rhs, pfloat& norm_rhstilde);
 
   void kcycleOp2(multigridLevel& level,
-                deviceMemory<dfloat>& o_x,  deviceMemory<dfloat>& o_rhs,
-                deviceMemory<dfloat>& o_ck, deviceMemory<dfloat>& o_vk,
-                deviceMemory<dfloat>& o_wk,
-                const dfloat alpha1, const dfloat rho1);
+                deviceMemory<pfloat>& o_x,  deviceMemory<pfloat>& o_rhs,
+                deviceMemory<pfloat>& o_ck, deviceMemory<pfloat>& o_vk,
+                deviceMemory<pfloat>& o_wk,
+                const pfloat alpha1, const pfloat rho1);
 
   void kcycleCombinedOp1(multigridLevel& level,
-                        deviceMemory<dfloat>& o_a,
-                        deviceMemory<dfloat>& o_b,
-                        deviceMemory<dfloat>& o_c,
-                        dfloat& aDotb,
-                        dfloat& aDotc,
-                        dfloat& bDotb);
+                        deviceMemory<pfloat>& o_a,
+                        deviceMemory<pfloat>& o_b,
+                        deviceMemory<pfloat>& o_c,
+                        pfloat& aDotb,
+                        pfloat& aDotc,
+                        pfloat& bDotb);
   void kcycleCombinedOp2(multigridLevel& level,
-                        deviceMemory<dfloat>& o_a,
-                        deviceMemory<dfloat>& o_b,
-                        deviceMemory<dfloat>& o_c,
-                        deviceMemory<dfloat>& o_d,
-                        dfloat& aDotb,
-                        dfloat& aDotc,
-                        dfloat& aDotd);
-  dfloat vectorAddInnerProd(multigridLevel& level,
-                          const dfloat alpha, deviceMemory<dfloat>& o_x,
-                          const dfloat beta,  deviceMemory<dfloat>& o_y);
+                        deviceMemory<pfloat>& o_a,
+                        deviceMemory<pfloat>& o_b,
+                        deviceMemory<pfloat>& o_c,
+                        deviceMemory<pfloat>& o_d,
+                        pfloat& aDotb,
+                        pfloat& aDotc,
+                        pfloat& aDotd);
+  pfloat vectorAddInnerProd(multigridLevel& level,
+                          const pfloat alpha, deviceMemory<pfloat>& o_x,
+                          const pfloat beta,  deviceMemory<pfloat>& o_y);
 };
 
 class parAlmond_t: public operator_t {
@@ -203,10 +203,10 @@ public:
   //-- Local A matrix data must be globally indexed & row sorted
   void AMGSetup(parCOO& A,
                bool nullSpace,
-               memory<dfloat> nullVector,
-               dfloat nullSpacePenalty);
+               memory<pfloat> nullVector,
+               pfloat nullSpacePenalty);
 
-  void Operator(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x);
+  void Operator(deviceMemory<pfloat>& o_rhs, deviceMemory<pfloat>& o_x);
 
   void Report();
 

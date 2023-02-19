@@ -31,8 +31,8 @@ namespace libp {
 
 namespace parAlmond {
 
-static bool customLess(const int smax, const dfloat rmax, const hlong imax,
-                       const int s,    const dfloat r,    const hlong i){
+static bool customLess(const int smax, const pfloat rmax, const hlong imax,
+                       const int s,    const pfloat r,    const hlong i){
 
   if(s > smax) return true;
   if(smax > s) return false;
@@ -63,17 +63,17 @@ void formAggregates(parCSR& A, strongGraph_t& C,
   const dlong M   = C.Ncols;
   const dlong nnz = C.nnz;
 
-  memory<dfloat> rands(M);
+  memory<pfloat> rands(M);
   memory<int>   states(M, 0);
   memory<hlong> colMap = A.colMap; //mapping from local column ids to global ids
 
-  memory<dfloat> Tr(M);
+  memory<pfloat> Tr(M);
   memory<int>    Ts(M);
   memory<hlong>  Ti(M);
   memory<hlong>  Tc(M);
 
   for(dlong i=0; i<N; i++)
-    rands[i] = (dfloat) drand48();
+    rands[i] = (pfloat) drand48();
 
   // add the number of non-zeros in each column
   memory<int> colCnt(M, 0);
@@ -96,7 +96,7 @@ void formAggregates(parCSR& A, strongGraph_t& C,
     // #pragma omp parallel for
     for(dlong i=0; i<N; i++){
       int    smax = states[i];
-      dfloat rmax = rands[i];
+      pfloat rmax = rands[i];
       hlong  imax = colMap[i];
 
       if(smax != 1){
@@ -124,7 +124,7 @@ void formAggregates(parCSR& A, strongGraph_t& C,
     // #pragma omp parallel for
     for(dlong i=0; i<N; i++){
       int    smax = Ts[i];
-      dfloat rmax = Tr[i];
+      pfloat rmax = Tr[i];
       hlong  imax = Ti[i];
 
       for(dlong jj=C.rowStarts[i];jj<C.rowStarts[i+1];jj++){
@@ -187,7 +187,7 @@ void formAggregates(parCSR& A, strongGraph_t& C,
   // #pragma omp parallel for
   for(dlong i=0; i<N; i++){
     int   smax  = states[i];
-    dfloat rmax = rands[i];
+    pfloat rmax = rands[i];
     hlong  imax = colMap[i];
     hlong  cmax = FineToCoarse[i];
 
@@ -223,7 +223,7 @@ void formAggregates(parCSR& A, strongGraph_t& C,
   // #pragma omp parallel for
   for(dlong i=0; i<N; i++){
     int    smax = Ts[i];
-    dfloat rmax = Tr[i];
+    pfloat rmax = Tr[i];
     hlong  imax = Ti[i];
     hlong  cmax = Tc[i];
 

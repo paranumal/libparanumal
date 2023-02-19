@@ -128,6 +128,27 @@ void mesh_t::GeometricFactorsQuad2D(){
   o_wJ   = platform.malloc<dfloat>(wJ);
   o_vgeo = platform.malloc<dfloat>(vgeo);
   o_ggeo = platform.malloc<dfloat>(ggeo);
+
+  if constexpr (std::is_same_v<dfloat,pfloat>) {
+    o_pfloat_ggeo = o_ggeo;
+    o_pfloat_vgeo = o_vgeo;
+    o_pfloat_wJ   = o_wJ;
+  } else {
+    memory<pfloat> pfloat_wJ(Nelements*Np);
+    memory<pfloat> pfloat_ggeo(Nggeo*Nelements*Np);
+    memory<pfloat> pfloat_vgeo(Nvgeo*Nelements*Np);
+
+    for(int n=0;n<Nggeo*Nelements*Np;++n)
+      pfloat_ggeo[n] = ggeo[n];
+    for(int n=0;n<Nvgeo*Nelements*Np;++n)
+      pfloat_vgeo[n] = vgeo[n];
+    for(int n=0;n<Nelements*Np;++n)
+      pfloat_wJ[n] = wJ[n];
+
+    o_pfloat_ggeo = platform.malloc<pfloat>(pfloat_ggeo);
+    o_pfloat_vgeo = platform.malloc<pfloat>(pfloat_vgeo);
+    o_pfloat_wJ   = platform.malloc<pfloat>(pfloat_wJ);
+  }
 }
 
 } //namespace libp

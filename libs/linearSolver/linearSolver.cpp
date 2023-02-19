@@ -28,13 +28,14 @@ SOFTWARE.
 
 namespace libp {
 
-int linearSolver_t::Solve(operator_t& linearOperator,
-                          operator_t& precon,
-                          deviceMemory<dfloat>& o_x,
-                          deviceMemory<dfloat>& o_rhs,
-                          const dfloat tol,
-                          const int MAXIT,
-                          const int verbose) {
+template <typename T>
+int linearSolver_t<T>::Solve(operator_t& linearOperator,
+			     operator_t& precon,
+			     deviceMemory<T>& o_x,
+			     deviceMemory<T>& o_rhs,
+			     const T tol,
+			     const int MAXIT,
+			     const int verbose) {
   assertInitialized();
   ig->FormInitialGuess(o_x, o_rhs);
   int iters = ls->Solve(linearOperator, precon, o_x, o_rhs, tol, MAXIT, verbose);
@@ -43,20 +44,25 @@ int linearSolver_t::Solve(operator_t& linearOperator,
   return iters;
 }
 
-void linearSolver_t::MakeDefaultInitialGuessStrategy() {
-  ig = std::make_shared<InitialGuess::Last>(ls->N, ls->platform,
-                                            ls->settings, ls->comm);
+template <typename T>
+void linearSolver_t<T>::MakeDefaultInitialGuessStrategy() {
+  ig = std::make_shared<InitialGuess::Zero<T> >(ls->N, ls->platform, ls->settings, ls->comm);
 }
 
-bool linearSolver_t::isInitialized() {
+template <typename T>
+bool linearSolver_t<T>::isInitialized() {
   return (ls!=nullptr && ig!=nullptr);
 }
 
-void linearSolver_t::assertInitialized() {
+template <typename T>
+void linearSolver_t<T>::assertInitialized() {
   LIBP_ABORT("LinearSolver not initialized",
              ls==nullptr);
   LIBP_ABORT("InitialGuess not initialized",
              ig==nullptr);
 }
+
+template class linearSolver_t<double>;
+template class linearSolver_t<float>;
 
 } //namespace libp

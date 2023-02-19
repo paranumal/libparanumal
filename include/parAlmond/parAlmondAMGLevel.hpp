@@ -40,21 +40,21 @@ public:
   parCSR A, P, R;
 
   SmoothType stype;
-  dfloat lambda, lambda1, lambda0; //smoothing params
+  pfloat lambda, lambda1, lambda0; //smoothing params
 
   int ChebyshevIterations=2;
 
   amgLevel() = default;
   amgLevel(parCSR& AA, settings_t& _settings);
 
-  void Operator(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_Ax);
-  void residual(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_res);
-  void coarsen(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_Cx);
-  void prolongate(deviceMemory<dfloat>& o_x, deviceMemory<dfloat>& o_Px);
+  void Operator(deviceMemory<pfloat>& o_x, deviceMemory<pfloat>& o_Ax);
+  void residual(deviceMemory<pfloat>& o_rhs, deviceMemory<pfloat>& o_x, deviceMemory<pfloat>& o_res);
+  void coarsen(deviceMemory<pfloat>& o_x, deviceMemory<pfloat>& o_Cx);
+  void prolongate(deviceMemory<pfloat>& o_x, deviceMemory<pfloat>& o_Px);
 
-  void smooth(deviceMemory<dfloat>& o_rhs, deviceMemory<dfloat>& o_x, bool x_is_zero);
-  void smoothDampedJacobi(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_x, bool x_is_zero);
-  void smoothChebyshev(deviceMemory<dfloat>& o_r, deviceMemory<dfloat>& o_x, bool x_is_zero);
+  void smooth(deviceMemory<pfloat>& o_rhs, deviceMemory<pfloat>& o_x, bool x_is_zero);
+  void smoothDampedJacobi(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_x, bool x_is_zero);
+  void smoothChebyshev(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_x, bool x_is_zero);
 
   size_t SmootherScratchSize();
 
