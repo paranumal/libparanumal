@@ -41,7 +41,6 @@ void elliptic_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
   //Trigger JIT kernel builds
   ogs::InitializeKernels(platform, ogs::Dfloat, ogs::Add);
-  // DO I NEED THIS FOR Pfloat ?
   ogs::InitializeKernels(platform, ogs::Pfloat, ogs::Add);
 
   disc_ipdg = settings.compareSetting("DISCRETIZATION","IPDG");
