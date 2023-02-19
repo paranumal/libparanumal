@@ -75,8 +75,8 @@ class linearSolver_t {
   void assertInitialized();
 };
 
-  template class linearSolver_t<double>;
-  template class linearSolver_t<float>;
+extern template class linearSolver_t<double>;
+extern template class linearSolver_t<float>;
 
 
 namespace LinearSolver {
@@ -98,11 +98,17 @@ public:
 
   virtual int Solve(operator_t& linearOperator, operator_t& precon,
 	    deviceMemory<float>& o_x, deviceMemory<float>& o_rhs,
-	    const float tol, const int MAXIT, const int verbose){ printf("sjfosef\n"); return 0;}
+	    const float tol, const int MAXIT, const int verbose){
+    LIBP_FORCE_ABORT("Type mismatch in linearSolver. Solver was constructed for type: double");
+    return 0;
+  }
 
   virtual int Solve(operator_t& linearOperator, operator_t& precon,
 	    deviceMemory<double>& o_x, deviceMemory<double>& o_rhs,
-	    const double tol, const int MAXIT, const int verbose){ printf("sjfosef\n"); return 0;}
+	    const double tol, const int MAXIT, const int verbose){
+    LIBP_FORCE_ABORT("Type mismatch in linearSolver. Solver was constructed for type: float");
+    return 0;
+  }
 
 };
 
@@ -130,8 +136,8 @@ public:
             const T tol, const int MAXIT, const int verbose);
 };
 
-template class pcg<float>;
-template class pcg<double>;
+extern template class pcg<float>;
+extern template class pcg<double>;
 
 
 //Preconditioned GMRES
@@ -155,8 +161,8 @@ public:
             const T tol, const int MAXIT, const int verbose);
 };
 
-  template class pgmres<float>;
-template class pgmres<double>;
+extern template class pgmres<float>;
+extern template class pgmres<double>;
 
 
 // Preconditioned MINRES
@@ -185,8 +191,8 @@ public:
             const T tol, const int MAXIT, const int verbose);
 };
 
-template class pminres<float>;
-template class pminres<double>;
+extern template class pminres<float>;
+extern template class pminres<double>;
 
 //Non-Blocking Preconditioned Conjugate Gradient
 template <typename T>
@@ -219,8 +225,8 @@ public:
             const T tol, const int MAXIT, const int verbose);
 };
 
-template class nbpcg<float>;
-template class nbpcg<double>;
+extern template class nbpcg<float>;
+extern template class nbpcg<double>;
 
 //Non-Blocking Flexible Preconditioned Conjugate Gradient
 template <typename T>
@@ -255,8 +261,8 @@ public:
             const T tol, const int MAXIT, const int verbose);
 };
 
-template class nbfpcg<float>;
-template class nbfpcg<double>;
+extern template class nbfpcg<float>;
+extern template class nbfpcg<double>;
 
 } //namespace LinearSolver
 

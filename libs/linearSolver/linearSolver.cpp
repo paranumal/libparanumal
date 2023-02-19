@@ -46,7 +46,6 @@ int linearSolver_t<T>::Solve(operator_t& linearOperator,
 
 template <typename T>
 void linearSolver_t<T>::MakeDefaultInitialGuessStrategy() {
-  // This is missing type
   ig = std::make_shared<InitialGuess::Zero<T> >(ls->N, ls->platform, ls->settings, ls->comm);
 }
 
@@ -62,5 +61,8 @@ void linearSolver_t<T>::assertInitialized() {
   LIBP_ABORT("InitialGuess not initialized",
              ig==nullptr);
 }
+
+template class linearSolver_t<double>;
+template class linearSolver_t<float>;
 
 } //namespace libp

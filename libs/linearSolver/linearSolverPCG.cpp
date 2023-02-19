@@ -67,21 +67,27 @@ int pcg<T>::Solve(operator_t& linearOperator, operator_t& precon,
   T rdotr0 = 0.0;
   T TOL = 0.0;
 
+  deviceMemory<pfloat> o_pfloat_r;
+  deviceMemory<pfloat> o_pfloat_z;
+
   /*Pre-reserve memory pool space to avoid some unnecessary re-sizing*/
   dlong Ntotal = N + Nhalo;
-  // TW 3=>5
-  platform.reserve<T>(3*Ntotal + PCG_BLOCKSIZE
-                           + 4 * platform.memPoolAlignment<T>());
+  if constexpr (sizeof(pfloat)==sizeof(T)) {
+    platform.reserve<T>(3*Ntotal + PCG_BLOCKSIZE
+                        + 4 * platform.memPoolAlignment<T>());
+  } else {
+    platform.reserve<std::byte>(sizeof(T) * (3*Ntotal + PCG_BLOCKSIZE)
+                              + sizeof(pfloat) * 2 * Ntotal
+                              + 6 * platform.memPoolAlignment());
 
-  platform.reserve<pfloat>(2*Ntotal +
-                           + 4 * platform.memPoolAlignment<T>());
+    o_pfloat_r  = platform.reserve<pfloat>(Ntotal);
+    o_pfloat_z  = platform.reserve<pfloat>(Ntotal);
+  }
+
   /*aux variables */
   deviceMemory<T> o_p  = platform.reserve<T>(Ntotal);
   deviceMemory<T> o_z  = platform.reserve<T>(Ntotal);
   deviceMemory<T> o_Ap = platform.reserve<T>(Ntotal);
-
-  deviceMemory<pfloat> o_pfloat_r  = platform.reserve<pfloat>(Ntotal);
-  deviceMemory<pfloat> o_pfloat_z  = platform.reserve<pfloat>(Ntotal);
 
   // Comput norm of RHS (for stopping tolerance).
   if (settings.compareSetting("LINEAR SOLVER STOPPING CRITERION", "ABS/REL-RHS-2NORM")) {
@@ -115,10 +121,9 @@ int pcg<T>::Solve(operator_t& linearOperator, operator_t& precon,
     }
 
     // z = Precon^{-1} r
-    if(sizeof(pfloat)==sizeof(T)){
+    if constexpr (sizeof(pfloat)==sizeof(T)){
       precon.Operator(o_r, o_z);
-    }
-    else{
+    } else {
       linAlg.d2p(N, o_r, o_pfloat_r);
       precon.Operator(o_pfloat_r, o_pfloat_z);
       linAlg.p2d(N, o_pfloat_z, o_z);
@@ -201,6 +206,10 @@ T pcg<T>::UpdatePCG(const T alpha,
   comm.Allreduce(rdotr);
   return rdotr;
 }
+
+template class pcg<float>;
+template class pcg<double>;
+
 
 } //namespace LinearSolver
 

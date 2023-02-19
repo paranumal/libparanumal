@@ -60,22 +60,27 @@ int pgmres<T>::Solve(operator_t& linearOperator, operator_t& precon,
   int rank = comm.rank();
   linAlg_t &linAlg = platform.linAlg();
 
+  deviceMemory<pfloat> o_pfloat_r;
+  deviceMemory<pfloat> o_pfloat_z;
+
   /*Pre-reserve memory pool space to avoid some unnecessary re-sizing*/
   dlong Ntotal = N + Nhalo;
-  platform.reserve<T>((restart+3)*Ntotal
-                          +(restart+3) * platform.memPoolAlignment<T>());
+  if constexpr (sizeof(pfloat)==sizeof(T)) {
+    platform.reserve<T>((restart+3)*Ntotal
+                          + (restart+3) * platform.memPoolAlignment<T>());
+  } else {
+    platform.reserve<std::byte>(sizeof(T) * ((restart+3)*Ntotal)
+                              + sizeof(pfloat) * 2 * Ntotal
+                              + (restart+5) * platform.memPoolAlignment());
+
+    o_pfloat_r  = platform.reserve<pfloat>(Ntotal);
+    o_pfloat_z  = platform.reserve<pfloat>(Ntotal);
+  }
 
   /*aux variables */
   deviceMemory<T> o_Ax = platform.reserve<T>(Ntotal);
   deviceMemory<T> o_z  = platform.reserve<T>(Ntotal);
   deviceMemory<T> o_r  = platform.reserve<T>(Ntotal);
-
-  platform.reserve<pfloat>(2*Ntotal +
-                           + 4 * platform.memPoolAlignment<T>());
-
-  deviceMemory<pfloat> o_pfloat_r  = platform.reserve<pfloat>(Ntotal);
-  deviceMemory<pfloat> o_pfloat_z  = platform.reserve<pfloat>(Ntotal);
-
 
   memory<deviceMemory<T>> o_V(restart);
   for(int i=0; i<restart; ++i){
@@ -89,16 +94,13 @@ int pgmres<T>::Solve(operator_t& linearOperator, operator_t& precon,
   linAlg.zaxpy(N, (T)-1.f, o_Ax, (T)1.f, o_b, o_z);
 
   // r = Precon^{-1} (r-A*x)
-  //  precon.Operator(o_z, o_r);
-  if(sizeof(pfloat)==sizeof(T)){
+  if constexpr(sizeof(pfloat)==sizeof(T)){
     precon.Operator(o_z, o_r);
-  }
-  else{
+  } else {
     linAlg.d2p(N, o_z, o_pfloat_z);
     precon.Operator(o_pfloat_z, o_pfloat_r);
     linAlg.p2d(N, o_pfloat_r, o_r);
   }
-
 
   T nr = linAlg.norm2(N, o_r, comm);
 
@@ -127,11 +129,9 @@ int pgmres<T>::Solve(operator_t& linearOperator, operator_t& precon,
       linearOperator.Operator(o_V[i], o_z);
 
       // r = Precon^{-1} z
-      //      precon.Operator(o_z, o_r);
-      if(sizeof(pfloat)==sizeof(T)){
+      if constexpr(sizeof(pfloat)==sizeof(T)){
         precon.Operator(o_z, o_r);
-      }
-      else{
+      } else {
         linAlg.d2p(N, o_z, o_pfloat_z);
         precon.Operator(o_pfloat_z, o_pfloat_r);
         linAlg.p2d(N, o_pfloat_r, o_r);
@@ -204,17 +204,13 @@ int pgmres<T>::Solve(operator_t& linearOperator, operator_t& precon,
     linAlg.zaxpy(N, (T)-1.f, o_Ax, (T)1.f, o_b, o_z);
 
     // r = Precon^{-1} (r-A*x)
-    //    precon.Operator(o_z, o_r);
-    // double check direction
-    if(sizeof(pfloat)==sizeof(T)){
+    if constexpr(sizeof(pfloat)==sizeof(T)){
       precon.Operator(o_z, o_r);
-    }
-    else{
+    } else {
       linAlg.d2p(N, o_z, o_pfloat_z);
       precon.Operator(o_pfloat_z, o_pfloat_r);
       linAlg.p2d(N, o_pfloat_r, o_r);
     }
-
 
     nr = linAlg.norm2(N, o_r, comm);
 
@@ -245,6 +241,9 @@ void pgmres<T>::UpdateGMRES(memory<deviceMemory<T>>& o_V,
     platform.linAlg().axpy(N, y[j], o_V[j], (T)1.0, o_x);
   }
 }
+
+template class pgmres<float>;
+template class pgmres<double>;
 
 } //namespace LinearSolver
 

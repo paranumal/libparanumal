@@ -63,10 +63,23 @@ int nbfpcg<T>::Solve(operator_t& linearOperator, operator_t& precon,
   int rank = comm.rank();
   linAlg_t &linAlg = platform.linAlg();
 
+  deviceMemory<pfloat> o_pfloat_tmp;
+  deviceMemory<pfloat> o_pfloat_Ptmp;
+
   /*Pre-reserve memory pool space to avoid some unnecessary re-sizing*/
   dlong Ntotal = N + Nhalo;
-  platform.reserve<T>(8*Ntotal + 4*NBFPCG_BLOCKSIZE
-                           + 9 * platform.memPoolAlignment<T>());
+
+  if constexpr (sizeof(pfloat)==sizeof(T)) {
+    platform.reserve<T>(8*Ntotal + 4*NBFPCG_BLOCKSIZE
+                        + 9 * platform.memPoolAlignment<T>());
+  } else {
+    platform.reserve<std::byte>(sizeof(T) * (8*Ntotal + 4*NBFPCG_BLOCKSIZE)
+                              + sizeof(pfloat) * 2 * Ntotal
+                              + 11 * platform.memPoolAlignment());
+
+    o_pfloat_tmp  = platform.reserve<pfloat>(Ntotal);
+    o_pfloat_Ptmp  = platform.reserve<pfloat>(Ntotal);
+  }
 
   /*aux variables */
   deviceMemory<T> o_u = platform.reserve<T>(Ntotal);
@@ -77,13 +90,6 @@ int nbfpcg<T>::Solve(operator_t& linearOperator, operator_t& precon,
   deviceMemory<T> o_s = platform.reserve<T>(Ntotal);
   deviceMemory<T> o_z = platform.reserve<T>(Ntotal);
   deviceMemory<T> o_q = platform.reserve<T>(Ntotal);
-
-  platform.reserve<pfloat>(2*Ntotal +
-                           + 4 * platform.memPoolAlignment<T>());
-
-  deviceMemory<pfloat> o_pfloat_tmp  = platform.reserve<pfloat>(Ntotal);
-  deviceMemory<pfloat> o_pfloat_Ptmp  = platform.reserve<pfloat>(Ntotal);
-
 
   // register scalars
   T alpha0 = 0;
@@ -100,16 +106,13 @@ int nbfpcg<T>::Solve(operator_t& linearOperator, operator_t& precon,
   linAlg.axpy(N, (T)-1.f, o_u, (T)1.f, o_r);
 
   // u = M*r [ Sanan notation ]
-  //  precon.Operator(o_r, o_u);
-  if(sizeof(pfloat)==sizeof(T)){
+  if constexpr (sizeof(pfloat)==sizeof(T)){
     precon.Operator(o_r, o_u);
-  }
-  else{
+  } else {
     linAlg.d2p(N, o_r, o_pfloat_tmp);
     precon.Operator(o_pfloat_tmp, o_pfloat_Ptmp);
     linAlg.p2d(N, o_pfloat_Ptmp, o_u);
   }
-
 
   // p = u
   o_p.copyFrom(o_u, properties_t("async", true));
@@ -121,11 +124,9 @@ int nbfpcg<T>::Solve(operator_t& linearOperator, operator_t& precon,
   // delta = u.w
   Update0NBFPCG(o_u, o_r, o_w);
 
-  //  precon.Operator(o_w, o_m);
-  if(sizeof(pfloat)==sizeof(T)){
+  if constexpr (sizeof(pfloat)==sizeof(T)){
     precon.Operator(o_w, o_m);
-  }
-  else{
+  } else {
     linAlg.d2p(N, o_w, o_pfloat_tmp);
     precon.Operator(o_pfloat_tmp, o_pfloat_Ptmp);
     linAlg.p2d(N, o_pfloat_Ptmp, o_m);
@@ -169,16 +170,13 @@ int nbfpcg<T>::Solve(operator_t& linearOperator, operator_t& precon,
     linAlg.zaxpy(N, (T)1.0, o_w, (T)-1.0, o_r, o_n);
 
     // m <= M*(w-r)
-    //    precon.Operator(o_n, o_m);
-    if(sizeof(pfloat)==sizeof(T)){
+    if constexpr (sizeof(pfloat)==sizeof(T)) {
       precon.Operator(o_n, o_m);
-    }
-    else{
+    } else {
       linAlg.d2p(N, o_n, o_pfloat_tmp);
       precon.Operator(o_pfloat_tmp, o_pfloat_Ptmp);
       linAlg.p2d(N, o_pfloat_Ptmp, o_m);
     }
-
 
     // m <= u + M*(w-r)
     linAlg.axpy(N, (T)1.0, o_u, (T)1.0, o_m);
@@ -286,6 +284,9 @@ void nbfpcg<T>::Update1NBFPCG(const T alpha,
 
   comm.Iallreduce(dots, Comm::Sum, 4, request);
 }
+
+template class nbfpcg<float>;
+template class nbfpcg<double>;
 
 } //namespace LinearSolver
 

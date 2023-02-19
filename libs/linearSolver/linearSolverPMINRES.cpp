@@ -53,10 +53,22 @@ int pminres<T>::Solve(operator_t& linearOperator, operator_t& precon,
   int rank = comm.rank();
   linAlg_t &linAlg = platform.linAlg();
 
+  deviceMemory<pfloat> o_pfloat_r;
+  deviceMemory<pfloat> o_pfloat_z;
+
   /*Pre-reserve memory pool space to avoid some unnecessary re-sizing*/
   dlong Ntotal = N + Nhalo;
-  platform.reserve<T>(6*Ntotal
-                           + 6 * platform.memPoolAlignment<T>());
+  if constexpr (sizeof(pfloat)==sizeof(T)) {
+    platform.reserve<T>(6*Ntotal
+                        + 6 * platform.memPoolAlignment<T>());
+  } else {
+    platform.reserve<std::byte>(sizeof(T) * (6*Ntotal)
+                              + sizeof(pfloat) * 2 * Ntotal
+                              + 8 * platform.memPoolAlignment());
+
+    o_pfloat_r  = platform.reserve<pfloat>(Ntotal);
+    o_pfloat_z  = platform.reserve<pfloat>(Ntotal);
+  }
 
   deviceMemory<T> o_p     = platform.reserve<T>(Ntotal);
   deviceMemory<T> o_z     = platform.reserve<T>(Ntotal);
@@ -65,22 +77,15 @@ int pminres<T>::Solve(operator_t& linearOperator, operator_t& precon,
   deviceMemory<T> o_q     = platform.reserve<T>(Ntotal);
   deviceMemory<T> o_q_old = platform.reserve<T>(Ntotal);
 
-  platform.reserve<pfloat>(2*Ntotal +
-                           + 4 * platform.memPoolAlignment<T>());
-
-  deviceMemory<pfloat> o_pfloat_r  = platform.reserve<pfloat>(Ntotal);
-  deviceMemory<pfloat> o_pfloat_z  = platform.reserve<pfloat>(Ntotal);
-
 
   linearOperator.Operator(o_x, o_r);            // r = b - A*x
   linAlg.axpy(N, (T)1.0, o_b, (T)-1.0, o_r);
 
 
-  //  precon.Operator(o_r, o_z);            // z = M\r
-  if(sizeof(pfloat)==sizeof(T)){
+  // z = M\r
+  if constexpr(sizeof(pfloat)==sizeof(T)){
     precon.Operator(o_r, o_z);
-  }
-  else{
+  } else {
     linAlg.d2p(N, o_r, o_pfloat_r);
     precon.Operator(o_pfloat_r, o_pfloat_z);
     linAlg.p2d(N, o_pfloat_z, o_z);
@@ -151,11 +156,10 @@ int pminres<T>::Solve(operator_t& linearOperator, operator_t& precon,
 #endif
     }
 
-    //    precon.Operator(o_r, o_z);                        // z = M\r
-    if(sizeof(pfloat)==sizeof(T)){
+    // z = M\r
+    if constexpr(sizeof(pfloat)==sizeof(T)){
       precon.Operator(o_r, o_z);
-    }
-    else{
+    } else {
       linAlg.d2p(N, o_r, o_pfloat_r);
       precon.Operator(o_pfloat_r, o_pfloat_z);
       linAlg.p2d(N, o_pfloat_z, o_z);
@@ -193,6 +197,9 @@ void pminres<T>::UpdateMINRES(const T ma2,
   updateMINRESKernel(N, ma2, ma3, alpha, beta,
                      o_z, o_q_old, o_q, o_r_old, o_r, o_p);
 }
+
+template class pminres<float>;
+template class pminres<double>;
 
 } //namespace LinearSolver
 
