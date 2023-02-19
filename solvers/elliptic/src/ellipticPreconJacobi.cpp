@@ -48,7 +48,6 @@ void JacobiPrecon::Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_M
 
   // zero mean of RHS
   if(elliptic.allNeumann){
-    printf("elliptic zeroMean\n");
     elliptic.ZeroMean(o_Mr);
   }
 }
