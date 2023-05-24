@@ -1,0 +1,137 @@
+[FORMAT]
+2.0
+
+[DATA FILE]
+#data/ellipticGaussian2D.h
+#data/ellipticSine2D.h
+#data/ellipticLshape2D.h
+data/ellipticHomogeneous2D.h
+
+[MESH FILE]
+BOX
+
+[MESH DIMENSION]
+2
+
+[ELEMENT TYPE] # number of edges
+3
+
+[BOX NX]
+72
+#288
+  
+[BOX NY]
+72
+#288
+
+
+[BOX DIMX]
+2
+
+[BOX DIMY]
+2
+
+[BOX DIMZ]
+2
+
+[BOX BOUNDARY FLAG]
+1
+
+[POLYNOMIAL DEGREE]
+7
+
+[THREAD MODEL]
+#Serial
+CUDA
+
+[PLATFORM NUMBER]
+0
+
+[DEVICE NUMBER]
+0
+
+[LAMBDA]
+1
+
+# can be IPDG, or CONTINUOUS
+[DISCRETIZATION]
+  IPDG
+#CONTINUOUS
+
+# can be PCG, FPCG, NBPCG, NBFPCG, or PGMRES
+[LINEAR SOLVER]
+PCG
+  #RPCG
+
+# can be NONE, JACOBI, MASSMATRIX, PARALMOND, SEMFEM, MULTIGRID, or OAS
+[PRECONDITIONER]
+#JACOBI
+#SEMFEM
+MULTIGRID
+#NONE
+#OAS
+
+# can be DEFAULT or ERRORESTIMATE
+[STOPPING CRITERIA]
+ERRORESTIMATE
+#DEFAULT
+
+# residual convergence test parameter
+[ITERATIVE CONVERGENCE TOLERANCE]
+1.e-10
+
+
+########## MULTIGRID Options ##############
+
+# can be ALLDEGREES, HALFDEGREES, HALFDOFS
+[MULTIGRID COARSENING]
+HALFDOFS
+
+# can be DAMPEDJACOBI or CHEBYSHEV
+[MULTIGRID SMOOTHER]
+CHEBYSHEV
+
+# can be any integer >0
+[MULTIGRID CHEBYSHEV DEGREE]
+3
+
+###########################################
+
+# can be LAST, ZERO, CLASSIC, QR, or EXTRAP
+[INITIAL GUESS STRATEGY]
+QR
+
+[INITIAL GUESS HISTORY SPACE DIMENSION]
+12
+  
+########## ParAlmond Options ##############
+
+# can be KCYCLE, or VCYCLE
+# can add the EXACT and NONSYM option
+[PARALMOND CYCLE]
+VCYCLE
+
+# can be SMOOTHED or UNSMOOTHED
+[PARALMOND AGGREGATION]
+UNSMOOTHED
+  #SMOOTHED
+
+# can be DAMPEDJACOBI or CHEBYSHEV
+[PARALMOND SMOOTHER]
+DAMPEDJACOBI
+  #CHEBYSHEV
+
+# can be any integer >0
+[PARALMOND CHEBYSHEV DEGREE]
+1
+
+###########################################
+
+[OUTPUT TO FILE]
+FALSE
+
+[OUTPUT FILE NAME]
+wave
+
+[VERBOSE]
+TRUE

@@ -624,6 +624,43 @@ void mesh_t::SmatrixTet3D(const int _N,
   }
 }
 
+void mesh_t::StrongSmatrixTet3D(const int _N,
+				const memory<dfloat> _Dr,
+				const memory<dfloat> _Ds,
+				const memory<dfloat> _Dt,
+				const memory<dfloat> _MM,
+				memory<dfloat>& _S){
+  
+  const int _Np = (_N+1)*(_N+2)*(_N+3)/6;
+
+  _S.malloc(6*_Np*_Np, 0.0);
+  memory<dfloat> _Srr = _S + 0*_Np*_Np;
+  memory<dfloat> _Srs = _S + 1*_Np*_Np;
+  memory<dfloat> _Srt = _S + 2*_Np*_Np;
+  memory<dfloat> _Sss = _S + 3*_Np*_Np;
+  memory<dfloat> _Sst = _S + 4*_Np*_Np;
+  memory<dfloat> _Stt = _S + 5*_Np*_Np;
+  for (int n=0;n<_Np;n++) {
+    for (int m=0;m<_Np;m++) {
+      for (int k=0;k<_Np;k++) {
+        for (int l=0;l<_Np;l++) {
+          _Srr[m+n*_Np] += _MM[l+n*_Np]*_Dr[k+l*_Np]*_Dr[m+k*_Np];
+          _Srs[m+n*_Np] += _MM[l+n*_Np]*_Dr[k+l*_Np]*_Ds[m+k*_Np];
+          _Srt[m+n*_Np] += _MM[l+n*_Np]*_Dr[k+l*_Np]*_Dt[m+k*_Np];
+          _Srs[m+n*_Np] += _MM[l+n*_Np]*_Ds[k+l*_Np]*_Dr[m+k*_Np];
+          _Sss[m+n*_Np] += _MM[l+n*_Np]*_Ds[k+l*_Np]*_Ds[m+k*_Np];
+          _Sst[m+n*_Np] += _MM[l+n*_Np]*_Ds[k+l*_Np]*_Dt[m+k*_Np];
+          _Srt[m+n*_Np] += _MM[l+n*_Np]*_Dt[k+l*_Np]*_Dr[m+k*_Np];
+          _Sst[m+n*_Np] += _MM[l+n*_Np]*_Dt[k+l*_Np]*_Ds[m+k*_Np];
+          _Stt[m+n*_Np] += _MM[l+n*_Np]*_Dt[k+l*_Np]*_Dt[m+k*_Np];
+        }
+      }
+    }
+  }
+}
+
+
+
 void mesh_t::InterpolationMatrixTet3D(const int _N,
                                       const memory<dfloat> rIn,
                                       const memory<dfloat> sIn,

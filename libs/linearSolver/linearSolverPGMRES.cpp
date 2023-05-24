@@ -55,7 +55,8 @@ pgmres<T>::pgmres(dlong _N, dlong _Nhalo,
 template<typename T>
 int pgmres<T>::Solve(operator_t& linearOperator, operator_t& precon,
                      deviceMemory<T>& o_x, deviceMemory<T>& o_b,
-                     const T tol, const int MAXIT, const int verbose) {
+                     const T tol, const int MAXIT, const int verbose,
+                     stoppingCriteria_t<T> *stoppingCriteria) {
 
   int rank = comm.rank();
   linAlg_t &linAlg = platform.linAlg();

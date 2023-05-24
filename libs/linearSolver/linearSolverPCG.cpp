@@ -55,7 +55,8 @@ pcg<T>::pcg(dlong _N, dlong _Nhalo,
 template <typename T>
 int pcg<T>::Solve(operator_t& linearOperator, operator_t& precon,
                   deviceMemory<T>& o_x, deviceMemory<T>& o_r,
-                  const T tol, const int MAXIT, const int verbose) {
+                  const T tol, const int MAXIT, const int verbose,
+                  stoppingCriteria_t<T> *stoppingCriteria){
 
   int rank = comm.rank();
   linAlg_t &linAlg = platform.linAlg();
@@ -115,11 +116,18 @@ int pcg<T>::Solve(operator_t& linearOperator, operator_t& precon,
   for(iter=0;iter<MAXIT;++iter){
 
     // Exit if tolerance is reached, taking at least one step.
-    if (((iter == 0) && (rdotr0 == 0.0)) ||
-        ((iter > 0) && (rdotr0 <= TOL))) {
+    if (((iter == 0) && (rdotr0 == 0.0))){
       break;
     }
 
+    if(iter>0 && stoppingCriteria->stopTest(iter, o_x, o_r, rdotr0, TOL)){
+      break;
+    }
+    
+    if(((iter > 0) && (rdotr0 <= TOL))) {
+      break;
+    }
+    
     // z = Precon^{-1} r
     if constexpr (sizeof(pfloat)==sizeof(T)){
       precon.Operator(o_r, o_z);

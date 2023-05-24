@@ -134,6 +134,19 @@ void elliptic_t::Run(){
                 lambda,
                 o_rL);
 
+  stoppingCriteria_t<dfloat> *stoppingCriteria;
+  
+  if(settings.compareSetting("STOPPING CRITERIA", "ERRORESTIMATE")){
+    printf("SETTING UP ESC\n");
+    ellipticStoppingCriteria<dfloat> *esc = new ellipticStoppingCriteria<dfloat>(this, &addBCKernel);
+    esc->setLocalRHS(o_rL);
+    esc->reset();
+    stoppingCriteria = esc;
+  }
+  else{
+    stoppingCriteria = new stoppingCriteria_t<dfloat>();
+  }
+    
   //Set x to zero
   platform.linAlg().set(mesh.Nelements*mesh.Np*Nfields, (dfloat)0.0, o_xL);
 
@@ -183,7 +196,7 @@ void elliptic_t::Run(){
 
   //call the solver
   dfloat tol = (sizeof(dfloat)==sizeof(double)) ? 1.0e-8 : 1.0e-5;
-  int iter = Solve(linearSolver, o_x, o_r, tol, maxIter, verbose);
+  int iter = Solve(linearSolver, o_x, o_r, tol, maxIter, verbose, stoppingCriteria);
 
   //add the boundary data to the masked nodes
   if(settings.compareSetting("DISCRETIZATION","CONTINUOUS")){

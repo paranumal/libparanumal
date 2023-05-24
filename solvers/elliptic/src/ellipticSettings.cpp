@@ -34,6 +34,7 @@ ellipticSettings_t::ellipticSettings_t(const comm_t& _comm):
   // is used inside another solver
   ellipticAddSettings(*this);
   parAlmond::AddSettings(*this);
+  InitialGuess::AddSettings(*this);
 }
 
 void ellipticAddRunSettings(settings_t& settings) {
@@ -95,6 +96,22 @@ void ellipticAddSettings(settings_t& settings,
                       "FALSE",
                       "Enable verbose output",
                       {"TRUE", "FALSE"});
+
+  settings.newSetting(prefix+"STOPPING CRITERIA",
+                      "DEFAULT",
+                      "Choice of stopping criteria",
+		      {"DEFAULT", "ERRORESTIMATE"});
+
+  
+  settings.newSetting(prefix+"ITERATIVE CONVERGENCE TOLERANCE",
+                      "1.e-8",
+                      "Tolerance parameter used to determine if residual is small");
+
+  settings.newSetting(prefix+"STOPPING CRITERIA STEP",
+                      "1",
+                      "Number of iterations between checking stopping criteria");
+  
+
 }
 
 void ellipticSettings_t::report() {

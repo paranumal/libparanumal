@@ -58,7 +58,8 @@ nbfpcg<T>::nbfpcg(dlong _N, dlong _Nhalo,
 template<typename T>
 int nbfpcg<T>::Solve(operator_t& linearOperator, operator_t& precon,
                   deviceMemory<T>& o_x, deviceMemory<T>& o_r,
-                  const T tol, const int MAXIT, const int verbose) {
+                     const T tol, const int MAXIT, const int verbose,
+                     stoppingCriteria_t<T> *stoppingCriteria){
 
   int rank = comm.rank();
   linAlg_t &linAlg = platform.linAlg();

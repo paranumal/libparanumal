@@ -119,7 +119,7 @@ void mesh_t::ReferenceNodesTri2D(){
   linAlg_t::matrixTranspose(Np, Np, Srs, Np, SrsT, Np);
   linAlg_t::matrixTranspose(Np, Np, Sss, Np, SssT, Np);
 
-  o_S = platform.malloc<dfloat>(ST);
+  o_S = platform.malloc<dfloat>(ST);  
 
   if constexpr (std::is_same_v<dfloat,pfloat>) {
     o_pfloat_S = o_S;
@@ -131,6 +131,24 @@ void mesh_t::ReferenceNodesTri2D(){
     o_pfloat_S = platform.malloc<pfloat>(pfloat_ST);
   }
 
+  //packed stiffness matrices
+  StrongSmatrixTri2D(N, Dr, Ds, MM, strongS);
+  strongSrr = strongS + 0*Np*Np;
+  strongSrs = strongS + 1*Np*Np;
+  strongSss = strongS + 2*Np*Np;
+
+  memory<dfloat> strongST(3*Np*Np);
+  memory<dfloat> strongSrrT = strongST + 0*Np*Np;
+  memory<dfloat> strongSrsT = strongST + 1*Np*Np;
+  memory<dfloat> strongSssT = strongST + 2*Np*Np;
+  linAlg_t::matrixTranspose(Np, Np, strongSrr, Np, strongSrrT, Np);
+  linAlg_t::matrixTranspose(Np, Np, strongSrs, Np, strongSrsT, Np);
+  linAlg_t::matrixTranspose(Np, Np, strongSss, Np, strongSssT, Np);
+
+  o_strongS = platform.malloc<dfloat>(strongST);
+
+
+  
   /* Plotting data */
   plotN = N + 3; //enriched interpolation space for plotting
   plotNp = (plotN+1)*(plotN+2)/2;

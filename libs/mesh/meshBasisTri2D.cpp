@@ -668,6 +668,38 @@ void mesh_t::SmatrixTri2D(const int _N,
   }
 }
 
+
+void mesh_t::StrongSmatrixTri2D(const int _N,
+				const memory<dfloat> _Dr,
+				const memory<dfloat> _Ds,
+				const memory<dfloat> _MM,
+				memory<dfloat>& _S){
+  
+  const int _Np = (_N+1)*(_N+2)/2;
+  
+  _S.malloc(3*_Np*_Np, 0.0);
+  memory<dfloat> _Srr = _S + 0*_Np*_Np;
+  memory<dfloat> _Srs = _S + 1*_Np*_Np;
+  memory<dfloat> _Sss = _S + 2*_Np*_Np;
+
+  // strong form: e.g.  Srr = MM*Dr*Dr
+  for (int n=0;n<_Np;n++) {
+    for (int m=0;m<_Np;m++) {
+      for (int k=0;k<_Np;k++) {
+        for (int l=0;l<_Np;l++) {
+	  // M_nl * Dr_lk * Dr_km
+          _Srr[m+n*_Np] += _MM[l+n*_Np]*_Dr[k+l*_Np]*_Dr[m+k*_Np];
+          _Srs[m+n*_Np] += _MM[l+n*_Np]*_Dr[k+l*_Np]*_Ds[m+k*_Np];
+          _Srs[m+n*_Np] += _MM[l+n*_Np]*_Ds[k+l*_Np]*_Dr[m+k*_Np];
+          _Sss[m+n*_Np] += _MM[l+n*_Np]*_Ds[k+l*_Np]*_Ds[m+k*_Np];
+        }
+      }
+    }
+  }
+}
+
+
+
 void mesh_t::InterpolationMatrixTri2D(const int _N,
                                       const memory<dfloat> rIn,
                                       const memory<dfloat> sIn,

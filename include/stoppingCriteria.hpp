@@ -2,7 +2,7 @@
 
 The MIT License (MIT)
 
-Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,18 +24,31 @@ SOFTWARE.
 
 */
 
-#include "elliptic.hpp"
+#ifndef STOPPINGCRITERIA_HPP
+#define STOPPINGCRITERIA_HPP
 
-int elliptic_t::Solve(linearSolver_t<dfloat>& linearSolver,
-                      deviceMemory<dfloat> &o_x,
-                      deviceMemory<dfloat> &o_r,
-                      const dfloat tol, const int MAXIT, const int verbose,
-                      stoppingCriteria_t<dfloat> *stoppingCriteria){
+#include "platform.hpp"
 
-  // if there is a nullspace, remove the constant vector from r
-  if(allNeumann) ZeroMean(o_r);
+using namespace libp;
 
-  int Niter = linearSolver.Solve(*this, precon, o_x, o_r, tol, MAXIT, verbose, stoppingCriteria);
+template <typename T>
+class stoppingCriteria_t {
 
-  return Niter;
-}
+public:
+
+  stoppingCriteria_t(){
+
+  }
+
+  virtual void reset(){ }
+  
+  virtual int stopTest(int iteration, deviceMemory<T> &o_x, deviceMemory<T> &o_r, T rdotr, T TOL){
+
+    if(rdotr <= TOL)
+      return 1;
+
+    return 0;
+
+  }
+};
+#endif

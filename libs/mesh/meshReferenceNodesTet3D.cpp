@@ -143,6 +143,35 @@ void mesh_t::ReferenceNodesTet3D(){
     o_pfloat_S = platform.malloc<pfloat>(pfloat_ST);
   }
 
+  // packed strong form stiffness matrices
+  //packed stiffness matrices
+  StrongSmatrixTet3D(N, Dr, Ds, Dt, MM, strongS);
+  strongSrr = strongS + 0*Np*Np;
+  strongSrs = strongS + 1*Np*Np;
+  strongSrt = strongS + 2*Np*Np;
+  strongSss = strongS + 3*Np*Np;
+  strongSst = strongS + 4*Np*Np;
+  strongStt = strongS + 5*Np*Np;
+
+  memory<dfloat> strongST(6*Np*Np);
+  memory<dfloat> strongSrrT = strongST + 0*Np*Np;
+  memory<dfloat> strongSrsT = strongST + 1*Np*Np;
+  memory<dfloat> strongSrtT = strongST + 2*Np*Np;
+  memory<dfloat> strongSssT = strongST + 3*Np*Np;
+  memory<dfloat> strongSstT = strongST + 4*Np*Np;
+  memory<dfloat> strongSttT = strongST + 5*Np*Np;
+  linAlg_t::matrixTranspose(Np, Np, strongSrr, Np, strongSrrT, Np);
+  linAlg_t::matrixTranspose(Np, Np, strongSrs, Np, strongSrsT, Np);
+  linAlg_t::matrixTranspose(Np, Np, strongSrt, Np, strongSrtT, Np);
+  linAlg_t::matrixTranspose(Np, Np, strongSss, Np, strongSssT, Np);
+  linAlg_t::matrixTranspose(Np, Np, strongSst, Np, strongSstT, Np);
+  linAlg_t::matrixTranspose(Np, Np, strongStt, Np, strongSttT, Np);
+
+  o_strongS = platform.malloc<dfloat>(strongST);
+
+
+
+  
   /* Plotting data */
   plotN = N + 3; //enriched interpolation space for plotting
   plotNp = (plotN+1)*(plotN+2)*(plotN+3)/6;

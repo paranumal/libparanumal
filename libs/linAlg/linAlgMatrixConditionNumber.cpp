@@ -39,7 +39,6 @@ extern "C" {
                 float *RCOND, float *WORK, int *IWORK, int *INFO );
 }
 
-
 namespace libp {
 
 double linAlg_t::matrixConditionNumber(const int N, const memory<double> A) {

@@ -1,0 +1,122 @@
+
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+
+@kernel void ellipticStoppingCriteria(const dlong Nblocks,
+				      const dlong N,
+				      @restrict const  dfloat * R, // strong residual
+				      @restrict const  dfloat * r, // weak residual
+				      @restrict dfloat  *  normR, // partial reduction of R
+				      @restrict dfloat  *  normF){ // partial reduction of R-r
+  
+  for(dlong b=0;b<Nblocks;++b;@outer(0)){
+
+    @shared dfloat s_normR[p_blockSize];
+    @shared dfloat s_normF[p_blockSize];
+    
+    for(int t=0;t<p_blockSize;++t;@inner(0)){
+      dlong id = t + b*p_blockSize;
+      
+      dfloat normR = 0.0;
+      dfloat normF = 0.0;
+      while (id<N) {
+	dfloat Rid = R[id];
+	dfloat rid = r[id];
+	dfloat Fid = Rid-rid;
+	normR += Rid*Rid;
+	normF += Fid*Fid;
+	id += Nblocks*p_blockSize;
+      }
+      //      printf("normR=%g\n", normR);
+      s_normR[t] = normR;
+      s_normF[t] = normF;
+    }
+    
+#if p_blockSize>512
+    for(int t=0;t<p_blockSize;++t;@inner(0))
+      if(t<512){	
+	s_normR[t] += s_normR[t+512];
+	s_normF[t] += s_normF[t+512];
+      }
+#endif
+#if p_blockSize>256
+    for(int t=0;t<p_blockSize;++t;@inner(0))
+      if(t<256){
+	s_normR[t] += s_normR[t+256];
+	s_normF[t] += s_normF[t+256];
+      }
+#endif
+    for(int t=0;t<p_blockSize;++t;@inner(0))
+      if(t<128){
+	s_normR[t] += s_normR[t+128];
+	s_normF[t] += s_normF[t+128];
+      }
+
+    for(int t=0;t<p_blockSize;++t;@inner(0))
+      if(t< 64){
+	s_normR[t] += s_normR[t+ 64];
+	s_normF[t] += s_normF[t+ 64];
+      }
+    
+    for(int t=0;t<p_blockSize;++t;@inner(0))
+      if(t< 32){
+	s_normR[t] += s_normR[t+ 32];
+	s_normF[t] += s_normF[t+ 32];
+      }
+    
+    for(int t=0;t<p_blockSize;++t;@inner(0))
+      if(t< 16){
+	s_normR[t] += s_normR[t+ 16];
+	s_normF[t] += s_normF[t+ 16];
+      }
+    
+    for(int t=0;t<p_blockSize;++t;@inner(0))
+      if(t<  8){
+	s_normR[t] += s_normR[t+  8];
+	s_normF[t] += s_normF[t+  8];
+      }
+
+    for(int t=0;t<p_blockSize;++t;@inner(0))
+      if(t<  4){
+	s_normR[t] += s_normR[t+  4];
+	s_normF[t] += s_normF[t+  4];
+      }
+    
+    for(int t=0;t<p_blockSize;++t;@inner(0))
+      if(t<  2){
+	s_normR[t] += s_normR[t+  2];
+	s_normF[t] += s_normF[t+  2];
+      }
+    
+    for(int t=0;t<p_blockSize;++t;@inner(0))
+      if(t<  1){
+	normR[b] = s_normR[0] + s_normR[1];
+	normF[b] = s_normF[0] + s_normF[1];
+      }
+  }
+}
+
