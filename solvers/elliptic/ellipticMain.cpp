@@ -71,7 +71,8 @@ int main(int argc, char **argv){
                         lambda, NBCTypes, BCType);
 
     // run
-    elliptic.Run();
+//    elliptic.Run();
+    elliptic.WaveSolver();
   }
 
   // close down MPI

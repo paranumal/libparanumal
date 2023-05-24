@@ -185,6 +185,12 @@ class mesh_t {
   deviceMemory<dfloat> o_S;
   deviceMemory<pfloat> o_pfloat_S;
 
+  memory<dfloat> strongSrr, strongSrs, strongSrt; //element stiffness matrices (in strong form)
+  memory<dfloat> strongSsr, strongSss, strongSst;
+  memory<dfloat> strongStr, strongSts, strongStt;
+  memory<dfloat> strongS;
+  deviceMemory<dfloat> o_strongS;
+   
   /*************************/
   /* Cubature              */
   /*************************/
@@ -361,6 +367,9 @@ class mesh_t {
     Setup(_platform, _settings, _comm);
   }
 
+  // convert elementType and mesh dimension to string
+  std::string GetSuffix();
+   
   // mesh setup
   void Setup(platform_t& _platform, meshSettings_t& _settings,
              comm_t _comm);
@@ -851,6 +860,16 @@ class mesh_t {
                            const memory<dfloat> _Ds,
                            const memory<dfloat> _MM,
                            memory<dfloat>& _S);
+
+
+   static void StrongSmatrixTri2D(const int _N,
+                                  const memory<dfloat> _Dr,
+                                  const memory<dfloat> _Ds,
+                                  const memory<dfloat> _MM,
+                                  memory<dfloat>& _S);
+   
+
+   
   static void InterpolationMatrixTri2D(const int _N,
                                        const memory<dfloat> rIn,
                                        const memory<dfloat> sIn,
@@ -1029,6 +1048,15 @@ class mesh_t {
                            const memory<dfloat> _Dt,
                            const memory<dfloat> _MM,
                            memory<dfloat>& _S);
+
+   static void StrongSmatrixTet3D(const int _N,
+                                  const memory<dfloat> _Dr,
+                                  const memory<dfloat> _Ds,
+                                  const memory<dfloat> _Dt,
+                                  const memory<dfloat> _MM,
+                                  memory<dfloat>& _S);
+   
+   
   static void InterpolationMatrixTet3D(const int _N,
                                        const memory<dfloat> rIn,
                                        const memory<dfloat> sIn,

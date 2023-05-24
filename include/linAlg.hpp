@@ -194,6 +194,15 @@ class linAlg_t {
                               const memory<long long int>  A, const int LDA,
                               memory<long long int> AT, const int LDAT);
 
+  static void matrixMultiply(const int NrowsA, const int NcolsA, memory<double> A,
+                             const int NrowsB, const int NcolsB, memory<double> B,
+                             memory<double> C);
+  static void matrixMultiply(const int NrowsA, const int NcolsA, memory<float> A,
+                             const int NrowsB, const int NcolsB, memory<float> B,
+                             memory<float> C);
+   
+   
+   
  private:
   platform_t *platform;
   properties_t kernelInfoFloat;

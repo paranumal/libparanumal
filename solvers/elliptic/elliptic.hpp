@@ -32,9 +32,11 @@ SOFTWARE.
 #include "mesh.hpp"
 #include "solver.hpp"
 #include "linAlg.hpp"
+#include "linAlgMatrix.hpp"
 #include "precon.hpp"
 #include "linearSolver.hpp"
 #include "parAlmond.hpp"
+#include "stoppingCriteria.hpp"
 
 #define DELLIPTIC LIBP_DIR"/solvers/elliptic/"
 
@@ -123,8 +125,11 @@ public:
 
   void Run();
 
+   void WaveSolver();
+
+   
   int Solve(linearSolver_t<dfloat>& linearSolver, deviceMemory<dfloat> &o_x, deviceMemory<dfloat> &o_r,
-            const dfloat tol, const int MAXIT, const int verbose);
+            const dfloat tol, const int MAXIT, const int verbose, stoppingCriteria_t<dfloat> *stoppingCriteria);
 
   void PlotFields(memory<dfloat>& Q, std::string fileName);
 
@@ -171,6 +176,53 @@ public:
   void ZeroMean(deviceMemory<double> &o_q);
   void ZeroMean(deviceMemory<float> &o_q);
 };
+
+template <typename T>
+class ellipticStoppingCriteria : public stoppingCriteria_t<T> {
+
+  elliptic_t *elliptic;
+
+  occa::kernel *addBCKernel;
+  
+  occa::kernel strongVolumeResidualKernel;
+  occa::kernel stoppingCriteriaKernel;
+  occa::kernel cubatureH1ErrorKernel;
+  
+  deviceMemory<T> o_bL; // local rhs without any bcs
+  deviceMemory<T> o_qL;
+  deviceMemory<T> o_RnL;
+  deviceMemory<T> o_Rn;
+
+  deviceMemory<T> o_normRn;
+  deviceMemory<T> o_normFn;
+  memory<T> normRn;
+  memory<T> normFn;
+
+  dlong NblocksC = 0;
+  deviceMemory<T> o_errH1;
+  
+  dlong Ngall  = 0;
+  dlong blockSize = 0;
+  dlong Nblocks = 0;
+  
+  T eta = 0, eta_old = 0;
+  T *etaHistory = NULL;
+  int currentIteration = 0;
+public:
+  
+   ellipticStoppingCriteria<T>(elliptic_t *_elliptic, occa::kernel *addBCKernel);
+
+  T errorEstimate(deviceMemory<T> &o_q, deviceMemory<T> &o_r);
+
+  void reset();
+  
+  int stopTest(int iteration, deviceMemory<T> &o_q, deviceMemory<T> &o_r, T rdotr, T TOL);
+
+  void setLocalRHS(deviceMemory<T> &o_bLin);  
+};
+
+extern template class ellipticStoppingCriteria<float>;
+extern template class ellipticStoppingCriteria<double>;
 
 
 #endif

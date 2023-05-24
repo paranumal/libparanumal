@@ -24,6 +24,11 @@ SOFTWARE.
 
 */
 
+#define ellipticForcing2D(x, y, lambda, f) \
+  { \
+  f = 0.; \
+  }
+
 
 /* Homogeneous Dirichlet boundary condition   */
 #define ellipticDirichletCondition2D(x,y,nx,ny,uM,uxM,uyM,uB,uxB,uyB)  \

@@ -29,6 +29,7 @@ SOFTWARE.
 
 #include <optional>
 #include "core.hpp"
+#include "linAlgMatrix.hpp"
 #include "settings.hpp"
 #include "mesh.hpp"
 #include "solver.hpp"
@@ -38,6 +39,8 @@ namespace libp {
 //forward declare
 namespace TimeStepper {
   class timeStepperBase_t;
+
+  void butcherTables(const char *methodName, int &Nstages, int &embedded, linAlgMatrix_t<dfloat> &outB);
 }
 
 /* General TimeStepper object*/
