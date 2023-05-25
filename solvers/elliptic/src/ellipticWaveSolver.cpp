@@ -33,7 +33,7 @@ SOFTWARE.
 template <typename T>
 void printMatrixLocal(linAlgMatrix_t<T> &A, const char *str){
 
-#if 0
+#if 1
   std::cout << "matrix: " <<  std::string(str) << "[" << std::endl;
   for(int r=1;r<=A.rows();++r){
     for(int c=1;c<=A.cols();++c){
@@ -51,7 +51,7 @@ void printMatrixLocal(linAlgMatrix_t<T> &A, const char *str){
 void elliptic_t::WaveSolver(){
 
   //setup linear algebra module
-  platform.linAlg().InitKernels({"set"});
+  platform.linAlg().InitKernels({"set", "sum"});
   
   // FOR THIS - WE ASSUME IPDG  and LAMBDA=1
   
@@ -62,33 +62,41 @@ void elliptic_t::WaveSolver(){
   int Nstages = 0;
   int embedded = 0;
  
-//  libp::TimeStepper::butcherTables("ESDIRK5(3)6L[2]SA", Nstages, embedded, BTABLE);
+ libp::TimeStepper::butcherTables("ESDIRK5(3)6L[2]SA", Nstages, embedded, BTABLE);
 //  libp::TimeStepper::butcherTables("ESDIRK5(4)7L[2]SA2", Nstages, embedded, BTABLE);
-  libp::TimeStepper::butcherTables("ESDIRK6(5)9L[2]SA", Nstages, embedded, BTABLE);
-
+//  libp::TimeStepper::butcherTables("ESDIRK6(5)9L[2]SA", Nstages, embedded, BTABLE);
+//    libp::TimeStepper::butcherTables("Kvaerno(7,4,5)-ESDIRK", Nstages, embedded, BTABLE);
+  
+//  libp::TimeStepper::butcherTables("TRBDF2-ESDIRK", Nstages, embedded, BTABLE);
+ 
 
   printMatrixLocal(BTABLE, "BUTCHER TABLE");
   
   // extract alphas, betas
-  linAlgMatrix_t<dfloat> alpha(Nstages, Nstages), beta(1,Nstages);
+  linAlgMatrix_t<dfloat> alpha(Nstages, Nstages), beta(1,Nstages), betahat(1,Nstages);
   for(int n=1;n<=Nstages;++n){
     for(int m=1;m<=Nstages;++m){
       alpha(n,m) = BTABLE(n,m+1);
     }
     beta(1,n) = BTABLE(Nstages+1,n+1);
+    if(embedded)
+       betahat(1,n) = BTABLE(Nstages+2,n+1);
   }
 
   dfloat gam = alpha(2,2);
   dfloat invGamma = 1./gam;
-
+  
   std::cout << "gamma = " << gam << std::endl;
 
   printMatrixLocal(alpha, "ALPHA BLOCK");
   printMatrixLocal(beta, "BETA BLOCK");
+  printMatrixLocal(betahat, "BETA HAT BLOCK");
+
   
   deviceMemory<dfloat> o_alpha = platform.malloc<dfloat>(Nstages*Nstages, alpha.data);
   deviceMemory<dfloat> o_beta  = platform.malloc<dfloat>(Nstages, beta.data);
-
+  deviceMemory<dfloat> o_betahat  = platform.malloc<dfloat>(Nstages, betahat.data);
+  
   // set up initial conditions for D and P
   dfloat finalTime = 10;
   dfloat dt = 0.1;
@@ -201,7 +209,11 @@ void elliptic_t::WaveSolver(){
   kernelName = "waveCombine";
   kernel_t waveCombineKernel =
      platform.buildKernel(fileName, kernelName, kernelInfo);
-  
+
+
+  kernelName = "waveErrorEstimate";
+  kernel_t waveErrorEstimateKernel
+     = platform.buildKernel(fileName, kernelName, kernelInfo);
   
   fileName   = oklFilePrefix + "waveKernels" + suffix + oklFileSuffix;
 
@@ -220,7 +232,7 @@ void elliptic_t::WaveSolver(){
   kernelName = "waveInitialConditions" + suffix;
   kernel_t waveInitialConditionsKernel
      = platform.buildKernel(fileName, kernelName, kernelInfo);
-  
+
   //create occa buffers
   dlong Nall = mesh.Np*(mesh.Nelements+mesh.totalHaloPairs);
   std::cout << "totalHaloPairs = " << mesh.totalHaloPairs << std::endl;
@@ -229,12 +241,17 @@ void elliptic_t::WaveSolver(){
 
   deviceMemory<dfloat> o_DL    = platform.malloc<dfloat>(Nall);
   deviceMemory<dfloat> o_PL    = platform.malloc<dfloat>(Nall);
+  deviceMemory<dfloat> o_newDL    = platform.malloc<dfloat>(Nall);
+  deviceMemory<dfloat> o_newPL    = platform.malloc<dfloat>(Nall);
+  deviceMemory<dfloat> o_embDL    = platform.malloc<dfloat>(Nall);
+  deviceMemory<dfloat> o_embPL    = platform.malloc<dfloat>(Nall);
   deviceMemory<dfloat> o_DtildeL  = platform.malloc<dfloat>(Nall);
   deviceMemory<dfloat> o_DrhsL = platform.malloc<dfloat>(Nall);
   deviceMemory<dfloat> o_DhatL = platform.malloc<dfloat>(Nall*Nstages);
   deviceMemory<dfloat> o_PhatL = platform.malloc<dfloat>(Nall*Nstages);
   deviceMemory<dfloat> o_scratch1 = platform.malloc<dfloat>(Nall);
   deviceMemory<dfloat> o_scratch2 = platform.malloc<dfloat>(Nall);
+  deviceMemory<dfloat> o_errL    = platform.malloc<dfloat>(Nall);
   
   memory<dfloat> invMM, V, MM;
   
@@ -253,25 +270,6 @@ void elliptic_t::WaveSolver(){
     printf("HEXES NOT IMPLEMENTED YET\n");
     exit(-1);
   }
-
-#if 0
-  std::cout << "MM = [" << std::endl;
-  for(int n=0;n<mesh.Np;++n){
-    for(int m=0;m<mesh.Np;++m){
-      std::cout << MM[n*mesh.Np+m] << ", " ;
-    }
-    std::cout << std::endl;
-  }
-
-  std::cout << "invMM = [" << std::endl;
-  for(int n=0;n<mesh.Np;++n){
-    for(int m=0;m<mesh.Np;++m){
-      std::cout << invMM[n*mesh.Np+m] << ", " ;
-    }
-    std::cout << std::endl;
-  }
-  std::cout << "]" << std::endl;
-#endif
   
   deviceMemory<dfloat> o_invMM = platform.malloc<dfloat>(mesh.Np*mesh.Np, invMM);
   deviceMemory<dfloat> o_MM    = platform.malloc<dfloat>(mesh.Np*mesh.Np, MM);
@@ -299,7 +297,6 @@ void elliptic_t::WaveSolver(){
     WJ.malloc(mesh.Np*mesh.Nelements);
     invWJ.malloc(mesh.Np*mesh.Nelements);
     for(int n=0;n<mesh.Np*mesh.Nelements;++n){
-      // TRIS AND TETS ONLY
       invWJ[n] = 1./mesh.wJ[n];
       WJ[n] = mesh.wJ[n];
     }
@@ -310,10 +307,9 @@ void elliptic_t::WaveSolver(){
   
   waveInitialConditionsKernel(Nall, t, mesh.o_x, mesh.o_y, mesh.o_z, o_DL, o_PL);
 
-#if 1
   stoppingCriteria_t<dfloat> *stoppingCriteria = NULL;
   ellipticStoppingCriteria<dfloat> *esc = NULL;
-#if 1
+
   if(settings.compareSetting("STOPPING CRITERIA", "ERRORESTIMATE")){
     printf("SETTING UP ESC\n");
     esc = new ellipticStoppingCriteria<dfloat>(this, NULL);
@@ -321,12 +317,15 @@ void elliptic_t::WaveSolver(){
     stoppingCriteria = esc;
   }
   else
-#endif
   {
     stoppingCriteria = new stoppingCriteria_t<dfloat>();
   }
-#endif
+
+#define USE_ADAPTIVE 0
   
+#if USE_ADAPTIVE==0
+  // START NON-ADAPTIVE TIME-STEPPER (GOOOOOD!!!)
+
   for(int tstep=0;tstep<Nsteps;++tstep){ // do adaptive later
     int iter = 0;
     
@@ -342,14 +341,12 @@ void elliptic_t::WaveSolver(){
     // LOOP OVER IMPLICIT STAGES
     for(int stage=2;stage<=Nstages;++stage){
 
+      lambda = lambdaSolve;
+      
       // solve for D
-#if 1
       if(esc)
          esc->setLocalRHS(o_DrhsL);
       int iterD = Solve(DLinearSolver, o_DtildeL, o_DrhsL, tol, maxIter, verbose, stoppingCriteria);
-#else
-      int iterD = Solve(DLinearSolver, o_DtildeL, o_DrhsL, tol, maxIter, verbose);
-#endif
       
       iter += iterD;
 
@@ -387,8 +384,9 @@ void elliptic_t::WaveSolver(){
     // c. finalize
     // P = Phat(:,1) +     dt*(Dhat(:,1:Nstages)*beta'); 
     // D = Dhat(:,1) + dt*LAP*(Phat(:,1:Nstages)*beta'); (LAP = -MM\L)
-    waveStepFinalizeKernel(mesh.Nelements, dt, Nstages, o_beta, o_invWJ, o_invMM, o_scratch2, o_DhatL, o_PhatL, o_DL, o_PL); // REMEMBER -sign 
-    
+
+    waveStepFinalizeKernel(mesh.Nelements, dt, Nstages, o_beta, o_invWJ, o_invMM, o_scratch2, o_DhatL, o_PhatL, o_DL, o_PL); 
+
     timePoint_t ends = GlobalPlatformTime(platform);
     
     double elapsedTime = ElapsedTime(starts, ends);
@@ -424,21 +422,167 @@ void elliptic_t::WaveSolver(){
 //        PlotFields(DL, fname);
       }
     }
+  }
+    // END NON-ADAPTIVE TIME-STEPPER
+#endif
+
+
+#if USE_ADAPTIVE==1
+  int tstep = 0;
+  int allStep = 0;
+  
+  // START ADAPTIVE TIME-STEPPER
+  dfloat dtMIN = 1E-9; //minumum allowed timestep
+  dfloat ATOL = 1E-6;  //absolute error tolerance
+  dfloat RTOL = 1E-6;  //relative error tolerance
+  dfloat safe = 0.8;   //safety factor
+    
+  //error control parameters
+  dfloat errBeta = 0.05;
+  dfloat factor1 = 0.2;
+  dfloat factor2 = 10.0;
+
+  // ???
+  dfloat exp1 = 0.2 - 0.75*errBeta;
+  dfloat invfactor1 = 1.0/factor1;
+  dfloat invfactor2 = 1.0/factor2;
+  dfloat facold = 1E-4;
+  dfloat sqrtinvNall = 1.0/sqrt((dfloat)Nall);
+
+  dfloat errEstimate = 0;
+    
+  t = 0;
+
+  while(t<finalTime){
+
+    LIBP_ABORT("Time step became too small at time step = " << tstep,
+               dt<dtMIN);
+    LIBP_ABORT("Solution became unstable at time step = " << tstep,
+               std::isnan(dt));
+    
+    //check for final timestep
+    if (t+dt > finalTime){
+      dt = finalTime-t;
+    }
+    
+    // STEP
+    {
+      invDt = 1./dt;
+      invGammaDt = 1./(gam*dt);
+      lambdaSolve = 1./(gam*gam*dt*dt);
+        
+      int iter = 0;
+        
+      dfloat scD = 1. + invGamma*alpha(2,1);
+      dfloat scP = scD*invGamma*invDt;
+      waveStepInitializeKernel(mesh.Nelements, scD, scP, lambdaSolve,
+                               o_WJ, o_MM, o_DL, o_PL, o_DhatL, o_PhatL, o_DrhsL);
+        
+      // LOOP OVER IMPLICIT STAGES
+      for(int stage=2;stage<=Nstages;++stage){
+
+        lambda = lambdaSolve;
+        
+        // solve for D
+        if(esc)
+           esc->setLocalRHS(o_DrhsL);
+        int iterD = Solve(DLinearSolver, o_DtildeL, o_DrhsL, tol, maxIter, verbose, stoppingCriteria);
+          
+        iter += iterD;
+          
+        // transform DtildeL to DhatL, compute DrhsL for next stage (if appropriate)
+        waveStageFinalizeKernel(mesh.Nelements,
+                                dt,
+                                invGammaDt,
+                                invGamma,
+                                gam,
+                                lambdaSolve,
+                                Nstages,
+                                stage,
+                                o_alpha,
+                                o_WJ,
+                                o_MM,
+                                o_DtildeL, 
+                                o_DhatL,
+                                o_PhatL,
+                                o_DrhsL); // remember 1-index
+      }
+      printf("====> step=%d, sum(iterD)=%d, ave(iterD)=%3.2f\n", tstep, iter, iter/(double)(Nstages-1));
+        
+      // finalize: 
+      waveCombineKernel(Nall, Nstages, o_beta, o_PhatL, o_scratch1);
+      lambda = 0;
+      Operator(o_scratch1, o_scratch2);
+      lambda = lambdaSolve;
+      waveStepFinalizeKernel(mesh.Nelements, dt, Nstages, o_beta, o_invWJ, o_invMM, o_scratch2, o_DhatL, o_PhatL, o_DL, o_PL);
+
+#if 1
+      // finalize with embedded  coefficients
+      waveCombineKernel(Nall, Nstages, o_betahat, o_PhatL, o_scratch1);
+      lambda = 0;
+      Operator(o_scratch1, o_scratch2);
+      lambda = lambdaSolve;
+      waveStepFinalizeKernel(mesh.Nelements, dt, Nstages, o_betahat, o_invWJ, o_invMM, o_scratch2, o_DhatL, o_PhatL, o_embDL, o_embPL);
+#endif
+      
+      // estimate error
+//      waveErrorEstimateKernel(Nall, ATOL, RTOL, o_DL, o_PL, o_newDL, o_newPL, o_embDL, o_embPL, o_errL);
+
+      errEstimate = platform.linAlg().sum(Nall, o_errL, mesh.comm);
+      errEstimate = sqrt(errEstimate)*sqrtinvNall;
+      printf("ESDIRK: errEStimate=%f\n", errEstimate);
+    } // END STEP
+
+      // build controller
+    dfloat fac1 = pow(errEstimate,exp1);
+    dfloat fac = fac1/pow(facold,errBeta);
+      
+    fac = std::max(invfactor2, std::min(invfactor1,fac/safe));
+    dfloat dtnew = dt/fac;
+    dtnew = dt;
+    
+    if (1) { // errEstimate<1.0) { //dt is accepted
+      std::cout << "ESDIRK: Accepting step" << std::endl;
+
+#if 0
+      // accept rkq
+      o_DL.copyFrom(o_newDL);
+      o_PL.copyFrom(o_newPL);
+#endif
+      t += dt;
+      
+      constexpr dfloat errMax = 1.0e-4;  // hard coded factor ?
+      facold = std::max(errEstimate,errMax);
+      
+      tstep++;
+    } else {
+      dtnew = dt/(std::max(invfactor1,fac1/safe));
+      printf("ESDIRK: old dt = %g, dtnew = %g\n", dt, dtnew);
+    }
+    dt = dtnew;
+    allStep++;
+  }
+   
+    
+  // END NON-ADAPTIVE TIME-STEPPER
+#endif
+    
+  
+    
 
 #if 0
     // output norm of final solution
     {
       //compute q.M*q
       dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
-      deviceMemory<dfloat> o_MxL = platform.reserve<dfloat>(Nentries);
-      mesh.MassMatrixApply(o_xL, o_MxL);
+      deviceMemory<dfloat> o_MDL = platform.reserve<dfloat>(Nentries);
+      mesh.MassMatrixApply(o_DL, o_MDL);
       
-      dfloat norm2 = sqrt(platform.linAlg().innerProd(Nentries, o_xL, o_MxL, mesh.comm));
+      dfloat norm2 = sqrt(platform.linAlg().innerProd(Nentries, o_DL, o_MDL, mesh.comm));
       
       if(mesh.rank==0)
          printf("Solution norm = %17.15lg\n", norm2);
     }
-
 #endif
-  }
+
 }

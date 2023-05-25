@@ -47,21 +47,21 @@ export LIBP_LD = mpic++
 
 export LIBP_INCLUDES=-I${LIBP_INCLUDE_DIR} -I${OCCA_DIR}/include
 export LIBP_LIBS= -Wl,-rpath,$(LIBP_BLAS_DIR) ${LIBP_BLAS_LIB}  \
-                  -Wl,-rpath,$(OCCA_DIR)/lib -L$(OCCA_DIR)/lib -locca
+                  -Wl,-rpath,$(OCCA_DIR)/lib -L$(OCCA_DIR)/lib -locca  
 
 
 ifneq (,${debug})
-  export LIBP_CFLAGS=-O0 -g -Wall -Wshadow -Wno-unused-function -Wno-unknown-pragmas
+  export LIBP_CFLAGS=-O0 -g -Wall -Wshadow -Wno-unused-function -Wno-unknown-pragmas 
   export LIBP_CXXFLAGS=-O0 -g -Wall -Wshadow -Wno-unused-function -Wno-unknown-pragmas -std=c++17
-  export LIBP_DEFINES=-DLIBP_DEBUG
+  export LIBP_DEFINES=-DLIBP_DEBUG 
 else
-  export LIBP_CFLAGS=-fopenmp -O3 -Wall -Wshadow -Wno-unused-function
-  export LIBP_CXXFLAGS=-fopenmp -O3 -Wall -Wshadow -Wno-unused-function -std=c++17
+  export LIBP_CFLAGS=-fopenmp -O2 -Wall -Wshadow -Wno-unused-function 
+  export LIBP_CXXFLAGS=-fopenmp -O2 -Wall -Wshadow -Wno-unused-function -std=c++17
   export LIBP_DEFINES=
 
   ifeq (GNU,${LIBP_ARCH})
-    LIBP_CFLAGS+= -mavx2 -ftree-vectorize -march=native -DGLIBCXX_PARALLEL
-    LIBP_CXXFLAGS+= -mavx2 -ftree-vectorize -march=native -DGLIBCXX_PARALLEL
+#  LIBP_CFLAGS+= -mavx2 -ftree-vectorize -march=native -DGLIBCXX_PARALLEL
+#  LIBP_CXXFLAGS+= -mavx2 -ftree-vectorize -march=native -DGLIBCXX_PARALLEL
   else ifeq (INTEL,${LIBP_ARCH})
     LIBP_CFLAGS+=-funroll-loops -xHost
     LIBP_CXXFLAGS+=-funroll-loops -xHost

@@ -222,6 +222,24 @@ public:
 
    }
 
+   linAlgMatrix_t<T>& operator=(const dfloat val){
+
+     if(Nrows==0 || Ncols==0){
+       Nrows = 1;
+       Ncols = 1;
+       data.calloc(Nrows*Ncols);
+     }
+     
+     for(int r=1;r<=Nrows;++r){
+       for(int c=1;c<=Ncols;++c){
+         (*this)(r,c) = val;
+       }
+     }
+     return *this;
+
+   }
+
+   
    
    linAlgMatrix_t<T> transpose(){
      linAlgMatrix_t<T> AT(Ncols, Nrows);

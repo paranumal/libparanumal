@@ -100,6 +100,7 @@ SOFTWARE.
 
       dfloat Di   = Dtilde - invGammaDt*Pn;
       dfloat Pi   = Pn;
+
       dfloat Rnew = Dn + invGammaDt*Pn;
       
       for(int j=0;j<i;++j){
@@ -179,13 +180,14 @@ SOFTWARE.
       Dres *= invWJ[e];
       
       const dlong id = e*p_Np+n;
-      DL[id] = DhatL[id] - dt*Dres;
+      DL[id] = DhatL[id] - dt*Dres; // NEGATE FOR LAPLACIAN
 
       dfloat Pres = 0;
       for(int s=0;s<Nstages;++s){
-        Pres += beta[s]*DhatL[id+s*Nelements*p_Np]; // HALO ?
+        dfloat Dhats = DhatL[id+s*Nelements*p_Np];
+        Pres += beta[s]*Dhats; 
       }
-      PL[id] = PhatL[id] + dt*Pres; 
+      PL[id] = PhatL[id] + dt*Pres;
     }
   }
 }
