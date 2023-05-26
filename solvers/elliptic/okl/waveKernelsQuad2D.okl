@@ -90,13 +90,12 @@ SOFTWARE.
       
       dfloat Di = Dtilde - gammatilde[i]*Pn/dt;
       
-      dfloat Rnew = gammatilde[i+1]*Pn/dt;
+      dfloat Rnew = Dn + gammatilde[i+1]*Pn/dt;
       
       for(int j=0;j<i;++j){
         dfloat Dj = DhatL[id+j*Nelements*p_Np];
         
         dfloat tildeAij = alphatilde[i*Nstages+j];
-        if(j==0) tildeAij -= 1;
         
         Di -= tildeAij*Dj;
         

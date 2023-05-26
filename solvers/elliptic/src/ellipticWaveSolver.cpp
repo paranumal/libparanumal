@@ -102,7 +102,8 @@ void elliptic_t::WaveSolver(){
   gammatilde = 0.;
   
   for(int i=0;i<=Nstages-1;++i){
-    alphatilde(i+1,1) = 1.;
+//    alphatilde(i+1,1) = 1.;
+    
     for(int j=1;j<=i;++j){
       alphatilde(i+1,j) += alpha(i+1,j)/gam;
     }
