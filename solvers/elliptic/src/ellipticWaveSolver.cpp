@@ -64,9 +64,9 @@ void elliptic_t::WaveSolver(){
  
   // libp::TimeStepper::butcherTables("ESDIRK5(3)6L[2]SA", Nstages, embedded, BTABLE);
 //  libp::TimeStepper::butcherTables("ESDIRK5(4)7L[2]SA2", Nstages, embedded, BTABLE);
-//  libp::TimeStepper::butcherTables("ESDIRK6(5)9L[2]SA", Nstages, embedded, BTABLE);
+  libp::TimeStepper::butcherTables("ESDIRK6(5)9L[2]SA", Nstages, embedded, BTABLE);
 //    libp::TimeStepper::butcherTables("Kvaerno(7,4,5)-ESDIRK", Nstages, embedded, BTABLE);
-    libp::TimeStepper::butcherTables("ESDIRK3(2)4L[2]SA", Nstages, embedded, BTABLE);
+//    libp::TimeStepper::butcherTables("ESDIRK3(2)4L[2]SA", Nstages, embedded, BTABLE);
   
 //  libp::TimeStepper::butcherTables("TRBDF2-ESDIRK", Nstages, embedded, BTABLE);
  
@@ -93,13 +93,11 @@ void elliptic_t::WaveSolver(){
 
   printMatrixLocal(alpha, "ALPHA BLOCK");
   printMatrixLocal(beta, "BETA BLOCK");
-  //  printMatrixLocal(betahat, "BETA HAT BLOCK");
 
-#if 1
-  // this didn't work - will need a matrix for each pressure intermediate reconstruction
   linAlgMatrix_t<dfloat> alphatilde(Nstages, Nstages);
   linAlgMatrix_t<dfloat> gammatilde(1,Nstages);
   linAlgMatrix_t<dfloat> betaAlpha(1,Nstages);
+  linAlgMatrix_t<dfloat> betahatAlpha(1,Nstages);
   alphatilde = 0.;
   gammatilde = 0.;
   
@@ -120,9 +118,11 @@ void elliptic_t::WaveSolver(){
   }
 
   betaAlpha = 0.;
+  betahatAlpha = 0.;
   for(int i=1;i<=Nstages;++i){
     for(int j=1;j<=i;++j){
       betaAlpha(1,j) += beta(1,i)*alpha(i,j);
+      betahatAlpha(1,j) += betahat(1,i)*alpha(i,j);
     }
   }
   
@@ -133,10 +133,7 @@ void elliptic_t::WaveSolver(){
   deviceMemory<dfloat> o_alphatilde = platform.malloc<dfloat>(Nstages*Nstages, alphatilde.data);
   deviceMemory<dfloat> o_gammatilde = platform.malloc<dfloat>(Nstages, gammatilde.data);
   deviceMemory<dfloat> o_betaAlpha  = platform.malloc<dfloat>(Nstages, betaAlpha.data);
-
-#endif
-
-  
+  deviceMemory<dfloat> o_betahatAlpha  = platform.malloc<dfloat>(Nstages, betahatAlpha.data);
   
   deviceMemory<dfloat> o_alpha = platform.malloc<dfloat>(Nstages*Nstages, alpha.data);
   deviceMemory<dfloat> o_beta  = platform.malloc<dfloat>(Nstages, beta.data);
@@ -452,7 +449,7 @@ void elliptic_t::WaveSolver(){
              (char*) settings.getSetting("PRECONDITIONER").c_str());
     }
 
-    int iostep = 2;
+    int iostep = 10;
     if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
       static int slice=0;
       if((tstep%iostep) == 0){
@@ -576,7 +573,8 @@ void elliptic_t::WaveSolver(){
       
 #if 1
       // finalize with embedded  coefficients
-      waveCombineKernel(Nall, Nstages, o_betahat, o_PhatL, o_scratch1);
+      // TW NEEDS TO BE UPDATED
+      waveCombineKernel(Nall, Nstages, o_betahat, o_betahatAlpha, o_PhatL, p_DhatL, o_scratch1);
       lambda = 0;
       Operator(o_scratch1, o_scratch2);
       lambda = lambdaSolve;

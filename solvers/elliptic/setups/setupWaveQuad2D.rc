@@ -73,12 +73,12 @@ MULTIGRID
 
 # can be DEFAULT or ERRORESTIMATE
 [STOPPING CRITERIA]
-ERRORESTIMATE
-#DEFAULT
+#ERRORESTIMATE
+DEFAULT
 
 # residual convergence test parameter
 [ITERATIVE CONVERGENCE TOLERANCE]
-1.e-8
+1.e-10
 
 
 ########## MULTIGRID Options ##############
@@ -93,7 +93,7 @@ CHEBYSHEV
 
 # can be any integer >0
 [MULTIGRID CHEBYSHEV DEGREE]
-2
+3
 
 ###########################################
 
@@ -113,20 +113,21 @@ VCYCLE
 
 # can be SMOOTHED or UNSMOOTHED
 [PARALMOND AGGREGATION]
-SMOOTHED
+UNSMOOTHED
 
 # can be DAMPEDJACOBI or CHEBYSHEV
 [PARALMOND SMOOTHER]
+#DAMPEDJACOBI
 CHEBYSHEV
 
 # can be any integer >0
 [PARALMOND CHEBYSHEV DEGREE]
-2
+1
 
 ###########################################
 
 [OUTPUT TO FILE]
-TRUE
+FALSE
 
 [OUTPUT FILE NAME]
 wave
