@@ -143,18 +143,24 @@ SOFTWARE.
                                @restrict const dfloat *embPL,
                                @restrict dfloat *  err){
   
-  for(dlong n=0;n<N;++n;@tile(p_Np, @outer, @inner)){
+  for(dlong n=0;n<N;++n;@tile(256, @outer, @inner)){
 
     if(n<N){
       const dfloat oldDn = fabs(oldDL[n]);
       const dfloat oldPn = fabs(oldPL[n]);
-      const dfloat newDn = fabs(newDL[n]);
-      const dfloat newPn = fabs(newPL[n]);
-      const dfloat errDn = (embDL[n]-newDn);
-      const dfloat errPn = (embPL[n]-newPn);
-      
+
+      dfloat newDn = newDL[n];
+      dfloat newPn = newPL[n];
+
+      const dfloat errDn = fabs(embDL[n]-newDn);
+      const dfloat errPn = fabs(embPL[n]-newPn);
+
+      newDn = fabs(newDn);
+      newPn = fabs(newPn);
+
       const dfloat maxDn = (oldDn>newDn) ? oldDn : newDn;
       const dfloat maxPn = (oldPn>newPn) ? oldPn : newPn;
+
       dfloat skD = ATOL + RTOL*maxDn;
       dfloat skP = ATOL + RTOL*maxPn;
       

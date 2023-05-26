@@ -88,6 +88,9 @@ ellipticStoppingCriteria<T>::ellipticStoppingCriteria(elliptic_t *_elliptic, occ
   normRn.malloc(Nblocks);
   normFn.malloc(Nblocks);
   
+  //  int maxIterations = 5000; // this needs to be made robust
+  //  etaHistory = (T*) calloc(maxIterations, sizeof(T));
+
   //setup cubature for error estimate (make this optional later)
   mesh.CubatureSetup();
   mesh.CubaturePhysicalNodes();
@@ -128,7 +131,7 @@ void ellipticStoppingCriteria<T>::setLocalRHS(deviceMemory<T> &o_bLin){
 template <typename T>
 void ellipticStoppingCriteria<T>::reset(){
 
-  eta_old = 1;  
+  //  eta_old = 1;  
   eta = 0;
 
   if(elliptic->disc_c0){
@@ -234,9 +237,11 @@ int ellipticStoppingCriteria<T>::stopTest(int iteration,
   //  printf("errorNorm: eta=%g, eta_old=%g\n", eta, eta_old);
   //  if(fabs(eta-eta_old)>etaConvergenceFactor*eta){
   {
-    eta_old = eta;
+    //    eta_old = eta;
     eta = errorEstimate(o_q, o_r);
 
+    //    etaHistory[currentIteration++] = eta;
+    
   }
 
   // https://onlinelibrary.wiley.com/doi/pdf/10.1002/cnm.1120
