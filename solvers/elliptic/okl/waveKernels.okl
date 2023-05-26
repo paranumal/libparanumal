@@ -117,16 +117,28 @@ SOFTWARE.
 // a. Phat(:,1:Nstages)*beta' => o_DrhsL
 @kernel void waveCombine(const dlong N,
                          const int Nstages,
+                         const dfloat dt,
                          const dfloat *beta,
+                         const dfloat *betaAlpha,
                          @restrict const dfloat *PhatL,
+                         @restrict const dfloat *DhatL, 
                          @restrict dfloat *DrhsL){
 
   for(dlong n=0;n<N;++n;@tile(p_Np,@outer,@inner)){
+
+#if 0    
     dfloat res = 0;
     for(int s=0;s<Nstages;++s){
       dfloat betas = beta[s];
       res += betas*PhatL[s*N+n];
+    }    
+#else
+    dfloat res = PhatL[n];
+    for(int s=0;s<Nstages;++s){
+      dfloat betaAlphas = betaAlpha[s];
+      res += dt*betaAlphas*DhatL[s*N+n];
     }
+#endif
     DrhsL[n] = res;
   }
 }

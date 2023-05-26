@@ -95,6 +95,48 @@ void elliptic_t::WaveSolver(){
   printMatrixLocal(beta, "BETA BLOCK");
   //  printMatrixLocal(betahat, "BETA HAT BLOCK");
 
+#if 1
+  // this didn't work - will need a matrix for each pressure intermediate reconstruction
+  linAlgMatrix_t<dfloat> alphatilde(Nstages, Nstages);
+  linAlgMatrix_t<dfloat> gammatilde(1,Nstages);
+  linAlgMatrix_t<dfloat> betaAlpha(1,Nstages);
+  alphatilde = 0.;
+  gammatilde = 0.;
+  
+  for(int i=0;i<=Nstages-1;++i){
+    alphatilde(i+1,1) = 1.;
+    for(int j=1;j<=i;++j){
+      alphatilde(i+1,j) += alpha(i+1,j)/gam;
+    }
+    for(int j=1;j<=i;++j){
+      for(int k=1;k<=j;++k){
+        alphatilde(i+1,k) += alpha(i+1,j)*alpha(j,k)/(gam*gam);
+      }
+    }
+    gammatilde(1,i+1) = 1./gam;
+    for(int j=1;j<=i;++j){
+      gammatilde(1,i+1) += alpha(i+1,j)/(gam*gam);
+    }
+  }
+
+  betaAlpha = 0.;
+  for(int i=1;i<=Nstages;++i){
+    for(int j=1;j<=i;++j){
+      betaAlpha(1,j) += beta(1,i)*alpha(i,j);
+    }
+  }
+  
+  printMatrixLocal(gammatilde, "GAMMA TILDE BLOCK");
+  printMatrixLocal(alphatilde, "ALPHA TILDE BLOCK");
+  printMatrixLocal(betaAlpha,  "BETAxALPHA  BLOCK");
+
+  deviceMemory<dfloat> o_alphatilde = platform.malloc<dfloat>(Nstages*Nstages, alphatilde.data);
+  deviceMemory<dfloat> o_gammatilde = platform.malloc<dfloat>(Nstages, gammatilde.data);
+  deviceMemory<dfloat> o_betaAlpha  = platform.malloc<dfloat>(Nstages, betaAlpha.data);
+
+#endif
+
+  
   
   deviceMemory<dfloat> o_alpha = platform.malloc<dfloat>(Nstages*Nstages, alpha.data);
   deviceMemory<dfloat> o_beta  = platform.malloc<dfloat>(Nstages, beta.data);
@@ -103,10 +145,11 @@ void elliptic_t::WaveSolver(){
   // set up initial conditions for D and P
   dfloat finalTime = 10;
   //  dfloat dt = 0.1;
-  dfloat dt = 0.05;
+  dfloat dt = 0.1;
   dfloat t = 0;
   int Nsteps = ceil(finalTime/dt);
   dt = finalTime/Nsteps;
+
   dfloat invDt = 1./dt;
   dfloat invGammaDt = 1./(gam*dt);
   dfloat lambdaSolve = 1./(gam*gam*dt*dt);
@@ -241,7 +284,7 @@ void elliptic_t::WaveSolver(){
   dlong Nall = mesh.Np*(mesh.Nelements+mesh.totalHaloPairs);
   std::cout << "totalHaloPairs = " << mesh.totalHaloPairs << std::endl;
   
-  memory<dfloat> DL(Nall), PL(Nall), DrhsL(Nall), PhatL(Nall*Nstages), DhatL(Nall*Nstages);
+  memory<dfloat> DL(Nall), PL(Nall), DrhsL(Nall), PhatL(Nall), DhatL(Nall*Nstages);
 
   deviceMemory<dfloat> o_DL    = platform.malloc<dfloat>(Nall);
   deviceMemory<dfloat> o_PL    = platform.malloc<dfloat>(Nall);
@@ -252,7 +295,7 @@ void elliptic_t::WaveSolver(){
   deviceMemory<dfloat> o_DtildeL  = platform.malloc<dfloat>(Nall);
   deviceMemory<dfloat> o_DrhsL = platform.malloc<dfloat>(Nall);
   deviceMemory<dfloat> o_DhatL = platform.malloc<dfloat>(Nall*Nstages);
-  deviceMemory<dfloat> o_PhatL = platform.malloc<dfloat>(Nall*Nstages);
+  deviceMemory<dfloat> o_PhatL = platform.malloc<dfloat>(Nall);
   deviceMemory<dfloat> o_scratch1 = platform.malloc<dfloat>(Nall);
   deviceMemory<dfloat> o_scratch2 = platform.malloc<dfloat>(Nall);
   deviceMemory<dfloat> o_errL    = platform.malloc<dfloat>(Nall);
@@ -365,6 +408,8 @@ void elliptic_t::WaveSolver(){
                               Nstages,
                               stage,
                               o_alpha,
+                              o_alphatilde,
+                              o_gammatilde,
                               o_WJ,
                               o_MM,
                               o_DtildeL, 
@@ -379,7 +424,7 @@ void elliptic_t::WaveSolver(){
     // D = Dhat(:,1) + dt*LAP*(Phat(:,1:Nstages)*beta');
     
     // a. Phat(:,1:Nstages)*beta' => o_scratchL
-    waveCombineKernel(Nall, Nstages, o_beta, o_PhatL, o_scratch1);
+    waveCombineKernel(Nall, Nstages, dt, o_beta, o_betaAlpha, o_PhatL, o_DhatL, o_scratch1);
 
     // b. L*(Phat(:,1:Nstages)*beta') => o_DL
     lambda = 0;
@@ -407,7 +452,7 @@ void elliptic_t::WaveSolver(){
              (char*) settings.getSetting("PRECONDITIONER").c_str());
     }
 
-    int iostep = 50;
+    int iostep = 2;
     if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
       static int slice=0;
       if((tstep%iostep) == 0){
@@ -507,6 +552,8 @@ void elliptic_t::WaveSolver(){
                                 Nstages,
                                 stage,
                                 o_alpha,
+                                o_alphatilde,
+                                o_gammatilde,
                                 o_WJ,
                                 o_MM,
                                 o_DtildeL, 
@@ -518,7 +565,8 @@ void elliptic_t::WaveSolver(){
       printf("====> time=%g, dt=%g, step=%d, sum(iterD)=%d, ave(iterD)=%3.2f\n", t, dt, tstep, iter, iter/(double)(Nstages-1));
         
       // finalize: 
-      waveCombineKernel(Nall, Nstages, o_beta, o_PhatL, o_scratch1);
+//      waveCombineKernel(Nall, Nstages, o_beta, o_PhatL, o_scratch1);
+      waveCombineKernel(Nall, Nstages, dt, o_beta, o_betaAlpha, o_PhatL, o_DhatL, o_scratch1);
       lambda = 0;
       Operator(o_scratch1, o_scratch2);
       lambda = lambdaSolve;

@@ -79,6 +79,8 @@ SOFTWARE.
                                     const int    Nstages,
                                     const int    stage,
                                     @restrict const dfloat *alpha,
+                                    @restrict const dfloat *alphatilde,
+                                    @restrict const dfloat *gammatilde,  
                                     @restrict const dfloat *WJ,
                                     @restrict const dfloat *MM,                                    
                                     @restrict       dfloat *DtildeL,
@@ -98,37 +100,30 @@ SOFTWARE.
       const dfloat Dn = DhatL[id];
       const dfloat Pn = PhatL[id];
 
-      dfloat Di   = Dtilde - invGammaDt*Pn;
-      dfloat Pi   = Pn;
+      dfloat Di = Dtilde - gammatilde[i]*Pn/dt;
 
-      dfloat Rnew = Dn + invGammaDt*Pn;
+      dfloat Rnew = gammatilde[i+1]*Pn/dt;
       
       for(int j=0;j<i;++j){
         dfloat Dj = DhatL[id+j*Nelements*p_Np];
-        dfloat Pj = PhatL[id+j*Nelements*p_Np];
-
-        dfloat Aij = alpha[i*Nstages+j];
         
-        Pi += dt*Aij*Dj;
-        Di -= invGamma*Aij*(Dj + invGammaDt*Pj);
-
+        dfloat tildeAij = alphatilde[i*Nstages+j];
+        if(j==0) tildeAij -= 1;
+        
+        Di -= tildeAij*Dj;
+        
         if(i+1<Nstages){
-          dfloat tmp = alpha[(i+1)*Nstages+j];
-          Rnew += invGamma*tmp*(Dj + invGammaDt*Pj);
+          dfloat tmptilde = alphatilde[(i+1)*Nstages+j];          
+          Rnew += tmptilde*Dj;
         }
       }
-
-      // use updated Di to finalize  Pi
-      Pi += dt*gamma*Di;
       
       if(i+1<Nstages){
-        dfloat tmp = alpha[(i+1)*Nstages+i];
-        Rnew += invGamma*tmp*(Di + invGammaDt*Pi);
+        dfloat tmptilde = alphatilde[(i+1)*Nstages+i];          
+        Rnew += tmptilde*Di;
       }
       
       DhatL[id+i*Nelements*p_Np] = Di;
-      PhatL[id+i*Nelements*p_Np] = Pi;
-      
       s_R[n] = Rnew;
     }
     
