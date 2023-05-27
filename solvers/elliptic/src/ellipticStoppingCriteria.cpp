@@ -134,7 +134,7 @@ void ellipticStoppingCriteria<T>::reset(){
   //  eta_old = 1;  
   eta = 0;
 
-  if(elliptic->disc_c0){
+  if(elliptic->disc_c0 && addBCKernel){
     //fill masked nodes with BC data
     addBCKernel[0](elliptic->mesh.Nelements,
 		   elliptic->mesh.o_x,
@@ -143,7 +143,7 @@ void ellipticStoppingCriteria<T>::reset(){
 		   elliptic->o_mapB,
 		   o_qL);
   }
-    
+  
   currentIteration = 0;
 }
 
