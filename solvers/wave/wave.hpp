@@ -73,8 +73,13 @@ public:
    dfloat ellipticTOL;
    dfloat tau;
 
+   int Nstages;
+   int embedded;
    dfloat gamma;
-
+   dfloat lambdaSolve;
+   
+   linAlgMatrix_t<dfloat> alpha, beta, betahat;
+   
    deviceMemory<dfloat> o_alphatilde;
    deviceMemory<dfloat> o_gammatilde;
    deviceMemory<dfloat> o_betatilde;

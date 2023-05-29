@@ -216,10 +216,10 @@ void wave_t::Run(){
     if(disc_c0){
       // gather up RHS 
       elliptic.ogsMasked.Gather(o_scratch1, o_scratch1L, 1, ogs::Add, ogs::NoTrans);
-      Operator(o_scratch1, o_scratch2);
+      elliptic.Operator(o_scratch1, o_scratch2);
       elliptic.ogsMasked.Scatter(o_scratch2L, o_scratch2, 1, ogs::NoTrans);
     }else{
-      Operator(o_scratch1L, o_scratch2L);
+      elliptic.Operator(o_scratch1L, o_scratch2L);
     }
     elliptic.lambda = lambdaSolve;
     

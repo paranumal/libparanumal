@@ -94,7 +94,6 @@ waveSettings_t::waveSettings_t(comm_t& _comm):
   parAlmond::AddSettings(*this, "ELLIPTIC ");
   InitialGuess::AddSettings(*this, "ELLIPTIC ");
   
-  report();
 }
 
 void waveSettings_t::report() {
