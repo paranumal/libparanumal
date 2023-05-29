@@ -39,7 +39,8 @@ void wave_t::Run(){
   dfloat t = 0;
 
   // round time step
-  dt = 0.1;
+  settings.getSetting("TIME STEP", dt);
+  
   Nsteps = ceil(finalTime/dt);
   dt = finalTime/Nsteps;
 
