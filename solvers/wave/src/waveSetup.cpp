@@ -48,13 +48,17 @@ void wave_t::Setup(platform_t& _platform,
   
   // initialize time stepper
   linAlgMatrix_t<dfloat> BTABLE;
-  int Nstages = 0;
-  int embedded = 0;
+
+  Nstages = 0;
+  embedded = 0;
   
   libp::TimeStepper::butcherTables("ESDIRK6(5)9L[2]SA", Nstages, embedded, BTABLE);
   
   // extract alphas, betas
-  linAlgMatrix_t<dfloat> alpha(Nstages, Nstages), beta(1,Nstages), betahat(1,Nstages);
+  alpha.reshape(Nstages, Nstages);
+  beta.reshape(1,Nstages);
+  betahat.reshape(1,Nstages);
+  
   for(int n=1;n<=Nstages;++n){
     for(int m=1;m<=Nstages;++m){
       alpha(n,m) = BTABLE(n,m+1);
