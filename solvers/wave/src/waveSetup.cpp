@@ -35,17 +35,31 @@ void wave_t::Setup(platform_t& _platform,
   comm = _mesh.comm;
   settings = _settings;
 
-  ellipticSettings = _settings.extractEllipticSettings();
-  
   //Trigger JIT kernel builds
   ogs::InitializeKernels(platform, ogs::Dfloat, ogs::Add);
 
-  //setup linear algebra module
-  platform.linAlg().InitKernels({"set", "sum", "norm2", "min", "max"});
-  
   // FOR THIS - WE ASSUME IPDG  and LAMBDA=1
   Nfields = 1;
-  
+
+  ellipticSettings = _settings.extractEllipticSettings();
+
+  int NBCTypes = 7;
+  memory<int> BCType(NBCTypes);
+  // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
+  BCType[0] = 0;
+  BCType[1] = 1;
+  BCType[2] = 1;
+  BCType[3] = 2;
+  BCType[4] = 1;
+  BCType[5] = 2;
+  BCType[6] = 2;
+
+  lambdaSolve = 1;
+  elliptic.Setup(platform, mesh, ellipticSettings, lambdaSolve, NBCTypes, BCType);
+
+  // find out if this is a C0 discretization
+  disc_c0 = elliptic.settings.compareSetting("DISCRETIZATION", "CONTINUOUS") ? 1 : 0;
+
   // initialize time stepper
   linAlgMatrix_t<dfloat> BTABLE;
 
@@ -190,6 +204,9 @@ void wave_t::Setup(platform_t& _platform,
   waveInitialConditionsKernel
      = platform.buildKernel(fileName, kernelName, kernelInfo);
 
+  //setup linear solver
+  Nall = mesh.Np*(mesh.Nelements+mesh.totalHaloPairs);
+  
   //create occa buffers
   DL.malloc(Nall);
   PL.malloc(Nall);

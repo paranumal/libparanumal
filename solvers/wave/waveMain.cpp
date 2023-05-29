@@ -41,22 +41,23 @@ int main(int argc, char **argv){
     meshSettings_t meshSettings(comm);
     waveSettings_t waveSettings(comm);
 
+    //load settings from file
+    waveSettings.parseFromFile(platformSettings, meshSettings,
+                               argv[1]);
+    
     // set up platform
     platform_t platform(platformSettings);
 
+    std::cout << "REPORTING INITIAL SETTINGS" << std::endl;
     platformSettings.report();
     meshSettings.report();
+    waveSettings.report();
+    std::cout << "ENDING INITIAL SETTINGS" << std::endl;
 
     // set up mesh
     mesh_t mesh(platform, meshSettings, comm);
 
     // Boundary Type translation. Just defaults.
-    int NBCTypes = 3;
-    memory<int> BCType(3);
-    BCType[0] = 0;
-    BCType[1] = 1;
-    BCType[2] = 2;
-
     wave_t wave(platform, mesh, waveSettings);
 
     // run

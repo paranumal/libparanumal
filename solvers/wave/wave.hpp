@@ -140,13 +140,17 @@ public:
    void Setup(platform_t& _platform, mesh_t& _mesh,
               waveSettings_t& _settings);
    
-   void Solve(deviceMemory<dfloat> &_DL, deviceMemory<dfloat> &_PL, const dfloat T);
+   void Solve(deviceMemory<dfloat> &_DL,
+              deviceMemory<dfloat> &_PL,
+              const dfloat T);
    
    void Run();
    
    void Report(dfloat time, int tstep);
    
-   void PlotFields(libp::memory<dfloat>& DL, libp::memory<dfloat>& PL,  std::string fileName);
+   void PlotFields(libp::memory<dfloat>& DL,
+                   libp::memory<dfloat>& PL,
+                   std::string fileName);
 
 };
 

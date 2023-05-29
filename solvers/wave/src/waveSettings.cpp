@@ -33,7 +33,7 @@ waveSettings_t::waveSettings_t(comm_t& _comm):
   newSetting("DATA FILE",
              "data/waveHomogeneous2D.h",
              "Boundary and Initial conditions header");
-
+  
   newSetting("TIME INTEGRATOR",
              "ESDIRK6(5)9L[2]SA", 
              "Time integration method",
@@ -77,8 +77,12 @@ waveSettings_t::waveSettings_t(comm_t& _comm):
              ".1",
              "Time between printing output data");
 
+  newSetting("OUTPUT STEP",
+             "100",
+             "Number of time steps betwenen printing output data");
+  
   newSetting("OUTPUT TO FILE",
-             "FALSE",
+             "TRUE",
              "Flag for writing fields to VTU files",
              {"TRUE", "FALSE"});
 
@@ -100,6 +104,7 @@ void waveSettings_t::report() {
 
   if (comm.rank()==0) {
     std::cout << "WAVE Settings:\n\n";
+
     reportSetting("DATA FILE");
     reportSetting("TIME INTEGRATOR");
     reportSetting("START TIME");
@@ -159,11 +164,11 @@ void waveSettings_t::parseFromFile(platformSettings_t& platformSettings,
 
 ellipticSettings_t waveSettings_t::extractEllipticSettings() {
 
-  ellipticSettings_t  ellipticSettings(comm);
-
-//  InitialGuess::AddSettings(ellipticSettings);
-
-  for(auto it = ellipticSettings.settings.begin(); it != ellipticSettings.settings.end(); ++it) {
+  ellipticSettings_t  _ellipticSettings(comm);
+  
+//  InitialGuess::AddSettings(_ellipticSettings);
+  
+  for(auto it = _ellipticSettings.settings.begin(); it != _ellipticSettings.settings.end(); ++it) {
     setting_t& set = it->second;
     const std::string name = set.getName();
 
@@ -173,6 +178,15 @@ ellipticSettings_t waveSettings_t::extractEllipticSettings() {
     set.updateVal(val);
   }
 
-  return ellipticSettings;
+  {
+    std::string val;
+    getSetting("DATA FILE", val);
+    _ellipticSettings.newSetting("DATA FILE",
+                                 val,
+                                 "Boundary and Initial conditions header");
+  }
+
+  
+  return _ellipticSettings;
 }
 

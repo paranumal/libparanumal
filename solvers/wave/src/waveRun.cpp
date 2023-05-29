@@ -40,30 +40,19 @@ void wave_t::Run(){
   int Nsteps = ceil(finalTime/dt);
   dt = finalTime/Nsteps;
 
+  int iostep = 1;
+  settings.getSetting("OUTPUT STEP", iostep);
+  
   dfloat invGamma = 1./gamma;
   dfloat invDt = 1./dt;
   dfloat invGammaDt = 1./(gamma*dt);
 
   lambdaSolve = 1./(gamma*gamma*dt*dt);
-
-  int NBCTypes = 7;
-  memory<int> BCType(NBCTypes);
-  // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
-  BCType[0] = 0;
-  BCType[1] = 1;
-  BCType[2] = 1;
-  BCType[3] = 2;
-  BCType[4] = 1;
-  BCType[5] = 2;
-  BCType[6] = 2;
-
-
-  
-  elliptic.Setup(platform, mesh, ellipticSettings, lambdaSolve, NBCTypes, BCType);
   
   int maxIter = 5000;
   int verbose = settings.compareSetting("VERBOSE", "TRUE") ? 1 : 0;
   dfloat tol = (sizeof(dfloat)==sizeof(double)) ? 1.0e-10 : 1.0e-5; // TW !!!
+
   elliptic.settings.getSetting("ITERATIVE CONVERGENCE TOLERANCE", tol);
   
   dlong Ndofs = elliptic.Ndofs;
@@ -85,10 +74,8 @@ void wave_t::Run(){
      elliptic.precon.Setup<OASPrecon>(elliptic);
   else if(elliptic.settings.compareSetting("PRECONDITIONER", "NONE"))
      elliptic.precon.Setup<IdentityPrecon>(Ndofs);
-
-
   
-  // build linear solvers for P and D, but typically only use one
+  // build linear solvers for elliptic
   if (elliptic.settings.compareSetting("LINEAR SOLVER","NBPCG")){
     linearSolver.Setup<LinearSolver::nbpcg<dfloat> >(Ndofs, Nhalo, platform, elliptic.settings, comm);
   } else if (elliptic.settings.compareSetting("LINEAR SOLVER","NBFPCG")){
@@ -101,6 +88,7 @@ void wave_t::Run(){
     linearSolver.Setup<LinearSolver::pminres<dfloat> >(Ndofs, Nhalo, platform, elliptic.settings, comm);
   }
 
+  // build initial guess strategy
   if (elliptic.settings.compareSetting("INITIAL GUESS STRATEGY", "LAST")) {
     linearSolver.SetupInitialGuess<InitialGuess::Last<dfloat> >(Ndofs, platform, elliptic.settings, comm);
   } else if (elliptic.settings.compareSetting("INITIAL GUESS STRATEGY", "ZERO")) {
@@ -113,19 +101,13 @@ void wave_t::Run(){
     linearSolver.SetupInitialGuess<InitialGuess::Extrap<dfloat> >(Ndofs, platform, elliptic.settings, comm);
   }
 
-  //setup linear solver
-  disc_c0 = elliptic.settings.compareSetting("DISCRETIZATION", "CONTINUOUS") ? 1 : 0;
-  
-  Nall = mesh.Np*(mesh.Nelements+mesh.totalHaloPairs);
-
   // set initial conditions
   waveInitialConditionsKernel(Nall, t, mesh.o_x, mesh.o_y, mesh.o_z, o_DL, o_PL);
 
   stoppingCriteria_t<dfloat> *stoppingCriteria = NULL;
   ellipticStoppingCriteria<dfloat> *esc = NULL;
-  
+
   if(elliptic.settings.compareSetting("STOPPING CRITERIA", "ERRORESTIMATE")){
-    printf("SETTING UP ESC\n");
     esc = new ellipticStoppingCriteria<dfloat>(&elliptic, NULL);
     esc->reset();
     stoppingCriteria = esc;
@@ -143,7 +125,7 @@ void wave_t::Run(){
     t = tstep*dt;
 
     timePoint_t starts = GlobalPlatformTime(platform);
-
+    
     // PhatL = PL, DhatL = DL, DrhsL = lambda*WJ*(scD*DL + scP*PL)
     dfloat scD = 1. + invGamma*alpha(2,1);
     dfloat scP = scD*invGamma*invDt;
@@ -162,8 +144,6 @@ void wave_t::Run(){
       // gather rhs to globalDofs if c0
       if(disc_c0){
         elliptic.ogsMasked.Gather(o_Drhs,   o_DrhsL,   1, ogs::Add, ogs::Trans);
-        
-        // TW not sure about this (working assumption is that DtildeL is already implicitly continuous)
         elliptic.ogsMasked.Gather(o_Dtilde, o_DtildeL, 1, ogs::Add, ogs::NoTrans);
       }else{
         o_DtildeL.copyTo(o_Dtilde);
@@ -243,10 +223,9 @@ void wave_t::Run(){
              iter,
              elapsedTime/(NglobalDofs),
              NglobalDofs*((dfloat)iter/elapsedTime),
-             (char*) settings.getSetting("PRECONDITIONER").c_str());
+             (char*) elliptic.settings.getSetting("PRECONDITIONER").c_str());
     }
 
-    int iostep = 1;
     if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
       static int slice=0;
       if((tstep%iostep) == 0){
