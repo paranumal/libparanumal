@@ -66,7 +66,11 @@ public:
    int disc_c0=0;
    
    int Niter;
-
+   int iostep;
+   int maxIter;
+   int verbose;
+   dfloat tol;
+   
    dlong Nall;
    dlong NglobalDofs;
    
@@ -76,6 +80,12 @@ public:
    int Nstages;
    int embedded;
    dfloat gamma;
+   dfloat invGamma;
+   dfloat invGammaDt;
+   dfloat invDt;
+   int Nsteps;
+   dfloat dt;
+   
    dfloat lambdaSolve;
    
    linAlgMatrix_t<dfloat> alpha, beta, betahat;
@@ -120,6 +130,10 @@ public:
    deviceMemory<dfloat> o_invWJ;
    deviceMemory<dfloat> o_WJ;
 
+   stoppingCriteria_t<dfloat> *stoppingCriteria = NULL;
+   ellipticStoppingCriteria<dfloat> *esc = NULL;
+
+   
    kernel_t waveStageUpdateKernel;
    kernel_t waveCombineKernel;
    kernel_t waveErrorEstimateKernel;
@@ -141,8 +155,7 @@ public:
               waveSettings_t& _settings);
    
    void Solve(deviceMemory<dfloat> &_DL,
-              deviceMemory<dfloat> &_PL,
-              const dfloat T);
+              deviceMemory<dfloat> &_PL);
    
    void Run();
    

@@ -85,7 +85,7 @@ void wave_t::Setup(platform_t& _platform,
   }
 
   gamma = alpha(2,2);
-  dfloat invGamma = 1./gamma;
+  invGamma = 1./gamma;
   
   std::cout << "gamma = " << gamma << std::endl;
 
