@@ -74,6 +74,7 @@ void wave_t::Setup(platform_t& _platform,
   alpha.reshape(Nstages, Nstages);
   beta.reshape(1,Nstages);
   betahat.reshape(1,Nstages);
+  esdirkC.reshape(1,Nstages);
   
   for(int n=1;n<=Nstages;++n){
     for(int m=1;m<=Nstages;++m){
@@ -84,6 +85,7 @@ void wave_t::Setup(platform_t& _platform,
     if(embedded)
        betahat(1,n) = BTABLE(Nstages+2,n+1);
 
+    esdirkC(n) = BTABLE(n,1);
   }
 
   gamma = alpha(2,2);
@@ -166,7 +168,7 @@ void wave_t::Setup(platform_t& _platform,
     suffix = "Hex3D";
   }
 
-  std::string oklFilePrefix = DELLIPTIC "/okl/";
+  std::string oklFilePrefix = DWAVE "/okl/";
   std::string oklFileSuffix = ".okl";
   std::string fileName, kernelName;
 
@@ -188,12 +190,14 @@ void wave_t::Setup(platform_t& _platform,
   waveErrorEstimateKernel
      = platform.buildKernel(fileName, kernelName, kernelInfo);
   
+  // element type specific kernels
   fileName   = oklFilePrefix + "waveKernels" + suffix + oklFileSuffix;
 
   kernelName = "waveStepInitialize" + suffix;
   waveStepInitializeKernel =
      platform.buildKernel(fileName, kernelName, kernelInfo);
 
+  
   kernelName = "waveStageFinalize" + suffix;
   waveStageFinalizeKernel =
      platform.buildKernel(fileName, kernelName, kernelInfo);
@@ -206,6 +210,10 @@ void wave_t::Setup(platform_t& _platform,
   waveInitialConditionsKernel
      = platform.buildKernel(fileName, kernelName, kernelInfo);
 
+  kernelName = "waveForcing" + suffix;
+  waveForcingKernel
+     = platform.buildKernel(fileName, kernelName, kernelInfo);
+  
   //setup linear solver
   Nall = mesh.Np*(mesh.Nelements+mesh.totalHaloPairs);
   
@@ -225,6 +233,8 @@ void wave_t::Setup(platform_t& _platform,
   o_scratch1L = platform.malloc<dfloat>(Nall);
   o_scratch2L = platform.malloc<dfloat>(Nall);
 
+  o_FL        = platform.malloc<dfloat>(Nall);
+  
   if (disc_c0){
     NglobalDofs = elliptic.ogsMasked.NgatherGlobal*Nfields;
   } else {

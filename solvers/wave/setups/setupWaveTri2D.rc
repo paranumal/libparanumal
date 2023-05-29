@@ -15,13 +15,13 @@ BOX
 
 [BOX NX]
 #72
-#288
-144
+288
+#144
   
 [BOX NY]
 #72
-#288
-144
+288
+#144
 
 [BOX DIMX]
 2
@@ -44,8 +44,11 @@ BOX
 ESDIRK4(3)6L{2}SA 
 
 [TIME STEP]
-0.01  
-  
+0.1  
+
+[OMEGA]
+77
+    
 [FINAL TIME]
 3.
   

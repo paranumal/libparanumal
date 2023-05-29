@@ -87,8 +87,10 @@ public:
    dfloat dt;
    
    dfloat lambdaSolve;
+   dfloat omega;
+   dfloat sigma;
    
-   linAlgMatrix_t<dfloat> alpha, beta, betahat;
+   linAlgMatrix_t<dfloat> alpha, beta, betahat, esdirkC;
    
    deviceMemory<dfloat> o_alphatilde;
    deviceMemory<dfloat> o_gammatilde;
@@ -124,6 +126,8 @@ public:
    deviceMemory<dfloat> o_scratch2;
    deviceMemory<dfloat> o_scratch1L;
    deviceMemory<dfloat> o_scratch2L;
+
+   deviceMemory<dfloat> o_FL;
    
    deviceMemory<dfloat> o_invMM;
    deviceMemory<dfloat> o_MM;
@@ -142,6 +146,7 @@ public:
    kernel_t waveStageInitializeKernel;
    kernel_t waveStageFinalizeKernel;
    kernel_t waveInitialConditionsKernel;
+   kernel_t waveForcingKernel;
    
    wave_t() = default;
    wave_t(platform_t &_platform,
@@ -155,7 +160,8 @@ public:
               waveSettings_t& _settings);
    
    void Solve(deviceMemory<dfloat> &_DL,
-              deviceMemory<dfloat> &_PL);
+              deviceMemory<dfloat> &_PL,
+              deviceMemory<dfloat> &_FL);
    
    void Run();
    

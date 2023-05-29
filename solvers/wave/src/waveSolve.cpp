@@ -28,7 +28,9 @@ SOFTWARE.
 #include "timer.hpp"
 #include "ellipticPrecon.hpp"
 
-void wave_t::Solve(deviceMemory<dfloat> &o_rDL, deviceMemory<dfloat> &o_rPL){
+void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
+                   deviceMemory<dfloat> &o_rPL,
+                   deviceMemory<dfloat> &o_rFL){
 
 
   std::cout << "iostep = " << iostep << std::endl;
@@ -77,6 +79,14 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL, deviceMemory<dfloat> &o_rPL){
       }
       
       iter += iterD;
+
+      dfloat scF = 0;
+      if(stage<Nstages){
+        for(int j=1;j<=stage+1;++j){
+          dfloat tj = t + dt*esdirkC(1,j);
+          scF += alpha(stage+1,j)*cos(omega*tj);
+        }
+      }
       
       // transform DtildeL to DhatL, compute DrhsL for next stage (if appropriate)
       waveStageFinalizeKernel(mesh.Nelements,
@@ -87,11 +97,13 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL, deviceMemory<dfloat> &o_rPL){
                               lambdaSolve,
                               Nstages,
                               stage,
+                              scF,
                               o_alpha,
                               o_alphatilde,
                               o_gammatilde,
                               o_WJ,
                               o_MM,
+                              o_FL,
                               o_DtildeL, 
                               o_DhatL,
                               o_PhatL,
@@ -121,7 +133,17 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL, deviceMemory<dfloat> &o_rPL){
     // P = Phat(:,1) +     dt*(Dhat(:,1:Nstages)*beta'); 
     // D = Dhat(:,1) + dt*LAP*(Phat(:,1:Nstages)*beta'); (LAP = -MM\L)
     // THIS INCLUDE MASS MATRIX INVERSE - (IF C0 USES INVERSE OF GLOBALIZED LUMPED MASS MATRIX)
-    waveStepFinalizeKernel(mesh.Nelements, dt, Nstages, o_beta, o_invWJ, o_invMM, o_scratch2L, o_DhatL, o_PhatL, o_rDL, o_rPL); 
+
+    dfloat scF = 0;
+    for(int i=1;i<=Nstages;++i){
+      dfloat ti = t + dt*esdirkC(1,i);
+      std::cout << "ti =" << ti << std::endl;
+      scF += beta(1,i)*cos(omega*ti);
+    }
+
+    
+    waveStepFinalizeKernel(mesh.Nelements, dt, Nstages, scF, o_beta,
+                           o_invWJ, o_invMM, o_scratch2L, o_DhatL, o_PhatL, o_FL, o_rDL, o_rPL); 
 
     timePoint_t ends = GlobalPlatformTime(platform);
 

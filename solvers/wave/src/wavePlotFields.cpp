@@ -73,18 +73,20 @@ void wave_t::PlotFields(libp::memory<dfloat>& D, libp::memory<dfloat>& P, std::s
   fprintf(fp, "        </DataArray>\n");
   fprintf(fp, "      </Points>\n");
 
-  memory<dfloat> Iq(mesh.plotNp*Nfields);
+  memory<dfloat> Iq(mesh.plotNp*2);
 
   // write out fields
   fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
-  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Fields\" NumberOfComponents=\"%d\" Format=\"ascii\">\n", Nfields);
+  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"P\" NumberOfComponents=\"%d\" Format=\"ascii\">\n",
+          2);
   for(dlong e=0;e<mesh.Nelements;++e){
-    for (int f=0;f<Nfields;f++)
-      mesh.PlotInterp(P + f*mesh.Np + e*mesh.Np*Nfields, Iq + f*mesh.Np, scratch);
-
+    
+    mesh.PlotInterp(P + e*mesh.Np, Iq + 0*mesh.Np, scratch);
+    mesh.PlotInterp(D + e*mesh.Np, Iq + 1*mesh.Np, scratch);
+    
     for(int n=0;n<mesh.plotNp;++n){
       fprintf(fp, "       ");
-      for (int f=0;f<Nfields;f++)
+      for (int f=0;f<2;f++)
         fprintf(fp, "%f ", Iq[n+f*mesh.Np]);
       fprintf(fp, "\n");
     }
@@ -93,7 +95,7 @@ void wave_t::PlotFields(libp::memory<dfloat>& D, libp::memory<dfloat>& P, std::s
   fprintf(fp, "     </PointData>\n");
 
   fprintf(fp, "    <Cells>\n");
-  fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");
+  fprintf(fp, "      <DataArray type=\"Int64\" Name=\"connectivity\" Format=\"ascii\">\n");
 
   for(dlong e=0;e<mesh.Nelements;++e){
     for(int n=0;n<mesh.plotNelements;++n){
@@ -106,7 +108,7 @@ void wave_t::PlotFields(libp::memory<dfloat>& D, libp::memory<dfloat>& P, std::s
   }
   fprintf(fp, "        </DataArray>\n");
 
-  fprintf(fp, "        <DataArray type=\"Int32\" Name=\"offsets\" Format=\"ascii\">\n");
+  fprintf(fp, "        <DataArray type=\"Int64\" Name=\"offsets\" Format=\"ascii\">\n");
   dlong cnt = 0;
   for(dlong e=0;e<mesh.Nelements;++e){
     for(int n=0;n<mesh.plotNelements;++n){
@@ -117,7 +119,7 @@ void wave_t::PlotFields(libp::memory<dfloat>& D, libp::memory<dfloat>& P, std::s
   }
   fprintf(fp, "       </DataArray>\n");
 
-  fprintf(fp, "       <DataArray type=\"Int32\" Name=\"types\" Format=\"ascii\">\n");
+  fprintf(fp, "       <DataArray type=\"Int64\" Name=\"types\" Format=\"ascii\">\n");
   for(dlong e=0;e<mesh.Nelements;++e){
     for(int n=0;n<mesh.plotNelements;++n){
       if(mesh.dim==2)

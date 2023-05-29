@@ -108,6 +108,12 @@ void wave_t::Run(){
   // set initial conditions
   waveInitialConditionsKernel(Nall, t, mesh.o_x, mesh.o_y, mesh.o_z, o_DL, o_PL);
 
+  // set up some monochromatic forcing (https://arxiv.org/pdf/1910.10148.pdf)
+  // harmonic spatial forcing
+  settings.getSetting("OMEGA", omega);
+  sigma = std::max(36., omega*omega);
+  waveForcingKernel(Nall, t, sigma, omega, mesh.o_x, mesh.o_y, mesh.o_z, o_FL); // will use cos(omega*t)*FL
+  
   if(elliptic.settings.compareSetting("STOPPING CRITERIA", "ERRORESTIMATE")){
     esc = new ellipticStoppingCriteria<dfloat>(&elliptic, NULL);
     esc->reset();
@@ -119,8 +125,8 @@ void wave_t::Run(){
   }
 
   // integrate between startTime and endTime
-  Solve(o_DL, o_PL);
-  Solve(o_DL, o_PL);
+  Solve(o_DL, o_PL, o_FL);
+//  Solve(o_DL, o_PL, o_FL);
   
   
 #if 0

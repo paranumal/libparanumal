@@ -73,6 +73,10 @@ waveSettings_t::waveSettings_t(comm_t& _comm):
              "0.1",
              "Time step");
 
+  newSetting("OMEGA",
+             "1",
+             "Frequency for harmonic forcing");
+
   newSetting("OUTPUT INTERVAL",
              ".1",
              "Time between printing output data");
