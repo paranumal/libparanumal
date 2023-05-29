@@ -1,0 +1,210 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+
+@kernel void waveStepInitializeTri2D(const dlong Nelements,
+                                     const dfloat scD,
+                                     const dfloat scP,
+                                     const dfloat lambda,
+                                     @restrict const dfloat *WJ,
+                                     @restrict const dfloat *MM,
+                                     @restrict const dfloat *DL,
+                                     @restrict const dfloat *PL,
+                                     @restrict       dfloat *DhatL,
+                                     @restrict       dfloat *PhatL,
+                                     @restrict       dfloat *DrhsL){
+  
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    @shared dfloat s_R[p_Np];
+
+    for(dlong n=0;n<p_Np;++n;@inner(0)){
+      const dlong id = e*p_Np + n;
+      const dfloat Dn = DL[id];
+      const dfloat Pn = PL[id];
+
+      // start hat vars
+      DhatL[id] = Dn;
+      PhatL[id] = Pn;
+
+      const dfloat Rn = scD*Dn + scP*Pn;
+      
+      s_R[n] = Rn;
+    }
+    
+    @barrier();
+ 
+    for(dlong n=0;n<p_Np;++n;@inner(0)){
+      dfloat Drhs = 0;
+      for(dlong m=0;m<p_Np;++m){
+        Drhs += MM[n+m*p_Np]*s_R[m];
+      }
+      Drhs *= WJ[e];
+      
+      const dlong id = e*p_Np+n;
+      DrhsL[id] = lambda*Drhs;
+    }
+  }
+}
+
+
+@kernel void waveStageFinalizeTri2D(const dlong Nelements,
+                                    const dfloat dt,
+                                    const dfloat invGammaDt,
+                                    const dfloat invGamma,
+                                    const dfloat gamma,
+                                    const dfloat lambda,
+                                    const int    Nstages,
+                                    const int    stage,
+                                    @restrict const dfloat *alpha,
+                                    @restrict const dfloat *alphatilde,
+                                    @restrict const dfloat *gammatilde,  
+                                    @restrict const dfloat *WJ,
+                                    @restrict const dfloat *MM,                                    
+                                    @restrict       dfloat *DtildeL,
+                                    @restrict       dfloat *DhatL,
+                                    @restrict       dfloat *PhatL,
+                                    @restrict       dfloat *DrhsL){
+  
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    @shared dfloat s_R[p_Np];
+
+    for(dlong n=0;n<p_Np;++n;@inner(0)){
+      const int i = stage-1;
+      const dlong id = e*p_Np + n;
+      
+      const dfloat Dtilde = DtildeL[id];
+
+      const dfloat Dn = DhatL[id];
+      const dfloat Pn = PhatL[id];
+
+      dfloat Di = Dtilde - gammatilde[i]*Pn/dt;
+
+      dfloat Rnew = Dn + gammatilde[i+1]*Pn/dt;
+      
+      for(int j=0;j<i;++j){
+        dfloat Dj = DhatL[id+j*Nelements*p_Np];
+        
+        dfloat tildeAij = alphatilde[i*Nstages+j];
+        
+        Di -= tildeAij*Dj;
+        
+        if(i+1<Nstages){
+          dfloat tmptilde = alphatilde[(i+1)*Nstages+j];          
+          Rnew += tmptilde*Dj;
+        }
+      }
+      
+      if(i+1<Nstages){
+        dfloat tmptilde = alphatilde[(i+1)*Nstages+i];          
+        Rnew += tmptilde*Di;
+      }
+      
+      DhatL[id+i*Nelements*p_Np] = Di;
+      s_R[n] = Rnew;
+    }
+    
+    @barrier();
+
+    for(dlong n=0;n<p_Np;++n;@inner(0)){
+      const int i = stage-1;
+      if(i+1<Nstages){
+        dfloat Drhs = 0;
+        for(dlong m=0;m<p_Np;++m){
+          Drhs += MM[n+m*p_Np]*s_R[m];
+        }
+        Drhs *= WJ[e];
+        
+        const dlong id = e*p_Np+n;
+        DrhsL[id] = lambda*Drhs;
+      }
+    }
+  }
+}
+
+  
+@kernel void waveStepFinalizeTri2D(const dlong Nelements,
+                                   const dfloat dt,
+                                   const int Nstages,
+                                   @restrict const dfloat *beta,
+                                   @restrict const dfloat *invWJ,
+                                   @restrict const dfloat *invMM,
+                                   @restrict const dfloat *ML_Phat_Beta,
+                                   @restrict const dfloat *DhatL,
+                                   @restrict const dfloat *PhatL,
+                                   @restrict       dfloat *DL,
+                                   @restrict       dfloat *PL){
+  
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    @shared dfloat s_tmp[p_Np];
+
+    for(dlong n=0;n<p_Np;++n;@inner(0)){
+      s_tmp[n] = ML_Phat_Beta[e*p_Np+n];
+    }
+    
+    @barrier();
+
+    for(dlong n=0;n<p_Np;++n;@inner(0)){
+      dfloat Dres = 0;
+      for(dlong m=0;m<p_Np;++m){
+        Dres += invMM[n+m*p_Np]*s_tmp[m];
+      }
+      Dres *= invWJ[e];
+      
+      const dlong id = e*p_Np+n;
+      DL[id] = DhatL[id] - dt*Dres; // NEGATE FOR LAPLACIAN
+
+      dfloat Pres = 0;
+      for(int s=0;s<Nstages;++s){
+        dfloat Dhats = DhatL[id+s*Nelements*p_Np];
+        Pres += beta[s]*Dhats; 
+      }
+      PL[id] = PhatL[id] + dt*Pres;
+    }
+  }
+}
+
+@kernel void waveInitialConditionsTri2D(const dlong N,
+                                        const dfloat t,
+                                        @restrict const dfloat *x,
+                                        @restrict const dfloat *y,
+                                        @restrict const dfloat *z,
+                                        @restrict       dfloat *DL,
+                                        @restrict       dfloat *PL){
+  
+  for(int n=0;n<N;++n;@tile(p_Np, @outer, @inner)){
+    const dfloat xn = x[n];
+    const dfloat yn = y[n];
+
+    // u = cos(pi*x)*sin(pi*y)*sin(pi*t*sqrt(2))
+    // v = sin(pi*x)*cos(pi*y)*sin(pi*t*sqrt(2))
+    // p = sqrt(2)*sin(pi*x)*sin(pi*y)*cos(pi*t*sqrt(2))
+    DL[n] = 0;
+    DL[n] = exp(-10.*((xn-.1)*xn+yn*(yn-.1)));
+    PL[n] = exp(-30.*(xn*xn+yn*yn));
+//    PL[n] = sqrt(2.)*sin(M_PI*xn)*sin(M_PI*yn)*cos(M_PI*t*sqrt(2.));
+  }
+}
+

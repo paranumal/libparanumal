@@ -1,0 +1,185 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+
+// EXPLICIT FIRST STAGE
+// Phat(:,1) = P(:);
+// Dhat(:,1) = D(:);
+// Drhs = lambda*(1 + (1/gamma)*alpha(2,1))*Dhat(:,1)
+// Prhs = lambda*(1 + (1/gamma)*alpha(2,1))*Phat(:,1)
+
+@kernel void waveInitializeStep(const dlong N,
+                                const dfloat sc,
+                                @restrict const dfloat *DL,
+                                @restrict const dfloat *PL,
+                                @restrict dfloat *DhatL,
+                                @restrict dfloat *PhatL,
+                                @restrict dfloat *DrhsL,
+                                @restrict dfloat *PrhsL){
+  
+  for(int n=0;n<N;++n;@tile(p_Np, @outer, @inner)){
+
+    const dfloat Dn = DL[n];
+    const dfloat Pn = PL[n];
+
+    DhatL[n] = Dn;
+    PhatL[n] = Pn;
+    DrhsL[n] = sc*Dn;
+    PrhsL[n] = sc*Pn;
+  }
+}
+
+// i=stage
+// Dhat(:,i) = Dhat(:,i) - ((1/gamma)*Dhat(:,1:i-1)*alpha(i,1:i-1)');
+// Phat(:,i) = Phat(:,i) - ((1/gamma)*Phat(:,1:i-1)*alpha(i,1:i-1)');
+// if(i<Nstages){
+//   Drhs =  lambda*(Dhat(:,1) + ((1/gamma)*Dhat(:,1:i)*alpha(i+1,1:i)'));
+//   Prhs =  lambda*(Phat(:,1) + ((1/gamma)*Phat(:,1:i)*alpha(i+1,1:i)')); %%
+// }
+//
+
+@kernel void waveStageUpdate(const dlong N,
+                             const dfloat lambda,
+                             const dfloat invGamma,
+                             const int Nstages,
+                             const int stage,
+                             @restrict const dfloat *alpha,
+                             @restrict dfloat *DhatL,
+                             @restrict dfloat *PhatL,
+                             @restrict dfloat *DrhsL,
+                             @restrict dfloat *PrhsL){
+  
+
+  for(int n=0;n<N;++n;@tile(p_Np, @outer, @inner)){
+
+    const int i = stage-1; 
+
+    dfloat DhatNew = 0, DrhsNew = 0;
+    dfloat PhatNew = 0, PrhsNew = 0;
+
+    for(int j=0;j<=i;++j){ // check limit
+      dfloat Dhatnj = DhatL[n+j*N];
+      dfloat Phatnj = PhatL[n+j*N];
+      if(j<i){
+        DhatNew += alpha[i*Nstages+j]*Dhatnj;
+        PhatNew += alpha[i*Nstages+j]*Phatnj;
+      }
+      if(j==i){
+        DhatNew = Dhatnj - invGamma*DhatNew;
+        PhatNew = Phatnj - invGamma*PhatNew;
+        Dhatnj = DhatNew;
+        Phatnj = PhatNew;
+      }
+
+      if(j==0){
+        DrhsNew = Dhatnj;
+        PrhsNew = Phatnj;
+      }
+      if(i+1<Nstages){
+        DrhsNew += invGamma*alpha[(i+1)*Nstages+j]*Dhatnj;
+        PrhsNew += invGamma*alpha[(i+1)*Nstages+j]*Phatnj;
+      }
+    }
+    
+    DhatL[n+i*N] = DhatNew;
+    PhatL[n+i*N] = PhatNew;
+
+    if(i+1<Nstages){
+      DrhsL[n] = lambda*DrhsNew;
+      PrhsL[n] = lambda*PrhsNew;
+    }
+  }
+}
+
+// a. Phat(:,1:Nstages)*beta' => o_DrhsL
+@kernel void waveCombine(const dlong N,
+                         const int Nstages,
+                         const dfloat dt,
+                         const dfloat *beta,
+                         const dfloat *betaAlpha,
+                         @restrict const dfloat *PhatL,
+                         @restrict const dfloat *DhatL, 
+                         @restrict dfloat *DrhsL){
+
+  for(dlong n=0;n<N;++n;@tile(p_Np,@outer,@inner)){
+
+#if 0    
+    dfloat res = 0;
+    for(int s=0;s<Nstages;++s){
+      dfloat betas = beta[s];
+      res += betas*PhatL[s*N+n];
+    }    
+#else
+    dfloat res = PhatL[n];
+    for(int s=0;s<Nstages;++s){
+      dfloat betaAlphas = betaAlpha[s];
+      res += dt*betaAlphas*DhatL[s*N+n];
+    }
+#endif
+    DrhsL[n] = res;
+  }
+}
+
+
+@kernel void waveErrorEstimate(const dlong N,
+                               const dfloat ATOL,
+                               const dfloat RTOL,
+                               @restrict const dfloat *oldDL,
+                               @restrict const dfloat *oldPL,
+                               @restrict const dfloat *newDL,
+                               @restrict const dfloat *newPL,
+                               @restrict const dfloat *embDL,
+                               @restrict const dfloat *embPL,
+                               @restrict dfloat *  err){
+  
+  for(dlong n=0;n<N;++n;@tile(256, @outer, @inner)){
+
+    if(n<N){
+      const dfloat oldDn = fabs(oldDL[n]);
+      const dfloat oldPn = fabs(oldPL[n]);
+
+      dfloat newDn = newDL[n];
+      dfloat newPn = newPL[n];
+
+      const dfloat errDn = fabs(embDL[n]-newDn);
+      const dfloat errPn = fabs(embPL[n]-newPn);
+
+      newDn = fabs(newDn);
+      newPn = fabs(newPn);
+
+      const dfloat maxDn = (oldDn>newDn) ? oldDn : newDn;
+      const dfloat maxPn = (oldPn>newPn) ? oldPn : newPn;
+
+      dfloat skD = ATOL + RTOL*maxDn;
+      dfloat skP = ATOL + RTOL*maxPn;
+      
+      dfloat r_err = 0.0;
+      r_err += (errDn/skD)*(errDn/skD);
+      r_err += (errPn/skP)*(errPn/skP);
+      err[n] = r_err;
+    }
+  }
+}
