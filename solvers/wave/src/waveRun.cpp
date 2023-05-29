@@ -119,6 +119,7 @@ void wave_t::Run(){
 
   // integrate between startTime and endTime
   Solve(o_DL, o_PL);
+  Solve(o_DL, o_PL);
   
   
 #if 0

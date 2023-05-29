@@ -125,7 +125,7 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL, deviceMemory<dfloat> &o_rPL){
 
     timePoint_t ends = GlobalPlatformTime(platform);
 
-    printf("====> time=%g, dt=%g, step=%d, sum(iterD)=%d, ave(iterD)=%3.2f\n", t, dt, tstep, iter, iter/(double)(Nstages-1));
+    printf("====> time=%g, dt=%g, step=%d, sum(iterD)=%d, ave(iterD)=%3.2f\n", t+dt, dt, tstep, iter, iter/(double)(Nstages-1));
     
     double elapsedTime = ElapsedTime(starts, ends);
     
