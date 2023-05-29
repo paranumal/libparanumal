@@ -65,8 +65,10 @@ void wave_t::Setup(platform_t& _platform,
 
   Nstages = 0;
   embedded = 0;
-  
-  libp::TimeStepper::butcherTables("ESDIRK6(5)9L[2]SA", Nstages, embedded, BTABLE);
+
+  std::string timeIntegrator;
+  settings.getSetting("TIME INTEGRATOR", timeIntegrator);
+  libp::TimeStepper::butcherTables(timeIntegrator.c_str(), Nstages, embedded, BTABLE);
   
   // extract alphas, betas
   alpha.reshape(Nstages, Nstages);

@@ -40,7 +40,7 @@ void butcherTables(const char *methodName, int &Nstages, int &embedded, linAlgMa
 
     outB.import(6,6,tmpB);
   }
-  else if(strcmp(methodName, "ARK3(2)4L[2]SA-ERK")==0){
+  else if(strcmp(methodName, "ARK3(2)4L{2}SA-ERK")==0){
 
     Nstages = 4;
     embedded = 1;
@@ -56,7 +56,7 @@ void butcherTables(const char *methodName, int &Nstages, int &embedded, linAlgMa
 
     outB.import(6,5,tmpB);
   }
-  else if(strcmp(methodName, "ARK3(2)4L[2]SA-ESDIRK")==0){
+  else if(strcmp(methodName, "ARK3(2)4L{2}SA-ESDIRK")==0){
 
     Nstages = 4;
     embedded = 1;
@@ -72,7 +72,7 @@ void butcherTables(const char *methodName, int &Nstages, int &embedded, linAlgMa
 
     outB.import(6,5,tmpB);
   }
-  else if(strcmp(methodName, "ARK4(3)6L[2]SA-ERK")==0){
+  else if(strcmp(methodName, "ARK4(3)6L{2}SA-ERK")==0){
 
     Nstages = 6;
     embedded = 1;
@@ -90,7 +90,7 @@ void butcherTables(const char *methodName, int &Nstages, int &embedded, linAlgMa
 
     outB.import(8,7,tmpB);
   }
-  else if(strcmp(methodName, "ARK4(3)6L[2]SA-ESDIRK")==0){
+  else if(strcmp(methodName, "ARK4(3)6L{2}SA-ESDIRK")==0){
 
     Nstages = 6;
     embedded = 1;
@@ -108,7 +108,7 @@ void butcherTables(const char *methodName, int &Nstages, int &embedded, linAlgMa
 
     outB.import(8,7,tmpB);
   }
-  else if(strcmp(methodName, "ESDIRK4(3)6L[2]SA")==0){
+  else if(strcmp(methodName, "ESDIRK4(3)6L{2}SA")==0){
 
     Nstages = 6;
     embedded = 1;
@@ -126,7 +126,7 @@ void butcherTables(const char *methodName, int &Nstages, int &embedded, linAlgMa
 
     outB.import(8,7,tmpB);
   }
-  else if(strcmp(methodName, "ESDIRK4(3)7L[2]SA")==0){
+  else if(strcmp(methodName, "ESDIRK4(3)7L{2}SA")==0){
 
     Nstages = 7;
     embedded = 1;
@@ -145,7 +145,7 @@ void butcherTables(const char *methodName, int &Nstages, int &embedded, linAlgMa
 
     outB.import(9,8,tmpB);
   }
-  else if(strcmp(methodName, "ESDIRK4(3I)6L[2]SA")==0){
+  else if(strcmp(methodName, "ESDIRK4(3I)6L{2}SA")==0){
 
     Nstages = 6;
     embedded = 1;
@@ -163,7 +163,7 @@ void butcherTables(const char *methodName, int &Nstages, int &embedded, linAlgMa
 
     outB.import(8,7,tmpB);
   }
-  else if(strcmp(methodName, "QESDIRK4(3)6L[2]SA")==0){
+  else if(strcmp(methodName, "QESDIRK4(3)6L{2}SA")==0){
 
     Nstages = 6;
     embedded = 1;
@@ -181,7 +181,7 @@ void butcherTables(const char *methodName, int &Nstages, int &embedded, linAlgMa
 
     outB.import(8,7,tmpB);
   }
-  else if(strcmp(methodName, "SDIRK4()5L[1]SA")==0){
+  else if(strcmp(methodName, "SDIRK4()5L{1}SA")==0){
 
     Nstages = 5;
     embedded = 0;
@@ -197,7 +197,7 @@ void butcherTables(const char *methodName, int &Nstages, int &embedded, linAlgMa
 
     outB.import(6,6,tmpB);
   }
-  else if(strcmp(methodName, "ESDIRK5(3)6L[2]SA")==0){
+  else if(strcmp(methodName, "ESDIRK5(3)6L{2}SA")==0){
 
     Nstages = 6;
     embedded = 1;
@@ -215,7 +215,7 @@ void butcherTables(const char *methodName, int &Nstages, int &embedded, linAlgMa
 
     outB.import(8,7,tmpB);
   }
-  else if(strcmp(methodName, "SDIRK5()5L[1]")==0){
+  else if(strcmp(methodName, "SDIRK5()5L{1]")==0){
 
     Nstages = 5;
     embedded = 0;
@@ -231,7 +231,7 @@ void butcherTables(const char *methodName, int &Nstages, int &embedded, linAlgMa
 
     outB.import(6,6,tmpB);
   }
-  else if(strcmp(methodName, "ESDIRK5(4)7L[2]SA")==0){
+  else if(strcmp(methodName, "ESDIRK5(4)7L{2}SA")==0){
 
     Nstages = 7;
     embedded = 1;
@@ -250,7 +250,7 @@ void butcherTables(const char *methodName, int &Nstages, int &embedded, linAlgMa
 
     outB.import(9,8,tmpB);
   }
-  else if(strcmp(methodName, "ESDIRK5(4)7L[2]SA2")==0){
+  else if(strcmp(methodName, "ESDIRK5(4)7L{2}SA2")==0){
 
     Nstages = 7;
     embedded = 1;
@@ -269,7 +269,7 @@ void butcherTables(const char *methodName, int &Nstages, int &embedded, linAlgMa
 
     outB.import(9,8,tmpB);
   }
-  else if(strcmp(methodName, "ESDIRK5(4)8L[2]SA")==0){
+  else if(strcmp(methodName, "ESDIRK5(4)8L{2}SA")==0){
 
     Nstages = 8;
     embedded = 1;
@@ -289,7 +289,7 @@ void butcherTables(const char *methodName, int &Nstages, int &embedded, linAlgMa
 
     outB.import(10,9,tmpB);
   }
-  else if(strcmp(methodName, "ESDIRK6(4)7A[2]")==0){
+  else if(strcmp(methodName, "ESDIRK6(4)7A{2}")==0){
 
     Nstages = 7;
     embedded = 1;
@@ -308,7 +308,7 @@ void butcherTables(const char *methodName, int &Nstages, int &embedded, linAlgMa
 
     outB.import(9,8,tmpB);
   }
-  else if(strcmp(methodName, "ESDIRK6(5)9L[2]SA")==0){
+  else if(strcmp(methodName, "ESDIRK6(5)9L{2}SA")==0){
 
     Nstages = 9;
     embedded = 1;
@@ -329,7 +329,7 @@ void butcherTables(const char *methodName, int &Nstages, int &embedded, linAlgMa
 
     outB.import(11,10,tmpB);
   }
-  else if(strcmp(methodName, "ESDIRK5(4I)8L[2]SA")==0){
+  else if(strcmp(methodName, "ESDIRK5(4I)8L{2}SA")==0){
 
     Nstages = 8;
     embedded = 1;
@@ -349,7 +349,7 @@ void butcherTables(const char *methodName, int &Nstages, int &embedded, linAlgMa
 
     outB.import(10,9,tmpB);
   }
-  else if(strcmp(methodName, "ARK4(3)7L[2]SA-ERK")==0){
+  else if(strcmp(methodName, "ARK4(3)7L{2}SA-ERK")==0){
 
     Nstages = 7;
     embedded = 1;
@@ -368,7 +368,7 @@ void butcherTables(const char *methodName, int &Nstages, int &embedded, linAlgMa
 
     outB.import(9,8,tmpB);
   }
-  else if(strcmp(methodName, "ARK4(3)7L[2]SA-ESDIRK")==0){
+  else if(strcmp(methodName, "ARK4(3)7L{2}SA-ESDIRK")==0){
 
     Nstages = 7;
     embedded = 1;
@@ -387,7 +387,7 @@ void butcherTables(const char *methodName, int &Nstages, int &embedded, linAlgMa
 
     outB.import(9,8,tmpB);
   }
-  else if(strcmp(methodName, "ARK5(4)8L[2]SA-ERK")==0){
+  else if(strcmp(methodName, "ARK5(4)8L{2}SA-ERK")==0){
 
     Nstages = 8;
     embedded = 1;
@@ -407,7 +407,7 @@ void butcherTables(const char *methodName, int &Nstages, int &embedded, linAlgMa
 
     outB.import(10,9,tmpB);
   }
-  else if(strcmp(methodName, "ARK5(4)8L[2]SA-ESDIRK")==0){
+  else if(strcmp(methodName, "ARK5(4)8L{2}SA-ESDIRK")==0){
 
     Nstages = 8;
     embedded = 1;
@@ -427,7 +427,7 @@ void butcherTables(const char *methodName, int &Nstages, int &embedded, linAlgMa
 
     outB.import(10,9,tmpB);
   }
-  else if(strcmp(methodName, "ARK5(4)8L[2]SAb-ERK")==0){
+  else if(strcmp(methodName, "ARK5(4)8L{2}SAb-ERK")==0){
 
     Nstages = 8;
     embedded = 1;
@@ -447,7 +447,7 @@ void butcherTables(const char *methodName, int &Nstages, int &embedded, linAlgMa
 
     outB.import(10,9,tmpB);
   }
-  else if(strcmp(methodName, "ARK5(4)8L[2]SAb-ESDIRK")==0){
+  else if(strcmp(methodName, "ARK5(4)8L{2}SAb-ESDIRK")==0){
 
     Nstages = 8;
     embedded = 1;
@@ -1563,7 +1563,7 @@ void butcherTables(const char *methodName, int &Nstages, int &embedded, linAlgMa
 
     outB.import(6,6,tmpB);
   }
-  else if(strcmp(methodName, "ESDIRK3(2)4L[2]SA")==0){
+  else if(strcmp(methodName, "ESDIRK3(2)4L{2}SA")==0){
 
     Nstages = 4;
     embedded = 1;
@@ -1579,7 +1579,7 @@ void butcherTables(const char *methodName, int &Nstages, int &embedded, linAlgMa
 
     outB.import(6,5,tmpB);
   }
-  else if(strcmp(methodName, "ESDIRK3(2)5L[2]SA")==0){
+  else if(strcmp(methodName, "ESDIRK3(2)5L{2}SA")==0){
 
     Nstages = 5;
     embedded = 1;
@@ -1596,7 +1596,7 @@ void butcherTables(const char *methodName, int &Nstages, int &embedded, linAlgMa
 
     outB.import(7,6,tmpB);
   }
-  else if(strcmp(methodName, "ESDIRK3(2I)5L[2]SA")==0){
+  else if(strcmp(methodName, "ESDIRK3(2I)5L{2}SA")==0){
 
     Nstages = 5;
     embedded = 1;
