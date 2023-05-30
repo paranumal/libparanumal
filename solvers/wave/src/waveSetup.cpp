@@ -60,6 +60,12 @@ void wave_t::Setup(platform_t& _platform,
   // find out if this is a C0 discretization
   disc_c0 = elliptic.settings.compareSetting("DISCRETIZATION", "CONTINUOUS") ? 1 : 0;
 
+  if(disc_c0==1 && mesh.elementType==Mesh::TRIANGLES){
+    std::cout << "TRYING TO USE TRIANGLE MESH WITH C0 NOT ALLOWED WITH WAVE" << std::endl;
+    exit(-1);
+  }
+
+  
   // initialize time stepper
   linAlgMatrix_t<dfloat> BTABLE;
 
@@ -234,6 +240,7 @@ void wave_t::Setup(platform_t& _platform,
   o_scratch2L = platform.malloc<dfloat>(Nall);
 
   o_FL        = platform.malloc<dfloat>(Nall);
+  o_FPL        = platform.malloc<dfloat>(Nall);
   
   if (disc_c0){
     NglobalDofs = elliptic.ogsMasked.NgatherGlobal*Nfields;

@@ -31,19 +31,23 @@ SOFTWARE.
 void wave_t::Run(){
 
   // set up initial conditions for D and P
-  dfloat startTime, finalTime;
   settings.getSetting("START TIME", startTime);
   settings.getSetting("FINAL TIME", finalTime);
+
+  // harmonic forcing data
+  settings.getSetting("OMEGA", omega);
+  sigma = std::max(36., omega*omega);
+  int NouterSteps = 10;
+  finalTime = NouterSteps*(2.*M_PI/omega);
+  dfloat t = startTime;
   
-
-  dfloat t = 0;
-
   // round time step
   settings.getSetting("TIME STEP", dt);
   
-  Nsteps = ceil(finalTime/dt);
+  Nsteps = std::max(NouterSteps*10., ceil(finalTime/dt));
   dt = finalTime/Nsteps;
-
+  std::cout << "dt=" << dt << std::endl;
+  
   iostep = 1;
   settings.getSetting("OUTPUT STEP", iostep);
   
@@ -110,8 +114,6 @@ void wave_t::Run(){
 
   // set up some monochromatic forcing (https://arxiv.org/pdf/1910.10148.pdf)
   // harmonic spatial forcing
-  settings.getSetting("OMEGA", omega);
-  sigma = std::max(36., omega*omega);
   waveForcingKernel(Nall, t, sigma, omega, mesh.o_x, mesh.o_y, mesh.o_z, o_FL); // will use cos(omega*t)*FL
   
   if(elliptic.settings.compareSetting("STOPPING CRITERIA", "ERRORESTIMATE")){
@@ -126,8 +128,9 @@ void wave_t::Run(){
 
   // integrate between startTime and endTime
   Solve(o_DL, o_PL, o_FL);
-//  Solve(o_DL, o_PL, o_FL);
-  
+
+  // try WaveHoltz (not sure if this is quite right yet)
+  waveHoltz(o_DL, o_PL, o_FL);
   
 #if 0
     // output norm of final solution

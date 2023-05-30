@@ -81,13 +81,13 @@ void wave_t::PlotFields(libp::memory<dfloat>& D, libp::memory<dfloat>& P, std::s
           2);
   for(dlong e=0;e<mesh.Nelements;++e){
     
-    mesh.PlotInterp(P + e*mesh.Np, Iq + 0*mesh.Np, scratch);
-    mesh.PlotInterp(D + e*mesh.Np, Iq + 1*mesh.Np, scratch);
+    mesh.PlotInterp(P + e*mesh.Np, Iq + 0*mesh.plotNp, scratch);
+    mesh.PlotInterp(D + e*mesh.Np, Iq + 1*mesh.plotNp, scratch);
     
     for(int n=0;n<mesh.plotNp;++n){
       fprintf(fp, "       ");
       for (int f=0;f<2;f++)
-        fprintf(fp, "%f ", Iq[n+f*mesh.Np]);
+        fprintf(fp, "%f ", Iq[n+f*mesh.plotNp]);
       fprintf(fp, "\n");
     }
   }

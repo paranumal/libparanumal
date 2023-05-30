@@ -85,6 +85,8 @@ public:
    dfloat invDt;
    int Nsteps;
    dfloat dt;
+   dfloat startTime;
+   dfloat finalTime;
    
    dfloat lambdaSolve;
    dfloat omega;
@@ -128,6 +130,7 @@ public:
    deviceMemory<dfloat> o_scratch2L;
 
    deviceMemory<dfloat> o_FL;
+   deviceMemory<dfloat> o_FPL;
    
    deviceMemory<dfloat> o_invMM;
    deviceMemory<dfloat> o_MM;
@@ -162,6 +165,10 @@ public:
    void Solve(deviceMemory<dfloat> &_DL,
               deviceMemory<dfloat> &_PL,
               deviceMemory<dfloat> &_FL);
+
+   void waveHoltz(deviceMemory<dfloat> &_DL,
+                 deviceMemory<dfloat> &_PL,
+                 deviceMemory<dfloat> &_FL);
    
    void Run();
    

@@ -87,6 +87,7 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
           scF += alpha(stage+1,j)*cos(omega*tj);
         }
       }
+      std:: cout << "scF = " << scF << std::endl;
       
       // transform DtildeL to DhatL, compute DrhsL for next stage (if appropriate)
       waveStageFinalizeKernel(mesh.Nelements,
@@ -137,14 +138,17 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
     dfloat scF = 0;
     for(int i=1;i<=Nstages;++i){
       dfloat ti = t + dt*esdirkC(1,i);
-      std::cout << "ti =" << ti << std::endl;
       scF += beta(1,i)*cos(omega*ti);
     }
-
+    std::cout << "scF(2) = " << scF << std::endl;
     
     waveStepFinalizeKernel(mesh.Nelements, dt, Nstages, scF, o_beta,
                            o_invWJ, o_invMM, o_scratch2L, o_DhatL, o_PhatL, o_FL, o_rDL, o_rPL); 
 
+    const dfloat scFP = dt*2.*(cos(omega*(t+dt))-0.25)/finalTime;
+    std::cout << "scFP = " << scFP << std::endl;
+    platform.linAlg().axpy(Nall, scFP, o_rPL, (dfloat)1., o_FPL);
+    
     timePoint_t ends = GlobalPlatformTime(platform);
 
     printf("====> time=%g, dt=%g, step=%d, sum(iterD)=%d, ave(iterD)=%3.2f\n", t+dt, dt, tstep, iter, iter/(double)(Nstages-1));
@@ -162,9 +166,10 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
              (char*) elliptic.settings.getSetting("PRECONDITIONER").c_str());
     }
 
+    if(0)
     if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
       static int slice=0;
-      if((tstep%iostep) == 0){
+      if(tstep>0 && (tstep%iostep) == 0){
         ++slice;
         
         // copy data back to host
