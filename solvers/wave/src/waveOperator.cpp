@@ -28,11 +28,22 @@ SOFTWARE.
 #include "timer.hpp"
 #include "ellipticPrecon.hpp"
 
-void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
-                   deviceMemory<dfloat> &o_rPL,
-                   deviceMemory<dfloat> &o_rFL){
+void wave_t::Operator(deviceMemory<dfloat> &o_QL,
+                      deviceMemory<dfloat> &o_AQL){
 
-  std::cout << "iostep = " << iostep << std::endl;
+  // THIS IMPACTS -
+  // o_DhatL, o_PhatL, o_DrhsL,  o_Dtilde, o_DtildeL, o_Drhs 
+  
+//  std::cout << "STARTING: wave solve" << std::endl;
+
+  dlong Ndofs = elliptic.Ndofs;
+
+  // IC: (0,P)
+  o_QL.copyTo(o_PL);
+  platform.linAlg().set(Ndofs, (dfloat)0., o_DL);
+
+  // zero filtered solution accumulator
+  platform.linAlg().set(Ndofs, (dfloat)0., o_AQL);
   
   for(int tstep=0;tstep<Nsteps;++tstep){ // do adaptive later
     int iter = 0;
@@ -45,7 +56,7 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
     dfloat scD = 1. + invGamma*alpha(2,1);
     dfloat scP = scD*invGamma*invDt;
     waveStepInitializeKernel(mesh.Nelements, scD, scP, lambdaSolve,
-                             o_WJ, o_MM, o_rDL, o_rPL, o_DhatL, o_PhatL, o_DrhsL);
+                             o_WJ, o_MM, o_DL, o_PL, o_DhatL, o_PhatL, o_DrhsL);
 
     // LOOP OVER IMPLICIT STAGES
     for(int stage=2;stage<=Nstages;++stage){
@@ -65,8 +76,8 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
         o_DrhsL.copyTo(o_Drhs);
       }
 
-      // changed to tol
-      int iterD = elliptic.Solve(linearSolver, o_Dtilde, o_Drhs, tol, maxIter, verbose, stoppingCriteria);
+      int modMaxIter = maxIter; // -4;
+      int iterD = elliptic.Solve(linearSolver, o_Dtilde, o_Drhs, tol, modMaxIter, verbose, stoppingCriteria);
 
       //add the boundary data to the masked nodes
       if(disc_c0){
@@ -80,14 +91,9 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
       
       iter += iterD;
 
+      // unforced
       dfloat scF = 0;
-      if(stage<Nstages){
-        for(int j=1;j<=stage+1;++j){
-          dfloat tj = t + dt*esdirkC(1,j);
-          scF += alpha(stage+1,j)*cos(omega*tj);
-        }
-      }
-
+      
       // transform DtildeL to DhatL, compute DrhsL for next stage (if appropriate)
       waveStageFinalizeKernel(mesh.Nelements,
                               dt,
@@ -110,14 +116,9 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
                               o_DrhsL); // remember 1-index
     }
 
-    // KERNEL 4: FINALIZE
-    // P = Phat(:,1) +     dt*(Dhat(:,1:Nstages)*beta'); 
-    // D = Dhat(:,1) + dt*LAP*(Phat(:,1:Nstages)*beta');
-    
-    // a. Phat(:,1:Nstages)*beta' => o_scratchL
+
     waveCombineKernel(Nall, Nstages, dt, o_beta, o_betaAlpha, o_PhatL, o_DhatL, o_scratch1L);
 
-    // b. L*(Phat(:,1:Nstages)*beta') => o_rDL
     elliptic.lambda = 0;
     if(disc_c0){
       // gather up RHS 
@@ -129,57 +130,38 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
     }
     elliptic.lambda = lambdaSolve;
     
-    // c. finalize
-    // P = Phat(:,1) +     dt*(Dhat(:,1:Nstages)*beta'); 
-    // D = Dhat(:,1) + dt*LAP*(Phat(:,1:Nstages)*beta'); (LAP = -MM\L)
-    // THIS INCLUDE MASS MATRIX INVERSE - (IF C0 USES INVERSE OF GLOBALIZED LUMPED MASS MATRIX)
-
+    // unforced
     dfloat scF = 0;
-    for(int i=1;i<=Nstages;++i){
-      dfloat ti = t + dt*esdirkC(1,i);
-      scF += beta(1,i)*cos(omega*ti);
-    }
-    
     waveStepFinalizeKernel(mesh.Nelements, dt, Nstages, scF, o_beta,
-                           o_invWJ, o_invMM, o_scratch2L, o_DhatL, o_PhatL, o_FL, o_rDL, o_rPL); 
-
+                           o_invWJ, o_invMM, o_scratch2L, o_DhatL, o_PhatL, o_FL, o_DL, o_PL); 
+    
     const dfloat scFP = dt*2.*(cos(omega*(t+dt))-0.25)/finalTime;
-    platform.linAlg().axpy(Nall, scFP, o_rPL, (dfloat)1., o_FPL);
-    
-    timePoint_t ends = GlobalPlatformTime(platform);
+    platform.linAlg().axpy(Nall, scFP, o_PL, (dfloat)1., o_AQL);    
 
-    printf("====> time=%g, dt=%g, step=%d, sum(iterD)=%d, ave(iterD)=%3.2f\n", t+dt, dt, tstep, iter, iter/(double)(Nstages-1));
+//    printf("=*=*=*=> time=%g, dt=%g, step=%d, sum(iterD)=%d, ave(iterD)=%3.2f\n", t+dt, dt, tstep, iter, iter/(double)(Nstages-1));
     
-    double elapsedTime = ElapsedTime(starts, ends);
     
-    if ((mesh.rank==0) && verbose){
-      printf("%d, " hlongFormat ", %g, %d, %g, %g; global: N, dofs, elapsed, iterations, time per node, nodes*iterations/time %s\n",
-             mesh.N,
-             NglobalDofs,
-             elapsedTime,
-             iter,
-             elapsedTime/(NglobalDofs),
-             NglobalDofs*((dfloat)iter/elapsedTime),
-             (char*) elliptic.settings.getSetting("PRECONDITIONER").c_str());
-    }
+  }
 
-    if(0)
-    if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
-      static int slice=0;
-      if(tstep>0 && (tstep%iostep) == 0){
-        ++slice;
-        
-        // copy data back to host
-        o_rPL.copyTo(PL);
-        o_rDL.copyTo(DL);
-        
-        // output field files
-        std::string name;
-        settings.getSetting("OUTPUT FILE NAME", name);
-        char fname[BUFSIZ];
-        sprintf(fname, "DP_%04d_%04d.vtu",  mesh.rank, slice);
-        PlotFields(DL, PL, fname);
-      }
+  // AQL = (I - OP)*QL;
+  platform.linAlg().axpy(Ndofs, (dfloat)1., o_QL, (dfloat)-1., o_AQL);
+  
+  if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
+    static int slice=0;
+//    if(tstep>0 && (tstep%iostep) == 0){
+    {
+      ++slice;
+      
+      // copy data back to host
+      o_AQL.copyTo(PL);
+      o_DL.copyTo(DL);
+      
+      // output field files
+      std::string name;
+      settings.getSetting("OUTPUT FILE NAME", name);
+      char fname[BUFSIZ];
+      sprintf(fname, "OP_%04d_%04d.vtu",  mesh.rank, slice);
+      PlotFields(DL, PL, fname);
     }
   }
 }

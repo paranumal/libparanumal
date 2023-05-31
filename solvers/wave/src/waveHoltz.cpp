@@ -29,10 +29,73 @@ SOFTWARE.
 #include "timer.hpp"
 #include "ellipticPrecon.hpp"
 
-void wave_t::waveHoltz(deviceMemory<dfloat> &o_rDL,
-                       deviceMemory<dfloat> &o_rPL,
-                       deviceMemory<dfloat> &o_rFL){
+void wave_t::waveHoltz(deviceMemory<dfloat> &o_qL){
   
+#if 1
+
+  const dlong Ndofs = elliptic.Ndofs;
+  const dlong Nhalo = elliptic.Nhalo;
+  
+  precon_t waveHoltzPrecon;
+  waveHoltzPrecon.Setup<IdentityPrecon>(Ndofs);
+
+  linearSolver_t<dfloat> waveHoltzLinearSolver;
+
+  // configure linear solver to use pgmres
+  waveHoltzLinearSolver.Setup<LinearSolver::pgmres<dfloat> >
+     (Ndofs, Nhalo, platform, elliptic.settings, comm);
+
+  // configure linear solver to use zero initial guess
+  waveHoltzLinearSolver.SetupInitialGuess<InitialGuess::Last<dfloat> >
+     (Ndofs, platform, elliptic.settings, comm);
+  
+  // compute RHS (this will work for IPDG for now)
+  deviceMemory<dfloat> o_bL = platform.malloc<dfloat>(Ndofs);
+
+  platform.linAlg().set(Ndofs, (dfloat)0, o_qL);
+  platform.linAlg().set(Ndofs, (dfloat)0, o_DL);
+  platform.linAlg().set(Ndofs, (dfloat)0, o_PL);
+  platform.linAlg().set(Ndofs, (dfloat)0, o_FPL);
+  
+  // solve homogeneous initial conditions with forcing to obtain RHS
+//  Nsteps *=20;
+  Solve(o_DL, o_PL, o_FL);
+//  Nsteps /=20;
+  std::cout << "**************** DONE INITIAL FORCING PHASE *******************" << std::endl;
+  
+  // this becomes the RHS 
+  o_FPL.copyTo(o_bL);
+  
+  stoppingCriteria_t<dfloat> *waveHoltzStoppingCriteria = new stoppingCriteria_t<dfloat>();
+  int iterD =
+     waveHoltzLinearSolver.Solve(*this,
+                                 waveHoltzPrecon,
+                                 o_qL,
+                                 o_bL,
+                                 tol,
+                                 maxIter,
+                                 verbose,
+                                 waveHoltzStoppingCriteria);
+  
+  std::cout << " WOWSA " << std::endl;
+
+//  if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
+  {
+    // copy data back to host
+    o_qL.copyTo(PL);
+    o_qL.copyTo(DL);
+    
+    // output field files
+    std::string name;
+    settings.getSetting("OUTPUT FILE NAME", name);
+    char fname[BUFSIZ];
+    sprintf(fname, "SOLN_%04d.vtu",  mesh.rank);
+    PlotFields(DL, PL, fname);
+  }
+  
+#endif
+
+#if 0  
   // start with zeroed P, L, and filtered pressure
   platform.linAlg().set(Nall, (dfloat)0, o_DL);
   platform.linAlg().set(Nall, (dfloat)0, o_PL);
@@ -67,4 +130,5 @@ void wave_t::waveHoltz(deviceMemory<dfloat> &o_rDL,
       PlotFields(DL, PL, fname);
     }
   }
+#endif
 }

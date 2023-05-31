@@ -43,8 +43,9 @@ void wave_t::Run(){
   
   // round time step
   settings.getSetting("TIME STEP", dt);
-  
-  Nsteps = std::max(NouterSteps*10., ceil(finalTime/dt));
+
+  // should try using more accurate pressure accumulator
+  Nsteps = std::max(NouterSteps*8., ceil(finalTime/dt));
   dt = finalTime/Nsteps;
   std::cout << "dt=" << dt << std::endl;
   
@@ -127,10 +128,11 @@ void wave_t::Run(){
   }
 
   // integrate between startTime and endTime
-  Solve(o_DL, o_PL, o_FL);
+//  Solve(o_DL, o_PL, o_FL);
 
   // try WaveHoltz (not sure if this is quite right yet)
-  waveHoltz(o_DL, o_PL, o_FL);
+  deviceMemory<dfloat> o_qL = platform.malloc<dfloat>(Ndofs);
+  waveHoltz(o_qL);
   
 #if 0
     // output norm of final solution

@@ -161,14 +161,15 @@ public:
    //setup
    void Setup(platform_t& _platform, mesh_t& _mesh,
               waveSettings_t& _settings);
-   
-   void Solve(deviceMemory<dfloat> &_DL,
-              deviceMemory<dfloat> &_PL,
-              deviceMemory<dfloat> &_FL);
 
-   void waveHoltz(deviceMemory<dfloat> &_DL,
-                 deviceMemory<dfloat> &_PL,
-                 deviceMemory<dfloat> &_FL);
+   void Solve(deviceMemory<dfloat> &_o_DL,
+              deviceMemory<dfloat> &_o_PL,
+              deviceMemory<dfloat> &_o_FL);
+   
+   void Operator(deviceMemory<dfloat> &inPL,
+                 deviceMemory<dfloat> &outPL);
+
+   void waveHoltz(deviceMemory<dfloat> &o_qL);
    
    void Run();
    
