@@ -34,19 +34,28 @@ void wave_t::Run(){
   settings.getSetting("START TIME", startTime);
   settings.getSetting("FINAL TIME", finalTime);
 
-  // harmonic forcing data
-  settings.getSetting("OMEGA", omega);
-  sigma = std::max(36., omega*omega);
-  int NouterSteps = 30; // was 30
-  finalTime = NouterSteps*(2.*M_PI/omega);
   dfloat t = startTime;
+  omega = 0;
   
-  // round time step
-  settings.getSetting("TIME STEP", dt);
+  if(settings.compareSetting("SOLVER MODE", "WAVEHOLTZ")){
+    
+    // harmonic forcing data
+    settings.getSetting("OMEGA", omega);
+    sigma = std::max(36., omega*omega);
+    int NouterSteps = 30; // was 30
+    finalTime = NouterSteps*(2.*M_PI/omega);
+    
+    // should try using more accurate pressure accumulator
+    Nsteps = NouterSteps*12; // std::max(NouterSteps*8., ceil(finalTime/dt));
 
-  // should try using more accurate pressure accumulator
-  Nsteps = NouterSteps*12; // std::max(NouterSteps*8., ceil(finalTime/dt));
+  }else{
+    // round time step
+    settings.getSetting("TIME STEP", dt);
+    Nsteps = finalTime/dt;
+  }
+  
   dt = finalTime/Nsteps;
+  
   std::cout << "dt=" << dt << std::endl;
   
   iostep = 1;
@@ -129,29 +138,26 @@ void wave_t::Run(){
     stoppingCriteria = new stoppingCriteria_t<dfloat>();
   }
 
-  // integrate between startTime and endTime
-//  Solve(o_DL, o_PL, o_FL);
 
-  // try WaveHoltz (not sure if this is quite right yet)
-  deviceMemory<dfloat> o_qL = platform.malloc<dfloat>(Nall);
-  waveHoltz(o_qL);
-  
-#if 0
-    // output norm of final solution
-    {
-      //compute q.M*q
-      dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
-      deviceMemory<dfloat> o_MDL = platform.reserve<dfloat>(Nentries);
-      mesh.MassMatrixApply(o_DL, o_MDL);
+  // choose which model to run
+  if(settings.compareSetting("SOLVER MODE", "WAVEHOLTZ")){
+    deviceMemory<dfloat> o_qL = platform.malloc<dfloat>(Nall);
+    waveHoltz(o_qL);
+  }else{
+    Solve(o_DL, o_PL, o_FL);
+
+    if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
+      // copy data back to host
+      o_PL.copyTo(PL);
+      o_DL.copyTo(DL);
       
-      dfloat norm2 = sqrt(platform.linAlg().innerProd(Nentries, o_DL, o_MDL, mesh.comm));
-      
-      if(mesh.rank==0)
-         printf("Solution norm = %17.15lg\n", norm2);
+      // output field files
+      std::string name;
+      settings.getSetting("OUTPUT FILE NAME", name);
+      char fname[BUFSIZ];
+      sprintf(fname, "SOLN_DP_%04d.vtu",  mesh.rank);
+      PlotFields(DL, PL, fname);
     }
-#endif
-
-  
-  
+  }
   
 }

@@ -33,6 +33,11 @@ waveSettings_t::waveSettings_t(comm_t& _comm):
   newSetting("DATA FILE",
              "data/waveHomogeneous2D.h",
              "Boundary and Initial conditions header");
+
+  newSetting("SOLVER MODE",
+             "TIMEDOMAIN",
+             "Solver to use",
+             {"TIMEDOMAIN", "WAVEHOLTZ"});
   
   newSetting("TIME INTEGRATOR",
              "ESDIRK6(5)9L{2}SA", 

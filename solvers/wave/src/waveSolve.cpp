@@ -83,11 +83,16 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
       iter += iterD;
 
       dfloat scF = 0;
-      if(stage<Nstages){
-        for(int j=1;j<=stage+1;++j){
-          dfloat tj = t + dt*esdirkC(1,j);
-          scF += alpha(stage+1,j)*cos(omega*tj);
+
+      if(settings.compareSetting("SOLVER MODE", "WAVEHOLTZ")){
+        if(stage<Nstages){
+          for(int j=1;j<=stage+1;++j){
+            dfloat tj = t + dt*esdirkC(1,j);
+            scF += alpha(stage+1,j)*cos(omega*tj);
+          }
         }
+      }else{
+        scF = 0; // no forcing if TIMEDOMAIN
       }
 
       // transform DtildeL to DhatL, compute DrhsL for next stage (if appropriate)
@@ -137,29 +142,29 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
     // THIS INCLUDE MASS MATRIX INVERSE - (IF C0 USES INVERSE OF GLOBALIZED LUMPED MASS MATRIX)
 
     dfloat scF = 0;
-    for(int i=1;i<=Nstages;++i){
-      dfloat ti = t + dt*esdirkC(1,i);
-      scF += beta(1,i)*cos(omega*ti);
-    }
-
     dfloat filtP = 0;
     filtD = (dfloat)0.;
-    for(int i=1;i<=Nstages;++i){
-      dfloat filti = 2.*(cos(omega*(t+dt*esdirkC(1,i)))-0.25)/finalTime;
-      filtP += beta(1,i)*filti;
-      for(int j=1;j<=i;++j){
-        filtD(1,j) += beta(1,i)*filti*alpha(i,j);
+
+    if(settings.compareSetting("SOLVER MODE", "WAVEHOLTZ")){
+      for(int i=1;i<=Nstages;++i){
+        dfloat ti = t + dt*esdirkC(1,i);
+        scF += beta(1,i)*cos(omega*ti);
       }
+      for(int i=1;i<=Nstages;++i){
+        dfloat filti = 2.*(cos(omega*(t+dt*esdirkC(1,i)))-0.25)/finalTime;
+        filtP += beta(1,i)*filti;
+        for(int j=1;j<=i;++j){
+          filtD(1,j) += beta(1,i)*filti*alpha(i,j);
+        }
+      }
+    }else{
+      scF = 0; // no forcing if TIMEDOMAIN
     }
+
     o_filtD.copyFrom(filtD.data);
     
     waveStepFinalizeKernel(mesh.Nelements, dt, Nstages, scF, o_beta, filtP, o_filtD,
                            o_invWJ, o_invMM, o_scratch2L, o_DhatL, o_PhatL, o_FL, o_rDL, o_rPL, o_filtPL);  
-
-#if 0
-    const dfloat scFP = dt*2.*(cos(omega*(t+dt))-0.25)/finalTime;
-    platform.linAlg().axpy(Nall, scFP, o_rPL, (dfloat)1., o_filtPL);
-#endif
     
     timePoint_t ends = GlobalPlatformTime(platform);
 

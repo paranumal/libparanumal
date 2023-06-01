@@ -211,14 +211,8 @@ SOFTWARE.
     const dfloat xn = x[n];
     const dfloat yn = y[n];
 
-    // u = cos(pi*x)*sin(pi*y)*sin(pi*t*sqrt(2))
-    // v = sin(pi*x)*cos(pi*y)*sin(pi*t*sqrt(2))
-    // p = sqrt(2)*sin(pi*x)*sin(pi*y)*cos(pi*t*sqrt(2))
-    DL[n] = 0;
-    PL[n] = 0;
-//    DL[n] = exp(-10.*((xn-.1)*xn+yn*(yn-.1)));
-//    PL[n] = exp(-30.*(xn*xn+yn*yn));
-//    PL[n] = sqrt(2.)*sin(M_PI*xn)*sin(M_PI*yn)*cos(M_PI*t*sqrt(2.));
+    waveInitialConditionsFunction2D(t, xn, yn,  DL[n], PL[n]);
+
   }
 }
 
@@ -234,10 +228,9 @@ SOFTWARE.
   for(int n=0;n<N;++n;@tile(p_Np, @outer, @inner)){
     const dfloat xn = x[n];
     const dfloat yn = y[n];
-    
-    /* taken from https://arxiv.org/pdf/1910.10148.pdf (4.2.1) */
-    dfloat tmp = -sigma*((xn-0.01)*(xn-0.01)+(yn-0.015)*(yn-0.015));
-    FL[n] = -omega*omega*exp(tmp);
+
+    waveForcingFunction2D(xn, yn,  sigma, omega, FL[n]);
+
   }
 }
 

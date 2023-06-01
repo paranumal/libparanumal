@@ -33,8 +33,6 @@ void wave_t::Operator(deviceMemory<dfloat> &o_QL,
 
   // THIS IMPACTS -
   // o_DhatL, o_PhatL, o_DrhsL,  o_Dtilde, o_DtildeL, o_Drhs 
-  
-//  std::cout << "STARTING: wave solve" << std::endl;
 
   linAlgMatrix_t<dfloat> filtD(1,Nstages);
   deviceMemory<dfloat> o_filtD = platform.malloc<dfloat>(Nstages);
@@ -135,21 +133,25 @@ void wave_t::Operator(deviceMemory<dfloat> &o_QL,
 
     dfloat filtP = 0;
     filtD = (dfloat)0.;
-    for(int i=1;i<=Nstages;++i){
-      dfloat filti = 2.*(cos(omega*(t+dt*esdirkC(1,i)))-0.25)/finalTime;
-      filtP += beta(i)*filti;
-      for(int j=1;j<=i;++j){
-        filtD(1,j) += beta(i)*filti*alpha(i,j);
+
+    if(settings.compareSetting("SOLVER MODE", "WAVEHOLTZ")){
+      
+      for(int i=1;i<=Nstages;++i){
+        dfloat filti = 2.*(cos(omega*(t+dt*esdirkC(1,i)))-0.25)/finalTime;
+        filtP += beta(i)*filti;
+        for(int j=1;j<=i;++j){
+          filtD(1,j) += beta(i)*filti*alpha(i,j);
+        }
       }
+      o_filtD.copyFrom(filtD.data);
     }
-    o_filtD.copyFrom(filtD.data);
     
     // unforced
     dfloat scF = 0;
     waveStepFinalizeKernel(mesh.Nelements, dt, Nstages, scF, o_beta, filtP, o_filtD,
                            o_invWJ, o_invMM,
                            o_scratch2L, o_DhatL, o_PhatL, o_FL, o_DL, o_PL, o_AQL); 
-
+    
     // printf("=*=*=*=> time=%g, dt=%g, step=%d, sum(iterD)=%d, ave(iterD)=%3.2f\n", t+dt, dt, tstep, iter, iter/(double)(Nstages-1));
   }
 
