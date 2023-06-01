@@ -36,14 +36,17 @@ void wave_t::Operator(deviceMemory<dfloat> &o_QL,
   
 //  std::cout << "STARTING: wave solve" << std::endl;
 
-  dlong Ndofs = elliptic.Ndofs;
-
-  // IC: (0,P)
-  o_QL.copyTo(o_PL);
-  platform.linAlg().set(Ndofs, (dfloat)0., o_DL);
-
+  linAlgMatrix_t<dfloat> filtD(1,Nstages);
+  deviceMemory<dfloat> o_filtD = platform.malloc<dfloat>(Nstages);
+  
+  // zero velocity divergence
+  platform.linAlg().set(Nall, (dfloat)0., o_DL);
+  
   // zero filtered solution accumulator
-  platform.linAlg().set(Ndofs, (dfloat)0., o_AQL);
+  platform.linAlg().set(Nall, (dfloat)0., o_AQL);
+
+  // copy IC
+  o_QL.copyTo(o_PL);
   
   for(int tstep=0;tstep<Nsteps;++tstep){ // do adaptive later
     int iter = 0;
@@ -129,22 +132,29 @@ void wave_t::Operator(deviceMemory<dfloat> &o_QL,
       elliptic.Operator(o_scratch1L, o_scratch2L);
     }
     elliptic.lambda = lambdaSolve;
+
+    dfloat filtP = 0;
+    filtD = (dfloat)0.;
+    for(int i=1;i<=Nstages;++i){
+      dfloat filti = 2.*(cos(omega*(t+dt*esdirkC(1,i)))-0.25)/finalTime;
+      filtP += beta(i)*filti;
+      for(int j=1;j<=i;++j){
+        filtD(1,j) += beta(i)*filti*alpha(i,j);
+      }
+    }
+    o_filtD.copyFrom(filtD.data);
     
     // unforced
     dfloat scF = 0;
-    waveStepFinalizeKernel(mesh.Nelements, dt, Nstages, scF, o_beta,
-                           o_invWJ, o_invMM, o_scratch2L, o_DhatL, o_PhatL, o_FL, o_DL, o_PL); 
-    
-    const dfloat scFP = dt*2.*(cos(omega*(t+dt))-0.25)/finalTime;
-    platform.linAlg().axpy(Nall, scFP, o_PL, (dfloat)1., o_AQL);    
+    waveStepFinalizeKernel(mesh.Nelements, dt, Nstages, scF, o_beta, filtP, o_filtD,
+                           o_invWJ, o_invMM,
+                           o_scratch2L, o_DhatL, o_PhatL, o_FL, o_DL, o_PL, o_AQL); 
 
-//    printf("=*=*=*=> time=%g, dt=%g, step=%d, sum(iterD)=%d, ave(iterD)=%3.2f\n", t+dt, dt, tstep, iter, iter/(double)(Nstages-1));
-    
-    
+    // printf("=*=*=*=> time=%g, dt=%g, step=%d, sum(iterD)=%d, ave(iterD)=%3.2f\n", t+dt, dt, tstep, iter, iter/(double)(Nstages-1));
   }
 
   // AQL = (I - OP)*QL;
-  platform.linAlg().axpy(Ndofs, (dfloat)1., o_QL, (dfloat)-1., o_AQL);
+  platform.linAlg().axpy(Nall, (dfloat)1., o_QL, (dfloat)-1., o_AQL);
   
   if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
     static int slice=0;

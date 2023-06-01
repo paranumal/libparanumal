@@ -84,7 +84,7 @@ SOFTWARE.
                                     @restrict const dfloat *gammatilde,  
                                     @restrict const dfloat *WJ,
                                     @restrict const dfloat *MM,
-                                    @restrict const dfloat *FL,                                     
+                                    @restrict const dfloat *FL,
                                     @restrict       dfloat *DtildeL,
                                     @restrict       dfloat *DhatL,
                                     @restrict       dfloat *PhatL,
@@ -153,6 +153,8 @@ SOFTWARE.
                                    const int Nstages,
                                    const dfloat scF,
                                    @restrict const dfloat *beta,
+                                   const dfloat filtP,
+                                   @restrict const dfloat *filtD,
                                    @restrict const dfloat *invWJ,
                                    @restrict const dfloat *invMM,
                                    @restrict const dfloat *ML_Phat_Beta,
@@ -160,7 +162,8 @@ SOFTWARE.
                                    @restrict const dfloat *PhatL,
                                    @restrict const dfloat *FL,
                                    @restrict       dfloat *DL,
-                                   @restrict       dfloat *PL){
+                                   @restrict       dfloat *PL,
+                                   @restrict       dfloat *filtPL){
   
   for(dlong e=0;e<Nelements;++e;@outer(0)){
     @shared dfloat s_tmp[p_Np];
@@ -181,12 +184,17 @@ SOFTWARE.
       const dlong id = e*p_Np+n;
       DL[id] = DhatL[id] - dt*Dres +dt*scF*FL[id]; // NEGATE FOR LAPLACIAN
 
-      dfloat Pres = 0;
+      dfloat Pres = 0, filtPres = 0;
+      dfloat Pn = PhatL[id];
+      
       for(int s=0;s<Nstages;++s){
         dfloat Dhats = DhatL[id+s*Nelements*p_Np];
-        Pres += beta[s]*Dhats; 
+        Pres += beta[s]*Dhats;
+        filtPres += filtD[s]*Dhats; 
       }
-      PL[id] = PhatL[id] + dt*Pres;
+      
+      PL[id] = Pn + dt*Pres;
+      filtPL[id] += dt*(filtP*Pn + dt*filtPres);
     }
   }
 }

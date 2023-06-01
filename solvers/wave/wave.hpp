@@ -130,7 +130,7 @@ public:
    deviceMemory<dfloat> o_scratch2L;
 
    deviceMemory<dfloat> o_FL;
-   deviceMemory<dfloat> o_FPL;
+   deviceMemory<dfloat> o_filtPL;
    
    deviceMemory<dfloat> o_invMM;
    deviceMemory<dfloat> o_MM;

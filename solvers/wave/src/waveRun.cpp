@@ -37,7 +37,7 @@ void wave_t::Run(){
   // harmonic forcing data
   settings.getSetting("OMEGA", omega);
   sigma = std::max(36., omega*omega);
-  int NouterSteps = 10;
+  int NouterSteps = 30; // was 30
   finalTime = NouterSteps*(2.*M_PI/omega);
   dfloat t = startTime;
   
@@ -45,7 +45,7 @@ void wave_t::Run(){
   settings.getSetting("TIME STEP", dt);
 
   // should try using more accurate pressure accumulator
-  Nsteps = std::max(NouterSteps*8., ceil(finalTime/dt));
+  Nsteps = NouterSteps*12; // std::max(NouterSteps*8., ceil(finalTime/dt));
   dt = finalTime/Nsteps;
   std::cout << "dt=" << dt << std::endl;
   
@@ -67,6 +67,8 @@ void wave_t::Run(){
   dlong Ndofs = elliptic.Ndofs;
   dlong Nhalo = elliptic.Nhalo;
 
+  std::cout << "Ndofs = " << Ndofs << ", Nall = " << Nall << std::endl;
+  
   // rebuild precon for this lambda
   elliptic.lambda = lambdaSolve;
   if     (elliptic.settings.compareSetting("PRECONDITIONER", "JACOBI"))
@@ -131,7 +133,7 @@ void wave_t::Run(){
 //  Solve(o_DL, o_PL, o_FL);
 
   // try WaveHoltz (not sure if this is quite right yet)
-  deviceMemory<dfloat> o_qL = platform.malloc<dfloat>(Ndofs);
+  deviceMemory<dfloat> o_qL = platform.malloc<dfloat>(Nall);
   waveHoltz(o_qL);
   
 #if 0

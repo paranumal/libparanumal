@@ -129,7 +129,9 @@ SOFTWARE.
                                    const dfloat dt,
                                    const int Nstages,
                                     const dfloat scF,
-                                   @restrict const dfloat *beta,
+                                    @restrict const dfloat *beta,
+                                    const dfloat filtP,
+                                    @restrict const dfloat *filtD,
                                    @restrict const dfloat *invWJ,
                                    @restrict const dfloat *invMM,
                                    @restrict const dfloat *ML_Phat_Beta,
@@ -137,7 +139,8 @@ SOFTWARE.
                                    @restrict const dfloat *PhatL,
                                    @restrict const dfloat *FL,
                                    @restrict       dfloat *DL,
-                                   @restrict       dfloat *PL){
+                                    @restrict       dfloat *PL,
+                                    @restrict       dfloat *filtPL){
   
   for(dlong e=0;e<Nelements;++e;@outer(0)){
     
@@ -148,11 +151,16 @@ SOFTWARE.
       Dres *= invWJ[id];
       DL[id] = DhatL[id] - dt*Dres + dt*scF*FL[id];
       
-      dfloat Pres = 0;
+      dfloat Pres = 0, filtPres = 0;
+      dfloat Pn = PhatL[id];
+      
       for(int s=0;s<Nstages;++s){
-        Pres += beta[s]*DhatL[id+s*Nelements*p_Np]; // HALO ?
+        dfloat Dhats = DhatL[id+s*Nelements*p_Np];
+        Pres += beta[s]*Dhats; // HALO ?
+        filtPres += filtD[s]*Dhats; 
       }
-      PL[id] = PhatL[id] + dt*Pres; 
+      PL[id] = PhatL[id] + dt*Pres;
+      filtPL[id] += dt*(filtP*Pn + dt*filtPres);
     }
   }
 }

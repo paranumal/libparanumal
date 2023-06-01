@@ -33,30 +33,29 @@ void wave_t::waveHoltz(deviceMemory<dfloat> &o_qL){
   
 #if 1
 
-  const dlong Ndofs = elliptic.Ndofs;
   const dlong Nhalo = elliptic.Nhalo;
   
   precon_t waveHoltzPrecon;
-  waveHoltzPrecon.Setup<IdentityPrecon>(Ndofs);
+  waveHoltzPrecon.Setup<IdentityPrecon>(Nall);
 
   linearSolver_t<dfloat> waveHoltzLinearSolver;
 
   // configure linear solver to use pgmres
   waveHoltzLinearSolver.Setup<LinearSolver::pgmres<dfloat> >
-     (Ndofs, Nhalo, platform, elliptic.settings, comm);
+     (Nall, Nhalo, platform, elliptic.settings, comm);
 
   // configure linear solver to use zero initial guess
   waveHoltzLinearSolver.SetupInitialGuess<InitialGuess::Last<dfloat> >
-     (Ndofs, platform, elliptic.settings, comm);
+     (Nall, platform, elliptic.settings, comm);
   
   // compute RHS (this will work for IPDG for now)
-  deviceMemory<dfloat> o_bL = platform.malloc<dfloat>(Ndofs);
-
-  platform.linAlg().set(Ndofs, (dfloat)0, o_qL);
-  platform.linAlg().set(Ndofs, (dfloat)0, o_DL);
-  platform.linAlg().set(Ndofs, (dfloat)0, o_PL);
-  platform.linAlg().set(Ndofs, (dfloat)0, o_FPL);
+  deviceMemory<dfloat> o_bL = platform.malloc<dfloat>(Nall);
   
+  platform.linAlg().set(Nall, (dfloat)0, o_qL);
+  platform.linAlg().set(Nall, (dfloat)0, o_DL);
+  platform.linAlg().set(Nall, (dfloat)0, o_PL);
+  platform.linAlg().set(Nall, (dfloat)0, o_filtPL);
+
   // solve homogeneous initial conditions with forcing to obtain RHS
 //  Nsteps *=20;
   Solve(o_DL, o_PL, o_FL);
@@ -64,7 +63,7 @@ void wave_t::waveHoltz(deviceMemory<dfloat> &o_qL){
   std::cout << "**************** DONE INITIAL FORCING PHASE *******************" << std::endl;
   
   // this becomes the RHS 
-  o_FPL.copyTo(o_bL);
+  o_filtPL.copyTo(o_bL);
   
   stoppingCriteria_t<dfloat> *waveHoltzStoppingCriteria = new stoppingCriteria_t<dfloat>();
   int iterD =
@@ -78,7 +77,7 @@ void wave_t::waveHoltz(deviceMemory<dfloat> &o_qL){
                                  waveHoltzStoppingCriteria);
   
   std::cout << " WOWSA " << std::endl;
-
+  
 //  if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
   {
     // copy data back to host
@@ -106,13 +105,13 @@ void wave_t::waveHoltz(deviceMemory<dfloat> &o_qL){
     std::cout << "STARTING OUTER ITERATION: " << it << std::endl;
     
     platform.linAlg().set(Nall, (dfloat)0, o_DL);
-    platform.linAlg().set(Nall, (dfloat)0, o_FPL);
+    platform.linAlg().set(Nall, (dfloat)0, o_filtPL);
 
     // solve to T = 2pi/omega
     Solve(o_DL, o_PL, o_FL);
 
-    // PL <= FPL
-    o_FPL.copyTo(o_PL);
+    // PL <= filtPL
+    o_filtPL.copyTo(o_PL);
     
     if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
       static int slice=0;

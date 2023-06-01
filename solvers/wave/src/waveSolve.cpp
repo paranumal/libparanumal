@@ -33,6 +33,9 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
                    deviceMemory<dfloat> &o_rFL){
 
   std::cout << "iostep = " << iostep << std::endl;
+
+  linAlgMatrix_t<dfloat> filtD(1,Nstages);
+  deviceMemory<dfloat> o_filtD = platform.malloc<dfloat>(Nstages);
   
   for(int tstep=0;tstep<Nsteps;++tstep){ // do adaptive later
     int iter = 0;
@@ -68,7 +71,6 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
       // changed to tol
       int iterD = elliptic.Solve(linearSolver, o_Dtilde, o_Drhs, tol, maxIter, verbose, stoppingCriteria);
 
-      //add the boundary data to the masked nodes
       if(disc_c0){
 
         // scatter x to LocalDofs if c0
@@ -139,12 +141,25 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
       dfloat ti = t + dt*esdirkC(1,i);
       scF += beta(1,i)*cos(omega*ti);
     }
-    
-    waveStepFinalizeKernel(mesh.Nelements, dt, Nstages, scF, o_beta,
-                           o_invWJ, o_invMM, o_scratch2L, o_DhatL, o_PhatL, o_FL, o_rDL, o_rPL); 
 
+    dfloat filtP = 0;
+    filtD = (dfloat)0.;
+    for(int i=1;i<=Nstages;++i){
+      dfloat filti = 2.*(cos(omega*(t+dt*esdirkC(1,i)))-0.25)/finalTime;
+      filtP += beta(1,i)*filti;
+      for(int j=1;j<=i;++j){
+        filtD(1,j) += beta(1,i)*filti*alpha(i,j);
+      }
+    }
+    o_filtD.copyFrom(filtD.data);
+    
+    waveStepFinalizeKernel(mesh.Nelements, dt, Nstages, scF, o_beta, filtP, o_filtD,
+                           o_invWJ, o_invMM, o_scratch2L, o_DhatL, o_PhatL, o_FL, o_rDL, o_rPL, o_filtPL);  
+
+#if 0
     const dfloat scFP = dt*2.*(cos(omega*(t+dt))-0.25)/finalTime;
-    platform.linAlg().axpy(Nall, scFP, o_rPL, (dfloat)1., o_FPL);
+    platform.linAlg().axpy(Nall, scFP, o_rPL, (dfloat)1., o_filtPL);
+#endif
     
     timePoint_t ends = GlobalPlatformTime(platform);
 
