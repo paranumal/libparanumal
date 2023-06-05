@@ -27,13 +27,15 @@ SOFTWARE.
 
 // isotropic acoustics
 @kernel void acousticsVolumeHex3D(const dlong Nelements,
+                                  @restrict const  dlong  *  elementIds,
 				 @restrict const  dfloat *  vgeo,
 				 @restrict const  dfloat *  DT,
 				 @restrict const  dfloat *  q,
 				 @restrict dfloat *  rhsq){
 
-  for(dlong e=0;e<Nelements;++e;@outer(0)){
+  for(dlong eo=0;eo<Nelements;++eo;@outer(0)){
 
+    @exclusive dlong e;
     @shared dfloat s_DT[p_Nq][p_Nq];
 
     @shared dfloat s_F[p_Nfields][p_Nq][p_Nq][p_Nq];
@@ -43,6 +45,9 @@ SOFTWARE.
     for(int k=0;k<p_Nq;++k;@inner(2)){
       for(int j=0;j<p_Nq;++j;@inner(1)){
         for(int i=0;i<p_Nq;++i;@inner(0)){
+
+          e = elementIds[eo];
+          
           if(k==0)
             s_DT[j][i] = DT[j*p_Nq+i];
 
