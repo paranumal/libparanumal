@@ -43,7 +43,7 @@ SOFTWARE.
 // Initial conditions
 #define acousticsInitialConditions2D(t, x, y, r, u, v) \
 {                                       \
-  *(r) = 1.0 + exp(-3*(x*x+y*y));       \
+  *(r) = exp(-40.*(x*x+y*y));       \
   *(u) = 0.0;                           \
   *(v) = 0.0;                           \
 }
