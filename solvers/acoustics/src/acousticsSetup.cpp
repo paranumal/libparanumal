@@ -42,14 +42,34 @@ void acoustics_t::Setup(platform_t& _platform, mesh_t& _mesh,
   //Trigger JIT kernel builds
   ogs::InitializeKernels(platform, ogs::Dfloat, ogs::Add);
 
-  //setup linear algebra module
-  platform.linAlg().InitKernels({"innerProd"});
+  //setup cubature
+  mesh.CubatureSetup();
 
-  /*setup trace halo exchange */
-  traceHalo = mesh.HaloTraceSetup(Nfields);
 
+  //make array of time step estimates for each element
+  memory<dfloat> EtoDT(mesh.Nelements);
+  dfloat vmax = MaxWaveSpeed();
+  for(dlong e=0;e<mesh.Nelements;++e){
+    dfloat h = mesh.ElementCharacteristicLength(e);
+    dfloat dtAdv  = h/(vmax*(mesh.N+1.)*(mesh.N+1.));
+
+    EtoDT[e] = dtAdv;
+  }
+
+  mesh.mrNlevels=0;
+  if (settings.compareSetting("TIME INTEGRATOR","MRAB3")){
+    mesh.MultiRateSetup(EtoDT);
+    mesh.MultiRatePmlSetup();
+    multirateTraceHalo = mesh.MultiRateHaloTraceSetup(Nfields);
+  }
+  
   //setup timeStepper
-  if (settings.compareSetting("TIME INTEGRATOR","AB3")){
+  if (settings.compareSetting("TIME INTEGRATOR","MRAB3")){
+    timeStepper.Setup<TimeStepper::mrab3>(mesh.Nelements, 0,
+                                          mesh.totalHaloPairs,
+                                          mesh.Np, Nfields, 0,
+                                          platform, mesh);
+  } else if (settings.compareSetting("TIME INTEGRATOR","AB3")){
     timeStepper.Setup<TimeStepper::ab3>(mesh.Nelements,
                                         mesh.totalHaloPairs,
                                         mesh.Np, Nfields, platform, comm);
@@ -66,12 +86,29 @@ void acoustics_t::Setup(platform_t& _platform, mesh_t& _mesh,
   // set penalty parameter
   dfloat Lambda2 = 0.5;
 
+  //setup linear algebra module
+  platform.linAlg().InitKernels({"innerProd"});
+
+  /*setup trace halo exchange */
+  traceHalo = mesh.HaloTraceSetup(Nfields);
+
+  
+
+  
   // compute samples of q at interpolation nodes
   q.malloc(Nlocal+Nhalo);
   o_q = platform.malloc<dfloat>(Nlocal+Nhalo);
 
   mesh.MassMatrixKernelSetup(Nfields); // mass matrix operator
 
+  {
+    memory<dlong> allElements(mesh.Nelements);
+    for(int n=0;n<mesh.Nelements;++n){
+      allElements[n] = n;
+    }
+    o_allElements = platform.malloc<dlong>(mesh.Nelements, allElements);
+  }
+  
   // OCCA build stuff
   properties_t kernelInfo = mesh.props; //copy base occa properties
 
@@ -119,6 +156,12 @@ void acoustics_t::Setup(platform_t& _platform, mesh_t& _mesh,
   surfaceKernel = platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
 
+  // load multirate surface kernel
+  kernelName = "acousticsMRSurface" + suffix;
+
+  surfaceMRKernel = platform.buildKernel(fileName, kernelName,
+                                         kernelInfo);
+  
   if (mesh.dim==2) {
     fileName   = oklFilePrefix + "acousticsInitialCondition2D" + oklFileSuffix;
     kernelName = "acousticsInitialCondition2D";

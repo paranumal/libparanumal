@@ -27,18 +27,22 @@ SOFTWARE.
 
 // isotropic acoustics
 @kernel void acousticsVolumeTri2D(const dlong Nelements,
-                            @restrict const  dfloat *  vgeo,
-                            @restrict const  dfloat *  D,
-                            @restrict const  dfloat *  q,
+                                  @restrict const  dlong  *  elementIds,
+                                  @restrict const  dfloat *  vgeo,
+                                  @restrict const  dfloat *  D,
+                                  @restrict const  dfloat *  q,
                                   @restrict dfloat *  rhsq){
 
-  for(dlong e=0;e<Nelements;++e;@outer(0)){
+  for(dlong eo=0;eo<Nelements;++eo;@outer(0)){
 
+    @exclusive dlong e;
     @shared dfloat s_F[p_Nfields][p_Np];
     @shared dfloat s_G[p_Nfields][p_Np];
 
     for(int n=0;n<p_Np;++n;@inner(0)){
 
+      e = elementIds[eo];
+      
       // prefetch geometric factors (constant on triangle)
       const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
       const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];

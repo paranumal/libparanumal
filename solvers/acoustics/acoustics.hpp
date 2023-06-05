@@ -55,13 +55,17 @@ public:
 
   timeStepper_t timeStepper;
 
+   deviceMemory<dlong> o_allElements;
+   
   ogs::halo_t traceHalo;
+   memory<ogs::halo_t> multirateTraceHalo;
 
   memory<dfloat> q;
   deviceMemory<dfloat> o_q;
 
   kernel_t volumeKernel;
   kernel_t surfaceKernel;
+   kernel_t surfaceMRKernel;
 
   kernel_t initialConditionKernel;
 
@@ -81,8 +85,21 @@ public:
 
   void PlotFields(memory<dfloat> Q, const std::string fileName);
 
-  void rhsf(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
+   void rhsf(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
+   
+   void rhsVolume(dlong N, deviceMemory<dlong>&o_ids,
+                  deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
 
+
+   void rhsSurfaceMR(dlong N, deviceMemory<dlong>& o_ids,
+                     deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS,
+                     deviceMemory<dfloat>& o_fQM, const dfloat T);
+
+
+   void rhsf_MR(deviceMemory<dfloat>& o_Q,
+                deviceMemory<dfloat>& o_RHS,	
+                deviceMemory<dfloat>& o_fQM, const dfloat T, const int lev);
+   
   dfloat MaxWaveSpeed();
 };
 

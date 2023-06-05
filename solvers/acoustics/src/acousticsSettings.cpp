@@ -37,7 +37,7 @@ acousticsSettings_t::acousticsSettings_t(comm_t _comm):
   newSetting("TIME INTEGRATOR",
              "DOPRI5",
              "Time integration method",
-             {"AB3", "DOPRI5", "LSERK4"});
+             {"AB3", "DOPRI5", "LSERK4", "MRAB3"});
 
   newSetting("CFL NUMBER",
              "1.0",

@@ -37,8 +37,9 @@ void acoustics_t::rhsf(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, c
 
   // extract q halo on DEVICE
   traceHalo.ExchangeStart(o_Q, 1);
-
+  
   volumeKernel(mesh.Nelements,
+               o_allElements,
                mesh.o_vgeo,
                mesh.o_D,
                o_Q,
@@ -75,4 +76,70 @@ void acoustics_t::rhsf(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, c
                   mesh.o_z,
                   o_Q,
                   o_RHS);
+}
+
+
+void acoustics_t::rhsVolume(dlong N, deviceMemory<dlong>& o_ids,
+                             deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T){
+
+  // compute volume contribution to bns RHS
+  if (N)
+    volumeKernel(N,
+                 o_ids,
+                 mesh.o_vgeo,
+                 mesh.o_D,
+                 o_Q,
+                 o_RHS);
+}
+
+
+void acoustics_t::rhsSurfaceMR(dlong N,
+                               deviceMemory<dlong>& o_ids,
+                               deviceMemory<dfloat>& o_Q,
+                               deviceMemory<dfloat>& o_RHS,
+                               deviceMemory<dfloat>& o_fQM,
+                               const dfloat T){
+  
+  // compute volume contribution to bns RHS
+  if (N)
+     surfaceMRKernel(N,
+                     o_ids,
+                     mesh.o_sgeo,
+                     mesh.o_LIFT,
+                     mesh.o_vmapM,
+                     mesh.o_mapP,
+                     mesh.o_EToB,
+                     T,
+                     mesh.o_x,
+                     mesh.o_y,
+                     mesh.o_z,
+                     o_Q,
+                     o_fQM,
+                     o_RHS);
+}
+
+
+//evaluate ODE rhs = f(q,t)
+void acoustics_t::rhsf_MR(deviceMemory<dfloat>& o_Q, 
+                          deviceMemory<dfloat>& o_RHS, 
+                          deviceMemory<dfloat>& o_fQM,
+                          const dfloat T,
+                          const int lev){
+
+  // extract q trace halo and start exchange
+  multirateTraceHalo[lev].ExchangeStart(o_fQM, 1);
+
+  // compute volume contribution to bns RHS
+  rhsVolume(mesh.mrNnonPmlElements[lev], mesh.o_mrNonPmlElements[lev], o_Q, o_RHS, T);
+
+  // complete trace halo exchange
+  multirateTraceHalo[lev].ExchangeFinish(o_fQM, 1);
+
+  // compute surface contribution to bns RHS
+  rhsSurfaceMR(mesh.mrNnonPmlElements[lev],
+               mesh.o_mrNonPmlElements[lev], 
+               o_Q,
+               o_RHS,
+               o_fQM,
+               T);
 }
