@@ -25,6 +25,7 @@ SOFTWARE.
 */
 
 #include "acoustics.hpp"
+#include "timer.hpp"
 
 void acoustics_t::Run(){
 
@@ -49,7 +50,14 @@ void acoustics_t::Run(){
   dfloat dt = cfl*hmin/(vmax*(mesh.N+1.)*(mesh.N+1.));
   timeStepper.SetTimeStep(dt);
 
+  timePoint_t starts = GlobalPlatformTime(platform);
+
   timeStepper.Run(*this, o_q, startTime, finalTime);
+
+  timePoint_t ends = GlobalPlatformTime(platform);
+
+  double elapsedTime = ElapsedTime(starts, ends);
+  std::cout << "elapsedTime = " << std::scientific << elapsedTime << std::endl;
 
   // output norm of final solution
   {
