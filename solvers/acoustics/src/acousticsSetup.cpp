@@ -45,7 +45,6 @@ void acoustics_t::Setup(platform_t& _platform, mesh_t& _mesh,
   //setup cubature
   mesh.CubatureSetup();
 
-
   //make array of time step estimates for each element
   memory<dfloat> EtoDT(mesh.Nelements);
   dfloat vmax = MaxWaveSpeed();
@@ -91,9 +90,6 @@ void acoustics_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
   /*setup trace halo exchange */
   traceHalo = mesh.HaloTraceSetup(Nfields);
-
-  
-
   
   // compute samples of q at interpolation nodes
   q.malloc(Nlocal+Nhalo);

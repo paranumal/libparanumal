@@ -60,8 +60,8 @@ memory<ogs::halo_t> mesh_t::MultiRateHaloTraceSetup(int Nfields){
       const dlong vid = e*Nfp*Nfaces + n;
       const dlong idM = vmapM[vid];
 
-      const dlong eM = idM/(Nfp*Nfaces);
-      const int fidM = idM%(Nfp*Nfaces);
+      const dlong eM = idM/Np; 
+      const int fidM = idM%Np;
 
       const dlong id  = eM*Nfields*Np + fidM;
       const dlong tid = e*Nfields*Nfp*Nfaces + n;
@@ -82,8 +82,8 @@ memory<ogs::halo_t> mesh_t::MultiRateHaloTraceSetup(int Nfields){
       const dlong vid = e*Nfp*Nfaces + n;
       const dlong idM = vmapM[vid];
 
-      const dlong eM = idM/(Nfp*Nfaces);
-      const int fidM = idM%(Nfp*Nfaces);
+      const dlong eM = idM/Np;
+      const int fidM = idM%Np;
 
       const dlong id  = eM*Nfields*Np + fidM;
       const dlong tid = e*Nfields*Nfp*Nfaces + n;

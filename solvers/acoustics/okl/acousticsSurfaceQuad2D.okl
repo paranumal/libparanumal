@@ -103,6 +103,64 @@ void surfaceTerms(const int e,
   s_vflux[es][j][i] += sc*(-vflux);
 }
 
+void mrSurfaceTerms(const int e,
+                  const int es,
+                  const int sk,
+                  const int face,
+                  const int i,
+                  const int j,
+                  const dfloat *sgeo,
+                  const dfloat *x,
+                  const dfloat *y,
+                  const int *vmapM,
+                  const int *mapP,
+                  const int *EToB,
+                    const dfloat *fQM,
+                  dfloat s_rflux[p_NblockS][p_Nq][p_Nq],
+                  dfloat s_uflux[p_NblockS][p_Nq][p_Nq],
+                  dfloat s_vflux[p_NblockS][p_Nq][p_Nq]){
+
+  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
+  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
+  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];
+  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];
+
+  // indices of negative and positive traces of face node
+  const dlong vidM = vmapM[sk];
+  const dlong qidP = mapP[sk];
+  const dlong eM   = e;
+  const dlong eP   = qidP/(p_Nfp*p_Nfaces);
+  const int fidP   = qidP%(p_Nfp*p_Nfaces);
+  
+  const dlong idM = eM*p_Nfp*p_Nfaces*p_Nfields + sk%(p_Nfp*p_Nfaces);
+  const dlong idP = eP*p_Nfp*p_Nfaces*p_Nfields + fidP;
+  
+  const dfloat rM = fQM[idM + 0*p_Nfp*p_Nfaces];
+  const dfloat uM = fQM[idM + 1*p_Nfp*p_Nfaces];
+  const dfloat vM = fQM[idM + 2*p_Nfp*p_Nfaces];
+
+  dfloat rP = fQM[idP + 0*p_Nfp*p_Nfaces];
+  dfloat uP = fQM[idP + 1*p_Nfp*p_Nfaces];
+  dfloat vP = fQM[idP + 2*p_Nfp*p_Nfaces];
+
+  const int bc = EToB[face+p_Nfaces*e];
+  if(bc>0){
+    acousticsDirichletConditions2D(bc, time, x[vidM], y[vidM], nx, ny, rM, uM, vM, &rP, &uP, &vP);
+  }
+
+  const dfloat sc = invWJ*sJ;
+
+  dfloat rflux, uflux, vflux;
+  upwind(nx, ny, rM, uM, vM, rP, uP, vP, &rflux, &uflux, &vflux);
+
+  s_rflux[es][j][i] += sc*(-rflux);
+  s_uflux[es][j][i] += sc*(-uflux);
+  s_vflux[es][j][i] += sc*(-vflux);
+}
+
+
+
+
 // batch process elements
 @kernel void acousticsSurfaceQuad2D(const dlong Nelements,
                                    @restrict const  dlong  *  elementIds,
@@ -175,6 +233,101 @@ void surfaceTerms(const int e,
           //surfaceTerms(sk3,3,0     ,j);
           surfaceTerms(element, es, sk3, 3, 0, j,
                        sgeo, x, y, vmapM, vmapP, EToB, q, s_rflux, s_uflux, s_vflux);
+        }
+      }
+    }
+
+    // for each node in the element
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        if(r_e<Nelements){
+          #pragma unroll p_Nq
+            for(int j=0;j<p_Nq;++j){
+              const dlong base = element*p_Np*p_Nfields+j*p_Nq+i;
+              rhsq[base+0*p_Np] += s_rflux[es][j][i];
+              rhsq[base+1*p_Np] += s_uflux[es][j][i];
+              rhsq[base+2*p_Np] += s_vflux[es][j][i];
+            }
+        }
+      }
+    }
+  }
+}
+
+
+// batch process elements
+@kernel void acousticsMRSurfaceQuad2D(const dlong Nelements,
+                                   @restrict const  dlong  *  elementIds,
+                                   @restrict const  dfloat *  sgeo,
+                                   @restrict const  dfloat *  LIFT,
+                                   @restrict const  dlong  *  vmapM,
+                                   @restrict const  dlong  *  mapP,
+                                   @restrict const  int    *  EToB,
+                                   const dfloat time,
+                                   @restrict const  dfloat *  x,
+                                   @restrict const  dfloat *  y,
+                                   @restrict const  dfloat *  z,
+                                   @restrict const  dfloat *  q,
+                                      @restrict const  dfloat *  fQM,
+                                   @restrict dfloat *  rhsq){
+
+  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
+
+    // @shared storage for flux terms
+    @shared dfloat s_rflux[p_NblockS][p_Nq][p_Nq];
+    @shared dfloat s_uflux[p_NblockS][p_Nq][p_Nq];
+    @shared dfloat s_vflux[p_NblockS][p_Nq][p_Nq];
+
+    @exclusive dlong r_e, element;
+
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        #pragma unroll p_Nq
+          for(int j=0;j<p_Nq;++j){
+            s_rflux[es][j][i] = 0.;
+            s_uflux[es][j][i] = 0.;
+            s_vflux[es][j][i] = 0.;
+          }
+      }
+    }
+
+    // for all face nodes of all elements
+    // face 0 & 2
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        r_e = eo + es;
+        if(r_e<Nelements){
+          element = elementIds[r_e];
+
+          const dlong sk0 = element*p_Nfp*p_Nfaces + 0*p_Nfp + i;
+          const dlong sk2 = element*p_Nfp*p_Nfaces + 2*p_Nfp + i;
+
+          //          surfaceTerms(sk0,0,i,0     );
+          mrSurfaceTerms(element, es, sk0, 0, i, 0,
+                       sgeo, x, y, vmapM, mapP, EToB, fQM, s_rflux, s_uflux, s_vflux);
+
+          //      surfaceTerms(sk2,2,i,p_Nq-1);
+          mrSurfaceTerms(element, es, sk2, 2, i, p_Nq-1,
+                       sgeo, x, y, vmapM, mapP, EToB, fQM, s_rflux, s_uflux, s_vflux);
+        }
+      }
+    }
+
+    // face 1 & 3
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int j=0;j<p_Nq;++j;@inner(0)){
+        if(r_e<Nelements){
+          const dlong sk1 = element*p_Nfp*p_Nfaces + 1*p_Nfp + j;
+          const dlong sk3 = element*p_Nfp*p_Nfaces + 3*p_Nfp + j;
+
+          //          surfaceTerms(sk1,1,p_Nq-1,j);
+          mrSurfaceTerms(element, es, sk1, 1, p_Nq-1, j,
+                       sgeo, x, y, vmapM, mapP, EToB, fQM, s_rflux, s_uflux, s_vflux);
+
+          //surfaceTerms(sk3,3,0     ,j);
+          mrSurfaceTerms(element, es, sk3, 3, 0, j,
+                       sgeo, x, y, vmapM, mapP, EToB, fQM, s_rflux, s_uflux, s_vflux);
         }
       }
     }
