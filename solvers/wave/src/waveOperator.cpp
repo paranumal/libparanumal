@@ -31,6 +31,7 @@ SOFTWARE.
 void wave_t::Operator(deviceMemory<dfloat> &o_QL,
                       deviceMemory<dfloat> &o_AQL){
 
+#if 1
   // THIS IMPACTS -
   // o_DhatL, o_PhatL, o_DrhsL,  o_Dtilde, o_DtildeL, o_Drhs 
 
@@ -82,10 +83,7 @@ void wave_t::Operator(deviceMemory<dfloat> &o_QL,
 
       //add the boundary data to the masked nodes
       if(disc_c0){
-
-        // scatter x to LocalDofs if c0
         elliptic.ogsMasked.Scatter(o_DtildeL, o_Dtilde, 1, ogs::NoTrans);
-        
       }else{
         o_Dtilde.copyTo(o_DtildeL);
       }
@@ -176,4 +174,152 @@ void wave_t::Operator(deviceMemory<dfloat> &o_QL,
       PlotFields(DL, PL, fname);
     }
   }
+#else
+
+  linAlgMatrix_t<dfloat> filtD(1,Nstages);
+  deviceMemory<dfloat> o_filtD = platform.malloc<dfloat>(Nstages);
+
+  // zero velocity divergence
+  platform.linAlg().set(Nall, (dfloat)0., o_DL);
+  
+  // zero filtered solution accumulator
+  platform.linAlg().set(Nall, (dfloat)0., o_AQL);
+
+  // copy IC
+  o_QL.copyTo(o_PL);
+  
+  for(int tstep=0;tstep<Nsteps;++tstep){ // do adaptive later
+    int iter = 0;
+    
+    dfloat t = tstep*dt;
+    
+    timePoint_t starts = GlobalPlatformTime(platform);
+    
+    // PhatL = PL, DhatL = DL
+    waveStepInitializeKernelV2(Nall, o_DL, o_PL, o_DhatL, o_PhatL);
+
+    // LOOP OVER IMPLICIT STAGES
+    for(int stage=2;stage<=Nstages;++stage){
+
+      waveStageInitializeKernelV2(Nall, Nstages, stage, gamma, dt, o_alpha, o_DhatL, o_PhatL, o_scratch1L);
+
+      elliptic.lambda = 0;
+      if(disc_c0){
+        // gather up RHS 
+        elliptic.ogsMasked.Gather(o_scratch1, o_scratch1L, 1, ogs::Add, ogs::NoTrans);
+        elliptic.Operator(o_scratch1, o_scratch2);
+        elliptic.ogsMasked.Scatter(o_scratch2L, o_scratch2, 1, ogs::NoTrans);
+      }else{
+        elliptic.Operator(o_scratch1L, o_scratch2L);
+      }
+      elliptic.lambda = lambdaSolve;
+
+      dfloat scF = 0;
+      waveStageRHSKernelV2(mesh.Nelements, Nstages, stage, lambdaSolve, gamma, dt, o_alpha, o_WJ, o_MM, o_scratch2L,
+                           scF, o_FL,  o_DhatL, o_PhatL, o_DrhsL);
+      
+      // record local RHS
+      if(esc)
+         esc->setLocalRHS(o_DrhsL);
+
+      // gather rhs to globalDofs if c0
+      if(disc_c0){
+        elliptic.ogsMasked.Gather(o_Drhs, o_DrhsL, 1, ogs::Add, ogs::Trans);
+      }else{
+        o_DrhsL.copyTo(o_Drhs);
+      }
+      
+      int iterD = elliptic.Solve(linearSolver, o_Dtilde, o_Drhs, tol, maxIter, verbose, stoppingCriteria);
+      
+      if(disc_c0){ // scatter x to LocalDofs if c0
+        elliptic.ogsMasked.Scatter(o_DtildeL, o_Dtilde, 1, ogs::NoTrans);
+      }else{
+        o_Dtilde.copyTo(o_DtildeL);
+      }
+      
+      iter += iterD;
+      
+      waveStageFinalizeKernelV2(Nall, Nstages, stage, gamma, dt, o_alpha, o_DtildeL, o_DhatL, o_PhatL);
+    }
+
+    // KERNEL 4: FINALIZE
+    // P = Phat(:,1) +     dt*(Dhat(:,1:Nstages)*beta'); 
+    // D = Dhat(:,1) + dt*LAP*(Phat(:,1:Nstages)*beta');
+    
+    // a. Phat(:,1:Nstages)*beta' => o_scratchL
+    waveCombineKernel(Nall, Nstages, dt, o_beta, o_betaAlpha, o_PhatL, o_DhatL, o_scratch1L);
+
+    // b. L*(Phat(:,1:Nstages)*beta') => o_rDL
+    elliptic.lambda = 0;
+    if(disc_c0){
+      // gather up RHS 
+      elliptic.ogsMasked.Gather(o_scratch1, o_scratch1L, 1, ogs::Add, ogs::NoTrans);
+      elliptic.Operator(o_scratch1, o_scratch2);
+      elliptic.ogsMasked.Scatter(o_scratch2L, o_scratch2, 1, ogs::NoTrans);
+    }else{
+      elliptic.Operator(o_scratch1L, o_scratch2L);
+    }
+    elliptic.lambda = lambdaSolve;
+    
+    // c. finalize
+    // P = Phat(:,1) +     dt*(Dhat(:,1:Nstages)*beta'); 
+    // D = Dhat(:,1) + dt*LAP*(Phat(:,1:Nstages)*beta'); (LAP = -MM\L)
+    // THIS INCLUDE MASS MATRIX INVERSE - (IF C0 USES INVERSE OF GLOBALIZED LUMPED MASS MATRIX)
+
+    dfloat scF = 0;
+    dfloat filtP = 0;
+    filtD = (dfloat)0.;
+
+    if(settings.compareSetting("SOLVER MODE", "WAVEHOLTZ")){
+      for(int i=1;i<=Nstages;++i){
+        dfloat filti = 2.*(cos(omega*(t+dt*esdirkC(1,i)))-0.25)/finalTime;
+        filtP += beta(1,i)*filti;
+        for(int j=1;j<=i;++j){
+          filtD(1,j) += beta(1,i)*filti*alpha(i,j);
+        }
+      }
+
+      o_filtD.copyFrom(filtD.data);
+    }
+    
+    waveStepFinalizeKernel(mesh.Nelements, dt, Nstages, scF, o_beta, filtP, o_filtD,
+                           o_invWJ, o_invMM, o_scratch2L, o_DhatL, o_PhatL, o_FL, o_DL, o_PL, o_AQL);  
+    
+    timePoint_t ends = GlobalPlatformTime(platform);
+
+    printf("====> time=%g, dt=%g, step=%d, sum(iterD)=%d, ave(iterD)=%3.2f\n", t+dt, dt, tstep, iter, iter/(double)(Nstages-1));
+    
+    double elapsedTime = ElapsedTime(starts, ends);
+    
+    if ((mesh.rank==0) && verbose){
+      printf("%d, " hlongFormat ", %g, %d, %g, %g; global: N, dofs, elapsed, iterations, time per node, nodes*iterations/time %s\n",
+             mesh.N,
+             NglobalDofs,
+             elapsedTime,
+             iter,
+             elapsedTime/(NglobalDofs),
+             NglobalDofs*((dfloat)iter/elapsedTime),
+             (char*) elliptic.settings.getSetting("PRECONDITIONER").c_str());
+    }
+  }
+
+  // AQL = (I - OP)*QL;
+  platform.linAlg().axpy(Nall, (dfloat)1., o_QL, (dfloat)-1., o_AQL);
+  
+  if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
+    static int slice=0;
+    ++slice;
+    
+    // copy data back to host
+    o_AQL.copyTo(PL);
+    o_DL.copyTo(DL);
+    
+    // output field files
+    std::string name;
+    settings.getSetting("OUTPUT FILE NAME", name);
+    char fname[BUFSIZ];
+    sprintf(fname, "OP_%04d_%04d.vtu",  mesh.rank, slice);
+    PlotFields(DL, PL, fname);
+  }
+#endif
 }

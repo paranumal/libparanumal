@@ -195,6 +195,20 @@ void wave_t::Setup(platform_t& _platform,
   kernelName = "waveErrorEstimate";
   waveErrorEstimateKernel
      = platform.buildKernel(fileName, kernelName, kernelInfo);
+
+#if 0
+  kernelName = "waveStepInitializeV2";
+  waveStepInitializeKernelV2 =
+     platform.buildKernel(fileName, kernelName, kernelInfo);  
+  
+  kernelName = "waveStageInitializeV2";
+  waveStageInitializeKernelV2 =
+     platform.buildKernel(fileName, kernelName, kernelInfo);
+  
+  kernelName = "waveStageFinalizeV2";
+  waveStageFinalizeKernelV2 =
+     platform.buildKernel(fileName, kernelName, kernelInfo);
+#endif  
   
   // element type specific kernels
   fileName   = oklFilePrefix + "waveKernels" + suffix + oklFileSuffix;
@@ -219,6 +233,13 @@ void wave_t::Setup(platform_t& _platform,
   kernelName = "waveForcing" + suffix;
   waveForcingKernel
      = platform.buildKernel(fileName, kernelName, kernelInfo);
+
+#if 0
+  kernelName = "waveStageRHSV2";
+  waveStageRHSKernelV2 =
+     platform.buildKernel(fileName, kernelName, kernelInfo);
+#endif
+
   
   //setup linear solver
   Nall = mesh.Np*(mesh.Nelements+mesh.totalHaloPairs);
@@ -227,7 +248,7 @@ void wave_t::Setup(platform_t& _platform,
   DL.malloc(Nall);
   PL.malloc(Nall);
   DrhsL.malloc(Nall);
-  PhatL.malloc(Nall);
+  PhatL.malloc(Nall*Nstages);
   DhatL.malloc(Nall*Nstages);
 
   o_DL        = platform.malloc<dfloat>(Nall);
@@ -235,7 +256,7 @@ void wave_t::Setup(platform_t& _platform,
   o_DtildeL   = platform.malloc<dfloat>(Nall);
   o_DrhsL     = platform.malloc<dfloat>(Nall);
   o_DhatL     = platform.malloc<dfloat>(Nall*Nstages);
-  o_PhatL     = platform.malloc<dfloat>(Nall);
+  o_PhatL     = platform.malloc<dfloat>(Nall*Nstages);
   o_scratch1L = platform.malloc<dfloat>(Nall);
   o_scratch2L = platform.malloc<dfloat>(Nall);
 

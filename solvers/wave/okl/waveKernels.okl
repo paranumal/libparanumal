@@ -183,3 +183,86 @@ SOFTWARE.
     }
   }
 }
+
+// V2 version
+@kernel void waveStepInitializeV2(const dlong N,
+                                  @restrict const dfloat *DL,
+                                  @restrict const dfloat *PL,
+                                  @restrict dfloat *DhatL,
+                                  @restrict dfloat *PhatL){
+  
+  for(int n=0;n<N;++n;@tile(p_Np, @outer, @inner)){
+    
+    const dfloat Dn = DL[n];
+    const dfloat Pn = PL[n];
+    
+    DhatL[n] = Dn;
+    PhatL[n] = Pn;
+  }
+}
+
+
+@kernel void waveStageInitializeV2(const dlong N,
+                                   const int Nstages,
+                                   const int stage,
+                                   const dfloat gamma,
+                                   const dfloat dt,
+                                   @restrict const dfloat *alpha,
+                                   @restrict const dfloat *DhatL,
+                                   @restrict const dfloat *PhatL,
+                                   @restrict       dfloat *scratchL){
+  
+  for(int n=0;n<N;++n;@tile(p_Np, @outer, @inner)){
+    
+    int i = stage-1;
+    
+    dfloat resp = gamma*PhatL[n];
+    dfloat resd = 0;
+    
+    for(int j=0;j<i;++j){
+      dfloat Aij = alpha[i*Nstages+j];
+      resp += Aij*PhatL[n + j*N];
+      resd += Aij*DhatL[n + j*N];
+    }
+    
+    scratchL[n] = dt*resp + gamma*dt*dt*resd;
+  }
+  
+}
+
+
+@kernel void waveStageFinalizeV2(const dlong N,
+                                 const int Nstages,
+                                 const int stage,
+                                 const dfloat gamma,
+                                 const dfloat dt,
+                                 @restrict const dfloat *alpha,
+                                 @restrict const dfloat *DtildeL,
+                                 @restrict       dfloat *DhatL,
+                                 @restrict       dfloat *PhatL){
+  
+  for(int n=0;n<N;++n;@tile(p_Np, @outer, @inner)){
+    
+    const int i = stage-1;
+
+    const dfloat Pn = PhatL[n];
+    dfloat resd = 0;
+
+    for(int j=0;j<i;++j){
+      dfloat Aij = alpha[i*Nstages+j];
+      resd += Aij*DhatL[n + j*N];
+    }
+
+    dfloat Di = DtildeL[n];
+    resd += alpha[i*Nstages+i]*Di;
+
+    DhatL[n+i*N] = Di;
+    PhatL[n+i*N] = Pn + dt*resd;
+  }
+  
+}
+
+
+
+
+

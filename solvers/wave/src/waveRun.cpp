@@ -42,11 +42,11 @@ void wave_t::Run(){
     // harmonic forcing data
     settings.getSetting("OMEGA", omega);
     sigma = std::max(36., omega*omega);
-    int NouterSteps = 30; // was 30
+    int NouterSteps = 15; // was 30
     finalTime = NouterSteps*(2.*M_PI/omega);
     
     // should try using more accurate pressure accumulator
-    Nsteps = NouterSteps*12; // std::max(NouterSteps*8., ceil(finalTime/dt));
+    Nsteps = NouterSteps*100; // THIS PART IS CRITICAL. AT OMEGA=40.5 WE NEED 10
 
   }else{
     // round time step
@@ -144,19 +144,71 @@ void wave_t::Run(){
     deviceMemory<dfloat> o_qL = platform.malloc<dfloat>(Nall);
     waveHoltz(o_qL);
   }else{
+
+    timePoint_t starts = GlobalPlatformTime(platform);
+    
     Solve(o_DL, o_PL, o_FL);
 
+    timePoint_t ends = GlobalPlatformTime(platform);
+
+    platform.device.finish();
+    
+    double elapsedTime = ElapsedTime(starts, ends);
+    std::cout << "elapsedTime = " << std::scientific << elapsedTime << std::endl;
+    
+  
+    deviceMemory<dfloat> o_exactDL = platform.malloc<dfloat>(Nall);
+    deviceMemory<dfloat> o_exactPL = platform.malloc<dfloat>(Nall);
+    
+    waveInitialConditionsKernel(Nall, finalTime, mesh.o_x, mesh.o_y, mesh.o_z, o_exactDL, o_exactPL);
+
+    o_PL.copyTo(PL);
+    o_DL.copyTo(DL);       
+    
+    memory<dfloat> exactDL(Nall);
+    memory<dfloat> exactPL(Nall);
+
+    o_exactDL.copyTo(exactDL);
+    o_exactPL.copyTo(exactPL);
+
+    dfloat errDLMax = 0;
+    dfloat errPLMax = 0;
+    for(int n=0;n<Nall;++n){
+      dfloat errDLn = fabs(DL[n] - exactDL[n]);
+      dfloat errPLn = fabs(PL[n] - exactPL[n]);
+
+      errDLMax = std::max(errDLMax, errDLn);
+      errPLMax = std::max(errPLMax, errPLn);
+    }
+    std::cout << std::setprecision (6);
+    std::cout << std::scientific;
+    std::cout << "errDLMax = " << errDLMax << " errPLMax = " << errPLMax << std::endl;
+    
     if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
       // copy data back to host
-      o_PL.copyTo(PL);
-      o_DL.copyTo(DL);
-      
       // output field files
       std::string name;
       settings.getSetting("OUTPUT FILE NAME", name);
       char fname[BUFSIZ];
       sprintf(fname, "SOLN_DP_%04d.vtu",  mesh.rank);
       PlotFields(DL, PL, fname);
+    }
+
+    {
+      std::string name;
+      settings.getSetting("OUTPUT FILE NAME", name);
+      char fname[BUFSIZ];
+      // write to binary file
+      sprintf(fname, "SOLN_DP_%04d.bin",  mesh.rank);
+      FILE *fp = fopen(fname, "w");
+      fprintf(fp, "# libParanumal binary format: blocks of Np*Nel doubles for (x,y,DL,PL,..). First line is: dim,Np,Nel,Nfields,sizeof(dfloat)\n");
+      fprintf(fp, "%d %d %d %d %d (x,y,PL,DL)\n", mesh.dim, mesh.Np, mesh.Nelements, 4, sizeof(dfloat));
+      dlong NpNel = mesh.Np*mesh.Nelements;
+      fwrite(mesh.x.ptr(), NpNel, sizeof(dfloat), fp);
+      fwrite(mesh.y.ptr(), NpNel, sizeof(dfloat), fp);
+      fwrite(DL.ptr(), NpNel, sizeof(dfloat), fp);
+      fwrite(PL.ptr(), NpNel, sizeof(dfloat), fp);
+      fclose(fp);
     }
   }
   

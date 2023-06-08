@@ -236,3 +236,47 @@ SOFTWARE.
 
 
 
+@kernel void waveStageRHSV2(const dlong Nelements,
+                            const int Nstages,
+                            const int stage,
+                            const dfloat lambda,
+                            const dfloat gamma,
+                            const dfloat dt,
+                            @restrict const dfloat *alpha,
+                            @restrict const dfloat *WJL,
+                            @restrict const dfloat *MM,
+                            @restrict const dfloat *scratchL,
+                            const dfloat scF,
+                            @restrict const dfloat *FL,
+                            @restrict const dfloat *DhatL,
+                            @restrict const dfloat *PhatL,
+                            @restrict       dfloat *DrhsL){
+  
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_tmp[p_Np];
+
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      dlong id = n + e*p_Np;
+      dfloat res = dt*scF*FL[id];
+      res += DhatL[id];
+      s_tmp[n] = res;
+    }
+
+    @barrier();
+    
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      const dlong id = n + e*p_Np;
+      dfloat Mres = 0;
+      for(int m=0;m<p_Np;++m){
+        Mres += MM[n+m*p_Np]*s_tmp[m];
+      }
+      Mres *= WJL[e];
+
+      // note sign 
+      Mres -= scratchL[id];
+
+      DrhsL[id] = lambda*Mres;
+    }
+  }
+}

@@ -150,6 +150,11 @@ public:
    kernel_t waveStageFinalizeKernel;
    kernel_t waveInitialConditionsKernel;
    kernel_t waveForcingKernel;
+
+   kernel_t waveStepInitializeKernelV2;
+   kernel_t waveStageInitializeKernelV2;
+   kernel_t waveStageFinalizeKernelV2;
+   kernel_t waveStageRHSKernelV2;
    
    wave_t() = default;
    wave_t(platform_t &_platform,
@@ -165,11 +170,17 @@ public:
    void Solve(deviceMemory<dfloat> &_o_DL,
               deviceMemory<dfloat> &_o_PL,
               deviceMemory<dfloat> &_o_FL);
+
+   void SolveV2(deviceMemory<dfloat> &_o_DL,
+                deviceMemory<dfloat> &_o_PL,
+                deviceMemory<dfloat> &_o_FL);
+
    
    void Operator(deviceMemory<dfloat> &inPL,
                  deviceMemory<dfloat> &outPL);
 
    void waveHoltz(deviceMemory<dfloat> &o_qL);
+   void waveHoltzV2(deviceMemory<dfloat> &o_qL);
    
    void Run();
    
