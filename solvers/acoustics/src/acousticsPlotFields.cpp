@@ -86,7 +86,7 @@ void acoustics_t::PlotFields(memory<dfloat> Q, const std::string fileName){
 
     for(int n=0;n<mesh.plotNp;++n){
       fprintf(fp, "       ");
-      fprintf(fp, "%g\n", Ip[n]);
+      fprintf(fp, "%f\n", Ip[n]);
     }
   }
   fprintf(fp, "       </DataArray>\n");
@@ -103,16 +103,16 @@ void acoustics_t::PlotFields(memory<dfloat> Q, const std::string fileName){
       fprintf(fp, "       ");
       fprintf(fp, "       ");
       if (mesh.dim==2)
-        fprintf(fp, "%g %g\n", Iu[n], Iv[n]);
+        fprintf(fp, "%f %f\n", Iu[n], Iv[n]);
       else
-        fprintf(fp, "%g %g %g\n", Iu[n], Iv[n], Iw[n]);
+        fprintf(fp, "%f %f %f\n", Iu[n], Iv[n], Iw[n]);
     }
   }
   fprintf(fp, "       </DataArray>\n");
   fprintf(fp, "     </PointData>\n");
 
   fprintf(fp, "    <Cells>\n");
-  fprintf(fp, "      <DataArray type=\"Int32\" Name=\"connectivity\" Format=\"ascii\">\n");
+  fprintf(fp, "      <DataArray type=\"Int64\" Name=\"connectivity\" Format=\"ascii\">\n");
 
   for(dlong e=0;e<mesh.Nelements;++e){
     for(int n=0;n<mesh.plotNelements;++n){
@@ -125,7 +125,7 @@ void acoustics_t::PlotFields(memory<dfloat> Q, const std::string fileName){
   }
   fprintf(fp, "        </DataArray>\n");
 
-  fprintf(fp, "        <DataArray type=\"Int32\" Name=\"offsets\" Format=\"ascii\">\n");
+  fprintf(fp, "        <DataArray type=\"Int64\" Name=\"offsets\" Format=\"ascii\">\n");
   dlong cnt = 0;
   for(dlong e=0;e<mesh.Nelements;++e){
     for(int n=0;n<mesh.plotNelements;++n){
@@ -136,7 +136,7 @@ void acoustics_t::PlotFields(memory<dfloat> Q, const std::string fileName){
   }
   fprintf(fp, "       </DataArray>\n");
 
-  fprintf(fp, "       <DataArray type=\"Int32\" Name=\"types\" Format=\"ascii\">\n");
+  fprintf(fp, "       <DataArray type=\"Int64\" Name=\"types\" Format=\"ascii\">\n");
   for(dlong e=0;e<mesh.Nelements;++e){
     for(int n=0;n<mesh.plotNelements;++n){
       if(mesh.dim==2)
