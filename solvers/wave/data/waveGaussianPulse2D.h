@@ -48,13 +48,14 @@ SOFTWARE.
 
 #define waveForcingFunction2D(x, y, sigma, omega, f) \
   {                                            \
-    f = exp(-20.*(x*x+y*y));                   \
+    /*    f = exp(-80.*(x*x+(y-.5)*(y-.5)));    */  \
+    f = 0.;                                         \
   }
 
 
 #define waveInitialConditionsFunction2D(t, x, y, d, p)  \
   {                                                 \
     d = 0.;                                         \
-    p = exp(-30.*(x*x+y*y));                        \
+    p = exp(-80.*(x*x+(y-.5)*(y-.5)));              \
   }
 
