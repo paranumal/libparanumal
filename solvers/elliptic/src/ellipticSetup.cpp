@@ -67,14 +67,18 @@ void elliptic_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
   if (settings.compareSetting("DISCRETIZATION","IPDG")) {
     //tau (penalty term in IPDG)
-    if (mesh.elementType==Mesh::TRIANGLES ||
-        mesh.elementType==Mesh::QUADRILATERALS){
+    if (mesh.elementType==Mesh::TRIANGLES){
       tau = 2.0*(mesh.N+1)*(mesh.N+2)/2.0;
       if(mesh.dim==3) {
         tau *= 1.5;
       }
+    }else if(mesh.elementType==Mesh::QUADRILATERALS){
+      tau = 2.0*(mesh.N+1)*(mesh.N+1);
+      if(mesh.dim==3) {
+        tau *= 1.5;
+      }
     } else {
-      tau = 2.0*(mesh.N+1)*(mesh.N+3);
+      tau = 6.0*(mesh.N+1)*(mesh.N+3);
     }
   } else {
     tau = 0.0;

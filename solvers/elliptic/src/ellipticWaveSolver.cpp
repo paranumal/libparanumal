@@ -51,7 +51,7 @@ void printMatrixLocal(linAlgMatrix_t<T> &A, const char *str){
 void elliptic_t::WaveSolver(){
 
   //setup linear algebra module
-  platform.linAlg().InitKernels({"set", "sum"});
+  platform.linAlg().InitKernels({"set", "sum", "norm2", "min", "max"});
   
   // FOR THIS - WE ASSUME IPDG  and LAMBDA=1
   
@@ -407,6 +407,14 @@ void elliptic_t::WaveSolver(){
       // gather rhs to globalDofs if c0
       if(disc_c0){
         ogsMasked.Gather(o_Drhs,   o_DrhsL,   1, ogs::Add, ogs::Trans);
+
+#if 0        
+        {
+          dfloat val = platform.linAlg().norm2(NglobalDofs, o_Drhs, mesh.comm);
+          std::cout << "|Drhs|=" << val << std::endl;
+        }
+#endif
+        
         // TW not sure about this (working assumption is that DtildeL is already implicitly continuous)
         ogsMasked.Gather(o_Dtilde, o_DtildeL, 1, ogs::Add, ogs::NoTrans);
       }else{
@@ -418,8 +426,24 @@ void elliptic_t::WaveSolver(){
 
       //add the boundary data to the masked nodes
       if(disc_c0){
+
+#if 0
+        {
+          dfloat val = platform.linAlg().norm2(NglobalDofs, o_Dtilde, mesh.comm);
+          std::cout << "|Dtilde|=" << val << std::endl;
+        }
+#endif
+        
         // scatter x to LocalDofs if c0
         ogsMasked.Scatter(o_DtildeL, o_Dtilde, 1, ogs::NoTrans);
+
+#if 0
+        {
+          dfloat val = platform.linAlg().norm2(Nall, o_DtildeL, mesh.comm);
+          std::cout << "|DtildeL|=" << val << std::endl;
+        }
+#endif
+        
       }else{
         o_Dtilde.copyTo(o_DtildeL);
       }
@@ -488,7 +512,7 @@ void elliptic_t::WaveSolver(){
              (char*) settings.getSetting("PRECONDITIONER").c_str());
     }
 
-    int iostep = 10;
+    int iostep = 1;
     if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
       static int slice=0;
       if((tstep%iostep) == 0){
@@ -497,13 +521,40 @@ void elliptic_t::WaveSolver(){
         // copy data back to host
         o_PL.copyTo(PL);
         o_DL.copyTo(DL);
-      
+
+#if 0
+        {
+          std::cout << "DL === ";
+          for(int n=0;n<100;++n){
+            std::cout << DL[n] << ",";
+          }
+          std::cout << std::endl;
+        }
+        
+        {
+          dfloat val = platform.linAlg().norm2(Nall, o_DL, mesh.comm);
+          dfloat minval = platform.linAlg().min(Nall, o_DL, mesh.comm);
+          dfloat maxval = platform.linAlg().max(Nall, o_DL, mesh.comm);
+          std::cout << "|DL|=" << val << "range=[" << minval << "," << maxval << "]" << std::endl;
+        }
+
+        {
+          dfloat val = platform.linAlg().norm2(Nall, o_PL, mesh.comm);
+          std::cout << "|PL|=" << val << std::endl;
+        }
+#endif
+        
       // output field files
         std::string name;
         settings.getSetting("OUTPUT FILE NAME", name);
         char fname[BUFSIZ];
         sprintf(fname, "P_%04d_%04d.vtu",  mesh.rank, slice);
         PlotFields(PL, fname);
+
+        // output field files
+        sprintf(fname, "D_%04d_%04d.vtu",  mesh.rank, slice);
+        PlotFields(DL, fname);
+
       }
     }
   }

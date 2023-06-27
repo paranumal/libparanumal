@@ -61,12 +61,12 @@ void elliptic_t::PlotFields(memory<dfloat>& Q, std::string fileName){
     if (mesh.dim==2) {
       for(int n=0;n<mesh.plotNp;++n){
         fprintf(fp, "       ");
-        fprintf(fp, "%g %g %g\n", Ix[n],Iy[n],0.0);
+        fprintf(fp, "%f %f %f\n", Ix[n],Iy[n],0.0);
       }
     } else {
       for(int n=0;n<mesh.plotNp;++n){
         fprintf(fp, "       ");
-        fprintf(fp, "%g %g %g\n", Ix[n],Iy[n],Iz[n]);
+        fprintf(fp, "%f %f %f\n", Ix[n],Iy[n],Iz[n]);
       }
     }
   }
@@ -85,7 +85,7 @@ void elliptic_t::PlotFields(memory<dfloat>& Q, std::string fileName){
     for(int n=0;n<mesh.plotNp;++n){
       fprintf(fp, "       ");
       for (int f=0;f<Nfields;f++)
-        fprintf(fp, "%g ", Iq[n+f*mesh.Np]);
+        fprintf(fp, "%f ", Iq[n+f*mesh.Np]);
       fprintf(fp, "\n");
     }
   }

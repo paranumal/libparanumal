@@ -1,42 +1,42 @@
 
 /*
 
-The MIT License (MIT)
+  The MIT License (MIT)
 
-Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 
 */
 
 
 @kernel void ellipticStrongResidualTri2D_v0(const dlong Nelements,
-					 @restrict const dfloat *wJ,
-					 @restrict const dfloat *ggeo,	
-					 @restrict const dfloat *vgeo,
-					 @restrict const dfloat *D,
-					 @restrict const dfloat *strongS, // strong version
-					 @restrict const dfloat *MM,
-					 const dfloat lambda,
-					 @restrict const dfloat *qL,
-					 @restrict const dfloat *bL,
-					 @restrict dfloat *RnL){
+                                            @restrict const dfloat *wJ,
+                                            @restrict const dfloat *ggeo,	
+                                            @restrict const dfloat *vgeo,
+                                            @restrict const dfloat *D,
+                                            @restrict const dfloat *strongS, // strong version
+                                            @restrict const dfloat *MM,
+                                            const dfloat lambda,
+                                            @restrict const dfloat *qL,
+                                            @restrict const dfloat *bL,
+                                            @restrict dfloat *RnL){
   
   for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
 
@@ -46,7 +46,7 @@ SOFTWARE.
         if (e<Nelements) {
           //prefetch q
           const dlong base = n + e*p_Np;
-	  s_q[e-eo][n] = qL[base];
+          s_q[e-eo][n] = qL[base];
         }
       }
     }
@@ -68,17 +68,17 @@ SOFTWARE.
           dfloat qM = 0.;
 	  
 #pragma unroll p_Np
-	  for (int k=0;k<p_Np;k++) {
-	    dfloat qn = s_q[es][k];
-	    qrr += strongS[n+k*p_Np+0*p_Np*p_Np]*qn;
-	    qrs += strongS[n+k*p_Np+1*p_Np*p_Np]*qn;
-	    qss += strongS[n+k*p_Np+2*p_Np*p_Np]*qn;
-	    qM  += MM[n+k*p_Np]*s_q[es][k];
-	  }
+          for (int k=0;k<p_Np;k++) {
+            dfloat qn = s_q[es][k];
+            qrr += strongS[n+k*p_Np+0*p_Np*p_Np]*qn;
+            qrs += strongS[n+k*p_Np+1*p_Np*p_Np]*qn;
+            qss += strongS[n+k*p_Np+2*p_Np*p_Np]*qn;
+            qM  += MM[n+k*p_Np]*qn;
+          }
 	  
           const dlong id = n + e*p_Np;
 	  
-	  // TW: check sign
+          // TW: check sign
           RnL[id] = -(Grr*qrr+Grs*qrs+Gss*qss) + J*lambda*qM - bL[id];
         }
       }
@@ -88,16 +88,16 @@ SOFTWARE.
 
 
 @kernel void ellipticStrongResidualTri2D(const dlong Nelements,
-					 @restrict const dfloat *wJ,
-					 @restrict const dfloat *ggeo,	
-					 @restrict const dfloat *vgeo,
-					 @restrict const dfloat *D,
-					 @restrict const dfloat *strongS, // strong version
-					 @restrict const dfloat *MM,
-					 const dfloat lambda,
-					 @restrict const dfloat *qL,
-					 @restrict const dfloat *bL,
-					 @restrict dfloat *RnL){
+                                         @restrict const dfloat *wJ,
+                                         @restrict const dfloat *ggeo,	
+                                         @restrict const dfloat *vgeo,
+                                         @restrict const dfloat *D,
+                                         @restrict const dfloat *strongS, // strong version
+                                         @restrict const dfloat *MM,
+                                         const dfloat lambda,
+                                         @restrict const dfloat *qL,
+                                         @restrict const dfloat *bL,
+                                         @restrict dfloat *RnL){
 
 #define p_NEPT 3
   
@@ -108,61 +108,61 @@ SOFTWARE.
     for(dlong es=0;es<p_NblockV;++es;@inner(1)){
       for(int n=0;n<p_Np;++n;@inner(0)){
 #pragma unroll p_NEPT
-	for(dlong ep=0;ep<p_NEPT;++ep){
-	  const dlong e = es + ep*p_NblockV + eo;
-	  //	  const dlong e = es*p_NEPT + ep + eo;
-	  if (e<Nelements) {
-	    //prefetch q
-	    const dlong base = n + e*p_Np;
-	    s_q[ep][es][n] = qL[base];
-	  }
-	}
+        for(dlong ep=0;ep<p_NEPT;++ep){
+          const dlong e = es + ep*p_NblockV + eo;
+          //	  const dlong e = es*p_NEPT + ep + eo;
+          if (e<Nelements) {
+            //prefetch q
+            const dlong base = n + e*p_Np;
+            s_q[ep][es][n] = qL[base];
+          }
+        }
       }
     }
     
     for(dlong es=0;es<p_NblockV;++es;@inner(1)){
       for(int n=0;n<p_Np;++n;@inner(0)){
-	dfloat qrr[p_NEPT] = {0.};
-	dfloat qrs[p_NEPT] = {0.};
-	dfloat qss[p_NEPT] = {0.};
-	dfloat qM[p_NEPT] = {0.};
+        dfloat qrr[p_NEPT] = {0.};
+        dfloat qrs[p_NEPT] = {0.};
+        dfloat qss[p_NEPT] = {0.};
+        dfloat qM[p_NEPT] = {0.};
 	
 #pragma unroll p_Np
-	for (int k=0;k<p_Np;k++) {
-	  const dlong  baseid = n+k*p_Np;
-	  const dfloat strongSrr = strongS[baseid+0*p_Np*p_Np]; // nice reuse p_NEPT
-	  const dfloat strongSrs = strongS[baseid+1*p_Np*p_Np];
-	  const dfloat strongSss = strongS[baseid+2*p_Np*p_Np];
-	  const dfloat M = MM[baseid];
+        for (int k=0;k<p_Np;k++) {
+          const dlong  baseid = n+k*p_Np;
+          const dfloat strongSrr = strongS[baseid+0*p_Np*p_Np]; // nice reuse p_NEPT
+          const dfloat strongSrs = strongS[baseid+1*p_Np*p_Np];
+          const dfloat strongSss = strongS[baseid+2*p_Np*p_Np];
+          const dfloat M = MM[baseid];
 
 #pragma unroll p_NEPT
-	  for(dlong ep=0;ep<p_NEPT;++ep){
-	    dfloat qn = s_q[ep][es][k];
-	    qrr[ep] += strongSrr*qn;
-	    qrs[ep] += strongSrs*qn;
-	    qss[ep] += strongSss*qn;
-	    qM[ep]  += M*qn;
-	  }
-	}
+          for(dlong ep=0;ep<p_NEPT;++ep){
+            dfloat qn = s_q[ep][es][k];
+            qrr[ep] += strongSrr*qn;
+            qrs[ep] += strongSrs*qn;
+            qss[ep] += strongSss*qn;
+            qM[ep]  += M*qn;
+          }
+        }
 	
 #pragma unroll p_NEPT
-	for(dlong ep=0;ep<p_NEPT;++ep){
-	  const dlong e = es + ep*p_NblockV + eo;
-	  //	  const dlong e = es*p_NEPT + ep + eo;
-	  if (e<Nelements) {
-	    const dlong gid = e*p_Nggeo;
+        for(dlong ep=0;ep<p_NEPT;++ep){
+          const dlong e = es + ep*p_NblockV + eo;
+          //	  const dlong e = es*p_NEPT + ep + eo;
+          if (e<Nelements) {
+            const dlong gid = e*p_Nggeo;
 	    
-	    const dfloat Grr = ggeo[gid + p_G00ID];
-	    const dfloat Grs = ggeo[gid + p_G01ID];
-	    const dfloat Gss = ggeo[gid + p_G11ID];
-	    const dfloat J   = wJ[e];
+            const dfloat Grr = ggeo[gid + p_G00ID];
+            const dfloat Grs = ggeo[gid + p_G01ID];
+            const dfloat Gss = ggeo[gid + p_G11ID];
+            const dfloat J   = wJ[e];
 	  
-	    const dlong id = n + e*p_Np;
+            const dlong id = n + e*p_Np;
 	    
-	    // TW: check sign
-	    RnL[id] = -(Grr*qrr[ep]+Grs*qrs[ep]+Gss*qss[ep]) + J*lambda*qM[ep] - bL[id];
-	  }
-	}
+            // TW: check sign
+            RnL[id] = (-(Grr*qrr[ep]+Grs*qrs[ep]+Gss*qss[ep]) + J*lambda*qM[ep] - bL[id]);
+          }
+        }
       }
     }
   }

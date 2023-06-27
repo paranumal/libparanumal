@@ -186,9 +186,9 @@ T ellipticStoppingCriteria<T>::errorEstimate(deviceMemory<T> &o_q, deviceMemory<
   T normRn2 = elliptic->platform.linAlg().sum(Nblocks, o_normRn, mesh.comm);
   T normFn2 = elliptic->platform.linAlg().sum(Nblocks, o_normFn, mesh.comm);
 
-//  std::cout << "normRn2, normFn2 = " << sqrt(normRn2) << ", " << sqrt(normFn2) << std::endl;
+  std::cout << "normRn2, normFn2 = " << sqrt(normRn2) << ", " << sqrt(normFn2) << std::endl;
   
-  eta = std::max(normRn2, normFn2); // as iter=>infty, normRn2=>normF2 since r=>0
+  eta = std::min(normRn2, normFn2); // as iter=>infty, normRn2=>normF2 since r=>0
   eta = sqrt(eta);
   //  eta = sqrt(normRn2+normFn2);
 
@@ -233,22 +233,14 @@ int ellipticStoppingCriteria<T>::stopTest(int iteration,
   }
 
   // only recompute if eta does not look converged
-  T etaConvergenceFactor = 1e-1;
-  //  printf("errorNorm: eta=%g, eta_old=%g\n", eta, eta_old);
-  //  if(fabs(eta-eta_old)>etaConvergenceFactor*eta){
-  {
-    //    eta_old = eta;
-    eta = errorEstimate(o_q, o_r);
-
-    //    etaHistory[currentIteration++] = eta;
-    
-  }
+  eta = errorEstimate(o_q, o_r);
 
   // https://onlinelibrary.wiley.com/doi/pdf/10.1002/cnm.1120
   //    T fudgeFactor = 7.5e-3;
   //    T fudgeFactor = 0.01;
   //  T fudgeFactor = 0.1; // 0.03 2d
-  T fudgeFactor = 1.e-1; // 0.03 2d
+//  T fudgeFactor = 1.e-1; // 0.03 2d
+    T fudgeFactor = 1.e-3; // 0.03 2d
 
   //  printf("estimate eta: %g\n", eta);
   elliptic->platform.linAlg().set(NblocksC, (T)0.0, o_errH1);
