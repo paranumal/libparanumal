@@ -36,6 +36,8 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
 
   linAlgMatrix_t<dfloat> filtD(1,Nstages);
   deviceMemory<dfloat> o_filtD = platform.malloc<dfloat>(Nstages);
+
+  dlong cumIter = 0;
   
   for(int tstep=0;tstep<Nsteps;++tstep){ // do adaptive later
     int iter = 0;
@@ -70,6 +72,7 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
 
       // changed to tol
       int iterD = elliptic.Solve(linearSolver, o_Dtilde, o_Drhs, tol, maxIter, verbose, stoppingCriteria);
+      cumIter += iterD;
 
       if(disc_c0){
 
@@ -203,4 +206,6 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
       }
     }
   }
+
+  std::cout << "time=" << Nsteps*dt << ", Cumulative iterations: " << cumIter << std::endl;
 }

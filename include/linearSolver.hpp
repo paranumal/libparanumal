@@ -68,10 +68,12 @@ class linearSolver_t {
 
   bool isInitialized();
 
- private:
   std::shared_ptr<LinearSolver::linearSolverBase_t> ls=nullptr;
-  std::shared_ptr<InitialGuess::initialGuessStrategy_t> ig=nullptr;
+   std::shared_ptr<InitialGuess::initialGuessStrategy_t> ig=nullptr;
 
+ private:
+
+   
   void MakeDefaultInitialGuessStrategy();
 
   void assertInitialized();
@@ -102,7 +104,8 @@ public:
   virtual int Solve(operator_t& linearOperator, operator_t& precon,
 	    deviceMemory<float>& o_x, deviceMemory<float>& o_rhs,
                     const float tol, const int MAXIT, const int verbose,
-                    stoppingCriteria_t<float> *stoppingCriteria){
+                    stoppingCriteria_t<float> *stoppingCriteria,
+                    std::shared_ptr<InitialGuess::initialGuessStrategy_t> ig){
     LIBP_FORCE_ABORT("Type mismatch in linearSolver. Solver was constructed for type: double");
     return 0;
   }
@@ -110,7 +113,8 @@ public:
   virtual int Solve(operator_t& linearOperator, operator_t& precon,
 	    deviceMemory<double>& o_x, deviceMemory<double>& o_rhs,
                     const double tol, const int MAXIT, const int verbose,
-                    stoppingCriteria_t<double> *stoppingCriteria){
+                    stoppingCriteria_t<double> *stoppingCriteria,
+                    std::shared_ptr<InitialGuess::initialGuessStrategy_t> ig){
     LIBP_FORCE_ABORT("Type mismatch in linearSolver. Solver was constructed for type: float");
     return 0;
   }
@@ -139,7 +143,8 @@ public:
   int Solve(operator_t& linearOperator, operator_t& precon,
             deviceMemory<T>& o_x, deviceMemory<T>& o_rhs,
             const T tol, const int MAXIT, const int verbose,
-            stoppingCriteria_t<T> *stoppingCriteria);
+            stoppingCriteria_t<T> *stoppingCriteria,
+            std::shared_ptr<InitialGuess::initialGuessStrategy_t> ig);
 };
 
 extern template class pcg<float>;
@@ -165,7 +170,8 @@ public:
   int Solve(operator_t& linearOperator, operator_t& precon,
             deviceMemory<T>& o_x, deviceMemory<T>& o_rhs,
             const T tol, const int MAXIT, const int verbose,
-            stoppingCriteria_t<T> *stoppingCriteria);
+            stoppingCriteria_t<T> *stoppingCriteria,
+            std::shared_ptr<InitialGuess::initialGuessStrategy_t> ig);
 };
 
 extern template class pgmres<float>;
@@ -196,7 +202,8 @@ public:
   int Solve(operator_t& linearOperator, operator_t& precon,
             deviceMemory<T>& o_x, deviceMemory<T>& o_rhs,
             const T tol, const int MAXIT, const int verbose,
-            stoppingCriteria_t<T> *stoppingCriteria);
+            stoppingCriteria_t<T> *stoppingCriteria,
+            std::shared_ptr<InitialGuess::initialGuessStrategy_t> ig);
 };
 
 extern template class pminres<float>;
@@ -231,7 +238,8 @@ public:
   int Solve(operator_t& linearOperator, operator_t& precon,
             deviceMemory<T>& o_x, deviceMemory<T>& o_rhs,
             const T tol, const int MAXIT, const int verbose,
-            stoppingCriteria_t<T> *stoppingCriteria);
+            stoppingCriteria_t<T> *stoppingCriteria,
+            std::shared_ptr<InitialGuess::initialGuessStrategy_t> ig);
 };
 
 extern template class nbpcg<float>;
@@ -268,7 +276,8 @@ public:
   int Solve(operator_t& linearOperator, operator_t& precon,
             deviceMemory<T>& o_x, deviceMemory<T>& o_rhs,
             const T tol, const int MAXIT, const int verbose,
-            stoppingCriteria_t<T> *stoppingCriteria);
+            stoppingCriteria_t<T> *stoppingCriteria,
+            std::shared_ptr<InitialGuess::initialGuessStrategy_t> ig);
 };
 
 extern template class nbfpcg<float>;

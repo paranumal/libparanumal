@@ -56,7 +56,8 @@ template <typename T>
 int pcg<T>::Solve(operator_t& linearOperator, operator_t& precon,
                   deviceMemory<T>& o_x, deviceMemory<T>& o_r,
                   const T tol, const int MAXIT, const int verbose,
-                  stoppingCriteria_t<T> *stoppingCriteria){
+                  stoppingCriteria_t<T> *stoppingCriteria,
+                  std::shared_ptr<InitialGuess::initialGuessStrategy_t> ig){
 
   int rank = comm.rank();
   linAlg_t &linAlg = platform.linAlg();
@@ -110,23 +111,30 @@ int pcg<T>::Solve(operator_t& linearOperator, operator_t& precon,
   }
 
   if (verbose&&(rank==0))
-    printf("PCG: initial res norm %12.12f \n", sqrt(rdotr0));
+    printf("PCG: initial res norm %12.12e \n", sqrt(rdotr0));
 
   int iter;
-  for(iter=0;iter<MAXIT;++iter){
+
+  int modMAXIT = (MAXIT>0) ?  MAXIT:-MAXIT;
+  
+  for(iter=0;iter<modMAXIT;++iter){
 
     // Exit if tolerance is reached, taking at least one step.
     if (((iter == 0) && (rdotr0 == 0.0))){
       break;
     }
+    else if(MAXIT>0){
+      
+      if(stoppingCriteria->stopTest(iter, o_x, o_r, rdotr0, TOL)){ // REMOVED iter>0 test
+        break;
+      }
+      
+      if(((iter > 0) && (rdotr0 <= TOL))) {
+        break;
+      }
+    }
 
-    if(iter>0 && stoppingCriteria->stopTest(iter, o_x, o_r, rdotr0, TOL)){
-      break;
-    }
-    
-    if(((iter > 0) && (rdotr0 <= TOL))) {
-      break;
-    }
+
     
     // z = Precon^{-1} r
     if constexpr (sizeof(pfloat)==sizeof(T)){
@@ -157,7 +165,7 @@ int pcg<T>::Solve(operator_t& linearOperator, operator_t& precon,
 
     // A*p
     linearOperator.Operator(o_p, o_Ap);
-
+    
     // p.Ap
     pAp =  linAlg.innerProd(N, o_p, o_Ap, comm);
 
@@ -167,14 +175,20 @@ int pcg<T>::Solve(operator_t& linearOperator, operator_t& precon,
     //  r <= r - alpha*A*p
     //  dot(r,r)
     rdotr0 = UpdatePCG(alpha, o_p, o_Ap, o_x, o_r);
-
-    if (verbose&&(rank==0)) {
+    
+//    if (verbose&&(rank==0)) {
+    {
       if(rdotr0<0)
         printf("WARNING CG: rdotr = %17.15lf\n", rdotr0);
 
-      printf("CG: it %d, r norm %12.12le, alpha = %le \n", iter+1, sqrt(rdotr0), alpha);
-    }
+      printf("CG: it %d, r norm %12.12le, alpha = %le, MAXIT = %d \n", iter+1, sqrt(rdotr0), alpha, MAXIT);
+    }    
   }
+
+#if 0
+  if(ig!=NULL && iter>0)
+     ig->Update(o_p, o_Ap); 
+#endif
 
   return iter;
 }

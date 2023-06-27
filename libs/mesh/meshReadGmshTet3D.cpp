@@ -56,14 +56,28 @@ void mesh_t::ReadGmshTet3D(const std::string fileName){
   memory<dfloat> VZ(Nnodes);
 
   /* load nodes */
+  dfloat xmin = 1e9, xmax = -1e8;
+  dfloat ymin = 1e9, ymax = -1e8;
+  dfloat zmin = 1e9, zmax = -1e8;
   for(hlong n=0;n<Nnodes;++n){
     //read to end of line
     LIBP_ABORT("Error reading mesh file: " << fileName,
                !fgets(buf, BUFSIZ, fp));
     sscanf(buf, "%*d" dfloatFormat dfloatFormat dfloatFormat,
            VX.ptr()+n, VY.ptr()+n, VZ.ptr()+n);
+
+    xmin = std::min(xmin, VX[n]);
+    xmax = std::max(xmax, VX[n]);
+    ymin = std::min(ymin, VY[n]);
+    ymax = std::max(ymax, VY[n]);
+    zmin = std::min(zmin, VZ[n]);
+    zmax = std::max(zmax, VZ[n]);
   }
 
+  std::cout << "x in [" << xmin << "," << xmax << "]" << std::endl;
+  std::cout << "y in [" << ymin << "," << ymax << "]" << std::endl;
+  std::cout << "z in [" << zmin << "," << zmax << "]" << std::endl;
+  
   /* look for section with Element node data */
   do{
     //read to end of line
@@ -82,6 +96,9 @@ void mesh_t::ReadGmshTet3D(const std::string fileName){
   fpos_t fpos;
   fgetpos(fp, &fpos);
   hlong Ntets = 0, gNboundaryFaces = 0;
+
+  std::cout << "gNelements = " << gNelements << std::endl;
+  
   for(hlong n=0;n<gNelements;++n){
     int ElementType;
     //read to end of line
@@ -125,6 +142,8 @@ void mesh_t::ReadGmshTet3D(const std::string fileName){
       boundaryInfo[bcnt*4+1] = v1-1;
       boundaryInfo[bcnt*4+2] = v2-1;
       boundaryInfo[bcnt*4+3] = v3-1;
+      boundaryInfo[bcnt*4+0] = 1; // default to Dirichlet
+      
       ++bcnt;
     }
 

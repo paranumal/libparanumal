@@ -72,6 +72,7 @@ void parAlmond_t::Operator(deviceMemory<pfloat>& o_rhs, deviceMemory<pfloat>& o_
     pfloat tol = 1e-8;
     operator_t &A = multigrid->GetLevel<operator_t>(0);
     stoppingCriteria_t<pfloat> stoppingCriteria;
+    
     (void) multigrid->linearSolver.Solve(A, *multigrid, o_x, o_rhs, tol, maxIter, verbose, &stoppingCriteria);
   } else { //apply a multigrid cycle
     multigrid->Operator(o_rhs, o_x);

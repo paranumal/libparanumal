@@ -30,17 +30,18 @@ namespace libp {
 
 template <typename T>
 int linearSolver_t<T>::Solve(operator_t& linearOperator,
-			     operator_t& precon,
-			     deviceMemory<T>& o_x,
-			     deviceMemory<T>& o_rhs,
-			     const T tol,
-			     const int MAXIT,
+                             operator_t& precon,
+                             deviceMemory<T>& o_x,
+                             deviceMemory<T>& o_rhs,
+                             const T tol,
+                             const int MAXIT,
                              const int verbose,
                              stoppingCriteria_t<T> *stoppingCriteria){
   assertInitialized();
   ig->FormInitialGuess(o_x, o_rhs);
-  int iters = ls->Solve(linearOperator, precon, o_x, o_rhs, tol, MAXIT, verbose, stoppingCriteria);
-  ig->Update(linearOperator, o_x, o_rhs);
+  int iters = ls->Solve(linearOperator, precon, o_x, o_rhs, tol, MAXIT, verbose, stoppingCriteria, ig);
+  if(iters>0)
+     ig->Update(linearOperator, o_x, o_rhs);
 
   return iters;
 }

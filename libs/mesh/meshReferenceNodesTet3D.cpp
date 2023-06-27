@@ -173,7 +173,7 @@ void mesh_t::ReferenceNodesTet3D(){
 
   
   /* Plotting data */
-  plotN = N + 3; //enriched interpolation space for plotting
+  plotN = N + 1; //enriched interpolation space for plotting
   plotNp = (plotN+1)*(plotN+2)*(plotN+3)/6;
 
   /* Plotting nodes */

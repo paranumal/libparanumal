@@ -63,6 +63,16 @@ class initialGuessStrategy_t {
   virtual void Update(operator_t& linearOperator, deviceMemory<double>& o_x, deviceMemory<double>& o_rhs) {
     LIBP_FORCE_ABORT("Type mismatch in InitialGuess. Strategy was constructed for type: float");
   }
+
+   virtual void Update(deviceMemory<double>& o_x, deviceMemory<double>& o_Ax) {
+     LIBP_FORCE_ABORT("Type mismatch in InitialGuess. Strategy was constructed for type: float");
+   }
+
+   virtual void Update(deviceMemory<float>& o_x, deviceMemory<float>& o_Ax) {
+     LIBP_FORCE_ABORT("Type mismatch in InitialGuess. Strategy was constructed for type: float");
+   }
+   
+   
 };
 
 // Default initial guess strategy:  use whatever the last solution was (starting at the zero vector)
@@ -181,6 +191,7 @@ public:
   RollingQRProjection(dlong _N, platform_t& _platform, settings_t& _settings, comm_t _comm);
 
   void Update(operator_t &linearOperator, deviceMemory<T>& o_x, deviceMemory<T>& o_rhs);
+   void Update(deviceMemory<T>& o_x, deviceMemory<T>& o_Ax);
 };
 
 extern template class RollingQRProjection<double>;

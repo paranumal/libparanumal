@@ -41,7 +41,7 @@ void wave_t::Run(){
     
     // harmonic forcing data
     settings.getSetting("OMEGA", omega);
-    sigma = std::max(36., omega*omega);
+    sigma = std::max((dfloat)36., omega*omega);
     int NouterSteps = 15; // was 30
     finalTime = NouterSteps*(2.*M_PI/omega);
     

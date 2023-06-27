@@ -30,7 +30,7 @@ namespace libp {
 
 namespace LinearSolver {
 
-#define PGMRES_RESTART 20
+#define PGMRES_RESTART 240
 
 template<typename T>
 pgmres<T>::pgmres(dlong _N, dlong _Nhalo,
@@ -56,7 +56,8 @@ template<typename T>
 int pgmres<T>::Solve(operator_t& linearOperator, operator_t& precon,
                      deviceMemory<T>& o_x, deviceMemory<T>& o_b,
                      const T tol, const int MAXIT, const int verbose,
-                     stoppingCriteria_t<T> *stoppingCriteria) {
+                     stoppingCriteria_t<T> *stoppingCriteria,
+                     std::shared_ptr<InitialGuess::initialGuessStrategy_t> ig){
 
   int rank = comm.rank();
   linAlg_t &linAlg = platform.linAlg();
@@ -124,8 +125,12 @@ int pgmres<T>::Solve(operator_t& linearOperator, operator_t& precon,
     // V(:,0) = r/nr
     linAlg.axpy(N, (T)(1./nr), o_r, (T) 0., o_V[0]);
 
+    std::cout << "PGMRES: outer " << iter << std::endl ;
+
     //Construct orthonormal basis via Gram-Schmidt
     for(int i=0;i<restart;++i){
+//      std::cout << "PGMRES: iteration " << i << std::endl ;
+
       // compute z = A*V(:,i)
       linearOperator.Operator(o_V[i], o_z);
 
@@ -181,8 +186,9 @@ int pgmres<T>::Solve(operator_t& linearOperator, operator_t& precon,
       iter++;
       error = std::abs(s[i+1]);
 
-      if (verbose&&(rank==0)) {
-        printf("GMRES: it %d, approx residual norm %12.12le \n", iter, error);
+//      if (verbose&&(rank==0)) {
+      {
+        printf("PGMRES: it %d, approx residual norm %12.12le \n", iter, error);
       }
 
       if(error < TOL || iter==MAXIT) {
@@ -216,6 +222,9 @@ int pgmres<T>::Solve(operator_t& linearOperator, operator_t& precon,
     nr = linAlg.norm2(N, o_r, comm);
 
     error = nr;
+
+    printf("PGMRES: it %d, approx residual norm %12.12le \n", iter, error);
+    
     //exit if tolerance is reached
     if(error<=TOL) return iter;
   }

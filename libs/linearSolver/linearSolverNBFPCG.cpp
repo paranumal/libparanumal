@@ -59,7 +59,8 @@ template<typename T>
 int nbfpcg<T>::Solve(operator_t& linearOperator, operator_t& precon,
                   deviceMemory<T>& o_x, deviceMemory<T>& o_r,
                      const T tol, const int MAXIT, const int verbose,
-                     stoppingCriteria_t<T> *stoppingCriteria){
+                     stoppingCriteria_t<T> *stoppingCriteria,
+                     std::shared_ptr<InitialGuess::initialGuessStrategy_t> ig){
 
   int rank = comm.rank();
   linAlg_t &linAlg = platform.linAlg();

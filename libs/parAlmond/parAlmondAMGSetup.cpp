@@ -113,7 +113,7 @@ void parAlmond_t::AMGSetup(parCOO& cooA,
     // Increase coarsening rate as we add levels.
     //See: Algebraic Multigrid On Unstructured Meshes, P Vanek, J. Mandel, M. Brezina.
     if (mg.strtype==SYMMETRIC)
-      theta=theta/2;
+       theta=theta/2; // 2;
 
     hlong globalCoarseSize;
     if (mg.coarsetype==COARSEEXACT) {

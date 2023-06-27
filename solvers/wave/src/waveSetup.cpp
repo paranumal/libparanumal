@@ -332,4 +332,14 @@ void wave_t::Setup(platform_t& _platform,
     
     o_invWJ = platform.malloc<dfloat>(mesh.Nelements*mesh.Np, invWJ);
   }
+
+
+  dfloat hmin = 1e9, hmax = -1e9;
+  for(dlong e=0;e<mesh.Nelements;++e){
+    dfloat h = mesh.ElementCharacteristicLength(e);
+    hmin = std::min(hmin, h);
+    hmax = std::max(hmax, h);
+  }
+
+  std::cout << "h in range [ " << hmin << ", " << hmax << "] " << std::endl;
 }
