@@ -141,7 +141,11 @@ void dopri5::Run(solver_t& solver,
   int tstep=0, allStep=0;
 
   while (time < end) {
+    
+    if(allStep%10 == 0)
+       std::cout << "tstep=" << tstep << ", time=" << time  << std::endl;
 
+    
     LIBP_ABORT("Time step became too small at time step = " << tstep,
                dt<dtMIN);
     LIBP_ABORT("Solution became unstable at time step = " << tstep,

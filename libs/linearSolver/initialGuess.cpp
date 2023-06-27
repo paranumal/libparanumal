@@ -351,6 +351,111 @@ void RollingQRProjection<T>::Update(operator_t &linearOperator, deviceMemory<T>&
   }
 }
 
+
+template <typename T>
+void RollingQRProjection<T>::Update(deviceMemory<T>& o_x, deviceMemory<T>& o_Ax)
+{
+  // Rotate the history space (QR update).
+  if (curDim == maxDim) {
+    // Drop the first column in the QR factorization:  R = R(:, 2:end).
+    for (int j = 0; j < maxDim; j++) {
+      for (int i = 0; i < maxDim - 1; i++)
+        R[j*maxDim + i] = R[j*maxDim + (i + 1)];
+      R[j*maxDim + (maxDim - 1)] = 0.0;
+    }
+
+    // Restore R to triangular form (overlapped with Q update).
+    for (int j = 0; j < maxDim - 1 ; j++) {
+      T Rjj   = R[j*maxDim + j];
+      T Rjp1j = R[(j + 1)*maxDim + j];
+
+      h_c[j] = 0.0, h_s[j] = 0.0;
+      givensRotation(Rjj, Rjp1j, h_c[j], h_s[j]);
+
+      for (int i = j; i < maxDim; i++) {
+        T Rji   = R[j*maxDim + i];
+        T Rjp1i = R[(j + 1)*maxDim + i];
+
+        R[j*maxDim + i]       =  h_c[j]*Rji + h_s[j]*Rjp1i;
+        R[(j + 1)*maxDim + i] = -h_s[j]*Rji + h_c[j]*Rjp1i;
+      }
+    }
+
+    // Copy c and s to device
+    h_c.copyTo(o_c, maxDim, 0, properties_t("async", true));
+    h_s.copyTo(o_s, maxDim, 0, properties_t("async", true));
+
+    // Update the RHS and solution spaces.
+    igDropQRFirstColumnKernel(Ntotal, o_c, o_s, o_Btilde, o_Xtilde);
+
+    curDim--;
+  }
+
+  // Zero the column of R into which we want to write.
+  for (int i = 0; i < maxDim; i++)
+    R[i*maxDim + curDim] = 0.0;
+
+  // Compute the initial norm of the new vector.
+  T normbtilde = this->platform.linAlg().norm2(Ntotal, o_Ax, this->comm);
+
+  // Orthogonalize and tack on the new column.
+  
+  if (curDim == 0) {
+    if (normbtilde > 0) {
+      T invnormbtilde = 1.0/normbtilde;
+      this->igUpdateKernel(Ntotal, 0, invnormbtilde, o_Ax, o_Btilde, o_x, o_Xtilde);
+
+      R[0] = normbtilde;
+
+      curDim = 1;
+    }
+  } else {
+    const int Nreorth = 2;
+
+    deviceMemory<T> o_xtilde = this->platform.template reserve<T>(Ntotal);
+    deviceMemory<T> o_alphas = this->platform.template reserve<T>(maxDim);
+    pinnedMemory<T> h_alphas = this->platform.template hostReserve<T>(maxDim);
+    deviceMemory<T> o_Axtilde = this->platform.template reserve<T>(Ntotal);
+    o_Ax.copyTo(o_Axtilde);
+    
+    // Orthogonalize new RHS against previous ones.
+    this->igBasisInnerProducts(o_Axtilde, o_Btilde, o_alphas, h_alphas);
+    this->igReconstruct(1.0, o_Axtilde, -1.0, o_alphas, o_Btilde, o_Axtilde);
+    this->igReconstruct(1.0,      o_x, -1.0, o_alphas, o_Xtilde, o_xtilde);
+
+    for (int i = 0; i < curDim; i++)
+      R[i*maxDim + curDim] += h_alphas[i];
+
+    for (int n = 1; n < Nreorth; n++) {
+      this->igBasisInnerProducts(o_Axtilde, o_Btilde, o_alphas, h_alphas);
+      this->igReconstruct(1.0, o_Axtilde, -1.0, o_alphas, o_Btilde, o_Axtilde);
+      this->igReconstruct(1.0,  o_xtilde, -1.0, o_alphas, o_Xtilde, o_xtilde);
+
+      for (int i = 0; i < curDim; i++)
+        R[i*maxDim + curDim] += h_alphas[i];
+    }
+
+    // Normalize.
+    T normbtildeproj = this->platform.linAlg().norm2(Ntotal, o_Axtilde, this->comm);
+
+    // Only add if the remainder after projection is large enough.
+    //
+    // TODO:  What is the appropriate criterion here?
+    if (normbtildeproj/normbtilde > 1.0e-10) {
+      T invnormbtildeproj = 1.0/normbtildeproj;
+      this->igUpdateKernel(Ntotal, curDim, invnormbtildeproj, o_Axtilde, o_Btilde, o_xtilde, o_Xtilde);
+      
+      R[curDim*maxDim + curDim] = normbtildeproj;
+      
+      curDim++;
+    }
+  }
+}
+
+
+
+
+
 template <typename T>
 void RollingQRProjection<T>::givensRotation(T a, T b, T& c, T& s)
 {
