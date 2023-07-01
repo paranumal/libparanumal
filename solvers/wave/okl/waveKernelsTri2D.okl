@@ -97,14 +97,16 @@ SOFTWARE.
       const int i = stage-1;
       const dlong id = e*p_Np + n;
       
-      const dfloat Dtilde = DtildeL[id];
-
+      const dfloat Dtilde = DtildeL[id]; // THIS
       const dfloat Dn = DhatL[id];
       const dfloat Pn = PhatL[id];
 
       dfloat Di = Dtilde - gammatilde[i]*Pn/dt;
 
-      dfloat Rnew = Dn + gammatilde[i+1]*Pn/dt;
+      dfloat Rnew = Dn;
+      if(i+1<Nstages){
+        Rnew += gammatilde[i+1]*Pn/dt;
+      }
       
       for(int j=0;j<i;++j){
         dfloat Dj = DhatL[id+j*Nelements*p_Np];

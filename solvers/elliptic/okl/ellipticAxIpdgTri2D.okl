@@ -1,26 +1,26 @@
 /*
 
-The MIT License (MIT)
+  The MIT License (MIT)
 
-Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 
 */
 
@@ -29,18 +29,18 @@ SOFTWARE.
 // nx,ny,nz,sJ,invJ - need WsJ
 
 @kernel void ellipticAxIpdgTri2D(const dlong Nelements,
-                                @restrict const  dlong *  vmapM,
-                                @restrict const  dlong *  vmapP,
-                                const dfloat lambda,
-                                const dfloat tau,
-                                @restrict const  dfloat *  vgeo,
-                                @restrict const  dfloat *  sgeo,
-                                @restrict const  int    *  EToB,
-                                @restrict const  dfloat *  D,
-                                @restrict const  dfloat *  LIFT,
-                                @restrict const  dfloat *  MM,
-                                @restrict const  dfloat4 *  gradq,
-                                      @restrict dfloat  *  Aq){
+                                 @restrict const  dlong *  vmapM,
+                                 @restrict const  dlong *  vmapP,
+                                 const dfloat lambda,
+                                 const dfloat tau,
+                                 @restrict const  dfloat *  vgeo,
+                                 @restrict const  dfloat *  sgeo,
+                                 @restrict const  int    *  EToB,
+                                 @restrict const  dfloat *  D,
+                                 @restrict const  dfloat *  LIFT,
+                                 @restrict const  dfloat *  MM,
+                                 @restrict const  dfloat4 *  gradq,
+                                 @restrict dfloat  *  Aq){
 
   for(dlong e=0;e<Nelements;++e;@outer(0)){
     @shared  dfloat s_dqdx[p_Np];
@@ -117,11 +117,11 @@ SOFTWARE.
         dfloat Lnxdq = 0;
         dfloat Lnydq = 0;
 
-        #pragma unroll p_NfacesNfp
-          for(int i=0;i<p_NfacesNfp;++i){
-            Lnxdq += LIFT[n+i*p_Np]*s_nxdq[i];
-            Lnydq += LIFT[n+i*p_Np]*s_nydq[i];
-          }
+#pragma unroll p_NfacesNfp
+        for(int i=0;i<p_NfacesNfp;++i){
+          Lnxdq += LIFT[n+i*p_Np]*s_nxdq[i];
+          Lnydq += LIFT[n+i*p_Np]*s_nydq[i];
+        }
 
         dfloat dqdx = s_dqdx[n] + Lnxdq;
         dfloat dqdy = s_dqdy[n] + Lnydq;
@@ -143,11 +143,11 @@ SOFTWARE.
       if(n<p_Np){
         dfloat lapr = 0, laps = 0;
 
-        #pragma unroll p_Np
-          for(int i=0;i<p_Np;++i){
-            lapr += D[n+i*p_Np+0*p_Np*p_Np]*s_dqdx[i];
-            laps += D[n+i*p_Np+1*p_Np*p_Np]*s_dqdy[i];
-          }
+#pragma unroll p_Np
+        for(int i=0;i<p_Np;++i){
+          lapr += D[n+i*p_Np+0*p_Np*p_Np]*s_dqdx[i];
+          laps += D[n+i*p_Np+1*p_Np*p_Np]*s_dqdy[i];
+        }
 
         s_lapq[n] -= (lapr+laps);
       }
@@ -160,10 +160,10 @@ SOFTWARE.
         dfloat lap = 0;
 
         // lift remaining surface terms
-        #pragma unroll p_NfacesNfp
-          for(int i=0;i<p_NfacesNfp;++i){
-            lap += LIFT[n+i*p_Np]*s_lapflux[i];
-          }
+#pragma unroll p_NfacesNfp
+        for(int i=0;i<p_NfacesNfp;++i){
+          lap += LIFT[n+i*p_Np]*s_lapflux[i];
+        }
 
         s_lapq[n] += lap;
       }
@@ -178,10 +178,10 @@ SOFTWARE.
         dfloat Mlapq = 0;
 
         // multiply by mass matrix
-        #pragma unroll p_Np
-          for(int i=0;i<p_Np;++i){
-            Mlapq += MM[n+i*p_Np]*s_lapq[i];
-          }
+#pragma unroll p_Np
+        for(int i=0;i<p_Np;++i){
+          Mlapq += MM[n+i*p_Np]*s_lapq[i];
+        }
 
         Aq[n+e*p_Np] = J*Mlapq;
       }
@@ -191,70 +191,70 @@ SOFTWARE.
 
 // // Optimized sizes for @kernel 4-5
 #if p_N==1
- #define p_NbV 5
- #define p_Nmt 1
- #endif
+#define p_NbV 5
+#define p_Nmt 1
+#endif
 
 #if p_N==2
- #define p_NbV 7
- #define p_Nmt 2
+#define p_NbV 7
+#define p_Nmt 2
 #endif
 
 #if p_N==3
- #define p_NbV 5
- #define p_Nmt 2
+#define p_NbV 5
+#define p_Nmt 2
 #endif
 
- #if p_N==4
-  #define p_NbV 2
-  #define p_Nmt 2
+#if p_N==4
+#define p_NbV 2
+#define p_Nmt 2
 #endif
 
- #if p_N==5
- #define p_NbV 3
- #define p_Nmt 2
- #endif
+#if p_N==5
+#define p_NbV 3
+#define p_Nmt 2
+#endif
 
 #if p_N==6
- #define p_NbV 4
- #define p_Nmt 2
- #endif
+#define p_NbV 4
+#define p_Nmt 2
+#endif
 
 #if p_N==7
-  #define p_NbV 4
-  #define p_Nmt 2
- #endif
+#define p_NbV 4
+#define p_Nmt 2
+#endif
 
 #if p_N==8
- #define p_NbV 2
- #define p_Nmt 3
+#define p_NbV 2
+#define p_Nmt 3
 #endif
 
 #if p_N==9
-  #define p_NbV 2
-  #define p_Nmt 3
- #endif
+#define p_NbV 2
+#define p_Nmt 3
+#endif
 
 #if p_N==10
- #define p_NbV 3
- #define p_Nmt 3
+#define p_NbV 3
+#define p_Nmt 3
 #endif
 
 // Added multiple element per threadblock
 @kernel void ellipticPartialAxIpdgTri2D(const dlong Nelements,
-                                @restrict const  dlong *  elementList,
-                                @restrict const  dlong *  vmapM,
-                                @restrict const  dlong *  vmapP,
-                                const dfloat lambda,
-                                const dfloat tau,
-                                @restrict const  dfloat *  vgeo,
-                                @restrict const  dfloat *  sgeo,
-                                @restrict const  int   *  EToB,
-                                @restrict const  dfloat *  D,
-                                @restrict const  dfloat *  LIFT,
-                                @restrict const  dfloat *  MM,
-                                @restrict const  dfloat4 *  gradq,
-                                      @restrict dfloat  *  Aq){
+                                        @restrict const  dlong *  elementList,
+                                        @restrict const  dlong *  vmapM,
+                                        @restrict const  dlong *  vmapP,
+                                        const dfloat lambda,
+                                        const dfloat tau,
+                                        @restrict const  dfloat *  vgeo,
+                                        @restrict const  dfloat *  sgeo,
+                                        @restrict const  int   *  EToB,
+                                        @restrict const  dfloat *  D,
+                                        @restrict const  dfloat *  LIFT,
+                                        @restrict const  dfloat *  MM,
+                                        @restrict const  dfloat4 *  gradq,
+                                        @restrict dfloat  *  Aq){
 
   for(dlong eo=0;eo<Nelements;eo+=(p_NbV*p_Nmt);@outer(0)){
     @shared  dfloat s_dqdx[p_Nmt][p_NbV][p_Np];
@@ -276,25 +276,24 @@ SOFTWARE.
 
     @exclusive dlong element[p_Nmt];
 
-   for(int es=0;es<p_NbV;++es;@inner(1)){//
-    for(int n=0;n<p_Nmax;++n;@inner(0)){
+    for(int es=0;es<p_NbV;++es;@inner(1)){//
+      for(int n=0;n<p_Nmax;++n;@inner(0)){
 
-
-      #pragma unroll p_Nmt
+#pragma unroll p_Nmt
         for(int em=0;em<p_Nmt;++em){
           const dlong e = eo+es*p_Nmt + em;
           if(e<Nelements){
-           element[em] = elementList[e];
-         }
-      }
+            element[em] = elementList[e];
+          }
+        }
 
-      #pragma unroll p_Nmt
+#pragma unroll p_Nmt
         for(int em=0;em<p_Nmt;++em){
           const dlong e = eo+es*p_Nmt + em;
           //const int element = elementList[e];
 
-           if(e<Nelements){
-             if(n<p_Np){
+          if(e<Nelements){
+            if(n<p_Np){
               // assume that this stores (qx, qy, qz, q) as dfloat4
 
               const dfloat4 gradqn = gradq[element[em]*p_Np+n];
@@ -304,58 +303,59 @@ SOFTWARE.
               s_lapq[em][es][n] = lambda*gradqn.w;
             }
 
-          if(n<p_NfacesNfp){
-            const dlong id  = n + element[em]*p_Nfaces*p_Nfp;
-            idM[em] = vmapM[id];
-            const dlong idP = vmapP[id];
-            // find face that owns this node
-            const int face = n/p_Nfp;
+            if(n<p_NfacesNfp){
 
-            dfloat4 gradqM = gradq[idM[em]];// could fetch from @shared after barrier
-            dfloat4 gradqP = gradq[idP];
+              const dlong id  = n + element[em]*p_Nfaces*p_Nfp;
+              idM[em] = vmapM[id];
+              const dlong idP = vmapP[id];
+              // find face that owns this node
+              const int face = n/p_Nfp;
 
-            // load surface geofactors for this face
-            dlong sid = p_Nsgeo*(element[em]*p_Nfaces+face);
-            nx[em]   = sgeo[sid+p_NXID];
-            ny[em]   = sgeo[sid+p_NYID];
-            sJ[em]   = sgeo[sid+p_SJID];
-            invJ[em] = sgeo[sid+p_IJID];
-            hinv[em] = sgeo[sid+p_IHID];
+              dfloat4 gradqM = gradq[idM[em]];// could fetch from @shared after barrier
+              dfloat4 gradqP = gradq[idP];
 
-            int bc = EToB[face+p_Nfaces*element[em]];
-            if(bc>0) {
-              ellipticHomogeneousBC2D(bc, gradqM.w, gradqM.x, gradqM.y, gradqP.w, gradqP.x, gradqP.y);
-              gradqP.x = 2.f*gradqP.x - gradqM.x;
-              gradqP.y = 2.f*gradqP.y - gradqM.y;
-              gradqP.w = 2.f*gradqP.w - gradqM.w;
+              // load surface geofactors for this face
+              dlong sid = p_Nsgeo*(element[em]*p_Nfaces+face);
+              nx[em]   = sgeo[sid+p_NXID];
+              ny[em]   = sgeo[sid+p_NYID];
+              sJ[em]   = sgeo[sid+p_SJID];
+              invJ[em] = sgeo[sid+p_IJID];
+              hinv[em] = sgeo[sid+p_IHID];
+
+              int bc = EToB[face+p_Nfaces*element[em]];
+              if(bc>0) {
+                ellipticHomogeneousBC2D(bc, gradqM.w, gradqM.x, gradqM.y, gradqP.w, gradqP.x, gradqP.y);
+                gradqP.x = 2.f*gradqP.x - gradqM.x;
+                gradqP.y = 2.f*gradqP.y - gradqM.y;
+                gradqP.w = 2.f*gradqP.w - gradqM.w;
+              }
+
+              const dfloat dq = gradqP.w - gradqM.w;
+              const dfloat hlf = 0.5f;
+
+              s_nxdq[em][es][n] = hlf*sJ[em]*invJ[em]*nx[em]*dq;
+              s_nydq[em][es][n] = hlf*sJ[em]*invJ[em]*ny[em]*dq;
+
+              s_lapflux[em][es][n] = hlf*sJ[em]*invJ[em]*(-nx[em]*(gradqP.x-gradqM.x)
+                                                          -ny[em]*(gradqP.y-gradqM.y)
+                                                          -tau*hinv[em]*dq);
             }
-
-            const dfloat dq = gradqP.w - gradqM.w;
-            const dfloat hlf = 0.5f;
-
-            s_nxdq[em][es][n] = hlf*sJ[em]*invJ[em]*nx[em]*dq;
-            s_nydq[em][es][n] = hlf*sJ[em]*invJ[em]*ny[em]*dq;
-
-            s_lapflux[em][es][n] = hlf*sJ[em]*invJ[em]*(-nx[em]*(gradqP.x-gradqM.x)
-                                                    -ny[em]*(gradqP.y-gradqM.y)
-                                                    -tau*hinv[em]*dq);
           }
         }
       }
     }
-  }
 
 
-  for(int es=0;es<p_NbV;++es;@inner(1)){//
-    for(int n=0;n<p_Nmax;++n;@inner(0)){
+    for(int es=0;es<p_NbV;++es;@inner(1)){//
+      for(int n=0;n<p_Nmax;++n;@inner(0)){
 
-      dfloat Lnxdq[p_Nmt], Lnydq[p_Nmt];
+        dfloat Lnxdq[p_Nmt], Lnydq[p_Nmt];
 
-      // // Try holding drdx in register array
-      // const dfloat drdx[p_Nmt], drdy[p_Nmt];
-      // const dfloat dsdx[p_Nmt], dsdy[p_Nmt];
+        // // Try holding drdx in register array
+        // const dfloat drdx[p_Nmt], drdy[p_Nmt];
+        // const dfloat dsdx[p_Nmt], dsdy[p_Nmt];
 
-      #pragma unroll p_Nmt
+#pragma unroll p_Nmt
         for(int em=0;em<p_Nmt;++em){
           Lnxdq[em] = 0.f;
           Lnydq[em] = 0.f;
@@ -369,23 +369,23 @@ SOFTWARE.
         }
 
 
-       if(n<p_Np){
+        if(n<p_Np){
 
-        #pragma unroll p_NfacesNfp
-        for(int i=0;i<p_NfacesNfp;++i){
-          const dfloat L = LIFT[n+i*p_Np];
-            #pragma unroll p_Nmt
+#pragma unroll p_NfacesNfp
+          for(int i=0;i<p_NfacesNfp;++i){
+            const dfloat L = LIFT[n+i*p_Np];
+#pragma unroll p_Nmt
             for(int em=0;em<p_Nmt;++em){
               Lnxdq[em] += L*s_nxdq[em][es][i];
               Lnydq[em] += L*s_nydq[em][es][i];
             }
           }
 
-        #pragma unroll p_Nmt
-        for(int em=0;em<p_Nmt;++em){
-          const dlong e = eo+es*p_Nmt + em;
-          if(e<Nelements){
-             // const int element = elementList[e];
+#pragma unroll p_Nmt
+          for(int em=0;em<p_Nmt;++em){
+            const dlong e = eo+es*p_Nmt + em;
+            if(e<Nelements){
+              // const int element = elementList[e];
               const dlong gid = element[em]*p_Nvgeo;
 
               // These data can be stored on @shared
@@ -410,108 +410,111 @@ SOFTWARE.
 
 
 
-  for(int es=0;es<p_NbV;++es;@inner(1)){//
-    for(int n=0;n<p_Nmax;++n;@inner(0)){
+    for(int es=0;es<p_NbV;++es;@inner(1)){//
+      for(int n=0;n<p_Nmax;++n;@inner(0)){
 
-      dfloat lapr[p_Nmt], laps[p_Nmt];
-      #pragma unroll p_Nmt
+        dfloat lapr[p_Nmt], laps[p_Nmt];
+#pragma unroll p_Nmt
         for(int em=0;em<p_Nmt;++em){
-
-          if(n<p_NfacesNfp){
-            int id = idM[em]%p_Np;
-            s_lapflux[em][es][n] += sJ[em]*invJ[em]*(nx[em]*s_Lnxdq[em][es][id]
-                                                     +ny[em]*s_Lnydq[em][es][id]);
+          
+          const dlong e = eo+es*p_Nmt + em;
+          //const int element = elementList[e];
+          
+          if(e<Nelements){
+            if(n<p_NfacesNfp){
+              int id = idM[em]%p_Np;
+              s_lapflux[em][es][n] += sJ[em]*invJ[em]*(nx[em]*s_Lnxdq[em][es][id]
+                                                       +ny[em]*s_Lnydq[em][es][id]);
+            }
           }
-
+          
           lapr[em] = 0.f;
           laps[em] = 0.f;
         }
 
         if(n<p_Np){
-          #pragma unroll p_Np
-            for(int i=0;i<p_Np;++i){
-              const dfloat drT = D[n+i*p_Np+0*p_Np*p_Np];
-              const dfloat dsT = D[n+i*p_Np+1*p_Np*p_Np];
+#pragma unroll p_Np
+          for(int i=0;i<p_Np;++i){
+            const dfloat drT = D[n+i*p_Np+0*p_Np*p_Np];
+            const dfloat dsT = D[n+i*p_Np+1*p_Np*p_Np];
 
-              #pragma unroll p_Nmt
-              for(int em=0;em<p_Nmt;++em){
-                lapr[em] += drT*s_dqdx[em][es][i];
-                laps[em] += dsT*s_dqdy[em][es][i];
-              }
+#pragma unroll p_Nmt
+            for(int em=0;em<p_Nmt;++em){
+              lapr[em] += drT*s_dqdx[em][es][i];
+              laps[em] += dsT*s_dqdy[em][es][i];
             }
+          }
 
 
           if(n<p_Np){
-            #pragma unroll p_Nmt
-              for(int em=0;em<p_Nmt;++em){
-                s_lapq[em][es][n] -= (lapr[em]+laps[em]);
-              }
+#pragma unroll p_Nmt
+            for(int em=0;em<p_Nmt;++em){
+              s_lapq[em][es][n] -= (lapr[em]+laps[em]);
+            }
           }
         }
       }
     }
 
 
-
+  
     for(int es=0;es<p_NbV;++es;@inner(1)){//
       for(int n=0;n<p_Nmax;++n;@inner(0)){
         dfloat lap[p_Nmt];
-        #pragma unroll p_Nmt
-          for(int em=0;em<p_Nmt;++em){
-              lap[em] = 0.f;
-          }
-
+#pragma unroll p_Nmt
+        for(int em=0;em<p_Nmt;++em){
+          lap[em] = 0.f;
+        }
+      
         if(n<p_Np){
           // lift remaining surface terms
-          #pragma unroll p_NfacesNfp
-            for(int i=0;i<p_NfacesNfp;++i){
-                const dfloat L = LIFT[n+i*p_Np];
-                #pragma unroll p_Nmt
-                for(int em=0;em<p_Nmt;++em){
-                lap[em] += L*s_lapflux[em][es][i];
-              }
-            }
-
-          #pragma unroll p_Nmt
+#pragma unroll p_NfacesNfp
+          for(int i=0;i<p_NfacesNfp;++i){
+            const dfloat L = LIFT[n+i*p_Np];
+#pragma unroll p_Nmt
             for(int em=0;em<p_Nmt;++em){
-               s_lapq[em][es][n] += lap[em];
+              lap[em] += L*s_lapflux[em][es][i];
             }
+          }
+        
+#pragma unroll p_Nmt
+          for(int em=0;em<p_Nmt;++em){
+            s_lapq[em][es][n] += lap[em];
+          }
         }
       }
     }
 
-
-
-  for(int es=0;es<p_NbV;++es;@inner(1)){//
-    for(int n=0;n<p_Nmax;++n;@inner(0)){
-
-      dfloat Mlapq[p_Nmt];
-
-      #pragma unroll p_Nmt
+    for(int es=0;es<p_NbV;++es;@inner(1)){//
+      for(int n=0;n<p_Nmax;++n;@inner(0)){
+      
+        dfloat Mlapq[p_Nmt];
+      
+#pragma unroll p_Nmt
         for(int em=0;em<p_Nmt;++em){
-            Mlapq[em] = 0.f;
+          Mlapq[em] = 0.f;
         }
-
+      
         if(n<p_Np){
-
-          #pragma unroll p_Np
+        
+#pragma unroll p_Np
           for(int i=0;i<p_Np;++i){
             const dfloat mm = MM[n+i*p_Np];
-            #pragma unroll p_Nmt
-             for(int em=0;em<p_Nmt;++em){
+#pragma unroll p_Nmt
+            for(int em=0;em<p_Nmt;++em){
               Mlapq[em] += mm*s_lapq[em][es][i];
             }
           }
-
-          #pragma unroll p_Nmt
+        
+#pragma unroll p_Nmt
           for(int em=0;em<p_Nmt;++em){
             const dlong e = eo+es*p_Nmt + em;
-
+            
             if(e<Nelements){
-               // const int element = elementList[e];
-                const dfloat J = vgeo[element[em]*p_Nvgeo + p_JID];
-
-                Aq[n+element[em]*p_Np] = J*Mlapq[em];
+              // const int element = elementList[e];
+              const dfloat J = vgeo[element[em]*p_Nvgeo + p_JID];
+              
+              Aq[n+element[em]*p_Np] = J*Mlapq[em];
             }
           }
         }

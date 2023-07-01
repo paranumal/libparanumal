@@ -37,6 +37,8 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
   linAlgMatrix_t<dfloat> filtD(1,Nstages);
   deviceMemory<dfloat> o_filtD = platform.malloc<dfloat>(Nstages);
 
+  deviceMemory<dfloat> o_SurfaceForceL  = platform.malloc<dfloat>(mesh.Np*mesh.Nelements);
+  
   dlong cumIter = 0;
   
   for(int tstep=0;tstep<Nsteps;++tstep){ // do adaptive later
@@ -57,10 +59,41 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
 
       elliptic.lambda = lambdaSolve;
 
+      // entering surface source
+      std::cout << "Entering surface source kernel " << std::endl;
+      waveSurfaceSourceKernel(mesh.Nelements,
+                              mesh.o_vmapM,
+                              elliptic.tau,
+                              mesh.o_vgeo,
+                              mesh.o_sgeo,
+                              o_EToPatch,
+                              t,
+                              dt,
+                              stage-1,
+                              Nstages,
+                              o_alphatilde,
+                              gammatilde(1,stage)/dt,
+                              o_esdirkC,
+                              xsource,
+                              ysource,
+                              zsource,
+                              fsource,
+                              mesh.o_x,
+                              mesh.o_y,
+                              mesh.o_z,
+                              mesh.o_D,
+                              mesh.o_LIFT,
+                              mesh.o_MM,
+                              o_SurfaceForceL);
+      
+    
+      platform.linAlg().
+         axpy(mesh.Np*mesh.Nelements, (dfloat)-1., o_SurfaceForceL, (dfloat)1., o_DrhsL);
+      
       // record local RHS
       if(esc)
          esc->setLocalRHS(o_DrhsL);
-
+      
       // gather rhs to globalDofs if c0
       if(disc_c0){
         elliptic.ogsMasked.Gather(o_Drhs,   o_DrhsL,   1, ogs::Add, ogs::Trans);
@@ -69,9 +102,11 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
         o_DtildeL.copyTo(o_Dtilde);
         o_DrhsL.copyTo(o_Drhs);
       }
-
+      
+      
       // changed to tol
-      int iterD = elliptic.Solve(linearSolver, o_Dtilde, o_Drhs, tol, maxIter, verbose, stoppingCriteria);
+      int iterD =
+         elliptic.Solve(linearSolver, o_Dtilde, o_Drhs, tol, maxIter, verbose, stoppingCriteria);
       cumIter += iterD;
 
       if(disc_c0){
@@ -135,9 +170,43 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
       elliptic.Operator(o_scratch1, o_scratch2);
       elliptic.ogsMasked.Scatter(o_scratch2L, o_scratch2, 1, ogs::NoTrans);
     }else{
+      std::cout << "waveSolve calling  elliptic Operator" << std::endl;
       elliptic.Operator(o_scratch1L, o_scratch2L);
+      std::cout << "waveSolve finished elliptic Operator" << std::endl;
     }
     elliptic.lambda = lambdaSolve;
+
+#if 1
+    // finalizing force
+    std::cout << "Entering finalize source kernel " << std::endl;
+    waveSurfaceSourceKernel(mesh.Nelements,
+                            mesh.o_vmapM,
+                            elliptic.tau,
+                            mesh.o_vgeo,
+                            mesh.o_sgeo,
+                            o_EToPatch,
+                            t,
+                            dt,
+                            Nstages,  // last stage+1 (beta coefficients)
+                            Nstages,
+                            o_alphatilde,  /* use these coefficients */
+                            (dfloat)1./dt,  /* use these coefficients */
+                            o_esdirkC,
+                            xsource,
+                            ysource,
+                            zsource,
+                            fsource,
+                            mesh.o_x,
+                            mesh.o_y,
+                            mesh.o_z,
+                            mesh.o_D,
+                            mesh.o_LIFT,
+                            mesh.o_MM,
+                            o_SurfaceForceL);
+    
+    platform.linAlg().
+       axpy(mesh.Np*mesh.Nelements, dt, o_SurfaceForceL, (dfloat)1., o_scratch2L); 
+#endif
     
     // c. finalize
     // P = Phat(:,1) +     dt*(Dhat(:,1:Nstages)*beta'); 
@@ -167,7 +236,8 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
     o_filtD.copyFrom(filtD.data);
     
     waveStepFinalizeKernel(mesh.Nelements, dt, Nstages, scF, o_beta, filtP, o_filtD,
-                           o_invWJ, o_invMM, o_scratch2L, o_DhatL, o_PhatL, o_FL, o_rDL, o_rPL, o_filtPL);  
+                           o_invWJ, o_invMM, o_scratch2L,
+                           o_DhatL, o_PhatL, o_FL, o_rDL, o_rPL, o_filtPL);  
     
     timePoint_t ends = GlobalPlatformTime(platform);
 

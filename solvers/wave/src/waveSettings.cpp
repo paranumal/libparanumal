@@ -102,6 +102,29 @@ waveSettings_t::waveSettings_t(comm_t& _comm):
              "TRUE",
              "Verbose output setings for wave",
              {"TRUE", "FALSE"});
+
+  newSetting("FLUX SOURCE X",
+             "0.0",
+             "x-coordinate of flux point source");
+
+  newSetting("FLUX SOURCE Y",
+             "0.0",
+             "y-coordinate of flux point source");
+
+  newSetting("FLUX SOURCE Z",
+             "0.0",
+             "z-coordinate of flux point source");
+
+
+  newSetting("FLUX SOURCE PATCH RADIUS",
+             "1.0",
+             "Radius of flux point patch");
+
+  
+  newSetting("FLUX SOURCE FREQUENCY",
+             "1.0",
+             "Frequency of flux point source Ricker pulse");
+  
   
   ellipticAddSettings(*this, "ELLIPTIC ");
   parAlmond::AddSettings(*this, "ELLIPTIC ");

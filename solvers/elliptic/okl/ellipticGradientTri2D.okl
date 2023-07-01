@@ -32,6 +32,8 @@ SOFTWARE.
                                      @restrict const  dfloat *  q,
                                      @restrict dfloat4 *  gradq){
 
+
+  
   for(dlong e=0;e<Nelements;++e;@outer(0)){
 
     @shared dfloat s_q[p_Np];
@@ -192,6 +194,7 @@ SOFTWARE.
 #endif
 
 
+  
 // map multiple nodes to thread
 @kernel void ellipticPartialGradientTri2D(const dlong Nelements,
          const dlong offset,
@@ -231,11 +234,13 @@ SOFTWARE.
           const dlong e = eo+es*p_Nmt + em+offset;
           qr[em] = 0.f;
           qs[em] = 0.f;
-          //
-          drdx2[em] = vgeo[p_Nvgeo*e+p_RXID];
-          drdy2[em] = vgeo[p_Nvgeo*e+p_RYID];
-          dsdx2[em] = vgeo[p_Nvgeo*e+p_SXID];
-          dsdy2[em] = vgeo[p_Nvgeo*e+p_SYID];
+          if(e<Nelements){
+            //
+            drdx2[em] = vgeo[p_Nvgeo*e+p_RXID];
+            drdy2[em] = vgeo[p_Nvgeo*e+p_RYID];
+            dsdx2[em] = vgeo[p_Nvgeo*e+p_SXID];
+            dsdy2[em] = vgeo[p_Nvgeo*e+p_SYID];
+          }
         }
 
         #pragma unroll p_Np

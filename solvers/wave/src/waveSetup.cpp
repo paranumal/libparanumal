@@ -26,6 +26,24 @@ SOFTWARE.
 
 #include "wave.hpp"
 
+template <typename T>
+void printMatrixLocal(linAlgMatrix_t<T> &A, const char *str){
+
+#if 1
+  std::cout << "matrix: " <<  std::string(str) << "[" << std::endl;
+  for(int r=1;r<=A.rows();++r){
+    for(int c=1;c<=A.cols();++c){
+      //      std::cout << A(r,c) << " ";
+      printf("% 5.4e ", A(r,c));
+      
+    }
+    std::cout << std::endl;
+  }
+  std::cout << std::endl << "]" << std::endl;
+#endif
+}
+
+
 void wave_t::Setup(platform_t& _platform,
                    mesh_t& _mesh,
                    waveSettings_t& _settings){
@@ -38,6 +56,9 @@ void wave_t::Setup(platform_t& _platform,
   //Trigger JIT kernel builds
   ogs::InitializeKernels(platform, ogs::Dfloat, ogs::Add);
 
+  platform.linAlg().InitKernels({"set", "sum", "norm2", "min", "max", "add"});
+
+  
   // FOR THIS - WE ASSUME IPDG  and LAMBDA=1
   Nfields = 1;
 
@@ -77,7 +98,7 @@ void wave_t::Setup(platform_t& _platform,
   libp::TimeStepper::butcherTables(timeIntegrator.c_str(), Nstages, embedded, BTABLE);
   
   // extract alphas, betas
-  alpha.reshape(Nstages, Nstages);
+  alpha.reshape(Nstages+1, Nstages);
   beta.reshape(1,Nstages);
   betahat.reshape(1,Nstages);
   esdirkC.reshape(1,Nstages);
@@ -94,13 +115,17 @@ void wave_t::Setup(platform_t& _platform,
     esdirkC(n) = BTABLE(n,1);
   }
 
+  for(int m=1;m<=Nstages;++m){
+    alpha(Nstages+1,m) = beta(1,m);
+  }
+
   gamma = alpha(2,2);
   invGamma = 1./gamma;
   
   std::cout << "gamma = " << gamma << std::endl;
 
-  linAlgMatrix_t<dfloat> alphatilde(Nstages, Nstages);
-  linAlgMatrix_t<dfloat> gammatilde(1,Nstages);
+  alphatilde.reshape(Nstages+1, Nstages);
+  gammatilde.reshape(1,Nstages);
   linAlgMatrix_t<dfloat> betaAlpha(1,Nstages);
   linAlgMatrix_t<dfloat> betahatAlpha(1,Nstages);
   alphatilde = 0.;
@@ -130,21 +155,29 @@ void wave_t::Setup(platform_t& _platform,
     }
   }
 
-#if 0
+  for(int i=1;i<=Nstages;++i){
+    alphatilde(1+Nstages, i) = betaAlpha(1,i);
+  }
+  
+
+  
+#if 1
   printMatrixLocal(BTABLE, "BUTCHER TABLE");
   printMatrixLocal(alpha, "ALPHA BLOCK");
   printMatrixLocal(beta, "BETA BLOCK");
   printMatrixLocal(gammatilde, "GAMMA TILDE BLOCK");
   printMatrixLocal(alphatilde, "ALPHA TILDE BLOCK");
   printMatrixLocal(betaAlpha,  "BETAxALPHA  BLOCK");
+  printMatrixLocal(esdirkC,    "ESDIRK-C    BLOCK");
 #endif
   
-  o_alphatilde = platform.malloc<dfloat>(Nstages*Nstages, alphatilde.data);
+  o_alphatilde = platform.malloc<dfloat>((Nstages+1)*Nstages, alphatilde.data);
   o_gammatilde = platform.malloc<dfloat>(Nstages, gammatilde.data);
   o_betaAlpha  = platform.malloc<dfloat>(Nstages, betaAlpha.data);
   o_betahatAlpha  = platform.malloc<dfloat>(Nstages, betahatAlpha.data);
+  o_esdirkC = platform.malloc<dfloat>(Nstages, esdirkC.data);
   
-  o_alpha = platform.malloc<dfloat>(Nstages*Nstages, alpha.data);
+  o_alpha = platform.malloc<dfloat>((Nstages+1)*Nstages, alpha.data);
   o_beta  = platform.malloc<dfloat>(Nstages, beta.data);
   o_betahat  = platform.malloc<dfloat>(Nstages, betahat.data);
   
@@ -162,6 +195,8 @@ void wave_t::Setup(platform_t& _platform,
     boundaryHeaderFileName = std::string(DELLIPTIC "/data/ellipticBoundary3D.h");
   kernelInfo["includes"] += boundaryHeaderFileName;
 
+  kernelInfo["defines/p_Nmax"] = (int) std::max(mesh.Np, mesh.Nfp*mesh.Nfaces);
+  
   // set kernel name suffix
   std::string suffix;
   if(mesh.elementType==Mesh::TRIANGLES) {
@@ -234,11 +269,17 @@ void wave_t::Setup(platform_t& _platform,
   waveForcingKernel
      = platform.buildKernel(fileName, kernelName, kernelInfo);
 
-#if 0
-  kernelName = "waveStageRHSV2";
-  waveStageRHSKernelV2 =
+
+  // new file
+  fileName   = oklFilePrefix + "waveSurfaceSource"  + suffix + oklFileSuffix;
+  
+  kernelName = "waveSurfaceSource" + suffix;
+  std::cout << "kernelName=" << kernelName << std::endl;
+  
+  waveSurfaceSourceKernel =
      platform.buildKernel(fileName, kernelName, kernelInfo);
-#endif
+
+
 
   
   //setup linear solver
@@ -342,4 +383,104 @@ void wave_t::Setup(platform_t& _platform,
   }
 
   std::cout << "h in range [ " << hmin << ", " << hmax << "] " << std::endl;
+
+
+  /* build source via fluxes */
+  dfloat rdim = 1;
+  xsource = 0;
+  ysource = 0;
+  zsource = 0;
+  fsource = 1;
+  settings.getSetting("FLUX SOURCE X", xsource);
+  settings.getSetting("FLUX SOURCE Y", ysource);
+  settings.getSetting("FLUX SOURCE Z", zsource);
+  settings.getSetting("FLUX SOURCE PATCH RADIUS", rdim);
+
+  settings.getSetting("FLUX SOURCE FREQUENCY", fsource);
+
+  patchLabels.malloc(mesh.Nelements);
+  for(dlong e1=0;e1<mesh.Nelements;++e1){
+    patchLabels[e1] = 0;
+  }
+
+  for(dlong e=0;e<mesh.Nelements;++e){
+
+    // test if source is in this element
+    if(mesh.PointInclusionTest(e, xsource, ysource, 0)){
+      std::cout << "Found element " << e <<
+         " includes source ("  << xsource << "," << ysource << ")" << std::endl;
+      patchLabels[e] = 1;
+#if 1
+      for(int f1=0;f1<mesh.Nfaces;++f1){
+        dlong e1 = mesh.EToE[e*mesh.Nfaces+f1];
+        patchLabels[e1] = 1;
+        for(int f2=0;f2<mesh.Nfaces;++f2){
+          dlong e2 = mesh.EToE[e1*mesh.Nfaces+f2];
+          patchLabels[e2] = 1;
+          for(int f3=0;f3<mesh.Nfaces;++f3){
+            dlong e3 = mesh.EToE[e2*mesh.Nfaces+f3];
+            patchLabels[e3] = 1;
+          }
+        }
+      }
+#endif
+    }
+  }
+
+  int change = 1;
+  while(change>0){
+    change = 0;
+    for(dlong e=0;e<mesh.Nelements;++e){
+      if(patchLabels[e]==0){
+        int countNeighbors = 0;
+        for(int f=0;f<mesh.Nfaces;++f){
+          dlong eP = mesh.EToE[e*mesh.Nfaces+f];
+          if(patchLabels[eP]==1)
+             ++countNeighbors;
+        }
+        if(countNeighbors==2){
+           patchLabels[e] = 1;
+           ++change;
+        }
+      }
+    }
+  }
+  memory<int> EToPatch(mesh.Nelements*mesh.Nfaces);
+  for(dlong e1=0;e1<mesh.Nelements;++e1){
+    for(int f1=0;f1<mesh.Nfaces;++f1){
+      EToPatch[e1*mesh.Nfaces+f1] = 0;
+    }
+  }
+  
+  for(dlong e1=0;e1<mesh.Nelements;++e1){
+    for(int f1=0;f1<mesh.Nfaces;++f1){
+      dlong e2 = mesh.EToE[e1*mesh.Nfaces+f1];
+      
+      // only handle internal patches first
+      if(patchLabels[e1]==1){
+        if(patchLabels[e2]==0){
+          EToPatch[e1*mesh.Nfaces+f1] = 1;
+        }
+      }
+      if(patchLabels[e1]==0){
+        if(patchLabels[e2]==1){
+          EToPatch[e1*mesh.Nfaces+f1] = -1;
+        }
+      }
+    }
+  }
+
+  for(dlong e1=0;e1<mesh.Nelements;++e1){
+    for(int f1=0;f1<mesh.Nfaces;++f1){
+      if(EToPatch[e1*mesh.Nfaces+f1]){
+        dlong e2 = mesh.EToE[e1*mesh.Nfaces+f1];
+        dlong f2 = mesh.EToF[e1*mesh.Nfaces+f1];
+        printf("(%d,%d) patch %d =>  neighbor: ( %d,%d) patch %d\n",
+               e1, f1, EToPatch[e1*mesh.Nfaces+f1],
+               e2, f2, EToPatch[e2*mesh.Nfaces+f2]);
+      }
+    }
+  }
+
+  o_EToPatch = platform.malloc<int>(mesh.Nelements*mesh.Nfaces, EToPatch);
 }

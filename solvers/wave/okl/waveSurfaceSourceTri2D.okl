@@ -1,0 +1,377 @@
+/*
+
+  The MIT License (MIT)
+
+  Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+*/
+
+
+
+// // Optimized sizes for @kernel 4-5
+#if p_N==1
+#define p_NbV 5
+#define p_Nmt 1
+#endif
+
+#if p_N==2
+#define p_NbV 7
+#define p_Nmt 2
+#endif
+
+#if p_N==3
+#define p_NbV 5
+#define p_Nmt 2
+#endif
+
+#if p_N==4
+#define p_NbV 2
+#define p_Nmt 2
+#endif
+
+#if p_N==5
+#define p_NbV 3
+#define p_Nmt 2
+#endif
+
+#if p_N==6
+#define p_NbV 4
+#define p_Nmt 2
+#endif
+
+#if p_N==7
+#define p_NbV 4
+#define p_Nmt 2
+#endif
+
+#if p_N==8
+#define p_NbV 2
+#define p_Nmt 3
+#endif
+
+#if p_N==9
+#define p_NbV 2
+#define p_Nmt 3
+#endif
+
+#if p_N==10
+#define p_NbV 3
+#define p_Nmt 3
+#endif
+
+// Added multiple element per threadblock
+@kernel void waveSurfaceSourceTri2D(const dlong Nelements,
+                                    @restrict const  dlong *  vmapM,
+                                    const dfloat tau,
+                                    @restrict const  dfloat *  vgeo,
+                                    @restrict const  dfloat *  sgeo,
+                                    @restrict const  int    *  EToPatch,
+                                    const dfloat t,
+                                    const dfloat dt,
+                                    const int    stage,
+                                    const int    Nstages,
+                                    @restrict const  dfloat *  esdirkAlphaTilde,
+                                    const dfloat  gammatilde,
+                                    @restrict const  dfloat *  esdirkC,
+                                    const dfloat xsource,
+                                    const dfloat ysource,
+                                    const dfloat zsource,
+                                    const dfloat fsource,
+                                    @restrict const  dfloat *  x,
+                                    @restrict const  dfloat *  y,
+                                    @restrict const  dfloat *  z,
+                                    @restrict const  dfloat *  D,
+                                    @restrict const  dfloat *  LIFT,
+                                    @restrict const  dfloat *  MM,
+                                    @restrict dfloat  *  Aq){
+  
+  for(dlong eo=0;eo<Nelements;eo+=(p_NbV*p_Nmt);@outer(0)){
+    @shared  dfloat s_dqdx[p_Nmt][p_NbV][p_Np];
+    @shared  dfloat s_dqdy[p_Nmt][p_NbV][p_Np];
+
+    @shared  dfloat s_lapq[p_Nmt][p_NbV][p_Np];
+    @shared  dfloat s_nxdq[p_Nmt][p_NbV][p_NfacesNfp];
+    @shared  dfloat s_nydq[p_Nmt][p_NbV][p_NfacesNfp];
+    @shared  dfloat s_lapflux[p_Nmt][p_NbV][p_NfacesNfp];
+    @shared  dfloat s_Lnxdq[p_Nmt][p_NbV][p_Np];
+    @shared  dfloat s_Lnydq[p_Nmt][p_NbV][p_Np];
+
+    @exclusive dfloat nx[p_Nmt], ny[p_Nmt], sJ[p_Nmt];
+    @exclusive dfloat invJ[p_Nmt], hinv[p_Nmt];
+
+    for(int es=0;es<p_NbV;++es;@inner(1)){//
+      for(int n=0;n<p_Nmax;++n;@inner(0)){
+
+#pragma unroll p_Nmt
+        for(int em=0;em<p_Nmt;++em){
+          const dlong e = eo+es*p_Nmt + em;
+
+          if(n<p_Np)
+             s_lapq[em][es][n] = 0;
+          
+          
+          if(e<Nelements){
+
+            if(n<p_NfacesNfp){
+              const dlong id  = n + e*p_Nfaces*p_Nfp;
+              const dlong idM = vmapM[id];
+
+              // find face that owns this node
+              const int face = n/p_Nfp;
+
+              // load surface geofactors for this face
+              dlong sid = p_Nsgeo*(e*p_Nfaces+face);
+              nx[em]   = sgeo[sid+p_NXID];
+              ny[em]   = sgeo[sid+p_NYID];
+              sJ[em]   = sgeo[sid+p_SJID];
+              invJ[em] = sgeo[sid+p_IJID];
+              hinv[em] = sgeo[sid+p_IHID];
+
+              dfloat qP = 0, dqdxP  = 0, dqdyP = 0;
+              
+              int patch = EToPatch[p_Nfaces*e+face];
+
+              if(patch!=0) {
+
+                dfloat xn = x[idM];
+                dfloat yn = y[idM];
+                
+                int stagep = (stage<Nstages) ? stage:Nstages-1;
+                
+                for(int s=0;s<=stagep;++s){ // ?? check
+                  dfloat P_s = 0, dPdx_s = 0, dPdy_s = 0;
+                  dfloat D_s = 0, dDdx_s = 0, dDdy_s = 0;
+                  dfloat Atilde;
+                  if(stage==Nstages){
+                    Atilde = esdirkAlphaTilde[stage*Nstages+s];
+                  }else{
+                    if(s==stagep)
+                       Atilde = 1;
+                    else
+                       Atilde = esdirkAlphaTilde[stage*Nstages+s];
+                  }
+
+                  // patch can be:
+                  //  1 (trace from inside patch),
+                  // -1 (trace from outside patch),
+                  //  2 (assume Dirichlet)
+                  dfloat t_s = t + dt*esdirkC[s]; // ?? check
+                  waveSurfaceSource2D(patch, t_s, xsource, ysource, fsource, xn, yn, P_s, dPdx_s, dPdy_s, D_s, dDdx_s, dDdy_s);
+                  
+                  if(s==0){
+                    qP    += gammatilde*P_s;
+#if 1
+                    dqdxP += gammatilde*dPdx_s;
+                    dqdyP += gammatilde*dPdy_s;
+#endif
+                  }
+                  
+                  qP    += Atilde*D_s;
+#if 1
+                  dqdxP += Atilde*dDdx_s;
+                  dqdyP += Atilde*dDdy_s;
+#endif
+                }
+              }
+              
+              // no negative trace
+              const dfloat hlf = 0.5f;
+              
+              s_nxdq[em][es][n] = hlf*sJ[em]*invJ[em]*nx[em]*qP;
+              s_nydq[em][es][n] = hlf*sJ[em]*invJ[em]*ny[em]*qP;
+              
+              s_lapflux[em][es][n] = hlf*sJ[em]*invJ[em]*(-nx[em]*dqdxP
+                                                          -ny[em]*dqdyP
+                                                          -tau*hinv[em]*qP);
+            }
+          }
+        }
+      }
+    }
+
+
+    for(int es=0;es<p_NbV;++es;@inner(1)){//
+      for(int n=0;n<p_Nmax;++n;@inner(0)){
+
+        dfloat Lnxdq[p_Nmt], Lnydq[p_Nmt];
+
+#pragma unroll p_Nmt
+        for(int em=0;em<p_Nmt;++em){
+          Lnxdq[em] = 0.f;
+          Lnydq[em] = 0.f;
+        }
+
+
+        if(n<p_Np){
+
+#pragma unroll p_NfacesNfp
+          for(int i=0;i<p_NfacesNfp;++i){
+            const dfloat L = LIFT[n+i*p_Np];
+#pragma unroll p_Nmt
+            for(int em=0;em<p_Nmt;++em){
+              Lnxdq[em] += L*s_nxdq[em][es][i];
+              Lnydq[em] += L*s_nydq[em][es][i];
+            }
+          }
+
+#pragma unroll p_Nmt
+          for(int em=0;em<p_Nmt;++em){
+            const dlong e = eo+es*p_Nmt + em;
+            if(e<Nelements){
+              // const int element = elementList[e];
+              const dlong gid = e*p_Nvgeo;
+
+              // These data can be stored on @shared
+              const dfloat drdx = vgeo[gid + p_RXID];
+              const dfloat drdy = vgeo[gid + p_RYID];
+              const dfloat dsdx = vgeo[gid + p_SXID];
+              const dfloat dsdy = vgeo[gid + p_SYID];
+
+              dfloat dqdx =  Lnxdq[em];
+              dfloat dqdy =  Lnydq[em];
+              s_dqdx[em][es][n] = drdx*dqdx + drdy*dqdy; // abuse of notation
+              s_dqdy[em][es][n] = dsdx*dqdx + dsdy*dqdy;
+
+              s_Lnxdq[em][es][n] = Lnxdq[em];
+              s_Lnydq[em][es][n] = Lnydq[em];
+            }
+          }
+
+        }
+      }
+    }
+
+
+
+    for(int es=0;es<p_NbV;++es;@inner(1)){//
+      for(int n=0;n<p_Nmax;++n;@inner(0)){
+
+        dfloat lapr[p_Nmt], laps[p_Nmt];
+
+#pragma unroll p_Nmt
+        for(int em=0;em<p_Nmt;++em){
+
+          if(n<p_NfacesNfp){
+
+            const dlong e = eo+es*p_Nmt + em;
+            if(e<Nelements){
+              const dlong idM = vmapM[n+e*p_Nfaces*p_Nfp];
+              int id = idM%p_Np;
+              s_lapflux[em][es][n] += sJ[em]*invJ[em]*(nx[em]*s_Lnxdq[em][es][id]+
+                                                       ny[em]*s_Lnydq[em][es][id]);
+            }
+          }
+
+          lapr[em] = 0.f;
+          laps[em] = 0.f;
+        }
+
+        if(n<p_Np){
+#pragma unroll p_Np
+          for(int i=0;i<p_Np;++i){
+            const dfloat drT = D[n+i*p_Np+0*p_Np*p_Np];
+            const dfloat dsT = D[n+i*p_Np+1*p_Np*p_Np];
+
+#pragma unroll p_Nmt
+            for(int em=0;em<p_Nmt;++em){
+              lapr[em] += drT*s_dqdx[em][es][i];
+              laps[em] += dsT*s_dqdy[em][es][i];
+            }
+          }
+
+
+          if(n<p_Np){
+#pragma unroll p_Nmt
+            for(int em=0;em<p_Nmt;++em){
+              s_lapq[em][es][n] -= (lapr[em]+laps[em]);
+            }
+          }
+        }
+      }
+    }
+
+
+
+    for(int es=0;es<p_NbV;++es;@inner(1)){//
+      for(int n=0;n<p_Nmax;++n;@inner(0)){
+        dfloat lap[p_Nmt];
+#pragma unroll p_Nmt
+        for(int em=0;em<p_Nmt;++em){
+          lap[em] = 0.f;
+        }
+
+        if(n<p_Np){
+          // lift remaining surface terms
+#pragma unroll p_NfacesNfp
+          for(int i=0;i<p_NfacesNfp;++i){
+            const dfloat L = LIFT[n+i*p_Np];
+#pragma unroll p_Nmt
+            for(int em=0;em<p_Nmt;++em){
+              lap[em] += L*s_lapflux[em][es][i];
+            }
+          }
+
+#pragma unroll p_Nmt
+          for(int em=0;em<p_Nmt;++em){
+            s_lapq[em][es][n] += lap[em];
+          }
+        }
+      }
+    }
+
+
+
+    for(int es=0;es<p_NbV;++es;@inner(1)){//
+      for(int n=0;n<p_Nmax;++n;@inner(0)){
+
+        dfloat Mlapq[p_Nmt];
+
+        if(n<p_Np){
+
+#pragma unroll p_Nmt
+          for(int em=0;em<p_Nmt;++em){
+            Mlapq[em] = 0.f;
+          }
+
+#pragma unroll p_Np
+          for(int i=0;i<p_Np;++i){
+            const dfloat mm = MM[n+i*p_Np];
+#pragma unroll p_Nmt
+            for(int em=0;em<p_Nmt;++em){
+              Mlapq[em] += mm*s_lapq[em][es][i];
+            }
+          }
+
+#pragma unroll p_Nmt
+          for(int em=0;em<p_Nmt;++em){
+            const dlong e = eo+es*p_Nmt + em;
+
+            if(e<Nelements){
+              const dfloat J = vgeo[e*p_Nvgeo + p_JID];
+              
+              Aq[n+e*p_Np] = J*Mlapq[em];
+            }
+          }
+        }
+      }
+    }
+  }
+}
