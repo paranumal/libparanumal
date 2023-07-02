@@ -1187,6 +1187,8 @@ class mesh_t {
                                        const memory<dfloat> sOut,
                                        const memory<dfloat> tOut,
                                        memory<dfloat>& I);
+
+   int PointInclusionTest(dlong element, dfloat xs, dfloat ys, dfloat zs);
 };
 
 } //namespace libp

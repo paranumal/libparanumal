@@ -91,8 +91,17 @@ public:
    dfloat lambdaSolve;
    dfloat omega;
    dfloat sigma;
+
+   /* flux source info */
+   dfloat xsource;
+   dfloat ysource;
+   dfloat zsource;
+   dfloat fsource;
+
+   memory<int> patchLabels;
+   deviceMemory<int>o_EToPatch;
    
-   linAlgMatrix_t<dfloat> alpha, beta, betahat, esdirkC;
+   linAlgMatrix_t<dfloat> alpha, beta, betahat, esdirkC, alphatilde, gammatilde;
    
    deviceMemory<dfloat> o_alphatilde;
    deviceMemory<dfloat> o_gammatilde;
@@ -104,6 +113,8 @@ public:
    deviceMemory<dfloat> o_betahatAlpha;
    deviceMemory<dfloat> o_betahat;
    deviceMemory<dfloat> o_gamma;
+   deviceMemory<dfloat> o_esdirkC;
+   
    
    memory<dfloat> DL;
    memory<dfloat> PL;
@@ -155,6 +166,8 @@ public:
    kernel_t waveStageInitializeKernelV2;
    kernel_t waveStageFinalizeKernelV2;
    kernel_t waveStageRHSKernelV2;
+
+   kernel_t waveSurfaceSourceKernel;
    
    wave_t() = default;
    wave_t(platform_t &_platform,
