@@ -28,11 +28,14 @@
 
 from test import *
 
-data2D = "./data/waveQuadraticTime2D.h"
-data3D = "./data/waveQuadraticTime3D.h"
+dataTime2D = "./data/waveQuadraticTime2D.h"
+dataTime3D = "./data/waveQuadraticTime3D.h"
+
+dataSpace2D = "./data/waveQuadraticSpace2D.h"
+dataSpace3D = "./data/waveQuadraticSpace3D.h"
 
 def waveSettings(rcformat="2.0",
-                 data_file=data2D,
+                 data_file=dataTime2D,
                  mesh="BOX",
                  dim=2,
                  element=4,
@@ -44,7 +47,8 @@ def waveSettings(rcformat="2.0",
                  thread_model=device,
                  platform_number=0,
                  device_number=0,
-                 time_integrator="ESDIRK4(3)6L{2}SA",
+#                 time_integrator="ESDIRK4(3)6L{2}SA",
+                 time_integrator="ESDIRK6(5)9L{2}SA",
                  time_step=0.01,
                  start_time=0.0,
                  final_time=1.1,
@@ -97,15 +101,37 @@ def waveSettings(rcformat="2.0",
 def main():
   failCount=0;
 
+
+  cnt = 1;
+  for dtp in range(0, 4):
+    for P in range(4,5):
+      for NXP in range(3, 4):
+        NX = 4*(2**NXP)
+        dt = 0.1/(2.**dtp)
+        test(name="testSpace"+str(cnt).zfill(5),
+             cmd=waveBin,
+             settings=waveSettings(element=3,
+                                   data_file=dataSpace2D,
+                                   thread_model="CUDA",
+                                   boundary_flag=1,
+                                   dim=2,
+                                   degree=P,
+                                   time_step=dt,
+                                   nx=NX,
+                                   ny=NX))
+        print("\n")
+        cnt = cnt+1;
+
+
   
   cnt = 1;
   for P in range(1,10):
     for NXP in range(0, 4):
       NX = 4*(2**NXP)
-      test(name="test"+str(cnt).zfill(5),
+      test(name="testTime"+str(cnt).zfill(5),
            cmd=waveBin,
            settings=waveSettings(element=3,
-                                 data_file=data2D,
+                                 data_file=dataTime2D,
                                  thread_model="CUDA",
                                  boundary_flag=1,
                                  dim=2,
@@ -115,6 +141,11 @@ def main():
       print("\n")
       cnt = cnt+1;
 
+
+
+  
+
+      
   testDir = "./"
   #clean up
   for file_name in os.listdir(testDir):
