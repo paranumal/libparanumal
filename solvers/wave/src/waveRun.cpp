@@ -185,6 +185,37 @@ void wave_t::Run(){
     std::cout << std::setprecision (6);
     std::cout << std::scientific;
     std::cout << "errDLMax = " << errDLMax << " errPLMax = " << errPLMax << std::endl;
+
+    dfloat errPL2 = 0, errDL2 = 0;
+    dfloat normExactPL2 = 0, normExactDL2 = 0;
+    // change for other elements
+    if(mesh.elementType==Mesh::TRIANGLES ||
+       mesh.elementType==Mesh::TETRAHEDRA){
+      for(dlong e=0;e<mesh.Nelements;++e){
+        for(int n=0;n<mesh.Np;++n){
+          dlong idn = e*mesh.Np + n;
+          dfloat errPL2n = 0, normExactPL2n = 0;
+          dfloat errDL2n = 0, normExactDL2n = 0;
+          for(int m=0;m<mesh.Np;++m){
+            dlong idm = e*mesh.Np + m;
+            dfloat MMnm = mesh.MM[n*mesh.Np+m];
+            errPL2n += MMnm*(PL[idm]-exactPL[idm]);
+            errDL2n += MMnm*(DL[idm]-exactDL[idm]);
+            normExactPL2n += MMnm*exactPL[idm];
+            normExactDL2n += MMnm*exactDL[idm];
+          }
+          errPL2 += WJ[e]*(PL[idn]-exactPL[idn])*errPL2n;
+          errDL2 += WJ[e]*(DL[idn]-exactDL[idn])*errDL2n;
+          normExactPL2 += WJ[e]*(exactPL[idn])*normExactPL2n;
+          normExactDL2 += WJ[e]*(exactDL[idn])*normExactDL2n;
+        }
+      }
+    }
+
+    dfloat relErrDL2 = sqrt(errDL2/normExactDL2);
+    dfloat relErrPL2 = sqrt(errPL2/normExactPL2);
+    
+    std::cout << "relErrDL2 = " << relErrDL2 << " relErrPL2 = " << relErrPL2 << std::endl;
     
     if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
       // copy data back to host
