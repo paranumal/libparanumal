@@ -384,7 +384,7 @@ void wave_t::Setup(platform_t& _platform,
 
   std::cout << "h in range [ " << hmin << ", " << hmax << "] " << std::endl;
 
-
+  if(settings.compareSetting("ENABLE FLUX SOURCE","TRUE")){
   /* build source via fluxes */
   dfloat rdim = 1;
   xsource = 0;
@@ -483,4 +483,5 @@ void wave_t::Setup(platform_t& _platform,
   }
 
   o_EToPatch = platform.malloc<int>(mesh.Nelements*mesh.Nfaces, EToPatch);
+  }
 }

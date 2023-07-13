@@ -215,7 +215,7 @@ void wave_t::Run(){
     dfloat relErrDL2 = sqrt(errDL2/normExactDL2);
     dfloat relErrPL2 = sqrt(errPL2/normExactPL2);
     
-    std::cout << "relErrDL2 = " << relErrDL2 << " relErrPL2 = " << relErrPL2 << std::endl;
+    std::cout << mesh.N << ", " << mesh.Nelements << ", " << dt << ", " << relErrDL2 << ", " <<  relErrPL2 << "; %% N, Nelements, dt, relErrDL2, relErrPL2" << std::endl;
     
     if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
       // copy data back to host
