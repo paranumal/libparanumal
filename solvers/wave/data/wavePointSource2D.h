@@ -97,7 +97,7 @@ SOFTWARE.
     dddx = -dRdx*drickerdt2/(4.f*M_PI*R) - drickerdt*dRdx/(4.f*M_PI*R*R); \
     dddy = -dRdy*drickerdt2/(4.f*M_PI*R) - drickerdt*dRdy/(4.f*M_PI*R*R); \
                                                                         \
-    if(patch==1){                                                       \
+    if(patch==-1){                                                       \
       /* not 100 percent sure */                                        \
       p *= -1.f; dpdx *= -1.f; dpdy *= -1.f;                            \
       d *= -1.f; dddx *= -1.f; dddy *= -1.f;                            \

@@ -1,26 +1,26 @@
 /*
 
-The MIT License (MIT)
+  The MIT License (MIT)
 
-Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 
 */
 
@@ -59,41 +59,67 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
 
       elliptic.lambda = lambdaSolve;
 
-      // entering surface source
-      std::cout << "Entering surface source kernel " << std::endl;
-      waveSurfaceSourceKernel(mesh.Nelements,
-                              mesh.o_vmapM,
-                              elliptic.tau,
-                              mesh.o_vgeo,
-                              mesh.o_sgeo,
-                              o_EToPatch,
-                              t,
-                              dt,
-                              stage-1,
-                              Nstages,
-                              o_alphatilde,
-                              gammatilde(1,stage)/dt,
-                              o_esdirkC,
-                              xsource,
-                              ysource,
-                              zsource,
-                              fsource,
-                              mesh.o_x,
-                              mesh.o_y,
-                              mesh.o_z,
-                              mesh.o_D,
-                              mesh.o_LIFT,
-                              mesh.o_MM,
-                              o_SurfaceForceL);
-      
-    
-      platform.linAlg().
-         axpy(mesh.Np*mesh.Nelements, (dfloat)-1., o_SurfaceForceL, (dfloat)1., o_DrhsL);
+      if(settings.compareSetting("ENABLE FLUX SOURCE","TRUE")){
+        // entering surface source
+        std::cout << "Entering surface source kernel " << std::endl;
+        waveSurfaceSourceKernel(mesh.Nelements,
+                                mesh.o_vmapM,
+                                elliptic.tau,
+                                mesh.o_vgeo,
+                                mesh.o_sgeo,
+                                o_EToPatch,
+                                t,
+                                dt,
+                                stage-1,
+                                Nstages,
+                                o_alphatilde,
+                                gammatilde(1,stage)/dt,
+                                o_esdirkC,
+                                xsource,
+                                ysource,
+                                zsource,
+                                fsource,
+                                mesh.o_x,
+                                mesh.o_y,
+                                mesh.o_z,
+                                mesh.o_D,
+                                mesh.o_LIFT,
+                                o_MM,
+                                o_SurfaceForceL);
+
+      }
+
+      {
+        dfloat sigmaF = 0, omegaF = 0, scaleF = 1;
+        waveForcingKernel(mesh.Nelements,
+                          Nstages,
+                          stage,
+                          t,
+                          dt,
+                          o_alpha,
+                          o_esdirkC,
+                          sigmaF,
+                          omegaF,
+                          lambdaSolve,
+                          scaleF,
+                          mesh.o_x,
+                          mesh.o_y,                      
+                          mesh.o_z,
+                          o_WJ,
+                          o_MM,
+                          o_DrhsL);
+      }
       
       // record local RHS
       if(esc)
          esc->setLocalRHS(o_DrhsL);
-      
+
+      if(settings.compareSetting("ENABLE FLUX SOURCE","TRUE")){
+        // where should this go ?
+        platform.linAlg().
+           axpy(mesh.Np*mesh.Nelements, (dfloat)-1., o_SurfaceForceL, (dfloat)1., o_DrhsL);
+      }
+        
       // gather rhs to globalDofs if c0
       if(disc_c0){
         elliptic.ogsMasked.Gather(o_Drhs,   o_DrhsL,   1, ogs::Add, ogs::Trans);
@@ -176,37 +202,61 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
     }
     elliptic.lambda = lambdaSolve;
 
-#if 1
-    // finalizing force
-    std::cout << "Entering finalize source kernel " << std::endl;
-    waveSurfaceSourceKernel(mesh.Nelements,
-                            mesh.o_vmapM,
-                            elliptic.tau,
-                            mesh.o_vgeo,
-                            mesh.o_sgeo,
-                            o_EToPatch,
-                            t,
-                            dt,
-                            Nstages,  // last stage+1 (beta coefficients)
-                            Nstages,
-                            o_alphatilde,  /* use these coefficients */
-                            (dfloat)1./dt,  /* use these coefficients */
-                            o_esdirkC,
-                            xsource,
-                            ysource,
-                            zsource,
-                            fsource,
-                            mesh.o_x,
-                            mesh.o_y,
-                            mesh.o_z,
-                            mesh.o_D,
-                            mesh.o_LIFT,
-                            mesh.o_MM,
-                            o_SurfaceForceL);
+    if(settings.compareSetting("ENABLE FLUX SOURCE","TRUE")){
+      // finalizing force
+      std::cout << "Entering finalize source kernel " << std::endl;
+      waveSurfaceSourceKernel(mesh.Nelements,
+                              mesh.o_vmapM,
+                              elliptic.tau,
+                              mesh.o_vgeo,
+                              mesh.o_sgeo,
+                              o_EToPatch,
+                              t,
+                              dt,
+                              Nstages,  // last stage+1 (beta coefficients)
+                              Nstages,
+                              o_alphatilde,  /* use these coefficients */
+                              (dfloat)1./dt,  /* use these coefficients */
+                              o_esdirkC,
+                              xsource,
+                              ysource,
+                              zsource,
+                              fsource,
+                              mesh.o_x,
+                              mesh.o_y,
+                              mesh.o_z,
+                              mesh.o_D,
+                              mesh.o_LIFT,
+                              mesh.o_MM,
+                              o_SurfaceForceL);
     
-    platform.linAlg().
-       axpy(mesh.Np*mesh.Nelements, dt, o_SurfaceForceL, (dfloat)1., o_scratch2L); 
-#endif
+      platform.linAlg().
+         axpy(mesh.Np*mesh.Nelements, dt, o_SurfaceForceL, (dfloat)1., o_scratch2L); 
+    }
+
+    {
+      dfloat sigmaF = 0, omegaF = 0, lambdaF = 1., scaleF = -1./dt;
+      waveForcingKernel(mesh.Nelements,
+                        Nstages,
+                        Nstages+1,
+                        t,
+                        dt,
+                        o_alpha,
+                        o_esdirkC,
+                        sigmaF,                        
+                        omegaF,
+                        lambdaF,
+                        scaleF,
+                        mesh.o_x,
+                        mesh.o_y,
+                        mesh.o_z,
+                        o_WJ,
+                        o_MM,
+                        o_scratch2L);
+      }
+
+
+
     
     // c. finalize
     // P = Phat(:,1) +     dt*(Dhat(:,1:Nstages)*beta'); 
@@ -257,24 +307,24 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
     }
 
     if(1)
-    if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
-      static int slice=0;
-      if(tstep==0 || ((tstep+1)%iostep) == 0){
-        // copy data back to host
-        o_rPL.copyTo(PL);
-        o_rDL.copyTo(DL);
+       if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
+         static int slice=0;
+         if(tstep==0 || ((tstep+1)%iostep) == 0){
+           // copy data back to host
+           o_rPL.copyTo(PL);
+           o_rDL.copyTo(DL);
         
-        // output field files
-        std::string name;
-        settings.getSetting("OUTPUT FILE NAME", name);
-        char fname[BUFSIZ];
-        sprintf(fname, "DP_%04d_%04d.vtu",  mesh.rank, slice);
-        PlotFields(DL, PL, fname);
+           // output field files
+           std::string name;
+           settings.getSetting("OUTPUT FILE NAME", name);
+           char fname[BUFSIZ];
+           sprintf(fname, "DP_%04d_%04d.vtu",  mesh.rank, slice);
+           PlotFields(DL, PL, fname);
 
-        ++slice;
+           ++slice;
 
-      }
-    }
+         }
+       }
   }
 
   std::cout << "time=" << Nsteps*dt << ", Cumulative iterations: " << cumIter << std::endl;

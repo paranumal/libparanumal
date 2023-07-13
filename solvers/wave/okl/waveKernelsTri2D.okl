@@ -218,21 +218,55 @@ SOFTWARE.
   }
 }
 
-@kernel void waveForcingTri2D(const dlong N,
+@kernel void waveForcingTri2D(const dlong Nelements,
+                              const int Nstages,
+                              const int stage,
                               const dfloat t,
+                              const dfloat dt,
+                              @restrict const dfloat *esdirkA,
+                              @restrict const dfloat *esdirkC,
                               const dfloat sigma,
                               const dfloat omega,
+                              const dfloat lambda,
+                              const dfloat scale,
                               @restrict const dfloat *x,
                               @restrict const dfloat *y,
                               @restrict const dfloat *z,
+                              @restrict const dfloat *WJL,
+                              @restrict const dfloat *MM,
                               @restrict       dfloat *FL){
   
-  for(int n=0;n<N;++n;@tile(p_Np, @outer, @inner)){
-    const dfloat xn = x[n];
-    const dfloat yn = y[n];
+  for(int e=0;e<Nelements;++e;@outer(0)){
 
-    waveForcingFunction2D(xn, yn,  sigma, omega, FL[n]);
+    @shared dfloat s_rhs[p_Np];
+    
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      const dlong id = e*p_Np + n;
+      const dfloat xn = x[id];
+      const dfloat yn = y[id];
 
+      int s = stage-1;
+      int sp = (stage>Nstages) ? Nstages-1:s;
+      dfloat rhs = 0;
+      for(int i=0;i<=sp;++i){
+        dfloat ti = t + dt*esdirkC[i];
+        dfloat tmp = 0;
+        waveForcingFunction2D(ti, xn, yn,  sigma, omega, tmp);
+        rhs += esdirkA[s*Nstages + i]*tmp;
+      }
+
+      s_rhs[n] = rhs;
+    }
+
+
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      dfloat res = 0;
+      for(int m=0;m<p_Np;++m){
+        res += MM[n + m*p_Np]*s_rhs[m];
+      }
+      // increment forcing
+      FL[e*p_Np+n] += dt*scale*lambda*WJL[e]*res;
+    }
   }
 }
 

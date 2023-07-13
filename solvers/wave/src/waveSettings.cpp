@@ -125,6 +125,12 @@ waveSettings_t::waveSettings_t(comm_t& _comm):
              "1.0",
              "Frequency of flux point source Ricker pulse");
   
+
+  newSetting("ENABLE FLUX SOURCE",
+             "FALSE",
+             "Switch to enable flux source",
+             {"TRUE", "FALSE"});
+
   
   ellipticAddSettings(*this, "ELLIPTIC ");
   parAlmond::AddSettings(*this, "ELLIPTIC ");
