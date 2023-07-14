@@ -181,6 +181,7 @@ SOFTWARE.
   }
 }
 
+  #if 0
 @kernel void waveForcingQuad2D(const dlong N,
                               const dfloat t,
                               const dfloat sigma,
@@ -200,3 +201,53 @@ SOFTWARE.
 
 
 
+#endif
+
+
+@kernel void waveForcingQuad2D(const dlong Nelements,
+                              const int Nstages,
+                              const int stage,
+                              const dfloat t,
+                              const dfloat dt,
+                              @restrict const dfloat *esdirkA,
+                              @restrict const dfloat *esdirkC,
+                              const dfloat sigma,
+                              const dfloat omega,
+                              const dfloat lambda,
+                              const dfloat scale,
+                              @restrict const dfloat *x,
+                              @restrict const dfloat *y,
+                              @restrict const dfloat *z,
+                              @restrict const dfloat *WJL,
+                              @restrict const dfloat *MM,
+                              @restrict       dfloat *FL){
+  
+  for(int e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_rhs[p_Np];
+    
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      const dlong id = e*p_Np + n;
+      const dfloat xn = x[id];
+      const dfloat yn = y[id];
+
+      int s = stage-1;
+      int sp = (stage>Nstages) ? Nstages-1:s;
+      dfloat rhs = 0;
+      for(int i=0;i<=sp;++i){
+        dfloat ti = t + dt*esdirkC[i];
+        dfloat tmp = 0;
+        waveForcingFunction2D(ti, xn, yn,  sigma, omega, tmp);
+        rhs += esdirkA[s*Nstages + i]*tmp;
+      }
+
+      dfloat res = WJL[id]*rhs;
+
+      // increment forcing
+      FL[e*p_Np+n] += dt*scale*lambda*res;
+    }
+  }
+}
+
+
+  

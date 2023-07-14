@@ -270,16 +270,16 @@ void wave_t::Setup(platform_t& _platform,
      = platform.buildKernel(fileName, kernelName, kernelInfo);
 
 
-  // new file
-  fileName   = oklFilePrefix + "waveSurfaceSource"  + suffix + oklFileSuffix;
-  
-  kernelName = "waveSurfaceSource" + suffix;
-  std::cout << "kernelName=" << kernelName << std::endl;
-  
-  waveSurfaceSourceKernel =
-     platform.buildKernel(fileName, kernelName, kernelInfo);
-
-
+  if(settings.compareSetting("ENABLE FLUX SOURCE","TRUE")){
+    // new file
+    fileName   = oklFilePrefix + "waveSurfaceSource"  + suffix + oklFileSuffix;
+    
+    kernelName = "waveSurfaceSource" + suffix;
+    std::cout << "kernelName=" << kernelName << std::endl;
+    
+    waveSurfaceSourceKernel =
+       platform.buildKernel(fileName, kernelName, kernelInfo);
+  }
 
   
   //setup linear solver

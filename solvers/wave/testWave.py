@@ -58,7 +58,7 @@ def waveSettings(rcformat="2.0",
                  final_time=1.1,
                  discretization="IPDG",
                  stopping_criteria="ERRORESTIMATE",
-                 convergence_tolerance=1e-9,
+                 convergence_tolerance=1e-11,
                  pmg_chebyshev_degree=2,
                  initial_guess="QR",
                  initial_guess_dim=16,
@@ -108,7 +108,7 @@ def main():
   cnt = 1;
   for P in range(1,10):
     for NXP in range(0, 4):
-      for dtp in range(0, 5):
+      for dtp in range(0, 6):
 
         dt = 0.4/(2.**dtp)
         NX = 4*(2**NXP)
@@ -126,49 +126,46 @@ def main():
         print("\n")
         cnt = cnt+1;
         
-        
-  cnt = 1;
-  for dtp in range(0, 4):
-    for P in range(4,5):
-      for NXP in range(3, 4):
-        NX = 4*(2**NXP)
-        dt = 0.1/(2.**dtp)
-        test(name="testSpace"+str(cnt).zfill(5),
-             cmd=waveBin,
-             settings=waveSettings(element=3,
-                                   data_file=dataSpace2D,
-                                   thread_model="CUDA",
-                                   boundary_flag=1,
-                                   dim=2,
-                                   degree=P,
-                                   time_step=dt,
-                                   nx=NX,
-                                   ny=NX))
-        print("\n")
-        cnt = cnt+1;
+
+  if 0==1:        
+    cnt = 1;
+    for dtp in range(0, 4):
+      for P in range(4,5):
+        for NXP in range(3, 4):
+          NX = 4*(2**NXP)
+          dt = 0.1/(2.**dtp)
+          test(name="testSpace"+str(cnt).zfill(5),
+               cmd=waveBin,
+               settings=waveSettings(element=3,
+                                     data_file=dataSpace2D,
+                                     thread_model="CUDA",
+                                     boundary_flag=1,
+                                     dim=2,
+                                     degree=P,
+                                     time_step=dt,
+                                     nx=NX,
+                                     ny=NX))
+          print("\n")
+          cnt = cnt+1;
 
 
   
-  cnt = 1;
-  for P in range(1,10):
-    for NXP in range(0, 4):
-      NX = 4*(2**NXP)
-      test(name="testTime"+str(cnt).zfill(5),
-           cmd=waveBin,
-           settings=waveSettings(element=3,
-                                 data_file=dataTime2D,
-                                 thread_model="CUDA",
-                                 boundary_flag=1,
-                                 dim=2,
-                                 degree=P,
-                                 nx=NX,
-                                 ny=NX))
-      print("\n")
-      cnt = cnt+1;
-
-
-
-  
+          cnt = 1;
+          for P in range(1,10):
+            for NXP in range(0, 4):
+              NX = 4*(2**NXP)
+              test(name="testTime"+str(cnt).zfill(5),
+                   cmd=waveBin,
+                   settings=waveSettings(element=3,
+                                         data_file=dataTime2D,
+                                         thread_model="CUDA",
+                                         boundary_flag=1,
+                                         dim=2,
+                                         degree=P,
+                                         nx=NX,
+                                        ny=NX))
+              print("\n")
+              cnt = cnt+1;
 
       
   testDir = "./"

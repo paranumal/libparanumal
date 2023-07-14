@@ -212,6 +212,21 @@ void wave_t::Run(){
       }
     }
 
+    if(mesh.elementType==Mesh::QUADRILATERALS ||
+       mesh.elementType==Mesh::HEXAHEDRA){
+      for(dlong e=0;e<mesh.Nelements;++e){
+        for(int n=0;n<mesh.Np;++n){
+          dlong idn = e*mesh.Np + n;
+          dfloat WJn = WJ[idn];
+          errPL2 += WJn*pow(PL[idn]-exactPL[idn],2);
+          errDL2 += WJn*pow(DL[idn]-exactDL[idn],2);
+          
+          normExactPL2 += WJn*pow(exactPL[idn],2);
+          normExactDL2 += WJn*pow(exactDL[idn],2);
+        }
+      }
+    }
+    
     dfloat relErrDL2 = sqrt(errDL2/normExactDL2);
     dfloat relErrPL2 = sqrt(errPL2/normExactPL2);
     
