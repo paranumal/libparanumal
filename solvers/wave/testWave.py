@@ -114,7 +114,7 @@ def main():
         NX = 4*(2**NXP)
         test(name="testSpaceTime"+str(cnt).zfill(5),
              cmd=waveBin,
-             settings=waveSettings(element=3,
+             settings=waveSettings(element=4,
                                    data_file=dataSpaceTime2D,
                                    thread_model="CUDA",
                                    boundary_flag=1,
