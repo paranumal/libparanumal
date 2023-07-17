@@ -25,7 +25,7 @@ SOFTWARE.
 */
 
 
-@kernel void waveStepInitializeQuad2D(const dlong Nelements,
+@kernel void waveStepInitializeHex3D(const dlong Nelements,
                                      const dfloat scD,
                                      const dfloat scP,
                                      const dfloat lambda,
@@ -57,7 +57,7 @@ SOFTWARE.
 }
 
 
-@kernel void waveStageFinalizeQuad2D(const dlong Nelements,
+@kernel void waveStageFinalizeHex3D(const dlong Nelements,
                                     const dfloat dt,
                                     const dfloat invGammaDt,
                                     const dfloat invGamma,
@@ -93,9 +93,8 @@ SOFTWARE.
       dfloat Di = Dtilde - gammatilde[i]*Pn/dt;
       
       dfloat Rnew = Dn;
-      if(i+1<Nstages){
-        Rnew += gammatilde[i+1]*Pn/dt;
-      }
+      if(i+1<Nstages)
+         Rnew += gammatilde[i+1]*Pn/dt;
       
       for(int j=0;j<i;++j){
         dfloat Dj = DhatL[id+j*Nelements*p_Np];
@@ -128,7 +127,7 @@ SOFTWARE.
 }
 
   
-@kernel void waveStepFinalizeQuad2D(const dlong Nelements,
+@kernel void waveStepFinalizeHex3D(const dlong Nelements,
                                    const dfloat dt,
                                    const int Nstages,
                                     const dfloat scF,
@@ -168,7 +167,7 @@ SOFTWARE.
   }
 }
 
-@kernel void waveInitialConditionsQuad2D(const dlong N,
+@kernel void waveInitialConditionsHex3D(const dlong N,
                                          const dfloat t,
                                         @restrict const dfloat *x,
                                         @restrict const dfloat *y,
@@ -179,13 +178,14 @@ SOFTWARE.
   for(int n=0;n<N;++n;@tile(p_Np, @outer, @inner)){
     const dfloat xn = x[n];
     const dfloat yn = y[n];
+    const dfloat zn = z[n];
 
-    waveInitialConditionsFunction2D(t, xn, yn,  DL[n], PL[n]);
+    waveInitialConditionsFunction3D(t, xn, yn, zn, DL[n], PL[n]);
   }
 }
 
   #if 0
-@kernel void waveForcingQuad2D(const dlong N,
+@kernel void waveForcingHex3D(const dlong N,
                               const dfloat t,
                               const dfloat sigma,
                               const dfloat omega,
@@ -197,8 +197,9 @@ SOFTWARE.
   for(int n=0;n<N;++n;@tile(p_Np, @outer, @inner)){
     const dfloat xn = x[n];
     const dfloat yn = y[n];
+    const dfloat zn = z[n];
     
-    waveForcingFunction2D(xn, yn, sigma, omega, FL[n]);
+    waveForcingFunction3D(xn, yn, zn, sigma, omega, FL[n]);
   }
 }
 
@@ -207,7 +208,7 @@ SOFTWARE.
 #endif
 
 
-@kernel void waveForcingQuad2D(const dlong Nelements,
+@kernel void waveForcingHex3D(const dlong Nelements,
                               const int Nstages,
                               const int stage,
                               const dfloat t,
@@ -240,7 +241,7 @@ SOFTWARE.
       for(int i=0;i<=sp;++i){
         dfloat ti = t + dt*esdirkC[i];
         dfloat tmp = 0;
-        waveForcingFunction2D(ti, xn, yn,  sigma, omega, tmp);
+        waveForcingFunction3D(ti, xn, yn, zn, sigma, omega, tmp);
         rhs += esdirkA[s*Nstages + i]*tmp;
       }
 

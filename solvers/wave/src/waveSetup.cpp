@@ -322,15 +322,15 @@ void wave_t::Setup(platform_t& _platform,
     mesh.invMassMatrixTri2D(mesh.Np, V, invMM);
     mesh.MassMatrixTri2D(mesh.Np, V, MM);
   } else if(mesh.elementType==Mesh::QUADRILATERALS) {
-    invMM.malloc(1);
-    MM.malloc(1);
+    invMM.malloc(mesh.Np*mesh.Np);
+    MM.malloc(mesh.Np*mesh.Np);
   } else if(mesh.elementType==Mesh::TETRAHEDRA) {
     mesh.VandermondeTet3D(mesh.N, mesh.r, mesh.s, mesh.t, V);
     mesh.invMassMatrixTet3D(mesh.Np, V, invMM);
     mesh.MassMatrixTet3D(mesh.Np, V, MM);
-  } else { 
-    printf("HEXES NOT IMPLEMENTED YET\n");
-    exit(-1);
+  } else {
+    invMM.malloc(mesh.Np*mesh.Np);
+    MM.malloc(mesh.Np*mesh.Np);
   }
   
   o_invMM = platform.malloc<dfloat>(mesh.Np*mesh.Np, invMM);
