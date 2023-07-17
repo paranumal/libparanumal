@@ -201,6 +201,7 @@ public:
 
    void ReportError(dfloat t,
                     dfloat elapsedTime,
+                    int iterations,
                     deviceMemory<dfloat>& DL,
                     deviceMemory<dfloat>& PL);
 

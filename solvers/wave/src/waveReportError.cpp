@@ -28,7 +28,7 @@ SOFTWARE.
 #include "timer.hpp"
 #include "ellipticPrecon.hpp"
 
-void wave_t::ReportError(dfloat t, dfloat elapsedTime, deviceMemory<dfloat> &o_DLin, deviceMemory<dfloat> &o_PLin){
+void wave_t::ReportError(dfloat t, dfloat elapsedTime, int iterations, deviceMemory<dfloat> &o_DLin, deviceMemory<dfloat> &o_PLin){
 
   memory<dfloat> DLin(Nall);
   memory<dfloat> PLin(Nall);
@@ -106,7 +106,7 @@ void wave_t::ReportError(dfloat t, dfloat elapsedTime, deviceMemory<dfloat> &o_D
   dfloat relErrDL2 = sqrt(errDL2/(eps+normExactDL2));
   dfloat relErrPL2 = sqrt(errPL2/(eps+normExactPL2));
   
-  std::cout << t << "," << mesh.N << ", " << mesh.Nelements << ", " << dt << ", " << relErrDL2 << ", " <<  relErrPL2 << ", " << elapsedTime <<
+  std::cout << t << "," << mesh.N << ", " << mesh.Nelements << ", " << dt << ", " << iterations << ", " << relErrDL2 << ", " <<  relErrPL2 << ", " << elapsedTime <<
      "; %% t, N, Nelements, dt, relErrDL2, relErrPL2, elapsedTime" << std::endl;
 
 }

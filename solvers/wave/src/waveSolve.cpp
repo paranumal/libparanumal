@@ -330,7 +330,7 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
     settings.getSetting("OUTPUT ERROR INTERVAL", errorStep);
     if(errorStep>0 && tstep>0){
       if((tstep%errorStep)==0){
-        ReportError(t+dt, elapsedTime, o_rDL, o_rPL);
+        ReportError(t+dt, elapsedTime, iter, o_rDL, o_rPL);
       }
     }
     
