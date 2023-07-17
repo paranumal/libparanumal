@@ -198,6 +198,12 @@ public:
    void Run();
    
    void Report(dfloat time, int tstep);
+
+   void ReportError(dfloat t,
+                    dfloat elapsedTime,
+                    deviceMemory<dfloat>& DL,
+                    deviceMemory<dfloat>& PL);
+
    
    void PlotFields(libp::memory<dfloat>& DL,
                    libp::memory<dfloat>& PL,

@@ -325,6 +325,15 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
 
          }
        }
+
+    int errorStep = 1000;
+    settings.getSetting("OUTPUT ERROR INTERVAL", errorStep);
+    if(errorStep>0 && tstep>0){
+      if((tstep%errorStep)==0){
+        ReportError(t+dt, elapsedTime, o_rDL, o_rPL);
+      }
+    }
+    
   }
 
   std::cout << "time=" << Nsteps*dt << ", Cumulative iterations: " << cumIter << std::endl;

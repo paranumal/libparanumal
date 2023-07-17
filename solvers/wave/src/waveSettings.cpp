@@ -88,13 +88,17 @@ waveSettings_t::waveSettings_t(comm_t& _comm):
 
   newSetting("OUTPUT STEP",
              "100",
-             "Number of time steps betwenen printing output data");
+             "Number of time steps between printing output data");
   
   newSetting("OUTPUT TO FILE",
              "TRUE",
              "Flag for writing fields to VTU files",
              {"TRUE", "FALSE"});
 
+  newSetting("OUTPUT ERROR INTERVAL",
+             "0",
+             "Number of time steps between printing output error");
+  
   newSetting("OUTPUT FILE NAME",
              "wave");
 
@@ -151,6 +155,7 @@ void waveSettings_t::report() {
     reportSetting("OUTPUT INTERVAL");
     reportSetting("OUTPUT TO FILE");
     reportSetting("OUTPUT FILE NAME");
+    reportSetting("OUTPUT ERROR INTERVAL");
 
     std::cout << "\n Solver Settings:\n\n";
 

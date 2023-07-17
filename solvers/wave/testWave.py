@@ -62,7 +62,8 @@ def waveSettings(rcformat="2.0",
                  pmg_chebyshev_degree=2,
                  initial_guess="QR",
                  initial_guess_dim=16,
-                 output_to_file="FALSE"):
+                 output_to_file="FALSE",
+                 output_error_interval=0):
   
   return [setting_t("FORMAT", rcformat),
           setting_t("DATA FILE", data_file),
@@ -100,7 +101,8 @@ def waveSettings(rcformat="2.0",
           setting_t("ELLIPTIC PARALMOND AGGREGATION", "SMOOTHED"),
           setting_t("ELLIPTIC PARALMOND SMOOTHER", "CHEBYSHEV"),
           setting_t("ELLIPTIC PARALMOND CHEBYSHEV DEGREE", 2),
-          setting_t("OUTPUT TO FILE", output_to_file)]
+          setting_t("OUTPUT TO FILE", output_to_file),
+          setting_t("OUTPUT ERROR INTERVAL", output_error_interval)]
 
 def main():
   failCount=0;
@@ -122,7 +124,8 @@ def main():
                                    degree=P,
                                    time_step=dt,
                                    nx=NX,
-                                   ny=NX))
+                                   ny=NX,
+                                   output_error_interval=1))
         print("\n")
         cnt = cnt+1;
         
@@ -144,7 +147,8 @@ def main():
                                      degree=P,
                                      time_step=dt,
                                      nx=NX,
-                                     ny=NX))
+                                     ny=NX,
+                                     output_error_interval=1))
           print("\n")
           cnt = cnt+1;
 
@@ -163,7 +167,8 @@ def main():
                                          dim=2,
                                          degree=P,
                                          nx=NX,
-                                        ny=NX))
+                                         ny=NX,
+                                         output_error_interval=1))
               print("\n")
               cnt = cnt+1;
 

@@ -158,79 +158,8 @@ void wave_t::Run(){
     double elapsedTime = ElapsedTime(starts, ends);
     std::cout << "elapsedTime = " << std::scientific << elapsedTime << std::endl;
     
-  
-    deviceMemory<dfloat> o_exactDL = platform.malloc<dfloat>(Nall);
-    deviceMemory<dfloat> o_exactPL = platform.malloc<dfloat>(Nall);
-    
-    waveInitialConditionsKernel(Nall, finalTime, mesh.o_x, mesh.o_y, mesh.o_z, o_exactDL, o_exactPL);
-
-    o_PL.copyTo(PL);
-    o_DL.copyTo(DL);       
-    
-    memory<dfloat> exactDL(Nall);
-    memory<dfloat> exactPL(Nall);
-
-    o_exactDL.copyTo(exactDL);
-    o_exactPL.copyTo(exactPL);
-
-    dfloat errDLMax = 0;
-    dfloat errPLMax = 0;
-    for(int n=0;n<Nall;++n){
-      dfloat errDLn = fabs(DL[n] - exactDL[n]);
-      dfloat errPLn = fabs(PL[n] - exactPL[n]);
-
-      errDLMax = std::max(errDLMax, errDLn);
-      errPLMax = std::max(errPLMax, errPLn);
-    }
-    std::cout << std::setprecision (6);
-    std::cout << std::scientific;
-    std::cout << "errDLMax = " << errDLMax << " errPLMax = " << errPLMax << std::endl;
-
-    dfloat errPL2 = 0, errDL2 = 0;
-    dfloat normExactPL2 = 0, normExactDL2 = 0;
-    // change for other elements
-    if(mesh.elementType==Mesh::TRIANGLES ||
-       mesh.elementType==Mesh::TETRAHEDRA){
-      for(dlong e=0;e<mesh.Nelements;++e){
-        for(int n=0;n<mesh.Np;++n){
-          dlong idn = e*mesh.Np + n;
-          dfloat errPL2n = 0, normExactPL2n = 0;
-          dfloat errDL2n = 0, normExactDL2n = 0;
-          for(int m=0;m<mesh.Np;++m){
-            dlong idm = e*mesh.Np + m;
-            dfloat MMnm = mesh.MM[n*mesh.Np+m];
-            errPL2n += MMnm*(PL[idm]-exactPL[idm]);
-            errDL2n += MMnm*(DL[idm]-exactDL[idm]);
-            normExactPL2n += MMnm*exactPL[idm];
-            normExactDL2n += MMnm*exactDL[idm];
-          }
-          errPL2 += WJ[e]*(PL[idn]-exactPL[idn])*errPL2n;
-          errDL2 += WJ[e]*(DL[idn]-exactDL[idn])*errDL2n;
-          normExactPL2 += WJ[e]*(exactPL[idn])*normExactPL2n;
-          normExactDL2 += WJ[e]*(exactDL[idn])*normExactDL2n;
-        }
-      }
-    }
-
-    if(mesh.elementType==Mesh::QUADRILATERALS ||
-       mesh.elementType==Mesh::HEXAHEDRA){
-      for(dlong e=0;e<mesh.Nelements;++e){
-        for(int n=0;n<mesh.Np;++n){
-          dlong idn = e*mesh.Np + n;
-          dfloat WJn = WJ[idn];
-          errPL2 += WJn*pow(PL[idn]-exactPL[idn],2);
-          errDL2 += WJn*pow(DL[idn]-exactDL[idn],2);
-          
-          normExactPL2 += WJn*pow(exactPL[idn],2);
-          normExactDL2 += WJn*pow(exactDL[idn],2);
-        }
-      }
-    }
-    
-    dfloat relErrDL2 = sqrt(errDL2/normExactDL2);
-    dfloat relErrPL2 = sqrt(errPL2/normExactPL2);
-    
-    std::cout << mesh.N << ", " << mesh.Nelements << ", " << dt << ", " << relErrDL2 << ", " <<  relErrPL2 << ", " << elapsedTime << "; %% N, Nelements, dt, relErrDL2, relErrPL2, elapsedTime" << std::endl;
+    // output error
+    ReportError(finalTime, elapsedTime, o_DL, o_PL);
     
     if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
       // copy data back to host
