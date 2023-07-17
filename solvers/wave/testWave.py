@@ -108,6 +108,11 @@ def main():
   failCount=0;
 
   cnt = 1;
+
+  testDim = 3
+  testElement = 12
+  testDataFile = dataSpaceTime3D
+  
   for P in range(1,10):
     for NXP in range(0, 4):
       for dtp in range(0, 6):
@@ -116,11 +121,11 @@ def main():
         NX = 4*(2**NXP)
         test(name="testSpaceTime"+str(cnt).zfill(5),
              cmd=waveBin,
-             settings=waveSettings(element=4,
-                                   data_file=dataSpaceTime2D,
+             settings=waveSettings(element=testElement,
+                                   data_file=testDataFile,
                                    thread_model="CUDA",
                                    boundary_flag=1,
-                                   dim=2,
+                                   dim=testDim,
                                    degree=P,
                                    time_step=dt,
                                    nx=NX,
