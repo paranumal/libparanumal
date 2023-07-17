@@ -109,17 +109,27 @@ def main():
 
   cnt = 1;
 
-  testDim = 3
-  testElement = 12
-  testDataFile = dataSpaceTime3D
-  
+  if(1):
+    testDim = 3
+    testElement = 12
+    testElementName = "Hex3D"
+    testDataFile = dataSpaceTime3D
+
+  if(0):
+    testDim = 2
+    testElement = 4
+    testElementName = "Quad2D"
+    testDataFile = dataSpaceTime2D
+
+
+    
   for P in range(1,10):
-    for NXP in range(0, 4):
+    for NXP in range(0, 3):
       for dtp in range(0, 6):
 
         dt = 0.4/(2.**dtp)
         NX = 4*(2**NXP)
-        test(name="testSpaceTime"+str(cnt).zfill(5),
+        test(name="testSpaceTime"+testElementName+str(cnt).zfill(5),
              cmd=waveBin,
              settings=waveSettings(element=testElement,
                                    data_file=testDataFile,
@@ -130,6 +140,7 @@ def main():
                                    time_step=dt,
                                    nx=NX,
                                    ny=NX,
+                                   nz=NX,
                                    output_error_interval=1))
         print("\n")
         cnt = cnt+1;

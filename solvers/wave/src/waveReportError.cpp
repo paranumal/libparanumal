@@ -28,7 +28,7 @@ SOFTWARE.
 #include "timer.hpp"
 #include "ellipticPrecon.hpp"
 
-void wave_t::ReportError(dfloat t, dfloat elapsedTime, deviceMemory<dfloat> &o_DL, deviceMemory<dfloat> &o_PL){
+void wave_t::ReportError(dfloat t, dfloat elapsedTime, deviceMemory<dfloat> &o_DLin, deviceMemory<dfloat> &o_PLin){
 
   memory<dfloat> DLin(Nall);
   memory<dfloat> PLin(Nall);
@@ -44,8 +44,8 @@ void wave_t::ReportError(dfloat t, dfloat elapsedTime, deviceMemory<dfloat> &o_D
   o_exactDL.copyTo(exactDL);
   o_exactPL.copyTo(exactPL);
 
-  o_DL.copyTo(DLin);
-  o_PL.copyTo(PLin);
+  o_DLin.copyTo(DLin);
+  o_PLin.copyTo(PLin);
   
   dfloat errDLMax = 0;
   dfloat errPLMax = 0;
