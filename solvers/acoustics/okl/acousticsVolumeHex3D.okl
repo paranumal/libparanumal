@@ -177,7 +177,7 @@ SOFTWARE.
     @shared dfloat s_G[2][p_Nq][p_Nq][p_Nq];
     @shared dfloat s_H[2][p_Nq][p_Nq][p_Nq];
 
-    @exclusive dfloat JW, invJW;
+    @exclusive dfloat JW, invJW, r;
     
     for(int k=0;k<p_Nq;++k;@inner(2)){
       for(int j=0;j<p_Nq;++j;@inner(1)){
@@ -204,7 +204,7 @@ SOFTWARE.
 
           // conseved variables
           const dlong  qbase = e*p_Np*p_Nfields + k*p_Nq*p_Nq + j*p_Nq + i;
-          const dfloat r = q[qbase+0*p_Np];
+          r = q[qbase+0*p_Np];
           const dfloat u = q[qbase+1*p_Np];
           const dfloat v = q[qbase+2*p_Np];
           const dfloat w = q[qbase+3*p_Np];
@@ -270,20 +270,14 @@ SOFTWARE.
 
           // geometric factors
           const dlong gbase = e*p_Np*p_Nvgeo + k*p_Nq*p_Nq + j*p_Nq + i;
-          const dfloat rx = vgeo[gbase+p_Np*p_RXID];
           const dfloat ry = vgeo[gbase+p_Np*p_RYID];
           const dfloat rz = vgeo[gbase+p_Np*p_RZID];
-          const dfloat sx = vgeo[gbase+p_Np*p_SXID];
           const dfloat sy = vgeo[gbase+p_Np*p_SYID];
           const dfloat sz = vgeo[gbase+p_Np*p_SZID];
-          const dfloat tx = vgeo[gbase+p_Np*p_TXID];
           const dfloat ty = vgeo[gbase+p_Np*p_TYID];
           const dfloat tz = vgeo[gbase+p_Np*p_TZID];
 
-          // conseved variables
-          const dlong  qbase = e*p_Np*p_Nfields + k*p_Nq*p_Nq + j*p_Nq + i;
-          const dfloat r = q[qbase+0*p_Np];
-
+          // conserved variables
           // (1/J) \hat{div} (G*[F;G])
           // questionable: why JW
           {
@@ -291,18 +285,18 @@ SOFTWARE.
             const dfloat f = 0;
             const dfloat g = -r;
             const dfloat h = 0;
-            s_F[0][k][j][i] = JW*(rx*f + ry*g + rz*h);
-            s_G[0][k][j][i] = JW*(sx*f + sy*g + sz*h);
-            s_H[0][k][j][i] = JW*(tx*f + ty*g + tz*h);
+            s_F[0][k][j][i] = JW*(ry*g);
+            s_G[0][k][j][i] = JW*(sy*g);
+            s_H[0][k][j][i] = JW*(ty*g);
           }
 
           {
             const dfloat f = 0;
             const dfloat g = 0;
             const dfloat h = -r;
-            s_F[1][k][j][i] = JW*(rx*f + ry*g + rz*h);
-            s_G[1][k][j][i] = JW*(sx*f + sy*g + sz*h);
-            s_H[1][k][j][i] = JW*(tx*f + ty*g + tz*h);
+            s_F[1][k][j][i] = JW*(rz*h);
+            s_G[1][k][j][i] = JW*(sz*h);
+            s_H[1][k][j][i] = JW*(tz*h);
           }
         }
       }
