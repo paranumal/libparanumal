@@ -82,6 +82,15 @@ meshSettings_t::meshSettings_t(comm_t _comm):
              "1",
              "Type of boundary conditions for BOX domain (-1 for periodic)");
 
+  newSetting("BOX KERSHAW MAP",
+             "-1",
+             "Type of Kershaw map",
+	     {"1","2","3"});
+
+  newSetting("BOX KERSHAW PARAMETER",
+             "1",
+             "Parameter for Kershaw map (1 is undeformed)");
+
   newSetting("POLYNOMIAL DEGREE",
              "4",
              "Degree of polynomial finite element space",

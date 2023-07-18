@@ -62,6 +62,10 @@ acousticsSettings_t::acousticsSettings_t(comm_t _comm):
 
   newSetting("OUTPUT FILE NAME",
              "acoustics");
+
+  newSetting("OUTPUT ERROR INTERVAL",
+             "0",
+             "Number of time steps between printing output error");
 }
 
 void acousticsSettings_t::report() {

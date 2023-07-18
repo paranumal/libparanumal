@@ -101,6 +101,8 @@ public:
                 deviceMemory<dfloat>& o_fQM, const dfloat T, const int lev);
    
   dfloat MaxWaveSpeed();
+
+   void ReportError(dfloat t, dfloat dt, dfloat elapsedTime, int iterations, deviceMemory<dfloat> &o_qin);
 };
 
 #endif

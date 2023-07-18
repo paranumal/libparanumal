@@ -24,43 +24,37 @@ SOFTWARE.
 
 */
 
-#include "acoustics.hpp"
+#include "mesh.hpp"
 
-void acoustics_t::Report(dfloat time, int tstep){
+namespace libp {
 
-  static int frame=0;
+// mesh is the local partition
+int mesh_t::PointInclusionTest(dlong element, dfloat xs, dfloat ys, dfloat zs){
 
-  //compute q.M*q
-  dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
-  deviceMemory<dfloat> o_Mq = platform.reserve<dfloat>(Nentries);
-  mesh.MassMatrixApply(o_q, o_Mq);
+  if(elementType==Mesh::TRIANGLES){
+    dlong id1 = element*Nverts + 0;
+    dlong id2 = element*Nverts + 1;
+    dlong id3 = element*Nverts + 2;
+    dfloat x1 = EX[id1], x2 = EX[id2], x3 = EX[id3];
+    dfloat y1 = EY[id1], y2 = EY[id2], y3 = EY[id3];
 
-  dfloat norm2 = sqrt(platform.linAlg().innerProd(Nentries, o_q, o_Mq, mesh.comm));
+    // Xs = (1-r-s)*X1 + r*X2 + s*X3
+    // [ (X2-X1)  (X3-X1) ]*[r;s] = Xs-X1
+    // [r;s] = (1/J)*[ (y3-y1)  -(x3-x1); -(y2-y1)  (x2-x1) ]*[Xs-X1]
+    // J = (x2-x1)*(y3-y1) - (y2-y1)*(x3-x1)
 
-  if(mesh.rank==0)
-    printf("%5.2f (%d), %5.2f (time, timestep, norm)\n", time, tstep, norm2);
+    dfloat J =    (x2-x1)*(y3-y1) - (y2-y1)*(x3-x1);
+    dfloat re = ( (y3-y1)*(xs-x1) - (x3-x1)*(ys-y1))/J;
+    dfloat se = (-(y2-y1)*(xs-x1) + (x2-x1)*(ys-y1))/J;
 
-
-  int errorStep = 1000;
-  settings.getSetting("OUTPUT ERROR INTERVAL", errorStep);
-  if(errorStep>0 && tstep>0){
-    if((tstep%errorStep)==0){
-      ReportError(time, 0, 0, 0, o_q);
+    if(0<=re && 0<=se && re+se<=1){
+      return 1;
+    }else{
+      return 0;
     }
   }
 
-  
-  if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
+  return 0;
+}
 
-    // copy data back to host
-    o_q.copyTo(q);
-
-    // output field files
-    std::string name;
-    settings.getSetting("OUTPUT FILE NAME", name);
-    char fname[BUFSIZ];
-    sprintf(fname, "%s_%04d_%04d.vtu", name.c_str(), mesh.rank, frame++);
-
-    PlotFields(q, std::string(fname));
-  }
 }

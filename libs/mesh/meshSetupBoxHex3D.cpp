@@ -156,6 +156,31 @@ void mesh_t::SetupBoxHex3D(){
     }
   }
 
+  int kershawMapType = -1;
+  settings.getSetting("BOX KERSHAW MAP", kershawMapType);
+  if(kershawMapType!=-1){
+    dfloat kershawParam = 1;
+    settings.getSetting("BOX KERSHAW PARAMETER", kershawParam);
+    for(int n=0;n<Nelements*Nverts;++n){
+#if 1
+      dfloat xn = EX[n], yn = EY[n], zn = EZ[n];
+      // scale into biunit box
+      xn = xn/DIMX;
+      yn = yn/DIMY;
+      zn = zn/DIMZ;
+      kershawMap3D(kershawMapType, kershawParam, xn, yn, zn);
+
+      // scale back
+      EX[n] = xn*DIMX;
+      EY[n] = yn*DIMY;
+      EZ[n] = zn*DIMZ;
+#else
+      kershawMap3D(kershawMapType, kershawParam, EX[n], EY[n], EZ[n]);
+#endif
+    }
+  }
+  
+
   if (boundaryFlag != -1) { //-1 reserved for periodic case
     NboundaryFaces = 2*NX*NY + 2*NX*NZ + 2*NY*NZ;
     boundaryInfo.malloc(NboundaryFaces*(NfaceVertices+1));
