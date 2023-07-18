@@ -48,13 +48,18 @@ void acoustics_t::Setup(platform_t& _platform, mesh_t& _mesh,
   //make array of time step estimates for each element
   memory<dfloat> EtoDT(mesh.Nelements);
   dfloat vmax = MaxWaveSpeed();
+  dfloat hmin = 1e9, hmax = -1e9;
   for(dlong e=0;e<mesh.Nelements;++e){
     dfloat h = mesh.ElementCharacteristicLength(e);
     dfloat dtAdv  = h/(vmax*(mesh.N+1.)*(mesh.N+1.));
 
     EtoDT[e] = dtAdv;
+    hmin = std::min(hmin, h);
+    hmax = std::max(hmax, h);
   }
 
+  std::cout << "h in range [ " << hmin << ", " << hmax << "] " << std::endl;
+  
   mesh.mrNlevels=0;
   if (settings.compareSetting("TIME INTEGRATOR","MRAB3")){
     mesh.MultiRateSetup(EtoDT);
