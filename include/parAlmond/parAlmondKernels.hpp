@@ -37,7 +37,7 @@ namespace parAlmond {
 
   //NC: Hard code these for now. Should be sufficient for GPU devices, but needs attention for CPU
   constexpr int blockSize = 256;
-  constexpr int NonzerosPerBlock = 2048; //should be a multiple of blockSize for good unrolling
+  constexpr int NonzerosPerBlock = 3072; //should be a multiple of blockSize for good unrolling
 
   extern kernel_t SpMVcsrKernel1;
   extern kernel_t SpMVcsrKernel2;

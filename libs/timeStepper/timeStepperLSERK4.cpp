@@ -143,6 +143,9 @@ void lserk4::Run(solver_t& solver,
     Step(solver, o_q, o_pmlq, time, stepdt);
     time += stepdt;
     tstep++;
+
+    if(!(tstep%100))
+       std::cout << "Time: " << time << ", tstep: " << tstep << ", dt: " << dt << std::endl;
   }
 }
 

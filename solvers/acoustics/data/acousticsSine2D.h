@@ -29,21 +29,25 @@ SOFTWARE.
 /* wall 1, outflow 2 */
 #define acousticsDirichletConditions2D(bc, t, x, y, nx, ny, rM, uM, vM, rB, uB, vB) \
 {                                       \
-  if(bc==1){                            \
+  if(bc==2){                            \
     *(rB) = -rM;                        \
     *(uB) = uM;                         \
     *(vB) = vM;                         \
-  } else if(bc==2){                     \
+  } else if(bc==1){                     \
     *(rB) = rM;                         \
     *(uB) = uM - 2.0*(nx*uM+ny*vM)*nx;  \
     *(vB) = vM - 2.0*(nx*uM+ny*vM)*ny;  \
   }                                     \
 }
 
+// r. = sx*sy*(-st*m*M_PI*sqrt(t))
+// ux = -m*M_PI*sx*sy*st/
+
 // Initial conditions
 #define acousticsInitialConditions2D(t, x, y, r, u, v) \
-{                                       \
-  *(r) = exp(-80.*(x*x+(y-.5)*(y-.5))); \
-  *(u) = 0.0;                           \
-  *(v) = 0.0;                           \
-}
+  {                                                                     \
+    dfloat m = 2;                                                       \
+    *(r) = sin(m*M_PI*x)*sin(m*M_PI*y)*cos(m*M_PI*t*sqrt(2.));          \
+    *(u) = cos(m*M_PI*x)*sin(m*M_PI*y)*sin(m*M_PI*t*sqrt(2.))*sqrt(2.); \
+    *(v) = sin(m*M_PI*x)*cos(m*M_PI*y)*sin(m*M_PI*t*sqrt(2.))*sqrt(2.); \
+  }

@@ -1,43 +1,43 @@
 /*
 
-The MIT License (MIT)
+  The MIT License (MIT)
 
-Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 
 */
 
 
 // just assume GLL and estimate residual (-laplacian q + lambda*q - rhs) * JW
 // need to check weighting for rhs
-@kernel void ellipticStrongResidualHex3D_v0(const dlong Nelements,
-					    @restrict const  dfloat *wJ,
-					    @restrict const  dfloat *ggeo,
-					    @restrict const  dfloat *vgeo,
-					    @restrict const  dfloat *D,
-					    @restrict const  dfloat *S,
-					    @restrict const  dfloat *MM,
-					    const dfloat lambda,
-					    @restrict const  dfloat *qL,					  
-					    @restrict const  dfloat *bL,
-					    @restrict dfloat *RnL){
+@kernel void ellipticStrongResidualHex3D(const dlong Nelements,
+                                            @restrict const  dfloat *wJ,
+                                            @restrict const  dfloat *ggeo,
+                                            @restrict const  dfloat *vgeo,
+                                            @restrict const  dfloat *D,
+                                            @restrict const  dfloat *S,
+                                            @restrict const  dfloat *MM,
+                                            const dfloat lambda,
+                                            @restrict const  dfloat *qL,					  
+                                            @restrict const  dfloat *bL,
+                                            @restrict dfloat *RnL){
   
   for(dlong e=0; e<Nelements; ++e; @outer(0)){  
 
@@ -53,16 +53,16 @@ SOFTWARE.
     @exclusive dfloat r_JW;
     
     @exclusive int tid;
-
-#define cubeThreads				\
-    for(int k=0;k<p_Nq;++k;@inner(2))		\
-      for(int j=0;j<p_Nq;++j;@inner(1))		\
-	for(int i=0;i<p_Nq;++i;@inner(0))
-
+    
+#define cubeThreads                             \
+    for(int k=0;k<p_Nq;++k;@inner(2))           \
+       for(int j=0;j<p_Nq;++j;@inner(1))        \
+          for(int i=0;i<p_Nq;++i;@inner(0))
+    
     cubeThreads{
       if(k==0)
-	s_D[j][i] = D[p_Nq*j+i];
-
+         s_D[j][i] = D[p_Nq*j+i];
+      
       tid = k*p_Nq*p_Nq + j*p_Nq + i;
       
       dlong id = e*p_Np + tid;
@@ -77,9 +77,9 @@ SOFTWARE.
       
 #pragma unroll p_Nq
       for(int n=0;n<p_Nq;++n){
-	qr += s_D[i][n]*s_q[k][j][n];
-	qs += s_D[j][n]*s_q[k][n][i];
-	qt += s_D[k][n]*s_q[n][j][i];
+        qr += s_D[i][n]*s_q[k][j][n];
+        qs += s_D[j][n]*s_q[k][n][i];
+        qt += s_D[k][n]*s_q[n][j][i];
       }
 
       dlong gid = e*p_Np*p_Nvgeo + k*p_Nq*p_Nq + j*p_Nq + i;
@@ -110,54 +110,54 @@ SOFTWARE.
       dfloat lapq = lambda*s_q[k][j][i];
       
       {
-	dfloat qxr = 0, qyr = 0, qzr = 0;
+        dfloat qxr = 0, qyr = 0, qzr = 0;
+        
+#pragma unroll p_Nq
+        for(int n=0;n<p_Nq;++n){
+          dfloat Din = s_D[i][n];
+          qxr += Din*s_qx[k][j][n];
+          qyr += Din*s_qy[k][j][n];
+          qzr += Din*s_qz[k][j][n];
+        }
 	
-#pragma unroll p_Nq
-	for(int n=0;n<p_Nq;++n){
-	  dfloat Din = s_D[i][n];
-	  qxr += Din*s_qx[k][j][n];
-	  qyr += Din*s_qy[k][j][n];
-	  qzr += Din*s_qz[k][j][n];
-	}
-	
-	// (lambda - lap)q
-	lapq -= r_rx*qxr;
-	lapq -= r_ry*qyr;
-	lapq -= r_rz*qzr;
+        // (lambda - lap)q
+        lapq -= r_rx*qxr;
+        lapq -= r_ry*qyr;
+        lapq -= r_rz*qzr;
       }
-
+      
       {
-	dfloat qxs = 0, qys = 0, qzs = 0;
-	    
+        dfloat qxs = 0, qys = 0, qzs = 0;
+        
 #pragma unroll p_Nq
-	for(int n=0;n<p_Nq;++n){
-	  dfloat Djn = s_D[j][n];
-	  qxs += Djn*s_qx[k][n][i];
-	  qys += Djn*s_qy[k][n][i];
-	  qzs += Djn*s_qz[k][n][i];
-	}
-
-	lapq -= r_sx*qxs;
-	lapq -= r_sy*qys;
-	lapq -= r_sz*qzs;
+        for(int n=0;n<p_Nq;++n){
+          dfloat Djn = s_D[j][n];
+          qxs += Djn*s_qx[k][n][i];
+          qys += Djn*s_qy[k][n][i];
+          qzs += Djn*s_qz[k][n][i];
+        }
+        
+        lapq -= r_sx*qxs;
+        lapq -= r_sy*qys;
+        lapq -= r_sz*qzs;
       }
-	  
+      
       {
-	dfloat qxt = 0, qyt = 0, qzt = 0;
+        dfloat qxt = 0, qyt = 0, qzt = 0;
 #pragma unroll p_Nq
-	for(int n=0;n<p_Nq;++n){
-	      
-	  dfloat Dkn = s_D[k][n];
-	  qxt += Dkn*s_qx[n][j][i];
-	  qyt += Dkn*s_qy[n][j][i];
-	  qzt += Dkn*s_qz[n][j][i];
-	}
-
-	lapq -= r_tx*qxt;
-	lapq -= r_ty*qyt;
-	lapq -= r_tz*qzt;
+        for(int n=0;n<p_Nq;++n){
+          
+          dfloat Dkn = s_D[k][n];
+          qxt += Dkn*s_qx[n][j][i];
+          qyt += Dkn*s_qy[n][j][i];
+          qzt += Dkn*s_qz[n][j][i];
+        }
+        
+        lapq -= r_tx*qxt;
+        lapq -= r_ty*qyt;
+        lapq -= r_tz*qzt;
       }
-	  
+      
       dlong id = e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
       RnL[id] = r_JW*lapq - bL[id];
     }
@@ -169,19 +169,19 @@ SOFTWARE.
 // (v, -div^ (G'*J*G*grad^u) ) + surface stuff
 // ggeo has G'*J*W*G so need to divide before using and use weights on outside
 
-@kernel void ellipticStrongResidualHex3D(const dlong Nelements,
-					 @restrict const  dfloat *wJ,
-					 @restrict const  dfloat *ggeo,
-					 @restrict const  dfloat *vgeo,
-					 @restrict const  dfloat *D,
-					 @restrict const  dfloat *S,
-					 @restrict const  dfloat *MM,
-					 const dfloat lambda,
-					 @restrict const  dfloat *qL,					  
-					 @restrict const  dfloat *bL,
-					 @restrict dfloat *RnL){
-
-
+@kernel void ellipticStrongResidualHex3D_v1(const dlong Nelements,
+                                         @restrict const  dfloat *wJ,
+                                         @restrict const  dfloat *ggeo,
+                                         @restrict const  dfloat *vgeo,
+                                         @restrict const  dfloat *D,
+                                         @restrict const  dfloat *S,
+                                         @restrict const  dfloat *MM,
+                                         const dfloat lambda,
+                                         @restrict const  dfloat *qL,					  
+                                         @restrict const  dfloat *bL,
+                                         @restrict dfloat *RnL){
+  
+  
   for(dlong e=0; e<Nelements; ++e; @outer(0)){
 
     @shared dfloat s_DT[p_Nq][p_Nq];
@@ -207,13 +207,13 @@ SOFTWARE.
 
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
-	// load pencil of u into register
-	const dlong base = i + j*p_Nq + e*p_Np;
-	for(int k = 0; k < p_Nq; k++) {
-	  const dlong id = base + k*p_Nq*p_Nq;
-	  r_q[k] = qL[id]; // prefetch operation
-	  r_Aq[k] = 0.f; // zero the accumulator
-	}
+        // load pencil of u into register
+        const dlong base = i + j*p_Nq + e*p_Np;
+        for(int k = 0; k < p_Nq; k++) {
+          const dlong id = base + k*p_Nq*p_Nq;
+          r_q[k] = qL[id]; // prefetch operation
+          r_Aq[k] = 0.f; // zero the accumulator
+        }
       }
     }
 
@@ -221,76 +221,76 @@ SOFTWARE.
 #pragma unroll p_Nq
     for(int k = 0;k < p_Nq; k++){
       for(int j=0;j<p_Nq;++j;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
+          
+          // prefetch geometric factors
+          const dlong gbase = e*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
+          dfloat r_MM = MM[k*p_Nq*p_Nq+j*p_Nq+i];
+          
+          dfloat invMMijk = 1.f/r_MM;
+          r_G00 = ggeo[gbase+p_G00ID*p_Np]*invMMijk;
+          r_G01 = ggeo[gbase+p_G01ID*p_Np]*invMMijk;
+          r_G02 = ggeo[gbase+p_G02ID*p_Np]*invMMijk;
 
-	  // prefetch geometric factors
-	  const dlong gbase = e*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
-	  dfloat r_MM = MM[k*p_Nq*p_Nq+j*p_Nq+i];
+          r_G11 = ggeo[gbase+p_G11ID*p_Np]*invMMijk;
+          r_G12 = ggeo[gbase+p_G12ID*p_Np]*invMMijk;
+          r_G22 = ggeo[gbase+p_G22ID*p_Np]*invMMijk;
 
-	  dfloat invMMijk = 1.f/r_MM;
-	  r_G00 = ggeo[gbase+p_G00ID*p_Np]*invMMijk;
-	  r_G01 = ggeo[gbase+p_G01ID*p_Np]*invMMijk;
-	  r_G02 = ggeo[gbase+p_G02ID*p_Np]*invMMijk;
-
-	  r_G11 = ggeo[gbase+p_G11ID*p_Np]*invMMijk;
-	  r_G12 = ggeo[gbase+p_G12ID*p_Np]*invMMijk;
-	  r_G22 = ggeo[gbase+p_G22ID*p_Np]*invMMijk;
-
-	  r_J = wJ[e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i]*invMMijk;
-	}
+          r_J = wJ[e*p_Np + k*p_Nq*p_Nq + j*p_Nq + i]*invMMijk;
+        }
       }
 
 
       for(int j=0;j<p_Nq;++j;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
 
-	  // share u(:,:,k)
-	  s_q[j][i] = r_q[k];
+          // share u(:,:,k)
+          s_q[j][i] = r_q[k];
 
-	  r_qt = 0;
+          r_qt = 0;
 
 #pragma unroll p_Nq
-	  for(int m = 0; m < p_Nq; m++) {
-	    r_qt += s_DT[k][m]*r_q[m];
-	  }
-	}
+          for(int m = 0; m < p_Nq; m++) {
+            r_qt += s_DT[k][m]*r_q[m];
+          }
+        }
       }
 
 
       for(int j=0;j<p_Nq;++j;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
 
-	  dfloat qr = 0.f;
-	  dfloat qs = 0.f;
+          dfloat qr = 0.f;
+          dfloat qs = 0.f;
 
 #pragma unroll p_Nq
-	  for(int m = 0; m < p_Nq; m++) {
-	    qr += s_DT[i][m]*s_q[j][m];
-	    qs += s_DT[j][m]*s_q[m][i];
-	  }
+          for(int m = 0; m < p_Nq; m++) {
+            qr += s_DT[i][m]*s_q[j][m];
+            qs += s_DT[j][m]*s_q[m][i];
+          }
 
-	  s_Gqs[j][i] = (r_G01*qr + r_G11*qs + r_G12*r_qt);
-	  s_Gqr[j][i] = (r_G00*qr + r_G01*qs + r_G02*r_qt);
+          s_Gqs[j][i] = (r_G01*qr + r_G11*qs + r_G12*r_qt);
+          s_Gqr[j][i] = (r_G00*qr + r_G01*qs + r_G02*r_qt);
 
-	  // put this here for a performance bump
-	  r_Gqt = (r_G02*qr + r_G12*qs + r_G22*r_qt);
-	  r_Auk = -r_J*lambda*r_q[k];
-	}
+          // put this here for a performance bump
+          r_Gqt = (r_G02*qr + r_G12*qs + r_G22*r_qt);
+          r_Auk = -r_J*lambda*r_q[k];
+        }
       }
 
 
       for(int j=0;j<p_Nq;++j;@inner(1)){
-	for(int i=0;i<p_Nq;++i;@inner(0)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
 
 #pragma unroll p_Nq
-	  for(int m = 0; m < p_Nq; m++){
-	    r_Auk   += s_DT[j][m]*s_Gqs[m][i];
-	    r_Aq[m] += s_DT[m][k]*r_Gqt; // DT(m,k)*ut(i,j,k,e)
-	    r_Auk   += s_DT[i][m]*s_Gqr[j][m];
-	  }
-
-	  r_Aq[k] += r_Auk;
-	}
+          for(int m = 0; m < p_Nq; m++){
+            r_Auk   += s_DT[j][m]*s_Gqs[m][i];
+            r_Aq[m] += s_DT[m][k]*r_Gqt; // DT(m,k)*ut(i,j,k,e)
+            r_Auk   += s_DT[i][m]*s_Gqr[j][m];
+          }
+          
+          r_Aq[k] += r_Auk;
+        }
       }
     }
 
@@ -299,11 +299,11 @@ SOFTWARE.
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
 #pragma unroll p_Nq
-	for(int k = 0; k < p_Nq; k++){
-	  const dlong id = e*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
-	  const dfloat MMkji = MM[k*p_Nq*p_Nq+j*p_Nq+i]; // reference mass matrix
-	  RnL[id] = -MMkji*r_Aq[k] - bL[id];
-	}
+        for(int k = 0; k < p_Nq; k++){
+          const dlong id = e*p_Np +k*p_Nq*p_Nq+ j*p_Nq + i;
+          const dfloat MMkji = MM[k*p_Nq*p_Nq+j*p_Nq+i]; // reference mass matrix
+          RnL[id] = -MMkji*r_Aq[k] - bL[id];
+        }
       }
     }
   }

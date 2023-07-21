@@ -143,7 +143,7 @@ void dopri5::Run(solver_t& solver,
   while (time < end) {
     
     if(allStep%10 == 0)
-       std::cout << "tstep=" << tstep << ", time=" << time  << std::endl;
+       std::cout << "tstep=" << tstep << ", time=" << time  << ", dt=" << dt << std::endl;
 
     
     LIBP_ABORT("Time step became too small at time step = " << tstep,
@@ -232,6 +232,9 @@ void dopri5::Run(solver_t& solver,
     }
     dt = dtnew;
     allStep++;
+
+//    if(!(allStep%100))
+//       std::cout << "Time: " << time << ", tstep: " << tstep << ", dt: " << dt << std::endl;
   }
 }
 

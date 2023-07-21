@@ -1191,6 +1191,9 @@ class mesh_t {
    int PointInclusionTest(dlong element, dfloat xs, dfloat ys, dfloat zs);
 };
 
+void kershawMap2D(int mapType,  dfloat param1, dfloat &x, dfloat &y);
+void kershawMap3D(int mapType,  dfloat param1, dfloat &x, dfloat &y, dfloat &z);
+
 } //namespace libp
 
 #endif

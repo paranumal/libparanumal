@@ -78,8 +78,8 @@ SOFTWARE.
 
 #pragma unroll p_Nq
       for(int n=0; n<p_Nq; ++n){
-	qr += s_D[i][n]*s_q[j][n];
-	qs += s_D[j][n]*s_q[n][i];
+        qr += s_D[i][n]*s_q[j][n];
+        qs += s_D[j][n]*s_q[n][i];
       }
       
       s_qx[j][i] = r_rx*qr + r_sx*qs;
