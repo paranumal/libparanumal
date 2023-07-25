@@ -909,6 +909,7 @@ void elliptic_t::BuildOperatorDiagonalIpdgHex3D(memory<dfloat>& A) {
     }
   }
 
+#pragma omp parallel for
   for(dlong eM=0;eM<mesh.Nelements;++eM){
     /* start with stiffness matrix  */
     for(int n=0;n<mesh.Np;++n){
