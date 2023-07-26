@@ -240,7 +240,7 @@ int ellipticStoppingCriteria<T>::stopTest(int iteration,
   //    T fudgeFactor = 0.01;
   //  T fudgeFactor = 0.1; // 0.03 2d
 //  T fudgeFactor = 1.e-1; // 0.03 2d
-    T fudgeFactor = 1.e-3; // 0.03 2d
+    T fudgeFactor = 1.e-2; // 0.03 2d
 
   //  printf("estimate eta: %g\n", eta);
   elliptic->platform.linAlg().set(NblocksC, (T)0.0, o_errH1);
