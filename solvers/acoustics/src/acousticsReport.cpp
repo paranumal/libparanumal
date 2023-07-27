@@ -40,7 +40,7 @@ void acoustics_t::Report(dfloat time, int tstep){
   if(mesh.rank==0)
     printf("%5.2f (%d), %5.2f (time, timestep, norm)\n", time, tstep, norm2);
 
-
+#if 0
   int errorStep = 1000;
   settings.getSetting("OUTPUT ERROR INTERVAL", errorStep);
   if(errorStep>0 && tstep>0){
@@ -48,7 +48,7 @@ void acoustics_t::Report(dfloat time, int tstep){
       ReportError(time, 0, 0, 0, o_q);
     }
   }
-
+#endif
   
   if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
 
