@@ -159,18 +159,32 @@ T ellipticStoppingCriteria<T>::errorEstimate(deviceMemory<T> &o_q, deviceMemory<
   }
   
   // compute local components of etaV2 = sum_e  h^2_e*|| lambda*q - laplacian*q - f ||^2_e
-  strongVolumeResidualKernel(mesh.Nelements,
-			     mesh.o_wJ,
-			     mesh.o_ggeo,
-			     mesh.o_vgeo, // this for tensor-product elements
-			     mesh.o_D,
-			     mesh.o_strongS,
-			     mesh.o_MM,
-			     elliptic->lambda,
-			     o_qL,
-			     o_bL,
-			     o_RnL);
-
+  if(mesh.elementType==Mesh::TRIANGLES || mesh.elementType==Mesh::TETRAHEDRA){
+    strongVolumeResidualKernel(mesh.Nelements,
+			       mesh.o_wJ,
+			       mesh.o_ggeo,
+			       mesh.o_vgeo, // this for tensor-product elements
+			       mesh.o_D,
+			       mesh.o_strongS,
+			       mesh.o_MM,
+			       elliptic->lambda,
+			       o_qL,
+			       o_bL,
+			       o_RnL);
+  }else{
+    strongVolumeResidualKernel(mesh.Nelements,
+			       mesh.o_wJ,
+			       mesh.o_ggeo,
+			       mesh.o_vgeo, // this for tensor-product elements
+			       mesh.o_D,
+			       mesh.o_strongS,
+			       mesh.o_diagMM,
+			       elliptic->lambda,
+			       o_qL,
+			       o_bL,
+			       o_RnL);
+  }
+  
   if(elliptic->disc_c0){  
     // TW: double check this ??
     elliptic->ogsMasked.Gather(o_Rn, o_RnL, 1, ogs::Add, ogs::Trans);
@@ -240,7 +254,7 @@ int ellipticStoppingCriteria<T>::stopTest(int iteration,
   //    T fudgeFactor = 0.01;
   //  T fudgeFactor = 0.1; // 0.03 2d
 //  T fudgeFactor = 1.e-1; // 0.03 2d
-    T fudgeFactor = 1.e-2; // 0.03 2d
+    T fudgeFactor = 1.e-3; // 0.03 2d
 
   //  printf("estimate eta: %g\n", eta);
   elliptic->platform.linAlg().set(NblocksC, (T)0.0, o_errH1);

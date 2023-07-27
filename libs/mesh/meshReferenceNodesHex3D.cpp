@@ -46,6 +46,23 @@ void mesh_t::ReferenceNodesHex3D(){
   LumpedMassMatrixHex3D(N, gllw, MM);
   invLumpedMassMatrixHex3D(N, gllw, invMM);
 
+  int cnt = 0;
+
+  diagMM.malloc(Np, 0.0);
+  diagInvMM.malloc(Np, 0.0);
+  for(int k=0;k<Nq;++k){
+    for(int j=0;j<Nq;++j){
+      for(int i=0;i<Nq;++i){
+	diagMM[cnt]    = gllw[k]*gllw[j]*gllw[i];
+	diagInvMM[cnt] = 1./diagMM[cnt];
+	++cnt;
+      }
+    }
+  }
+
+  o_diagMM = platform.malloc<dfloat>(diagMM);
+  o_diagInvMM = platform.malloc<dfloat>(diagInvMM);
+  
   // D matrix
   Dmatrix1D(N, gllz, gllz, D);
   o_D = platform.malloc<dfloat>(D);

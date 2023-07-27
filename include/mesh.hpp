@@ -172,6 +172,12 @@ class mesh_t {
   deviceMemory<dfloat> o_MM;
   deviceMemory<pfloat> o_pfloat_MM;
 
+  memory<dfloat> diagMM;
+  memory<dfloat> diagInvMM;
+
+  deviceMemory<dfloat> o_diagMM;
+  deviceMemory<dfloat> o_diagInvMM;
+  
   memory<dfloat> LIFT;          // lift matrix
   deviceMemory<dfloat> o_LIFT;
   deviceMemory<pfloat> o_pfloat_LIFT;

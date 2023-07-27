@@ -324,6 +324,15 @@ void wave_t::Setup(platform_t& _platform,
   } else if(mesh.elementType==Mesh::QUADRILATERALS) {
     invMM.malloc(mesh.Np*mesh.Np);
     MM.malloc(mesh.Np*mesh.Np);
+    int cnt = 0;
+    for(int j=0;j<mesh.Nq;++j){
+      for(int i=0;i<mesh.Nq;++i){
+	MM[cnt] = mesh.gllw[i]*mesh.gllw[j];
+	invMM[cnt] = 1./MM[cnt];
+	++cnt;
+      }
+    }
+      
   } else if(mesh.elementType==Mesh::TETRAHEDRA) {
     mesh.VandermondeTet3D(mesh.N, mesh.r, mesh.s, mesh.t, V);
     mesh.invMassMatrixTet3D(mesh.Np, V, invMM);
@@ -331,6 +340,20 @@ void wave_t::Setup(platform_t& _platform,
   } else {
     invMM.malloc(mesh.Np*mesh.Np);
     MM.malloc(mesh.Np*mesh.Np);
+
+    int cnt = 0;
+    for(int k=0;k<mesh.Nq;++k){
+      for(int j=0;j<mesh.Nq;++j){
+	for(int i=0;i<mesh.Nq;++i){
+	  MM[cnt] = mesh.gllw[i]*mesh.gllw[j]*mesh.gllw[k];
+	  invMM[cnt] = 1./MM[cnt];
+	  printf("MM[%d]=%g\n", cnt, MM[cnt]);
+	  ++cnt;
+	}
+      }
+    }
+    
+    
   }
   
   o_invMM = platform.malloc<dfloat>(mesh.Np*mesh.Np, invMM);

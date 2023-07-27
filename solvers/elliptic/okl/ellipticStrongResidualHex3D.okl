@@ -27,7 +27,7 @@
 
 // just assume GLL and estimate residual (-laplacian q + lambda*q - rhs) * JW
 // need to check weighting for rhs
-@kernel void ellipticStrongResidualHex3D(const dlong Nelements,
+@kernel void ellipticStrongResidualHex3D_v0(const dlong Nelements,
                                             @restrict const  dfloat *wJ,
                                             @restrict const  dfloat *ggeo,
                                             @restrict const  dfloat *vgeo,
@@ -169,7 +169,7 @@
 // (v, -div^ (G'*J*G*grad^u) ) + surface stuff
 // ggeo has G'*J*W*G so need to divide before using and use weights on outside
 
-@kernel void ellipticStrongResidualHex3D_v1(const dlong Nelements,
+@kernel void ellipticStrongResidualHex3D(const dlong Nelements,
                                          @restrict const  dfloat *wJ,
                                          @restrict const  dfloat *ggeo,
                                          @restrict const  dfloat *vgeo,
@@ -226,8 +226,9 @@
           // prefetch geometric factors
           const dlong gbase = e*p_Nggeo*p_Np + k*p_Nq*p_Nq + j*p_Nq + i;
           dfloat r_MM = MM[k*p_Nq*p_Nq+j*p_Nq+i];
-          
           dfloat invMMijk = 1.f/r_MM;
+
+	  // remove weights from geometric factors
           r_G00 = ggeo[gbase+p_G00ID*p_Np]*invMMijk;
           r_G01 = ggeo[gbase+p_G01ID*p_Np]*invMMijk;
           r_G02 = ggeo[gbase+p_G02ID*p_Np]*invMMijk;
