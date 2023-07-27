@@ -79,7 +79,7 @@ void elliptic_t::Setup(platform_t& _platform, mesh_t& _mesh,
       }
     } else {
       //      tau = 6.0*(mesh.N+1)*(mesh.N+3);
-      tau = 3.0*(mesh.N+1)*(mesh.N+1);
+      tau = 2.0*(mesh.N+1)*(mesh.N+1);
     }
   } else {
     tau = 0.0;
