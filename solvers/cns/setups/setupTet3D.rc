@@ -2,10 +2,12 @@
 2.0
 
 [DATA FILE]
-data/cnsGaussian3D.h
+#data/cnsGaussian3D.h
+data/cnsUniform3D.h
 
 [MESH FILE]
-BOX
+#BOX
+../../meshes/cnsNACA3D.msh
 
 [MESH DIMENSION]
 3
@@ -41,7 +43,7 @@ CUDA
 1.4
 
 [VISCOSITY]
-0.01
+0.00001
 
 [ISOTHERMAL]
 FALSE
@@ -57,10 +59,10 @@ DOPRI5
 0
 
 [FINAL TIME]
-10
+1
 
 [OUTPUT INTERVAL]
-1
+0.2
 
 [OUTPUT TO FILE]
 TRUE

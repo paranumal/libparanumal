@@ -54,6 +54,9 @@ void cns_t::Run(){
   dfloat dt = std::min(dtAdv, dtVisc);
   timeStepper.SetTimeStep(dt);
 
+   if(mesh.rank==0)
+  printf("time step size: %.4e startTime= %.4e FinalTime= %.4e \n", dt, startTime, finalTime);
+
   timeStepper.Run(*this, o_q, startTime, finalTime);
 
   // output norm of final solution

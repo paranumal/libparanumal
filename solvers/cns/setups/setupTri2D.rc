@@ -2,10 +2,12 @@
 2.0
 
 [DATA FILE]
-data/cnsGaussian2D.h
+#data/cnsGaussian2D.h
+data/cnsUniform2D.h
 
 [MESH FILE]
-BOX
+#BOX
+../../meshes/cnsNACA2D.msh
 
 [MESH DIMENSION]
 2
@@ -41,7 +43,7 @@ CUDA
 1.4
 
 [VISCOSITY]
-0.01
+0.00001
 
 [ISOTHERMAL]
 FALSE
@@ -52,6 +54,7 @@ CUBATURE
 
 [TIME INTEGRATOR]
 DOPRI5
+#LSERK4
 
 [START TIME]
 0
@@ -60,7 +63,7 @@ DOPRI5
 10
 
 [OUTPUT INTERVAL]
-1
+1.0
 
 [OUTPUT TO FILE]
 TRUE

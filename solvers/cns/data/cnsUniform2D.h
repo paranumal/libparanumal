@@ -25,18 +25,18 @@ SOFTWARE.
 */
 
 //Mean flow
-#define p_RBAR 1.0
-#define p_UBAR 1.0
+#define p_RBAR 1.4
+#define p_UBAR 0.2
 #define p_VBAR 0.0
 #define p_PBAR 1.0
 
 // Initial conditions (p is ignored for isothermal)
 #define cnsInitialConditions2D(gamma, mu, t, x, y, r, u, v, p) \
 {                                         \
-  *(r) = p_RBAR           \
-  *(u) = p_UBAR           \
-  *(v) = p_VBAR           \
-  *(p) = p_PBAR           \
+  *(r) = p_RBAR;           \
+  *(u) = p_UBAR;           \
+  *(v) = p_VBAR;           \
+  *(p) = p_PBAR;           \
 }
 
 // Body force
@@ -63,10 +63,10 @@ SOFTWARE.
     *(vxB) = vxM;                      \
     *(vyB) = vyM;                      \
   } else if(bc==2){                    \
-    *(rB) = p_RBAR;                       \
-    *(uB) = p_UBAR;                       \
-    *(vB) = p_VBAR;                       \
-    *(pB) = p_PBAR;                       \
+    *(rB) = p_RBAR;                    \
+    *(uB) = p_UBAR;                   \
+    *(vB) = p_VBAR;                   \
+    *(pB) = pM;                       \
     *(uxB) = uxM;                      \
     *(uyB) = uyM;                      \
     *(vxB) = vxM;                      \
@@ -75,7 +75,7 @@ SOFTWARE.
     *(rB) = rM;                        \
     *(uB) = uM;                        \
     *(vB) = vM;                        \
-    *(pB) = pM;                        \
+    *(pB) = p_PBAR;                    \
     *(uxB) = 0.0;                      \
     *(uyB) = 0.0;                      \
     *(vxB) = 0.0;                      \

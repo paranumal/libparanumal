@@ -25,8 +25,8 @@ SOFTWARE.
 */
 
 //Mean flow
-#define p_RBAR 1.0
-#define p_UBAR 1.0
+#define p_RBAR 1.4
+#define p_UBAR 0.1
 #define p_VBAR 0.0
 #define p_WBAR 0.0
 #define p_PBAR 1.0
@@ -78,7 +78,7 @@ SOFTWARE.
     *(uB) = p_UBAR;                    \
     *(vB) = p_VBAR;                    \
     *(wB) = p_WBAR;                    \
-    *(pB) = p_PBAR;                    \
+    *(pB) = pM;                    \
     *(uxB) = uxM;                      \
     *(uyB) = uyM;                      \
     *(uzB) = uzM;                      \
@@ -93,7 +93,7 @@ SOFTWARE.
     *(uB) = uM;                        \
     *(vB) = vM;                        \
     *(wB) = wM;                        \
-    *(pB) = pM;                        \
+    *(pB) = p_PBAR;                        \
     *(uxB) = 0.0;                      \
     *(uyB) = 0.0;                      \
     *(uzB) = 0.0;                      \
