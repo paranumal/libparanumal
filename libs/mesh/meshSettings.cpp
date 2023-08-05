@@ -85,7 +85,7 @@ meshSettings_t::meshSettings_t(comm_t _comm):
   newSetting("BOX KERSHAW MAP",
              "-1",
              "Type of Kershaw map",
-	     {"1","2","3"});
+             {"1","2","3"});
 
   newSetting("BOX KERSHAW PARAMETER",
              "1",
@@ -95,6 +95,31 @@ meshSettings_t::meshSettings_t(comm_t _comm):
              "4",
              "Degree of polynomial finite element space",
              {"1","2","3","4","5","6","7","8","9","10","11","12","13","14","15"});
+
+  // NBN: enable adjustment of cubature degree
+  newSetting("CUBATURE DEGREE INCREMENT",
+             "2",
+             "Volume cubature order adjustment",
+             {"-1","0","1","2","3","4","5","6"});
+
+  // NBN: enable adjustment of plot interpolation order
+  newSetting("PLOT INTERP INCREMENT",
+             "2", 
+             "Adjust interpolation order for plots", 
+             { "-4", "-3", "-2", "-1", "0","1","2","3","4","5","6","7","8","9" });
+
+  // NBN: define a region of the mesh for plotting
+  newSetting("PLOT XRANGE",
+             "ALL",
+             "X-range for plots, [ALL] or [xlo, xhi]");
+
+  newSetting("PLOT YRANGE",
+             "ALL",
+             "Y-range for plots, [ALL] or [ylo, yhi]");
+
+  newSetting("PLOT ZRANGE",
+             "ALL",
+             "Z-range for plots, [ALL] or [zlo, zhi]");
 
   paradogs::AddSettings(*this);
 }
@@ -138,6 +163,13 @@ void meshSettings_t::report() {
     }
 
     reportSetting("POLYNOMIAL DEGREE");
+
+    reportSetting("CUBATURE DEGREE INCREMENT");
+    reportSetting("PLOT INTERP INCREMENT");
+
+    reportSetting("PLOT XRANGE");
+    reportSetting("PLOT YRANGE");
+    reportSetting("PLOT ZRANGE");
 
     if (!compareSetting("MESH FILE","BOX")) {
       paradogs::ReportSettings(*this);
