@@ -44,58 +44,14 @@ SOFTWARE.
 
 #include <cassert>
 #include <cstring>
+#include <ctime>
 
 // define arg types
 #define ISO_COORD_TYPE_FP32   1
 #define ISO_SCALAR_TYPE_FP32  1
 #define ISO_QUALITY_IS_FP32   1
 
-// simplify loop syntax
-// #define loopi(start_l,end_l) for ( int i=start_l;i<end_l;++i )
-// #define loopj(start_l,end_l) for ( int j=start_l;j<end_l;++j )
-// #define loopk(start_l,end_l) for ( int k=start_l;k<end_l;++k )
-
 typedef unsigned int uint;
-extern int g_procid;
-
-
-#ifndef _MSC_VER
-
-// TODO: expose simple logging scheme
-// void nnLOG(int n, const char* format_str, ...);
-// void nnMSG(int n, const char* format_str, ...);
-// void nnTRC(int n, const char* format_str, ...);
-// 
-// void nnLOG(const stdS & msg, int n);
-// void nnMSG(const stdS & msg, int n);
-// void nnTRC(const stdS & msg, int n);
-
-void nnMSG(int n, const char* format_str, ...) {
-
-  int g_MSG_FLAG = 5;
-  static char bufM[1024];
-  if (n <= g_MSG_FLAG) {
-    va_list arglist;
-    va_start(arglist, format_str);
-    int nUsed = -1;
-    nUsed = vsnprintf  (bufL, 1023,       format_str, arglist);
-  //nUsed = vsnprintf_s(bufL, 1023, 1000, format_str, arglist);
-    assert(nUsed >= 0);
-    va_end(arglist);
-
-    fprintf(stdout, "%s", bufM);
-    fflush(stdout);
-  }
-}
-
-void nnMSG(const stdS& msg, int n) {
-  nnMSG(n, "%s", msg.c_str());
-}
-
-#define nnLOG nnMSG
-#define nnTRC nnMSG
-
-#endif
 
 
 namespace iso {
@@ -154,7 +110,9 @@ namespace iso {
     typedef P3ScalarType ScalarType;
 
     Point3() { _v[0] = _v[1] = _v[2] = (P3ScalarType)0; }
-    Point3(const P3ScalarType nx, const P3ScalarType ny, const P3ScalarType nz) { _v[0] = nx; _v[1] = ny; _v[2] = nz; }
+    Point3(const P3ScalarType nx, const P3ScalarType ny, const P3ScalarType nz) {
+      _v[0] = nx; _v[1] = ny; _v[2] = nz; 
+    }
     Point3(Point3 const& p) = default;
 
     // Copy from Point with different template
@@ -176,7 +134,9 @@ namespace iso {
     }
 
     void SetZero() { _v[0] = 0; _v[1] = 0; _v[2] = 0; }
-    void SetCoord(const P3ScalarType nx, const P3ScalarType ny, const P3ScalarType nz) { _v[0] = nx; _v[1] = ny; _v[2] = nz; }
+    void SetCoord(const P3ScalarType nx, const P3ScalarType ny, const P3ScalarType nz) { 
+      _v[0] = nx; _v[1] = ny; _v[2] = nz; 
+    }
 
     // Pad values outside [0..2] range with 0.
     P3ScalarType Ext(const int i) const {
@@ -3684,9 +3644,7 @@ namespace iso {
         // Make all quadric factors independent of mesh size
         pp->ScaleFactor = 1e8 * pow(1.0 / m.m_bbox.Diag(), 6); // scaling factor
 
-#if (1)
-        nnMSG(1, "          (ScaleIndependent) scale factor: %0.3e\n", pp->ScaleFactor);
-#endif
+        // nnMSG(1, "          (ScaleIndependent) scale factor: %0.3e\n", pp->ScaleFactor);
       }
 
       if (pp->QualityWeight) {
@@ -3859,11 +3817,11 @@ namespace iso {
     void ClearTerminationFlag(int v) { m_tf &= ~v; }
     bool IsTerminationFlag(int v) { return ((m_tf & v) != 0); }
 
-    void SetTargetSimplices(int ts) { nTargetSimplices = ts; SetTerminationFlag(LOnSimplices); }
-    void SetTargetVertices(int tv) { nTargetVertices = tv;  SetTerminationFlag(LOnVertices); }
-    void SetTargetOperations(int to) { nTargetOps = to;	     SetTerminationFlag(LOnOps); }
+    void SetTargetSimplices(int ts)     { nTargetSimplices = ts; SetTerminationFlag(LOnSimplices); }
+    void SetTargetVertices(int tv)      { nTargetVertices = tv;  SetTerminationFlag(LOnVertices); }
+    void SetTargetOperations(int to)    { nTargetOps = to;	     SetTerminationFlag(LOnOps); }
     void SetTargetMetric(ScalarType tm) { targetMetric = tm;     SetTerminationFlag(LOMetric); }
-    void SetTimeBudget(float tb) { timeBudget = tb;       SetTerminationFlag(LOTime); }
+    void SetTimeBudget(float tb)        { timeBudget = tb;       SetTerminationFlag(LOTime); }
 
     void ClearTermination() {
       m_tf = 0;
@@ -3944,14 +3902,12 @@ namespace iso {
       std::make_heap(m_h.begin(), m_h.end());
       if (!m_h.empty()) currMetric = m_h.front().pri;
 
-#if (1)
-      if (pp->OptimalPlacement) {
-        nnMSG(1, "          OptimalPlacement: ON, heap size is %d\n", (int)m_h.size());
-      }
-      else {
-        nnMSG(1, "          OptimalPlacement: OFF, heap size is %d\n", (int)m_h.size());
-      }
-#endif
+      // if (pp->OptimalPlacement) {
+      //   nnMSG(1, "          OptimalPlacement: ON, heap size is %d\n", (int)m_h.size());
+      // }
+      // else {
+      //   nnMSG(1, "          OptimalPlacement: OFF, heap size is %d\n", (int)m_h.size());
+      // }
     }
 
     template <class MeshModifierType>
@@ -3985,13 +3941,13 @@ namespace iso {
 
   void EdgeCollapse(MeshType& m, float fac)
   {
-    nnMSG(1, "[proc:%02d] Entering Quadric EdgeCollapse(m, %0.2f)\n", g_procid, fac);
+    // nnMSG(1, "[proc:%02d] Entering Quadric EdgeCollapse(m, %0.2f)\n", rank, fac);
 
     int Nv = m.VN(), Nf = m.FN();
     int TargetNf = (int)(fac * (float)Nf);
     constexpr double TargetError = std::numeric_limits<float>::max();
-    nnMSG(1, "          mesh has %d verts and %d tri faces\n"
-             "          target Nfaces (%0.2f * %d) = %d\n", Nv, Nf, fac, Nf, TargetNf);
+    // nnMSG(1, "          mesh has %d verts and %d tri faces\n"
+    //          "          target Nfaces (%0.2f * %d) = %d\n", Nv, Nf, fac, Nf, TargetNf);
 
     TriQuadricParams qparams;
 
@@ -4011,7 +3967,7 @@ namespace iso {
     double NfToDel = m.m_fn - TargetNf, progress = 0.0;
     while (DeciSession.DoOptimization() && m.m_fn > TargetNf) {
       progress = 100.0 - (100.0 * (m.m_fn - TargetNf) / (NfToDel));
-      nnMSG(1, "[proc:%02d] Simplifying... %5.2lf \n", g_procid, progress);
+      // nnMSG(1, "[proc:%02d] Simplifying... %5.2lf \n", g_procid, progress);
     };
     DeciSession.Finalize<MyTriEdgeCollapse>();
   }
