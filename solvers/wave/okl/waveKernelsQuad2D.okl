@@ -129,19 +129,19 @@ SOFTWARE.
 
   
 @kernel void waveStepFinalizeQuad2D(const dlong Nelements,
-                                   const dfloat dt,
-                                   const int Nstages,
+				    const dfloat dt,
+				    const int Nstages,
                                     const dfloat scF,
                                     @restrict const dfloat *beta,
                                     const dfloat filtP,
                                     @restrict const dfloat *filtD,
-                                   @restrict const dfloat *invWJ,
-                                   @restrict const dfloat *invMM,
-                                   @restrict const dfloat *ML_Phat_Beta,
-                                   @restrict const dfloat *DhatL,
-                                   @restrict const dfloat *PhatL,
-                                   @restrict const dfloat *FL,
-                                   @restrict       dfloat *DL,
+				    @restrict const dfloat *invWJ,
+				    @restrict const dfloat *invMM,
+				    @restrict const dfloat *ML_Phat_Beta,
+				    @restrict const dfloat *DhatL,
+				    @restrict const dfloat *PhatL,
+				    @restrict const dfloat *FL,
+				    @restrict       dfloat *DL,
                                     @restrict       dfloat *PL,
                                     @restrict       dfloat *filtPL){
   

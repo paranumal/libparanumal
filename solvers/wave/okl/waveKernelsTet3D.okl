@@ -104,7 +104,10 @@ SOFTWARE.
 
       dfloat Di = Dtilde - gammatilde[i]*Pn/dt;
 
-      dfloat Rnew = Dn + gammatilde[i+1]*Pn/dt;
+      dfloat Rnew = Dn;
+      if(i+1<Nstages){
+	Rnew += gammatilde[i+1]*Pn/dt;
+      }
       
       for(int j=0;j<i;++j){
         dfloat Dj = DhatL[id+j*Nelements*p_Np];
@@ -217,6 +220,7 @@ SOFTWARE.
   }
 }
 
+#if 0
 @kernel void waveForcingTet3D(const dlong N,
                               const dfloat t,
                               const dfloat sigma,
@@ -231,7 +235,7 @@ SOFTWARE.
     const dfloat yn = y[n];
     const dfloat zn = z[n];
 
-    waveForcingFunction3D(xn, yn,  zn, sigma, omega, FL[n]);
+    waveForcingFunction3D(t,xn, yn,  zn, sigma, omega, FL[n]);
 
   }
 }
@@ -282,3 +286,62 @@ SOFTWARE.
     }
   }
 }
+#endif
+
+@kernel void waveForcingTet3D(const dlong Nelements,
+                              const int Nstages,
+                              const int stage,
+                              const dfloat t,
+                              const dfloat dt,
+                              @restrict const dfloat *esdirkA,
+                              @restrict const dfloat *esdirkC,
+                              const dfloat sigma,
+                              const dfloat omega,
+                              const dfloat lambda,
+                              const dfloat scale,
+                              @restrict const dfloat *x,
+                              @restrict const dfloat *y,
+                              @restrict const dfloat *z,
+                              @restrict const dfloat *WJL,
+                              @restrict const dfloat *MM,
+                              @restrict       dfloat *FL){
+  
+  for(int e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_rhs[p_Np];
+    
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      const dlong id = e*p_Np + n;
+      const dfloat xn = x[id];
+      const dfloat yn = y[id];
+      const dfloat zn = z[id];
+
+      int s = stage-1;
+      int sp = (stage>Nstages) ? Nstages-1:s;
+      dfloat rhs = 0;
+      for(int i=0;i<=sp;++i){
+        dfloat ti = t + dt*esdirkC[i];
+        dfloat tmp = 0;
+        waveForcingFunction3D(ti, xn, yn, zn, sigma, omega, tmp);
+        rhs += esdirkA[s*Nstages + i]*tmp;
+      }
+
+      s_rhs[n] = rhs;
+    }
+
+
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      dfloat res = 0;
+      for(int m=0;m<p_Np;++m){
+        res += MM[n + m*p_Np]*s_rhs[m];
+      }
+      // increment forcing
+      FL[e*p_Np+n] += dt*scale*lambda*WJL[e]*res;
+    }
+  }
+}
+
+
+
+
+

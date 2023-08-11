@@ -86,6 +86,12 @@ void wave_t::Setup(platform_t& _platform,
     exit(-1);
   }
 
+
+  if(disc_c0==1 && mesh.elementType==Mesh::TETRAHEDRA){
+    std::cout << "TRYING TO USE TETRAHEDRA MESH WITH C0 NOT ALLOWED WITH WAVE" << std::endl;
+    exit(-1);
+  }
+
   
   // initialize time stepper
   linAlgMatrix_t<dfloat> BTABLE;

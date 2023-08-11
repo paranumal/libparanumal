@@ -46,7 +46,7 @@ SOFTWARE.
     uyB = 0.f;   \
   }
 
-#define waveForcingFunction2D(x, y, sigma, omega, f) \
+#define waveForcingFunction2D(t, x, y, sigma, omega, f)	\
   {                                            \
     /*    f = exp(-80.*(x*x+(y-.5)*(y-.5)));    */  \
     f = 0.;                                         \
@@ -54,8 +54,8 @@ SOFTWARE.
 
 
 #define waveInitialConditionsFunction2D(t, x, y, d, p)  \
-  {                                                 \
-    d = 0.;                                         \
-    p = exp(-80.*(x*x+(y-.5)*(y-.5)));              \
+  {							\
+    d = 0.;						\
+    p = exp(-100.*(x*x+y*y));				\
   }
 
