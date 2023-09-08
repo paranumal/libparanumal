@@ -47,6 +47,7 @@ cnsDir           = solverDir + "/cns"
 bnsDir           = solverDir + "/bns"
 lbsDir           = solverDir + "/lbs"
 insDir           = solverDir + "/ins"
+maxwellDir       = solverDir + "/maxwell"
 
 gradientBin  = gradientDir      + "/gradientMain"
 advectionBin = advectionDir     + "/advectionMain"
@@ -57,6 +58,7 @@ cnsBin       = cnsDir           + "/cnsMain"
 bnsBin       = bnsDir           + "/bnsMain"
 lbsBin       = lbsDir           + "/lbsMain"
 insBin       = insDir           + "/insMain"
+maxwellBin   = maxwellDir       + "/maxwellMain"
 
 inputRC = testDir + "/setup.rc"
 
@@ -161,6 +163,7 @@ def test(name, cmd, settings, referenceNorm, ranks=1):
   return failed
 
 if __name__ == "__main__":
+  import testMaxwell
   import testMesh
   import testGradient
   import testAdvection
@@ -178,6 +181,7 @@ if __name__ == "__main__":
   import testInitialGuess
 
   failCount=0;
+  failCount+=testMaxwell.main()
   failCount+=testMesh.main()
   failCount+=testParAdogs.main()
   failCount+=testGradient.main()
@@ -193,5 +197,6 @@ if __name__ == "__main__":
   failCount+=testTimeStepper.main()
   failCount+=testLinearSolver.main()
   failCount+=testParAlmond.main()
+
 
   sys.exit(failCount)
