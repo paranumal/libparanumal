@@ -2,7 +2,8 @@
 2.0
 
 [DATA FILE]
-data/maxwellGaussian3D.h
+#data/maxwellGaussian3D.h
+data/maxwellMode3D.h
 
 [MESH FILE]
 BOX
@@ -14,19 +15,29 @@ BOX
 6
 
 [BOX NX]
-10
+20
 
 [BOX NY]
-10
+20
 
 [BOX NZ]
-10
+20
+
+[BOX DIMX]
+2
+
+[BOX DIMY]
+2
+
+[BOX DIMZ]
+2
+
 
 [BOX BOUNDARY FLAG]
 1
 
 [POLYNOMIAL DEGREE]
-4
+6
 
 [THREAD MODEL]
 CUDA
@@ -50,7 +61,10 @@ DOPRI5
 1
 
 [OUTPUT TO FILE]
-TRUE
+FALSE
 
 [OUTPUT FILE NAME]
 maxwell
+
+[COMPUTE ERROR]
+TRUE

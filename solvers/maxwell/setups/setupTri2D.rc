@@ -2,7 +2,8 @@
 2.0
 
 [DATA FILE]
-data/maxwellGaussian2D.h
+data/maxwellMode2D.h
+#data/maxwellGaussian2D.h
 
 [MESH FILE]
 BOX
@@ -22,11 +23,20 @@ BOX
 [BOX NZ]
 10
 
+[BOX DIMX]
+2
+
+[BOX DIMY]
+2
+
+[BOX DIMZ]
+2
+
 [BOX BOUNDARY FLAG]
 1
 
 [POLYNOMIAL DEGREE]
-4
+7
 
 [THREAD MODEL]
 CUDA
@@ -38,6 +48,7 @@ CUDA
 0
 
 [TIME INTEGRATOR]
+#LSERK4
 DOPRI5
 
 [START TIME]
@@ -54,3 +65,6 @@ TRUE
 
 [OUTPUT FILE NAME]
 maxwell
+
+[COMPUTE ERROR]
+TRUE
