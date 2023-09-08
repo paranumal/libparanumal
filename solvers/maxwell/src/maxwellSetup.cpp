@@ -43,7 +43,7 @@ void maxwell_t::Setup(platform_t& _platform, mesh_t& _mesh,
   ogs::InitializeKernels(platform, ogs::Dfloat, ogs::Add);
 
   //setup linear algebra module
-  platform.linAlg().InitKernels({"innerProd"});
+  platform.linAlg().InitKernels({"innerProd", "sum", "norm2"});
 
   /*setup trace halo exchange */
   traceHalo = mesh.HaloTraceSetup(Nfields);
@@ -119,6 +119,13 @@ void maxwell_t::Setup(platform_t& _platform, mesh_t& _mesh,
   surfaceKernel = platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
 
+  // kernels from surface file
+  fileName   = oklFilePrefix + "maxwellError" + suffix + oklFileSuffix;
+  kernelName = "maxwellError" + suffix;
+
+  errorKernel = platform.buildKernel(fileName, kernelName,
+				     kernelInfo);
+  
   if (mesh.dim==2) {
     fileName   = oklFilePrefix + "maxwellInitialCondition2D" + oklFileSuffix;
     kernelName = "maxwellInitialCondition2D";

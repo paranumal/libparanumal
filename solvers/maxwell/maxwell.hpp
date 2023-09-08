@@ -64,6 +64,7 @@ public:
   kernel_t surfaceKernel;
 
   kernel_t initialConditionKernel;
+  kernel_t errorKernel;
 
   maxwell_t() = default;
   maxwell_t(platform_t &_platform, mesh_t &_mesh,

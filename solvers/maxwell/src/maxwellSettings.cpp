@@ -62,6 +62,12 @@ maxwellSettings_t::maxwellSettings_t(comm_t _comm):
 
   newSetting("OUTPUT FILE NAME",
              "maxwell");
+
+  newSetting("COMPUTE ERROR",
+             "FALSE",
+             "Flag for computing L2 error (uses InitialCondition from data file)",
+             {"TRUE", "FALSE"});
+
 }
 
 void maxwellSettings_t::report() {
@@ -75,6 +81,7 @@ void maxwellSettings_t::report() {
     reportSetting("OUTPUT INTERVAL");
     reportSetting("OUTPUT TO FILE");
     reportSetting("OUTPUT FILE NAME");
+    reportSetting("COMPUTE ERROR");
   }
 }
 
