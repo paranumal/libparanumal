@@ -1,0 +1,230 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+
+// Roe averaged Riemann solver
+void upwind(const dfloat nx,
+            const dfloat ny,
+            const dfloat nz,
+            const dfloat HxM,
+            const dfloat HyM,
+            const dfloat HzM,
+            const dfloat ExM,
+            const dfloat EyM,
+            const dfloat EzM,
+            const dfloat HxP,
+            const dfloat HyP,
+            const dfloat HzP,
+            const dfloat ExP,
+            const dfloat EyP,
+            const dfloat EzP,
+	    dfloat *fluxHx,
+            dfloat *fluxHy,
+            dfloat *fluxHz,
+	    dfloat *fluxEx,
+            dfloat *fluxEy,
+            dfloat *fluxEz){
+
+  /*
+    ORIGINAL H&W nodal DG book code
+
+    % form field differences at faces                                                                                                                                                     
+    dHx(:)  = Hx(vmapP)-Hx(vmapM);  dEx(:)  = Ex(vmapP)-Ex(vmapM);
+    dHy(:)  = Hy(vmapP)-Hy(vmapM);  dEy(:)  = Ey(vmapP)-Ey(vmapM);
+    dHz(:)  = Hz(vmapP)-Hz(vmapM);  dEz(:)  = Ez(vmapP)-Ez(vmapM);
+    
+    % make boundary conditions all reflective (Ez+ = -Ez-)                                                                                                                                
+    dHx(mapB) = 0;  dEx(mapB) = -2*Ex(vmapB);
+    dHy(mapB) = 0;  dEy(mapB) = -2*Ey(vmapB);
+    dHz(mapB) = 0;  dEz(mapB) = -2*Ez(vmapB);
+    
+    alpha=1; % => full upwinding                                                                                                                                                          
+    
+    ndotdH = nx.*dHx + ny.*dHy + nz.*dHz;
+    ndotdE = nx.*dEx + ny.*dEy + nz.*dEz;
+
+    fluxHx = -ny.*dEz + nz.*dEy + alpha*(dHx - ndotdH.*nx);
+    fluxHy = -nz.*dEx + nx.*dEz + alpha*(dHy - ndotdH.*ny);
+    fluxHz = -nx.*dEy + ny.*dEx + alpha*(dHz - ndotdH.*nz);
+    
+    fluxEx =  ny.*dHz - nz.*dHy + alpha*(dEx - ndotdE.*nx);
+    fluxEy =  nz.*dHx - nx.*dHz + alpha*(dEy - ndotdE.*ny);
+    fluxEz =  nx.*dHy - ny.*dHx + alpha*(dEz - ndotdE.*nz);
+  */
+
+  //  form field differences at faces
+  dfloat dHx = HxP - HxM, dEx = ExP - ExM;
+  dfloat dHy = HyP - HyM, dEy = EyP - EyM;
+  dfloat dHz = HzP - HzM, dEz = EzP - EzM;
+    
+  dfloat alpha=1; // => full upwinding
+  
+  dfloat ndotdH = nx*dHx + ny*dHy + nz*dHz;
+  dfloat ndotdE = nx*dEx + ny*dEy + nz*dEz;
+
+  *fluxHx = -ny*dEz + nz*dEy + alpha*(dHx - ndotdH*nx);
+  *fluxHy = -nz*dEx + nx*dEz + alpha*(dHy - ndotdH*ny);
+  *fluxHz = -nx*dEy + ny*dEx + alpha*(dHz - ndotdH*nz);
+    
+  *fluxEx =  ny*dHz - nz*dHy + alpha*(dEx - ndotdE*nx);
+  *fluxEy =  nz*dHx - nx*dHz + alpha*(dEy - ndotdE*ny);
+  *fluxEz =  nx*dHy - ny*dHx + alpha*(dEz - ndotdE*nz);
+}
+
+// batch process elements
+@kernel void maxwellSurfaceTet3D(const dlong Nelements,
+                                  @restrict const  dlong  *  elementIds,
+                                  @restrict const  dfloat *  sgeo,
+                                  @restrict const  dfloat *  LIFT,
+                                  @restrict const  dlong  *  vmapM,
+                                  @restrict const  dlong  *  vmapP,
+                                  @restrict const  int    *  EToB,
+                                  const dfloat time,
+                                  @restrict const  dfloat *  x,
+                                  @restrict const  dfloat *  y,
+                                  @restrict const  dfloat *  z,
+                                  @restrict const  dfloat *  q,
+                                  @restrict dfloat *  rhsq){
+
+  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
+
+    // @shared storage for flux terms
+    @shared dfloat s_fluxHx[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_fluxHy[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_fluxHz[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_fluxEx[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_fluxEy[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_fluxEz[p_NblockS][p_NfacesNfp];
+
+    @exclusive dlong r_e, element;
+
+    // for all face nodes of all elements
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
+        r_e = eo + es;
+        if(r_e<Nelements){
+          element = elementIds[r_e];
+
+          if(n<p_NfacesNfp){
+            // find face that owns this node
+            const int face = n/p_Nfp;
+
+            // load surface geofactors for this face
+            const dlong sid    = p_Nsgeo*(element*p_Nfaces+face);
+            const dfloat nx   = sgeo[sid+p_NXID];
+            const dfloat ny   = sgeo[sid+p_NYID];
+            const dfloat nz   = sgeo[sid+p_NZID];
+            const dfloat sJ   = sgeo[sid+p_SJID];
+            const dfloat invJ = sgeo[sid+p_IJID];
+
+            // indices of negative and positive traces of face node
+            const dlong id  = element*p_Nfp*p_Nfaces + n;
+            const dlong idM = vmapM[id];
+            const dlong idP = vmapP[id];
+
+            // load traces
+            const dlong eM = element;
+            const dlong eP = idP/p_Np;
+            const int vidM = idM%p_Np;
+            const int vidP = idP%p_Np;
+
+            const dlong qbaseM = eM*p_Np*p_Nfields + vidM;
+            const dlong qbaseP = eP*p_Np*p_Nfields + vidP;
+
+            const dfloat HxM = q[qbaseM + 0*p_Np];
+            const dfloat HyM = q[qbaseM + 1*p_Np];
+            const dfloat HzM = q[qbaseM + 2*p_Np];
+            const dfloat ExM = q[qbaseM + 3*p_Np];
+            const dfloat EyM = q[qbaseM + 4*p_Np];
+            const dfloat EzM = q[qbaseM + 5*p_Np];
+
+            dfloat HxP = q[qbaseP + 0*p_Np];
+            dfloat HyP = q[qbaseP + 1*p_Np];
+            dfloat HzP = q[qbaseP + 2*p_Np];
+            dfloat ExP = q[qbaseP + 3*p_Np];
+            dfloat EyP = q[qbaseP + 4*p_Np];
+            dfloat EzP = q[qbaseP + 5*p_Np];
+
+            // apply boundary condition
+            const int bc = EToB[face+p_Nfaces*element];
+            if(bc>0){
+              maxwellDirichletConditions3D(bc, time, x[idM], y[idM], z[idM], nx, ny, nz, HxM, HyM, HzM, ExM, EyM, EzM, &HxP, &HyP, &HzP, &ExP, &EyP, &EzP);
+            }
+
+            // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
+            const dfloat sc = invJ*sJ;
+	    
+            dfloat fluxHx, fluxHy, fluxHz;
+	    dfloat fluxEx, fluxEy, fluxEz;
+
+            upwind(nx, ny, nz, HxM, HyM, HzM, ExM, EyM, EzM, HxP, HyP, HzP, ExP, EyP, EzP, &fluxHx, &fluxHy, &fluxHz, &fluxEx, &fluxEy, &fluxEz);
+
+            s_fluxHx[es][n] = sc*(fluxHx);
+            s_fluxHy[es][n] = sc*(fluxHy);
+            s_fluxHz[es][n] = sc*(fluxHz);
+            s_fluxEx[es][n] = sc*(fluxEx);
+            s_fluxEy[es][n] = sc*(fluxEy);
+            s_fluxEz[es][n] = sc*(fluxEz);
+          }
+        }
+      }
+    }
+
+    // for each node in the element
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
+        if(r_e<Nelements){
+          if(n<p_Np){
+            // load rhs data from volume fluxes
+            dfloat LfluxHx = 0.f, LfluxHy = 0.f, LfluxHz = 0.f;
+	    dfloat LfluxEx = 0.f, LfluxEy = 0.f, LfluxEz = 0.f;
+
+            // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
+            #pragma unroll p_NfacesNfp
+              for(int m=0;m<p_NfacesNfp;++m){
+                const dfloat L = LIFT[n+m*p_Np];
+                LfluxHx += L*s_fluxHx[es][m];
+                LfluxHy += L*s_fluxHy[es][m];
+                LfluxHz += L*s_fluxHz[es][m];
+                LfluxEx += L*s_fluxEx[es][m];
+                LfluxEy += L*s_fluxEy[es][m];
+                LfluxEz += L*s_fluxEz[es][m];
+              }
+
+            const dlong base = element*p_Np*p_Nfields+n;
+            rhsq[base+0*p_Np] += LfluxHx;
+            rhsq[base+1*p_Np] += LfluxHy;
+            rhsq[base+2*p_Np] += LfluxHz;
+            rhsq[base+3*p_Np] += LfluxEx;
+            rhsq[base+4*p_Np] += LfluxEy;
+            rhsq[base+5*p_Np] += LfluxEz;
+          }
+        }
+      }
+    }
+  }
+}

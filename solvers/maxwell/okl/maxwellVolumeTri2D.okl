@@ -1,0 +1,107 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+
+// isotropic maxwell
+@kernel void maxwellVolumeTri2D(const dlong Nelements,
+				@restrict const  dfloat *  vgeo,
+				@restrict const  dfloat *  D,
+				@restrict const  dfloat *  q,
+				@restrict dfloat *  rhsq){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_F[p_Nfields][p_Np];
+    @shared dfloat s_G[p_Nfields][p_Np];
+
+    for(int n=0;n<p_Np;++n;@inner(0)){
+
+      // prefetch geometric factors (constant on triangle)
+      const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+      const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+      const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+      const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+      const dlong  qbase = e*p_Np*p_Nfields + n;
+      const dfloat Hx = q[qbase+0*p_Np];
+      const dfloat Hy = q[qbase+1*p_Np];
+      const dfloat Ez = q[qbase+2*p_Np];
+
+      // dH/dt = -curl E
+      // dE/dt =  curl H
+      
+      {
+	// dHx/dt = -dEz/dy
+        const dfloat f = 0;
+        const dfloat g = -Ez;
+        s_F[0][n] = drdx*f + drdy*g;
+        s_G[0][n] = dsdx*f + dsdy*g;
+      }
+
+      {
+	// dHy/dt =  dEz/dx
+        const dfloat f = Ez;
+        const dfloat g = 0;
+        s_F[1][n] = drdx*f + drdy*g;
+        s_G[1][n] = dsdx*f + dsdy*g;
+      }
+
+      {
+	// dEz/dt = dHy/dx - dHx/dy
+        const dfloat f =  Hy;
+        const dfloat g = -Hx;
+        s_F[2][n] = drdx*f + drdy*g;
+        s_G[2][n] = dsdx*f + dsdy*g;
+      }
+    }
+
+    for(int n=0;n<p_Np;++n;@inner(0)){
+
+      dfloat rhsq0 = 0, rhsq1 = 0, rhsq2 = 0;
+
+      for(int i=0;i<p_Np;++i){
+        const dfloat Drni = D[n+i*p_Np+0*p_Np*p_Np];
+        const dfloat Dsni = D[n+i*p_Np+1*p_Np*p_Np];
+
+        rhsq0 += Drni*s_F[0][i]
+                +Dsni*s_G[0][i];
+        rhsq1 += Drni*s_F[1][i]
+                +Dsni*s_G[1][i];
+        rhsq2 += Drni*s_F[2][i]
+                +Dsni*s_G[2][i];
+      }
+
+      const dlong base = e*p_Np*p_Nfields + n;
+
+      // move to rhs
+      rhsq[base+0*p_Np] = rhsq0;
+      rhsq[base+1*p_Np] = rhsq1;
+      rhsq[base+2*p_Np] = rhsq2;
+    }
+  }
+}
+
+
