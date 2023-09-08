@@ -1,0 +1,1 @@
+ncu --print-summary per-gpu -k  _occa_maxwellVolumeTet3D_0 ./maxwellMain setups/setupTet3D.rc
