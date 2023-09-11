@@ -28,6 +28,15 @@
 #include "timer.hpp"
 #include "ellipticPrecon.hpp"
 
+void diagnostic(dlong N, mesh_t &mesh, platform_t &platform, deviceMemory<dfloat> &o_x, const char *message){
+  
+  dfloat normx = platform.linAlg().norm2(N, o_x, mesh.comm);
+
+  std::cout << std::scientific << std::setw(10) << std::endl;
+  std::cout << "norm(" << message << ")=" << normx << std::endl;
+  
+}
+
 void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
                    deviceMemory<dfloat> &o_rPL,
                    deviceMemory<dfloat> &o_rFL){
@@ -54,6 +63,10 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
     waveStepInitializeKernel(mesh.Nelements, scD, scP, lambdaSolve,
                              o_WJ, o_MM, o_rDL, o_rPL, o_DhatL, o_PhatL, o_DrhsL);
 
+    diagnostic(mesh.Nelements*mesh.Np, mesh, platform, o_DL, "DL");
+    diagnostic(mesh.Nelements*mesh.Np, mesh, platform, o_PL, "PL");
+    diagnostic(mesh.Nelements*mesh.Np, mesh, platform, o_DrhsL, "DrhsL");
+    
     // LOOP OVER IMPLICIT STAGES
     for(int stage=2;stage<=Nstages;++stage){
 
@@ -119,7 +132,9 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
         platform.linAlg().
            axpy(mesh.Np*mesh.Nelements, (dfloat)-1., o_SurfaceForceL, (dfloat)1., o_DrhsL);
       }
-        
+
+      diagnostic(mesh.Nelements*mesh.Np, mesh, platform, o_DrhsL, "DrhsL");
+      
       // gather rhs to globalDofs if c0
       if(disc_c0){
         elliptic.ogsMasked.Gather(o_Drhs,   o_DrhsL,   1, ogs::Add, ogs::Trans);
@@ -144,6 +159,8 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
         o_Dtilde.copyTo(o_DtildeL);
       }
       
+      diagnostic(mesh.Nelements*mesh.Np, mesh, platform, o_DtildeL, "DtildeL");
+
       iter += iterD;
 
       dfloat scF = 0;
@@ -179,6 +196,8 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
                               o_DhatL,
                               o_PhatL,
                               o_DrhsL); // remember 1-index
+      
+
     }
 
     // KERNEL 4: FINALIZE
@@ -202,6 +221,8 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
     }
     elliptic.lambda = lambdaSolve;
 
+    diagnostic(mesh.Nelements*mesh.Np, mesh, platform, o_scratch2L, "M*OP*scratch1L");
+    
     if(settings.compareSetting("ENABLE FLUX SOURCE","TRUE")){
       // finalizing force
       std::cout << "Entering finalize source kernel " << std::endl;
@@ -291,7 +312,11 @@ void wave_t::Solve(deviceMemory<dfloat> &o_rDL,
     
     timePoint_t ends = GlobalPlatformTime(platform);
 
-    printf("====> time=%g, dt=%g, step=%d, sum(iterD)=%d, ave(iterD)=%3.2f\n", t+dt, dt, tstep, iter, iter/(double)(Nstages-1));
+    dfloat normP = platform.linAlg().norm2(mesh.Np*mesh.Nelements, o_rPL, mesh.comm);
+    dfloat normD = platform.linAlg().norm2(mesh.Np*mesh.Nelements, o_rDL, mesh.comm);
+    
+    printf("====> time=%g, dt=%g, step=%d, sum(iterD)=%d, ave(iterD)=%3.2f, norm(P,l2) =%3.2e, norm(D,l2) =%3.2e\n",
+	   t+dt, dt, tstep, iter, iter/(double)(Nstages-1), normP, normD);
     
     double elapsedTime = ElapsedTime(starts, ends);
     
