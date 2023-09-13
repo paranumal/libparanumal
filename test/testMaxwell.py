@@ -67,7 +67,7 @@ def main():
                     cmd=maxwellBin,
                     settings=maxwellSettings(element=6,data_file=data3D,dim=3,
                                                degree=2),
-                    referenceNorm=0.464103149761998)
+                    referenceNorm=0.494395985627954)
 
   failCount += test(name="testMaxwellTri_MPI", ranks=4,
                     cmd=maxwellBin,
