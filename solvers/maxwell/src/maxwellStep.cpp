@@ -81,18 +81,42 @@ void maxwell_t::rhsf(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, con
 
   traceHalo.ExchangeFinish(o_Q, 1);
 
-  if (mesh.NhaloElements)
-    surfaceKernel(mesh.NhaloElements,
-                  mesh.o_haloElementIds,
-                  mesh.o_sgeo,
-                  mesh.o_LIFT,
-                  mesh.o_vmapM,
-                  mesh.o_vmapP,
-                  mesh.o_EToB,
-                  T,
-                  mesh.o_x,
-                  mesh.o_y,
-                  mesh.o_z,
-                  o_Q,
-                  o_RHS);
+  if (mesh.NhaloElements){
+    if(materialType==ISOTROPIC){
+      surfaceKernel(mesh.NhaloElements,
+		    mesh.o_haloElementIds,
+		    mesh.o_sgeo,
+		    mesh.o_LIFT,
+		    mesh.o_vmapM,
+		    mesh.o_vmapP,
+		    mesh.o_EToB,
+		    T,
+		    mesh.o_x,
+		    mesh.o_y,
+		    mesh.o_z,
+		    o_Q,
+		    o_RHS);
+    }else{
+      heterogeneousSurfaceKernel(mesh.NhaloElements,
+				 mesh.o_haloElementIds,
+				 mesh.o_sgeo,
+				 mesh.o_LIFT,
+				 mesh.o_vmapM,
+				 mesh.o_vmapP,
+				 mesh.o_EToB,
+				 T,
+				 mesh.o_x,
+				 mesh.o_y,
+				 mesh.o_z,
+				 mesh.o_intInterp,
+				 mesh.o_intLIFT,
+				 o_materialUpwindWeights,
+				 o_Q,
+				 o_RHS);
+    }
+  }
+
+  if(materialType==HETEROGENEOUS){
+    heterogeneousProjectKernel(mesh.Nelements, mesh.o_cubInterp, mesh.o_cubProject, o_materialInverseWeights, o_RHS);
+  }
 }

@@ -188,7 +188,7 @@ void maxwell_t::Setup(platform_t& _platform, mesh_t& _mesh,
 	dfloat xn = mesh.x[e*mesh.Np+n];
 	dfloat yn = mesh.y[e*mesh.Np+n];
 	materialCoefficients[id] = 1.0; // mu
-	materialCoefficients[id+mesh.Np] = 1.0; // + 0.03*sin(xn*M_PI)*sin(yn*M_PI); // epsilon
+	materialCoefficients[id+mesh.Np] = 1.0 + 0.03*sin(xn*M_PI)*sin(yn*M_PI); // epsilon
       }
     }
 
@@ -249,9 +249,9 @@ void maxwell_t::Setup(platform_t& _platform, mesh_t& _mesh,
 	  cubEpsilon += cubInm*materialCoefficients[id+mesh.Np];
 	}
 	dlong cubId = e*mesh.cubNp*materialNfields + n;
-	dfloat cubw = mesh.cubw[n];
-	materialInverseWeights[cubId] = cubw/cubMu;
-	materialInverseWeights[cubId+mesh.cubNp] = cubw/cubEpsilon;
+	// NOTE: cubProjectT on DEVICE has cubature weights built in
+	materialInverseWeights[cubId] = 1./cubMu;
+	materialInverseWeights[cubId+mesh.cubNp] = 1./cubEpsilon;
       }
     }
 
