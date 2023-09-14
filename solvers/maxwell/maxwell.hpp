@@ -62,6 +62,7 @@ public:
 
   kernel_t volumeKernel;
   kernel_t surfaceKernel;
+  kernel_t heterogeneousSurfaceKernel;
 
   kernel_t initialConditionKernel;
   kernel_t errorKernel;

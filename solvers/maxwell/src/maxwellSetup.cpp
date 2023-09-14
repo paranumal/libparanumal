@@ -119,12 +119,20 @@ void maxwell_t::Setup(platform_t& _platform, mesh_t& _mesh,
   surfaceKernel = platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
 
-  // kernels from surface file
+  // kernels from error file
   fileName   = oklFilePrefix + "maxwellError" + suffix + oklFileSuffix;
   kernelName = "maxwellError" + suffix;
 
   errorKernel = platform.buildKernel(fileName, kernelName,
 				     kernelInfo);
+
+  // kernels from heterogeneous surface file
+  fileName   = oklFilePrefix + "maxwellHeterogeneousSurface" + suffix + oklFileSuffix;
+  kernelName = "maxwellHeterogeneousSurface" + suffix;
+
+  heterogeneousSurfaceKernel = platform.buildKernel(fileName, kernelName,
+						    kernelInfo);
+
   
   if (mesh.dim==2) {
     fileName   = oklFilePrefix + "maxwellInitialCondition2D" + oklFileSuffix;
