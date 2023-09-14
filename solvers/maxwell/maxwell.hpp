@@ -47,12 +47,19 @@ public:
                      const std::string filename);
 };
 
+typedef enum{
+  ISOTROPIC=1,
+  HETEROGENEOUS=2
+}materialType_e;
+
 class maxwell_t: public solver_t {
 public:
   mesh_t mesh;
 
   int Nfields;
 
+  int materialType;
+  
   timeStepper_t timeStepper;
 
   ogs::halo_t traceHalo;
@@ -63,6 +70,7 @@ public:
   kernel_t volumeKernel;
   kernel_t surfaceKernel;
   kernel_t heterogeneousSurfaceKernel;
+  kernel_t heterogeneousProjectKernel;
 
   kernel_t initialConditionKernel;
   kernel_t errorKernel;

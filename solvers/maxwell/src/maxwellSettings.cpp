@@ -68,6 +68,11 @@ maxwellSettings_t::maxwellSettings_t(comm_t _comm):
              "Flag for computing L2 error (uses InitialCondition from data file)",
              {"TRUE", "FALSE"});
 
+  newSetting("MATERIAL TYPE",
+             "ISOTROPIC",
+             "Type of material",
+             {"ISOTROPIC", "HETEROGENEOUS"});
+  
 }
 
 void maxwellSettings_t::report() {
@@ -82,6 +87,7 @@ void maxwellSettings_t::report() {
     reportSetting("OUTPUT TO FILE");
     reportSetting("OUTPUT FILE NAME");
     reportSetting("COMPUTE ERROR");
+    reportSetting("MATERIAL TYPE");
   }
 }
 

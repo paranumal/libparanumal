@@ -34,6 +34,14 @@ void maxwell_t::Setup(platform_t& _platform, mesh_t& _mesh,
   comm = _mesh.comm;
   settings = _settings;
 
+  // type of material
+  materialType = (settings.compareSetting("MATERIAL TYPE", "ISOTROPIC")) ? ISOTROPIC:HETEROGENEOUS;
+
+  if(materialType==HETEROGENEOUS){
+    mesh.CubatureSetup();
+    //    mesh.CubaturePhysicalNodes();
+  }
+  
   Nfields = (mesh.dim==3) ? 6:3;
 
   dlong Nlocal = mesh.Nelements*mesh.Np*Nfields;
@@ -99,6 +107,15 @@ void maxwell_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
   kernelInfo["defines/" "p_Lambda2"]= Lambda2;
 
+  if (materialType==HETEROGENEOUS){
+    int cubMaxNodes = std::max(mesh.Np, (mesh.intNfp*mesh.Nfaces));
+    kernelInfo["defines/" "p_cubMaxNodes"]= cubMaxNodes;
+    int cubMaxNodes1 = std::max(mesh.Np, (mesh.intNfp));
+    kernelInfo["defines/" "p_cubMaxNodes1"]= cubMaxNodes1;
+    int cubMaxNp = std::max(mesh.Np, (mesh.cubNp));
+    kernelInfo["defines/" "p_cubMaxNp"]= cubMaxNp;
+  }
+  
   // set kernel name suffix
   std::string suffix = mesh.elementSuffix();
   std::string oklFilePrefix = DMAXWELL "/okl/";
@@ -126,13 +143,22 @@ void maxwell_t::Setup(platform_t& _platform, mesh_t& _mesh,
   errorKernel = platform.buildKernel(fileName, kernelName,
 				     kernelInfo);
 
-  // kernels from heterogeneous surface file
-  fileName   = oklFilePrefix + "maxwellHeterogeneousSurface" + suffix + oklFileSuffix;
-  kernelName = "maxwellHeterogeneousSurface" + suffix;
+  if (materialType==HETEROGENEOUS){
+    // kernels from heterogeneous surface file
+    fileName   = oklFilePrefix + "maxwellHeterogeneousSurface" + suffix + oklFileSuffix;
+    kernelName = "maxwellHeterogeneousSurface" + suffix;
+    
+    heterogeneousSurfaceKernel = platform.buildKernel(fileName, kernelName,
+						      kernelInfo);
 
-  heterogeneousSurfaceKernel = platform.buildKernel(fileName, kernelName,
-						    kernelInfo);
-
+    // kernels from heterogeneous project file
+    fileName   = oklFilePrefix + "maxwellHeterogeneousProject" + suffix + oklFileSuffix;
+    kernelName = "maxwellHeterogeneousProject" + suffix;
+    
+    heterogeneousProjectKernel = platform.buildKernel(fileName, kernelName,
+						      kernelInfo);
+    
+  }
   
   if (mesh.dim==2) {
     fileName   = oklFilePrefix + "maxwellInitialCondition2D" + oklFileSuffix;

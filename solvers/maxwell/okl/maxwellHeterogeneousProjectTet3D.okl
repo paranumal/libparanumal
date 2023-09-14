@@ -1,0 +1,147 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+
+ 
+// use Weight Adjusted DG type approximation of weighted mass inversion
+// see - https://epubs.siam.org/doi/abs/10.1137/16M1089186
+
+@kernel void maxwellHeterogeneousProjectTet3D(const dlong Nelements,
+					      @restrict const  dlong  *  elementIds,
+					      @restrict const  dfloat *  cubInterp, // interpolate to cubature nodes
+					      @restrict const  dfloat *  cubProject, // project from cubature to interpolation nodes
+					      @restrict const  dfloat *  cubInverseWeights,
+					      @restrict        dfloat *  rhsq){
+
+  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
+
+    // reduces shared storage by processing one face at a time
+
+    @shared dfloat s_rhsHx[p_NblockV][p_cubMaxNp];
+    @shared dfloat s_rhsHy[p_NblockV][p_cubMaxNp];
+    @shared dfloat s_rhsHz[p_NblockV][p_cubMaxNp];
+    @shared dfloat s_rhsEx[p_NblockV][p_cubMaxNp];
+    @shared dfloat s_rhsEy[p_NblockV][p_cubMaxNp];
+    @shared dfloat s_rhsEz[p_NblockV][p_cubMaxNp];
+    
+    @exclusive dlong r_e, element;
+
+
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_cubMaxNp;++n;@inner(0)){
+	r_e = eo + es;
+	element = (r_e<Nelements) ? elementIds[r_e]:-1;
+	  
+	if(r_e<Nelements){
+	  
+	  if(n<p_Np){
+
+	    const dlong base = element*p_Np*p_Nfields + n;
+
+	    s_rhsHx[es][n] = rhsq[n+0*p_Np];
+	    s_rhsHy[es][n] = rhsq[n+1*p_Np];
+	    s_rhsHz[es][n] = rhsq[n+2*p_Np];
+	    s_rhsEx[es][n] = rhsq[n+3*p_Np];
+	    s_rhsEy[es][n] = rhsq[n+4*p_Np];
+	    s_rhsEz[es][n] = rhsq[n+5*p_Np];
+	  }
+	}
+      }
+    }
+
+    @exclusive dfloat rhsHx, rhsHy, rhsHz;
+    @exclusive dfloat rhsEx, rhsEy, rhsEz;
+    
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_cubMaxNp;++n;@inner(0)){
+
+	dlong cid = element*p_cubNp*2 + n;
+	const dfloat cubWH = cubInverseWeights[cid];
+	const dfloat cubWE = cubInverseWeights[cid+p_cubNp];
+	
+	rhsHx = 0; rhsHy = 0; rhsHz = 0;
+	rhsEx = 0; rhsEy = 0; rhsEz = 0;
+
+	for(int m=0;m<p_Np;++m){
+	  dfloat cInm = cubInterp[n+m*p_cubNp];
+	  rhsHx += cInm*s_rhsHx[es][m];
+	  rhsHy += cInm*s_rhsHy[es][m];
+	  rhsHz += cInm*s_rhsHz[es][m];
+	  rhsEx += cInm*s_rhsEx[es][m];
+	  rhsEy += cInm*s_rhsEy[es][m];
+	  rhsEz += cInm*s_rhsEz[es][m];
+	}
+
+	rhsHx *= cubWH;
+	rhsHy *= cubWH;
+	rhsHz *= cubWH;
+	rhsEx *= cubWE;
+	rhsEy *= cubWE;
+	rhsEz *= cubWE;
+      }
+    }
+
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_cubMaxNp;++n;@inner(0)){
+	s_rhsHx[es][n] = rhsHx;
+	s_rhsHy[es][n] = rhsHy;
+	s_rhsHz[es][n] = rhsHz;
+	s_rhsEx[es][n] = rhsEx;
+	s_rhsEy[es][n] = rhsEy;
+	s_rhsEz[es][n] = rhsEz;
+      }
+    }
+    
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_cubMaxNp;++n;@inner(0)){
+	if(n<p_Np && r_e<Nelements){
+	  
+	  rhsHx = 0; rhsHy = 0; rhsHz = 0;
+	  rhsEx = 0; rhsEy = 0; rhsEz = 0;
+	  
+	  for(int m=0;m<p_cubNp;++m){
+	    dfloat cPnm = cubProject[n+m*p_Np];
+	    rhsHx += cPnm*s_rhsHx[es][m];
+	    rhsHy += cPnm*s_rhsHy[es][m];
+	    rhsHz += cPnm*s_rhsHz[es][m];
+	    rhsEx += cPnm*s_rhsEx[es][m];
+	    rhsEy += cPnm*s_rhsEy[es][m];
+	    rhsEz += cPnm*s_rhsEz[es][m];
+	  }
+
+	  const dlong base = element*p_Np*p_Nfields+n;
+	  rhsq[base+0*p_Np] = rhsHx;
+	  rhsq[base+1*p_Np] = rhsHy;
+	  rhsq[base+2*p_Np] = rhsHz;
+	  rhsq[base+3*p_Np] = rhsEx;
+	  rhsq[base+4*p_Np] = rhsEy;
+	  rhsq[base+5*p_Np] = rhsEz;
+        }
+      }
+    }
+  }
+}

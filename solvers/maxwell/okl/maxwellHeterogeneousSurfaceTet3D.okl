@@ -29,6 +29,7 @@ SOFTWARE.
 void upwind(const dfloat nx,
             const dfloat ny,
             const dfloat nz,
+	    const dfloat4 iweights,
             const dfloat dHx,
             const dfloat dHy,
             const dfloat dHz,
@@ -42,61 +43,40 @@ void upwind(const dfloat nx,
             dfloat *fluxEy,
             dfloat *fluxEz){
 
-  /*
-    ORIGINAL H&W nodal DG book code
-
-    % form field differences at faces                                                                                                                                                     
-    dHx(:)  = Hx(vmapP)-Hx(vmapM);  dEx(:)  = Ex(vmapP)-Ex(vmapM);
-    dHy(:)  = Hy(vmapP)-Hy(vmapM);  dEy(:)  = Ey(vmapP)-Ey(vmapM);
-    dHz(:)  = Hz(vmapP)-Hz(vmapM);  dEz(:)  = Ez(vmapP)-Ez(vmapM);
-    
-    % make boundary conditions all reflective (Ez+ = -Ez-)                                                                                                                                
-    dHx(mapB) = 0;  dEx(mapB) = -2*Ex(vmapB);
-    dHy(mapB) = 0;  dEy(mapB) = -2*Ey(vmapB);
-    dHz(mapB) = 0;  dEz(mapB) = -2*Ez(vmapB);
-    
-    alpha=1; % => full upwinding                                                                                                                                                          
-    
-    ndotdH = nx.*dHx + ny.*dHy + nz.*dHz;
-    ndotdE = nx.*dEx + ny.*dEy + nz.*dEz;
-
-    fluxHx = -ny.*dEz + nz.*dEy + alpha*(dHx - ndotdH.*nx);
-    fluxHy = -nz.*dEx + nx.*dEz + alpha*(dHy - ndotdH.*ny);
-    fluxHz = -nx.*dEy + ny.*dEx + alpha*(dHz - ndotdH.*nz);
-    
-    fluxEx =  ny.*dHz - nz.*dHy + alpha*(dEx - ndotdE.*nx);
-    fluxEy =  nz.*dHx - nx.*dHz + alpha*(dEy - ndotdE.*ny);
-    fluxEz =  nx.*dHy - ny.*dHx + alpha*(dEz - ndotdE.*nz);
-  */
-
-    
   dfloat alpha=1; // => full upwinding
   
   dfloat ndotdH = nx*dHx + ny*dHy + nz*dHz;
   dfloat ndotdE = nx*dEx + ny*dEy + nz*dEz;
 
-  *fluxHx = -ny*dEz + nz*dEy + alpha*(dHx - ndotdH*nx);
-  *fluxHy = -nz*dEx + nx*dEz + alpha*(dHy - ndotdH*ny);
-  *fluxHz = -nx*dEy + ny*dEx + alpha*(dHz - ndotdH*nz);
-    
-  *fluxEx =  ny*dHz - nz*dHy + alpha*(dEx - ndotdE*nx);
-  *fluxEy =  nz*dHx - nx*dHz + alpha*(dEy - ndotdE*ny);
-  *fluxEz =  nx*dHy - ny*dHx + alpha*(dEz - ndotdE*nz);
+  dfloat centHw = iweights.x;
+  dfloat stabHw = iweights.y;
+  dfloat centEw = iweights.z;
+  dfloat stabEw = iweights.w;
+  
+  *fluxHx = centHw*(-ny*dEz + nz*dEy) + alpha*stabHw*(dHx - ndotdH*nx);
+  *fluxHy = centHw*(-nz*dEx + nx*dEz) + alpha*stabHw*(dHy - ndotdH*ny);
+  *fluxHz = centHw*(-nx*dEy + ny*dEx) + alpha*stabHw*(dHz - ndotdH*nz);
+     
+  *fluxEx = centEw*( ny*dHz - nz*dHy) + alpha*stabEw*(dEx - ndotdE*nx);
+  *fluxEy = centEw*( nz*dHx - nx*dHz) + alpha*stabEw*(dEy - ndotdE*ny);
+  *fluxEz = centEw*( nx*dHy - ny*dHx) + alpha*stabEw*(dEz - ndotdE*nz);
 }
-
+ 
 // batch process elements
-@kernel void maxwellSurfaceHeterogeneousTet3D(const dlong Nelements,
+@kernel void maxwellHeterogeneousSurfaceTet3D(const dlong Nelements,
 					      @restrict const  dlong  *  elementIds,
 					      @restrict const  dfloat *  sgeo,
 					      @restrict const  dfloat *  LIFT,
 					      @restrict const  dlong  *  vmapM,
 					      @restrict const  dlong  *  vmapP,
 					      @restrict const  int    *  EToB,
-					      @restrict const  dfloat *  intInterp, // interpolate to integration nodes
-					      @restrict const  dfloat *  intLIFT, // lift from integration to interpolation nodes
 					      @restrict const  dfloat *  x,
 					      @restrict const  dfloat *  y,
 					      @restrict const  dfloat *  z,
+					      @restrict const  dfloat *  intInterp, // interpolate to integration nodes
+					      @restrict const  dfloat *  intLIFT, // lift from integration to interpolation nodes
+					      @restrict const  dfloat4 *  intUpwindCoeffs, // flux term coefficients
+					      @restrict const  dfloat *  mu,
 					      const dfloat time,					      
 					      @restrict const  dfloat *  q,
 					      @restrict dfloat *  rhsq){
@@ -113,21 +93,21 @@ void upwind(const dfloat nx,
     @shared dfloat s_dEy[p_NblockS][p_Nfp];
     @shared dfloat s_dEz[p_NblockS][p_Nfp];
     
-    @shared dfloat s_fluxHx[p_NblockS][p_intNfp];
-    @shared dfloat s_fluxHy[p_NblockS][p_intNfp];
-    @shared dfloat s_fluxHz[p_NblockS][p_intNfp];
-    @shared dfloat s_fluxEx[p_NblockS][p_intNfp];
-    @shared dfloat s_fluxEy[p_NblockS][p_intNfp];
-    @shared dfloat s_fluxEz[p_NblockS][p_intNfp];
+    @shared dfloat s_ifluxHx[p_NblockS][p_intNfp];
+    @shared dfloat s_ifluxHy[p_NblockS][p_intNfp];
+    @shared dfloat s_ifluxHz[p_NblockS][p_intNfp];
+    @shared dfloat s_ifluxEx[p_NblockS][p_intNfp];
+    @shared dfloat s_ifluxEy[p_NblockS][p_intNfp];
+    @shared dfloat s_ifluxEz[p_NblockS][p_intNfp];
 
     @exclusive dlong r_e, element;
 
-    @exclusive dfloat LHxflux, LHyflux, LHzflux, LExflux, LEyflux, LEzflux;
+    @exclusive dfloat LfluxHx, LfluxHy, LfluxHz, LfluxEx, LfluxEy, LfluxEz;
 
     for(int es=0;es<p_NblockS;++es;@inner(1)){
       for(int n=0;n<p_cubMaxNodes1;++n;@inner(0)){
-	LHxflux = 0; LHyflux = 0; LHzflux = 0;
-	LExflux = 0; LEyflux = 0; LEzflux = 0;
+	LfluxHx = 0; LfluxHy = 0; LfluxHz = 0;
+	LfluxEx = 0; LfluxEy = 0; LfluxEz = 0;
 
 	r_e = eo + es;
 	element = (r_e<Nelements) ? elementIds[r_e]:-1;
@@ -222,21 +202,24 @@ void upwind(const dfloat nx,
 	    const dfloat nz   = sgeo[sid+p_NZID];
 	    const dfloat sJ   = sgeo[sid+p_SJID];
 	    const dfloat invJ = sgeo[sid+p_IJID];
-	    
+
+	    const dlong iid  = element*p_intNfp*p_Nfaces + n + face*p_intNfp;
+	    const dfloat4 iweights = intUpwindCoeffs[iid];
+
 	    // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
 	    const dfloat sc = p_half*invJ*sJ;
 	    
-            dfloat fluxHx, fluxHy, fluxHz;
-	    dfloat fluxEx, fluxEy, fluxEz;
+            dfloat ifluxHx, ifluxHy, ifluxHz;
+	    dfloat ifluxEx, ifluxEy, ifluxEz;
 	    
-            upwind(nx, ny, nz, dHx, dHy, dHz, dEx, dEy, dEz, &fluxHx, &fluxHy, &fluxHz, &fluxEx, &fluxEy, &fluxEz);
+            upwind(nx, ny, nz, iweights, idHx, idHy, idHz, idEx, idEy, idEz, &ifluxHx, &ifluxHy, &ifluxHz, &ifluxEx, &ifluxEy, &ifluxEz);
 	    
-            s_fluxHx[es][n] = sc*fluxHx;
-            s_fluxHy[es][n] = sc*fluxHy;
-            s_fluxHz[es][n] = sc*fluxHz;
-            s_fluxEx[es][n] = sc*fluxEx;
-            s_fluxEy[es][n] = sc*fluxEy;
-            s_fluxEz[es][n] = sc*fluxEz;
+            s_ifluxHx[es][n] = sc*ifluxHx;
+            s_ifluxHy[es][n] = sc*ifluxHy;
+            s_ifluxHz[es][n] = sc*ifluxHz;
+            s_ifluxEx[es][n] = sc*ifluxEx;
+            s_ifluxEy[es][n] = sc*ifluxEy;
+            s_ifluxEz[es][n] = sc*ifluxEz;
           }
         }
       }
@@ -248,12 +231,12 @@ void upwind(const dfloat nx,
 	  if(n<p_Np){
 	    for(int m=0;m<p_intNfp;++m){
 	      const dfloat L = intLIFT[n+(m+face*p_intNfp)*p_Np];
-	      LHxflux += L*s_Hxflux[m];
-	      LHyflux += L*s_Hyflux[m];
-	      LHzflux += L*s_Hzflux[m];
-	      LExflux += L*s_Exflux[m];
-	      LEyflux += L*s_Eyflux[m];
-	      LEzflux += L*s_Ezflux[m];
+	      LfluxHx += L*s_ifluxHx[es][m];
+	      LfluxHy += L*s_ifluxHy[es][m];
+	      LfluxHz += L*s_ifluxHz[es][m];
+	      LfluxEx += L*s_ifluxEx[es][m];
+	      LfluxEy += L*s_ifluxEy[es][m];
+	      LfluxEz += L*s_ifluxEz[es][m];
 	    }
 	  }
 	}
