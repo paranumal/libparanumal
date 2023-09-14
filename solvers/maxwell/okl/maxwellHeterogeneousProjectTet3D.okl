@@ -36,19 +36,19 @@ SOFTWARE.
 					      @restrict        dfloat *  rhsq){
 
   // for all elements
-  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockC;@outer(0)){
 
     // reduces shared storage by processing one face at a time
-    @shared dfloat s_rhsHx[p_NblockV][p_cubMaxNp];
-    @shared dfloat s_rhsHy[p_NblockV][p_cubMaxNp];
-    @shared dfloat s_rhsHz[p_NblockV][p_cubMaxNp];
-    @shared dfloat s_rhsEx[p_NblockV][p_cubMaxNp];
-    @shared dfloat s_rhsEy[p_NblockV][p_cubMaxNp];
-    @shared dfloat s_rhsEz[p_NblockV][p_cubMaxNp];
+    @shared dfloat s_rhsHx[p_NblockC][p_cubMaxNp];
+    @shared dfloat s_rhsHy[p_NblockC][p_cubMaxNp];
+    @shared dfloat s_rhsHz[p_NblockC][p_cubMaxNp];
+    @shared dfloat s_rhsEx[p_NblockC][p_cubMaxNp];
+    @shared dfloat s_rhsEy[p_NblockC][p_cubMaxNp];
+    @shared dfloat s_rhsEz[p_NblockC][p_cubMaxNp];
     
     @exclusive dlong r_e, element;
 
-    for(int es=0;es<p_NblockS;++es;@inner(1)){
+    for(int es=0;es<p_NblockC;++es;@inner(1)){
       for(int n=0;n<p_cubMaxNp;++n;@inner(0)){
 	r_e = eo + es;
 	if(r_e<Nelements && n<p_Np){
@@ -67,7 +67,7 @@ SOFTWARE.
     @exclusive dfloat rhsHx, rhsHy, rhsHz;
     @exclusive dfloat rhsEx, rhsEy, rhsEz;
     
-    for(int es=0;es<p_NblockS;++es;@inner(1)){
+    for(int es=0;es<p_NblockC;++es;@inner(1)){
       for(int n=0;n<p_cubMaxNp;++n;@inner(0)){
 
 	const dlong cid = r_e*p_cubNp*2 + n;
@@ -98,7 +98,7 @@ SOFTWARE.
       }
     }
 
-    for(int es=0;es<p_NblockS;++es;@inner(1)){
+    for(int es=0;es<p_NblockC;++es;@inner(1)){
       for(int n=0;n<p_cubMaxNp;++n;@inner(0)){
 	s_rhsHx[es][n] = rhsHx;
 	s_rhsHy[es][n] = rhsHy;
@@ -109,7 +109,7 @@ SOFTWARE.
       }
     }
     
-    for(int es=0;es<p_NblockS;++es;@inner(1)){
+    for(int es=0;es<p_NblockC;++es;@inner(1)){
       for(int n=0;n<p_cubMaxNp;++n;@inner(0)){
 	if(n<p_Np && r_e<Nelements){
 	  

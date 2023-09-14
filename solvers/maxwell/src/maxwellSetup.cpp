@@ -114,6 +114,8 @@ void maxwell_t::Setup(platform_t& _platform, mesh_t& _mesh,
     kernelInfo["defines/" "p_cubMaxNodes1"]= cubMaxNodes1;
     int cubMaxNp = std::max(mesh.Np, (mesh.cubNp));
     kernelInfo["defines/" "p_cubMaxNp"]= cubMaxNp;
+    int NblockC = std::max(1, blockMax/cubMaxNp);
+    kernelInfo["defines/" "p_NblockC"]= NblockC;
   }
   
   // set kernel name suffix
