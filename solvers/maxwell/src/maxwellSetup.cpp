@@ -170,4 +170,91 @@ void maxwell_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
   initialConditionKernel = platform.buildKernel(fileName, kernelName,
                                                   kernelInfo);
+
+  if (materialType==HETEROGENEOUS){
+    
+    materialNfields = 2;
+    
+    materialNlocal = mesh.Nelements*mesh.Np*materialNfields;
+    materialNhalo  = mesh.totalHaloPairs*mesh.Np*materialNfields;
+    materialNtotal = materialNhalo+materialNlocal;
+    
+    materialHalo = mesh.HaloTraceSetup(materialNfields);
+    materialCoefficients.malloc(materialNlocal);
+
+    for(dlong e=0;e<mesh.Nelements;++e){
+      for(dlong n=0;n<mesh.Np;++n){
+	dlong id = e*mesh.Np*materialNfields + n;
+	dfloat xn = mesh.x[e*mesh.Np+n];
+	dfloat yn = mesh.y[e*mesh.Np+n];
+	materialCoefficients[id] = 1.0; // mu
+	materialCoefficients[id+mesh.Np] = 1.0; // + 0.03*sin(xn*M_PI)*sin(yn*M_PI); // epsilon
+      }
+    }
+
+    // exchange halo 
+    materialHalo.Exchange(materialCoefficients, 1);
+
+    // compute integration trace of sqrt coefficient ratios
+    materialUpwindWeights.malloc(mesh.Nelements*mesh.intNfp*mesh.Nfaces*4); // dfloat4 not available here
+
+    for(dlong e=0;e<mesh.Nelements;++e){
+      for(int f=0;f<mesh.Nfaces;++f){
+	for(dlong n=0;n<mesh.intNfp;++n){
+	  dfloat fmuM = 0, fmuP = 0, fepsilonM = 0, fepsilonP = 0;
+	  for(dlong m=0;m<mesh.Nfp;++m){
+	    dlong fid  = m+f*mesh.Nfp+e*mesh.Nfp*mesh.Nfaces;
+	    dlong vidM = mesh.vmapM[fid];
+	    dlong vidP = mesh.vmapP[fid];
+	    dlong idM  = materialNfields*mesh.Np*(vidM/mesh.Np) + vidM%mesh.Np;
+	    dlong idP  = materialNfields*mesh.Np*(vidP/mesh.Np) + vidP%mesh.Np;
+
+	    dfloat muM      = materialCoefficients[idM];
+	    dfloat epsilonM = materialCoefficients[idM+mesh.Np];
+	    dfloat muP      = materialCoefficients[idP];
+	    dfloat epsilonP = materialCoefficients[idP+mesh.Np];
+	    
+            dfloat Inm = mesh.intInterp[m+n*mesh.Nfp+f*mesh.intNfp*mesh.Nfp];
+	    fmuM += Inm*muM;
+	    fepsilonM += Inm*epsilonM;
+	    fmuP += Inm*muP;
+	    fepsilonP += Inm*epsilonP;
+	  }
+	  dfloat ZM = sqrt(fmuM/fepsilonM);
+	  dfloat ZP = sqrt(fmuP/fepsilonP);
+	  dfloat YM = sqrt(fepsilonM/fmuM);
+	  dfloat YP = sqrt(fepsilonP/fmuP);
+
+	  dlong cid = 4*(e*mesh.intNfp*mesh.Nfaces + f*mesh.intNfp+n);
+
+	  materialUpwindWeights[cid+0] = YP/(YM+YP);
+	  materialUpwindWeights[cid+1] = 1./(YM+YP);
+	  materialUpwindWeights[cid+2] = ZP/(ZM+ZP);
+	  materialUpwindWeights[cid+3] = 1./(ZM+ZP);
+	}
+      }
+    }
+
+    o_materialUpwindWeights = platform.malloc<dfloat>(materialUpwindWeights);
+    
+    // interpolate to cubature nodes
+    materialInverseWeights.malloc(mesh.Nelements*mesh.cubNp*materialNfields);
+    for(dlong e=0;e<mesh.Nelements;++e){
+      for(dlong n=0;n<mesh.cubNp;++n){
+	dfloat cubMu = 0, cubEpsilon = 0;
+	for(dlong m=0;m<mesh.Np;++m){
+	  dfloat cubInm = mesh.cubInterp[n*mesh.Np+m];
+	  dlong id = e*mesh.Np*materialNfields + m;
+	  cubMu += cubInm*materialCoefficients[id];
+	  cubEpsilon += cubInm*materialCoefficients[id+mesh.Np];
+	}
+	dlong cubId = e*mesh.cubNp*materialNfields + n;
+	dfloat cubw = mesh.cubw[n];
+	materialInverseWeights[cubId] = cubw/cubMu;
+	materialInverseWeights[cubId+mesh.cubNp] = cubw/cubEpsilon;
+      }
+    }
+
+    o_materialInverseWeights = platform.malloc<dfloat>(materialInverseWeights);
+  }  
 }

@@ -44,20 +44,40 @@ void maxwell_t::rhsf(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, con
                o_Q,
                o_RHS);
 
-  if (mesh.NinternalElements)
-    surfaceKernel(mesh.NinternalElements,
-                  mesh.o_internalElementIds,
-                  mesh.o_sgeo,
-                  mesh.o_LIFT,
-                  mesh.o_vmapM,
-                  mesh.o_vmapP,
-                  mesh.o_EToB,
-                  T,
-                  mesh.o_x,
-                  mesh.o_y,
-                  mesh.o_z,
-                  o_Q,
-                  o_RHS);
+  if (mesh.NinternalElements){
+    if(materialType==ISOTROPIC){
+      surfaceKernel(mesh.NinternalElements,
+		    mesh.o_internalElementIds,
+		    mesh.o_sgeo,
+		    mesh.o_LIFT,
+		    mesh.o_vmapM,
+		    mesh.o_vmapP,
+		    mesh.o_EToB,
+		    T,
+		    mesh.o_x,
+		    mesh.o_y,
+		    mesh.o_z,
+		    o_Q,
+		    o_RHS);
+    }else{
+      heterogeneousSurfaceKernel(mesh.NinternalElements,
+				 mesh.o_internalElementIds,
+				 mesh.o_sgeo,
+				 mesh.o_LIFT,
+				 mesh.o_vmapM,
+				 mesh.o_vmapP,
+				 mesh.o_EToB,
+				 T,
+				 mesh.o_x,
+				 mesh.o_y,
+				 mesh.o_z,
+				 mesh.o_intInterp,
+				 mesh.o_intLIFT,
+				 o_materialUpwindWeights,
+				 o_Q,
+				 o_RHS);
+    }
+  }
 
   traceHalo.ExchangeFinish(o_Q, 1);
 

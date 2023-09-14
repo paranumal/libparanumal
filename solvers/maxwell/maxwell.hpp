@@ -67,6 +67,19 @@ public:
   memory<dfloat> q;
   deviceMemory<dfloat> o_q;
 
+  int   materialNfields;
+  dlong materialNlocal;
+  dlong materialNhalo;
+  dlong materialNtotal;
+  memory<dfloat> materialCoefficients;
+  memory<dfloat> materialInverseWeights;
+  memory<dfloat> materialUpwindWeights;
+  
+  deviceMemory<dfloat> o_materialInverseWeights;
+  deviceMemory<dfloat> o_materialUpwindWeights;
+  
+  ogs::halo_t materialHalo;
+  
   kernel_t volumeKernel;
   kernel_t surfaceKernel;
   kernel_t heterogeneousSurfaceKernel;
