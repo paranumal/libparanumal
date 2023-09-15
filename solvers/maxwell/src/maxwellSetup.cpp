@@ -182,28 +182,32 @@ void maxwell_t::Setup(platform_t& _platform, mesh_t& _mesh,
     materialNtotal = materialNhalo+materialNlocal;
     
     materialHalo = mesh.HaloTraceSetup(materialNfields);
-    materialCoefficients.malloc(materialNlocal);
+    materialCoefficients.malloc(materialNlocal+materialNhalo);
 
     for(dlong e=0;e<mesh.Nelements;++e){
       for(dlong n=0;n<mesh.Np;++n){
 	dlong id = e*mesh.Np*materialNfields + n;
 	dfloat xn = mesh.x[e*mesh.Np+n];
 	dfloat yn = mesh.y[e*mesh.Np+n];
+	dfloat zn = (mesh.dim==3) ? mesh.z[e*mesh.Np+n] :0;
+
 	materialCoefficients[id] = 1.0; // mu
 	materialCoefficients[id+mesh.Np] = 1.0 + 0.03*sin(xn*M_PI)*sin(yn*M_PI); // epsilon
       }
     }
 
-    // exchange halo 
+    // exchange halo  (so that we can access traces of the coefficients from elements on other ranks)
     materialHalo.Exchange(materialCoefficients, 1);
 
     // compute integration trace of sqrt coefficient ratios
     materialUpwindWeights.malloc(mesh.Nelements*mesh.intNfp*mesh.Nfaces*4); // dfloat4 not available here
 
+    // for each element extract traces of the coefficients and compute upwind coefficients at each interpolation node
     for(dlong e=0;e<mesh.Nelements;++e){
       for(int f=0;f<mesh.Nfaces;++f){
 	for(dlong n=0;n<mesh.intNfp;++n){
 	  dfloat fmuM = 0, fmuP = 0, fepsilonM = 0, fepsilonP = 0;
+	  // interpolate traces of material coefficients to flux quadrature/cubature
 	  for(dlong m=0;m<mesh.Nfp;++m){
 	    dlong fid  = m+f*mesh.Nfp+e*mesh.Nfp*mesh.Nfaces;
 	    dlong vidM = mesh.vmapM[fid];
