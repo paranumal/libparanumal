@@ -97,7 +97,7 @@ void maxwell_t::Setup(platform_t& _platform, mesh_t& _mesh,
   kernelInfo["defines/" "p_maxNodes"]= maxNodes;
 
   int blockMax = 256;
-  if (platform.device.mode() == "CUDA") blockMax = 512;
+  if (platform.device.mode() == "CUDA") blockMax = 1024;
 
   int NblockV = std::max(1, blockMax/mesh.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;

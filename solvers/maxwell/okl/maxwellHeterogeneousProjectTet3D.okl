@@ -46,7 +46,7 @@ SOFTWARE.
     @shared dfloat s_rhsEy[p_NblockC][p_cubMaxNp];
     @shared dfloat s_rhsEz[p_NblockC][p_cubMaxNp];
     
-    @exclusive dlong r_e, element;
+    @exclusive dlong r_e;
 
     for(int es=0;es<p_NblockC;++es;@inner(1)){
       for(int n=0;n<p_cubMaxNp;++n;@inner(0)){
@@ -70,14 +70,11 @@ SOFTWARE.
     for(int es=0;es<p_NblockC;++es;@inner(1)){
       for(int n=0;n<p_cubMaxNp;++n;@inner(0)){
 
-	const dlong cid = r_e*p_cubNp*2 + n;
-	const dfloat cubWH = cubInverseWeights[cid];
-	const dfloat cubWE = cubInverseWeights[cid+p_cubNp];
-	
 	rhsHx = 0; rhsHy = 0; rhsHz = 0;
 	rhsEx = 0; rhsEy = 0; rhsEz = 0;
 
-#pragma unroll p_Np
+	// p_Np
+#pragma unroll 4
 	for(int m=0;m<p_Np;++m){
 	  dfloat cInm = cubInterp[n+m*p_cubNp];
 	  rhsHx += cInm*s_rhsHx[es][m];
@@ -87,19 +84,22 @@ SOFTWARE.
 	  rhsEy += cInm*s_rhsEy[es][m];
 	  rhsEz += cInm*s_rhsEz[es][m];
 	}
+      }
+    }
 
+    for(int es=0;es<p_NblockC;++es;@inner(1)){
+      for(int n=0;n<p_cubMaxNp;++n;@inner(0)){
+
+	const dlong cid = r_e*p_cubNp*2 + n;
+	const dfloat cubWH = cubInverseWeights[cid];
+	const dfloat cubWE = cubInverseWeights[cid+p_cubNp];
 	rhsHx *= cubWH;
 	rhsHy *= cubWH;
 	rhsHz *= cubWH;
 	rhsEx *= cubWE;
 	rhsEy *= cubWE;
 	rhsEz *= cubWE;
-
-      }
-    }
-
-    for(int es=0;es<p_NblockC;++es;@inner(1)){
-      for(int n=0;n<p_cubMaxNp;++n;@inner(0)){
+	
 	s_rhsHx[es][n] = rhsHx;
 	s_rhsHy[es][n] = rhsHy;
 	s_rhsHz[es][n] = rhsHz;
@@ -111,11 +111,13 @@ SOFTWARE.
     
     for(int es=0;es<p_NblockC;++es;@inner(1)){
       for(int n=0;n<p_cubMaxNp;++n;@inner(0)){
+
 	if(n<p_Np && r_e<Nelements){
-	  
 	  rhsHx = 0; rhsHy = 0; rhsHz = 0;
 	  rhsEx = 0; rhsEy = 0; rhsEz = 0;
-	  
+
+	  // p_cubNp
+#pragma unroll 4
 	  for(int m=0;m<p_cubNp;++m){
 	    dfloat cPnm = cubProject[n+m*p_Np];
 	    rhsHx += cPnm*s_rhsHx[es][m];
@@ -125,7 +127,6 @@ SOFTWARE.
 	    rhsEy += cPnm*s_rhsEy[es][m];
 	    rhsEz += cPnm*s_rhsEz[es][m];
 	  }
-	  
 	  const dlong base = r_e*p_Np*p_Nfields+n;
 	  rhsq[base+0*p_Np] = rhsHx;
 	  rhsq[base+1*p_Np] = rhsHy;
