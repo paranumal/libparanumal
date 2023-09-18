@@ -63,24 +63,25 @@ SOFTWARE.
     for(int es=0;es<p_NblockC;++es;@inner(1)){
       for(int n=0;n<p_cubMaxNp;++n;@inner(0)){
 
-	const dlong cid = r_e*p_cubNp*2 + n;
-	const dfloat cubWH = cubInverseWeights[cid];
-	const dfloat cubWE = cubInverseWeights[cid+p_cubNp];
-	
-	rhsHx = 0; rhsHy = 0; rhsEz = 0;
-
+	if(r_e<Nelements){
+	  const dlong cid = r_e*p_cubNp*2 + n;
+	  const dfloat cubWH = cubInverseWeights[cid];
+	  const dfloat cubWE = cubInverseWeights[cid+p_cubNp];
+	  
+	  rhsHx = 0; rhsHy = 0; rhsEz = 0;
+	  
 #pragma unroll p_Np
-	for(int m=0;m<p_Np;++m){
-	  dfloat cInm = cubInterp[n+m*p_cubNp];
-	  rhsHx += cInm*s_rhsHx[es][m];
-	  rhsHy += cInm*s_rhsHy[es][m];
-	  rhsEz += cInm*s_rhsEz[es][m];
+	  for(int m=0;m<p_Np;++m){
+	    dfloat cInm = cubInterp[n+m*p_cubNp];
+	    rhsHx += cInm*s_rhsHx[es][m];
+	    rhsHy += cInm*s_rhsHy[es][m];
+	    rhsEz += cInm*s_rhsEz[es][m];
+	  }
+	  
+	  rhsHx *= cubWH;
+	  rhsHy *= cubWH;
+	  rhsEz *= cubWE;
 	}
-
-	rhsHx *= cubWH;
-	rhsHy *= cubWH;
-	rhsEz *= cubWE;
-
       }
     }
 
