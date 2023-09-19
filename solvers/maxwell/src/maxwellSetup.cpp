@@ -36,13 +36,20 @@ void maxwell_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
   // type of material
   materialType = (settings.compareSetting("MATERIAL TYPE", "ISOTROPIC")) ? ISOTROPIC:HETEROGENEOUS;
-
-  if(materialType==HETEROGENEOUS){
+  
+  //  if(materialType==HETEROGENEOUS){
+  {
     mesh.CubatureSetup();
-    //    mesh.CubaturePhysicalNodes();
+    mesh.CubaturePhysicalNodes();
   }
+
+  // look for PML elements
+  PmlSetup();
+  std::cout << "NpmlElements " << mesh.NpmlElements << std::endl;
+  std::cout << "NnonPmlElements " << mesh.NnonPmlElements << std::endl;
   
   Nfields = (mesh.dim==3) ? 6:3;
+  Npmlfields = (mesh.dim==2) ? 1:6;
 
   dlong Nlocal = mesh.Nelements*mesh.Np*Nfields;
   dlong Nhalo  = mesh.totalHaloPairs*mesh.Np*Nfields;
@@ -62,13 +69,28 @@ void maxwell_t::Setup(platform_t& _platform, mesh_t& _mesh,
                                         mesh.totalHaloPairs,
                                         mesh.Np, Nfields, platform, comm);
   } else if (settings.compareSetting("TIME INTEGRATOR","LSERK4")){
-    timeStepper.Setup<TimeStepper::lserk4>(mesh.Nelements,
-                                           mesh.totalHaloPairs,
-                                           mesh.Np, Nfields, platform, comm);
-  } else if (settings.compareSetting("TIME INTEGRATOR","DOPRI5")){
-    timeStepper.Setup<TimeStepper::dopri5>(mesh.Nelements,
-                                           mesh.totalHaloPairs,
-                                           mesh.Np, Nfields, platform, comm);
+    if(!mesh.NpmlElements){
+      timeStepper.Setup<TimeStepper::lserk4>(mesh.Nelements,
+					     mesh.totalHaloPairs,
+					     mesh.Np, Nfields, platform, comm);
+    }else{
+      timeStepper.Setup<TimeStepper::lserk4>(mesh.Nelements, mesh.NpmlElements,
+					     mesh.totalHaloPairs,
+					     mesh.Np, Nfields, Npmlfields,
+					     platform, comm);
+    }
+  }
+  else if (settings.compareSetting("TIME INTEGRATOR","DOPRI5")){
+    if(!mesh.NpmlElements){
+      timeStepper.Setup<TimeStepper::dopri5>(mesh.Nelements,
+					     mesh.totalHaloPairs,
+					     mesh.Np, Nfields, platform, comm);
+    }else{
+      timeStepper.Setup<TimeStepper::dopri5>(mesh.Nelements, mesh.NpmlElements,
+					     mesh.totalHaloPairs,
+					     mesh.Np, Nfields, Npmlfields,
+					     platform, comm);
+    }
   }
 
   // set penalty parameter
@@ -78,6 +100,10 @@ void maxwell_t::Setup(platform_t& _platform, mesh_t& _mesh,
   q.malloc(Nlocal+Nhalo);
   o_q = platform.malloc<dfloat>(Nlocal+Nhalo);
 
+  pmlq.malloc(mesh.NpmlElements*mesh.Np*Npmlfields);
+  o_pmlq = platform.malloc<dfloat>(mesh.NpmlElements*mesh.Np*Npmlfields);
+
+  
   mesh.MassMatrixKernelSetup(Nfields); // mass matrix operator
 
   // OCCA build stuff
@@ -89,6 +115,7 @@ void maxwell_t::Setup(platform_t& _platform, mesh_t& _mesh,
   kernelInfo["includes"] += dataFileName;
 
   kernelInfo["defines/" "p_Nfields"]= Nfields;
+  kernelInfo["defines/" "p_Npmlfields"]= Npmlfields;
 
   const dfloat p_half = 1./2.;
   kernelInfo["defines/" "p_half"]= p_half;
@@ -112,11 +139,13 @@ void maxwell_t::Setup(platform_t& _platform, mesh_t& _mesh,
     kernelInfo["defines/" "p_cubMaxNodes"]= cubMaxNodes;
     int cubMaxNodes1 = std::max(mesh.Np, (mesh.intNfp));
     kernelInfo["defines/" "p_cubMaxNodes1"]= cubMaxNodes1;
-    int cubMaxNp = std::max(mesh.Np, (mesh.cubNp));
-    kernelInfo["defines/" "p_cubMaxNp"]= cubMaxNp;
-    int NblockC = std::max(1, blockMax/cubMaxNp);
-    kernelInfo["defines/" "p_NblockC"]= NblockC;
   }
+
+  int cubMaxNp = std::max(mesh.Np, (mesh.cubNp));
+  kernelInfo["defines/" "p_cubMaxNp"]= cubMaxNp;
+  
+  int NblockC = std::max(1, blockMax/cubMaxNp);
+  kernelInfo["defines/" "p_NblockC"]= NblockC;
   
   // set kernel name suffix
   std::string suffix = mesh.elementSuffix();
@@ -131,6 +160,13 @@ void maxwell_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
   volumeKernel =  platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
+
+  if(mesh.NpmlElements){
+    kernelName = "maxwellPmlVolume" + suffix;
+    pmlVolumeKernel = platform.buildKernel(fileName, kernelName,
+					   kernelInfo);
+  }
+  
   // kernels from surface file
   fileName   = oklFilePrefix + "maxwellSurface" + suffix + oklFileSuffix;
   kernelName = "maxwellSurface" + suffix;
@@ -138,6 +174,12 @@ void maxwell_t::Setup(platform_t& _platform, mesh_t& _mesh,
   surfaceKernel = platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
 
+  if(mesh.NpmlElements){
+    kernelName = "maxwellPmlSurface" + suffix;
+    pmlSurfaceKernel = platform.buildKernel(fileName, kernelName,
+					    kernelInfo);
+  }
+  
   // kernels from error file
   fileName   = oklFilePrefix + "maxwellError" + suffix + oklFileSuffix;
   kernelName = "maxwellError" + suffix;
@@ -160,6 +202,14 @@ void maxwell_t::Setup(platform_t& _platform, mesh_t& _mesh,
     heterogeneousProjectKernel = platform.buildKernel(fileName, kernelName,
 						      kernelInfo);
     
+  }
+
+  if(mesh.NpmlElements){
+    fileName   = oklFilePrefix + "maxwellPmlTerms" + suffix + oklFileSuffix;
+    kernelName = "maxwellCubaturePmlTerms" + suffix;
+    
+    pmlCubatureTermsKernel = platform.buildKernel(fileName, kernelName,
+						  kernelInfo);
   }
   
   if (mesh.dim==2) {

@@ -1,0 +1,204 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+// Efficient and stable perfectly matched layer for CEM
+// Kenneth Duru, Gunilla Kreiss 
+// see: https://doi.org/10.1016/j.apnum.2013.09.005 
+
+@kernel void maxwellCubaturePmlTermsTet3D(const dlong Npmlelements,
+					  @restrict const  dlong *  pmlElementIds,
+					  @restrict const  dlong *  pmlIds,
+					  @restrict const  dfloat * cubPmlSigma,
+					  @restrict const  dfloat * cubInterp, // interpolate to cubature nodes	
+					  @restrict const  dfloat * cubProject, // project from cubature to interpolation nodes
+					  @restrict const  dfloat * q,
+					  @restrict const  dfloat * pmlq,
+					  @restrict        dfloat * rhsq,
+					  @restrict        dfloat * rhspmlq){
+  
+  // for all elements
+  for(dlong e=0;e<Npmlelements;++e;@outer(0)){
+
+    // reduces shared storage by processing one face at a time
+    @shared dfloat s_Hx[p_cubMaxNp];
+    @shared dfloat s_Hy[p_cubMaxNp];
+    @shared dfloat s_Hz[p_cubMaxNp];
+    @shared dfloat s_Ex[p_cubMaxNp];
+    @shared dfloat s_Ey[p_cubMaxNp];
+    @shared dfloat s_Ez[p_cubMaxNp];
+    @shared dfloat s_Vx[p_cubMaxNp];
+    @shared dfloat s_Vy[p_cubMaxNp];
+    @shared dfloat s_Vz[p_cubMaxNp];
+    @shared dfloat s_Wx[p_cubMaxNp];
+    @shared dfloat s_Wy[p_cubMaxNp];
+    @shared dfloat s_Wz[p_cubMaxNp];
+    @shared dfloat s_rhsVx[p_cubMaxNp];
+    @shared dfloat s_rhsVy[p_cubMaxNp];
+    @shared dfloat s_rhsVz[p_cubMaxNp];
+    @shared dfloat s_rhsWx[p_cubMaxNp];
+    @shared dfloat s_rhsWy[p_cubMaxNp];
+    @shared dfloat s_rhsWz[p_cubMaxNp];
+    
+    @exclusive dlong element, pmlElement;
+    
+    for(int n=0;n<p_cubMaxNp;++n;@inner(0)){
+      if(n<p_Np){
+	element = pmlElementIds[e];
+	pmlElement = pmlIds[e];
+	const dlong base = element*p_Np*p_Nfields + n;
+	const dlong pmlbase = pmlElement*p_Np*p_Npmlfields + n;
+	
+	s_Hx[n] = q[base+0*p_Np];
+	s_Hy[n] = q[base+1*p_Np];
+	s_Hz[n] = q[base+2*p_Np];
+	s_Ex[n] = q[base+3*p_Np];
+	s_Ey[n] = q[base+4*p_Np];
+	s_Ez[n] = q[base+5*p_Np];
+	s_Vx[n] = pmlq[pmlbase+0*p_Np];
+	s_Vy[n] = pmlq[pmlbase+1*p_Np];
+	s_Vz[n] = pmlq[pmlbase+2*p_Np];
+	s_Wx[n] = pmlq[pmlbase+3*p_Np];
+	s_Wy[n] = pmlq[pmlbase+4*p_Np];
+	s_Wz[n] = pmlq[pmlbase+5*p_Np];
+	s_rhsVx[n] = rhspmlq[pmlbase+0*p_Np];
+	s_rhsVy[n] = rhspmlq[pmlbase+1*p_Np];
+	s_rhsVz[n] = rhspmlq[pmlbase+2*p_Np];
+	s_rhsWx[n] = rhspmlq[pmlbase+3*p_Np];
+	s_rhsWy[n] = rhspmlq[pmlbase+4*p_Np];
+	s_rhsWz[n] = rhspmlq[pmlbase+5*p_Np];
+      }
+    }
+
+    @exclusive dfloat cubHx, cubHy, cubEz, cubWz, cubRhsWz;
+    
+    for(int n=0;n<p_cubMaxNp;++n;@inner(0)){
+      cubHx = 0; cubHy = 0; cubHz = 0;
+      cubEx = 0; cubEy = 0; cubEz = 0;
+      cubVx = 0; cubVy = 0; cubVz = 0;
+      cubWx = 0; cubWy = 0; cubWz = 0;
+      
+      cubRhsVx = 0; cubRhsVy = 0; cubRhsVz = 0;
+      cubRhsWx = 0; cubRhsWy = 0; cubRhsWz = 0;
+      
+#pragma unroll p_Np
+      for(int m=0;m<p_Np;++m){
+	dfloat cInm = cubInterp[n+m*p_cubNp];
+	cubHx += cInm*s_Hx[m];
+	cubHy += cInm*s_Hy[m];
+	cubHz += cInm*s_Hz[m];
+	cubEx += cInm*s_Ex[m];
+	cubEy += cInm*s_Ey[m];
+	cubEz += cInm*s_Ez[m];
+	cubVx += cInm*s_Vx[m];
+	cubVy += cInm*s_Vy[m];
+	cubVz += cInm*s_Vz[m];
+	cubWx += cInm*s_Wx[m];
+	cubWy += cInm*s_Wy[m];
+	cubWz += cInm*s_Wz[m];
+	
+	cubRhsVx += cInm*s_rhsVx[m];
+	cubRhsVy += cInm*s_rhsVy[m];
+	cubRhsVz += cInm*s_rhsVz[m];
+	cubRhsWx += cInm*s_rhsWx[m];
+	cubRhsWy += cInm*s_rhsWy[m];
+	cubRhsWz += cInm*s_rhsWz[m];
+      }
+    }
+    
+    for(int n=0;n<p_cubMaxNp;++n;@inner(0)){
+
+      dfloat cubSigmaX = cubPmlSigma[p_dim*pmlElement*p_cubNp + n];
+      dfloat cubSigmaY = cubPmlSigma[p_dim*pmlElement*p_cubNp + n + p_cubNp];
+      dfloat cubSigmaZ = cubPmlSigma[p_dim*pmlElement*p_cubNp + n + 2*p_cubNp];
+      
+      // now use these for RHS 
+      s_Hx[n] = -cubSigmaY*cubHx;
+      s_Hy[n] = -cubSigmaX*cubHy;
+      s_Hz[n] = -cubSigmaX*cubHz;
+      s_Ex[n] = -cubSigmaY*cubHx;
+      s_Ey[n] = -cubSigmaX*cubHy;
+      s_Ez[n] = -cubSigmaX*cubHz;
+      s_Ez[n] = -cubSigmaX*cubEz;
+      s_Vx[n] = -cubSigmaZ*cubVx + (cubSigmaZ-cubSigmaY)*cubRhsVx;
+      s_Vy[n] = -cubSigmaZ*cubVy + (cubSigmaX-cubSigmaZ)*cubRhsVy;
+      s_Vz[n] = -cubSigmaY*cubVz + (cubSigmaY-cubSigmaX)*cubRhsVz;
+      s_Wx[n] = -cubSigmaZ*cubWx + (cubSigmaY-cubSigmaZ)*cubRhsWx;
+      s_Wy[n] = -cubSigmaZ*cubWy + (cubSigmaZ-cubSigmaX)*cubRhsWy;
+      s_Wz[n] = -cubSigmaY*cubWz + (cubSigmaX-cubSigmaY)*cubRhsWz;
+    }
+    
+    for(int n=0;n<p_cubMaxNp;++n;@inner(0)){
+      if(n<p_Np){
+	
+	const dlong base = element*p_Np*p_Nfields+n;
+	const dlong pmlbase = pmlElement*p_Np*p_Npmlfields+n;
+
+	dfloat rhsHx = rhsq[base+0*p_Np] + pmlq[pmlbase+0*p_Np];
+	dfloat rhsHy = rhsq[base+1*p_Np] + pmlq[pmlbase+1*p_Np];
+	dfloat rhsHz = rhsq[base+2*p_Np] + pmlq[pmlbase+2*p_Np];
+	dfloat rhsEx = rhsq[base+3*p_Np] + pmlq[pmlbase+3*p_Np];
+	dfloat rhsEy = rhsq[base+4*p_Np] + pmlq[pmlbase+4*p_Np];
+	dfloat rhsEz = rhsq[base+5*p_Np] + pmlq[pmlbase+5*p_Np];
+	dfloat rhsVx = 0;
+	dfloat rhsVy = 0;
+	dfloat rhsVz = 0;
+	dfloat rhsWx = 0;
+	dfloat rhsWy = 0;
+	dfloat rhsWz = 0;
+	
+	for(int m=0;m<p_cubNp;++m){
+	  dfloat cPnm = cubProject[n+m*p_Np];
+	  rhsHx += cPnm*s_Hx[m];
+	  rhsHy += cPnm*s_Hy[m];
+	  rhsHz += cPnm*s_Hz[m];
+	  rhsEx += cPnm*s_Ex[m];
+	  rhsEy += cPnm*s_Ey[m];
+	  rhsEz += cPnm*s_Ez[m];
+	  rhsVx += cPnm*s_Vx[m];
+	  rhsVy += cPnm*s_Vy[m];
+	  rhsVz += cPnm*s_Vz[m];
+	  rhsWx += cPnm*s_Wx[m];
+	  rhsWy += cPnm*s_Wy[m];
+	  rhsWz += cPnm*s_Wz[m];
+	}
+	
+	rhsq[base+0*p_Np] = rhsHx;
+	rhsq[base+1*p_Np] = rhsHy;
+	rhsq[base+2*p_Np] = rhsHz;
+	rhsq[base+3*p_Np] = rhsEx;
+	rhsq[base+4*p_Np] = rhsEy;
+	rhsq[base+5*p_Np] = rhsEz;
+	
+	rhspmlq[pmlbase+0*p_Np] = rhsVx;
+	rhspmlq[pmlbase+1*p_Np] = rhsVy;
+	rhspmlq[pmlbase+2*p_Np] = rhsVz;
+	rhspmlq[pmlbase+3*p_Np] = rhsWx;
+	rhspmlq[pmlbase+4*p_Np] = rhsWy;
+	rhspmlq[pmlbase+5*p_Np] = rhsWz;
+      }
+    }
+  }
+}

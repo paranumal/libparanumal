@@ -57,6 +57,7 @@ public:
   mesh_t mesh;
 
   int Nfields;
+  int Npmlfields;
 
   int materialType;
   
@@ -67,6 +68,19 @@ public:
   memory<dfloat> q;
   deviceMemory<dfloat> o_q;
 
+  // Pml
+  int pmlOrder;
+  dfloat  sigmaXmax, sigmaYmax, sigmaZmax;
+  memory<dfloat> pmlSigma;
+  deviceMemory<dfloat> o_pmlSigma;
+  dfloat pmlAlpha;
+
+  memory<dfloat> pmlq;
+  deviceMemory<dfloat> o_pmlq;
+  
+  // Flag for using cubature integration for sigma terms in pml
+  int pmlcubature;
+  
   int   materialNfields;
   dlong materialNlocal;
   dlong materialNhalo;
@@ -82,6 +96,11 @@ public:
   
   kernel_t volumeKernel;
   kernel_t surfaceKernel;
+
+  kernel_t pmlVolumeKernel;
+  kernel_t pmlSurfaceKernel;
+  kernel_t pmlCubatureTermsKernel;
+  
   kernel_t heterogeneousSurfaceKernel;
   kernel_t heterogeneousProjectKernel;
 
@@ -105,8 +124,29 @@ public:
   void PlotFields(memory<dfloat> Q, const std::string fileName);
 
   void rhsf(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
+  void rhsf_pml(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_pmlQ,
+                deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_pmlRHS, const dfloat T);
+
+  void rhsVolume(dlong N, deviceMemory<dlong>& o_ids,
+		 deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS);
+
+  void rhsSurface(dlong N, deviceMemory<dlong>& o_ids,
+		  deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T);
+
+
+  void rhsPmlVolume(dlong N, deviceMemory<dlong>& o_ids, deviceMemory<dlong>& o_pmlids,
+		    deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_pmlQ,
+		    deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_pmlRHS);
+
+  
+  void rhsPmlSurface(dlong N, deviceMemory<dlong>& o_ids, deviceMemory<dlong>& o_pmlids,
+		     deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_pmlQ,
+		     deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_pmlRHS, const dfloat T);
+
 
   dfloat MaxWaveSpeed();
+
+  void PmlSetup();
 };
 
 #endif

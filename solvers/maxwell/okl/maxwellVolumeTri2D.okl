@@ -27,6 +27,7 @@ SOFTWARE.
 
 // isotropic maxwell
 @kernel void maxwellVolumeTri2D(const dlong Nelements,
+				@restrict const  dlong *  elementIds,
 				@restrict const  dfloat *  vgeo,
 				@restrict const  dfloat *  D,
 				@restrict const  dfloat *  q,
@@ -37,15 +38,19 @@ SOFTWARE.
     @shared dfloat s_F[p_Nfields][p_Np];
     @shared dfloat s_G[p_Nfields][p_Np];
 
+    @exclusive dlong element;
+    
     for(int n=0;n<p_Np;++n;@inner(0)){
 
+      element = elementIds[e];
+      
       // prefetch geometric factors (constant on triangle)
-      const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
-      const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
-      const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
-      const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+      const dfloat drdx = vgeo[element*p_Nvgeo + p_RXID];
+      const dfloat drdy = vgeo[element*p_Nvgeo + p_RYID];
+      const dfloat dsdx = vgeo[element*p_Nvgeo + p_SXID];
+      const dfloat dsdy = vgeo[element*p_Nvgeo + p_SYID];
 
-      const dlong  qbase = e*p_Np*p_Nfields + n;
+      const dlong  qbase = element*p_Np*p_Nfields + n;
       const dfloat Hx = q[qbase+0*p_Np];
       const dfloat Hy = q[qbase+1*p_Np];
       const dfloat Ez = q[qbase+2*p_Np];
@@ -94,7 +99,7 @@ SOFTWARE.
                 +Dsni*s_G[2][i];
       }
 
-      const dlong base = e*p_Np*p_Nfields + n;
+      const dlong base = element*p_Np*p_Nfields + n;
 
       // move to rhs
       rhsq[base+0*p_Np] = rhsq0;
@@ -104,4 +109,86 @@ SOFTWARE.
   }
 }
 
+// PML - eps, mu => constant in PML
+@kernel void maxwellPmlVolumeTri2D(const dlong Nelements,
+				   @restrict const  dlong *  pmlElementIds,
+				   @restrict const  dlong *  pmlIds,
+				   @restrict const  dfloat *  vgeo,
+				   @restrict const  dfloat *  D,
+				   @restrict const  dfloat *  q,
+				   @restrict const  dfloat *  pmlq,
+				   @restrict dfloat *  rhsq,
+				   @restrict dfloat *  rhspmlq){
 
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_Hx[p_Np];
+    @shared dfloat s_Hy[p_Np];
+    @shared dfloat s_Ez[p_Np];
+
+    @exclusive dlong element, pmlElement;
+    
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      // element from all elements
+      element = pmlElementIds[e];
+      // element in pml element
+      pmlElement = pmlIds[e];
+      const dlong  qbase = element*p_Np*p_Nfields + n;
+      const dfloat Hx = q[qbase+0*p_Np];
+      const dfloat Hy = q[qbase+1*p_Np];
+      const dfloat Ez = q[qbase+2*p_Np];
+
+      s_Hx[n] = Hx;
+      s_Hy[n] = Hy;
+      s_Ez[n] = Ez;
+    }
+
+
+    for(int n=0;n<p_Np;++n;@inner(0)){
+
+      // prefetch geometric factors (constant on triangle)
+      const dlong gbase = element*p_Nvgeo;
+      const dfloat drdx = vgeo[gbase + p_RXID];
+      const dfloat drdy = vgeo[gbase + p_RYID];
+      const dfloat dsdx = vgeo[gbase + p_SXID];
+      const dfloat dsdy = vgeo[gbase + p_SYID];
+
+      // dH/dt = -curl E
+      // dE/dt =  curl H
+      
+      dfloat dHxdr = 0, dHxds = 0;
+      dfloat dHydr = 0, dHyds = 0;
+      dfloat dEzdr = 0, dEzds = 0;
+
+      for(int i=0;i<p_Np;++i){
+        const dfloat Drni = D[n+i*p_Np+0*p_Np*p_Np];
+        const dfloat Dsni = D[n+i*p_Np+1*p_Np*p_Np];
+
+	const dfloat Hxi = s_Hx[i];
+	const dfloat Hyi = s_Hy[i];
+	const dfloat Ezi = s_Ez[i];
+	
+	dHxdr += Drni*Hxi; dHxds += Dsni*Hxi;
+	dHydr += Drni*Hyi; dHyds += Dsni*Hyi;
+	dEzdr += Drni*Ezi; dEzds += Dsni*Ezi;
+      }
+      
+      const dfloat dHxdy = drdy*dHxdr + dsdy*dHxds;
+      const dfloat dHydx = drdx*dHydr + dsdx*dHyds;
+      const dfloat dEzdx = drdx*dEzdr + dsdx*dEzds;
+      const dfloat dEzdy = drdy*dEzdr + dsdy*dEzds;
+      
+      const dlong base    = element*p_Np*p_Nfields + n;
+      const dlong pmlbase = pmlElement*p_Npmlfields*p_Np + n;
+      
+      // store rhs for state
+      rhsq[base+0*p_Np] = -dEzdy;
+      rhsq[base+1*p_Np] =  dEzdx;
+      rhsq[base+2*p_Np] =  dHydx - dHxdy;
+
+      // store rhs for pmlstate
+      rhspmlq[pmlbase+0*p_Np] = dHxdy;
+
+    }
+  }
+}

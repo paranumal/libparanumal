@@ -49,7 +49,10 @@ void maxwell_t::Run(){
   dfloat dt = cfl*hmin/(vmax*(mesh.N+1.)*(mesh.N+1.));
   timeStepper.SetTimeStep(dt);
 
-  timeStepper.Run(*this, o_q, startTime, finalTime);
+  if(!mesh.NpmlElements)
+    timeStepper.Run(*this, o_q, startTime, finalTime);
+  else
+    timeStepper.RunWithPml(*this, o_q, o_pmlq, startTime, finalTime);
 
   // output norm of final solution
   {

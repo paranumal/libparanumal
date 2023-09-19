@@ -27,13 +27,6 @@
 
 // isotropic maxwell
 
-// thread loop over elements
-@kernel void maxwellVolumeTet3D(const dlong Nelements,
-				@restrict const  dfloat *  vgeo,
-				@restrict const  dfloat *  D,
-				@restrict const  dfloat *  q,
-				@restrict dfloat *  rhsq){
-
 #define p_Nvol 1
 
 #if p_N==1
@@ -53,6 +46,13 @@
 #else
 #define p_NblockV 1
 #endif
+
+// thread loop over elements
+@kernel void maxwellVolumeTet3D(const dlong Nelements,
+				@restrict const  dfloat *  vgeo,
+				@restrict const  dfloat *  D,
+				@restrict const  dfloat *  q,
+				@restrict dfloat *  rhsq){
 
 
   for(dlong eo=0;eo<Nelements;eo+=(p_Nvol*p_NblockV);@outer(0)){
@@ -188,5 +188,172 @@
     }
   }
 }
+
+
+
+// thread loop over elements
+@kernel void maxwellPmlVolumeTet3D(const dlong Npmlelements,
+				   @restrict const  dlong *  pmlElementIds,
+				   @restrict const  dlong *  pmlIds,
+				   @restrict const  dfloat *  vgeo,
+				   @restrict const  dfloat *  D,
+				   @restrict const  dfloat *  q,
+				   @restrict const  dfloat *  pmlq,
+				   @restrict dfloat *  rhsq,
+				   @restrict dfloat *  rhspmlq){
+  
+
+  for(dlong eo=0;eo<Npmlelements;eo+=(p_Nvol*p_NblockV);@outer(0)){
+
+    @shared dfloat s_Hx[p_Nvol][p_NblockV][p_Np];
+    @shared dfloat s_Hy[p_Nvol][p_NblockV][p_Np];
+    @shared dfloat s_Hz[p_Nvol][p_NblockV][p_Np];
+    @shared dfloat s_Ex[p_Nvol][p_NblockV][p_Np];
+    @shared dfloat s_Ey[p_Nvol][p_NblockV][p_Np];
+    @shared dfloat s_Ez[p_Nvol][p_NblockV][p_Np];
+
+    @exclusive dlong element, pmlElement;
+    
+    for(int et=0;et<p_NblockV;++et;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
+
+#pragma unroll p_Nvol
+	for(int es=0;es<p_Nvol;++es){
+
+	  const dlong e = es*p_NblockV + et + eo;
+
+	  if(e<Npmlelements){
+
+	    element = pmlElementIds[e];
+	    pmlElement = pmlIds[e];
+	    
+	    const dlong  qbase = element*p_Np*p_Nfields + n;
+	    s_Hx[es][et][n] = q[qbase+0*p_Np];
+	    s_Hy[es][et][n] = q[qbase+1*p_Np];
+	    s_Hz[es][et][n] = q[qbase+2*p_Np];
+	    s_Ex[es][et][n] = q[qbase+3*p_Np];
+	    s_Ey[es][et][n] = q[qbase+4*p_Np];
+	    s_Ez[es][et][n] = q[qbase+5*p_Np];
+	  }
+	}
+      }
+    }
+
+    for(int et=0;et<p_NblockV;++et;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
+
+        dfloat r_dHxdr[p_Nvol] = {0.f}, r_dHxds[p_Nvol] = {0.f}, r_dHxdt[p_Nvol] = {0.f};
+        dfloat r_dHydr[p_Nvol] = {0.f}, r_dHyds[p_Nvol] = {0.f}, r_dHydt[p_Nvol] = {0.f};
+        dfloat r_dHzdr[p_Nvol] = {0.f}, r_dHzds[p_Nvol] = {0.f}, r_dHzdt[p_Nvol] = {0.f};
+
+        dfloat r_dExdr[p_Nvol] = {0.f}, r_dExds[p_Nvol] = {0.f}, r_dExdt[p_Nvol] = {0.f};
+        dfloat r_dEydr[p_Nvol] = {0.f}, r_dEyds[p_Nvol] = {0.f}, r_dEydt[p_Nvol] = {0.f};
+        dfloat r_dEzdr[p_Nvol] = {0.f}, r_dEzds[p_Nvol] = {0.f}, r_dEzdt[p_Nvol] = {0.f};
+
+	
+#pragma unroll p_Np
+	for(int m=0;m<p_Np;++m){
+
+	  const dfloat Drnm = D[n+m*p_Np];
+	  const dfloat Dsnm = D[n+m*p_Np+1*p_Np*p_Np];
+	  const dfloat Dtnm = D[n+m*p_Np+2*p_Np*p_Np];
+
+#pragma unroll p_Nvol
+	  for(int es=0;es<p_Nvol;++es){
+	    const dfloat Hxm = s_Hx[es][et][m];
+	    const dfloat Hym = s_Hy[es][et][m];
+	    const dfloat Hzm = s_Hz[es][et][m];
+	    const dfloat Exm = s_Ex[es][et][m];
+	    const dfloat Eym = s_Ey[es][et][m];
+	    const dfloat Ezm = s_Ez[es][et][m];
+
+	    r_dHxdr[es] += Drnm*Hxm;
+	    r_dHxds[es] += Dsnm*Hxm;
+	    r_dHxdt[es] += Dtnm*Hxm;
+	    r_dHydr[es] += Drnm*Hym;
+	    r_dHyds[es] += Dsnm*Hym;
+	    r_dHydt[es] += Dtnm*Hym;
+	    r_dHzdr[es] += Drnm*Hzm;
+	    r_dHzds[es] += Dsnm*Hzm;
+	    r_dHzdt[es] += Dtnm*Hzm;
+
+	    r_dExdr[es] += Drnm*Exm;
+	    r_dExds[es] += Dsnm*Exm;
+	    r_dExdt[es] += Dtnm*Exm;
+	    r_dEydr[es] += Drnm*Eym;
+	    r_dEyds[es] += Dsnm*Eym;
+	    r_dEydt[es] += Dtnm*Eym;
+	    r_dEzdr[es] += Drnm*Ezm;
+	    r_dEzds[es] += Dsnm*Ezm;
+	    r_dEzdt[es] += Dtnm*Ezm;
+	  }
+	}
+
+#pragma unroll p_Nvol
+	for(int es=0;es<p_Nvol;++es){
+
+	  const dlong e = es*p_NblockV + et + eo;
+
+	  if(e<Npmlelements){
+	    // prefetch geometric factors (constant on triangle)
+	    const dlong gbase = element*p_Nvgeo;
+	    const dfloat drdx = vgeo[gbase + p_RXID];
+	    const dfloat drdy = vgeo[gbase + p_RYID];
+	    const dfloat drdz = vgeo[gbase + p_RZID];
+	    const dfloat dsdx = vgeo[gbase + p_SXID];
+	    const dfloat dsdy = vgeo[gbase + p_SYID];
+	    const dfloat dsdz = vgeo[gbase + p_SZID];
+	    const dfloat dtdx = vgeo[gbase + p_TXID];
+	    const dfloat dtdy = vgeo[gbase + p_TYID];
+	    const dfloat dtdz = vgeo[gbase + p_TZID];
+
+	    const dlong base = element*p_Np*p_Nfields + n;
+
+	    const dfloat dHxdy = drdy*r_dHxdr[es] + dsdy*r_dHxds[es] + dtdy*r_dHxdt[es];
+	    const dfloat dHxdz = drdz*r_dHxdr[es] + dsdz*r_dHxds[es] + dtdz*r_dHxdt[es];
+
+	    const dfloat dHydx = drdx*r_dHydr[es] + dsdx*r_dHyds[es] + dtdx*r_dHydt[es];
+	    const dfloat dHydz = drdz*r_dHydr[es] + dsdz*r_dHyds[es] + dtdz*r_dHydt[es];
+
+	    const dfloat dHzdx = drdx*r_dHzdr[es] + dsdx*r_dHzds[es] + dtdx*r_dHzdt[es];
+	    const dfloat dHzdy = drdy*r_dHzdr[es] + dsdy*r_dHzds[es] + dtdy*r_dHzdt[es];
+
+	    const dfloat dExdy = drdy*r_dExdr[es] + dsdy*r_dExds[es] + dtdy*r_dExdt[es];
+	    const dfloat dExdz = drdz*r_dExdr[es] + dsdz*r_dExds[es] + dtdz*r_dExdt[es];
+
+	    const dfloat dEydx = drdx*r_dEydr[es] + dsdx*r_dEyds[es] + dtdx*r_dEydt[es];
+	    const dfloat dEydz = drdz*r_dEydr[es] + dsdz*r_dEyds[es] + dtdz*r_dEydt[es];
+
+	    const dfloat dEzdx = drdx*r_dEzdr[es] + dsdx*r_dEzds[es] + dtdx*r_dEzdt[es];
+	    const dfloat dEzdy = drdy*r_dEzdr[es] + dsdy*r_dEzds[es] + dtdy*r_dEzdt[es];
+
+	    // dH/dt = -curl E
+	    rhsq[base+0*p_Np] = -(dEzdy-dEydz);
+	    rhsq[base+1*p_Np] = -(dExdz-dEzdx);
+	    rhsq[base+2*p_Np] = -(dEydx-dExdy);
+
+	    // dE/dt =  curl H
+	    rhsq[base+3*p_Np] =  (dHzdy-dHydz);
+	    rhsq[base+4*p_Np] =  (dHxdz-dHzdx);
+	    rhsq[base+5*p_Np] =  (dHydx-dHxdy);
+
+	    dlong pmlbase = pmlelement*p_Np*p_Npmlfields + n;
+	    rhspmlq[pmlbase+0*p_Np] = dEydz;
+	    rhspmlq[pmlbase+1*p_Np] = dEzdz;
+	    rhspmlq[pmlbase+2*p_Np] = dExdy;
+	    rhspmlq[pmlbase+3*p_Np] = dHydz;
+	    rhspmlq[pmlbase+4*p_Np] = dHxdz;
+	    rhspmlq[pmlbase+5*p_Np] = dHxdy;
+	  }
+	}
+      }
+    }
+  }
+}
+
+
+
+
+
 
 

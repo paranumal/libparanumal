@@ -41,57 +41,21 @@ void upwind(const dfloat nx,
             const dfloat ExP,
             const dfloat EyP,
             const dfloat EzP,
-	    dfloat *fluxHx,
-            dfloat *fluxHy,
-            dfloat *fluxHz,
-	    dfloat *fluxEx,
-            dfloat *fluxEy,
-            dfloat *fluxEz){
+	    dfloat *HxU,
+            dfloat *HyU,
+            dfloat *HzU,
+	    dfloat *ExU,
+            dfloat *EyU,
+            dfloat *EzU){
 
-  /*
-    ORIGINAL H&W nodal DG book code
+    
+  *HxU = p_half*( HxP + HxM - ny*(EzP-EzM) + nz*(EyP-EyM) );
+  *HyU = p_half*( HyP + HyM - nz*(ExP-ExM) + nx*(EzP-EzM) );
+  *HzU = p_half*( HzP + HzM - nx*(EyP-EyM) + ny*(ExP-ExM) );
 
-    % form field differences at faces                                                                                                                                                     
-    dHx(:)  = Hx(vmapP)-Hx(vmapM);  dEx(:)  = Ex(vmapP)-Ex(vmapM);
-    dHy(:)  = Hy(vmapP)-Hy(vmapM);  dEy(:)  = Ey(vmapP)-Ey(vmapM);
-    dHz(:)  = Hz(vmapP)-Hz(vmapM);  dEz(:)  = Ez(vmapP)-Ez(vmapM);
-    
-    % make boundary conditions all reflective (Ez+ = -Ez-)                                                                                                                                
-    dHx(mapB) = 0;  dEx(mapB) = -2*Ex(vmapB);
-    dHy(mapB) = 0;  dEy(mapB) = -2*Ey(vmapB);
-    dHz(mapB) = 0;  dEz(mapB) = -2*Ez(vmapB);
-    
-    alpha=1; % => full upwinding                                                                                                                                                          
-    
-    ndotdH = nx.*dHx + ny.*dHy + nz.*dHz;
-    ndotdE = nx.*dEx + ny.*dEy + nz.*dEz;
-
-    fluxHx = -ny.*dEz + nz.*dEy + alpha*(dHx - ndotdH.*nx);
-    fluxHy = -nz.*dEx + nx.*dEz + alpha*(dHy - ndotdH.*ny);
-    fluxHz = -nx.*dEy + ny.*dEx + alpha*(dHz - ndotdH.*nz);
-    
-    fluxEx =  ny.*dHz - nz.*dHy + alpha*(dEx - ndotdE.*nx);
-    fluxEy =  nz.*dHx - nx.*dHz + alpha*(dEy - ndotdE.*ny);
-    fluxEz =  nx.*dHy - ny.*dHx + alpha*(dEz - ndotdE.*nz);
-  */
-
-  //  form field differences at faces
-  dfloat dHx = HxP - HxM, dEx = ExP - ExM;
-  dfloat dHy = HyP - HyM, dEy = EyP - EyM;
-  dfloat dHz = HzP - HzM, dEz = EzP - EzM;
-    
-  dfloat alpha=1; // => full upwinding
-  
-  dfloat ndotdH = nx*dHx + ny*dHy + nz*dHz;
-  dfloat ndotdE = nx*dEx + ny*dEy + nz*dEz;
-
-  *fluxHx = -ny*dEz + nz*dEy + alpha*(dHx - ndotdH*nx);
-  *fluxHy = -nz*dEx + nx*dEz + alpha*(dHy - ndotdH*ny);
-  *fluxHz = -nx*dEy + ny*dEx + alpha*(dHz - ndotdH*nz);
-    
-  *fluxEx =  ny*dHz - nz*dHy + alpha*(dEx - ndotdE*nx);
-  *fluxEy =  nz*dHx - nx*dHz + alpha*(dEy - ndotdE*ny);
-  *fluxEz =  nx*dHy - ny*dHx + alpha*(dEz - ndotdE*nz);
+  *ExU = p_half*( ExP + ExM + ny*(HzP-HzM) - nz*(HyP-HyM) );
+  *EyU = p_half*( EyP + EyM + nz*(HxP-HxM) - nx*(HzP-HzM) );
+  *EzU = p_half*( EzP + EzM + nx*(HyP-HyM) - ny*(HxP-HxM) );
 }
 
 // batch process elements
@@ -178,11 +142,18 @@ void upwind(const dfloat nx,
             // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
             const dfloat sc = p_half*invJ*sJ;
 	    
-            dfloat fluxHx, fluxHy, fluxHz;
-	    dfloat fluxEx, fluxEy, fluxEz;
+            dfloat HxU, HyU, HzU;
+	    dfloat ExU, EyU, EzU;
 
-            upwind(nx, ny, nz, HxM, HyM, HzM, ExM, EyM, EzM, HxP, HyP, HzP, ExP, EyP, EzP, &fluxHx, &fluxHy, &fluxHz, &fluxEx, &fluxEy, &fluxEz);
+            upwind(nx, ny, nz, HxM, HyM, HzM, ExM, EyM, EzM, HxP, HyP, HzP, ExP, EyP, EzP, &HxU, &HyU, &HzU, &ExU, &EyU, &EzU);
 
+	    dfloat fluxHx = -ny*(EzU-EzM) + nz*(EyU-EyM);
+	    dfloat fluxHy = -nz*(ExU-ExM) + nx*(EzU-EzM);
+	    dfloat fluxHz = -nx*(EyU-EyM) + ny*(ExU-ExM);
+	    dfloat fluxEx =  ny*(HzU-HzM) + nz*(HyU-HyM);
+	    dfloat fluxEy =  nz*(HxU-HxM) + nx*(HzU-HzM);
+	    dfloat fluxEz =  nx*(HyU-HyM) + ny*(HxU-HxM);
+	    
             s_fluxHx[es][n] = sc*(fluxHx);
             s_fluxHy[es][n] = sc*(fluxHy);
             s_fluxHz[es][n] = sc*(fluxHz);
