@@ -30,7 +30,7 @@ void maxwell_t::Report(dfloat time, int tstep){
 
   static int frame=0;
   dfloat L2error = 0;
-  
+
   if (settings.compareSetting("COMPUTE ERROR","TRUE")) {
     deviceMemory<dfloat> o_err = platform.reserve<dfloat>(mesh.Nelements);
     // only set up for Tri and Tet elements
@@ -45,8 +45,13 @@ void maxwell_t::Report(dfloat time, int tstep){
 
   dfloat norm2 = sqrt(platform.linAlg().innerProd(Nentries, o_q, o_Mq, mesh.comm));
 
-  if(mesh.rank==0)
-    printf("%5.2f (%d), %5.2f, %5.2e (time, timestep, norm, L2error)\n", time, tstep, norm2, L2error);
+  if(mesh.rank==0) {
+    if (settings.compareSetting("COMPUTE ERROR","TRUE")) {
+      printf("%5.2f (%d), %5.2f, %5.2e (time, timestep, norm, L2error)\n", time, tstep, norm2, L2error);
+    } else {
+      printf("%5.2f (%d), %5.2f (time, timestep, norm)\n", time, tstep, norm2);
+    }
+  }
 
   if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
 
