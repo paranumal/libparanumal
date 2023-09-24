@@ -163,10 +163,10 @@ def test(name, cmd, settings, referenceNorm, ranks=1):
   return failed
 
 if __name__ == "__main__":
-  import testMaxwell
   import testMesh
   import testGradient
   import testAdvection
+  import testMaxwell
   import testAcoustics
   import testElliptic
   import testFokkerPlanck
@@ -181,11 +181,11 @@ if __name__ == "__main__":
   import testInitialGuess
 
   failCount=0;
-  failCount+=testMaxwell.main()
   failCount+=testMesh.main()
   failCount+=testParAdogs.main()
   failCount+=testGradient.main()
   failCount+=testAdvection.main()
+  failCount+=testMaxwell.main()
   failCount+=testAcoustics.main()
   failCount+=testElliptic.main()
   failCount+=testFokkerPlanck.main()
