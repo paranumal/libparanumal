@@ -104,7 +104,7 @@
 #define sum1(s_tmp)
 #endif
 
-#if 0
+#if 1
 #define sum(s_tmp)				\
   sum128(s_tmp)					\
     sum64(s_tmp)				\
@@ -207,8 +207,8 @@
       }
     }
     
-    sum128(s_tmp);  sum64(s_tmp);  sum32(s_tmp);  sum16(s_tmp);  sum8(s_tmp);  sum4(s_tmp);  sum2(s_tmp);  sum1(s_tmp);
-    sum128(s_cubtmp);  sum64(s_cubtmp);  sum32(s_cubtmp);  sum16(s_cubtmp);  sum8(s_cubtmp);  sum4(s_cubtmp);  sum2(s_cubtmp);  sum1(s_cubtmp);    
+    sum(s_tmp);
+    sum(s_cubtmp);
     
     for(dlong n=0;n<p_cubNp;++n;@inner(0)){
       int notDone = 0;
@@ -266,7 +266,8 @@
 	}
       }
       
-      sum128(s_tmp);  sum64(s_tmp);  sum32(s_tmp);  sum16(s_tmp);  sum8(s_tmp);  sum4(s_tmp);  sum2(s_tmp);  sum1(s_tmp);
+      // p.Ap
+      sum(s_tmp);
       
       // x += alpha*p, r -= alpha*Ap
       for(dlong n=0;n<p_cubNp;++n;@inner(0)){
@@ -296,9 +297,9 @@
       }
       
       // r.z
-      sum128(s_cubtmp);  sum64(s_cubtmp);  sum32(s_cubtmp);  sum16(s_cubtmp);  sum8(s_cubtmp);  sum4(s_cubtmp);  sum2(s_cubtmp);  sum1(s_cubtmp);
+      sum(s_cubtmp);
       // r.r
-      sum128(s_tmp);  sum64(s_tmp);  sum32(s_tmp);  sum16(s_tmp);  sum8(s_tmp);  sum4(s_tmp);  sum2(s_tmp);  sum1(s_tmp);
+      sum(s_tmp);
       
       for(dlong n=0;n<p_cubNp;++n;@inner(0)){
 	int notDone = 0;
@@ -315,7 +316,7 @@
 	      b[id+f*p_Np] = xn[f];
 	    }
 	  }
-	  //	  if(n==0) printf("took %d it\n", it);
+	  if(n==0) printf("took %d it\n", it);
 	  return;
 	}
 
