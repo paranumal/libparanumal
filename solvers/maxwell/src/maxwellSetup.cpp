@@ -34,23 +34,42 @@ void maxwell_t::Setup(platform_t& _platform, mesh_t& _mesh,
   comm = _mesh.comm;
   settings = _settings;
 
-  // type of material
-  materialType = (settings.compareSetting("MATERIAL TYPE", "ISOTROPIC")) ? ISOTROPIC:HETEROGENEOUS;
+  // type of perfectly matched layer
+  if(settings.compareSetting("PML TYPE", "CFS"))
+    pmlType = CFSPML;
+  else
+    pmlType = NOPML;
   
-  //  if(materialType==HETEROGENEOUS){
+  // type of material
+  if(settings.compareSetting("MATERIAL TYPE", "ANISOTROPIC"))
+    materialType = ANISOTROPIC;
+  else if(settings.compareSetting("MATERIAL TYPE", "HETEROGENEOUS"))
+    materialType = HETEROGENEOUS;
+  else
+    materialType = ISOTROPIC;
+
+  
   {
     mesh.CubatureSetup();
     mesh.CubaturePhysicalNodes();
   }
 
   // look for PML elements
-  PmlSetup();
   std::cout << "NpmlElements " << mesh.NpmlElements << std::endl;
   std::cout << "NnonPmlElements " << mesh.NnonPmlElements << std::endl;
-  
-  Nfields = (mesh.dim==3) ? 6:3;
-  Npmlfields = (mesh.dim==2) ? 1:6;
 
+  Nfields = (mesh.dim==3) ? 6:3;
+
+  if(pmlType==CFSPML) // CFS-PML
+    Npmlfields = (mesh.dim==2) ? 4:12;
+  else
+    Npmlfields = (mesh.dim==2) ? 1:6;
+
+  std::cout << "Npmlfields = " << Npmlfields <<  "pmlType = "  << pmlType << std::endl;
+
+  PmlSetup();
+
+  
   dlong Nlocal = mesh.Nelements*mesh.Np*Nfields;
   dlong Nhalo  = mesh.totalHaloPairs*mesh.Np*Nfields;
 
@@ -124,7 +143,7 @@ void maxwell_t::Setup(platform_t& _platform, mesh_t& _mesh,
   kernelInfo["defines/" "p_maxNodes"]= maxNodes;
 
   int blockMax = 256;
-  if (platform.device.mode() == "CUDA") blockMax = 1024;
+  if (platform.device.mode() == "CUDA") blockMax = 512;
 
   int NblockV = std::max(1, blockMax/mesh.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;
@@ -162,7 +181,8 @@ void maxwell_t::Setup(platform_t& _platform, mesh_t& _mesh,
                                          kernelInfo);
 
   if(mesh.NpmlElements){
-    kernelName = "maxwellPmlVolume" + suffix;
+    kernelName = "maxwellCfsPmlVolume" + suffix;
+
     pmlVolumeKernel = platform.buildKernel(fileName, kernelName,
 					   kernelInfo);
   }
@@ -175,7 +195,8 @@ void maxwell_t::Setup(platform_t& _platform, mesh_t& _mesh,
                                          kernelInfo);
 
   if(mesh.NpmlElements){
-    kernelName = "maxwellPmlSurface" + suffix;
+    kernelName = "maxwellCfsPmlSurface" + suffix;
+    
     pmlSurfaceKernel = platform.buildKernel(fileName, kernelName,
 					    kernelInfo);
   }
@@ -201,16 +222,42 @@ void maxwell_t::Setup(platform_t& _platform, mesh_t& _mesh,
     
     heterogeneousProjectKernel = platform.buildKernel(fileName, kernelName,
 						      kernelInfo);
-    
   }
+  
+  // kernels from heterogeneous project file
+  fileName   = oklFilePrefix + "maxwellAnisotropicProject" + suffix + oklFileSuffix;
 
-  if(mesh.NpmlElements){
-    fileName   = oklFilePrefix + "maxwellPmlTerms" + suffix + oklFileSuffix;
-    kernelName = "maxwellCubaturePmlTerms" + suffix;
-    
-    pmlCubatureTermsKernel = platform.buildKernel(fileName, kernelName,
+  kernelName = "maxwellAnisotropicProject" + suffix;
+  
+  anisotropicProjectKernel = platform.buildKernel(fileName, kernelName,
 						  kernelInfo);
-  }
+
+
+  kernelName = "maxwellCubatureAnisotropicProject" + suffix;
+  
+  anisotropicCubatureProjectKernel = platform.buildKernel(fileName, kernelName,
+							  kernelInfo);
+
+
+  fileName   = oklFilePrefix + "maxwellPmlTerms" + suffix + oklFileSuffix;
+  
+  kernelName = "maxwellCubatureCfsPmlTerms" + suffix;
+  
+  pmlCubatureTermsKernel = platform.buildKernel(fileName, kernelName,
+						kernelInfo);
+  
+  kernelName = "maxwellCfsPmlTerms" + suffix;
+  
+  pmlTermsKernel = platform.buildKernel(fileName, kernelName,
+					kernelInfo);
+
+
+  fileName   = oklFilePrefix + "maxwellMassMatrixSolve" + suffix + oklFileSuffix;
+  kernelName = "maxwellMassMatrixSolve" + suffix;
+  
+  massMatrixSolveKernel = platform.buildKernel(fileName, kernelName,
+					kernelInfo);
+
   
   if (mesh.dim==2) {
     fileName   = oklFilePrefix + "maxwellInitialCondition2D" + oklFileSuffix;

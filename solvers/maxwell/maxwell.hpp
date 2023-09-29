@@ -49,8 +49,15 @@ public:
 
 typedef enum{
   ISOTROPIC=1,
-  HETEROGENEOUS=2
+  HETEROGENEOUS=2,
+  ANISOTROPIC=3
 }materialType_e;
+
+typedef enum{
+  NOPML=0,
+  CFSPML=1
+}pmlType_e;
+
 
 class maxwell_t: public solver_t {
 public:
@@ -59,7 +66,8 @@ public:
   int Nfields;
   int Npmlfields;
 
-  int materialType;
+  materialType_e materialType;
+  pmlType_e pmlType;
   
   timeStepper_t timeStepper;
 
@@ -70,10 +78,18 @@ public:
 
   // Pml
   int pmlOrder;
-  dfloat  sigmaXmax, sigmaYmax, sigmaZmax;
+  //  dfloat  sigmaXmax, sigmaYmax, sigmaZmax;
   memory<dfloat> pmlSigma;
+  memory<dfloat> pmlKappa;
+  memory<dfloat> pmlAlpha;
+  memory<dfloat> pmlBeta;
+  memory<dfloat> pmlInvWeights;
+  memory<dfloat> pmlWeights;
+  
   deviceMemory<dfloat> o_pmlSigma;
-  dfloat pmlAlpha;
+  deviceMemory<dfloat> o_pmlBeta;
+  deviceMemory<dfloat> o_pmlInvWeights;
+  deviceMemory<dfloat> o_pmlWeights;
 
   memory<dfloat> pmlq;
   deviceMemory<dfloat> o_pmlq;
@@ -99,14 +115,21 @@ public:
 
   kernel_t pmlVolumeKernel;
   kernel_t pmlSurfaceKernel;
+
   kernel_t pmlCubatureTermsKernel;
+  kernel_t pmlTermsKernel;
   
   kernel_t heterogeneousSurfaceKernel;
   kernel_t heterogeneousProjectKernel;
 
+  kernel_t anisotropicProjectKernel;
+  kernel_t anisotropicCubatureProjectKernel;
+
   kernel_t initialConditionKernel;
   kernel_t errorKernel;
 
+  kernel_t massMatrixSolveKernel;
+  
   maxwell_t() = default;
   maxwell_t(platform_t &_platform, mesh_t &_mesh,
               maxwellSettings_t& _settings) {

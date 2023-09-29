@@ -46,7 +46,7 @@ void maxwell_t::rhsf(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, con
 
   rhsSurface(mesh.NhaloElements, mesh.o_haloElementIds, o_Q, o_RHS, T); 
   
-  if(materialType==HETEROGENEOUS){
+  if(materialType==HETEROGENEOUS){    
     heterogeneousProjectKernel(mesh.Nelements, mesh.o_cubInterp, mesh.o_cubProject, o_materialInverseWeights, o_RHS);
   }
 }
@@ -55,8 +55,6 @@ void maxwell_t::rhsf(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, con
 //evaluate ODE rhs = f(q,t)
 void maxwell_t::rhsf_pml(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_pmlQ,
 			 deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_pmlRHS, const dfloat T){
-
-  //  printf("Inside rhsf_pml, NpmlElements = %d\n", mesh.NpmlElements);
 
   // extract q trace halo and start exchange
   traceHalo.ExchangeStart(o_Q, 1);
@@ -77,12 +75,33 @@ void maxwell_t::rhsf_pml(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_pmlQ
   
 
   if(materialType==HETEROGENEOUS){
+    //printf("Calling heterogeneousProjectKernel\n");
     heterogeneousProjectKernel(mesh.Nelements, mesh.o_cubInterp, mesh.o_cubProject, o_materialInverseWeights, o_RHS);
   }
 
   if(mesh.NpmlElements){
-    pmlCubatureTermsKernel(mesh.NpmlElements, mesh.o_pmlElements, mesh.o_pmlIds,
-			   o_pmlSigma, mesh.o_cubInterp, mesh.o_cubProject, o_Q, o_pmlQ, o_RHS, o_pmlRHS);
+    if(pmlcubature){
+      //printf("Calling pmlCubatureTermsKernel\n");
+      pmlCubatureTermsKernel(mesh.NpmlElements, mesh.o_pmlElements, mesh.o_pmlIds,
+			     o_pmlSigma, o_pmlBeta, mesh.o_cubInterp, mesh.o_cubProject, o_Q, o_pmlQ, o_RHS, o_pmlRHS);
+    }else{
+      pmlTermsKernel(mesh.NpmlElements, mesh.o_pmlElements, mesh.o_pmlIds,
+		     o_pmlSigma, o_pmlBeta, o_Q, o_pmlQ, o_RHS, o_pmlRHS);
+    }
+
+#if 0
+    if(pmlcubature){
+      //printf("Calling anisotropicCubatureProjectKernel\n");
+      anisotropicCubatureProjectKernel(mesh.NpmlElements, mesh.o_pmlElements, mesh.o_pmlIds, mesh.o_cubInterp, mesh.o_cubProject, o_pmlInvWeights, o_RHS);
+    }else{
+      //      printf("Calling anisotropicProjectKernel\n");
+      anisotropicProjectKernel(mesh.NpmlElements, mesh.o_pmlElements, mesh.o_pmlIds, o_pmlInvWeights, o_RHS);
+    }
+#else
+    dfloat TOL = 1e-8;
+    int maxNit = 100;
+    massMatrixSolveKernel(TOL, maxNit, mesh.NpmlElements, mesh.o_pmlElements, mesh.o_pmlIds, mesh.o_MM, mesh.o_cubInterp,  o_pmlWeights, o_RHS);
+#endif
   }
 }
 
@@ -104,7 +123,7 @@ void maxwell_t::rhsSurface(dlong N, deviceMemory<dlong>& o_ids,
 
   // compute volume contribution to maxwell RHS
   if (N){
-    if(materialType==ISOTROPIC){
+    if(materialType==ISOTROPIC  || materialType==ANISOTROPIC){
       surfaceKernel(N,
 		    o_ids,
 		    mesh.o_sgeo,
@@ -147,20 +166,15 @@ void maxwell_t::rhsPmlVolume(dlong N, deviceMemory<dlong>& o_ids, deviceMemory<d
   
   // compute volume contribution to maxwell RHS
   if (N) {
-    if (pmlcubature)
-      pmlVolumeKernel(N,
-		      o_ids,
-		      o_pmlids,
-		      mesh.o_vgeo,
-		      mesh.o_D,
-		      o_Q,
-		      o_pmlQ,
-		      o_RHS,
-		      o_pmlRHS);
-    else{
-      printf("ARGGGH. MUST USE CUBATURE MODE FOR MAXWELL PML\n");
-      exit(-1);
-    }
+    pmlVolumeKernel(N,
+		    o_ids,
+		    o_pmlids,
+		    mesh.o_vgeo,
+		    mesh.o_D,
+		    o_Q,
+		    o_pmlQ,
+		    o_RHS,
+		    o_pmlRHS);
   }
 }
 

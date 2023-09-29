@@ -46,7 +46,7 @@ void maxwell_t::Report(dfloat time, int tstep){
   dfloat norm2 = sqrt(platform.linAlg().innerProd(Nentries, o_q, o_Mq, mesh.comm));
 
   if(mesh.rank==0)
-    printf("%5.2f (%d), %5.2f, %5.2e (time, timestep, norm, L2error)\n", time, tstep, norm2, L2error);
+    printf("%5.2f (%d), %5.2e, %5.2e (time, timestep, norm, L2error)\n", time, tstep, norm2, L2error);
 
   if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
 

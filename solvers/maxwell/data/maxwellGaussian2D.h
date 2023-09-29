@@ -27,6 +27,7 @@ SOFTWARE.
 
 // Boundary conditions
 /* PEC 1 */
+#if 0
 #define maxwellDirichletConditions2D(bc, t, x, y, nx, ny, HxM, HyM, EzM, HxB, HyB, EzB) \
   {									\
     if(bc==1){								\
@@ -35,11 +36,20 @@ SOFTWARE.
       *(EzB) = -EzM;							\
     }									\
   }
-
+#else
+#define maxwellDirichletConditions2D(bc, t, x, y, nx, ny, HxM, HyM, EzM, HxB, HyB, EzB) \
+  {									\
+    if(bc==1){								\
+      *(HxB) = 0;							\
+      *(HyB) = 0;							\
+      *(EzB) = 0;							\
+    }									\
+  }
+#endif
 // Initial conditions
 #define maxwellInitialConditions2D(t, x, y, Hx, Hy, Ez) \
   {							\
     *(Hx) = 0.0;					\
     *(Hy) = 0.0;					\
-    *(Ez) = exp(-30.*(x*x+y*y));				\
+    *(Ez) = (x*x+y*y<.5)*exp(-60.*(x*x+y*y));		\
   }

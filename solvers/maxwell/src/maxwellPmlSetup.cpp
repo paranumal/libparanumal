@@ -33,16 +33,35 @@ void maxwell_t::PmlSetup(){
 
   pmlcubature=0;
 
+  int sigmaOrder = 1;
+  int kappaOrder = 1;
+  int alphaOrder = 1;
+  
+  dfloat sigmaXmax = 0, sigmaYmax = 0, sigmaZmax = 0;
+  dfloat kappaXmax = 0, kappaYmax = 0, kappaZmax = 0;
+  dfloat alphaXmax = 0, alphaYmax = 0, alphaZmax = 0;
+  
   //set up the pml
   if (mesh.NpmlElements) {
+
     //get settings from solver
-    settings.getSetting("PML PROFILE ORDER", pmlOrder);
+    settings.getSetting("PML SIGMA PROFILE ORDER", sigmaOrder);
     settings.getSetting("PML SIGMAX MAX", sigmaXmax);
     settings.getSetting("PML SIGMAY MAX", sigmaYmax);
     settings.getSetting("PML SIGMAZ MAX", sigmaZmax);
-    pmlcubature = (settings.compareSetting("PML INTEGRATION", "CUBATURE")) ? 1:0;
 
-    pmlAlpha = 0.2; //hardcoded
+    settings.getSetting("PML KAPPA PROFILE ORDER", kappaOrder);
+    settings.getSetting("PML KAPPAX MAX", kappaXmax);
+    settings.getSetting("PML KAPPAY MAX", kappaYmax);
+    settings.getSetting("PML KAPPAZ MAX", kappaZmax);
+
+    settings.getSetting("PML ALPHA PROFILE ORDER", alphaOrder);
+    settings.getSetting("PML ALPHAX MAX", alphaXmax);
+    settings.getSetting("PML ALPHAY MAX", alphaYmax);
+    settings.getSetting("PML ALPHAZ MAX", alphaZmax);
+
+    
+    pmlcubature = (settings.compareSetting("PML INTEGRATION", "CUBATURE")) ? 1:0;
 
     //find the bounding box of the whole domain and interior domain
     dfloat xmin = 1e9, xmax =-1e9;
@@ -93,19 +112,47 @@ void maxwell_t::PmlSetup(){
       }
     }
 
-    dfloat xmaxScale =0., xminScale=0.;
-    dfloat ymaxScale =0., yminScale=0.;
-    dfloat zmaxScale =0., zminScale=0.;
+    dfloat sigmaXmaxScale =0., sigmaXminScale=0.;
+    dfloat sigmaYmaxScale =0., sigmaYminScale=0.;
+    dfloat sigmaZmaxScale =0., sigmaZminScale=0.;
 
-    xmaxScale = pow(pmlxmax-xmax,pmlOrder);
-    xminScale = pow(pmlxmin-xmin,pmlOrder);
-    ymaxScale = pow(pmlymax-ymax,pmlOrder);
-    yminScale = pow(pmlymin-ymin,pmlOrder);
+    sigmaXmaxScale = pow(pmlxmax-xmax,sigmaOrder);
+    sigmaXminScale = pow(pmlxmin-xmin,sigmaOrder);
+    sigmaYmaxScale = pow(pmlymax-ymax,sigmaOrder);
+    sigmaYminScale = pow(pmlymin-ymin,sigmaOrder);
     if(mesh.dim==3){
-      zmaxScale = pow(pmlzmax-zmax,pmlOrder);
-      zminScale = pow(pmlzmin-zmin,pmlOrder);
+      sigmaZmaxScale = pow(pmlzmax-zmax,sigmaOrder);
+      sigmaZminScale = pow(pmlzmin-zmin,sigmaOrder);
     }
 
+    dfloat kappaXmaxScale =0., kappaXminScale=0.;
+    dfloat kappaYmaxScale =0., kappaYminScale=0.;
+    dfloat kappaZmaxScale =0., kappaZminScale=0.;
+
+    kappaXmaxScale = pow(pmlxmax-xmax,kappaOrder);
+    kappaXminScale = pow(pmlxmin-xmin,kappaOrder);
+    kappaYmaxScale = pow(pmlymax-ymax,kappaOrder);
+    kappaYminScale = pow(pmlymin-ymin,kappaOrder);
+    if(mesh.dim==3){
+      kappaZmaxScale = pow(pmlzmax-zmax,kappaOrder);
+      kappaZminScale = pow(pmlzmin-zmin,kappaOrder);
+    }
+
+
+    dfloat alphaXmaxScale =0., alphaXminScale=0.;
+    dfloat alphaYmaxScale =0., alphaYminScale=0.;
+    dfloat alphaZmaxScale =0., alphaZminScale=0.;
+
+    alphaXmaxScale = pow(pmlxmax-xmax,alphaOrder);
+    alphaXminScale = pow(pmlxmin-xmin,alphaOrder);
+    alphaYmaxScale = pow(pmlymax-ymax,alphaOrder);
+    alphaYminScale = pow(pmlymin-ymin,alphaOrder);
+    if(mesh.dim==3){
+      alphaZmaxScale = pow(pmlzmax-zmax,alphaOrder);
+      alphaZminScale = pow(pmlzmin-zmin,alphaOrder);
+    }
+
+    
     // Set the size of pml nodes
     int pmlNp = (pmlcubature) ? mesh.cubNp : mesh.Np;
     int pmlNq = (pmlcubature) ? mesh.cubNq : mesh.Nq;
@@ -124,6 +171,13 @@ void maxwell_t::PmlSetup(){
     // printf("Setting PML Coefficient \n");
     //set up damping parameter
     pmlSigma.malloc(mesh.dim*mesh.NpmlElements*pmlNp, 0.0);
+    pmlKappa.malloc(mesh.dim*mesh.NpmlElements*pmlNp, 1.0);
+    pmlAlpha.malloc(mesh.dim*mesh.NpmlElements*pmlNp, 1.0);
+     pmlBeta.malloc(mesh.dim*mesh.NpmlElements*pmlNp, 0.0);
+    
+    pmlInvWeights.malloc(3*mesh.NpmlElements*pmlNp, 0.0);
+    pmlWeights.malloc(3*mesh.NpmlElements*pmlNp, 0.0);
+
 
     for (dlong m=0;m<mesh.NpmlElements;m++){
       dlong e     = mesh.pmlElements[m];
@@ -198,21 +252,145 @@ void maxwell_t::PmlSetup(){
             +0.125*(1-rn)*(1+sn)*(1+tn)*ze[7];
         }
 
+	dlong baseid = mesh.dim*pmlNp*m + n;
 
-	if(x>xmax) pmlSigma[mesh.dim*pmlNp*m + 0*pmlNp + n] = sigmaXmax*pow(x-xmax,pmlOrder)/xmaxScale;
-	if(x<xmin) pmlSigma[mesh.dim*pmlNp*m + 0*pmlNp + n] = sigmaXmax*pow(x-xmin,pmlOrder)/xminScale;
-	if(y>ymax) pmlSigma[mesh.dim*pmlNp*m + 1*pmlNp + n] = sigmaYmax*pow(y-ymax,pmlOrder)/ymaxScale;
-	if(y<ymin) pmlSigma[mesh.dim*pmlNp*m + 1*pmlNp + n] = sigmaYmax*pow(y-ymin,pmlOrder)/yminScale;
-
+	if(type==100 || type==300 || type==500 || type==700){ 
+	  if(x>=xmax){
+	    pmlSigma[baseid + 0*pmlNp] =     sigmaXmax*pow(x-xmax,sigmaOrder)/sigmaXmaxScale;
+	    pmlKappa[baseid + 0*pmlNp] = 1 + kappaXmax*pow(x-xmax,kappaOrder)/kappaXmaxScale;
+	    pmlAlpha[baseid + 0*pmlNp] = 1 + alphaXmax*pow(x-xmax,alphaOrder)/alphaXmaxScale;
+	  }
+	  if(x<=xmin){
+	    pmlSigma[baseid + 0*pmlNp] =      sigmaXmax*pow(x-xmin,sigmaOrder)/sigmaXminScale;
+	    pmlKappa[baseid + 0*pmlNp] = 1 +  kappaXmax*pow(x-xmin,kappaOrder)/kappaXminScale;
+	    pmlAlpha[baseid + 0*pmlNp] = 1 +  alphaXmax*pow(x-xmin,alphaOrder)/alphaXminScale;
+	  }
+	}
+	if(type==200 || type==300 || type==600 || type==700){
+	  if(y>=ymax){
+	    pmlSigma[baseid + 1*pmlNp] =      sigmaYmax*pow(y-ymax,sigmaOrder)/sigmaYmaxScale;
+	    pmlKappa[baseid + 1*pmlNp] = 1 +  kappaYmax*pow(y-ymax,kappaOrder)/kappaYmaxScale;
+	    pmlAlpha[baseid + 1*pmlNp] = 1 +  alphaYmax*pow(y-ymax,alphaOrder)/alphaYmaxScale;
+	  }
+	  if(y<=ymin){
+	    pmlSigma[baseid + 1*pmlNp] =       sigmaYmax*pow(y-ymin,sigmaOrder)/sigmaYminScale;
+	    pmlKappa[baseid + 1*pmlNp] = 1 +   kappaYmax*pow(y-ymin,kappaOrder)/kappaYminScale;
+	    pmlAlpha[baseid + 1*pmlNp] = 1 +   alphaYmax*pow(y-ymin,alphaOrder)/alphaYminScale;
+	  }
+	}
+	
         if(mesh.dim==3){
-	  if(z>zmax) pmlSigma[mesh.dim*pmlNp*m + 2*pmlNp + n] = sigmaZmax*pow(z-zmax,pmlOrder)/zmaxScale;
-	  if(z<zmin) pmlSigma[mesh.dim*pmlNp*m + 2*pmlNp + n] = sigmaZmax*pow(z-zmin,pmlOrder)/zminScale;
-        }
+	  if(type==400 || type==500 || type==600 || type==700){ 
+	    if(z>=zmax){
+	      pmlSigma[baseid + 2*pmlNp ] =     sigmaZmax*pow(z-zmax,sigmaOrder)/sigmaZmaxScale;
+	      pmlKappa[baseid + 2*pmlNp ] = 1 + kappaZmax*pow(z-zmax,kappaOrder)/kappaZmaxScale;
+	      pmlAlpha[baseid + 2*pmlNp ] = 1 + alphaZmax*pow(z-zmax,alphaOrder)/alphaZmaxScale;
+	    }
+	    if(z<=zmin){
+	      pmlSigma[baseid + 2*pmlNp ] =     sigmaZmax*pow(z-zmin,sigmaOrder)/sigmaZminScale;
+	      pmlKappa[baseid + 2*pmlNp ] = 1 + kappaZmax*pow(z-zmin,kappaOrder)/kappaZminScale;
+	      pmlAlpha[baseid + 2*pmlNp ] = 1 + alphaZmax*pow(z-zmin,alphaOrder)/alphaZminScale;
+	    }
+	  }
+	}
       }
     }
 
+    dfloat minSigmaX = 1e9, maxSigmaX = -1e9;
+    dfloat minSigmaY = 1e9, maxSigmaY = -1e9;
+    for (dlong m=0;m<mesh.NpmlElements;m++){
+      for(int n=0;n<pmlNp;++n){ /* for each node */
+	minSigmaX = std::min(minSigmaX, pmlSigma[mesh.dim*pmlNp*m+0*pmlNp+n]);
+	maxSigmaX = std::max(maxSigmaX, pmlSigma[mesh.dim*pmlNp*m+0*pmlNp+n]);
+	minSigmaY = std::min(minSigmaY, pmlSigma[mesh.dim*pmlNp*m+1*pmlNp+n]);
+	maxSigmaY = std::max(maxSigmaY, pmlSigma[mesh.dim*pmlNp*m+1*pmlNp+n]);
+      }
+    }
+
+    std::cout << "SigmaX in range [" << minSigmaX << "," << maxSigmaX << "]" << std::endl;
+    std::cout << "SigmaY in range [" << minSigmaY << "," << maxSigmaY << "]" << std::endl;
+
+
+    dfloat minKappaX = 1e9, maxKappaX = -1e9;
+    dfloat minKappaY = 1e9, maxKappaY = -1e9;
+    for (dlong m=0;m<mesh.NpmlElements;m++){
+      for(int n=0;n<pmlNp;++n){ /* for each node */
+	minKappaX = std::min(minKappaX, pmlKappa[mesh.dim*pmlNp*m+0*pmlNp+n]);
+	maxKappaX = std::max(maxKappaX, pmlKappa[mesh.dim*pmlNp*m+0*pmlNp+n]);
+	minKappaY = std::min(minKappaY, pmlKappa[mesh.dim*pmlNp*m+1*pmlNp+n]);
+	maxKappaY = std::max(maxKappaY, pmlKappa[mesh.dim*pmlNp*m+1*pmlNp+n]);
+      }
+    }
+
+    std::cout << "KappaX in range [" << minKappaX << "," << maxKappaX << "]" << std::endl;
+    std::cout << "KappaY in range [" << minKappaY << "," << maxKappaY << "]" << std::endl;
+
+    
+    for (dlong m=0;m<mesh.NpmlElements;m++){
+      for(int n=0;n<pmlNp;++n){ /* for each node */
+	dlong base = mesh.dim*pmlNp*m+n;
+	dfloat kappax = pmlKappa[base+0*pmlNp];
+	dfloat kappay = pmlKappa[base+1*pmlNp];
+	dfloat kappaz = (mesh.dim==3) ? pmlKappa[base+2*pmlNp] : 1.;
+
+	dfloat alphax = pmlAlpha[base+0*pmlNp];
+	dfloat alphay = pmlAlpha[base+1*pmlNp];
+	dfloat alphaz = (mesh.dim==3) ? pmlAlpha[base+2*pmlNp] : 1.;
+
+	dfloat sigmax = pmlSigma[base+0*pmlNp];
+	dfloat sigmay = pmlSigma[base+1*pmlNp];
+	dfloat sigmaz = (mesh.dim==3) ? pmlSigma[base+2*pmlNp] : 1.;
+	
+	dlong wbase = 3*pmlNp*m+n;
+	pmlInvWeights[wbase+0*pmlNp] = kappax*kappax/(kappax*kappay*kappaz);
+	pmlInvWeights[wbase+1*pmlNp] = kappay*kappay/(kappax*kappay*kappaz);
+	pmlInvWeights[wbase+2*pmlNp] = kappaz*kappaz/(kappax*kappay*kappaz);
+
+	pmlWeights[wbase+0*pmlNp] = (kappax*kappay*kappaz)/(kappax*kappax);
+	pmlWeights[wbase+1*pmlNp] = (kappax*kappay*kappaz)/(kappay*kappay);
+	pmlWeights[wbase+2*pmlNp] = (kappax*kappay*kappaz)/(kappaz*kappaz);
+
+	
+	dlong bbase = mesh.dim*pmlNp*m+n;
+	pmlBeta[bbase+0*pmlNp] = alphax + sigmax/kappax;
+	pmlBeta[bbase+1*pmlNp] = alphay + sigmay/kappay;
+
+#if 0
+	printf("kappa=(%f,%f,%f), alpha=(%f,%f,%f), sigma=(%f,%f,%f)\n", 
+	  kappax, kappay, kappaz, alphax, alphay, alphaz, sigmax, sigmay, sigmaz);
+
+	printf("invW=(%f,%f,%f), beta=(%f,%f)\n",
+	       pmlInvWeights[wbase+0*pmlNp],
+	       pmlInvWeights[wbase+1*pmlNp],
+	       pmlInvWeights[wbase+2*pmlNp],
+	       pmlBeta[bbase+0*pmlNp],
+	       pmlBeta[bbase+1*pmlNp]);
+#endif
+      }
+    }
+
+#if 0
+    for (dlong m=0;m<mesh.NpmlElements;m++){
+      for(int n=0;n<pmlNp;++n){ /* for each node */
+	dlong bbase = Npmlfields*pmlNp*m+n;
+	dlong wbase = 3*pmlNp*m+n;
+	printf("bbase=%d, invW=(%f,%f,%f), beta=(%f,%f)\n",
+	       bbase,
+	       pmlInvWeights[wbase+0*pmlNp],
+	       pmlInvWeights[wbase+1*pmlNp],
+	       pmlInvWeights[wbase+2*pmlNp],
+	       pmlBeta[bbase+0*pmlNp],
+	       pmlBeta[bbase+1*pmlNp]);
+      }
+    }
+#endif
+    
     // printf("# of PML elements: %d and # of Non-PML elements: %d \n",mesh.NpmlElements, mesh.Nelements-mesh.NpmlElements);
-    if (mesh.NpmlElements)
+    if (mesh.NpmlElements){      
       o_pmlSigma = platform.malloc<dfloat>(pmlSigma);
+      o_pmlBeta  = platform.malloc<dfloat>(pmlBeta);
+      o_pmlInvWeights = platform.malloc<dfloat>(pmlInvWeights);
+      o_pmlWeights = platform.malloc<dfloat>(pmlWeights);
+    }
   }
 }

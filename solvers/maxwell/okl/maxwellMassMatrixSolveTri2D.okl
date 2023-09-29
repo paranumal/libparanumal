@@ -1,0 +1,340 @@
+/*
+
+  The MIT License (MIT)
+
+  Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+*/
+
+#if p_Np>128
+#define sum128(s_tmp)							\
+  for(dlong n=0;n<p_cubNp;++n;@inner(0))				\
+    if(n<128 && n+128<p_Np)						\
+      for(dlong f=0;f<p_Nfields;++f)					\
+	s_tmp[f][n] += s_tmp[f][n+128];
+#else
+#define sum128(s_tmp)
+#endif
+
+#if p_Np>64
+#define sum64(s_tmp)							\
+  for(dlong n=0;n<p_cubNp;++n;@inner(0))				\
+    if(n<64 && n+64<p_Np)						\
+      for(dlong f=0;f<p_Nfields;++f)					\
+	s_tmp[f][n] += s_tmp[f][n+64];
+#else
+#define sum64(s_tmp)
+#endif
+
+#if p_Np>32
+#define sum32(s_tmp)							\
+  for(dlong n=0;n<p_cubNp;++n;@inner(0))				\
+    if(n<32 && n+32<p_Np)						\
+      for(dlong f=0;f<p_Nfields;++f)					\
+	s_tmp[f][n] += s_tmp[f][n+32];
+#else
+#define sum32(s_tmp)
+#endif
+
+#if p_Np>16
+#define sum16(s_tmp)							\
+  for(dlong n=0;n<p_cubNp;++n;@inner(0))				\
+    if(n<16 && n+16<p_Np)						\
+      for(dlong f=0;f<p_Nfields;++f)					\
+	s_tmp[f][n] += s_tmp[f][n+16];
+#else
+#define sum16(s_tmp)
+#endif
+
+#if p_Np>8
+#define sum8(s_tmp)							\
+  for(dlong n=0;n<p_cubNp;++n;@inner(0))				\
+    if(n<8 && n+8<p_Np)							\
+      for(dlong f=0;f<p_Nfields;++f)					\
+	s_tmp[f][n] += s_tmp[f][n+8];					
+#else
+#define sum8(s_tmp)
+#endif
+
+#if p_Np>4
+#define sum4(s_tmp)							\
+  for(dlong n=0;n<p_cubNp;++n;@inner(0))				\
+    if(n<4 && n+4<p_Np)							\
+      for(dlong f=0;f<p_Nfields;++f)					\
+	s_tmp[f][n] += s_tmp[f][n+4];
+#else
+#define sum4(s_tmp)
+#endif
+
+#if p_Np>2
+#define sum2(s_tmp)							\
+  for(dlong n=0;n<p_cubNp;++n;@inner(0))				\
+    if(n<2 && n+2<p_Np)							\
+      for(dlong f=0;f<p_Nfields;++f)					\
+	s_tmp[f][n] += s_tmp[f][n+2];
+#else
+#define sum2(s_tmp)
+#endif
+
+#if p_Np>1
+#define sum1(s_tmp)							\
+  for(dlong n=0;n<p_cubNp;++n;@inner(0))				\
+    if(n<1 && n+1<p_Np)							\
+      for(dlong f=0;f<p_Nfields;++f)					\
+	s_tmp[f][n] += s_tmp[f][n+1];
+#else
+#define sum1(s_tmp)
+#endif
+
+#if 0
+#define sum(s_tmp)				\
+  sum128(s_tmp)					\
+    sum64(s_tmp)				\
+    sum32(s_tmp)				\
+    sum16(s_tmp)				\
+    sum8(s_tmp)					\
+    sum4(s_tmp)					\
+    sum2(s_tmp)					\
+    sum1(s_tmp)					
+#endif
+
+
+@kernel void maxwellMassMatrixSolveTri2D(const dfloat TOL,
+					 const int maxNit,
+					 const dlong Nelements,
+					 const dlong *elements,
+					 const dlong *pmlElements,
+					 const dfloat *MM,
+					 const dfloat *cubInterp,
+					 const dfloat *W,
+					 dfloat *b){
+
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_cubtmp[p_Nfields][p_cubNp];
+    @shared dfloat s_tmp[p_Nfields][p_cubNp];
+    @shared dfloat s_invP[p_Nfields][p_cubNp];
+
+    @exclusive dfloat Wn[p_Nfields], rn[p_Nfields], Apn[p_Nfields];
+    @exclusive dfloat xn[p_Nfields], pn[p_Nfields],  zn[p_Nfields];
+    @exclusive dfloat rdotz[p_Nfields];
+    @exclusive dlong element, pmlElement;
+    
+    for(dlong n=0;n<p_cubNp;++n;@inner(0)){
+
+      element = elements[e];
+      pmlElement = pmlElements[e];
+
+      if(n<p_Np){
+	dlong id = element*p_Nfields*p_Np + n;
+	for(dlong f=0;f<p_Nfields;++f){
+	  s_tmp[f][n] = b[id+f*p_Np];
+	}
+
+	// compute inverse of diagonal of M_W
+	// dot product row n with column n
+	dfloat Pn[p_Nfields] = {0.};
+	for(dlong m=0;m<p_cubNp;++m){
+	  dfloat Imn = cubInterp[m+n*p_cubNp];
+	  dlong id = pmlElement*p_cubNp*p_Nfields + m;
+	  for(int f=0;f<p_Nfields;++f){
+	    Pn[f] += Imn*Imn*W[id+f*p_cubNp];
+	  }
+	}
+	for(int f=0;f<p_Nfields;++f){
+	  s_invP[f][n] = 1.f/Pn[f];
+	}
+      }
+    }
+
+    for(dlong n=0;n<p_cubNp;++n;@inner(0)){
+      
+      if(n<p_Np){
+
+	// multiply nodal RHS by reference mass matrix
+	for(dlong f=0;f<p_Nfields;++f)
+	  rn[f] = 0;
+	
+	for(int m=0;m<p_Np;++m){
+	  dfloat Mnm = MM[n+m*p_Np];
+	  for(dlong f=0;f<p_Nfields;++f){
+	    rn[f] += Mnm*s_tmp[f][m];
+	  }
+	}
+
+	dlong id = element*p_Nfields*p_Np + n;
+	for(dlong f=0;f<p_Nfields;++f){
+	  xn[f] = 0;
+	  zn[f] = s_invP[f][n]*rn[f];
+	  pn[f] = zn[f];
+	}
+      }
+      
+      // hard coded for cubature
+      dlong id = pmlElement*p_cubNp*p_Nfields + n;
+      for(dlong f=0;f<p_Nfields;++f){
+	Wn[f] =  W[id + f*p_cubNp];
+      }
+    }
+      
+    // r.z
+    for(dlong n=0;n<p_cubNp;++n;@inner(0)){
+      
+      if(n<p_Np){
+	for(dlong f=0;f<p_Nfields;++f){
+	  s_tmp[f][n]    = rn[f]*zn[f];
+	  s_cubtmp[f][n] = rn[f]*rn[f];
+	}
+      }
+    }
+    
+    sum128(s_tmp);  sum64(s_tmp);  sum32(s_tmp);  sum16(s_tmp);  sum8(s_tmp);  sum4(s_tmp);  sum2(s_tmp);  sum1(s_tmp);
+    sum128(s_cubtmp);  sum64(s_cubtmp);  sum32(s_cubtmp);  sum16(s_cubtmp);  sum8(s_cubtmp);  sum4(s_cubtmp);  sum2(s_cubtmp);  sum1(s_cubtmp);    
+    
+    for(dlong n=0;n<p_cubNp;++n;@inner(0)){
+      int notDone = 0;
+      
+      for(dlong f=0;f<p_Nfields;++f){
+	rdotz[f] = s_tmp[f][0];
+	dfloat rdotr = s_cubtmp[f][0];
+	notDone += (rdotr>TOL);
+      }
+      
+      if(!notDone) return;
+    }
+
+    // https://en.wikipedia.org/wiki/Conjugate_gradient_method
+    for(int it=0;it<maxNit;++it){
+      
+      // A*p
+      for(dlong n=0;n<p_cubNp;++n;@inner(0)){			
+	if(n<p_Np)
+	  for(dlong f=0;f<p_Nfields;++f)
+	    s_tmp[f][n] = pn[f];				
+      }								
+      
+      for(dlong n=0;n<p_cubNp;++n;@inner(0)){
+	dfloat cubxn[p_Nfields] = {0.};
+	
+	// interpolate to cubature
+	for(dlong m=0;m<p_Np;++m){					
+	  dfloat Inm = cubInterp[n+m*p_cubNp];
+	  for(dlong f=0;f<p_Nfields;++f)
+	    cubxn[f] += Inm*s_tmp[f][m];					
+	}
+	
+	// scale by weight at cubature
+	for(dlong f=0;f<p_Nfields;++f)
+	  s_cubtmp[f][n] = Wn[f]*cubxn[f];					
+      }								
+      
+      for(dlong n=0;n<p_cubNp;++n;@inner(0)){			
+	if(n<p_Np){
+	  
+	  for(dlong f=0;f<p_Nfields;++f)
+	    Apn[f] = 0.;
+	  
+	  // test against W&B basis 
+	  for(dlong m=0;m<p_cubNp;++m){				
+	    dfloat Imn = cubInterp[m+n*p_cubNp];
+	    
+	    for(dlong f=0;f<p_Nfields;++f)
+	      Apn[f] += Imn*s_cubtmp[f][m];					
+	  }
+	  for(dlong f=0;f<p_Nfields;++f){
+	    s_tmp[f][n] = pn[f]*Apn[f];
+	  }
+	}
+      }
+      
+      sum128(s_tmp);  sum64(s_tmp);  sum32(s_tmp);  sum16(s_tmp);  sum8(s_tmp);  sum4(s_tmp);  sum2(s_tmp);  sum1(s_tmp);
+      
+      // x += alpha*p, r -= alpha*Ap
+      for(dlong n=0;n<p_cubNp;++n;@inner(0)){
+
+	for(dlong f=0;f<p_Nfields;++f){
+	  {
+	    // p.Ap
+	    dfloat pAp = s_tmp[f][0];
+
+	    // alpha = r.z/(p.Ap)
+	    dfloat alpha = rdotz[f]/pAp;
+	    
+	    if(n<p_Np){
+	      // x = x + alpha*p
+	      xn[f] += alpha*pn[f];
+	      // r = r - alpha*Ap
+	      rn[f] -= alpha*Apn[f];
+	      // r = precon*r
+	      zn[f] = s_invP[f][n]*rn[f];
+	      // r.z
+	      s_cubtmp[f][n] = rn[f]*zn[f];
+	      // r.r
+	      s_tmp[f][n] = rn[f]*rn[f];
+	    }
+	  }
+	}
+      }
+      
+      // r.z
+      sum128(s_cubtmp);  sum64(s_cubtmp);  sum32(s_cubtmp);  sum16(s_cubtmp);  sum8(s_cubtmp);  sum4(s_cubtmp);  sum2(s_cubtmp);  sum1(s_cubtmp);
+      // r.r
+      sum128(s_tmp);  sum64(s_tmp);  sum32(s_tmp);  sum16(s_tmp);  sum8(s_tmp);  sum4(s_tmp);  sum2(s_tmp);  sum1(s_tmp);
+      
+      for(dlong n=0;n<p_cubNp;++n;@inner(0)){
+	int notDone = 0;
+	
+	for(dlong f=0;f<p_Nfields;++f){
+	  dfloat rdotr = s_tmp[f][0];	
+	  notDone += (rdotr>TOL);
+	}
+      
+	if(!notDone){
+	  if(n<p_Np){
+	    dlong id = element*p_Np*p_Nfields + n;
+	    for(dlong f=0;f<p_Nfields;++f){
+	      b[id+f*p_Np] = xn[f];
+	    }
+	  }
+	  //	  if(n==0) printf("took %d it\n", it);
+	  return;
+	}
+
+	for(dlong f=0;f<p_Nfields;++f){
+	  dfloat newrdotz  = s_cubtmp[f][0];	
+	  dfloat beta = newrdotz/rdotz[f];
+	  rdotz[f] = newrdotz;
+	  pn[f] = zn[f] + beta*pn[f];
+	}
+      }
+    }
+    
+    for(dlong n=0;n<p_cubNp;++n;@inner(0)){
+      if(n<p_Np){
+	dlong id = element*p_Np*p_Nfields + n;
+	for(dlong f=0;f<p_Nfields;++f){
+	  b[id+f*p_Np] = xn[f];
+	}
+      }
+    }
+  }
+}

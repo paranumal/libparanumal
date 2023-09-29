@@ -71,11 +71,16 @@ maxwellSettings_t::maxwellSettings_t(comm_t _comm):
   newSetting("MATERIAL TYPE",
              "ISOTROPIC",
              "Type of material",
-             {"ISOTROPIC", "HETEROGENEOUS"});
+             {"ISOTROPIC", "HETEROGENEOUS", "ANISOTROPIC"});
 
-  newSetting("PML PROFILE ORDER",
-             "4",
-             "Polynomial degree of PML damping");
+  newSetting("PML TYPE",
+             "NONE",
+             "Type of Perfectly Matched Layer",
+             {"NONE", "CFS"});
+  
+  newSetting("PML SIGMA PROFILE ORDER",
+             "2",
+             "Polynomial degree of PML damping parameter");
 
   newSetting("PML SIGMAX MAX",
              "100",
@@ -89,6 +94,41 @@ maxwellSettings_t::maxwellSettings_t(comm_t _comm):
              "100",
              "Coefficent of polynomial PML damping in z direction");
 
+
+  newSetting("PML KAPPA PROFILE ORDER",
+             "2",
+             "Polynomial degree of PML kappa parameter");
+
+  newSetting("PML KAPPAX MAX",
+             "100",
+             "Coefficent of polynomial PML kappa in x direction");
+
+  newSetting("PML KAPPAY MAX",
+             "100",
+             "Coefficent of polynomial PML kappa in y direction");
+
+  newSetting("PML KAPPAZ MAX",
+             "100",
+             "Coefficent of polynomial PML kappa in z direction");
+
+  newSetting("PML ALPHA PROFILE ORDER",
+             "2",
+             "Polynomial degree of PML alpha parameter");
+
+  newSetting("PML ALPHAX MAX",
+             "100",
+             "Coefficent of polynomial PML alpha in x direction");
+
+  newSetting("PML ALPHAY MAX",
+             "100",
+             "Coefficent of polynomial PML alpha in y direction");
+
+  newSetting("PML ALPHAZ MAX",
+             "100",
+             "Coefficent of polynomial PML alpha in z direction");
+
+  
+  
   newSetting("PML INTEGRATION",
              "COLLOCATION",
              "Type of integration rule to PML damping profile",
@@ -102,10 +142,22 @@ void maxwellSettings_t::report() {
     std::cout << "Maxwell Settings:\n\n";
     reportSetting("DATA FILE");
 
-    reportSetting("PML PROFILE ORDER");
+    reportSetting("PML SIGMA PROFILE ORDER");
     reportSetting("PML SIGMAX MAX");
     reportSetting("PML SIGMAY MAX");
     reportSetting("PML SIGMAZ MAX");
+
+    reportSetting("PML KAPPA PROFILE ORDER");
+    reportSetting("PML KAPPAX MAX");
+    reportSetting("PML KAPPAY MAX");
+    reportSetting("PML KAPPAZ MAX");
+
+    reportSetting("PML ALPHA PROFILE ORDER");
+    reportSetting("PML ALPHAX MAX");
+    reportSetting("PML ALPHAY MAX");
+    reportSetting("PML ALPHAZ MAX");
+
+
     reportSetting("PML INTEGRATION");
 
     reportSetting("TIME INTEGRATOR");
