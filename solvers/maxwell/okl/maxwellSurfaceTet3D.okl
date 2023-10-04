@@ -296,9 +296,8 @@ void upwind(const dfloat nx,
             // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
 	const dfloat sc = invJ*sJ;
 	
-	dfloat HxU, HyU, EzU;
-	dfloat alpha = 1;
-	upwind(nx, ny, nz, alpha, HxM, HyM, HzM, ExM, EyM, EzM, HxP, HyP, HzP, ExP, EyP, EzP, &HxU, &HyU, &HzU, &ExU, &EyU, &EzU);
+	dfloat HxU, HyU, HzU, ExU, EyU, EzU;
+	upwind(nx, ny, nz, HxM, HyM, HzM, ExM, EyM, EzM, HxP, HyP, HzP, ExP, EyP, EzP, &HxU, &HyU, &HzU, &ExU, &EyU, &EzU);
 
 	const dfloat fluxHx = -ny*(EzU-EzM)+nz*(EyU-EyM);
 	const dfloat fluxHy = -nz*(ExU-ExM)+nx*(EzU-EzM);
@@ -321,84 +320,80 @@ void upwind(const dfloat nx,
 	const dfloat fluxEzx = nx*(EzU-EzM);
 	const dfloat fluxEzy = ny*(EzU-EzM);
 
-	s_fluxHx[es][n] = sc*(fluxHx);
-	s_fluxHy[es][n] = sc*(fluxHy);
-	s_fluxHz[es][n] = sc*(fluxHz);
-	s_fluxEx[es][n] = sc*(fluxEx);
-	s_fluxEy[es][n] = sc*(fluxEy);
-	s_fluxEz[es][n] = sc*(fluxEz);
+	s_fluxHx[n] = sc*(fluxHx);
+	s_fluxHy[n] = sc*(fluxHy);
+	s_fluxHz[n] = sc*(fluxHz);
+	s_fluxEx[n] = sc*(fluxEx);
+	s_fluxEy[n] = sc*(fluxEy);
+	s_fluxEz[n] = sc*(fluxEz);
 
-	s_fluxHxy[es][n] = sc*(fluxHxy);
-	s_fluxHxz[es][n] = sc*(fluxHxz);
-	s_fluxHyy[es][n] = sc*(fluxHyx);
-	s_fluxHyz[es][n] = sc*(fluxHyz);
-	s_fluxHzx[es][n] = sc*(fluxHzx);
-	s_fluxHzy[es][n] = sc*(fluxHzy);
+	s_fluxHxy[n] = sc*(fluxHxy);
+	s_fluxHxz[n] = sc*(fluxHxz);
+	s_fluxHyx[n] = sc*(fluxHyx);
+	s_fluxHyz[n] = sc*(fluxHyz);
+	s_fluxHzx[n] = sc*(fluxHzx);
+	s_fluxHzy[n] = sc*(fluxHzy);
 
-	s_fluxExy[es][n] = sc*(fluxExy);
-	s_fluxExz[es][n] = sc*(fluxExz);
-	s_fluxEyy[es][n] = sc*(fluxEyx);
-	s_fluxEyz[es][n] = sc*(fluxEyz);
-	s_fluxEzx[es][n] = sc*(fluxEzx);
-	s_fluxEzy[es][n] = sc*(fluxEzy);
+	s_fluxExy[n] = sc*(fluxExy);
+	s_fluxExz[n] = sc*(fluxExz);
+	s_fluxEyx[n] = sc*(fluxEyx);
+	s_fluxEyz[n] = sc*(fluxEyz);
+	s_fluxEzx[n] = sc*(fluxEzx);
+	s_fluxEzy[n] = sc*(fluxEzy);
       }
     }
 
     // TW HERE 
     
     // for each node in the element
-    for(int es=0;es<p_NblockS;++es;@inner(1)){
-      for(int n=0;n<p_maxNodes;++n;@inner(0)){
-        if(r_e<pmlNelements){
-          if(n<p_Np){
-            // load rhs data from volume fluxes
-            dfloat LfluxHx = 0.f, LfluxHy = 0.f, LfluxHz = 0.f;
-	    dfloat LfluxEx = 0.f, LfluxEy = 0.f, LfluxEz = 0.f;
-	    dfloat LfluxHxy = 0.f, LfluxHxz = 0.f;
-	    dfloat LfluxHyx = 0.f, LfluxHyz = 0.f;
-	    dfloat LfluxHzx = 0.f, LfluxHzy = 0.f;
-	    dfloat LfluxExy = 0.f, LfluxExz = 0.f;
-	    dfloat LfluxEyx = 0.f, LfluxEyz = 0.f;
-	    dfloat LfluxEzx = 0.f, LfluxEzy = 0.f;
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      if(n<p_Np){
+	// load rhs data from volume fluxes
+	dfloat LfluxHx = 0.f, LfluxHy = 0.f, LfluxHz = 0.f;
+	dfloat LfluxEx = 0.f, LfluxEy = 0.f, LfluxEz = 0.f;
+	dfloat LfluxHxy = 0.f, LfluxHxz = 0.f;
+	dfloat LfluxHyx = 0.f, LfluxHyz = 0.f;
+	dfloat LfluxHzx = 0.f, LfluxHzy = 0.f;
+	dfloat LfluxExy = 0.f, LfluxExz = 0.f;
+	dfloat LfluxEyx = 0.f, LfluxEyz = 0.f;
+	dfloat LfluxEzx = 0.f, LfluxEzy = 0.f;
 
 #pragma unroll p_NfacesNfp
-	    for(int m=0;m<p_NfacesNfp;++m){
-	      const dfloat L = LIFT[n+m*p_Np];
-	      LfluxHx += L*s_fluxHx[es][m];
-	      LfluxHy += L*s_fluxHy[es][m];	      
-	      LfluxHz += L*s_fluxHz[es][m];
-	      LfluxEx += L*s_fluxEz[es][m];
-	      LfluxEy += L*s_fluxEz[es][m];
-	      LfluxEz += L*s_fluxEz[es][m];
-	      LfluxHxy += L*s_fluxHxy[es][m];
-	      LfluxHyx += L*s_fluxHyx[es][m];
-	      LfluxEzx += L*s_fluxEzx[es][m];
-	      LfluxEzy += L*s_fluxEzy[es][m];
-	    }
+	for(int m=0;m<p_NfacesNfp;++m){
+	  const dfloat L = LIFT[n+m*p_Np];
+	  LfluxHx += L*s_fluxHx[m];
+	  LfluxHy += L*s_fluxHy[m];	      
+	  LfluxHz += L*s_fluxHz[m];
+	  LfluxEx += L*s_fluxEz[m];
+	  LfluxEy += L*s_fluxEz[m];
+	  LfluxEz += L*s_fluxEz[m];
+	  LfluxHxy += L*s_fluxHxy[m];
+	  LfluxHyx += L*s_fluxHyx[m];
+	  LfluxEzx += L*s_fluxEzx[m];
+	  LfluxEzy += L*s_fluxEzy[m];
+	}
 
-            const dlong base = element*p_Np*p_Nfields+n;
-	    const dlong basepml = pmlIds[r_e]*p_Np*p_Npmlfields + n;
-            rhsq[base+0*p_Np] += LfluxHx;
-            rhsq[base+1*p_Np] += LfluxHy;
-	    rhsq[base+2*p_Np] += LfluxHz;
-	    rhsq[base+3*p_Np] += LfluxEx;
-	    rhsq[base+4*p_Np] += LfluxEy;
-            rhsq[base+5*p_Np] += LfluxEz;
-	    rhspmlq[basepml+0*p_Np] += LfluxHxy;
-	    rhspmlq[basepml+1*p_Np] += LfluxHxz;
-	    rhspmlq[basepml+2*p_Np] += LfluxHyx;
-	    rhspmlq[basepml+3*p_Np] += LfluxHyz;
-	    rhspmlq[basepml+4*p_Np] += LfluxHzx;
-	    rhspmlq[basepml+5*p_Np] += LfluxHzy;
-	    rhspmlq[basepml+6*p_Np] += LfluxExy;
-	    rhspmlq[basepml+7*p_Np] += LfluxExz;
-	    rhspmlq[basepml+8*p_Np] += LfluxEyx;
-	    rhspmlq[basepml+9*p_Np] += LfluxEyz;
-	    rhspmlq[basepml+10*p_Np] += LfluxEzx;
-	    rhspmlq[basepml+11*p_Np] += LfluxEzy;
+	const dlong base = element*p_Np*p_Nfields+n;
+	const dlong basepml = pmlIds[e]*p_Np*p_Npmlfields + n;
+	rhsq[base+0*p_Np] += LfluxHx;
+	rhsq[base+1*p_Np] += LfluxHy;
+	rhsq[base+2*p_Np] += LfluxHz;
+	rhsq[base+3*p_Np] += LfluxEx;
+	rhsq[base+4*p_Np] += LfluxEy;
+	rhsq[base+5*p_Np] += LfluxEz;
+	rhspmlq[basepml+0*p_Np] += LfluxHxy;
+	rhspmlq[basepml+1*p_Np] += LfluxHxz;
+	rhspmlq[basepml+2*p_Np] += LfluxHyx;
+	rhspmlq[basepml+3*p_Np] += LfluxHyz;
+	rhspmlq[basepml+4*p_Np] += LfluxHzx;
+	rhspmlq[basepml+5*p_Np] += LfluxHzy;
+	rhspmlq[basepml+6*p_Np] += LfluxExy;
+	rhspmlq[basepml+7*p_Np] += LfluxExz;
+	rhspmlq[basepml+8*p_Np] += LfluxEyx;
+	rhspmlq[basepml+9*p_Np] += LfluxEyz;
+	rhspmlq[basepml+10*p_Np] += LfluxEzx;
+	rhspmlq[basepml+11*p_Np] += LfluxEzy;
 
-          }
-        }
       }
     }
   }

@@ -27,7 +27,7 @@
 
 // complex frequency shift version
 // TW this one
-@kernel void maxwellCubatureCfsPmlTermsTri2D(const dlong Npmlelements,
+@kernel void maxwellCubatureCfsPmlTermsTet3D(const dlong Npmlelements,
 					     @restrict const  dlong *  pmlElementIds,
 					     @restrict const  dlong *  pmlIds,
 					     @restrict const  dfloat * cubPmlSigma,
@@ -64,131 +64,249 @@
 
     @exclusive dlong element, pmlElement;
 
-    for(int es=0;es<p_NblockC;++es;@inner(1)){
-      for(int n=0;n<p_cubMaxNp;++n;@inner(0)){
-	element = pmlElementIds[e];
-	pmlElement = pmlIds[e];
-	if(n<p_Np){
-	  const dlong base    =    element*p_Np*p_Nfields    + n;
-	  const dlong pmlbase = pmlElement*p_Np*p_Npmlfields + n;
-	  
-	  s_Hx[es][n]  = q[base+0*p_Np];
-	  s_Hy[es][n]  = q[base+1*p_Np];
-	  s_Hz[es][n]  = q[base+2*p_Np];
-	  s_Ex[es][n]  = q[base+3*p_Np];
-	  s_Ey[es][n]  = q[base+4*p_Np];
-	  s_Ez[es][n]  = q[base+5*p_Np];
-	  s_Hxy[es][n] = pmlq[pmlbase+0*p_Np];
-	  s_Hxz[es][n] = pmlq[pmlbase+1*p_Np];
-	  s_Hyx[es][n] = pmlq[pmlbase+2*p_Np];
-	  s_Hyz[es][n] = pmlq[pmlbase+3*p_Np];
-	  s_Hzx[es][n] = pmlq[pmlbase+4*p_Np];
-	  s_Hzy[es][n] = pmlq[pmlbase+5*p_Np];
-	  s_Exy[es][n] = pmlq[pmlbase+6*p_Np];
-	  s_Exz[es][n] = pmlq[pmlbase+7*p_Np];
-	  s_Eyx[es][n] = pmlq[pmlbase+8*p_Np];
-	  s_Eyz[es][n] = pmlq[pmlbase+9*p_Np];
-	  s_Ezy[es][n] = pmlq[pmlbase+10*p_Np];
-	  s_Ezx[es][n] = pmlq[pmlbase+11*p_Np];	    
-	}
+    for(int n=0;n<p_cubMaxNp;++n;@inner(0)){
+      element = pmlElementIds[e];
+      pmlElement = pmlIds[e];
+      if(n<p_Np){
+	const dlong base    =    element*p_Np*p_Nfields    + n;
+	const dlong pmlbase = pmlElement*p_Np*p_Npmlfields + n;
+	
+	s_Hx[n]  = q[base+0*p_Np];
+	s_Hy[n]  = q[base+1*p_Np];
+	s_Hz[n]  = q[base+2*p_Np];
+	s_Ex[n]  = q[base+3*p_Np];
+	s_Ey[n]  = q[base+4*p_Np];
+	s_Ez[n]  = q[base+5*p_Np];
+	s_Hxy[n] = pmlq[pmlbase+0*p_Np];
+	s_Hxz[n] = pmlq[pmlbase+1*p_Np];
+	s_Hyx[n] = pmlq[pmlbase+2*p_Np];
+	s_Hyz[n] = pmlq[pmlbase+3*p_Np];
+	s_Hzx[n] = pmlq[pmlbase+4*p_Np];
+	s_Hzy[n] = pmlq[pmlbase+5*p_Np];
+	s_Exy[n] = pmlq[pmlbase+6*p_Np];
+	s_Exz[n] = pmlq[pmlbase+7*p_Np];
+	s_Eyx[n] = pmlq[pmlbase+8*p_Np];
+	s_Eyz[n] = pmlq[pmlbase+9*p_Np];
+	s_Ezy[n] = pmlq[pmlbase+10*p_Np];
+	s_Ezx[n] = pmlq[pmlbase+11*p_Np];	    
       }
     }
-  }
-
-  @exclusive dfloat cubHx, cubHy, cubHz;
-  @exclusive dfloat cubEx, cubEy, cubEz;
-  @exclusive dfloat cubHxy, cubHxz, cubHyx, cubHyz, cubHzx, cubHzy;
-  @exclusive dfloat cubExy, cubExz, cubEyx, cubEyz, cubEzx, cubEzy;
-
-  for(int n=0;n<p_cubMaxNp;++n;@inner(0)){
+  
+    
+    @exclusive dfloat cubHx, cubHy, cubHz;
+    @exclusive dfloat cubEx, cubEy, cubEz;
+    @exclusive dfloat cubHxy, cubHxz, cubHyx, cubHyz, cubHzx, cubHzy;
+    @exclusive dfloat cubExy, cubExz, cubEyx, cubEyz, cubEzx, cubEzy;
+    
+    for(int n=0;n<p_cubMaxNp;++n;@inner(0)){
       
-    cubHx = 0; cubHxy = 0; cubHxz = 0;
-    cubHy = 0; cubHyx = 0; cubHyz = 0;
-    cubHz = 0; cubHzx = 0; cubHzy = 0;
-    cubEx = 0; cubExy = 0; cubExz = 0;
-    cubEy = 0; cubEyx = 0; cubEyz = 0;
-#endif
+      cubHx = 0; cubHxy = 0; cubHxz = 0;
+      cubHy = 0; cubHyx = 0; cubHyz = 0;
+      cubHz = 0; cubHzx = 0; cubHzy = 0;
+      cubEx = 0; cubExy = 0; cubExz = 0;
+      cubEy = 0; cubEyx = 0; cubEyz = 0;
 	
 #pragma unroll p_Np
-    for(int m=0;m<p_Np;++m){
-      cubHx  += cInm*s_Hx[es][m];
-      cubHy  += cInm*s_Hy[es][m];
-      cubHz  += cInm*s_Hz[es][m];
-      cubEx  += cInm*s_Ex[es][m];
-      cubEy  += cInm*s_Ey[es][m];
-      cubEz  += cInm*s_Ez[es][m];
+      for(int m=0;m<p_Np;++m){
 
-      cubHxy += cInm*s_Hxy[es][m];
-      cubHxz += cInm*s_Hxz[es][m];
-      cubHyx += cInm*s_Hyx[es][m];
-      cubHyz += cInm*s_Hyz[es][m];
-      cubHzx += cInm*s_Hyx[es][m];
-      cubHzy += cInm*s_Hzy[es][m];
-      cubHyx += cInm*s_Hyx[es][m];
+	const dfloat cInm = cubInterp[n+m*p_cubNp];
+	
+	cubHx  += cInm*s_Hx[m];
+	cubHy  += cInm*s_Hy[m];
+	cubHz  += cInm*s_Hz[m];
+	cubEx  += cInm*s_Ex[m];
+	cubEy  += cInm*s_Ey[m];
+	cubEz  += cInm*s_Ez[m];
 
-      cubExy += cInm*s_Exy[es][m];
-      cubExz += cInm*s_Exz[es][m];
-      cubEyx += cInm*s_Eyx[es][m];
-      cubEyz += cInm*s_Eyz[es][m];
-      cubEzx += cInm*s_Eyx[es][m];
-      cubEzy += cInm*s_Ezy[es][m];
-    }
-  }
-    
-  for(int n=0;n<p_cubMaxNp;++n;@inner(0)){
-    
-    dlong sbase = p_dim*pmlElement*p_cubNp + n;
-    dfloat cubSigmaX = cubPmlSigma[sbase + 0*p_cubNp];
-    dfloat cubSigmaY = cubPmlSigma[sbase + 1*p_cubNp];
-    dfloat cubSigmaZ = cubPmlSigma[sbase + 2*p_cubNp];	  
-    dfloat cubBetaX  = cubPmlBeta[sbase + 0*p_cubNp];
-    dfloat cubBetaY  = cubPmlBeta[sbase + 1*p_cubNp];
-    dfloat cubBetaZ  = cubPmlBeta[sbase + 2*p_cubNp];
-	
-    // check signs
-    s_Hx[es][n]  =  cubSigmaY*cubEzy - cubSigmaZ*cubEyz;
-    s_Hy[es][n]  =  cubSigmaZ*cubEzx - cubSigmaX*cubExz;
-    s_Hz[es][n]  =  cubSigmaX*cubEyx - cubSigmaY*cubExy;
-    s_Ex[es][n]  = -cubSigmaY*cubHzy + cubSigmaZ*cubHyz;
-    s_Ey[es][n]  = -cubSigmaZ*cubHzx + cubSigmaX*cubHxz;
-    s_Ez[es][n]  = -cubSigmaX*cubHyx + cubSigmaY*cubHxy;
-	
-    s_Hxy[es][n] = -cubBetaY*cubHxy;
-    s_Hyx[es][n] = -cubBetaX*cubHyx;
-    s_Ezx[es][n] = -cubBetaX*cubEzx;
-    s_Ezy[es][n] = -cubBetaY*cubEzy;
-  }
-  
-  for(int n=0;n<p_cubMaxNp;++n;@inner(0)){
-    if(n<p_Np){
-	
-      const dlong base    =    element*p_Np*p_Nfields   +n;
-      const dlong pmlbase = pmlElement*p_Np*p_Npmlfields+n;
-	
-      dfloat rhsHx = 0, rhsHxy = 0;
-      dfloat rhsHy = 0, rhsHyx = 0;
-      dfloat rhsEz = 0, rhsEzx = 0, rhsEzy = 0;
-	
-      for(int m=0;m<p_cubNp;++m){
-	const dfloat cPnm = cubProject[n+m*p_Np];
-	rhsHx  += cPnm*s_Hx[es][m];
-	rhsHy  += cPnm*s_Hy[es][m];
-	rhsEz  += cPnm*s_Ez[es][m];
-	rhsHxy += cPnm*s_Hxy[es][m];
-	rhsHyx += cPnm*s_Hyx[es][m];
-	rhsEzx += cPnm*s_Ezx[es][m];
-	rhsEzy += cPnm*s_Ezy[es][m];
+	cubHxy += cInm*s_Hxy[m];
+	cubHxz += cInm*s_Hxz[m];
+	cubHyx += cInm*s_Hyx[m];
+	cubHyz += cInm*s_Hyz[m];
+	cubHzx += cInm*s_Hyx[m];
+	cubHzy += cInm*s_Hzy[m];
+	cubHyx += cInm*s_Hyx[m];
+
+	cubExy += cInm*s_Exy[m];
+	cubExz += cInm*s_Exz[m];
+	cubEyx += cInm*s_Eyx[m];
+	cubEyz += cInm*s_Eyz[m];
+	cubEzx += cInm*s_Eyx[m];
+	cubEzy += cInm*s_Ezy[m];
       }
+    }
+    
+    for(int n=0;n<p_cubMaxNp;++n;@inner(0)){
+    
+      dlong sbase = p_dim*pmlElement*p_cubNp + n;
+      dfloat cubSigmaX = cubPmlSigma[sbase + 0*p_cubNp];
+      dfloat cubSigmaY = cubPmlSigma[sbase + 1*p_cubNp];
+      dfloat cubSigmaZ = cubPmlSigma[sbase + 2*p_cubNp];	  
+      dfloat cubBetaX  = cubPmlBeta[sbase + 0*p_cubNp];
+      dfloat cubBetaY  = cubPmlBeta[sbase + 1*p_cubNp];
+      dfloat cubBetaZ  = cubPmlBeta[sbase + 2*p_cubNp];
 	
-      rhsq[base+0*p_Np] += rhsHx;
-      rhsq[base+1*p_Np] += rhsHy;
-      rhsq[base+2*p_Np] += rhsEz;
+      // check signs
+      s_Hx[n]  =  cubSigmaY*cubEzy - cubSigmaZ*cubEyz;
+      s_Hy[n]  =  cubSigmaZ*cubEzx - cubSigmaX*cubExz;
+      s_Hz[n]  =  cubSigmaX*cubEyx - cubSigmaY*cubExy;
+      s_Ex[n]  = -cubSigmaY*cubHzy + cubSigmaZ*cubHyz;
+      s_Ey[n]  = -cubSigmaZ*cubHzx + cubSigmaX*cubHxz;
+      s_Ez[n]  = -cubSigmaX*cubHyx + cubSigmaY*cubHxy;
 	
-      rhspmlq[pmlbase+0*p_Np] += rhsHxy;
-      rhspmlq[pmlbase+1*p_Np] += rhsHyx;
-      rhspmlq[pmlbase+2*p_Np] += rhsEzx;
-      rhspmlq[pmlbase+3*p_Np] += rhsEzy;
+      s_Hxy[n] = -cubBetaY*cubHxy;
+      s_Hyx[n] = -cubBetaX*cubHyx;
+      s_Ezx[n] = -cubBetaX*cubEzx;
+      s_Ezy[n] = -cubBetaY*cubEzy;
+    }
+
+    for(int n=0;n<p_cubMaxNp;++n;@inner(0)){
+      if(n<p_Np){
+	
+	const dlong base    =    element*p_Np*p_Nfields   +n;
+	const dlong pmlbase = pmlElement*p_Np*p_Npmlfields+n;
+	
+	dfloat rhsHx = 0, rhsHxy = 0;
+	dfloat rhsHy = 0, rhsHyx = 0;
+	dfloat rhsEz = 0, rhsEzx = 0, rhsEzy = 0;
+	
+	for(int m=0;m<p_cubNp;++m){
+	  const dfloat cPnm = cubProject[n+m*p_Np];
+	  rhsHx  += cPnm*s_Hx[m];
+	  rhsHy  += cPnm*s_Hy[m];
+	  rhsEz  += cPnm*s_Ez[m];
+	  rhsHxy += cPnm*s_Hxy[m];
+	  rhsHyx += cPnm*s_Hyx[m];
+	  rhsEzx += cPnm*s_Ezx[m];
+	  rhsEzy += cPnm*s_Ezy[m];
+	}
+	
+	rhsq[base+0*p_Np] += rhsHx;
+	rhsq[base+1*p_Np] += rhsHy;
+	rhsq[base+2*p_Np] += rhsEz;
+	
+	rhspmlq[pmlbase+0*p_Np] += rhsHxy;
+	rhspmlq[pmlbase+1*p_Np] += rhsHyx;
+	rhspmlq[pmlbase+2*p_Np] += rhsEzx;
+	rhspmlq[pmlbase+3*p_Np] += rhsEzy;
+      }
     }
   }
 }
 
+@kernel void maxwellCfsPmlTermsTet3D(const dlong Npmlelements,
+					     @restrict const  dlong *  pmlElementIds,
+					     @restrict const  dlong *  pmlIds,
+					     @restrict const  dfloat * pmlSigma,
+					     @restrict const  dfloat * pmlBeta,
+					     @restrict const  dfloat * q,
+					     @restrict const  dfloat * pmlq,
+					     @restrict        dfloat * rhsq,
+					     @restrict        dfloat * rhspmlq){
+  
+  // for all elements
+  for(dlong e=0;e<Npmlelements;++e;@outer(0)){
+    
+#define USE_ORIGINAL_SCALING 1
+    
+    for(int n=0;n<p_Np;++n;@inner(0)){
+
+      dlong element = pmlElementIds[e];
+      dlong pmlElement = pmlIds[e];
+      
+      const dlong base    =    element*p_Np*p_Nfields    + n;
+      const dlong pmlbase = pmlElement*p_Np*p_Npmlfields + n;
+      
+      dfloat Hx = q[base+0*p_Np];
+      dfloat Hy = q[base+1*p_Np];
+      dfloat Hz = q[base+2*p_Np];
+      dfloat Ex = q[base+3*p_Np];
+      dfloat Ey = q[base+4*p_Np];
+      dfloat Ez = q[base+5*p_Np];
+      
+      dfloat Hxy = pmlq[pmlbase+0*p_Np];
+      dfloat Hxz = pmlq[pmlbase+1*p_Np];
+      dfloat Hyx = pmlq[pmlbase+2*p_Np];
+      dfloat Hyz = pmlq[pmlbase+3*p_Np];
+      dfloat Hzx = pmlq[pmlbase+4*p_Np];
+      dfloat Hzy = pmlq[pmlbase+5*p_Np];
+
+      dfloat Exy = pmlq[pmlbase+6*p_Np];
+      dfloat Exz = pmlq[pmlbase+7*p_Np];
+      dfloat Eyx = pmlq[pmlbase+8*p_Np];
+      dfloat Eyz = pmlq[pmlbase+9*p_Np];
+      dfloat Ezx = pmlq[pmlbase+10*p_Np];
+      dfloat Ezy = pmlq[pmlbase+11*p_Np];
+
+#if USE_ORIGINAL_SCALING==1
+      dfloat rhsHxy = rhspmlq[pmlbase+0*p_Np];
+      dfloat rhsHxz = rhspmlq[pmlbase+1*p_Np];
+      dfloat rhsHyx = rhspmlq[pmlbase+2*p_Np];
+      dfloat rhsHyz = rhspmlq[pmlbase+3*p_Np];
+      dfloat rhsHzx = rhspmlq[pmlbase+4*p_Np];
+      dfloat rhsHzy = rhspmlq[pmlbase+5*p_Np];
+
+      dfloat rhsExy = rhspmlq[pmlbase+6*p_Np];
+      dfloat rhsExz = rhspmlq[pmlbase+7*p_Np];
+      dfloat rhsEyx = rhspmlq[pmlbase+8*p_Np];
+      dfloat rhsEyz = rhspmlq[pmlbase+9*p_Np];
+      dfloat rhsEzx = rhspmlq[pmlbase+10*p_Np];
+      dfloat rhsEzy = rhspmlq[pmlbase+11*p_Np];
+#endif
+      
+      dlong sbase = p_dim*pmlElement*p_Np + n;
+      dfloat sigmaX = pmlSigma[sbase + 0*p_Np];
+      dfloat sigmaY = pmlSigma[sbase + 1*p_Np];
+      dfloat sigmaZ = pmlSigma[sbase + 2*p_Np];
+      dfloat betaX  =  pmlBeta[sbase + 0*p_Np];
+      dfloat betaY  =  pmlBeta[sbase + 1*p_Np];
+      dfloat betaZ  =  pmlBeta[sbase + 2*p_Np];
+      
+#if USE_ORIGINAL_SCALING==1
+      // check signs
+      rhsq[base+0*p_Np] += -Eyz+Ezy;
+      rhsq[base+1*p_Np] += -Exz+Ezx;
+      rhsq[base+2*p_Np] += -Eyx+Exy;
+      rhsq[base+3*p_Np] +=  Hyz-Hzy;
+      rhsq[base+4*p_Np] +=  Hxz-Hzx;
+      rhsq[base+5*p_Np] +=  Hyx-Hxy;
+      
+      rhspmlq[pmlbase+0*p_Np] = sigmaY*rhsHxy - betaY*Hxy;
+      rhspmlq[pmlbase+1*p_Np] = sigmaZ*rhsHxz - betaZ*Hxz;
+      rhspmlq[pmlbase+2*p_Np] = sigmaX*rhsHyx - betaX*Hyx;
+      rhspmlq[pmlbase+3*p_Np] = sigmaZ*rhsHyz - betaZ*Hyz;
+      rhspmlq[pmlbase+4*p_Np] = sigmaX*rhsHzx - betaX*Hzx;
+      rhspmlq[pmlbase+5*p_Np] = sigmaY*rhsHzy - betaY*Hzy;
+
+      rhspmlq[pmlbase+6*p_Np] = sigmaY*rhsExy - betaY*Exy;
+      rhspmlq[pmlbase+7*p_Np] = sigmaZ*rhsExz - betaZ*Exz;
+      rhspmlq[pmlbase+8*p_Np] = sigmaX*rhsEyx - betaX*Eyx;
+      rhspmlq[pmlbase+9*p_Np] = sigmaZ*rhsEyz - betaZ*Eyz;
+      rhspmlq[pmlbase+10*p_Np] = sigmaX*rhsEzx - betaX*Ezx;
+      rhspmlq[pmlbase+11*p_Np] = sigmaY*rhsEzy - betaY*Ezy;
+#else
+      // check signs
+      rhsq[base+0*p_Np] += -sigmaZ*Eyz + sigmaY*Ezy;
+      rhsq[base+1*p_Np] += -sigmaX*Ezx + sigmaZ*Exz;
+      rhsq[base+2*p_Np] += -sigmaX*Eyx + sigmaY*Exy;
+      rhsq[base+3*p_Np] +=  sigmaZ*Hyz - sigmaY*Hzy;
+      rhsq[base+4*p_Np] +=  sigmaX*Hzx - sigmaZ*Hxz;
+      rhsq[base+5*p_Np] +=  sigmaX*Hyx - sigmaY*Hxy;
+      
+      rhspmlq[pmlbase+0*p_Np] -= betaY*Hxy;
+      rhspmlq[pmlbase+1*p_Np] -= betaZ*Hxz;
+      rhspmlq[pmlbase+2*p_Np] -= betaX*Hyx;
+      rhspmlq[pmlbase+3*p_Np] -= betaZ*Hyz;
+      rhspmlq[pmlbase+4*p_Np] -= betaX*Hzx;
+      rhspmlq[pmlbase+5*p_Np] -= betaY*Hzy;
+
+      rhspmlq[pmlbase+6*p_Np] -= betaY*Exy;
+      rhspmlq[pmlbase+7*p_Np] -= betaZ*Exz;
+      rhspmlq[pmlbase+8*p_Np] -= betaX*Eyx;
+      rhspmlq[pmlbase+9*p_Np] -= betaZ*Eyz;
+      rhspmlq[pmlbase+10*p_Np] -= betaX*Ezx;
+      rhspmlq[pmlbase+11*p_Np] -= betaY*Ezy;
+
+#endif
+    }
+  }
+}

@@ -56,7 +56,7 @@ SOFTWARE.
 // see - https://epubs.siam.org/doi/abs/10.1137/16M1089186
 
 
-@kernel void maxwellCubatureAnisotropicProjectTri2D(const dlong Nelements,
+@kernel void maxwellCubatureAnisotropicProjectTet3D(const dlong Nelements,
 					    @restrict const  dlong *  pmlElementIds, 
 					    @restrict const  dlong *  pmlIds,
 					    @restrict const  dfloat *  cubInterp, // interpolate to cubature nodes
@@ -112,7 +112,8 @@ SOFTWARE.
 
 	  //	  printf("cubW = %f,%f,%f\n", cubW1, cubW2, cubW3);
 
-	  rhsHx = 0; rhsHy = 0; rhsEz = 0;
+	  rhsHx = 0; rhsHy = 0; rhsHz = 0;
+	  rhsEz = 0; rhsEy = 0; rhsEz = 0;
 	  
 #pragma unroll p_Np
 	  for(int m=0;m<p_Np;++m){
