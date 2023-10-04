@@ -1,0 +1,178 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+
+ 
+// nodal approach
+@kernel void maxwellAnisotropicProjectTet3D(const dlong Nelements,
+					    @restrict const  dlong *  pmlElementIds, 
+					    @restrict const  dlong *  pmlIds,
+					    @restrict const  dfloat *  inverseWeights,
+					    @restrict        dfloat *  rhsq){
+  
+  // for all elements
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      dlong element = pmlElementIds[e];
+      dlong pmlElement = pmlIds[e];
+      
+      const dlong base = element*p_Np*p_Nfields + n;
+      const dlong wbase = pmlElement*p_Np*p_dim + n;
+      rhsq[base+0*p_Np] *= inverseWeights[wbase + 0*p_Np];	
+      rhsq[base+1*p_Np] *= inverseWeights[wbase + 1*p_Np];
+      rhsq[base+2*p_Np] *= inverseWeights[wbase + 2*p_Np];
+      rhsq[base+3*p_Np] *= inverseWeights[wbase + 0*p_Np];
+      rhsq[base+4*p_Np] *= inverseWeights[wbase + 1*p_Np]; // note only using 3 weight fields
+      rhsq[base+5*p_Np] *= inverseWeights[wbase + 2*p_Np];
+    }
+  }
+}
+
+
+// use Weight Adjusted DG type approximation of weighted mass inversion
+// see - https://epubs.siam.org/doi/abs/10.1137/16M1089186
+
+
+@kernel void maxwellCubatureAnisotropicProjectTri2D(const dlong Nelements,
+					    @restrict const  dlong *  pmlElementIds, 
+					    @restrict const  dlong *  pmlIds,
+					    @restrict const  dfloat *  cubInterp, // interpolate to cubature nodes
+					    @restrict const  dfloat *  cubProject, // project from cubature to interpolation nodes
+					    @restrict const  dfloat *  cubInverseWeights,
+					    @restrict        dfloat *  rhsq){
+  
+  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockC;@outer(0)){
+
+    // reduces shared storage by processing one face at a time
+    @shared dfloat s_rhsHx[p_NblockC][p_cubMaxNp];
+    @shared dfloat s_rhsHy[p_NblockC][p_cubMaxNp];
+    @shared dfloat s_rhsHz[p_NblockC][p_cubMaxNp];
+    @shared dfloat s_rhsEx[p_NblockC][p_cubMaxNp];
+    @shared dfloat s_rhsEy[p_NblockC][p_cubMaxNp];
+    @shared dfloat s_rhsEz[p_NblockC][p_cubMaxNp];
+    
+    @exclusive dlong r_e, element;
+
+    for(int es=0;es<p_NblockC;++es;@inner(1)){
+      for(int n=0;n<p_cubMaxNp;++n;@inner(0)){
+	r_e = eo + es;
+
+	element = pmlElementIds[r_e];
+	
+	if(r_e<Nelements && n<p_Np){
+
+	  const dlong base = element*p_Np*p_Nfields + n;
+	  
+	  s_rhsHx[es][n] = rhsq[base+0*p_Np];
+	  s_rhsHy[es][n] = rhsq[base+1*p_Np];
+	  s_rhsHz[es][n] = rhsq[base+2*p_Np];
+	  s_rhsEx[es][n] = rhsq[base+3*p_Np];
+	  s_rhsEy[es][n] = rhsq[base+4*p_Np];
+	  s_rhsEz[es][n] = rhsq[base+5*p_Np];
+	}
+      }
+    }
+
+    @exclusive dfloat rhsHx, rhsHy, rhsHz;
+    @exclusive dfloat rhsEx, rhsEy, rhsEz; 
+    
+    for(int es=0;es<p_NblockC;++es;@inner(1)){
+      for(int n=0;n<p_cubMaxNp;++n;@inner(0)){
+
+	if(r_e<Nelements){
+	  const dlong  pmlElement = pmlIds[r_e];
+	  const dlong  cid = pmlElement*p_cubNp*3 + n; // WARNING ON 3
+	  const dfloat cubW1 = cubInverseWeights[cid+0*p_cubNp];
+	  const dfloat cubW2 = cubInverseWeights[cid+1*p_cubNp];
+	  const dfloat cubW3 = cubInverseWeights[cid+2*p_cubNp];	
+
+	  //	  printf("cubW = %f,%f,%f\n", cubW1, cubW2, cubW3);
+
+	  rhsHx = 0; rhsHy = 0; rhsEz = 0;
+	  
+#pragma unroll p_Np
+	  for(int m=0;m<p_Np;++m){
+	    dfloat cInm = cubInterp[n+m*p_cubNp];
+	    rhsHx += cInm*s_rhsHx[es][m];
+	    rhsHy += cInm*s_rhsHy[es][m];
+	    rhsHy += cInm*s_rhsHz[es][m];
+	    rhsEx += cInm*s_rhsEx[es][m];
+	    rhsEy += cInm*s_rhsEy[es][m];
+	    rhsEz += cInm*s_rhsEz[es][m];
+	  }
+	  
+	  rhsHx *= cubW1;
+	  rhsHy *= cubW2;
+	  rhsHz *= cubW3;
+
+	  rhsEx *= cubW1;
+	  rhsEy *= cubW2;
+	  rhsEz *= cubW3;
+	}
+      }
+    }
+
+    for(int es=0;es<p_NblockC;++es;@inner(1)){
+      for(int n=0;n<p_cubMaxNp;++n;@inner(0)){
+	s_rhsHx[es][n] = rhsHx;
+	s_rhsHy[es][n] = rhsHy;
+	s_rhsHz[es][n] = rhsHz;
+	s_rhsEx[es][n] = rhsEx;
+	s_rhsEy[es][n] = rhsEy;
+	s_rhsEz[es][n] = rhsEz;
+      }
+    }
+    
+    for(int es=0;es<p_NblockC;++es;@inner(1)){
+      for(int n=0;n<p_cubMaxNp;++n;@inner(0)){
+	if(n<p_Np && r_e<Nelements){
+	  
+	  rhsHx = 0; rhsHy = 0; rhsHz = 0;
+	  rhsEx = 0; rhsEy = 0; rhsEz = 0;
+	  
+	  for(int m=0;m<p_cubNp;++m){
+	    dfloat cPnm = cubProject[n+m*p_Np];
+	    rhsHx += cPnm*s_rhsHx[es][m];
+	    rhsHy += cPnm*s_rhsHy[es][m];
+	    rhsHz += cPnm*s_rhsHz[es][m];
+	    rhsEx += cPnm*s_rhsEx[es][m];
+	    rhsEy += cPnm*s_rhsEy[es][m];
+	    rhsEz += cPnm*s_rhsEz[es][m];
+	  }
+	  
+	  const dlong base = element*p_Np*p_Nfields+n;
+	  rhsq[base+0*p_Np] = rhsHx;
+	  rhsq[base+1*p_Np] = rhsHy;
+	  rhsq[base+2*p_Np] = rhsHz;
+	  rhsq[base+3*p_Np] = rhsEx;
+	  rhsq[base+4*p_Np] = rhsEy;
+	  rhsq[base+5*p_Np] = rhsEz;
+        }
+      }
+    }
+  }
+}

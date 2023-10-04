@@ -339,7 +339,7 @@
 
 	    dlong pmlbase = pmlelement*p_Np*p_Npmlfields + n;
 	    rhspmlq[pmlbase+0*p_Np] = dEydz;
-	    rhspmlq[pmlbase+1*p_Np] = dEzdz;
+	    rhspmlq[pmlbase+1*p_Np] = dEzdx;
 	    rhspmlq[pmlbase+2*p_Np] = dExdy;
 	    rhspmlq[pmlbase+3*p_Np] = dHydz;
 	    rhspmlq[pmlbase+4*p_Np] = dHxdz;
