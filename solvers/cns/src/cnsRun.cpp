@@ -33,9 +33,8 @@ void cns_t::Run(){
   settings.getSetting("FINAL TIME", finalTime);
 
   initialConditionKernel(mesh.Nelements,
-                         mu,
-                         gamma,
                          startTime,
+                         o_pCoeff,
                          mesh.o_x,
                          mesh.o_y,
                          mesh.o_z,
@@ -47,14 +46,23 @@ void cns_t::Run(){
   // set time step
   dfloat hmin = mesh.MinCharacteristicLength();
   dfloat vmax = MaxWaveSpeed(o_q, startTime);
+  printf(" vmax = %.4f", vmax);
 
   dfloat dtAdv  = cfl/(vmax*(mesh.N+1.)*(mesh.N+1.));
-  dfloat dtVisc = cfl*pow(hmin, 2)/(pow(mesh.N+1,4)*mu);
 
+  dfloat visc   = 0.0; 
+
+  if(stab.type==Stab::NOSTAB){
+    visc = pCoeff[MUID]; 
+  }else if(stab.type==Stab::ARTDIFF){
+   visc = std::max(hmin/mesh.N, pCoeff[MUID]); 
+  }
+
+  dfloat dtVisc = mu > 1E-12 ? cfl*pow(hmin, 2)/(pow(mesh.N+1,4)*visc):1E12;
   dfloat dt = std::min(dtAdv, dtVisc);
   timeStepper.SetTimeStep(dt);
 
-   if(mesh.rank==0)
+  if(mesh.rank==0)
   printf("time step size: %.4e startTime= %.4e FinalTime= %.4e \n", dt, startTime, finalTime);
 
   timeStepper.Run(*this, o_q, startTime, finalTime);

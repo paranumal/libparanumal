@@ -1,0 +1,51 @@
+@kernel void detectFindNeighTri2D(const dlong Nelements,
+	                                @restrict const  dlong  *  vmapP,
+																	@restrict dfloat *  ElementList){
+
+  for(dlong e=0;e<Nelements;++e;@tile(p_blockSize,@outer,@inner)){
+
+	 for(int fld=0; fld<p_dNfields; fld++){
+			// int fld = 0;
+      const int em_type = ElementList[e*p_dNfields + fld];
+      dlong ep_ids[p_Nfaces]; 
+      int ep_type[p_Nfaces]; 
+
+      for(int f=0; f<p_Nfaces; f++){
+      	const dlong idf = e*p_Nfaces*p_Nfp + f*p_Nfp + 0; 
+      	ep_ids[f]  = vmapP[idf]/p_Np;
+      	ep_type[f] = ElementList[ep_ids[f]*p_dNfields + fld]; 
+      }
+		  
+		  // 
+      if(em_type==s_DGDG_TYPE){
+      	int all_fv = 0, en_type = s_DGDG_TYPE; 
+      	for(int f=0; f<p_Nfaces; f++){      	  
+      	  // const int ep_type  =  ElementList[ep*p_dNfields + fld];
+      	  if(ep_type[f] ==s_FVFV_TYPE){ 
+      	  	en_type     = s_DGFV_TYPE; 
+      	  	all_fv +=1; 
+      	  }
+        }
+
+   			if(all_fv==p_Nfaces){ en_type = s_FVFV_TYPE;}  
+					// ElementList[e*p_dNfields + fld] = en_type; 
+					ElementList[e*p_dNfields + fld] = dfloat(en_type); 
+			}
+
+
+			// for(int f=0; f<p_Nfaces; f++){
+			// 	const dlong ep = ep_ids[f]; 
+			// 	const int ept = ElementList[ep*p_dNfields + fld];
+			// 	// this is halo element
+			// 	if(ep > Nelements && ept==s_DGFV_TYPE){
+			// 		ElementList[ep*p_dNfields + fld] = s_FVFV_TYPE;
+			// 	}
+			// }
+    }
+  }
+}
+
+
+
+
+

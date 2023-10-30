@@ -95,7 +95,6 @@ void lserk4::Run(solver_t& solver,
                            + 6 * platform.memPoolAlignment<dfloat>());
 
   dfloat time = start;
-
   solver.Report(time,0);
 
   dfloat outputInterval=0.0;

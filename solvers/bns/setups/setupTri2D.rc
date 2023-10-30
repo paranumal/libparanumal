@@ -2,10 +2,12 @@
 2.0
 
 [DATA FILE]
-data/bnsGaussian2D.h
+#data/bnsGaussian2D.h
+data/bnsUniform2D.h
 
 [MESH FILE]
-PMLBOX
+#PMLBOX
+../../meshes/bnsNACA.msh
 
 [MESH DIMENSION]
 2
@@ -38,7 +40,7 @@ CUDA
 0
 
 [VISCOSITY]
-0.001
+8.0e-8
 
 [SPEED OF SOUND]
 1.0
@@ -47,10 +49,10 @@ CUDA
 4
 
 [PML SIGMAX MAX]
-50
+100
 
 [PML SIGMAY MAX]
-50
+100
 
 [PML INTEGRATION]
 COLLOCATION
@@ -62,7 +64,7 @@ SARK4
 0
 
 [FINAL TIME]
-10
+100
 
 [OUTPUT INTERVAL]
 1

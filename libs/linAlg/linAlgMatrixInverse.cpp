@@ -72,4 +72,76 @@ void linAlg_t::matrixInverse(const int N, memory<float> A){
   LIBP_ABORT("sgetri_ reports info = " << info, info);
 }
 
+// Pseudo Invverse
+void linAlg_t::matrixPseudoInverse(const int M, const int N, memory<double> A){
+
+  memory<double> tmpA(M*N);
+  memory<double> V(M*N);
+
+  // Copy the matrix
+  for(int m=0; m<M*N; m++)
+    tmpA[m] = A[m]; 
+
+  // First compute  inv(trans(A)*A)
+  for(int n=0; n<N; n++){
+    for(int m=0; m<N; m++){
+      double tmp = 0; 
+      for(int i = 0; i<M; i++){
+       tmp += tmpA[i*N +n]*tmpA[i*N +m];
+     }
+     V[n*N + m] = tmp; 
+   }
+ }
+
+ matrixInverse(N, V); 
+
+// (A^T*A)^-1 * A^T
+ for(int n=0; n<N; n++){
+  for(int m=0; m<M; m++){
+    double tmp = 0; 
+    for(int i=0; i<N; i++){
+      tmp += V[n*N + i]*tmpA[m*N + i];
+    }
+    A[n*M + m] = tmp; 
+  }
+}
+
+}
+
+
+// Pseudo Inverse 
+void linAlg_t::matrixPseudoInverse(const int M, const int N, memory<float> A){
+
+  memory<float> tmpA(M*N);
+  memory<float> V(M*N);
+
+  // Copy the matrix
+  for(int m=0; m<M*N; m++)
+    tmpA[m] = A[m]; 
+
+  // First compute  inv(trans(A)*A)
+  for(int n=0; n<N; n++){
+    for(int m=0; m<N; m++){
+      float tmp = 0; 
+      for(int i = 0; i<M; i++){
+       tmp += tmpA[i*N +n]*tmpA[i*N +m];
+     }
+     V[n*N + m] = tmp; 
+   }
+ }
+ matrixInverse(N, V); 
+
+// (A^T*A)^-1 * A^T
+ for(int n=0; n<N; n++){
+  for(int m=0; m<M; m++){
+    float tmp = 0; 
+    for(int i=0; i<N; i++){
+      tmp += V[n*N + i]*tmpA[m*N + i];
+    }
+    A[n*M + m] = tmp; 
+  }
+}
+}
+
+
 } //namespace libp

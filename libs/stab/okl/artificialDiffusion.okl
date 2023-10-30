@@ -1,0 +1,212 @@
+/*
+The MIT License (MIT)
+
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
+ @kernel void computeViscosity(const dlong N,
+                               const dfloat alpha,
+                               @restrict const dfloat *viscActivation, 
+                               @restrict const dfloat *viscScale, 
+                               @restrict       dfloat *visc){
+ for(dlong n=0;n<N;++n;@tile(p_blockSize,@outer,@inner)){
+  const dlong e   = n/s_Nverts; 
+  const int vid   = n%s_Nverts; 
+  const dfloat scale = viscScale[e]; // (h/N) 
+
+  for(int fld=0; fld<s_Ndfields; fld++){
+    const dlong id     = e*s_Nverts*s_Ndfields + fld*s_Nverts + vid; 
+    dfloat ramp        = viscActivation[e*s_Ndfields + fld];
+    visc[n] = alpha*scale*ramp;
+    }
+  }
+}
+
+
+
+@kernel void maskElements(const dlong N,
+                          @restrict const dlong  *elementMask, 
+                          @restrict       dfloat *viscActivation){
+ for(dlong n=0;n<N;++n;@tile(p_blockSize,@outer,@inner)){
+  const dlong e   = elementMask[n]; 
+  for(int fld=0; fld<s_Ndfields; fld++){
+    viscActivation[e*s_Ndfields + fld] = 0.0;
+    }
+  }
+}
+
+
+
+
+
+@kernel void projectViscosity(const dlong Nelements,
+                              @restrict const  dfloat *  pM,
+                              @restrict const  dfloat *  vq,
+                              @restrict        dfloat *  q){
+
+  for(dlong e=0;e<Nelements;e++; @outer(0)){  // for all elements
+    @shared dfloat s_q[s_Ndfields][s_Nverts];
+
+    for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element    
+      if(n<s_Nverts){    
+        const dlong id = e*s_Ndfields*s_Nverts + n;
+        #pragma unroll s_Ndfields
+        for(int fld=0; fld<s_Ndfields;++fld){
+          s_q[fld][n] = vq[id+fld*s_Nverts];
+        }
+      }
+    }
+
+    for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+      
+      dfloat r_qM[s_Ndfields];
+       #pragma unroll s_Ndfields
+       for (int fld=0;fld<s_Ndfields;fld++)
+          r_qM[fld] = 0.0;
+
+        #pragma unroll s_Nverts
+        for (int k=0;k<s_Nverts;k++) {
+          const dfloat fmn = pM[n+k*p_Np];
+          for (int fld=0;fld<s_Ndfields;fld++){
+             r_qM[fld] += fmn*s_q[fld][k];
+          }        
+        }
+
+        const dlong qbase = e*p_Np*s_Ndfields + n;
+        #pragma unroll s_Ndfields
+        for (int fld=0;fld<s_Ndfields;fld++){
+          q[qbase+fld*p_Np] = r_qM[fld];
+        }
+                  
+      }
+    }
+  }
+
+
+
+
+
+
+// @kernel void projectViscosityTri2D(const dlong Nelements,
+//                                     @restrict const  dfloat *  pM,
+//                                     @restrict const  dfloat *  vq,
+//                                     @restrict        dfloat *  q){
+
+//   for(dlong e=0;e<Nelements;e++; @outer(0)){  // for all elements
+//     @shared dfloat s_q[p_dNfields][p_sNverts];
+
+//     for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element    
+//       if(n<p_sNverts){    
+//         const dlong id = e*p_dNfields*p_sNverts + n;
+//         #pragma unroll p_dNfields
+//         for(int fld=0; fld<p_dNfields;++fld){
+//           s_q[fld][n] = vq[id+fld*p_sNverts];
+//         }
+//       }
+//     }
+
+
+
+//     for(int n=0;n<p_Np;++n;@inner(0)){     // for all nodes in this element
+      
+//       dfloat r_qM[p_dNfields];
+//        #pragma unroll p_dNfields
+//        for (int fld=0;fld<p_dNfields;fld++)
+//           r_qM[fld] = 0.0;
+
+//         #pragma unroll p_sNverts
+//         for (int k=0;k<p_sNverts;k++) {
+//           const dfloat fmn = pM[n+k*p_Np];
+//           for (int fld=0;fld<p_dNfields;fld++){
+//              r_qM[fld] += fmn*s_q[fld][k];
+//           }        
+//         }
+
+//         const dlong qbase = e*p_Np*p_dNfields + n;
+//         #pragma unroll p_dNfields
+//         for (int fld=0;fld<p_dNfields;fld++){
+//           q[qbase+fld*p_Np] = r_qM[fld];
+//         }
+                  
+//       }
+//     }
+//   }
+
+
+
+
+
+
+// @kernel void computeViscosity(const dlong N,
+//                               const dfloat alpha,
+//                               @restrict const  int    *  EToB,
+//                                @restrict const dfloat *viscActivation, 
+//                                @restrict const dfloat *viscScale, 
+//                                @restrict       dfloat *visc){
+//  for(dlong n=0;n<N;++n;@tile(p_blockSize,@outer,@inner)){
+//   const dlong e   = n/p_sNverts; 
+//   const int vid   = n%p_sNverts; 
+//   const dfloat scale = viscScale[e]; // (h/N) 
+
+//   int bctype = 0;
+
+//   for(int f=0; f<p_Nfaces; f++){
+//     if(EToB[e*p_Nfaces + f] == 1)
+//       bctype =1 ;  
+//   }
+
+//   for(int fld=0; fld<p_dNfields; fld++){
+//     const dlong id     = e*p_sNverts*p_dNfields + fld*p_sNverts + vid; 
+//     dfloat ramp  = viscActivation[e*p_dNfields + fld];
+//     visc[n] = (bctype==1) ? 0.0 : alpha*scale*ramp;
+//     }
+//   }
+// }
+
+
+
+// @kernel void computeViscosity(const dlong Nelements,
+//                               const dfloat alpha,
+//                               @restrict const  int    *  EToB,
+//                                @restrict const dfloat *viscActivation, 
+//                                @restrict const dfloat *viscScale, 
+//                                @restrict       dfloat *visc){
+//  for(dlong e=0;e<Nelements;++e;@tile(p_blockSize,@outer,@inner)){
+//   const dfloat scale = viscScale[e]; // (h/N) 
+
+//   int bctype = 0;
+//   for(int f=0; f<p_Nfaces; f++){
+//     if(EToB[e*p_Nfaces + f] == 1){
+//       bctype =1 ;  
+//     }
+//   }
+
+// for(int v=0; v<p_sNverts; v++){
+//   for(int fld=0; fld<p_dNfields; fld++){
+//     const dlong id     = e*p_sNverts*p_dNfields + fld*p_sNverts + v; 
+//     dfloat ramp        = viscActivation[e*p_dNfields + fld];
+//     visc[e*p_sNverts*p_dNfields + fld*p_sNverts + v] = (bctype==1) ? 0.0 : alpha*scale*ramp;
+//     }
+//   }
+
+
+//   }
+// }

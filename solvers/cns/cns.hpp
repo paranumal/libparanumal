@@ -33,6 +33,7 @@ SOFTWARE.
 #include "solver.hpp"
 #include "timeStepper.hpp"
 #include "linAlg.hpp"
+#include "stab.hpp"
 
 #define DCNS LIBP_DIR"/solvers/cns/"
 
@@ -40,22 +41,41 @@ using namespace libp;
 
 class cnsSettings_t: public settings_t {
 public:
-  cnsSettings_t(comm_t _comm);
+  cnsSettings_t(comm_t& _comm);
   void report();
   void parseFromFile(platformSettings_t& platformSettings,
                      meshSettings_t& meshSettings,
                      const std::string filename);
+
+  stabSettings_t extractStabSettings();
 };
+
+
 
 class cns_t: public solver_t {
 public:
   mesh_t mesh;
+  stab_t stab {};
+  stabSettings_t stabSettings; 
 
   int Nfields;
   int Ngrads;
 
-  dfloat mu;
-  dfloat gamma;
+  dfloat Re, Ma, Pr;
+  dfloat mu, cp, cv, R;
+  dfloat gamma, igamma, gammaM1, igammaM1, gammaP1, igammaP1;
+
+  int viscType;
+  int Nph; // number of physical parameters 
+  int MUID, GMID, RRID, PRID, CPID, CVID; 
+  int EXID, TRID, TSID, CSID; 
+
+  // Physical coefficients
+  memory<dfloat> refState; 
+
+  // Physical coefficients
+  memory<dfloat> pCoeff; 
+  deviceMemory<dfloat> o_pCoeff; 
 
   int cubature;
   int isothermal;
@@ -64,6 +84,8 @@ public:
 
   ogs::halo_t fieldTraceHalo;
   ogs::halo_t gradTraceHalo;
+
+
 
   memory<dfloat> q;
   deviceMemory<dfloat> o_q;
@@ -95,13 +117,23 @@ public:
 
   void Run();
 
+  // Set reference values, thermodynamics, nondimensional values
+  void setPhysics(properties_t & kernelInfo);
+  void setArtificialDiffusion(properties_t & kernelInfo);
+
+  // Set detectors
+  void SetDetector(properties_t & kernelInfo);
+
+
   void Report(dfloat time, int tstep) override;
 
   void PlotFields(memory<dfloat> Q, memory<dfloat> V, std::string fileName);
 
-  void rhsf(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
-
   dfloat MaxWaveSpeed(deviceMemory<dfloat>& o_Q, const dfloat T);
+
+  void rhsf(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
+  void rhsNoStab(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
+  void rhsArtDiff(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
 };
 
 #endif

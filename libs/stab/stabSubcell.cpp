@@ -24,44 +24,48 @@ SOFTWARE.
 
 */
 
-#include "mesh.hpp"
+#include "stab.hpp"
 
 namespace libp {
 
-//build a new mesh object from another with a different degree.
-mesh_t mesh_t::SetupNewDegree(int Nf){
+void stab_t::stabSetupSubcell(){
+  /*
 
-  // Copy the existing object
-  mesh_t mesh=*this;
+  settings.getSetting("SUBCELL NUMBER", N);
 
-  //just reuse the current mesh if the degree isnt changing.
-  if (Nf==N) return mesh;
+  if(N<mesh.N){
+     LIBP_FORCE_ABORT("Subcell number can not be less than N");
+   }
 
-  mesh.N = Nf;
+   switch (mesh.elementType) {
+      case Mesh::TRIANGLES:
+        stabSetupSubcellTri2D();
+        break;
+      case Mesh::QUADRILATERALS:
+        // stabSetupSubcellQuad2D();
+         // LIBP_FORCE_ABORT("Limiter is not implemented yet");
+        break;
+      case Mesh::TETRAHEDRA:
+        // stabSetupSubcellTet3D();
+        break;
+      case Mesh::HEXAHEDRA:
+        // stabSetupSubcellHex3D();
+        // LIBP_FORCE_ABORT("FV-Subcell is not implemented yet");
+        break;
+    } 
 
-  // load reference (r,s) element nodes
-  mesh.ReferenceNodes();
 
-  // connect face nodes (find trace indices)
-  mesh.ConnectFaceNodes();
+   sq.malloc((mesh.Nelements + mesh.totalHaloPairs)*Nsubcells*sNfields, 0.0); 
+   o_sq = platform.malloc<dfloat>(sq);
 
-  // make a global indexing
-  mesh.ConnectNodes();
+   sqf.malloc((mesh.Nelements + mesh.totalHaloPairs)*Nsubcells*sNfields*Nfaces, 0.0); 
+   o_sqf= platform.malloc<dfloat>(sqf);
 
-  // compute physical (x,y) locations of the element nodes
-  mesh.PhysicalNodes();
+   srhsq.malloc((mesh.Nelements + mesh.totalHaloPairs)*Nsubcells*sNfields, 0.0); 
+   o_srhsq = platform.malloc<dfloat>(srhsq);
 
-  // compute geometric factors
-  mesh.GeometricFactors();
-
-  // compute surface geofacs
-  mesh.SurfaceGeometricFactors();
-
-  // label local/global gather elements
-  mesh.GatherScatterSetup();
-
-  return mesh;
-
+    */
 }
+
 
 } //namespace libp

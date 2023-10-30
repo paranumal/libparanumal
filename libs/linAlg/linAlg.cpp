@@ -44,6 +44,11 @@ void linAlg_t::set(const dlong N, const double alpha, deviceMemory<double> o_a) 
   setKernelDouble(N, alpha, o_a);
 }
 
+template<>
+void linAlg_t::set(const dlong N, const int alpha, deviceMemory<int> o_a) {
+  setKernelInt(N, alpha, o_a);
+}
+
 // o_a[n] += alpha
 template<>
 void linAlg_t::add(const dlong N, const float alpha, deviceMemory<float> o_a) {
@@ -253,7 +258,9 @@ T linAlg_t::sum(const dlong N, deviceMemory<T> o_a, comm_t comm) {
 
   if constexpr (std::is_same_v<T,float>) {
     sumKernelFloat(Nblock, N, o_a, o_scratch);
-  } else {
+  }else if constexpr (std::is_same_v<T,int>){
+    sumKernelInt(Nblock, N, o_a, o_scratch);
+  }else {
     sumKernelDouble(Nblock, N, o_a, o_scratch);
   }
 
@@ -272,10 +279,14 @@ T linAlg_t::sum(const dlong N, deviceMemory<T> o_a, comm_t comm) {
 }
 
 template
+int linAlg_t::sum(const dlong N, deviceMemory<int> o_a, comm_t comm);
+
+template
 float linAlg_t::sum(const dlong N, deviceMemory<float> o_a, comm_t comm);
 
 template
 double linAlg_t::sum(const dlong N, deviceMemory<double> o_a, comm_t comm);
+
 
 // ||o_a||_2
 template<typename T>

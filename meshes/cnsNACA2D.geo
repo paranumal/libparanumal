@@ -299,8 +299,8 @@ Background Field = 3;
 
 Coherence;
 // Isothermall Wall
-Physical Line("Wall",1)     = {1, 2, 3, 4};
-// Physical Line("Farfield",20)   = {5, 6, 7, 8, 9, 10, 11};
-Physical Line("Inflow",2)   = {5, 9, 10, 11};
-Physical Line("Outflow",3)  = {6, 7, 8};
+Physical Line("Wall",12)     = {1, 2, 3, 4};
+Physical Line("Farfield",20)   = {5, 6, 7, 8, 9, 10, 11};
+// Physical Line("Inflow",2)   = {5, 9, 10, 11};
+// Physical Line("Outflow",3)  = {6, 7, 8};
 Physical Surface("Domain",9) = {1,2};

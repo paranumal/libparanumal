@@ -35,8 +35,7 @@ dfloat cns_t::MaxWaveSpeed(deviceMemory<dfloat>& o_Q, const dfloat T){
                      mesh.o_sgeo,
                      mesh.o_vmapM,
                      mesh.o_EToB,
-                     gamma,
-                     mu,
+                     o_pCoeff, 
                      T,
                      mesh.o_x,
                      mesh.o_y,
@@ -45,12 +44,134 @@ dfloat cns_t::MaxWaveSpeed(deviceMemory<dfloat>& o_Q, const dfloat T){
                      o_maxSpeed);
 
   const dfloat vmax = platform.linAlg().max(mesh.Nelements, o_maxSpeed, mesh.comm);
-
   return vmax;
 }
 
+
 //evaluate ODE rhs = f(q,t)
 void cns_t::rhsf(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T){
+  // if(EulerSolve){
+  //     // rhsEuler(o_Q, o_RHS, T);
+  // }else{
+
+   if(stab.type==Stab::ARTDIFF){
+      rhsArtDiff(o_Q, o_RHS, T); 
+    }
+    // else if(stab.stabType==Stab::LIMITER){
+    //   rhsLimiter(o_Q, o_RHS, T); 
+    // }
+    else{
+      rhsNoStab(o_Q, o_RHS, T); 
+   }
+ // }
+
+}
+
+
+
+//evaluate ODE rhs = f(q,t)
+void cns_t::rhsArtDiff(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T){
+
+  dlong NlocalGrads = mesh.Nelements*mesh.Np*Ngrads;
+  dlong NhaloGrads  = mesh.totalHaloPairs*mesh.Np*Ngrads;
+  deviceMemory<dfloat> o_gradq = platform.reserve<dfloat>(NlocalGrads+NhaloGrads);
+
+  stab.Apply(o_Q, o_RHS, T); 
+
+  #if 0
+
+  dfloat vmax = MaxWaveSpeed(o_Q, T);
+  // printf("vmax = %.f\n", vmax);
+  platform.linAlg().scale(mesh.Nelements*mesh.Nverts, vmax, stab.o_viscosity); 
+  #endif
+
+  // extract q trace halo and start exchange
+  fieldTraceHalo.ExchangeStart(o_Q, 1);
+
+// compute volume contributions to gradients
+  gradVolumeKernel(mesh.Nelements,
+                   mesh.o_vgeo,
+                   mesh.o_D,
+                   o_Q,
+                   o_gradq);
+
+  // complete trace halo exchange
+  fieldTraceHalo.ExchangeFinish(o_Q, 1);
+
+   // compute surface contributions to gradients
+  gradSurfaceKernel(mesh.Nelements,
+                    mesh.o_sgeo,
+                    mesh.o_LIFT,
+                    mesh.o_vmapM,
+                    mesh.o_vmapP,
+                    mesh.o_EToB,
+                    mesh.o_x,
+                    mesh.o_y,
+                    mesh.o_z,
+                    o_pCoeff, 
+                    T,
+                    o_Q,
+                    o_gradq);
+
+  // extract viscousStresses trace halo and start exchange
+  gradTraceHalo.ExchangeStart(o_gradq, 1);
+
+  // compute volume contribution to cns RHS
+  if (cubature) {
+     cubatureVolumeKernel(mesh.Nelements,
+                         mesh.o_vgeo,
+                         mesh.o_cubvgeo,
+                         mesh.o_cubD,
+                         mesh.o_cubPDT,
+                         mesh.o_cubInterp,
+                         mesh.o_cubProject,
+                         mesh.o_x,
+                         mesh.o_y,
+                         mesh.o_z,
+                         o_pCoeff, 
+                         T,
+                         stab.o_viscosity,
+                         o_Q,
+                         o_gradq,
+                         o_RHS);
+  } else {
+    LIBP_FORCE_ABORT("Artificial diffusion for CNS is NOT implemented yet!");
+  }
+
+  // complete trace halo exchange
+  gradTraceHalo.ExchangeFinish(o_gradq, 1);
+
+  if (cubature) {
+     // dfloat hmin = mesh.MinCharacteristicLength();
+    const dfloat tau = 2.0*(mesh.N+1)*(mesh.N+2)/2.0;
+     cubatureSurfaceKernel(mesh.Nelements,
+                            mesh.o_vgeo,
+                            mesh.o_cubsgeo,
+                            mesh.o_vmapM,
+                            mesh.o_vmapP,
+                            mesh.o_EToB,
+                            mesh.o_intInterp,
+                            mesh.o_intLIFT,
+                            mesh.o_intx,
+                            mesh.o_inty,
+                            mesh.o_intz,
+                            o_pCoeff, 
+                            T,
+                            tau,
+                            stab.o_viscosity,
+                            o_Q,
+                            o_gradq,
+                            o_RHS);
+    } else {
+          LIBP_FORCE_ABORT("Artificial diffusion with non-cubature integration is NOT implemented yet!");
+    }
+}
+
+
+
+
+//evaluate ODE rhs = f(q,t)
+void cns_t::rhsNoStab(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T){
 
   dlong NlocalGrads = mesh.Nelements*mesh.Np*Ngrads;
   dlong NhaloGrads  = mesh.totalHaloPairs*mesh.Np*Ngrads;

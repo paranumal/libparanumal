@@ -27,25 +27,60 @@ SOFTWARE.
 #include "cns.hpp"
 
 //settings for cns solver
-cnsSettings_t::cnsSettings_t(comm_t _comm):
+cnsSettings_t::cnsSettings_t(comm_t& _comm):
   settings_t(_comm) {
 
   newSetting("DATA FILE",
              "data/cnsTalorVortex2D.h",
              "Boundary and Initial conditions header");
 
+  newSetting("SOLVER TYPE",
+             "EULER",
+             "Solver to be used", 
+            {"EULER", "NAVIER-STOKES"});
+
+ newSetting("NONDIMENSIONAL EQUATIONS",
+             "FALSE",
+             "Compute R and Mu from Mach and Reynolds",
+             {"FALSE", "TRUE"});
+
   newSetting("GAMMA",
              "1.4",
              "Specific heat ratio");
 
-  newSetting("VISCOSITY",
-             "1.0",
-             "Fluid viscosity");
+  newSetting("SPECIFIC GAS CONSTANT",
+             "287.058",
+             "Specific gas constant (if non-dimensional=FALSE)");
 
-  newSetting("ISOTHERMAL",
+  newSetting("VISCOSITY",
+             "0.0",
+             "Bulk viscosity (if non-dimensional=TRUE)");
+
+  newSetting("VISCOSITY TYPE",
+             "CONSTANT",
+             "Viscosity treatment", 
+             {"CONSTANT", "SUTHERLAND", "POWER-LAW"});
+
+  newSetting("MACH NUMBER",
+             "0.1",
+             "Mach number (if non-dimensional=TRUE)");
+
+  newSetting("REYNOLDS NUMBER",
+             "1.0",
+             "Reynolds number (if non-dimensional=TRUE)");
+
+  newSetting("PRANDTL NUMBER",
+             "0.72",
+             "Pranndtl Number");
+
+   newSetting("ISOTHERMAL",
              "FALSE",
-             "Use Isothermal equation of state. When TRUE, energy equation is ignored.",
-             {"TRUE", "FALSE"});
+             "Solve isothermal equations", 
+             {"FALSE", "TRUE"});
+
+  newSetting("REFERENCE STATE",
+             "1.0, 1.0, 0.0, 1.0, 1.0",
+             "Reference state of the problem");
 
   newSetting("ADVECTION TYPE",
              "COLLOCATION",
@@ -80,7 +115,78 @@ cnsSettings_t::cnsSettings_t(comm_t _comm):
 
   newSetting("OUTPUT FILE NAME",
              "cns");
+
+
+
+ newSetting("STABILIZATION SOLVER TYPE",
+             "1",
+             "Solver type for stabilization",
+             {"1", "2", "3"});
+
+  newSetting("DETECTOR TYPE",
+             "1",
+             "Detector type for stabilization: NODETECT: 0 ALL: 1 KLOCKNER:2, PERSSON:3, DUCROS:4",
+             {"0", "1", "2", "3", "4"});
+
+  newSetting("STAB TYPE",
+             "0",
+             "Stabilization type: NOSTAB:0, FILTER:1, LIMITER:2, ART_DIFF:3, SUBCELL:4",
+             {"0", "1", "2", "3", "4"});
+
+  newSetting("ARTDIFF TYPE",
+             "LAPLACE",
+             "ARTIFICIAL DIFFUSION TYPE",
+             {"LAPLACE", "PHYSICAL"});
+
+  newSetting("ARTDIFF SCALE FACTOR",
+             "3.0",
+             "ARTIFICIAL DIFFUSION SCALING FACTOR");
+
+  newSetting("FILTER CUTOFF",
+             "1",
+             "Exponential Filter Cutoff Order");
+
+  newSetting("FILTER ORDER",
+             "2",
+             "Exponential Filter Order (must be even)");
+
+  newSetting("SUBCELL NUMBER",
+             "5",
+             "Subcell number per edge (>=N)");
+
+  newSetting("SUBCELL MINOR GRID",
+             "WARPBLEND",
+             "Subcell minor grid");
+
+  newSetting("STAB OUTPUT TO FILE",
+             "TRUE",
+             "Detector Output to File ",
+             {"TRUE", "FALSE"});
 }
+
+
+
+stabSettings_t cnsSettings_t::extractStabSettings() {
+
+  stabSettings_t stabSettings(comm);
+
+  for(auto it = stabSettings.settings.begin(); it != stabSettings.settings.end(); ++it) {
+    setting_t& set = it->second;
+    const std::string name = set.getName();
+    std::string val;
+    getSetting(name, val);
+    set.updateVal(val);
+  }
+
+  return stabSettings;
+}
+
+
+
+
+
+
+
 
 void cnsSettings_t::report() {
 
@@ -89,7 +195,12 @@ void cnsSettings_t::report() {
 
     reportSetting("DATA FILE");
     reportSetting("GAMMA");
+    reportSetting("SPECIFIC GAS CONSTANT");
     reportSetting("VISCOSITY");
+    reportSetting("VISCOSITY TYPE");
+    reportSetting("SOLVER TYPE");
+    reportSetting("MACH NUMBER");
+    reportSetting("REYNOLDS NUMBER");
     reportSetting("ISOTHERMAL");
     reportSetting("ADVECTION TYPE");
     reportSetting("TIME INTEGRATOR");

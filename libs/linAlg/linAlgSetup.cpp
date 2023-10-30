@@ -47,6 +47,14 @@ void linAlg_t::Setup(platform_t *_platform) {
   kernelInfoDouble["defines/init_dfloat_min"] =  std::numeric_limits<double>::max();
   kernelInfoDouble["defines/init_dfloat_max"] = -std::numeric_limits<double>::max();
   kernelInfoDouble["defines/dfloat"]  = "double";
+
+  kernelInfoInt = kernelInfoFloat;
+  kernelInfoInt["defines/init_int_min"] =  std::numeric_limits<int>::max();
+  kernelInfoInt["defines/init_int_max"] = -std::numeric_limits<int>::max();
+  kernelInfoInt["defines/dlong"]  = "int";
+
+
+
 }
 
 //initialize list of kernels
@@ -64,6 +72,10 @@ void linAlg_t::InitKernels(std::vector<std::string> kernels) {
                                                 "linAlgSet.okl",
                                                 "set",
                                                 kernelInfoDouble);
+        setKernelInt = platform->buildKernel(LINALG_DIR "/okl/"
+                                                "linAlgSet.okl",
+                                                "setInt",
+                                                kernelInfoInt);
 
       }
     } else if (name=="add") {
@@ -211,6 +223,11 @@ void linAlg_t::InitKernels(std::vector<std::string> kernels) {
                                                 "linAlgSum.okl",
                                                 "sum",
                                                 kernelInfoDouble);
+
+        sumKernelInt = platform->buildKernel(LINALG_DIR "/okl/"
+                                                "linAlgSum.okl",
+                                                "sumInt",
+                                                kernelInfoInt);
       }
     } else if (name=="norm2") {
       if (norm2KernelFloat.isInitialized()==false) {

@@ -43,6 +43,9 @@ void cns_t::Report(dfloat time, int tstep){
 
   if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
 
+    stab.Apply(o_q, o_q, 0.0);
+    stab.Report(0.0, tstep);
+
     //compute vorticity
     deviceMemory<dfloat> o_Vort = platform.reserve<dfloat>(mesh.dim*mesh.Nelements*mesh.Np);
     vorticityKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_D, o_q, o_Vort);

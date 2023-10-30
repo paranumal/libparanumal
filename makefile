@@ -64,7 +64,7 @@ Can use "make verbose=true" for verbose output.
 endef
 
 ifeq (,$(filter solvers \
-				acoustics advection bns cns elliptic fokkerPlanck gradient ins \
+				acoustics advection bns cns elliptic fokkerPlanck gradient ins\
 				lib clean clean-kernels \
 				realclean info help test,$(MAKECMDGOALS)))
 ifneq (,$(MAKECMDGOALS))

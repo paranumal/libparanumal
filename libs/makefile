@@ -57,7 +57,7 @@ Can use "make verbose=true" for verbose output.
 
 endef
 
-ifeq (,$(filter core linAlg linearSolver parAdogs mesh ogs parAlmond timeStepper \
+ifeq (,$(filter core linAlg linearSolver parAdogs mesh ogs parAlmond timeStepper stab\
 								clean clean-libs clean-kernels realclean info help, $(MAKECMDGOALS)))
 ifneq (,$(MAKECMDGOALS))
 $(error ${LIB_HELP_MSG})
@@ -81,6 +81,7 @@ LIBMESH_DIR=${LIBP_LIBS_DIR}/mesh
 LIBOGS_DIR=${LIBP_LIBS_DIR}/ogs
 LIBPARALMOND_DIR=${LIBP_LIBS_DIR}/parAlmond
 LIBTIMESTEPPER_DIR=${LIBP_LIBS_DIR}/timeStepper
+LIBSTAB_DIR=${LIBP_LIBS_DIR}/stab
 
 #includes
 INCLUDES=${LIBP_INCLUDES}
@@ -94,6 +95,7 @@ LIBMESH_DEFINES=-DMESH_DIR='"${LIBMESH_DIR}"'
 LIBOGS_DEFINES=-DLIBP_DIR='"${LIBP_DIR}"'  -DOGS_DIR='"${LIBOGS_DIR}"'
 LIBPARALMOND_DEFINES=-DPARALMOND_DIR='"${LIBPARALMOND_DIR}"'
 LIBTIMESTEPPER_DEFINES=-DTIMESTEPPER_DIR='"${LIBTIMESTEPPER_DIR}"'
+LIBSTAB_DEFINES=-DSTAB_DIR='"${LIBSTAB_DIR}"'
 
 ifeq (true,${gpu-aware-mpi})
   LIBOGS_DEFINES+= -DGPU_AWARE_MPI
@@ -121,6 +123,12 @@ LIBPARALMOND_DEPS=$(wildcard ${LIBP_INCLUDE_DIR}/parAlmond/*.h)   \
 				  				$(wildcard ${LIBP_INCLUDE_DIR}/parAlmond/*.hpp) \
 								  ${LIB_DEPS}
 
+LIBSTAB_DEPS=$(wildcard ${LIBP_INCLUDE_DIR}/stab/*.h)   \
+				  				$(wildcard ${LIBP_INCLUDE_DIR}/stab/*.hpp) \
+								  ${LIB_DEPS}
+
+
+
 LIBCORE_SRC =$(wildcard core/*.cpp)
 LIBLINALG_SRC =$(wildcard linAlg/*.cpp)
 LIBLINEARSOLVER_SRC =$(wildcard linearSolver/*.cpp)
@@ -129,6 +137,7 @@ LIBMESH_SRC =$(wildcard mesh/*.cpp)
 LIBOGS_SRC =$(wildcard ogs/*.cpp)
 LIBPARALMOND_SRC =$(wildcard parAlmond/*.cpp)
 LIBTIMESTEPPER_SRC =$(wildcard timeStepper/*.cpp)
+LIBSTAB_SRC =$(wildcard stab/*.cpp)
 
 LIBCORE_OBJS=$(LIBCORE_SRC:.cpp=.o)
 LIBLINALG_OBJS=$(LIBLINALG_SRC:.cpp=.o)
@@ -138,15 +147,17 @@ LIBMESH_OBJS=$(LIBMESH_SRC:.cpp=.o)
 LIBOGS_OBJS=$(LIBOGS_SRC:.cpp=.o)
 LIBPARALMOND_OBJS=$(LIBPARALMOND_SRC:.cpp=.o)
 LIBTIMESTEPPER_OBJS=$(LIBTIMESTEPPER_SRC:.cpp=.o)
+LIBSTAB_OBJS=$(LIBSTAB_SRC:.cpp=.o)
 
-.PHONY: all core linAlg linearSolver mesh ogs parAdogs parAlmond timeStepper \
+.PHONY: all core linAlg linearSolver mesh ogs parAdogs parAlmond timeStepper stab\
 				clean realclean silentUpdate-core             \
 				silentUpdate-linAlg silentUpdate-linearSolver \
 				silentUpdate-ogs silentUpdate-mesh            \
 				silentUpdate-parAdogs                         \
-				silentUpdate-parAlmond silentUpdate-timeStepper
+				silentUpdate-parAlmond silentUpdate-timeStepper\
+				silentUpdate-stab silentUpdate-stab
 
-all: core linAlg linearSolver parAdogs mesh ogs parAlmond timeStepper
+all: core linAlg linearSolver parAdogs mesh ogs parAlmond timeStepper stab
 
 core: libcore.a silentUpdate-core
 linAlg: liblinAlg.a silentUpdate-linAlg
@@ -156,6 +167,7 @@ ogs: libogs.a silentUpdate-ogs
 parAdogs: libparAdogs.a silentUpdate-parAdogs
 parAlmond: libparAlmond.a silentUpdate-parAlmond
 timeStepper: libtimeStepper.a silentUpdate-timeStepper
+stab: libstab.a silentUpdate-stab
 
 libcore.a: $(LIBCORE_OBJS)
 ifneq (,${verbose})
@@ -221,6 +233,16 @@ else
 	@ar -cr libparAlmond.a $(LIBPARALMOND_OBJS)
 endif
 
+libstab.a: $(LIBSTAB_OBJS) | libmesh.a
+ifneq (,${verbose})
+	ar -cr libstab.a $(LIBSTAB_OBJS) $(LIBMESH_OBJS)
+else
+	@printf "%b" "$(LIB_COLOR)Building library $(@F)$(NO_COLOR)\n";
+	@ar -cr libstab.a $(LIBSTAB_OBJS)
+endif
+
+
+
 silentUpdate-core:
 	@true
 
@@ -243,6 +265,9 @@ silentUpdate-parAlmond:
 	@true
 
 silentUpdate-timeStepper:
+	@true
+
+silentUpdate-stab:
 	@true
 
 ${OCCA_DIR}/lib/libocca.so:
@@ -313,9 +338,17 @@ else
 	@$(LIBP_CXX) -o $@ -c $< ${LIBTIMESTEPPER_DEFINES} $(LIB_CXXFLAGS)
 endif
 
+stab/%.o: stab/%.cpp $(LIB_DEPS) | libmesh.a
+ifneq (,${verbose})
+	$(LIBP_CXX) -o $@ -c $< ${LIBSTAB_DEFINES} $(LIB_CXXFLAGS)
+else
+	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
+	@$(LIBP_CXX) -o $@ -c $< ${LIBSTAB_DEFINES} $(LIB_CXXFLAGS)
+endif
+
 #cleanup
 clean:
-	rm -f core/*.o linAlg/*.o linearSolver/*.o mesh/*.o ogs/*.o parAdogs/*.o parAlmond/*.o timeStepper/*.o *.a
+	rm -f core/*.o linAlg/*.o linearSolver/*.o mesh/*.o ogs/*.o parAdogs/*.o parAlmond/*.o timeStepper/*.o stab/*.o *.a
 
 clean-kernels: clean
 	rm -rf ${LIBP_DIR}/.occa/

@@ -1,0 +1,181 @@
+/*
+
+  The MIT License (MIT)
+
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+*/
+
+// 
+@kernel void filterHJSHex3D(const dlong Nelements,
+                            @restrict const  dlong  *  elementIds,
+                            @restrict const  dfloat *  filterM,
+                            @restrict        dfloat *  q){
+
+  for(dlong e=0;e<Nelements;e++; @outer(0)){  // for all elements
+
+    @shared dfloat s_q[p_sNfields][p_Nq][p_Nq];
+    @exclusive dfloat r_q[p_sNfields][p_Nq];
+    // @exclusive dfloat r_qn[p_sNfields][p_Nq];
+
+    @shared dfloat s_FMT[p_Nq][p_Nq];
+
+    @exclusive int eid[p_sNfields];
+    @exclusive int elmActive;
+
+    for(int j=0;j<p_Nq;++j;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        elmActive = 0; 
+          for(int fld=0; fld<p_sNfields;++fld){
+            eid[fld] = elementIds[e*p_dNfields + fld]; 
+            // Active this element if it is detected for any field 
+            if(eid[fld]>0){ elmActive=1; }
+          }
+
+          if(elmActive){ // If the element is active 
+            s_FMT[j][i] = filterM[i+j*p_Nq];
+
+            #pragma unroll p_Nq
+            for(int k = 0; k < p_Nq; ++k) {
+              for(int fld=0; fld<p_sNfields; fld++)
+                r_q[fld][k] = 0.f;
+            }      
+          }
+        }
+      }
+
+
+       //read and multiply in k
+    for(int j = 0; j < p_Nq; ++j; @inner(1)) {
+      for(int i = 0; i < p_Nq; ++i; @inner(0)) {
+        if(elmActive){
+  #pragma unroll p_Nq
+          // for every slice in k
+          for(int k = 0; k < p_Nq; ++k) {
+            const dlong id = e * p_Np * p_sNfields + k * p_Nq * p_Nq + j * p_Nq + i;  
+              for(int fld=0; fld<p_sNfields; fld++){
+                for(int n = 0; n < p_Nq; ++n) {
+                  // for every field
+                  r_q[fld][n] += s_FMT[k][n]*q[id + fld*p_Np];
+              }
+            }
+
+          }
+        }
+      }
+    }
+
+
+  // loop around slices
+#pragma unroll p_Nq
+    for(int k = 0; k < p_Nq; ++k) {
+      //load slice to @shared
+      for(int j = 0; j < p_Nq; ++j; @inner(1)){
+        for(int i = 0; i < p_Nq; ++i; @inner(0)) {
+          if(elmActive){
+          
+          #pragma unroll p_sNfields
+            for(int fld=0; fld<p_sNfields; fld++){
+              s_q[fld][j][i] = r_q[fld][k];
+            }
+          }
+        }
+      }
+
+
+      for(int j = 0; j < p_Nq; ++j; @inner(1)) {
+        for(int i = 0; i < p_Nq; ++i; @inner(0)) {
+          if(elmActive){
+            for(int fld=0; fld<p_sNfields; fld++){
+              r_q[fld][k] = 0.f;
+            }
+
+            #pragma unroll p_Nq
+            for (int n = 0; n < p_Nq; n++) {
+              const dfloat Ii = s_FMT[n][i];
+               for(int fld=0; fld<p_sNfields; fld++){
+                r_q[fld][k] += Ii * s_q[fld][j][n];
+              }
+            }
+          }
+        }
+      }
+
+
+
+      //load multiplied data to shared
+      for(int j = 0; j < p_Nq; ++j; @inner(1)){
+        for(int i = 0; i < p_Nq; ++i; @inner(0)) {
+          if(elmActive){
+          // #pragma unroll p_sNfields
+            for(int fld=0; fld<p_sNfields; fld++){
+              s_q[fld][j][i] = r_q[fld][k];
+           }
+          }
+         }
+       }
+
+
+
+      for(int j = 0; j < p_Nq; ++j; @inner(1)) {
+        for(int i = 0; i < p_Nq; ++i; @inner(0)) {
+          if(elmActive){
+
+            for(int fld=0; fld<p_sNfields; fld++){
+              r_q[fld][k] = 0.f;
+            }
+
+#pragma unroll p_Nq
+            for (int n = 0; n < p_Nq; n++) {
+              const dfloat Ij = s_FMT[n][j];
+              for(int fld=0; fld<p_sNfields; fld++){
+                r_q[fld][k] += Ij * s_q[fld][n][i];
+              }
+            }
+          }
+        }
+      }
+// *******//
+    }
+
+
+
+
+
+
+    for(int j = 0; j < p_Nq; ++j; @inner(1)) {
+      for(int i = 0; i < p_Nq; ++i; @inner(0)) {
+        if(elmActive){
+          #pragma unroll p_Nq
+            for(int k = 0; k < p_Nq; ++k) {
+              const dlong id = e * p_Np*p_sNfields + k * p_Nq * p_Nq + j * p_Nq + i;
+
+              for(int fld=0; fld<p_sNfields; fld++){
+                if(eid[fld]){                
+                  q[id + fld * p_Np] = r_q[fld][k];
+                }
+              }
+            }
+          }
+        }
+     }
+   }
+ }

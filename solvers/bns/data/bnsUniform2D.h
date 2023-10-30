@@ -26,7 +26,7 @@ SOFTWARE.
 
 //mean flow
 #define RBAR 1.0
-#define UBAR 1.0
+#define UBAR 0.15
 #define VBAR 0.0
 
 // Initial conditions
@@ -70,8 +70,8 @@ SOFTWARE.
     *(s22B) = 0.0;                     \
   } else if(bc==3){                    \
     *(rB) = RBAR;                      \
-    *(uB) = uM;                        \
-    *(vB) = vM;                        \
+    *(uB) = UBAR;                      \
+    *(vB) = VBAR;                      \
     *(s11B) = s11M;                    \
     *(s12B) = s12M;                    \
     *(s22B) = s22M;                    \

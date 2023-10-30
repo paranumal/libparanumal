@@ -109,6 +109,8 @@ public:
 
   void Report(dfloat time, int tstep);
 
+  void ComputeForces(const dfloat T);
+
   void PlotFields(memory<dfloat>& Q, memory<dfloat>& V, std::string fileName);
 
   dfloat MaxWaveSpeed();

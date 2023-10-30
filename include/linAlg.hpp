@@ -177,6 +177,9 @@ class linAlg_t {
   static void matrixInverse(const int N, memory<double> A);
   static void matrixInverse(const int N, memory<float> A);
 
+  static void matrixPseudoInverse(const int M, const int N, memory<double> A);
+  static void matrixPseudoInverse(const int M, const int N, memory<float> A);
+
   static double matrixConditionNumber(const int N, const memory<double> A);
   static float  matrixConditionNumber(const int N, const memory<float> A);
 
@@ -198,6 +201,7 @@ class linAlg_t {
   platform_t *platform;
   properties_t kernelInfoFloat;
   properties_t kernelInfoDouble;
+  properties_t kernelInfoInt;
 
   static constexpr int blocksize = 256;
 
@@ -238,6 +242,9 @@ class linAlg_t {
   kernel_t weightedNorm2KernelDouble;
   kernel_t innerProdKernelDouble;
   kernel_t weightedInnerProdKernelDouble;
+
+  kernel_t setKernelInt;
+  kernel_t sumKernelInt;
 
   kernel_t p2dKernel;
   kernel_t d2pKernel;

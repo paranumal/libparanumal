@@ -34,15 +34,12 @@ void cns_t::Setup(platform_t& _platform, mesh_t& _mesh,
   comm = _mesh.comm;
   settings = _settings;
 
-  //Trigger JIT kernel builds
-  ogs::InitializeKernels(platform, ogs::Dfloat, ogs::Add);
-
-  //get physical paramters
-  settings.getSetting("VISCOSITY", mu);
-  settings.getSetting("GAMMA", gamma);
-
   cubature   = (settings.compareSetting("ADVECTION TYPE", "CUBATURE")) ? 1:0;
   isothermal = (settings.compareSetting("ISOTHERMAL", "TRUE")) ? 1:0;
+
+
+  Nfields   = (mesh.dim==3) ? 4:3; 
+  if (!isothermal) Nfields++;       //include energy equation
 
   //setup cubature
   if (cubature) {
@@ -50,10 +47,11 @@ void cns_t::Setup(platform_t& _platform, mesh_t& _mesh,
     mesh.CubaturePhysicalNodes();
   }
 
-  Nfields   = (mesh.dim==3) ? 4:3;
-  Ngrads = mesh.dim*mesh.dim;
+  //Trigger JIT kernel builds
+  ogs::InitializeKernels(platform, ogs::Dfloat, ogs::Add);
 
-  if (!isothermal) Nfields++; //include energy equation
+  //setup linear algebra module
+  platform.linAlg().InitKernels({"innerProd", "max", "scale"});
 
   //setup timeStepper
   if (settings.compareSetting("TIME INTEGRATOR","AB3")){
@@ -70,12 +68,9 @@ void cns_t::Setup(platform_t& _platform, mesh_t& _mesh,
                                            mesh.Np, Nfields, platform, comm);
   }
 
-  //setup linear algebra module
-  platform.linAlg().InitKernels({"innerProd", "max"});
-
-  /*setup trace halo exchange */
-  fieldTraceHalo = mesh.HaloTraceSetup(Nfields);
-  gradTraceHalo  = mesh.HaloTraceSetup(Ngrads);
+  // // setup trace halo exchange //
+  // fieldTraceHalo = mesh.HaloTraceSetup(Nfields);
+  // gradTraceHalo  = mesh.HaloTraceSetup(Ngrads);
 
   dlong NlocalFields = mesh.Nelements*mesh.Np*Nfields;
   dlong NhaloFields  = mesh.totalHaloPairs*mesh.Np*Nfields;
@@ -85,17 +80,17 @@ void cns_t::Setup(platform_t& _platform, mesh_t& _mesh,
   o_q = platform.malloc<dfloat>(NlocalFields+NhaloFields);
 
   mesh.MassMatrixKernelSetup(Nfields); // mass matrix operator
-
+  
   // OCCA build stuff
-  properties_t kernelInfo = mesh.props; //copy base occa properties
-
+  properties_t &kernelInfo = mesh.props; //copy base occa properties
+  
   //add boundary data to kernel info
   std::string dataFileName;
   settings.getSetting("DATA FILE", dataFileName);
   kernelInfo["includes"] += dataFileName;
 
   kernelInfo["defines/" "p_Nfields"]= Nfields;
-  kernelInfo["defines/" "p_Ngrads"]= Ngrads;
+  // kernelInfo["defines/" "p_Ngrads"]= Ngrads;
 
   int maxNodes = std::max(mesh.Np, (mesh.Nfp*mesh.Nfaces));
   kernelInfo["defines/" "p_maxNodes"]= maxNodes;
@@ -121,6 +116,35 @@ void cns_t::Setup(platform_t& _platform, mesh_t& _mesh,
     int cubNblockS = std::max(1, blockMax/cubMaxNodes);
     kernelInfo["defines/" "p_cubNblockS"]= cubNblockS;
   }
+
+  // Set physics of the problem, i.e. equation of state etc. 
+  setPhysics(kernelInfo); 
+
+  // Set the stabilizer for the problem
+  if(settings.compareSetting("STAB TYPE", "NOSTAB")){
+    // setNoStabilization(kernelInfo);
+  }else{
+    // extract stabilization settings
+    stabSettings = _settings.extractStabSettings();
+    stab.Setup(platform, mesh, stabSettings, kernelInfo);
+    // stabSettings.report();
+    // stab.Test();
+  }
+
+
+  if(stab.type==Stab::ARTDIFF){
+    setArtificialDiffusion(kernelInfo);
+  }
+  // else if(stab.type==stab.Stab::LIMITER){
+
+  // }else if(stab.type==stab::SUBCELL){
+
+  // }else{
+  //  LIBP_ABORT("Stabilization method = " << stab::type<< 
+  //             "is not impmented in CNS solver", stab::type);
+  // }
+
+  /*
 
   // set kernel name suffix
   std::string suffix = mesh.elementSuffix();
@@ -234,4 +258,6 @@ void cns_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
   maxWaveSpeedKernel = platform.buildKernel(fileName, kernelName,
                                             kernelInfo);
+                                            */
+                                            
 }
