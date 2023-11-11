@@ -31,7 +31,7 @@ namespace libp {
 // using namespace libp;
 
 void stab_t::stabSetupArtdiff(){
-  // Compute viscosity scaling i.e. alpha * mesh_length/ mesh.N
+  // Compute viscosity scaling i.e. alpha * mesh_length/ mesh.N^2
   // read viscosity scaling factor i.e. viscosity_max = factor*h/N 
   settings.getSetting("ARTDIFF SCALE FACTOR", scaleFactor);  
 
@@ -105,21 +105,20 @@ void stab_t::stabSetupArtdiff(){
   // Build gather scatter for vertex-based smmothing
   mesh_t meshC = mesh.SetupNewDegree(1);
 
+  // Define wights for vertex smoothing
   bool verbose = false,  unique  = true; 
   ogs.Setup(mesh.Nelements*mesh.Nverts, meshC.globalIds, mesh.comm, 
                 ogs::Signed, ogs::Auto, unique, verbose, platform); 
-
+  
   weight.malloc(mesh.Nelements*mesh.Nverts, 1.0);
-
   ogs.GatherScatter(weight, 1, ogs::Add, ogs::Sym); 
-
   // invert weights for gs for vertex nodes only
   for(int i=0; i < mesh.Nelements*mesh.Nverts; i++ ){ 
     weight[i] = 1./weight[i];
   }
   o_weight = platform.malloc<dfloat>(weight); 
 
-    
+  
   int blockMax = 256;
   if (platform.device.mode() == "CUDA") blockMax = 512;
 
@@ -154,7 +153,7 @@ void stab_t::stabApplyArtdiff(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o
                          o_viscosityScale,
                          o_vertexViscosity); 
 
-  // 
+  // // 
   ogs.GatherScatter(o_vertexViscosity, 1, ogs::Add, ogs::Sym); 
   platform.linAlg().amx(mesh.Nelements*mesh.Nverts, 1.0, o_weight, o_vertexViscosity); 
 

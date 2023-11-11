@@ -43,7 +43,7 @@ void myTokenizer(const int NrefState, std::string s, memory<dfloat> & refState, 
 }
 
 
-void cns_t::setPhysics(properties_t & props){
+void cns_t::setupPhysics(properties_t & props){
  
   // Set isentropic exponent and related info
   settings.getSetting("GAMMA", gamma);
@@ -73,7 +73,14 @@ void cns_t::setPhysics(properties_t & props){
     pRef = refState[3];    
   } 
 
-  const dfloat VREF = sqrt(uRef*uRef + vRef*vRef);
+
+  dfloat VREF = 1.0; 
+  if(mesh.dim==3){
+    VREF = sqrt(uRef*uRef + vRef*vRef);
+  }else{
+    VREF = sqrt(uRef*uRef + vRef*vRef + wRef*wRef);    
+  }
+
 
   // Set specific gas constant
   if(settings.compareSetting("NONDIMENSIONAL EQUATIONS", "TRUE")){

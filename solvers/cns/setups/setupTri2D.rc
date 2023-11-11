@@ -6,7 +6,8 @@
 data/cnsUniform2D.h
 #*******************[MESH PROPERTIES]*******************#
 [MESH FILE]
-../../meshes/cnsNACA2D.msh
+BOX
+#../../meshes/cnsNACA2D.msh
 
 [MESH DIMENSION]
 2
@@ -24,7 +25,7 @@ data/cnsUniform2D.h
 20
 
 [BOX BOUNDARY FLAG]
--1
+1
 
 [POLYNOMIAL DEGREE]
 3

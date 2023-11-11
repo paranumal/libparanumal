@@ -26,9 +26,9 @@ SOFTWARE.
 
 #include "cns.hpp"
 
-void cns_t::setupArtificialDiffusion(properties_t & kernelInfo){
-  // needed gradients of all fields 
-  Ngrads = Nfields*mesh.dim;
+void cns_t::setupNoStab(properties_t & kernelInfo){
+  // needed gradients for velocity only 
+  Ngrads = mesh.dim*mesh.dim;
 
   // setup trace halo exchange 
   fieldTraceHalo = mesh.HaloTraceSetup(Nfields);
@@ -47,26 +47,26 @@ void cns_t::setupArtificialDiffusion(properties_t & kernelInfo){
   if(cubature){
     // kernels from volume file Add isothermal version as well AK. 
     fileName   = oklFilePrefix + "cnsGradVolume" + suffix + oklFileSuffix;
-    kernelName = "cnsGradVolumeConservative" + suffix; 
+    kernelName = "cnsGradVolume" + suffix; 
     gradVolumeKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
 
     // kernels from surface file
     fileName   = oklFilePrefix + "cnsGradSurface" + suffix + oklFileSuffix;
-    kernelName = "cnsGradSurfaceConservative" + suffix; // gradient of all conservative fields
+    kernelName = "cnsGradSurface" + suffix; // gradient of all conservative fields
     gradSurfaceKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 
     
 
     if(settings.compareSetting("ARTDIFF TYPE", "LAPLACE")){
       // kernels from volume file
-      fileName   = oklFilePrefix + "cnsCubatureVolumeArtDiff" + suffix + oklFileSuffix;
-      kernelName = "cnsCubatureVolumeArtificialDiffsuion" + suffix;
+      fileName   = oklFilePrefix + "cnsCubatureVolume" + suffix + oklFileSuffix;
+      kernelName = "cnsCubatureVolume" + suffix;
       cubatureVolumeKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
 
 
       // kernels from surface file
-      fileName   = oklFilePrefix + "cnsCubatureSurfaceArtDiff" + suffix + oklFileSuffix;
-      kernelName = "cnsCubatureSurfaceArtificialDiffusion" + suffix;
+      fileName   = oklFilePrefix + "cnsCubatureSurface" + suffix + oklFileSuffix;
+      kernelName = "cnsCubatureSurface" + suffix;
       cubatureSurfaceKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
 
 

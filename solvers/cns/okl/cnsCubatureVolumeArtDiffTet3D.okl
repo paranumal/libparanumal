@@ -1,0 +1,628 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+#define RMIN 0.05
+#define PMIN 0.05
+#define ALPHA 100
+
+#define POSITIVITY 0
+
+// Regularization of rho / p  (cannot be smaller than rmin / pmin)
+dfloat LMAX(const dfloat x, const dfloat alpha){
+  dfloat xlim = x*(atan(alpha*x)/M_PI + 0.5) - atan(alpha)/M_PI + 0.5;
+  return xlim;
+}
+
+// Density / pressure sensor for gradients...
+dfloat SMOOTH(const dfloat x, const dfloat alpha){
+ dfloat dx = atan(alpha*x)/M_PI + alpha*x/(M_PI*(alpha*alpha*x*x + 1.0)) + 0.5;
+  return dx; 
+}
+
+
+// Compressible Navier-Stokes
+@kernel void cnsCubatureVolumeArtificialDiffsuionTet3D(const dlong Nelements,
+                                          @restrict const  dfloat *  vgeo,
+                                          @restrict const  dfloat *  cubvgeo,
+                                          @restrict const  dfloat *  cubD,
+                                          @restrict const  dfloat *  cubPDT,
+                                          @restrict const  dfloat *  cubInterp,
+                                          @restrict const  dfloat *  cubProject,
+                                          @restrict const  dfloat *  x,
+                                          @restrict const  dfloat *  y,
+                                          @restrict const  dfloat *  z,
+                                          @restrict const  dfloat * pCoeff,
+                                          const dfloat t,
+                                          @restrict const  dfloat *  muArtDiff,
+                                          @restrict const  dfloat *  q,
+                                          @restrict const  dfloat *  gradq,
+                                          @restrict dfloat *  rhsq){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_q[p_Nfields][p_Np];
+    @shared dfloat s_gradq[p_Ngrads][p_Np];
+
+    @shared dfloat s_F[p_Nfields][p_cubNp];
+    @shared dfloat s_G[p_Nfields][p_cubNp];
+    @shared dfloat s_H[p_Nfields][p_cubNp];
+
+    @shared dfloat s_mu[p_Np];
+
+    @exclusive dfloat fx, fy, fz;
+
+    for(int n=0;n<p_cubNp;++n;@inner(0)){      // for all nodes in this element
+      if(n<p_Np){
+        const dlong  qbase = e*p_Np*p_Nfields + n;
+        const dlong id     = e*p_Np*p_Ngrads + n;
+
+        const dfloat gamma = pCoeff[p_GMID]; // gamma
+        const dfloat mu    = pCoeff[p_MUID]; // bulk viscosity
+
+        // hold artificial viscosity now
+        s_mu[n] = muArtDiff[e*p_Np + n]; 
+
+        dfloat rr = q[qbase+0*p_Np];
+        dfloat ru = q[qbase+1*p_Np];
+        dfloat rv = q[qbase+2*p_Np];
+        dfloat rw = q[qbase+3*p_Np];
+        dfloat rE = q[qbase+4*p_Np];
+
+        dfloat dr = 0.0; 
+#if POSITIVITY
+        // check positivity on density
+        rr         = RMIN + LMAX(rr-RMIN, ALPHA); 
+        dr         = SMOOTH(rr-RMIN, ALPHA); 
+#else
+        dr = 1.0; 
+#endif
+        // conservative fields
+        s_q[0][n] = rr;
+        s_q[1][n] = ru;
+        s_q[2][n] = rv;
+        s_q[3][n] = rw;
+        s_q[4][n] = rE;
+      
+        // grad-density 
+        s_gradq[0][n] = dr * gradq[id+0*p_Np];
+        s_gradq[1][n] = dr * gradq[id+1*p_Np];     
+        s_gradq[2][n] = dr * gradq[id+2*p_Np];     
+        // grad x-momentum
+        s_gradq[3][n] = gradq[id+3*p_Np];
+        s_gradq[4][n] = gradq[id+4*p_Np];     
+        s_gradq[5][n] = gradq[id+5*p_Np];     
+        // grad y-momentum        
+        s_gradq[6][n] = gradq[id+6*p_Np];
+        s_gradq[7][n] = gradq[id+7*p_Np];     
+        s_gradq[8][n] = gradq[id+8*p_Np];     
+        // grad z-momentum
+        s_gradq[ 9][n] = gradq[id+ 9*p_Np];
+        s_gradq[10][n] = gradq[id+10*p_Np];     
+        s_gradq[11][n] = gradq[id+11*p_Np];     
+        // grad energy
+        s_gradq[12][n] = gradq[id+12*p_Np];
+        s_gradq[13][n] = gradq[id+13*p_Np];     
+        s_gradq[14][n] = gradq[id+14*p_Np];     
+
+        // get primitive variables
+        const dfloat u = ru/rr; 
+        const dfloat v = rv/rr;
+        const dfloat w = rw/rr;
+        const dfloat p = (gamma-1)*(rE-0.5*rr*(u*u + v*v + w*w));
+        //Body force contribution
+        fx = 0.0; fy = 0.0, fz =0.0;
+        cnsBodyForce3D(gamma, mu, t, x[e*p_Np+n], y[e*p_Np+n], z[e*p_Np+n],rr, u, v, w, p, &fx, &fy, &fz);
+        // multiplybody forces with density
+        fx *= rr; 
+        fy *= rr;
+        fz *= rr;
+      }
+    }
+
+
+    for(int n=0;n<p_cubNp;++n;@inner(0)){
+      const dfloat gamma = pCoeff[p_GMID]; // gamma
+      const dfloat CV    = pCoeff[p_CVID]; // CV
+      const dfloat CP    = pCoeff[p_CPID]; // CP
+      const dfloat Pr    = pCoeff[p_PRID]; // Prandtl Number
+            dfloat mu    = pCoeff[p_MUID]; // Bulk viscosity
+      //interpolate to cubature
+      dfloat rr = 0., ru = 0., rv = 0., rw=0., rE = 0.;
+      // artificial diffusion
+      dfloat rm = 0.;
+      // gradients
+      dfloat drrdx = 0., drrdy = 0., drrdz = 0.;
+      dfloat drudx = 0., drudy = 0., drudz = 0.;
+      dfloat drvdx = 0., drvdy = 0., drvdz = 0.;
+      dfloat drwdx = 0., drwdy = 0., drwdz = 0.;
+      dfloat dredx = 0., dredy = 0., dredz = 0.;
+
+      #pragma unroll p_Np
+        for(int i=0;i<p_Np;++i){
+          const dfloat cIni = cubInterp[n+i*p_cubNp];
+          rm += cIni*s_mu[i];
+
+          rr += cIni*s_q[0][i];
+          ru += cIni*s_q[1][i];
+          rv += cIni*s_q[2][i];
+          rw += cIni*s_q[3][i];
+          rE += cIni*s_q[4][i];
+        
+          drrdx += s_gradq[0][i]; 
+          drrdy += s_gradq[1][i]; 
+          drrdz += s_gradq[2][i]; 
+          
+          drudx += s_gradq[3][i]; 
+          drudy += s_gradq[4][i]; 
+          drudz += s_gradq[5][i]; 
+          
+          drvdx += s_gradq[6][i]; 
+          drvdy += s_gradq[7][i]; 
+          drvdz += s_gradq[8][i]; 
+          
+          drwdx += s_gradq[9][i];
+          drwdy += s_gradq[10][i];
+          drwdz += s_gradq[11][i];
+
+          dredx += s_gradq[12][i];
+          dredy += s_gradq[13][i];
+          dredz += s_gradq[14][i];
+
+        }
+
+      // primitive variables
+      const dfloat invr = 1.0/rr;   
+      const dfloat u  = ru*invr; 
+      const dfloat v  = rv*invr;
+      const dfloat w  = rw*invr;
+      const dfloat ke = u*u + v*v + w*w;
+      // pressure field
+      dfloat p  = (gamma-1)*(rE- 0.5f*rr*ke);
+      
+            // Positivity Check
+      #if POSITIVITY
+        p        = PMIN + LMAX(p-PMIN, ALPHA); 
+        dfloat dp  = SMOOTH(p-PMIN, ALPHA); 
+      #else
+        dfloat dp=1.0; 
+      #endif
+
+      const dfloat dudx  = (drudx - drrdx*u)*invr;
+      const dfloat dvdx  = (drvdx - drrdx*v)*invr;
+      const dfloat dwdx  = (drwdx - drrdx*w)*invr;
+
+      const dfloat dudy  = (drudy - drrdy*u)*invr;
+      const dfloat dvdy  = (drvdy - drrdy*v)*invr;
+      const dfloat dwdy  = (drwdy - drrdy*w)*invr;
+
+      const dfloat dudz  = (drudz - drrdz*u)*invr;
+      const dfloat dvdz  = (drvdz - drrdz*v)*invr;
+      const dfloat dwdz  = (drwdz - drrdz*w)*invr;
+
+      const dfloat dkedx = (u*dudx + v*dvdx + w*dwdx);
+      const dfloat dkedy = (u*dudy + v*dvdy + w*dwdy);
+      const dfloat dkedz = (u*dudz + v*dvdz + w*dwdz);
+
+      // Compute the gradient of pressure
+      dfloat dpdx = dp*(gamma-1.0)*(dredx - 0.5f*drrdx*ke - rr*dkedx); 
+      dfloat dpdy = dp*(gamma-1.0)*(dredy - 0.5f*drrdy*ke - rr*dkedy); 
+      dfloat dpdz = dp*(gamma-1.0)*(dredz - 0.5f*drrdz*ke - rr*dkedz); 
+
+      if(p_viscType==2){ // Sutherland
+        //nondimensional temp =  p/(\rho * R)/Tref
+        const dfloat R    = pCoeff[p_RRID]; 
+        const dfloat exp  = pCoeff[p_EXID]; // Exponential term
+        const dfloat tr   = pCoeff[p_TRID]; // 1/Tref 
+        const dfloat ts   = pCoeff[p_TSID]; // Ts/Tref
+        const dfloat cs   = pCoeff[p_CSID]; // precomuted value to simlify
+        const dfloat tn   = p*invr*tr/R; // non-dimensional temp
+        mu  = (tn > ts) ? (mu*pow(tn, exp)*(1.0+ts)/(tn + ts)) : mu*tn*cs;  
+        // mu  = mu*pow(tn, exp)*(1.0+ts)/(tn + ts);  
+      }else if(p_viscType==3){ // Powerlaw
+
+      }
+
+      // mu*cp/Pr* (1/Cv*(gamma-1)) * p/rho = Temp 
+      const dfloat Tx =(dpdx*rr - p*drrdx)*invr*invr;
+      const dfloat Ty =(dpdy*rr - p*drrdy)*invr*invr;
+      const dfloat Tz =(dpdz*rr - p*drrdz)*invr*invr;
+
+      const dfloat T11 = mu*(2.0*dudx - 2.0*(dudx+dvdy+dwdz)/3.0);
+      const dfloat T12 = mu*(dudy+dvdx);
+      const dfloat T13 = mu*(dudz+dwdx);
+      const dfloat T22 = mu*(2.0*dvdy - 2.0*(dudx+dvdy+dwdz)/3.0);
+      const dfloat T23 = mu*(dvdz+dwdy);
+      const dfloat T33 = mu*(2.0*dwdz - 2.0*(dudx+dvdy+dwdz)/3.0);
+
+      // prefetch geometric factors (constant on triangle)
+      const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+      const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+      const dfloat drdz = vgeo[e*p_Nvgeo + p_RZID];
+      const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+      const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+      const dfloat dsdz = vgeo[e*p_Nvgeo + p_SZID];
+      const dfloat dtdx = vgeo[e*p_Nvgeo + p_TXID];
+      const dfloat dtdy = vgeo[e*p_Nvgeo + p_TYID];
+      const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
+
+      {
+        // F0 = ru, G0 = rv
+        const dfloat F = -ru + 0.0*rm*drrdx;
+        const dfloat G = -rv + 0.0*rm*drrdy;
+        const dfloat H = -rw + 0.0*rm*drrdz;
+
+        // F0 = ru, G0 = rv
+        s_F[0][n] = drdx*F + drdy*G + drdz*H;
+        s_G[0][n] = dsdx*F + dsdy*G + dsdz*H;
+        s_H[0][n] = dtdx*F + dtdy*G + dtdz*H;
+      }
+
+
+      {
+        // F1 = 2*mu*T11 - (ru^2+p), G1 = 2*mu*T12 - (rvu)
+        const dfloat F = -(ru*u+p) + T11 + 0.0*rm*drudx;
+        const dfloat G = -(rv*u)   + T12 + 0.0*rm*drudy;
+        const dfloat H = -(rw*u)   + T13 + 0.0*rm*drudz;
+        // F0 = ru, G0 = rv
+        s_F[1][n] = drdx*F + drdy*G + drdz*H;
+        s_G[1][n] = dsdx*F + dsdy*G + dsdz*H;
+        s_H[1][n] = dtdx*F + dtdy*G + dtdz*H;
+      }
+
+      {
+        // F2 = 2*mu*T21 - (ruv), G2 = 2*mu*T22 - (rv^2+p)
+        const dfloat F = -(ru*v)   + T12 + 0.0*rm*drvdx;
+        const dfloat G = -(rv*v+p) + T22 + 0.0*rm*drvdy;
+        const dfloat H = -(rw*v)   + T23 + 0.0*rm*drvdz;
+        // F0 = ru, G0 = rv
+        s_F[2][n] = drdx*F + drdy*G + drdz*H;
+        s_G[2][n] = dsdx*F + dsdy*G + dsdz*H;
+        s_H[2][n] = dtdx*F + dtdy*G + dtdz*H;
+      }
+
+      
+      {
+        const dfloat F = -(ru*w)   + T13 + 0.0*rm*drwdx;
+        const dfloat G = -(rv*w)   + T23 + 0.0*rm*drwdy;
+        const dfloat H = -(rw*w +p)+ T33 + 0.0*rm*drwdz;
+        // F0 = ru, G0 = rv
+        s_F[3][n] = drdx*F + drdy*G + drdz*H;
+        s_G[3][n] = dsdx*F + dsdy*G + dsdz*H;
+        s_H[3][n] = dtdx*F + dtdy*G + dtdz*H;
+      }
+
+      {
+      // F3 = mu*(u*T11+v*T12) - (uE+up), G2 = mu*(u*T12+v*T22) - (vE+vp)
+      const dfloat Tmu = mu*CP/Pr; 
+      const dfloat F = -u*(rE+p) + (u*T11 + v*T12 + w*T13) + 0.0*Tmu*Tx + 0.0*rm*dredx;
+      const dfloat G = -v*(rE+p) + (u*T12 + v*T22 + w*T23) + 0.0*Tmu*Ty + 0.0*rm*dredy;
+      const dfloat H = -w*(rE+p) + (u*T13 + v*T23 + w*T33) + 0.0*Tmu*Tz + 0.0*rm*dredz;
+       // F0 = ru, G0 = rv
+        s_F[4][n] = drdx*F + drdy*G + drdz*H;
+        s_G[4][n] = dsdx*F + dsdy*G + dsdz*H;
+        s_H[4][n] = dtdx*F + dtdy*G + dtdz*H;
+      }
+    }
+
+for(int n=0;n<p_cubNp;++n;@inner(0)){
+      if (n<p_Np) {
+        dfloat df0dr = 0.f, dg0ds = 0.f, dh0dt = 0.f;
+        dfloat df1dr = 0.f, dg1ds = 0.f, dh1dt = 0.f;
+        dfloat df2dr = 0.f, dg2ds = 0.f, dh2dt = 0.f;
+        dfloat df3dr = 0.f, dg3ds = 0.f, dh3dt = 0.f;
+        dfloat df4dr = 0.f, dg4ds = 0.f, dh4dt = 0.f;
+
+        #pragma unroll p_cubNp
+          for(int i=0;i<p_cubNp;++i){
+            const dfloat cDrni = cubPDT[n+i*p_Np+0*p_Np*p_cubNp];
+            const dfloat cDsni = cubPDT[n+i*p_Np+1*p_Np*p_cubNp];
+            const dfloat cDtni = cubPDT[n+i*p_Np+2*p_Np*p_cubNp];
+
+            df0dr += cDrni*s_F[0][i];
+            df1dr += cDrni*s_F[1][i];
+            df2dr += cDrni*s_F[2][i];
+            df3dr += cDrni*s_F[3][i];
+            df4dr += cDrni*s_F[4][i];
+
+            dg0ds += cDsni*s_G[0][i];
+            dg1ds += cDsni*s_G[1][i];
+            dg2ds += cDsni*s_G[2][i];
+            dg3ds += cDsni*s_G[3][i];
+            dg4ds += cDsni*s_G[4][i];
+
+            dh0dt += cDtni*s_H[0][i];
+            dh1dt += cDtni*s_H[1][i];
+            dh2dt += cDtni*s_H[2][i];
+            dh3dt += cDtni*s_H[3][i];
+            dh4dt += cDtni*s_H[4][i];
+          }
+
+
+        const dlong base = e*p_Np*p_Nfields + n;
+        // move to rhs
+        rhsq[base+0*p_Np] = -(df0dr+dg0ds+dh0dt);
+        rhsq[base+1*p_Np] = -(df1dr+dg1ds+dh1dt)+fx;
+        rhsq[base+2*p_Np] = -(df2dr+dg2ds+dh2dt)+fy;
+        rhsq[base+3*p_Np] = -(df3dr+dg3ds+dh3dt)+fz;
+        rhsq[base+4*p_Np] = -(df4dr+dg4ds+dh4dt);
+      }
+    }
+  }
+}
+
+
+
+
+
+// // Compressible Navier-Stokes
+// @kernel void cnsCubatureVolumeArtificialDiffsuionPhysicalTri2D(const dlong Nelements,
+//                                           @restrict const  dfloat *  vgeo,
+//                                           @restrict const  dfloat *  cubvgeo,
+//                                           @restrict const  dfloat *  cubD,
+//                                           @restrict const  dfloat *  cubPDT,
+//                                           @restrict const  dfloat *  cubInterp,
+//                                           @restrict const  dfloat *  cubProject,
+//                                           @restrict const  dfloat *  x,
+//                                           @restrict const  dfloat *  y,
+//                                           @restrict const  dfloat *  z,
+//                                           @restrict const  dfloat * pCoeff,
+//                                           const dfloat t,
+//                                           @restrict const  dfloat *  muArtDiff,
+//                                           @restrict const  dfloat *  q,
+//                                           @restrict const  dfloat *  gradq,
+//                                           @restrict dfloat *  rhsq){
+
+//   for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+//     @shared dfloat s_q[p_Nfields][p_Np];
+//     @shared dfloat s_gradq[p_Ngrads][p_Np];
+
+//     @shared dfloat s_F[p_Nfields][p_cubNp];
+//     @shared dfloat s_G[p_Nfields][p_cubNp];
+
+//     @shared dfloat s_mu[p_Np];
+
+//     @exclusive dfloat fx, fy;
+
+//     for(int n=0;n<p_cubNp;++n;@inner(0)){      // for all nodes in this element
+//       if(n<p_Np){
+//         const dlong  qbase = e*p_Np*p_Nfields + n;
+//         const dlong id     = e*p_Np*p_Ngrads + n;
+
+//         const dfloat gamma = pCoeff[p_GMID]; // gamma
+//         const dfloat mu    = pCoeff[p_MUID]; // bulk viscosity
+
+//         // hold artificial viscosity now
+//         s_mu[n] = muArtDiff[e*p_Np + n]; 
+
+//         dfloat rr = q[qbase+0*p_Np];
+//         dfloat ru = q[qbase+1*p_Np];
+//         dfloat rv = q[qbase+2*p_Np];
+//         dfloat rE = q[qbase+3*p_Np];
+
+//         dfloat dr = 0.0; 
+// #if POSITIVITY
+//         // check positivity on density
+//         rr         = RMIN + LMAX(rr-RMIN, ALPHA); 
+//         dr         = SMOOTH(rr-RMIN, ALPHA); 
+// #else
+//         dr = 1.0; 
+// #endif
+
+//         // conservative fields
+//         s_q[0][n] = rr;
+//         s_q[1][n] = ru;
+//         s_q[2][n] = rv;
+//         s_q[3][n] = rE;
+//         // 
+//         s_gradq[0][n] = dr * gradq[id+0*p_Np];
+//         s_gradq[1][n] = dr * gradq[id+1*p_Np];     
+//         s_gradq[2][n] =      gradq[id+2*p_Np];
+//         s_gradq[3][n] =      gradq[id+3*p_Np];
+//         s_gradq[4][n] =      gradq[id+4*p_Np];
+//         s_gradq[5][n] =      gradq[id+5*p_Np];        
+//         s_gradq[6][n] =      gradq[id+6*p_Np];
+//         s_gradq[7][n] =      gradq[id+7*p_Np];
+
+//         // get primitive variables
+//         const dfloat u = ru/rr; 
+//         const dfloat v = rv/rr;
+//         const dfloat p = (gamma-1)*(rE-0.5*rr*(u*u+v*v));
+//         //Body force contribution
+//         fx = 0.0; fy = 0.0;
+//         cnsBodyForce2D(gamma, mu, t, x[e*p_Np+n], y[e*p_Np+n], rr, u, v, p, &fx, &fy);
+//         // multiplybody forces with density
+//         fx *= rr; 
+//         fy *= rr;
+//       }
+//     }
+
+
+//     for(int n=0;n<p_cubNp;++n;@inner(0)){
+//       const dfloat gamma = pCoeff[p_GMID]; // gamma
+//       const dfloat CV    = pCoeff[p_CVID]; // CV
+//       const dfloat CP    = pCoeff[p_CPID]; // CP
+//       const dfloat Pr    = pCoeff[p_PRID]; // Prandtl Number
+//             dfloat mu    = pCoeff[p_MUID]; // Bulk viscosity
+//       //interpolate to cubature
+//       dfloat rr = 0., ru = 0.; 
+//       dfloat rv = 0., rE = 0.;
+//       // artificial diffusion
+//       dfloat rm = 0.;
+
+//       dfloat drrdx = 0., drrdy = 0.;
+//       dfloat drudx = 0., drudy = 0.;
+//       dfloat drvdx = 0., drvdy = 0.;
+//       dfloat dredx = 0., dredy = 0.;
+
+//       #pragma unroll p_Np
+//         for(int i=0;i<p_Np;++i){
+//           const dfloat cIni = cubInterp[n+i*p_cubNp];
+//           rm += cIni*s_mu[i];
+
+//           rr += cIni*s_q[0][i];
+//           ru += cIni*s_q[1][i];
+//           rv += cIni*s_q[2][i];
+//           rE += cIni*s_q[3][i];
+
+//           drrdx += cIni*s_gradq[0][i];
+//           drrdy += cIni*s_gradq[1][i];
+//           drudx += cIni*s_gradq[2][i];
+//           drudy += cIni*s_gradq[3][i];
+//           drvdx += cIni*s_gradq[4][i];
+//           drvdy += cIni*s_gradq[5][i];
+//           dredx += cIni*s_gradq[6][i];
+//           dredy += cIni*s_gradq[7][i];
+//         }
+
+//       // primitive variables
+//       const dfloat invr = 1.0/rr;   
+//       const dfloat u  = ru*invr; 
+//       const dfloat v  = rv*invr;
+//       const dfloat ke = u*u + v*v;
+//       // pressure field
+//       dfloat p  = (gamma-1)*(rE- 0.5f*rr*ke);
+      
+//             // Positivity Check
+//       #if POSITIVITY
+//         p        = PMIN + LMAX(p-PMIN, ALPHA); 
+//         dfloat dp  = SMOOTH(p-PMIN, ALPHA); 
+//       #else
+//         dfloat dp=1.0; 
+//       #endif
+
+//       const dfloat dudx  = (drudx - drrdx*u)*invr;
+//       const dfloat dvdx  = (drvdx - drrdx*v)*invr;
+//       const dfloat dudy  = (drudy - drrdy*u)*invr;
+//       const dfloat dvdy  = (drvdy - drrdy*v)*invr;
+
+//       const dfloat dkedx = (u*dudx + v*dvdx);
+//       const dfloat dkedy = (u*dudy + v*dvdy);
+
+//       // Compute the gradient of pressure
+//       dfloat dpdx = dp*(gamma-1.0)*(dredx - 0.5f*drrdx*ke - rr*dkedx); 
+//       dfloat dpdy = dp*(gamma-1.0)*(dredy - 0.5f*drrdy*ke - rr*dkedy); 
+
+//       if(p_viscType==2){ // Sutherland
+//         //nondimensional temp =  p/(\rho * R)/Tref
+//         const dfloat R    = pCoeff[p_RRID]; 
+//         const dfloat exp  = pCoeff[p_EXID]; // Exponential term
+//         const dfloat tr   = pCoeff[p_TRID]; // 1/Tref 
+//         const dfloat ts   = pCoeff[p_TSID]; // Ts/Tref
+//         const dfloat cs   = pCoeff[p_CSID]; // precomuted value to simlify
+//         const dfloat tn   = p*invr*tr/R; // non-dimensional temp
+//         mu  = (tn > ts) ? (mu*pow(tn, exp)*(1.0+ts)/(tn + ts)) : mu*tn*cs;  
+//         // mu  = mu*pow(tn, exp)*(1.0+ts)/(tn + ts);  
+//       }else if(p_viscType==3){ // Powerlaw
+
+//       }
+
+//       // mu*cp/Pr* (1/Cv*(gamma-1)) * p/rho = Temp 
+//       const dfloat Tx =(dpdx*rr - p*drrdx)*invr*invr;
+//       const dfloat Ty =(dpdy*rr - p*drrdy)*invr*invr;
+
+//       const dfloat T11 = (mu+rm)*( 2.0*dudx - 2.0*(dudx+dvdy)/3.0);
+//       const dfloat T12 = (mu+rm)*(dudy+dvdx);
+//       const dfloat T22 = (mu+rm)*(2.0*dvdy - 2.0*(dudx+dvdy)/3.0);
+
+//       // F0 = ru, G0 = rv
+//       s_F[0][n] = -ru;
+//       s_G[0][n] = -rv;
+
+//       // F1 = 2*mu*T11 - (ru^2+p), G1 = 2*mu*T12 - (rvu)
+//       s_F[1][n] = -(ru*u+p) + T11;
+//       s_G[1][n] = -(rv*u)   + T12;
+
+//       // F2 = 2*mu*T21 - (ruv), G2 = 2*mu*T22 - (rv^2+p)
+//       s_F[2][n] = -(rv*u)   + T12;
+//       s_G[2][n] = -(rv*v+p) + T22;
+
+//       // // // F3 = mu*(u*T11+v*T12) - (uE+up), G2 = mu*(u*T12+v*T22) - (vE+vp)
+//       const dfloat Tmu = (mu+rm)*CP/Pr; 
+//       s_F[3][n] = -u*(rE+p) + (u*T11 + v*T12 ) + Tmu*Tx;
+//       s_G[3][n] = -v*(rE+p) + (u*T12 + v*T22 ) + Tmu*Ty;
+//     }
+
+
+//     for(int n=0;n<p_cubNp;++n;@inner(0)){
+//       if (n<p_Np) {
+//         // prefetch geometric factors (constant on triangle)
+//         const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+//         const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+//         const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+//         const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+//         dfloat df0dr = 0.f, df0ds = 0.f;
+//         dfloat df1dr = 0.f, df1ds = 0.f;
+//         dfloat df2dr = 0.f, df2ds = 0.f;
+//         dfloat df3dr = 0.f, df3ds = 0.f;
+//         dfloat dg0dr = 0.f, dg0ds = 0.f;
+//         dfloat dg1dr = 0.f, dg1ds = 0.f;
+//         dfloat dg2dr = 0.f, dg2ds = 0.f;
+//         dfloat dg3dr = 0.f, dg3ds = 0.f;
+
+//         #pragma unroll p_cubNp
+//           for(int i=0;i<p_cubNp;++i){
+//             const dfloat cDrni = cubPDT[n+i*p_Np+0*p_cubNp*p_Np];
+//             const dfloat cDsni = cubPDT[n+i*p_Np+1*p_cubNp*p_Np];
+
+//             df0dr += cDrni*s_F[0][i];
+//             df1dr += cDrni*s_F[1][i];
+//             df2dr += cDrni*s_F[2][i];
+//             df3dr += cDrni*s_F[3][i];
+
+//             df0ds += cDsni*s_F[0][i];
+//             df1ds += cDsni*s_F[1][i];
+//             df2ds += cDsni*s_F[2][i];
+//             df3ds += cDsni*s_F[3][i];
+
+//             dg0dr += cDrni*s_G[0][i];
+//             dg1dr += cDrni*s_G[1][i];
+//             dg2dr += cDrni*s_G[2][i];
+//             dg3dr += cDrni*s_G[3][i];
+
+//             dg0ds += cDsni*s_G[0][i];
+//             dg1ds += cDsni*s_G[1][i];
+//             dg2ds += cDsni*s_G[2][i];
+//             dg3ds += cDsni*s_G[3][i];
+//           }
+
+//         const dfloat rhsq0 = drdx*df0dr + dsdx*df0ds + drdy*dg0dr + dsdy*dg0ds;
+//         const dfloat rhsq1 = drdx*df1dr + dsdx*df1ds + drdy*dg1dr + dsdy*dg1ds;
+//         const dfloat rhsq2 = drdx*df2dr + dsdx*df2ds + drdy*dg2dr + dsdy*dg2ds;
+//         const dfloat rhsq3 = drdx*df3dr + dsdx*df3ds + drdy*dg3dr + dsdy*dg3ds;
+
+//         const dlong base = e*p_Np*p_Nfields + n;
+
+//         // move to rhs
+//         rhsq[base+0*p_Np] = -rhsq0;
+//         rhsq[base+1*p_Np] = -rhsq1+fx;
+//         rhsq[base+2*p_Np] = -rhsq2+fy;
+//         rhsq[base+3*p_Np] = -rhsq3;
+//       }
+//     }
+//   }
+// }
+

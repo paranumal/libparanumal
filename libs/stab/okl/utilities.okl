@@ -70,15 +70,6 @@ SOFTWARE.
     for(int n=0;n<p_Np;++n;@inner(0)){
       const dlong base = e*p_Np*s_Nsfields + n;
       const dfloat  rq  = Q[base+field_id*p_Np];
-      // const dfloat  u  = Q[base+1*p_Np]/r;
-      // const dfloat  v = q[base+2*p_Np]/r;
-      // const dfloat E  = q[base+3*p_Np];
-
-      // const dfloat p  = 0.4*(E-0.5*r*(u*u+v*v));
-      // const dfloat r1 = pow(r, 1.4); 
-      // const dfloat ls = p/r1; 
-      // const dfloat s = log10(ls);
-
       q[e*p_Np + n] =  rq;
     }
   }  

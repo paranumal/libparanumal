@@ -2,12 +2,12 @@
 2.0
 
 [DATA FILE]
-#data/cnsGaussian3D.h
-data/cnsUniform3D.h
-
+data/cnsGaussian3D.h
+#data/cnsUniform3D.h
+#*******************[MESH PROPERTIES]*******************#
 [MESH FILE]
-#BOX
-../../meshes/cnsNACA3D.msh
+BOX
+#../../meshes/AGARD_B.msh
 
 [MESH DIMENSION]
 3
@@ -16,13 +16,13 @@ data/cnsUniform3D.h
 6
 
 [BOX NX]
-10
+20			
 
 [BOX NY]
-10
+20
 
 [BOX NZ]
-10
+20
 
 [BOX BOUNDARY FLAG]
 -1
@@ -30,6 +30,7 @@ data/cnsUniform3D.h
 [POLYNOMIAL DEGREE]
 4
 
+#*******************[DEVICE PROPERTIES]*******************#
 [THREAD MODEL]
 CUDA
 
@@ -39,11 +40,48 @@ CUDA
 [DEVICE NUMBER]
 0
 
+#*******************[SOLVER PROPERTIES]*******************#
+[SOLVER TYPE]
+#EULER
+NAVIER-STOKES
+
+# If TRUE compute R and mu from Mach & Reynolds//
+[NONDIMENSIONAL EQUATIONS]
+TRUE
+
+# Isentropic exponent 
 [GAMMA]
 1.4
 
+# // Mach number is needed for NONDIM=TRUE
+[MACH NUMBER]
+0.1
+
+# Reynolds number is needed for NONDIM = TRUE
+[REYNOLDS NUMBER]
+1e2
+
+# R is needed if NONDIM=FALSE otherwise  R = 1.0/(gamma*Ma^2) 
+[SPECIFIC GAS CONSTANT]
+287.052
+
+# mu is needed if NONDIM = FALSE, otherwise mu = 1/Re
 [VISCOSITY]
 0.00001
+
+[VISCOSITY TYPE]
+CONSTANT
+#SUTHERLAND
+#POWER-LAW
+
+
+[PRANDTL NUMBER]
+0.72
+
+# [rref, uref, vref, wref(if 3D), pref]
+[REFERENCE STATE]
+1.0, 1.0, 0.0, 0.0, 1.0
+#1.4, 1.0, 0.0, 0.0, 100
 
 [ISOTHERMAL]
 FALSE
@@ -54,6 +92,10 @@ CUBATURE
 
 [TIME INTEGRATOR]
 DOPRI5
+#LSERK4
+
+[CFL NUMBER]
+0.1
 
 [START TIME]
 0
@@ -61,11 +103,42 @@ DOPRI5
 [FINAL TIME]
 1
 
+#*******************[OUTPUT PROPERTIES]*******************#
 [OUTPUT INTERVAL]
-0.2
+0.05
 
 [OUTPUT TO FILE]
 TRUE
 
 [OUTPUT FILE NAME]
 cns
+
+#*****************[STABILIZASYON PROPERTIES]*****************#
+# HJS:1  CNS:2  INS:3 
+[STABILIZATION SOLVER TYPE]
+2
+
+# NODETECT: 0  ALL= 1 Klockner: 2 Persson: 3 DUCROS: 4
+[DETECTOR TYPE]
+2
+
+# NoStab:0 Filter: 1, Limiter: 2, Artdiff: 3, Subcell: 4
+[STAB TYPE]
+3
+
+[SUBCELL NUMBER]
+4
+
+[SUBCELL MINOR GRID]
+WARPBLEND
+
+[STAB OUTPUT TO FILE]
+TRUE
+
+[ARTDIFF TYPE]
+LAPLACE
+#PHYSICAL
+
+[ARTDIFF SCALE FACTOR]
+1
+

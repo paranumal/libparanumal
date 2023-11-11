@@ -1,0 +1,589 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+#define RMIN 0.05
+#define PMIN 0.05
+#define ALPHA 100
+
+#define POSITIVITY 0
+
+// Regularization of rho / p  (cannot be smaller than rmin / pmin)
+dfloat LMAX(const dfloat x, const dfloat alpha){
+  dfloat xlim = x*(atan(alpha*x)/M_PI + 0.5) - atan(alpha)/M_PI + 0.5;
+  return xlim;
+}
+
+// Density / pressure sensor for gradients...
+dfloat SMOOTH(const dfloat x, const dfloat alpha){
+ dfloat dx = atan(alpha*x)/M_PI + alpha*x/(M_PI*(alpha*alpha*x*x + 1.0)) + 0.5;
+  return dx; 
+}
+
+
+// Roe averaged Riemann solver
+void upwindRoeAveraged(const dfloat nx,
+                       const dfloat ny,
+                       const dfloat nz,
+                       const dfloat gamma,
+                       const dfloat rM,
+                       const dfloat uM,
+                       const dfloat vM,
+                       const dfloat wM,
+                       const dfloat pM,
+                       const dfloat rP,
+                       const dfloat uP,
+                       const dfloat vP,
+                       const dfloat wP,
+                       const dfloat pP,
+                       dfloat *rflux,
+                       dfloat *ruflux,
+                       dfloat *rvflux,
+                       dfloat *rwflux,
+                       dfloat *Eflux){
+
+  const dfloat EM = pM/(gamma-1) + 0.5*rM*(uM*uM+vM*vM+wM*wM);
+  const dfloat EP = pP/(gamma-1) + 0.5*rP*(uP*uP+vP*vP+wP*wP);
+  const dfloat HM = (EM+pM)/rM;
+  const dfloat HP = (EP+pP)/rP;
+
+  // Compute Roe average variables
+  const dfloat sqrtrM = sqrt(rM);
+  const dfloat sqrtrP = sqrt(rP);
+
+  const dfloat r = sqrtrM*sqrtrP;
+  const dfloat u = (sqrtrM*uM + sqrtrP*uP)/(sqrtrM + sqrtrP);
+  const dfloat v = (sqrtrM*vM + sqrtrP*vP)/(sqrtrM + sqrtrP);
+  const dfloat w = (sqrtrM*wM + sqrtrP*wP)/(sqrtrM + sqrtrP);
+  const dfloat H = (sqrtrM*HM + sqrtrP*HP)/(sqrtrM + sqrtrP);
+
+  const dfloat c2 = (gamma-1)*(H-0.5*(u*u+v*v+w*w));
+  const dfloat c = sqrt(c2);
+
+  // normal velocity
+  const dfloat qP = nx*uP+ny*vP+nz*wP;
+  const dfloat qM = nx*uM+ny*vM+nz*wM;
+  const dfloat q  = nx*u +ny*v +nz*w;
+
+  // jump terms
+  const dfloat dp = pP-pM;
+  const dfloat dr = rP-rM;
+  const dfloat du = uP-uM;
+  const dfloat dv = vP-vM;
+  const dfloat dw = wP-wM;
+  const dfloat dq = qP-qM;
+
+  const dfloat W1 = fabs(q-c) * 0.5*(dp-r*c*dq)/(c2);
+  const dfloat W2 = fabs(q  ) * r;
+  const dfloat W3 = fabs(q+c) * 0.5*(dp+r*c*dq)/(c2);
+  const dfloat W4 = fabs(q  ) * (dr-(dp/c2));
+
+  // Fluxes from traces n.F(uP) and n.F(uM)
+  *rflux  = 0.5*((rP*qP         ) + (rM*qM         ));
+  *ruflux = 0.5*((rP*uP*qP+nx*pP) + (rM*uM*qM+nx*pM));
+  *rvflux = 0.5*((rP*vP*qP+ny*pP) + (rM*vM*qM+ny*pM));
+  *rwflux = 0.5*((rP*wP*qP+nz*pP) + (rM*wM*qM+nz*pM));
+  *Eflux  = 0.5*((qP*(EP+pP)    ) + (qM*(EM+pM)    ));
+
+  // Roe flux
+  *rflux  -= 0.5*(W1*1.0      + W2*0.0                   + W3*1.0      + W4*1.0              );
+  *ruflux -= 0.5*(W1*(u-nx*c) + W2*(du-nx*dq)            + W3*(u+nx*c) + W4*u                );
+  *rvflux -= 0.5*(W1*(v-ny*c) + W2*(dv-ny*dq)            + W3*(v+ny*c) + W4*v                );
+  *rwflux -= 0.5*(W1*(w-nz*c) + W2*(dw-nz*dq)            + W3*(w+nz*c) + W4*w                );
+  *Eflux  -= 0.5*(W1*(H- q*c) + W2*(u*du+v*dv+w*dw-q*dq) + W3*(H+ q*c) + W4*0.5*(u*u+v*v+w*w));
+}
+
+// batch process elements
+@kernel void cnsCubatureSurfaceArtificialDiffusionTet3D(const dlong Nelements,
+                                                        @restrict const  dfloat *  vgeo,
+                                                        @restrict const  dfloat *  sgeo,
+                                                        @restrict const  dlong  *  vmapM,
+                                                        @restrict const  dlong  *  vmapP,
+                                                        @restrict const  int    *  EToB,
+                                                        @restrict const  dfloat *  intInterp, 
+                                                        @restrict const  dfloat *  intLIFT, 
+                                                        @restrict const  dfloat *  intx,
+                                                        @restrict const  dfloat *  inty,
+                                                        @restrict const  dfloat *  intz,
+                                                        @restrict const dfloat *pCoeff,
+                                                        const dfloat time,
+                                                        const dfloat tau,
+                                                        @restrict const  dfloat *  aMu,
+                                                        @restrict const  dfloat *  q,
+                                                        @restrict const  dfloat *  gradq,
+                                                        @restrict dfloat *  rhsq){
+  // for all elements
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+
+    // @shared storage for flux terms
+    @shared dfloat s_qM[p_Nfields][p_Nfp];
+    @shared dfloat s_qP[p_Nfields][p_Nfp];
+    @shared dfloat s_gradqM[p_Ngrads][p_Nfp];
+    @shared dfloat s_gradqP[p_Ngrads][p_Nfp];
+
+    // viscosity is C0 but just in case!!!!
+    @shared dfloat s_muM[p_Nfp];
+    @shared dfloat s_muP[p_Nfp];
+
+    @shared dfloat s_rflux [p_intNfp];
+    @shared dfloat s_ruflux[p_intNfp];
+    @shared dfloat s_rvflux[p_intNfp];
+    @shared dfloat s_rwflux[p_intNfp];
+    @shared dfloat s_Eflux [p_intNfp];
+
+    @exclusive dfloat Lrflux, Lruflux, Lrvflux, Lrwflux, LEflux;
+
+    for(int n=0;n<p_cubMaxNodes1;++n;@inner(0)){
+      Lrflux  = 0;
+      Lruflux = 0;
+      Lrvflux = 0;
+      Lrwflux = 0;
+      LEflux  = 0;
+    }
+
+    #pragma unroll p_Nfaces
+      for(int face=0;face<p_Nfaces;++face){
+
+        for(int n=0;n<p_cubMaxNodes1;++n;@inner(0)){
+          if(n<p_Nfp){
+            // indices of negative and positive traces of face node
+            const dlong id  = e*p_Nfp*p_Nfaces + (n + face*p_Nfp);
+            const dlong idM = vmapM[id];
+            const dlong idP = vmapP[id];
+
+            // load traces
+            const dlong eM = e;
+            const dlong eP = idP/p_Np;
+            const int vidM = idM%p_Np;
+            const int vidP = idP%p_Np;
+
+            const dlong qbaseM = eM*p_Np*p_Nfields + vidM;
+            const dlong qbaseP = eP*p_Np*p_Nfields + vidP;
+
+            const dlong sbaseM = eM*p_Np*p_Ngrads + vidM;
+            const dlong sbaseP = eP*p_Np*p_Ngrads + vidP;
+
+            s_muM[n]   = aMu[eM*p_Np  + vidM];
+            s_muP[n]   = aMu[eP*p_Np  + vidP];
+            // read conservative fields
+            s_qM[0][n] = q[qbaseM + 0*p_Np];
+            s_qM[1][n] = q[qbaseM + 1*p_Np];
+            s_qM[2][n] = q[qbaseM + 2*p_Np];
+            s_qM[3][n] = q[qbaseM + 3*p_Np];
+            s_qM[4][n] = q[qbaseM + 4*p_Np];
+
+            s_qP[0][n] = q[qbaseP + 0*p_Np];
+            s_qP[1][n] = q[qbaseP + 1*p_Np];
+            s_qP[2][n] = q[qbaseP + 2*p_Np];
+            s_qP[3][n] = q[qbaseP + 3*p_Np];
+            s_qP[4][n] = q[qbaseP + 4*p_Np];
+            // read gradient fields
+            s_gradqM[0][n]  = gradq[sbaseM+ 0*p_Np];
+            s_gradqM[1][n]  = gradq[sbaseM+ 1*p_Np];
+            s_gradqM[2][n]  = gradq[sbaseM+ 2*p_Np];
+            s_gradqM[3][n]  = gradq[sbaseM+ 3*p_Np];
+            s_gradqM[4][n]  = gradq[sbaseM+ 4*p_Np];
+            s_gradqM[5][n]  = gradq[sbaseM+ 5*p_Np];
+            s_gradqM[6][n]  = gradq[sbaseM+ 6*p_Np];
+            s_gradqM[7][n]  = gradq[sbaseM+ 7*p_Np];
+            s_gradqM[8][n]  = gradq[sbaseM+ 8*p_Np];
+            s_gradqM[9][n]  = gradq[sbaseM+ 9*p_Np];
+            s_gradqM[10][n] = gradq[sbaseM+10*p_Np];
+            s_gradqM[11][n] = gradq[sbaseM+11*p_Np];
+            s_gradqM[12][n] = gradq[sbaseM+12*p_Np];
+            s_gradqM[13][n] = gradq[sbaseM+13*p_Np];
+            s_gradqM[14][n] = gradq[sbaseM+14*p_Np];
+
+            s_gradqP[0][n]  = gradq[sbaseP+ 0*p_Np];
+            s_gradqP[1][n]  = gradq[sbaseP+ 1*p_Np];
+            s_gradqP[2][n]  = gradq[sbaseP+ 2*p_Np];
+            s_gradqP[3][n]  = gradq[sbaseP+ 3*p_Np];
+            s_gradqP[4][n]  = gradq[sbaseP+ 4*p_Np];
+            s_gradqP[5][n]  = gradq[sbaseP+ 5*p_Np];
+            s_gradqP[6][n]  = gradq[sbaseP+ 6*p_Np];
+            s_gradqP[7][n]  = gradq[sbaseP+ 7*p_Np];
+            s_gradqP[8][n]  = gradq[sbaseP+ 8*p_Np];
+            s_gradqP[9][n]  = gradq[sbaseP+ 9*p_Np];
+            s_gradqP[10][n] = gradq[sbaseP+10*p_Np];
+            s_gradqP[11][n] = gradq[sbaseP+11*p_Np];
+            s_gradqP[12][n] = gradq[sbaseP+12*p_Np];
+            s_gradqP[13][n] = gradq[sbaseP+13*p_Np];
+            s_gradqP[14][n] = gradq[sbaseP+14*p_Np];
+          }
+        }
+
+
+        // interpolate to surface integration nodes
+        for(int n=0;n<p_cubMaxNodes1;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
+          if(n<p_intNfp){
+            // indices of negative and positive traces of face node
+            const dfloat gamma  = pCoeff[p_GMID]; // gamma
+            const dfloat R      = pCoeff[p_RRID]; 
+            const dfloat CP     = pCoeff[p_CPID]; 
+            const dfloat CV     = pCoeff[p_CVID]; 
+            const dfloat Pr     = pCoeff[p_PRID]; // Prandtl Number
+
+            // load surface geofactors for this face
+            const dlong sid    = p_Nsgeo*(e*p_Nfaces+face);
+            const dfloat nx   = sgeo[sid+p_NXID];
+            const dfloat ny   = sgeo[sid+p_NYID];
+            const dfloat nz   = sgeo[sid+p_NZID];
+            const dfloat sJ   = sgeo[sid+p_SJID];
+            const dfloat invJ = sgeo[sid+p_IJID];
+
+            dfloat rrM = 0., ruM = 0., rvM = 0., rwM = 0., rEM = 0., rmM = 0.;
+            dfloat rrP = 0., ruP = 0., rvP = 0., rwP = 0., rEP = 0., rmP = 0.;
+            
+            dfloat drrdxM = 0., drrdyM = 0., drrdzM = 0.;
+            dfloat drudxM = 0., drudyM = 0., drudzM = 0.;
+            dfloat drvdxM = 0., drvdyM = 0., drvdzM = 0.;
+            dfloat drwdxM = 0., drwdyM = 0., drwdzM = 0.;
+            dfloat dredxM = 0., dredyM = 0., dredzM = 0.;
+            
+            dfloat drrdxP = 0., drrdyP = 0., drrdzP = 0.;
+            dfloat drudxP = 0., drudyP = 0., drudzP = 0.;
+            dfloat drvdxP = 0., drvdyP = 0., drvdzP = 0.;
+            dfloat drwdxP = 0., drwdyP = 0., drwdzP = 0.;
+            dfloat dredxP = 0., dredyP = 0., dredzP = 0.;
+
+            // local block interpolation (face nodes to integration nodes)
+            #pragma unroll p_Nfp
+              for(int m=0;m<p_Nfp;++m){
+                const dfloat iInm = intInterp[ (n+face*p_intNfp) + m*p_Nfaces*p_intNfp];
+                const int fm = m;
+
+                rmM  += iInm*s_muM[fm];
+                rmP  += iInm*s_muP[fm];
+                
+                rrM += iInm*s_qM[0][fm];
+                ruM += iInm*s_qM[1][fm];
+                rvM += iInm*s_qM[2][fm];
+                rwM += iInm*s_qM[3][fm];
+                rEM += iInm*s_qM[4][fm];
+
+                rrP += iInm*s_qP[0][fm];
+                ruP += iInm*s_qP[1][fm];
+                rvP += iInm*s_qP[2][fm];
+                rwP += iInm*s_qP[3][fm];
+                rEP += iInm*s_qP[4][fm];
+
+                drrdxM = s_gradqM[ 0][fm]; 
+                drrdyM = s_gradqM[ 1][fm]; 
+                drrdzM = s_gradqM[ 2][fm];                
+                drudxM = s_gradqM[ 3][fm];
+                drudyM = s_gradqM[ 4][fm];
+                drudzM = s_gradqM[ 5][fm];
+                drvdxM = s_gradqM[ 6][fm];
+                drvdyM = s_gradqM[ 7][fm];
+                drvdzM = s_gradqM[ 8][fm];
+                drwdxM = s_gradqM[ 9][fm];
+                drwdyM = s_gradqM[10][fm];
+                drwdzM = s_gradqM[11][fm];
+                dredxM = s_gradqM[12][fm];
+                dredyM = s_gradqM[13][fm];
+                dredzM = s_gradqM[14][fm];
+
+                drrdxP = s_gradqP[ 0][fm]; 
+                drrdyP = s_gradqP[ 1][fm]; 
+                drrdzP = s_gradqP[ 2][fm];
+                drudxP = s_gradqP[ 3][fm];
+                drudyP = s_gradqP[ 4][fm];
+                drudzP = s_gradqP[ 5][fm];
+                drvdxP = s_gradqP[ 6][fm];
+                drvdyP = s_gradqP[ 7][fm];
+                drvdzP = s_gradqP[ 8][fm];
+                drwdxP = s_gradqP[ 9][fm];
+                drwdyP = s_gradqP[10][fm];
+                drwdzP = s_gradqP[11][fm];
+                dredxP = s_gradqP[12][fm];
+                dredyP = s_gradqP[13][fm];
+                dredzP = s_gradqP[14][fm];
+              }
+
+            #if POSITIVITY==1 
+                    rrM         = RMIN + LMAX(rrM-RMIN, ALPHA); 
+                    dfloat drM  = SMOOTH(rrM-RMIN, ALPHA); 
+                    drrdxM *=drM; 
+                    drrdyM *=drM; 
+                    drrdzM *=drM; 
+            #endif
+            const dfloat irM = 1./ rrM;    
+            const dfloat uM  = ruM*irM;
+            const dfloat vM  = rvM*irM;
+            const dfloat wM  = rwM*irM;
+            const dfloat keM = (uM*uM + vM*vM + wM*wM);
+                  dfloat pM  = (gamma-1)*(rEM-0.5*rrM*(uM*uM + vM*vM + wM*wM));
+
+            #if POSITIVITY==1 
+                // Limit and smooth pressure
+                pM        = PMIN + LMAX(pM-PMIN, ALPHA); 
+                dfloat dpM  = SMOOTH(pM-PMIN, ALPHA); 
+            #else
+                    dfloat dpM = 1.0; 
+            #endif
+            // reconstruct energy accordingly
+            rEM = pM/(gamma-1.0) + 0.5f*rrM*keM; 
+            const dfloat EM  = rEM*irM;
+
+            // Derivative of primitives
+            const dfloat dudxM = (drudxM - drrdxM*uM)*irM;
+            const dfloat dvdxM = (drvdxM - drrdxM*vM)*irM;
+            const dfloat dwdxM = (drwdxM - drrdxM*wM)*irM;
+
+            const dfloat dudyM = (drudyM - drrdyM*uM)*irM;
+            const dfloat dvdyM = (drvdyM - drrdyM*vM)*irM;
+            const dfloat dwdyM = (drwdyM - drrdyM*wM)*irM;
+
+            const dfloat dudzM = (drudzM - drrdzM*uM)*irM;
+            const dfloat dvdzM = (drvdzM - drrdzM*vM)*irM;
+            const dfloat dwdzM = (drwdzM - drrdzM*wM)*irM;
+
+            const dfloat dedxM = (dredxM - drrdxM*EM)*irM;
+            const dfloat dedyM = (dredyM - drrdyM*EM)*irM;
+            const dfloat dedzM = (dredzM - drrdzM*EM)*irM;
+
+            const dfloat dkedxM = (uM*dudxM + vM*dvdxM + wM*dwdxM);
+            const dfloat dkedyM = (uM*dudyM + vM*dvdyM + wM*dwdyM);
+            const dfloat dkedzM = (uM*dudzM + vM*dvdzM + wM*dwdzM);
+
+            dfloat dpdxM = dpM*(gamma-1.0)*(dredxM - 0.5*drrdxM*keM - rrM*dkedxM); 
+            dfloat dpdyM = dpM*(gamma-1.0)*(dredyM - 0.5*drrdyM*keM - rrM*dkedyM); 
+            dfloat dpdzM = dpM*(gamma-1.0)*(dredzM - 0.5*drrdzM*keM - rrM*dkedzM); 
+
+
+            dfloat irP = 1./ rrP;    
+            dfloat uP  = ruP*irP;
+            dfloat vP  = rvP*irP;
+            dfloat wP  = rwP*irP;
+            dfloat keP = (uP*uP+vP*vP + wP*wP);
+            dfloat pP = (gamma-1)*(rEP-0.5*rrP*keP);
+
+            dfloat dudxP = (drudxP - drrdxP*uP)*irP;
+            dfloat dvdxP = (drvdxP - drrdxP*vP)*irP;
+            dfloat dwdxP = (drwdxP - drrdxP*wP)*irP;
+            dfloat dudyP = (drudyP - drrdyP*uP)*irP;
+            dfloat dvdyP = (drvdyP - drrdyP*vP)*irP;
+            dfloat dwdyP = (drwdyP - drrdyP*wP)*irP;
+            dfloat dudzP = (drudzP - drrdzP*uP)*irP;
+            dfloat dvdzP = (drvdzP - drrdzP*vP)*irP;
+            dfloat dwdzP = (drwdzP - drrdzP*wP)*irP;
+
+            dfloat muM = pCoeff[p_MUID]; // bulk viscosity
+            dfloat muP = pCoeff[p_MUID]; // bulk viscosity
+
+            // apply boundary condition
+            const int bc = EToB[face+p_Nfaces*e];
+            if(bc>0){
+              cnsBoundaryConditions3D(bc, gamma, R, CP, CV, muM,
+                                      time, intx[idM], inty[idM], intz[idM], nx, ny, nz,
+                                      rrM, uM, vM, wM, pM,
+                                      dudxM, dudyM, dudzM,
+                                      dvdxM, dvdyM, dvdzM,
+                                      dwdxM, dwdyM, dwdzM,
+                                      &rrP, &uP, &vP, &wP, &pP,
+                                      &dudxP, &dudyP, &dudzP,
+                                      &dvdxP, &dvdyP, &dvdzP,
+                                      &dwdxP, &dwdyP, &dwdzP);
+
+            #if POSITIVITY==1
+                        rrP         = RMIN + LMAX(rrP-RMIN, ALPHA);
+            #endif 
+                        irP         = 1.0/rrP; 
+                        keP         = (uP*uP+vP*vP + wP*wP);
+
+            }
+
+            #if POSITIVITY==1
+              // Limit and smooth pressure
+              pP        = PMIN + LMAX(pP-PMIN, ALPHA); 
+              dfloat dpP  = SMOOTH(pP-RMIN, ALPHA); 
+            #else
+              dfloat dpP = 1.0; 
+            #endif
+
+            // reconstruct energy 
+            rEP = pP/(gamma-1.0) + 0.5*rrP*keP; 
+            dfloat EP  = rEP*irP;
+
+            dfloat dedxP = (dredxP - drrdxP*EP)*irP;
+            dfloat dedyP = (dredyP - drrdyP*EP)*irP;
+            dfloat dedzP = (dredzP - drrdzP*EP)*irP;
+
+            dfloat dkedxP = (uP*dudxP + vP*dvdxP + wP*dwdxP);
+            dfloat dkedyP = (uP*dudyP + vP*dvdyP + wP*dwdyP);
+            dfloat dkedzP = (uP*dudzP + vP*dvdzP + wP*dwdzP);
+
+            dfloat dpdxP = dpP*(gamma-1.0)*(dredxP - 0.5f*drrdxP*keP - rrP*dkedxP); 
+            dfloat dpdyP = dpP*(gamma-1.0)*(dredyP - 0.5f*drrdyP*keP - rrP*dkedyP); 
+            dfloat dpdzP = dpP*(gamma-1.0)*(dredzP - 0.5f*drrdzP*keP - rrP*dkedzP); 
+
+            if(p_viscType==2){ // Sutherland     
+              const dfloat exp  = pCoeff[p_EXID]; // Exponential term
+              const dfloat tr   = pCoeff[p_TRID]; // 1/Tref 
+              const dfloat ts   = pCoeff[p_TSID]; // Ts/Tref
+              const dfloat cs   = pCoeff[p_CSID]; // precomuted value to simlify
+              const dfloat tnM   = pM*irM*tr/R; // non-dimensional temp
+              const dfloat tnP   = pP*irP*tr/R; // non-dimensional temp
+              muM  = (tnM > ts) ? (muM*pow(tnM, exp)*(1.0+ts)/(tnM + ts)) : muM*tnM*cs;  
+              muP  = (tnP > ts) ? (muP*pow(tnP, exp)*(1.0+ts)/(tnP + ts)) : muP*tnP*cs;  
+            }else if(p_viscType==3){ // Powerlaw
+
+            }
+
+
+            //  
+            const dfloat TxM = (dpdxM*rrM - pM*drrdxM)*irM*irM;
+            const dfloat TyM = (dpdyM*rrM - pM*drrdyM)*irM*irM;
+            const dfloat TzM = (dpdzM*rrM - pM*drrdzM)*irM*irM;
+
+            // Correct MA^2 later AK. 
+            const dfloat TxP = (dpdxP*rrP - pP*drrdxP)*irP*irP;
+            const dfloat TyP = (dpdyP*rrP - pP*drrdyP)*irP*irP;
+            const dfloat TzP = (dpdzP*rrP - pP*drrdzP)*irP*irP;
+
+            dfloat rflux, ruflux, rvflux, rwflux, Eflux;
+            upwindRoeAveraged(nx, ny, nz, gamma,
+                              rrM, uM, vM, wM, pM, rrP, uP, vP, wP, pP,
+                              &rflux, &ruflux, &rvflux, &rwflux, &Eflux);
+
+            dfloat T01M = 0.0; 
+            dfloat T02M = 0.0; 
+            dfloat T03M = 0.0; 
+            
+            dfloat TmuM = muM*CP/Pr; 
+            dfloat T11M = muM*(2.0*dudxM - 2.0*(dudxM+dvdyM+dwdzM)/3.0);
+            dfloat T12M = muM*(dudyM+dvdxM);
+            dfloat T13M = muM*(dudzM+dwdxM);
+            
+            dfloat T21M = T12M;            
+            dfloat T22M = muM*(2.0*dvdyM - 2.0*(dudxM+dvdyM+dwdzM)/3.0);
+            dfloat T23M = muM*(dvdzM+dwdyM);
+
+            dfloat T31M = T13M; 
+            dfloat T32M = T23M; 
+            dfloat T33M = muM*(2.0*dwdzM - 2.0*(dudxM+dvdyM+dwdzM)/3.0);
+            
+            dfloat T41M = uM*T11M + vM*T12M + wM*T13M + 0.0*TmuM*TxM;
+            dfloat T42M = uM*T12M + vM*T22M + wM*T23M + 0.0*TmuM*TyM;
+            dfloat T43M = uM*T13M + vM*T23M + wM*T33M + 0.0*TmuM*TzM;
+
+            // // add artificial viscosity
+            // T01M += rmM*drrdxM; T02M += rmM*drrdyM; T03M += rmM*drrdzM;
+            // T11M += rmM*drudxM; T12M += rmM*drudyM; T13M += rmM*drudzM;
+            // T21M += rmM*drvdxM; T22M += rmM*drvdyM; T23M += rmM*drvdzM;
+            // T31M += rmM*drwdxM; T32M += rmM*drwdyM; T33M += rmM*drwdzM;
+            // T41M += rmM*dredxM; T42M += rmM*dredyM; T43M += rmM*dredzM;
+           
+
+            dfloat T01P = 0.0; 
+            dfloat T02P = 0.0; 
+            dfloat T03P = 0.0; 
+            
+            dfloat TmuP = muP*CP/Pr; 
+            dfloat T11P = muP*(2.0*dudxP - 2.0*(dudxP+dvdyP+dwdzP)/3.0);
+            dfloat T12P = muP*(dudyP+dvdxP);
+            dfloat T13P = muP*(dudzP+dwdxP);
+            
+            dfloat T21P = T12P;            
+            dfloat T22P = muP*(2.0*dvdyP - 2.0*(dudxP+dvdyP+dwdzP)/3.0);
+            dfloat T23P = muP*(dvdzP+dwdyP);
+
+            dfloat T31P = T13P; 
+            dfloat T32P = T23P; 
+            dfloat T33P = muP*(2.0*dwdzP - 2.0*(dudxP+dvdyP+dwdzP)/3.0);
+            
+            dfloat T41P = uP*T11P + vP*T12P + wP*T13P + 0.0*TmuP*TxP;
+            dfloat T42P = uP*T12P + vP*T22P + wP*T23P + 0.0*TmuP*TyP;
+            dfloat T43P = uP*T13P + vP*T23P + wP*T33P + 0.0*TmuP*TzP;
+
+            // // add artificial viscosity
+            // T01P += (bc>0)? 0.0:rmP*drrdxP;
+            // T02P += (bc>0)? 0.0:rmP*drrdyP;
+            // T03P += (bc>0)? 0.0:rmP*drrdzP;
+
+            // T11P += (bc>0)? 0.0:rmP*drudxP;
+            // T12P += (bc>0)? 0.0:rmP*drudyP;
+            // T13P += (bc>0)? 0.0:rmP*drudzP;
+
+            // T21P += (bc>0)? 0.0:rmP*drvdxP;
+            // T22P += (bc>0)? 0.0:rmP*drvdyP;
+            // T23P += (bc>0)? 0.0:rmP*drvdzP;
+
+            // T31P += (bc>0)? 0.0:rmP*drwdxP;
+            // T32P += (bc>0)? 0.0:rmP*drwdyP;
+            // T33P += (bc>0)? 0.0:rmP*drwdzP;
+
+            // T41P += (bc>0)? 0.0:rmP*dredxP;
+            // T42P += (bc>0)? 0.0:rmP*dredyP;
+            // T43P += (bc>0)? 0.0:rmP*dredzP;
+
+            rflux  -= 0.5*(nx*(T01P+T01M)+ny*(T02P+T02M)+nz*(T03P+T03M)); 
+            ruflux -= 0.5*(nx*(T11P+T11M)+ny*(T12P+T12M)+nz*(T13P+T13M));
+            rvflux -= 0.5*(nx*(T12P+T12M)+ny*(T22P+T22M)+nz*(T23P+T23M));
+            rwflux -= 0.5*(nx*(T13P+T13M)+ny*(T23P+T23M)+nz*(T33P+T33M));
+            Eflux  -= 0.5*(nx*(T41P+T41M)+ny*(T42P+T42M)+nz*(T43P+T43M));
+
+            // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
+            const dfloat sc = invJ*sJ;
+            s_rflux [n] = sc*(-rflux );
+            s_ruflux[n] = sc*(-ruflux);
+            s_rvflux[n] = sc*(-rvflux);
+            s_rwflux[n] = sc*(-rwflux);
+            s_Eflux [n] = sc*(-Eflux);
+          }
+        }
+
+        // wait for all @shared memory writes of the previous inner loop to complete
+
+        // for each node in the element
+        for(int n=0;n<p_cubMaxNodes1;++n;@inner(0)){
+          if(n<p_Np){
+            // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
+            #pragma unroll p_intNfp
+              for(int m=0;m<p_intNfp;++m){
+                const dfloat L = intLIFT[n+(m+face*p_intNfp)*p_Np];
+                Lrflux  += L*s_rflux[m];
+                Lruflux += L*s_ruflux[m];
+                Lrvflux += L*s_rvflux[m];
+                Lrwflux += L*s_rwflux[m];
+                LEflux  += L*s_Eflux[m];
+              }
+          }
+        }
+      }
+
+
+    // for each node in the element
+    for(int n=0;n<p_cubMaxNodes1;++n;@inner(0)){
+      if(n<p_Np){
+        const dlong base = e*p_Np*p_Nfields+n;
+        rhsq[base+0*p_Np] += Lrflux;
+        rhsq[base+1*p_Np] += Lruflux;
+        rhsq[base+2*p_Np] += Lrvflux;
+        rhsq[base+3*p_Np] += Lrwflux;
+        rhsq[base+4*p_Np] += LEflux;
+      }
+    }
+  }
+}

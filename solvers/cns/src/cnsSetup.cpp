@@ -118,7 +118,7 @@ void cns_t::Setup(platform_t& _platform, mesh_t& _mesh,
   }
 
   // Set physics of the problem, i.e. equation of state etc. 
-  setPhysics(kernelInfo); 
+  setupPhysics(kernelInfo); 
 
   // Set the stabilizer for the problem
   if(settings.compareSetting("STAB TYPE", "NOSTAB")){
@@ -133,15 +133,17 @@ void cns_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
 
   if(stab.type==Stab::ARTDIFF){
-    setArtificialDiffusion(kernelInfo);
+    setupArtificialDiffusion(kernelInfo);
+  }else if(stab.type==Stab::NOSTAB){
+    setupNoStab(kernelInfo);    
   }
-  // else if(stab.type==stab.Stab::LIMITER){
+  // else if(stab.type==Stab::LIMITER){
 
-  // }else if(stab.type==stab::SUBCELL){
+  // }else if(stab.type==Stab::SUBCELL){
 
   // }else{
-  //  LIBP_ABORT("Stabilization method = " << stab::type<< 
-  //             "is not impmented in CNS solver", stab::type);
+  //  // LIBP_ABORT("Stabilization method = " << stab::type<< 
+  //             // "is not impmented in CNS solver", stab::type);
   // }
 
   /*

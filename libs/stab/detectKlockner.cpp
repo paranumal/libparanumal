@@ -86,8 +86,6 @@ void stab_t::detectSetupKlockner(){
    props["defines/" "s_sK0"] = 1.0;  
    props["defines/" "p_Nq"]  = mesh.N+1;
 
-   // props["defines/" "s_Nverts"]  = mesh.Nverts;  
-
   // Needed for Subcell and Limiter Only
   if(type==Stab::SUBCELL || type==Stab::LIMITER){
      props["defines/" "s_DGDG_TYPE"] = int(0); 
@@ -110,17 +108,16 @@ void stab_t::detectSetupKlockner(){
   }else{ // return coefficient
     kernelName    = "detectKlockner" + suffix;
   }
-
   detectKernel  = platform.buildKernel(fileName, kernelName, props);
 
+  
   if(type==Stab::SUBCELL || type==Stab::LIMITER){
     fileName        = oklFilePrefix + "subcell" + oklFileSuffix;
     kernelName      = "detectFindNeigh" + suffix;
     findNeighKernel =  platform.buildKernel(fileName, kernelName, props);
   }
   
-  fileName        = oklFilePrefix + "utilities" + oklFileSuffix; 
-
+  fileName           = oklFilePrefix + "utilities" + oklFileSuffix; 
   kernelName         = "extractField";
   extractFieldKernel = platform.buildKernel(fileName, kernelName, props); 
   
@@ -133,8 +130,10 @@ void stab_t::detectApplyKlockner(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>
 if(solver==Stab::HJS){
   o_qdetector.copyFrom(o_Q); 
 }else if(solver==Stab::CNS){
-  // Use Density field for now AK:
+  // // Use Density field for now AK:
   const int field_id = 0; 
+  // o_qdetector.copyFrom(o_Q); // !!!!!!!!!!!!!!!!!!!
+
   extractFieldKernel(mesh.Nelements,
                      field_id, 
                      o_Q,
@@ -173,7 +172,7 @@ if(type==Stab::ARTDIFF){
                   mesh.o_vmapP, 
                   o_elementList); 
 
-}
+  }
 }
 
 

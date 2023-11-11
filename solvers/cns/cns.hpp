@@ -85,8 +85,6 @@ public:
   ogs::halo_t fieldTraceHalo;
   ogs::halo_t gradTraceHalo;
 
-
-
   memory<dfloat> q;
   deviceMemory<dfloat> o_q;
 
@@ -118,8 +116,9 @@ public:
   void Run();
 
   // Set reference values, thermodynamics, nondimensional values
-  void setPhysics(properties_t & kernelInfo);
-  void setArtificialDiffusion(properties_t & kernelInfo);
+  void setupPhysics(properties_t & kernelInfo);
+  void setupArtificialDiffusion(properties_t & kernelInfo);
+  void setupNoStab(properties_t & kernelInfo);
 
   // Set detectors
   void SetDetector(properties_t & kernelInfo);

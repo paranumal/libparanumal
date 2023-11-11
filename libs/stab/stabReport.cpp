@@ -42,7 +42,11 @@ o_testRhs = platform.malloc<dfloat>((mesh.Nelements + mesh.totalHaloPairs)*mesh.
 
 for(int e=0; e<mesh.Nelements; e++){
   for(int n=0; n<mesh.Np; n++){
-    qtest[e*mesh.Np + n] = mesh.x[e*mesh.Np + n]<0 ? 1 : 0.0; 
+    const dfloat xn = mesh.x[e*mesh.Np + n];
+    const dfloat yn = mesh.y[e*mesh.Np + n];
+    const dfloat zn = mesh.z[e*mesh.Np + n];
+    qtest[e*mesh.Np + n] = sqrt(xn*xn+yn*yn + zn*zn) -2 >0 ? 1.0 : 0.0; 
+    // qtest[e*mesh.Np + n] = (xn+yn + zn)>0 ? 1.0 : 0.0; 
   }
 }
 o_qtest.copyFrom(qtest);

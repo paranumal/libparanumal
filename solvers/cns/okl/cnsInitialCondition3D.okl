@@ -25,17 +25,17 @@ SOFTWARE.
 */
 
 @kernel void cnsInitialCondition3D(const dlong Nelements,
-                                   const dfloat mu,
-                                   const dfloat gamma,
                                    const dfloat time,
+                                   @restrict const  dfloat *  pCoeff,
                                    @restrict const  dfloat *  x,
                                    @restrict const  dfloat *  y,
                                    @restrict const  dfloat *  z,
                                    @restrict        dfloat *  q){
-
   for(dlong e=0;e<Nelements;++e;@outer(0)){
     for(int n=0;n<p_Np;++n;@inner(0)){
       const dlong id = e*p_Np + n;
+      const dfloat mu    = pCoeff[p_MUID]; 
+      const dfloat gamma = pCoeff[p_GMID]; 
 
       dfloat r = 0.0;
       dfloat u = 0.0;
@@ -56,10 +56,9 @@ SOFTWARE.
   }
 }
 
-@kernel void cnsIsothermalInitialCondition3D(const dlong Nelements,
-                                   const dfloat mu,
-                                   const dfloat gamma,
+@kernel void cnsIsothermalInitialCondition2D(const dlong Nelements,
                                    const dfloat time,
+                                   @restrict const  dfloat *  pCoeff,
                                    @restrict const  dfloat *  x,
                                    @restrict const  dfloat *  y,
                                    @restrict const  dfloat *  z,
@@ -68,6 +67,9 @@ SOFTWARE.
   for(dlong e=0;e<Nelements;++e;@outer(0)){
     for(int n=0;n<p_Np;++n;@inner(0)){
       const dlong id = e*p_Np + n;
+
+      const dfloat mu    = pCoeff[p_MUID]; 
+      const dfloat gamma = pCoeff[p_GMID]; 
 
       dfloat r = 0.0;
       dfloat u = 0.0;

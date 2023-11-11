@@ -44,12 +44,9 @@ SOFTWARE.
 
 // Boundary conditions
 /* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5 */
-#define cnsBoundaryConditions3D(bc, gamma, mu,           \
-                                t, x, y, z, nx, ny, nz,  \
-                                rM, uM, vM, wM, pM,      \
-                                uxM, uyM, uzM, vxM, vyM, vzM, wxM, wyM, wzM, \
-                                rB, uB, vB, wB, pB,      \
-                                uxB, uyB, uzB, vxB, vyB, vzB, wxB, wyB, wzB) \
+#define cnsBoundaryConditions3D(bc, gamma, R, CP, CV, mu, t, x, y, z, nx, ny, nz, \
+                                  rM, uM, vM, wM, pM, uxM, uyM, uzM, vxM, vyM, vzM, wxM, wyM, wzM, \
+                                  rB, uB, vB, wB, pB, uxB, uyB, uzB, vxB, vyB, vzB, wxB, wyB, wzB) \
 {                                      \
   if(bc==1){                           \
     *(rB) = rM;                        \

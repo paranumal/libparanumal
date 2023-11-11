@@ -25,23 +25,22 @@ SOFTWARE.
 */
 
 
-// Compressible Navier-Stokes
+/// Compressible Navier-Stokes
 @kernel void cnsCubatureVolumeTet3D(const dlong Nelements,
-                                   @restrict const  dfloat *  vgeo,
-                                   @restrict const  dfloat *  cubvgeo,
-                                   @restrict const  dfloat *  cubD,
-                                   @restrict const  dfloat *  cubPDT,
-                                   @restrict const  dfloat *  cubInterp,
-                                   @restrict const  dfloat *  cubProject,
-                                   @restrict const  dfloat *  x,
-                                   @restrict const  dfloat *  y,
-                                   @restrict const  dfloat *  z,
-                                   const dfloat t,
-                                   const dfloat mu,
-                                   const dfloat gamma,
-                                   @restrict const  dfloat *  q,
-                                   @restrict const  dfloat *  gradq,
-                                   @restrict dfloat *  rhsq){
+                                    @restrict const  dfloat *  vgeo,
+                                    @restrict const  dfloat *  cubvgeo,
+                                    @restrict const  dfloat *  cubD,
+                                    @restrict const  dfloat *  cubPDT,
+                                    @restrict const  dfloat *  cubInterp,
+                                    @restrict const  dfloat *  cubProject,
+                                    @restrict const  dfloat *  x,
+                                    @restrict const  dfloat *  y,
+                                    @restrict const  dfloat *  z,
+                                    @restrict const  dfloat * pCoeff,
+                                    const dfloat t,
+                                    @restrict const  dfloat *  q,
+                                    @restrict const  dfloat *  gradq,
+                                    @restrict dfloat *  rhsq){
 
   for(dlong e=0;e<Nelements;++e;@outer(0)){
 
@@ -58,6 +57,9 @@ SOFTWARE.
       if(n<p_Np){
         const dlong  qbase = e*p_Np*p_Nfields + n;
         const dlong id = e*p_Np*p_Ngrads + n;
+
+        const dfloat gamma = pCoeff[p_GMID]; // gamma
+        const dfloat mu    = pCoeff[p_MUID]; // bulk viscosity
 
         const dfloat r  = q[qbase+0*p_Np];
         const dfloat ru = q[qbase+1*p_Np];
@@ -95,6 +97,12 @@ SOFTWARE.
 
 
     for(int n=0;n<p_cubNp;++n;@inner(0)){
+      const dfloat gamma = pCoeff[p_GMID]; // gamma
+      const dfloat CV    = pCoeff[p_CVID]; // CV
+      const dfloat CP    = pCoeff[p_CPID]; // CP
+      const dfloat Pr    = pCoeff[p_PRID]; // Prandtl Number
+            dfloat mu    = pCoeff[p_MUID]; // Bulk viscosity
+            
       //interpolate to cubature
       dfloat r = 0., ru = 0., rv = 0., rw = 0, E = 0;
       dfloat dudx = 0., dudy = 0., dudz = 0.;
@@ -198,7 +206,7 @@ SOFTWARE.
 
     for(int n=0;n<p_cubNp;++n;@inner(0)){
       if (n<p_Np) {
-
+        
         dfloat df0dr = 0.f, dg0ds = 0.f, dh0dt = 0.f;
         dfloat df1dr = 0.f, dg1ds = 0.f, dh1dt = 0.f;
         dfloat df2dr = 0.f, dg2ds = 0.f, dh2dt = 0.f;

@@ -76,11 +76,12 @@ void cns_t::rhsArtDiff(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, c
   dlong NhaloGrads  = mesh.totalHaloPairs*mesh.Np*Ngrads;
   deviceMemory<dfloat> o_gradq = platform.reserve<dfloat>(NlocalGrads+NhaloGrads);
 
-  stab.Apply(o_Q, o_RHS, T); 
+  // stab.Apply(o_Q, o_RHS, T); 
 
-  #if 0
+  #if 1
 
-  dfloat vmax = MaxWaveSpeed(o_Q, T);
+  // dfloat vmax = MaxWaveSpeed(o_Q, T);
+  dfloat vmax = 0.0;
   // printf("vmax = %.f\n", vmax);
   platform.linAlg().scale(mesh.Nelements*mesh.Nverts, vmax, stab.o_viscosity); 
   #endif
@@ -180,7 +181,7 @@ void cns_t::rhsNoStab(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, co
   // extract q trace halo and start exchange
   fieldTraceHalo.ExchangeStart(o_Q, 1);
 
-  // compute volume contributions to gradients
+ // compute volume contributions to gradients
   gradVolumeKernel(mesh.Nelements,
                    mesh.o_vgeo,
                    mesh.o_D,
@@ -200,9 +201,8 @@ void cns_t::rhsNoStab(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, co
                     mesh.o_x,
                     mesh.o_y,
                     mesh.o_z,
+                    o_pCoeff, 
                     T,
-                    mu,
-                    gamma,
                     o_Q,
                     o_gradq);
 
@@ -211,7 +211,7 @@ void cns_t::rhsNoStab(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, co
 
   // compute volume contribution to cns RHS
   if (cubature) {
-    cubatureVolumeKernel(mesh.Nelements,
+     cubatureVolumeKernel(mesh.Nelements,
                          mesh.o_vgeo,
                          mesh.o_cubvgeo,
                          mesh.o_cubD,
@@ -221,9 +221,8 @@ void cns_t::rhsNoStab(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, co
                          mesh.o_x,
                          mesh.o_y,
                          mesh.o_z,
+                         o_pCoeff, 
                          T,
-                         mu,
-                         gamma,
                          o_Q,
                          o_gradq,
                          o_RHS);
@@ -257,9 +256,8 @@ void cns_t::rhsNoStab(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, co
                             mesh.o_intx,
                             mesh.o_inty,
                             mesh.o_intz,
+                            o_pCoeff, 
                             T,
-                            mu,
-                            gamma,
                             o_Q,
                             o_gradq,
                             o_RHS);

@@ -28,14 +28,14 @@ SOFTWARE.
                                @restrict const dfloat *viscScale, 
                                @restrict       dfloat *visc){
  for(dlong n=0;n<N;++n;@tile(p_blockSize,@outer,@inner)){
-  const dlong e   = n/s_Nverts; 
-  const int vid   = n%s_Nverts; 
-  const dfloat scale = viscScale[e]; // (h/N) 
+  const int e   = int(n/s_Nverts); 
+  const int vid   = int(n%s_Nverts); 
+  const dfloat scale = viscScale[e]; 
 
   for(int fld=0; fld<s_Ndfields; fld++){
     const dlong id     = e*s_Nverts*s_Ndfields + fld*s_Nverts + vid; 
     dfloat ramp        = viscActivation[e*s_Ndfields + fld];
-    visc[n] = alpha*scale*ramp;
+    visc[n]            = alpha*scale*ramp;
     }
   }
 }
