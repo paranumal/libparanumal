@@ -1,0 +1,151 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+
+// isotropic maxwell
+@kernel void maxwellErrorTet3D(const dlong Nelements,
+			       const dfloat time,
+				@restrict const  dfloat *  vgeo,
+				@restrict const  dfloat *  x,
+				@restrict const  dfloat *  y,
+				@restrict const  dfloat *  z,
+				@restrict const  dfloat *  MM,
+				@restrict const  dfloat *  q,
+				@restrict dfloat * normerrq){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_errHx[p_Np];
+    @shared dfloat s_errHy[p_Np];
+    @shared dfloat s_errHz[p_Np];
+    @shared dfloat s_errEx[p_Np];
+    @shared dfloat s_errEy[p_Np];
+    @shared dfloat s_errEz[p_Np];
+    @shared dfloat s_errL2[p_Np];
+
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      dlong id = e*p_Np + n;
+      dfloat xn = x[id], yn = y[id], zn = z[id];
+
+      dlong qbase = e*p_Np*p_Nfields + n;
+      const dfloat Hx = q[qbase+0*p_Np];
+      const dfloat Hy = q[qbase+1*p_Np];
+      const dfloat Hz = q[qbase+2*p_Np];
+      const dfloat Ex = q[qbase+3*p_Np];
+      const dfloat Ey = q[qbase+4*p_Np];
+      const dfloat Ez = q[qbase+5*p_Np];
+      
+      dfloat exactHx = 0, exactHy = 0, exactHz = 0;
+      dfloat exactEx = 0, exactEy = 0, exactEz = 0;
+      
+      maxwellInitialConditions3D(time, xn, yn, zn, &exactHx, &exactHy, &exactHz, &exactEx, &exactEy, &exactEz);
+
+      // compute nodal error
+      s_errHx[n] = Hx - exactHx;
+      s_errHy[n] = Hy - exactHy;
+      s_errHz[n] = Hz - exactHz;
+      s_errEx[n] = Ex - exactEx;
+      s_errEy[n] = Ey - exactEy;
+      s_errEz[n] = Ez - exactEz;      
+    }
+
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      
+      const dfloat J = vgeo[e*p_Nvgeo + p_JID];
+
+      dfloat MerrHx = 0, MerrHy = 0, MerrHz = 0;
+      dfloat MerrEx = 0, MerrEy = 0, MerrEz = 0;
+
+      for(int m=0;m<p_Np;++m){
+	dfloat MMnm = MM[n+m*p_Np];
+	MerrHx += MMnm*s_errHx[m];
+	MerrHy += MMnm*s_errHy[m];
+	MerrHz += MMnm*s_errHz[m];
+	MerrEx += MMnm*s_errEx[m];
+	MerrEy += MMnm*s_errEy[m];
+	MerrEz += MMnm*s_errEz[m];
+      }
+
+      dfloat err = 0;
+      err += s_errHx[n]*MerrHx;
+      err += s_errHy[n]*MerrHy;
+      err += s_errHz[n]*MerrHz;
+      err += s_errEx[n]*MerrEx;
+      err += s_errEy[n]*MerrEy;
+      err += s_errEz[n]*MerrEz;
+
+      err *= J;
+
+      s_errL2[n] = err;
+    }
+
+#if p_Np>512
+    for(int n=0;n<p_Np;++n;@inner(0)) s_errL2[n] += (n+512<p_Np) ? s_errL2[n+512]:0.;
+#endif
+
+#if p_Np>256
+    for(int n=0;n<p_Np;++n;@inner(0)) s_errL2[n] += (n+256<p_Np) ? s_errL2[n+256]:0.;
+#endif
+
+#if p_Np>128
+    for(int n=0;n<p_Np;++n;@inner(0)) s_errL2[n] += (n+128<p_Np) ? s_errL2[n+128]:0.;
+#endif
+
+#if p_Np>64
+    for(int n=0;n<p_Np;++n;@inner(0)) s_errL2[n] += (n+64<p_Np) ? s_errL2[n+64]:0.;
+#endif
+
+#if p_Np>32
+    for(int n=0;n<p_Np;++n;@inner(0)) s_errL2[n] += (n+32<p_Np) ? s_errL2[n+32]:0.;
+#endif
+
+#if p_Np>16
+    for(int n=0;n<p_Np;++n;@inner(0)) s_errL2[n] += (n+16<p_Np) ? s_errL2[n+16]:0.;
+#endif
+
+#if p_Np>8
+    for(int n=0;n<p_Np;++n;@inner(0)) s_errL2[n] += (n+8<p_Np) ? s_errL2[n+8]:0.;
+#endif
+
+#if p_Np>4
+    for(int n=0;n<p_Np;++n;@inner(0)) s_errL2[n] += (n+4<p_Np) ? s_errL2[n+4]:0.;
+#endif
+
+#if p_Np>2
+    for(int n=0;n<p_Np;++n;@inner(0)) s_errL2[n] += (n+2<p_Np) ? s_errL2[n+2]:0.;
+#endif
+
+#if p_Np>1
+    for(int n=0;n<p_Np;++n;@inner(0)) s_errL2[n] += (n+1<p_Np) ? s_errL2[n+1]:0.;
+#endif
+
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      if(n==0){
+	normerrq[e] = s_errL2[n];
+      }
+    }
+  }
+}

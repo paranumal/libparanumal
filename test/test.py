@@ -47,6 +47,7 @@ cnsDir           = solverDir + "/cns"
 bnsDir           = solverDir + "/bns"
 lbsDir           = solverDir + "/lbs"
 insDir           = solverDir + "/ins"
+maxwellDir       = solverDir + "/maxwell"
 
 gradientBin  = gradientDir      + "/gradientMain"
 advectionBin = advectionDir     + "/advectionMain"
@@ -57,6 +58,7 @@ cnsBin       = cnsDir           + "/cnsMain"
 bnsBin       = bnsDir           + "/bnsMain"
 lbsBin       = lbsDir           + "/lbsMain"
 insBin       = insDir           + "/insMain"
+maxwellBin   = maxwellDir       + "/maxwellMain"
 
 inputRC = testDir + "/setup.rc"
 
@@ -164,6 +166,7 @@ if __name__ == "__main__":
   import testMesh
   import testGradient
   import testAdvection
+  import testMaxwell
   import testAcoustics
   import testElliptic
   import testFokkerPlanck
@@ -182,6 +185,7 @@ if __name__ == "__main__":
   failCount+=testParAdogs.main()
   failCount+=testGradient.main()
   failCount+=testAdvection.main()
+  failCount+=testMaxwell.main()
   failCount+=testAcoustics.main()
   failCount+=testElliptic.main()
   failCount+=testFokkerPlanck.main()
@@ -193,5 +197,6 @@ if __name__ == "__main__":
   failCount+=testTimeStepper.main()
   failCount+=testLinearSolver.main()
   failCount+=testParAlmond.main()
+
 
   sys.exit(failCount)
