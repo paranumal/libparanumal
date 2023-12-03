@@ -6,8 +6,8 @@
 data/cnsUniform2D.h
 #*******************[MESH PROPERTIES]*******************#
 [MESH FILE]
-BOX
-#../../meshes/cnsNACA2D.msh
+#BOX
+../../meshes/cnsNACA2D.msh
 
 [MESH DIMENSION]
 2
@@ -55,11 +55,11 @@ TRUE
 
 # // Mach number is needed for NONDIM=TRUE
 [MACH NUMBER]
-2.0
+0.8
 
 # Reynolds number is needed for NONDIM = TRUE
 [REYNOLDS NUMBER]
-1e4
+1e5
 
 # R is needed if NONDIM=FALSE otherwise  R = 1.0/(gamma*Ma^2) 
 [SPECIFIC GAS CONSTANT]
@@ -70,23 +70,19 @@ TRUE
 0.00001
 
 [VISCOSITY TYPE]
-#CONSTANT
-SUTHERLAND
+CONSTANT
+#SUTHERLAND
 #POWER-LAW
 
 
 [PRANDTL NUMBER]
 0.72
 
-# [rref, uref, vref, wref(if 3D), pref]
+# [density, velocity, pressure, temperature, viscosity, length]
+# [rref, vref, pref. tref, mref, lref]
 [REFERENCE STATE]
-#22.4, 1.0, 0.0, 1.7778
-#5.60, 1.0, 0.0, 1.7778
-#11.20, 0.984807753012208, 0.173648177666930, 1.28 -> Ma = 2.5
-11.2, 0.984807753012208, 0.173648177666930, 2.0 -> Mach 2.0
-#2.8, 1.0, 0.0, 1.388888888888889 -> Ma 1.2
-#2.8, 1.0, 0.0, 1.388888888888889 -> Ma 1.2
-#5.6, 1.0, 0.0, 6.25
+1.0, 1.0, 1.0, 1.0, 1.0, 1.0
+
 
 [ISOTHERMAL]
 FALSE

@@ -243,6 +243,8 @@ void upwindRoeAveraged(const dfloat nx,
             const dfloat CP     = pCoeff[p_CPID]; 
             const dfloat CV     = pCoeff[p_CVID]; 
             const dfloat Pr     = pCoeff[p_PRID]; // Prandtl Number
+            const dfloat M2     = pCoeff[p_M2ID]; // Mach Square
+            const dfloat kappa  = pCoeff[p_KAID]; // Mach Square
 
             // load surface geofactors for this face
             const dlong sid    = p_Nsgeo*(e*p_Nfaces+face);
@@ -333,7 +335,7 @@ void upwindRoeAveraged(const dfloat nx,
             const dfloat vM  = rvM*irM;
             const dfloat wM  = rwM*irM;
             const dfloat keM = (uM*uM + vM*vM + wM*wM);
-                  dfloat pM  = (gamma-1)*(rEM-0.5*rrM*(uM*uM + vM*vM + wM*wM));
+                  dfloat pM  = (gamma-1)*(rEM-0.5*rrM*keM);
 
             #if POSITIVITY==1 
                 // Limit and smooth pressure
@@ -367,24 +369,24 @@ void upwindRoeAveraged(const dfloat nx,
             const dfloat dkedyM = (uM*dudyM + vM*dvdyM + wM*dwdyM);
             const dfloat dkedzM = (uM*dudzM + vM*dvdzM + wM*dwdzM);
 
-            dfloat dpdxM = dpM*(gamma-1.0)*(dredxM - 0.5*drrdxM*keM - rrM*dkedxM); 
-            dfloat dpdyM = dpM*(gamma-1.0)*(dredyM - 0.5*drrdyM*keM - rrM*dkedyM); 
-            dfloat dpdzM = dpM*(gamma-1.0)*(dredzM - 0.5*drrdzM*keM - rrM*dkedzM); 
+            // dfloat dpdxM = dpM*(gamma-1.0)*(dredxM - 0.5*drrdxM*keM - rrM*dkedxM); 
+            // dfloat dpdyM = dpM*(gamma-1.0)*(dredyM - 0.5*drrdyM*keM - rrM*dkedyM); 
+            // dfloat dpdzM = dpM*(gamma-1.0)*(dredzM - 0.5*drrdzM*keM - rrM*dkedzM); 
 
 
             dfloat irP = 1./ rrP;    
-            dfloat uP  = ruP*irP;
-            dfloat vP  = rvP*irP;
-            dfloat wP  = rwP*irP;
+            dfloat uP  = ruP*irP, vP  = rvP*irP, wP  = rwP*irP;
             dfloat keP = (uP*uP+vP*vP + wP*wP);
             dfloat pP = (gamma-1)*(rEP-0.5*rrP*keP);
 
             dfloat dudxP = (drudxP - drrdxP*uP)*irP;
             dfloat dvdxP = (drvdxP - drrdxP*vP)*irP;
             dfloat dwdxP = (drwdxP - drrdxP*wP)*irP;
+            
             dfloat dudyP = (drudyP - drrdyP*uP)*irP;
             dfloat dvdyP = (drvdyP - drrdyP*vP)*irP;
             dfloat dwdyP = (drwdyP - drrdyP*wP)*irP;
+            
             dfloat dudzP = (drudzP - drrdzP*uP)*irP;
             dfloat dvdzP = (drvdzP - drrdzP*vP)*irP;
             dfloat dwdzP = (drwdzP - drrdzP*wP)*irP;
@@ -410,7 +412,7 @@ void upwindRoeAveraged(const dfloat nx,
                         rrP         = RMIN + LMAX(rrP-RMIN, ALPHA);
             #endif 
                         irP         = 1.0/rrP; 
-                        keP         = (uP*uP+vP*vP + wP*wP);
+                        keP         = (uP*uP+vP*vP+wP*wP);
 
             }
 
@@ -434,9 +436,9 @@ void upwindRoeAveraged(const dfloat nx,
             dfloat dkedyP = (uP*dudyP + vP*dvdyP + wP*dwdyP);
             dfloat dkedzP = (uP*dudzP + vP*dvdzP + wP*dwdzP);
 
-            dfloat dpdxP = dpP*(gamma-1.0)*(dredxP - 0.5f*drrdxP*keP - rrP*dkedxP); 
-            dfloat dpdyP = dpP*(gamma-1.0)*(dredyP - 0.5f*drrdyP*keP - rrP*dkedyP); 
-            dfloat dpdzP = dpP*(gamma-1.0)*(dredzP - 0.5f*drrdzP*keP - rrP*dkedzP); 
+            // dfloat dpdxP = dpP*(gamma-1.0)*(dredxP - 0.5f*drrdxP*keP - rrP*dkedxP); 
+            // dfloat dpdyP = dpP*(gamma-1.0)*(dredyP - 0.5f*drrdyP*keP - rrP*dkedyP); 
+            // dfloat dpdzP = dpP*(gamma-1.0)*(dredzP - 0.5f*drrdzP*keP - rrP*dkedzP); 
 
             if(p_viscType==2){ // Sutherland     
               const dfloat exp  = pCoeff[p_EXID]; // Exponential term
@@ -452,91 +454,76 @@ void upwindRoeAveraged(const dfloat nx,
             }
 
 
-            //  
-            const dfloat TxM = (dpdxM*rrM - pM*drrdxM)*irM*irM;
-            const dfloat TyM = (dpdyM*rrM - pM*drrdyM)*irM*irM;
-            const dfloat TzM = (dpdzM*rrM - pM*drrdzM)*irM*irM;
+            const dfloat TxM = (gamma -1.0)*M2*(dredxM*irM - rEM*drrdxM*irM*irM - dkedxM);
+            const dfloat TyM = (gamma -1.0)*M2*(dredyM*irM - rEM*drrdyM*irM*irM - dkedyM);
+            const dfloat TzM = (gamma -1.0)*M2*(dredzM*irM - rEM*drrdzM*irM*irM - dkedzM);
 
-            // Correct MA^2 later AK. 
-            const dfloat TxP = (dpdxP*rrP - pP*drrdxP)*irP*irP;
-            const dfloat TyP = (dpdyP*rrP - pP*drrdyP)*irP*irP;
-            const dfloat TzP = (dpdzP*rrP - pP*drrdzP)*irP*irP;
+            const dfloat TxP = (gamma -1.0)*M2*(dredxP*irP - rEP*drrdxP*irP*irP - dkedxP);
+            const dfloat TyP = (gamma -1.0)*M2*(dredyP*irP - rEP*drrdyP*irP*irP - dkedyP);
+            const dfloat TzP = (gamma -1.0)*M2*(dredzP*irP - rEP*drrdzP*irP*irP - dkedzP);
+
 
             dfloat rflux, ruflux, rvflux, rwflux, Eflux;
             upwindRoeAveraged(nx, ny, nz, gamma,
                               rrM, uM, vM, wM, pM, rrP, uP, vP, wP, pP,
                               &rflux, &ruflux, &rvflux, &rwflux, &Eflux);
 
-            dfloat T01M = 0.0; 
-            dfloat T02M = 0.0; 
-            dfloat T03M = 0.0; 
+            const dfloat beta = 2.0/3.0; 
+            dfloat T01M = 0.0, T02M = 0.0, T03M = 0.0; 
             
-            dfloat TmuM = muM*CP/Pr; 
-            dfloat T11M = muM*(2.0*dudxM - 2.0*(dudxM+dvdyM+dwdzM)/3.0);
+            dfloat T11M = muM*(2.0*dudxM - beta*(dudxM+dvdyM+dwdzM));
             dfloat T12M = muM*(dudyM+dvdxM);
             dfloat T13M = muM*(dudzM+dwdxM);
             
             dfloat T21M = T12M;            
-            dfloat T22M = muM*(2.0*dvdyM - 2.0*(dudxM+dvdyM+dwdzM)/3.0);
+            dfloat T22M = muM*(2.0*dvdyM - beta*(dudxM+dvdyM+dwdzM));
             dfloat T23M = muM*(dvdzM+dwdyM);
 
             dfloat T31M = T13M; 
             dfloat T32M = T23M; 
-            dfloat T33M = muM*(2.0*dwdzM - 2.0*(dudxM+dvdyM+dwdzM)/3.0);
+            dfloat T33M = muM*(2.0*dwdzM - beta*(dudxM+dvdyM+dwdzM));
             
-            dfloat T41M = uM*T11M + vM*T12M + wM*T13M + 0.0*TmuM*TxM;
-            dfloat T42M = uM*T12M + vM*T22M + wM*T23M + 0.0*TmuM*TyM;
-            dfloat T43M = uM*T13M + vM*T23M + wM*T33M + 0.0*TmuM*TzM;
+            dfloat T41M = uM*T11M + vM*T12M + wM*T13M + kappa*TxM;
+            dfloat T42M = uM*T12M + vM*T22M + wM*T23M + kappa*TyM;
+            dfloat T43M = uM*T13M + vM*T23M + wM*T33M + kappa*TzM;
 
-            // // add artificial viscosity
-            // T01M += rmM*drrdxM; T02M += rmM*drrdyM; T03M += rmM*drrdzM;
-            // T11M += rmM*drudxM; T12M += rmM*drudyM; T13M += rmM*drudzM;
-            // T21M += rmM*drvdxM; T22M += rmM*drvdyM; T23M += rmM*drvdzM;
-            // T31M += rmM*drwdxM; T32M += rmM*drwdyM; T33M += rmM*drwdzM;
-            // T41M += rmM*dredxM; T42M += rmM*dredyM; T43M += rmM*dredzM;
-           
 
-            dfloat T01P = 0.0; 
-            dfloat T02P = 0.0; 
-            dfloat T03P = 0.0; 
-            
-            dfloat TmuP = muP*CP/Pr; 
-            dfloat T11P = muP*(2.0*dudxP - 2.0*(dudxP+dvdyP+dwdzP)/3.0);
+            // add artificial viscosity
+            T01M += rmM*drrdxM, T02M += rmM*drrdyM, T03M += rmM*drrdzM;
+            T11M += rmM*drudxM, T12M += rmM*drudyM, T13M += rmM*drudzM;
+            T21M += rmM*drvdxM, T22M += rmM*drvdyM, T23M += rmM*drvdzM;
+            T31M += rmM*drwdxM, T32M += rmM*drwdyM, T33M += rmM*drwdzM;
+            T41M += rmM*dredxM, T42M += rmM*dredyM, T43M += rmM*dredzM;   
+
+
+            dfloat T01P = 0.0, T02P = 0.0, T03P = 0.0; 
+            dfloat T11P = muP*(2.0*dudxP - beta*(dudxP+dvdyP+dwdzP));
             dfloat T12P = muP*(dudyP+dvdxP);
             dfloat T13P = muP*(dudzP+dwdxP);
             
             dfloat T21P = T12P;            
-            dfloat T22P = muP*(2.0*dvdyP - 2.0*(dudxP+dvdyP+dwdzP)/3.0);
+            dfloat T22P = muP*(2.0*dvdyP - beta*(dudxP+dvdyP+dwdzP));
             dfloat T23P = muP*(dvdzP+dwdyP);
 
             dfloat T31P = T13P; 
             dfloat T32P = T23P; 
-            dfloat T33P = muP*(2.0*dwdzP - 2.0*(dudxP+dvdyP+dwdzP)/3.0);
+            dfloat T33P = muP*(2.0*dwdzP - beta*(dudxP+dvdyP+dwdzP));
             
-            dfloat T41P = uP*T11P + vP*T12P + wP*T13P + 0.0*TmuP*TxP;
-            dfloat T42P = uP*T12P + vP*T22P + wP*T23P + 0.0*TmuP*TyP;
-            dfloat T43P = uP*T13P + vP*T23P + wP*T33P + 0.0*TmuP*TzP;
+            dfloat T41P = uP*T11P + vP*T12P + wP*T13P + kappa*TxP;
+            dfloat T42P = uP*T12P + vP*T22P + wP*T23P + kappa*TyP;
+            dfloat T43P = uP*T13P + vP*T23P + wP*T33P + kappa*TzP;
 
-            // // add artificial viscosity
-            // T01P += (bc>0)? 0.0:rmP*drrdxP;
-            // T02P += (bc>0)? 0.0:rmP*drrdyP;
-            // T03P += (bc>0)? 0.0:rmP*drrdzP;
-
-            // T11P += (bc>0)? 0.0:rmP*drudxP;
-            // T12P += (bc>0)? 0.0:rmP*drudyP;
-            // T13P += (bc>0)? 0.0:rmP*drudzP;
-
-            // T21P += (bc>0)? 0.0:rmP*drvdxP;
-            // T22P += (bc>0)? 0.0:rmP*drvdyP;
-            // T23P += (bc>0)? 0.0:rmP*drvdzP;
-
-            // T31P += (bc>0)? 0.0:rmP*drwdxP;
-            // T32P += (bc>0)? 0.0:rmP*drwdyP;
-            // T33P += (bc>0)? 0.0:rmP*drwdzP;
-
-            // T41P += (bc>0)? 0.0:rmP*dredxP;
-            // T42P += (bc>0)? 0.0:rmP*dredyP;
-            // T43P += (bc>0)? 0.0:rmP*dredzP;
+            // add artificial viscosity
+            T01P += (bc>0)? 0.0: rmP*drrdxP, T02M += (bc>0)? 0.0:rmP*drrdyP; 
+            T03P += (bc>0)? 0.0: rmP*drrdzP;
+            T11P += (bc>0)? 0.0: rmP*drudxP, T12M += (bc>0)? 0.0:rmP*drudyP; 
+            T13P += (bc>0)? 0.0: rmP*drudzP;
+            T21P += (bc>0)? 0.0: rmP*drvdxP, T22M += (bc>0)? 0.0:rmP*drvdyP;
+            T23P += (bc>0)? 0.0: rmP*drvdzP;
+            T31P += (bc>0)? 0.0: rmP*drwdxP, T32M += (bc>0)? 0.0:rmP*drwdyP;
+            T33P += (bc>0)? 0.0: rmP*drwdzP;
+            T41P += (bc>0)? 0.0: rmP*dredxP, T42M += (bc>0)? 0.0:rmP*dredyP; 
+            T43P += (bc>0)? 0.0: rmP*dredzP;   
 
             rflux  -= 0.5*(nx*(T01P+T01M)+ny*(T02P+T02M)+nz*(T03P+T03M)); 
             ruflux -= 0.5*(nx*(T11P+T11M)+ny*(T12P+T12M)+nz*(T13P+T13M));

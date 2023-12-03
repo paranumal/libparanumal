@@ -57,29 +57,18 @@ void cns_t::setupPhysics(properties_t & props){
 
   // Read Referenece State
   std::string stateStr;
-  const int NrefState = mesh.dim==3 ? 5 : 4;   
+  const int NrefState = 6;
   refState.malloc(NrefState, 0.0); 
   settings.getSetting("REFERENCE STATE", stateStr);
   myTokenizer(NrefState, stateStr,  refState,  ',');
 
-  dfloat rRef =0.0, uRef   = 0.0, vRef = 0.0, wRef = 0.0, pRef = 0.0; 
-  rRef = refState[0]; 
-  uRef = refState[1]; 
-  vRef = refState[2];
-  if(mesh.dim ==3){
-    wRef = refState[3];
-    pRef = refState[4];
-  }else{
-    pRef = refState[3];    
-  } 
-
-
-  dfloat VREF = 1.0; 
-  if(mesh.dim==3){
-    VREF = sqrt(uRef*uRef + vRef*vRef);
-  }else{
-    VREF = sqrt(uRef*uRef + vRef*vRef + wRef*wRef);    
-  }
+  // dfloat rRef =0.0, vRef   = 0.0, pRef = 0.0, tRef = 0.0, mRef = 0.0, lRef = 0.0; 
+  // rRef = refState[0]; 
+  // vRef = refState[1]; 
+  // pRef = refState[2]; 
+  // tRef = refState[3]; 
+  // mRef = refState[4]; 
+  // lRef = refState[5]; 
 
 
   // Set specific gas constant
@@ -96,15 +85,15 @@ void cns_t::setupPhysics(properties_t & props){
   cv = R/(gamma-1.0); 
 
   if(settings.compareSetting("SOLVER TYPE", "NAVIER-STOKES")){
-
     settings.getSetting("PRANDTL NUMBER", Pr); 
     settings.getSetting("VISCOSITY", mu);
-    mu = (settings.compareSetting("NONDIMENSIONAL EQUATIONS", "TRUE"))? (rRef*VREF)/Re : mu;
+    // update mu as 1/Re
+    mu = (settings.compareSetting("NONDIMENSIONAL EQUATIONS", "TRUE"))? 1.0/Re : mu;
   }else{
     mu = 0.0; Re = 0.0; 
   }
 
-  Nph  = 6;  
+  Nph  = 8;  
   pCoeff.malloc(Nph,0.0);
   MUID = 0; 
   GMID = 1; 
@@ -112,12 +101,16 @@ void cns_t::setupPhysics(properties_t & props){
   RRID = 3; 
   CPID = 4; 
   CVID = 5; 
+  KAID = 6; 
+  M2ID = 7; 
   pCoeff[MUID] = mu; // Bulk Viscosity
   pCoeff[PRID] = Pr; // Prandtl Number
   pCoeff[RRID] = R;  // Specific Gas Constant
   pCoeff[GMID] = gamma; 
   pCoeff[CPID] = cp;
   pCoeff[CVID] = cv;
+  pCoeff[KAID] = 1.0/( (gamma-1.0)*Ma*Ma)*mu/Pr;
+  pCoeff[M2ID] = Ma*Ma;
 
 
   if(settings.compareSetting("SOLVER TYPE", "NAVIER-STOKES")){
@@ -160,22 +153,24 @@ void cns_t::setupPhysics(properties_t & props){
   props["defines/" "p_RRID"]    = RRID;
   props["defines/" "p_CPID"]    = CPID;
   props["defines/" "p_CVID"]    = CVID;
+  props["defines/" "p_KAID"]    = KAID;
+  props["defines/" "p_M2ID"]    = M2ID;
   props["defines/" "p_EXID"]    = EXID;
   props["defines/" "p_TRID"]    = TRID;
   props["defines/" "p_TSID"]    = TSID;
   props["defines/" "p_CSID"]    = CSID;
 
   // Define reference state on device
-  props["defines/" "p_RBAR"]    = refState[0];
-  props["defines/" "p_UBAR"]    = refState[1];
-  props["defines/" "p_VBAR"]    = refState[2];
-  if(mesh.dim==3){
-    props["defines/" "p_WBAR"]    = refState[3];
-    props["defines/" "p_PBAR"]    = refState[4];
+  // props["defines/" "p_RBAR"]    = refState[0];
+  // props["defines/" "p_UBAR"]    = refState[1];
+  // props["defines/" "p_VBAR"]    = refState[2];
+  // if(mesh.dim==3){
+  //   props["defines/" "p_WBAR"]    = refState[3];
+  //   props["defines/" "p_PBAR"]    = refState[4];
 
-  }else{
-    props["defines/" "p_PBAR"]    = refState[3];    
-  }
+  // }else{
+  //   props["defines/" "p_PBAR"]    = refState[3];    
+  // }
  
   // move physical model to device
   o_pCoeff = platform.malloc<dfloat>(pCoeff);   

@@ -46,8 +46,6 @@ void cns_t::Run(){
   // set time step
   dfloat hmin = mesh.MinCharacteristicLength();
   dfloat vmax = MaxWaveSpeed(o_q, startTime);
-  printf(" vmax = %.4f", vmax);
-
   dfloat dtAdv  = cfl/(vmax*(mesh.N+1.)*(mesh.N+1.));
 
   dfloat visc   = 0.0; 

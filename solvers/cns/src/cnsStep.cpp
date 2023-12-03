@@ -76,9 +76,9 @@ void cns_t::rhsArtDiff(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, c
   dlong NhaloGrads  = mesh.totalHaloPairs*mesh.Np*Ngrads;
   deviceMemory<dfloat> o_gradq = platform.reserve<dfloat>(NlocalGrads+NhaloGrads);
 
-  // stab.Apply(o_Q, o_RHS, T); 
+  stab.Apply(o_Q, o_RHS, T); 
 
-  #if 1
+  #if 0
 
   // dfloat vmax = MaxWaveSpeed(o_Q, T);
   dfloat vmax = 0.0;

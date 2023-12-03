@@ -206,11 +206,11 @@ SOFTWARE.
     @exclusive dfloat Lrexflux, Lreyflux, Lrezflux; 
 
     for(int n=0;n<p_Np;++n;@inner(0)){
-      Lrrxflux  = 0; Lrryflux  = 0; Lrrzflux  = 0;
-      Lruxflux  = 0; Lruyflux  = 0; Lruzflux  = 0;
-      Lrvxflux  = 0; Lrvyflux  = 0; Lrvzflux  = 0;
-      Lrwxflux  = 0; Lrwyflux  = 0; Lrwzflux  = 0;
-      Lrexflux  = 0; Lreyflux  = 0; Lrezflux  = 0;
+      Lrrxflux  = 0.0; Lrryflux  = 0.0; Lrrzflux  = 0.0;
+      Lruxflux  = 0.0; Lruyflux  = 0.0; Lruzflux  = 0.0;
+      Lrvxflux  = 0.0; Lrvyflux  = 0.0; Lrvzflux  = 0.0;
+      Lrwxflux  = 0.0; Lrwyflux  = 0.0; Lrwzflux  = 0.0;
+      Lrexflux  = 0.0; Lreyflux  = 0.0; Lrezflux  = 0.0;
     }
 
 
@@ -343,17 +343,17 @@ SOFTWARE.
 // for each node in the element
     for(int n=0;n<p_Np;++n;@inner(0)){
         const dlong base = e*p_Np*p_Ngrads+n;
-        gradq[base+0*p_Np] += Lrrxflux;
-        gradq[base+1*p_Np] += Lrryflux;
-        gradq[base+2*p_Np] += Lrrzflux;
+        gradq[base+ 0*p_Np] += Lrrxflux;
+        gradq[base+ 1*p_Np] += Lrryflux;
+        gradq[base+ 2*p_Np] += Lrrzflux;
 
-        gradq[base+3*p_Np] += Lruxflux;
-        gradq[base+4*p_Np] += Lruyflux;
-        gradq[base+5*p_Np] += Lruzflux;
+        gradq[base+ 3*p_Np] += Lruxflux;
+        gradq[base+ 4*p_Np] += Lruyflux;
+        gradq[base+ 5*p_Np] += Lruzflux;
 
-        gradq[base+6*p_Np] += Lrvxflux;
-        gradq[base+7*p_Np] += Lrvyflux;
-        gradq[base+8*p_Np] += Lrvzflux;
+        gradq[base+ 6*p_Np] += Lrvxflux;
+        gradq[base+ 7*p_Np] += Lrvyflux;
+        gradq[base+ 8*p_Np] += Lrvzflux;
 
         gradq[base+ 9*p_Np] += Lrwxflux;
         gradq[base+10*p_Np] += Lrwyflux;

@@ -147,6 +147,8 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
       const dfloat CV    = pCoeff[p_CVID]; // CV
       const dfloat CP    = pCoeff[p_CPID]; // CP
       const dfloat Pr    = pCoeff[p_PRID]; // Prandtl Number
+      const dfloat kappa = pCoeff[p_KAID]; // Thermal Conductivity
+      const dfloat M2    = pCoeff[p_M2ID]; // Mach Square
             dfloat mu    = pCoeff[p_MUID]; // Bulk viscosity
       //interpolate to cubature
       dfloat rr = 0., ru = 0., rv = 0., rw=0., rE = 0.;
@@ -193,15 +195,13 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
         }
 
       // primitive variables
-      const dfloat invr = 1.0/rr;   
-      const dfloat u  = ru*invr; 
-      const dfloat v  = rv*invr;
-      const dfloat w  = rw*invr;
+      const dfloat ir = 1.0/rr;   
+      const dfloat u  = ru*ir, v  = rv*ir, w= rw*ir;
       const dfloat ke = u*u + v*v + w*w;
       // pressure field
       dfloat p  = (gamma-1)*(rE- 0.5f*rr*ke);
       
-            // Positivity Check
+      // Positivity Check
       #if POSITIVITY
         p        = PMIN + LMAX(p-PMIN, ALPHA); 
         dfloat dp  = SMOOTH(p-PMIN, ALPHA); 
@@ -209,26 +209,21 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
         dfloat dp=1.0; 
       #endif
 
-      const dfloat dudx  = (drudx - drrdx*u)*invr;
-      const dfloat dvdx  = (drvdx - drrdx*v)*invr;
-      const dfloat dwdx  = (drwdx - drrdx*w)*invr;
+      const dfloat dudx  = (drudx - drrdx*u)*ir;
+      const dfloat dvdx  = (drvdx - drrdx*v)*ir;
+      const dfloat dwdx  = (drwdx - drrdx*w)*ir;
 
-      const dfloat dudy  = (drudy - drrdy*u)*invr;
-      const dfloat dvdy  = (drvdy - drrdy*v)*invr;
-      const dfloat dwdy  = (drwdy - drrdy*w)*invr;
+      const dfloat dudy  = (drudy - drrdy*u)*ir;
+      const dfloat dvdy  = (drvdy - drrdy*v)*ir;
+      const dfloat dwdy  = (drwdy - drrdy*w)*ir;
 
-      const dfloat dudz  = (drudz - drrdz*u)*invr;
-      const dfloat dvdz  = (drvdz - drrdz*v)*invr;
-      const dfloat dwdz  = (drwdz - drrdz*w)*invr;
+      const dfloat dudz  = (drudz - drrdz*u)*ir;
+      const dfloat dvdz  = (drvdz - drrdz*v)*ir;
+      const dfloat dwdz  = (drwdz - drrdz*w)*ir;
 
       const dfloat dkedx = (u*dudx + v*dvdx + w*dwdx);
       const dfloat dkedy = (u*dudy + v*dvdy + w*dwdy);
       const dfloat dkedz = (u*dudz + v*dvdz + w*dwdz);
-
-      // Compute the gradient of pressure
-      dfloat dpdx = dp*(gamma-1.0)*(dredx - 0.5f*drrdx*ke - rr*dkedx); 
-      dfloat dpdy = dp*(gamma-1.0)*(dredy - 0.5f*drrdy*ke - rr*dkedy); 
-      dfloat dpdz = dp*(gamma-1.0)*(dredz - 0.5f*drrdz*ke - rr*dkedz); 
 
       if(p_viscType==2){ // Sutherland
         //nondimensional temp =  p/(\rho * R)/Tref
@@ -237,17 +232,17 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
         const dfloat tr   = pCoeff[p_TRID]; // 1/Tref 
         const dfloat ts   = pCoeff[p_TSID]; // Ts/Tref
         const dfloat cs   = pCoeff[p_CSID]; // precomuted value to simlify
-        const dfloat tn   = p*invr*tr/R; // non-dimensional temp
+        const dfloat tn   = p*ir*tr/R; // non-dimensional temp
         mu  = (tn > ts) ? (mu*pow(tn, exp)*(1.0+ts)/(tn + ts)) : mu*tn*cs;  
         // mu  = mu*pow(tn, exp)*(1.0+ts)/(tn + ts);  
       }else if(p_viscType==3){ // Powerlaw
 
       }
 
-      // mu*cp/Pr* (1/Cv*(gamma-1)) * p/rho = Temp 
-      const dfloat Tx =(dpdx*rr - p*drrdx)*invr*invr;
-      const dfloat Ty =(dpdy*rr - p*drrdy)*invr*invr;
-      const dfloat Tz =(dpdz*rr - p*drrdz)*invr*invr;
+     // derivative of temperature
+      const dfloat Tx = (gamma-1.0)*M2*(dredx*ir - rE*drrdx*ir*ir - dkedx);      
+      const dfloat Ty = (gamma-1.0)*M2*(dredy*ir - rE*drrdy*ir*ir - dkedy);     
+      const dfloat Tz = (gamma-1.0)*M2*(dredz*ir - rE*drrdz*ir*ir - dkedz);     
 
       const dfloat T11 = mu*(2.0*dudx - 2.0*(dudx+dvdy+dwdz)/3.0);
       const dfloat T12 = mu*(dudy+dvdx);
@@ -268,10 +263,10 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
       const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
 
       {
-        // F0 = ru, G0 = rv
-        const dfloat F = -ru + 0.0*rm*drrdx;
-        const dfloat G = -rv + 0.0*rm*drrdy;
-        const dfloat H = -rw + 0.0*rm*drrdz;
+        // F0 = ru, G0 = rv, H0 = rw
+        const dfloat F = -ru + rm*drrdx;
+        const dfloat G = -rv + rm*drrdy;
+        const dfloat H = -rw + rm*drrdz;
 
         // F0 = ru, G0 = rv
         s_F[0][n] = drdx*F + drdy*G + drdz*H;
@@ -282,9 +277,9 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
 
       {
         // F1 = 2*mu*T11 - (ru^2+p), G1 = 2*mu*T12 - (rvu)
-        const dfloat F = -(ru*u+p) + T11 + 0.0*rm*drudx;
-        const dfloat G = -(rv*u)   + T12 + 0.0*rm*drudy;
-        const dfloat H = -(rw*u)   + T13 + 0.0*rm*drudz;
+        const dfloat F = -(ru*u+p) + T11 + rm*drudx;
+        const dfloat G = -(rv*u)   + T12 + rm*drudy;
+        const dfloat H = -(rw*u)   + T13 + rm*drudz;
         // F0 = ru, G0 = rv
         s_F[1][n] = drdx*F + drdy*G + drdz*H;
         s_G[1][n] = dsdx*F + dsdy*G + dsdz*H;
@@ -293,9 +288,9 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
 
       {
         // F2 = 2*mu*T21 - (ruv), G2 = 2*mu*T22 - (rv^2+p)
-        const dfloat F = -(ru*v)   + T12 + 0.0*rm*drvdx;
-        const dfloat G = -(rv*v+p) + T22 + 0.0*rm*drvdy;
-        const dfloat H = -(rw*v)   + T23 + 0.0*rm*drvdz;
+        const dfloat F = -(ru*v)   + T12 + rm*drvdx;
+        const dfloat G = -(rv*v+p) + T22 + rm*drvdy;
+        const dfloat H = -(rw*v)   + T23 + rm*drvdz;
         // F0 = ru, G0 = rv
         s_F[2][n] = drdx*F + drdy*G + drdz*H;
         s_G[2][n] = dsdx*F + dsdy*G + dsdz*H;
@@ -304,9 +299,9 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
 
       
       {
-        const dfloat F = -(ru*w)   + T13 + 0.0*rm*drwdx;
-        const dfloat G = -(rv*w)   + T23 + 0.0*rm*drwdy;
-        const dfloat H = -(rw*w +p)+ T33 + 0.0*rm*drwdz;
+        const dfloat F = -(ru*w)   + T13 + rm*drwdx;
+        const dfloat G = -(rv*w)   + T23 + rm*drwdy;
+        const dfloat H = -(rw*w +p)+ T33 + rm*drwdz;
         // F0 = ru, G0 = rv
         s_F[3][n] = drdx*F + drdy*G + drdz*H;
         s_G[3][n] = dsdx*F + dsdy*G + dsdz*H;
@@ -316,9 +311,9 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
       {
       // F3 = mu*(u*T11+v*T12) - (uE+up), G2 = mu*(u*T12+v*T22) - (vE+vp)
       const dfloat Tmu = mu*CP/Pr; 
-      const dfloat F = -u*(rE+p) + (u*T11 + v*T12 + w*T13) + 0.0*Tmu*Tx + 0.0*rm*dredx;
-      const dfloat G = -v*(rE+p) + (u*T12 + v*T22 + w*T23) + 0.0*Tmu*Ty + 0.0*rm*dredy;
-      const dfloat H = -w*(rE+p) + (u*T13 + v*T23 + w*T33) + 0.0*Tmu*Tz + 0.0*rm*dredz;
+      const dfloat F = -u*(rE+p) + (u*T11 + v*T12 + w*T13) + kappa*Tx + rm*dredx;
+      const dfloat G = -v*(rE+p) + (u*T12 + v*T22 + w*T23) + kappa*Ty + rm*dredy;
+      const dfloat H = -w*(rE+p) + (u*T13 + v*T23 + w*T33) + kappa*Tz + rm*dredz;
        // F0 = ru, G0 = rv
         s_F[4][n] = drdx*F + drdy*G + drdz*H;
         s_G[4][n] = dsdx*F + dsdy*G + dsdz*H;
@@ -498,9 +493,9 @@ for(int n=0;n<p_cubNp;++n;@inner(0)){
 //         }
 
 //       // primitive variables
-//       const dfloat invr = 1.0/rr;   
-//       const dfloat u  = ru*invr; 
-//       const dfloat v  = rv*invr;
+//       const dfloat ir = 1.0/rr;   
+//       const dfloat u  = ru*ir; 
+//       const dfloat v  = rv*ir;
 //       const dfloat ke = u*u + v*v;
 //       // pressure field
 //       dfloat p  = (gamma-1)*(rE- 0.5f*rr*ke);
@@ -513,10 +508,10 @@ for(int n=0;n<p_cubNp;++n;@inner(0)){
 //         dfloat dp=1.0; 
 //       #endif
 
-//       const dfloat dudx  = (drudx - drrdx*u)*invr;
-//       const dfloat dvdx  = (drvdx - drrdx*v)*invr;
-//       const dfloat dudy  = (drudy - drrdy*u)*invr;
-//       const dfloat dvdy  = (drvdy - drrdy*v)*invr;
+//       const dfloat dudx  = (drudx - drrdx*u)*ir;
+//       const dfloat dvdx  = (drvdx - drrdx*v)*ir;
+//       const dfloat dudy  = (drudy - drrdy*u)*ir;
+//       const dfloat dvdy  = (drvdy - drrdy*v)*ir;
 
 //       const dfloat dkedx = (u*dudx + v*dvdx);
 //       const dfloat dkedy = (u*dudy + v*dvdy);
@@ -532,7 +527,7 @@ for(int n=0;n<p_cubNp;++n;@inner(0)){
 //         const dfloat tr   = pCoeff[p_TRID]; // 1/Tref 
 //         const dfloat ts   = pCoeff[p_TSID]; // Ts/Tref
 //         const dfloat cs   = pCoeff[p_CSID]; // precomuted value to simlify
-//         const dfloat tn   = p*invr*tr/R; // non-dimensional temp
+//         const dfloat tn   = p*ir*tr/R; // non-dimensional temp
 //         mu  = (tn > ts) ? (mu*pow(tn, exp)*(1.0+ts)/(tn + ts)) : mu*tn*cs;  
 //         // mu  = mu*pow(tn, exp)*(1.0+ts)/(tn + ts);  
 //       }else if(p_viscType==3){ // Powerlaw
@@ -540,8 +535,8 @@ for(int n=0;n<p_cubNp;++n;@inner(0)){
 //       }
 
 //       // mu*cp/Pr* (1/Cv*(gamma-1)) * p/rho = Temp 
-//       const dfloat Tx =(dpdx*rr - p*drrdx)*invr*invr;
-//       const dfloat Ty =(dpdy*rr - p*drrdy)*invr*invr;
+//       const dfloat Tx =(dpdx*rr - p*drrdx)*ir*ir;
+//       const dfloat Ty =(dpdy*rr - p*drrdy)*ir*ir;
 
 //       const dfloat T11 = (mu+rm)*( 2.0*dudx - 2.0*(dudx+dvdy)/3.0);
 //       const dfloat T12 = (mu+rm)*(dudy+dvdx);

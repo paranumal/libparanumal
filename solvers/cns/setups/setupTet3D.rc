@@ -16,19 +16,19 @@ BOX
 6
 
 [BOX NX]
-20			
+10			
 
 [BOX NY]
-20
+10
 
 [BOX NZ]
-20
+10
 
 [BOX BOUNDARY FLAG]
--1
+1
 
 [POLYNOMIAL DEGREE]
-4
+3
 
 #*******************[DEVICE PROPERTIES]*******************#
 [THREAD MODEL]
@@ -59,7 +59,7 @@ TRUE
 
 # Reynolds number is needed for NONDIM = TRUE
 [REYNOLDS NUMBER]
-1e2
+1e3
 
 # R is needed if NONDIM=FALSE otherwise  R = 1.0/(gamma*Ma^2) 
 [SPECIFIC GAS CONSTANT]
@@ -67,7 +67,7 @@ TRUE
 
 # mu is needed if NONDIM = FALSE, otherwise mu = 1/Re
 [VISCOSITY]
-0.00001
+1e-5
 
 [VISCOSITY TYPE]
 CONSTANT
@@ -78,10 +78,8 @@ CONSTANT
 [PRANDTL NUMBER]
 0.72
 
-# [rref, uref, vref, wref(if 3D), pref]
 [REFERENCE STATE]
-1.0, 1.0, 0.0, 0.0, 1.0
-#1.4, 1.0, 0.0, 0.0, 100
+1.0, 1.0, 1.0, 1.0, 1.0, 1.0
 
 [ISOTHERMAL]
 FALSE

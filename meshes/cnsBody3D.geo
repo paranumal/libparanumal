@@ -163,7 +163,6 @@ Field[5].XCenter =  5.0;
 Field[5].YCenter =    0;
 Field[5].ZCenter =    0;
 
-
 Field[6] = Ball;
 Field[6].Radius   = 0.5;
 Field[6].Thickness = 0.75;

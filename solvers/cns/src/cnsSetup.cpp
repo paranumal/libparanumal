@@ -68,10 +68,7 @@ void cns_t::Setup(platform_t& _platform, mesh_t& _mesh,
                                            mesh.Np, Nfields, platform, comm);
   }
 
-  // // setup trace halo exchange //
-  // fieldTraceHalo = mesh.HaloTraceSetup(Nfields);
-  // gradTraceHalo  = mesh.HaloTraceSetup(Ngrads);
-
+  
   dlong NlocalFields = mesh.Nelements*mesh.Np*Nfields;
   dlong NhaloFields  = mesh.totalHaloPairs*mesh.Np*Nfields;
 
@@ -94,6 +91,7 @@ void cns_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
   int maxNodes = std::max(mesh.Np, (mesh.Nfp*mesh.Nfaces));
   kernelInfo["defines/" "p_maxNodes"]= maxNodes;
+
 
   int blockMax = 256;
   if (platform.device.mode() == "CUDA") blockMax = 512;

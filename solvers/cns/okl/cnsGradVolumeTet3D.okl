@@ -203,17 +203,17 @@ SOFTWARE.
       const dfloat dredz = drdz*dredr + dsdz*dreds + dtdz*dredt;
 
       const dlong sbase = e*p_Ngrads*p_Np + n;
-      gradq[sbase + 0*p_Np] = drrdx;
-      gradq[sbase + 1*p_Np] = drrdy;
-      gradq[sbase + 2*p_Np] = drrdz;
+      gradq[sbase +  0*p_Np] = drrdx;
+      gradq[sbase +  1*p_Np] = drrdy;
+      gradq[sbase +  2*p_Np] = drrdz;
 
-      gradq[sbase + 3*p_Np] = drudx;
-      gradq[sbase + 4*p_Np] = drudy;
-      gradq[sbase + 5*p_Np] = drudz;
+      gradq[sbase +  3*p_Np] = drudx;
+      gradq[sbase +  4*p_Np] = drudy;
+      gradq[sbase +  5*p_Np] = drudz;
 
-      gradq[sbase + 6*p_Np] = drvdx;
-      gradq[sbase + 7*p_Np] = drvdy;
-      gradq[sbase + 8*p_Np] = drvdz;
+      gradq[sbase +  6*p_Np] = drvdx;
+      gradq[sbase +  7*p_Np] = drvdy;
+      gradq[sbase +  8*p_Np] = drvdz;
      
       gradq[sbase +  9*p_Np] = drwdx;
       gradq[sbase + 10*p_Np] = drwdy;

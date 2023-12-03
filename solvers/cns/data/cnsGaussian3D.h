@@ -31,7 +31,7 @@ SOFTWARE.
   *(u) = exp(-3*(x*x+y*y+z*z));           \
   *(v) = exp(-3*(x*x+y*y+z*z));           \
   *(w) = exp(-3*(x*x+y*y+z*z));           \
-  *(p) = 1 + exp(-3*(x*x+y*y+z*z));       \
+  *(p) = 71.428571428571431*(1 + exp(-3*(x*x+y*y+z*z)));       \
 }
 
 // Body force

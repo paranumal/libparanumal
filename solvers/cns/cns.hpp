@@ -62,12 +62,12 @@ public:
   int Ngrads;
 
   dfloat Re, Ma, Pr;
-  dfloat mu, cp, cv, R;
+  dfloat mu, cp, cv, R, kappa;
   dfloat gamma, igamma, gammaM1, igammaM1, gammaP1, igammaP1;
 
   int viscType;
   int Nph; // number of physical parameters 
-  int MUID, GMID, RRID, PRID, CPID, CVID; 
+  int MUID, GMID, RRID, PRID, CPID, CVID, KAID, M2ID; 
   int EXID, TRID, TSID, CSID; 
 
   // Physical coefficients
