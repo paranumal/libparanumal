@@ -100,7 +100,8 @@ void ssbdf3::Run(solver_t& solver,
          o_qn, time, dt, order);
     time += dt;
     tstep++;
-    if (order<Nstages-1) order++;
+    //    if (order<Nstages-1) order++;
+    if (order<Nstages-2) order++;
 
     if (time>outputTime) {
       //report state
