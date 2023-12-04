@@ -1,0 +1,199 @@
+[FORMAT]
+2.0
+
+[DATA FILE]
+data/insUniform3D.h
+
+[MESH FILE]
+../../meshes/cylinders3D_111814.msh
+
+[MESH DIMENSION]
+3
+
+[ELEMENT TYPE] # number of edges
+6
+
+[POLYNOMIAL DEGREE]
+3
+
+[THREAD MODEL]
+#OpenMP
+#Serial
+CUDA
+
+
+[PLATFORM NUMBER]
+0
+
+[DEVICE NUMBER]
+0
+
+[VISCOSITY]
+0.00007142857143
+
+[CFL NUMBER]
+0.5
+
+# can be CUBATURE or COLLOCATION
+[ADVECTION TYPE]
+#COLLOCATION
+CUBATURE
+
+#currently experimental
+[PRESSURE INCREMENT]
+FALSE
+
+# subcycling
+[TIME INTEGRATOR]
+#EXTBDF3
+SSBDF3
+
+[NUMBER OF SUBCYCLES]
+4
+
+[SUBCYCLING TIME INTEGRATOR]
+DOPRI5
+
+[START TIME]
+0
+
+[FINAL TIME]
+300.0
+
+[OUTPUT INTERVAL]
+0.001
+
+[OUTPUT TO FILE]
+#TRUE
+FALSE
+
+[OUTPUT FILE NAME]
+ins
+
+#################################################
+########## Velocity Solver Options ##############
+#################################################
+
+# can be PCG, FPCG, NBPCG, NBFPCG, or PGMRES
+[VELOCITY LINEAR SOLVER]
+PCG
+
+[VELOCITY LINEAR SOLVER STOPPING CRITERION]
+ABS/REL-INITRESID
+
+# can be IPDG, or CONTINUOUS
+[VELOCITY DISCRETIZATION]
+CONTINUOUS
+
+# can be NONE, JACOBI, MASSMATRIX, PARALMOND, SEMFEM, MULTIGRID, or OAS
+[VELOCITY PRECONDITIONER]
+MULTIGRID
+#JACOBI
+
+# can be LAST, ZERO, CLASSIC, QR, or EXTRAP
+[VELOCITY INITIAL GUESS STRATEGY]
+QR
+
+[VELOCITY INITIAL GUESS HISTORY SPACE DIMENSION]
+9
+
+[VELOCITY VERBOSE]
+TRUE
+
+########## MULTIGRID Options ##############
+
+# can be ALLDEGREES, HALFDEGREES, HALFDOFS
+[VELOCITY MULTIGRID COARSENING]
+HALFDOFS
+
+# can be DAMPEDJACOBI or CHEBYSHEV
+[VELOCITY MULTIGRID SMOOTHER]
+CHEBYSHEV
+
+# can be any integer >0
+[VELOCITY MULTIGRID CHEBYSHEV DEGREE]
+1
+
+###########################################
+
+########## ParAlmond Options ##############
+
+# can be KCYCLE, or VCYCLE
+# can add the EXACT and NONSYM option
+[VELOCITY PARALMOND CYCLE]
+VCYCLE
+
+# can be DAMPEDJACOBI or CHEBYSHEV
+[VELOCITY PARALMOND SMOOTHER]
+CHEBYSHEV
+
+# can be any integer >0
+[VELOCITY PARALMOND CHEBYSHEV DEGREE]
+1
+
+###########################################
+
+#################################################
+########## Pressure Solver Options ##############
+#################################################
+
+# can be PCG, FPCG, NBPCG, NBFPCG, or PGMRES
+[PRESSURE LINEAR SOLVER]
+PCG
+
+[PRESSURE LINEAR SOLVER STOPPING CRITERION]
+ABS/REL-INITRESID
+
+# can be IPDG, or CONTINUOUS
+[PRESSURE DISCRETIZATION]
+CONTINUOUS
+#IPDG
+
+# can be NONE, JACOBI, MASSMATRIX, PARALMOND, SEMFEM, or MULTIGRID
+[PRESSURE PRECONDITIONER]
+MULTIGRID
+
+# can be LAST, ZERO, CLASSIC, QR, or EXTRAP
+[PRESSURE INITIAL GUESS STRATEGY]
+#ZERO
+QR
+
+[PRESSURE INITIAL GUESS HISTORY SPACE DIMENSION]
+9
+
+[PRESSURE VERBOSE]
+TRUE
+
+########## MULTIGRID Options ##############
+
+# can be ALLDEGREES, HALFDEGREES, HALFDOFS
+[PRESSURE MULTIGRID COARSENING]
+HALFDOFS
+
+# can be DAMPEDJACOBI or CHEBYSHEV
+[PRESSURE MULTIGRID SMOOTHER]
+CHEBYSHEV
+
+# can be any integer >0
+[PRESSURE MULTIGRID CHEBYSHEV DEGREE]
+2
+
+###########################################
+
+########## ParAlmond Options ##############
+
+# can be KCYCLE, or VCYCLE
+# can add the EXACT and NONSYM option
+[PRESSURE PARALMOND CYCLE]
+VCYCLE
+
+# can be DAMPEDJACOBI or CHEBYSHEV
+[PRESSURE PARALMOND SMOOTHER]
+CHEBYSHEV
+
+# can be any integer >0
+[PRESSURE PARALMOND CHEBYSHEV DEGREE]
+2
+
+###########################################
+

@@ -42,6 +42,8 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
   settings.getSetting("VISCOSITY", nu);
 
+  std::cout << "VISCOSITY evaluates to " << nu << std::endl;
+
   cubature = (settings.compareSetting("ADVECTION TYPE", "CUBATURE")) ? 1:0;
   pressureIncrement = (settings.compareSetting("PRESSURE INCREMENT", "TRUE")) ? 1:0;
 
