@@ -27,7 +27,7 @@ SOFTWARE.
 #define PMIN 0.05
 #define ALPHA 100
 
-#define POSITIVITY 0
+#define POSITIVITY 1
 
 // Regularization of rho / p  (cannot be smaller than rmin / pmin)
 dfloat LMAX(const dfloat x, const dfloat alpha){

@@ -2,12 +2,13 @@
 2.0
 
 [DATA FILE]
-data/cnsGaussian3D.h
-#data/cnsUniform3D.h
+#data/cnsGaussian3D.h
+data/cnsUniform3D.h
 #*******************[MESH PROPERTIES]*******************#
 [MESH FILE]
-BOX
+#BOX
 #../../meshes/AGARD_B.msh
+../../meshes/cnsBody3D.msh
 
 [MESH DIMENSION]
 3
@@ -55,11 +56,11 @@ TRUE
 
 # // Mach number is needed for NONDIM=TRUE
 [MACH NUMBER]
-0.1
+0.6
 
 # Reynolds number is needed for NONDIM = TRUE
 [REYNOLDS NUMBER]
-1e3
+2.7e6
 
 # R is needed if NONDIM=FALSE otherwise  R = 1.0/(gamma*Ma^2) 
 [SPECIFIC GAS CONSTANT]
@@ -103,7 +104,7 @@ DOPRI5
 
 #*******************[OUTPUT PROPERTIES]*******************#
 [OUTPUT INTERVAL]
-0.05
+0.01
 
 [OUTPUT TO FILE]
 TRUE
@@ -138,5 +139,5 @@ LAPLACE
 #PHYSICAL
 
 [ARTDIFF SCALE FACTOR]
-1
+1.0
 

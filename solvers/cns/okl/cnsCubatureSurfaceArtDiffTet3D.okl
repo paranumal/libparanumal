@@ -27,7 +27,7 @@ SOFTWARE.
 #define PMIN 0.05
 #define ALPHA 100
 
-#define POSITIVITY 0
+#define POSITIVITY 1
 
 // Regularization of rho / p  (cannot be smaller than rmin / pmin)
 dfloat LMAX(const dfloat x, const dfloat alpha){
@@ -514,15 +514,24 @@ void upwindRoeAveraged(const dfloat nx,
             dfloat T43P = uP*T13P + vP*T23P + wP*T33P + kappa*TzP;
 
             // add artificial viscosity
-            T01P += (bc>0)? 0.0: rmP*drrdxP, T02M += (bc>0)? 0.0:rmP*drrdyP; 
+            T01P += (bc>0)? 0.0: rmP*drrdxP; 
+            T02M += (bc>0)? 0.0: rmP*drrdyP; 
             T03P += (bc>0)? 0.0: rmP*drrdzP;
-            T11P += (bc>0)? 0.0: rmP*drudxP, T12M += (bc>0)? 0.0:rmP*drudyP; 
+            
+            T11P += (bc>0)? 0.0: rmP*drudxP;
+            T12M += (bc>0)? 0.0: rmP*drudyP; 
             T13P += (bc>0)? 0.0: rmP*drudzP;
-            T21P += (bc>0)? 0.0: rmP*drvdxP, T22M += (bc>0)? 0.0:rmP*drvdyP;
+            
+            T21P += (bc>0)? 0.0: rmP*drvdxP; 
+            T22M += (bc>0)? 0.0: rmP*drvdyP;
             T23P += (bc>0)? 0.0: rmP*drvdzP;
-            T31P += (bc>0)? 0.0: rmP*drwdxP, T32M += (bc>0)? 0.0:rmP*drwdyP;
+            
+            T31P += (bc>0)? 0.0: rmP*drwdxP;
+            T32M += (bc>0)? 0.0: rmP*drwdyP;
             T33P += (bc>0)? 0.0: rmP*drwdzP;
-            T41P += (bc>0)? 0.0: rmP*dredxP, T42M += (bc>0)? 0.0:rmP*dredyP; 
+            
+            T41P += (bc>0)? 0.0: rmP*dredxP;
+            T42M += (bc>0)? 0.0: rmP*dredyP; 
             T43P += (bc>0)? 0.0: rmP*dredzP;   
 
             rflux  -= 0.5*(nx*(T01P+T01M)+ny*(T02P+T02M)+nz*(T03P+T03M)); 

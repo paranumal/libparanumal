@@ -26,11 +26,35 @@ SOFTWARE.
 // ffmpeg -r 20 -f image2 -s 1538x784 -i mach%*.png -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" -vframes 400 -crf 15 -pix_fmt yuv420p test.mp4
 /**************************************************************************/
 //Mean flow n*1.4/(1.4*Ma^2) = P
-#define p_RBAR 5.6
+// #define p_RBAR 5.6
+// #define p_UBAR 1.0
+// #define p_VBAR 0.0
+// #define p_WBAR 0.0
+// #define p_PBAR 6.25
+
+// Mach = 0.6
+#define p_RBAR 5.6000000
 #define p_UBAR 1.0
 #define p_VBAR 0.0
 #define p_WBAR 0.0
-#define p_PBAR 6.25
+#define p_PBAR 11.111111
+
+// // Mach = 2.0
+// #define p_RBAR 11.2
+// #define p_UBAR 1.0
+// #define p_VBAR 0.0
+// #define p_WBAR 0.0
+// #define p_PBAR 2.0
+
+// // Mach 3
+// #define p_RBAR 44.8
+// #define p_UBAR 1.0
+// #define p_VBAR 0.0
+// #define p_WBAR 0.0
+// #define p_PBAR 3.555555555555555
+
+
+
 /**************************************************************************/
 
 

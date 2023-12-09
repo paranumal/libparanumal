@@ -1,49 +1,57 @@
 
 // AGARD_R = 1, AGARD_O = 2, STANDALONE = 3
-MODEL = 1; 
+MODEL = 3; 
 
 BBOX  = 1; // SPHERE 
 // BBOX  = 2; // BOX 
-// Note that Length = 8.5 x D for AGARD B
-LoD = 8.5; 
 
+// Note that Length = 8.5 x D for AGARD B
 SetFactory("OpenCASCADE");
 
-
+LoD = 1.0; 
+xmin = 0.0; ymin = 0.0; zmin = 0.0;
+xmax = 1.0; ymax = 1.0; zmax = 1.0;
+// AGARD R
 If(MODEL == 1)
   v() = ShapeFromFile("agard_b_1.stp");
+  LoD = 8.5; 
 EndIf
 
-
+// AGARD 0
 If(MODEL == 2)
   v() = ShapeFromFile("agard_r.stp");
 EndIf
 
+// body alone fit diameter to 1
 If(MODEL == 3)
+  Printf("Loading model geometry with id = %g", MODEL);
   v() = ShapeFromFile("bodyalone.stp");
+  Printf("loading is done ");
+  LoD  = 12.0; 
+  xmin = 0.00; ymin = -1.5; zmin = -1.5;
+  xmax = 36.0; ymax =  1.5; zmax =  1.5;
 EndIf
 
-
-// Get the bounding box of the volume:
-bbox() = BoundingBox Volume{v()};
-xmin = bbox(0); ymin = bbox(1);zmin = bbox(2);
-xmax = bbox(3); ymax = bbox(4);zmax = bbox(5);
-// Report the bounding box
-For i In {0:#bbox()-1}
-  Printf ("bounding box = %g", bbox(i));
-EndFor
+// // Get the bounding box of the volume:
+// bbox() = BoundingBox Volume{v()};
+// xmin = bbox(0); ymin = bbox(1);zmin = bbox(2);
+// xmax = bbox(3); ymax = bbox(4);zmax = bbox(5);
+// // Report the bounding box
+// For i In {0:#bbox()-1}
+//   Printf("xmin = %g ", xmin);
+//   Printf ("bounding box = %g", bbox(i));
+// EndFor
 
 // Find the current center
 xc = 0.5*(xmin + xmax);
 yc = 0.5*(ymin + ymax);
 zc = 0.5*(zmin + zmax);
-
-scale_factor = LoD/(xmax - xmin); 
-
-// Scale the volume so that (xmax - xmin) = 8.5; 
+//Set diameter to 1 in scaled geometry
+scale_factor = 1.0/(ymax - ymin); 
+// Scale the volume so that D = 1.0; 
 Dilate {{0, 0, 0}, {scale_factor, scale_factor, scale_factor}} { Volume{1};}
 
-// Get the bounding box of the volume again:
+// // Get the bounding box of the volume again:
 bbox() = BoundingBox Volume{v()};
 xmin = bbox(0);ymin = bbox(1);zmin = bbox(2);
 xmax = bbox(3);ymax = bbox(4);zmax = bbox(5);
@@ -56,9 +64,8 @@ bbox() = BoundingBox Volume{1};
 xmin = bbox(0);ymin = bbox(1);zmin = bbox(2);
 xmax = bbox(3);ymax = bbox(4);zmax = bbox(5);
 
-
 For i In {0:#bbox()-1}
-  Printf ("bounding box after centering = %g", bbox(i));
+  Printf ("bounding box = %g", bbox(i));
 EndFor
 
 If(BBOX == 1)
@@ -82,21 +89,20 @@ wpoints() = Point In BoundingBox{xmin, ymin, zmin, xmax, ymax, zmax};
 
 // Volume ID check
 For i In {0:#vol()-1}
-  Printf ("volume Cehck : id of # volume = %g / %g", vol(i),#vol() );
+  Printf ("volume Cehck : id of # volume = %g  over total of %g", vol(i),#vol() );
 EndFor
 
+// exctract walls from all surfaces to get farfield
 For i In {0:#walls()-1}
   outSurf() -= {walls(i)}; 
-  // Printf ("%g, ", walls(i));
 EndFor
 
 For i In {0:#outSurf()-1}
-  Printf ("%g, ", outSurf(i));
+  Printf ("%g", outSurf(i));
 EndFor
 
-Printf("Number of wall surfaces = %g", #walls());
-Printf("Number of farfield surfaces = %g", #outSurf());
-
+// Printf("Number of wall surfaces = %g", #walls());
+// Printf("Number of farfield surfaces = %g", #outSurf());
 
 // Walls
 Physical Surface("Wall", 12) = walls();
@@ -104,78 +110,125 @@ Physical Surface("FarField", 20) = outSurf();
 Physical Volume("Domain", 9) = vol();
 
 
+If(MODEL==3)
+  l0 = 0.1; l1 = 0.2; l2 = 6.0; 
+  // l0 = 0.25; l1 = 0.40; l2 = 8.0; 
+
+  Field[1] = Distance;
+  Field[1].PointsList = {3, 4, 5};
+  Field[1].CurvesList = {5, 7};
+  Field[1].Sampling = 500;
+
+  Field[2] = Threshold;
+  Field[2].InField = 1;
+  Field[2].SizeMin = l0;
+  Field[2].SizeMax = l2;
+  Field[2].DistMin = 1.0;
+  Field[2].DistMax = 2.0;
+
+  Field[3] = Cylinder;
+  Field[3].Radius   = 2.0;
+  Field[3].VIn      = l1;
+  Field[3].VOut     = l2;
+  Field[3].XAxis    = 7.0;
+  Field[3].YAxis    = 0.0;
+  Field[3].ZAxis    = 0.0;
+  Field[3].XCenter  = 1.0;
+  Field[3].YCenter  = 0.0;
+  Field[3].ZCenter  = 0.0;
+
+
+  Field[4] = Ball;
+  Field[4].Radius    =  0.75;
+  Field[4].Thickness =  0.5;
+  Field[4].VIn       =  0.25*l1;
+  Field[4].VOut      =  l2;
+  Field[4].XCenter   =  xmin+0.25;
+  Field[4].YCenter   =  0.0;
+  Field[4].ZCenter   =  0.0;
+
+  Field[8] = Ball;
+  Field[8].Radius    =  2.0;
+  Field[8].Thickness =  0.5;
+  Field[8].VIn       =  l1;
+  Field[8].VOut      =  l2;
+  Field[8].XCenter   =  xmin;
+  Field[8].YCenter   =  0.0;
+  Field[8].ZCenter   =  0.0;
+
+
+  Field[5] = Ball;
+  Field[5].Radius    = 2.0;
+  Field[5].Thickness = 0.5;
+  Field[5].VIn       = l1;
+  Field[5].VOut      = l2;
+  Field[5].XCenter   = 8.0;
+  Field[5].YCenter   = 0.0;
+  Field[5].ZCenter   = 0.0;
+
+  Field[7] = Min;
+  Field[7].FieldsList = {2, 3, 4, 5,8};
+  Background Field = 7;
+
+   Mesh.Algorithm3D = 1; 
+   Mesh.Optimize = 1; 
+   Mesh 3;
+EndIf
 
 
 // lf = 0.1; 
 // lc = 4.0; 
 
-l0 = 0.2; 
-l1 = 0.3; 
-l2 = 6.0; 
-
-// lc = 6.0; 
-// Meshing Related
-// Give sizing to the wall points
-// MeshSize{wpoints()} = lc;
-// Mesh.MeshSizeFromCurvature = 20;
-
-Field[1] = Distance;
-Field[1].PointsList = {4, 18, 15};
-Field[1].CurvesList = {10, 25};
-Field[1].Sampling = 100;
-
-Field[2] = Threshold;
-Field[2].InField = 1;
-Field[2].SizeMin = l0;
-Field[2].SizeMax = l2;
-Field[2].DistMin = 0.2;
-Field[2].DistMax = 0.4;
 
 
-Field[3] = Cylinder;
-Field[3].Radius   = 2.5;
-Field[3].VIn      = l1;
-Field[3].VOut     = l2;
-Field[3].XAxis    = 5;
-Field[3].YAxis    = 0;
-Field[3].ZAxis    = 0;
-Field[3].XCenter  = 0.0;
-Field[3].YCenter  =    0;
-Field[3].ZCenter  =    0;
 
 
-Field[4] = Ball;
-Field[4].Radius   = 2.5;
-Field[4].Thickness = 0.5;
-Field[4].VIn      = l1;
-Field[4].VOut     = l2;
-Field[4].XCenter = -5.0;
-Field[4].YCenter =    0;
-Field[4].ZCenter =    0;
 
 
-Field[5] = Ball;
-Field[5].Radius   = 2.5;
-Field[5].Thickness = 0.5;
-Field[5].VIn      = l1;
-Field[5].VOut     = l2;
-Field[5].XCenter =  5.0;
-Field[5].YCenter =    0;
-Field[5].ZCenter =    0;
-
-Field[6] = Ball;
-Field[6].Radius   = 0.5;
-Field[6].Thickness = 0.75;
-Field[6].VIn      = l0;
-Field[6].VOut     = l2;
-Field[6].XCenter =  xmin;
-Field[6].YCenter =    0;
-Field[6].ZCenter =    0;
+// Field[3] = Cylinder;
+// Field[3].Radius   = 2.5;
+// Field[3].VIn      = l1;
+// Field[3].VOut     = l2;
+// Field[3].XAxis    = 5;
+// Field[3].YAxis    = 0;
+// Field[3].ZAxis    = 0;
+// Field[3].XCenter  = 0.0;
+// Field[3].YCenter  =    0;
+// Field[3].ZCenter  =    0;
 
 
-Field[7] = Min;
-Field[7].FieldsList = {2, 3, 4, 5, 6};
-Background Field = 7;
+// Field[4] = Ball;
+// Field[4].Radius   = 2.5;
+// Field[4].Thickness = 0.5;
+// Field[4].VIn      = l1;
+// Field[4].VOut     = l2;
+// Field[4].XCenter = -5.0;
+// Field[4].YCenter =    0;
+// Field[4].ZCenter =    0;
+
+
+// Field[5] = Ball;
+// Field[5].Radius   = 2.5;
+// Field[5].Thickness = 0.5;
+// Field[5].VIn      = l1;
+// Field[5].VOut     = l2;
+// Field[5].XCenter =  5.0;
+// Field[5].YCenter =    0;
+// Field[5].ZCenter =    0;
+
+// Field[6] = Ball;
+// Field[6].Radius   = 0.5;
+// Field[6].Thickness = 0.75;
+// Field[6].VIn      = l0;
+// Field[6].VOut     = l2;
+// Field[6].XCenter =  xmin;
+// Field[6].YCenter =    0;
+// Field[6].ZCenter =    0;
+
+
+// Field[7] = Min;
+// Field[7].FieldsList = {2, 3, 4, 5, 6};
+// Background Field = 7;
 
 
 
@@ -202,7 +255,7 @@ Background Field = 7;
 
 // Mesh 2;
 
-// Mesh 3;
+// 
 
 
 // // Mesh output format (1: msh, 2: unv, 10: auto, 16: vtk, 19: vrml, 21: mail, 26: pos

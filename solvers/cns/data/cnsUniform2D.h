@@ -30,12 +30,6 @@ SOFTWARE.
 // #define p_VBAR 0.0
 // #define p_PBAR 6.25
 
-// Ma = 0.8
-#define p_RBAR 1.4
-#define p_UBAR 0.984807753012208
-#define p_VBAR 0.173648177666930
-#define p_PBAR 1.5625
-
 // MAch 2
 // #define p_RBAR 11.2
 // #define p_UBAR 0.984807753012208
@@ -49,7 +43,11 @@ SOFTWARE.
 // #define p_PBAR 3.555555555555555
 
 
-
+// Ma = 0.8
+#define p_RBAR 1.4
+#define p_UBAR 0.984807753012208
+#define p_VBAR 0.173648177666930
+#define p_PBAR 1.5625
 // Define Temperature for Isothermal Wall T = P /(rho * R)
 #define p_TBAR 1.00000
 
@@ -116,7 +114,7 @@ const dfloat cin  = sqrt(gamma*pM/rM);                                       \
 const dfloat min  = fabs(uin/cin);                                           \
   if(bc==11){                                                                \
     dfloat PR = 0;                                                           \
-    PressureRiemann2D(gamma, R, CP, CV, uin, cin, rM, uM, vM, pM, &PR);        \
+    PressureRiemann2D(gamma, R, CP, CV, uin, cin, rM, uM, vM, pM, &PR);      \
     *(rB) = PR/(p_TBAR*R);                                                   \
     *(uB) = 0.0;                                                             \
     *(vB) = 0.0;                                                             \
@@ -124,7 +122,7 @@ const dfloat min  = fabs(uin/cin);                                           \
     *(uxB) = uxM;*(uyB) = uyM; *(vxB) = vxM; *(vyB) = vyM;                   \
   } else if(bc==12){                                                         \
     dfloat PR = 0;                                                           \
-    PressureRiemann2D(gamma, R, CP, CV, uin, cin, rM, uM, vM, pM, &PR);        \
+    PressureRiemann2D(gamma, R, CP, CV, uin, cin, rM, uM, vM, pM, &PR);      \
     const dfloat TB = pM/(rM*R);                                             \
     *(rB) = PR/(TB*R);                                                       \
     *(uB) = 0.0;                                                             \
@@ -133,7 +131,7 @@ const dfloat min  = fabs(uin/cin);                                           \
     *(uxB) = 0.0; *(uyB) = 0.0;*(vxB) = 0.0; *(vyB) = 0.0;                   \
   }else if(bc==13){                                                          \
     dfloat PR = 0;                                                           \
-    PressureRiemann2D(gamma, R, CP, CV, uin, cin, rM, uM, vM, pM, &PR);        \
+    PressureRiemann2D(gamma, R, CP, CV, uin, cin, rM, uM, vM, pM, &PR);      \
     *(rB) = rM;                                                              \
     *(uB) = uM - (nx*uM+ny*vM)*nx;                                           \
     *(vB) = vM - (nx*uM+ny*vM)*ny;                                           \
@@ -150,8 +148,7 @@ const dfloat min  = fabs(uin/cin);                                           \
      *(uxB) = uxM;*(uyB) = uyM; *(vxB) = vxM; *(vyB) = vyM;                  \
     }else{                                                                   \
       if(min <=1.0){                                                         \
-      *(rB) = rM; *(uB) = uM; *(vB) = vM;                                    \
-      *(pB) = p_PBAR;                                                        \
+      *(rB) = rM; *(uB) = uM; *(vB) = vM; *(pB) = p_PBAR;                    \
       }else{                                                                 \
        *(rB) = rM; *(uB) = uM; *(vB) = vM; *(pB) = pM;                       \
       }                                                                      \
