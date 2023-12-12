@@ -36,18 +36,18 @@ SOFTWARE.
 // #define p_VBAR 0.173648177666930
 // #define p_PBAR 2.0
 
-// // Mach 3
-// #define p_RBAR 44.8
-// #define p_UBAR 0.984807753012208
-// #define p_VBAR 0.173648177666930
-// #define p_PBAR 3.555555555555555
-
-
-// Ma = 0.8
-#define p_RBAR 1.4
+// Mach 3
+#define p_RBAR 44.8
 #define p_UBAR 0.984807753012208
 #define p_VBAR 0.173648177666930
-#define p_PBAR 1.5625
+#define p_PBAR 3.555555555555555
+
+
+// // Ma = 0.8
+// #define p_RBAR 1.4
+// #define p_UBAR 0.984807753012208
+// #define p_VBAR 0.173648177666930
+// #define p_PBAR 1.5625
 // Define Temperature for Isothermal Wall T = P /(rho * R)
 #define p_TBAR 1.00000
 

@@ -55,7 +55,7 @@ TRUE
 
 # // Mach number is needed for NONDIM=TRUE
 [MACH NUMBER]
-0.8
+3.0
 
 # Reynolds number is needed for NONDIM = TRUE
 [REYNOLDS NUMBER]
@@ -82,7 +82,6 @@ CONSTANT
 # [rref, vref, pref. tref, mref, lref]
 [REFERENCE STATE]
 1.0, 1.0, 1.0, 1.0, 1.0, 1.0
-
 
 [ISOTHERMAL]
 FALSE

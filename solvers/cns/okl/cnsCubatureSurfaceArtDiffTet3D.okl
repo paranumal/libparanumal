@@ -382,7 +382,7 @@ void upwindRoeAveraged(const dfloat nx,
             dfloat dudxP = (drudxP - drrdxP*uP)*irP;
             dfloat dvdxP = (drvdxP - drrdxP*vP)*irP;
             dfloat dwdxP = (drwdxP - drrdxP*wP)*irP;
-            
+          
             dfloat dudyP = (drudyP - drrdyP*uP)*irP;
             dfloat dvdyP = (drvdyP - drrdyP*vP)*irP;
             dfloat dwdyP = (drwdyP - drrdyP*wP)*irP;
@@ -454,13 +454,25 @@ void upwindRoeAveraged(const dfloat nx,
             }
 
 
-            const dfloat TxM = (gamma -1.0)*M2*(dredxM*irM - rEM*drrdxM*irM*irM - dkedxM);
-            const dfloat TyM = (gamma -1.0)*M2*(dredyM*irM - rEM*drrdyM*irM*irM - dkedyM);
-            const dfloat TzM = (gamma -1.0)*M2*(dredzM*irM - rEM*drrdzM*irM*irM - dkedzM);
+            // const dfloat TxM = (gamma -1.0)*M2*(dredxM*irM - rEM*drrdxM*irM*irM - dkedxM);
+            // const dfloat TyM = (gamma -1.0)*M2*(dredyM*irM - rEM*drrdyM*irM*irM - dkedyM);
+            // const dfloat TzM = (gamma -1.0)*M2*(dredzM*irM - rEM*drrdzM*irM*irM - dkedzM);
 
-            const dfloat TxP = (gamma -1.0)*M2*(dredxP*irP - rEP*drrdxP*irP*irP - dkedxP);
-            const dfloat TyP = (gamma -1.0)*M2*(dredyP*irP - rEP*drrdyP*irP*irP - dkedyP);
-            const dfloat TzP = (gamma -1.0)*M2*(dredzP*irP - rEP*drrdzP*irP*irP - dkedzP);
+            // const dfloat TxP = (gamma -1.0)*M2*(dredxP*irP - rEP*drrdxP*irP*irP - dkedxP);
+            // const dfloat TyP = (gamma -1.0)*M2*(dredyP*irP - rEP*drrdyP*irP*irP - dkedyP);
+            // const dfloat TzP = (gamma -1.0)*M2*(dredzP*irP - rEP*drrdzP*irP*irP - dkedzP);
+
+
+            const dfloat TxM = (dredxM*irM - rEM*drrdxM*irM*irM - dkedxM);
+            const dfloat TyM = (dredyM*irM - rEM*drrdyM*irM*irM - dkedyM);
+            const dfloat TzM = (dredzM*irM - rEM*drrdzM*irM*irM - dkedzM);
+
+            const dfloat TxP = (dredxP*irP - rEP*drrdxP*irP*irP - dkedxP);
+            const dfloat TyP = (dredyP*irP - rEP*drrdyP*irP*irP - dkedyP);
+            const dfloat TzP = (dredzP*irP - rEP*drrdzP*irP*irP - dkedzP);
+            
+
+
 
 
             dfloat rflux, ruflux, rvflux, rwflux, Eflux;
@@ -483,9 +495,12 @@ void upwindRoeAveraged(const dfloat nx,
             dfloat T32M = T23M; 
             dfloat T33M = muM*(2.0*dwdzM - beta*(dudxM+dvdyM+dwdzM));
             
-            dfloat T41M = uM*T11M + vM*T12M + wM*T13M + kappa*TxM;
-            dfloat T42M = uM*T12M + vM*T22M + wM*T23M + kappa*TyM;
-            dfloat T43M = uM*T13M + vM*T23M + wM*T33M + kappa*TzM;
+            // dfloat T41M = uM*T11M + vM*T12M + wM*T13M + kappa*TxM;
+            // dfloat T42M = uM*T12M + vM*T22M + wM*T23M + kappa*TyM;
+            // dfloat T43M = uM*T13M + vM*T23M + wM*T33M + kappa*TzM;
+            dfloat T41M = uM*T11M + vM*T12M + wM*T13M + (muM*gamma/Pr)*TxM;
+            dfloat T42M = uM*T12M + vM*T22M + wM*T23M + (muM*gamma/Pr)*TyM;
+            dfloat T43M = uM*T13M + vM*T23M + wM*T33M + (muM*gamma/Pr)*TzM;
 
 
             // add artificial viscosity
@@ -509,9 +524,12 @@ void upwindRoeAveraged(const dfloat nx,
             dfloat T32P = T23P; 
             dfloat T33P = muP*(2.0*dwdzP - beta*(dudxP+dvdyP+dwdzP));
             
-            dfloat T41P = uP*T11P + vP*T12P + wP*T13P + kappa*TxP;
-            dfloat T42P = uP*T12P + vP*T22P + wP*T23P + kappa*TyP;
-            dfloat T43P = uP*T13P + vP*T23P + wP*T33P + kappa*TzP;
+            // dfloat T41P = uP*T11P + vP*T12P + wP*T13P + kappa*TxP;
+            // dfloat T42P = uP*T12P + vP*T22P + wP*T23P + kappa*TyP;
+            // dfloat T43P = uP*T13P + vP*T23P + wP*T33P + kappa*TzP;
+            dfloat T41P = uP*T11P + vP*T12P + wP*T13P + (muP*gamma/Pr)*TxP;
+            dfloat T42P = uP*T12P + vP*T22P + wP*T23P + (muP*gamma/Pr)*TyP;
+            dfloat T43P = uP*T13P + vP*T23P + wP*T33P + (muP*gamma/Pr)*TzP;
 
             // add artificial viscosity
             T01P += (bc>0)? 0.0: rmP*drrdxP; 

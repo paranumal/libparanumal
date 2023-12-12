@@ -239,10 +239,14 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
 
       }
 
+     // // derivative of temperature
+     //  const dfloat Tx = (gamma-1.0)*M2*(dredx*ir - rE*drrdx*ir*ir - dkedx);      
+     //  const dfloat Ty = (gamma-1.0)*M2*(dredy*ir - rE*drrdy*ir*ir - dkedy);     
+     //  const dfloat Tz = (gamma-1.0)*M2*(dredz*ir - rE*drrdz*ir*ir - dkedz);     
      // derivative of temperature
-      const dfloat Tx = (gamma-1.0)*M2*(dredx*ir - rE*drrdx*ir*ir - dkedx);      
-      const dfloat Ty = (gamma-1.0)*M2*(dredy*ir - rE*drrdy*ir*ir - dkedy);     
-      const dfloat Tz = (gamma-1.0)*M2*(dredz*ir - rE*drrdz*ir*ir - dkedz);     
+      const dfloat Tx = (dredx*ir - rE*drrdx*ir*ir - dkedx);      
+      const dfloat Ty = (dredy*ir - rE*drrdy*ir*ir - dkedy);     
+      const dfloat Tz = (dredz*ir - rE*drrdz*ir*ir - dkedz);     
 
       const dfloat T11 = mu*(2.0*dudx - 2.0*(dudx+dvdy+dwdz)/3.0);
       const dfloat T12 = mu*(dudy+dvdx);
@@ -309,11 +313,16 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
       }
 
       {
+      // // F3 = mu*(u*T11+v*T12) - (uE+up), G2 = mu*(u*T12+v*T22) - (vE+vp)
+      // const dfloat Tmu = mu*CP/Pr; 
+      // const dfloat F = -u*(rE+p) + (u*T11 + v*T12 + w*T13) + kappa*Tx + rm*dredx;
+      // const dfloat G = -v*(rE+p) + (u*T12 + v*T22 + w*T23) + kappa*Ty + rm*dredy;
+      // const dfloat H = -w*(rE+p) + (u*T13 + v*T23 + w*T33) + kappa*Tz + rm*dredz;
       // F3 = mu*(u*T11+v*T12) - (uE+up), G2 = mu*(u*T12+v*T22) - (vE+vp)
       const dfloat Tmu = mu*CP/Pr; 
-      const dfloat F = -u*(rE+p) + (u*T11 + v*T12 + w*T13) + kappa*Tx + rm*dredx;
-      const dfloat G = -v*(rE+p) + (u*T12 + v*T22 + w*T23) + kappa*Ty + rm*dredy;
-      const dfloat H = -w*(rE+p) + (u*T13 + v*T23 + w*T33) + kappa*Tz + rm*dredz;
+      const dfloat F = -u*(rE+p) + (u*T11 + v*T12 + w*T13) + (mu*gamma/Pr)*Tx + rm*dredx;
+      const dfloat G = -v*(rE+p) + (u*T12 + v*T22 + w*T23) + (mu*gamma/Pr)*Ty + rm*dredy;
+      const dfloat H = -w*(rE+p) + (u*T13 + v*T23 + w*T33) + (mu*gamma/Pr)*Tz + rm*dredz;
        // F0 = ru, G0 = rv
         s_F[4][n] = drdx*F + drdy*G + drdz*H;
         s_G[4][n] = dsdx*F + dsdy*G + dsdz*H;

@@ -209,8 +209,8 @@ void upwindRoeAveraged(const dfloat nx,
         const dfloat CP     = pCoeff[p_CPID]; 
         const dfloat CV     = pCoeff[p_CVID]; 
         const dfloat Pr     = pCoeff[p_PRID]; // Prandtl Number
-        const dfloat M2     = pCoeff[p_M2ID]; // Mach Square
-        const dfloat kappa  = pCoeff[p_KAID]; // Mach Square
+        // const dfloat M2     = pCoeff[p_M2ID]; // Mach Square
+        // const dfloat kappa  = pCoeff[p_KAID]; // Mach Square
 
         // find face that owns this node
         const int face = n/p_intNfp;
@@ -373,12 +373,11 @@ void upwindRoeAveraged(const dfloat nx,
 
         }
 
-        const dfloat TxM = (gamma -1.0)*M2*(dredxM*irM - rEM*drrdxM*irM*irM - dkedxM);
-        const dfloat TyM = (gamma -1.0)*M2*(dredyM*irM - rEM*drrdyM*irM*irM - dkedyM);
+        const dfloat TxM = (dredxM*irM - rEM*drrdxM*irM*irM - dkedxM);
+        const dfloat TyM = (dredyM*irM - rEM*drrdyM*irM*irM - dkedyM);
 
-        const dfloat TxP = (gamma -1.0)*M2*(dredxP*irP - rEP*drrdxP*irP*irP - dkedxP);
-        const dfloat TyP = (gamma -1.0)*M2*(dredyP*irP - rEP*drrdyP*irP*irP - dkedyP);
-
+        const dfloat TxP = (dredxP*irP - rEP*drrdxP*irP*irP - dkedxP);
+        const dfloat TyP = (dredyP*irP - rEP*drrdyP*irP*irP - dkedyP);
 
         dfloat rflux, ruflux, rvflux, Eflux;
         upwindRoeAveraged(nx, ny, gamma, rrM, uM, vM, pM, rrP, uP, vP, pP, 
@@ -390,8 +389,10 @@ void upwindRoeAveraged(const dfloat nx,
         dfloat T12M = muM*(dudyM+dvdxM);
         dfloat T21M = T12M;
         dfloat T22M = muM*(2.0*dvdyM - beta*(dudxM+dvdyM));
-        dfloat T31M = uM*T11M + vM*T12M + kappa*TxM;
-        dfloat T32M = uM*T12M + vM*T22M + kappa*TyM;
+
+        const dfloat kappaM = muM*gamma/Pr;
+        dfloat T31M = uM*T11M + vM*T12M + kappaM*TxM;
+        dfloat T32M = uM*T12M + vM*T22M + kappaM*TyM;
 
         // add artificial viscosity
         T01M += rmM*drrdxM, T02M += rmM*drrdyM;
@@ -404,8 +405,10 @@ void upwindRoeAveraged(const dfloat nx,
         dfloat T12P = muP*(dudyP+dvdxP);
         dfloat T21P = T12P;
         dfloat T22P = muP*(2.0*dvdyP - beta*(dudxP+dvdyP));
-        dfloat T31P = uP*T11P + vP*T12P + kappa*TxP;
-        dfloat T32P = uP*T12P + vP*T22P + kappa*TyP;
+
+        const dfloat kappaP = muP*gamma/Pr;
+        dfloat T31P = uP*T11P + vP*T12P + kappaP*TxP;
+        dfloat T32P = uP*T12P + vP*T22P + kappaP*TyP;
 
         // add artificial viscosity
         T01P += (bc>0)? 0.0:rmP*drrdxP, T02P += (bc>0)? 0.0:rmP*drrdyP;
@@ -414,18 +417,30 @@ void upwindRoeAveraged(const dfloat nx,
         T31P += (bc>0)? 0.0:rmP*dredxP, T32P += (bc>0)? 0.0:rmP*dredyP; 
 
         // BR1 Riemann Solver
-        rflux  -= 0.5*(nx*(T01P+T01M) + ny*(T02P+T02M)); 
-        ruflux -= 0.5*(nx*(T11P+T11M) + ny*(T12P+T12M)); 
-        rvflux -= 0.5*(nx*(T21P+T21M) + ny*(T22P+T22M)); 
-        Eflux  -= 0.5*(nx*(T31P+T31M) + ny*(T32P+T32M)); 
+        rflux  -= 0.5*(nx*(T01P+T01M) + ny*(T02P+T02M) ); 
+        ruflux -= 0.5*(nx*(T11P+T11M) + ny*(T12P+T12M) ); 
+        rvflux -= 0.5*(nx*(T21P+T21M) + ny*(T22P+T22M) ); 
+        Eflux  -= 0.5*(nx*(T31P+T31M) + ny*(T32P+T32M) ); 
+
+        // const dfloat beta_ldg = 0.5; 
+        // const dfloat betaL = 0.5 - beta_ldg; 
+        // const dfloat betaR = 0.5 + beta_ldg; 
+        // const dfloat taul = 0.0;
+
+        // // LDG Riemann Solver
+        // rflux  -= ( nx*(betaL*T01M+betaR*T01P)+ny*(betaL*T02M+betaR*T02P)+taul*(rrM-rrP)); 
+        // ruflux -= ( nx*(betaL*T11M+betaR*T11P)+ny*(betaL*T12M+betaR*T12P)+taul*(ruM-ruP)); 
+        // rvflux -= ( nx*(betaL*T21M+betaR*T21P)+ny*(betaL*T22M+betaR*T22P)+taul*(rvM-rvP)); 
+        // Eflux  -= ( nx*(betaL*T31M+betaR*T31P)+ny*(betaL*T32M+betaR*T32P)+taul*(rEM-rEP)); 
+
 
         // evaluate "flux" terms
         const dfloat sc = invJ*sJ;
 
-        s_rflux [n] = sc*(-rflux );
-        s_ruflux[n] = sc*(-ruflux);
-        s_rvflux[n] = sc*(-rvflux);
-        s_Eflux [n] = sc*(-Eflux);
+        s_rflux [n] = sc*rflux;
+        s_ruflux[n] = sc*ruflux;
+        s_rvflux[n] = sc*rvflux;
+        s_Eflux [n] = sc*Eflux;
       }
     }
 
@@ -447,11 +462,12 @@ void upwindRoeAveraged(const dfloat nx,
             LEflux  += L*s_Eflux[m];
           }
 
+        // move to rhs
         const dlong base = e*p_Np*p_Nfields+n;
-        rhsq[base+0*p_Np] += Lrflux;
-        rhsq[base+1*p_Np] += Lruflux;
-        rhsq[base+2*p_Np] += Lrvflux;
-        rhsq[base+3*p_Np] += LEflux;
+        rhsq[base+0*p_Np] -= Lrflux;
+        rhsq[base+1*p_Np] -= Lruflux;
+        rhsq[base+2*p_Np] -= Lrvflux;
+        rhsq[base+3*p_Np] -= LEflux;
       }
     }
   }

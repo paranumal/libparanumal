@@ -32,12 +32,12 @@ SOFTWARE.
 // #define p_WBAR 0.0
 // #define p_PBAR 6.25
 
-// Mach = 0.6
-#define p_RBAR 5.6000000
-#define p_UBAR 1.0
-#define p_VBAR 0.0
-#define p_WBAR 0.0
-#define p_PBAR 11.111111
+// // Mach = 0.6
+// #define p_RBAR 5.6000000
+// #define p_UBAR 1.0
+// #define p_VBAR 0.0
+// #define p_WBAR 0.0
+// #define p_PBAR 11.111111
 
 // // Mach = 2.0
 // #define p_RBAR 11.2
@@ -53,8 +53,15 @@ SOFTWARE.
 // #define p_WBAR 0.0
 // #define p_PBAR 3.555555555555555
 
+// Ma = 0.8
+#define p_RBAR 1.4
+#define p_UBAR 1.0
+#define p_VBAR 0.0
+#define p_WBAR 0.0
+#define p_PBAR 1.5625
 
 
+#define p_TBAR 1.00000
 /**************************************************************************/
 
 

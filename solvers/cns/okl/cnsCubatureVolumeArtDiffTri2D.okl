@@ -131,8 +131,8 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
       const dfloat CV    = pCoeff[p_CVID]; // CV
       const dfloat CP    = pCoeff[p_CPID]; // CP
       const dfloat Pr    = pCoeff[p_PRID]; // Prandtl Number
-      const dfloat kappa = pCoeff[p_KAID]; // Thermal Conductivity
-      const dfloat M2    = pCoeff[p_M2ID]; // Mach Square
+      // const dfloat kappa = pCoeff[p_KAID]; // Thermal Conductivity
+      // const dfloat M2    = pCoeff[p_M2ID]; // Mach Square
             dfloat mu    = pCoeff[p_MUID]; // Bulk viscosity
       //interpolate to cubature
       dfloat rr = 0., ru = 0., rv = 0., rE = 0.;
@@ -199,9 +199,12 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
 
       }
 
+      // // derivative of temperature
+      // const dfloat Tx = (gamma-1.0)*M2*(dredx*ir - rE*drrdx*ir*ir - dkedx);      
+      // const dfloat Ty = (gamma-1.0)*M2*(dredy*ir - rE*drrdy*ir*ir - dkedy);      
       // derivative of temperature
-      const dfloat Tx = (gamma-1.0)*M2*(dredx*ir - rE*drrdx*ir*ir - dkedx);      
-      const dfloat Ty = (gamma-1.0)*M2*(dredy*ir - rE*drrdy*ir*ir - dkedy);      
+      const dfloat Tx = (dredx*ir - rE*drrdx*ir*ir - dkedx);      
+      const dfloat Ty = (dredy*ir - rE*drrdy*ir*ir - dkedy);      
       // stress tensor
       const dfloat T11 = mu*( 2.0*dudx - 2.0*(dudx+dvdy)/3.0);
       const dfloat T12 = mu*(dudy+dvdx);
@@ -219,7 +222,8 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
       s_F[2][n] = -(rv*u)   + T12 + rm*drvdx;
       s_G[2][n] = -(rv*v+p) + T22 + rm*drvdy;
 
-      // // // F3 = mu*(u*T11+v*T12) - (uE+up), G2 = mu*(u*T12+v*T22) - (vE+vp)
+      // F3 = mu*(u*T11+v*T12) - (uE+up), G2 = mu*(u*T12+v*T22) - (vE+vp)
+      const dfloat kappa = (mu*gamma/Pr); 
       s_F[3][n] = -u*(rE+p) + (u*T11 + v*T12 ) + kappa*Tx + rm*dredx;
       s_G[3][n] = -v*(rE+p) + (u*T12 + v*T22 ) + kappa*Ty + rm*dredy;
     }
