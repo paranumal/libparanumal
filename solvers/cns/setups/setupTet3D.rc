@@ -17,16 +17,16 @@ data/cnsUniform3D.h
 6
 
 [BOX NX]
-10			
+20			
 
 [BOX NY]
-10
+20
 
 [BOX NZ]
-10
+20
 
 [BOX BOUNDARY FLAG]
-1
+12
 
 [POLYNOMIAL DEGREE]
 3
@@ -56,7 +56,7 @@ TRUE
 
 # // Mach number is needed for NONDIM=TRUE
 [MACH NUMBER]
-0.8
+2.0
 
 # Reynolds number is needed for NONDIM = TRUE
 [REYNOLDS NUMBER]
@@ -87,7 +87,8 @@ FALSE
 
 #Can be COLLOCATION or CUBATURE
 [ADVECTION TYPE]
-CUBATURE
+#CUBATURE
+COLLOCATION
 
 [TIME INTEGRATOR]
 DOPRI5
@@ -100,11 +101,11 @@ DOPRI5
 0
 
 [FINAL TIME]
-1
+10
 
 #*******************[OUTPUT PROPERTIES]*******************#
 [OUTPUT INTERVAL]
-0.1
+1.0
 
 [OUTPUT TO FILE]
 TRUE

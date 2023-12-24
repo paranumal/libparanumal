@@ -39,12 +39,12 @@ SOFTWARE.
 // #define p_WBAR 0.0
 // #define p_PBAR 11.111111
 
-// // Mach = 2.0
-// #define p_RBAR 11.2
-// #define p_UBAR 1.0
-// #define p_VBAR 0.0
-// #define p_WBAR 0.0
-// #define p_PBAR 2.0
+// Mach = 2.0
+#define p_RBAR 11.2
+#define p_UBAR 1.0
+#define p_VBAR 0.0
+#define p_WBAR 0.0
+#define p_PBAR 2.0
 
 // // Mach 3
 // #define p_RBAR 44.8
@@ -53,12 +53,19 @@ SOFTWARE.
 // #define p_WBAR 0.0
 // #define p_PBAR 3.555555555555555
 
-// Ma = 0.8
-#define p_RBAR 1.4
-#define p_UBAR 1.0
-#define p_VBAR 0.0
-#define p_WBAR 0.0
-#define p_PBAR 1.5625
+// // Ma = 0.8
+// #define p_RBAR 1.4
+// #define p_UBAR 1.0
+// #define p_VBAR 0.0
+// #define p_WBAR 0.0
+// #define p_PBAR 1.5625
+
+// // Ma = 0.1
+// #define p_RBAR 1.4
+// #define p_UBAR 1.0
+// #define p_VBAR 0.0
+// #define p_WBAR 0.0
+// #define p_PBAR 100
 
 
 #define p_TBAR 1.00000
@@ -96,6 +103,47 @@ const dfloat PR2  = pM+0.5*UN/AR*(UN+sqrt(UN*UN+4.0*AR*(pM+BR)));               
   *(fy) = 0.0;                                      \
   *(fz) = 0.0;                                      \
 }
+
+
+/* ************************************************************************ */
+#define cnsDiffusionBoundaryConditions3D(bc, gamma, R, CP, CV, mu, t, x, y, z, nx, ny, nz, \
+                                  rM, uM, vM, wM, pM, uxM, uyM, uzM, vxM, vyM, vzM, wxM, wyM, wzM, \
+                                  rB, uB, vB, wB, pB, uxB, uyB, uzB, vxB, vyB, vzB, wxB, wyB, wzB) \
+{                                      \
+const dfloat uin  = uM*nx + vM*ny;                                           \
+const dfloat cin  = sqrt(gamma*pM/rM);                                       \
+const dfloat min  = fabs(uin/cin);                                           \
+  if(bc==11){                                                                \
+    *(rB) = rM;                                                              \
+    *(uB) = 0.0;                                                             \
+    *(vB) = 0.0;                                                             \
+    *(wB) = 0.0;                                                             \
+    *(pB) = (gamma-1.0)*rM*CV*p_TBAR;                                        \
+    *(uxB) = uxM;*(uyB) = uyM; *(uzB) = uzM;                                 \
+    *(vxB) = vxM;*(vyB) = vyM; *(vzB) = vzM;                                 \
+    *(wxB) = wxM;*(wyB) = wyM; *(wzB) = wzM;                                 \
+  } else if(bc==12){                                                         \
+    *(rB) = rM;                                                              \
+    *(uB) = 0.0;                                                             \
+    *(vB) = 0.0;                                                             \
+    *(wB) = 0.0;                                                             \
+    *(pB) = pM + 0.5*(gamma -1.0)*rM*(uM*uM + vM*vM + wM*wM);                \                                                              \
+    *(uxB) = 0.0; *(uyB) = 0.0;*(vxB) = 0.0; *(vyB) = 0.0;                   \
+  }else if(bc==13){                                                          \
+    *(rB) = rM;                                                              \
+    *(uB) = uM - (nx*uM+ny*vM)*nx;                                           \
+    *(vB) = vM - (nx*uM+ny*vM)*ny;                                           \
+    *(pB) = pM;                                                              \                                                              \
+    *(uxB) = uxM;*(uyB) = uyM; *(vxB) = vxM; *(vyB) = vyM;                   \
+  }else{                                                                     \
+    *(rB) = rM;                                                              \
+    *(uB) = uM;                                                              \
+    *(vB) = vM;                                                              \
+    *(pB) = pM;                                                               \
+    *(uxB) = uxM;*(uyB) = uyM; *(vxB) = vxM; *(vyB) = vyM;                   \
+  }\
+}
+
 
 
 /*

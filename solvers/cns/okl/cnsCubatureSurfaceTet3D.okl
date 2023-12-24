@@ -200,7 +200,6 @@ void upwindRoeAveraged(const dfloat nx,
         // interpolate to surface integration nodes
         for(int n=0;n<p_cubMaxNodes1;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
           if(n<p_intNfp){
-
              // indices of negative and positive traces of face node
             const dfloat gamma  = pCoeff[p_GMID]; // gamma
             const dfloat R      = pCoeff[p_RRID]; 
@@ -217,8 +216,8 @@ void upwindRoeAveraged(const dfloat nx,
             const dfloat sJ   = sgeo[sid+p_SJID];
             const dfloat invJ = sgeo[sid+p_IJID];
 
-            dfloat rM  = 0., ruM = 0., rvM = 0., rwM = 0., EM = 0.;
-            dfloat rP  = 0., ruP = 0., rvP = 0., rwP = 0., EP = 0.;
+            dfloat rrM  = 0., ruM = 0., rvM = 0., rwM = 0., rEM = 0.;
+            dfloat rrP  = 0., ruP = 0., rvP = 0., rwP = 0., rEP = 0.;
             dfloat dudxM = 0., dudyM = 0., dudzM = 0.;
             dfloat dvdxM = 0., dvdyM = 0., dvdzM = 0.;
             dfloat dwdxM = 0., dwdyM = 0., dwdzM = 0.;
@@ -231,17 +230,17 @@ void upwindRoeAveraged(const dfloat nx,
               for(int m=0;m<p_Nfp;++m){
                 const dfloat iInm = intInterp[ (n+face*p_intNfp) + m*p_Nfaces*p_intNfp];
                 const int fm = m;
-                rM  += iInm*s_qM[0][fm];
-                ruM += iInm*s_qM[1][fm];
-                rvM += iInm*s_qM[2][fm];
-                rwM += iInm*s_qM[3][fm];
-                EM  += iInm*s_qM[4][fm];
+                rrM  += iInm*s_qM[0][fm];
+                ruM  += iInm*s_qM[1][fm];
+                rvM  += iInm*s_qM[2][fm];
+                rwM  += iInm*s_qM[3][fm];
+                rEM  += iInm*s_qM[4][fm];
 
-                rP  += iInm*s_qP[0][fm];
-                ruP += iInm*s_qP[1][fm];
-                rvP += iInm*s_qP[2][fm];
-                rwP += iInm*s_qP[3][fm];
-                EP  += iInm*s_qP[4][fm];
+                rrP  += iInm*s_qP[0][fm];
+                ruP  += iInm*s_qP[1][fm];
+                rvP  += iInm*s_qP[2][fm];
+                rwP  += iInm*s_qP[3][fm];
+                rEP  += iInm*s_qP[4][fm];
 
                 dudxM += iInm*s_gradqM[0][fm];
                 dudyM += iInm*s_gradqM[1][fm];
@@ -264,26 +263,27 @@ void upwindRoeAveraged(const dfloat nx,
                 dwdzP += iInm*s_gradqP[8][fm];
               }
 
-            const dfloat uM = ruM/rM;
-            const dfloat vM = rvM/rM;
-            const dfloat wM = rwM/rM;
-            const dfloat pM = (gamma-1)*(EM-0.5*rM*(uM*uM+vM*vM+wM*wM));
+            const dfloat uM = ruM/rrM;
+            const dfloat vM = rvM/rrM;
+            const dfloat wM = rwM/rrM;
+            const dfloat pM = (gamma-1)*(rEM-0.5*rrM*(uM*uM+vM*vM+wM*wM));
 
-            dfloat uP = ruP/rP;
-            dfloat vP = rvP/rP;
-            dfloat wP = rwP/rP;
-            dfloat pP = (gamma-1)*(EP-0.5*rP*(uP*uP+vP*vP+wP*wP));
+            dfloat uP = ruP/rrP;
+            dfloat vP = rvP/rrP;
+            dfloat wP = rwP/rrP;
+            dfloat pP = (gamma-1)*(rEP-0.5*rrP*(uP*uP+vP*vP+wP*wP));
 
             // apply boundary condition
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
-              cnsBoundaryConditions3D(bc,gamma, R, CP, CV, mu,
+                const dlong idM = e*p_intNfpNfaces + n; 
+               cnsBoundaryConditions3D(bc, gamma, R, CP, CV, mu,
                                       time, intx[idM], inty[idM], intz[idM], nx, ny, nz,
-                                      rM, uM, vM, wM, pM,
+                                      rrM, uM, vM, wM, pM,
                                       dudxM, dudyM, dudzM,
                                       dvdxM, dvdyM, dvdzM,
                                       dwdxM, dwdyM, dwdzM,
-                                      &rP, &uP, &vP, &wP, &pP,
+                                      &rrP, &uP, &vP, &wP, &pP,
                                       &dudxP, &dudyP, &dudzP,
                                       &dvdxP, &dvdyP, &dvdzP,
                                       &dwdxP, &dwdyP, &dwdzP);
@@ -291,7 +291,7 @@ void upwindRoeAveraged(const dfloat nx,
 
             dfloat rflux, ruflux, rvflux, rwflux, Eflux;
             upwindRoeAveraged(nx, ny, nz, gamma,
-                              rM, uM, vM, wM, pM, rP, uP, vP, wP, pP,
+                              rrM, uM, vM, wM, pM, rrP, uP, vP, wP, pP,
                               &rflux, &ruflux, &rvflux, &rwflux, &Eflux);
 
             const dfloat T11M = mu*(2.0*dudxM - 2.0*(dudxM+dvdyM+dwdzM)/3.0);

@@ -36,9 +36,8 @@ SOFTWARE.
                                     @restrict const  dfloat *  x,
                                     @restrict const  dfloat *  y,
                                     @restrict const  dfloat *  z,
+                                    @restrict const  dfloat * pCoeff,
                                     const dfloat t,
-                                    const dfloat mu,
-                                    const dfloat gamma,
                                     @restrict const  dfloat *  q,
                                     @restrict const  dfloat *  gradq,
                                     @restrict dfloat *  rhsq){
@@ -58,19 +57,22 @@ SOFTWARE.
         const dlong  qbase = e*p_Np*p_Nfields + n;
         const dlong id = e*p_Np*p_Ngrads + n;
 
-        const dfloat r  = q[qbase+0*p_Np];
+        const dfloat gamma = pCoeff[p_GMID]; // gamma
+        const dfloat mu    = pCoeff[p_MUID]; // bulk viscosity
+
+        const dfloat rr = q[qbase+0*p_Np];
         const dfloat ru = q[qbase+1*p_Np];
         const dfloat rv = q[qbase+2*p_Np];
-        const dfloat E  = q[qbase+3*p_Np];
+        const dfloat rE = q[qbase+3*p_Np];
 
         // primitive variables (velocity)
-        const dfloat u = ru/r, v = rv/r;
-        const dfloat p = (gamma-1)*(E-0.5*r*(u*u+v*v));
+        const dfloat u = ru/rr, v = rv/rr;
+        const dfloat p = (gamma-1)*(rE-0.5*rr*(u*u+v*v));
 
-        s_q[0][n] = r;
+        s_q[0][n] = rr;
         s_q[1][n] = ru;
         s_q[2][n] = rv;
-        s_q[3][n] = E;
+        s_q[3][n] = rE;
 
         s_gradq[0][n] = gradq[id+0*p_Np];
         s_gradq[1][n] = gradq[id+1*p_Np];
@@ -79,24 +81,33 @@ SOFTWARE.
 
         //Body force contribution
         fx = 0.0; fy = 0.0;
-        cnsBodyForce2D(gamma, mu, t, x[e*p_Np+n], y[e*p_Np+n], r, u, v, p, &fx, &fy);
-        fx *= r; fy *= r;
+        cnsBodyForce2D(gamma, mu, t, x[e*p_Np+n], y[e*p_Np+n], rr, u, v, p, &fx, &fy);
+        // multiplybody forces with density
+        fx *= rr; 
+        fy *= rr;
       }
     }
 
 
     for(int n=0;n<p_cubNp;++n;@inner(0)){
+      const dfloat gamma = pCoeff[p_GMID]; // gamma
+      const dfloat CV    = pCoeff[p_CVID]; // CV
+      const dfloat CP    = pCoeff[p_CPID]; // CP
+      const dfloat Pr    = pCoeff[p_PRID]; // Prandtl Number
+      const dfloat mu    = pCoeff[p_MUID]; // Prandtl Number
+      
       //interpolate to cubature
-      dfloat r = 0., ru = 0., rv = 0., E = 0.;
+      dfloat rr = 0., ru = 0., rv = 0., rE = 0.;
       dfloat dudx = 0., dudy = 0.;
       dfloat dvdx = 0., dvdy = 0.;
       #pragma unroll p_Np
         for(int i=0;i<p_Np;++i){
           const dfloat cIni = cubInterp[n+i*p_cubNp];
-          r  += cIni*s_q[0][i];
-          ru += cIni*s_q[1][i];
-          rv += cIni*s_q[2][i];
-          E  += cIni*s_q[3][i];
+          rr  += cIni*s_q[0][i];
+          ru  += cIni*s_q[1][i];
+          rv  += cIni*s_q[2][i];
+          rE  += cIni*s_q[3][i];
+          
           dudx += cIni*s_gradq[0][i];
           dudy += cIni*s_gradq[1][i];
           dvdx += cIni*s_gradq[2][i];
@@ -104,8 +115,8 @@ SOFTWARE.
         }
 
       // primitive variables
-      const dfloat u = ru/r, v = rv/r;
-      const dfloat p  = (gamma-1)*(E-0.5*r*(u*u+v*v));
+      const dfloat u = ru/rr, v = rv/rr;
+      const dfloat p = (gamma-1)*(rE-0.5*rr*(u*u+v*v));
 
       const dfloat T11 = 2.0*dudx - 2.0*(dudx+dvdy)/3.0;
       const dfloat T12 = dudy+dvdx;
@@ -124,8 +135,8 @@ SOFTWARE.
       s_G[2][n] = -(rv*v+p) + mu*T22;
 
       // F3 = mu*(u*T11+v*T12) - (uE+up), G2 = mu*(u*T12+v*T22) - (vE+vp)
-      s_F[3][n] = -u*(E+p) + mu*(u*T11 + v*T12);
-      s_G[3][n] = -v*(E+p) + mu*(u*T12 + v*T22);
+      s_F[3][n] = -u*(rE+p) + mu*(u*T11 + v*T12);
+      s_G[3][n] = -v*(rE+p) + mu*(u*T12 + v*T22);
     }
 
 

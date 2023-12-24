@@ -27,7 +27,7 @@ SOFTWARE.
 #include "cns.hpp"
 
 void cns_t::setupNoStab(properties_t & kernelInfo){
-  // needed gradients for velocity only 
+  // Needed gradients for velocity only 
   Ngrads = mesh.dim*mesh.dim;
 
   // setup trace halo exchange 
@@ -44,49 +44,41 @@ void cns_t::setupNoStab(properties_t & kernelInfo){
   std::string oklFileSuffix = ".okl";
   std::string fileName, kernelName;
 
+  // kernels from volume file Add isothermal version as well AK. 
+  fileName   = oklFilePrefix + "cnsGradVolume" + suffix + oklFileSuffix;
+  kernelName = "cnsGradVolume" + suffix; 
+  gradVolumeKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
+
+  // kernels from surface file
+  fileName   = oklFilePrefix + "cnsGradSurface" + suffix + oklFileSuffix;
+  kernelName = "cnsGradSurface" + suffix; // gradient of all conservative fields
+  gradSurfaceKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
+
   if(cubature){
-    // kernels from volume file Add isothermal version as well AK. 
-    fileName   = oklFilePrefix + "cnsGradVolume" + suffix + oklFileSuffix;
-    kernelName = "cnsGradVolume" + suffix; 
-    gradVolumeKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
+    // kernels from volume file
+    fileName   = oklFilePrefix + "cnsCubatureVolume" + suffix + oklFileSuffix;
+    kernelName = "cnsCubatureVolume" + suffix;
+    cubatureVolumeKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
+
 
     // kernels from surface file
-    fileName   = oklFilePrefix + "cnsGradSurface" + suffix + oklFileSuffix;
-    kernelName = "cnsGradSurface" + suffix; // gradient of all conservative fields
-    gradSurfaceKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
+    fileName   = oklFilePrefix + "cnsCubatureSurface" + suffix + oklFileSuffix;
+    kernelName = "cnsCubatureSurface" + suffix;
+    cubatureSurfaceKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
+  }else{
+
+     // kernels from volume file
+    fileName   = oklFilePrefix + "cnsVolume" + suffix + oklFileSuffix;
+    kernelName = "cnsVolume" + suffix;
+    volumeKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
+
+
+    // kernels from surface file
+    fileName   = oklFilePrefix + "cnsSurface" + suffix + oklFileSuffix;
+    kernelName = "cnsSurface" + suffix;
+    surfaceKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
 
     
-
-    if(settings.compareSetting("ARTDIFF TYPE", "LAPLACE")){
-      // kernels from volume file
-      fileName   = oklFilePrefix + "cnsCubatureVolume" + suffix + oklFileSuffix;
-      kernelName = "cnsCubatureVolume" + suffix;
-      cubatureVolumeKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
-
-
-      // kernels from surface file
-      fileName   = oklFilePrefix + "cnsCubatureSurface" + suffix + oklFileSuffix;
-      kernelName = "cnsCubatureSurface" + suffix;
-      cubatureSurfaceKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
-
-
-    }
-   // else if(settings.compareSetting("ARTDIFF TYPE", "PHYSICAL")){
-   //  // kernels from volume file
-   //    fileName   = oklFilePrefix + "cnsCubatureVolumeArtDiff" + suffix + oklFileSuffix;
-   //    kernelName = "cnsCubatureVolumeArtificialDiffsuionPhysical" + suffix;
-   //    cubatureVolumeKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
-
-
-   //    // kernels from surface file
-   //    fileName   = oklFilePrefix + "cnsCubatureSurfaceArtDiff" + suffix + oklFileSuffix;
-   //    kernelName = "cnsCubatureSurfaceArtificialDiffusionPhysical" + suffix;
-   //    cubatureSurfaceKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
-   //  }else{
-   //    LIBP_FORCE_ABORT("Artificial Diffusion Type is not found");      
-   //  }
-   // }else{
-   //   LIBP_FORCE_ABORT("Artificial Diffusion is only applied for cubature integration yet!");  
   }
 
 

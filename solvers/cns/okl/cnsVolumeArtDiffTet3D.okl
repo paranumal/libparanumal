@@ -1,0 +1,265 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+#define RMIN 0.05
+#define PMIN 0.05
+#define ALPHA 100
+
+#define POSITIVITY 1
+
+// Regularization of rho / p  (cannot be smaller than rmin / pmin)
+dfloat LMAX(const dfloat x, const dfloat alpha){
+  dfloat xlim = x*(atan(alpha*x)/M_PI + 0.5) - atan(alpha)/M_PI + 0.5;
+  return xlim;
+}
+
+// Density / pressure sensor for gradients...
+dfloat SMOOTH(const dfloat x, const dfloat alpha){
+ dfloat dx = atan(alpha*x)/M_PI + alpha*x/(M_PI*(alpha*alpha*x*x + 1.0)) + 0.5;
+  return dx; 
+}
+
+// Compressible Navier-Stokes
+@kernel void cnsVolumeArtificialDiffsuionTet3D(const dlong Nelements,
+                                  @restrict const  dfloat *  vgeo,
+                                  @restrict const  dfloat *  D,
+                                  @restrict const  dfloat *  x,
+                                  @restrict const  dfloat *  y,
+                                  @restrict const  dfloat *  z,
+                                  @restrict const  dfloat * pCoeff,
+                                  const dfloat t,
+                                  @restrict const  dfloat *  muArtDiff,
+                                  @restrict const  dfloat *  q,
+                                  @restrict const  dfloat *  gradq,
+                                  @restrict dfloat *  rhsq){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_F[p_Nfields][p_Np];
+    @shared dfloat s_G[p_Nfields][p_Np];
+    @shared dfloat s_H[p_Nfields][p_Np];
+
+    @exclusive dfloat fx, fy, fz;
+
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      const dfloat gamma = pCoeff[p_GMID]; // gamma
+      const dfloat Pr    = pCoeff[p_PRID]; // Prandtl Number
+            dfloat mu    = pCoeff[p_MUID]; // bulk viscosity
+      // hold artificial viscosity now
+      const dfloat amu  = muArtDiff[e*p_Np + n]; 
+
+      // prefetch geometric factors (constant on triangle)
+      const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+      const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+      const dfloat drdz = vgeo[e*p_Nvgeo + p_RZID];
+
+      const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+      const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+      const dfloat dsdz = vgeo[e*p_Nvgeo + p_SZID];
+      
+      const dfloat dtdx = vgeo[e*p_Nvgeo + p_TXID];
+      const dfloat dtdy = vgeo[e*p_Nvgeo + p_TYID];
+      const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
+
+       // conserved variables
+      const dlong  qbase = e*p_Np*p_Nfields + n;
+            dfloat rr = q[qbase+0*p_Np];
+            dfloat ru = q[qbase+1*p_Np];
+            dfloat rv = q[qbase+2*p_Np];
+            dfloat rw = q[qbase+3*p_Np];
+            dfloat rE = q[qbase+4*p_Np];
+
+
+      dfloat dr = 1.0; 
+      #if POSITIVITY
+        // check positivity on density
+        rr          = RMIN + LMAX(rr-RMIN, ALPHA); 
+        dr         = SMOOTH(rr-RMIN, ALPHA); 
+      #endif
+
+      // primitive variables
+      const dfloat ir  = 1.0/rr; 
+      const dfloat u = ru*ir, v = rv*ir,  w = rw*ir;
+            dfloat p = (gamma-1)*(rE-0.5*rr*(u*u + v*v + w*w));
+
+      // Positivity Check
+      dfloat dp = 1.0; 
+      #if POSITIVITY
+        p        = PMIN + LMAX(p-PMIN, ALPHA); 
+        // dp       = SMOOTH(p-PMIN, ALPHA); 
+        rE       = p/(gamma-1.0) + 0.5*rr*(u*u + v*v + w*w); 
+      #endif
+
+      // gradients
+      const dlong id = e*p_Np*p_Ngrads + n;
+      dfloat drrdx = dr*gradq[id+0*p_Np];
+      dfloat drrdy = dr*gradq[id+1*p_Np];     
+      dfloat drrdz = dr*gradq[id+2*p_Np];     
+      
+      dfloat drudx =    gradq[id+3*p_Np];
+      dfloat drudy =    gradq[id+4*p_Np];
+      dfloat drudz =    gradq[id+5*p_Np];
+
+      dfloat drvdx =    gradq[id +6*p_Np];
+      dfloat drvdy =    gradq[id +7*p_Np];
+      dfloat drvdz =    gradq[id +8*p_Np];
+      
+      dfloat drwdx =    gradq[id+ 9*p_Np];
+      dfloat drwdy =    gradq[id+10*p_Np];
+      dfloat drwdz =    gradq[id+11*p_Np];
+
+      dfloat dredx =    gradq[id+12*p_Np];
+      dfloat dredy =    gradq[id+13*p_Np];
+      dfloat dredz =    gradq[id+14*p_Np];
+      
+
+      fx = 0.0; fy = 0.0, fz = 0.0;
+      cnsBodyForce3D(gamma, mu, t, x[e*p_Np+n], y[e*p_Np+n], z[e*p_Np+n], rr, u, v, w, p, &fx, &fy, &fz);
+      // multiplybody forces with density
+      fx *= rr; fy *= rr, fz *= rr;
+
+       // Find derivative of primitives
+      const dfloat dudx  = (drudx - drrdx*u)*ir;
+      const dfloat dvdx  = (drvdx - drrdx*v)*ir;
+      const dfloat dwdx  = (drwdx - drrdx*w)*ir;
+      
+      const dfloat dudy  = (drudy - drrdy*u)*ir;
+      const dfloat dvdy  = (drvdy - drrdy*v)*ir;
+      const dfloat dwdy  = (drwdy - drrdy*w)*ir;
+
+      const dfloat dudz  = (drudz - drrdz*u)*ir;
+      const dfloat dvdz  = (drvdz - drrdz*v)*ir;
+      const dfloat dwdz  = (drwdz - drrdz*w)*ir;
+
+      if(p_viscType==2){ // Sutherland
+        //nondimensional temp =  p/(\rho * R)/Tref
+        const dfloat R    = pCoeff[p_RRID]; 
+        const dfloat exp  = pCoeff[p_EXID]; // Exponential term
+        const dfloat tr   = pCoeff[p_TRID]; // 1/Tref 
+        const dfloat ts   = pCoeff[p_TSID]; // Ts/Tref
+        const dfloat cs   = pCoeff[p_CSID]; // precomuted value to simlify
+        const dfloat tn   = p*ir*tr/R; // non-dimensional temp
+        mu  = (tn > ts) ? (mu*pow(tn, exp)*(1.0+ts)/(tn + ts)) : mu*tn*cs;  
+        // mu  = mu*pow(tn, exp)*(1.0+ts)/(tn + ts);  
+      }else if(p_viscType==3){ // Powerlaw
+
+      }
+
+      // Temperature gradients
+      const dfloat Tx = (dredx*ir - rE*drrdx*ir*ir - (u*dudx + v*dvdx + w*dwdx));      
+      const dfloat Ty = (dredy*ir - rE*drrdy*ir*ir - (u*dudy + v*dvdy + w*dwdy));
+      const dfloat Tz = (dredz*ir - rE*drrdz*ir*ir - (u*dudz + v*dvdz + w*dwdz));
+
+      const dfloat T11 = mu*(2.0*dudx - 2.0*(dudx+dvdy+dwdz)/3.0);
+      const dfloat T12 = mu*(dudy+dvdx);
+      const dfloat T13 = mu*(dudz+dwdx);
+      const dfloat T22 = mu*(2.0*dvdy - 2.0*(dudx+dvdy+dwdz)/3.0);
+      const dfloat T23 = mu*(dvdz+dwdy);
+      const dfloat T33 = mu*(2.0*dwdz - 2.0*(dudx+dvdy+dwdz)/3.0);
+
+      //  \hat{div} (G*[F;G])
+      {
+        // F0 = ru, G0 = rv
+        const dfloat f = -ru + amu*drrdx;
+        const dfloat g = -rv + amu*drrdy;
+        const dfloat h = -rw + amu*drrdz;
+        s_F[0][n] = drdx*f + drdy*g + drdz*h;
+        s_G[0][n] = dsdx*f + dsdy*g + dsdz*h;
+        s_H[0][n] = dtdx*f + dtdy*g + dtdz*h;
+      }
+
+      {
+        // F1 = mu*T11 - (ru^2+p), G1 = mu*T12 - (rvu), H1 = mu*T13 - (ruw)
+        const dfloat f = mu*T11-(ru*u+p) + amu*drudx;
+        const dfloat g = mu*T12-(ru*v)   + amu*drudy;
+        const dfloat h = mu*T13-(ru*w)   + amu*drudz;
+        s_F[1][n] = drdx*f + drdy*g + drdz*h;
+        s_G[1][n] = dsdx*f + dsdy*g + dsdz*h;
+        s_H[1][n] = dtdx*f + dtdy*g + dtdz*h;
+
+      }
+
+      {
+        // F2 = mu*T21 - (ruv), G2 = mu*T22 - (rv^2+p), H2 = mu*T23 - (rvw)
+        const dfloat f = mu*T12-(rv*u)   + amu*drvdx;
+        const dfloat g = mu*T22-(rv*v+p) + amu*drvdy;
+        const dfloat h = mu*T23-(rv*w)   + amu*drvdz;
+        s_F[2][n] = drdx*f + drdy*g + drdz*h;
+        s_G[2][n] = dsdx*f + dsdy*g + dsdz*h;
+        s_H[2][n] = dtdx*f + dtdy*g + dtdz*h;
+      }
+
+      {
+        // F3 = mu*T31 - (ruw), G3 = mu*T32 - (rvw), H3 = mu*T33 - (rw^2+p)
+        const dfloat f = mu*T13-(rw*u)  + amu*drwdx;
+        const dfloat g = mu*T23-(rw*v)  + amu*drwdy;
+        const dfloat h = mu*T33-(rw*w+p)+ amu*drwdz;
+        s_F[3][n] = drdx*f + drdy*g + drdz*h;
+        s_G[3][n] = dsdx*f + dsdy*g + dsdz*h;
+        s_H[3][n] = dtdx*f + dtdy*g + dtdz*h;
+      }
+
+      {
+        // F4 = mu*(u*T11+v*T12+w*T13) - (uE+up),
+        // G4 = mu*(u*T12+v*T22+w*T23) - (vE+vp),
+        // H4 = mu*(u*T13+v*T23+w*T33) - (wE+wp)
+        const dfloat kappa = (mu*gamma/Pr); 
+        const dfloat f = mu*(u*T11+v*T12+w*T13)-u*(rE+p) + kappa*Tx + amu*dredx;
+        const dfloat g = mu*(u*T12+v*T22+w*T23)-v*(rE+p) + kappa*Ty + amu*dredy;
+        const dfloat h = mu*(u*T13+v*T23+w*T33)-w*(rE+p) + kappa*Tz + amu*dredz;
+        s_F[4][n] = drdx*f + drdy*g + drdz*h;
+        s_G[4][n] = dsdx*f + dsdy*g + dsdz*h;
+        s_H[4][n] = dtdx*f + dtdy*g + dtdz*h;
+      }
+    }
+
+     
+for(int n=0;n<p_Np;++n;@inner(0)){
+
+      dfloat rhsq0 = 0, rhsq1 = 0, rhsq2 = 0, rhsq3 = 0, rhsq4 = 0;
+
+      for(int i=0;i<p_Np;++i){
+        const dfloat Drni = D[n+i*p_Np+0*p_Np*p_Np];
+        const dfloat Dsni = D[n+i*p_Np+1*p_Np*p_Np];
+        const dfloat Dtni = D[n+i*p_Np+2*p_Np*p_Np];
+
+        rhsq0 += Drni*s_F[0][i]+Dsni*s_G[0][i]+Dtni*s_H[0][i];
+        rhsq1 += Drni*s_F[1][i]+Dsni*s_G[1][i]+Dtni*s_H[1][i];
+        rhsq2 += Drni*s_F[2][i]+Dsni*s_G[2][i]+Dtni*s_H[2][i];
+        rhsq3 += Drni*s_F[3][i]+Dsni*s_G[3][i]+Dtni*s_H[3][i];
+        rhsq4 += Drni*s_F[4][i]+Dsni*s_G[4][i]+Dtni*s_H[4][i];
+      }
+
+      const dlong base = e*p_Np*p_Nfields + n;
+
+      // move to rhs
+      rhsq[base+0*p_Np] = rhsq0;
+      rhsq[base+1*p_Np] = rhsq1+fx;
+      rhsq[base+2*p_Np] = rhsq2+fy;
+      rhsq[base+3*p_Np] = rhsq3+fz;
+      rhsq[base+4*p_Np] = rhsq4;
+    }
+  }
+}

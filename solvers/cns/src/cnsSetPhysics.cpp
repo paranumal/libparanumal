@@ -62,15 +62,6 @@ void cns_t::setupPhysics(properties_t & props){
   settings.getSetting("REFERENCE STATE", stateStr);
   myTokenizer(NrefState, stateStr,  refState,  ',');
 
-  // dfloat rRef =0.0, vRef   = 0.0, pRef = 0.0, tRef = 0.0, mRef = 0.0, lRef = 0.0; 
-  // rRef = refState[0]; 
-  // vRef = refState[1]; 
-  // pRef = refState[2]; 
-  // tRef = refState[3]; 
-  // mRef = refState[4]; 
-  // lRef = refState[5]; 
-
-
   // Set specific gas constant
   if(settings.compareSetting("NONDIMENSIONAL EQUATIONS", "TRUE")){
       settings.getSetting("REYNOLDS NUMBER", Re);    

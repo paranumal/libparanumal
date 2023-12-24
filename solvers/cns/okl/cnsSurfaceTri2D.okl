@@ -101,9 +101,8 @@ void upwindRoeAveraged(const dfloat nx,
                             @restrict const  dfloat *  x,
                             @restrict const  dfloat *  y,
                             @restrict const  dfloat *  z,
+                            @restrict const  dfloat * pCoeff,
                             const dfloat time,
-                            const dfloat mu,
-                            const dfloat gamma,
                             @restrict const  dfloat *  q,
                             @restrict const  dfloat *  gradq,
                             @restrict dfloat *  rhsq){
@@ -123,6 +122,11 @@ void upwindRoeAveraged(const dfloat nx,
         const dlong e = eo + es;
         if(e<Nelements){
           if(n<p_NfacesNfp){
+            const dfloat gamma = pCoeff[p_GMID]; // gamma
+            const dfloat CV    = pCoeff[p_CVID]; // CV
+            const dfloat CP    = pCoeff[p_CPID]; // CP
+            const dfloat Pr    = pCoeff[p_PRID]; // Prandtl Number
+            const dfloat mu    = pCoeff[p_MUID]; // Prandtl Number
             // find face that owns this node
             const int face = n/p_Nfp;
 
@@ -181,7 +185,7 @@ void upwindRoeAveraged(const dfloat nx,
             // apply boundary condition
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
-              cnsBoundaryConditions2D(bc, gamma, mu,
+              cnsBoundaryConditions2D(bc, gamma, R, CP, CV, mu,
                                       time, x[idM], y[idM], nx, ny,
                                       rM, uM, vM, pM, dudxM, dudyM, dvdxM, dvdyM,
                                       &rP, &uP, &vP, &pP, &dudxP, &dudyP, &dvdxP, &dvdyP);

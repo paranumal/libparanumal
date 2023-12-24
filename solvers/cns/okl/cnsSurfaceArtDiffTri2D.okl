@@ -1,0 +1,393 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+#define RMIN 0.05
+#define PMIN 0.05
+#define ALPHA 100
+
+#define POSITIVITY 1
+
+// Regularization of rho / p  (cannot be smaller than rmin / pmin)
+dfloat LMAX(const dfloat x, const dfloat alpha){
+  dfloat xlim = x*(atan(alpha*x)/M_PI + 0.5) - atan(alpha)/M_PI + 0.5;
+  return xlim;
+}
+
+// Density / pressure sensor for gradients...
+dfloat SMOOTH(const dfloat x, const dfloat alpha){
+ dfloat dx = atan(alpha*x)/M_PI + alpha*x/(M_PI*(alpha*alpha*x*x + 1.0)) + 0.5;
+  return dx; 
+}
+
+// Roe averaged Riemann solver
+void upwindRoeAveraged(const dfloat nx,
+                       const dfloat ny,
+                       const dfloat gamma,
+                       const dfloat rM,
+                       const dfloat uM,
+                       const dfloat vM,
+                       const dfloat pM,
+                       const dfloat rP,
+                       const dfloat uP,
+                       const dfloat vP,
+                       const dfloat pP,
+                       dfloat *rflux,
+                       dfloat *ruflux,
+                       dfloat *rvflux,
+                       dfloat *Eflux){
+
+  const dfloat EM = pM/(gamma-1) + 0.5*rM*(uM*uM+vM*vM);
+  const dfloat EP = pP/(gamma-1) + 0.5*rP*(uP*uP+vP*vP);
+  const dfloat HM = (EM+pM)/rM;
+  const dfloat HP = (EP+pP)/rP;
+
+  // Compute Roe average variables
+  const dfloat sqrtrM = sqrt(rM);
+  const dfloat sqrtrP = sqrt(rP);
+
+  const dfloat r = sqrtrM*sqrtrP;
+  const dfloat u = (sqrtrM*uM + sqrtrP*uP)/(sqrtrM + sqrtrP);
+  const dfloat v = (sqrtrM*vM + sqrtrP*vP)/(sqrtrM + sqrtrP);
+  const dfloat H = (sqrtrM*HM + sqrtrP*HP)/(sqrtrM + sqrtrP);
+
+  const dfloat c2 = (gamma-1)*(H-0.5*(u*u+v*v));
+  const dfloat c = sqrt(c2);
+
+  // normal velocity
+  const dfloat qP = nx*uP+ny*vP;
+  const dfloat qM = nx*uM+ny*vM;
+  const dfloat q  = nx*u +ny*v;
+
+  // jump terms
+  const dfloat dp = pP-pM;
+  const dfloat dr = rP-rM;
+  const dfloat du = uP-uM;
+  const dfloat dv = vP-vM;
+  const dfloat dq = qP-qM;
+
+  const dfloat W1 = fabs(q-c) * 0.5*(dp-r*c*dq)/(c2);
+  const dfloat W2 = fabs(q  ) * r;
+  const dfloat W3 = fabs(q+c) * 0.5*(dp+r*c*dq)/(c2);
+  const dfloat W4 = fabs(q  ) * (dr-(dp/c2));
+
+  // Fluxes from traces n.F(uP) and n.F(uM)
+  *rflux  = 0.5*((rP*qP         ) - (rM*qM         ));
+  *ruflux = 0.5*((rP*uP*qP+nx*pP) - (rM*uM*qM+nx*pM));
+  *rvflux = 0.5*((rP*vP*qP+ny*pP) - (rM*vM*qM+ny*pM));
+  *Eflux  = 0.5*((qP*(EP+pP)    ) - (qM*(EM+pM)    ));
+
+  // Roe flux
+  *rflux  -= 0.5*(W1*1.0      + W2*0.0              + W3*1.0      + W4*1.0          );
+  *ruflux -= 0.5*(W1*(u-nx*c) + W2*(du-nx*dq)       + W3*(u+nx*c) + W4*u            );
+  *rvflux -= 0.5*(W1*(v-ny*c) + W2*(dv-ny*dq)       + W3*(v+ny*c) + W4*v            );
+  *Eflux  -= 0.5*(W1*(H- q*c) + W2*(u*du+v*dv-q*dq) + W3*(H+ q*c) + W4*0.5*(u*u+v*v));
+}
+
+
+// batch process elements
+@kernel void cnsSurfaceArtificialDiffusionTri2D(const dlong Nelements,
+                                                @restrict const  dfloat *  sgeo,
+                                                @restrict const  dfloat *  LIFT,
+                                                @restrict const  dlong  *  vmapM,
+                                                @restrict const  dlong  *  vmapP,
+                                                @restrict const  int    *  EToB,
+                                                @restrict const  dfloat *  x,
+                                                @restrict const  dfloat *  y,
+                                                @restrict const  dfloat *  z,
+                                                @restrict const dfloat *pCoeff,
+                                                const dfloat time,
+                                                const dfloat tau,
+                                                @restrict const  dfloat *  aMu,
+                                                @restrict const  dfloat *  q,
+                                                @restrict const  dfloat *  gradq,
+                                                @restrict dfloat *  rhsq){
+  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
+
+    // @shared storage for flux terms
+    @shared dfloat s_rflux [p_NblockS][p_NfacesNfp];
+    @shared dfloat s_ruflux[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_rvflux[p_NblockS][p_NfacesNfp];
+    @shared dfloat s_Eflux [p_NblockS][p_NfacesNfp];
+
+    // for all face nodes of all elements
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
+        const dlong e = eo + es;
+        if(e<Nelements){
+          if(n<p_NfacesNfp){
+              // indices of negative and positive traces of face node
+              const dfloat gamma  = pCoeff[p_GMID]; // gamma
+              const dfloat R      = pCoeff[p_RRID]; 
+              const dfloat CP     = pCoeff[p_CPID]; 
+              const dfloat CV     = pCoeff[p_CVID]; 
+              const dfloat Pr     = pCoeff[p_PRID]; // Prandtl Number
+              // find face that owns this node
+              const int face = n/p_Nfp;
+              // load surface geofactors for this face
+              const dlong sid   = p_Nsgeo*(e*p_Nfaces+face);
+              const dfloat nx   = sgeo[sid+p_NXID];
+              const dfloat ny   = sgeo[sid+p_NYID];
+              const dfloat sJ   = sgeo[sid+p_SJID];
+              const dfloat invJ = sgeo[sid+p_IJID];
+
+              // indices of negative and positive traces of face node
+              const dlong id  = e*p_Nfp*p_Nfaces + n;
+              const dlong idM = vmapM[id];
+              const dlong idP = vmapP[id];
+
+              // load traces
+              const dlong eM = e;
+              const dlong eP = idP/p_Np;
+              const int vidM = idM%p_Np;
+              const int vidP = idP%p_Np;
+              // load artificial diffusion
+              const dfloat amuM = aMu[eM*p_Np+vidM];
+              const dfloat amuP = aMu[eP*p_Np+vidP];
+
+              const dlong qbaseM = eM*p_Np*p_Nfields + vidM;
+              const dlong qbaseP = eP*p_Np*p_Nfields + vidP;
+
+              const dlong sbaseM = eM*p_Np*p_Ngrads + vidM;
+              const dlong sbaseP = eP*p_Np*p_Ngrads + vidP;
+
+              dfloat rrM = q[qbaseM + 0*p_Np];
+              dfloat ruM = q[qbaseM + 1*p_Np];
+              dfloat rvM = q[qbaseM + 2*p_Np];
+              dfloat rEM = q[qbaseM + 3*p_Np];
+              
+              dfloat drM = 1.0; 
+              #if POSITIVITY==1 
+                rrM         = RMIN + LMAX(rrM-RMIN, ALPHA); 
+                drM         = SMOOTH(rrM-RMIN, ALPHA); 
+              #endif
+
+              // Get gradients
+              const dfloat drrdxM = drM*gradq[sbaseM+0*p_Np];
+              const dfloat drrdyM = drM*gradq[sbaseM+1*p_Np];
+              const dfloat drudxM =     gradq[sbaseM+2*p_Np];
+              const dfloat drudyM =     gradq[sbaseM+3*p_Np];
+              const dfloat drvdxM =     gradq[sbaseM+4*p_Np];
+              const dfloat drvdyM =     gradq[sbaseM+5*p_Np];
+              const dfloat dredxM =     gradq[sbaseM+6*p_Np];
+              const dfloat dredyM =     gradq[sbaseM+7*p_Np];
+
+              // Obtain primite varibales
+              const dfloat irM = 1.0/rrM;    
+              const dfloat uM  = ruM*irM, vM  = rvM*irM;
+                    dfloat pM  = (gamma-1)*(rEM - 0.5*rrM*(uM*uM+vM*vM));
+             
+              // Limit pressure
+              dfloat dpM = 1.0; 
+              #if POSITIVITY==1 
+                // Limit and smooth pressure
+                pM          = PMIN + LMAX(pM-PMIN, ALPHA); 
+                dpM         = SMOOTH(pM-PMIN, ALPHA); 
+                // reconstruct energy accordingly
+                rEM = pM/(gamma-1.0) + 0.5f*rrM*(uM*uM+vM*vM); 
+              #endif
+              // Derivative of velocities
+              const dfloat dudxM = (drudxM - drrdxM*uM)*irM;
+              const dfloat dvdxM = (drvdxM - drrdxM*vM)*irM;
+              const dfloat dudyM = (drudyM - drrdyM*uM)*irM;
+              const dfloat dvdyM = (drvdyM - drrdyM*vM)*irM;
+              // derivative of energy term
+              // const dfloat dedxM = (dredxM - drrdxM*rEM*irM)*irM;
+              // const dfloat dedyM = (dredyM - drrdyM*rEM*irM)*irM;
+              // derivative of kinetic energy
+              const dfloat dkedxM = (uM*dudxM + vM*dvdxM);
+              const dfloat dkedyM = (uM*dudyM + vM*dvdyM);
+
+              
+              // Get conservative fields
+              dfloat rrP  = q[qbaseP + 0*p_Np];
+              dfloat ruP  = q[qbaseP + 1*p_Np];
+              dfloat rvP  = q[qbaseP + 2*p_Np];
+              dfloat rEP  = q[qbaseP + 3*p_Np];
+
+              // limit density
+              dfloat drP = 1.0; 
+              #if POSITIVITY==1 
+                rrP         = RMIN + LMAX(rrP-RMIN, ALPHA); 
+                drP         = SMOOTH(rrP-RMIN, ALPHA); 
+              #endif
+
+              // Get gradients
+              dfloat drrdxP = drP*gradq[sbaseP+0*p_Np];
+              dfloat drrdyP = drP*gradq[sbaseP+1*p_Np];
+              dfloat drudxP =     gradq[sbaseP+2*p_Np];
+              dfloat drudyP =     gradq[sbaseP+3*p_Np];
+              dfloat drvdxP =     gradq[sbaseP+4*p_Np];
+              dfloat drvdyP =     gradq[sbaseP+5*p_Np];
+              dfloat dredxP =     gradq[sbaseP+6*p_Np];
+              dfloat dredyP =     gradq[sbaseP+7*p_Np];
+              // Get primiteves
+              dfloat irP = 1./ rrP;    
+              dfloat uP  = ruP*irP, vP  = rvP*irP;
+              dfloat pP  = (gamma-1)*(rEP-0.5*rrP*(uP*uP+vP*vP));
+               // limit pressure
+              dfloat dpP = 1.0; 
+              #if POSITIVITY==1 
+                // Limit and smooth pressure
+                pP          = PMIN + LMAX(pP-PMIN, ALPHA); 
+                dpP         = SMOOTH(pP-PMIN, ALPHA); 
+                // reconstruct energy accordingly
+                rEP = pP/(gamma-1.0) + 0.5f*rrP*(uP*uP+vP*vP); 
+              #endif
+             
+              // Derivative of velocities
+              dfloat dudxP = (drudxP - drrdxP*uP)*irP;
+              dfloat dvdxP = (drvdxP - drrdxP*vP)*irP;
+              dfloat dudyP = (drudyP - drrdyP*uP)*irP;
+              dfloat dvdyP = (drvdyP - drrdyP*vP)*irP;
+
+              dfloat muM = pCoeff[p_MUID]; // bulk viscosity
+              dfloat muP = pCoeff[p_MUID]; // bulk viscosity
+
+              // apply boundary condition
+              const int bc = EToB[face+p_Nfaces*e];
+              if(bc>0){
+                cnsBoundaryConditions2D(bc, gamma, R, CP, CV, muM,
+                                        time, x[idM], y[idM], nx, ny, 
+                                        rrM, uM, vM, pM, dudxM, dudyM, dvdxM, dvdyM,
+                                        &rrP, &uP, &vP, &pP, &dudxP, &dudyP, &dvdxP, &dvdyP);
+                irP = 1.0/rrP; 
+                rEP = pP/(gamma-1.0) + 0.5f*rrP*(uP*uP+vP*vP); 
+              }
+              // derivative of energy term
+              const dfloat dedxP = (dredxP - drrdxP*rEP*irP)*irP;
+              const dfloat dedyP = (dredyP - drrdyP*rEP*irP)*irP;
+              // derivative of kinetic energy
+              const dfloat dkedxP = (uP*dudxP + vP*dvdxP);
+              const dfloat dkedyP = (uP*dudyP + vP*dvdyP);
+
+              if(p_viscType==2){ // Sutherland     
+                const dfloat exp  = pCoeff[p_EXID]; // Exponential term
+                const dfloat tr   = pCoeff[p_TRID]; // 1/Tref 
+                const dfloat ts   = pCoeff[p_TSID]; // Ts/Tref
+                const dfloat cs   = pCoeff[p_CSID]; // precomuted value to simlify
+                const dfloat tnM   = pM*irM*tr/R; // non-dimensional temp
+                const dfloat tnP   = pP*irP*tr/R; // non-dimensional temp
+                muM  = (tnM > ts) ? (muM*pow(tnM, exp)*(1.0+ts)/(tnM + ts)) : muM*tnM*cs;  
+                muP  = (tnP > ts) ? (muP*pow(tnP, exp)*(1.0+ts)/(tnP + ts)) : muP*tnP*cs;  
+              }else if(p_viscType==3){ // Powerlaw
+
+              }
+
+
+
+              const dfloat TxM = (dredxM*irM - rEM*drrdxM*irM*irM - dkedxM);
+              const dfloat TyM = (dredyM*irM - rEM*drrdyM*irM*irM - dkedyM);
+
+              const dfloat TxP = (dredxP*irP - rEP*drrdxP*irP*irP - dkedxP);
+              const dfloat TyP = (dredyP*irP - rEP*drrdyP*irP*irP - dkedyP);
+
+              dfloat rflux, ruflux, rvflux, Eflux;
+              upwindRoeAveraged(nx, ny, gamma, rrM, uM, vM, pM, rrP, uP, vP, pP, 
+                              &rflux, &ruflux, &rvflux, &Eflux);
+
+              const dfloat beta = 2.0/3.0; 
+              dfloat T01M = 0., T02M = 0.;
+              dfloat T11M = muM*(2.0*dudxM - beta*(dudxM+dvdyM));
+              dfloat T12M = muM*(dudyM+dvdxM);
+              dfloat T21M = T12M;
+              dfloat T22M = muM*(2.0*dvdyM - beta*(dudxM+dvdyM));
+
+              const dfloat kappaM = muM*gamma/Pr;
+              dfloat T31M = uM*T11M + vM*T12M + kappaM*TxM;
+              dfloat T32M = uM*T12M + vM*T22M + kappaM*TyM;
+
+              // add artificial viscosity
+              T01M += amuM*drrdxM, T02M += amuM*drrdyM;
+              T11M += amuM*drudxM, T12M += amuM*drudyM;
+              T21M += amuM*drvdxM, T22M += amuM*drvdyM;
+              T31M += amuM*dredxM, T32M += amuM*dredyM;       
+
+              dfloat T01P = 0., T02P = 0.;
+              dfloat T11P = muP*(2.0*dudxP - beta*(dudxP+dvdyP));
+              dfloat T12P = muP*(dudyP+dvdxP);
+              dfloat T21P = T12P;
+              dfloat T22P = muP*(2.0*dvdyP - beta*(dudxP+dvdyP));
+
+              const dfloat kappaP = muP*gamma/Pr;
+              dfloat T31P = uP*T11P + vP*T12P + kappaP*TxP;
+              dfloat T32P = uP*T12P + vP*T22P + kappaP*TyP;
+
+              // add artificial viscosity
+              T01P += (bc>0)? 0.0:amuP*drrdxP, T02P += (bc>0)? 0.0:amuP*drrdyP;
+              T11P += (bc>0)? 0.0:amuP*drudxP, T12P += (bc>0)? 0.0:amuP*drudyP;
+              T21P += (bc>0)? 0.0:amuP*drvdxP, T22P += (bc>0)? 0.0:amuP*drvdyP;
+              T31P += (bc>0)? 0.0:amuP*dredxP, T32P += (bc>0)? 0.0:amuP*dredyP; 
+
+              // BR1 Riemann Solver
+              rflux  -= 0.5*(nx*(T01P-T01M) + ny*(T02P-T02M) ); 
+              ruflux -= 0.5*(nx*(T11P-T11M) + ny*(T12P-T12M) ); 
+              rvflux -= 0.5*(nx*(T21P-T21M) + ny*(T22P-T22M) ); 
+              Eflux  -= 0.5*(nx*(T31P-T31M) + ny*(T32P-T32M) ); 
+              
+              // evaluate "flux" terms
+              const dfloat sc = invJ*sJ;
+              s_rflux[es][n]  = sc*(-rflux );
+              s_ruflux[es][n] = sc*(-ruflux);
+              s_rvflux[es][n] = sc*(-rvflux);
+              s_Eflux[es][n]  = sc*(-Eflux);
+            }
+          }
+        }
+      }
+  
+   
+    // wait for all @shared memory writes of the previous inner loop to complete
+
+    // for each node in the element
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
+        const dlong e = eo + es;
+        if(e<Nelements){
+          if(n<p_Np){
+            // load rhs data from volume fluxes
+            dfloat Lrflux = 0.f, Lruflux = 0.f, Lrvflux = 0.f,  LEflux = 0.f;
+
+            // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
+            #pragma unroll p_NfacesNfp
+              for(int m=0;m<p_NfacesNfp;++m){
+                const dfloat L = LIFT[n+m*p_Np];
+                Lrflux  += L*s_rflux[es][m];
+                Lruflux += L*s_ruflux[es][m];
+                Lrvflux += L*s_rvflux[es][m];
+                LEflux  += L*s_Eflux[es][m];
+              }
+
+            const dlong base = e*p_Np*p_Nfields+n;
+            rhsq[base+0*p_Np] += Lrflux;
+            rhsq[base+1*p_Np] += Lruflux;
+            rhsq[base+2*p_Np] += Lrvflux;
+            rhsq[base+3*p_Np] += LEflux;
+          }
+        }
+      }
+    }
+  }
+}

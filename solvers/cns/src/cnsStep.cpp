@@ -136,7 +136,18 @@ void cns_t::rhsArtDiff(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, c
                          o_gradq,
                          o_RHS);
   } else {
-    LIBP_FORCE_ABORT("Artificial diffusion for CNS is NOT implemented yet!");
+    volumeKernel(mesh.Nelements,
+                 mesh.o_vgeo,
+                 mesh.o_D,
+                 mesh.o_x,
+                 mesh.o_y,
+                 mesh.o_z,
+                 o_pCoeff, 
+                 T,
+                 stab.o_viscosity,
+                 o_Q,
+                 o_gradq,
+                 o_RHS);
   }
 
   // complete trace halo exchange
@@ -164,8 +175,25 @@ void cns_t::rhsArtDiff(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, c
                             o_gradq,
                             o_RHS);
     } else {
-          LIBP_FORCE_ABORT("Artificial diffusion with non-cubature integration is NOT implemented yet!");
-    }
+      // dfloat hmin = mesh.MinCharacteristicLength();
+    const dfloat tau = 2.0*(mesh.N+1)*(mesh.N+2)/2.0;
+     surfaceKernel(mesh.Nelements,
+                        mesh.o_sgeo,
+                        mesh.o_LIFT,
+                        mesh.o_vmapM,
+                        mesh.o_vmapP,
+                        mesh.o_EToB,
+                        mesh.o_x,
+                        mesh.o_y,
+                        mesh.o_z,
+                        o_pCoeff, 
+                        T,
+                        tau,
+                        stab.o_viscosity,
+                        o_Q,
+                        o_gradq,
+                        o_RHS);
+  }
 }
 
 
@@ -233,9 +261,8 @@ void cns_t::rhsNoStab(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, co
                  mesh.o_x,
                  mesh.o_y,
                  mesh.o_z,
+                 o_pCoeff, 
                  T,
-                 mu,
-                 gamma,
                  o_Q,
                  o_gradq,
                  o_RHS);
@@ -271,9 +298,8 @@ void cns_t::rhsNoStab(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, co
                     mesh.o_x,
                     mesh.o_y,
                     mesh.o_z,
+                    o_pCoeff, 
                     T,
-                    mu,
-                    gamma,
                     o_Q,
                     o_gradq,
                     o_RHS);

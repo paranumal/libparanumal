@@ -32,9 +32,8 @@ SOFTWARE.
                             @restrict const  dfloat *  x,
                             @restrict const  dfloat *  y,
                             @restrict const  dfloat *  z,
+                            @restrict const  dfloat * pCoeff,
                             const dfloat t,
-                            const dfloat mu,
-                            const dfloat gamma,
                             @restrict const  dfloat *  q,
                             @restrict const  dfloat *  gradq,
                             @restrict dfloat *  rhsq){
@@ -47,6 +46,9 @@ SOFTWARE.
     @exclusive dfloat fx, fy;
 
     for(int n=0;n<p_Np;++n;@inner(0)){
+
+      const dfloat gamma = pCoeff[p_GMID]; // gamma
+      const dfloat mu    = pCoeff[p_MUID]; // bulk viscosity
 
       // prefetch geometric factors (constant on triangle)
       const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];

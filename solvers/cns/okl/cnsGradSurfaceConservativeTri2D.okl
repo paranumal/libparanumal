@@ -23,26 +23,26 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 */
-
-@kernel void cnsGradSurfaceTri2D(const dlong Nelements,
-                                 @restrict const  dfloat *  sgeo,
-                                 @restrict const  dfloat *  LIFT,
-                                 @restrict const  dlong  *  vmapM,
-                                 @restrict const  dlong  *  vmapP,
-                                 @restrict const  int    *  EToB,
-                                 @restrict const  dfloat *  x,
-                                 @restrict const  dfloat *  y,
-                                 @restrict const  dfloat *  z,
-                                 @restrict const  dfloat *  pCoeff,
-                                           const  dfloat time,
-                                 @restrict const  dfloat *  q,
-                                 @restrict        dfloat *  gradq){
+@kernel void cnsGradSurfaceConservativeTri2D(const dlong Nelements,
+                                             @restrict const  dfloat *  sgeo,
+                                             @restrict const  dfloat *  LIFT,
+                                             @restrict const  dlong  *  vmapM,
+                                             @restrict const  dlong  *  vmapP,
+                                             @restrict const  int    *  EToB,
+                                             @restrict const  dfloat *  x,
+                                             @restrict const  dfloat *  y,
+                                             @restrict const  dfloat *  z,
+                                             @restrict const  dfloat *  pCoeff,
+                                                       const  dfloat time,
+                                             @restrict const  dfloat *  q,
+                                             @restrict        dfloat *  gradq){
 
   // for all elements
   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
 
     // @shared storage for flux terms
     @shared dfloat s_gradflux[p_NblockS][p_Ngrads][p_NfacesNfp];
+    // @exclusive dfloat gamma, mu; 
 
     // for all face nodes of all elements
     for(int es=0;es<p_NblockS;++es;@inner(1)){
@@ -50,13 +50,12 @@ SOFTWARE.
         const dlong e = eo + es;
         if(e<Nelements){
           if(n<p_NfacesNfp){
-             // indices of negative and positive traces of face node
+            // indices of negative and positive traces of face node
             const dfloat gamma  = pCoeff[p_GMID]; // gamma
             const dfloat R      = pCoeff[p_RRID]; 
             const dfloat CP     = pCoeff[p_CPID]; 
             const dfloat CV     = pCoeff[p_CVID]; 
             const dfloat mu     = pCoeff[p_MUID]; 
-
             // find face that owns this node
             const int face = n/p_Nfp;
 
@@ -86,45 +85,51 @@ SOFTWARE.
             const dfloat rvM = q[baseM + 2*p_Np];
             const dfloat reM = q[baseM + 3*p_Np];
 
-            const dfloat uM = ruM/rrM;
-            const dfloat vM = rvM/rrM;
+                  dfloat rrP = q[baseP + 0*p_Np];
+                  dfloat ruP = q[baseP + 1*p_Np];
+                  dfloat rvP = q[baseP + 2*p_Np];
+                  dfloat reP = q[baseP + 3*p_Np];
 
-            dfloat rrP = q[baseP + 0*p_Np];
-            dfloat ruP = q[baseP + 1*p_Np];
-            dfloat rvP = q[baseP + 2*p_Np];
-            dfloat reP = q[baseP + 3*p_Np];
-
-            dfloat uP = ruP/rrP;
-            dfloat vP = rvP/rrP;
-
-            // apply boundary condition
+            // apply boundary condition given in primitive variables
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0) {
-              // const dfloat uM = ruM/rrM;
-              // const dfloat vM = rvM/rrM;
+              const dfloat uM = ruM/rrM;
+              const dfloat vM = rvM/rrM;
               const dfloat pM = (gamma-1.0)*(reM - 0.5*rrM*(uM*uM + vM*vM)); 
+              const dfloat tM =  pM/(R*rrM); 
 
-              dfloat uP = ruP/rrP;
-              dfloat vP = rvP/rrP;
-              dfloat pP = (gamma-1.0)*(reP - 0.5*rrP*(uP*uP + vP*vP)); 
-
-              dfloat dudx = 0.f, dudy = 0.f; //fake these values
-              dfloat dvdx = 0.f, dvdy = 0.f; //fake these values
-              cnsBoundaryConditions2D(bc, gamma, R, CP, CV, mu, \
+              dfloat uP = 0.0, vP = 0.0, pP = 0.0; 
+              // dfloat pP = gamma*gamma*rrP;
+              dfloat dudx = 0.f, dudy = 0.f, dvdx = 0.f, dvdy = 0.f; //fake these values !!!
+              // cnsBoundaryConditions2D(bc, gamma, R, CP, CV, mu, \
+              //                         time, x[idM], y[idM], nx, ny, \
+              //                         rrM, uM, vM, pM, 0., 0., 0., 0.,
+              //                         &rrP, &uP, &vP, &pP, &dudx, &dudy, &dvdx, &dvdy);
+              cnsDiffusionBoundaryConditions2D(bc, gamma, R, CP, CV, mu, \
                                       time, x[idM], y[idM], nx, ny, \
                                       rrM, uM, vM, pM, 0., 0., 0., 0.,
                                       &rrP, &uP, &vP, &pP, &dudx, &dudy, &dvdx, &dvdy);
+              // Return back to conservative variables
+              ruP = rrP*uP; 
+              rvP = rrP*vP; 
+              reP = pP/(gamma-1.0) + 0.5*rrP*(uP*uP + vP*vP); 
             }
+
             const dfloat sc = 0.5f*invJ*sJ;
-            s_gradflux[es][0][n] = sc*nx*(uP-uM);
-            s_gradflux[es][1][n] = sc*ny*(uP-uM);
-            s_gradflux[es][2][n] = sc*nx*(vP-vM);
-            s_gradflux[es][3][n] = sc*ny*(vP-vM);
+            s_gradflux[es][0][n] = sc*nx*(rrP-rrM);
+            s_gradflux[es][1][n] = sc*ny*(rrP-rrM);
+            s_gradflux[es][2][n] = sc*nx*(ruP-ruM);
+            s_gradflux[es][3][n] = sc*ny*(ruP-ruM);
+
+            s_gradflux[es][4][n] = sc*nx*(rvP-rvM);
+            s_gradflux[es][5][n] = sc*ny*(rvP-rvM);
+            s_gradflux[es][6][n] = sc*nx*(reP-reM);
+            s_gradflux[es][7][n] = sc*ny*(reP-reM);
+
           }
         }
       }
     }
-
 
     // for each node in the element
     for(int es=0;es<p_NblockS;++es;@inner(1)){
@@ -133,24 +138,38 @@ SOFTWARE.
         if(e<Nelements){
           if(n<p_Np){
             // load rhs data from volume fluxes
-            dfloat LTuxflux = 0.f, LTuyflux = 0.f;
-            dfloat LTvxflux = 0.f, LTvyflux = 0.f;
+            dfloat LTrrxflux = 0.f, LTrryflux = 0.f;
+            dfloat LTruxflux = 0.f, LTruyflux = 0.f;
+            dfloat LTrvxflux = 0.f, LTrvyflux = 0.f;
+            dfloat LTrexflux = 0.f, LTreyflux = 0.f;
 
             // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
             #pragma unroll p_NfacesNfp
               for(int m=0;m<p_NfacesNfp;++m){
                 const dfloat L = LIFT[n+m*p_Np];
-                LTuxflux += L*s_gradflux[es][0][m];
-                LTuyflux += L*s_gradflux[es][1][m];
-                LTvxflux += L*s_gradflux[es][2][m];
-                LTvyflux += L*s_gradflux[es][3][m];
+                
+                LTrrxflux += L*s_gradflux[es][0][m];
+                LTrryflux += L*s_gradflux[es][1][m];
+                LTruxflux += L*s_gradflux[es][2][m];
+                LTruyflux += L*s_gradflux[es][3][m];
+
+                LTrvxflux += L*s_gradflux[es][4][m];
+                LTrvyflux += L*s_gradflux[es][5][m];
+                LTrexflux += L*s_gradflux[es][6][m];
+                LTreyflux += L*s_gradflux[es][7][m];
               }
 
             const dlong base = e*p_Np*p_Ngrads+n;
-            gradq[base+0*p_Np] += LTuxflux;
-            gradq[base+1*p_Np] += LTuyflux;
-            gradq[base+2*p_Np] += LTvxflux;
-            gradq[base+3*p_Np] += LTvyflux;
+            gradq[base+0*p_Np] += LTrrxflux;
+            gradq[base+1*p_Np] += LTrryflux;
+            gradq[base+2*p_Np] += LTruxflux;
+            gradq[base+3*p_Np] += LTruyflux;
+
+            gradq[base+4*p_Np] += LTrvxflux;
+            gradq[base+5*p_Np] += LTrvyflux;
+            gradq[base+6*p_Np] += LTrexflux;
+            gradq[base+7*p_Np] += LTreyflux;
+
           }
         }
       }

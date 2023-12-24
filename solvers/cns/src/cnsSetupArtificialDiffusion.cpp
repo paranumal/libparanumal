@@ -44,19 +44,17 @@ void cns_t::setupArtificialDiffusion(properties_t & kernelInfo){
   std::string oklFileSuffix = ".okl";
   std::string fileName, kernelName;
 
+ // kernels from volume file Add isothermal version as well AK. 
+  fileName   = oklFilePrefix + "cnsGradVolumeConservative" + suffix + oklFileSuffix;
+  kernelName = "cnsGradVolumeConservative" + suffix; 
+  gradVolumeKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
+
+  // kernels from surface file
+  fileName   = oklFilePrefix + "cnsGradSurfaceConservative" + suffix + oklFileSuffix;
+  kernelName = "cnsGradSurfaceConservative" + suffix; // gradient of all conservative fields
+  gradSurfaceKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
+
   if(cubature){
-    // kernels from volume file Add isothermal version as well AK. 
-    fileName   = oklFilePrefix + "cnsGradVolume" + suffix + oklFileSuffix;
-    kernelName = "cnsGradVolumeConservative" + suffix; 
-    gradVolumeKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
-
-    // kernels from surface file
-    fileName   = oklFilePrefix + "cnsGradSurface" + suffix + oklFileSuffix;
-    kernelName = "cnsGradSurfaceConservative" + suffix; // gradient of all conservative fields
-    gradSurfaceKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
-
-    
-
     if(settings.compareSetting("ARTDIFF TYPE", "LAPLACE")){
       // kernels from volume file
       fileName   = oklFilePrefix + "cnsCubatureVolumeArtDiff" + suffix + oklFileSuffix;
@@ -68,28 +66,23 @@ void cns_t::setupArtificialDiffusion(properties_t & kernelInfo){
       fileName   = oklFilePrefix + "cnsCubatureSurfaceArtDiff" + suffix + oklFileSuffix;
       kernelName = "cnsCubatureSurfaceArtificialDiffusion" + suffix;
       cubatureSurfaceKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
+    }
+   }else{
+     if(settings.compareSetting("ARTDIFF TYPE", "LAPLACE")){
+      // kernels from volume file
+      fileName   = oklFilePrefix + "cnsVolumeArtDiff" + suffix + oklFileSuffix;
+      kernelName = "cnsVolumeArtificialDiffsuion" + suffix;
+      volumeKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
 
+
+      // kernels from surface file
+      fileName   = oklFilePrefix + "cnsSurfaceArtDiff" + suffix + oklFileSuffix;
+      kernelName = "cnsSurfaceArtificialDiffusion" + suffix;
+      surfaceKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
 
     }
-   // else if(settings.compareSetting("ARTDIFF TYPE", "PHYSICAL")){
-   //  // kernels from volume file
-   //    fileName   = oklFilePrefix + "cnsCubatureVolumeArtDiff" + suffix + oklFileSuffix;
-   //    kernelName = "cnsCubatureVolumeArtificialDiffsuionPhysical" + suffix;
-   //    cubatureVolumeKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
-
-
-   //    // kernels from surface file
-   //    fileName   = oklFilePrefix + "cnsCubatureSurfaceArtDiff" + suffix + oklFileSuffix;
-   //    kernelName = "cnsCubatureSurfaceArtificialDiffusionPhysical" + suffix;
-   //    cubatureSurfaceKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
-   //  }else{
-   //    LIBP_FORCE_ABORT("Artificial Diffusion Type is not found");      
-   //  }
-   // }else{
-   //   LIBP_FORCE_ABORT("Artificial Diffusion is only applied for cubature integration yet!");  
   }
-
-
+  
   // vorticity calculation
   fileName   = oklFilePrefix + "cnsVorticity" + suffix + oklFileSuffix;
   kernelName = "cnsVorticity" + suffix;

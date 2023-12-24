@@ -365,9 +365,9 @@ void upwindRoeAveraged(const dfloat nx,
             const dfloat dedyM = (dredyM - drrdyM*EM)*irM;
             const dfloat dedzM = (dredzM - drrdzM*EM)*irM;
 
-            const dfloat dkedxM = (uM*dudxM + vM*dvdxM + wM*dwdxM);
-            const dfloat dkedyM = (uM*dudyM + vM*dvdyM + wM*dwdyM);
-            const dfloat dkedzM = (uM*dudzM + vM*dvdzM + wM*dwdzM);
+            // const dfloat dkedxM = (uM*dudxM + vM*dvdxM + wM*dwdxM);
+            // const dfloat dkedyM = (uM*dudyM + vM*dvdyM + wM*dwdyM);
+            // const dfloat dkedzM = (uM*dudzM + vM*dvdzM + wM*dwdzM);
 
             // dfloat dpdxM = dpM*(gamma-1.0)*(dredxM - 0.5*drrdxM*keM - rrM*dkedxM); 
             // dfloat dpdyM = dpM*(gamma-1.0)*(dredyM - 0.5*drrdyM*keM - rrM*dkedyM); 
@@ -428,9 +428,9 @@ void upwindRoeAveraged(const dfloat nx,
             rEP = pP/(gamma-1.0) + 0.5*rrP*keP; 
             dfloat EP  = rEP*irP;
 
-            dfloat dedxP = (dredxP - drrdxP*EP)*irP;
-            dfloat dedyP = (dredyP - drrdyP*EP)*irP;
-            dfloat dedzP = (dredzP - drrdzP*EP)*irP;
+            // dfloat dedxP = (dredxP - drrdxP*EP)*irP;
+            // dfloat dedyP = (dredyP - drrdyP*EP)*irP;
+            // dfloat dedzP = (dredzP - drrdzP*EP)*irP;
 
             dfloat dkedxP = (uP*dudxP + vP*dvdxP + wP*dwdxP);
             dfloat dkedyP = (uP*dudyP + vP*dvdyP + wP*dwdyP);

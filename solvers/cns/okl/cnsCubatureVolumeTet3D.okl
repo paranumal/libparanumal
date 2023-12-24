@@ -61,21 +61,21 @@ SOFTWARE.
         const dfloat gamma = pCoeff[p_GMID]; // gamma
         const dfloat mu    = pCoeff[p_MUID]; // bulk viscosity
 
-        const dfloat r  = q[qbase+0*p_Np];
+        const dfloat rr = q[qbase+0*p_Np];
         const dfloat ru = q[qbase+1*p_Np];
         const dfloat rv = q[qbase+2*p_Np];
         const dfloat rw = q[qbase+3*p_Np];
-        const dfloat E  = q[qbase+4*p_Np];
+        const dfloat rE = q[qbase+4*p_Np];
 
         // primitive variables (velocity)
-        const dfloat u = ru/r, v = rv/r, w = rw/r;
-        const dfloat p = (gamma-1)*(E-0.5*r*(u*u+v*v+w*w));
+        const dfloat u = ru/rr, v = rv/rr, w = rw/rr;
+        const dfloat p = (gamma-1)*(rE-0.5*rr*(u*u+v*v+w*w));
 
-        s_q[0][n] = r ;
+        s_q[0][n] = rr;
         s_q[1][n] = ru;
         s_q[2][n] = rv;
         s_q[3][n] = rw;
-        s_q[4][n] = E;
+        s_q[4][n] = rE;
 
         s_gradq[0][n] = gradq[id+0*p_Np];
         s_gradq[1][n] = gradq[id+1*p_Np];
@@ -90,8 +90,8 @@ SOFTWARE.
         //Body force contribution
         fx = 0.0; fy = 0.0; fz = 0.0;
         cnsBodyForce3D(gamma, mu, t, x[e*p_Np+n], y[e*p_Np+n], z[e*p_Np+n],
-                        r, u, v, w, p, &fx, &fy, &fz);
-        fx *= r; fy *= r; fz *= r;
+                        rr, u, v, w, p, &fx, &fy, &fz);
+        fx *= rr; fy *= rr; fz *= rr;
       }
     }
 
@@ -104,7 +104,7 @@ SOFTWARE.
             dfloat mu    = pCoeff[p_MUID]; // Bulk viscosity
             
       //interpolate to cubature
-      dfloat r = 0., ru = 0., rv = 0., rw = 0, E = 0;
+      dfloat rr = 0., ru = 0., rv = 0., rw = 0, rE = 0;
       dfloat dudx = 0., dudy = 0., dudz = 0.;
       dfloat dvdx = 0., dvdy = 0., dvdz = 0.;
       dfloat dwdx = 0., dwdy = 0., dwdz = 0.;
@@ -112,11 +112,12 @@ SOFTWARE.
       #pragma unroll p_Np
         for(int i=0;i<p_Np;++i){
           const dfloat cIni = cubInterp[n+i*p_cubNp];
-          r  += cIni*s_q[0][i];
+          rr += cIni*s_q[0][i];
           ru += cIni*s_q[1][i];
           rv += cIni*s_q[2][i];
           rw += cIni*s_q[3][i];
-          E  += cIni*s_q[4][i];
+          rE += cIni*s_q[4][i];
+
           dudx += cIni*s_gradq[0][i];
           dudy += cIni*s_gradq[1][i];
           dudz += cIni*s_gradq[2][i];
@@ -129,8 +130,8 @@ SOFTWARE.
         }
 
       // primitive variables
-      const dfloat u = ru/r, v = rv/r, w = rw/r;
-      const dfloat p = (gamma-1)*(E-0.5*r*(u*u+v*v+w*w));
+      const dfloat u = ru/rr, v = rv/rr, w = rw/rr;
+      const dfloat p = (gamma-1)*(rE-0.5*rr*(u*u+v*v+w*w));
 
       // prefetch geometric factors (constant on triangle)
       const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
@@ -194,9 +195,9 @@ SOFTWARE.
         // F4 = mu*(u*T11+v*T12+w*T13) - (uE+up),
         // G4 = mu*(u*T12+v*T22+w*T23) - (vE+vp),
         // H4 = mu*(u*T13+v*T23+w*T33) - (wE+wp)
-        const dfloat F = mu*(u*T11+v*T12+w*T13)-u*(E+p);
-        const dfloat G = mu*(u*T12+v*T22+w*T23)-v*(E+p);
-        const dfloat H = mu*(u*T13+v*T23+w*T33)-w*(E+p);
+        const dfloat F = mu*(u*T11+v*T12+w*T13)-u*(rE+p);
+        const dfloat G = mu*(u*T12+v*T22+w*T23)-v*(rE+p);
+        const dfloat H = mu*(u*T13+v*T23+w*T33)-w*(rE+p);
         s_F[4][n] = drdx*F + drdy*G + drdz*H;
         s_G[4][n] = dsdx*F + dsdy*G + dsdz*H;
         s_H[4][n] = dtdx*F + dtdy*G + dtdz*H;
