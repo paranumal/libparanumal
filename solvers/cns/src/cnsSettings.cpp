@@ -30,136 +30,112 @@ SOFTWARE.
 cnsSettings_t::cnsSettings_t(comm_t& _comm):
   settings_t(_comm) {
 
-  newSetting("DATA FILE",
-             "data/cnsTalorVortex2D.h",
+  newSetting("DATA FILE", "data/cnsTalorVortex2D.h",
              "Boundary and Initial conditions header");
 
-  newSetting("SOLVER TYPE",
-             "EULER",
+  newSetting("SOLVER TYPE", "EULER",
              "Solver to be used", 
             {"EULER", "NAVIER-STOKES"});
 
- newSetting("NONDIMENSIONAL EQUATIONS",
-             "FALSE",
+ newSetting("NONDIMENSIONAL EQUATIONS", "FALSE",
              "Compute R and Mu from Mach and Reynolds",
              {"FALSE", "TRUE"});
 
-  newSetting("GAMMA",
-             "1.4",
+  newSetting("GAMMA", "1.4",
              "Specific heat ratio");
 
-  newSetting("SPECIFIC GAS CONSTANT",
-             "287.058",
+  newSetting("SPECIFIC GAS CONSTANT", "287.058",
              "Specific gas constant (if non-dimensional=FALSE)");
 
-  newSetting("VISCOSITY",
-             "0.0",
+  newSetting("VISCOSITY", "0.0",
              "Bulk viscosity (if non-dimensional=TRUE)");
 
-  newSetting("VISCOSITY TYPE",
-             "CONSTANT",
+  newSetting("VISCOSITY TYPE", "CONSTANT",
              "Viscosity treatment", 
              {"CONSTANT", "SUTHERLAND", "POWER-LAW"});
 
-  newSetting("MACH NUMBER",
-             "0.1",
+  newSetting("MACH NUMBER", "0.1",
              "Mach number (if non-dimensional=TRUE)");
 
-  newSetting("REYNOLDS NUMBER",
-             "1.0",
+  newSetting("REYNOLDS NUMBER", "1000.0",
              "Reynolds number (if non-dimensional=TRUE)");
 
-  newSetting("PRANDTL NUMBER",
-             "0.72",
+  newSetting("PRANDTL NUMBER", "0.72",
              "Pranndtl Number");
 
-   newSetting("ISOTHERMAL",
-             "FALSE",
+   newSetting("ISOTHERMAL", "FALSE",
              "Solve isothermal equations", 
              {"FALSE", "TRUE"});
 
-  newSetting("REFERENCE STATE",
-             "1.0, 1.0, 0.0, 1.0, 1.0",
+  newSetting("REFERENCE STATE", "1.0, 1.0, 0.0, 1.0, 1.0",
              "Reference state of the problem");
 
-  newSetting("ADVECTION TYPE",
-             "COLLOCATION",
+  newSetting("ADVECTION TYPE", "COLLOCATION",
              "Integration type for flux terms",
              {"COLLOCATION", "CUBATURE"});
 
-  newSetting("TIME INTEGRATOR",
-             "DOPRI5",
+  newSetting("LDG BETA COEFFICIENT", "0.5",
+             "Local DG method alternating upwinding coefficient between 0 and 1");
+
+  newSetting("LDG TAU COEFFICIENT", "1.0",
+             "Local DG jump stabilizer between 0  and 1");
+
+  newSetting("TIME INTEGRATOR", "DOPRI5",
              "Time integration method",
              {"AB3", "DOPRI5", "LSERK4"});
 
-  newSetting("CFL NUMBER",
-             "1.0",
+  newSetting("CFL NUMBER", "1.0",
              "Multiplier for timestep stability bound");
 
-  newSetting("START TIME",
-             "0",
+  newSetting("START TIME", "0.0",
              "Start time for time integration");
 
-  newSetting("FINAL TIME",
-             "10",
+  newSetting("FINAL TIME", "1.0",
              "End time for time integration");
 
-  newSetting("OUTPUT INTERVAL",
-             ".1",
+  newSetting("OUTPUT INTERVAL", "0.1",
              "Time between printing output data");
 
-  newSetting("OUTPUT TO FILE",
-             "FALSE",
+  newSetting("OUTPUT TO FILE", "FALSE",
              "Flag for writing fields to VTU files",
              {"TRUE", "FALSE"});
 
-  newSetting("OUTPUT FILE NAME",
-             "cns");
+  newSetting("OUTPUT FILE NAME", "output");
 
 
 
- newSetting("STABILIZATION SOLVER TYPE",
-             "1",
+ newSetting("STABILIZATION SOLVER TYPE", "1",
              "Solver type for stabilization",
              {"1", "2", "3"});
 
-  newSetting("DETECTOR TYPE",
-             "1",
+  newSetting("DETECTOR TYPE", "1",
              "Detector type for stabilization: NODETECT: 0 ALL: 1 KLOCKNER:2, PERSSON:3, DUCROS:4",
              {"0", "1", "2", "3", "4"});
 
-  newSetting("STAB TYPE",
-             "0",
+  newSetting("STAB TYPE", "0",
              "Stabilization type: NOSTAB:0, FILTER:1, LIMITER:2, ART_DIFF:3, SUBCELL:4",
              {"0", "1", "2", "3", "4"});
 
-  newSetting("ARTDIFF TYPE",
-             "LAPLACE",
+  newSetting("ARTDIFF TYPE", "LAPLACE",
              "ARTIFICIAL DIFFUSION TYPE",
              {"LAPLACE", "PHYSICAL"});
 
-  newSetting("ARTDIFF SCALE FACTOR",
-             "3.0",
+  newSetting("ARTDIFF SCALE FACTOR", "3.0",
              "ARTIFICIAL DIFFUSION SCALING FACTOR");
 
-  newSetting("FILTER CUTOFF",
-             "1",
+  newSetting("FILTER CUTOFF", "1",
              "Exponential Filter Cutoff Order");
 
-  newSetting("FILTER ORDER",
-             "2",
+  newSetting("FILTER ORDER", "2",
              "Exponential Filter Order (must be even)");
 
-  newSetting("SUBCELL NUMBER",
-             "5",
+  newSetting("SUBCELL NUMBER", "5",
              "Subcell number per edge (>=N)");
 
-  newSetting("SUBCELL MINOR GRID",
-             "WARPBLEND",
+  newSetting("SUBCELL MINOR GRID", "WARPBLEND",
              "Subcell minor grid");
 
-  newSetting("STAB OUTPUT TO FILE",
-             "TRUE",
+  newSetting("STAB OUTPUT TO FILE", "FALSE",
              "Detector Output to File ",
              {"TRUE", "FALSE"});
 }
@@ -177,16 +153,8 @@ stabSettings_t cnsSettings_t::extractStabSettings() {
     getSetting(name, val);
     set.updateVal(val);
   }
-
   return stabSettings;
 }
-
-
-
-
-
-
-
 
 void cnsSettings_t::report() {
 
@@ -203,6 +171,8 @@ void cnsSettings_t::report() {
     reportSetting("REYNOLDS NUMBER");
     reportSetting("ISOTHERMAL");
     reportSetting("ADVECTION TYPE");
+    reportSetting("LDG BETA COEFFICIENT");
+    reportSetting("LDG TAU COEFFICIENT");
     reportSetting("TIME INTEGRATOR");
     reportSetting("START TIME");
     reportSetting("FINAL TIME");

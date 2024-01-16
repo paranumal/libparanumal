@@ -8,6 +8,8 @@ data/cnsUniform2D.h
 [MESH FILE]
 #BOX
 ../../meshes/cnsNACA2D.msh
+#../../meshes/cnsNACA2D_Symmetry.msh
+#../../meshes/cnsGaussTri2D.msh
 
 [MESH DIMENSION]
 2
@@ -16,19 +18,47 @@ data/cnsUniform2D.h
 3
 
 [BOX NX]
-20
+51
 
 [BOX NY]
-20
+101
 
 [BOX NZ]
-20
+101
 
 [BOX BOUNDARY FLAG]
 11
-
+#*******************[DISCRETIZATION PROPERTIES]************#
 [POLYNOMIAL DEGREE]
 5
+
+[SOLVER TYPE]
+#EULER
+NAVIER-STOKES
+
+# If TRUE compute R and mu from Mach & Reynolds//
+[NONDIMENSIONAL EQUATIONS]
+TRUE
+
+[ISOTHERMAL]
+FALSE
+
+#Can be COLLOCATION or CUBATURE
+[ADVECTION TYPE]
+#COLLOCATION
+CUBATURE
+
+# 0 < beta < 1 
+[LDG BETA COEFFICIENT]
+0.5
+
+# 0 < tau < 1.0
+[LDG TAU COEFFICIENT]
+0.5
+
+[TIME INTEGRATOR]
+DOPRI5
+#LSERK4
 
 #*******************[DEVICE PROPERTIES]*******************#
 [THREAD MODEL]
@@ -40,14 +70,7 @@ CUDA
 [DEVICE NUMBER]
 0
 
-#*******************[SOLVER PROPERTIES]*******************#
-[SOLVER TYPE]
-#EULER
-NAVIER-STOKES
-
-# If TRUE compute R and mu from Mach & Reynolds//
-[NONDIMENSIONAL EQUATIONS]
-TRUE
+#*******************[PROBLEM PROPERTIES]*******************#
 
 # Isentropic exponent 
 [GAMMA]
@@ -55,9 +78,7 @@ TRUE
 
 # // Mach number is needed for NONDIM=TRUE
 [MACH NUMBER]
-#0.1
 3.0
-#0.8
 
 # Reynolds number is needed for NONDIM = TRUE
 [REYNOLDS NUMBER]
@@ -71,10 +92,9 @@ TRUE
 [VISCOSITY]
 0.00001
 
+# [ CONSTANT ] - [SUTHERLAND] - [POWER-LAW]
 [VISCOSITY TYPE]
-CONSTANT
-#SUTHERLAND
-#POWER-LAW
+SUTHERLAND
 
 
 [PRANDTL NUMBER]
@@ -85,17 +105,6 @@ CONSTANT
 [REFERENCE STATE]
 1.0, 1.0, 1.0, 1.0, 1.0, 1.0
 
-[ISOTHERMAL]
-FALSE
-
-#Can be COLLOCATION or CUBATURE
-[ADVECTION TYPE]
-COLLOCATION
-#CUBATURE
-
-[TIME INTEGRATOR]
-DOPRI5
-#LSERK4
 
 [CFL NUMBER]
 0.5
@@ -104,11 +113,11 @@ DOPRI5
 0
 
 [FINAL TIME]
-10
+5
 
 #*******************[OUTPUT PROPERTIES]*******************#
 [OUTPUT INTERVAL]
-0.2
+0.1
 
 [OUTPUT TO FILE]
 TRUE
@@ -138,10 +147,10 @@ WARPBLEND
 [STAB OUTPUT TO FILE]
 TRUE
 
+# [LAPLACE], [PHYSICAL X do not use this option for now!!!!] 
 [ARTDIFF TYPE]
 LAPLACE
-#PHYSICAL
 
 [ARTDIFF SCALE FACTOR]
-1
+3
 

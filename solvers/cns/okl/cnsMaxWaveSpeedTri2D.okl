@@ -105,18 +105,18 @@ SOFTWARE.
           const dfloat vM = rvM/rM;
           const dfloat pM = (gamma-1)*(EM-0.5*rM*(uM*uM+vM*vM));
 
-          dfloat rP = rM;
-          dfloat uP = uM;
-          dfloat vP = vM;
-          dfloat pP = pM;
+          // Initialize boundary state with internal state
+          dfloat rP  =  rM;
+          dfloat ruP = ruM;
+          dfloat rvP = rvM;
+          dfloat EP  = EM;
 
-          dfloat dudxP, dudyP, dvdxP, dvdyP;
-
-          //get boundary value
-          cnsBoundaryConditions2D(bc, gamma, R, CP, CV, mu,
-                                  time, x[idM], y[idM], nx, ny,
-                                  rM, uM, vM, pM, 0.0, 0.0, 0.0, 0.0,
-                                  &rP, &uP, &vP, &pP, &dudxP, &dudyP, &dvdxP, &dvdyP);
+          cnsInviscidBoundaryConditions2D(bc, gamma, R, CP, CV, mu,
+                                          time, x[idM], y[idM], nx, ny,
+                                          rM, ruM, rvM, EM, &rP, &ruP, &rvP, &EP);
+          dfloat uP = ruP/rP; 
+          dfloat vP = rvP/rP; 
+          dfloat pP = (gamma-1)*(EP-0.5*rP*(uP*uP+vP*vP));
 
           //determine max wavespeed from boundary value
           const dfloat U = sqrt(uP*uP+vP*vP);

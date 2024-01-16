@@ -155,7 +155,6 @@ void cns_t::rhsArtDiff(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, c
 
   if (cubature) {
      // dfloat hmin = mesh.MinCharacteristicLength();
-    const dfloat tau = 2.0*(mesh.N+1)*(mesh.N+2)/2.0;
      cubatureSurfaceKernel(mesh.Nelements,
                             mesh.o_vgeo,
                             mesh.o_cubsgeo,
@@ -169,14 +168,12 @@ void cns_t::rhsArtDiff(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, c
                             mesh.o_intz,
                             o_pCoeff, 
                             T,
-                            tau,
                             stab.o_viscosity,
                             o_Q,
                             o_gradq,
                             o_RHS);
     } else {
       // dfloat hmin = mesh.MinCharacteristicLength();
-    const dfloat tau = 2.0*(mesh.N+1)*(mesh.N+2)/2.0;
      surfaceKernel(mesh.Nelements,
                         mesh.o_sgeo,
                         mesh.o_LIFT,
@@ -188,7 +185,6 @@ void cns_t::rhsArtDiff(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, c
                         mesh.o_z,
                         o_pCoeff, 
                         T,
-                        tau,
                         stab.o_viscosity,
                         o_Q,
                         o_gradq,

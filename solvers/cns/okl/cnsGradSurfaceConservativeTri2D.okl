@@ -56,6 +56,8 @@ SOFTWARE.
             const dfloat CP     = pCoeff[p_CPID]; 
             const dfloat CV     = pCoeff[p_CVID]; 
             const dfloat mu     = pCoeff[p_MUID]; 
+            const dfloat beta   = pCoeff[p_BTID]; 
+            const dfloat tau   =  pCoeff[p_TAID]; 
             // find face that owns this node
             const int face = n/p_Nfp;
 
@@ -93,39 +95,34 @@ SOFTWARE.
             // apply boundary condition given in primitive variables
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0) {
-              const dfloat uM = ruM/rrM;
-              const dfloat vM = rvM/rrM;
-              const dfloat pM = (gamma-1.0)*(reM - 0.5*rrM*(uM*uM + vM*vM)); 
-              const dfloat tM =  pM/(R*rrM); 
 
-              dfloat uP = 0.0, vP = 0.0, pP = 0.0; 
-              // dfloat pP = gamma*gamma*rrP;
-              dfloat dudx = 0.f, dudy = 0.f, dvdx = 0.f, dvdy = 0.f; //fake these values !!!
-              // cnsBoundaryConditions2D(bc, gamma, R, CP, CV, mu, \
-              //                         time, x[idM], y[idM], nx, ny, \
-              //                         rrM, uM, vM, pM, 0., 0., 0., 0.,
-              //                         &rrP, &uP, &vP, &pP, &dudx, &dudy, &dvdx, &dvdy);
-              cnsDiffusionBoundaryConditions2D(bc, gamma, R, CP, CV, mu, \
-                                      time, x[idM], y[idM], nx, ny, \
-                                      rrM, uM, vM, pM, 0., 0., 0., 0.,
-                                      &rrP, &uP, &vP, &pP, &dudx, &dudy, &dvdx, &dvdy);
-              // Return back to conservative variables
-              ruP = rrP*uP; 
-              rvP = rrP*vP; 
-              reP = pP/(gamma-1.0) + 0.5*rrP*(uP*uP + vP*vP); 
+                // fake derivates
+                dfloat drrdxP = 0.0, drrdyP =0.0; 
+                dfloat drudxP = 0.0, drudyP =0.0; 
+                dfloat drvdxP = 0.0, drvdyP =0.0; 
+                dfloat dredxP = 0.0, dredyP =0.0; 
+                cnsViscousBoundaryConditions2D(bc, gamma, R, CP, CV, mu, time, x[idM], y[idM], nx, ny, 
+                                               rrM, ruM, rvM, reM, &rrP, &ruP, &rvP, &reP, 
+                                               0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                               &drrdxP, &drrdyP, &drudxP, &drudyP, 
+                                               &drvdxP, &drvdyP, &dredxP, &dredyP);
             }
 
-            const dfloat sc = 0.5f*invJ*sJ;
-            s_gradflux[es][0][n] = sc*nx*(rrP-rrM);
-            s_gradflux[es][1][n] = sc*ny*(rrP-rrM);
-            s_gradflux[es][2][n] = sc*nx*(ruP-ruM);
-            s_gradflux[es][3][n] = sc*ny*(ruP-ruM);
+            const dfloat sc = 0.5*invJ*sJ;
+            const dfloat alphaM = 0.5 + beta; 
+            const dfloat alphaP = 0.5 - beta; 
+            
+            s_gradflux[es][0][n] = sc*nx*( alphaM*rrM + alphaP*rrP  - rrM);
+            s_gradflux[es][1][n] = sc*ny*( alphaM*rrM + alphaP*rrP  - rrM);
 
-            s_gradflux[es][4][n] = sc*nx*(rvP-rvM);
-            s_gradflux[es][5][n] = sc*ny*(rvP-rvM);
-            s_gradflux[es][6][n] = sc*nx*(reP-reM);
-            s_gradflux[es][7][n] = sc*ny*(reP-reM);
+            s_gradflux[es][2][n] = sc*nx*( alphaM*ruM + alphaP*ruP  - ruM);
+            s_gradflux[es][3][n] = sc*ny*( alphaM*ruM + alphaP*ruP  - ruM);
 
+            s_gradflux[es][4][n] = sc*nx*( alphaM*rvM + alphaP*rvP  - rvM);
+            s_gradflux[es][5][n] = sc*ny*( alphaM*rvM + alphaP*rvP  - rvM);
+
+            s_gradflux[es][6][n] = sc*nx*( alphaM*reM + alphaP*reP  - reM);
+            s_gradflux[es][7][n] = sc*ny*( alphaM*reM + alphaP*reP  - reM);
           }
         }
       }
@@ -176,3 +173,180 @@ SOFTWARE.
     }
   }
 }
+
+
+
+// @kernel void cnsGradSurfaceConservativeTri2D(const dlong Nelements,
+//                                              @restrict const  dfloat *  sgeo,
+//                                              @restrict const  dfloat *  LIFT,
+//                                              @restrict const  dlong  *  vmapM,
+//                                              @restrict const  dlong  *  vmapP,
+//                                              @restrict const  int    *  EToB,
+//                                              @restrict const  dfloat *  x,
+//                                              @restrict const  dfloat *  y,
+//                                              @restrict const  dfloat *  z,
+//                                              @restrict const  dfloat *  pCoeff,
+//                                                        const  dfloat time,
+//                                              @restrict const  dfloat *  q,
+//                                              @restrict        dfloat *  gradq){
+
+//   // for all elements
+//   for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
+
+//     // @shared storage for flux terms
+//     @shared dfloat s_gradflux[p_NblockS][p_Ngrads][p_NfacesNfp];
+//     // @exclusive dfloat gamma, mu; 
+
+//     // for all face nodes of all elements
+//     for(int es=0;es<p_NblockS;++es;@inner(1)){
+//       for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
+//         const dlong e = eo + es;
+//         if(e<Nelements){
+//           if(n<p_NfacesNfp){
+//             // indices of negative and positive traces of face node
+//             const dfloat gamma  = pCoeff[p_GMID]; // gamma
+//             const dfloat R      = pCoeff[p_RRID]; 
+//             const dfloat CP     = pCoeff[p_CPID]; 
+//             const dfloat CV     = pCoeff[p_CVID]; 
+//             const dfloat mu     = pCoeff[p_MUID]; 
+//             const dfloat beta   = pCoeff[p_BTID]; 
+//             // find face that owns this node
+//             const int face = n/p_Nfp;
+
+//             // load surface geofactors for this face
+//             const dlong sid    = p_Nsgeo*(e*p_Nfaces+face);
+//             const dfloat nx   = sgeo[sid+p_NXID];
+//             const dfloat ny   = sgeo[sid+p_NYID];
+//             const dfloat sJ   = sgeo[sid+p_SJID];
+//             const dfloat invJ = sgeo[sid+p_IJID];
+
+//             // indices of negative and positive traces of face node
+//             const dlong id  = e*p_Nfp*p_Nfaces + n;
+//             const dlong idM = vmapM[id];
+//             const dlong idP = vmapP[id];
+
+//             // load traces
+//             const dlong eM = e;
+//             const dlong eP = idP/p_Np;
+//             const int vidM = idM%p_Np;
+//             const int vidP = idP%p_Np;
+
+//             const dlong baseM = eM*p_Np*p_Nfields + vidM;
+//             const dlong baseP = eP*p_Np*p_Nfields + vidP;
+
+//             const dfloat rrM = q[baseM + 0*p_Np];
+//             const dfloat ruM = q[baseM + 1*p_Np];
+//             const dfloat rvM = q[baseM + 2*p_Np];
+//             const dfloat reM = q[baseM + 3*p_Np];
+
+//                   dfloat rrP = q[baseP + 0*p_Np];
+//                   dfloat ruP = q[baseP + 1*p_Np];
+//                   dfloat rvP = q[baseP + 2*p_Np];
+//                   dfloat reP = q[baseP + 3*p_Np];
+
+//             // apply boundary condition given in primitive variables
+//             const int bc = EToB[face+p_Nfaces*e];
+//             if(bc>0) {
+
+//               cnsBoundaryConditions2D(bc, gamma, R, CP, CV, mu, time, x[idM], y[idM], nx, ny, \
+//                                       rrM, ruM, rvM, reM, &rrP, &ruP, &rvP, &reP);
+
+//               // const dfloat uM = ruM/rrM;
+//               // const dfloat vM = rvM/rrM;
+//               // const dfloat pM = (gamma-1.0)*(reM - 0.5*rrM*(uM*uM + vM*vM)); 
+//               // const dfloat tM =  pM/(R*rrM); 
+
+//               // dfloat uP = 0.0, vP = 0.0, pP = 0.0; 
+//               // // dfloat pP = gamma*gamma*rrP;
+//               // dfloat dudx = 0.f, dudy = 0.f, dvdx = 0.f, dvdy = 0.f; //fake these values !!!
+//               // cnsBoundaryConditions2D(bc, gamma, R, CP, CV, mu, \
+//               //                         time, x[idM], y[idM], nx, ny, \
+//               //                         rrM, uM, vM, pM, 0., 0., 0., 0.,
+//               //                         &rrP, &uP, &vP, &pP, &dudx, &dudy, &dvdx, &dvdy);
+//               // cnsDiffusionBoundaryConditions2D(bc, gamma, R, CP, CV, mu, \
+//               //                         time, x[idM], y[idM], nx, ny, \
+//               //                         rrM, uM, vM, pM, 0., 0., 0., 0.,
+//               //                         &rrP, &uP, &vP, &pP, &dudx, &dudy, &dvdx, &dvdy);
+//               // Return back to conservative variables
+//               // ruP = rrP*uP; 
+//               // rvP = rrP*vP; 
+//               // reP = pP/(gamma-1.0) + 0.5*rrP*(uP*uP + vP*vP); 
+//             }
+
+//             const dfloat sc = 0.5f*invJ*sJ;
+//             const dfloat alphaM = 0.5 - beta; 
+//             const dfloat alphaP = 0.5 + beta; 
+            
+//             s_gradflux[es][0][n] = sc*nx*( alphaM*rrM + alphaP*rrP  - rrM);
+//             s_gradflux[es][1][n] = sc*ny*( alphaM*rrM + alphaP*rrP  - rrM);
+
+//             s_gradflux[es][2][n] = sc*nx*( alphaM*ruM + alphaP*ruP  - ruM);
+//             s_gradflux[es][3][n] = sc*ny*( alphaM*ruM + alphaP*ruP  - ruM);
+
+//             s_gradflux[es][4][n] = sc*nx*( alphaM*rvM + alphaP*rvP  - rvM);
+//             s_gradflux[es][5][n] = sc*ny*( alphaM*rvM + alphaP*rvP  - rvM);
+
+//             s_gradflux[es][6][n] = sc*nx*( alphaM*reM + alphaP*reP  - reM);
+//             s_gradflux[es][7][n] = sc*ny*( alphaM*reM + alphaP*reP  - reM);
+
+//             // s_gradflux[es][0][n] = sc*nx*(rrP-rrM);
+//             // s_gradflux[es][1][n] = sc*ny*(rrP-rrM);
+//             // s_gradflux[es][2][n] = sc*nx*(ruP-ruM);
+//             // s_gradflux[es][3][n] = sc*ny*(ruP-ruM);
+
+//             // s_gradflux[es][4][n] = sc*nx*(rvP-rvM);
+//             // s_gradflux[es][5][n] = sc*ny*(rvP-rvM);
+//             // s_gradflux[es][6][n] = sc*nx*(reP-reM);
+//             // s_gradflux[es][7][n] = sc*ny*(reP-reM);
+
+//           }
+//         }
+//       }
+//     }
+
+//     // for each node in the element
+//     for(int es=0;es<p_NblockS;++es;@inner(1)){
+//       for(int n=0;n<p_maxNodes;++n;@inner(0)){
+//         const dlong e = eo + es;
+//         if(e<Nelements){
+//           if(n<p_Np){
+//             // load rhs data from volume fluxes
+//             dfloat LTrrxflux = 0.f, LTrryflux = 0.f;
+//             dfloat LTruxflux = 0.f, LTruyflux = 0.f;
+//             dfloat LTrvxflux = 0.f, LTrvyflux = 0.f;
+//             dfloat LTrexflux = 0.f, LTreyflux = 0.f;
+
+//             // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
+//             #pragma unroll p_NfacesNfp
+//               for(int m=0;m<p_NfacesNfp;++m){
+//                 const dfloat L = LIFT[n+m*p_Np];
+                
+//                 LTrrxflux += L*s_gradflux[es][0][m];
+//                 LTrryflux += L*s_gradflux[es][1][m];
+//                 LTruxflux += L*s_gradflux[es][2][m];
+//                 LTruyflux += L*s_gradflux[es][3][m];
+
+//                 LTrvxflux += L*s_gradflux[es][4][m];
+//                 LTrvyflux += L*s_gradflux[es][5][m];
+//                 LTrexflux += L*s_gradflux[es][6][m];
+//                 LTreyflux += L*s_gradflux[es][7][m];
+//               }
+
+//             const dlong base = e*p_Np*p_Ngrads+n;
+//             gradq[base+0*p_Np] += LTrrxflux;
+//             gradq[base+1*p_Np] += LTrryflux;
+//             gradq[base+2*p_Np] += LTruxflux;
+//             gradq[base+3*p_Np] += LTruyflux;
+
+//             gradq[base+4*p_Np] += LTrvxflux;
+//             gradq[base+5*p_Np] += LTrvyflux;
+//             gradq[base+6*p_Np] += LTrexflux;
+//             gradq[base+7*p_Np] += LTreyflux;
+
+//           }
+//         }
+//       }
+//     }
+//   }
+// }
+

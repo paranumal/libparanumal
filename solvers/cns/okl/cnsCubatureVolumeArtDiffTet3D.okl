@@ -23,8 +23,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 */
-#define RMIN 0.05
-#define PMIN 0.05
+#define RMIN 0.01
+#define PMIN 0.01
 #define ALPHA 100
 
 #define POSITIVITY 1
@@ -43,23 +43,22 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
 
 
 // Compressible Navier-Stokes
-@kernel void cnsCubatureVolumeArtificialDiffsuionTet3D(const dlong Nelements,
-                                          @restrict const  dfloat *  vgeo,
-                                          @restrict const  dfloat *  cubvgeo,
-                                          @restrict const  dfloat *  cubD,
-                                          @restrict const  dfloat *  cubPDT,
-                                          @restrict const  dfloat *  cubInterp,
-                                          @restrict const  dfloat *  cubProject,
-                                          @restrict const  dfloat *  x,
-                                          @restrict const  dfloat *  y,
-                                          @restrict const  dfloat *  z,
-                                          @restrict const  dfloat * pCoeff,
-                                          const dfloat t,
-                                          @restrict const  dfloat *  muArtDiff,
-                                          @restrict const  dfloat *  q,
-                                          @restrict const  dfloat *  gradq,
-                                          @restrict dfloat *  rhsq){
-
+@kernel void cnsCubatureVolumeArtificialDiffsuionLaplaceTet3D(const dlong Nelements,
+                                                              @restrict const  dfloat *  vgeo,
+                                                              @restrict const  dfloat *  cubvgeo,
+                                                              @restrict const  dfloat *  cubD,
+                                                              @restrict const  dfloat *  cubPDT,
+                                                              @restrict const  dfloat *  cubInterp,
+                                                              @restrict const  dfloat *  cubProject,
+                                                              @restrict const  dfloat *  x,
+                                                              @restrict const  dfloat *  y,
+                                                              @restrict const  dfloat *  z,
+                                                              @restrict const  dfloat * pCoeff,
+                                                              const dfloat t,
+                                                              @restrict const  dfloat *  muArtDiff,
+                                                              @restrict const  dfloat *  q,
+                                                              @restrict const  dfloat *  gradq,
+                                                              @restrict dfloat *  rhsq){
   for(dlong e=0;e<Nelements;++e;@outer(0)){
 
     @shared dfloat s_q[p_Nfields][p_Np];
@@ -90,14 +89,12 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
         dfloat rw = q[qbase+3*p_Np];
         dfloat rE = q[qbase+4*p_Np];
 
-        dfloat dr = 0.0; 
-#if POSITIVITY
+       dfloat dr = 1.0; 
+        #if POSITIVITY
         // check positivity on density
         rr         = RMIN + LMAX(rr-RMIN, ALPHA); 
         dr         = SMOOTH(rr-RMIN, ALPHA); 
-#else
-        dr = 1.0; 
-#endif
+        #endif
         // conservative fields
         s_q[0][n] = rr;
         s_q[1][n] = ru;
@@ -147,9 +144,8 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
       const dfloat CV    = pCoeff[p_CVID]; // CV
       const dfloat CP    = pCoeff[p_CPID]; // CP
       const dfloat Pr    = pCoeff[p_PRID]; // Prandtl Number
-      const dfloat kappa = pCoeff[p_KAID]; // Thermal Conductivity
-      const dfloat M2    = pCoeff[p_M2ID]; // Mach Square
             dfloat mu    = pCoeff[p_MUID]; // Bulk viscosity
+
       //interpolate to cubature
       dfloat rr = 0., ru = 0., rv = 0., rw=0., rE = 0.;
       // artificial diffusion
@@ -197,16 +193,14 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
       // primitive variables
       const dfloat ir = 1.0/rr;   
       const dfloat u  = ru*ir, v  = rv*ir, w= rw*ir;
-      const dfloat ke = u*u + v*v + w*w;
       // pressure field
-      dfloat p  = (gamma-1)*(rE- 0.5f*rr*ke);
+      dfloat p  = (gamma-1)*(rE- 0.5f*rr*( u*u + v*v + w*w));
       
       // Positivity Check
+      dfloat dp=1.0; 
       #if POSITIVITY
         p        = PMIN + LMAX(p-PMIN, ALPHA); 
-        dfloat dp  = SMOOTH(p-PMIN, ALPHA); 
-      #else
-        dfloat dp=1.0; 
+        dp       = SMOOTH(p-PMIN, ALPHA); 
       #endif
 
       const dfloat dudx  = (drudx - drrdx*u)*ir;
@@ -221,10 +215,6 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
       const dfloat dvdz  = (drvdz - drrdz*v)*ir;
       const dfloat dwdz  = (drwdz - drrdz*w)*ir;
 
-      const dfloat dkedx = (u*dudx + v*dvdx + w*dwdx);
-      const dfloat dkedy = (u*dudy + v*dvdy + w*dwdy);
-      const dfloat dkedz = (u*dudz + v*dvdz + w*dwdz);
-
       if(p_viscType==2){ // Sutherland
         //nondimensional temp =  p/(\rho * R)/Tref
         const dfloat R    = pCoeff[p_RRID]; 
@@ -234,26 +224,24 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
         const dfloat cs   = pCoeff[p_CSID]; // precomuted value to simlify
         const dfloat tn   = p*ir*tr/R; // non-dimensional temp
         mu  = (tn > ts) ? (mu*pow(tn, exp)*(1.0+ts)/(tn + ts)) : mu*tn*cs;  
-        // mu  = mu*pow(tn, exp)*(1.0+ts)/(tn + ts);  
       }else if(p_viscType==3){ // Powerlaw
-
+        const dfloat R    = pCoeff[p_RRID]; 
+        const dfloat exp  = pCoeff[p_EXID]; // Exponential term
+        const dfloat Temp = p*ir/R;      // Temperature
+        mu                = mu*pow(Temp, exp); 
       }
 
-     // // derivative of temperature
-     //  const dfloat Tx = (gamma-1.0)*M2*(dredx*ir - rE*drrdx*ir*ir - dkedx);      
-     //  const dfloat Ty = (gamma-1.0)*M2*(dredy*ir - rE*drrdy*ir*ir - dkedy);     
-     //  const dfloat Tz = (gamma-1.0)*M2*(dredz*ir - rE*drrdz*ir*ir - dkedz);     
-     // derivative of temperature
-      const dfloat Tx = (dredx*ir - rE*drrdx*ir*ir - dkedx);      
-      const dfloat Ty = (dredy*ir - rE*drrdy*ir*ir - dkedy);     
-      const dfloat Tz = (dredz*ir - rE*drrdz*ir*ir - dkedz);     
+      const dfloat Tx = (dredx*ir - rE*drrdx*ir*ir - (u*dudx+v*dvdx+w*dwdx));      
+      const dfloat Ty = (dredy*ir - rE*drrdy*ir*ir - (u*dudy+v*dvdy+w*dwdy));     
+      const dfloat Tz = (dredz*ir - rE*drrdz*ir*ir - (u*dudz+v*dvdz+w*dwdz));     
 
-      const dfloat T11 = mu*(2.0*dudx - 2.0*(dudx+dvdy+dwdz)/3.0);
+      const dfloat sbeta = 2.0/3.0; 
+      const dfloat T11 = mu*(2.0*dudx - sbeta*(dudx+dvdy+dwdz));
       const dfloat T12 = mu*(dudy+dvdx);
       const dfloat T13 = mu*(dudz+dwdx);
-      const dfloat T22 = mu*(2.0*dvdy - 2.0*(dudx+dvdy+dwdz)/3.0);
+      const dfloat T22 = mu*(2.0*dvdy - sbeta*(dudx+dvdy+dwdz));
       const dfloat T23 = mu*(dvdz+dwdy);
-      const dfloat T33 = mu*(2.0*dwdz - 2.0*(dudx+dvdy+dwdz)/3.0);
+      const dfloat T33 = mu*(2.0*dwdz - sbeta*(dudx+dvdy+dwdz));
 
       // prefetch geometric factors (constant on triangle)
       const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
@@ -314,15 +302,10 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
 
       {
       // // F3 = mu*(u*T11+v*T12) - (uE+up), G2 = mu*(u*T12+v*T22) - (vE+vp)
-      // const dfloat Tmu = mu*CP/Pr; 
-      // const dfloat F = -u*(rE+p) + (u*T11 + v*T12 + w*T13) + kappa*Tx + rm*dredx;
-      // const dfloat G = -v*(rE+p) + (u*T12 + v*T22 + w*T23) + kappa*Ty + rm*dredy;
-      // const dfloat H = -w*(rE+p) + (u*T13 + v*T23 + w*T33) + kappa*Tz + rm*dredz;
-      // F3 = mu*(u*T11+v*T12) - (uE+up), G2 = mu*(u*T12+v*T22) - (vE+vp)
-      const dfloat Tmu = mu*CP/Pr; 
-      const dfloat F = -u*(rE+p) + (u*T11 + v*T12 + w*T13) + (mu*gamma/Pr)*Tx + rm*dredx;
-      const dfloat G = -v*(rE+p) + (u*T12 + v*T22 + w*T23) + (mu*gamma/Pr)*Ty + rm*dredy;
-      const dfloat H = -w*(rE+p) + (u*T13 + v*T23 + w*T33) + (mu*gamma/Pr)*Tz + rm*dredz;
+      const dfloat kappa = (CP*mu)/Pr; 
+      const dfloat F = -u*(rE+p) + (u*T11 + v*T12 + w*T13) + kappa*Tx + rm*dredx;
+      const dfloat G = -v*(rE+p) + (u*T12 + v*T22 + w*T23) + kappa*Ty + rm*dredy;
+      const dfloat H = -w*(rE+p) + (u*T13 + v*T23 + w*T33) + kappa*Tz + rm*dredz;
        // F0 = ru, G0 = rv
         s_F[4][n] = drdx*F + drdy*G + drdz*H;
         s_G[4][n] = dsdx*F + dsdy*G + dsdz*H;
@@ -362,8 +345,6 @@ for(int n=0;n<p_cubNp;++n;@inner(0)){
             dh3dt += cDtni*s_H[3][i];
             dh4dt += cDtni*s_H[4][i];
           }
-
-
         const dlong base = e*p_Np*p_Nfields + n;
         // move to rhs
         rhsq[base+0*p_Np] = -(df0dr+dg0ds+dh0dt);

@@ -37,9 +37,7 @@ void myTokenizer(const int NrefState, std::string s, memory<dfloat> & refState, 
         refState[nref] = std::stod(word); 
         nref ++; 
     }
-
     LIBP_ABORT("Correct the reference state: pref, uref, vref, wref, pref", nref!= NrefState);
-  
 }
 
 
@@ -47,14 +45,6 @@ void cns_t::setupPhysics(properties_t & props){
  
   // Set isentropic exponent and related info
   settings.getSetting("GAMMA", gamma);
-  
-  // These are needed to simplfy computations 
-  gammaM1  = gamma - 1.0; 
-  gammaP1  = gamma + 1.0; 
-  igamma   = 1.0/ gamma; 
-  igammaM1 = 1.0/ gammaM1; 
-  igammaP1 = 1.0/ gammaP1; 
-
   // Read Referenece State
   std::string stateStr;
   const int NrefState = 6;
@@ -77,64 +67,67 @@ void cns_t::setupPhysics(properties_t & props){
 
   if(settings.compareSetting("SOLVER TYPE", "NAVIER-STOKES")){
     settings.getSetting("PRANDTL NUMBER", Pr); 
-    settings.getSetting("VISCOSITY", mu);
-    // update mu as 1/Re
-    mu = (settings.compareSetting("NONDIMENSIONAL EQUATIONS", "TRUE"))? 1.0/Re : mu;
+    if(settings.compareSetting("NONDIMENSIONAL EQUATIONS", "TRUE")){
+      mu = 1.0/Re; 
+    }else{
+      settings.getSetting("VISCOSITY", mu);
+    }
   }else{
     mu = 0.0; Re = 0.0; 
   }
 
-  Nph  = 8;  
+  settings.getSetting("LDG BETA COEFFICIENT", beta_ldg);
+  settings.getSetting("LDG TAU COEFFICIENT", tau_ldg);
+  Nph  = 10;  
+  int pids = 0;
   pCoeff.malloc(Nph,0.0);
-  MUID = 0; 
-  GMID = 1; 
-  PRID = 2; 
-  RRID = 3; 
-  CPID = 4; 
-  CVID = 5; 
-  KAID = 6; 
-  M2ID = 7; 
+  MUID = pids++;  GMID = pids++;  PRID = pids++; RRID = pids++; CPID = pids++; 
+  CVID = pids++;  KAID = pids++;  M2ID = pids++; BTID = pids++; TAID = pids++;  
+  
   pCoeff[MUID] = mu; // Bulk Viscosity
   pCoeff[PRID] = Pr; // Prandtl Number
   pCoeff[RRID] = R;  // Specific Gas Constant
   pCoeff[GMID] = gamma; 
   pCoeff[CPID] = cp;
   pCoeff[CVID] = cv;
-  pCoeff[KAID] = 1.0/( (gamma-1.0)*Ma*Ma)*mu/Pr;
+  pCoeff[KAID] = cp*mu/Pr; // 1.0/( (gamma-1.0)*Ma*Ma)*mu/Pr;
   pCoeff[M2ID] = Ma*Ma;
-
+  pCoeff[BTID] = beta_ldg;
+  pCoeff[TAID] = tau_ldg;
 
   if(settings.compareSetting("SOLVER TYPE", "NAVIER-STOKES")){
+    
     if(settings.compareSetting("VISCOSITY TYPE", "CONSTANT")){
       viscType = 1;
     }else if(settings.compareSetting("VISCOSITY TYPE", "SUTHERLAND")){
       viscType  = 2;
       Nph      += 4;  
-      EXID = 6; 
-      TRID = 7; 
-      TSID = 8; 
-      CSID = 9; 
+      EXID = pids++; TRID = pids++; TSID = pids++; CSID = pids++; 
       pCoeff.realloc(Nph);
       // Coefficients from White, F. M., Viscous fluid flow, McGraw-Hill, 2006
-      dfloat Tref = 273.15, Ts = 110.4, exp = 1.5;  
+      dfloat Tref = (settings.compareSetting("NONDIMENSIONAL EQUATIONS", "TRUE")) ? 1.0 : 273.15; 
+      dfloat Ts   = (settings.compareSetting("NONDIMENSIONAL EQUATIONS", "TRUE")) ? 110.4/273.15:110.4; 
+      dfloat exp  = 3.0/2.0 ;  
       pCoeff[EXID] = exp;            // exponent  
       pCoeff[TRID] = 1.0/Tref;       // inverse of reference temperature here !!!    
       pCoeff[TSID] = Ts/Tref;        // Ts/Tref approximately !!! 
       pCoeff[CSID] = pow(pCoeff[TSID],pCoeff[EXID])*(1.0+pCoeff[TSID])/(2.0*pCoeff[TSID]*pCoeff[TSID]); // exponent  
     }else if(settings.compareSetting("VISCOSITY TYPE", "POWER-LAW")){
       viscType  = 3;
-      dfloat exp = 1.5;
+      Nph      += 2;
+      EXID = pids++; 
+      TRID = pids++; 
+  
+      dfloat exp = 2.0/3.0;
       dfloat Tref = (settings.compareSetting("NONDIMENSIONAL EQUATIONS", "TRUE")) ? 
                     1.0 : 273.15; 
-      pCoeff[MUID] = mu / Tref * exp; // Update viscosity
-      pCoeff[EXID] = exp;             // exponent  
-      pCoeff[TRID] = Tref;            // inverse of reference temperature = 1/Tref   
+      pCoeff[MUID] = mu / pow(Tref, exp); // Update viscosity
+      pCoeff[EXID] = exp;                 // exponent  
+      pCoeff[TRID] = Tref;                // Tref   
     }
   }else{ // Euler solver
     viscType = 0; 
   }
-
-  
 
   // Define physical model on Device 
   props["defines/" "p_viscType"]= viscType;
@@ -150,6 +143,8 @@ void cns_t::setupPhysics(properties_t & props){
   props["defines/" "p_TRID"]    = TRID;
   props["defines/" "p_TSID"]    = TSID;
   props["defines/" "p_CSID"]    = CSID;
+  props["defines/" "p_BTID"]    = BTID;
+  props["defines/" "p_TAID"]    = TAID;
 
   // Define reference state on device
   // props["defines/" "p_RBAR"]    = refState[0];

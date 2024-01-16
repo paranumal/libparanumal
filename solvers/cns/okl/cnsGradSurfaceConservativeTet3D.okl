@@ -70,6 +70,8 @@ SOFTWARE.
               const dfloat CP     = pCoeff[p_CPID]; 
               const dfloat CV     = pCoeff[p_CVID]; 
               const dfloat mu     = pCoeff[p_MUID]; 
+              const dfloat beta   = pCoeff[p_BTID]; 
+              const dfloat tau   =  pCoeff[p_TAID]; 
 
               // load surface geofactors for this face
               const dlong sid    = p_Nsgeo*(e*p_Nfaces+face);
@@ -108,48 +110,53 @@ SOFTWARE.
             // apply boundary condition given in primitive variables
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0) {
-              const dfloat uM = ruM/rrM, vM = rvM/rrM, wM = rwM/rrM;
-              const dfloat pM = (gamma-1.0)*(reM - 0.5*rrM*(uM*uM + vM*vM + wM*wM)); 
+              // fake derivates
+                dfloat drrdxP = 0.0, drrdyP =0.0, drrdzP =0.0; 
+                dfloat drudxP = 0.0, drudyP =0.0, drudzP =0.0; 
+                dfloat drvdxP = 0.0, drvdyP =0.0, drvdzP =0.0; 
+                dfloat drwdxP = 0.0, drwdyP =0.0, drwdzP =0.0; 
+                dfloat dredxP = 0.0, dredyP =0.0, dredzP =0.0; 
+                cnsViscousBoundaryConditions3D(bc, gamma, R, CP, CV, mu, time, 
+                                 x[idM], y[idM], z[idM], 
+                                 nx, ny, nz,
+                                 rrM, ruM, rvM, rwM, reM, 
+                                 &rrP, &ruP, &rvP, &rwP,  &reP, 
+                                 0.0, 0.0, 0.0, 
+                                 0.0, 0.0, 0.0,  
+                                 0.0, 0.0, 0.0, 
+                                 0.0, 0.0, 0.0, 
+                                 0.0, 0.0, 0.0, 
+                                 &drrdxP, &drrdyP, &drrdzP, 
+                                 &drudxP, &drudyP, &drudzP, 
+                                 &drvdxP, &drvdyP, &drvdzP, 
+                                 &drwdxP, &drwdyP, &drwdzP, 
+                                 &dredxP, &dredyP, &dredzP);
 
-              dfloat uP = ruP/rrP, vP = rvP/rrP, wP = rwP/rrP;
-              dfloat pP = (gamma-1.0)*(reP - 0.5*rrP*(uP*uP+vP*vP+wP*wP)); 
-
-              dfloat dudx = 0.f, dudy = 0.f, dudz = 0.f; //fake these values
-              dfloat dvdx = 0.f, dvdy = 0.f, dvdz = 0.f; 
-              dfloat dwdx = 0.f, dwdy = 0.f, dwdz = 0.f; 
-              cnsDiffusionBoundaryConditions3D(bc, gamma, R, CP, CV, mu, \
-                                time, x[idM], y[idM], z[idM], nx, ny, nz,\
-                                rrM, uM, vM, wM, pM, 0., 0., 0., 0., 0., 0., 0., 0., 0., \
-                                &rrP, &uP, &vP, &wP, &pP, \
-                                &dudx, &dudy, &dudz, &dvdx, &dvdy, &dvdz, &dwdx, &dwdy, &dwdz);
-
-              // Return back to conservative formulation
-              ruP = rrP*uP; 
-              rvP = rrP*vP; 
-              rwP = rrP*wP; 
-              reP = pP/(gamma-1.) + 0.5*rrP*(uP*uP+vP*vP+wP*wP); 
             }
 
-            const dfloat sc = 0.5f*invJ*sJ;
-            s_gradflux[0][n]  = sc*nx*(rrP-rrM);
-            s_gradflux[1][n]  = sc*ny*(rrP-rrM);
-            s_gradflux[2][n]  = sc*nz*(rrP-rrM);
+            const dfloat sc = 0.5*invJ*sJ;
+            const dfloat alphaM = 0.5 + beta; 
+            const dfloat alphaP = 0.5 - beta; 
 
-            s_gradflux[3][n]  = sc*nx*(ruP-ruM);
-            s_gradflux[4][n]  = sc*ny*(ruP-ruM);
-            s_gradflux[5][n]  = sc*nz*(ruP-ruM);
+            s_gradflux[ 0][n] = sc*nx*( alphaM*rrM + alphaP*rrP  - rrM);
+            s_gradflux[ 1][n] = sc*ny*( alphaM*rrM + alphaP*rrP  - rrM);
+            s_gradflux[ 2][n] = sc*nz*( alphaM*rrM + alphaP*rrP  - rrM);
 
-            s_gradflux[6][n]  = sc*nx*(rvP-rvM);
-            s_gradflux[7][n]  = sc*ny*(rvP-rvM);
-            s_gradflux[8][n]  = sc*nz*(rvP-rvM);
+            s_gradflux[ 3][n] = sc*nx*( alphaM*ruM + alphaP*ruP  - ruM);
+            s_gradflux[ 4][n] = sc*ny*( alphaM*ruM + alphaP*ruP  - ruM);
+            s_gradflux[ 5][n] = sc*nz*( alphaM*ruM + alphaP*ruP  - ruM);
 
-            s_gradflux[ 9][n] = sc*nx*(rwP-rwM);
-            s_gradflux[10][n] = sc*ny*(rwP-rwM);
-            s_gradflux[11][n] = sc*nz*(rwP-rwM);
+            s_gradflux[ 6][n] = sc*nx*( alphaM*rvM + alphaP*rvP  - rvM);
+            s_gradflux[ 7][n] = sc*ny*( alphaM*rvM + alphaP*rvP  - rvM);
+            s_gradflux[ 8][n] = sc*nz*( alphaM*rvM + alphaP*rvP  - rvM);
 
-            s_gradflux[12][n] = sc*nx*(reP-reM);
-            s_gradflux[13][n] = sc*ny*(reP-reM);
-            s_gradflux[14][n] = sc*nz*(reP-reM);
+            s_gradflux[ 9][n] = sc*nx*( alphaM*rwM + alphaP*rwP  - rwM);
+            s_gradflux[10][n] = sc*ny*( alphaM*rwM + alphaP*rwP  - rwM);
+            s_gradflux[11][n] = sc*nz*( alphaM*rwM + alphaP*rwP  - rwM);
+
+            s_gradflux[12][n] = sc*nx*( alphaM*reM + alphaP*reP  - reM);
+            s_gradflux[13][n] = sc*ny*( alphaM*reM + alphaP*reP  - reM);
+            s_gradflux[14][n] = sc*nz*( alphaM*reM + alphaP*reP  - reM);
         }
       } 
 

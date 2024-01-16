@@ -2,13 +2,11 @@
 2.0
 
 [DATA FILE]
-#data/cnsGaussian3D.h
-data/cnsUniform3D.h
+data/cnsGaussian3D.h
+#data/cnsUniform3D.h
 #*******************[MESH PROPERTIES]*******************#
 [MESH FILE]
-#BOX
-#../../meshes/AGARD_B.msh
-../../meshes/cnsBody3D.msh
+BOX
 
 [MESH DIMENSION]
 3
@@ -17,19 +15,49 @@ data/cnsUniform3D.h
 6
 
 [BOX NX]
-20			
+21
 
 [BOX NY]
-20
+21
 
 [BOX NZ]
-20
+21
 
 [BOX BOUNDARY FLAG]
-12
+11
 
+
+#*******************[DISCRETIZATION PROPERTIES]************#
 [POLYNOMIAL DEGREE]
 3
+
+[SOLVER TYPE]
+#EULER
+NAVIER-STOKES
+
+# If TRUE compute R and mu from Mach & Reynolds//
+[NONDIMENSIONAL EQUATIONS]
+TRUE
+
+[ISOTHERMAL]
+FALSE
+
+#Can be COLLOCATION or CUBATURE
+[ADVECTION TYPE]
+#COLLOCATION
+CUBATURE
+
+# 0 < beta < 1 
+[LDG BETA COEFFICIENT]
+0.5
+
+# 0 < tau < 1.0
+[LDG TAU COEFFICIENT]
+0.5
+
+[TIME INTEGRATOR]
+DOPRI5
+#LSERK4
 
 #*******************[DEVICE PROPERTIES]*******************#
 [THREAD MODEL]
@@ -41,14 +69,7 @@ CUDA
 [DEVICE NUMBER]
 0
 
-#*******************[SOLVER PROPERTIES]*******************#
-[SOLVER TYPE]
-#EULER
-NAVIER-STOKES
-
-# If TRUE compute R and mu from Mach & Reynolds//
-[NONDIMENSIONAL EQUATIONS]
-TRUE
+#*******************[PROBLEM PROPERTIES]*******************#
 
 # Isentropic exponent 
 [GAMMA]
@@ -56,11 +77,11 @@ TRUE
 
 # // Mach number is needed for NONDIM=TRUE
 [MACH NUMBER]
-2.0
+0.1
 
 # Reynolds number is needed for NONDIM = TRUE
 [REYNOLDS NUMBER]
-2.7e6
+1e5
 
 # R is needed if NONDIM=FALSE otherwise  R = 1.0/(gamma*Ma^2) 
 [SPECIFIC GAS CONSTANT]
@@ -68,50 +89,40 @@ TRUE
 
 # mu is needed if NONDIM = FALSE, otherwise mu = 1/Re
 [VISCOSITY]
-1e-5
+0.00001
 
+# [ CONSTANT ] - [SUTHERLAND] - [POWER-LAW]
 [VISCOSITY TYPE]
-CONSTANT
-#SUTHERLAND
-#POWER-LAW
+SUTHERLAND
 
 
 [PRANDTL NUMBER]
 0.72
 
+# [density, velocity, pressure, temperature, viscosity, length]
+# [rref, vref, pref. tref, mref, lref]
 [REFERENCE STATE]
 1.0, 1.0, 1.0, 1.0, 1.0, 1.0
 
-[ISOTHERMAL]
-FALSE
-
-#Can be COLLOCATION or CUBATURE
-[ADVECTION TYPE]
-#CUBATURE
-COLLOCATION
-
-[TIME INTEGRATOR]
-DOPRI5
-#LSERK4
 
 [CFL NUMBER]
-0.1
+0.5
 
 [START TIME]
 0
 
 [FINAL TIME]
-10
+1
 
 #*******************[OUTPUT PROPERTIES]*******************#
 [OUTPUT INTERVAL]
-1.0
+0.1
 
 [OUTPUT TO FILE]
 TRUE
 
 [OUTPUT FILE NAME]
-cns
+cnsTet
 
 #*****************[STABILIZASYON PROPERTIES]*****************#
 # HJS:1  CNS:2  INS:3 
@@ -133,12 +144,12 @@ cns
 WARPBLEND
 
 [STAB OUTPUT TO FILE]
-FALSE
+TRUE
 
+# [LAPLACE], [PHYSICAL X do not use this option for now!!!!] 
 [ARTDIFF TYPE]
 LAPLACE
-#PHYSICAL
 
 [ARTDIFF SCALE FACTOR]
-1.0
+3
 

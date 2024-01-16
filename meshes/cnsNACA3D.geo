@@ -297,17 +297,13 @@ BooleanDifference{ Volume{2}; Delete; }{ Volume{1}; Delete; }
 //+
 Coherence;
 //+
-// Physical Surface("Farfield", 20) = {15, 16, 17, 20, 19, 24, 18, 21, 23};
-Physical Surface("Inflow", 2) = {15, 16, 17, 20, 21, 23};
-Physical Surface("Outflow", 3) = {19, 24, 18};
-//+
-Physical Surface("Wall", 1) = {25, 26, 29, 27, 28};
-//+
-Physical Surface("Symmetry", 4) = {8, 22};
-//+
+// Physical Surface("Inflow", 2) = {15, 16, 17, 20, 21, 23};
+// Physical Surface("Outflow", 3) = {19, 24, 18};
+Physical Surface("Farfield", 20) = {15, 16, 17, 20, 19, 24, 18, 21, 23};
+Physical Surface("Wall", 12) = {25, 26, 29, 27, 28};
+Physical Surface("Symmetry", 42) = {8, 22};
 Physical Volume("Domain", 9) = {3, 2};
+
 //+
 Coherence;
-
-
 Mesh.MeshSizeFromCurvature = 20;
