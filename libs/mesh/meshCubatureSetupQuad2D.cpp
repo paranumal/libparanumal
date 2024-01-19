@@ -30,8 +30,11 @@ namespace libp {
 
 void mesh_t::CubatureSetupQuad2D(){
 
+  int cubInc = 0;
+  settings.getSetting("CUBATURE DEGREE INCREMENT", cubInc);
+
   /* Quadrature data */
-  cubN = N+1;
+  cubN = (N+1) + cubInc;
   cubNq = cubN+1;
   cubNp = cubNq*cubNq;
   cubNfp = cubNq;
