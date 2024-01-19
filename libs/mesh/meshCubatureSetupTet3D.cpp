@@ -30,8 +30,11 @@ namespace libp {
 
 void mesh_t::CubatureSetupTet3D(){
 
+  int cubInc = 0;
+  settings.getSetting("CUBATURE DEGREE INCREMENT", cubInc);
+
   /* Cubature data */
-  cubN = 2*N; //cubature order
+  cubN = (2*N) + cubInc; //cubature order
   CubatureNodesTet3D(cubN, cubNp, cubr, cubs, cubt, cubw);
 
   InterpolationMatrixTet3D(N, r, s, t, cubr, cubs, cubt, cubInterp);
