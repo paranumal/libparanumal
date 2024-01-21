@@ -163,6 +163,16 @@ void upwindRoeAveraged(const dfloat nx,
         //
         s_muM[n] = aMu[eM*p_Np  + vidM];
         s_muP[n] = aMu[eP*p_Np  + vidP];
+
+        // for(int fld=0; fld<p_Nfields; fld++){
+        //   s_qM[fld][n] = q[qbaseM + fld*p_Np];
+        //   s_qP[fld][n] = q[qbaseP + fld*p_Np];
+        // }
+
+        // for(int fld=0; fld<p_Ngrads; fld++){
+        //   s_gradqM[fld][n] = gradq[sbaseM+fld*p_Np];
+        //   s_gradqP[fld][n] = gradq[sbaseP+fld*p_Np];
+        // }
         
         //
         s_qM[0][n] = q[qbaseM + 0*p_Np];

@@ -27,17 +27,17 @@ SOFTWARE.
 #include "cns.hpp"
 
 
-void myTokenizer(const int NrefState, std::string s, memory<dfloat> & refState, char del)
+void cns_t::tokenizer(const int N, std::string s, memory<dfloat> & state, char del)
 {
     std::stringstream ss(s);
     std::string word;
     int nref = 0; 
     while (!ss.eof()) {
         getline(ss, word, del);
-        refState[nref] = std::stod(word); 
+        state[nref] = std::stod(word); 
         nref ++; 
     }
-    LIBP_ABORT("Correct the reference state: pref, uref, vref, wref, pref", nref!= NrefState);
+    LIBP_ABORT("correct the number of inputs in tokenizer", nref!= N);
 }
 
 
@@ -50,7 +50,7 @@ void cns_t::setupPhysics(properties_t & props){
   const int NrefState = 6;
   refState.malloc(NrefState, 0.0); 
   settings.getSetting("REFERENCE STATE", stateStr);
-  myTokenizer(NrefState, stateStr,  refState,  ',');
+  tokenizer(NrefState, stateStr,  refState,  ',');
 
   // Set specific gas constant
   if(settings.compareSetting("NONDIMENSIONAL EQUATIONS", "TRUE")){

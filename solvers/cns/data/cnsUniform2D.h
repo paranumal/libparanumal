@@ -25,12 +25,12 @@ SOFTWARE.
 */
 
 /* ************************************************************************ */
-#define MACH 3.0
+#define MACH 2.0
 /* ************************************************************************ */
 #if MACH==0.1
   #define p_RBAR 1.4
-  #define p_UBAR 0.984807753012208
-  #define p_VBAR 0.173648177666930
+  #define p_UBAR 1.00000
+  #define p_VBAR 0.00000
   #define p_PBAR 100
   #define p_TBAR 1.00000
 #elif MACH==0.8
@@ -53,8 +53,8 @@ SOFTWARE.
   #define p_TBAR 1.00000
 #elif MACH==3.0
   #define p_RBAR 12.6000
-  #define p_UBAR 0.984807753012208
-  #define p_VBAR 0.173648177666930
+  #define p_UBAR 1.0
+  #define p_VBAR 0.0
   #define p_PBAR 1.00000
   #define p_TBAR 1.00000
 #elif MACH==4.0

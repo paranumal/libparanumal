@@ -75,6 +75,10 @@ public:
   // Physical coefficients
   memory<dfloat> refState; 
 
+  // moment center
+  memory<dfloat> momentCenter; 
+  deviceMemory<dfloat> o_momentCenter;
+
   // Physical coefficients
   memory<dfloat> pCoeff; 
   deviceMemory<dfloat> o_pCoeff; 
@@ -105,6 +109,10 @@ public:
   kernel_t initialConditionKernel;
   kernel_t maxWaveSpeedKernel;
 
+
+  kernel_t computeForcesKernel; 
+  kernel_t computeMomentsKernel; 
+
   cns_t() = default;
   cns_t(platform_t &_platform, mesh_t &_mesh,
               cnsSettings_t& _settings) {
@@ -119,6 +127,12 @@ public:
 
   // Set reference values, thermodynamics, nondimensional values
   void setupPhysics(properties_t & kernelInfo);
+
+  void tokenizer(const int N, std::string s, memory<dfloat> & state, char delimiter);
+  
+  void reportForces(dfloat time, int tstep);
+  void reportMoments(dfloat time, int tstep);
+
   void setupArtificialDiffusion(properties_t & kernelInfo);
   void setupNoStab(properties_t & kernelInfo);
 

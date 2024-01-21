@@ -2,9 +2,9 @@ Geometry.OldNewReg=0;
 SetFactory("OpenCASCADE");
 // Mesh.LcIntegrationPrecision = 1.e-2;
 
-lc   = DefineNumber[0.015];
-lc2  = DefineNumber[0.2];
-lc3  = DefineNumber[0.4];
+lc   = DefineNumber[0.05];
+lc2  = DefineNumber[0.25];
+lc3  = DefineNumber[0.5];
 
 Point(1) =  {1.000000e+00,0.000000e+00,0.000000e+00, lc};
 Point(2) =  {9.997533e-01,0.000000e+00,-3.498543e-05,lc};
@@ -266,11 +266,11 @@ p9 = newp; Point(p9) = { -yi,  0.0,  zomin, lc2};
 p10 = newp;  Point(p10) = { xomax, -(yi+0.5),  zomin, lc2}; 
 p11 = newp;  Point(p11) = { xomax,  (yi+0.5),  zomin, lc2}; 
 
- l1 = newc; Line(l1) = {p2, p3};
- l2 = newc; Line(l2) = {p3, p10};
- l3 = newc; Line(l3) = {p10, p11};
- l4 = newc; Line(l4) = {p11,p4}; 
- l5 = newc; Line(l5) = {p4,p5}; 
+l1 = newc; Line(l1) = {p2,  p3};
+l2 = newc; Line(l2) = {p3,  p10};
+l3 = newc; Line(l3) = {p10, p11};
+l4 = newc; Line(l4) = {p11, p4}; 
+l5 = newc; Line(l5) = {p4,  p5}; 
 
 c1 = newc; Circle(c1) = {p5, p1, p6};
 c2 = newc; Circle(c2) = {p6, p1, p2};
@@ -289,21 +289,17 @@ Plane Surface(7) = {7};
 Curve Loop(8) = {18, 19, 13, 14, -20, -23, -22, 21, 16, 17};
 //+
 Plane Surface(8) = {8};
-
 Extrude {0, 0, 3*L} { Surface{7,8};}
 
 BooleanDifference{ Volume{2}; Delete; }{ Volume{1}; Delete; }
 
-//+
-Coherence;
-//+
-// Physical Surface("Inflow", 2) = {15, 16, 17, 20, 21, 23};
-// Physical Surface("Outflow", 3) = {19, 24, 18};
 Physical Surface("Farfield", 20) = {15, 16, 17, 20, 19, 24, 18, 21, 23};
-Physical Surface("Wall", 12) = {25, 26, 29, 27, 28};
-Physical Surface("Symmetry", 42) = {8, 22};
+Physical Surface("Wall", 11) = {25, 26, 29, 27, 28};
+Physical Surface("Symmetry", 13) = {8, 22};
 Physical Volume("Domain", 9) = {3, 2};
 
-//+
+
 Coherence;
+
+
 Mesh.MeshSizeFromCurvature = 20;

@@ -51,7 +51,7 @@ void cns_t::Setup(platform_t& _platform, mesh_t& _mesh,
   ogs::InitializeKernels(platform, ogs::Dfloat, ogs::Add);
 
   //setup linear algebra module
-  platform.linAlg().InitKernels({"innerProd", "max", "scale"});
+  platform.linAlg().InitKernels({"innerProd", "max", "scale", "sum"});
 
   //setup timeStepper
   if (settings.compareSetting("TIME INTEGRATOR","AB3")){

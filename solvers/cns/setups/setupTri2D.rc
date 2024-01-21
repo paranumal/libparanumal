@@ -30,7 +30,7 @@ data/cnsUniform2D.h
 11
 #*******************[DISCRETIZATION PROPERTIES]************#
 [POLYNOMIAL DEGREE]
-5
+3
 
 [SOLVER TYPE]
 #EULER
@@ -78,7 +78,7 @@ CUDA
 
 # // Mach number is needed for NONDIM=TRUE
 [MACH NUMBER]
-3.0
+2.0
 
 # Reynolds number is needed for NONDIM = TRUE
 [REYNOLDS NUMBER]
@@ -124,6 +124,16 @@ TRUE
 
 [OUTPUT FILE NAME]
 cns
+
+[REPORT FORCES]
+TRUE
+
+[REPORT MOMENTS]
+TRUE
+
+[MOMENT CENTER]
+0.0, 0.0
+
 
 #*****************[STABILIZASYON PROPERTIES]*****************#
 # HJS:1  CNS:2  INS:3 

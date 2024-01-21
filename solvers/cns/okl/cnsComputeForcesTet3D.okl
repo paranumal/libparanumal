@@ -1,0 +1,490 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+@kernel void cnsComputeForcesTet3D(const dlong Nelements,
+                                  @restrict const  dfloat *  vgeo,
+                                  @restrict const  dfloat *  sgeo,
+                                  @restrict const  dfloat *  D,
+                                  @restrict const  dfloat *  SM,
+                                  @restrict const  dlong  *  vmapM,
+                                  @restrict const  int    *  EToB,
+                                  @restrict const  dfloat *  x,
+                                  @restrict const  dfloat *  y,
+                                  @restrict const  dfloat *  z,
+                                  @restrict const  dfloat * pCoeff,
+                                  @restrict const  dfloat *  q,
+                                  @restrict        dfloat *  F){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    @shared dfloat s_u[p_maxNodes];
+    @shared dfloat s_v[p_maxNodes];
+    @shared dfloat s_w[p_maxNodes];
+
+    @exclusive int is_wall_bc; 
+    
+    @exclusive dfloat r_dudx, r_dudy, r_dudz; 
+    @exclusive dfloat r_dvdx, r_dvdy, r_dvdz; 
+    @exclusive dfloat r_dwdx, r_dwdy, r_dwdz; 
+    @exclusive dfloat r_p; 
+
+    // not sure if we enforce single boundary face per element!
+    @shared dfloat s_vFx[p_maxNodes];
+    @shared dfloat s_vFy[p_maxNodes];
+    @shared dfloat s_vFz[p_maxNodes];
+
+    @shared dfloat s_pFx[p_maxNodes];
+    @shared dfloat s_pFy[p_maxNodes];
+    @shared dfloat s_pFz[p_maxNodes];
+
+    #define s_dudx s_vFx 
+    #define s_dudy s_vFy 
+    #define s_dudz s_vFz 
+
+    #define s_dvdx s_pFx 
+    #define s_dvdy s_pFy 
+    #define s_dvdz s_pFz 
+
+    #define s_dwdx s_u 
+    #define s_dwdy s_v 
+    #define s_dwdz s_w 
+
+    // Check if this element has wall bc
+     for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      is_wall_bc = 0; 
+      for(int face=0; face<p_Nfaces; face++){
+        const int bc = EToB[face+p_Nfaces*e];
+        if(bc==11 || bc==12){ is_wall_bc = 1;}
+      }   
+    }
+
+
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      if(n<p_Np && is_wall_bc==1){
+        const dlong qbase = e*p_Nfields*p_Np + n;
+        const dfloat rr = q[qbase + 0*p_Np];
+        const dfloat ru = q[qbase + 1*p_Np];
+        const dfloat rv = q[qbase + 2*p_Np];
+        const dfloat rw = q[qbase + 3*p_Np];
+        s_u[n] = ru/rr; 
+        s_v[n] = rv/rr; 
+        s_w[n] = rw/rr; 
+      }
+    }
+
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+        if(n<p_Np && is_wall_bc){
+          dfloat dudr = 0., duds = 0., dudt = 0.;
+          dfloat dvdr = 0., dvds = 0., dvdt = 0.;
+          dfloat dwdr = 0., dwds = 0., dwdt = 0.;
+
+          for(int i=0;i<p_Np;++i){
+            const dfloat Drni = D[n+i*p_Np+0*p_Np*p_Np];
+            const dfloat Dsni = D[n+i*p_Np+1*p_Np*p_Np];
+            const dfloat Dtni = D[n+i*p_Np+2*p_Np*p_Np];
+            const dfloat u = s_u[i];
+            const dfloat v = s_v[i];
+            const dfloat w = s_w[i];
+            dudr += Drni*u, duds += Dsni*u, dudt += Dtni*u;
+            dvdr += Drni*v, dvds += Dsni*v, dvdt += Dtni*v;
+            dwdr += Drni*w, dwds += Dsni*w, dwdt += Dtni*w;
+          }
+          // prefetch geometric factors (constant on triangle)
+          const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+          const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+          const dfloat drdz = vgeo[e*p_Nvgeo + p_RZID];
+
+          const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+          const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+          const dfloat dsdz = vgeo[e*p_Nvgeo + p_SZID];
+
+          const dfloat dtdx = vgeo[e*p_Nvgeo + p_TXID];
+          const dfloat dtdy = vgeo[e*p_Nvgeo + p_TYID];
+          const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
+          
+          //
+          s_dudx[n] = drdx*dudr + dsdx*duds + dtdx*dudt;
+          s_dudy[n] = drdy*dudr + dsdy*duds + dtdy*dudt;
+          s_dudz[n] = drdz*dudr + dsdz*duds + dtdz*dudt;
+
+          s_dvdx[n] = drdx*dvdr + dsdx*dvds + dtdx*dvdt;
+          s_dvdy[n] = drdy*dvdr + dsdy*dvds + dtdy*dvdt;
+          s_dvdz[n] = drdz*dvdr + dsdz*dvds + dtdz*dvdt;
+
+          s_dwdx[n] = drdx*dwdr + dsdx*dwds + dtdx*dwdt;
+          s_dwdy[n] = drdy*dwdr + dsdy*dwds + dtdy*dwdt;
+          s_dwdz[n] = drdz*dwdr + dsdz*dwds + dtdz*dwdt;
+      }
+    }
+    
+
+    // save to registers
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      if(n<p_NfacesNfp && is_wall_bc){
+        const dfloat gamma = pCoeff[p_GMID]; // gamma
+        const dlong id  = e*p_Nfp*p_Nfaces + n;
+        const dlong idM = vmapM[id];
+        // local id belongs to e
+        const int vidM = idM%p_Np;
+        // base for field varibale
+        const dlong qbase = e*p_Np*p_Nfields + vidM;
+
+        dfloat rr = q[qbase + 0*p_Np];
+        dfloat ru = q[qbase + 1*p_Np];
+        dfloat rv = q[qbase + 2*p_Np];
+        dfloat rw = q[qbase + 3*p_Np];
+        dfloat rE = q[qbase + 4*p_Np];
+
+        dfloat ir = 1.0/rr, u  = ru*ir, v  = rv*ir, w  = rw*ir;
+
+        r_p    = (gamma-1)*(rE - 0.5*rr*(u*u+v*v+w*w));
+        r_dudx = s_dudx[vidM];
+        r_dudy = s_dudy[vidM];
+        r_dudz = s_dudz[vidM];
+        //
+        r_dvdx = s_dvdx[vidM];
+        r_dvdy = s_dvdy[vidM];
+        r_dvdz = s_dvdz[vidM];
+        //
+        r_dwdx = s_dwdx[vidM];
+        r_dwdy = s_dwdy[vidM];
+        r_dwdz = s_dwdz[vidM];
+      }
+    }
+
+
+
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      if(n<p_NfacesNfp && is_wall_bc){
+        const dlong id  = e*p_Nfp*p_Nfaces + n;
+        const dlong idM = vmapM[id];
+        
+        
+        const int face = n/p_Nfp;
+        const int bc   = EToB[face+p_Nfaces*e];
+
+        // load surface geofactors for this face
+        const dlong sid   = p_Nsgeo*(e*p_Nfaces+face);
+        const dfloat nx   = sgeo[sid+p_NXID];
+        const dfloat ny   = sgeo[sid+p_NYID];
+        const dfloat nz   = sgeo[sid+p_NZID];
+        const dfloat sJ   = sgeo[sid+p_SJID];
+
+        dfloat mu          = pCoeff[p_MUID]; // bulk viscosity
+        
+        const dfloat sbeta = 2.0/3.0; 
+        dfloat T11 = (2.0*r_dudx - sbeta*(r_dudx+r_dvdy+r_dwdz));
+        dfloat T12 = (r_dudy+r_dvdx);
+        dfloat T13 = (r_dudz+r_dwdx);
+
+        dfloat T22 = (2.0*r_dvdy - sbeta*(r_dudx+r_dvdy+r_dwdz));
+        dfloat T23 = (r_dvdz+r_dwdy);
+        dfloat T33 = (2.0*r_dwdz - sbeta*(r_dudx+r_dvdy+r_dwdz));
+
+        s_vFx[n] = (bc==11 || bc==12) ? sJ*(mu*(nx*T11 + ny*T12 + nz*T13)): 0.0; 
+        s_vFy[n] = (bc==11 || bc==12) ? sJ*(mu*(nx*T12 + ny*T22 + nz*T23)): 0.0; 
+        s_vFz[n] = (bc==11 || bc==12) ? sJ*(mu*(nx*T13 + ny*T23 + nz*T33)): 0.0; 
+        s_pFx[n] = (bc==11 || bc==12) ? sJ*(-r_p*nx): 0.0; 
+        s_pFy[n] = (bc==11 || bc==12) ? sJ*(-r_p*ny): 0.0; 
+        s_pFz[n] = (bc==11 || bc==12) ? sJ*(-r_p*nz): 0.0; 
+      }
+    }
+
+
+    // for each node in the element
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      if(n<p_Np){
+        if(is_wall_bc){
+          dfloat vfxI  = 0.0, pfxI = 0.0;  
+          dfloat vfyI  = 0.0, pfyI = 0.0;  
+          dfloat vfzI  = 0.0, pfzI = 0.0;  
+
+          pfxI = 0.f,  pfyI = 0.f;
+            #pragma unroll p_NfacesNfp
+            for(int m=0;m<p_NfacesNfp;++m){
+              const dfloat sM = SM[n+m*p_Np];
+              vfxI     += sM*s_vFx[m];
+              vfyI     += sM*s_vFy[m];
+              vfzI     += sM*s_vFz[m];
+
+              pfxI     += sM*s_pFx[m];
+              pfyI     += sM*s_pFy[m];
+              pfzI     += sM*s_pFz[m];
+            }
+          const dlong shift = Nelements*p_Np;
+          F[e*p_Np+n+0*shift] = vfxI; 
+          F[e*p_Np+n+1*shift] = vfyI;
+          F[e*p_Np+n+2*shift] = vfzI;
+          F[e*p_Np+n+3*shift] = pfxI;
+          F[e*p_Np+n+4*shift] = pfyI;
+          F[e*p_Np+n+5*shift] = pfzI;
+        }else{
+         const dlong shift = Nelements*p_Np;
+          F[e*p_Np+n+0*shift] = 0.0; 
+          F[e*p_Np+n+1*shift] = 0.0;
+          F[e*p_Np+n+2*shift] = 0.0;
+          F[e*p_Np+n+3*shift] = 0.0;
+          F[e*p_Np+n+4*shift] = 0.0;
+          F[e*p_Np+n+5*shift] = 0.0;
+        }
+      }
+    }  
+  }
+}
+#undef s_dudx  
+#undef s_dudy  
+#undef s_dudz  
+
+#undef s_dvdx 
+#undef s_dvdy 
+#undef s_dvdz 
+
+#undef s_dwdx 
+#undef s_dwdy 
+#undef s_dwdz 
+
+@kernel void cnsComputeMomentsTet3D(const dlong Nelements,
+                                    @restrict const  dfloat *  vgeo,
+                                    @restrict const  dfloat *  sgeo,
+                                    @restrict const  dfloat *  D,
+                                    @restrict const  dfloat *  SM,
+                                    @restrict const  dlong  *  vmapM,
+                                    @restrict const  int    *  EToB,
+                                    @restrict const  dfloat *  x,
+                                    @restrict const  dfloat *  y,
+                                    @restrict const  dfloat *  z,
+                                    @restrict const  dfloat *  XC,  
+                                    @restrict const  dfloat * pCoeff,
+                                    @restrict const  dfloat *  q,
+                                    @restrict        dfloat *  F){
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    @shared dfloat s_u[p_maxNodes];
+    @shared dfloat s_v[p_maxNodes];
+    @shared dfloat s_w[p_maxNodes];
+
+    @exclusive int is_wall_bc; 
+    
+    @exclusive dfloat r_dudx, r_dudy, r_dudz; 
+    @exclusive dfloat r_dvdx, r_dvdy, r_dvdz; 
+    @exclusive dfloat r_dwdx, r_dwdy, r_dwdz; 
+    @exclusive dfloat r_p; 
+
+    // not sure if we enforce single boundary face per element!
+    @shared dfloat s_dudx[p_maxNodes];
+    @shared dfloat s_dudy[p_maxNodes];
+    @shared dfloat s_dudz[p_maxNodes];
+    
+    @shared dfloat s_dvdx[p_maxNodes];
+    @shared dfloat s_dvdy[p_maxNodes];
+    @shared dfloat s_dvdz[p_maxNodes];
+
+    @shared dfloat s_dwdx[p_maxNodes];
+    @shared dfloat s_dwdy[p_maxNodes];
+    @shared dfloat s_dwdz[p_maxNodes];
+
+    #define s_Mx s_dudx 
+    #define s_My s_dudy 
+    #define s_Mz s_dudz 
+
+
+    // Check if this element has wall bc
+     for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      is_wall_bc = 0; 
+      for(int face=0; face<p_Nfaces; face++){
+        const int bc = EToB[face+p_Nfaces*e];
+        if(bc==11 || bc==12){ is_wall_bc = 1;}
+      }   
+    }
+
+
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      if(n<p_Np && is_wall_bc==1){
+        const dlong qbase = e*p_Nfields*p_Np + n;
+        const dfloat rr = q[qbase + 0*p_Np];
+        const dfloat ru = q[qbase + 1*p_Np];
+        const dfloat rv = q[qbase + 2*p_Np];
+        const dfloat rw = q[qbase + 3*p_Np];
+        s_u[n] = ru/rr; 
+        s_v[n] = rv/rr; 
+        s_w[n] = rw/rr; 
+      }
+    }
+
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+        if(n<p_Np && is_wall_bc){
+          dfloat dudr = 0., duds = 0., dudt = 0.;
+          dfloat dvdr = 0., dvds = 0., dvdt = 0.;
+          dfloat dwdr = 0., dwds = 0., dwdt = 0.;
+
+          for(int i=0;i<p_Np;++i){
+            const dfloat Drni = D[n+i*p_Np+0*p_Np*p_Np];
+            const dfloat Dsni = D[n+i*p_Np+1*p_Np*p_Np];
+            const dfloat Dtni = D[n+i*p_Np+2*p_Np*p_Np];
+            const dfloat u = s_u[i];
+            const dfloat v = s_v[i];
+            const dfloat w = s_w[i];
+            dudr += Drni*u, duds += Dsni*u, dudt += Dtni*u;
+            dvdr += Drni*v, dvds += Dsni*v, dvdt += Dtni*v;
+            dwdr += Drni*w, dwds += Dsni*w, dwdt += Dtni*w;
+          }
+          // prefetch geometric factors (constant on triangle)
+          const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+          const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+          const dfloat drdz = vgeo[e*p_Nvgeo + p_RZID];
+
+          const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+          const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+          const dfloat dsdz = vgeo[e*p_Nvgeo + p_SZID];
+
+          const dfloat dtdx = vgeo[e*p_Nvgeo + p_TXID];
+          const dfloat dtdy = vgeo[e*p_Nvgeo + p_TYID];
+          const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
+          
+          //
+          s_dudx[n] = drdx*dudr + dsdx*duds + dtdx*dudt;
+          s_dudy[n] = drdy*dudr + dsdy*duds + dtdy*dudt;
+          s_dudz[n] = drdz*dudr + dsdz*duds + dtdz*dudt;
+
+          s_dvdx[n] = drdx*dvdr + dsdx*dvds + dtdx*dvdt;
+          s_dvdy[n] = drdy*dvdr + dsdy*dvds + dtdy*dvdt;
+          s_dvdz[n] = drdz*dvdr + dsdz*dvds + dtdz*dvdt;
+
+          s_dwdx[n] = drdx*dwdr + dsdx*dwds + dtdx*dwdt;
+          s_dwdy[n] = drdy*dwdr + dsdy*dwds + dtdy*dwdt;
+          s_dwdz[n] = drdz*dwdr + dsdz*dwds + dtdz*dwdt;
+      }
+    }
+    
+
+    // save to registers
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      if(n<p_NfacesNfp && is_wall_bc){
+        const dfloat gamma = pCoeff[p_GMID]; // gamma
+        const dlong id  = e*p_Nfp*p_Nfaces + n;
+        const dlong idM = vmapM[id];
+        // local id belongs to e
+        const int vidM = idM%p_Np;
+        // base for field varibale
+        const dlong qbase = e*p_Np*p_Nfields + vidM;
+
+        dfloat rr = q[qbase + 0*p_Np];
+        dfloat ru = q[qbase + 1*p_Np];
+        dfloat rv = q[qbase + 2*p_Np];
+        dfloat rw = q[qbase + 3*p_Np];
+        dfloat rE = q[qbase + 4*p_Np];
+
+        dfloat ir = 1.0/rr, u  = ru*ir, v  = rv*ir, w  = rw*ir;
+
+        r_p    = (gamma-1)*(rE - 0.5*rr*(u*u+v*v+w*w));
+        r_dudx = s_dudx[vidM];
+        r_dudy = s_dudy[vidM];
+        r_dudz = s_dudz[vidM];
+        //
+        r_dvdx = s_dvdx[vidM];
+        r_dvdy = s_dvdy[vidM];
+        r_dvdz = s_dvdz[vidM];
+        //
+        r_dwdx = s_dwdx[vidM];
+        r_dwdy = s_dwdy[vidM];
+        r_dwdz = s_dwdz[vidM];
+      }
+    }
+
+
+
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      if(n<p_NfacesNfp && is_wall_bc){
+        const dlong id  = e*p_Nfp*p_Nfaces + n;
+        const dlong idM = vmapM[id];
+        
+        
+        const int face = n/p_Nfp;
+        const int bc   = EToB[face+p_Nfaces*e];
+
+        // load surface geofactors for this face
+        const dlong sid   = p_Nsgeo*(e*p_Nfaces+face);
+        const dfloat nx   = sgeo[sid+p_NXID];
+        const dfloat ny   = sgeo[sid+p_NYID];
+        const dfloat nz   = sgeo[sid+p_NZID];
+        const dfloat sJ   = sgeo[sid+p_SJID];
+        
+        const dfloat xf   = x[idM]-XC[0]; 
+        const dfloat yf   = y[idM]-XC[1];
+        const dfloat zf   = z[idM]-XC[2];
+
+        dfloat mu          = pCoeff[p_MUID]; // bulk viscosity
+        
+        const dfloat sbeta = 2.0/3.0; 
+        dfloat T11 = (2.0*r_dudx - sbeta*(r_dudx+r_dvdy+r_dwdz));
+        dfloat T12 = (r_dudy+r_dvdx);
+        dfloat T13 = (r_dudz+r_dwdx);
+
+        dfloat T22 = (2.0*r_dvdy - sbeta*(r_dudx+r_dvdy+r_dwdz));
+        dfloat T23 = (r_dvdz+r_dwdy);
+        dfloat T33 = (2.0*r_dwdz - sbeta*(r_dudx+r_dvdy+r_dwdz));
+
+        const dfloat fx = -r_p*nx + mu*(nx*T11 + ny*T12 + nz*T13); 
+        const dfloat fy = -r_p*ny + mu*(nx*T12 + ny*T22 + nz*T23);
+        const dfloat fz = -r_p*nz + mu*(nx*T13 + ny*T23 + nz*T33);
+
+        const dfloat mx = fy*zf - fz*yf;  
+        const dfloat my =-fx*zf + fz*xf;  
+        const dfloat mz = fx*yf - fy*xf;  
+
+        s_Mx[n] = (bc==11 || bc==12) ? sJ*mx: 0.0; 
+        s_My[n] = (bc==11 || bc==12) ? sJ*my: 0.0; 
+        s_Mz[n] = (bc==11 || bc==12) ? sJ*mz: 0.0; 
+      }
+    }
+
+
+    // for each node in the element
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      if(n<p_Np){
+        if(is_wall_bc){
+          dfloat mxI  = 0.0;  
+          dfloat myI  = 0.0;  
+          dfloat mzI  = 0.0;  
+          #pragma unroll p_NfacesNfp
+          for(int m=0;m<p_NfacesNfp;++m){
+            const dfloat sM = SM[n+m*p_Np];
+            mxI     += sM*s_Mx[m];
+            myI     += sM*s_My[m];
+            mzI     += sM*s_Mz[m];
+          }
+          const dlong shift = Nelements*p_Np;
+          F[e*p_Np+n+0*shift] = mxI; 
+          F[e*p_Np+n+1*shift] = myI;
+          F[e*p_Np+n+2*shift] = mzI;
+        }else{
+         const dlong shift = Nelements*p_Np;
+          F[e*p_Np+n+0*shift] = 0.0; 
+          F[e*p_Np+n+1*shift] = 0.0;
+          F[e*p_Np+n+2*shift] = 0.0;
+        }
+      }
+    }  
+  }
+}

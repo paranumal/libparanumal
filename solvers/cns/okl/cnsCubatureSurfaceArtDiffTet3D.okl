@@ -282,8 +282,8 @@ void upwindRoeAveraged(const dfloat nx,
                 const dfloat iInm = intInterp[ (n+face*p_intNfp) + m*p_Nfaces*p_intNfp];
                 const int fm = m;
 
-                rmM  += iInm*s_muM[fm];
-                rmP  += iInm*s_muP[fm];
+                rmM += iInm*s_muM[fm];
+                rmP += iInm*s_muP[fm];
                 
                 rrM += iInm*s_qM[0][fm];
                 ruM += iInm*s_qM[1][fm];

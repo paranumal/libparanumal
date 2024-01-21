@@ -2,11 +2,12 @@
 2.0
 
 [DATA FILE]
-data/cnsGaussian3D.h
-#data/cnsUniform3D.h
+#data/cnsGaussian3D.h
+data/cnsUniform3D.h
 #*******************[MESH PROPERTIES]*******************#
 [MESH FILE]
-BOX
+#BOX
+../../meshes/cnsNACA3D.msh
 
 [MESH DIMENSION]
 3
@@ -29,7 +30,7 @@ BOX
 
 #*******************[DISCRETIZATION PROPERTIES]************#
 [POLYNOMIAL DEGREE]
-3
+4
 
 [SOLVER TYPE]
 #EULER
@@ -44,8 +45,8 @@ FALSE
 
 #Can be COLLOCATION or CUBATURE
 [ADVECTION TYPE]
-#COLLOCATION
-CUBATURE
+COLLOCATION
+#CUBATURE
 
 # 0 < beta < 1 
 [LDG BETA COEFFICIENT]
@@ -123,6 +124,15 @@ TRUE
 
 [OUTPUT FILE NAME]
 cnsTet
+
+[REPORT FORCES]
+TRUE
+
+[REPORT MOMENTS]
+TRUE
+
+[MOMENT CENTER]
+0.0, 0.0, 0.0
 
 #*****************[STABILIZASYON PROPERTIES]*****************#
 # HJS:1  CNS:2  INS:3 
