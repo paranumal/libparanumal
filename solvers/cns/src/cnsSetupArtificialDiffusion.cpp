@@ -61,7 +61,6 @@ void cns_t::setupArtificialDiffusion(properties_t & kernelInfo){
       kernelName = "cnsCubatureVolumeArtificialDiffsuionLaplace" + suffix;
       cubatureVolumeKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
 
-
       // kernels from surface file
       fileName   = oklFilePrefix + "cnsCubatureSurfaceArtDiff" + suffix + oklFileSuffix;
       kernelName = "cnsCubatureSurfaceArtificialDiffusionLaplace" + suffix;
@@ -81,15 +80,15 @@ void cns_t::setupArtificialDiffusion(properties_t & kernelInfo){
       surfaceKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
 
     }else if(settings.compareSetting("ARTDIFF TYPE", "PHYSICAL")){
-      // kernels from volume file
-      fileName   = oklFilePrefix + "cnsVolumeArtDiff" + suffix + oklFileSuffix;
-      kernelName = "cnsVolumeArtificialDiffsuionPhysical" + suffix;
-      volumeKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
+      // // kernels from volume file
+      // fileName   = oklFilePrefix + "cnsVolumeArtDiff" + suffix + oklFileSuffix;
+      // kernelName = "cnsVolumeArtificialDiffsuionPhysical" + suffix;
+      // volumeKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
 
-      // kernels from surface file
-      fileName   = oklFilePrefix + "cnsSurfaceArtDiff" + suffix + oklFileSuffix;
-      kernelName = "cnsSurfaceArtificialDiffusionPhysical" + suffix;
-      surfaceKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
+      // // kernels from surface file
+      // fileName   = oklFilePrefix + "cnsSurfaceArtDiff" + suffix + oklFileSuffix;
+      // kernelName = "cnsSurfaceArtificialDiffusionPhysical" + suffix;
+      // surfaceKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
     }
   }
 

@@ -2,10 +2,12 @@
 2.0
 
 [DATA FILE]
-data/cnsGaussian2D.h
-
+#data/cnsGaussian2D.h
+data/cnsUniform2D.h
+#*******************[MESH PROPERTIES]*******************#
 [MESH FILE]
-BOX
+#BOX
+../../meshes/cnsNACA2D_quad.msh
 
 [MESH DIMENSION]
 2
@@ -14,20 +16,46 @@ BOX
 4
 
 [BOX NX]
-20
+50
 
 [BOX NY]
-20
-
-[BOX NZ]
-20
+50
 
 [BOX BOUNDARY FLAG]
--1
-
+11
+#*******************[DISCRETIZATION PROPERTIES]************#
 [POLYNOMIAL DEGREE]
-4
+3
 
+[SOLVER TYPE]
+#EULER
+NAVIER-STOKES
+
+# If TRUE compute R and mu from Mach & Reynolds//
+[NONDIMENSIONAL EQUATIONS]
+TRUE
+
+[ISOTHERMAL]
+FALSE
+
+#Can be COLLOCATION or CUBATURE
+[ADVECTION TYPE]
+COLLOCATION
+#CUBATURE
+
+# 0 < beta < 1 
+[LDG BETA COEFFICIENT]
+0.5
+
+# 0 < tau < 1.0
+[LDG TAU COEFFICIENT]
+0.5
+
+[TIME INTEGRATOR]
+DOPRI5
+#LSERK4
+
+#*******************[DEVICE PROPERTIES]*******************#
 [THREAD MODEL]
 CUDA
 
@@ -37,33 +65,97 @@ CUDA
 [DEVICE NUMBER]
 0
 
+#*******************[PROBLEM PROPERTIES]*******************#
+
+# Isentropic exponent 
 [GAMMA]
 1.4
 
+# // Mach number is needed for NONDIM=TRUE
+[MACH NUMBER]
+0.1
+
+# Reynolds number is needed for NONDIM = TRUE
+[REYNOLDS NUMBER]
+1e5
+
+# R is needed if NONDIM=FALSE otherwise  R = 1.0/(gamma*Ma^2) 
+[SPECIFIC GAS CONSTANT]
+287.052
+
+# mu is needed if NONDIM = FALSE, otherwise mu = 1/Re
 [VISCOSITY]
-0.01
+0.00001
 
-[ISOTHERMAL]
-FALSE
+# [ CONSTANT ] - [SUTHERLAND] - [POWER-LAW]
+[VISCOSITY TYPE]
+SUTHERLAND
 
-#Can be COLLOCATION or CUBATURE
-[ADVECTION TYPE]
-CUBATURE
 
-[TIME INTEGRATOR]
-DOPRI5
+[PRANDTL NUMBER]
+0.72
+
+# [density, velocity, pressure, temperature, viscosity, length]
+# [rref, vref, pref. tref, mref, lref]
+[REFERENCE STATE]
+1.0, 1.0, 1.0, 1.0, 1.0, 1.0
+
+
+[CFL NUMBER]
+0.5
 
 [START TIME]
 0
 
 [FINAL TIME]
-10
+5
 
+#*******************[OUTPUT PROPERTIES]*******************#
 [OUTPUT INTERVAL]
-1
+0.1
 
 [OUTPUT TO FILE]
 TRUE
 
 [OUTPUT FILE NAME]
 cns
+
+[REPORT FORCES]
+TRUE
+
+[REPORT MOMENTS]
+TRUE
+
+[MOMENT CENTER]
+0.0, 0.0
+
+
+#*****************[STABILIZASYON PROPERTIES]*****************#
+# HJS:1  CNS:2  INS:3 
+[STABILIZATION SOLVER TYPE]
+2
+
+# NODETECT: 0  ALL= 1 Klockner: 2 Persson: 3 DUCROS: 4
+[DETECTOR TYPE]
+2
+
+# NoStab:0 Filter: 1, Limiter: 2, Artdiff: 3, Subcell: 4
+[STAB TYPE]
+3
+
+[SUBCELL NUMBER]
+4
+
+[SUBCELL MINOR GRID]
+WARPBLEND
+
+[STAB OUTPUT TO FILE]
+TRUE
+
+# [LAPLACE], [PHYSICAL X do not use this option for now!!!!] 
+[ARTDIFF TYPE]
+LAPLACE
+
+[ARTDIFF SCALE FACTOR]
+3
+

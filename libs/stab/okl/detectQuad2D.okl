@@ -32,211 +32,6 @@
 #define mymin(a,b) (((a)<(b))?(a):(b))
 
 // 
-@kernel void detectKlocknerQuad2D(const dlong Nelements,
-				     @restrict const dfloat* vgeo,
-				     @restrict const int *  ModMap,
-				     @restrict const dfloat * MM,               
-				     @restrict const dfloat * InvVT,
-				     @restrict const dfloat * LSF,
-				     @restrict const dfloat * BLD,
-				     @restrict const dfloat * Q, 
-				     @restrict dlong *  ElementList){
-// p_Nel =1 is working now, check this later....
-#define p_Nel 1
-#if BLDEC==1
-#define reduce02(s_L2, NT)				\
-  if(NT<p_Nq){						\
-    for(int es=0;es<p_Nel;++es;@inner(1)){		\
-      for(int n=0; n<p_Nq; n++; @inner(0)){		\
-	if(n<NT && n+NT<p_Nq){				\
-	  for(int fld=0; fld<p_dNfields; fld++){	\
-	    s_L2[es][fld][n] += s_L2[es][fld][n+NT];	\
-	  }						\
-	}						\
-      }							\
-    }							\
-  }
-#endif
-
-  for(dlong eo=0;eo<Nelements;eo+=p_Nel;@outer(0)){
-
-    @shared dfloat s_Q[p_Nel][p_dNfields][p_Np]; 
-    @shared dfloat s_Qhat2[p_Nel][p_dNfields][p_Np];
-    @shared dfloat s_LogMod[p_Nel][p_dNfields][p_Nq];
-
-#if BLDEC==1
-    @shared dfloat s_L2[p_Nel][p_dNfields][p_Nq]; 
-#endif
-
-    @shared int s_ModMap[p_Np]; 
-    @shared dfloat s_LSF[p_Nq];
-    @shared dfloat s_BLD[p_Nq];
-
-    // prefetch global variables
-    for(int es=0;es<p_Nel;++es;@inner(1)){
-      for(int n=0; n<p_Nq; n++; @inner(0)){
-	dlong e = eo+es;
-
-	if(es==0){
-	  s_LSF[n] = LSF[n];
-	  s_BLD[n] = BLD[n];
-	}
-
-
-  	int m = n + es*p_Nq;
-	while(m<p_Np*p_Nel && eo*p_Np+m<Nelements*p_Np){
-	  const dlong id = m+eo*p_Np*p_dNfields;
-			  
-	  for(int fld=0; fld<p_dNfields; fld++){ 
-	    s_Q[0][fld][m]  = Q[id + fld*p_Np];
-	  }      
-	  m += p_Nel*p_Nq;
-	}
-
-	// reset counter
-	m = n + es*p_Nq;
-	while(m<p_Np){
-	  s_ModMap[m] = ModMap[m];
-	  m += p_Nel*p_Nq;
-	}
-      
-      }
-    }
-
-
-
-    // get modal coefficients and compute L2 norm
-    for(int es=0;es<p_Nel;++es;@inner(1)){
-      for(int n=0; n<p_Nq; n++; @inner(0)){
-
-	dlong e = eo+es;
-	dfloat L2[p_dNfields];
-	dfloat Qhatn[p_dNfields]; 
-#if BLDEC==1
-	for(int fld=0; fld<p_dNfields; fld++){ 
-	  L2[fld]    = 0; 
-	}
-#endif
-
-	if(e<Nelements){
-	  int nn = n;
-
-	  while(nn<p_Np){
-	    // dfloat Qhatn[p_Nfields]; 
-	    for(int fld=0; fld<p_dNfields; fld++){ 
-	      Qhatn[fld] = 0; 
-	    }
-
-#pragma unroll p_Np
-	    for(int m=0; m<p_Np;m++){
-	      const dfloat invvt = InvVT[nn+m*p_Np]; 
-	      for(int fld=0; fld<p_dNfields; fld++){ 
-		Qhatn[fld] += invvt*s_Q[es][fld][m];
-	      }
-	    }
-
-
-	    for(int fld=0; fld<p_dNfields; fld++){ 	    
-
-	      dfloat Qhatn2 = Qhatn[fld]*Qhatn[fld];
-
-	      s_Qhat2[es][fld][nn] = Qhatn2; 
-
-#if BLDEC==1
-	      const dfloat JW = vgeo[e*p_Np*p_Nvgeo + nn + p_JWID*p_Np];
-	      L2[fld] += JW*Qhatn2; // accumulate
-#endif
-	    }
-	    nn += p_Nq;
-	  }
-	}
-
-#if BLDEC==1
-	for(int fld=0; fld<p_dNfields; fld++){ 
-	  s_L2[es][fld][n] = L2[fld];
-	}
-#endif
-      }
-    }
-
-#if BLDEC==1
-    reduce02(s_L2,  64);
-    reduce02(s_L2,  16);
-    reduce02(s_L2,   8);
-    reduce02(s_L2,   4);
-    reduce02(s_L2,   2);
-    reduce02(s_L2,   1);
-#endif
-
-    //skyline pessimization: get 1D mods from 2D
-    for(int es=0;es<p_Nel;++es;@inner(1)){    
-      for(int n=0; n<p_Nq; n++; @inner(0)){   
-
-	dlong e = eo+es;
-
-	if(e<Nelements){
-
-	  dfloat modsum[p_dNfields];
-	  dfloat norm[p_dNfields];
-	  dfloat res[p_dNfields];
-
-
-	  for(int fld=0; fld<p_dNfields; fld++){ 
-	    modsum[fld] = 0; 
-	    norm[fld] = 0; 
-	    res[fld] = 0; 
-	  }
-
-	  for(int i=0; i<n+1; i++){
-	    const int nmods = n*n + i; 
-	    const int m     = s_ModMap[nmods];  // not coalesced!!!!
-	    for(int fld=0; fld<p_dNfields; fld++){ 
-	      modsum[fld] += s_Qhat2[es][fld][m];
-	    }
-	  }
-
-	  for(int fld=0; fld<p_dNfields; fld++){ 
-#if BLDEC==1
-	    // norm = q' * MM * q on element e
-	    norm[fld] = s_L2[es][fld][0];
-
-	    res[fld] = log10f((float)(modsum[fld] + s_BLD[n]*norm[fld]));     
-#else
-	    res[fld] = log10f((float)(modsum[fld])); 
-#endif
-
-	    s_LogMod[es][fld][n] = 0.5*res[fld]; // use log(sqrt(a)) = 0.5*log(a)
-	  }
-
-
-	  // assumes p_Nel*p_Nq <= 32
-	  if(n==0){
-
-	    for(int fld=0; fld<p_dNfields; fld++){ 
-	      // use running max from highest mode
-	      dfloat runningMax = mymax(s_LogMod[es][fld][p_Nq-1], s_LogMod[es][fld][p_Nq-2]);
-	      dfloat coeff = runningMax*s_LSF[p_Nq-2];
-
-	      for(int j=p_Nq-2;j>0;--j){
-					runningMax = mymax(runningMax, s_LogMod[es][fld][j]);
-					// accumulate in least squares fit
-					coeff += s_LSF[j-1]*runningMax;
-	      }
-
-	      const dfloat sk  = fabs(coeff); 
-	      ElementList[e*p_dNfields + fld] = sk < 2.0 ? 1 : 0;	  
-	    }
-	  }
-
-	}
-      }
-    }
-  }
-}
-
-
-
-// 
 @kernel void detectKlocknerDiffusionQuad2D(const dlong Nelements,
 				     @restrict const dfloat* vgeo,
 				     @restrict const int *  ModMap,
@@ -254,7 +49,7 @@
     for(int es=0;es<p_Nel;++es;@inner(1)){		\
       for(int n=0; n<p_Nq; n++; @inner(0)){		\
 	if(n<NT && n+NT<p_Nq){				\
-	  for(int fld=0; fld<p_dNfields; fld++){	\
+	  for(int fld=0; fld<s_Ndfields; fld++){	\
 	    s_L2[es][fld][n] += s_L2[es][fld][n+NT];	\
 	  }						\
 	}						\
@@ -265,12 +60,12 @@
 
   for(dlong eo=0;eo<Nelements;eo+=p_Nel;@outer(0)){
 
-    @shared dfloat s_Q[p_Nel][p_dNfields][p_Np]; 
-    @shared dfloat s_Qhat2[p_Nel][p_dNfields][p_Np];
-    @shared dfloat s_LogMod[p_Nel][p_dNfields][p_Nq];
+    @shared dfloat s_Q[p_Nel][s_Ndfields][p_Np]; 
+    @shared dfloat s_Qhat2[p_Nel][s_Ndfields][p_Np];
+    @shared dfloat s_LogMod[p_Nel][s_Ndfields][p_Nq];
 
 #if BLDEC==1
-    @shared dfloat s_L2[p_Nel][p_dNfields][p_Nq]; 
+    @shared dfloat s_L2[p_Nel][s_Ndfields][p_Nq]; 
 #endif
 
     @shared int s_ModMap[p_Np]; 
@@ -280,33 +75,30 @@
     // prefetch global variables
     for(int es=0;es<p_Nel;++es;@inner(1)){
       for(int n=0; n<p_Nq; n++; @inner(0)){
-	dlong e = eo+es;
-
-	if(es==0){
-	  s_LSF[n] = LSF[n];
-	  s_BLD[n] = BLD[n];
-	}
-
-
-  	int m = n + es*p_Nq;
-	while(m<p_Np*p_Nel && eo*p_Np+m<Nelements*p_Np){
-	  const dlong id = m+eo*p_Np*p_dNfields;
+				dlong e = eo+es;
+				if(es==0){
+				  s_LSF[n] = LSF[n];
+				  s_BLD[n] = BLD[n];
+				}
+  		int m = n + es*p_Nq;
+			while(m<p_Np*p_Nel && eo*p_Np+m<Nelements*p_Np){
+	  		const dlong id = m+eo*p_Np*s_Ndfields;
 			  
-	  for(int fld=0; fld<p_dNfields; fld++){ 
-	    s_Q[0][fld][m]  = Q[id + fld*p_Np];
-	  }      
-	  m += p_Nel*p_Nq;
-	}
+	  		for(int fld=0; fld<s_Ndfields; fld++){ 
+	    		s_Q[0][fld][m]  = Q[id + fld*p_Np];
+	  		}      
+	  	m += p_Nel*p_Nq;
+		}
 
-	// reset counter
-	m = n + es*p_Nq;
-	while(m<p_Np){
-	  s_ModMap[m] = ModMap[m];
-	  m += p_Nel*p_Nq;
-	}
+		// reset counter
+		m = n + es*p_Nq;
+		while(m<p_Np){
+	  	s_ModMap[m] = ModMap[m];
+	  	m += p_Nel*p_Nq;
+		}
       
-      }
     }
+  }
 
 
 
@@ -314,34 +106,34 @@
     for(int es=0;es<p_Nel;++es;@inner(1)){
       for(int n=0; n<p_Nq; n++; @inner(0)){
 
-	dlong e = eo+es;
-	dfloat L2[p_dNfields];
-	dfloat Qhatn[p_dNfields]; 
+				dlong e = eo+es;
+				dfloat L2[s_Ndfields];
+				dfloat Qhatn[s_Ndfields]; 
 #if BLDEC==1
-	for(int fld=0; fld<p_dNfields; fld++){ 
-	  L2[fld]    = 0; 
-	}
+				for(int fld=0; fld<s_Ndfields; fld++){ 
+				  L2[fld]    = 0.0; 
+				}
 #endif
 
-	if(e<Nelements){
-	  int nn = n;
+			if(e<Nelements){
+			  int nn = n;
 
-	  while(nn<p_Np){
-	    // dfloat Qhatn[p_Nfields]; 
-	    for(int fld=0; fld<p_dNfields; fld++){ 
-	      Qhatn[fld] = 0; 
-	    }
+			  while(nn<p_Np){
+			    // dfloat Qhatn[p_Nfields]; 
+			    for(int fld=0; fld<s_Ndfields; fld++){ 
+			      Qhatn[fld] = 0; 
+			    }
 
-#pragma unroll p_Np
-	    for(int m=0; m<p_Np;m++){
-	      const dfloat invvt = InvVT[nn+m*p_Np]; 
-	      for(int fld=0; fld<p_dNfields; fld++){ 
-		Qhatn[fld] += invvt*s_Q[es][fld][m];
-	      }
-	    }
+					#pragma unroll p_Np
+			    for(int m=0; m<p_Np;m++){
+			      const dfloat invvt = InvVT[nn+m*p_Np]; 
+			      for(int fld=0; fld<s_Ndfields; fld++){ 
+							Qhatn[fld] += invvt*s_Q[es][fld][m];
+			      }
+			    }
 
 
-	    for(int fld=0; fld<p_dNfields; fld++){ 	    
+	    for(int fld=0; fld<s_Ndfields; fld++){ 	    
 
 	      dfloat Qhatn2 = Qhatn[fld]*Qhatn[fld];
 
@@ -357,9 +149,9 @@
 	}
 
 #if BLDEC==1
-	for(int fld=0; fld<p_dNfields; fld++){ 
-	  s_L2[es][fld][n] = L2[fld];
-	}
+		for(int fld=0; fld<s_Ndfields; fld++){ 
+		  s_L2[es][fld][n] = L2[fld];
+		}
 #endif
       }
     }
@@ -381,12 +173,12 @@
 
 	if(e<Nelements){
 
-	  dfloat modsum[p_dNfields];
-	  dfloat norm[p_dNfields];
-	  dfloat res[p_dNfields];
+	  dfloat modsum[s_Ndfields];
+	  dfloat norm[s_Ndfields];
+	  dfloat res[s_Ndfields];
 
 
-	  for(int fld=0; fld<p_dNfields; fld++){ 
+	  for(int fld=0; fld<s_Ndfields; fld++){ 
 	    modsum[fld] = 0; 
 	    norm[fld] = 0; 
 	    res[fld] = 0; 
@@ -395,16 +187,15 @@
 	  for(int i=0; i<n+1; i++){
 	    const int nmods = n*n + i; 
 	    const int m     = s_ModMap[nmods];  // not coalesced!!!!
-	    for(int fld=0; fld<p_dNfields; fld++){ 
+	    for(int fld=0; fld<s_Ndfields; fld++){ 
 	      modsum[fld] += s_Qhat2[es][fld][m];
 	    }
 	  }
 
-	  for(int fld=0; fld<p_dNfields; fld++){ 
+	  for(int fld=0; fld<s_Ndfields; fld++){ 
 #if BLDEC==1
 	    // norm = q' * MM * q on element e
 	    norm[fld] = s_L2[es][fld][0];
-
 	    res[fld] = log10f((float)(modsum[fld] + s_BLD[n]*norm[fld]));     
 #else
 	    res[fld] = log10f((float)(modsum[fld])); 
@@ -420,35 +211,241 @@
 
 	    // dfloat mincoeff = 100; 
 
-	    for(int fld=0; fld<p_dNfields; fld++){ 
+	    for(int fld=0; fld<s_Ndfields; fld++){ 
 	      // use running max from highest mode
 	      dfloat runningMax = mymax(s_LogMod[es][fld][p_Nq-1], s_LogMod[es][fld][p_Nq-2]);
 	      dfloat coeff = runningMax*s_LSF[p_Nq-2];
 
 	      for(int j=p_Nq-2;j>0;--j){
-		runningMax = mymax(runningMax, s_LogMod[es][fld][j]);
-
-		// accumulate in least squares fit
-		coeff += s_LSF[j-1]*runningMax;
+					runningMax = mymax(runningMax, s_LogMod[es][fld][j]);
+					// accumulate in least squares fit
+					coeff += s_LSF[j-1]*runningMax;
 	      }
 
-	      const dfloat sk  = fabs(coeff); 
-	      // It can be tuned: AK
-	      const dfloat s0    = 2.0;  
-	      const dfloat kappa = 0.0; 	
+	      // this handles zero field, do not select those elements!!!
+	      coeff = fabs(coeff); 
+	      const dfloat sk = coeff != coeff ? p_N : coeff; 	
+	      // // It can be tuned: AK
+	      ElementList[e*s_Ndfields + fld] = sk < (s_sS0+1) ? 1 : 0;	 
 
-	      ElementList[e*p_dNfields + fld] = coeff*coeff< 4.0? 1 : 0;	  
-	      // // 
-	      // dfloat avisc = 0.0; 
-	    	// if(sk<(s0-kappa))
-	  		// 	avisc = 1.0; 
-	  		// else if(sk > (s0+kappa))
-	  		// 	avisc = 0.0; 
-	  		// else 
-	  		// 	avisc = 0.5*( 1. + sin( - 0.5* M_PI*(sk-s0)/ kappa)); 
-	  		// artVisc[e*p_dNfields + fld] = avisc;	  
+	      dfloat avisc = 0.0; 
+	    	if(sk<(s_sS0-s_sK0))
+	  			avisc = 1.0; 
+	  		else if(sk > (s_sS0 + s_sK0))
+	  			avisc = 0.0; 
+	  		else 
+	  			avisc = 0.5*( 1. + sin( - 0.5* M_PI*(sk-s_sS0)/ s_sK0)); 
+	  		
+	  		artVisc[e*s_Ndfields + fld] = avisc;	   		
+	    }
+	  }
 
-	  		artVisc[e*p_dNfields + fld] = coeff*coeff <  4.0? 1.0 : 0.0;	  		
+	}
+      }
+    }
+  }
+}
+
+
+
+// 
+@kernel void detectKlocknerQuad2D(const dlong Nelements,
+				     @restrict const dfloat* vgeo,
+				     @restrict const int *  ModMap,
+				     @restrict const dfloat * MM,               
+				     @restrict const dfloat * InvVT,
+				     @restrict const dfloat * LSF,
+				     @restrict const dfloat * BLD,
+				     @restrict const dfloat * Q, 
+				     @restrict       dfloat * artVisc, 
+				     @restrict dlong *  ElementList){
+#define p_Nel 1
+#if BLDEC==1
+#define reduce02(s_L2, NT)				\
+  if(NT<p_Nq){						\
+    for(int es=0;es<p_Nel;++es;@inner(1)){		\
+      for(int n=0; n<p_Nq; n++; @inner(0)){		\
+	if(n<NT && n+NT<p_Nq){				\
+	  for(int fld=0; fld<s_Ndfields; fld++){	\
+	    s_L2[es][fld][n] += s_L2[es][fld][n+NT];	\
+	  }						\
+	}						\
+      }							\
+    }							\
+  }
+#endif
+
+  for(dlong eo=0;eo<Nelements;eo+=p_Nel;@outer(0)){
+
+    @shared dfloat s_Q[p_Nel][s_Ndfields][p_Np]; 
+    @shared dfloat s_Qhat2[p_Nel][s_Ndfields][p_Np];
+    @shared dfloat s_LogMod[p_Nel][s_Ndfields][p_Nq];
+
+#if BLDEC==1
+    @shared dfloat s_L2[p_Nel][s_Ndfields][p_Nq]; 
+#endif
+
+    @shared int s_ModMap[p_Np]; 
+    @shared dfloat s_LSF[p_Nq];
+    @shared dfloat s_BLD[p_Nq];
+
+    // prefetch global variables
+    for(int es=0;es<p_Nel;++es;@inner(1)){
+      for(int n=0; n<p_Nq; n++; @inner(0)){
+				dlong e = eo+es;
+				if(es==0){
+				  s_LSF[n] = LSF[n];
+				  s_BLD[n] = BLD[n];
+				}
+  		int m = n + es*p_Nq;
+			while(m<p_Np*p_Nel && eo*p_Np+m<Nelements*p_Np){
+	  		const dlong id = m+eo*p_Np*s_Ndfields;
+			  
+	  		for(int fld=0; fld<s_Ndfields; fld++){ 
+	    		s_Q[0][fld][m]  = Q[id + fld*p_Np];
+	  		}      
+	  	m += p_Nel*p_Nq;
+		}
+
+		// reset counter
+		m = n + es*p_Nq;
+		while(m<p_Np){
+	  	s_ModMap[m] = ModMap[m];
+	  	m += p_Nel*p_Nq;
+		}
+      
+    }
+  }
+
+
+
+    // get modal coefficients and compute L2 norm
+    for(int es=0;es<p_Nel;++es;@inner(1)){
+      for(int n=0; n<p_Nq; n++; @inner(0)){
+
+				dlong e = eo+es;
+				dfloat L2[s_Ndfields];
+				dfloat Qhatn[s_Ndfields]; 
+#if BLDEC==1
+				for(int fld=0; fld<s_Ndfields; fld++){ 
+				  L2[fld]    = 0.0; 
+				}
+#endif
+
+			if(e<Nelements){
+			  int nn = n;
+
+			  while(nn<p_Np){
+			    // dfloat Qhatn[p_Nfields]; 
+			    for(int fld=0; fld<s_Ndfields; fld++){ 
+			      Qhatn[fld] = 0; 
+			    }
+
+					#pragma unroll p_Np
+			    for(int m=0; m<p_Np;m++){
+			      const dfloat invvt = InvVT[nn+m*p_Np]; 
+			      for(int fld=0; fld<s_Ndfields; fld++){ 
+							Qhatn[fld] += invvt*s_Q[es][fld][m];
+			      }
+			    }
+
+
+	    for(int fld=0; fld<s_Ndfields; fld++){ 	    
+
+	      dfloat Qhatn2 = Qhatn[fld]*Qhatn[fld];
+
+	      s_Qhat2[es][fld][nn] = Qhatn2; 
+
+#if BLDEC==1
+	      const dfloat JW = vgeo[e*p_Np*p_Nvgeo + nn + p_JWID*p_Np];
+	      L2[fld] += JW*Qhatn2; // accumulate
+#endif
+	    }
+	    nn += p_Nq;
+	  }
+	}
+
+#if BLDEC==1
+		for(int fld=0; fld<s_Ndfields; fld++){ 
+		  s_L2[es][fld][n] = L2[fld];
+		}
+#endif
+      }
+    }
+
+#if BLDEC==1
+    reduce02(s_L2,  64);
+    reduce02(s_L2,  16);
+    reduce02(s_L2,   8);
+    reduce02(s_L2,   4);
+    reduce02(s_L2,   2);
+    reduce02(s_L2,   1);
+#endif
+
+    //skyline pessimization: get 1D mods from 2D
+    for(int es=0;es<p_Nel;++es;@inner(1)){    
+      for(int n=0; n<p_Nq; n++; @inner(0)){   
+
+	dlong e = eo+es;
+
+	if(e<Nelements){
+
+	  dfloat modsum[s_Ndfields];
+	  dfloat norm[s_Ndfields];
+	  dfloat res[s_Ndfields];
+
+
+	  for(int fld=0; fld<s_Ndfields; fld++){ 
+	    modsum[fld] = 0; 
+	    norm[fld] = 0; 
+	    res[fld] = 0; 
+	  }
+
+	  for(int i=0; i<n+1; i++){
+	    const int nmods = n*n + i; 
+	    const int m     = s_ModMap[nmods];  // not coalesced!!!!
+	    for(int fld=0; fld<s_Ndfields; fld++){ 
+	      modsum[fld] += s_Qhat2[es][fld][m];
+	    }
+	  }
+
+	  for(int fld=0; fld<s_Ndfields; fld++){ 
+#if BLDEC==1
+	    // norm = q' * MM * q on element e
+	    norm[fld] = s_L2[es][fld][0];
+	    res[fld] = log10f((float)(modsum[fld] + s_BLD[n]*norm[fld]));     
+#else
+	    res[fld] = log10f((float)(modsum[fld])); 
+#endif
+
+	    s_LogMod[es][fld][n] = 0.5*res[fld]; // use log(sqrt(a)) = 0.5*log(a)
+	  }
+
+
+	  // assumes p_Nel*p_Nq <= 32
+	  if(n==0){
+	    // Select the element if any field creates trouble
+
+	    // dfloat mincoeff = 100; 
+
+	    for(int fld=0; fld<s_Ndfields; fld++){ 
+	      // use running max from highest mode
+	      dfloat runningMax = mymax(s_LogMod[es][fld][p_Nq-1], s_LogMod[es][fld][p_Nq-2]);
+	      dfloat coeff = runningMax*s_LSF[p_Nq-2];
+
+	      for(int j=p_Nq-2;j>0;--j){
+					runningMax = mymax(runningMax, s_LogMod[es][fld][j]);
+					// accumulate in least squares fit
+					coeff += s_LSF[j-1]*runningMax;
+	      }
+
+	      // this handles zero field, do not select those elements!!!
+	      const dfloat sk = fabs(coeff); 	
+	      // // It can be tuned: AK
+	      // const dfloat s0    = 2.0;  
+	      // const dfloat kappa = 1.0; 	
+	      // use (s0 + kappa)^2 = 9 or 4	     
+	      ElementList[e*s_Ndfields + fld] = sk < (s_sS0+1) ? 1 : 0;	 			
 	    }
 	  }
 
@@ -476,7 +473,7 @@
     for(int es=0;es<p_Nel;++es;@inner(1)){		\
       for(int n=0; n<p_Nq; n++; @inner(0)){		\
 	if(n<NT && n+NT<p_Nq){				\
-	  for(int fld=0; fld<p_dNfields; fld++){	\
+	  for(int fld=0; fld<s_Ndfields; fld++){	\
 	    s_L2[es][fld][n]  += s_L2[es][fld][n+NT];	\
 	    s_L2T[es][fld][n] += s_L2T[es][fld][n+NT];	\
 	  }						\
@@ -487,11 +484,11 @@
 
   for(dlong eo=0;eo<Nelements;eo+=p_Nel;@outer(0)){
 
-    @shared dfloat s_Q[p_Nel][p_dNfields][p_Np];
-    @shared dfloat s_QT[p_Nel][p_dNfields][p_Np];
+    @shared dfloat s_Q[p_Nel][s_Ndfields][p_Np];
+    @shared dfloat s_QT[p_Nel][s_Ndfields][p_Np];
 
-    @shared dfloat s_L2Q[p_Nel][p_dNfields][p_Np];
-    @shared dfloat s_L2QT[p_Nel][p_dNfields][p_Np];
+    @shared dfloat s_L2Q[p_Nel][s_Ndfields][p_Np];
+    @shared dfloat s_L2QT[p_Nel][s_Ndfields][p_Np];
 
     // prefetch global variables
     for(int es=0;es<p_Nel;++es;@inner(1)){
@@ -501,9 +498,9 @@
 				int m = n + es*p_Nq;
 				while(m<p_Np*p_Nel && eo*p_Np+m<Nelements*p_Np){
 	  			
-	  			const dlong id = m+eo*p_Np*p_dNfields;
+	  			const dlong id = m+eo*p_Np*s_Ndfields;
 			  
-	  			for(int fld=0; fld<p_dNfields; fld++){ 
+	  			for(int fld=0; fld<s_Ndfields; fld++){ 
 	    			s_Q[0][fld][m]  = Q[id + fld*p_Np];
 	  			}      
 	  			m += p_Nel*p_Nq;
@@ -517,25 +514,25 @@
       for(int n=0; n<p_Nq; n++; @inner(0)){
 
 				dlong e = eo+es;
-			dfloat qt[p_dNfields]; 
+			dfloat qt[s_Ndfields]; 
 			if(e<Nelements){
 	  		int nn = n;
 
 	  		while(nn<p_Np){
 	    		// dfloat Qhatn[p_Nfields]; 
-	    		for(int fld=0; fld<p_dNfields; fld++){ 
+	    		for(int fld=0; fld<s_Ndfields; fld++){ 
 	      		qt[fld] = 0; 
 	    		}
 
 					#pragma unroll p_Np
 		    	for(int m=0; m<p_Np;m++){
 		      	const dfloat pm = projectMn1[nn+m*p_Np]; 
-		      	for(int fld=0; fld<p_dNfields; fld++){ 
+		      	for(int fld=0; fld<s_Ndfields; fld++){ 
 							qt[fld] += pm*s_Q[es][fld][m];
 	      		}
 	    		}
 
-	    	for(int fld=0; fld<p_dNfields; fld++){ 	    
+	    	for(int fld=0; fld<s_Ndfields; fld++){ 	    
 	    		s_QT[es][fld][nn] = s_Q[es][fld][nn] - qt[fld]; 
 	      }
 	    nn += p_Nq;
@@ -554,7 +551,7 @@
 			  int nn = n;
 			  while(nn<p_Np){
 			   const dfloat JW = vgeo[e*p_Np*p_Nvgeo + nn + p_JWID*p_Np];
-			    for(int fld=0; fld<p_dNfields; fld++){ 
+			    for(int fld=0; fld<s_Ndfields; fld++){ 
 			    	s_L2Q[es][fld][nn]  = s_Q[es][fld][nn]  * JW * s_Q[es][fld][nn]; 
 			    	s_L2QT[es][fld][nn] = s_QT[es][fld][nn] * JW * s_QT[es][fld][nn]; 
 			  	}
@@ -577,14 +574,14 @@
       for(int n=0; n<p_Nq; n++; @inner(0)){
 	dlong e = eo+es;
 	if(e<Nelements){
-	  if(n<p_dNfields){
+	  if(n<s_Ndfields){
 	    const dfloat sk = 0.5*log10f((float)(s_L2QT[es][n][0]/s_L2Q[es][n][0]));
 	    const dfloat N = p_N; 
 	    const dfloat s0  = -4.f*log10f( (float) (N) );	    
-	    // ElementList[e*p_dNfields + n] = sk >= s0  ? 1.0: 0.0; 
+	    // ElementList[e*s_Ndfields + n] = sk >= s0  ? 1.0: 0.0; 
 	    const dfloat kappa = 1.0; 
-	    ElementList[e*p_dNfields + n] = (sk < (s0-kappa))  ? 0: 1; 
-	    // ElementList[e*p_dNfields + n] = 1; 
+	    ElementList[e*s_Ndfields + n] = (sk < (s0-kappa))  ? 0: 1; 
+	    // ElementList[e*s_Ndfields + n] = 1; 
 	  }
 	}
       }
@@ -609,7 +606,7 @@
     for(int es=0;es<p_Nel;++es;@inner(1)){		\
       for(int n=0; n<p_Nq; n++; @inner(0)){		\
 	if(n<NT && n+NT<p_Nq){				\
-	  for(int fld=0; fld<p_dNfields; fld++){	\
+	  for(int fld=0; fld<s_Ndfields; fld++){	\
 	    s_L2[es][fld][n]  += s_L2[es][fld][n+NT];	\
 	    s_L2T[es][fld][n] += s_L2T[es][fld][n+NT];	\
 	  }						\
@@ -620,11 +617,11 @@
 
   for(dlong eo=0;eo<Nelements;eo+=p_Nel;@outer(0)){
 
-    @shared dfloat s_Q[p_Nel][p_dNfields][p_Np];
-    @shared dfloat s_QT[p_Nel][p_dNfields][p_Np];
+    @shared dfloat s_Q[p_Nel][s_Ndfields][p_Np];
+    @shared dfloat s_QT[p_Nel][s_Ndfields][p_Np];
 
-    @shared dfloat s_L2Q[p_Nel][p_dNfields][p_Np];
-    @shared dfloat s_L2QT[p_Nel][p_dNfields][p_Np];
+    @shared dfloat s_L2Q[p_Nel][s_Ndfields][p_Np];
+    @shared dfloat s_L2QT[p_Nel][s_Ndfields][p_Np];
 
     // prefetch global variables
     for(int es=0;es<p_Nel;++es;@inner(1)){
@@ -634,9 +631,9 @@
 				int m = n + es*p_Nq;
 				while(m<p_Np*p_Nel && eo*p_Np+m<Nelements*p_Np){
 	  			
-	  			const dlong id = m+eo*p_Np*p_dNfields;
+	  			const dlong id = m+eo*p_Np*s_Ndfields;
 			  
-	  			for(int fld=0; fld<p_dNfields; fld++){ 
+	  			for(int fld=0; fld<s_Ndfields; fld++){ 
 	    			s_Q[0][fld][m]  = Q[id + fld*p_Np];
 	  			}      
 	  			m += p_Nel*p_Nq;
@@ -650,25 +647,25 @@
       for(int n=0; n<p_Nq; n++; @inner(0)){
 
 				dlong e = eo+es;
-			dfloat qt[p_dNfields]; 
+			dfloat qt[s_Ndfields]; 
 			if(e<Nelements){
 	  		int nn = n;
 
 	  		while(nn<p_Np){
 	    		// dfloat Qhatn[p_Nfields]; 
-	    		for(int fld=0; fld<p_dNfields; fld++){ 
+	    		for(int fld=0; fld<s_Ndfields; fld++){ 
 	      		qt[fld] = 0; 
 	    		}
 
 					#pragma unroll p_Np
 		    	for(int m=0; m<p_Np;m++){
 		      	const dfloat pm = projectMn1[nn+m*p_Np]; 
-		      	for(int fld=0; fld<p_dNfields; fld++){ 
+		      	for(int fld=0; fld<s_Ndfields; fld++){ 
 							qt[fld] += pm*s_Q[es][fld][m];
 	      		}
 	    		}
 
-	    	for(int fld=0; fld<p_dNfields; fld++){ 	    
+	    	for(int fld=0; fld<s_Ndfields; fld++){ 	    
 	    		s_QT[es][fld][nn] = s_Q[es][fld][nn] - qt[fld]; 
 	      }
 	    nn += p_Nq;
@@ -687,7 +684,7 @@
 			  int nn = n;
 			  while(nn<p_Np){
 			   const dfloat JW = vgeo[e*p_Np*p_Nvgeo + nn + p_JWID*p_Np];
-			    for(int fld=0; fld<p_dNfields; fld++){ 
+			    for(int fld=0; fld<s_Ndfields; fld++){ 
 			    	s_L2Q[es][fld][nn]  = s_Q[es][fld][nn]  * JW * s_Q[es][fld][nn]; 
 			    	s_L2QT[es][fld][nn] = s_QT[es][fld][nn] * JW * s_QT[es][fld][nn]; 
 			  	}
@@ -710,24 +707,24 @@
       for(int n=0; n<p_Nq; n++; @inner(0)){
 	dlong e = eo+es;
 	if(e<Nelements){
-	  if(n<p_dNfields){
+	  if(n<s_Ndfields){
 	    const dfloat sk = 0.5*log10f((float)(s_L2QT[es][n][0]/s_L2Q[es][n][0]));
 	    const dfloat N = p_N; 
 	    const dfloat s0  = -4.f*log10f( (float) (N) );	    
 	    
 	    const dfloat kappa = 1.0; 
-	    ElementList[e*p_dNfields + n] = (sk < (s0-kappa))  ? 0.0: 1.0; 
+	    ElementList[e*s_Ndfields + n] = (sk < (s0-kappa))  ? 0.0: 1.0; 
 
-			// artVisc[e*p_dNfields + n] = 1.0f; //0.f; 
+			// artVisc[e*s_Ndfields + n] = 1.0f; //0.f; 
 			
 
 
 	    if(sk<(s0-kappa))
-				artVisc[e*p_dNfields + n] = 0.f; //0.f; 
+				artVisc[e*s_Ndfields + n] = 0.f; //0.f; 
 			else if(sk > (s0+kappa) )
-				artVisc[e*p_dNfields + n] = 1.0; 
+				artVisc[e*s_Ndfields + n] = 1.0; 
 			else 
-				artVisc[e*p_dNfields + n] = 0.5*(1.f + sin( 0.5* M_PI*(sk-s0)/ kappa)); 
+				artVisc[e*s_Ndfields + n] = 0.5*(1.f + sin( 0.5* M_PI*(sk-s0)/ kappa)); 
 
 	  }
 	}

@@ -47,10 +47,6 @@ void cns_t::Report(dfloat time, int tstep){
     reportMoments(time, tstep); momentFrame++; 
   }
 
-
-  
-
-
   //compute q.M*q
   dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
   deviceMemory<dfloat> o_Mq = platform.reserve<dfloat>(Nentries);
@@ -64,9 +60,11 @@ void cns_t::Report(dfloat time, int tstep){
 
   
   if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
-   // if(stab.type!=Stab::NOSTAB){
-   //    stab.Apply(o_q, o_q, 0.0);
-   //    stab.Report(0.0, tstep);}
+    
+   if(stab.type!=Stab::NOSTAB){
+      stab.Apply(o_q, o_q, 0.0);
+      stab.Report(0.0, tstep);
+    }
 
     //compute vorticity
     deviceMemory<dfloat> o_Vort = platform.reserve<dfloat>(mesh.dim*mesh.Nelements*mesh.Np);
@@ -126,10 +124,10 @@ void cns_t::reportForces(dfloat time, int tstep){
     const dfloat vFy = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+1*shift , mesh.comm); 
     const dfloat pFx = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+2*shift , mesh.comm); 
     const dfloat pFy = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+3*shift , mesh.comm);
-    if(mesh.rank==0) 
+    if(mesh.rank==0){
       printf("forces: %.4e %.4e %.4e %.4e \n", vFx, vFy, pFx, pFy);
-
-    fprintf(fp,"%.6e %.6e %.6e %.6e %.6e\n", time, vFx, vFy, pFx, pFy);
+      fprintf(fp,"%.6e %.6e %.6e %.6e %.6e\n", time, vFx, vFy, pFx, pFy);
+    } 
   }else{
     const dfloat vFx = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+0*shift , mesh.comm); 
     const dfloat vFy = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+1*shift , mesh.comm); 
@@ -138,10 +136,12 @@ void cns_t::reportForces(dfloat time, int tstep){
     const dfloat pFx = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+3*shift , mesh.comm); 
     const dfloat pFy = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+4*shift , mesh.comm); 
     const dfloat pFz = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+5*shift , mesh.comm); 
-    if(mesh.rank==0) 
+    if(mesh.rank==0){
       printf("forces: %.4e %.4e %.4e %.4e %.4e %.4e %.4e\n", time, vFx, vFy, vFz, pFx, pFy, pFz);
+      fprintf(fp,"%.6e %.6e %.6e %.6e %.6e %.6e %.6e\n", time, vFx, vFy, vFz, pFx, pFy, pFz);
 
-    fprintf(fp,"%.6e %.6e %.6e %.6e %.6e %.6e %.6e\n", time, vFx, vFy, vFz, pFx, pFy, pFz);
+    } 
+
   }
   
   fclose(fp); 
@@ -184,19 +184,20 @@ void cns_t::reportMoments(dfloat time, int tstep){
 
     if(mesh.rank==0){
       printf("moments:%.4e \n", Mz);
+      // write tot the file
+      fprintf(fp,"%.6e %.6e\n", time, Mz);
     }
 
-    fprintf(fp,"%.6e %.6e\n", time, Mz);
-    fclose(fp); 
   }else{
     const dfloat  Mx = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_M+0*shift , mesh.comm); 
     const dfloat  My = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_M+1*shift , mesh.comm); 
     const dfloat  Mz = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_M+2*shift , mesh.comm); 
-    if(mesh.rank==0)
+    if(mesh.rank==0){
       printf("moments: %.4e %.4e %.4e\n", Mx, My, Mz);
+      // write to file
+      fprintf(fp, "%.6e %.6e %.6e %.6e\n", time, Mx, My, Mz);
+    }
 
-    // write to file
-    fprintf(fp, "%.6e %.6e %.6e %.6e\n", time, Mx, My, Mz);
   }
   
   fclose(fp); 

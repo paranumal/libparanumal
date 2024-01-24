@@ -297,9 +297,5 @@ Physical Surface("Farfield", 20) = {15, 16, 17, 20, 19, 24, 18, 21, 23};
 Physical Surface("Wall", 11) = {25, 26, 29, 27, 28};
 Physical Surface("Symmetry", 13) = {8, 22};
 Physical Volume("Domain", 9) = {3, 2};
-
-
 Coherence;
-
-
 Mesh.MeshSizeFromCurvature = 20;

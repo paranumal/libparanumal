@@ -1,0 +1,241 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+void surfaceTerms(const int e,
+                  const int es,
+                  const int sk,
+                  const int face,
+                  const int i,
+                  const int j,
+                  const dfloat *pCoeff, 
+                  const dfloat *x,
+                  const dfloat *y,
+                  const dfloat time,
+                  const dfloat *sgeo,
+                  const int *vmapM,
+                  const int *vmapP,
+                  const int *EToB,
+                  const dfloat *q,
+                  const dfloat *gradq,
+                  dfloat s_rrxflux[p_NblockS][p_Nq][p_Nq],
+                  dfloat s_rryflux[p_NblockS][p_Nq][p_Nq],
+                  dfloat s_ruxflux[p_NblockS][p_Nq][p_Nq],
+                  dfloat s_ruyflux[p_NblockS][p_Nq][p_Nq],
+                  dfloat s_rvxflux[p_NblockS][p_Nq][p_Nq],
+                  dfloat s_rvyflux[p_NblockS][p_Nq][p_Nq],
+                  dfloat s_rexflux[p_NblockS][p_Nq][p_Nq],
+                  dfloat s_reyflux[p_NblockS][p_Nq][p_Nq]){
+
+   // indices of negative and positive traces of face node
+  const dfloat gamma  = pCoeff[p_GMID]; // gamma
+  const dfloat R      = pCoeff[p_RRID]; 
+  const dfloat CP     = pCoeff[p_CPID]; 
+  const dfloat CV     = pCoeff[p_CVID]; 
+  const dfloat mu     = pCoeff[p_MUID]; 
+  const dfloat beta   = pCoeff[p_BTID]; 
+  const dfloat tau    = pCoeff[p_TAID]; 
+
+  const dfloat nx    = sgeo[sk*p_Nsgeo+p_NXID];
+  const dfloat ny    = sgeo[sk*p_Nsgeo+p_NYID];
+  const dfloat sJ    = sgeo[sk*p_Nsgeo+p_SJID];
+  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];
+
+  const dlong idM = vmapM[sk];
+  const dlong idP = vmapP[sk];
+
+  const dlong eM = e;
+  const dlong eP = idP/p_Np;
+  const int vidM = idM%p_Np;
+  const int vidP = idP%p_Np;
+
+  const dlong baseM = eM*p_Np*p_Nfields + vidM;
+  const dlong baseP = eP*p_Np*p_Nfields + vidP;
+
+  const dfloat rrM = q[baseM + 0*p_Np];
+  const dfloat ruM = q[baseM + 1*p_Np];
+  const dfloat rvM = q[baseM + 2*p_Np];
+  const dfloat reM = q[baseM + 3*p_Np];
+
+        dfloat rrP = q[baseP + 0*p_Np];
+        dfloat ruP = q[baseP + 1*p_Np];
+        dfloat rvP = q[baseP + 2*p_Np];
+        dfloat reP = q[baseP + 3*p_Np];
+
+  const int bc = EToB[face+p_Nfaces*e];
+  if(bc>0) {
+    // fake derivates
+    dfloat drrdxP = 0.0, drrdyP =0.0; 
+    dfloat drudxP = 0.0, drudyP =0.0; 
+    dfloat drvdxP = 0.0, drvdyP =0.0; 
+    dfloat dredxP = 0.0, dredyP =0.0; 
+    cnsViscousBoundaryConditions2D(bc, gamma, R, CP, CV, mu, time, x[idM], y[idM], nx, ny, 
+                                   rrM, ruM, rvM, reM, &rrP, &ruP, &rvP, &reP, 
+                                   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                   &drrdxP, &drrdyP, &drudxP, &drudyP, 
+                                   &drvdxP, &drvdyP, &dredxP, &dredyP);
+  }
+
+  const dfloat sc = 0.5*invWJ*sJ;
+  const dfloat alphaM = 0.5 + beta; 
+  const dfloat alphaP = 0.5 - beta; 
+
+  s_rrxflux[es][j][i] += sc*nx*( alphaM*rrM + alphaP*rrP  - rrM);
+  s_rryflux[es][j][i] += sc*ny*( alphaM*rrM + alphaP*rrP  - rrM);
+  s_ruxflux[es][j][i] += sc*nx*( alphaM*ruM + alphaP*ruP  - ruM);
+  s_ruyflux[es][j][i] += sc*ny*( alphaM*ruM + alphaP*ruP  - ruM); 
+
+  s_rvxflux[es][j][i] += sc*nx*( alphaM*rvM + alphaP*rvP  - rvM);
+  s_rvyflux[es][j][i] += sc*ny*( alphaM*rvM + alphaP*rvP  - rvM);
+  s_rexflux[es][j][i] += sc*nx*( alphaM*reM + alphaP*reP  - reM);
+  s_reyflux[es][j][i] += sc*ny*( alphaM*reM + alphaP*reP  - reM);
+}
+
+
+
+
+@kernel void cnsGradSurfaceConservativeQuad2D(const dlong Nelements,
+                                             @restrict const  dfloat *  sgeo,
+                                             @restrict const  dfloat *  LIFT,
+                                             @restrict const  dlong  *  vmapM,
+                                             @restrict const  dlong  *  vmapP,
+                                             @restrict const  int    *  EToB,
+                                             @restrict const  dfloat *  x,
+                                             @restrict const  dfloat *  y,
+                                             @restrict const  dfloat *  z,
+                                             @restrict const  dfloat *  pCoeff,
+                                                       const  dfloat time,
+                                             @restrict const  dfloat *  q,
+                                             @restrict        dfloat *  gradq){
+
+  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockS;@outer(0)){
+    // @shared storage for flux terms
+    @shared dfloat s_rrxflux[p_NblockS][p_Nq][p_Nq];
+    @shared dfloat s_rryflux[p_NblockS][p_Nq][p_Nq];
+    @shared dfloat s_ruxflux[p_NblockS][p_Nq][p_Nq];
+    @shared dfloat s_ruyflux[p_NblockS][p_Nq][p_Nq];
+    
+    @shared dfloat s_rvxflux[p_NblockS][p_Nq][p_Nq];
+    @shared dfloat s_rvyflux[p_NblockS][p_Nq][p_Nq];
+    @shared dfloat s_rexflux[p_NblockS][p_Nq][p_Nq];
+    @shared dfloat s_reyflux[p_NblockS][p_Nq][p_Nq];
+
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        #pragma unroll p_Nq
+          for(int j=0;j<p_Nq;++j){
+            s_rrxflux[es][j][i]= 0.0; 
+            s_rryflux[es][j][i]= 0.0; 
+            s_ruxflux[es][j][i]= 0.0; 
+            s_ruyflux[es][j][i]= 0.0; 
+
+            s_rvxflux[es][j][i]= 0.0; 
+            s_rvyflux[es][j][i]= 0.0; 
+            s_rexflux[es][j][i]= 0.0; 
+            s_reyflux[es][j][i]= 0.0; 
+          }
+      }
+    }
+
+
+    // for all face nodes of all elements
+    // face 0 & 2
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        const dlong e = eo + es;
+        if(e<Nelements){
+          const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i;
+          const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + i;
+
+          //surfaceTerms(sk0,0,i,0     );
+          surfaceTerms(e, es, sk0, 0, i, 0, pCoeff,
+                       x, y, time, sgeo, vmapM, vmapP, EToB, q, gradq,
+                       s_rrxflux, s_rryflux, s_ruxflux, s_ruyflux, 
+                       s_rvxflux, s_rvyflux, s_rexflux, s_reyflux);
+
+          //surfaceTerms(sk2,2,i,p_Nq-1);
+          surfaceTerms(e, es, sk2, 2, i, p_Nq-1,pCoeff,
+                       x, y, time, sgeo, vmapM, vmapP, EToB, q, gradq,
+                       s_rrxflux, s_rryflux, s_ruxflux, s_ruyflux, 
+                       s_rvxflux, s_rvyflux, s_rexflux, s_reyflux);
+
+        }
+      }
+    }
+
+
+    // face 1 & 3
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int j=0;j<p_Nq;++j;@inner(0)){
+        const dlong e = eo + es;
+        if(e<Nelements){
+          const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + j;
+          const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + j;
+
+          //surfaceTerms(sk1,1,p_Nq-1,j);
+          surfaceTerms(e, es, sk1, 1, p_Nq-1, j, pCoeff,
+                       x, y, time, sgeo, vmapM, vmapP, EToB, q, gradq,
+                       s_rrxflux, s_rryflux, s_ruxflux, s_ruyflux, 
+                       s_rvxflux, s_rvyflux, s_rexflux, s_reyflux);
+
+          //surfaceTerms(sk3,3,0     ,j);
+          surfaceTerms(e, es, sk3, 3, 0, j,pCoeff,
+                       x, y, time, sgeo, vmapM, vmapP, EToB, q, gradq,
+                       s_rrxflux, s_rryflux, s_ruxflux, s_ruyflux, 
+                       s_rvxflux, s_rvyflux, s_rexflux, s_reyflux);
+        }
+      }
+    }
+
+
+    // for each node in the element
+    for(int es=0;es<p_NblockS;++es;@inner(1)){
+      for(int i=0;i<p_Nq;++i;@inner(0)){
+        const dlong e = eo + es;
+        if(e<Nelements){
+          #pragma unroll p_Nq
+            for(int j=0;j<p_Nq;++j){
+              const dlong base = e*p_Np*p_Ngrads+j*p_Nq+i;
+              gradq[base+0*p_Np] += s_rrxflux[es][j][i];
+              gradq[base+1*p_Np] += s_rryflux[es][j][i];
+              gradq[base+2*p_Np] += s_ruxflux[es][j][i];
+              gradq[base+3*p_Np] += s_ruyflux[es][j][i];
+              gradq[base+4*p_Np] += s_rvxflux[es][j][i];
+              gradq[base+5*p_Np] += s_rvyflux[es][j][i];
+              gradq[base+6*p_Np] += s_rexflux[es][j][i];
+              gradq[base+7*p_Np] += s_reyflux[es][j][i];
+          }
+        }
+      }
+    }
+  }
+}
+
+
+
+
+
+
