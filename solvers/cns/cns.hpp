@@ -110,8 +110,8 @@ public:
   kernel_t maxWaveSpeedKernel;
 
 
-  kernel_t computeForcesKernel; 
-  kernel_t computeMomentsKernel; 
+  kernel_t forcesVolumeKernel; 
+  kernel_t forcesSurfaceKernel; 
 
   cns_t() = default;
   cns_t(platform_t &_platform, mesh_t &_mesh,
@@ -131,7 +131,6 @@ public:
   void tokenizer(const int N, std::string s, memory<dfloat> & state, char delimiter);
   
   void reportForces(dfloat time, int tstep);
-  void reportMoments(dfloat time, int tstep);
 
   void setupArtificialDiffusion(properties_t & kernelInfo);
   void setupNoStab(properties_t & kernelInfo);

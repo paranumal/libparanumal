@@ -1,0 +1,206 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+// Gradients of all conservative fields
+@kernel void cnsForcesVolumeTri2D(const dlong Nelements,
+                                  @restrict const  dfloat *  vgeo,
+                                  @restrict const  dfloat *  D,
+                                  @restrict const  dfloat *  q,
+                                  @restrict        dfloat *  gradq){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_u[p_Np];
+    @shared dfloat s_v[p_Np];
+
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      const dlong qbase = e*p_Nfields*p_Np + n;
+      const dfloat r  = q[qbase + 0*p_Np];
+      const dfloat ru = q[qbase + 1*p_Np];
+      const dfloat rv = q[qbase + 2*p_Np];
+
+      s_u[n] = ru/r;
+      s_v[n] = rv/r;
+    }
+
+
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      // prefetch geometric factors (constant on triangle)
+      const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+      const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+      const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+      const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+      dfloat dudr = 0, duds = 0, dvdr = 0, dvds = 0;
+
+      for(int i=0;i<p_Np;++i){
+        const dfloat Drni = D[n+i*p_Np+0*p_Np*p_Np];
+        const dfloat Dsni = D[n+i*p_Np+1*p_Np*p_Np];
+        const dfloat u = s_u[i];
+        const dfloat v = s_v[i];
+
+        dudr += Drni*u;
+        duds += Dsni*u;
+
+        dvdr += Drni*v;
+        dvds += Dsni*v;
+      }
+
+      const dfloat dudx = drdx*dudr + dsdx*duds;
+      const dfloat dudy = drdy*dudr + dsdy*duds;
+      const dfloat dvdx = drdx*dvdr + dsdx*dvds;
+      const dfloat dvdy = drdy*dvdr + dsdy*dvds;
+
+      const dlong sbase = e*p_Np*4 + n;
+      gradq[sbase + 0*p_Np] = dudx;
+      gradq[sbase + 1*p_Np] = dudy;
+      gradq[sbase + 2*p_Np] = dvdx;
+      gradq[sbase + 3*p_Np] = dvdy;
+    }
+  }
+}
+
+
+@kernel void cnsForcesSurfaceTri2D(const dlong Nelements,
+                                  @restrict const  dfloat *  sgeo,
+                                  @restrict const  dfloat *  SM,
+                                  @restrict const  dlong  *  vmapM,
+                                  @restrict const  int    *  EToB,
+                                  @restrict const  dfloat *  x,
+                                  @restrict const  dfloat *  y,
+                                  @restrict const  dfloat *  z,
+                                  @restrict const  dfloat *  XC, 
+                                  @restrict const  dfloat * pCoeff,
+                                  @restrict const  dfloat *  q,
+                                  @restrict const  dfloat *  gradq,
+                                  @restrict        dfloat *  F){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+   
+    // not sure if we enforce single boundary face per element!
+    @shared dfloat s_vFx[p_NfacesNfp];
+    @shared dfloat s_vFy[p_NfacesNfp];
+    @shared dfloat s_pFx[p_NfacesNfp];
+    @shared dfloat s_pFy[p_NfacesNfp];
+    @shared dfloat  s_Mz[p_NfacesNfp];
+
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
+        if(n<p_NfacesNfp){
+            // apply boundary condition
+            // find face that owns this node
+            const int face = n/p_Nfp;
+            const int bc = EToB[face+p_Nfaces*e];
+
+            const dfloat gamma = pCoeff[p_GMID]; // gamma
+            const dfloat R     = pCoeff[p_RRID]; // gas constant
+                  dfloat mu    = pCoeff[p_MUID]; // bulk viscosity
+
+            // load surface geofactors for this face
+            const dlong sid   = p_Nsgeo*(e*p_Nfaces+face);
+            const dfloat nx   = sgeo[sid+p_NXID];
+            const dfloat ny   = sgeo[sid+p_NYID];
+            const dfloat sJ   = sgeo[sid+p_SJID];
+
+            // indices of negative and positive traces of face node
+            const dlong id  = e*p_Nfp*p_Nfaces + n;
+            const dlong idM = vmapM[id];
+
+            // load traces
+            const dlong eM = e;
+            const int vidM = idM%p_Np;
+
+            const dlong qbaseM = eM*p_Np*p_Nfields + vidM;
+            const dlong sbaseM = eM*p_Np*4  + vidM;
+
+            const dfloat rM  = q[qbaseM + 0*p_Np];
+            const dfloat ruM = q[qbaseM + 1*p_Np];
+            const dfloat rvM = q[qbaseM + 2*p_Np];
+            const dfloat EM  = q[qbaseM + 3*p_Np];
+
+            const dfloat dudxM = gradq[sbaseM+0*p_Np];
+            const dfloat dudyM = gradq[sbaseM+1*p_Np];
+            const dfloat dvdxM = gradq[sbaseM+2*p_Np];
+            const dfloat dvdyM = gradq[sbaseM+3*p_Np];
+
+            const dfloat uM = ruM/rM;
+            const dfloat vM = rvM/rM;
+            const dfloat pM = (gamma-1)*(EM-0.5*rM*(uM*uM+vM*vM));
+
+            if(p_viscType==2){ // Sutherland     
+              const dfloat exp  = pCoeff[p_EXID]; // Exponential term
+              const dfloat tr   = pCoeff[p_TRID]; // 1/Tref 
+              const dfloat ts   = pCoeff[p_TSID]; // Ts/Tref
+              const dfloat cs   = pCoeff[p_CSID]; // precomuted value to simlify
+              const dfloat tn   = pM*tr/ (rM *R);  // non-dimensional temp
+              mu  = (tn > ts) ? (mu*pow(tn, exp)*(1.0+ts)/(tn + ts)) : mu*tn*cs;  
+            }else if(p_viscType==3){ // Powerlaw
+              const dfloat exp  = pCoeff[p_EXID]; // Exponential term
+              const dfloat TempM  = pM/(R*rM);      // Temperature
+              mu =  mu*pow(TempM, exp); 
+            }
+
+            const dfloat T11 = mu*(2.0*dudxM - 2.0*(dudxM+dvdyM)/3.0);
+            const dfloat T12 = mu*(dudyM+dvdxM);
+            const dfloat T22 = mu*(2.0*dvdyM - 2.0*(dudxM+dvdyM)/3.0);
+
+            const dfloat fx = pM*nx + (nx*T11 + ny*T12); 
+            const dfloat fy = pM*ny + (nx*T12 + ny*T22);
+            const dfloat dxf   = x[idM] - XC[0]; 
+            const dfloat dyf   = y[idM] - XC[1];
+            
+            s_vFx[n] = (bc==11 || bc==12) ?  sJ*(nx*T11 + ny*T12): 0.0; 
+            s_vFy[n] = (bc==11 || bc==12) ?  sJ*(nx*T12 + ny*T22): 0.0; 
+            s_pFx[n] = (bc==11 || bc==12) ?  sJ*pM*nx: 0.0; 
+            s_pFy[n] = (bc==11 || bc==12) ?  sJ*pM*ny: 0.0; 
+            s_Mz[n]  = (bc==11 || bc==12) ?  sJ*(fx*dyf - fy*dxf) : 0.0; 
+        }
+      }
+
+    // for each node in the element
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      if(n<p_Np){
+        dfloat vfxI  = 0.f, vfyI = 0.f; 
+        dfloat pfxI  = 0.f, pfyI = 0.f;
+        dfloat mzI   = 0.f ;
+        #pragma unroll p_NfacesNfp
+        for(int m=0;m<p_NfacesNfp;++m){
+          const dfloat sM = SM[n+m*p_Np];
+          vfxI     += sM*s_vFx[m];
+          vfyI     += sM*s_vFy[m];
+          pfxI     += sM*s_pFx[m];
+          pfyI     += sM*s_pFy[m];
+          mzI      += sM*s_Mz[m];
+        }
+        const dlong shift = Nelements*p_Np;
+        F[e*p_Np+n+0*shift] = vfxI; 
+        F[e*p_Np+n+1*shift] = vfyI;
+        F[e*p_Np+n+2*shift] = pfxI;
+        F[e*p_Np+n+3*shift] = pfyI;
+        F[e*p_Np+n+4*shift] = mzI;
+        }
+      }
+    } 
+  }

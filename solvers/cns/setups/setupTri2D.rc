@@ -3,11 +3,13 @@
 
 [DATA FILE]
 #data/cnsGaussian2D.h
+#data/cnsUniform2Dv2.h
 data/cnsUniform2D.h
 #*******************[MESH PROPERTIES]*******************#
 [MESH FILE]
 #BOX
-../../meshes/cnsNACA2D.msh
+#../../meshes/cnsNACA2D_LD.msh
+../../meshes/cnsNACAFlexi2D.msh
 #../../meshes/cnsNACA2D_Symmetry.msh
 #../../meshes/cnsGaussTri2D.msh
 
@@ -30,7 +32,7 @@ data/cnsUniform2D.h
 11
 #*******************[DISCRETIZATION PROPERTIES]************#
 [POLYNOMIAL DEGREE]
-3
+4
 
 [SOLVER TYPE]
 #EULER
@@ -45,8 +47,8 @@ FALSE
 
 #Can be COLLOCATION or CUBATURE
 [ADVECTION TYPE]
-#COLLOCATION
-CUBATURE
+COLLOCATION
+#CUBATURE
 
 # 0 < beta < 1 
 [LDG BETA COEFFICIENT]
@@ -78,11 +80,11 @@ CUDA
 
 # // Mach number is needed for NONDIM=TRUE
 [MACH NUMBER]
-2.0
+0.2
 
 # Reynolds number is needed for NONDIM = TRUE
 [REYNOLDS NUMBER]
-1e5
+1000000
 
 # R is needed if NONDIM=FALSE otherwise  R = 1.0/(gamma*Ma^2) 
 [SPECIFIC GAS CONSTANT]
@@ -90,11 +92,11 @@ CUDA
 
 # mu is needed if NONDIM = FALSE, otherwise mu = 1/Re
 [VISCOSITY]
-0.00001
+1.0e-6
 
 # [ CONSTANT ] - [SUTHERLAND] - [POWER-LAW]
 [VISCOSITY TYPE]
-SUTHERLAND
+CONSTANT
 
 
 [PRANDTL NUMBER]
@@ -105,7 +107,6 @@ SUTHERLAND
 [REFERENCE STATE]
 1.0, 1.0, 1.0, 1.0, 1.0, 1.0
 
-
 [CFL NUMBER]
 0.5
 
@@ -113,11 +114,11 @@ SUTHERLAND
 0
 
 [FINAL TIME]
-5
+50
 
 #*******************[OUTPUT PROPERTIES]*******************#
 [OUTPUT INTERVAL]
-0.1
+0.25
 
 [OUTPUT TO FILE]
 TRUE

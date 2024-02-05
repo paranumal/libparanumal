@@ -25,13 +25,25 @@ SOFTWARE.
 */
 
 /* ************************************************************************ */
-#define MACH 0.1
+#define MACH 0.2
 /* ************************************************************************ */
 #if MACH==0.1
   #define p_RBAR 1.4
-  #define p_UBAR 1.00000
-  #define p_VBAR 0.00000
+  #define p_UBAR 0.984807753012208
+  #define p_VBAR 0.173648177666930
   #define p_PBAR 100
+  #define p_TBAR 1.00000
+#elif MACH==0.15
+  #define p_RBAR 1.4
+  #define p_UBAR 0.984807753012208
+  #define p_VBAR 0.173648177666930
+  #define p_PBAR 44.44444444444444
+  #define p_TBAR 1.00000
+#elif MACH==0.2
+  #define p_RBAR 1.0
+  #define p_UBAR 0.965925826289068
+  #define p_VBAR 0.258819045102521
+  #define p_PBAR 17.857142857142858
   #define p_TBAR 1.00000
 #elif MACH==0.8
   #define p_RBAR 1.79200
@@ -83,8 +95,23 @@ SOFTWARE.
 // 2-2 : Inflow       : Supersonic Inlet
 // 3-1 : Outflow      : Subsonic Outlet
 // 3-2 : Outflow      : Supersonic Outlet
+// 4-1 : WeakDrichlet : Define
 /***************************************************************************/
 
+/***************************************************************************/
+// ************************************************************************
+// Pressure Riemann Solver on BC based on NASA Report
+// AK: We dont use in the current form!!!!
+/* ***********************************************************************/
+#define PressureRiemann2D(gamma, R, CP, CV, UN, CN, rM, uM, vM, pM, PR){     \
+const dfloat pfunc= 2.0*gamma/(gamma -1.0);                                  \
+const dfloat AR   = 2.0/(rM*(gamma+1.0));                                    \
+const dfloat BR   = pM*(gamma -1.0)/(gamma+1.0);                             \
+const dfloat PR1  = pM*pow(max(0.0001, 1.0+0.5*(gamma -1.0)*UN/CN), pfunc);  \
+const dfloat PR2  = pM+0.5*UN/AR*(UN+sqrt(UN*UN+4.0*AR*(pM+BR)));            \
+*(PR)   = (UN<=0) ? PR1 : PR2;                                               \
+}
+/* ************************************************************************ */
 
 
 // Initial conditions (p is ignored for isothermal)
@@ -178,6 +205,11 @@ const dfloat keREF = 0.5*p_RBAR*(p_UBAR*p_UBAR + p_VBAR*p_VBAR);             \
     *(ruB) = ruM;                                                            \
     *(rvB) = rvM;                                                            \
     *(reB) = reM;                                                            \
+  }else if(bc==41){                                                          \
+    *( rB) = p_RBAR;                                                         \
+    *(ruB) = p_RBAR*p_UBAR;                                                  \
+    *(rvB) = p_RBAR*p_VBAR;                                                  \
+    *(reB) = p_PBAR/(gamma -1.0) + keREF;                                    \
  }                                                                           \
 }
 
@@ -309,6 +341,15 @@ const dfloat keREF = 0.5*p_RBAR*(p_UBAR*p_UBAR + p_VBAR*p_VBAR);             \
     *(drudxB) = drudxM;*(drudyB) = drudyM;                                   \
     *(drvdxB) = drvdxM;*(drvdyB) = drvdyM;                                   \
     *(dredxB) = dredxM;*(dredyB) = dredyM;                                   \
+  } else if(bc==41){                                                         \
+    *( rB) = p_RBAR;                                                         \
+    *(ruB) = p_RBAR*p_UBAR;                                                  \
+    *(rvB) = p_RBAR*p_VBAR;                                                  \
+    *(reB) = p_PBAR/(gamma -1.0) + keREF;                                    \
+    *(drrdxB) = 0.0; *(drrdyB) = 0.0;                                        \
+    *(drudxB) = 0.0; *(drudyB) = 0.0;                                        \
+    *(drvdxB) = 0.0; *(drvdyB) = 0.0;                                        \
+    *(dredxB) = 0.0; *(dredyB) = 0.0;                                        \
   }                                                                          \
 }
 // ************************************************************************

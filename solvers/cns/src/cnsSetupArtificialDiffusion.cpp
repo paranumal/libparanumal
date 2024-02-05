@@ -95,14 +95,12 @@ void cns_t::setupArtificialDiffusion(properties_t & kernelInfo){
 
 
   // report forces on wall bc's
-  fileName   = oklFilePrefix + "cnsComputeForces" + suffix + oklFileSuffix;
-  kernelName = "cnsComputeForces" + suffix;
-  computeForcesKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
+  fileName   = oklFilePrefix + "cnsForces" + suffix + oklFileSuffix;
+  kernelName = "cnsForcesVolume" + suffix;
+  forcesVolumeKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 
-  kernelName = "cnsComputeMoments" + suffix;
-  computeMomentsKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
-
-
+  kernelName = "cnsForcesSurface" + suffix;
+  forcesSurfaceKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 
   
   // vorticity calculation

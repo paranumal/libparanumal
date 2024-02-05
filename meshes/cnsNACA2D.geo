@@ -1,7 +1,7 @@
 Mesh.LcIntegrationPrecision = 1.e-2;
 lc   = DefineNumber[0.005];
 lc2  = DefineNumber[0.1];
-lc3  = DefineNumber[0.25];
+lc3  = DefineNumber[5];
 
 Point(1) =  {1.000000e+00,0.000000e+00,0.000000e+00, lc};
 Point(2) =  {9.997533e-01,0.000000e+00,-3.498543e-05,lc};
@@ -220,12 +220,12 @@ xc   = DefineNumber[0];
 yc   = DefineNumber[0];
 
 xi   = DefineNumber[0];
-yi   = DefineNumber[1.0];
+yi   = DefineNumber[2.0];
 
-yomin   = DefineNumber[-3.0];
+yomin   = DefineNumber[-100.0];
 yomax   = -yomin; 
-xomin   = DefineNumber[3.0];
-xomax   = DefineNumber[4.0];
+xomin   = DefineNumber[100.0];
+xomax   = DefineNumber[100.0];
 // External box
 Point(800) = { xc, yc,  0.0, lc3}; 
 
@@ -241,8 +241,8 @@ Point(807) = { xi,  yi,  0.0, lc2};
 Point(808) = { -yi,  0.0,  0.0, lc2}; 
 
 
-Point(809) = { xomax, -(yi+0.5),  0.0, lc2}; 
-Point(810) = { xomax,  (yi+0.5),  0.0, lc2}; 
+Point(809) = { xomax, -(yi+0.5),  0.0, lc3}; 
+Point(810) = { xomax,  (yi+0.5),  0.0, lc3}; 
 
 
 Line(5)  = {801,802}; 

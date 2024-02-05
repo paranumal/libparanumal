@@ -7,7 +7,8 @@ data/cnsUniform3D.h
 #*******************[MESH PROPERTIES]*******************#
 [MESH FILE]
 #BOX
-../../meshes/cnsNACA3D.msh
+#../../meshes/cnsNACA3D.msh
+../../meshes/cnsBody3D.msh
 
 [MESH DIMENSION]
 3
@@ -24,13 +25,12 @@ data/cnsUniform3D.h
 [BOX NZ]
 21
 
+
 [BOX BOUNDARY FLAG]
 11
-
-
 #*******************[DISCRETIZATION PROPERTIES]************#
 [POLYNOMIAL DEGREE]
-4
+3
 
 [SOLVER TYPE]
 #EULER
@@ -78,11 +78,11 @@ CUDA
 
 # // Mach number is needed for NONDIM=TRUE
 [MACH NUMBER]
-0.1
+1.2
 
 # Reynolds number is needed for NONDIM = TRUE
 [REYNOLDS NUMBER]
-1e5
+1e6
 
 # R is needed if NONDIM=FALSE otherwise  R = 1.0/(gamma*Ma^2) 
 [SPECIFIC GAS CONSTANT]
@@ -90,12 +90,11 @@ CUDA
 
 # mu is needed if NONDIM = FALSE, otherwise mu = 1/Re
 [VISCOSITY]
-0.00001
+1.0e-6
 
 # [ CONSTANT ] - [SUTHERLAND] - [POWER-LAW]
 [VISCOSITY TYPE]
-SUTHERLAND
-
+CONSTANT
 
 [PRANDTL NUMBER]
 0.72
@@ -105,7 +104,6 @@ SUTHERLAND
 [REFERENCE STATE]
 1.0, 1.0, 1.0, 1.0, 1.0, 1.0
 
-
 [CFL NUMBER]
 0.5
 
@@ -113,17 +111,17 @@ SUTHERLAND
 0
 
 [FINAL TIME]
-1
+0.1
 
 #*******************[OUTPUT PROPERTIES]*******************#
 [OUTPUT INTERVAL]
-0.1
+0.025
 
 [OUTPUT TO FILE]
 TRUE
 
 [OUTPUT FILE NAME]
-cnsTet
+cns
 
 [REPORT FORCES]
 TRUE
@@ -133,6 +131,7 @@ TRUE
 
 [MOMENT CENTER]
 0.0, 0.0, 0.0
+
 
 #*****************[STABILIZASYON PROPERTIES]*****************#
 # HJS:1  CNS:2  INS:3 

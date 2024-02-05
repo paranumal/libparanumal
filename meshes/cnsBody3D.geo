@@ -69,7 +69,7 @@ For i In {0:#bbox()-1}
 EndFor
 
 If(BBOX == 1)
-  RI = 10*(xmax - xmin)/2; 
+  RI = 5*(xmax - xmin)/2; 
   Sphere(2) = {1, 0, 0, RI, -Pi/2, Pi/2, 2*Pi};
   BooleanDifference{ Volume{2}; Delete; }{ Volume{1}; Delete; }
 ElseIf(BBOX == 2)
@@ -111,13 +111,13 @@ Physical Volume("Domain", 9) = vol();
 
 
 If(MODEL==3)
-  l0 = 0.1; l1 = 0.2; l2 = 6.0; 
+  l0 = 0.2; l1 = 0.5; l2 = 3.0; 
   // l0 = 0.25; l1 = 0.40; l2 = 8.0; 
 
   Field[1] = Distance;
   Field[1].PointsList = {3, 4, 5};
   Field[1].CurvesList = {5, 7};
-  Field[1].Sampling = 500;
+  // Field[1].Sampling = 500;
 
   Field[2] = Threshold;
   Field[2].InField = 1;
@@ -170,8 +170,8 @@ If(MODEL==3)
   Field[7].FieldsList = {2, 3, 4, 5,8};
   Background Field = 7;
 
-   Mesh.Algorithm3D = 1; 
-   Mesh.Optimize = 1; 
+ Mesh.Algorithm3D = 1; 
+ Mesh.Optimize = 1; 
    // Mesh 3;
 EndIf
 

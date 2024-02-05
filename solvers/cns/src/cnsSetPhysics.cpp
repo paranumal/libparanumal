@@ -78,11 +78,14 @@ void cns_t::setupPhysics(properties_t & props){
 
   settings.getSetting("LDG BETA COEFFICIENT", beta_ldg);
   settings.getSetting("LDG TAU COEFFICIENT", tau_ldg);
+  
   Nph  = 10;  
   int pids = 0;
   pCoeff.malloc(Nph,0.0);
-  MUID = pids++;  GMID = pids++;  PRID = pids++; RRID = pids++; CPID = pids++; 
-  CVID = pids++;  KAID = pids++;  M2ID = pids++; BTID = pids++; TAID = pids++;  
+  MUID = pids++;  GMID = pids++;  PRID = pids++; 
+  RRID = pids++;  CPID = pids++;  CVID = pids++;  
+  KAID = pids++;  M2ID = pids++;  BTID = pids++; 
+  TAID = pids++;  
   
   pCoeff[MUID] = mu; // Bulk Viscosity
   pCoeff[PRID] = Pr; // Prandtl Number
@@ -119,8 +122,7 @@ void cns_t::setupPhysics(properties_t & props){
       TRID = pids++; 
   
       dfloat exp = 2.0/3.0;
-      dfloat Tref = (settings.compareSetting("NONDIMENSIONAL EQUATIONS", "TRUE")) ? 
-                    1.0 : 273.15; 
+      dfloat Tref = (settings.compareSetting("NONDIMENSIONAL EQUATIONS", "TRUE")) ? 1.0 : 273.15; 
       pCoeff[MUID] = mu / pow(Tref, exp); // Update viscosity
       pCoeff[EXID] = exp;                 // exponent  
       pCoeff[TRID] = Tref;                // Tref   

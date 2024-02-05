@@ -3,7 +3,7 @@
 
 [DATA FILE]
 #data/cnsGaussian2D.h
-data/cnsUniform2D.h
+data/cnsUniform2Dv2.h
 #*******************[MESH PROPERTIES]*******************#
 [MESH FILE]
 #BOX
@@ -16,16 +16,19 @@ data/cnsUniform2D.h
 4
 
 [BOX NX]
-50
+51
 
 [BOX NY]
-50
+101
+
+[BOX NZ]
+101
 
 [BOX BOUNDARY FLAG]
 11
 #*******************[DISCRETIZATION PROPERTIES]************#
 [POLYNOMIAL DEGREE]
-3
+4
 
 [SOLVER TYPE]
 #EULER
@@ -73,11 +76,11 @@ CUDA
 
 # // Mach number is needed for NONDIM=TRUE
 [MACH NUMBER]
-0.1
+0.2
 
 # Reynolds number is needed for NONDIM = TRUE
 [REYNOLDS NUMBER]
-1e5
+1000000
 
 # R is needed if NONDIM=FALSE otherwise  R = 1.0/(gamma*Ma^2) 
 [SPECIFIC GAS CONSTANT]
@@ -85,11 +88,11 @@ CUDA
 
 # mu is needed if NONDIM = FALSE, otherwise mu = 1/Re
 [VISCOSITY]
-0.00001
+1.0e-6
 
 # [ CONSTANT ] - [SUTHERLAND] - [POWER-LAW]
 [VISCOSITY TYPE]
-SUTHERLAND
+CONSTANT
 
 
 [PRANDTL NUMBER]
@@ -100,7 +103,6 @@ SUTHERLAND
 [REFERENCE STATE]
 1.0, 1.0, 1.0, 1.0, 1.0, 1.0
 
-
 [CFL NUMBER]
 0.5
 
@@ -108,11 +110,11 @@ SUTHERLAND
 0
 
 [FINAL TIME]
-5
+50
 
 #*******************[OUTPUT PROPERTIES]*******************#
 [OUTPUT INTERVAL]
-0.1
+0.25
 
 [OUTPUT TO FILE]
 TRUE

@@ -25,7 +25,7 @@ SOFTWARE.
 */
 // ffmpeg -r 20 -f image2 -s 1538x784 -i mach%*.png -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" -vframes 400 -crf 15 -pix_fmt yuv420p test.mp4
 /* ************************************************************************ */
-#define MACH 0.1
+#define MACH 1.2
 /* ************************************************************************ */
 #if MACH==0.1
   #define p_RBAR 1.4
@@ -200,6 +200,12 @@ const dfloat keREF = 0.5*p_RBAR*(p_UBAR*p_UBAR+p_VBAR*p_VBAR+p_WBAR*p_WBAR); \
     *(rvB) = rvM;                                                            \
     *(rwB) = rwM;                                                            \
     *(reB) = reM;                                                            \
+   }else if(bc==41){                                                          \
+    *( rB) = p_RBAR;                                                         \
+    *(ruB) = p_RBAR*p_UBAR;                                                  \
+    *(rvB) = p_RBAR*p_VBAR;                                                  \
+    *(rwB) = p_RBAR*p_WBAR;                                                  \
+    *(reB) = p_PBAR/(gamma -1.0) + keREF;                                    \
  }                                                                           \
 }
 
@@ -369,6 +375,17 @@ const dfloat keREF = 0.5*p_RBAR*(p_UBAR*p_UBAR+p_VBAR*p_VBAR+p_WBAR*p_WBAR); \
     *(drvdxB) = drvdxM;*(drvdyB) = drvdyM;*(drvdzB) = drvdzM;                \
     *(drwdxB) = drwdxM;*(drwdyB) = drwdyM;*(drwdzB) = drwdzM;                \
     *(dredxB) = dredxM;*(dredyB) = dredyM;*(dredzB) = dredzM;                \
+   }else if(bc==41){                                                         \
+    *( rB) = p_RBAR;                                                         \
+    *(ruB) = p_RBAR*p_UBAR;                                                  \
+    *(rvB) = p_RBAR*p_VBAR;                                                  \
+    *(rwB) = p_RBAR*p_WBAR;                                                  \
+    *(reB) = p_PBAR/(gamma -1.0) + keREF;                                    \
+    *(drrdxB) = 0.0;*(drrdyB) = 0.0;*(drrdzB) = 0.0;                         \
+    *(drudxB) = 0.0;*(drudyB) = 0.0;*(drudzB) = 0.0;                         \
+    *(drvdxB) = 0.0;*(drvdyB) = 0.0;*(drvdzB) = 0.0;                         \
+    *(drwdxB) = 0.0;*(drwdyB) = 0.0;*(drwdzB) = 0.0;                         \
+    *(dredxB) = 0.0;*(dredyB) = 0.0;*(dredzB) = 0.0;                         \
   }                                                                          \
 }
 

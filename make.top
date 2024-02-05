@@ -41,9 +41,9 @@ export LIBP_BLAS_LIB=-L${LIBP_BLAS_DIR} -lopenblas
 export OCCA_DIR=${LIBP_DIR}/occa
 
 #compilers to use for C/C++
-export LIBP_CC = mpicc.openmpi
-export LIBP_CXX= mpic++.openmpi
-export LIBP_LD = mpic++.openmpi
+export LIBP_CC = mpicc
+export LIBP_CXX= mpic++
+export LIBP_LD = mpic++
 
 export LIBP_INCLUDES=-I${LIBP_INCLUDE_DIR} -I${OCCA_DIR}/include
 export LIBP_LIBS= -Wl,-rpath,$(LIBP_BLAS_DIR) ${LIBP_BLAS_LIB}  \
