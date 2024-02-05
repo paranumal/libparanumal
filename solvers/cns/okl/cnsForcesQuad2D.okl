@@ -157,11 +157,11 @@ void surfaceTerms(const int e,
   dfloat T12 = mu*(dudy+dvdx);
   dfloat T22 = mu*(2.0*dvdy - sbeta*(dudx+dvdy));
  
-  const dfloat fx = p*nx + (nx*T11 + ny*T12); 
-  const dfloat fy = p*ny + (nx*T12 + ny*T22);
+  const dfloat fx = p*nx - (nx*T11 + ny*T12); 
+  const dfloat fy = p*ny - (nx*T12 + ny*T22);
 
-  s_vFx[j][i] += (bc==11 || bc==12) ?  wSJ*(nx*T11 + ny*T12): 0.0; 
-  s_vFy[j][i] += (bc==11 || bc==12) ?  wSJ*(nx*T12 + ny*T22): 0.0; 
+  s_vFx[j][i] += (bc==11 || bc==12) ? -wSJ*(nx*T11 + ny*T12): 0.0; 
+  s_vFy[j][i] += (bc==11 || bc==12) ? -wSJ*(nx*T12 + ny*T22): 0.0; 
   s_pFx[j][i] += (bc==11 || bc==12) ?  wSJ*p*nx: 0.0; 
   s_pFy[j][i] += (bc==11 || bc==12) ?  wSJ*p*ny: 0.0; 
    s_Mz[j][i] += (bc==11 || bc==12) ?  wSJ*(fx*dyf - fy*dxf) : 0.0; 

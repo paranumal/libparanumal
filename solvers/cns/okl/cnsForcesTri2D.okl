@@ -166,13 +166,13 @@ SOFTWARE.
             const dfloat T12 = mu*(dudyM+dvdxM);
             const dfloat T22 = mu*(2.0*dvdyM - 2.0*(dudxM+dvdyM)/3.0);
 
-            const dfloat fx = pM*nx + (nx*T11 + ny*T12); 
-            const dfloat fy = pM*ny + (nx*T12 + ny*T22);
+            const dfloat fx = pM*nx - (nx*T11 + ny*T12); 
+            const dfloat fy = pM*ny - (nx*T12 + ny*T22);
             const dfloat dxf   = x[idM] - XC[0]; 
             const dfloat dyf   = y[idM] - XC[1];
             
-            s_vFx[n] = (bc==11 || bc==12) ?  sJ*(nx*T11 + ny*T12): 0.0; 
-            s_vFy[n] = (bc==11 || bc==12) ?  sJ*(nx*T12 + ny*T22): 0.0; 
+            s_vFx[n] = (bc==11 || bc==12) ? -sJ*(nx*T11 + ny*T12): 0.0; 
+            s_vFy[n] = (bc==11 || bc==12) ? -sJ*(nx*T12 + ny*T22): 0.0; 
             s_pFx[n] = (bc==11 || bc==12) ?  sJ*pM*nx: 0.0; 
             s_pFy[n] = (bc==11 || bc==12) ?  sJ*pM*ny: 0.0; 
             s_Mz[n]  = (bc==11 || bc==12) ?  sJ*(fx*dyf - fy*dxf) : 0.0; 

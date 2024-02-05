@@ -214,17 +214,17 @@ SOFTWARE.
         const dfloat T23 = mu*(dvdz+dwdy);
         const dfloat T33 = mu*(2.0*dwdz - sbeta*(dudx+dvdy+dwdz));
         
-        const dfloat fx = pM*nx + (nx*T11 + ny*T12 + nz*T13); 
-        const dfloat fy = pM*ny + (nx*T12 + ny*T22 + nz*T23);
-        const dfloat fz = pM*nz + (nx*T13 + ny*T23 + nz*T33);
+        const dfloat fx = pM*nx - (nx*T11 + ny*T12 + nz*T13); 
+        const dfloat fy = pM*ny - (nx*T12 + ny*T22 + nz*T23);
+        const dfloat fz = pM*nz - (nx*T13 + ny*T23 + nz*T33);
         
         const dfloat dxf   = x[idM] - XC[0]; 
         const dfloat dyf   = y[idM] - XC[1];
         const dfloat dzf   = z[idM] - XC[2];
             
-        s_vFx[n] = (bc==11 || bc==12) ?  sJ*(nx*T11 + ny*T12 + nz*T13): 0.0; 
-        s_vFy[n] = (bc==11 || bc==12) ?  sJ*(nx*T12 + ny*T22 + nz*T23): 0.0; 
-        s_vFz[n] = (bc==11 || bc==12) ?  sJ*(nx*T13 + ny*T23 + nz*T33): 0.0; 
+        s_vFx[n] = (bc==11 || bc==12) ? -sJ*(nx*T11 + ny*T12 + nz*T13): 0.0; 
+        s_vFy[n] = (bc==11 || bc==12) ? -sJ*(nx*T12 + ny*T22 + nz*T23): 0.0; 
+        s_vFz[n] = (bc==11 || bc==12) ? -sJ*(nx*T13 + ny*T23 + nz*T33): 0.0; 
         
         s_pFx[n] = (bc==11 || bc==12) ?  sJ*pM*nx: 0.0; 
         s_pFy[n] = (bc==11 || bc==12) ?  sJ*pM*ny: 0.0; 
