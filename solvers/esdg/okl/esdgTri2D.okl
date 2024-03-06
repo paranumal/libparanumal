@@ -1,0 +1,1614 @@
+/*
+
+  The MIT License (MIT)
+
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+*/
+
+
+@kernel void esdgInterpolateTri2D(const dlong Nelements,
+						const dfloat gamma,
+						@restrict const dlong  *EToE,
+						@restrict const dlong  *EToB,
+						@restrict const dfloat *esIqfT, // interpolate solution to quadrature
+						@restrict const dfloat *esFqT, // filter through P^N
+						@restrict const dfloat *vgeo,
+						@restrict const dfloat *esWq,
+						@restrict const dfloat *q,  // conserved fields
+						@restrict dfloat *qc,
+						@restrict dfloat *qe,
+						@restrict dfloat *projectionError){
+  
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @exclusive dfloat r_qc_quad[p_Nfields];    
+    @exclusive dfloat r_qe_quad[p_Nfields];
+    @exclusive dfloat r_qp_quad[p_Nfields+3];
+    @exclusive dfloat r_qcrecon_quad[p_Nfields];
+    
+    @shared dfloat s_tmpc[p_Nfields][p_esNp];
+    @shared dfloat s_tmpe[p_Nfields][p_esNp];
+
+    for(int n=0;n<p_esNp;++n;@inner(0)){
+
+      if(n<p_Np){
+	for(int fld=0;fld<p_Nfields;++fld){
+	  dlong id = e*p_Np*p_Nfields + n + fld*p_Np;
+	  s_tmpc[fld][n] = q[id];
+	}
+      }
+    }
+
+    @barrier();
+
+    for(int n=0;n<p_esNp;++n;@inner(0)){
+
+      // interpolate to all nodes (for switching experiments)
+      for(int fld=0;fld<p_Nfields;++fld){
+	r_qc_quad[fld] = 0;
+      }
+      
+      // interpolate conserved to quadrature nodes
+      for(int m=0;m<p_Np;++m){
+	dfloat Inm = esIqfT[n+m*p_esNp];
+#pragma unroll p_Nfields
+	for(int fld=0;fld<p_Nfields;++fld){
+	  r_qc_quad[fld] += Inm*s_tmpc[fld][m];
+	}
+      }
+
+      // TW: guard 01
+      r_qc_quad[0] = guardPositive(r_qc_quad[0]);
+      //      r_qc_quad[3] = fabs(r_qc_quad[3]);
+    
+      for(int fld=0;fld<p_Nfields;++fld){
+	dlong id = e*p_Nfields*p_esNp + n + fld*p_esNp;
+	qc[id] = r_qc_quad[fld];
+      }
+
+      // transform from conserved to entropy variables on quadrature nodes
+      conserved2entropy(p_gamma, r_qc_quad, r_qe_quad);
+      
+      // load entropy to shared
+      for(int fld=0;fld<p_Nfields;++fld){
+	s_tmpe[fld][n] = r_qe_quad[fld];
+      }
+    }
+
+    @barrier();
+
+    @shared dfloat s_projectionError[p_esNq];
+    
+    // L2 project variables at quadrature nodes
+    for(int n=0;n<p_esNp;++n;@inner(0)){
+
+      for(int fld=0;fld<p_Nfields;++fld){
+	r_qe_quad[fld] = 0;
+      }
+      
+      for(int m=0;m<p_esNq;++m){
+	dfloat Fnm = esFqT[n+m*p_esNp];
+#pragma unroll p_Nfields
+	for(int fld=0;fld<p_Nfields;++fld){
+	  r_qe_quad[fld] += Fnm*s_tmpe[fld][m];
+	}
+      }
+
+      // TW HACK
+      //      r_qe_quad[3] = -fabs(r_qe_quad[3])-1e-5;
+
+      for(int fld=0;fld<p_Nfields;++fld){
+	dlong id = e*p_Nfields*p_esNp + n + fld*p_esNp;
+	qe[id] = r_qe_quad[fld];
+      }
+      
+      if(n<p_esNq){ 
+	dfloat res=0;
+	//	dfloat wn = esWq[n]/(vgeo[e*p_Nvgeo+p_JID]); // w/(h^(2))
+	dfloat wn = esWq[n]; // *sqrt(vgeo[e*p_Nvgeo+p_JID]);
+	for(int fld=0;fld<p_Nfields;++fld){
+	  dfloat err = r_qe_quad[fld]-s_tmpe[fld][n];
+	  res += err*err;
+	}
+	// note upscaling
+	s_projectionError[n] = wn*res;
+      }
+      
+    }
+
+#define reduce10(NT)						\
+    @barrier();						\
+    for(int n=0;n<p_esNp;++n;@inner(0)){			\
+      if(n<p_esNq && n+NT<p_esNq && n<NT){			\
+	s_projectionError[n] += s_projectionError[n+NT];	\
+      }								\
+    }
+
+    reduce10(512);
+    reduce10(256);
+    reduce10(128);
+    reduce10( 64);
+    reduce10( 32);
+    reduce10( 16);
+    reduce10(  8);
+    reduce10(  4);
+    reduce10(  2);
+    reduce10(  1);
+
+    @barrier();
+
+    for(int n=0;n<p_esNp;++n;@inner(0)){
+      if(n==0){
+	projectionError[e] = fabs(s_projectionError[0]);
+      }
+    }
+  }
+}
+
+@kernel void esdgVolumeTri2D(const dlong Nelements,
+				  const dfloat gamma,
+				  const int maxLVToE,
+				  @restrict const dlong  *NLVToE,
+				  @restrict const dlong  *LVToE,
+				  @restrict const dfloat *Rq,
+				  @restrict const dfloat *Sq,
+				  @restrict const dfloat *vgeo, // affine ftm
+				  @restrict const dfloat *esQNrT,
+				  @restrict const dfloat *esQNsT,
+				  @restrict const dfloat *esPqLfT,
+				  @restrict const dfloat *qe,
+				  @restrict dfloat *RHS,
+				  @restrict int *projFlag,
+				  @restrict dfloat *projectionError){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_qp_quad[p_esNp][p_Nfields+3];
+    @shared dfloat s_qe_quad[p_esNp][p_Nfields];
+
+    @shared dfloat s_QdivF[p_Nfields][p_esNp];
+
+    @exclusive dfloat r_xflux_mn[p_Nfields];
+    @exclusive dfloat r_yflux_mn[p_Nfields];
+
+    @shared dfloat s_maxProjectionError[p_Nverts];
+    
+    for(int n=0;n<p_esNp;++n;@inner(0)){
+      if(n<p_Nverts){
+	int Nneigh = NLVToE[e*p_Nverts+n];
+	dfloat maxProjectionError = 0;
+	for(int m=0;m<Nneigh;++m){
+	  dlong id = LVToE[e*p_Nverts*maxLVToE+n*maxLVToE + m];
+#if PRINT_WARNINGS==1
+	  if(e<0) printf("WARNING: found -ve neighbor\n");
+#endif
+	  dfloat err = projectionError[id];
+
+	  err /= pow(vgeo[id*p_Nvgeo+p_JID],1.5); // 1.5 for original weight
+
+	  if(err>maxProjectionError) maxProjectionError = err;
+	}
+	s_maxProjectionError[n] = maxProjectionError;
+      }
+    }
+
+    @barrier();
+    
+    @exclusive dfloat artVisc;
+
+    for(int n=0;n<p_esNp;++n;@inner(0)){
+      if(1){
+	artVisc = projectionError[e]/(vgeo[e*p_Nvgeo+p_JID]); 
+      }else{
+	artVisc = -0.5*(Rq[n]+Sq[n])*s_maxProjectionError[0];
+	artVisc += 0.5*(1+Rq[n])*s_maxProjectionError[1];
+	artVisc += 0.5*(1+Sq[n])*s_maxProjectionError[2];
+      }
+
+      dfloat r_qe_quadn[p_Nfields];
+      dfloat r_qp_quadn[p_Nfields+3];
+
+      // bail early if this element not flagged
+      
+#pragma unroll p_Nfields
+      for(int fld=0;fld<p_Nfields;++fld){
+	dlong id = e*p_Nfields*p_esNp + n + fld*p_esNp;
+	// load into guardister and shared (will need register version for inner Hadamard product loop)
+	r_qe_quadn[fld] = qe[id];
+      }
+
+      entropy2primitive(p_gamma, r_qe_quadn, r_qp_quadn);
+      
+      r_qp_quadn[4] = log(r_qp_quadn[0]);
+      r_qp_quadn[6] = 0.5*r_qp_quadn[0]/r_qp_quadn[3];
+      r_qp_quadn[5] = log(r_qp_quadn[6]);
+
+      for(int fld=0;fld<p_Nfields;++fld){
+	s_qe_quad[n][fld] = r_qe_quadn[fld];
+      }
+      
+      for(int fld=0;fld<p_Nfields+3;++fld){
+	s_qp_quad[n][fld] = r_qp_quadn[fld];
+      }
+    }
+    
+    @barrier();
+
+    for(int n=0;n<p_esNp;++n;@inner(0)){
+
+      // apply affine geometric map on fluxes
+      dlong  gid = e*p_Nvgeo;
+      dfloat drdx = vgeo[gid + p_RXID];
+      dfloat dsdx = vgeo[gid + p_SXID];
+      dfloat drdy = vgeo[gid + p_RYID];
+      dfloat dsdy = vgeo[gid + p_SYID];
+
+      dfloat r_rhs_quadn[p_Nfields];
+	
+      for(int fld=0;fld<p_Nfields;++fld){
+	r_rhs_quadn[fld] = 0;
+      }
+      
+      // compute Hadamard product form divergence
+      int Nstart = 0;
+      int Nend = (n<p_esNq) ? p_esNp:p_esNq;
+      
+      for(int m=Nstart;m<Nend;++m){
+	dfloat Drnm = esQNrT[n+m*p_esNp];
+	dfloat Dsnm = esQNsT[n+m*p_esNp];
+	dfloat dx = drdx*Drnm + dsdx*Dsnm;
+	dfloat dy = drdy*Drnm + dsdy*Dsnm;
+	
+	// if flagged the compute two point fluxes on the fly
+	entropyStableTwoPointFlux(p_gamma, s_qe_quad[m], s_qe_quad[n], s_qp_quad[m], s_qp_quad[n], r_xflux_mn, r_yflux_mn, artVisc);
+	
+#pragma unroll p_Nfields
+	for(int fld=0;fld<p_Nfields;++fld)
+	  r_rhs_quadn[fld] += dx*r_xflux_mn[fld];
+
+#pragma unroll p_Nfields
+	for(int fld=0;fld<p_Nfields;++fld)
+	  r_rhs_quadn[fld] += dy*r_yflux_mn[fld];
+      }
+      
+      // share divergence at combined quadrature
+#pragma unroll p_Nfields
+      for(int fld=0;fld<p_Nfields;++fld){
+	s_QdivF[fld][n] = -2.*r_rhs_quadn[fld]; // 2*D o F
+      }
+    }
+    
+    @barrier();
+
+    // project
+    for(int n=0;n<p_esNp;++n;@inner(0)){
+
+      dfloat r_PdivFquad[p_Nfields];
+
+      if(n<p_Np){
+
+#pragma unroll p_Nfields
+	for(int fld=0;fld<p_Nfields;++fld){
+	  r_PdivFquad[fld] = 0;
+	}
+	
+	for(int m=0;m<p_esNp;++m){
+	  dfloat Pnm = esPqLfT[n+m*p_Np];
+	  
+#pragma unroll p_Nfields
+	  for(int fld=0;fld<p_Nfields;++fld){
+	    r_PdivFquad[fld] += Pnm*s_QdivF[fld][m];
+	  }
+	}
+	
+	//#pragma unroll p_Nfields
+	for(int fld=0;fld<p_Nfields;++fld){
+	  dlong id = e*p_Nfields*p_Np + fld*p_Np + n;
+	  RHS[id] = r_PdivFquad[fld];
+	}
+      }
+    }
+  }
+}
+
+
+@kernel void esdgSurfaceTri2D(const dlong Nelements,
+				   const dfloat t,
+				   const dfloat gamma,
+				   @restrict const dfloat *sgeo,
+				   @restrict const dlong  *esVmapM,
+				   @restrict const dlong  *esVmapP,
+				   @restrict const dlong  *EToB,
+				   @restrict const dfloat *LfT, // lift matrix
+				   @restrict const  dfloat *  esX,
+				   @restrict const  dfloat *  esY,
+				   @restrict const  dfloat *  esZ,
+				   @restrict const dfloat *qc,
+				   @restrict const dfloat *qe,
+				   @restrict const dfloat *qp,
+				   @restrict const dfloat *qcrecon, 
+				   @restrict dfloat *rhs,
+				   @restrict int *projFlag){
+
+#define p_Nblk (256/p_Np)
+  
+  for(dlong eo=0;eo<Nelements;eo+=p_Nblk;@outer(0)){
+    
+    @shared dfloat s_flux_quad[p_Nblk][p_Nfields][p_esNp];
+
+#if 0
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      if(projFlag[e]==0)
+	return;
+    }
+    
+    @barrier();
+#endif
+
+    @exclusive int pFlag;
+    
+    for(int es=0;es<p_Nblk;++es;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
+	int m=n;
+	
+	dlong e = eo+es;
+	pFlag = 1;
+
+	if(pFlag && e<Nelements){
+	  while(m<p_esNf){
+	    
+	    // assume no bcs atm
+	    dlong id = e*p_esNf + m;
+	    
+	    dlong idM = esVmapM[id];
+	    dlong idP = esVmapP[id];
+	    
+	    dlong eM = idM / p_esNp;
+	    dlong eP = idP / p_esNp;
+	    
+	    dlong nM = idM % p_esNp;
+	    dlong nP = idP % p_esNp;	
+	    
+	    dlong esIdM = eM*p_Nfields*p_esNp + nM;
+	    dlong esIdP = eP*p_Nfields*p_esNp + nP;
+	    
+	    dfloat r_qpM[p_Nfields+3], r_qpP[p_Nfields+3];
+	    dfloat r_qeM[p_Nfields],   r_qeP[p_Nfields];
+	    dfloat r_qcreconM[p_Nfields],   r_qcreconP[p_Nfields];
+	    
+	    dfloat r_xfluxS[p_Nfields], r_yfluxS[p_Nfields];
+	    dfloat r_xfluxA[p_Nfields], r_yfluxA[p_Nfields];
+	    
+	    int fM = m/(p_esNf/p_Nfaces);
+	    
+	    dlong gid = e*p_Nsgeo*p_Nfaces + fM*p_Nsgeo;
+	    dfloat nx = sgeo[gid+p_NXID];
+	    dfloat ny = sgeo[gid+p_NYID];
+	    dfloat sJ = sgeo[gid+p_SJID];
+	    dfloat invJ = sgeo[gid+p_IJID];
+	    
+	    dfloat sc = invJ*sJ;
+	    
+#pragma unroll p_Nfields
+	    for(int fld=0;fld<p_Nfields;++fld)
+	      r_qeM[fld] = qe[esIdM+fld*p_esNp];
+	    
+	    entropy2primitive(p_gamma, r_qeM, r_qpM);
+	    entropy2conserved(p_gamma, r_qeM, r_qcreconM);
+	    
+#pragma unroll p_Nfields
+	    for(int fld=0;fld<p_Nfields;++fld)
+	      r_qeP[fld] = qe[esIdP+fld*p_esNp];
+	    
+	    entropy2primitive(p_gamma, r_qeP, r_qpP);
+	    entropy2conserved(p_gamma, r_qeP, r_qcreconP);
+	    
+	    const int bc = EToB[e*p_Nfaces+fM];
+	    
+	    if(bc>0){
+	      // esNp wide element coords
+	      dfloat xn = esX[idM], yn = esY[idM];
+	      
+	      esdgBoundaryConditions2D(bc, p_gamma, t, xn, yn, nx, ny, r_qpM[0], r_qpM[1], r_qpM[2], r_qpM[3], r_qpP+0, r_qpP+1, r_qpP+2, r_qpP+3);
+	      
+	      primitive2conserved(p_gamma, r_qpP, r_qcreconP);
+	    }	
+	    
+	    r_qpM[4] = log(r_qpM[0]);
+	    r_qpM[6] = 0.5*r_qpM[0]/r_qpM[3];
+	    r_qpM[5] = log(r_qpM[6]);
+	    
+	    r_qpP[4] = log(r_qpP[0]);
+	    r_qpP[6] = 0.5*r_qpP[0]/r_qpP[3];
+	    r_qpP[5] = log(r_qpP[6]);
+	    
+	    // compute two point flux
+	    entropyStableTwoPointFlux(p_gamma, r_qeP, r_qeM, r_qpP, r_qpM, r_xfluxS, r_yfluxS, 0.0);
+	    
+	    dfloat penalty[p_Nfields];
+
+#if USE_HLL_PENALTY==1
+
+	    dfloat rM = r_qpM[0];
+	    dfloat uM =  nx*r_qpM[1] + ny*r_qpM[2];
+	    dfloat vM = -ny*r_qpM[1] + nx*r_qpM[2];
+	    dfloat pM = r_qpM[3];
+	    dfloat EM = r_qcreconM[3];
+
+	    dfloat HM = (EM+pM)/rM;
+	    dfloat cM = guardSqrt(guardDivide(gamma*pM,rM));
+	    dfloat rhoMs = guardSqrt(rM);
+
+	    dfloat rP = r_qpP[0];
+	    dfloat uP =  nx*r_qpP[1] + ny*r_qpP[2];
+	    dfloat vP = -ny*r_qpP[1] + nx*r_qpP[2];
+	    dfloat pP = r_qpP[3];
+	    dfloat EP = r_qcreconP[3];
+
+	    dfloat HP = guardDivide(EP+pP,rP);
+	    dfloat cP = guardSqrt(gamma*guardDivide(pP,rP));
+	    dfloat rhoPs = guardsqrt(rP);
+	    
+	    dfloat rA = rhoMs*rhoPs;
+	    dfloat uA = guardDivide(rhoMs*uM+rhoPs*uP,rhoMs+rhoPs);
+	    dfloat vA = guardDivide(rhoMs*vM+rhoPs*vP,rhoMs+rhoPs);
+	    dfloat HA = guardDivide(rhoMs*HM+rhoPs*HP,rhoMs+rhoPs);
+
+	    dfloat c2A  = (gamma-1)*(HA - 0.5*(uA*uA+vA*vA));
+	    dfloat cA = guardSqrt(c2A);
+
+
+	    // Compute estimate of waves speeds
+	    dfloat SL = mymin(uM-cM,uA-cA);
+	    dfloat SR = mymax(uP+cP,uA+cA);
+
+	    // Compute HLL flux
+	    dfloat t1 = guardDivide(mymin(SR,0.)-mymin(0,SL),SR-SL);
+	    dfloat t2 = 1-t1;
+	    dfloat t3 = guardDivide(SR*fabs(SL)-SL*fabs(SR),2.*(SR-SL));
+
+	    dfloat r_xfluxM[p_Nfields];
+	    dfloat r_xfluxP[p_Nfields];
+
+	    // normal aligned fluxes
+	    r_xfluxM[0] = rM*uM;
+	    r_xfluxM[1] = rM*uM*uM+pM;
+	    r_xfluxM[2] = rM*uM*vM;
+	    r_xfluxM[3] = uM*(EM+pM);
+
+	    r_xfluxP[0] = rP*uP;
+	    r_xfluxP[1] = rP*uP*uP+pP;
+	    r_xfluxP[2] = rP*uP*vP;
+	    r_xfluxP[3] = uP*(EP+pP);
+
+	    dfloat tmpxM = nx*r_xfluxM[1]-ny*r_xfluxM[2];
+	    dfloat tmpyM = ny*r_xfluxM[1]+nx*r_xfluxM[2];
+	    r_xfluxM[1] = tmpxM;
+	    r_xfluxM[2] = tmpyM;
+
+	    dfloat tmpxP = nx*r_xfluxP[1]-ny*r_xfluxP[2];
+	    dfloat tmpyP = ny*r_xfluxP[1]+nx*r_xfluxP[2];
+	    r_xfluxP[1] = tmpxP;
+	    r_xfluxP[2] = tmpyP;
+	    
+	    //  fx(:,:,n) = t1.*fxQP(:,:,n) + t2.*fxQM(:,:,n) - t3.*(QP(:,:,n)-QM(:,:,n));
+	    for(int fld=0;fld<p_Nfields;++fld){
+	      penalty[fld]  = 0;
+#if 1
+	      penalty[fld]  = -0.5*(2*t1-1)*(r_xfluxP[fld]);
+	      penalty[fld] += +0.5*(2*t1-1)*(r_xfluxM[fld]);
+#endif
+	      penalty[fld] += t3*(r_qcreconP[fld]-r_qcreconM[fld]);
+
+	      penalty[fld] *= 0.5;
+	    }
+	  
+#endif	    
+#if USE_LLF_PENALTY==1
+	    // estimate lambda
+	    
+	    dfloat rM = r_qpM[0], uM = r_qpM[1], vM = r_qpM[2], pM = r_qpM[3];
+	    dfloat rP = r_qpP[0], uP = r_qpP[1], vP = r_qpP[2], pP = r_qpP[3];
+	    
+	    const dfloat qP = nx*uP+ny*vP;
+	    const dfloat qM = nx*uM+ny*vM;
+	    
+	    const dfloat qC = 0.5*(qP+qM);
+	    const dfloat rC = 0.5*(rP+rM);
+	    const dfloat pC = 0.5*(pP+pM);
+	    const dfloat cC = guardSqrt(p_gamma*guardDivide(pC,rC));
+	    const dfloat lambda = fabs(qC) + cC;
+	    
+	    for(int fld=0;fld<p_Nfields;++fld){
+	      penalty[fld] = 0.5*lambda*(r_qcreconP[fld]-r_qcreconM[fld]);
+	    }
+#endif
+#if 0
+	    // should replace LLF penalty iwth matrix penalty
+	    // https://github.com/jlchan/bbwadg/blob/master/esdg_quadhex_cpp/okl/Esdg2D.okl
+	    
+	    esdgEntropyStableMatrixPenaltyTri2D(p_gamma, nx, ny, r_qcreconM, r_qcreconP, penalty);
+#endif
+	    
+	    dfloat pscale = 0.5; // 0.5;
+	    
+	    // 2 for shock with penalty?
+	    for(int fld=0;fld<p_Nfields;++fld){
+	      s_flux_quad[es][fld][m] =
+		sc*( nx*(r_xfluxS[fld]) + ny*(r_yfluxS[fld]) - pscale*penalty[fld]);
+	    }
+	    m+=p_Np;
+	  }
+	}
+      }
+    }
+
+    @barrier();
+    
+    // -lift*F_s(u~+, u~-)
+    for(int es=0;es<p_Nblk;++es;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
+	dlong e = eo+es;
+	if(pFlag && e<Nelements){
+	  dfloat res[p_Nfields];
+	  
+	  for(int fld=0;fld<p_Nfields;++fld)
+	    res[fld] = 0;
+	  
+#pragma unroll p_esNf
+	  for(int m=0;m<p_esNf;++m){
+	    dfloat Lnm = LfT[n+m*p_Np];
+#pragma unroll p_Nfields	
+	    for(int fld=0;fld<p_Nfields;++fld){
+	      res[fld] += Lnm*s_flux_quad[es][fld][m];
+	    }
+	  }
+	  
+	  for(int fld=0;fld<p_Nfields;++fld){
+	    dlong id = e*p_Np*p_Nfields + fld*p_Np + n;
+	    rhs[id] -= res[fld];
+	  }
+	}
+      }
+    }
+  }
+}
+
+// entropy variables are polynomial
+@kernel void esdgVolumeGradientTri2D(const dlong Nelements,
+					  @restrict const dfloat *vgeo, // affine ftm
+					  @restrict const dfloat *esIqfDrPqT,
+					  @restrict const dfloat *esIqfDsPqT, 
+					  @restrict const dfloat *qe,
+					  @restrict dfloat *dqedx,
+					  @restrict dfloat *dqedy,
+					  @restrict dfloat *dqedz){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_qe[p_Nfields][p_esNp];
+
+    for(int n=0;n<p_esNp;++n;@inner(0)){
+#pragma unroll p_Nfields
+      for(int fld=0;fld<p_Nfields;++fld){
+	dlong id = e*p_Nfields*p_esNp + n + fld*p_esNp;
+	s_qe[fld][n] = qe[id];
+      }
+    }
+
+    @barrier();
+    
+    for(int n=0;n<p_esNp;++n;@inner(0)){
+      dfloat r_dqedx[p_Nfields];
+      dfloat r_dqedy[p_Nfields];
+
+      dlong  gid = e*p_Nvgeo;
+      dfloat drdx = vgeo[gid + p_RXID];
+      dfloat dsdx = vgeo[gid + p_SXID];
+      dfloat drdy = vgeo[gid + p_RYID];
+      dfloat dsdy = vgeo[gid + p_SYID];
+
+      for(int fld=0;fld<p_Nfields;++fld){
+	r_dqedx[fld] = 0;
+	r_dqedy[fld] = 0;
+      }
+      
+      // only need to diff first entries
+      for(int m=0;m<p_esNq;++m){
+	// strong form (maps data at combined cubature nodes to derivatives at cubature nodes)
+	// esDrq = Iqf*Dr*Pq ( size esNp x esNq )
+	dfloat Drnm = esIqfDrPqT[n+m*p_esNp];
+	dfloat Dsnm = esIqfDsPqT[n+m*p_esNp];
+	dfloat dx = drdx*Drnm + dsdx*Dsnm;
+	dfloat dy = drdy*Drnm + dsdy*Dsnm;
+
+#pragma unroll
+	for(int fld=0;fld<p_Nfields;++fld){
+	  dfloat qefld = s_qe[fld][m];
+	  r_dqedx[fld] += dx*qefld;
+	  r_dqedy[fld] += dy*qefld;
+	}
+      }
+
+      for(int fld=0;fld<p_Nfields;++fld){
+	dlong id = e*p_esNp*p_Nfields + fld*p_esNp + n;
+	dqedx[id] = r_dqedx[fld];
+	dqedy[id] = r_dqedy[fld];
+      }
+    }
+  }
+}
+
+@kernel void esdgSurfaceGradientTri2D(const dlong Nelements,
+					   const dfloat t,
+					   @restrict const dfloat *sgeo, // affine ftm
+					   @restrict const dfloat *esX,
+					   @restrict const dfloat *esY,
+					   @restrict const dfloat *esZ,
+					   @restrict const dlong  *esVmapM,
+					   @restrict const dlong  *esVmapP,
+					   @restrict const dlong  *EToB,
+					   @restrict const dfloat *esIqfLftT,
+					   @restrict const dfloat *qe,
+					   @restrict dfloat *dqedx,
+					   @restrict dfloat *dqedy,
+					   @restrict dfloat *dqedz){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_dqenx[p_Nfields][p_esNf];
+    @shared dfloat s_dqeny[p_Nfields][p_esNf];
+  
+    for(int n=0;n<p_esNp;++n;@inner(0)){
+
+      int m=n;
+      
+      while(m<p_esNf){
+	
+	// assume no bcs atm
+	dlong id = e*p_esNf + m;
+	
+	dlong idM = esVmapM[id];
+	dlong idP = esVmapP[id];
+
+	dlong eM = idM / p_esNp;
+	dlong eP = idP / p_esNp;
+	
+	dlong nM = idM % p_esNp;
+	dlong nP = idP % p_esNp;	
+	
+	dlong esIdM = eM*p_Nfields*p_esNp + nM;
+	dlong esIdP = eP*p_Nfields*p_esNp + nP;
+	
+	dfloat r_qeM[p_Nfields];
+	dfloat r_qeP[p_Nfields];
+
+	int fM = m/(p_esNf/p_Nfaces);
+	
+	dlong gid = e*p_Nsgeo*p_Nfaces + fM*p_Nsgeo;
+	dfloat nx = sgeo[gid+p_NXID];
+	dfloat ny = sgeo[gid+p_NYID];
+	dfloat sJ = sgeo[gid+p_SJID];
+	dfloat invJ = sgeo[gid+p_IJID];
+	
+	dfloat sc = invJ*sJ;
+	
+#pragma unroll p_Nfields
+	for(int fld=0;fld<p_Nfields;++fld){
+	  r_qeM[fld] = qe[esIdM+fld*p_esNp];
+	  r_qeP[fld] = qe[esIdP+fld*p_esNp];
+	}
+	
+	const int bc = EToB[e*p_Nfaces+fM];
+	if(bc>0){
+	  dfloat xn = esX[idM], yn = esY[idM];
+
+	  esdgGradientBoundaryConditions2D(bc, p_gamma, t, xn, yn, nx, ny, r_qeM[0], r_qeM[1], r_qeM[2], r_qeM[3], r_qeP, r_qeP+1, r_qeP+2, r_qeP+3); 
+	}
+	    
+
+	for(int fld=0;fld<p_Nfields;++fld){
+	  s_dqenx[fld][m] = 0.5*nx*(r_qeP[fld]-r_qeM[fld])*sc;
+	  s_dqeny[fld][m] = 0.5*ny*(r_qeP[fld]-r_qeM[fld])*sc;
+	}
+
+	m += p_esNp;
+      }
+    }
+
+    @barrier();
+
+    
+    for(int n=0;n<p_esNp;++n;@inner(0)){
+      dfloat r_Ldqenx[p_Nfields];
+      dfloat r_Ldqeny[p_Nfields];
+
+      for(int fld=0;fld<p_Nfields;++fld){
+	r_Ldqenx[fld] = 0;
+	r_Ldqeny[fld] = 0;
+      }
+
+      // lift from face quadrature nodes to combined quadrature
+      for(int m=0;m<p_esNf;++m){
+	dfloat Lnm = esIqfLftT[n + m*p_esNp]; // note stride
+
+#pragma unroll
+	for(int fld=0;fld<p_Nfields;++fld){
+	  r_Ldqenx[fld] += Lnm*s_dqenx[fld][m];
+	  r_Ldqeny[fld] += Lnm*s_dqeny[fld][m];
+	}
+      }
+
+      for(int fld=0;fld<p_Nfields;++fld){
+	dlong id = e*p_esNp*p_Nfields + fld*p_esNp + n;
+
+	dqedx[id] += r_Ldqenx[fld];
+	dqedy[id] += r_Ldqeny[fld];
+
+      }
+    }
+  }    
+}
+
+// volume relaxation 
+@kernel void esdgRelaxationTri2D(const dlong Nelements,
+				      const int maxLVToE,
+				      @restrict const dlong  *NLVToE,
+				      @restrict const dlong  *LVToE,
+				      @restrict const dfloat *R,
+				      @restrict const dfloat *S,
+				      @restrict const dfloat *Rq,
+				      @restrict const dfloat *Sq,
+				      @restrict dfloat *artificialViscosityWB,
+				      @restrict const dfloat *vgeo, // affine ftm
+				      @restrict const dfloat *esRelaxOpT,
+				      @restrict const dfloat *projectionError,
+				      @restrict const dfloat *qe,
+				      @restrict dfloat *rhs){
+
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_qe[p_Nfields][p_esNq];
+    
+    @shared dfloat s_maxProjectionError[p_Nverts];
+    
+    for(int n=0;n<p_esNq;++n;@inner(0)){
+      if(n<p_Nverts){
+	int Nneigh = NLVToE[e*p_Nverts+n];
+	dfloat maxProjectionError = 0;
+	for(int m=0;m<Nneigh;++m){
+	  dlong id = LVToE[e*p_Nverts*maxLVToE+n*maxLVToE + m];
+#if PRINT_WARNINGS==1
+	  if(e<0) printf("WARNING: found -ve neighbor\n");
+#endif
+	  dfloat err = projectionError[id];
+
+	  err /= vgeo[id*p_Nvgeo+p_JID]; // 1.5 for original weight
+#if 1
+	  if(err>maxProjectionError) maxProjectionError = err;
+#else
+	  maxProjectionError += err;
+#endif
+	}
+	s_maxProjectionError[n] = maxProjectionError;
+      }
+
+      for(int fld=0;fld<p_Nfields;++fld){
+	s_qe[fld][n] = qe[e*p_esNp*p_Nfields+fld*p_esNp+n];
+      }
+    }
+    
+    @barrier();
+    
+    for(int n=0;n<p_esNq;++n;@inner(0)){
+      
+#if 1
+      dfloat artVisc = projectionError[e]/vgeo[e*p_Nvgeo+p_JID];
+      for(int m=0;m<p_Nverts;++m){
+	artVisc = mymax(artVisc, s_maxProjectionError[m]);
+      }
+      
+      if(n<p_Np){
+	artificialViscosityWB[e*p_Np+n] = artVisc;
+      }
+#else
+      dfloat artVisc = 0;
+      if(n<p_Np){
+	artVisc = -0.5*(R[n]+S[n])*s_maxProjectionError[0];
+	artVisc += 0.5*(1+R[n])*s_maxProjectionError[1];
+	artVisc += 0.5*(1+S[n])*s_maxProjectionError[2];
+
+	//	if(artVisc>1e-10)
+	//	  {printf("R,S=(%g,%g),AV=%g\n", R[n], S[n], artVisc);}
+		
+	dfloat artViscWB = -0.5*(R[n]+S[n])*s_maxProjectionError[0];
+	artViscWB += 0.5*(1+R[n])*s_maxProjectionError[1];
+	artViscWB += 0.5*(1+S[n])*s_maxProjectionError[2];
+	artificialViscosityWB[e*p_Np+n] = artViscWB;
+      }
+#endif
+
+      if(n<p_Np){
+	dfloat res[p_Nfields];
+	for(int fld=0;fld<p_Nfields;++fld)
+	  res[fld] = 0;
+	
+	for(int m=0;m<p_esNq;++m){
+	  dfloat Rnm = esRelaxOpT[n+m*p_Np];
+	  for(int fld=0;fld<p_Nfields;++fld){
+	    res[fld] += Rnm*s_qe[fld][m];
+	  }
+	}
+	
+	for(int fld=0;fld<p_Nfields;++fld){
+	  dlong id = e*p_Np*p_Nfields + fld*p_Np + n;
+	  rhs[id] += 4*artVisc*res[fld];
+	}
+      }
+    }
+  }
+}
+
+
+  
+// fluxes
+@kernel void esdgDiffusionFluxesTri2D(const dlong Nelements,
+					   const int useArtificialViscosity,
+					   const int maxLVToE,
+					   @restrict const dlong  *NLVToE,
+					   @restrict const dlong  *LVToE,
+					   @restrict const dfloat *R,
+					   @restrict const dfloat *S,
+					   @restrict const dfloat *Rq,
+					   @restrict const dfloat *Sq,
+					   @restrict dfloat *artificialViscosityWB,
+					   @restrict const dfloat *muq,
+					   @restrict const dfloat *vgeo, // affine ftm
+					   @restrict const dfloat *esFqT,
+					   @restrict const dfloat *projectionError,
+					   @restrict const dfloat *qe,
+					   @restrict dfloat *dqedx,
+					   @restrict dfloat *dqedy,
+					   @restrict dfloat *dqedz){
+  
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_Kdqedx[p_Nfields][p_esNq];
+    @shared dfloat s_Kdqedy[p_Nfields][p_esNq];
+
+    @shared dfloat s_maxProjectionError[p_Nverts];
+    
+    for(int n=0;n<p_esNq;++n;@inner(0)){
+      if(useArtificialViscosity){
+	if(n<p_Nverts){
+	  int Nneigh = NLVToE[e*p_Nverts+n];
+	  dfloat maxProjectionError = 0;
+	  for(int m=0;m<Nneigh;++m){
+	    dlong id = LVToE[e*p_Nverts*maxLVToE+n*maxLVToE + m];
+	    dfloat err = projectionError[id];
+	    if(err>maxProjectionError) maxProjectionError = err;
+	  }
+	  s_maxProjectionError[n] = maxProjectionError;
+	}
+      }
+    }
+    
+    @barrier();
+    
+    
+    for(int n=0;n<p_esNq;++n;@inner(0)){
+      
+      dfloat mu = muq[e*p_esNp+n];
+      dfloat artVisc = 0;
+
+      if(useArtificialViscosity){
+#if 0
+	//	artVisc = projectionError[e];
+	artVisc = mymax(s_maxProjectionError[0], s_maxProjectionError[1]);
+	artVisc = mymax(artVisc, s_maxProjectionError[1]);
+
+	if(n<p_Np){
+	  artificialViscosityWB[e*p_Np+n] = artVisc;
+	}
+#else
+	artVisc = -0.5*(Rq[n]+Sq[n])*s_maxProjectionError[0];
+	artVisc += 0.5*(1+Rq[n])*s_maxProjectionError[1];
+	artVisc += 0.5*(1+Sq[n])*s_maxProjectionError[2];
+
+	if(n<p_Np){
+	  dfloat artViscWB = -0.5*(R[n]+S[n])*s_maxProjectionError[0];
+	  artViscWB += 0.5*(1+R[n])*s_maxProjectionError[1];
+	  artViscWB += 0.5*(1+S[n])*s_maxProjectionError[2];
+	  artificialViscosityWB[e*p_Np+n] = artViscWB;
+	}
+
+#endif
+	//	mu += artVisc;
+	//	lambda += artVisc;
+//	artVisc *= .1;
+      }
+
+      dfloat lambda = -2.*mu/3.;
+      
+      dlong id = e*p_esNp*p_Nfields + n; // offset to skip first field
+
+      // skip v1
+      dfloat v1 = qe[id], dv1dx = dqedx[id], dv1dy = dqedy[id]; id += p_esNp;
+      dfloat v2 = qe[id], dv2dx = dqedx[id], dv2dy = dqedy[id]; id += p_esNp;
+      dfloat v3 = qe[id], dv3dx = dqedx[id], dv3dy = dqedy[id]; id += p_esNp;
+      dfloat v4 = qe[id], dv4dx = dqedx[id], dv4dy = dqedy[id];
+
+      // TW HACK
+      v4 = -guardPositive(v4);
+      
+      dfloat fac = guardDivide(1.,v4*v4*v4);
+
+#if PRINT_WARNINGS==1
+      if(v4>=0) printf("diffusion fluxes got v4=%g\n", v4);
+#endif
+      
+      // fx = K11*dvdx + K12*dvdy
+      dfloat fx1 = 0, fx2 = 0, fx3 = 0, fx4 = 0;
+      dfloat fy1 = 0, fy2 = 0, fy3 = 0, fy4 = 0;
+
+#if 1
+      dfloat KXX22 = -(lambda+2.*mu)*v4*v4;
+      dfloat KXX24 =  (lambda+2.*mu)*v2*v4;
+      dfloat KXX33 = -mu*v4*v4;
+      dfloat KXX34 =  mu*v3*v4;
+      dfloat KXX42 =  (lambda+2.*mu)*v2*v4;
+      dfloat KXX43 =  mu*v3*v4;
+      dfloat KXX44 = -( (lambda+2.*mu)*v2*v2 + mu*v3*v3 - p_gamma*mu*v4/p_Pr );
+      
+      dfloat KXY23 = -lambda*v4*v4;
+      dfloat KXY24 =  lambda*v3*v4;
+      dfloat KXY32 = -mu*v4*v4;
+      dfloat KXY34 =  mu*v2*v4;
+      dfloat KXY42 =  mu*v3*v4;
+      dfloat KXY43 =  lambda*v2*v4;
+      dfloat KXY44 =  (lambda+mu)*(-v2*v3);
+
+      dfloat KYX32 = KXY23;
+      dfloat KYX42 = KXY24;
+      dfloat KYX23 = KXY32;
+      dfloat KYX43 = KXY34;
+      dfloat KYX24 = KXY42;
+      dfloat KYX34 = KXY43;
+      dfloat KYX44 = KXY44;
+
+#else
+      dfloat KXX22 = mu*v4, KXX24 = 0;
+      dfloat KXX33 = mu*v4, KXX34 = 0;
+      dfloat KXX44 = mu*v4, KXX42 = 0, KXX43 = 0;
+      dfloat KXY23 = 0, KXY24 = 0, KXY32 = 0, KXY34 = 0, KXY42 = 0, KXY43 = 0, KXY44 = 0;
+#endif
+      fx2  = KXX22*dv2dx + KXX24*dv4dx + KXY23*dv3dy + KXY24*dv4dy;
+      fx3  = KXX33*dv3dx + KXX34*dv4dx + KXY32*dv2dy + KXY34*dv4dy;
+      fx4  = KXX42*dv2dx + KXX43*dv3dx + KXX44*dv4dx;
+      fx4 += KXY42*dv2dy + KXY43*dv3dy + KXY44*dv4dy;
+
+#if 0
+      dfloat KYX23 = -mu*v4*v4;
+      dfloat KYX24 =  mu*v3*v4;
+      dfloat KYX32 = -lambda*v4*v4;
+      dfloat KYX34 =  lambda*v2*v4;
+      dfloat KYX42 =  lambda*v3*v4;
+      dfloat KYX43 =  mu*v2*v4;
+      dfloat KYX44 =  (lambda+mu)*(-v2*v3);
+#endif
+
+#if 1
+      dfloat KYY22 = -mu*v4*v4;
+      dfloat KYY24 =  mu*v2*v4;
+      dfloat KYY33 = -(lambda+2.*mu)*v4*v4;
+      dfloat KYY34 =  (lambda+2.*mu)*v3*v4;
+      dfloat KYY42 =  mu*v2*v4;
+      dfloat KYY43 =  (lambda+2.*mu)*v3*v4;
+      dfloat KYY44 = -( (lambda+2.*mu)*v3*v3 + mu*v2*v2 - p_gamma*mu*v4/p_Pr );
+#else
+      dfloat KYY22 = mu*v4*v4, KYY24 = 0;
+      dfloat KYY33 = mu*v4*v4, KYY34 = 0;
+      dfloat KYY44 = mu*v4*v4, KYY43 = 0, KYY42 = 0;
+      dfloat KYX23 = 0, KYX24 = 0, KYX32 = 0, KYX34 = 0, KYX42 = 0, KYX43 = 0, KYX44 = 0;
+#endif
+
+      fy2  = KYX23*dv3dx + KYX24*dv4dx + KYY22*dv2dy + KYY24*dv4dy;
+      fy3  = KYX32*dv2dx + KYX34*dv4dx + KYY33*dv3dy + KYY34*dv4dy;
+      fy4  = KYX42*dv2dx + KYX43*dv3dx + KYX44*dv4dx;
+      fy4 += KYY42*dv2dy + KYY43*dv3dy + KYY44*dv4dy;
+      
+      fx2 *= fac; fx3 *= fac; fx4 *= fac;
+      fy2 *= fac; fy3 *= fac; fy4 *= fac;
+
+      fx1  = artVisc*dv1dx;
+      fy1  = artVisc*dv1dy;
+
+      fx2  += artVisc*dv2dx;
+      fy2  += artVisc*dv2dy;
+
+      fx3  += artVisc*dv3dx;
+      fy3  += artVisc*dv3dy;
+
+      fx4  += artVisc*dv4dx;
+      fy4  += artVisc*dv4dy;
+      
+      // might need to project here
+      s_Kdqedx[0][n] = fx1; s_Kdqedy[0][n] = fy1;
+      s_Kdqedx[1][n] = fx2; s_Kdqedy[1][n] = fy2;
+      s_Kdqedx[2][n] = fx3; s_Kdqedy[2][n] = fy3;
+      s_Kdqedx[3][n] = fx4; s_Kdqedy[3][n] = fy4;
+    }
+
+    @barrier();
+
+    // project Kdqedx and Kdqedy through PN to vol and surf quadratures
+    for(int n=0;n<p_esNq;++n;@inner(0)){
+      dfloat resx[p_Nfields];
+      dfloat resy[p_Nfields];
+
+      int m = n;
+      while(m<p_esNp){
+	
+	for(int fld=0;fld<p_Nfields;++fld){
+	  resx[fld] = 0;
+	  resy[fld] = 0;
+	}
+	
+	for(int i=0;i<p_esNq;++i){
+	  dfloat Fmi = esFqT[m+p_esNp*i];
+
+#pragma unroll
+	  for(int fld=0;fld<p_Nfields;++fld){
+	    resx[fld] += Fmi*s_Kdqedx[fld][i];
+	    resy[fld] += Fmi*s_Kdqedy[fld][i];
+	  }
+	}
+
+	for(int fld=0;fld<p_Nfields;++fld){
+	  dlong id = e*p_esNp*p_Nfields + fld*p_esNp + m;
+	  dqedx[id] = resx[fld];
+	  dqedy[id] = resy[fld];
+	}
+
+	m+=p_esNq;
+      }
+    }
+  }
+}
+
+// diffusion penalty
+void esdgDiffusionPenaltyTri2D(const dfloat lambda,
+				    const dfloat nx,
+				    const dfloat ny,
+				    const dfloat *qcM,
+				    const dfloat *qcP,
+				    const dfloat *qeM,
+				    const dfloat *qeP,
+				    dfloat *pen){
+  
+  // skip v1
+  dfloat v1M = qeM[0], v2M = qeM[1], v3M = qeM[2], v4M = qeM[3];
+  dfloat v1P = qeP[0], v2P = qeP[1], v3P = qeP[2], v4P = qeP[3];
+
+#if PRINT_WARNINGS==1
+  if(v4M>=0) printf("diffusion fluxes got v4M=%g\n", v4M);
+  if(v4P>=0) printf("diffusion fluxes got v4P=%g\n", v4P);
+#endif
+
+  
+  dfloat dv1 = 0.5*(v1P-v1M);
+  dfloat dv2 = 0.5*(v2P-v2M);
+  dfloat dv3 = 0.5*(v3P-v3M);
+  dfloat dv4 = 0.5*(v4P-v4M);
+  
+#if 0
+  
+  dfloat v2 = 0.5*(v2M+v2P);
+  dfloat v3 = 0.5*(v3M+v3P);
+  dfloat v4 = 0.5*(v4M+v4P);
+
+  dfloat fac = 1./(v4*v4*v4);
+
+  // fx = K11*dvdx + K12*dvdy
+  dfloat fx2 = 0, fx3 = 0, fx4 = 0;
+  dfloat fy2 = 0, fy3 = 0, fy4 = 0;
+  
+  dfloat KXX22 = -nx*nx*(lambda+2*mu)*v4*v4;
+  dfloat KXX24 =  nx*nx*(lambda+2*mu)*v2*v4;
+  dfloat KXX33 = -nx*nx*mu*v4*v4;
+  dfloat KXX34 =  nx*nx*mu*v3*v4;
+  dfloat KXX42 =  nx*nx*(lambda+2*mu)*v2*v4;
+  dfloat KXX43 =  nx*nx*mu*v3*v4;
+  dfloat KXX44 = -nx*nx*( (lambda+2*mu)*v2*v2 + mu*v3*v3 - p_gamma*mu*v4/p_Pr );
+  
+  dfloat KXY23 = -nx*ny*lambda*v4*v4;
+  dfloat KXY24 =  nx*ny*lambda*v3*v4;
+  dfloat KXY32 = -nx*ny*mu*v4*v4;
+  dfloat KXY34 =  nx*ny*mu*v2*v4;
+  dfloat KXY42 =  nx*ny*mu*v3*v4;
+  dfloat KXY43 =  nx*ny*lambda*v2*v4;
+  dfloat KXY44 =  nx*ny*(lambda+mu)*(-v2*v3);
+
+  dfloat KYX23 = -nx*ny*mu*v4*v4;
+  dfloat KYX24 =  nx*ny*mu*v3*v4;
+  dfloat KYX32 = -nx*ny*lambda*v4*v4;
+  dfloat KYX34 =  nx*ny*lambda*v2*v4;
+  dfloat KYX42 =  nx*ny*lambda*v3*v4;
+  dfloat KYX43 =  nx*ny*mu*v2*v4;
+  dfloat KYX44 =  nx*ny*(lambda+mu)*(-v2*v3);
+  
+  dfloat KYY22 = -ny*ny*mu*v4*v4;
+  dfloat KYY24 =  ny*ny*mu*v2*v4;
+  dfloat KYY33 = -ny*ny*(lambda+2*mu)*v4*v4;
+  dfloat KYY34 =  ny*ny*(lambda+2*mu)*v3*v4;
+  dfloat KYY42 =  ny*ny*mu*v2*v4;
+  dfloat KYY43 =  ny*ny*(lambda+2*mu)*v3*v4;
+  dfloat KYY44 = -ny*ny*( (lambda+2*mu)*v3*v3 + mu*v2*v2 - p_gamma*mu*v4/p_Pr );
+  
+  pen[1]  = KXX22*dv2 + KXX24*dv4 + KXY23*dv3 + KXY24*dv4;
+  pen[2]  = KXX33*dv3 + KXX34*dv4 + KXY32*dv2 + KXY34*dv4;
+  pen[3]  = KXX42*dv2 + KXX43*dv3 + KXX44*dv4;
+  pen[3] += KXY42*dv2 + KXY43*dv3 + KXY44*dv4;
+
+  pen[1] += KYX23*dv3 + KYX24*dv4 + KYY22*dv2 + KYY24*dv4;
+  pen[2] += KYX32*dv2 + KYX34*dv4 + KYY33*dv3 + KYY34*dv4;
+  pen[3] += KYX42*dv2 + KYX43*dv3 + KYX44*dv4;
+  pen[3] += KYY42*dv2 + KYY43*dv3 + KYY44*dv4;
+
+  pen[1] *= fac;
+  pen[2] *= fac;
+  pen[3] *= fac;
+
+#else
+
+  dfloat rho  = 0.5*(qcM[0] + qcP[0]);
+  dfloat rhou = 0.5*(qcM[1] + qcP[1]);
+  dfloat rhov = 0.5*(qcM[2] + qcP[2]);
+  dfloat E    = 0.5*(qcM[3] + qcP[3]);
+  dfloat u = rhou/rho;
+  dfloat v = rhov/rho;
+  dfloat p = (p_gamma-1)*(E - 0.5*(rhou*rhou+rhov*rhov)/rho);
+  
+  dfloat c2 = p_gamma*p/rho;
+  dfloat H = c2/(p_gamma-1) + 0.5*(u*u+v*v); 
+
+  //  dUdV = (1/(γ-1)) * [rho  rhou       rhov        E;
+  //		      rhou rhou*u + p rhou*v      rhou*H;
+  //		      rhov rhov*u     rhov*v + p  rhov*H;
+  //		      E    rhou*H     rhov*H      rho*H^2-c2*p/(γ-1)];
+  
+  pen[0] = (1./(p_gamma-1.))*( rho*dv1 + rhou*dv2   + rhov*dv3 + E*dv4);
+  pen[1] = (1./(p_gamma-1.))*(rhou*dv1 + rhou*u*dv2 + rhou*v*dv3 + rhou*H*dv4);
+  pen[2] = (1./(p_gamma-1.))*(rhov*dv1 + rhov*u*dv2 + rhov*v*dv3 + rhov*H*dv4);
+  pen[3] = (1./(p_gamma-1.))*(   E*dv1 + rhou*H*dv2 + rhov*H*dv3 + rho*(H*H-c2*(p/(p_gamma-1)))*dv4);
+    
+#endif
+}
+
+
+@kernel void esdgVolumeDivergenceTri2D(const dlong Nelements,
+					    const int diffusionOnly,
+					    @restrict const dfloat *vgeo, // affine ftm
+					    @restrict const dfloat *esDrTWT,
+					    @restrict const dfloat *esDsTWT, 
+					    @restrict const dfloat *qe,
+					    @restrict const dfloat *Kdqedx,
+					    @restrict const dfloat *Kdqedy,
+					    @restrict const dfloat *Kdqedz,
+					    @restrict dfloat *rhs){
+  
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_Kvr[p_Nfields][p_esNq];
+    @shared dfloat s_Kvs[p_Nfields][p_esNq];
+    
+    for(int n=0;n<p_esNq;++n;@inner(0)){    
+
+      dlong  gid = e*p_Nvgeo;
+      dfloat drdx = vgeo[gid + p_RXID];
+      dfloat dsdx = vgeo[gid + p_SXID];
+      dfloat drdy = vgeo[gid + p_RYID];
+      dfloat dsdy = vgeo[gid + p_SYID];
+      
+      for(int fld=0;fld<p_Nfields;++fld){
+	dlong id = e*p_esNp*p_Nfields + n + p_esNp*fld;
+	dfloat tmpx = Kdqedx[id];
+	dfloat tmpy = Kdqedy[id];
+	s_Kvr[fld][n] = drdx*tmpx + drdy*tmpy;
+	s_Kvs[fld][n] = dsdx*tmpx + dsdy*tmpy;
+
+      }
+    }
+    
+    @barrier();
+    
+    for(int n=0;n<p_esNq;++n;@inner(0)){    
+
+      if(n<p_Np){
+	dfloat r_rhs[p_Nfields];
+	
+	for(int fld=0;fld<p_Nfields;++fld){
+	  r_rhs[fld] = 0;
+	}
+
+	// M^{-1} (grad phi, grad_dg Pv)
+	for(int m=0;m<p_esNq;++m){
+	  dfloat Drnm = esDrTWT[n+m*p_Np]; // from vol quadrature to wb
+	  dfloat Dsnm = esDsTWT[n+m*p_Np]; // note stride 
+
+#pragma unroll
+	  for(int fld=0;fld<p_Nfields;++fld){
+	    r_rhs[fld] += Drnm*s_Kvr[fld][m];
+	    r_rhs[fld] += Dsnm*s_Kvs[fld][m];
+	  }
+	}
+
+#if 1
+	dlong id = e*p_Np*p_Nfields + n;
+	for(int fld=0;fld<p_Nfields;++fld){
+	  if(diffusionOnly==1)
+	    rhs[id+fld*p_Np] = -r_rhs[fld]; // sign for IBP
+	  else
+	    rhs[id+fld*p_Np] -= r_rhs[fld]; // sign for IBP
+	}
+#endif
+      }
+    }
+  }
+}
+
+@kernel void esdgSurfaceDivergenceTri2D(const dlong Nelements,
+					     const dfloat t,
+					     const dfloat tau,
+					     @restrict const dfloat *sgeo, // affine ftm
+					     @restrict const dfloat *esX,
+					     @restrict const dfloat *esY,
+					     @restrict const dfloat *esZ,
+					     @restrict const dlong  *esVmapM,
+					     @restrict const dlong  *esVmapP,
+					     @restrict const dlong  *EToB,
+					     @restrict const dfloat *esLfT,
+					     @restrict const dfloat *qc,
+					     @restrict const dfloat *qe,
+					     @restrict const dfloat *Kdqedx,
+					     @restrict const dfloat *Kdqedy,
+					     @restrict const dfloat *Kdqedz,
+					     @restrict const dfloat *projectionError,
+					     @restrict dfloat *rhs){
+  
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_rhs[p_Nfields][p_esNf];
+
+    for(int n=0;n<p_Np;++n;@inner(0)){
+
+      int m=n;
+
+      while(m<p_esNf){
+	
+	// assume no bcs atm
+	dlong id = e*p_esNf + m;
+	
+	dlong idM = esVmapM[id];
+	dlong idP = esVmapP[id];
+	
+	dlong eM = idM / p_esNp;
+	dlong eP = idP / p_esNp;
+	
+	dlong nM = idM % p_esNp;
+	dlong nP = idP % p_esNp;	
+	
+	dlong esIdM = eM*p_Nfields*p_esNp + nM;
+	dlong esIdP = eP*p_Nfields*p_esNp + nP;
+	
+	dfloat r_dqedxM[p_Nfields];
+	dfloat r_dqedxP[p_Nfields];
+	dfloat r_dqedyM[p_Nfields];
+	dfloat r_dqedyP[p_Nfields];
+	dfloat r_dqednM[p_Nfields];
+	dfloat r_dqednP[p_Nfields];
+
+	dfloat r_qeM[p_Nfields];
+	dfloat r_qeP[p_Nfields];
+
+	int fM = m/(p_esNf/p_Nfaces);
+	
+	dlong gid = e*p_Nsgeo*p_Nfaces + fM*p_Nsgeo;
+	dfloat nx = sgeo[gid+p_NXID];
+	dfloat ny = sgeo[gid+p_NYID];
+	dfloat sJ = sgeo[gid+p_SJID];
+	dfloat invJ = sgeo[gid+p_IJID];
+	
+	dfloat sc = invJ*sJ;
+
+	// do not populate field 1
+	for(int fld=0 ;fld<p_Nfields;++fld){
+
+	  r_dqedxM[fld] = Kdqedx[esIdM+fld*p_esNp];
+	  r_dqedxP[fld] = Kdqedx[esIdP+fld*p_esNp];
+
+	  r_dqedyM[fld] = Kdqedy[esIdM+fld*p_esNp];
+	  r_dqedyP[fld] = Kdqedy[esIdP+fld*p_esNp];
+	  
+	  r_dqednM[fld] = nx*r_dqedxM[fld] + ny*r_dqedyM[fld];
+	  r_dqednP[fld] = nx*r_dqedxP[fld] + ny*r_dqedyP[fld];
+
+	  r_qeM[fld] = qe[esIdM+fld*p_esNp];
+	  r_qeP[fld] = qe[esIdP+fld*p_esNp];
+	}
+
+	const int bc = EToB[e*p_Nfaces+fM];
+      
+	if(bc>0){
+	  dfloat xn = esX[idM], yn = esY[idM];
+	  
+	  esdgDivergenceBoundaryConditions2D(bc, p_gamma, t, xn, yn, nx, ny,   r_dqednM[0], r_dqednM[1], r_dqednM[2], r_dqednM[3], r_dqednP, r_dqednP+1, r_dqednP+2, r_dqednP+3);
+	  
+	  esdgGradientBoundaryConditions2D(bc, p_gamma, t, xn, yn, nx, ny, r_qeM[0], r_qeM[1], r_qeM[2], r_qeM[3], r_qeP, r_qeP+1, r_qeP+2, r_qeP+3);
+	  
+	}
+
+	dfloat tauP = projectionError[eP];
+	dfloat tauM = projectionError[eM];
+	dfloat tauMAX = (tauP>tauM) ? tauP:tauM;
+
+#if 1
+#pragma unroll
+	for(int fld=0;fld<p_Nfields;++fld){
+	  // average for IBP
+	  s_rhs[fld][m] = 0.5*sc*(r_dqednP[fld]+r_dqednM[fld] + (tau+tauMAX)*(r_qeP[fld]-r_qeM[fld]));
+	}
+#else
+	for(int fld=0;fld<p_Nfields;++fld){
+	  // average for IBP
+	  s_rhs[fld][m] = 0.5*sc*( (tau+tauMAX)*(r_qeP[fld]-r_qeM[fld]));
+	}
+#endif
+	m += p_Np;
+      }
+    }
+    
+    @barrier();
+    
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      dfloat r_rhs[p_Nfields];
+      
+      for(int fld=0;fld<p_Nfields;++fld){
+	r_rhs[fld] = 0;
+      }
+
+#pragma unroll p_esNf
+      for(int m=0;m<p_esNf;++m){
+	dfloat Lnm = esLfT[n + m*p_Np]; // check stride
+
+#pragma unroll
+	for(int fld=0;fld<p_Nfields;++fld){
+	  r_rhs[fld] += Lnm*s_rhs[fld][m]; 
+	}
+      }
+      
+      for(int fld=0;fld<p_Nfields;++fld){
+	dlong id = e*p_Np*p_Nfields + fld*p_Np + n;
+	rhs[id] += r_rhs[fld];
+      }
+    }
+  }    
+}
+
+@kernel void esdgIntegrateEntropyChangeTri2D(const dlong Nelements,
+						  const dfloat gamma,
+						  @restrict const dfloat *esIqT, // interpolate solution to quadrature
+						  @restrict const dfloat *esFqT, // filter through PN
+						  @restrict const dfloat *vgeo,
+						  @restrict const dfloat *wq,
+						  @restrict const dfloat *qc,
+						  @restrict const dfloat *rhs,
+						  @restrict dfloat *intEntropy){
+  
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_rhs[p_Nfields][p_Np];
+    @shared dfloat s_qc[p_Nfields][p_Np];
+    @shared dfloat s_qe_quad[p_Nfields][p_esNq];
+
+    @shared volatile dfloat s_sum[p_esNp];
+
+    @exclusive dfloat r_qe_quad[p_Nfields];
+    @exclusive dfloat r_rhs_quad[p_Nfields];
+
+    for(int n=0;n<p_esNq;++n;@inner(0)){
+
+      if(n<p_Np){
+	for(int fld=0;fld<p_Nfields;++fld){
+	  dlong id = e*p_Np*p_Nfields + n + fld*p_Np;
+	  s_qc[fld][n]   = qc[id];
+	  s_rhs[fld][n] = rhs[id];
+	}
+      }
+    }
+    
+    @barrier();
+    
+    for(int n=0;n<p_esNq;++n;@inner(0)){
+      
+      dfloat r_qc_quad[p_Nfields];
+      
+      for(int fld=0;fld<p_Nfields;++fld){
+	r_rhs_quad[fld] = 0;
+	r_qc_quad[fld] = 0;
+      }
+      
+      // interpolate rhs and qc to quadrature
+      for(int m=0;m<p_Np;++m){
+	dfloat Inm = esIqT[n+m*p_esNp];
+#pragma unroll p_Nfields
+	for(int fld=0;fld<p_Nfields;++fld){
+	  r_rhs_quad[fld] += Inm*s_rhs[fld][m];
+	  r_qc_quad[fld]  += Inm*s_qc[fld][m];
+	}
+      }
+      
+      conserved2entropy(p_gamma, r_qc_quad, r_qe_quad);
+      
+      for(int fld=0;fld<p_Nfields;++fld){
+	s_qe_quad[fld][n]  = r_qe_quad[fld];
+      }
+    }
+    
+    @barrier();
+
+    // filter entropy variables
+    for(int n=0;n<p_esNq;++n;@inner(0)){
+      
+      for(int fld=0;fld<p_Nfields;++fld){
+	r_qe_quad[fld] = 0;
+      }
+      
+      for(int m=0;m<p_esNq;++m){
+	dfloat Fnm = esFqT[n+m*p_esNp];
+	for(int fld=0;fld<p_Nfields;++fld){	
+	  r_qe_quad[fld] += Fnm*s_qe_quad[fld][m];
+	}
+      }
+
+      dlong gid = e*p_Nvgeo + p_JID;
+      dfloat JW = vgeo[gid]*wq[n];
+      
+      s_sum[n] = JW*(r_qe_quad[0]*r_rhs_quad[0]+
+		     r_qe_quad[1]*r_rhs_quad[1]+
+		     r_qe_quad[2]*r_rhs_quad[2]+
+		     r_qe_quad[3]*r_rhs_quad[3]);
+    }
+    
+#define reduce21(NT)				  \
+    @barrier();				  \
+    for(int n=0;n<p_esNq;++n;@inner(0)){          \
+      if(n+NT<p_esNq && n<NT){                    \
+        s_sum[n] += s_sum[n+NT];		  \
+      }						  \
+    }                                          
+    
+    reduce21(512);
+    reduce21(256);
+    reduce21(128);
+    reduce21( 64);
+    reduce21( 32);
+    reduce21( 16);
+    reduce21(  8);
+    reduce21(  4);
+    reduce21(  2);
+    reduce21(  1);
+    
+    for(int n=0;n<p_esNq;++n;@inner(0)){  
+      if(n==0){
+        intEntropy[e] = s_sum[0];
+      }                                         
+    }
+  }
+}
+
+@kernel void esdgIntegrateEntropyTri2D(const dlong Nelements,
+					    const dfloat gamma,
+					    @restrict const dfloat *esIqT, // interpolate solution to quadrature
+					    @restrict const dfloat *vgeo,
+					    @restrict const dfloat *wq,
+					    @restrict const dfloat *qc,
+					    @restrict dfloat *intEntropy){
+  
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_qc[p_Nfields][p_Np];
+
+    @shared dfloat s_sum_entropy[p_esNp];
+
+    for(int n=0;n<p_esNq;++n;@inner(0)){
+
+      if(n<p_Np){
+	for(int fld=0;fld<p_Nfields;++fld){
+	  dlong id = e*p_Np*p_Nfields + n + fld*p_Np;
+	  s_qc[fld][n]   = qc[id];
+	}
+      }
+    }
+    
+    @barrier();
+    
+    for(int n=0;n<p_esNq;++n;@inner(0)){
+      
+      dfloat r_qc_quad[p_Nfields];
+      dfloat r_qp_quad[p_Nfields];
+      
+      for(int fld=0;fld<p_Nfields;++fld){
+	r_qc_quad[fld] = 0;
+      }
+      
+      // interpolate rhs and qc to quadrature
+      for(int m=0;m<p_Np;++m){
+	dfloat Inm = esIqT[n+m*p_esNp];
+#pragma unroll p_Nfields
+	for(int fld=0;fld<p_Nfields;++fld){
+	  r_qc_quad[fld]  += Inm*s_qc[fld][m];
+	}
+      }           
+      
+      conserved2primitive(p_gamma, r_qc_quad, r_qp_quad);
+
+      dfloat r = r_qp_quad[0];
+      dfloat p = r_qp_quad[3];
+      dfloat s = log(p/pow(r,p_gamma));
+
+      dfloat Jw = wq[n]*vgeo[e*p_Nvgeo+p_JID];
+      
+      s_sum_entropy[n] = -Jw*r*s/(p_gamma-1.);
+    }
+    
+    @barrier();
+    
+#define reduce60(NT)				  \
+    @barrier();				  \
+    for(int n=0;n<p_esNq;++n;@inner(0)){          \
+      if(n+NT<p_esNq && n<NT){                    \
+        s_sum_entropy[n] += s_sum_entropy[n+NT];  \
+      }						  \
+    }                                          
+    
+    reduce60(512);
+    reduce60(256);
+    reduce60(128);
+    reduce60( 64);
+    reduce60( 32);
+    reduce60( 16);
+    reduce60(  8);
+    reduce60(  4);
+    reduce60(  2);
+    reduce60(  1);
+    
+    for(int n=0;n<p_esNq;++n;@inner(0)){  
+      if(n==0){
+        intEntropy[e] = s_sum_entropy[0];
+      }                                         
+    }
+  }
+}
+
+

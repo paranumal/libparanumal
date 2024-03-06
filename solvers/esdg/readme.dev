@@ -1,0 +1,33 @@
+
+~/Work/git/libP-private.raj.v2/solvers/euler
+
+src/esdgStep.cpp:88:17: error: base operand of ‘->’ has non-pointer type ‘libp::timeStepper_t’
+   88 |   if(timeStepper->rkStage==0)
+      |                 ^~
+src/esdgStep.cpp:89:5: error: ‘o_zeroFlag’ was not declared in this scope
+   89 |     o_zeroFlag.copyTo(o_projFlag);
+      |     ^~~~~~~~~~
+src/esdgStep.cpp:89:23: error: ‘o_projFlag’ was not declared in this scope
+   89 |     o_zeroFlag.copyTo(o_projFlag);
+      |                       ^~~~~~~~~~
+src/esdgStep.cpp:93:23: error: ‘useDODGES’ was not declared in this scope
+   93 |                       useDODGES,
+      |                       ^~~~~~~~~
+src/esdgStep.cpp:104:23: error: ‘o_projectionError’ was not declared in this scope
+  104 |                       o_projectionError);
+      |                       ^~~~~~~~~~~~~~~~~
+src/esdgStep.cpp:121:18: error: ‘o_projFlag’ was not declared in this scope
+  121 |                  o_projFlag,
+      |                  ^~~~~~~~~~
+src/esdgStep.cpp:179:27: error: ‘o_artificialViscosity’ was not declared in this scope; did you mean ‘useArtificialViscosity’?
+  179 |                           o_artificialViscosity,
+      |                           ^~~~~~~~~~~~~~~~~~~~~
+      |                           useArtificialViscosity
+src/esdgStep.cpp:191:33: error: ‘class libp::mesh_t’ has no member named ‘o_cubDrWT’; did you mean ‘o_cubD’?
+  191 |                            mesh.o_cubDrWT,
+      |                                 ^~~~~~~~~
+      |                                 o_cubD
+src/esdgStep.cpp:192:33: error: ‘class libp::mesh_t’ has no member named ‘o_cubDsWT’; did you mean ‘o_cubD’?
+  192 |                            mesh.o_cubDsWT,
+      |                                 ^~~~~~~~~
+      |                                 o_cubD
