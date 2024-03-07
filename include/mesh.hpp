@@ -202,6 +202,15 @@ class mesh_t {
   memory<dfloat> cubPDT;                     // packed weak differentiation matrices
   deviceMemory<dfloat> o_cubPDT;
 
+  // TW: need these for esdg
+  memory<dfloat> cubDrWT;
+  memory<dfloat> cubDsWT;
+  memory<dfloat> cubDtWT;
+
+  deviceMemory<dfloat> o_cubDrWT;
+  deviceMemory<dfloat> o_cubDsWT;
+  deviceMemory<dfloat> o_cubDtWT;
+  
   // surface integration node info
   int intNfp=0;    // number of integration nodes on each face
   memory<dfloat> intr, ints, intw;
@@ -875,6 +884,9 @@ class mesh_t {
                                          const memory<dfloat> _s,
                                          const memory<dfloat> _cubr,
                                          const memory<dfloat> _cubs,
+					 const memory<dfloat> _cubw,
+					 memory<dfloat>& _cubDrW,
+					 memory<dfloat>& _cubDsW,
                                          memory<dfloat>& _cubPDT);
   static void CubatureSurfaceMatricesTri2D(const int _N,
                                            const memory<dfloat> _r,

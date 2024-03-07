@@ -177,7 +177,6 @@
 				  @restrict const dfloat *esPqLfT,
 				  @restrict const dfloat *qe,
 				  @restrict dfloat *RHS,
-				  @restrict int *projFlag,
 				  @restrict dfloat *projectionError){
 
   for(dlong e=0;e<Nelements;++e;@outer(0)){
@@ -346,23 +345,13 @@
 				   @restrict const dfloat *qe,
 				   @restrict const dfloat *qp,
 				   @restrict const dfloat *qcrecon, 
-				   @restrict dfloat *rhs,
-				   @restrict int *projFlag){
+				   @restrict dfloat *rhs){
 
 #define p_Nblk (256/p_Np)
   
   for(dlong eo=0;eo<Nelements;eo+=p_Nblk;@outer(0)){
     
     @shared dfloat s_flux_quad[p_Nblk][p_Nfields][p_esNp];
-
-#if 0
-    for(int n=0;n<p_Np;++n;@inner(0)){
-      if(projFlag[e]==0)
-	return;
-    }
-    
-    @barrier();
-#endif
 
     @exclusive int pFlag;
     
@@ -1207,7 +1196,6 @@ void esdgDiffusionPenaltyTri2D(const dfloat lambda,
 
 
 @kernel void esdgVolumeDivergenceTri2D(const dlong Nelements,
-					    const int diffusionOnly,
 					    @restrict const dfloat *vgeo, // affine ftm
 					    @restrict const dfloat *esDrTWT,
 					    @restrict const dfloat *esDsTWT, 
@@ -1240,7 +1228,7 @@ void esdgDiffusionPenaltyTri2D(const dfloat lambda,
       }
     }
     
-    @barrier();
+    @barrier( );
     
     for(int n=0;n<p_esNq;++n;@inner(0)){    
 
@@ -1266,9 +1254,6 @@ void esdgDiffusionPenaltyTri2D(const dfloat lambda,
 #if 1
 	dlong id = e*p_Np*p_Nfields + n;
 	for(int fld=0;fld<p_Nfields;++fld){
-	  if(diffusionOnly==1)
-	    rhs[id+fld*p_Np] = -r_rhs[fld]; // sign for IBP
-	  else
 	    rhs[id+fld*p_Np] -= r_rhs[fld]; // sign for IBP
 	}
 #endif

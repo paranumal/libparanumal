@@ -739,6 +739,9 @@ void mesh_t::CubatureWeakDmatricesTri2D(const int _N,
                                         const memory<dfloat> _s,
                                         const memory<dfloat> _cubr,
                                         const memory<dfloat> _cubs,
+					const memory<dfloat> _cubw,
+					memory<dfloat>& _cubDrW,
+					memory<dfloat>& _cubDsW,
                                         memory<dfloat>& _cubPDT){
 
   const int _Np = (_N+1)*(_N+2)/2;
@@ -768,6 +771,39 @@ void mesh_t::CubatureWeakDmatricesTri2D(const int _N,
       _cubPDsT[n*_cubNp+m] = resPDsT;
     }
   }
+
+  // cubDrW = V*transpose(cVr)*diag(cubw);
+  // cubDsW = V*transpose(cVs)*diag(cubw);
+
+  _cubDrW.malloc(_Np*_cubNp);
+  _cubDsW.malloc(_Np*_cubNp);
+  
+  for(int n=0;n<_cubNp;++n){
+    for(int m=0;m<_Np;++m){
+      // scale by cubw
+      cubVr[n*_Np+m] *= _cubw[n];
+      cubVs[n*_Np+m] *= _cubw[n];
+    }
+  }
+
+  for(int n=0;n<_Np;++n){
+    for(int m=0;m<_cubNp;++m){
+      dfloat resP = 0, resDrW = 0, resDsW = 0;
+
+      for(int i=0;i<_Np;++i){
+        dfloat Vni = V[n*_Np+i];
+        resDrW += Vni*cubVr[m*_Np+i];
+        resDsW += Vni*cubVs[m*_Np+i];
+      }
+      
+      _cubDrW[n*_cubNp+m] = resDrW;
+      _cubDsW[n*_cubNp+m] = resDsW;
+    }
+  }
+
+
+
+  
 }
 
 void mesh_t::CubatureSurfaceMatricesTri2D(const int _N,

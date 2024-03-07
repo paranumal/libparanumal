@@ -164,6 +164,9 @@ public:
   deviceMemory<dfloat> o_cx;
   deviceMemory<dfloat> o_cy;
   deviceMemory<dfloat> o_cz;
+
+  deviceMemory<dfloat> o_cubDrWT;
+  deviceMemory<dfloat> o_cubDsWT;
   
   kernel_t esInterpolateKernel;
   kernel_t esVolumeCubatureKernel;
@@ -184,6 +187,16 @@ public:
   
   kernel_t esVolumeDivergenceKernel;
   kernel_t esSurfaceDivergenceKernel;
+
+  deviceMemory<dfloat> o_esTotalEntropy;
+  deviceMemory<dfloat> o_entropyChange;
+  deviceMemory<dfloat> o_projectionError;
+  deviceMemory<dfloat> o_artificialViscosity;
+  
+  memory<dfloat> esTotalEntropy;
+  memory<dfloat> entropyChange;
+  memory<dfloat> projectionError;
+  memory<dfloat> artificialViscosity;
 
   
 };

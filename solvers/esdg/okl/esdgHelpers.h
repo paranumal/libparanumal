@@ -90,7 +90,7 @@ dfloat guardPow(dfloat a, dfloat b){
 #define USE_LLF_PENALTY 1
 #define USE_HLL_PENALTY 0
 // Prandtl number (O2)
-#define PRINT_WARNINGS 1
+#define PRINT_WARNINGS 0
 
 // flux forms from: https://arxiv.org/pdf/2005.03237.pdf
 

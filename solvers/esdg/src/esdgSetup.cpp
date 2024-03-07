@@ -769,7 +769,10 @@ void esdg_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
   kernelInfo["includes"] += DESDG "okl/esdgHelpers.h";
 
-  std::cout << kernelInfo << std::endl;
+  // bounds guards                                                                                                      
+  int guardLevel = 0;
+  settings.getSetting("GUARD LEVEL",guardLevel);
+  kernelInfo["defines/" "GUARD_LEVEL"]= guardLevel;
   
   kernelInfo["defines/" "p_Nverts"]= mesh.Nverts;
   kernelInfo["defines/" "p_Nfields"]= Nfields;
@@ -817,6 +820,8 @@ void esdg_t::Setup(platform_t& _platform, mesh_t& _mesh,
   kernelInfo["defines/" "p_ubar"] = ubar;
   kernelInfo["defines/" "p_vbar"] = vbar;
   kernelInfo["defines/" "p_pbar"] = pbar;
+
+  std::cout << kernelInfo << std::endl;
   
   // set kernel name suffix
   std::string suffix = mesh.elementSuffix();
@@ -825,7 +830,7 @@ void esdg_t::Setup(platform_t& _platform, mesh_t& _mesh,
   std::string oklFileSuffix = ".okl";
 
   std::string fileName, kernelName;
-
+  
   fileName = oklFilePrefix + "esdg" + suffix + oklFileSuffix;
 
   kernelName = "esdgInterpolate" + suffix;
@@ -914,4 +919,15 @@ void esdg_t::Setup(platform_t& _platform, mesh_t& _mesh,
   maxWaveSpeedKernel = platform.buildKernel(fileName, kernelName,
                                             kernelInfo);
 #endif
+
+  esTotalEntropy.malloc(mesh.Nelements, 0.);
+  entropyChange.malloc(mesh.Nelements, 0.);
+  projectionError.malloc(mesh.Nelements, 0.);
+  artificialViscosity.malloc(mesh.Nelements*mesh.Np, 0.);
+  
+  o_esTotalEntropy = platform.malloc<dfloat>(esTotalEntropy);
+  o_entropyChange = platform.malloc<dfloat>(entropyChange);
+  o_projectionError = platform.malloc<dfloat>(projectionError);
+  o_artificialViscosity = platform.malloc<dfloat>(artificialViscosity);
+  
 }

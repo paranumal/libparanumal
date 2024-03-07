@@ -45,6 +45,8 @@ class timeStepper_t {
  public:
   timeStepper_t() = default;
 
+  int stage=0;
+  
   /*Generic setup. Create a Stepper object and wrap it in a shared_ptr*/
   template<class Stepper, class... Args>
   void Setup(Args&& ... args) {

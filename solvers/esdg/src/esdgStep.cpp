@@ -116,7 +116,6 @@ void esdg_t::rhsf(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const 
 		 o_esPqLfT,
 		 o_esQe,
 		 o_RHS,
-		 o_projFlag,
 		 o_projectionError);
   
   // surface terms
@@ -135,8 +134,7 @@ void esdg_t::rhsf(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const 
 		  o_esQe,
 		  o_esQp,
 		  o_esQcrecon,
-		  o_RHS,
-		  o_projFlag);
+		  o_RHS);
 
   // add diffusion terms
   
@@ -182,7 +180,8 @@ void esdg_t::rhsf(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const 
 			  o_esdQedx,
 			  o_esdQedy,
 			  o_esdQedz);
-  
+
+#if 1
   esVolumeDivergenceKernel(mesh.Nelements,
 			   mesh.o_vgeo, // affine ftm
 			   mesh.o_cubDrWT, 
@@ -211,7 +210,7 @@ void esdg_t::rhsf(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const 
 			    o_esdQedz,
 			    o_projectionError,
 			    o_RHS);
-
+#endif
   static int stepCounter = 0;
   
   if(!(stepCounter%1000)){
@@ -222,116 +221,4 @@ void esdg_t::rhsf(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const 
 
   ++stepCounter;
 
-
-
-#if 0
-  
-  dlong NlocalGrads = mesh.Nelements*mesh.Np*Ngrads;
-  dlong NhaloGrads  = mesh.totalHaloPairs*mesh.Np*Ngrads;
-  deviceMemory<dfloat> o_gradq = platform.reserve<dfloat>(NlocalGrads+NhaloGrads);
-
-  // extract q trace halo and start exchange
-  fieldTraceHalo.ExchangeStart(o_Q, 1);
-
-  // compute volume contributions to gradients
-  gradVolumeKernel(mesh.Nelements,
-                   mesh.o_vgeo,
-                   mesh.o_D,
-                   o_Q,
-                   o_gradq);
-
-  // complete trace halo exchange
-  fieldTraceHalo.ExchangeFinish(o_Q, 1);
-
-  // compute surface contributions to gradients
-  gradSurfaceKernel(mesh.Nelements,
-                    mesh.o_sgeo,
-                    mesh.o_LIFT,
-                    mesh.o_vmapM,
-                    mesh.o_vmapP,
-                    mesh.o_EToB,
-                    mesh.o_x,
-                    mesh.o_y,
-                    mesh.o_z,
-                    T,
-                    mu,
-                    gamma,
-                    o_Q,
-                    o_gradq);
-
-  // extract viscousStresses trace halo and start exchange
-  gradTraceHalo.ExchangeStart(o_gradq, 1);
-
-  // compute volume contribution to esdg RHS
-  if (cubature) {
-    cubatureVolumeKernel(mesh.Nelements,
-                         mesh.o_vgeo,
-                         mesh.o_cubvgeo,
-                         mesh.o_cubD,
-                         mesh.o_cubPDT,
-                         mesh.o_cubInterp,
-                         mesh.o_cubProject,
-                         mesh.o_x,
-                         mesh.o_y,
-                         mesh.o_z,
-                         T,
-                         mu,
-                         gamma,
-                         o_Q,
-                         o_gradq,
-                         o_RHS);
-  } else {
-    volumeKernel(mesh.Nelements,
-                 mesh.o_vgeo,
-                 mesh.o_D,
-                 mesh.o_x,
-                 mesh.o_y,
-                 mesh.o_z,
-                 T,
-                 mu,
-                 gamma,
-                 o_Q,
-                 o_gradq,
-                 o_RHS);
-  }
-
-  // complete trace halo exchange
-  gradTraceHalo.ExchangeFinish(o_gradq, 1);
-
-  if (cubature) {
-      cubatureSurfaceKernel(mesh.Nelements,
-                            mesh.o_vgeo,
-                            mesh.o_cubsgeo,
-                            mesh.o_vmapM,
-                            mesh.o_vmapP,
-                            mesh.o_EToB,
-                            mesh.o_intInterp,
-                            mesh.o_intLIFT,
-                            mesh.o_intx,
-                            mesh.o_inty,
-                            mesh.o_intz,
-                            T,
-                            mu,
-                            gamma,
-                            o_Q,
-                            o_gradq,
-                            o_RHS);
-    } else {
-      surfaceKernel(mesh.Nelements,
-                    mesh.o_sgeo,
-                    mesh.o_LIFT,
-                    mesh.o_vmapM,
-                    mesh.o_vmapP,
-                    mesh.o_EToB,
-                    mesh.o_x,
-                    mesh.o_y,
-                    mesh.o_z,
-                    T,
-                    mu,
-                    gamma,
-                    o_Q,
-                    o_gradq,
-                    o_RHS);
-    }
-#endif
 }

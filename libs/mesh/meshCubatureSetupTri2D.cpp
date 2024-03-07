@@ -45,8 +45,11 @@ void mesh_t::CubatureSetupTri2D(){
 
   // Instead, it's cheaper to:
   // make weak cubature derivatives cubPDT = cubProject * cubD^T
+  memory<dfloat> cubDrW, cubDsW;
+  
   CubatureWeakDmatricesTri2D(N, r, s,
-                             cubr, cubs,
+                             cubr, cubs, cubw,
+			     cubDrW, cubDsW,
                              cubPDT);
   cubPDrT = cubPDT + 0*cubNp*Np;
   cubPDsT = cubPDT + 1*cubNp*Np;
@@ -61,6 +64,35 @@ void mesh_t::CubatureSetupTri2D(){
                                intr, intw,
                                intInterp, intLIFT);
 
+  // TW: mods for ESDG START
+  
+
+  
+  int cubNpBlocked = Np*((cubNp+Np-1)/Np);
+  cubDrWT.malloc(cubNpBlocked*Np, 0.);
+  cubDsWT.malloc(cubNpBlocked*Np, 0.);
+
+#if 0
+  memory<dfloat> cubDrW(cubNpBlocked*Np, 0.);
+  memory<dfloat> cubDsW(cubNpBlocked*Np, 0.);
+
+  memory<dfloat> cubProjectTmp(cubNp*Np, 0.0);
+  CubatureWeakDmatricesTri2D(N, r, s, cubr, cubs, cubw,
+                             cubDrW, cubDsW, cubProjectTmp);
+#endif
+  for(int n=0;n<Np;++n){
+    for(int m=0;m<cubNp;++m){
+      cubDrWT[n+m*Np] = cubDrW[n*cubNp+m];
+      cubDsWT[n+m*Np] = cubDsW[n*cubNp+m];
+    }
+  }
+
+  o_cubDrWT = platform.malloc(cubDrWT);
+  o_cubDsWT = platform.malloc(cubDsWT);
+  o_cubDtWT = platform.malloc(cubDsWT); // dummy to align with 3d
+
+  // TW: mods for ESDG START
+  
   // add compile time constants to kernels
   props["defines/" "p_cubNq"]= cubNq;
   props["defines/" "p_cubNp"]= cubNp;
