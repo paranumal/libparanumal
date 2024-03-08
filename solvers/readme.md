@@ -64,7 +64,7 @@ The libparanumal solver subdirectories include finite element discretizations of
      $$\frac{\partial E}{\partial t} =
     -\frac{\partial}{\partial x}\left(u(E+p)-\mu\left(u\tau_{11}+v\tau_{12}+w\tau_{13}\right)\right)
     -\frac{\partial}{\partial y}\left(v(E+p)-\mu\left(u\tau_{21}+v\tau_{22}+w\tau_{23}\right)\right)
-   -\frac{\partial}{\partial z}\left(w(E+p)-\mu\left(u\tau_{31}+v\tau_{32}+3\tau_{33}\right)\right)$$
+   -\frac{\partial}{\partial z}\left(w(E+p)-\mu\left(u\tau_{31}+v\tau_{32}+w\tau_{33}\right)\right)$$
     where:
     $$\tau_{11} = 2\frac{\partial u}{\partial x} - \frac{2}{3}\left(\frac{\partial u}{\partial x}+\frac{\partial v}{\partial y}+\frac{\partial w}{\partial z}\right)$$
     $$\tau_{22} = 2\frac{\partial v}{\partial y} - \frac{2}{3}\left(\frac{\partial u}{\partial x}+\frac{\partial v}{\partial y}+\frac{\partial w}{\partial z}\right)$$
