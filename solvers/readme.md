@@ -24,8 +24,8 @@ The libparanumal solver subdirectories include finite element discretizations of
 **elliptic**
 * Screened Poisson potential problem
   * 2D:
-    * PDE: $$\lambda u - \left(\frac{\partial^2 u}{\partial x^2}+\frac{\partial^2 u}{\partial y^2}\right)=f \;(x,y,z)\in\Omega$$
-    * Dirichlet BC: $$u=g(x,y) \mbox{ for } (x,y)\in\partial\Omega^D$
+    * PDE: $$\lambda u - \left(\frac{\partial^2 u}{\partial x^2}+\frac{\partial^2 u}{\partial y^2}\right)=f \mbox{ for } (x,y,z)\in\Omega$$
+    * Dirichlet BC: $$u=g(x,y) \mbox{ for } (x,y)\in\partial\Omega^D$$
     * Neumann BC:   $$n_x\frac{\partial u}{\partial x}+n_y\frac{\partial u}{\partial y}=h(x,y) \mbox{  for } (x,y)\in\partial\Omega^N$$
 
   * 3D:
