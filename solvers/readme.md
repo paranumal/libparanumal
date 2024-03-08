@@ -50,7 +50,18 @@ The libparanumal solver subdirectories include finite element discretizations of
      * $$\frac{\partial u}{\partial t} = v_x \frac{\partial u}{\partial x} + v_y \frac{\partial u}{\partial y} + \mu \left(\frac{\partial^2 u}{\partial x^2}+\frac{\partial^2 u}{\partial y^2}\right)$$
   * 3D:
      * $$\frac{\partial u}{\partial t} = v_x \frac{\partial u}{\partial x} + v_y \frac{\partial u}{\partial y} + v_z \frac{\partial u}{\partial z} + \mu \left(\frac{\partial^2 u}{\partial x^2}+\frac{\partial^2 u}{\partial y^2}+\frac{\partial^2 u}{\partial z^2}\right)$$
-  
+
+**ins**
+* Time-dependent incompressible Navier-Stokes equations:
+  * 2D:
+     * $$\frac{\partial u}{\partial t} = -\frac{\partial p}{\partial x}-u \frac{\partial u}{\partial x} - v \frac{\partial u}{\partial y} + \mu \left(\frac{\partial^2 u}{\partial x^2}+\frac{\partial^2 u}{\partial y^2}\right)$$
+     * $$\frac{\partial v}{\partial t} = -\frac{\partial p}{\partial y}-u \frac{\partial v}{\partial x} - v \frac{\partial v}{\partial y} + \mu \left(\frac{\partial^2 v}{\partial x^2}+\frac{\partial^2 v}{\partial y^2}\right)$$
+     * $$\frac{\partial u}{\partial x} + \frac{\partial v}{\partial y}=0$$
+  * 3D:
+     * $$\frac{\partial u}{\partial t} = -\frac{\partial p}{\partial x}-u \frac{\partial u}{\partial x} - v \frac{\partial u}{\partial y}- w \frac{\partial u}{\partial z} + \mu \left(\frac{\partial^2 u}{\partial x^2}+\frac{\partial^2 u}{\partial y^2}+\frac{\partial^2 u}{\partial z^2}\right)$$
+     * $$\frac{\partial v}{\partial t} = -\frac{\partial p}{\partial y}-u \frac{\partial v}{\partial x} - v \frac{\partial v}{\partial y}- w \frac{\partial u}{\partial z} + \mu \left(\frac{\partial^2 v}{\partial x^2}+\frac{\partial^2 v}{\partial y^2}+\frac{\partial^2 v}{\partial z^2}\right)$$
+     *  $$\frac{\partial w}{\partial t} = -\frac{\partial p}{\partial z}-u \frac{\partial w}{\partial x} - v \frac{\partial w}{\partial y}- w \frac{\partial w}{\partial z} + \mu \left(\frac{\partial^2 w}{\partial x^2}+\frac{\partial^2 w}{\partial y^2}+\frac{\partial^2 w}{\partial z^2}\right)$$
+     * $$\frac{\partial u}{\partial x} + \frac{\partial v}{\partial y}+ \frac{\partial w}{\partial z}=0$$
    
 **maxwell**
 * Time-domain Maxwell equations of electromagnetics:
