@@ -32,6 +32,47 @@ The libparanumal solver subdirectories include finite element discretizations of
     $$\frac{\partial q_4}{\partial t} = -c\sqrt{2}\left(\frac{\partial q_1}{\partial x}\right)-\frac{1}{\tau}\left(\frac{q_4-q_1^2}{q_0\sqrt{2}}\right)$$
     $$\frac{\partial q_5}{\partial t} = -c\sqrt{2}\left(\frac{\partial q_2}{\partial y}\right)-\frac{1}{\tau}\left(\frac{q_5-q_2^2}{q_0\sqrt{2}}\right)$$    
 
+**cns**
+* Compressible Navier-Stokes (does not include: limiting, artificial viscosity, entropy stable formulation)
+  * 2D:
+    $$\frac{\partial \rho}{\partial t} = -\frac{\partial\rho{}u}{\partial x}  -\frac{\partial\rho{}v}{\partial y}$$
+    $$\frac{\partial \rho{}u}{\partial t} = -\frac{\partial}{\partial x}\left(\rho{}u^2+p-\mu\tau_{11}\right)  -\frac{\partial}{\partial y}\left(\rho{}uv-\mu\tau_{12}\right)$$
+    $$\frac{\partial \rho{}v}{\partial t} = -\frac{\partial}{\partial x}\left(\rho{}uv-\mu\tau_{21}\right)  -\frac{\partial}{\partial y}\left(\rho{}v^2+p-\mu\tau_{22}\right)$$
+     $$\frac{\partial E}{\partial t} =
+    -\frac{\partial}{\partial x}\left(u(E+p)-\mu\left(u\tau_{11}+v\tau_{12}\right)\right)
+    -\frac{\partial}{\partial y}\left(v(E+p)-\mu\left(u\tau_{12}+v\tau_{22}\right)\right)$$
+    where:
+    $$\tau_{11} = 2\frac{\partial u}{\partial x} - \frac{2}{3}\left(\frac{\partial u}{\partial x}+\frac{\partial v}{\partial y}\right)$$
+    $$\tau_{22} = 2\frac{\partial v}{\partial y} - \frac{2}{3}\left(\frac{\partial u}{\partial x}+\frac{\partial v}{\partial y}\right)$$
+    $$\tau_{12} = \tau_{21} = \frac{\partial u}{\partial y}+\frac{\partial v}{\partial x}$$
+    $$E = \frac{p}{\gamma-1} + \frac{1}{2}\rho\left(u^2+v^2\right)$$
+ * 3D:
+    $$\frac{\partial \rho}{\partial t} = -\frac{\partial\rho{}u}{\partial x}  -\frac{\partial\rho{}v}{\partial y} -\frac{\partial\rho{}w}{\partial z}$$
+    $$\frac{\partial \rho{}u}{\partial t} =
+   -\frac{\partial}{\partial x}\left(\rho{}u^2+p-\mu\tau_{11}\right)
+   -\frac{\partial}{\partial y}\left(\rho{}uv-\mu\tau_{12}\right)
+    -\frac{\partial}{\partial z}\left(\rho{}uw-\mu\tau_{13}\right)$$
+    $$\frac{\partial \rho{}v}{\partial t} =
+   -\frac{\partial}{\partial x}\left(\rho{}uv-\mu\tau_{21}\right)
+   -\frac{\partial}{\partial y}\left(\rho{}v^2+p-\mu\tau_{22}\right)
+   -\frac{\partial}{\partial z}\left(\rho{}wv-\mu\tau_{23}\right)$$
+       $$\frac{\partial \rho{}w}{\partial t} =
+   -\frac{\partial}{\partial x}\left(\rho{}uw-\mu\tau_{31}\right)
+   -\frac{\partial}{\partial y}\left(\rho{}vw-\mu\tau_{32}\right)
+   -\frac{\partial}{\partial z}\left(\rho{}w^2+p-\mu\tau_{33}\right)$$
+     $$\frac{\partial E}{\partial t} =
+    -\frac{\partial}{\partial x}\left(u(E+p)-\mu\left(u\tau_{11}+v\tau_{12}+w\tau_{13}\right)\right)
+    -\frac{\partial}{\partial y}\left(v(E+p)-\mu\left(u\tau_{21}+v\tau_{22}+w\tau_{23}\right)\right)
+   -\frac{\partial}{\partial z}\left(w(E+p)-\mu\left(u\tau_{31}+v\tau_{32}+3\tau_{33}\right)\right)$$
+    where:
+    $$\tau_{11} = 2\frac{\partial u}{\partial x} - \frac{2}{3}\left(\frac{\partial u}{\partial x}+\frac{\partial v}{\partial y}+\frac{\partial w}{\partial z}\right)$$
+    $$\tau_{22} = 2\frac{\partial v}{\partial y} - \frac{2}{3}\left(\frac{\partial u}{\partial x}+\frac{\partial v}{\partial y}+\frac{\partial w}{\partial z}\right)$$
+    $$\tau_{33} = 2\frac{\partial w}{\partial z} - \frac{2}{3}\left(\frac{\partial u}{\partial x}+\frac{\partial v}{\partial y}+\frac{\partial w}{\partial z}\right)$$
+    $$\tau_{12} = \tau_{21} = \frac{\partial u}{\partial y}+\frac{\partial v}{\partial x}$$
+    $$\tau_{13} = \tau_{31} = \frac{\partial u}{\partial z}+\frac{\partial w}{\partial x}$$
+    $$\tau_{23} = \tau_{32} = \frac{\partial v}{\partial z}+\frac{\partial w}{\partial y}$$
+    $$E = \frac{p}{\gamma-1} + \frac{1}{2}\rho\left(u^2+v^2+w^2\right)$$
+    
 **elliptic**
 * Screened Poisson potential problem
   * 2D:
