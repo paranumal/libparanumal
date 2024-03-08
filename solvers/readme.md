@@ -3,7 +3,7 @@
 The libparanumal solver subdirectories include finite element discretizations of the following PDEs:
 
 **acoustics**
-* Linearized Euler equations:
+* Time dependent linearized Euler equations:
   * 2D:
        * $$\frac{\partial u}{\partial t} = -\frac{\partial p}{\partial x}$$
        * $$\frac{\partial v}{\partial t} = -\frac{\partial p}{\partial y}$$
@@ -32,3 +32,17 @@ The libparanumal solver subdirectories include finite element discretizations of
     * PDE: $$\lambda u - \left(\frac{\partial^2 u}{\partial x^2}+\frac{\partial^2 u}{\partial y^2}+\frac{\partial^2 u}{\partial z^2}\right)=f$$
     * Dirichlet BC: $$u=g(x,y,z) \mbox{ for } (x,y,z) \in \partial\Omega^D$$
     * Neumann BC:   $$n_x\frac{\partial u}{\partial x}+n_y\frac{\partial u}{\partial y}+n_z\frac{\partial u}{\partial z}=h(x,y) \mbox{ for } (x,y) \in \partial\Omega^N$$
+   
+**maxwell**
+* Time-domain Maxwell equations of electromagnetics:
+  * 2D (transverse mode):
+       * $$\frac{\partial H_x}{\partial t} = -\frac{\partial E_z}{\partial y}$$
+       * $$\frac{\partial H_y}{\partial t} =  \frac{\partial E_z}{\partial x}$$
+       * $$\frac{\partial E_z}{\partial t} =  \frac{\partial H_y}{\partial x}-\frac{\partial H_x}{\partial y}$$
+  * 3D (full field):
+       * $$\frac{\partial H_x}{\partial t} = -\frac{\partial E_z}{\partial y}+\frac{\partial E_y}{\partial z}$$
+       *  $$\frac{\partial H_y}{\partial t} = -\frac{\partial E_x}{\partial z}+\frac{\partial E_z}{\partial x}$$
+       *  $$\frac{\partial H_z}{\partial t} = -\frac{\partial E_y}{\partial x}+\frac{\partial E_x}{\partial y}$$
+       *  $$\frac{\partial E_x}{\partial t} = \frac{\partial H_z}{\partial y}-\frac{\partial H_y}{\partial z}$$
+       *  $$\frac{\partial E_y}{\partial t} = \frac{\partial H_x}{\partial z}-\frac{\partial H_z}{\partial x}$$
+       *  $$\frac{\partial E_z}{\partial t} = \frac{\partial H_y}{\partial x}-\frac{\partial H_x}{\partial y}$$
