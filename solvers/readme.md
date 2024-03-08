@@ -32,6 +32,14 @@ The libparanumal solver subdirectories include finite element discretizations of
     * PDE: $$\lambda u - \left(\frac{\partial^2 u}{\partial x^2}+\frac{\partial^2 u}{\partial y^2}+\frac{\partial^2 u}{\partial z^2}\right)=f$$
     * Dirichlet BC: $$u=g(x,y,z) \mbox{ for } (x,y,z) \in \partial\Omega^D$$
     * Neumann BC:   $$n_x\frac{\partial u}{\partial x}+n_y\frac{\partial u}{\partial y}+n_z\frac{\partial u}{\partial z}=h(x,y) \mbox{ for } (x,y) \in \partial\Omega^N$$
+
+**fokkerPlanck**
+* Time-domain advection diffusion modeled with the Fokker-Planck equations:
+  * 2D:
+     * $$\frac{\partial u}{\partial t} = v_x \frac{\partial u}{\partial x} + v_y \frac{\partial u}{\partial y} + \mu \left(\frac{\partial^2 u}{\partial x^2}+\frac{\partial^2 u}{\partial y^2}\right)$$
+  * 3D:
+     * $$\frac{\partial u}{\partial t} = v_x \frac{\partial u}{\partial x} + v_y \frac{\partial u}{\partial y} + v_z \frac{\partial u}{\partial z} + \mu \left(\frac{\partial^2 u}{\partial x^2}+\frac{\partial^2 u}{\partial y^2}+\frac{\partial^2 u}{\partial z^2}\right)$$
+  
    
 **maxwell**
 * Time-domain Maxwell equations of electromagnetics:
