@@ -14,6 +14,13 @@ The libparanumal solver subdirectories include finite element discretizations of
        * $$\frac{\partial w}{\partial t} = -\frac{\partial p}{\partial z}$$
        * $$\frac{\partial p}{\partial t} = -\frac{\partial u}{\partial x}-\frac{\partial v}{\partial y}-\frac{\partial w}{\partial z}$$
 
+**advection**
+* Linear advection equation:
+  * 2D:
+       * $$\frac{\partial u}{\partial t} = v_x\frac{\partial u}{\partial x}+v_y\frac{\partial u}{\partial y}$$
+  * 3D:
+       * $$\frac{\partial u}{\partial t} = v_x\frac{\partial u}{\partial x}+v_y\frac{\partial u}{\partial y}+v_z\frac{\partial u}{\partial z}$$
+
 **elliptic**
 * Screened Poisson potential problem
   * 2D:
