@@ -21,6 +21,17 @@ The libparanumal solver subdirectories include finite element discretizations of
   * 3D:
        * $$\frac{\partial u}{\partial t} = v_x\frac{\partial u}{\partial x}+v_y\frac{\partial u}{\partial y}+v_z\frac{\partial u}{\partial z}$$
 
+**bns**
+* Boltzmann Navier-Stokes equations of gas dynamics
+  * 2D:
+  * PDE: 
+    $$\frac{\partial q_0}{\partial t} = -c\left(\frac{\partial q_1}{\partial x} + \frac{\partial q_2}{\partial y}\right)$$
+    $$\frac{\partial q_1}{\partial t} = -c\left(\frac{\partial q_0}{\partial x} + \sqrt{2}\frac{\partial q_4}{\partial x} + \frac{\partial q_3}{\partial y}\right)$$
+    $$\frac{\partial q_2}{\partial t} = -c\left(\frac{\partial q_3}{\partial x} + \frac{\partial q_0}{\partial y} + \sqrt{2}\frac{\partial q_5}{\partial y}\right)$$
+    $$\frac{\partial q_3}{\partial t} = -c\left(\frac{\partial q_2}{\partial x} + \frac{\partial q_1}{\partial y}\right)-\frac{1}{\tau}\left(\frac{q_3-q_1q_2}{q_0}\right)$$
+    $$\frac{\partial q_4}{\partial t} = -c\sqrt{2}\left(\frac{\partial q_1}{\partial x}\right)-\frac{1}{\tau}\left(\frac{q_4-q_1^2}{q_0\sqrt{2}}\right)$$
+    $$\frac{\partial q_5}{\partial t} = -c\sqrt{2}\left(\frac{\partial q_2}{\partial y}\right)-\frac{1}{\tau}\left(\frac{q_5-q_2^2}{q_0\sqrt{2}}\right)$$    
+
 **elliptic**
 * Screened Poisson potential problem
   * 2D:
