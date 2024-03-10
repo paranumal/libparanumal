@@ -13,6 +13,8 @@ The libparanumal solver subdirectories include finite element discretizations of
        * $$\frac{\partial v}{\partial t} = -\frac{\partial p}{\partial y}$$
        * $$\frac{\partial w}{\partial t} = -\frac{\partial p}{\partial z}$$
        * $$\frac{\partial p}{\partial t} = -\frac{\partial u}{\partial x}-\frac{\partial v}{\partial y}-\frac{\partial w}{\partial z}$$
+* This solver demonstrates explicit time-stepping (LSERK4, DOPRI5) of upwind nodal discontinuous Galerkin discretizations.
+
 
 **advection**
 * Linear advection equation:
@@ -20,6 +22,7 @@ The libparanumal solver subdirectories include finite element discretizations of
        * $$\frac{\partial u}{\partial t} = v_x\frac{\partial u}{\partial x}+v_y\frac{\partial u}{\partial y}$$
   * 3D:
        * $$\frac{\partial u}{\partial t} = v_x\frac{\partial u}{\partial x}+v_y\frac{\partial u}{\partial y}+v_z\frac{\partial u}{\partial z}$$
+* This solver demonstrates explicit time-stepping (LSERK4, DOPRI5) of upwind nodal discontinuous Galerkin discretizations.
 
 **bns**
 * Boltzmann Navier-Stokes equations of gas dynamics
@@ -30,7 +33,9 @@ The libparanumal solver subdirectories include finite element discretizations of
     $$\frac{\partial q_2}{\partial t} = -c\left(\frac{\partial q_3}{\partial x} + \frac{\partial q_0}{\partial y} + \sqrt{2}\frac{\partial q_5}{\partial y}\right)$$
     $$\frac{\partial q_3}{\partial t} = -c\left(\frac{\partial q_2}{\partial x} + \frac{\partial q_1}{\partial y}\right)-\frac{1}{\tau}\left(\frac{q_3-q_1q_2}{q_0}\right)$$
     $$\frac{\partial q_4}{\partial t} = -c\sqrt{2}\left(\frac{\partial q_1}{\partial x}\right)-\frac{1}{\tau}\left(\frac{q_4-q_1^2}{q_0\sqrt{2}}\right)$$
-    $$\frac{\partial q_5}{\partial t} = -c\sqrt{2}\left(\frac{\partial q_2}{\partial y}\right)-\frac{1}{\tau}\left(\frac{q_5-q_2^2}{q_0\sqrt{2}}\right)$$    
+    $$\frac{\partial q_5}{\partial t} = -c\sqrt{2}\left(\frac{\partial q_2}{\partial y}\right)-\frac{1}{\tau}\left(\frac{q_5-q_2^2}{q_0\sqrt{2}}\right)$$
+  * This solver demonstrates explicit time-stepping using (LSERK4, DOPRI5), semi-implicit (SAAB3, SARK4), multirate semi-implicit (MRSAAB3) with and upwind nodal discontinuous Galerkin discretization and nodal or cubature relaxation terms.
+
 
 **cns**
 * Compressible Navier-Stokes (does not include: limiting, artificial viscosity, entropy stable formulation)
