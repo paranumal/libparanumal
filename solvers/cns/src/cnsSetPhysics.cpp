@@ -139,7 +139,7 @@ void cns_t::setupPhysics(properties_t & props){
   props["defines/" "p_RRID"]    = RRID;
   props["defines/" "p_CPID"]    = CPID;
   props["defines/" "p_CVID"]    = CVID;
-  props["defines/" "p_KAID"]    = KAID;
+  props["defines/" "p_KAID"]    = KAID; 
   props["defines/" "p_M2ID"]    = M2ID;
   props["defines/" "p_EXID"]    = EXID;
   props["defines/" "p_TRID"]    = TRID;

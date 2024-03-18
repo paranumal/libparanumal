@@ -119,7 +119,7 @@ SOFTWARE.
           dfloat EP  = EM;
 
          cnsInviscidBoundaryConditions3D(bc, gamma, R, CP, CV, mu,
-                                          time, x[idM], y[idM], z[idM], nx, ny,nz,
+                                          time, x[idM], y[idM], z[idM], nx, ny, nz,
                                           rM, ruM, rvM, rwM, EM, 
                                           &rP, &ruP, &rvP, &rwP, &EP);
           dfloat uP = ruP/rP; 

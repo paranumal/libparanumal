@@ -83,7 +83,7 @@ void stab_t::detectSetupKlockner(){
    props["defines/" "s_Ndfields"]= Ndfields;
    props["defines/" "s_Nsfields"]= Nsfields;
    // props["defines/" "s_sS0"] = mesh.N <= 3 ? 1.0:2.0;  
-   props["defines/" "s_sS0"] = 1.0; 
+   props["defines/" "s_sS0"] = 2.0; 
    props["defines/" "s_sK0"] = 1.0;  
    props["defines/" "p_Nq"]  = mesh.N+1;
 

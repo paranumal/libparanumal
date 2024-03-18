@@ -42,11 +42,11 @@ SOFTWARE.
   #define p_PBAR 2.00000
   #define p_TBAR 1.00000
 #elif MACH==1.2
-  #define p_RBAR 2.01600
-  #define p_UBAR 0.984807753012208
-  #define p_VBAR 0.173648177666930
+  #define p_RBAR 1.00000
+  #define p_UBAR 1.00000
+  #define p_VBAR 0.00000
   #define p_WBAR 0.00000
-  #define p_PBAR 1.00000
+  #define p_PBAR 0.496031746031746
   #define p_TBAR 1.00000
 #elif MACH==2.0
   #define p_RBAR 5.60000
@@ -152,7 +152,7 @@ const dfloat keREF = 0.5*p_RBAR*(p_UBAR*p_UBAR+p_VBAR*p_VBAR+p_WBAR*p_WBAR); \
         *( rB) = p_RBAR;                                                     \
         *(ruB) = p_RBAR*p_UBAR;                                              \
         *(rvB) = p_RBAR*p_VBAR;                                              \
-        *(rvB) = p_RBAR*p_WBAR;                                              \
+        *(rwB) = p_RBAR*p_WBAR;                                              \
         *(reB) = p_PBAR/(gamma -1.0) + keREF;                                \
       }else{                                                                 \
         *( rB) = p_RBAR;                                                     \
@@ -193,7 +193,7 @@ const dfloat keREF = 0.5*p_RBAR*(p_UBAR*p_UBAR+p_VBAR*p_VBAR+p_WBAR*p_WBAR); \
     *(ruB) = ruM;                                                            \
     *(rvB) = rvM;                                                            \
     *(rwB) = rwM;                                                            \
-    *(reB) = p_PBAR/(gamma -1.0) + 0.5*rM*(uM*uM + vM*vM+wM*wM);             \
+    *(reB) = p_PBAR/(gamma -1.0) + 0.5*rM*(uM*uM + vM*vM + wM*wM);           \
    }else if(bc==32){                                                         \
     *( rB) = rM;                                                             \
     *(ruB) = ruM;                                                            \

@@ -44,30 +44,50 @@ void cns_t::setupArtificialDiffusion(properties_t & kernelInfo){
   std::string oklFileSuffix = ".okl";
   std::string fileName, kernelName;
 
- // kernels from volume file Add isothermal version as well AK. 
-  fileName   = oklFilePrefix + "cnsGradVolumeConservative" + suffix + oklFileSuffix;
-  kernelName = "cnsGradVolumeConservative" + suffix; 
-  gradVolumeKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
+// kernels from volume file Add isothermal version as well AK. 
+    // fileName   = oklFilePrefix + "cnsGradVolumeConservative" + suffix + oklFileSuffix;
+    // kernelName = "cnsGradVolumeConservative" + suffix; 
+    // gradVolumeKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
 
-  // kernels from surface file
-  fileName   = oklFilePrefix + "cnsGradSurfaceConservative" + suffix + oklFileSuffix;
-  kernelName = "cnsGradSurfaceConservative" + suffix; // gradient of all conservative fields
-  gradSurfaceKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
+    // // kernels from surface file
+    // fileName   = oklFilePrefix + "cnsGradSurfaceConservative" + suffix + oklFileSuffix;
+    // kernelName = "cnsGradSurfaceConservative" + suffix; // gradient of all conservative fields
+    // gradSurfaceKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 
   if(cubature){
-    if(settings.compareSetting("ARTDIFF TYPE", "LAPLACE")){
-      // kernels from volume file
-      fileName   = oklFilePrefix + "cnsCubatureVolumeArtDiff" + suffix + oklFileSuffix;
-      kernelName = "cnsCubatureVolumeArtificialDiffsuionLaplace" + suffix;
-      cubatureVolumeKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
+    // kernels from volume file Add isothermal version as well AK. 
+      fileName   = oklFilePrefix + "cnsGradVolumeConservative" + suffix + oklFileSuffix;
+      kernelName = "cnsGradCubatureVolumeConservative" + suffix; 
+      cubatureGradVolumeKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
 
       // kernels from surface file
-      fileName   = oklFilePrefix + "cnsCubatureSurfaceArtDiff" + suffix + oklFileSuffix;
-      kernelName = "cnsCubatureSurfaceArtificialDiffusionLaplace" + suffix;
-      cubatureSurfaceKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
-    }
+      fileName   = oklFilePrefix + "cnsGradSurfaceConservative" + suffix + oklFileSuffix;
+      kernelName = "cnsGradCubatureSurfaceConservative" + suffix; // gradient of all conservative fields
+      cubatureGradSurfaceKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
+
+      if(settings.compareSetting("ARTDIFF TYPE", "LAPLACE")){
+        // kernels from volume file
+        fileName   = oklFilePrefix + "cnsCubatureVolumeArtDiff" + suffix + oklFileSuffix;
+        kernelName = "cnsCubatureVolumeArtificialDiffsuionLaplace" + suffix;
+        cubatureVolumeKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
+
+        // kernels from surface file
+        fileName   = oklFilePrefix + "cnsCubatureSurfaceArtDiff" + suffix + oklFileSuffix;
+        kernelName = "cnsCubatureSurfaceArtificialDiffusionLaplace" + suffix;
+        cubatureSurfaceKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
+      }
    }else{
-     if(settings.compareSetting("ARTDIFF TYPE", "LAPLACE")){
+      // kernels from volume file Add isothermal version as well AK. 
+      fileName   = oklFilePrefix + "cnsGradVolumeConservative" + suffix + oklFileSuffix;
+      kernelName = "cnsGradVolumeConservative" + suffix; 
+      gradVolumeKernel =  platform.buildKernel(fileName, kernelName, kernelInfo);
+
+      // kernels from surface file
+      fileName   = oklFilePrefix + "cnsGradSurfaceConservative" + suffix + oklFileSuffix;
+      kernelName = "cnsGradSurfaceConservative" + suffix; // gradient of all conservative fields
+      gradSurfaceKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
+
+      if(settings.compareSetting("ARTDIFF TYPE", "LAPLACE")){
       // kernels from volume file
       fileName   = oklFilePrefix + "cnsVolumeArtDiff" + suffix + oklFileSuffix;
       kernelName = "cnsVolumeArtificialDiffsuionLaplace" + suffix;

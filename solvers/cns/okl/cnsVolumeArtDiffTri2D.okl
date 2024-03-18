@@ -180,8 +180,8 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
       {
         // F3 = mu*(u*T11+v*T12) - (uE+up), G2 = mu*(u*T12+v*T22) - (vE+vp)
         const dfloat kappa = CP*mu/Pr; 
-        const dfloat f = -(u*rE+u*p) + (u*T11 + v*T12) + kappa*Tx + amu*dredx;
-        const dfloat g = -(v*rE+v*p) + (u*T12 + v*T22) + kappa*Ty + amu*dredy;
+        const dfloat f = -(u*rE+u*p) + (u*T11 + v*T12) - kappa*Tx + amu*dredx;
+        const dfloat g = -(v*rE+v*p) + (u*T12 + v*T22) - kappa*Ty + amu*dredy;
         s_F[3][n] = drdx*f + drdy*g;
         s_G[3][n] = dsdx*f + dsdy*g;
       }

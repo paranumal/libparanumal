@@ -2,14 +2,18 @@
 2.0
 
 [DATA FILE]
+#data/cnsShear2D.h
 #data/cnsGaussian2D.h
 #data/cnsUniform2Dv2.h
 data/cnsUniform2D.h
 #*******************[MESH PROPERTIES]*******************#
 [MESH FILE]
 #BOX
+#../../meshes/cnsShear2D_2.msh
 #../../meshes/cnsNACA2D_LD.msh
-../../meshes/cnsNACAFlexi2D.msh
+../../meshes/cnsSquare2D.msh
+#../../meshes/cnsNACA2D.msh
+#../../meshes/cnsNACAFlexi2D.msh
 #../../meshes/cnsNACA2D_Symmetry.msh
 #../../meshes/cnsGaussTri2D.msh
 
@@ -20,13 +24,10 @@ data/cnsUniform2D.h
 3
 
 [BOX NX]
-51
+21
 
 [BOX NY]
-101
-
-[BOX NZ]
-101
+21
 
 [BOX BOUNDARY FLAG]
 11
@@ -40,6 +41,7 @@ NAVIER-STOKES
 
 # If TRUE compute R and mu from Mach & Reynolds//
 [NONDIMENSIONAL EQUATIONS]
+#FALSE
 TRUE
 
 [ISOTHERMAL]
@@ -47,16 +49,16 @@ FALSE
 
 #Can be COLLOCATION or CUBATURE
 [ADVECTION TYPE]
-COLLOCATION
-#CUBATURE
+#COLLOCATION
+CUBATURE
 
-# 0 < beta < 1 
+# 0 <= beta <= 1 
 [LDG BETA COEFFICIENT]
-0.5
+0.0
 
-# 0 < tau < 1.0
+# 0 <= tau <= 1.0
 [LDG TAU COEFFICIENT]
-0.5
+0.0
 
 [TIME INTEGRATOR]
 DOPRI5
@@ -80,11 +82,12 @@ CUDA
 
 # // Mach number is needed for NONDIM=TRUE
 [MACH NUMBER]
-0.2
+0.4
+#0.816496580927726
 
 # Reynolds number is needed for NONDIM = TRUE
 [REYNOLDS NUMBER]
-1000000
+1e6
 
 # R is needed if NONDIM=FALSE otherwise  R = 1.0/(gamma*Ma^2) 
 [SPECIFIC GAS CONSTANT]
@@ -108,13 +111,13 @@ CONSTANT
 1.0, 1.0, 1.0, 1.0, 1.0, 1.0
 
 [CFL NUMBER]
-0.5
+0.1
 
 [START TIME]
 0
 
 [FINAL TIME]
-50
+10.0
 
 #*******************[OUTPUT PROPERTIES]*******************#
 [OUTPUT INTERVAL]
@@ -127,9 +130,6 @@ TRUE
 cns
 
 [REPORT FORCES]
-TRUE
-
-[REPORT MOMENTS]
 TRUE
 
 [MOMENT CENTER]
@@ -156,7 +156,7 @@ TRUE
 WARPBLEND
 
 [STAB OUTPUT TO FILE]
-TRUE
+FALSE
 
 # [LAPLACE], [PHYSICAL X do not use this option for now!!!!] 
 [ARTDIFF TYPE]

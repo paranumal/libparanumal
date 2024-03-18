@@ -25,20 +25,20 @@ SOFTWARE.
 */
 
 #define p_RBAR 1.4
-#define p_UBAR 0.984807753012208
-#define p_VBAR 0.173648177666930
-#define p_WBAR 0.173648177666930
-#define p_PBAR 100
+#define p_UBAR 1.0
+#define p_VBAR 0.0
+#define p_WBAR 0.0
+#define p_PBAR 71.428571428571431
 #define p_TBAR 1.00000
 
 // Initial conditions (p is ignored for isothermal)
 #define cnsInitialConditions3D(gamma, mu, t, x, y, z, r, u, v, w, p) \
 {                                         \
-  *(r) = 1 + exp(-3*(x*x+y*y+z*z));       \
-  *(u) = exp(-3*(x*x+y*y+z*z));           \
-  *(v) = exp(-3*(x*x+y*y+z*z));           \
-  *(w) = exp(-3*(x*x+y*y+z*z));           \
-  *(p) = 71.428571428571431*(1 + exp(-3*(x*x+y*y+z*z)));       \
+  *(r) = p_RBAR*(1 + exp(-3*(x*x+y*y+z*z)));       \
+  *(u) = p_UBAR*exp(-3*(x*x+y*y+z*z));             \
+  *(v) = p_VBAR*exp(-3*(x*x+y*y+z*z));             \
+  *(w) = p_WBAR*exp(-3*(x*x+y*y+z*z));             \
+  *(p) = p_PBAR*(1 + exp(-3*(x*x+y*y+z*z)));       \
 }
 
 // Body force
@@ -88,7 +88,7 @@ const dfloat keREF = 0.5*p_RBAR*(p_UBAR*p_UBAR+p_VBAR*p_VBAR+p_WBAR*p_WBAR); \
         *( rB) = p_RBAR;                                                     \
         *(ruB) = p_RBAR*p_UBAR;                                              \
         *(rvB) = p_RBAR*p_VBAR;                                              \
-        *(rvB) = p_RBAR*p_WBAR;                                              \
+        *(rwB) = p_RBAR*p_WBAR;                                              \
         *(reB) = p_PBAR/(gamma -1.0) + keREF;                                \
       }else{                                                                 \
         *( rB) = p_RBAR;                                                     \

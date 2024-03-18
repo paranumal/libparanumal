@@ -7,8 +7,9 @@ data/cnsUniform3D.h
 #*******************[MESH PROPERTIES]*******************#
 [MESH FILE]
 #BOX
-#../../meshes/cnsNACA3D.msh
-../../meshes/cnsBody3D.msh
+../../meshes/cnsNACA3D.msh
+#../../meshes/cnsBody3D.msh
+#../../meshes/cnsFFS3D.msh
 
 [MESH DIMENSION]
 3
@@ -17,20 +18,21 @@ data/cnsUniform3D.h
 6
 
 [BOX NX]
-21
+11
 
 [BOX NY]
-21
+11
 
 [BOX NZ]
-21
-
+11
 
 [BOX BOUNDARY FLAG]
-11
+20
+
+
 #*******************[DISCRETIZATION PROPERTIES]************#
 [POLYNOMIAL DEGREE]
-3
+4
 
 [SOLVER TYPE]
 #EULER
@@ -45,16 +47,16 @@ FALSE
 
 #Can be COLLOCATION or CUBATURE
 [ADVECTION TYPE]
-COLLOCATION
-#CUBATURE
+#COLLOCATION
+CUBATURE
 
 # 0 < beta < 1 
 [LDG BETA COEFFICIENT]
-0.5
+0.0
 
 # 0 < tau < 1.0
 [LDG TAU COEFFICIENT]
-0.5
+1.0
 
 [TIME INTEGRATOR]
 DOPRI5
@@ -105,17 +107,17 @@ CONSTANT
 1.0, 1.0, 1.0, 1.0, 1.0, 1.0
 
 [CFL NUMBER]
-0.5
+0.01
 
 [START TIME]
 0
 
 [FINAL TIME]
-0.1
+1.0
 
 #*******************[OUTPUT PROPERTIES]*******************#
 [OUTPUT INTERVAL]
-0.025
+0.001
 
 [OUTPUT TO FILE]
 TRUE
@@ -124,9 +126,6 @@ TRUE
 cns
 
 [REPORT FORCES]
-TRUE
-
-[REPORT MOMENTS]
 TRUE
 
 [MOMENT CENTER]
@@ -153,12 +152,12 @@ TRUE
 WARPBLEND
 
 [STAB OUTPUT TO FILE]
-TRUE
+FALSE
 
 # [LAPLACE], [PHYSICAL X do not use this option for now!!!!] 
 [ARTDIFF TYPE]
 LAPLACE
 
 [ARTDIFF SCALE FACTOR]
-3
+0.1
 

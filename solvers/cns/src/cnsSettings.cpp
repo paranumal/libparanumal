@@ -106,11 +106,7 @@ cnsSettings_t::cnsSettings_t(comm_t& _comm):
              "Flag for reporting forces",
              {"TRUE", "FALSE"});
 
-  newSetting("REPORT MOMENTS", "FALSE",
-             "Flag for reporting moments",
-             {"TRUE", "FALSE"});
-
-   newSetting("MOMENT CENTER", "0.0, 0.0, 0.0",
+  newSetting("MOMENT CENTER", "0.0, 0.0, 0.0",
              "Center for the moments");
 
 

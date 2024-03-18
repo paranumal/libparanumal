@@ -81,9 +81,9 @@ void upwindRoeAveraged(const dfloat nx,
   const dfloat c = sqrt(c2);
 
   // normal velocity
-  const dfloat qP = nx*uP+ny*vP+nz*wP;
-  const dfloat qM = nx*uM+ny*vM+nz*wM;
-  const dfloat q  = nx*u +ny*v +nz*w;
+  const dfloat qP = nx*uP + ny*vP + nz*wP;
+  const dfloat qM = nx*uM + ny*vM + nz*wM;
+  const dfloat q  = nx*u  + ny*v  + nz*w;
 
   // jump terms
   const dfloat dp = pP-pM;
@@ -280,8 +280,8 @@ void upwindRoeAveraged(const dfloat nx,
           pM          = PMIN + LMAX(pM-PMIN, ALPHA); 
           pP          = PMIN + LMAX(pP-PMIN, ALPHA); 
           // reconstruct energy accordingly
-          rEM = pM/(gamma-1.0) + 0.5f*rrM*(uM*uM+vM*vM+wM*wM); 
-          rEP = pP/(gamma-1.0) + 0.5f*rrP*(uP*uP+vP*vP+wP*wP); 
+          rEM = pM/(gamma-1.0) + 0.5f*rrM*(uM*uM + vM*vM + wM*wM); 
+          rEP = pP/(gamma-1.0) + 0.5f*rrP*(uP*uP + vP*vP + wP*wP); 
         #endif 
 
         dfloat rflux, ruflux, rvflux, rwflux, Eflux;
@@ -324,7 +324,6 @@ void upwindRoeAveraged(const dfloat nx,
             // update  primite variables           
             irP = 1.0/rrP, uP  = ruP*irP,  vP  = rvP*irP,  wP  = rwP*irP;
             pP  = (gamma-1)*(rEP - 0.5*rrP*(uP*uP+vP*vP+wP*wP));         
-
             }
 
         // Derivative of velocities
@@ -362,18 +361,18 @@ void upwindRoeAveraged(const dfloat nx,
         const dfloat dkedzP = (uP*dudzP + vP*dvdzP + wP*dwdzP);
 
        if(p_viscType==2){ // Sutherland     
-              const dfloat exp  = pCoeff[p_EXID]; // Exponential term
-              const dfloat tr   = pCoeff[p_TRID]; // 1/Tref 
-              const dfloat ts   = pCoeff[p_TSID]; // Ts/Tref
-              const dfloat cs   = pCoeff[p_CSID]; // precomuted value to simlify
-              const dfloat tnP   = pP*irP*tr/R; // non-dimensional temp
-              muP  = (tnP > ts) ? (muP*pow(tnP, exp)*(1.0+ts)/(tnP + ts)) : muP*tnP*cs;  
-            }else if(p_viscType==3){ // Powerlaw 
-              // mu = mu_ref * (T/Tref)**exp = (mu_ref/T_ref**exp) * T**exp = ( mu )* T**exp
-              const dfloat exp  = pCoeff[p_EXID]; // Exponential term
-              const dfloat TempP  = pP*irP/R;       // Temperature
-              muP = muP*pow(TempP, exp); 
-            }
+          const dfloat exp  = pCoeff[p_EXID]; // Exponential term
+          const dfloat tr   = pCoeff[p_TRID]; // 1/Tref 
+          const dfloat ts   = pCoeff[p_TSID]; // Ts/Tref
+          const dfloat cs   = pCoeff[p_CSID]; // precomuted value to simlify
+          const dfloat tnP   = pP*irP*tr/R; // non-dimensional temp
+          muP  = (tnP > ts) ? (muP*pow(tnP, exp)*(1.0+ts)/(tnP + ts)) : muP*tnP*cs;  
+        }else if(p_viscType==3){ // Powerlaw 
+          // mu = mu_ref * (T/Tref)**exp = (mu_ref/T_ref**exp) * T**exp = ( mu )* T**exp
+          const dfloat exp  = pCoeff[p_EXID]; // Exponential term
+          const dfloat TempP  = pP*irP/R;       // Temperature
+          muP = muP*pow(TempP, exp); 
+        }
 
         const dfloat TxM = (dredxM*irM - rEM*drrdxM*irM*irM - dkedxM);
         const dfloat TyM = (dredyM*irM - rEM*drrdyM*irM*irM - dkedyM);
@@ -384,7 +383,6 @@ void upwindRoeAveraged(const dfloat nx,
         const dfloat TzP = (dredzP*irP - rEP*drrdzP*irP*irP - dkedzP);
 
          const dfloat sbeta = 2.0/3.0; 
-
 
         dfloat T01M = 0., T02M = 0., T03M = 0.;
         dfloat T11M = muM*(2.0*dudxM - sbeta*(dudxM+dvdyM+dwdzM));

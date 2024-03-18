@@ -219,7 +219,7 @@ dfloat stab_t::ElementViscosityScaleTet3D(dlong e) {
 
     h = std::min(h, hest);
   }
-  return h/(mesh.N*mesh.N);
+  return h/(mesh.N*mesh.N*mesh.N);
 }
 
 dfloat stab_t::ElementViscosityScaleHex3D(dlong e) {
@@ -243,7 +243,7 @@ dfloat stab_t::ElementViscosityScaleHex3D(dlong e) {
 
     h = std::min(h, hest);
   }
-  return h/(mesh.N*mesh.N);
+  return h/(mesh.N*mesh.N*mesh.N);
 };
 
 

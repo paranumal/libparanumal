@@ -102,6 +102,9 @@ public:
   kernel_t gradVolumeKernel;
   kernel_t gradSurfaceKernel;
 
+  kernel_t cubatureGradVolumeKernel;
+  kernel_t cubatureGradSurfaceKernel;
+
   kernel_t vorticityKernel;
 
   kernel_t constrainKernel;

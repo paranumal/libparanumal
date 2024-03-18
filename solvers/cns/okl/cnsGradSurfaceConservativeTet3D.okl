@@ -134,9 +134,9 @@ SOFTWARE.
 
             }
 
-            const dfloat sc = 0.5*invJ*sJ;
-            const dfloat alphaM = 0.5 + beta; 
-            const dfloat alphaP = 0.5 - beta; 
+            const dfloat sc = invJ*sJ;
+            const dfloat alphaM = 0.5 - beta; 
+            const dfloat alphaP = 0.5 + beta; 
 
             s_gradflux[ 0][n] = sc*nx*( alphaM*rrM + alphaP*rrP  - rrM);
             s_gradflux[ 1][n] = sc*ny*( alphaM*rrM + alphaP*rrP  - rrM);

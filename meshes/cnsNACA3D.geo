@@ -234,68 +234,68 @@ Extrude {0, 0, L} { Surface{1};}
 // Printf("next point ID = %g", newp);
 // Printf("next point ID = %g; next line ID = %g; next surface ID = %g", newp,  newl, news);
 
-xc   = DefineNumber[0];
-yc   = DefineNumber[0];
-zc   = DefineNumber[-L/2];
+// xc   = DefineNumber[0];
+// yc   = DefineNumber[0];
+// zc   = DefineNumber[-L/2];
 
-xi   = DefineNumber[0];
-yi   = DefineNumber[1.0];
-zi   = DefineNumber[-L/2];
+// xi   = DefineNumber[0];
+// yi   = DefineNumber[1.0];
+// zi   = DefineNumber[-L/2];
 
-yomin   = DefineNumber[-3.0];
-yomax   = -yomin; 
-zomin   = -L/2; 
+// yomin   = DefineNumber[-3.0];
+// yomax   = -yomin; 
+// zomin   = -L/2; 
 
-xomin   = DefineNumber[3.0];
-xomax   = DefineNumber[4.0];
+// xomin   = DefineNumber[3.0];
+// xomax   = DefineNumber[4.0];
 
 
-// External box
-p1 = newp; Point(p1) = { xc, yc,  zomin, lc3}; 
-p2 = newp; Point(p2) = { xc, yomin,  zomin, lc3}; 
-p3 = newp; Point(p3) = { xomax, yomin,  zomin, lc3}; 
-p4 = newp; Point(p4) = { xomax, yomax,  zomin, lc3}; 
-p5 = newp; Point(p5) = { xc,   yomax,  zomin, lc3}; 
-p6 = newp; Point(p6) = { yomin,  yc,  zomin, lc3}; 
+// // External box
+// p1 = newp; Point(p1) = { xc, yc,  zomin, lc3}; 
+// p2 = newp; Point(p2) = { xc, yomin,  zomin, lc3}; 
+// p3 = newp; Point(p3) = { xomax, yomin,  zomin, lc3}; 
+// p4 = newp; Point(p4) = { xomax, yomax,  zomin, lc3}; 
+// p5 = newp; Point(p5) = { xc,   yomax,  zomin, lc3}; 
+// p6 = newp; Point(p6) = { yomin,  yc,  zomin, lc3}; 
 
-// Internal region
-p7 = newp; Point(p7) = { xi, -yi,  zomin, lc2}; 
-p8 = newp; Point(p8) = { xi,  yi,  zomin, lc2}; 
-p9 = newp; Point(p9) = { -yi,  0.0,  zomin, lc2}; 
+// // Internal region
+// p7 = newp; Point(p7) = { xi, -yi,  zomin, lc2}; 
+// p8 = newp; Point(p8) = { xi,  yi,  zomin, lc2}; 
+// p9 = newp; Point(p9) = { -yi,  0.0,  zomin, lc2}; 
+// p10 = newp;  Point(p10) = { xomax, -(yi+0.5),  zomin, lc2}; 
+// p11 = newp;  Point(p11) = { xomax,  (yi+0.5),  zomin, lc2}; 
 
-p10 = newp;  Point(p10) = { xomax, -(yi+0.5),  zomin, lc2}; 
-p11 = newp;  Point(p11) = { xomax,  (yi+0.5),  zomin, lc2}; 
+// l1 = newc; Line(l1) = {p2,  p3};
+// l2 = newc; Line(l2) = {p3,  p10};
+// l3 = newc; Line(l3) = {p10, p11};
+// l4 = newc; Line(l4) = {p11, p4}; 
+// l5 = newc; Line(l5) = {p4,  p5}; 
 
-l1 = newc; Line(l1) = {p2,  p3};
-l2 = newc; Line(l2) = {p3,  p10};
-l3 = newc; Line(l3) = {p10, p11};
-l4 = newc; Line(l4) = {p11, p4}; 
-l5 = newc; Line(l5) = {p4,  p5}; 
+// c1 = newc; Circle(c1) = {p5, p1, p6};
+// c2 = newc; Circle(c2) = {p6, p1, p2};
 
-c1 = newc; Circle(c1) = {p5, p1, p6};
-c2 = newc; Circle(c2) = {p6, p1, p2};
+// l6 = newc; Line(l6)  = {p7,p10}; 
+// l7 = newc; Line(l7)  = {p8,p11}; 
 
-l6 = newc; Line(l6)  = {p7,p10}; 
-l7 = newc; Line(l7)  = {p8,p11}; 
+// c3 = newc; Circle(c3) = {p8, p1, p9};
+// c4 = newc; Circle(c4) = {p9, p1, p7};
 
-c3 = newc; Circle(c3) = {p8, p1, p9};
-c4 = newc; Circle(c4) = {p9, p1, p7};
+// //+
+// Curve Loop(7) = {22, 23, 20, 15, -21};
+// //+
+// Plane Surface(7) = {7};
+// //+
+// Curve Loop(8) = {18, 19, 13, 14, -20, -23, -22, 21, 16, 17};
+// //+
+// Plane Surface(8) = {8};
+// Extrude {0, 0, 3*L} { Surface{7,8};}
 
-//+
-Curve Loop(7) = {22, 23, 20, 15, -21};
-//+
-Plane Surface(7) = {7};
-//+
-Curve Loop(8) = {18, 19, 13, 14, -20, -23, -22, 21, 16, 17};
-//+
-Plane Surface(8) = {8};
-Extrude {0, 0, 3*L} { Surface{7,8};}
+// BooleanDifference{ Volume{2}; Delete; }{ Volume{1}; Delete; }
 
-BooleanDifference{ Volume{2}; Delete; }{ Volume{1}; Delete; }
-
-Physical Surface("Farfield", 20) = {15, 16, 17, 20, 19, 24, 18, 21, 23};
-Physical Surface("Wall", 11) = {25, 26, 29, 27, 28};
-Physical Surface("Symmetry", 13) = {8, 22};
-Physical Volume("Domain", 9) = {3, 2};
-Coherence;
-Mesh.MeshSizeFromCurvature = 20;
+// // Physical Surface("Farfield", 20) = {15, 16, 17, 20, 19, 24, 18, 21, 23};
+// Physical Surface("Farfield", 20) = {15, 16, 17, 20, 19, 24, 18};
+// Physical Surface("Wall", 11) = {2,3,4,5,6};
+// Physical Surface("Symmetry", 13) = {8, 22,21,23};
+// Physical Volume("Domain", 9) = {3, 2};
+// Coherence;
+// Mesh.MeshSizeFromCurvature = 20;

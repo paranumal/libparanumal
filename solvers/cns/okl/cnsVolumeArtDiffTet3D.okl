@@ -247,6 +247,7 @@ for(int n=0;n<p_Np;++n;@inner(0)){
         const dfloat Drni = D[n+i*p_Np+0*p_Np*p_Np];
         const dfloat Dsni = D[n+i*p_Np+1*p_Np*p_Np];
         const dfloat Dtni = D[n+i*p_Np+2*p_Np*p_Np];
+        
         rhsq0 += Drni*s_F[0][i]+Dsni*s_G[0][i]+Dtni*s_H[0][i];
         rhsq1 += Drni*s_F[1][i]+Dsni*s_G[1][i]+Dtni*s_H[1][i];
         rhsq2 += Drni*s_F[2][i]+Dsni*s_G[2][i]+Dtni*s_H[2][i];

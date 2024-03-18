@@ -111,9 +111,16 @@ SOFTWARE.
           dfloat rvP = rvM;
           dfloat EP  = EM;
 
-          cnsInviscidBoundaryConditions2D(bc, gamma, R, CP, CV, mu,
+          dfloat drrdxP, drrdyP; 
+          dfloat drudxP, drudyP; 
+          dfloat drvdxP, drvdyP; 
+          dfloat dredxP, dredyP; 
+
+          cnsViscousBoundaryConditions2D(bc, gamma, R, CP, CV, mu,
                                           time, x[idM], y[idM], nx, ny,
-                                          rM, ruM, rvM, EM, &rP, &ruP, &rvP, &EP);
+                                          rM, ruM, rvM, EM, &rP, &ruP, &rvP, &EP,
+                                          0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                          &drrdxP, &drrdyP, &drudxP, &drudyP, &drvdxP, &drvdyP, &dredxP, &dredyP);
           dfloat uP = ruP/rP; 
           dfloat vP = rvP/rP; 
           dfloat pP = (gamma-1)*(EP-0.5*rP*(uP*uP+vP*vP));

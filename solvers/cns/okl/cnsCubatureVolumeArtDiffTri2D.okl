@@ -165,7 +165,7 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
       const dfloat u  = ru*ir, v  = rv*ir;
       
       // pressure field
-      dfloat p  = (gamma-1)*(rE- 0.5f*rr*(u*u + v*v));
+      dfloat p  = (gamma-1)*(rE- 0.5*rr*(u*u + v*v));
       // Positivity Check
         dfloat dp=1.0; 
       #if POSITIVITY
@@ -175,8 +175,8 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
 
       // Find derivative of primitives
       const dfloat dudx  = (drudx - drrdx*u)*ir;
-      const dfloat dvdx  = (drvdx - drrdx*v)*ir;
       const dfloat dudy  = (drudy - drrdy*u)*ir;
+      const dfloat dvdx  = (drvdx - drrdx*v)*ir;
       const dfloat dvdy  = (drvdy - drrdy*v)*ir;
 
       if(p_viscType==2){ // Sutherland
@@ -217,7 +217,7 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
       s_G[2][n] = -(rv*v+p) + T22 + rm*drvdy;
 
       // F3 = mu*(u*T11+v*T12) - (uE+up), G2 = mu*(u*T12+v*T22) - (vE+vp)
-      const dfloat kappa = (CP*mu/Pr); 
+      const dfloat kappa = CP*mu/Pr; 
       s_F[3][n] = -u*(rE+p) + (u*T11 + v*T12 ) + kappa*Tx + rm*dredx;
       s_G[3][n] = -v*(rE+p) + (u*T12 + v*T22 ) + kappa*Ty + rm*dredy;
     }

@@ -88,16 +88,48 @@ void cns_t::rhsArtDiff(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, c
   // extract q trace halo and start exchange
   fieldTraceHalo.ExchangeStart(o_Q, 1);
 
-// compute volume contributions to gradients
-  gradVolumeKernel(mesh.Nelements,
+  if (cubature) {
+    cubatureGradVolumeKernel(mesh.Nelements,
+                     mesh.o_vgeo,
+                     mesh.o_cubvgeo,
+                     mesh.o_cubD,
+                     mesh.o_cubPDT,
+                     mesh.o_cubInterp,
+                     mesh.o_cubProject,
+                     o_Q,
+                     o_gradq);    
+  }else{
+    // compute volume contributions to gradients
+    gradVolumeKernel(mesh.Nelements,
                    mesh.o_vgeo,
                    mesh.o_D,
                    o_Q,
-                   o_gradq);
+                   o_gradq);    
+  }
+
+
 
   // complete trace halo exchange
   fieldTraceHalo.ExchangeFinish(o_Q, 1);
 
+
+  if (cubature) {
+    cubatureGradSurfaceKernel(mesh.Nelements,
+                            mesh.o_vgeo,
+                            mesh.o_cubsgeo,
+                            mesh.o_vmapM,
+                            mesh.o_vmapP,
+                            mesh.o_EToB,
+                            mesh.o_intInterp,
+                            mesh.o_intLIFT,
+                            mesh.o_intx,
+                            mesh.o_inty,
+                            mesh.o_intz,
+                            o_pCoeff, 
+                            T,
+                            o_Q,
+                            o_gradq);
+  }else{
    // compute surface contributions to gradients
   gradSurfaceKernel(mesh.Nelements,
                     mesh.o_sgeo,
@@ -112,6 +144,9 @@ void cns_t::rhsArtDiff(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, c
                     T,
                     o_Q,
                     o_gradq);
+  }
+
+
 
   // extract viscousStresses trace halo and start exchange
   gradTraceHalo.ExchangeStart(o_gradq, 1);

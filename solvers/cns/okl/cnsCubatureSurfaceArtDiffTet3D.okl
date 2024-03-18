@@ -506,7 +506,7 @@ void upwindRoeAveraged(const dfloat nx,
 
 
           // viscous flux
-          const dfloat alphaM = 0.5-beta, alphaP = 0.5+beta;  
+          const dfloat alphaM = 0.5 + beta, alphaP = 0.5-beta;  
 
           // - n \dot F_vis 
           rflux  -= (nx*(alphaM*T01M+alphaP*T01P-T01M)+
