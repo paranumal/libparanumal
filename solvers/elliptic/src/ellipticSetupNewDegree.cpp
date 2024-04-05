@@ -68,7 +68,9 @@ elliptic_t elliptic_t::SetupNewDegree(mesh_t& meshC){
 
   //add standard boundary functions
   std::string boundaryHeaderFileName;
-  if (meshC.dim==2)
+  if (meshC.dim==1)
+    boundaryHeaderFileName = std::string(DELLIPTIC "/data/ellipticBoundary1D.h");
+  else if (meshC.dim==2)
     boundaryHeaderFileName = std::string(DELLIPTIC "/data/ellipticBoundary2D.h");
   else if (meshC.dim==3)
     boundaryHeaderFileName = std::string(DELLIPTIC "/data/ellipticBoundary3D.h");

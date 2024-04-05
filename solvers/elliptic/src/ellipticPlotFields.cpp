@@ -54,11 +54,18 @@ void elliptic_t::PlotFields(memory<dfloat>& Q, std::string fileName){
   // compute plot node coordinates on the fly
   for(dlong e=0;e<mesh.Nelements;++e){
     mesh.PlotInterp(mesh.x + e*mesh.Np, Ix, scratch);
-    mesh.PlotInterp(mesh.y + e*mesh.Np, Iy, scratch);
+    if(mesh.dim>1)
+      mesh.PlotInterp(mesh.y + e*mesh.Np, Iy, scratch);
     if(mesh.dim==3)
       mesh.PlotInterp(mesh.z + e*mesh.Np, Iz, scratch);
 
-    if (mesh.dim==2) {
+    if (mesh.dim==1) {
+      for(int n=0;n<mesh.plotNp;++n){
+        fprintf(fp, "       ");
+        fprintf(fp, "%g %g %g\n", Ix[n],0.0,0.0);
+      }
+    }
+    else if (mesh.dim==2) {
       for(int n=0;n<mesh.plotNp;++n){
         fprintf(fp, "       ");
         fprintf(fp, "%g %g %g\n", Ix[n],Iy[n],0.0);
@@ -120,7 +127,9 @@ void elliptic_t::PlotFields(memory<dfloat>& Q, std::string fileName){
   fprintf(fp, "       <DataArray type=\"Int32\" Name=\"types\" Format=\"ascii\">\n");
   for(dlong e=0;e<mesh.Nelements;++e){
     for(int n=0;n<mesh.plotNelements;++n){
-      if(mesh.dim==2)
+      if(mesh.dim==1)
+        fprintf(fp, "2\n"); // ????
+      else if(mesh.dim==2)
         fprintf(fp, "5\n");
       else
         fprintf(fp, "10\n");

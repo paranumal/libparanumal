@@ -61,7 +61,9 @@ void elliptic_t::Run(){
 
   //add standard boundary functions
   std::string boundaryHeaderFileName;
-  if (mesh.dim==2)
+  if (mesh.dim==1)
+    boundaryHeaderFileName = std::string(DELLIPTIC "/data/ellipticBoundary1D.h");
+  else if (mesh.dim==2)
     boundaryHeaderFileName = std::string(DELLIPTIC "/data/ellipticBoundary2D.h");
   else if (mesh.dim==3)
     boundaryHeaderFileName = std::string(DELLIPTIC "/data/ellipticBoundary3D.h");

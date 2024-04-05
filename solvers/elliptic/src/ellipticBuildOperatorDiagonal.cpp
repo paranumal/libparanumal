@@ -54,6 +54,9 @@ void elliptic_t::BuildOperatorDiagonal(memory<dfloat>& diagA){
     memory<dfloat> diagAL(mesh.Np*mesh.Nelements);
 
     switch(mesh.elementType){
+      case Mesh::LINES:
+        BuildOperatorDiagonalContinuousLine1D(diagAL);
+        break;
       case Mesh::TRIANGLES:
         BuildOperatorDiagonalContinuousTri2D(diagAL);
         break;
@@ -486,6 +489,40 @@ void elliptic_t::BuildOperatorDiagonalIpdgQuad2D(memory<dfloat>& A) {
     }
   }
 }
+
+void elliptic_t::BuildOperatorDiagonalContinuousLine1D(memory<dfloat>& A) {
+
+  for(dlong eM=0;eM<mesh.Nelements;++eM){
+    for (int nx=0;nx<mesh.Nq;nx++) {
+      int iid = nx;
+      if (mapB[nx+eM*mesh.Np]!=1) {
+	A[eM*mesh.Np+iid] = 0;
+	
+	for (int k=0;k<mesh.Nq;k++) {
+	  int id = k;
+	  dfloat Grr = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + mesh.G00ID*mesh.Np];
+	  A[eM*mesh.Np+iid] += Grr*mesh.D[nx+k*mesh.Nq]*mesh.D[nx+k*mesh.Nq];
+	}
+	
+	dfloat JW = mesh.wJ[eM*mesh.Np + iid];
+	A[eM*mesh.Np+iid] += JW*lambda;
+	
+      } else {
+	A[eM*mesh.Np+iid] = 1; //just put a 1 so A is invertable
+      }
+    }
+
+    //add the rank boost for the allNeumann Poisson problem
+    if (allNeumann) {
+      for(int n=0;n<mesh.Np;++n){
+	if (mapB[n+eM*mesh.Np]!=1) { //dont fill rows for masked nodes
+	  A[eM*mesh.Np+n] += allNeumannPenalty*allNeumannScale*allNeumannScale;
+	}
+      }
+    }
+  }
+}
+
 
 void elliptic_t::BuildOperatorDiagonalContinuousQuad2D(memory<dfloat>& A) {
 
