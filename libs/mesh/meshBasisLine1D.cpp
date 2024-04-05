@@ -65,9 +65,9 @@ void mesh_t::FaceNodesLine1D(const int _N,
 
   _faceNodes.malloc(2*_Nfp);
   for (int n=0;n<_Np;n++) {
-    if(fabs(_r[n]-1)<NODETOL)
+    if(fabs(_r[n]+1)<NODETOL)// ?????
       _faceNodes[0*_Nfp+(cnt[0]++)] = n;
-    if(fabs(_r[n]+1)<NODETOL)
+    if(fabs(_r[n]-1)<NODETOL)// ?????
       _faceNodes[1*_Nfp+(cnt[1]++)] = n;
   }
 }
@@ -93,17 +93,18 @@ void mesh_t::VertexNodesLine1D(const int _N,
   }
 }
 
+
 /*Find a matching array between nodes on matching faces */
 void mesh_t::FaceNodeMatchingLine1D(const memory<dfloat> _r,
-                                    const memory<int> _faceNodes,
-                                    const memory<int> _faceVertices,
-                                    memory<int>& R){
+                                   const memory<int> _faceNodes,
+                                   const memory<int> _faceVertices,
+                                   memory<int>& R){
 
   const int _Nfaces = 2;
   const int _Nverts = 2;
   const int _NfaceVertices = 1;
 
-  const int _Nfp = 1; 
+  const int _Nfp = _faceNodes.length()/_Nfaces;
 
   const dfloat NODETOL = 1.0e-5;
 
@@ -135,7 +136,8 @@ void mesh_t::FaceNodeMatchingLine1D(const memory<dfloat> _r,
       dfloat rn = _r[fn];
 
       /* physical coordinate of interpolation node */
-      x0[n] = 0.5*(1-rn)*EX0[0]+0.5*(1+rn)*EX0[1];
+      x0[n] = 0.5*(1-rn)*EX0[0]
+	+ 0.5*(1+rn)*EX0[1];
     }
 
     for (int fP=0;fP<_Nfaces;fP++) { /*For each neighbor face */
@@ -157,13 +159,14 @@ void mesh_t::FaceNodeMatchingLine1D(const memory<dfloat> _r,
           dfloat rn = _r[fn];
 
           /* physical coordinate of interpolation node */
-          x1[n] = 0.5*(1-rn)*EX1[0]+0.5*(1+rn)*EX1[1];
+          x1[n] = 0.5*(1-rn)*EX1[0]
+	    + 0.5*(1+rn)*EX1[1];
         }
 
         /* for each node on this face find the neighbor node */
         for(int n=0;n<_Nfp;++n){
           const dfloat xM = x0[n];
-	  
+
           int m=0;
           for(;m<_Nfp;++m){ /* for each neighbor node */
             const dfloat xP = x1[m];
@@ -198,6 +201,9 @@ void mesh_t::FaceNodeMatchingLine1D(const memory<dfloat> _r,
   }
 }
 
+  
+
+  
 void mesh_t::EquispacedNodesLine1D(const int _N,
                                    memory<dfloat>& _r){
   const int _Nq = _N+1;

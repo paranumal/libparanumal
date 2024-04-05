@@ -251,22 +251,26 @@ void elliptic_t::Run(){
   printf("%d &  %d & %d &  %.2e &  %.2e & %.2e; %% CG (REPORT): N, Ndofs, iter, normH1, ||r||, solveTime\n",
 	 mesh.N, (int)  NglobalDofs,  iter, normH1, normr, elapsedTime);
 
-  o_xL.copyTo(xL);
-  printf("%%%% JID=%d, RXID=%d, JWID=%d\n", mesh.RXID, mesh.JID, mesh.JWID);
-  printf("%%%% element, node, x, soln, exactSoln, Jacobian, drdx\n");
-  for(int e=0;e<mesh.Nelements;++e){
-    for(int n=0;n<mesh.Np;++n){
-      int id = e*mesh.Np+n;
-      printf("%d, %d, % .4e, % .4e, % .4e, % .4e, % .4e\n",
-	     e, n,
-	     mesh.x[id],
-	     xL[n],
-	     sin(M_PI*mesh.x[id]),
-	     mesh.vgeo[mesh.Nvgeo*mesh.Np*e+n+mesh.Np*mesh.JID],
-	     mesh.vgeo[mesh.Nvgeo*mesh.Np*e+n+mesh.Np*mesh.RXID]);
+#if 1
+  {
+    o_xL.copyTo(xL);
+    FILE *fp = fopen("foo.dat", "w");
+    fprintf(fp,"%%%% element, node, x, soln, exactSoln, Jacobian, drdx\n");
+    for(int e=0;e<mesh.Nelements;++e){
+      for(int n=0;n<mesh.Np;++n){
+	int id = e*mesh.Np+n;
+	fprintf(fp,"%d, %d, % .10e, % .10e, % .10e, % .10e, % .10e\n",
+		e, n,
+		mesh.x[id],
+		xL[id],
+		sin(M_PI*mesh.x[id]),
+		mesh.vgeo[mesh.Nvgeo*mesh.Np*e+n+mesh.Np*mesh.JID],
+		mesh.vgeo[mesh.Nvgeo*mesh.Np*e+n+mesh.Np*mesh.RXID]);
+      }
     }
+    fclose(fp);
   }
-	     
+#endif	     
       
   
 #endif
