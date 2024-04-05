@@ -159,6 +159,8 @@ OASPrecon::OASPrecon(elliptic_t& _elliptic):
   int Nc = 1;  //hard code
   int NpCoarse = mesh.Np;
   switch(mesh.elementType){
+    case Mesh::LINES:
+      NpCoarse = (Nc+1); break;
     case Mesh::TRIANGLES:
       NpCoarse = ((Nc+1)*(Nc+2))/2; break;
     case Mesh::QUADRILATERALS:

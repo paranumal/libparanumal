@@ -127,6 +127,10 @@ SEMFEMPrecon::SEMFEMPrecon(elliptic_t& _elliptic):
 
       dlong femId = e*mesh.NelFEM*femMesh.Nverts+n*mesh.Nverts;
       switch(mesh.elementType){
+      case Mesh::LINES:
+        localIds[femId+0] = id[0];
+        localIds[femId+1] = id[1];
+        break;
       case Mesh::TRIANGLES:
         localIds[femId+0] = id[0];
         localIds[femId+1] = id[1];

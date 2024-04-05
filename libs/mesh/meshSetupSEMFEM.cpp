@@ -83,6 +83,10 @@ mesh_t mesh_t::SetupSEMFEM(memory<hlong>& globalIds_,
     pmesh.ConnectNodes();
     //pmesh.globalIds is now populated
     //pmesh.mapB is now populated
+  } else if (elementType==Mesh::LINES) {
+    NpFEM = Np;
+    NelFEM = N;
+    SEMFEMEToVLine1D(N, FEMEToV);
   } else if (elementType==Mesh::QUADRILATERALS) {
     NpFEM = Np;
     NelFEM = N*N;
@@ -111,7 +115,8 @@ mesh_t mesh_t::SetupSEMFEM(memory<hlong>& globalIds_,
   dlong NFEMverts = femMesh.Nelements*Nverts;
   femMesh.EToV.malloc(NFEMverts);
   femMesh.EX.malloc(NFEMverts);
-  femMesh.EY.malloc(NFEMverts);
+  if (dim>=2)
+    femMesh.EY.malloc(NFEMverts);
   if (dim==3)
     femMesh.EZ.malloc(NFEMverts);
 
@@ -127,7 +132,8 @@ mesh_t mesh_t::SetupSEMFEM(memory<hlong>& globalIds_,
         femMesh.EToV[femId+i] = pmesh.globalIds[id];
 
         femMesh.EX[femId+i] = pmesh.x[id];
-        femMesh.EY[femId+i] = pmesh.y[id];
+	if(dim>=2)
+	  femMesh.EY[femId+i] = pmesh.y[id];
         if (dim==3)
           femMesh.EZ[femId+i] = pmesh.z[id];
       }
