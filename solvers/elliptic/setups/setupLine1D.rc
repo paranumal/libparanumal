@@ -2,7 +2,8 @@
 2.0
 
 [DATA FILE]
-data/ellipticSine1D.h
+#data/ellipticSine1D.h
+data/ellipticHorns1D.h
 
 [MESH FILE]
 BOX
@@ -14,7 +15,7 @@ BOX
 2
 
 [BOX NX]
-400000
+1000000
 
 [BOX DIMX]
 2
@@ -23,7 +24,7 @@ BOX
 1
 
 [POLYNOMIAL DEGREE]
-10
+5
 
 [THREAD MODEL]
 CUDA

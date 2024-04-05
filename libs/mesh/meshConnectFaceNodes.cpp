@@ -83,9 +83,7 @@ void mesh_t::ConnectFaceNodes(){
         /* for each node on this face use the permuation array
            to select the neighbor node */
         for(int nM=0;nM<Nfp;++nM){
-          const int nP  = R[fM*Nfaces*Nfp*NfaceVertices
-                            + fP*Nfp*NfaceVertices
-                            + rot*Nfp + nM];
+          const int nP  = R[fM*Nfaces*Nfp*NfaceVertices + fP*Nfp*NfaceVertices + rot*Nfp + nM];
           const int idM = faceNodes[fM*Nfp+nM];
           const int idP = faceNodes[fP*Nfp+nP];
 

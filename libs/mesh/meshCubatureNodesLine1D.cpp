@@ -51,26 +51,18 @@ void mesh_t::CubaturePhysicalNodesLine1D(){
 
   o_cubx = platform.malloc<dfloat>(Nelements*cubNp, cubx);
 
-  //Face cubature
-  intx.malloc(Nelements*Nfaces*cubNq);
+  //Face cubature (is just pointwise)
+  intx.malloc(Nelements*Nfaces*1);
   for(dlong e=0;e<Nelements;++e){
     for(int f=0;f<Nfaces;++f){
-      for(int n=0;n<1;++n){
-        dfloat ix = 0;
-        for(int m=0;m<Nq;++m){
-          dlong vid = vmapM[m+f*Nfp+e*Nfp*Nfaces];
-          dfloat xm = x[vid];
-	  
-          dfloat Inm = cubInterp[m+n*Nq];
-          ix += Inm*xm;
-        }
-        dlong id = n + f*cubNq + e*Nfaces*cubNq;
-        intx[id] = ix;
-      }
+      dlong vid = vmapM[f*Nfp+e*Nfp*Nfaces];
+      dfloat xm = x[vid];
+      dlong id = f + e*Nfaces;
+      intx[id] = xm;
     }
   }
 
-  o_intx = platform.malloc<dfloat>(Nelements*Nfaces*cubNq, intx);
+  o_intx = platform.malloc<dfloat>(Nelements*Nfaces*1, intx);
 }
 
 } //namespace libp

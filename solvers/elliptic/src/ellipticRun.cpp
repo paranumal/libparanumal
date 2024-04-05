@@ -255,15 +255,19 @@ void elliptic_t::Run(){
   {
     o_xL.copyTo(xL);
     FILE *fp = fopen("foo.dat", "w");
-    fprintf(fp,"%%%% element, node, x, soln, exactSoln, Jacobian, drdx\n");
+    fprintf(fp,"%%%% element, node, x, soln, exactSoln, error, Jacobian, drdx\n");
     for(int e=0;e<mesh.Nelements;++e){
       for(int n=0;n<mesh.Np;++n){
 	int id = e*mesh.Np+n;
-	fprintf(fp,"%d, %d, % .10e, % .10e, % .10e, % .10e, % .10e\n",
-		e, n,
+	dfloat xn = mesh.x[id];
+	dfloat exu = sin(M_PI*xn)*exp(-10*sin(M_PI*xn)*sin(M_PI*xn));
+	fprintf(fp,"%d, %d, % .10e, % .10e, % .10e, % .10e, % .10e, % .10e\n",
+		e,
+		n,
 		mesh.x[id],
 		xL[id],
-		sin(M_PI*mesh.x[id]),
+		exu,
+		xL[id]-exu,
 		mesh.vgeo[mesh.Nvgeo*mesh.Np*e+n+mesh.Np*mesh.JID],
 		mesh.vgeo[mesh.Nvgeo*mesh.Np*e+n+mesh.Np*mesh.RXID]);
       }

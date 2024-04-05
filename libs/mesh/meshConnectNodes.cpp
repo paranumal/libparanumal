@@ -114,6 +114,47 @@ void mesh_t::ConnectNodes(){
   }
 
   o_mapB = platform.malloc<int>(mapB);
+
+#if 0
+  printf("%%%% r=\n");
+  for(int n=0;n<Np;++n){
+    printf("%d, % .4e\n", n, r[n]);
+  }
+
+  printf("%%%% faceNodes\n");
+  for(int f=0;f<Nfaces;++f){
+    printf("%d: ", f);
+    for(int n=0;n<Nfp;++n){
+      int id = f*Nfp+n;
+      printf("%d ", faceNodes[id]);
+    }
+    printf("\n");
+  }
+  printf("%%%%element, face, node, vmapM, vmapP\n");
+  for(dlong e=0;e<Nelements;++e){
+    for(int f=0;f<Nfaces;++f){
+      for(int n=0;n<Nfp;++n){
+	int id = e*Nfaces*Nfp+f*Nfp+n;
+	printf("%d, %d, %d, %d, %d\n", e, f, n, vmapM[id],vmapP[id]);
+      }
+    }
+  }
+  
+  printf("%%%%element, face, EToE, EToF, EToB\n");
+  for(dlong e=0;e<Nelements;++e){
+    for(int f=0;f<Nfaces;++f){
+      int id = e*Nfaces+f;
+      printf("%d, %d, %lld, %d, %d\n", e, f, EToE[id], EToF[id], EToB[id]);
+    }
+  }
+  
+  printf("%%%%element, node, gnum\n");
+  for(dlong e=0;e<Nelements;++e){
+    for(dlong n=0;n<Np;++n){
+      printf("%d, %d, %lld \n", e, n, globalIds[e*Np+n]);
+    }
+  }
+#endif  
 }
 
 } //namespace libp
