@@ -234,7 +234,8 @@ MGLevel::MGLevel(elliptic_t& _elliptic,
 
   memory<dfloat> P;
 
-  if (   mesh.elementType==Mesh::QUADRILATERALS
+  if (   mesh.elementType==Mesh::LINES
+      || mesh.elementType==Mesh::QUADRILATERALS
       || mesh.elementType==Mesh::HEXAHEDRA) {
     mesh.DegreeRaiseMatrix1D(Nc, mesh.N, P);
   } else if (mesh.elementType==Mesh::TRIANGLES) {

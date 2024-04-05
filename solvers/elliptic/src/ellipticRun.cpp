@@ -184,7 +184,7 @@ void elliptic_t::Run(){
   timePoint_t start = GlobalPlatformTime(platform);
 
   //call the solver
-  dfloat tol = (sizeof(dfloat)==sizeof(double)) ? 1.0e-8 : 1.0e-5;
+  dfloat tol = (sizeof(dfloat)==sizeof(double)) ? 1.0e-18 : 1.0e-5;
   int iter = Solve(linearSolver, o_x, o_r, tol, maxIter, verbose);
 
   //add the boundary data to the masked nodes

@@ -39,7 +39,7 @@ SOFTWARE.
 #endif
 
 // precision of preconditioners
-#if 1
+#if 0
 #define pfloat float
 #define pfloatString "float"
 #else

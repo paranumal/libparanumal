@@ -83,7 +83,7 @@ void mesh_t::SetupBoxLine1D(){
 
   elementInfo.malloc(Nelements);
 
-  #pragma omp parallel for collapse(2)
+  #pragma omp parallel for
   for(int i=0;i<nx;++i){
     
     const dlong e = i;
