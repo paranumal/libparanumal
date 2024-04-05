@@ -27,21 +27,27 @@ SOFTWARE.
 #define PI 3.14159265358979323846
 
 /* forcing function   */
-#define ellipticForcing1D(x, lambda, f)  \
+#define ellipticForcing1D(x, lambda, f)	    \
   {                                         \
-    f  = (PI*PI+lambda)*sin(PI*x);   \
+    f  = (PI*PI+lambda)*sin(PI*x);	    \
   }
 
 /* Dirichlet boundary condition   */
 #define ellipticDirichletCondition1D(x,nx,uM,uxM,uB,uxB)	\
-  {              \
-    uB  = sin(PI*x);   \
-    uxB = uxM;   \
+  {								\
+    uB  = sin(PI*x);						\
+    uxB = uxM;							\
   }
 
 /* Neumann boundary condition   */
 #define ellipticNeumannCondition1D(x,nx,uM,uxM,uB,uxB)  \
-  {              \
-    uB  = uM;    \
-    uxB = -PI*cos(PI*x);   \
+  {							\
+    uB  = uM;						\
+    uxB = -PI*cos(PI*x);				\
+  }
+
+#define ellipticExactSolution1D(x,lambda,exu,exux)	       \
+  {                                                            \
+    *exu  = sin(PI*x);					       \
+    *exux = PI*cos(PI*x);				       \
   }

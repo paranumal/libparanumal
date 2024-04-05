@@ -64,8 +64,6 @@ void mesh_t::GeometricFactorsLine1D(){
   for(dlong e=0;e<Nelements;++e){ /* for each element */
     for(int i=0;i<Nq;++i){
       
-      int n = i;
-      
       //differentiate physical coordinates
       dfloat xr = 0.0;
       for(int m=0;m<Nq;++m){
@@ -83,15 +81,15 @@ void mesh_t::GeometricFactorsLine1D(){
       dfloat JW = J*gllw[i];
       
       /* store geometric factors */
-      vgeo[Nvgeo*Np*e + n + Np*RXID] = rx;
-      vgeo[Nvgeo*Np*e + n + Np*JID]  = J;
-      vgeo[Nvgeo*Np*e + n + Np*JWID] = JW;
-      vgeo[Nvgeo*Np*e + n + Np*IJWID] = 1./JW;
+      vgeo[Nvgeo*Np*e + i + Np*RXID] = rx;
+      vgeo[Nvgeo*Np*e + i + Np*JID]  = J;
+      vgeo[Nvgeo*Np*e + i + Np*JWID] = JW;
+      vgeo[Nvgeo*Np*e + i + Np*IJWID] = 1./JW;
       
       /* store second order geometric factors */
-      ggeo[Nggeo*Np*e + n + Np*G00ID] = JW*(rx*rx);
+      ggeo[Nggeo*Np*e + i + Np*G00ID] = JW*(rx*rx);
       
-      wJ[Np*e + n] = JW;
+      wJ[Np*e + i] = JW;
     }
   }
   

@@ -1,0 +1,359 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+#if 0
+@kernel void ellipticCubatureH1ErrorQuad2D(const dlong Nelements,
+					   @restrict const  dfloat *  cubw,
+					   @restrict const  dfloat *  cubx,
+					   @restrict const  dfloat *  cuby,
+					   @restrict const  dfloat *  cubz,
+					   @restrict const  dfloat *  cubwJ,
+					   @restrict const  dfloat *  vgeo,
+					   @restrict const  dfloat *  D,
+					   @restrict const  dfloat *  cubInterp,
+					   const dfloat lambda,
+					   @restrict const  dfloat  *  qL,
+					   @restrict dfloat  *  err){
+  
+#define squareThreads			       \
+  for(dlong e=eo;e<eo+p_NblockC;++e;@inner(2)) \
+    for(int j=0;j<p_cubNq;++j;@inner(1))       \
+      for(int i=0;i<p_cubNq;++i;@inner(0)) 
+  
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockC;@outer(0)){
+    
+    @shared dfloat s_q [p_NblockC][p_Nq][p_Nq];
+    @shared dfloat s_qx[p_NblockC][p_Nq][p_Nq];
+    @shared dfloat s_qy[p_NblockC][p_Nq][p_Nq];
+    @shared dfloat s_cq [p_NblockC][p_cubNq][p_cubNq];
+    @shared dfloat s_cqx[p_NblockC][p_cubNq][p_cubNq];
+    @shared dfloat s_cqy[p_NblockC][p_cubNq][p_cubNq];
+    @shared dfloat s_D[p_Nq][p_Nq];
+    @shared dfloat s_I[p_cubNq][p_Nq];
+
+    squareThreads{
+      if(i<p_Nq && j<p_Nq){
+	//prefetch q
+	const dlong base = i + j*p_Nq + e*p_Np;
+	if (e<Nelements) {
+	  s_q[e-eo][j][i] = qL[base];
+	}
+	if(e==eo){
+	  s_D[j][i] = D[j*p_Nq+i]; // CHECK THIS
+	}
+      }
+      if(e==eo && i<p_Nq){
+	s_I[j][i] = cubInterp[j+p_cubNq*i]; // CHECK THIS
+      }
+    }
+
+    squareThreads{
+      dfloat qr = 0, qs = 0;
+      dfloat rx = 0, sx = 0;
+      dfloat ry = 0, sy = 0;
+      
+      if(e<Nelements && i<p_Nq && j<p_Nq){
+	
+	const dlong base = e*p_Nvgeo*p_Np + p_Nq*j + i;
+
+	rx = vgeo[base+p_RXID*p_Np];
+	sx = vgeo[base+p_SXID*p_Np];
+	ry = vgeo[base+p_RYID*p_Np];
+	sy = vgeo[base+p_SYID*p_Np];
+
+	const int es = e-eo;
+
+#pragma unroll 
+	for(int k=0;k<p_Nq;++k){
+	  qr += s_D[i][k]*s_q[es][j][k];
+	  qs += s_D[j][k]*s_q[es][k][i];
+	}
+
+	s_qx[es][j][i] = rx*qr + sx*qs;
+	s_qy[es][j][i] = ry*qr + sy*qs;
+      }
+    }
+
+    squareThreads{
+      // interpolate in s
+      dfloat resx = 0, resy = 0, res = 0;
+      if(i<p_Nq){
+
+	const int es = e-eo;
+
+#pragma unroll 
+	for(int k=0;k<p_Nq;++k){
+	  const dfloat Ijk = s_I[j][k];
+	  res  += Ijk*s_q[es][k][i];
+	  resx += Ijk*s_qx[es][k][i];
+	  resy += Ijk*s_qy[es][k][i];
+	}
+	s_cq [es][j][i] = res;
+	s_cqx[es][j][i] = resx;
+	s_cqy[es][j][i] = resy;
+      }
+    }
+
+    @shared volatile  dfloat s_cerr[p_NblockC*p_cubNp];
+    
+    squareThreads{
+
+      const int es = e-eo;
+      
+      // interpolate in r
+      dfloat cqx = 0, cqy = 0, cq = 0;
+
+#pragma unroll 
+      for(int k=0;k<p_Nq;++k){
+	dfloat Iik = s_I[i][k];
+	cq  += Iik*s_cq[es][j][k];
+	cqx += Iik*s_cqx[es][j][k];
+	cqy += Iik*s_cqy[es][j][k];
+      }
+      
+      dfloat dqx = 0, dqy = 0, dq = 0, cwJ = 0;
+      
+      if(e<Nelements){
+	dlong cid = e*p_cubNp + j*p_cubNq + i;
+	dfloat cx = cubx[cid];
+	dfloat cy = cuby[cid];
+	cwJ = cubwJ[cid]; // hack
+	
+	dfloat excqx = 0, excqy = 0, excq = 0;
+	ellipticExactSolution2D(cx, cy, lambda, &excq, &excqx, &excqy);
+	dqx = cqx - excqx;
+	dqy = cqy - excqy;
+	dq  = cq  - excq;
+	//	printf("cx,cy,cwJ=%g,%g,%g, q,qx,qy=(%g,%g),(%g,%g),(%g,%g), err=%g,%g,%g\n",
+	//	       cx,cy,cwJ, excq,cq, excqx,cqx, excqy,cqy, dqx,dqy,dq);
+      }
+      
+      s_cerr[es*p_cubNp + j*p_cubNq + i] = cwJ*( lambda*dq*dq + dqx*dqx + dqy*dqy);
+    }
+    
+    @exclusive dlong t;
+
+    squareThreads{
+      t = (e-eo)*p_cubNp + j*p_cubNq + i;
+      if(t<512 && t+512<p_NblockC*p_cubNp) s_cerr[t] += s_cerr[t+512];
+    }
+
+    squareThreads{
+      if(t<256 && t+256<p_NblockC*p_cubNp) s_cerr[t] += s_cerr[t+256];
+    }
+
+    squareThreads{
+      if(t<128 && t+128<p_NblockC*p_cubNp) s_cerr[t] += s_cerr[t+128];
+    }
+
+    squareThreads{
+      if(t<64 && t+64<p_NblockC*p_cubNp) s_cerr[t] += s_cerr[t+64];
+    }
+
+    squareThreads{
+      if(t<32 && t+32<p_NblockC*p_cubNp) s_cerr[t] += s_cerr[t+32];
+      if(t<16 && t+16<p_NblockC*p_cubNp) s_cerr[t] += s_cerr[t+16];
+      if(t<8 && t+8<p_NblockC*p_cubNp) s_cerr[t] += s_cerr[t+8];
+      if(t<4 && t+4<p_NblockC*p_cubNp) s_cerr[t] += s_cerr[t+4];
+      if(t<2 && t+2<p_NblockC*p_cubNp) s_cerr[t] += s_cerr[t+2];
+      if(t<1 && t+1<p_NblockC*p_cubNp){
+	dfloat res = s_cerr[0]+s_cerr[1];
+	err[eo/p_NblockC] = res;
+      }
+    }
+  }
+}
+						     
+#endif
+
+
+#define p_cubNq2 (p_cubNq*p_cubNq)
+
+#define squareThreads			       \
+  for(int j=0;j<p_cubNq;++j;@inner(1))	       \
+    for(int i=0;i<p_cubNq;++i;@inner(0)) 
+
+@kernel void ellipticCubatureH1ErrorQuad2D(const dlong Nelements,
+					   @restrict const  dfloat *  cubx,
+					   @restrict const  dfloat *  cuby,
+					   @restrict const  dfloat *  cubz,
+					   @restrict const  dfloat *  cubwJ,
+					   @restrict const  dfloat *  cubvgeo,
+					   @restrict const  dfloat *  cubD,
+					   @restrict const  dfloat *  cubInterpT,
+					   const dfloat lambda,
+					   @restrict const  dfloat  *  qL,
+					   @restrict dfloat  *  err){
+
+  // does not use element blocking
+  for(int e=0; e<Nelements; ++e; @outer(0)) {
+
+    @shared dfloat s_q1[p_cubNq][p_cubNq];
+    @shared dfloat s_q2[p_cubNq][p_cubNq];
+    
+    @shared dfloat s_cubD[p_cubNq][p_cubNq];
+
+    @shared dfloat s_I[p_cubNq][p_Nq];
+
+    @exclusive dfloat errL;
+    
+    for(int b=0;b<p_cubNq;++b;@inner(1)){
+      for(int a=0;a<p_cubNq;++a;@inner(0)){
+
+        int id = a + b*p_cubNq;
+        if(id<p_cubNq*p_Nq){
+          s_I[a][b] = cubInterpT[id];
+        }
+
+        s_cubD[b][a] = cubD[id];
+
+        if(a<p_Nq && b<p_Nq){
+	  dlong id = e*p_Np + b*p_Nq + a;
+	  s_q1[b][a] = qL[id];
+        }
+      }
+    }
+
+    // 2. interpolate in b
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int a=0;a<p_cubNq;++a;@inner(0)){
+
+        if(a<p_Nq){
+	  dfloat tmp = 0;
+	  for(int b=0;b<p_Nq;++b){
+	    const dfloat sIjb= s_I[j][b];
+	    tmp  += sIjb*s_q1[b][a];
+	  }
+	  // store to s_q[c][j][a], ok since only this thread walks [c][:][a]
+	  s_q2[j][a] = tmp;
+        }
+      }
+    }
+    
+    
+    // 3. transform in a
+    for(int j=0;j<p_cubNq;++j;@inner(1)){
+      for(int i=0;i<p_cubNq;++i;@inner(0)){
+
+	dfloat tmp = 0;
+	for(int a=0;a<p_Nq;++a){
+	  const dfloat sIia = s_I[i][a];
+	  tmp  += sIia*s_q2[j][a];
+	}
+	
+	s_q1[j][i] = tmp;
+	errL = 0;
+      }
+    }
+
+
+    //===============================================
+    // 5. differentiate once interpolated
+    for(int j=0; j<p_cubNq; ++j; @inner(1)) {
+      for(int i=0; i<p_cubNq; ++i; @inner(0)) {
+	
+	const int baseJ = e*p_cubNp + j*p_cubNq + i;
+	const int base = e*p_Nvgeo*p_cubNp + j*p_cubNq + i;
+	
+	//geofactors for j i thread
+	const dfloat wJ = cubwJ[baseJ];
+	
+	const dfloat rx = cubvgeo[base+p_RXID*p_cubNp];
+	const dfloat ry = cubvgeo[base+p_RYID*p_cubNp];
+	const dfloat sx = cubvgeo[base+p_SXID*p_cubNp];
+	const dfloat sy = cubvgeo[base+p_SYID*p_cubNp];
+
+	// 'r', 's', derivatives
+	dfloat dr = 0.0f;
+	dfloat ds = 0.0f;
+	
+#pragma unroll p_cubNq
+	for (int n = 0; n<p_cubNq; ++n) {
+	  dr += s_cubD[i][n]*s_q1[j][n];
+	  ds += s_cubD[j][n]*s_q1[n][i];
+	}
+	
+	dfloat dqdx = rx*dr + sx*ds;
+	dfloat dqdy = ry*dr + sy*ds;
+	
+	dlong cid = e*p_cubNp + j*p_cubNq + i;
+	dfloat cx = cubx[cid];
+	dfloat cy = cuby[cid];
+	dfloat exdqdx = 0, exdqdy = 0, exq = 0;
+	ellipticExactSolution2D(cx, cy, lambda, &exq, &exdqdx, &exdqdy);
+	
+	// compute difference between computed and exact at cubature
+	dqdx -= exdqdx;
+	dqdy -= exdqdy;
+	
+	dfloat qk = s_q1[j][i]-exq;
+	dfloat errk = lambda*qk*qk;
+	
+	errk += dqdx*dqdx;
+	errk += dqdy*dqdy;
+	errL += wJ*errk;
+      }
+    }
+    
+    @exclusive dlong t;
+    
+    @shared volatile  dfloat s_cerr[p_cubNq2];
+    
+    squareThreads{
+      t = j*p_cubNq + i;
+      s_cerr[t] = errL;
+    }
+    
+    squareThreads{
+      if(t<512 && t+512<p_cubNq2) s_cerr[t] += s_cerr[t+512];
+    }
+
+    squareThreads{
+      if(t<256 && t+256<p_cubNq2) s_cerr[t] += s_cerr[t+256];
+    }
+
+    squareThreads{
+      if(t<128 && t+128<p_cubNq2) s_cerr[t] += s_cerr[t+128];
+    }
+
+    squareThreads{
+      if(t<64 && t+64<p_cubNq2) s_cerr[t] += s_cerr[t+64];
+    }
+
+    squareThreads{
+      if(t<32 && t+32<p_cubNq2) s_cerr[t] += s_cerr[t+32];
+      if(t<16 && t+16<p_cubNq2) s_cerr[t] += s_cerr[t+16];
+      if(t<8 && t+8<p_cubNq2) s_cerr[t] += s_cerr[t+8];
+      if(t<4 && t+4<p_cubNq2) s_cerr[t] += s_cerr[t+4];
+      if(t<2 && t+2<p_cubNq2) s_cerr[t] += s_cerr[t+2];
+      if(t<1 && t+1<p_cubNq2){
+	dfloat res = s_cerr[0]+s_cerr[1];
+	err[e] = res;
+      }
+    }
+  }
+}
+						     

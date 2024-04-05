@@ -214,6 +214,65 @@ void elliptic_t::Run(){
            (char*) settings.getSetting("PRECONDITIONER").c_str());
   }
 
+
+#if 1
+
+  dfloat normr = platform.linAlg().norm2(o_r.length(), o_r, comm);
+  
+  // make sure cubature is set up
+  mesh.CubatureSetup();
+  mesh.CubaturePhysicalNodes();
+  
+  occa::properties kernelInfoCubNp = kernelInfo;
+  
+  dlong p_NblockC = 1; 
+  dlong NblocksC = (mesh.Nelements+p_NblockC-1)/p_NblockC;
+  deviceMemory<dfloat> o_errH1 = platform.malloc<dfloat>(NblocksC);
+  
+  kernelInfoCubNp["defines/" "p_NblockC"] = p_NblockC;
+  kernelInfoCubNp["defines/" "p_cubNp"]   = mesh.cubNp;
+  kernelInfoCubNp["defines/" "p_cubNq"]   = mesh.cubNq;
+
+  fileName   = oklFilePrefix + "/ellipticCubatureH1Error" + suffix + oklFileSuffix;
+  kernelName = "ellipticCubatureH1Error" + suffix;
+  kernel_t cubatureH1ErrorKernel = platform.buildKernel(fileName, kernelName, kernelInfoCubNp);
+  
+  NblocksC = (mesh.Nelements+p_NblockC-1)/p_NblockC;
+  platform.linAlg().set(NblocksC, (dfloat)0.0, o_errH1);
+  
+  cubatureH1ErrorKernel(mesh.Nelements,
+			mesh.o_cubx, mesh.o_cuby, mesh.o_cubz, mesh.o_cubwJ,
+			mesh.o_cubvgeo, mesh.o_cubD, mesh.o_cubInterp, lambda,
+			o_xL, o_errH1);
+  
+  dfloat normH1 = platform.linAlg().sum(NblocksC, o_errH1, mesh.comm);
+  normH1 = sqrt(normH1);
+  
+  printf("%d &  %d & %d &  %.2e &  %.2e & %.2e; %% CG (REPORT): N, Ndofs, iter, normH1, ||r||, solveTime\n",
+	 mesh.N, (int)  NglobalDofs,  iter, normH1, normr, elapsedTime);
+
+  o_xL.copyTo(xL);
+  printf("%%%% JID=%d, RXID=%d, JWID=%d\n", mesh.RXID, mesh.JID, mesh.JWID);
+  printf("%%%% element, node, x, soln, exactSoln, Jacobian, drdx\n");
+  for(int e=0;e<mesh.Nelements;++e){
+    for(int n=0;n<mesh.Np;++n){
+      int id = e*mesh.Np+n;
+      printf("%d, %d, % .4e, % .4e, % .4e, % .4e, % .4e\n",
+	     e, n,
+	     mesh.x[id],
+	     xL[n],
+	     sin(M_PI*mesh.x[id]),
+	     mesh.vgeo[mesh.Nvgeo*mesh.Np*e+n+mesh.Np*mesh.JID],
+	     mesh.vgeo[mesh.Nvgeo*mesh.Np*e+n+mesh.Np*mesh.RXID]);
+    }
+  }
+	     
+      
+  
+#endif
+
+
+  
   if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
 
     // copy data back to host

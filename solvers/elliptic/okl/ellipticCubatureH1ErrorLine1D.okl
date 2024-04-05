@@ -1,0 +1,160 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+
+#define lineThreads			       \
+    for(int i=0;i<p_cubNq;++i;@inner(0)) 
+
+@kernel void ellipticCubatureH1ErrorLine1D(const dlong Nelements,
+					   @restrict const  dfloat *  cubx,
+					   @restrict const  dfloat *  cuby,
+					   @restrict const  dfloat *  cubz,
+					   @restrict const  dfloat *  cubwJ,
+					   @restrict const  dfloat *  cubvgeo,
+					   @restrict const  dfloat *  cubD,
+					   @restrict const  dfloat *  cubInterpT,
+					   const dfloat lambda,
+					   @restrict const  dfloat  *  qL,
+					   @restrict dfloat  *  err){
+
+  // does not use element blocking
+  for(int e=0; e<Nelements; ++e; @outer(0)) {
+
+    @shared dfloat s_q1[p_cubNq];
+    @shared dfloat s_q2[p_cubNq];
+    
+    @shared dfloat s_cubD[p_cubNq][p_cubNq];
+
+    @shared dfloat s_I[p_cubNq][p_Nq];
+
+    @exclusive dfloat errL;
+    
+    for(int a=0;a<p_cubNq;++a;@inner(0)){
+      
+      for(int b=0;b<p_Nq;++b){
+	int id = a + b*p_cubNq;
+	s_I[a][b] = cubInterpT[id];
+      }
+      for(int b=0;b<p_cubNq;++b){
+	int id = a + b*p_cubNq;
+	s_cubD[b][a] = cubD[id];
+      }
+      
+      if(a<p_Nq){
+	dlong id = e*p_Np + a;
+	s_q1[a] = qL[id];
+      }
+    }
+    
+    // 3. transform in a
+    for(int i=0;i<p_cubNq;++i;@inner(0)){
+      
+      dfloat tmp = 0;
+      for(int a=0;a<p_Nq;++a){
+	const dfloat sIia = s_I[i][a];
+	tmp  += sIia*s_q1[a];
+      }
+      
+      s_q2[i] = tmp;
+      errL = 0;
+    }
+    
+    //===============================================
+    // 5. differentiate once interpolated
+    for(int i=0; i<p_cubNq; ++i; @inner(0)) {
+      
+      const int baseJ = e*p_cubNp + i;
+      const int base = e*p_Nvgeo*p_cubNp + i;
+	
+      //geofactors for j i thread
+      const dfloat wJ = cubwJ[baseJ];
+      
+      const dfloat rx = cubvgeo[base+p_RXID*p_cubNp];
+
+      // 'r', derivatives
+      dfloat dr = 0.0f;
+      
+#pragma unroll p_cubNq
+      for (int n = 0; n<p_cubNq; ++n) {
+	dr += s_cubD[i][n]*s_q2[n];
+      }
+      
+      dfloat dqdx = rx*dr;
+      
+      dlong cid = e*p_cubNp + i;
+      dfloat cx = cubx[cid];
+      dfloat exdqdx = 0, exq = 0;
+      ellipticExactSolution1D(cx, lambda, &exq, &exdqdx);
+      
+      // compute difference between computed and exact at cubature
+      dqdx -= exdqdx;
+	
+      dfloat qk = s_q2[i]-exq;
+      dfloat errk = lambda*qk*qk;
+      
+      errk += dqdx*dqdx;
+      errL += wJ*errk;
+    }
+    
+    @exclusive dlong t;
+    
+    @shared volatile  dfloat s_cerr[p_cubNq];
+    
+    lineThreads{
+      t = i;
+      s_cerr[t] = errL;
+    }
+    
+    lineThreads{
+      if(t<512 && t+512<p_cubNq) s_cerr[t] += s_cerr[t+512];
+    }
+
+    lineThreads{
+      if(t<256 && t+256<p_cubNq) s_cerr[t] += s_cerr[t+256];
+    }
+
+    lineThreads{
+      if(t<128 && t+128<p_cubNq) s_cerr[t] += s_cerr[t+128];
+    }
+
+    lineThreads{
+      if(t<64 && t+64<p_cubNq) s_cerr[t] += s_cerr[t+64];
+    }
+    
+    lineThreads{
+      if(t<32 && t+32<p_cubNq) s_cerr[t] += s_cerr[t+32];
+      if(t<16 && t+16<p_cubNq) s_cerr[t] += s_cerr[t+16];
+      if(t<8 && t+8<p_cubNq) s_cerr[t] += s_cerr[t+8];
+      if(t<4 && t+4<p_cubNq) s_cerr[t] += s_cerr[t+4];
+      if(t<2 && t+2<p_cubNq) s_cerr[t] += s_cerr[t+2];
+      if(t<1 && t+1<p_cubNq){
+	dfloat res = s_cerr[0]+s_cerr[1];
+	err[e] = res;
+      }
+    }
+  }
+}
+						     

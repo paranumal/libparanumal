@@ -380,6 +380,8 @@ void MGLevel::SetupSmoother() {
     //set the stabilty weight (jacobi-type interation)
     lambda0 = (4./3.)/rho;
 
+    printf("lambda0=%g, rho=%g\n", lambda0, rho);
+    
     for (dlong n=0;n<Nrows;n++)
       invDiagA[n] *= lambda0;
 

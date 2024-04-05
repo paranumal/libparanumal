@@ -106,7 +106,7 @@ void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO& A) {
         val += Gss*Sss[m+n*mesh.Np];
         val += J*lambda*MM[m+n*mesh.Np];
 
-        dfloat nonZeroThreshold = 1e-7;
+        dfloat nonZeroThreshold = 1e-10;
         if (fabs(val)>nonZeroThreshold) {
           // pack non-zero
           sendNonZeros[cnt].val = val;
@@ -289,7 +289,7 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad3D(parAlmond::parCOO& A) {
             Af[rowid*mesh.Nelements*mesh.Np + colid] = val;
 #endif
 
-            dfloat nonZeroThreshold = 1e-7;
+            dfloat nonZeroThreshold = 1e-10;
             if (fabs(val)>nonZeroThreshold) {
               // pack non-zero
               sendNonZeros[cnt].val = val;
@@ -449,7 +449,7 @@ void elliptic_t::BuildOperatorMatrixContinuousLine1D(parAlmond::parCOO& A) {
 	  val += JW*lambda;
 	}
 	
-	dfloat nonZeroThreshold = 1e-7;
+	dfloat nonZeroThreshold = 1e-10;
 	if (fabs(val)>nonZeroThreshold) {
 	  // pack non-zero
 	  sendNonZeros[cnt].val = val;
@@ -598,7 +598,7 @@ void elliptic_t::BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO& A) {
               val += JW*lambda;
             }
 
-            dfloat nonZeroThreshold = 1e-7;
+            dfloat nonZeroThreshold = 1e-10;
             if (fabs(val)>nonZeroThreshold) {
               // pack non-zero
               sendNonZeros[cnt].val = val;
@@ -743,7 +743,7 @@ void elliptic_t::BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO& A) {
         val += Gtt*mesh.Stt[m+n*mesh.Np];
         val += J*lambda*mesh.MM[m+n*mesh.Np];
 
-        dfloat nonZeroThreshold = 1e-7;
+        dfloat nonZeroThreshold = 1e-10;
         if (fabs(val)>nonZeroThreshold) {
           //#pragma omp critical
           {
@@ -928,7 +928,7 @@ void elliptic_t::BuildOperatorMatrixContinuousHex3D(parAlmond::parCOO& A) {
             }
 
             // pack non-zero
-            dfloat nonZeroThreshold = 1e-7;
+            dfloat nonZeroThreshold = 1e-10;
             if (fabs(val) >= nonZeroThreshold) {
               sendNonZeros[cnt].val = val;
               sendNonZeros[cnt].row = maskedGlobalNumbering[e*mesh.Np + idn];
