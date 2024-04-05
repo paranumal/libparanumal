@@ -30,7 +30,21 @@ namespace libp {
 
 void mesh_t::SetElementType(const Mesh::ElementType eType) {
 
-  if (eType==Mesh::TRIANGLES) {
+  if (eType==Mesh::LINES) {
+    elementType = Mesh::LINES;
+
+    Nverts = 2;        // number of vertices per element
+    Nfaces = 2;        // number of faces per element
+    NfaceVertices = 1; // number of vertices per face
+
+    // vertices on each face
+    int _faceVertices[2][1] = {{0},{1}};
+
+    faceVertices.malloc(NfaceVertices*Nfaces);
+    faceVertices.copyFrom(_faceVertices[0]);
+
+  }
+  else if (eType==Mesh::TRIANGLES) {
     elementType = Mesh::TRIANGLES;
 
     Nverts = 3;        // number of vertices per element

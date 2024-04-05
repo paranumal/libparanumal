@@ -35,6 +35,9 @@ void mesh_t::ConnectFaceNodes(){
   memory<int> R;
 
   switch (elementType) {
+    case Mesh::LINES:
+      FaceNodeMatchingLine1D(r, faceNodes, faceVertices, R);
+      break;
     case Mesh::TRIANGLES:
       FaceNodeMatchingTri2D(r, s, faceNodes, faceVertices, R);
       break;

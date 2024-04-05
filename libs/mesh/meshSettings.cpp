@@ -38,11 +38,11 @@ meshSettings_t::meshSettings_t(comm_t _comm):
   newSetting("MESH DIMENSION",
              "2",
              "Dimension of input mesh",
-             {"2","3"});
+             {"1","2","3"});
   newSetting("ELEMENT TYPE",
              "3",
              "Type of mesh elements (number of edges)",
-             {"3","4","6","12"});
+             {"2", "3","4","6","12"});
   newSetting("ELEMENT MAP",
              "ISOPARAMETRIC",
              "Type mapping used to transform each element",

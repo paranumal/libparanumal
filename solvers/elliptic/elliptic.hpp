@@ -134,6 +134,7 @@ public:
   void BuildOperatorMatrixIpdg(parAlmond::parCOO& A);
   void BuildOperatorMatrixContinuous(parAlmond::parCOO& A);
 
+  void BuildOperatorMatrixContinuousLine1D(parAlmond::parCOO& A);
   void BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO& A);
   void BuildOperatorMatrixContinuousTri3D(parAlmond::parCOO& A);
   void BuildOperatorMatrixContinuousQuad2D(parAlmond::parCOO& A);
@@ -150,6 +151,7 @@ public:
 
   void BuildOperatorDiagonal(memory<dfloat>& diagA);
 
+  void BuildOperatorDiagonalContinuousLine1D(memory<dfloat>& diagA);
   void BuildOperatorDiagonalContinuousTri2D(memory<dfloat>& diagA);
   void BuildOperatorDiagonalContinuousTri3D(memory<dfloat>& diagA);
   void BuildOperatorDiagonalContinuousQuad2D(memory<dfloat>& diagA);

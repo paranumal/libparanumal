@@ -33,6 +33,16 @@ void mesh_t::MassMatrixApply(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_
   MassMatrixKernel(Nelements, o_wJ, o_MM, o_q, o_Mq);
 }
 
+void mesh_t::MassMatrixKernelSetupLine1D(int Nfields) {
+  properties_t kernelInfo = props; //copy base occa properties
+  kernelInfo["defines/" "p_Nfields"]= Nfields;
+
+  MassMatrixKernel = platform.buildKernel(MESH_DIR "/okl/MassMatrixOperatorLine1D.okl",
+                                          "MassMatrixOperatorLine1D",
+                                          kernelInfo);
+}
+
+  
 void mesh_t::MassMatrixKernelSetupTri2D(int Nfields) {
   properties_t kernelInfo = props; //copy base occa properties
   kernelInfo["defines/" "p_Nfields"]= Nfields;

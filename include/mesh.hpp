@@ -44,6 +44,7 @@ public:
 namespace Mesh {
   /*Element types*/
   enum ElementType {
+    LINES         =2,
     TRIANGLES     =3,
     QUADRILATERALS=4,
     TETRAHEDRA    =6,
@@ -71,8 +72,11 @@ class mesh_t {
   std::string elementSuffix(){
 
     std::string suffix("NOT DEFINED");
-
-    if(elementType==Mesh::TRIANGLES){
+    
+    if(elementType==Mesh::LINES){
+      suffix = "Line1D";
+    } 
+    else if(elementType==Mesh::TRIANGLES){
       if(dim==2){
         suffix = "Tri2D";
       }
@@ -135,6 +139,8 @@ class mesh_t {
   int ElementNodeCount(int _N){
     int _Np = 0;
     switch(elementType){
+    case Mesh::LINES:
+      _Np = (_N+1); break;
     case Mesh::TRIANGLES:
       _Np = ((_N+1)*(_N+2))/2; break;
     case Mesh::QUADRILATERALS:
@@ -384,6 +390,10 @@ class mesh_t {
   // Setup cubature
   void CubatureSetup() {
     switch (elementType) {
+    case Mesh::LINES:
+        CubatureSetupLine1D();
+        break;
+
       case Mesh::TRIANGLES:
         CubatureSetupTri2D();
         break;
@@ -402,6 +412,9 @@ class mesh_t {
   // Setup cubature physical nodes
   void CubaturePhysicalNodes() {
     switch (elementType) {
+      case Mesh::LINES:
+	CubaturePhysicalNodesLine1D();
+	break;
       case Mesh::TRIANGLES:
         if (dim==2)
           CubaturePhysicalNodesTri2D();
@@ -427,6 +440,9 @@ class mesh_t {
 
   void PlotInterp(const memory<dfloat> q, memory<dfloat> Iq, memory<dfloat> scratch=memory<dfloat>()) {
     switch (elementType) {
+      case Mesh::LINES:
+        PlotInterpLine1D(q, Iq, scratch);
+        break;
       case Mesh::TRIANGLES:
         PlotInterpTri2D(q, Iq, scratch);
         break;
@@ -445,6 +461,9 @@ class mesh_t {
   void MassMatrixApply(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_Mq);
   void MassMatrixKernelSetup(int Nfields) {
     switch (elementType) {
+      case Mesh::LINES:
+        MassMatrixKernelSetupLine1D(Nfields);
+        break;
       case Mesh::TRIANGLES:
         MassMatrixKernelSetupTri2D(Nfields);
         break;
@@ -462,6 +481,8 @@ class mesh_t {
 
   dfloat ElementCharacteristicLength(dlong e) {
     switch (elementType) {
+      case Mesh::LINES:
+        return ElementCharacteristicLengthLine1D(e);
       case Mesh::TRIANGLES:
         return ElementCharacteristicLengthTri2D(e);
       case Mesh::QUADRILATERALS:
@@ -498,6 +519,9 @@ class mesh_t {
   // box mesh
   void SetupBox() {
     switch (elementType) {
+       case Mesh::LINES:
+        SetupBoxLine1D();
+        break;
       case Mesh::TRIANGLES:
         SetupBoxTri2D();
         break;
@@ -512,6 +536,7 @@ class mesh_t {
         break;
     }
   }
+  void SetupBoxLine1D();
   void SetupBoxTri2D();
   void SetupBoxQuad2D();
   void SetupBoxTet3D();
@@ -520,6 +545,10 @@ class mesh_t {
   // pml box mesh
   void SetupPmlBox() {
     switch (elementType) {
+    case Mesh::LINES:
+	printf("SetupPmlBox: LINES not implemented\n");
+	exit(-1);
+	break;
       case Mesh::TRIANGLES:
         SetupPmlBoxTri2D();
         break;
@@ -542,6 +571,11 @@ class mesh_t {
   // mesh reader
   void ReadGmsh(const std::string fileName) {
     switch (elementType) {
+    case Mesh::LINES:
+	printf("ReadGmsh: LINES not implemented\n");
+	exit(-1);
+	break;
+
       case Mesh::TRIANGLES:
         if(dim==2)
           ReadGmshTri2D(fileName);
@@ -572,6 +606,9 @@ class mesh_t {
   // reference nodes and operators
   void ReferenceNodes() {
     switch (elementType) {
+      case Mesh::LINES:
+        ReferenceNodesLine1D();
+        break;
       case Mesh::TRIANGLES:
         ReferenceNodesTri2D();
         break;
@@ -586,6 +623,8 @@ class mesh_t {
         break;
     }
   }
+
+  void ReferenceNodesLine1D();
   void ReferenceNodesTri2D();
   void ReferenceNodesQuad2D();
   void ReferenceNodesTet3D();
@@ -618,6 +657,9 @@ class mesh_t {
   /* compute x,y,z coordinates of each node */
   void PhysicalNodes() {
     switch (elementType) {
+      case Mesh::LINES:
+	PhysicalNodesLine1D();
+        break;
       case Mesh::TRIANGLES:
         if(dim==2)
           PhysicalNodesTri2D();
@@ -638,6 +680,7 @@ class mesh_t {
         break;
     }
   }
+  void PhysicalNodesLine1D();
   void PhysicalNodesTri2D();
   void PhysicalNodesTri3D();
   void PhysicalNodesQuad2D();
@@ -648,6 +691,9 @@ class mesh_t {
   // compute geometric factors for local to physical map
   void GeometricFactors() {
     switch (elementType) {
+      case Mesh::LINES:
+	GeometricFactorsLine1D();
+	break;
       case Mesh::TRIANGLES:
         if(dim==2)
           GeometricFactorsTri2D();
@@ -668,6 +714,7 @@ class mesh_t {
         break;
     }
   }
+  void GeometricFactorsLine1D();
   void GeometricFactorsTri2D();
   void GeometricFactorsTri3D();
   void GeometricFactorsQuad2D();
@@ -677,6 +724,9 @@ class mesh_t {
 
   void SurfaceGeometricFactors() {
     switch (elementType) {
+      case Mesh::LINES:
+	SurfaceGeometricFactorsLine1D();
+	break;
       case Mesh::TRIANGLES:
         if(dim==2)
           SurfaceGeometricFactorsTri2D();
@@ -697,6 +747,8 @@ class mesh_t {
         break;
     }
   }
+
+  void SurfaceGeometricFactorsLine1D();
   void SurfaceGeometricFactorsTri2D();
   void SurfaceGeometricFactorsTri3D();
   void SurfaceGeometricFactorsQuad2D();
@@ -704,11 +756,13 @@ class mesh_t {
   void SurfaceGeometricFactorsTet3D();
   void SurfaceGeometricFactorsHex3D();
 
+  void CubatureSetupLine1D();
   void CubatureSetupTri2D();
   void CubatureSetupQuad2D();
   void CubatureSetupTet3D();
   void CubatureSetupHex3D();
 
+  void CubaturePhysicalNodesLine1D();
   void CubaturePhysicalNodesTri2D();
   void CubaturePhysicalNodesTri3D();
   void CubaturePhysicalNodesQuad2D();
@@ -716,16 +770,19 @@ class mesh_t {
   void CubaturePhysicalNodesTet3D();
   void CubaturePhysicalNodesHex3D();
 
+  void PlotInterpLine1D(const memory<dfloat> q, memory<dfloat> Iq, memory<dfloat> scratch);
   void PlotInterpTri2D(const memory<dfloat> q, memory<dfloat> Iq, memory<dfloat> scratch);
   void PlotInterpQuad2D(const memory<dfloat> q, memory<dfloat> Iq, memory<dfloat> scratch);
   void PlotInterpTet3D(const memory<dfloat> q, memory<dfloat> Iq, memory<dfloat> scratch);
   void PlotInterpHex3D(const memory<dfloat> q, memory<dfloat> Iq, memory<dfloat> scratch);
 
+  void MassMatrixKernelSetupLine1D(int Nfields);
   void MassMatrixKernelSetupTri2D(int Nfields);
   void MassMatrixKernelSetupQuad2D(int Nfields);
   void MassMatrixKernelSetupTet3D(int Nfields);
   void MassMatrixKernelSetupHex3D(int Nfields);
 
+  dfloat ElementCharacteristicLengthLine1D(dlong e);
   dfloat ElementCharacteristicLengthTri2D(dlong e);
   dfloat ElementCharacteristicLengthQuad2D(dlong e);
   dfloat ElementCharacteristicLengthTet3D(dlong e);
@@ -900,6 +957,53 @@ class mesh_t {
                                       const dfloat alphaIn=-1);
 
 
+  //Lines
+  static void NodesLine1D(const int _N,
+                          memory<dfloat>& _r);
+  static void FaceNodesLine1D(const int _N,
+                              const memory<dfloat> _r,
+                              memory<int>& _faceNodes);
+  static void VertexNodesLine1D(const int _N,
+                                const memory<dfloat> _r,
+                                memory<int>& _vertexNodes);
+  static void FaceNodeMatchingLine1D(const memory<dfloat> _r,
+                                     const memory<int> _faceNodes,
+                                     const memory<int> _faceVertices,
+                                     memory<int>& R);
+  static void EquispacedNodesLine1D(const int _N,
+                                    memory<dfloat>& _r);
+  static void EquispacedEToVLine1D(const int _N, memory<int>& _EToV);
+  static void SEMFEMEToVLine1D(const int _N, memory<int>& _EToV);
+  static void OrthonormalBasisLine1D(const dfloat a, 
+                                     const int i, 
+                                     dfloat& P);
+  static void GradOrthonormalBasisLine1D(const dfloat a,
+                                         const int i, 
+                                         dfloat& Pr);
+  static void VandermondeLine1D(const int _N,
+                                const memory<dfloat> _r,
+                                memory<dfloat>& V);
+  static void GradVandermondeLine1D(const int _N,
+                                    const memory<dfloat> _r,
+                                    memory<dfloat>& Vr);
+  static void MassMatrixLine1D(const int _Np,
+                               const memory<dfloat> V,
+                               memory<dfloat>& _MM);
+  static void LumpedMassMatrixLine1D(const int _N,
+                                     const memory<dfloat> _gllw,
+                                     memory<dfloat>& _MM);
+  static void invLumpedMassMatrixLine1D(const int _N,
+                                        const memory<dfloat> _gllw,
+                                        memory<dfloat>& _invMM);
+  static void DmatrixLine1D(const int _N,
+                            const memory<dfloat> _r,
+                            memory<dfloat>& _D);
+  static void InterpolationMatrixLine1D(const int _N,
+                                        const memory<dfloat> rIn,
+                                        const memory<dfloat> rOut,
+                                        memory<dfloat>& I);
+
+  
   //Quads
   static void NodesQuad2D(const int _N,
                           memory<dfloat>& _r,

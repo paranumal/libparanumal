@@ -1,0 +1,159 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+@kernel void ellipticPreconProlongateLine1D(const dlong Nelements,
+                                     @restrict const  dfloat *  P,
+                                     @restrict const  dfloat *  qCoarse,
+                                     @restrict dfloat *  qFine){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockVFine;@outer(0)){
+
+    @shared dfloat s_qCoarse[p_NblockVFine][p_NpCoarse];
+
+    for(int es=0;es<p_NblockVFine;++es;@inner(1)){
+      for(int n=0;n<p_NpFine;++n;@inner(0)){
+        const dlong e = eo + es;
+        if(e<Nelements){
+          if(n<p_NpCoarse) {
+            s_qCoarse[es][n] = qCoarse[e*p_NpCoarse+n];
+          }
+        }
+      }
+    }
+
+
+    for(int es=0;es<p_NblockVFine;++es;@inner(1)){
+      for(int n=0;n<p_NpFine;++n;@inner(0)){
+        const dlong e = eo + es;
+        if(e<Nelements){
+          //dfloat tmp = 0.;
+          dfloat tmp = qFine[e*p_NpFine+n];
+
+          #pragma unroll p_NpCoarse
+            for(int i=0;i<p_NpCoarse;++i){
+              tmp += P[i + n*p_NpCoarse]*s_qCoarse[es][i];
+            }
+
+          qFine[e*p_NpFine+n] = tmp;
+        }
+      }
+    }
+  }
+}
+
+@kernel void ellipticPartialPreconProlongateLine1D(const dlong Nelements,
+                                     @restrict const  dlong   *  elementList,
+                                     @restrict const  dlong   *  GlobalToLocal,
+                                     @restrict const  dfloat *  P,
+                                     @restrict const  dfloat *  qCoarse,
+                                     @restrict dfloat *  qFine){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockVFine;@outer(0)){
+
+    @shared dfloat s_qCoarse[p_NblockVFine][p_NpCoarse];
+
+    for(int es=0;es<p_NblockVFine;++es;@inner(1)){
+      for(int n=0;n<p_NpFine;++n;@inner(0)){
+        const dlong e = eo + es;
+        if(e<Nelements){
+          const dlong element = elementList[e];
+          if(n<p_NpCoarse) {
+            const dlong base = n + element*p_NpCoarse;
+            const dlong id = GlobalToLocal[base];
+            s_qCoarse[es][n] = (id!=-1) ? qCoarse[id] : 0.0;
+          }
+        }
+      }
+    }
+
+
+    for(int es=0;es<p_NblockVFine;++es;@inner(1)){
+      for(int n=0;n<p_NpFine;++n;@inner(0)){
+        const dlong e = eo + es;
+        if(e<Nelements){
+          dfloat tmp = 0.;
+          // dfloat tmp = qFine[e*p_NpFine+n];
+
+          #pragma unroll p_NpCoarse
+            for(int i=0;i<p_NpCoarse;++i){
+              tmp += P[i + n*p_NpCoarse]*s_qCoarse[es][i];
+            }
+
+          const dlong element = elementList[e];
+          qFine[element*p_NpFine+n] = tmp;
+        }
+      }
+    }
+  }
+}
+
+//storing P in @shared is too much for 3D
+#if 0
+@kernel void ellipticPreconProlongate_v1(const dlong Nelements,
+                                     @restrict const  dfloat *  P,
+                                     @restrict const  dfloat *  qCoarse,
+                                     @restrict dfloat *  qFine){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockVFine;@outer(0)){
+
+    @shared dfloat s_qCoarse[p_NblockVFine][p_NpCoarse];
+    @shared dfloat s_P[p_NpCoarse][p_NpFine];
+
+    for(int es=0;es<p_NblockVFine;++es;@inner(1)){
+      for(int n=0;n<p_NpFine;++n;@inner(0)){
+        dlong t = n + es*p_NpFine;
+
+        if(t<p_NpCoarse*p_NblockVFine)
+          if((eo*p_NpCoarse + t)<Nelements*p_NpCoarse)
+            s_qCoarse[0][t] = qCoarse[eo*p_NpCoarse+t];
+
+        while(t<p_NpFine*p_NpCoarse){
+          s_P[0][t] = P[t];
+          t += p_NpFine*p_NblockVFine;
+        }
+      }
+    }
+
+
+    for(int es=0;es<p_NblockVFine;++es;@inner(1)){
+      for(int n=0;n<p_NpFine;++n;@inner(0)){
+        const dlong e = eo + es;
+        if(e<Nelements){
+          dfloat tmp = 0.;
+          //dfloat tmp = qFine[e*p_NpFine+n];
+
+          #pragma unroll p_NpCoarse
+            for(int i=0;i<p_NpCoarse;++i){
+              tmp += s_P[n][i]*s_qCoarse[es][i];
+            }
+
+          qFine[e*p_NpFine+n] = tmp;
+        }
+      }
+    }
+  }
+}
+#endif

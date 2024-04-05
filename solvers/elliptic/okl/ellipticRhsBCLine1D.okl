@@ -1,0 +1,138 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+@kernel void ellipticRhsBCLine1D(const dlong Nelements,
+                              @restrict const  dfloat *  wJ,
+                              @restrict const  dfloat *  ggeo,
+                              @restrict const  dfloat *  sgeo,
+                              @restrict const  dfloat *  DT,
+                              @restrict const  dfloat *  S,
+                              @restrict const  dfloat *  MM,
+                              @restrict const  dlong  *  vmapM,
+                              @restrict const  dfloat *  sM,
+                              const dfloat lambda,
+                              @restrict const  dfloat *  x,
+                              @restrict const  dfloat *  y,
+                              @restrict const  dfloat *  z,
+                              @restrict const  int    *  mapB,
+                              @restrict dfloat  *  rhs){
+
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+    @shared dfloat s_q[p_Nq];
+    @shared dfloat s_ndq[p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
+
+    @exclusive dfloat r_qr[p_Nq], r_Aq[p_Nq];
+    @exclusive dfloat r_G00[p_Nq], r_GwJ[p_Nq];
+
+    // loop over slabs
+    for(int i=0;i<p_Nq;++i;@inner(0)){
+      s_q[i] = 0.;
+      s_ndq[i] = 0.;
+      for(int j=0;j<p_Nq;++j){
+	s_DT[j][i] = DT[j*p_Nq+i];
+      }
+    }
+
+    // face 0 & 1
+    for(int j=0;j<p_Nq;++j;@inner(0)){
+      if(j==0){//face 0
+        const dlong sk = e*p_Nfp*p_Nfaces + 0*p_Nfp;
+        const dlong idM = vmapM[sk];
+
+        const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
+        const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];
+
+        dfloat dudxP=0,uP=0;
+
+        const int bc = mapB[idM];
+        if(bc>0) {
+          ellipticBoundaryConditions1D(bc, x[idM], nx, 0.f, 0.f, uP, dudxP);
+        }
+
+        s_q  [p_Nq-1] = uP;
+        s_ndq[p_Nq-1] -= WsJ*(nx*dudxP);
+      }
+      if(j==1){//face 2
+        const dlong sk = e*p_Nfp*p_Nfaces + 1*p_Nfp;
+        const dlong idM = vmapM[sk];
+	
+        const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
+        const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];
+	
+        dfloat dudxP=0, uP=0;
+	
+        const int bc = mapB[idM];
+        if(bc>0) {
+          ellipticBoundaryConditions1D(bc, x[idM],  nx, 0.f, 0.f, uP, dudxP);
+        }
+
+        s_q  [0] = uP;
+        s_ndq[0] -= WsJ*(nx*dudxP);
+      }
+    }
+
+
+    // loop over slabs
+    for(int i=0;i<p_Nq;++i;@inner(0)){
+      const dlong base = e*p_Nggeo*p_Np + i;
+      
+      r_GwJ[0] = wJ[e*p_Np + i];
+      r_G00[0] = ggeo[base+p_G00ID*p_Np];
+
+      dfloat qr = 0.f;
+
+#pragma unroll p_Nq
+      for(int n=0; n<p_Nq; ++n){
+	qr += s_DT[i][n]*s_q[n];
+      }
+      
+      r_qr[0] = qr; 
+      
+      r_Aq[0] = r_GwJ[0]*lambda*s_q[i];
+    }
+    
+    // r term ----->
+
+    for(int i=0;i<p_Nq;++i;@inner(0)){
+      s_q[i] = r_G00[0]*r_qr[0];
+    }
+    
+
+    for(int i=0;i<p_Nq;++i;@inner(0)){
+      dfloat tmp = 0.f;
+#pragma unroll p_Nq
+      for(int n=0;n<p_Nq;++n) {
+	tmp += s_DT[n][i]*s_q[n];
+      }
+      
+      r_Aq[0] += tmp;
+
+      const dlong id = e*p_Np  + i;
+      rhs[id] -= r_Aq[0] + s_ndq[i];
+    }
+  }
+}
