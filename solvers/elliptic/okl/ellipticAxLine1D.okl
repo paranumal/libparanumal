@@ -104,7 +104,7 @@ SOFTWARE.
 }
 
 // line thread version
-@kernel void ellipticPartialAxLine1D(const dlong Nelements,
+@kernel void ellipticPartialAxLine1Dv0(const dlong Nelements,
                                    @restrict const  dlong   *  elementList,
                                    @restrict const  dlong   *  GlobalToLocal,
                                    @restrict const  dfloat *  wJ,
@@ -177,6 +177,110 @@ SOFTWARE.
 
       const dlong base = element*p_Np +  i;
       Aq[base] = r_Aq;
+    }
+  }
+}
+
+
+
+// line thread version
+@kernel void ellipticPartialAxLine1D(const dlong Nelements,
+                                   @restrict const  dlong   *  elementList,
+                                   @restrict const  dlong   *  GlobalToLocal,
+                                   @restrict const  dfloat *  wJ,
+                                   @restrict const  dfloat *  ggeo,
+                                   @restrict const  dfloat *  DT,
+                                   @restrict const  dfloat *  S,
+                                   @restrict const  dfloat *  MM,
+                                   const dfloat   lambda,
+                                   @restrict const  dfloat *  q,
+                                   @restrict dfloat *  Aq){
+
+
+#define p_T 256
+#define p_Nsub p_T/p_Nq
+  
+  for(dlong ebase=0;ebase<Nelements;ebase+=p_Nsub;@outer(0)){
+
+    @shared dfloat s_q[p_Nsub][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
+
+    @exclusive dlong element;
+    @exclusive dfloat r_qr, r_Aq;
+    @exclusive dfloat r_G00, r_GwJ;
+
+    // prefetch q(:,:,:,e) to @shared
+    for(int es=0;es<p_Nsub;++es;@inner(1)){
+      for(int i=0; i<p_Nq; ++i; @inner(0)){
+
+	dlong e = ebase + es;
+	
+	element = (e<Nelements) ? elementList[e]:-1;
+
+	if(element>=0){
+	  const dlong base = i + element*p_Np;
+	  const dlong id = GlobalToLocal[base];
+	  s_q[es][i] = (id!=-1) ? q[id] : 0.0;
+	}
+
+	// fetch DT to @shared
+	int j = es;
+	while(j<p_Nq){
+	  s_DT[j][i] = DT[j*p_Nq+i];
+	  j+=p_Nsub;
+	}
+      }
+    }
+    
+    
+    for(int es=0;es<p_Nsub;++es;@inner(1)){
+      for(int i=0; i<p_Nq; ++i; @inner(0)){
+	
+	if(element>=0){
+	  const dlong base = element*p_Nggeo*p_Np + i;
+	  
+	  // assumes w*J built into G entries
+	  r_GwJ = wJ[element*p_Np +  i];
+	  
+	  r_G00 = ggeo[base+p_G00ID*p_Np];
+	  
+	  dfloat qr = 0.f;
+	  
+#pragma unroll p_Nq
+	  for(int n=0; n<p_Nq; ++n){
+	    qr += s_DT[i][n]*s_q[es][n];
+	  }
+	  
+	  r_qr = qr; 
+	  
+	  r_Aq = r_GwJ*lambda*s_q[es][i];
+	}
+      }
+    }
+
+    // r term ----->
+    
+    for(int es=0;es<p_Nsub;++es;@inner(1)){
+      for(int i=0; i<p_Nq; ++i; @inner(0)){
+	s_q[es][i] = r_G00*r_qr;
+      }
+    }
+
+    for(int es=0;es<p_Nsub;++es;@inner(1)){
+      for(int i=0; i<p_Nq; ++i; @inner(0)){
+	if(element>=0){
+	  dfloat tmp = 0.f;
+#pragma unroll p_Nq
+	  for(int n=0;n<p_Nq;++n) {
+	    tmp += s_DT[n][i]*s_q[es][n];
+	  }
+	  
+	  r_Aq += tmp;
+	  
+	  const dlong base = element*p_Np +  i;
+	  Aq[base] = r_Aq;
+	}
+      }
     }
   }
 }

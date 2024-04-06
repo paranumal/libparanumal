@@ -215,6 +215,36 @@ void elliptic_t::Run(){
   }
 
 
+
+  
+  if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
+
+    // copy data back to host
+    o_xL.copyTo(xL);
+
+    // output field files
+    std::string name;
+    settings.getSetting("OUTPUT FILE NAME", name);
+    char fname[BUFSIZ];
+    sprintf(fname, "%s_%04d.vtu", name.c_str(), mesh.rank);
+
+    PlotFields(xL, fname);
+  }
+
+  // output norm of final solution
+  {
+    //compute q.M*q
+    dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
+    deviceMemory<dfloat> o_MxL = platform.reserve<dfloat>(Nentries);
+    mesh.MassMatrixApply(o_xL, o_MxL);
+
+    dfloat norm2 = sqrt(platform.linAlg().innerProd(Nentries, o_xL, o_MxL, mesh.comm));
+
+    if(mesh.rank==0)
+      printf("Solution norm = %17.15lg\n", norm2);
+  }
+
+
 #if 1
 
   dfloat normr = platform.linAlg().norm2(o_r.length(), o_r, comm);
@@ -248,10 +278,10 @@ void elliptic_t::Run(){
   dfloat normH1 = platform.linAlg().sum(NblocksC, o_errH1, mesh.comm);
   normH1 = sqrt(normH1);
   
-  printf("%d &  %d & %d &  %.2e &  %.2e & %.2e; %% CG (REPORT): N, Ndofs, iter, normH1, ||r||, solveTime\n",
+  printf("%d,   %d,  %d,   %.2e,   %.2e,  %.2e; %% CG (REPORT): N, Ndofs, iter, normH1, ||r||, solveTime\n",
 	 mesh.N, (int)  NglobalDofs,  iter, normH1, normr, elapsedTime);
 
-#if 1
+#if 0
   {
     o_xL.copyTo(xL);
     FILE *fp = fopen("foo.dat", "w");
@@ -279,32 +309,5 @@ void elliptic_t::Run(){
   
 #endif
 
-
   
-  if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
-
-    // copy data back to host
-    o_xL.copyTo(xL);
-
-    // output field files
-    std::string name;
-    settings.getSetting("OUTPUT FILE NAME", name);
-    char fname[BUFSIZ];
-    sprintf(fname, "%s_%04d.vtu", name.c_str(), mesh.rank);
-
-    PlotFields(xL, fname);
-  }
-
-  // output norm of final solution
-  {
-    //compute q.M*q
-    dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
-    deviceMemory<dfloat> o_MxL = platform.reserve<dfloat>(Nentries);
-    mesh.MassMatrixApply(o_xL, o_MxL);
-
-    dfloat norm2 = sqrt(platform.linAlg().innerProd(Nentries, o_xL, o_MxL, mesh.comm));
-
-    if(mesh.rank==0)
-      printf("Solution norm = %17.15lg\n", norm2);
-  }
 }
