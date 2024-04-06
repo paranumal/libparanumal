@@ -45,8 +45,8 @@ SOFTWARE.
     @shared dfloat s_ndq[p_Nq];
     @shared dfloat s_DT[p_Nq][p_Nq];
 
-    @exclusive dfloat r_qr[p_Nq], r_Aq[p_Nq];
-    @exclusive dfloat r_G00[p_Nq], r_GwJ[p_Nq];
+    @exclusive dfloat r_qr, r_Aq;
+    @exclusive dfloat r_G00, r_GwJ;
 
     // loop over slabs
     for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -60,7 +60,7 @@ SOFTWARE.
     // face 0 & 1
     for(int j=0;j<p_Nq;++j;@inner(0)){
       if(j==0){//face 0
-        const dlong sk = e*p_Nfp*p_Nfaces + 0*p_Nfp;
+        const dlong sk = e*p_Nfp*p_Nfaces +1*p_Nfp; // HAD TO SWAP THIS FROM 0
         const dlong idM = vmapM[sk];
 
         const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
@@ -77,7 +77,7 @@ SOFTWARE.
         s_ndq[p_Nq-1] -= WsJ*(nx*dudxP);
       }
       if(j==1){//face 2
-        const dlong sk = e*p_Nfp*p_Nfaces + 1*p_Nfp;
+        const dlong sk = e*p_Nfp*p_Nfaces + 0*p_Nfp; // HAD TO SWAP THIS FROM 1
         const dlong idM = vmapM[sk];
 	
         const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
@@ -91,7 +91,7 @@ SOFTWARE.
         }
 
         s_q  [0] = uP;
-        s_ndq[0] -= WsJ*(nx*dudxP);
+	s_ndq[0] -= WsJ*(nx*dudxP);
       }
     }
 
@@ -100,8 +100,8 @@ SOFTWARE.
     for(int i=0;i<p_Nq;++i;@inner(0)){
       const dlong base = e*p_Nggeo*p_Np + i;
       
-      r_GwJ[0] = wJ[e*p_Np + i];
-      r_G00[0] = ggeo[base+p_G00ID*p_Np];
+      r_GwJ = wJ[e*p_Np + i];
+      r_G00 = ggeo[base+p_G00ID*p_Np];
 
       dfloat qr = 0.f;
 
@@ -110,15 +110,15 @@ SOFTWARE.
 	qr += s_DT[i][n]*s_q[n];
       }
       
-      r_qr[0] = qr; 
+      r_qr = qr; 
       
-      r_Aq[0] = r_GwJ[0]*lambda*s_q[i];
+      r_Aq = r_GwJ*lambda*s_q[i];
     }
     
     // r term ----->
 
     for(int i=0;i<p_Nq;++i;@inner(0)){
-      s_q[i] = r_G00[0]*r_qr[0];
+      s_q[i] = r_G00*r_qr;
     }
     
 
@@ -129,10 +129,10 @@ SOFTWARE.
 	tmp += s_DT[n][i]*s_q[n];
       }
       
-      r_Aq[0] += tmp;
+      r_Aq += tmp;
 
       const dlong id = e*p_Np  + i;
-      rhs[id] -= r_Aq[0] + s_ndq[i];
+      rhs[id] -= r_Aq + s_ndq[i];
     }
   }
 }

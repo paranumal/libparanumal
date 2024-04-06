@@ -43,7 +43,6 @@ SOFTWARE.
   {									\
     dfloat  spi = sin(PI*x);						\
     dfloat  spi2 = spi*spi;						\
-    dfloat c2pi = cos(2*PI*x);						\
     uB = spi*exp(-hornS*spi2);						\
     uxB = uxM;								\
   }
