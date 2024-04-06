@@ -133,6 +133,22 @@ void elliptic_t::Setup(platform_t& _platform, mesh_t& _mesh,
     floatPartialAxKernel = platform.buildKernel(fileName, kernelName,
                                                 kernelInfoFloat);
 
+    if(mesh.elementType==Mesh::HEXAHEDRA){
+      if(mesh.settings.compareSetting("ELEMENT MAP", "TRILINEAR"))
+        kernelName = "ellipticAxTrilinear" + suffix;
+      else
+        kernelName = "ellipticAx" + suffix;
+    } else{
+      kernelName = "ellipticAx" + suffix;
+    }
+    
+    AxKernel = platform.buildKernel(fileName, kernelName,
+				    kernelInfoDouble);
+    
+    floatAxKernel = platform.buildKernel(fileName, kernelName,
+					 kernelInfoFloat);
+
+    
   } else if (settings.compareSetting("DISCRETIZATION","IPDG")) {
     int Nmax = std::max(mesh.Np, mesh.Nfaces*mesh.Nfp);
     kernelInfoDouble["defines/" "p_Nmax"]= Nmax;

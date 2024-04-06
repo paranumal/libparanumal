@@ -109,6 +109,24 @@ elliptic_t elliptic_t::SetupNewDegree(mesh_t& meshC){
                                                          kernelInfoFloat);
 
 
+    fileName   = oklFilePrefix + "ellipticAx" + suffix + oklFileSuffix;
+    if(meshC.elementType==Mesh::HEXAHEDRA){
+      if(mesh.settings.compareSetting("ELEMENT MAP", "TRILINEAR"))
+        kernelName = "ellipticAxTrilinear" + suffix;
+      else
+        kernelName = "ellipticAx" + suffix;
+    } else{
+      kernelName = "ellipticAx" + suffix;
+    }
+
+    elliptic.AxKernel = platform.buildKernel(fileName, kernelName,
+					     kernelInfoDouble);
+    
+    elliptic.floatAxKernel = platform.buildKernel(fileName, kernelName,
+						  kernelInfoFloat);
+
+
+    
   } else if (settings.compareSetting("DISCRETIZATION","IPDG")) {
     int Nmax = std::max(meshC.Np, meshC.Nfaces*meshC.Nfp);
     kernelInfoDouble["defines/" "p_Nmax"]= Nmax;

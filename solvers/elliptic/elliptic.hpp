@@ -98,10 +98,12 @@ public:
   dfloat allNeumannScale;
 
   kernel_t maskKernel;
+  kernel_t AxKernel;
   kernel_t partialAxKernel;
   kernel_t partialGradientKernel;
   kernel_t partialIpdgKernel;
 
+  kernel_t floatAxKernel;
   kernel_t floatPartialAxKernel;
   kernel_t floatPartialGradientKernel;
   kernel_t floatPartialIpdgKernel;

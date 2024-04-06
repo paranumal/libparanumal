@@ -56,20 +56,27 @@ void elliptic_t::Operator(deviceMemory<double> &o_q, deviceMemory<double> &o_Aq)
   }
 
   if(disc_c0){
+#if 1
+    platform.linAlg().set(o_Aq.length(), (dfloat)0.0, o_Aq);
+			  
+    AxKernel(mesh.Nelements,
+	     o_GlobalToLocal,
+	     o_wJ,
+	     o_ggeo,
+	     o_D,
+	     o_S,
+	     o_MM,
+	     static_cast<double>(lambda),
+	     o_q,
+	     o_Aq);
+
+#else
     //buffer for local Ax
     deviceMemory<double> o_AqL = platform.reserve<double>(mesh.Np*mesh.Nelements);
-
-    // int mapType = (mesh.elementType==Mesh::HEXAHEDRA &&
-    //                mesh.settings.compareSetting("ELEMENT MAP", "TRILINEAR")) ? 1:0;
-
-    // int integrationType = (mesh.elementType==Mesh::HEXAHEDRA &&
-    //                        settings.compareSetting("ELLIPTIC INTEGRATION", "CUBATURE")) ? 1:0;
 
     gHalo.ExchangeStart(o_q, 1);
 
     if(mesh.NlocalGatherElements/2){
-      // if(integrationType==0) { // GLL or non-hex
-        // if(mapType==0)
           partialAxKernel(mesh.NlocalGatherElements/2,
                           mesh.o_localGatherElementList,
                           o_GlobalToLocal,
@@ -81,21 +88,6 @@ void elliptic_t::Operator(deviceMemory<double> &o_q, deviceMemory<double> &o_Aq)
                           static_cast<double>(lambda),
                           o_q,
                           o_AqL);
-        /* NC: disabling until we re-add treatment of affine elements
-        else
-          partialAxKernel(mesh.NlocalGatherElements, mesh.o_localGatherElementList,
-                          mesh.o_EXYZ, mesh.o_gllzw, mesh.o_D, mesh.o_S, mesh.o_MM, lambda, o_q, o_Aq);
-        */
-      // } else {
-      //   partialCubatureAxKernel(mesh.NlocalGatherElements,
-      //                           mesh.o_localGatherElementList,
-      //                           mesh.o_cubggeo,
-      //                           mesh.o_cubD,
-      //                           mesh.o_cubInterpT,
-      //                           lambda,
-      //                           o_q,
-      //                           o_Aq);
-      // }
     }
 
     // finalize halo exchange
@@ -103,32 +95,17 @@ void elliptic_t::Operator(deviceMemory<double> &o_q, deviceMemory<double> &o_Aq)
 
     if(mesh.NglobalGatherElements) {
 
-      // if(integrationType==0) { // GLL or non-hex
-        // if(mapType==0)
-          partialAxKernel(mesh.NglobalGatherElements,
-                          mesh.o_globalGatherElementList,
-                          o_GlobalToLocal,
-                          o_wJ,
-                          o_ggeo,
-                          o_D,
-                          o_S,
-                          o_MM,
-                          static_cast<double>(lambda),
-                          o_q,
-                          o_AqL);
-        /* NC: disabling until we re-add treatment of affine elements
-        else
-          partialAxKernel(mesh.NglobalGatherElements, mesh.o_globalGatherElementList,
-                          mesh.o_EXYZ, mesh.o_gllzw, mesh.o_D, mesh.o_S, mesh.o_MM, lambda, o_q, o_Aq);
-        */
-      // } else {
-      //   partialCubatureAxKernel(mesh.NglobalGatherElements,
-      //                           mesh.o_globalGatherElementList,
-      //                           mesh.o_cubggeo,
-      //                           mesh.o_cubD,
-      //                           mesh.o_cubInterpT,
-      //                           lambda, o_q, o_Aq);
-      // }
+      partialAxKernel(mesh.NglobalGatherElements,
+		      mesh.o_globalGatherElementList,
+		      o_GlobalToLocal,
+		      o_wJ,
+		      o_ggeo,
+		      o_D,
+		      o_S,
+		      o_MM,
+		      static_cast<double>(lambda),
+		      o_q,
+		      o_AqL);
     }
 
     //gather result to Aq
@@ -149,7 +126,7 @@ void elliptic_t::Operator(deviceMemory<double> &o_q, deviceMemory<double> &o_Aq)
     }
 
     ogsMasked.GatherFinish(o_Aq, o_AqL, 1, ogs::Add, ogs::Trans);
-
+#endif
   } else if(disc_ipdg) {
     //buffer for gradient
     dlong Ntotal = mesh.Np*(mesh.Nelements+mesh.totalHaloPairs);
@@ -236,6 +213,22 @@ void elliptic_t::Operator(deviceMemory<float> &o_q, deviceMemory<float> &o_Aq){
   }
 
   if(disc_c0){
+
+#if 0
+    platform.linAlg().set(o_Aq.length(), (float)0.0, o_Aq);
+			  
+    floatAxKernel(mesh.Nelements,
+		   o_GlobalToLocal,
+		   o_wJ,
+		   o_ggeo,
+		   o_D,
+		   o_S,
+		   o_MM,
+		   static_cast<double>(lambda),
+		   o_q,
+		   o_Aq);
+#else
+    
     //buffer for local Ax
     deviceMemory<float> o_AqL = platform.reserve<float>(mesh.Np*mesh.Nelements);
 
@@ -290,7 +283,7 @@ void elliptic_t::Operator(deviceMemory<float> &o_q, deviceMemory<float> &o_Aq){
     }
 
     ogsMasked.GatherFinish(o_Aq, o_AqL, 1, ogs::Add, ogs::Trans);
-
+#endif
   } else if(disc_ipdg) {
     //buffer for gradient
     dlong Ntotal = mesh.Np*(mesh.Nelements+mesh.totalHaloPairs);
