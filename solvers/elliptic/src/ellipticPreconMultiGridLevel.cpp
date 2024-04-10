@@ -379,7 +379,6 @@ void MGLevel::SetupSmoother() {
 
     //set the stabilty weight (jacobi-type interation)
     lambda0 = (4./3.)/rho;
-
     printf("lambda0=%g, rho=%g\n", lambda0, rho);
     
     for (dlong n=0;n<Nrows;n++)
@@ -406,7 +405,7 @@ pfloat MGLevel::maxEigSmoothAx(){
 
   pfloat one = 1.0, zero = 0;
 
-  int k = 10;
+  int k = 11;
 
   hlong Ntotal = Nrows;
   mesh.comm.Allreduce(Ntotal);

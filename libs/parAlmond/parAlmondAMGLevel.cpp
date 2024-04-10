@@ -64,10 +64,24 @@ void amgLevel::residual  (deviceMemory<pfloat>& o_RHS, deviceMemory<pfloat>& o_X
 
 void amgLevel::smooth(deviceMemory<pfloat>& o_RHS, deviceMemory<pfloat>& o_X, bool x_is_zero){
   if(stype == DAMPED_JACOBI){
+    
     A.smoothDampedJacobi(o_RHS, o_X, lambda, x_is_zero);
+#if 0
+    for(int n=0;n<1;++n){
+      A.smoothDampedJacobi(o_RHS, o_X, lambda, 0);
+    }
+#endif
+
   } else if(stype == CHEBYSHEV){
     A.smoothChebyshev(o_RHS, o_X, lambda0, lambda1,
-                      x_is_zero, ChebyshevIterations);
+		      x_is_zero, ChebyshevIterations);
+
+#if 0
+    for(int n=0;n<2;++n){
+      A.smoothChebyshev(o_RHS, o_X, lambda0, lambda1,
+			0, ChebyshevIterations);
+    }
+#endif
   }
 }
 

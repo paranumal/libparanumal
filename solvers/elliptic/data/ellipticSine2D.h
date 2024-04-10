@@ -47,3 +47,11 @@ SOFTWARE.
     uxB = -PI*cos(PI*x)*sin(PI*y);   \
     uyB = -PI*sin(PI*x)*cos(PI*y);   \
   }
+
+#define ellipticExactSolution2D(x,y,lambda,exu,exux,exuy)		\
+  {									\
+    *exu  = PI*sin(PI*x)*sin(PI*y);					\
+    *exux = PI*cos(PI*x)*sin(PI*y);					\
+    *exuy = PI*sin(PI*x)*cos(PI*y);					\
+  }
+

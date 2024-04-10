@@ -33,6 +33,7 @@ SOFTWARE.
 
 // square thread version
 @kernel void ellipticAxQuad2D(const dlong   Nelements,
+			      @restrict const  dlong   *  GlobalToLocal,
                                @restrict const  dfloat *  wJ,
                                @restrict const  dfloat *  ggeo,
                                @restrict const  dfloat *  DT,
@@ -49,12 +50,14 @@ SOFTWARE.
 
     @exclusive dfloat r_qr, r_qs, r_Aq;
     @exclusive dfloat r_G00, r_G01, r_G11, r_GwJ;
+    @exclusive dlong gid;
 
-    // prefetch q(:,:,:,e) to @shared
+// prefetch q(:,:,:,e) to @shared
     squareThreads{
       const dlong base = i + j*p_Nq + e*p_Np;
-
-      s_q[j][i] = q[base];
+      gid = GlobalToLocal[base];
+      
+      s_q[j][i] = (gid!=-1) ? q[gid]:0;
 
       // fetch DT to @shared
       s_DT[j][i] = DT[j*p_Nq+i];
@@ -118,9 +121,9 @@ SOFTWARE.
         }
 
       r_Aq += tmp;
-
-      const dlong base = e*p_Np + j*p_Nq + i;
-      Aq[base] = r_Aq;
+      if(gid>=0){
+         @atomic Aq[gid] += r_Aq;
+      }
     }
   }
 }

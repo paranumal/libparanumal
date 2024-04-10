@@ -32,8 +32,8 @@ ellipticData1D = ellipticDir + "/data/ellipticHorns1D.h"
 ellipticData2D = ellipticDir + "/data/ellipticSine2D.h"
 ellipticData3D = ellipticDir + "/data/ellipticSine3D.h"
 
-def ellipticSettings(rcformat="2.0", data_file=ellipticData1D,
-                     mesh="BOX", dim=1, element=2, nx=10, ny=10, nz=10, boundary_flag=1,
+def ellipticSettings(rcformat="2.0", data_file=ellipticData2D,
+                     mesh="BOX", dim=2, element=4, nx=10, ny=10, nz=10, boundary_flag=1,
                      degree=4, thread_model="CUDA", platform_number=0, device_number=0,
                      Lambda=0.0,
                      discretization="CONTINUOUS",
@@ -54,7 +54,7 @@ def ellipticSettings(rcformat="2.0", data_file=ellipticData1D,
           setting_t("BOX NY", ny),
           setting_t("BOX NZ", nz),
           setting_t("BOX DIMX", 2),
-          setting_t("BOX DIMY", 1),
+          setting_t("BOX DIMY", 2),
           setting_t("BOX DIMZ", 1),
           setting_t("BOX BOUNDARY FLAG", boundary_flag),
           setting_t("POLYNOMIAL DEGREE", degree),
@@ -83,18 +83,20 @@ def main():
   #C0 tests
   ################
 
-  for L in range(1, 21, 1):
+  for L in range(1, 11, 1):
     for P in range(1,16,1):
       nx = 2**L
+      ny = 2**L
       degree = P
-      failCount += testTW(name="testLine1Da",
+      failCount += testTW(name="testQuad2D",
                           cmd=ellipticBin,
-                          settings=ellipticSettings(element=2,
+                          settings=ellipticSettings(element=4,
                                                     degree=degree,
                                                     nx=nx,
-                                                    data_file=ellipticData1D,
+                                                    ny=ny,
+                                                    data_file=ellipticData2D,
                                                     paralmond_cycle="VCYCLE",
-                                                    dim=1,
+                                                    dim=2,
                                                     precon="MULTIGRID"))                    
 
 

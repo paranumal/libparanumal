@@ -117,7 +117,7 @@ SOFTWARE.
 			      @restrict const  dfloat *  q,
 			      @restrict dfloat *  Aq){
   
-#define p_T 256
+#define p_T 128
 #define p_Nsub p_T/p_Nq
   
   for(dlong ebase=0;ebase<Nelements;ebase+=p_Nsub;@outer(0)){
@@ -301,7 +301,7 @@ SOFTWARE.
                                    @restrict dfloat *  Aq){
 
 
-#define p_T 256
+#define p_T 128
 #define p_Nsub p_T/p_Nq
   
   for(dlong ebase=0;ebase<Nelements;ebase+=p_Nsub;@outer(0)){

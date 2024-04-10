@@ -352,6 +352,7 @@ void parCSR::diagSetup() {
 
   // estimate rho(invD * A)
   rho = rhoDinvA();
+  //  rho *= 1.05;
 }
 
 
@@ -365,7 +366,7 @@ pfloat parCSR::rhoDinvA(){
 
   int size = comm.size();
 
-  int k = 10;
+  int k = 40;
 
   hlong Ntotal = globalRowStarts[size];
   if(k > Ntotal) k = static_cast<int>(Ntotal);

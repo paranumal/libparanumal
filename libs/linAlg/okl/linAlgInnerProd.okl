@@ -25,6 +25,7 @@ SOFTWARE.
 */
 
 
+#if 1
 @kernel void innerProd(const dlong Nblocks,
                        const dlong N,
                        @restrict const  dfloat *x,
@@ -94,6 +95,26 @@ SOFTWARE.
     for(int t=0;t<p_blockSize;++t;@inner(0)) if(t<  1) dot[0] = s_dot[0] + s_dot[1];
   }
 }
+
+#else
+
+@kernel void innerProd(const dlong N,
+                       @restrict const  dfloat *x,
+                       @restrict const  dfloat *y,
+                       @restrict        dfloat *dot){
+
+  for(dlong t=0;t<1;++t;@tile(1,@outer,@inner)){
+    dot[0] = 0;
+  }
+
+  for(int n=0;n<N;++n;@tile(256,@outer,@inner)){
+    if(n<N){
+      @atomic dot[0]+=x[n]*y[n];
+    }
+  }
+
+}
+#endif
 
 #if 0
 @kernel void innerProductAtomic(const dlong N,
