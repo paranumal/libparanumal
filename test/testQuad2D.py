@@ -29,7 +29,7 @@
 from testTW import *
 
 ellipticData1D = ellipticDir + "/data/ellipticHorns1D.h"
-ellipticData2D = ellipticDir + "/data/ellipticSine2D.h"
+ellipticData2D = ellipticDir + "/data/ellipticHorns2D.h"
 ellipticData3D = ellipticDir + "/data/ellipticSine3D.h"
 
 def ellipticSettings(rcformat="2.0", data_file=ellipticData2D,
