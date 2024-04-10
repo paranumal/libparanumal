@@ -24,7 +24,7 @@ SOFTWARE.
 
 */
 
-#if 0
+#if 1
 @kernel void norm2(const dlong Nblocks,
                    const dlong N,
                   @restrict const  dfloat *x,

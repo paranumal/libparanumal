@@ -281,7 +281,7 @@ double linAlg_t::sum(const dlong N, deviceMemory<double> o_a, comm_t comm);
 template<typename T>
 T linAlg_t::norm2(const dlong N, deviceMemory<T> o_a, comm_t comm) {
 
-#if 0
+#if 1
   int Nblock = (N+blocksize-1)/blocksize;
   Nblock = (Nblock>blocksize) ? blocksize : Nblock; //limit to blocksize entries
 

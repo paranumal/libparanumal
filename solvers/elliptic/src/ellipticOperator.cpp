@@ -214,7 +214,7 @@ void elliptic_t::Operator(deviceMemory<float> &o_q, deviceMemory<float> &o_Aq){
 
   if(disc_c0){
 
-#if 0
+#if 1
     platform.linAlg().set(o_Aq.length(), (float)0.0, o_Aq);
 			  
     floatAxKernel(mesh.Nelements,
@@ -224,7 +224,7 @@ void elliptic_t::Operator(deviceMemory<float> &o_q, deviceMemory<float> &o_Aq){
 		   o_D,
 		   o_S,
 		   o_MM,
-		   static_cast<double>(lambda),
+		   static_cast<float>(lambda),
 		   o_q,
 		   o_Aq);
 #else
