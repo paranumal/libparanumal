@@ -31,6 +31,12 @@ SOFTWARE.
       for(int i=0; i<p_Nq; ++i; @inner(0))
 
 
+#if dfloatSize==4
+#define ellipticAxQuad2D ellipticAxFloatQuad2D
+#else
+#define ellipticAxQuad2D ellipticAxDoubleQuad2D
+#endif
+
 // square thread version
 @kernel void ellipticAxQuad2D(const dlong   Nelements,
 			      @restrict const  dlong   *  GlobalToLocal,

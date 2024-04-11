@@ -78,7 +78,7 @@ void exactSolver_t::solve(deviceMemory<pfloat>& o_rhs, deviceMemory<pfloat>& o_x
 
 
 int exactSolver_t::getTargetSize() {
-  return 1000;
+  return 1; // 1000;
 }
 
 void exactSolver_t::setup(parCSR& _A, bool nullSpace,

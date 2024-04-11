@@ -85,11 +85,13 @@ elliptic_t elliptic_t::SetupNewDegree(mesh_t& meshC){
   properties_t kernelInfoDouble = kernelInfo;
   kernelInfoDouble["defines/dfloat"]= "double";
   kernelInfoDouble["defines/dfloat4"]= "double4";
-
+  kernelInfoDouble["defines/dfloatSize"] = sizeof(double);
+  
   properties_t kernelInfoFloat = kernelInfo;
   kernelInfoFloat["defines/dfloat"]= "float";
   kernelInfoFloat["defines/dfloat4"]= "float4";
-
+  kernelInfoFloat["defines/dfloatSize"] = sizeof(float);
+  
   // Ax kernel
   if (settings.compareSetting("DISCRETIZATION","CONTINUOUS")) {
     fileName   = oklFilePrefix + "ellipticAx" + suffix + oklFileSuffix;
@@ -110,23 +112,15 @@ elliptic_t elliptic_t::SetupNewDegree(mesh_t& meshC){
 
 
     fileName   = oklFilePrefix + "ellipticAx" + suffix + oklFileSuffix;
-    if(meshC.elementType==Mesh::HEXAHEDRA){
-      if(mesh.settings.compareSetting("ELEMENT MAP", "TRILINEAR"))
-        kernelName = "ellipticAxTrilinear" + suffix;
-      else
-        kernelName = "ellipticAx" + suffix;
-    } else{
-      kernelName = "ellipticAx" + suffix;
-    }
 
+    kernelName = "ellipticAxDouble" + suffix;
     elliptic.AxKernel = platform.buildKernel(fileName, kernelName,
 					     kernelInfoDouble);
-    
+
+    kernelName = "ellipticAxFloat" + suffix;
     elliptic.floatAxKernel = platform.buildKernel(fileName, kernelName,
 						  kernelInfoFloat);
 
-
-    
   } else if (settings.compareSetting("DISCRETIZATION","IPDG")) {
     int Nmax = std::max(meshC.Np, meshC.Nfaces*meshC.Nfp);
     kernelInfoDouble["defines/" "p_Nmax"]= Nmax;

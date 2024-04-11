@@ -29,6 +29,12 @@ SOFTWARE.
 #define lineThreads                           \
       for(int i=0; i<p_Nq; ++i; @inner(0))
 
+#if dfloatSize==4
+#define ellipticAxLine1D ellipticAxFloatLine1D
+#else
+#define ellipticAxLine1D ellipticAxDoubleLine1D
+#endif
+
 
 @kernel void ellipticAxLine1Dv1(const dlong   Nelements,
 			      @restrict const  dlong   *  GlobalToLocal,
