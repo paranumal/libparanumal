@@ -98,6 +98,7 @@ class mesh_t {
 
   // indices of vertex nodes
   memory<int> vertexNodes;
+  deviceMemory<int> o_vertexNodes;
 
   hlong Nnodes=0; //global number of element vertices
   memory<dfloat> EX; // coordinates of vertices for each element

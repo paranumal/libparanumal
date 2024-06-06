@@ -24,10 +24,135 @@
 
 */
 
+// function f = limiting(x,xmin,xmax,alpha,beta)
+
+// % f = xmin + max(x-beta,0);
+// % f = min(f-xmax,0)+xmax;
+
+// f = xmin + lmax(x-beta,alpha);
+// f = lmin(f-xmax,alpha) + xmax;
+
 // Base line decay for the sensor: default value 1
 #define BLDEC 1
 #define mymax(a,b) (((a)>(b))?(a):(b))
 #define mymin(a,b) (((a)<(b))?(a):(b))
+#define ALPHA  1000
+
+
+// Regularization of rho / p  (cannot be smaller than rmin / pmin)
+dfloat LMAX(const dfloat x, const dfloat alpha){
+  dfloat xmax = x*(atan(alpha*x)/M_PI + 0.5) - atan(alpha)/M_PI + 0.5;
+  return xmax;
+}
+
+
+// Regularization of rho / p  (cannot be smaller than rmin / pmin)
+dfloat LMIN(const dfloat x, const dfloat alpha){
+  dfloat xmin = x - LMAX(x,alpha);
+  return xmin;
+}
+
+// / Regularization of rho / p  (cannot be smaller than rmin / pmin)
+dfloat LIM(const dfloat x,const dfloat xmin, const dfloat xmax,
+	         const dfloat alpha,const dfloat beta){
+  dfloat xlim = xmin + LMAX(x-beta, alpha); 
+  xlim = LMIN(xlim-xmax, alpha) + xmax;
+  return xlim;
+}
+
+
+@kernel void detectDucrosDiffusionTri2D(const dlong Nelements,
+                                        @restrict const  dfloat *  pM,
+                                        @restrict const  dfloat *  q,
+                                        @restrict const  dfloat *  gradq,
+                                        @restrict        dfloat *  qd){
+ for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    // @shared dfloat s_u[p_Np];
+    // @shared dfloat s_v[p_Np];
+    @shared dfloat s_S[p_Np];
+
+    for(int n=0;n<p_Np;++n;@inner(0)){
+    	 // conserved variables
+      const dlong  qbase = e*p_Np*4 + n;
+      const dfloat rr = q[qbase+0*p_Np];
+      const dfloat ru = q[qbase+1*p_Np];
+      const dfloat rv = q[qbase+2*p_Np];
+      const dfloat ir  = 1.0/rr; 
+
+      const dfloat u = ru*ir; 
+      const dfloat v = rv*ir;
+     
+      // gradients
+      const dlong id = e*p_Np*8 + n;
+      const dfloat drrdx = gradq[id+0*p_Np];
+      const dfloat drrdy = gradq[id+1*p_Np];     
+      const dfloat drudx = gradq[id+2*p_Np];
+      const dfloat drudy = gradq[id+3*p_Np];
+      const dfloat drvdx = gradq[id+4*p_Np];
+      const dfloat drvdy = gradq[id+5*p_Np];  
+
+      // Find derivative of primitives
+      const dfloat dudx  = (drudx - drrdx*u)*ir;
+      const dfloat dvdx  = (drvdx - drrdx*v)*ir;
+      const dfloat dudy  = (drudy - drrdy*u)*ir;
+      const dfloat dvdy  = (drvdy - drrdy*v)*ir;
+
+      // Compute divergence and vorticity
+      const dfloat div  = (dudx + dvdy); 
+      const dfloat vort = (dvdx - dudy);
+
+      const dfloat sd = 
+
+      // Compute divergence sensor
+      // Prizolli's modification of Ducros detector
+      s_S[n] = -div/ (sqrt(div*div) + sqrt(vort*vort)+1e-16);
+      
+      // Ducros's original detector
+      // s_S[n] = div*div/ (div*div + vort*vort + 1.0E-16);
+
+      
+       // Person's modification of Ducros detector
+       // dfloat div  = -(dudx + dvdy); 
+       // dfloat vort = -(dvdx - dudy); 
+       // vort = sqrt(vort*vort); 
+
+       // const dfloat sigm = 1.0E4; 
+       // div  = LIM(div, -sigm, sigm, ALPHA, -sigm); 
+       // vort = LIM(vort, 0.0, sigm, ALPHA, 0.0); 
+
+       // s_S[n] = div*div/ (div*div + vort*vort + 1.0E-16);
+
+      
+
+
+
+       // dfloat div2  = dudx + dvdy; 
+       // dfloat vort2 = dvdx - dudy; 
+
+      // div2 *= div2; vort2*=vort2; 
+
+      // vort2 = vort2<10 ? 0:vort2; 
+      // div2  = div2 <10 ? 0:div2; 
+
+      // s_S[n] = div2/(div2 + vort2+1E-16); 
+    }  
+
+ 		for(int n=0;n<p_Np;++n;@inner(0)){
+    	if(n==0){
+     		dfloat rs = 0.0; 
+     		for(int i=0; i<p_Np; i++){
+           rs += pM[i]*s_S[i];
+        }
+        // qd[e] =  rs>0.7 ? rs:0.0; 
+        qd[e] =  rs; 
+        // qd[e] =  1.0; 
+     	}
+    }
+
+  }
+}
+
 
 // 
 @kernel void detectKlocknerDiffusionTri2D(const dlong Nelements,
@@ -38,7 +163,8 @@
 				    @restrict const dfloat * LSF,
 				    @restrict const dfloat * BLD,
 				    @restrict const dfloat * Q, 
-				    @restrict 		dfloat * artVisc, 
+				    @restrict const dfloat * Qd, 
+				    @restrict 		  dfloat * artVisc, 
 				    @restrict       dlong *  ElementList){
 #define p_Nel 1
 #if BLDEC==1
@@ -232,8 +358,8 @@
 	      // this handles zero field, do not select those elements!!!
 	      coeff = fabs(coeff); 
 	      const dfloat sk = coeff != coeff ? p_N : coeff; 	
-	      // // It can be tuned: AK
-	      ElementList[e*s_Ndfields + fld] = sk < (s_sS0+1) ? 1 : 0;	 
+
+	      const dfloat qd = Qd[e*s_Ndfields + fld]; 
 
 	      dfloat avisc = 0.0; 
 	    	if(sk<(s_sS0-s_sK0))
@@ -243,8 +369,12 @@
 	  		else 
 	  			avisc = 0.5*( 1. + sin( - 0.5* M_PI*(sk-s_sS0)/ s_sK0)); 
 	  		
+	  		// artVisc[e*s_Ndfields + fld] = avisc*qd;	 
 	  		artVisc[e*s_Ndfields + fld] = avisc;	 
 	  		// artVisc[e*s_Ndfields + fld] = sk;	 
+	      // // It can be tuned: AK
+	      // ElementList[e*s_Ndfields + fld] = avisc*qd > 0.10 ? 1 : 0;	 
+	     ElementList[e*s_Ndfields + fld] = sk < (s_sS0+1) ? 1 : 0;	 	 
 	    }
 	  }
 

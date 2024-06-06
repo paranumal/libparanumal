@@ -56,11 +56,17 @@ void cns_t::Report(dfloat time, int tstep){
 
   
   if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
-    
+
+    // reportSmoothFields(time, tstep); 
+
    if(stab.type!=Stab::NOSTAB){
-      stab.Apply(o_q, o_q, 0.0);
-      stab.Report(0.0, tstep);
+      // stab.Apply(o_q, o_gradq, 0.0);
+      stab.Report(time, tstep);
     }
+    
+    // copy data back to host
+    o_q.copyTo(q);
+    
 
     //compute vorticity
     deviceMemory<dfloat> o_Vort = platform.reserve<dfloat>(mesh.dim*mesh.Nelements*mesh.Np);
@@ -68,21 +74,49 @@ void cns_t::Report(dfloat time, int tstep){
 
     memory<dfloat> Vort(mesh.dim*mesh.Nelements*mesh.Np);
 
-    // copy data back to host
-    o_q.copyTo(q);
+  
     o_Vort.copyTo(Vort);
 
     // output field files
     std::string name;
     settings.getSetting("OUTPUT FILE NAME", name);
     char fname[BUFSIZ];
-    sprintf(fname, "%s_%04d_%04d.vtu", name.c_str(), mesh.rank, outFrame++);
+    // {
+    // // sprintf(fname, ".dat");
+    // FILE *fp;
+    // fp = fopen("maxDensity.dat", "a");
+    // dfloat maxr = 1000.0; 
+    // for(int e=0; e<mesh.Nelements; e++){
+    //   for(int n=0; n<mesh.Np; n++){
+    //    maxr = maxr<q[e*Nfields*mesh.Np + n+ 0*mesh.Np] ? maxr: q[e*Nfields*mesh.Np + n+ 0*mesh.Np];
+    //   }
+    // }
+    // fprintf(fp, " %g %g\n", time, maxr);
+    // fclose(fp); 
+    // }
 
+    sprintf(fname, "%s_%04d_%04d.vtu", name.c_str(), mesh.rank, outFrame++);
     PlotFields(q, Vort, std::string(fname));
   }
 }
 
+void cns_t::reportSmoothFields(dfloat time, int tstep){
 
+  deviceMemory<dfloat> o_qv = platform.reserve<dfloat>(mesh.Nelements*mesh.Np*Nfields);
+  deviceMemory<dfloat> o_qf = platform.reserve<dfloat>(mesh.Nelements*mesh.Np*Nfields);
+
+  // arrange memory hit for vector-gather-scatter
+  reportArrangeLayoutKernel(mesh.Nelements, 0, o_q, o_qv); 
+
+  ogs.GatherScatter(o_qv, Nfields, ogs::Add, ogs::Sym);
+
+  reportAverageKernel(mesh.Nelements, o_weight, o_qv); 
+
+  reportArrangeLayoutKernel(mesh.Nelements, 1, o_qv, o_qf);
+
+  o_qf.copyTo(q);  
+
+}
 
 
 void cns_t::reportForces(dfloat time, int tstep){

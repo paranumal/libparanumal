@@ -37,7 +37,7 @@ SOFTWARE.
 
 
 //copy a dlong array to float to use buildin functions
-@kernel void copyFloat(const dlong N, 
+@kernel void copyToFloat(const dlong N, 
                       @restrict dlong  *a, 
                       @restrict dfloat *b){
 
@@ -49,7 +49,7 @@ SOFTWARE.
 
 
 //copy a dlong array to float to use buildin functions
-@kernel void copyInt(const dlong N, 
+@kernel void copyToInt(const dlong N, 
                       @restrict dfloat  *a, 
                       @restrict dlong *b){
 

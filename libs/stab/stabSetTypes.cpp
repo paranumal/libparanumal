@@ -43,9 +43,6 @@ void stab_t::setTypes(const Stab::Solver _Solver,
     Ndfields  = 1; 
     Nsfields  = mesh.dim==2 ? 4:5; // non-isothermal flow only
   } else if (_Solver==Stab::INS) {
-     // solver   = Stab::INS;
-     // Ndfields = 1 
-     // Nsfields = mesh.dim==2 ? 3:4;
     LIBP_FORCE_ABORT("Unknown solver type: " << solver);
   } else {
     LIBP_FORCE_ABORT("Unknown solver type: " << solver);

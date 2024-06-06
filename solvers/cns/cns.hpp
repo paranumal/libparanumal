@@ -112,9 +112,20 @@ public:
   kernel_t initialConditionKernel;
   kernel_t maxWaveSpeedKernel;
 
+  kernel_t limiterReconstructKernel; 
+  kernel_t limiterGradientKernel; 
+  kernel_t limiterVertexBoundaryKernel;
 
   kernel_t forcesVolumeKernel; 
   kernel_t forcesSurfaceKernel; 
+
+  kernel_t reportArrangeLayoutKernel; 
+  kernel_t reportAverageKernel; 
+
+  // for post processing only 
+  ogs::ogs_t ogs;
+  memory<dfloat> weight; 
+  deviceMemory<dfloat> o_weight; 
 
   cns_t() = default;
   cns_t(platform_t &_platform, mesh_t &_mesh,
@@ -128,6 +139,8 @@ public:
 
   void Run();
 
+  void reportSmoothFields(dfloat time, int tstep);
+
   // Set reference values, thermodynamics, nondimensional values
   void setupPhysics(properties_t & kernelInfo);
 
@@ -136,6 +149,8 @@ public:
   void reportForces(dfloat time, int tstep);
 
   void setupArtificialDiffusion(properties_t & kernelInfo);
+  void setupLimiter(properties_t & kernelInfo);
+
   void setupNoStab(properties_t & kernelInfo);
 
   // Set detectors
@@ -151,6 +166,7 @@ public:
   void rhsf(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
   void rhsNoStab(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
   void rhsArtDiff(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
+  void rhsLimiter(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
 };
 
 #endif

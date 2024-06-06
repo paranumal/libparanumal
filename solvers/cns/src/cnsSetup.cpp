@@ -51,7 +51,7 @@ void cns_t::Setup(platform_t& _platform, mesh_t& _mesh,
   ogs::InitializeKernels(platform, ogs::Dfloat, ogs::Add);
 
   //setup linear algebra module
-  platform.linAlg().InitKernels({"innerProd", "max", "scale", "sum"});
+  platform.linAlg().InitKernels({"innerProd", "max", "scale", "sum", "set"});
 
   //setup timeStepper
   if (settings.compareSetting("TIME INTEGRATOR","AB3")){
@@ -132,9 +132,15 @@ void cns_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
   if(stab.type==Stab::ARTDIFF){
     setupArtificialDiffusion(kernelInfo);
+  }else if(stab.type==Stab::LIMITER){
+    setupLimiter(kernelInfo);
   }else if(stab.type==Stab::NOSTAB){
     setupNoStab(kernelInfo);    
   }
+
+
+
+  
 
   /*
 

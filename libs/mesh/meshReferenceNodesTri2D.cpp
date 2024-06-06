@@ -37,6 +37,7 @@ void mesh_t::ReferenceNodesTri2D(){
   NodesTri2D(N, r, s);
   FaceNodesTri2D(N, r, s, faceNodes);
   VertexNodesTri2D(N, r, s, vertexNodes);
+  o_vertexNodes = platform.malloc<int>(vertexNodes); 
 
   memory<dfloat> V;
   VandermondeTri2D(N, r, s, V);

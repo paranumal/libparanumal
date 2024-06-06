@@ -107,6 +107,50 @@ void upwindRoeAveraged(const dfloat nx,
 }
 
 
+// Roe averaged Riemann solver
+void upwindLaxFriedrichs(const dfloat nx,
+                         const dfloat ny,
+                         const dfloat gamma,
+                         const dfloat rM,
+                         const dfloat uM,
+                         const dfloat vM,
+                         const dfloat pM,
+                         const dfloat rP,
+                         const dfloat uP,
+                         const dfloat vP,
+                         const dfloat pP,
+                         dfloat *rflux,
+                         dfloat *ruflux,
+                         dfloat *rvflux,
+                         dfloat *Eflux){
+
+  // Find the nodal maximum wave speed 
+  const dfloat lambdaM = sqrt(uM*uM + vM*vM) + sqrt(fabs(gamma*pM/rM));  
+  const dfloat lambdaP = sqrt(uP*uP + vP*vP) + sqrt(fabs(gamma*pP/rP));  
+
+  const dfloat lambda = (lambdaM>lambdaP) ? lambdaM:lambdaP; 
+
+  const dfloat EM = pM/(gamma-1) + 0.5*rM*(uM*uM+vM*vM);
+  const dfloat EP = pP/(gamma-1) + 0.5*rP*(uP*uP+vP*vP);
+
+  const dfloat F1M = rM*uM,             F1P = rP*uP;
+  const dfloat F2M = rM*uM*uM + pM,     F2P = rP*uP*uP + pP; 
+  const dfloat F3M = rM*vM*uM,          F3P = rP*vP*uP; 
+  const dfloat F4M = uM*(EM + pM),      F4P = uP*(EP + pP); 
+
+  const dfloat G1M = rM*vM,             G1P = rP*vP;
+  const dfloat G2M = rM*uM*vM,          G2P = rP*uP*vP; 
+  const dfloat G3M = rM*vM*vM + pM,     G3P = rP*vP*vP + pP; 
+  const dfloat G4M = vM*(EM + pM),      G4P = vP*(EP + pP); 
+
+  // Fluxes from traces n.F(uP) and n.F(uM)
+  *rflux  = 0.5*(nx*( F1M + F1P) + ny*(G1M+G1P) + lambda*(rM-rP)      );
+  *ruflux = 0.5*(nx*( F2M + F2P) + ny*(G2M+G2P) + lambda*(rM*uM-rP*uP));
+  *rvflux = 0.5*(nx*( F3M + F3P) + ny*(G3M+G3P) + lambda*(rM*vM-rP*vP));
+  *Eflux  = 0.5*(nx*( F4M + F4P) + ny*(G4M+G4P) + lambda*(EM-EP));
+}
+
+
 // batch process elements
 @kernel void cnsCubatureSurfaceArtificialDiffusionLaplaceTri2D(const dlong Nelements,
                                                               @restrict const  dfloat *  vgeo,
@@ -336,8 +380,11 @@ void upwindRoeAveraged(const dfloat nx,
 
         // Compute inviscid fluxes
         dfloat rflux, ruflux, rvflux, Eflux;
-        upwindRoeAveraged(nx, ny, gamma, rrM, uM, vM, pM, rrP, uP, vP, pP, 
-                          &rflux, &ruflux, &rvflux, &Eflux);
+        // upwindRoeAveraged(nx, ny, gamma, rrM, uM, vM, pM, rrP, uP, vP, pP, 
+        //                   &rflux, &ruflux, &rvflux, &Eflux);
+
+         upwindLaxFriedrichs(nx, ny, gamma, rrM, uM, vM, pM, rrP, uP, vP, pP, 
+                             &rflux, &ruflux, &rvflux, &Eflux);
 
         // Derivative of velocities
         const dfloat dudxM = (drudxM - drrdxM*uM)*irM;

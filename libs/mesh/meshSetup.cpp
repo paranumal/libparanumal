@@ -48,6 +48,7 @@ void mesh_t::Setup(platform_t& _platform, meshSettings_t& _settings,
 
   props["defines/" "p_dim"]= dim;
   props["defines/" "p_Nfaces"]= Nfaces;
+  props["defines/" "p_Nverts"]= Nverts;
 
   std::string fileName;
   settings.getSetting("MESH FILE", fileName);

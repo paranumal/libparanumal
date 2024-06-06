@@ -33,9 +33,17 @@ void stab_t::detectSetupKlockner(){
   elementList.malloc((mesh.Nelements+mesh.totalHaloPairs)*Ndfields); 
   o_elementList = platform.malloc<dlong>(elementList); 
 
+  // Initialize Required Memory
+  elementListF.malloc((mesh.Nelements+mesh.totalHaloPairs)*Ndfields); 
+  o_elementListF = platform.malloc<dfloat>(elementList); 
+
   // Create a field for detector
   qdetector.malloc((mesh.Nelements+mesh.totalHaloPairs)*mesh.Np*Ndfields); 
   o_qdetector = platform.malloc<dfloat>(qdetector); 
+
+  // Create a field for detector
+  qducros.malloc((mesh.Nelements+mesh.totalHaloPairs)*Ndfields); 
+  o_qducros = platform.malloc<dfloat>(qducros); 
 
   // Compute Art. Diff. Activation function
   if(type==Stab::ARTDIFF){ // Vertex based to make it continuous
@@ -79,15 +87,16 @@ void stab_t::detectSetupKlockner(){
    o_leastSquares1D = platform.malloc<dfloat>(leastSquares1D); 
    o_baseLineDecay  = platform.malloc<dfloat>(baseLineDecay); 
 
+   // props["defines/" "s_Nverts"]= int(mesh.Nverts);
    props["defines/" "p_blockSize"]= 256;
    props["defines/" "s_Ndfields"]= Ndfields;
    props["defines/" "s_Nsfields"]= Nsfields;
-   // props["defines/" "s_sS0"] = mesh.N <= 3 ? 1.0:2.0;  
-   props["defines/" "s_sS0"] = 2.0; 
+   props["defines/" "s_sS0"] = mesh.N <= 3 ? 1.0:2.0;  
+   // props["defines/" "s_sS0"] = 2.0; 
    props["defines/" "s_sK0"] = 1.0;  
    props["defines/" "p_Nq"]  = mesh.N+1;
 
-  // Needed for Subcell and Limiter Only
+  // Needed for Subcell and Limiter only
   if(type==Stab::SUBCELL || type==Stab::LIMITER){
      props["defines/" "s_DGDG_TYPE"] = int(0); 
      props["defines/" "s_FVFV_TYPE"] = int(1); 
@@ -111,12 +120,53 @@ void stab_t::detectSetupKlockner(){
   }
   detectKernel  = platform.buildKernel(fileName, kernelName, props);
 
+  {
+
+   // Project to Cell Center Values
+    projectC0.malloc(mesh.Np, 0.0);
+    // // Compute Operator for Taylor Expansion x_mean - x
+    // dAVE.malloc(mesh.Np*mesh.Np, 0.0); 
+    for(int j=0; j<mesh.Np; j++){
+      dfloat sum=0.0; 
+      for(int i=0; i<mesh.Np; i++){
+        sum += mesh.MM[i*mesh.Np + j]; 
+    }
+    projectC0[j] = 0.5*sum;
+    } 
+
+    // Move to device
+    o_projectC0 = platform.malloc<dfloat>(projectC0); 
+
+
+
+
+  kernelName    = "detectDucrosDiffusion" + suffix;
+  detectKernel2 = platform.buildKernel(fileName, kernelName, props);
+
+
+  }
+
+
   
-  if(type==Stab::SUBCELL || type==Stab::LIMITER){
+  if(type==Stab::SUBCELL){
     fileName        = oklFilePrefix + "subcell" + oklFileSuffix;
     kernelName      = "detectFindNeigh" + suffix;
     findNeighKernel =  platform.buildKernel(fileName, kernelName, props);
   }
+
+  if(type==Stab::LIMITER){
+    fileName        = oklFilePrefix + "limiter" + oklFileSuffix;
+    kernelName      = "detectFindNeigh" + suffix;
+    findNeighKernel =  platform.buildKernel(fileName, kernelName, props);
+
+    fileName        = oklFilePrefix + "utilities" + oklFileSuffix;
+    kernelName      = "copyToInt";
+    copyToIntKernel =  platform.buildKernel(fileName, kernelName, props);
+
+    kernelName       = "copyToFloat";
+    copyToFloatKernel=  platform.buildKernel(fileName, kernelName, props);
+  }
+
   
   fileName           = oklFilePrefix + "utilities" + oklFileSuffix; 
   kernelName         = "extractField";
@@ -125,36 +175,46 @@ void stab_t::detectSetupKlockner(){
 }
 
 
-void stab_t::detectApplyKlockner(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T){
+void stab_t::detectApplyKlockner(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_gradQ, const dfloat T){
 
-// // Directly copy from field for HJS
+//Directly copy from field for HJS as it is a scalaer field
 if(solver==Stab::HJS){
   o_qdetector.copyFrom(o_Q); 
 }else if(solver==Stab::CNS){
-  // // Use Density field for now AK:
+  // Use Density field for now AK:
   const int field_id = 0; 
-  // o_qdetector.copyFrom(o_Q); // !!!!!!!!!!!!!!!!!!!
-
   extractFieldKernel(mesh.Nelements,
                      field_id, 
                      o_Q,
                      o_qdetector); 
 }
 
+
 if(type==Stab::ARTDIFF){
-  // Detect elements for each fields i.e. 2
-  detectKernel(mesh.Nelements, 
-               mesh.o_vgeo, 
-               o_modeMap, 
-               mesh.o_MM, 
-               o_invV, 
-               o_leastSquares1D, 
-               o_baseLineDecay, 
-               o_qdetector, 
-               o_viscosityActivation,
-               o_elementList); 
+
+
+   // Detect elements for each fields i.e. 2
+  {
+  detectKernel2(mesh.Nelements, o_projectC0,o_Q, o_gradQ, o_qducros);
+ }
+
   
-  }else if(type==Stab::SUBCELL || type==Stab::LIMITER || type==Stab::FILTER){
+  detectKernel(mesh.Nelements, 
+               mesh.o_vgeo, 
+               o_modeMap, 
+               mesh.o_MM, 
+               o_invV, 
+               o_leastSquares1D, 
+               o_baseLineDecay, 
+               o_qdetector, 
+               o_qducros, 
+               o_viscosityActivation,
+               o_elementList);
+
+  
+  }else if(type==Stab::SUBCELL || 
+           type==Stab::LIMITER || 
+           type==Stab::FILTER){
   detectKernel(mesh.Nelements, 
                mesh.o_vgeo, 
                o_modeMap, 
@@ -165,13 +225,19 @@ if(type==Stab::ARTDIFF){
                o_qdetector, 
                o_elementList); 
 
-  // make sure that this works for int!!!!!! AK.
-  mesh.halo.Exchange(o_elementList, Ndfields); 
 
+  // This is just a trick for the integer communication issue for now
+  // Need to fix later AK.
+  {
+  copyToFloatKernel(mesh.Nelements*Ndfields, o_elementList, o_elementListF); 
+  // make sure that this works for int!!!!!! AK.
+  mesh.halo.Exchange(o_elementListF, Ndfields); 
   // Correct Neighbor Info
   findNeighKernel(mesh.Nelements, 
                   mesh.o_vmapP, 
-                  o_elementList); 
+                  o_elementListF); 
+  copyToIntKernel((mesh.Nelements+mesh.totalHaloPairs)*Ndfields, o_elementListF, o_elementList); 
+  }
 
   }
 }

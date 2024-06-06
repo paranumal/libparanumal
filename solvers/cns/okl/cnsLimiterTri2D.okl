@@ -1,0 +1,1155 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+#define RMIN 0.01
+#define PMIN 0.01
+#define ALPHA 100
+
+#define POSITIVITY 1
+// limiters: 1 for Barth-JESPERSON + Green-Gauss
+// limiters: 2 for Barth-Jespersen + Vertex-Averaging
+// limiters: 3 for TU-ALIABADI
+#define LIMITER 1
+
+#define mymax(a,b) (((a)>(b))?(a):(b))
+#define mymin(a,b) (((a)<(b))?(a):(b))
+
+// Regularization of rho / p  (cannot be smaller than rmin / pmin)
+dfloat limiter_check(const dfloat qmax, const dfloat qmin, const dfloat qi, const dfloat qc){
+  dfloat alpha = 1.0; 
+  if(qi>qc){
+    alpha = mymin((qmax-qc)/(qi-qc), 1.0); 
+  }else if(qi<qc){
+    alpha = mymin((qmin-qc)/(qi-qc), 1.0);
+  }
+  return alpha;
+}
+
+@kernel void cnsReportArrangeLayout(const dlong Nelements,
+                                    const int type, 
+                                    @restrict dfloat *qin, 
+                                    @restrict dfloat *qout){
+for(dlong e0=0;e0<Nelements;++e0;@tile(p_blockSize,@outer,@inner)){
+  // qf to qv 
+  if(type==0){
+    for(int n=0; n<p_Np; n++){
+      const dlong id =  e0*p_Np*p_Nfields; 
+      const dfloat rr = qin[id + n + 0*p_Np]; 
+      const dfloat ru = qin[id + n + 1*p_Np];
+      const dfloat rv = qin[id + n + 2*p_Np];
+      const dfloat re = qin[id + n + 3*p_Np];
+      qout[id+ n*p_Nfields + 0] = rr; 
+      qout[id+ n*p_Nfields + 1] = ru; 
+      qout[id+ n*p_Nfields + 2] = rv; 
+      qout[id+ n*p_Nfields + 3] = re; 
+
+    }
+  }
+    // qv to qf 
+  if(type==1){
+    for(int n=0; n<p_Np; n++){
+      const dlong id =  e0*p_Np*p_Nfields; 
+      const dfloat rr = qin[id+n*p_Nfields+0]; 
+      const dfloat ru = qin[id+n*p_Nfields+1];
+      const dfloat rv = qin[id+n*p_Nfields+2];
+      const dfloat re = qin[id+n*p_Nfields+3];
+      
+      qout[id + n + 0*p_Np] = rr; 
+      qout[id + n + 1*p_Np] = ru; 
+      qout[id + n + 2*p_Np] = rv; 
+      qout[id + n + 3*p_Np] = re; 
+    }
+  }
+ }
+}
+
+@kernel void cnsReportAverage(const dlong Nelements,
+                              @restrict const dfloat *weight, 
+                              @restrict       dfloat *qv){
+
+for(dlong e=0;e<Nelements;++e;@tile(p_blockSize,@outer,@inner)){
+  for(int n=0; n<p_Np; n++){
+    const dfloat w = weight[e*p_Np + n]; 
+    for(int fld=0 ; fld<p_Nfields; fld++){
+      const int id = e*p_Nfields*p_Np + n*p_Nfields + fld; 
+      qv[id] *=w; 
+     }
+  }
+} 
+}
+
+
+
+
+
+#if LIMITER==3
+// Regularization of rho / p  (cannot be smaller than rmin / pmin)
+dfloat LMAX(const dfloat x, const dfloat alpha){
+  dfloat xlim = x*(atan(alpha*x)/M_PI + 0.5) - atan(alpha)/M_PI + 0.5;
+  return xlim;
+}
+
+// Density / pressure sensor for gradients...
+dfloat SMOOTH(const dfloat x, const dfloat alpha){
+ dfloat dx = atan(alpha*x)/M_PI + alpha*x/(M_PI*(alpha*alpha*x*x + 1.0)) + 0.5;
+  return dx; 
+}
+
+@kernel void cnsLimiterVertexBoundaryTri2D(const dlong Nelements,
+                                          @restrict const dfloat *vgeo, 
+                                          @restrict const dfloat *sgeo, 
+                                          @restrict const dfloat *lvgeo, 
+                                          @restrict const int    *EToB,
+                                          @restrict const int    *vertexNodes,
+                                          @restrict const dlong  *eList,
+                                          @restrict const dlong  *vmapM,
+                                          @restrict const dlong  *vmapP,
+                                          @restrict const dfloat *x, 
+                                          @restrict const dfloat *y, 
+                                          @restrict const dfloat *z,
+                                          @restrict const dfloat *pCoeff, 
+                                                    const dfloat  t, 
+                                          @restrict const dfloat *q, 
+                                          @restrict const dfloat *qc, 
+                                          @restrict       dfloat *qv, 
+                                          @restrict       dfloat *dqc){
+for(dlong e0=0;e0<Nelements;++e0;@tile(p_blockSize,@outer,@inner)){
+
+}
+}
+
+@kernel void cnsLimiterReconstructTri2D(const dlong Nelements,
+                                        @restrict const dfloat *vgeo, 
+                                        @restrict const dfloat *sgeo, 
+                                        @restrict const dfloat *lvgeo, 
+                                        @restrict const int    *EToB,
+                                        @restrict const int    *vertexNodes,
+                                        @restrict const dlong  *eList,
+                                        @restrict const dlong  *vmapM,
+                                        @restrict const dlong  *vmapP,
+                                        @restrict const dfloat *x, 
+                                        @restrict const dfloat *y, 
+                                        @restrict const dfloat *z,
+                                        @restrict const dfloat *pCoeff, 
+                                                  const dfloat  t, 
+                                        @restrict const dfloat *q, 
+                                        @restrict const dfloat *qc, 
+                                        @restrict const dfloat *qv, 
+                                        @restrict       dfloat *dqc){
+for(dlong e0=0;e0<Nelements;++e0;@tile(p_blockSize,@outer,@inner)){
+    const int etype = eList[e0];
+    if(etype!=s_DGDG_TYPE){
+      const dfloat gamma = pCoeff[p_GMID]; // gamma
+      const dfloat CV    = pCoeff[p_CVID]; // CV
+      const dfloat CP    = pCoeff[p_CPID]; // CP
+      const dfloat Pr    = pCoeff[p_PRID]; // Prandtl Number
+      const dfloat mu    = pCoeff[p_MUID]; // Prandtl Number
+
+      // Get geometric factors for center element of the patch
+      const dfloat xc0 = lvgeo[e0*s_Nvgeo + s_CXID]; 
+      const dfloat yc0 = lvgeo[e0*s_Nvgeo + s_CYID]; 
+      // const dfloat VC0 = lvgeo[e0*s_Nvgeo + s_VID]; 
+
+      // Get cell averages of conserved variables
+      dfloat r0  = qc[e0*p_Nfields + 0]; 
+      dfloat ru0 = qc[e0*p_Nfields + 1]; 
+      dfloat rv0 = qc[e0*p_Nfields + 2]; 
+      dfloat re0 = qc[e0*p_Nfields + 3]; 
+      // Compute primitive variables from cell averages of conserved variables
+      dfloat u0     = ru0/r0, v0 = rv0/r0; 
+      dfloat p0     = (gamma-1)*(re0-0.5*r0*(u0*u0+v0*v0));
+      
+      // Initialize the cell center gradients 
+      dfloat drdxC  = 0.0, drdyC = 0.0; 
+      dfloat dudxC  = 0.0, dudyC = 0.0; 
+      dfloat dvdxC  = 0.0, dvdyC = 0.0; 
+      dfloat dpdxC  = 0.0, dpdyC = 0.0; 
+      dfloat Vtotal = 0.0; 
+
+      for(int face=0; face<p_Nfaces; face++){
+        // indices of negative and positive traces of face node
+        const dlong id    = e0*p_Nfp*p_Nfaces + face*p_Nfp;
+        const int   bcf   = EToB[e0*p_Nfaces + face];
+        const dlong ef    = vmapP[id + 1]/p_Np;
+
+        // Volume and cell centers of neighbor section sharing the face 
+        // const dfloat VCF = VC0 + lvgeo[ef*s_Nvgeo + s_VID]; 
+        dfloat xcf = lvgeo[ef*s_Nvgeo + s_CXID]; 
+        dfloat ycf = lvgeo[ef*s_Nvgeo + s_CYID]; 
+
+        const dlong sid0  = p_Nsgeo*(e0*p_Nfaces+face);
+        const dlong sidf  = p_Nsgeo*(ef*p_Nfaces+face);
+        const dfloat vc0 = 2.0 /sgeo[sid0+p_SJID];
+        const dfloat vcf = 2.0 /sgeo[sidf+p_SJID];
+
+        // Compute cell averages of conserved variables
+        dfloat rf  = qc[ef*p_Nfields + 0]; 
+        dfloat ruf = qc[ef*p_Nfields + 1]; 
+        dfloat rvf = qc[ef*p_Nfields + 2]; 
+        dfloat ref = qc[ef*p_Nfields + 3]; 
+
+
+        const int lvid1 = face; 
+        const int lvid2 = (face+1)%p_Nfaces; 
+        const dlong vid1 = e0*p_Nfields*p_Nverts + lvid1*p_Nfields; 
+        const dlong vid2 = e0*p_Nfields*p_Nverts + lvid2*p_Nfields; 
+
+        // Compute averages of conserved variables at vertex nodes
+        dfloat vr1   = qv[vid1 + 0],  vr2  = qv[vid2 + 0];
+        dfloat vru1  = qv[vid1 + 1], vru2  = qv[vid2 + 1];
+        dfloat vrv1  = qv[vid1 + 2], vrv2  = qv[vid2 + 2];
+        dfloat vre1  = qv[vid1 + 3], vre2  = qv[vid2 + 3];
+        
+        const int vertexid1 = vertexNodes[lvid1]; 
+        const int vertexid2 = vertexNodes[lvid2]; 
+
+        const dfloat vx1 = x[e0*p_Np + vertexid1], vy1 = y[e0*p_Np + vertexid1]; 
+        const dfloat vx2 = x[e0*p_Np + vertexid2], vy2 = y[e0*p_Np + vertexid2]; 
+
+
+        // apply boundary conditions 
+        if(bcf>0){
+          // fake derivates
+          dfloat drrdxP = 0.0, drrdyP =0.0; 
+          dfloat drudxP = 0.0, drudyP =0.0; 
+          dfloat drvdxP = 0.0, drvdyP =0.0; 
+          dfloat dredxP = 0.0, dredyP =0.0; 
+          // load surface geofactors for this face
+          const dlong sid    = p_Nsgeo*(e0*p_Nfaces+face);
+          const dfloat nx    = sgeo[sid+p_NXID];
+          const dfloat ny    = sgeo[sid+p_NYID];
+          const dfloat sJ    = sgeo[sid+p_SJID];
+          const dfloat factor = vc0/(3.0*sJ);
+          xcf = xc0 +  2.0*factor*nx; 
+          ycf = yc0 +  2.0*factor*ny; 
+          cnsViscousBoundaryConditions2D(bcf, gamma, R, CP, CV, mu,
+                                    time, xcf, ycf, nx, ny, 
+                                    r0, ru0, rv0, re0, 
+                                    &rf, &ruf, &rvf, &ref, 
+                                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                    &drrdxP, &drrdyP, &drudxP, &drudyP, 
+                                    &drvdxP, &drvdyP, &dredxP, &dredyP);
+
+           // cnsViscousBoundaryConditions2D(bcf, gamma, R, CP, CV, mu,
+           //                          time, vx1, vy1, nx, ny, 
+           //                          r0, ru0, rv0, re0, 
+           //                          &vr1, &vru1, &vrv1, &vre1, 
+           //                          0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+           //                          &drrdxP, &drrdyP, &drudxP, &drudyP, 
+           //                          &drvdxP, &drvdyP, &dredxP, &dredyP);
+
+
+           // cnsViscousBoundaryConditions2D(bcf, gamma, R, CP, CV, mu,
+           //                          time, vx2, vy2, nx, ny, 
+           //                          r0, ru0, rv0, re0, 
+           //                          &vr2, &vru2, &vrv2, &vre2, 
+           //                          0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+           //                          &drrdxP, &drrdyP, &drudxP, &drudyP, 
+           //                          &drvdxP, &drvdyP, &dredxP, &dredyP);
+
+
+        }
+
+        // Compute primitive variables from cell averages of conserved variables
+        dfloat uf = ruf/rf, vf = rvf/rf; 
+        dfloat pf = (gamma-1)*(ref-0.5*rf*(uf*uf+vf*vf));
+
+        // Compute Primitives at vertices
+        dfloat vu1 = vru1/vr1, vv1 = vrv1/vr1; 
+        dfloat vp1  = (gamma-1)*(vre1-0.5*vr1*(vu1*vu1+vv1*vv1));
+
+        dfloat vu2 = vru2/vr2, vv2 = vrv2/vr2; 
+        dfloat vp2 = (gamma-1)*(vre2-0.5*vr2*(vu2*vu2+vv2*vv2)); 
+
+        const dfloat VCF = (vc0 + vcf)/3.0; 
+
+        // // Compute face gradients
+        // dfloat drdxf =  0.5*( (rf-r0)*(vy2-vy1) + (vr1-vr2)*(ycf - yc0) )/VCF;
+        // dfloat drdyf = -0.5*( (rf-r0)*(vx2-vx1) + (vr1-vr2)*(xcf - xc0) )/VCF;
+
+        // dfloat dudxf =  0.5*( (uf-u0)*(vy2-vy1) + (vu1-vu2)*(ycf - yc0) )/VCF;
+        // dfloat dudyf = -0.5*( (uf-u0)*(vx2-vx1) + (vu1-vu2)*(xcf - xc0) )/VCF;
+
+        // dfloat dvdxf =  0.5*( (vf-v0)*(vy2-vy1) + (vv1-vv2)*(ycf - yc0) )/VCF;
+        // dfloat dvdyf = -0.5*( (vf-v0)*(vx2-vx1) + (vv1-vv2)*(xcf - xc0) )/VCF;
+
+        // dfloat dpdxf =  0.5*( (pf-p0)*(vy2-vy1) + (vp1-vp2)*(ycf - yc0) )/VCF;
+        // dfloat dpdyf = -0.5*( (pf-p0)*(vx2-vx1) + (vp1-vp2)*(xcf - xc0) )/VCF;
+        
+        // // Volume weighting
+        // drdxC += VCF*drdxf; drdyC += VCF*drdyf; 
+        // dudxC += VCF*dudxf; dudyC += VCF*dudyf; 
+        // dvdxC += VCF*dvdxf; dvdyC += VCF*dvdyf; 
+        // dpdxC += VCF*dpdxf; dpdyC += VCF*dpdyf; 
+
+
+
+        // Compute face gradients
+        dfloat drdxf =  0.5*( (rf-r0)*(vy2-vy1) + (vr1-vr2)*(ycf - yc0) );
+        dfloat drdyf = -0.5*( (rf-r0)*(vx2-vx1) + (vr1-vr2)*(xcf - xc0) );
+
+        dfloat dudxf =  0.5*( (uf-u0)*(vy2-vy1) + (vu1-vu2)*(ycf - yc0) );
+        dfloat dudyf = -0.5*( (uf-u0)*(vx2-vx1) + (vu1-vu2)*(xcf - xc0) );
+
+        dfloat dvdxf =  0.5*( (vf-v0)*(vy2-vy1) + (vv1-vv2)*(ycf - yc0) );
+        dfloat dvdyf = -0.5*( (vf-v0)*(vx2-vx1) + (vv1-vv2)*(xcf - xc0) );
+
+        dfloat dpdxf =  0.5*( (pf-p0)*(vy2-vy1) + (vp1-vp2)*(ycf - yc0) );
+        dfloat dpdyf = -0.5*( (pf-p0)*(vx2-vx1) + (vp1-vp2)*(xcf - xc0) );
+        
+        // Volume weighting
+        drdxC += drdxf; drdyC += drdyf; 
+        dudxC += dudxf; dudyC += dudyf; 
+        dvdxC += dvdxf; dvdyC += dvdyf; 
+        dpdxC += dpdxf; dpdyC += dpdyf; 
+
+        Vtotal += VCF; 
+      }
+
+      drdxC = drdxC/Vtotal; drdyC = drdyC/Vtotal; 
+      dudxC = dudxC/Vtotal; dudyC = dudyC/Vtotal; 
+      dvdxC = dvdxC/Vtotal; dvdyC = dvdyC/Vtotal; 
+      dpdxC = dpdxC/Vtotal; dpdyC = dpdyC/Vtotal; 
+
+      dqc[e0*p_Nfields*p_dim + 0] = drdxC; 
+      dqc[e0*p_Nfields*p_dim + 1] = drdyC; 
+      dqc[e0*p_Nfields*p_dim + 2] = dudxC; 
+      dqc[e0*p_Nfields*p_dim + 3] = dudyC; 
+      dqc[e0*p_Nfields*p_dim + 4] = dvdxC; 
+      dqc[e0*p_Nfields*p_dim + 5] = dvdyC; 
+      dqc[e0*p_Nfields*p_dim + 6] = dpdxC; 
+      dqc[e0*p_Nfields*p_dim + 7] = dpdyC; 
+    }
+  }
+}
+
+
+
+@kernel void cnsLimiterGradientTri2D(const dlong Nelements,
+                                    @restrict const dfloat *vgeo, 
+                                    @restrict const dfloat *sgeo, 
+                                    @restrict const dfloat *lvgeo, 
+                                    @restrict const int    *EToB,
+                                    @restrict const int    *vertexNodes,
+                                    @restrict const dlong  *eList,
+                                    @restrict const dlong  *vmapM,
+                                    @restrict const dlong  *vmapP,
+                                    @restrict const dfloat *x, 
+                                    @restrict const dfloat *y, 
+                                    @restrict const dfloat *z,
+                                    @restrict const dfloat *pCoeff, 
+                                              const dfloat  t, 
+                                    @restrict       dfloat *q, 
+                                    @restrict const dfloat *qc, 
+                                    @restrict const dfloat *qv, 
+                                    @restrict const dfloat *dqc){
+for(dlong e0=0;e0<Nelements;++e0;@tile(p_blockSize,@outer,@inner)){
+    // Define register memories
+    dfloat r_dqn[p_Nfaces][p_Nfields*p_dim]; 
+    dfloat r_dqc[p_Nfields*p_dim]; 
+    dfloat r_qc[p_Nfields]; 
+    const int etype = eList[e0];
+    if(etype==s_FVFV_TYPE){
+
+      const dfloat gamma = pCoeff[p_GMID]; // gamma
+      const dfloat CV    = pCoeff[p_CVID]; // CV
+      const dfloat CP    = pCoeff[p_CPID]; // CP
+      const dfloat R     = pCoeff[p_RRID]; // CP
+      // const dfloat Pr    = pCoeff[p_PRID]; // Prandtl Number
+      const dfloat mu    = pCoeff[p_MUID]; // Prandtl Number
+
+      const dfloat xc0 = lvgeo[e0*s_Nvgeo + s_CXID]; 
+      const dfloat yc0 = lvgeo[e0*s_Nvgeo + s_CYID]; 
+      const dfloat VC0 = lvgeo[e0*s_Nvgeo + s_VID]; 
+
+      for(int fld=0; fld<p_Nfields; fld++){
+        r_qc[fld] = qc[e0*p_Nfields + fld];
+        // 
+        r_dqc[fld*p_dim + 0] = dqc[e0*p_Nfields*p_dim + fld*p_dim + 0]; 
+        r_dqc[fld*p_dim + 1] = dqc[e0*p_Nfields*p_dim + fld*p_dim + 1]; 
+      }
+
+
+      for(int face=0; face<p_Nfaces; face++){
+        const dlong id = e0*p_Nfp*p_Nfaces;
+        const dlong ef = vmapP[id + face*p_Nfp + 1]/p_Np;
+
+        for(int fld=0; fld<p_Nfields; fld++){
+          r_dqn[face][fld*p_dim + 0] = dqc[ef*p_Nfields*p_dim + fld*p_dim + 0]; 
+          r_dqn[face][fld*p_dim + 1] = dqc[ef*p_Nfields*p_dim + fld*p_dim + 1]; 
+        }
+
+        const int bcf = EToB[e0*p_Nfaces + face];
+
+        if(bcf>0){
+          dfloat rf  = 0.0, ruf = 0.0, rvf = 0.0, ref = 0.0; 
+          // load surface geofactors for this face
+          const dlong sid    = p_Nsgeo*(e0*p_Nfaces+face);
+          const dfloat nx    = sgeo[sid+p_NXID];
+          const dfloat ny    = sgeo[sid+p_NYID];
+          const dfloat sJ    = sgeo[sid+p_SJID];
+          const dfloat factor = VC0 / (3.0*sJ);
+          // reflect the center
+          dfloat xcf = xc0 +  2.0*factor*nx; 
+          dfloat ycf = yc0 +  2.0*factor*ny; 
+
+          cnsViscousBoundaryConditions2D(bcf, gamma, R, CP, CV, mu,
+                                        time, xcf, ycf, nx, ny, 
+                                        r_qc[0], r_qc[1], r_qc[2], r_qc[3], 
+                                        &rf, &ruf, &rvf, &ref, 
+                                        r_dqc[0],r_dqc[1],r_dqc[2],r_dqc[3],  
+                                        r_dqc[4],r_dqc[5],r_dqc[6],r_dqc[7],  
+                                        &r_dqn[face][0],&r_dqn[face][1],&r_dqn[face][2],&r_dqn[face][3],  
+                                        &r_dqn[face][4],&r_dqn[face][5],&r_dqn[face][6],&r_dqn[face][7]);  
+          }
+        }
+
+
+        const dfloat epse = 1e-10; 
+        for(int fld=0; fld<p_Nfields; fld++){
+          const int id = fld*p_dim;
+          const dfloat gq1 = sqrt(r_dqn[0][id+0]*r_dqn[0][id+0] + r_dqn[0][id+1]*r_dqn[0][id+1]); 
+          const dfloat gq2 = sqrt(r_dqn[1][id+0]*r_dqn[1][id+0] + r_dqn[1][id+1]*r_dqn[1][id+1]);  
+          const dfloat gq3 = sqrt(r_dqn[2][id+0]*r_dqn[2][id+0] + r_dqn[2][id+1]*r_dqn[2][id+1]); 
+
+          // const dfloat facq = gq1*gq1 + gq2*gq2 + gq3*gq3;
+          const dfloat facq = pow(gq1+1.0,-2) + pow(gq2+1.0,-2) + pow(gq3+1.0,-2);
+          //
+          // dfloat weight0 = (gq2*gq3+epse)/(facq+3.0*epse);
+          // dfloat weight1 = (gq1*gq3+epse)/(facq+3.0*epse);
+          // dfloat weight2 = (gq1*gq2+epse)/(facq+3.0*epse); 
+
+          dfloat weight0 = pow(gq1+1,-2)/(facq);
+          dfloat weight1 = pow(gq2+1,-2)/(facq);
+          dfloat weight2 = pow(gq3+1,-2)/(facq); 
+
+          r_dqc[id+0] = weight0*r_dqn[0][id+0]+weight1*r_dqn[1][id+0]+ weight2*r_dqn[2][id+0];
+          r_dqc[id+1] = weight0*r_dqn[0][id+1]+weight1*r_dqn[1][id+1]+ weight2*r_dqn[2][id+1];
+        }
+
+        // Compute primitive variables from cell averages of conserved variables
+        dfloat r0     = r_qc[0]; 
+        dfloat u0     = r_qc[1]/r0, v0 = r_qc[2]/r0; 
+        dfloat p0     = (gamma-1)*(r_qc[3]-0.5*r0*(u0*u0+v0*v0));
+
+        for(int n=0; n<p_Np; n++){
+          const dfloat dx = x[e0*p_Np + n] - xc0;
+          const dfloat dy = y[e0*p_Np + n] - yc0;
+          // Construct and smooth out density
+          dfloat lr   = r0 +  r_dqc[0*p_dim+0]*dx + r_dqc[0*p_dim+1]*dy;          
+         if(lr<1E-8){
+          printf("Correcting density, check solution!\n");
+           r_dqc[0*p_dim+0] *=0.5;
+           r_dqc[0*p_dim+1] *=0.5; 
+
+         }
+      }
+
+
+
+        for(int n=0; n<p_Np; n++){
+          const dfloat dx = x[e0*p_Np + n] - xc0;
+          const dfloat dy = y[e0*p_Np + n] - yc0;
+
+          dfloat dr = r_dqc[0*p_dim+0]*dx + r_dqc[0*p_dim+1]*dy; 
+          dfloat du = r_dqc[1*p_dim+0]*dx + r_dqc[1*p_dim+1]*dy; 
+          dfloat dv = r_dqc[2*p_dim+0]*dx + r_dqc[2*p_dim+1]*dy; 
+          dfloat dp = r_dqc[3*p_dim+0]*dx + r_dqc[3*p_dim+1]*dy; 
+          // Construct and smooth out density
+          dfloat lr   = r0 + dr; 
+          dfloat lp   = p0 + dp; 
+
+        // Reconstruct momentum
+          dfloat lru = r_qc[1] + r0*du + dr*u0; 
+          dfloat lrv = r_qc[2] + r0*dv + dr*v0;
+          
+          // Reconstruct energy
+          dfloat de = (1.0/(gamma-1))*dp+0.5*dr*(u0*u0+v0*v0)+r0*(u0*du+v0*dv);
+          dfloat lre = r_qc[3] + de;
+
+          q[e0*p_Nfields*p_Np + n + 0*p_Np] = lr; 
+          q[e0*p_Nfields*p_Np + n + 1*p_Np] = lru; 
+          q[e0*p_Nfields*p_Np + n + 2*p_Np] = lrv; 
+          q[e0*p_Nfields*p_Np + n + 3*p_Np] = lre; 
+      }
+
+
+    }
+  }
+}
+
+
+        // #if POSITIVITY
+        // lr          = RMIN + LMAX(lr-RMIN, ALPHA); 
+        // // dfloat sdr   = SMOOTH(lr-RMIN, ALPHA); 
+        // // LdrdxC0     *=sdr;  LdrdyC0     *=sdr; 
+
+        // lp          = PMIN + LMAX(lp-PMIN, ALPHA); 
+        // // dfloat dp   = SMOOTH(lp-PMIN, ALPHA); 
+        // // LdpdxC0     *=dp;  LdpdyC0     *=dp; 
+        // #endif
+
+#endif
+
+
+
+#if LIMITER==1
+@kernel void cnsLimiterVertexBoundaryTri2D(const dlong Nelements,
+                                          @restrict const dfloat *vgeo, 
+                                          @restrict const dfloat *sgeo, 
+                                          @restrict const dfloat *lvgeo, 
+                                          @restrict const int    *EToB,
+                                          @restrict const int    *vertexNodes,
+                                          @restrict const dlong  *eList,
+                                          @restrict const dlong  *vmapM,
+                                          @restrict const dlong  *vmapP,
+                                          @restrict const dfloat *x, 
+                                          @restrict const dfloat *y, 
+                                          @restrict const dfloat *z,
+                                          @restrict const dfloat *pCoeff, 
+                                                    const dfloat  t, 
+                                          @restrict const dfloat *q, 
+                                          @restrict const dfloat *qc, 
+                                          @restrict       dfloat *qv, 
+                                          @restrict       dfloat *dqc){
+for(dlong e0=0;e0<Nelements;++e0;@tile(p_blockSize,@outer,@inner)){
+
+}
+}
+
+@kernel void cnsLimiterReconstructTri2D(const dlong Nelements,
+                                        @restrict const dfloat *vgeo, 
+                                        @restrict const dfloat *sgeo, 
+                                        @restrict const dfloat *lvgeo, 
+                                        @restrict const int    *EToB,
+                                        @restrict const int    *vertexNodes,
+                                        @restrict const dlong  *eList,
+                                        @restrict const dlong  *vmapM,
+                                        @restrict const dlong  *vmapP,
+                                        @restrict const dfloat *x, 
+                                        @restrict const dfloat *y, 
+                                        @restrict const dfloat *z,
+                                        @restrict const dfloat *pCoeff, 
+                                                  const dfloat  t, 
+                                        @restrict const dfloat *q, 
+                                        @restrict const dfloat *qc, 
+                                        @restrict const dfloat *qv, 
+                                        @restrict       dfloat *dqc){
+for(dlong e0=0;e0<Nelements;++e0;@tile(p_blockSize,@outer,@inner)){
+    const int etype = eList[e0];
+    if(etype!=s_DGDG_TYPE){
+      const dfloat gamma = pCoeff[p_GMID]; // gamma
+      const dfloat CV    = pCoeff[p_CVID]; // CV
+      const dfloat CP    = pCoeff[p_CPID]; // CP
+      const dfloat Pr    = pCoeff[p_PRID]; // Prandtl Number
+      const dfloat mu    = pCoeff[p_MUID]; // Prandtl Number
+
+      // Get geometric factors for center element of the patch
+      const dfloat xc0 = lvgeo[e0*s_Nvgeo + s_CXID]; 
+      const dfloat yc0 = lvgeo[e0*s_Nvgeo + s_CYID]; 
+      const dfloat VC0 = lvgeo[e0*s_Nvgeo + s_VID]; 
+
+      // Get cell averages of conserved variables
+      dfloat rr0 = qc[e0*p_Nfields + 0]; 
+      dfloat ru0 = qc[e0*p_Nfields + 1]; 
+      dfloat rv0 = qc[e0*p_Nfields + 2]; 
+      dfloat re0 = qc[e0*p_Nfields + 3]; 
+      
+      // Initialize the cell center gradients 
+      dfloat drrdxC = 0.0, drrdyC = 0.0; 
+      dfloat drudxC = 0.0, drudyC = 0.0; 
+      dfloat drvdxC = 0.0, drvdyC = 0.0; 
+      dfloat dredxC = 0.0, dredyC = 0.0; 
+
+      for(int face=0; face<p_Nfaces; face++){
+        // indices of negative and positive traces of face node
+        const int   bcf  = EToB[e0*p_Nfaces + face];
+        // load surface geofactors for this face
+        const dlong sid   = p_Nsgeo*(e0*p_Nfaces+face);
+        const dfloat nx   = sgeo[sid+p_NXID];
+        const dfloat ny   = sgeo[sid+p_NYID];
+        const dfloat sJ   = sgeo[sid+p_SJID]; // SA = 2.0*sJ
+        const dfloat invJ = sgeo[sid+p_IJID]; // V  = 1.0/(2.0 * Vol)
+
+        const dlong ef = vmapP[e0*p_Nfp*p_Nfaces+face*p_Nfp+1]/p_Np;
+
+        dfloat rrf = qc[ef*p_Nfields + 0];
+        dfloat ruf = qc[ef*p_Nfields + 1];
+        dfloat rvf = qc[ef*p_Nfields + 2];
+        dfloat ref = qc[ef*p_Nfields + 3];
+
+       // apply boundary conditions 
+        if(bcf>0){
+          // fake derivates
+          dfloat drrdxP = 0.0, drrdyP =0.0; 
+          dfloat drudxP = 0.0, drudyP =0.0; 
+          dfloat drvdxP = 0.0, drvdyP =0.0; 
+          dfloat dredxP = 0.0, dredyP =0.0; 
+          const dfloat factor = 1.0/(3.0*invJ*sJ);
+          dfloat xcf = xc0 +  2.0*factor*nx; 
+          dfloat ycf = yc0 +  2.0*factor*ny; 
+          cnsViscousBoundaryConditions2D(bcf, gamma, R, CP, CV, mu,
+                                    time, xcf, ycf, nx, ny, 
+                                    rr0, ru0, rv0, re0, 
+                                    &rrf, &ruf, &rvf, &ref, 
+                                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                    &drrdxP, &drrdyP, &drudxP, &drudyP, 
+                                    &drvdxP, &drvdyP, &dredxP, &dredyP);
+          // rrf = 2.0*rrf - rr0; 
+          // ruf = 2.0*ruf - ru0; 
+          // rvf = 2.0*rvf - rv0; 
+          // ref = 2.0*ref - re0; 
+        }
+
+        drrdxC += sJ*invJ*nx*0.5*(rr0 + rrf), drrdyC += sJ*invJ*ny*0.5*(rr0 + rrf); 
+        drudxC += sJ*invJ*nx*0.5*(ru0 + ruf), drudyC += sJ*invJ*ny*0.5*(ru0 + ruf);
+        drvdxC += sJ*invJ*nx*0.5*(rv0 + rvf), drvdyC += sJ*invJ*ny*0.5*(rv0 + rvf);
+        dredxC += sJ*invJ*nx*0.5*(re0 + ref), dredyC += sJ*invJ*ny*0.5*(re0 + ref);
+      }
+
+      dqc[e0*p_Nfields*p_dim + 0] = drrdxC; 
+      dqc[e0*p_Nfields*p_dim + 1] = drrdyC; 
+      dqc[e0*p_Nfields*p_dim + 2] = drudxC; 
+      dqc[e0*p_Nfields*p_dim + 3] = drudyC; 
+      dqc[e0*p_Nfields*p_dim + 4] = drvdxC; 
+      dqc[e0*p_Nfields*p_dim + 5] = drvdyC; 
+      dqc[e0*p_Nfields*p_dim + 6] = dredxC; 
+      dqc[e0*p_Nfields*p_dim + 7] = dredyC; 
+    
+    }
+  }
+}
+
+
+@kernel void cnsLimiterGradientTri2D(const dlong Nelements,
+                                    @restrict const dfloat *vgeo, 
+                                    @restrict const dfloat *sgeo, 
+                                    @restrict const dfloat *lvgeo, 
+                                    @restrict const int    *EToB,
+                                    @restrict const int    *vertexNodes,
+                                    @restrict const dlong  *eList,
+                                    @restrict const dlong  *vmapM,
+                                    @restrict const dlong  *vmapP,
+                                    @restrict const dfloat *x, 
+                                    @restrict const dfloat *y, 
+                                    @restrict const dfloat *z,
+                                    @restrict const dfloat *pCoeff, 
+                                              const dfloat  t, 
+                                    @restrict       dfloat *q, 
+                                    @restrict const dfloat *qc, 
+                                    @restrict const dfloat *qv, 
+                                    @restrict       dfloat *dqc){
+for(dlong e0=0;e0<Nelements;++e0;@tile(p_blockSize,@outer,@inner)){
+  const int etype = eList[e0];
+  if(etype==s_FVFV_TYPE){
+    const dfloat gamma = pCoeff[p_GMID]; // gamma
+    const dfloat CV    = pCoeff[p_CVID]; // CV
+    const dfloat CP    = pCoeff[p_CPID]; // CP
+    const dfloat R     = pCoeff[p_RRID]; // CP
+    // const dfloat Pr    = pCoeff[p_PRID]; // Prandtl Number
+    const dfloat mu    = pCoeff[p_MUID]; // Prandtl Number
+
+    const dfloat xc0 = lvgeo[e0*s_Nvgeo + s_CXID]; 
+    const dfloat yc0 = lvgeo[e0*s_Nvgeo + s_CYID]; 
+    // const dfloat VC0 = lvgeo[e0*s_Nvgeo + s_VID]; 
+
+    dfloat rr0 = qc[e0*p_Nfields + 0];
+    dfloat ru0 = qc[e0*p_Nfields + 1];
+    dfloat rv0 = qc[e0*p_Nfields + 2];
+    dfloat re0 = qc[e0*p_Nfields + 3];
+
+    dfloat drrdx0 =  dqc[e0*p_Nfields*p_dim + 0]; 
+    dfloat drrdy0 =  dqc[e0*p_Nfields*p_dim + 1]; 
+    dfloat drudx0 =  dqc[e0*p_Nfields*p_dim + 2]; 
+    dfloat drudy0 =  dqc[e0*p_Nfields*p_dim + 3]; 
+    dfloat drvdx0 =  dqc[e0*p_Nfields*p_dim + 4]; 
+    dfloat drvdy0 =  dqc[e0*p_Nfields*p_dim + 5]; 
+    dfloat dredx0 =  dqc[e0*p_Nfields*p_dim + 6]; 
+    dfloat dredy0 =  dqc[e0*p_Nfields*p_dim + 7]; 
+
+    dfloat rrmax = rr0, rumax = ru0, rvmax = rv0, remax = re0; 
+    dfloat rrmin = rr0, rumin = ru0, rvmin = rv0, remin = re0; 
+
+      for(int face=0; face<p_Nfaces; face++){
+        const dlong id = e0*p_Nfp*p_Nfaces;
+        const dlong ef = vmapP[id + face*p_Nfp + 0]/p_Np;
+
+        dfloat rrf = qc[ef*p_Nfields + 0];
+        dfloat ruf = qc[ef*p_Nfields + 1];
+        dfloat rvf = qc[ef*p_Nfields + 2];
+        dfloat ref = qc[ef*p_Nfields + 3];
+
+        const int bcf = EToB[e0*p_Nfaces + face];
+       // apply boundary conditions 
+        if(bcf>0){
+          // fake derivates
+          dfloat drrdxP = 0.0, drrdyP =0.0; 
+          dfloat drudxP = 0.0, drudyP =0.0; 
+          dfloat drvdxP = 0.0, drvdyP =0.0; 
+          dfloat dredxP = 0.0, dredyP =0.0; 
+          // load surface geofactors for this face
+          const dlong sid    = p_Nsgeo*(e0*p_Nfaces+face);
+          const dfloat nx    = sgeo[sid+p_NXID];
+          const dfloat ny    = sgeo[sid+p_NYID];
+          const dfloat sJ    = sgeo[sid+p_SJID];
+          const dfloat invJ  = sgeo[sid+p_IJID];
+          const dfloat factor = 2.0/(3.0*invJ*sJ);
+          dfloat xcf = xc0 +  factor*nx; 
+          dfloat ycf = yc0 +  factor*ny; 
+          cnsViscousBoundaryConditions2D(bcf, gamma, R, CP, CV, mu,
+                                    time, xcf, ycf, nx, ny, 
+                                    rr0, ru0, rv0, re0, 
+                                    &rrf, &ruf, &rvf, &ref, 
+                                    0.0, 0.0, 0.0, 0.0, 
+                                    0.0, 0.0, 0.0, 0.0,
+                                    &drrdxP, &drrdyP, &drudxP, &drudyP, 
+                                    &drvdxP, &drvdyP, &dredxP, &dredyP);
+        }
+
+        // Find the min/max amoung the face neighbors
+        rrmax = mymax(rrmax, rrf); rrmin = mymin(rrmin, rrf); 
+        rumax = mymax(rumax, ruf); rumin = mymin(rumin, ruf); 
+        rvmax = mymax(rvmax, rvf); rvmin = mymin(rvmin, rvf); 
+        remax = mymax(remax, ref); remin = mymin(remin, ref); 
+      }
+
+      // Reconstruct at vertices and check limiting factor
+      dfloat phir=1.0, phiu=1.0, phiv=1.0, phie = 1.0; 
+      for(int v=0; v<p_Nverts; v++){
+        int lv_id = vertexNodes[v]; 
+        const dfloat xi = x[e0*p_Np + lv_id]; 
+        const dfloat yi = y[e0*p_Np + lv_id];
+        // unconstrained solutions
+        dfloat rri = rr0 + drrdx0*(xi-xc0) + drrdy0*(yi-yc0);  
+        dfloat rui = ru0 + drudx0*(xi-xc0) + drudy0*(yi-yc0);  
+        dfloat rvi = rv0 + drvdx0*(xi-xc0) + drvdy0*(yi-yc0);  
+        dfloat rei = re0 + dredx0*(xi-xc0) + dredy0*(yi-yc0);  
+
+        dfloat phiri = limiter_check(rrmax, rrmin, rri, rr0); 
+        dfloat phiui = limiter_check(rumax, rumin, rui, ru0); 
+        dfloat phivi = limiter_check(rvmax, rvmin, rvi, rv0); 
+        dfloat phiei = limiter_check(remax, remin, rei, re0); 
+
+        phir = mymin(phir, phiri);
+        phiu = mymin(phiu, phiui);
+        phiv = mymin(phiv, phivi);
+        phie = mymin(phie, phiei);
+
+      }
+
+      for(int n=0; n<p_Np; n++){
+        const dfloat dx = x[e0*p_Np + n] - xc0;
+        const dfloat dy = y[e0*p_Np + n] - yc0;
+
+        const dfloat lrr = rr0 + phir*(drrdx0*dx + drrdy0*dy);
+        const dfloat lru = ru0 + phiu*(drudx0*dx + drudy0*dy);
+        const dfloat lrv = rv0 + phiv*(drvdx0*dx + drvdy0*dy);
+        const dfloat lre = re0 + phie*(dredx0*dx + dredy0*dy);
+        
+        const dlong base = e0*p_Np*p_Nfields + n; 
+        q[base + 0*p_Np] = lrr; 
+        q[base + 1*p_Np] = lru; 
+        q[base + 2*p_Np] = lrv; 
+        q[base + 3*p_Np] = lre; 
+    }
+  }
+}
+}
+
+
+#endif
+
+
+
+
+
+
+
+#if LIMITER==2
+@kernel void cnsLimiterVertexBoundaryTri2D(const dlong Nelements,
+                                          @restrict const dfloat *vgeo, 
+                                          @restrict const dfloat *sgeo, 
+                                          @restrict const dfloat *lvgeo, 
+                                          @restrict const int    *EToB,
+                                          @restrict const int    *vertexNodes,
+                                          @restrict const dlong  *eList,
+                                          @restrict const dlong  *vmapM,
+                                          @restrict const dlong  *vmapP,
+                                          @restrict const dfloat *x, 
+                                          @restrict const dfloat *y, 
+                                          @restrict const dfloat *z,
+                                          @restrict const dfloat *pCoeff, 
+                                                    const dfloat  t, 
+                                          @restrict const dfloat *q, 
+                                          @restrict const dfloat *qc, 
+                                          @restrict       dfloat *qv, 
+                                          @restrict       dfloat *dqc){
+for(dlong e0=0;e0<Nelements;++e0;@tile(p_blockSize,@outer,@inner)){
+    const int etype = eList[e0];
+  if(etype!=s_DGDG_TYPE){
+    const dfloat gamma = pCoeff[p_GMID]; // gamma
+    const dfloat CV    = pCoeff[p_CVID]; // CV
+    const dfloat CP    = pCoeff[p_CPID]; // CP
+    const dfloat Pr    = pCoeff[p_PRID]; // Prandtl Number
+    const dfloat mu    = pCoeff[p_MUID]; // Prandtl Number
+
+    // Get geometric factors for center element of the patch
+    const dfloat xc0 = lvgeo[e0*s_Nvgeo + s_CXID]; 
+    const dfloat yc0 = lvgeo[e0*s_Nvgeo + s_CYID]; 
+    const dfloat VC0 = lvgeo[e0*s_Nvgeo + s_VID]; 
+
+    // Get cell averages of conserved variables
+    dfloat r0  = qc[e0*p_Nfields + 0]; 
+    dfloat ru0 = qc[e0*p_Nfields + 1]; 
+    dfloat rv0 = qc[e0*p_Nfields + 2]; 
+    dfloat re0 = qc[e0*p_Nfields + 3]; 
+
+     for(int face=0; face<p_Nfaces; face++){
+        // indices of negative and positive traces of face node
+        const dlong id    = e0*p_Nfp*p_Nfaces + face*p_Nfp;
+        const int   bcf   = EToB[e0*p_Nfaces + face];
+        if(bcf>0){
+          // load surface geofactors for this face
+          const dlong sid   = p_Nsgeo*(e0*p_Nfaces+face);
+          const dfloat nx   = sgeo[sid+p_NXID];
+          const dfloat ny   = sgeo[sid+p_NYID];
+          const dfloat sJ   = sgeo[sid+p_SJID]; // SA = 2.0*sJ
+          const dfloat invJ = sgeo[sid+p_IJID]; // V  = 1.0/(2.0 * Vol)
+
+          const int lvid1 = face; 
+          const int lvid2 = (face+1)%p_Nfaces; 
+          
+          const int vertexid1 = vertexNodes[lvid1]; 
+          const int vertexid2 = vertexNodes[lvid2]; 
+          
+          dfloat xv1 = x[e0*p_Np + vertexid1]; 
+          dfloat xv2 = x[e0*p_Np + vertexid2]; 
+
+          dfloat yv1 = y[e0*p_Np + vertexid1]; 
+          dfloat yv2 = y[e0*p_Np + vertexid2]; 
+
+          // Initialize the cell center gradients 
+          dfloat drrdx = 0.0, drrdy = 0.0; 
+          dfloat drudx = 0.0, drudy = 0.0; 
+          dfloat drvdx = 0.0, drvdy = 0.0; 
+          dfloat dredx = 0.0, dredy = 0.0; 
+
+          dfloat rf1=0.0, ruf1=0, rvf1=0, ref1 = 0; 
+          cnsViscousBoundaryConditions2D(bcf, gamma, R, CP, CV, mu,
+                                    time, xv1, yv1, nx, ny, 
+                                    r0, ru0, rv0, re0, 
+                                    &rf1, &ruf1, &rvf1, &ref1, 
+                                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                    &drrdx, &drrdy, &drudx, &drudy, 
+                                    &drvdx, &drvdy, &dredx, &dredy);
+
+          qv[e0*p_Nfields*p_Nverts + lvid1*p_Nfields + 0] = rf1; 
+          qv[e0*p_Nfields*p_Nverts + lvid1*p_Nfields + 1] = ruf1; 
+          qv[e0*p_Nfields*p_Nverts + lvid1*p_Nfields + 2] = rvf1; 
+          qv[e0*p_Nfields*p_Nverts + lvid1*p_Nfields + 3] = ref1; 
+
+
+          dfloat rf2=0.0, ruf2=0, rvf2=0, ref2 = 0; 
+          cnsViscousBoundaryConditions2D(bcf, gamma, R, CP, CV, mu,
+                                    time, xv2, yv2, nx, ny, 
+                                    r0, ru0, rv0, re0, 
+                                    &rf2, &ruf2, &rvf2, &ref2, 
+                                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                    &drrdx, &drrdy, &drudx, &drudy, 
+                                    &drvdx, &drvdy, &dredx, &dredy);
+
+          qv[e0*p_Nfields*p_Nverts + lvid2*p_Nfields + 0] = rf2; 
+          qv[e0*p_Nfields*p_Nverts + lvid2*p_Nfields + 1] = ruf2; 
+          qv[e0*p_Nfields*p_Nverts + lvid2*p_Nfields + 2] = rvf2; 
+          qv[e0*p_Nfields*p_Nverts + lvid2*p_Nfields + 3] = ref2; 
+
+        }    
+      }
+    }
+ }
+}
+
+
+
+
+@kernel void cnsLimiterReconstructTri2D(const dlong Nelements,
+                                        @restrict const dfloat *vgeo, 
+                                        @restrict const dfloat *sgeo, 
+                                        @restrict const dfloat *lvgeo, 
+                                        @restrict const int    *EToB,
+                                        @restrict const int    *vertexNodes,
+                                        @restrict const dlong  *eList,
+                                        @restrict const dlong  *vmapM,
+                                        @restrict const dlong  *vmapP,
+                                        @restrict const dfloat *x, 
+                                        @restrict const dfloat *y, 
+                                        @restrict const dfloat *z,
+                                        @restrict const dfloat *pCoeff, 
+                                                  const dfloat  t, 
+                                        @restrict const dfloat *q, 
+                                        @restrict const dfloat *qc, 
+                                        @restrict const dfloat *qv, 
+                                        @restrict       dfloat *dqc){
+for(dlong e0=0;e0<Nelements;++e0;@tile(p_blockSize,@outer,@inner)){
+    const int etype = eList[e0];
+    if(etype!=s_DGDG_TYPE){
+      const dfloat gamma = pCoeff[p_GMID]; // gamma
+      const dfloat CV    = pCoeff[p_CVID]; // CV
+      const dfloat CP    = pCoeff[p_CPID]; // CP
+      const dfloat Pr    = pCoeff[p_PRID]; // Prandtl Number
+      const dfloat mu    = pCoeff[p_MUID]; // Prandtl Number
+
+      // Get geometric factors for center element of the patch
+      const dfloat xc0 = lvgeo[e0*s_Nvgeo + s_CXID]; 
+      const dfloat yc0 = lvgeo[e0*s_Nvgeo + s_CYID]; 
+      const dfloat VC0 = lvgeo[e0*s_Nvgeo + s_VID]; 
+
+      // Get cell averages of conserved variables
+      dfloat r0  = qc[e0*p_Nfields + 0]; 
+      dfloat ru0 = qc[e0*p_Nfields + 1]; 
+      dfloat rv0 = qc[e0*p_Nfields + 2]; 
+      dfloat re0 = qc[e0*p_Nfields + 3]; 
+      
+      // Initialize the cell center gradients 
+      dfloat drrdxC = 0.0, drrdyC = 0.0; 
+      dfloat drudxC = 0.0, drudyC = 0.0; 
+      dfloat drvdxC = 0.0, drvdyC = 0.0; 
+      dfloat dredxC = 0.0, dredyC = 0.0; 
+
+      for(int face=0; face<p_Nfaces; face++){
+        // indices of negative and positive traces of face node
+        const dlong id    = e0*p_Nfp*p_Nfaces + face*p_Nfp;
+        // Find neighbors in patch
+        const int   bcf  = EToB[e0*p_Nfaces + face];
+        // load surface geofactors for this face
+        const dlong sid   = p_Nsgeo*(e0*p_Nfaces+face);
+        const dfloat nx   = sgeo[sid+p_NXID];
+        const dfloat ny   = sgeo[sid+p_NYID];
+        const dfloat sJ   = sgeo[sid+p_SJID]; // SA = 2.0*sJ
+        const dfloat invJ = sgeo[sid+p_IJID]; // V  = 1.0/(2.0 * Vol)
+
+        const int lvid1 = face; 
+        const int lvid2 = (face+1)%p_Nfaces; 
+
+        const int vid1 = e0*p_Nfields*p_Nverts + lvid1*p_Nfields; 
+        const int vid2 = e0*p_Nfields*p_Nverts + lvid2*p_Nfields; 
+
+        dfloat rf   = 0.5*(qv[vid1+0] + qv[vid2+0]); 
+        dfloat ruf  = 0.5*(qv[vid1+1] + qv[vid2+1]); 
+        dfloat rvf  = 0.5*(qv[vid1+2] + qv[vid2+2]); 
+        dfloat ref  = 0.5*(qv[vid1+3] + qv[vid2+3]); 
+
+        // apply boundary conditions 
+        if(bcf>0){          
+         // fake derivates
+          dfloat drrdxP = 0.0, drrdyP =0.0; 
+          dfloat drudxP = 0.0, drudyP =0.0; 
+          dfloat drvdxP = 0.0, drvdyP =0.0; 
+          dfloat dredxP = 0.0, dredyP =0.0; 
+
+          const int vertexid1 = vertexNodes[lvid1]; 
+          const int vertexid2 = vertexNodes[lvid2]; 
+
+          // printf("%d %d %d %d %d %d\n", e0, face, lvid1, lvid2, vertexid1, vertexid2);
+          dfloat xcf = 0.5*(x[e0*p_Np + vertexid1] + x[e0*p_Np + vertexid2]); 
+          dfloat ycf = 0.5*(y[e0*p_Np + vertexid1] + y[e0*p_Np + vertexid2]); 
+          cnsViscousBoundaryConditions2D(bcf, gamma, R, CP, CV, mu,
+                                    time, xcf, ycf, nx, ny, 
+                                    r0, ru0, rv0, re0, 
+                                    &rf, &ruf, &rvf, &ref, 
+                                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                    &drrdxP, &drrdyP, &drudxP, &drudyP, 
+                                    &drvdxP, &drvdyP, &dredxP, &dredyP);
+        }
+
+        drrdxC += sJ*invJ*nx*rf,  drrdyC += sJ*invJ*ny*rf  ; 
+        drudxC += sJ*invJ*nx*ruf, drudyC += sJ*invJ*ny*ruf ;
+        drvdxC += sJ*invJ*nx*rvf, drvdyC += sJ*invJ*ny*rvf ;
+        dredxC += sJ*invJ*nx*ref, dredyC += sJ*invJ*ny*ref ;
+      }
+
+      dqc[e0*p_Nfields*p_dim + 0] = drrdxC; 
+      dqc[e0*p_Nfields*p_dim + 1] = drrdyC; 
+      dqc[e0*p_Nfields*p_dim + 2] = drudxC; 
+      dqc[e0*p_Nfields*p_dim + 3] = drudyC; 
+      dqc[e0*p_Nfields*p_dim + 4] = drvdxC; 
+      dqc[e0*p_Nfields*p_dim + 5] = drvdyC; 
+      dqc[e0*p_Nfields*p_dim + 6] = dredxC; 
+      dqc[e0*p_Nfields*p_dim + 7] = dredyC; 
+    }
+  }
+}
+
+
+@kernel void cnsLimiterGradientTri2D(const dlong Nelements,
+                                    @restrict const dfloat *vgeo, 
+                                    @restrict const dfloat *sgeo, 
+                                    @restrict const dfloat *lvgeo, 
+                                    @restrict const int    *EToB,
+                                    @restrict const int    *vertexNodes,
+                                    @restrict const dlong  *eList,
+                                    @restrict const dlong  *vmapM,
+                                    @restrict const dlong  *vmapP,
+                                    @restrict const dfloat *x, 
+                                    @restrict const dfloat *y, 
+                                    @restrict const dfloat *z,
+                                    @restrict const dfloat *pCoeff, 
+                                              const dfloat  t, 
+                                    @restrict       dfloat *q, 
+                                    @restrict const dfloat *qc, 
+                                    @restrict const dfloat *qv, 
+                                    @restrict const dfloat *dqc){
+for(dlong e0=0;e0<Nelements;++e0;@tile(p_blockSize,@outer,@inner)){
+   const int etype = eList[e0];
+  if(etype==s_FVFV_TYPE){
+    const dfloat gamma = pCoeff[p_GMID]; // gamma
+    const dfloat CV    = pCoeff[p_CVID]; // CV
+    const dfloat CP    = pCoeff[p_CPID]; // CP
+    const dfloat R     = pCoeff[p_RRID]; // CP
+    // const dfloat Pr    = pCoeff[p_PRID]; // Prandtl Number
+    const dfloat mu    = pCoeff[p_MUID]; // Prandtl Number
+
+    const dfloat xc0 = lvgeo[e0*s_Nvgeo + s_CXID]; 
+    const dfloat yc0 = lvgeo[e0*s_Nvgeo + s_CYID]; 
+    // const dfloat VC0 = lvgeo[e0*s_Nvgeo + s_VID]; 
+
+    dfloat rr0 = qc[e0*p_Nfields + 0];
+    dfloat ru0 = qc[e0*p_Nfields + 1];
+    dfloat rv0 = qc[e0*p_Nfields + 2];
+    dfloat re0 = qc[e0*p_Nfields + 3];
+
+    dfloat drrdx0 =  dqc[e0*p_Nfields*p_dim + 0]; 
+    dfloat drrdy0 =  dqc[e0*p_Nfields*p_dim + 1]; 
+    dfloat drudx0 =  dqc[e0*p_Nfields*p_dim + 2]; 
+    dfloat drudy0 =  dqc[e0*p_Nfields*p_dim + 3]; 
+    dfloat drvdx0 =  dqc[e0*p_Nfields*p_dim + 4]; 
+    dfloat drvdy0 =  dqc[e0*p_Nfields*p_dim + 5]; 
+    dfloat dredx0 =  dqc[e0*p_Nfields*p_dim + 6]; 
+    dfloat dredy0 =  dqc[e0*p_Nfields*p_dim + 7]; 
+
+    dfloat rrmax = rr0, rumax = ru0, rvmax = rv0, remax = re0; 
+    dfloat rrmin = rr0, rumin = ru0, rvmin = rv0, remin = re0; 
+
+      for(int face=0; face<p_Nfaces; face++){
+        const dlong id = e0*p_Nfp*p_Nfaces;
+        const dlong ef = vmapP[id + face*p_Nfp + 0]/p_Np;
+
+        dfloat rrf = qc[ef*p_Nfields + 0];
+        dfloat ruf = qc[ef*p_Nfields + 1];
+        dfloat rvf = qc[ef*p_Nfields + 2];
+        dfloat ref = qc[ef*p_Nfields + 3];
+
+        const int bcf = EToB[e0*p_Nfaces + face];
+       // apply boundary conditions 
+        if(bcf>0){
+          // fake derivates
+          dfloat drrdxP = 0.0, drrdyP =0.0; 
+          dfloat drudxP = 0.0, drudyP =0.0; 
+          dfloat drvdxP = 0.0, drvdyP =0.0; 
+          dfloat dredxP = 0.0, dredyP =0.0; 
+          // load surface geofactors for this face
+          const dlong sid    = p_Nsgeo*(e0*p_Nfaces+face);
+          const dfloat nx    = sgeo[sid+p_NXID];
+          const dfloat ny    = sgeo[sid+p_NYID];
+          const dfloat sJ    = sgeo[sid+p_SJID];
+          const dfloat invJ  = sgeo[sid+p_IJID];
+          const dfloat factor = 2.0/(3.0*invJ*sJ);
+          dfloat xcf = xc0 +  factor*nx; 
+          dfloat ycf = yc0 +  factor*ny; 
+          cnsViscousBoundaryConditions2D(bcf, gamma, R, CP, CV, mu,
+                                    time, xcf, ycf, nx, ny, 
+                                    rr0, ru0, rv0, re0, 
+                                    &rrf, &ruf, &rvf, &ref, 
+                                    0.0, 0.0, 0.0, 0.0, 
+                                    0.0, 0.0, 0.0, 0.0,
+                                    &drrdxP, &drrdyP, &drudxP, &drudyP, 
+                                    &drvdxP, &drvdyP, &dredxP, &dredyP);
+        }
+
+        // Find the min/max amoung the face neighbors
+        rrmax = mymax(rrmax, rrf); rrmin = mymin(rrmin, rrf); 
+        rumax = mymax(rumax, ruf); rumin = mymin(rumin, ruf); 
+        rvmax = mymax(rvmax, rvf); rvmin = mymin(rvmin, rvf); 
+        remax = mymax(remax, ref); remin = mymin(remin, ref); 
+      }
+
+      // Reconstruct at vertices and check limiting factor
+      dfloat phir=1.0, phiu=1.0, phiv=1.0, phie = 1.0; 
+      for(int v=0; v<p_Nverts; v++){
+        int lv_id = vertexNodes[v]; 
+        const dfloat xi = x[e0*p_Np + lv_id]; 
+        const dfloat yi = y[e0*p_Np + lv_id];
+        // unconstrained solutions
+        dfloat rri = rr0 + drrdx0*(xi-xc0) + drrdy0*(yi-yc0);  
+        dfloat rui = ru0 + drudx0*(xi-xc0) + drudy0*(yi-yc0);  
+        dfloat rvi = rv0 + drvdx0*(xi-xc0) + drvdy0*(yi-yc0);  
+        dfloat rei = re0 + dredx0*(xi-xc0) + dredy0*(yi-yc0);  
+
+        dfloat phiri = limiter_check(rrmax, rrmin, rri, rr0); 
+        dfloat phiui = limiter_check(rumax, rumin, rui, ru0); 
+        dfloat phivi = limiter_check(rvmax, rvmin, rvi, rv0); 
+        dfloat phiei = limiter_check(remax, remin, rei, re0); 
+
+        phir = mymin(phir, phiri);
+        phiu = mymin(phiu, phiui);
+        phiv = mymin(phiv, phivi);
+        phie = mymin(phie, phiei);
+
+      }
+
+      for(int n=0; n<p_Np; n++){
+        const dfloat dx = x[e0*p_Np + n] - xc0;
+        const dfloat dy = y[e0*p_Np + n] - yc0;
+
+        const dfloat lrr = rr0 + phir*(drrdx0*dx + drrdy0*dy);
+        const dfloat lru = ru0 + phiu*(drudx0*dx + drudy0*dy);
+        const dfloat lrv = rv0 + phiv*(drvdx0*dx + drvdy0*dy);
+        const dfloat lre = re0 + phie*(dredx0*dx + dredy0*dy);
+        // const dfloat lrr = rr0 + (drrdx0*dx + drrdy0*dy);
+        // const dfloat lru = ru0 + (drudx0*dx + drudy0*dy);
+        // const dfloat lrv = rv0 + (drvdx0*dx + drvdy0*dy);
+        // const dfloat lre = re0 + (dredx0*dx + dredy0*dy);
+        
+        const dlong base = e0*p_Np*p_Nfields + n; 
+        q[base + 0*p_Np] = lrr; 
+        q[base + 1*p_Np] = lru; 
+        q[base + 2*p_Np] = lrv; 
+        q[base + 3*p_Np] = lre; 
+    }
+  }
+ }
+}
+#endif
+
+
+
+
+
+
+
+
+
+
+

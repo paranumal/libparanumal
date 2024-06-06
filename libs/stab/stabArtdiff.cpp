@@ -161,6 +161,8 @@ void stab_t::stabApplyArtdiff(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o
                          o_projectViscosity,
                          o_vertexViscosity,
                          o_viscosity); 
+
+
 }
 
 

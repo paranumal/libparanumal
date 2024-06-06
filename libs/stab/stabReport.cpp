@@ -29,26 +29,35 @@ SOFTWARE.
 namespace libp {
 
 void stab_t::Test(){
-  printf("testing stab..... \n");
+  printf("testing stab.....");
 
+// Make sure everything has been set before!!!!
 // create a field to test
 memory<dfloat> qtest; 
-qtest.malloc((mesh.Nelements + mesh.totalHaloPairs)*mesh.Np);
+qtest.malloc((mesh.Nelements + mesh.totalHaloPairs)*mesh.Np*Nsfields);
 deviceMemory<dfloat> o_qtest; 
 deviceMemory<dfloat> o_testRhs; 
-o_qtest   = platform.malloc<dfloat>((mesh.Nelements + mesh.totalHaloPairs)*mesh.Np);
-o_testRhs = platform.malloc<dfloat>((mesh.Nelements + mesh.totalHaloPairs)*mesh.Np);
+o_qtest   = platform.malloc<dfloat>((mesh.Nelements + mesh.totalHaloPairs)*mesh.Np*Nsfields);
+o_testRhs = platform.malloc<dfloat>((mesh.Nelements + mesh.totalHaloPairs)*mesh.Np*Nsfields);
 
 
 for(int e=0; e<mesh.Nelements; e++){
   for(int n=0; n<mesh.Np; n++){
     const dfloat xn = mesh.x[e*mesh.Np + n];
     const dfloat yn = mesh.y[e*mesh.Np + n];
-    const dfloat zn = mesh.z[e*mesh.Np + n];
-    qtest[e*mesh.Np + n] = sqrt(xn*xn+yn*yn + zn*zn) -2 >0 ? 1.0 : 0.0; 
-    // qtest[e*mesh.Np + n] = (xn+yn + zn)>0 ? 1.0 : 0.0; 
+    if(mesh.dim==2){
+      for(int fld=0; fld<Nsfields; fld++)
+        qtest[e*mesh.Np*Nsfields + n + fld*mesh.Np] = sqrt(xn*xn+yn*yn) -2 >0 ? 1.0 : 0.0; 
+        // qtest[e*mesh.Np*Nsfields + n + fld*mesh.Np] = sqrt(xn*xn+yn*yn) -2; 
+        // qtest[e*mesh.Np*Nsfields + n + fld*mesh.Np] = xn+yn; 
+    }else{
+      const dfloat zn = mesh.z[e*mesh.Np + n];
+      for(int fld=0; fld<Nsfields; fld++)
+        qtest[e*mesh.Np + n + fld*mesh.Np] = sqrt(xn*xn+yn*yn + zn*zn) -2 >0 ? 1.0 : 0.0; 
+    }
   }
 }
+
 o_qtest.copyFrom(qtest);
 
 const dfloat time = 0.0; 
@@ -58,7 +67,7 @@ Detect(o_qtest, o_testRhs, time);
 Apply(o_qtest, o_testRhs, time); 
 
 Report(time, tstep); 
-printf("testing stab.....done \n");
+printf("DONE. \n");
 }
 
 
@@ -73,15 +82,21 @@ void stab_t::Report(dfloat time, int tstep){
     printf("%5.2f (%d), %d (time, timestep, # of detected elements)\n", time, tstep, Ndetected);
 
   if (settings.compareSetting("STAB OUTPUT TO FILE","TRUE")) {	
-	  // copy data back to host
+	  
+    // copy data back to host
   	if(elementList.length()!=0){
       o_elementList.copyTo(elementList);
     }
-
      // detector field
     if(o_qdetector.length()!=0){ 
       o_qdetector.copyTo(qdetector);
     }
+
+     // detector field
+    if(o_qducros.length()!=0){ 
+      o_qducros.copyTo(qducros);
+    }
+
     // Artificial Viscosity
     if(o_viscosityActivation.length()!=0){ 
       o_viscosityActivation.copyTo(viscosityActivation);
@@ -94,20 +109,18 @@ void stab_t::Report(dfloat time, int tstep){
       o_vertexViscosity.copyTo(vertexViscosity);
     }
 
-    // Limiter
+    if(o_qc.length()!=0){ 
+      o_qc.copyTo(qc);
+    }
 
-    // if(o_qv.length()!=0){ 
-    //   o_qv.copyTo(qv);
-    // }
 
-    // if(o_qc.length()!=0){ 
-    //   o_qc.copyTo(qc);
-    // }
+    if(o_qv.length()!=0){ 
+      o_qv.copyTo(qv);
+    }
 
-    //  if(o_DX.length()!=0){ 
-    //   o_DX.copyTo(DX);
-    // }
-
+    if(o_dq.length()!=0){ 
+      o_dq.copyTo(dq);
+    }
 
     {
       char fname[BUFSIZ];
@@ -128,7 +141,6 @@ void stab_t::Report(dfloat time, int tstep){
 dlong stab_t::GetElementNumber(deviceMemory<dlong>& o_list){
 dlong Nelm = platform.linAlg().sum(mesh.Nelements*Ndfields, o_list, comm); 
 return Nelm;
-  
 }
 
 
@@ -204,6 +216,22 @@ FILE *fp;
     fprintf(fp, "       </DataArray>\n");
   }
 
+
+  if(elementList.length()!=0){
+   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Elements\" NumberOfComponents=\"%d\" Format=\"ascii\">\n", Ndfields);
+  for(dlong e=0;e<mesh.Nelements;++e){
+     for(int n=0;n<mesh.plotNp;++n){
+          fprintf(fp, "       ");
+           for(int fld=0; fld<Ndfields; fld++){
+             fprintf(fp, "%g ", dfloat(elementList[e*Ndfields + fld]));
+          }
+          fprintf(fp, "\n");
+      }
+    }
+  fprintf(fp, "       </DataArray>\n");
+  }
+
+
  if (viscosity.length()!=0) {
      fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Viscosity\" NumberOfComponents=\"%d\" Format=\"ascii\">\n", Ndfields);
     for(dlong e=0;e<mesh.Nelements;++e){
@@ -230,24 +258,36 @@ FILE *fp;
   }
 
 
+   if (qc.length()!=0) {
+     fprintf(fp, "        <DataArray type=\"Float32\" Name=\"C0\" NumberOfComponents=\"%d\" Format=\"ascii\">\n", Nsfields);
+    for(dlong e=0;e<mesh.Nelements;++e){
 
-// if(vertexViscosity.length()!=0){
-//  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"vertexVisc\" NumberOfComponents=\"%d\" Format=\"ascii\">\n", Ndfields);
-//   for(dlong e=0;e<mesh.Nelements;++e){
-//       for(int n=0;n<mesh.Nverts;++n){
-//           fprintf(fp, "       ");
-//            for(int fld=0; fld<Ndfields; fld++){
-//              fprintf(fp, "%g ", vertexViscosity[e*mesh.Nverts*Ndfields + fld*mesh.Nverts + n]);
-//           }
-//           fprintf(fp, "\n");
-//       }
-//     }
-//   fprintf(fp, "       </DataArray>\n");
+      for(int n=0;n<mesh.plotNp;++n){
+        fprintf(fp, "       ");
+        fprintf(fp, "       ");
+        for(int fld=0; fld<Nsfields; fld++){
+          fprintf(fp, "%g ", qc[e*Nsfields + fld]);
+        }
+        fprintf(fp, "\n");
+      }
+    }
+    fprintf(fp, "       </DataArray>\n");
+  }
 
-//   }
-
-
-
+ if (dq.length()!=0) {
+     fprintf(fp, "        <DataArray type=\"Float32\" Name=\"dq\" NumberOfComponents=\"%d\" Format=\"ascii\">\n", Nsfields*mesh.dim);
+    for(dlong e=0;e<mesh.Nelements;++e){
+      for(int n=0;n<mesh.plotNp;++n){
+        fprintf(fp, "       ");
+        fprintf(fp, "       ");
+        for(int fld=0; fld<Nsfields*mesh.dim; fld++){
+          fprintf(fp, "%g ", dq[e*Nsfields*mesh.dim + fld]);
+        }
+        fprintf(fp, "\n");
+      }
+    }
+    fprintf(fp, "       </DataArray>\n");
+  }
 
   fprintf(fp, "     </PointData>\n");
   fprintf(fp, "    <Cells>\n");
@@ -361,6 +401,36 @@ if(viscosityActivation.length()!=0){
   fprintf(fp, "       </DataArray>\n");
   }
 
+if(qducros.length()!=0){
+ fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Qd\" NumberOfComponents=\"%d\" Format=\"ascii\">\n", Ndfields);
+  for(dlong e=0;e<mesh.Nelements;++e){
+      for(int n=0;n<mesh.Nverts;++n){
+          fprintf(fp, "       ");
+           for(int fld=0; fld<Ndfields; fld++){
+             fprintf(fp, "%g ", qducros[e*Ndfields + fld]);
+          }
+          fprintf(fp, "\n");
+      }
+    }
+  fprintf(fp, "       </DataArray>\n");
+  }
+
+
+if(qv.length()!=0){
+ fprintf(fp, "        <DataArray type=\"Float32\" Name=\"VertexValues\" NumberOfComponents=\"%d\" Format=\"ascii\">\n", Nsfields);
+  for(dlong e=0;e<mesh.Nelements;++e){
+      for(int n=0;n<mesh.Nverts;++n){
+          fprintf(fp, "       ");
+           for(int fld=0; fld<Nsfields; fld++){
+             // fprintf(fp, "%g ", qv[e*mesh.Nverts*Nsfields + fld*mesh.Nverts + n]);
+             fprintf(fp, "%g ", qv[e*mesh.Nverts*Nsfields + n*Nsfields + fld]);
+          }
+          fprintf(fp, "\n");
+      }
+    }
+  fprintf(fp, "       </DataArray>\n");
+  }
+
 
   if(vertexViscosity.length()!=0){
  fprintf(fp, "        <DataArray type=\"Float32\" Name=\"vertexVisc\" NumberOfComponents=\"%d\" Format=\"ascii\">\n", Ndfields);
@@ -376,12 +446,6 @@ if(viscosityActivation.length()!=0){
   fprintf(fp, "       </DataArray>\n");
 
   }
-
-
-
-
-
-
 
 
   fprintf(fp, "     </PointData>\n");

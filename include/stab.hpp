@@ -86,6 +86,8 @@ class stab_t {
   int CXID, CYID, CZID, IVID; 
   int FXID, FYID, FZID, SAID; 
   int NXID, NYID, NZID, BCID; 
+  /***************************/
+  int VID; 
 
   /*************************/
   /* Solver Data           */
@@ -100,8 +102,14 @@ class stab_t {
   memory<dlong> elementList;
   deviceMemory<dlong> o_elementList; 
 
+  memory<dfloat> elementListF;
+  deviceMemory<dfloat> o_elementListF; 
+
   memory<dfloat> qdetector;
   deviceMemory<dfloat> o_qdetector; 
+
+  memory<dfloat> qducros;
+  deviceMemory<dfloat> o_qducros; 
   
   //     Klockner Detector      // 
   memory<int> modeMap; 
@@ -117,9 +125,12 @@ class stab_t {
   memory<dfloat> projectNm1; 
   deviceMemory<dfloat> o_projectNm1; 
 
-  // kernel_t copyIntKernel; 
+  kernel_t copyToIntKernel; 
+  kernel_t copyToFloatKernel; 
   kernel_t detectKernel; 
   kernel_t extractFieldKernel; 
+
+  kernel_t detectKernel2; 
 
   /*****************************/
   /*   FILTER STABILIZATION    */
@@ -129,6 +140,10 @@ class stab_t {
 
   // kernel_t filterKernel; 
  
+
+
+  memory<dfloat> weight; 
+  deviceMemory<dfloat> o_weight; 
   /*****************************/
   /*   LIMITER STABILIZATION    */
   /*****************************/
@@ -151,12 +166,12 @@ class stab_t {
   memory<int> vertexNodes;
   deviceMemory<int> o_vertexNodes; 
 
-  // differences with respect to cell-center
-  // required for Taylor expansion 
-  memory<dfloat> dAVE; 
-  
-  memory<dfloat> DX; 
-  deviceMemory<dfloat>  o_DX; 
+  memory<dlong> lvmapM, lvmapP; 
+  deviceMemory<dfloat> o_lvmapM, o_lvmapP; 
+
+
+  kernel_t projectCellAverageKernel;
+  kernel_t getVertexValuesKernel;
 
   /*******************************************/
   /*   ARTIFICIAL DIFFUSION STABILIZATION    */
@@ -166,8 +181,7 @@ class stab_t {
   memory<dfloat> viscosityScale; 
   deviceMemory<dfloat> o_viscosityScale; 
 
-  memory<dfloat> weight; 
-  deviceMemory<dfloat> o_weight; 
+  
 
   dlong Nmasked; 
   memory<dlong> elementMask; 
@@ -230,7 +244,7 @@ class stab_t {
   memory<dlong> emapP, fmapP; // global connectivity
   deviceMemory<dlong> o_emapP, o_fmapP; // global connectivity
 
-  // geometric info
+  // geometric info for limiter and subcell
   memory<dfloat> vgeo, sgeo; 
   deviceMemory<dfloat> o_vgeo, o_sgeo; 
 
@@ -258,6 +272,9 @@ class stab_t {
          detectSetupPersson(); 
         break;
       case Stab::DUCROS:
+         if(solver!=Stab::CNS){
+          LIBP_FORCE_ABORT("DUCROS indicator is defined for CNS only");
+         }
          detectSetupDucros(); 
         break;
       case Stab::ALL:
@@ -300,8 +317,7 @@ class stab_t {
         // stabSetupFilter();
         break;
       case Stab::LIMITER:
-         // stabSetupLimiter();
-         // LIBP_FORCE_ABORT("Limiter is not implemented yet");
+         stabSetupLimiter();
         break;
       case Stab::ARTDIFF:
         stabSetupArtdiff();
@@ -323,7 +339,7 @@ class stab_t {
         // stabApplyFilter();
         break;
       case Stab::LIMITER:
-         // stabApplyLimiter();
+         stabApplyLimiter(o_Q, o_RHS, T);
          // LIBP_FORCE_ABORT("Limiter is not implemented yet");
         break;
       case Stab::ARTDIFF:
@@ -394,12 +410,16 @@ class stab_t {
    dfloat ElementViscosityScaleHex3D(dlong e);
 // *********************LIMITER RELATED*****************************//
    void stabSetupLimiter(); 
-   void limSetupOperators(); 
+   void limiterSetupOperators(); 
+   void stabApplyLimiter(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T); 
 
-   void limGeometricFactorsTri2D(); 
-   void limGeometricFactorsQuad2D(); 
-   void limGeometricFactorsTet3D(); 
-   void limGeometricFactorsHex3D(); 
+
+
+
+   void limiterGeometricFactorsTri2D(); 
+   void limiterGeometricFactorsQuad2D(); 
+   void limiterGeometricFactorsTet3D(); 
+   void limiterGeometricFactorsHex3D(); 
 
    // *********************SUBCELL RELATED*****************************//
    void stabSetupSubcell(); 
@@ -421,10 +441,6 @@ class stab_t {
    void CellWarpBlendEToVTri2D(const int _N, memory<int>& mEToV);
 
   
-
-
-
- 
  private:
   /*Set the type of mesh*/
   void setTypes(const Stab::Solver solver, 

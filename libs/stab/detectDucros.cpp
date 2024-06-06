@@ -28,12 +28,22 @@ SOFTWARE.
 
 namespace libp {
 
+// For CNS only!!!!!
 void stab_t::detectSetupDucros(){
-  /*
+
   // Initialize Required Memory
   elementList.malloc((mesh.Nelements+mesh.totalHaloPairs)*Ndfields); 
   o_elementList = platform.malloc<dlong>(elementList); 
 
+  // Create the Ducros field; i.e. div(u)^2 / (div(u)^2 + vort^2 +eps)
+  qdetector.malloc((mesh.Nelements+mesh.totalHaloPairs)*mesh.Np); 
+  o_qdetector = platform.malloc<dfloat>(qdetector); 
+
+  // Number of detected Elements
+  elementList.malloc((mesh.Nelements+mesh.totalHaloPairs)*Ndfields); 
+  o_elementList = platform.malloc<dlong>(elementList); 
+
+  /*
   // Create a field for detector
   qdetector.malloc((mesh.Nelements+mesh.totalHaloPairs)*mesh.Np*Ndfields); 
   o_qdetector = platform.malloc<dfloat>(qdetector); 

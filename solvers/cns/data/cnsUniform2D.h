@@ -25,7 +25,7 @@ SOFTWARE.
 */
 
 /* ************************************************************************ */
-#define MACH 0.4
+#define MACH 3.0
 /* ************************************************************************ */
 #if MACH==0.1
   #define p_RBAR 1.4
@@ -63,6 +63,12 @@ SOFTWARE.
   #define p_VBAR 0.173648177666930
   #define p_PBAR 1.00000
   #define p_TBAR 1.00000
+#elif MACH==1.4
+  #define p_RBAR 2.76056338028
+  #define p_UBAR 1.0
+  #define p_VBAR 0.0
+  #define p_PBAR 1.00000
+  #define p_TBAR 1.00000
 #elif MACH==2.0
   #define p_RBAR 5.60000
   #define p_UBAR 0.984807753012208
@@ -71,14 +77,14 @@ SOFTWARE.
   #define p_TBAR 1.00000
 #elif MACH==3.0
   #define p_RBAR 12.6000
-  #define p_UBAR 0.984807753012208
-  #define p_VBAR 0.173648177666930
+  #define p_UBAR 1.0
+  #define p_VBAR 0.0
   #define p_PBAR 1.00000
   #define p_TBAR 1.00000
 #elif MACH==4.0
   #define p_RBAR 22.4000
-  #define p_UBAR 0.984807753012208
-  #define p_VBAR 0.173648177666930
+  #define p_UBAR 1.0
+  #define p_VBAR 0.0
   #define p_PBAR 1.00000
   #define p_TBAR 1.00000
 #elif MACH==5.0
@@ -160,8 +166,8 @@ const dfloat mM  = fabs(unM/cM);                                             \
 const dfloat keREF = 0.5*p_RBAR*(p_UBAR*p_UBAR + p_VBAR*p_VBAR);             \
   if(bc==11){                                                                \
     *( rB) = rM;                                                             \
-    *(ruB) = -ruM;                                                           \
-    *(rvB) = -rvM;                                                           \
+    *(ruB) = 0.0;                                                            \
+    *(rvB) = 0.0;                                                            \
     *(reB) = rM*CV*p_TBAR + 0.5*(ruM*ruM + rvM*rvM)/rM;                      \
     *(drrdxB) = drrdxM;*(drrdyB) = drrdyM;                                   \
     *(drudxB) = drudxM;*(drudyB) = drudyM;                                   \
@@ -169,8 +175,8 @@ const dfloat keREF = 0.5*p_RBAR*(p_UBAR*p_UBAR + p_VBAR*p_VBAR);             \
     *(dredxB) = dredxM;*(dredyB) = dredyM;                                   \
    }else if(bc==12){                                                         \
     *( rB) = rM;                                                             \
-    *(ruB) = -ruM;                                                           \
-    *(rvB) = -rvM;                                                           \
+    *(ruB) = 0.0;                                                            \
+    *(rvB) = 0.0;                                                            \
     *(reB) = reM - 0.5*(ruM*ruM + rvM*rvM)/rM;                               \
     const dfloat uxM = drudxM - uM*drrdxM;                                   \
     const dfloat uyM = drudyM - uM*drrdyM;                                   \

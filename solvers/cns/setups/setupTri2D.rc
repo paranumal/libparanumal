@@ -9,11 +9,12 @@ data/cnsUniform2D.h
 #*******************[MESH PROPERTIES]*******************#
 [MESH FILE]
 #BOX
+#../../meshes/cnsBox2D.msh
 #../../meshes/cnsShear2D_2.msh
 #../../meshes/cnsNACA2D_LD.msh
-../../meshes/cnsSquare2D.msh
+#../../meshes/cnsSquare2D.msh
 #../../meshes/cnsNACA2D.msh
-#../../meshes/cnsNACAFlexi2D.msh
+../../meshes/cnsNACAFlexi2D.msh
 #../../meshes/cnsNACA2D_Symmetry.msh
 #../../meshes/cnsGaussTri2D.msh
 
@@ -24,13 +25,21 @@ data/cnsUniform2D.h
 3
 
 [BOX NX]
-21
+50
 
 [BOX NY]
-21
+50
+
+[BOX DIMX]
+10
+
+[BOX DIMY]
+10
 
 [BOX BOUNDARY FLAG]
 11
+
+
 #*******************[DISCRETIZATION PROPERTIES]************#
 [POLYNOMIAL DEGREE]
 4
@@ -82,7 +91,7 @@ CUDA
 
 # // Mach number is needed for NONDIM=TRUE
 [MACH NUMBER]
-0.4
+3.0
 #0.816496580927726
 
 # Reynolds number is needed for NONDIM = TRUE
@@ -95,7 +104,7 @@ CUDA
 
 # mu is needed if NONDIM = FALSE, otherwise mu = 1/Re
 [VISCOSITY]
-1.0e-6
+1.0e-5
 
 # [ CONSTANT ] - [SUTHERLAND] - [POWER-LAW]
 [VISCOSITY TYPE]
@@ -117,11 +126,11 @@ CONSTANT
 0
 
 [FINAL TIME]
-10.0
+5
 
 #*******************[OUTPUT PROPERTIES]*******************#
 [OUTPUT INTERVAL]
-0.25
+0.1
 
 [OUTPUT TO FILE]
 TRUE
@@ -130,7 +139,7 @@ TRUE
 cns
 
 [REPORT FORCES]
-TRUE
+FALSE
 
 [MOMENT CENTER]
 0.0, 0.0
@@ -156,7 +165,7 @@ TRUE
 WARPBLEND
 
 [STAB OUTPUT TO FILE]
-FALSE
+TRUE
 
 # [LAPLACE], [PHYSICAL X do not use this option for now!!!!] 
 [ARTDIFF TYPE]
