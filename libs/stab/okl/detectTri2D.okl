@@ -78,6 +78,7 @@ dfloat LIM(const dfloat x,const dfloat xmin, const dfloat xmax,
       const dfloat rr = q[qbase+0*p_Np];
       const dfloat ru = q[qbase+1*p_Np];
       const dfloat rv = q[qbase+2*p_Np];
+      const dfloat rE = q[qbase+2*p_Np];
       const dfloat ir  = 1.0/rr; 
 
       const dfloat u = ru*ir; 
@@ -102,7 +103,14 @@ dfloat LIM(const dfloat x,const dfloat xmin, const dfloat xmax,
       const dfloat div  = (dudx + dvdy); 
       const dfloat vort = (dvdx - dudy);
 
-      const dfloat sd = 
+      const dfloat gamma = 1.4; 
+
+      const dfloat p  = (gamma-1)*(rE - 0.5*rr*(u*u+v*v));
+
+      const dfloat c = sqrt(gamma * P/rr); 
+
+
+      const dfloat us = sqrt(u*u+v*v + c); 
 
       // Compute divergence sensor
       // Prizolli's modification of Ducros detector

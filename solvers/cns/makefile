@@ -79,7 +79,8 @@ endif
 endif
 
 #libraries
-CNS_LIBP_LIBS=timeStepper stab mesh parAdogs ogs linAlg core 
+CNS_LIBP_LIBS=timeStepper mesh parAdogs ogs linAlg core 
+# CNS_LIBP_LIBS=timeStepper stab mesh parAdogs ogs linAlg core 
 
 #includes
 INCLUDES=${LIBP_INCLUDES} \
@@ -104,7 +105,8 @@ DEPS=$(wildcard *.hpp) \
      $(wildcard $(LIBP_INCLUDE_DIR)/*.h) \
      $(wildcard $(LIBP_INCLUDE_DIR)/*.hpp)
 
-SRC =$(wildcard src/*.cpp)
+# SRC =$(wildcard src/*.cpp)
+SRC =$(wildcard src/*.cpp) $(wildcard src/stab/*.cpp)
 
 OBJS=$(SRC:.cpp=.o)
 

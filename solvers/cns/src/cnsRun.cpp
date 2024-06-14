@@ -50,9 +50,9 @@ void cns_t::Run(){
 
   dfloat visc   = 0.0; 
 
-  if(stab.type==Stab::NOSTAB){
+  if(stabType==Stab::NOSTAB){
     visc = pCoeff[MUID]; 
-  }else if(stab.type==Stab::ARTDIFF){
+  }else if(stabType==Stab::ARTDIFF){
    visc = std::max(hmin/mesh.N, pCoeff[MUID]); 
   }
 
@@ -68,13 +68,16 @@ void cns_t::Run(){
    // stab.Report(0.0, 0);
 
 #if 0
-   if(stab.type!=Stab::NOSTAB){
-      stab.Apply(o_q, o_q, 0.0);
+   if(stabType!=Stab::NOSTAB){
+
+    applyStab(o_q, o_q, 0);
+    Report(0,0); 
+      // stab.Apply(o_q, o_q, 0.0);
 
     // int alpha = 1; 
     // platform.linAlg().set(mesh.Nelements, alpha, stab.o_elementList);
 
-  for(int i=0; i<1; i++){
+  // for(int i=0; i<1; i++){
 
   // // Project Solution To Cell-Mean Values
   // limiterVertexBoundaryKernel(mesh.Nelements,
@@ -135,9 +138,8 @@ void cns_t::Run(){
   //                           stab.o_qv, 
   //                           stab.o_dq);
 
-      stab.Report(0.0, 0);
-      Report(0,0); 
-     }
+      // stab.Report(0.0, 0);
+     // }
     }
 
 #else

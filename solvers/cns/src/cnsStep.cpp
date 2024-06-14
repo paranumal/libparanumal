@@ -55,14 +55,11 @@ void cns_t::rhsf(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const d
   //     // rhsEuler(o_Q, o_RHS, T);
   // }else{
 
-  if(stab.type==Stab::ARTDIFF){
-    rhsArtDiff(o_Q, o_RHS, T);
-  }else if(stab.type==Stab::LIMITER){
-    rhsLimiter(o_Q, o_RHS, T); 
-  }else{
-  rhsNoStab(o_Q, o_RHS, T); 
-  }
+  if(stabType==Stab::ARTDIFF){      rhsArtDiff(o_Q, o_RHS, T);}
+  else if(stabType==Stab::LIMITER){ rhsLimiter(o_Q, o_RHS, T);}
+  else if(stabType==Stab::NOSTAB ){ rhsNoStab(o_Q, o_RHS, T); }
 }
+
 
 
 
@@ -95,18 +92,6 @@ void cns_t::rhsArtDiff(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, c
   }
   // complete trace halo exchange
   fieldTraceHalo.ExchangeFinish(o_Q, 1);
-
-
-
-
-  stab.Apply(o_Q, o_gradq, T); 
-
-  #if 0
-  // dfloat vmax = MaxWaveSpeed(o_Q, T);
-  dfloat vmax = 0.0;
-  // printf("vmax = %.f\n", vmax);
-  platform.linAlg().scale(mesh.Nelements*mesh.Nverts, vmax, stab.o_viscosity); 
-  #endif
 
 
   if (cubature) {
@@ -142,7 +127,9 @@ void cns_t::rhsArtDiff(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, c
                     o_gradq);
   }
 
-
+  applyStab(o_Q, o_gradq, T);
+   // const dfloat vmax = 0.0; 
+   // platform.linAlg().scale(mesh.Nelements*mesh.Np, vmax, o_viscosity); 
 
   // extract viscousStresses trace halo and start exchange
   gradTraceHalo.ExchangeStart(o_gradq, 1);
@@ -161,7 +148,7 @@ void cns_t::rhsArtDiff(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, c
                          mesh.o_z,
                          o_pCoeff, 
                          T,
-                         stab.o_viscosity,
+                         o_viscosity,
                          o_Q,
                          o_gradq,
                          o_RHS);
@@ -174,7 +161,7 @@ void cns_t::rhsArtDiff(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, c
                  mesh.o_z,
                  o_pCoeff, 
                  T,
-                 stab.o_viscosity,
+                 o_viscosity,
                  o_Q,
                  o_gradq,
                  o_RHS);
@@ -198,7 +185,7 @@ void cns_t::rhsArtDiff(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, c
                             mesh.o_intz,
                             o_pCoeff, 
                             T,
-                            stab.o_viscosity,
+                            o_viscosity,
                             o_Q,
                             o_gradq,
                             o_RHS);
@@ -215,7 +202,7 @@ void cns_t::rhsArtDiff(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, c
                         mesh.o_z,
                         o_pCoeff, 
                         T,
-                        stab.o_viscosity,
+                        o_viscosity,
                         o_Q,
                         o_gradq,
                         o_RHS);
@@ -223,198 +210,362 @@ void cns_t::rhsArtDiff(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, c
 }
 
 
+
+
+
+
+
+
+
+// //evaluate ODE rhs = f(q,t)
+// void cns_t::rhsArtDiff(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T){
+//   dlong NlocalGrads = mesh.Nelements*mesh.Np*Ngrads;
+//   dlong NhaloGrads  = mesh.totalHaloPairs*mesh.Np*Ngrads;
+//   deviceMemory<dfloat> o_gradq = platform.reserve<dfloat>(NlocalGrads+NhaloGrads);  
+
+//   // extract q trace halo and start exchange
+//   fieldTraceHalo.ExchangeStart(o_Q, 1);
+
+//   if (cubature) {
+//     cubatureGradVolumeKernel(mesh.Nelements,
+//                      mesh.o_vgeo,
+//                      mesh.o_cubvgeo,
+//                      mesh.o_cubD,
+//                      mesh.o_cubPDT,
+//                      mesh.o_cubInterp,
+//                      mesh.o_cubProject,
+//                      o_Q,
+//                      o_gradq);    
+//   }else{
+//     // compute volume contributions to gradients
+//     gradVolumeKernel(mesh.Nelements,
+//                    mesh.o_vgeo,
+//                    mesh.o_D,
+//                    o_Q,
+//                    o_gradq);    
+//   }
+//   // complete trace halo exchange
+//   fieldTraceHalo.ExchangeFinish(o_Q, 1);
+
+
+
+
+//   stab.Apply(o_Q, o_gradq, T); 
+
+//   #if 0
+//   // dfloat vmax = MaxWaveSpeed(o_Q, T);
+//   dfloat vmax = 0.0;
+//   // printf("vmax = %.f\n", vmax);
+//   platform.linAlg().scale(mesh.Nelements*mesh.Nverts, vmax, stab.o_viscosity); 
+//   #endif
+
+
+//   if (cubature) {
+//     cubatureGradSurfaceKernel(mesh.Nelements,
+//                             mesh.o_vgeo,
+//                             mesh.o_cubsgeo,
+//                             mesh.o_vmapM,
+//                             mesh.o_vmapP,
+//                             mesh.o_EToB,
+//                             mesh.o_intInterp,
+//                             mesh.o_intLIFT,
+//                             mesh.o_intx,
+//                             mesh.o_inty,
+//                             mesh.o_intz,
+//                             o_pCoeff, 
+//                             T,
+//                             o_Q,
+//                             o_gradq);
+//   }else{
+//    // compute surface contributions to gradients
+//   gradSurfaceKernel(mesh.Nelements,
+//                     mesh.o_sgeo,
+//                     mesh.o_LIFT,
+//                     mesh.o_vmapM,
+//                     mesh.o_vmapP,
+//                     mesh.o_EToB,
+//                     mesh.o_x,
+//                     mesh.o_y,
+//                     mesh.o_z,
+//                     o_pCoeff, 
+//                     T,
+//                     o_Q,
+//                     o_gradq);
+//   }
+
+
+
+//   // extract viscousStresses trace halo and start exchange
+//   gradTraceHalo.ExchangeStart(o_gradq, 1);
+
+//   // compute volume contribution to cns RHS
+//   if (cubature) {
+//      cubatureVolumeKernel(mesh.Nelements,
+//                          mesh.o_vgeo,
+//                          mesh.o_cubvgeo,
+//                          mesh.o_cubD,
+//                          mesh.o_cubPDT,
+//                          mesh.o_cubInterp,
+//                          mesh.o_cubProject,
+//                          mesh.o_x,
+//                          mesh.o_y,
+//                          mesh.o_z,
+//                          o_pCoeff, 
+//                          T,
+//                          stab.o_viscosity,
+//                          o_Q,
+//                          o_gradq,
+//                          o_RHS);
+//   } else {
+//     volumeKernel(mesh.Nelements,
+//                  mesh.o_vgeo,
+//                  mesh.o_D,
+//                  mesh.o_x,
+//                  mesh.o_y,
+//                  mesh.o_z,
+//                  o_pCoeff, 
+//                  T,
+//                  stab.o_viscosity,
+//                  o_Q,
+//                  o_gradq,
+//                  o_RHS);
+//   }
+
+//   // complete trace halo exchange
+//   gradTraceHalo.ExchangeFinish(o_gradq, 1);
+
+//   if (cubature) {
+//      // dfloat hmin = mesh.MinCharacteristicLength();
+//      cubatureSurfaceKernel(mesh.Nelements,
+//                             mesh.o_vgeo,
+//                             mesh.o_cubsgeo,
+//                             mesh.o_vmapM,
+//                             mesh.o_vmapP,
+//                             mesh.o_EToB,
+//                             mesh.o_intInterp,
+//                             mesh.o_intLIFT,
+//                             mesh.o_intx,
+//                             mesh.o_inty,
+//                             mesh.o_intz,
+//                             o_pCoeff, 
+//                             T,
+//                             stab.o_viscosity,
+//                             o_Q,
+//                             o_gradq,
+//                             o_RHS);
+//     } else {
+//       // dfloat hmin = mesh.MinCharacteristicLength();
+//      surfaceKernel(mesh.Nelements,
+//                         mesh.o_sgeo,
+//                         mesh.o_LIFT,
+//                         mesh.o_vmapM,
+//                         mesh.o_vmapP,
+//                         mesh.o_EToB,
+//                         mesh.o_x,
+//                         mesh.o_y,
+//                         mesh.o_z,
+//                         o_pCoeff, 
+//                         T,
+//                         stab.o_viscosity,
+//                         o_Q,
+//                         o_gradq,
+//                         o_RHS);
+//   }
+// }
+
+
 //evaluate ODE rhs = f(q,t)
 void cns_t::rhsLimiter(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T){
 
-  dlong NlocalGrads = mesh.Nelements*mesh.Np*Ngrads;
-  dlong NhaloGrads  = mesh.totalHaloPairs*mesh.Np*Ngrads;
-  deviceMemory<dfloat> o_gradq = platform.reserve<dfloat>(NlocalGrads+NhaloGrads);
+//   dlong NlocalGrads = mesh.Nelements*mesh.Np*Ngrads;
+//   dlong NhaloGrads  = mesh.totalHaloPairs*mesh.Np*Ngrads;
+//   deviceMemory<dfloat> o_gradq = platform.reserve<dfloat>(NlocalGrads+NhaloGrads);
 
-#if 1
-{
-  stab.Apply(o_Q, o_RHS, T);
+// #if 1
+// {
+//   stab.Apply(o_Q, o_RHS, T);
 
-  // int alpha = 1; 
-  // platform.linAlg().set(mesh.Nelements, alpha, stab.o_elementList);
+//   // int alpha = 1; 
+//   // platform.linAlg().set(mesh.Nelements, alpha, stab.o_elementList);
   
-  // Project Solution To Cell-Mean Values
-  limiterReconstructKernel(mesh.Nelements,
-                      mesh.o_vgeo,
-                      mesh.o_sgeo,
-                      stab.o_vgeo, 
-                      mesh.o_EToB, 
-                      mesh.o_vertexNodes, 
-                      stab.o_elementList, 
-                      mesh.o_vmapM, 
-                      mesh.o_vmapP, 
-                      mesh.o_x, 
-                      mesh.o_y, 
-                      mesh.o_z,
-                      o_pCoeff,
-                      T,
-                      o_Q, 
-                      stab.o_qc, 
-                      stab.o_qv, 
-                      stab.o_dq);
+//   // Project Solution To Cell-Mean Values
+//   limiterReconstructKernel(mesh.Nelements,
+//                       mesh.o_vgeo,
+//                       mesh.o_sgeo,
+//                       stab.o_vgeo, 
+//                       mesh.o_EToB, 
+//                       mesh.o_vertexNodes, 
+//                       stab.o_elementList, 
+//                       mesh.o_vmapM, 
+//                       mesh.o_vmapP, 
+//                       mesh.o_x, 
+//                       mesh.o_y, 
+//                       mesh.o_z,
+//                       o_pCoeff,
+//                       T,
+//                       o_Q, 
+//                       stab.o_qc, 
+//                       stab.o_qv, 
+//                       stab.o_dq);
 
-  limiterGradientKernel(mesh.Nelements,
-                            mesh.o_vgeo,
-                            mesh.o_sgeo,
-                            stab.o_vgeo, 
-                            mesh.o_EToB, 
-                            mesh.o_vertexNodes, 
-                            stab.o_elementList, 
-                            mesh.o_vmapM, 
-                            mesh.o_vmapP, 
-                            mesh.o_x, 
-                            mesh.o_y, 
-                            mesh.o_z,
-                            o_pCoeff,
-                            T,
-                            o_Q, 
-                            stab.o_qc, 
-                            stab.o_qv, 
-                            stab.o_dq);
- }
-#endif
-
-
-
-  // extract q trace halo and start exchange
-  fieldTraceHalo.ExchangeStart(o_Q, 1);
-
-  if (cubature) {
-    cubatureGradVolumeKernel(mesh.Nelements,
-                     mesh.o_vgeo,
-                     mesh.o_cubvgeo,
-                     mesh.o_cubD,
-                     mesh.o_cubPDT,
-                     mesh.o_cubInterp,
-                     mesh.o_cubProject,
-                     o_Q,
-                     o_gradq);    
-  }else{
-    // compute volume contributions to gradients
-    gradVolumeKernel(mesh.Nelements,
-                   mesh.o_vgeo,
-                   mesh.o_D,
-                   o_Q,
-                   o_gradq);    
-  }
+//   limiterGradientKernel(mesh.Nelements,
+//                             mesh.o_vgeo,
+//                             mesh.o_sgeo,
+//                             stab.o_vgeo, 
+//                             mesh.o_EToB, 
+//                             mesh.o_vertexNodes, 
+//                             stab.o_elementList, 
+//                             mesh.o_vmapM, 
+//                             mesh.o_vmapP, 
+//                             mesh.o_x, 
+//                             mesh.o_y, 
+//                             mesh.o_z,
+//                             o_pCoeff,
+//                             T,
+//                             o_Q, 
+//                             stab.o_qc, 
+//                             stab.o_qv, 
+//                             stab.o_dq);
+//  }
+// #endif
 
 
 
-  // complete trace halo exchange
-  fieldTraceHalo.ExchangeFinish(o_Q, 1);
+//   // extract q trace halo and start exchange
+//   fieldTraceHalo.ExchangeStart(o_Q, 1);
 
-
-  if (cubature) {
-    cubatureGradSurfaceKernel(mesh.Nelements,
-                              mesh.o_vgeo,
-                              mesh.o_cubsgeo,
-                              mesh.o_vmapM,
-                              mesh.o_vmapP,
-                              mesh.o_EToB,
-                              mesh.o_intInterp,
-                              mesh.o_intLIFT,
-                              mesh.o_intx,
-                              mesh.o_inty,
-                              mesh.o_intz,
-                              o_pCoeff, 
-                              T,
-                              o_Q,
-                              o_gradq);
-  }else{
-   // compute surface contributions to gradients
-  gradSurfaceKernel(mesh.Nelements,
-                    mesh.o_sgeo,
-                    mesh.o_LIFT,
-                    mesh.o_vmapM,
-                    mesh.o_vmapP,
-                    mesh.o_EToB,
-                    mesh.o_x,
-                    mesh.o_y,
-                    mesh.o_z,
-                    o_pCoeff, 
-                    T,
-                    o_Q,
-                    o_gradq);
-  }
+//   if (cubature) {
+//     cubatureGradVolumeKernel(mesh.Nelements,
+//                      mesh.o_vgeo,
+//                      mesh.o_cubvgeo,
+//                      mesh.o_cubD,
+//                      mesh.o_cubPDT,
+//                      mesh.o_cubInterp,
+//                      mesh.o_cubProject,
+//                      o_Q,
+//                      o_gradq);    
+//   }else{
+//     // compute volume contributions to gradients
+//     gradVolumeKernel(mesh.Nelements,
+//                    mesh.o_vgeo,
+//                    mesh.o_D,
+//                    o_Q,
+//                    o_gradq);    
+//   }
 
 
 
-  // extract viscousStresses trace halo and start exchange
-  gradTraceHalo.ExchangeStart(o_gradq, 1);
+//   // complete trace halo exchange
+//   fieldTraceHalo.ExchangeFinish(o_Q, 1);
 
-  // compute volume contribution to cns RHS
-  if (cubature) {
-     cubatureVolumeKernel(mesh.Nelements,
-                         mesh.o_vgeo,
-                         mesh.o_cubvgeo,
-                         mesh.o_cubD,
-                         mesh.o_cubPDT,
-                         mesh.o_cubInterp,
-                         mesh.o_cubProject,
-                         mesh.o_x,
-                         mesh.o_y,
-                         mesh.o_z,
-                         o_pCoeff, 
-                         T,
-                         o_Q,
-                         o_gradq,
-                         o_RHS);
-  } else {
-    volumeKernel(mesh.Nelements,
-                 mesh.o_vgeo,
-                 mesh.o_D,
-                 mesh.o_x,
-                 mesh.o_y,
-                 mesh.o_z,
-                 o_pCoeff, 
-                 T,
-                 o_Q,
-                 o_gradq,
-                 o_RHS);
-  }
 
-  // complete trace halo exchange
-  gradTraceHalo.ExchangeFinish(o_gradq, 1);
+//   if (cubature) {
+//     cubatureGradSurfaceKernel(mesh.Nelements,
+//                               mesh.o_vgeo,
+//                               mesh.o_cubsgeo,
+//                               mesh.o_vmapM,
+//                               mesh.o_vmapP,
+//                               mesh.o_EToB,
+//                               mesh.o_intInterp,
+//                               mesh.o_intLIFT,
+//                               mesh.o_intx,
+//                               mesh.o_inty,
+//                               mesh.o_intz,
+//                               o_pCoeff, 
+//                               T,
+//                               o_Q,
+//                               o_gradq);
+//   }else{
+//    // compute surface contributions to gradients
+//   gradSurfaceKernel(mesh.Nelements,
+//                     mesh.o_sgeo,
+//                     mesh.o_LIFT,
+//                     mesh.o_vmapM,
+//                     mesh.o_vmapP,
+//                     mesh.o_EToB,
+//                     mesh.o_x,
+//                     mesh.o_y,
+//                     mesh.o_z,
+//                     o_pCoeff, 
+//                     T,
+//                     o_Q,
+//                     o_gradq);
+//   }
 
-  if (cubature) {
-     // dfloat hmin = mesh.MinCharacteristicLength();
-     cubatureSurfaceKernel(mesh.Nelements,
-                            mesh.o_vgeo,
-                            mesh.o_cubsgeo,
-                            mesh.o_vmapM,
-                            mesh.o_vmapP,
-                            mesh.o_EToB,
-                            mesh.o_intInterp,
-                            mesh.o_intLIFT,
-                            mesh.o_intx,
-                            mesh.o_inty,
-                            mesh.o_intz,
-                            o_pCoeff, 
-                            T,
-                            o_Q,
-                            o_gradq,
-                            o_RHS);
-    } else {
-      // dfloat hmin = mesh.MinCharacteristicLength();
-     surfaceKernel(mesh.Nelements,
-                        mesh.o_sgeo,
-                        mesh.o_LIFT,
-                        mesh.o_vmapM,
-                        mesh.o_vmapP,
-                        mesh.o_EToB,
-                        mesh.o_x,
-                        mesh.o_y,
-                        mesh.o_z,
-                        o_pCoeff, 
-                        T,
-                        o_Q,
-                        o_gradq,
-                        o_RHS);
-  }
+
+
+//   // extract viscousStresses trace halo and start exchange
+//   gradTraceHalo.ExchangeStart(o_gradq, 1);
+
+//   // compute volume contribution to cns RHS
+//   if (cubature) {
+//      cubatureVolumeKernel(mesh.Nelements,
+//                          mesh.o_vgeo,
+//                          mesh.o_cubvgeo,
+//                          mesh.o_cubD,
+//                          mesh.o_cubPDT,
+//                          mesh.o_cubInterp,
+//                          mesh.o_cubProject,
+//                          mesh.o_x,
+//                          mesh.o_y,
+//                          mesh.o_z,
+//                          o_pCoeff, 
+//                          T,
+//                          o_Q,
+//                          o_gradq,
+//                          o_RHS);
+//   } else {
+//     volumeKernel(mesh.Nelements,
+//                  mesh.o_vgeo,
+//                  mesh.o_D,
+//                  mesh.o_x,
+//                  mesh.o_y,
+//                  mesh.o_z,
+//                  o_pCoeff, 
+//                  T,
+//                  o_Q,
+//                  o_gradq,
+//                  o_RHS);
+//   }
+
+//   // complete trace halo exchange
+//   gradTraceHalo.ExchangeFinish(o_gradq, 1);
+
+//   if (cubature) {
+//      // dfloat hmin = mesh.MinCharacteristicLength();
+//      cubatureSurfaceKernel(mesh.Nelements,
+//                             mesh.o_vgeo,
+//                             mesh.o_cubsgeo,
+//                             mesh.o_vmapM,
+//                             mesh.o_vmapP,
+//                             mesh.o_EToB,
+//                             mesh.o_intInterp,
+//                             mesh.o_intLIFT,
+//                             mesh.o_intx,
+//                             mesh.o_inty,
+//                             mesh.o_intz,
+//                             o_pCoeff, 
+//                             T,
+//                             o_Q,
+//                             o_gradq,
+//                             o_RHS);
+//     } else {
+//       // dfloat hmin = mesh.MinCharacteristicLength();
+//      surfaceKernel(mesh.Nelements,
+//                         mesh.o_sgeo,
+//                         mesh.o_LIFT,
+//                         mesh.o_vmapM,
+//                         mesh.o_vmapP,
+//                         mesh.o_EToB,
+//                         mesh.o_x,
+//                         mesh.o_y,
+//                         mesh.o_z,
+//                         o_pCoeff, 
+//                         T,
+//                         o_Q,
+//                         o_gradq,
+//                         o_RHS);
+//   }
 }
 
 //evaluate ODE rhs = f(q,t)

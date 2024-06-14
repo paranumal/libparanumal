@@ -1,0 +1,408 @@
+/*
+
+  The MIT License (MIT)
+
+  Copyright (c) 2017 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+*/
+// Base line decay for the sensor: default value 1
+#define BLDEC 1
+#define mymax(a,b) (((a)>(b))?(a):(b))
+#define mymin(a,b) (((a)<(b))?(a):(b))
+#define ALPHA  1000
+
+
+// // Regularization of rho / p  (cannot be smaller than rmin / pmin)
+// dfloat LMAX(const dfloat x, const dfloat alpha){
+//   dfloat xmax = x*(atan(alpha*x)/M_PI + 0.5) - atan(alpha)/M_PI + 0.5;
+//   return xmax;
+// }
+
+
+// // Regularization of rho / p  (cannot be smaller than rmin / pmin)
+// dfloat LMIN(const dfloat x, const dfloat alpha){
+//   dfloat xmin = x - LMAX(x,alpha);
+//   return xmin;
+// }
+
+// // / Regularization of rho / p  (cannot be smaller than rmin / pmin)
+// dfloat LIM(const dfloat x,const dfloat xmin, const dfloat xmax,
+// 	         const dfloat alpha,const dfloat beta){
+//   dfloat xlim = xmin + LMAX(x-beta, alpha); 
+//   xlim = LMIN(xlim-xmax, alpha) + xmax;
+//   return xlim;
+// }
+
+
+// 
+@kernel void cnsDetectKlocknerTri2D(const dlong Nelements,
+																    @restrict const dfloat* vgeo,
+																    @restrict const int *  ModMap,
+																    @restrict const dfloat * MM,               
+																    @restrict const dfloat * InvVT,
+																    @restrict const dfloat * LSF,
+																    @restrict const dfloat * BLD,
+																    @restrict const dfloat * Q, 
+																    @restrict 		  dfloat * qdetect, 
+																    @restrict       dlong *  ElementList){
+#define p_Nel 1
+#if BLDEC==1
+#define reduce02(s_L2, NT)				\
+   if(NT<p_Nq){						\
+    for(int es=0;es<p_Nel;++es;@inner(1)){		\
+      for(int n=0; n<p_Nq; n++; @inner(0)){		\
+	if(n<NT && n+NT<p_Nq){				\
+	    s_L2[es][n]  += s_L2[es][n+NT];	\
+	}						\
+      }							\
+    }							\
+  }
+#endif
+
+
+  for(dlong eo=0;eo<Nelements;eo+=p_Nel;@outer(0)){
+
+    @shared dfloat s_Q[p_Nel][p_Np];
+    @shared dfloat s_Qhat2[p_Nel][p_Np];
+    @shared dfloat s_LogMod[p_Nel][p_Nq];
+
+#if BLDEC==1
+    @shared dfloat s_L2[p_Nel][p_Nq]; 
+#endif
+    @shared int s_ModMap[p_Np]; 
+    @shared dfloat s_LSF[p_Nq];
+    @shared dfloat s_BLD[p_Nq];
+
+    // prefetch global variables
+    for(int es=0;es<p_Nel;++es;@inner(1)){
+
+      for(int n=0; n<p_Nq; n++; @inner(0)){
+				// dlong e = eo+es;
+				if(es==0){
+				  s_LSF[n] = LSF[n]; s_BLD[n] = BLD[n];
+				}
+
+				int m = n + es*p_Nq;
+				while(m<p_Np*p_Nel && eo*p_Np+m<Nelements*p_Np){
+			  	const dlong id = m+eo*p_Np*p_Nfields;
+			  	// Read density					  
+			  	s_Q[0][m]  = Q[id + 0*p_Np];
+			  	m += p_Nel*p_Nq;
+				}
+
+				// reset counter
+				m = n + es*p_Nq;
+				while(m<p_Np){
+			  	s_ModMap[m] = ModMap[m];
+			  	m += p_Nel*p_Nq;
+				}
+      }
+    }
+
+    // get modal coefficients and compute L2 norm
+    for(int es=0;es<p_Nel;++es;@inner(1)){
+      for(int n=0; n<p_Nq; n++; @inner(0)){
+
+				dlong e = eo+es;
+				dfloat L2 = 0.0; 
+				if(e<Nelements){
+	  			int nn = n;
+
+	  			while(nn<p_Np){
+	  				dfloat Qhatn = 0.0; 
+
+#pragma unroll p_Np
+	    			for(int m=0; m<p_Np;m++){
+	      			// const dfloat invvt = InvVT[nn+m*p_Np]; 
+							Qhatn +=  InvVT[nn+m*p_Np]*s_Q[es][m];
+				    }
+
+	    			// for(int fld=0; fld<s_Ndfields; fld++){ 	    
+	      	  dfloat Qhatn2 = Qhatn*Qhatn;
+	          s_Qhat2[es][nn] = Qhatn2; 
+#if BLDEC==1
+	      		L2 += Qhatn2; // accumulate
+#endif
+	    				nn += p_Nq;
+	  				}
+
+#if BLDEC==1
+	  				const dfloat J = vgeo[e*p_Nvgeo + p_JID];
+				    L2 *= J;
+#endif
+				}
+
+#if BLDEC==1
+	  			s_L2[es][n] = L2;
+#endif
+      		}
+    	}
+
+#if BLDEC==1
+    // reduce02(s_L2, 128);
+    reduce02(s_L2,  64);
+    reduce02(s_L2,  16);
+    reduce02(s_L2,   8);
+    reduce02(s_L2,   4);
+    reduce02(s_L2,   2);
+    reduce02(s_L2,   1);
+#endif
+    // @barrier("local");
+
+    //skyline pessimization: get 1D mods from 2D
+    for(int es=0;es<p_Nel;++es;@inner(1)){    
+      for(int n=0; n<p_Nq; n++; @inner(0)){   
+
+			dlong e = eo+es;
+
+			if(e<Nelements){
+	  		dfloat modsum = 0.0, norm =0.0, res = 0.0; 
+
+			  for(int i=0; i<n+1; i++){
+	  		  const int nmods = 0.5*n*(n+1) + i; 
+	    		const int m     = s_ModMap[nmods];  // not coalesced!!!!
+	      	modsum += s_Qhat2[es][m];
+	  		}
+
+
+#if BLDEC==1
+	    // norm = q' * MM * q on element e
+	    norm = s_L2[es][0];
+	    res = log10f((float)(modsum + s_BLD[n]*norm));     
+#else
+	    res = log10f((float)(modsum)); 
+#endif
+	    s_LogMod[es][n] = 0.5*res; // use log(sqrt(a)) = 0.5*log(a)
+
+
+	  // assumes p_Nel*p_Nq <= 32
+	  if(n==0){
+	      // use running max from highest mode
+	      dfloat runningMax = mymax(s_LogMod[es][p_Nq-1], s_LogMod[es][p_Nq-2]);
+	      dfloat coeff = runningMax*s_LSF[p_Nq-2];
+
+	      for(int j=p_Nq-2;j>0;--j){
+					runningMax = mymax(runningMax, s_LogMod[es][j]);
+					// accumulate in least squares fit
+					coeff += s_LSF[j-1]*runningMax;
+	      }
+
+	      // this handles zero field, do not select those elements!!!
+	      coeff = fabs(coeff); 
+	      const dfloat sk = coeff != coeff ? p_N : coeff; 	
+	      // const dfloat sk = coeff;
+	      dfloat r_qd = 0.0; 
+	    	if(sk<(s_sS0-s_sK0))
+	  			r_qd = 1.0; 
+	  		else if(sk > (s_sS0 + s_sK0))
+	  			r_qd = 0.0; 
+	  		else 
+	  			r_qd = 0.5*( 1. + sin( - 0.5* M_PI*(sk-s_sS0)/ s_sK0)); 
+	  		
+	  		// artVisc[e*s_Ndfields + fld] = avisc*qd;	 
+	  		qdetect[e] = r_qd;	 
+	  		ElementList[e] = r_qd>0 ? 1 : 0;
+			  }
+				}
+      }
+    }
+  }
+}
+
+
+//----------------------------------------------------------------// 
+//----------------------------------------------------------------// 
+//----------------------------------------------------------------// 
+//----------------------------------------------------------------// 
+@kernel void cnsDetectKlocknerTet3D(const dlong Nelements,
+																    @restrict const dfloat* vgeo,
+																    @restrict const int *  ModMap,
+																    @restrict const dfloat * MM,               
+																    @restrict const dfloat * InvVT,
+																    @restrict const dfloat * LSF,
+																    @restrict const dfloat * BLD,
+																    @restrict const dfloat * Q, 
+																    @restrict 		  dfloat * qdetect, 
+																    @restrict       dlong *  ElementList){
+#define p_Nel 1
+#if BLDEC==1
+#define reduce02(s_L2, NT)				\
+   if(NT<p_Nq){						\
+    for(int es=0;es<p_Nel;++es;@inner(1)){		\
+      for(int n=0; n<p_Nq; n++; @inner(0)){		\
+	if(n<NT && n+NT<p_Nq){				\
+	    s_L2[es][n]  += s_L2[es][n+NT];	\
+	}						\
+      }							\
+    }							\
+  }
+#endif
+
+
+  for(dlong eo=0;eo<Nelements;eo+=p_Nel;@outer(0)){
+
+    @shared dfloat s_Q[p_Nel][p_Np];
+    @shared dfloat s_Qhat2[p_Nel][p_Np];
+    @shared dfloat s_LogMod[p_Nel][p_Nq];
+
+#if BLDEC==1
+    @shared dfloat s_L2[p_Nel][p_Nq]; 
+#endif
+    @shared int s_ModMap[p_Np]; 
+    @shared dfloat s_LSF[p_Nq];
+    @shared dfloat s_BLD[p_Nq];
+
+    // prefetch global variables
+    for(int es=0;es<p_Nel;++es;@inner(1)){
+
+      for(int n=0; n<p_Nq; n++; @inner(0)){
+				// dlong e = eo+es;
+				if(es==0){
+				  s_LSF[n] = LSF[n]; s_BLD[n] = BLD[n];
+				}
+
+				int m = n + es*p_Nq;
+				while(m<p_Np*p_Nel && eo*p_Np+m<Nelements*p_Np){
+			  	const dlong id = m+eo*p_Np*p_Nfields;
+			  	// Read density					  
+			  	s_Q[0][m]  = Q[id + 0*p_Np];
+			  	m += p_Nel*p_Nq;
+				}
+
+				// reset counter
+				m = n + es*p_Nq;
+				while(m<p_Np){
+			  	s_ModMap[m] = ModMap[m];
+			  	m += p_Nel*p_Nq;
+				}
+      }
+    }
+
+    // get modal coefficients and compute L2 norm
+    for(int es=0;es<p_Nel;++es;@inner(1)){
+      for(int n=0; n<p_Nq; n++; @inner(0)){
+
+				dlong e = eo+es;
+				dfloat L2 = 0.0; 
+				if(e<Nelements){
+	  			int nn = n;
+
+	  			while(nn<p_Np){
+	  				dfloat Qhatn = 0.0; 
+
+#pragma unroll p_Np
+	    			for(int m=0; m<p_Np;m++){
+	      			// const dfloat invvt = InvVT[nn+m*p_Np]; 
+							Qhatn +=  InvVT[nn+m*p_Np]*s_Q[es][m];
+				    }
+
+	    			// for(int fld=0; fld<s_Ndfields; fld++){ 	    
+	      	  dfloat Qhatn2 = Qhatn*Qhatn;
+	          s_Qhat2[es][nn] = Qhatn2; 
+#if BLDEC==1
+	      		L2 += Qhatn2; // accumulate
+#endif
+	    				nn += p_Nq;
+	  				}
+
+#if BLDEC==1
+	  				const dfloat J = vgeo[e*p_Nvgeo + p_JID];
+				    L2 *= J;
+#endif
+				}
+
+#if BLDEC==1
+	  			s_L2[es][n] = L2;
+#endif
+      		}
+    	}
+
+#if BLDEC==1
+    reduce02(s_L2, 128);
+    reduce02(s_L2,  64);
+    reduce02(s_L2,  16);
+    reduce02(s_L2,   8);
+    reduce02(s_L2,   4);
+    reduce02(s_L2,   2);
+    reduce02(s_L2,   1);
+#endif
+    // @barrier("local");
+
+    //skyline pessimization: get 1D mods from 2D
+    for(int es=0;es<p_Nel;++es;@inner(1)){    
+      for(int n=0; n<p_Nq; n++; @inner(0)){   
+
+			dlong e = eo+es;
+
+			if(e<Nelements){
+	  		dfloat modsum = 0.0, norm =0.0, res = 0.0; 
+
+	  		int number_of_modes = 0.5*(n+1)*(n+2); 
+			  for(int i=0; i<number_of_modes; i++){
+	  		  const int nmods = n*(n+1)*(n+2)/6 + i; 
+	    		const int m     = s_ModMap[nmods];  // not coalesced!!!!
+	      	modsum += s_Qhat2[es][m];
+	  		}
+
+
+#if BLDEC==1
+	    // norm = q' * MM * q on element e
+	    norm = s_L2[es][0];
+	    res = log10f((float)(modsum + s_BLD[n]*norm));     
+#else
+	    res = log10f((float)(modsum)); 
+#endif
+	    s_LogMod[es][n] = 0.5*res; // use log(sqrt(a)) = 0.5*log(a)
+
+
+	  // assumes p_Nel*p_Nq <= 32
+	  if(n==0){
+	      // use running max from highest mode
+	      dfloat runningMax = mymax(s_LogMod[es][p_Nq-1], s_LogMod[es][p_Nq-2]);
+	      dfloat coeff = runningMax*s_LSF[p_Nq-2];
+
+	      for(int j=p_Nq-2;j>0;--j){
+					runningMax = mymax(runningMax, s_LogMod[es][j]);
+					// accumulate in least squares fit
+					coeff += s_LSF[j-1]*runningMax;
+	      }
+
+	      // this handles zero field, do not select those elements!!!
+	      coeff = fabs(coeff); 
+	      const dfloat sk = coeff != coeff ? p_N : coeff; 	
+	      // const dfloat sk = coeff;
+	      dfloat r_qd = 0.0; 
+	    	if(sk<(s_sS0-s_sK0))
+	  			r_qd = 1.0; 
+	  		else if(sk > (s_sS0 + s_sK0))
+	  			r_qd = 0.0; 
+	  		else 
+	  			r_qd = 0.5*( 1. + sin( - 0.5* M_PI*(sk-s_sS0)/ s_sK0)); 
+	  		
+	  		// artVisc[e*s_Ndfields + fld] = avisc*qd;	 
+	  		qdetect[e] = r_qd;	 
+	  		ElementList[e] = r_qd>0 ? 1 : 0;
+			  }
+				}
+      }
+    }
+  }
+}

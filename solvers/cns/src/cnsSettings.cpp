@@ -110,10 +110,6 @@ cnsSettings_t::cnsSettings_t(comm_t& _comm):
              "Center for the moments");
 
 
-
-
-
-
  newSetting("STABILIZATION SOLVER TYPE", "1",
              "Solver type for stabilization",
              {"1", "2", "3"});
@@ -152,19 +148,19 @@ cnsSettings_t::cnsSettings_t(comm_t& _comm):
 
 
 
-stabSettings_t cnsSettings_t::extractStabSettings() {
+// stabSettings_t cnsSettings_t::extractStabSettings() {
 
-  stabSettings_t stabSettings(comm);
+//   stabSettings_t stabSettings(comm);
 
-  for(auto it = stabSettings.settings.begin(); it != stabSettings.settings.end(); ++it) {
-    setting_t& set = it->second;
-    const std::string name = set.getName();
-    std::string val;
-    getSetting(name, val);
-    set.updateVal(val);
-  }
-  return stabSettings;
-}
+//   for(auto it = stabSettings.settings.begin(); it != stabSettings.settings.end(); ++it) {
+//     setting_t& set = it->second;
+//     const std::string name = set.getName();
+//     std::string val;
+//     getSetting(name, val);
+//     set.updateVal(val);
+//   }
+//   return stabSettings;
+// }
 
 void cnsSettings_t::report() {
 

@@ -51,7 +51,7 @@ void cns_t::Setup(platform_t& _platform, mesh_t& _mesh,
   ogs::InitializeKernels(platform, ogs::Dfloat, ogs::Add);
 
   //setup linear algebra module
-  platform.linAlg().InitKernels({"innerProd", "max", "scale", "sum", "set"});
+  platform.linAlg().InitKernels({"innerProd", "max", "scale", "sum", "set","amx"});
 
   //setup timeStepper
   if (settings.compareSetting("TIME INTEGRATOR","AB3")){
@@ -79,64 +79,73 @@ void cns_t::Setup(platform_t& _platform, mesh_t& _mesh,
   mesh.MassMatrixKernelSetup(Nfields); // mass matrix operator
   
   // OCCA build stuff
-  properties_t &kernelInfo = mesh.props; //copy base occa properties
+  props = mesh.props; //copy base occa properties
   
   //add boundary data to kernel info
   std::string dataFileName;
   settings.getSetting("DATA FILE", dataFileName);
-  kernelInfo["includes"] += dataFileName;
+  props["includes"] += dataFileName;
 
-  kernelInfo["defines/" "p_Nfields"]= Nfields;
+  props["defines/" "p_Nfields"]= Nfields;
   // kernelInfo["defines/" "p_Ngrads"]= Ngrads;
 
   int maxNodes = std::max(mesh.Np, (mesh.Nfp*mesh.Nfaces));
-  kernelInfo["defines/" "p_maxNodes"]= maxNodes;
+  props["defines/" "p_maxNodes"]= maxNodes;
 
 
   int blockMax = 256;
   if (platform.device.mode() == "CUDA") blockMax = 512;
 
+  props["defines/" "p_blockSize"] = blockMax;
+
   int NblockV = std::max(1, blockMax/mesh.Np);
-  kernelInfo["defines/" "p_NblockV"]= NblockV;
+  props["defines/" "p_NblockV"]= NblockV;
 
   int NblockS = std::max(1, blockMax/maxNodes);
-  kernelInfo["defines/" "p_NblockS"]= NblockS;
+  props["defines/" "p_NblockS"]= NblockS;
 
   if (cubature) {
     int cubMaxNodes = std::max(mesh.Np, (mesh.intNfp*mesh.Nfaces));
-    kernelInfo["defines/" "p_cubMaxNodes"]= cubMaxNodes;
+    props["defines/" "p_cubMaxNodes"]= cubMaxNodes;
     int cubMaxNodes1 = std::max(mesh.Np, (mesh.intNfp));
-    kernelInfo["defines/" "p_cubMaxNodes1"]= cubMaxNodes1;
+    props["defines/" "p_cubMaxNodes1"]= cubMaxNodes1;
 
     int cubNblockV = std::max(1, blockMax/mesh.cubNp);
-    kernelInfo["defines/" "p_cubNblockV"]= cubNblockV;
+    props["defines/" "p_cubNblockV"]= cubNblockV;
 
     int cubNblockS = std::max(1, blockMax/cubMaxNodes);
-    kernelInfo["defines/" "p_cubNblockS"]= cubNblockS;
+    props["defines/" "p_cubNblockS"]= cubNblockS;
   }
 
   // Set physics of the problem, i.e. equation of state etc. 
-  setupPhysics(kernelInfo); 
-
-  // Set the stabilizer for the problem
-  if(settings.compareSetting("STAB TYPE", "NOSTAB")){
-    // setNoStabilization(kernelInfo);
-  }else{
-    // extract stabilization settings
-    stabSettings = _settings.extractStabSettings();
-    stab.Setup(platform, mesh, stabSettings, kernelInfo);
-    // stabSettings.report();
-    // stab.Test();
-  }
+  setupPhysics(); 
+  setupStab();
 
 
-  if(stab.type==Stab::ARTDIFF){
-    setupArtificialDiffusion(kernelInfo);
-  }else if(stab.type==Stab::LIMITER){
-    setupLimiter(kernelInfo);
-  }else if(stab.type==Stab::NOSTAB){
-    setupNoStab(kernelInfo);    
-  }
+
+
+
+
+
+  // // Set the stabilizer for the problem
+  // if(settings.compareSetting("STAB TYPE", "NOSTAB")){
+  //   // setNoStabilization(kernelInfo);
+  // }else{
+  //   // extract stabilization settings
+  //   stabSettings = _settings.extractStabSettings();
+  //   stab.Setup(platform, mesh, stabSettings, kernelInfo);
+  //   // stabSettings.report();
+  //   // stab.Test();
+  // }
+
+
+  // if(stab.type==Stab::ARTDIFF){
+  //   setupArtificialDiffusion(kernelInfo);
+  // }else if(stab.type==Stab::LIMITER){
+  //   setupLimiter(kernelInfo);
+  // }else if(stab.type==Stab::NOSTAB){
+  //   setupNoStab(kernelInfo);    
+  // }
 
 
 

@@ -59,9 +59,11 @@ void cns_t::Report(dfloat time, int tstep){
 
     // reportSmoothFields(time, tstep); 
 
-   if(stab.type!=Stab::NOSTAB){
+   if(stabType!=Stab::NOSTAB){
+    o_qdetect.copyTo(qdetect); 
+    o_viscosity.copyTo(viscosity); 
       // stab.Apply(o_q, o_gradq, 0.0);
-      stab.Report(time, tstep);
+      // stab.Report(time, tstep);
     }
     
     // copy data back to host

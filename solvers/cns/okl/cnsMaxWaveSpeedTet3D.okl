@@ -118,10 +118,23 @@ SOFTWARE.
           dfloat rwP = rwM;
           dfloat EP  = EM;
 
-         cnsInviscidBoundaryConditions3D(bc, gamma, R, CP, CV, mu,
+          dfloat drrdxP, drrdyP, drrdzP; 
+          dfloat drudxP, drudyP, drudzP; 
+          dfloat drvdxP, drvdyP, drvdzP; 
+          dfloat drwdxP, drwdyP, drwdzP; 
+          dfloat dredxP, dredyP, dredzP; 
+
+         cnsViscousBoundaryConditions3D(bc, gamma, R, CP, CV, mu,
                                           time, x[idM], y[idM], z[idM], nx, ny, nz,
                                           rM, ruM, rvM, rwM, EM, 
-                                          &rP, &ruP, &rvP, &rwP, &EP);
+                                          &rP, &ruP, &rvP, &rwP, &EP, 
+                                          0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+                                          0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+                                          &drrdxP, &drrdyP,&drrdzP, 
+                                          &drudxP, &drudyP,&drudzP, 
+                                          &drvdxP, &drvdyP,&drvdzP, 
+                                          &drwdxP, &drwdyP,&drwdzP, 
+                                          &dredxP, &dredyP,&dredzP);
           dfloat uP = ruP/rP; 
           dfloat vP = rvP/rP; 
           dfloat wP = rwP/rP; 

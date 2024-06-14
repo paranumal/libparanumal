@@ -41,7 +41,7 @@ void cns_t::tokenizer(const int N, std::string s, memory<dfloat> & state, char d
 }
 
 
-void cns_t::setupPhysics(properties_t & props){
+void cns_t::setupPhysics(){
  
   // Set isentropic exponent and related info
   settings.getSetting("GAMMA", gamma);

@@ -438,17 +438,58 @@ template
 void ogsOperator_t::GatherScatter(memory<long long int> v,const int k,
                                   const Op op, const Transpose trans);
 
+// template<typename T>
+// void ogsOperator_t::GatherScatter(deviceMemory<T> o_v,
+//                                   const int k,
+//                                   const Op op,
+//                                   const Transpose trans) {
+//   constexpr Type type = ogsType<T>::get();
+//   InitializeKernels(platform, type, Add);
+
+//   if (trans==Trans) {
+//     if (NrowBlocksT)
+//       gatherScatterKernel[type][Add](NrowBlocksT,
+//                                      k,
+//                                      o_blockRowStartsT,
+//                                      o_rowStartsT,
+//                                      o_colIdsT,
+//                                      o_rowStartsN,
+//                                      o_colIdsN,
+//                                      o_v);
+//   } else if (trans==Sym) {
+//     if (NrowBlocksT)
+//       gatherScatterKernel[type][Add](NrowBlocksT,
+//                                      k,
+//                                      o_blockRowStartsT,
+//                                      o_rowStartsT,
+//                                      o_colIdsT,
+//                                      o_rowStartsT,
+//                                      o_colIdsT,
+//                                      o_v);
+//   } else {
+//     if (NrowBlocksT)
+//       gatherScatterKernel[type][Add](NrowBlocksT,
+//                                      k,
+//                                      o_blockRowStartsT,
+//                                      o_rowStartsN,
+//                                      o_colIdsN,
+//                                      o_rowStartsT,
+//                                      o_colIdsT,
+//                                      o_v);
+//   }
+// }
+
 template<typename T>
 void ogsOperator_t::GatherScatter(deviceMemory<T> o_v,
                                   const int k,
                                   const Op op,
                                   const Transpose trans) {
   constexpr Type type = ogsType<T>::get();
-  InitializeKernels(platform, type, Add);
+  InitializeKernels(platform, type, op);
 
   if (trans==Trans) {
     if (NrowBlocksT)
-      gatherScatterKernel[type][Add](NrowBlocksT,
+      gatherScatterKernel[type][op](NrowBlocksT,
                                      k,
                                      o_blockRowStartsT,
                                      o_rowStartsT,
@@ -458,7 +499,7 @@ void ogsOperator_t::GatherScatter(deviceMemory<T> o_v,
                                      o_v);
   } else if (trans==Sym) {
     if (NrowBlocksT)
-      gatherScatterKernel[type][Add](NrowBlocksT,
+      gatherScatterKernel[type][op](NrowBlocksT,
                                      k,
                                      o_blockRowStartsT,
                                      o_rowStartsT,
@@ -468,7 +509,7 @@ void ogsOperator_t::GatherScatter(deviceMemory<T> o_v,
                                      o_v);
   } else {
     if (NrowBlocksT)
-      gatherScatterKernel[type][Add](NrowBlocksT,
+      gatherScatterKernel[type][op](NrowBlocksT,
                                      k,
                                      o_blockRowStartsT,
                                      o_rowStartsN,
@@ -478,6 +519,7 @@ void ogsOperator_t::GatherScatter(deviceMemory<T> o_v,
                                      o_v);
   }
 }
+
 
 template
 void ogsOperator_t::GatherScatter(deviceMemory<float> v,const int k,

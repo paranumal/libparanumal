@@ -179,6 +179,36 @@ void cns_t::PlotFields(memory<dfloat> Q, memory<dfloat> V, std::string fileName)
     fprintf(fp, "       </DataArray>\n");
   }
 
+
+   if (qdetect.length()!=0) {
+    // write out indicator
+    fprintf(fp, "        <DataArray type=\"Float32\" Name=\"S\" Format=\"ascii\">\n");
+    for(dlong e=0;e<mesh.Nelements;++e){
+      // mesh.PlotInterp(V + e*mesh.Np, Ip, scratch);
+      for(int n=0;n<mesh.plotNp;++n){
+        fprintf(fp, "       ");
+        fprintf(fp, "%g\n", qdetect[e]);
+      }
+    }
+    fprintf(fp, "       </DataArray>\n");
+  }
+
+
+ if (viscosity.length()!=0) {
+    // write out vorticity
+      fprintf(fp, "        <DataArray type=\"Float32\" Name=\"viscosity\" Format=\"ascii\">\n");
+      for(dlong e=0;e<mesh.Nelements;++e){
+        mesh.PlotInterp(viscosity + e*mesh.Np, Ip, scratch);
+
+        for(int n=0;n<mesh.plotNp;++n){
+          fprintf(fp, "       ");
+          fprintf(fp, "%g\n", Ip[n]);
+        }
+      }
+    fprintf(fp, "       </DataArray>\n");
+  }
+  
+
   fprintf(fp, "     </PointData>\n");
 
   fprintf(fp, "    <Cells>\n");

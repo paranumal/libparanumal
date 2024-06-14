@@ -7,7 +7,7 @@ data/cnsUniform3D.h
 #*******************[MESH PROPERTIES]*******************#
 [MESH FILE]
 #BOX
-../../meshes/cnsNACA3D.msh
+../../meshes/cnsNACA3Dv2.msh
 #../../meshes/cnsBody3D.msh
 #../../meshes/cnsFFS3D.msh
 
@@ -18,16 +18,23 @@ data/cnsUniform3D.h
 6
 
 [BOX NX]
-11
-
+10
 [BOX NY]
-11
-
+10
 [BOX NZ]
-11
+10
+
+[BOX DIMX]
+10
+
+[BOX DIMY]
+10
+
+[BOX DIMZ]
+10
 
 [BOX BOUNDARY FLAG]
-20
+11
 
 
 #*******************[DISCRETIZATION PROPERTIES]************#
@@ -40,6 +47,7 @@ NAVIER-STOKES
 
 # If TRUE compute R and mu from Mach & Reynolds//
 [NONDIMENSIONAL EQUATIONS]
+#FALSE
 TRUE
 
 [ISOTHERMAL]
@@ -50,13 +58,13 @@ FALSE
 #COLLOCATION
 CUBATURE
 
-# 0 < beta < 1 
+# 0 <= beta <= 1 
 [LDG BETA COEFFICIENT]
 0.0
 
-# 0 < tau < 1.0
+# 0 <= tau <= 1.0
 [LDG TAU COEFFICIENT]
-1.0
+0.0
 
 [TIME INTEGRATOR]
 DOPRI5
@@ -80,7 +88,8 @@ CUDA
 
 # // Mach number is needed for NONDIM=TRUE
 [MACH NUMBER]
-1.2
+2.0
+#0.816496580927726
 
 # Reynolds number is needed for NONDIM = TRUE
 [REYNOLDS NUMBER]
@@ -92,11 +101,12 @@ CUDA
 
 # mu is needed if NONDIM = FALSE, otherwise mu = 1/Re
 [VISCOSITY]
-1.0e-6
+1.0e-5
 
 # [ CONSTANT ] - [SUTHERLAND] - [POWER-LAW]
 [VISCOSITY TYPE]
 CONSTANT
+
 
 [PRANDTL NUMBER]
 0.72
@@ -107,7 +117,7 @@ CONSTANT
 1.0, 1.0, 1.0, 1.0, 1.0, 1.0
 
 [CFL NUMBER]
-0.01
+0.1
 
 [START TIME]
 0
@@ -117,7 +127,7 @@ CONSTANT
 
 #*******************[OUTPUT PROPERTIES]*******************#
 [OUTPUT INTERVAL]
-0.001
+0.01
 
 [OUTPUT TO FILE]
 TRUE
@@ -126,7 +136,7 @@ TRUE
 cns
 
 [REPORT FORCES]
-TRUE
+FALSE
 
 [MOMENT CENTER]
 0.0, 0.0, 0.0
@@ -152,12 +162,12 @@ TRUE
 WARPBLEND
 
 [STAB OUTPUT TO FILE]
-FALSE
+TRUE
 
 # [LAPLACE], [PHYSICAL X do not use this option for now!!!!] 
 [ARTDIFF TYPE]
 LAPLACE
 
 [ARTDIFF SCALE FACTOR]
-0.1
+6
 

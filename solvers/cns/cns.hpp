@@ -33,7 +33,7 @@ SOFTWARE.
 #include "solver.hpp"
 #include "timeStepper.hpp"
 #include "linAlg.hpp"
-#include "stab.hpp"
+// #include "stab.hpp"
 
 #define DCNS LIBP_DIR"/solvers/cns/"
 
@@ -47,16 +47,25 @@ public:
                      meshSettings_t& meshSettings,
                      const std::string filename);
 
-  stabSettings_t extractStabSettings();
+  // stabSettings_t extractStabSettings();
 };
+
+
+
+namespace Stab {
+  enum Detect { NODETECT =0, ALL =1, KLOCKNER =2, PERSSON  =3, DUCROS   =4,};
+  enum Type { NOSTAB  =0, FILTER  =1, LIMITER =2, ARTDIFF =3, SUBCELL =4,};
+} //namespace stab
 
 
 
 class cns_t: public solver_t {
 public:
   mesh_t mesh;
-  stab_t stab {};
-  stabSettings_t stabSettings; 
+  // stab_t stab {};
+  // stabSettings_t stabSettings; 
+
+  properties_t props; 
 
   int Nfields;
   int Ngrads;
@@ -69,7 +78,8 @@ public:
 
   int viscType;
   int Nph; // number of physical parameters 
-  int MUID, GMID, RRID, PRID, CPID, CVID, KAID, M2ID, BTID, TAID; 
+  int MUID, GMID, RRID, PRID, CPID; 
+  int CVID, KAID, M2ID, BTID, TAID; 
   int EXID, TRID, TSID, CSID; 
 
   // Physical coefficients
@@ -127,6 +137,43 @@ public:
   memory<dfloat> weight; 
   deviceMemory<dfloat> o_weight; 
 
+  // Stabilization Related
+  int detectType=0, stabType=0; 
+
+  // Detected elements and detected field variable
+  memory<dlong>elmList; 
+  deviceMemory<dlong> o_elmList; 
+  deviceMemory<int> o_modeIds; 
+
+  // always scaled such that 0<=s<=1.0 
+  memory<dfloat> qdetect; 
+  deviceMemory<dfloat>o_qdetect; 
+  deviceMemory<dfloat>o_invV, o_LS1D, o_BLD; 
+
+
+
+  // Artificial Viscosity
+  dfloat avisAlpha; 
+  memory<dfloat> elmLength; 
+  deviceMemory<dfloat> o_elmLength;
+
+
+  memory<dfloat> vertexViscosity, viscosity; 
+  deviceMemory<dfloat> o_vertexViscosity, o_viscosity;
+
+  memory<dfloat>PM12N;
+  deviceMemory<dfloat>o_PM12N;
+
+
+  kernel_t detectKernel;
+  kernel_t computeViscosityKernel;
+  kernel_t projectViscosityKernel;
+
+
+  // Artificial viscosity 
+
+
+ 
   cns_t() = default;
   cns_t(platform_t &_platform, mesh_t &_mesh,
               cnsSettings_t& _settings) {
@@ -142,19 +189,33 @@ public:
   void reportSmoothFields(dfloat time, int tstep);
 
   // Set reference values, thermodynamics, nondimensional values
-  void setupPhysics(properties_t & kernelInfo);
+  void setupPhysics();
 
   void tokenizer(const int N, std::string s, memory<dfloat> & state, char delimiter);
   
   void reportForces(dfloat time, int tstep);
+  void rhsf(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
 
-  void setupArtificialDiffusion(properties_t & kernelInfo);
-  void setupLimiter(properties_t & kernelInfo);
+  
+  // Setup detectors and stabilizers
+  void setupStab();
+  void applyStab(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_gradQ, const dfloat T);
+  void applyDetect(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_gradQ, const dfloat T);
 
-  void setupNoStab(properties_t & kernelInfo);
+  void setupKlocknerDetector();
+  void applyKlocknerDetector(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_gradQ, const dfloat T);
 
-  // Set detectors
-  void SetDetector(properties_t & kernelInfo);
+  void rhsNoStab(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
+  void rhsArtDiff(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
+  void rhsLimiter(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
+
+
+
+  void setupArtificialDiffusion();
+  void applyArtificialDiffusion(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_gradQ, const dfloat T);
+  void setupLimiter();
+  void setupNoStab();
+  
 
 
   void Report(dfloat time, int tstep) override;
@@ -163,10 +224,13 @@ public:
 
   dfloat MaxWaveSpeed(deviceMemory<dfloat>& o_Q, const dfloat T);
 
-  void rhsf(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
-  void rhsNoStab(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
-  void rhsArtDiff(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
-  void rhsLimiter(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
+
+
+dfloat ElementViscosityScaleTri2D(dlong e); 
+dfloat ElementViscosityScaleQuad2D(dlong e); 
+dfloat ElementViscosityScaleTet3D(dlong e); 
+dfloat ElementViscosityScaleHex3D(dlong e); 
+
 };
 
 #endif

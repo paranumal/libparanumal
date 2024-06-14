@@ -135,8 +135,8 @@ SOFTWARE.
             }
 
             const dfloat sc = invJ*sJ;
-            const dfloat alphaM = 0.5 - beta; 
-            const dfloat alphaP = 0.5 + beta; 
+            const dfloat alphaM = 0.5 + beta; 
+            const dfloat alphaP = 0.5 - beta; 
 
             s_gradflux[ 0][n] = sc*nx*( alphaM*rrM + alphaP*rrP  - rrM);
             s_gradflux[ 1][n] = sc*ny*( alphaM*rrM + alphaP*rrP  - rrM);
@@ -211,5 +211,212 @@ SOFTWARE.
         gradq[base+13*p_Np] += Lreyflux;
         gradq[base+14*p_Np] += Lrezflux;
       }
+  }
+}
+
+
+
+
+
+@kernel void cnsGradCubatureSurfaceConservativeTet3D(const dlong Nelements,
+                                                  @restrict const  dfloat *  vgeo,
+                                                  @restrict const  dfloat *  sgeo,
+                                                   @restrict const  dlong  *  vmapM,
+                                                   @restrict const  dlong  *  vmapP,
+                                                   @restrict const  int    *  EToB,
+                                                  @restrict const  dfloat *  intInterp, // interpolate to integration nodes
+                                                  @restrict const  dfloat *  intLIFT, //
+                                                   @restrict const  dfloat *  intx,
+                                                   @restrict const  dfloat *  inty,
+                                                   @restrict const  dfloat *  intz,
+                                                   @restrict const  dfloat *  pCoeff,
+                                                             const  dfloat time,
+                                                   @restrict const  dfloat *  q,
+                                                   @restrict        dfloat *  gradq){
+  // for all elements
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+
+    @shared dfloat s_qM[p_Nfields][p_NfacesNfp];
+    @shared dfloat s_qP[p_Nfields][p_NfacesNfp];
+    @shared dfloat s_gradflux[p_Ngrads][p_intNfpNfaces];
+
+   for(int n=0;n<p_cubMaxNodes;++n;@inner(0)){
+      if(n<p_NfacesNfp){
+          // indices of negative and positive traces of face node
+          const dlong id  = e*p_Nfp*p_Nfaces + n;
+          const dlong idM = vmapM[id];
+          const dlong idP = vmapP[id];
+
+          // load traces
+          const dlong eM = e;
+          const dlong eP = idP/p_Np;
+          const int vidM = idM%p_Np;
+          const int vidP = idP%p_Np;
+
+          const dlong baseM = eM*p_Np*p_Nfields + vidM;
+          const dlong baseP = eP*p_Np*p_Nfields + vidP;
+
+          for(int fld=0; fld<p_Nfields; fld++){
+            s_qM[fld][n] = q[baseM + fld*p_Np];
+            s_qP[fld][n] = q[baseP + fld*p_Np];
+          }
+        }
+      }
+
+
+      for(int n=0;n<p_cubMaxNodes;++n;@inner(0)){
+        if(n<(p_Nfaces*p_intNfp)){
+            // indices of negative and positive traces of face node
+          const dfloat gamma  = pCoeff[p_GMID]; // gamma
+          const dfloat R      = pCoeff[p_RRID]; 
+          const dfloat CP     = pCoeff[p_CPID]; 
+          const dfloat CV     = pCoeff[p_CVID]; 
+          const dfloat mu     = pCoeff[p_MUID]; 
+          const dfloat beta   = pCoeff[p_BTID]; 
+
+          const int face = n/p_intNfp; // find face that owns this integration node    
+          // load surface geofactors for this face
+          const dlong sid = p_Nsgeo*(e*p_Nfaces+face);
+          const dfloat nx   = sgeo[sid+p_NXID];
+          const dfloat ny   = sgeo[sid+p_NYID];
+          const dfloat nz   = sgeo[sid+p_NZID];
+          const dfloat sJ   = sgeo[sid+p_SJID];
+          const dfloat invJ = sgeo[sid+p_IJID];
+
+          dfloat rrM = 0.0, rrP = 0.0; 
+          dfloat ruM = 0.0, ruP = 0.0; 
+          dfloat rvM = 0.0, rvP = 0.0; 
+          dfloat rwM = 0.0, rwP = 0.0; 
+          dfloat reM = 0.0, reP = 0.0; 
+
+          // local block interpolation (face nodes to integration nodes)
+          #pragma unroll p_Nfp
+          for(int m=0;m<p_Nfp;++m){
+            const dfloat iInm = intInterp[n+m*p_Nfaces*p_intNfp];
+            const int fm = face*p_Nfp+m;
+            rrM += iInm*s_qM[0][fm]; 
+            ruM += iInm*s_qM[1][fm]; 
+            rvM += iInm*s_qM[2][fm]; 
+            rwM += iInm*s_qM[3][fm]; 
+            reM += iInm*s_qM[4][fm]; 
+
+            rrP += iInm*s_qP[0][fm]; 
+            ruP += iInm*s_qP[1][fm]; 
+            rvP += iInm*s_qP[2][fm]; 
+            rwP += iInm*s_qP[3][fm]; 
+            reP += iInm*s_qP[4][fm]; 
+          }
+
+          // apply boundary condition given in primitive variables
+            const int bc = EToB[face+p_Nfaces*e];
+            if(bc>0) {
+               const dlong intId = n+e*p_Nfaces*p_intNfp;
+              // fake derivates
+                dfloat drrdxP = 0.0, drrdyP =0.0, drrdzP =0.0; 
+                dfloat drudxP = 0.0, drudyP =0.0, drudzP =0.0; 
+                dfloat drvdxP = 0.0, drvdyP =0.0, drvdzP =0.0; 
+                dfloat drwdxP = 0.0, drwdyP =0.0, drwdzP =0.0; 
+                dfloat dredxP = 0.0, dredyP =0.0, dredzP =0.0; 
+                cnsViscousBoundaryConditions3D(bc, gamma, R, CP, CV, mu, time, 
+                                 intx[intId], inty[intId], intz[intId], 
+                                 nx, ny, nz, 
+                                 rrM, ruM, rvM, rwM, reM, 
+                                 &rrP, &ruP, &rvP, &rwP, &reP, 
+                                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,  
+                                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+                                 0.0, 0.0, 0.0, 
+                                 &drrdxP, &drrdyP, &drrdzP, 
+                                 &drudxP, &drudyP, &drudzP, 
+                                 &drvdxP, &drvdyP, &drvdzP, 
+                                 &drwdxP, &drwdyP, &drwdzP, 
+                                 &dredxP, &dredyP, &dredzP);
+
+            }
+
+
+            const dfloat sc = invJ*sJ;
+            const dfloat alphaM = 0.5 + beta; 
+            const dfloat alphaP = 0.5 - beta; 
+            
+            s_gradflux[ 0][n] = sc*nx*( alphaM*rrM + alphaP*rrP);
+            s_gradflux[ 1][n] = sc*ny*( alphaM*rrM + alphaP*rrP);
+            s_gradflux[ 2][n] = sc*nz*( alphaM*rrM + alphaP*rrP);
+
+            s_gradflux[ 3][n] = sc*nx*( alphaM*ruM + alphaP*ruP);
+            s_gradflux[ 4][n] = sc*ny*( alphaM*ruM + alphaP*ruP);
+            s_gradflux[ 5][n] = sc*nz*( alphaM*ruM + alphaP*ruP);
+
+            s_gradflux[ 6][n] = sc*nx*( alphaM*rvM + alphaP*rvP);
+            s_gradflux[ 7][n] = sc*ny*( alphaM*rvM + alphaP*rvP);
+            s_gradflux[ 8][n] = sc*nz*( alphaM*rvM + alphaP*rvP);
+
+            s_gradflux[ 9][n] = sc*nx*( alphaM*rwM + alphaP*rwP);
+            s_gradflux[10][n] = sc*ny*( alphaM*rwM + alphaP*rwP);
+            s_gradflux[11][n] = sc*nz*( alphaM*rwM + alphaP*rwP);
+
+            s_gradflux[12][n] = sc*nx*( alphaM*reM + alphaP*reP);
+            s_gradflux[13][n] = sc*ny*( alphaM*reM + alphaP*reP);
+            s_gradflux[14][n] = sc*nz*( alphaM*reM + alphaP*reP);
+        }
+      }
+
+      // wait for all @shared memory writes of the previous inner loop to complete
+
+    // lift from surface integration to volume nodes
+    for(int n=0;n<p_cubMaxNodes;++n;@inner(0)){
+      if(n<p_Np ){
+        // load rhs data from volume fluxes
+        dfloat LTrrxflux = 0.f, LTrryflux = 0.f, LTrrzflux = 0.f;
+        dfloat LTruxflux = 0.f, LTruyflux = 0.f, LTruzflux = 0.f;
+        dfloat LTrvxflux = 0.f, LTrvyflux = 0.f, LTrvzflux = 0.f;
+        dfloat LTrwxflux = 0.f, LTrwyflux = 0.f, LTrwzflux = 0.f;
+        dfloat LTrexflux = 0.f, LTreyflux = 0.f, LTrezflux = 0.f;
+      
+        #pragma unroll p_intNfp*p_Nfaces
+        for(int m=0;m<(p_intNfp*p_Nfaces);++m){
+          const dfloat L = intLIFT[n+m*p_Np];
+          LTrrxflux += L*s_gradflux[ 0][m];
+          LTrryflux += L*s_gradflux[ 1][m];
+          LTrrzflux += L*s_gradflux[ 2][m];
+         
+          LTruxflux += L*s_gradflux[ 3][m];
+          LTruyflux += L*s_gradflux[ 4][m];
+          LTruzflux += L*s_gradflux[ 5][m];
+
+          LTrvxflux += L*s_gradflux[ 6][m];
+          LTrvyflux += L*s_gradflux[ 7][m];
+          LTrvzflux += L*s_gradflux[ 8][m];
+
+          LTrwxflux += L*s_gradflux[ 9][m];
+          LTrwyflux += L*s_gradflux[10][m];
+          LTrwzflux += L*s_gradflux[11][m];
+
+          LTrexflux += L*s_gradflux[12][m];
+          LTreyflux += L*s_gradflux[13][m];
+          LTrezflux += L*s_gradflux[14][m];
+        }
+
+        const dlong base = e*p_Np*p_Ngrads+n;
+        gradq[base+0*p_Np] += LTrrxflux;
+        gradq[base+1*p_Np] += LTrryflux;
+        gradq[base+2*p_Np] += LTrrzflux;
+       
+        gradq[base+3*p_Np] += LTruxflux;
+        gradq[base+4*p_Np] += LTruyflux;
+        gradq[base+5*p_Np] += LTruzflux;
+
+        gradq[base+6*p_Np] += LTrvxflux;
+        gradq[base+7*p_Np] += LTrvyflux;
+        gradq[base+8*p_Np] += LTrvzflux;
+
+        gradq[base+ 9*p_Np] += LTrwxflux;
+        gradq[base+10*p_Np] += LTrwyflux;
+        gradq[base+11*p_Np] += LTrwzflux;
+
+        gradq[base+12*p_Np] += LTrexflux;
+        gradq[base+13*p_Np] += LTreyflux;
+        gradq[base+14*p_Np] += LTrezflux;
+      }
+    }
   }
 }

@@ -25,10 +25,9 @@ data/cnsUniform2D.h
 3
 
 [BOX NX]
-50
-
+10
 [BOX NY]
-50
+10
 
 [BOX DIMX]
 10
@@ -91,7 +90,7 @@ CUDA
 
 # // Mach number is needed for NONDIM=TRUE
 [MACH NUMBER]
-3.0
+5.0
 #0.816496580927726
 
 # Reynolds number is needed for NONDIM = TRUE
@@ -126,7 +125,7 @@ CONSTANT
 0
 
 [FINAL TIME]
-5
+5.0
 
 #*******************[OUTPUT PROPERTIES]*******************#
 [OUTPUT INTERVAL]
