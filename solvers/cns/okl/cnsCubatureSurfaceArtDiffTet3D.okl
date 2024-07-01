@@ -150,7 +150,7 @@ void upwindLaxFriedrichs(const dfloat nx,
   const dfloat F2M = rM*uM*uM + pM,     F2P = rP*uP*uP + pP; 
   const dfloat F3M = rM*uM*vM,          F3P = rP*uP*vP; 
   const dfloat F4M = rM*uM*wM,          F4P = rP*uP*wP; 
-  const dfloat F5M = uM*(EM + pM),      F5P = uP*(EP + pP); 
+  const dfloat F5M =    uM*(EM + pM),   F5P =    uP*(EP + pP); 
 
   const dfloat G1M = rM*vM,             G1P = rP*vP;
   const dfloat G2M = rM*vM*uM,          G2P = rP*vP*uP; 
@@ -440,7 +440,8 @@ void upwindLaxFriedrichs(const dfloat nx,
 
         }
 
-
+        dfloat factor = 1.0; 
+        if(bc==11){factor =0; }
 
         dfloat irP = 1.0/rrP, uP  = ruP*irP,  vP  = rvP*irP,  wP  = rwP*irP;
         dfloat pP  = (gamma-1)*(rEP - 0.5*rrP*(uP*uP+vP*vP+wP*wP));    
@@ -455,15 +456,15 @@ void upwindLaxFriedrichs(const dfloat nx,
         rEP = pP/(gamma-1.0) + 0.5f*rrP*(uP*uP+vP*vP+wP*wP); 
       #endif       
 
-        // Compute inviscid fluxes
+        // // Compute inviscid fluxes
         dfloat rflux, ruflux, rvflux, rwflux, Eflux;
-        upwindRoeAveraged(nx, ny, nz, gamma, rrM, uM, vM, wM, pM, rrP, uP, vP, wP, pP, 
-                          &rflux, &ruflux, &rvflux, &rwflux, &Eflux);
+        // upwindRoeAveraged(nx, ny, nz, gamma, rrM, uM, vM, wM, pM, rrP, uP, vP, wP, pP, 
+        //                   &rflux, &ruflux, &rvflux, &rwflux, &Eflux);
 
-         // upwindLaxFriedrichs(nx, ny, nz, gamma, 
-         //                     rrM, uM, vM, wM, pM, 
-         //                     rrP, uP, vP, wP, pP, 
-         //                     &rflux, &ruflux, &rvflux,&rwflux, &Eflux);
+         upwindLaxFriedrichs(nx, ny, nz, gamma, 
+                             rrM, uM, vM, wM, pM, 
+                             rrP, uP, vP, wP, pP, 
+                             &rflux, &ruflux, &rvflux,&rwflux, &Eflux);
 
         // Derivative of velocities
         const dfloat dudxM = (drudxM - drrdxM*uM)*irM;
@@ -564,11 +565,11 @@ void upwindLaxFriedrichs(const dfloat nx,
         T31M += rmM*drwdxM, T32M += rmM*drwdyM, T33M+=rmM*drwdzM;
         T41M += rmM*dredxM, T42M += rmM*dredyM, T43M+=rmM*dredzM;           
         // add artificial viscosity
-        T01P += rmP*drrdxP, T02P += rmP*drrdyP, T03P+=rmP*drrdzP;
-        T11P += rmP*drudxP, T12P += rmP*drudyP, T13P+=rmP*drudzP;
-        T21P += rmP*drvdxP, T22P += rmP*drvdyP, T23P+=rmP*drvdzP;
-        T31P += rmP*drwdxP, T32P += rmP*drwdyP, T33P+=rmP*drwdzP;
-        T41P += rmP*dredxP, T42P += rmP*dredyP, T43P+=rmP*dredzP;       
+        T01P += factor*rmP*drrdxP, T02P += factor*rmP*drrdyP, T03P+=factor*rmP*drrdzP;
+        T11P += factor*rmP*drudxP, T12P += factor*rmP*drudyP, T13P+=factor*rmP*drudzP;
+        T21P += factor*rmP*drvdxP, T22P += factor*rmP*drvdyP, T23P+=factor*rmP*drvdzP;
+        T31P += factor*rmP*drwdxP, T32P += factor*rmP*drwdyP, T33P+=factor*rmP*drwdzP;
+        T41P += factor*rmP*dredxP, T42P += factor*rmP*dredyP, T43P+=factor*rmP*dredzP;       
 
         const dfloat alphaM = 0.5 - beta, alphaP = 0.5 + beta;  
         // const dfloat alphaM = 0.5 - beta, alphaP = 0.5 + beta;  

@@ -1,0 +1,143 @@
+
+@kernel void maxVelocityTet3D(const dlong Nelements,
+                                    @restrict const  dfloat *  vgeo,
+                                    @restrict const  dfloat *  sgeo,
+                                    @restrict const  dlong  *  vmapM,
+                                    @restrict const  int    *  EToB,
+                                    @restrict const  dfloat *  pCoeff,                                           
+                                              const  dfloat time,
+                                    @restrict const  dfloat *  x,
+                                    @restrict const  dfloat *  y,
+                                    @restrict const  dfloat *  z,
+                                    @restrict const  dfloat *  q,
+                                    @restrict dfloat *  Vmax){
+
+ // for all elements
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+
+    @shared dfloat s_maxSpeed[p_maxNodes];
+    @exclusive dfloat gamma, R, CP, CV, mu; 
+
+    // for each node in the element
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+        // indices of negative and positive traces of face node
+        gamma  = pCoeff[p_GMID]; // gamma
+        mu     = pCoeff[p_MUID];
+        R      = pCoeff[p_RRID]; 
+        CP     = pCoeff[p_CPID]; 
+        CV     = pCoeff[p_CVID]; 
+      //initialize
+      s_maxSpeed[n] = 0.0;
+
+      if(n<p_Np){
+        //find max wavespeed at each node
+        const dlong id = e*p_Np*p_Nfields+n;
+        const dfloat r  = q[id + 0*p_Np];
+        const dfloat ru = q[id + 1*p_Np];
+        const dfloat rv = q[id + 2*p_Np];
+        const dfloat rw = q[id + 3*p_Np];
+        const dfloat E  = q[id + 4*p_Np];
+
+        const dfloat u = ru/r;
+        const dfloat v = rv/r;
+        const dfloat w = rw/r;
+        const dfloat p = (gamma-1)*(E-0.5*r*(u*u+v*v+w*w));
+
+        const dfloat U = sqrt(u*u+v*v+w*w);
+        const dfloat c = sqrt(gamma*p/r);
+
+        const dfloat UP = fabs(U+c);
+        const dfloat UM = fabs(U-c);
+
+        const dfloat Umax = (UP > UM) ? UP : UM;
+
+        s_maxSpeed[n] = Umax;
+      }
+    }
+
+    // for all face nodes of all elements
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
+
+      if(n<p_NfacesNfp){
+        // check for boundary face
+        const int face = n/p_Nfp;
+        const int bc = EToB[face+p_Nfaces*e];
+        if(bc>0){
+          // load surface geofactors for this face
+          const dlong sid = p_Nsgeo*(e*p_Nfaces+face);
+          const dfloat nx = sgeo[sid+p_NXID];
+          const dfloat ny = sgeo[sid+p_NYID];
+          const dfloat nz = sgeo[sid+p_NZID];
+
+          const dlong id  = e*p_Nfp*p_Nfaces + n;
+          const dlong idM = vmapM[id];
+
+          const int vidM = idM%p_Np;
+          const dlong qbaseM = e*p_Np*p_Nfields + vidM;
+
+          const dfloat rM  = q[qbaseM + 0*p_Np];
+          const dfloat ruM = q[qbaseM + 1*p_Np];
+          const dfloat rvM = q[qbaseM + 2*p_Np];
+          const dfloat rwM = q[qbaseM + 3*p_Np];
+          const dfloat EM  = q[qbaseM + 4*p_Np];
+
+          const dfloat uM = ruM/rM;
+          const dfloat vM = rvM/rM;
+          const dfloat wM = rwM/rM;
+          const dfloat pM = (gamma-1)*(EM-0.5*rM*(uM*uM+vM*vM+wM*wM));
+
+          // Initialize boundary state with internal state
+          dfloat rP  =  rM;
+          dfloat ruP = ruM;
+          dfloat rvP = rvM;
+          dfloat rwP = rwM;
+          dfloat EP  = EM;
+
+          dfloat drrdxP, drrdyP, drrdzP; 
+          dfloat drudxP, drudyP, drudzP; 
+          dfloat drvdxP, drvdyP, drvdzP; 
+          dfloat drwdxP, drwdyP, drwdzP; 
+          dfloat dredxP, dredyP, dredzP; 
+
+         cnsViscousBoundaryConditions3D(bc, gamma, R, CP, CV, mu,
+                                          time, x[idM], y[idM], z[idM], nx, ny, nz,
+                                          rM, ruM, rvM, rwM, EM, 
+                                          &rP, &ruP, &rvP, &rwP, &EP, 
+                                          0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+                                          0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+                                          &drrdxP, &drrdyP,&drrdzP, 
+                                          &drudxP, &drudyP,&drudzP, 
+                                          &drvdxP, &drvdyP,&drvdzP, 
+                                          &drwdxP, &drwdyP,&drwdzP, 
+                                          &dredxP, &dredyP,&dredzP);
+          dfloat uP = ruP/rP; 
+          dfloat vP = rvP/rP; 
+          dfloat wP = rwP/rP; 
+          dfloat pP = (gamma-1)*(EP-0.5*rP*(uP*uP+vP*vP+wP*wP));
+
+          //determine max wavespeed from boundary value
+          const dfloat U = sqrt(uP*uP+vP*vP+wP*wP);
+          const dfloat c = sqrt(gamma*pP/rP);
+
+          const dfloat UP = fabs(U+c);
+          const dfloat UM = fabs(U-c);
+
+          const dfloat Umax = (UP > UM) ? UP : UM;
+
+          s_maxSpeed[n] = (Umax > s_maxSpeed[n]) ? Umax : s_maxSpeed[n];
+        }
+      }
+    }
+
+  // Create a local reduction for this!!!!AK
+   for(int n=0;n<p_maxNodes;++n;@inner(0)){
+    if(n<1){
+      dfloat vmax = s_maxSpeed[0]; 
+      for(int i=1; i<p_maxNodes; i++){
+        vmax = (vmax > s_maxSpeed[n]) ? vmax : s_maxSpeed[n];
+      }
+      Vmax[e] = vmax;  
+    }
+   }
+ }
+}

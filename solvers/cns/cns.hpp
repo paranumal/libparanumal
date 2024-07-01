@@ -154,8 +154,8 @@ public:
 
   // Artificial Viscosity
   dfloat avisAlpha; 
-  memory<dfloat> elmLength; 
-  deviceMemory<dfloat> o_elmLength;
+  memory<dfloat> elmLength, Vmax; 
+  deviceMemory<dfloat> o_elmLength, o_Vmax;
 
 
   memory<dfloat> vertexViscosity, viscosity; 
@@ -168,6 +168,7 @@ public:
   kernel_t detectKernel;
   kernel_t computeViscosityKernel;
   kernel_t projectViscosityKernel;
+  kernel_t maxVelocityKernel;
 
 
   // Artificial viscosity 

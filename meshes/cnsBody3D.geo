@@ -2,7 +2,7 @@
 // AGARD_R = 1, AGARD_O = 2, STANDALONE = 3
 MODEL = 3; 
 
-BBOX  = 1; // SPHERE 
+BBOX  = 3; // SPHERE 
 // BBOX  = 2; // BOX 
 
 // Note that Length = 8.5 x D for AGARD B
@@ -11,26 +11,23 @@ SetFactory("OpenCASCADE");
 LoD = 1.0; 
 xmin = 0.0; ymin = 0.0; zmin = 0.0;
 xmax = 1.0; ymax = 1.0; zmax = 1.0;
+
+
+Printf("Loading model geometry with id = %g", MODEL);
 // AGARD R
 If(MODEL == 1)
   v() = ShapeFromFile("agard_b_1.stp");
-  LoD = 8.5; 
-EndIf
-
-// AGARD 0
-If(MODEL == 2)
-  v() = ShapeFromFile("agard_r.stp");
-EndIf
-
-// body alone fit diameter to 1
-If(MODEL == 3)
-  Printf("Loading model geometry with id = %g", MODEL);
+  LoD = 8.5;
+ElseIf(MODEL==2)
+ v() = ShapeFromFile("agard_r.stp");
+ElseIf(MODEL==3)
   v() = ShapeFromFile("bodyalone.stp");
   Printf("loading is done ");
   LoD  = 12.0; 
   xmin = 0.00; ymin = -1.5; zmin = -1.5;
   xmax = 36.0; ymax =  1.5; zmax =  1.5;
 EndIf
+Printf("Loaded model geometry with id = %g", MODEL);
 
 // // Get the bounding box of the volume:
 // bbox() = BoundingBox Volume{v()};
@@ -38,14 +35,16 @@ EndIf
 // xmax = bbox(3); ymax = bbox(4);zmax = bbox(5);
 // // Report the bounding box
 // For i In {0:#bbox()-1}
-//   Printf("xmin = %g ", xmin);
-//   Printf ("bounding box = %g", bbox(i));
+//   // Printf("xmin = %g ", xmin);
+//   Printf ("bounding box x_%g= %g", i, bbox(i));
 // EndFor
 
 // Find the current center
 xc = 0.5*(xmin + xmax);
 yc = 0.5*(ymin + ymax);
 zc = 0.5*(zmin + zmax);
+
+
 //Set diameter to 1 in scaled geometry
 scale_factor = 1.0/(ymax - ymin); 
 // Scale the volume so that D = 1.0; 
@@ -78,6 +77,12 @@ ElseIf(BBOX == 2)
   zbmin = -15; DZ = 30; 
   Box(2) = {xbmin, ybmin, zbmin, DX, DY, DZ};
   BooleanDifference{ Volume{2}; Delete; }{ Volume{1}; Delete; }
+ElseIf(BBOX==3)
+RI = 5*(xmax - xmin)/2; 
+Cylinder(2) = {-0.5*RI, 0.0, 0.0, 1.25*RI, 0, 0, 5.0, 2*Pi};
+BooleanDifference{ Volume{2}; Delete; }{ Volume{1}; Delete; }
+
+
 EndIf
  
 
@@ -105,13 +110,15 @@ EndFor
 // Printf("Number of farfield surfaces = %g", #outSurf());
 
 // Walls
-Physical Surface("Wall", 12) = walls();
+Physical Surface("Wall", 11) = walls();
 Physical Surface("FarField", 20) = outSurf();
 Physical Volume("Domain", 9) = vol();
 
 
 If(MODEL==3)
-  l0 = 0.2; l1 = 0.5; l2 = 3.0; 
+  l0 = 0.08; 
+  l1 = 0.25; 
+  l2 = 1.0; 
   // l0 = 0.25; l1 = 0.40; l2 = 8.0; 
 
   Field[1] = Distance;
@@ -127,7 +134,7 @@ If(MODEL==3)
   Field[2].DistMax = 2.0;
 
   Field[3] = Cylinder;
-  Field[3].Radius   = 2.0;
+  Field[3].Radius   = 2.5;
   Field[3].VIn      = l1;
   Field[3].VOut     = l2;
   Field[3].XAxis    = 7.0;
@@ -139,11 +146,11 @@ If(MODEL==3)
 
 
   Field[4] = Ball;
-  Field[4].Radius    =  0.75;
+  Field[4].Radius    =  2.0;
   Field[4].Thickness =  0.5;
-  Field[4].VIn       =  0.25*l1;
+  Field[4].VIn       =  l1;
   Field[4].VOut      =  l2;
-  Field[4].XCenter   =  xmin+0.25;
+  Field[4].XCenter   =  xmin+0.75;
   Field[4].YCenter   =  0.0;
   Field[4].ZCenter   =  0.0;
 
@@ -166,8 +173,17 @@ If(MODEL==3)
   Field[5].YCenter   = 0.0;
   Field[5].ZCenter   = 0.0;
 
+  Field[6] = Ball;
+  Field[6].Radius    =  2.0;
+  Field[6].Thickness =  0.5;
+  Field[6].VIn       =  l1;
+  Field[6].VOut      =  l2;
+  Field[6].XCenter   =  xmax-0.75;
+  Field[6].YCenter   =  0.0;
+  Field[6].ZCenter   =  0.0;
+
   Field[7] = Min;
-  Field[7].FieldsList = {2, 3, 4, 5,8};
+  Field[7].FieldsList = {2, 3, 4, 5,6,8};
   Background Field = 7;
 
  Mesh.Algorithm3D = 1; 
@@ -352,4 +368,4 @@ EndIf
 // // // Mesh Visibility
 // Mesh.SurfaceEdges = 1;
 // Mesh.SurfaceFaces = 0;
-// Mesh.VolumeEdges = 0;
+// Mesh.VolumeEdges = 0;//+

@@ -25,7 +25,7 @@ SOFTWARE.
 */
 // ffmpeg -r 20 -f image2 -s 1538x784 -i mach%*.png -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" -vframes 400 -crf 15 -pix_fmt yuv420p test.mp4
 /* ************************************************************************ */
-#define MACH 2.0
+#define MACH 0.8
 /* ************************************************************************ */
 #if MACH==0.1
   #define p_RBAR 1.4

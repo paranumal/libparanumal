@@ -135,11 +135,11 @@ void upwindLaxFriedrichs(const dfloat nx,
 
   const dfloat F1M = rM*uM,             F1P = rP*uP;
   const dfloat F2M = rM*uM*uM + pM,     F2P = rP*uP*uP + pP; 
-  const dfloat F3M = rM*vM*uM,          F3P = rP*vP*uP; 
+  const dfloat F3M = rM*uM*vM,          F3P = rP*uP*vP; 
   const dfloat F4M = uM*(EM + pM),      F4P = uP*(EP + pP); 
 
   const dfloat G1M = rM*vM,             G1P = rP*vP;
-  const dfloat G2M = rM*uM*vM,          G2P = rP*uP*vP; 
+  const dfloat G2M = rM*vM*uM,          G2P = rP*vP*uP; 
   const dfloat G3M = rM*vM*vM + pM,     G3P = rP*vP*vP + pP; 
   const dfloat G4M = vM*(EM + pM),      G4P = vP*(EP + pP); 
 

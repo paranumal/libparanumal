@@ -90,7 +90,7 @@ CUDA
 
 # // Mach number is needed for NONDIM=TRUE
 [MACH NUMBER]
-5.0
+2.0
 #0.816496580927726
 
 # Reynolds number is needed for NONDIM = TRUE
@@ -171,5 +171,5 @@ TRUE
 LAPLACE
 
 [ARTDIFF SCALE FACTOR]
-3
+1
 

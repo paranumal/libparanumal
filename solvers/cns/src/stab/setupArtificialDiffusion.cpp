@@ -31,10 +31,25 @@ void cns_t::applyArtificialDiffusion(deviceMemory<dfloat>& o_Q, deviceMemory<dfl
 // Apply detector which returns an indicator scaled to 0<= s <=1.0
 applyDetect(o_Q, o_gradQ, T); 
 
+maxVelocityKernel(mesh.Nelements,
+                     mesh.o_vgeo,
+                     mesh.o_sgeo,
+                     mesh.o_vmapM,
+                     mesh.o_EToB,
+                     o_pCoeff, 
+                     T,
+                     mesh.o_x,
+                     mesh.o_y,
+                     mesh.o_z,
+                     o_Q,
+                     o_Vmax);
+
+
 computeViscosityKernel(mesh.Nelements*mesh.Nverts, 
                          avisAlpha, 
                          o_qdetect,
                          o_elmLength,
+                         o_Vmax,
                          o_vertexViscosity); 
 
   // 
@@ -52,9 +67,10 @@ void cns_t::setupArtificialDiffusion(){
   
  // artificial viscosity scale factor:Alpha
   settings.getSetting("ARTDIFF SCALE FACTOR", avisAlpha);  
+ 
  // Scale with polynomial order
-  avisAlpha = avisAlpha/( (double) std::pow(mesh.N,mesh.dim)); 
-  // avisAlpha = avisAlpha/( (double) std::pow(mesh.N, 2.0)); 
+  // avisAlpha = avisAlpha/( (double) std::pow(mesh.N,mesh.dim)); 
+  avisAlpha = avisAlpha/( (double) std::pow(mesh.N,1)); 
   
   // Definition of element length might change
   elmLength.malloc(mesh.Nelements); 
@@ -86,6 +102,10 @@ void cns_t::setupArtificialDiffusion(){
   // Allocate Memory for Artificial Viscosity
   viscosity.malloc((mesh.Nelements+mesh.totalHaloPairs)*mesh.Np, 0.0); 
   o_viscosity = platform.malloc<dfloat>(viscosity); 
+
+  // Allocate Memory for Artificial Viscosity
+  Vmax.malloc((mesh.Nelements+mesh.totalHaloPairs), 0.0); 
+  o_Vmax = platform.malloc<dfloat>(Vmax); 
 
   memory<dfloat> V, invV1, r1, s1, t1;
   // Compute projection matrix 
@@ -157,6 +177,10 @@ void cns_t::setupArtificialDiffusion(){
 
   kernelName    = "projectViscosity";
   projectViscosityKernel  = platform.buildKernel(fileName, kernelName, props);
+
+  fileName      = oklStabFilePrefix + "maxVelocity" + suffix + oklFileSuffix;
+  kernelName    = "maxVelocity" + suffix;
+  maxVelocityKernel  = platform.buildKernel(fileName, kernelName, props);
 
   if(cubature){
     // kernels from volume file Add isothermal version as well AK. 

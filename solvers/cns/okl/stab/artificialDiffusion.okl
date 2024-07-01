@@ -1,18 +1,37 @@
+// @kernel void computeViscosity(const dlong N,
+//                                const dfloat alpha,
+//                                @restrict const dfloat *viscActivation, 
+//                                @restrict const dfloat *viscScale, 
+//                                @restrict       dfloat *visc){
+//  for(dlong n=0;n<N;++n;@tile(p_blockSize,@outer,@inner)){
+//   const int e     = int(n/s_Nverts); 
+//   const int vid   = int(n%s_Nverts); 
+//   const dfloat scale = viscScale[e]; // h
+
+//   const dlong id     = e*s_Nverts + vid; 
+//   dfloat ramp        = viscActivation[e]; // f(s)
+//   visc[n]            = alpha*scale*ramp;  // alpha*h/N * f(s)
+//   }
+// }
+
 @kernel void computeViscosity(const dlong N,
                                const dfloat alpha,
                                @restrict const dfloat *viscActivation, 
                                @restrict const dfloat *viscScale, 
+                               @restrict const dfloat *Vmax, 
                                @restrict       dfloat *visc){
  for(dlong n=0;n<N;++n;@tile(p_blockSize,@outer,@inner)){
   const int e     = int(n/s_Nverts); 
   const int vid   = int(n%s_Nverts); 
   const dfloat scale = viscScale[e]; // h
+  const dfloat vmax = Vmax[e]; // h
 
   const dlong id     = e*s_Nverts + vid; 
   dfloat ramp        = viscActivation[e]; // f(s)
-  visc[n]            = alpha*scale*ramp;  // alpha*h/N * f(s)
+  visc[n]            = alpha*scale*vmax*ramp;  // alpha*h/N * f(s)
   }
 }
+
 
 
 @kernel void projectViscosity(const dlong Nelements,

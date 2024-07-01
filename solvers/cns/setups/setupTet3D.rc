@@ -7,8 +7,9 @@ data/cnsUniform3D.h
 #*******************[MESH PROPERTIES]*******************#
 [MESH FILE]
 #BOX
-../../meshes/cnsNACA3Dv2.msh
+#../../meshes/cnsNACA3Dv2.msh
 #../../meshes/cnsBody3D.msh
+../../meshes/cnsBody3Dv2.msh
 #../../meshes/cnsFFS3D.msh
 
 [MESH DIMENSION]
@@ -88,7 +89,7 @@ CUDA
 
 # // Mach number is needed for NONDIM=TRUE
 [MACH NUMBER]
-2.0
+0.8
 #0.816496580927726
 
 # Reynolds number is needed for NONDIM = TRUE
@@ -123,11 +124,11 @@ CONSTANT
 0
 
 [FINAL TIME]
-1.0
+2.0
 
 #*******************[OUTPUT PROPERTIES]*******************#
 [OUTPUT INTERVAL]
-0.01
+0.1
 
 [OUTPUT TO FILE]
 TRUE
@@ -169,5 +170,5 @@ TRUE
 LAPLACE
 
 [ARTDIFF SCALE FACTOR]
-6
+1
 
