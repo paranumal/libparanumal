@@ -28,18 +28,10 @@ SOFTWARE.
 
 void cns_t::Report(dfloat time, int tstep){
 
-  static int outFrame=0;
-  static int forceFrame=0;
+  static int outFrame = 0;
+  static int forceFrame = 0;     
   if(settings.compareSetting("REPORT FORCES","TRUE")){
-
-    if(forceFrame==0){
-      momentCenter.malloc(mesh.dim, 0.0); 
-      std::string stateStr;
-      settings.getSetting("MOMENT CENTER", stateStr);
-      tokenizer(mesh.dim, stateStr, momentCenter,  ',');
-      o_momentCenter = platform.malloc<dfloat>(momentCenter); 
-    }
-    reportForces(time, tstep); 
+    writeForces(time, tstep, forceFrame); 
     forceFrame++; 
   }
 
@@ -57,13 +49,9 @@ void cns_t::Report(dfloat time, int tstep){
   
   if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
 
-    // reportSmoothFields(time, tstep); 
-
    if(stabType!=Stab::NOSTAB){
-    o_qdetect.copyTo(qdetect); 
-    o_viscosity.copyTo(viscosity); 
-      // stab.Apply(o_q, o_gradq, 0.0);
-      // stab.Report(time, tstep);
+      o_qdetect.copyTo(qdetect); 
+      o_viscosity.copyTo(viscosity); 
     }
     
     // copy data back to host
@@ -83,27 +71,13 @@ void cns_t::Report(dfloat time, int tstep){
     std::string name;
     settings.getSetting("OUTPUT FILE NAME", name);
     char fname[BUFSIZ];
-    // {
-    // // sprintf(fname, ".dat");
-    // FILE *fp;
-    // fp = fopen("maxDensity.dat", "a");
-    // dfloat maxr = 1000.0; 
-    // for(int e=0; e<mesh.Nelements; e++){
-    //   for(int n=0; n<mesh.Np; n++){
-    //    maxr = maxr<q[e*Nfields*mesh.Np + n+ 0*mesh.Np] ? maxr: q[e*Nfields*mesh.Np + n+ 0*mesh.Np];
-    //   }
-    // }
-    // fprintf(fp, " %g %g\n", time, maxr);
-    // fclose(fp); 
-    // }
-
     sprintf(fname, "%s_%04d_%04d.vtu", name.c_str(), mesh.rank, outFrame++);
     PlotFields(q, Vort, std::string(fname));
   }
 }
 
 void cns_t::reportSmoothFields(dfloat time, int tstep){
-
+/*
   deviceMemory<dfloat> o_qv = platform.reserve<dfloat>(mesh.Nelements*mesh.Np*Nfields);
   deviceMemory<dfloat> o_qf = platform.reserve<dfloat>(mesh.Nelements*mesh.Np*Nfields);
 
@@ -117,20 +91,62 @@ void cns_t::reportSmoothFields(dfloat time, int tstep){
   reportArrangeLayoutKernel(mesh.Nelements, 1, o_qv, o_qf);
 
   o_qf.copyTo(q);  
+  */
 
 }
 
 
-void cns_t::reportForces(dfloat time, int tstep){
+void cns_t::writeForces(dfloat time, int tstep, int frame){
 
   // Write out the integrated pressure and viscous forces
   // Note that this is not the most efficient way but we can use the kernels
-  // Viscous and pressure forces are seperated
   dlong Nentries = 0; 
   // Forces and moments
-  Nentries = mesh.dim==2 ? mesh.Nelements*mesh.Np*(mesh.dim*mesh.dim+1):mesh.Nelements*mesh.Np*(mesh.dim*mesh.dim+mesh.dim); 
+  Nentries = mesh.dim==2 ? mesh.Nelements*mesh.Np*(mesh.dim*mesh.dim+1):
+                           mesh.Nelements*mesh.Np*(mesh.dim*mesh.dim+mesh.dim); 
+  
+  // Compute all forces on all boundaries
   deviceMemory<dfloat> o_F     = platform.reserve<dfloat>(Nentries);
   deviceMemory<dfloat> o_gradq = platform.reserve<dfloat>(mesh.Nelements*mesh.Np*mesh.dim*mesh.dim);
+
+  if(mesh.dim==2 && mesh.rank==0){
+    printf("----------------------------------------------------------------------\n"); 
+    if(reportComponent){
+       printf("viscous_x - viscous_y - pressure_x - pressure_y - moment_z \n"); 
+    }else{
+       printf("force_x - force_y - moment_z \n"); 
+    }
+  }else if(mesh.dim==3 && mesh.rank==0){
+    printf("----------------------------------------------------------------------\n"); 
+    if(reportComponent){
+       printf("viscous_x-viscous_y-viscous_z-pressure_x-pressure_y-pressure_z-moment_x-moment_y-moment_z\n"); 
+    }else{
+       printf("force_x - force_y - force_z - moment_x - moment_y - moment_z\n"); 
+    }
+  }
+
+  // output field files
+  std::string name;
+  settings.getSetting("OUTPUT FILE NAME", name);
+  name = name + "analysis.dat";
+  // Open file
+  FILE *fp; 
+  fp = fopen(name.c_str(), "a");
+  if(frame==0 && mesh.rank==0){
+    if(reportComponent){
+      if(mesh.dim==2){
+       fprintf(fp, "time\tgroupID\tviscous_x\tviscous_y\tpressure_x\tpressure_y\tmoment_z\n"); 
+      }else{
+       fprintf(fp, "time\tgroupID\tviscous_x\tviscous_y\tviscous_z\tpressure_x\tpressure_y\tpressure_z\tmoment_x\tmoment_y\tmoment_z\n"); 
+      }
+    }else{
+      if(mesh.dim==2){
+       fprintf(fp, "time\tgroupID\tforce_x\tforce_y\tmoment_z\n"); 
+      }else{
+       fprintf(fp, "time\tgroupID\tforce_x\tforce_y\tforce_z\tmoment_x\tmoment_y\tmoment_z\n"); 
+      }
+    }
+  }
 
   // compute volume contributions to gradients
   forcesVolumeKernel(mesh.Nelements,
@@ -139,40 +155,42 @@ void cns_t::reportForces(dfloat time, int tstep){
                      o_q,
                      o_gradq);
 
+  // Write out every force/moment components for every report group 
+  for(int grp =0; grp<NreportGroups; grp++){
+    // compute volume contributions to gradients
+    forcesSurfaceKernel(mesh.Nelements,
+                       grp, 
+                       mesh.o_sgeo,
+                       mesh.o_sM,
+                       mesh.o_vmapM,
+                       o_EToG,
+                       o_reportGroups,
+                       mesh.o_x,
+                       mesh.o_y,
+                       mesh.o_z,
+                       o_momentCenter, 
+                       o_pCoeff,
+                       o_q,
+                       o_gradq,
+                       o_F);
 
-  // compute volume contributions to gradients
-  forcesSurfaceKernel(mesh.Nelements,
-                   mesh.o_sgeo,
-                   mesh.o_sM,
-                   mesh.o_vmapM,
-                   mesh.o_EToB,
-                   mesh.o_x,
-                   mesh.o_y,
-                   mesh.o_z,
-                   o_momentCenter, 
-                   o_pCoeff,
-                   o_q,
-                   o_gradq,
-                   o_F);
-  // output field files
-  std::string name;
-  settings.getSetting("OUTPUT FILE NAME", name);
-  name = name + "_forces.dat";
-  // Open file
-  FILE *fp; 
-  fp = fopen(name.c_str(), "a");
 
-  const dlong shift = mesh.Nelements*mesh.Np; 
-  if(mesh.dim==2){
-    const dfloat vFx = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+0*shift , mesh.comm); 
-    const dfloat vFy = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+1*shift , mesh.comm); 
-    const dfloat pFx = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+2*shift , mesh.comm); 
-    const dfloat pFy = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+3*shift , mesh.comm);
-    const dfloat Mz  = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+4*shift , mesh.comm);
-    if(mesh.rank==0){
-      printf("forces: %.4e %.4e %.4e %.4e %.4e\n", vFx, vFy, pFx, pFy, Mz);
-      fprintf(fp,"%.6e %.6e %.6e %.6e %.6e %.6e\n", time, vFx, vFy, pFx, pFy, Mz);
-    } 
+     const dlong shift = mesh.Nelements*mesh.Np; 
+    if(mesh.dim==2){
+      const dfloat vFx = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+0*shift , mesh.comm); 
+      const dfloat vFy = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+1*shift , mesh.comm); 
+      const dfloat pFx = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+2*shift , mesh.comm); 
+      const dfloat pFy = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+3*shift , mesh.comm);
+      const dfloat Mz  = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+4*shift , mesh.comm);
+      if(mesh.rank==0){
+        if(reportComponent){
+          printf("on group %d : %.2e %.2e %.2e %.2e %.2e\n", grp, vFx, vFy, pFx, pFy, Mz);
+          fprintf(fp,"%.6e %d %.6e %.6e %.6e %.6e %.6e\n", time, grp, vFx, vFy, pFx, pFy, Mz);
+        }else{
+          printf("on group %d : %.2e %.2e %.2e\n", grp, vFx+pFx, vFy + pFy, Mz);
+          fprintf(fp,"%.6e %d %.6e %.6e %.6e\n", time, grp, vFx+pFx, vFy+pFy, Mz);
+        }
+      } 
   }else{
     const dfloat vFx = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+0*shift , mesh.comm); 
     const dfloat vFy = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+1*shift , mesh.comm); 
@@ -186,12 +204,22 @@ void cns_t::reportForces(dfloat time, int tstep){
     const dfloat My = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+7*shift , mesh.comm); 
     const dfloat Mz = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+8*shift , mesh.comm); 
     if(mesh.rank==0){
-      printf("forces: %.4e %.4e %.4e %.4e %.4e %.4e %.4e %.4e %.4e %.4e\n", time, vFx, vFy, vFz, pFx, pFy, pFz, Mx, My, Mz);
-      fprintf(fp,"%.6e %.6e %.6e %.6e %.6e %.6e %.6e %.6e %.6e %.6e\n", time, vFx, vFy, vFz, pFx, pFy, pFz, Mx, My, Mz);
-
+      if(reportComponent){
+          printf("on group %d : %.2e %.2e %.2e %.2e %.2e %.2e %.2e %.2e %.2e\n", grp,  vFx, vFy, vFz, pFx, pFy, pFz, Mx, My, Mz);
+          fprintf(fp, "%.6e %d %.2e %.2e %.2e %.2e %.2e %.2e %.2e %.2e %.2e\n", time, grp,  vFx, vFy, vFz, pFx, pFy, pFz, Mx, My, Mz);
+        }else{
+          printf("on group %d : %.2e %.2e %.2e %.2e %.2e %.2e\n", grp, vFx+pFx, vFy+pFy, vFz+pFz, Mx, My, Mz);
+          fprintf(fp, "%.6e %d %.2e %.2e %.2e %.2e %.2e %.2e\n", time, grp, vFx+pFx, vFy+pFy, vFz+pFz, Mx, My, Mz);
+      }
     } 
+  }
 
   }
-  
-  fclose(fp); 
+
+  if(mesh.rank==0){
+    printf("----------------------------------------------------------------------\n");     
+  }
+
+    // fprintf(fp, "\n"); 
+    fclose(fp); 
 }

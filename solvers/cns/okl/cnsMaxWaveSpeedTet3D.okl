@@ -25,11 +25,13 @@ SOFTWARE.
 */
 
 @kernel void cnsMaxWaveSpeedTet3D(const dlong Nelements,
+                                  int BCStateID, 
                                   @restrict const  dfloat *  vgeo,
                                   @restrict const  dfloat *  sgeo,
                                   @restrict const  dlong  *  vmapM,
                                   @restrict const  int    *  EToB,
-                                  @restrict const  dfloat *  pCoeff,                                           
+                                  @restrict const  dfloat *  pCoeff,  
+                                  @restrict const  dfloat *  flowStates,                                         
                                             const  dfloat time,
                                   @restrict const  dfloat *  x,
                                   @restrict const  dfloat *  y,
@@ -124,8 +126,16 @@ SOFTWARE.
           dfloat drwdxP, drwdyP, drwdzP; 
           dfloat dredxP, dredyP, dredzP; 
 
-         cnsViscousBoundaryConditions3D(bc, gamma, R, CP, CV, mu,
-                                          time, x[idM], y[idM], z[idM], nx, ny, nz,
+          const dfloat RBAR = flowStates[BCStateID*p_NsP + 0]; 
+          const dfloat UBAR = flowStates[BCStateID*p_NsP + 1]; 
+          const dfloat VBAR = flowStates[BCStateID*p_NsP + 2]; 
+          const dfloat WBAR = flowStates[BCStateID*p_NsP + 3]; 
+          const dfloat PBAR = flowStates[BCStateID*p_NsP + 4]; 
+          const dfloat TBAR = flowStates[BCStateID*p_NsP + 5]; 
+
+         cnsViscousBoundaryConditions3D(bc, gamma, R, CP, CV, mu,time, 
+                                          RBAR, UBAR, VBAR, WBAR, PBAR, TBAR, 
+                                          x[idM], y[idM], z[idM], nx, ny, nz,
                                           rM, ruM, rvM, rwM, EM, 
                                           &rP, &ruP, &rvP, &rwP, &EP, 
                                           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 

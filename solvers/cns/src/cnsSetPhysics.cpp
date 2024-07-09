@@ -26,31 +26,10 @@ SOFTWARE.
 
 #include "cns.hpp"
 
-
-void cns_t::tokenizer(const int N, std::string s, memory<dfloat> & state, char del)
-{
-    std::stringstream ss(s);
-    std::string word;
-    int nref = 0; 
-    while (!ss.eof()) {
-        getline(ss, word, del);
-        state[nref] = std::stod(word); 
-        nref ++; 
-    }
-    LIBP_ABORT("correct the number of inputs in tokenizer", nref!= N);
-}
-
-
 void cns_t::setupPhysics(){
  
   // Set isentropic exponent and related info
   settings.getSetting("GAMMA", gamma);
-  // Read Referenece State
-  std::string stateStr;
-  const int NrefState = 6;
-  refState.malloc(NrefState, 0.0); 
-  settings.getSetting("REFERENCE STATE", stateStr);
-  tokenizer(NrefState, stateStr,  refState,  ',');
 
   // Set specific gas constant
   if(settings.compareSetting("NONDIMENSIONAL EQUATIONS", "TRUE")){
@@ -131,6 +110,15 @@ void cns_t::setupPhysics(){
     viscType = 0; 
   }
 
+  // Read Reference State and number of states
+  setFlowStates(); 
+  // Read Reference State and number of states
+  setBoundaryMaps(); 
+  // Read force and moment info and prepare for output
+  setReport(); 
+  // move physical model to device
+  o_pCoeff = platform.malloc<dfloat>(pCoeff);   
+  
   // Define physical model on Device 
   props["defines/" "p_viscType"]= viscType;
   props["defines/" "p_MUID"]    = MUID;
@@ -147,20 +135,5 @@ void cns_t::setupPhysics(){
   props["defines/" "p_CSID"]    = CSID;
   props["defines/" "p_BTID"]    = BTID;
   props["defines/" "p_TAID"]    = TAID;
-
-  // Define reference state on device
-  // props["defines/" "p_RBAR"]    = refState[0];
-  // props["defines/" "p_UBAR"]    = refState[1];
-  // props["defines/" "p_VBAR"]    = refState[2];
-  // if(mesh.dim==3){
-  //   props["defines/" "p_WBAR"]    = refState[3];
-  //   props["defines/" "p_PBAR"]    = refState[4];
-
-  // }else{
-  //   props["defines/" "p_PBAR"]    = refState[3];    
-  // }
- 
-  // move physical model to device
-  o_pCoeff = platform.malloc<dfloat>(pCoeff);   
 
 }

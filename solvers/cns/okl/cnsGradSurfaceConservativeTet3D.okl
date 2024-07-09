@@ -25,6 +25,7 @@ SOFTWARE.
 */
 
 @kernel void cnsGradSurfaceConservativeTet3D(const dlong Nelements,
+                                               const int BCStateID, 
                                              @restrict const  dfloat *  sgeo,
                                              @restrict const  dfloat *  LIFT,
                                              @restrict const  dlong  *  vmapM,
@@ -34,6 +35,7 @@ SOFTWARE.
                                              @restrict const  dfloat *  y,
                                              @restrict const  dfloat *  z,
                                              @restrict const  dfloat *  pCoeff,
+                                             @restrict const  dfloat *  flowStates,
                                                        const  dfloat time,
                                              @restrict const  dfloat *  q,
                                              @restrict        dfloat *  gradq){
@@ -110,6 +112,12 @@ SOFTWARE.
             // apply boundary condition given in primitive variables
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0) {
+               const dfloat RBAR = flowStates[BCStateID*p_NsP + 0]; 
+               const dfloat UBAR = flowStates[BCStateID*p_NsP + 1]; 
+               const dfloat VBAR = flowStates[BCStateID*p_NsP + 2]; 
+               const dfloat WBAR = flowStates[BCStateID*p_NsP + 3]; 
+               const dfloat PBAR = flowStates[BCStateID*p_NsP + 4]; 
+               const dfloat TBAR = flowStates[BCStateID*p_NsP + 5]; 
               // fake derivates
                 dfloat drrdxP = 0.0, drrdyP =0.0, drrdzP =0.0; 
                 dfloat drudxP = 0.0, drudyP =0.0, drudzP =0.0; 
@@ -117,6 +125,7 @@ SOFTWARE.
                 dfloat drwdxP = 0.0, drwdyP =0.0, drwdzP =0.0; 
                 dfloat dredxP = 0.0, dredyP =0.0, dredzP =0.0; 
                 cnsViscousBoundaryConditions3D(bc, gamma, R, CP, CV, mu, time, 
+                                 RBAR, UBAR, VBAR, WBAR, PBAR, TBAR, 
                                  x[idM], y[idM], z[idM], 
                                  nx, ny, nz,
                                  rrM, ruM, rvM, rwM, reM, 
@@ -219,6 +228,7 @@ SOFTWARE.
 
 
 @kernel void cnsGradCubatureSurfaceConservativeTet3D(const dlong Nelements,
+                                                   int BCStateID, 
                                                   @restrict const  dfloat *  vgeo,
                                                   @restrict const  dfloat *  sgeo,
                                                    @restrict const  dlong  *  vmapM,
@@ -230,6 +240,7 @@ SOFTWARE.
                                                    @restrict const  dfloat *  inty,
                                                    @restrict const  dfloat *  intz,
                                                    @restrict const  dfloat *  pCoeff,
+                                                    @restrict const  dfloat *  flowStates,
                                                              const  dfloat time,
                                                    @restrict const  dfloat *  q,
                                                    @restrict        dfloat *  gradq){
@@ -310,7 +321,13 @@ SOFTWARE.
           // apply boundary condition given in primitive variables
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0) {
-               const dlong intId = n+e*p_Nfaces*p_intNfp;
+                const dlong intId = n+e*p_Nfaces*p_intNfp;
+                const dfloat RBAR = flowStates[BCStateID*p_NsP + 0]; 
+                const dfloat UBAR = flowStates[BCStateID*p_NsP + 1]; 
+                const dfloat VBAR = flowStates[BCStateID*p_NsP + 2]; 
+                const dfloat WBAR = flowStates[BCStateID*p_NsP + 3]; 
+                const dfloat PBAR = flowStates[BCStateID*p_NsP + 4]; 
+                const dfloat TBAR = flowStates[BCStateID*p_NsP + 5]; 
               // fake derivates
                 dfloat drrdxP = 0.0, drrdyP =0.0, drrdzP =0.0; 
                 dfloat drudxP = 0.0, drudyP =0.0, drudzP =0.0; 
@@ -318,6 +335,7 @@ SOFTWARE.
                 dfloat drwdxP = 0.0, drwdyP =0.0, drwdzP =0.0; 
                 dfloat dredxP = 0.0, dredyP =0.0, dredzP =0.0; 
                 cnsViscousBoundaryConditions3D(bc, gamma, R, CP, CV, mu, time, 
+                                 RBAR, UBAR, VBAR, WBAR, PBAR, TBAR, 
                                  intx[intId], inty[intId], intz[intId], 
                                  nx, ny, nz, 
                                  rrM, ruM, rvM, rwM, reM, 

@@ -24,6 +24,7 @@ SOFTWARE.
 
 */
 @kernel void cnsGradSurfaceConservativeTri2D(const dlong Nelements,
+                                             const int BCStateID, 
                                              @restrict const  dfloat *  sgeo,
                                              @restrict const  dfloat *  LIFT,
                                              @restrict const  dlong  *  vmapM,
@@ -33,6 +34,7 @@ SOFTWARE.
                                              @restrict const  dfloat *  y,
                                              @restrict const  dfloat *  z,
                                              @restrict const  dfloat *  pCoeff,
+                                             @restrict const  dfloat *  flowStates,
                                                        const  dfloat time,
                                              @restrict const  dfloat *  q,
                                              @restrict        dfloat *  gradq){
@@ -95,13 +97,20 @@ SOFTWARE.
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0) {
 
+              const dfloat RBAR = flowStates[BCStateID*p_NsP + 0]; 
+              const dfloat UBAR = flowStates[BCStateID*p_NsP + 1]; 
+              const dfloat VBAR = flowStates[BCStateID*p_NsP + 2]; 
+              const dfloat PBAR = flowStates[BCStateID*p_NsP + 3]; 
+              const dfloat TBAR = flowStates[BCStateID*p_NsP + 4]; 
+
               // fake derivates
               dfloat drrdxP = 0.0, drrdyP =0.0; 
               dfloat drudxP = 0.0, drudyP =0.0; 
               dfloat drvdxP = 0.0, drvdyP =0.0; 
               dfloat dredxP = 0.0, dredyP =0.0; 
               cnsViscousBoundaryConditions2D(bc, gamma, R, CP, CV, mu, time, 
-                                            x[idM], y[idM], nx, ny, 
+                                            RBAR, UBAR, VBAR, PBAR, TBAR, 
+                                             x[idM], y[idM], nx, ny, 
                                              rrM, ruM, rvM, reM, &rrP, &ruP, &rvP, &reP, 
                                              0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                                              &drrdxP, &drrdyP, &drudxP, &drudyP, 
@@ -214,6 +223,7 @@ SOFTWARE.
 }
 
 @kernel void cnsGradCubatureSurfaceConservativeTri2D(const dlong Nelements,
+                                                  int BCStateID, 
                                                   @restrict const  dfloat *  vgeo,
                                                   @restrict const  dfloat *  sgeo,
                                                    @restrict const  dlong  *  vmapM,
@@ -225,6 +235,7 @@ SOFTWARE.
                                                    @restrict const  dfloat *  inty,
                                                    @restrict const  dfloat *  intz,
                                                    @restrict const  dfloat *  pCoeff,
+                                                   @restrict const  dfloat *  flowStates,
                                                              const  dfloat time,
                                                    @restrict const  dfloat *  q,
                                                    @restrict        dfloat *  gradq){
@@ -304,18 +315,24 @@ SOFTWARE.
          // apply boundary condition given in primitive variables
           const int bc = EToB[face+p_Nfaces*e];
           if(bc>0) {
-            const dlong intId = n+e*p_Nfaces*p_intNfp;
-            // fake derivates
-            dfloat drrdxP = 0.0, drrdyP =0.0; 
-            dfloat drudxP = 0.0, drudyP =0.0; 
-            dfloat drvdxP = 0.0, drvdyP =0.0; 
-            dfloat dredxP = 0.0, dredyP =0.0; 
-            cnsViscousBoundaryConditions2D(bc, gamma, R, CP, CV, mu, time, 
-                                           intx[intId], inty[intId], nx, ny, 
-                                           rrM, ruM, rvM, reM, &rrP, &ruP, &rvP, &reP, 
-                                           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                                           &drrdxP, &drrdyP, &drudxP, &drudyP, 
-                                           &drvdxP, &drvdyP, &dredxP, &dredyP);
+              const dlong intId = n+e*p_Nfaces*p_intNfp;
+              const dfloat RBAR = flowStates[BCStateID*p_NsP + 0]; 
+              const dfloat UBAR = flowStates[BCStateID*p_NsP + 1]; 
+              const dfloat VBAR = flowStates[BCStateID*p_NsP + 2]; 
+              const dfloat PBAR = flowStates[BCStateID*p_NsP + 3]; 
+              const dfloat TBAR = flowStates[BCStateID*p_NsP + 4]; 
+              // fake derivates
+              dfloat drrdxP = 0.0, drrdyP =0.0; 
+              dfloat drudxP = 0.0, drudyP =0.0; 
+              dfloat drvdxP = 0.0, drvdyP =0.0; 
+              dfloat dredxP = 0.0, dredyP =0.0; 
+              cnsViscousBoundaryConditions2D(bc, gamma, R, CP, CV, mu, time, 
+                                         RBAR, UBAR, VBAR, PBAR, TBAR, 
+                                         intx[intId], inty[intId], nx, ny, 
+                                         rrM, ruM, rvM, reM, &rrP, &ruP, &rvP, &reP, 
+                                         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                         &drrdxP, &drrdyP, &drudxP, &drudyP, 
+                                         &drvdxP, &drvdyP, &dredxP, &dredyP);
           }
 
             const dfloat sc = invJ*sJ;

@@ -31,11 +31,13 @@ dfloat cns_t::MaxWaveSpeed(deviceMemory<dfloat>& o_Q, const dfloat T){
   deviceMemory<dfloat> o_maxSpeed = platform.reserve<dfloat>(mesh.Nelements);
 
   maxWaveSpeedKernel(mesh.Nelements,
+                    BCStateID,
                      mesh.o_vgeo,
                      mesh.o_sgeo,
                      mesh.o_vmapM,
                      mesh.o_EToB,
                      o_pCoeff, 
+                     o_flowStates,
                      T,
                      mesh.o_x,
                      mesh.o_y,
@@ -96,6 +98,7 @@ void cns_t::rhsArtDiff(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, c
 
   if (cubature) {
     cubatureGradSurfaceKernel(mesh.Nelements,
+                            BCStateID, 
                             mesh.o_vgeo,
                             mesh.o_cubsgeo,
                             mesh.o_vmapM,
@@ -107,6 +110,7 @@ void cns_t::rhsArtDiff(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, c
                             mesh.o_inty,
                             mesh.o_intz,
                             o_pCoeff, 
+                            o_flowStates, 
                             T,
                             o_Q,
                             o_gradq);
@@ -173,6 +177,7 @@ void cns_t::rhsArtDiff(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, c
   if (cubature) {
      // dfloat hmin = mesh.MinCharacteristicLength();
      cubatureSurfaceKernel(mesh.Nelements,
+                            BCStateID, 
                             mesh.o_vgeo,
                             mesh.o_cubsgeo,
                             mesh.o_vmapM,
@@ -184,6 +189,7 @@ void cns_t::rhsArtDiff(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, c
                             mesh.o_inty,
                             mesh.o_intz,
                             o_pCoeff, 
+                            o_flowStates, 
                             T,
                             o_viscosity,
                             o_Q,

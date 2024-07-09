@@ -85,10 +85,12 @@ SOFTWARE.
 
 
 @kernel void cnsForcesSurfaceTri2D(const dlong Nelements,
+                                  const int grpNo, 
                                   @restrict const  dfloat *  sgeo,
                                   @restrict const  dfloat *  SM,
                                   @restrict const  dlong  *  vmapM,
-                                  @restrict const  int    *  EToB,
+                                  @restrict const  int    *  EToG,
+                                  @restrict const  int    *  reportGroups,
                                   @restrict const  dfloat *  x,
                                   @restrict const  dfloat *  y,
                                   @restrict const  dfloat *  z,
@@ -112,8 +114,26 @@ SOFTWARE.
             // apply boundary condition
             // find face that owns this node
             const int face = n/p_Nfp;
-            const int bc = EToB[face+p_Nfaces*e];
+            const int geoId = EToG[face+p_Nfaces*e];
 
+            int computeForces = 0; 
+
+            if(geoId){
+              for(int id =0; id<p_NrIDs; id++){
+                int geometricID  = reportGroups[id*2 + 0]; 
+                int groupID      = reportGroups[id*2 + 1]; 
+                computeForces = (groupID==grpNo && geometricID==geoId) ?
+                                1: computeForces; 
+              }
+            }
+
+            s_vFx[n] = 0.0; 
+            s_vFy[n] = 0.0;
+            s_pFx[n] = 0.0; 
+            s_pFy[n] = 0.0; 
+            s_Mz[n]  = 0.0; 
+
+            if(computeForces){
             const dfloat gamma = pCoeff[p_GMID]; // gamma
             const dfloat R     = pCoeff[p_RRID]; // gas constant
                   dfloat mu    = pCoeff[p_MUID]; // bulk viscosity
@@ -171,11 +191,12 @@ SOFTWARE.
             const dfloat dxf   = x[idM] - XC[0]; 
             const dfloat dyf   = y[idM] - XC[1];
             
-            s_vFx[n] = (bc==11 || bc==12) ? -sJ*(nx*T11 + ny*T12): 0.0; 
-            s_vFy[n] = (bc==11 || bc==12) ? -sJ*(nx*T12 + ny*T22): 0.0; 
-            s_pFx[n] = (bc==11 || bc==12) ?  sJ*pM*nx: 0.0; 
-            s_pFy[n] = (bc==11 || bc==12) ?  sJ*pM*ny: 0.0; 
-            s_Mz[n]  = (bc==11 || bc==12) ?  sJ*(fx*dyf - fy*dxf) : 0.0; 
+            s_vFx[n] = -sJ*(nx*T11 + ny*T12); 
+            s_vFy[n] = -sJ*(nx*T12 + ny*T22); 
+            s_pFx[n] =  sJ*pM*nx;
+            s_pFy[n] =  sJ*pM*ny;
+            s_Mz[n]  =  sJ*(fx*dyf - fy*dxf);
+          }
         }
       }
 

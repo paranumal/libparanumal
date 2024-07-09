@@ -107,8 +107,8 @@ Point(100)= { 3.00000000000000,0.500000000000000,	0.0,fac*lc};
 
 
 // Inner region
-Point(101) = {12.0,0.5,	0, lc};
-Point(102) = {12.0,0.0,	0, lc};
+Point(101) = {8.5,0.5,	0, lc};
+Point(102) = {8.5,0.0,	0, lc};
 
 Spline(1) = { 1 ... 100};
 Spline(2) = { 100 ...101};
@@ -153,94 +153,29 @@ Line(17) = {806, 802};
 Curve Loop(3) = {17, -14, 4, 8, 9, 15};
 Plane Surface(2) = {3};
 
-//+
-Extrude {{1, 0, 0}, {0, 0, 0}, 2*Pi/3} {
-  Surface{1}; Surface{2}; Recombine;
-}
+// Redifine mesh size for nurbs control points
+MeshSize {1 ... 100, 101, 102, 802} = fac*lc;
+MeshSize {801, 804} = 2*lc;
+
+// NO MIRROR
+// Physical Line("Wall1",11)     = {1, 2, 3};
+// Physical Line("Farfield",20) = {15, 9, 8, 7};
+// Physical Line("Wall2",13) = {17, 5, 6};
+// Physical Surface("Domain", 9) = {1, 2};
+// Coherence;
+
+
+
+// Mirror geometriy
 
 //+
-Extrude {{1, 0, 0}, {0, 0, 0}, -2*Pi/3} {
-  Surface{1}; Surface{2}; Recombine;
+Symmetry {0, 1, 0, 0} {
+  Duplicata {Surface{1}; Surface{2}; }
 }
 
-
-//+
-Extrude {{1, 0, 0}, {0, 0, 0}, 2*Pi/3} {
-  Surface{49}; Surface{76}; Recombine;
-}
-
+// MIRROR
+Physical Line("Wall1",11)     = {1, 2, 3, 20, 21, 22};
+Physical Line("Farfield",20) = {15, 9, 8, 7, 33, 32, 31, 24};
+Physical Surface("Domain", 9) = {1, 2, 18, 27};
 Coherence;
-// Isothermall Wall
-Physical Surface("WALL_NOSE",1)     = {30, 89, 148};
-Physical Surface("WALL_BODY",2)     = {34,93,152,37,96,155};
-Physical Surface("Farfield_1",3)    = {185, 68, 127, 41,100,159};
-Physical Surface("Farfield_2",4)    = {192, 134, 75, 72, 131, 189};
-Physical Volume("Domain", 9) = {1,2,3,4,5,6};
-Coherence;//+
 
-
-Field[1] = Distance;
-Field[1].PointsList = {1 ... 10};
-Field[1].CurvesList = {1, 2, 3};
-
-Field[2] = Threshold;
-Field[2].InField = 1;
-Field[2].SizeMin = lc;
-Field[2].SizeMax = lc3;
-Field[2].DistMin = 1.0;
-Field[2].DistMax = 3.0;
-
-
-Field[3] = Ball;
-Field[3].Radius    =  1.5;
-Field[3].Thickness =  1.0;
-Field[3].VIn       =  lc;
-Field[3].VOut      =  lc3;
-Field[3].XCenter   =  1.0;
-Field[3].YCenter   =  0.0;
-Field[3].ZCenter   =  0.0;
-
-
-Field[4] = Ball;
-Field[4].Radius    =  1.5;
-Field[4].Thickness =  1.0;
-Field[4].VIn       =  lc;
-Field[4].VOut      =  lc3;
-Field[4].XCenter   =  12.0;
-Field[4].YCenter   =  0.0;
-Field[4].ZCenter   =  0.0;
-
-Field[5] = Ball;
-Field[5].Radius    =  0.5;
-Field[5].Thickness =  1.0;
-Field[5].VIn       =  0.5*lc;
-Field[5].VOut      =  lc3;
-Field[5].XCenter   =  0.25;
-Field[5].YCenter   =  0.0;
-Field[5].ZCenter   =  0.0;
-
-Field[6] = Ball;
-Field[6].Radius    =  0.75;
-Field[6].Thickness =  1.0;
-Field[6].VIn       =  0.5*lc;
-Field[6].VOut      =  lc3;
-Field[6].XCenter   =  12.25;
-Field[6].YCenter   =  0.0;
-Field[6].ZCenter   =  0.0;
-
-
-// Field[3] = Cylinder;
-// Field[3].Radius   = 2.0;
-// Field[3].VIn      = lc;
-// Field[3].VOut     = lc3;
-// Field[3].XAxis    = 1.0;
-// Field[3].YAxis    = 0.0;
-// Field[3].ZAxis    = 0.0;
-// Field[3].XCenter  = 3.0;
-// Field[3].YCenter  = 0.0;
-// Field[3].ZCenter  = 0.0;
-
-
-Field[7] = Min;
-Field[7].FieldsList = {2,3,4,5, 6};
-Background Field = 7;

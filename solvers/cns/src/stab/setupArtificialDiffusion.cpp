@@ -32,11 +32,13 @@ void cns_t::applyArtificialDiffusion(deviceMemory<dfloat>& o_Q, deviceMemory<dfl
 applyDetect(o_Q, o_gradQ, T); 
 
 maxVelocityKernel(mesh.Nelements,
+                    BCStateID, 
                      mesh.o_vgeo,
                      mesh.o_sgeo,
                      mesh.o_vmapM,
                      mesh.o_EToB,
                      o_pCoeff, 
+                     o_flowStates, 
                      T,
                      mesh.o_x,
                      mesh.o_y,

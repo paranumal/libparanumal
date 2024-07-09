@@ -70,6 +70,8 @@ public:
   int Nfields;
   int Ngrads;
 
+ 
+
   dfloat Re, Ma, Pr;
   dfloat mu, cp, cv, R, kappa, gamma;
   // dfloat gamma, igamma, gammaM1, igammaM1, gammaP1, igammaP1;
@@ -80,14 +82,30 @@ public:
   int Nph; // number of physical parameters 
   int MUID, GMID, RRID, PRID, CPID; 
   int CVID, KAID, M2ID, BTID, TAID; 
-  int EXID, TRID, TSID, CSID; 
+  int EXID, TRID, TSID, CSID;  
+
+   // Number of reference points
+  int NstatePoints, NstateSets, NgeoIDs;  
+  int ICStateID, BCStateID;  
+  // Physical coefficients
+  memory<dfloat> flowStates; 
+  deviceMemory<dfloat> o_flowStates;
 
   // Physical coefficients
-  memory<dfloat> refState; 
-
+  memory<dfloat> GToB; 
+  memory<int>   EToG;  
+  deviceMemory<int> o_EToG; 
+    
   // moment center
+  int reportForces, reportMoments; 
+  int reportComponent, NreportGroups, NreportIDs; 
   memory<dfloat> momentCenter; 
   deviceMemory<dfloat> o_momentCenter;
+  memory<int>  reportGroups;      
+  deviceMemory<int>  o_reportGroups;  
+
+  
+
 
   // Physical coefficients
   memory<dfloat> pCoeff; 
@@ -192,9 +210,10 @@ public:
   // Set reference values, thermodynamics, nondimensional values
   void setupPhysics();
 
-  void tokenizer(const int N, std::string s, memory<dfloat> & state, char delimiter);
+  // void tokenizer(const int N, std::string s, memory<dfloat> & state, char delimiter);
+  // template<typename T>
   
-  void reportForces(dfloat time, int tstep);
+  void writeForces(dfloat time, int tstep, int frame);
   void rhsf(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
 
   
@@ -217,15 +236,16 @@ public:
   void setupLimiter();
   void setupNoStab();
   
-
-
   void Report(dfloat time, int tstep) override;
 
   void PlotFields(memory<dfloat> Q, memory<dfloat> V, std::string fileName);
 
   dfloat MaxWaveSpeed(deviceMemory<dfloat>& o_Q, const dfloat T);
 
-
+  // Utilities
+  void setFlowStates();
+  void setBoundaryMaps();
+  void setReport();
 
 dfloat ElementViscosityScaleTri2D(dlong e); 
 dfloat ElementViscosityScaleQuad2D(dlong e); 

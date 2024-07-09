@@ -1,29 +1,39 @@
-[FORMAT]
-2.0
-
-[DATA FILE]
-#data/cnsShear2D.h
-#data/cnsGaussian2D.h
-#data/cnsUniform2Dv2.h
-data/cnsUniform2D.h
-#*******************[MESH PROPERTIES]*******************#
-[MESH FILE]
-#BOX
 #../../meshes/cnsBox2D.msh
 #../../meshes/cnsShear2D_2.msh
 #../../meshes/cnsNACA2D_LD.msh
 #../../meshes/cnsSquare2D.msh
 #../../meshes/cnsNACA2D.msh
-../../meshes/cnsNACAFlexi2D.msh
 #../../meshes/cnsNACA2D_Symmetry.msh
 #../../meshes/cnsGaussTri2D.msh
+#../../meshes/cnsBody2Dv2.msh
+#../../meshes/cnsBody2D.msh
+#-------------------------------------------------------------#
+
+
+
+
+#-------------------------------------------------------------#
+[DATA FILE]
+#data/cnsShear2D.h
+#data/cnsGaussian2D.h
+#data/cnsUniform2Dv2.h
+data/cnsUniform2D.h
+#-------------------[MESH PROPERTIES]-----------------------#
+[MESH FILE]
+#BOX
+../../meshes/cnsNACAFlexi2D.msh
+
+[FORMAT]
+2.0
 
 [MESH DIMENSION]
 2
 
-[ELEMENT TYPE] # number of edges
+# number of edges
+[ELEMENT TYPE] 
 3
 
+# if MESH FILE = BOX 
 [BOX NX]
 10
 [BOX NY]
@@ -37,42 +47,44 @@ data/cnsUniform2D.h
 
 [BOX BOUNDARY FLAG]
 11
+#-------------------------------------------------------------#
 
 
-#*******************[DISCRETIZATION PROPERTIES]************#
+#-----------------[DISCRETIZATION PROPERTIES]------------------#
 [POLYNOMIAL DEGREE]
 4
 
+# EULER or NAVIER-STOKES
 [SOLVER TYPE]
-#EULER
 NAVIER-STOKES
 
-# If TRUE compute R and mu from Mach & Reynolds//
+# FALSE or TRUE
 [NONDIMENSIONAL EQUATIONS]
-#FALSE
 TRUE
 
+# FALSE or TRUE
 [ISOTHERMAL]
 FALSE
 
 #Can be COLLOCATION or CUBATURE
 [ADVECTION TYPE]
-#COLLOCATION
 CUBATURE
 
-# 0 <= beta <= 1 
+# DIFFUSION DISCRETIZATION: 0 <= beta <= 1 
 [LDG BETA COEFFICIENT]
 0.0
 
-# 0 <= tau <= 1.0
+# DIFFUSION DISCRETIZATION: 0 <= tau <= 1 
 [LDG TAU COEFFICIENT]
 0.0
 
 [TIME INTEGRATOR]
 DOPRI5
-#LSERK4
+#-------------------------------------------------------------#
 
-#*******************[DEVICE PROPERTIES]*******************#
+
+
+#-------------------[DEVICE PROPERTIES]-----------------------#
 [THREAD MODEL]
 CUDA
 
@@ -81,42 +93,50 @@ CUDA
 
 [DEVICE NUMBER]
 0
+#-------------------------------------------------------------#
 
-#*******************[PROBLEM PROPERTIES]*******************#
 
+#---------------------[PROBLEM SETUP]------------------------#
 # Isentropic exponent 
 [GAMMA]
 1.4
 
-# // Mach number is needed for NONDIM=TRUE
+# Mach number is needed for NONDIM=TRUE
 [MACH NUMBER]
 2.0
-#0.816496580927726
 
 # Reynolds number is needed for NONDIM = TRUE
 [REYNOLDS NUMBER]
 1e6
 
-# R is needed if NONDIM=FALSE otherwise  R = 1.0/(gamma*Ma^2) 
+# if NONDIM=FALSE otherwise  R = 1.0/(gamma*Ma^2) 
 [SPECIFIC GAS CONSTANT]
 287.052
 
-# mu is needed if NONDIM = FALSE, otherwise mu = 1/Re
+# if NONDIM = FALSE, otherwise mu = 1/Re
 [VISCOSITY]
 1.0e-5
 
-# [ CONSTANT ] - [SUTHERLAND] - [POWER-LAW]
+# CONSTANT, SUTHERLAND or POWER-LAW
 [VISCOSITY TYPE]
 CONSTANT
-
 
 [PRANDTL NUMBER]
 0.72
 
-# [density, velocity, pressure, temperature, viscosity, length]
-# [rref, vref, pref. tref, mref, lref]
-[REFERENCE STATE]
-1.0, 1.0, 1.0, 1.0, 1.0, 1.0
+# [density, velocity, pressure, temperature]
+[FLOW STATES]
+5.60000, 0.984807753012208, 0.173648177666930, 1.0, 1.0;  5.60000, 1.0, 0.0, 1.0, 1.0;
+
+[IC STATE ID]
+0
+
+[BC STATE ID]
+0
+
+#Geoemtric IDs -> BC IDs
+[GEOMETRIC-TO-PHYSICAL MAP]
+12:1,2,3,4; 20:5,6,7;
 
 [CFL NUMBER]
 0.1
@@ -125,9 +145,12 @@ CONSTANT
 0
 
 [FINAL TIME]
-5.0
+1.0
+#-------------------------------------------------------------#
 
-#*******************[OUTPUT PROPERTIES]*******************#
+
+
+#-------------------[OUTPUT PROPERTIES]-----------------------#
 [OUTPUT INTERVAL]
 0.1
 
@@ -138,13 +161,26 @@ TRUE
 cns
 
 [REPORT FORCES]
+TRUE
+
+[REPORT MOMENTS]
+TRUE
+
+[REPORT COMPONENT]
 FALSE
 
 [MOMENT CENTER]
 0.0, 0.0
 
+# zero indexed groups
+[REPORT GROUPS]
+0:1,2; 1:3,4; 2:1,2,3,4;
 
-#*****************[STABILIZASYON PROPERTIES]*****************#
+#-------------------------------------------------------------#
+
+
+
+#----------------[STABILIZASYON PROPERTIES]-------------------#
 # HJS:1  CNS:2  INS:3 
 [STABILIZATION SOLVER TYPE]
 2
@@ -172,4 +208,5 @@ LAPLACE
 
 [ARTDIFF SCALE FACTOR]
 1
+#-------------------------------------------------------------#
 

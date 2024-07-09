@@ -32,9 +32,12 @@ void cns_t::Run(){
   settings.getSetting("START TIME", startTime);
   settings.getSetting("FINAL TIME", finalTime);
 
+
   initialConditionKernel(mesh.Nelements,
                          startTime,
+                         ICStateID,
                          o_pCoeff,
+                         o_flowStates,
                          mesh.o_x,
                          mesh.o_y,
                          mesh.o_z,
@@ -64,88 +67,7 @@ void cns_t::Run(){
   printf("time step size: %.4e startTime= %.4e FinalTime= %.4e \n", dt, startTime, finalTime);
 
   
-   // Report(0,0); 
-   // stab.Report(0.0, 0);
-
-#if 0
-   if(stabType!=Stab::NOSTAB){
-
-    applyStab(o_q, o_q, 0);
-    Report(0,0); 
-      // stab.Apply(o_q, o_q, 0.0);
-
-    // int alpha = 1; 
-    // platform.linAlg().set(mesh.Nelements, alpha, stab.o_elementList);
-
-  // for(int i=0; i<1; i++){
-
-  // // Project Solution To Cell-Mean Values
-  // limiterVertexBoundaryKernel(mesh.Nelements,
-  //                     mesh.o_vgeo,
-  //                     mesh.o_sgeo,
-  //                     stab.o_vgeo, 
-  //                     mesh.o_EToB, 
-  //                     mesh.o_vertexNodes, 
-  //                     stab.o_elementList, 
-  //                     mesh.o_vmapM, 
-  //                     mesh.o_vmapP, 
-  //                     mesh.o_x, 
-  //                     mesh.o_y, 
-  //                     mesh.o_z,
-  //                     o_pCoeff,
-  //                     0.0,
-  //                     o_q, 
-  //                     stab.o_qc, 
-  //                     stab.o_qv, 
-  //                     stab.o_dq);
-
-  // // Project Solution To Cell-Mean Values
-  // limiterReconstructKernel(mesh.Nelements,
-  //                     mesh.o_vgeo,
-  //                     mesh.o_sgeo,
-  //                     stab.o_vgeo, 
-  //                     mesh.o_EToB, 
-  //                     mesh.o_vertexNodes, 
-  //                     stab.o_elementList, 
-  //                     mesh.o_vmapM, 
-  //                     mesh.o_vmapP, 
-  //                     mesh.o_x, 
-  //                     mesh.o_y, 
-  //                     mesh.o_z,
-  //                     o_pCoeff,
-  //                     0.0,
-  //                     o_q, 
-  //                     stab.o_qc, 
-  //                     stab.o_qv, 
-  //                     stab.o_dq);
-
-  // limiterGradientKernel(mesh.Nelements,
-  //                           mesh.o_vgeo,
-  //                           mesh.o_sgeo,
-  //                           stab.o_vgeo, 
-  //                           mesh.o_EToB, 
-  //                           mesh.o_vertexNodes, 
-  //                           stab.o_elementList, 
-  //                           mesh.o_vmapM, 
-  //                           mesh.o_vmapP, 
-  //                           mesh.o_x, 
-  //                           mesh.o_y, 
-  //                           mesh.o_z,
-  //                           o_pCoeff,
-  //                           0.0,
-  //                           o_q, 
-  //                           stab.o_qc, 
-  //                           stab.o_qv, 
-  //                           stab.o_dq);
-
-      // stab.Report(0.0, 0);
-     // }
-    }
-
-#else
   timeStepper.Run(*this, o_q, startTime, finalTime);
-// Report(0,0); 
-#endif
 
   // output norm of final solution
   {

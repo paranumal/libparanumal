@@ -30,14 +30,14 @@ SOFTWARE.
 cnsSettings_t::cnsSettings_t(comm_t& _comm):
   settings_t(_comm) {
 
-  newSetting("DATA FILE", "data/cnsTalorVortex2D.h",
+  newSetting("DATA FILE", "data/cnsUniform2D.h",
              "Boundary and Initial conditions header");
 
-  newSetting("SOLVER TYPE", "EULER",
+  newSetting("SOLVER TYPE", "NAVIER-STOKES",
              "Solver to be used", 
             {"EULER", "NAVIER-STOKES"});
 
- newSetting("NONDIMENSIONAL EQUATIONS", "FALSE",
+ newSetting("NONDIMENSIONAL EQUATIONS", "TRUE",
              "Compute R and Mu from Mach and Reynolds",
              {"FALSE", "TRUE"});
 
@@ -67,8 +67,17 @@ cnsSettings_t::cnsSettings_t(comm_t& _comm):
              "Solve isothermal equations", 
              {"FALSE", "TRUE"});
 
-  newSetting("REFERENCE STATE", "1.0, 1.0, 0.0, 1.0, 1.0",
-             "Reference state of the problem");
+  newSetting("FLOW STATES", "1.0, 1.0, 0.0, 1.0, 1.0",
+             "Reference states for problem setting");
+
+   newSetting("GEOMETRIC-TO-PHYSICAL MAP",
+             "Maps the geometric IDs to BC IDs");
+
+  newSetting("IC STATE ID", "0",
+             "State id defined in flow states to be used for initialization");
+
+  newSetting("BC STATE ID", "0",
+             "State id defined in flow states to be used for initialization");
 
   newSetting("ADVECTION TYPE", "COLLOCATION",
              "Integration type for flux terms",
@@ -106,11 +115,24 @@ cnsSettings_t::cnsSettings_t(comm_t& _comm):
              "Flag for reporting forces",
              {"TRUE", "FALSE"});
 
+  newSetting("REPORT COMPONENT", "FALSE",
+             "Flag for reporting forces in component forms i.e. pressure, viscous",
+             {"TRUE", "FALSE"});
+
+  newSetting("REPORT GROUPS",
+            "Geometric groups for reporting");
+
+  newSetting("REPORT MOMENTS", "FALSE",
+             "Flag for reporting moments",
+             {"TRUE", "FALSE"});
+
   newSetting("MOMENT CENTER", "0.0, 0.0, 0.0",
              "Center for the moments");
 
-
- newSetting("STABILIZATION SOLVER TYPE", "1",
+  newSetting("GEOMETRIC GROUPS",
+             "Groups of geometric entities in force/moment report");
+ 
+  newSetting("STABILIZATION SOLVER TYPE", "1",
              "Solver type for stabilization",
              {"1", "2", "3"});
 
@@ -175,6 +197,11 @@ void cnsSettings_t::report() {
     reportSetting("SOLVER TYPE");
     reportSetting("MACH NUMBER");
     reportSetting("REYNOLDS NUMBER");
+    
+    reportSetting("FLOW STATES");
+    reportSetting("IC STATE ID");
+    reportSetting("BC STATE ID");
+
     reportSetting("ISOTHERMAL");
     reportSetting("ADVECTION TYPE");
     reportSetting("LDG BETA COEFFICIENT");
