@@ -21,7 +21,8 @@ data/cnsUniform2D.h
 #-------------------[MESH PROPERTIES]-----------------------#
 [MESH FILE]
 #BOX
-../../meshes/cnsNACAFlexi2D.msh
+#../../meshes/cnsNACAFlexi2D.msh
+../../meshes/cnsBody2D.msh
 
 [FORMAT]
 2.0
@@ -136,7 +137,9 @@ CONSTANT
 
 #Geoemtric IDs -> BC IDs
 [GEOMETRIC-TO-PHYSICAL MAP]
-12:1,2,3,4; 20:5,6,7;
+12:1,2,3,20,21,22; 20:7,8,9,15,33,32;
+# NACA-FLEXI
+#12:1,2,3,4; 20:5,6,7,8,9,10,11;
 
 [CFL NUMBER]
 0.1

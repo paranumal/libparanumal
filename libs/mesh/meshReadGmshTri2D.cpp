@@ -121,7 +121,9 @@ void mesh_t::ReadGmshTri2D(const std::string fileName){
                !fgets(buf, BUFSIZ, fp));
     sscanf(buf, "%*d%d", &ElementType);
     if(ElementType==1){ // boundary face
-      sscanf(buf, "%*d%*d %*d" hlongFormat "%*d" hlongFormat hlongFormat,
+      // sscanf(buf, "%*d%*d %*d" hlongFormat "%*d" hlongFormat hlongFormat,
+      //        boundaryInfo.ptr()+bcnt*3, &v1, &v2);
+      sscanf(buf, "%*d%*d %*d" "%*d" hlongFormat hlongFormat hlongFormat,
              boundaryInfo.ptr()+bcnt*3, &v1, &v2);
       boundaryInfo[bcnt*3+1] = v1-1;
       boundaryInfo[bcnt*3+2] = v2-1;

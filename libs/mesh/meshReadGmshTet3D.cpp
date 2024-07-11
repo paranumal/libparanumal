@@ -120,7 +120,9 @@ void mesh_t::ReadGmshTet3D(const std::string fileName){
                !fgets(buf, BUFSIZ, fp));
     sscanf(buf, "%*d%d", &ElementType);
     if(ElementType==2){ // boundary face
-      sscanf(buf, "%*d%*d %*d" hlongFormat "%*d" hlongFormat hlongFormat hlongFormat,
+      // sscanf(buf, "%*d%*d %*d" hlongFormat "%*d" hlongFormat hlongFormat hlongFormat,
+      //        boundaryInfo.ptr()+bcnt*4, &v1, &v2, &v3);
+      sscanf(buf, "%*d%*d %*d" "%*d" hlongFormat hlongFormat hlongFormat hlongFormat,
              boundaryInfo.ptr()+bcnt*4, &v1, &v2, &v3);
       boundaryInfo[bcnt*4+1] = v1-1;
       boundaryInfo[bcnt*4+2] = v2-1;

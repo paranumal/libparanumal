@@ -173,9 +173,9 @@ Symmetry {0, 1, 0, 0} {
   Duplicata {Surface{1}; Surface{2}; }
 }
 
-// MIRROR
-Physical Line("Wall1",11)     = {1, 2, 3, 20, 21, 22};
-Physical Line("Farfield",20) = {15, 9, 8, 7, 33, 32, 31, 24};
-Physical Surface("Domain", 9) = {1, 2, 18, 27};
+// // MIRROR
+// Physical Line("Wall1",11)     = {1, 2, 3, 20, 21, 22};
+// Physical Line("Farfield",20) = {15, 9, 8, 7, 33, 32, 31, 24};
+// Physical Surface("Domain", 9) = {1, 2, 18, 27};
 Coherence;
 

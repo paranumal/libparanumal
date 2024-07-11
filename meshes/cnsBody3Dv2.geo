@@ -170,12 +170,12 @@ Extrude {{1, 0, 0}, {0, 0, 0}, 2*Pi/3} {
 }
 
 Coherence;
-// Isothermall Wall
-Physical Surface("WALL_NOSE",1)     = {30, 89, 148};
-Physical Surface("WALL_BODY",2)     = {34,93,152,37,96,155};
-Physical Surface("Farfield_1",3)    = {185, 68, 127, 41,100,159};
-Physical Surface("Farfield_2",4)    = {192, 134, 75, 72, 131, 189};
-Physical Volume("Domain", 9) = {1,2,3,4,5,6};
+// // Isothermall Wall
+// Physical Surface("WALL_NOSE",1)     = {30, 89, 148};
+// Physical Surface("WALL_BODY",2)     = {34,93,152,37,96,155};
+// Physical Surface("Farfield_1",3)    = {185, 68, 127, 41,100,159};
+// Physical Surface("Farfield_2",4)    = {192, 134, 75, 72, 131, 189};
+// Physical Volume("Domain", 9) = {1,2,3,4,5,6};
 Coherence;//+
 
 
