@@ -306,8 +306,8 @@ Extrude {0, 0, 1} { Surface{2}; Surface{1};}
 
 Coherence;
 // Isothermall Wall
-Physical Surface("Wall",11)     = {33, 37, 29, 41};
-Physical Surface("Farfield",20) = {77,61,97,81,85,89,93};
-Physical Surface("Symmetry",13) = {114, 62, 1,2};
-Physical Volume("Domain", 9) = {1,2};
-Coherence;//+
+// Physical Surface("Wall",11)     = {33, 37, 29, 41};
+// Physical Surface("Farfield",20) = {77,61,97,81,85,89,93};
+// Physical Surface("Symmetry",13) = {114, 62, 1,2};
+// Physical Volume("Domain", 9) = {1,2};
+// Coherence;//+
