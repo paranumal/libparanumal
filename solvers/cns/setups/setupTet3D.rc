@@ -10,7 +10,7 @@ data/cnsUniform3D.h
 #-------------------[MESH PROPERTIES]-----------------------#
 [MESH FILE]
 #BOX
-../../meshes/cnsBody3Dv2.msh
+../../meshes/cnsAGARD_B.msh
 
 [FORMAT]
 2.0
@@ -47,7 +47,7 @@ data/cnsUniform3D.h
 
 #-----------------[DISCRETIZATION PROPERTIES]------------------#
 [POLYNOMIAL DEGREE]
-4
+3
 
 # EULER or NAVIER-STOKES
 [SOLVER TYPE]
@@ -98,11 +98,11 @@ CUDA
 
 # Mach number is needed for NONDIM=TRUE
 [MACH NUMBER]
-2.0
+1.2
 
 # Reynolds number is needed for NONDIM = TRUE
 [REYNOLDS NUMBER]
-1e6
+1.2e6
 
 # if NONDIM=FALSE otherwise  R = 1.0/(gamma*Ma^2) 
 [SPECIFIC GAS CONSTANT]
@@ -121,7 +121,7 @@ CONSTANT
 
 # [density, velocity, pressure, temperature]
 [FLOW STATES]
-5.60000, 0.984807753012208, 0.173648177666930, 0.0, 1.0, 1.0;  5.60000, 1.0, 0.0, 0.0, 1.0, 1.0;
+2.01600, 1.0, 0.0, 0.0, 1.0, 1.0; 5.60000, 0.984807753012208, 0.173648177666930, 0.0, 1.0, 1.0;
 
 [IC STATE ID]
 0
@@ -131,10 +131,7 @@ CONSTANT
 
 #Geoemtric IDs -> BC IDs
 [GEOMETRIC-TO-PHYSICAL MAP]
-
-#12:30, 89, 148,34,93,152,37,96,155; 20:185, 68, 127, 41,100,159, 192, 134, 75, 72, 131, 189;
-#12:1,2; 20:3,4;
-
+12:1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13; 20:14, 15, 16;
 
 [CFL NUMBER]
 0.1
@@ -143,7 +140,7 @@ CONSTANT
 0
 
 [FINAL TIME]
-1.0
+10.0
 #-------------------------------------------------------------#
 
 
@@ -156,7 +153,7 @@ CONSTANT
 TRUE
 
 [OUTPUT FILE NAME]
-cns
+cnsAGARD_B
 
 [REPORT FORCES]
 TRUE
@@ -172,7 +169,7 @@ FALSE
 
 # zero indexed groups
 [REPORT GROUPS]
-0:152,37,96,155;1:30,89,148,34,93;3:30,89,148,34,93,152,37,96,155;
+0:1,2,3,4,10,11,12,13;1:5,6,7,8,9;2:1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13;
 
 #-------------------------------------------------------------#
 

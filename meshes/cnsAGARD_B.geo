@@ -2,6 +2,11 @@ lc   = DefineNumber[0.15];
 lc2  = DefineNumber[0.5];
 lc3  = DefineNumber[1.75];
 fac  = DefineNumber[0.5];
+
+// lc   = DefineNumber[0.25];
+// lc2  = DefineNumber[0.75];
+// lc3  = DefineNumber[2.0];
+// fac  = DefineNumber[0.5];
 // Note that Length = 8.5 x D for AGARD B
 SetFactory("OpenCASCADE");
 
