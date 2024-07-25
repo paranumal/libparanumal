@@ -170,14 +170,6 @@ Extrude {{1, 0, 0}, {0, 0, 0}, 2*Pi/3} {
 }
 
 Coherence;
-// // Isothermall Wall
-// Physical Surface("WALL_NOSE",1)     = {30, 89, 148};
-// Physical Surface("WALL_BODY",2)     = {34,93,152,37,96,155};
-// Physical Surface("Farfield_1",3)    = {185, 68, 127, 41,100,159};
-// Physical Surface("Farfield_2",4)    = {192, 134, 75, 72, 131, 189};
-// Physical Volume("Domain", 9) = {1,2,3,4,5,6};
-Coherence;//+
-
 
 Field[1] = Distance;
 Field[1].PointsList = {1 ... 10};
@@ -244,3 +236,14 @@ Field[6].ZCenter   =  0.0;
 Field[7] = Min;
 Field[7].FieldsList = {2,3,4,5, 6};
 Background Field = 7;
+
+
+
+
+// // Isothermall Wall
+// Physical Surface("WALL_NOSE",1)     = {30, 89, 148};
+// Physical Surface("WALL_BODY",2)     = {34,93,152,37,96,155};
+// Physical Surface("Farfield_1",3)    = {185, 68, 127, 41,100,159};
+// Physical Surface("Farfield_2",4)    = {192, 134, 75, 72, 131, 189};
+// Physical Volume("Domain", 9) = {1,2,3,4,5,6};
+Coherence;//+
