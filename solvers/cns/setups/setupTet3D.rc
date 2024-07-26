@@ -9,8 +9,9 @@ data/cnsUniform3D.h
 
 #-------------------[MESH PROPERTIES]-----------------------#
 [MESH FILE]
+../../meshes/cnsHB2.msh
 #BOX
-../../meshes/cnsAGARD_B.msh
+#../../meshes/cnsAGARD_B.msh
 
 [FORMAT]
 2.0
@@ -98,11 +99,11 @@ CUDA
 
 # Mach number is needed for NONDIM=TRUE
 [MACH NUMBER]
-1.2
+5.0
 
 # Reynolds number is needed for NONDIM = TRUE
 [REYNOLDS NUMBER]
-1.2e6
+4.4e5
 
 # if NONDIM=FALSE otherwise  R = 1.0/(gamma*Ma^2) 
 [SPECIFIC GAS CONSTANT]
@@ -121,7 +122,8 @@ CONSTANT
 
 # [density, velocity, pressure, temperature]
 [FLOW STATES]
-2.01600, 1.0, 0.0, 0.0, 1.0, 1.0; 5.60000, 0.984807753012208, 0.173648177666930, 0.0, 1.0, 1.0;
+35.0, 1.0, 0.0, 0.0, 1.0, 1.0; 
+#5.60000, 0.984807753012208, 0.173648177666930, 0.0, 1.0, 1.0;
 
 [IC STATE ID]
 0
@@ -131,7 +133,9 @@ CONSTANT
 
 #Geoemtric IDs -> BC IDs
 [GEOMETRIC-TO-PHYSICAL MAP]
-12:1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13; 20:14, 15, 16;
+12:1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15; 20:16, 17, 18; 
+#AGARD_B
+#12:1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13; 20:14, 15, 16;
 # for cnsBody3Dv2.geo
 #12:30,89,148,34, 34,93,152,37,96,155; 20:185, 68, 127, 41,100,159, 192, 134, 75, 72, 131, 189;  
 
@@ -171,8 +175,8 @@ FALSE
 
 # zero indexed groups
 [REPORT GROUPS]
-0:1,2,3,4,10,11,12,13;1:5,6,7,8,9;2:1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13;
-
+0:1,2,3,4,5,6,7,8,9,10,11,12,13,14,15;1:1,2,3,4,13,14;2:5,6,7,8,9, 10, 11, 12,15;
+# Group zero is the whole body surfaces, 1 is the nose part and 2 is the remaning body parts
 #-------------------------------------------------------------#
 
 
