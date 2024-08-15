@@ -27,6 +27,9 @@ SOFTWARE.
 #include "cns.hpp"
 
 void cns_t::setupPhysics(){
+
+  // Read Reference State and number of states
+  setFlowStates(); 
  
   // Set isentropic exponent and related info
   settings.getSetting("GAMMA", gamma);
@@ -39,15 +42,24 @@ void cns_t::setupPhysics(){
   }else {
       settings.getSetting("SPECIFIC GAS CONSTANT", R); 
   }
-
   // Set presure and volumetric expansion coefficients
   cp = R*gamma/(gamma-1.0);  
   cv = R/(gamma-1.0); 
-
   if(settings.compareSetting("SOLVER TYPE", "NAVIER-STOKES")){
     settings.getSetting("PRANDTL NUMBER", Pr); 
     if(settings.compareSetting("NONDIMENSIONAL EQUATIONS", "TRUE")){
-      mu = 1.0/Re; 
+      dfloat rref=1.0, uref=1.0, vref=0.0, wref=0.0, pref=1.0, tref=1.0; 
+      rref = flowStates[ICStateID*NstatePoints + 0];
+      uref = flowStates[ICStateID*NstatePoints + 1];
+      vref = flowStates[ICStateID*NstatePoints + 2];
+      if(mesh.dim==2){
+        wref = flowStates[ICStateID*NstatePoints + 3];
+        pref = flowStates[ICStateID*NstatePoints + 4];
+      }else{
+        pref = flowStates[ICStateID*NstatePoints + 3];        
+      }
+      const dfloat velRef = mesh.dim==2 ? std::sqrt(uref*uref + vref*vref):std::sqrt(uref*uref + vref*vref+wref*wref); 
+      mu = rref*velRef/Re; 
     }else{
       settings.getSetting("VISCOSITY", mu);
     }
@@ -110,8 +122,6 @@ void cns_t::setupPhysics(){
     viscType = 0; 
   }
 
-  // Read Reference State and number of states
-  setFlowStates(); 
   // Read Reference State and number of states
   setBoundaryMaps(); 
   // Read force and moment info and prepare for output

@@ -168,6 +168,8 @@ public:
   deviceMemory<dfloat>o_qdetect; 
   deviceMemory<dfloat>o_invV, o_LS1D, o_BLD; 
 
+  memory<dfloat>  projectC0, qducros; 
+  deviceMemory<dfloat>o_projectC0, o_qducros; 
 
 
   // Artificial Viscosity
@@ -184,6 +186,7 @@ public:
 
 
   kernel_t detectKernel;
+  kernel_t detectDucrosKernel;
   kernel_t computeViscosityKernel;
   kernel_t projectViscosityKernel;
   kernel_t maxVelocityKernel;

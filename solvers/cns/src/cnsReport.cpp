@@ -184,10 +184,10 @@ void cns_t::writeForces(dfloat time, int tstep, int frame){
       const dfloat Mz  = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+4*shift , mesh.comm);
       if(mesh.rank==0){
         if(reportComponent){
-          printf("on group %d : %.2e %.2e %.2e %.2e %.2e\n", grp, vFx, vFy, pFx, pFy, Mz);
+          printf("on report group %d : %.2e %.2e %.2e %.2e %.2e\n", grp, vFx, vFy, pFx, pFy, Mz);
           fprintf(fp,"%.6e %d %.6e %.6e %.6e %.6e %.6e\n", time, grp, vFx, vFy, pFx, pFy, Mz);
         }else{
-          printf("on group %d : %.2e %.2e %.2e\n", grp, vFx+pFx, vFy + pFy, Mz);
+          printf("on report group %d : %.2e %.2e %.2e\n", grp, vFx+pFx, vFy + pFy, Mz);
           fprintf(fp,"%.6e %d %.6e %.6e %.6e\n", time, grp, vFx+pFx, vFy+pFy, Mz);
         }
       } 
@@ -205,10 +205,10 @@ void cns_t::writeForces(dfloat time, int tstep, int frame){
     const dfloat Mz = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+8*shift , mesh.comm); 
     if(mesh.rank==0){
       if(reportComponent){
-          printf("on group %d : %.2e %.2e %.2e %.2e %.2e %.2e %.2e %.2e %.2e\n", grp,  vFx, vFy, vFz, pFx, pFy, pFz, Mx, My, Mz);
+          printf("on report group %d : %.2e %.2e %.2e %.2e %.2e %.2e %.2e %.2e %.2e\n", grp,  vFx, vFy, vFz, pFx, pFy, pFz, Mx, My, Mz);
           fprintf(fp, "%.6e %d %.2e %.2e %.2e %.2e %.2e %.2e %.2e %.2e %.2e\n", time, grp,  vFx, vFy, vFz, pFx, pFy, pFz, Mx, My, Mz);
         }else{
-          printf("on group %d : %.2e %.2e %.2e %.2e %.2e %.2e\n", grp, vFx+pFx, vFy+pFy, vFz+pFz, Mx, My, Mz);
+          printf("on report group %d : %.2e %.2e %.2e %.2e %.2e %.2e\n", grp, vFx+pFx, vFy+pFy, vFz+pFz, Mx, My, Mz);
           fprintf(fp, "%.6e %d %.2e %.2e %.2e %.2e %.2e %.2e\n", time, grp, vFx+pFx, vFy+pFy, vFz+pFz, Mx, My, Mz);
       }
     } 

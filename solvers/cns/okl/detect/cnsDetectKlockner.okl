@@ -50,6 +50,187 @@
 //   xlim = LMIN(xlim-xmax, alpha) + xmax;
 //   return xlim;
 // }
+@kernel void detectDucrosDiffusionTri2D(const dlong Nelements,
+                                        @restrict const  dfloat *  pM,
+                                        @restrict const  dfloat *  q,
+                                        @restrict const  dfloat *  gradq,
+                                        @restrict        dfloat *  qd){
+ for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_S[p_Np];
+
+    for(int n=0;n<p_Np;++n;@inner(0)){
+    	 // conserved variables
+      const dlong  qbase = e*p_Np*4 + n;
+      const dfloat rr = q[qbase+0*p_Np];
+      const dfloat ru = q[qbase+1*p_Np];
+      const dfloat rv = q[qbase+2*p_Np];
+      const dfloat rE = q[qbase+2*p_Np];
+      const dfloat ir  = 1.0/rr; 
+
+      const dfloat u = ru*ir; 
+      const dfloat v = rv*ir;
+     
+      // gradients
+      const dlong id = e*p_Np*8 + n;
+      const dfloat drrdx = gradq[id+0*p_Np];
+      const dfloat drrdy = gradq[id+1*p_Np];     
+      const dfloat drudx = gradq[id+2*p_Np];
+      const dfloat drudy = gradq[id+3*p_Np];
+      const dfloat drvdx = gradq[id+4*p_Np];
+      const dfloat drvdy = gradq[id+5*p_Np];  
+
+      // Find derivative of primitives
+      const dfloat dudx  = (drudx - drrdx*u)*ir;
+      const dfloat dvdx  = (drvdx - drrdx*v)*ir;
+      const dfloat dudy  = (drudy - drrdy*u)*ir;
+      const dfloat dvdy  = (drvdy - drrdy*v)*ir;
+
+      // Compute divergence and vorticity
+      const dfloat div  = (dudx + dvdy); 
+      const dfloat vort = (dvdx - dudy);
+
+      const dfloat gamma = 1.4; 
+      const dfloat p  = (gamma-1)*(rE - 0.5*rr*(u*u+v*v));
+      const dfloat c = sqrt(gamma * p/rr); 
+      const dfloat us = sqrt(u*u+v*v + c); 
+
+      // Compute divergence sensor
+      // Prizolli's modification of Ducros detector
+      s_S[n] = -div/ (sqrt(div*div) + sqrt(vort*vort)+1e-16);
+      
+      // Ducros's original detector
+      // s_S[n] = div*div/ (div*div + vort*vort + 1.0E-16);
+
+      
+       // Person's modification of Ducros detector
+       // dfloat div  = -(dudx + dvdy); 
+       // dfloat vort = -(dvdx - dudy); 
+       // vort = sqrt(vort*vort); 
+
+       // const dfloat sigm = 1.0E4; 
+       // div  = LIM(div, -sigm, sigm, ALPHA, -sigm); 
+       // vort = LIM(vort, 0.0, sigm, ALPHA, 0.0); 
+
+       // s_S[n] = div*div/ (div*div + vort*vort + 1.0E-16);
+
+      
+
+
+
+       // dfloat div2  = dudx + dvdy; 
+       // dfloat vort2 = dvdx - dudy; 
+
+      // div2 *= div2; vort2*=vort2; 
+
+      // vort2 = vort2<10 ? 0:vort2; 
+      // div2  = div2 <10 ? 0:div2; 
+
+      // s_S[n] = div2/(div2 + vort2+1E-16); 
+    }  
+
+ 		for(int n=0;n<p_Np;++n;@inner(0)){
+    	if(n==0){
+     		dfloat rs = 0.0; 
+     		for(int i=0; i<p_Np; i++){
+           rs += pM[i]*s_S[i];
+        }
+        // qd[e] =  rs>0.7 ? rs:0.0; 
+        qd[e] =  rs; 
+        // qd[e] =  1.0; 
+     	}
+    }
+
+  }
+}
+
+
+
+@kernel void detectDucrosDiffusionTet3D(const dlong Nelements,
+                                        @restrict const  dfloat *  pM,
+                                        @restrict const  dfloat *  q,
+                                        @restrict const  dfloat *  gradq,
+                                        @restrict        dfloat *  qd){
+ for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_S[p_Np];
+
+    for(int n=0;n<p_Np;++n;@inner(0)){
+    	 // conserved variables
+      const dlong  qbase = e*p_Np*4 + n;
+      const dfloat rr = q[qbase+0*p_Np];
+      const dfloat ru = q[qbase+1*p_Np];
+      const dfloat rv = q[qbase+2*p_Np];
+      const dfloat rw = q[qbase+3*p_Np];
+      const dfloat rE = q[qbase+4*p_Np];
+      const dfloat ir  = 1.0/rr; 
+
+      const dfloat u = ru*ir; 
+      const dfloat v = rv*ir;
+      const dfloat w = rw*ir;
+     
+      // gradients
+      const dlong id = e*p_Np*15 + n;
+      const dfloat drrdx = gradq[id+0*p_Np];
+      const dfloat drrdy = gradq[id+1*p_Np];     
+      const dfloat drrdz = gradq[id+2*p_Np];     
+
+      const dfloat drudx = gradq[id+3*p_Np];
+      const dfloat drudy = gradq[id+4*p_Np];     
+      const dfloat drudz = gradq[id+5*p_Np];     
+
+      const dfloat drvdx = gradq[id+6*p_Np];
+      const dfloat drvdy = gradq[id+7*p_Np];     
+      const dfloat drvdz = gradq[id+8*p_Np];     
+
+      const dfloat drwdx = gradq[id+ 9*p_Np];
+      const dfloat drwdy = gradq[id+10*p_Np];     
+      const dfloat drwdz = gradq[id+11*p_Np];     
+
+
+      // Find derivative of primitives
+      const dfloat dudx  = (drudx - drrdx*u)*ir;
+      const dfloat dvdx  = (drvdx - drrdx*v)*ir;
+      const dfloat dwdx  = (drwdx - drrdx*w)*ir;
+      
+      const dfloat dudy  = (drudy - drrdy*u)*ir;
+      const dfloat dvdy  = (drvdy - drrdy*v)*ir;
+      const dfloat dwdy  = (drwdy - drrdy*w)*ir;
+
+      const dfloat dudz  = (drudz - drrdz*u)*ir;
+      const dfloat dvdz  = (drvdz - drrdz*v)*ir;
+      const dfloat dwdz  = (drwdz - drrdz*w)*ir;
+
+      // Compute divergence and vorticity
+      const dfloat div  = (dudx + dvdy + dwdz); 
+      const dfloat vrtx = dwdy-dvdz; 
+      const dfloat vrty = dudz-dwdx; 
+      const dfloat vrtz = dvdx-dudy; 
+
+      const dfloat gamma = 1.4; 
+      const dfloat p  = (gamma-1)*(rE - 0.5*rr*(u*u+v*v+w*w));
+      const dfloat c = sqrt(gamma * p/rr); 
+      // const dfloat us = sqrt(u*u+v*v+w*w + c); 
+      // Compute divergence sensor
+      // Prizolli's modification of Ducros detector
+      s_S[n] = -div/ (sqrt(div*div) + sqrt(vrtx*vrtx+vrty*vrty+vrtz*vrtz)+1e-16);
+    }  
+
+ 		for(int n=0;n<p_Np;++n;@inner(0)){
+    	if(n==0){
+     		dfloat rs = 0.0; 
+     		for(int i=0; i<p_Np; i++){
+           rs += pM[i]*s_S[i];
+        }
+        // qd[e] =  rs>0.7 ? rs:0.0; 
+        qd[e] =  rs; 
+        // qd[e] =  1.0; 
+     	}
+    }
+
+  }
+}
+
 
 
 // 
@@ -61,6 +242,7 @@
 																    @restrict const dfloat * LSF,
 																    @restrict const dfloat * BLD,
 																    @restrict const dfloat * Q, 
+																    @restrict const dfloat * QDucros, 
 																    @restrict 		  dfloat * qdetect, 
 																    @restrict       dlong *  ElementList){
 #define p_Nel 1
@@ -208,6 +390,8 @@
 	      // this handles zero field, do not select those elements!!!
 	      coeff = fabs(coeff); 
 	      const dfloat sk = coeff != coeff ? p_N : coeff; 	
+
+	      const dfloat qd = QDucros[e]; 
 	      // const dfloat sk = coeff;
 	      dfloat r_qd = 0.0; 
 	    	if(sk<(s_sS0-s_sK0))
@@ -218,7 +402,8 @@
 	  			r_qd = 0.5*( 1. + sin( - 0.5* M_PI*(sk-s_sS0)/ s_sK0)); 
 	  		
 	  		// artVisc[e*s_Ndfields + fld] = avisc*qd;	 
-	  		qdetect[e] = r_qd;	 
+	  		// qdetect[e] = r_qd;	 
+	  		qdetect[e] = r_qd*qd;	 
 	  		ElementList[e] = r_qd>0 ? 1 : 0;
 			  }
 				}
@@ -240,6 +425,7 @@
 																    @restrict const dfloat * LSF,
 																    @restrict const dfloat * BLD,
 																    @restrict const dfloat * Q, 
+																    @restrict const dfloat * QDucros, 
 																    @restrict 		  dfloat * qdetect, 
 																    @restrict       dlong *  ElementList){
 #define p_Nel 1
@@ -387,7 +573,9 @@
 
 	      // this handles zero field, do not select those elements!!!
 	      coeff = fabs(coeff); 
-	      const dfloat sk = coeff != coeff ? p_N : coeff; 	
+	      const dfloat sk = coeff != coeff ? p_N : coeff; 
+
+	      const dfloat qd = QDucros[e]; 	
 	      // const dfloat sk = coeff;
 	      dfloat r_qd = 0.0; 
 	    	if(sk<(s_sS0-s_sK0))
@@ -398,7 +586,8 @@
 	  			r_qd = 0.5*( 1. + sin( - 0.5* M_PI*(sk-s_sS0)/ s_sK0)); 
 	  		
 	  		// artVisc[e*s_Ndfields + fld] = avisc*qd;	 
-	  		qdetect[e] = r_qd;	 
+	  		// qdetect[e] = r_qd;	 
+	  		qdetect[e] = r_qd*qd;	 
 	  		ElementList[e] = r_qd>0 ? 1 : 0;
 			  }
 				}

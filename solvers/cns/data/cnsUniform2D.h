@@ -98,16 +98,18 @@ SOFTWARE.
 // #endif
 /***************************************************************************/
 // BCs Summary
-// 1-1 : No-Slip Wall : Isothermal: Navier-Stokes Solver
-// 1-2 : No-Slip Wall : Adiabatic : Navier-Stokes Solver
-// 1-3 : Slip Wall    : Adiabatic : Euler Wall 
-// 1-3 : Symmetry     : Navier-Stokes Symmetry 
-// 2-0 : FarField     : Supersonic/Subsonic Inlet/Outlet
-// 2-1 : Inflow       : Subsonic Inlet
-// 2-2 : Inflow       : Supersonic Inlet
-// 3-1 : Outflow      : Subsonic Outlet
-// 3-2 : Outflow      : Supersonic Outlet
-// 4-1 : WeakDrichlet : Define
+// 1-1 : No-Slip Isothermall Wall: Isothermal: Navier-Stokes Solver
+// 1-2 : No-Slip Wall    : Adiabatic : Navier-Stokes Solver
+// 1-3 : Slip Wall       : Adiabatic : Euler Wall 
+// 1-3 : Symmetry        : Navier-Stokes Symmetry 
+// 2-0 : FarField        : Weak Drichlet (Weak Riemann Farfield)
+// 2-3 : Outflow Mach BC : Impose defined Mach Number by reference state
+// 2-1 : Inflow          : Subsonic Inlet
+// 2-2 : Inflow          : Supersonic Inlet
+// 3-1 : Outflow         : Subsonic Outlet
+// 3-2 : Outflow         : Supersonic Outlet
+// 3-3 : Pressure-Outlet : Pressure Outlet
+// 4-1 : WeakDrichlet    : Define
 /***************************************************************************/
 
 /***************************************************************************/
@@ -115,14 +117,14 @@ SOFTWARE.
 // Pressure Riemann Solver on BC based on NASA Report
 // AK: We dont use in the current form!!!!
 // /* ***********************************************************************/
-// #define PressureRiemann2D(gamma, R, CP, CV, UN, CN, rM, uM, vM, pM, PR){     \
-// const dfloat pfunc= 2.0*gamma/(gamma -1.0);                                  \
-// const dfloat AR   = 2.0/(rM*(gamma+1.0));                                    \
-// const dfloat BR   = pM*(gamma -1.0)/(gamma+1.0);                             \
-// const dfloat PR1  = pM*pow(max(0.0001, 1.0+0.5*(gamma -1.0)*UN/CN), pfunc);  \
-// const dfloat PR2  = pM+0.5*UN/AR*(UN+sqrt(UN*UN+4.0*AR*(pM+BR)));            \
-// *(PR)   = (UN<=0) ? PR1 : PR2;                                               \
-// }
+#define PressureRiemann2D(gamma, R, CP, CV, UN, CN, rM, uM, vM, pM, PR){     \
+const dfloat pfunc= 2.0*gamma/(gamma -1.0);                                  \
+const dfloat AR   = 2.0/(rM*(gamma+1.0));                                    \
+const dfloat BR   = pM*(gamma -1.0)/(gamma+1.0);                             \
+const dfloat PR1  = pM*pow(max(0.0001, 1.0+0.5*(gamma -1.0)*UN/CN), pfunc);  \
+const dfloat PR2  = pM+0.5*UN/AR*(UN+sqrt(UN*UN+4.0*AR*(pM+BR)));            \
+*(PR)   = (UN<=0) ? PR1 : PR2;                                               \
+}
 /* ************************************************************************ */
 
 
@@ -145,8 +147,6 @@ SOFTWARE.
 }
 
 
-    // *(reB) = rM*CP*p_TBAR/gamma;                                             
-
 
 // Viscous Riemann Solve BC's
 // ************************************************************************
@@ -160,37 +160,40 @@ SOFTWARE.
                                       drvdxB, drvdyB, dredxB, dredyB)        \
 {                                                                            \
 const dfloat uM  = ruM/rM;                                                   \
-const dfloat vM  =  rvM/rM;                                                   \
+const dfloat vM  = rvM/rM;                                                   \
 const dfloat pM  = (gamma-1.0)*(reM - 0.5*rM*(uM*uM + vM*vM));               \
 const dfloat unM = uM*nx + vM*ny;                                            \
 const dfloat cM  = sqrt(gamma*pM/rM);                                        \
 const dfloat mM  = fabs(unM/cM);                                             \
 const dfloat keREF = 0.5*RBAR*(UBAR*UBAR + VBAR*VBAR);                       \
+dfloat PR;                                                                   \
+PressureRiemann2D(gamma, R, CP, CV, unM, cM, rM, uM, vM, pM, &PR);           \
+const dfloat TM = (reM-0.5*rM*(uM*uM+vM*vM))/(rM*CV);                       \
   if(bc==11){                                                                \
-    *( rB) = rM;                                                             \
+    *( rB) = PR/(TBAR*R);                                                    \
     *(ruB) = 0.0;                                                            \
     *(rvB) = 0.0;                                                            \
-    *(reB) = rM*CV*TBAR + 0.5*(ruM*ruM + rvM*rvM)/rM;                        \
+    *(reB) = PR/(gamma-1.0);                                                 \
     *(drrdxB) = drrdxM;*(drrdyB) = drrdyM;                                   \
     *(drudxB) = drudxM;*(drudyB) = drudyM;                                   \
     *(drvdxB) = drvdxM;*(drvdyB) = drvdyM;                                   \
     *(dredxB) = dredxM;*(dredyB) = dredyM;                                   \
    }else if(bc==12){                                                         \
-    *( rB) = rM;                                                             \
+    *( rB) = PR/(TM*R);                                                      \
     *(ruB) = 0.0;                                                            \
     *(rvB) = 0.0;                                                            \
-    *(reB) = reM - 0.5*(ruM*ruM + rvM*rvM)/rM;                               \
+    *(reB) = PR/(gamma-1.0);                                                 \
     const dfloat uxM = drudxM - uM*drrdxM;                                   \
     const dfloat uyM = drudyM - uM*drrdyM;                                   \
     const dfloat vxM = drvdxM - vM*drrdxM;                                   \
     const dfloat vyM = drvdyM - vM*drrdyM;                                   \
-    const dfloat TxM = dredxM - (drrdxM*reM/rM + uM*uxM + vM*vxM);          \
-    const dfloat TyM = dredyM - (drrdyM*reM/rM + uM*uyM + vM*vyM);          \
+    const dfloat TxM = dredxM - (drrdxM*reM/rM + uM*uxM + vM*vxM);           \
+    const dfloat TyM = dredyM - (drrdyM*reM/rM + uM*uyM + vM*vyM);           \
     *(drrdxB) = drrdxM;*(drrdyB) = drrdyM;                                   \
     *(drudxB) = drudxM;*(drudyB) = drudyM;                                   \
     *(drvdxB) = drvdxM;*(drvdyB) = drvdyM;                                   \
-    *(dredxB) = dredxM - (nx*nx*TxM + nx*ny*TyM);                            \                                                     \
-    *(dredyB) = dredyM - (nx*ny*TxM + ny*ny*TyM);                            \
+    *(dredxB) = dredxM - nx*(nx*TxM + ny*TyM);                               \                                                     \
+    *(dredyB) = dredyM - ny*(nx*TxM + ny*TyM);                               \
   }else if(bc==13){                                                          \
     *( rB) =  rM;                                                            \
     *(ruB) =  ruM - (nx*ruM+ny*rvM)*nx;                                      \
@@ -215,7 +218,7 @@ const dfloat keREF = 0.5*RBAR*(UBAR*UBAR + VBAR*VBAR);                       \
         *( rB) = RBAR;                                                       \
         *(ruB) = RBAR*UBAR;                                                  \
         *(rvB) = RBAR*VBAR;                                                  \
-        *(reB) = reM-0.5*rM*(uM*uM+vM*vM)+keREF;                             \
+        *(reB) = pM/(gamma-1) + keREF;                                       \
         *(drrdxB) = 0.0; *(drrdyB) = 0.0;                                    \
         *(drudxB) = 0.0; *(drudyB) = 0.0;                                    \
         *(drvdxB) = 0.0; *(drvdyB) = 0.0;                                    \
@@ -235,7 +238,7 @@ const dfloat keREF = 0.5*RBAR*(UBAR*UBAR + VBAR*VBAR);                       \
         *( rB) = rM;                                                         \
         *(ruB) = ruM;                                                        \
         *(rvB) = rvM;                                                        \
-        *(reB) = PBAR/(gamma -1.0) + 0.5*rM*(uM*uM + vM*vM);                 \
+        *(reB) = 4.4642857/(gamma -1.0) + 0.5*rM*(uM*uM + vM*vM);                 \
         *(drrdxB) = 0.0; *(drrdyB) = 0.0;                                    \
         *(drudxB) = 0.0; *(drudyB) = 0.0;                                    \
         *(drvdxB) = 0.0; *(drvdyB) = 0.0;                                    \
@@ -246,7 +249,7 @@ const dfloat keREF = 0.5*RBAR*(UBAR*UBAR + VBAR*VBAR);                       \
     *( rB) = RBAR;                                                           \
     *(ruB) = RBAR*UBAR;                                                      \
     *(rvB) = RBAR*VBAR;                                                      \
-    *(reB) = reM-0.5*rM*(uM*uM+vM*vM)+keREF;                                 \
+    *(reB) = pM/(gamma-1) + keREF;                                           \
     *(drrdxB) = 0.0; *(drrdyB) = 0.0;                                        \
     *(drudxB) = 0.0; *(drudyB) = 0.0;                                        \
     *(drvdxB) = 0.0; *(drvdyB) = 0.0;                                        \
@@ -264,7 +267,7 @@ const dfloat keREF = 0.5*RBAR*(UBAR*UBAR + VBAR*VBAR);                       \
     *( rB) = rM;                                                             \
     *(ruB) = ruM;                                                            \
     *(rvB) = rvM;                                                            \
-    *(reB) = PBAR/(gamma -1.0) + 0.5*rM*(uM*uM + vM*vM);                     \
+    *(reB) = 4.4642857/(gamma -1.0) + 0.5*rM*(uM*uM + vM*vM);                     \
     *(drrdxB) = 0.0; *(drrdyB) = 0.0;                                        \
     *(drudxB) = 0.0; *(drudyB) = 0.0;                                        \
     *(drvdxB) = 0.0; *(drvdyB) = 0.0;                                        \
@@ -289,3 +292,270 @@ const dfloat keREF = 0.5*RBAR*(UBAR*UBAR + VBAR*VBAR);                       \
     *(dredxB) = 0.0; *(dredyB) = 0.0;                                        \
   }                                                                          \
 }
+
+
+// // Viscous Riemann Solve BC's
+// // ************************************************************************
+// #define cnsViscousBoundaryConditions2D(bc, gamma, R, CP, CV, mu, t,          \
+//                                       RBAR, UBAR, VBAR, PBAR, TBAR,          \
+//                                       x, y, nx, ny,                          \
+//                                       rM, ruM, rvM, reM, rB, ruB, rvB, reB,  \
+//                                       drrdxM, drrdyM, drudxM, drudyM,        \
+//                                       drvdxM, drvdyM, dredxM, dredyM,        \
+//                                       drrdxB, drrdyB, drudxB, drudyB,        \
+//                                       drvdxB, drvdyB, dredxB, dredyB)        \
+// {                                                                            \
+// const dfloat uM  = ruM/rM;                                                   \
+// const dfloat vM  = rvM/rM;                                                   \
+// const dfloat pM  = (gamma-1.0)*(reM - 0.5*rM*(uM*uM + vM*vM));               \
+// const dfloat tM  = pM/(rM*R);                                                \
+// const dfloat unM = uM*nx + vM*ny;                                            \
+// const dfloat cM  = sqrt(gamma*pM/rM);                                        \
+// const dfloat mM  = fabs(unM/cM);                                             \
+// const dfloat keREF = 0.5*RBAR*(UBAR*UBAR + VBAR*VBAR);                       \
+// dfloat PR; PressureRiemann2D(gamma, R, CP, CV, unM, cM, rM, uM, vM, pM, &PR);\
+//   if(bc==11){                                                                \
+//     *( rB) = PR/(TBAR*R);                                                    \
+//     *(ruB) = 0.0;                                                            \
+//     *(rvB) = 0.0;                                                            \
+//     *(reB) = PR/(gamma-1.0);                                                 \
+//     *(drrdxB) = drrdxM;*(drrdyB) = drrdyM;                                   \
+//     *(drudxB) = drudxM;*(drudyB) = drudyM;                                   \
+//     *(drvdxB) = drvdxM;*(drvdyB) = drvdyM;                                   \
+//     *(dredxB) = dredxM;*(dredyB) = dredyM;                                   \
+//    }else if(bc==12){                                                         \
+//     *( rB) = PR/(tM*R);                                                      \
+//     *(ruB) = 0.0;                                                            \
+//     *(rvB) = 0.0;                                                            \
+//     *(reB) = PR/(gamma-1.0);                                                 \
+//     *(drrdxB) = 0.0;*(drrdyB) = 0.0;                                         \
+//     *(drudxB) = 0.0;*(drudyB) = 0.0;                                         \
+//     *(drvdxB) = 0.0;*(drvdyB) = 0.0;                                         \
+//     *(dredxB) = 0.0;*(dredyB) = 0.0;                                         \
+//   }else if(bc==13){                                                          \
+//     const dfloat ruS = ruM - (nx*ruM+ny*rvM)*nx;                                 \
+//     const dfloat rvS = rvM - (nx*ruM+ny*rvM)*ny;                                 \
+//     *( rB) =  rM;                                                            \
+//     *(ruB) =  ruM - (nx*ruM+ny*rvM)*nx;                                      \
+//     *(rvB) =  rvM - (nx*ruM+ny*rvM)*ny;                                      \
+//     *(reB) =  PR/(gamma -1.0)+0.5*(ruS*ruS + rvS*rvS)/rM;                    \
+//     *(drrdxB) = 0.0; *(drrdyB) = 0.0;                                        \
+//     *(drudxB) = 0.0; *(drudyB) = 0.0;                                        \
+//     *(drvdxB) = 0.0; *(drvdyB) = 0.0;                                        \
+//     *(dredxB) = 0.0; *(dredyB) = 0.0;                                        \
+//   }else if(bc==20){                                                          \
+//     *( rB) = RBAR;                                                           \
+//     *(ruB) = RBAR*UBAR;                                                      \
+//     *(rvB) = RBAR*VBAR;                                                      \
+//     *(reB) = PBAR/(gamma -1.0) + keREF;                                      \
+//     *(drrdxB) = 0.0; *(drrdyB) = 0.0;                                        \
+//     *(drudxB) = 0.0; *(drudyB) = 0.0;                                        \
+//     *(drvdxB) = 0.0; *(drvdyB) = 0.0;                                        \
+//     *(dredxB) = 0.0; *(dredyB) = 0.0;                                        \
+//   }else if(bc==23){                                                          \
+//     const dfloat vRmag = sqrt(UBAR*UBAR+VBAR*VBAR);                          \                                                           \
+//     const dfloat cR    = sqrt(gamma*PBAR/RBAR);                              \
+//     const dfloat MaOut = vRmag/cR;                                           \
+//     const dfloat vMmag = sqrt(uM*uM+vM*vM);                                  \                                                           \
+//     const dfloat cM    = sqrt(gamma*pM/rM);                                  \
+//     const dfloat MaM   = vMmag/cM;                                           \
+//     const dfloat cB    = vMmag/MaOut;                                        \
+//     dfloat pB  = 1.0;                                                        \
+//     if(MaM<1.0){                                                                 \
+//       dfloat pT = pM*pow((1.0+0.5*(gamma-1.0)*MaM*MaM),     gamma/(gamma-1.0));  \
+//       pB        = pT*pow((1.0+0.5*(gamma-1.0)*MaOut*MaOut),-gamma/(gamma-1.0));  \
+//     }else{                                                                   \
+//       pB = pM + 0.5*rM*(uM*uM+vM*vM);                                      \
+//     }                                                                        \
+//     const dfloat rb = gamma*pB/(cB*cB);                                      \
+//     *( rB) = rb;                                                             \
+//     *(ruB) = rb*uM;                                                          \
+//     *(rvB) = rb*vM;                                                          \
+//     *(reB) = pB/(gamma-1) + 0.5*rb*(uM*uM+vM*vM);                            \
+//     *(drrdxB) = 0.0; *(drrdyB) = 0.0;                                        \
+//     *(drudxB) = 0.0; *(drudyB) = 0.0;                                        \
+//     *(drvdxB) = 0.0; *(drvdyB) = 0.0;                                        \
+//     *(dredxB) = 0.0; *(dredyB) = 0.0;                                        \
+//   }else if(bc==22){                                                          \
+//     *( rB) = RBAR;                                                           \
+//     *(ruB) = RBAR*UBAR;                                                      \
+//     *(rvB) = RBAR*VBAR;                                                      \
+//     *(reB) = PBAR/(gamma -1.0) + keREF;                                      \
+//     *(drrdxB) = 0.0;*(drrdyB) = 0.0;                                         \
+//     *(drudxB) = 0.0;*(drudyB) = 0.0;                                         \
+//     *(drvdxB) = 0.0;*(drvdyB) = 0.0;                                         \
+//     *(dredxB) = 0.0;*(dredyB) = 0.0;                                         \
+//   }else if(bc==31){                                                          \
+//     *( rB) = rM;                                                             \
+//     *(ruB) = ruM;                                                            \
+//     *(rvB) = rvM;                                                            \
+//     *(reB) = 4.4642857/(gamma -1.0) + 0.5*rM*(uM*uM + vM*vM);                \
+//     *(drrdxB) = 0.0; *(drrdyB) = 0.0;                                        \
+//     *(drudxB) = 0.0; *(drudyB) = 0.0;                                        \
+//     *(drvdxB) = 0.0; *(drvdyB) = 0.0;                                        \
+//     *(dredxB) = 0.0; *(dredyB) = 0.0;                                        \
+//   }else if(bc==32){                                                          \
+//     *( rB) = rM;                                                             \
+//     *(ruB) = ruM;                                                            \
+//     *(rvB) = rvM;                                                            \
+//     *(reB) = reM;                                                            \
+//     *(drrdxB) = drrdxM;*(drrdyB) = drrdyM;                                   \
+//     *(drudxB) = drudxM;*(drudyB) = drudyM;                                   \
+//     *(drvdxB) = drvdxM;*(drvdyB) = drvdyM;                                   \
+//     *(dredxB) = dredxM;*(dredyB) = dredyM;                                   \
+//   } else if(bc==41){                                                         \
+//     *( rB) = RBAR;                                                           \
+//     *(ruB) = RBAR*UBAR;                                                      \
+//     *(rvB) = RBAR*VBAR;                                                      \
+//     *(reB) = PBAR/(gamma -1.0) + keREF;                                      \
+//     *(drrdxB) = 0.0; *(drrdyB) = 0.0;                                        \
+//     *(drudxB) = 0.0; *(drudyB) = 0.0;                                        \
+//     *(drvdxB) = 0.0; *(drvdyB) = 0.0;                                        \
+//     *(dredxB) = 0.0; *(dredyB) = 0.0;                                        \
+//   }                                                                          \
+// }
+
+// 
+// 
+// 
+// // Viscous Riemann Solve BC's
+// // ************************************************************************
+// #define cnsViscousBoundaryConditions2D(bc, gamma, R, CP, CV, mu, t,          \
+//                                       RBAR, UBAR, VBAR, PBAR, TBAR,           \
+//                                       x, y, nx, ny,                          \
+//                                       rM, ruM, rvM, reM, rB, ruB, rvB, reB,  \
+//                                       drrdxM, drrdyM, drudxM, drudyM,        \
+//                                       drvdxM, drvdyM, dredxM, dredyM,        \
+//                                       drrdxB, drrdyB, drudxB, drudyB,        \
+//                                       drvdxB, drvdyB, dredxB, dredyB)        \
+// {                                                                            \
+// const dfloat uM  = ruM/rM;                                                   \
+// const dfloat vM  =  rvM/rM;                                                   \
+// const dfloat pM  = (gamma-1.0)*(reM - 0.5*rM*(uM*uM + vM*vM));               \
+// const dfloat unM = uM*nx + vM*ny;                                            \
+// const dfloat cM  = sqrt(gamma*pM/rM);                                        \
+// const dfloat mM  = fabs(unM/cM);                                             \
+// const dfloat keREF = 0.5*RBAR*(UBAR*UBAR + VBAR*VBAR);                       \
+//   if(bc==11){                                                                \
+//     *( rB) = rM;                                                             \
+//     *(ruB) = 0.0;                                                            \
+//     *(rvB) = 0.0;                                                            \
+//     *(reB) = rM*CV*TBAR + 0.5*(ruM*ruM + rvM*rvM)/rM;                        \
+//     *(drrdxB) = drrdxM;*(drrdyB) = drrdyM;                                   \
+//     *(drudxB) = drudxM;*(drudyB) = drudyM;                                   \
+//     *(drvdxB) = drvdxM;*(drvdyB) = drvdyM;                                   \
+//     *(dredxB) = dredxM;*(dredyB) = dredyM;                                   \
+//    }else if(bc==12){                                                         \
+//     *( rB) = rM;                                                             \
+//     *(ruB) = 0.0;                                                            \
+//     *(rvB) = 0.0;                                                            \
+//     *(reB) = reM - 0.5*(ruM*ruM + rvM*rvM)/rM;                               \
+//     const dfloat uxM = drudxM - uM*drrdxM;                                   \
+//     const dfloat uyM = drudyM - uM*drrdyM;                                   \
+//     const dfloat vxM = drvdxM - vM*drrdxM;                                   \
+//     const dfloat vyM = drvdyM - vM*drrdyM;                                   \
+//     const dfloat TxM = dredxM - (drrdxM*reM/rM + uM*uxM + vM*vxM);          \
+//     const dfloat TyM = dredyM - (drrdyM*reM/rM + uM*uyM + vM*vyM);          \
+//     *(drrdxB) = drrdxM;*(drrdyB) = drrdyM;                                   \
+//     *(drudxB) = drudxM;*(drudyB) = drudyM;                                   \
+//     *(drvdxB) = drvdxM;*(drvdyB) = drvdyM;                                   \
+//     *(dredxB) = dredxM - (nx*nx*TxM + nx*ny*TyM);                            \                                                     \
+//     *(dredyB) = dredyM - (nx*ny*TxM + ny*ny*TyM);                            \
+//   }else if(bc==13){                                                          \
+//     *( rB) =  rM;                                                            \
+//     *(ruB) =  ruM - (nx*ruM+ny*rvM)*nx;                                      \
+//     *(rvB) =  rvM - (nx*ruM+ny*rvM)*ny;                                      \
+//     *(reB) =  reM;                                                           \
+//     *(drrdxB) = 0.0; *(drrdyB) = 0.0;                                        \
+//     *(drudxB) = 0.0; *(drudyB) = 0.0;                                        \
+//     *(drvdxB) = 0.0; *(drvdyB) = 0.0;                                        \
+//     *(dredxB) = 0.0; *(dredyB) = 0.0;                                        \
+//   }else if(bc==20){                                                          \
+//     if(unM<=0){                                                              \
+//       if(mM > 1.0){                                                          \
+//         *( rB) = RBAR;                                                       \
+//         *(ruB) = RBAR*UBAR;                                                  \
+//         *(rvB) = RBAR*VBAR;                                                  \
+//         *(reB) = PBAR/(gamma -1.0) + keREF;                                  \
+//         *(drrdxB) = 0.0;*(drrdyB) = 0.0;                                     \
+//         *(drudxB) = 0.0;*(drudyB) = 0.0;                                     \
+//         *(drvdxB) = 0.0;*(drvdyB) = 0.0;                                     \
+//         *(dredxB) = 0.0;*(dredyB) = 0.0;                                     \
+//       }else{                                                                 \
+//         *( rB) = RBAR;                                                       \
+//         *(ruB) = RBAR*UBAR;                                                  \
+//         *(rvB) = RBAR*VBAR;                                                  \
+//         *(reB) = reM-0.5*rM*(uM*uM+vM*vM)+keREF;                             \
+//         *(drrdxB) = 0.0; *(drrdyB) = 0.0;                                    \
+//         *(drudxB) = 0.0; *(drudyB) = 0.0;                                    \
+//         *(drvdxB) = 0.0; *(drvdyB) = 0.0;                                    \
+//         *(dredxB) = 0.0; *(dredyB) = 0.0;                                    \
+//       }                                                                      \
+//     }else{                                                                   \
+//       if(mM > 1.0){                                                          \
+//         *( rB) = rM;                                                         \
+//         *(ruB) = ruM;                                                        \
+//         *(rvB) = rvM;                                                        \
+//         *(reB) = reM;                                                        \
+//         *(drrdxB) = drrdxM;*(drrdyB) = drrdyM;                               \
+//         *(drudxB) = drudxM;*(drudyB) = drudyM;                               \
+//         *(drvdxB) = drvdxM;*(drvdyB) = drvdyM;                               \
+//         *(dredxB) = dredxM;*(dredyB) = dredyM;                               \
+//         }else{                                                               \
+//         *( rB) = rM;                                                         \
+//         *(ruB) = ruM;                                                        \
+//         *(rvB) = rvM;                                                        \
+//         *(reB) = PBAR/(gamma -1.0) + 0.5*rM*(uM*uM + vM*vM);                 \
+//         *(drrdxB) = 0.0; *(drrdyB) = 0.0;                                    \
+//         *(drudxB) = 0.0; *(drudyB) = 0.0;                                    \
+//         *(drvdxB) = 0.0; *(drvdyB) = 0.0;                                    \
+//         *(dredxB) = 0.0; *(dredyB) = 0.0;                                    \
+//       }                                                                      \
+//     }                                                                        \
+//   }else if(bc==21){                                                          \
+//     *( rB) = RBAR;                                                           \
+//     *(ruB) = RBAR*UBAR;                                                      \
+//     *(rvB) = RBAR*VBAR;                                                      \
+//     *(reB) = reM-0.5*rM*(uM*uM+vM*vM)+keREF;                                 \
+//     *(drrdxB) = 0.0; *(drrdyB) = 0.0;                                        \
+//     *(drudxB) = 0.0; *(drudyB) = 0.0;                                        \
+//     *(drvdxB) = 0.0; *(drvdyB) = 0.0;                                        \
+//     *(dredxB) = 0.0; *(dredyB) = 0.0;                                        \
+//   }else if(bc==22){                                                          \
+//     *( rB) = RBAR;                                                           \
+//     *(ruB) = RBAR*UBAR;                                                      \
+//     *(rvB) = RBAR*VBAR;                                                      \
+//     *(reB) = PBAR/(gamma -1.0) + keREF;                                      \
+//     *(drrdxB) = 0.0;*(drrdyB) = 0.0;                                         \
+//     *(drudxB) = 0.0;*(drudyB) = 0.0;                                         \
+//     *(drvdxB) = 0.0;*(drvdyB) = 0.0;                                         \
+//     *(dredxB) = 0.0;*(dredyB) = 0.0;                                         \
+//   }else if(bc==31){                                                          \
+//     *( rB) = rM;                                                             \
+//     *(ruB) = ruM;                                                            \
+//     *(rvB) = rvM;                                                            \
+//     *(reB) = PBAR/(gamma -1.0) + 0.5*rM*(uM*uM + vM*vM);                     \
+//     *(drrdxB) = 0.0; *(drrdyB) = 0.0;                                        \
+//     *(drudxB) = 0.0; *(drudyB) = 0.0;                                        \
+//     *(drvdxB) = 0.0; *(drvdyB) = 0.0;                                        \
+//     *(dredxB) = 0.0; *(dredyB) = 0.0;                                        \
+//   }else if(bc==32){                                                          \
+//     *( rB) = rM;                                                             \
+//     *(ruB) = ruM;                                                            \
+//     *(rvB) = rvM;                                                            \
+//     *(reB) = reM;                                                            \
+//     *(drrdxB) = drrdxM;*(drrdyB) = drrdyM;                                   \
+//     *(drudxB) = drudxM;*(drudyB) = drudyM;                                   \
+//     *(drvdxB) = drvdxM;*(drvdyB) = drvdyM;                                   \
+//     *(dredxB) = dredxM;*(dredyB) = dredyM;                                   \
+//   } else if(bc==41){                                                         \
+//     *( rB) = RBAR;                                                           \
+//     *(ruB) = RBAR*UBAR;                                                      \
+//     *(rvB) = RBAR*VBAR;                                                      \
+//     *(reB) = PBAR/(gamma -1.0) + keREF;                                      \
+//     *(drrdxB) = 0.0; *(drrdyB) = 0.0;                                        \
+//     *(drudxB) = 0.0; *(drudyB) = 0.0;                                        \
+//     *(drvdxB) = 0.0; *(drvdyB) = 0.0;                                        \
+//     *(dredxB) = 0.0; *(dredyB) = 0.0;                                        \
+//   }                                                                          \
+// }

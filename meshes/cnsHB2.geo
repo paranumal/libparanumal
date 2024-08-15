@@ -29,7 +29,7 @@ EndFor
 
 //Set diameter to 1 in scaled geometry
 // scale_factor = 1.0/(ymax - ymin); 
-scale_factor = 1.0/(2*27.86324634); 
+scale_factor = 1.0/(63.5); 
 
 // Scale the volume so that L = 8.5; 
 Dilate {{0, 0, 0}, {scale_factor, scale_factor, scale_factor}} { Volume{1};}
@@ -55,9 +55,9 @@ For i In {0:#bbox()-1}
 EndFor
 
 // RI = 3.0*(xmax - xmin)/2; 
-RI        = 12.0;
+RI        = 25.0;
 C0        = -1.0;  
-LC        = 25.0;  
+LC        = 75.0;  
 Sphere(2) = {C0, 0, 0, RI, -Pi/2, Pi/2, 2*Pi};
 Cylinder(3) = {C0, 0, 0, LC, 0, 0, RI, 2*Pi};
 BooleanUnion{ Volume{3}; Delete; }{ Volume{2}; Delete; }

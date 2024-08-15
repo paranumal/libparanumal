@@ -36,7 +36,11 @@ void BaseLineDecay(int _N, memory<dfloat>& _BLD);
 
 void cns_t::applyKlocknerDetector(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_gradQ, const dfloat T){
 
-  detectKernel(mesh.Nelements, 
+ detectDucrosKernel(mesh.Nelements, o_projectC0,o_Q, o_gradQ, o_qducros);
+
+
+
+ detectKernel(mesh.Nelements, 
               mesh.o_vgeo, 
               o_modeIds, 
               mesh.o_MM, 
@@ -44,6 +48,7 @@ void cns_t::applyKlocknerDetector(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat
               o_LS1D, 
               o_BLD, 
               o_Q, 
+              o_qducros,
               o_qdetect, 
               o_elmList);
 }
@@ -102,6 +107,25 @@ void cns_t::setupKlocknerDetector(){
   props["defines/" "s_sK0"] = 1.0;  
   props["defines/" "p_Nq"]  = mesh.N+1;
 
+  {
+    // Project to Cell Center Values
+    projectC0.malloc(mesh.Np, 0.0);
+    for(int j=0; j<mesh.Np; j++){
+      dfloat sum=0.0; 
+      for(int i=0; i<mesh.Np; i++){ sum += mesh.MM[i*mesh.Np + j];}
+      projectC0[j] = 0.5*sum;
+    } 
+
+    // Move to device
+    o_projectC0 = platform.malloc<dfloat>(projectC0); 
+  
+    // Create a field for detector
+    qducros.malloc((mesh.Nelements+mesh.totalHaloPairs)*1); 
+    o_qducros = platform.malloc<dfloat>(qducros); 
+
+
+  }
+
    // set kernel name suffix
   std::string suffix        = mesh.elementSuffix();
   std::string oklFilePrefix = DCNS"/okl/detect/";
@@ -111,6 +135,9 @@ void cns_t::setupKlocknerDetector(){
   fileName      = oklFilePrefix + "cnsDetectKlockner" + oklFileSuffix;
   kernelName    = "cnsDetectKlockner" + suffix;
   detectKernel  = platform.buildKernel(fileName, kernelName, props);
+
+  kernelName         = "detectDucrosDiffusion" + suffix;
+  detectDucrosKernel = platform.buildKernel(fileName, kernelName, props);
 
 }
 
