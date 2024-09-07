@@ -30,15 +30,29 @@ void cns_t::setupPhysics(){
 
   // Read Reference State and number of states
   setFlowStates(); 
- 
   // Set isentropic exponent and related info
   settings.getSetting("GAMMA", gamma);
+
+  dfloat rref=1.0, uref=1.0, vref=0.0, wref=0.0, pref=1.0, tref=1.0; 
+  rref = flowStates[ICStateID*NstatePoints + 0];
+  uref = flowStates[ICStateID*NstatePoints + 1];
+  vref = flowStates[ICStateID*NstatePoints + 2];
+  if(mesh.dim==2){
+    pref = flowStates[ICStateID*NstatePoints + 3];        
+    tref = flowStates[ICStateID*NstatePoints + 4];        
+  }else{
+    wref = flowStates[ICStateID*NstatePoints + 3];
+    pref = flowStates[ICStateID*NstatePoints + 4];
+    tref = flowStates[ICStateID*NstatePoints + 5];
+  }
+
+  // printf("%.4f %.4f %.4f %.4f %.4f\n", rref, uref, vref, pref,tref); 
 
   // Set specific gas constant
   if(settings.compareSetting("NONDIMENSIONAL EQUATIONS", "TRUE")){
       settings.getSetting("REYNOLDS NUMBER", Re);    
       settings.getSetting("MACH NUMBER", Ma); 
-      R = 1.0 / (gamma*Ma*Ma); 
+      R = pref/(rref*tref); 
   }else {
       settings.getSetting("SPECIFIC GAS CONSTANT", R); 
   }
@@ -48,16 +62,6 @@ void cns_t::setupPhysics(){
   if(settings.compareSetting("SOLVER TYPE", "NAVIER-STOKES")){
     settings.getSetting("PRANDTL NUMBER", Pr); 
     if(settings.compareSetting("NONDIMENSIONAL EQUATIONS", "TRUE")){
-      dfloat rref=1.0, uref=1.0, vref=0.0, wref=0.0, pref=1.0, tref=1.0; 
-      rref = flowStates[ICStateID*NstatePoints + 0];
-      uref = flowStates[ICStateID*NstatePoints + 1];
-      vref = flowStates[ICStateID*NstatePoints + 2];
-      if(mesh.dim==2){
-        wref = flowStates[ICStateID*NstatePoints + 3];
-        pref = flowStates[ICStateID*NstatePoints + 4];
-      }else{
-        pref = flowStates[ICStateID*NstatePoints + 3];        
-      }
       const dfloat velRef = mesh.dim==2 ? std::sqrt(uref*uref + vref*vref):std::sqrt(uref*uref + vref*vref+wref*wref); 
       mu = rref*velRef/Re; 
     }else{

@@ -98,12 +98,17 @@
           const dfloat PBAR = flowStates[BCStateID*p_NsP + 3]; 
           const dfloat TBAR = flowStates[BCStateID*p_NsP + 4]; 
 
-          cnsViscousBoundaryConditions2D(bc, gamma, R, CP, CV, mu, time, 
-                                          RBAR, UBAR, VBAR, PBAR, TBAR, 
-                                          x[idM], y[idM], nx, ny,
-                                          rM, ruM, rvM, EM, &rP, &ruP, &rvP, &EP,
-                                          0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                                          &drrdxP, &drrdyP, &drudxP, &drudyP, &drvdxP, &drvdyP, &dredxP, &dredyP);
+            cnsInviscidBoundaryConditions2D(bc, gamma, R, CP, CV, muM, time, 
+                                        RBAR, UBAR, VBAR, PBAR, TBAR, 
+                                        x[idM], y[idM], nx, ny, 
+                                        rM, ruM, rvM, EM, &rP, &ruP, &rvP, &EP); 
+
+          // cnsViscousBoundaryConditions2D(bc, gamma, R, CP, CV, mu, time, 
+          //                                 RBAR, UBAR, VBAR, PBAR, TBAR, 
+          //                                 x[idM], y[idM], nx, ny,
+          //                                 rM, ruM, rvM, EM, &rP, &ruP, &rvP, &EP,
+          //                                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+          //                                 &drrdxP, &drrdyP, &drudxP, &drudyP, &drvdxP, &drvdyP, &dredxP, &dredyP);
           dfloat uP = ruP/rP; 
           dfloat vP = rvP/rP; 
           dfloat pP = (gamma-1)*(EP-0.5*rP*(uP*uP+vP*vP));

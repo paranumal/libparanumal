@@ -27,29 +27,126 @@
 #define BLDEC 1
 #define mymax(a,b) (((a)>(b))?(a):(b))
 #define mymin(a,b) (((a)<(b))?(a):(b))
-#define ALPHA  1000
 
-
-// // Regularization of rho / p  (cannot be smaller than rmin / pmin)
-// dfloat LMAX(const dfloat x, const dfloat alpha){
-//   dfloat xmax = x*(atan(alpha*x)/M_PI + 0.5) - atan(alpha)/M_PI + 0.5;
-//   return xmax;
-// }
-
+// #define SMIN 0.00
+// #define SMAX 1.00
+// #define ALPHA 100.0
 
 // // Regularization of rho / p  (cannot be smaller than rmin / pmin)
-// dfloat LMIN(const dfloat x, const dfloat alpha){
-//   dfloat xmin = x - LMAX(x,alpha);
-//   return xmin;
-// }
-
-// // / Regularization of rho / p  (cannot be smaller than rmin / pmin)
-// dfloat LIM(const dfloat x,const dfloat xmin, const dfloat xmax,
-// 	         const dfloat alpha,const dfloat beta){
-//   dfloat xlim = xmin + LMAX(x-beta, alpha); 
-//   xlim = LMIN(xlim-xmax, alpha) + xmax;
+// dfloat LMAX(const dfloat x){
+//   dfloat xlim = x*(atan(ALPHA*x)/M_PI + 0.5) - atan(ALPHA)/M_PI + 0.5;
 //   return xlim;
 // }
+
+// // Regularization of rho / p  (cannot be smaller than rmin / pmin)
+// dfloat LMIN(const dfloat x){
+//   dfloat xlim = x - LMAX(x);
+//   return xlim;
+// }
+
+
+// // Density / pressure sensor for gradients...
+// dfloat SMOOTH_S(const dfloat s){
+// 	const dfloat lmax = LMAX(s-SMIN); 
+// 	const dfloat lmin = LMIN(lmax-SMAX); 
+//   return  lmin+SMAX; 
+// }
+
+
+// @kernel void detectDucrosDiffusionTri2D(const dlong Nelements,
+// 	                                      @restrict const  dfloat *  ElmLength,
+//                                         @restrict const  dfloat *  pM,
+//                                         @restrict const  dfloat *  q,
+//                                         @restrict const  dfloat *  gradq,
+//                                         @restrict        dfloat *  qd){
+//  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+//     @shared dfloat s_SW[p_Np];
+//     @shared dfloat s_ST[p_Np];
+
+//     for(int n=0;n<p_Np;++n;@inner(0)){
+//   	  // const dfloat gamma  = pCoeff[p_GMID]; // gamma
+//       // const dfloat R      = pCoeff[p_RRID]; 
+//       // const dfloat CP     = pCoeff[p_CPID]; 
+//       // const dfloat CV     = pCoeff[p_CVID]; 
+//       // const dfloat Pr     = pCoeff[p_PRID]; // Prandtl Number
+//       // const dfloat beta   = pCoeff[p_BTID]; // LDG alternating upwinding
+//       //         dfloat tau    = pCoeff[p_TAID]; // LDG jump stabilizer
+//     	 // conserved variables
+//       const dlong  qbase = e*p_Np*4 + n;
+//       const dfloat rr = q[qbase+0*p_Np];
+//       const dfloat ru = q[qbase+1*p_Np];
+//       const dfloat rv = q[qbase+2*p_Np];
+//       const dfloat rE = q[qbase+3*p_Np];
+//       const dfloat ir  = 1.0/rr; 
+
+//       const dfloat u = ru*ir; 
+//       const dfloat v = rv*ir;
+     
+//       // gradients
+//       const dlong id = e*p_Np*8 + n;
+//       const dfloat drrdx = gradq[id+0*p_Np];
+//       const dfloat drrdy = gradq[id+1*p_Np];     
+//       const dfloat drudx = gradq[id+2*p_Np];
+//       const dfloat drudy = gradq[id+3*p_Np];
+//       const dfloat drvdx = gradq[id+4*p_Np];
+//       const dfloat drvdy = gradq[id+5*p_Np];  
+
+//       // Find derivative of primitives
+//       const dfloat dudx  = (drudx - drrdx*u)*ir;
+//       const dfloat dvdx  = (drvdx - drrdx*v)*ir;
+//       const dfloat dudy  = (drudy - drrdy*u)*ir;
+//       const dfloat dvdy  = (drvdy - drrdy*v)*ir;
+
+//       // Compute divergence and vorticity
+//       const dfloat div  = (dudx + dvdy); 
+//       const dfloat vort = (dvdx - dudy);
+
+//       const dfloat gamma = 1.4; 
+//       const dfloat p     = (gamma-1)*(rE - 0.5*rr*(u*u+v*v));
+//       const dfloat c     = sqrt(gamma*p/rr); 
+//       const dfloat us    = sqrt(u*u+v*v + c); 
+      
+
+//       const dfloat he = ElmLength[e]; 
+
+//        // printf("( %d  %g %g %g )\n", e, c , div, vort); 
+
+
+//       // Compute divergence sensor
+//       // Prizolli's modification of Ducros detector
+//       // s_S[n] = -div/ (sqrt(div*div) + sqrt(vort*vort)+1e-16);
+      
+//       // Ducros's original detector
+//       s_SW[n] = div*div/ (div*div + vort*vort + 1.0E-16);
+//       s_ST[n] = -he*div/(c*p_N);
+//     }  
+
+//  		for(int n=0;n<p_Np;++n;@inner(0)){
+//     	if(n==0){
+//      		dfloat rw = 0.0, rt=0.0; 
+//      		for(int i=0; i<p_Np; i++){
+//            rw += pM[i]*s_SW[i];
+//            rt += pM[i]*s_ST[i];
+//         }
+
+//         // qd[e] =  rs>0.7 ? rs:0.0; 
+//         qd[e] =  SMOOTH_S(rw);
+
+//          // printf("( %d   %g %g %g)\n", e, rw, rt,  SMOOTH_S(rw)); 
+//         // qd[e] =  1.0; 
+//      	}
+//     }
+
+//   }
+// }
+
+
+
+
+
+
+
 @kernel void detectDucrosDiffusionTri2D(const dlong Nelements,
                                         @restrict const  dfloat *  pM,
                                         @restrict const  dfloat *  q,
@@ -97,10 +194,10 @@
 
       // Compute divergence sensor
       // Prizolli's modification of Ducros detector
-      s_S[n] = -div/ (sqrt(div*div) + sqrt(vort*vort)+1e-16);
+      // s_S[n] = -div/ (sqrt(div*div) + sqrt(vort*vort)+1e-16);
       
       // Ducros's original detector
-      // s_S[n] = div*div/ (div*div + vort*vort + 1.0E-16);
+      s_S[n] = div*div/ (div*div + vort*vort + 1.0E-16);
 
       
        // Person's modification of Ducros detector
@@ -135,8 +232,10 @@
      		for(int i=0; i<p_Np; i++){
            rs += pM[i]*s_S[i];
         }
-        // qd[e] =  rs>0.7 ? rs:0.0; 
-        qd[e] =  rs; 
+        // qd[e] =  rs>0.5 ? 1.0:0.0; 
+        qd[e] =  rs;
+
+        // printf("( %d   %g )\n", e, rs); 
         // qd[e] =  1.0; 
      	}
     }
@@ -401,10 +500,9 @@
 	  		else 
 	  			r_qd = 0.5*( 1. + sin( - 0.5* M_PI*(sk-s_sS0)/ s_sK0)); 
 	  		
-	  		// artVisc[e*s_Ndfields + fld] = avisc*qd;	 
-	  		// qdetect[e] = r_qd;	 
+	  		// qdetect[e] = qd;	 
 	  		qdetect[e] = r_qd*qd;	 
-	  		ElementList[e] = r_qd>0 ? 1 : 0;
+	  		// ElementList[e] = r_qd*qd>0 ? 1 : 0;
 			  }
 				}
       }

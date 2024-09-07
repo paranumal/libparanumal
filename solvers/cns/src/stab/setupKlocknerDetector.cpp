@@ -36,10 +36,17 @@ void BaseLineDecay(int _N, memory<dfloat>& _BLD);
 
 void cns_t::applyKlocknerDetector(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_gradQ, const dfloat T){
 
- detectDucrosKernel(mesh.Nelements, o_projectC0,o_Q, o_gradQ, o_qducros);
+ // detectDucrosKernel(mesh.Nelements, o_elmLength, o_projectC0, o_Q, o_gradQ, o_qducros);
+ detectDucrosKernel(mesh.Nelements, o_projectC0, o_Q, o_gradQ, o_qducros);
 
-
-
+ // if(T>1.0){
+ //  const dfloat vmax = 1.0; 
+ //  platform.linAlg().scale(mesh.Nelements, vmax, o_qducros); 
+ // }else{
+ //   const dfloat vmax = 1.0; 
+ //   platform.linAlg().set(mesh.Nelements, vmax, o_qducros);
+ // }
+ 
  detectKernel(mesh.Nelements, 
               mesh.o_vgeo, 
               o_modeIds, 
@@ -59,10 +66,12 @@ void cns_t::setupKlocknerDetector(){
   // There is no cutout in the detector to mark elements
   // as this should be function of stabilizer 
   // Initialize Required Memory
-  elmList.malloc((mesh.Nelements+mesh.totalHaloPairs)*1); 
+  // elmList.malloc((mesh.Nelements+mesh.totalHaloPairs)*1); 
+  elmList.malloc(mesh.Nelements); 
   o_elmList = platform.malloc<dlong>(elmList); 
 
-  qdetect.malloc((mesh.Nelements+mesh.totalHaloPairs)*1); 
+  qdetect.malloc(mesh.Nelements); 
+  // qdetect.malloc((mesh.Nelements+mesh.totalHaloPairs)*1); 
   o_qdetect = platform.malloc<dfloat>(qdetect); 
 
    // Create required operators 
@@ -120,10 +129,9 @@ void cns_t::setupKlocknerDetector(){
     o_projectC0 = platform.malloc<dfloat>(projectC0); 
   
     // Create a field for detector
-    qducros.malloc((mesh.Nelements+mesh.totalHaloPairs)*1); 
+    // qducros.malloc((mesh.Nelements+mesh.totalHaloPairs)*1); 
+    qducros.malloc(mesh.Nelements*1); 
     o_qducros = platform.malloc<dfloat>(qducros); 
-
-
   }
 
    // set kernel name suffix

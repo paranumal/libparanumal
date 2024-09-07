@@ -21,14 +21,14 @@
                                @restrict const dfloat *Vmax, 
                                @restrict       dfloat *visc){
  for(dlong n=0;n<N;++n;@tile(p_blockSize,@outer,@inner)){
-  const int e     = int(n/s_Nverts); 
-  const int vid   = int(n%s_Nverts); 
-  const dfloat scale = viscScale[e]; // h
-  const dfloat vmax = Vmax[e]; // h
+  const int e         = int(n/s_Nverts); 
+  const int vid       = int(n%s_Nverts); 
+  const dfloat scale  = viscScale[e]; // h
+  const dfloat vmax   = Vmax[e]; // h
 
-  const dlong id     = e*s_Nverts + vid; 
-  dfloat ramp        = viscActivation[e]; // f(s)
-  visc[n]            = alpha*scale*vmax*ramp;  // alpha*h/N * f(s)
+  const dlong id      = e*s_Nverts + vid; 
+  dfloat ramp         = viscActivation[e]; // f(s)
+  visc[n]             = alpha*scale*vmax*ramp;  // alpha*h/N * f(s)
   }
 }
 
@@ -54,7 +54,7 @@
         for (int k=0;k<s_Nverts;k++) {
              r_qM += pM[n+k*p_Np]*s_q[k];
         }
-
+        
         q[ e*p_Np + n] = r_qM;
                   
       }

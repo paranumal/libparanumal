@@ -44,7 +44,6 @@ SOFTWARE.
       const dfloat ru = q[qbase + 1*p_Np];
       const dfloat rv = q[qbase + 2*p_Np];
       const dfloat re = q[qbase + 3*p_Np];
-
       s_rr[n] = rr;
       s_ru[n] = ru;
       s_rv[n] = rv;
@@ -73,18 +72,10 @@ SOFTWARE.
         const dfloat rv = s_rv[i];
         const dfloat re = s_re[i];
 
-        // density
-        drrdr += Drni*rr;
-        drrds += Dsni*rr;
-
-        drudr += Drni*ru;
-        druds += Dsni*ru;
-
-        drvdr += Drni*rv;
-        drvds += Dsni*rv;
-
-        dredr += Drni*re;
-        dreds += Dsni*re;
+        drrdr += Drni*rr; drrds += Dsni*rr;
+        drudr += Drni*ru; druds += Dsni*ru;
+        drvdr += Drni*rv; drvds += Dsni*rv;
+        dredr += Drni*re; dreds += Dsni*re;
       }
       // Density
       const dfloat drrdx = drdx*drrdr + dsdx*drrds;

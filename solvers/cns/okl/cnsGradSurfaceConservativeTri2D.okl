@@ -93,16 +93,22 @@ SOFTWARE.
                   dfloat ruP = q[baseP + 1*p_Np];
                   dfloat rvP = q[baseP + 2*p_Np];
                   dfloat reP = q[baseP + 3*p_Np];
-            // // apply boundary condition given in primitive variables
+
+
+            const dfloat sc = invJ*sJ;
+
+            // LDG Flipping 
+            dfloat betaM = 0.5 + (nx>0 ? beta:-beta); 
+            dfloat betaP = 0.5 - (nx>0 ? beta:-beta);
+            
+            // apply boundary condition given in primitive variables
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0) {
-
               const dfloat RBAR = flowStates[BCStateID*p_NsP + 0]; 
               const dfloat UBAR = flowStates[BCStateID*p_NsP + 1]; 
               const dfloat VBAR = flowStates[BCStateID*p_NsP + 2]; 
               const dfloat PBAR = flowStates[BCStateID*p_NsP + 3]; 
               const dfloat TBAR = flowStates[BCStateID*p_NsP + 4]; 
-
               // fake derivates
               dfloat drrdxP = 0.0, drrdyP =0.0; 
               dfloat drudxP = 0.0, drudyP =0.0; 
@@ -115,62 +121,20 @@ SOFTWARE.
                                              0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                                              &drrdxP, &drrdyP, &drudxP, &drudyP, 
                                              &drvdxP, &drvdyP, &dredxP, &dredyP);
-
+              
+              // betaM = 0.0;  betaP = 1.0; 
             }
+            s_gradflux[es][0][n] = sc*nx*( betaM*rrM + betaP*rrP  - rrM);
+            s_gradflux[es][1][n] = sc*ny*( betaM*rrM + betaP*rrP  - rrM);
 
-            // const dfloat ntx = 0.707106781186547;
-            // const dfloat nty = 0.707106781186547;
-            // const dfloat ntest = nx*ntx + ny*nty; 
+            s_gradflux[es][2][n] = sc*nx*( betaM*ruM + betaP*ruP  - ruM);
+            s_gradflux[es][3][n] = sc*ny*( betaM*ruM + betaP*ruP  - ruM);
 
-            // const dfloat sc = invJ*sJ;
-            // const dfloat beta1 = (ntest)>=0 ? beta :-beta; 
-          
-            // dfloat alphaM = 0.5 + beta1; 
-            // dfloat alphaP = 0.5 + beta1; 
-            
-            // s_gradflux[es][0][n] = sc*nx*( alphaM*rrM + alphaP*rrP  - rrM);
-            // s_gradflux[es][1][n] = sc*ny*( alphaM*rrM + alphaP*rrP  - rrM);
+            s_gradflux[es][4][n] = sc*nx*( betaM*rvM + betaP*rvP  - rvM);
+            s_gradflux[es][5][n] = sc*ny*( betaM*rvM + betaP*rvP  - rvM);
 
-            // s_gradflux[es][2][n] = sc*nx*( alphaM*ruM + alphaP*ruP  - ruM);
-            // s_gradflux[es][3][n] = sc*ny*( alphaM*ruM + alphaP*ruP  - ruM);
-
-            // s_gradflux[es][4][n] = sc*nx*( alphaM*rvM + alphaP*rvP  - rvM);
-            // s_gradflux[es][5][n] = sc*ny*( alphaM*rvM + alphaP*rvP  - rvM);
-
-            // s_gradflux[es][6][n] = sc*nx*( alphaM*reM + alphaP*reP  - reM);
-            // s_gradflux[es][7][n] = sc*ny*( alphaM*reM + alphaP*reP  - reM);
-
-            // s_gradflux[es][0][n] = sc*nx*( 0.5*(rrM + rrP) + beta1*(rrM - rrP) - rrM);
-            // s_gradflux[es][1][n] = sc*ny*( 0.5*(rrM + rrP) + beta1*(rrM - rrP) - rrM);
-
-            // s_gradflux[es][2][n] = sc*nx*( 0.5*(ruM + ruP) + beta1*(ruM - ruP) - ruM);
-            // s_gradflux[es][3][n] = sc*ny*( 0.5*(ruM + ruP) + beta1*(ruM - ruP) - ruM);
-
-            // s_gradflux[es][4][n] = sc*nx*( 0.5*(rvM + rvP) + beta1*(rvM - rvP) - rvM);
-            // s_gradflux[es][5][n] = sc*ny*( 0.5*(rvM + rvP) + beta1*(rvM - rvP) - rvM);
-
-            // s_gradflux[es][6][n] = sc*nx*( 0.5*(reM + reP) + beta1*(reM - reP) - reM);
-            // s_gradflux[es][7][n] = sc*ny*( 0.5*(reM + reP) + beta1*(reM - reP) - reM);
-
-            // const dfloat sc = invJ*sJ;
-            // const dfloat alphaM = 0.5 + beta; 
-            // const dfloat alphaP = 0.5  beta; 
-
-            const dfloat sc = invJ*sJ;
-            const dfloat alphaM = 0.5 + beta; 
-            const dfloat alphaP = 0.5 - beta; 
-            
-            s_gradflux[es][0][n] = sc*nx*( alphaM*rrM + alphaP*rrP  - rrM);
-            s_gradflux[es][1][n] = sc*ny*( alphaM*rrM + alphaP*rrP  - rrM);
-
-            s_gradflux[es][2][n] = sc*nx*( alphaM*ruM + alphaP*ruP  - ruM);
-            s_gradflux[es][3][n] = sc*ny*( alphaM*ruM + alphaP*ruP  - ruM);
-
-            s_gradflux[es][4][n] = sc*nx*( alphaM*rvM + alphaP*rvP  - rvM);
-            s_gradflux[es][5][n] = sc*ny*( alphaM*rvM + alphaP*rvP  - rvM);
-
-            s_gradflux[es][6][n] = sc*nx*( alphaM*reM + alphaP*reP  - reM);
-            s_gradflux[es][7][n] = sc*ny*( alphaM*reM + alphaP*reP  - reM);
+            s_gradflux[es][6][n] = sc*nx*( betaM*reM + betaP*reP  - reM);
+            s_gradflux[es][7][n] = sc*ny*( betaM*reM + betaP*reP  - reM);
           }
         }
       }
@@ -312,6 +276,11 @@ SOFTWARE.
             reP += iInm*s_qP[3][fm]; 
           }
 
+
+            // LDG Flipping 
+            dfloat betaM = 0.5 - (nx>0 ? beta:-beta); 
+            dfloat betaP = 0.5 + (nx>0 ? beta:-beta);
+
          // apply boundary condition given in primitive variables
           const int bc = EToB[face+p_Nfaces*e];
           if(bc>0) {
@@ -333,23 +302,23 @@ SOFTWARE.
                                          0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                                          &drrdxP, &drrdyP, &drudxP, &drudyP, 
                                          &drvdxP, &drvdyP, &dredxP, &dredyP);
+              // betaM = 0.0;  
+              // betaP = 1.0; 
           }
 
             const dfloat sc = invJ*sJ;
-            const dfloat alphaM = 0.5 + beta; 
-            const dfloat alphaP = 0.5 - beta; 
             
-            s_gradflux[0][n] = sc*nx*( alphaM*rrM + alphaP*rrP);
-            s_gradflux[1][n] = sc*ny*( alphaM*rrM + alphaP*rrP);
+            s_gradflux[0][n] = sc*nx*( betaM*rrM + betaP*rrP);
+            s_gradflux[1][n] = sc*ny*( betaM*rrM + betaP*rrP);
 
-            s_gradflux[2][n] = sc*nx*( alphaM*ruM + alphaP*ruP);
-            s_gradflux[3][n] = sc*ny*( alphaM*ruM + alphaP*ruP);
+            s_gradflux[2][n] = sc*nx*( betaM*ruM + betaP*ruP);
+            s_gradflux[3][n] = sc*ny*( betaM*ruM + betaP*ruP);
 
-            s_gradflux[4][n] = sc*nx*( alphaM*rvM + alphaP*rvP);
-            s_gradflux[5][n] = sc*ny*( alphaM*rvM + alphaP*rvP);
+            s_gradflux[4][n] = sc*nx*( betaM*rvM + betaP*rvP);
+            s_gradflux[5][n] = sc*ny*( betaM*rvM + betaP*rvP);
 
-            s_gradflux[6][n] = sc*nx*( alphaM*reM + alphaP*reP);
-            s_gradflux[7][n] = sc*ny*( alphaM*reM + alphaP*reP);
+            s_gradflux[6][n] = sc*nx*( betaM*reM + betaP*reP);
+            s_gradflux[7][n] = sc*ny*( betaM*reM + betaP*reP);
         }
       }
 
