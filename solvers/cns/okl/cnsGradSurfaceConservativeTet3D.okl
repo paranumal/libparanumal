@@ -25,7 +25,7 @@ SOFTWARE.
 */
 
 @kernel void cnsGradSurfaceConservativeTet3D(const dlong Nelements,
-                                               const int BCStateID, 
+                                             const int BCStateID, 
                                              @restrict const  dfloat *  sgeo,
                                              @restrict const  dfloat *  LIFT,
                                              @restrict const  dlong  *  vmapM,
@@ -108,7 +108,13 @@ SOFTWARE.
                     dfloat rvP = q[baseP + 2*p_Np];
                     dfloat rwP = q[baseP + 3*p_Np];
                     dfloat reP = q[baseP + 4*p_Np];
-             
+
+
+            const dfloat sc = invJ*sJ;
+            // LDG Flipping 
+            dfloat betaM = 0.5 + (nx>0 ? beta:-beta); 
+            dfloat betaP = 0.5 - (nx>0 ? beta:-beta);
+
             // apply boundary condition given in primitive variables
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0) {
@@ -141,31 +147,29 @@ SOFTWARE.
                                  &drwdxP, &drwdyP, &drwdzP, 
                                  &dredxP, &dredyP, &dredzP);
 
+             // betaM = 0.0;  betaP = 1.0; 
+
             }
 
-            const dfloat sc = invJ*sJ;
-            const dfloat alphaM = 0.5 + beta; 
-            const dfloat alphaP = 0.5 - beta; 
+            s_gradflux[ 0][n] = sc*nx*( betaM*rrM + betaP*rrP  - rrM);
+            s_gradflux[ 1][n] = sc*ny*( betaM*rrM + betaP*rrP  - rrM);
+            s_gradflux[ 2][n] = sc*nz*( betaM*rrM + betaP*rrP  - rrM);
 
-            s_gradflux[ 0][n] = sc*nx*( alphaM*rrM + alphaP*rrP  - rrM);
-            s_gradflux[ 1][n] = sc*ny*( alphaM*rrM + alphaP*rrP  - rrM);
-            s_gradflux[ 2][n] = sc*nz*( alphaM*rrM + alphaP*rrP  - rrM);
+            s_gradflux[ 3][n] = sc*nx*( betaM*ruM + betaP*ruP  - ruM);
+            s_gradflux[ 4][n] = sc*ny*( betaM*ruM + betaP*ruP  - ruM);
+            s_gradflux[ 5][n] = sc*nz*( betaM*ruM + betaP*ruP  - ruM);
 
-            s_gradflux[ 3][n] = sc*nx*( alphaM*ruM + alphaP*ruP  - ruM);
-            s_gradflux[ 4][n] = sc*ny*( alphaM*ruM + alphaP*ruP  - ruM);
-            s_gradflux[ 5][n] = sc*nz*( alphaM*ruM + alphaP*ruP  - ruM);
+            s_gradflux[ 6][n] = sc*nx*( betaM*rvM + betaP*rvP  - rvM);
+            s_gradflux[ 7][n] = sc*ny*( betaM*rvM + betaP*rvP  - rvM);
+            s_gradflux[ 8][n] = sc*nz*( betaM*rvM + betaP*rvP  - rvM);
 
-            s_gradflux[ 6][n] = sc*nx*( alphaM*rvM + alphaP*rvP  - rvM);
-            s_gradflux[ 7][n] = sc*ny*( alphaM*rvM + alphaP*rvP  - rvM);
-            s_gradflux[ 8][n] = sc*nz*( alphaM*rvM + alphaP*rvP  - rvM);
+            s_gradflux[ 9][n] = sc*nx*( betaM*rwM + betaP*rwP  - rwM);
+            s_gradflux[10][n] = sc*ny*( betaM*rwM + betaP*rwP  - rwM);
+            s_gradflux[11][n] = sc*nz*( betaM*rwM + betaP*rwP  - rwM);
 
-            s_gradflux[ 9][n] = sc*nx*( alphaM*rwM + alphaP*rwP  - rwM);
-            s_gradflux[10][n] = sc*ny*( alphaM*rwM + alphaP*rwP  - rwM);
-            s_gradflux[11][n] = sc*nz*( alphaM*rwM + alphaP*rwP  - rwM);
-
-            s_gradflux[12][n] = sc*nx*( alphaM*reM + alphaP*reP  - reM);
-            s_gradflux[13][n] = sc*ny*( alphaM*reM + alphaP*reP  - reM);
-            s_gradflux[14][n] = sc*nz*( alphaM*reM + alphaP*reP  - reM);
+            s_gradflux[12][n] = sc*nx*( betaM*reM + betaP*reP  - reM);
+            s_gradflux[13][n] = sc*ny*( betaM*reM + betaP*reP  - reM);
+            s_gradflux[14][n] = sc*nz*( betaM*reM + betaP*reP  - reM);
         }
       } 
 
@@ -228,22 +232,22 @@ SOFTWARE.
 
 
 @kernel void cnsGradCubatureSurfaceConservativeTet3D(const dlong Nelements,
-                                                   int BCStateID, 
-                                                  @restrict const  dfloat *  vgeo,
-                                                  @restrict const  dfloat *  sgeo,
-                                                   @restrict const  dlong  *  vmapM,
-                                                   @restrict const  dlong  *  vmapP,
-                                                   @restrict const  int    *  EToB,
-                                                  @restrict const  dfloat *  intInterp, // interpolate to integration nodes
-                                                  @restrict const  dfloat *  intLIFT, //
-                                                   @restrict const  dfloat *  intx,
-                                                   @restrict const  dfloat *  inty,
-                                                   @restrict const  dfloat *  intz,
-                                                   @restrict const  dfloat *  pCoeff,
+                                                    int BCStateID, 
+                                                    @restrict const  dfloat *  vgeo,
+                                                    @restrict const  dfloat *  sgeo,
+                                                    @restrict const  dlong  *  vmapM,
+                                                    @restrict const  dlong  *  vmapP,
+                                                    @restrict const  int    *  EToB,
+                                                    @restrict const  dfloat *  intInterp, // interpolate to integration nodes
+                                                    @restrict const  dfloat *  intLIFT, //
+                                                    @restrict const  dfloat *  intx,
+                                                    @restrict const  dfloat *  inty,
+                                                    @restrict const  dfloat *  intz,
+                                                    @restrict const  dfloat *  pCoeff,
                                                     @restrict const  dfloat *  flowStates,
-                                                             const  dfloat time,
-                                                   @restrict const  dfloat *  q,
-                                                   @restrict        dfloat *  gradq){
+                                                    const  dfloat time,
+                                                    @restrict const  dfloat *  q,
+                                                    @restrict        dfloat *  gradq){
   // for all elements
   for(dlong e=0;e<Nelements;e++;@outer(0)){
 
@@ -318,6 +322,12 @@ SOFTWARE.
             reP += iInm*s_qP[4][fm]; 
           }
 
+
+
+            // LDG Flipping 
+            dfloat betaM = 0.5 - (nx>0 ? beta:-beta); 
+            dfloat betaP = 0.5 + (nx>0 ? beta:-beta);
+
           // apply boundary condition given in primitive variables
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0) {
@@ -349,32 +359,30 @@ SOFTWARE.
                                  &drwdxP, &drwdyP, &drwdzP, 
                                  &dredxP, &dredyP, &dredzP);
 
+            // betaM = 0.0; betaP = 1.0; 
+
             }
 
+            const dfloat sc = invJ*sJ;            
+            s_gradflux[ 0][n] = sc*nx*( betaM*rrM + betaP*rrP);
+            s_gradflux[ 1][n] = sc*ny*( betaM*rrM + betaP*rrP);
+            s_gradflux[ 2][n] = sc*nz*( betaM*rrM + betaP*rrP);
 
-            const dfloat sc = invJ*sJ;
-            const dfloat alphaM = 0.5 + beta; 
-            const dfloat alphaP = 0.5 - beta; 
-            
-            s_gradflux[ 0][n] = sc*nx*( alphaM*rrM + alphaP*rrP);
-            s_gradflux[ 1][n] = sc*ny*( alphaM*rrM + alphaP*rrP);
-            s_gradflux[ 2][n] = sc*nz*( alphaM*rrM + alphaP*rrP);
+            s_gradflux[ 3][n] = sc*nx*( betaM*ruM + betaP*ruP);
+            s_gradflux[ 4][n] = sc*ny*( betaM*ruM + betaP*ruP);
+            s_gradflux[ 5][n] = sc*nz*( betaM*ruM + betaP*ruP);
 
-            s_gradflux[ 3][n] = sc*nx*( alphaM*ruM + alphaP*ruP);
-            s_gradflux[ 4][n] = sc*ny*( alphaM*ruM + alphaP*ruP);
-            s_gradflux[ 5][n] = sc*nz*( alphaM*ruM + alphaP*ruP);
+            s_gradflux[ 6][n] = sc*nx*( betaM*rvM + betaP*rvP);
+            s_gradflux[ 7][n] = sc*ny*( betaM*rvM + betaP*rvP);
+            s_gradflux[ 8][n] = sc*nz*( betaM*rvM + betaP*rvP);
 
-            s_gradflux[ 6][n] = sc*nx*( alphaM*rvM + alphaP*rvP);
-            s_gradflux[ 7][n] = sc*ny*( alphaM*rvM + alphaP*rvP);
-            s_gradflux[ 8][n] = sc*nz*( alphaM*rvM + alphaP*rvP);
+            s_gradflux[ 9][n] = sc*nx*( betaM*rwM + betaP*rwP);
+            s_gradflux[10][n] = sc*ny*( betaM*rwM + betaP*rwP);
+            s_gradflux[11][n] = sc*nz*( betaM*rwM + betaP*rwP);
 
-            s_gradflux[ 9][n] = sc*nx*( alphaM*rwM + alphaP*rwP);
-            s_gradflux[10][n] = sc*ny*( alphaM*rwM + alphaP*rwP);
-            s_gradflux[11][n] = sc*nz*( alphaM*rwM + alphaP*rwP);
-
-            s_gradflux[12][n] = sc*nx*( alphaM*reM + alphaP*reP);
-            s_gradflux[13][n] = sc*ny*( alphaM*reM + alphaP*reP);
-            s_gradflux[14][n] = sc*nz*( alphaM*reM + alphaP*reP);
+            s_gradflux[12][n] = sc*nx*( betaM*reM + betaP*reP);
+            s_gradflux[13][n] = sc*ny*( betaM*reM + betaP*reP);
+            s_gradflux[14][n] = sc*nz*( betaM*reM + betaP*reP);
         }
       }
 

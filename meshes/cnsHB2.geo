@@ -22,11 +22,6 @@ For i In {0:#bbox()-1}
   Printf ("before scaling bounding box x_%g= %g", i, bbox(i));
 EndFor
 
-// // Find the current center
-// xc = 0.5*(xmin + xmax); // Length
-// yc = 0.5*(ymin + ymax); // Dimaeter
-// zc = 0.5*(zmin + zmax); // with fins
-
 //Set diameter to 1 in scaled geometry
 // scale_factor = 1.0/(ymax - ymin); 
 scale_factor = 1.0/(63.5); 
@@ -88,10 +83,10 @@ For i In {0:#walls()-1}
 EndFor
 
 
-// Walls
-Physical Surface("Wall", 11) = walls();
-Physical Surface("FarField", 20) = outSurf();
-Physical Volume("Domain", 9) = vol();
+// // Walls
+// Physical Surface("Wall", 11) = walls();
+// Physical Surface("FarField", 20) = outSurf();
+// Physical Volume("Domain", 9) = vol();
 
 Field[1] = Distance;
 Field[1].PointsList = {2,1,4,5,6,3,2};

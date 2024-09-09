@@ -37,7 +37,7 @@ dfloat LMAX(const dfloat x, const dfloat alpha){
 
 // Density / pressure sensor for gradients...
 dfloat SMOOTH(const dfloat x, const dfloat alpha){
- dfloat dx = atan(alpha*x)/M_PI + alpha*x/(M_PI*(alpha*alpha*x*x + 1.0)) + 0.5;
+  dfloat dx = atan(alpha*x)/M_PI + alpha*x/(M_PI*(alpha*alpha*x*x + 1.0)) + 0.5;
   return dx; 
 }
 

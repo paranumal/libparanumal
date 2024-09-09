@@ -372,7 +372,7 @@ void upwindRusanov(const dfloat nx, const dfloat ny, const dfloat gamma,
         dfloat betaP = 0.5 + (nx>0 ? beta:-beta);
         // apply boundary conditions for viscous flux and modify bc state after inviscid fluxes
         if(bc>0){
-          const dlong idM = e*p_intNfpNfaces + n; 
+          // const dlong idM = e*p_intNfpNfaces + n; 
           cnsViscousBoundaryConditions2D(bc, gamma, R, CP, CV, muM, time, 
                                         RBAR, UBAR, VBAR, PBAR, TBAR, 
                                         intx[idM], inty[idM], nx, ny, 

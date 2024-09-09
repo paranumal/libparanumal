@@ -187,22 +187,22 @@ SOFTWARE.
 }
 
 @kernel void cnsGradCubatureSurfaceConservativeTri2D(const dlong Nelements,
-                                                  int BCStateID, 
-                                                  @restrict const  dfloat *  vgeo,
-                                                  @restrict const  dfloat *  sgeo,
-                                                   @restrict const  dlong  *  vmapM,
-                                                   @restrict const  dlong  *  vmapP,
-                                                   @restrict const  int    *  EToB,
-                                                  @restrict const  dfloat *  intInterp, // interpolate to integration nodes
-                                                  @restrict const  dfloat *  intLIFT, //
-                                                   @restrict const  dfloat *  intx,
-                                                   @restrict const  dfloat *  inty,
-                                                   @restrict const  dfloat *  intz,
-                                                   @restrict const  dfloat *  pCoeff,
-                                                   @restrict const  dfloat *  flowStates,
-                                                             const  dfloat time,
-                                                   @restrict const  dfloat *  q,
-                                                   @restrict        dfloat *  gradq){
+                                                    int BCStateID, 
+                                                    @restrict const  dfloat *  vgeo,
+                                                    @restrict const  dfloat *  sgeo,
+                                                    @restrict const  dlong  *  vmapM,
+                                                    @restrict const  dlong  *  vmapP,
+                                                    @restrict const  int    *  EToB,
+                                                    @restrict const  dfloat *  intInterp, // interpolate to integration nodes
+                                                    @restrict const  dfloat *  intLIFT, //
+                                                    @restrict const  dfloat *  intx,
+                                                    @restrict const  dfloat *  inty,
+                                                    @restrict const  dfloat *  intz,
+                                                    @restrict const  dfloat *  pCoeff,
+                                                    @restrict const  dfloat *  flowStates,
+                                                    const  dfloat time,
+                                                    @restrict const  dfloat *  q,
+                                                    @restrict        dfloat *  gradq){
 
   // for all elements
   for(dlong e=0;e<Nelements;e++;@outer(0)){

@@ -1,8 +1,3 @@
-#BOX
-#../../meshes/cnsNACA3Dv2.msh
-#../../meshes/cnsBody3D.msh
-#../../meshes/cnsFFS3D.msh
-
 #-------------------------------------------------------------#
 [DATA FILE]
 data/cnsUniform3D.h
@@ -99,7 +94,7 @@ CUDA
 
 # Mach number is needed for NONDIM=TRUE
 [MACH NUMBER]
-5.0
+2.0
 
 # Reynolds number is needed for NONDIM = TRUE
 [REYNOLDS NUMBER]
@@ -115,14 +110,14 @@ CUDA
 
 # CONSTANT, SUTHERLAND or POWER-LAW
 [VISCOSITY TYPE]
-CONSTANT
+SUTHERLAND
 
 [PRANDTL NUMBER]
 0.72
 
 # [density, velocity, pressure, temperature]
 [FLOW STATES]
-35.0, 1.0, 0.0, 0.0, 1.0, 1.0; 
+1.0, 1.0, 0.0, 0.0, 0.17857142857, 1.0;
 #5.60000, 0.984807753012208, 0.173648177666930, 0.0, 1.0, 1.0;
 
 [IC STATE ID]
@@ -133,11 +128,9 @@ CONSTANT
 
 #Geoemtric IDs -> BC IDs
 [GEOMETRIC-TO-PHYSICAL MAP]
-11:1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15; 20:16, 17, 18; 
+12:1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15; 20: 16, 17, 18; 
 #AGARD_B
 #12:1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13; 20:14, 15, 16;
-# for cnsBody3Dv2.geo
-#12:30,89,148,34, 34,93,152,37,96,155; 20:185, 68, 127, 41,100,159, 192, 134, 75, 72, 131, 189;  
 
 [CFL NUMBER]
 0.1
@@ -208,6 +201,6 @@ TRUE
 LAPLACE
 
 [ARTDIFF SCALE FACTOR]
-1
+3
 #-------------------------------------------------------------#
 

@@ -100,7 +100,7 @@ CUDA
 # Reynolds number is needed for NONDIM = TRUE
 [REYNOLDS NUMBER]
 #2000
-1e3
+1e4
 #2e5
 
 # if NONDIM=FALSE otherwise  R = 1.0/(gamma*Ma^2) 

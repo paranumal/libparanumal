@@ -46,7 +46,7 @@ void cns_t::setupPhysics(){
     tref = flowStates[ICStateID*NstatePoints + 5];
   }
 
-  // printf("%.4f %.4f %.4f %.4f %.4f\n", rref, uref, vref, pref,tref); 
+  // printf("%.4f %.4f %.4f %.4f %.4f %.4f \n", rref, uref, vref, wref, pref, tref); 
 
   // Set specific gas constant
   if(settings.compareSetting("NONDIMENSIONAL EQUATIONS", "TRUE")){

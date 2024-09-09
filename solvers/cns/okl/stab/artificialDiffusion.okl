@@ -55,7 +55,7 @@
              r_qM += pM[n+k*p_Np]*s_q[k];
         }
         
-        q[ e*p_Np + n] = r_qM;
+        q[e*p_Np + n] = r_qM;
                   
       }
     }
