@@ -500,7 +500,6 @@ void upwindLaxFriedrichs(const dfloat nx,
           // Limit and smooth pressure
           pP          = PMIN + LMAX(pP-PMIN, ALPHA); 
           // reconstruct energy accordingly
-          // rEM = pM/(gamma-1.0) + 0.5f*rrM*(uM*uM+vM*vM); 
           rEP = pP/(gamma-1.0) + 0.5f*rrP*(uP*uP+vP*vP); 
         #endif       
 
@@ -593,9 +592,9 @@ void upwindLaxFriedrichs(const dfloat nx,
         dfloat T33P = muP*(2.0*dwdzP - sbeta*sdivP);
         //
         const dfloat kappaP = CP*muP/Pr;
-        dfloat T41P = uP*T11P + vP*T12P + wP*T13P+kappaP*TxP;
-        dfloat T42P = uP*T21P + vP*T22P + wP*T23P+kappaP*TyP;
-        dfloat T43P = uP*T31P + vP*T32P + wP*T33P+kappaP*TzP;
+        dfloat T41P = uP*T11P + vP*T12P + wP*T13P + kappaP*TxP;
+        dfloat T42P = uP*T21P + vP*T22P + wP*T23P + kappaP*TyP;
+        dfloat T43P = uP*T31P + vP*T32P + wP*T33P + kappaP*TzP;
 
         // add artificial viscosity
         T01M += rmu*drrdxM, T02M += rmu*drrdyM, T03M+=rmu*drrdzM;
