@@ -76,25 +76,6 @@ void cns_t::Report(dfloat time, int tstep){
   }
 }
 
-void cns_t::reportSmoothFields(dfloat time, int tstep){
-/*
-  deviceMemory<dfloat> o_qv = platform.reserve<dfloat>(mesh.Nelements*mesh.Np*Nfields);
-  deviceMemory<dfloat> o_qf = platform.reserve<dfloat>(mesh.Nelements*mesh.Np*Nfields);
-
-  // arrange memory hit for vector-gather-scatter
-  reportArrangeLayoutKernel(mesh.Nelements, 0, o_q, o_qv); 
-
-  ogs.GatherScatter(o_qv, Nfields, ogs::Add, ogs::Sym);
-
-  reportAverageKernel(mesh.Nelements, o_weight, o_qv); 
-
-  reportArrangeLayoutKernel(mesh.Nelements, 1, o_qv, o_qf);
-
-  o_qf.copyTo(q);  
-  */
-
-}
-
 
 void cns_t::writeForces(dfloat time, int tstep, int frame){
 
@@ -103,7 +84,7 @@ void cns_t::writeForces(dfloat time, int tstep, int frame){
   dlong Nentries = 0; 
   // Forces and moments
   Nentries = mesh.dim==2 ? mesh.Nelements*mesh.Np*(mesh.dim*mesh.dim+1):
-                           mesh.Nelements*mesh.Np*(mesh.dim*mesh.dim+mesh.dim); 
+                           mesh.Nelements*mesh.Np*(mesh.dim*mesh.dim); 
   
   // Compute all forces on all boundaries
   deviceMemory<dfloat> o_F     = platform.reserve<dfloat>(Nentries);
@@ -192,17 +173,17 @@ void cns_t::writeForces(dfloat time, int tstep, int frame){
         }
       } 
   }else{
-    const dfloat vFx = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+0*shift , mesh.comm); 
-    const dfloat vFy = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+1*shift , mesh.comm); 
-    const dfloat vFz = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+2*shift , mesh.comm); 
+    const dfloat vFx = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F + 0*shift, mesh.comm); 
+    const dfloat vFy = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F + 1*shift, mesh.comm); 
+    const dfloat vFz = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F + 2*shift, mesh.comm); 
     
-    const dfloat pFx = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+3*shift , mesh.comm); 
-    const dfloat pFy = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+4*shift , mesh.comm); 
-    const dfloat pFz = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+5*shift , mesh.comm); 
+    const dfloat pFx = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F + 3*shift, mesh.comm); 
+    const dfloat pFy = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F + 4*shift, mesh.comm); 
+    const dfloat pFz = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F + 5*shift, mesh.comm); 
 
-    const dfloat Mx = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+6*shift , mesh.comm); 
-    const dfloat My = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+7*shift , mesh.comm); 
-    const dfloat Mz = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+8*shift , mesh.comm); 
+    const dfloat Mx  = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F + 6*shift, mesh.comm); 
+    const dfloat My  = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F + 7*shift, mesh.comm); 
+    const dfloat Mz  = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F + 8*shift, mesh.comm); 
     if(mesh.rank==0){
       if(reportComponent){
           printf("on report group %d : %.2e %.2e %.2e %.2e %.2e %.2e %.2e %.2e %.2e\n", grp,  vFx, vFy, vFz, pFx, pFy, pFz, Mx, My, Mz);

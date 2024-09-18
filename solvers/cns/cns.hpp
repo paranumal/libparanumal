@@ -207,9 +207,6 @@ public:
              cnsSettings_t& _settings);
 
   void Run();
-
-  void reportSmoothFields(dfloat time, int tstep);
-
   // Set reference values, thermodynamics, nondimensional values
   void setupPhysics();
 

@@ -26,10 +26,10 @@ SOFTWARE.
 
 // Gradients of all conservative fields
 @kernel void cnsForcesVolumeTri2D(const dlong Nelements,
-                                  @restrict const  dfloat *  vgeo,
-                                  @restrict const  dfloat *  D,
-                                  @restrict const  dfloat *  q,
-                                  @restrict        dfloat *  gradq){
+                                      @restrict const  dfloat *  vgeo,
+                                      @restrict const  dfloat *  D,
+                                      @restrict const  dfloat *  q,
+                                      @restrict        dfloat *  gradq){
 
   for(dlong e=0;e<Nelements;++e;@outer(0)){
 

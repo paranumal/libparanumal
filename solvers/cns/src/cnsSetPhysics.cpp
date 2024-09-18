@@ -50,9 +50,7 @@ void cns_t::setupPhysics(){
 
   // Set specific gas constant
   if(settings.compareSetting("NONDIMENSIONAL EQUATIONS", "TRUE")){
-      settings.getSetting("REYNOLDS NUMBER", Re);    
-      settings.getSetting("MACH NUMBER", Ma); 
-      R = pref/(rref*tref); 
+    R = pref/(rref*tref); 
   }else {
       settings.getSetting("SPECIFIC GAS CONSTANT", R); 
   }
@@ -62,10 +60,14 @@ void cns_t::setupPhysics(){
   if(settings.compareSetting("SOLVER TYPE", "NAVIER-STOKES")){
     settings.getSetting("PRANDTL NUMBER", Pr); 
     if(settings.compareSetting("NONDIMENSIONAL EQUATIONS", "TRUE")){
-      const dfloat velRef = mesh.dim==2 ? std::sqrt(uref*uref + vref*vref):std::sqrt(uref*uref + vref*vref+wref*wref); 
+      settings.getSetting("REYNOLDS NUMBER", Re);    
+      const dfloat velRef = mesh.dim==2 ? std::sqrt(uref*uref + vref*vref):
+                                          std::sqrt(uref*uref + vref*vref+ wref*wref); 
       mu = rref*velRef/Re; 
+      Ma = velRef/(std::sqrt(gamma*pref/rref)); 
     }else{
       settings.getSetting("VISCOSITY", mu);
+      settings.getSetting("MACH NUMBER", Ma); 
     }
   }else{
     mu = 0.0; Re = 0.0; 

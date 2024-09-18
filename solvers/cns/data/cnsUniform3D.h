@@ -182,21 +182,21 @@ if(bc==11){                                                                  \
     const dfloat wxM = drwdxM - wM*drrdxM;                                   \
     const dfloat wyM = drwdyM - wM*drrdyM;                                   \
     const dfloat wzM = drwdzM - wM*drrdzM;                                   \
-    const dfloat TxM = dredxM - (drrdxM*reM/rM + uM*uxM + vM*vxM+ wM*wxM);   \
-    const dfloat TyM = dredyM - (drrdyM*reM/rM + uM*uyM + vM*vyM+ wM*wyM);   \
-    const dfloat TzM = dredzM - (drrdzM*reM/rM + uM*uzM + vM*vzM+ wM*wzM);   \
+    const dfloat TxM = dredxM - (drrdxM*reM/rM+uM*uxM+vM*vxM+wM*wxM);        \
+    const dfloat TyM = dredyM - (drrdyM*reM/rM+uM*uyM+vM*vyM+wM*wyM);        \
+    const dfloat TzM = dredzM - (drrdzM*reM/rM+uM*uzM+vM*vzM+wM*wzM);        \
     *(drrdxB) = drrdxM;*(drrdyB) = drrdyM;*(drrdzB) = drrdzM;                \
     *(drudxB) = drudxM;*(drudyB) = drudyM;*(drudzB) = drudzM;                \
     *(drvdxB) = drvdxM;*(drvdyB) = drvdyM;*(drvdzB) = drvdzM;                \
     *(drwdxB) = drwdxM;*(drwdyB) = drwdyM;*(drwdzB) = drwdzM;                \
-    *(dredxB) = dredxM - (nx*nx*TxM + nx*ny*TyM+ nx*nz*TzM);                 \                                                     \
-    *(dredyB) = dredyM - (ny*nx*TxM + ny*ny*TyM+ ny*nz*TzM);                 \
-    *(dredzB) = dredzM - (nz*nx*TxM + nz*ny*TyM+ nz*nz*TzM);                 \
+    *(dredxB) = dredxM - nx*(nx*TxM + ny*TyM+ nz*TzM);                       \                                                     \
+    *(dredyB) = dredyM - ny*(nx*TxM + ny*TyM+ nz*TzM);                       \
+    *(dredzB) = dredzM - nz*(nx*TxM + ny*TyM+ nz*TzM);                       \
   }else if(bc==13){                                                          \
     *( rB) =  rM;                                                            \
-    *(ruB) =  ruM - (nx*ruM+ny*rvM+nz*rwM)*nx;                               \
-    *(rvB) =  rvM - (nx*ruM+ny*rvM+nz*rwM)*ny;                               \
-    *(rwB) =  rwM - (nx*ruM+ny*rvM+nz*rwM)*nz;                               \
+    *(ruB) =  ruM - 2.0*(nx*ruM+ny*rvM+nz*rwM)*nx;                               \
+    *(rvB) =  rvM - 2.0*(nx*ruM+ny*rvM+nz*rwM)*ny;                               \
+    *(rwB) =  rwM - 2.0*(nx*ruM+ny*rvM+nz*rwM)*nz;                               \
     *(reB) =  reM;                                                           \
     *(drrdxB) = 0.0;*(drrdyB) = 0.0;*(drrdzB) = 0.0;                         \
     *(drudxB) = 0.0;*(drudyB) = 0.0;*(drudzB) = 0.0;                         \

@@ -102,11 +102,6 @@ void upwindRusanov(const dfloat nx, const dfloat ny, const dfloat gamma,
                    const dfloat rP, const dfloat uP, const dfloat vP, const dfloat pP,
                    dfloat *rflux, dfloat *ruflux, dfloat *rvflux, dfloat *Eflux){
 
-  // // // Find the nodal maximum wave speed 
-  // const dfloat lambdaM = sqrt(uM*uM + vM*vM) + sqrt(fabs(gamma*pM/rM));  
-  // const dfloat lambdaP = sqrt(uP*uP + vP*vP) + sqrt(fabs(gamma*pP/rP));  
-  // const dfloat lambda = (lambdaM>lambdaP) ? lambdaM:lambdaP; 
-
   // Sum the left and right velocities and take the normal
   const dfloat vn = nx*(uM+uP) + ny*(vM + vP); 
   // Estimate the maximum wave speed / 2
@@ -297,20 +292,25 @@ void upwindRusanov(const dfloat nx, const dfloat ny, const dfloat gamma,
             // rmP    += iInm*s_muP[fm];
           }
 
-        // Check positivity
-        #if POSITIVITY==1 
-          rrM         = RMIN + LMAX(rrM-RMIN, ALPHA); 
-          rrP         = RMIN + LMAX(rrP-RMIN, ALPHA); 
-          dfloat drM  = SMOOTH(rrM-RMIN, ALPHA); 
-          dfloat drP  = SMOOTH(rrP-RMIN, ALPHA); 
-          drrdxM *=drM; drrdyM *=drM; 
-          drrdxP *=drP; drrdyP *=drP; 
-        #endif  
+
+          // Check positivity
+          #if POSITIVITY==1 
+            rrM         = RMIN + LMAX(rrM-RMIN, ALPHA); 
+            dfloat drM  = SMOOTH(rrM-RMIN, ALPHA); 
+            drrdxM *=drM; drrdyM *=drM; 
+          #endif  
+
+          // Obtain primite varibales
+          dfloat irM = 1.0/rrM, uM  = ruM*irM,  vM  = rvM*irM;
+          dfloat pM  = (gamma-1)*(rEM - 0.5*rrM*(uM*uM+vM*vM));
 
 
-        // Obtain primite varibales
-        dfloat irM = 1.0/rrM, uM  = ruM*irM,  vM  = rvM*irM;
-        dfloat pM  = (gamma-1)*(rEM - 0.5*rrM*(uM*uM+vM*vM));
+          // Check positivity
+          #if POSITIVITY==1           
+            pM  = PMIN + LMAX(pM-PMIN, ALPHA); 
+            rEM = pM/(gamma-1.0) + 0.5f*rrM*(uM*uM+vM*vM); 
+          #endif  
+        
 
         // get temperature dependent viscosity for element
         if(p_viscType==2){ // Sutherland     
@@ -344,29 +344,27 @@ void upwindRusanov(const dfloat nx, const dfloat ny, const dfloat gamma,
          }
 
 
+        // Check positivity
+        #if POSITIVITY==1 
+          rrP         = RMIN + LMAX(rrP-RMIN, ALPHA); 
+        #endif 
+
+
         dfloat irP = 1.0/rrP, uP  = ruP*irP,  vP  = rvP*irP;
         dfloat pP  = (gamma-1)*(rEP - 0.5*rrP*(uP*uP+vP*vP));    
-        
 
-       // limit pressure
-      #if POSITIVITY==1 
-        // Limit and smooth pressure
-        pM          = PMIN + LMAX(pM-PMIN, ALPHA); 
-        pP          = PMIN + LMAX(pP-PMIN, ALPHA); 
-        // reconstruct energy accordingly
-        rEM = pM/(gamma-1.0) + 0.5f*rrM*(uM*uM+vM*vM); 
-        rEP = pP/(gamma-1.0) + 0.5f*rrP*(uP*uP+vP*vP); 
-      #endif       
+        // Check positivity
+        #if POSITIVITY==1           
+          pP  = PMIN + LMAX(pP-PMIN, ALPHA); 
+          rEP = pP/(gamma-1.0) + 0.5f*rrP*(uP*uP+vP*vP); 
+        #endif  
 
-
-          // Compute inviscid fluxes
+        // Compute inviscid fluxes
         dfloat rflux, ruflux, rvflux, Eflux;
         upwindRoe(nx, ny, gamma, rrM, uM, vM, pM, rrP, uP, vP, pP, &rflux, &ruflux, &rvflux, &Eflux);
         // upwindRusanov(nx, ny, gamma, rrM, uM, vM, pM, rrP, uP, vP, pP, &rflux, &ruflux, &rvflux, &Eflux);
 
         dfloat tauFlip  =  nx>= 0 ? 1.0 :-1.0;
-        // dfloat tauFlip  =  0.0;
-
         // LDG Flipping 
         dfloat betaM = 0.5 - (nx>0 ? beta:-beta); 
         dfloat betaP = 0.5 + (nx>0 ? beta:-beta);
@@ -385,20 +383,25 @@ void upwindRusanov(const dfloat nx, const dfloat ny, const dfloat gamma,
 
         dfloat factor = 1.0; 
         // // // // tweak bc's for laplacian term, instead of creating new bc set
-        if(bc==11 || bc==12 || bc==13){factor =0; }
+        // if(bc==11 || bc==12 || bc==13){factor =0; }
+        if(bc>0){factor =0; }
+
+        // Check positivity
+        #if POSITIVITY==1 
+          rrP         = RMIN + LMAX(rrP-RMIN, ALPHA); 
+          dfloat drP  = SMOOTH(rrP-RMIN, ALPHA); 
+          drrdxP *=drP; drrdyP *=drP; 
+        #endif 
 
         irP = 1.0/rrP, uP  = ruP*irP,  vP  = rvP*irP;
         pP  = (gamma-1)*(rEP - 0.5*rrP*(uP*uP+vP*vP));    
         
-       // limit pressure
-      #if POSITIVITY==1 
-        // Limit and smooth pressure
-        // pM          = PMIN + LMAX(pM-PMIN, ALPHA); 
-        pP          = PMIN + LMAX(pP-PMIN, ALPHA); 
-        // reconstruct energy accordingly
-        // rEM = pM/(gamma-1.0) + 0.5f*rrM*(uM*uM+vM*vM); 
-        rEP = pP/(gamma-1.0) + 0.5f*rrP*(uP*uP+vP*vP); 
-      #endif       
+        // limit pressure
+        #if POSITIVITY==1 
+          // Limit and smooth pressure
+          pP  = PMIN + LMAX(pP-PMIN, ALPHA); 
+          rEP = pP/(gamma-1.0) + 0.5f*rrP*(uP*uP+vP*vP); 
+        #endif       
 
        
         // Derivative of velocities

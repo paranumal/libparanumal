@@ -109,7 +109,6 @@ SOFTWARE.
                     dfloat rwP = q[baseP + 3*p_Np];
                     dfloat reP = q[baseP + 4*p_Np];
 
-
             const dfloat sc = invJ*sJ;
             // LDG Flipping 
             dfloat betaM = 0.5 + (nx>0 ? beta:-beta); 
@@ -124,7 +123,7 @@ SOFTWARE.
                const dfloat WBAR = flowStates[BCStateID*p_NsP + 3]; 
                const dfloat PBAR = flowStates[BCStateID*p_NsP + 4]; 
                const dfloat TBAR = flowStates[BCStateID*p_NsP + 5]; 
-              // fake derivates
+                // fake derivates
                 dfloat drrdxP = 0.0, drrdyP =0.0, drrdzP =0.0; 
                 dfloat drudxP = 0.0, drudyP =0.0, drudzP =0.0; 
                 dfloat drvdxP = 0.0, drvdyP =0.0, drvdzP =0.0; 
@@ -178,17 +177,17 @@ SOFTWARE.
           for(int m=0;m<p_Nfp;++m){
             const dfloat L = LIFT[n+(m+face*p_Nfp)*p_Np];
             
-            Lrrxflux += L*s_gradflux[0][m];
-            Lrryflux += L*s_gradflux[1][m];
-            Lrrzflux += L*s_gradflux[2][m];
+            Lrrxflux += L*s_gradflux[ 0][m];
+            Lrryflux += L*s_gradflux[ 1][m];
+            Lrrzflux += L*s_gradflux[ 2][m];
 
-            Lruxflux += L*s_gradflux[3][m];
-            Lruyflux += L*s_gradflux[4][m];
-            Lruzflux += L*s_gradflux[5][m];
+            Lruxflux += L*s_gradflux[ 3][m];
+            Lruyflux += L*s_gradflux[ 4][m];
+            Lruzflux += L*s_gradflux[ 5][m];
 
-            Lrvxflux += L*s_gradflux[6][m];
-            Lrvyflux += L*s_gradflux[7][m];
-            Lrvzflux += L*s_gradflux[8][m];
+            Lrvxflux += L*s_gradflux[ 6][m];
+            Lrvyflux += L*s_gradflux[ 7][m];
+            Lrvzflux += L*s_gradflux[ 8][m];
 
             Lrwxflux += L*s_gradflux[ 9][m];
             Lrwyflux += L*s_gradflux[10][m];

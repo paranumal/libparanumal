@@ -55,7 +55,7 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
                                                               @restrict const  dfloat *  z,
                                                               @restrict const  dfloat * pCoeff,
                                                               const dfloat t,
-                                                              @restrict const  dfloat *  muArtDiff,
+                                                              @restrict const  dfloat *  aMu,
                                                               @restrict const  dfloat *  q,
                                                               @restrict const  dfloat *  gradq,
                                                               @restrict dfloat *  rhsq){
@@ -81,7 +81,7 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
         const dfloat mu    = pCoeff[p_MUID]; // bulk viscosity
 
         // hold artificial viscosity now
-        s_mu[n] = muArtDiff[e*p_Np + n]; 
+        s_mu[n] = aMu[e*p_Np + n]; 
 
         dfloat rr = q[qbase+0*p_Np];
         dfloat ru = q[qbase+1*p_Np];
@@ -89,12 +89,6 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
         dfloat rw = q[qbase+3*p_Np];
         dfloat rE = q[qbase+4*p_Np];
 
-        dfloat dr = 1.0; 
-#if POSITIVITY
-        // check positivity on density
-        rr         = RMIN + LMAX(rr-RMIN, ALPHA); 
-        dr         = SMOOTH(rr-RMIN, ALPHA); 
-#endif
 
         // conservative fields
         s_q[0][n] = rr;
@@ -103,21 +97,21 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
         s_q[3][n] = rw;
         s_q[4][n] = rE;
         // 
-        s_gradq[ 0][n] = dr * gradq[id+ 0*p_Np];
-        s_gradq[ 1][n] = dr * gradq[id+ 1*p_Np];     
-        s_gradq[ 2][n] = dr * gradq[id+ 2*p_Np];     
-        s_gradq[ 3][n] =      gradq[id+ 3*p_Np];
-        s_gradq[ 4][n] =      gradq[id+ 4*p_Np];     
-        s_gradq[ 5][n] =      gradq[id+ 5*p_Np];     
-        s_gradq[ 6][n] =      gradq[id+ 6*p_Np];
-        s_gradq[ 7][n] =      gradq[id+ 7*p_Np];     
-        s_gradq[ 8][n] =      gradq[id+ 8*p_Np];     
-        s_gradq[ 9][n] =      gradq[id+ 9*p_Np];
-        s_gradq[10][n] =      gradq[id+10*p_Np];     
-        s_gradq[11][n] =      gradq[id+11*p_Np];     
-        s_gradq[12][n] =      gradq[id+12*p_Np];
-        s_gradq[13][n] =      gradq[id+13*p_Np];     
-        s_gradq[14][n] =      gradq[id+14*p_Np];     
+        s_gradq[ 0][n] = gradq[id+ 0*p_Np];
+        s_gradq[ 1][n] = gradq[id+ 1*p_Np];     
+        s_gradq[ 2][n] = gradq[id+ 2*p_Np];     
+        s_gradq[ 3][n] = gradq[id+ 3*p_Np];
+        s_gradq[ 4][n] = gradq[id+ 4*p_Np];     
+        s_gradq[ 5][n] = gradq[id+ 5*p_Np];     
+        s_gradq[ 6][n] = gradq[id+ 6*p_Np];
+        s_gradq[ 7][n] = gradq[id+ 7*p_Np];     
+        s_gradq[ 8][n] = gradq[id+ 8*p_Np];     
+        s_gradq[ 9][n] = gradq[id+ 9*p_Np];
+        s_gradq[10][n] = gradq[id+10*p_Np];     
+        s_gradq[11][n] = gradq[id+11*p_Np];     
+        s_gradq[12][n] = gradq[id+12*p_Np];
+        s_gradq[13][n] = gradq[id+13*p_Np];     
+        s_gradq[14][n] = gradq[id+14*p_Np];     
 
         // get primitive variables
         const dfloat u = ru/rr; 
@@ -186,19 +180,26 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
           dredy += cIni*s_gradq[13][i];
           dredz += cIni*s_gradq[14][i];
         }
+        // Check positivity
+        #if POSITIVITY==1 
+        rr         = RMIN + LMAX(rr-RMIN, ALPHA); 
+        dfloat dr  = SMOOTH(rr-RMIN, ALPHA); 
+        drrdx *=dr;  drrdy *=dr; drrdz *=dr;  
+        #endif  
 
       // primitive variables
       const dfloat ir = 1.0/rr;   
       const dfloat u  = ru*ir, v  = rv*ir, w  = rw*ir;
       
       // pressure field
-      dfloat p  = (gamma-1)*(rE- 0.5*rr*(u*u + v*v + w*w));
+      dfloat p  = (gamma-1)*(rE- 0.5*rr*(u*u+v*v+w*w));
+
       // Positivity Check
-        dfloat dp=1.0; 
       #if POSITIVITY
         p        = PMIN + LMAX(p-PMIN, ALPHA); 
-        dp       = SMOOTH(p-PMIN, ALPHA); 
+        rE       = p/(gamma-1.0) + 0.5*rr*(u*u+v*v+w*w); 
       #endif
+      
 
       // Find derivative of primitives
       const dfloat dudx  = (drudx - drrdx*u)*ir;
@@ -238,11 +239,8 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
       const dfloat T11 = mu*( 2.0*dudx - 2.0*(dudx+dvdy+dwdz)/3.0);
       const dfloat T12 = mu*(dudy+dvdx);
       const dfloat T13 = mu*(dudz+dwdx);
-
-      
       const dfloat T22 = mu*(2.0*dvdy - 2.0*(dudx+dvdy+dwdz)/3.0);
       const dfloat T23 = mu*(dvdz+dwdy);
-
       const dfloat T33 = mu*(2.0*dwdz - 2.0*(dudx+dvdy+dwdz)/3.0);
      
       // F0 = ru, G0 = rv
@@ -252,8 +250,8 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
 
       // F1 = 2*mu*T11 - (ru^2+p), G1 = 2*mu*T12 - (rvu)
       s_F[1][n] = -(ru*u+p) + T11 + rm*drudx;
-      s_G[1][n] = -(rv*u)   + T12 + rm*drudy;
-      s_H[1][n] = -(rw*u)   + T13 + rm*drudz;
+      s_G[1][n] = -(ru*v)   + T12 + rm*drudy;
+      s_H[1][n] = -(ru*w)   + T13 + rm*drudz;
 
       // F2 = 2*mu*T21 - (ruv), G2 = 2*mu*T22 - (rv^2+p)
       s_F[2][n] = -(rv*u)   + T12 + rm*drvdx;
