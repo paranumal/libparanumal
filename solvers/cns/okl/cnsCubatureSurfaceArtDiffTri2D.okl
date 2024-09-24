@@ -331,14 +331,14 @@ void upwindRusanov(const dfloat nx, const dfloat ny, const dfloat gamma,
         const dfloat UBAR = flowStates[BCStateID*p_NsP + 1]; 
         const dfloat VBAR = flowStates[BCStateID*p_NsP + 2]; 
         const dfloat PBAR = flowStates[BCStateID*p_NsP + 3]; 
-        const dfloat TBAR = flowStates[BCStateID*p_NsP + 4]; 
+        // const dfloat TBAR = flowStates[BCStateID*p_NsP + 4]; 
 
         const dlong idM = e*p_intNfpNfaces + n; 
          // apply boundary conditions for viscous flux and modify bc state after inviscid fluxes
         if(bc>0){
 
           cnsInviscidBoundaryConditions2D(bc, gamma, R, CP, CV, muM, time, 
-                                        RBAR, UBAR, VBAR, PBAR, TBAR, 
+                                        RBAR, UBAR, VBAR, PBAR, 
                                         intx[idM], inty[idM], nx, ny, 
                                         rrM, ruM, rvM, rEM, &rrP, &ruP, &rvP, &rEP); 
          }
@@ -372,7 +372,7 @@ void upwindRusanov(const dfloat nx, const dfloat ny, const dfloat gamma,
         if(bc>0){
           // const dlong idM = e*p_intNfpNfaces + n; 
           cnsViscousBoundaryConditions2D(bc, gamma, R, CP, CV, muM, time, 
-                                        RBAR, UBAR, VBAR, PBAR, TBAR, 
+                                        RBAR, UBAR, VBAR, PBAR, 
                                         intx[idM], inty[idM], nx, ny, 
                                         rrM, ruM, rvM, rEM, &rrP, &ruP, &rvP, &rEP, 
                                         drrdxM, drrdyM, drudxM, drudyM, drvdxM, drvdyM, dredxM, dredyM,
@@ -507,5 +507,308 @@ void upwindRusanov(const dfloat nx, const dfloat ny, const dfloat gamma,
     }
   }
 }
+
+
+
+
+// batch process elements
+@kernel void cnsEulerCubatureSurfaceArtificialDiffusionLaplaceTri2D(const dlong Nelements,
+                                                                    const int BCStateID, 
+                                                                    @restrict const  dfloat *  vgeo,
+                                                                    @restrict const  dfloat *  sgeo,
+                                                                    @restrict const  dlong  *  vmapM,
+                                                                    @restrict const  dlong  *  vmapP,
+                                                                    @restrict const  int    *  EToB,
+                                                                    @restrict const  dfloat *  intInterp, 
+                                                                    @restrict const  dfloat *  intLIFT, 
+                                                                    @restrict const  dfloat *  intx,
+                                                                    @restrict const  dfloat *  inty,
+                                                                    @restrict const  dfloat *  intz,
+                                                                    @restrict const dfloat *pCoeff,
+                                                                    @restrict const  dfloat *  flowStates,
+                                                                    const dfloat time,
+                                                                    @restrict const  dfloat *  aMu,
+                                                                    @restrict const  dfloat *  q,
+                                                                    @restrict const  dfloat *  gradq,
+                                                                    @restrict dfloat *  rhsq){
+
+  // for all elements
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+
+    // @shared storage for flux terms
+    @shared dfloat s_qM[p_Nfields][p_NfacesNfp];
+    @shared dfloat s_qP[p_Nfields][p_NfacesNfp];
+    @shared dfloat s_gradqM[p_Ngrads][p_NfacesNfp];
+    @shared dfloat s_gradqP[p_Ngrads][p_NfacesNfp];
+
+    // viscosity is C0 but just in case!!!!
+    @shared dfloat s_mu[p_NfacesNfp];
+
+    @shared dfloat s_rflux [p_intNfpNfaces];
+    @shared dfloat s_ruflux[p_intNfpNfaces];
+    @shared dfloat s_rvflux[p_intNfpNfaces];
+    @shared dfloat s_Eflux [p_intNfpNfaces];
+    for(int n=0;n<p_cubMaxNodes;++n;@inner(0)){
+      if(n<p_NfacesNfp){
+        const dlong id  = e*p_Nfp*p_Nfaces + n;
+        const dlong idM = vmapM[id];
+        const dlong idP = vmapP[id];
+
+        const dlong eM = e;
+        const dlong eP = idP/p_Np;
+        const int vidM = idM%p_Np;
+        const int vidP = idP%p_Np;
+        
+        const dlong qbaseM = eM*p_Np*p_Nfields + vidM;
+        const dlong qbaseP = eP*p_Np*p_Nfields + vidP;
+        const dlong sbaseM = eM*p_Np*p_Ngrads  + vidM;
+        const dlong sbaseP = eP*p_Np*p_Ngrads  + vidP;
+        //
+        s_mu[n] = aMu[eM*p_Np  + vidM];
+
+        s_qM[0][n] = q[qbaseM + 0*p_Np];
+        s_qM[1][n] = q[qbaseM + 1*p_Np];
+        s_qM[2][n] = q[qbaseM + 2*p_Np];
+        s_qM[3][n] = q[qbaseM + 3*p_Np];
+        
+        s_qP[0][n] = q[qbaseP + 0*p_Np];
+        s_qP[1][n] = q[qbaseP + 1*p_Np];
+        s_qP[2][n] = q[qbaseP + 2*p_Np];
+        s_qP[3][n] = q[qbaseP + 3*p_Np];
+        
+        s_gradqM[0][n] = gradq[sbaseM+0*p_Np];
+        s_gradqM[1][n] = gradq[sbaseM+1*p_Np];
+        s_gradqM[2][n] = gradq[sbaseM+2*p_Np];
+        s_gradqM[3][n] = gradq[sbaseM+3*p_Np];
+        s_gradqM[4][n] = gradq[sbaseM+4*p_Np];
+        s_gradqM[5][n] = gradq[sbaseM+5*p_Np];
+        s_gradqM[6][n] = gradq[sbaseM+6*p_Np];
+        s_gradqM[7][n] = gradq[sbaseM+7*p_Np];
+        
+        s_gradqP[0][n] = gradq[sbaseP+0*p_Np];
+        s_gradqP[1][n] = gradq[sbaseP+1*p_Np];
+        s_gradqP[2][n] = gradq[sbaseP+2*p_Np];
+        s_gradqP[3][n] = gradq[sbaseP+3*p_Np];
+        s_gradqP[4][n] = gradq[sbaseP+4*p_Np];
+        s_gradqP[5][n] = gradq[sbaseP+5*p_Np];
+        s_gradqP[6][n] = gradq[sbaseP+6*p_Np];
+        s_gradqP[7][n] = gradq[sbaseP+7*p_Np];
+      }
+    }
+
+
+    // interpolate to surface integration nodes
+    for(int n=0;n<p_cubMaxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
+      if(n<p_intNfpNfaces){
+        // find face that owns this node
+        const int face = n/p_intNfp;
+        
+        // indices of negative and positive traces of face node
+        const dfloat gamma  = pCoeff[p_GMID]; // gamma
+        const dfloat R      = pCoeff[p_RRID]; 
+        const dfloat CP     = pCoeff[p_CPID]; 
+        const dfloat CV     = pCoeff[p_CVID]; 
+        const dfloat Pr     = pCoeff[p_PRID]; // Prandtl Number
+        const dfloat beta   = pCoeff[p_BTID]; // LDG alternating upwinding
+              dfloat tau    = pCoeff[p_TAID]; // LDG jump stabilizer
+
+        // get boundary ids
+        const int bc = EToB[face+p_Nfaces*e];
+
+        // load surface geofactors for this face
+        const dlong sid    = p_Nsgeo*(e*p_Nfaces+face);
+        const dfloat nx   = sgeo[sid+p_NXID];
+        const dfloat ny   = sgeo[sid+p_NYID];
+        const dfloat sJ   = sgeo[sid+p_SJID];
+        const dfloat invJ = sgeo[sid+p_IJID];
+        const dfloat hinv = sgeo[sid+p_IHID];
+
+        dfloat rrM  = 0., ruM = 0., rvM = 0., rEM = 0., rmu = 0.;
+        dfloat rrP  = 0., ruP = 0., rvP = 0., rEP = 0.;
+        
+        dfloat drrdxM = 0., drrdyM = 0.;
+        dfloat drrdxP = 0., drrdyP = 0.;
+        dfloat drudxM = 0., drudyM = 0.;
+        dfloat drudxP = 0., drudyP = 0.;
+        dfloat drvdxM = 0., drvdyM = 0.;
+        dfloat drvdxP = 0., drvdyP = 0.;
+        dfloat dredxM = 0., dredyM = 0.;
+        dfloat dredxP = 0., dredyP = 0.;
+
+        // local block interpolation (face nodes to integration nodes)
+        #pragma unroll p_Nfp
+          for(int m=0;m<p_Nfp;++m){
+            const dfloat iInm = intInterp[n+m*p_Nfaces*p_intNfp];
+            const int fm = face*p_Nfp+m;
+            rrM  += iInm*s_qM[0][fm];
+            ruM  += iInm*s_qM[1][fm];
+            rvM  += iInm*s_qM[2][fm];
+            rEM  += iInm*s_qM[3][fm];
+
+            rrP  += iInm*s_qP[0][fm];
+            ruP  += iInm*s_qP[1][fm];
+            rvP  += iInm*s_qP[2][fm];
+            rEP  += iInm*s_qP[3][fm];
+
+            drrdxM += iInm*s_gradqM[0][fm];
+            drrdyM += iInm*s_gradqM[1][fm];
+            drudxM += iInm*s_gradqM[2][fm];
+            drudyM += iInm*s_gradqM[3][fm];
+            drvdxM += iInm*s_gradqM[4][fm];
+            drvdyM += iInm*s_gradqM[5][fm];
+            dredxM += iInm*s_gradqM[6][fm];
+            dredyM += iInm*s_gradqM[7][fm];
+
+            drrdxP += iInm*s_gradqP[0][fm];
+            drrdyP += iInm*s_gradqP[1][fm];
+            drudxP += iInm*s_gradqP[2][fm];
+            drudyP += iInm*s_gradqP[3][fm];
+            drvdxP += iInm*s_gradqP[4][fm];
+            drvdyP += iInm*s_gradqP[5][fm];
+            dredxP += iInm*s_gradqP[6][fm];
+            dredyP += iInm*s_gradqP[7][fm];
+            
+            rmu    += iInm*s_mu[fm];
+          }
+
+
+          // Check positivity
+          #if POSITIVITY==1 
+            rrM         = RMIN + LMAX(rrM-RMIN, ALPHA); 
+            dfloat drM  = SMOOTH(rrM-RMIN, ALPHA); 
+            drrdxM *=drM; drrdyM *=drM; 
+          #endif  
+
+          // Obtain primite varibales
+          dfloat irM = 1.0/rrM, uM  = ruM*irM,  vM  = rvM*irM;
+          dfloat pM  = (gamma-1)*(rEM - 0.5*rrM*(uM*uM+vM*vM));
+
+
+          // Check positivity
+          #if POSITIVITY==1           
+            pM  = PMIN + LMAX(pM-PMIN, ALPHA); 
+            rEM = pM/(gamma-1.0) + 0.5f*rrM*(uM*uM+vM*vM); 
+          #endif  
+        
+        // const dfloat TBAR = flowStates[BCStateID*p_NsP + 4]; 
+
+         // apply boundary conditions for viscous flux and modify bc state after inviscid fluxes
+        if(bc>0){
+        const dlong idM = e*p_intNfpNfaces + n; 
+        const dfloat RBAR = flowStates[BCStateID*p_NsP + 0]; 
+        const dfloat UBAR = flowStates[BCStateID*p_NsP + 1]; 
+        const dfloat VBAR = flowStates[BCStateID*p_NsP + 2]; 
+        const dfloat PBAR = flowStates[BCStateID*p_NsP + 3]; 
+        cnsInviscidBoundaryConditions2D(bc, gamma, R, CP, CV, 0.0, time, 
+                                        RBAR, UBAR, VBAR, PBAR, 
+                                        intx[idM], inty[idM], nx, ny, 
+                                        rrM, ruM, rvM, rEM, &rrP, &ruP, &rvP, &rEP); 
+
+            drrdxP = 0.0; drrdyP = 0.0; drudxP = 0.0; drudyP = 0.0;
+            drvdxP = 0.0; drvdyP = 0.0; dredxP = 0.0; dredyP = 0.0;
+         }
+
+
+        // Check positivity
+        #if POSITIVITY==1 
+          rrP         = RMIN + LMAX(rrP-RMIN, ALPHA); 
+        #endif 
+
+
+        dfloat irP = 1.0/rrP, uP  = ruP*irP,  vP  = rvP*irP;
+        dfloat pP  = (gamma-1)*(rEP - 0.5*rrP*(uP*uP+vP*vP));    
+
+        // Check positivity
+        #if POSITIVITY==1           
+          pP  = PMIN + LMAX(pP-PMIN, ALPHA); 
+          rEP = pP/(gamma-1.0) + 0.5f*rrP*(uP*uP+vP*vP); 
+        #endif  
+          
+
+        // Compute inviscid fluxes
+        dfloat rflux, ruflux, rvflux, Eflux;
+        upwindRoe(nx, ny, gamma, rrM, uM, vM, pM, rrP, uP, vP, pP, &rflux, &ruflux, &rvflux, &Eflux);
+        // upwindRusanov(nx, ny, gamma, rrM, uM, vM, pM, rrP, uP, vP, pP, &rflux, &ruflux, &rvflux, &Eflux);
+
+        dfloat tauFlip  =  nx>= 0 ? 1.0 :-1.0;
+        // LDG Flipping 
+        dfloat betaM  = 0.5 - (nx>0 ? beta:-beta); 
+        dfloat betaP  = 0.5 + (nx>0 ? beta:-beta);
+        dfloat factor = 1.0; 
+        // // // // tweak bc's for laplacian term, instead of creating new bc set
+        // if(bc==11 || bc==12 || bc==13){factor =0; }
+        if(bc>0){factor =0; }
+
+        // Check positivity
+        #if POSITIVITY==1 
+          rrP         = RMIN + LMAX(rrP-RMIN, ALPHA); 
+          dfloat drP  = SMOOTH(rrP-RMIN, ALPHA); 
+          drrdxP *=drP; drrdyP *=drP; 
+        #endif 
+
+        irP = 1.0/rrP, uP  = ruP*irP,  vP  = rvP*irP;
+        pP  = (gamma-1)*(rEP - 0.5*rrP*(uP*uP+vP*vP));    
+        
+        // limit pressure
+        #if POSITIVITY==1 
+          // Limit and smooth pressure
+          pP  = PMIN + LMAX(pP-PMIN, ALPHA); 
+          rEP = pP/(gamma-1.0) + 0.5f*rrP*(uP*uP+vP*vP); 
+        #endif       
+
+        dfloat T01M = rmu*drrdxM, T02M = rmu*drrdyM;
+        dfloat T11M = rmu*drudxM, T12M = rmu*drudyM;
+        dfloat T21M = rmu*drvdxM, T22M = rmu*drvdyM;
+        dfloat T31M = rmu*dredxM, T32M = rmu*dredyM;       
+        
+        // add artificial viscosity: 
+        dfloat T01P = factor*rmu*drrdxP, T02P = factor*rmu*drrdyP;
+        dfloat T11P = factor*rmu*drudxP, T12P = factor*rmu*drudyP;
+        dfloat T21P = factor*rmu*drvdxP, T22P = factor*rmu*drvdyP;
+        dfloat T31P = factor*rmu*dredxP, T32P = factor*rmu*dredyP;     
+
+        rflux  -= (nx*(betaM*T01M+betaP*T01P)+ny*(betaM*T02M+betaP*T02P) + tauFlip*tau*(rrM-rrP)); 
+        ruflux -= (nx*(betaM*T11M+betaP*T11P)+ny*(betaM*T12M+betaP*T12P) + tauFlip*tau*(ruM-ruP)); 
+        rvflux -= (nx*(betaM*T21M+betaP*T21P)+ny*(betaM*T22M+betaP*T22P) + tauFlip*tau*(rvM-rvP)); 
+        Eflux  -= (nx*(betaM*T31M+betaP*T31P)+ny*(betaM*T32M+betaP*T32P) + tauFlip*tau*(rEM-rEP)); 
+
+        // evaluate "flux" terms and move to rhs 
+        const dfloat sc = invJ*sJ;
+        s_rflux[n]  = sc*(-rflux );
+        s_ruflux[n] = sc*(-ruflux);
+        s_rvflux[n] = sc*(-rvflux);
+        s_Eflux[n]  = sc*(-Eflux);
+      }
+    }
+
+    // wait for all @shared memory writes of the previous inner loop to complete
+
+    // for each node in the element
+    for(int n=0;n<p_cubMaxNodes;++n;@inner(0)){
+      if(n<p_Np){
+        // load rhs data from volume fluxes
+        dfloat Lrflux = 0.f, Lruflux = 0.f, Lrvflux = 0.f, LEflux = 0.f;
+        // rhs += LIFT*((sJ/J)*(A*nx+B*ny)*(q^* - q^-))
+        #pragma unroll p_intNfpNfaces
+          for(int m=0;m<p_intNfpNfaces;++m){
+            const dfloat L = intLIFT[n+m*p_Np];
+            Lrflux  += L*s_rflux[m];
+            Lruflux += L*s_ruflux[m];
+            Lrvflux += L*s_rvflux[m];
+            LEflux  += L*s_Eflux[m];
+          }
+        // move to rhs
+        const dlong base = e*p_Np*p_Nfields+n;
+        rhsq[base+0*p_Np] += Lrflux;
+        rhsq[base+1*p_Np] += Lruflux;
+        rhsq[base+2*p_Np] += Lrvflux;
+        rhsq[base+3*p_Np] += LEflux;
+      }
+    }
+  }
+}
+
+
+
 
 

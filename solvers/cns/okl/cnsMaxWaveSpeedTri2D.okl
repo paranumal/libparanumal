@@ -122,10 +122,10 @@ SOFTWARE.
           const dfloat UBAR = flowStates[BCStateID*p_NsP + 1]; 
           const dfloat VBAR = flowStates[BCStateID*p_NsP + 2]; 
           const dfloat PBAR = flowStates[BCStateID*p_NsP + 3]; 
-          const dfloat TBAR = flowStates[BCStateID*p_NsP + 4]; 
+          // const dfloat TBAR = flowStates[BCStateID*p_NsP + 4]; 
 
           cnsViscousBoundaryConditions2D(bc, gamma, R, CP, CV, mu, time, 
-                                        RBAR, UBAR, VBAR, PBAR, TBAR, 
+                                        RBAR, UBAR, VBAR, PBAR, 
                                         x[idM], y[idM], nx, ny,
                                         rM, ruM, rvM, EM, &rP, &ruP, &rvP, &EP,
                                         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,

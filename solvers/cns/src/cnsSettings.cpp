@@ -60,6 +60,9 @@ cnsSettings_t::cnsSettings_t(comm_t& _comm):
   newSetting("REYNOLDS NUMBER", "1000.0",
              "Reynolds number (if non-dimensional=TRUE)");
 
+  newSetting("ANGLE OF ATTACK", "0.0",
+             "Angle of attack (if non-dimensional=TRUE)");
+
   newSetting("PRANDTL NUMBER", "0.72",
              "Pranndtl Number");
 

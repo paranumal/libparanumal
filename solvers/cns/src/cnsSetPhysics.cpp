@@ -28,50 +28,48 @@ SOFTWARE.
 
 void cns_t::setupPhysics(){
 
-  // Read Reference State and number of states
-  setFlowStates(); 
   // Set isentropic exponent and related info
   settings.getSetting("GAMMA", gamma);
 
-  dfloat rref=1.0, uref=1.0, vref=0.0, wref=0.0, pref=1.0, tref=1.0; 
+  // Read Reference State and number of states
+  setFlowStates(); 
+  
+  dfloat rref=1.0, uref=1.0, vref=0.0, wref=0.0, pref=1.0; 
   rref = flowStates[ICStateID*NstatePoints + 0];
   uref = flowStates[ICStateID*NstatePoints + 1];
   vref = flowStates[ICStateID*NstatePoints + 2];
   if(mesh.dim==2){
     pref = flowStates[ICStateID*NstatePoints + 3];        
-    tref = flowStates[ICStateID*NstatePoints + 4];        
   }else{
     wref = flowStates[ICStateID*NstatePoints + 3];
     pref = flowStates[ICStateID*NstatePoints + 4];
-    tref = flowStates[ICStateID*NstatePoints + 5];
   }
 
-  // printf("%.4f %.4f %.4f %.4f %.4f %.4f \n", rref, uref, vref, wref, pref, tref); 
-
+  settings.getSetting("PRANDTL NUMBER", Pr); 
   // Set specific gas constant
   if(settings.compareSetting("NONDIMENSIONAL EQUATIONS", "TRUE")){
-    R = pref/(rref*tref); 
+    settings.getSetting("MACH NUMBER", Ma); 
+    R  = 1.0/(gamma*Ma*Ma); 
+
+    if(EulerSolve){ Re = 0.0;}
+    else{settings.getSetting("REYNOLDS NUMBER", Re);}  
+    mu = EulerSolve ? 0.0: 1.0/Re; 
   }else {
-      settings.getSetting("SPECIFIC GAS CONSTANT", R); 
+    settings.getSetting("SPECIFIC GAS CONSTANT", R);   
+    if(EulerSolve){
+      mu=0.0; Re=0.0;
+    }else{
+      settings.getSetting("VISCOSITY", mu);
+
+      const dfloat velRef = mesh.dim==2 ? std::sqrt(uref*uref + vref*vref):
+                                          std::sqrt(uref*uref + vref*vref+ wref*wref); 
+      Ma = velRef/(std::sqrt(gamma*pref/rref)); 
+      Re = rref*velRef*1.0/ mu; 
+    }
   }
   // Set presure and volumetric expansion coefficients
   cp = R*gamma/(gamma-1.0);  
   cv = R/(gamma-1.0); 
-  if(settings.compareSetting("SOLVER TYPE", "NAVIER-STOKES")){
-    settings.getSetting("PRANDTL NUMBER", Pr); 
-    if(settings.compareSetting("NONDIMENSIONAL EQUATIONS", "TRUE")){
-      settings.getSetting("REYNOLDS NUMBER", Re);    
-      const dfloat velRef = mesh.dim==2 ? std::sqrt(uref*uref + vref*vref):
-                                          std::sqrt(uref*uref + vref*vref+ wref*wref); 
-      mu = rref*velRef/Re; 
-      Ma = velRef/(std::sqrt(gamma*pref/rref)); 
-    }else{
-      settings.getSetting("VISCOSITY", mu);
-      settings.getSetting("MACH NUMBER", Ma); 
-    }
-  }else{
-    mu = 0.0; Re = 0.0; 
-  }
 
   settings.getSetting("LDG BETA COEFFICIENT", beta_ldg);
   settings.getSetting("LDG TAU COEFFICIENT", tau_ldg);

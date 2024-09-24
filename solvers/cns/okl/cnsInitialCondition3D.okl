@@ -38,13 +38,13 @@ SOFTWARE.
       const dlong id = e*p_Np + n;
       const dfloat mu    = pCoeff[p_MUID]; 
       const dfloat gamma = pCoeff[p_GMID]; 
+      const dfloat R     = pCoeff[p_RRID]; 
 
       const dfloat RBAR = refState[ICStateID*p_NsP + 0]; 
       const dfloat UBAR = refState[ICStateID*p_NsP + 1]; 
       const dfloat VBAR = refState[ICStateID*p_NsP + 2]; 
       const dfloat WBAR = refState[ICStateID*p_NsP + 3]; 
       const dfloat PBAR = refState[ICStateID*p_NsP + 4]; 
-      const dfloat TBAR = refState[ICStateID*p_NsP + 5]; 
 
       dfloat r = 0.0;
       dfloat u = 0.0;
@@ -52,7 +52,8 @@ SOFTWARE.
       dfloat w = 0.0;
       dfloat p = 0.0;
 
-      cnsInitialConditions3D(gamma, mu, time, RBAR, UBAR, VBAR, WBAR, PBAR, TBAR, x[id], y[id], z[id],
+      cnsInitialConditions3D(gamma, mu, time, R, RBAR, UBAR, VBAR, WBAR, PBAR,
+                             x[id], y[id], z[id],
                              &r, &u, &v, &w, &p);
 
       const dlong qbase = e*p_Np*p_Nfields + n;
@@ -81,13 +82,13 @@ SOFTWARE.
 
       const dfloat mu    = pCoeff[p_MUID]; 
       const dfloat gamma = pCoeff[p_GMID]; 
+      const dfloat R     = pCoeff[p_RRID]; 
 
       const dfloat RBAR = refState[ICStateID*p_NsP + 0]; 
       const dfloat UBAR = refState[ICStateID*p_NsP + 1]; 
       const dfloat VBAR = refState[ICStateID*p_NsP + 2]; 
       const dfloat WBAR = refState[ICStateID*p_NsP + 3]; 
       const dfloat PBAR = refState[ICStateID*p_NsP + 4]; 
-      const dfloat TBAR = refState[ICStateID*p_NsP + 5]; 
 
       dfloat r = 0.0;
       dfloat u = 0.0;
@@ -95,8 +96,8 @@ SOFTWARE.
       dfloat w = 0.0;
       dfloat p = 0.0;
 
-      cnsInitialConditions3D(gamma, mu, time, RBAR, UBAR, VBAR, WBAR, PBAR, TBAR, x[id], y[id], z[id],
-                             &r, &u, &v, &w, &p);
+      cnsInitialConditions3D(gamma, mu, time, R, RBAR, UBAR, VBAR, WBAR, PBAR, 
+                             x[id], y[id], z[id], &r, &u, &v, &w, &p);
 
       const dlong qbase = e*p_Np*p_Nfields + n;
       q[qbase+0*p_Np] = r;

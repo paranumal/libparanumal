@@ -64,14 +64,12 @@ public:
   mesh_t mesh;
   // stab_t stab {};
   // stabSettings_t stabSettings; 
+  int EulerSolve; 
 
   properties_t props; 
 
   int Nfields;
   int Ngrads;
-
- 
-
   dfloat Re, Ma, Pr;
   dfloat mu, cp, cv, R, kappa, gamma;
   // dfloat gamma, igamma, gammaM1, igammaM1, gammaP1, igammaP1;
@@ -103,8 +101,6 @@ public:
   deviceMemory<dfloat> o_momentCenter;
   memory<int>  reportGroups;      
   deviceMemory<int>  o_reportGroups;  
-
-  
 
 
   // Physical coefficients
@@ -229,6 +225,7 @@ public:
   void rhsArtDiff(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
   void rhsLimiter(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
 
+  void rhsEulerArtDiff(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
 
 
   void setupArtificialDiffusion();

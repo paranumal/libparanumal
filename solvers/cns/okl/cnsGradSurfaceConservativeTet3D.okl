@@ -122,7 +122,6 @@ SOFTWARE.
                const dfloat VBAR = flowStates[BCStateID*p_NsP + 2]; 
                const dfloat WBAR = flowStates[BCStateID*p_NsP + 3]; 
                const dfloat PBAR = flowStates[BCStateID*p_NsP + 4]; 
-               const dfloat TBAR = flowStates[BCStateID*p_NsP + 5]; 
                 // fake derivates
                 dfloat drrdxP = 0.0, drrdyP =0.0, drrdzP =0.0; 
                 dfloat drudxP = 0.0, drudyP =0.0, drudzP =0.0; 
@@ -130,7 +129,7 @@ SOFTWARE.
                 dfloat drwdxP = 0.0, drwdyP =0.0, drwdzP =0.0; 
                 dfloat dredxP = 0.0, dredyP =0.0, dredzP =0.0; 
                 cnsViscousBoundaryConditions3D(bc, gamma, R, CP, CV, mu, time, 
-                                 RBAR, UBAR, VBAR, WBAR, PBAR, TBAR, 
+                                 RBAR, UBAR, VBAR, WBAR, PBAR, 
                                  x[idM], y[idM], z[idM], 
                                  nx, ny, nz,
                                  rrM, ruM, rvM, rwM, reM, 
@@ -336,7 +335,6 @@ SOFTWARE.
                 const dfloat VBAR = flowStates[BCStateID*p_NsP + 2]; 
                 const dfloat WBAR = flowStates[BCStateID*p_NsP + 3]; 
                 const dfloat PBAR = flowStates[BCStateID*p_NsP + 4]; 
-                const dfloat TBAR = flowStates[BCStateID*p_NsP + 5]; 
               // fake derivates
                 dfloat drrdxP = 0.0, drrdyP =0.0, drrdzP =0.0; 
                 dfloat drudxP = 0.0, drudyP =0.0, drudzP =0.0; 
@@ -344,7 +342,7 @@ SOFTWARE.
                 dfloat drwdxP = 0.0, drwdyP =0.0, drwdzP =0.0; 
                 dfloat dredxP = 0.0, dredyP =0.0, dredzP =0.0; 
                 cnsViscousBoundaryConditions3D(bc, gamma, R, CP, CV, mu, time, 
-                                 RBAR, UBAR, VBAR, WBAR, PBAR, TBAR, 
+                                 RBAR, UBAR, VBAR, WBAR, PBAR, 
                                  intx[intId], inty[intId], intz[intId], 
                                  nx, ny, nz, 
                                  rrM, ruM, rvM, rwM, reM, 

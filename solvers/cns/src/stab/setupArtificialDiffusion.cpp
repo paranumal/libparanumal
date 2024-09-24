@@ -183,29 +183,41 @@ void cns_t::setupArtificialDiffusion(){
   kernelName    = "maxVelocity" + suffix;
   maxVelocityKernel  = platform.buildKernel(fileName, kernelName, props);
 
-  // kernels from volume file Add isothermal version as well AK. 
-  fileName   = oklFilePrefix + "cnsGradVolumeConservative" + suffix + oklFileSuffix;
-  kernelName = "cnsGradVolumeConservative" + suffix; 
-  gradVolumeKernel =  platform.buildKernel(fileName, kernelName, props);
+  if(EulerSolve){
+    // kernels from volume file Add isothermal version as well AK. 
+    fileName   = oklFilePrefix + "cnsGradVolumeConservative" + suffix + oklFileSuffix;
+    kernelName = "cnsPartialGradVolumeConservative" + suffix; 
+    gradVolumeKernel =  platform.buildKernel(fileName, kernelName, props);
 
-  // kernels from surface file
-  fileName   = oklFilePrefix + "cnsGradSurfaceConservative" + suffix + oklFileSuffix;
-  kernelName = "cnsGradSurfaceConservative" + suffix; // gradient of all conservative fields
-  gradSurfaceKernel = platform.buildKernel(fileName, kernelName, props);
+    // kernels from surface file
+    fileName   = oklFilePrefix + "cnsGradSurfaceConservative" + suffix + oklFileSuffix;
+    kernelName = "cnsPartialGradSurfaceConservative" + suffix; // gradient of all conservative fields
+    gradSurfaceKernel = platform.buildKernel(fileName, kernelName, props);
+}else{
+    // kernels from volume file Add isothermal version as well AK. 
+    fileName   = oklFilePrefix + "cnsGradVolumeConservative" + suffix + oklFileSuffix;
+    kernelName = "cnsGradVolumeConservative" + suffix; 
+    gradVolumeKernel =  platform.buildKernel(fileName, kernelName, props);
 
-  if(cubature){
-  //   // kernels from volume file Add isothermal version as well AK. 
-  // fileName   = oklFilePrefix + "cnsGradVolumeConservative" + suffix + oklFileSuffix;
-  // kernelName = "cnsGradCubatureVolumeConservative" + suffix; 
-  // cubatureGradVolumeKernel =  platform.buildKernel(fileName, kernelName, props);
+    // kernels from surface file
+    fileName   = oklFilePrefix + "cnsGradSurfaceConservative" + suffix + oklFileSuffix;
+    kernelName = "cnsGradSurfaceConservative" + suffix; // gradient of all conservative fields
+    gradSurfaceKernel = platform.buildKernel(fileName, kernelName, props);
+ }
+ 
 
-  // // kernels from surface file
-  // fileName   = oklFilePrefix + "cnsGradSurfaceConservative" + suffix + oklFileSuffix;
-  // kernelName = "cnsGradCubatureSurfaceConservative" + suffix; // gradient of all conservative fields
-  // cubatureGradSurfaceKernel = platform.buildKernel(fileName, kernelName, props);
-
-
+  if(cubature){    
     if(settings.compareSetting("ARTDIFF TYPE", "LAPLACE")){
+      if(EulerSolve){
+        // kernels from volume file
+        fileName   = oklFilePrefix + "cnsCubatureVolumeArtDiff" + suffix + oklFileSuffix;
+        kernelName = "cnsEulerCubatureVolumeArtificialDiffsuionLaplace" + suffix;
+        cubatureVolumeKernel =  platform.buildKernel(fileName, kernelName, props);
+        // kernels from surface file
+        fileName   = oklFilePrefix + "cnsCubatureSurfaceArtDiff" + suffix + oklFileSuffix;
+        kernelName = "cnsEulerCubatureSurfaceArtificialDiffusionLaplace" + suffix;
+        cubatureSurfaceKernel =  platform.buildKernel(fileName, kernelName, props);   
+      }else{
       // kernels from volume file
       fileName   = oklFilePrefix + "cnsCubatureVolumeArtDiff" + suffix + oklFileSuffix;
       kernelName = "cnsCubatureVolumeArtificialDiffsuionLaplace" + suffix;
@@ -214,7 +226,8 @@ void cns_t::setupArtificialDiffusion(){
       // kernels from surface file
       fileName   = oklFilePrefix + "cnsCubatureSurfaceArtDiff" + suffix + oklFileSuffix;
       kernelName = "cnsCubatureSurfaceArtificialDiffusionLaplace" + suffix;
-      cubatureSurfaceKernel =  platform.buildKernel(fileName, kernelName, props);
+      cubatureSurfaceKernel =  platform.buildKernel(fileName, kernelName, props);        
+      }
     }
    }else{
       if(settings.compareSetting("ARTDIFF TYPE", "LAPLACE")){
@@ -274,7 +287,15 @@ void cns_t::setupArtificialDiffusion(){
 
 }
 
+ //   // kernels from volume file Add isothermal version as well AK. 
+  // fileName   = oklFilePrefix + "cnsGradVolumeConservative" + suffix + oklFileSuffix;
+  // kernelName = "cnsGradCubatureVolumeConservative" + suffix; 
+  // cubatureGradVolumeKernel =  platform.buildKernel(fileName, kernelName, props);
 
+  // // kernels from surface file
+  // fileName   = oklFilePrefix + "cnsGradSurfaceConservative" + suffix + oklFileSuffix;
+  // kernelName = "cnsGradCubatureSurfaceConservative" + suffix; // gradient of all conservative fields
+  // cubatureGradSurfaceKernel = platform.buildKernel(fileName, kernelName, props);
 
 
 // Compute h/N for all element types

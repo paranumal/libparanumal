@@ -83,21 +83,3 @@ Background Field = 2;
 
 Coherence;
 
-// We are using Geometric Identites NOW!!!!
-
-// Isothermall Wall
-// Physical Line("Wall",12)      = {1, 2, 3, 4};
-// Physical Line("Drichlet",41)  = {5,6, 7, 8, 9,10,11};
-// Physical Surface("Domain",9)  = {1,2};//+
-
-// // Use geometric IDs and let user change it to BC IDs
-// Physical Line("Wall_1",1)      = {1};
-// Physical Line("Wall_2",2)      = {2};
-// Physical Line("Wall_3",3)      = {3};
-// Physical Line("Wall_4",4)      = {4};
-// Physical Line("Drichlet_1",5) = {10,11};
-// Physical Line("Drichlet_2",6)   = {5,9};
-// Physical Line("Drichlet_3",7)   = {6, 7, 8};
-// Physical Surface("Domain",9)  = {1,2};//+
-//+
-

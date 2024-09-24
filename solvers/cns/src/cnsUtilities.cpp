@@ -40,7 +40,7 @@ int countinString(std::string s, char c){
 
 void cns_t::setFlowStates(){
   char comma        = ',' ;  // seperates the entries
-  char semicolon    = ';' ;  // seperates the entries
+  char semicolon    = ';' ;  // seperates the groups
   // Read Referenece State
   std::string str, sword, dword;
   settings.getSetting("FLOW STATES", str);
@@ -48,7 +48,7 @@ void cns_t::setFlowStates(){
   std::stringstream ss(str);
   std::stringstream ssc(str);
   // Count comma seperated reference state data
-  NstatePoints = (3+mesh.dim);   // Density - Velocity - Pressure -Temeperature
+  NstatePoints = (2+mesh.dim);   // Density - Velocity - Pressure
   NstateSets   = countinString(ss.str(), semicolon);
 
   // int sk = 0; 
@@ -74,6 +74,7 @@ void cns_t::setFlowStates(){
       getline(ds, dword, comma);
       if(dword.length()>0){
         flowStates[sks*NstatePoints + skd] = std::stod(dword); 
+        // printf("%.4e \n", flowStates[sks*NstatePoints + skd]); 
         skd++; 
       }
      }
@@ -236,10 +237,7 @@ void cns_t::setReport(){
   }
 
   o_reportGroups = platform.malloc<int>(reportGroups);
-
-  
   ss.clear(); ssc.clear();
-
   // Number of reference points per state
   props["defines/" "p_NrGrp"]    = (int) NreportGroups;
   props["defines/" "p_NrIDs"]    = (int) NreportIDs;

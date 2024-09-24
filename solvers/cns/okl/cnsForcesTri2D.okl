@@ -83,9 +83,8 @@ SOFTWARE.
   }
 }
 
-
 @kernel void cnsForcesSurfaceTri2D(const dlong Nelements,
-                                  const int grpNo, 
+                                  const int targetGroupID, 
                                   @restrict const  dfloat *  sgeo,
                                   @restrict const  dfloat *  SM,
                                   @restrict const  dlong  *  vmapM,
@@ -113,25 +112,19 @@ SOFTWARE.
         if(n<p_NfacesNfp){
             // apply boundary condition
             // find face that owns this node
-            const int face = n/p_Nfp;
-            const int geoId = EToG[face+p_Nfaces*e];
-
+            const int face            = n/p_Nfp;
+            const int geometricID     = EToG[face+p_Nfaces*e];
             int computeForces = 0; 
-
-            if(geoId){
+            if(geometricID){ // if this is a BC face
               for(int id =0; id<p_NrIDs; id++){
-                int geometricID  = reportGroups[id*2 + 0]; 
-                int groupID      = reportGroups[id*2 + 1]; 
-                computeForces = (groupID==grpNo && geometricID==geoId) ?
-                                1: computeForces; 
+                int targetGeoID = reportGroups[id*2 + 0]; 
+                int groupID     = reportGroups[id*2 + 1]; 
+                computeForces = (groupID==targetGroupID && geometricID==targetGeoID)? 
+                                1:computeForces; 
               }
             }
 
-            s_vFx[n] = 0.0; 
-            s_vFy[n] = 0.0;
-            s_pFx[n] = 0.0; 
-            s_pFy[n] = 0.0; 
-            s_Mz[n]  = 0.0; 
+            s_vFx[n] = 0.0;s_vFy[n] = 0.0;s_pFx[n] = 0.0;s_pFy[n] = 0.0;s_Mz[n]  = 0.0; 
 
             if(computeForces){
             const dfloat gamma = pCoeff[p_GMID]; // gamma
@@ -153,21 +146,30 @@ SOFTWARE.
             const int vidM = idM%p_Np;
 
             const dlong qbaseM = eM*p_Np*p_Nfields + vidM;
-            const dlong sbaseM = eM*p_Np*4  + vidM;
+            const dlong sbaseM = eM*p_Np*p_Ngrads  + vidM;
 
             const dfloat rM  = q[qbaseM + 0*p_Np];
             const dfloat ruM = q[qbaseM + 1*p_Np];
             const dfloat rvM = q[qbaseM + 2*p_Np];
             const dfloat EM  = q[qbaseM + 3*p_Np];
 
-            const dfloat dudxM = gradq[sbaseM+0*p_Np];
-            const dfloat dudyM = gradq[sbaseM+1*p_Np];
-            const dfloat dvdxM = gradq[sbaseM+2*p_Np];
-            const dfloat dvdyM = gradq[sbaseM+3*p_Np];
+            const dfloat irM = 1.0/rM;
+            const dfloat uM = ruM*irM;
+            const dfloat vM = rvM*irM;
+                  dfloat pM = (gamma-1)*(EM-0.5*rM*(uM*uM+vM*vM));
 
-            const dfloat uM = ruM/rM;
-            const dfloat vM = rvM/rM;
-            const dfloat pM = (gamma-1)*(EM-0.5*rM*(uM*uM+vM*vM));
+            const dfloat drrdxM = gradq[sbaseM+0*p_Np];
+            const dfloat drrdyM = gradq[sbaseM+1*p_Np];
+            const dfloat drudxM = gradq[sbaseM+2*p_Np];
+            const dfloat drudyM = gradq[sbaseM+3*p_Np];
+            const dfloat drvdxM = gradq[sbaseM+4*p_Np];
+            const dfloat drvdyM = gradq[sbaseM+5*p_Np];
+
+            // Derivative of velocities
+            const dfloat dudxM = (drudxM - drrdxM*uM)*irM;
+            const dfloat dvdxM = (drvdxM - drrdxM*vM)*irM;
+            const dfloat dudyM = (drudyM - drrdyM*uM)*irM;
+            const dfloat dvdyM = (drvdyM - drrdyM*vM)*irM;
 
             if(p_viscType==2){ // Sutherland     
               const dfloat exp  = pCoeff[p_EXID]; // Exponential term
@@ -181,6 +183,9 @@ SOFTWARE.
               const dfloat TempM  = pM/(R*rM);      // Temperature
               mu =  mu*pow(TempM, exp); 
             }
+
+
+            // pM -= 0.247157686604053; 
 
             const dfloat T11 = mu*(2.0*dudxM - 2.0*(dudxM+dvdyM)/3.0);
             const dfloat T12 = mu*(dudyM+dvdxM);
@@ -225,3 +230,143 @@ SOFTWARE.
       }
     } 
   }
+
+
+
+
+
+// @kernel void cnsForcesSurfaceTri2D(const dlong Nelements,
+//                                   const int targetGroupID, 
+//                                   @restrict const  dfloat *  sgeo,
+//                                   @restrict const  dfloat *  SM,
+//                                   @restrict const  dlong  *  vmapM,
+//                                   @restrict const  int    *  EToG,
+//                                   @restrict const  int    *  reportGroups,
+//                                   @restrict const  dfloat *  x,
+//                                   @restrict const  dfloat *  y,
+//                                   @restrict const  dfloat *  z,
+//                                   @restrict const  dfloat *  XC, 
+//                                   @restrict const  dfloat * pCoeff,
+//                                   @restrict const  dfloat *  q,
+//                                   @restrict const  dfloat *  gradq,
+//                                   @restrict        dfloat *  F){
+
+//   for(dlong e=0;e<Nelements;++e;@outer(0)){
+   
+//     // not sure if we enforce single boundary face per element!
+//     @shared dfloat s_vFx[p_NfacesNfp];
+//     @shared dfloat s_vFy[p_NfacesNfp];
+//     @shared dfloat s_pFx[p_NfacesNfp];
+//     @shared dfloat s_pFy[p_NfacesNfp];
+//     @shared dfloat  s_Mz[p_NfacesNfp];
+
+//       for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
+//         if(n<p_NfacesNfp){
+//             // apply boundary condition
+//             // find face that owns this node
+//             const int face            = n/p_Nfp;
+//             const int geometricID     = EToG[face+p_Nfaces*e];
+//             int computeForces = 0; 
+//             if(geometricID){ // if this is a BC face
+//               for(int id =0; id<p_NrIDs; id++){
+//                 int targetGeoID = reportGroups[id*2 + 0]; 
+//                 int groupID     = reportGroups[id*2 + 1]; 
+//                 computeForces = (groupID==targetGroupID && geometricID==targetGeoID)? 
+//                                 1:computeForces; 
+//               }
+//             }
+
+//             s_vFx[n] = 0.0;s_vFy[n] = 0.0;s_pFx[n] = 0.0;s_pFy[n] = 0.0;s_Mz[n]  = 0.0; 
+
+//             if(computeForces){
+//             const dfloat gamma = pCoeff[p_GMID]; // gamma
+//             const dfloat R     = pCoeff[p_RRID]; // gas constant
+//                   dfloat mu    = pCoeff[p_MUID]; // bulk viscosity
+
+//             // load surface geofactors for this face
+//             const dlong sid   = p_Nsgeo*(e*p_Nfaces+face);
+//             const dfloat nx   = sgeo[sid+p_NXID];
+//             const dfloat ny   = sgeo[sid+p_NYID];
+//             const dfloat sJ   = sgeo[sid+p_SJID];
+
+//             // indices of negative and positive traces of face node
+//             const dlong id  = e*p_Nfp*p_Nfaces + n;
+//             const dlong idM = vmapM[id];
+
+//             // load traces
+//             const dlong eM = e;
+//             const int vidM = idM%p_Np;
+
+//             const dlong qbaseM = eM*p_Np*p_Nfields + vidM;
+//             const dlong sbaseM = eM*p_Np*4  + vidM;
+
+//             const dfloat rM  = q[qbaseM + 0*p_Np];
+//             const dfloat ruM = q[qbaseM + 1*p_Np];
+//             const dfloat rvM = q[qbaseM + 2*p_Np];
+//             const dfloat EM  = q[qbaseM + 3*p_Np];
+
+//             const dfloat dudxM = gradq[sbaseM+0*p_Np];
+//             const dfloat dudyM = gradq[sbaseM+1*p_Np];
+//             const dfloat dvdxM = gradq[sbaseM+2*p_Np];
+//             const dfloat dvdyM = gradq[sbaseM+3*p_Np];
+
+//             const dfloat uM = ruM/rM;
+//             const dfloat vM = rvM/rM;
+//             const dfloat pM = (gamma-1)*(EM-0.5*rM*(uM*uM+vM*vM));
+
+//             if(p_viscType==2){ // Sutherland     
+//               const dfloat exp  = pCoeff[p_EXID]; // Exponential term
+//               const dfloat tr   = pCoeff[p_TRID]; // 1/Tref 
+//               const dfloat ts   = pCoeff[p_TSID]; // Ts/Tref
+//               const dfloat cs   = pCoeff[p_CSID]; // precomuted value to simlify
+//               const dfloat tn   = pM*tr/ (rM *R);  // non-dimensional temp
+//               mu  = (tn > ts) ? (mu*pow(tn, exp)*(1.0+ts)/(tn + ts)) : mu*tn*cs;  
+//             }else if(p_viscType==3){ // Powerlaw
+//               const dfloat exp  = pCoeff[p_EXID]; // Exponential term
+//               const dfloat TempM  = pM/(R*rM);      // Temperature
+//               mu =  mu*pow(TempM, exp); 
+//             }
+
+//             const dfloat T11 = mu*(2.0*dudxM - 2.0*(dudxM+dvdyM)/3.0);
+//             const dfloat T12 = mu*(dudyM+dvdxM);
+//             const dfloat T22 = mu*(2.0*dvdyM - 2.0*(dudxM+dvdyM)/3.0);
+
+//             const dfloat fx = pM*nx - (nx*T11 + ny*T12); 
+//             const dfloat fy = pM*ny - (nx*T12 + ny*T22);
+//             const dfloat dxf   = x[idM] - XC[0]; 
+//             const dfloat dyf   = y[idM] - XC[1];
+            
+//             s_vFx[n] = -sJ*(nx*T11 + ny*T12); 
+//             s_vFy[n] = -sJ*(nx*T12 + ny*T22); 
+//             s_pFx[n] =  sJ*pM*nx;
+//             s_pFy[n] =  sJ*pM*ny;
+//             s_Mz[n]  =  sJ*(fx*dyf - fy*dxf);
+//           }
+//         }
+//       }
+
+//     // for each node in the element
+//     for(int n=0;n<p_maxNodes;++n;@inner(0)){
+//       if(n<p_Np){
+//         dfloat vfxI  = 0.f, vfyI = 0.f; 
+//         dfloat pfxI  = 0.f, pfyI = 0.f;
+//         dfloat mzI   = 0.f ;
+//         #pragma unroll p_NfacesNfp
+//         for(int m=0;m<p_NfacesNfp;++m){
+//           const dfloat sM = SM[n+m*p_Np];
+//           vfxI     += sM*s_vFx[m];
+//           vfyI     += sM*s_vFy[m];
+//           pfxI     += sM*s_pFx[m];
+//           pfyI     += sM*s_pFy[m];
+//           mzI      += sM*s_Mz[m];
+//         }
+//         const dlong shift = Nelements*p_Np;
+//         F[e*p_Np+n+0*shift] = vfxI; 
+//         F[e*p_Np+n+1*shift] = vfyI;
+//         F[e*p_Np+n+2*shift] = pfxI;
+//         F[e*p_Np+n+3*shift] = pfyI;
+//         F[e*p_Np+n+4*shift] = mzI;
+//         }
+//       }
+//     } 
+//   }

@@ -111,7 +111,7 @@ SOFTWARE.
 
 
 @kernel void cnsForcesSurfaceTet3D(const dlong Nelements,
-                                  const int grpNo, 
+                                  const int targetGroupID, 
                                   @restrict const  dfloat *  sgeo,
                                   @restrict const  dfloat *  SM,
                                   @restrict const  dlong  *  vmapM,
@@ -144,17 +144,15 @@ SOFTWARE.
     for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
       if(n<p_NfacesNfp){
         // apply boundary condition
-        // find face that owns this node
-        const int face = n/p_Nfp;
-        const int geoId = EToG[face+p_Nfaces*e];
+        const int face            = n/p_Nfp;
+        const int geometricID     = EToG[face+p_Nfaces*e];
         int computeForces = 0; 
-
-        if(geoId){
+        if(geometricID){ // if this is a BC face
           for(int id =0; id<p_NrIDs; id++){
-            int geometricID  = reportGroups[id*2 + 0]; 
-            int groupID      = reportGroups[id*2 + 1]; 
-            computeForces = (groupID==grpNo && geometricID==geoId) ?
-                            1: computeForces; 
+            int targetGeoID = reportGroups[id*2 + 0]; 
+            int groupID     = reportGroups[id*2 + 1]; 
+            computeForces = (groupID==targetGroupID && geometricID==targetGeoID)? 
+                            1:computeForces; 
           }
         }
         s_vFx[n] = 0.0, s_vFy[n] = 0.0, s_vFz[n] = 0.0;
@@ -216,13 +214,12 @@ SOFTWARE.
             const dfloat tn   = pM*tr/ (rM *R);  // non-dimensional temp
             mu  = (tn > ts) ? (mu*pow(tn, exp)*(1.0+ts)/(tn + ts)) : mu*tn*cs;  
           }else if(p_viscType==3){ // Powerlaw
-            const dfloat exp  = pCoeff[p_EXID]; // Exponential term
+            const dfloat exp  = pCoeff[p_EXID];   // Exponential term
             const dfloat TempM  = pM/(R*rM);      // Temperature
             mu =  mu*pow(TempM, exp); 
           }
 
           const dfloat sbeta = 2.0/3.0; 
-
           const dfloat T11 = mu*(2.0*dudx - sbeta*(dudx+dvdy+dwdz));
           const dfloat T12 = mu*(dudy+dvdx);
           const dfloat T13 = mu*(dudz+dwdx);

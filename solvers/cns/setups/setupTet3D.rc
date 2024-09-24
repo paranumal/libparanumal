@@ -100,6 +100,10 @@ CUDA
 [REYNOLDS NUMBER]
 4.4e5
 
+# Angle of Attack
+[ANGLE OF ATTACK]
+0
+
 # if NONDIM=FALSE otherwise  R = 1.0/(gamma*Ma^2) 
 [SPECIFIC GAS CONSTANT]
 287.052
@@ -117,8 +121,7 @@ SUTHERLAND
 
 # [density, velocity, pressure, temperature]
 [FLOW STATES]
-1.0, 1.0, 0.0, 0.0, 0.17857142857, 1.0;
-#5.60000, 0.984807753012208, 0.173648177666930, 0.0, 1.0, 1.0;
+1.0, 1.0, 0.0, 0.0, 0.17857142857;
 
 [IC STATE ID]
 0
@@ -146,7 +149,7 @@ SUTHERLAND
 
 #-------------------[OUTPUT PROPERTIES]-----------------------#
 [OUTPUT INTERVAL]
-0.1
+0.00001
 
 [OUTPUT TO FILE]
 TRUE

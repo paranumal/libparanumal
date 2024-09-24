@@ -5,8 +5,10 @@
 data/cnsUniform2D.h
 #-------------------[MESH PROPERTIES]-----------------------#
 [MESH FILE]
+../../meshes/cnsFFS2D.msh
+#../../meshes/cnsBump2D.msh
+#../../meshes/cnsSupersonicCylinder2D.msh
 #../../meshes/cnsFlatPlate2D.msh
-../../meshes/cnsSupersonicCylinder2D.msh
 #../../meshes/cnsNACAFlexi2D.msh
 #../../meshes/cnsNACA2D_Symmetry.msh
 #../../meshes/cnsBody2D.msh
@@ -43,7 +45,8 @@ data/cnsUniform2D.h
 
 # EULER or NAVIER-STOKES
 [SOLVER TYPE]
-NAVIER-STOKES
+EULER
+#NAVIER-STOKES
 
 # FALSE or TRUE
 [NONDIMENSIONAL EQUATIONS]
@@ -91,13 +94,16 @@ CUDA
 
 # Mach number is needed for NONDIM=TRUE
 [MACH NUMBER]
-1.7
+3.0
+#1.7
 
 # Reynolds number is needed for NONDIM = TRUE
 [REYNOLDS NUMBER]
-#2000
-#1e4
 2e5
+
+# Angle of Attack
+[ANGLE OF ATTACK]
+0
 
 # if NONDIM=FALSE otherwise  R = 1.0/(gamma*Ma^2) 
 [SPECIFIC GAS CONSTANT]
@@ -105,25 +111,20 @@ CUDA
 
 # if NONDIM = FALSE, otherwise mu = 1/Re
 [VISCOSITY]
-#0.00001
-#0.0002
-#0.0001
-#1.0e-5
+#1e-5
 
 # CONSTANT, SUTHERLAND or POWER-LAW
 [VISCOSITY TYPE]
-#CONSTANT
-SUTHERLAND
+CONSTANT
+#SUTHERLAND
 
 [PRANDTL NUMBER]
 0.72
 
-# [density, velocity, pressure, temperature]
+# [density, velocity, pressure]
 [FLOW STATES]
-#1.0, 1.0, 0.0, 17.857142857142858, 1.0;
-#12.6, 1.0, 0.0, 1.0, 1.0;
-1.0, 1.0, 0.0, 0.247157686604053, 1.0;
-#1.0, 1.0, 0.0,0.988630746416214, 1.0;
+12.6, 1.0, 0.0, 1.0;
+#1.0, 1.0, 0.0, 0.247157686604053;
 
 [IC STATE ID]
 0
@@ -133,12 +134,8 @@ SUTHERLAND
 
 #Geoemtric IDs -> BC IDs
 [GEOMETRIC-TO-PHYSICAL MAP]
-#12:2,3;13:1;20:4,5,6;
-12:1;20:2,3;
-#12:1,2,3,4;20:5,6,7,8,9,10,11;
-#11:1,2,3,4;20:5,6,7,8,9,10,11;
-#12:1,2; 13:12,13,5;20:6,8,9,10;
-#12:1,2,3,20,21,22; 20:7,8,9,15,33,32;
+13:1,2,3,5;40:6,4;
+#12:1,2;20:3,4;
 
 [CFL NUMBER]
 0.1
@@ -147,14 +144,14 @@ SUTHERLAND
 0
 
 [FINAL TIME]
-100.0
+10.0
 #-------------------------------------------------------------#
 
 
 
 #-------------------[OUTPUT PROPERTIES]-----------------------#
 [OUTPUT INTERVAL]
-0.2
+0.1
 
 [OUTPUT TO FILE]
 TRUE
@@ -163,7 +160,8 @@ TRUE
 cnsCircle
 
 [REPORT FORCES]
-TRUE
+FALSE
+#TRUE
 
 [REPORT MOMENTS]
 TRUE
@@ -176,8 +174,7 @@ TRUE
 
 # zero indexed groups
 [REPORT GROUPS]
-#0:2,3;
-0:1;
+0:1,2;
 
 #-------------------------------------------------------------#
 
@@ -210,6 +207,6 @@ TRUE
 LAPLACE
 
 [ARTDIFF SCALE FACTOR]
-3.0
+1.0
 #-------------------------------------------------------------#
 

@@ -403,14 +403,13 @@ void upwindRusanov(const dfloat nx, const dfloat ny, const dfloat nz, const dflo
         const dfloat VBAR = flowStates[BCStateID*p_NsP + 2]; 
         const dfloat WBAR = flowStates[BCStateID*p_NsP + 3]; 
         const dfloat PBAR = flowStates[BCStateID*p_NsP + 4]; 
-        const dfloat TBAR = flowStates[BCStateID*p_NsP + 5]; 
 
         const dlong idM = e*p_intNfpNfaces + n; 
          // apply boundary conditions for viscous flux and modify bc state after inviscid fluxes        
         if(bc>0){
 
           cnsInviscidBoundaryConditions3D(bc, gamma, R, CP, CV, muM, time, 
-                                        RBAR, UBAR, VBAR, WBAR, PBAR, TBAR, 
+                                        RBAR, UBAR, VBAR, WBAR, PBAR, 
                                         intx[idM], inty[idM], intz[idM], nx, ny, nz,  
                                         rrM, ruM, rvM, rwM, rEM, 
                                         &rrP, &ruP, &rvP, &rwP, &rEP); 
@@ -452,7 +451,7 @@ void upwindRusanov(const dfloat nx, const dfloat ny, const dfloat nz, const dflo
 
         if(bc>0){
           cnsViscousBoundaryConditions3D(bc, gamma, R, CP, CV, muM,time, 
-                                        RBAR, UBAR, VBAR, WBAR, PBAR, TBAR, 
+                                        RBAR, UBAR, VBAR, WBAR, PBAR, 
                                         intx[idM], inty[idM], intz[idM],
                                         nx, ny, nz, 
                                         rrM, ruM, rvM, rwM, rEM, 
@@ -483,14 +482,14 @@ void upwindRusanov(const dfloat nx, const dfloat ny, const dfloat nz, const dflo
         #endif 
 
         irP = 1.0/rrP, uP  = ruP*irP,  vP  = rvP*irP, wP= rwP*irP;
-        pP  = (gamma-1)*(rEP - 0.5*rrP*(uP*uP+vP*vP+wP*wP));    
+        pP  = (gamma-1)*(rEP - 0.5*rrP*(uP*uP + vP*vP + wP*wP));    
 
         // limit pressure
         #if POSITIVITY==1 
           // Limit and smooth pressure
           pP          = PMIN + LMAX(pP-PMIN, ALPHA); 
           // reconstruct energy accordingly
-          rEP = pP/(gamma-1.0) + 0.5f*rrP*(uP*uP+vP*vP+wP*wP); 
+          rEP = pP/(gamma-1.0) + 0.5f*rrP*(uP*uP + vP*vP + wP*wP); 
         #endif       
 
 

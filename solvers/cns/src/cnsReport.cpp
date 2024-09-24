@@ -57,7 +57,6 @@ void cns_t::Report(dfloat time, int tstep){
     // copy data back to host
     o_q.copyTo(q);
     
-
     //compute vorticity
     deviceMemory<dfloat> o_Vort = platform.reserve<dfloat>(mesh.dim*mesh.Nelements*mesh.Np);
     vorticityKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_D, o_q, o_Vort);
@@ -78,17 +77,6 @@ void cns_t::Report(dfloat time, int tstep){
 
 
 void cns_t::writeForces(dfloat time, int tstep, int frame){
-
-  // Write out the integrated pressure and viscous forces
-  // Note that this is not the most efficient way but we can use the kernels
-  dlong Nentries = 0; 
-  // Forces and moments
-  Nentries = mesh.dim==2 ? mesh.Nelements*mesh.Np*(mesh.dim*mesh.dim+1):
-                           mesh.Nelements*mesh.Np*(mesh.dim*mesh.dim); 
-  
-  // Compute all forces on all boundaries
-  deviceMemory<dfloat> o_F     = platform.reserve<dfloat>(Nentries);
-  deviceMemory<dfloat> o_gradq = platform.reserve<dfloat>(mesh.Nelements*mesh.Np*mesh.dim*mesh.dim);
 
   if(mesh.dim==2 && mesh.rank==0){
     printf("----------------------------------------------------------------------\n"); 
@@ -129,12 +117,60 @@ void cns_t::writeForces(dfloat time, int tstep, int frame){
     }
   }
 
+
+   // Write out the integrated pressure and viscous forces
+  dlong Nentries = mesh.dim==2 ? mesh.Nelements*mesh.Np*(mesh.dim+mesh.dim+1):
+                                 mesh.Nelements*mesh.Np*(mesh.dim+mesh.dim+mesh.dim); 
+  
+  // Compute all forces on all boundaries
+  deviceMemory<dfloat> o_F     = platform.reserve<dfloat>(Nentries);
+#if 1
+  deviceMemory<dfloat> o_gradq = platform.reserve<dfloat>(mesh.Nelements*mesh.Np*mesh.dim*mesh.dim);
+
   // compute volume contributions to gradients
   forcesVolumeKernel(mesh.Nelements,
                      mesh.o_vgeo,
                      mesh.o_D,
                      o_q,
                      o_gradq);
+
+
+
+#else
+dlong NlocalGrads = mesh.Nelements*mesh.Np*Ngrads;
+dlong NhaloGrads  = mesh.totalHaloPairs*mesh.Np*Ngrads;
+deviceMemory<dfloat> o_gradq = platform.reserve<dfloat>(NlocalGrads+NhaloGrads);  
+
+// extract q trace halo and start exchange
+  fieldTraceHalo.ExchangeStart(o_q, 1);
+ gradVolumeKernel(mesh.Nelements,
+                   mesh.o_vgeo,
+                   mesh.o_D,
+                   o_q,
+                   o_gradq);    
+
+fieldTraceHalo.ExchangeFinish(o_q, 1);
+gradSurfaceKernel(mesh.Nelements,
+                    BCStateID, 
+                    mesh.o_sgeo,
+                    mesh.o_LIFT,
+                    mesh.o_vmapM,
+                    mesh.o_vmapP,
+                    mesh.o_EToB,
+                    mesh.o_x,
+                    mesh.o_y,
+                    mesh.o_z,
+                    o_pCoeff, 
+                    o_flowStates, 
+                    time,
+                    o_q,
+                    o_gradq);
+
+#endif
+
+
+
+
 
   // Write out every force/moment components for every report group 
   for(int grp =0; grp<NreportGroups; grp++){
@@ -200,7 +236,6 @@ void cns_t::writeForces(dfloat time, int tstep, int frame){
   if(mesh.rank==0){
     printf("----------------------------------------------------------------------\n");     
   }
-
-    // fprintf(fp, "\n"); 
-    fclose(fp); 
+  
+  fclose(fp); 
 }

@@ -56,7 +56,7 @@ SOFTWARE.
 
 // Initial conditions (p is ignored for isothermal)
 // ************************************************************************
-#define cnsInitialConditions2D(gamma, mu, t, RBAR, UBAR, VBAR, PBAR, TBAR, x, y, r, u, v, p) \
+#define cnsInitialConditions2D(gamma, mu, t, R, RBAR, UBAR, VBAR, PBAR, x, y, r, u, v, p) \
 {                                         \
   *(r) = RBAR;           \
   *(u) = UBAR;           \
@@ -76,7 +76,7 @@ SOFTWARE.
 // Inviscid Riemann Solve BC's
 // ************************************************************************
 #define cnsInviscidBoundaryConditions2D(bc, gamma, R, CP, CV, mu, t,         \
-                                        RBAR, UBAR, VBAR, PBAR, TBAR,        \
+                                        RBAR, UBAR, VBAR, PBAR,              \
                                         x, y, nx, ny,                        \
                                         rM, ruM, rvM, reM,                   \
                                         rB, ruB, rvB, reB)                   \
@@ -148,7 +148,7 @@ const dfloat keREF = 0.5*RBAR*(UBAR*UBAR + VBAR*VBAR);                       \
 // Viscous Riemann Solve BC's
 // ************************************************************************
 #define cnsViscousBoundaryConditions2D(bc, gamma, R, CP, CV, mu, t,          \
-                                      RBAR, UBAR, VBAR, PBAR, TBAR,           \
+                                      RBAR, UBAR, VBAR, PBAR,                \
                                       x, y, nx, ny,                          \
                                       rM, ruM, rvM, reM, rB, ruB, rvB, reB,  \
                                       drrdxM, drrdyM, drudxM, drudyM,        \
@@ -156,7 +156,7 @@ const dfloat keREF = 0.5*RBAR*(UBAR*UBAR + VBAR*VBAR);                       \
                                       drrdxB, drrdyB, drudxB, drudyB,        \
                                       drvdxB, drvdyB, dredxB, dredyB)        \
 {                                                                            \
-const dfloat uM  = ruM/rM;                                                   \
+const dfloat uM  =  ruM/rM;                                                   \
 const dfloat vM  =  rvM/rM;                                                  \
 const dfloat pM  = (gamma-1.0)*(reM - 0.5*rM*(uM*uM + vM*vM));               \
 const dfloat tM  = pM/(rM*R);                                                \
@@ -165,6 +165,7 @@ const dfloat cM  = sqrt(gamma*pM/rM);                                        \
 const dfloat mM  = fabs(unM/cM);                                             \
 const dfloat keREF = 0.5*RBAR*(UBAR*UBAR + VBAR*VBAR);                       \
   if(bc==11){                                                                \
+    const dfloat TBAR  = PBAR/(R*RBAR);                                      \
     *( rB) = rM;                                                             \
     *(ruB) = 0.0;                                                            \
     *(rvB) = 0.0;                                                            \
@@ -191,8 +192,8 @@ const dfloat keREF = 0.5*RBAR*(UBAR*UBAR + VBAR*VBAR);                       \
     *(dredyB) = dredyM - ny*(nx*TxM + ny*TyM);                               \
   }else if(bc==13){                                                          \
     *( rB) =  rM;                                                            \
-    *(ruB) =  ruM - 2.0*(nx*ruM+ny*rvM)*nx;                                  \
-    *(rvB) =  rvM - 2.0*(nx*ruM+ny*rvM)*ny;                                  \
+    *(ruB) =  rM*(uM - 2.0*(nx*uM+ny*vM)*nx);                                \
+    *(rvB) =  rM*(vM - 2.0*(nx*uM+ny*vM)*ny);                                \
     *(reB) =  reM;                                                           \
     *(drrdxB) = 0.0;*(drrdyB) = 0.0;                                         \
     *(drudxB) = 0.0;*(drudyB) = 0.0;                                         \

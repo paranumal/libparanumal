@@ -26,8 +26,7 @@ SOFTWARE.
 
 #include "cns.hpp"
 
-void cns_t::Setup(platform_t& _platform, mesh_t& _mesh,
-                  cnsSettings_t& _settings){
+void cns_t::Setup(platform_t& _platform, mesh_t& _mesh, cnsSettings_t& _settings){
 
   platform = _platform;
   mesh = _mesh;
@@ -36,6 +35,7 @@ void cns_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
   cubature   = (settings.compareSetting("ADVECTION TYPE", "CUBATURE")) ? 1:0;
   isothermal = (settings.compareSetting("ISOTHERMAL", "TRUE")) ? 1:0;
+  EulerSolve = (settings.compareSetting("SOLVER TYPE", "EULER")) ? 1:0;
 
 
   Nfields   = (mesh.dim==3) ? 4:3; 
