@@ -6,7 +6,6 @@ data/cnsUniform3D.h
 [MESH FILE]
 ../../meshes/cnsHB2.msh
 #BOX
-#../../meshes/cnsAGARD_B.msh
 
 [FORMAT]
 2.0
@@ -43,7 +42,7 @@ data/cnsUniform3D.h
 
 #-----------------[DISCRETIZATION PROPERTIES]------------------#
 [POLYNOMIAL DEGREE]
-3
+4
 
 # EULER or NAVIER-STOKES
 [SOLVER TYPE]
@@ -94,7 +93,7 @@ CUDA
 
 # Mach number is needed for NONDIM=TRUE
 [MACH NUMBER]
-2.0
+3.0
 
 # Reynolds number is needed for NONDIM = TRUE
 [REYNOLDS NUMBER]
@@ -121,7 +120,7 @@ SUTHERLAND
 
 # [density, velocity, pressure, temperature]
 [FLOW STATES]
-1.0, 1.0, 0.0, 0.0, 0.17857142857;
+12.6, 1.0, 0.0, 0.0, 1.0;
 
 [IC STATE ID]
 0
@@ -131,7 +130,7 @@ SUTHERLAND
 
 #Geoemtric IDs -> BC IDs
 [GEOMETRIC-TO-PHYSICAL MAP]
-12:1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15; 20: 16, 17, 18; 
+12:1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15; 20: 16; 
 #AGARD_B
 #12:1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13; 20:14, 15, 16;
 
@@ -149,7 +148,7 @@ SUTHERLAND
 
 #-------------------[OUTPUT PROPERTIES]-----------------------#
 [OUTPUT INTERVAL]
-0.00001
+0.1
 
 [OUTPUT TO FILE]
 TRUE
@@ -171,7 +170,8 @@ FALSE
 
 # zero indexed groups
 [REPORT GROUPS]
-0:1,2,3,4,5,6,7,8,9,10,11,12,13,14,15;1:1,2,3,4,13,14;2:5,6,7,8,9, 10, 11, 12,15;
+0:1,2,3,4,5,6,7,8,9,10,11,12,13,14,15;
+#1:1,2,3,4,13,14;2:5,6,7,8,9, 10, 11, 12,15;
 # Group zero is the whole body surfaces, 1 is the nose part and 2 is the remaning body parts
 #-------------------------------------------------------------#
 

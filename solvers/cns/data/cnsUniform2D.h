@@ -104,10 +104,18 @@ const dfloat keREF = 0.5*RBAR*(UBAR*UBAR + VBAR*VBAR);                       \
     *(rvB) =  rM*(vM - 2.0*(nx*uM+ny*vM)*ny);                                \
     *(reB) =  reM;                                                           \
    }else if(bc==20){                                                         \                                                              \
-    *( rB) = RBAR;                                                           \
-    *(ruB) = RBAR*UBAR;                                                      \
-    *(rvB) = RBAR*VBAR;                                                      \
-    *(reB) = PBAR/(gamma-1)+keREF ;                                          \
+    if(unM>0.0){                                                              \
+      const dfloat pB = mM > 1.0 ? pM :  PBAR;                                 \
+      *( rB) = rM;                                                             \
+      *(ruB) = ruM;                                                            \
+      *(rvB) = rvM;                                                            \
+      *(reB) = pB/(gamma-1)+0.5*rM*(uM*uM + vM*vM) ;                           \
+    }else{                                                                    \
+      *( rB) = RBAR;                                                           \
+      *(ruB) = RBAR*UBAR;                                                      \
+      *(rvB) = RBAR*VBAR;                                                      \
+      *(reB) = PBAR/(gamma-1)+keREF ;                                          \
+    }                                                                         \
    }else if(bc==21){                                                         \
     *( rB) = RBAR;                                                           \
     *(ruB) = RBAR*UBAR;                                                      \
