@@ -81,11 +81,20 @@ const dfloat keREF = 0.5*RBAR*(UBAR*UBAR+VBAR*VBAR+WBAR*WBAR);               \
     *(rwB) =  rM*(wM - 2.0*(nx*uM+ny*vM+nz*wM)*nz);                          \
     *(reB) =  reM;                                                           \
    }else if(bc==20){                                                         \                                                              \
-    *( rB) = RBAR;                                                           \
-    *(ruB) = RBAR*UBAR;                                                      \
-    *(rvB) = RBAR*VBAR;                                                      \
-    *(rwB) = RBAR*WBAR;                                                      \
-    *(reB) = PBAR/(gamma-1)+keREF ;                                          \
+    if(unM>0.0){                                                             \
+     const dfloat pB = mM > 1.0 ? pM :  PBAR;                                \
+      *( rB) = rM;                                                           \
+      *(ruB) = ruM;                                                          \
+      *(rvB) = rvM;                                                          \
+      *(rwB) = rwM;                                                          \
+      *(reB) = pB/(gamma-1)+0.5*rM*(uM*uM+vM*vM+wM*wM);                      \
+    }else{                                                                   \
+      *( rB) = RBAR;                                                         \
+      *(ruB) = RBAR*UBAR;                                                    \
+      *(rvB) = RBAR*VBAR;                                                    \
+      *(rwB) = RBAR*WBAR;                                                    \
+      *(reB) = PBAR/(gamma-1)+keREF ;                                        \
+    }                                                                        \
    }else if(bc==21){                                                         \
     *( rB) = RBAR;                                                           \
     *(ruB) = RBAR*UBAR;                                                      \
@@ -195,9 +204,9 @@ if(bc==11){                                                                  \
     *(dredzB) = dredzM - nz*(nx*TxM + ny*TyM+ nz*TzM);                       \
   }else if(bc==13){                                                          \
     *( rB) =  rM;                                                            \
-    *(ruB) =  ruM - 2.0*(nx*ruM+ny*rvM+nz*rwM)*nx;                               \
-    *(rvB) =  rvM - 2.0*(nx*ruM+ny*rvM+nz*rwM)*ny;                               \
-    *(rwB) =  rwM - 2.0*(nx*ruM+ny*rvM+nz*rwM)*nz;                               \
+    *(ruB) =  ruM - 2.0*(nx*ruM+ny*rvM+nz*rwM)*nx;                           \
+    *(rvB) =  rvM - 2.0*(nx*ruM+ny*rvM+nz*rwM)*ny;                           \
+    *(rwB) =  rwM - 2.0*(nx*ruM+ny*rvM+nz*rwM)*nz;                           \
     *(reB) =  reM;                                                           \
     *(drrdxB) = 0.0;*(drrdyB) = 0.0;*(drrdzB) = 0.0;                         \
     *(drudxB) = 0.0;*(drudyB) = 0.0;*(drudzB) = 0.0;                         \

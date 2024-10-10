@@ -138,101 +138,216 @@ SOFTWARE.
 }
 
 
+// This function computes gradient for all conservative fields
+@kernel void cnsPartialGradVolumeConservativeTet3D(const dlong Nelements,
+                                                  @restrict const  dfloat *  vgeo,
+                                                  @restrict const  dfloat *  D,
+                                                  @restrict const  dfloat *  q,
+                                                  @restrict        dfloat *  gradq){
 
-
-// Gradients of all conservative fields
-@kernel void cnsGradCubatureVolumeConservativeTet3D(const dlong Nelements,
-                                                    @restrict const  dfloat *  vgeo,
-                                                    @restrict const  dfloat *  cubvgeo,
-                                                    @restrict const  dfloat *  cubD,
-                                                    @restrict const  dfloat *  cubPDT,
-                                                    @restrict const  dfloat *  cubInterp,
-                                                    @restrict const  dfloat *  cubProject,
-                                                    @restrict const  dfloat *  q,
-                                                    @restrict        dfloat *  gradq){
   for(dlong e=0;e<Nelements;++e;@outer(0)){
 
-    @shared dfloat s_cq[p_Nfields][p_cubNp];
-    @shared dfloat s_q[p_Nfields][p_Np];
+    @shared dfloat s_rr[p_Np];
+    @shared dfloat s_ru[p_Np];
+    @shared dfloat s_rv[p_Np];
+    @shared dfloat s_rw[p_Np];
+    @shared dfloat s_re[p_Np];
 
-    @exclusive dfloat r_qr[p_Nfields]; 
-    @exclusive dfloat r_qs[p_Nfields];
-    @exclusive dfloat r_qt[p_Nfields];
-
-    #define r_q r_qr 
-
-    for(int n=0;n<p_cubNp;++n;@inner(0)){
-      if(n<p_Np){
-        const dlong qbase = e*p_Nfields*p_Np + n;
-        for(int fld = 0; fld<p_Nfields; fld++){
-          s_q[fld][n] = q[qbase + fld*p_Np]; 
-        }
-      }
-      for(int fld = 0; fld<p_Nfields; fld++){
-        r_q[fld] = 0.0; 
-      }
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      const dlong qbase = e*p_Nfields*p_Np + n;
+      const dfloat rr = q[qbase + 0*p_Np];
+      const dfloat ru = q[qbase + 1*p_Np];
+      const dfloat rv = q[qbase + 2*p_Np];
+      const dfloat rw = q[qbase + 3*p_Np];
+      const dfloat re = q[qbase + 4*p_Np];
+      // Field variables
+      s_rr[n] = rr;
+      s_ru[n] = ru;
+      s_rv[n] = rv;
+      s_rw[n] = rw;
+      s_re[n] = re;
     }
 
 
-    for(int n=0;n<p_cubNp;++n;@inner(0)){
-      #pragma unroll p_Np
-        for(int i=0;i<p_Np;++i){
-          const dfloat cIni = cubInterp[n+i*p_cubNp];
-          for(int fld=0; fld<p_Nfields; fld++){
-            r_q[fld] += cIni*s_q[fld][i];
-          }
-        }
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      // prefetch geometric factors (constant on triangle)
+      const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+      const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+      const dfloat drdz = vgeo[e*p_Nvgeo + p_RZID];
 
-        for(int fld=0; fld<p_Nfields; fld++){
-          s_cq[fld][n] = r_q[fld];
-        }
+      const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+      const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+      const dfloat dsdz = vgeo[e*p_Nvgeo + p_SZID];
+
+      const dfloat dtdx = vgeo[e*p_Nvgeo + p_TXID];
+      const dfloat dtdy = vgeo[e*p_Nvgeo + p_TYID];
+      const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
+
+      dfloat drrdr = 0.f, drrds = 0.f, drrdt = 0.f;
+      dfloat drudr = 0.f, druds = 0.f, drudt = 0.f;
+      dfloat drvdr = 0.f, drvds = 0.f, drvdt = 0.f;
+      dfloat drwdr = 0.f, drwds = 0.f, drwdt = 0.f;
+      dfloat dredr = 0.f, dreds = 0.f, dredt = 0.f;
+
+      for(int i=0;i<p_Np;++i){
+        const dfloat Drni = D[n+i*p_Np+0*p_Np*p_Np];
+        const dfloat Dsni = D[n+i*p_Np+1*p_Np*p_Np];
+        const dfloat Dtni = D[n+i*p_Np+2*p_Np*p_Np];
+
+        const dfloat rr = s_rr[i];
+        const dfloat ru = s_ru[i];
+        const dfloat rv = s_rv[i];
+        const dfloat rw = s_rw[i];
+        const dfloat re = s_re[i];
+
+        drrdr += Drni*rr, drrds += Dsni*rr, drrdt += Dtni*rr;
+        drudr += Drni*ru, druds += Dsni*ru, drudt += Dtni*ru;
+        drvdr += Drni*rv, drvds += Dsni*rv, drvdt += Dtni*rv;
+        drwdr += Drni*rw, drwds += Dsni*rw, drwdt += Dtni*rw;
+        dredr += Drni*re, dreds += Dsni*re, dredt += Dtni*re;
       }
+      // Density
+      const dfloat drrdx = drdx*drrdr + dsdx*drrds + dtdx*drrdt;
+      const dfloat drrdy = drdy*drrdr + dsdy*drrds + dtdy*drrdt;
+      const dfloat drrdz = drdz*drrdr + dsdz*drrds + dtdz*drrdt;
+      // x-momentum
+      const dfloat drudx = drdx*drudr + dsdx*druds + dtdx*drudt;
+      const dfloat drudy = drdy*drudr + dsdy*druds + dtdy*drudt;
+      const dfloat drudz = drdz*drudr + dsdz*druds + dtdz*drudt;
+      // y-momentum
+      const dfloat drvdx = drdx*drvdr + dsdx*drvds + dtdx*drvdt;
+      const dfloat drvdy = drdy*drvdr + dsdy*drvds + dtdy*drvdt;
+      const dfloat drvdz = drdz*drvdr + dsdz*drvds + dtdz*drvdt;
+      // z-momentum
+      const dfloat drwdx = drdx*drwdr + dsdx*drwds + dtdx*drwdt;
+      const dfloat drwdy = drdy*drwdr + dsdy*drwds + dtdy*drwdt;
+      const dfloat drwdz = drdz*drwdr + dsdz*drwds + dtdz*drwdt;
+      // energy
+      const dfloat dredx = drdx*dredr + dsdx*dreds + dtdx*dredt;
+      const dfloat dredy = drdy*dredr + dsdy*dreds + dtdy*dredt;
+      const dfloat dredz = drdz*dredr + dsdz*dreds + dtdz*dredt;
 
+      const dlong sbase = e*p_Ngrads*p_Np + n;
+      gradq[sbase +  0*p_Np] = drrdx;
+      gradq[sbase +  1*p_Np] = drrdy;
+      gradq[sbase +  2*p_Np] = drrdz;
 
-    for(int n=0;n<p_cubNp;++n;@inner(0)){
-      if(n<p_Np){
+      gradq[sbase +  3*p_Np] = drudx;
+      gradq[sbase +  4*p_Np] = drudy;
+      gradq[sbase +  5*p_Np] = drudz;
 
-        for(int fld=0; fld<p_Nfields; fld++){
-          r_qr[fld] = 0.0; 
-          r_qs[fld] = 0.0;
-          r_qt[fld] = 0.0;
-        }
+      gradq[sbase +  6*p_Np] = drvdx;
+      gradq[sbase +  7*p_Np] = drvdy;
+      gradq[sbase +  8*p_Np] = drvdz;
+     
+      gradq[sbase +  9*p_Np] = drwdx;
+      gradq[sbase + 10*p_Np] = drwdy;
+      gradq[sbase + 11*p_Np] = drwdz;
 
-        // prefetch geometric factors (constant on triangle)
-        const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
-        const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
-        const dfloat drdz = vgeo[e*p_Nvgeo + p_RZID];
-        //
-        const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
-        const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
-        const dfloat dsdz = vgeo[e*p_Nvgeo + p_SZID];
-        //
-        const dfloat dtdx = vgeo[e*p_Nvgeo + p_TXID];
-        const dfloat dtdy = vgeo[e*p_Nvgeo + p_TYID];
-        const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
-
-        #pragma unroll p_cubNp
-        for(int i=0;i<p_cubNp;++i){
-          const dfloat cDrWni = cubPDT[n+i*p_Np+0*p_cubNp*p_Np];
-          const dfloat cDsWni = cubPDT[n+i*p_Np+1*p_cubNp*p_Np];
-          const dfloat cDtWni = cubPDT[n+i*p_Np+2*p_cubNp*p_Np];
-          for(int fld=0; fld<p_Nfields; fld++){
-            r_qr[fld] += cDrWni*s_cq[fld][i];
-            r_qs[fld] += cDsWni*s_cq[fld][i];
-            r_qt[fld] += cDtWni*s_cq[fld][i];
-          }
-        }
-
-        const dlong sbase = e*p_Ngrads*p_Np + n;
-        for(int fld=0; fld<p_Nfields; fld++){
-          gradq[sbase + (3*fld+0)*p_Np] = -(drdx*r_qr[fld]+dsdx*r_qs[fld]+dtdx*r_qt[fld]); 
-          gradq[sbase + (3*fld+1)*p_Np] = -(drdy*r_qr[fld]+dsdy*r_qs[fld]+dtdy*r_qt[fld]); 
-          gradq[sbase + (3*fld+2)*p_Np] = -(drdz*r_qr[fld]+dsdz*r_qs[fld]+dtdz*r_qt[fld]); 
-        }
-      }
+      gradq[sbase + 12*p_Np] = dredx;
+      gradq[sbase + 13*p_Np] = dredy;
+      gradq[sbase + 14*p_Np] = dredz;
     }
   }
 }
+
+
+
+
+
+// // Gradients of all conservative fields
+// @kernel void cnsGradCubatureVolumeConservativeTet3D(const dlong Nelements,
+//                                                     @restrict const  dfloat *  vgeo,
+//                                                     @restrict const  dfloat *  cubvgeo,
+//                                                     @restrict const  dfloat *  cubD,
+//                                                     @restrict const  dfloat *  cubPDT,
+//                                                     @restrict const  dfloat *  cubInterp,
+//                                                     @restrict const  dfloat *  cubProject,
+//                                                     @restrict const  dfloat *  q,
+//                                                     @restrict        dfloat *  gradq){
+//   for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+//     @shared dfloat s_cq[p_Nfields][p_cubNp];
+//     @shared dfloat s_q[p_Nfields][p_Np];
+
+//     @exclusive dfloat r_qr[p_Nfields]; 
+//     @exclusive dfloat r_qs[p_Nfields];
+//     @exclusive dfloat r_qt[p_Nfields];
+
+//     #define r_q r_qr 
+
+//     for(int n=0;n<p_cubNp;++n;@inner(0)){
+//       if(n<p_Np){
+//         const dlong qbase = e*p_Nfields*p_Np + n;
+//         for(int fld = 0; fld<p_Nfields; fld++){
+//           s_q[fld][n] = q[qbase + fld*p_Np]; 
+//         }
+//       }
+//       for(int fld = 0; fld<p_Nfields; fld++){
+//         r_q[fld] = 0.0; 
+//       }
+//     }
+
+
+//     for(int n=0;n<p_cubNp;++n;@inner(0)){
+//       #pragma unroll p_Np
+//         for(int i=0;i<p_Np;++i){
+//           const dfloat cIni = cubInterp[n+i*p_cubNp];
+//           for(int fld=0; fld<p_Nfields; fld++){
+//             r_q[fld] += cIni*s_q[fld][i];
+//           }
+//         }
+
+//         for(int fld=0; fld<p_Nfields; fld++){
+//           s_cq[fld][n] = r_q[fld];
+//         }
+//       }
+
+
+//     for(int n=0;n<p_cubNp;++n;@inner(0)){
+//       if(n<p_Np){
+
+//         for(int fld=0; fld<p_Nfields; fld++){
+//           r_qr[fld] = 0.0; 
+//           r_qs[fld] = 0.0;
+//           r_qt[fld] = 0.0;
+//         }
+
+//         // prefetch geometric factors (constant on triangle)
+//         const dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+//         const dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+//         const dfloat drdz = vgeo[e*p_Nvgeo + p_RZID];
+//         //
+//         const dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+//         const dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+//         const dfloat dsdz = vgeo[e*p_Nvgeo + p_SZID];
+//         //
+//         const dfloat dtdx = vgeo[e*p_Nvgeo + p_TXID];
+//         const dfloat dtdy = vgeo[e*p_Nvgeo + p_TYID];
+//         const dfloat dtdz = vgeo[e*p_Nvgeo + p_TZID];
+
+//         #pragma unroll p_cubNp
+//         for(int i=0;i<p_cubNp;++i){
+//           const dfloat cDrWni = cubPDT[n+i*p_Np+0*p_cubNp*p_Np];
+//           const dfloat cDsWni = cubPDT[n+i*p_Np+1*p_cubNp*p_Np];
+//           const dfloat cDtWni = cubPDT[n+i*p_Np+2*p_cubNp*p_Np];
+//           for(int fld=0; fld<p_Nfields; fld++){
+//             r_qr[fld] += cDrWni*s_cq[fld][i];
+//             r_qs[fld] += cDsWni*s_cq[fld][i];
+//             r_qt[fld] += cDtWni*s_cq[fld][i];
+//           }
+//         }
+
+//         const dlong sbase = e*p_Ngrads*p_Np + n;
+//         for(int fld=0; fld<p_Nfields; fld++){
+//           gradq[sbase + (3*fld+0)*p_Np] = -(drdx*r_qr[fld]+dsdx*r_qs[fld]+dtdx*r_qt[fld]); 
+//           gradq[sbase + (3*fld+1)*p_Np] = -(drdy*r_qr[fld]+dsdy*r_qs[fld]+dtdy*r_qt[fld]); 
+//           gradq[sbase + (3*fld+2)*p_Np] = -(drdz*r_qr[fld]+dsdz*r_qs[fld]+dtdz*r_qt[fld]); 
+//         }
+//       }
+//     }
+//   }
+// }
 
 
 

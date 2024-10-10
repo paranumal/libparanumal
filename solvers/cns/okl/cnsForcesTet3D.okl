@@ -110,6 +110,8 @@ SOFTWARE.
 }
 
 
+
+
 @kernel void cnsForcesSurfaceTet3D(const dlong Nelements,
                                   const int targetGroupID, 
                                   @restrict const  dfloat *  sgeo,
@@ -181,7 +183,7 @@ SOFTWARE.
           const int vidM = idM%p_Np;
 
           const dlong qbaseM = eM*p_Np*p_Nfields + vidM;
-          const dlong sbaseM = eM*p_Np*9  + vidM;
+          const dlong sbaseM = eM*p_Np*p_Ngrads  + vidM;
 
           const dfloat rM  = q[qbaseM + 0*p_Np];
           const dfloat ruM = q[qbaseM + 1*p_Np];
@@ -189,22 +191,41 @@ SOFTWARE.
           const dfloat rwM = q[qbaseM + 3*p_Np];
           const dfloat EM  = q[qbaseM + 4*p_Np];
 
-          const dfloat dudx = gradq[sbaseM+0*p_Np];
-          const dfloat dudy = gradq[sbaseM+1*p_Np];
-          const dfloat dudz = gradq[sbaseM+2*p_Np];
-          
-          const dfloat dvdx = gradq[sbaseM+3*p_Np];
-          const dfloat dvdy = gradq[sbaseM+4*p_Np];
-          const dfloat dvdz = gradq[sbaseM+5*p_Np];
+          const dfloat drrdx = gradq[sbaseM+0*p_Np];
+          const dfloat drrdy = gradq[sbaseM+1*p_Np];
+          const dfloat drrdz = gradq[sbaseM+2*p_Np];
 
-          const dfloat dwdx = gradq[sbaseM+6*p_Np];
-          const dfloat dwdy = gradq[sbaseM+7*p_Np];
-          const dfloat dwdz = gradq[sbaseM+8*p_Np];
+          const dfloat drudx = gradq[sbaseM+3*p_Np];
+          const dfloat drudy = gradq[sbaseM+4*p_Np];
+          const dfloat drudz = gradq[sbaseM+5*p_Np];
+          
+          const dfloat drvdx = gradq[sbaseM+6*p_Np];
+          const dfloat drvdy = gradq[sbaseM+7*p_Np];
+          const dfloat drvdz = gradq[sbaseM+8*p_Np];
+
+          const dfloat drwdx = gradq[sbaseM+ 9*p_Np];
+          const dfloat drwdy = gradq[sbaseM+10*p_Np];
+          const dfloat drwdz = gradq[sbaseM+11*p_Np];
 
           const dfloat uM = ruM/rM;
           const dfloat vM = rvM/rM;
           const dfloat wM = rwM/rM;
           const dfloat pM = (gamma-1)*(EM-0.5*rM*(uM*uM+vM*vM+wM*wM));
+
+          // Derivative of velocities
+          const dfloat dudx = (drudx - drrdx*uM)/rM;
+          const dfloat dvdx = (drvdx - drrdx*vM)/rM;
+          const dfloat dwdx = (drwdx - drrdx*wM)/rM;
+         
+          // Derivative of velocities
+          const dfloat dudy = (drudy - drrdy*uM)/rM;
+          const dfloat dvdy = (drvdy - drrdy*vM)/rM;
+          const dfloat dwdy = (drwdy - drrdy*wM)/rM;
+
+          // Derivative of velocities
+          const dfloat dudz = (drudz - drrdz*uM)/rM;
+          const dfloat dvdz = (drvdz - drrdz*vM)/rM;
+          const dfloat dwdz = (drwdz - drrdz*wM)/rM;
 
           if(p_viscType==2){ // Sutherland     
             const dfloat exp  = pCoeff[p_EXID]; // Exponential term
@@ -288,3 +309,187 @@ SOFTWARE.
       }
     } 
   }
+
+
+
+
+
+// @kernel void cnsForcesSurfaceTet3D(const dlong Nelements,
+//                                   const int targetGroupID, 
+//                                   @restrict const  dfloat *  sgeo,
+//                                   @restrict const  dfloat *  SM,
+//                                   @restrict const  dlong  *  vmapM,
+//                                   @restrict const  int    *  EToG,
+//                                   @restrict const  int    *  reportGroups,
+//                                   @restrict const  dfloat *  x,
+//                                   @restrict const  dfloat *  y,
+//                                   @restrict const  dfloat *  z,
+//                                   @restrict const  dfloat *  XC, 
+//                                   @restrict const  dfloat * pCoeff,
+//                                   @restrict const  dfloat *  q,
+//                                   @restrict const  dfloat *  gradq,
+//                                   @restrict        dfloat *  F){
+
+//   for(dlong e=0;e<Nelements;++e;@outer(0)){
+   
+//     // not sure if we enforce single boundary face per element!
+//     @shared dfloat s_vFx[p_NfacesNfp];
+//     @shared dfloat s_vFy[p_NfacesNfp];
+//     @shared dfloat s_vFz[p_NfacesNfp];
+
+//     @shared dfloat s_pFx[p_NfacesNfp];
+//     @shared dfloat s_pFy[p_NfacesNfp];
+//     @shared dfloat s_pFz[p_NfacesNfp];
+
+//     @shared dfloat s_Mx[p_NfacesNfp];
+//     @shared dfloat s_My[p_NfacesNfp];
+//     @shared dfloat s_Mz[p_NfacesNfp];
+
+//     for(int n=0;n<p_maxNodes;++n;@inner(0)){ // maxNodes = max(Nfp*Nfaces,Np)
+//       if(n<p_NfacesNfp){
+//         // apply boundary condition
+//         const int face            = n/p_Nfp;
+//         const int geometricID     = EToG[face+p_Nfaces*e];
+//         int computeForces = 0; 
+//         if(geometricID){ // if this is a BC face
+//           for(int id =0; id<p_NrIDs; id++){
+//             int targetGeoID = reportGroups[id*2 + 0]; 
+//             int groupID     = reportGroups[id*2 + 1]; 
+//             computeForces = (groupID==targetGroupID && geometricID==targetGeoID)? 
+//                             1:computeForces; 
+//           }
+//         }
+//         s_vFx[n] = 0.0, s_vFy[n] = 0.0, s_vFz[n] = 0.0;
+//         s_pFx[n] = 0.0, s_pFy[n] = 0.0, s_pFz[n] = 0.0; 
+//         s_Mx[n]  = 0.0, s_My[n]  = 0.0, s_Mz[n]  = 0.0; 
+
+//         if(computeForces){
+
+//           const dfloat gamma = pCoeff[p_GMID]; // gamma
+//           const dfloat R     = pCoeff[p_RRID]; // gas constant
+//                 dfloat mu    = pCoeff[p_MUID]; // bulk viscosity
+
+//           // load surface geofactors for this face
+//           const dlong sid   = p_Nsgeo*(e*p_Nfaces+face);
+//           const dfloat nx   = sgeo[sid+p_NXID];
+//           const dfloat ny   = sgeo[sid+p_NYID];
+//           const dfloat nz   = sgeo[sid+p_NZID];
+//           const dfloat sJ   = sgeo[sid+p_SJID];
+
+//           // indices of negative and positive traces of face node
+//           const dlong id  = e*p_Nfp*p_Nfaces + n;
+//           const dlong idM = vmapM[id];
+
+//           // load traces
+//           const dlong eM = e;
+//           const int vidM = idM%p_Np;
+
+//           const dlong qbaseM = eM*p_Np*p_Nfields    + vidM;
+//           const dlong sbaseM = eM*p_Np*p_dim*p_dim  + vidM;
+
+//           const dfloat rM  = q[qbaseM + 0*p_Np];
+//           const dfloat ruM = q[qbaseM + 1*p_Np];
+//           const dfloat rvM = q[qbaseM + 2*p_Np];
+//           const dfloat rwM = q[qbaseM + 3*p_Np];
+//           const dfloat EM  = q[qbaseM + 4*p_Np];
+
+//           const dfloat dudx = gradq[sbaseM+0*p_Np];
+//           const dfloat dudy = gradq[sbaseM+1*p_Np];
+//           const dfloat dudz = gradq[sbaseM+2*p_Np];
+          
+//           const dfloat dvdx = gradq[sbaseM+3*p_Np];
+//           const dfloat dvdy = gradq[sbaseM+4*p_Np];
+//           const dfloat dvdz = gradq[sbaseM+5*p_Np];
+
+//           const dfloat dwdx = gradq[sbaseM+6*p_Np];
+//           const dfloat dwdy = gradq[sbaseM+7*p_Np];
+//           const dfloat dwdz = gradq[sbaseM+8*p_Np];
+
+//           const dfloat uM = ruM/rM;
+//           const dfloat vM = rvM/rM;
+//           const dfloat wM = rwM/rM;
+//           const dfloat pM = (gamma-1)*(EM-0.5*rM*(uM*uM+vM*vM+wM*wM));
+
+//           if(p_viscType==2){ // Sutherland     
+//             const dfloat exp  = pCoeff[p_EXID]; // Exponential term
+//             const dfloat tr   = pCoeff[p_TRID]; // 1/Tref 
+//             const dfloat ts   = pCoeff[p_TSID]; // Ts/Tref
+//             const dfloat cs   = pCoeff[p_CSID]; // precomuted value to simlify
+//             const dfloat tn   = pM*tr/ (rM *R);  // non-dimensional temp
+//             mu  = (tn > ts) ? (mu*pow(tn, exp)*(1.0+ts)/(tn + ts)) : mu*tn*cs;  
+//           }else if(p_viscType==3){ // Powerlaw
+//             const dfloat exp  = pCoeff[p_EXID];   // Exponential term
+//             const dfloat TempM  = pM/(R*rM);      // Temperature
+//             mu =  mu*pow(TempM, exp); 
+//           }
+
+//           const dfloat sbeta = 2.0/3.0; 
+//           const dfloat T11 = mu*(2.0*dudx - sbeta*(dudx+dvdy+dwdz));
+//           const dfloat T12 = mu*(dudy+dvdx);
+//           const dfloat T13 = mu*(dudz+dwdx);
+
+//           const dfloat T22 = mu*(2.0*dvdy - sbeta*(dudx+dvdy+dwdz));
+//           const dfloat T23 = mu*(dvdz+dwdy);
+//           const dfloat T33 = mu*(2.0*dwdz - sbeta*(dudx+dvdy+dwdz));
+          
+//           const dfloat fx = pM*nx - (nx*T11 + ny*T12 + nz*T13); 
+//           const dfloat fy = pM*ny - (nx*T12 + ny*T22 + nz*T23);
+//           const dfloat fz = pM*nz - (nx*T13 + ny*T23 + nz*T33);
+          
+//           const dfloat dxf   = x[idM] - XC[0]; 
+//           const dfloat dyf   = y[idM] - XC[1];
+//           const dfloat dzf   = z[idM] - XC[2];
+              
+//           s_vFx[n] = -sJ*(nx*T11 + ny*T12 + nz*T13);
+//           s_vFy[n] = -sJ*(nx*T12 + ny*T22 + nz*T23);
+//           s_vFz[n] = -sJ*(nx*T13 + ny*T23 + nz*T33);
+          
+//           s_pFx[n] = sJ*pM*nx;
+//           s_pFy[n] = sJ*pM*ny;
+//           s_pFz[n] = sJ*pM*nz;
+
+//           s_Mx[n]  = sJ*(fz*dyf - fy*dzf); 
+//           s_My[n]  = sJ*(fz*dxf - fx*dzf); 
+//           s_Mz[n]  = sJ*(fy*dxf - fx*dyf); 
+//         }
+//       }
+//     }
+
+//     // for each node in the element
+//     for(int n=0;n<p_maxNodes;++n;@inner(0)){
+//       if(n<p_Np){
+//         dfloat vfxI  = 0., vfyI = 0., vfzI = 0.; 
+//         dfloat pfxI  = 0., pfyI = 0., pfzI = 0.; 
+//         dfloat mxI   = 0., myI  = 0., mzI  = 0.; 
+//         #pragma unroll p_NfacesNfp
+//         for(int m=0;m<p_NfacesNfp;++m){
+//           const dfloat sM = SM[n+m*p_Np];
+//           vfxI     += sM*s_vFx[m];
+//           vfyI     += sM*s_vFy[m];
+//           vfzI     += sM*s_vFz[m];
+
+//           pfxI     += sM*s_pFx[m];
+//           pfyI     += sM*s_pFy[m];
+//           pfzI     += sM*s_pFz[m];
+
+//           mxI      += sM*s_Mx[m];
+//           myI      += sM*s_My[m];
+//           mzI      += sM*s_Mz[m];
+//         }
+//         const dlong shift = Nelements*p_Np;
+//         F[e*p_Np+n+0*shift] = vfxI; 
+//         F[e*p_Np+n+1*shift] = vfyI;
+//         F[e*p_Np+n+2*shift] = vfzI;
+ 
+//         F[e*p_Np+n+3*shift] = pfxI; 
+//         F[e*p_Np+n+4*shift] = pfyI;
+//         F[e*p_Np+n+5*shift] = pfzI;
+
+//         F[e*p_Np+n+6*shift] = mxI; 
+//         F[e*p_Np+n+7*shift] = myI;
+//         F[e*p_Np+n+8*shift] = mzI;
+//         }
+//       }
+//     } 
+//   }
+

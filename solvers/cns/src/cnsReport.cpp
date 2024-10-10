@@ -81,16 +81,16 @@ void cns_t::writeForces(dfloat time, int tstep, int frame){
   if(mesh.dim==2 && mesh.rank==0){
     printf("----------------------------------------------------------------------\n"); 
     if(reportComponent){
-       printf("viscous_x - viscous_y - pressure_x - pressure_y - moment_z \n"); 
+       printf("\t\tviscous_x - viscous_y - pressure_x - pressure_y - moment_z \n"); 
     }else{
-       printf("force_x - force_y - moment_z \n"); 
+       printf("\t\tforce_x - force_y - moment_z \n"); 
     }
   }else if(mesh.dim==3 && mesh.rank==0){
     printf("----------------------------------------------------------------------\n"); 
     if(reportComponent){
-       printf("viscous_x-viscous_y-viscous_z-pressure_x-pressure_y-pressure_z-moment_x-moment_y-moment_z\n"); 
+       printf("\t\tviscous_x-viscous_y-viscous_z-pressure_x-pressure_y-pressure_z-moment_x-moment_y-moment_z\n"); 
     }else{
-       printf("force_x - force_y - force_z - moment_x - moment_y - moment_z\n"); 
+       printf("\t\tforce_x - force_y - force_z - moment_x - moment_y - moment_z\n"); 
     }
   }
 
@@ -124,7 +124,7 @@ void cns_t::writeForces(dfloat time, int tstep, int frame){
   
   // Compute all forces on all boundaries
   deviceMemory<dfloat> o_F     = platform.reserve<dfloat>(Nentries);
-#if 1
+#if 0
   deviceMemory<dfloat> o_gradq = platform.reserve<dfloat>(mesh.Nelements*mesh.Np*mesh.dim*mesh.dim);
 
   // compute volume contributions to gradients
@@ -142,7 +142,7 @@ dlong NhaloGrads  = mesh.totalHaloPairs*mesh.Np*Ngrads;
 deviceMemory<dfloat> o_gradq = platform.reserve<dfloat>(NlocalGrads+NhaloGrads);  
 
 // extract q trace halo and start exchange
-  fieldTraceHalo.ExchangeStart(o_q, 1);
+ fieldTraceHalo.ExchangeStart(o_q, 1);
  gradVolumeKernel(mesh.Nelements,
                    mesh.o_vgeo,
                    mesh.o_D,
@@ -201,10 +201,10 @@ gradSurfaceKernel(mesh.Nelements,
       const dfloat Mz  = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+4*shift , mesh.comm);
       if(mesh.rank==0){
         if(reportComponent){
-          printf("on report group %d : %.2e %.2e %.2e %.2e %.2e\n", grp, vFx, vFy, pFx, pFy, Mz);
+          printf("report group %d : %.2e %.2e %.2e %.2e %.2e\n", grp, vFx, vFy, pFx, pFy, Mz);
           fprintf(fp,"%.6e %d %.6e %.6e %.6e %.6e %.6e\n", time, grp, vFx, vFy, pFx, pFy, Mz);
         }else{
-          printf("on report group %d : %.2e %.2e %.2e\n", grp, vFx+pFx, vFy + pFy, Mz);
+          printf("report group %d : %.2e %.2e %.2e\n", grp, vFx+pFx, vFy + pFy, Mz);
           fprintf(fp,"%.6e %d %.6e %.6e %.6e\n", time, grp, vFx+pFx, vFy+pFy, Mz);
         }
       } 
@@ -222,10 +222,10 @@ gradSurfaceKernel(mesh.Nelements,
     const dfloat Mz  = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F + 8*shift, mesh.comm); 
     if(mesh.rank==0){
       if(reportComponent){
-          printf("on report group %d : %.2e %.2e %.2e %.2e %.2e %.2e %.2e %.2e %.2e\n", grp,  vFx, vFy, vFz, pFx, pFy, pFz, Mx, My, Mz);
+          printf("report group %d : %.2e %.2e %.2e %.2e %.2e %.2e %.2e %.2e %.2e\n", grp,  vFx, vFy, vFz, pFx, pFy, pFz, Mx, My, Mz);
           fprintf(fp, "%.6e %d %.2e %.2e %.2e %.2e %.2e %.2e %.2e %.2e %.2e\n", time, grp,  vFx, vFy, vFz, pFx, pFy, pFz, Mx, My, Mz);
         }else{
-          printf("on report group %d : %.2e %.2e %.2e %.2e %.2e %.2e\n", grp, vFx+pFx, vFy+pFy, vFz+pFz, Mx, My, Mz);
+          printf("report group %d : %.2e %.2e %.2e %.2e %.2e %.2e\n", grp, vFx+pFx, vFy+pFy, vFz+pFz, Mx, My, Mz);
           fprintf(fp, "%.6e %d %.2e %.2e %.2e %.2e %.2e %.2e\n", time, grp, vFx+pFx, vFy+pFy, vFz+pFz, Mx, My, Mz);
       }
     } 

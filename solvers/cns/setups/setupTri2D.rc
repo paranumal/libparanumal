@@ -6,6 +6,7 @@ data/cnsUniform2D.h
 #-------------------[MESH PROPERTIES]-----------------------#
 [MESH FILE]
 ../../meshes/cnsScramjet2D.msh
+#../../meshes/cnsScramjet2D.msh
 #../../meshes/cnsFFS2D.msh
 #../../meshes/cnsBump2D.msh
 #../../meshes/cnsSupersonicCylinder2D.msh
@@ -124,7 +125,7 @@ CONSTANT
 
 # [density, velocity, pressure]
 [FLOW STATES]
-12.6, 1.0, 0.0, 1.0;
+1.0, 3.0, 0.0, 1.0;
 #1.0, 1.0, 0.0, 0.247157686604053;
 
 [IC STATE ID]

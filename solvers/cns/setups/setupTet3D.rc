@@ -4,6 +4,8 @@ data/cnsUniform3D.h
 
 #-------------------[MESH PROPERTIES]-----------------------#
 [MESH FILE]
+#../../meshes/cnsBump3D.msh
+#../../meshes/cnsFFS3D.msh
 ../../meshes/cnsHB2.msh
 #BOX
 
@@ -46,6 +48,7 @@ data/cnsUniform3D.h
 
 # EULER or NAVIER-STOKES
 [SOLVER TYPE]
+#EULER
 NAVIER-STOKES
 
 # FALSE or TRUE
@@ -130,6 +133,8 @@ SUTHERLAND
 
 #Geoemtric IDs -> BC IDs
 [GEOMETRIC-TO-PHYSICAL MAP]
+#13:17,21,25, 33, 1, 38; 20: 29, 37; 
+#13:1,38,17, 21, 25, 33; 20: 37, 29; 
 12:1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15; 20: 16; 
 #AGARD_B
 #12:1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13; 20:14, 15, 16;
@@ -148,7 +153,7 @@ SUTHERLAND
 
 #-------------------[OUTPUT PROPERTIES]-----------------------#
 [OUTPUT INTERVAL]
-0.1
+0.001
 
 [OUTPUT TO FILE]
 TRUE
@@ -204,6 +209,6 @@ TRUE
 LAPLACE
 
 [ARTDIFF SCALE FACTOR]
-5
+1
 #-------------------------------------------------------------#
 

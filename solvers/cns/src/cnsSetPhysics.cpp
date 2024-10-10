@@ -49,7 +49,9 @@ void cns_t::setupPhysics(){
   // Set specific gas constant
   if(settings.compareSetting("NONDIMENSIONAL EQUATIONS", "TRUE")){
     settings.getSetting("MACH NUMBER", Ma); 
-    R  = 1.0/(gamma*Ma*Ma); 
+    const dfloat velRef = mesh.dim==2 ? std::sqrt(uref*uref + vref*vref):
+                                          std::sqrt(uref*uref + vref*vref+ wref*wref); 
+    R  = velRef/(gamma*Ma*Ma); 
 
     if(EulerSolve){ Re = 0.0;}
     else{settings.getSetting("REYNOLDS NUMBER", Re);}  

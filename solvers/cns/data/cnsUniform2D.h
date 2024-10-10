@@ -29,6 +29,7 @@ SOFTWARE.
 // 1-2 : No-Slip Wall    : Adiabatic : Navier-Stokes Solver
 // 1-3 : Slip Wall       : Adiabatic : Euler Wall 
 // 1-3 : Symmetry        : Navier-Stokes Symmetry 
+// 1-4 : Symmetry        : Euler Symmetry 
 // 2-0 : FarField        : Riemann Farfield / Euler-Navier-Stokes
 // 2-1 : Inflow          : Subsonic Inlet
 // 2-2 : Inflow          : Supersonic Inlet
