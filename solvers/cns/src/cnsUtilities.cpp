@@ -51,8 +51,6 @@ void cns_t::setFlowStates(){
   NstatePoints = (2+mesh.dim);   // Density - Velocity - Pressure
   NstateSets   = countinString(ss.str(), semicolon);
 
-  // int sk = 0; 
-  // while(!ssc.eof()){
   while(ssc){
      getline(ssc, sword, semicolon);
      if((int) sword.length()>0){
@@ -89,6 +87,8 @@ void cns_t::setFlowStates(){
   settings.getSetting("IC STATE ID", ICStateID); 
   // BC State ID
   settings.getSetting("BC STATE ID", BCStateID); 
+  // REF State ID
+  settings.getSetting("REFERENCE STATE ID", RefStateID); 
 }
 
 
@@ -237,7 +237,34 @@ void cns_t::setReport(){
   }
 
   o_reportGroups = platform.malloc<int>(reportGroups);
+
+
+
+  // Read Referenece State
+  settings.getSetting("MOMENT CENTER", str);
+  std::stringstream ssm(str);
+  std::stringstream ssmc(str); 
+  
+  // printf("%s \n", str.c_str());
+  // Number of geoemtric sets
+  int Nmoment   = countinString(ssm.str(), comma);  
+  LIBP_ABORT("correct the number of inputs in tokenizer", Nmoment!=mesh.dim);
+  momentCenter.malloc(2*Nmoment, 0);
+  
+  int sk=0; 
+  while(ssmc){
+    getline(ssmc, sword, comma);
+     if((int)sword.length()>0){   
+      momentCenter[sk++] =  std::stod(sword);
+      // printf("%s %.4e \n", sword.c_str(), momentCenter[sk-1]);
+    }
+  }
+  // LIBP_ABORT("correct the number of inputs in tokenizer", sk!=mesh.dim);
+
+  o_momentCenter = platform.malloc<dfloat>(momentCenter);
+
   ss.clear(); ssc.clear();
+  ssm.clear(); ssmc.clear();
   // Number of reference points per state
   props["defines/" "p_NrGrp"]    = (int) NreportGroups;
   props["defines/" "p_NrIDs"]    = (int) NreportIDs;

@@ -84,7 +84,7 @@ public:
 
    // Number of reference points
   int NstatePoints, NstateSets, NgeoIDs;  
-  int ICStateID, BCStateID;  
+  int ICStateID, BCStateID, RefStateID;  
   // Physical coefficients
   memory<dfloat> flowStates; 
   deviceMemory<dfloat> o_flowStates;

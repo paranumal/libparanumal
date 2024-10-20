@@ -82,6 +82,9 @@ cnsSettings_t::cnsSettings_t(comm_t& _comm):
   newSetting("BC STATE ID", "0",
              "State id defined in flow states to be used for initialization");
 
+  newSetting("REFERENCE STATE ID", "0",
+             "Reference state id defined in flow states to be used");
+
   newSetting("ADVECTION TYPE", "COLLOCATION",
              "Integration type for flux terms",
              {"COLLOCATION", "CUBATURE"});
@@ -118,18 +121,18 @@ cnsSettings_t::cnsSettings_t(comm_t& _comm):
              "Flag for reporting forces",
              {"TRUE", "FALSE"});
 
-  newSetting("REPORT COMPONENT", "FALSE",
+  newSetting("REPORT COMPONENT", "TRUE",
              "Flag for reporting forces in component forms i.e. pressure, viscous",
              {"TRUE", "FALSE"});
 
   newSetting("REPORT GROUPS",
             "Geometric groups for reporting");
 
-  newSetting("REPORT MOMENTS", "FALSE",
+  newSetting("REPORT MOMENTS", "TRUE",
              "Flag for reporting moments",
              {"TRUE", "FALSE"});
 
-  newSetting("MOMENT CENTER", "0.0, 0.0, 0.0",
+  newSetting("MOMENT CENTER", "0.0, 0.0, 0.0,",
              "Center for the moments");
 
   newSetting("GEOMETRIC GROUPS",
@@ -204,6 +207,8 @@ void cnsSettings_t::report() {
     reportSetting("FLOW STATES");
     reportSetting("IC STATE ID");
     reportSetting("BC STATE ID");
+    reportSetting("REFERENCE STATE ID");
+    reportSetting("MOMENT CENTER");
 
     reportSetting("ISOTHERMAL");
     reportSetting("ADVECTION TYPE");

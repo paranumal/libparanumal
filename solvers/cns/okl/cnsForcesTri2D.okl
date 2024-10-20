@@ -84,12 +84,14 @@ SOFTWARE.
 }
 
 @kernel void cnsForcesSurfaceTri2D(const dlong Nelements,
+                                  const int refStateID, 
                                   const int targetGroupID, 
                                   @restrict const  dfloat *  sgeo,
                                   @restrict const  dfloat *  SM,
                                   @restrict const  dlong  *  vmapM,
                                   @restrict const  int    *  EToG,
                                   @restrict const  int    *  reportGroups,
+                                  @restrict const  dfloat *  flowStates,
                                   @restrict const  dfloat *  x,
                                   @restrict const  dfloat *  y,
                                   @restrict const  dfloat *  z,
@@ -130,6 +132,8 @@ SOFTWARE.
             const dfloat gamma = pCoeff[p_GMID]; // gamma
             const dfloat R     = pCoeff[p_RRID]; // gas constant
                   dfloat mu    = pCoeff[p_MUID]; // bulk viscosity
+
+             const dfloat PREF    = flowStates[refStateID*p_NsP + 3]; 
 
             // load surface geofactors for this face
             const dlong sid   = p_Nsgeo*(e*p_Nfaces+face);
@@ -184,22 +188,24 @@ SOFTWARE.
               mu =  mu*pow(TempM, exp); 
             }
 
-
-            // pM -= 0.247157686604053; 
-
             const dfloat T11 = mu*(2.0*dudxM - 2.0*(dudxM+dvdyM)/3.0);
             const dfloat T12 = mu*(dudyM+dvdxM);
             const dfloat T22 = mu*(2.0*dvdyM - 2.0*(dudxM+dvdyM)/3.0);
 
-            const dfloat fx = pM*nx - (nx*T11 + ny*T12); 
-            const dfloat fy = pM*ny - (nx*T12 + ny*T22);
+            const dfloat px = (pM-PREF)*nx;
+            const dfloat py = (pM-PREF)*ny;
+
+            const dfloat vx = -(nx*T11 + ny*T12); 
+            const dfloat vy = -(nx*T12 + ny*T22);
+
+            const dfloat fx = px + vx;
+            const dfloat fy = py + vy;
+
             const dfloat dxf   = x[idM] - XC[0]; 
             const dfloat dyf   = y[idM] - XC[1];
-            
-            s_vFx[n] = -sJ*(nx*T11 + ny*T12); 
-            s_vFy[n] = -sJ*(nx*T12 + ny*T22); 
-            s_pFx[n] =  sJ*pM*nx;
-            s_pFy[n] =  sJ*pM*ny;
+
+            s_vFx[n] =  sJ*vx; s_vFy[n] =  sJ*vy; 
+            s_pFx[n] =  sJ*px; s_pFy[n] =  sJ*py;
             s_Mz[n]  =  sJ*(fx*dyf - fy*dxf);
           }
         }

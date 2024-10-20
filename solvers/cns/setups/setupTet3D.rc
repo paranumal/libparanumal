@@ -131,6 +131,10 @@ SUTHERLAND
 [BC STATE ID]
 0
 
+[REFERENCE STATE ID]
+0
+
+
 #Geoemtric IDs -> BC IDs
 [GEOMETRIC-TO-PHYSICAL MAP]
 #13:17,21,25, 33, 1, 38; 20: 29, 37; 
@@ -171,7 +175,7 @@ TRUE
 FALSE
 
 [MOMENT CENTER]
-0.0, 0.0, 0.0
+1.92, 0.0, 0.0,
 
 # zero indexed groups
 [REPORT GROUPS]

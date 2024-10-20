@@ -1,6 +1,6 @@
 SetFactory("OpenCASCADE");
-lc1  = DefineNumber[0.10];
-lc2  = DefineNumber[5.00];
+lc1  = DefineNumber[0.05];
+lc2  = DefineNumber[10.00];
 
 scale_factor = 1.0/(63.5); 
 
