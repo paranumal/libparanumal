@@ -255,9 +255,9 @@ SOFTWARE.
           const dfloat T23 = mu*(dvdz+dwdy);
           const dfloat T33 = mu*(2.0*dwdz - sbeta*(dudx+dvdy+dwdz));
           
-          const dfloat px = (pM-PREF)*nx; 
-          const dfloat py = (pM-PREF)*ny;
-          const dfloat pz = (pM-PREF)*nz;
+          const dfloat px = pM*nx; 
+          const dfloat py = pM*ny;
+          const dfloat pz = pM*nz;
 
           const dfloat vx = -(nx*T11 + ny*T12 + nz*T13); 
           const dfloat vy = -(nx*T12 + ny*T22 + nz*T23);
@@ -267,14 +267,14 @@ SOFTWARE.
           const dfloat fy = py + vy;
           const dfloat fz = pz + vz;
 
-          const dfloat dxf   = x[idM] - XC[0]; 
-          const dfloat dyf   = y[idM] - XC[1];
-          const dfloat dzf   = z[idM] - XC[2];
+          const dfloat dxf = x[idM] - XC[0]; 
+          const dfloat dyf = y[idM] - XC[1];
+          const dfloat dzf = z[idM] - XC[2];
               
           s_vFx[n] = sJ*vx;
           s_vFy[n] = sJ*vy;
           s_vFz[n] = sJ*vz;
-          
+         
           s_pFx[n] = sJ*px;
           s_pFy[n] = sJ*py;
           s_pFz[n] = sJ*pz;

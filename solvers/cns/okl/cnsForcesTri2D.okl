@@ -192,8 +192,8 @@ SOFTWARE.
             const dfloat T12 = mu*(dudyM+dvdxM);
             const dfloat T22 = mu*(2.0*dvdyM - 2.0*(dudxM+dvdyM)/3.0);
 
-            const dfloat px = (pM-PREF)*nx;
-            const dfloat py = (pM-PREF)*ny;
+            const dfloat px = pM*nx;
+            const dfloat py = pM*ny;
 
             const dfloat vx = -(nx*T11 + ny*T12); 
             const dfloat vy = -(nx*T12 + ny*T22);

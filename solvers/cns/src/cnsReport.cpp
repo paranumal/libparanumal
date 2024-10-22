@@ -143,6 +143,7 @@ deviceMemory<dfloat> o_gradq = platform.reserve<dfloat>(NlocalGrads+NhaloGrads);
 
 // extract q trace halo and start exchange
  fieldTraceHalo.ExchangeStart(o_q, 1);
+ 
  gradVolumeKernel(mesh.Nelements,
                    mesh.o_vgeo,
                    mesh.o_D,
