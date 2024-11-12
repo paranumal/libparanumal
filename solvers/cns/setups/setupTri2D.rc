@@ -1,11 +1,10 @@
 #-------------------------------------------------------------#
 [DATA FILE]
-#data/cnsShear2D.h
-#data/cnsGaussian2D.h
 data/cnsUniform2D.h
+
 #-------------------[MESH PROPERTIES]-----------------------#
 [MESH FILE]
-../../meshes/cnsScramjet2D.msh
+#../../meshes/cnsScramjet2D.msh
 #../../meshes/cnsScramjet2D.msh
 #../../meshes/cnsFFS2D.msh
 #../../meshes/cnsBump2D.msh
@@ -14,6 +13,7 @@ data/cnsUniform2D.h
 #../../meshes/cnsNACAFlexi2D.msh
 #../../meshes/cnsNACA2D_Symmetry.msh
 #../../meshes/cnsBody2D.msh
+../../meshes/naca12.msh
 
 [FORMAT]
 2.0
@@ -43,12 +43,12 @@ data/cnsUniform2D.h
 
 #-----------------[DISCRETIZATION PROPERTIES]------------------#
 [POLYNOMIAL DEGREE]
-4
+3
 
 # EULER or NAVIER-STOKES
 [SOLVER TYPE]
-EULER
-#NAVIER-STOKES
+#EULER
+NAVIER-STOKES
 
 # FALSE or TRUE
 [NONDIMENSIONAL EQUATIONS]
@@ -96,12 +96,11 @@ CUDA
 
 # Mach number is needed for NONDIM=TRUE
 [MACH NUMBER]
-3.0
-#1.7
+1.5
 
 # Reynolds number is needed for NONDIM = TRUE
 [REYNOLDS NUMBER]
-2e5
+6.5e6
 
 # Angle of Attack
 [ANGLE OF ATTACK]
@@ -125,8 +124,7 @@ CONSTANT
 
 # [density, velocity, pressure]
 [FLOW STATES]
-1.0, 3.0, 0.0, 1.0;
-#1.0, 1.0, 0.0, 0.247157686604053;
+1.0,1.477211629518312,0.260472266500396, 0.714285714285714;
 
 [IC STATE ID]
 0
@@ -139,7 +137,7 @@ CONSTANT
 
 #Geoemtric IDs -> BC IDs
 [GEOMETRIC-TO-PHYSICAL MAP]
-13:1,3,5,6,7,8;20:2,4;
+12:1,2,3,4;20:5, 6, 7, 8, 9, 10, 11;
 #13:1,2,3,5;40:6,4;
 #12:1,2;20:3,4;
 
@@ -176,12 +174,17 @@ TRUE
 TRUE
 
 [MOMENT CENTER]
-1.0, 2.0,
+-0.25, 0.0,
 
 # zero indexed groups
 [REPORT GROUPS]
-0:1,2;
+0:1,2,3,4;
 
+[REFERENCE AREA]
+0.785398163397448
+
+[REFERENCE LENGTH]
+1.0
 #-------------------------------------------------------------#
 
 

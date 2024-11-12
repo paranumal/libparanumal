@@ -78,6 +78,28 @@ void cns_t::Report(dfloat time, int tstep){
 
 void cns_t::writeForces(dfloat time, int tstep, int frame){
 
+    dfloat rref=1.0, uref=1.0, vref=0.0, wref=0.0, pref=1.0; 
+    rref = flowStates[ICStateID*NstatePoints + 0];
+    uref = flowStates[ICStateID*NstatePoints + 1];
+    vref = flowStates[ICStateID*NstatePoints + 2];
+    if(mesh.dim==2){
+      pref = flowStates[ICStateID*NstatePoints + 3];        
+    }else{
+      wref = flowStates[ICStateID*NstatePoints + 3];
+      pref = flowStates[ICStateID*NstatePoints + 4];
+    }
+
+  const dfloat velRef = mesh.dim==2 ?   std::sqrt(uref*uref + vref*vref):
+                                        std::sqrt(uref*uref + vref*vref + wref*wref);
+
+
+  dfloat Aref; settings.getSetting("REFERENCE AREA", Aref); 
+  dfloat Lref; settings.getSetting("REFERENCE LENGTH", Lref); 
+
+
+  const dfloat rcp_dynp = 1.0/(0.5*rref*velRef*velRef*Aref); 
+  const dfloat rcp_dynpm = rcp_dynp/Lref; 
+
   if(mesh.dim==2 && mesh.rank==0){
     printf("----------------------------------------------------------------------\n"); 
     if(reportComponent){
@@ -119,12 +141,12 @@ void cns_t::writeForces(dfloat time, int tstep, int frame){
 
 
    // Write out the integrated pressure and viscous forces
-  dlong Nentries = mesh.dim==2 ? mesh.Nelements*mesh.Np*(mesh.dim+mesh.dim+1):
-                                 mesh.Nelements*mesh.Np*(mesh.dim+mesh.dim+mesh.dim); 
+  dlong Nentries = mesh.dim==2 ? mesh.Nelements*mesh.Np*(mesh.dim*mesh.dim+1):
+                                 mesh.Nelements*mesh.Np*(mesh.dim*mesh.dim); 
   
   // Compute all forces on all boundaries
   deviceMemory<dfloat> o_F     = platform.reserve<dfloat>(Nentries);
-#if 0
+#if 1
   deviceMemory<dfloat> o_gradq = platform.reserve<dfloat>(mesh.Nelements*mesh.Np*mesh.dim*mesh.dim);
 
   // compute volume contributions to gradients
@@ -133,9 +155,6 @@ void cns_t::writeForces(dfloat time, int tstep, int frame){
                      mesh.o_D,
                      o_q,
                      o_gradq);
-
-
-
 #else
 dlong NlocalGrads = mesh.Nelements*mesh.Np*Ngrads;
 dlong NhaloGrads  = mesh.totalHaloPairs*mesh.Np*Ngrads;
@@ -168,11 +187,6 @@ gradSurfaceKernel(mesh.Nelements,
                     o_gradq);
 
 #endif
-
-
-
-
-
   // Write out every force/moment components for every report group 
   for(int grp =0; grp<NreportGroups; grp++){
     // compute volume contributions to gradients
@@ -197,11 +211,11 @@ gradSurfaceKernel(mesh.Nelements,
 
      const dlong shift = mesh.Nelements*mesh.Np; 
     if(mesh.dim==2){
-      const dfloat vFx = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+0*shift , mesh.comm); 
-      const dfloat vFy = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+1*shift , mesh.comm); 
-      const dfloat pFx = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+2*shift , mesh.comm); 
-      const dfloat pFy = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+3*shift , mesh.comm);
-      const dfloat Mz  = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+4*shift , mesh.comm);
+      const dfloat vFx = rcp_dynp *platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+0*shift , mesh.comm); 
+      const dfloat vFy = rcp_dynp *platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+1*shift , mesh.comm); 
+      const dfloat pFx = rcp_dynp *platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+2*shift , mesh.comm); 
+      const dfloat pFy = rcp_dynp *platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+3*shift , mesh.comm);
+      const dfloat Mz  = rcp_dynpm*platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F+4*shift , mesh.comm);
       if(mesh.rank==0){
         if(reportComponent){
           printf("report group %d : %.2e %.2e %.2e %.2e %.2e\n", grp, vFx, vFy, pFx, pFy, Mz);
@@ -212,17 +226,17 @@ gradSurfaceKernel(mesh.Nelements,
         }
       } 
   }else{
-    const dfloat vFx = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F + 0*shift, mesh.comm); 
-    const dfloat vFy = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F + 1*shift, mesh.comm); 
-    const dfloat vFz = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F + 2*shift, mesh.comm); 
+    const dfloat vFx = rcp_dynp*platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F + 0*shift, mesh.comm); 
+    const dfloat vFy = rcp_dynp*platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F + 1*shift, mesh.comm); 
+    const dfloat vFz = rcp_dynp*platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F + 2*shift, mesh.comm); 
     
-    const dfloat pFx = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F + 3*shift, mesh.comm); 
-    const dfloat pFy = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F + 4*shift, mesh.comm); 
-    const dfloat pFz = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F + 5*shift, mesh.comm); 
+    const dfloat pFx = rcp_dynp*platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F + 3*shift, mesh.comm); 
+    const dfloat pFy = rcp_dynp*platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F + 4*shift, mesh.comm); 
+    const dfloat pFz = rcp_dynp*platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F + 5*shift, mesh.comm); 
 
-    const dfloat Mx  = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F + 6*shift, mesh.comm); 
-    const dfloat My  = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F + 7*shift, mesh.comm); 
-    const dfloat Mz  = platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F + 8*shift, mesh.comm); 
+    const dfloat Mx  = rcp_dynpm*platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F + 6*shift, mesh.comm); 
+    const dfloat My  = rcp_dynpm*platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F + 7*shift, mesh.comm); 
+    const dfloat Mz  = rcp_dynpm*platform.linAlg().sum(mesh.Nelements*mesh.Np, o_F + 8*shift, mesh.comm); 
     if(mesh.rank==0){
       if(reportComponent){
           printf("report group %d : %.2e %.2e %.2e %.2e %.2e %.2e %.2e %.2e %.2e\n", grp,  vFx, vFy, vFz, pFx, pFy, pFz, Mx, My, Mz);

@@ -1,6 +1,7 @@
+SetFactory("OpenCASCADE");
 Mesh.LcIntegrationPrecision = 1.e-2;
-lc   = DefineNumber[0.01];
-lc2  = DefineNumber[0.1];
+lc   = DefineNumber[0.025];
+lc2  = DefineNumber[0.2];
 lc3  = DefineNumber[0.5];
 fac  = DefineNumber[0.25];
 
@@ -300,6 +301,6 @@ Background Field = 3;
 
 Coherence;
 // Isothermall Wall
-Physical Line("Wall",11)     = {1, 2, 3, 4};
-Physical Line("Farfield",20)   = {5, 6, 7, 8, 9, 10, 11};
-Physical Surface("Domain",9) = {1,2};
+Physical Line("airfoil",12)     = {1, 2, 3, 4};
+Physical Line("far",20)   = {5, 6, 7, 8, 9, 10, 11};
+Physical Surface("Fluid",9) = {1,2};

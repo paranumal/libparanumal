@@ -96,11 +96,11 @@ CUDA
 
 # Mach number is needed for NONDIM=TRUE
 [MACH NUMBER]
-3.0
+1.5
 
 # Reynolds number is needed for NONDIM = TRUE
 [REYNOLDS NUMBER]
-4.4e5
+6.5e6
 
 # Angle of Attack
 [ANGLE OF ATTACK]
@@ -112,16 +112,17 @@ CUDA
 
 # if NONDIM = FALSE, otherwise mu = 1/Re
 [VISCOSITY]
-1.0e-5
+#1.0e-5
 
 # CONSTANT, SUTHERLAND or POWER-LAW
 [VISCOSITY TYPE]
-SUTHERLAND
+CONSTANT
+#SUTHERLAND
 
 [PRANDTL NUMBER]
 0.72
 
-# [density, velocity, pressure, temperature]
+# [density, velocity, pressure]
 [FLOW STATES]
 12.6, 1.0, 0.0, 0.0, 1.0;
 
@@ -134,14 +135,9 @@ SUTHERLAND
 [REFERENCE STATE ID]
 0
 
-
 #Geoemtric IDs -> BC IDs
 [GEOMETRIC-TO-PHYSICAL MAP]
-#13:17,21,25, 33, 1, 38; 20: 29, 37; 
-#13:1,38,17, 21, 25, 33; 20: 37, 29; 
 12:1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15; 20: 16; 
-#AGARD_B
-#12:1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13; 20:14, 15, 16;
 
 [CFL NUMBER]
 0.1
@@ -157,13 +153,13 @@ SUTHERLAND
 
 #-------------------[OUTPUT PROPERTIES]-----------------------#
 [OUTPUT INTERVAL]
-0.001
+0.1
 
 [OUTPUT TO FILE]
 TRUE
 
 [OUTPUT FILE NAME]
-cnsAGARD_B
+cnsHB2
 
 [REPORT FORCES]
 TRUE
@@ -182,6 +178,12 @@ FALSE
 0:1,2,3,4,5,6,7,8,9,10,11,12,13,14,15;
 #1:1,2,3,4,13,14;2:5,6,7,8,9, 10, 11, 12,15;
 # Group zero is the whole body surfaces, 1 is the nose part and 2 is the remaning body parts
+
+[REFERENCE AREA]
+0.785398163397448
+
+[REFERENCE LENGTH]
+1.0
 #-------------------------------------------------------------#
 
 
@@ -213,6 +215,6 @@ TRUE
 LAPLACE
 
 [ARTDIFF SCALE FACTOR]
-1
+4.0
 #-------------------------------------------------------------#
 

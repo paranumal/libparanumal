@@ -95,6 +95,7 @@ void cns_t::setupPhysics(){
   pCoeff[BTID] = beta_ldg;
   pCoeff[TAID] = tau_ldg;
 
+
   if(settings.compareSetting("SOLVER TYPE", "NAVIER-STOKES")){
     
     if(settings.compareSetting("VISCOSITY TYPE", "CONSTANT")){

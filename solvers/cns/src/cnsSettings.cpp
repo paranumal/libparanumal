@@ -135,6 +135,13 @@ cnsSettings_t::cnsSettings_t(comm_t& _comm):
   newSetting("MOMENT CENTER", "0.0, 0.0, 0.0,",
              "Center for the moments");
 
+  newSetting("REFERENCE AREA", "1.0",
+             "Reference area for reporting force coeeficients");
+
+  newSetting("REFERENCE LENGTH", "1.0",
+             "Reference length for reporting moment coeeficients");
+
+
   newSetting("GEOMETRIC GROUPS",
              "Groups of geometric entities in force/moment report");
  
