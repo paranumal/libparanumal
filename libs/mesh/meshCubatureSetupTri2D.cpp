@@ -30,8 +30,11 @@ namespace libp {
 
 void mesh_t::CubatureSetupTri2D(){
 
+  int cubInc = 0;
+  settings.getSetting("CUBATURE DEGREE INCREMENT", cubInc);
+
   /* Cubature data */
-  cubN = 2*N; //cubature order
+  cubN = (2*N) + cubInc; //cubature order
   CubatureNodesTri2D(cubN, cubNp, cubr, cubs, cubw);
 
   InterpolationMatrixTri2D(N, r, s, cubr, cubs, cubInterp);
