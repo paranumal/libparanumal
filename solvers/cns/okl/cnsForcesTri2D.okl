@@ -194,7 +194,8 @@ SOFTWARE.
             const dfloat dxf   = x[idM] - XC[0]; 
             const dfloat dyf   = y[idM] - XC[1];
 
-            s_vFx[n] =  sJ*vx; s_vFy[n] =  sJ*vy; 
+            // s_vFx[n] =  sJ*vx; s_vFy[n] =  sJ*vy; 
+            s_vFx[n] = abs(sJ*nx);    s_vFy[n] =  abs(sJ*ny); 
             s_pFx[n] =  sJ*px; s_pFy[n] =  sJ*py;
             s_Mz[n]  =  sJ*(fx*dyf - fy*dxf);
           }

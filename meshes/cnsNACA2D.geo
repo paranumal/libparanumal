@@ -1,6 +1,6 @@
 SetFactory("OpenCASCADE");
 Mesh.LcIntegrationPrecision = 1.e-2;
-lc   = DefineNumber[0.025];
+lc   = DefineNumber[0.01];
 lc2  = DefineNumber[0.2];
 lc3  = DefineNumber[0.5];
 fac  = DefineNumber[0.25];

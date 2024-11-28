@@ -146,7 +146,6 @@ SOFTWARE.
                                  &dredxP, &dredyP, &dredzP);
 
              // betaM = 0.0;  betaP = 1.0; 
-
             }
 
             s_gradflux[ 0][n] = sc*nx*( betaM*rrM + betaP*rrP  - rrM);

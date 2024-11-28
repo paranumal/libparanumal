@@ -253,9 +253,9 @@ SOFTWARE.
           s_vFx[n] =  sJ*vx; s_pFx[n] =  sJ*px; 
           s_vFy[n] =  sJ*vy; s_pFy[n] =  sJ*py;
           s_vFz[n] =  sJ*vz; s_pFz[n] =  sJ*pz;
-          s_Mx[n]  = sJ*(dyf*fz - dzf*fy); 
-          s_My[n]  = sJ*(dzf*fx - dxf*fz); 
-          s_Mz[n]  = sJ*(dxf*fy - dyf*fx); 
+          s_Mx[n]  =  sJ*(dyf*fz - dzf*fy); 
+          s_My[n]  =  sJ*(dzf*fx - dxf*fz); 
+          s_Mz[n]  =  sJ*(dxf*fy - dyf*fx); 
         }
       }
     }

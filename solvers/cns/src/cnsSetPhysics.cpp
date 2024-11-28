@@ -33,7 +33,6 @@ void cns_t::setupPhysics(){
 
   // Read Reference State and number of states
   setFlowStates(); 
-  
   dfloat rref=1.0, uref=1.0, vref=0.0, wref=0.0, pref=1.0; 
   rref = flowStates[ICStateID*NstatePoints + 0];
   uref = flowStates[ICStateID*NstatePoints + 1];
@@ -46,32 +45,27 @@ void cns_t::setupPhysics(){
   }
 
   settings.getSetting("PRANDTL NUMBER", Pr); 
-  // Set specific gas constant
-  if(settings.compareSetting("NONDIMENSIONAL EQUATIONS", "TRUE")){
-    settings.getSetting("MACH NUMBER", Ma); 
-    const dfloat velRef = mesh.dim==2 ?   std::sqrt(uref*uref + vref*vref):
-                                          std::sqrt(uref*uref + vref*vref+ wref*wref); 
-    R  = velRef/(gamma*Ma*Ma); 
+  settings.getSetting("SPECIFIC GAS CONSTANT", R); 
+  settings.getSetting("VISCOSITY", mu);              mu = EulerSolve ? 0.0:mu; 
 
-    if(EulerSolve){ Re = 0.0;}
-    else{settings.getSetting("REYNOLDS NUMBER", Re);}  
-    mu = EulerSolve ? 0.0: rref*velRef/Re; 
-  }else {
-    settings.getSetting("SPECIFIC GAS CONSTANT", R);   
-    if(EulerSolve){
-      mu=0.0; Re=0.0;
-    }else{
-      settings.getSetting("VISCOSITY", mu);
+  const dfloat velRef = mesh.dim==2?std::sqrt(uref*uref+vref*vref):std::sqrt(uref*uref+vref*vref+wref*wref); 
 
-      const dfloat velRef = mesh.dim==2 ? std::sqrt(uref*uref + vref*vref):
-                                          std::sqrt(uref*uref + vref*vref+ wref*wref); 
-      Ma = velRef/(std::sqrt(gamma*pref/rref)); 
-      Re = rref*velRef*1.0/ mu; 
-    }
-  }
-  // Set presure and volumetric expansion coefficients
+  // Compute Reynolds and Mach Numbers
+  dfloat Lref;  
+  settings.getSetting("REFERENCE LENGTH", Lref); 
+  
+  Ma = velRef/(std::sqrt(gamma*pref/rref)); 
+  settings.changeSetting("MACH NUMBER",std::to_string(Ma));
+
+  Re = rref*velRef*Lref/ mu; 
+  settings.changeSetting("REYNOLDS NUMBER",std::to_string(Re));
+
   cp = R*gamma/(gamma-1.0);  
   cv = R/(gamma-1.0); 
+
+  if(mesh.rank==0){ 
+    printf("Setting leads to nondimesional values:\n Re= %.4e\n Ma= %.4f\n Cp= %.4f\n Cv= %.4f\n", Re, Ma, cp,cv);
+  }
 
   settings.getSetting("LDG BETA COEFFICIENT", beta_ldg);
   settings.getSetting("LDG TAU COEFFICIENT", tau_ldg);
@@ -79,10 +73,8 @@ void cns_t::setupPhysics(){
   Nph  = 10;  
   int pids = 0;
   pCoeff.malloc(Nph,0.0);
-  MUID = pids++;  GMID = pids++;  PRID = pids++; 
-  RRID = pids++;  CPID = pids++;  CVID = pids++;  
-  KAID = pids++;  M2ID = pids++;  BTID = pids++; 
-  TAID = pids++;  
+  MUID = pids++;  GMID = pids++;  PRID = pids++;  RRID = pids++;  CPID = pids++;  
+  CVID = pids++;  KAID = pids++;  M2ID = pids++;  BTID = pids++;  TAID = pids++;  
   
   pCoeff[MUID] = mu; // Bulk Viscosity
   pCoeff[PRID] = Pr; // Prandtl Number
@@ -90,8 +82,7 @@ void cns_t::setupPhysics(){
   pCoeff[GMID] = gamma; 
   pCoeff[CPID] = cp;
   pCoeff[CVID] = cv;
-  pCoeff[KAID] = cp*mu/Pr; // 1.0/( (gamma-1.0)*Ma*Ma)*mu/Pr;
-  pCoeff[M2ID] = Ma*Ma;
+  pCoeff[KAID] = cp*mu/Pr; 
   pCoeff[BTID] = beta_ldg;
   pCoeff[TAID] = tau_ldg;
 
@@ -105,28 +96,29 @@ void cns_t::setupPhysics(){
       Nph      += 4;  
       EXID = pids++; TRID = pids++; TSID = pids++; CSID = pids++; 
       pCoeff.realloc(Nph);
-      // Coefficients from White, F. M., Viscous fluid flow, McGraw-Hill, 2006
-      dfloat Tref = (settings.compareSetting("NONDIMENSIONAL EQUATIONS", "TRUE")) ? 1.0 : 273.15; 
-      dfloat Ts   = (settings.compareSetting("NONDIMENSIONAL EQUATIONS", "TRUE")) ? 110.4/273.15:110.4; 
-      dfloat exp  = 3.0/2.0 ;  
+
+       // Coefficients from White, F. M., Viscous fluid flow, McGraw-Hill, 2006
+      dfloat Tref = 273.15;  dfloat Ts = 110.4; dfloat exp  = 3.0/2.0 ;  
       pCoeff[EXID] = exp;            // exponent  
-      pCoeff[TRID] = 1.0/Tref;       // inverse of reference temperature here !!!    
-      pCoeff[TSID] = Ts/Tref;        // Ts/Tref approximately !!! 
+      // pCoeff[TRID] =  1.785714285714285; pCoeff[TRID] =  0.721606358502405;
+      pCoeff[TRID] = gamma/(gamma-1.0)*pref/rref; 
+      pCoeff[TRID] = gamma/(gamma-1.0)*pref/rref*Ts/Tref;
       pCoeff[CSID] = pow(pCoeff[TSID],pCoeff[EXID])*(1.0+pCoeff[TSID])/(2.0*pCoeff[TSID]*pCoeff[TSID]); // exponent  
+
     }else if(settings.compareSetting("VISCOSITY TYPE", "POWER-LAW")){
       viscType  = 3;
       Nph      += 2;
       EXID = pids++; 
       TRID = pids++; 
   
-      dfloat exp = 2.0/3.0;
-      dfloat Tref = (settings.compareSetting("NONDIMENSIONAL EQUATIONS", "TRUE")) ? 1.0 : 273.15; 
+      dfloat exp   = 2.0/3.0;
+      dfloat Tref  = 273.15; 
       pCoeff[MUID] = mu / pow(Tref, exp); // Update viscosity
       pCoeff[EXID] = exp;                 // exponent  
       pCoeff[TRID] = Tref;                // Tref   
     }
   }else{ // Euler solver
-    viscType = 0; 
+      viscType = 0; 
   }
 
   // Read Reference State and number of states
@@ -152,5 +144,115 @@ void cns_t::setupPhysics(){
   props["defines/" "p_CSID"]    = CSID;
   props["defines/" "p_BTID"]    = BTID;
   props["defines/" "p_TAID"]    = TAID;
+
+  // settings.getSetting("PRANDTL NUMBER", Pr); 
+  // // Set specific gas constant
+  // if(settings.compareSetting("NONDIMENSIONAL EQUATIONS", "TRUE")){
+  //   settings.getSetting("MACH NUMBER", Ma); 
+  //   const dfloat velRef = mesh.dim==2 ?   std::sqrt(uref*uref + vref*vref):
+  //                                         std::sqrt(uref*uref + vref*vref+ wref*wref); 
+  //   R  = velRef/(gamma*Ma*Ma); 
+
+
+  //   if(EulerSolve){ Re = 0.0;}
+  //   else{settings.getSetting("REYNOLDS NUMBER", Re);}  
+  //   mu = EulerSolve ? 0.0: rref*velRef/Re; 
+  // }else {
+  //   settings.getSetting("SPECIFIC GAS CONSTANT", R);   
+  //   if(EulerSolve){
+  //     mu=0.0; Re=0.0;
+  //   }else{
+  //     settings.getSetting("VISCOSITY", mu);
+
+  //     const dfloat velRef = mesh.dim==2 ? std::sqrt(uref*uref + vref*vref):
+  //                                         std::sqrt(uref*uref + vref*vref+ wref*wref); 
+  //     Ma = velRef/(std::sqrt(gamma*pref/rref)); 
+  //     Re = rref*velRef*1.0/ mu; 
+  //   }
+  // }
+  // // Set presure and volumetric expansion coefficients
+  // cp = R*gamma/(gamma-1.0);  
+  // cv = R/(gamma-1.0); 
+  // printf("R= %.6e %.6e\n", R, pref/rref);
+
+  // settings.getSetting("LDG BETA COEFFICIENT", beta_ldg);
+  // settings.getSetting("LDG TAU COEFFICIENT", tau_ldg);
+  
+  // Nph  = 10;  
+  // int pids = 0;
+  // pCoeff.malloc(Nph,0.0);
+  // MUID = pids++;  GMID = pids++;  PRID = pids++; 
+  // RRID = pids++;  CPID = pids++;  CVID = pids++;  
+  // KAID = pids++;  M2ID = pids++;  BTID = pids++; 
+  // TAID = pids++;  
+  
+  // pCoeff[MUID] = mu; // Bulk Viscosity
+  // pCoeff[PRID] = Pr; // Prandtl Number
+  // pCoeff[RRID] = R;  // Specific Gas Constant
+  // pCoeff[GMID] = gamma; 
+  // pCoeff[CPID] = cp;
+  // pCoeff[CVID] = cv;
+  // pCoeff[KAID] = cp*mu/Pr; // 1.0/( (gamma-1.0)*Ma*Ma)*mu/Pr;
+  // pCoeff[M2ID] = Ma*Ma;
+  // pCoeff[BTID] = beta_ldg;
+  // pCoeff[TAID] = tau_ldg;
+
+
+  // if(settings.compareSetting("SOLVER TYPE", "NAVIER-STOKES")){
+    
+  //   if(settings.compareSetting("VISCOSITY TYPE", "CONSTANT")){
+  //     viscType = 1;
+  //   }else if(settings.compareSetting("VISCOSITY TYPE", "SUTHERLAND")){
+  //     viscType  = 2;
+  //     Nph      += 4;  
+  //     EXID = pids++; TRID = pids++; TSID = pids++; CSID = pids++; 
+  //     pCoeff.realloc(Nph);
+  //     // Coefficients from White, F. M., Viscous fluid flow, McGraw-Hill, 2006
+  //     dfloat Tref = (settings.compareSetting("NONDIMENSIONAL EQUATIONS", "TRUE")) ? 1.0 : 273.15; 
+  //     dfloat Ts   = (settings.compareSetting("NONDIMENSIONAL EQUATIONS", "TRUE")) ? 110.4/273.15:110.4; 
+  //     dfloat exp  = 3.0/2.0 ;  
+  //     pCoeff[EXID] = exp;            // exponent  
+  //     pCoeff[TRID] = 1.0/Tref;       // inverse of reference temperature here !!!    
+  //     pCoeff[TSID] = Ts/Tref;        // Ts/Tref approximately !!! 
+  //     pCoeff[CSID] = pow(pCoeff[TSID],pCoeff[EXID])*(1.0+pCoeff[TSID])/(2.0*pCoeff[TSID]*pCoeff[TSID]); // exponent  
+  //   }else if(settings.compareSetting("VISCOSITY TYPE", "POWER-LAW")){
+  //     viscType  = 3;
+  //     Nph      += 2;
+  //     EXID = pids++; 
+  //     TRID = pids++; 
+  
+  //     dfloat exp = 2.0/3.0;
+  //     dfloat Tref = (settings.compareSetting("NONDIMENSIONAL EQUATIONS", "TRUE")) ? 1.0 : 273.15; 
+  //     pCoeff[MUID] = mu / pow(Tref, exp); // Update viscosity
+  //     pCoeff[EXID] = exp;                 // exponent  
+  //     pCoeff[TRID] = Tref;                // Tref   
+  //   }
+  // }else{ // Euler solver
+  //   viscType = 0; 
+  // }
+
+  // // Read Reference State and number of states
+  // setBoundaryMaps(); 
+  // // Read force and moment info and prepare for output
+  // setReport(); 
+  // // move physical model to device
+  // o_pCoeff = platform.malloc<dfloat>(pCoeff);   
+  
+  // // Define physical model on Device 
+  // props["defines/" "p_viscType"]= viscType;
+  // props["defines/" "p_MUID"]    = MUID;
+  // props["defines/" "p_GMID"]    = GMID;
+  // props["defines/" "p_PRID"]    = PRID;
+  // props["defines/" "p_RRID"]    = RRID;
+  // props["defines/" "p_CPID"]    = CPID;
+  // props["defines/" "p_CVID"]    = CVID;
+  // props["defines/" "p_KAID"]    = KAID; 
+  // props["defines/" "p_M2ID"]    = M2ID;
+  // props["defines/" "p_EXID"]    = EXID;
+  // props["defines/" "p_TRID"]    = TRID;
+  // props["defines/" "p_TSID"]    = TSID;
+  // props["defines/" "p_CSID"]    = CSID;
+  // props["defines/" "p_BTID"]    = BTID;
+  // props["defines/" "p_TAID"]    = TAID;
 
 }

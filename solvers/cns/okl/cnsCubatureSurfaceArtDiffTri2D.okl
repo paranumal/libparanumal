@@ -312,18 +312,27 @@ void upwindRusanov(const dfloat nx, const dfloat ny, const dfloat gamma,
           #endif  
         
 
-        // get temperature dependent viscosity for element
-        if(p_viscType==2){ // Sutherland     
-          const dfloat exp  = pCoeff[p_EXID]; // Exponential term
-          const dfloat tr   = pCoeff[p_TRID]; // 1/Tref 
-          const dfloat ts   = pCoeff[p_TSID]; // Ts/Tref
-          const dfloat cs   = pCoeff[p_CSID]; // precomuted value to simlify
-          const dfloat tnM  = (pM*irM/R)*tr;  // non-dimensional temp
-          muM  = (tnM > ts) ? (muM*pow(tnM, exp)*(1.0+ts)/(tnM + ts)) : muM*tnM*cs;  
-         }else if(p_viscType==3){ // Powerlaw
-          const dfloat exp  = pCoeff[p_EXID]; // Exponential term
-          const dfloat TempM  = pM*irM/R;      // Temperature
-          muM = muM*pow(TempM, exp); 
+        // // get temperature dependent viscosity for element
+        // if(p_viscType==2){ // Sutherland     
+        //   const dfloat exp  = pCoeff[p_EXID]; // Exponential term
+        //   const dfloat tr   = pCoeff[p_TRID]; // 1/Tref 
+        //   const dfloat ts   = pCoeff[p_TSID]; // Ts/Tref
+        //   const dfloat cs   = pCoeff[p_CSID]; // precomuted value to simlify
+        //   const dfloat tnM  = (pM*irM/R)*tr;  // non-dimensional temp
+        //   muM  = (tnM > ts) ? (muM*pow(tnM, exp)*(1.0+ts)/(tnM + ts)) : muM*tnM*cs;  
+        //  }else if(p_viscType==3){ // Powerlaw
+        //   const dfloat exp  = pCoeff[p_EXID]; // Exponential term
+        //   const dfloat TempM  = pM*irM/R;      // Temperature
+        //   muM = muM*pow(TempM, exp); 
+        // }
+
+
+        if(p_viscType==2){ // Sutherland
+          const dfloat cpTref  = pCoeff[p_TRID];
+          const dfloat cpTs    = pCoeff[p_TSID];
+          const dfloat cpTM    =  gamma*(irM*rEM - 0.5*(uM*uM + vM*vM));
+          const dfloat TratM   =  cpTM/cpTref;  
+          muM  = muM * (cpTref + cpTs)*TratM*sqrt(TratM)/(cpTM + cpTs); 
         }
 
 
@@ -405,52 +414,60 @@ void upwindRusanov(const dfloat nx, const dfloat ny, const dfloat gamma,
 
        
         // Derivative of velocities
-        const dfloat dudxM = (drudxM - drrdxM*uM)*irM;
-        const dfloat dvdxM = (drvdxM - drrdxM*vM)*irM;
-        const dfloat dudyM = (drudyM - drrdyM*uM)*irM;
-        const dfloat dvdyM = (drvdyM - drrdyM*vM)*irM;
+        const dfloat dudxM = (drudxM - drrdxM*uM);
+        const dfloat dvdxM = (drvdxM - drrdxM*vM);
+        const dfloat dudyM = (drudyM - drrdyM*uM);
+        const dfloat dvdyM = (drvdyM - drrdyM*vM);
+        const dfloat TxM = irM*(dredxM- (rEM*drrdxM*irM + uM*dudxM + vM*dvdxM));
+        const dfloat TyM = irM*(dredyM- (rEM*drrdyM*irM + uM*dudyM + vM*dvdyM));
               
-              dfloat dudxP = (drudxP - drrdxP*uP)*irP;
-              dfloat dvdxP = (drvdxP - drrdxP*vP)*irP;
-              dfloat dudyP = (drudyP - drrdyP*uP)*irP;
-              dfloat dvdyP = (drvdyP - drrdyP*vP)*irP;
+              dfloat dudxP = (drudxP - drrdxP*uP);
+              dfloat dvdxP = (drvdxP - drrdxP*vP);
+              dfloat dudyP = (drudyP - drrdyP*uP);
+              dfloat dvdyP = (drvdyP - drrdyP*vP);
+              dfloat TxP   = irP*(dredxP- (rEP*drrdxP*irP + uP*dudxP + vP*dvdxP));
+              dfloat TyP   = irP*(dredyP- (rEP*drrdyP*irP + uP*dudyP + vP*dvdyP));
 
-        const dfloat TxM = (dredxM*irM - rEM*drrdxM*irM*irM - (uM*dudxM + vM*dvdxM));
-        const dfloat TyM = (dredyM*irM - rEM*drrdyM*irM*irM - (uM*dudyM + vM*dvdyM));
-        const dfloat TxP = (dredxP*irP - rEP*drrdxP*irP*irP - (uP*dudxP + vP*dvdxP));
-        const dfloat TyP = (dredyP*irP - rEP*drrdyP*irP*irP - (uP*dudyP + vP*dvdyP));
+        // // get temperature dependent viscosity for neighbor
+        // if(p_viscType==2){ // Sutherland     
+        //   const dfloat exp  = pCoeff[p_EXID]; // Exponential term
+        //   const dfloat tr   = pCoeff[p_TRID]; // 1/Tref 
+        //   const dfloat ts   = pCoeff[p_TSID]; // Ts/Tref
+        //   const dfloat cs   = pCoeff[p_CSID]; // precomuted value to simlify
+        //   const dfloat tnP   = pP*irP*tr/R; // non-dimensional temp
+        //   muP  = (tnP > ts) ? (muP*pow(tnP, exp)*(1.0+ts)/(tnP + ts)) : muP*tnP*cs;  
+        // }else if(p_viscType==3){ // Powerlaw 
+        //   // mu = mu_ref * (T/Tref)**exp = (mu_ref/T_ref**exp) * T**exp = ( mu )* T**exp
+        //   const dfloat exp  = pCoeff[p_EXID]; // Exponential term
+        //   const dfloat TempP  = pP*irP/R;       // Temperature
+        //   muP = muP*pow(TempP, exp); 
+        // }
 
-        // get temperature dependent viscosity for neighbor
-        if(p_viscType==2){ // Sutherland     
-          const dfloat exp  = pCoeff[p_EXID]; // Exponential term
-          const dfloat tr   = pCoeff[p_TRID]; // 1/Tref 
-          const dfloat ts   = pCoeff[p_TSID]; // Ts/Tref
-          const dfloat cs   = pCoeff[p_CSID]; // precomuted value to simlify
-          const dfloat tnP   = pP*irP*tr/R; // non-dimensional temp
-          muP  = (tnP > ts) ? (muP*pow(tnP, exp)*(1.0+ts)/(tnP + ts)) : muP*tnP*cs;  
-        }else if(p_viscType==3){ // Powerlaw 
-          // mu = mu_ref * (T/Tref)**exp = (mu_ref/T_ref**exp) * T**exp = ( mu )* T**exp
-          const dfloat exp  = pCoeff[p_EXID]; // Exponential term
-          const dfloat TempP  = pP*irP/R;       // Temperature
-          muP = muP*pow(TempP, exp); 
+
+        if(p_viscType==2){ // Sutherland
+          const dfloat cpTref  = pCoeff[p_TRID];
+          const dfloat cpTs    = pCoeff[p_TSID];
+          const dfloat cpTP    =  gamma*(irP*rEP - 0.5*(uP*uP + vP*vP));
+          const dfloat TratP   =  cpTP/cpTref;  
+          muP  = muP * (cpTref + cpTs)*TratP*sqrt(TratP)/(cpTP + cpTs); 
         }
 
-        const dfloat sbeta = 2.0/3.0; 
+        const dfloat sbeta = 1.0/3.0; 
         dfloat T01M = 0., T02M = 0.;
-        dfloat T11M = muM*(2.0*dudxM - sbeta*(dudxM+dvdyM));
-        dfloat T12M = muM*(dudyM+dvdxM);
+        dfloat T11M = 2.0*muM*irM*(dudxM - sbeta*(dudxM+dvdyM));
+        dfloat T12M = muM*irM*(dudyM+dvdxM);
         dfloat T21M = T12M;
-        dfloat T22M = muM*(2.0*dvdyM - sbeta*(dudxM+dvdyM));
+        dfloat T22M = 2.0*muM*irM*(dvdyM - sbeta*(dudxM+dvdyM));
         //
         dfloat kappaM = CP*muM/Pr;
-        dfloat T31M = uM*T11M + vM*T12M + kappaM*TxM;
-        dfloat T32M = uM*T12M + vM*T22M + kappaM*TyM;
+        dfloat T31M   = uM*T11M + vM*T12M + kappaM*TxM;
+        dfloat T32M   = uM*T12M + vM*T22M + kappaM*TyM;
 
         dfloat T01P = 0., T02P = 0.;
-        dfloat T11P = muP*(2.0*dudxP - sbeta*(dudxP+dvdyP));
-        dfloat T12P = muP*(dudyP+dvdxP);
+        dfloat T11P = 2.0*muP*irP*(dudxP - sbeta*(dudxP+dvdyP));
+        dfloat T12P = muP*irP*(dudyP+dvdxP);
         dfloat T21P = T12P;
-        dfloat T22P = muP*(2.0*dvdyP - sbeta*(dudxP+dvdyP));
+        dfloat T22P = 2.0*muP*irP*(dvdyP - sbeta*(dudxP+dvdyP));
         //
         dfloat kappaP = CP*muP/Pr;
         dfloat T31P = uP*T11P + vP*T12P + kappaP*TxP;

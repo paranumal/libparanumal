@@ -42,6 +42,7 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
 }
 
 
+
 // Compressible Navier-Stokes
 @kernel void cnsCubatureVolumeArtificialDiffsuionLaplaceTet3D(const dlong Nelements,
                                                               @restrict const  dfloat *  vgeo,
@@ -214,15 +215,30 @@ dfloat SMOOTH(const dfloat x, const dfloat alpha){
       const dfloat dwdy  = (drwdy - drrdy*w)*ir;
       const dfloat dwdz  = (drwdz - drrdz*w)*ir;
 
-      if(p_viscType==2){ // Sutherland
-        //nondimensional temp =  p/(\rho * R)/Tref
-        const dfloat R    = pCoeff[p_RRID]; 
-        const dfloat exp  = pCoeff[p_EXID]; // Exponential term
-        const dfloat tr   = pCoeff[p_TRID]; // 1/Tref 
-        const dfloat ts   = pCoeff[p_TSID]; // Ts/Tref
-        const dfloat cs   = pCoeff[p_CSID]; // precomuted value to simlify
-        const dfloat tn   = p*ir*tr/R; // non-dimensional temp
-        mu  = (tn > ts) ? (mu*pow(tn, exp)*(1.0+ts)/(tn + ts)) : mu*tn*cs;  
+      // if(p_viscType==2){ // Sutherland
+      //   //nondimensional temp =  p/(\rho * R)/Tref
+      //   const dfloat R    = pCoeff[p_RRID]; 
+      //   const dfloat exp  = pCoeff[p_EXID]; // Exponential term
+      //   const dfloat tr   = pCoeff[p_TRID]; // 1/Tref 
+      //   const dfloat ts   = pCoeff[p_TSID]; // Ts/Tref
+      //   const dfloat cs   = pCoeff[p_CSID]; // precomuted value to simlify
+      //   const dfloat tn   = p*ir*tr/R; // non-dimensional temp
+      //   mu  = (tn > ts) ? (mu*pow(tn, exp)*(1.0+ts)/(tn + ts)) : mu*tn*cs;  
+      // }else if(p_viscType==3){ // Powerlaw
+      //   const dfloat R    = pCoeff[p_RRID]; 
+      //   const dfloat exp  = pCoeff[p_EXID]; // Exponential term
+      //   const dfloat Temp = p*ir/R;      // Temperature
+      //   mu                = mu*pow(Temp, exp); 
+      // }
+
+       if(p_viscType==2){ // Sutherland
+        const dfloat cpTref  = pCoeff[p_TRID];
+        const dfloat cpTs    = pCoeff[p_TSID];
+        const dfloat cpT    =  gamma*(ir*rE - 0.5*(u*u + v*v + w*w));
+        const dfloat Trat   =  cpT/cpTref;  
+
+         mu  = mu * (cpTref + cpTs)*Trat*sqrt(Trat)/(cpT + cpTs); 
+       
       }else if(p_viscType==3){ // Powerlaw
         const dfloat R    = pCoeff[p_RRID]; 
         const dfloat exp  = pCoeff[p_EXID]; // Exponential term

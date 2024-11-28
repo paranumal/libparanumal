@@ -121,9 +121,7 @@ SOFTWARE.
                                              rrM, ruM, rvM, reM, &rrP, &ruP, &rvP, &reP, 
                                              0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                                              &drrdxP, &drrdyP, &drudxP, &drudyP, 
-                                             &drvdxP, &drvdyP, &dredxP, &dredyP);
-              
-              // betaM = 0.0;  betaP = 1.0; 
+                                             &drvdxP, &drvdyP, &dredxP, &dredyP);              
             }
             s_gradflux[es][0][n] = sc*nx*( betaM*rrM + betaP*rrP  - rrM);
             s_gradflux[es][1][n] = sc*ny*( betaM*rrM + betaP*rrP  - rrM);

@@ -47,16 +47,15 @@ int main(int argc, char **argv){
 
     // set up platform
     platform_t platform(platformSettings);
-
-    platformSettings.report();
-    meshSettings.report();
-    cnsSettings.report();
-
     // set up mesh
     mesh_t mesh(platform, meshSettings, comm);
 
     // set up cns solver
     cns_t cns(platform, mesh, cnsSettings);
+
+    platformSettings.report();
+    meshSettings.report();
+    cnsSettings.report();
 
     // run
     cns.Run();

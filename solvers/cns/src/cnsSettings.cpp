@@ -37,9 +37,6 @@ cnsSettings_t::cnsSettings_t(comm_t& _comm):
              "Solver to be used", 
             {"EULER", "NAVIER-STOKES"});
 
- newSetting("NONDIMENSIONAL EQUATIONS", "TRUE",
-             "Compute R and Mu from Mach and Reynolds",
-             {"FALSE", "TRUE"});
 
   newSetting("GAMMA", "1.4",
              "Specific heat ratio");
@@ -54,14 +51,17 @@ cnsSettings_t::cnsSettings_t(comm_t& _comm):
              "Viscosity treatment", 
              {"CONSTANT", "SUTHERLAND", "POWER-LAW"});
 
+ // newSetting("NONDIMENSIONAL EQUATIONS", "TRUE",
+ //             "Compute R and Mu from Mach and Reynolds",
+ //             {"FALSE", "TRUE"});
   newSetting("MACH NUMBER", "0.1",
              "Mach number (if non-dimensional=TRUE)");
 
   newSetting("REYNOLDS NUMBER", "1000.0",
              "Reynolds number (if non-dimensional=TRUE)");
 
-  newSetting("ANGLE OF ATTACK", "0.0",
-             "Angle of attack (if non-dimensional=TRUE)");
+  // newSetting("ANGLE OF ATTACK", "0.0",
+  //            "Angle of attack (if non-dimensional=TRUE)");
 
   newSetting("PRANDTL NUMBER", "0.72",
              "Pranndtl Number");
@@ -121,14 +121,14 @@ cnsSettings_t::cnsSettings_t(comm_t& _comm):
              "Flag for reporting forces",
              {"TRUE", "FALSE"});
 
-  newSetting("REPORT COMPONENT", "TRUE",
+  newSetting("REPORT COMPONENT", "FALSE",
              "Flag for reporting forces in component forms i.e. pressure, viscous",
              {"TRUE", "FALSE"});
 
   newSetting("REPORT GROUPS",
             "Geometric groups for reporting");
 
-  newSetting("REPORT MOMENTS", "TRUE",
+  newSetting("REPORT MOMENTS", "FALSE",
              "Flag for reporting moments",
              {"TRUE", "FALSE"});
 
@@ -208,8 +208,8 @@ void cnsSettings_t::report() {
     reportSetting("VISCOSITY");
     reportSetting("VISCOSITY TYPE");
     reportSetting("SOLVER TYPE");
-    reportSetting("MACH NUMBER");
-    reportSetting("REYNOLDS NUMBER");
+    // reportSetting("MACH NUMBER");
+    // reportSetting("REYNOLDS NUMBER");
     
     reportSetting("FLOW STATES");
     reportSetting("IC STATE ID");
@@ -217,7 +217,7 @@ void cnsSettings_t::report() {
     reportSetting("REFERENCE STATE ID");
     reportSetting("MOMENT CENTER");
 
-    reportSetting("ISOTHERMAL");
+    // reportSetting("ISOTHERMAL");
     reportSetting("ADVECTION TYPE");
     reportSetting("LDG BETA COEFFICIENT");
     reportSetting("LDG TAU COEFFICIENT");

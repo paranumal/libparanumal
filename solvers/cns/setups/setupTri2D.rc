@@ -47,16 +47,7 @@ data/cnsUniform2D.h
 
 # EULER or NAVIER-STOKES
 [SOLVER TYPE]
-#EULER
 NAVIER-STOKES
-
-# FALSE or TRUE
-[NONDIMENSIONAL EQUATIONS]
-TRUE
-
-# FALSE or TRUE
-[ISOTHERMAL]
-FALSE
 
 #Can be COLLOCATION or CUBATURE
 [ADVECTION TYPE]
@@ -94,30 +85,15 @@ CUDA
 [GAMMA]
 1.4
 
-# Mach number is needed for NONDIM=TRUE
-[MACH NUMBER]
-1.5
-
-# Reynolds number is needed for NONDIM = TRUE
-[REYNOLDS NUMBER]
-6.5e6
-
-# Angle of Attack
-[ANGLE OF ATTACK]
-0
-
-# if NONDIM=FALSE otherwise  R = 1.0/(gamma*Ma^2) 
 [SPECIFIC GAS CONSTANT]
-287.052
+0.714285714285714
 
-# if NONDIM = FALSE, otherwise mu = 1/Re
 [VISCOSITY]
-#1e-5
+2.307692307692311e-7
 
 # CONSTANT, SUTHERLAND or POWER-LAW
 [VISCOSITY TYPE]
-CONSTANT
-#SUTHERLAND
+SUTHERLAND
 
 [PRANDTL NUMBER]
 0.72
@@ -138,8 +114,6 @@ CONSTANT
 #Geoemtric IDs -> BC IDs
 [GEOMETRIC-TO-PHYSICAL MAP]
 12:1,2,3,4;20:5, 6, 7, 8, 9, 10, 11;
-#13:1,2,3,5;40:6,4;
-#12:1,2;20:3,4;
 
 [CFL NUMBER]
 0.1
@@ -153,6 +127,7 @@ CONSTANT
 
 
 
+
 #-------------------[OUTPUT PROPERTIES]-----------------------#
 [OUTPUT INTERVAL]
 0.2
@@ -161,7 +136,7 @@ CONSTANT
 TRUE
 
 [OUTPUT FILE NAME]
-cnsCircle
+cnsNACA
 
 [REPORT FORCES]
 #FALSE
@@ -181,12 +156,11 @@ TRUE
 0:1,2,3,4;
 
 [REFERENCE AREA]
-0.785398163397448
+1.0
 
 [REFERENCE LENGTH]
 1.0
 #-------------------------------------------------------------#
-
 
 
 #----------------[STABILIZASYON PROPERTIES]-------------------#

@@ -202,7 +202,7 @@ void cns_t::PlotFields(memory<dfloat> Q, memory<dfloat> V, std::string fileName)
 
         for(int n=0;n<mesh.plotNp;++n){
           fprintf(fp, "       ");
-          fprintf(fp, "%g\n", Ip[n]);
+          fprintf(fp, "%g\n", mu+Ip[n]);
         }
       }
     fprintf(fp, "       </DataArray>\n");
