@@ -43,6 +43,10 @@ void platform_t::DeviceProperties(){
   Props["memory"].asObject();
 
   Props["serial/include_std"] = true;
+  Props["kernel/include_occa"] = true;
+  Props["launcher/kernel/include_occa"] = true;
+
+  std::cout << occa::host().properties() << std::endl;
 
   if(sizeof(dfloat)==4){
     Props["defines/" "dfloat"]="float";
@@ -81,7 +85,6 @@ void platform_t::DeviceProperties(){
   if(device.mode()=="Serial") {
     Props["compiler_flags"] += "-O3 ";
     Props["compiler_flags"] += "-g "; //debugging
-    Props["kernel/include_occa"] = true;
     Props["defines/OCCA_USE_SERIAL"] = 1;
   }
 
