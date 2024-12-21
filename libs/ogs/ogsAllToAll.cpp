@@ -343,11 +343,11 @@ ogsAllToAll_t::ogsAllToAll_t(dlong Nshared,
 }
 
 void ogsAllToAll_t::AllocBuffer(size_t Nbytes) {
-  if (o_workspace.size() < postmpi.nnzT*Nbytes) {
+  if (o_workspace.byte_size() < postmpi.nnzT*Nbytes) {
     h_workspace = platform.hostMalloc<char>(postmpi.nnzT*Nbytes);
     o_workspace = platform.malloc<char>(postmpi.nnzT*Nbytes);
   }
-  if (o_sendspace.size() < NsendT*Nbytes) {
+  if (o_sendspace.byte_size() < NsendT*Nbytes) {
     h_sendspace = platform.hostMalloc<char>(NsendT*Nbytes);
     o_sendspace = platform.malloc<char>(NsendT*Nbytes);
   }

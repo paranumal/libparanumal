@@ -753,11 +753,11 @@ ogsCrystalRouter_t::ogsCrystalRouter_t(dlong Nshared,
 
 void ogsCrystalRouter_t::AllocBuffer(size_t Nbytes) {
 
-  if (o_sendspace.size() < NsendMax*Nbytes) {
+  if (o_sendspace.byte_size() < NsendMax*Nbytes) {
     h_sendspace = platform.hostMalloc<char>(NsendMax*Nbytes);
     o_sendspace = platform.malloc<char>(NsendMax*Nbytes);
   }
-  if (o_work[0].size() < NrecvMax*Nbytes) {
+  if (o_work[0].byte_size() < NrecvMax*Nbytes) {
     h_work[0] = platform.hostMalloc<char>(NrecvMax*Nbytes);
     h_work[1] = platform.hostMalloc<char>(NrecvMax*Nbytes);
     h_workspace = h_work[0];

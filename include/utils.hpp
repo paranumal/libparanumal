@@ -45,7 +45,7 @@ using properties_t = occa::json;
 using device_t = occa::device;
 using kernel_t = occa::kernel;
 using stream_t = occa::stream;
-using memPool_t = occa::experimental::memoryPool;
+using memPool_t = occa::memoryPool;
 
 //error codes
 #define LIBP_SUCCESS 0

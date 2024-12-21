@@ -42,6 +42,8 @@ void platform_t::DeviceProperties(){
   Props["kernel"].asObject();
   Props["memory"].asObject();
 
+  Props["serial/include_std"] = true;
+
   if(sizeof(dfloat)==4){
     Props["defines/" "dfloat"]="float";
     Props["defines/" "dfloat2"]="float2";
@@ -68,7 +70,7 @@ void platform_t::DeviceProperties(){
     Props["defines/" "pfloat8"]="double8";
   }
 
-  
+
   if(sizeof(dlong)==4){
     Props["defines/" "dlong"]="int";
   }
@@ -79,6 +81,7 @@ void platform_t::DeviceProperties(){
   if(device.mode()=="Serial") {
     Props["compiler_flags"] += "-O3 ";
     Props["compiler_flags"] += "-g "; //debugging
+    Props["kernel/include_occa"] = true;
     Props["defines/OCCA_USE_SERIAL"] = 1;
   }
 
