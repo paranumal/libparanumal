@@ -352,6 +352,8 @@ public:
   bool gathered_halo=false;
   dlong Nhalo=0;
 
+  using ogsBase_t::Setup;
+
   void Setup(const dlong _N,
              memory<hlong> ids,
              comm_t _comm,

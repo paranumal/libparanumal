@@ -73,6 +73,8 @@ public:
 
   void Run();
 
+  using solver_t::Report;
+
   void Report();
 
   void PlotFields();

@@ -272,7 +272,7 @@ else
 	@$(LIBP_CXX) -o $@ -c $< ${LIBCORE_DEFINES} $(LIB_CXXFLAGS)
 endif
 
-primitives/%.o: primitives/%.cpp $(LIB_DEPS) ${OCCA_DIR}/lib/libocca.so
+primitives/%.o: primitives/%.cpp $(LIB_DEPS) | libcore.a
 ifneq (,${verbose})
 	$(LIBP_CXX) -o $@ -c $< $(LIB_CXXFLAGS)
 else
@@ -312,7 +312,7 @@ else
 	@$(LIBP_CXX) -o $@ -c $< ${LIBMESH_DEFINES} $(LIB_CXXFLAGS)
 endif
 
-ogs/%.o: ogs/%.cpp $(LIBOGS_DEPS) | liblinAlg.a
+ogs/%.o: ogs/%.cpp $(LIBOGS_DEPS) | liblinAlg.a liblinearSolver.a
 ifneq (,${verbose})
 	$(LIBP_CXX) -o $@ -c $< ${LIBOGS_DEFINES} -I${GS_DIR}/src $(LIB_CXXFLAGS)
 else
@@ -320,7 +320,7 @@ else
 	@$(LIBP_CXX) -o $@ -c $< ${LIBOGS_DEFINES} -I${GS_DIR}/src $(LIB_CXXFLAGS)
 endif
 
-parAlmond/%.o: parAlmond/%.cpp $(LIBPARALMOND_DEPS) | liblinearSolver.a
+parAlmond/%.o: parAlmond/%.cpp $(LIBPARALMOND_DEPS) | libogs.a
 ifneq (,${verbose})
 	$(LIBP_CXX) -o $@ -c $< ${LIBPARALMOND_DEFINES} $(LIB_CXXFLAGS)
 else
