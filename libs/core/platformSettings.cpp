@@ -53,6 +53,11 @@ platformSettings_t::platformSettings_t(comm_t _comm):
   newSetting("CACHE DIR",
              LIBP_DIR "/.occa",
              "Path for OCCA to place kernel cache");
+
+  newSetting("GPU-AWARE MPI",
+             "FALSE",
+             "Enable direct access of GPU memory in MPI",
+             {"TRUE", "FALSE"});
 }
 
 void platformSettings_t::report() {

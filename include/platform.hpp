@@ -80,6 +80,9 @@ public:
 
     iplatform = std::make_shared<internal::iplatform_t>(_settings);
 
+    if (settings().compareSetting("GPU-AWARE MPI", "TRUE"))
+      settings().comm.setGpuAware(true);
+
     comm = settings().comm;
 
     if (comm.rank()==0) {
