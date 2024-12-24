@@ -41,22 +41,22 @@ SOFTWARE.
   for(dlong k=0;k<K;++k;@outer(1)){
     for(dlong b=0;b<Nblocks;++b;@outer(0)){
       @exclusive dlong blockStart, blockEnd, gStart, sStart;
-      @shared T gtemp[p_gatherNodesPerBlock];
-      @shared T stemp[p_gatherNodesPerBlock];
+      @shared T gtemp[GS_NODESPERBLOCK];
+      @shared T stemp[GS_NODESPERBLOCK];
 
-      for(dlong n=0;n<p_blockSize;++n;@inner(0)){
+      for(dlong n=0;n<GS_BLOCKSIZE;++n;@inner(0)){
         blockStart = blockStarts[b];
         blockEnd   = blockStarts[b+1];
         gStart = gatherStarts[blockStart];
         sStart = scatterStarts[blockStart];
 
-        for (dlong id=gStart+n;id<gatherStarts[blockEnd];id+=p_blockSize) {
+        for (dlong id=gStart+n;id<gatherStarts[blockEnd];id+=GS_BLOCKSIZE) {
           gtemp[id-gStart] = q[k+gatherIds[id]*K];
         }
       }
 
-      for(dlong n=0;n<p_blockSize;++n;@inner(0)){
-        for (dlong row=blockStart+n;row<blockEnd;row+=p_blockSize) {
+      for(dlong n=0;n<GS_BLOCKSIZE;++n;@inner(0)){
+        for (dlong row=blockStart+n;row<blockEnd;row+=GS_BLOCKSIZE) {
           const dlong gRowStart = gatherStarts[row]  -gStart;
           const dlong gRowEnd   = gatherStarts[row+1]-gStart;
           const dlong sRowStart = scatterStarts[row]  -sStart;
@@ -71,8 +71,8 @@ SOFTWARE.
         }
       }
 
-      for(dlong n=0;n<p_blockSize;++n;@inner(0)){
-        for (dlong id=sStart+n;id<scatterStarts[blockEnd];id+=p_blockSize) {
+      for(dlong n=0;n<GS_BLOCKSIZE;++n;@inner(0)){
+        for (dlong id=sStart+n;id<scatterStarts[blockEnd];id+=GS_BLOCKSIZE) {
           q[k+scatterIds[id]*K] = stemp[id-sStart];
         }
       }
@@ -94,20 +94,20 @@ SOFTWARE.
   for(dlong k=0;k<K;++k;@outer(1)){
     for(dlong b=0;b<Nblocks;++b;@outer(0)){
       @exclusive dlong blockStart, blockEnd, start;
-      @shared T temp[p_gatherNodesPerBlock];
+      @shared T temp[G_NODESPERBLOCK];
 
-      for(dlong n=0;n<p_blockSize;++n;@inner(0)){
+      for(dlong n=0;n<G_BLOCKSIZE;++n;@inner(0)){
         blockStart = blockStarts[b];
         blockEnd   = blockStarts[b+1];
         start = gatherStarts[blockStart];
 
-        for (dlong id=start+n;id<gatherStarts[blockEnd];id+=p_blockSize) {
+        for (dlong id=start+n;id<gatherStarts[blockEnd];id+=G_BLOCKSIZE) {
           temp[id-start] = q[k+gatherIds[id]*K];
         }
       }
 
-      for(dlong n=0;n<p_blockSize;++n;@inner(0)){
-        for (dlong row=blockStart+n;row<blockEnd;row+=p_blockSize) {
+      for(dlong n=0;n<G_BLOCKSIZE;++n;@inner(0)){
+        for (dlong row=blockStart+n;row<blockEnd;row+=G_BLOCKSIZE) {
           const dlong rowStart = gatherStarts[row]  -start;
           const dlong rowEnd   = gatherStarts[row+1]-start;
           T gq = OGS_OP_INIT;
@@ -135,9 +135,9 @@ SOFTWARE.
   for(dlong k=0;k<K;++k;@outer(1)){
     for(dlong b=0;b<Nblocks;++b;@outer(0)){
       @exclusive dlong rowStart, rowEnd;
-      @shared T temp[p_gatherNodesPerBlock];
+      @shared T temp[S_NODESPERBLOCK];
 
-      for(dlong n=0;n<p_blockSize;++n;@inner(0)){
+      for(dlong n=0;n<S_BLOCKSIZE;++n;@inner(0)){
         rowStart = blockStarts[b];
         rowEnd   = blockStarts[b+1];
         dlong idStart = scatterStarts[rowStart];
@@ -149,13 +149,13 @@ SOFTWARE.
           for (int i=colStart;i<colEnd;i++) {
             temp[i] = foo;
           }
-          row += p_blockSize;
+          row += S_BLOCKSIZE;
         }
       }
 
-      for(dlong n=0;n<p_blockSize;++n;@inner(0)){
+      for(dlong n=0;n<S_BLOCKSIZE;++n;@inner(0)){
         const dlong row = scatterStarts[rowStart]+n;
-        for (dlong i=0;row+i<scatterStarts[rowEnd];i+=p_blockSize) {
+        for (dlong i=0;row+i<scatterStarts[rowEnd];i+=S_BLOCKSIZE) {
           q[k+scatterIds[row+i]*K] = temp[i+n];
         }
       }
@@ -163,13 +163,15 @@ SOFTWARE.
   }
 }
 
+#define EXTRACT_BLOCKSIZE 256
+
 //extract sparse entries from vector
 @kernel void extract(const dlong N,
                      const int K,
                      @restrict const dlong *ids,
                      @restrict const T *q,
                            @restrict T *gatherq) {
-  for(dlong n=0;n<N*K;++n;@tile(p_blockSize, @outer(0), @inner(0))){
+  for(dlong n=0;n<N*K;++n;@tile(EXTRACT_BLOCKSIZE, @outer(0), @inner(0))){
     const dlong gid = n/K;
     const int k = n%K;
     gatherq[n] = q[k+ids[gid]*K];

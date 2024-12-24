@@ -218,7 +218,7 @@ void nbpcg<T>::Update1NBPCG(const T beta,
     dots[0] = 0.0;
   }
 
-  comm.Iallreduce(dots, Comm::Sum, 1, request);
+  comm.Iallreduce(dots, comm_t::Sum, 1, request);
 }
 
 template <typename T>
@@ -250,7 +250,7 @@ void nbpcg<T>::Update2NBPCG(const T alpha,
     dots[2] = 0.0;
   }
 
-  comm.Iallreduce(dots, Comm::Sum, 3, request);
+  comm.Iallreduce(dots, comm_t::Sum, 3, request);
 }
 
 template class nbpcg<float>;

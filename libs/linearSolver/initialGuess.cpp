@@ -161,7 +161,7 @@ void Projection<T>::igBasisInnerProducts(deviceMemory<T>& o_x,
     }
   }
 
-  comm.Allreduce(h_alphas, Comm::Sum, curDim);
+  comm.Allreduce(h_alphas, comm_t::Sum, curDim);
   h_alphas.copyTo(o_alphas, curDim, 0, properties_t("async", true));
 }
 

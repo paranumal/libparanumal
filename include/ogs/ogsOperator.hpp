@@ -33,6 +33,15 @@ namespace libp {
 
 namespace ogs {
 
+extern int gsblockSize;
+extern int gblockSize;
+extern int sblockSize;
+
+extern int gsNodesPerBlock;
+extern int gNodesPerBlock;
+extern int sNodesPerBlock;
+
+
 // The Z operator class is essentially a sparse CSR matrix,
 // with no vals stored. By construction, the sparse
 // matrix will have at most 1 non-zero per column.
@@ -56,22 +65,31 @@ public:
   deviceMemory<dlong> o_colIdsN;
   deviceMemory<dlong> o_colIdsT;
 
-  dlong NrowBlocksN=0;
-  dlong NrowBlocksT=0;
-  memory<dlong> blockRowStartsN;
-  memory<dlong> blockRowStartsT;
-  deviceMemory<dlong> o_blockRowStartsN;
-  deviceMemory<dlong> o_blockRowStartsT;
+  struct rowBlocking_t {
+    dlong NrowBlocksN=0;
+    dlong NrowBlocksT=0;
+    memory<dlong> blockRowStartsN;
+    memory<dlong> blockRowStartsT;
+    deviceMemory<dlong> o_blockRowStartsN;
+    deviceMemory<dlong> o_blockRowStartsT;
+  };
+
+  rowBlocking_t gBlocking, sBlocking, gsBlocking;
 
   Kind kind;
 
   ogsOperator_t()=default;
-  ogsOperator_t(platform_t& _platform)
-   : platform(_platform) {};
+  ogsOperator_t(platform_t &platform_,
+                Kind kind_,
+                const dlong NrowsN_,
+                const dlong NrowsT_,
+                const dlong Ncols_,
+                const dlong Nids,
+                memory<hlong> baseIds,
+                memory<dlong> rows,
+                memory<dlong> cols);
 
   void Free();
-
-  void setupRowBlocks();
 
   //Apply Z operator
   template<template<typename> class U,
@@ -118,9 +136,7 @@ private:
   void GatherScatter(U<T> v, const int K,
                      const Transpose trans);
 
-  //NC: Hard code these for now. Should be sufficient for GPU devices, but needs attention for CPU
-  static constexpr int blockSize = 256;
-  static constexpr int gatherNodesPerBlock = 512; //should be a multiple of blockSize for good unrolling
+  void createBlocking(const int NodesPerBlock, rowBlocking_t& blocking);
 
   //4 types - Float, Double, Int32, Int64
   //4 ops - Add, Mul, Max, Min

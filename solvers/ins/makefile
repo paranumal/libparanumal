@@ -79,7 +79,7 @@ endif
 
 #libraries
 ELLIPTIC_DIR =${LIBP_DIR}/solvers/elliptic
-FPE_LIBP_LIBS=timeStepper linearSolver parAlmond mesh parAdogs ogs linAlg core
+FPE_LIBP_LIBS=timeStepper linearSolver parAlmond mesh parAdogs ogs linAlg prim core
 
 #includes
 INCLUDES=-I${ELLIPTIC_DIR} \

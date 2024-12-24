@@ -232,35 +232,35 @@ void exactSolver_t::syncToDevice() {}
 void exactSolver_t::Report(int lev) {
 
   int totalActive = (N>0) ? 1:0;
-  comm.Allreduce(totalActive, Comm::Sum);
+  comm.Allreduce(totalActive, comm_t::Sum);
 
   dlong minNrows=N, maxNrows=N;
   hlong totalNrows=N;
-  comm.Allreduce(maxNrows, Comm::Max);
-  comm.Allreduce(totalNrows, Comm::Sum);
+  comm.Allreduce(maxNrows, comm_t::Max);
+  comm.Allreduce(totalNrows, comm_t::Sum);
   pfloat avgNrows = (pfloat) totalNrows/totalActive;
 
   if (N==0) minNrows=maxNrows; //set this so it's ignored for the global min
-  comm.Allreduce(minNrows, Comm::Min);
+  comm.Allreduce(minNrows, comm_t::Min);
 
   long long int nnz;
   nnz = A.diag.nnz+A.offd.nnz;
 
   long long int minNnz=nnz, maxNnz=nnz, totalNnz=nnz;
-  comm.Allreduce(maxNnz,   Comm::Max);
-  comm.Allreduce(totalNnz, Comm::Sum);
+  comm.Allreduce(maxNnz,   comm_t::Max);
+  comm.Allreduce(totalNnz, comm_t::Sum);
 
   if (nnz==0) minNnz = maxNnz; //set this so it's ignored for the global min
-  comm.Allreduce(minNnz, Comm::Min);
+  comm.Allreduce(minNnz, comm_t::Min);
 
   pfloat nnzPerRow = (Nrows==0) ? 0 : (pfloat) nnz/Nrows;
   pfloat minNnzPerRow=nnzPerRow, maxNnzPerRow=nnzPerRow, avgNnzPerRow=nnzPerRow;
-  comm.Allreduce(maxNnzPerRow, Comm::Max);
-  comm.Allreduce(avgNnzPerRow, Comm::Sum);
+  comm.Allreduce(maxNnzPerRow, comm_t::Max);
+  comm.Allreduce(avgNnzPerRow, comm_t::Sum);
   avgNnzPerRow /= totalActive;
 
   if (Nrows==0) minNnzPerRow = maxNnzPerRow;
-  comm.Allreduce(minNnzPerRow, Comm::Min);
+  comm.Allreduce(minNnzPerRow, comm_t::Min);
 
   std::string name = "Exact Solve     ";
 

@@ -41,7 +41,7 @@ ParAlmondPrecon::ParAlmondPrecon(elliptic_t& _elliptic):
   parAlmond(elliptic.platform, settings, elliptic.mesh.comm) {
 
   //build full A matrix and pass to parAlmond
-  if (Comm::World().rank()==0){
+  if (comm_t::world().rank()==0){
     printf("-----------------------------Multigrid AMG Setup--------------------------------------------\n");
   }
   parAlmond::parCOO A(elliptic.platform, elliptic.mesh.comm);
@@ -64,7 +64,7 @@ ParAlmondPrecon::ParAlmondPrecon(elliptic_t& _elliptic):
   parAlmond.AMGSetup(A, elliptic.allNeumann, null, elliptic.allNeumannPenalty);
 
   parAlmond.Report();
-  
+
   //The csr matrix at the top level of parAlmond may have a larger
   // halo region than the matrix free kernel. Adjust if necessary
   dlong parAlmondNrows = parAlmond.getNumRows(0);

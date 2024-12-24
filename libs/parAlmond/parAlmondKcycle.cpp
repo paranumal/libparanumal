@@ -107,7 +107,7 @@ void multigrid_t::kcycleOp1(multigridLevel& level,
                            pfloat& norm_rhs, pfloat& norm_rhstilde) {
 
   pfloat one = 1.0, zero = 0.0;
-  
+
   //ck = x
   platform.linAlg().axpy(level.Nrows, one, o_x, zero, o_ck);
 
@@ -187,7 +187,7 @@ void multigrid_t::kcycleCombinedOp1(multigridLevel& level,
     h_scratch[2] = 0.0;
   }
 
-  comm.Allreduce(h_scratch, Comm::Sum, 3);
+  comm.Allreduce(h_scratch, comm_t::Sum, 3);
   aDotb = h_scratch[0];
   aDotc = h_scratch[1];
   bDotb = h_scratch[2];
@@ -222,7 +222,7 @@ void multigrid_t::kcycleCombinedOp2(multigridLevel& level,
     h_scratch[2] = 0.0;
   }
 
-  comm.Allreduce(h_scratch, Comm::Sum, 3);
+  comm.Allreduce(h_scratch, comm_t::Sum, 3);
   aDotb = h_scratch[0];
   aDotc = h_scratch[1];
   aDotd = h_scratch[2];
@@ -250,7 +250,7 @@ pfloat multigrid_t::vectorAddInnerProd(multigridLevel& level,
     h_scratch[0] = 0.0;
   }
 
-  comm.Allreduce(h_scratch, Comm::Sum, 1);
+  comm.Allreduce(h_scratch, comm_t::Sum, 1);
   return h_scratch[0];
 }
 

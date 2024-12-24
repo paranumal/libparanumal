@@ -52,30 +52,30 @@ void ogs_t::GatherScatterStart(deviceMemory<T> o_v,
                                const Transpose trans){
   exchange->AllocBuffer(k*sizeof(T));
 
-  deviceMemory<T> o_haloBuf = exchange->o_workspace;
+  deviceMemory<T> o_sendBuf = exchange->getDeviceSendBuffer();
 
   //collect halo buffer
-  gatherHalo->Gather(o_haloBuf, o_v, k, op, trans);
+  gatherHalo->Gather(o_sendBuf, o_v, k, op, trans);
 
   if (exchange->gpu_aware) {
     //prepare MPI exchange
-    exchange->Start(o_haloBuf, k, op, trans);
+    exchange->DeviceStart(ogsType<T>::get(), k, op, trans);
   } else {
     //get current stream
     device_t &device = platform.device;
     stream_t currentStream = device.getStream();
 
-    pinnedMemory<T> haloBuf = exchange->h_workspace;
+    pinnedMemory<T> sendBuf = exchange->getHostSendBuffer();
 
     //if not using gpu-aware mpi move the halo buffer to the host
     const dlong Nhalo = (trans == NoTrans) ? NhaloP : NhaloT;
 
-    //wait for o_haloBuf to be ready
+    //wait for o_sendBuf to be ready
     device.finish();
 
     //queue copy to host
     device.setStream(dataStream);
-    haloBuf.copyFrom(o_haloBuf, Nhalo*k,
+    sendBuf.copyFrom(o_sendBuf, Nhalo*k,
                      0, properties_t("async", true));
     device.setStream(currentStream);
   }
@@ -90,13 +90,10 @@ void ogs_t::GatherScatterFinish(deviceMemory<T> o_v,
   //queue local gs operation
   gatherLocal->GatherScatter(o_v, k, op, trans);
 
-  deviceMemory<T> o_haloBuf = exchange->o_workspace;
-
   if (exchange->gpu_aware) {
     //finish MPI exchange
-    exchange->Finish(o_haloBuf, k, op, trans);
+    exchange->DeviceFinish(ogsType<T>::get(),k, op, trans);
   } else {
-    pinnedMemory<T> haloBuf = exchange->h_workspace;
 
     //get current stream
     device_t &device = platform.device;
@@ -107,19 +104,24 @@ void ogs_t::GatherScatterFinish(deviceMemory<T> o_v,
     device.finish();
 
     /*MPI exchange of host buffer*/
-    exchange->Start (haloBuf, k, op, trans);
-    exchange->Finish(haloBuf, k, op, trans);
+    exchange->HostStart (ogsType<T>::get(), k, op, trans);
+    exchange->HostFinish(ogsType<T>::get(), k, op, trans);
+
+    pinnedMemory<T> recvBuf = exchange->getHostRecvBuffer();
+    deviceMemory<T> o_recvBuf = exchange->getDeviceRecvBuffer();
 
     // copy recv back to device
     const dlong Nhalo = (trans == Trans) ? NhaloP : NhaloT;
-    haloBuf.copyTo(o_haloBuf, Nhalo*k,
+    recvBuf.copyTo(o_recvBuf, Nhalo*k,
                    0, properties_t("async", true));
     device.finish(); //wait for transfer to finish
     device.setStream(currentStream);
   }
 
+  deviceMemory<T> o_recvBuf = exchange->getDeviceRecvBuffer();
+
   //write exchanged halo buffer back to vector
-  gatherHalo->Scatter(o_v, o_haloBuf, k, trans);
+  gatherHalo->Scatter(o_v, o_recvBuf, k, trans);
 }
 
 template
@@ -155,13 +157,13 @@ void ogs_t::GatherScatterStart(memory<T> v,
   exchange->AllocBuffer(k*sizeof(T));
 
   /*Cast workspace to type T*/
-  pinnedMemory<T> haloBuf = exchange->h_workspace;
+  pinnedMemory<T> sendBuf = exchange->getHostSendBuffer();
 
   //collect halo buffer
-  gatherHalo->Gather(haloBuf, v, k, op, trans);
+  gatherHalo->Gather(sendBuf, v, k, op, trans);
 
   //prepare MPI exchange
-  exchange->Start(haloBuf, k, op, trans);
+  exchange->HostStart(ogsType<T>::get(), k, op, trans);
 }
 
 template<typename T>
@@ -171,16 +173,17 @@ void ogs_t::GatherScatterFinish(memory<T> v,
                                 const Transpose trans){
 
   /*Cast workspace to type T*/
-  pinnedMemory<T> haloBuf = exchange->h_workspace;
 
   //queue local gs operation
   gatherLocal->GatherScatter(v, k, op, trans);
 
   //finish MPI exchange
-  exchange->Finish(haloBuf, k, op, trans);
+  exchange->HostFinish(ogsType<T>::get(), k, op, trans);
+
+  pinnedMemory<T> recvBuf = exchange->getHostRecvBuffer();
 
   //write exchanged halo buffer back to vector
-  gatherHalo->Scatter(v, haloBuf, k, trans);
+  gatherHalo->Scatter(v, recvBuf, k, trans);
 }
 
 template
@@ -217,31 +220,31 @@ void ogs_t::GatherStart(deviceMemory<T> o_gv,
                         const Transpose trans){
   AssertGatherDefined();
 
-  deviceMemory<T> o_haloBuf = exchange->o_workspace;
-
   if (trans==Trans) { //if trans!=ogs::Trans theres no comms required
     exchange->AllocBuffer(k*sizeof(T));
 
+    deviceMemory<T> o_sendBuf = exchange->getDeviceSendBuffer();
+
     //collect halo buffer
-    gatherHalo->Gather(o_haloBuf, o_v, k, op, Trans);
+    gatherHalo->Gather(o_sendBuf, o_v, k, op, Trans);
 
     if (exchange->gpu_aware) {
       //prepare MPI exchange
-      exchange->Start(o_haloBuf, k, op, Trans);
+      exchange->DeviceStart(ogsType<T>::get(), k, op, Trans);
     } else {
       //get current stream
       device_t &device = platform.device;
       stream_t currentStream = device.getStream();
 
       //if not using gpu-aware mpi move the halo buffer to the host
-      pinnedMemory<T> haloBuf = exchange->h_workspace;
+      pinnedMemory<T> sendBuf = exchange->getHostSendBuffer();
 
-      //wait for o_haloBuf to be ready
+      //wait for o_sendBuf to be ready
       device.finish();
 
       //queue copy to host
       device.setStream(dataStream);
-      haloBuf.copyFrom(o_haloBuf, NhaloT*k,
+      sendBuf.copyFrom(o_sendBuf, NhaloT*k,
                        0, properties_t("async", true));
       device.setStream(currentStream);
     }
@@ -259,22 +262,20 @@ void ogs_t::GatherFinish(deviceMemory<T> o_gv,
                          const Transpose trans){
   AssertGatherDefined();
 
-  deviceMemory<T> o_haloBuf = exchange->o_workspace;
-
   //queue local g operation
   gatherLocal->Gather(o_gv, o_v, k, op, trans);
 
   if (trans==Trans) { //if trans!=ogs::Trans theres no comms required
     if (exchange->gpu_aware) {
       //finish MPI exchange
-      exchange->Finish(o_haloBuf, k, op, Trans);
+      exchange->DeviceFinish(ogsType<T>::get(),k, op, Trans);
+
+      deviceMemory<T> o_recvBuf = exchange->getDeviceRecvBuffer();
 
       //put the result at the end of o_gv
-      o_haloBuf.copyTo(o_gv + k*NlocalT,
+      o_recvBuf.copyTo(o_gv + k*NlocalT,
                        k*NhaloP, 0, properties_t("async", true));
     } else {
-      pinnedMemory<T> haloBuf = exchange->h_workspace;
-
       //get current stream
       device_t &device = platform.device;
       stream_t currentStream = device.getStream();
@@ -284,12 +285,14 @@ void ogs_t::GatherFinish(deviceMemory<T> o_gv,
       device.finish();
 
       /*MPI exchange of host buffer*/
-      exchange->Start (haloBuf, k, op, trans);
-      exchange->Finish(haloBuf, k, op, trans);
+      exchange->HostStart (ogsType<T>::get(), k, op, trans);
+      exchange->HostFinish(ogsType<T>::get(), k, op, trans);
+
+      pinnedMemory<T> recvBuf = exchange->getHostRecvBuffer();
 
       // copy recv back to device
       //put the result at the end of o_gv
-      haloBuf.copyTo(o_gv + k*NlocalT, k*NhaloP,
+      recvBuf.copyTo(o_gv + k*NlocalT, k*NhaloP,
                      0, properties_t("async", true));
       device.finish(); //wait for transfer to finish
       device.setStream(currentStream);
@@ -337,13 +340,13 @@ void ogs_t::GatherStart(memory<T> gv,
     exchange->AllocBuffer(k*sizeof(T));
 
     /*Cast workspace to type T*/
-    pinnedMemory<T> haloBuf = exchange->h_workspace;
+    pinnedMemory<T> sendBuf = exchange->getHostSendBuffer();
 
     //collect halo buffer
-    gatherHalo->Gather(haloBuf, v, k, op, Trans);
+    gatherHalo->Gather(sendBuf, v, k, op, Trans);
 
     //prepare MPI exchange
-    exchange->Start(haloBuf, k, op, Trans);
+    exchange->HostStart(ogsType<T>::get(), k, op, Trans);
   } else {
     //gather halo
     gatherHalo->Gather(gv + k*NlocalT, v, k, op, trans);
@@ -362,14 +365,13 @@ void ogs_t::GatherFinish(memory<T> gv,
   gatherLocal->Gather(gv, v, k, op, trans);
 
   if (trans==Trans) { //if trans!=ogs::Trans theres no comms required
-    /*Cast workspace to type T*/
-    pinnedMemory<T> haloBuf = exchange->h_workspace;
-
     //finish MPI exchange
-    exchange->Finish(haloBuf, k, op, Trans);
+    exchange->HostFinish(ogsType<T>::get(), k, op, Trans);
+
+    pinnedMemory<T> recvBuf = exchange->getHostRecvBuffer();
 
     //put the result at the end of o_gv
-    haloBuf.copyTo(gv+k*NlocalT, k*NhaloP);
+    recvBuf.copyTo(gv+k*NlocalT, k*NhaloP);
   }
 }
 
@@ -405,36 +407,36 @@ void ogs_t::ScatterStart(deviceMemory<T> o_v,
                          const Transpose trans){
   AssertGatherDefined();
 
-  deviceMemory<T> o_haloBuf = exchange->o_workspace;
-
   if (trans==NoTrans) { //if trans!=ogs::NoTrans theres no comms required
     exchange->AllocBuffer(k*sizeof(T));
+
+    deviceMemory<T> o_sendBuf = exchange->getDeviceSendBuffer();
 
     device_t &device = platform.device;
 
     if (exchange->gpu_aware) {
       //collect halo buffer
-      o_haloBuf.copyFrom(o_gv + k*NlocalT,
+      o_sendBuf.copyFrom(o_gv + k*NlocalT,
                          k*NhaloP, 0, properties_t("async", true));
 
-      //wait for o_haloBuf to be ready
+      //wait for o_sendBuf to be ready
       device.finish();
 
       //prepare MPI exchange
-      exchange->Start(o_haloBuf, k, Add, NoTrans);
+      exchange->DeviceStart(ogsType<T>::get(), k, Add, NoTrans);
     } else {
       //get current stream
       stream_t currentStream = device.getStream();
 
       //if not using gpu-aware mpi move the halo buffer to the host
-      pinnedMemory<T> haloBuf = exchange->h_workspace;
+      pinnedMemory<T> sendBuf = exchange->getHostSendBuffer();
 
       //wait for o_gv to be ready
       device.finish();
 
       //queue copy to host
       device.setStream(dataStream);
-      haloBuf.copyFrom(o_gv + k*NlocalT, NhaloP*k,
+      sendBuf.copyFrom(o_gv + k*NlocalT, NhaloP*k,
                        0, properties_t("async", true));
       device.setStream(currentStream);
     }
@@ -448,17 +450,14 @@ void ogs_t::ScatterFinish(deviceMemory<T> o_v,
                           const Transpose trans){
   AssertGatherDefined();
 
-  deviceMemory<T> o_haloBuf = exchange->o_workspace;
-
   //queue local s operation
   gatherLocal->Scatter(o_v, o_gv, k, trans);
 
   if (trans==NoTrans) { //if trans!=ogs::NoTrans theres no comms required
     if (exchange->gpu_aware) {
       //finish MPI exchange
-      exchange->Finish(o_haloBuf, k, Add, NoTrans);
+      exchange->DeviceFinish(ogsType<T>::get(),k, Add, NoTrans);
     } else {
-      pinnedMemory<T> haloBuf = exchange->h_workspace;
 
       //get current stream
       device_t &device = platform.device;
@@ -469,18 +468,23 @@ void ogs_t::ScatterFinish(deviceMemory<T> o_v,
       device.finish();
 
       /*MPI exchange of host buffer*/
-      exchange->Start (haloBuf, k, Add, NoTrans);
-      exchange->Finish(haloBuf, k, Add, NoTrans);
+      exchange->HostStart (ogsType<T>::get(), k, Add, NoTrans);
+      exchange->HostFinish(ogsType<T>::get(), k, Add, NoTrans);
+
+      pinnedMemory<T> recvBuf = exchange->getHostRecvBuffer();
+      deviceMemory<T> o_recvBuf = exchange->getDeviceRecvBuffer();
 
       // copy recv back to device
-      haloBuf.copyTo(o_haloBuf, NhaloT*k,
+      recvBuf.copyTo(o_recvBuf, NhaloT*k,
                      0, properties_t("async", true));
       device.finish(); //wait for transfer to finish
       device.setStream(currentStream);
     }
 
+    deviceMemory<T> o_recvBuf = exchange->getDeviceRecvBuffer();
+
     //scatter halo buffer
-    gatherHalo->Scatter(o_v, o_haloBuf, k, NoTrans);
+    gatherHalo->Scatter(o_v, o_recvBuf, k, NoTrans);
   } else {
     //scatter halo
     gatherHalo->Scatter(o_v, o_gv + k*NlocalT, k, trans);
@@ -525,13 +529,13 @@ void ogs_t::ScatterStart(memory<T> v,
     exchange->AllocBuffer(k*sizeof(T));
 
     /*Cast workspace to type T*/
-    pinnedMemory<T> haloBuf = exchange->h_workspace;
+    pinnedMemory<T> sendBuf = exchange->getHostSendBuffer();
 
     //collect halo buffer
-    haloBuf.copyFrom(gv + k*NlocalT, k*NhaloP);
+    sendBuf.copyFrom(gv + k*NlocalT, k*NhaloP);
 
     //prepare MPI exchange
-    exchange->Start(haloBuf, k, Add, NoTrans);
+    exchange->HostStart(ogsType<T>::get(), k, Add, NoTrans);
   }
 }
 
@@ -546,14 +550,13 @@ void ogs_t::ScatterFinish(memory<T> v,
   gatherLocal->Scatter(v, gv, k, trans);
 
   if (trans==NoTrans) { //if trans!=ogs::NoTrans theres no comms required
-    /*Cast workspace to type T*/
-    pinnedMemory<T> haloBuf = exchange->h_workspace;
-
     //finish MPI exchange (and put the result at the end of o_gv)
-    exchange->Finish(haloBuf, k, Add, NoTrans);
+    exchange->HostFinish(ogsType<T>::get(), k, Add, NoTrans);
+
+    pinnedMemory<T> recvBuf = exchange->getHostRecvBuffer();
 
     //scatter halo buffer
-    gatherHalo->Scatter(v, haloBuf, k, NoTrans);
+    gatherHalo->Scatter(v, recvBuf, k, NoTrans);
   } else {
     //scatter halo
     gatherHalo->Scatter(v, gv + k*NlocalT, k, trans);

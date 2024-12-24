@@ -195,7 +195,7 @@ T linAlg_t::min(const dlong N, deviceMemory<T> o_a, comm_t comm) {
     globalmin = std::numeric_limits<T>::max();
   }
 
-  comm.Allreduce(globalmin, Comm::Min);
+  comm.Allreduce(globalmin, comm_t::Min);
 
   return globalmin;
 }
@@ -230,7 +230,7 @@ T linAlg_t::max(const dlong N, deviceMemory<T> o_a, comm_t comm) {
     globalmax = -std::numeric_limits<T>::max();
   }
 
-  comm.Allreduce(globalmax, Comm::Max);
+  comm.Allreduce(globalmax, comm_t::Max);
 
   return globalmax;
 }
@@ -266,7 +266,7 @@ T linAlg_t::sum(const dlong N, deviceMemory<T> o_a, comm_t comm) {
     globalsum = 0.0;
   }
 
-  comm.Allreduce(globalsum, Comm::Sum);
+  comm.Allreduce(globalsum, comm_t::Sum);
 
   return globalsum;
 }
@@ -301,7 +301,7 @@ T linAlg_t::norm2(const dlong N, deviceMemory<T> o_a, comm_t comm) {
     globalnorm = 0.0;
   }
 
-  comm.Allreduce(globalnorm, Comm::Sum);
+  comm.Allreduce(globalnorm, comm_t::Sum);
 
   return sqrt(globalnorm);
 }
@@ -337,7 +337,7 @@ T linAlg_t::innerProd(const dlong N, deviceMemory<T> o_x, deviceMemory<T> o_y,
     globaldot = 0.0;
   }
 
-  comm.Allreduce(globaldot, Comm::Sum);
+  comm.Allreduce(globaldot, comm_t::Sum);
 
   return globaldot;
 }
@@ -376,7 +376,7 @@ T linAlg_t::weightedInnerProd(const dlong N, deviceMemory<T> o_w,
     globaldot = 0.0;
   }
 
-  comm.Allreduce(globaldot, Comm::Sum);
+  comm.Allreduce(globaldot, comm_t::Sum);
 
   return globaldot;
 }
@@ -416,7 +416,7 @@ T linAlg_t::weightedNorm2(const dlong N, deviceMemory<T> o_w,
     globalnorm = 0.0;
   }
 
-  comm.Allreduce(globalnorm, Comm::Sum);
+  comm.Allreduce(globalnorm, comm_t::Sum);
 
   return sqrt(globalnorm);
 }

@@ -46,8 +46,6 @@ void platform_t::DeviceProperties(){
   Props["kernel/include_occa"] = true;
   Props["launcher/kernel/include_occa"] = true;
 
-  std::cout << occa::host().properties() << std::endl;
-
   if(sizeof(dfloat)==4){
     Props["defines/" "dfloat"]="float";
     Props["defines/" "dfloat2"]="float2";

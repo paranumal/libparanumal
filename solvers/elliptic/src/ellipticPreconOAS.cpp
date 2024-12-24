@@ -33,7 +33,7 @@ SOFTWARE.
 void OASPrecon::Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_Mr) {
 
   pfloat one = 1., zero = 0;
-  
+
   if (mesh.N>1) {
     deviceMemory<pfloat> o_rPatch = elliptic.platform.reserve<pfloat>(ellipticPatch.Ndofs);
 
@@ -110,7 +110,7 @@ OASPrecon::OASPrecon(elliptic_t& _elliptic):
 
   //build the one ring mesh
   if (mesh.N>1) {
-    if (Comm::World().rank()==0){
+    if (comm_t::world().rank()==0){
       printf("-----------------------------Multigrid Degree %2d Patch--------------------------------------\n", mesh.N);
     }
     meshPatch = mesh.SetupRingPatch();
@@ -174,7 +174,7 @@ OASPrecon::OASPrecon(elliptic_t& _elliptic):
   elliptic_t ellipticC = elliptic.SetupNewDegree(meshC);
 
   //build full A matrix and pass to parAlmond
-  if (Comm::World().rank()==0){
+  if (comm_t::world().rank()==0){
     printf("-----------------------------Multigrid AMG Setup--------------------------------------------\n");
   }
   parAlmond::parCOO A(elliptic.platform, meshC.comm);

@@ -79,7 +79,7 @@ endif
 endif
 
 #libraries
-ELLIPTIC_LIBP_LIBS=parAlmond linearSolver mesh parAdogs ogs linAlg core
+ELLIPTIC_LIBP_LIBS=parAlmond linearSolver mesh parAdogs ogs linAlg prim core
 
 #includes
 INCLUDES=${LIBP_INCLUDES} \

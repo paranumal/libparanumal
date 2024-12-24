@@ -248,7 +248,7 @@ void nbfpcg<T>::Update0NBFPCG(deviceMemory<T>& o_u,
     dots[2] = 0.0;
   }
 
-  comm.Iallreduce(dots, Comm::Sum, 3, request);
+  comm.Iallreduce(dots, comm_t::Sum, 3, request);
 }
 
 template<typename T>
@@ -282,7 +282,7 @@ void nbfpcg<T>::Update1NBFPCG(const T alpha,
     dots[3] = 0.0;
   }
 
-  comm.Iallreduce(dots, Comm::Sum, 4, request);
+  comm.Iallreduce(dots, comm_t::Sum, 4, request);
 }
 
 template class nbfpcg<float>;

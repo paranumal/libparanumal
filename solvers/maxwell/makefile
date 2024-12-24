@@ -78,7 +78,7 @@ endif
 endif
 
 #libraries
-MAXWELL_LIBP_LIBS=timeStepper mesh parAdogs ogs linAlg core
+MAXWELL_LIBP_LIBS=timeStepper mesh parAdogs ogs linAlg prim core
 
 #includes
 INCLUDES=${LIBP_INCLUDES} \

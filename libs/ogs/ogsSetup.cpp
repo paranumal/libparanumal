@@ -29,17 +29,35 @@ SOFTWARE.
 #include "ogs/ogsOperator.hpp"
 #include "ogs/ogsExchange.hpp"
 #include "timer.hpp"
-
-#ifdef GLIBCXX_PARALLEL
-#include <parallel/algorithm>
-using __gnu_parallel::sort;
-#else
-using std::sort;
-#endif
+#include "primitives.hpp"
 
 namespace libp {
 
 namespace ogs {
+
+
+constexpr int FLAG_LOCAL=1;
+constexpr int FLAG_SHARED=2;
+
+static void EnumerateGatherGroups(const dlong N,
+                                  const memory<hlong> baseIds,
+                                  dlong& NgroupsP,
+                                  dlong& NgroupsT,
+                                  memory<dlong> gids);
+static void SplitGroups(const dlong Nids,
+                        const memory<dlong> colIds,
+                        const memory<hlong> baseIds,
+                        const memory<int> sharedFlag,
+                        const dlong Nlocal,
+                        const dlong Nhalo,
+                        memory<dlong> localColIds,
+                        memory<dlong> haloColIds,
+                        memory<hlong> localBaseIds,
+                        memory<hlong> haloBaseIds);
+static void SortByRow(const dlong N,
+                      memory<dlong>& rowIds,
+                      memory<dlong>& colIds,
+                      memory<hlong>& baseIds);
 
 void ogs_t::Setup(const dlong _N,
                   memory<hlong> ids,
@@ -90,299 +108,84 @@ void ogsBase_t::Setup(const dlong _N,
   kind = _kind;
   unique = _unique;
 
-  int rank, size;
-  rank = comm.rank();
-  size = comm.size();
+  // Seed RNG
+  int rank = comm.rank();
+  prim::seedRNG(rank);
 
   //sanity check options
   LIBP_ABORT("Invalid ogs setup requested",
              (kind==Unsigned && unique==true)
               || (kind==Halo && unique==true));
 
+
+  memory<int> flags(N);
+
+  //flag non-zero ids
+  #pragma omp parallel for
+  for (dlong n=0;n<N;++n) {
+    flags[n] = (ids[n]!=0) ? 1 : 0;
+  }
+
   //count how many ids are non-zero
-  dlong Nids=0;
-  for (dlong n=0;n<N;n++)
-    if (ids[n]!=0) Nids++;
+  dlong Nids = prim::count(N, flags, 1);
 
-  // make list of nodes
-  memory<parallelNode_t> nodes(Nids);
+  /*Make an array of locations for non-zero base ids*/
+  memory<dlong> colIds(Nids);
+  prim::select(N, flags, 1, colIds);
+  flags.free();
 
-  //fill the data (squeezing out zero ids)
-  Nids=0;
-  for (dlong n=0;n<N;n++) {
-    if (ids[n]!=0) {
-      nodes[Nids].localId = Nids; //record a compressed id first (useful for ordering)
-      nodes[Nids].baseId = (kind==Unsigned) ?
-                            abs(ids[n]) : ids[n]; //record global id
-      nodes[Nids].rank = rank;
-      nodes[Nids].destRank = abs(ids[n]) % size;
-      Nids++;
-    }
+  /*Compress out zero ids*/
+  memory<hlong> baseIds(Nids);
+  prim::transformGather(Nids, colIds, ids, baseIds);
+
+  //flag which baseId groups are shared via MPI
+  memory<int> sharedFlag(Nids);
+  FindSharedGroups(Nids,
+                  baseIds,
+                  sharedFlag,
+                  verbose);
+
+  //if we altered the signs of ids, write them back
+  if (unique) {
+    prim::transformScatter(Nids, colIds, baseIds, ids);
   }
 
-  //flag which nodes are shared via MPI
-  FindSharedNodes(Nids, nodes, verbose);
+  /*
+  Use the shared flag to split the lists of colIds and baseIds
+  into local and halo lists
+  */
+  dlong Nlocal = prim::count(Nids, sharedFlag, FLAG_LOCAL);
+  dlong Nhalo = Nids - Nlocal;
+  memory<dlong> localColIds(Nlocal);
+  memory<dlong> haloColIds(Nhalo);
+  memory<hlong> localBaseIds(Nlocal);
+  memory<hlong> haloBaseIds(Nhalo);
 
-  //Index the local and halo baseIds on this rank and
-  // construct sharedNodes which contains all the info
-  // we need to setup the MPI exchange.
-  dlong Nshared=0;
-  memory<parallelNode_t> sharedNodes;
-  ConstructSharedNodes(Nids, nodes, Nshared, sharedNodes);
+  SplitGroups(Nids,
+              colIds,
+              baseIds,
+              sharedFlag,
+              Nlocal,
+              Nhalo,
+              localColIds,
+              haloColIds,
+              localBaseIds,
+              haloBaseIds);
 
-  Nids=0;
-  for (dlong n=0;n<N;n++) {
-    if (ids[n]!=0) {
-      nodes[Nids].localId = n; //record the real id now
+  /*Number the gather groups to make the row indexing*/
+  memory<dlong> localRowIds(Nlocal);
+  memory<dlong> haloRowIds(Nhalo);
 
-      //if we altered the signs of ids, write them back
-      if (unique)
-        ids[n] = nodes[Nids].baseId;
+  EnumerateGatherGroups(Nlocal, localBaseIds, NlocalP, NlocalT, localRowIds);
+  EnumerateGatherGroups(Nhalo, haloBaseIds, NhaloP, NhaloT, haloRowIds);
 
-      Nids++;
-    }
-  }
+  /*Sort the sparse COO data by the row index*/
+  SortByRow(Nlocal, localRowIds, localColIds, localBaseIds);
+  SortByRow(Nhalo, haloRowIds, haloColIds, haloBaseIds);
 
-  //setup local gather operators
-  if (kind==Signed)
-    LocalSignedSetup(Nids, nodes);
-  else if (kind==Unsigned)
-    LocalUnsignedSetup(Nids, nodes);
-  else
-    LocalHaloSetup(Nids, nodes);
-
-  //with that, we're done with the local nodes list
-  nodes.free();
-
-  // At this point, we've setup gs operators to gather/scatter the purely local nodes,
-  // and gather/scatter the shared halo nodes to/from a coalesced ordering. We now
-  // need gs operators to scatter/gather the coalesced halo nodes to/from the expected
-  // orderings for MPI communications.
-
-  if (method == AllToAll) {
-    exchange = std::shared_ptr<ogsExchange_t>(
-                  new ogsAllToAll_t(Nshared, sharedNodes,
-                                    *gatherHalo, dataStream,
-                                    comm, platform));
-  } else if (method == Pairwise) {
-    exchange = std::shared_ptr<ogsExchange_t>(
-                  new ogsPairwise_t(Nshared, sharedNodes,
-                                    *gatherHalo, dataStream,
-                                    comm, platform));
-  } else if (method == CrystalRouter) {
-    exchange = std::shared_ptr<ogsExchange_t>(
-                  new ogsCrystalRouter_t(Nshared, sharedNodes,
-                                         *gatherHalo, dataStream,
-                                         comm, platform));
-  } else { //Auto
-    exchange = std::shared_ptr<ogsExchange_t>(
-                  AutoSetup(Nshared, sharedNodes,
-                            *gatherHalo, comm,
-                            platform, verbose));
-  }
-
-  timePoint_t end = GlobalPlatformTime(platform, comm);
-  double elapsedTime = ElapsedTime(start, end);
-
-  if (!rank && verbose) {
-    std::cout << "ogs Setup Time: " << elapsedTime << " seconds." << std::endl;
-  }
-}
-
-void ogsBase_t::FindSharedNodes(const dlong Nids,
-                                memory<parallelNode_t> &nodes,
-                                const int verbose){
-
-  int rank, size;
-  rank = comm.rank();
-  size = comm.size();
-
-  memory<int> sendCounts(size,0);
-  memory<int> recvCounts(size);
-  memory<int> sendOffsets(size+1);
-  memory<int> recvOffsets(size+1);
-
-  //count number of ids we're sending
-  for (dlong n=0;n<Nids;n++) {
-    sendCounts[nodes[n].destRank]++;
-  }
-
-  comm.Alltoall(sendCounts, recvCounts);
-
-  sendOffsets[0] = 0;
-  recvOffsets[0] = 0;
-  for (int r=0;r<size;r++) {
-    sendOffsets[r+1] = sendOffsets[r]+sendCounts[r];
-    recvOffsets[r+1] = recvOffsets[r]+recvCounts[r];
-
-    //reset counter
-    sendCounts[r] = 0;
-  }
-
-  //write a send ordering into newIds
-  for (dlong n=0;n<Nids;n++) {
-    const int r = nodes[n].destRank;
-    nodes[n].newId = sendOffsets[r]+sendCounts[r]++;
-  }
-
-  // permute the list to send ordering
-  permute(Nids, nodes, [](const parallelNode_t& a) { return a.newId; } );
-
-  dlong recvN = recvOffsets[size]; //total ids to recv
-
-  memory<parallelNode_t> recvNodes(recvN);
-
-  //Send all the nodes to their destination rank.
-  comm.Alltoallv(    nodes, sendCounts, sendOffsets,
-                 recvNodes, recvCounts, recvOffsets);
-
-  //remember this ordering
-  for (dlong n=0;n<recvN;n++) {
-    recvNodes[n].newId = n;
-  }
-
-  // sort based on base ids
-  sort(recvNodes.ptr(), recvNodes.ptr()+recvN,
-       [](const parallelNode_t& a, const parallelNode_t& b) {
-         return abs(a.baseId) < abs(b.baseId);
-       });
-
-  // We now have a collection of nodes associated with some subset of all global Ids
-  // Our list is sorted by baseId to group nodes with the same globalId together
-  // We now want to flag which nodes are shared via MPI
-
-  int is_unique=1;
-
-  dlong Nshared=0;
-
-  dlong start=0;
-  for (dlong n=0;n<recvN;n++) {
-    if (n==recvN-1 || abs(recvNodes[n].baseId)!=abs(recvNodes[n+1].baseId)) {
-      dlong end = n+1;
-
-      int positiveCount=0;
-      if (unique) {
-        //Make a single node from each baseId group the sole positive node
-        const hlong baseId = abs(recvNodes[start].baseId);
-
-        //pick a random node in this group
-        const int m = (rand() % (end-start));
-
-        for (int i=start;i<end;i++)
-          recvNodes[i].baseId = -baseId;
-
-        recvNodes[start+m].baseId = baseId;
-        positiveCount=1;
-      } else {
-        //count how many postive baseIds there are in this group
-        for (int i=start;i<end;i++)
-          if (recvNodes[i].baseId>0) positiveCount++;
-
-        //if we didnt find a sole positive baseId, the gather is not well-defined
-        if (positiveCount!=1) is_unique=0;
-      }
-
-      // When making a halo excahnge, check that we have a leading positive id
-      LIBP_ABORT("Found " << positiveCount << " positive Ids for baseId: "
-                 << abs(recvNodes[start].baseId)<< ".",
-                 kind==Halo && positiveCount!=1);
-
-      //determine if this node is shared via MPI,
-      int shared=1;
-      const int r = recvNodes[start].rank;
-      for (int i=start+1;i<end;i++) {
-        if (recvNodes[i].rank != r) {
-          shared=2;
-          Nshared++;
-          break;
-        }
-      }
-
-      //set shared flag.
-      for (int i=start;i<end;i++) {
-        recvNodes[i].sign = shared;
-      }
-
-      //set new baseId group start point
-      start=n+1;
-    }
-  }
-
-  //shared the unique node check so we know if the gather operation is well-defined
-  comm.Allreduce(is_unique, Comm::Min);
-  gather_defined = (is_unique==1);
-
-  hlong Nshared_global = Nshared;
-  comm.Reduce(Nshared_global, 0);
-  if (!rank && verbose) {
-    std::cout << "ogs Setup: " << Nshared_global << " unique labels shared." << std::endl;
-  }
-
-  //at this point each collection of baseIds either has all nodes have
-  // sign = 1, meaning all the nodes with this baseId are on the
-  // same rank, or have sign=2, meaning that baseId must be communicated
-
-  // permute recv nodes back to recv'd ordering
-  permute(recvN, recvNodes, [](const parallelNode_t& a) { return a.newId; } );
-
-  //Return all the nodes to their origin rank.
-  comm.Alltoallv(recvNodes, recvCounts, recvOffsets,
-                     nodes, sendCounts, sendOffsets);
-}
-
-void ogsBase_t::ConstructSharedNodes(const dlong Nids,
-                                     memory<parallelNode_t> &nodes,
-                                     dlong &Nshared,
-                                     memory<parallelNode_t> &sharedNodes) {
-
-  int size = comm.size();
-
-  // sort based on abs(baseId)
-  sort(nodes.ptr(), nodes.ptr()+Nids,
-       [](const parallelNode_t& a, const parallelNode_t& b) {
-         if(abs(a.baseId) < abs(b.baseId)) return true; //group by abs(baseId)
-         if(abs(a.baseId) > abs(b.baseId)) return false;
-
-         return a.baseId > b.baseId; //positive ids on a rank first
-       });
-
-  //count how many unique global Ids we have on this rank
-  // and flag baseId groups that have a positive baseId somewhere on this rank
-  dlong NbaseIds=0;
-  NlocalT=0; NlocalP=0;
-  NhaloT=0; NhaloP=0;
-  dlong start=0;
-  for (dlong n=0;n<Nids;n++) {
-    if (n==Nids-1 || abs(nodes[n].baseId)!=abs(nodes[n+1].baseId)) {
-      dlong end = n+1;
-
-      //if there's no leading postive id, flag this baseId group as negative
-      int sign = abs(nodes[start].sign);
-      if (nodes[start].baseId<0) {
-        sign = -sign;
-        for (int i=start;i<end;i++) {
-          nodes[i].sign = sign;
-        }
-      }
-
-      //count the positive/negative local and halo gather nodes
-      if (abs(sign)==1) {
-        NlocalT++;
-        if (sign==1) NlocalP++;
-      } else {
-        NhaloT++;
-        if (sign==2) NhaloP++;
-      }
-
-      //record the new ordering
-      for (int i=start;i<end;i++) {
-        nodes[i].newId=NbaseIds;
-      }
-
-      NbaseIds++;
-      start = end;
-    }
-  }
+  /*Make the local and halo gather operators*/
+  ConstructGatherOperators(Nlocal, localRowIds, localColIds, localBaseIds,
+                           Nhalo, haloRowIds, haloColIds, haloBaseIds);
 
   //total number of positive owned gathered nodes
   Ngather = NlocalP+NhaloP;
@@ -391,459 +194,622 @@ void ogsBase_t::ConstructSharedNodes(const dlong Nids,
   NgatherGlobal = Ngather;
   comm.Allreduce(NgatherGlobal);
 
-  //extract the leading node from each shared baseId
-  memory<parallelNode_t> sendSharedNodes(NhaloT);
+  // Compress the list of baseIds in the halo into the list they appear after gathering
+  memory<hlong> gatheredHaloBaseIds(NhaloT);
+  #pragma omp parallel for
+  for (dlong n=0;n<NhaloT;++n) {
+    const hlong baseId = std::abs(haloBaseIds[gatherHalo->rowStartsT[n]]);
+    gatheredHaloBaseIds[n] = (n<NhaloP) ? baseId : -baseId;
+  }
+  haloBaseIds = gatheredHaloBaseIds;
 
-  NhaloT=0;
-  for (dlong n=0;n<Nids;n++) {
-    if (n==0 || abs(nodes[n].baseId)!=abs(nodes[n-1].baseId)) {
-      if (abs(nodes[n].sign)==2) {
-        sendSharedNodes[NhaloT++] = nodes[n];
-      }
-    }
+  //Construct sharedNodes which contains all the info
+  // we need to setup the MPI exchange.
+  dlong Nshared = 0;
+  memory<int>   sharedRemoteRanks;
+  memory<dlong> sharedLocalRows;
+  memory<dlong> sharedRemoteRows;
+  memory<hlong> sharedLocalBaseIds;
+  memory<hlong> sharedRemoteBaseIds;
+  ConstructSharedNodes(haloBaseIds,
+                       Nshared,
+                       sharedRemoteRanks,
+                       sharedLocalRows,
+                       sharedRemoteRows,
+                       sharedLocalBaseIds,
+                       sharedRemoteBaseIds);
+
+  // At this point, we've setup gs operators to gather/scatter the purely local nodes,
+  // and gather/scatter the shared halo nodes to/from a coalesced ordering. We now
+  // need gs operators to scatter/gather the coalesced halo nodes to/from the expected
+  // orderings for MPI communications.
+
+  Kind knd = (kind == Unsigned) ? Unsigned : Signed;
+
+  if (method == AllToAll) {
+    exchange = std::shared_ptr<ogsExchange_t>(
+                  new ogsAllToAll_t(knd,
+                                    Nshared,
+                                    sharedRemoteRanks,
+                                    sharedLocalRows,
+                                    sharedRemoteRows,
+                                    sharedLocalBaseIds,
+                                    sharedRemoteBaseIds,
+                                    *gatherHalo,
+                                    dataStream,
+                                    comm,
+                                    platform));
+  } else if (method == Pairwise) {
+    exchange = std::shared_ptr<ogsExchange_t>(
+                  new ogsPairwise_t(knd,
+                                    Nshared,
+                                    sharedRemoteRanks,
+                                    sharedLocalRows,
+                                    sharedRemoteRows,
+                                    sharedLocalBaseIds,
+                                    sharedRemoteBaseIds,
+                                    *gatherHalo,
+                                    dataStream,
+                                    comm,
+                                    platform));
+  } else if (method == CrystalRouter) {
+    exchange = std::shared_ptr<ogsExchange_t>(
+                  new ogsCrystalRouter_t(knd,
+                                         Nshared,
+                                         sharedRemoteRanks,
+                                         sharedLocalRows,
+                                         sharedRemoteRows,
+                                         sharedLocalBaseIds,
+                                         sharedRemoteBaseIds,
+                                         haloBaseIds,
+                                         *gatherHalo,
+                                         dataStream,
+                                         comm,
+                                         platform));
+  } else { //Auto
+    exchange = std::shared_ptr<ogsExchange_t>(
+                  AutoSetup(Nshared,
+                            sharedRemoteRanks,
+                            sharedLocalRows,
+                            sharedRemoteRows,
+                            sharedLocalBaseIds,
+                            sharedRemoteBaseIds,
+                            haloBaseIds,
+                            *gatherHalo,
+                            comm,
+                            platform,
+                            verbose));
   }
 
-  // permute the list back to local id ordering
-  permute(Nids, nodes, [](const parallelNode_t& a) { return a.localId; } );
+  timePoint_t end = GlobalPlatformTime(platform);
+  double elapsedTime = ElapsedTime(start, end);
 
-  // Use the newId index to reorder the baseId groups based on
-  // the order we encouter them in their original ordering.
-  memory<dlong> indexMap(NbaseIds, -1);
-
-  dlong localCntN = 0, localCntT = NlocalP;  //start point for local gather nodes
-  dlong haloCntN  = 0, haloCntT  = NhaloP;   //start point for halo gather nodes
-  for (dlong n=0;n<Nids;n++) {
-    const dlong newId = nodes[n].newId; //get the new baseId group id
-
-    //record a new index if we've not encoutered this baseId group before
-    if (indexMap[newId]==-1) {
-      if        (nodes[n].sign== 1) {
-        indexMap[newId] = localCntN++;
-      } else if (nodes[n].sign==-1) {
-        indexMap[newId] = localCntT++;
-      } else if (nodes[n].sign== 2) {
-        indexMap[newId] = haloCntN++;
-      } else { //nodes[n].sign==-2
-        indexMap[newId] = haloCntT++;
-      }
-    }
-
-    const dlong gid = indexMap[newId];
-    nodes[n].newId = gid; //reorder
+  if (!rank && verbose) {
+    std::cout << "ogs Setup Time: " << elapsedTime << " seconds." << std::endl;
   }
+}
 
-  //re-order the shared node list
-  for (dlong n=0;n<NhaloT;n++) {
-    const dlong newId = sendSharedNodes[n].newId; //get the new baseId group id
-    const dlong gid = indexMap[newId];
-    sendSharedNodes[n].localId = gid; //reorder the localId to the compressed order
-  }
+void ogsBase_t::FindSharedGroups(const dlong Nids,
+                                 memory<hlong> baseIds,
+                                 memory<int> sharedFlag,
+                                 const int verbose){
 
-  indexMap.free();
+  int rank = comm.rank();
+  int size = comm.size();
 
-  memory<int> sendCounts(size,0);
+  /*Create list of destination ranks*/
+  memory<int> destRanks(Nids);
+  memory<dlong> destRankSortIds(Nids);
+
+  #pragma omp parallel for
+  for (dlong n=0;n<Nids;n++) { destRanks[n] = std::abs(baseIds[n]) % size; }
+
+  /*Sort by destination to get the send ordering*/
+  prim::sort(Nids, destRanks, destRankSortIds);
+
+  memory<int> sendCounts(size);
   memory<int> recvCounts(size);
   memory<int> sendOffsets(size+1);
   memory<int> recvOffsets(size+1);
 
-  // sort based on destination rank
-  sort(sendSharedNodes.ptr(), sendSharedNodes.ptr()+NhaloT,
-       [](const parallelNode_t& a, const parallelNode_t& b) {
-         return a.destRank < b.destRank;
-       });
-
-  //count number of ids we're sending
-  for (dlong n=0;n<NhaloT;n++) {
-    sendCounts[sendSharedNodes[n].destRank]++;
-  }
+  /*Get length and offsets of groups of destinations*/
+  prim::runLengthEncodeConsecutive(Nids, destRanks, size, sendOffsets);
+  prim::adjacentDifference(size, sendOffsets+1, sendCounts);
 
   comm.Alltoall(sendCounts, recvCounts);
-
-  sendOffsets[0] = 0;
   recvOffsets[0] = 0;
-  for (int r=0;r<size;r++) {
-    sendOffsets[r+1] = sendOffsets[r]+sendCounts[r];
-    recvOffsets[r+1] = recvOffsets[r]+recvCounts[r];
-  }
+  prim::inclusiveScan(size, recvCounts, recvOffsets+1);
   dlong recvN = recvOffsets[size]; //total ids to recv
 
-  memory<parallelNode_t> recvSharedNodes(recvN);
+  destRanks.free();
 
-  //Send all the nodes to their destination rank.
-  comm.Alltoallv(sendSharedNodes, sendCounts, sendOffsets,
-                 recvSharedNodes, recvCounts, recvOffsets);
+  //Arrange the list of baseIds to send order
+  memory<hlong> sendBaseIds(Nids);
+  prim::transformGather(Nids, destRankSortIds, baseIds, sendBaseIds);
+
+  //Send the baseIds to their destination rank.
+  memory<hlong> recvBaseIds(recvN);
+  comm.Alltoallv(sendBaseIds, sendCounts, sendOffsets,
+                 recvBaseIds, recvCounts, recvOffsets);
+
+  // Send the source rank of each node to destination
+  memory<hlong> sendRanks(Nids, rank); //initialize entries to 'rank'
+  memory<hlong> recvRanks(recvN);
+  comm.Alltoallv(sendRanks, sendCounts, sendOffsets,
+                 recvRanks, recvCounts, recvOffsets);
+
+  /*Group recieved nodes together by the abs(baseId)*/
+  memory<hlong> recvAbsBaseIds(recvN);
+  memory<dlong> baseSortIds(recvN);
+
+  /*Sort by abs(baseId) and record ordering*/
+  prim::abs(recvN, recvBaseIds, recvAbsBaseIds);
+  prim::sort(recvN, recvAbsBaseIds, baseSortIds);
+
+  /*Get offsets to groups of baseIds*/
+  dlong NbaseIdGroups = 0;
+  memory<dlong> baseIdGroupOffsets;
+  prim::runLengthEncode(recvN, recvAbsBaseIds, NbaseIdGroups, baseIdGroupOffsets);
+
+  recvAbsBaseIds.free();
+
+  // We now have a collection of nodes associated with some subset of all global Ids
+  // Our list is sorted by baseId to group nodes with the same globalId together
+
+  int is_unique=1;
+
+  if (unique) {
+    //Make a single node from each baseId group the sole positive node
+
+    memory<int> rands(NbaseIdGroups);
+    prim::random(NbaseIdGroups, rands);
+
+    #pragma omp parallel for
+    for (dlong n=0;n<NbaseIdGroups;n++) {
+      const dlong start = baseIdGroupOffsets[n];
+      const dlong end = baseIdGroupOffsets[n+1];
+
+      const hlong baseId = std::abs(recvBaseIds[baseSortIds[start]]);
+
+      //pick a random node in this group
+      const int m = (rands[n] % (end-start));
+
+      for (dlong i=start;i<end;i++) {
+        recvBaseIds[baseSortIds[i]] = -baseId;
+      }
+
+      recvBaseIds[baseSortIds[start+m]] = baseId;
+    }
+
+  } else {
+
+    memory<dlong> uniqueFlag(NbaseIdGroups, 0);
+
+    #pragma omp parallel for
+    for (dlong n=0;n<NbaseIdGroups;n++) {
+      const dlong start = baseIdGroupOffsets[n];
+      const dlong end = baseIdGroupOffsets[n+1];
+
+      int positiveCount=0;
+      //count how many postive baseIds there are in this group
+      for (dlong i=start;i<end;i++) {
+        positiveCount += (recvBaseIds[baseSortIds[i]] > 0) ? 1 : 0;
+      }
+
+      //if we didnt find a sole positive baseId, flag this group. The gather is not well-defined
+      uniqueFlag[n] = (positiveCount==1) ? 1 : 0;
+    }
+
+    is_unique = (prim::count(NbaseIdGroups, uniqueFlag, 0)==0) ? 1 : 0;
+
+    if (kind==Halo && !is_unique) {
+      // When making a halo exchange, we have to have a single positive id in each baseId group
+      LIBP_FORCE_ABORT("Halo exchange not well-defined. Some baseId groups have no unique positive id.");
+    }
+  }
+
+  //shared the unique node check so we know if the gather operation is well-defined
+  comm.Allreduce(is_unique, comm_t::Min);
+  gather_defined = (is_unique==1);
+
+
+  memory<int> recvSharedFlag(recvN);
+  memory<int> sendSharedFlag(Nids);
+  memory<int> flags(NbaseIdGroups); //flag for whether baseId group is shared over MPI
+
+  // We now want to flag which nodes are shared via MPI
+  #pragma omp parallel for
+  for (dlong n=0;n<NbaseIdGroups;n++) {
+    const dlong start = baseIdGroupOffsets[n];
+    const dlong end = baseIdGroupOffsets[n+1];
+
+    //determine if this node is shared via MPI,
+    int flag=FLAG_LOCAL;
+    const int r = recvRanks[baseSortIds[start]];
+    for (dlong i=start+1;i<end;i++) {
+      if (recvRanks[baseSortIds[i]] != r) {
+        flag=FLAG_SHARED;
+        break;
+      }
+    }
+
+    //set shared flag.
+    for (dlong i=start;i<end;i++) {
+      recvSharedFlag[baseSortIds[i]] = flag;
+    }
+
+    flags[n] = flag;
+  }
+
+  dlong Nshared = prim::count(NbaseIdGroups, flags, FLAG_SHARED);
+  hlong Nshared_global = Nshared;
+  comm.Reduce(Nshared_global, 0);
+
+  //at this point each collection of baseIds either has all nodes have
+  // sign = 1, meaning all the nodes with this baseId are on the
+  // same rank, or have sign=2, meaning that baseId must be communicated
+
+  //Share the group signs back to their source
+  comm.Alltoallv(recvSharedFlag, recvCounts, recvOffsets,
+                 sendSharedFlag, sendCounts, sendOffsets);
+
+  prim::transformScatter(Nids, destRankSortIds, sendSharedFlag, sharedFlag);
+
+  if (unique) {
+    //Share the group signs back to their source
+    comm.Alltoallv(recvBaseIds, recvCounts, recvOffsets,
+                   sendBaseIds, sendCounts, sendOffsets);
+
+    prim::transformScatter(Nids, destRankSortIds, sendBaseIds, baseIds);
+  }
+
+  if (!rank && verbose) {
+    std::cout << "ogs Setup: " << Nshared_global << " unique labels shared." << std::endl;
+  }
+}
+
+static void SplitGroups(const dlong Nids,
+                        const memory<dlong> colIds,
+                        const memory<hlong> baseIds,
+                        const memory<int> sharedFlag,
+                        const dlong Nlocal,
+                        const dlong Nhalo,
+                        memory<dlong> localColIds,
+                        memory<dlong> haloColIds,
+                        memory<hlong> localBaseIds,
+                        memory<hlong> haloBaseIds) {
+  memory<dlong> localIds(Nlocal);
+  memory<dlong> haloIds(Nhalo);
+  prim::select(Nids, sharedFlag, FLAG_LOCAL, localIds);
+  prim::select(Nids, sharedFlag, FLAG_SHARED, haloIds);
+
+  prim::transformGather(Nlocal, localIds, baseIds, localBaseIds);
+  prim::transformGather(Nhalo,   haloIds, baseIds, haloBaseIds);
+  prim::transformGather(Nlocal, localIds, colIds, localColIds);
+  prim::transformGather(Nhalo,   haloIds, colIds, haloColIds);
+}
+
+static void EnumerateGatherGroups(const dlong N,
+                                  const memory<hlong> baseIds,
+                                  dlong& NgroupsP,
+                                  dlong& NgroupsT,
+                                  memory<dlong> gids) {
+
+  /*
+  Enumerate each baseId groups according to a gathered ordering,
+  groups with at least 1 positive baseId appear first in the
+  gathered ordering
+  */
+  memory<hlong> absBaseIds(N);
+  memory<dlong> sortIds(N);
+
+  /*Sort by abs(baseId) to group baseIds*/
+  prim::abs(N, baseIds, absBaseIds);
+  prim::stableSort(N, absBaseIds, sortIds);
+
+  /*Compute how many baseId groups we have, and get offsets to groups of baseIds*/
+  NgroupsT = 0;
+  memory<dlong> groupOffsets;
+  prim::runLengthEncode(N, absBaseIds, NgroupsT, groupOffsets);
+
+  prim::set(N, 0, gids);
+
+  /* Sign groups that have no positive baseId on this rank and mark the first appearance */
+  #pragma omp parallel for
+  for (dlong n=0;n<NgroupsT;++n) {
+    const dlong start = groupOffsets[n];
+    const dlong end = groupOffsets[n+1];
+
+    // Check for a positive baseId in this group
+    int sign = -1;
+    for (dlong i=start;i<end;++i) {
+      if (baseIds[sortIds[i]] > 0) {
+        sign = 1; //Found a positive baseId in this group
+        break;
+      }
+    }
+    /*Since the sort was stable, 'start' is the first appearance of this baseId group*/
+    gids[sortIds[start]] = sign;
+  }
+
+  NgroupsP = prim::count(N, gids, 1);
+
+  /* Get the ids of the first appearances of each baseId group, in their original ordering */
+  memory<dlong> gatherIds(NgroupsT);
+  prim::select(N, gids,  1, gatherIds);
+  prim::select(N, gids, -1, gatherIds+NgroupsP);
+
+  /*Enumerate the first entry of the groups*/
+  #pragma omp parallel for
+  for (dlong n=0;n<NgroupsT;n++) {
+    gids[gatherIds[n]] = n;
+  }
+
+  /* Propagate numbering to whole group */
+  #pragma omp parallel for
+  for (dlong n=0;n<NgroupsT;++n) {
+    const dlong start = groupOffsets[n];
+    const dlong end = groupOffsets[n+1];
+
+    const dlong gid = gids[sortIds[start]];
+    for (dlong i=start+1;i<end;i++) {
+      gids[sortIds[i]] = gid;
+    }
+  }
+}
+
+static void SortByRow(const dlong N,
+                      memory<dlong>& rowIds,
+                      memory<dlong>& colIds,
+                      memory<hlong>& baseIds) {
+
+  memory<dlong> sortIds(N);
+
+  /*Sort groups by their row*/
+  prim::stableSort(N, rowIds, sortIds);
+
+  memory<hlong> newBaseIds(N);
+  prim::transformGather(N, sortIds, baseIds, newBaseIds);
+
+  memory<dlong> newColIds(N);
+  prim::transformGather(N, sortIds, colIds, newColIds);
+
+  baseIds = newBaseIds;
+  colIds = newColIds;
+}
+
+void ogsBase_t::ConstructGatherOperators(const dlong Nlocal,
+                                         const memory<dlong> localRowIds,
+                                         const memory<dlong> localColIds,
+                                         const memory<hlong> localBaseIds,
+                                         const dlong Nhalo,
+                                         const memory<dlong> haloRowIds,
+                                         const memory<dlong> haloColIds,
+                                         const memory<hlong> haloBaseIds) {
+
+  Kind knd = (kind == Unsigned) ? Unsigned : Signed;
+
+  //setup local gather operator
+  if (kind!=Halo) {
+    gatherLocal = std::make_shared<ogsOperator_t>(platform,
+                                                  knd,
+                                                  NlocalP,
+                                                  NlocalT,
+                                                  N,
+                                                  Nlocal,
+                                                  localBaseIds,
+                                                  localRowIds,
+                                                  localColIds);
+  }
+
+  //setup local gather operator
+  gatherHalo = std::make_shared<ogsOperator_t>(platform,
+                                               knd,
+                                               NhaloP,
+                                               NhaloT,
+                                               N,
+                                               Nhalo,
+                                               haloBaseIds,
+                                               haloRowIds,
+                                               haloColIds);
+}
+
+void ogsBase_t::ConstructSharedNodes(const memory<hlong> haloBaseIds,
+                                     dlong &Nshared,
+                                     memory<int>&   sharedRemoteRanks,
+                                     memory<dlong>& sharedLocalRows,
+                                     memory<dlong>& sharedRemoteRows,
+                                     memory<hlong>& sharedLocalBaseIds,
+                                     memory<hlong>& sharedRemoteBaseIds) {
+
+  int rank = comm.rank();
+  int size = comm.size();
+
+  memory<dlong> rows(NhaloT);
+
+  /*Create list of destination ranks*/
+  memory<int> destRanks(NhaloT);
+  memory<dlong> destRankSortIds(NhaloT);
+
+  prim::range(NhaloT, 0, 1, rows);
+
+  #pragma omp parallel for
+  for (dlong n=0;n<NhaloT;++n) { destRanks[n] = std::abs(haloBaseIds[n]) % size; }
+
+  /*Sort by destination to get the send ordering*/
+  prim::sort(NhaloT, destRanks, destRankSortIds);
+
+  memory<int> sendCounts(size);
+  memory<int> recvCounts(size);
+  memory<int> sendOffsets(size+1);
+  memory<int> recvOffsets(size+1);
+
+  /*Get length and offsets of groups of destinations*/
+  prim::runLengthEncodeConsecutive(NhaloT, destRanks, size, sendOffsets);
+  prim::adjacentDifference(size, sendOffsets+1, sendCounts);
+
+  comm.Alltoall(sendCounts, recvCounts);
+  recvOffsets[0] = 0;
+  prim::inclusiveScan(size, recvCounts, recvOffsets+1);
+  dlong recvN = recvOffsets[size]; //total ids to recv
+
+  destRanks.free();
+
+  //Arrange the list of haloBaseIds to send order
+  memory<hlong> sendBaseIds(NhaloT);
+  prim::transformGather(NhaloT, destRankSortIds, haloBaseIds, sendBaseIds);
+
+  //Send the haloBaseIds to their destination rank.
+  memory<hlong> recvBaseIds(recvN);
+  comm.Alltoallv(sendBaseIds, sendCounts, sendOffsets,
+                 recvBaseIds, recvCounts, recvOffsets);
+
+  //Arrange the list of rows to send order
+  memory<dlong> sendRows(NhaloT);
+  prim::transformGather(NhaloT, destRankSortIds, rows, sendRows);
+
+  //Send the rows to their destination rank.
+  memory<dlong> recvRows(recvN);
+  comm.Alltoallv(sendRows, sendCounts, sendOffsets,
+                 recvRows, recvCounts, recvOffsets);
+
+  // Send the source rank of each node to destination
+  memory<int> sendRanks(NhaloT, rank); //initialize entries to 'rank'
+  memory<int> recvRanks(recvN);
+  comm.Alltoallv(sendRanks, sendCounts, sendOffsets,
+                 recvRanks, recvCounts, recvOffsets);
 
   //free up some space
-  sendSharedNodes.free();
-  sendCounts.free();
-  recvCounts.free();
-  sendOffsets.free();
-  recvOffsets.free();
+  destRankSortIds.free();
+  rows.free();
+  sendBaseIds.free();
+  sendRows.free();
+  sendRanks.free();
 
-  // sort based on base ids
-  sort(recvSharedNodes.ptr(), recvSharedNodes.ptr()+recvN,
-       [](const parallelNode_t& a, const parallelNode_t& b) {
-         return abs(a.baseId) < abs(b.baseId);
-       });
+  /*Group recieved nodes together by the abs(baseId)*/
+  memory<hlong> recvAbsBaseIds(recvN);
+  memory<dlong> baseSortIds(recvN);
 
-  //count number of shared nodes we will be sending
-  memory<int> sharedSendCounts(size,0);
-  memory<int> sharedRecvCounts(size);
-  memory<int> sharedSendOffsets(size+1);
-  memory<int> sharedRecvOffsets(size+1);
+  /*Sort by abs(baseId) and record ordering*/
+  prim::abs(recvN, recvBaseIds, recvAbsBaseIds);
+  prim::sort(recvN, recvAbsBaseIds, baseSortIds);
 
-  start=0;
-  for (dlong n=0;n<recvN;n++) {
-    if (n==recvN-1 || abs(recvSharedNodes[n].baseId)!=abs(recvSharedNodes[n+1].baseId)) {
-      dlong end = n+1;
+  /*Get offsets to groups of baseIds*/
+  dlong NbaseIdGroups = 0;
+  memory<dlong> baseIdGroupOffsets;
+  prim::runLengthEncode(recvN, recvAbsBaseIds, NbaseIdGroups, baseIdGroupOffsets);
 
-      for (int i=start;i<end;i++) {
-        //We'll be sending all the shared nodes to each rank involved
-        sharedSendCounts[recvSharedNodes[i].rank] += end-start-1;
-      }
+  recvAbsBaseIds.free();
 
-      //set new baseId group start point
-      start=n+1;
+  // We now have a collection of nodes associated with some subset of all global Ids
+  // Each of these baseId groups are shared between at least 2 MPI ranks.
+  // We want to send the full sharing information back to every rank that is participating
+  // in the group so that, for a given baseId group, each rank participating knows:
+  // 1) All ranks sharing this baseId 2) the +/- sign of the baseId on each rank
+  // 3) The gathered index of the baseId on each rank
+
+  /*
+  Each node in the list is going to record info for the whole baseId group,
+  so grow the array and get offsets to where each node writes
+  */
+  memory<dlong> groupSize(recvN);
+  memory<dlong> groupStart(recvN);
+  memory<dlong> groupEnd(recvN);
+
+  #pragma omp parallel for
+  for (dlong n=0;n<NbaseIdGroups;++n) {
+    const dlong start = baseIdGroupOffsets[n];
+    const dlong end = baseIdGroupOffsets[n+1];
+
+    //write the group size at every node location (excluding the rank's own node)
+    for (dlong i=start;i<end;++i) {
+      groupStart[baseSortIds[i]] = start;
+      groupEnd[baseSortIds[i]] = end;
+      groupSize[baseSortIds[i]] = end-start-1;
     }
   }
+  memory<dlong> groupOffsets(recvN+1);
+  groupOffsets[0] = 0;
+  prim::inclusiveScan(recvN, groupSize, groupOffsets+1);
 
-  // Each rank has a set of shared global Ids and for each global id that
-  // rank knows what MPI ranks participate in gathering. We now send this
-  // information to the involved ranks.
+  /*Now fill the send data for each node*/
+  dlong sendN = groupOffsets[recvN];
+  sendRanks.malloc(sendN);
+  sendBaseIds.malloc(sendN);
+  memory<dlong> sendLocalRows(sendN);
+  memory<dlong> sendRemoteRows(sendN);
 
-  //share counts
-  comm.Alltoall(sharedSendCounts, sharedRecvCounts);
+  #pragma omp parallel for
+  for (dlong n=0;n<recvN;++n) {
+    const dlong start = groupOffsets[n];
+    const dlong gStart = groupStart[n];
+    const dlong gEnd = groupEnd[n];
 
-  //cumulative sum
-  sharedSendOffsets[0] = 0;
-  sharedRecvOffsets[0] = 0;
-  for (int r=0;r<size;r++) {
-    sharedSendOffsets[r+1] = sharedSendOffsets[r]+sharedSendCounts[r];
-    sharedRecvOffsets[r+1] = sharedRecvOffsets[r]+sharedRecvCounts[r];
-  }
+    const dlong row = recvRows[n];
 
-  //make a send buffer
-  memory<parallelNode_t> sharedSendNodes(sharedSendOffsets[size]);
-
-  //reset sendCounts
-  for (int r=0;r<size;r++) sharedSendCounts[r]=0;
-
-  start=0;
-  for (dlong n=0;n<recvN;n++) {
-    if (n==recvN-1 || abs(recvSharedNodes[n].baseId)!=abs(recvSharedNodes[n+1].baseId)) {
-      dlong end = n+1;
-
-      //build the node list to send
-      for (int i=start;i<end;i++) {
-        const int r = recvSharedNodes[i].rank;
-        const dlong id = recvSharedNodes[i].localId;
-        const int sign = recvSharedNodes[i].sign;
-
-        int sid = sharedSendCounts[r]+sharedSendOffsets[r];
-        for (int j=start;j<end;j++) {
-          if (j==i) continue; //dont bother sending this rank's own node
-          sharedSendNodes[sid] = recvSharedNodes[j];
-          sharedSendNodes[sid].newId = id;
-          sharedSendNodes[sid].sign = sign;
-          sid++;
-        }
-        sharedSendCounts[r] += end-start-1;
-      }
-
-      //set new baseId group start point
-      start=n+1;
+    //write all the group info
+    dlong loc = start;
+    for (dlong i=gStart;i<gEnd;++i) {
+      const dlong gloc = baseSortIds[i];
+      if (gloc==n) continue; //dont bother sending this rank's own node
+      sendRanks[loc] = recvRanks[gloc];
+      sendBaseIds[loc] = recvBaseIds[gloc];
+      sendRemoteRows[loc] = recvRows[gloc];
+      sendLocalRows[loc] = row;
+      ++loc;
     }
   }
-  recvSharedNodes.free();
+  baseSortIds.free();
+  recvRows.free();
+  recvRanks.free();
+  recvBaseIds.free();
 
-  //make sharedNodes to hold the exchange data we recv
-  Nshared = sharedRecvOffsets[size];
-  sharedNodes = memory<parallelNode_t>(Nshared);
+  /*Update the MPI offset data for the new payload size*/
+  prim::transformGather(size+1, recvOffsets, groupOffsets, sendOffsets);
+  prim::adjacentDifference(size, sendOffsets+1, sendCounts);
 
-  //Share all the gathering info
-  comm.Alltoallv(sharedSendNodes, sharedSendCounts, sharedSendOffsets,
-                     sharedNodes, sharedRecvCounts, sharedRecvOffsets);
-}
+  comm.Alltoall(sendCounts, recvCounts);
+  recvOffsets[0] = 0;
+  prim::inclusiveScan(size, recvCounts, recvOffsets+1);
+  Nshared = recvOffsets[size]; //total ids to recv
 
-//Make local and halo gather operators using nodes list
-void ogsBase_t::LocalSignedSetup(const dlong Nids, memory<parallelNode_t> &nodes){
+  recvRanks.malloc(Nshared);
+  recvBaseIds.malloc(Nshared);
+  memory<dlong> recvLocalRows(Nshared);
+  memory<dlong> recvRemoteRows(Nshared);
 
-  gatherLocal = std::make_shared<ogsOperator_t>(platform);
-  gatherHalo  = std::make_shared<ogsOperator_t>(platform);
+  comm.Alltoallv(sendRanks, sendCounts, sendOffsets,
+                 recvRanks, recvCounts, recvOffsets);
+  comm.Alltoallv(sendBaseIds, sendCounts, sendOffsets,
+                 recvBaseIds, recvCounts, recvOffsets);
+  comm.Alltoallv(sendLocalRows, sendCounts, sendOffsets,
+                 recvLocalRows, recvCounts, recvOffsets);
+  comm.Alltoallv(sendRemoteRows, sendCounts, sendOffsets,
+                 recvRemoteRows, recvCounts, recvOffsets);
 
-  gatherLocal->kind = Signed;
-  gatherHalo->kind = Signed;
+  memory<dlong> localSortIds(Nshared);
 
-  gatherLocal->Ncols = N;
-  gatherHalo->Ncols = N;
+  /*Sort list of shared nodes by their local row ordering*/
+  prim::sort(Nshared, recvLocalRows, localSortIds);
 
-  gatherLocal->NrowsN = NlocalP;
-  gatherLocal->NrowsT = NlocalT;
-  gatherHalo->NrowsN = NhaloP;
-  gatherHalo->NrowsT = NhaloT;
+  sharedLocalRows = recvLocalRows;
 
-  //tally up how many nodes are being gathered to each gatherNode and
-  //  map to a local ordering
-  memory<dlong> localGatherNCounts(gatherLocal->NrowsT,0);
-  memory<dlong> localGatherTCounts(gatherLocal->NrowsT,0);
-  memory<dlong> haloGatherNCounts(gatherHalo->NrowsT,0);
-  memory<dlong> haloGatherTCounts(gatherHalo->NrowsT,0);
+  sharedRemoteRanks.malloc(Nshared);
+  prim::transformGather(Nshared, localSortIds, recvRanks, sharedRemoteRanks);
 
-  for (dlong i=0;i<Nids;i++) {
-    const dlong gid = nodes[i].newId; //re-mapped baseId on this rank
+  sharedRemoteBaseIds.malloc(Nshared);
+  prim::transformGather(Nshared, localSortIds, recvBaseIds, sharedRemoteBaseIds);
 
-    if (abs(nodes[i].sign)==1) { //local
-      if (nodes[i].baseId>0) localGatherNCounts[gid]++;  //tally
-      localGatherTCounts[gid]++;  //tally
-    } else { //halo
-      if (nodes[i].baseId>0) haloGatherNCounts[gid]++;  //tally
-      haloGatherTCounts[gid]++;  //tally
-    }
+  sharedRemoteRows.malloc(Nshared);
+  prim::transformGather(Nshared, localSortIds, recvRemoteRows, sharedRemoteRows);
+
+  sharedLocalBaseIds.malloc(Nshared);
+
+  #pragma omp parallel for
+  for (dlong n=0;n<Nshared;++n) {
+    const hlong baseId = std::abs(sharedRemoteBaseIds[n]);
+    sharedLocalBaseIds[n] = (sharedLocalRows[n]<NhaloP) ? baseId : -baseId;
   }
-
-  //make local row offsets
-  gatherLocal->rowStartsN.malloc(gatherLocal->NrowsT+1);
-  gatherLocal->rowStartsT.malloc(gatherLocal->NrowsT+1);
-  gatherLocal->rowStartsN[0] = 0;
-  gatherLocal->rowStartsT[0] = 0;
-  for (dlong i=0;i<gatherLocal->NrowsT;i++) {
-    gatherLocal->rowStartsN[i+1] = gatherLocal->rowStartsN[i] + localGatherNCounts[i];
-    gatherLocal->rowStartsT[i+1] = gatherLocal->rowStartsT[i] + localGatherTCounts[i];
-    localGatherNCounts[i] = 0; //reset counters
-    localGatherTCounts[i] = 0; //reset counters
-  }
-  gatherLocal->nnzN = gatherLocal->rowStartsN[gatherLocal->NrowsT];
-  gatherLocal->nnzT = gatherLocal->rowStartsT[gatherLocal->NrowsT];
-  gatherLocal->colIdsN.malloc(gatherLocal->nnzN);
-  gatherLocal->colIdsT.malloc(gatherLocal->nnzT);
-
-  //make halo row offsets
-  gatherHalo->rowStartsN.malloc(gatherHalo->NrowsT+1);
-  gatherHalo->rowStartsT.malloc(gatherHalo->NrowsT+1);
-  gatherHalo->rowStartsN[0] = 0;
-  gatherHalo->rowStartsT[0] = 0;
-  for (dlong i=0;i<gatherHalo->NrowsT;i++) {
-    gatherHalo->rowStartsN[i+1] = gatherHalo->rowStartsN[i] + haloGatherNCounts[i];
-    gatherHalo->rowStartsT[i+1] = gatherHalo->rowStartsT[i] + haloGatherTCounts[i];
-    haloGatherNCounts[i] = 0;
-    haloGatherTCounts[i] = 0;
-  }
-  gatherHalo->nnzN = gatherHalo->rowStartsN[gatherHalo->NrowsT];
-  gatherHalo->nnzT = gatherHalo->rowStartsT[gatherHalo->NrowsT];
-  gatherHalo->colIdsN.malloc(gatherHalo->nnzN);
-  gatherHalo->colIdsT.malloc(gatherHalo->nnzT);
-
-
-  for (dlong i=0;i<Nids;i++) {
-    const dlong gid = nodes[i].newId;
-
-    if (abs(nodes[i].sign)==1) { //local gather group
-      if (nodes[i].baseId>0) {
-        const dlong soffset = gatherLocal->rowStartsN[gid];
-        const int sindex  = localGatherNCounts[gid];
-        gatherLocal->colIdsN[soffset+sindex] = nodes[i].localId;
-        localGatherNCounts[gid]++;
-      }
-      const dlong soffset = gatherLocal->rowStartsT[gid];
-      const int sindex  = localGatherTCounts[gid];
-      gatherLocal->colIdsT[soffset+sindex] = nodes[i].localId;
-      localGatherTCounts[gid]++;
-    } else {
-      if (nodes[i].baseId>0) {
-        const dlong soffset = gatherHalo->rowStartsN[gid];
-        const int sindex  = haloGatherNCounts[gid];
-        gatherHalo->colIdsN[soffset+sindex] = nodes[i].localId;
-        haloGatherNCounts[gid]++;
-      }
-      const dlong soffset = gatherHalo->rowStartsT[gid];
-      const int sindex  = haloGatherTCounts[gid];
-      gatherHalo->colIdsT[soffset+sindex] = nodes[i].localId;
-      haloGatherTCounts[gid]++;
-    }
-  }
-  localGatherNCounts.free();
-  localGatherTCounts.free();
-  haloGatherNCounts.free();
-  haloGatherTCounts.free();
-
-  gatherLocal->o_rowStartsN = platform.malloc(gatherLocal->rowStartsN);
-  gatherLocal->o_rowStartsT = platform.malloc(gatherLocal->rowStartsT);
-  gatherLocal->o_colIdsN = platform.malloc(gatherLocal->colIdsN);
-  gatherLocal->o_colIdsT = platform.malloc(gatherLocal->colIdsT);
-
-  gatherHalo->o_rowStartsN = platform.malloc(gatherHalo->rowStartsN);
-  gatherHalo->o_rowStartsT = platform.malloc(gatherHalo->rowStartsT);
-  gatherHalo->o_colIdsN = platform.malloc(gatherHalo->colIdsN);
-  gatherHalo->o_colIdsT = platform.malloc(gatherHalo->colIdsT);
-
-  //divide the list of colIds into roughly equal sized blocks so that each
-  // threadblock loads approximately an equal amount of data
-  gatherLocal->setupRowBlocks();
-  gatherHalo->setupRowBlocks();
-}
-
-//Make local and halo gather operators using nodes list
-void ogsBase_t::LocalUnsignedSetup(const dlong Nids, memory<parallelNode_t> &nodes){
-
-  gatherLocal = std::make_shared<ogsOperator_t>(platform);
-  gatherHalo  = std::make_shared<ogsOperator_t>(platform);
-
-  gatherLocal->kind = Unsigned;
-  gatherHalo->kind = Unsigned;
-
-  gatherLocal->Ncols = N;
-  gatherHalo->Ncols = N;
-
-  gatherLocal->NrowsN = NlocalP;
-  gatherLocal->NrowsT = NlocalT;
-  gatherHalo->NrowsN = NhaloP;
-  gatherHalo->NrowsT = NhaloT;
-
-  //tally up how many nodes are being gathered to each gatherNode and
-  //  map to a local ordering
-  memory<dlong> localGatherTCounts(gatherLocal->NrowsT,0);
-  memory<dlong> haloGatherTCounts(gatherHalo->NrowsT,0);
-
-  for (dlong i=0;i<Nids;i++) {
-    const dlong gid = nodes[i].newId; //re-mapped baseId on this rank
-
-    if (abs(nodes[i].sign)==1) { //local
-      localGatherTCounts[gid]++;  //tally
-    } else { //halo
-      haloGatherTCounts[gid]++;  //tally
-    }
-  }
-
-  //make local row offsets
-  gatherLocal->rowStartsT.malloc(gatherLocal->NrowsT+1);
-  gatherLocal->rowStartsN = gatherLocal->rowStartsT;
-  gatherLocal->rowStartsT[0] = 0;
-  for (dlong i=0;i<gatherLocal->NrowsT;i++) {
-    gatherLocal->rowStartsT[i+1] = gatherLocal->rowStartsT[i] + localGatherTCounts[i];
-    localGatherTCounts[i] = 0; //reset counters
-  }
-  gatherLocal->nnzT = gatherLocal->rowStartsT[gatherLocal->NrowsT];
-  gatherLocal->nnzN = gatherLocal->nnzT;
-  gatherLocal->colIdsT.malloc(gatherLocal->nnzT);
-  gatherLocal->colIdsN = gatherLocal->colIdsT;
-
-  //make halo row offsets
-  gatherHalo->rowStartsT.malloc(gatherHalo->NrowsT+1);
-  gatherHalo->rowStartsN = gatherHalo->rowStartsT;
-  gatherHalo->rowStartsT[0] = 0;
-  for (dlong i=0;i<gatherHalo->NrowsT;i++) {
-    gatherHalo->rowStartsT[i+1] = gatherHalo->rowStartsT[i] + haloGatherTCounts[i];
-    haloGatherTCounts[i] = 0;
-  }
-  gatherHalo->nnzT = gatherHalo->rowStartsT[gatherHalo->NrowsT];
-  gatherHalo->nnzN = gatherHalo->nnzT;
-  gatherHalo->colIdsT.malloc(gatherHalo->nnzT);
-  gatherHalo->colIdsN = gatherHalo->colIdsT;
-
-
-  for (dlong i=0;i<Nids;i++) {
-    const dlong gid = nodes[i].newId;
-
-    if (abs(nodes[i].sign)==1) { //local gather group
-      const dlong soffset = gatherLocal->rowStartsT[gid];
-      const int sindex  = localGatherTCounts[gid];
-      gatherLocal->colIdsT[soffset+sindex] = nodes[i].localId;
-      localGatherTCounts[gid]++;
-    } else {
-      const dlong soffset = gatherHalo->rowStartsT[gid];
-      const int sindex  = haloGatherTCounts[gid];
-      gatherHalo->colIdsT[soffset+sindex] = nodes[i].localId;
-      haloGatherTCounts[gid]++;
-    }
-  }
-  localGatherTCounts.free();
-  haloGatherTCounts.free();
-
-  gatherLocal->o_rowStartsT = platform.malloc(gatherLocal->rowStartsT);
-  gatherLocal->o_rowStartsN = gatherLocal->o_rowStartsT;
-  gatherLocal->o_colIdsT = platform.malloc(gatherLocal->colIdsT);
-  gatherLocal->o_colIdsN = gatherLocal->o_colIdsT;
-
-  gatherHalo->o_rowStartsT = platform.malloc(gatherHalo->rowStartsT);
-  gatherHalo->o_rowStartsN = gatherHalo->o_rowStartsT;
-  gatherHalo->o_colIdsT = platform.malloc(gatherHalo->colIdsT);
-  gatherHalo->o_colIdsN = gatherHalo->o_colIdsT;
-
-  //divide the list of colIds into roughly equal sized blocks so that each
-  // threadblock loads approximately an equal amount of data
-  gatherLocal->setupRowBlocks();
-  gatherHalo->setupRowBlocks();
-}
-
-//Make local and halo gather operators using nodes list
-void ogsBase_t::LocalHaloSetup(const dlong Nids, memory<parallelNode_t> &nodes){
-
-  gatherHalo  = std::make_shared<ogsOperator_t>(platform);
-  gatherHalo->kind = Signed;
-
-  gatherHalo->Ncols = N;
-
-  gatherHalo->NrowsN = NhaloP;
-  gatherHalo->NrowsT = NhaloT;
-
-  //tally up how many nodes are being gathered to each gatherNode and
-  //  map to a local ordering
-  memory<dlong> haloGatherNCounts(gatherHalo->NrowsT,0);
-  memory<dlong> haloGatherTCounts(gatherHalo->NrowsT,0);
-
-  for (dlong i=0;i<Nids;i++) {
-    const dlong gid = nodes[i].newId; //re-mapped baseId on this rank
-
-    if (abs(nodes[i].sign)==2) {//halo
-      if (nodes[i].sign==2) haloGatherNCounts[gid]++;  //tally
-      haloGatherTCounts[gid]++;  //tally
-    }
-  }
-
-  //make halo row offsets
-  gatherHalo->rowStartsN.malloc(gatherHalo->NrowsT+1);
-  gatherHalo->rowStartsT.malloc(gatherHalo->NrowsT+1);
-  gatherHalo->rowStartsN[0]=0;
-  gatherHalo->rowStartsT[0]=0;
-  for (dlong i=0;i<gatherHalo->NrowsT;i++) {
-    gatherHalo->rowStartsN[i+1] = gatherHalo->rowStartsN[i] + haloGatherNCounts[i];
-    gatherHalo->rowStartsT[i+1] = gatherHalo->rowStartsT[i] + haloGatherTCounts[i];
-    haloGatherNCounts[i] = 0;
-    haloGatherTCounts[i] = 0;
-  }
-  gatherHalo->nnzN = gatherHalo->rowStartsN[gatherHalo->NrowsT];
-  gatherHalo->nnzT = gatherHalo->rowStartsT[gatherHalo->NrowsT];
-  gatherHalo->colIdsN.malloc(gatherHalo->nnzN);
-  gatherHalo->colIdsT.malloc(gatherHalo->nnzT);
-
-
-  for (dlong i=0;i<Nids;i++) {
-    const dlong gid = nodes[i].newId;
-
-    if (abs(nodes[i].sign)==2) {
-      if (nodes[i].sign==2) {
-        const dlong soffset = gatherHalo->rowStartsN[gid];
-        const int sindex  = haloGatherNCounts[gid];
-        gatherHalo->colIdsN[soffset+sindex] = nodes[i].localId;
-        haloGatherNCounts[gid]++;
-      }
-      const dlong soffset = gatherHalo->rowStartsT[gid];
-      const int sindex  = haloGatherTCounts[gid];
-      gatherHalo->colIdsT[soffset+sindex] = nodes[i].localId;
-      haloGatherTCounts[gid]++;
-    }
-  }
-  haloGatherNCounts.free();
-  haloGatherTCounts.free();
-
-  gatherHalo->o_rowStartsN = platform.malloc(gatherHalo->rowStartsN);
-  gatherHalo->o_rowStartsT = platform.malloc(gatherHalo->rowStartsT);
-  gatherHalo->o_colIdsN = platform.malloc(gatherHalo->colIdsN);
-  gatherHalo->o_colIdsT = platform.malloc(gatherHalo->colIdsT);
-
-  //divide the list of colIds into roughly equal sized blocks so that each
-  // threadblock loads approximately an equal amount of data
-  gatherHalo->setupRowBlocks();
 }
 
 void ogsBase_t::Free() {
@@ -873,11 +839,8 @@ void ogs_t::SetupGlobalToLocalMapping(memory<dlong> GlobalToLocal) {
 
   memory<dlong> ids(NlocalT+NhaloT);
 
-  for (dlong n=0;n<NlocalT+NhaloT;n++)
-    ids[n] = n;
-
-  for (dlong n=0;n<N;n++)
-    GlobalToLocal[n] = -1;
+  prim::range(NlocalT+NhaloT, 0, 1, ids);
+  prim::set(N, -1, GlobalToLocal);
 
   gatherLocal->Scatter(GlobalToLocal, ids,
                        1, NoTrans);

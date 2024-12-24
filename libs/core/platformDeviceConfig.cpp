@@ -37,7 +37,7 @@ void platform_t::DeviceConfig(){
   memory<char> hostname = hostnames + rank()*MAX_PROCESSOR_NAME;
 
   int namelen;
-  Comm::GetProcessorName(hostname.ptr(), namelen);
+  comm_t::GetProcessorName(hostname.ptr(), namelen);
   comm.Allgather(hostnames, MAX_PROCESSOR_NAME);
 
   int localRank = 0;

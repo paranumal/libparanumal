@@ -35,12 +35,7 @@ namespace ogs {
 
 //forward declarations
 class ogsOperator_t;
-class ogsFusedOperator_t;
 class ogsExchange_t;
-
-struct parallelNode_t;
-
-class halo_t;
 
 class ogsBase_t {
 public:
@@ -84,21 +79,34 @@ protected:
   void AssertGatherDefined();
 
 private:
-  void FindSharedNodes(const dlong Nids,
-                       memory<parallelNode_t> &nodes,
-                       const int verbose);
+  void FindSharedGroups(const dlong Nids,
+                        memory<hlong> baseIds,
+                        memory<int> sharedFlag,
+                        const int verbose);
+  void ConstructGatherOperators(const dlong Nlocal,
+                                const memory<dlong> localRowIds,
+                                const memory<dlong> localColIds,
+                                const memory<hlong> localBaseIds,
+                                const dlong Nhalo,
+                                const memory<dlong> haloRowIds,
+                                const memory<dlong> haloColIds,
+                                const memory<hlong> haloBaseIds);
 
-  void ConstructSharedNodes(const dlong Nids,
-                           memory<parallelNode_t> &nodes,
-                           dlong &Nshared,
-                           memory<parallelNode_t> &sharedNodes);
+  void ConstructSharedNodes(const memory<hlong> haloBaseIds,
+                            dlong &Nshared,
+                            memory<int>&   sharedRemoteRanks,
+                            memory<dlong>& sharedLocalRows,
+                            memory<dlong>& sharedRemoteRows,
+                            memory<hlong>& sharedLocalBaseIds,
+                            memory<hlong>& sharedRemoteBaseIds);
 
-  void LocalSignedSetup(const dlong Nids, memory<parallelNode_t> &nodes);
-  void LocalUnsignedSetup(const dlong Nids, memory<parallelNode_t> &nodes);
-  void LocalHaloSetup(const dlong Nids, memory<parallelNode_t> &nodes);
-
-  ogsExchange_t* AutoSetup(dlong Nshared,
-                           memory<parallelNode_t> &sharedNodes,
+  ogsExchange_t* AutoSetup(const dlong Nshared,
+                           const memory<int>   sharedRemoteRanks,
+                           const memory<dlong> sharedLocalRows,
+                           const memory<dlong> sharedRemoteRows,
+                           const memory<hlong> sharedLocalBaseIds,
+                           const memory<hlong> sharedRemoteBaseIds,
+                           const memory<hlong> haloBaseIds,
                            ogsOperator_t& gatherHalo,
                            comm_t _comm,
                            platform_t &_platform,

@@ -203,7 +203,7 @@ private:
   kernel_t update1NBPCGKernel;
   kernel_t update2NBPCGKernel;
 
-  Comm::request_t request;
+  comm_t::request_t request;
 
   void Update1NBPCG(const T beta,
                     deviceMemory<T>& o_z,
@@ -237,7 +237,7 @@ private:
   kernel_t update0NBFPCGKernel;
   kernel_t update1NBFPCGKernel;
 
-  Comm::request_t request;
+  comm_t::request_t request;
 
   void Update0NBFPCG(deviceMemory<T>& o_u,
                      deviceMemory<T>& o_r,

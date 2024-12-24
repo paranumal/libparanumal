@@ -51,7 +51,8 @@ dfloat advection_t::MaxWaveSpeed(deviceMemory<dfloat>& o_Q, const dfloat T){
 void advection_t::rhsf(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, const dfloat T){
 
   // extract q halo on DEVICE
-  traceHalo.ExchangeStart(o_Q, 1);
+  // traceHalo.ExchangeStart(o_Q, 1);
+  mesh.halo.ExchangeStart(o_Q, mesh.Np);
 
   volumeKernel(mesh.Nelements,
                mesh.o_vgeo,
@@ -63,7 +64,9 @@ void advection_t::rhsf(deviceMemory<dfloat>& o_Q, deviceMemory<dfloat>& o_RHS, c
                o_Q,
                o_RHS);
 
-  traceHalo.ExchangeFinish(o_Q, 1);
+  // traceHalo.ExchangeFinish(o_Q, 1);
+  mesh.halo.ExchangeFinish(o_Q, mesh.Np);
+
 
   surfaceKernel(mesh.Nelements,
                 mesh.o_sgeo,

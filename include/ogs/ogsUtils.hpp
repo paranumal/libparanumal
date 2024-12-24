@@ -33,19 +33,6 @@ namespace libp {
 
 namespace ogs {
 
-struct parallelNode_t{
-
-  dlong localId;    // local node id
-  hlong baseId;     // original global index
-
-  dlong newId;         // new global id
-  int sign;
-
-  int rank; //original rank
-  int destRank; //destination rank
-
-};
-
 template<typename T>
 struct ogsType {
   static constexpr Type get();
@@ -63,22 +50,6 @@ template<> struct ogsType<int> {
 template<> struct ogsType<long long int> {
   static constexpr Type get() { return Int64; }
 };
-
-//permute an array A, according to the ordering returned by P
-// i.e. for all n, A[P(n)] <- A[n]
-template<typename T, class Order>
-void permute(const dlong N, memory<T> A, Order P) {
-
-  for(dlong n=0;n<N;++n) {
-    //get what index A[n] should move to
-    dlong pn = P(A[n]);
-    while (pn!=n) {
-      //swap
-      std::swap(A[n], A[pn]);
-      pn = P(A[n]);
-    }
-  }
-}
 
 } //namespace ogs
 

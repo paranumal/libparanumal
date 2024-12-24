@@ -28,6 +28,7 @@ SOFTWARE.
 #include "ogs.hpp"
 #include "ogs/ogsUtils.hpp"
 #include "ogs/ogsOperator.hpp"
+#include "primitives.hpp"
 
 namespace libp {
 
@@ -182,19 +183,19 @@ void ogsOperator_t::Gather(deviceMemory<T> o_gv,
   InitializeKernels(platform, type, op);
 
   if (trans==NoTrans) {
-    if (NrowBlocksN)
-      gatherKernel[type][op](NrowBlocksN,
+    if (gBlocking.NrowBlocksN)
+      gatherKernel[type][op](gBlocking.NrowBlocksN,
                               k,
-                              o_blockRowStartsN,
+                              gBlocking.o_blockRowStartsN,
                               o_rowStartsN,
                               o_colIdsN,
                               o_v,
                               o_gv);
   } else {
-    if (NrowBlocksT)
-      gatherKernel[type][op](NrowBlocksT,
+    if (gBlocking.NrowBlocksT)
+      gatherKernel[type][op](gBlocking.NrowBlocksT,
                               k,
-                              o_blockRowStartsT,
+                              gBlocking.o_blockRowStartsT,
                               o_rowStartsT,
                               o_colIdsT,
                               o_v,
@@ -300,19 +301,19 @@ void ogsOperator_t::Scatter(deviceMemory<T> o_v,
   InitializeKernels(platform, type, Add);
 
   if (trans==Trans) {
-    if (NrowBlocksN)
-      scatterKernel[type](NrowBlocksN,
+    if (sBlocking.NrowBlocksN)
+      scatterKernel[type](sBlocking.NrowBlocksN,
                           k,
-                          o_blockRowStartsN,
+                          sBlocking.o_blockRowStartsN,
                           o_rowStartsN,
                           o_colIdsN,
                           o_gv,
                           o_v);
   } else {
-    if (NrowBlocksT)
-      scatterKernel[type](NrowBlocksT,
+    if (sBlocking.NrowBlocksT)
+      scatterKernel[type](sBlocking.NrowBlocksT,
                           k,
-                          o_blockRowStartsT,
+                          sBlocking.o_blockRowStartsT,
                           o_rowStartsT,
                           o_colIdsT,
                           o_gv,
@@ -447,30 +448,30 @@ void ogsOperator_t::GatherScatter(deviceMemory<T> o_v,
   InitializeKernels(platform, type, Add);
 
   if (trans==Trans) {
-    if (NrowBlocksT)
-      gatherScatterKernel[type][Add](NrowBlocksT,
+    if (gsBlocking.NrowBlocksT)
+      gatherScatterKernel[type][Add](gsBlocking.NrowBlocksT,
                                      k,
-                                     o_blockRowStartsT,
+                                     gsBlocking.o_blockRowStartsT,
                                      o_rowStartsT,
                                      o_colIdsT,
                                      o_rowStartsN,
                                      o_colIdsN,
                                      o_v);
   } else if (trans==Sym) {
-    if (NrowBlocksT)
-      gatherScatterKernel[type][Add](NrowBlocksT,
+    if (gsBlocking.NrowBlocksT)
+      gatherScatterKernel[type][Add](gsBlocking.NrowBlocksT,
                                      k,
-                                     o_blockRowStartsT,
+                                     gsBlocking.o_blockRowStartsT,
                                      o_rowStartsT,
                                      o_colIdsT,
                                      o_rowStartsT,
                                      o_colIdsT,
                                      o_v);
   } else {
-    if (NrowBlocksT)
-      gatherScatterKernel[type][Add](NrowBlocksT,
+    if (gsBlocking.NrowBlocksT)
+      gatherScatterKernel[type][Add](gsBlocking.NrowBlocksT,
                                      k,
-                                     o_blockRowStartsT,
+                                     gsBlocking.o_blockRowStartsT,
                                      o_rowStartsN,
                                      o_colIdsN,
                                      o_rowStartsT,
@@ -492,72 +493,207 @@ template
 void ogsOperator_t::GatherScatter(deviceMemory<long long int> v,const int k,
                                   const Op op, const Transpose trans);
 
-void ogsOperator_t::setupRowBlocks() {
+/*
+Binary search for the first entry between v[start] and v[end]
+which is >= val. Returns end if no such index exist
+*/
+static dlong upperBound(dlong first,
+                        dlong last,
+                        const dlong *v,
+                        const dlong val) {
 
-  dlong blockSumN=0, blockSumT=0;
-  NrowBlocksN=0, NrowBlocksT=0;
+  dlong count = last - first;
 
-  if (NrowsN) NrowBlocksN++;
-  if (NrowsT) NrowBlocksT++;
+  while (count > 0) {
+    const dlong step = count / 2;
+    const dlong mid = first + step;
 
-  for (dlong i=0;i<NrowsT;i++) {
-    const dlong rowSizeN  = rowStartsN[i+1]-rowStartsN[i];
-    const dlong rowSizeT  = rowStartsT[i+1]-rowStartsT[i];
-
-    //this row is pathalogically big. We can't currently run this
-    LIBP_ABORT("Multiplicity of global node id: " << i
-               << " in ogsOperator_t::setupRowBlocks is too large.",
-               rowSizeN > gatherNodesPerBlock);
-    LIBP_ABORT("Multiplicity of global node id: " << i
-               << " in ogsOperator_t::setupRowBlocks is too large.",
-               rowSizeT > gatherNodesPerBlock);
-
-    if (blockSumN+rowSizeN > gatherNodesPerBlock) { //adding this row will exceed the nnz per block
-      NrowBlocksN++; //count the previous block
-      blockSumN=rowSizeN; //start a new row block
+    if (v[mid] < val) {
+      first = mid + 1;
+      count -= step + 1;
     } else {
-      blockSumN+=rowSizeN; //add this row to the block
-    }
-
-    if (blockSumT+rowSizeT > gatherNodesPerBlock) { //adding this row will exceed the nnz per block
-      NrowBlocksT++; //count the previous block
-      blockSumT=rowSizeT; //start a new row block
-    } else {
-      blockSumT+=rowSizeT; //add this row to the block
+      count = step;
     }
   }
 
-  blockRowStartsN.calloc(NrowBlocksN+1);
-  blockRowStartsT.calloc(NrowBlocksT+1);
-
-  blockSumN=0, blockSumT=0;
-  NrowBlocksN=0, NrowBlocksT=0;
-  if (NrowsN) NrowBlocksN++;
-  if (NrowsT) NrowBlocksT++;
-
-  for (dlong i=0;i<NrowsT;i++) {
-    const dlong rowSizeN  = rowStartsN[i+1]-rowStartsN[i];
-    const dlong rowSizeT  = rowStartsT[i+1]-rowStartsT[i];
-
-    if (blockSumN+rowSizeN > gatherNodesPerBlock) { //adding this row will exceed the nnz per block
-      blockRowStartsN[NrowBlocksN++] = i; //mark the previous block
-      blockSumN=rowSizeN; //start a new row block
-    } else {
-      blockSumN+=rowSizeN; //add this row to the block
-    }
-    if (blockSumT+rowSizeT > gatherNodesPerBlock) { //adding this row will exceed the nnz per block
-      blockRowStartsT[NrowBlocksT++] = i; //mark the previous block
-      blockSumT=rowSizeT; //start a new row block
-    } else {
-      blockSumT+=rowSizeT; //add this row to the block
-    }
-  }
-  blockRowStartsN[NrowBlocksN] = NrowsN;
-  blockRowStartsT[NrowBlocksT] = NrowsT;
-
-  o_blockRowStartsN = platform.malloc(blockRowStartsN);
-  o_blockRowStartsT = platform.malloc(blockRowStartsT);
+  return first;
 }
+
+static void blockRows(const dlong Nrows,
+                      const int NodesPerBlock,
+                      const memory<dlong> rowStarts,
+                      dlong& Nblocks,
+                      memory<dlong>& blockStarts) {
+
+  if (!Nrows) return;
+
+  //Check for a pathalogically big row. We can't currently run this
+  memory<dlong> rowSizes(Nrows+1);
+  prim::adjacentDifference(Nrows+1, rowStarts, rowSizes);
+  dlong maxRowSize = prim::max(Nrows, rowSizes);
+  rowSizes.free();
+
+  LIBP_ABORT("Multiplicity of a global node in ogsOperator_t::setupRowBlocks is larger than requested blocking factor: " << NodesPerBlock,
+             maxRowSize > NodesPerBlock);
+
+  // We're going to resursively bisect the list of rows into blocks,
+  //  so we need the scratch space to be some power of 2.
+  //  Worst case is every block as only one row,
+  //  so scratch space is at most Nrows blocks
+  dlong maxNblocks = 1;
+  while (maxNblocks < Nrows) { maxNblocks *= 2; }
+
+  memory<dlong> blockStartsOld(maxNblocks+1);
+  memory<dlong> blockStartsNew(maxNblocks+1);
+  memory<dlong> blockSizes(maxNblocks);
+
+  Nblocks = 1;
+  blockStartsOld[0] = 0;
+  blockStartsOld[1] = Nrows;
+  blockStartsNew[0] = 0;
+
+  blockSizes[0] = rowStarts[Nrows];
+  dlong maxSize = blockSizes[0];
+
+  while (maxSize > NodesPerBlock) {
+    blockStartsNew[2*Nblocks] = Nrows;
+    /*Recursively bisect the list of rows until the max block size is < NodesPerBlock*/
+    #pragma omp parallel for
+    for (dlong n=0;n<Nblocks;++n) {
+      const dlong start = blockStartsOld[n];
+      const dlong end   = blockStartsOld[n+1];
+      const dlong rowBlockSize = rowStarts[end] - rowStarts[start];
+
+      if (rowBlockSize > NodesPerBlock) {
+        //Find the index ~middle of this block
+        const dlong midSize = rowStarts[start] + (rowBlockSize + 1)/2;
+        dlong mid = upperBound(start, end, rowStarts.ptr(), midSize);
+        if (mid == end) --mid; // need at least one row in the right block
+        blockStartsNew[2*n] = start;
+        blockStartsNew[2*n+1] = mid;
+        blockSizes[2*n] = rowStarts[mid] - rowStarts[start];
+        blockSizes[2*n+1] = rowStarts[end] - rowStarts[mid];
+      } else {
+        blockStartsNew[2*n] = start;
+        blockStartsNew[2*n+1] = end;
+        blockSizes[2*n] = rowBlockSize;
+        blockSizes[2*n+1] = 0;
+      }
+    }
+
+    //swap blockStarts arrays
+    blockStartsOld.swap(blockStartsNew);
+
+    //Check if we're done bisecting
+    Nblocks *= 2;
+    maxSize = prim::max(Nblocks, blockSizes);
+  }
+
+  dlong Nunique=0;
+  prim::unique(Nblocks+1, blockStartsOld, Nunique, blockStarts);
+  Nblocks = Nunique-1;
+}
+
+//divide the list of colIds into roughly equal sized blocks so that each
+// threadblock loads approximately an equal amount of data
+void ogsOperator_t::createBlocking(const int NodesPerBlock,
+                                   ogsOperator_t::rowBlocking_t& blocking) {
+  blockRows(NrowsT,
+            NodesPerBlock,
+            rowStartsT,
+            blocking.NrowBlocksT,
+            blocking.blockRowStartsT);
+  blocking.o_blockRowStartsT = platform.malloc(blocking.blockRowStartsT);
+
+  if (kind==Signed) {
+    blockRows(NrowsN,
+              NodesPerBlock,
+              rowStartsN,
+              blocking.NrowBlocksN,
+              blocking.blockRowStartsN);
+    blocking.o_blockRowStartsN = platform.malloc(blocking.blockRowStartsN);
+  } else {
+    blocking.NrowBlocksN = blocking.NrowBlocksT;
+    blocking.blockRowStartsN = blocking.blockRowStartsT;
+    blocking.o_blockRowStartsN = blocking.o_blockRowStartsT;
+  }
+}
+
+//Make gather operator using nodes list. List of non-zeros must be sorted by row index
+ogsOperator_t::ogsOperator_t(platform_t &platform_,
+                             Kind kind_,
+                             const dlong NrowsN_,
+                             const dlong NrowsT_,
+                             const dlong Ncols_,
+                             const dlong Nids,
+                             memory<hlong> baseIds,
+                             memory<dlong> rows,
+                             memory<dlong> cols):
+  platform(platform_),
+  Ncols(Ncols_),
+  NrowsN(NrowsN_),
+  NrowsT(NrowsT_),
+  kind(kind_)
+{
+  nnzT = Nids;
+  rowStartsT.malloc(NrowsT+1);
+  prim::runLengthEncodeConsecutive(nnzT, rows, NrowsT, rowStartsT);
+
+  colIdsT = cols;
+
+  o_rowStartsT = platform.malloc(rowStartsT);
+  o_colIdsT = platform.malloc(colIdsT);
+
+  if (kind == Signed) {
+    memory<int> flags(Nids);
+
+    #pragma omp parallel for
+    for (dlong n=0;n<Nids;++n) {
+      flags[n] = (baseIds[n]>0) ? 1 : 0;
+    }
+
+    nnzN = prim::count(Nids, flags, 1);
+    memory<dlong> idsN(nnzN);
+    prim::select(Nids, flags, 1, idsN);
+
+    memory<dlong> rowsN(nnzN);
+    prim::transformGather(nnzN, idsN, rows, rowsN);
+
+    rowStartsN.malloc(NrowsN+1);
+    prim::runLengthEncodeConsecutive(nnzN, rowsN, NrowsN, rowStartsN);
+
+    colIdsN.malloc(nnzN);
+    prim::transformGather(nnzN, idsN, cols, colIdsN);
+
+    o_rowStartsN = platform.malloc(rowStartsN);
+    o_colIdsN = platform.malloc(colIdsN);
+  } else {
+    nnzN = nnzT;
+    rowStartsN = rowStartsT;
+    colIdsN = colIdsT;
+    o_rowStartsN = o_rowStartsT;
+    o_colIdsN = o_colIdsT;
+  }
+
+  //divide the list of colIds into roughly equal sized blocks so that each
+  // threadblock loads approximately an equal amount of data
+  createBlocking(gNodesPerBlock, gBlocking);
+
+  if (gNodesPerBlock==sNodesPerBlock) {
+    sBlocking = gBlocking;
+  } else {
+    createBlocking(sNodesPerBlock, sBlocking);
+  }
+
+  if (gsNodesPerBlock==gNodesPerBlock) {
+    gsBlocking = gBlocking;
+  } else if (gsNodesPerBlock==sNodesPerBlock) {
+    gsBlocking = sBlocking;
+  } else {
+    createBlocking(gsNodesPerBlock, gsBlocking);
+  }
+}
+
 
 void ogsOperator_t::Free() {
   rowStartsT.free();
@@ -570,18 +706,33 @@ void ogsOperator_t::Free() {
   o_rowStartsN.free();
   o_colIdsN.free();
 
-  blockRowStartsT.free();
-  blockRowStartsN.free();
-  o_blockRowStartsN.free();
-  o_blockRowStartsT.free();
+  gBlocking.blockRowStartsT.free();
+  gBlocking.blockRowStartsN.free();
+  gBlocking.o_blockRowStartsN.free();
+  gBlocking.o_blockRowStartsT.free();
+
+  sBlocking.blockRowStartsT.free();
+  sBlocking.blockRowStartsN.free();
+  sBlocking.o_blockRowStartsN.free();
+  sBlocking.o_blockRowStartsT.free();
+
+  gsBlocking.blockRowStartsT.free();
+  gsBlocking.blockRowStartsN.free();
+  gsBlocking.o_blockRowStartsN.free();
+  gsBlocking.o_blockRowStartsT.free();
 
   nnzN=0;
   nnzT=0;
   NrowsN=0;
   NrowsT=0;
   Ncols=0;
-  NrowBlocksN=0;
-  NrowBlocksT=0;
+
+  gBlocking.NrowBlocksN=0;
+  gBlocking.NrowBlocksT=0;
+  sBlocking.NrowBlocksN=0;
+  sBlocking.NrowBlocksT=0;
+  gsBlocking.NrowBlocksN=0;
+  gsBlocking.NrowBlocksT=0;
 }
 
 

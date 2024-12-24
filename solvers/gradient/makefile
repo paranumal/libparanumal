@@ -79,7 +79,7 @@ endif
 endif
 
 #libraries
-GRADIENT_LIBP_LIBS=mesh parAdogs ogs linAlg core
+GRADIENT_LIBP_LIBS=mesh parAdogs ogs linAlg prim core
 
 #includes
 INCLUDES=${LIBP_INCLUDES} \

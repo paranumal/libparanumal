@@ -27,13 +27,7 @@ SOFTWARE.
 #include "ogs.hpp"
 #include "ogs/ogsUtils.hpp"
 #include "ogs/ogsExchange.hpp"
-
-#ifdef GLIBCXX_PARALLEL
-#include <parallel/algorithm>
-using __gnu_parallel::sort;
-#else
-using std::sort;
-#endif
+#include "primitives.hpp"
 
 namespace libp {
 
@@ -43,92 +37,86 @@ namespace ogs {
 * Host exchange
 ***********************************/
 template<typename T>
-inline void ogsCrystalRouter_t::Start(pinnedMemory<T> &buf, const int k,
-                               const Op op, const Transpose trans){}
+inline void ogsCrystalRouter_t::HostStart(const int k, const Op op, const Transpose trans){}
 
 template<typename T>
-inline void ogsCrystalRouter_t::Finish(pinnedMemory<T> &buf, const int k,
-                                const Op op, const Transpose trans){
+inline void ogsCrystalRouter_t::HostFinish(const int k, const Op op, const Transpose trans){
 
+  memory<crLevel>& L = data[trans].levels;
+  pinnedMemory<T> workBuf = h_workspace;
 
-  memory<crLevel> levels;
-  if (trans==NoTrans) {
-    levels = levelsN;
-  } else {
-    levels = levelsT;
-  }
-
-  pinnedMemory<T> sendBuf = h_sendspace;
-
-  // To start,    buf = h_workspace = h_work[(hbuf_id+0)%2];
-  //          sendBuf = h_sendspace;
   for (int l=0;l<Nlevels;l++) {
-    pinnedMemory<T> recvBuf = h_workspace;
+
+    pinnedMemory<T> sendBuf = h_sendspace;
+    pinnedMemory<T> recvBuf = h_recvspace;
 
     //post recvs
-    if (levels[l].Nmsg>0) {
-      comm.Irecv(recvBuf + levels[l].recvOffset*k,
-                 levels[l].partner,
-                 k*levels[l].Nrecv0,
-                 levels[l].partner,
-                 request[1]);
+    if (L[l].Nmsg>0) {
+      comm.Irecv(sendBuf + L[l].Nids*k,
+                 L[l].partner,
+                 k*L[l].Nrecv0,
+                 L[l].partner,
+                 requests[1]);
     }
-    if (levels[l].Nmsg==2) {
-      comm.Irecv(recvBuf + levels[l].recvOffset*k + levels[l].Nrecv0*k,
+    if (L[l].Nmsg==2) {
+      comm.Irecv(sendBuf + L[l].Nids*k + L[l].Nrecv0*k,
                 rank-1,
-                k*levels[l].Nrecv1,
+                k*L[l].Nrecv1,
                 rank-1,
-                request[2]);
+                requests[2]);
     }
 
     //assemble send buffer
-    extract(levels[l].Nsend, k, levels[l].sendIds, buf, sendBuf);
+    extract(L[l].Nsend, k, L[l].sendIds, sendBuf, workBuf);
 
     //post send
-    comm.Isend(sendBuf,
-               levels[l].partner,
-               k*levels[l].Nsend,
+    comm.Isend(workBuf,
+               L[l].partner,
+               k*L[l].Nsend,
                rank,
-               request[0]);
+               requests[0]);
 
-    comm.Waitall(levels[l].Nmsg+1, request);
-
-    //rotate buffers
-    h_workspace = h_work[(hbuf_id+1)%2];
-    hbuf_id = (hbuf_id+1)%2;
-
-    recvBuf = buf;
-    buf     = h_workspace;
+    comm.Waitall(L[l].Nmsg+1, requests);
 
     //Gather the recv'd values into the haloBuffer
-    levels[l].gather.Gather(buf, recvBuf, k, op, Trans);
+    L[l].gather.Gather(recvBuf, sendBuf, k, op, Trans);
+
+    if (l==Nlevels-1) break;
+
+    //swap buffers
+    h_sendspace.swap(h_recvspace);
   }
 }
 
-void ogsCrystalRouter_t::Start(pinnedMemory<float> &buf, const int k, const Op op, const Transpose trans) { Start<float>(buf, k, op, trans); }
-void ogsCrystalRouter_t::Start(pinnedMemory<double> &buf, const int k, const Op op, const Transpose trans) { Start<double>(buf, k, op, trans); }
-void ogsCrystalRouter_t::Start(pinnedMemory<int> &buf, const int k, const Op op, const Transpose trans) { Start<int>(buf, k, op, trans); }
-void ogsCrystalRouter_t::Start(pinnedMemory<long long int> &buf, const int k, const Op op, const Transpose trans) { Start<long long int>(buf, k, op, trans); }
-void ogsCrystalRouter_t::Finish(pinnedMemory<float> &buf, const int k, const Op op, const Transpose trans) { Finish<float>(buf, k, op, trans); }
-void ogsCrystalRouter_t::Finish(pinnedMemory<double> &buf, const int k, const Op op, const Transpose trans) { Finish<double>(buf, k, op, trans); }
-void ogsCrystalRouter_t::Finish(pinnedMemory<int> &buf, const int k, const Op op, const Transpose trans) { Finish<int>(buf, k, op, trans); }
-void ogsCrystalRouter_t::Finish(pinnedMemory<long long int> &buf, const int k, const Op op, const Transpose trans) { Finish<long long int>(buf, k, op, trans); }
+void ogsCrystalRouter_t::HostStart(const Type type, const int k, const Op op, const Transpose trans) {
+  switch (type) {
+    case Int32:  HostStart<int>(k, op, trans); break;
+    case Int64:  HostStart<long long int>(k, op, trans); break;
+    case Float:  HostStart<float>(k, op, trans); break;
+    case Double: HostStart<double>(k, op, trans); break;
+  }
+}
+void ogsCrystalRouter_t::HostFinish(const Type type, const int k, const Op op, const Transpose trans) {
+  switch (type) {
+    case Int32:  HostFinish<int>(k, op, trans); break;
+    case Int64:  HostFinish<long long int>(k, op, trans); break;
+    case Float:  HostFinish<float>(k, op, trans); break;
+    case Double: HostFinish<double>(k, op, trans); break;
+  }
+}
 
 /**********************************
 * GPU-aware exchange
 ***********************************/
 template<typename T>
-inline void ogsCrystalRouter_t::Start(deviceMemory<T> &o_buf,
-                                      const int k,
-                                      const Op op,
-                                      const Transpose trans){
+inline void ogsCrystalRouter_t::DeviceStart(const int k, const Op op, const Transpose trans){
+  //wait for kernel to finish on default stream
+  device_t &device = platform.device;
+  device.finish();
 }
 
 template<typename T>
-inline void ogsCrystalRouter_t::Finish(deviceMemory<T> &o_buf,
-                                       const int k,
-                                       const Op op,
-                                       const Transpose trans){
+inline void ogsCrystalRouter_t::DeviceFinish(const int k, const Op op, const Transpose trans){
 
   device_t &device = platform.device;
 
@@ -138,76 +126,75 @@ inline void ogsCrystalRouter_t::Finish(deviceMemory<T> &o_buf,
   //the intermediate kernels are always overlapped with the default stream
   device.setStream(dataStream);
 
-  memory<crLevel> levels;
-  if (trans==NoTrans) {
-    levels = levelsN;
-  } else {
-    levels = levelsT;
-  }
+  memory<crLevel>& L = data[trans].levels;
+  deviceMemory<T> o_workBuf = o_workspace;
 
-  deviceMemory<T> o_sendBuf = o_sendspace;
-
-  // To start,    o_buf = o_workspace = o_work[(buf_id+0)%2];
-  //          o_sendBuf = o_sendspace
   for (int l=0;l<Nlevels;l++) {
-    deviceMemory<T> o_recvBuf = o_workspace;
+    deviceMemory<T> o_sendBuf = o_sendspace;
+    deviceMemory<T> o_recvBuf = o_recvspace;
 
     //post recvs
-    if (levels[l].Nmsg>0) {
-      comm.Irecv(o_recvBuf + levels[l].recvOffset*k,
-                 levels[l].partner,
-                 k*levels[l].Nrecv0,
-                 levels[l].partner,
-                 request[1]);
+    if (L[l].Nmsg>0) {
+      comm.Irecv(o_sendBuf + L[l].Nids*k,
+                 L[l].partner,
+                 k*L[l].Nrecv0,
+                 L[l].partner,
+                 requests[1]);
     }
-    if (levels[l].Nmsg==2) {
-      comm.Irecv(o_recvBuf + levels[l].recvOffset*k + levels[l].Nrecv0*k,
+    if (L[l].Nmsg==2) {
+      comm.Irecv(o_sendBuf + L[l].Nids*k + L[l].Nrecv0*k,
                 rank-1,
-                k*levels[l].Nrecv1,
+                k*L[l].Nrecv1,
                 rank-1,
-                request[2]);
+                requests[2]);
     }
 
     //assemble send buffer
-    if (levels[l].Nsend) {
-      extractKernel[ogsType<T>::get()](levels[l].Nsend, k,
-                                       levels[l].o_sendIds,
-                                       o_buf, o_sendBuf);
+    if (L[l].Nsend) {
+      extractKernel[ogsType<T>::get()](L[l].Nsend, k,
+                                       L[l].o_sendIds,
+                                       o_sendBuf, o_workBuf);
       device.finish();
     }
 
     //post send
-    comm.Isend(o_sendBuf,
-               levels[l].partner,
-               k*levels[l].Nsend,
+    comm.Isend(o_workBuf,
+               L[l].partner,
+               k*L[l].Nsend,
                rank,
-               request[0]);
+               requests[0]);
 
-    comm.Waitall(levels[l].Nmsg+1, request);
-
-    //rotate buffers
-    o_workspace = o_work[(buf_id+1)%2];
-    buf_id = (buf_id+1)%2;
-
-    o_recvBuf = o_buf;
-    o_buf  = o_workspace;
+    comm.Waitall(L[l].Nmsg+1, requests);
 
     //Gather the recv'd values into the haloBuffer
-    levels[l].gather.Gather(o_buf, o_recvBuf, k, op, Trans);
+    L[l].gather.Gather(o_recvBuf, o_sendBuf, k, op, Trans);
+
+    if (l==Nlevels-1) break;
+
+    //swap buffers
+    o_sendspace.swap(o_recvspace);
   }
 
+  device.finish();
   device.setStream(currentStream);
 }
 
-void ogsCrystalRouter_t::Start(deviceMemory<float> &buf, const int k, const Op op, const Transpose trans) { Start<float>(buf, k, op, trans); }
-void ogsCrystalRouter_t::Start(deviceMemory<double> &buf, const int k, const Op op, const Transpose trans) { Start<double>(buf, k, op, trans); }
-void ogsCrystalRouter_t::Start(deviceMemory<int> &buf, const int k, const Op op, const Transpose trans) { Start<int>(buf, k, op, trans); }
-void ogsCrystalRouter_t::Start(deviceMemory<long long int> &buf, const int k, const Op op, const Transpose trans) { Start<long long int>(buf, k, op, trans); }
-void ogsCrystalRouter_t::Finish(deviceMemory<float> &buf, const int k, const Op op, const Transpose trans) { Finish<float>(buf, k, op, trans); }
-void ogsCrystalRouter_t::Finish(deviceMemory<double> &buf, const int k, const Op op, const Transpose trans) { Finish<double>(buf, k, op, trans); }
-void ogsCrystalRouter_t::Finish(deviceMemory<int> &buf, const int k, const Op op, const Transpose trans) { Finish<int>(buf, k, op, trans); }
-void ogsCrystalRouter_t::Finish(deviceMemory<long long int> &buf, const int k, const Op op, const Transpose trans) { Finish<long long int>(buf, k, op, trans); }
-
+void ogsCrystalRouter_t::DeviceStart(const Type type, const int k, const Op op, const Transpose trans) {
+  switch (type) {
+    case Int32:  DeviceStart<int>(k, op, trans); break;
+    case Int64:  DeviceStart<long long int>(k, op, trans); break;
+    case Float:  DeviceStart<float>(k, op, trans); break;
+    case Double: DeviceStart<double>(k, op, trans); break;
+  }
+}
+void ogsCrystalRouter_t::DeviceFinish(const Type type, const int k, const Op op, const Transpose trans) {
+  switch (type) {
+    case Int32:  DeviceFinish<int>(k, op, trans); break;
+    case Int64:  DeviceFinish<long long int>(k, op, trans); break;
+    case Float:  DeviceFinish<float>(k, op, trans); break;
+    case Double: DeviceFinish<double>(k, op, trans); break;
+  }
+}
 
 /*
  *Crystal Router performs the needed MPI communcation via recursive
@@ -244,8 +231,411 @@ void ogsCrystalRouter_t::Finish(deviceMemory<long long int> &buf, const int k, c
  * the halo nodes are scattered back to the output array.
  */
 
-ogsCrystalRouter_t::ogsCrystalRouter_t(dlong Nshared,
-                                       memory<parallelNode_t> &sharedNodes,
+static void EnumerateGroups(const dlong N,
+                            const memory<hlong> baseIds,
+                            dlong& Ngroups,
+                            memory<dlong> gids,
+                            memory<hlong>& newBaseIds) {
+
+  /*
+  Enumerate each baseId groups according to a gathered ordering
+  */
+  memory<hlong> bIds(N);
+  memory<dlong> sortIds(N);
+
+  /*Copy the baseIds*/
+  bIds.copyFrom(baseIds);
+
+  /*Sort to group baseIds*/
+  prim::stableSort(N, bIds, sortIds);
+
+  /*Compute how many baseId groups we have, and get offsets to groups of baseIds*/
+  Ngroups = 0;
+  memory<dlong> groupOffsets;
+  prim::runLengthEncode(N, bIds, Ngroups, groupOffsets);
+
+  prim::set(N, 0, gids);
+
+  /* Mark the first appearance of each baseId group*/
+  #pragma omp parallel for
+  for (dlong n=0;n<Ngroups;++n) {
+    const dlong start = groupOffsets[n];
+    /*Since the sort was stable, 'start' is the first appearance of this baseId group*/
+    gids[sortIds[start]] = 1;
+  }
+
+  Ngroups = prim::count(N, gids, 1);
+
+  /* Get the ids of the first appearances of each baseId group, in their original ordering */
+  memory<dlong> gatherIds(Ngroups);
+  prim::select(N, gids,  1, gatherIds);
+
+  /*Enumerate the first entry of the groups*/
+  #pragma omp parallel for
+  for (dlong n=0;n<Ngroups;n++) {
+    gids[gatherIds[n]] = n;
+  }
+
+  newBaseIds.malloc(Ngroups);
+
+  /* Propagate numbering to whole group */
+  #pragma omp parallel for
+  for (dlong n=0;n<Ngroups;++n) {
+    const dlong start = groupOffsets[n];
+    const dlong end = groupOffsets[n+1];
+
+    const dlong gid = gids[sortIds[start]];
+    for (dlong i=start+1;i<end;i++) {
+      gids[sortIds[i]] = gid;
+    }
+    newBaseIds[gid] = bIds[start]; //Record the baseId of this group
+  }
+}
+
+void ogsCrystalRouter_t::data_t::setupExchange(const int Nlevels,
+                                               dlong NhaloP,
+                                               dlong NhaloT,
+                                               memory<hlong> haloBaseIds,
+                                               dlong Nshared,
+                                               memory<int>   remoteRanks,
+                                               memory<hlong> remoteBaseIds,
+                                               memory<dlong> localIds,
+                                               comm_t comm,
+                                               platform_t& platform) {
+
+  if (Nlevels<1) return;
+
+  int rank = comm.rank();
+  int size = comm.size();
+
+  levels.malloc(Nlevels);
+
+  dlong Nids = NhaloP;
+  memory<hlong> baseIds(Nids);
+  baseIds.copyFrom(haloBaseIds);
+
+  dlong Ncols=0, nnz=0;
+  memory<dlong> cols;
+
+  // The list of shared nodes to send is already sorted by baseId, so get group offsets
+  dlong Ngroups = 0;
+  memory<dlong> groupOffsets;
+  prim::runLengthEncode(Nshared, remoteBaseIds, Ngroups, groupOffsets);
+
+  memory<dlong> haloIds(Ngroups);
+  prim::transformGather(Ngroups, groupOffsets, localIds, haloIds);
+
+  comm_t::request_t requests[3];
+
+  //Now build the levels
+  int lvl = 0;
+  int np = size;
+  int np_offset=0;
+
+  NsendMax = 0;
+  NrecvMax = 0;
+
+  while (np>1) {
+    int np_half = (np+1)/2;
+    int r_half = np_half + np_offset;
+
+    int is_lo = (rank<r_half) ? 1 : 0;
+
+    int partner = np-1-(rank-np_offset)+np_offset;
+    int Nmsg=1;
+    if (partner==rank) {
+      partner=r_half;
+      Nmsg=0;
+    }
+    if (np&1 && rank==r_half) {
+      Nmsg=2;
+    }
+    levels[lvl].partner = partner;
+    levels[lvl].Nmsg = Nmsg;
+
+    levels[lvl].Nids = Nids;
+
+    //flag lo/hi nodes and groups
+    memory<int> hiFlags(Nids); //Flag if this group contributes to the hi part
+    memory<int> loFlags(Nids); //Flag if this group contributes to the lo part
+    memory<int> nodeFlags(Nshared); //Flag if individual shared node is in hi part
+
+    if (Nids != Ngroups) {
+      // This can happen if some ids in the halo dont actually get sent anywhere,
+      // For example, in the Trans mode when a baseId group has no positive id anywhere
+      prim::set(Nids, -1, hiFlags);
+      prim::set(Nids, -1, loFlags);
+    }
+
+    #pragma omp parallel for
+    for (dlong n=0;n<Ngroups;++n) {
+      const dlong start = groupOffsets[n];
+      const dlong end = groupOffsets[n+1];
+
+      const dlong lid = haloIds[n]; //location of this baseId in the halo
+
+      int hiFlag = 0;
+      int loFlag = 0;
+      for (dlong i=start;i<end;++i) {
+        const int flag = (remoteRanks[i]<r_half) ? 0 : 1;
+        hiFlag |= flag;
+        loFlag |= (flag) ? 0 : 1;
+        nodeFlags[i] = flag;
+      }
+      hiFlags[lid] = hiFlag;
+      loFlags[lid] = loFlag;
+    }
+
+    dlong NidsLo = prim::count(Nids, loFlags, 1);
+    dlong NidsHi = prim::count(Nids, hiFlags, 1);
+
+    // Make the list of sendIds
+    int Nsend = (is_lo) ? NidsHi : NidsLo;
+    int Nkeep = (is_lo) ? NidsLo : NidsHi;
+    memory<dlong> sendFlags = (is_lo) ? hiFlags : loFlags;
+    memory<dlong> keepFlags = (is_lo) ? loFlags : hiFlags;
+
+    levels[lvl].Nsend = Nsend;
+    levels[lvl].sendIds.malloc(Nsend);
+    prim::select(Nids, sendFlags, 1, levels[lvl].sendIds);
+    levels[lvl].o_sendIds = platform.malloc(levels[lvl].sendIds);
+
+    // Communicate how many baseIds we're sending
+    comm.Isend(Nsend, partner, rank, requests[0]);
+
+    int Nrecv0=0, Nrecv1=0;
+    if (Nmsg>0)
+      comm.Irecv(Nrecv0, partner, partner, requests[1]);
+    if (Nmsg==2)
+      comm.Irecv(Nrecv1, r_half-1, r_half-1, requests[2]);
+
+    comm.Waitall(Nmsg+1, requests);
+
+    levels[lvl].Nrecv0 = Nrecv0;
+    levels[lvl].Nrecv1 = Nrecv1;
+
+    int Nrecv = Nrecv0+Nrecv1;
+
+    //Size of recv buffer
+    Ncols = Nids + Nrecv;
+
+    NsendMax = std::max(NsendMax, Nsend);
+    NrecvMax = std::max(NrecvMax, Ncols);
+
+    nnz = Nkeep + Nrecv;
+    cols.malloc(nnz);
+    memory<hlong> newBaseIds(nnz);
+
+    memory<hlong> sendBaseIds(Nsend);
+    prim::transformGather(Nsend, levels[lvl].sendIds, baseIds, sendBaseIds);
+
+    // Send the list of baseIds to our partner
+    comm.Isend(sendBaseIds, partner, Nsend, rank, requests[0]);
+
+    if (Nmsg>0)
+      comm.Irecv(newBaseIds+Nkeep, partner, Nrecv0, partner, requests[1]);
+    if (Nmsg==2)
+      comm.Irecv(newBaseIds+Nkeep+Nrecv0, r_half-1, Nrecv1, r_half-1, requests[2]);
+
+    prim::select(Nids, keepFlags, 1, cols);
+    prim::transformGather(Nkeep, cols, baseIds, newBaseIds);
+
+    //Column ids of the recieved baseIds
+    prim::range(Nrecv, Nids, 1, cols+Nkeep);
+
+    comm.Waitall(Nmsg+1, requests);
+
+    sendBaseIds.free();
+    keepFlags.free();
+    sendFlags.free();
+    hiFlags.free();
+    loFlags.free();
+    localIds.free();
+    groupOffsets.free();
+
+    //Shrink the size of the hypercube
+    if (is_lo) {
+      np = np_half;
+    } else {
+      np -= np_half;
+      np_offset = r_half;
+    }
+
+    //The last gather must be built with the desired row ordering, so exit early here
+    if (np<=1) {
+      baseIds = newBaseIds;
+      break;
+    }
+
+    //We now have the list of baseIds on this rank after the comms.
+    // Build the gather to compress the list to a unique set of baseIds
+
+    memory<dlong> rows(nnz);
+    EnumerateGroups(nnz, newBaseIds, Nids, rows, baseIds);
+
+    /*Sort groups by their row*/
+    memory<dlong> rowSortIds(nnz);
+    prim::stableSort(nnz, rows, rowSortIds);
+
+    memory<dlong> sortedCols(nnz);
+    prim::transformGather(nnz, rowSortIds, cols, sortedCols);
+    cols = sortedCols;
+
+    /*Build the gather op to assemble the recieved data from MPI*/
+    levels[lvl].gather = ogsOperator_t(platform,
+                                       Unsigned,
+                                       Nids,
+                                       Nids,
+                                       Ncols,
+                                       nnz,
+                                       memory<hlong>(),
+                                       rows,
+                                       cols);
+
+    // To construct the next level, we need to forward the sharing info to our partner
+
+    dlong NsharedLo = prim::count(Nshared, nodeFlags, 0);
+    dlong NsharedHi = Nshared - NsharedLo;
+
+    Nsend = (is_lo) ? NsharedHi : NsharedLo;
+    Nkeep = (is_lo) ? NsharedLo : NsharedHi;
+
+
+    // Communicate how many baseIds we're sending
+    comm.Isend(Nsend, partner, rank, requests[0]);
+
+    Nrecv0=0;
+    Nrecv1=0;
+    if (Nmsg>0)
+      comm.Irecv(Nrecv0, partner, partner, requests[1]);
+    if (Nmsg==2)
+      comm.Irecv(Nrecv1, r_half-1, r_half-1, requests[2]);
+
+    comm.Waitall(Nmsg+1, requests);
+
+    Nrecv = Nrecv0+Nrecv1;
+
+    dlong NsharedNew = Nkeep + Nrecv;
+
+    memory<dlong> sendIds(Nsend);
+    memory<dlong> keepIds(Nkeep);
+    prim::select(Nshared, nodeFlags, ((is_lo) ? 1 : 0), sendIds);
+    prim::select(Nshared, nodeFlags, ((is_lo) ? 0 : 1), keepIds);
+
+    memory<int> sendRemoteRanks(Nsend);
+    prim::transformGather(Nsend, sendIds, remoteRanks, sendRemoteRanks);
+
+    memory<int> newRemoteRanks(NsharedNew);
+
+    // Send the list of ranks to our partner
+    comm.Isend(sendRemoteRanks, partner, Nsend, rank, requests[0]);
+
+    if (Nmsg>0)
+      comm.Irecv(newRemoteRanks+Nkeep, partner, Nrecv0, partner, requests[1]);
+    if (Nmsg==2)
+      comm.Irecv(newRemoteRanks+Nkeep+Nrecv0, r_half-1, Nrecv1, r_half-1, requests[2]);
+
+    prim::transformGather(Nkeep, keepIds, remoteRanks, newRemoteRanks);
+    comm.Waitall(Nmsg+1, requests);
+
+    memory<hlong> sendRemoteBaseIds(Nsend);
+    prim::transformGather(Nsend, sendIds, remoteBaseIds, sendRemoteBaseIds);
+
+    memory<hlong> newRemoteBaseIds(NsharedNew);
+
+    // Send the list of baseIds to our partner
+    comm.Isend(sendRemoteBaseIds, partner, Nsend, rank, requests[0]);
+
+    if (Nmsg>0)
+      comm.Irecv(newRemoteBaseIds+Nkeep, partner, Nrecv0, partner, requests[1]);
+    if (Nmsg==2)
+      comm.Irecv(newRemoteBaseIds+Nkeep+Nrecv0, r_half-1, Nrecv1, r_half-1, requests[2]);
+
+    prim::transformGather(Nkeep, keepIds, remoteBaseIds, newRemoteBaseIds);
+    comm.Waitall(Nmsg+1, requests);
+
+    Nshared = NsharedNew;
+    remoteBaseIds.free();
+    remoteRanks.free();
+    remoteBaseIds = newRemoteBaseIds;
+
+    // Finally, sort the new list to group baseIds together
+
+    memory<dlong> sortIds(Nshared);
+    prim::stableSort(Nshared, newRemoteBaseIds, sortIds);
+
+    remoteRanks.malloc(Nshared);
+    prim::transformGather(Nshared, sortIds, newRemoteRanks, remoteRanks);
+    newRemoteRanks.free();
+
+    // Get group offsets
+    prim::runLengthEncode(Nshared, remoteBaseIds, Ngroups, groupOffsets);
+
+    // Sort the baseIds that comprise our current buffer to get a baseId->haloId mapping
+    memory<hlong> bIds(Nids);
+    bIds.copyFrom(baseIds);
+    haloIds.malloc(Nids);
+
+    prim::sort(Ngroups, bIds, haloIds);
+    bIds.free();
+
+    lvl++;
+  }
+
+  // Build the last gather to assemble the recieved buffer to the desired halo ordering
+
+  memory<hlong> hBaseIds(NhaloT);
+  hBaseIds.copyFrom(haloBaseIds);
+  haloIds.malloc(NhaloT);
+
+  prim::sort(NhaloT, hBaseIds, haloIds);
+
+  memory<dlong> sortIds(nnz);
+  prim::sort(nnz, baseIds, sortIds);
+  prim::runLengthEncode(nnz, baseIds, Ngroups, groupOffsets);
+
+  memory<dlong> rows(nnz);
+
+  #pragma omp parallel for
+  for (dlong n=0;n<Ngroups;++n) {
+    const dlong start = groupOffsets[n];
+    const dlong end = groupOffsets[n+1];
+
+    const dlong lid = haloIds[n]; //location of this baseId in the halo
+
+    for (dlong i=start;i<end;++i) {
+      rows[sortIds[i]] = lid;
+    }
+  }
+
+  /*Sort groups by their row*/
+  memory<dlong> rowSortIds(nnz);
+  prim::stableSort(nnz, rows, rowSortIds);
+
+  memory<dlong> sortedCols(nnz);
+  prim::transformGather(nnz, rowSortIds, cols, sortedCols);
+  cols = sortedCols;
+
+  /*Build the final gather op to assemble the recieved data*/
+  levels[lvl].gather = ogsOperator_t(platform,
+                                     Unsigned,
+                                     NhaloT,
+                                     NhaloT,
+                                     Ncols,
+                                     nnz,
+                                     memory<hlong>(),
+                                     rows,
+                                     cols);
+}
+
+ogsCrystalRouter_t::ogsCrystalRouter_t(Kind kind,
+                                       const dlong Nshared,
+                                       const memory<int>   sharedRanks,
+                                       const memory<dlong> sharedLocalRows,
+                                       const memory<dlong> sharedRemoteRows,
+                                       const memory<hlong> sharedLocalBaseIds,
+                                       const memory<hlong> sharedRemoteBaseIds,
+                                       const memory<hlong> haloBaseIds,
                                        ogsOperator_t& gatherHalo,
                                        stream_t _dataStream,
                                        comm_t _comm,
@@ -274,477 +664,144 @@ ogsCrystalRouter_t::ogsCrystalRouter_t(dlong Nshared,
     }
     Nlevels++;
   }
-  levelsN.malloc(Nlevels);
-  levelsT.malloc(Nlevels);
 
-  request.malloc(3);
-
-  //Now build the levels
-  Nlevels = 0;
-  np = size;
-  np_offset=0;
+  // Expand the list of shared data to include the current halo nodes
 
   dlong N = Nshared + Nhalo;
-  memory<parallelNode_t> nodes(N);
 
-  //setup is easier if we include copies of the nodes we own
-  // in the list of shared nodes
-  for(dlong n=0;n<Nhalo;++n) {
-    nodes[n].newId = n;
-    nodes[n].sign  = (n<NhaloP) ? 2 : -2;
-    nodes[n].baseId = 0;
-    nodes[n].rank = rank;
-  }
-  for(dlong n=0;n<Nshared;++n) {
-    const dlong newId = sharedNodes[n].newId;
-    if (nodes[newId].baseId==0) {
-      if (newId<NhaloP)
-        nodes[newId].baseId = abs(sharedNodes[n].baseId);
-      else
-        nodes[newId].baseId = -abs(sharedNodes[n].baseId);
-    }
-  }
-  for(dlong n=Nhalo;n<N;++n) nodes[n] = sharedNodes[n-Nhalo];
+  memory<dlong> localRows(N);
+  prim::range(Nhalo, 0, 1, localRows);
+  localRows.copyFrom(sharedLocalRows, Nshared, Nhalo);
 
-  sort(nodes.ptr(), nodes.ptr()+N,
-       [](const parallelNode_t& a, const parallelNode_t& b) {
-         return a.newId < b.newId; //group by newId (which also groups by abs(baseId))
-       });
+  memory<hlong> localBaseIds(N);
+  localBaseIds.copyFrom(haloBaseIds, Nhalo);
+  localBaseIds.copyFrom(sharedLocalBaseIds, Nshared, Nhalo);
 
-  dlong haloBuf_size = Nhalo;
+  memory<hlong> remoteBaseIds(N);
+  remoteBaseIds.copyFrom(haloBaseIds, Nhalo);
+  remoteBaseIds.copyFrom(sharedRemoteBaseIds, Nshared, Nhalo);
 
-  dlong NhaloExtT = Nhalo;
-  dlong NhaloExtN = Nhalo;
+  memory<int> remoteRanks(N);
+  prim::set(Nhalo, rank, remoteRanks);
+  remoteRanks.copyFrom(sharedRanks, Nshared, Nhalo);
 
-  while (np>1) {
-    int np_half = (np+1)/2;
-    int r_half = np_half + np_offset;
 
-    int is_lo = (rank<r_half) ? 1 : 0;
+  memory<hlong> absRemoteBaseIds(N);
+  memory<dlong> baseSortIds(N);
 
-    int partner = np-1-(rank-np_offset)+np_offset;
-    int Nmsg=1;
-    if (partner==rank) {
-      partner=r_half;
-      Nmsg=0;
-    }
-    if (np&1 && rank==r_half) {
-      Nmsg=2;
-    }
-    levelsN[Nlevels].partner = partner;
-    levelsT[Nlevels].partner = partner;
-    levelsN[Nlevels].Nmsg = Nmsg;
-    levelsT[Nlevels].Nmsg = Nmsg;
+  /*Sort list of shared nodes into baseId groups*/
+  prim::abs(N, remoteBaseIds, absRemoteBaseIds);
+  prim::stableSort(N, absRemoteBaseIds, baseSortIds);
 
-    //count lo/hi nodes
-    dlong Nlo=0, Nhi=0;
-    for (dlong n=0;n<N;n++) {
-      if (nodes[n].rank<r_half)
-        Nlo++;
-      else
-        Nhi++;
-    }
+  memory<dlong> tmpLocalRows(N);
+  prim::transformGather(N, baseSortIds, localRows, tmpLocalRows);
+  localRows = tmpLocalRows;
 
-    int Nsend=(is_lo) ? Nhi : Nlo;
+  memory<hlong> tmpLocalBaseIds(N);
+  prim::transformGather(N, baseSortIds, localBaseIds, tmpLocalBaseIds);
+  localBaseIds = tmpLocalBaseIds;
 
-    comm.Isend(Nsend, partner, rank, request[0]);
+  memory<hlong> tmpRemoteBaseIds(N);
+  prim::transformGather(N, baseSortIds, remoteBaseIds, tmpRemoteBaseIds);
+  remoteBaseIds = tmpRemoteBaseIds;
 
-    int Nrecv0=0, Nrecv1=0;
-    if (Nmsg>0)
-      comm.Irecv(Nrecv0, partner, partner, request[1]);
-    if (Nmsg==2)
-      comm.Irecv(Nrecv1, r_half-1, r_half-1, request[2]);
+  memory<int> tmpRemoteRanks(N);
+  prim::transformGather(N, baseSortIds, remoteRanks, tmpRemoteRanks);
+  remoteRanks = tmpRemoteRanks;
 
-    comm.Waitall(Nmsg+1, request);
+  baseSortIds.free();
 
-    int Nrecv = Nrecv0+Nrecv1;
+  memory<hlong> absHaloBaseIds(Nhalo);
+  prim::abs(Nhalo, haloBaseIds, absHaloBaseIds);
 
-    //make room for the nodes we'll recv
-    if (is_lo) Nlo+=Nrecv;
-    else       Nhi+=Nrecv;
+  // Sym     mode - Send everything, gather to all Nhalo nodes
+  // NoTrans mode - Only send positive baseIds, gather to all Nhalo nodes
+  // Trans   mode - Only send to remote positive baseIds, gather to positive NhaloP nodes
 
-    //split node list in two
-    memory<parallelNode_t> loNodes(Nlo);
-    memory<parallelNode_t> hiNodes(Nhi);
+  /*Build the symmetric exchange using all the shared data*/
+  dlong NsendS = N;
+  data[Sym].setupExchange(Nlevels,
+                          Nhalo,
+                          Nhalo,
+                          absHaloBaseIds,
+                          NsendS,
+                          remoteRanks,
+                          absRemoteBaseIds,
+                          localRows,
+                          comm,
+                          platform);
 
-    Nlo=0, Nhi=0;
-    for (dlong n=0;n<N;n++) {
-      if (nodes[n].rank<r_half)
-        loNodes[Nlo++] = nodes[n];
-      else
-        hiNodes[Nhi++] = nodes[n];
+  if (kind==Signed) {
+    /*NoTrans: Get locations of shared nodes that have a local positive baseId*/
+    memory<int> noTransFlags(N);
+
+    #pragma omp parallel for
+    for (dlong n=0; n<N;++n) {
+      noTransFlags[n] = (localBaseIds[n]>0) ? 1 : 0;
     }
 
-    //free up space
-    nodes.free();
+    dlong NsendN = prim::count(N, noTransFlags, 1);
+    memory<dlong> noTransIds(NsendN);
+    prim::select(N, noTransFlags, 1, noTransIds);
 
-    //point to the buffer we keep after the comms
-    nodes = is_lo ? loNodes : hiNodes;
-    N     = is_lo ? Nlo+Nrecv : Nhi+Nrecv;
+    /*Extract the subset of the shared node list for these nodes*/
+    memory<int> remoteRanksN(NsendN);
+    prim::transformGather(NsendN, noTransIds, remoteRanks, remoteRanksN);
 
-    const int offset = is_lo ? Nlo : Nhi;
-    memory<parallelNode_t> sendNodes = is_lo ? hiNodes : loNodes;
+    memory<hlong> absRemoteBaseIdsN(NsendN);
+    prim::transformGather(NsendN, noTransIds, absRemoteBaseIds, absRemoteBaseIdsN);
 
-    //count how many entries from the halo buffer we're sending
-    int NentriesSendN=0;
-    int NentriesSendT=0;
-    for (dlong n=0;n<Nsend;n++) {
-      if (n==0 || abs(sendNodes[n].baseId)!=abs(sendNodes[n-1].baseId)) {
-        if (sendNodes[n].sign>0) NentriesSendN++;
-        NentriesSendT++;
-      }
-    }
-    levelsN[Nlevels].Nsend = NentriesSendN;
-    levelsT[Nlevels].Nsend = NentriesSendT;
-    levelsN[Nlevels].sendIds.malloc(NentriesSendN);
-    levelsT[Nlevels].sendIds.malloc(NentriesSendT);
+    memory<dlong> localRowsN(NsendN);
+    prim::transformGather(NsendN, noTransIds, localRows, localRowsN);
 
-    NentriesSendN=0; //reset
-    NentriesSendT=0; //reset
-    for (dlong n=0;n<Nsend;n++) {
-      if (n==0 || abs(sendNodes[n].baseId)!=abs(sendNodes[n-1].baseId)) {
-        if (sendNodes[n].sign>0)
-          levelsN[Nlevels].sendIds[NentriesSendN++] = sendNodes[n].newId;
+    /*Build the NoTrans exchange*/
+    data[NoTrans].setupExchange(Nlevels,
+                                NhaloP,
+                                Nhalo,
+                                absHaloBaseIds,
+                                NsendN,
+                                remoteRanksN,
+                                absRemoteBaseIdsN,
+                                localRowsN,
+                                comm,
+                                platform);
 
-        levelsT[Nlevels].sendIds[NentriesSendT++] = sendNodes[n].newId;
-      }
-      sendNodes[n].newId = -1; //wipe the newId before sending
-    }
-    levelsT[Nlevels].o_sendIds = platform.malloc(levelsT[Nlevels].sendIds);
-    levelsN[Nlevels].o_sendIds = platform.malloc(levelsN[Nlevels].sendIds);
+    /*Trans: Get locations of shared nodes that have a remote positive baseId*/
+    memory<int> transFlags(N);
 
-    //share the entry count with our partner
-    comm.Isend(NentriesSendT, partner, rank, request[0]);
-
-    int NentriesRecvT0=0, NentriesRecvT1=0;
-    if (Nmsg>0)
-      comm.Irecv(NentriesRecvT0, partner, partner, request[1]);
-    if (Nmsg==2)
-      comm.Irecv(NentriesRecvT1, r_half-1, r_half-1, request[2]);
-
-    comm.Waitall(Nmsg+1, request);
-
-    levelsT[Nlevels].Nrecv0 = NentriesRecvT0;
-    levelsT[Nlevels].Nrecv1 = NentriesRecvT1;
-    levelsT[Nlevels].recvOffset = NhaloExtT;
-
-    comm.Isend(NentriesSendN, partner, rank, request[0]);
-
-    int NentriesRecvN0=0, NentriesRecvN1=0;
-    if (Nmsg>0)
-      comm.Irecv(NentriesRecvN0, partner, partner, request[1]);
-    if (Nmsg==2)
-      comm.Irecv(NentriesRecvN1, r_half-1, r_half-1, request[2]);
-
-    comm.Waitall(Nmsg+1, request);
-
-    levelsN[Nlevels].Nrecv0 = NentriesRecvN0;
-    levelsN[Nlevels].Nrecv1 = NentriesRecvN1;
-    levelsN[Nlevels].recvOffset = NhaloExtN;
-
-    //space needed in recv buffer for this level
-    dlong buf_size = NhaloExtT + NentriesRecvT0 + NentriesRecvT1;
-    haloBuf_size = (buf_size > haloBuf_size) ? buf_size : haloBuf_size;
-
-
-    //send half the list to our partner
-    comm.Isend(sendNodes, partner, Nsend, rank, request[0]);
-
-    //recv new nodes from our partner(s)
-    if (Nmsg>0)
-      comm.Irecv(nodes+offset, partner, Nrecv0, partner, request[1]);
-    if (Nmsg==2)
-      comm.Irecv(nodes+offset+Nrecv0, r_half-1, Nrecv1, r_half-1, request[2]);
-
-    comm.Waitall(Nmsg+1, request);
-
-    sendNodes.free();
-
-    //We now have a list of nodes who's destinations are in our half
-    // of the hypercube
-    //We now build the gather into the haloBuffer
-
-
-    //record the current order
-    for (dlong n=0;n<N;n++) nodes[n].localId = n;
-
-    //sort the new node list by baseId to find matches
-    sort(nodes.ptr(), nodes.ptr()+N,
-       [](const parallelNode_t& a, const parallelNode_t& b) {
-         if(abs(a.baseId) < abs(b.baseId)) return true; //group by abs(baseId)
-         if(abs(a.baseId) > abs(b.baseId)) return false;
-
-         return a.newId > b.newId; //positive newIds first
-       });
-
-    //find how many positive ids there will be in the extended halo
-    dlong start = 0;
-    NhaloExtN=0;
-    NhaloExtT=0;
-    for (dlong n=0;n<N;++n) {
-      //for each baseId group
-      if (n==N-1 || (abs(nodes[n].baseId)!=abs(nodes[n+1].baseId))) {
-        dlong end = n+1;
-        const dlong id = nodes[start].newId; //get Id
-
-        //if this id is in the extended halo already,
-        // or if it is a new baseId to arrive, look for
-        // a positive node
-        if (id >= Nhalo || id==-1) {
-          for (dlong i=start;i<end;++i) {
-            if (nodes[i].sign>0) {
-              NhaloExtN++;
-              break;
-            }
-          }
-          NhaloExtT++;
-        }
-        start = end;
-      }
+    #pragma omp parallel for
+    for (dlong n=0; n<N;++n) {
+      transFlags[n] = (remoteBaseIds[n]>0) ? 1 : 0;
     }
 
+    dlong NsendT = prim::count(N, transFlags, 1);
+    memory<dlong> transIds(NsendT);
+    prim::select(N, transFlags,  1, transIds);
 
-    //make an index map to save the original extended halo ids
-    memory<dlong> indexMap(NhaloExtT);
+    /*Extract the subset of the shared node list for these nodes*/
+    memory<int> remoteRanksT(NsendT);
+    prim::transformGather(NsendT, transIds, remoteRanks, remoteRanksT);
 
-    //fill newIds of new entries if possible, or give them an index
-    NhaloExtT = Nhalo + NhaloExtN;
-    NhaloExtN = Nhalo;
-    start = 0;
-    for (dlong n=0;n<N;++n) {
-      //for each baseId group
-      if (n==N-1 || (abs(nodes[n].baseId)!=abs(nodes[n+1].baseId))) {
-        dlong end = n+1;
+    memory<hlong> absRemoteBaseIdsT(NsendT);
+    prim::transformGather(NsendT, transIds, absRemoteBaseIds, absRemoteBaseIdsT);
 
-        dlong id = nodes[start].newId; //get Id
+    memory<dlong> localRowsT(NsendT);
+    prim::transformGather(NsendT, transIds, localRows, localRowsT);
 
-        //if this id is in the extended halo already,
-        // or if it is a new baseId to arrive, give it
-        // a new id in the extended halo
-        if (id >= Nhalo || id==-1) {
-          int sign = -2;
-          for (dlong i=start;i<end;++i) {
-            if (nodes[i].sign>0) {
-              sign = nodes[i].sign;
-              break;
-            }
-          }
-
-          if (sign>0)
-            id = NhaloExtN++;
-          else
-            id = NhaloExtT++;
-
-          //save the orignal id
-          indexMap[id-Nhalo] = nodes[start].newId;
-        }
-
-        //write id into this baseId group
-        for (dlong i=start;i<end;++i)
-          nodes[i].newId = id;
-
-        start = end;
-      }
-    }
-
-    //sort back to first ordering
-    permute(N, nodes, [](const parallelNode_t& a) { return a.localId; } );
-
-    ogsOperator_t gatherN(platform);
-    ogsOperator_t gatherT(platform);
-
-    gatherN.kind = Unsigned;
-    gatherT.kind = Unsigned;
-
-    gatherN.NrowsN = NhaloExtN;
-    gatherN.NrowsT = NhaloExtN;
-    gatherN.Ncols  = levelsN[Nlevels].recvOffset
-                      + NentriesRecvN0 + NentriesRecvN1;
-
-    gatherT.NrowsN = NhaloExtT;
-    gatherT.NrowsT = NhaloExtT;
-    gatherT.Ncols  = levelsT[Nlevels].recvOffset
-                      + NentriesRecvT0 + NentriesRecvT1;
-
-    gatherT.rowStartsT.calloc(gatherT.NrowsT+1);
-    gatherT.rowStartsN = gatherT.rowStartsT;
-
-    gatherN.rowStartsT.calloc(gatherT.NrowsT+1);
-    gatherN.rowStartsN = gatherN.rowStartsT;
-
-    //gatherT the existing halo
-    for (dlong n=0;n<Nhalo;++n) gatherT.rowStartsT[n+1]=1;
-
-    //for notrans theres nothing to gather in the negative nodes the first time
-    if (np==size)
-      for (dlong n=0;n<NhaloP;++n) gatherN.rowStartsT[n+1]=1;
-    else
-      for (dlong n=0;n<Nhalo;++n) gatherN.rowStartsT[n+1]=1;
-
-    //look through the nodes we still have for extended halo nodes
-    for (dlong n=0;n<offset;++n) {
-      if (n==0 || abs(nodes[n].baseId)!=abs(nodes[n-1].baseId)) {
-        const dlong id = nodes[n].newId;
-        if (nodes[n].newId >= Nhalo) {
-          if (nodes[n].sign >0) gatherN.rowStartsT[id+1]++;
-          gatherT.rowStartsT[id+1]++;
-        }
-      }
-    }
-
-    //look through first message for nodes to gather
-    for (dlong n=offset;n<offset+Nrecv0;++n) {
-      if (n==offset || abs(nodes[n].baseId)!=abs(nodes[n-1].baseId)) {
-        const dlong id = nodes[n].newId;
-        if (nodes[n].sign >0) gatherN.rowStartsT[id+1]++;
-        gatherT.rowStartsT[id+1]++;
-      }
-    }
-    //look through second message for nodes to gather
-    for (dlong n=offset+Nrecv0;n<N;++n) {
-      if (n==offset+Nrecv0 || abs(nodes[n].baseId)!=abs(nodes[n-1].baseId)) {
-        const dlong id = nodes[n].newId;
-        if (nodes[n].sign >0) gatherN.rowStartsT[id+1]++;
-        gatherT.rowStartsT[id+1]++;
-      }
-    }
-
-    for (dlong i=0;i<gatherT.NrowsT;i++) {
-      gatherT.rowStartsT[i+1] += gatherT.rowStartsT[i];
-      gatherN.rowStartsT[i+1] += gatherN.rowStartsT[i];
-    }
-
-    gatherT.nnzT = gatherT.rowStartsT[gatherT.NrowsT];
-    gatherT.nnzN = gatherT.rowStartsT[gatherT.NrowsT];
-
-    gatherT.colIdsT.calloc(gatherT.nnzT);
-    gatherT.colIdsN = gatherT.colIdsT;
-
-    gatherN.nnzT = gatherN.rowStartsT[gatherN.NrowsT];
-    gatherN.nnzN = gatherN.rowStartsT[gatherN.NrowsT];
-
-    gatherN.colIdsT.calloc(gatherN.nnzT);
-    gatherN.colIdsN = gatherN.colIdsT;
-
-    //gatherT the existing halo
-    for (dlong n=0;n<Nhalo;++n) {
-      gatherT.colIdsT[gatherT.rowStartsT[n]++] = n;
-    }
-
-    if (np==size) {
-      for (dlong n=0;n<NhaloP;++n) {
-        gatherN.colIdsT[gatherN.rowStartsT[n]++] = n;
-      }
-    } else {
-      for (dlong n=0;n<Nhalo;++n) {
-        gatherN.colIdsT[gatherN.rowStartsT[n]++] = n;
-      }
-    }
-
-    //look through the nodes we still have for extended halo nodes
-    for (dlong n=0;n<offset;++n) {
-      if (n==0 || abs(nodes[n].baseId)!=abs(nodes[n-1].baseId)) {
-        const dlong id = nodes[n].newId;
-        if (nodes[n].newId >= Nhalo) {
-          if (nodes[n].sign > 0) {
-            gatherN.colIdsT[gatherN.rowStartsT[id]++] = indexMap[id-Nhalo];
-          }
-          gatherT.colIdsT[gatherT.rowStartsT[id]++] = indexMap[id-Nhalo];
-        }
-      }
-    }
-
-    indexMap.free();
-
-    dlong NentriesRecvN=levelsN[Nlevels].recvOffset;
-    dlong NentriesRecvT=levelsT[Nlevels].recvOffset;
-    //look through first message for nodes to gatherT
-    for (dlong n=offset;n<offset+Nrecv0;++n) {
-      if (n==offset || abs(nodes[n].baseId)!=abs(nodes[n-1].baseId)) {
-        const dlong id = nodes[n].newId;
-        if (nodes[n].sign > 0) {
-          gatherN.colIdsT[gatherN.rowStartsT[id]++] = NentriesRecvN++;
-        }
-        gatherT.colIdsT[gatherT.rowStartsT[id]++] = NentriesRecvT++;
-      }
-    }
-    //look through second message for nodes to gatherT
-    for (dlong n=offset+Nrecv0;n<N;++n) {
-      if (n==offset+Nrecv0 || abs(nodes[n].baseId)!=abs(nodes[n-1].baseId)) {
-        const dlong id = nodes[n].newId;
-        if (nodes[n].sign > 0) {
-          gatherN.colIdsT[gatherN.rowStartsT[id]++] = NentriesRecvN++;
-        }
-        gatherT.colIdsT[gatherT.rowStartsT[id]++] = NentriesRecvT++;
-      }
-    }
-
-    //reset row starts
-    for (dlong i=gatherT.NrowsT;i>0;--i) {
-      gatherT.rowStartsT[i] = gatherT.rowStartsT[i-1];
-      gatherN.rowStartsT[i] = gatherN.rowStartsT[i-1];
-    }
-    gatherT.rowStartsT[0] = 0;
-    gatherN.rowStartsT[0] = 0;
-
-    gatherT.o_rowStartsT = platform.malloc(gatherT.rowStartsT);
-    gatherT.o_rowStartsN = gatherT.o_rowStartsT;
-    gatherN.o_rowStartsT = platform.malloc(gatherN.rowStartsT);
-    gatherN.o_rowStartsN = gatherN.o_rowStartsT;
-    gatherT.o_colIdsT = platform.malloc(gatherT.colIdsT);
-    gatherT.o_colIdsN = gatherT.o_colIdsT;
-    gatherN.o_colIdsT = platform.malloc(gatherN.colIdsT);
-    gatherN.o_colIdsN = gatherN.o_colIdsT;
-
-    gatherN.setupRowBlocks();
-    gatherT.setupRowBlocks();
-
-    levelsT[Nlevels].gather = gatherT;
-    levelsN[Nlevels].gather = gatherN;
-
-    //sort the new node list by newId
-    sort(nodes.ptr(), nodes.ptr()+N,
-       [](const parallelNode_t& a, const parallelNode_t& b) {
-         return a.newId < b.newId; //group by newId (which also groups by abs(baseId))
-       });
-
-    //propagate the sign of recvieved nodes
-    start = 0;
-    for (dlong n=0;n<N;++n) {
-      //for each baseId group
-      if (n==N-1 || (abs(nodes[n].baseId)!=abs(nodes[n+1].baseId))) {
-        dlong end = n+1;
-        //look for a positive sign, so we know if this node flips positive
-        for (dlong i=start;i<end;++i) {
-          const int sign = nodes[i].sign;
-          if (sign>0) {
-            for (dlong j=start;j<end;++j)
-              nodes[j].sign = sign;
-            break;
-          }
-        }
-        start = end;
-      }
-    }
-
-    //Shrink the size of the hypercube
-    if (is_lo) {
-      np = np_half;
-    } else {
-      np -= np_half;
-      np_offset = r_half;
-    }
-    Nlevels++;
-  }
-  if (size>1) nodes.free();
-
-  NsendMax=0, NrecvMax=0;
-  for (int k=0;k<Nlevels;k++) {
-    int Nsend = levelsT[k].Nsend;
-    NsendMax = (Nsend>NsendMax) ? Nsend : NsendMax;
-    int Nrecv = levelsT[k].recvOffset
-                + levelsT[k].Nrecv0 + levelsT[k].Nrecv1;
-    NrecvMax = (Nrecv>NrecvMax) ? Nrecv : NrecvMax;
+    /*Build the Trans exchange*/
+    data[Trans].setupExchange(Nlevels,
+                              Nhalo,
+                              NhaloP,
+                              absHaloBaseIds,
+                              NsendT,
+                              remoteRanksT,
+                              absRemoteBaseIdsT,
+                              localRowsT,
+                              comm,
+                              platform);
+  } else {
+    data[NoTrans] = data[Sym];
+    data[Trans] = data[Sym];
   }
 
   //make scratch space
@@ -753,20 +810,15 @@ ogsCrystalRouter_t::ogsCrystalRouter_t(dlong Nshared,
 
 void ogsCrystalRouter_t::AllocBuffer(size_t Nbytes) {
 
-  if (o_sendspace.byte_size() < NsendMax*Nbytes) {
-    h_sendspace = platform.hostMalloc<char>(NsendMax*Nbytes);
-    o_sendspace = platform.malloc<char>(NsendMax*Nbytes);
+  if (o_workspace.byte_size() < data[Sym].NsendMax*Nbytes) {
+    h_workspace = platform.hostMalloc<char>(data[Sym].NsendMax*Nbytes);
+    o_workspace = platform.malloc<char>(data[Sym].NsendMax*Nbytes);
   }
-  if (o_work[0].byte_size() < NrecvMax*Nbytes) {
-    h_work[0] = platform.hostMalloc<char>(NrecvMax*Nbytes);
-    h_work[1] = platform.hostMalloc<char>(NrecvMax*Nbytes);
-    h_workspace = h_work[0];
-    hbuf_id=0;
-
-    o_work[0] = platform.malloc<char>(NrecvMax*Nbytes);
-    o_work[1] = platform.malloc<char>(NrecvMax*Nbytes);
-    o_workspace = o_work[0];
-    buf_id=0;
+  if (o_sendspace.byte_size() < data[Sym].NrecvMax*Nbytes) {
+    h_sendspace = platform.hostMalloc<char>(data[Sym].NrecvMax*Nbytes);
+    h_recvspace = platform.hostMalloc<char>(data[Sym].NrecvMax*Nbytes);
+    o_sendspace = platform.malloc<char>(data[Sym].NrecvMax*Nbytes);
+    o_recvspace = platform.malloc<char>(data[Sym].NrecvMax*Nbytes);
   }
 }
 

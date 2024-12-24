@@ -78,7 +78,7 @@ dfloat ParallelPivot(const dlong N, memory<dfloat>& F,
 
   /*Make a copy of input vector*/
   memory<dfloat> A(N);
-  
+
   #pragma omp parallel for
   for (dlong n=0;n<N;++n) {
     A[n] = F[n];
@@ -91,8 +91,8 @@ dfloat ParallelPivot(const dlong N, memory<dfloat>& F,
     globalMax = std::max(A[n], globalMax);
     globalMin = std::min(A[n], globalMin);
   }
-  comm.Allreduce(globalMin, Comm::Min);
-  comm.Allreduce(globalMax, Comm::Max);
+  comm.Allreduce(globalMin, comm_t::Min);
+  comm.Allreduce(globalMax, comm_t::Max);
 
   /*Find pivot point via binary search*/
   dfloat pivot = Pivot(A, 0, N, k, globalMin, globalMax, comm);

@@ -42,6 +42,14 @@ kernel_t ogsOperator_t::scatterKernel[4];
 
 kernel_t ogsExchange_t::extractKernel[4];
 
+//defaults
+int gsblockSize = 256;
+int gblockSize = 256;
+int sblockSize = 256;
+
+int gsNodesPerBlock = 512;
+int gNodesPerBlock = 512;
+int sNodesPerBlock = 512;
 
 void InitializeKernels(platform_t& platform, const Type type, const Op op) {
 
@@ -50,14 +58,19 @@ void InitializeKernels(platform_t& platform, const Type type, const Op op) {
 
     properties_t kernelInfo = platform.props();
 
-    kernelInfo["defines/p_blockSize"] = ogsOperator_t::blockSize;
-    kernelInfo["defines/p_gatherNodesPerBlock"] = ogsOperator_t::gatherNodesPerBlock;
+    kernelInfo["defines/GS_BLOCKSIZE"] = ogs::gsblockSize;
+    kernelInfo["defines/G_BLOCKSIZE"]  = ogs::gblockSize;
+    kernelInfo["defines/S_BLOCKSIZE"]  = ogs::sblockSize;
+
+    kernelInfo["defines/G_NODESPERBLOCK"]  = ogs::gNodesPerBlock;
+    kernelInfo["defines/S_NODESPERBLOCK"]  = ogs::sNodesPerBlock;
+    kernelInfo["defines/GS_NODESPERBLOCK"] = ogs::gsNodesPerBlock;
 
     switch (type) {
       case Float:  kernelInfo["defines/T"] =  "float"; break;
       case Double: kernelInfo["defines/T"] =  "double"; break;
-      case Int32:  kernelInfo["defines/T"] =  "int32_t"; break;
-      case Int64:  kernelInfo["defines/T"] =  "int64_t"; break;
+      case Int32:  kernelInfo["defines/T"] =  "int"; break;
+      case Int64:  kernelInfo["defines/T"] =  "long long int"; break;
     }
 
     switch (type) {
@@ -117,7 +130,7 @@ void InitializeKernels(platform_t& platform, const Type type, const Op op) {
                                                  kernelInfo);
 
       ogsExchange_t::extractKernel[type] = platform.buildKernel(OGS_DIR "/okl/ogsKernels.okl",
-                                                "extract", kernelInfo);\
+                                                "extract", kernelInfo);
     }
   }
 }
