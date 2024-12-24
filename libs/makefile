@@ -39,7 +39,7 @@ Libraries makefile targets:
 Usage:
 
 make all
-	 Build core, ogs, parAdogs, mesh, linAlg, timeStepper, linearSovler, and parAlmond libraries.
+	 Build core, prim, ogs, parAdogs, mesh, linAlg, timeStepper, linearSovler, and parAlmond libraries.
 make {lib}
 	 Build only {lib} library.
 make clean
@@ -57,7 +57,7 @@ Can use "make verbose=true" for verbose output.
 
 endef
 
-ifeq (,$(filter core linAlg linearSolver parAdogs mesh ogs parAlmond timeStepper \
+ifeq (,$(filter core prim linAlg linearSolver parAdogs mesh ogs parAlmond timeStepper \
 								clean clean-libs clean-kernels realclean info help, $(MAKECMDGOALS)))
 ifneq (,$(MAKECMDGOALS))
 $(error ${LIB_HELP_MSG})
@@ -74,6 +74,7 @@ endif
 
 #libraries
 LIBCORE_DIR=${LIBP_LIBS_DIR}/core
+LIBPRIM_DIR=${LIBP_LIBS_DIR}/primitives
 LIBLINALG_DIR=${LIBP_LIBS_DIR}/linAlg
 LIBLINEARSOLVER_DIR=${LIBP_LIBS_DIR}/linearSolver
 LIBPARADOGS_DIR=${LIBP_LIBS_DIR}/parAdogs
@@ -122,6 +123,7 @@ LIBPARALMOND_DEPS=$(wildcard ${LIBP_INCLUDE_DIR}/parAlmond/*.h)   \
 								  ${LIB_DEPS}
 
 LIBCORE_SRC =$(wildcard core/*.cpp)
+LIBPRIM_SRC =$(wildcard primitives/*.cpp)
 LIBLINALG_SRC =$(wildcard linAlg/*.cpp)
 LIBLINEARSOLVER_SRC =$(wildcard linearSolver/*.cpp)
 LIBPARADOGS_SRC =$(wildcard parAdogs/*.cpp)
@@ -131,6 +133,7 @@ LIBPARALMOND_SRC =$(wildcard parAlmond/*.cpp)
 LIBTIMESTEPPER_SRC =$(wildcard timeStepper/*.cpp)
 
 LIBCORE_OBJS=$(LIBCORE_SRC:.cpp=.o)
+LIBPRIM_OBJS=$(LIBPRIM_SRC:.cpp=.o)
 LIBLINALG_OBJS=$(LIBLINALG_SRC:.cpp=.o)
 LIBLINEARSOLVER_OBJS=$(LIBLINEARSOLVER_SRC:.cpp=.o)
 LIBPARADOGS_OBJS=$(LIBPARADOGS_SRC:.cpp=.o)
@@ -139,16 +142,17 @@ LIBOGS_OBJS=$(LIBOGS_SRC:.cpp=.o)
 LIBPARALMOND_OBJS=$(LIBPARALMOND_SRC:.cpp=.o)
 LIBTIMESTEPPER_OBJS=$(LIBTIMESTEPPER_SRC:.cpp=.o)
 
-.PHONY: all core linAlg linearSolver mesh ogs parAdogs parAlmond timeStepper \
+.PHONY: all core prim linAlg linearSolver mesh ogs parAdogs parAlmond timeStepper \
 				clean realclean silentUpdate-core             \
 				silentUpdate-linAlg silentUpdate-linearSolver \
 				silentUpdate-ogs silentUpdate-mesh            \
 				silentUpdate-parAdogs                         \
 				silentUpdate-parAlmond silentUpdate-timeStepper
 
-all: core linAlg linearSolver parAdogs mesh ogs parAlmond timeStepper
+all: core prim linAlg linearSolver parAdogs mesh ogs parAlmond timeStepper
 
 core: libcore.a silentUpdate-core
+prim: libprim.a silentUpdate-prim
 linAlg: liblinAlg.a silentUpdate-linAlg
 linearSolver: liblinearSolver.a silentUpdate-linearSolver
 mesh: libmesh.a silentUpdate-mesh
@@ -165,7 +169,15 @@ else
 	@ar -cr libcore.a $(LIBCORE_OBJS)
 endif
 
-libogs.a: $(LIBOGS_OBJS) | libcore.a
+libprim.a: $(LIBPRIM_OBJS) | libcore.a
+ifneq (,${verbose})
+	ar -cr libprim.a $(LIBPRIM_OBJS)
+else
+	@printf "%b" "$(LIB_COLOR)Building library $(@F)$(NO_COLOR)\n";
+	@ar -cr libprim.a $(LIBPRIM_OBJS)
+endif
+
+libogs.a: $(LIBOGS_OBJS) | libprim.a
 ifneq (,${verbose})
 	ar -cr libogs.a $(LIBOGS_OBJS)
 else
@@ -173,7 +185,7 @@ else
 	@ar -cr libogs.a $(LIBOGS_OBJS)
 endif
 
-liblinAlg.a: $(LIBLINALG_OBJS) | libcore.a
+liblinAlg.a: $(LIBLINALG_OBJS) | libprim.a
 ifneq (,${verbose})
 	ar -cr liblinAlg.a $(LIBLINALG_OBJS)
 else
@@ -205,7 +217,7 @@ else
 	@ar -cr libtimeStepper.a $(LIBTIMESTEPPER_OBJS)
 endif
 
-liblinearSolver.a: $(LIBLINEARSOLVER_OBJS) | libcore.a
+liblinearSolver.a: $(LIBLINEARSOLVER_OBJS) | libprim.a
 ifneq (,${verbose})
 	ar -cr liblinearSolver.a $(LIBLINEARSOLVER_OBJS)
 else
@@ -222,6 +234,9 @@ else
 endif
 
 silentUpdate-core:
+	@true
+
+silentUpdate-prim:
 	@true
 
 silentUpdate-linAlg:
@@ -257,7 +272,15 @@ else
 	@$(LIBP_CXX) -o $@ -c $< ${LIBCORE_DEFINES} $(LIB_CXXFLAGS)
 endif
 
-linAlg/%.o: linAlg/%.cpp $(LIB_DEPS) | libcore.a
+primitives/%.o: primitives/%.cpp $(LIB_DEPS) ${OCCA_DIR}/lib/libocca.so
+ifneq (,${verbose})
+	$(LIBP_CXX) -o $@ -c $< $(LIB_CXXFLAGS)
+else
+	@printf "%b" "$(OBJ_COLOR)Compiling $(@F)$(NO_COLOR)\n";
+	@$(LIBP_CXX) -o $@ -c $< $(LIB_CXXFLAGS)
+endif
+
+linAlg/%.o: linAlg/%.cpp $(LIB_DEPS) | libprim.a
 ifneq (,${verbose})
 	$(LIBP_CXX) -o $@ -c $< ${LIBLINALG_DEFINES} $(LIB_CXXFLAGS)
 else
@@ -273,7 +296,7 @@ else
 	@$(LIBP_CXX) -o $@ -c $< ${LIBPARADOGS_DEFINES} $(LIB_CXXFLAGS)
 endif
 
-linearSolver/%.o: linearSolver/%.cpp $(LIB_DEPS) | libcore.a
+linearSolver/%.o: linearSolver/%.cpp $(LIB_DEPS) | libprim.a
 ifneq (,${verbose})
 	$(LIBP_CXX) -o $@ -c $< ${LIBLINEARSOLVER_DEFINES} $(LIB_CXXFLAGS)
 else
@@ -315,7 +338,7 @@ endif
 
 #cleanup
 clean:
-	rm -f core/*.o linAlg/*.o linearSolver/*.o mesh/*.o ogs/*.o parAdogs/*.o parAlmond/*.o timeStepper/*.o *.a
+	rm -f core/*.o primitives/*.o linAlg/*.o linearSolver/*.o mesh/*.o ogs/*.o parAdogs/*.o parAlmond/*.o timeStepper/*.o *.a
 
 clean-kernels: clean
 	rm -rf ${LIBP_DIR}/.occa/

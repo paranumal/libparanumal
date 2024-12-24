@@ -80,11 +80,8 @@ include make.top
 endif
 endif
 
-#gslib
-GS_DIR=${LIBP_TPL_DIR}/gslib
-
 #libraries
-LIBP_CORE_LIBS=timeStepper linearSolver parAlmond mesh ogs linAlg core
+LIBP_CORE_LIBS=timeStepper linearSolver parAlmond mesh ogs linAlg prim core
 SOLVER_DIR   =${LIBP_DIR}/solvers
 
 .PHONY: all solvers libp_libs \
