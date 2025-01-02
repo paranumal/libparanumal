@@ -5,15 +5,17 @@ data/cnsUniform2D.h
 #-------------------[MESH PROPERTIES]-----------------------#
 [MESH FILE]
 #../../meshes/cnsScramjet2D.msh
-#../../meshes/cnsScramjet2D.msh
+#../../meshes/cnsRamp2D.msh
 #../../meshes/cnsFFS2D.msh
-#../../meshes/cnsBump2D.msh
+../../meshes/cnsBump2D.msh
+#../../meshes/cnsHalfCylinder2D.msh
+
 #../../meshes/cnsSupersonicCylinder2D.msh
 #../../meshes/cnsFlatPlate2D.msh
 #../../meshes/cnsNACAFlexi2D.msh
 #../../meshes/cnsNACA2D_Symmetry.msh
 #../../meshes/cnsBody2D.msh
-../../meshes/naca12.msh
+#../../meshes/naca12.msh
 
 [FORMAT]
 2.0
@@ -43,11 +45,12 @@ data/cnsUniform2D.h
 
 #-----------------[DISCRETIZATION PROPERTIES]------------------#
 [POLYNOMIAL DEGREE]
-3
+4
 
 # EULER or NAVIER-STOKES
 [SOLVER TYPE]
-NAVIER-STOKES
+EULER
+#NAVIER-STOKES
 
 #Can be COLLOCATION or CUBATURE
 [ADVECTION TYPE]
@@ -100,7 +103,7 @@ SUTHERLAND
 
 # [density, velocity, pressure]
 [FLOW STATES]
-1.0,1.477211629518312,0.260472266500396, 0.714285714285714;
+1.0, 1.4, 0.0, 0.714285714285714;
 
 [IC STATE ID]
 0
@@ -113,7 +116,12 @@ SUTHERLAND
 
 #Geoemtric IDs -> BC IDs
 [GEOMETRIC-TO-PHYSICAL MAP]
-12:1,2,3,4;20:5, 6, 7, 8, 9, 10, 11;
+#12:1,2,3,4;20:5, 6, 7, 8, 9, 10, 11;
+13:1,2,3,5;20:6,4;
+#13:1,3,5,6,7,8;20:2,4;
+#13:1,2,4;20:3,5;
+#13:1;20:2,3,4;
+
 
 [CFL NUMBER]
 0.1
@@ -122,7 +130,7 @@ SUTHERLAND
 0
 
 [FINAL TIME]
-20.0
+10.0
 #-------------------------------------------------------------#
 
 
@@ -136,11 +144,11 @@ SUTHERLAND
 TRUE
 
 [OUTPUT FILE NAME]
-cnsNACA
+cnsBP3
 
 [REPORT FORCES]
-#FALSE
-TRUE
+FALSE
+#TRUE
 
 [REPORT MOMENTS]
 TRUE
@@ -190,6 +198,6 @@ TRUE
 LAPLACE
 
 [ARTDIFF SCALE FACTOR]
-1.0
+0.5
 #-------------------------------------------------------------#
 

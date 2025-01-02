@@ -707,8 +707,6 @@ void upwindRusanov(const dfloat nx, const dfloat ny, const dfloat gamma,
             rEM = pM/(gamma-1.0) + 0.5f*rrM*(uM*uM+vM*vM); 
           #endif  
         
-        // const dfloat TBAR = flowStates[BCStateID*p_NsP + 4]; 
-
          // apply boundary conditions for viscous flux and modify bc state after inviscid fluxes
         if(bc>0){
         const dlong idM = e*p_intNfpNfaces + n; 
@@ -721,8 +719,8 @@ void upwindRusanov(const dfloat nx, const dfloat ny, const dfloat gamma,
                                         intx[idM], inty[idM], nx, ny, 
                                         rrM, ruM, rvM, rEM, &rrP, &ruP, &rvP, &rEP); 
 
-            drrdxP = 0.0; drrdyP = 0.0; drudxP = 0.0; drudyP = 0.0;
-            drvdxP = 0.0; drvdyP = 0.0; dredxP = 0.0; dredyP = 0.0;
+            drrdxP = drrdxM; drrdyP = drrdyM; drudxP = drudxM; drudyP = drudyM;
+            drvdxP = drvdxM; drvdyP = drvdyM; dredxP = dredxM; dredyP = dredyM;
          }
 
 
