@@ -1,0 +1,195 @@
+#-------------------------------------------------------------#
+[DATA FILE]
+data/cnsTGV3D.h
+
+#-------------------[MESH PROPERTIES]-----------------------#
+[MESH FILE]
+BOX
+
+[FORMAT]
+2.0
+
+[MESH DIMENSION]
+3
+
+# number of edges
+[ELEMENT TYPE] 
+6
+
+# if MESH FILE = BOX 
+[BOX NX]
+10
+
+[BOX NY]
+10
+
+[BOX NZ]
+10
+
+[BOX DIMX]
+6.28318530718
+
+[BOX DIMY]
+6.28318530718
+
+[BOX DIMZ]
+6.28318530718
+
+[BOX BOUNDARY FLAG]
+-1
+#-------------------------------------------------------------#
+
+
+#-----------------[DISCRETIZATION PROPERTIES]------------------#
+[POLYNOMIAL DEGREE]
+4
+
+# EULER or NAVIER-STOKES
+[SOLVER TYPE]
+NAVIER-STOKES
+
+#Can be COLLOCATION or CUBATURE
+[ADVECTION TYPE]
+CUBATURE
+
+# DIFFUSION DISCRETIZATION: 0 <= beta <= 1 
+[LDG BETA COEFFICIENT]
+0.0
+
+# DIFFUSION DISCRETIZATION: 0 <= tau <= 1 
+[LDG TAU COEFFICIENT]
+0.0
+
+[TIME INTEGRATOR]
+DOPRI5
+#-------------------------------------------------------------#
+
+
+
+#-------------------[DEVICE PROPERTIES]-----------------------#
+[THREAD MODEL]
+CUDA
+
+[PLATFORM NUMBER]
+0
+
+[DEVICE NUMBER]
+0
+#-------------------------------------------------------------#
+
+
+#---------------------[PROBLEM SETUP]------------------------#
+# Isentropic exponent 
+[GAMMA]
+1.4
+
+[SPECIFIC GAS CONSTANT]
+0.714285714285714
+
+[VISCOSITY]
+0.000625
+
+# CONSTANT, SUTHERLAND or POWER-LAW
+[VISCOSITY TYPE]
+#CONSTANT
+SUTHERLAND
+
+[PRANDTL NUMBER]
+0.72
+
+# [density, velocity, pressure]
+[FLOW STATES]
+1.0, 1.0, 0.0, 0.0, 100.0;
+
+[IC STATE ID]
+0
+
+[BC STATE ID]
+0
+
+[REFERENCE STATE ID]
+0
+
+#Geoemtric IDs -> BC IDs
+[GEOMETRIC-TO-PHYSICAL MAP]
+12:1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15; 20: 16; 
+
+[CFL NUMBER]
+0.1
+
+[START TIME]
+0
+
+[FINAL TIME]
+20.0
+#-------------------------------------------------------------#
+
+
+
+#-------------------[OUTPUT PROPERTIES]-----------------------#
+[OUTPUT INTERVAL]
+0.1
+
+[OUTPUT TO FILE]
+TRUE
+
+[OUTPUT FILE NAME]
+cnsTGV
+
+[REPORT FORCES]
+FALSE
+
+[REPORT MOMENTS]
+FALSE
+
+[REPORT COMPONENT]
+FALSE
+
+[MOMENT CENTER]
+0.0, 0.0, 0.0,
+
+# zero indexed groups
+[REPORT GROUPS]
+0:1,2,3,4,5,6,7,8,9,10,11,12,13,14,15;
+#1:1,2,3,4,13,14;2:5,6,7,8,9, 10, 11, 12,15;
+# Group zero is the whole body surfaces, 1 is the nose part and 2 is the remaning body parts
+
+[REFERENCE AREA]
+1.0
+
+[REFERENCE LENGTH]
+6.28318530718
+#-------------------------------------------------------------#
+
+
+
+#----------------[STABILIZASYON PROPERTIES]-------------------#
+# HJS:1  CNS:2  INS:3 
+[STABILIZATION SOLVER TYPE]
+2
+
+# NODETECT: 0  ALL= 1 Klockner: 2 Persson: 3 DUCROS: 4
+[DETECTOR TYPE]
+2
+
+# NoStab:0 Filter: 1, Limiter: 2, Artdiff: 3, Subcell: 4
+[STAB TYPE]
+3
+
+[SUBCELL NUMBER]
+4
+
+[SUBCELL MINOR GRID]
+WARPBLEND
+
+[STAB OUTPUT TO FILE]
+TRUE
+
+# [LAPLACE], [PHYSICAL X do not use this option for now!!!!] 
+[ARTDIFF TYPE]
+LAPLACE
+
+[ARTDIFF SCALE FACTOR]
+0.0
+#-------------------------------------------------------------#
+
