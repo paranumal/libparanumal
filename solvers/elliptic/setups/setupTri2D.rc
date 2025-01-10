@@ -14,10 +14,10 @@ BOX
 3
 
 [BOX NX]
-40
+5
 
 [BOX NY]
-40
+5
 
 [BOX NZ]
 40
@@ -35,7 +35,7 @@ BOX
 1
 
 [POLYNOMIAL DEGREE]
-4
+1
 
 [THREAD MODEL]
 CUDA
@@ -47,7 +47,7 @@ CUDA
 0
 
 [LAMBDA]
-1
+0
 
 # can be IPDG, or CONTINUOUS
 [DISCRETIZATION]

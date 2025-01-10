@@ -103,7 +103,7 @@ SUTHERLAND
 
 # [density, velocity, pressure]
 [FLOW STATES]
-1.0, 1.4, 0.0, 0.714285714285714;
+1.0, 0.675, 0.0, 0.714285714285714;
 
 [IC STATE ID]
 0

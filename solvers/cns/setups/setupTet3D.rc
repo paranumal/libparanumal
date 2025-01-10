@@ -130,7 +130,7 @@ SUTHERLAND
 
 #-------------------[OUTPUT PROPERTIES]-----------------------#
 [OUTPUT INTERVAL]
-0.1
+0.25
 
 [OUTPUT TO FILE]
 TRUE

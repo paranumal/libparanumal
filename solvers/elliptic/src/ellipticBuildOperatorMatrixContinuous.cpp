@@ -86,6 +86,8 @@ void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO& A) {
 
   //Build unassembed non-zeros
   dlong cnt =0;
+  dlong tmp1 = 0; 
+  dlong tmp2 = 0; 
   for (dlong e=0;e<mesh.Nelements;e++) {
     dfloat Grr = mesh.ggeo[e*mesh.Nggeo + mesh.G00ID];
     dfloat Grs = mesh.ggeo[e*mesh.Nggeo + mesh.G01ID];
@@ -94,6 +96,7 @@ void elliptic_t::BuildOperatorMatrixContinuousTri2D(parAlmond::parCOO& A) {
 
     for (int n=0;n<mesh.Np;n++) {
       if (maskedGlobalNumbering[e*mesh.Np + n]<0) continue; //skip masked nodes
+      tmp1++;
       for (int m=0;m<mesh.Np;m++) {
         if (maskedGlobalNumbering[e*mesh.Np + m]<0) continue; //skip masked nodes
 
