@@ -219,7 +219,7 @@ void ogsCrystalRouter_t::DeviceFinish(const Type type, const int k, const Op op,
  * of the local NP reaches 1.
  *
  * In the case where NP is odd, n_half-1 == NP-n_half and rank n_half-1 has
- * no partner to communicate with. In this case, we assign rank r to the
+ * no partner to communicate with. In this case, we assign rank n_half-1 to the
  * lo half of ranks, and rank n_half-1 sends its data to rank n_half (and
  * receives no message, as rank n_half-2 is receiving all rank n_half's data).
 
@@ -461,36 +461,35 @@ void ogsCrystalRouter_t::data_t::setupExchange(const int Nlevels,
       np_offset = r_half;
     }
 
-    //The last gather must be built with the desired row ordering, so exit early here
-    if (np<=1) {
-      baseIds = newBaseIds;
-      break;
-    }
-
     //We now have the list of baseIds on this rank after the comms.
-    // Build the gather to compress the list to a unique set of baseIds
 
-    memory<dlong> rows(nnz);
-    EnumerateGroups(nnz, newBaseIds, Nids, rows, baseIds);
+    if (np>1) {
+      // Build the gather to compress the list to a unique set of baseIds
+      memory<dlong> rows(nnz);
+      EnumerateGroups(nnz, newBaseIds, Nids, rows, baseIds);
 
-    /*Sort groups by their row*/
-    memory<dlong> rowSortIds(nnz);
-    prim::stableSort(nnz, rows, rowSortIds);
+      /*Sort groups by their row*/
+      memory<dlong> rowSortIds(nnz);
+      prim::stableSort(nnz, rows, rowSortIds);
 
-    memory<dlong> sortedCols(nnz);
-    prim::transformGather(nnz, rowSortIds, cols, sortedCols);
-    cols = sortedCols;
+      memory<dlong> sortedCols(nnz);
+      prim::transformGather(nnz, rowSortIds, cols, sortedCols);
+      cols = sortedCols;
 
-    /*Build the gather op to assemble the recieved data from MPI*/
-    levels[lvl].gather = ogsOperator_t(platform,
-                                       Unsigned,
-                                       Nids,
-                                       Nids,
-                                       Ncols,
-                                       nnz,
-                                       memory<hlong>(),
-                                       rows,
-                                       cols);
+      /*Build the gather op to assemble the recieved data from MPI*/
+      levels[lvl].gather = ogsOperator_t(platform,
+                                         Unsigned,
+                                         Nids,
+                                         Nids,
+                                         Ncols,
+                                         nnz,
+                                         memory<hlong>(),
+                                         rows,
+                                         cols);
+    } else {
+      //The last gather must be built with the desired row ordering
+      baseIds = newBaseIds;
+    }
 
     // To construct the next level, we need to forward the sharing info to our partner
 
@@ -558,6 +557,9 @@ void ogsCrystalRouter_t::data_t::setupExchange(const int Nlevels,
     remoteBaseIds.free();
     remoteRanks.free();
     remoteBaseIds = newRemoteBaseIds;
+
+    //If this is the last level exit here to go build the last gather
+    if (np<=1) break;
 
     // Finally, sort the new list to group baseIds together
 
