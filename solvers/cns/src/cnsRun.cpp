@@ -32,7 +32,6 @@ void cns_t::Run(){
   settings.getSetting("START TIME", startTime);
   settings.getSetting("FINAL TIME", finalTime);
 
-
   initialConditionKernel(mesh.Nelements,
                          startTime,
                          ICStateID,
@@ -42,7 +41,7 @@ void cns_t::Run(){
                          mesh.o_y,
                          mesh.o_z,
                          o_q);
-
+  
   dfloat cfl=1.0;
   settings.getSetting("CFL NUMBER", cfl);
 

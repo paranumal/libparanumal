@@ -4,10 +4,11 @@ data/cnsUniform2D.h
 
 #-------------------[MESH PROPERTIES]-----------------------#
 [MESH FILE]
+BOX
 #../../meshes/cnsScramjet2D.msh
 #../../meshes/cnsRamp2D.msh
 #../../meshes/cnsFFS2D.msh
-../../meshes/cnsBump2D.msh
+#../../meshes/cnsBump2D.msh
 #../../meshes/cnsHalfCylinder2D.msh
 
 #../../meshes/cnsSupersonicCylinder2D.msh
@@ -103,7 +104,7 @@ SUTHERLAND
 
 # [density, velocity, pressure]
 [FLOW STATES]
-1.0, 0.675, 0.0, 0.714285714285714;
+1.0, 3.0, 0.0, 0.714285714285714;
 
 [IC STATE ID]
 0
@@ -117,8 +118,8 @@ SUTHERLAND
 #Geoemtric IDs -> BC IDs
 [GEOMETRIC-TO-PHYSICAL MAP]
 #12:1,2,3,4;20:5, 6, 7, 8, 9, 10, 11;
-13:1,2,3,5;20:6,4;
-#13:1,3,5,6,7,8;20:2,4;
+#13:1,2,3,5;20:6,4;
+13:1,3,5,6,7,8;20:2,4;
 #13:1,2,4;20:3,5;
 #13:1;20:2,3,4;
 
@@ -138,13 +139,13 @@ SUTHERLAND
 
 #-------------------[OUTPUT PROPERTIES]-----------------------#
 [OUTPUT INTERVAL]
-0.2
+0.1
 
 [OUTPUT TO FILE]
 TRUE
 
 [OUTPUT FILE NAME]
-cnsBP3
+cnsTest
 
 [REPORT FORCES]
 FALSE

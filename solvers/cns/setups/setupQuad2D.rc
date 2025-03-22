@@ -2,8 +2,8 @@
 2.0
 
 [DATA FILE]
-#data/cnsGaussian2D.h
-data/cnsUniform2Dv2.h
+data/cnsGaussian2D.h
+#data/cnsUniform2Dv2.h
 #*******************[MESH PROPERTIES]*******************#
 [MESH FILE]
 #BOX
@@ -16,13 +16,13 @@ data/cnsUniform2Dv2.h
 4
 
 [BOX NX]
-51
+10
 
 [BOX NY]
-101
+10
 
 [BOX NZ]
-101
+10
 
 [BOX BOUNDARY FLAG]
 11

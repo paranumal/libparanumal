@@ -25,5 +25,4 @@ os.system('mkdir '+ args.outDir)
 gmsh.open(args.cgnsFile)
 gmsh.option.setNumber("Mesh.MshFileVersion",2.2)   
 gmsh.write(args.outDir+"/"+ args.mshFile)
-
 gmsh.finalize()
