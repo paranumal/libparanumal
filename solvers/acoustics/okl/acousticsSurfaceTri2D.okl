@@ -112,12 +112,15 @@ void upwind(const dfloat nx,
             dfloat vP = q[qbaseP + 2*p_Np];
 
             // apply boundary condition
-            const int bc = EToB[face+p_Nfaces*element];
-            if(bc>0){
-              acousticsDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, rM, uM, vM, &rP, &uP, &vP);
-              //should also add the Neumann BC here, but need uxM, uyM, vxM, abd vyM somehow
-            }
-
+            int bc = EToB[face+p_Nfaces*element];
+	    if(bc>0 || idM==idP)
+	      {
+		// TW: currently BCs are not correct, since internal boundary with quads is not labelled
+		bc = 1;
+		acousticsDirichletConditions2D(bc, time, x[idM], y[idM], nx, ny, rM, uM, vM, &rP, &uP, &vP);
+		//should also add the Neumann BC here, but need uxM, uyM, vxM, abd vyM somehow
+	      }
+	    
             // evaluate "flux" terms: (sJ/J)*(A*nx+B*ny)*(q^* - q^-)
             const dfloat sc = invJ*sJ;
 

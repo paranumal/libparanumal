@@ -3,13 +3,13 @@ Mesh.MshFileVersion = 2.2;
 d = 1;
 h = d/10;
 
-Point(1) = {0,0,0,h};
-Point(2) = {d,0,0,h};
-Point(3) = {d,d,0,h};
-Point(4) = {0,d,0,h};
+Point(1) = {-3*d,-d,0,h};
+Point(2) = {-d,-d,0,h};
+Point(3) = {-d,d,0,h};
+Point(4) = {-3*d,d,0,h};
 
-Point(5) = {2*d,0,0,h};
-Point(6) = {2*d,d,0,h};
+Point(5) = {d,-d,0,h};
+Point(6) = {d,d,0,h};
 
 Line(7) = {1,2};
 Line(8) = {2,3};

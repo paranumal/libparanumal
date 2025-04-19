@@ -5,6 +5,7 @@
 data/acousticsGaussian2D.h
 
 [MESH FILE]
+#../../meshes/squareTri.msh
 ../../meshes/blockHybrid2D.msh
 
 [MESH DIMENSION]

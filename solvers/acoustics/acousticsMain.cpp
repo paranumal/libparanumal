@@ -32,6 +32,68 @@ void meshReport(mesh_t &mesh, const char *s){
   std::cout << "mesh:etype " << mesh.elementType << std::endl;
   std::cout << "mesh:Nel   " << mesh.Nelements << std::endl;
   std::cout << "mesh:Np    " << mesh.Np << std::endl;
+  std::cout << "mesh.NinternalElements    " << mesh.NinternalElements << std::endl;
+  
+  std::cout << "mesh:VX,VY  " << std::endl;
+  for(int e=0;e<mesh.Nelements;++e){
+    std::cout << "    ";
+    for(int v=0;v<mesh.Nverts;++v){
+      std::cout <<  " (" << mesh.EX[e*mesh.Nverts+v] << "," << mesh.EY[e*mesh.Nverts+v] << ")";
+    }
+    std::cout << std::endl;
+  }
+  std::cout << std::endl;
+
+  
+  std::cout << "mesh:EToV  " << std::endl;
+  for(int e=0;e<mesh.Nelements;++e){
+    std::cout << "    ";
+    for(int f=0;f<mesh.Nverts;++f){
+      std::cout <<   mesh.EToV[e*mesh.Nverts+f] << " ";
+    }
+    std::cout << std::endl;
+  }
+  std::cout << std::endl;
+  
+  std::cout << "mesh:EToE  " << std::endl;  
+  for(int e=0;e<mesh.Nelements;++e){
+    std::cout << "    ";
+    for(int f=0;f<mesh.Nfaces;++f){
+      std::cout <<   mesh.EToE[e*mesh.Nfaces+f] << " ";
+    }
+    std::cout << std::endl;
+  }
+  std::cout << std::endl;
+  
+  std::cout << "mesh:EToB  " << std::endl;
+  for(int e=0;e<mesh.Nelements;++e){
+    std::cout << "    ";
+    for(int f=0;f<mesh.Nfaces;++f){
+      std::cout <<   mesh.EToB[e*mesh.Nfaces+f] << " ";
+    }
+    std::cout << std::endl;
+  }
+  std::cout << std::endl;
+
+
+  std::cout << "mesh:vmapP  " << std::endl;
+  for(int e=0;e<mesh.Nelements;++e){
+    std::cout << "element: " << e << std::endl;
+    for(int f=0;f<mesh.Nfaces;++f){
+      std::cout << "face: " << f << ": ";
+      for(int n=0;n<mesh.Nfp;++n){
+	std::cout <<   mesh.vmapM[e*mesh.Nfaces*mesh.Nfp+f*mesh.Nfp + n] << " ";
+      }
+      std::cout << " ===> ";
+      for(int n=0;n<mesh.Nfp;++n){
+	std::cout <<   mesh.vmapP[e*mesh.Nfaces*mesh.Nfp+f*mesh.Nfp + n] << " ";
+      }
+      std::cout << std::endl;
+    }
+    std::cout << std::endl;
+  }
+  std::cout << std::endl;
+
 }
 
 
@@ -65,7 +127,8 @@ int main(int argc, char **argv){
     meshSettings.changeSetting("ELEMENT TYPE", std::to_string(Mesh::TRIANGLES));
     mesh_t mesh(platform, meshSettings, comm);
     meshReport(mesh, "read 1");
-    
+
+#if 0
     meshSettings.changeSetting("ELEMENT TYPE", std::to_string(Mesh::TRIANGLES));
     mesh_t meshTri(platform, meshSettings, comm);
     meshReport(meshTri, "Tri");
@@ -73,7 +136,8 @@ int main(int argc, char **argv){
     meshSettings.changeSetting("ELEMENT TYPE", std::to_string(Mesh::QUADRILATERALS));
     mesh_t meshQuad(platform, meshSettings, comm);
     meshReport(meshTri, "Quad");
-
+#endif
+    
     // set up acoustics solver
     acoustics_t acoustics(platform, mesh, acousticsSettings);
 
