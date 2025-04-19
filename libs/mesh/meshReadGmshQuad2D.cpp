@@ -94,6 +94,8 @@ void mesh_t::ReadGmshQuad2D(const std::string fileName){
   // rewind to start of elements
   fsetpos(fp, &fpos);
 
+  std::cout << "Nquadrilaterals: " << Nquadrilaterals << std::endl;
+  
   hlong chunk = (hlong) Nquadrilaterals/size;
   int remainder = (int) (Nquadrilaterals - chunk*size);
 
@@ -156,6 +158,8 @@ void mesh_t::ReadGmshQuad2D(const std::string fileName){
   }
   fclose(fp);
 
+  std::cout << "meshReadGmshQuad2D done EToV read" << std::endl;
+  
   /* record number of boundary faces found */
   NboundaryFaces = bcnt;
 
@@ -171,6 +175,8 @@ void mesh_t::ReadGmshQuad2D(const std::string fileName){
       EY[e*Nverts+n] = VY[EToV[e*Nverts+n]];
     }
   }
+
+  std::cout << "Done read" << std::endl;
 }
 
 } //namespace libp

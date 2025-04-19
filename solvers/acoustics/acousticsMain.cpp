@@ -26,6 +26,15 @@ SOFTWARE.
 
 #include "acoustics.hpp"
 
+void meshReport(mesh_t &mesh, const char *s){
+
+  std::cout << "mesh: " << std::string(s) << std::endl;
+  std::cout << "mesh:etype " << mesh.elementType << std::endl;
+  std::cout << "mesh:Nel   " << mesh.Nelements << std::endl;
+  std::cout << "mesh:Np    " << mesh.Np << std::endl;
+}
+
+
 int main(int argc, char **argv){
 
   // start up MPI
@@ -53,7 +62,17 @@ int main(int argc, char **argv){
     acousticsSettings.report();
 
     // set up mesh
+    meshSettings.changeSetting("ELEMENT TYPE", std::to_string(Mesh::TRIANGLES));
     mesh_t mesh(platform, meshSettings, comm);
+    meshReport(mesh, "read 1");
+    
+    meshSettings.changeSetting("ELEMENT TYPE", std::to_string(Mesh::TRIANGLES));
+    mesh_t meshTri(platform, meshSettings, comm);
+    meshReport(meshTri, "Tri");
+
+    meshSettings.changeSetting("ELEMENT TYPE", std::to_string(Mesh::QUADRILATERALS));
+    mesh_t meshQuad(platform, meshSettings, comm);
+    meshReport(meshTri, "Quad");
 
     // set up acoustics solver
     acoustics_t acoustics(platform, mesh, acousticsSettings);

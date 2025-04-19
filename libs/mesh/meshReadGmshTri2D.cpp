@@ -161,6 +161,8 @@ void mesh_t::ReadGmshTri2D(const std::string fileName){
   /* record number of found triangles */
   Nelements = (dlong) NtrianglesLocal;
 
+  std::cout << "meshReadGmshTri2D:Nelements " << Nelements << std::endl;
+  
   /* collect vertices for each element */
   EX.malloc(Nverts*Nelements);
   EY.malloc(Nverts*Nelements);
