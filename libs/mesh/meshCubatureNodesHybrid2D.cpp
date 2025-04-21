@@ -61,7 +61,8 @@ namespace libp {
 void mesh_t::ElementIntNodesTri2D(dlong e, memory<dfloat> &intx, memory<dfloat> &inty){
 
   dlong cnt = 0, icnt = 0, Icnt = 0;
-  for(int f=0;f<Nfaces;++f){
+  dlong ElementNfaces = ElementNfaces(etype);
+  for(int f=0;f<ElementNfaces;++f){
     dlong intNfpFace = ElementIntNfp(etype, f);
     dlong NfpFace = ElementNfp(etype, f);
     for(int n=0;n<intNfpFace;++n){
