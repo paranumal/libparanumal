@@ -900,6 +900,13 @@ class mesh_t {
                                       const dfloat alphaIn=-1);
 
 
+  int ContinuousVandermonde1D(int _N, int Npoints,
+			      memory<dfloat> &_r,
+			      memory<dfloat> &V,
+			      memory<dfloat> &r);
+
+  void ContinuousFilterMatrix1D(int _N, int Nlow, memory<dfloat> &_r, memory<dfloat> &F);
+  
   //Quads
   static void NodesQuad2D(const int _N,
                           memory<dfloat>& _r,
