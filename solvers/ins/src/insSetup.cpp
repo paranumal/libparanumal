@@ -519,4 +519,106 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
   kernelName = "insMaxWaveSpeed" + suffix;
 
   maxWaveSpeedKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
+
+#if 0
+  // filter kernels
+  fileName   = oklFilePrefix + "insRelaxationFilter" + suffix + oklFileSuffix;
+  kernelName = "insRelaxationFilter" + suffix;
+  
+  subcycler.relaxationFilterKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
+
+  // quad version
+  int Nq = mesh.N+1;
+  memory<dfloat> FILT(Nq*Nq);
+  
+#if 1
+  memory<dfloat> _r(Nq);
+  for(int n=0;n<Nq;++n)
+    _r[n] = mesh.r[n];
+  
+  memory<dfloat> V, invV;
+  mesh.Vandermonde1D(mesh.N, _r, V);
+  mesh.Vandermonde1D(mesh.N, _r, invV);
+  
+  linAlg_t::matrixInverse(Nq, invV);
+  
+  //  dfloat sigma = 0.1;
+  dfloat sigma = 0.8;
+  for(int n=0;n<Nq;++n){
+    dfloat fac = (n==Nq-1) ? 0: exp(-sigma*n*n/((dfloat)(mesh.N*mesh.N)));
+    printf("fac[%d] = %e\n", n, fac);
+    //    dfloat fac = (n<mesh.N-1) ? 1: 0;
+    for(int m=0;m<Nq;++m){
+      invV[n*Nq+m] *= fac;
+    }
+  }
+
+  for(int n=0;n<Nq;++n){
+    for(int m=0;m<Nq;++m){
+      dfloat Fnm = 0;
+      for(int i=0;i<Nq;++i){
+	Fnm += V[n*Nq+i]*invV[i*Nq+m];
+      }
+      FILT[n*Nq+m] = Fnm;
+    }
+  }
+
+  for(int n=0;n<Nq;++n){
+    for(int m=0;m<Nq;++m){
+      printf("%g ", FILT[n*Nq+m]);
+    }
+    printf("\n");
+  }
+  
+#else  
+  mesh.ContinuousFilterMatrix1D(mesh.N, mesh.N-2, mesh.r, FILT);
+#endif
+  
+  subcycler.o_FILT = platform.malloc<dfloat>((mesh.N+1)*(mesh.N+1));
+  subcycler.o_FILT.copyFrom(FILT);
+#endif
+
+  // build degree vector
+  memory<dfloat> JWL(Nlocal+Nhalo, (dfloat)0.);
+  memory<dfloat> JWS(Nlocal+Nhalo, (dfloat)0.);
+  for(dlong e=0;e<mesh.Nelements;++e){
+    for(int n=0;n<mesh.Np;++n){
+      dlong id = e*mesh.Np+n;
+      JWL[id] = mesh.vgeo[mesh.Nvgeo*mesh.Np*e + n + mesh.Np*mesh.JWID];
+    }
+  }
+  
+  dlong Ngather = uSolver.ogsMasked.Ngather;
+
+  memory<dfloat> JWG(Ngather);
+  uSolver.ogsMasked.Gather(JWG, JWL, 1, ogs::Add, ogs::Trans);
+  uSolver.ogsMasked.Scatter(JWS, JWG, 1, ogs::NoTrans);
+  
+  for(int n=0;n<Nlocal;++n){
+    if(JWS[n])
+      JWL[n] = JWL[n]/JWS[n];
+    else
+      JWL[n] = 1;
+    //    printf("JWL[%d]=%e\n", n, JWL[n]);
+  }
+  
+  o_projectWeights = platform.malloc<dfloat>(Nlocal+Nhalo, JWL);
+
+  fileName   = oklFilePrefix + "insProject" + suffix + oklFileSuffix;
+
+  kernelName = "insProjectWeight" + suffix;
+  projectWeightKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
+
+  kernelName = "insProjectScatter" + suffix;
+  projectScatterKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
+
+  memory<dlong> uGlobalToLocal(mesh.Nelements*mesh.Np,(dlong)0);
+  memory<dlong> vGlobalToLocal(mesh.Nelements*mesh.Np,(dlong)0);
+
+  uSolver.ogsMasked.SetupGlobalToLocalMapping(uGlobalToLocal);
+  vSolver.ogsMasked.SetupGlobalToLocalMapping(vGlobalToLocal);
+  
+  o_uGlobalToLocal = platform.malloc<dlong>(mesh.Nelements*mesh.Np, uGlobalToLocal);
+  o_vGlobalToLocal = platform.malloc<dlong>(mesh.Nelements*mesh.Np, vGlobalToLocal);
+  
 }

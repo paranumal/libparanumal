@@ -121,4 +121,8 @@ void subcycler_t::rhsf(deviceMemory<dfloat>& o_U, deviceMemory<dfloat>& o_RHS, c
                           o_Ue,
                           o_U,
                           o_RHS);
+
+#if 0
+  relaxationFilterKernel(mesh.Nelements, o_FILT, o_U, o_RHS);
+#endif
 }

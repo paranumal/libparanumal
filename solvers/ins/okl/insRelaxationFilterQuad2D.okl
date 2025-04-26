@@ -1,0 +1,138 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+// compute NU = -div(uxu) using quadrature (weak form)
+@kernel void insRelaxationFilterQuad2D(const dlong Nelements,
+				       @restrict const  dfloat * FILT,
+				       @restrict const  dfloat *  U,
+				       @restrict  dfloat *  RHS){
+  
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){  // for all elements
+
+    @shared dfloat s_u[p_NblockV][p_Nq][p_Nq];
+    @shared dfloat s_v[p_NblockV][p_Nq][p_Nq];
+    
+    @shared dfloat s_FILT[p_Nq][p_Nq];
+
+    @exclusive dfloat r_Uji, r_Vji;
+    @exclusive dfloat r_origUji, r_origVji;
+    @exclusive dlong e;
+    
+    //fetch the Ue and V values and store in flux arrays in @shared
+    for(int es=0;es<p_NblockV;++es;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
+
+          e = eo+es; // element in block
+          if(e<Nelements){
+            const dlong id = e*p_Np*p_NVfields + j*p_Nq+i;
+	    
+            r_origUji = U[id+0*p_Np];
+            r_origVji = U[id+1*p_Np];
+	    
+            s_u[es][j][i] = r_origUji;
+            s_v[es][j][i] = r_origVji;
+          }
+	  
+          if(es==0){
+            s_FILT[j][i] = FILT[i+j*p_Nq];
+          }
+        }
+      }
+    }
+    
+#if 0
+    for(int es=0;es<p_NblockV;++es;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
+	  if(i==0 && j==0 && e==0){
+	    for(int n=0;n<p_Nq;++n){
+	      for(int m=0;m<p_Nq;++m){
+		printf("%g ", s_FILT[n][m]);
+	      }
+	      printf("\n");
+	    }
+	  }
+	}
+      }
+    }
+#endif    
+
+    //filter in i
+    for(int es=0;es<p_NblockV;++es;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
+	  r_Uji  = 0.;
+	  r_Vji  = 0.;
+	  
+#pragma unroll p_Nq
+	  for (int n=0;n<p_Nq;n++) {
+	    const dfloat Fni = s_FILT[i][n];
+	    r_Uji  += Fni*s_u[es][j][n];
+	    r_Vji  += Fni*s_v[es][j][n];
+          }
+        }
+      }
+    }
+
+    //write register back to @shared
+    for(int es=0;es<p_NblockV;++es;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
+	  s_u[es][j][i] = r_Uji;
+	  s_v[es][j][i] = r_Vji;
+        }
+      }
+    }
+    
+
+    //interpolate in j and store flux in register
+    for(int es=0;es<p_NblockV;++es;@inner(2)){
+      for(int j=0;j<p_Nq;++j;@inner(1)){
+        for(int i=0;i<p_Nq;++i;@inner(0)){
+	  if(e<Nelements){
+
+	    r_Uji  = 0.;
+	    r_Vji  = 0.;
+	    
+#pragma unroll p_Nq
+	    for (int n=0;n<p_Nq;n++) {
+	      const dfloat Fjn = s_FILT[j][n];
+	      r_Uji  += Fjn*s_u[es][n][i];
+	      r_Vji  += Fjn*s_v[es][n][i];
+	    }
+
+            const dlong id = e*p_Np*p_NVfields + j*p_Nq + i;
+	    const dfloat tau = 100;
+            RHS[id+0*p_Np] -= tau*(r_origUji-r_Uji);
+            RHS[id+1*p_Np] -= tau*(r_origVji-r_Vji);
+          }
+        }
+      }
+    }
+  }
+}
+

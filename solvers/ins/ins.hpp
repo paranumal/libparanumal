@@ -76,6 +76,12 @@ public:
   void Report(dfloat time, int tstep){};
 
   void rhsf(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
+
+  kernel_t relaxationFilterKernel;
+  deviceMemory<dfloat> o_FILT;
+  
+
+  
 };
 
 class ins_t: public solver_t {
@@ -140,6 +146,14 @@ public:
   kernel_t initialConditionKernel;
   kernel_t maxWaveSpeedKernel;
 
+  kernel_t projectWeightKernel;
+  kernel_t projectScatterKernel;
+
+  deviceMemory<dfloat> o_projectWeights;
+  deviceMemory<dfloat> o_uGlobalToLocal;
+  deviceMemory<dfloat> o_vGlobalToLocal;
+  void Project(deviceMemory<dfloat>& o_U, int Nfilt);
+  
   ins_t() = default;
   ins_t(platform_t &_platform, mesh_t &_mesh,
         insSettings_t& _settings) {

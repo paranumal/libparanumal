@@ -3,9 +3,10 @@
 
 [DATA FILE]
 data/insUniform2D.h
+#data/insRampedUniform2D.h
 
 [MESH FILE]
-../../meshes/bumpQuad2D.msh
+../../meshes/bumpBoxQuad2Dv2.msh
 
 [MESH DIMENSION]
 2
@@ -26,8 +27,12 @@ CUDA
 [DEVICE NUMBER]
 0
 
+[CFL NUMBER]
+1
+
 [VISCOSITY]
-0.001
+0.00005
+#0.0001
 
 # can be CUBATURE or COLLOCATION
 [ADVECTION TYPE]
@@ -50,10 +55,10 @@ DOPRI5
 0
 
 [FINAL TIME]
-10.0
+10
 
 [OUTPUT INTERVAL]
-0.5
+1
 
 [OUTPUT TO FILE]
 TRUE

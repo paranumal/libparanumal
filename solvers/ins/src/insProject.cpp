@@ -1,3 +1,4 @@
+
 /*
 
 The MIT License (MIT)
@@ -26,42 +27,25 @@ SOFTWARE.
 
 #include "ins.hpp"
 
-void ins_t::Report(dfloat time, int tstep){
+void ins_t::Project(deviceMemory<dfloat>& o_U, int Nfilt){
 
-  static int frame=0;
+  // weight and extract velocity
 
-  //compute U.M*U
-  dlong Nentries = mesh.Nelements*mesh.Np*NVfields;
-  deviceMemory<dfloat> o_MU = platform.reserve<dfloat>(Nentries);
-  mesh.MassMatrixApply(o_u, o_MU);
+  dlong Nlocal = mesh.Nelements*mesh.Np;
+  dlong Nhalo  = mesh.totalHaloPairs*mesh.Np;
+  
+  // scatter
+  deviceMemory<dfloat> o_wUL = platform.reserve<dfloat>(Nlocal+Nhalo);
+  deviceMemory<dfloat> o_wVL = platform.reserve<dfloat>(Nlocal+Nhalo);
+  deviceMemory<dfloat> o_UG = platform.reserve<dfloat>(uSolver.Ndofs+uSolver.Nhalo);
+  deviceMemory<dfloat> o_VG = platform.reserve<dfloat>(vSolver.Ndofs+vSolver.Nhalo);
 
-  dfloat norm2 = sqrt(platform.linAlg().innerProd(Nentries, o_u, o_MU, mesh.comm));
-  o_MU.free();
+  projectWeightKernel(mesh.Nelements, Nfilt, o_projectWeights, o_U, o_wUL, o_wVL);
+  
+  uSolver.ogsMasked.Gather(o_UG, o_wUL, 1, ogs::Add, ogs::Trans);
+  if(Nfilt>1)
+    vSolver.ogsMasked.Gather(o_VG, o_wVL, 1, ogs::Add, ogs::Trans);
 
-  if(mesh.rank==0)
-    printf("\n%5.2f (%d), %5.2f (time, timestep, norm)\n", time, tstep, norm2);
-
-  if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
-
-    //compute vorticity
-    deviceMemory<dfloat> o_Vort = platform.reserve<dfloat>(mesh.dim*mesh.Nelements*mesh.Np);
-    vorticityKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_D, o_u, o_Vort);
-
-    Project(o_Vort, 1);
-    
-    memory<dfloat> Vort(mesh.dim*mesh.Nelements*mesh.Np);
-
-    // copy data back to host
-    o_u.copyTo(u);
-    o_p.copyTo(p);
-    o_Vort.copyTo(Vort);
-
-    // output field files
-    std::string name;
-    settings.getSetting("OUTPUT FILE NAME", name);
-    char fname[BUFSIZ];
-    sprintf(fname, "%s_%04d_%04d.vtu", name.c_str(), mesh.rank, frame++);
-
-    PlotFields(u, p, Vort, std::string(fname));
-  }
+  projectScatterKernel(mesh.Nelements, Nfilt, o_uGlobalToLocal, o_UG, o_vGlobalToLocal, o_VG, o_U);
+  
 }

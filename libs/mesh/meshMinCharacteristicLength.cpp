@@ -39,6 +39,9 @@ dfloat mesh_t::MinCharacteristicLength(){
 
   // MPI_Allreduce to get global minimum h
   comm.Allreduce(hmin, comm_t::Min);
+
+  std::cout << "ElementCharacteristicLength2D: r " << hmin << std::endl;
+  
   return hmin;
 }
 
@@ -62,7 +65,7 @@ dfloat mesh_t::ElementCharacteristicLengthTri2D(dlong e) {
 dfloat mesh_t::ElementCharacteristicLengthQuad2D(dlong e) {
 
   dfloat h = std::numeric_limits<dfloat>::max();
-
+  
   //sum weighted Jacobians to integrate over the element
   dfloat J = 0.0;
   for (int n=0;n<Np;n++)
@@ -74,12 +77,29 @@ dfloat mesh_t::ElementCharacteristicLengthQuad2D(dlong e) {
     for (int i=0;i<Nfp;i++)
       sJ += sgeo[Nsgeo*(Nfaces*Nfp*e + Nfp*f + i) + WSJID];
 
-    // sJ = L, J = A,   sJ/J = L/A = L/(h*L) = 1/h
-    // h = 1/(sJ/J)
     dfloat hest = J/sJ;
 
     h = std::min(h, hest);
   }
+
+  dfloat hrev = std::numeric_limits<dfloat>::max();
+  
+  for(int f=0;f<Nfaces;++f){
+    for (int i=0;i<Nfp;i++){
+      const int fn = faceNodes[f*Nfp+i];
+      J = vgeo[Nvgeo*Np*e + fn + Np*JWID];
+      dfloat sJ = sgeo[Nsgeo*(Nfaces*Nfp*e + Nfp*f + i) + WSJID];
+      dfloat hest = (N+1)*(N+1)*2.*J/sJ;
+      
+      hrev = std::min(hrev, hest);
+    }
+  }
+
+  if(hrev<0.5*h)
+    std::cout << "ElementCharacteristicLengthQuad2D: revised estimate from " << h << " to " << hrev << std::endl;
+
+  h = std::min(h,hrev);
+  
   return h;
 }
 
@@ -121,6 +141,9 @@ dfloat mesh_t::ElementCharacteristicLengthHex3D(dlong e) {
 
     h = std::min(h, hest);
   }
+
+
+  
   return h;
 }
 

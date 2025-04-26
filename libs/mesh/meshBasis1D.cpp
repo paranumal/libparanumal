@@ -371,14 +371,16 @@ void mesh_t::JacobiGQ(const dfloat alpha, const dfloat beta,
 #endif
 }
 
-/*
 // C0 basis
-int meshContinuousVandermonde1D(int _N, int Npoints, dfloat *_r, dfloat **V, dfloat **Vr){
-
+int mesh_t::ContinuousVandermonde1D(int _N, int Npoints,
+				    memory<dfloat> &_r,
+				    memory<dfloat> &V,
+				    memory<dfloat> &Vr){
+  
   int _Np = (_N+1);
 
-  *V  = (dfloat *) calloc(Npoints*_Np, sizeof(dfloat));
-  *Vr = (dfloat *) calloc(Npoints*_Np, sizeof(dfloat));
+  V.malloc(Npoints*_Np, 0.);
+  Vr.malloc(Npoints*_Np, 0.);
 
   for(int n=0; n<Npoints; n++){
 
@@ -386,37 +388,35 @@ int meshContinuousVandermonde1D(int _N, int Npoints, dfloat *_r, dfloat **V, dfl
     for(int i=0; i<=_N; i++){
       int id = n*_Np+sk;
       if(i==0){
-        V[0][id] = 0.5*(1-_r[n]);
-        Vr[0][id] = -0.5;
+        V[id] = 0.5*(1-_r[n]);
+        Vr[id] = -0.5;
       }
       else  if(i==1){
-        V[0][id] = 0.5*(1+_r[n]);
-        Vr[0][id] = +0.5;
+        V[id] = 0.5*(1+_r[n]);
+        Vr[id] = +0.5;
       }
       else{
         // 0.25*(1+_r)*(1-_r)*P^{0,0}_{i-2}(_r)
-        dfloat P =  meshJacobiP(_r[n], 0, 0, i-2);
-        dfloat Pr = meshGradJacobiP(_r[n], 0, 0, i-2);
-        V[0][id]  = 0.25*(1+_r[n])*(1-_r[n])*P;
-        Vr[0][id] = 0.25*( (-2*_r[n])*P + (1+_r[n])*(1-_r[n])*Pr);
+        dfloat P =  JacobiP(_r[n], 0, 0, i-2);
+        dfloat Pr = GradJacobiP(_r[n], 0, 0, i-2);
+        V[id]  = 0.25*(1+_r[n])*(1-_r[n])*P;
+        Vr[id] = 0.25*( (-2*_r[n])*P + (1+_r[n])*(1-_r[n])*Pr);
       }
 
       sk++;
     }
   }
-
+  
   return _Np;
 }
-*/
 
-/*
-void meshContinuousFilterMatrix1D(int _N, int Nlow, dfloat *_r, dfloat **F){
+void mesh_t::ContinuousFilterMatrix1D(int _N, int Nlow, memory<dfloat> &_r, memory<dfloat> &F){
 
-  dfloat *VC0, *VrC0;
-  dfloat *L = (dfloat*) calloc((_N+1)*(_N+1), sizeof(dfloat));
-  dfloat *LinvF = (dfloat*) calloc((_N+1)*(_N+1), sizeof(dfloat));
+  memory<dfloat> VC0, VrC0;
+  memory<dfloat> L((_N+1)*(_N+1), 0.);
+  memory<dfloat> LinvF((_N+1)*(_N+1), 0.);
 
-  int _Np = meshContinuousVandermonde1D(_N, _N+1, _r, &VC0, &VrC0);
+  int _Np = mesh_t::ContinuousVandermonde1D(_N, _N+1, _r, VC0, VrC0);
   //  int _Np = meshVandermonde1D(_N, _N+1, _r, &VC0, &VrC0); use
   printf("CONTINUOUS VANDERMONDE MATRIX: [\n");
   for(int n=0;n<_Np;++n){
@@ -427,14 +427,14 @@ void meshContinuousFilterMatrix1D(int _N, int Nlow, dfloat *_r, dfloat **F){
   }
   printf("\n");
 
-  *F = (dfloat *) calloc(_Np*_Np, sizeof(dfloat));
+  F.malloc((_N+1)*(_N+1), 0.);
 
   for(int n=0;n<=Nlow;++n){
     L[n*(_N+1)+n] = 1;
   }
-
-  matrixRightSolve(_Np, _Np, L, _Np, _Np, VC0, LinvF);
-
+  
+  linAlg_t::matrixRightSolve(_Np, _Np, L, _Np, _Np, VC0, LinvF);
+  
   for(int n=0;n<_Np;++n){
     for(int m=0;m<_Np;++m){
       dfloat res = 0;
@@ -451,19 +451,15 @@ void meshContinuousFilterMatrix1D(int _N, int Nlow, dfloat *_r, dfloat **F){
       for(int i=0;i<_Np;++i){
         res += VC0[n*_Np+i]*LinvF[i*_Np+m];
       }
-      F[0][n*_Np+m] = res;
+      F[n*_Np+m] = res;
       printf("% e ", res);
     }
     printf("\n");
   }
   printf("\n");
 
-  free(VC0);
-  free(VrC0);
-  free(L);
-  free(LinvF);
 }
-*/
+
 
 // ------------------------------------------------------------------------
 // 1D INTERPOLATION MATRICES

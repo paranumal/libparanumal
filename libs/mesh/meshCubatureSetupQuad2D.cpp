@@ -31,7 +31,8 @@ namespace libp {
 void mesh_t::CubatureSetupQuad2D(){
 
   /* Quadrature data */
-  cubN = N+1;
+  //  cubN = N+4; // (cubN+1)*2 - 1 = 3*N-1 + 2 => cubN  = ceil(3*N+2)/2 - 1
+  cubN = (3*N+3)/2 - 1;
   cubNq = cubN+1;
   cubNp = cubNq*cubNq;
   cubNfp = cubNq;

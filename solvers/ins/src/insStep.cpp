@@ -102,6 +102,8 @@ void ins_t::rhs_imex_invg(deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_U
     Gradient(-dt, o_p, 1.0, o_U, T);
   }
 
+  // project U to C0
+  Project(o_U, mesh.dim);
 
   if (mesh.rank==0 && mesh.dim==2) {
     printf("\rSolver iterations: U - %3d, V - %3d, P - %3d", NiterU, NiterV, NiterP); fflush(stdout);
