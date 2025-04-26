@@ -322,8 +322,8 @@ SOFTWARE.
             s_UP[es][face][i] = Ue[qbaseP+0*p_Np];
             s_VP[es][face][i] = Ue[qbaseP+1*p_Np];
 
-	    if( fabs(s_UM[es][face][i]-s_UP[es][face][i] )>1e-10)
-	      printf("dUe=%e, dVe=%e\n", s_UM[es][face][i]-s_UP[es][face][i], s_VM[es][face][i]-s_VP[es][face][i]);
+	    //	    if( fabs(s_UM[es][face][i]-s_UP[es][face][i] )>1e-10)
+	    //	      printf("dUe=%e, dVe=%e\n", s_UM[es][face][i]-s_UP[es][face][i], s_VM[es][face][i]-s_VP[es][face][i]);
 	    
             s_UdM[es][face][i] = U[qbaseM+0*p_Np];
             s_VdM[es][face][i] = U[qbaseM+1*p_Np];
