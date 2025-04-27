@@ -102,13 +102,13 @@ void ins_t::rhs_imex_invg(deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_U
     Gradient(-dt, o_p, 1.0, o_U, T);
   }
 
-  // project U to C0
+  // project U to C0 (it is not clear if this is as important as projecting Ue)
   Project(o_U, mesh.dim);
 
   if (mesh.rank==0 && mesh.dim==2) {
-    printf("\rSolver iterations: U - %3d, V - %3d, P - %3d", NiterU, NiterV, NiterP); fflush(stdout);
+    printf("\rT: %e, Solver iterations: U - %3d, V - %3d, P - %3d", T, NiterU, NiterV, NiterP); fflush(stdout);
   } else if (mesh.rank==0 && mesh.dim==3) {
-    printf("\rSolver iterations: U - %3d, V - %3d, W - %3d, P - %3d", NiterU, NiterV, NiterW, NiterP); fflush(stdout);
+    printf("\rT: %e, Solver iterations: U - %3d, V - %3d, W - %3d, P - %3d", T, NiterU, NiterV, NiterW, NiterP); fflush(stdout);
   }
 }
 
@@ -147,7 +147,7 @@ void ins_t::rhs_subcycle_f(deviceMemory<dfloat>& o_U, deviceMemory<dfloat>& o_UH
 
     //q at t-n*dt
     deviceMemory<dfloat> o_Un = o_U + ((shiftIndex+n)%maxOrder)*N;
-
+    
     //next scaled partial sum
     platform.linAlg().axpy(N, B[n+1]/(B[n+1]+bSum), o_Un,
                               bSum/(B[n+1]+bSum), o_UHAT);
@@ -155,4 +155,7 @@ void ins_t::rhs_subcycle_f(deviceMemory<dfloat>& o_U, deviceMemory<dfloat>& o_UH
 
     subStepper.Run(subcycler, o_UHAT, T-n*dt, T-(n-1)*dt);
   }
+
+
+  
 }

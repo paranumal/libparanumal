@@ -57,7 +57,8 @@ class ins_t;
 class subcycler_t: public solver_t {
 public:
   mesh_t mesh;
-
+  ins_t *ins;
+  
   int cubature;
   ogs::halo_t vTraceHalo;
   kernel_t advectionVolumeKernel;

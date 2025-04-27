@@ -37,15 +37,15 @@ void ins_t::Project(deviceMemory<dfloat>& o_U, int Nfilt){
   // scatter
   deviceMemory<dfloat> o_wUL = platform.reserve<dfloat>(Nlocal+Nhalo);
   deviceMemory<dfloat> o_wVL = platform.reserve<dfloat>(Nlocal+Nhalo);
-  deviceMemory<dfloat> o_UG = platform.reserve<dfloat>(uSolver.Ndofs+uSolver.Nhalo);
-  deviceMemory<dfloat> o_VG = platform.reserve<dfloat>(vSolver.Ndofs+vSolver.Nhalo);
+  deviceMemory<dfloat> o_UG = platform.reserve<dfloat>(pSolver.Ndofs+pSolver.Nhalo);
+  deviceMemory<dfloat> o_VG = platform.reserve<dfloat>(pSolver.Ndofs+pSolver.Nhalo);
 
   projectWeightKernel(mesh.Nelements, Nfilt, o_projectWeights, o_U, o_wUL, o_wVL);
   
-  uSolver.ogsMasked.Gather(o_UG, o_wUL, 1, ogs::Add, ogs::Trans);
+  pSolver.ogsMasked.Gather(o_UG, o_wUL, 1, ogs::Add, ogs::Trans);
   if(Nfilt>1)
-    vSolver.ogsMasked.Gather(o_VG, o_wVL, 1, ogs::Add, ogs::Trans);
+    pSolver.ogsMasked.Gather(o_VG, o_wVL, 1, ogs::Add, ogs::Trans);
 
-  projectScatterKernel(mesh.Nelements, Nfilt, o_uGlobalToLocal, o_UG, o_vGlobalToLocal, o_VG, o_U);
+  projectScatterKernel(mesh.Nelements, Nfilt, o_uGlobalToLocal, o_UG, o_uGlobalToLocal, o_VG, o_U);
   
 }

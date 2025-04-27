@@ -6,7 +6,8 @@ data/insUniform2D.h
 #data/insRampedUniform2D.h
 
 [MESH FILE]
-../../meshes/bumpBoxQuad2Dv2.msh
+../../meshes/bumpBoxQuad2D.msh
+#../../meshes/bumpBoxQuad2Dv2.msh
 
 [MESH DIMENSION]
 2
@@ -31,7 +32,8 @@ CUDA
 1
 
 [VISCOSITY]
-0.00005
+0.00001
+#0.00005
 #0.0001
 
 # can be CUBATURE or COLLOCATION

@@ -373,6 +373,7 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
     }
 
     //build subcycler
+    subcycler.ins = this;
     subcycler.platform = platform;
     subcycler.mesh = mesh;
     subcycler.comm = comm;
@@ -578,28 +579,39 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
   subcycler.o_FILT.copyFrom(FILT);
 #endif
 
+  memory<dlong> uGlobalToLocal(mesh.Nelements*mesh.Np,(dlong)0);
+  memory<dlong> vGlobalToLocal(mesh.Nelements*mesh.Np,(dlong)0);
+  
+  pSolver.ogsMasked.SetupGlobalToLocalMapping(uGlobalToLocal);
+  vSolver.ogsMasked.SetupGlobalToLocalMapping(vGlobalToLocal);
+  
+  o_uGlobalToLocal = platform.malloc<dlong>(mesh.Nelements*mesh.Np, uGlobalToLocal);
+  o_vGlobalToLocal = platform.malloc<dlong>(mesh.Nelements*mesh.Np, vGlobalToLocal);
+
   // build degree vector
+  dlong Ngather = pSolver.ogsMasked.Ngather;
   memory<dfloat> JWL(Nlocal+Nhalo, (dfloat)0.);
   memory<dfloat> JWS(Nlocal+Nhalo, (dfloat)0.);
+  memory<dfloat> JWG(Ngather, (dfloat)0.);
   for(dlong e=0;e<mesh.Nelements;++e){
     for(int n=0;n<mesh.Np;++n){
       dlong id = e*mesh.Np+n;
-      JWL[id] = mesh.vgeo[mesh.Nvgeo*mesh.Np*e + n + mesh.Np*mesh.JWID];
+      dfloat JWen = mesh.vgeo[mesh.Nvgeo*mesh.Np*e + n + mesh.Np*mesh.JWID];
+      JWL[id] = JWen;
+      dlong gid = uGlobalToLocal[id];
+      if(gid>=0)
+	JWG[gid] += JWen;
     }
   }
-  
-  dlong Ngather = uSolver.ogsMasked.Ngather;
-
-  memory<dfloat> JWG(Ngather);
-  uSolver.ogsMasked.Gather(JWG, JWL, 1, ogs::Add, ogs::Trans);
-  uSolver.ogsMasked.Scatter(JWS, JWG, 1, ogs::NoTrans);
-  
+  // not globalized
   for(int n=0;n<Nlocal;++n){
-    if(JWS[n])
-      JWL[n] = JWL[n]/JWS[n];
+    dlong gid = uGlobalToLocal[n];
+    if(gid>=0){
+      dfloat JGn = JWG[gid];
+      JWL[n] = JWL[n]/JGn;
+    }
     else
       JWL[n] = 1;
-    //    printf("JWL[%d]=%e\n", n, JWL[n]);
   }
   
   o_projectWeights = platform.malloc<dfloat>(Nlocal+Nhalo, JWL);
@@ -612,13 +624,5 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
   kernelName = "insProjectScatter" + suffix;
   projectScatterKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 
-  memory<dlong> uGlobalToLocal(mesh.Nelements*mesh.Np,(dlong)0);
-  memory<dlong> vGlobalToLocal(mesh.Nelements*mesh.Np,(dlong)0);
-
-  uSolver.ogsMasked.SetupGlobalToLocalMapping(uGlobalToLocal);
-  vSolver.ogsMasked.SetupGlobalToLocalMapping(vGlobalToLocal);
-  
-  o_uGlobalToLocal = platform.malloc<dlong>(mesh.Nelements*mesh.Np, uGlobalToLocal);
-  o_vGlobalToLocal = platform.malloc<dlong>(mesh.Nelements*mesh.Np, vGlobalToLocal);
   
 }

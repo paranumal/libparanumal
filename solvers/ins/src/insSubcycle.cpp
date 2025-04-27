@@ -29,6 +29,11 @@ SOFTWARE.
 //evaluate ODE rhs = f(q,t)
 void subcycler_t::rhsf(deviceMemory<dfloat>& o_U, deviceMemory<dfloat>& o_RHS, const dfloat T){
 
+  static int Nsubsteps = 0;
+
+  ++Nsubsteps;
+  if(!(Nsubsteps%1000)) std::cout << ", " << "Nsubsteps=" << Nsubsteps << std::endl;
+  
   dlong Ntotal = (mesh.Nelements+mesh.totalHaloPairs)*mesh.Np*NVfields;
   deviceMemory<dfloat> o_Ue = platform.reserve<dfloat>(Ntotal);
 
@@ -65,6 +70,43 @@ void subcycler_t::rhsf(deviceMemory<dfloat>& o_U, deviceMemory<dfloat>& o_RHS, c
   // finish exchange of Ue
   vTraceHalo.ExchangeFinish(o_Ue, 1);
 
+  // (lumped) project Ue to C0
+  ins->Project(o_Ue, mesh.dim);
+
+#if 0
+  {
+    // this checks for C0
+    dlong Nlocal = mesh.Nelements*mesh.Np;
+    dlong Nhalo  = mesh.totalHaloPairs*mesh.Np;
+    memory<dfloat> Ue(mesh.dim*(Nlocal+Nhalo));
+
+    o_Ue.copyTo(Ue);
+
+    for(dlong e=0;e<mesh.Nelements;++e){
+      for(int n=0;n<mesh.Nfp*mesh.Nfaces;++n){
+	dlong vidM = mesh.vmapM[e*mesh.Nfp*mesh.Nfaces+n];
+	dlong vidP = mesh.vmapP[e*mesh.Nfp*mesh.Nfaces+n];
+	if(vidM>=0 && vidP>=0){
+	  dlong eM = vidM/mesh.Np;
+	  dlong eP = vidP/mesh.Np;
+	  dlong nM = vidM%mesh.Np;
+	  dlong nP = vidP%mesh.Np;
+	  
+	  dlong lidM = mesh.Np*2*eM + nM;
+	  dlong lidP = mesh.Np*2*eP + nP;
+	  
+	  dfloat du = Ue[lidM]-Ue[lidP];
+	  dfloat dv = Ue[lidM+mesh.Np]-Ue[lidP+mesh.Np];
+	  if(du || dv)
+	    printf("e: %d, n: %d, (x,y)=(%e,%e), du=%e, dv=%e\n",
+		   e, n, mesh.x[vidM], mesh.y[vidM], du, dv);
+	}
+      }
+    }
+  }
+#endif
+  
+  
   // extract u halo on DEVICE
   vTraceHalo.ExchangeStart(o_U, 1);
 

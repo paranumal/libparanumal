@@ -322,7 +322,7 @@ SOFTWARE.
             s_UP[es][face][i] = Ue[qbaseP+0*p_Np];
             s_VP[es][face][i] = Ue[qbaseP+1*p_Np];
 
-	    //	    if( fabs(s_UM[es][face][i]-s_UP[es][face][i] )>1e-10)
+	    //	    if( fabs(s_UM[es][face][i]-s_UP[es][face][i] )>1e-10*fabs(s_UM[es][face][i]))
 	    //	      printf("dUe=%e, dVe=%e\n", s_UM[es][face][i]-s_UP[es][face][i], s_VM[es][face][i]-s_VP[es][face][i]);
 	    
             s_UdM[es][face][i] = U[qbaseM+0*p_Np];
@@ -418,17 +418,26 @@ SOFTWARE.
             dfloat unM   = fabs(nx*uM + ny*vM);
             dfloat unP   = fabs(nx*uP + ny*vP);
 	    dfloat unMax = (unM > unP) ? unM : unP;
+	    //	    dfloat unMax = 0.5f*(unM+unP);
+
 
 #if 0
-	    dfloat maguM = sqrt(uM*uM+vM*vM);
-	    dfloat maguP = sqrt(uP*uP+vP*vP);
-	    dfloat unMax = (maguM > maguP) ? maguM : maguP;
-#endif
+	    unMax = (unMax<1) ? 1:unMax;
+
+            s_fluxNU[es][face][i] = WsJ*(.5f*(nx*(uP*udP + uM*udM) + ny*(vP*udP + vM*udM)  + unMax*(udM-udP)));
+            s_fluxNV[es][face][i] = WsJ*(.5f*(nx*(uP*vdP + uM*vdM) + ny*(vP*vdP + vM*vdM)  + unMax*(vdM-vdP)));
+
+#else
+
+	    dfloat tau = 0.5;
+	    dfloat ndotdUd = nx*(udM-udP) + ny*(vdM-vdP);
+
+            s_fluxNU[es][face][i] = WsJ*(.5f*(nx*(uP*udP + uM*udM) + ny*(vP*udP + vM*udM)  + unMax*(udM-udP) + tau*nx*ndotdUd));
+            s_fluxNV[es][face][i] = WsJ*(.5f*(nx*(uP*vdP + uM*vdM) + ny*(vP*vdP + vM*vdM)  + unMax*(vdM-vdP) + tau*ny*ndotdUd));
 	    
-            s_fluxNU[es][face][i] = WsJ*(.5f*(nx*(uP*udP + uM*udM)
-                                           + ny*(vP*udP + vM*udM)  + unMax*(udM-udP) ));
-            s_fluxNV[es][face][i] = WsJ*(.5f*(nx*(uP*vdP + uM*vdM)
-                                           + ny*(vP*vdP + vM*vdM)  + unMax*(vdM-vdP) ));
+	    
+#endif
+
           }
         }
       }
