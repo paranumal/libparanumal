@@ -113,7 +113,7 @@ void stress_t::Run(){
 
   rhsBCKernel(mesh.Nelements,
 	      mesh.o_wJ,
-	      mesh.o_ggeo,
+	      mesh.o_vgeo,
 	      mesh.o_sgeo,
 	      mesh.o_D,
 	      mesh.o_S,
@@ -121,6 +121,7 @@ void stress_t::Run(){
 	      mesh.o_vmapM,
 	      mesh.o_sM,
 	      lambda,
+	      o_nut,
 	      mesh.o_x,
 	      mesh.o_y,
 	      mesh.o_z,
@@ -128,8 +129,8 @@ void stress_t::Run(){
 	      o_rL);
 
   // gather rhs to globalDofs if c0
-  ogsMasked.Gather(o_r, o_rL, 1, ogs::Add, ogs::Trans);
-  ogsMasked.Gather(o_x, o_xL, 1, ogs::Add, ogs::NoTrans);
+  ogsMasked.Gather(o_r, o_rL, Nfields, ogs::Add, ogs::Trans);
+  ogsMasked.Gather(o_x, o_xL, Nfields, ogs::Add, ogs::NoTrans);
 
   int maxIter = 5000;
   int verbose = settings.compareSetting("VERBOSE", "TRUE") ? 1 : 0;
@@ -142,7 +143,8 @@ void stress_t::Run(){
 
   //add the boundary data to the masked nodes
   // scatter x to LocalDofs if c0
-  ogsMasked.Scatter(o_xL, o_x, 1, ogs::NoTrans);
+  ogsMasked.Scatter(o_xL, o_x, Nfields, ogs::NoTrans);
+
   //fill masked nodes with BC data
   addBCKernel(mesh.Nelements,
 	      mesh.o_x,

@@ -178,7 +178,7 @@ SOFTWARE.
       r_Aq[0] += p_two*qxx[0] + qyy[0] +  qyx[1];
       r_Aq[1] += p_two*qyy[1] + qxx[1] +  qxy[0];
       
-      const dlong base = element*p_Np*p_Nfields + p_Nfields*(j*p_Nq + i);
+      const dlong base = p_Nfields*(element*p_Np + (j*p_Nq + i));
       for(int fld=0;fld<p_Nfields;++fld){
 	Aq[base+fld] = r_Aq[fld];
       }

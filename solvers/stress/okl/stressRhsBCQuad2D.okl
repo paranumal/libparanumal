@@ -1,215 +1,229 @@
 /*
 
-The MIT License (MIT)
+  The MIT License (MIT)
 
-Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+  Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
 
 */
 
+#define p_two ((dfloat)2)
+
+// hex @kernel for screened coulomb potential mat-vec
+#define squareThreads					   \
+  for(int j=0; j<p_Nq; ++j; @inner(1))			   \
+    for(int i=0; i<p_Nq; ++i; @inner(0))
+
+
 @kernel void stressRhsBCQuad2D(const dlong Nelements,
-                              @restrict const  dfloat *  wJ,
-                              @restrict const  dfloat *  ggeo,
-                              @restrict const  dfloat *  sgeo,
-                              @restrict const  dfloat *  DT,
-                              @restrict const  dfloat *  S,
-                              @restrict const  dfloat *  MM,
-                              @restrict const  dlong  *  vmapM,
-                              @restrict const  dfloat *  sM,
-                              const dfloat lambda,
-                              @restrict const  dfloat *  x,
-                              @restrict const  dfloat *  y,
-                              @restrict const  dfloat *  z,
-                              @restrict const  int    *  mapB,
-                              @restrict dfloat  *  rhs){
+			       @restrict const  dfloat *  wJ,			       
+			       @restrict const  dfloat *  vgeo,
+			       @restrict const  dfloat *  sgeo,
+			       @restrict const  dfloat *  DT,
+			       @restrict const  dfloat *  S,
+			       @restrict const  dfloat *  MM,
+			       @restrict const  dlong  *  vmapM,
+			       @restrict const  dfloat *  sM,		       
+			       const dfloat lambda,
+			       @restrict const  dfloat *  nut,
+			       @restrict const  dfloat *  x,
+			       @restrict const  dfloat *  y,
+			       @restrict const  dfloat *  z,
+			       @restrict const  int    *  mapB,
+			       @restrict dfloat  *  rhs){
 
   for(dlong e=0;e<Nelements;e++;@outer(0)){
-    @shared dfloat s_q[p_Nq][p_Nq];
-    @shared dfloat s_ndq[p_Nq][p_Nq];
+    @shared dfloat s_q[p_Nfields][p_Nq][p_Nq];
+    @shared dfloat s_ndq[p_Nfields][p_Nq][p_Nq];
     @shared dfloat s_DT[p_Nq][p_Nq];
 
-    @exclusive dfloat r_qr[p_Nq], r_qs[p_Nq], r_Aq[p_Nq];
-    @exclusive dfloat r_G00[p_Nq], r_G01[p_Nq], r_G11[p_Nq], r_GwJ[p_Nq];
+    // oh dear
+    @shared dfloat s_rx_qx[p_Nfields][p_Nq][p_Nq];
+    @shared dfloat s_sx_qx[p_Nfields][p_Nq][p_Nq];
+    @shared dfloat s_ry_qx[p_Nfields][p_Nq][p_Nq];
+    @shared dfloat s_sy_qx[p_Nfields][p_Nq][p_Nq];
+    @shared dfloat s_rx_qy[p_Nfields][p_Nq][p_Nq];
+    @shared dfloat s_sx_qy[p_Nfields][p_Nq][p_Nq];
+    @shared dfloat s_ry_qy[p_Nfields][p_Nq][p_Nq];
+    @shared dfloat s_sy_qy[p_Nfields][p_Nq][p_Nq];
+    
+    @exclusive dlong element;
+    @exclusive dfloat r_qr[p_Nfields], r_qs[p_Nfields], r_Aq[p_Nfields];
+
+    @exclusive dfloat r_rx, r_ry, r_sx, r_sy, r_wJ, r_nut;
 
     // loop over slabs
-    for(int j=0;j<p_Nq;++j){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
-        s_q[j][i] = 0.;
-        s_ndq[j][i] = 0.;
+    squareThreads{	
+      for(int fld=0;fld<p_Nfields;++fld){
+	s_q[fld][j][i] = 0.;
+	s_ndq[fld][j][i] = 0.;
+      }
+      
+      s_DT[j][i] = DT[j*p_Nq+i];
+    }
+    
+    // loop over all faces
+#pragma unroll p_Nfaces
+    for(int face=0;face<p_Nfaces;++face){
 
-        s_DT[j][i] = DT[j*p_Nq+i];
+      @barrier();
+
+      squareThreads{	
+	
+	dfloat dudxM[p_Nfields]={0.f};
+	dfloat dudyM[p_Nfields]={0.f};
+	dfloat uM[p_Nfields]={0.f};
+	  
+	dfloat dudxP[p_Nfields]={0.f};
+	dfloat dudyP[p_Nfields]={0.f};
+	dfloat uP[p_Nfields]={0.f};
+
+	// select which threads to activate
+	int sw = 0, fi = 0;
+	if(face==0){ sw = (j==0);      fi = i; }
+	if(face==1){ sw = (i==p_Nq-1); fi = j; }
+	if(face==2){ sw = (j==p_Nq-1); fi = i; }
+	if(face==3){ sw = (i==0);      fi = j; }
+
+	// only use "face threads"
+	if(sw){
+	  const dlong sk = e*p_Nfp*p_Nfaces + face*p_Nfp + fi;
+	  const dlong idM = vmapM[sk];	    
+	  const int bc = mapB[idM];
+	  if(bc>0) {
+	    const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
+	    const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
+	    const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];
+	    
+	    stressBoundaryConditions2D(bc, x[idM], y[idM], nx, ny, uM, dudxM, dudyM, uP, dudxP, dudyP);
+	    
+	    for(int fld=0;fld<p_Nfields;++fld){
+	      s_q  [fld][j][i] = uP[fld];
+	      s_ndq[fld][j][i] -= WsJ*(nx*dudxP[fld] + ny*dudyP[fld]);
+	    }
+	  }
+	}
       }
     }
-
-
-    // face 0 & 2
-    for(int i=0;i<p_Nq;++i;@inner(0)){
-      {//face 0
-        const dlong sk = e*p_Nfp*p_Nfaces + 0*p_Nfp + i;
-        const dlong idM = vmapM[sk];
-
-        const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
-        const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
-        const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];
-
-        dfloat dudxP=0, dudyP=0, uP=0;
-
-        const int bc = mapB[idM];
-        if(bc>0) {
-          stressBoundaryConditions2D(bc, x[idM], y[idM], nx, ny, 0.f, 0.f, 0.f, uP, dudxP, dudyP);
-        }
-
-        s_q  [0][i] = uP;
-        s_ndq[0][i] -= WsJ*(nx*dudxP + ny*dudyP);
+  
+    @barrier();
+    
+    squareThreads{	
+      const dlong id = e*p_Np + j*p_Nq + i;
+      r_nut = nut[id];
+      
+      const dlong base = e*p_Nvgeo*p_Np + j*p_Nq + i;
+      r_rx = vgeo[base+p_RXID*p_Np];
+      r_ry = vgeo[base+p_RYID*p_Np];
+      r_sx = vgeo[base+p_SXID*p_Np];
+      r_sy = vgeo[base+p_SYID*p_Np];
+      r_wJ = vgeo[base+p_JWID*p_Np];
+      r_wJ *= r_nut;
+	
+      for(int fld=0;fld<p_Nfields;++fld){
+	r_qr[fld] = 0;
+	r_qs[fld] = 0;
       }
-      {//face 2
-        const dlong sk = e*p_Nfp*p_Nfaces + 2*p_Nfp + i;
-        const dlong idM = vmapM[sk];
-
-        const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
-        const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
-        const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];
-
-        dfloat dudxP=0, dudyP=0, uP=0;
-
-        const int bc = mapB[idM];
-        if(bc>0) {
-          stressBoundaryConditions2D(bc, x[idM], y[idM], nx, ny, 0.f, 0.f, 0.f, uP, dudxP, dudyP);
-        }
-
-        s_q  [p_Nq-1][i] = uP;
-        s_ndq[p_Nq-1][i] -= WsJ*(nx*dudxP + ny*dudyP);
+	
+#pragma unroll p_Nq
+      for(int n=0; n<p_Nq; ++n){
+	dfloat Din = s_DT[i][n];
+	  
+#pragma unroll p_Nfields
+	for(int fld=0;fld<p_Nfields;++fld)
+	  r_qr[fld] += Din*s_q[fld][j][n];
+	  
+	dfloat Djn = s_DT[j][n];
+	  
+#pragma unroll p_Nfields
+	for(int fld=0;fld<p_Nfields;++fld)
+	  r_qs[fld] += Djn*s_q[fld][n][i];
+      }
+	
+      for(int fld=0;fld<p_Nfields;++fld){
+	r_Aq[fld] = r_wJ*lambda*s_q[fld][j][i];
       }
     }
-
-
-    // face 1 & 3
-    for(int j=0;j<p_Nq;++j;@inner(0)){
-      {//face 1
-        const dlong sk = e*p_Nfp*p_Nfaces + 1*p_Nfp + j;
-        const dlong idM = vmapM[sk];
-
-        const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
-        const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
-        const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];
-
-        dfloat dudxP=0, dudyP=0, uP=0;
-
-        const int bc = mapB[idM];
-        if(bc>0) {
-          stressBoundaryConditions2D(bc, x[idM], y[idM], nx, ny, 0.f, 0.f, 0.f, uP, dudxP, dudyP);
-        }
-
-        s_q  [j][p_Nq-1] = uP;
-        s_ndq[j][p_Nq-1] -= WsJ*(nx*dudxP + ny*dudyP);
-      }
-      {//face 2
-        const dlong sk = e*p_Nfp*p_Nfaces + 3*p_Nfp + j;
-        const dlong idM = vmapM[sk];
-
-        const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];
-        const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];
-        const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];
-
-        dfloat dudxP=0, dudyP=0, uP=0;
-
-        const int bc = mapB[idM];
-        if(bc>0) {
-          stressBoundaryConditions2D(bc, x[idM], y[idM], nx, ny, 0.f, 0.f, 0.f, uP, dudxP, dudyP);
-        }
-
-        s_q  [j][0] = uP;
-        s_ndq[j][0] -= WsJ*(nx*dudxP + ny*dudyP);
+      
+      
+    squareThreads{
+      for(int fld=0;fld<p_Nfields;++fld){
+	dfloat qx = r_rx*r_qr[fld] + r_sx*r_qs[fld];
+	dfloat qy = r_ry*r_qr[fld] + r_sy*r_qs[fld];
+	// Dr'*(rx*wJ*rx)*Dr + Ds'*(sx*wJ*sx)*Ds
+	s_rx_qx[fld][j][i] = r_rx*r_wJ*qx;
+	s_sx_qx[fld][j][i] = r_sx*r_wJ*qx;
+	s_ry_qx[fld][j][i] = r_ry*r_wJ*qx;
+	s_sy_qx[fld][j][i] = r_sy*r_wJ*qx;
+	  
+	s_rx_qy[fld][j][i] = r_rx*r_wJ*qy;
+	s_sx_qy[fld][j][i] = r_sx*r_wJ*qy;
+	s_ry_qy[fld][j][i] = r_ry*r_wJ*qy;
+	s_sy_qy[fld][j][i] = r_sy*r_wJ*qy;
       }
     }
-
-
-    // loop over slabs
-    for(int j=0;j<p_Nq;++j){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
-        const dlong base = e*p_Nggeo*p_Np + j*p_Nq + i;
-
-        r_GwJ[j] = wJ[e*p_Np + j*p_Nq + i];
-
-        r_G00[j] = ggeo[base+p_G00ID*p_Np];
-        r_G01[j] = ggeo[base+p_G01ID*p_Np];
-
-        r_G11[j] = ggeo[base+p_G11ID*p_Np];
-
-        dfloat qr = 0.f, qs = 0.f;
-
-        #pragma unroll p_Nq
-          for(int n=0; n<p_Nq; ++n){
-            qr += s_DT[i][n]*s_q[j][n];
-            qs += s_DT[j][n]*s_q[n][i];
-          }
-
-        r_qr[j] = qr; r_qs[j] = qs;
-
-        r_Aq[j] = r_GwJ[j]*lambda*s_q[j][i];
+      
+      
+    squareThreads{
+      dfloat qxx[p_Nfields] = {0.f};
+      dfloat qxy[p_Nfields] = {0.f};
+      dfloat qyx[p_Nfields] = {0.f};
+      dfloat qyy[p_Nfields] = {0.f};
+	
+#pragma unroll p_Nq
+      for(int n=0;n<p_Nq;++n) {
+	  
+	dfloat Dni = s_DT[n][i];
+#pragma unroll p_Nfields
+	for(int fld=0;fld<p_Nfields;++fld){
+	  qxx[fld] += Dni*s_rx_qx[fld][j][n];
+	  qyx[fld] += Dni*s_ry_qx[fld][j][n];
+	  qxy[fld] += Dni*s_rx_qy[fld][j][n];
+	  qyy[fld] += Dni*s_ry_qy[fld][j][n];
+	}
+	  
+	dfloat Dnj = s_DT[n][j];
+#pragma unroll p_Nfields
+	for(int fld=0;fld<p_Nfields;++fld){
+	  qxx[fld] += Dnj*s_sx_qx[fld][n][i];
+	  qyx[fld] += Dnj*s_sy_qx[fld][n][i];
+	  qxy[fld] += Dnj*s_sx_qy[fld][n][i];
+	  qyy[fld] += Dnj*s_sy_qy[fld][n][i];
+	}
       }
-    }
+	
+      /*
+	\sum_j d_j ( nu (d_j u_i + d_i u_j ))
+	=> -\sum_j (d_j phi, nu (d_j u_i + d_i u_j ))
+	
+	Dx'*nu*Dx*u + Dy'*nu*Dy*u + Dx'*nu*Dx*u + Dy'*nu*Dx*v
+	Dx'*nu*Dx*v + Dy'*nu*Dy*v + Dx'*nu*Dy*u + Dy'*nu*Dy*v
+	
+      */
+      
+      r_Aq[0] += p_two*qxx[0] + qyy[0] +  qyx[1];
+      r_Aq[1] += p_two*qyy[1] + qxx[1] +  qxy[0];
 
-    // r term ----->
-
-    for(int j=0;j<p_Nq;++j){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
-        s_q[j][i] = r_G00[j]*r_qr[j] + r_G01[j]*r_qs[j];
-      }
-    }
-
-
-    for(int j=0;j<p_Nq;++j){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
-        dfloat tmp = 0.f;
-        #pragma unroll p_Nq
-          for(int n=0;n<p_Nq;++n) {
-            tmp += s_DT[n][i]*s_q[j][n];
-          }
-
-        r_Aq[j] += tmp;
-      }
-    }
-
-    // s term ---->
-
-    for(int j=0;j<p_Nq;++j){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
-        s_q[j][i] = r_G01[j]*r_qr[j] + r_G11[j]*r_qs[j];
-      }
-    }
-
-
-    for(int j=0;j<p_Nq;++j){
-      for(int i=0;i<p_Nq;++i;@inner(0)){
-        dfloat tmp = 0.f;
-
-        #pragma unroll p_Nq
-          for(int n=0;n<p_Nq;++n) {
-            tmp += s_DT[n][j]*s_q[n][i];
-          }
-
-        r_Aq[j] += tmp;
-
-        const dlong id = e*p_Np + j*p_Nq + i;
-        rhs[id] -= r_Aq[j] + s_ndq[j][i];
+      const dlong base = element*p_Np*p_Nfields + p_Nfields*(j*p_Nq + i);
+      for(int fld=0;fld<p_Nfields;++fld){
+	rhs[base+fld] -= r_Aq[fld] + s_ndq[fld][j][i];
       }
     }
   }

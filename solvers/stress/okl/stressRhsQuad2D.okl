@@ -41,12 +41,14 @@ SOFTWARE.
       // assumes w*J built into G entries
       const dlong id = e*p_Np + n;
       const dfloat r_GwJ = wJ[id];
-
-      dfloat f = 0;
-      stressForcing2D(x[id], y[id], lambda, f);
-
-      rhs[2*id+0] = r_GwJ*f;
-      rhs[2*id+1] = r_GwJ*f; // TW DUPED
+      const dfloat xn = x[id];
+      const dfloat yn = y[id];
+      
+      dfloat f[p_Nfields] = {0.f};
+      stressForcing2D(xn, yn, lambda, f);
+      
+      rhs[p_Nfields*id+0] = r_GwJ*f[0];
+      rhs[p_Nfields*id+1] = r_GwJ*f[1]; // TW DUPED
     }
   }
 }

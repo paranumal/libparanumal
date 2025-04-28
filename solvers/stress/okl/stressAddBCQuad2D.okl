@@ -36,14 +36,13 @@ SOFTWARE.
       const int id = n+e*p_Np;
       const int bc = mapB[n+e*p_Np];
 
-      dfloat dudxP=0, dudyP=0, uP=0;
-
+      dfloat dudxM[p_Nfields]={0.f}, dudyM[p_Nfields]={0.f}, uM[p_Nfields]={0.f};
+      dfloat dudxB[p_Nfields]={0.f}, dudyB[p_Nfields]={0.f}, uB[p_Nfields]={0.f};
+      
       if(bc==1) {
-        stressBoundaryConditions2D(bc, x[id], y[id], 0.f, 0.f, \
-                                      0.f, 0.f, 0.f,                \
-                                      uP, dudxP, dudyP);
-        q[id*2+0] = uP;
-	q[id*2+1] = uP;	 // TW: dup
+        stressBoundaryConditions2D(bc, x[id], y[id], 0.f, 0.f, uM, dudxM, dudyM, uB, dudxB, dudyB)
+        q[id*p_Nfields+0] = uB[0];
+	q[id*p_Nfields+1] = uB[1];
       }
     }
   }
