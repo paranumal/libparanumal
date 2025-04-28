@@ -33,8 +33,9 @@ JacobiPrecon::JacobiPrecon(stress_t& _stress):
   memory<dfloat> diagA   (stress.Ndofs);
   memory<pfloat> invDiagA(stress.Ndofs);
   stress.BuildOperatorDiagonal(diagA);
+
   for (dlong n=0;n<stress.Ndofs;n++)
-    invDiagA[n] = 1.0; // /diagA[n]; TW FIX LATER
+    invDiagA[n] = 1.0/diagA[n]; 
 
   o_invDiagA = stress.platform.malloc<pfloat>(invDiagA);
 }

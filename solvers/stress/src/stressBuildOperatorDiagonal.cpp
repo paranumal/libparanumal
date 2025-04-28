@@ -51,7 +51,7 @@ void stress_t::BuildOperatorDiagonal(memory<dfloat>& diagA){
   }
   
   //gather the diagonal to assemble it
-  ogsMasked.Gather(diagA, diagAL, 1, ogs::Add, ogs::Trans);
+  ogsMasked.Gather(diagA, diagAL, Nfields, ogs::Add, ogs::Trans);
 
   if(comm_t::world().rank()==0) printf("done.\n");
 }
@@ -91,34 +91,88 @@ void stress_t::BuildOperatorDiagonalContinuousTri2D(memory<dfloat>& A) {
 
 void stress_t::BuildOperatorDiagonalContinuousQuad2D(memory<dfloat>& A) {
 
-  for(dlong eM=0;eM<mesh.Nelements;++eM){
-    for (int ny=0;ny<mesh.Nq;ny++) {
-      for (int nx=0;nx<mesh.Nq;nx++) {
-        int iid = nx+ny*mesh.Nq;
-        if (mapB[nx+ny*mesh.Nq+eM*mesh.Np]!=1) {
-          A[eM*mesh.Np+iid] = 0;
+  /*
+    \sum_j d_j ( nu (d_j u_i + d_i u_j ))
+    => -\sum_j (d_j phi, nu (d_j u_i + d_i u_j ))
+    
+    [2.*Dx'*nu*Dx*u + Dy'*nu*Dy*u] + Dy'*nu*Dx*v
+    Dx'*nu*Dy*u + [Dx'*nu*Dx*v + 2.*Dy'*nu*Dy*v]
+    
+  */
+
+  
+  for(dlong e=0;e<mesh.Nelements;++e){
+    for (int m=0;m<mesh.Nq;++m) {
+      for (int n=0;n<mesh.Nq;++n) {
+        dlong iid = n+m*mesh.Nq;
+	dlong lid = iid + e*mesh.Np;
+	dlong uid = 2*lid + 0;
+	dlong vid = 2*lid + 1;
+	
+        if (mapB[n+m*mesh.Nq+e*mesh.Np]!=1) {
+
+	  dlong vbase = e*mesh.Np*mesh.Nvgeo;
+          A[uid] = 0;
+	  A[vid] = 0;
 
           for (int k=0;k<mesh.Nq;k++) {
-            int id = k+ny*mesh.Nq;
-            dfloat Grr = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + mesh.G00ID*mesh.Np];
-            A[eM*mesh.Np+iid] += Grr*mesh.D[nx+k*mesh.Nq]*mesh.D[nx+k*mesh.Nq];
+            int id = k+m*mesh.Nq;
+	    dfloat Dkn = mesh.D[n+k*mesh.Nq];
+	    dfloat rx = mesh.vgeo[vbase + id + mesh.RXID*mesh.Np];
+	    dfloat ry = mesh.vgeo[vbase + id + mesh.RYID*mesh.Np];
+	    dfloat wJ = mesh.vgeo[vbase + id + mesh.JWID*mesh.Np];	    
+	    dfloat nut_km = nut[e*mesh.Np+id];
+
+	    dfloat uGrr = (2.*rx*rx + ry*ry)*nut_km*wJ;
+            A[uid] += uGrr*Dkn*Dkn; // strided for gather
+	    
+	    dfloat vGrr = (2.*ry*ry + rx*rx)*nut_km*wJ;
+	    A[vid] += vGrr*Dkn*Dkn;
           }
+
 
           for (int k=0;k<mesh.Nq;k++) {
-            int id = nx+k*mesh.Nq;
-            dfloat Gss = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + mesh.G11ID*mesh.Np];
-            A[eM*mesh.Np+iid] += Gss*mesh.D[ny+k*mesh.Nq]*mesh.D[ny+k*mesh.Nq];
+            int id = n+k*mesh.Nq;
+	    dfloat Dkm = mesh.D[m+k*mesh.Nq];
+	    dfloat sx = mesh.vgeo[vbase + id + mesh.SXID*mesh.Np];
+	    dfloat sy = mesh.vgeo[vbase + id + mesh.SYID*mesh.Np];
+	    dfloat wJ = mesh.vgeo[vbase + id + mesh.JWID*mesh.Np];	    
+	    dfloat nut_km = nut[e*mesh.Np+id];
+
+	    dfloat uGss = (2.*sx*sx + sy*sy)*nut_km*wJ;
+            A[uid] += uGss*Dkm*Dkm; // strided for gather
+
+	    dfloat vGss = (2.*sy*sy + sx*sx)*nut_km*wJ;
+	    A[vid] += vGss*Dkm*Dkm;
           }
 
-          int id = nx+ny*mesh.Nq;
-          dfloat Grs = mesh.ggeo[eM*mesh.Np*mesh.Nggeo + id + mesh.G01ID*mesh.Np];
-          A[eM*mesh.Np+iid] += 2*Grs*mesh.D[nx+nx*mesh.Nq]*mesh.D[ny+ny*mesh.Nq];
+	  {
+            int id = n+m*mesh.Nq;
+	    dfloat Dnn = mesh.D[n+n*mesh.Nq];
+	    dfloat Dmm = mesh.D[m+m*mesh.Nq];
+	    dfloat rx = mesh.vgeo[vbase + id + mesh.RXID*mesh.Np];
+	    dfloat ry = mesh.vgeo[vbase + id + mesh.RYID*mesh.Np];
+	    dfloat sx = mesh.vgeo[vbase + id + mesh.SXID*mesh.Np];
+	    dfloat sy = mesh.vgeo[vbase + id + mesh.SYID*mesh.Np];
+	    dfloat wJ = mesh.vgeo[vbase + id + mesh.JWID*mesh.Np];	    
+	    dfloat nut_nm = nut[e*mesh.Np+id];
+	    
+	    dfloat uGrs = 2.*(2.*rx*sx + ry*sy)*nut_nm*wJ;
+            A[uid] += uGrs*Dnn*Dmm; // strided for gather
+	    
+	    dfloat vGrs = 2.*(2.*ry*sy + rx*sx)*nut_nm*wJ;
+	    A[vid] += vGrs*Dnn*Dmm;
 
-          dfloat JW = mesh.wJ[eM*mesh.Np + iid];
-          A[eM*mesh.Np+iid] += JW*lambda;
+	    // do not need off diagonal blocks
+	  }
+	  
+	  dfloat JW = mesh.vgeo[vbase + n + m*mesh.Nq + mesh.JWID*mesh.Np];
+          A[uid] += JW*lambda;
+	  A[vid] += JW*lambda;
 
         } else {
-          A[eM*mesh.Np+iid] = 1; //just put a 1 so A is invertable
+          A[uid] = 1; //just put a 1 so A is invertable
+	  A[vid] = 1;
         }
       }
     }
@@ -126,8 +180,11 @@ void stress_t::BuildOperatorDiagonalContinuousQuad2D(memory<dfloat>& A) {
     //add the rank boost for the allNeumann Poisson problem
     if (allNeumann) {
       for(int n=0;n<mesh.Np;++n){
-        if (mapB[n+eM*mesh.Np]!=1) { //dont fill rows for masked nodes
-          A[eM*mesh.Np+n] += allNeumannPenalty*allNeumannScale*allNeumannScale;
+        if (mapB[n+e*mesh.Np]!=1) { //dont fill rows for masked nodes
+	  dlong id = e*mesh.Np+n;
+	  dfloat fac = allNeumannPenalty*allNeumannScale*allNeumannScale;
+          A[Nfields*id+0] += fac;
+	  A[Nfields*id+1] += fac;
         }
       }
     }

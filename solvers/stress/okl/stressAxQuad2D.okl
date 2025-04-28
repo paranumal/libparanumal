@@ -102,10 +102,14 @@ SOFTWARE.
 #pragma unroll p_Nq
       for(int n=0; n<p_Nq; ++n){
 	dfloat Din = s_DT[i][n];
+	
+#pragma unroll p_Nfields
 	for(int fld=0;fld<p_Nfields;++fld)
 	  r_qr[fld] += Din*s_q[fld][j][n];
 	
 	dfloat Djn = s_DT[j][n];
+
+#pragma unroll p_Nfields
 	for(int fld=0;fld<p_Nfields;++fld)
 	  r_qs[fld] += Djn*s_q[fld][n][i];
       }
@@ -144,6 +148,7 @@ SOFTWARE.
       for(int n=0;n<p_Nq;++n) {
 
 	dfloat Dni = s_DT[n][i];
+#pragma unroll p_Nfields
 	for(int fld=0;fld<p_Nfields;++fld){
 	  qxx[fld] += Dni*s_rx_qx[fld][j][n];
 	  qyx[fld] += Dni*s_ry_qx[fld][j][n];
@@ -152,6 +157,7 @@ SOFTWARE.
 	}
 
 	dfloat Dnj = s_DT[n][j];
+#pragma unroll p_Nfields
 	for(int fld=0;fld<p_Nfields;++fld){
 	  qxx[fld] += Dnj*s_sx_qx[fld][n][i];
 	  qyx[fld] += Dnj*s_sy_qx[fld][n][i];
@@ -170,7 +176,7 @@ SOFTWARE.
       */
       
       r_Aq[0] += p_two*qxx[0] + qyy[0] +  qyx[1];
-      r_Aq[1] += p_two*qxx[1] + qyy[1] +  qxy[0];
+      r_Aq[1] += p_two*qyy[1] + qxx[1] +  qxy[0];
       
       const dlong base = element*p_Np*p_Nfields + p_Nfields*(j*p_Nq + i);
       for(int fld=0;fld<p_Nfields;++fld){

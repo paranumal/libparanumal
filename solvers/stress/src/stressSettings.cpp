@@ -59,7 +59,7 @@ void stressAddSettings(settings_t& settings,
   settings.newSetting(prefix+"DISCRETIZATION",
                       "CONTINUOUS",
                       "Type of Finite Element Discretization",
-                      {"CONTINUOUS", "IPDG"});
+                      {"CONTINUOUS"});
 
   settings.newSetting(prefix+"LINEAR SOLVER",
                       "PCG",
@@ -74,22 +74,8 @@ void stressAddSettings(settings_t& settings,
   settings.newSetting(prefix+"PRECONDITIONER",
                       "NONE",
                       "Preconditioning Strategy",
-                      {"NONE", "JACOBI", "MASSMATRIX", "PARALMOND", "MULTIGRID", "SEMFEM", "OAS"});
+                      {"NONE", "JACOBI"});
 
-  /* MULTIGRID options */
-  settings.newSetting(prefix+"MULTIGRID COARSENING",
-                      "HALFDOFS",
-                      "p-Multigrid coarsening strategy",
-                      {"ALLDEGREES", "HALFDEGREES", "HALFDOFS"});
-
-  settings.newSetting(prefix+"MULTIGRID SMOOTHER",
-                      "CHEBYSHEV",
-                      "p-Multigrid smoother",
-                      {"DAMPEDJACOBI", "CHEBYSHEV"});
-
-  settings.newSetting(prefix+"MULTIGRID CHEBYSHEV DEGREE",
-                      "2",
-                      "Smoothing iterations in Chebyshev smoother");
 
   settings.newSetting(prefix+"VERBOSE",
                       "FALSE",
@@ -107,17 +93,6 @@ void stressSettings_t::report() {
     reportSetting("DISCRETIZATION");
     reportSetting("LINEAR SOLVER");
     reportSetting("PRECONDITIONER");
-
-    if (compareSetting("PRECONDITIONER","MULTIGRID")) {
-      reportSetting("MULTIGRID COARSENING");
-      reportSetting("MULTIGRID SMOOTHER");
-      if (compareSetting("MULTIGRID SMOOTHER","CHEBYSHEV"))
-        reportSetting("MULTIGRID CHEBYSHEV DEGREE");
-    }
-
-    if (compareSetting("PRECONDITIONER","MULTIGRID")
-      ||compareSetting("PRECONDITIONER","PARALMOND"))
-      parAlmond::ReportSettings(*this);
 
     reportSetting("OUTPUT TO FILE");
     reportSetting("OUTPUT FILE NAME");
