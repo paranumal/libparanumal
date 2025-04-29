@@ -116,7 +116,7 @@
 	    
 	    for(int fld=0;fld<p_Nfields;++fld){
 	      s_q  [fld][j][i] = uP[fld];
-	      s_ndq[fld][j][i] -= WsJ*(nx*dudxP[fld] + ny*dudyP[fld]);
+	            s_ndq[fld][j][i] -= WsJ*(nx*dudxP[fld] + ny*dudyP[fld]);
 	    }
 	  }
 	}
@@ -218,15 +218,15 @@
 	Dx'*nu*Dx*v + Dy'*nu*Dy*v + Dx'*nu*Dy*u + Dy'*nu*Dy*v
 	
       */
-
-#if 0
+#if 1
       r_Aq[0] += p_two*qxx[0] + qyy[0] +  qyx[1];
       r_Aq[1] += p_two*qyy[1] + qxx[1] +  qxy[0];
 #else
       r_Aq[0] += qxx[0] + qyy[0];
       r_Aq[1] += qyy[1] + qxx[1];
 #endif
-      const dlong base = p_Nfields*(element*p_Np + (j*p_Nq + i));
+
+      const dlong base = p_Nfields*(element*p_Np + j*p_Nq + i);
       for(int fld=0;fld<p_Nfields;++fld){
 	rhs[base+fld] -= r_Aq[fld] + s_ndq[fld][j][i];
       }

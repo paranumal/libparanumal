@@ -180,16 +180,14 @@ SOFTWARE.
 	
       */
 
-#if 0
       dfloat fac = p_two;
+#if 1
       r_Aq[0] += fac*qxx[0] + qyy[0] +  qyx[1];
       r_Aq[1] += fac*qyy[1] + qxx[1] +  qxy[0];
 #else
-      // just do two decoupled laplacians for the moment
       r_Aq[0] += qxx[0] + qyy[0];
       r_Aq[1] += qyy[1] + qxx[1];
 #endif
-
       const dlong base = p_Nfields*(element*p_Np + j*p_Nq + i);
       for(int fld=0;fld<p_Nfields;++fld){
 	Aq[base+fld] = r_Aq[fld];
