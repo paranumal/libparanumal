@@ -79,11 +79,13 @@ endif
 
 #libraries
 ELLIPTIC_DIR =${LIBP_DIR}/solvers/elliptic
+STRESS_DIR =${LIBP_DIR}/solvers/stress
 FPE_LIBP_LIBS=timeStepper linearSolver parAlmond mesh parAdogs ogs linAlg prim core
 
 #includes
 INCLUDES=-I${ELLIPTIC_DIR} \
-			${LIBP_INCLUDES} \
+	-I${STRESS_DIR} \
+	${LIBP_INCLUDES} \
 			-I.
 
 #defines
@@ -94,7 +96,7 @@ DEFINES =${LIBP_DEFINES} \
 INS_CXXFLAGS=${LIBP_CXXFLAGS} ${DEFINES} ${INCLUDES}
 
 #link libraries
-LIBS=-L${ELLIPTIC_DIR} -lelliptic \
+LIBS=-L${ELLIPTIC_DIR} -lelliptic -L$(STRESS_DIR) -lstress \
 	  -L${LIBP_LIBS_DIR} $(addprefix -l,$(FPE_LIBP_LIBS)) \
      ${LIBP_LIBS}
 
@@ -105,13 +107,14 @@ LFLAGS=${INS_CXXFLAGS} ${LIBS}
 DEPS=$(wildcard *.hpp) \
      $(wildcard $(LIBP_INCLUDE_DIR)/*.h) \
      $(wildcard $(LIBP_INCLUDE_DIR)/*.hpp) \
-     $(wildcard $(ELLIPTIC_DIR)/*.hpp)
+     $(wildcard $(ELLIPTIC_DIR)/*.hpp)\
+     $(wildcard $(STRESS_DIR)/*.hpp)
 
 SRC =$(wildcard src/*.cpp)
 
 OBJS=$(SRC:.cpp=.o)
 
-.PHONY: all lib libp_libs libelliptic clean clean-libs \
+.PHONY: all lib libp_libs libstress libelliptic clean clean-libs \
 		clean-kernels realclean help info
 
 all: insMain
@@ -132,7 +135,15 @@ else
 	@${MAKE} -C ${ELLIPTIC_DIR} lib --no-print-directory
 endif
 
-insMain:$(OBJS) insMain.o libelliptic
+libstress: libp_libs
+ifneq (,${verbose})
+	${MAKE} -C ${STRESS_DIR} lib verbose=${verbose}
+else
+	@${MAKE} -C ${STRESS_DIR} lib --no-print-directory
+endif
+
+
+insMain:$(OBJS) insMain.o libelliptic libstress
 ifneq (,${verbose})
 	$(LIBP_LD) -o insMain insMain.o $(OBJS) $(MESH_OBJS) $(LFLAGS)
 else
@@ -149,7 +160,7 @@ else
 endif
 
 # rule for .cpp files
-%.o: %.cpp $(DEPS) | libelliptic
+%.o: %.cpp $(DEPS) | libelliptic 
 ifneq (,${verbose})
 	$(LIBP_CXX) -o $*.o -c $*.cpp $(INS_CXXFLAGS)
 else
@@ -163,6 +174,7 @@ clean:
 
 clean-libs: clean
 	${MAKE} -C ${ELLIPTIC_DIR} clean
+	${MAKE} -C ${STRESS_DIR} clean
 	${MAKE} -C ${LIBP_LIBS_DIR} clean
 
 clean-kernels: clean-libs
@@ -170,6 +182,7 @@ clean-kernels: clean-libs
 
 realclean: clean
 	${MAKE} -C ${ELLIPTIC_DIR} clean
+	${MAKE} -C ${STRESS_DIR} clean
 	${MAKE} -C ${LIBP_LIBS_DIR} realclean
 
 help:
