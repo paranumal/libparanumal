@@ -41,6 +41,7 @@ public:
   JacobiPrecon() = default;
   JacobiPrecon(stress_t& stress);
   void Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_Mr);
+  void Update();
 };
 
 

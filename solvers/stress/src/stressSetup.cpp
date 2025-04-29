@@ -121,7 +121,6 @@ void stress_t::Setup(platform_t& _platform, mesh_t& _mesh,
   }
   o_nut  = platform.malloc<dfloat>(mesh.Np*mesh.Nelements, nut);
 
-
   fileName   = oklFilePrefix + "stressBuildOperatorDiagonal" + suffix + oklFileSuffix;
   kernelName = "stressBuildOperatorDiagonal" + suffix;
 

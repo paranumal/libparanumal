@@ -129,7 +129,8 @@ public:
   void Operator(deviceMemory<float>& o_q, deviceMemory<float>& o_Aq);
 
   void BuildOperatorDiagonal(memory<dfloat>& diagA);
-
+  void BuildOperatorDiagonal(deviceMemory<pfloat> &o_invDiagA );
+  
   void BuildOperatorDiagonalContinuousTri2D(memory<dfloat>& diagA);
   void BuildOperatorDiagonalContinuousTri3D(memory<dfloat>& diagA);
   void BuildOperatorDiagonalContinuousQuad2D(memory<dfloat>& diagA);

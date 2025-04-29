@@ -56,6 +56,34 @@ void stress_t::BuildOperatorDiagonal(memory<dfloat>& diagA){
   if(comm_t::world().rank()==0) printf("done.\n");
 }
 
+void stress_t::BuildOperatorDiagonal(deviceMemory<pfloat> &o_invDiagA ){
+
+  deviceMemory<dfloat> o_diagAL =
+    platform.reserve<dfloat>(mesh.Nelements*Nfields*mesh.Np);
+  deviceMemory<dfloat> o_diagA =
+    platform.reserve<dfloat>(Ndofs);
+  
+  dfloat neumannBoost = (allNeumann) ? allNeumannPenalty*
+    allNeumannScale*allNeumannScale: 0;
+
+  buildOperatorDiagonalKernel(mesh.Nelements,
+				     o_nut,
+				     mesh.o_mapB,
+				     neumannBoost,
+				     mesh.o_wJ,
+				     mesh.o_vgeo,
+				     mesh.o_D,
+				     mesh.o_S,
+				     mesh.o_MM,
+				     lambda,
+				     o_diagAL);
+  
+  ogsMasked.Gather(o_diagA, o_diagAL, Nfields, ogs::Add, ogs::Trans);
+
+  reciprocalKernel(Ndofs, o_diagA, o_invDiagA);
+}
+
+
 
 void stress_t::BuildOperatorDiagonalContinuousTri2D(memory<dfloat>& A) {
   
