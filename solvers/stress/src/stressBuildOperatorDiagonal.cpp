@@ -83,7 +83,7 @@ void stress_t::BuildOperatorDiagonalContinuousQuad2D(memory<dfloat>& A) {
 	dlong uid = 2*lid + 0;
 	dlong vid = 2*lid + 1;
 
-	dfloat fac = 1;  // Eventually set this to 2
+	dfloat fac = 2; 
 	
         if (mapB[n+m*mesh.Nq+e*mesh.Np]!=1) {
 

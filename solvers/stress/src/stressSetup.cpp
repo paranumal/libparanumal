@@ -105,7 +105,7 @@ void stress_t::Setup(platform_t& _platform, mesh_t& _mesh,
   
   floatPartialAxKernel = platform.buildKernel(fileName, kernelName,
 					      kernelInfoFloat);
-
+  
   /* Preconditioner Setup */
   Ndofs = ogsMasked.Ngather*Nfields;
   Nhalo = gHalo.Nhalo*Nfields;
@@ -116,10 +116,24 @@ void stress_t::Setup(platform_t& _platform, mesh_t& _mesh,
       dlong id = e*mesh.Np + n;
       dfloat xn = mesh.x[id];
       dfloat yn = mesh.y[id];
-      nut[id] = 1; //  + 0.01*sin(M_PI*xn)*sin(M_PI*yn);
+      nut[id] = 1 + 0.3*cos(M_PI*xn)*cos(M_PI*yn);
     }
   }
   o_nut  = platform.malloc<dfloat>(mesh.Np*mesh.Nelements, nut);
+
+
+  fileName   = oklFilePrefix + "stressBuildOperatorDiagonal" + suffix + oklFileSuffix;
+  kernelName = "stressBuildOperatorDiagonal" + suffix;
+  
+  buildOperatorDiagonalKernel = platform.buildKernel(fileName, kernelName,
+						     kernelInfoDouble);
+
+  // diagonal inverse (dfloat=>(pfloat)(1/float))
+  fileName   = oklFilePrefix + "stressReciprocal" + oklFileSuffix;
+  kernelName = "stressReciprocal";
+  
+  reciprocalKernel = platform.buildKernel(fileName, kernelName,
+					  kernelInfoDouble);
   
   // assume Jacobi
   precon.Setup<JacobiPrecon>(*this);

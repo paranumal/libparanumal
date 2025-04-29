@@ -94,10 +94,13 @@ public:
   dfloat allNeumannPenalty;
   dfloat allNeumannScale;
 
+  kernel_t reciprocalKernel;
   kernel_t maskKernel;
   kernel_t partialAxKernel;
   kernel_t floatPartialAxKernel;
 
+  kernel_t buildOperatorDiagonalKernel;
+  
   memory<dfloat> nut;
   deviceMemory<dfloat> o_nut;
   

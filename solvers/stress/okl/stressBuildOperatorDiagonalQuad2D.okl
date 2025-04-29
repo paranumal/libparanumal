@@ -1,0 +1,148 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+@kernel void stressBuildOperatorDiagonalQuad2D(const dlong Nelements,
+					       @restrict const  dfloat *  nut,
+					       @restrict const  dlong *  mapB,
+					       const dfloat neumannBoost,
+					       @restrict const  dfloat *  wJ,
+					       @restrict const  dfloat *  vgeo,
+					       @restrict const  dfloat *  DT,
+					       @restrict const  dfloat *  S,
+					       @restrict const  dfloat *  MM,
+					       const dfloat   lambda,
+					       @restrict dfloat * A){
+
+
+  /*
+    \sum_j d_j ( nu (d_j u_i + d_i u_j ))
+    => -\sum_j (d_j phi, nu (d_j u_i + d_i u_j ))
+    
+    [2.*Dx'*nu*Dx*u + Dy'*nu*Dy*u] + Dy'*nu*Dx*v
+    Dx'*nu*Dy*u + [Dx'*nu*Dx*v + 2.*Dy'*nu*Dy*v]
+    
+  */
+
+#define p_two ((dfloat)2)
+  
+  
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_D[p_Nq][p_Nq];
+
+    for (int m=0;m<p_Nq;++m;@inner(1)) {
+      for (int n=0;n<p_Nq;++n;@inner(0)) {
+	s_D[m][n] = DT[m*p_Nq+n];
+      }
+    }
+    
+    for (int m=0;m<p_Nq;++m;@inner(1)) {
+      for (int n=0;n<p_Nq;++n;@inner(0)) {
+	dfloat Au = 0, Av = 0;
+
+	const dlong nid = e*p_Np + m*p_Nq + n;
+	const dfloat fac = p_two;
+	// Eventually set this to 2
+	const int bc = mapB[nid];
+
+        if (bc!=1){
+	  dlong vbase = e*p_Np*p_Nvgeo;
+
+          for (int k=0;k<p_Nq;k++) {
+            int id = k+m*p_Nq;
+	    dfloat Dkn = s_D[k][n];
+	    dfloat rx = vgeo[vbase + id + p_RXID*p_Np];
+	    dfloat ry = vgeo[vbase + id + p_RYID*p_Np];
+	    dfloat wJ = vgeo[vbase + id + p_JWID*p_Np];	    
+	    dfloat nut_km = nut[e*p_Np+id];
+
+	    dfloat uGrr = (fac*rx*rx + ry*ry)*nut_km*wJ;
+            Au += uGrr*Dkn*Dkn; // strided for gather
+	    
+	    dfloat vGrr = (fac*ry*ry + rx*rx)*nut_km*wJ;
+	    Av += vGrr*Dkn*Dkn;
+          }
+
+
+          for (int k=0;k<p_Nq;k++) {
+            int id = n+k*p_Nq;
+	    dfloat Dkm = s_D[k][m];
+	    dfloat sx = vgeo[vbase + id + p_SXID*p_Np];
+	    dfloat sy = vgeo[vbase + id + p_SYID*p_Np];
+	    dfloat wJ = vgeo[vbase + id + p_JWID*p_Np];	    
+	    dfloat nut_nk = nut[e*p_Np+id];
+	    
+	    dfloat uGss = (fac*sx*sx + sy*sy)*nut_nk*wJ;
+            Au += uGss*Dkm*Dkm; // strided for gather
+	    
+	    dfloat vGss = (fac*sy*sy + sx*sx)*nut_nk*wJ;
+	    Av += vGss*Dkm*Dkm;
+          }
+
+	  {
+            int id = n+m*p_Nq;
+	    dfloat Dnn = s_D[n][n];
+	    dfloat Dmm = s_D[m][m];
+	    dfloat rx = vgeo[vbase + id + p_RXID*p_Np];
+	    dfloat ry = vgeo[vbase + id + p_RYID*p_Np];
+	    dfloat sx = vgeo[vbase + id + p_SXID*p_Np];
+	    dfloat sy = vgeo[vbase + id + p_SYID*p_Np];
+	    dfloat wJ = vgeo[vbase + id + p_JWID*p_Np];	    
+	    dfloat nut_nm = nut[e*p_Np+id];
+
+	    // check this
+	    dfloat uGrs = p_two*(fac*rx*sx + ry*sy)*nut_nm*wJ;
+            Au += uGrs*Dnn*Dmm; // strided for gather
+	    
+	    dfloat vGrs = p_two*(fac*ry*sy + rx*sx)*nut_nm*wJ;
+	    Av += vGrs*Dnn*Dmm;
+	    
+	    // do not need off diagonal blocks
+	  }
+	  
+	  dfloat JW = vgeo[vbase + n + m*p_Nq + p_JWID*p_Np];
+          Au += JW*lambda;
+	  Av += JW*lambda;
+	  
+        } else {
+          Au = 1; //just put a 1 so A is invertable
+	  Av = 1;
+        }
+      
+	//add the rank boost for the allNeumann Poisson problem
+	if (neumannBoost) {
+	  if(bc!=1) { //dont fill rows for masked nodes
+	    Au += neumannBoost;
+	    Av += neumannBoost;
+	  }
+	}
+	
+	A[p_Nfields*nid+0] = fac;
+	A[p_Nfields*nid+1] = fac;
+      }
+    }
+  }
+}
