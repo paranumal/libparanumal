@@ -125,25 +125,15 @@ void stress_t::Setup(platform_t& _platform, mesh_t& _mesh,
   fileName   = oklFilePrefix + "stressBuildOperatorDiagonal" + suffix + oklFileSuffix;
   kernelName = "stressBuildOperatorDiagonal" + suffix;
 
-  if constexpr (std::is_same_v<dfloat,double>) {
-    buildOperatorDiagonalKernel = platform.buildKernel(fileName, kernelName,
-						       kernelInfoDouble);
-  }else{
-    buildOperatorDiagonalKernel = platform.buildKernel(fileName, kernelName,
-						       kernelInfoFloat);
-  }
+  buildOperatorDiagonalKernel = platform.buildKernel(fileName, kernelName,
+						     kernelInfo);
 
   // diagonal inverse (dfloat=>(pfloat)(1/float))
   fileName   = oklFilePrefix + "stressReciprocal" + oklFileSuffix;
   kernelName = "stressReciprocal";
 
-  if constexpr (std::is_same_v<dfloat,double>) {
-    reciprocalKernel = platform.buildKernel(fileName, kernelName,
-					    kernelInfoDouble);
-  }else{
-    reciprocalKernel = platform.buildKernel(fileName, kernelName,
-					    kernelInfoFloat);
-  }
+  reciprocalKernel = platform.buildKernel(fileName, kernelName,
+					  kernelInfo);
   
   // assume Jacobi
   precon.Setup<JacobiPrecon>(*this);
