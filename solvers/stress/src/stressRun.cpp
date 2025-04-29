@@ -146,14 +146,12 @@ void stress_t::Run(){
   ogsMasked.Scatter(o_xL, o_x, Nfields, ogs::NoTrans);
 
   //fill masked nodes with BC data
-#if 0
   addBCKernel(mesh.Nelements,
 	      mesh.o_x,
 	      mesh.o_y,
 	      mesh.o_z,
 	      o_mapB,
 	      o_xL);
-#endif
   
   timePoint_t end = GlobalPlatformTime(platform);
   double elapsedTime = ElapsedTime(start, end);

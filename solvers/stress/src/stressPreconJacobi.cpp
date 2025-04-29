@@ -36,7 +36,6 @@ JacobiPrecon::JacobiPrecon(stress_t& _stress):
 
   for (dlong n=0;n<stress.Ndofs;n++){
     invDiagA[n] = 1.0/diagA[n];
-    //    std::cout << "invDiagA[" << n << "]: " << invDiagA[n] << std::endl;
   }
 
   o_invDiagA = stress.platform.malloc<pfloat>(invDiagA);

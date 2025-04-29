@@ -41,6 +41,7 @@ SOFTWARE.
 #define stressHomogeneousDirichlet2D(uM,uxM,uyM,uB,uxB,uyB)  \
   {							     \
     uB[0]  = 0.f;					     \
+    uB[1]  = 0.f;					     \
     uxB[0] = uxM[0];					     \
     uyB[0] = uyM[0];					     \
     uxB[1] = uxM[1];					     \

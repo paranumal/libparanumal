@@ -34,23 +34,23 @@ SOFTWARE.
   }
 
 /* Dirichlet boundary condition   */
-#define stressDirichletCondition2D(x,y,nx,ny,uM,uxM,uyM,uB,uxB,uyB)  \
-  {								     \
-    uB[0]  = sin(PI*x)*sin(PI*y);				     \
-    uB[1]  = sin(PI*x)*sin(PI*y);				     \
-    uxB[0] = uxM[0];						     \
-    uxB[1] = uxM[1];						     \
-    uyB[0] = uyM[0];							     \
-    uyB[1] = uyM[1];							     \
+#define stressDirichletCondition2D(x,y,nx,ny,uM,uxM,uyM,uB,uxB,uyB)	\
+  {									\
+    uB[0]  = sin(PI*x)*sin(PI*y);					\
+    uB[1]  = 0;								\
+    uxB[0] = uxM[0];							\
+    uxB[1] = uxM[1];							\
+    uyB[0] = uyM[0];							\
+    uyB[1] = uyM[1];							\
   }
 
 /* Neumann boundary condition   */
 #define stressNeumannCondition2D(x,y,nx,ny,uM,uxM,uyM,uB,uxB,uyB)  \
-  {              \
-    uB[0]  = uM[0];			     \
-    uB[1]  = uM[1];			     \
-    uxB[0] = -PI*cos(PI*x)*sin(PI*y);   \
-    uxB[1] = -PI*cos(PI*x)*sin(PI*y);   \
-    uyB[0] = -PI*sin(PI*x)*cos(PI*y);   \
-    uyB[1] = -PI*sin(PI*x)*cos(PI*y);   \
+  {								   \
+    uB[0]  = uM[0];						   \
+    uB[1]  = uM[1];						   \
+    uxB[0] = -PI*cos(PI*x)*sin(PI*y);				   \
+    uxB[1] = -PI*cos(PI*x)*sin(PI*y);				   \
+    uyB[0] = -PI*sin(PI*x)*cos(PI*y);				   \
+    uyB[1] = -PI*sin(PI*x)*cos(PI*y);				   \
   }
