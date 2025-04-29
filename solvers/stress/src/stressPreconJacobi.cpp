@@ -68,6 +68,7 @@ JacobiPrecon::JacobiPrecon(stress_t& _stress):
 
   stress.reciprocalKernel(stress.Ndofs, o_diagA, o_invDiagA);
 
+  
 #endif
 }
 
