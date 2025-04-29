@@ -40,16 +40,18 @@ JacobiPrecon::JacobiPrecon(stress_t& _stress):
   }
 
   o_invDiagA = stress.platform.malloc<pfloat>(invDiagA);
-
 #else
-
-  deviceMemory<dfloat> o_diagAL = stress.platform.malloc<dfloat>(stress.mesh.Nelements*stress.Nfields*stress.mesh.Np);
-  deviceMemory<dfloat> o_diagA = stress.platform.malloc<dfloat>(stress.Ndofs);
+  
+  deviceMemory<dfloat> o_diagAL =
+    stress.platform.malloc<dfloat>(stress.mesh.Nelements*stress.Nfields*stress.mesh.Np);
+  deviceMemory<dfloat> o_diagA =
+    stress.platform.malloc<dfloat>(stress.Ndofs);
 
   o_invDiagA = stress.platform.malloc<pfloat>(stress.Ndofs);
 
   dfloat neumannBoost = (stress.allNeumann) ? stress.allNeumannPenalty*
     stress.allNeumannScale*stress.allNeumannScale: 0;
+
   stress.buildOperatorDiagonalKernel(stress.mesh.Nelements,
 				     stress.o_nut,
 				     stress.mesh.o_mapB,
@@ -64,13 +66,8 @@ JacobiPrecon::JacobiPrecon(stress_t& _stress):
   
   stress.ogsMasked.Gather(o_diagA, o_diagAL, stress.Nfields, ogs::Add, ogs::Trans);
 
-  o_invDiagA = stress.platform.malloc<pfloat>(stress.Ndofs);
-  
   stress.reciprocalKernel(stress.Ndofs, o_diagA, o_invDiagA);
-  
 
-  
-  std::cout << "Ndofs: " << stress.Ndofs << std::endl;
 #endif
 }
 

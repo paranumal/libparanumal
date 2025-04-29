@@ -140,8 +140,8 @@ SOFTWARE.
 	  }
 	}
 	
-	A[p_Nfields*nid+0] = fac;
-	A[p_Nfields*nid+1] = fac;
+	A[p_Nfields*nid+0] = Au;
+	A[p_Nfields*nid+1] = Av;
       }
     }
   }

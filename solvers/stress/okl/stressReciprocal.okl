@@ -30,7 +30,7 @@ SOFTWARE.
 			      @restrict pfloat *invq){
 
   for(dlong n=0;n<N;++n;@tile(256,@outer,@inner)){
-    invq[n] = 1./q[n];
+    invq[n] = ((dfloat)1.)/q[n];
   }
 }
 
