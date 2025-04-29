@@ -58,35 +58,9 @@ void stress_t::BuildOperatorDiagonal(memory<dfloat>& diagA){
 
 
 void stress_t::BuildOperatorDiagonalContinuousTri2D(memory<dfloat>& A) {
-
-  for(dlong eM=0;eM<mesh.Nelements;++eM){
-    dlong gbase = eM*mesh.Nggeo;
-    dfloat Grr = mesh.ggeo[gbase + mesh.G00ID];
-    dfloat Grs = mesh.ggeo[gbase + mesh.G01ID];
-    dfloat Gss = mesh.ggeo[gbase + mesh.G11ID];
-    dfloat J   = mesh.wJ[eM];
-
-    /* start with stiffness matrix  */
-    for(int n=0;n<mesh.Np;++n){
-      if (mapB[n+eM*mesh.Np]!=1) { //dont fill rows for masked nodes
-        A[eM*mesh.Np+n] = J*lambda*mesh.MM[n+n*mesh.Np];
-        A[eM*mesh.Np+n] += Grr*mesh.Srr[n+n*mesh.Np];
-        A[eM*mesh.Np+n] += Grs*mesh.Srs[n+n*mesh.Np];
-        A[eM*mesh.Np+n] += Gss*mesh.Sss[n+n*mesh.Np];
-      } else {
-        A[eM*mesh.Np+n] = 1; //just put a 1 so A is invertable
-      }
-    }
-
-    //add the rank boost for the allNeumann Poisson problem
-    if (allNeumann) {
-      for(int n=0;n<mesh.Np;++n){
-        if (mapB[n+eM*mesh.Np]!=1) { //dont fill rows for masked nodes
-          A[eM*mesh.Np+n] += allNeumannPenalty*allNeumannScale*allNeumannScale;
-        }
-      }
-    }
-  }
+  
+  std::cout << "BuildOperatorDiagonalContinuousTri2D not implemented" << std::endl;
+  exit(-1);
 }
 
 void stress_t::BuildOperatorDiagonalContinuousQuad2D(memory<dfloat>& A) {
@@ -108,6 +82,8 @@ void stress_t::BuildOperatorDiagonalContinuousQuad2D(memory<dfloat>& A) {
 	dlong lid = iid + e*mesh.Np;
 	dlong uid = 2*lid + 0;
 	dlong vid = 2*lid + 1;
+
+	dfloat fac = 1;  // Eventually set this to 2
 	
         if (mapB[n+m*mesh.Nq+e*mesh.Np]!=1) {
 
@@ -123,10 +99,10 @@ void stress_t::BuildOperatorDiagonalContinuousQuad2D(memory<dfloat>& A) {
 	    dfloat wJ = mesh.vgeo[vbase + id + mesh.JWID*mesh.Np];	    
 	    dfloat nut_km = nut[e*mesh.Np+id];
 
-	    dfloat uGrr = (2.*rx*rx + ry*ry)*nut_km*wJ;
+	    dfloat uGrr = (fac*rx*rx + ry*ry)*nut_km*wJ;
             A[uid] += uGrr*Dkn*Dkn; // strided for gather
 	    
-	    dfloat vGrr = (2.*ry*ry + rx*rx)*nut_km*wJ;
+	    dfloat vGrr = (fac*ry*ry + rx*rx)*nut_km*wJ;
 	    A[vid] += vGrr*Dkn*Dkn;
           }
 
@@ -137,12 +113,12 @@ void stress_t::BuildOperatorDiagonalContinuousQuad2D(memory<dfloat>& A) {
 	    dfloat sx = mesh.vgeo[vbase + id + mesh.SXID*mesh.Np];
 	    dfloat sy = mesh.vgeo[vbase + id + mesh.SYID*mesh.Np];
 	    dfloat wJ = mesh.vgeo[vbase + id + mesh.JWID*mesh.Np];	    
-	    dfloat nut_km = nut[e*mesh.Np+id];
-
-	    dfloat uGss = (2.*sx*sx + sy*sy)*nut_km*wJ;
+	    dfloat nut_nk = nut[e*mesh.Np+id];
+	    
+	    dfloat uGss = (fac*sx*sx + sy*sy)*nut_nk*wJ;
             A[uid] += uGss*Dkm*Dkm; // strided for gather
-
-	    dfloat vGss = (2.*sy*sy + sx*sx)*nut_km*wJ;
+	    
+	    dfloat vGss = (fac*sy*sy + sx*sx)*nut_nk*wJ;
 	    A[vid] += vGss*Dkm*Dkm;
           }
 
@@ -157,10 +133,10 @@ void stress_t::BuildOperatorDiagonalContinuousQuad2D(memory<dfloat>& A) {
 	    dfloat wJ = mesh.vgeo[vbase + id + mesh.JWID*mesh.Np];	    
 	    dfloat nut_nm = nut[e*mesh.Np+id];
 	    
-	    dfloat uGrs = 2.*(2.*rx*sx + ry*sy)*nut_nm*wJ;
+	    dfloat uGrs = 2.*(fac*rx*sx + ry*sy)*nut_nm*wJ;
             A[uid] += uGrs*Dnn*Dmm; // strided for gather
 	    
-	    dfloat vGrs = 2.*(2.*ry*sy + rx*sx)*nut_nm*wJ;
+	    dfloat vGrs = 2.*(fac*ry*sy + rx*sx)*nut_nm*wJ;
 	    A[vid] += vGrs*Dnn*Dmm;
 
 	    // do not need off diagonal blocks
@@ -194,99 +170,12 @@ void stress_t::BuildOperatorDiagonalContinuousQuad2D(memory<dfloat>& A) {
 
 void stress_t::BuildOperatorDiagonalContinuousTet3D(memory<dfloat>& A) {
 
-  for(dlong eM=0;eM<mesh.Nelements;++eM){
-    dlong gbase = eM*mesh.Nggeo;
-    dfloat Grr = mesh.ggeo[gbase + mesh.G00ID];
-    dfloat Grs = mesh.ggeo[gbase + mesh.G01ID];
-    dfloat Grt = mesh.ggeo[gbase + mesh.G02ID];
-    dfloat Gss = mesh.ggeo[gbase + mesh.G11ID];
-    dfloat Gst = mesh.ggeo[gbase + mesh.G12ID];
-    dfloat Gtt = mesh.ggeo[gbase + mesh.G22ID];
-    dfloat J   = mesh.wJ[eM];
-
-    /* start with stiffness matrix  */
-    for(int n=0;n<mesh.Np;++n){
-      if (mapB[n+eM*mesh.Np]!=1) { //dont fill rows for masked nodes
-        A[eM*mesh.Np+n] = J*lambda*mesh.MM[n+n*mesh.Np];
-        A[eM*mesh.Np+n] += Grr*mesh.Srr[n+n*mesh.Np];
-        A[eM*mesh.Np+n] += Grs*mesh.Srs[n+n*mesh.Np];
-        A[eM*mesh.Np+n] += Grt*mesh.Srt[n+n*mesh.Np];
-        A[eM*mesh.Np+n] += Gss*mesh.Sss[n+n*mesh.Np];
-        A[eM*mesh.Np+n] += Gst*mesh.Sst[n+n*mesh.Np];
-        A[eM*mesh.Np+n] += Gtt*mesh.Stt[n+n*mesh.Np];
-      } else {
-        A[eM*mesh.Np+n] = 1; //just put a 1 so A is invertable
-      }
-    }
-
-    //add the rank boost for the allNeumann Poisson problem
-    if (allNeumann) {
-      for(int n=0;n<mesh.Np;++n){
-        if (mapB[n+eM*mesh.Np]!=1) { //dont fill rows for masked nodes
-          A[eM*mesh.Np+n] += allNeumannPenalty*allNeumannScale*allNeumannScale;
-        }
-      }
-    }
-  }
+  std::cout << "BuildOperatorDiagonalContinuousTet3D not implemented" << std::endl;
+  exit(-1);
 }
 
 void stress_t::BuildOperatorDiagonalContinuousHex3D(memory<dfloat>& A) {
 
-  for(dlong eM=0;eM<mesh.Nelements;++eM){
-    for (int nz=0;nz<mesh.Nq;nz++) {
-    for (int ny=0;ny<mesh.Nq;ny++) {
-    for (int nx=0;nx<mesh.Nq;nx++) {
-      int idn = nx+ny*mesh.Nq+nz*mesh.Nq*mesh.Nq;
-      if (mapB[idn+eM*mesh.Np]!=1) {
-        A[eM*mesh.Np+idn] = 0;
-
-        int id = nx+ny*mesh.Nq+nz*mesh.Nq*mesh.Nq;
-        dlong base = eM*mesh.Np*mesh.Nggeo;
-
-
-        dfloat Grs = mesh.ggeo[base + id + mesh.G01ID*mesh.Np];
-        A[eM*mesh.Np+idn] += 2*Grs*mesh.D[nx+nx*mesh.Nq]*mesh.D[ny+ny*mesh.Nq];
-
-        dfloat Grt = mesh.ggeo[base + id + mesh.G02ID*mesh.Np];
-        A[eM*mesh.Np+idn] += 2*Grt*mesh.D[nx+nx*mesh.Nq]*mesh.D[nz+nz*mesh.Nq];
-
-        dfloat Gst = mesh.ggeo[base + id + mesh.G12ID*mesh.Np];
-        A[eM*mesh.Np+idn] += 2*Gst*mesh.D[ny+ny*mesh.Nq]*mesh.D[nz+nz*mesh.Nq];
-
-        for (int k=0;k<mesh.Nq;k++) {
-          int iid = k+ny*mesh.Nq+nz*mesh.Nq*mesh.Nq;
-          dfloat Grr = mesh.ggeo[base + iid + mesh.G00ID*mesh.Np];
-          A[eM*mesh.Np+idn] += Grr*mesh.D[nx+k*mesh.Nq]*mesh.D[nx+k*mesh.Nq];
-        }
-
-        for (int k=0;k<mesh.Nq;k++) {
-          int iid = nx+k*mesh.Nq+nz*mesh.Nq*mesh.Nq;
-          dfloat Gss = mesh.ggeo[base + iid + mesh.G11ID*mesh.Np];
-          A[eM*mesh.Np+idn] += Gss*mesh.D[ny+k*mesh.Nq]*mesh.D[ny+k*mesh.Nq];
-        }
-
-        for (int k=0;k<mesh.Nq;k++) {
-          int iid = nx+ny*mesh.Nq+k*mesh.Nq*mesh.Nq;
-          dfloat Gtt = mesh.ggeo[base + iid + mesh.G22ID*mesh.Np];
-          A[eM*mesh.Np+idn] += Gtt*mesh.D[nz+k*mesh.Nq]*mesh.D[nz+k*mesh.Nq];
-        }
-
-        dfloat JW = mesh.wJ[eM*mesh.Np + idn];
-        A[eM*mesh.Np+idn] += JW*lambda;
-      } else {
-        A[eM*mesh.Np+idn] = 1; //just put a 1 so A is invertable
-      }
-    }
-    }
-    }
-
-    //add the rank boost for the allNeumann Poisson problem
-    if (allNeumann) {
-      for(int n=0;n<mesh.Np;++n){
-        if (mapB[n+eM*mesh.Np]!=1) { //dont fill rows for masked nodes
-          A[eM*mesh.Np+n] += allNeumannPenalty*allNeumannScale*allNeumannScale;
-        }
-      }
-    }
-  }
+  std::cout << "BuildOperatorDiagonalContinuousHex3D not implemented" << std::endl;
+  exit(-1);
 }

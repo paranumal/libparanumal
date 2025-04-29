@@ -116,14 +116,12 @@ void stress_t::Setup(platform_t& _platform, mesh_t& _mesh,
       dlong id = e*mesh.Np + n;
       dfloat xn = mesh.x[id];
       dfloat yn = mesh.y[id];
-      nut[id] = 1 + 0.01*sin(M_PI*xn)*sin(M_PI*yn);
+      nut[id] = 1; //  + 0.01*sin(M_PI*xn)*sin(M_PI*yn);
     }
   }
   o_nut  = platform.malloc<dfloat>(mesh.Np*mesh.Nelements, nut);
   
   // assume Jacobi
   precon.Setup<JacobiPrecon>(*this);
-
-
   
 }

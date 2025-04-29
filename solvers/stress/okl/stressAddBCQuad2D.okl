@@ -40,9 +40,11 @@ SOFTWARE.
       dfloat dudxB[p_Nfields]={0.f}, dudyB[p_Nfields]={0.f}, uB[p_Nfields]={0.f};
       
       if(bc==1) {
-        stressBoundaryConditions2D(bc, x[id], y[id], 0.f, 0.f, uM, dudxM, dudyM, uB, dudxB, dudyB)
-        q[id*p_Nfields+0] = uB[0];
-	q[id*p_Nfields+1] = uB[1];
+        stressBoundaryConditions2D(bc, x[id], y[id], 0.f, 0.f, uM, dudxM, dudyM, uB, dudxB, dudyB);
+
+	for(int fld=0;fld<p_Nfields;++fld){	  
+	  q[id*p_Nfields+fld] = uB[fld];
+	}
       }
     }
   }

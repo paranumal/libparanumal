@@ -34,10 +34,15 @@ JacobiPrecon::JacobiPrecon(stress_t& _stress):
   memory<pfloat> invDiagA(stress.Ndofs);
   stress.BuildOperatorDiagonal(diagA);
 
-  for (dlong n=0;n<stress.Ndofs;n++)
-    invDiagA[n] = 1.0/diagA[n]; 
+  for (dlong n=0;n<stress.Ndofs;n++){
+    invDiagA[n] = 1.0/diagA[n];
+    //    std::cout << "invDiagA[" << n << "]: " << invDiagA[n] << std::endl;
+  }
 
   o_invDiagA = stress.platform.malloc<pfloat>(invDiagA);
+
+  std::cout << "Ndofs: " << stress.Ndofs << std::endl;
+  
 }
 
 void JacobiPrecon::Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_Mr) {

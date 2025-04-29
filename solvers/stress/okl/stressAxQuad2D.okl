@@ -38,7 +38,7 @@ SOFTWARE.
 @kernel void stressPartialAxQuad2D(const dlong Nelements,
                                    @restrict const  dlong   *  elementList,
                                    @restrict const  dlong   *  GlobalToLocal,
-                                   @restrict const  dfloat *  nut,				   
+                                   @restrict const  dfloat *  nut,
                                    @restrict const  dfloat *  wJ,
                                    @restrict const  dfloat *  vgeo,
                                    @restrict const  dfloat *  DT,
@@ -80,6 +80,8 @@ SOFTWARE.
       s_DT[j][i] = DT[j*p_Nq+i];
     }
 
+    @barrier();
+
     squareThreads{
 
       // assumes w*J built into G entries
@@ -92,8 +94,7 @@ SOFTWARE.
       r_sx = vgeo[base+p_SXID*p_Np];
       r_sy = vgeo[base+p_SYID*p_Np];
       r_wJ = vgeo[base+p_JWID*p_Np];
-      r_wJ *= r_nut;
-
+      
       for(int fld=0;fld<p_Nfields;++fld){
 	r_qr[fld] = 0;
 	r_qs[fld] = 0;
@@ -117,8 +118,11 @@ SOFTWARE.
       for(int fld=0;fld<p_Nfields;++fld){
 	r_Aq[fld] = r_wJ*lambda*s_q[fld][j][i];
       }
+
+      r_wJ *= r_nut;
     }
 
+    @barrier();
     
     squareThreads{
       for(int fld=0;fld<p_Nfields;++fld){
@@ -137,7 +141,8 @@ SOFTWARE.
       }
     }
 
-
+    @barrier();
+    
     squareThreads{
       dfloat qxx[p_Nfields] = {0.f};
       dfloat qxy[p_Nfields] = {0.f};
@@ -174,11 +179,18 @@ SOFTWARE.
 	Dx'*nu*Dx*v + Dy'*nu*Dy*v + Dx'*nu*Dy*u + Dy'*nu*Dy*v
 	
       */
-      
-      r_Aq[0] += p_two*qxx[0] + qyy[0] +  qyx[1];
-      r_Aq[1] += p_two*qyy[1] + qxx[1] +  qxy[0];
-      
-      const dlong base = p_Nfields*(element*p_Np + (j*p_Nq + i));
+
+#if 0
+      dfloat fac = p_two;
+      r_Aq[0] += fac*qxx[0] + qyy[0] +  qyx[1];
+      r_Aq[1] += fac*qyy[1] + qxx[1] +  qxy[0];
+#else
+      // just do two decoupled laplacians for the moment
+      r_Aq[0] += qxx[0] + qyy[0];
+      r_Aq[1] += qyy[1] + qxx[1];
+#endif
+
+      const dlong base = p_Nfields*(element*p_Np + j*p_Nq + i);
       for(int fld=0;fld<p_Nfields;++fld){
 	Aq[base+fld] = r_Aq[fld];
       }

@@ -46,9 +46,10 @@ SOFTWARE.
       
       dfloat f[p_Nfields] = {0.f};
       stressForcing2D(xn, yn, lambda, f);
-      
-      rhs[p_Nfields*id+0] = r_GwJ*f[0];
-      rhs[p_Nfields*id+1] = r_GwJ*f[1]; // TW DUPED
+
+      for(int fld=0;fld<p_Nfields;++fld){
+	rhs[p_Nfields*id+fld] = r_GwJ*f[fld];
+      }
     }
   }
 }

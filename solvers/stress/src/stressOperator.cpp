@@ -94,7 +94,7 @@ void stress_t::Operator(deviceMemory<double> &o_q, deviceMemory<double> &o_Aq){
 
   //gather result to Aq
   ogsMasked.GatherStart(o_Aq, o_AqL, Nfields, ogs::Add, ogs::Trans);
-  
+
   if((mesh.NlocalGatherElements+1)/2){
     partialAxKernel((mesh.NlocalGatherElements+1)/2,
 		    mesh.o_localGatherElementList+(mesh.NlocalGatherElements/2),
@@ -109,8 +109,9 @@ void stress_t::Operator(deviceMemory<double> &o_q, deviceMemory<double> &o_Aq){
 		    o_q,
 		    o_AqL);
   }
-  
+
   ogsMasked.GatherFinish(o_Aq, o_AqL, Nfields, ogs::Add, ogs::Trans);
+
 }
 
 

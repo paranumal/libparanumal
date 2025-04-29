@@ -85,6 +85,7 @@ void stress_t::BoundarySetup(){
                   mesh.comm, ogs::Signed, ogs::Auto,
                   unique, verbose, platform);
 
+  // TW - need Nfields ?
   //setup normalization constant
   if (settings.compareSetting("DISCRETIZATION","IPDG")) {
     allNeumannScale = 1./sqrt((dfloat)mesh.Np*mesh.NelementsGlobal);

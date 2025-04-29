@@ -33,7 +33,8 @@ int stress_t::Solve(linearSolver_t<dfloat>& linearSolver,
 
   // if there is a nullspace, remove the constant vector from r
   if(allNeumann) ZeroMean(o_r);
-
+  printf("allNeumann=%d\n", allNeumann);
+  
   int Niter = linearSolver.Solve(*this, precon, o_x, o_r, tol, MAXIT, verbose);
 
   return Niter;

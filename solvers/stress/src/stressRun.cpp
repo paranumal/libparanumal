@@ -55,7 +55,6 @@ void stress_t::Run(){
 
   int Nmax = std::max(mesh.Np, mesh.Nfaces*mesh.Nfp);
   kernelInfo["defines/" "p_Nmax"]= Nmax;
-
   kernelInfo["defines/" "p_Nfields"]= Nfields;
 
   // set kernel name suffix
@@ -139,6 +138,7 @@ void stress_t::Run(){
 
   //call the solver
   dfloat tol = (sizeof(dfloat)==sizeof(double)) ? 1.0e-8 : 1.0e-5;
+
   int iter = Solve(linearSolver, o_x, o_r, tol, maxIter, verbose);
 
   //add the boundary data to the masked nodes
@@ -146,13 +146,15 @@ void stress_t::Run(){
   ogsMasked.Scatter(o_xL, o_x, Nfields, ogs::NoTrans);
 
   //fill masked nodes with BC data
+#if 0
   addBCKernel(mesh.Nelements,
 	      mesh.o_x,
 	      mesh.o_y,
 	      mesh.o_z,
 	      o_mapB,
 	      o_xL);
-
+#endif
+  
   timePoint_t end = GlobalPlatformTime(platform);
   double elapsedTime = ElapsedTime(start, end);
 
@@ -182,7 +184,6 @@ void stress_t::Run(){
       }
     }
 
-    
 
     // output field files
     std::string name;
@@ -194,7 +195,7 @@ void stress_t::Run(){
   }
 
   // output norm of final solution
-  {
+  { // NEED TO FIX MASS MATRIX
     //compute q.M*q
     dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
     deviceMemory<dfloat> o_MxL = platform.reserve<dfloat>(Nentries);
