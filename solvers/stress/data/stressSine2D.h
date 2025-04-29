@@ -30,7 +30,7 @@ SOFTWARE.
 #define stressForcing2D(x, y, lambda, f)  \
   {                                         \
     f[0]  = (2*PI*PI+lambda)*sin(PI*x)*sin(PI*y);   \
-    f[1]  = (2*PI*PI+lambda)*sin(PI*x)*sin(PI*y);   \
+    f[1]  = 0;  \
   }
 
 /* Dirichlet boundary condition   */

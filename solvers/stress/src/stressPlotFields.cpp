@@ -80,12 +80,12 @@ void stress_t::PlotFields(memory<dfloat>& Q, std::string fileName){
   fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Fields\" NumberOfComponents=\"%d\" Format=\"ascii\">\n", Nfields);
   for(dlong e=0;e<mesh.Nelements;++e){
     for (int f=0;f<Nfields;f++)
-      mesh.PlotInterp(Q + f*mesh.Np + e*mesh.Np*Nfields, Iq + f*mesh.Np, scratch);
+      mesh.PlotInterp(Q + f*mesh.Np + e*mesh.Np*Nfields, Iq + f*mesh.plotNp, scratch);
 
     for(int n=0;n<mesh.plotNp;++n){
       fprintf(fp, "       ");
       for (int f=0;f<Nfields;f++)
-        fprintf(fp, "%f ", Iq[n+f*mesh.Np]);
+        fprintf(fp, "%f ", Iq[n+f*mesh.plotNp]);
       fprintf(fp, "\n");
     }
   }
