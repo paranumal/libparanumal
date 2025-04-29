@@ -169,8 +169,20 @@ void stress_t::Run(){
 
   if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
 
+    memory<dfloat> xtmpL(Nall);
     // copy data back to host
-    o_xL.copyTo(xL);
+    o_xL.copyTo(xtmpL);
+
+    for(dlong e=0;e<mesh.Nelements;++e){
+      for(int n=0;n<mesh.Np;++n){
+	for(int fld=0;fld<Nfields;++fld){
+	  xL[e*mesh.Np*Nfields + fld*mesh.Np + n] =
+	    xtmpL[Nfields*(e*mesh.Np+n)+fld];
+	}
+      }
+    }
+
+    
 
     // output field files
     std::string name;
