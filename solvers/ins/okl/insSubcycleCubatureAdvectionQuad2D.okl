@@ -43,6 +43,9 @@ SOFTWARE.
     @shared dfloat s_F21[p_cubNblockV][p_cubNq][p_cubNq];
     @shared dfloat s_F22[p_cubNblockV][p_cubNq][p_cubNq];
 
+    @shared dfloat s_U[p_cubNblockV][p_cubNq][p_cubNq];
+    @shared dfloat s_V[p_cubNblockV][p_cubNq][p_cubNq];
+
     @shared dfloat s_cubInterp[p_Nq][p_cubNq];
     @shared dfloat s_cubProject[p_cubNq][p_Nq];
     @shared dfloat s_cubPDT[p_cubNq][p_Nq];
@@ -134,6 +137,8 @@ SOFTWARE.
             r_Udn += Inj*s_F21[es][n][i];
             r_Vdn += Inj*s_F22[es][n][i];
           }
+	  s_U[es][j][i] = r_Udn;
+	  s_V[es][j][i] = r_Vdn;
         }
       }
     }
@@ -151,13 +156,37 @@ SOFTWARE.
             const dfloat dsdy = cubvgeo[gid + p_SYID*p_cubNp];
             const dfloat JW   = cubvgeo[gid + p_JWID*p_cubNp];
 
-            const dfloat cUn = JW*(drdx*r_Un+drdy*r_Vn);
+#if 0
+	    const dfloat cUn = JW*(drdx*r_Un+drdy*r_Vn);
             const dfloat cVn = JW*(dsdx*r_Un+dsdy*r_Vn);
 
-            s_F11[es][j][i] = cUn*r_Udn;
+	    s_F11[es][j][i] = cUn*r_Udn;
             s_F12[es][j][i] = cVn*r_Udn;
             s_F21[es][j][i] = cUn*r_Vdn;
             s_F22[es][j][i] = cVn*r_Vdn;
+#else
+	    // compute divergence for penalization
+	    dfloat cUr = 0, cUs = 0, cVr = 0, cVs = 0;
+	    for(int n=0;n<p_cubNq;++n){
+	      dfloat Din = cubDT[i*p_cubNq+n];
+	      dfloat Djn = cubDT[j*p_cubNq+n];
+	      cUr += Din*s_U[es][j][n];
+	      cUs += Djn*s_U[es][n][i];
+	      cVr += Din*s_V[es][j][n];
+	      cVs += Djn*s_V[es][n][i];
+	    }
+	    dfloat WdivU =  JW*(drdx*cUr + dsdx*cUs + drdy*cVr + dsdy*cVs);
+	    dfloat tau = -2.e-3; // fix later
+	    
+	    const dfloat cUn = JW*(drdx*r_Un+drdy*r_Vn);
+            const dfloat cVn = JW*(dsdx*r_Un+dsdy*r_Vn);
+
+	    // Dr'*F11 + Ds'*F12
+            s_F11[es][j][i] = cUn*r_Udn + tau*drdx*WdivU; 
+            s_F12[es][j][i] = cVn*r_Udn + tau*dsdx*WdivU;
+            s_F21[es][j][i] = cUn*r_Vdn + tau*drdy*WdivU;
+            s_F22[es][j][i] = cVn*r_Vdn + tau*dsdy*WdivU;
+#endif
           }
         }
       }
@@ -419,7 +448,6 @@ SOFTWARE.
             dfloat unP   = fabs(nx*uP + ny*vP);
 	    dfloat unMax = (unM > unP) ? unM : unP;
 	    //	    dfloat unMax = 0.5f*(unM+unP);
-
 
 #if 0
 	    unMax = (unMax<1) ? 1:unMax;

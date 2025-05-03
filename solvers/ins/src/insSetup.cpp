@@ -337,7 +337,7 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
     int cubMaxNodes1 = std::max(mesh.Np, (mesh.intNfp));
     kernelInfo["defines/" "p_cubMaxNodes1"]= cubMaxNodes1;
 
-    int cubNblockV = std::max(1,blockMax/mesh.cubNp);
+    int cubNblockV = 1; // std::max(1,blockMax/mesh.cubNp);
     kernelInfo["defines/" "p_cubNblockV"]= cubNblockV;
 
     int cubNblockS = std::max(1,blockMax/cubMaxNodes);
@@ -529,10 +529,10 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
   subcycler.relaxationFilterKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 
   // quad version
+
   int Nq = mesh.N+1;
   memory<dfloat> FILT(Nq*Nq);
-  
-#if 1
+#if 0
   memory<dfloat> _r(Nq);
   for(int n=0;n<Nq;++n)
     _r[n] = mesh.r[n];
@@ -579,6 +579,18 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
   subcycler.o_FILT.copyFrom(FILT);
 #endif
 
+
+#if 1
+  
+  fileName   = oklFilePrefix + "insProject" + suffix + oklFileSuffix;
+
+  kernelName = "insProjectWeight" + suffix;
+  projectWeightKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
+
+  kernelName = "insProjectScatter" + suffix;
+  projectScatterKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
+
+  
   memory<dlong> uGlobalToLocal(mesh.Nelements*mesh.Np,(dlong)0);
   memory<dlong> vGlobalToLocal(mesh.Nelements*mesh.Np,(dlong)0);
   
@@ -616,13 +628,5 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
   
   o_projectWeights = platform.malloc<dfloat>(Nlocal+Nhalo, JWL);
 
-  fileName   = oklFilePrefix + "insProject" + suffix + oklFileSuffix;
-
-  kernelName = "insProjectWeight" + suffix;
-  projectWeightKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
-
-  kernelName = "insProjectScatter" + suffix;
-  projectScatterKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
-
-  
+#endif  
 }

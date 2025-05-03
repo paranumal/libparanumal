@@ -6,8 +6,8 @@ data/insUniform2D.h
 #data/insRampedUniform2D.h
 
 [MESH FILE]
-../../meshes/bumpBoxQuad2D.msh
-#../../meshes/bumpBoxQuad2Dv2.msh
+#../../meshes/bumpBoxQuad2D.msh
+../../meshes/bumpBoxQuad2Dv2.msh
 
 [MESH DIMENSION]
 2
@@ -29,10 +29,13 @@ CUDA
 0
 
 [CFL NUMBER]
-1
+1.25
 
 [VISCOSITY]
-0.00001
+0.000001
+#0.0000025
+#0.000005
+#0.00001
 #0.00005
 #0.0001
 
@@ -84,6 +87,7 @@ CONTINUOUS
 # can be NONE, JACOBI, MASSMATRIX, PARALMOND, SEMFEM, MULTIGRID, or OAS
 [VELOCITY PRECONDITIONER]
 JACOBI
+#MULTIGRID
 
 # can be LAST, ZERO, CLASSIC, QR, or EXTRAP
 [VELOCITY INITIAL GUESS STRATEGY]
