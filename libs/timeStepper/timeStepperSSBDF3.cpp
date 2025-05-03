@@ -55,13 +55,20 @@ ssbdf3::ssbdf3(dlong Nelements, dlong NhaloElements,
                                     kernelInfo);
 
   // initialize BDF time stepping coefficients
-  dfloat _b[Nstages*(Nstages+1)] = {
+  dfloat _b3[3*(4)] = {
                             1.,    1.,     0.,    0.,
                          3./2.,    2., -1./2.,    0.,
                         11./6.,    3., -3./2., 1./3.};
 
+  dfloat _b2[2*(3)] = {
+    1.,    1.,     0.,  
+    3./2.,    2., -1./2.};
+  
   ssbdf_b.malloc(Nstages*(Nstages+1));
-  ssbdf_b.copyFrom(_b);
+  if(Nstages==2)
+    ssbdf_b.copyFrom(_b2);  
+  else
+    ssbdf_b.copyFrom(_b3);
 
   o_ssbdf_b = platform.malloc<dfloat>(ssbdf_b);
 }

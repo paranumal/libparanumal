@@ -75,7 +75,7 @@ void subcycler_t::rhsf(deviceMemory<dfloat>& o_U, deviceMemory<dfloat>& o_RHS, c
   ins->Project(o_Ue, mesh.dim);
 
 
-  {
+  if(0){
     // this checks for C0
     dlong Nlocal = mesh.Nelements*mesh.Np;
     dlong Nhalo  = mesh.totalHaloPairs*mesh.Np;

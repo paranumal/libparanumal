@@ -151,8 +151,8 @@ public:
   kernel_t projectScatterKernel;
 
   deviceMemory<dfloat> o_projectWeights;
-  deviceMemory<dfloat> o_uGlobalToLocal;
-  deviceMemory<dfloat> o_vGlobalToLocal;
+  deviceMemory<dlong> o_uGlobalToLocal;
+  deviceMemory<dlong> o_vGlobalToLocal;
   void Project(deviceMemory<dfloat>& o_U, int Nfilt);
   
   ins_t() = default;

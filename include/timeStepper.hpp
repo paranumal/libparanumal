@@ -113,6 +113,7 @@ public:
 /* Adams Bashforth, order 3 */
 class ab3: public timeStepperBase_t {
 protected:
+  //  static constexpr int Nstages{3};
   static constexpr int Nstages{3};
   int shiftIndex;
 
@@ -444,7 +445,8 @@ public:
 /* Backward Difference Formula, order 3, with subcycling */
 class ssbdf3: public timeStepperBase_t {
 protected:
-  static constexpr int Nstages{3};
+  //  static constexpr int Nstages{3};
+  static constexpr int Nstages{2};
   int shiftIndex;
 
   memory<dfloat> ssbdf_b;

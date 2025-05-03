@@ -176,16 +176,16 @@ SOFTWARE.
 	      cVs += Djn*s_V[es][n][i];
 	    }
 	    dfloat WdivU =  JW*(drdx*cUr + dsdx*cUs + drdy*cVr + dsdy*cVs);
-	    dfloat tau = -2.e-3; // fix later
+	    dfloat tauVol = -2.5e-3; // fix later  -2.e-3; // fix later
 	    
 	    const dfloat cUn = JW*(drdx*r_Un+drdy*r_Vn);
             const dfloat cVn = JW*(dsdx*r_Un+dsdy*r_Vn);
 
 	    // Dr'*F11 + Ds'*F12
-            s_F11[es][j][i] = cUn*r_Udn + tau*drdx*WdivU; 
-            s_F12[es][j][i] = cVn*r_Udn + tau*dsdx*WdivU;
-            s_F21[es][j][i] = cUn*r_Vdn + tau*drdy*WdivU;
-            s_F22[es][j][i] = cVn*r_Vdn + tau*dsdy*WdivU;
+            s_F11[es][j][i] = cUn*r_Udn + tauVol*drdx*WdivU; 
+            s_F12[es][j][i] = cVn*r_Udn + tauVol*dsdx*WdivU;
+            s_F21[es][j][i] = cUn*r_Vdn + tauVol*drdy*WdivU;
+            s_F22[es][j][i] = cVn*r_Vdn + tauVol*dsdy*WdivU;
 #endif
           }
         }
@@ -457,11 +457,11 @@ SOFTWARE.
 
 #else
 
-	    dfloat tau = 0.5;
+	    dfloat tauSur = 0.5; // fix this later ?
 	    dfloat ndotdUd = nx*(udM-udP) + ny*(vdM-vdP);
 
-            s_fluxNU[es][face][i] = WsJ*(.5f*(nx*(uP*udP + uM*udM) + ny*(vP*udP + vM*udM)  + unMax*(udM-udP) + tau*nx*ndotdUd));
-            s_fluxNV[es][face][i] = WsJ*(.5f*(nx*(uP*vdP + uM*vdM) + ny*(vP*vdP + vM*vdM)  + unMax*(vdM-vdP) + tau*ny*ndotdUd));
+            s_fluxNU[es][face][i] = WsJ*(.5f*(nx*(uP*udP + uM*udM) + ny*(vP*udP + vM*udM)  + unMax*(udM-udP) + tauSur*nx*ndotdUd));
+            s_fluxNV[es][face][i] = WsJ*(.5f*(nx*(uP*vdP + uM*vdM) + ny*(vP*vdP + vM*vdM)  + unMax*(vdM-vdP) + tauSur*ny*ndotdUd));
 	    
 	    
 #endif

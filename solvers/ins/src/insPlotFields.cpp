@@ -61,12 +61,12 @@ void ins_t::PlotFields(memory<dfloat>& U, memory<dfloat>& P, memory<dfloat>& V, 
     if (mesh.dim==2) {
       for(int n=0;n<mesh.plotNp;++n){
         fprintf(fp, "       ");
-        fprintf(fp, "%g %g %g\n", Ix[n],Iy[n],0.0);
+        fprintf(fp, "%f %f %f\n", Ix[n],Iy[n],0.0);
       }
     } else {
       for(int n=0;n<mesh.plotNp;++n){
         fprintf(fp, "       ");
-        fprintf(fp, "%g %g %g\n", Ix[n],Iy[n],Iz[n]);
+        fprintf(fp, "%f %f %f\n", Ix[n],Iy[n],Iz[n]);
       }
     }
   }
@@ -92,9 +92,9 @@ void ins_t::PlotFields(memory<dfloat>& U, memory<dfloat>& P, memory<dfloat>& V, 
         fprintf(fp, "       ");
         fprintf(fp, "       ");
         if (mesh.dim==2)
-          fprintf(fp, "%g %g\n", Iu[n], Iv[n]);
+          fprintf(fp, "%f %f\n", Iu[n], Iv[n]);
         else
-          fprintf(fp, "%g %g %g\n", Iu[n], Iv[n], Iw[n]);
+          fprintf(fp, "%f %f %f\n", Iu[n], Iv[n], Iw[n]);
       }
     }
     fprintf(fp, "       </DataArray>\n");
@@ -108,7 +108,7 @@ void ins_t::PlotFields(memory<dfloat>& U, memory<dfloat>& P, memory<dfloat>& V, 
 
       for(int n=0;n<mesh.plotNp;++n){
         fprintf(fp, "       ");
-        fprintf(fp, "%g\n", Ip[n]);
+        fprintf(fp, "%f\n", Ip[n]);
       }
     }
     fprintf(fp, "       </DataArray>\n");
@@ -123,7 +123,7 @@ void ins_t::PlotFields(memory<dfloat>& U, memory<dfloat>& P, memory<dfloat>& V, 
 
         for(int n=0;n<mesh.plotNp;++n){
           fprintf(fp, "       ");
-          fprintf(fp, "%g\n", Ip[n]);
+          fprintf(fp, "%f\n", Ip[n]);
         }
       }
     } else {
@@ -136,7 +136,7 @@ void ins_t::PlotFields(memory<dfloat>& U, memory<dfloat>& P, memory<dfloat>& V, 
         for(int n=0;n<mesh.plotNp;++n){
           fprintf(fp, "       ");
           fprintf(fp, "       ");
-          fprintf(fp, "%g %g %g\n", Iu[n], Iv[n], Iw[n]);
+          fprintf(fp, "%f %f %f\n", Iu[n], Iv[n], Iw[n]);
         }
       }
     }
