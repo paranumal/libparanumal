@@ -156,6 +156,9 @@ void dopri5::Run(solver_t& solver,
          o_rkq, o_rkpmlq, o_rkerr,
          time, dt);
 
+    // finalize
+    solver.finalizeStep(o_rkq);
+    
     // compute Dopri estimator
     dfloat err = Estimater(o_q, o_rkq, o_rkerr);
 

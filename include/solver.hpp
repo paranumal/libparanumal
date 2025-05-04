@@ -107,6 +107,12 @@ public:
   virtual void Operator(deviceMemory<double>& o_q, deviceMemory<double>& o_Aq) {
     LIBP_FORCE_ABORT("Operator not implemented in this solver (pfloat)");
   }
+
+  //Full rhs evaluation of solver in form dq/dt = rhsf(q,t)
+  virtual void finalizeStep(deviceMemory<dfloat>& o_q) {
+    LIBP_FORCE_ABORT("finalieStep not implemented in this solver");
+  }
+  
 };
 
 } //namespace libp

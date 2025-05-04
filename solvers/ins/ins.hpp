@@ -77,7 +77,8 @@ public:
   void Report(dfloat time, int tstep){};
 
   void rhsf(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_rhs, const dfloat time);
-
+  void finalizeStep(deviceMemory<dfloat>& o_q);
+  
   kernel_t relaxationFilterKernel;
   deviceMemory<dfloat> o_FILT;
   
