@@ -47,7 +47,7 @@ SOFTWARE.
     *(uB) = p_ubar;                 \
     *(vB) = p_vbar;                 \
   } else if(bc==3){                 \
-    *(uB) = uM;                     \
+    *(uB) = p_ubar*tanh(100.f*y);    \
     *(vB) = vM;                     \
   } else if(bc==4){                 \
     *(uB) = 0.f;                    \

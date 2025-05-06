@@ -31,7 +31,7 @@ namespace libp {
 void mesh_t::CubatureSetupTri2D(){
 
   /* Cubature data */
-  cubN = 2*N+3; //cubature order
+  cubN = 3*N; //cubature order
   CubatureNodesTri2D(cubN, cubNp, cubr, cubs, cubw);
 
   InterpolationMatrixTri2D(N, r, s, cubr, cubs, cubInterp);
@@ -40,9 +40,44 @@ void mesh_t::CubatureSetupTri2D(){
   // Defined such that cubProject * cubW * cubInterp = Identity
   CubaturePmatrixTri2D(N, r, s, cubr, cubs, cubProject);
 
-  //cubature derivates matrices, cubD: differentiate on cubature nodes
-  // we dont use cubD on Tris/Tets  so skip computing
 
+  memory<dfloat> cubInterpT(cubNp*Np*(dim+1)); // hide diff interp matrices at end of cub interp matrix
+  
+  for(int n=0;n<cubNp;++n){
+    for(int m=0;m<Np;++m){
+      dfloat dr = 0, ds = 0;
+      for(int i=0;i<Np;++i){
+	dfloat Drmi = Dr[i*Np+m];
+	dfloat Dsmi = Ds[i*Np+m];
+	dr += cubInterp[n*Np+i]*Drmi;
+	ds += cubInterp[n*Np+i]*Dsmi;
+      }
+      
+      cubInterpT[n+m*cubNp + 0*Np*cubNp] = cubInterp[n*Np+m];
+      cubInterpT[n+m*cubNp + 1*Np*cubNp] = dr;
+      cubInterpT[n+m*cubNp + 2*Np*cubNp] = ds;
+    }
+  }
+
+  printf("HOST cubInterp\n");
+  for(int n=0;n<cubNp;++n){
+    for(int m=0;m<Np;++m){
+      printf("%e ", cubInterp[n*Np+m]);
+    }
+    printf("\n");
+  }
+  printf("\n");
+
+  printf("HOST cubDrInterp\n");
+  for(int n=0;n<cubNp;++n){
+    for(int m=0;m<Np;++m){
+      printf("%e ", cubInterpT[n+m*cubNp+1*Np*cubNp]);
+    }
+    printf("\n");
+  }
+  printf("\n");
+
+  
   // Instead, it's cheaper to:
   // make weak cubature derivatives cubPDT = cubProject * cubD^T
   CubatureWeakDmatricesTri2D(N, r, s,
@@ -70,8 +105,8 @@ void mesh_t::CubatureSetupTri2D(){
 
   // build transposes (we hold matrices as column major on device)
   memory<dfloat> cubProjectT(cubNp*Np);
-  memory<dfloat> cubInterpT(cubNp*Np);
-  linAlg_t::matrixTranspose(cubNp, Np, cubInterp, Np, cubInterpT, cubNp);
+  //  memory<dfloat> cubInterpT(cubNp*Np);
+  //  linAlg_t::matrixTranspose(cubNp, Np, cubInterp, Np, cubInterpT, cubNp);
   linAlg_t::matrixTranspose(Np, cubNp, cubProject, cubNp, cubProjectT, Np);
 
   //pre-multiply cubProject by W on device
@@ -101,7 +136,8 @@ void mesh_t::CubatureSetupTri2D(){
   linAlg_t::matrixTranspose(Np, Nfaces*intNfp, intLIFT, Nfaces*intNfp, intLIFTT, Np);
   linAlg_t::matrixTranspose(Nfaces*intNfp, Nfp, intInterp, Nfp, intInterpT, Nfaces*intNfp);
 
-  o_cubInterp  = platform.malloc<dfloat>(Np*cubNp, cubInterpT);
+  //  o_cubInterp  = platform.malloc<dfloat>(Np*cubNp, cubInterpT);
+  o_cubInterp  = platform.malloc<dfloat>(Np*cubNp*(dim+1), cubInterpT);
   o_cubProject = platform.malloc<dfloat>(Np*cubNp, cubProjectT);
 
   o_cubPDT = platform.malloc<dfloat>(2*cubNp*Np, cubPDTT);
