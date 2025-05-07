@@ -75,8 +75,9 @@ SOFTWARE.
           const dfloat uy = drdy*ur + dsdy*us;
           const dfloat vx = drdx*vr + dsdx*vs;
 
-          const dlong id = e*p_Np+n;
+          const dlong id = 2*e*p_Np+n;
           Vort[id] = vx-uy;
+	  Vort[id+p_Np] = 0;
         }
       }
     }

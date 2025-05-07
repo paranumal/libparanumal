@@ -49,6 +49,9 @@ void ins_t::Report(dfloat time, int tstep){
 
     if(mesh.elementType==Mesh::QUADRILATERALS)
       Project(o_Vort, 1);
+    else
+      MassSolve(o_Vort);
+      
     
     memory<dfloat> Vort(mesh.dim*mesh.Nelements*mesh.Np);
 

@@ -131,11 +131,21 @@ SOFTWARE.
 
       dfloat Au[p_Nfields] = {0.};
       dfloat JW = wJ[e];
+
+#if 1
       dfloat MMnn = MM[n*p_Np+n];
       for(int fld=0;fld<p_Nfields;++fld){
 	Au[fld] += JW*MMnn;
       }
-
+#else
+      dfloat MMn = 0;
+      for(int i=0;i<p_Np;++i){
+      	MMn += fabs(MM[n*p_Np+i]);
+      }
+      for(int fld=0;fld<p_Nfields;++fld){
+      	Au[fld] += JW*MMn;
+      }
+#endif
       const dlong base = p_Nfields*(e*p_Np +n);
       for(int fld=0;fld<p_Nfields;++fld){
 	A[base+fld] = Au[fld];
