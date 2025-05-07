@@ -30,29 +30,66 @@ SOFTWARE.
 
 void mass_t::BoundarySetup(){
 
+  //check all the bounaries for a Dirichlet
+  allNeumann = 0;
+  allNeumannPenalty = 0;
+
   //translate the mesh's element-to-boundaryflag mapping
   EToB.malloc(mesh.Nelements*mesh.Nfaces, 0);
+  for (dlong e=0;e<mesh.Nelements;e++) {
+    for (int f=0;f<mesh.Nfaces;f++) {
+      int bc = mesh.EToB[e*mesh.Nfaces+f];
+      if (bc>0) {
+        int BC = BCType[bc];         //translate mesh's boundary flag
+        EToB[e*mesh.Nfaces+f] = BC;  //record it
+        if (BC!=2) allNeumann = 0;   //check if its a Dirchlet
+      }
+    }
+  }
   o_EToB = platform.malloc<int>(EToB);
+
+  //collect the allNeumann flags from other ranks
+  mesh.comm.Allreduce(allNeumann, comm_t::Min);
 
   //translate the mesh's node-wise bc flag
   Nmasked = 0;
   mapB.malloc((mesh.Nelements+mesh.totalHaloPairs)*mesh.Np, 0);
+  for (int n=0;n<mesh.Nelements*mesh.Np;n++) {
+    int bc = mesh.mapB[n];
+    if (bc>0) {
+      int BC = BCType[bc];     //translate mesh's boundary flag
+      mapB[n] = BC;  //record it
+
+      if (mapB[n] == 1) Nmasked++;   //Dirichlet boundary
+    }
+  }
   o_mapB = platform.malloc<int>(mapB);
 
   maskIds.malloc(Nmasked);
   Nmasked =0; //reset
+  for (dlong n=0;n<mesh.Nelements*mesh.Np;n++) {
+    if (mapB[n] == 1) maskIds[Nmasked++] = n;
+  }
   o_maskIds = platform.malloc<int>(maskIds);
 
   //make a masked version of the global id numbering
   maskedGlobalIds.malloc(mesh.Nelements*mesh.Np);
   maskedGlobalIds.copyFrom(mesh.globalIds);
+  for (dlong n=0;n<Nmasked;n++) {
+    maskedGlobalIds[maskIds[n]] = 0;
+  }
 
   //use the masked ids to make another gs handle (signed so the gather is defined)
-  bool unique = true; //flag a unique node in every gather node
   bool verbose = true;
+  bool unique = true; //flag a unique node in every gather node
   ogsMasked.Setup(mesh.Nelements*mesh.Np, maskedGlobalIds,
                   mesh.comm, ogs::Signed, ogs::Auto,
                   unique, verbose, platform);
+
+  // TW - need Nfields ?
+  //setup normalization constant
+  //note that we can use the mesh ogs, since there are no masked nodes
+  allNeumannScale = 0./sqrt((dfloat)ogsMasked.NgatherGlobal);
 
   /* use the masked gs handle to define a global ordering */
   dlong Ntotal  = mesh.Np*mesh.Nelements; // number of degrees of freedom on this rank (before gathering)
@@ -190,9 +227,6 @@ void mass_t::BuildOperatorDiagonalContinuousQuad2D(memory<dfloat>& A) {
 	dlong vid = 2*lid + 1;
 
 	dlong vbase = e*mesh.Np*mesh.Nvgeo;
-	A[uid] = 0;
-	A[vid] = 0;
-	
 	dfloat JW = mesh.vgeo[vbase + n + m*mesh.Nq + mesh.JWID*mesh.Np];
 	A[uid] = JW;
 	A[vid] = JW;
@@ -232,7 +266,7 @@ void mass_t::Operator(deviceMemory<double> &o_q, deviceMemory<double> &o_Aq){
   //buffer for local Ax
   deviceMemory<double> o_AqL = platform.reserve<double>(Nfields*mesh.Np*mesh.Nelements);
 
-  gHalo.ExchangeStart(o_q, Nfields);
+  //  gHalo.ExchangeStart(o_q, Nfields);
   
   if(mesh.NlocalGatherElements/2){
     massPartialAxKernel(mesh.NlocalGatherElements/2,
@@ -493,13 +527,16 @@ void mass_t::Run(){
   }
 }
 
-void mass_t::Setup(platform_t& _platform, mesh_t& _mesh,
+void mass_t::Setup(platform_t& _platform, mesh_t& _mesh, settings_t& _settings,
 		   const int _NBCTypes, const memory<int> _BCType){
 
   platform = _platform;
   mesh = _mesh;
   comm = _mesh.comm;
+  settings = _settings;
 
+  settings.report();
+  
   Nfields = mesh.dim;
 
   //Trigger JIT kernel builds
@@ -577,8 +614,6 @@ void mass_t::Setup(platform_t& _platform, mesh_t& _mesh,
   kernelName = "massScatter" + suffix;
   massScatterKernel = platform.buildKernel(fileName, kernelName,
 					   kernelInfo);
-
-  
   
   /* Preconditioner Setup */
   Ndofs = ogsMasked.Ngather*Nfields;

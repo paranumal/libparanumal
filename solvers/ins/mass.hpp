@@ -95,13 +95,13 @@ public:
   deviceMemory<dfloat> o_nut;
   
   mass_t() = default;
-  mass_t(platform_t &_platform, mesh_t &_mesh,
+  mass_t(platform_t &_platform, mesh_t &_mesh, settings_t& _settings,
 	 const int _NBCTypes, const memory<int> _BCType) {
-    Setup(_platform, _mesh, _NBCTypes, _BCType);
+    Setup(_platform, _mesh, _settings, _NBCTypes, _BCType);
   }
 
   //setup
-  void Setup(platform_t& _platform, mesh_t& _mesh, 
+  void Setup(platform_t& _platform, mesh_t& _mesh, settings_t& _settings,
              const int _NBCTypes, const memory<int> _BCType);
 
   void BoundarySetup();

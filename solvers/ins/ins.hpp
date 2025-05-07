@@ -51,6 +51,7 @@ public:
 
   ellipticSettings_t extractVelocitySettings();
   ellipticSettings_t extractPressureSettings();
+  ellipticSettings_t extractMassSettings();
 };
 
 class ins_t;
@@ -94,8 +95,9 @@ public:
 
   ogs::halo_t vTraceHalo;
   ogs::halo_t pTraceHalo;
+  ogs::halo_t massTraceHalo;
 
-  ellipticSettings_t vSettings, pSettings;
+  ellipticSettings_t vSettings, pSettings, massSettings;
   elliptic_t uSolver, vSolver, wSolver;
   elliptic_t pSolver;
 

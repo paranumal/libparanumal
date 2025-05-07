@@ -93,6 +93,11 @@ insSettings_t::insSettings_t(comm_t& _comm):
   ellipticAddSettings(*this, "PRESSURE ");
   parAlmond::AddSettings(*this, "PRESSURE ");
   InitialGuess::AddSettings(*this, "PRESSURE ");
+
+  ellipticAddSettings(*this, "MASS ");
+  parAlmond::AddSettings(*this, "MASS ");
+  InitialGuess::AddSettings(*this, "MASS ");
+
 }
 
 void insSettings_t::report() {
@@ -138,6 +143,30 @@ void insSettings_t::report() {
       reportSetting("VELOCITY PARALMOND CHEBYSHEV DEGREE");
     }
 
+    std::cout << "\nMass Solver Settings:\n\n";
+
+    reportSetting("MASS DISCRETIZATION");
+    reportSetting("MASS LINEAR SOLVER");
+    reportSetting("MASS INITIAL GUESS STRATEGY");
+    reportSetting("MASS INITIAL GUESS HISTORY SPACE DIMENSION");
+    reportSetting("MASS PRECONDITIONER");
+
+    if (compareSetting("MASS PRECONDITIONER","MULTIGRID")) {
+      reportSetting("MASS MULTIGRID COARSENING");
+      reportSetting("MASS MULTIGRID SMOOTHER");
+      if (compareSetting("MASS MULTIGRID SMOOTHER","CHEBYSHEV"))
+        reportSetting("MASS MULTIGRID CHEBYSHEV DEGREE");
+    }
+
+    if (compareSetting("MASS PRECONDITIONER","MULTIGRID")
+      ||compareSetting("MASS PRECONDITIONER","PARALMOND")) {
+      reportSetting("MASS PARALMOND CYCLE");
+      reportSetting("MASS PARALMOND SMOOTHER");
+      reportSetting("MASS PARALMOND CHEBYSHEV DEGREE");
+    }
+
+
+    
     std::cout << "\nPressure Solver Settings:\n\n";
 
     reportSetting("PRESSURE DISCRETIZATION");
@@ -203,6 +232,27 @@ ellipticSettings_t insSettings_t::extractVelocitySettings() {
 
   return velocitySettings;
 }
+
+
+ellipticSettings_t insSettings_t::extractMassSettings() {
+
+  ellipticSettings_t massSettings(comm);
+
+  InitialGuess::AddSettings(massSettings);
+
+  for(auto it = massSettings.settings.begin(); it != massSettings.settings.end(); ++it) {
+    setting_t& set = it->second;
+    const std::string name = set.getName();
+
+    std::string val;
+    getSetting("MASS "+name, val);
+
+    set.updateVal(val);
+  }
+
+  return massSettings;
+}
+
 
 ellipticSettings_t insSettings_t::extractPressureSettings() {
 

@@ -284,7 +284,7 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
     }
   }
 
-#if 0
+#if 1
   // TW: not correct yet 
   //Setup pressure Elliptic solver
   dlong massNlocal=0, massNhalo=0;
@@ -301,26 +301,26 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
     massBCType[6] = 2;
 
     std::cout << "MASS LINEARSOLVER" << std::endl;
-
-    massSolver.Setup(platform, mesh, NBCTypes, massBCType);
+    massSettings = _settings.extractMassSettings();
+    massSolver.Setup(platform, mesh, massSettings, NBCTypes, massBCType);
 
     massNlocal = massSolver.ogsMasked.Ngather;
     massNhalo  = massSolver.gHalo.Nhalo;
 
     std::cout << "MASS NGATHER: " << massNlocal << std::endl;
     
-    massLinearSolver.Setup<LinearSolver::pcg<dfloat>>(massNlocal, massNhalo, platform, pSettings, comm);
+    massLinearSolver.Setup<LinearSolver::pcg<dfloat>>(massNlocal, massNhalo, platform, massSettings, comm);
 
-    if (pSettings.compareSetting("INITIAL GUESS STRATEGY", "LAST")) {
-      massLinearSolver.SetupInitialGuess<InitialGuess::Last<dfloat>>(massNlocal, platform, pSettings, comm);
-    } else if (pSettings.compareSetting("INITIAL GUESS STRATEGY", "ZERO")) {
-      massLinearSolver.SetupInitialGuess<InitialGuess::Zero<dfloat>>(massNlocal, platform, pSettings, comm);
-    } else if (pSettings.compareSetting("INITIAL GUESS STRATEGY", "CLASSIC")) {
-      massLinearSolver.SetupInitialGuess<InitialGuess::ClassicProjection<dfloat>>(massNlocal, platform, pSettings, comm);
-    } else if (pSettings.compareSetting("INITIAL GUESS STRATEGY", "QR")) {
-      massLinearSolver.SetupInitialGuess<InitialGuess::RollingQRProjection<dfloat>>(massNlocal, platform, pSettings, comm);
-    } else if (pSettings.compareSetting("INITIAL GUESS STRATEGY", "EXTRAP")) {
-      massLinearSolver.SetupInitialGuess<InitialGuess::Extrap<dfloat>>(massNlocal, platform, pSettings, comm);
+    if (massSettings.compareSetting("INITIAL GUESS STRATEGY", "LAST")) {
+      massLinearSolver.SetupInitialGuess<InitialGuess::Last<dfloat>>(massNlocal, platform, massSettings, comm);
+    } else if (massSettings.compareSetting("INITIAL GUESS STRATEGY", "ZERO")) {
+      massLinearSolver.SetupInitialGuess<InitialGuess::Zero<dfloat>>(massNlocal, platform, massSettings, comm);
+    } else if (massSettings.compareSetting("INITIAL GUESS STRATEGY", "CLASSIC")) {
+      massLinearSolver.SetupInitialGuess<InitialGuess::ClassicProjection<dfloat>>(massNlocal, platform, massSettings, comm);
+    } else if (massSettings.compareSetting("INITIAL GUESS STRATEGY", "QR")) {
+      massLinearSolver.SetupInitialGuess<InitialGuess::RollingQRProjection<dfloat>>(massNlocal, platform, massSettings, comm);
+    } else if (massSettings.compareSetting("INITIAL GUESS STRATEGY", "EXTRAP")) {
+      massLinearSolver.SetupInitialGuess<InitialGuess::Extrap<dfloat>>(massNlocal, platform, massSettings, comm);
     }
   }
 
@@ -341,6 +341,7 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
   /*setup trace halo exchange */
   pTraceHalo = mesh.HaloTraceSetup(1); //one field
   vTraceHalo = mesh.HaloTraceSetup(NVfields); //one field
+  massTraceHalo = mesh.HaloTraceSetup(NVfields); //one field
 
   // u and p at interpolation nodes
   u.malloc((Nlocal+Nhalo)*NVfields);

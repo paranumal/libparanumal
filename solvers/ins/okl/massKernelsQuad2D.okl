@@ -46,9 +46,11 @@ SOFTWARE.
 
       // assumes w*J built into G entries
       dfloat r_GwJ = wJ[e*p_Np + j*p_Nq + i];
-      dfloat r_Aq = r_GwJ*q[base];
-      
-      Aq[base] = r_Aq;
+      for(int fld=0;fld<p_Nfields;++fld){
+	dlong id = base*p_Nfields+fld;
+	dfloat r_Aq = r_GwJ*q[id];
+	Aq[id] = r_Aq;
+      }
     }
   }
 }
@@ -71,13 +73,17 @@ SOFTWARE.
       element = elementList[e];
       const dlong base = i + j*p_Nq + element*p_Np;
       const dlong id = GlobalToLocal[base];
-      dfloat qji = (id!=-1) ? q[id] : 0.0;
 
       // assumes w*J built into G entries
       dfloat r_GwJ = wJ[element*p_Np + j*p_Nq + i];
-      dfloat r_Aq = r_GwJ*qji;
-
-      Aq[base] = r_Aq;
+      
+      if(id!=-1){
+	for(int fld=0;fld<p_Nfields;++fld){
+	  dfloat qji = q[p_Nfields*id+fld];
+	  dfloat r_Aq = r_GwJ*qji;
+	  Aq[base] = r_Aq;
+	}
+      }
     }
   }
 }
@@ -98,11 +104,11 @@ SOFTWARE.
       for (int n=0;n<p_Nq;++n;@inner(0)) {
 
 	const dlong nid = e*p_Np + m*p_Nq + n;
-	
-	dfloat Au = 0;
 	dfloat JW = wJ[e*p_Np + n + m*p_Nq];
-	Au += JW;
-	A[nid+0] = Au;
+	
+	for(int fld=0;fld<p_Nfields;++fld){
+	  A[p_Nfields*nid+fld] = JW;
+	}
       }
     }
   }
@@ -118,3 +124,23 @@ SOFTWARE.
   }
 }
 
+@kernel void massScatterQuad2D(const dlong   Nelements,
+			      @restrict const  dlong   *  GlobalToLocal,
+			      @restrict dfloat *  UG,
+			      @restrict dfloat *  UL){
+  
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    
+    @exclusive dlong element;
+
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      const dlong base = (n + e*p_Np);
+      const dlong id = p_Nfields*GlobalToLocal[base];
+      const dlong idL = e*p_Np*p_Nfields+n;
+      for(int fld=0;fld<p_Nfields;++fld){
+	UL[idL+fld*p_Np] = UG[id+fld];
+      }
+    }
+  }
+}
