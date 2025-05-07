@@ -104,10 +104,10 @@ void ins_t::rhs_imex_invg(deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_U
 
   // project U to C0 (should be equivalent to also projecting Ue)
   // (note the projection uses pressure gather (which neglects outflow only)
-  //  if(mesh.elementType==Mesh::QUADRILATERALS)
-  //    Project(o_U, mesh.dim);
+  if(mesh.elementType==Mesh::QUADRILATERALS)
+    Project(o_U, mesh.dim);
   //  else
-  MassSolve(o_U);
+  //  MassSolve(o_U);
 
 
   if (mesh.rank==0 && mesh.dim==2) {
