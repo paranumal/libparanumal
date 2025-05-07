@@ -1,3 +1,4 @@
+
 /*
 
 The MIT License (MIT)
@@ -27,7 +28,7 @@ SOFTWARE.
 #define p_half ((dfloat)0.5)
 
 // compute NU = -div(uxu) using quadrature (weak form)
-@kernel void insSubcycleAdvectionCubatureVolumeQuad2D_org(const dlong Nelements,
+@kernel void insSubcycleAdvectionCubatureVolumeQuad2D_orig(const dlong Nelements,
                                             @restrict const  dfloat *  vgeo,
                                             @restrict const  dfloat *  cubvgeo,
                                             @restrict const  dfloat *  cubDT,
@@ -541,7 +542,7 @@ SOFTWARE.
 }
 
 
-@kernel void insSubcycleAdvectionCubatureSurfaceQuad2D_org(const dlong Nelements,
+@kernel void insSubcycleAdvectionCubatureSurfaceQuad2D_orig(const dlong Nelements,
                                             @restrict const  dfloat *  vgeo,
                                             @restrict const  dfloat *  cubsgeo,
                                             @restrict const  dfloat *  cubInterp,
@@ -1245,5 +1246,4 @@ SOFTWARE.
 
 
 #undef quadSurfaceTerms
-
 

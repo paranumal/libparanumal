@@ -176,6 +176,7 @@ void subcycler_t::rhsf(deviceMemory<dfloat>& o_U, deviceMemory<dfloat>& o_RHS, c
 
 void subcycler_t::finalizeStep(deviceMemory<dfloat>& o_q){
   // NOT SURE IF WE NEED THIS
-  if(mesh.elementType==Mesh::QUADRILATERALS)
-    ins->Project(o_q, mesh.dim);
+  //  if(mesh.elementType==Mesh::QUADRILATERALS)
+    //    ins->Project(o_q, mesh.dim);
+  //  ins->MassSolve(o_q);
 }

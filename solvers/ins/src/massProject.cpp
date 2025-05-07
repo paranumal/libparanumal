@@ -636,8 +636,7 @@ void mass_t::Setup(platform_t& _platform, mesh_t& _mesh, settings_t& _settings,
   // diagonal inverse (dfloat=>(pfloat)(1/float))
   kernelName = "massReciprocal";
 
-  reciprocalKernel = platform.buildKernel(fileName, kernelName,
-					  kernelInfo);
+  reciprocalKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 
   // assume Jacobi
   precon.Setup<MassJacobiPrecon>(*this);
