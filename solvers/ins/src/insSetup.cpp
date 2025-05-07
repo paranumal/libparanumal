@@ -72,6 +72,7 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
   if (settings.compareSetting("TIME INTEGRATOR","SSBDF3"))
     settings.getSetting("NUMBER OF SUBCYCLES", Nsubcycles);
 
+  
   //Setup velocity Elliptic solvers
   dlong uNlocal=0, vNlocal=0, wNlocal=0;
   dlong uNhalo=0, vNhalo=0, wNhalo=0;
@@ -283,6 +284,48 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
     }
   }
 
+#if 0
+  // TW: not correct yet 
+  //Setup pressure Elliptic solver
+  dlong massNlocal=0, massNhalo=0;
+  {
+    int NBCTypes = 7;
+    memory<int> massBCType(NBCTypes);
+    // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
+    massBCType[0] = 0;
+    massBCType[1] = 2;
+    massBCType[2] = 2;
+    massBCType[3] = 2;
+    massBCType[4] = 2;
+    massBCType[5] = 2;
+    massBCType[6] = 2;
+
+    std::cout << "MASS LINEARSOLVER" << std::endl;
+
+    massSolver.Setup(platform, mesh, NBCTypes, massBCType);
+
+    massNlocal = massSolver.ogsMasked.Ngather;
+    massNhalo  = massSolver.gHalo.Nhalo;
+
+    std::cout << "MASS NGATHER: " << massNlocal << std::endl;
+    
+    massLinearSolver.Setup<LinearSolver::pcg<dfloat>>(massNlocal, massNhalo, platform, pSettings, comm);
+
+    if (pSettings.compareSetting("INITIAL GUESS STRATEGY", "LAST")) {
+      massLinearSolver.SetupInitialGuess<InitialGuess::Last<dfloat>>(massNlocal, platform, pSettings, comm);
+    } else if (pSettings.compareSetting("INITIAL GUESS STRATEGY", "ZERO")) {
+      massLinearSolver.SetupInitialGuess<InitialGuess::Zero<dfloat>>(massNlocal, platform, pSettings, comm);
+    } else if (pSettings.compareSetting("INITIAL GUESS STRATEGY", "CLASSIC")) {
+      massLinearSolver.SetupInitialGuess<InitialGuess::ClassicProjection<dfloat>>(massNlocal, platform, pSettings, comm);
+    } else if (pSettings.compareSetting("INITIAL GUESS STRATEGY", "QR")) {
+      massLinearSolver.SetupInitialGuess<InitialGuess::RollingQRProjection<dfloat>>(massNlocal, platform, pSettings, comm);
+    } else if (pSettings.compareSetting("INITIAL GUESS STRATEGY", "EXTRAP")) {
+      massLinearSolver.SetupInitialGuess<InitialGuess::Extrap<dfloat>>(massNlocal, platform, pSettings, comm);
+    }
+  }
+
+#endif
+  
   //Solver tolerances
   if (sizeof(dfloat)==sizeof(double)) {
     presTOL = 1.0E-8;
@@ -521,112 +564,57 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
   maxWaveSpeedKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 
-#if 0
-  // filter kernels
-  fileName   = oklFilePrefix + "insRelaxationFilter" + suffix + oklFileSuffix;
-  kernelName = "insRelaxationFilter" + suffix;
-  
-  subcycler.relaxationFilterKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
-
-  // quad version
-
-  int Nq = mesh.N+1;
-  memory<dfloat> FILT(Nq*Nq);
-#if 0
-  memory<dfloat> _r(Nq);
-  for(int n=0;n<Nq;++n)
-    _r[n] = mesh.r[n];
-  
-  memory<dfloat> V, invV;
-  mesh.Vandermonde1D(mesh.N, _r, V);
-  mesh.Vandermonde1D(mesh.N, _r, invV);
-  
-  linAlg_t::matrixInverse(Nq, invV);
-  
-  //  dfloat sigma = 0.1;
-  dfloat sigma = 0.8;
-  for(int n=0;n<Nq;++n){
-    dfloat fac = (n==Nq-1) ? 0: exp(-sigma*n*n/((dfloat)(mesh.N*mesh.N)));
-    printf("fac[%d] = %e\n", n, fac);
-    //    dfloat fac = (n<mesh.N-1) ? 1: 0;
-    for(int m=0;m<Nq;++m){
-      invV[n*Nq+m] *= fac;
-    }
-  }
-
-  for(int n=0;n<Nq;++n){
-    for(int m=0;m<Nq;++m){
-      dfloat Fnm = 0;
-      for(int i=0;i<Nq;++i){
-	Fnm += V[n*Nq+i]*invV[i*Nq+m];
-      }
-      FILT[n*Nq+m] = Fnm;
-    }
-  }
-
-  for(int n=0;n<Nq;++n){
-    for(int m=0;m<Nq;++m){
-      printf("%g ", FILT[n*Nq+m]);
-    }
-    printf("\n");
-  }
-  
-#else  
-  mesh.ContinuousFilterMatrix1D(mesh.N, mesh.N-2, mesh.r, FILT);
-#endif
-  
-  subcycler.o_FILT = platform.malloc<dfloat>((mesh.N+1)*(mesh.N+1));
-  subcycler.o_FILT.copyFrom(FILT);
-#endif
 
 
 #if 1
-  
-  fileName   = oklFilePrefix + "insProject" + suffix + oklFileSuffix;
 
-  kernelName = "insProjectWeight" + suffix;
-  projectWeightKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
+  if(mesh.elementType==Mesh::QUADRILATERALS){
+    fileName   = oklFilePrefix + "insProject" + suffix + oklFileSuffix;
 
-  kernelName = "insProjectScatter" + suffix;
-  projectScatterKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
+    kernelName = "insProjectWeight" + suffix;
+    projectWeightKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
+
+    kernelName = "insProjectScatter" + suffix;
+    projectScatterKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 
   
-  memory<dlong> uGlobalToLocal(mesh.Nelements*mesh.Np,(dlong)0);
-  memory<dlong> vGlobalToLocal(mesh.Nelements*mesh.Np,(dlong)0);
+    memory<dlong> uGlobalToLocal(mesh.Nelements*mesh.Np,(dlong)0);
+    memory<dlong> vGlobalToLocal(mesh.Nelements*mesh.Np,(dlong)0);
   
-  pSolver.ogsMasked.SetupGlobalToLocalMapping(uGlobalToLocal);
-  vSolver.ogsMasked.SetupGlobalToLocalMapping(vGlobalToLocal);
+    pSolver.ogsMasked.SetupGlobalToLocalMapping(uGlobalToLocal);
+    vSolver.ogsMasked.SetupGlobalToLocalMapping(vGlobalToLocal);
   
-  o_uGlobalToLocal = platform.malloc<dlong>(mesh.Nelements*mesh.Np, uGlobalToLocal);
-  o_vGlobalToLocal = platform.malloc<dlong>(mesh.Nelements*mesh.Np, vGlobalToLocal);
+    o_uGlobalToLocal = platform.malloc<dlong>(mesh.Nelements*mesh.Np, uGlobalToLocal);
+    o_vGlobalToLocal = platform.malloc<dlong>(mesh.Nelements*mesh.Np, vGlobalToLocal);
 
-  // build degree vector
-  dlong Ngather = pSolver.ogsMasked.Ngather;
-  memory<dfloat> JWL(Nlocal+Nhalo, (dfloat)0.);
-  memory<dfloat> JWS(Nlocal+Nhalo, (dfloat)0.);
-  memory<dfloat> JWG(Ngather, (dfloat)0.);
-  for(dlong e=0;e<mesh.Nelements;++e){
-    for(int n=0;n<mesh.Np;++n){
-      dlong id = e*mesh.Np+n;
-      dfloat JWen = mesh.vgeo[mesh.Nvgeo*mesh.Np*e + n + mesh.Np*mesh.JWID];
-      JWL[id] = JWen;
-      dlong gid = uGlobalToLocal[id];
-      if(gid>=0)
-	JWG[gid] += JWen;
+    // build degree vector
+    dlong Ngather = pSolver.ogsMasked.Ngather;
+    memory<dfloat> JWL(Nlocal+Nhalo, (dfloat)0.);
+    memory<dfloat> JWS(Nlocal+Nhalo, (dfloat)0.);
+    memory<dfloat> JWG(Ngather, (dfloat)0.);
+    for(dlong e=0;e<mesh.Nelements;++e){
+      for(int n=0;n<mesh.Np;++n){
+	dlong id = e*mesh.Np+n;
+	dfloat JWen = mesh.vgeo[mesh.Nvgeo*mesh.Np*e + n + mesh.Np*mesh.JWID];
+	JWL[id] = JWen;
+	dlong gid = uGlobalToLocal[id];
+	if(gid>=0)
+	  JWG[gid] += JWen;
+      }
     }
-  }
-  // not globalized
-  for(int n=0;n<Nlocal;++n){
-    dlong gid = uGlobalToLocal[n];
-    if(gid>=0){
-      dfloat JGn = JWG[gid];
-      JWL[n] = JWL[n]/JGn;
+    // not globalized
+    for(int n=0;n<Nlocal;++n){
+      dlong gid = uGlobalToLocal[n];
+      if(gid>=0){
+	dfloat JGn = JWG[gid];
+	JWL[n] = JWL[n]/JGn;
+      }
+      else
+	JWL[n] = 1;
     }
-    else
-      JWL[n] = 1;
+  
+    o_projectWeights = platform.malloc<dfloat>(Nlocal+Nhalo, JWL);
   }
   
-  o_projectWeights = platform.malloc<dfloat>(Nlocal+Nhalo, JWL);
-
 #endif  
 }

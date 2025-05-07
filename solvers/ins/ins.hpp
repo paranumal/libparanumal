@@ -34,6 +34,7 @@
 #include "timeStepper.hpp"
 #include "linAlg.hpp"
 #include "elliptic.hpp"
+#include "mass.hpp"
 #include "initialGuess.hpp"
 
 #define DINS LIBP_DIR"/solvers/ins/"
@@ -98,10 +99,13 @@ public:
   elliptic_t uSolver, vSolver, wSolver;
   elliptic_t pSolver;
 
+  mass_t massSolver;
+  
   linearSolver_t<dfloat>  uLinearSolver;
   linearSolver_t<dfloat>  vLinearSolver;
   linearSolver_t<dfloat>  wLinearSolver;
   linearSolver_t<dfloat>  pLinearSolver;
+  linearSolver_t<dfloat>  massLinearSolver;
 
   int NVfields, NTfields;
 
@@ -204,6 +208,8 @@ public:
                      const dfloat gamma, const dfloat T);
   void PressureIncrementSolve(deviceMemory<dfloat>& o_P, deviceMemory<dfloat>& o_RHS,
                      const dfloat gamma, const dfloat T, const dfloat dt);
+
+  void MassSolve(deviceMemory<dfloat>& o_U);
 };
 
 #endif

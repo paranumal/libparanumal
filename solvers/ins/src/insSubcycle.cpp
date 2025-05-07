@@ -168,4 +168,14 @@ void subcycler_t::rhsf(deviceMemory<dfloat>& o_U, deviceMemory<dfloat>& o_RHS, c
 #if 0
   relaxationFilterKernel(mesh.Nelements, o_FILT, o_U, o_RHS);
 #endif
+
+  //  o_Ue.free();
+  
+}
+
+
+void subcycler_t::finalizeStep(deviceMemory<dfloat>& o_q){
+  // NOT SURE IF WE NEED THIS
+  if(mesh.elementType==Mesh::QUADRILATERALS)
+    ins->Project(o_q, mesh.dim);
 }

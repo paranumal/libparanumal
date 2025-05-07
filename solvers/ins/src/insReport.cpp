@@ -47,7 +47,8 @@ void ins_t::Report(dfloat time, int tstep){
     deviceMemory<dfloat> o_Vort = platform.reserve<dfloat>(mesh.dim*mesh.Nelements*mesh.Np);
     vorticityKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_D, o_u, o_Vort);
 
-    Project(o_Vort, 1);
+    if(mesh.elementType==Mesh::QUADRILATERALS)
+      Project(o_Vort, 1);
     
     memory<dfloat> Vort(mesh.dim*mesh.Nelements*mesh.Np);
 
