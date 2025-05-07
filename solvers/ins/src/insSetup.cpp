@@ -284,8 +284,6 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
     }
   }
 
-#if 1
-  // TW: not correct yet 
   //Setup pressure Elliptic solver
   dlong massNlocal=0, massNhalo=0;
   {
@@ -304,8 +302,8 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
     massSettings = _settings.extractMassSettings();
     massSolver.Setup(platform, mesh, massSettings, NBCTypes, massBCType);
 
-    massNlocal = massSolver.ogsMasked.Ngather;
-    massNhalo  = massSolver.gHalo.Nhalo;
+    massNlocal = mesh.dim*massSolver.ogsMasked.Ngather;
+    massNhalo  = mesh.dim*massSolver.gHalo.Nhalo;
 
     std::cout << "MASS NGATHER: " << massNlocal << std::endl;
     
@@ -323,8 +321,6 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
       massLinearSolver.SetupInitialGuess<InitialGuess::Extrap<dfloat>>(massNlocal, platform, massSettings, comm);
     }
   }
-
-#endif
   
   //Solver tolerances
   if (sizeof(dfloat)==sizeof(double)) {

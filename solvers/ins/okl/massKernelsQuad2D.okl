@@ -31,7 +31,7 @@ SOFTWARE.
       for(int i=0; i<p_Nq; ++i; @inner(0))
 
 
-// square thread version
+// square thread version used to build rhs
 @kernel void massAxQuad2D(const dlong   Nelements,
 			  @restrict const  dfloat *  wJ,
 			  @restrict const  dfloat *  MM,
@@ -47,9 +47,10 @@ SOFTWARE.
       // assumes w*J built into G entries
       dfloat r_GwJ = wJ[e*p_Np + j*p_Nq + i];
       for(int fld=0;fld<p_Nfields;++fld){
-	dlong id = base*p_Nfields+fld;
-	dfloat r_Aq = r_GwJ*q[id];
-	Aq[id] = r_Aq;
+	dlong qid = e*p_Np*p_Nfields+fld*p_Np+j*p_Nq+i;
+	dlong Aqid = base*p_Nfields+fld;
+	dfloat r_Aq = r_GwJ*q[qid];
+	Aq[Aqid] = r_Aq;
       }
     }
   }
@@ -73,16 +74,14 @@ SOFTWARE.
       element = elementList[e];
       const dlong base = i + j*p_Nq + element*p_Np;
       const dlong id = GlobalToLocal[base];
-
+      
       // assumes w*J built into G entries
       dfloat r_GwJ = wJ[element*p_Np + j*p_Nq + i];
-      
-      if(id!=-1){
-	for(int fld=0;fld<p_Nfields;++fld){
-	  dfloat qji = q[p_Nfields*id+fld];
-	  dfloat r_Aq = r_GwJ*qji;
-	  Aq[base] = r_Aq;
-	}
+
+      for(int fld=0;fld<p_Nfields;++fld){
+	dfloat qji = q[p_Nfields*id+fld];
+	dfloat r_Aq = r_GwJ*qji;
+	Aq[base*p_Nfields+fld] = r_Aq;
       }
     }
   }
@@ -135,7 +134,7 @@ SOFTWARE.
     @exclusive dlong element;
 
     for(int n=0;n<p_Np;++n;@inner(0)){
-      const dlong base = (n + e*p_Np);
+      const dlong base = n + e*p_Np;
       const dlong id = p_Nfields*GlobalToLocal[base];
       const dlong idL = e*p_Np*p_Nfields+n;
       for(int fld=0;fld<p_Nfields;++fld){

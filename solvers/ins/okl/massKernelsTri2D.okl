@@ -38,9 +38,9 @@ SOFTWARE.
     
     @shared dfloat s_q[p_Nfields][p_Np];
     for(int n=0;n<p_Np;++n;@inner(0)){
-      const dlong base = p_Nfields*(n + e*p_Np);
+      const dlong base =n + e*p_Np*p_Nfields;
       for(int fld=0;fld<p_Nfields;++fld){
-	s_q[fld][n] = q[base+fld];
+	s_q[fld][n] = q[base+fld*p_Np];
       }
     }
     
@@ -82,7 +82,7 @@ SOFTWARE.
 
     for(int n=0;n<p_Np;++n;@inner(0)){
       element = elementList[e];
-      const dlong base = p_Nfields*(n + element*p_Np);
+      const dlong base = (n + element*p_Np);
       const dlong id = p_Nfields*GlobalToLocal[base];
       for(int fld=0;fld<p_Nfields;++fld){
 	s_q[fld][n] = q[id+fld];
@@ -96,6 +96,10 @@ SOFTWARE.
       dfloat r_Aq[p_Nfields] = {0.};
       for(int i=0;i<p_Np;++i){
 	dfloat MMni = MM[n+i*p_Np];
+
+	//	if(e==0 && n==0)
+	//	  printf("MMni=%g, J=%g\n", MMni, J);
+
 	for(int fld=0;fld<p_Nfields;++fld){
 	  r_Aq[fld] += MMni*s_q[fld][i];
 	}
@@ -209,6 +213,7 @@ SOFTWARE.
       const dlong idL = e*p_Np*p_Nfields+n;
       for(int fld=0;fld<p_Nfields;++fld){
 	UL[idL+fld*p_Np] = UG[id+fld];
+	//	if(e==0) printf("e: %d, n: %d, ug: %g\n", e, n, UG[id+fld]);
       }
     }
   }

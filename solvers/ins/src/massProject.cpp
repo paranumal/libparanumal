@@ -80,7 +80,7 @@ void mass_t::BoundarySetup(){
   }
 
   //use the masked ids to make another gs handle (signed so the gather is defined)
-  bool verbose = true;
+  bool verbose = false;
   bool unique = true; //flag a unique node in every gather node
   ogsMasked.Setup(mesh.Nelements*mesh.Np, maskedGlobalIds,
                   mesh.comm, ogs::Signed, ogs::Auto,
@@ -190,7 +190,6 @@ void mass_t::BuildOperatorDiagonal(deviceMemory<pfloat> &o_invDiagA ){
 void mass_t::BuildOperatorDiagonalContinuousTri2D(memory<dfloat>& A) {
   
   for(dlong eM=0;eM<mesh.Nelements;++eM){
-    dlong gbase = eM*mesh.Nggeo;
     dfloat J   = mesh.wJ[eM];
 
     /* start with stiffness matrix  */
@@ -200,7 +199,8 @@ void mass_t::BuildOperatorDiagonalContinuousTri2D(memory<dfloat>& A) {
       dlong vid = 2*lid + 1;
       
       
-      A[eM*mesh.Np+n] = J*mesh.MM[n+n*mesh.Np];
+      A[2*(eM*mesh.Np+n)+0] = J*mesh.MM[n+n*mesh.Np];
+      A[2*(eM*mesh.Np+n)+1] = J*mesh.MM[n+n*mesh.Np];
     }
   }
 
@@ -266,7 +266,7 @@ void mass_t::Operator(deviceMemory<double> &o_q, deviceMemory<double> &o_Aq){
   //buffer for local Ax
   deviceMemory<double> o_AqL = platform.reserve<double>(Nfields*mesh.Np*mesh.Nelements);
 
-  //  gHalo.ExchangeStart(o_q, Nfields);
+  gHalo.ExchangeStart(o_q, Nfields);
   
   if(mesh.NlocalGatherElements/2){
     massPartialAxKernel(mesh.NlocalGatherElements/2,
@@ -307,6 +307,15 @@ void mass_t::Operator(deviceMemory<double> &o_q, deviceMemory<double> &o_Aq){
 
   ogsMasked.GatherFinish(o_Aq, o_AqL, Nfields, ogs::Add, ogs::Trans);
 
+  if(0){
+    memory<dfloat> Aqtmp(Ndofs);
+    o_Aq.copyTo(Aqtmp);
+    printf("Aq: ");
+    for(int n=0;n<Ndofs;++n){
+      printf("%g ", Aqtmp[n]);
+    }
+  }
+  
 }
 
 
@@ -484,7 +493,7 @@ void mass_t::Run(){
   //call the solver
   dfloat tol = (sizeof(dfloat)==sizeof(double)) ? 1.0e-8 : 1.0e-5;
 
-  bool verbose=true;
+  bool verbose=false;
   int iter = Solve(linearSolver, o_x, o_r, tol, maxIter, verbose);
 
   //add the boundary data to the masked nodes
