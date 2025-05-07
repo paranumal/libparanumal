@@ -970,10 +970,12 @@ SOFTWARE.
 
             // bad notation here //
             s_iFluxU[em][es][n] = sc*( nx*(r_iUP[em]*r_iUdP[em] - r_iUM[em]*r_iUdM[em])
-				      +ny*(r_iVP[em]*r_iUdP[em] - r_iVM[em]*r_iUdM[em]) +unmax*(r_iUdM[em]-r_iUdP[em]) + sigmaSurf*nx*ndotdUd);
+				      +ny*(r_iVP[em]*r_iUdP[em] - r_iVM[em]*r_iUdM[em])
+				       +unmax*(r_iUdM[em]-r_iUdP[em]) + sigmaSurf*nx*ndotdUd);
 
             s_iFluxV[em][es][n] = sc*( nx*(r_iUP[em]*r_iVdP[em] - r_iUM[em]*r_iVdM[em])
-                                      +ny*(r_iVP[em]*r_iVdP[em] - r_iVM[em]*r_iVdM[em]) +unmax*(r_iVdM[em]-r_iVdP[em]) + sigmaSurf*ny*ndotdUd);
+                                      +ny*(r_iVP[em]*r_iVdP[em] - r_iVM[em]*r_iVdM[em])
+				       +unmax*(r_iVdM[em]-r_iVdP[em]) + sigmaSurf*ny*ndotdUd);
           }
         }
       }
