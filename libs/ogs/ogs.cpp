@@ -292,8 +292,9 @@ void ogs_t::GatherFinish(deviceMemory<T> o_gv,
 
       // copy recv back to device
       //put the result at the end of o_gv
-      recvBuf.copyTo(o_gv + k*NlocalT, k*NhaloP,
-                     0, properties_t("async", true));
+      if(NhaloP>0)
+	recvBuf.copyTo(o_gv + k*NlocalT, k*NhaloP,
+		       0, properties_t("async", true));
       device.finish(); //wait for transfer to finish
       device.setStream(currentStream);
     }

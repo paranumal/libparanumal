@@ -75,8 +75,9 @@ void halo_t::ExchangeStart(deviceMemory<T> o_v, const int k){
 
       //queue copy to host
       device.setStream(dataStream);
-      sendBuf.copyFrom(o_v + k*NlocalT, NhaloP*k,
-                       0, properties_t("async", true));
+      if(NhaloP>0)
+	sendBuf.copyFrom(o_v + k*NlocalT, NhaloP*k,
+			 0, properties_t("async", true));
       device.setStream(currentStream);
     } else {
       //collect halo buffer
@@ -87,8 +88,9 @@ void halo_t::ExchangeStart(deviceMemory<T> o_v, const int k){
 
       //queue copy to host
       device.setStream(dataStream);
-      sendBuf.copyFrom(o_sendBuf, NhaloP*k,
-                       0, properties_t("async", true));
+      if(NhaloP>0)
+	sendBuf.copyFrom(o_sendBuf, NhaloP*k,
+			 0, properties_t("async", true));
       device.setStream(currentStream);
     }
   }
@@ -129,8 +131,9 @@ void halo_t::ExchangeFinish(deviceMemory<T> o_v, const int k){
 
     // copy recv back to device
     if (gathered_halo) {
-      recvBuf.copyTo(o_v + k*(NlocalT+NhaloP), k*Nhalo,
-                     k*NhaloP, properties_t("async", true));
+      if(Nhalo>0)
+	recvBuf.copyTo(o_v + k*(NlocalT+NhaloP), k*Nhalo,
+		       k*NhaloP, properties_t("async", true));
       device.finish(); //wait for transfer to finish
       device.setStream(currentStream);
     } else {
