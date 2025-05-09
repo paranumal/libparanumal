@@ -60,12 +60,28 @@ void ins_t::Report(dfloat time, int tstep){
     o_p.copyTo(p);
     o_Vort.copyTo(Vort);
 
-    // output field files
-    std::string name;
-    settings.getSetting("OUTPUT FILE NAME", name);
-    char fname[BUFSIZ];
-    sprintf(fname, "%s_%04d_%04d.vtu", name.c_str(), mesh.rank, frame++);
-
-    PlotFields(u, p, Vort, std::string(fname));
+    if(0){
+      // output field files
+      std::string name;
+      settings.getSetting("OUTPUT FILE NAME", name);
+      char fname[BUFSIZ];
+      sprintf(fname, "%s_%04d_%04d.vtu", name.c_str(), mesh.rank, frame++);
+      
+      PlotFields(u, p, Vort, std::string(fname));
+    }
+    
+    {
+      std::string name;
+      settings.getSetting("VIZ OUTPUT FILE NAME", name);
+      
+      // THIS plots the data as png
+      char fname[BUFSIZ];
+      sprintf(fname, "%s_%04d_%04d.png", name.c_str(), mesh.rank, frame++);
+      
+      std::string sfname(fname);
+      
+      PlotFrame(Vort, sfname, mesh.dim);
+    }
+    
   }
 }

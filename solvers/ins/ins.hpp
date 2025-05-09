@@ -177,6 +177,7 @@ public:
   void Report(dfloat time, int tstep);
 
   void PlotFields(memory<dfloat>& U, memory<dfloat>& P, memory<dfloat>& V, std::string fileName);
+  void PlotFrame(memory<dfloat>& U, std::string fileName, int plotNfields);
 
   dfloat MaxWaveSpeed(deviceMemory<dfloat>& o_U, const dfloat T);
 

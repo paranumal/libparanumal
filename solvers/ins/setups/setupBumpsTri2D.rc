@@ -8,7 +8,7 @@ data/insUniform2D.h
 [MESH FILE]
 #../../meshes/bumpBoxQuad2D.msh
 #../../meshes/bumpBoxQuad2Dv2.msh
-../../meshes/bumpTri2Dbox.msh
+../../meshes/bumpsTri2DboxRamp.msh
 
 [MESH DIMENSION]
 2
@@ -17,7 +17,7 @@ data/insUniform2D.h
 3
 
 [POLYNOMIAL DEGREE]
-3
+2
 
 [THREAD MODEL]
 CUDA
@@ -29,7 +29,7 @@ CUDA
 0
 
 [CFL NUMBER]
-2
+1.
 #1.25
 
 [VISCOSITY]
@@ -65,7 +65,7 @@ DOPRI5
 40
 
 [OUTPUT INTERVAL]
-.1
+2
 
 [OUTPUT TO FILE]
 TRUE
@@ -246,21 +246,5 @@ TRUE
 
 [MASS LINEAR SOLVER STOPPING CRITERION]
 ABS/REL-INITRESID
-
-[VIZ OUTPUT]
-TRUE
-
-[VIZ OUTPUT FILE NAME]
-png/bump
-
-[VIZ COLORMAP RANGE]
-TRUE
-
-[VIZ COLORMAP RANGE MIN]
--10
-
-[VIZ COLORMAP RANGE MAX]
-10
-#0.0125
 
 

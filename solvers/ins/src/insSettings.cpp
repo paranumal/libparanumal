@@ -86,6 +86,32 @@ insSettings_t::insSettings_t(comm_t& _comm):
   newSetting("OUTPUT FILE NAME",
              "ins");
 
+
+  newSetting("VIZ OUTPUT",
+	     "FALSE",
+	     "Flag for writing field frames to PNG files",
+	     {"TRUE", "FALSE"});
+
+  newSetting("VIZ COLORMAP RANGE",
+	     "FALSE",
+	     {"TRUE", "FALSE"});
+  
+  newSetting("VIZ OUTPUT FILE NAME",
+             "dirac",
+	     "Name for visualization file");
+
+#if 1
+  newSetting("VIZ COLORMAP RANGE MIN",
+             "0.0",
+             "Lower cutoff for colormap when writing frames to PNG files");
+
+  newSetting("VIZ COLORMAP RANGE MAX",
+             "1.0",
+             "Upper cutoff for colormap when writing frames to PNG files");
+#endif
+
+
+  
   ellipticAddSettings(*this, "VELOCITY ");
   parAlmond::AddSettings(*this, "VELOCITY ");
   InitialGuess::AddSettings(*this, "VELOCITY ");

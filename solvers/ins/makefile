@@ -98,7 +98,7 @@ INS_CXXFLAGS=${LIBP_CXXFLAGS} ${DEFINES} ${INCLUDES}
 #link libraries
 LIBS=-L${ELLIPTIC_DIR} -lelliptic -L$(STRESS_DIR) -lstress \
 	  -L${LIBP_LIBS_DIR} $(addprefix -l,$(FPE_LIBP_LIBS)) \
-     ${LIBP_LIBS}
+     ${LIBP_LIBS} -lpng
 
 #link flags
 LFLAGS=${INS_CXXFLAGS} ${LIBS}
