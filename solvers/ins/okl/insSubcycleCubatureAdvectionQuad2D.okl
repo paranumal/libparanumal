@@ -697,11 +697,12 @@ SOFTWARE.
             const dfloat uP = r_UPn[face], vP = r_VPn[face];
             const dfloat udM = r_UdMn[face], vdM = r_VdMn[face];
                   dfloat udP = r_UdPn[face], vdP = r_VdPn[face];
-
+		  
             int bc = EToB[face+p_Nfaces*e];
             if(bc>0) {
+	      dfloat ndotU = nx*uM + ny*vM;
               const dlong idm = e*p_Nfaces*p_cubNq + face*p_cubNq + i;
-              insVelocityDirichletConditions2D(bc, nu, time, intx[e*p_Nfaces*p_cubNq + face*p_cubNq + i], \
+              insVelocityDirichletConditions2D(bc, ndotU, nu, time, intx[e*p_Nfaces*p_cubNq + face*p_cubNq + i], \
                                                          inty[e*p_Nfaces*p_cubNq + face*p_cubNq + i], \
                                                          nx, ny, udM, vdM, &udP, &vdP);
             }
@@ -945,8 +946,9 @@ SOFTWARE.
 	    
             int bc = EToB[face+p_Nfaces*e];
             if(bc>0) {
+	      dfloat ndotU = nx*uM + ny*vM;
               const dlong idm = e*p_Nfaces*p_cubNq + face*p_cubNq + i;
-              insVelocityDirichletConditions2D(bc, nu, time, intx[e*p_Nfaces*p_cubNq + face*p_cubNq + i], inty[e*p_Nfaces*p_cubNq + face*p_cubNq + i],  nx, ny, udM, vdM, &udP, &vdP);
+              insVelocityDirichletConditions2D(bc, ndotU, nu, time, intx[e*p_Nfaces*p_cubNq + face*p_cubNq + i], inty[e*p_Nfaces*p_cubNq + face*p_cubNq + i],  nx, ny, udM, vdM, &udP, &vdP);
             }
 	    
             unM   = fabs(nx*uM + ny*vM); // sqrt(uM*uM+vM*vM); 
@@ -1165,8 +1167,9 @@ SOFTWARE.
 
             int bc = EToB[face+p_Nfaces*e];
             if(bc>0) {
+	      dfloat ndotU = nx*uM + ny*vM;
               const dlong idm = e*p_Nfaces*p_cubNq + face*p_cubNq + i;
-              insVelocityDirichletConditions2D(bc, nu, time, intx[e*p_Nfaces*p_cubNq + face*p_cubNq + i], \
+              insVelocityDirichletConditions2D(bc, ndotU, nu, time, intx[e*p_Nfaces*p_cubNq + face*p_cubNq + i], \
                                                          inty[e*p_Nfaces*p_cubNq + face*p_cubNq + i], \
                                                          nx, ny, udM, vdM, &udP, &vdP);
             }

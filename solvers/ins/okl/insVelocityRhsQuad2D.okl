@@ -35,7 +35,8 @@ SOFTWARE.
   dfloat dvdxP=0.f, dvdyP=0.f, vP=0.f;                                  \
   const int bc = mapB[idM];                                             \
   if(bc>0) {                                                            \
-    insVelocityDirichletConditions2D(bc, nu, time, x[idM], y[idM], nx, ny, 0.f, 0.f, &uP, &vP);\
+    dfloat ndotU = 1;							\
+    insVelocityDirichletConditions2D(bc, ndotU, nu, time, x[idM], y[idM], nx, ny, 0.f, 0.f, &uP, &vP); \
     insVelocityNeumannConditions2D(bc, nu, time, x[idM], y[idM], nx, ny, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dvdxP, &dvdyP);\
   }                                                                     \
                                                                         \
@@ -225,8 +226,9 @@ SOFTWARE.
   dfloat dvdxP=0, dvdyP=0, vP=0;                                        \
   const int bc = EToB[face+p_Nfaces*e];                                 \
   if(bc>0) {                                                            \
+    dfloat ndotU = 1;							\
     const dlong idM = vmapM[sk];                                        \
-    insVelocityDirichletConditions2D(bc, nu, time, x[idM], y[idM], nx, ny, 0.f, 0.f, &uP, &vP);\
+    insVelocityDirichletConditions2D(bc, ndotU, nu, time, x[idM], y[idM], nx, ny, 0.f, 0.f, &uP, &vP); \
     insVelocityNeumannConditions2D(bc, nu, time, x[idM], y[idM], nx, ny, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dvdxP, &dvdyP);\
   }                                                                     \
                                                                         \
@@ -387,7 +389,8 @@ SOFTWARE.
                                                                         \
     dfloat uP=0;                                                        \
     dfloat vP=0;                                                        \
-    insVelocityDirichletConditions2D(bc, nu, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);\
+    dfloat ndotU = 1;							\
+    insVelocityDirichletConditions2D(bc, ndotU, nu, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP); \
     UH[idM] = uP;                                                       \
     VH[idM] = vP;                                                       \
   }                                                                     \

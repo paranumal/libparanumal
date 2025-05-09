@@ -28,6 +28,8 @@ SOFTWARE.
 #define p_vbar 0.0
 #define p_pbar 1.0
 
+#define copysign(a) ( ((a)<0) ? -1.f : 1.f )
+
 // Initial conditions
 #define insInitialConditions2D(nu,t,x,y,u,v,p)   \
   {                                   \
@@ -38,24 +40,25 @@ SOFTWARE.
 
 // Boundary conditions
 /* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5 */
-#define insVelocityDirichletConditions2D(bc, nu, t, x, y, nx, ny, uM, vM, uB, vB) \
-{                                   \
-  if(bc==1){                        \
-    *(uB) = 0.f;                    \
-    *(vB) = 0.f;                    \
-  } else if(bc==2){                 \
-    *(uB) = p_ubar;                 \
-    *(vB) = p_vbar;                 \
-  } else if(bc==3){                 \
-    *(uB) = uM;    \
-    *(vB) = vM;                     \
-  } else if(bc==4){                 \
-    *(uB) = 0.f;                    \
-    *(vB) = vM;                     \
-  } else if(bc==5){                 \
-    *(uB) = uM;                     \
-    *(vB) = 0.f;                    \
-  }                                 \
+#define insVelocityDirichletConditions2D(bc, ndotUe, nu, t, x, y, nx, ny, uM, vM, uB, vB) \
+  {									\
+    if(bc==1){								\
+      *(uB) = 0.f;							\
+      *(vB) = 0.f;							\
+    } else if(bc==2){							\
+      *(uB) = p_ubar;							\
+      *(vB) = p_vbar;							\
+    } else if(bc==3){							\
+      /* penalize tangential part */					\
+      *(uB) = (ndotU>0) ? uM : 0;					\
+      *(vB) = (ndotU>0) ? vM : 0;					\
+    } else if(bc==4){							\
+      *(uB) = 0.f;							\
+      *(vB) = vM;							\
+    } else if(bc==5){							\
+      *(uB) = uM;							\
+      *(vB) = 0.f;							\
+    }									\
 }
 
 #define insVelocityNeumannConditions2D(bc, nu, t, x, y, nx, ny, uxM, uyM, vxM, vyM, uxB, uyB, vxB, vyB) \

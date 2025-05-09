@@ -48,7 +48,7 @@ void ins_t::Report(dfloat time, int tstep){
     vorticityKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_D, o_u, o_Vort);
 
     if(mesh.elementType==Mesh::QUADRILATERALS)
-      Project(o_Vort, 1);
+      Project(o_Vort, 2);
     else
       MassSolve(o_Vort);
       
