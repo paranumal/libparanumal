@@ -84,9 +84,10 @@ SOFTWARE.
 
           dfloat UP = UM;
           dfloat VP = VM;
-
+	  dfloat ndotU = 1;
+	  
           //get boundary value
-          insVelocityDirichletConditions2D(bc, nu, time, x[idM], y[idM],  \
+          insVelocityDirichletConditions2D(bc, ndotU, nu, time, x[idM], y[idM],  \
                                            nx, ny, UM, VM, &UP, &VP);
 
           //determine max wavespeed from boundary value
