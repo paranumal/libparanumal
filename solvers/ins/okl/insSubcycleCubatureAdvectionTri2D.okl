@@ -645,7 +645,8 @@ SOFTWARE.
             // apply boundary conditions
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
-              insVelocityDirichletConditions2D(bc,nu,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, r_iUdM[em],r_iVdM[em], &(r_iUdP[em]), &(r_iVdP[em]));
+	      dfloat ndotU = nx*r_iUM[em] + ny*r_iVM[em];
+              insVelocityDirichletConditions2D(bc,ndotU, nu,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, r_iUdM[em],r_iVdM[em], &(r_iUdP[em]), &(r_iVdP[em]));
             }
 
             // Find max normal velocity on the face
@@ -954,7 +955,8 @@ SOFTWARE.
             // apply boundary conditions
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
-              insVelocityDirichletConditions2D(bc,nu,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, r_iUdM[em],r_iVdM[em], &(r_iUdP[em]), &(r_iVdP[em]));
+	      dfloat ndotU = nx*r_iUM[em] + ny*r_iVM[em];
+              insVelocityDirichletConditions2D(bc,ndotU, nu,time, intx[n+e*p_Nfaces*p_intNfp], inty[n+e*p_Nfaces*p_intNfp], nx, ny, r_iUdM[em],r_iVdM[em], &(r_iUdP[em]), &(r_iVdP[em]));
             }
 
             // Find max normal velocity on the face
