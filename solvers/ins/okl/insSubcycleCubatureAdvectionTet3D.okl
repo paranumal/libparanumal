@@ -250,21 +250,25 @@ SOFTWARE.
 	cU   += cIni*Ui;
 	cV   += cIni*Vi;
 	cW   += cIni*Wi;
+
 	cUe  += cIni*Uei;
 	cVe  += cIni*Vei;
 	cWe  += cIni*Wei;
+
 	cUr  += cDr_ni*Ui;
 	cVr  += cDr_ni*Vi;
 	cWr  += cDr_ni*Wi;
 	cUer += cDr_ni*Uei;
+	
 	cUs  += cDs_ni*Ui;
 	cVs  += cDs_ni*Vi;
 	cWs  += cDs_ni*Wi;
 	cVes += cDs_ni*Vei;
+	
 	cUt  += cDt_ni*Ui;
 	cVt  += cDt_ni*Vi;
 	cWt  += cDt_ni*Wi;
-	cWet += cDt_ni*Vei;
+	cWet += cDt_ni*Wei;
       }
 
       cdivU  = (drdx*cUr + dsdx*cUs + dtdx*cUt);
