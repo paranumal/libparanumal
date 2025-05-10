@@ -671,21 +671,21 @@ SOFTWARE.
             // evaluate "flux" terms: LLF
             const dfloat sc = invJ * sJ ;
 
-            s_iFluxU[es][n] = sc*(.5f*(nx*(iUP*iUdP + iUM*iUdM)
-                                      +ny*(iVP*iUdP + iVM*iUdM)
-                                      +nz*(iWP*iUdP + iWM*iUdM)
+            s_iFluxU[es][n] = sc*(.5f*(nx*(iUP*iUdP - iUM*iUdM)
+                                      +ny*(iVP*iUdP - iVM*iUdM)
+                                      +nz*(iWP*iUdP - iWM*iUdM)
 				       +nx*ndotdUd
                                       +unmax*(iUdM-iUdP) ));
 
-            s_iFluxV[es][n] = sc*(.5f*(nx*(iUP*iVdP + iUM*iVdM)
-                                     + ny*(iVP*iVdP + iVM*iVdM)
-                                     + nz*(iWP*iVdP + iWM*iVdM)
+            s_iFluxV[es][n] = sc*(.5f*(nx*(iUP*iVdP - iUM*iVdM)
+                                     + ny*(iVP*iVdP - iVM*iVdM)
+                                     + nz*(iWP*iVdP - iWM*iVdM)
 				       +ny*ndotdUd
                                      + unmax*(iVdM-iVdP) ));
 
-            s_iFluxW[es][n] = sc*(.5f*(nx*(iUP*iWdP + iUM*iWdM)
-                                     + ny*(iVP*iWdP + iVM*iWdM)
-                                     + nz*(iWP*iWdP + iWM*iWdM)
+            s_iFluxW[es][n] = sc*(.5f*(nx*(iUP*iWdP - iUM*iWdM)
+                                     + ny*(iVP*iWdP - iVM*iWdM)
+                                     + nz*(iWP*iWdP - iWM*iWdM)
 				       +nz*ndotdUd
                                      + unmax*(iWdM-iWdP) ));
           }
