@@ -90,7 +90,8 @@ SOFTWARE.
           dfloat WP = WM;
 
           //get boundary value
-          insVelocityDirichletConditions3D(bc, nu, time,            \
+	  dfloat ndotU = 1;								
+          insVelocityDirichletConditions3D(bc, ndotU, nu, time,            \
                                            x[idM], y[idM], z[idM],  \
                                            nx, ny, nz,              \
                                            UM, VM, WM,              \

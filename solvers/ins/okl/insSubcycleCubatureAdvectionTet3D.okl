@@ -24,6 +24,7 @@ SOFTWARE.
 
 */
 
+#define p_half ((dfloat)0.5)
 
 // compute NU = -div(uxu) with cubature
 @kernel void insSubcycleAdvectionCubatureVolumeTet3D_orig(const dlong Nelements,
@@ -184,13 +185,13 @@ SOFTWARE.
   for(dlong e=0;e<Nelements;++e;@outer(0)){  // for all elements
 
     // Hold Flux Vector on Shared
-    @shared dfloat  s_U[p_cubNp];
-    @shared dfloat  s_V[p_cubNp];
-    @shared dfloat  s_W[p_cubNp];	
+    @shared dfloat s_U[p_cubNp];
+    @shared dfloat s_V[p_cubNp];
+    @shared dfloat s_W[p_cubNp];	
     @shared dfloat s_Ue[p_Np];
     @shared dfloat s_Ve[p_Np];
     @shared dfloat s_We[p_Np];
-    @shared dfloat  s_divU[p_cubNp];
+    @shared dfloat s_divU[p_cubNp];
 
     @exclusive dfloat Uflux, Vflux, Wflux, cdivU;
     @exclusive dfloat drdx, drdy, drdz, dsdx, dsdy, dsdz, dtdx, dtdy, dtdz;
@@ -221,8 +222,8 @@ SOFTWARE.
 	  s_W[n] = U[id+2*p_Np];
 	  
 	  s_Ue[n] = drdx*Uen + drdy*Ven + drdz*Wen;
-	  s_Ve[n] = dsdx*Uen + dsdy*Ven + dsdz*Ven;
-	  s_We[n] = dtdx*Uen + dtdy*Ven + dtdz*Ven;
+	  s_Ve[n] = dsdx*Uen + dsdy*Ven + dsdz*Wen;
+	  s_We[n] = dtdx*Uen + dtdy*Ven + dtdz*Wen;
 	}
       }
     }
@@ -232,7 +233,7 @@ SOFTWARE.
       dfloat cUr = 0, cUs = 0, cUt = 0;
       dfloat cVr = 0, cVs = 0, cVt = 0;
       dfloat cWr = 0, cWs = 0, cWt = 0;
-      dfloat cUer = 0, cVes = 0, cWes = 0;
+      dfloat cUer = 0, cVes = 0, cWet = 0;
       
 #pragma unroll p_Np
       for(int i=0;i<p_Np;++i){
@@ -263,14 +264,14 @@ SOFTWARE.
 	cUt  += cDt_ni*Ui;
 	cVt  += cDt_ni*Vi;
 	cWt  += cDt_ni*Wi;
-	cVet += cDt_ni*Vei;
+	cWet += cDt_ni*Vei;
       }
 
       cdivU  = (drdx*cUr + dsdx*cUs + dtdx*cUt);
       cdivU += (drdy*cVr + dsdy*cVs + dtdy*cVt);
       cdivU += (drdz*cWr + dsdz*cWs + dtdz*cWt);
 
-      dfloat cdivUe = cUer+cVes+cWes;
+      dfloat cdivUe = cUer+cVes+cWet;
       
       Uflux  = cUe*cUr + cVe*cUs + cWe*cUt;
       Uflux += p_half*cU*cdivUe;
@@ -453,10 +454,11 @@ SOFTWARE.
             // apply boundary conditions
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0){
-              insVelocityDirichletConditions3D(bc,nu,time, intx[n+e*p_Nfaces*p_intNfp], \
-                                                        inty[n+e*p_Nfaces*p_intNfp], \
-                                                        intz[n+e*p_Nfaces*p_intNfp], \
-                                                  nx, ny, nz, iUdM,iVdM,iWdM, &iUdP, &iVdP, &iWdP);
+	      dfloat ndotU = iUM*nx + iVM*ny + iWM*nz; // assume advection velocity C0
+              insVelocityDirichletConditions3D(bc,ndotU, nu,time, intx[n+e*p_Nfaces*p_intNfp], \
+					       inty[n+e*p_Nfaces*p_intNfp], \
+					       intz[n+e*p_Nfaces*p_intNfp], \
+					       nx, ny, nz, iUdM,iVdM,iWdM, &iUdP, &iVdP, &iWdP);
             }
 
 

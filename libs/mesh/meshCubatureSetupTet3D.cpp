@@ -40,10 +40,27 @@ void mesh_t::CubatureSetupTet3D(){
   // Defined such that cubProject * cubW * cubInterp = Identity
   CubaturePmatrixTet3D(N, r, s, t, cubr, cubs, cubt, cubProject);
 
-  //cubature derivates matrices, cubD: differentiate on cubature nodes
-  // we dont use cubD on Tris/Tets  so skip computing
+  memory<dfloat> cubInterpT(cubNp*Np*(dim+1)); // hide diff interp matrices at end of cub interp matrix
+  
+  for(int n=0;n<cubNp;++n){
+    for(int m=0;m<Np;++m){
+      dfloat dr = 0, ds = 0, dt = 0;
+      for(int i=0;i<Np;++i){
+	dfloat Drmi = Dr[i*Np+m];
+	dfloat Dsmi = Ds[i*Np+m];
+	dfloat Dtmi = Dt[i*Np+m];
+	dr += cubInterp[n*Np+i]*Drmi;
+	ds += cubInterp[n*Np+i]*Dsmi;
+	dt += cubInterp[n*Np+i]*Dtmi;
+      }
+      
+      cubInterpT[n+m*cubNp + 0*Np*cubNp] = cubInterp[n*Np+m];
+      cubInterpT[n+m*cubNp + 1*Np*cubNp] = dr;
+      cubInterpT[n+m*cubNp + 2*Np*cubNp] = ds;
+      cubInterpT[n+m*cubNp + 3*Np*cubNp] = dt;
+    }
+  }
 
-  // Instead, it's cheaper to:
   // make weak cubature derivatives cubPDT = cubProject * cubD^T
   CubatureWeakDmatricesTet3D(N, r, s, t,
                              cubr, cubs, cubt,
@@ -69,8 +86,8 @@ void mesh_t::CubatureSetupTet3D(){
 
   // build transposes (we hold matrices as column major on device)
   memory<dfloat> cubProjectT(cubNp*Np);
-  memory<dfloat> cubInterpT(cubNp*Np);
-  linAlg_t::matrixTranspose(cubNp, Np, cubInterp, Np, cubInterpT, cubNp);
+  //  memory<dfloat> cubInterpT(cubNp*Np);
+  //  linAlg_t::matrixTranspose(cubNp, Np, cubInterp, Np, cubInterpT, cubNp);
   linAlg_t::matrixTranspose(Np, cubNp, cubProject, cubNp, cubProjectT, Np);
 
   //pre-multiply cubProject by W on device
@@ -103,7 +120,8 @@ void mesh_t::CubatureSetupTet3D(){
   linAlg_t::matrixTranspose(Np, Nfaces*intNfp, intLIFT, Nfaces*intNfp, intLIFTT, Np);
   linAlg_t::matrixTranspose(Nfaces*intNfp, Nfp, intInterp, Nfp, intInterpT, Nfaces*intNfp);
 
-  o_cubInterp  = platform.malloc<dfloat>(Np*cubNp, cubInterpT);
+  o_cubInterp  = platform.malloc<dfloat>(Np*cubNp*(dim+1), cubInterpT);
+  
   o_cubProject = platform.malloc<dfloat>(Np*cubNp, cubProjectT);
 
   o_cubPDT = platform.malloc<dfloat>(3*Np*cubNp, cubPDTT);

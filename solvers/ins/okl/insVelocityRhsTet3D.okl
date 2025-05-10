@@ -100,7 +100,8 @@ SOFTWARE.
 
         const int bc = mapB[idM];
         if(bc>0) {
-          insVelocityDirichletConditions3D(bc, nu, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, &uP, &vP, &wP);
+	  dfloat ndotU = 1;								
+          insVelocityDirichletConditions3D(bc, ndotU, nu, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, &uP, &vP, &wP);
           insVelocityNeumannConditions3D(bc, nu, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, &dudxP,&dudyP,&dudzP, &dvdxP,&dvdyP,&dvdzP, &dwdxP,&dwdyP,&dwdzP);
         }
 
@@ -285,7 +286,8 @@ SOFTWARE.
 
         const int bc = EToB[face+p_Nfaces*e];
         if(bc>0) {
-          insVelocityDirichletConditions3D(bc, nu, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, &uP, &vP, &wP);
+	  dfloat ndotU = 1;								
+          insVelocityDirichletConditions3D(bc, ndotU, nu, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, &uP, &vP, &wP);
           insVelocityNeumannConditions3D(bc, nu, time, x[idM], y[idM], z[idM], nx, ny, nz, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, &dudxP,&dudyP,&dudzP, &dvdxP,&dvdyP,&dvdzP, &dwdxP,&dwdyP,&dwdzP);
         }
 
@@ -468,7 +470,8 @@ SOFTWARE.
           dfloat uP = 0.f;
           dfloat vP = 0.f;
           dfloat wP = 0.f;
-          insVelocityDirichletConditions3D(bc, nu, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP);
+	  dfloat ndotU = 1;								
+          insVelocityDirichletConditions3D(bc, ndotU, nu, time, x[idM], y[idM], z[idM], nx, ny, nz, uM, vM, wM, &uP, &vP, &wP);
           UH[idM] = uP;
           VH[idM] = vP;
           WH[idM] = wP;

@@ -69,8 +69,8 @@ void ins_t::Report(dfloat time, int tstep){
       
       PlotFields(u, p, Vort, std::string(fname));
     }
-    
-    {
+
+    if(mesh.dim==2){
       std::string name;
       settings.getSetting("VIZ OUTPUT FILE NAME", name);
       

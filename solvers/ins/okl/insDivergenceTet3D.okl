@@ -165,7 +165,8 @@ SOFTWARE.
             // apply boundary condition
             const int bc = EToB[face+p_Nfaces*e];
             if(bc>0) {
-              insVelocityDirichletConditions3D(bc,nu,time, x[idM],y[idM],z[idM], nx,ny,nz, uM,vM,wM, &uP,&vP,&wP);
+       	      dfloat ndotU = 1;								
+              insVelocityDirichletConditions3D(bc,ndotU, nu,time, x[idM],y[idM],z[idM], nx,ny,nz, uM,vM,wM, &uP,&vP,&wP);
               // // Use strong form of the BCs
               uP = 2.f*uP-uM;
               vP = 2.f*vP-vM;
