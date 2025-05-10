@@ -199,8 +199,8 @@ void mass_t::BuildOperatorDiagonalContinuousTri2D(memory<dfloat>& A) {
       dlong vid = 2*lid + 1;
       
       
-      A[2*(eM*mesh.Np+n)+0] = J*mesh.MM[n+n*mesh.Np];
-      A[2*(eM*mesh.Np+n)+1] = J*mesh.MM[n+n*mesh.Np];
+      A[mesh.dim*(eM*mesh.Np+n)+0] = J*mesh.MM[n+n*mesh.Np];
+      A[mesh.dim*(eM*mesh.Np+n)+1] = J*mesh.MM[n+n*mesh.Np];
     }
   }
 
@@ -223,8 +223,8 @@ void mass_t::BuildOperatorDiagonalContinuousQuad2D(memory<dfloat>& A) {
       for (int n=0;n<mesh.Nq;++n) {
         dlong iid = n+m*mesh.Nq;
 	dlong lid = iid + e*mesh.Np;
-	dlong uid = 2*lid + 0;
-	dlong vid = 2*lid + 1;
+	dlong uid = mesh.dim*lid + 0;
+	dlong vid = mesh.dim*lid + 1;
 
 	dlong vbase = e*mesh.Np*mesh.Nvgeo;
 	dfloat JW = mesh.vgeo[vbase + n + m*mesh.Nq + mesh.JWID*mesh.Np];
@@ -235,11 +235,23 @@ void mass_t::BuildOperatorDiagonalContinuousQuad2D(memory<dfloat>& A) {
   }
 }
 
-
 void mass_t::BuildOperatorDiagonalContinuousTet3D(memory<dfloat>& A) {
+  
+  for(dlong eM=0;eM<mesh.Nelements;++eM){
+    dfloat J   = mesh.wJ[eM];
 
-  std::cout << "BuildOperatorDiagonalContinuousTet3D not implemented" << std::endl;
-  exit(-1);
+    /* start with stiffness matrix  */
+    for(int n=0;n<mesh.Np;++n){
+      dlong lid = n + eM*mesh.Np;
+      dlong uid = mesh.dim*lid + 0;
+      dlong vid = mesh.dim*lid + 1;
+      dlong wid = mesh.dim*lid + 1;
+      
+      A[mesh.dim*(eM*mesh.Np+n)+0] = J*mesh.MM[n+n*mesh.Np];
+      A[mesh.dim*(eM*mesh.Np+n)+1] = J*mesh.MM[n+n*mesh.Np];
+      A[mesh.dim*(eM*mesh.Np+n)+2] = J*mesh.MM[n+n*mesh.Np];
+    }
+  }
 }
 
 void mass_t::BuildOperatorDiagonalContinuousHex3D(memory<dfloat>& A) {
