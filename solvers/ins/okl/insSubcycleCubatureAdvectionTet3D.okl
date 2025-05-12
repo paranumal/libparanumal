@@ -32,7 +32,7 @@ SOFTWARE.
 
 
 // compute NU = -div(uxu) with cubature
-@kernel void insSubcycleAdvectionCubatureVolumeTet3D(const dlong Nelements,
+@kernel void insSubcycleAdvectionCubatureVolumeTet3D_old(const dlong Nelements,
                                            @restrict const  dfloat *  vgeo,
                                            @restrict const  dfloat *  cubvgeo,
                                            @restrict const  dfloat *  cubD,
@@ -176,7 +176,7 @@ SOFTWARE.
 }
 
 
-@kernel void insSubcycleAdvectionCubatureVolumeTet3D_new(const dlong Nelements,
+@kernel void insSubcycleAdvectionCubatureVolumeTet3D(const dlong Nelements,
 						     @restrict const  dfloat *  vgeo,
 						     @restrict const  dfloat *  cubvgeo,
 						     @restrict const  dfloat *  cubD,
@@ -343,7 +343,7 @@ SOFTWARE.
 
 
 
-@kernel void insSubcycleAdvectionCubatureSurfaceTet3D(const dlong Nelements,
+@kernel void insSubcycleAdvectionCubatureSurfaceTet3D_old(const dlong Nelements,
                                             @restrict const  dfloat *  vgeo,
                                             @restrict const  dfloat *  sgeo,
                                             @restrict const  dfloat *  intInterp, // interpolate to integration nodes
@@ -534,7 +534,7 @@ SOFTWARE.
   }
 }
 
-@kernel void insSubcycleAdvectionCubatureSurfaceTet3D_new(const dlong Nelements,
+@kernel void insSubcycleAdvectionCubatureSurfaceTet3D(const dlong Nelements,
 						      @restrict const  dfloat *  vgeo,
 						      @restrict const  dfloat *  sgeo,
 						      @restrict const  dfloat *  intInterp, // interpolate to integration nodes
