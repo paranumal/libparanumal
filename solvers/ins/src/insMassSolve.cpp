@@ -34,8 +34,8 @@ void ins_t::MassSolve(deviceMemory<dfloat>& o_U){
   
   dlong Ntotal = (mesh.Nelements+mesh.totalHaloPairs)*mesh.Np*Nfields;
   dlong Nglobal = (massSolver.Ndofs+massSolver.Nhalo);
-  int maxIter = 10;
-  int verbose = 1;
+  int maxIter = 1000;
+  bool verbose = false;
 
   deviceMemory<dfloat> o_GrhsU = platform.reserve<dfloat>(Nglobal);
   deviceMemory<dfloat> o_GUH   = platform.reserve<dfloat>(Nglobal);

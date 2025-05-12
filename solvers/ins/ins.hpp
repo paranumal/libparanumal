@@ -161,6 +161,12 @@ public:
   deviceMemory<dlong> o_uGlobalToLocal;
   deviceMemory<dlong> o_vGlobalToLocal;
   void Project(deviceMemory<dfloat>& o_U, int Nfilt);
+
+  deviceMemory<dfloat> o_invMM;
+  deviceMemory<dfloat> o_invwJ;
+
+  deviceMemory<pfloat> o_pfloat_invMM;
+  deviceMemory<pfloat> o_pfloat_invwJ;
   
   ins_t() = default;
   ins_t(platform_t &_platform, mesh_t &_mesh,

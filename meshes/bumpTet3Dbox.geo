@@ -108,3 +108,5 @@ Physical Surface("Inflow", 2) = {22, 23, 24, 15};
 Physical Surface("Wall", 1) = {17, 18, 20, 16, 19};
 //+
 Physical Surface("Outflow", 3) = {21};
+//+
+Physical Volume("Domain", 31) = {1};

@@ -561,10 +561,7 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
   maxWaveSpeedKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 
-
-
 #if 1
-
   if(mesh.elementType==Mesh::QUADRILATERALS){
     fileName   = oklFilePrefix + "insProject" + suffix + oklFileSuffix;
 
@@ -573,7 +570,6 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
     kernelName = "insProjectScatter" + suffix;
     projectScatterKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
-
   
     memory<dlong> uGlobalToLocal(mesh.Nelements*mesh.Np,(dlong)0);
     memory<dlong> vGlobalToLocal(mesh.Nelements*mesh.Np,(dlong)0);
