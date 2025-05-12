@@ -39,6 +39,7 @@ SOFTWARE.
     @shared dfloat s_q[p_Nfields][p_Np];
 
     for(int n=0;n<p_Np;++n;@inner(0)){
+
       const dlong base =n + e*p_Np*p_Nfields;
       for(int fld=0;fld<p_Nfields;++fld){
 	s_q[fld][n] = q[base+fld*p_Np];
@@ -123,8 +124,6 @@ SOFTWARE.
 					     @restrict dfloat * A){
 
 
-#define p_two ((dfloat)2)
-  
   for(dlong e=0;e<Nelements;++e;@outer(0)){
 
     for (int n=0;n<p_Np;++n;@inner(0)) {
@@ -224,6 +223,21 @@ SOFTWARE.
       for(int fld=0;fld<p_Nfields;++fld){
 	UL[idL+fld*p_Np] = UG[id+fld];
       }
+    }
+  }
+}
+
+
+@kernel void massWeightTet3D(const dlong   Ngather,
+			     @restrict pfloat *wG,
+			     @restrict pfloat *UG){
+  
+
+  for(int n=0;n<Ngather;++n;@tile(256,@outer(0),@inner(0))){
+    dlong id = n*p_Nfields;
+    dfloat wn = wG[n];
+    for(int fld=0;fld<p_Nfields;++fld){
+      UG[id+fld] *= wn;
     }
   }
 }
