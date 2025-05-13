@@ -310,6 +310,7 @@ SOFTWARE.
       Wflux = 0;
       
       if(n<p_Np){
+#pragma unroll p_cubNp
 	for(int i=0;i<p_cubNp;++i){
 	  dfloat Pni   = cubProject[n+i*p_Np];
 	  dfloat PDrni = cubPDT[n+i*p_Np+0*p_Np*p_cubNp];
