@@ -185,7 +185,7 @@ void mass_t::BuildOperatorDiagonal(deviceMemory<pfloat> &o_invDiagA ){
 
   reciprocalKernel(Ndofs, o_diagA, o_invDiagA);
 
-  {
+  if(0){
     memory<pfloat> tmp(Ndofs);
     o_invDiagA.copyTo(tmp);
     //    for(int n=0;n<Ndofs;++n){
@@ -704,7 +704,7 @@ void mass_t::Setup(platform_t& _platform, mesh_t& _mesh, settings_t& _settings,
   comm = _mesh.comm;
   settings = _settings;
 
-  settings.report();
+  //  settings.report();
   
   Nfields = mesh.dim;
 

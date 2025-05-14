@@ -1324,4 +1324,397 @@ SOFTWARE.
   }
 }
 
+#undef p_Npt
+#define p_Npt 2
 
+// skew symmetric
+@kernel void insSubcycleAdvectionCubatureVolumeTet3D_skew(const dlong Nelements,
+						     @restrict const  dfloat *  vgeo,
+						     @restrict const  dfloat *  cubvgeo,
+						     @restrict const  dfloat *  cubD,
+						     @restrict const  dfloat *  cubPDT,
+						     @restrict const  dfloat *  cubInterp,
+						     @restrict const  dfloat *  cubProject,
+						     @restrict const  dfloat *  Ue,
+						     @restrict const  dfloat *  U,
+						     @restrict  dfloat *  RHS){
+
+  for(dlong eo=0;eo<Nelements;eo+=p_Npt;@outer(0)){  // for all elements
+
+    // Hold Flux Vector on Shared
+
+    @shared dfloat s_vgeo[p_Npt][p_Nvgeo];
+    
+    @shared dfloat s_U[p_Npt][p_Np];
+    @shared dfloat s_V[p_Npt][p_Np];
+    @shared dfloat s_W[p_Npt][p_Np];	
+    @shared dfloat s_Ue[p_Npt][p_Np];
+    @shared dfloat s_Ve[p_Npt][p_Np];
+    @shared dfloat s_We[p_Npt][p_Np];
+    @shared dfloat s_divFlux11[p_Npt][p_cubNp];
+    @shared dfloat s_divFlux12[p_Npt][p_cubNp];
+    @shared dfloat s_divFlux13[p_Npt][p_cubNp];
+    @shared dfloat s_divFlux21[p_Npt][p_cubNp];
+    @shared dfloat s_divFlux22[p_Npt][p_cubNp];
+    @shared dfloat s_divFlux23[p_Npt][p_cubNp];
+    @shared dfloat s_divFlux31[p_Npt][p_cubNp];
+    @shared dfloat s_divFlux32[p_Npt][p_cubNp];
+    @shared dfloat s_divFlux33[p_Npt][p_cubNp];
+    @shared dfloat s_Uflux[p_Npt][p_cubNp], s_Vflux[p_Npt][p_cubNp], s_Wflux[p_Npt][p_cubNp];
+    
+    for(int n=0;n<p_cubNp;++n;@inner(0)){     // for all nodes in this element
+
+      int m=n;
+      while(m<p_Npt*p_Nvgeo){
+	if(eo*p_Nvgeo+m<p_Nvgeo*Nelements)
+	  s_vgeo[0][m] = vgeo[eo*p_Nvgeo+m];
+	m+=p_cubNp;
+      }
+    }
+
+    for(int n=0;n<p_cubNp;++n;@inner(0)){     // for all nodes in this element
+
+#pragma unroll 
+      for(int es=0;es<p_Npt;++es){	
+	dlong e = eo + es;
+	if(n<p_Np && e<Nelements){
+	  
+	  const dlong id = e*p_Np*p_NVfields + n;
+	  
+	  const dfloat Uen = Ue[id+0*p_Np];
+	  const dfloat Ven = Ue[id+1*p_Np];
+	  const dfloat Wen = Ue[id+2*p_Np];
+	  
+	  s_U[es][n] = U[id+0*p_Np];
+	  s_V[es][n] = U[id+1*p_Np];
+	  s_W[es][n] = U[id+2*p_Np];
+	  
+	  s_Ue[es][n] = s_vgeo[es][p_RXID]*Uen + s_vgeo[es][p_RYID]*Ven + s_vgeo[es][p_RZID]*Wen;
+	  s_Ve[es][n] = s_vgeo[es][p_SXID]*Uen + s_vgeo[es][p_SYID]*Ven + s_vgeo[es][p_SZID]*Wen;
+	  s_We[es][n] = s_vgeo[es][p_TXID]*Uen + s_vgeo[es][p_TYID]*Ven + s_vgeo[es][p_TZID]*Wen;
+	}
+      }
+    }
+      
+    for(int n=0;n<p_cubNp;++n;@inner(0)){     // for all nodes in this element
+
+      dfloat cU[p_Npt] = {0.},   cV[p_Npt] = {0.}, cW[p_Npt] = {0.};
+      dfloat cUe[p_Npt] = {0.}, cVe[p_Npt] = {0.}, cWe[p_Npt] = {0.};
+      dfloat cUr[p_Npt] = {0.}, cUs[p_Npt] = {0.}, cUt[p_Npt] = {0.};
+      dfloat cVr[p_Npt] = {0.}, cVs[p_Npt] = {0.}, cVt[p_Npt] = {0.};
+      dfloat cWr[p_Npt] = {0.}, cWs[p_Npt] = {0.}, cWt[p_Npt] = {0.};
+      
+      //#pragma unroll p_Np
+      //#pragma unroll p_unrNp
+#pragma unroll
+      for(int i=0;i<p_Np;++i){
+	const dfloat cIni   = cubInterp[n+i*p_cubNp + 0*p_Np*p_cubNp];
+	const dfloat cDr_ni = cubInterp[n+i*p_cubNp + 1*p_Np*p_cubNp];
+	const dfloat cDs_ni = cubInterp[n+i*p_cubNp + 2*p_Np*p_cubNp];
+	const dfloat cDt_ni = cubInterp[n+i*p_cubNp + 3*p_Np*p_cubNp];
+
+#pragma unroll p_Npt
+	//#pragma unroll 
+	for(int es=0;es<p_Npt;++es){
+	  dfloat Ui = s_U[es][i];
+	  dfloat Vi = s_V[es][i];
+	  dfloat Wi = s_W[es][i];
+	  dfloat Uei = s_Ue[es][i];
+	  dfloat Vei = s_Ve[es][i];
+	  dfloat Wei = s_We[es][i];
+	  	 
+	  cU[es]  += cIni*Ui;
+	  cV[es]  += cIni*Vi;
+	  cW[es]  += cIni*Wi;
+
+	  cUe[es] += cIni*Uei;
+	  cVe[es] += cIni*Vei;
+	  cWe[es] += cIni*Wei;
+	  
+	  cUr[es] += cDr_ni*Ui;
+	  cVr[es] += cDr_ni*Vi;
+	  cWr[es] += cDr_ni*Wi;
+	  
+	  cUs[es] += cDs_ni*Ui;
+	  cVs[es] += cDs_ni*Vi;
+	  cWs[es] += cDs_ni*Wi;
+
+	  cUt[es] += cDt_ni*Ui;
+	  cVt[es] += cDt_ni*Vi;
+	  cWt[es] += cDt_ni*Wi;
+	}
+      }
+
+      //#pragma unroll p_Npt
+#pragma unroll 
+      for(int es=0;es<p_Npt;++es){
+	
+	dfloat rx = s_vgeo[es][p_RXID], ry = s_vgeo[es][p_RYID], rz = s_vgeo[es][p_RZID];
+	dfloat sx = s_vgeo[es][p_SXID], sy = s_vgeo[es][p_SYID], sz = s_vgeo[es][p_SZID];
+	dfloat tx = s_vgeo[es][p_TXID], ty = s_vgeo[es][p_TYID], tz = s_vgeo[es][p_TZID];
+
+	dfloat cdivU;
+	cdivU  = rx*cUr[es] + sx*cUs[es] + tx*cUt[es];
+	cdivU += ry*cVr[es] + sy*cVs[es] + ty*cVt[es];
+	cdivU += rz*cWr[es] + sz*cWs[es] + tz*cWt[es];
+
+	dfloat sigmaVol = 1e-3;
+	cdivU *= sigmaVol;
+	
+	dfloat F11 = rx*cdivU - p_half*cUe[es]*cU[es];
+	dfloat F12 = sx*cdivU - p_half*cVe[es]*cU[es];
+	dfloat F13 = tx*cdivU - p_half*cWe[es]*cU[es];
+	
+	s_divFlux11[es][n] = F11;
+	s_divFlux12[es][n] = F12;
+	s_divFlux13[es][n] = F13;
+	
+	dfloat F21 = ry*cdivU - p_half*cUe[es]*cV[es];
+	dfloat F22 = sy*cdivU - p_half*cVe[es]*cV[es];
+	dfloat F23 = ty*cdivU - p_half*cWe[es]*cV[es];
+	
+	s_divFlux21[es][n] = F21;
+	s_divFlux22[es][n] = F22;
+	s_divFlux23[es][n] = F23;
+	
+	dfloat F31 = rz*cdivU - p_half*cUe[es]*cW[es];
+	dfloat F32 = sz*cdivU - p_half*cVe[es]*cW[es];
+	dfloat F33 = tz*cdivU - p_half*cWe[es]*cW[es];
+	
+	s_divFlux31[es][n] = F31;
+	s_divFlux32[es][n] = F32;
+	s_divFlux33[es][n] = F33;
+	
+	s_Uflux[es][n]  = p_half*(cUe[es]*cUr[es] + cVe[es]*cUs[es] + cWe[es]*cUt[es]);
+	s_Vflux[es][n]  = p_half*(cUe[es]*cVr[es] + cVe[es]*cVs[es] + cWe[es]*cVt[es]);
+	s_Wflux[es][n]  = p_half*(cUe[es]*cWr[es] + cVe[es]*cWs[es] + cWe[es]*cWt[es]);
+      }
+    }
+    
+    for(int n=0;n<p_cubNp;++n;@inner(0)){     // for all nodes in this element
+
+      if(n<p_Np){
+
+	dfloat Uflux[p_Npt] = {0.}, Vflux[p_Npt] = {0.}, Wflux[p_Npt] = {0.};
+
+#pragma unroll p_cubNp
+	for(int i=0;i<p_cubNp;++i){
+	  dfloat Pni  = cubProject[n+i*p_Np];
+	  
+#pragma unroll
+	  for(int es=0;es<p_Npt;++es){
+	    Uflux[es] += Pni*s_Uflux[es][i];
+	    Vflux[es] += Pni*s_Vflux[es][i];
+	    Wflux[es] += Pni*s_Wflux[es][i];
+	  }	    
+	}
+	
+#pragma unroll 
+	for(int i=0;i<p_cubNp;++i){
+	  dfloat PDrni = cubPDT[n+i*p_Np+0*p_Np*p_cubNp];
+	  dfloat PDsni = cubPDT[n+i*p_Np+1*p_Np*p_cubNp];
+	  dfloat PDtni = cubPDT[n+i*p_Np+2*p_Np*p_cubNp];
+	  
+#pragma unroll
+	  for(int es=0;es<p_Npt;++es){
+	    Uflux[es] += PDrni*s_divFlux11[es][i];
+	    Vflux[es] += PDrni*s_divFlux21[es][i];
+	    Wflux[es] += PDrni*s_divFlux31[es][i];
+	    
+	    Uflux[es] += PDsni*s_divFlux12[es][i];
+	    Vflux[es] += PDsni*s_divFlux22[es][i];
+	    Wflux[es] += PDsni*s_divFlux32[es][i];
+	    
+	    Uflux[es] += PDtni*s_divFlux13[es][i];
+	    Vflux[es] += PDtni*s_divFlux23[es][i];
+	    Wflux[es] += PDtni*s_divFlux33[es][i];
+	  }	    
+	}
+	
+	//#pragma unroll p_Npt
+#pragma unroll 
+	for(int es=0;es<p_Npt;++es){
+	  dlong e = es + eo;
+	  if(e<Nelements){
+	    const dlong id = e*p_Np*p_NVfields+n;
+	    RHS[id+0*p_Np] = -Uflux[es];
+	    RHS[id+1*p_Np] = -Vflux[es];
+	    RHS[id+2*p_Np] = -Wflux[es];
+	  }
+	}
+      }
+    }
+  }
+}
+
+
+
+
+@kernel void insSubcycleAdvectionCubatureSurfaceTet3D_skew(const dlong Nelements,
+						      @restrict const  dfloat *  vgeo,
+						      @restrict const  dfloat *  sgeo,
+						      @restrict const  dfloat *  intInterp, // interpolate to integration nodes
+						      @restrict const  dfloat *  intLIFT, // lift from integration to interpolation nodes
+						      @restrict const  dlong  *  vmapM,
+						      @restrict const  dlong  *  vmapP,
+						      @restrict const  int    *  EToB,
+						      const dfloat time,
+						      @restrict const  dfloat *  intx, // integration nodes
+						      @restrict const  dfloat *  inty,
+						      @restrict const  dfloat *  intz,
+						      const dfloat nu,
+						      @restrict const  dfloat *  Ue,
+						      @restrict const  dfloat *  U,
+						      @restrict  dfloat *  RHS){
+  
+  // for all elements
+  for(dlong eo=0;eo<Nelements;eo+=p_cubNblockS;@outer(0)){
+
+    // @shared storage for flux terms
+    @shared dfloat s_UM[p_cubNblockS][p_NfacesNfp];
+    @shared dfloat s_VM[p_cubNblockS][p_NfacesNfp];
+    @shared dfloat s_WM[p_cubNblockS][p_NfacesNfp];
+
+    @shared dfloat s_UdM[p_cubNblockS][p_NfacesNfp];
+    @shared dfloat s_VdM[p_cubNblockS][p_NfacesNfp];
+    @shared dfloat s_WdM[p_cubNblockS][p_NfacesNfp];
+    @shared dfloat s_UdP[p_cubNblockS][p_NfacesNfp];
+    @shared dfloat s_VdP[p_cubNblockS][p_NfacesNfp];
+    @shared dfloat s_WdP[p_cubNblockS][p_NfacesNfp];
+
+    @shared dfloat s_iFluxU[p_cubNblockS][p_intNfpNfaces];
+    @shared dfloat s_iFluxV[p_cubNblockS][p_intNfpNfaces];
+    @shared dfloat s_iFluxW[p_cubNblockS][p_intNfpNfaces];
+
+    // for all face nodes of all elements
+    for(int es=0;es<p_cubNblockS;++es;@inner(1)){
+      for(int n=0;n<p_cubMaxNodes;++n;@inner(0)){
+        const dlong e = eo + es;
+        if(e<Nelements && n<(p_Nfaces*p_Nfp)){
+	  // indices of negative and positive traces of face node
+	  const dlong id  = e*p_Nfp*p_Nfaces + n;
+	  const dlong idM = vmapM[id];
+	  const dlong idP = vmapP[id];
+	  
+	  // load traces
+	  const dlong eM = e;
+	  const dlong eP = idP/p_Np;
+
+	  const int vidM = idM%p_Np;
+	  const int vidP = idP%p_Np;
+	  
+	  const dlong qbaseM = eM*p_Np*p_NVfields + vidM;
+	  const dlong qbaseP = eP*p_Np*p_NVfields + vidP;
+	  
+	  // load negative and positive trace node values of velocity
+	  s_UM[es][n] = Ue[qbaseM+0*p_Np];
+	  s_VM[es][n] = Ue[qbaseM+1*p_Np];
+	  s_WM[es][n] = Ue[qbaseM+2*p_Np];
+	  
+	  s_UdM[es][n] = U[qbaseM+0*p_Np];
+	  s_VdM[es][n] = U[qbaseM+1*p_Np];
+	  s_WdM[es][n] = U[qbaseM+2*p_Np];
+	  s_UdP[es][n] = U[qbaseP+0*p_Np];
+	  s_VdP[es][n] = U[qbaseP+1*p_Np];
+	  s_WdP[es][n] = U[qbaseP+2*p_Np];
+        }
+      }
+    }
+
+
+    // interpolate to surface integration nodes
+    for(int es=0;es<p_cubNblockS;++es;@inner(1)){
+      for(int n=0;n<p_cubMaxNodes;++n;@inner(0)){
+        const dlong e = eo + es;
+        if(e<Nelements && n<(p_Nfaces*p_intNfp)){
+	  const int face = n/p_intNfp; // find face that owns this integration node
+	  
+	  // load surface geofactors for this face
+	  const dlong sid   = p_Nsgeo*(e*p_Nfaces+face);
+	  const dfloat nx   = sgeo[sid+p_NXID];
+	  const dfloat ny   = sgeo[sid+p_NYID];
+	  const dfloat nz   = sgeo[sid+p_NZID];
+	  const dfloat sJ   = sgeo[sid+p_SJID];
+	  const dfloat invJ = sgeo[sid+p_IJID];
+	  
+	  dfloat iUM  = 0.f, iVM  = 0.f, iWM  = 0.f;
+	  dfloat iUdM = 0.f, iVdM = 0.f, iWdM = 0.f;
+	  dfloat iUdP = 0.f, iVdP = 0.f, iWdP = 0.f;
+	  
+	  // local block interpolation (face nodes to integration nodes)
+#pragma unroll p_Nfp
+	  for(int m=0;m<p_Nfp;++m){
+	    const dfloat iInm = intInterp[n+m*p_Nfaces*p_intNfp];
+	    const int fm = face*p_Nfp+m;
+	    
+	    iUM  += iInm*s_UM[es][fm];
+	    iVM  += iInm*s_VM[es][fm];
+	    iWM  += iInm*s_WM[es][fm];
+	    
+	    iUdM += iInm*s_UdM[es][fm];
+	    iVdM += iInm*s_VdM[es][fm];
+	    iWdM += iInm*s_WdM[es][fm];
+	    
+	    iUdP += iInm*s_UdP[es][fm];
+	    iVdP += iInm*s_VdP[es][fm];
+	    iWdP += iInm*s_WdP[es][fm];
+	  }
+	  
+	  const dfloat ndotU = iUM*nx + iVM*ny + iWM*nz; // assume advection velocity C0	      
+	  
+	  // apply boundary conditions
+	  const int bc = EToB[face+p_Nfaces*e];
+	  
+	  if(bc>0){
+	    dfloat ix = intx[n+e*p_Nfaces*p_intNfp];
+	    dfloat iy = inty[n+e*p_Nfaces*p_intNfp];
+	    dfloat iz = intz[n+e*p_Nfaces*p_intNfp];
+	    insVelocityDirichletConditions3D(bc,ndotU, nu,time, ix, iy, iz, \
+					     nx, ny, nz, iUdM,iVdM,iWdM, &iUdP, &iVdP, &iWdP);
+	  }
+	    
+	  const dfloat sigmaSurf = 0.1; // TW ?
+	  const dfloat ndotdUd = sigmaSurf*(nx*(iUdM-iUdP) + ny*(iVdM-iVdP) + nz*(iWdM-iWdP));
+	  
+	  // evaluate "flux" terms: LLF
+	  const dfloat sc = p_half*invJ*sJ ;
+	  
+	  dfloat fac = ndotU - fabs(ndotU); // advection velocity - penalty
+
+	  // assume advection velocity is C0
+	  s_iFluxU[es][n] = sc*(-iUdM*ndotU + fac*(iUdP - iUdM)+nx*ndotdUd);
+	  s_iFluxV[es][n] = sc*(-iVdM*ndotU + fac*(iVdP - iVdM)+ny*ndotdUd);
+	  s_iFluxW[es][n] = sc*(-iWdM*ndotU + fac*(iWdP - iWdM)+nz*ndotdUd);
+	}
+      }
+    }
+
+
+    // lift from surface integration to volume nodes
+    for(int es=0;es<p_cubNblockS;++es;@inner(1)){
+      for(int n=0;n<p_cubMaxNodes;++n;@inner(0)){
+        const dlong e = eo + es;
+        if(e<Nelements && n<p_Np){
+	  
+	  dfloat rhsu = 0.0;
+	  dfloat rhsv = 0.0;
+	  dfloat rhsw = 0.0;
+	  
+#pragma unroll p_intNfpNfaces
+	  for(int m=0;m<p_intNfpNfaces;++m){
+	    // RefMassMatrix^{-1}*cInterp^t*cWeight
+	    const dfloat L = intLIFT[n+m*p_Np];
+	    rhsu += L*s_iFluxU[es][m];
+	    rhsv += L*s_iFluxV[es][m];
+	    rhsw += L*s_iFluxW[es][m];
+	  }
+	  
+	  const dlong id = n + p_NVfields*p_Np*e;
+	  RHS[id+0*p_Np] -= rhsu;
+	  RHS[id+1*p_Np] -= rhsv;
+	  RHS[id+2*p_Np] -= rhsw;
+        }
+      }
+    }
+  }
+}
