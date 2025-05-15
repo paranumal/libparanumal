@@ -113,7 +113,7 @@ public:
 
   int NiterU, NiterV, NiterW, NiterP;
 
-  int cubature, pressureIncrement;
+  int cubature, pressureIncrement, pressureCorrection;
   int vDisc_c0, pDisc_c0;
   dfloat velTOL, presTOL;
 
@@ -122,6 +122,10 @@ public:
 
   memory<dfloat> u, p;
   deviceMemory<dfloat> o_u, o_p;
+
+  memory<dfloat> PN;
+  deviceMemory<dfloat> o_PN;
+
 
   //subcycling
   int Nsubcycles;
@@ -149,6 +153,10 @@ public:
   kernel_t pressureIncrementRhsKernel;
   kernel_t pressureIncrementBCKernel;
 
+
+  kernel_t pressureNeumannUpdateKernel;
+
+
   kernel_t vorticityKernel;
 
   kernel_t initialConditionKernel;
@@ -173,6 +181,13 @@ public:
              insSettings_t& _settings);
 
   void Run();
+
+  void extbdfCallback(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_F, deviceMemory<dfloat>& o_V, 
+                      deviceMemory<dfloat>& o_a, deviceMemory<dfloat>& o_b, 
+                      const dfloat gamma, const int indx, const dfloat time);
+
+  // void extbdfCallback(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_v, const dfloat time);
+
 
   void Report(dfloat time, int tstep);
 

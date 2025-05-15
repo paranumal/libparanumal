@@ -217,7 +217,8 @@ SOFTWARE.
           // apply boundary condition
           const int bc = EToB[face+p_Nfaces*e];
           if(bc>0){
-            insVelocityDirichletConditions2D(bc,nu,time, intx[n+e*p_Nfaces*p_intNfp],inty[n+e*p_Nfaces*p_intNfp], nx, ny, iUM,iVM, &iUP, &iVP);
+            dfloat ndotU = nx*iUM + ny*iVM;
+            insVelocityDirichletConditions2D(bc,ndotU, nu,time, intx[n+e*p_Nfaces*p_intNfp],inty[n+e*p_Nfaces*p_intNfp], nx, ny, iUM,iVM, &iUP, &iVP);
           }
 
           // Find max normal velocity on the face

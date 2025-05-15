@@ -44,6 +44,7 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
   cubature = (settings.compareSetting("ADVECTION TYPE", "CUBATURE")) ? 1:0;
   pressureIncrement = (settings.compareSetting("PRESSURE INCREMENT", "TRUE")) ? 1:0;
+  pressureCorrection = (settings.compareSetting("SPLITTING CORRECTION TYPE", "PRESSURE")) ? 1:0;
 
   //setup cubature
   if (cubature) {
@@ -343,6 +344,12 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
   u.malloc((Nlocal+Nhalo)*NVfields);
   o_u = platform.malloc<dfloat>((Nlocal+Nhalo)*NVfields);
 
+  // VH.malloc(3*Nlocal*NVfields);  
+  // o_VH = platform.malloc<dfloat>(3*Nlocal*NVfields);
+
+  PN.malloc(Nlocal*NVfields);  
+  o_PN = platform.malloc<dfloat>(Nlocal*NVfields);
+
   p.malloc(Nlocal+Nhalo);
   o_p = platform.malloc<dfloat>(Nlocal+Nhalo);
 
@@ -470,11 +477,19 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
   if (settings.compareSetting("TIME INTEGRATOR","EXTBDF3")
     ||settings.compareSetting("TIME INTEGRATOR","SSBDF3")) {
     fileName   = oklFilePrefix + "insVelocityRhs" + suffix + oklFileSuffix;
+    if(pressureCorrection){
+      if (vDisc_c0)
+        kernelName = "insVelocityRhs" + suffix;
+      else
+        kernelName = "insVelocityIpdgRhs" + suffix;
+    }else{
+      if (vDisc_c0)
+        kernelName = "insVelocityRhs" + suffix;
+      else
+        kernelName = "insVelocityIpdgRhs" + suffix;
+        // kernelName = "insVelocityDualIpdgRhs" + suffix;
+    }
 
-    if (vDisc_c0)
-      kernelName = "insVelocityRhs" + suffix;
-    else
-      kernelName = "insVelocityIpdgRhs" + suffix;
     velocityRhsKernel =  platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
 
@@ -512,33 +527,71 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
   divergenceSurfaceKernel = platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
 
-  //pressure solver kernels
-  if (pressureIncrement) {
-    fileName   = oklFilePrefix + "insPressureIncrementRhs" + suffix + oklFileSuffix;
+  if(pressureCorrection){
 
-    if (pDisc_c0)
-      kernelName = "insPressureIncrementRhs" + suffix;
-    else
-      kernelName = "insPressureIncrementIpdgRhs" + suffix;
-    pressureIncrementRhsKernel =  platform.buildKernel(fileName, kernelName,
-                                           kernelInfo);
+  }else{
+     const int blocksize=256;
+     const int Nstages  =3;
+     kernelInfo["defines/" "p_blockSize"] = blocksize;
+     kernelInfo["defines/" "p_Nstages"] = Nstages;
 
-    kernelName = "insPressureIncrementBC" + suffix;
-    pressureIncrementBCKernel =  platform.buildKernel(fileName, kernelName,
-                                           kernelInfo);
-  } else {
-    fileName   = oklFilePrefix + "insPressureRhs" + suffix + oklFileSuffix;
-    if (pDisc_c0)
-      kernelName = "insPressureRhs" + suffix;
-    else
-      kernelName = "insPressureIpdgRhs" + suffix;
-    pressureRhsKernel =  platform.buildKernel(fileName, kernelName,
+    fileName   = oklFilePrefix + "insPressureNeumann" + oklFileSuffix;
+    kernelName = "insPressureNeumannUpdate";
+    pressureNeumannUpdateKernel =  platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
 
-    kernelName = "insPressureBC" + suffix;
-    pressureBCKernel =  platform.buildKernel(fileName, kernelName,
-                                           kernelInfo);
+
+
+
+
   }
+
+
+  if(pressureCorrection){
+     //pressure solver kernels
+    if (pressureIncrement) {
+      fileName   = oklFilePrefix + "insPressureIncrementRhs" + suffix + oklFileSuffix;
+
+      if (pDisc_c0)
+        kernelName = "insPressureIncrementRhs" + suffix;
+      else
+        kernelName = "insPressureIncrementIpdgRhs" + suffix;
+      pressureIncrementRhsKernel =  platform.buildKernel(fileName, kernelName,
+                                             kernelInfo);
+
+      kernelName = "insPressureIncrementBC" + suffix;
+      pressureIncrementBCKernel =  platform.buildKernel(fileName, kernelName,
+                                             kernelInfo);
+    } else {
+      fileName   = oklFilePrefix + "insPressureRhs" + suffix + oklFileSuffix;
+      if (pDisc_c0)
+        kernelName = "insPressureRhs" + suffix;
+      else
+        kernelName = "insPressureIpdgRhs" + suffix;
+      pressureRhsKernel =  platform.buildKernel(fileName, kernelName,
+                                             kernelInfo);
+
+      kernelName = "insPressureBC" + suffix;
+      pressureBCKernel =  platform.buildKernel(fileName, kernelName,
+                                             kernelInfo);
+    }
+
+  }else{
+
+    fileName   = oklFilePrefix + "insPressureRhs" + suffix + oklFileSuffix;
+      if (pDisc_c0)
+        kernelName = "insPressureDualRhs" + suffix;
+      else
+        kernelName = "insPressureDualIpdgRhs" + suffix;
+      pressureRhsKernel =  platform.buildKernel(fileName, kernelName,
+                                             kernelInfo);
+
+      kernelName = "insPressureBC" + suffix;
+      pressureBCKernel =  platform.buildKernel(fileName, kernelName,
+                                             kernelInfo);
+  }
+
+ 
 
   fileName   = oklFilePrefix + "insVorticity" + suffix + oklFileSuffix;
   kernelName = "insVorticity" + suffix;

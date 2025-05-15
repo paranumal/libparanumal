@@ -29,7 +29,7 @@ SOFTWARE.
 //  Solves -gamma*Laplacian*P = rhs
 void ins_t::PressureSolve(deviceMemory<dfloat>& o_P, deviceMemory<dfloat>& o_RHS,
                           const dfloat gamma, const dfloat T){
-
+if(pressureCorrection){
   // compute RHS = MM*RHS/gamma + BCdata
   pressureRhsKernel(mesh.Nelements,
                     mesh.o_wJ,
@@ -52,6 +52,31 @@ void ins_t::PressureSolve(deviceMemory<dfloat>& o_P, deviceMemory<dfloat>& o_RHS
                     nu,
                     gamma,
                     o_RHS);
+}else{
+ // compute RHS = MM*RHS/gamma + BCdata
+  pressureRhsKernel(mesh.Nelements,
+                    mesh.o_wJ,
+                    mesh.o_vgeo,
+                    mesh.o_sgeo,
+                    mesh.o_ggeo,
+                    mesh.o_S,
+                    mesh.o_D,
+                    mesh.o_LIFT,
+                    mesh.o_MM,
+                    mesh.o_sM,
+                    mesh.o_vmapM,
+                    mesh.o_EToB,
+                    mesh.o_mapB,
+                    pTau,
+                    T,
+                    mesh.o_x,
+                    mesh.o_y,
+                    mesh.o_z,
+                    o_PN,
+                    nu,
+                    gamma,
+                    o_RHS);
+}
 
   //  Solve - Laplacian*P = RHS
   int maxIter = 5000;

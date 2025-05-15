@@ -48,6 +48,11 @@ insSettings_t::insSettings_t(comm_t& _comm):
              "Use Pressure increment update",
              {"TRUE", "FALSE"});
 
+  newSetting("SPLITTING CORRECTION TYPE",
+             "PRESSURE",
+             "Use Pressure correction or velocity correction",
+             {"PRESSURE", "VELOCITY"});
+
   newSetting("TIME INTEGRATOR",
              "DOPRI5",
              "Time integration method",

@@ -427,6 +427,7 @@ protected:
             deviceMemory<dfloat> o_q,
             deviceMemory<dfloat> o_qn,
             deviceMemory<dfloat> o_F,
+            deviceMemory<dfloat> o_V,
             dfloat time, dfloat _dt, int order);
 
 public:
@@ -465,7 +466,6 @@ public:
       platform_t& _platform, comm_t _comm);
 
   dfloat GetGamma();
-
   void Run(solver_t& solver,
            deviceMemory<dfloat> o_q,
            std::optional<deviceMemory<dfloat>> o_pmlq,
