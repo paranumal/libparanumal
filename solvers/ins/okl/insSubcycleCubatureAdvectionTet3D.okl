@@ -30,6 +30,14 @@ SOFTWARE.
 #define p_cubNblockV 1
 
 
+#if 0
+#define insSubcycleAdvectionCubatureVolumeTet3D_good insSubcycleAdvectionCubatureVolumeTet3D
+#define insSubcycleAdvectionCubatureSurfaceTet3D_good insSubcycleAdvectionCubatureSurfaceTet3D
+#else
+#define insSubcycleAdvectionCubatureVolumeTet3D_skew insSubcycleAdvectionCubatureVolumeTet3D
+#define insSubcycleAdvectionCubatureSurfaceTet3D_skew insSubcycleAdvectionCubatureSurfaceTet3D
+#endif
+
 
 // compute NU = -div(uxu) with cubature
 @kernel void insSubcycleAdvectionCubatureVolumeTet3D_old(const dlong Nelements,
@@ -535,7 +543,7 @@ SOFTWARE.
   }
 }
 
-@kernel void insSubcycleAdvectionCubatureSurfaceTet3D(const dlong Nelements,
+@kernel void insSubcycleAdvectionCubatureSurfaceTet3D_good(const dlong Nelements,
 						      @restrict const  dfloat *  vgeo,
 						      @restrict const  dfloat *  sgeo,
 						      @restrict const  dfloat *  intInterp, // interpolate to integration nodes
@@ -1126,7 +1134,7 @@ SOFTWARE.
 
 
 // trying to reduce register usage
-@kernel void insSubcycleAdvectionCubatureVolumeTet3D(const dlong Nelements,
+@kernel void insSubcycleAdvectionCubatureVolumeTet3D_good(const dlong Nelements,
 						     @restrict const  dfloat *  vgeo,
 						     @restrict const  dfloat *  cubvgeo,
 						     @restrict const  dfloat *  cubD,
@@ -1422,15 +1430,15 @@ SOFTWARE.
 	  dfloat Uei = s_Ue[es][i];
 	  dfloat Vei = s_Ve[es][i];
 	  dfloat Wei = s_We[es][i];
-	  	 
-	  cU[es]  += cIni*Ui;
-	  cV[es]  += cIni*Vi;
-	  cW[es]  += cIni*Wi;
 
 	  cUe[es] += cIni*Uei;
 	  cVe[es] += cIni*Vei;
 	  cWe[es] += cIni*Wei;
-	  
+
+	  cU[es]  += cIni*Ui;
+	  cV[es]  += cIni*Vi;
+	  cW[es]  += cIni*Wi;
+
 	  cUr[es] += cDr_ni*Ui;
 	  cVr[es] += cDr_ni*Vi;
 	  cWr[es] += cDr_ni*Wi;
@@ -1682,9 +1690,9 @@ SOFTWARE.
 	  dfloat fac = ndotU - fabs(ndotU); // advection velocity - penalty
 
 	  // assume advection velocity is C0
-	  s_iFluxU[es][n] = sc*(-iUdM*ndotU + fac*(iUdP - iUdM)+nx*ndotdUd);
-	  s_iFluxV[es][n] = sc*(-iVdM*ndotU + fac*(iVdP - iVdM)+ny*ndotdUd);
-	  s_iFluxW[es][n] = sc*(-iWdM*ndotU + fac*(iWdP - iWdM)+nz*ndotdUd);
+	  s_iFluxU[es][n] = sc*(iUdM*ndotU + fac*(iUdP - iUdM)+nx*ndotdUd);
+	  s_iFluxV[es][n] = sc*(iVdM*ndotU + fac*(iVdP - iVdM)+ny*ndotdUd);
+	  s_iFluxW[es][n] = sc*(iWdM*ndotU + fac*(iWdP - iWdM)+nz*ndotdUd);
 	}
       }
     }
