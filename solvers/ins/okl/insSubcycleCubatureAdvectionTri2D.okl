@@ -78,6 +78,13 @@ SOFTWARE.
 #endif
 
 
+#if 0
+#define insSubcycleAdvectionCubatureVolumeTri2D_orig insSubcycleAdvectionCubatureVolumeTri2D
+#define insSubcycleAdvectionCubatureSurfaceTri2D_orig insSubcycleAdvectionCubatureSurfaceTri2D
+#else
+#define insSubcycleAdvectionCubatureVolumeTri2D_stab insSubcycleAdvectionCubatureVolumeTri2D
+#define insSubcycleAdvectionCubatureSurfaceTri2D_stab insSubcycleAdvectionCubatureSurfaceTri2D
+#endif
 
 @kernel void insSubcycleAdvectionCubatureVolumeTri2D_orig(const dlong Nelements,
                                            @restrict const  dfloat *  vgeo,
@@ -227,7 +234,7 @@ SOFTWARE.
 }
 
 
-@kernel void insSubcycleAdvectionCubatureVolumeTri2D(const dlong Nelements,
+@kernel void insSubcycleAdvectionCubatureVolumeTri2D_stab(const dlong Nelements,
 						     @restrict const  dfloat *  vgeo,
 						     @restrict const  dfloat *  cubvgeo,
 						     @restrict const  dfloat *  cubD,
@@ -710,7 +717,7 @@ SOFTWARE.
 
 
 
-@kernel void insSubcycleAdvectionCubatureSurfaceTri2D(const dlong Nelements,
+@kernel void insSubcycleAdvectionCubatureSurfaceTri2D_stab(const dlong Nelements,
 						      @restrict const  dfloat *  vgeo,
 						      @restrict const  dfloat *  sgeo,
 						      @restrict const  dfloat *  intInterp, // interpolate to integration nodes
