@@ -107,32 +107,11 @@ void ins_t::rhs_imex_invg(deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_U
     // This form uses Guermond-Shen form of the Dual Splitting Method of Karniadakis 
     // RHS  holds (extp(u) + dt*N(u))/dt where N(u) = -(u.\nabla)u so RHS =  \gamma_0/dt * Uhat = \gamma U_hat   
     // We need that to use same extbdf for other options also
-    // platform.linAlg().axpy(NVfields*Ntotal, 1.0/gamma, o_RHS, 0.0, o_U);
-
-    // // rhsP = -Div RHS = -Div[ gamma/dt *u_hat  ]
-    // deviceMemory<dfloat> o_rhsP = platform.reserve<dfloat>(Ntotal);
-    // Divergence(-gamma, o_U, 0.0, o_rhsP, T);
-
-    // // call pressure solver to solve
-    // // -Laplacian*P = rhsP =  -Div[ gamma/dt *u_hat  ] + [dpdn]_{wall, }
-    // PressureSolve(o_p, o_rhsP, gamma, T);
-
-    // // //update velocity with pressure correction
-    // // // U = U - [dt/gamma_0]*grad P
-    // Gradient(-1.0/gamma, o_p, 1.0, o_U, T);
-
-    // //call velocty solver to solve
-    // platform.linAlg().axpy(NVfields*Ntotal, gamma, o_U, 0.0, o_RHS);
-
-    // VelocitySolve(o_U, o_RHS, gamma, T);
-
-
-
     platform.linAlg().axpy(NVfields*Ntotal, 1.0/gamma, o_RHS, 0.0, o_U);
 
     // rhsP = -Div RHS = -Div[ gamma/dt *u_hat  ]
     deviceMemory<dfloat> o_rhsP = platform.reserve<dfloat>(Ntotal);
-    Divergence(-dt, o_U, 0.0, o_rhsP, T);
+    Divergence(-gamma, o_U, 0.0, o_rhsP, T);
 
     // call pressure solver to solve
     // -Laplacian*P = rhsP =  -Div[ gamma/dt *u_hat  ] + [dpdn]_{wall, }
@@ -140,14 +119,12 @@ void ins_t::rhs_imex_invg(deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_U
 
     // //update velocity with pressure correction
     // // U = U - [dt/gamma_0]*grad P
-    Gradient(-dt, o_p, 1.0, o_U, T);
+    Gradient(-1.0/gamma, o_p, 1.0, o_U, T);
 
     //call velocty solver to solve
     platform.linAlg().axpy(NVfields*Ntotal, gamma, o_U, 0.0, o_RHS);
 
     VelocitySolve(o_U, o_RHS, gamma, T);
-
-
   }
 
   
@@ -212,40 +189,40 @@ void ins_t::rhs_subcycle_f(deviceMemory<dfloat>& o_U, deviceMemory<dfloat>& o_UH
 }
 
 
-void ins_t::extbdfCallback(deviceMemory<dfloat>& o_U, deviceMemory<dfloat>& o_F, 
-                           deviceMemory<dfloat>& o_V, 
-                           deviceMemory<dfloat>& o_A, deviceMemory<dfloat>& o_B, 
-                           const dfloat gamma, const int indx, const dfloat time){
+void ins_t::extbdfCallback(deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_Qe, const dfloat time){
 
 // void ins_t::extbdfCallback(deviceMemory<dfloat>& o_U, deviceMemory<dfloat>& o_V, const dfloat time){
-const dfloat dt = timeStepper.GetTimeStep();
-const dfloat gamma0 = gamma*dt; 
+const dfloat dt     = timeStepper.GetTimeStep();
+const dfloat gamma0 = timeStepper.GetGamma();
+// const dfloat gamma0 = gamma*dt; 
 if(pressureCorrection){
-  // nada, handled in extbdf integrator
+  // nada, everything is handled in extbdf integrator
 }else{
-    // Compute pressure Neumann data to be used in preessure RHS and update the history
-    const dlong Nlocal = mesh.Nelements*mesh.Np*mesh.dim; 
-
-    //V(q) at current index
-    deviceMemory<dfloat> o_V0 = o_V + indx*Nlocal; 
-
     //Compute \nabla X (\nabla X U)
-    deviceMemory<dfloat> o_Vort  = platform.reserve<dfloat>(mesh.dim*mesh.Nelements*mesh.Np);
-    // deviceMemory<dfloat> o_Vort0 = platform.reserve<dfloat>(mesh.dim*mesh.Nelements*mesh.Np);
-    vorticityKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_D, o_U, o_Vort);
-    vorticityKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_D, o_Vort, o_V0);
-    o_Vort.free(); 
-    
-    //Update the Pressure Neumann data i.e. extp( -N(u) - nu curlxcurlx)
-    pressureNeumannUpdateKernel(Nlocal,
-                          indx, 
-                          nu,  
-                          gamma0,  
-                          o_A,
-                          o_B,
-                          o_F,
-                          o_V,
-                          o_PN); 
+    const dlong Ntotal = mesh.Nelements*mesh.Np; 
+    deviceMemory<dfloat> o_Vort0  = platform.reserve<dfloat>(mesh.dim*Ntotal);
+    deviceMemory<dfloat> o_Vort1 = platform.reserve<dfloat>(mesh.dim*Ntotal);
+    vorticityKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_D, o_Qe, o_Vort0);
+    vorticityKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_D, o_Vort0, o_Vort1);
+    o_Vort0.free(); 
+    // No that RHS holds [ext(q) + dt ext(N(U))]/dt
+    // PN = ext(N(U)) - nu curl curl qe 
+    platform.linAlg().zaxpy(mesh.dim*Ntotal, dt, o_RHS, -1.0, o_Qe, o_PN);   
+    platform.linAlg().axpy(mesh.dim*Ntotal, -nu, o_Vort1, 1/dt, o_PN);    
+
+
+
+
+    // //Update the Pressure Neumann data i.e. extp( -N(u) - nu curlxcurlx)
+    // pressureNeumannUpdateKernel(Nlocal,
+    //                       indx, 
+    //                       nu,  
+    //                       gamma0,  
+    //                       o_A,
+    //                       o_B,
+    //                       o_F,
+    //                       o_V,
+    //                       o_PN); 
 }
 
 

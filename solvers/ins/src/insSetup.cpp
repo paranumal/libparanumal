@@ -333,7 +333,7 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
   }
 
   //setup linear algebra module
-  platform.linAlg().InitKernels({"innerProd", "axpy", "max"});
+  platform.linAlg().InitKernels({"innerProd", "axpy", "max", "zaxpy"});
 
   /*setup trace halo exchange */
   pTraceHalo = mesh.HaloTraceSetup(1); //one field
@@ -527,24 +527,24 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
   divergenceSurfaceKernel = platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
 
-  if(pressureCorrection){
+  // if(pressureCorrection){
 
-  }else{
-     const int blocksize=256;
-     const int Nstages  =3;
-     kernelInfo["defines/" "p_blockSize"] = blocksize;
-     kernelInfo["defines/" "p_Nstages"] = Nstages;
+  // }else{
+  //    const int blocksize=256;
+  //    const int Nstages  =3;
+  //    kernelInfo["defines/" "p_blockSize"] = blocksize;
+  //    kernelInfo["defines/" "p_Nstages"] = Nstages;
 
-    fileName   = oklFilePrefix + "insPressureNeumann" + oklFileSuffix;
-    kernelName = "insPressureNeumannUpdate";
-    pressureNeumannUpdateKernel =  platform.buildKernel(fileName, kernelName,
-                                           kernelInfo);
-
-
+  //   fileName   = oklFilePrefix + "insPressureNeumann" + oklFileSuffix;
+  //   kernelName = "insPressureNeumannUpdate";
+  //   pressureNeumannUpdateKernel =  platform.buildKernel(fileName, kernelName,
+  //                                          kernelInfo);
 
 
 
-  }
+
+
+  // }
 
 
   if(pressureCorrection){

@@ -86,17 +86,11 @@ void extbdf3::Run(solver_t& solver,
              o_pmlq.has_value());
 
   /*Pre-reserve memory pool space to avoid some unnecessary re-sizing*/
-  // platform.reserve<dfloat>(2*Nstages*N + N
-  //                          + 3 * platform.memPoolAlignment<dfloat>());
-
-  /*Pre-reserve memory pool space to avoid some unnecessary re-sizing*/
-  platform.reserve<dfloat>(3*Nstages*N + N
+  platform.reserve<dfloat>(2*Nstages*N + N
                            + 3 * platform.memPoolAlignment<dfloat>());
-
 
   deviceMemory<dfloat> o_qn = platform.reserve<dfloat>(Nstages*N); //q history
   deviceMemory<dfloat> o_F  = platform.reserve<dfloat>(Nstages*N); //F(q) history (explicit part)
-  deviceMemory<dfloat> o_V  = platform.reserve<dfloat>(Nstages*N); //V(q) history of Vorticity
 
   dfloat time = start;
 
@@ -111,7 +105,7 @@ void extbdf3::Run(solver_t& solver,
   int order=0;
   while (time < end) {
     Step(solver, o_q,
-         o_qn, o_F, o_V,
+         o_qn, o_F,
          time, dt, order);
     time += dt;
     tstep++;
@@ -125,17 +119,16 @@ void extbdf3::Run(solver_t& solver,
   }
 }
 
+
+
 void extbdf3::Step(solver_t& solver,
                    deviceMemory<dfloat> o_q,
                    deviceMemory<dfloat> o_qn,
                    deviceMemory<dfloat> o_F,
-                   deviceMemory<dfloat> o_V,
                    dfloat time, dfloat _dt, int order) {
 
   //F(q) at current index
   deviceMemory<dfloat> o_F0 = o_F + shiftIndex*N;
-  // deviceMemory<dfloat> o_V0 = o_V + shiftIndex*N;
-
   //coefficients at current order
   deviceMemory<dfloat> o_A = o_extbdf_a + order*Nstages;
   deviceMemory<dfloat> o_B = o_extbdf_b + order*(Nstages+1);
@@ -146,6 +139,7 @@ void extbdf3::Step(solver_t& solver,
   
   //build rhs for implicit step and update history
   deviceMemory<dfloat> o_rhs = platform.reserve<dfloat>(N); //rhs storage
+  deviceMemory<dfloat> o_qe  = platform.reserve<dfloat>(N); //storege for extrapolated velocity
 
   rhsKernel(N,
            _dt,
@@ -154,18 +148,17 @@ void extbdf3::Step(solver_t& solver,
            o_B,
            o_q,
            o_F,
+           o_qe, 
            o_qn,
-           o_rhs);
+           o_rhs); // (gamma_0/dt) * uhat
 
   dfloat gamma = B[0]/_dt;
 
   // If dual splitting compute extrapolated pressure Neumann data 
-  solver.extbdfCallback(o_q, o_rhs, o_V, o_A, o_B, gamma, shiftIndex, time); 
-
+  solver.extbdfCallback(o_rhs, o_qe, time); 
   //solve implicit part:
   // find q such that gamma*q - G(q) = rhs
   solver.rhs_imex_invg(o_rhs, o_q, gamma, time+_dt);
-
   //rotate index
   shiftIndex = (shiftIndex+Nstages-1)%Nstages;
 }

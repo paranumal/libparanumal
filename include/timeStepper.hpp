@@ -427,7 +427,6 @@ protected:
             deviceMemory<dfloat> o_q,
             deviceMemory<dfloat> o_qn,
             deviceMemory<dfloat> o_F,
-            deviceMemory<dfloat> o_V,
             dfloat time, dfloat _dt, int order);
 
 public:
