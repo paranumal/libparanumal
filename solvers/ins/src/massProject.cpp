@@ -822,6 +822,7 @@ void mass_t::Setup(platform_t& _platform, mesh_t& _mesh, settings_t& _settings,
   o_pfloat_invJW = platform.malloc<pfloat>(mesh.Nelements, pfloat_invJW);
   o_pfloat_invMM = platform.malloc<pfloat>(mesh.Np*mesh.Np, pfloat_invMM);
 #endif
+
   
   // assume Jacobi
 

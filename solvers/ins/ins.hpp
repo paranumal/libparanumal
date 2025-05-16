@@ -167,6 +167,11 @@ public:
 
   deviceMemory<pfloat> o_pfloat_invMM;
   deviceMemory<pfloat> o_pfloat_invwJ;
+
+  kernel_t filterKernel;
+  deviceMemory<dfloat> o_FILT;
+
+
   
   ins_t() = default;
   ins_t(platform_t &_platform, mesh_t &_mesh,

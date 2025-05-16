@@ -17,7 +17,7 @@ data/insUniform2D.h
 3
 
 [POLYNOMIAL DEGREE]
-3
+4
 
 [THREAD MODEL]
 CUDA

@@ -41,6 +41,10 @@ void ins_t::MassSolve(deviceMemory<dfloat>& o_U){
   deviceMemory<dfloat> o_GUH   = platform.reserve<dfloat>(Nglobal);
   deviceMemory<dfloat> o_rhsU  = platform.reserve<dfloat>(Ntotal);
 
+  // filter U before projecting
+  if(mesh.elementType==Mesh::TRIANGLES)
+    filterKernel(mesh.Nelements, o_FILT, o_U, o_U);
+  
   // compute RHS = MM*RHS/nu + BCdata
   // and split fields to separate arrays
   

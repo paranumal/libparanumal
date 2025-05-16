@@ -81,6 +81,8 @@ public:
   dfloat allNeumannPenalty;
   dfloat allNeumannScale;
 
+
+  
   kernel_t weightKernel;
   kernel_t reciprocalKernel;
   kernel_t maskKernel;

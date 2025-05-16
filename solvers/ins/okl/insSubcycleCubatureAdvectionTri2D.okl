@@ -340,7 +340,7 @@ SOFTWARE.
 	  cdivUs += PDsni*divUi;
 	}
 
-	dfloat sigmaVol = 2.5e-3;
+	dfloat sigmaVol = 1.e-3; // 2.5e-3;
 	Uflux += sigmaVol*(drdx*cdivUr + dsdx*cdivUs);
 	Vflux += sigmaVol*(drdy*cdivUr + dsdy*cdivUs);
 	
