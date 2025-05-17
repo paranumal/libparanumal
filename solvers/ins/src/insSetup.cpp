@@ -527,26 +527,6 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
   divergenceSurfaceKernel = platform.buildKernel(fileName, kernelName,
                                          kernelInfo);
 
-  // if(pressureCorrection){
-
-  // }else{
-  //    const int blocksize=256;
-  //    const int Nstages  =3;
-  //    kernelInfo["defines/" "p_blockSize"] = blocksize;
-  //    kernelInfo["defines/" "p_Nstages"] = Nstages;
-
-  //   fileName   = oklFilePrefix + "insPressureNeumann" + oklFileSuffix;
-  //   kernelName = "insPressureNeumannUpdate";
-  //   pressureNeumannUpdateKernel =  platform.buildKernel(fileName, kernelName,
-  //                                          kernelInfo);
-
-
-
-
-
-  // }
-
-
   if(pressureCorrection){
      //pressure solver kernels
     if (pressureIncrement) {
@@ -576,7 +556,7 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
                                              kernelInfo);
     }
 
-  }else{
+  }else{ \\ velocity correction 
 
     fileName   = oklFilePrefix + "insPressureRhs" + suffix + oklFileSuffix;
       if (pDisc_c0)
