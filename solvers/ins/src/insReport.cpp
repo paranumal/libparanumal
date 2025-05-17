@@ -35,11 +35,13 @@ void ins_t::Report(dfloat time, int tstep){
   deviceMemory<dfloat> o_MU = platform.reserve<dfloat>(Nentries);
   mesh.MassMatrixApply(o_u, o_MU);
 
-  dfloat norm2 = sqrt(platform.linAlg().innerProd(Nentries, o_u, o_MU, mesh.comm));
+  dfloat udotMU = platform.linAlg().innerProd(Nentries, o_u, o_MU, mesh.comm);
+  std::cout << "udotMU=" << udotMU << std::endl;
+  dfloat norm2 = sqrt(udotMU);
   o_MU.free();
 
   if(mesh.rank==0)
-    printf("\n%5.2f (%d), %5.2f (time, timestep, norm)\n", time, tstep, norm2);
+    printf("\n%5.2f (%d), %5.2f (OUTPUT: time, timestep, norm)\n", time, tstep, norm2);
 
   if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
 
@@ -69,8 +71,8 @@ void ins_t::Report(dfloat time, int tstep){
       
       PlotFields(u, p, Vort, std::string(fname));
     }
-    
-    {
+
+    if(mesh.dim==2){
       std::string name;
       settings.getSetting("VIZ OUTPUT FILE NAME", name);
       

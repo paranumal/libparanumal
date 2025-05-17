@@ -40,7 +40,7 @@ SOFTWARE.
 
 // Boundary conditions
 /* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5, z-slip 6 */
-#define insVelocityDirichletConditions3D(bc, nu, t, x, y, z, nx, ny, nz, uM, vM, wM, uB, vB, wB) \
+#define insVelocityDirichletConditions3D(bc, ndotUe, nu, t, x, y, z, nx, ny, nz, uM, vM, wM, uB, vB, wB) \
 {                                   \
   if(bc==1){                        \
     *(uB) = 0.f;                    \
@@ -51,9 +51,9 @@ SOFTWARE.
     *(vB) = p_vbar;                 \
     *(wB) = p_wbar;                 \
   } else if(bc==3){                 \
-    *(uB) = uM;                     \
-    *(vB) = vM;                     \
-    *(wB) = wM;                     \
+    *(uB) = (ndotU>0) ? uM : 0;						\
+    *(vB) = (ndotU>0) ? vM : 0;						\
+    *(wB) = (ndotU>0) ? wM : 0;						\
   } else if(bc==4){                 \
     *(uB) = 0.f;                    \
     *(vB) = vM;                     \

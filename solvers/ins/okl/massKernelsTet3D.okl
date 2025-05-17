@@ -25,49 +25,10 @@ SOFTWARE.
 */
 
 
-// square thread version
-@kernel void massFilterTri2D(const dlong   Nelements,
-			     @restrict const  dfloat *  FILT,
-			     @restrict const  dfloat *  q,
-			     @restrict dfloat *  Aq){
-  
-  for(dlong e=0;e<Nelements;++e;@outer(0)){
-    
-    @shared dfloat s_q[p_Nfields][p_Np];
-
-    for(int n=0;n<p_Np;++n;@inner(0)){
-      const dlong base =n + e*p_Np*p_Nfields;
-      for(int fld=0;fld<p_Nfields;++fld){
-	s_q[fld][n] = q[base+fld*p_Np];
-      }
-    }
-    
-    // prefetch q(:,:,:,e) to @shared
-    for(int n=0;n<p_Np;++n;@inner(0)){
-      // assumes w*J built into G entries
-      dfloat r_Aq[p_Nfields] = {0.};
-
-      for(int i=0;i<p_Np;++i){
-	dfloat FILTni = FILT[n+i*p_Np];
-	for(int fld=0;fld<p_Nfields;++fld){
-	  r_Aq[fld] += FILTni*s_q[fld][i];
-	}
-      }
-
-      const dlong base = e*p_Np*p_Nfields + n;
-      
-      for(int fld=0;fld<p_Nfields;++fld){
-	Aq[base+fld*p_Np] = r_Aq[fld];
-      }
-    }
-  }
-}
-
-
 
 
 // square thread version
-@kernel void massAxTri2D(const dlong   Nelements,
+@kernel void massAxTet3D(const dlong   Nelements,
 			 @restrict const  dfloat *  wJ,
 			  @restrict const  dfloat *  MM,
 			 @restrict const  dfloat *  q,
@@ -78,6 +39,7 @@ SOFTWARE.
     @shared dfloat s_q[p_Nfields][p_Np];
 
     for(int n=0;n<p_Np;++n;@inner(0)){
+
       const dlong base =n + e*p_Np*p_Nfields;
       for(int fld=0;fld<p_Nfields;++fld){
 	s_q[fld][n] = q[base+fld*p_Np];
@@ -107,7 +69,7 @@ SOFTWARE.
 }
 
 // square thread version
-@kernel void massPartialAxTri2D(const dlong Nelements,
+@kernel void massPartialAxTet3D(const dlong Nelements,
 				@restrict const  dlong   *  elementList,
 				@restrict const  dlong   *  GlobalToLocal,
 				@restrict const  dfloat *  wJ,
@@ -156,14 +118,12 @@ SOFTWARE.
   }
 }
 
-@kernel void massBuildOperatorDiagonalTri2D(const dlong Nelements,
+@kernel void massBuildOperatorDiagonalTet3D(const dlong Nelements,
 					     @restrict const  dfloat *  wJ,
 					     @restrict const  dfloat *  MM,
 					     @restrict dfloat * A){
 
 
-#define p_two ((dfloat)2)
-  
   for(dlong e=0;e<Nelements;++e;@outer(0)){
 
     for (int n=0;n<p_Np;++n;@inner(0)) {
@@ -205,7 +165,7 @@ SOFTWARE.
 
 
 // square thread version
-@kernel void massRhsTri2D(const dlong   Nelements,
+@kernel void massRhsTet3D(const dlong   Nelements,
 			  @restrict const  dfloat *  wJ,
 			  @restrict const  dfloat *  MM,
 			  @restrict const  dfloat *  U,
@@ -249,7 +209,7 @@ SOFTWARE.
 }
 
   
-@kernel void massScatterTri2D(const dlong   Nelements,
+@kernel void massScatterTet3D(const dlong   Nelements,
 			      @restrict const  dlong   *  GlobalToLocal,
 			      @restrict dfloat *  UG,
 			      @restrict dfloat *  UL){
@@ -268,7 +228,7 @@ SOFTWARE.
 }
 
 
-@kernel void massWeightTri2D(const dlong   Ngather,
+@kernel void massWeightTet3D(const dlong   Ngather,
 			     @restrict pfloat *wG,
 			     @restrict pfloat *UG){
   

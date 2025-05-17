@@ -38,7 +38,7 @@ SOFTWARE.
 
 // Boundary conditions
 /* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5, z-slip 6 */
-#define insVelocityDirichletConditions3D(bc, nu, t, x, y, z, nx, ny, nz, uM, vM, wM, uB, vB, wB) \
+#define insVelocityDirichletConditions3D(bc, ndotUe, nu, t, x, y, z, nx, ny, nz, uM, vM, wM, uB, vB, wB) \
 {                                                                         \
   const dfloat a = M_PI/4.f;                                              \
   const dfloat d = M_PI/2.f;                                              \
@@ -50,11 +50,11 @@ SOFTWARE.
     *(uB) = -a*(exp(a*x)*sin(a*y+d*z)+exp(a*z)*cos(a*x+d*y))*exp(-d*d*t); \
     *(vB) = -a*(exp(a*y)*sin(a*z+d*x)+exp(a*x)*cos(a*y+d*z))*exp(-d*d*t); \
     *(wB) = -a*(exp(a*z)*sin(a*x+d*y)+exp(a*y)*cos(a*z+d*x))*exp(-d*d*t); \
-  } else if(bc==3){                                                       \
-    *(uB) = uM;                                                           \
-    *(vB) = vM;                                                           \
-    *(wB) = wM;                                                           \
-  } else if(bc==4){                                                       \
+  } else if(bc==3){							\
+  *(uB) = (ndotU>0) ? uM : 0;						\
+  *(vB) = (ndotU>0) ? vM : 0;						\
+  *(wB) = (ndotU>0) ? wM : 0;						\
+  } else if(bc==4){							\
     *(uB) = 0.f;                                                          \
     *(vB) = vM;                                                           \
     *(wB) = wM;                                                           \

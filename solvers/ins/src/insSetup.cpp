@@ -594,10 +594,7 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
   maxWaveSpeedKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 
-
-
 #if 1
-
   if(mesh.elementType==Mesh::QUADRILATERALS){
     fileName   = oklFilePrefix + "insProject" + suffix + oklFileSuffix;
 
@@ -606,7 +603,6 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
     kernelName = "insProjectScatter" + suffix;
     projectScatterKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
-
   
     memory<dlong> uGlobalToLocal(mesh.Nelements*mesh.Np,(dlong)0);
     memory<dlong> vGlobalToLocal(mesh.Nelements*mesh.Np,(dlong)0);
@@ -646,5 +642,75 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
     o_projectWeights = platform.malloc<dfloat>(Nlocal+Nhalo, JWL);
   }
   
-#endif  
+#endif
+
+  // build filter
+  if(mesh.elementType==Mesh::TRIANGLES){
+
+    fileName   = oklFilePrefix + "massKernels" + suffix + oklFileSuffix;
+    kernelName = "massFilter" + suffix;
+
+    filterKernel = platform.buildKernel(fileName, kernelName,
+					    kernelInfo);
+    memory<dfloat> V;
+    mesh.VandermondeTri2D(mesh.N, mesh.r, mesh.s, V);
+    
+    memory<dfloat> invV(mesh.Np*mesh.Np);
+    for(int n=0;n<mesh.Np;++n){
+      for(int m=0;m<mesh.Np;++m){
+	invV[n*mesh.Np+m] = V[n*mesh.Np+m];
+      }
+    }
+    
+    linAlg_t::matrixInverse(mesh.Np, invV);
+
+    memory<dfloat> FILT(mesh.Np*mesh.Np, 0.);
+    for(int n=0;n<mesh.Np;++n){
+      for(int m=0;m<mesh.Np;++m){
+	int sk = 0;
+	dfloat Fnm = 0;
+	for(int i=0;i<mesh.N+1;++i){
+	  for(int j=0;j<mesh.N+1-i;++j){
+	    dfloat fac = (i+j==mesh.N) ? .8:1.;
+	    Fnm += V[n*mesh.Np+sk]*fac*invV[sk*mesh.Np+m];
+	    ++sk;
+	  }
+	}
+	FILT[n+m*mesh.Np] = Fnm;
+      }      
+    }
+
+    printf("V:\n");
+
+    for(int n=0;n<mesh.Np;++n){
+      for(int m=0;m<mesh.Np;++m){
+	printf("%g ", V[n*mesh.Np+m]);
+      }
+      printf("\n");
+    }
+
+    printf("invV:\n");
+
+    for(int n=0;n<mesh.Np;++n){
+      for(int m=0;m<mesh.Np;++m){
+	printf("%g ", invV[n*mesh.Np+m]);
+      }
+      printf("\n");
+    }
+
+    printf("FILT:\n");
+
+    for(int n=0;n<mesh.Np;++n){
+      for(int m=0;m<mesh.Np;++m){
+	printf("%g ", FILT[n+mesh.Np*m]);
+      }
+      printf("\n");
+    }
+
+
+    o_FILT = platform.malloc<dfloat>(FILT);
+  }
+
+
+  
 }

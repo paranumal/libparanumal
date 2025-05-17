@@ -43,4 +43,16 @@ public:
   void Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_Mr);
 };
 
+class MassInversePrecon: public operator_t {
+private:
+  mass_t mass;
+
+public:
+  MassJacobiPrecon() = default;
+  MassJacobiPrecon(mass_t& mass);
+  void Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_Mr);
+};
+
+
+
 #endif

@@ -2,19 +2,16 @@
 2.0
 
 [DATA FILE]
-data/insUniform2D.h
-#data/insRampedUniform2D.h
+data/insUniform3D.h
 
 [MESH FILE]
-#../../meshes/bumpBoxQuad2D.msh
-#../../meshes/bumpBoxQuad2Dv2.msh
-../../meshes/bumpTri2Dbox.msh
+../../meshes/cubeTet3DV4.msh
 
 [MESH DIMENSION]
-2
+3
 
 [ELEMENT TYPE] # number of edges
-3
+6
 
 [POLYNOMIAL DEGREE]
 4
@@ -29,21 +26,14 @@ CUDA
 0
 
 [CFL NUMBER]
-1.5
-#2
-#1.25
+1.
 
 [VISCOSITY]
-0.000001
-#0.000001
-#0.0000025
-#0.000005
-#0.00001
-#0.00005
-#0.0001
+0.01
 
 # can be CUBATURE or COLLOCATION
 [ADVECTION TYPE]
+#COLLOCATION
 CUBATURE
 
 #currently experimental
@@ -55,7 +45,6 @@ SSBDF3
 
 [NUMBER OF SUBCYCLES]
 1
-#4
 
 [SUBCYCLING TIME INTEGRATOR]
 DOPRI5
@@ -64,16 +53,16 @@ DOPRI5
 0
 
 [FINAL TIME]
-5
+0.2
 
 [OUTPUT INTERVAL]
-1.5
+2
 
 [OUTPUT TO FILE]
-TRUE
+FALSE
 
 [OUTPUT FILE NAME]
-bump
+ins
 
 #################################################
 ########## Velocity Solver Options ##############
@@ -83,6 +72,8 @@ bump
 [VELOCITY LINEAR SOLVER]
 PCG
 
+[VELOCITY LINEAR SOLVER STOPPING CRITERION]
+ABS/REL-INITRESID
 
 # can be IPDG, or CONTINUOUS
 [VELOCITY DISCRETIZATION]
@@ -98,7 +89,7 @@ MULTIGRID
 QR
 
 [VELOCITY INITIAL GUESS HISTORY SPACE DIMENSION]
-9
+4
 
 [VELOCITY INITIAL GUESS EXTRAP DEGREE]
 3
@@ -108,9 +99,6 @@ MINNORM
 
 [VELOCITY VERBOSE]
 TRUE
-
-[VELOCITY LINEAR SOLVER STOPPING CRITERION]
-ABS/REL-INITRESID
 
 ########## MULTIGRID Options ##############
 
@@ -151,7 +139,7 @@ CHEBYSHEV
 
 # can be PCG, FPCG, NBPCG, NBFPCG, or PGMRES
 [PRESSURE LINEAR SOLVER]
-FPCG
+PCG
 
 [PRESSURE LINEAR SOLVER STOPPING CRITERION]
 ABS/REL-INITRESID
@@ -169,7 +157,7 @@ MULTIGRID
 QR
 
 [PRESSURE INITIAL GUESS HISTORY SPACE DIMENSION]
-9
+4
 
 [PRESSURE INITIAL GUESS EXTRAP DEGREE]
 3
@@ -214,6 +202,7 @@ CHEBYSHEV
 ###########################################
 
 
+
 #################################################
 ########## Mass Solver Options ##############
 #################################################
@@ -235,7 +224,7 @@ JACOBI
 QR
 
 [MASS INITIAL GUESS HISTORY SPACE DIMENSION]
-8
+4
 
 [MASS INITIAL GUESS EXTRAP DEGREE]
 3
@@ -250,19 +239,4 @@ TRUE
 ABS/REL-INITRESID
 
 [VIZ OUTPUT]
-TRUE
-
-[VIZ OUTPUT FILE NAME]
-png/bump
-
-[VIZ COLORMAP RANGE]
-TRUE
-
-[VIZ COLORMAP RANGE MIN]
--10
-
-[VIZ COLORMAP RANGE MAX]
-10
-#0.0125
-
-
+FALSE

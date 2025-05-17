@@ -81,6 +81,9 @@ public:
   dfloat allNeumannPenalty;
   dfloat allNeumannScale;
 
+
+  
+  kernel_t weightKernel;
   kernel_t reciprocalKernel;
   kernel_t maskKernel;
   kernel_t massAxKernel;
@@ -93,6 +96,9 @@ public:
   
   memory<dfloat> nut;
   deviceMemory<dfloat> o_nut;
+
+  deviceMemory<dfloat> o_invMM, o_invJW;
+  deviceMemory<pfloat> o_pfloat_invMM, o_pfloat_invJW;
   
   mass_t() = default;
   mass_t(platform_t &_platform, mesh_t &_mesh, settings_t& _settings,
@@ -115,6 +121,9 @@ public:
 
   void Operator(deviceMemory<double>& o_q, deviceMemory<double>& o_Aq);
   void Operator(deviceMemory<float>& o_q, deviceMemory<float>& o_Aq);
+
+  void BlockInverseOperator(deviceMemory<double>& o_q, deviceMemory<double>& o_Aq);
+  void BlockInverseOperator(deviceMemory<float>& o_q, deviceMemory<float>& o_Aq);
 
   void BuildOperatorDiagonal(memory<dfloat>& diagA);
   void BuildOperatorDiagonal(deviceMemory<pfloat> &o_invDiagA );
@@ -143,6 +152,17 @@ public:
   void Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_Mr);
   void Update();
 };
+
+//MassJacobi preconditioner
+class MassInversePrecon: public operator_t {
+private:
+  mass_t mass;
+public:
+  MassInversePrecon() = default;
+  MassInversePrecon(mass_t& mass);
+  void Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_Mr);
+};
+
 
 
 #endif

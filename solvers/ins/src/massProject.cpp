@@ -86,7 +86,7 @@ void mass_t::BoundarySetup(){
                   mesh.comm, ogs::Signed, ogs::Auto,
                   unique, verbose, platform);
 
-  // TW - need Nfields ?
+  // TW - need Nfields  ?
   //setup normalization constant
   //note that we can use the mesh ogs, since there are no masked nodes
   allNeumannScale = 0./sqrt((dfloat)ogsMasked.NgatherGlobal);
@@ -110,6 +110,7 @@ void mass_t::BoundarySetup(){
 
   // TW
   o_weight  = platform.malloc<pfloat>(weight);
+  printf("Ngather=%d\n", Ngather);
   o_weightG = platform.malloc<pfloat>(weightG);
 
   // create a global numbering system
@@ -183,6 +184,25 @@ void mass_t::BuildOperatorDiagonal(deviceMemory<pfloat> &o_invDiagA ){
   ogsMasked.Gather(o_diagA, o_diagAL, Nfields, ogs::Add, ogs::Trans);
 
   reciprocalKernel(Ndofs, o_diagA, o_invDiagA);
+
+  if(0){
+    memory<pfloat> tmp(Ndofs);
+    o_invDiagA.copyTo(tmp);
+    //    for(int n=0;n<Ndofs;++n){
+    //      printf("tmp[%d]=%g\n", n, tmp[n]);
+    //    }
+
+    memory<dfloat> MM(mesh.Np*mesh.Np);
+    mesh.o_MM.copyTo(MM);
+    for(int n=0;n<mesh.Np;++n){
+      for(int m=0;m<mesh.Np;++m){
+	printf("%g, ", MM[n*mesh.Np+m]);
+      }
+      printf("\n");
+    }
+    
+  }
+  
 }
 
 
@@ -195,12 +215,11 @@ void mass_t::BuildOperatorDiagonalContinuousTri2D(memory<dfloat>& A) {
     /* start with stiffness matrix  */
     for(int n=0;n<mesh.Np;++n){
       dlong lid = n + eM*mesh.Np;
-      dlong uid = 2*lid + 0;
-      dlong vid = 2*lid + 1;
+      dlong uid = mesh.dim*lid + 0;
+      dlong vid = mesh.dim*lid + 1;
       
-      
-      A[2*(eM*mesh.Np+n)+0] = J*mesh.MM[n+n*mesh.Np];
-      A[2*(eM*mesh.Np+n)+1] = J*mesh.MM[n+n*mesh.Np];
+      A[mesh.dim*(eM*mesh.Np+n)+0] = J*mesh.MM[n+n*mesh.Np];
+      A[mesh.dim*(eM*mesh.Np+n)+1] = J*mesh.MM[n+n*mesh.Np];
     }
   }
 
@@ -223,8 +242,8 @@ void mass_t::BuildOperatorDiagonalContinuousQuad2D(memory<dfloat>& A) {
       for (int n=0;n<mesh.Nq;++n) {
         dlong iid = n+m*mesh.Nq;
 	dlong lid = iid + e*mesh.Np;
-	dlong uid = 2*lid + 0;
-	dlong vid = 2*lid + 1;
+	dlong uid = mesh.dim*lid + 0;
+	dlong vid = mesh.dim*lid + 1;
 
 	dlong vbase = e*mesh.Np*mesh.Nvgeo;
 	dfloat JW = mesh.vgeo[vbase + n + m*mesh.Nq + mesh.JWID*mesh.Np];
@@ -235,11 +254,23 @@ void mass_t::BuildOperatorDiagonalContinuousQuad2D(memory<dfloat>& A) {
   }
 }
 
-
 void mass_t::BuildOperatorDiagonalContinuousTet3D(memory<dfloat>& A) {
+  
+  for(dlong eM=0;eM<mesh.Nelements;++eM){
+    dfloat J   = mesh.wJ[eM];
 
-  std::cout << "BuildOperatorDiagonalContinuousTet3D not implemented" << std::endl;
-  exit(-1);
+    /* start with stiffness matrix  */
+    for(int n=0;n<mesh.Np;++n){
+      dlong lid = n + eM*mesh.Np;
+      dlong uid = mesh.dim*lid + 0;
+      dlong vid = mesh.dim*lid + 1;
+      dlong wid = mesh.dim*lid + 2;
+      
+      A[mesh.dim*(eM*mesh.Np+n)+0] = J*mesh.MM[n+n*mesh.Np];
+      A[mesh.dim*(eM*mesh.Np+n)+1] = J*mesh.MM[n+n*mesh.Np];
+      A[mesh.dim*(eM*mesh.Np+n)+2] = J*mesh.MM[n+n*mesh.Np];
+    }
+  }
 }
 
 void mass_t::BuildOperatorDiagonalContinuousHex3D(memory<dfloat>& A) {
@@ -250,14 +281,14 @@ void mass_t::BuildOperatorDiagonalContinuousHex3D(memory<dfloat>& A) {
 
 void mass_t::Operator(deviceMemory<double> &o_q, deviceMemory<double> &o_Aq){
 
-  deviceMemory<double> o_MM, o_wJ, o_vgeo;
+  deviceMemory<double> o_MM, o_JW, o_vgeo;
 
   if constexpr (std::is_same_v<dfloat,double>) {
     o_MM   = mesh.o_MM;
-    o_wJ   = mesh.o_wJ;
+    o_JW   = mesh.o_wJ;
   } else if (std::is_same_v<pfloat,double>) {
     o_MM   = mesh.o_pfloat_MM;
-    o_wJ   = mesh.o_pfloat_wJ;
+    o_JW   = mesh.o_pfloat_wJ;
   } else {
     LIBP_FORCE_ABORT("mass_t::Operator called on type double, but double not set in types.h");
   }
@@ -266,27 +297,27 @@ void mass_t::Operator(deviceMemory<double> &o_q, deviceMemory<double> &o_Aq){
   //buffer for local Ax
   deviceMemory<double> o_AqL = platform.reserve<double>(Nfields*mesh.Np*mesh.Nelements);
 
-  gHalo.ExchangeStart(o_q, Nfields);
+  gHalo.ExchangeStart(o_q, 1); // Nfields);
   
   if(mesh.NlocalGatherElements/2){
     massPartialAxKernel(mesh.NlocalGatherElements/2,
 			mesh.o_localGatherElementList,
 			o_GlobalToLocal,
-			o_wJ,
+			o_JW,
 			o_MM,
 			o_q,
 			o_AqL);
   }
   
   // finalize halo exchange
-  gHalo.ExchangeFinish(o_q, Nfields);
+  gHalo.ExchangeFinish(o_q, 1); // Nfields);
   
   if(mesh.NglobalGatherElements) {
     
     massPartialAxKernel(mesh.NglobalGatherElements,
 		    mesh.o_globalGatherElementList,
 		    o_GlobalToLocal,
-		    o_wJ,
+		    o_JW,
 		    o_MM,
 		    o_q,
 		    o_AqL);
@@ -299,36 +330,27 @@ void mass_t::Operator(deviceMemory<double> &o_q, deviceMemory<double> &o_Aq){
     massPartialAxKernel((mesh.NlocalGatherElements+1)/2,
 			mesh.o_localGatherElementList+(mesh.NlocalGatherElements/2),
 			o_GlobalToLocal,
-			o_wJ,
+			o_JW,
 			o_MM,
 			o_q,
 			o_AqL);
   }
 
   ogsMasked.GatherFinish(o_Aq, o_AqL, Nfields, ogs::Add, ogs::Trans);
-
-  if(0){
-    memory<dfloat> Aqtmp(Ndofs);
-    o_Aq.copyTo(Aqtmp);
-    printf("Aq: ");
-    for(int n=0;n<Ndofs;++n){
-      printf("%g ", Aqtmp[n]);
-    }
-  }
   
 }
 
 
 void mass_t::Operator(deviceMemory<float> &o_q, deviceMemory<float> &o_Aq){
 
-  deviceMemory<float> o_MM, o_wJ;
-
+  deviceMemory<float> o_MM, o_JW;
+  
   if constexpr (std::is_same_v<dfloat,float>) {
     o_MM   = mesh.o_MM;
-    o_wJ   = mesh.o_wJ;
+    o_JW   = mesh.o_wJ;
   } else if (std::is_same_v<pfloat,float>) {
     o_MM   = mesh.o_pfloat_MM;
-    o_wJ   = mesh.o_pfloat_wJ;
+    o_JW   = mesh.o_pfloat_wJ;
   } else {
     LIBP_FORCE_ABORT("mass_t::Operator called on type float, but float not set in types.h");
   }
@@ -337,26 +359,26 @@ void mass_t::Operator(deviceMemory<float> &o_q, deviceMemory<float> &o_Aq){
   //buffer for local Ax
   deviceMemory<float> o_AqL = platform.reserve<float>(Nfields*mesh.Np*mesh.Nelements);
   
-  gHalo.ExchangeStart(o_q, Nfields);
+  gHalo.ExchangeStart(o_q, 1); // Nfields);
   
   if(mesh.NlocalGatherElements/2){
     floatMassPartialAxKernel(mesh.NlocalGatherElements/2,
 			     mesh.o_localGatherElementList,
 			     o_GlobalToLocal,
-			     o_wJ,
+			     o_JW,
 			     o_MM,
 			     o_q,
 			     o_AqL);
   }
   
   // finalize halo exchange
-  gHalo.ExchangeFinish(o_q, Nfields);
+  gHalo.ExchangeFinish(o_q, 1); // Nfields);
   
   if(mesh.NglobalGatherElements) {
     floatMassPartialAxKernel(mesh.NglobalGatherElements,
 			     mesh.o_globalGatherElementList,
 			     o_GlobalToLocal,
-			     o_wJ,
+			     o_JW,
 			     o_MM,
 			     o_q,
 			     o_AqL);
@@ -369,7 +391,7 @@ void mass_t::Operator(deviceMemory<float> &o_q, deviceMemory<float> &o_Aq){
     floatMassPartialAxKernel((mesh.NlocalGatherElements+1)/2,
 			     mesh.o_localGatherElementList+(mesh.NlocalGatherElements/2),
 			     o_GlobalToLocal,
-			     o_wJ,
+			     o_JW,
 			     o_MM,
 			     o_q,
 			     o_AqL);
@@ -379,9 +401,147 @@ void mass_t::Operator(deviceMemory<float> &o_q, deviceMemory<float> &o_Aq){
   
 }
 
+
+void mass_t::BlockInverseOperator(deviceMemory<double> &o_q, deviceMemory<double> &o_Aq){
+
+  deviceMemory<double> o_tmp_invMM, o_tmp_invJW;
+
+  if constexpr (std::is_same_v<dfloat,double>) {
+    o_tmp_invMM   = o_invMM;
+    o_tmp_invJW   = o_invJW;
+  } else if (std::is_same_v<pfloat,double>) {
+    o_tmp_invMM   = o_pfloat_invMM;
+    o_tmp_invJW   = o_pfloat_invJW;
+  } else {
+    LIBP_FORCE_ABORT("mass_t::BlockInverseOperator called on type double, but double not set in types.h");
+  }
+
+  // assume C0
+  //buffer for local Ax
+  deviceMemory<double> o_AqL = platform.reserve<double>(Nfields*mesh.Np*mesh.Nelements);
+
+  gHalo.ExchangeStart(o_q, 1); // Nfields);
+  
+  if(mesh.NlocalGatherElements/2){
+    massPartialAxKernel(mesh.NlocalGatherElements/2,
+			mesh.o_localGatherElementList,
+			o_GlobalToLocal,
+			o_tmp_invJW,
+			o_tmp_invMM,
+			o_q,
+			o_AqL);
+  }
+  
+  // finalize halo exchange
+  gHalo.ExchangeFinish(o_q, 1); // Nfields);
+  
+  if(mesh.NglobalGatherElements) {
+    
+    massPartialAxKernel(mesh.NglobalGatherElements,
+		    mesh.o_globalGatherElementList,
+		    o_GlobalToLocal,
+		    o_tmp_invJW,
+		    o_tmp_invMM,
+		    o_q,
+		    o_AqL);
+  }
+
+  //gather result to Aq
+  ogsMasked.GatherStart(o_Aq, o_AqL, Nfields, ogs::Add, ogs::Trans);
+
+  if((mesh.NlocalGatherElements+1)/2){
+    massPartialAxKernel((mesh.NlocalGatherElements+1)/2,
+			mesh.o_localGatherElementList+(mesh.NlocalGatherElements/2),
+			o_GlobalToLocal,
+			o_tmp_invJW,
+			o_tmp_invMM,
+			o_q,
+			o_AqL);
+  }
+
+  ogsMasked.GatherFinish(o_Aq, o_AqL, Nfields, ogs::Add, ogs::Trans);
+  
+}
+
+
+void mass_t::BlockInverseOperator(deviceMemory<float> &o_q, deviceMemory<float> &o_Aq){
+
+  deviceMemory<float> o_tmp_invMM, o_tmp_invJW;
+
+  if constexpr (std::is_same_v<dfloat,float>) {
+    o_tmp_invMM   = o_invMM;
+    o_tmp_invJW   = o_invJW;
+  } else if (std::is_same_v<pfloat,float>) {
+    o_tmp_invMM   = o_pfloat_invMM;
+    o_tmp_invJW   = o_pfloat_invJW;
+  } else {
+    LIBP_FORCE_ABORT("mass_t::BlockInverseOperator called on type float, but float not set in types.h");
+  }
+
+  // assume C0
+  //buffer for local Ax
+  deviceMemory<float> o_AqL = platform.reserve<float>(Nfields*mesh.Np*mesh.Nelements);
+  
+  gHalo.ExchangeStart(o_q, 1); // Nfields);
+  
+  if(mesh.NlocalGatherElements/2){
+    floatMassPartialAxKernel(mesh.NlocalGatherElements/2,
+			 mesh.o_localGatherElementList,
+			 o_GlobalToLocal,
+			 o_tmp_invJW,
+			 o_tmp_invMM,
+			 o_q,
+			 o_AqL);
+  }
+  
+  // finalize halo exchange
+  gHalo.ExchangeFinish(o_q, 1); // Nfields);
+  
+  if(mesh.NglobalGatherElements) {
+    floatMassPartialAxKernel(mesh.NglobalGatherElements,
+			 mesh.o_globalGatherElementList,
+			 o_GlobalToLocal,
+			 o_tmp_invJW,
+			 o_tmp_invMM,
+			 o_q,
+			 o_AqL);
+  }
+  
+  //gather result to Aq
+  ogsMasked.GatherStart(o_Aq, o_AqL, Nfields, ogs::Add, ogs::Trans);
+  
+  if((mesh.NlocalGatherElements+1)/2){
+    floatMassPartialAxKernel((mesh.NlocalGatherElements+1)/2,
+			 mesh.o_localGatherElementList+(mesh.NlocalGatherElements/2),
+			 o_GlobalToLocal,
+			 o_tmp_invJW,
+			 o_tmp_invMM,
+			 o_q,
+			 o_AqL);
+  }
+  
+  ogsMasked.GatherFinish(o_Aq, o_AqL, Nfields, ogs::Add, ogs::Trans);
+  
+}
+
+
+
 void MassJacobiPrecon::Update(){
   mass.BuildOperatorDiagonal(o_invDiagA);
 }
+
+
+int mass_t::Solve(linearSolver_t<dfloat>& linearSolver,
+		  deviceMemory<dfloat> &o_x,
+		  deviceMemory<dfloat> &o_r,
+		  const dfloat tol, const int MAXIT, const int verbose){
+
+  int Niter = linearSolver.Solve(*this, precon, o_x, o_r, tol, MAXIT, verbose);
+
+  return Niter;
+}
+
+
 
 // Jacobi preconditioner
 MassJacobiPrecon::MassJacobiPrecon(mass_t& _mass):
@@ -544,7 +704,7 @@ void mass_t::Setup(platform_t& _platform, mesh_t& _mesh, settings_t& _settings,
   comm = _mesh.comm;
   settings = _settings;
 
-  settings.report();
+  //  settings.report();
   
   Nfields = mesh.dim;
 
@@ -586,7 +746,7 @@ void mass_t::Setup(platform_t& _platform, mesh_t& _mesh, settings_t& _settings,
   //add standard boundary functions
 
   int blockMax = 256;
-  if (platform.device.mode() == "CUDA") blockMax = 512;
+  if (platform.device.mode() == "CUDA") blockMax = 1024;
 
   kernelInfo["defines/" "p_Nfields"]= Nfields;
   
@@ -623,6 +783,11 @@ void mass_t::Setup(platform_t& _platform, mesh_t& _mesh, settings_t& _settings,
   kernelName = "massScatter" + suffix;
   massScatterKernel = platform.buildKernel(fileName, kernelName,
 					   kernelInfo);
+
+  kernelName = "massWeight" + suffix;
+  weightKernel = platform.buildKernel(fileName, kernelName,
+				      kernelInfo);
+  
   
   /* Preconditioner Setup */
   Ndofs = ogsMasked.Ngather*Nfields;
@@ -638,18 +803,50 @@ void mass_t::Setup(platform_t& _platform, mesh_t& _mesh, settings_t& _settings,
 
   reciprocalKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 
+#if 0
+  // TET
+  memory<dfloat> invMM(mesh.MM);
+  memory<pfloat> pfloat_invMM(mesh.Np*mesh.Np);
+  memory<pfloat> pfloat_invJW(mesh.Nelements);
+
+  linAlg_t::matrixInverse(mesh.Np, invMM);
+  
+  for(int n=0;n<mesh.Np;++n)
+    for(int m=0;m<mesh.Np;++m)
+      pfloat_invMM[n*mesh.Np+m] = invMM[n*mesh.Np+m];
+
+  for(dlong e=0;e<mesh.Nelements;++e){
+    pfloat_invJW[e] = 1./mesh.wJ[e];
+  }
+  
+  o_pfloat_invJW = platform.malloc<pfloat>(mesh.Nelements, pfloat_invJW);
+  o_pfloat_invMM = platform.malloc<pfloat>(mesh.Np*mesh.Np, pfloat_invMM);
+#endif
+
+  
   // assume Jacobi
+
   precon.Setup<MassJacobiPrecon>(*this);
+  if(0)
+    precon.Setup<MassInversePrecon>(*this);
+  
   
 }
 
-int mass_t::Solve(linearSolver_t<dfloat>& linearSolver,
-                      deviceMemory<dfloat> &o_x,
-		      deviceMemory<dfloat> &o_r,
-                      const dfloat tol, const int MAXIT, const int verbose){
 
-  int Niter = linearSolver.Solve(*this, precon, o_x, o_r, tol, MAXIT, verbose);
-
-  return Niter;
+// block mass
+MassInversePrecon::MassInversePrecon(mass_t& _mass):
+  mass(_mass) {
+  
 }
 
+void MassInversePrecon::Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_Mr) {
+
+  linAlg_t& linAlg = mass.platform.linAlg();
+  
+  mass.BlockInverseOperator(o_r, o_Mr);
+
+  dlong Ngather = mass.ogsMasked.Ngather;     // number of degrees of freedom on this rank (after gathering)
+
+  mass.weightKernel(Ngather, mass.o_weightG, o_Mr);
+}
