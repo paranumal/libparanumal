@@ -183,9 +183,7 @@ public:
   void Run();
 
   void extbdfCallback(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_F,  const dfloat time);
-
-  // void extbdfCallback(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_v, const dfloat time);
-
+  void ssbdfCallback(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_F,  const dfloat time);
 
   void Report(dfloat time, int tstep);
 

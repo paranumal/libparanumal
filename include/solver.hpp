@@ -64,6 +64,11 @@ public:
     LIBP_FORCE_ABORT("rhsf not implemented in this solver");
   }
 
+   //Full rhs evaluation of solver in form dq/dt = rhsf(q,t)
+  virtual void ssbdfCallback(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_F, const dfloat time) {
+    LIBP_FORCE_ABORT("rhsf not implemented in this solver");
+  }
+
   //  //Full rhs evaluation of solver in form dq/dt = rhsf(q,t)
   // virtual void extbdfCallback(deviceMemory<dfloat>& o_q, deviceMemory<dfloat>& o_v, const dfloat time) {
   //   LIBP_FORCE_ABORT("rhsf not implemented in this solver");

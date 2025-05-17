@@ -117,6 +117,9 @@ void ssbdf3::Run(solver_t& solver,
   }
 }
 
+
+
+
 void ssbdf3::Step(solver_t& solver,
                   deviceMemory<dfloat> o_q,
                   deviceMemory<dfloat> o_qn,
@@ -137,14 +140,20 @@ void ssbdf3::Step(solver_t& solver,
 
   //build rhs for implicit step and update history
   deviceMemory<dfloat> o_rhs = platform.reserve<dfloat>(N); //rhs storage
+  deviceMemory<dfloat> o_qe  = platform.reserve<dfloat>(N); //extrapolated velocity
   rhsKernel(N,
            _dt,
            shiftIndex,
            o_B,
+           o_qn, 
            o_qhat,
+           o_qe,
            o_rhs);
 
   dfloat gamma = B[0]/_dt;
+
+  // If dual splitting compute extrapolated pressure Neumann data 
+  solver.ssbdfCallback(o_rhs, o_qe, time); 
 
   //solve implicit part:
   // find q such that gamma*q - G(q) = rhs

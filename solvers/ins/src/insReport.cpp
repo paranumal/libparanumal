@@ -60,7 +60,7 @@ void ins_t::Report(dfloat time, int tstep){
     o_p.copyTo(p);
     o_Vort.copyTo(Vort);
 
-    if(0){
+    if(1){
       // output field files
       std::string name;
       settings.getSetting("OUTPUT FILE NAME", name);

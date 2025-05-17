@@ -107,24 +107,21 @@ void ins_t::rhs_imex_invg(deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_U
     // This form uses Guermond-Shen form of the Dual Splitting Method of Karniadakis 
     // RHS  holds (extp(u) + dt*N(u))/dt where N(u) = -(u.\nabla)u so RHS =  \gamma_0/dt * Uhat = \gamma U_hat   
     // We need that to use same extbdf for other options also
-    platform.linAlg().axpy(NVfields*Ntotal, 1.0/gamma, o_RHS, 0.0, o_U);
-
     // rhsP = -Div RHS = -Div[ gamma/dt *u_hat  ]
     deviceMemory<dfloat> o_rhsP = platform.reserve<dfloat>(Ntotal);
+    platform.linAlg().axpy(NVfields*Ntotal, 1.0/gamma, o_RHS, 0.0, o_U);
     Divergence(-gamma, o_U, 0.0, o_rhsP, T);
-
     // call pressure solver to solve
     // -Laplacian*P = rhsP =  -Div[ gamma/dt *u_hat  ] + [dpdn]_{wall, }
     PressureSolve(o_p, o_rhsP, gamma, T);
-
     // //update velocity with pressure correction
     // // U = U - [dt/gamma_0]*grad P
     Gradient(-1.0/gamma, o_p, 1.0, o_U, T);
-
     //call velocty solver to solve
     platform.linAlg().axpy(NVfields*Ntotal, gamma, o_U, 0.0, o_RHS);
 
     VelocitySolve(o_U, o_RHS, gamma, T);
+   
   }
 
   
@@ -209,23 +206,25 @@ if(pressureCorrection){
     // PN = ext(N(U)) - nu curl curl qe 
     platform.linAlg().zaxpy(mesh.dim*Ntotal, dt, o_RHS, -1.0, o_Qe, o_PN);   
     platform.linAlg().axpy(mesh.dim*Ntotal, -nu, o_Vort1, 1/dt, o_PN);    
-
-
-
-
-    // //Update the Pressure Neumann data i.e. extp( -N(u) - nu curlxcurlx)
-    // pressureNeumannUpdateKernel(Nlocal,
-    //                       indx, 
-    //                       nu,  
-    //                       gamma0,  
-    //                       o_A,
-    //                       o_B,
-    //                       o_F,
-    //                       o_V,
-    //                       o_PN); 
+}
 }
 
+void ins_t::ssbdfCallback(deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_Qe, const dfloat time){
 
-
-
+// void ins_t::extbdfCallback(deviceMemory<dfloat>& o_U, deviceMemory<dfloat>& o_V, const dfloat time){
+const dfloat dt     = timeStepper.GetTimeStep();
+const dfloat gamma0 = timeStepper.GetGamma();
+// const dfloat gamma0 = gamma*dt; 
+if(pressureCorrection){
+  // nada, everything is handled in extbdf integrator
+}else{
+    // -u_hat/dt - nu curl curl u*
+    const dlong Ntotal = mesh.Nelements*mesh.Np; 
+    deviceMemory<dfloat> o_Vort0  = platform.reserve<dfloat>(mesh.dim*Ntotal);
+    deviceMemory<dfloat> o_Vort1 = platform.reserve<dfloat>(mesh.dim*Ntotal);
+    vorticityKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_D, o_Qe, o_Vort0);
+    vorticityKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_D, o_Vort0, o_Vort1);
+    o_Vort0.free(); 
+    platform.linAlg().zaxpy(mesh.dim*Ntotal, -dt/gamma0, o_RHS, -nu, o_Vort1, o_PN);   
+}
 }
