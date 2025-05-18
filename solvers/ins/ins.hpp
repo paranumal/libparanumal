@@ -235,6 +235,9 @@ public:
                      const dfloat gamma, const dfloat T, const dfloat dt);
 
   void MassSolve(deviceMemory<dfloat>& o_U);
+
+
+  // void continuityCheck(deviceMemory<dfloat>& o_U, const dfloat T);
 };
 
 #endif

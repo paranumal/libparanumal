@@ -362,8 +362,6 @@ SOFTWARE.
   for(int e=0;e<Nelements;e++;@outer(0)){
     @shared dfloat s_p[p_Np];
     @shared dfloat s_ndp[p_Nfp*p_Nfaces];
-    // @shared dfloat s_dpdn[p_Nfp*p_Nfaces];
-
     @exclusive dfloat r_rhsP;
 
     for(int n=0;n<p_maxNodes;++n;@inner(0)){

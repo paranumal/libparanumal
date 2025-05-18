@@ -8,7 +8,8 @@ data/insUniform2D.h
 [MESH FILE]
 #../../meshes/bumpBoxQuad2D.msh
 #../../meshes/bumpBoxQuad2Dv2.msh
-../../meshes/bumpsTri2DboxRamp.msh
+#../../meshes/bumpsTri2DboxRamp.msh
+../../meshes/bumpsTri2D.msh
 
 [MESH DIMENSION]
 2
@@ -17,7 +18,7 @@ data/insUniform2D.h
 3
 
 [POLYNOMIAL DEGREE]
-2
+4
 
 [THREAD MODEL]
 CUDA
@@ -33,7 +34,7 @@ CUDA
 #1.25
 
 [VISCOSITY]
-0.000001
+0.0001
 #0.000001
 #0.0000025
 #0.000005
@@ -71,7 +72,8 @@ DOPRI5
 TRUE
 
 [OUTPUT FILE NAME]
-bump
+bump_wo_project
+#bump_w_project
 
 #################################################
 ########## Velocity Solver Options ##############

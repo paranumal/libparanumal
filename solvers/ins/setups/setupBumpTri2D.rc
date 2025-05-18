@@ -8,7 +8,8 @@ data/insUniform2D.h
 [MESH FILE]
 #../../meshes/bumpBoxQuad2D.msh
 #../../meshes/bumpBoxQuad2Dv2.msh
-../../meshes/bumpTri2Dbox.msh
+#../../meshes/bumpTri2Dbox.msh
+../../meshes/bumpTri2D.msh
 
 [MESH DIMENSION]
 2
@@ -34,7 +35,7 @@ CUDA
 #1.25
 
 [VISCOSITY]
-0.000001
+0.0001
 #0.000001
 #0.0000025
 #0.000005
@@ -51,7 +52,12 @@ CUBATURE
 FALSE
 
 [TIME INTEGRATOR]
+#EXTBDF3
 SSBDF3
+
+[SPLITTING CORRECTION TYPE]
+VELOCITY
+#PRESSURE
 
 [NUMBER OF SUBCYCLES]
 1
@@ -64,16 +70,17 @@ DOPRI5
 0
 
 [FINAL TIME]
-5
+1
 
 [OUTPUT INTERVAL]
-1.5
+0.1
 
 [OUTPUT TO FILE]
 TRUE
 
 [OUTPUT FILE NAME]
-bump
+bump_wo_project
+#bump_w_project
 
 #################################################
 ########## Velocity Solver Options ##############

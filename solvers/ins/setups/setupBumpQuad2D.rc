@@ -6,8 +6,9 @@ data/insUniform2D.h
 #data/insRampedUniform2D.h
 
 [MESH FILE]
+../../meshes/fenceQuad2D.msh
 #../../meshes/bumpBoxQuad2D.msh
-../../meshes/bumpBoxQuad2Dv2.msh
+#../../meshes/bumpBoxQuad2Dv2.msh
 
 [MESH DIMENSION]
 2
@@ -16,7 +17,7 @@ data/insUniform2D.h
 4
 
 [POLYNOMIAL DEGREE]
-2
+3
 
 [THREAD MODEL]
 CUDA
@@ -32,7 +33,8 @@ CUDA
 #1.25
 
 [VISCOSITY]
-0.000001
+0.0001
+#0.000001
 #0.0000025
 #0.000005
 #0.00001
@@ -47,8 +49,13 @@ CUBATURE
 [PRESSURE INCREMENT]
 FALSE
 
-[TIME INTEGRATOR]
+TIME INTEGRATOR]
+#EXTBDF3
 SSBDF3
+
+[SPLITTING CORRECTION TYPE]
+VELOCITY
+#PRESSURE
 
 [NUMBER OF SUBCYCLES]
 4
@@ -60,10 +67,10 @@ DOPRI5
 0
 
 [FINAL TIME]
-50
+3
 
 [OUTPUT INTERVAL]
-5
+0.1
 
 [OUTPUT TO FILE]
 TRUE
@@ -208,13 +215,9 @@ CHEBYSHEV
 2
 
 ###########################################
-
-
-
 # can be PCG, FPCG, NBPCG, NBFPCG, or PGMRES
 [MASS LINEAR SOLVER]
 PCG
-
 
 # can be IPDG, or CONTINUOUS
 [MASS DISCRETIZATION]

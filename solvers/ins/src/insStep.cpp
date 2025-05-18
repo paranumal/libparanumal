@@ -55,10 +55,7 @@ dfloat ins_t::MaxWaveSpeed(deviceMemory<dfloat>& o_U, const dfloat T){
 void ins_t::rhs_imex_invg(deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_U, const dfloat gamma, const dfloat T){
   // here gamma is the gamma/dt 
   const dfloat dt = timeStepper.GetTimeStep();
-
   const dlong Ntotal = (mesh.Nelements+mesh.totalHaloPairs)*mesh.Np;
-  const dlong Nlocal = mesh.Nelements*mesh.Np;
-
   if(pressureCorrection){
     if (pressureIncrement) {
       //use current pressure in velocity RHS
@@ -119,19 +116,24 @@ void ins_t::rhs_imex_invg(deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_U
     Gradient(-1.0/gamma, o_p, 1.0, o_U, T);
     //call velocty solver to solve
     platform.linAlg().axpy(NVfields*Ntotal, gamma, o_U, 0.0, o_RHS);
-
     VelocitySolve(o_U, o_RHS, gamma, T);
    
   }
 
-  
+  #if 0
+    filterKernel(mesh.Nelements, o_FILT, o_U, o_RHS);
+  #endif
 
-  // project U to C0 (should be equivalent to also projecting Ue)
-  // (note the projection uses pressure gather (which neglects outflow only)
-  if(mesh.elementType==Mesh::QUADRILATERALS)
-    Project(o_U, mesh.dim);
-  else
-    MassSolve(o_U);
+
+  // continuityCheck(o_U, T); 
+  // // project U to C0 (should be equivalent to also projecting Ue)
+  // // (note the projection uses pressure gather (which neglects outflow only)
+  // if(mesh.elementType==Mesh::QUADRILATERALS)
+  //   Project(o_U, mesh.dim);
+  // else
+  //   MassSolve(o_U);
+
+  // continuityCheck(o_U, T); 
 
   if (mesh.rank==0 && mesh.dim==2) {
     printf("\rT: %e, Solver iterations: U - %3d, V - %3d, P - %3d", T, NiterU, NiterV, NiterP); fflush(stdout);
@@ -190,7 +192,6 @@ void ins_t::extbdfCallback(deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_
 
 // void ins_t::extbdfCallback(deviceMemory<dfloat>& o_U, deviceMemory<dfloat>& o_V, const dfloat time){
 const dfloat dt     = timeStepper.GetTimeStep();
-const dfloat gamma0 = timeStepper.GetGamma();
 // const dfloat gamma0 = gamma*dt; 
 if(pressureCorrection){
   // nada, everything is handled in extbdf integrator
@@ -228,3 +229,36 @@ if(pressureCorrection){
     platform.linAlg().zaxpy(mesh.dim*Ntotal, -dt/gamma0, o_RHS, -nu, o_Vort1, o_PN);   
 }
 }
+
+
+// void ins_t::continuityCheck(deviceMemory<dfloat>& o_U, const dfloat T){
+
+//    o_U.copyTo(u);
+//    const dfloat tol =1e-10; 
+
+//    for(int eM=0; eM<mesh.Nelements; eM++){
+//       for(int n=0; n<mesh.Nfaces*mesh.Nfp; n++){
+//         const dlong id  = eM*mesh.Nfp*mesh.Nfaces + n;
+//         const dlong idM = mesh.vmapM[id];
+//         const dlong idP = mesh.vmapP[id];
+
+//         const dlong eP = idP/mesh.Np;
+
+//         const dlong vidM = eM*mesh.Np*NVfields + idM%mesh.Np;
+//         const dlong vidP = eP*mesh.Np*NVfields + idP%mesh.Np;
+
+//         const dfloat uM = u[vidM + 0*mesh.Np];
+//         const dfloat uP = u[vidP + 0*mesh.Np];
+
+//         const dfloat vM = u[vidM + 1*mesh.Np];
+//         const dfloat vP = u[vidP + 1*mesh.Np];
+
+//         const dfloat du = uM-uP; 
+//         const dfloat dv = vM-vP; 
+
+//         if(std::abs(du)>tol || std::abs(dv)>tol){
+//           printf("%d %d %.4e %4e\n", eM, eP, du, dv);
+//         }
+//       }
+//    }
+// }

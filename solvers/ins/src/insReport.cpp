@@ -38,6 +38,15 @@ void ins_t::Report(dfloat time, int tstep){
   dfloat udotMU = platform.linAlg().innerProd(Nentries, o_u, o_MU, mesh.comm);
   std::cout << "udotMU=" << udotMU << std::endl;
   dfloat norm2 = sqrt(udotMU);
+
+
+  #if 0
+    filterKernel(mesh.Nelements, o_FILT, o_u, o_MU);
+    o_MU.copyTo(u);
+  #endif
+
+
+
   o_MU.free();
 
   if(mesh.rank==0)
@@ -57,7 +66,7 @@ void ins_t::Report(dfloat time, int tstep){
     
     memory<dfloat> Vort(mesh.dim*mesh.Nelements*mesh.Np);
 
-    // copy data back to host
+    // copy data back to host!!!!!!!!!
     o_u.copyTo(u);
     o_p.copyTo(p);
     o_Vort.copyTo(Vort);

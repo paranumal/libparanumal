@@ -349,3 +349,165 @@ SOFTWARE.
     }
   }
 }
+
+#undef surfaceTerms
+
+
+
+
+
+#define surfaceTerms(sk,face,i, j)                                      \
+{                                                                       \
+  const dlong idM    = vmapM[sk];                                       \
+  const dfloat nx    = sgeo[sk*p_Nsgeo+p_NXID];                         \
+  const dfloat ny    = sgeo[sk*p_Nsgeo+p_NYID];                         \
+  const dfloat WsJ   = sgeo[sk*p_Nsgeo+p_WSJID];                        \
+                                                                        \
+  dfloat dpdxP=0.f, dpdyP=0.f, pP=0.f, pn = 0;                          \
+  const int bc = mapB[idM];                                             \
+  if(bc>0) {                                                            \
+    insPressureDirichletConditions2D(bc,nu,time, x[idM], y[idM], nx, ny, 0.f, &pP);\
+    insPressureNeumannConditions2D(bc,nu,time, x[idM], y[idM], nx, ny, 0.f, 0.f, &dpdxP, &dpdyP);\
+   if(bc==1 || bc==2){                                                  \
+    const dfloat dpdnx = PN[e*p_Np*p_NVfields + idM%p_Np+0*p_Np];       \
+    const dfloat dpdny = PN[e*p_Np*p_NVfields + idM%p_Np+1*p_Np];       \
+    pn = nx*dpndx + ny*dpndy;                                           \
+    }                                                                   \
+  }                                                                     \
+                                                                        \
+  s_p  [j][i]  = pP;                                                    \
+  s_ndp[j][i] -= WsJ*(nx*dpdxP + ny*dpdyP-pn);                          \
+}
+
+@kernel void insPressureDualRhsQuad2D(const dlong Nelements,
+                               @restrict const  dfloat *  wJ,
+                               @restrict const  dfloat *  vgeo,
+                               @restrict const  dfloat *  sgeo,
+                               @restrict const  dfloat *  ggeo,
+                               @restrict const  dfloat *  S,
+                               @restrict const  dfloat *  DT,
+                               @restrict const  dfloat *  LIFT,
+                               @restrict const  dfloat *  MM,
+                               @restrict const  dfloat *  sM,
+                               @restrict const  dlong  *  vmapM,
+                               @restrict const  int    *  EToB,
+                               @restrict const  int    *  mapB,
+                               const dfloat tau,
+                               const dfloat time,
+                               @restrict const  dfloat *  x,
+                               @restrict const  dfloat *  y,
+                               @restrict const  dfloat *  z,
+                               @restrict const  dfloat *  PN,
+                               const dfloat nu,
+                               const dfloat gamma,
+                               @restrict        dfloat *  RHS){
+
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+    @shared dfloat s_p[p_Nq][p_Nq];
+    @shared dfloat s_ndp[p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
+
+    @exclusive dfloat r_pr[p_Nq], r_ps[p_Nq], r_Ap[p_Nq];
+    @exclusive dfloat r_G00[p_Nq], r_G01[p_Nq], r_G11[p_Nq];
+
+    // loop over slabs
+    for(int i=0;i<p_Nq;++i;@inner(0)){
+      for(int j=0;j<p_Nq;++j){
+        s_p[j][i] = 0.;
+        s_ndp[j][i] = 0.;
+
+        s_DT[j][i] = DT[j*p_Nq+i];
+      }
+    }
+
+
+    // face 0 & 2
+    for(int i=0;i<p_Nq;++i;@inner(0)){
+      const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i;
+      const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + i;
+
+      surfaceTerms(sk0,0,i,0     );
+      surfaceTerms(sk2,2,i,p_Nq-1);
+    }
+
+
+    // face 1 & 3
+    for(int j=0;j<p_Nq;++j;@inner(0)){
+      const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + j;
+      const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + j;
+
+      surfaceTerms(sk1,1,p_Nq-1,j);
+      surfaceTerms(sk3,3,0     ,j);
+    }
+
+
+    // loop over slabs
+    for(int i=0;i<p_Nq;++i;@inner(0)){
+      for(int j=0;j<p_Nq;++j){
+        const dlong base = e*p_Nggeo*p_Np + j*p_Nq + i;
+
+        r_G00[j] = ggeo[base+p_G00ID*p_Np];
+        r_G01[j] = ggeo[base+p_G01ID*p_Np];
+        r_G11[j] = ggeo[base+p_G11ID*p_Np];
+
+        dfloat qr = 0.f, qs = 0.f;
+        #pragma unroll p_Nq
+          for(int n=0; n<p_Nq; ++n){
+            qr += s_DT[i][n]*s_p[j][n];
+            qs += s_DT[j][n]*s_p[n][i];
+          }
+
+        r_pr[j] = qr; r_ps[j] = qs;
+      }
+    }
+
+    // r term ----->
+
+    for(int i=0;i<p_Nq;++i;@inner(0)){
+      for(int j=0;j<p_Nq;++j){
+        s_p[j][i] = r_G00[j]*r_pr[j] + r_G01[j]*r_ps[j];
+      }
+    }
+
+
+    for(int i=0;i<p_Nq;++i;@inner(0)){
+      for(int j=0;j<p_Nq;++j){
+        dfloat tmp = 0.f;
+        #pragma unroll p_Nq
+          for(int n=0;n<p_Nq;++n) {
+            tmp += s_DT[n][i]*s_p[j][n];
+          }
+
+        r_Ap[j] = tmp;
+      }
+    }
+
+    // s term ---->
+
+    for(int i=0;i<p_Nq;++i;@inner(0)){
+      for(int j=0;j<p_Nq;++j){
+        s_p[j][i] = r_G01[j]*r_pr[j] + r_G11[j]*r_ps[j];
+      }
+    }
+
+
+    for(int i=0;i<p_Nq;++i;@inner(0)){
+      for(int j=0;j<p_Nq;++j){
+        const dfloat JW = wJ[i + j*p_Nq + e*p_Np];
+
+        dfloat tmp = 0.f;
+
+        #pragma unroll p_Nq
+          for(int n=0;n<p_Nq;++n) {
+            tmp += s_DT[n][j]*s_p[n][i];
+          }
+
+        r_Ap[j] += tmp;
+
+        const dlong id = e*p_Np + j*p_Nq + i;
+        RHS[id] = JW*RHS[id] - (r_Ap[j] + s_ndp[j][i]);
+      }
+    }
+  }
+}
+#undef surfaceTerms

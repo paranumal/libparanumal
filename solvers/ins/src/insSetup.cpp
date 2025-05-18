@@ -231,6 +231,7 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
       vTau = 2.0*(mesh.N+1)*(mesh.N+3);
   }
 
+
   //Setup pressure Elliptic solver
   dlong pNlocal=0, pNhalo=0;
   {
@@ -260,7 +261,7 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
       pNhalo  = mesh.totalHaloPairs*mesh.Np;
     }
 
-    if (vSettings.compareSetting("LINEAR SOLVER","NBPCG")){
+    if (pSettings.compareSetting("LINEAR SOLVER","NBPCG")){
       pLinearSolver.Setup<LinearSolver::nbpcg<dfloat>>(pNlocal, pNhalo, platform, pSettings, comm);
     } else if (pSettings.compareSetting("LINEAR SOLVER","NBFPCG")){
       pLinearSolver.Setup<LinearSolver::nbfpcg<dfloat>>(pNlocal, pNhalo, platform, pSettings, comm);
@@ -284,6 +285,7 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
       pLinearSolver.SetupInitialGuess<InitialGuess::Extrap<dfloat>>(pNlocal, platform, pSettings, comm);
     }
   }
+
 
   //Setup pressure Elliptic solver
   dlong massNlocal=0, massNhalo=0;
@@ -331,6 +333,8 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
     presTOL = 1.0E-5;
     velTOL  = 1.0E-5;
   }
+
+
 
   //setup linear algebra module
   platform.linAlg().InitKernels({"innerProd", "axpy", "max", "zaxpy"});
@@ -556,7 +560,7 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
                                              kernelInfo);
     }
 
-  }else{ \\ velocity correction 
+  }else{ 
 
     fileName   = oklFilePrefix + "insPressureRhs" + suffix + oklFileSuffix;
       if (pDisc_c0)
@@ -710,7 +714,6 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
     o_FILT = platform.malloc<dfloat>(FILT);
   }
-
 
   
 }

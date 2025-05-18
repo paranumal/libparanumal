@@ -3,7 +3,7 @@ Mesh.MshFileVersion = 2.2;
 SetFactory("OpenCASCADE");
 
 d = 1;
-h = d/3;
+h = d/5;
 
 Point(1) = {-10*d,0,0,h};
 Point(2) = {-d/2.,0,0,h};
@@ -34,46 +34,46 @@ Physical Curve("Outflow", 3) = {12};
 //+
 Physical Surface("Domain", 20) = {15};
 
-Field[1] = BoundaryLayer;
-Field[1].NodesList = {1,2,3,4,5,6,7};
-Field[1].CurvesList = {7,8,9,10,11};
-Field[1].SizeFar = 0.5*h;
-Field[1].Ratio = 2;
-Field[1].NbLayers = 8;
-Field[1].Thickness = 4*h/2;
-Field[1].Quads = 1;
-Field[1].FanPointsList = {3,4};
-BoundaryLayer Field = 1;
+// Field[1] = BoundaryLayer;
+// Field[1].NodesList = {1,2,3,4,5,6,7};
+// Field[1].CurvesList = {7,8,9,10,11};
+// Field[1].SizeFar = 0.5*h;
+// Field[1].Ratio = 2;
+// Field[1].NbLayers = 8;
+// Field[1].Thickness = 4*h/2;
+// Field[1].Quads = 1;
+// Field[1].FanPointsList = {3,4};
+// BoundaryLayer Field = 1;
 
-//Mesh.Algorithm = 6;
-Recombine Surface {20};
-//+
-Field[1].NbLayers = 4;
-//+
-Field[1].Ratio = 4;
-//+
-Field[1].SizeFar = 0.1;
-//+
-Field[2] = Min;
-//+
-Field[2].FieldsList = {1};
-//+
-Field[1].AnisoMax = 100;
-//+
-Field[1].Quads = 0;
-//+
-Field[1].Ratio = 2;
-//+
-Field[1].NbLayers = 8;
-//+
-Field[1].IntersectMetrics = 1;
-//+
-Field[1].Thickness = 0.2;
-//+
-Field[1].NbLayers = 1;
-//+
-Field[1].IntersectMetrics = 0;
-//+
-Field[1].Beta = 2;
-//+
-Field[1].Size = 0.01;
+// //Mesh.Algorithm = 6;
+// Recombine Surface {20};
+// //+
+// Field[1].NbLayers = 4;
+// //+
+// Field[1].Ratio = 4;
+// //+
+// Field[1].SizeFar = 0.1;
+// //+
+// Field[2] = Min;
+// //+
+// Field[2].FieldsList = {1};
+// //+
+// Field[1].AnisoMax = 100;
+// //+
+// Field[1].Quads = 0;
+// //+
+// Field[1].Ratio = 2;
+// //+
+// Field[1].NbLayers = 8;
+// //+
+// Field[1].IntersectMetrics = 1;
+// //+
+// Field[1].Thickness = 0.2;
+// //+
+// Field[1].NbLayers = 1;
+// //+
+// Field[1].IntersectMetrics = 0;
+// //+
+// Field[1].Beta = 2;
+// //+
+// Field[1].Size = 0.01;

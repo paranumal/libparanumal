@@ -154,6 +154,7 @@ void ssbdf3::Step(solver_t& solver,
 
   // If dual splitting compute extrapolated pressure Neumann data 
   solver.ssbdfCallback(o_rhs, o_qe, time); 
+  // solver.ssbdfCallback(o_rhs, o_qhat, time); 
 
   //solve implicit part:
   // find q such that gamma*q - G(q) = rhs
