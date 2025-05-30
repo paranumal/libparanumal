@@ -29,7 +29,7 @@
 void elliptic_t::Operator(deviceMemory<double> &o_q, deviceMemory<double> &o_Aq){
 
   deviceMemory<double> o_MM, o_D, o_S, o_LIFT;
-  deviceMemory<double> o_wJ, o_ggeo, o_sgeo, o_vgeo;
+  deviceMemory<double> o_wJ, o_ggeo, o_sgeo, o_vgeo, o_tmpIbMM;
 
   if constexpr (std::is_same_v<dfloat,double>) {
     o_MM   = mesh.o_MM;
@@ -182,8 +182,8 @@ void elliptic_t::Operator(deviceMemory<double> &o_q, deviceMemory<double> &o_Aq)
 void elliptic_t::Operator(deviceMemory<float> &o_q, deviceMemory<float> &o_Aq){
 
   deviceMemory<float> o_MM, o_D, o_S, o_LIFT;
-  deviceMemory<float> o_wJ, o_ggeo, o_sgeo, o_vgeo;
-
+  deviceMemory<float> o_wJ, o_ggeo, o_sgeo, o_vgeo, o_tmpIbMM;
+  
   if constexpr (std::is_same_v<dfloat,float>) {
     o_MM   = mesh.o_MM;
     o_D    = mesh.o_D;
@@ -205,7 +205,7 @@ void elliptic_t::Operator(deviceMemory<float> &o_q, deviceMemory<float> &o_Aq){
     o_sgeo = mesh.o_pfloat_sgeo;
     o_vgeo = mesh.o_pfloat_vgeo;
   } else {
-    LIBP_FORCE_ABORT("elliptic_t::Operator called on type float, but float not set in types.h");
+    LIBP_FORCE_ABORT("elliptic_t::Operator called on type double, but double not set in types.h");
   }
 
   if(disc_c0){
@@ -245,9 +245,6 @@ void elliptic_t::Operator(deviceMemory<float> &o_q, deviceMemory<float> &o_Aq){
                            o_AqL);
     }
 
-    //gather result to Aq
-    ogsMasked.GatherStart(o_Aq, o_AqL, 1, ogs::Add, ogs::Trans);
-
     if((mesh.NlocalGatherElements+1)/2){
       floatPartialAxKernel((mesh.NlocalGatherElements+1)/2,
                            mesh.o_localGatherElementList+(mesh.NlocalGatherElements/2),
@@ -262,6 +259,12 @@ void elliptic_t::Operator(deviceMemory<float> &o_q, deviceMemory<float> &o_Aq){
                            o_AqL);
     }
 
+    // add penalty 
+    if(ibNelements>0)
+      floatImmersedBoundaryPenaltyKernel(ibNelements, o_ibElements, o_GlobalToLocal, o_floatIbMM, o_q, o_AqL);
+    
+    //gather result to Aq 
+    ogsMasked.GatherStart(o_Aq, o_AqL, 1, ogs::Add, ogs::Trans);
     ogsMasked.GatherFinish(o_Aq, o_AqL, 1, ogs::Add, ogs::Trans);
 
   } else if(disc_ipdg) {

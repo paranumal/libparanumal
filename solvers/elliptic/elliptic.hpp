@@ -177,9 +177,14 @@ public:
   void BuildImmersedBoundaryMatrixTet3D(mesh_t &vmesh);
   dlong ibNelements;
   deviceMemory<dfloat> o_ibMM;  // local contributions to immersed interface terms
+  deviceMemory<float>  o_floatIbMM;  // FP32 version local contributions to immersed interface terms
   deviceMemory<dlong>  o_ibElements;
+
   memory<dfloat> ibDiagA;
+  memory<float> floatIbDiagA;  
+
   kernel_t immersedBoundaryPenaltyKernel;
+  kernel_t floatImmersedBoundaryPenaltyKernel;
   
 };
 

@@ -725,6 +725,11 @@ void elliptic_t::BuildImmersedBoundaryMatrixTet3D(mesh_t &vmesh){
   kernelName = "ellipticImmersedBoundaryPenalty" + suffix;
 
   immersedBoundaryPenaltyKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
+
+  kernelInfo["defines/dfloat"] = pfloatString;
+
+  floatImmersedBoundaryPenaltyKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
+
   
   std::vector<std::vector<dfloat>> fEX;
   std::vector<std::vector<dfloat>> fEY;
@@ -766,7 +771,6 @@ void elliptic_t::BuildImmersedBoundaryMatrixTet3D(mesh_t &vmesh){
 
   // zero for accumulation
   memory<dfloat> ibMM(ibNelements*vmesh.Np*vmesh.Np, (dfloat)0.);
-
   memory<dfloat> ibInvV;
 
   vmesh.VandermondeTet3D(vmesh.N, vmesh.r, vmesh.s, vmesh.t, ibInvV);
@@ -907,8 +911,13 @@ void elliptic_t::BuildImmersedBoundaryMatrixTet3D(mesh_t &vmesh){
     printf("10^{%d} count: %d\n", p-15, logAreaCounts[p]);
   }
 #endif
+  memory<float>  floatIbMM(ibNelements*vmesh.Np*vmesh.Np, (float)0.);
+  for(dlong n=0;n<mesh.Np*mesh.Np*ibNelements;++n){
+    floatIbMM[n] = ibMM[n];
+  }
   
   o_ibMM = platform.malloc<dfloat>(ibMM);
+  o_floatIbMM = platform.malloc<float>(floatIbMM);
   o_ibElements = platform.malloc<dlong>(ibElements);
 
   // TW: need to scatter diagonal of matrices into full vector and gather with ogs into full diagonal
@@ -925,7 +934,11 @@ void elliptic_t::BuildImmersedBoundaryMatrixTet3D(mesh_t &vmesh){
   //gather the diagonal to assemble it
   ibDiagA.malloc(Ndofs);
   ogsMasked.Gather(ibDiagA, ibDiagAL, 1, ogs::Add, ogs::Trans);
-  
+  floatIbDiagA.malloc(Ndofs);
+  for(dlong n=0;n<Ndofs;++n){
+    floatIbDiagA[n] = ibDiagA[n];
+  }
+
   
 }
   
