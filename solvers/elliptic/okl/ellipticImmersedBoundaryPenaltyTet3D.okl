@@ -24,31 +24,42 @@ SOFTWARE.
 
 */
 
-#include "ellipticPrecon.hpp"
 
-// Jacobi preconditioner
-JacobiPrecon::JacobiPrecon(elliptic_t& _elliptic):
-  elliptic(_elliptic) {
+@kernel void ellipticImmersedBoundaryPenaltyTet3D(const dlong Nelements,
+						  @restrict const  dlong   *  elementList,
+						  @restrict const  dlong   *  GlobalToLocal,
+						  @restrict const  dfloat *  ibMM,
+						  @restrict const  dfloat  *  q,
+						  @restrict dfloat  *  Aq){
+  
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
 
-  memory<dfloat> diagA   (elliptic.Ndofs);
-  memory<pfloat> invDiagA(elliptic.Ndofs);
-  elliptic.BuildOperatorDiagonal(diagA);
+    @shared dfloat s_q[p_Np];
+    @exclusive dlong element;
 
-  for (dlong n=0;n<elliptic.Ndofs;n++){
-    invDiagA[n] = 1.0/diagA[n];
-  }
-  o_invDiagA = elliptic.platform.malloc<pfloat>(invDiagA);
-}
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      element = elementList[e];
+      
+      const dlong base = n + element*p_Np;
+      const dlong id = GlobalToLocal[base];
+      s_q[n] = (id!=-1) ? q[id] : 0.0;
+    }
+    
+    
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      const dfloat *ibMMe = ibMM+e*p_Np*p_Np;
 
-void JacobiPrecon::Operator(deviceMemory<pfloat>& o_r, deviceMemory<pfloat>& o_Mr) {
+      // coalesced (up to Np) read
+      dfloat Aqn = Aq[element*p_Np+n];
+      
+#pragma unroll p_Np
+      for(int m=0;m<p_Np;++m){
+	// coalesced up to Np read of ibMM
+	Aqn += ibMMe[n + m*p_Np]*s_q[m];
+      }
 
-  linAlg_t& linAlg = elliptic.platform.linAlg();
-
-  // Mr = invDiag.*r
-  linAlg.amxpy(elliptic.Ndofs, (pfloat)1.0, o_invDiagA, o_r, (pfloat)0.0, o_Mr);
-
-  // zero mean of RHS
-  if(elliptic.allNeumann){
-    elliptic.ZeroMean(o_Mr);
+      // coalesced (up to Np) write
+      Aq[element*p_Np+n] = Aqn;
+    }
   }
 }

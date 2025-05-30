@@ -136,6 +136,12 @@ elliptic_t elliptic_t::SetupNewDegree(mesh_t& meshC){
     elliptic.Nhalo = meshC.totalHaloPairs*meshC.Np*Nfields;
   }
 
+  // build immersed interface penalty matrices for this level (hard coded for tets)
+  if(meshC.elementType==Mesh::TETRAHEDRA)
+    elliptic.BuildImmersedBoundaryMatrixTet3D(meshC);
+  else
+    elliptic.ibNelements = 0;
+  
   elliptic.precon = precon_t();
 
   return elliptic;

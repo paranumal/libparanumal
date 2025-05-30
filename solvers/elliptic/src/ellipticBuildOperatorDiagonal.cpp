@@ -75,6 +75,14 @@ void elliptic_t::BuildOperatorDiagonal(memory<dfloat>& diagA){
 
     //gather the diagonal to assemble it
     ogsMasked.Gather(diagA, diagAL, 1, ogs::Add, ogs::Trans);
+
+    if(ibNelements){
+      for (dlong n=0;n<Ndofs;n++){
+	diagA[n] += ibDiagA[n];
+      }
+    }
+
+    
   }
   if(comm_t::world().rank()==0) printf("done.\n");
 }

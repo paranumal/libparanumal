@@ -164,6 +164,9 @@ void elliptic_t::Setup(platform_t& _platform, mesh_t& _mesh,
     Nhalo = mesh.totalHaloPairs*mesh.Np*Nfields;
   }
 
+  /* build immersed boundary stiffness matrix and diagonal */
+  BuildImmersedBoundaryMatrixTet3D(mesh); // ibNelements = 0 if no surface mesh
+  
   if (settings.compareSetting("PRECONDITIONER", "JACOBI"))
     precon.Setup<JacobiPrecon>(*this);
   else if(settings.compareSetting("PRECONDITIONER", "MASSMATRIX"))

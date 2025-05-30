@@ -45,7 +45,7 @@ int main(int argc, char **argv){
     //load settings from file
     ellipticSettings.parseFromFile(platformSettings, meshSettings,
                                    argv[1]);
-
+   
     // set up platform
     platform_t platform(platformSettings);
 
@@ -55,9 +55,21 @@ int main(int argc, char **argv){
 
     // set up mesh
     mesh_t mesh(platform, meshSettings, comm);
-
+    
     dfloat lambda = 0.0;
     ellipticSettings.getSetting("LAMBDA", lambda);
+    
+    std::vector<std::vector<double>> fEX, fEY, fEZ;
+
+#if 0
+    if(mesh.elementType==Mesh::HEXAHEDRA)
+      computeIntersectionsHex3D(mesh.EX, mesh.EY, mesh.EZ, ibmesh.EX, ibmesh.EY, ibmesh.EZ, fEX, fEY, fEZ, mesh.Nelements, ibmesh.Nelements);
+    else
+      computeIntersectionsTet3D(mesh.EX, mesh.EY, mesh.EZ, ibmesh.EX, ibmesh.EY, ibmesh.EZ, fEX, fEY, fEZ, mesh.Nelements, ibmesh.Nelements);
+    
+    writeFragmentsVTU("foo.vtu", fEX, fEY, fEZ);
+    writeOriginalSurfaceVTU(ibmesh.Nelements, ibmesh.EX, ibmesh.EY, ibmesh.EZ, "surf.vtu");
+#endif
 
     // Boundary Type translation. Just defaults.
     int NBCTypes = 3;

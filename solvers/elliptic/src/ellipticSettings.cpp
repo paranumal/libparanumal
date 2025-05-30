@@ -52,6 +52,16 @@ void ellipticAddRunSettings(settings_t& settings) {
 
   settings.newSetting("OUTPUT FILE NAME",
                       "elliptic");
+
+  settings.newSetting("IMMERSED BOUNDARY",
+		      "FALSE",
+		      "Flag for using immersed boundary",
+		      {"TRUE", "FALSE"});
+  
+  settings.newSetting("IMMERSED BOUNDARY MESH FILE",
+		      "../../meshes/surf.msh",
+		      "Immersed boundary surface mesh file");
+		      
 }
 
 void ellipticAddSettings(settings_t& settings,

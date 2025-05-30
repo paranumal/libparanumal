@@ -93,6 +93,9 @@ public:
   memory<int> EToB;
   deviceMemory<int> o_EToB;
 
+  deviceMemory<dfloat> o_mu;
+  deviceMemory<pfloat> o_pfloat_mu;
+  
   int allNeumann;
   dfloat allNeumannPenalty;
   dfloat allNeumannScale;
@@ -170,8 +173,51 @@ public:
 
   void ZeroMean(deviceMemory<double> &o_q);
   void ZeroMean(deviceMemory<float> &o_q);
+
+  void BuildImmersedBoundaryMatrixTet3D(mesh_t &vmesh);
+  dlong ibNelements;
+  deviceMemory<dfloat> o_ibMM;  // local contributions to immersed interface terms
+  deviceMemory<dlong>  o_ibElements;
+  memory<dfloat> ibDiagA;
+  kernel_t immersedBoundaryPenaltyKernel;
+  
 };
 
+
+void computeIntersectionsHex3D(const memory<dfloat> &EX,
+			  const memory<dfloat> &EY,
+			  const memory<dfloat> &EZ,
+			  const memory<dfloat> &sEX,
+			  const memory<dfloat> &sEY,
+			  const memory<dfloat> &sEZ,
+			  std::vector<std::vector<double>>& fEX,
+			  std::vector<std::vector<double>>& fEY,
+			  std::vector<std::vector<double>>& fEZ,
+			  dlong Nel,
+			  dlong Nsurf);
+void computeIntersectionsTet3D(const memory<dfloat> &EX,
+			  const memory<dfloat> &EY,
+			  const memory<dfloat> &EZ,
+			  const memory<dfloat> &sEX,
+			  const memory<dfloat> &sEY,
+			  const memory<dfloat> &sEZ,
+			  std::vector<std::vector<double>>& fEX,
+			  std::vector<std::vector<double>>& fEY,
+			  std::vector<std::vector<double>>& fEZ,
+			  dlong Nel,
+			  dlong Nsurf);
+
+
+void writeFragmentsVTU(const std::string& filename,
+                       const std::vector<std::vector<double>>& fEX,
+                       const std::vector<std::vector<double>>& fEY,
+                       const std::vector<std::vector<double>>& fEZ);
+
+void writeOriginalSurfaceVTU(const dlong Nelements,
+			     const memory<dfloat> &sEX,
+			     const memory<dfloat> &sEY,
+			     const memory<dfloat> &sEZ,
+                             const std::string& filename);
 
 #endif
 

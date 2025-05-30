@@ -352,7 +352,7 @@ void MGLevel::SetupSmoother() {
   memory<dfloat> diagA   (Nrows);
   memory<pfloat> invDiagA(Nrows);
   elliptic.BuildOperatorDiagonal(diagA);
-
+ 
   for (dlong n=0;n<Nrows;n++) {
     invDiagA[n] = 1.0/diagA[n];
   }
