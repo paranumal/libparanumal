@@ -245,6 +245,7 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
     pBCType[6] = 2;
 
     pSettings = _settings.extractPressureSettings();
+    pSettings.changeSetting("IMMERSED BOUNDARY", "FALSE");
     pSolver.Setup(platform, mesh, pSettings,
                   0.0, NBCTypes, pBCType);
     pTau = pSolver.tau;
@@ -638,7 +639,7 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
 	dfloat Fnm = 0;
 	for(int i=0;i<mesh.N+1;++i){
 	  for(int j=0;j<mesh.N+1-i;++j){
-	    dfloat fac = (i+j==mesh.N) ? .8:1.;
+	    dfloat fac = (i+j==mesh.N) ? .9:1.;
 	    Fnm += V[n*mesh.Np+sk]*fac*invV[sk*mesh.Np+m];
 	    ++sk;
 	  }

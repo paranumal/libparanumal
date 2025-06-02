@@ -710,6 +710,41 @@ void elliptic_t::BuildImmersedBoundaryMatrixTet3D(mesh_t &vmesh){
   
   // surface mesh
   mesh_t ibmesh(platform, ibmeshSettings, comm);
+
+  dfloat xmin=1e9, xmax=-1e9;
+  dfloat ymin=1e9, ymax=-1e9;
+  dfloat zmin=1e9, zmax=-1e9;
+
+  for(dlong e=0;e<ibmesh.Nelements;++e){
+    for(dlong v=0;v<ibmesh.Nverts;++v){
+      dlong id = e*ibmesh.Nverts+v;
+      xmin = std::min(xmin, ibmesh.EX[id]);
+      xmax = std::max(xmax, ibmesh.EX[id]);
+      ymin = std::min(ymin, ibmesh.EY[id]);
+      ymax = std::max(ymax, ibmesh.EY[id]);
+      zmin = std::min(zmin, ibmesh.EZ[id]);
+      zmax = std::max(zmax, ibmesh.EZ[id]);
+    }
+  }
+
+  dfloat Lx = fabs(xmax-xmin);
+  dfloat Ly = fabs(ymax-ymin);
+  dfloat Lz = fabs(zmax-zmin);
+  dfloat Cx = xmin + 0.5*Lx;
+  dfloat Cy = ymin + 0.5*Ly;
+  dfloat Cz = zmin + 0.5*Lz;
+  dfloat Lmax = std::max(Lx,std::max(Ly,Lz));
+  
+  for(dlong e=0;e<ibmesh.Nelements;++e){
+    for(dlong v=0;v<ibmesh.Nverts;++v){
+      dlong id = e*ibmesh.Nverts+v;
+      ibmesh.EX[id] = (ibmesh.EX[id]-Cx)/Lmax;
+      ibmesh.EY[id] = (ibmesh.EY[id]-Cy)/Lmax;
+      ibmesh.EZ[id] = (ibmesh.EZ[id]-Cz)/Lmax;
+    }
+  }
+  
+  writeOriginalSurfaceVTU(ibmesh.Nelements, ibmesh.EX, ibmesh.EY,ibmesh.EZ, "surf.vtu");
   
   std::cout << "ibMesh Nelements: " << ibmesh.Nelements << std::endl;
   std::cout << "  mesh Nelements: " << vmesh.Nelements << std::endl;
