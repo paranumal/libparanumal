@@ -49,18 +49,27 @@ void ins_t::Report(dfloat time, int tstep){
     deviceMemory<dfloat> o_Vort = platform.reserve<dfloat>(mesh.dim*mesh.Nelements*mesh.Np);
     vorticityKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_D, o_u, o_Vort);
 
-    if(mesh.elementType==Mesh::QUADRILATERALS)
+    deviceMemory<dfloat> o_Qfactor = platform.reserve<dfloat>(mesh.dim*mesh.Nelements*mesh.Np);
+    qfactorKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_D, o_u, o_Vort);
+    
+    if(mesh.elementType==Mesh::QUADRILATERALS){
       Project(o_Vort, 2);
-    else
+      Project(o_Qfactor, 2);
+    }
+    else{
       MassSolve(o_Vort);
+      MassSolve(o_Qfactor);
+    }
       
     
     memory<dfloat> Vort(mesh.dim*mesh.Nelements*mesh.Np);
+    memory<dfloat> Qfactor(mesh.dim*mesh.Nelements*mesh.Np);
 
     // copy data back to host
     o_u.copyTo(u);
     o_p.copyTo(p);
     o_Vort.copyTo(Vort);
+    o_Qfactor.copyTo(Qfactor);
 
     if(1){
       // output field files
@@ -69,7 +78,7 @@ void ins_t::Report(dfloat time, int tstep){
       char fname[BUFSIZ];
       sprintf(fname, "%s_%04d_%04d.vtu", name.c_str(), mesh.rank, frame++);
       
-      PlotFields(u, p, Vort, std::string(fname));
+      PlotFields(u, p, Vort, Qfactor, std::string(fname));
     }
 
     if(mesh.dim==2){

@@ -110,7 +110,10 @@ insSettings_t::insSettings_t(comm_t& _comm):
              "Upper cutoff for colormap when writing frames to PNG files");
 #endif
 
-
+  newSetting("RELAXATION FILTER",
+             "FALSE",
+             "Use filter prior to mass projection of velocity",
+             {"TRUE", "FALSE"});
   
   ellipticAddSettings(*this, "VELOCITY ");
   parAlmond::AddSettings(*this, "VELOCITY ");

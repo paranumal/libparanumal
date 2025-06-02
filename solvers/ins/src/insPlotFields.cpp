@@ -27,7 +27,9 @@ SOFTWARE.
 #include "ins.hpp"
 
 // interpolate data to plot nodes and save to file (one per process
-void ins_t::PlotFields(memory<dfloat>& U, memory<dfloat>& P, memory<dfloat>& V, std::string fileName){
+void ins_t::PlotFields(memory<dfloat>& U, memory<dfloat>& P,
+		       memory<dfloat>& Vort, memory<dfloat>& Qfactor,
+		       std::string fileName){
 
   FILE *fp;
 
@@ -114,12 +116,27 @@ void ins_t::PlotFields(memory<dfloat>& U, memory<dfloat>& P, memory<dfloat>& V, 
     fprintf(fp, "       </DataArray>\n");
   }
 
-  if (V.length()!=0) {
+  if (Qfactor.length()!=0) {
+    // write out Qfactor (embedded in 3 vector)
+    fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Qfactor\" Format=\"ascii\">\n");
+    for(dlong e=0;e<mesh.Nelements;++e){
+      mesh.PlotInterp(Qfactor + e*mesh.Np*mesh.dim, Ip, scratch);
+
+      for(int n=0;n<mesh.plotNp;++n){
+        fprintf(fp, "       ");
+        fprintf(fp, "%f\n", Ip[n]);
+      }
+    }
+    fprintf(fp, "       </DataArray>\n");
+  }
+
+  
+  if (Vort.length()!=0) {
     // write out vorticity
     if(mesh.dim==2){
       fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticity\" Format=\"ascii\">\n");
       for(dlong e=0;e<mesh.Nelements;++e){
-        mesh.PlotInterp(V + e*mesh.Np*mesh.dim, Ip, scratch);
+        mesh.PlotInterp(Vort + e*mesh.Np*mesh.dim, Ip, scratch);
 
         for(int n=0;n<mesh.plotNp;++n){
           fprintf(fp, "       ");
@@ -129,9 +146,9 @@ void ins_t::PlotFields(memory<dfloat>& U, memory<dfloat>& P, memory<dfloat>& V, 
     } else {
       fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticity\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
       for(dlong e=0;e<mesh.Nelements;++e){
-        mesh.PlotInterp(V + 0*mesh.Np + e*mesh.Np*3, Iu, scratch);
-        mesh.PlotInterp(V + 1*mesh.Np + e*mesh.Np*3, Iv, scratch);
-        mesh.PlotInterp(V + 2*mesh.Np + e*mesh.Np*3, Iw, scratch);
+        mesh.PlotInterp(Vort + 0*mesh.Np + e*mesh.Np*3, Iu, scratch);
+        mesh.PlotInterp(Vort + 1*mesh.Np + e*mesh.Np*3, Iv, scratch);
+        mesh.PlotInterp(Vort + 2*mesh.Np + e*mesh.Np*3, Iw, scratch);
 
         for(int n=0;n<mesh.plotNp;++n){
           fprintf(fp, "       ");

@@ -546,6 +546,11 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
   vorticityKernel =  platform.buildKernel(fileName, kernelName,
                                             kernelInfo);
 
+  fileName   = oklFilePrefix + "insQfactor" + suffix + oklFileSuffix;
+  kernelName = "insQfactor" + suffix;
+  qfactorKernel =  platform.buildKernel(fileName, kernelName,
+                                            kernelInfo);
+
   if (mesh.dim==2) {
     fileName   = oklFilePrefix + "insInitialCondition2D" + oklFileSuffix;
     kernelName = "insInitialCondition2D";
@@ -613,7 +618,8 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
 #endif
 
   // build filter
-  if(mesh.elementType==Mesh::TRIANGLES){
+  if(mesh.elementType==Mesh::TRIANGLES ||
+     mesh.elementType==Mesh::TETRAHEDRA){
 
     fileName   = oklFilePrefix + "massKernels" + suffix + oklFileSuffix;
     kernelName = "massFilter" + suffix;
@@ -621,7 +627,10 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
     filterKernel = platform.buildKernel(fileName, kernelName,
 					    kernelInfo);
     memory<dfloat> V;
-    mesh.VandermondeTri2D(mesh.N, mesh.r, mesh.s, V);
+    if(mesh.dim==2)
+      mesh.VandermondeTri2D(mesh.N, mesh.r, mesh.s, V);
+    else
+      mesh.VandermondeTet3D(mesh.N, mesh.r, mesh.s, mesh.t, V);
     
     memory<dfloat> invV(mesh.Np*mesh.Np);
     for(int n=0;n<mesh.Np;++n){
@@ -637,17 +646,32 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
       for(int m=0;m<mesh.Np;++m){
 	int sk = 0;
 	dfloat Fnm = 0;
-	for(int i=0;i<mesh.N+1;++i){
-	  for(int j=0;j<mesh.N+1-i;++j){
-	    dfloat fac = (i+j==mesh.N) ? .9:1.;
-	    Fnm += V[n*mesh.Np+sk]*fac*invV[sk*mesh.Np+m];
-	    ++sk;
+	dfloat frac = 0.9;
+	if(mesh.elementType==Mesh::TETRAHEDRA){
+	  for(int i=0;i<mesh.N+1;++i){
+	    for(int j=0;j<mesh.N+1-i;++j){
+	      for(int k=0;k<mesh.N+1-i-j;++k){
+		dfloat fac = (i+j+k==mesh.N) ? frac:1.;
+		Fnm += V[n*mesh.Np+sk]*fac*invV[sk*mesh.Np+m];
+		++sk;
+	      }
+	    }
+	  }
+	}
+	if(mesh.elementType==Mesh::TRIANGLES){
+	  for(int i=0;i<mesh.N+1;++i){
+	    for(int j=0;j<mesh.N+1-i;++j){
+	      dfloat fac = (i+j==mesh.N) ? frac:1.;
+	      Fnm += V[n*mesh.Np+sk]*fac*invV[sk*mesh.Np+m];
+	      ++sk;
+	    }
 	  }
 	}
 	FILT[n+m*mesh.Np] = Fnm;
       }      
     }
 
+#if 0
     printf("V:\n");
 
     for(int n=0;n<mesh.Np;++n){
@@ -674,7 +698,7 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
       }
       printf("\n");
     }
-
+#endif
 
     o_FILT = platform.malloc<dfloat>(FILT);
   }

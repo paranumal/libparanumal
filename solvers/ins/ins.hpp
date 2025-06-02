@@ -150,6 +150,7 @@ public:
   kernel_t pressureIncrementBCKernel;
 
   kernel_t vorticityKernel;
+  kernel_t qfactorKernel;
 
   kernel_t initialConditionKernel;
   kernel_t maxWaveSpeedKernel;
@@ -187,7 +188,7 @@ public:
 
   void Report(dfloat time, int tstep);
 
-  void PlotFields(memory<dfloat>& U, memory<dfloat>& P, memory<dfloat>& V, std::string fileName);
+  void PlotFields(memory<dfloat>& U, memory<dfloat>& P, memory<dfloat>& Vort, memory<dfloat>& Qfactor, std::string fileName);
   void PlotFrame(memory<dfloat>& U, std::string fileName, int plotNfields);
 
   dfloat MaxWaveSpeed(deviceMemory<dfloat>& o_U, const dfloat T);
