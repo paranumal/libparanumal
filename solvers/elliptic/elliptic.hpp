@@ -55,6 +55,9 @@ void ellipticAddSettings(settings_t& settings,
 
 class elliptic_t: public solver_t {
 public:
+
+  int fineN;
+  
   mesh_t mesh;
 
   dlong Ndofs, Nhalo;

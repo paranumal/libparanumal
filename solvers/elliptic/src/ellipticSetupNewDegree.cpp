@@ -34,7 +34,8 @@ elliptic_t elliptic_t::SetupNewDegree(mesh_t& meshC){
 
   //shallow copy
   elliptic_t elliptic = *this;
-
+  elliptic.fineN = mesh.N;
+  
   elliptic.mesh = meshC;
 
   /*setup trace halo exchange */

@@ -671,34 +671,6 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
       }      
     }
 
-#if 0
-    printf("V:\n");
-
-    for(int n=0;n<mesh.Np;++n){
-      for(int m=0;m<mesh.Np;++m){
-	printf("%g ", V[n*mesh.Np+m]);
-      }
-      printf("\n");
-    }
-
-    printf("invV:\n");
-
-    for(int n=0;n<mesh.Np;++n){
-      for(int m=0;m<mesh.Np;++m){
-	printf("%g ", invV[n*mesh.Np+m]);
-      }
-      printf("\n");
-    }
-
-    printf("FILT:\n");
-
-    for(int n=0;n<mesh.Np;++n){
-      for(int m=0;m<mesh.Np;++m){
-	printf("%g ", FILT[n+mesh.Np*m]);
-      }
-      printf("\n");
-    }
-#endif
 
     o_FILT = platform.malloc<dfloat>(FILT);
   }

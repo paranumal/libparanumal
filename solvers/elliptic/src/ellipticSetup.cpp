@@ -37,6 +37,8 @@ void elliptic_t::Setup(platform_t& _platform, mesh_t& _mesh,
   settings = _settings;
   lambda = _lambda;
 
+  fineN = mesh.N;
+  
   Nfields = 1;
 
   //Trigger JIT kernel builds

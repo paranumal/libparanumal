@@ -50,7 +50,7 @@ void ins_t::Report(dfloat time, int tstep){
     vorticityKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_D, o_u, o_Vort);
 
     deviceMemory<dfloat> o_Qfactor = platform.reserve<dfloat>(mesh.dim*mesh.Nelements*mesh.Np);
-    qfactorKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_D, o_u, o_Vort);
+    qfactorKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_D, o_u, o_Qfactor);
     
     if(mesh.elementType==Mesh::QUADRILATERALS){
       Project(o_Vort, 2);

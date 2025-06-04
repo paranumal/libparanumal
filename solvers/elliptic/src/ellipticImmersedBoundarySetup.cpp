@@ -828,8 +828,13 @@ void elliptic_t::BuildImmersedBoundaryMatrixTet3D(mesh_t &vmesh){
   
   // form penalty
   //  dfloat maxTau = vmesh.N*vmesh.N*maxInvH;
-  dfloat maxTau = pow(vmesh.N, 3)*pow(maxInvH,2);
- 
+  printf("vmesh.N=%d\n", vmesh.N);
+  //  dfloat maxTau = pow(vmesh.N, 3)*pow(maxInvH,2);
+  //  dfloat maxTau = pow(vmesh.N, 3)*pow(maxInvH,1);
+  //  dfloat maxTau = pow(fineN, 3)*pow(maxInvH,2.);
+  //dfloat maxTau = pow(vmesh.N, 3)*pow(maxInvH,1.5);
+  // dfloat maxTau = pow(fineN, 3)*pow(maxInvH,2.);
+  dfloat maxTau = pow(fineN, 2)*pow(maxInvH,2);
   std::cout << "maxTau: " << maxTau << std::endl;
 
   memory<dlong> logAreaCounts(100,0);
@@ -841,7 +846,12 @@ void elliptic_t::BuildImmersedBoundaryMatrixTet3D(mesh_t &vmesh){
   for(ib=0;ib<ibNelements;++ib){
     
     memory<dfloat> ibCubV(ibCubNp*vmesh.Np);
+    memory<dfloat> ibCubVr(ibCubNp*vmesh.Np);
+    memory<dfloat> ibCubVs(ibCubNp*vmesh.Np);
+    memory<dfloat> ibCubVt(ibCubNp*vmesh.Np);
+    
     memory<dfloat> ibCubInterp(ibCubNp*vmesh.Np);
+    memory<dfloat> ibCubDn(ibCubNp*vmesh.Np);
     
     memory<dfloat> ibEX(TRINVERTS), ibEY(TRINVERTS), ibEZ(TRINVERTS);
     memory<dfloat> ibEXTet(TETNVERTS), ibEYTet(TETNVERTS), ibEZTet(TETNVERTS);
@@ -852,7 +862,24 @@ void elliptic_t::BuildImmersedBoundaryMatrixTet3D(mesh_t &vmesh){
       printf("building element %d of %d\n", ib, ibNelements);
     
     dlong e = ibElements[ib];
-    
+
+    // grab tet vertex coordinates
+    for(int v=0;v<TETNVERTS;++v){
+      ibEXTet[v] = vmesh.EX[e*TETNVERTS+v];
+      ibEYTet[v] = vmesh.EY[e*TETNVERTS+v];
+      ibEZTet[v] = vmesh.EZ[e*TETNVERTS+v];
+    }
+
+    dfloat rx = vmesh.vgeo[e*vmesh.Nvgeo+mesh.RXID];
+    dfloat ry = vmesh.vgeo[e*vmesh.Nvgeo+mesh.RYID];
+    dfloat rz = vmesh.vgeo[e*vmesh.Nvgeo+mesh.RZID];
+    dfloat sx = vmesh.vgeo[e*vmesh.Nvgeo+mesh.SXID];
+    dfloat sy = vmesh.vgeo[e*vmesh.Nvgeo+mesh.SYID];
+    dfloat sz = vmesh.vgeo[e*vmesh.Nvgeo+mesh.SZID];
+    dfloat tx = vmesh.vgeo[e*vmesh.Nvgeo+mesh.TXID];
+    dfloat ty = vmesh.vgeo[e*vmesh.Nvgeo+mesh.TYID];
+    dfloat tz = vmesh.vgeo[e*vmesh.Nvgeo+mesh.TZID];
+
     // for each sub-triangle
     for(int tri=0;tri<fEX[e].size()/TRINVERTS;++tri){
 
@@ -863,12 +890,32 @@ void elliptic_t::BuildImmersedBoundaryMatrixTet3D(mesh_t &vmesh){
 	ibEZ[v] = fEZ[e][tri*TRINVERTS+v];
       }
 
-      // grab tet vertex coordinates
-      for(int v=0;v<TETNVERTS;++v){
-	ibEXTet[v] = vmesh.EX[e*TETNVERTS+v];
-	ibEYTet[v] = vmesh.EY[e*TETNVERTS+v];
-	ibEZTet[v] = vmesh.EZ[e*TETNVERTS+v];
-      }
+      // compute normals (cross product of edge vectors)
+      dfloat ex1 = ibEX[1]-ibEX[0];
+      dfloat ey1 = ibEY[1]-ibEY[0];
+      dfloat ez1 = ibEZ[1]-ibEZ[0];
+      dfloat ex2 = ibEX[2]-ibEX[0];
+      dfloat ey2 = ibEY[2]-ibEY[0];
+      dfloat ez2 = ibEZ[2]-ibEZ[0];
+
+      dfloat ibnx = ey2*ez1 - ez2*ey1;
+      dfloat ibny = ez2*ex1 - ex2*ez1;
+      dfloat ibnz = ex2*ey1 - ey2*ex1;
+
+      dfloat ibsc = sqrt(ibnx*ibnx+ibny*ibny+ibnz*ibnz);
+      ibnx /= ibsc;
+      ibny /= ibsc;
+      ibnz /= ibsc;
+
+#if 0
+      dfloat fac = ibnx*ibEX[0]+ibny*ibEY[0]+ibnz*ibEZ[0];
+      if(fac>0)
+	printf("ibn.X: %g\n", fac);
+#endif
+      
+      dfloat ibnr = rx*ibnx + ry*ibny + rz*ibnz;
+      dfloat ibns = sx*ibnx + sy*ibny + sz*ibnz;
+      dfloat ibnt = tx*ibnx + ty*ibny + tz*ibnz;
       
       // lay down tri cubature nodes on this triangle
       for(int n=0;n<ibCubNp;++n){
@@ -888,17 +935,25 @@ void elliptic_t::BuildImmersedBoundaryMatrixTet3D(mesh_t &vmesh){
 				    ibEXTet, ibEYTet,ibEZTet, 
 				    ibCubrTet, ibCubsTet, ibCubtTet);
       
-      // evaluate PKDO at tet nodes
+      // evaluate PKDO at tet cubature nodes
       vmesh.VandermondeTet3D(vmesh.N, ibCubrTet, ibCubsTet, ibCubtTet, ibCubV);
 
+      // evaluate gradient PKDO at tet cubature nodes
+      vmesh.GradVandermondeTet3D(vmesh.N, ibCubrTet, ibCubsTet, ibCubtTet, ibCubVr, ibCubVs, ibCubVt);
+	
       // construction interpolation operator (W&B to IB fragment cubature nodes)
       for(int n=0;n<ibCubNp;++n){
 	for(int m=0;m<vmesh.Np;++m){
-	  dfloat tmp = 0;
+	  dfloat tmp = 0, tmpr = 0, tmps = 0, tmpt = 0;
 	  for(int i=0;i<vmesh.Np;++i){
-	    tmp += ibCubV[n*vmesh.Np+i]*ibInvV[i*vmesh.Np+m];
+	    dfloat ibInvVim = ibInvV[i*vmesh.Np+m];
+	    tmp  +=  ibCubV[n*vmesh.Np+i]*ibInvVim;
+	    tmpr += ibCubVr[n*vmesh.Np+i]*ibInvVim;
+	    tmps += ibCubVs[n*vmesh.Np+i]*ibInvVim;
+	    tmpt += ibCubVt[n*vmesh.Np+i]*ibInvVim;
 	  }
 	  ibCubInterp[n*vmesh.Np+m] = tmp;
+	  ibCubDn[n*vmesh.Np+m] = ibnr*tmpr + ibns*tmps + ibnt*tmpt;
 	}
       }
 
@@ -918,12 +973,20 @@ void elliptic_t::BuildImmersedBoundaryMatrixTet3D(mesh_t &vmesh){
       for(int m=0;m<vmesh.Np;++m){
 	for(int n=0;n<vmesh.Np;++n){
 
+	  // (tau*phi_m, phi_n)_{dIB} + (phi_m, n.grad phi_n) + (n.grad phi_m, phi_n)
 	  dfloat tmp = 0;
 	  for(int i=0;i<ibCubNp;++i){
-	    tmp += ibCubInterp[i*vmesh.Np+m]*ibCubInterp[i*vmesh.Np+n]*ibCubw[i];
+	    dfloat phi_m =  ibCubInterp[i*vmesh.Np+m];
+	    dfloat phi_n =  ibCubInterp[i*vmesh.Np+n];
+	    dfloat dphidn_m =  ibCubDn[i*vmesh.Np+m];
+	    dfloat dphidn_n =  ibCubDn[i*vmesh.Np+n];
+	    dfloat cw = ibCubw[i];
+	    tmp += maxTau*phi_m*cw*phi_n;
+	    tmp -=        phi_m*cw*dphidn_n;
+	    tmp -=     dphidn_m*cw*phi_n;
 	  }
-	  tmp *= J*maxTau;
-
+	  tmp *= J;
+	  
 	  // these are symmetric, so order doesn't matter. Should just store symmetric part
 	  ibMM[ib*vmesh.Np*vmesh.Np + m*vmesh.Np + n] += tmp;
 	}
