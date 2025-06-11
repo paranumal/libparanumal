@@ -126,12 +126,17 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
     dfloat lambda = gamma/(dtAdvc*nu);
     uSolver.Setup(platform, mesh, vSettings,
                   lambda, NBCTypes, uBCType);
+
+#if 0
     vSolver.Setup(platform, mesh, vSettings,
                   lambda, NBCTypes, vBCType);
     if (mesh.dim == 3)
       wSolver.Setup(platform, mesh, vSettings,
                     lambda, NBCTypes, wBCType);
-
+#else
+    vSolver = uSolver;
+    wSolver = uSolver;
+#endif
     vTau = uSolver.tau;
 
     vDisc_c0 = settings.compareSetting("VELOCITY DISCRETIZATION", "CONTINUOUS") ? 1 : 0;
@@ -160,11 +165,18 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
     } else if (vSettings.compareSetting("LINEAR SOLVER","PCG")){
 
+#if 0
       uLinearSolver.Setup<LinearSolver::pcg<dfloat>>(uNlocal, uNhalo, platform, vSettings, comm);
       vLinearSolver.Setup<LinearSolver::pcg<dfloat>>(vNlocal, vNhalo, platform, vSettings, comm);
       if (mesh.dim==3)
         wLinearSolver.Setup<LinearSolver::pcg<dfloat>>(wNlocal, wNhalo, platform, vSettings, comm);
-
+#else
+      printf("Building velocity\n");
+      uLinearSolver.Setup<LinearSolver::pcg<dfloat>>(uNlocal, uNhalo, platform, vSettings, comm);
+      printf("Copying velocity\n");
+      vLinearSolver = uLinearSolver;
+      wLinearSolver = uLinearSolver;
+#endif
     } else if (vSettings.compareSetting("LINEAR SOLVER","PGMRES")){
 
       uLinearSolver.Setup<LinearSolver::pgmres<dfloat>>(uNlocal, uNhalo, platform, vSettings, comm);
@@ -671,10 +683,17 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
       }      
     }
 
-
     o_FILT = platform.malloc<dfloat>(FILT);
   }
 
+  if(vSettings.compareSetting("IMMERSED BOUNDARY", "TRUE")){
+    fileName   = oklFilePrefix + "insImmersedBoundaryAdvectionPenalty" + suffix + oklFileSuffix;
+    kernelName = "insImmersedBoundaryAdvectionPenalty" + suffix;
+
+    immersedBoundaryAdvectionPenaltyKernel =
+      platform.buildKernel(fileName, kernelName,kernelInfo);    
+    
+  }
 
   
 }

@@ -75,8 +75,8 @@ void mesh_t::ReferenceNodesTri2D(){
   if constexpr (std::is_same_v<dfloat,pfloat>) {
     o_pfloat_D = o_D;
   } else {
-    memory<pfloat> pfloat_DT(Np*Np*dim);
-    for(int n=0;n<Np*Np*dim;++n) {
+    memory<pfloat> pfloat_DT(Np*Np*2);
+    for(int n=0;n<Np*Np*2;++n) {
       pfloat_DT[n] = DT[n];
     }
     o_pfloat_D = platform.malloc<pfloat>(pfloat_DT);
@@ -124,8 +124,8 @@ void mesh_t::ReferenceNodesTri2D(){
   if constexpr (std::is_same_v<dfloat,pfloat>) {
     o_pfloat_S = o_S;
   } else {
-    memory<pfloat> pfloat_ST(Np*Np*( (dim)*(dim+1)/2 ));
-    for(int n=0;n<(Np*Np*dim*(dim+1))/2;++n) {
+    memory<pfloat> pfloat_ST(Np*Np*( (2)*(2+1)/2 ));
+    for(int n=0;n<(Np*Np*2*(2+1))/2;++n) {
       pfloat_ST[n] = ST[n];
     }
     o_pfloat_S = platform.malloc<pfloat>(pfloat_ST);

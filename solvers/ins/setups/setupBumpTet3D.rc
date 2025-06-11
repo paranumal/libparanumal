@@ -5,7 +5,8 @@
 data/insUniform3D.h
 
 [MESH FILE]
-../../meshes/cubeTet3DV4.msh
+../../meshes/bumpTet3Dbox.msh
+#../../meshes/cubeTet3DV4.msh
 
 [MESH DIMENSION]
 3
@@ -14,7 +15,7 @@ data/insUniform3D.h
 6
 
 [POLYNOMIAL DEGREE]
-4
+2
 
 [THREAD MODEL]
 CUDA
@@ -53,7 +54,7 @@ DOPRI5
 0
 
 [FINAL TIME]
-0.2
+0.04
 
 [OUTPUT INTERVAL]
 2

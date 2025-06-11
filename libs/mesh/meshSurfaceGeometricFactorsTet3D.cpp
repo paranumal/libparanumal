@@ -31,7 +31,7 @@ namespace libp {
 void mesh_t::SurfaceGeometricFactorsTet3D(){
 
   /* unified storage array for geometric factors */
-  Nsgeo = 6;
+  Nsgeo = 7;
 
   NXID  = 0;
   NYID  = 1;
@@ -39,6 +39,7 @@ void mesh_t::SurfaceGeometricFactorsTet3D(){
   SJID  = 3;
   IJID  = 4;
   IHID  = 5;
+  MAXHID  = 5;
 
   props["defines/" "p_Nsgeo"]= Nsgeo;
   props["defines/" "p_NXID"]= NXID;
@@ -47,6 +48,7 @@ void mesh_t::SurfaceGeometricFactorsTet3D(){
   props["defines/" "p_SJID"]= SJID;
   props["defines/" "p_IJID"]= IJID;
   props["defines/" "p_IHID"]= IHID;
+  props["defines/" "p_MAXHID"]= MAXHID;
 
   sgeo.malloc(Nelements*Nsgeo*Nfaces);
 
@@ -160,7 +162,8 @@ void mesh_t::SurfaceGeometricFactorsTet3D(){
       // rescaling - A = L*h/2 => (J*2) = (sJ*2)*h/2 => h  = 2*J/sJ
       dfloat hinvM = hinv[baseM];
       dfloat hinvP = hinv[baseP];
-      sgeo[baseM*Nsgeo+IHID] = std::max(hinvM,hinvP);
+      sgeo[baseM*Nsgeo+IHID]   = std::max(hinvM,hinvP);
+      sgeo[baseM*Nsgeo+MAXHID] = std::max(1./hinvM,1./hinvP);
 
       // if (EToB[fM+eM*Nfaces] > 0) { //enforce a stronger penalty on boundaries
       //   sgeo[baseM*Nsgeo+IHID] *= 2;

@@ -60,7 +60,6 @@ void ins_t::Report(dfloat time, int tstep){
       MassSolve(o_Vort);
       MassSolve(o_Qfactor);
     }
-      
     
     memory<dfloat> Vort(mesh.dim*mesh.Nelements*mesh.Np);
     memory<dfloat> Qfactor(mesh.dim*mesh.Nelements*mesh.Np);

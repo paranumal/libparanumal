@@ -149,8 +149,8 @@ void mesh_t::SurfaceGeometricFactorsTri3D(){
         ny /= sJ;
         nz /= sJ;
 
-        LIBP_ABORT("Negative J found at element " << e,
-                   sJ<1e-8);
+	//        LIBP_ABORT("Negative J found at element " << e,
+	//                   sJ<1e-8);
 
         int base = e*Nfp*Nfaces*Nsgeo + n + f*Nfp;
 

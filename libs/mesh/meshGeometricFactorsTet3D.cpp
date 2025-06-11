@@ -27,11 +27,54 @@ SOFTWARE.
 #include "mesh.hpp"
 
 namespace libp {
+  
+  dfloat volumeTet3D(const memory<dfloat> &EX,
+		     const memory<dfloat> &EY,
+		     const memory<dfloat> &EZ) {
 
-void mesh_t::GeometricFactorsTet3D(){
+    // Form edge vectors from vertex 0 to vertices 1, 2, and 3:
+    dfloat v1x = EX[1] - EX[0], v1y = EY[1] - EY[0], v1z = EZ[1] - EZ[0];
+    dfloat v2x = EX[2] - EX[0], v2y = EY[2] - EY[0], v2z = EZ[2] - EZ[0];
+    dfloat v3x = EX[3] - EX[0], v3y = EY[3] - EY[0], v3z = EZ[3] - EZ[0];
+    
+    // Compute cross product v2 × v3:
+    dfloat cx = v2y*v3z - v2z*v3y;
+    dfloat cy = v2z*v3x - v2x*v3z;
+    dfloat cz = v2x*v3y - v2y*v3x;
+    
+    // Scalar triple product v1 · (v2 × v3)
+    dfloat triple = v1x*cx + v1y*cy + v1z*cz;
+    
+    // Volume = |triple| / 6
+    return std::fabs(triple) / (dfloat)6.0;
+  }
+
+  dfloat faceAreaTet3D(const memory<int> &faceVertices, int face,
+		       const memory<dfloat> &EX,
+		       const memory<dfloat> &EY,
+		       const memory<dfloat> &EZ){
+
+    int i = faceVertices[face*3+0];
+    int j = faceVertices[face*3+1];
+    int k = faceVertices[face*3+2];
+
+    /* edge vectors v1 = Pj – Pi, v2 = Pk – Pi */
+    dfloat v1x = EX[j] - EX[i], v1y = EY[j] - EY[i], v1z = EZ[j] - EZ[i];
+    dfloat v2x = EX[k] - EX[i], v2y = EY[k] - EY[i], v2z = EZ[k] - EZ[i];
+
+    /* cross product v1 × v2 */
+    dfloat cx = v1y*v2z - v1z*v2y;
+    dfloat cy = v1z*v2x - v1x*v2z;
+    dfloat cz = v1x*v2y - v1y*v2x;
+
+    /* triangle area = 0.5 * ||cross|| */
+    return (dfloat)0.5 * sqrt(cx*cx + cy*cy + cz*cz);
+}
+
+  void mesh_t::GeometricFactorsTet3D(){
 
   /*Set offsets*/
-  Nvgeo = 10;
+  Nvgeo = 11;
 
   RXID  = 0;
   RYID  = 1;
@@ -43,7 +86,8 @@ void mesh_t::GeometricFactorsTet3D(){
   TYID  = 7;
   TZID  = 8;
   JID   = 9;
-
+  VOLHID = 10;
+  
   props["defines/" "p_Nvgeo"]= Nvgeo;
   props["defines/" "p_RXID"]= RXID;
   props["defines/" "p_SXID"]= SXID;
@@ -58,6 +102,7 @@ void mesh_t::GeometricFactorsTet3D(){
   props["defines/" "p_TZID"]= TZID;
 
   props["defines/" "p_JID"]= JID;
+  props["defines/" "p_VOLHID"]= VOLHID;
 
   /* unified storage array for geometric factors */
   vgeo.malloc((Nelements+totalHaloPairs)*Nvgeo);
@@ -83,11 +128,11 @@ void mesh_t::GeometricFactorsTet3D(){
   ggeo.malloc(Nelements*Nggeo);
 
   wJ.malloc(Nelements);
-
-
+  
+  dfloat maxvolh = 0;
   // dfloat minJ = 1e9, maxJ = -1e9;
 
-  #pragma omp parallel for
+  #pragma omp parallel for reduction(max:maxvolh)
   for(dlong e=0;e<Nelements;++e){ /* for each element */
 
     /* find vertex indices and physical coordinates */
@@ -130,6 +175,20 @@ void mesh_t::GeometricFactorsTet3D(){
     //    printf("geo: %g,%g,%g - %g,%g,%g - %g,%g,%g\n",
     //     rx,ry,rz, sx,sy,sz, tx,ty,tz);
 
+    dfloat A[4], area = 0;
+    dfloat minh = 1e9;
+    dfloat vol = volumeTet3D(EX+id,EY+id,EZ+id);
+    for(int f=0;f<Nverts;++f){
+      A[f] = faceAreaTet3D(faceVertices, f, EX+id,EY+id,EZ+id);
+      area += A[f];
+      minh = std::min(minh, dim*vol/A[f]);
+    }
+
+    dfloat h = dim*vol/area;
+    //    vgeo[Nvgeo*e + VOLHID] = h;
+    vgeo[Nvgeo*e + VOLHID] = minh; 
+    maxvolh = std::max(maxvolh, h);
+    
     /* store second order geometric factors */
     ggeo[Nggeo*e + G00ID] = J*(rx*rx + ry*ry + rz*rz);
     ggeo[Nggeo*e + G01ID] = J*(rx*sx + ry*sy + rz*sz);
@@ -142,6 +201,8 @@ void mesh_t::GeometricFactorsTet3D(){
   }
   //printf("minJ = %g, maxJ = %g\n", minJ, maxJ);
 
+  std::cout << "maxvolh=" << maxvolh << std::endl;
+  
   halo.Exchange(vgeo, Nvgeo);
 
   o_wJ   = platform.malloc<dfloat>(wJ);

@@ -1293,10 +1293,10 @@ SOFTWARE.
 
 	dfloat Uflux[p_Npt], Vflux[p_Npt], Wflux[p_Npt];
       
-	dfloat sigmaVol = 1e-3;
 	//#pragma unroll p_Npt
 #pragma unroll 
 	for(int es=0;es<p_Npt;++es){
+	  dfloat sigmaVol = 2.*s_vgeo[es][p_VOLHID]; // 1e-3;
 	  Uflux[es] = sigmaVol*(s_vgeo[es][p_RXID]*cdivUr[es] + s_vgeo[es][p_SXID]*cdivUs[es] + s_vgeo[es][p_TXID]*cdivUt[es]);
 	  Vflux[es] = sigmaVol*(s_vgeo[es][p_RYID]*cdivUr[es] + s_vgeo[es][p_SYID]*cdivUs[es] + s_vgeo[es][p_TYID]*cdivUt[es]);
 	  Wflux[es] = sigmaVol*(s_vgeo[es][p_RZID]*cdivUr[es] + s_vgeo[es][p_SZID]*cdivUs[es] + s_vgeo[es][p_TZID]*cdivUt[es]);

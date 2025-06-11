@@ -31,13 +31,14 @@ namespace libp {
 void mesh_t::GeometricFactorsTri2D(){
 
   /*Set offsets*/
-  Nvgeo = 5;
+  Nvgeo = 6;
 
   RXID  = 0;
   RYID  = 1;
   SXID  = 2;
   SYID  = 3;
   JID   = 4;
+  VOLHID   = 5;
 
   props["defines/" "p_Nvgeo"]= Nvgeo;
   props["defines/" "p_RXID"]= RXID;
@@ -45,6 +46,7 @@ void mesh_t::GeometricFactorsTri2D(){
   props["defines/" "p_RYID"]= RYID;
   props["defines/" "p_SYID"]= SYID;
   props["defines/" "p_JID"]= JID;
+  props["defines/" "p_VOLHID"]= VOLHID;
 
   /* unified storage array for geometric factors */
   vgeo.malloc((Nelements+totalHaloPairs)*Nvgeo);
@@ -65,7 +67,9 @@ void mesh_t::GeometricFactorsTri2D(){
 
   wJ.malloc(Nelements);
 
-  #pragma omp parallel for
+  dfloat maxvolh = 0;
+  
+#pragma omp parallel for reduction(max:maxvolh)
   for(dlong e=0;e<Nelements;++e){ /* for each element */
 
     /* find vertex indices and physical coordinates */
@@ -95,7 +99,17 @@ void mesh_t::GeometricFactorsTri2D(){
     vgeo[Nvgeo*e + SXID] = sx;
     vgeo[Nvgeo*e + SYID] = sy;
     vgeo[Nvgeo*e +  JID] = J;
+    
+    /* compute a penalty scaling */
+    dfloat h1 = sqrt( (xe2-xe1)*(xe2-xe1)  + (ye2-ye1)*(ye2-ye1) );
+    dfloat h2 = sqrt( (xe3-xe2)*(xe3-xe2)  + (ye3-ye2)*(ye3-ye2) );
+    dfloat h3 = sqrt( (xe1-xe3)*(xe1-xe3)  + (ye1-ye3)*(ye1-ye3) );
 
+    dfloat h = dim*(2*J)/(h1+h2+h3);
+    vgeo[Nvgeo*e +  VOLHID] = h;
+
+    maxvolh = std::max(maxvolh, h);
+    
     /* store second order geometric factors */
     ggeo[Nggeo*e + G00ID] = J*(rx*rx + ry*ry);
     ggeo[Nggeo*e + G01ID] = J*(rx*sx + ry*sy);
@@ -104,6 +118,8 @@ void mesh_t::GeometricFactorsTri2D(){
     wJ[e]  = J;
   }
 
+  std::cout << "maxvolh=" << maxvolh << std::endl;
+  
   halo.Exchange(vgeo, Nvgeo);
 
   o_wJ   = platform.malloc<dfloat>(wJ);

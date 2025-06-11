@@ -31,7 +31,8 @@ namespace libp {
 void mesh_t::CubatureSetupTet3D(){
 
   /* Cubature data */
-  cubN = 3*N-1; //cubature order
+  //  cubN = 3*N-1; //cubature order
+  cubN = 2.5*N; //cubature order
 
   CubatureNodesTet3D(cubN, cubNp, cubr, cubs, cubt, cubw);
 

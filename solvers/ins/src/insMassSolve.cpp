@@ -46,7 +46,7 @@ void ins_t::MassSolve(deviceMemory<dfloat>& o_U){
   if(settings.compareSetting("RELAXATION FILTER", "TRUE")){
     if(mesh.elementType==Mesh::TRIANGLES ||
        mesh.elementType==Mesh::TETRAHEDRA)
-      filterKernel(mesh.Nelements, o_FILT, o_U, o_U);
+      //      filterKernel(mesh.Nelements, o_FILT, o_U, o_U);
   }
 #endif
   

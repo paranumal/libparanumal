@@ -75,17 +75,21 @@
 	    const dfloat Dsn = D[n + i*p_Np+1*p_Np*p_Np];
 	    const dfloat Dtn = D[n + i*p_Np+2*p_Np*p_Np];
 
-	    ur += Drn*s_u[es][i];
-	    us += Dsn*s_u[es][i];
-	    ut += Dtn*s_u[es][i];
+	    const dfloat ui = s_u[es][i];
+	    const dfloat vi = s_v[es][i];
+	    const dfloat wi = s_w[es][i];
+	    
+	    ur += Drn*ui;
+	    us += Dsn*ui;
+	    ut += Dtn*ui;
 
-	    vr += Drn*s_v[es][i];
-	    vs += Dsn*s_v[es][i];
-	    vt += Dtn*s_v[es][i];
+	    vr += Drn*vi;
+	    vs += Dsn*vi;
+	    vt += Dtn*vi;
 
-	    wr += Drn*s_w[es][i];
-	    ws += Dsn*s_w[es][i];
-	    wt += Dtn*s_w[es][i];
+	    wr += Drn*wi;
+	    ws += Dsn*wi;
+	    wt += Dtn*wi;
 	  }
 
 	  const dfloat ux = drdx*ur + dsdx*us + dtdx*ut;

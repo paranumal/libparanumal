@@ -130,7 +130,7 @@ void mesh_t::GeometricFactorsTri3D(){
 
       dfloat J = xn*tx + yn*ty + zn*tz;
 
-      LIBP_ABORT("Negative J found at element " << e, J<1e-8);
+      //      LIBP_ABORT("Negative J found at element " << e, J<1e-8);
 
       rx /= J;
       ry /= J;
@@ -147,7 +147,7 @@ void mesh_t::GeometricFactorsTri3D(){
       // use this for "volume" Jacobian
       J = sqrt(Gx*Gx+Gy*Gy+Gz*Gz);
 
-      LIBP_ABORT("Negative J found at element " << e, J<1e-8);
+      //      LIBP_ABORT("Negative J found at element " << e, J<1e-8);
 
       /* store geometric factors */
       int base = Nvgeo*Np*e + n;

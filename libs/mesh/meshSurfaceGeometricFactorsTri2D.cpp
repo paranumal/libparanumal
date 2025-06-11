@@ -31,13 +31,14 @@ namespace libp {
 void mesh_t::SurfaceGeometricFactorsTri2D(){
 
   /* unified storage array for geometric factors */
-  Nsgeo = 5;
+  Nsgeo = 6;
 
   NXID  = 0;
   NYID  = 1;
   SJID  = 2;
   IJID  = 3;
   IHID  = 4;
+  MAXHID  = 5;
 
   props["defines/" "p_Nsgeo"]= Nsgeo;
   props["defines/" "p_NXID"]= NXID;
@@ -45,6 +46,7 @@ void mesh_t::SurfaceGeometricFactorsTri2D(){
   props["defines/" "p_SJID"]= SJID;
   props["defines/" "p_IJID"]= IJID;
   props["defines/" "p_IHID"]= IHID;
+  props["defines/" "p_MAXHID"]= MAXHID;
 
   sgeo.malloc(Nelements*Nsgeo*Nfaces);
 
@@ -140,6 +142,7 @@ void mesh_t::SurfaceGeometricFactorsTri2D(){
       dfloat hinvM = hinv[baseM];
       dfloat hinvP = hinv[baseP];
       sgeo[baseM*Nsgeo+IHID] = std::max(hinvM,hinvP);
+      sgeo[baseM*Nsgeo+MAXHID] = std::max(1./hinvM,1./hinvP);
 
       // if (EToB[fM+eM*Nfaces] > 0) { //enforce a stronger penalty on boundaries
       //   sgeo[baseM*Nsgeo+IHID] *= 2;
