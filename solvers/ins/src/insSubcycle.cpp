@@ -165,7 +165,7 @@ void subcycler_t::rhsf(deviceMemory<dfloat>& o_U, deviceMemory<dfloat>& o_RHS, c
                           o_U,
                           o_RHS);
 
-#if 1
+#if 0
   // add IB mass penalty here (need to take out maxTau)
   if(ins->uSolver.ibNelements>0)
     ins->immersedBoundaryAdvectionPenaltyKernel(ins->uSolver.ibNelements,

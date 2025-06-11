@@ -630,6 +630,7 @@ SOFTWARE.
 	  const dfloat nz   = sgeo[sid+p_NZID];
 	  const dfloat sJ   = sgeo[sid+p_SJID];
 	  const dfloat invJ = sgeo[sid+p_IJID];
+	  const dfloat surfH = sgeo[sid+p_MAXHID];
 	  
 	  dfloat iUM  = 0.f, iVM  = 0.f, iWM  = 0.f;
 	  dfloat iUdM = 0.f, iVdM = 0.f, iWdM = 0.f;
@@ -667,7 +668,7 @@ SOFTWARE.
 					     nx, ny, nz, iUdM,iVdM,iWdM, &iUdP, &iVdP, &iWdP);
 	  }
 	    
-	  const dfloat sigmaSurf = 0.1; // TW ?
+	  const dfloat sigmaSurf = 0.5*surfH; // TW ?
 	  const dfloat ndotdUd = sigmaSurf*(nx*(iUdM-iUdP) + ny*(iVdM-iVdP) + nz*(iWdM-iWdP));
 	  
 	  // evaluate "flux" terms: LLF
@@ -1296,7 +1297,7 @@ SOFTWARE.
 	//#pragma unroll p_Npt
 #pragma unroll 
 	for(int es=0;es<p_Npt;++es){
-	  dfloat sigmaVol = 2.*s_vgeo[es][p_VOLHID]; // 1e-3;
+	  dfloat sigmaVol = 0.25*s_vgeo[es][p_VOLHID]; // 1e-3;
 	  Uflux[es] = sigmaVol*(s_vgeo[es][p_RXID]*cdivUr[es] + s_vgeo[es][p_SXID]*cdivUs[es] + s_vgeo[es][p_TXID]*cdivUt[es]);
 	  Vflux[es] = sigmaVol*(s_vgeo[es][p_RYID]*cdivUr[es] + s_vgeo[es][p_SYID]*cdivUs[es] + s_vgeo[es][p_TYID]*cdivUt[es]);
 	  Wflux[es] = sigmaVol*(s_vgeo[es][p_RZID]*cdivUr[es] + s_vgeo[es][p_SZID]*cdivUs[es] + s_vgeo[es][p_TZID]*cdivUt[es]);
