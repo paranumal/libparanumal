@@ -486,10 +486,11 @@ class mesh_t {
   int SXID, SYID, SZID;
   int TXID, TYID, TZID;
   int JID, JWID, IJWID;
+  int VOLHID;
   int G00ID, G01ID, G02ID, G11ID, G12ID, G22ID;
 
   int NXID, NYID, NZID;
-  int SJID, IJID, IHID, WIJID, WSJID;
+  int SJID, IJID, IHID, WIJID, WSJID, MAXHID;
 
  private:
   /*Set the type of mesh*/

@@ -67,7 +67,7 @@ public:
   kernel_t advectionSurfaceKernel;
 
   kernel_t subCycleAdvectionKernel;
-
+  
   int NVfields;
   int order, maxOrder, shiftIndex;
   dfloat nu, T0, dt;
@@ -158,6 +158,9 @@ public:
   kernel_t projectWeightKernel;
   kernel_t projectScatterKernel;
 
+  kernel_t immersedBoundaryAdvectionPenaltyKernel;
+
+  
   deviceMemory<dfloat> o_projectWeights;
   deviceMemory<dlong> o_uGlobalToLocal;
   deviceMemory<dlong> o_vGlobalToLocal;

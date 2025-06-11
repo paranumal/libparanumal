@@ -588,8 +588,10 @@ void elliptic_t::BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO& A) {
   //Build unassembed non-zeros
   if(comm_t::world().rank()==0) {printf("Building full FEM matrix...");fflush(stdout);}
 
+  dlong ibecnt = 0;
+  
   dlong cnt =0;
-  //#pragma omp parallel for
+
   for (dlong e=0;e<mesh.Nelements;e++) {
 
     dfloat Grr = mesh.ggeo[e*mesh.Nggeo + mesh.G00ID];
@@ -614,18 +616,25 @@ void elliptic_t::BuildOperatorMatrixContinuousTet3D(parAlmond::parCOO& A) {
         val += Gtt*mesh.Stt[m+n*mesh.Np];
         val += J*lambda*mesh.MM[m+n*mesh.Np];
 
+	// add in immersed boundary entries
+	if(ibNelements>0 && ibElements[ibecnt]==e){
+	  val += maxTau*ibMM[ibecnt*mesh.Np*mesh.Np+m*mesh.Np+n];
+	}
+
         dfloat nonZeroThreshold = 1e-7;
         if (fabs(val)>nonZeroThreshold) {
-          //#pragma omp critical
-          {
-            // pack non-zero
-            sendNonZeros[cnt].val = val;
-            sendNonZeros[cnt].row = maskedGlobalNumbering[e*mesh.Np + n];
-            sendNonZeros[cnt].col = maskedGlobalNumbering[e*mesh.Np + m];
-            cnt++;
-          }
+	  // pack non-zero
+	  sendNonZeros[cnt].val = val;
+	  sendNonZeros[cnt].row = maskedGlobalNumbering[e*mesh.Np + n];
+	  sendNonZeros[cnt].col = maskedGlobalNumbering[e*mesh.Np + m];
+	  cnt++;
         }
       }
+    }
+
+    // if we just handled the latest IB element then increment counter
+    if(ibNelements>0 && ibElements[ibecnt]==e){
+      ++ibecnt;
     }
   }
 

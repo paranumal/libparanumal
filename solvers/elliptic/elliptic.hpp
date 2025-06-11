@@ -179,9 +179,18 @@ public:
 
   void BuildImmersedBoundaryMatrixTet3D(mesh_t &vmesh);
   dlong ibNelements;
+  dfloat maxTau;
+  
+  memory<dlong> ibElements;
+  deviceMemory<dlong>  o_ibElements;
+
+  memory<dfloat> ibMM;
   deviceMemory<dfloat> o_ibMM;  // local contributions to immersed interface terms
   deviceMemory<float>  o_floatIbMM;  // FP32 version local contributions to immersed interface terms
-  deviceMemory<dlong>  o_ibElements;
+
+  memory<dfloat> ibLIFT;
+  deviceMemory<dfloat> o_ibLIFT;  // local contributions to immersed interface terms
+  deviceMemory<float>  o_floatIbLIFT;  // FP32 version local contributions to immersed interface terms
 
   memory<dfloat> ibDiagA;
   memory<float> floatIbDiagA;  

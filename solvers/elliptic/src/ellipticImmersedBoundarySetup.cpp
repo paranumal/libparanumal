@@ -727,6 +727,7 @@ void elliptic_t::BuildImmersedBoundaryMatrixTet3D(mesh_t &vmesh){
     }
   }
 
+#if 0
   dfloat Lx = fabs(xmax-xmin);
   dfloat Ly = fabs(ymax-ymin);
   dfloat Lz = fabs(zmax-zmin);
@@ -743,6 +744,7 @@ void elliptic_t::BuildImmersedBoundaryMatrixTet3D(mesh_t &vmesh){
       ibmesh.EZ[id] = (ibmesh.EZ[id]-Cz)/Lmax;
     }
   }
+#endif
   
   writeOriginalSurfaceVTU(ibmesh.Nelements, ibmesh.EX, ibmesh.EY,ibmesh.EZ, "surf.vtu");
   
@@ -784,7 +786,7 @@ void elliptic_t::BuildImmersedBoundaryMatrixTet3D(mesh_t &vmesh){
   }
 
   // build list of ib elements
-  memory<dlong> ibElements(ibNelements);  
+  ibElements.malloc(ibNelements);  
   
   dlong ib = 0;
   for(dlong e=0;e<vmesh.Nelements;++e){
@@ -805,26 +807,42 @@ void elliptic_t::BuildImmersedBoundaryMatrixTet3D(mesh_t &vmesh){
   vmesh.CubatureNodesTri2D(ibCubN, ibCubNp, ibCubr, ibCubs, ibCubw);
 
   // zero for accumulation
-  memory<dfloat> ibMM(ibNelements*vmesh.Np*vmesh.Np, (dfloat)0.);
-  memory<dfloat> ibInvV;
+  //  memory<dfloat> ibMM(ibNelements*vmesh.Np*vmesh.Np, (dfloat)0.);
+  ibMM.malloc(ibNelements*vmesh.Np*vmesh.Np, (dfloat)0.);
+  ibLIFT.malloc(ibNelements*vmesh.Np*vmesh.Np, (dfloat)0.);
+  memory<dfloat> ibV, ibInvV;
 
+  vmesh.VandermondeTet3D(vmesh.N, vmesh.r, vmesh.s, vmesh.t, ibV);
   vmesh.VandermondeTet3D(vmesh.N, vmesh.r, vmesh.s, vmesh.t, ibInvV);
   linAlg_t::matrixInverse(vmesh.Np, ibInvV);
 
+  memory<dfloat> volInvMM(vmesh.Np*vmesh.Np,0.);
+  for(int n=0;n<vmesh.Np;++n){
+    for(int m=0;m<vmesh.Np;++m){
+      dfloat tmp = 0;
+      for(int i=0;i<vmesh.Np;++i){
+	tmp += ibV[n*vmesh.Np+i]*ibV[m*vmesh.Np+i];
+      }
+      volInvMM[n*vmesh.Np+m] = tmp;
+    }
+  }
+  
   // find maximum reciprocal face orthogonal element length
   // for all elements in immersed boundary patch
-  dfloat maxInvH = 0;
+  dfloat maxInvH = 0, maxH = 0;
   for(ib=0;ib<ibNelements;++ib){
     dlong e = ibElements[ib];
 
     for(int f=0;f<vmesh.Nfaces;++f){
-      dlong id = e*vmesh.Nsgeo*vmesh.Nfaces + f*vmesh.Nsgeo + vmesh.IHID;
-      maxInvH = std::max(maxInvH, vmesh.sgeo[id]);
+      dlong id = e*vmesh.Nsgeo*vmesh.Nfaces + f*vmesh.Nsgeo;
+      maxInvH = std::max(maxInvH, vmesh.sgeo[id+vmesh.IHID]);
+      maxH = std::max(maxH, vmesh.sgeo[id+vmesh.MAXHID]);
     }
   }
 
   // take global max among ranks
   vmesh.comm.Allreduce(maxInvH, comm_t::Max);
+  vmesh.comm.Allreduce(maxH, comm_t::Max);
   
   // form penalty
   //  dfloat maxTau = vmesh.N*vmesh.N*maxInvH;
@@ -834,13 +852,25 @@ void elliptic_t::BuildImmersedBoundaryMatrixTet3D(mesh_t &vmesh){
   //  dfloat maxTau = pow(fineN, 3)*pow(maxInvH,2.);
   //dfloat maxTau = pow(vmesh.N, 3)*pow(maxInvH,1.5);
   // dfloat maxTau = pow(fineN, 3)*pow(maxInvH,2.);
-  dfloat maxTau = pow(fineN, 2)*pow(maxInvH,2);
-  std::cout << "maxTau: " << maxTau << std::endl;
+  //  dfloat maxTau = pow(fineN, 2)*pow(maxInvH,2);
+  //dfloat maxTau = 10.*pow(fineN, 3)*pow(maxInvH,3);
+  // should be:
+  //    alpha*( lambda*(Jv/Js)/(N+1) ) to dominate mass
+  //
+  dfloat alpha = 1;
+  //  maxTau = alpha*(lambda*maxH/(vmesh.N+1) + pow(vmesh.N+1, 3)*pow(maxInvH,1));
+  maxTau = alpha*(pow(vmesh.N+1, 3)*pow(maxInvH,2));
+  std::cout << "lambda: " << lambda << ", maxTau: " << maxTau << std::endl;
 
   memory<dlong> logAreaCounts(100,0);
-  
+
   // slow to get started
 #if !defined(LIBP_DEBUG)
+
+  omp_set_num_threads(20);
+  
+  
+  
 #pragma omp parallel for
 #endif
   for(ib=0;ib<ibNelements;++ib){
@@ -852,6 +882,7 @@ void elliptic_t::BuildImmersedBoundaryMatrixTet3D(mesh_t &vmesh){
     
     memory<dfloat> ibCubInterp(ibCubNp*vmesh.Np);
     memory<dfloat> ibCubDn(ibCubNp*vmesh.Np);
+    memory<dfloat> ibPEN(vmesh.Np*vmesh.Np,0.);
     
     memory<dfloat> ibEX(TRINVERTS), ibEY(TRINVERTS), ibEZ(TRINVERTS);
     memory<dfloat> ibEXTet(TETNVERTS), ibEYTet(TETNVERTS), ibEZTet(TETNVERTS);
@@ -879,7 +910,10 @@ void elliptic_t::BuildImmersedBoundaryMatrixTet3D(mesh_t &vmesh){
     dfloat tx = vmesh.vgeo[e*vmesh.Nvgeo+mesh.TXID];
     dfloat ty = vmesh.vgeo[e*vmesh.Nvgeo+mesh.TYID];
     dfloat tz = vmesh.vgeo[e*vmesh.Nvgeo+mesh.TZID];
+    dfloat Je = vmesh.vgeo[e*vmesh.Nvgeo+mesh.JID];
 
+    dfloat tauH = pow(Je, 1./vmesh.dim);
+    
     // for each sub-triangle
     for(int tri=0;tri<fEX[e].size()/TRINVERTS;++tri){
 
@@ -969,31 +1003,52 @@ void elliptic_t::BuildImmersedBoundaryMatrixTet3D(mesh_t &vmesh){
       
       //      if(sqrt(J)<1e-5)
       //	printf("sqrt(J)=%g\n", sqrt(J));
-      
+
       for(int m=0;m<vmesh.Np;++m){
 	for(int n=0;n<vmesh.Np;++n){
 
 	  // (tau*phi_m, phi_n)_{dIB} + (phi_m, n.grad phi_n) + (n.grad phi_m, phi_n)
 	  dfloat tmp = 0;
+	  dfloat tmpPEN = 0;
 	  for(int i=0;i<ibCubNp;++i){
 	    dfloat phi_m =  ibCubInterp[i*vmesh.Np+m];
 	    dfloat phi_n =  ibCubInterp[i*vmesh.Np+n];
 	    dfloat dphidn_m =  ibCubDn[i*vmesh.Np+m];
 	    dfloat dphidn_n =  ibCubDn[i*vmesh.Np+n];
 	    dfloat cw = ibCubw[i];
-	    tmp += maxTau*phi_m*cw*phi_n;
-	    tmp -=        phi_m*cw*dphidn_n;
-	    tmp -=     dphidn_m*cw*phi_n;
+	    dfloat sigmaSurf = 
+	    tmpPEN += phi_m*cw*phi_n; // no tau here
+	    tmp += maxTau*phi_m*cw*phi_n;	    
+	    //	    tmp -=        phi_m*cw*dphidn_n;
+	    //	    tmp -=     dphidn_m*cw*phi_n;
 	  }
 	  tmp *= J;
+	  tmpPEN *= J;
 	  
 	  // these are symmetric, so order doesn't matter. Should just store symmetric part
 	  ibMM[ib*vmesh.Np*vmesh.Np + m*vmesh.Np + n] += tmp;
+	  ibPEN[m*vmesh.Np+n] += tmpPEN;
 	}
       }
     }
+
+    for(int m=0;m<vmesh.Np;++m){
+      for(int n=0;n<vmesh.Np;++n){
+	dfloat LIFTmn = 0;
+	for(int i=0;i<vmesh.Np;++i){
+	  LIFTmn += volInvMM[m*vmesh.Np+i]*ibPEN[i*vmesh.Np + n];
+	}
+	LIFTmn /= Je;
+	
+	ibLIFT[ib*vmesh.Np*vmesh.Np + m + n*vmesh.Np] = LIFTmn;
+      }
+    }
+    
   }
 
+  // reset maxTau
+  maxTau = 0.;
+  
 #pragma omp barrier
 
 #if 0  
@@ -1009,13 +1064,18 @@ void elliptic_t::BuildImmersedBoundaryMatrixTet3D(mesh_t &vmesh){
     printf("10^{%d} count: %d\n", p-15, logAreaCounts[p]);
   }
 #endif
+
   memory<float>  floatIbMM(ibNelements*vmesh.Np*vmesh.Np, (float)0.);
+  memory<float>  floatIbLIFT(ibNelements*vmesh.Np*vmesh.Np, (float)0.);
   for(dlong n=0;n<mesh.Np*mesh.Np*ibNelements;++n){
     floatIbMM[n] = ibMM[n];
+    floatIbLIFT[n] = ibLIFT[n];
   }
   
   o_ibMM = platform.malloc<dfloat>(ibMM);
+  o_ibLIFT = platform.malloc<dfloat>(ibLIFT);
   o_floatIbMM = platform.malloc<float>(floatIbMM);
+  o_floatIbLIFT = platform.malloc<float>(floatIbLIFT);
   o_ibElements = platform.malloc<dlong>(ibElements);
 
   // TW: need to scatter diagonal of matrices into full vector and gather with ogs into full diagonal

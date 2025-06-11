@@ -28,6 +28,7 @@ SOFTWARE.
 @kernel void ellipticImmersedBoundaryPenaltyTet3D(const dlong Nelements,
 						  @restrict const  dlong   *  elementList,
 						  @restrict const  dlong   *  GlobalToLocal,
+						  const dfloat maxTau,
 						  @restrict const  dfloat *  ibMM,
 						  @restrict const  dfloat  *  q,
 						  @restrict dfloat  *  Aq){
@@ -55,7 +56,7 @@ SOFTWARE.
 #pragma unroll p_Np
       for(int m=0;m<p_Np;++m){
 	// coalesced up to Np read of ibMM
-	Aqn += ibMMe[n + m*p_Np]*s_q[m];
+	Aqn += maxTau*ibMMe[n + m*p_Np]*s_q[m];
       }
 
       // coalesced (up to Np) write

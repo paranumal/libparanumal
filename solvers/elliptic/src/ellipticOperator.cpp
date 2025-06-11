@@ -115,9 +115,11 @@ void elliptic_t::Operator(deviceMemory<double> &o_q, deviceMemory<double> &o_Aq)
                       o_AqL);
     }
 
-    // add penalty 
-    if(ibNelements>0)
-      immersedBoundaryPenaltyKernel(ibNelements, o_ibElements, o_GlobalToLocal, o_ibMM, o_q, o_AqL);
+    // add penalty  (need to add maxTau)
+    if(ibNelements>0){
+      //      printf("Adding penalty: %g with lambda: %g\n", maxTau, lambda);
+      immersedBoundaryPenaltyKernel(ibNelements, o_ibElements, o_GlobalToLocal, static_cast<double>(maxTau), o_ibMM, o_q, o_AqL);
+    }
     
     // moved this here (temporarily) because we want to run penalty kernel
     ogsMasked.GatherStart(o_Aq, o_AqL, 1, ogs::Add, ogs::Trans);
@@ -260,8 +262,11 @@ void elliptic_t::Operator(deviceMemory<float> &o_q, deviceMemory<float> &o_Aq){
     }
 
     // add penalty 
-    if(ibNelements>0)
-      floatImmersedBoundaryPenaltyKernel(ibNelements, o_ibElements, o_GlobalToLocal, o_floatIbMM, o_q, o_AqL);
+    if(ibNelements>0){
+      //      printf("FLOAT: Adding penalty: %g with lambda: %g\n", maxTau, lambda);
+      floatImmersedBoundaryPenaltyKernel(ibNelements, o_ibElements, o_GlobalToLocal,
+					 static_cast<float>(maxTau), o_floatIbMM, o_q, o_AqL);
+    }
     
     //gather result to Aq 
     ogsMasked.GatherStart(o_Aq, o_AqL, 1, ogs::Add, ogs::Trans);

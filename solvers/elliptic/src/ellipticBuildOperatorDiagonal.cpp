@@ -78,7 +78,7 @@ void elliptic_t::BuildOperatorDiagonal(memory<dfloat>& diagA){
 
     if(ibNelements){
       for (dlong n=0;n<Ndofs;n++){
-	diagA[n] += ibDiagA[n];
+	diagA[n] += maxTau*ibDiagA[n];
       }
     }
 
