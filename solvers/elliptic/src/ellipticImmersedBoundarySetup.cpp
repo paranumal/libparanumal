@@ -727,7 +727,7 @@ void elliptic_t::BuildImmersedBoundaryMatrixTet3D(mesh_t &vmesh){
     }
   }
 
-#if 0
+#if 1
   dfloat Lx = fabs(xmax-xmin);
   dfloat Ly = fabs(ymax-ymin);
   dfloat Lz = fabs(zmax-zmin);
@@ -858,8 +858,8 @@ void elliptic_t::BuildImmersedBoundaryMatrixTet3D(mesh_t &vmesh){
   //    alpha*( lambda*(Jv/Js)/(N+1) ) to dominate mass
   //
   dfloat alpha = 1;
-  //  maxTau = alpha*(lambda*maxH/(vmesh.N+1) + pow(vmesh.N+1, 3)*pow(maxInvH,1));
-  maxTau = alpha*(pow(vmesh.N+1, 3)*pow(maxInvH,2));
+  maxTau = alpha*(lambda*maxH/(vmesh.N+1) + pow(vmesh.N+1, 3)*pow(maxInvH,1));
+  //  maxTau = alpha*(pow(vmesh.N+1, 3)*pow(maxInvH,2));
   std::cout << "lambda: " << lambda << ", maxTau: " << maxTau << std::endl;
 
   memory<dlong> logAreaCounts(100,0);
@@ -1047,7 +1047,7 @@ void elliptic_t::BuildImmersedBoundaryMatrixTet3D(mesh_t &vmesh){
   }
 
   // reset maxTau
-  maxTau = 0.;
+  maxTau = 1.;
   
 #pragma omp barrier
 
