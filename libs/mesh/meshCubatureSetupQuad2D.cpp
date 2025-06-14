@@ -174,6 +174,14 @@ void mesh_t::CubatureSetupQuad2D(){
     }
 
     for(int f=0;f<Nfaces;++f){ // for each face
+
+      // find max surfh
+      dfloat maxh = 0;
+      for(int m=0;m<Nq;++m){
+	dlong base = e*Nfp*Nfaces + f*Nq + m;
+	maxh = std::max(maxh, sgeo[base*Nsgeo+MAXHID]);
+      }
+      
       for(int m=0;m<cubNq;++m){  // for each node on face
 
         //interpolate derivatives of physical coordinates
@@ -219,6 +227,10 @@ void mesh_t::CubatureSetupQuad2D(){
 
         cubsgeo[base+WIJID] = 1./(J*cubw[0]);
         cubsgeo[base+WSJID] = sJ*cubw[m];
+
+	/* borrow max h from nodes */
+	cubsgeo[base+MAXHID] = maxh;
+	
       }
     }
   }

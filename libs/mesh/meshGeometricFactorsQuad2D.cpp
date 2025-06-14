@@ -31,7 +31,7 @@ namespace libp {
 void mesh_t::GeometricFactorsQuad2D(){
 
   /*Set offsets*/
-  Nvgeo = 7;
+  Nvgeo = 8;
 
   RXID  = 0;
   RYID  = 1;
@@ -40,7 +40,8 @@ void mesh_t::GeometricFactorsQuad2D(){
   JID   = 4;
   JWID  = 5;
   IJWID = 6;
-
+  VOLHID = 7;
+  
   props["defines/" "p_Nvgeo"]= Nvgeo;
   props["defines/" "p_RXID"]= RXID;
   props["defines/" "p_SXID"]= SXID;
@@ -49,6 +50,7 @@ void mesh_t::GeometricFactorsQuad2D(){
   props["defines/" "p_JID"]= JID;
   props["defines/" "p_JWID"]= JWID;
   props["defines/" "p_IJWID"]= IJWID;
+  props["defines/" "p_VOLHID"]= VOLHID;
 
   /* unified storage array for geometric factors */
   /* note that we have volume geometric factors for each node */
@@ -72,6 +74,20 @@ void mesh_t::GeometricFactorsQuad2D(){
 
   #pragma omp parallel for
   for(dlong e=0;e<Nelements;++e){ /* for each element */
+
+    /* find vertex indices and physical coordinates */
+    dlong id = e*Nverts+0;
+
+    dfloat xe1 = EX[id+0];
+    dfloat xe2 = EX[id+1];
+    dfloat xe3 = EX[id+2];
+    dfloat xe4 = EX[id+3];
+
+    dfloat ye1 = EY[id+0];
+    dfloat ye2 = EY[id+1];
+    dfloat ye3 = EY[id+2];
+    dfloat ye4 = EY[id+3];
+    
     for(int j=0;j<Nq;++j){
       for(int i=0;i<Nq;++i){
 
@@ -113,6 +129,15 @@ void mesh_t::GeometricFactorsQuad2D(){
         vgeo[Nvgeo*Np*e + n + Np*JWID] = JW;
         vgeo[Nvgeo*Np*e + n + Np*IJWID] = 1./JW;
 
+	/* compute a penalty scaling */
+	dfloat h1 = sqrt( (xe2-xe1)*(xe2-xe1)  + (ye2-ye1)*(ye2-ye1) );
+	dfloat h2 = sqrt( (xe3-xe2)*(xe3-xe2)  + (ye3-ye2)*(ye3-ye2) );
+	dfloat h3 = sqrt( (xe4-xe3)*(xe4-xe3)  + (ye4-ye3)*(ye4-ye3) );
+	dfloat h4 = sqrt( (xe1-xe4)*(xe1-xe4)  + (ye1-ye4)*(ye1-ye4) );
+	
+	dfloat h = dim*(4.*J)/(h1+h2+h3+h4); // ratio of area to perimeter (assumes bilinear geo map)
+	vgeo[Nvgeo*Np*e +  n+ Np*VOLHID] = h;
+	
         /* store second order geometric factors */
         ggeo[Nggeo*Np*e + n + Np*G00ID] = JW*(rx*rx + ry*ry);
         ggeo[Nggeo*Np*e + n + Np*G01ID] = JW*(rx*sx + ry*sy);
