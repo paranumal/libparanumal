@@ -143,3 +143,19 @@ SOFTWARE.
     }
   }
 }
+
+
+@kernel void massWeightQuad2D(const dlong   Ngather,
+			     @restrict pfloat *wG,
+			     @restrict pfloat *UG){
+  
+
+  for(int n=0;n<Ngather;++n;@tile(256,@outer(0),@inner(0))){
+    dlong id = n*p_Nfields;
+    dfloat wn = wG[n];
+    for(int fld=0;fld<p_Nfields;++fld){
+      UG[id+fld] *= wn;
+    }
+  }
+}
+

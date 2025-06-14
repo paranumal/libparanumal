@@ -84,7 +84,7 @@ SOFTWARE.
 	      const dfloat ux = drdx*dudr + dsdx*duds;
 	      const dfloat uy = drdy*dudr + dsdy*duds;
 	      const dfloat vx = drdx*dvdr + dsdx*dvds;
-	      const dfloat vx = drdy*dvdr + dsdy*dvds;
+	      const dfloat vy = drdy*dvdr + dsdy*dvds;
 
 	      dfloat QFn = 0;
 	      QFn += ux*ux;

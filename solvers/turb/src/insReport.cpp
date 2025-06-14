@@ -52,14 +52,8 @@ void ins_t::Report(dfloat time, int tstep){
     deviceMemory<dfloat> o_Qfactor = platform.reserve<dfloat>(mesh.dim*mesh.Nelements*mesh.Np);
     qfactorKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_D, o_u, o_Qfactor);
     
-    if(mesh.elementType==Mesh::QUADRILATERALS){
-      Project(o_Vort, 2);
-      Project(o_Qfactor, 2);
-    }
-    else{
-      MassSolve(o_Vort);
-      MassSolve(o_Qfactor);
-    }
+    MassSolve(o_Vort);
+    MassSolve(o_Qfactor);
     
     memory<dfloat> Vort(mesh.dim*mesh.Nelements*mesh.Np);
     memory<dfloat> Qfactor(mesh.dim*mesh.Nelements*mesh.Np);

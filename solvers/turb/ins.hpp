@@ -37,7 +37,7 @@
 #include "mass.hpp"
 #include "initialGuess.hpp"
 
-#define DINS LIBP_DIR"/solvers/ins/"
+#define DINS LIBP_DIR"/solvers/turb/"
 
 using namespace libp;
 

@@ -564,54 +564,6 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
   maxWaveSpeedKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 
-#if 1
-  if(mesh.elementType==Mesh::QUADRILATERALS){
-    fileName   = oklFilePrefix + "insProject" + suffix + oklFileSuffix;
-
-    kernelName = "insProjectWeight" + suffix;
-    projectWeightKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
-
-    kernelName = "insProjectScatter" + suffix;
-    projectScatterKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
-  
-    memory<dlong> uGlobalToLocal(mesh.Nelements*mesh.Np,(dlong)0);
-  
-    pSolver.ogsMasked.SetupGlobalToLocalMapping(uGlobalToLocal);
-    uSolver.ogsMasked.SetupGlobalToLocalMapping(uGlobalToLocal);
-  
-    o_uGlobalToLocal = platform.malloc<dlong>(mesh.Nelements*mesh.Np, uGlobalToLocal);
-
-    // build degree vector
-    dlong Ngather = pSolver.ogsMasked.Ngather;
-    memory<dfloat> JWL(Nlocal+Nhalo, (dfloat)0.);
-    memory<dfloat> JWS(Nlocal+Nhalo, (dfloat)0.);
-    memory<dfloat> JWG(Ngather, (dfloat)0.);
-    for(dlong e=0;e<mesh.Nelements;++e){
-      for(int n=0;n<mesh.Np;++n){
-	dlong id = e*mesh.Np+n;
-	dfloat JWen = mesh.vgeo[mesh.Nvgeo*mesh.Np*e + n + mesh.Np*mesh.JWID];
-	JWL[id] = JWen;
-	dlong gid = uGlobalToLocal[id];
-	if(gid>=0)
-	  JWG[gid] += JWen;
-      }
-    }
-    // not globalized
-    for(int n=0;n<Nlocal;++n){
-      dlong gid = uGlobalToLocal[n];
-      if(gid>=0){
-	dfloat JGn = JWG[gid];
-	JWL[n] = JWL[n]/JGn;
-      }
-      else
-	JWL[n] = 1;
-    }
-  
-    o_projectWeights = platform.malloc<dfloat>(Nlocal+Nhalo, JWL);
-  }
-  
-#endif
-
   // build filter
   if(mesh.elementType==Mesh::TRIANGLES ||
      mesh.elementType==Mesh::TETRAHEDRA){

@@ -27,7 +27,7 @@ SOFTWARE.
 #ifndef MASS_HPP
 #define MASS_HPP 1
 
-#define DINS LIBP_DIR"/solvers/ins/"
+#define DINS LIBP_DIR"/solvers/turb/"
 
 #include "core.hpp"
 #include "platform.hpp"
