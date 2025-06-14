@@ -1,0 +1,682 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+#include "ins.hpp"
+
+void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
+                  insSettings_t& _settings){
+
+  platform = _platform;
+  mesh = _mesh;
+  comm = _mesh.comm;
+  settings = _settings;
+
+  //Trigger JIT kernel builds
+  ogs::InitializeKernels(platform, ogs::Dfloat, ogs::Add);
+
+  NVfields = (mesh.dim==3) ? 3:2; // Total Number of Velocity Fields
+  NTfields = (mesh.dim==3) ? 4:3; // Total Velocity + Pressure
+
+  settings.getSetting("VISCOSITY", nu);
+
+  cubature = (settings.compareSetting("ADVECTION TYPE", "CUBATURE")) ? 1:0;
+  pressureIncrement = (settings.compareSetting("PRESSURE INCREMENT", "TRUE")) ? 1:0;
+
+  //setup cubature
+  if (cubature) {
+    mesh.CubatureSetup();
+    mesh.CubaturePhysicalNodes();
+  }
+
+  dlong Nlocal = mesh.Nelements*mesh.Np;
+  dlong Nhalo  = mesh.totalHaloPairs*mesh.Np;
+
+  //setup timeStepper
+  dfloat gamma = 0.0;
+  if (settings.compareSetting("TIME INTEGRATOR","EXTBDF3")){
+    timeStepper.Setup<TimeStepper::extbdf3>(mesh.Nelements,
+                                            mesh.totalHaloPairs,
+                                            mesh.Np, NVfields, platform, comm);
+    gamma = timeStepper.GetGamma();
+  } else if (settings.compareSetting("TIME INTEGRATOR","SSBDF3")){
+    timeStepper.Setup<TimeStepper::ssbdf3>(mesh.Nelements,
+                                           mesh.totalHaloPairs,
+                                           mesh.Np, NVfields, platform, comm);
+    gamma = timeStepper.GetGamma();
+  }
+
+  Nsubcycles=1;
+  if (settings.compareSetting("TIME INTEGRATOR","SSBDF3"))
+    settings.getSetting("NUMBER OF SUBCYCLES", Nsubcycles);
+
+  
+  //Setup velocity Elliptic solvers
+  dlong uNlocal=0, vNlocal=0, wNlocal=0;
+  dlong uNhalo=0, vNhalo=0, wNhalo=0;
+  if (settings.compareSetting("TIME INTEGRATOR","EXTBDF3")
+    ||settings.compareSetting("TIME INTEGRATOR","SSBDF3")){
+
+    // SetUp Boundary Flags types for Elliptic Solve
+    // bc = 1 -> wall
+    // bc = 2 -> inflow
+    // bc = 3 -> outflow
+    // bc = 4 -> x-aligned slip
+    // bc = 5 -> y-aligned slip
+    // bc = 6 -> z-aligned slip
+    int NBCTypes = 7;
+    memory<int> uBCType(NBCTypes);
+    // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
+    uBCType[0] = 0;
+    uBCType[1] = 1;
+    uBCType[2] = 1;
+    uBCType[3] = 2;
+    uBCType[4] = 1;
+    uBCType[5] = 2;
+    uBCType[6] = 2;
+
+    memory<int> vBCType(NBCTypes);
+    // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
+    vBCType[0] = 0;
+    vBCType[1] = 1;
+    vBCType[2] = 1;
+    vBCType[3] = 2;
+    vBCType[4] = 2;
+    vBCType[5] = 1;
+    vBCType[6] = 2;
+
+    memory<int> wBCType(NBCTypes);
+    // bc=3 => outflow => Neumann   => vBCType[3] = 2, etc.
+    wBCType[0] = 0;
+    wBCType[1] = 1;
+    wBCType[2] = 1;
+    wBCType[3] = 2;
+    wBCType[4] = 2;
+    wBCType[5] = 2;
+    wBCType[6] = 1;
+
+    vSettings = _settings.extractVelocitySettings();
+
+    //make a guess at dt for the lambda value
+    //TODO: we should allow preconditioners to be re-setup if lambda is updated
+    dfloat hmin = mesh.MinCharacteristicLength();
+    dfloat dtAdvc = Nsubcycles*hmin/((mesh.N+1.)*(mesh.N+1.));
+    dfloat lambda = gamma/(dtAdvc*nu);
+    uSolver.Setup(platform, mesh, vSettings,
+                  lambda, NBCTypes, uBCType);
+
+    vTau = uSolver.tau;
+
+    vDisc_c0 = settings.compareSetting("VELOCITY DISCRETIZATION", "CONTINUOUS") ? 1 : 0;
+
+    uNlocal = uSolver.Ndofs;
+    uNhalo = uSolver.Nhalo;
+
+    if (vSettings.compareSetting("LINEAR SOLVER","NBPCG")){
+
+      uLinearSolver.Setup<LinearSolver::nbpcg<dfloat>>(uNlocal, uNhalo, platform, vSettings, comm);
+      vLinearSolver.Setup<LinearSolver::nbpcg<dfloat>>(vNlocal, vNhalo, platform, vSettings, comm);
+      if (mesh.dim==3)
+        wLinearSolver.Setup<LinearSolver::nbpcg<dfloat>>(wNlocal, wNhalo, platform, vSettings, comm);
+
+    } else if (vSettings.compareSetting("LINEAR SOLVER","NBFPCG")){
+
+      uLinearSolver.Setup<LinearSolver::nbfpcg<dfloat>>(uNlocal, uNhalo, platform, vSettings, comm);
+      vLinearSolver.Setup<LinearSolver::nbfpcg<dfloat>>(vNlocal, vNhalo, platform, vSettings, comm);
+      if (mesh.dim==3)
+        wLinearSolver.Setup<LinearSolver::nbfpcg<dfloat>>(wNlocal, wNhalo, platform, vSettings, comm);
+
+    } else if (vSettings.compareSetting("LINEAR SOLVER","PCG")){
+
+#if 0
+      uLinearSolver.Setup<LinearSolver::pcg<dfloat>>(uNlocal, uNhalo, platform, vSettings, comm);
+      vLinearSolver.Setup<LinearSolver::pcg<dfloat>>(vNlocal, vNhalo, platform, vSettings, comm);
+      if (mesh.dim==3)
+        wLinearSolver.Setup<LinearSolver::pcg<dfloat>>(wNlocal, wNhalo, platform, vSettings, comm);
+#else
+      printf("Building velocity\n");
+      uLinearSolver.Setup<LinearSolver::pcg<dfloat>>(uNlocal, uNhalo, platform, vSettings, comm);
+      printf("Copying velocity\n");
+      vLinearSolver = uLinearSolver;
+      wLinearSolver = uLinearSolver;
+#endif
+    } else if (vSettings.compareSetting("LINEAR SOLVER","PGMRES")){
+
+      uLinearSolver.Setup<LinearSolver::pgmres<dfloat>>(uNlocal, uNhalo, platform, vSettings, comm);
+      vLinearSolver.Setup<LinearSolver::pgmres<dfloat>>(vNlocal, vNhalo, platform, vSettings, comm);
+      if (mesh.dim==3)
+        wLinearSolver.Setup<LinearSolver::pgmres<dfloat>>(wNlocal, wNhalo, platform, vSettings, comm);
+
+    } else if (vSettings.compareSetting("LINEAR SOLVER","PMINRES")){
+
+      uLinearSolver.Setup<LinearSolver::pminres<dfloat>>(uNlocal, uNhalo, platform, vSettings, comm);
+      vLinearSolver.Setup<LinearSolver::pminres<dfloat>>(vNlocal, vNhalo, platform, vSettings, comm);
+      if (mesh.dim==3)
+        wLinearSolver.Setup<LinearSolver::pminres<dfloat>>(wNlocal, wNhalo, platform, vSettings, comm);
+    }
+
+    if (vSettings.compareSetting("INITIAL GUESS STRATEGY", "LAST")) {
+
+      uLinearSolver.SetupInitialGuess<InitialGuess::Last<dfloat>>(uNlocal, platform, vSettings, comm);
+      vLinearSolver.SetupInitialGuess<InitialGuess::Last<dfloat>>(vNlocal, platform, vSettings, comm);
+      if (mesh.dim==3)
+        wLinearSolver.SetupInitialGuess<InitialGuess::Last<dfloat>>(wNlocal, platform, vSettings, comm);
+
+    } else if (vSettings.compareSetting("INITIAL GUESS STRATEGY", "ZERO")) {
+
+      uLinearSolver.SetupInitialGuess<InitialGuess::Zero<dfloat>>(uNlocal, platform, vSettings, comm);
+      vLinearSolver.SetupInitialGuess<InitialGuess::Zero<dfloat>>(vNlocal, platform, vSettings, comm);
+      if (mesh.dim==3)
+        wLinearSolver.SetupInitialGuess<InitialGuess::Zero<dfloat>>(wNlocal, platform, vSettings, comm);
+
+    } else if (vSettings.compareSetting("INITIAL GUESS STRATEGY", "CLASSIC")) {
+
+      uLinearSolver.SetupInitialGuess<InitialGuess::ClassicProjection<dfloat>>(uNlocal, platform, vSettings, comm);
+      vLinearSolver.SetupInitialGuess<InitialGuess::ClassicProjection<dfloat>>(vNlocal, platform, vSettings, comm);
+      if (mesh.dim==3)
+        wLinearSolver.SetupInitialGuess<InitialGuess::ClassicProjection<dfloat>>(wNlocal, platform, vSettings, comm);
+
+    } else if (vSettings.compareSetting("INITIAL GUESS STRATEGY", "QR")) {
+
+      uLinearSolver.SetupInitialGuess<InitialGuess::RollingQRProjection<dfloat>>(uNlocal, platform, vSettings, comm);
+      vLinearSolver.SetupInitialGuess<InitialGuess::RollingQRProjection<dfloat>>(vNlocal, platform, vSettings, comm);
+      if (mesh.dim==3)
+        wLinearSolver.SetupInitialGuess<InitialGuess::RollingQRProjection<dfloat>>(wNlocal, platform, vSettings, comm);
+
+    } else if (vSettings.compareSetting("INITIAL GUESS STRATEGY", "EXTRAP")) {
+
+      uLinearSolver.SetupInitialGuess<InitialGuess::Extrap<dfloat>>(uNlocal, platform, vSettings, comm);
+      vLinearSolver.SetupInitialGuess<InitialGuess::Extrap<dfloat>>(vNlocal, platform, vSettings, comm);
+      if (mesh.dim==3)
+        wLinearSolver.SetupInitialGuess<InitialGuess::Extrap<dfloat>>(wNlocal, platform, vSettings, comm);
+
+    }
+
+  } else {
+    vDisc_c0 = 0;
+
+    //set penalty
+    if (mesh.elementType==Mesh::TRIANGLES ||
+        mesh.elementType==Mesh::QUADRILATERALS){
+      vTau = 2.0*(mesh.N+1)*(mesh.N+2)/2.0;
+      if(mesh.dim==3)
+        vTau *= 1.5;
+    } else
+      vTau = 2.0*(mesh.N+1)*(mesh.N+3);
+  }
+
+  //Setup pressure Elliptic solver
+  dlong pNlocal=0, pNhalo=0;
+  {
+    int NBCTypes = 7;
+    memory<int> pBCType(NBCTypes);
+    // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
+    pBCType[0] = 0;
+    pBCType[1] = 2;
+    pBCType[2] = 2;
+    pBCType[3] = 1;
+    pBCType[4] = 2;
+    pBCType[5] = 2;
+    pBCType[6] = 2;
+
+    pSettings = _settings.extractPressureSettings();
+    pSettings.changeSetting("IMMERSED BOUNDARY", "FALSE");
+    pSolver.Setup(platform, mesh, pSettings,
+                  0.0, NBCTypes, pBCType);
+    pTau = pSolver.tau;
+
+    pDisc_c0 = settings.compareSetting("PRESSURE DISCRETIZATION", "CONTINUOUS") ? 1 : 0;
+
+    if (pDisc_c0) {
+      pNlocal = pSolver.ogsMasked.Ngather;
+      pNhalo  = pSolver.gHalo.Nhalo;
+    } else {
+      pNlocal = mesh.Nelements*mesh.Np;
+      pNhalo  = mesh.totalHaloPairs*mesh.Np;
+    }
+
+    if (vSettings.compareSetting("LINEAR SOLVER","NBPCG")){
+      pLinearSolver.Setup<LinearSolver::nbpcg<dfloat>>(pNlocal, pNhalo, platform, pSettings, comm);
+    } else if (pSettings.compareSetting("LINEAR SOLVER","NBFPCG")){
+      pLinearSolver.Setup<LinearSolver::nbfpcg<dfloat>>(pNlocal, pNhalo, platform, pSettings, comm);
+    } else if (pSettings.compareSetting("LINEAR SOLVER","PCG")){
+      pLinearSolver.Setup<LinearSolver::pcg<dfloat>>(pNlocal, pNhalo, platform, pSettings, comm);
+    } else if (pSettings.compareSetting("LINEAR SOLVER","PGMRES")){
+      pLinearSolver.Setup<LinearSolver::pgmres<dfloat>>(pNlocal, pNhalo, platform, pSettings, comm);
+    } else if (pSettings.compareSetting("LINEAR SOLVER","PMINRES")){
+      pLinearSolver.Setup<LinearSolver::pminres<dfloat>>(pNlocal, pNhalo, platform, pSettings, comm);
+    }
+
+    if (pSettings.compareSetting("INITIAL GUESS STRATEGY", "LAST")) {
+      pLinearSolver.SetupInitialGuess<InitialGuess::Last<dfloat>>(pNlocal, platform, pSettings, comm);
+    } else if (pSettings.compareSetting("INITIAL GUESS STRATEGY", "ZERO")) {
+      pLinearSolver.SetupInitialGuess<InitialGuess::Zero<dfloat>>(pNlocal, platform, pSettings, comm);
+    } else if (pSettings.compareSetting("INITIAL GUESS STRATEGY", "CLASSIC")) {
+      pLinearSolver.SetupInitialGuess<InitialGuess::ClassicProjection<dfloat>>(pNlocal, platform, pSettings, comm);
+    } else if (pSettings.compareSetting("INITIAL GUESS STRATEGY", "QR")) {
+      pLinearSolver.SetupInitialGuess<InitialGuess::RollingQRProjection<dfloat>>(pNlocal, platform, pSettings, comm);
+    } else if (pSettings.compareSetting("INITIAL GUESS STRATEGY", "EXTRAP")) {
+      pLinearSolver.SetupInitialGuess<InitialGuess::Extrap<dfloat>>(pNlocal, platform, pSettings, comm);
+    }
+  }
+
+  //Setup pressure Elliptic solver
+  dlong massNlocal=0, massNhalo=0;
+  {
+    int NBCTypes = 7;
+    memory<int> massBCType(NBCTypes);
+    // bc=3 => outflow => Dirichlet => pBCType[3] = 1, etc.
+    massBCType[0] = 0;
+    massBCType[1] = 2;
+    massBCType[2] = 2;
+    massBCType[3] = 2;
+    massBCType[4] = 2;
+    massBCType[5] = 2;
+    massBCType[6] = 2;
+
+    std::cout << "MASS LINEARSOLVER" << std::endl;
+    massSettings = _settings.extractMassSettings();
+    massSolver.Setup(platform, mesh, massSettings, NBCTypes, massBCType);
+
+    massNlocal = mesh.dim*massSolver.ogsMasked.Ngather;
+    massNhalo  = mesh.dim*massSolver.gHalo.Nhalo;
+
+    std::cout << "MASS NGATHER: " << massNlocal << std::endl;
+    
+    massLinearSolver.Setup<LinearSolver::pcg<dfloat>>(massNlocal, massNhalo, platform, massSettings, comm);
+
+    if (massSettings.compareSetting("INITIAL GUESS STRATEGY", "LAST")) {
+      massLinearSolver.SetupInitialGuess<InitialGuess::Last<dfloat>>(massNlocal, platform, massSettings, comm);
+    } else if (massSettings.compareSetting("INITIAL GUESS STRATEGY", "ZERO")) {
+      massLinearSolver.SetupInitialGuess<InitialGuess::Zero<dfloat>>(massNlocal, platform, massSettings, comm);
+    } else if (massSettings.compareSetting("INITIAL GUESS STRATEGY", "CLASSIC")) {
+      massLinearSolver.SetupInitialGuess<InitialGuess::ClassicProjection<dfloat>>(massNlocal, platform, massSettings, comm);
+    } else if (massSettings.compareSetting("INITIAL GUESS STRATEGY", "QR")) {
+      massLinearSolver.SetupInitialGuess<InitialGuess::RollingQRProjection<dfloat>>(massNlocal, platform, massSettings, comm);
+    } else if (massSettings.compareSetting("INITIAL GUESS STRATEGY", "EXTRAP")) {
+      massLinearSolver.SetupInitialGuess<InitialGuess::Extrap<dfloat>>(massNlocal, platform, massSettings, comm);
+    }
+  }
+  
+  //Solver tolerances
+  if (sizeof(dfloat)==sizeof(double)) {
+    presTOL = 1.0E-8;
+    velTOL  = 1.0E-8;
+  } else {
+    presTOL = 1.0E-5;
+    velTOL  = 1.0E-5;
+  }
+
+  //setup linear algebra module
+  platform.linAlg().InitKernels({"innerProd", "axpy", "max"});
+
+  /*setup trace halo exchange */
+  pTraceHalo = mesh.HaloTraceSetup(1); //one field
+  vTraceHalo = mesh.HaloTraceSetup(NVfields); //one field
+  massTraceHalo = mesh.HaloTraceSetup(NVfields); //one field
+
+  // u and p at interpolation nodes
+  u.malloc((Nlocal+Nhalo)*NVfields);
+  o_u = platform.malloc<dfloat>((Nlocal+Nhalo)*NVfields);
+
+  p.malloc(Nlocal+Nhalo);
+  o_p = platform.malloc<dfloat>(Nlocal+Nhalo);
+
+  mesh.MassMatrixKernelSetup(NVfields); // mass matrix operator
+
+  // OCCA build stuff
+  properties_t kernelInfo = mesh.props; //copy base occa properties
+
+  //add boundary data to kernel info
+  std::string dataFileName;
+  settings.getSetting("DATA FILE", dataFileName);
+  kernelInfo["includes"] += dataFileName;
+
+  kernelInfo["defines/" "p_Nfields"] = NVfields;
+  kernelInfo["defines/" "p_NVfields"]= NVfields;
+  kernelInfo["defines/" "p_NTfields"]= NTfields;
+
+  int maxNodes = std::max(mesh.Np, (mesh.Nfp*mesh.Nfaces));
+  kernelInfo["defines/" "p_maxNodes"]= maxNodes;
+
+  int blockMax = 256;
+
+  int NblockV = std::max(1,blockMax/mesh.Np);
+  kernelInfo["defines/" "p_NblockV"]= NblockV;
+
+  int NblockS = std::max(1,blockMax/maxNodes);
+  kernelInfo["defines/" "p_NblockS"]= NblockS;
+
+  if (cubature) {
+    int cubMaxNodes = std::max(mesh.Np, (mesh.intNfp*mesh.Nfaces));
+    kernelInfo["defines/" "p_cubMaxNodes"]= cubMaxNodes;
+    int cubMaxNodes1 = std::max(mesh.Np, (mesh.intNfp));
+    kernelInfo["defines/" "p_cubMaxNodes1"]= cubMaxNodes1;
+
+    int cubNblockV = 1; // std::max(1,blockMax/mesh.cubNp);
+    kernelInfo["defines/" "p_cubNblockV"]= cubNblockV;
+
+    int cubNblockS = std::max(1,blockMax/cubMaxNodes);
+    kernelInfo["defines/" "p_cubNblockS"]= cubNblockS;
+  }
+
+  // set kernel name suffix
+  std::string suffix = mesh.elementSuffix();
+  std::string oklFilePrefix = DINS "/okl/";
+  std::string oklFileSuffix = ".okl";
+
+  std::string fileName, kernelName;
+
+  // advection kernels
+  if (settings.compareSetting("TIME INTEGRATOR","SSBDF3")) {
+    //subcycle kernels
+    if (cubature) {
+      fileName   = oklFilePrefix + "insSubcycleCubatureAdvection" + suffix + oklFileSuffix;
+      kernelName = "insSubcycleAdvectionCubatureVolume" + suffix;
+      advectionVolumeKernel =  platform.buildKernel(fileName, kernelName,
+                                             kernelInfo);
+      kernelName = "insSubcycleAdvectionCubatureSurface" + suffix;
+      advectionSurfaceKernel = platform.buildKernel(fileName, kernelName,
+                                             kernelInfo);
+    } else {
+      fileName   = oklFilePrefix + "insSubcycleAdvection" + suffix + oklFileSuffix;
+      kernelName = "insSubcycleAdvectionVolume" + suffix;
+      advectionVolumeKernel =  platform.buildKernel(fileName, kernelName,
+                                             kernelInfo);
+      kernelName = "insSubcycleAdvectionSurface" + suffix;
+      advectionSurfaceKernel = platform.buildKernel(fileName, kernelName,
+                                             kernelInfo);
+    }
+
+    //build subcycler
+    subcycler.ins = this;
+    subcycler.platform = platform;
+    subcycler.mesh = mesh;
+    subcycler.comm = comm;
+    subcycler.settings = settings;
+
+    subcycler.NVfields = NVfields;
+    subcycler.nu = nu;
+    subcycler.cubature = cubature;
+    subcycler.vTraceHalo = vTraceHalo;
+    subcycler.advectionVolumeKernel = advectionVolumeKernel;
+    subcycler.advectionSurfaceKernel = advectionSurfaceKernel;
+
+    if (settings.compareSetting("SUBCYCLING TIME INTEGRATOR","AB3")){
+      subStepper.Setup<TimeStepper::ab3>(mesh.Nelements,
+                                         mesh.totalHaloPairs,
+                                         mesh.Np, NVfields, platform, comm);
+    } else if (settings.compareSetting("SUBCYCLING TIME INTEGRATOR","LSERK4")){
+      subStepper.Setup<TimeStepper::lserk4>(mesh.Nelements,
+                                            mesh.totalHaloPairs,
+                                            mesh.Np, NVfields, platform, comm);
+    } else if (settings.compareSetting("SUBCYCLING TIME INTEGRATOR","DOPRI5")){
+      subStepper.Setup<TimeStepper::dopri5>(mesh.Nelements,
+                                            mesh.totalHaloPairs,
+                                            mesh.Np, NVfields, platform, comm);
+    }
+
+    fileName   = oklFilePrefix + "insSubcycleAdvection" + oklFileSuffix;
+    kernelName = "insSubcycleAdvectionKernel";
+    subcycler.subCycleAdvectionKernel = platform.buildKernel(fileName, kernelName,
+                                             kernelInfo);
+
+  } else {
+    //regular advection kernels
+    if (cubature) {
+      fileName   = oklFilePrefix + "insCubatureAdvection" + suffix + oklFileSuffix;
+      kernelName = "insAdvectionCubatureVolume" + suffix;
+      advectionVolumeKernel =  platform.buildKernel(fileName, kernelName,
+                                             kernelInfo);
+      kernelName = "insAdvectionCubatureSurface" + suffix;
+      advectionSurfaceKernel = platform.buildKernel(fileName, kernelName,
+                                             kernelInfo);
+    } else {
+      fileName   = oklFilePrefix + "insAdvection" + suffix + oklFileSuffix;
+      kernelName = "insAdvectionVolume" + suffix;
+      advectionVolumeKernel =  platform.buildKernel(fileName, kernelName,
+                                             kernelInfo);
+      kernelName = "insAdvectionSurface" + suffix;
+      advectionSurfaceKernel = platform.buildKernel(fileName, kernelName,
+                                             kernelInfo);
+    }
+  }
+
+  // diffusion kernels
+  if (settings.compareSetting("TIME INTEGRATOR","EXTBDF3")
+    ||settings.compareSetting("TIME INTEGRATOR","SSBDF3")) {
+    fileName   = oklFilePrefix + "insVelocityRhs" + suffix + oklFileSuffix;
+
+    if (vDisc_c0)
+      kernelName = "insVelocityRhs" + suffix;
+    else
+      kernelName = "insVelocityIpdgRhs" + suffix;
+    velocityRhsKernel =  platform.buildKernel(fileName, kernelName,
+                                           kernelInfo);
+
+    kernelName = "insVelocityBC" + suffix;
+    velocityBCKernel =  platform.buildKernel(fileName, kernelName,
+                                           kernelInfo);
+  } else {
+    // gradient kernel
+    fileName   = oklFilePrefix + "insVelocityGradient" + suffix + oklFileSuffix;
+    kernelName = "insVelocityGradient" + suffix;
+    velocityGradientKernel =  platform.buildKernel(fileName, kernelName,
+                                               kernelInfo);
+
+    fileName   = oklFilePrefix + "insDiffusion" + suffix + oklFileSuffix;
+    kernelName = "insDiffusion" + suffix;
+    diffusionKernel =  platform.buildKernel(fileName, kernelName,
+                                           kernelInfo);
+  }
+
+  //pressure gradient kernels
+  fileName   = oklFilePrefix + "insGradient" + suffix + oklFileSuffix;
+  kernelName = "insGradientVolume" + suffix;
+  gradientVolumeKernel =  platform.buildKernel(fileName, kernelName,
+                                         kernelInfo);
+  kernelName = "insGradientSurface" + suffix;
+  gradientSurfaceKernel = platform.buildKernel(fileName, kernelName,
+                                         kernelInfo);
+
+  //velocity divergence kernels
+  fileName   = oklFilePrefix + "insDivergence" + suffix + oklFileSuffix;
+  kernelName = "insDivergenceVolume" + suffix;
+  divergenceVolumeKernel =  platform.buildKernel(fileName, kernelName,
+                                         kernelInfo);
+  kernelName = "insDivergenceSurface" + suffix;
+  divergenceSurfaceKernel = platform.buildKernel(fileName, kernelName,
+                                         kernelInfo);
+
+  //pressure solver kernels
+  if (pressureIncrement) {
+    fileName   = oklFilePrefix + "insPressureIncrementRhs" + suffix + oklFileSuffix;
+
+    if (pDisc_c0)
+      kernelName = "insPressureIncrementRhs" + suffix;
+    else
+      kernelName = "insPressureIncrementIpdgRhs" + suffix;
+    pressureIncrementRhsKernel =  platform.buildKernel(fileName, kernelName,
+                                           kernelInfo);
+
+    kernelName = "insPressureIncrementBC" + suffix;
+    pressureIncrementBCKernel =  platform.buildKernel(fileName, kernelName,
+                                           kernelInfo);
+  } else {
+    fileName   = oklFilePrefix + "insPressureRhs" + suffix + oklFileSuffix;
+    if (pDisc_c0)
+      kernelName = "insPressureRhs" + suffix;
+    else
+      kernelName = "insPressureIpdgRhs" + suffix;
+    pressureRhsKernel =  platform.buildKernel(fileName, kernelName,
+                                           kernelInfo);
+
+    kernelName = "insPressureBC" + suffix;
+    pressureBCKernel =  platform.buildKernel(fileName, kernelName,
+                                           kernelInfo);
+  }
+
+  fileName   = oklFilePrefix + "insVorticity" + suffix + oklFileSuffix;
+  kernelName = "insVorticity" + suffix;
+  vorticityKernel =  platform.buildKernel(fileName, kernelName,
+                                            kernelInfo);
+
+  fileName   = oklFilePrefix + "insQfactor" + suffix + oklFileSuffix;
+  kernelName = "insQfactor" + suffix;
+  qfactorKernel =  platform.buildKernel(fileName, kernelName,
+                                            kernelInfo);
+
+  if (mesh.dim==2) {
+    fileName   = oklFilePrefix + "insInitialCondition2D" + oklFileSuffix;
+    kernelName = "insInitialCondition2D";
+  } else {
+    fileName   = oklFilePrefix + "insInitialCondition3D" + oklFileSuffix;
+    kernelName = "insInitialCondition3D";
+  }
+
+  initialConditionKernel = platform.buildKernel(fileName, kernelName,
+                                                  kernelInfo);
+
+  fileName   = oklFilePrefix + "insMaxWaveSpeed" + suffix + oklFileSuffix;
+  kernelName = "insMaxWaveSpeed" + suffix;
+
+  maxWaveSpeedKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
+
+#if 1
+  if(mesh.elementType==Mesh::QUADRILATERALS){
+    fileName   = oklFilePrefix + "insProject" + suffix + oklFileSuffix;
+
+    kernelName = "insProjectWeight" + suffix;
+    projectWeightKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
+
+    kernelName = "insProjectScatter" + suffix;
+    projectScatterKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
+  
+    memory<dlong> uGlobalToLocal(mesh.Nelements*mesh.Np,(dlong)0);
+  
+    pSolver.ogsMasked.SetupGlobalToLocalMapping(uGlobalToLocal);
+    uSolver.ogsMasked.SetupGlobalToLocalMapping(uGlobalToLocal);
+  
+    o_uGlobalToLocal = platform.malloc<dlong>(mesh.Nelements*mesh.Np, uGlobalToLocal);
+
+    // build degree vector
+    dlong Ngather = pSolver.ogsMasked.Ngather;
+    memory<dfloat> JWL(Nlocal+Nhalo, (dfloat)0.);
+    memory<dfloat> JWS(Nlocal+Nhalo, (dfloat)0.);
+    memory<dfloat> JWG(Ngather, (dfloat)0.);
+    for(dlong e=0;e<mesh.Nelements;++e){
+      for(int n=0;n<mesh.Np;++n){
+	dlong id = e*mesh.Np+n;
+	dfloat JWen = mesh.vgeo[mesh.Nvgeo*mesh.Np*e + n + mesh.Np*mesh.JWID];
+	JWL[id] = JWen;
+	dlong gid = uGlobalToLocal[id];
+	if(gid>=0)
+	  JWG[gid] += JWen;
+      }
+    }
+    // not globalized
+    for(int n=0;n<Nlocal;++n){
+      dlong gid = uGlobalToLocal[n];
+      if(gid>=0){
+	dfloat JGn = JWG[gid];
+	JWL[n] = JWL[n]/JGn;
+      }
+      else
+	JWL[n] = 1;
+    }
+  
+    o_projectWeights = platform.malloc<dfloat>(Nlocal+Nhalo, JWL);
+  }
+  
+#endif
+
+  // build filter
+  if(mesh.elementType==Mesh::TRIANGLES ||
+     mesh.elementType==Mesh::TETRAHEDRA){
+
+    fileName   = oklFilePrefix + "massKernels" + suffix + oklFileSuffix;
+    kernelName = "massFilter" + suffix;
+
+    filterKernel = platform.buildKernel(fileName, kernelName,
+					    kernelInfo);
+    memory<dfloat> V;
+    if(mesh.dim==2)
+      mesh.VandermondeTri2D(mesh.N, mesh.r, mesh.s, V);
+    else
+      mesh.VandermondeTet3D(mesh.N, mesh.r, mesh.s, mesh.t, V);
+    
+    memory<dfloat> invV(mesh.Np*mesh.Np);
+    for(int n=0;n<mesh.Np;++n){
+      for(int m=0;m<mesh.Np;++m){
+	invV[n*mesh.Np+m] = V[n*mesh.Np+m];
+      }
+    }
+    
+    linAlg_t::matrixInverse(mesh.Np, invV);
+
+    memory<dfloat> FILT(mesh.Np*mesh.Np, 0.);
+    for(int n=0;n<mesh.Np;++n){
+      for(int m=0;m<mesh.Np;++m){
+	int sk = 0;
+	dfloat Fnm = 0;
+	dfloat frac = 0.9;
+	if(mesh.elementType==Mesh::TETRAHEDRA){
+	  for(int i=0;i<mesh.N+1;++i){
+	    for(int j=0;j<mesh.N+1-i;++j){
+	      for(int k=0;k<mesh.N+1-i-j;++k){
+		dfloat fac = (i+j+k==mesh.N) ? frac:1.;
+		Fnm += V[n*mesh.Np+sk]*fac*invV[sk*mesh.Np+m];
+		++sk;
+	      }
+	    }
+	  }
+	}
+	if(mesh.elementType==Mesh::TRIANGLES){
+	  for(int i=0;i<mesh.N+1;++i){
+	    for(int j=0;j<mesh.N+1-i;++j){
+	      dfloat fac = (i+j==mesh.N) ? frac:1.;
+	      Fnm += V[n*mesh.Np+sk]*fac*invV[sk*mesh.Np+m];
+	      ++sk;
+	    }
+	  }
+	}
+	FILT[n+m*mesh.Np] = Fnm;
+      }      
+    }
+
+    o_FILT = platform.malloc<dfloat>(FILT);
+  }
+
+  if(vSettings.compareSetting("IMMERSED BOUNDARY", "TRUE")){
+    fileName   = oklFilePrefix + "insImmersedBoundaryAdvectionPenalty" + suffix + oklFileSuffix;
+    kernelName = "insImmersedBoundaryAdvectionPenalty" + suffix;
+
+    immersedBoundaryAdvectionPenaltyKernel =
+      platform.buildKernel(fileName, kernelName,kernelInfo);    
+    
+  }
+
+  
+}

@@ -1,0 +1,158 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+
+// Initial conditions
+#define insInitialConditions3D(nu,t,x,y,z,u,v,w,p)                     \
+{                                                                      \
+  const dfloat a = M_PI/4.f;                                           \
+  const dfloat d = M_PI/2.f;                                           \
+  *(u) = -a*(exp(a*x)*sin(a*y+d*z)+exp(a*z)*cos(a*x+d*y))*exp(-d*d*t); \
+  *(v) = -a*(exp(a*y)*sin(a*z+d*x)+exp(a*x)*cos(a*y+d*z))*exp(-d*d*t); \
+  *(w) = -a*(exp(a*z)*sin(a*x+d*y)+exp(a*y)*cos(a*z+d*x))*exp(-d*d*t); \
+  *(p) = -a*a*exp(-2.f*d*d*t)*(exp(2.f*a*x)+exp(2.f*a*y)+exp(2.f*a*z))*(sin(a*x+d*y)*cos(a*z+d*x)*exp(a*(y+z))+sin(a*y+d*z)*cos(a*x+d*y)*exp(a*(x+z))+sin(a*z+d*x)*cos(a*y+d*z)*exp(a*(x+y))); \
+}
+
+// Boundary conditions
+/* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5, z-slip 6 */
+#define insVelocityDirichletConditions3D(bc, ndotUe, nu, t, x, y, z, nx, ny, nz, uM, vM, wM, uB, vB, wB) \
+{                                                                         \
+  const dfloat a = M_PI/4.f;                                              \
+  const dfloat d = M_PI/2.f;                                              \
+  if(bc==1){                                                              \
+    *(uB) = 0.f;                                                          \
+    *(vB) = 0.f;                                                          \
+    *(wB) = 0.f;                                                          \
+  } else if(bc==2){                                                       \
+    *(uB) = -a*(exp(a*x)*sin(a*y+d*z)+exp(a*z)*cos(a*x+d*y))*exp(-d*d*t); \
+    *(vB) = -a*(exp(a*y)*sin(a*z+d*x)+exp(a*x)*cos(a*y+d*z))*exp(-d*d*t); \
+    *(wB) = -a*(exp(a*z)*sin(a*x+d*y)+exp(a*y)*cos(a*z+d*x))*exp(-d*d*t); \
+  } else if(bc==3){							\
+  *(uB) = (ndotU>0) ? uM : 0;						\
+  *(vB) = (ndotU>0) ? vM : 0;						\
+  *(wB) = (ndotU>0) ? wM : 0;						\
+  } else if(bc==4){							\
+    *(uB) = 0.f;                                                          \
+    *(vB) = vM;                                                           \
+    *(wB) = wM;                                                           \
+  } else if(bc==5){                                                       \
+    *(uB) = uM;                                                           \
+    *(vB) = 0.f;                                                          \
+    *(wB) = wM;                                                           \
+  } else if(bc==6){                                                       \
+    *(uB) = uM;                                                           \
+    *(vB) = vM;                                                           \
+    *(wB) = 0.f;                                                          \
+  }                                                                       \                                                                    \
+}
+
+#define insVelocityNeumannConditions3D(bc, nu, t, x, y, z, nx, ny, nz, uxM, uyM, uzM, vxM, vyM, vzM, wxM, wyM, wzM, uxB, uyB, uzB, vxB, vyB, vzB, wxB, wyB, wzB) \
+{                                                                              \
+  const dfloat a = M_PI/4.f;                                                   \
+  const dfloat d = M_PI/2.f;                                                   \
+  if(bc==1 || bc==2){                                                          \
+    *(uxB) = uxM;                                                              \
+    *(uyB) = uyM;                                                              \
+    *(uzB) = uzM;                                                              \
+    *(vxB) = vxM;                                                              \
+    *(vyB) = vyM;                                                              \
+    *(vzB) = vzM;                                                              \
+    *(wxB) = wxM;                                                              \
+    *(wyB) = wyM;                                                              \
+    *(wzB) = wzM;                                                              \
+  } else if(bc==3){                                                            \
+    *(uxB) = -a*(a*exp(a*x)*sin(a*y+d*z)-a*exp(a*z)*sin(a*x+d*y))*exp(-d*d*t); \
+    *(uyB) = -a*(a*exp(a*x)*cos(a*y+d*z)-d*exp(a*z)*sin(a*x+d*y))*exp(-d*d*t); \
+    *(uzB) = -a*(d*exp(a*x)*cos(a*y+d*z)+a*exp(a*z)*cos(a*x+d*y))*exp(-d*d*t); \
+    *(vxB) = -a*(d*exp(a*y)*cos(a*z+d*x)+a*exp(a*x)*cos(a*y+d*z))*exp(-d*d*t); \
+    *(vyB) = -a*(a*exp(a*y)*sin(a*z+d*x)-a*exp(a*x)*sin(a*y+d*z))*exp(-d*d*t); \
+    *(vzB) = -a*(a*exp(a*y)*cos(a*z+d*x)-d*exp(a*x)*sin(a*y+d*z))*exp(-d*d*t); \
+    *(wxB) =  a*(a*exp(a*z)*cos(a*x+d*y)-d*exp(a*y)*sin(a*z+d*x))*exp(-d*d*t); \
+    *(wyB) =  a*(d*exp(a*z)*cos(a*x+d*y)+a*exp(a*y)*cos(a*z+d*x))*exp(-d*d*t); \
+    *(wzB) =  a*(a*exp(a*z)*sin(a*x+d*y)-a*exp(a*y)*sin(a*z+d*x))*exp(-d*d*t); \
+  } else if(bc==4){                                                            \
+    *(uxB) = uxM;                                                              \
+    *(uyB) = uyM;                                                              \
+    *(uzB) = uzM;                                                              \
+    *(vxB) = 0.f;                                                              \
+    *(vyB) = 0.f;                                                              \
+    *(vzB) = 0.f;                                                              \
+    *(wxB) = 0.f;                                                              \
+    *(wyB) = 0.f;                                                              \
+    *(wzB) = 0.f;                                                              \
+  } else if(bc==5){                                                            \
+    *(uxB) = 0.f;                                                              \
+    *(uyB) = 0.f;                                                              \
+    *(uzB) = 0.f;                                                              \
+    *(vxB) = vxM;                                                              \
+    *(vyB) = vyM;                                                              \
+    *(vzB) = vzM;                                                              \
+    *(wxB) = 0.f;                                                              \
+    *(wyB) = 0.f;                                                              \
+    *(wzB) = 0.f;                                                              \
+  } else if(bc==6){                                                            \
+    *(uxB) = 0.f;                                                              \
+    *(uyB) = 0.f;                                                              \
+    *(uzB) = 0.f;                                                              \
+    *(vxB) = 0.f;                                                              \
+    *(vyB) = 0.f;                                                              \
+    *(vzB) = 0.f;                                                              \
+    *(wxB) = wxM;                                                              \
+    *(wyB) = wyM;                                                              \
+    *(wzB) = wzM;                                                              \
+  }                                                                            \                                                                    \
+}
+
+
+#define insPressureDirichletConditions3D(bc, nu, t, x, y, z, nx, ny, nz, pM, pB) \
+{                                                                                \
+  const dfloat a = M_PI/4.f;                                                     \
+  const dfloat d = M_PI/2.f;                                                     \
+  if(bc==1 || bc==2){                                                            \
+    *(pB) = pM;                                                                  \
+  } else if(bc==3){                                                              \
+    *(pB) = -a*a*exp(-2.f*d*d*t)*( exp(2.f*a*x)+exp(2.f*a*y)+exp(2.f*a*z))*(sin(a*x+d*y)*cos(a*z+d*x)*exp(a*(y+z))+sin(a*y+d*z)*cos(a*x+d*y)*exp(a*(x+z))+sin(a*z+d*x)*cos(a*y+d*z)*exp(a*(x+y))); \
+  } else if(bc==4||bc==5||bc==6){                                                \
+    *(pB) = pM;                                                                  \
+  }                                                                              \
+}
+
+#define insPressureNeumannConditions3D(bc, nu, t, x, y, z, nx, ny, nz, pxM, pyM, pzM, pxB, pyB, pzB) \
+{                                          \
+  if(bc==1 || bc==2){                      \
+    *(pxB) = 0.f;                          \
+    *(pyB) = 0.f;                          \
+    *(pzB) = 0.f;                          \
+  } else if(bc==3){                        \
+    *(pxB) = pxM;                          \
+    *(pyB) = pyM;                          \
+    *(pzB) = pzM;                          \
+  } else if(bc==4||bc==5||bc==6){          \
+    *(pxB) = 0.f;                          \
+    *(pyB) = 0.f;                          \
+    *(pzB) = 0.f;                          \
+  }                                        \
+}

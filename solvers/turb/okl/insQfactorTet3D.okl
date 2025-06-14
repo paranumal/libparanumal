@@ -1,0 +1,127 @@
+/*
+
+  The MIT License (MIT)
+
+  Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+*/
+
+@kernel void insQfactorTet3D(const dlong Nelements,
+			     @restrict const  dfloat *  vgeo,
+			     @restrict const  dfloat *  const D,
+			     @restrict const  dfloat *  U,
+			     @restrict  dfloat *  QF){
+
+  // block partition of elements
+  for(dlong eo=0;eo<Nelements;eo+=p_NblockV;@outer(0)){
+
+    @shared dfloat s_u[p_NblockV][p_Np];
+    @shared dfloat s_v[p_NblockV][p_Np];
+    @shared dfloat s_w[p_NblockV][p_Np];
+
+    for(int e=eo;e<eo+p_NblockV;++e;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
+        if(e<Nelements){
+          const dlong id = e*p_Np*p_NVfields+n;
+          s_u[e-eo][n] = U[id+0*p_Np];
+          s_v[e-eo][n] = U[id+1*p_Np];
+          s_w[e-eo][n] = U[id+2*p_Np];
+        }
+      }
+    }
+
+
+    for(int e=eo;e<eo+p_NblockV;++e;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
+        if(e<Nelements){
+          const int es = e-eo;
+          const dlong gid = e*p_Nvgeo;
+          const dfloat drdx = vgeo[gid + p_RXID];
+          const dfloat drdy = vgeo[gid + p_RYID];
+          const dfloat drdz = vgeo[gid + p_RZID];
+          const dfloat dsdx = vgeo[gid + p_SXID];
+          const dfloat dsdy = vgeo[gid + p_SYID];
+          const dfloat dsdz = vgeo[gid + p_SZID];
+          const dfloat dtdx = vgeo[gid + p_TXID];
+          const dfloat dtdy = vgeo[gid + p_TYID];
+          const dfloat dtdz = vgeo[gid + p_TZID];
+
+          // compute 1D derivatives
+          dfloat ur = 0, vr = 0, wr =0;
+          dfloat us = 0, vs = 0, ws =0;
+          dfloat ut = 0, vt = 0, wt =0;
+
+#pragma unroll p_Np
+	  for(int i=0;i<p_Np;++i) {
+	    const dfloat Drn = D[n + i*p_Np+0*p_Np*p_Np];
+	    const dfloat Dsn = D[n + i*p_Np+1*p_Np*p_Np];
+	    const dfloat Dtn = D[n + i*p_Np+2*p_Np*p_Np];
+
+	    const dfloat ui = s_u[es][i];
+	    const dfloat vi = s_v[es][i];
+	    const dfloat wi = s_w[es][i];
+	    
+	    ur += Drn*ui;
+	    us += Dsn*ui;
+	    ut += Dtn*ui;
+
+	    vr += Drn*vi;
+	    vs += Dsn*vi;
+	    vt += Dtn*vi;
+
+	    wr += Drn*wi;
+	    ws += Dsn*wi;
+	    wt += Dtn*wi;
+	  }
+
+	  const dfloat ux = drdx*ur + dsdx*us + dtdx*ut;
+          const dfloat uy = drdy*ur + dsdy*us + dtdy*ut;
+          const dfloat uz = drdz*ur + dsdz*us + dtdz*ut;
+
+          const dfloat vx = drdx*vr + dsdx*vs + dtdx*vt;
+	  const dfloat vy = drdy*vr + dsdy*vs + dtdy*vt;
+          const dfloat vz = drdz*vr + dsdz*vs + dtdz*vt;
+
+          const dfloat wx = drdx*wr + dsdx*ws + dtdx*wt;
+          const dfloat wy = drdy*wr + dsdy*ws + dtdy*wt;
+	  const dfloat wz = drdz*wr + dsdz*ws + dtdz*wt;
+
+          const dlong id = e*p_Np*p_NVfields+n;
+	  dfloat QFn = 0;
+	  QFn += ux*ux;
+	  QFn += uy*vx;
+	  QFn += uz*wx;
+	  QFn += vx*uy;
+	  QFn += vy*vy;
+	  QFn += vz*wy;
+	  QFn += wx*uz;
+	  QFn += wy*vz;
+	  QFn += wz*wz;
+
+	  QF[id] = -((dfloat)0.5)*QFn;
+	  QF[id+1*p_Np] = 0;
+	  QF[id+2*p_Np] = 0;
+        }
+      }
+    }
+  }
+}
+

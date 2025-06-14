@@ -1,0 +1,159 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+// Optimized sizes for @kernel 4-5
+#if p_N==1
+ #define p_NbV 10
+ #define p_Nmt 1
+ #endif
+
+#if p_N==2
+ #define p_NbV 4
+ #define p_Nmt 2
+#endif
+
+#if p_N==3
+ #define p_NbV 6
+ #define p_Nmt 1
+#endif
+
+ #if p_N==4
+  #define p_NbV 2
+  #define p_Nmt 2
+#endif
+
+ #if p_N==5
+ #define p_NbV 2
+ #define p_Nmt 5
+ #endif
+
+#if p_N==6
+ #define p_NbV 3
+ #define p_Nmt 7
+ #endif
+
+#if p_N==7
+  #define p_NbV 2
+  #define p_Nmt 7
+ #endif
+
+#if p_N==8
+ #define p_NbV 5
+ #define p_Nmt 7
+#endif
+
+#if p_N==9
+  #define p_NbV 5
+  #define p_Nmt 7
+ #endif
+
+#if p_N==10
+ #define p_NbV 4
+ #define p_Nmt 6
+#endif
+
+
+// map multiple nodes to thread
+@kernel void insVelocityGradientTri2D(const dlong Nelements,
+                                     @restrict const  dfloat  *  vgeo,
+                                     @restrict const  dfloat  *  D,
+                                     @restrict const  dfloat  *  U,
+                                     @restrict        dfloat4 *  GU){
+
+  for(dlong eo=0;eo<Nelements;eo+=(p_NbV*p_Nmt);@outer(0)){
+
+    @shared dfloat s_q[p_Nmt][p_NbV][p_Np];
+
+    #pragma unroll p_NVfields
+    for (int i=0; i<p_NVfields; i++) {
+
+      for(int es=0; es<p_NbV;++es;@inner(1)){
+        for(int n=0;n<p_Np;++n;@inner(0)){
+          #pragma unroll p_Nmt
+          for(int em=0;em<p_Nmt;++em){
+            const dlong e = eo+es*p_Nmt + em;
+            if(e<Nelements){
+              const dlong id = n + e*p_Np*p_NVfields;
+              s_q[em][es][n] = U[id+i*p_Np];
+            }
+          }
+        }
+      }
+
+
+      for(int es=0;es<p_NbV; ++es; @inner(1)){
+        for(int n=0;n<p_Np;++n;@inner(0)){
+          dfloat qr[p_Nmt], qs[p_Nmt];
+
+          // hold geometric factors on register
+          dfloat drdx2[p_Nmt], dsdx2[p_Nmt];
+          dfloat drdy2[p_Nmt], dsdy2[p_Nmt];
+
+          #pragma unroll p_Nmt
+          for(int em=0;em<p_Nmt;++em){
+            const dlong e = eo+es*p_Nmt + em;
+            qr[em] = 0.f;
+            qs[em] = 0.f;
+
+            drdx2[em] = vgeo[p_Nvgeo*e+p_RXID];
+            drdy2[em] = vgeo[p_Nvgeo*e+p_RYID];
+            dsdx2[em] = vgeo[p_Nvgeo*e+p_SXID];
+            dsdy2[em] = vgeo[p_Nvgeo*e+p_SYID];
+          }
+
+          #pragma unroll p_Np
+          for(int k=0;k<p_Np;++k){
+            dfloat drt = D[n + k*p_Np +0*p_Np*p_Np];
+            dfloat dst = D[n + k*p_Np +1*p_Np*p_Np];
+
+            #pragma unroll p_Nmt
+            for(int em=0;em<p_Nmt;++em){
+              dfloat qn = s_q[em][es][k];
+
+              qr[em] += drt*qn;
+              qs[em] += dst*qn;
+            }
+          }
+
+
+          #pragma unroll p_Nmt
+          for(int em=0;em<p_Nmt;++em){
+            const dlong e  = eo+es*p_Nmt + em;
+            if(e<Nelements){
+              const dlong id = e*p_Np*p_NVfields+n;
+              dfloat4 gradqn;
+              gradqn.x = drdx2[em]*qr[em] + dsdx2[em]*qs[em];
+              gradqn.y = drdy2[em]*qr[em] + dsdy2[em]*qs[em];
+              gradqn.w = s_q[em][es][n];
+
+              GU[id+i*p_Np] = gradqn;
+            }
+          }
+        }
+      }
+    }
+  }
+}

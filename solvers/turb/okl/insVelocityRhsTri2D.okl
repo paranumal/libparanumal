@@ -1,0 +1,422 @@
+/*
+
+The MIT License (MIT)
+
+Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+*/
+
+// compute RHS = MM*RHS/nu + BCdata
+// and split fields to separate arrays
+@kernel void insVelocityRhsTri2D(const dlong Nelements,
+                               @restrict const  dfloat *  wJ,
+                               @restrict const  dfloat *  vgeo,
+                               @restrict const  dfloat *  sgeo,
+                               @restrict const  dfloat *  ggeo,
+                               @restrict const  dfloat *  S,
+                               @restrict const  dfloat *  D,
+                               @restrict const  dfloat *  LIFT,
+                               @restrict const  dfloat *  MM,
+                               @restrict const  dfloat *  sM,
+                               @restrict const  dlong  *  vmapM,
+                               @restrict const  int    *  EToB,
+                               @restrict const  int    *  mapB,
+                               const dfloat tau,
+                               const dfloat time,
+                               @restrict const  dfloat *  x,
+                               @restrict const  dfloat *  y,
+                               @restrict const  dfloat *  z,
+                               const dfloat lambda,
+                               const dfloat nu,
+                               @restrict const dfloat *  U,
+                               @restrict const dfloat *  RHS,
+                               @restrict       dfloat *  UH,
+                               @restrict       dfloat *  VH,
+                               @restrict       dfloat *  WH,
+                               @restrict       dfloat *  rhsU,
+                               @restrict       dfloat *  rhsV,
+                               @restrict       dfloat *  rhsW){
+
+  for(int e=0;e<Nelements;e++;@outer(0)){
+    @shared dfloat s_u[p_Np];
+    @shared dfloat s_v[p_Np];
+    @shared dfloat s_ndu[p_Nfp*p_Nfaces];
+    @shared dfloat s_ndv[p_Nfp*p_Nfaces];
+
+    @exclusive dfloat r_rhsU, r_rhsV;
+
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      if(n<p_Np){
+        s_u[n] = 0.;
+        s_v[n] = 0.;
+      }
+      if(n<p_NfacesNfp){
+        s_ndu[n] = 0.;
+        s_ndv[n] = 0.;
+      }
+    }
+
+
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      if(n<p_NfacesNfp){
+        const int id  = n + e*p_Nfaces*p_Nfp;
+        const int idM = vmapM[id];
+        const int nid = idM%p_Np;
+
+        const int face = n/p_Nfp;
+
+        // load surface geofactors for this face
+        const int sid = p_Nsgeo*(e*p_Nfaces+face);
+        const dfloat nx = sgeo[sid+p_NXID];
+        const dfloat ny = sgeo[sid+p_NYID];
+        const dfloat sJ = sgeo[sid+p_SJID];
+
+        dfloat dudxP=0, dudyP=0, uP=0;
+        dfloat dvdxP=0, dvdyP=0, vP=0;
+
+        const int bc = mapB[idM];
+        if(bc>0) {
+	  dfloat ndotU = 1;								
+          insVelocityDirichletConditions2D(bc, ndotU, nu, time, x[idM], y[idM], nx, ny, 0.f, 0.f, &uP, &vP);
+          insVelocityNeumannConditions2D(bc, nu, time, x[idM], y[idM], nx, ny, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dvdxP, &dvdyP);
+        }
+
+        s_u[nid] = uP;
+        s_v[nid] = vP;
+        s_ndu[n] = sJ*(nx*dudxP + ny*dudyP);
+        s_ndv[n] = sJ*(nx*dvdxP + ny*dvdyP);
+      }
+    }
+
+
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      if(n<p_Np){
+        //volume Dirichlet data
+        const int gid = e*p_Nggeo;
+        const dfloat Grr = ggeo[gid + p_G00ID];
+        const dfloat Grs = ggeo[gid + p_G01ID];
+        const dfloat Gss = ggeo[gid + p_G11ID];
+
+        dfloat urr = 0., vrr = 0.;
+        dfloat urs = 0., vrs = 0.;
+        dfloat uss = 0., vss = 0.;
+        #pragma unroll p_Np
+          for (int k=0;k<p_Np;k++) {
+            urr += S[n+k*p_Np+0*p_Np*p_Np]*s_u[k];
+            urs += S[n+k*p_Np+1*p_Np*p_Np]*s_u[k];
+            uss += S[n+k*p_Np+2*p_Np*p_Np]*s_u[k];
+
+            vrr += S[n+k*p_Np+0*p_Np*p_Np]*s_v[k];
+            vrs += S[n+k*p_Np+1*p_Np*p_Np]*s_v[k];
+            vss += S[n+k*p_Np+2*p_Np*p_Np]*s_v[k];
+          }
+
+        dfloat Lndu = 0;
+        dfloat Lndv = 0;
+        // surface mass * surface terms
+        #pragma unroll p_NfacesNfp
+          for(int i=0;i<p_NfacesNfp;++i){
+            Lndu += sM[n+i*p_Np]*s_ndu[i];
+            Lndv += sM[n+i*p_Np]*s_ndv[i];
+          }
+
+        r_rhsU = -(Grr*urr+Grs*urs+Gss*uss - Lndu);
+        r_rhsV = -(Grr*vrr+Grs*vrs+Gss*vss - Lndv);
+      }
+    }
+
+
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      if(n<p_Np){
+        //load RHS
+        const int id = n + e*p_Np*p_NVfields;
+        s_u[n] = RHS[id+0*p_Np]/nu - lambda*s_u[n];
+        s_v[n] = RHS[id+1*p_Np]/nu - lambda*s_v[n];
+      }
+    }
+
+
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      if(n<p_Np){
+        const dfloat J = wJ[e];
+
+        dfloat Mu=0.0, Mv=0.0;
+
+        #pragma unroll p_Np
+        for (int k=0;k<p_Np;k++) {
+          Mu += MM[n+k*p_Np]*s_u[k];
+          Mv += MM[n+k*p_Np]*s_v[k];
+        }
+
+        const int id = n + e*p_Np;
+        rhsU[id] = J*Mu + r_rhsU;
+        rhsV[id] = J*Mv + r_rhsV;
+
+        // const int iid = n + e*p_Np*p_NVfields;
+        // UH[id] = U[iid+0*p_Np];
+        // VH[id] = U[iid+1*p_Np];
+      }
+    }
+  }
+}
+
+// compute RHS = MM*RHS/nu + BCdata
+// and split fields to separate arrays
+@kernel void insVelocityIpdgRhsTri2D(const dlong Nelements,
+                               @restrict const  dfloat *  wJ,
+                               @restrict const  dfloat *  vgeo,
+                               @restrict const  dfloat *  sgeo,
+                               @restrict const  dfloat *  ggeo,
+                               @restrict const  dfloat *  S,
+                               @restrict const  dfloat *  D,
+                               @restrict const  dfloat *  LIFT,
+                               @restrict const  dfloat *  MM,
+                               @restrict const  dfloat *  sM,
+                               @restrict const  dlong  *  vmapM,
+                               @restrict const  int    *  EToB,
+                               @restrict const  int    *  mapB,
+                               const dfloat tau,
+                               const dfloat time,
+                               @restrict const  dfloat *  x,
+                               @restrict const  dfloat *  y,
+                               @restrict const  dfloat *  z,
+                               const dfloat lambda,
+                               const dfloat nu,
+                               @restrict const dfloat *  U,
+                               @restrict const dfloat *  RHS,
+                               @restrict       dfloat *  UH,
+                               @restrict       dfloat *  VH,
+                               @restrict       dfloat *  WH,
+                               @restrict       dfloat *  rhsU,
+                               @restrict       dfloat *  rhsV,
+                               @restrict       dfloat *  rhsW){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+    @shared  dfloat s_dqdx[p_Np];
+    @shared  dfloat s_dqdy[p_Np];
+    @shared  dfloat s_laps[p_Np];
+
+    @shared  dfloat s_nxdq[p_NfacesNfp];
+    @shared  dfloat s_nydq[p_NfacesNfp];
+
+    @shared  dfloat s_dq[p_NVfields][p_NfacesNfp];
+    @shared  dfloat s_lapsflux[p_NVfields][p_NfacesNfp];
+
+    @shared  dfloat s_Lnxdq[p_Np];
+    @shared  dfloat s_Lnydq[p_Np];
+
+    @exclusive dlong idM;
+    @exclusive dfloat nx, ny, sJ, invJ, hinv;
+
+    for(int n=0;n<p_maxNodes;++n;@inner(0)){
+      if(n<p_NfacesNfp){
+        const dlong id  = n + e*p_Nfaces*p_Nfp;
+        idM = vmapM[id];
+        const int face = n/p_Nfp;
+
+        dfloat dudxP=0, dudyP=0, uP=0;
+        dfloat dvdxP=0, dvdyP=0, vP=0;
+
+        // load surface geofactors for this face
+        const dlong sid = p_Nsgeo*(e*p_Nfaces+face);
+        nx = sgeo[sid+p_NXID];
+        ny = sgeo[sid+p_NYID];
+        sJ = sgeo[sid+p_SJID];
+        invJ = sgeo[sid+p_IJID];
+        hinv = sgeo[sid+p_IHID];
+
+        const int bc = EToB[face+p_Nfaces*e];
+        if(bc>0) {
+	  dfloat ndotU = 1;								
+          insVelocityDirichletConditions2D(bc, ndotU, nu, time, x[idM], y[idM], nx, ny, 0.f, 0.f, &uP, &vP);
+          insVelocityNeumannConditions2D(bc, nu, time, x[idM], y[idM], nx, ny, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dvdxP, &dvdyP);
+        }
+
+        const dfloat du = uP;
+        const dfloat dv = vP;
+
+        s_dq[0][n] = sJ*invJ*du;
+        s_dq[1][n] = sJ*invJ*dv;
+
+        s_lapsflux[0][n] = sJ*invJ*(-nx*(dudxP)-ny*(dudyP) -tau*hinv*du);
+        s_lapsflux[1][n] = sJ*invJ*(-nx*(dvdxP)-ny*(dvdyP) -tau*hinv*dv);
+      }
+    }
+
+    for (int fld=0;fld<p_NVfields;fld++) {
+
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
+        if(n<p_NfacesNfp){
+          s_nxdq[n] = nx*s_dq[fld][n];
+          s_nydq[n] = ny*s_dq[fld][n];
+        }
+      }
+
+
+      // dqdx += LIFT*(sJ/J)*nx*dq
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
+        if(n<p_Np){
+          const dlong gid = e*p_Nvgeo;
+          const dfloat drdx = vgeo[gid + p_RXID];
+          const dfloat drdy = vgeo[gid + p_RYID];
+          const dfloat dsdx = vgeo[gid + p_SXID];
+          const dfloat dsdy = vgeo[gid + p_SYID];
+
+          dfloat Lnxdq = 0.f;
+          dfloat Lnydq = 0.f;
+
+          #pragma unroll p_NfacesNfp
+            for(int i=0;i<p_NfacesNfp;++i){
+              Lnxdq += LIFT[n+i*p_Np]*s_nxdq[i];
+              Lnydq += LIFT[n+i*p_Np]*s_nydq[i];
+            }
+
+          const dfloat dqdx = Lnxdq;
+          const dfloat dqdy = Lnydq;
+
+          s_dqdx[n] = drdx*dqdx + drdy*dqdy; // abuse of notation
+          s_dqdy[n] = dsdx*dqdx + dsdy*dqdy;
+
+          s_Lnxdq[n] = Lnxdq;
+          s_Lnydq[n] = Lnydq;
+        }
+      }
+
+
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
+        if(n<p_NfacesNfp){
+          const int id = idM%p_Np;
+          s_lapsflux[fld][n] += sJ*invJ*(nx*s_Lnxdq[id]+ny*s_Lnydq[id]);
+        }
+
+        if(n<p_Np){
+          dfloat lasr = 0.f, lass = 0.f;
+
+          #pragma unroll p_Np
+          for(int i=0;i<p_Np;++i) {
+            const dfloat Drn = D[n+i*p_Np+0*p_Np*p_Np];
+            const dfloat Dsn = D[n+i*p_Np+1*p_Np*p_Np];
+            lasr += Drn*s_dqdx[i];
+            lass += Dsn*s_dqdy[i];
+          }
+
+          //fetch RHS value and add volume terms
+          const dlong id = e*p_Np*p_NVfields+n;
+          s_laps[n] = RHS[id+fld*p_Np]/nu + (lasr+lass);
+        }
+      }
+
+
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
+        if(n<p_Np){
+          dfloat las = 0;
+
+          // lift remaining surface terms
+          #pragma unroll p_NfacesNfp
+            for(int i=0;i<p_NfacesNfp;++i){
+              las += LIFT[n+i*p_Np]*s_lapsflux[fld][i];
+            }
+          s_laps[n] -= las;
+        }
+      }
+
+
+      for(int n=0;n<p_maxNodes;++n;@inner(0)){
+        if(n<p_Np){
+          const dfloat J = wJ[e];
+
+          dfloat Mlaps = 0.f;
+          // multiply by mass matrix
+          #pragma unroll p_Np
+          for(int i=0;i<p_Np;++i){
+            Mlaps += MM[n+i*p_Np]*s_laps[i];
+          }
+
+          const dlong iid = e*p_Np*p_NVfields+n;
+          const dlong id = e*p_Np+n;
+          switch(fld) {
+            case (0):
+              UH[id] = U[iid+0*p_Np];
+              rhsU[id] = J*Mlaps;
+              break;
+            case (1):
+              VH[id] = U[iid+1*p_Np];
+              rhsV[id] = J*Mlaps;
+              break;
+          }
+        }
+      }
+    }
+  }
+}
+
+// merge arrays back, and enter BCs if C0
+@kernel void insVelocityBCTri2D(const dlong Nelements,
+                               @restrict const  dfloat *  sgeo,
+                               @restrict const  dlong  *  vmapM,
+                               @restrict const  int    *  mapB,
+                               const dfloat time,
+                               @restrict const  dfloat *  x,
+                               @restrict const  dfloat *  y,
+                               @restrict const  dfloat *  z,
+                               const dfloat nu,
+                               const int vDisc_c0,
+                               @restrict        dfloat *  UH,
+                               @restrict        dfloat *  VH,
+                               @restrict        dfloat *  WH,
+                               @restrict        dfloat *  U){
+
+  if (vDisc_c0) { //fill masked boundary points if C0
+    for(dlong e=0;e<Nelements;e++;@outer(0)){
+      for(int n=0;n<p_NfacesNfp;++n;@inner(0)){
+        const dlong idM = vmapM[e*p_Nfp*p_Nfaces + n];
+        const int bc = mapB[idM];
+
+        if(bc>0) {
+          const dfloat uM = UH[idM];
+          const dfloat vM = VH[idM];
+
+          const int face = n/p_Nfp;
+          const dlong sid = p_Nsgeo*(e*p_Nfaces+face);
+          const dfloat nx = sgeo[sid+p_NXID];
+          const dfloat ny = sgeo[sid+p_NYID];
+
+          dfloat uP = 0.f;
+          dfloat vP = 0.f;
+	  dfloat ndotU = 1;								
+          insVelocityDirichletConditions2D(bc, ndotU, nu, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP);
+          UH[idM] = uP;
+          VH[idM] = vP;
+        }
+      }
+    }
+  }
+
+  // Second outer loop to ensure UH is written before reading again
+  for(dlong e=0;e<Nelements;e++;@outer(0)){
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      const dlong id = e*p_Np+n;
+      const dlong iid = e*p_Np*p_NVfields+n;
+      U[iid+0*p_Np] = UH[id];
+      U[iid+1*p_Np] = VH[id];
+    }
+  }
+}

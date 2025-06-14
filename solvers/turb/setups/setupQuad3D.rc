@@ -1,0 +1,249 @@
+[FORMAT]
+1.0
+
+[DATA FILE]
+data/insBrownMinionQuad3D.h
+
+[INITIAL CONDITION]
+BROWN-MINION
+
+[SPHERE RADIUS]
+1.0
+
+[MESH FILE]
+../../meshes/sphereQuadH01.msh
+#../../meshes/insVortexQuad2D.msh
+
+[MESH DIMENSION]
+3
+
+[ELEMENT TYPE] # number of edges
+4
+
+[POLYNOMIAL DEGREE]
+10
+
+[THREAD MODEL]
+CUDA
+
+[PLATFORM NUMBER]
+0
+
+[DEVICE NUMBER]
+0
+
+# can be EXTBDF1,2, or 3
+# can add SUBCYCLING to EXTBDF
+[TIME INTEGRATOR]
+#ARK2
+EXTBDF2
+
+[SUBCYCLING STEPS]
+8
+
+# currently we have order(Nstages) =  2(2), 3(3), 4(5)
+# make sure >= TIME INTEGRATOR order
+[SUBCYCLING TIME ORDER]
+4
+
+# can be CUBATURE or COLLOCATION
+[ADVECTION TYPE]
+#COLLOCATION
+CUBATURE
+
+[VISCOSITY]
+0.0002
+
+[UBAR]
+0.0
+
+[VBAR]
+0.0
+
+[PBAR]
+0.0
+
+[TSTEPS FOR SOLUTION OUTPUT]
+70
+#564
+
+[START TIME]
+0
+
+[FINAL TIME]
+30
+
+[CFL]
+0.3
+
+[OUTPUT TYPE]
+VTU
+#PPM
+
+[RESTART FROM FILE]
+0
+
+[OUTPUT FILE NAME]
+/scratch/insQuad3DS4/sphereQuad3DS4
+#sphereQuad3D
+
+#################################################
+########## Velocity Solver Options ##############
+#################################################
+
+# can add FLEXIBLE to PCG
+[VELOCITY KRYLOV SOLVER]
+PCG
+
+[VELOCITY LINEAR SOLVER STOPPING CRITERION]
+ABS/REL-INITRESID
+
+# can be IPDG, or CONTINUOUS
+[VELOCITY DISCRETIZATION]
+IPDG
+#CONTINUOUS
+
+# can be NODAL or BERN
+[VELOCITY BASIS]
+NODAL
+
+# can be NONE, JACOBI, MASSMATRIX, PARALMOND, SEMFEM, or MULTIGRID
+[VELOCITY PRECONDITIONER]
+#MULTIGRID
+JACOBI
+
+[VELOCITY INITIAL GUESS STRATEGY]
+LAST
+
+[VELOCITY INITIAL GUESS HISTORY SPACE DIMENSION]
+-1
+
+########## MULTIGRID Options ##############
+
+# can be ALLDEGREES, HALFDEGREES, HALFDOFS
+[VELOCITY MULTIGRID COARSENING]
+HALFDOFS
+
+# can be LOCALPATCH, or DAMPEDJACOBI
+# LOCALPATCH smoother can include EXACT
+# can include CHEBYSHEV for smoother acceleration
+[VELOCITY MULTIGRID SMOOTHER]
+DAMPEDJACOBI,CHEBYSHEV
+
+[MULTIGRID CHEBYSHEV DEGREE]
+2
+
+###########################################
+
+########## ParAlmond Options ##############
+
+# can be KCYCLE, or VCYCLE
+# can add the EXACT and NONSYM option
+[VELOCITY PARALMOND CYCLE]
+KCYCLE
+
+# can be DAMPEDJACOBI or CHEBYSHEV
+[VELOCITY PARALMOND SMOOTHER]
+CHEBYSHEV
+
+# can be STRONGNODES, DISTRIBUTED, SATURATE
+[VELOCITY PARALMOND PARTITION]
+STRONGNODES
+
+# can be DEFAULT or LPSCN
+[VELOCITY PARALMOND AGGREGATION STRATEGY]
+DEFAULT
+#LPSCN
+
+# can be MAX, MIN, or NONE
+[VELOCITY PARALMOND LPSCN ORDERING]
+MAX
+#MIN
+
+###########################################
+
+#################################################
+########## Pressure Solver Options ##############
+#################################################
+
+# can add FLEXIBLE to PCG
+[PRESSURE KRYLOV SOLVER]
+PCG,FLEXIBLE
+
+[PRESSURE LINEAR SOLVER STOPPING CRITERION]
+ABS/REL-INITRESID
+
+# can be IPDG, or CONTINUOUS
+[PRESSURE DISCRETIZATION]
+#IPDG
+CONTINUOUS
+
+# can be NODAL or BERN
+[PRESSURE BASIS]
+NODAL
+
+# can be NONE, JACOBI, MASSMATRIX, PARALMOND, SEMFEM, or MULTIGRID
+[PRESSURE PRECONDITIONER]
+MULTIGRID
+#JACOBI
+
+[PRESSURE INITIAL GUESS STRATEGY]
+LAST
+
+[PRESSURE INITIAL GUESS HISTORY SPACE DIMENSION]
+-1
+
+########## MULTIGRID Options ##############
+
+# can be ALLDEGREES, HALFDEGREES, HALFDOFS
+[PRESSURE MULTIGRID COARSENING]
+HALFDOFS
+
+# can be LOCALPATCH, or DAMPEDJACOBI
+# LOCALPATCH smoother can include EXACT
+# can include CHEBYSHEV for smoother acceleration
+[PRESSURE MULTIGRID SMOOTHER]
+DAMPEDJACOBI,CHEBYSHEV
+
+###########################################
+
+########## ParAlmond Options ##############
+
+# can be KCYCLE, or VCYCLE
+# can add the EXACT and NONSYM option
+[PRESSURE PARALMOND CYCLE]
+KCYCLE
+
+# can be DAMPEDJACOBI or CHEBYSHEV
+[PRESSURE PARALMOND SMOOTHER]
+CHEBYSHEV
+
+[PARALMOND CHEBYSHEV DEGREE].
+2
+
+# can be STRONGNODES, DISTRIBUTED, SATURATE
+[PRESSURE PARALMOND PARTITION]
+STRONGNODES
+
+# can be DEFAULT or LPSCN
+[PRESSURE PARALMOND AGGREGATION STRATEGY]
+DEFAULT
+#LPSCN
+
+# can be MAX, MIN, or NONE
+[PRESSURE PARALMOND LPSCN ORDERING]
+MAX
+#MIN
+
+###########################################
+
+# compare to a reference solution. Use NONE to skip comparison
+# can be VORTEX or KOVASZNAY
+[EXACT]
+NONE
+
+[VERBOSE]
+FALSE
+
+[OUTPUT FILE FORMAT]
+PPM
