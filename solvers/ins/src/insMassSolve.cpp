@@ -49,15 +49,23 @@ void ins_t::MassSolve(deviceMemory<dfloat>& o_U){
       //      filterKernel(mesh.Nelements, o_FILT, o_U, o_U);
   }
 #endif
-  
+
   // compute RHS = MM*RHS/nu + BCdata
   // and split fields to separate arrays
-  
-  massSolver.massAxKernel(mesh.Nelements,
-			  mesh.o_wJ,
-			  mesh.o_MM,
-			  o_U,
-			  o_rhsU);
+  if constexpr (std::is_same_v<dfloat,double>) {  
+    massSolver.massAxKernel(mesh.Nelements,
+			    mesh.o_wJ,
+			    mesh.o_MM,
+			    o_U,
+			    o_rhsU);
+  }else{
+    massSolver.floatMassAxKernel(mesh.Nelements,
+			    mesh.o_pfloat_wJ,
+			    mesh.o_pfloat_MM,
+			    o_U,
+			    o_rhsU);
+    
+  }
   
   // gather
   massSolver.ogsMasked.Gather(o_GrhsU, o_rhsU, Nfields, ogs::Add, ogs::Trans);
