@@ -231,7 +231,10 @@ void stress_t::Operator(deviceMemory<double> &o_q, deviceMemory<double> &o_Aq){
 
 
 void stress_t::Operator(deviceMemory<float> &o_q, deviceMemory<float> &o_Aq){
-
+  // verifies that we do not need pfloat o_nut
+  printf("stress_t::Operator float\n");
+  exit(-1);
+  
   deviceMemory<float> o_MM, o_D, o_S;
   deviceMemory<float> o_wJ, o_vgeo;
 
@@ -329,7 +332,9 @@ int stress_t::Solve(linearSolver_t<dfloat>& linearSolver,
 
 
 void stress_t::BuildOperatorDiagonal(memory<dfloat>& diagA){
-
+  printf("Wrong stress_t::BuildOperatorDiagonal\n");
+  exit(-1);
+  
   if(comm_t::world().rank()==0) {printf("Building diagonal...");fflush(stdout);}
 
   // assume C0
