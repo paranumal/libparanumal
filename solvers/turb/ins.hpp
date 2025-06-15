@@ -36,6 +36,7 @@
 #include "elliptic.hpp"
 #include "mass.hpp"
 #include "initialGuess.hpp"
+#include "stress.hpp"
 
 #define DINS LIBP_DIR"/solvers/turb/"
 
@@ -101,6 +102,9 @@ public:
   elliptic_t uSolver, vSolver, wSolver;
   elliptic_t pSolver;
 
+  stress_t stressSolver;
+  linearSolver_t<dfloat> stressLinearSolver;
+  
   mass_t massSolver;
   
   linearSolver_t<dfloat>  uLinearSolver;
@@ -149,6 +153,9 @@ public:
   kernel_t pressureIncrementRhsKernel;
   kernel_t pressureIncrementBCKernel;
 
+  kernel_t stressRhsKernel;
+  kernel_t stressBCKernel;
+  
   kernel_t vorticityKernel;
   kernel_t qfactorKernel;
 
@@ -175,8 +182,6 @@ public:
   kernel_t filterKernel;
   deviceMemory<dfloat> o_FILT;
 
-
-  
   ins_t() = default;
   ins_t(platform_t &_platform, mesh_t &_mesh,
         insSettings_t& _settings) {
@@ -226,7 +231,8 @@ public:
                      const dfloat gamma, const dfloat T);
   void PressureIncrementSolve(deviceMemory<dfloat>& o_P, deviceMemory<dfloat>& o_RHS,
                      const dfloat gamma, const dfloat T, const dfloat dt);
-
+  void StressSolve(deviceMemory<dfloat>& o_U, deviceMemory<dfloat>& o_RHS,
+                     const dfloat gamma, const dfloat T);
   void MassSolve(deviceMemory<dfloat>& o_U);
 };
 

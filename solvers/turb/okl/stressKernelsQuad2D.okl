@@ -1,0 +1,333 @@
+/*
+
+  The MIT License (MIT)
+
+  Copyright (c) 2017-2022 Tim Warburton, Noel Chalmers, Jesse Chan, Ali Karakus
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+*/
+
+
+#define p_two ((dfloat)2)
+
+// hex @kernel for screened coulomb potential mat-vec
+#define squareThreads				\
+  for(int j=0; j<p_Nq; ++j; @inner(1))		\
+    for(int i=0; i<p_Nq; ++i; @inner(0))
+
+
+
+// square thread version
+@kernel void stressPartialAxQuad2D(const dlong Nelements,
+                                   @restrict const  dlong   *  elementList,
+                                   @restrict const  dlong   *  GlobalToLocal,
+                                   @restrict const  dfloat *  nut,
+                                   @restrict const  dfloat *  wJ,
+                                   @restrict const  dfloat *  vgeo,
+                                   @restrict const  dfloat *  DT,
+                                   @restrict const  dfloat *  S,
+                                   @restrict const  dfloat *  MM,
+                                   const dfloat   lambda,
+                                   @restrict const  dfloat *  q,
+                                   @restrict dfloat *  Aq){
+
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_q[p_Nfields][p_Nq][p_Nq];
+    @shared dfloat s_DT[p_Nq][p_Nq];
+
+    // oh dear
+    @shared dfloat s_rx_qx[p_Nfields][p_Nq][p_Nq];
+    @shared dfloat s_sx_qx[p_Nfields][p_Nq][p_Nq];
+    @shared dfloat s_ry_qx[p_Nfields][p_Nq][p_Nq];
+    @shared dfloat s_sy_qx[p_Nfields][p_Nq][p_Nq];
+    @shared dfloat s_rx_qy[p_Nfields][p_Nq][p_Nq];
+    @shared dfloat s_sx_qy[p_Nfields][p_Nq][p_Nq];
+    @shared dfloat s_ry_qy[p_Nfields][p_Nq][p_Nq];
+    @shared dfloat s_sy_qy[p_Nfields][p_Nq][p_Nq];
+    
+    @exclusive dlong element;
+    @exclusive dfloat r_qr[p_Nfields], r_qs[p_Nfields], r_Aq[p_Nfields];
+
+    @exclusive dfloat r_rx, r_ry, r_sx, r_sy, r_wJ, r_nut;
+
+    // prefetch q(:,:,:,e) to @shared
+    squareThreads{
+      element = elementList[e];
+      const dlong base = i + j*p_Nq + element*p_Np;
+      const dlong id = GlobalToLocal[base];
+      for(int fld=0;fld<p_Nfields;++fld)
+	s_q[fld][j][i] = (id!=-1) ? q[id*p_Nfields+fld] : 0.0;
+
+      // fetch DT to @shared
+      s_DT[j][i] = DT[j*p_Nq+i];
+    }
+
+    @barrier();
+
+    squareThreads{
+
+      // assumes w*J built into G entries
+      const dlong id = element*p_Np + j*p_Nq + i;
+      r_nut = nut[id];
+      
+      const dlong base = element*p_Nvgeo*p_Np + j*p_Nq + i;
+      r_rx = vgeo[base+p_RXID*p_Np];
+      r_ry = vgeo[base+p_RYID*p_Np];
+      r_sx = vgeo[base+p_SXID*p_Np];
+      r_sy = vgeo[base+p_SYID*p_Np];
+      r_wJ = vgeo[base+p_JWID*p_Np];
+      
+      for(int fld=0;fld<p_Nfields;++fld){
+	r_qr[fld] = 0;
+	r_qs[fld] = 0;
+      }
+
+#pragma unroll p_Nq
+      for(int n=0; n<p_Nq; ++n){
+	dfloat Din = s_DT[i][n];
+	
+#pragma unroll p_Nfields
+	for(int fld=0;fld<p_Nfields;++fld)
+	  r_qr[fld] += Din*s_q[fld][j][n];
+	
+	dfloat Djn = s_DT[j][n];
+
+#pragma unroll p_Nfields
+	for(int fld=0;fld<p_Nfields;++fld)
+	  r_qs[fld] += Djn*s_q[fld][n][i];
+      }
+      
+      for(int fld=0;fld<p_Nfields;++fld){
+	r_Aq[fld] = r_wJ*lambda*s_q[fld][j][i];
+      }
+
+      r_wJ *= r_nut;
+    }
+
+    @barrier();
+    
+    squareThreads{
+      for(int fld=0;fld<p_Nfields;++fld){
+	dfloat qx = r_rx*r_qr[fld] + r_sx*r_qs[fld];
+	dfloat qy = r_ry*r_qr[fld] + r_sy*r_qs[fld];
+	// Dr'*(rx*wJ*rx)*Dr + Ds'*(sx*wJ*sx)*Ds
+	s_rx_qx[fld][j][i] = r_rx*r_wJ*qx;
+	s_sx_qx[fld][j][i] = r_sx*r_wJ*qx;
+	s_ry_qx[fld][j][i] = r_ry*r_wJ*qx;
+	s_sy_qx[fld][j][i] = r_sy*r_wJ*qx;
+
+	s_rx_qy[fld][j][i] = r_rx*r_wJ*qy;
+	s_sx_qy[fld][j][i] = r_sx*r_wJ*qy;
+	s_ry_qy[fld][j][i] = r_ry*r_wJ*qy;
+	s_sy_qy[fld][j][i] = r_sy*r_wJ*qy;
+      }
+    }
+
+    @barrier();
+    
+    squareThreads{
+      dfloat qxx[p_Nfields] = {0.f};
+      dfloat qxy[p_Nfields] = {0.f};
+      dfloat qyx[p_Nfields] = {0.f};
+      dfloat qyy[p_Nfields] = {0.f};
+
+#pragma unroll p_Nq
+      for(int n=0;n<p_Nq;++n) {
+
+	dfloat Dni = s_DT[n][i];
+#pragma unroll p_Nfields
+	for(int fld=0;fld<p_Nfields;++fld){
+	  qxx[fld] += Dni*s_rx_qx[fld][j][n];
+	  qyx[fld] += Dni*s_ry_qx[fld][j][n];
+	  qxy[fld] += Dni*s_rx_qy[fld][j][n];
+	  qyy[fld] += Dni*s_ry_qy[fld][j][n];
+	}
+
+	dfloat Dnj = s_DT[n][j];
+#pragma unroll p_Nfields
+	for(int fld=0;fld<p_Nfields;++fld){
+	  qxx[fld] += Dnj*s_sx_qx[fld][n][i];
+	  qyx[fld] += Dnj*s_sy_qx[fld][n][i];
+	  qxy[fld] += Dnj*s_sx_qy[fld][n][i];
+	  qyy[fld] += Dnj*s_sy_qy[fld][n][i];
+	}
+      }
+
+      /*
+	\sum_j d_j ( nu (d_j u_i + d_i u_j ))
+	=> -\sum_j (d_j phi, nu (d_j u_i + d_i u_j ))
+	
+	Dx'*nu*Dx*u + Dy'*nu*Dy*u + Dx'*nu*Dx*u + Dy'*nu*Dx*v
+	Dx'*nu*Dx*v + Dy'*nu*Dy*v + Dx'*nu*Dy*u + Dy'*nu*Dy*v
+	
+      */
+
+      dfloat fac = p_two;
+#if 1
+      r_Aq[0] += fac*qxx[0] + qyy[0] +  qyx[1];
+      r_Aq[1] += fac*qyy[1] + qxx[1] +  qxy[0];
+#else
+      r_Aq[0] += qxx[0] + qyy[0];
+      r_Aq[1] += qyy[1] + qxx[1];
+#endif
+      const dlong base = p_Nfields*(element*p_Np + j*p_Nq + i);
+      for(int fld=0;fld<p_Nfields;++fld){
+	Aq[base+fld] = r_Aq[fld];
+      }
+    }
+  }
+}
+
+
+
+@kernel void stressReciprocal(const dlong N,
+			      @restrict const  dfloat *q,
+			      @restrict pfloat *invq){
+
+  for(dlong n=0;n<N;++n;@tile(256,@outer,@inner)){
+    invq[n] = ((dfloat)1.)/q[n];
+  }
+}
+
+
+@kernel void stressBuildOperatorDiagonalQuad2D(const dlong Nelements,
+					       @restrict const  dfloat *  nut,
+					       @restrict const  dlong *  mapB,
+					       const dfloat neumannBoost,
+					       @restrict const  dfloat *  wJ,
+					       @restrict const  dfloat *  vgeo,
+					       @restrict const  dfloat *  DT,
+					       @restrict const  dfloat *  S,
+					       @restrict const  dfloat *  MM,
+					       const dfloat   lambda,
+					       @restrict dfloat * A){
+
+
+  /*
+    \sum_j d_j ( nu (d_j u_i + d_i u_j ))
+    => -\sum_j (d_j phi, nu (d_j u_i + d_i u_j ))
+    
+    [2.*Dx'*nu*Dx*u + Dy'*nu*Dy*u] + Dy'*nu*Dx*v
+    Dx'*nu*Dy*u + [Dx'*nu*Dx*v + 2.*Dy'*nu*Dy*v]
+    
+  */
+
+#define p_two ((dfloat)2)
+  
+  
+  for(dlong e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_D[p_Nq][p_Nq];
+
+    for (int m=0;m<p_Nq;++m;@inner(1)) {
+      for (int n=0;n<p_Nq;++n;@inner(0)) {
+	s_D[m][n] = DT[m*p_Nq+n];
+      }
+    }
+    
+    for (int m=0;m<p_Nq;++m;@inner(1)) {
+      for (int n=0;n<p_Nq;++n;@inner(0)) {
+	dfloat Au = 0, Av = 0;
+
+	const dlong nid = e*p_Np + m*p_Nq + n;
+	const dfloat fac = p_two;
+	// Eventually set this to 2
+	const int bc = mapB[nid];
+
+        if (bc!=1){
+	  dlong vbase = e*p_Np*p_Nvgeo;
+
+          for (int k=0;k<p_Nq;k++) {
+            int id = k+m*p_Nq;
+	    dfloat Dkn = s_D[k][n];
+	    dfloat rx = vgeo[vbase + id + p_RXID*p_Np];
+	    dfloat ry = vgeo[vbase + id + p_RYID*p_Np];
+	    dfloat wJ = vgeo[vbase + id + p_JWID*p_Np];	    
+	    dfloat nut_km = nut[e*p_Np+id];
+
+	    dfloat uGrr = (fac*rx*rx + ry*ry)*nut_km*wJ;
+            Au += uGrr*Dkn*Dkn; // strided for gather
+	    
+	    dfloat vGrr = (fac*ry*ry + rx*rx)*nut_km*wJ;
+	    Av += vGrr*Dkn*Dkn;
+          }
+
+
+          for (int k=0;k<p_Nq;k++) {
+            int id = n+k*p_Nq;
+	    dfloat Dkm = s_D[k][m];
+	    dfloat sx = vgeo[vbase + id + p_SXID*p_Np];
+	    dfloat sy = vgeo[vbase + id + p_SYID*p_Np];
+	    dfloat wJ = vgeo[vbase + id + p_JWID*p_Np];	    
+	    dfloat nut_nk = nut[e*p_Np+id];
+	    
+	    dfloat uGss = (fac*sx*sx + sy*sy)*nut_nk*wJ;
+            Au += uGss*Dkm*Dkm; // strided for gather
+	    
+	    dfloat vGss = (fac*sy*sy + sx*sx)*nut_nk*wJ;
+	    Av += vGss*Dkm*Dkm;
+          }
+
+	  {
+            int id = n+m*p_Nq;
+	    dfloat Dnn = s_D[n][n];
+	    dfloat Dmm = s_D[m][m];
+	    dfloat rx = vgeo[vbase + id + p_RXID*p_Np];
+	    dfloat ry = vgeo[vbase + id + p_RYID*p_Np];
+	    dfloat sx = vgeo[vbase + id + p_SXID*p_Np];
+	    dfloat sy = vgeo[vbase + id + p_SYID*p_Np];
+	    dfloat wJ = vgeo[vbase + id + p_JWID*p_Np];	    
+	    dfloat nut_nm = nut[e*p_Np+id];
+
+	    // check this
+	    dfloat uGrs = p_two*(fac*rx*sx + ry*sy)*nut_nm*wJ;
+            Au += uGrs*Dnn*Dmm; // strided for gather
+	    
+	    dfloat vGrs = p_two*(fac*ry*sy + rx*sx)*nut_nm*wJ;
+	    Av += vGrs*Dnn*Dmm;
+	    
+	    // do not need off diagonal blocks
+	  }
+	  
+	  dfloat JW = vgeo[vbase + n + m*p_Nq + p_JWID*p_Np];
+          Au += JW*lambda;
+	  Av += JW*lambda;
+	  
+        } else {
+          Au = 1; //just put a 1 so A is invertable
+	  Av = 1;
+        }
+      
+	//add the rank boost for the allNeumann Poisson problem
+	if (neumannBoost) {
+	  if(bc!=1) { //dont fill rows for masked nodes
+	    Au += neumannBoost;
+	    Av += neumannBoost;
+	  }
+	}
+	
+	A[p_Nfields*nid+0] = Au;
+	A[p_Nfields*nid+1] = Av;
+      }
+    }
+  }
+}
+
