@@ -124,8 +124,7 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
     dfloat hmin = mesh.MinCharacteristicLength();
     dfloat dtAdvc = Nsubcycles*hmin/((mesh.N+1.)*(mesh.N+1.));
     dfloat lambda = gamma/(dtAdvc*nu);
-    uSolver.Setup(platform, mesh, vSettings,
-                  lambda, NBCTypes, uBCType);
+    uSolver.Setup(platform, mesh, vSettings, lambda, NBCTypes, uBCType);
 
     vTau = uSolver.tau;
 
@@ -214,6 +213,15 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
 
     }
 
+
+
+    
+    // Setup vector velocity stress solver
+    std::cout << "Setting up stress solver: " << std::endl;
+    stressSolver.Setup(platform, mesh, vSettings, lambda, NBCTypes, uBCType);
+    stressLinearSolver.Setup<LinearSolver::pcg<dfloat>>(stressSolver.Ndofs, stressSolver.Nhalo, platform, vSettings, comm);
+    stressLinearSolver.SetupInitialGuess<InitialGuess::RollingQRProjection<dfloat>>(stressSolver.Ndofs, platform, vSettings, comm);
+    
   } else {
     vDisc_c0 = 0;
 
@@ -227,6 +235,8 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
       vTau = 2.0*(mesh.N+1)*(mesh.N+3);
   }
 
+
+  
   //Setup pressure Elliptic solver
   dlong pNlocal=0, pNhalo=0;
   {
@@ -479,6 +489,22 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
     kernelName = "insVelocityBC" + suffix;
     velocityBCKernel =  platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
+
+    fileName = oklFilePrefix + "insStressRhs" + suffix + oklFileSuffix;
+
+    if (vDisc_c0)
+      kernelName = "insStressRhs" + suffix;
+    else
+      kernelName = "insStressIpdgRhs" + suffix;
+    stressRhsKernel =  platform.buildKernel(fileName, kernelName,
+					    kernelInfo);
+
+    kernelName = "insStressBC" + suffix;
+    stressBCKernel =  platform.buildKernel(fileName, kernelName,
+                                           kernelInfo);
+
+    
+    
   } else {
     // gradient kernel
     fileName   = oklFilePrefix + "insVelocityGradient" + suffix + oklFileSuffix;

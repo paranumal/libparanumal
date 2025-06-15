@@ -87,7 +87,8 @@ void ins_t::rhs_imex_invg(deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_U
   } else {
     //call velocty solver to solve
     // gamma*U - mu*Laplacian*U = RHS
-    VelocitySolve(o_U, o_RHS, gamma, T);
+    //    VelocitySolve(o_U, o_RHS, gamma, T);
+    StressSolve(o_U, o_RHS, gamma, T);
 
     // rhsP = -Div U
     deviceMemory<dfloat> o_rhsP = platform.reserve<dfloat>(Ntotal);
