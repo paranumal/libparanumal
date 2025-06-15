@@ -783,7 +783,7 @@ void stress_t::Setup(platform_t& _platform, mesh_t& _mesh,
       dlong id = e*mesh.Np + n;
       dfloat xn = mesh.x[id];
       dfloat yn = mesh.y[id];
-      nut[id] = 1 + 0.3*cos(M_PI*xn)*cos(M_PI*yn);
+      nut[id] = (1 + 0.3*cos(M_PI*xn)*cos(M_PI*yn))*1000;
     }
   }
   o_nut  = platform.malloc<dfloat>(mesh.Np*mesh.Nelements, nut);

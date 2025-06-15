@@ -230,18 +230,18 @@
 
 // merge arrays back, and enter BCs if C0
 @kernel void insStressBCQuad2D(const dlong Nelements,
-				 @restrict const  dfloat *  sgeo,
-				 @restrict const  dlong  *  vmapM,
-				 @restrict const  int    *  mapB,
-				 const dfloat time,
-				 @restrict const  dfloat *  x,
-				 @restrict const  dfloat *  y,
-				 @restrict const  dfloat *  z,
-				 const dfloat nu,
-				 const int vDisc_c0,
-				 @restrict        dfloat *  UH,
-				 @restrict        dfloat *  U){
-
+			       @restrict const  dfloat *  sgeo,
+			       @restrict const  dlong  *  vmapM,
+			       @restrict const  int    *  mapB,
+			       const dfloat time,
+			       @restrict const  dfloat *  x,
+			       @restrict const  dfloat *  y,
+			       @restrict const  dfloat *  z,
+			       const dfloat nu, // need to add nut
+			       const int vDisc_c0,
+			       @restrict        dfloat *  UH,
+			       @restrict        dfloat *  U){
+  
   if (vDisc_c0) {//fill masked boundary points if C0
     for(dlong e=0;e<Nelements;e++;@outer(0)){
       // face 0 & 2
