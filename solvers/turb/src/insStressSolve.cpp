@@ -40,6 +40,7 @@ void ins_t::StressSolve(deviceMemory<dfloat>& o_U, deviceMemory<dfloat>& o_RHS,
 
   // compute RHS = MM*RHS/nu + BCdata
   // and split fields to separate arrays
+  dfloat nuInv = 1./nu;
   stressRhsKernel(mesh.Nelements,
 		  mesh.o_wJ,
 		  mesh.o_vgeo,
@@ -59,7 +60,8 @@ void ins_t::StressSolve(deviceMemory<dfloat>& o_U, deviceMemory<dfloat>& o_RHS,
 		  mesh.o_y,
 		  mesh.o_z,
 		  gamma/nu,
-		  nu,
+		  nuInv,
+		  stressSolver.o_nut,
 		  o_U,
 		  o_RHS,
 		  o_UH,

@@ -192,11 +192,11 @@ SOFTWARE.
         dfloat tmpu = 0.f;
         dfloat tmpv = 0.f;
 
-        #pragma unroll p_Nq
-          for(int n=0;n<p_Nq;++n) {
-            tmpu += s_DT[n][j]*s_u[n][i];
-            tmpv += s_DT[n][j]*s_v[n][i];
-          }
+#pragma unroll p_Nq
+	for(int n=0;n<p_Nq;++n) {
+	  tmpu += s_DT[n][j]*s_u[n][i];
+	  tmpv += s_DT[n][j]*s_v[n][i];
+	}
 
         r_Au[j] += tmpu;
         r_Av[j] += tmpv;

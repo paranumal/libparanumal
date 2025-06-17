@@ -24,12 +24,16 @@
 
 */
 
-#define surfaceTerms1(sk,face,i, j)                                      \
+#define p_one ((dfloat)1.)
+#define p_two ((dfloat)2.)
+
+#define surfaceTerms1(sk,face,i, j)					\
   {									\
     const dlong idM = vmapM[sk];					\
     const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				\
     const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				\
     const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];			\
+    const dfloat nuMod = nut[idM];			\
     dfloat UM[p_NVfields] = {0.};					\
     dfloat UP[p_NVfields] = {0.};					\
     dfloat dudxP=0.f, dudyP=0.f, uP=0.f;				\
@@ -43,8 +47,8 @@
                                                                         \
     s_u  [j][i]  = UP[0];						\
     s_v  [j][i]  = UP[1];						\
-    s_ndu[j][i] -= WsJ*(nx*dudxP + ny*dudyP);				\
-    s_ndv[j][i] -= WsJ*(nx*dvdxP + ny*dvdyP);				\
+    s_ndu[j][i] -= WsJ*nuMod*(p_two*nx*dudxP + ny*(dudyP+dvdxP));	\
+    s_ndv[j][i] -= WsJ*nuMod*(p_two*ny*dvdyP + nx*(dudyP+dvdxP));	\
   }
 
 
@@ -69,7 +73,8 @@
 				@restrict const  dfloat *  y,
 				@restrict const  dfloat *  z,
 				const dfloat lambda,
-				const dfloat nu,
+				const dfloat nuInv,
+				@restrict const dfloat *  nut,
 				@restrict const dfloat *  U,
 				@restrict const dfloat *  RHS,
 				@restrict       dfloat *  UH,
@@ -78,13 +83,16 @@
   for(dlong e=0;e<Nelements;e++;@outer(0)){
     @shared dfloat s_u[p_Nq][p_Nq];
     @shared dfloat s_v[p_Nq][p_Nq];
+    @shared dfloat s_tmpur[p_Nq][p_Nq];
+    @shared dfloat s_tmpus[p_Nq][p_Nq];
+    @shared dfloat s_tmpvr[p_Nq][p_Nq];
+    @shared dfloat s_tmpvs[p_Nq][p_Nq];
     @shared dfloat s_ndu[p_Nq][p_Nq];
     @shared dfloat s_ndv[p_Nq][p_Nq];
     @shared dfloat s_DT[p_Nq][p_Nq];
 
-    @exclusive dfloat r_ur[p_Nq], r_us[p_Nq], r_Au[p_Nq];
-    @exclusive dfloat r_vr[p_Nq], r_vs[p_Nq], r_Av[p_Nq];
-    @exclusive dfloat r_G00[p_Nq], r_G01[p_Nq], r_G11[p_Nq], r_GwJ[p_Nq];
+    @exclusive dfloat r_Au[p_Nq];
+    @exclusive dfloat r_Av[p_Nq];
 
     // loop over slabs
     for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -122,37 +130,43 @@
     // loop over slabs
     for(int i=0;i<p_Nq;++i;@inner(0)){
       for(int j=0;j<p_Nq;++j){
-        const dlong base = e*p_Nggeo*p_Np + j*p_Nq + i;
-
-        r_G00[j] = ggeo[base+p_G00ID*p_Np];
-        r_G01[j] = ggeo[base+p_G01ID*p_Np];
-        r_G11[j] = ggeo[base+p_G11ID*p_Np];
-        r_GwJ[j] = wJ[e*p_Np + j*p_Nq + i];
+        dfloat r_GwJ = wJ[e*p_Np + j*p_Nq + i];
 
         dfloat ur = 0.f, us = 0.f;
         dfloat vr = 0.f, vs = 0.f;
+
 #pragma unroll p_Nq
 	for(int n=0; n<p_Nq; ++n){
-	  ur += s_DT[i][n]*s_u[j][n];
-	  vr += s_DT[i][n]*s_v[j][n];
-	  us += s_DT[j][n]*s_u[n][i];
-	  vs += s_DT[j][n]*s_v[n][i];
+	  dfloat Din = s_DT[i][n];
+	  dfloat Djn = s_DT[j][n];
+	  ur += Din*s_u[j][n];
+	  vr += Din*s_v[j][n];
+	  us += Djn*s_u[n][i];
+	  vs += Djn*s_v[n][i];
 	}
 
-        r_ur[j] = ur; r_us[j] = us;
-        r_vr[j] = vr; r_vs[j] = vs;
+        r_Au[j] = r_GwJ*lambda*s_u[j][i];
+        r_Av[j] = r_GwJ*lambda*s_v[j][i];
 
-        r_Au[j] = r_GwJ[j]*lambda*s_u[j][i];
-        r_Av[j] = r_GwJ[j]*lambda*s_v[j][i];
-      }
-    }
+        const dlong base = e*p_Nvgeo*p_Np + j*p_Nq + i;
 
-    // r term ----->
-
-    for(int i=0;i<p_Nq;++i;@inner(0)){
-      for(int j=0;j<p_Nq;++j){
-        s_u[j][i] = r_G00[j]*r_ur[j] + r_G01[j]*r_us[j];
-        s_v[j][i] = r_G00[j]*r_vr[j] + r_G01[j]*r_vs[j];
+	const dfloat rx = vgeo[base + p_RXID*p_Np];
+	const dfloat ry = vgeo[base + p_RYID*p_Np];
+	const dfloat sx = vgeo[base + p_SXID*p_Np];
+	const dfloat sy = vgeo[base + p_SYID*p_Np];
+	
+	const dfloat nuMod = nut[e*p_Np+j*p_Nq+i];
+	
+	dfloat ux = rx*ur + sx*us;
+	dfloat uy = ry*ur + sy*us;
+	dfloat vx = rx*vr + sx*vs;
+	dfloat vy = ry*vr + sy*vs;
+	
+	s_tmpur[j][i] = r_GwJ*nuMod*(rx*p_two*ux + ry*(uy+vx));
+	s_tmpus[j][i] = r_GwJ*nuMod*(sx*p_two*ux + sy*(uy+vx));
+	
+	s_tmpvr[j][i] = r_GwJ*nuMod*(rx*(uy+vx) + ry*p_two*vy);
+	s_tmpvs[j][i] = r_GwJ*nuMod*(sx*(uy+vx) + sy*p_two*vy);
       }
     }
 
@@ -163,46 +177,24 @@
         dfloat tmpv = 0.f;
 #pragma unroll p_Nq
 	for(int n=0;n<p_Nq;++n) {
-	  tmpu += s_DT[n][i]*s_u[j][n];
-	  tmpv += s_DT[n][i]*s_v[j][n];
+	  dfloat Dni = s_DT[n][i];
+	  dfloat Dnj = s_DT[n][j];
+	  tmpu += Dni*s_tmpur[j][n];
+	  tmpv += Dni*s_tmpvr[j][n];
+	  tmpu += Dnj*s_tmpus[n][i];
+	  tmpv += Dnj*s_tmpvs[n][i];
 	}
-
-        r_Au[j] += tmpu;
+	
+	r_Au[j] += tmpu;
         r_Av[j] += tmpv;
       }
-    }
-
-    // s term ---->
-
-    for(int i=0;i<p_Nq;++i;@inner(0)){
-      for(int j=0;j<p_Nq;++j){
-        s_u[j][i] = r_G01[j]*r_ur[j] + r_G11[j]*r_us[j];
-        s_v[j][i] = r_G01[j]*r_vr[j] + r_G11[j]*r_vs[j];
-      }
-    }
-
-
-    for(int i=0;i<p_Nq;++i;@inner(0)){
+      
       for(int j=0;j<p_Nq;++j){
         const dfloat JW = wJ[i + j*p_Nq + e*p_Np];
-
-        dfloat tmpu = 0.f;
-        dfloat tmpv = 0.f;
-
-#pragma unroll p_Nq
-	for(int n=0;n<p_Nq;++n) {
-	  tmpu += s_DT[n][j]*s_u[n][i];
-	  tmpv += s_DT[n][j]*s_v[n][i];
-	}
-
-        r_Au[j] += tmpu;
-        r_Av[j] += tmpv;
-
         const dlong id = e*p_Np + j*p_Nq + i;
         const dlong iid = p_dim*e*p_Np + j*p_Nq + i;
-        rhsU[p_dim*id+0] = JW*RHS[iid+0*p_Np]/nu - (r_Au[j] + s_ndu[j][i]);
-        rhsU[p_dim*id+1] = JW*RHS[iid+1*p_Np]/nu - (r_Av[j] + s_ndv[j][i]);
-
+        rhsU[p_dim*id+0] = nuInv*JW*RHS[iid+0*p_Np] - (r_Au[j] + s_ndu[j][i]); // need to fix lambda
+	rhsU[p_dim*id+1] = nuInv*JW*RHS[iid+1*p_Np] - (r_Av[j] + s_ndv[j][i]);
       }
     }
   }
@@ -222,7 +214,8 @@
                                                                         \
       dfloat UM[p_NVfields] = {0.};					\
       dfloat UP[p_NVfields] = {0.};					\
-      UM[0] = uM; UM[1] = vM;						\
+      UM[0] = uM;							\
+      UM[1] = vM;							\
       dfloat ndotU = 1;							\
       insVelocityDirichletConditions2D(bc, ndotU, nu, time, x[idM], y[idM], nx, ny, UM, UP); \
       UH[p_dim*idM+0] = UP[0];						\

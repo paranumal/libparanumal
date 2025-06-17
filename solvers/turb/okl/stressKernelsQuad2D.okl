@@ -50,31 +50,27 @@
 
   for(dlong e=0;e<Nelements;++e;@outer(0)){
 
-    @shared dfloat s_q[p_Nfields][p_Nq][p_Nq];
+    @shared dfloat s_u[p_Nq][p_Nq];
+    @shared dfloat s_v[p_Nq][p_Nq];
     @shared dfloat s_DT[p_Nq][p_Nq];
 
     // oh dear
-    @shared dfloat s_rx_qx[p_Nfields][p_Nq][p_Nq];
-    @shared dfloat s_sx_qx[p_Nfields][p_Nq][p_Nq];
-    @shared dfloat s_ry_qx[p_Nfields][p_Nq][p_Nq];
-    @shared dfloat s_sy_qx[p_Nfields][p_Nq][p_Nq];
-    @shared dfloat s_rx_qy[p_Nfields][p_Nq][p_Nq];
-    @shared dfloat s_sx_qy[p_Nfields][p_Nq][p_Nq];
-    @shared dfloat s_ry_qy[p_Nfields][p_Nq][p_Nq];
-    @shared dfloat s_sy_qy[p_Nfields][p_Nq][p_Nq];
+    @shared dfloat s_tmpur[p_Nq][p_Nq];
+    @shared dfloat s_tmpus[p_Nq][p_Nq];
+    @shared dfloat s_tmpvr[p_Nq][p_Nq];
+    @shared dfloat s_tmpvs[p_Nq][p_Nq];    
     
     @exclusive dlong element;
-    @exclusive dfloat r_qr[p_Nfields], r_qs[p_Nfields], r_Aq[p_Nfields];
-
-    @exclusive dfloat r_rx, r_ry, r_sx, r_sy, r_wJ, r_nut;
+    @exclusive dfloat r_Aq[p_Nfields];
 
     // prefetch q(:,:,:,e) to @shared
     squareThreads{
       element = elementList[e];
       const dlong base = i + j*p_Nq + element*p_Np;
       const dlong id = GlobalToLocal[base];
-      for(int fld=0;fld<p_Nfields;++fld)
-	s_q[fld][j][i] = (id!=-1) ? q[id*p_Nfields+fld] : 0.0;
+
+      s_u[j][i] = (id!=-1) ? q[id*p_Nfields+0] : 0.0;
+      s_v[j][i] = (id!=-1) ? q[id*p_Nfields+1] : 0.0;
 
       // fetch DT to @shared
       s_DT[j][i] = DT[j*p_Nq+i];
@@ -86,89 +82,62 @@
 
       // assumes w*J built into G entries
       const dlong id = element*p_Np + j*p_Nq + i;
-      r_nut = nut[id];
+      dfloat r_nut = nut[id];
       
       const dlong base = element*p_Nvgeo*p_Np + j*p_Nq + i;
-      r_rx = vgeo[base+p_RXID*p_Np];
-      r_ry = vgeo[base+p_RYID*p_Np];
-      r_sx = vgeo[base+p_SXID*p_Np];
-      r_sy = vgeo[base+p_SYID*p_Np];
-      r_wJ = vgeo[base+p_JWID*p_Np];
-      
-      for(int fld=0;fld<p_Nfields;++fld){
-	r_qr[fld] = 0;
-	r_qs[fld] = 0;
-      }
+      dfloat rx = vgeo[base+p_RXID*p_Np];
+      dfloat ry = vgeo[base+p_RYID*p_Np];
+      dfloat sx = vgeo[base+p_SXID*p_Np];
+      dfloat sy = vgeo[base+p_SYID*p_Np];
+      dfloat r_wJ = vgeo[base+p_JWID*p_Np];
+
+      dfloat ur = 0, vr = 0, us= 0, vs = 0;
 
 #pragma unroll p_Nq
       for(int n=0; n<p_Nq; ++n){
 	dfloat Din = s_DT[i][n];
-	
-#pragma unroll p_Nfields
-	for(int fld=0;fld<p_Nfields;++fld)
-	  r_qr[fld] += Din*s_q[fld][j][n];
-	
-	dfloat Djn = s_DT[j][n];
+	dfloat Djn = s_DT[j][n];	
+	ur += Din*s_u[j][n];
+	vr += Din*s_v[j][n];
+	us += Djn*s_u[n][i];
+	vs += Djn*s_v[n][i];
+      }
 
-#pragma unroll p_Nfields
-	for(int fld=0;fld<p_Nfields;++fld)
-	  r_qs[fld] += Djn*s_q[fld][n][i];
-      }
+      dfloat ux = rx*ur + sx*us;
+      dfloat uy = ry*ur + sy*us;
+      dfloat vx = rx*vr + sx*vs;
+      dfloat vy = ry*vr + sy*vs;
       
-      for(int fld=0;fld<p_Nfields;++fld){
-	r_Aq[fld] = r_wJ*lambda*s_q[fld][j][i];
-      }
+      r_Aq[0] = r_wJ*lambda*s_u[j][i];
+      r_Aq[1] = r_wJ*lambda*s_v[j][i];
 
       r_wJ *= r_nut;
+
+      dfloat tmpur = rx*(p_two*ux) + ry*(uy+vx);
+      dfloat tmpus = sx*(p_two*ux) + sy*(uy+vx);
+      dfloat tmpvr = rx*(uy+vx) + ry*(p_two*vy);
+      dfloat tmpvs = sx*(uy+vx) + sy*(p_two*vy);
+
+      s_tmpur[j][i] = r_wJ*tmpur;
+      s_tmpus[j][i] = r_wJ*tmpus;
+      s_tmpvr[j][i] = r_wJ*tmpvr;
+      s_tmpvs[j][i] = r_wJ*tmpvs;
     }
 
     @barrier();
     
     squareThreads{
-      for(int fld=0;fld<p_Nfields;++fld){
-	dfloat qx = r_rx*r_qr[fld] + r_sx*r_qs[fld];
-	dfloat qy = r_ry*r_qr[fld] + r_sy*r_qs[fld];
-	// Dr'*(rx*wJ*rx)*Dr + Ds'*(sx*wJ*sx)*Ds
-	s_rx_qx[fld][j][i] = r_rx*r_wJ*qx;
-	s_sx_qx[fld][j][i] = r_sx*r_wJ*qx;
-	s_ry_qx[fld][j][i] = r_ry*r_wJ*qx;
-	s_sy_qx[fld][j][i] = r_sy*r_wJ*qx;
 
-	s_rx_qy[fld][j][i] = r_rx*r_wJ*qy;
-	s_sx_qy[fld][j][i] = r_sx*r_wJ*qy;
-	s_ry_qy[fld][j][i] = r_ry*r_wJ*qy;
-	s_sy_qy[fld][j][i] = r_sy*r_wJ*qy;
-      }
-    }
-
-    @barrier();
-    
-    squareThreads{
-      dfloat qxx[p_Nfields] = {0.f};
-      dfloat qxy[p_Nfields] = {0.f};
-      dfloat qyx[p_Nfields] = {0.f};
-      dfloat qyy[p_Nfields] = {0.f};
+      dfloat tmpu = 0, tmpv = 0;
 
 #pragma unroll p_Nq
       for(int n=0;n<p_Nq;++n) {
-
 	dfloat Dni = s_DT[n][i];
-#pragma unroll p_Nfields
-	for(int fld=0;fld<p_Nfields;++fld){
-	  qxx[fld] += Dni*s_rx_qx[fld][j][n];
-	  qyx[fld] += Dni*s_ry_qx[fld][j][n];
-	  qxy[fld] += Dni*s_rx_qy[fld][j][n];
-	  qyy[fld] += Dni*s_ry_qy[fld][j][n];
-	}
-
 	dfloat Dnj = s_DT[n][j];
-#pragma unroll p_Nfields
-	for(int fld=0;fld<p_Nfields;++fld){
-	  qxx[fld] += Dnj*s_sx_qx[fld][n][i];
-	  qyx[fld] += Dnj*s_sy_qx[fld][n][i];
-	  qxy[fld] += Dnj*s_sx_qy[fld][n][i];
-	  qyy[fld] += Dnj*s_sy_qy[fld][n][i];
-	}
+	tmpu += Dni*s_tmpur[j][n];
+	tmpv += Dni*s_tmpvr[j][n];
+	tmpu += Dnj*s_tmpus[n][i];
+	tmpv += Dnj*s_tmpvs[n][i];
       }
 
       /*
@@ -180,14 +149,9 @@
 	
       */
 
-      dfloat fac = p_two;
-#if 1
-      r_Aq[0] += fac*qxx[0] + qyy[0] +  qyx[1];
-      r_Aq[1] += fac*qyy[1] + qxx[1] +  qxy[0];
-#else
-      r_Aq[0] += qxx[0] + qyy[0];
-      r_Aq[1] += qyy[1] + qxx[1];
-#endif
+      r_Aq[0] += tmpu;
+      r_Aq[1] += tmpv;
+      
       const dlong base = p_Nfields*(element*p_Np + j*p_Nq + i);
       for(int fld=0;fld<p_Nfields;++fld){
 	Aq[base+fld] = r_Aq[fld];
@@ -252,6 +216,7 @@
 	// Eventually set this to 2
 	const int bc = mapB[nid];
 
+	// make this simpler
         if (bc!=1){
 	  dlong vbase = e*p_Np*p_Nvgeo;
 
